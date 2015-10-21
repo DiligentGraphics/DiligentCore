@@ -1,0 +1,220 @@
+/*     Copyright 2015 Egor Yusov
+ *  
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ * 
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ *  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ *  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ *  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF ANY PROPRIETARY RIGHTS.
+ *
+ *  In no event and under no legal theory, whether in tort (including negligence), 
+ *  contract, or otherwise, unless required by applicable law (such as deliberate 
+ *  and grossly negligent acts) or agreed to in writing, shall any Contributor be
+ *  liable for any damages, including any direct, indirect, special, incidental, 
+ *  or consequential damages of any character arising as a result of this License or 
+ *  out of the use or inability to use the software (including but not limited to damages 
+ *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and 
+ *  all other commercial damages or losses), even if such Contributor has been advised 
+ *  of the possibility of such damages.
+ */
+
+#include "pch.h"
+
+#include "VAOCache.h"
+#include "RenderDeviceGLImpl.h"
+#include "GLObjectWrapper.h"
+#include "BufferGLImpl.h"
+#include "GLTypeConversions.h"
+#include "GLContextState.h"
+
+namespace Diligent
+{
+
+VAOCache::VAOCache()
+{
+    m_Cache.max_load_factor(0.5f);
+    m_VertexDescToKey.max_load_factor(0.5f);
+    m_BuffToKey.max_load_factor(0.5f);
+}
+
+VAOCache::~VAOCache()
+{
+    VERIFY(m_Cache.empty(), "VAO cache is not empty. Are there any unreleased objects?");
+    VERIFY(m_VertexDescToKey.empty(), "VertexDescToKey hash is not empty" );
+    VERIFY(m_BuffToKey.empty(), "BuffToKey hash is not empty");
+}
+
+void VAOCache::OnDestroyBuffer(IBuffer *pBuffer)
+{
+    ThreadingTools::LockHelper CacheLock(m_CacheLockFlag);
+    auto EqualRange = m_BuffToKey.equal_range(pBuffer);
+    for(auto It = EqualRange.first; It != EqualRange.second; ++It)
+    {
+        m_Cache.erase(It->second);
+    }
+    m_BuffToKey.erase(EqualRange.first, EqualRange.second);
+}
+
+void VAOCache::OnDestroyVertexDesc(IVertexDescription *pVertexDesc)
+{
+    ThreadingTools::LockHelper CacheLock(m_CacheLockFlag);
+    auto EqualRange = m_VertexDescToKey.equal_range(pVertexDesc);
+    for(auto It = EqualRange.first; It != EqualRange.second; ++It)
+    {
+        m_Cache.erase(It->second);
+    }
+    m_VertexDescToKey.erase(EqualRange.first, EqualRange.second);
+}
+
+const GLObjectWrappers::GLVertexArrayObj& VAOCache::GetVAO( IVertexDescription &VertexDesc,
+                                                              IBuffer *pIndexBuffer,
+                                                              vector< VertexStreamInfo > &VertexStreams,
+                                                              GLContextState &GLContextState )
+{
+    // Lock the cache
+    ThreadingTools::LockHelper CacheLock(m_CacheLockFlag);
+
+    RefCntAutoPtr<IBuffer> spVertexBuffers[MaxBufferSlots];
+    
+    // Get layout
+    const auto *LayoutElems = VertexDesc.GetDesc().LayoutElements;
+    auto NumElems = VertexDesc.GetDesc().NumElements;
+    const auto *TightStrides = VertexDesc.GetTightStrides();
+    // Construct the key
+    VAOCacheKey Key = {0};
+    Key.pVertexDesc = &VertexDesc;
+    Key.pIndexBuffer = pIndexBuffer;
+    
+    auto LayoutIt = LayoutElems;
+    for( size_t Elem = 0; Elem < NumElems; ++Elem, ++LayoutIt )
+    {
+        auto BuffSlot = LayoutIt->BufferSlot;
+        if( BuffSlot >= VertexStreams.size() )
+        {
+            UNEXPECTED( "Input layout requires more buffers than bound to the pipeline" );
+            continue;
+        }
+        if( BuffSlot >= MaxBufferSlots )
+        {
+            VERIFY( BuffSlot >= MaxBufferSlots, "Incorrect input slot" );
+            continue;
+        }
+        auto &CurrStream = VertexStreams[BuffSlot];
+        auto Stride = CurrStream.Stride ? CurrStream.Stride : TightStrides[BuffSlot];
+        auto &spCurrBuf = spVertexBuffers[BuffSlot];
+        auto &CurrStreamKey = Key.Streams[BuffSlot];
+        if( !spCurrBuf )
+        {
+            spCurrBuf = CurrStream.pBuffer;
+            VERIFY( spCurrBuf, "Buffer no longer exists" );
+
+            CHECK_DYNAMIC_TYPE( BufferGLImpl, spCurrBuf.RawPtr() );
+            static_cast<BufferGLImpl*>(spCurrBuf.RawPtr())->BufferMemoryBarrier(
+                GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT,// Vertex data sourced from buffer objects after the barrier 
+                                                   // will reflect data written by shaders prior to the barrier.
+                                                   // The set of buffer objects affected by this bit is derived 
+                                                   // from the GL_VERTEX_ARRAY_BUFFER_BINDING bindings
+                GLContextState);
+
+            CurrStreamKey.pBuffer = spCurrBuf.RawPtr();
+            CurrStreamKey.Stride = Stride;
+            CurrStreamKey.Offset = CurrStream.Offset;
+        }
+        else
+        {
+            VERIFY( spCurrBuf == CurrStream.pBuffer, "Buffer no longer exists" );
+            VERIFY( CurrStreamKey.pBuffer == spCurrBuf.RawPtr(), "Unexpected buffer" );
+            VERIFY( CurrStreamKey.Stride == Stride, "Unexpected buffer stride" );
+            VERIFY( CurrStreamKey.Offset == CurrStream.Offset, "Unexpected buffer offset" );
+        }
+    }
+
+    if( pIndexBuffer )
+    {
+        CHECK_DYNAMIC_TYPE( BufferGLImpl, pIndexBuffer );
+        static_cast<BufferGLImpl*>(pIndexBuffer)->BufferMemoryBarrier(
+            GL_ELEMENT_ARRAY_BARRIER_BIT,// Vertex array indices sourced from buffer objects after the barrier 
+                                         // will reflect data written by shaders prior to the barrier.
+                                         // The buffer objects affected by this bit are derived from the
+                                         // ELEMENT_ARRAY_BUFFER binding.
+            GLContextState);
+    }
+
+    // Try to find VAO in the map
+    auto It = m_Cache.find(Key);
+    if( It != m_Cache.end() )
+    {
+        return It->second;
+    }
+    else
+    {
+        // Create new VAO
+        GLObjectWrappers::GLVertexArrayObj NewVAO(true);
+
+        // Initialize VAO
+        GLContextState.BindVAO( NewVAO );
+        auto LayoutIt = LayoutElems;
+        for( size_t Elem = 0; Elem < NumElems; ++Elem, ++LayoutIt )
+        {
+            auto BuffSlot = LayoutIt->BufferSlot;
+            if( BuffSlot >= VertexStreams.size() || BuffSlot >= MaxBufferSlots )
+            {
+                UNEXPECTED( "Incorrect input buffer slot" );
+                continue;
+            }
+            // Get buffer through the strong reference. Note that we are not
+            // using pointers stored in the key for safety
+            auto &CurrStream = VertexStreams[BuffSlot];
+            auto Stride = CurrStream.Stride ? CurrStream.Stride : TightStrides[BuffSlot];
+            auto &spBuff = spVertexBuffers[BuffSlot];
+            VERIFY( spBuff, "Vertex buffer is null" );
+            const BufferGLImpl *pBufferOGL = static_cast<const BufferGLImpl*>( spBuff.RawPtr() );
+
+            glBindBuffer(GL_ARRAY_BUFFER, pBufferOGL->m_GlBuffer);
+            GLvoid* DataStartOffset = reinterpret_cast<GLvoid*>( static_cast<size_t>( CurrStream.Offset + LayoutIt->RelativeOffset ) );
+            auto GlType = TypeToGLType(LayoutIt->ValueType);
+            if( !LayoutIt->IsNormalized &&
+                (LayoutIt->ValueType == VT_INT8  || 
+                 LayoutIt->ValueType == VT_INT16 ||
+                 LayoutIt->ValueType == VT_INT32 ||
+                 LayoutIt->ValueType == VT_UINT8 || 
+                 LayoutIt->ValueType == VT_UINT16||
+                 LayoutIt->ValueType == VT_UINT32 ) )
+                glVertexAttribIPointer(LayoutIt->InputIndex, LayoutIt->NumComponents, GlType, Stride, DataStartOffset );
+            else
+                glVertexAttribPointer(LayoutIt->InputIndex, LayoutIt->NumComponents, GlType, LayoutIt->IsNormalized, Stride, DataStartOffset );
+
+            if( LayoutIt->Frequency == LayoutElement::FREQUENCY_PER_INSTANCE )
+            {
+                // If divisor is zero, then the attribute acts like normal, being indexed by the array or index 
+                // buffer. If divisor is non-zero, then the current instance is divided by this divisor, and 
+                // the result of that is used to access the attribute array.
+                glVertexAttribDivisor(LayoutIt->InputIndex, LayoutIt->InstanceDataStepRate);
+            }
+	        glEnableVertexAttribArray(LayoutIt->InputIndex);
+        }
+        if( pIndexBuffer )
+        {
+            const BufferGLImpl *pIndBufferOGL = static_cast<const BufferGLImpl*>( pIndexBuffer );
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, pIndBufferOGL->m_GlBuffer);
+        }
+            
+        auto NewElems = m_Cache.emplace( make_pair(Key, std::move(NewVAO)) );
+        // New element must be actually inserted
+        VERIFY( NewElems.second, "New element was not inserted into the cache" ); 
+        m_VertexDescToKey.insert( make_pair(Key.pVertexDesc, Key) );
+        for(int iStream = 0; iStream < _countof(Key.Streams); ++iStream)
+        {
+            auto *pCurrBuff = Key.Streams[iStream].pBuffer;
+            if( pCurrBuff )
+                m_BuffToKey.insert( make_pair(pCurrBuff, Key) );
+        }
+
+        return NewElems.first->second;
+    }
+}
+
+}

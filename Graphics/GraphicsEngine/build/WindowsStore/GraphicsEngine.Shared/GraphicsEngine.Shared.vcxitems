@@ -1,0 +1,65 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <ItemsProjectGuid>{0cdd843c-089d-4fee-be9f-c08fa2b51acb}</ItemsProjectGuid>
+    <ItemsRootNamespace>GraphicsEngine</ItemsRootNamespace>
+    <ItemsProjectName>GraphicsEngine.Shared</ItemsProjectName>
+    <CodeSharingProject>248F659F-DAC5-46E8-AC09-60EC9FC95053</CodeSharingProject>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(MSBuildThisFileDirectory)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ProjectCapability Include="SourceItemsFromImports" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\..\src\ResourceMapping.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\..\src\pch.cpp">
+      <PrecompiledHeader>Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\..\src\Texture.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\include\BlendStateBase.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\include\BufferBase.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\include\BufferViewBase.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\include\Defines.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\include\DepthStencilStateBase.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\include\DeviceContextBase.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\include\DeviceObjectBase.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\include\RasterizerStateBase.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\include\RenderDeviceBase.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\include\ResourceMappingImpl.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\include\SamplerBase.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\include\ShaderBase.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\include\StateObjectsRegistry.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\include\pch.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\include\SwapChainBase.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\include\TextureBase.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\include\TextureViewBase.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\include\VertexDescriptionBase.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\interface\BlendState.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\interface\Buffer.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\interface\BufferView.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\interface\Constants.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\interface\DepthStencilState.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\interface\DeviceCaps.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\interface\DeviceContext.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\interface\DeviceObject.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\interface\MapHelper.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\interface\RasterizerState.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\interface\RenderDevice.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\interface\ResourceMapping.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\interface\Sampler.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\interface\Shader.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\interface\SwapChain.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\interface\Texture.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\interface\TextureView.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\interface\GraphicsTypes.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\interface\VertexDescription.h" />
+  </ItemGroup>
+</Project>

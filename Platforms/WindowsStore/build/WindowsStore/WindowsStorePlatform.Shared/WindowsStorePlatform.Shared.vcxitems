@@ -1,0 +1,32 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <ItemsProjectGuid>{65c1955f-c69e-4185-8b89-864725706a36}</ItemsProjectGuid>
+    <ItemsRootNamespace>WindowsStoreAppPlatform</ItemsRootNamespace>
+    <ItemsProjectName>WindowsStorePlatform.Shared</ItemsProjectName>
+    <CodeSharingProject>248F659F-DAC5-46E8-AC09-60EC9FC95053</CodeSharingProject>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(MSBuildThisFileDirectory)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ProjectCapability Include="SourceItemsFromImports" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\include\pch.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\include\WindowsStoreDebug.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\include\WindowsStoreFileSystem.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\..\include\WindowsStorePlatformDefinitions.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\..\src\pch.cpp">
+      <PrecompiledHeader>Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\..\src\WindowsStoreDebug.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\..\src\WindowsStoreFileSystem.cpp" />
+  </ItemGroup>
+</Project>

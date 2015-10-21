@@ -1,0 +1,3 @@
+EXPORTS
+	 CreateDeviceAndImmediateContextD3D11
+	 CreateSwapChainD3D11
