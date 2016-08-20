@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -36,21 +36,24 @@ template<typename BaseInterface>
 class RenderDeviceBase;
 
 /// Template class implementing base functionality for a device object
-template<class BaseInterface, typename ObjectDescType>
-class DeviceObjectBase : public ObjectBase<BaseInterface>
+template<class BaseInterface, typename ObjectDescType, typename TObjectAllocator>
+class DeviceObjectBase : public ObjectBase<BaseInterface, TObjectAllocator>
 {
 public:
+    typedef ObjectBase<BaseInterface, TObjectAllocator> TBase;
 
+    /// \param ObjAllocator - allocator that was used to allocate memory for this instance
 	/// \param pDevice - pointer to the render device.
 	/// \param ObjDesc - object description.
 	/// \param pOwner - owner object.
 	/// \param bIsDeviceInternal - flag indicating if the object is an internal device object
 	///							   and must not keep a strong reference to the device.
-    DeviceObjectBase( class IRenderDevice *pDevice,
+    DeviceObjectBase( TObjectAllocator &ObjAllocator,
+                      class IRenderDevice *pDevice,
 					  const ObjectDescType &ObjDesc,
 					  IObject *pOwner = nullptr,
 				      bool bIsDeviceInternal = false) :
-        ObjectBase<BaseInterface>(pOwner),
+        TBase(pOwner, &ObjAllocator),
         m_pDevice( pDevice ),
 		// Do not keep strong reference to the device if the object is an internal device object
 		m_spDevice( bIsDeviceInternal ? nullptr : pDevice ),
@@ -70,9 +73,9 @@ public:
     {
     }
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE( IID_DeviceObject, ObjectBase<BaseInterface> )
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE( IID_DeviceObject, TBase )
 
-    virtual const ObjectDescType& GetDesc()const override
+    virtual const ObjectDescType& GetDesc()const override final
     {
         return m_Desc;
     }
@@ -88,11 +91,15 @@ public:
         return m_UniqueID.GetID();
     }
 
+	IRenderDevice *GetDevice()const{return m_pDevice;}
+
 protected:
 	
-	IRenderDevice *GetDevice(){return m_pDevice;}
+    /// Copy of a device object name.
 
-    /// Copy of a device object name
+    /// When new object is created, its description structure is copied
+    /// to m_Desc, the name is copied to m_ObjectNameCopy, and 
+    /// m_Desc.Name pointer is set to m_ObjectNameCopy.c_str().
     const String m_ObjectNameCopy;
 
 	/// Object description

@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -32,21 +32,23 @@
 namespace Diligent
 {
 
+class IMemoryAllocator;
 /// Implementation of the Diligent::ISwapChainD3D11 interface
-class SwapChainD3D11Impl : public SwapChainBase<ISwapChainD3D11>
+class SwapChainD3D11Impl : public SwapChainBase<ISwapChainD3D11, IMemoryAllocator>
 {
 public:
-    typedef SwapChainBase<ISwapChainD3D11> TSwapChainBase;
-    SwapChainD3D11Impl(const SwapChainDesc& SwapChainDesc, 
-                        class RenderDeviceD3D11Impl* pRenderDeviceD3D11,
-                        class DeviceContextD3D11Impl* pDeviceContextD3D11,
-                        void* pNativeWndHandle);
+    typedef SwapChainBase<ISwapChainD3D11, IMemoryAllocator> TSwapChainBase;
+    SwapChainD3D11Impl(IMemoryAllocator &Allocator,
+                       const SwapChainDesc& SwapChainDesc, 
+                       class RenderDeviceD3D11Impl* pRenderDeviceD3D11,
+                       class DeviceContextD3D11Impl* pDeviceContextD3D11,
+                       void* pNativeWndHandle);
     ~SwapChainD3D11Impl();
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface );
+    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
 
-    virtual void Present();
-    virtual void Resize( Uint32 NewWidth, Uint32 NewHeight );
+    virtual void Present()override final;
+    virtual void Resize( Uint32 NewWidth, Uint32 NewHeight )override final;
 
     virtual IDXGISwapChain *GetDXGISwapChain(){ return m_pSwapChain; }
 
@@ -56,11 +58,11 @@ public:
 private:
     void CreateRTVandDSV();
     /// D3D11 swap chain
-    Diligent::CComPtr<IDXGISwapChain> m_pSwapChain;
+    CComPtr<IDXGISwapChain> m_pSwapChain;
     /// Back buffer render target view
-    Diligent::CComPtr<ID3D11RenderTargetView> m_pRenderTargetView;
+    CComPtr<ID3D11RenderTargetView> m_pRenderTargetView;
     /// Back buffer depth-stencil view
-    Diligent::CComPtr<ID3D11DepthStencilView> m_pDepthStencilView;
+    CComPtr<ID3D11DepthStencilView> m_pDepthStencilView;
 };
 
 }

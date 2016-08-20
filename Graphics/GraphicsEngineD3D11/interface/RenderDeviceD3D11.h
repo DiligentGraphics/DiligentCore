@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ static const Diligent::INTERFACE_ID IID_RenderDeviceD3D11 =
 { 0x5b1cbb8, 0xfcad, 0x49ee, { 0xba, 0xda, 0x78, 0x1, 0x22, 0x3e, 0xc3, 0xfe } };
 
 /// Interface to the render device object implemented in D3D11
-class IRenderDeviceD3D11 : public Diligent::IRenderDevice
+class IRenderDeviceD3D11 : public IRenderDevice
 {
 public:
 

@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -29,11 +29,12 @@
 #include "RenderDevice.h"
 #include "GLObjectWrapper.h"
 #include "GLProgram.h"
-#include "HashUtils.h"
 
 namespace Diligent
 {
- 
+
+class FixedBlockMemoryAllocator;
+
 inline GLenum GetGLShaderType(SHADER_TYPE ShaderType)
 {
     switch(ShaderType)
@@ -63,12 +64,12 @@ inline GLenum ShaderTypeToGLShaderBit(SHADER_TYPE ShaderType)
 }
 
 /// Implementation of the Diligent::IShaderGL interface
-class ShaderGLImpl : public ShaderBase<IShaderGL, IGLDeviceBaseInterface>
+class ShaderGLImpl : public ShaderBase<IShaderGL, IGLDeviceBaseInterface, FixedBlockMemoryAllocator>
 {
 public:
-    typedef ShaderBase<IShaderGL, IGLDeviceBaseInterface> TShaderBase;
+    typedef ShaderBase<IShaderGL, IGLDeviceBaseInterface, FixedBlockMemoryAllocator> TShaderBase;
 
-    ShaderGLImpl( class RenderDeviceGLImpl *pDeviceGL, const ShaderCreationAttribs &ShaderCreationAttribs, bool bIsDeviceInternal = false );
+    ShaderGLImpl( FixedBlockMemoryAllocator& ShaderObjAllocator, class RenderDeviceGLImpl *pDeviceGL, const ShaderCreationAttribs &ShaderCreationAttribs, bool bIsDeviceInternal = false );
     ~ShaderGLImpl();
 
     virtual void BindResources( IResourceMapping* pResourceMapping, Uint32 Flags  )override;
@@ -77,29 +78,15 @@ public:
 
     virtual IShaderVariable* GetShaderVariable( const Char* Name )override;
 
+    GLProgram& GetGlProgram(){return m_GlProgObj;}
+
 private:
-    struct CGLShaderVariable : ShaderVariableBase
-    {
-        CGLShaderVariable( ShaderGLImpl *pShader, GLProgram::GLProgramVariableBase &ProgVar ) :
-            ShaderVariableBase( pShader ),
-            ProgramVar(ProgVar)
-        {}
 
-        virtual void Set( IDeviceObject *pObject )override
-        {
-            ProgramVar.pResource = pObject;
-        }
-    private:
-        GLProgram::GLProgramVariableBase &ProgramVar;
-    };
-
-    friend class ProgramPipelineCache;
+    friend class PipelineStateGLImpl;
     friend class DeviceContextGLImpl;
+
     GLProgram m_GlProgObj;  // Used if program pipeline supported
     GLObjectWrappers::GLShaderObj m_GLShaderObj; // Used if program pipelines are not supported
-
-    /// Hash map to look up shader variables by name.
-    std::unordered_map<Diligent::HashMapStringKey, CGLShaderVariable> m_VariableHash;
 };
 
 }

@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -68,7 +68,7 @@ namespace Diligent
     template<typename CharType>
     struct CStringCompare
     {
-        bool operator()( const Char *str1, const Char *str2 )const
+        bool operator()( const CharType *str1, const CharType *str2 )const
         {
             UNSUPPORTED( "Template specialization is not implemented" )
             return false;
@@ -127,7 +127,7 @@ namespace Diligent
 
         // Disable copy constuctor and assignments. The struct is designed
         // to be initialized at creation time only
-        HashMapStringKey( const HashMapStringKey& )             = delete;
+        HashMapStringKey( const HashMapStringKey& )              = delete;
         HashMapStringKey& operator = ( const HashMapStringKey& ) = delete;
         HashMapStringKey& operator = ( HashMapStringKey&& )      = delete;
 

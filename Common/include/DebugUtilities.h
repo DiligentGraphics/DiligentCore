@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -31,18 +31,26 @@
 // This function is only requried to ensure that Message argument passed to the macro
 // is actually string and not something else
 inline void EnsureStr( const char* ){}
+
+#define ASSERTION_FAILED(Message, ...)\
+{                                           \
+    EnsureStr(Message);                     \
+    Diligent::MsgStream ms;                 \
+    Diligent::FormatMsg( ms, Message, ##__VA_ARGS__);\
+    PlatformDebug::AssertionFailed( ms.str().c_str(), __FUNCTION__, __FILE__, __LINE__); \
+}
+
 #   define VERIFY(Expr, Message, ...)\
     {                                \
+        EnsureStr(Message);          \
         if( !(Expr) )                \
         {                            \
-            Diligent::MsgStream ms; \
-            Diligent::FormatMsg( ms, Message, ##__VA_ARGS__);\
-            PlatformDebug::AssertionFailed( ms.str().c_str(), __FUNCTION__, __FILE__, __LINE__); \
-        }                           \
-        EnsureStr(Message);         \
+            ASSERTION_FAILED(Message, ##__VA_ARGS__)\
+        }                            \
     }
-#   define UNEXPECTED(Message, ...)   { VERIFY(false, Message, ##__VA_ARGS__); }
-#   define UNSUPPORTED(Message, ...)  { VERIFY(false, Message, ##__VA_ARGS__); }
+
+#   define UNEXPECTED   ASSERTION_FAILED
+#   define UNSUPPORTED  ASSERTION_FAILED
 
 #   define VERIFY_EXPR(Expr) VERIFY(Expr, "Debug exression failed:\n", #Expr)
 

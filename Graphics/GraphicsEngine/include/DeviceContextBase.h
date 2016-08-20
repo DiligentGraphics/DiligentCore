@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -49,8 +49,8 @@ struct VertexStreamInfo
 {
     /// Strong reference to the buffer object
     RefCntAutoPtr<IBuffer> pBuffer;
-    Uint32 Stride; ///< Stride
-    Uint32 Offset; ///< Offset
+    Uint32 Stride; ///< Stride in bytes
+    Uint32 Offset; ///< Offset in bytes
     VertexStreamInfo() :
         Stride( 0 ),
         Offset( 0 )
@@ -64,25 +64,30 @@ struct VertexStreamInfo
 ///          the pipeline: buffers, states, samplers, shaders, etc.
 ///          The context also keeps strong references to the device and
 ///          the swap chain.
-template<typename BaseInterface = IDeviceContext>
-class DeviceContextBase : public ObjectBase<BaseInterface>
+template<typename BaseInterface>
+class DeviceContextBase : public ObjectBase<BaseInterface, IMemoryAllocator>
 {
 public:
-    DeviceContextBase(IRenderDevice *pRenderDevice) :
+
+    typedef ObjectBase<BaseInterface, IMemoryAllocator> TObjectBase;
+
+    /// \param RawMemAllocator - allocator that was used to allocate memory for this instance of the device context object.
+    /// \param pRenderDevice - render device.
+    /// \param bIsDeferred - flag indicating if this instance is a deferred context
+    DeviceContextBase(IMemoryAllocator& RawMemAllocator, IRenderDevice *pRenderDevice, bool bIsDeferred) :
+        TObjectBase(nullptr, &RawMemAllocator),
         m_pDevice(pRenderDevice),
         m_IndexDataStartOffset( 0 ),
         m_StencilRef( 0 ),
-        m_SamplesBlendMask( 0 )
+        m_NumVertexStreams(0),
+        m_bIsDeferred(bIsDeferred)
     {
         for( int i = 0; i < 4; ++i )
             m_BlendFactors[i] = -1;
-        m_VertexStreams.reserve( MaxBufferSlots );
-        m_Viewports.reserve( 16 );
-        m_ScissorRects.reserve( 16 );
         // Set dummy render target array size to make sure that
         // render targets are actually bound the first time 
         // SetRenderTargets() is called 
-        m_pBoundRenderTargets.resize( 8 );
+        m_NumBoundRenderTargets = _countof(m_pBoundRenderTargets);
     }
 
     ~DeviceContextBase()
@@ -91,89 +96,62 @@ public:
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE( IID_DeviceContext, ObjectBase<BaseInterface> )
 
-    virtual void SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer **ppBuffers, Uint32 *pStrides, Uint32 *pOffsets, Uint32 Flags ) = 0;
+    /// Base implementation of IDeviceContext::SetVertexBuffers(); validates parameters and 
+    /// caches references to the buffers.
+    inline virtual void SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer **ppBuffers, Uint32 *pStrides, Uint32 *pOffsets, Uint32 Flags ) = 0;
 
-    virtual void ClearState() = 0;
+    inline virtual void ClearState() = 0;
 
-    virtual void SetShaders( IShader **ppShaders, Uint32 NumShadersToSet )
-    {
-        m_pBoundShaders.resize( NumShadersToSet );
-        for( Uint32 i = 0; i < NumShadersToSet; ++i )
-            m_pBoundShaders[i] = ppShaders[i];
-#ifdef DEBUG_CHECKS
-        {
-            Uint32 BoundShaders = 0;
-            for( auto sh = m_pBoundShaders.begin(); sh != m_pBoundShaders.end(); ++sh )
-            {
-                auto ShaderType = (*sh)->GetDesc().ShaderType;
-                if( BoundShaders & ShaderType )
-                {
-                    LOG_ERROR_MESSAGE( "More than one shader of type ", GetShaderTypeLiteralName( ShaderType ), " is being set to the pipeline" );
-                    BoundShaders |= ShaderType;
-                }
-            }
-        }
-#endif
-    }
+    /// Base implementation of IDeviceContext::SetPipelineState(); caches references to the pipeline state object.
+    inline virtual void SetPipelineState(IPipelineState *pPipelineState) = 0;
 
-    virtual void BindShaderResources( IResourceMapping *pResourceMapping, Uint32 Flags )
-    {
-    }
+    /// Base implementation of IDeviceContext::CommitShaderResources(); validates parameters.
+    inline bool CommitShaderResources(IShaderResourceBinding *pShaderResourceBinding, Uint32 Flags, int);
 
-    // Body of the pure virtual function cannot be inlined
-    /// Caches the strong reference to the vertex description
-    virtual void SetVertexDescription( IVertexDescription *pVertexDesc ) = 0;
-    
-    /// Caches the strong reference to the index buffer
-    virtual void SetIndexBuffer( IBuffer *pIndexBuffer, Uint32 ByteOffset ) = 0;
+    /// Base implementation of IDeviceContext::SetIndexBuffer(); caches the strong reference to the index buffer
+    inline virtual void SetIndexBuffer( IBuffer *pIndexBuffer, Uint32 ByteOffset ) = 0;
 
-    /// If the new depth stencil parameters differ from the cached values, 
-    /// updates the values and returns true. Otherwise returns false.
-    bool SetDepthStencilState( IDepthStencilState *pDSState, Uint32 StencilRef, Uint32 Dummy = 0);
-
-
-    /// If the new rasterizer state differs from the cached state, 
-    /// updates the cached state and returns true. Otherwise returns false.
-    bool SetRasterizerState( IRasterizerState *pRS, Uint32 Dummy = 0 );
-
-
-    /// If the new blend parameters differ from the cached values, 
-    /// updates the cached values and returns true. Otherwise returns false.
-    bool SetBlendState( IBlendState *pBS, const float* pBlendFactors, Uint32 SampleMask, Uint32 Dummy = 0 );
-    
     /// Caches the viewports
-    void SetViewports( Uint32 NumViewports, const Viewport *pViewports, Uint32 &RTWidth, Uint32 &RTHeight );
+    inline void SetViewports( Uint32 NumViewports, const Viewport *pViewports, Uint32 &RTWidth, Uint32 &RTHeight );
 
     /// Caches the scissor rects
-    void SetScissorRects( Uint32 NumRects, const Rect *pRects, Uint32 &RTWidth, Uint32 &RTHeight );
+    inline void SetScissorRects( Uint32 NumRects, const Rect *pRects, Uint32 &RTWidth, Uint32 &RTHeight );
 
     /// Caches the render target and depth stencil views. Returns true if any view is different
     /// from the cached value and false otherwise.
-    bool SetRenderTargets( Uint32 NumRenderTargets, ITextureView *ppRenderTargets[], ITextureView *pDepthStencil, Uint32 Dummy = 0 );
+    inline bool SetRenderTargets( Uint32 NumRenderTargets, ITextureView *ppRenderTargets[], ITextureView *pDepthStencil, Uint32 Dummy = 0 );
 
     /// Sets the strong pointer to the swap chain
-    void SetSwapChain( ISwapChain *pSwapChain ) { m_pSwapChain = pSwapChain; }
+    inline void SetSwapChain( ISwapChain *pSwapChain ) { m_pSwapChain = pSwapChain; }
 
-    bool IsDefaultFBBound(){ return m_pBoundRenderTargets.size() == 0 && m_pBoundDepthStencil == nullptr; }
+    /// Returns the swap chain
+    ISwapChain *GetSwapChain() { return m_pSwapChain; }
 
-    void GetDepthStencilState(IDepthStencilState **ppDSS, Uint32 &StencilRef);
+    /// Returns true if currently bound frame buffer is the default frame buffer
+    inline bool IsDefaultFBBound(){ return m_NumBoundRenderTargets == 0 && m_pBoundDepthStencil == nullptr; }
 
-    void GetRasterizerState( IRasterizerState **ppRS );
+    /// Returns currently bound pipeline state and blend factors
+    inline void GetPipelineState(IPipelineState **ppPSO, float* BlendFactors, Uint32 &StencilRef);
 
-    void GetBlendState( IBlendState **ppBS, float* BlendFactors, Uint32& SamplesBlendMask );
+    /// Returns currently bound render targets
+    inline void GetRenderTargets(Uint32 &NumRenderTargets, ITextureView **ppRTVs, ITextureView **ppDSV);
 
-    void GetRenderTargets(Uint32 &NumRenderTargets, ITextureView **ppRTVs, ITextureView **ppDSV);
+    /// Returns currently set viewports
+    inline void GetViewports( Uint32 &NumViewports, Viewport *pViewports );
 
-    /// Creates and binds default depth stencil, rasterizer & blend states 
-    void CreateDefaultStates();
-
-    void GetShaders( IShader **ppShaders, Uint32 &NumShaders );
-
-    void GetViewports( Uint32 &NumViewports, Viewport *pViewports );
+    /// Returns the render device
+    IRenderDevice *GetDevice(){return m_pDevice;}
 
 protected:
+    inline bool SetBlendFactors(const float *BlendFactors, int Dummy);
+
+    inline bool SetStencilRef(Uint32 StencilRef, int Dummy);
+
     /// Returns the size of the currently bound render target
-    void GetRenderTargetSize( Uint32 &RTWidth, Uint32 &RTHeight );
+    inline void GetRenderTargetSize( Uint32 &RTWidth, Uint32 &RTHeight );
+
+    /// Clears all cached resources
+    inline void ClearStateCache();
 
     /// Strong reference to the device.
     RefCntAutoPtr<IRenderDevice> m_pDevice;
@@ -182,28 +160,20 @@ protected:
     /// weak reference to the immediate context.
     RefCntAutoPtr<ISwapChain> m_pSwapChain;
 
-    /// Vector of strong references to bound shaders
-    std::vector< RefCntAutoPtr<IShader> > m_pBoundShaders;
-    
     /// Vertex streams. Every stream holds strong reference to the buffer
-    std::vector<VertexStreamInfo> m_VertexStreams;
+    VertexStreamInfo m_VertexStreams[MaxBufferSlots];
+    
+    /// Number of bound vertex streams
+    Uint32 m_NumVertexStreams = 0;
 
-    /// Strong reference to the bound vertex description object
-    RefCntAutoPtr<IVertexDescription> m_pVertexDesc;
+    /// Strong reference to the bound pipeline state object
+    RefCntAutoPtr<IPipelineState> m_pPipelineState;
 
     /// Strong reference to the bound index buffer
     RefCntAutoPtr<IBuffer> m_pIndexBuffer;
 
+    /// Offset from the beginning of the index buffer to the start of the index data, in bytes.
     Uint32 m_IndexDataStartOffset;
-
-    /// Strong references to the bound depth-stencil state
-    RefCntAutoPtr< IDepthStencilState > m_pDSState;
-
-    /// Strong references to the bound rasterizer state
-    RefCntAutoPtr< IRasterizerState> m_pRasterizerState;
-
-    /// Strong references to the bound blend state
-    RefCntAutoPtr< IBlendState> m_pBlendState;
 
 	/// Current stencil reference value
     Uint32 m_StencilRef;
@@ -211,30 +181,30 @@ protected:
 	/// Curent blend factors
     Float32 m_BlendFactors[4];
 
-	/// Current samples blend mask 
-    Uint32 m_SamplesBlendMask;
-
 	/// Current viewports
-    std::vector<Viewport> m_Viewports;
+    Viewport m_Viewports[MaxRenderTargets];
+    /// Number of current viewports
+    Uint32 m_NumViewports = 0;
 
 	/// Current scissor rects
-    std::vector<Rect> m_ScissorRects;
+    Rect m_ScissorRects[MaxRenderTargets];
+    /// Number of current scissor rects
+    Uint32 m_NumScissorRects = 0;
 
-    /// Vector of strong references to bound render targets
-    std::vector< RefCntAutoPtr<ITextureView> > m_pBoundRenderTargets;
+    /// Vector of strong references to the bound render targets
+    RefCntAutoPtr<ITextureView> m_pBoundRenderTargets[MaxRenderTargets];
+    /// Number of bound render targets
+    Uint32 m_NumBoundRenderTargets = 0;
 
     /// Strong references to the bound depth stencil view
     RefCntAutoPtr<ITextureView> m_pBoundDepthStencil;
 
-private:
-    RefCntAutoPtr<IDepthStencilState> m_pDefaultDSS;
-    RefCntAutoPtr<IRasterizerState> m_pDefaultRS;
-    RefCntAutoPtr<IBlendState> m_pDefaultBS;
+    bool m_bIsDeferred = false;
 };
 
 
 template<typename BaseInterface>
-void DeviceContextBase<BaseInterface> :: SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer **ppBuffers, Uint32 *pStrides, Uint32 *pOffsets, Uint32 Flags  )
+inline void DeviceContextBase<BaseInterface> :: SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer **ppBuffers, Uint32 *pStrides, Uint32 *pOffsets, Uint32 Flags  )
 {
     if( StartSlot >= MaxBufferSlots )
     {
@@ -250,9 +220,12 @@ void DeviceContextBase<BaseInterface> :: SetVertexBuffers( Uint32 StartSlot, Uin
 
     if( Flags & SET_VERTEX_BUFFERS_FLAG_RESET )
     {
-        m_VertexStreams.clear();
+        for(Uint32 s=0; s < m_NumVertexStreams; ++s)
+            m_VertexStreams[s] = VertexStreamInfo();
+        m_NumVertexStreams = 0;
     }
-    m_VertexStreams.resize( std::max(m_VertexStreams.size(), static_cast<size_t>(StartSlot + NumBuffersSet) ) );
+    m_NumVertexStreams = std::max(m_NumVertexStreams, StartSlot + NumBuffersSet );
+    
     for( Uint32 Buff = 0; Buff < NumBuffersSet; ++Buff )
     {
         auto &CurrStream = m_VertexStreams[StartSlot + Buff];
@@ -271,27 +244,50 @@ void DeviceContextBase<BaseInterface> :: SetVertexBuffers( Uint32 StartSlot, Uin
 #endif
     }
     // Remove null buffers from the end of the array
-    while(m_VertexStreams.size() > 0 && !m_VertexStreams.back().pBuffer)
-        m_VertexStreams.pop_back();
+    while(m_NumVertexStreams > 0 && !m_VertexStreams[m_NumVertexStreams-1].pBuffer)
+        m_VertexStreams[m_NumVertexStreams--] = VertexStreamInfo();
 }
 
 template<typename BaseInterface>
-void DeviceContextBase<BaseInterface> :: ClearState()
+inline void DeviceContextBase<BaseInterface> :: SetPipelineState(IPipelineState *pPipelineState)
 {
-    UNSUPPORTED("This function is not implemented")
+    m_pPipelineState = pPipelineState;
+}
+
+template<typename BaseInterface>
+inline bool DeviceContextBase<BaseInterface> :: CommitShaderResources(IShaderResourceBinding *pShaderResourceBinding, Uint32 Flags, int)
+{
+#ifdef _DEBUG
+    if (!m_pPipelineState)
+    {
+        LOG_ERROR_MESSAGE("No pipeline state is bound to the pipeline");
+        return false;
+    }
+
+    if (pShaderResourceBinding)
+    {
+        auto *pPSO = pShaderResourceBinding->GetPipelineState();
+        if (pPSO != m_pPipelineState)
+        {
+            LOG_ERROR_MESSAGE("Shader resource binding object does not match currently bound pipeline state");
+            return false;
+        }
+    }
+#endif
+    return true;
+}
+
+template<typename BaseInterface>
+inline void DeviceContextBase<BaseInterface> :: ClearState()
+{
+    UNSUPPORTED("This function is deprecated")
     //m_VertexStreams.clear();
     //m_pIndexBuffer.Release();
     //m_IndexDataStartOffset = 0;
 }
 
 template<typename BaseInterface>
-void DeviceContextBase<BaseInterface> :: SetVertexDescription( IVertexDescription *pVertexDesc )
-{
-    m_pVertexDesc = pVertexDesc;
-}
-
-template<typename BaseInterface>
-void DeviceContextBase<BaseInterface> :: SetIndexBuffer( IBuffer *pIndexBuffer, Uint32 ByteOffset )
+inline void DeviceContextBase<BaseInterface> :: SetIndexBuffer( IBuffer *pIndexBuffer, Uint32 ByteOffset )
 {
     m_pIndexBuffer = pIndexBuffer;
     m_IndexDataStartOffset = ByteOffset;
@@ -305,151 +301,56 @@ void DeviceContextBase<BaseInterface> :: SetIndexBuffer( IBuffer *pIndexBuffer, 
 }
 
 
-/// \param [in] pDSState - pointer to the new depth-stencil state interface.
-/// \param [in] StencilRef - new stencil reference value.
-/// \param [in] Dummy - dummy argument required to make function signature distinct
-///                     from IDeviceContext::SetDepthStencilState(). This is required
-///                     because otherwise this overloaded function will only differ in 
-///                     the return type which is not allowed.
-/// \return 
-/// - True if either new depth stencil state or stencil reference value differs from
-///   currently cached values.
-/// - False otherwise.
-/// 
-/// \remarks The method caches *strong reference* to the provided interface in m_pDSState.
 template<typename BaseInterface>
-bool DeviceContextBase<BaseInterface> :: SetDepthStencilState( IDepthStencilState *pDSState, Uint32 StencilRef, Uint32 Dummy )
-{
-    // If null depth-stencil state is provided, bind default state
-    if( !pDSState )
-        pDSState = m_pDefaultDSS;
-
-    // Here m_pDSState is certainly a live object because we keep the
-    // strong reference. pDSState is also clearly live object, so we can 
-    // safely compare pointers.
-    if( m_pDSState != pDSState || m_StencilRef != StencilRef )
-    {
-        m_pDSState = pDSState;
-        m_StencilRef = StencilRef;
-        return true;
-    }
-
-    return false;
-}
-
-/// \param [in] pRS - pointer to the new rasterizer state interface.
-/// \param [in] Dummy - dummy argument required to make function signature distinct
-///                     from IDeviceContext::SetRasterizerState(). This is required
-///                     because otherwise this overloaded function will only differ in 
-///                     the return type which is not allowed.
-/// \return 
-/// - True if the new rasterizer state differ from the cached state.
-/// - False otherwise.
-///
-/// \remarks The method caches *strong reference* to the provided interface in m_pRasterizerState.
-template<typename BaseInterface>
-bool DeviceContextBase<BaseInterface> :: SetRasterizerState( IRasterizerState *pRS, Uint32 Dummy )
-{
-    // If null rasterizer state provided, bind default state
-    if( !pRS )
-        pRS = m_pDefaultRS;
-
-    // Here m_pRasterizerState is certainly a live object because we keep the
-    // strong reference. pRS is also clearly live object, so we can 
-    // safely compare pointers.
-    if( m_pRasterizerState != pRS )
-    {
-        m_pRasterizerState = pRS;
-        return true;
-    }
-
-    return false;
-}
-
-
-/// \param [in] pBS - pointer to the new blend state interface.
-/// \param [in] pBlendFactors - new blend factors.
-/// \param [in] SampleMask - new sample mask.
-/// \param [in] Dummy - dummy argument required to make function signature distinct
-///                     from IDeviceContext::SetBlendState(). This is required
-///                     because otherwise this overloaded function will only differ in 
-///                     the return type which is not allowed.
-/// \return 
-/// - True if either the new blend state, blend factors or sample mask value differs from
-///   the currently cached values.
-/// - False otherwise.
-///
-/// \remarks The method caches *strong reference* to the provided interface in m_pBlendState.
-template<typename BaseInterface>
-bool DeviceContextBase<BaseInterface> :: SetBlendState( IBlendState *pBS, const float* pBlendFactors, Uint32 SampleMask, Uint32 Dummy )
-{
-    // If null blend state provided, bind default state
-    if( !pBS )
-        pBS = m_pDefaultBS;
-
-    static const float DefaultBlendFactors[4] = { 1, 1, 1, 1 };
-    if( pBlendFactors == nullptr )
-        pBlendFactors = DefaultBlendFactors;
-
-    // Here m_pBlendState is certainly a live object because we keep the
-    // strong reference. pBS is also clearly live object, so we can 
-    // safely compare pointers.
-    if( m_pBlendState != pBS ||
-        m_BlendFactors[0] != pBlendFactors[0] ||
-        m_BlendFactors[1] != pBlendFactors[1] ||
-        m_BlendFactors[2] != pBlendFactors[2] ||
-        m_BlendFactors[3] != pBlendFactors[3] ||
-        m_SamplesBlendMask != SampleMask )
-    {
-        m_pBlendState = pBS;
-        m_SamplesBlendMask = SampleMask;
-        for( int i = 0; i < 4; ++i )
-            m_BlendFactors[i] = pBlendFactors[i];
-
-        return true;
-    }
-
-    return false;
-}
-
-template<typename BaseInterface>
-void DeviceContextBase<BaseInterface> :: GetDepthStencilState(IDepthStencilState **ppDSS, Uint32 &StencilRef)
+inline void DeviceContextBase<BaseInterface> :: GetPipelineState(IPipelineState **ppPSO, float* BlendFactors, Uint32 &StencilRef)
 { 
-    VERIFY( ppDSS != nullptr, "Null pointer provided null" );
-    VERIFY( *ppDSS == nullptr, "Memory address contains a pointer to a non-null depth-stencil state" );
-    VERIFY( m_pDSState, "No depth-stencil state is bound. At least default state must always be bound. Did you forget to call CreateDefaultStates()?" );
-    m_pDSState->QueryInterface( IID_DepthStencilState, reinterpret_cast<IObject**>( ppDSS ) );
+    VERIFY( ppPSO != nullptr, "Null pointer provided null" );
+    VERIFY( *ppPSO == nullptr, "Memory address contains a pointer to a non-null blend state" );
+    if(m_pPipelineState)
+    {
+        m_pPipelineState->QueryInterface( IID_PipelineState, reinterpret_cast<IObject**>( ppPSO ) );
+    }
+    else
+    {
+        *ppPSO = nullptr;
+    }
+
+    for( Uint32 f = 0; f < 4; ++f )
+        BlendFactors[f] = m_BlendFactors[f];
     StencilRef = m_StencilRef;
 };
 
 template<typename BaseInterface>
-void DeviceContextBase<BaseInterface> :: GetRasterizerState(IRasterizerState **ppRS )
+inline bool DeviceContextBase<BaseInterface> ::SetBlendFactors(const float *BlendFactors, int)
 {
-    VERIFY( ppRS != nullptr, "Null pointer provided null" );
-    VERIFY( *ppRS == nullptr, "Memory address contains a pointer to a non-null rasterizer state" );
-    VERIFY( m_pRasterizerState, "No rasterizer state is bound. At least default state must always be bound. Did you forget to call CreateDefaultStates()?" );
-    m_pRasterizerState->QueryInterface( IID_RasterizerState, reinterpret_cast<IObject**>( ppRS ) );
-}
-
-template<typename BaseInterface>
-void DeviceContextBase<BaseInterface> :: GetBlendState( IBlendState **ppBS, float* BlendFactors, Uint32& SamplesBlendMask )
-{ 
-    VERIFY( ppBS != nullptr, "Null pointer provided null" );
-    VERIFY( *ppBS == nullptr, "Memory address contains a pointer to a non-null blend state" );
-    VERIFY( m_pBlendState, "No blend state is bound. At least default state must always be bound. Did you forget to call CreateDefaultStates()?" );
-    m_pBlendState->QueryInterface( IID_BlendState, reinterpret_cast<IObject**>( ppBS ) );
+    bool FactorsDiffer = false;
     for( Uint32 f = 0; f < 4; ++f )
-        BlendFactors[f] = m_BlendFactors[f];
-    SamplesBlendMask = m_SamplesBlendMask;
+    {
+        if( m_BlendFactors[f] != BlendFactors[f] )
+            FactorsDiffer = true;
+        m_BlendFactors[f] = BlendFactors[f];
+    }
+    return FactorsDiffer;
 }
 
 template<typename BaseInterface>
-void DeviceContextBase<BaseInterface> :: GetRenderTargetSize( Uint32 &RTWidth, Uint32 &RTHeight )
+inline bool DeviceContextBase<BaseInterface> :: SetStencilRef(Uint32 StencilRef, int)
+{
+    if (m_StencilRef != StencilRef)
+    {
+        m_StencilRef = StencilRef;
+        return true;
+    }
+    return false;
+}
+
+template<typename BaseInterface>
+inline void DeviceContextBase<BaseInterface> :: GetRenderTargetSize( Uint32 &RTWidth, Uint32 &RTHeight )
 {
     RTWidth  = 0;
     RTHeight = 0;
     // First, try to find non-null render target 
-    for( Uint32 rt = 0; rt < m_pBoundRenderTargets.size(); ++rt )
+    for( Uint32 rt = 0; rt < m_NumBoundRenderTargets; ++rt )
         if( auto *pRTView = m_pBoundRenderTargets[rt].RawPtr() )
         {
             // Use render target size as viewport size
@@ -487,22 +388,24 @@ void DeviceContextBase<BaseInterface> :: GetRenderTargetSize( Uint32 &RTWidth, U
 }
 
 template<typename BaseInterface>
-void DeviceContextBase<BaseInterface> :: SetViewports( Uint32 NumViewports, const Viewport *pViewports, Uint32 &RTWidth, Uint32 &RTHeight )
+inline void DeviceContextBase<BaseInterface> :: SetViewports( Uint32 NumViewports, const Viewport *pViewports, Uint32 &RTWidth, Uint32 &RTHeight )
 {
     if( RTWidth == 0 || RTHeight == 0 )
     {
         GetRenderTargetSize( RTWidth, RTHeight );
     }
 
-    m_Viewports.resize(NumViewports);
+    VERIFY(NumViewports < MaxRenderTargets, "Num viewports (", NumViewports,") exceeds the limit (", MaxRenderTargets, ")")
+    m_NumViewports = std::min(MaxRenderTargets, NumViewports);
+    
     Viewport DefaultVP( 0, 0, static_cast<float>(RTWidth), static_cast<float>(RTHeight) );
     // If no viewports are specified, use default viewport
-    if( NumViewports == 1 && pViewports == nullptr )
+    if( m_NumViewports == 1 && pViewports == nullptr )
     {
         pViewports = &DefaultVP;
     }
 
-    for( Uint32 vp = 0; vp < NumViewports; ++vp )
+    for( Uint32 vp = 0; vp < m_NumViewports; ++vp )
     {
         m_Viewports[vp] = pViewports[vp];
         VERIFY( m_Viewports[vp].Width  >= 0,  "Incorrect viewport width (",  m_Viewports[vp].Width,  ")" );
@@ -512,26 +415,28 @@ void DeviceContextBase<BaseInterface> :: SetViewports( Uint32 NumViewports, cons
 }
 
 template<typename BaseInterface>
-void DeviceContextBase<BaseInterface> :: GetViewports( Uint32 &NumViewports, Viewport *pViewports )
+inline void DeviceContextBase<BaseInterface> :: GetViewports( Uint32 &NumViewports, Viewport *pViewports )
 {
-    NumViewports = static_cast<Uint32>( m_Viewports.size() );
+    NumViewports = m_NumViewports;
     if( pViewports )
     {
-        for( Uint32 vp = 0; vp < m_Viewports.size(); ++vp )
+        for( Uint32 vp = 0; vp < m_NumViewports; ++vp )
             pViewports[vp] = m_Viewports[vp];
     }
 }
 
 template<typename BaseInterface>
-void DeviceContextBase<BaseInterface> :: SetScissorRects( Uint32 NumRects, const Rect *pRects, Uint32 &RTWidth, Uint32 &RTHeight )
+inline void DeviceContextBase<BaseInterface> :: SetScissorRects( Uint32 NumRects, const Rect *pRects, Uint32 &RTWidth, Uint32 &RTHeight )
 {
     if( RTWidth == 0 || RTHeight == 0 )
     {
         GetRenderTargetSize( RTWidth, RTHeight );
     }
 
-    m_ScissorRects.resize( NumRects );
-    for( Uint32 sr = 0; sr < NumRects; ++sr )
+    VERIFY(NumRects < MaxRenderTargets, "Num scissor rects (", NumRects,") exceeds the limit (", MaxRenderTargets, ")")
+    m_NumScissorRects = std::min(MaxRenderTargets, NumRects);
+
+    for( Uint32 sr = 0; sr < m_NumScissorRects; ++sr )
     {
         m_ScissorRects[sr] = pRects[sr];
         VERIFY( m_ScissorRects[sr].left <= m_ScissorRects[sr].right,  "Incorrect horizontal bounds for a scissor rect [", m_ScissorRects[sr].left, ", ", m_ScissorRects[sr].right,  ")" );
@@ -540,13 +445,16 @@ void DeviceContextBase<BaseInterface> :: SetScissorRects( Uint32 NumRects, const
 }
 
 template<typename BaseInterface>
-bool DeviceContextBase<BaseInterface> :: SetRenderTargets( Uint32 NumRenderTargets, ITextureView *ppRenderTargets[], ITextureView *pDepthStencil, Uint32 Dummy )
+inline bool DeviceContextBase<BaseInterface> :: SetRenderTargets( Uint32 NumRenderTargets, ITextureView *ppRenderTargets[], ITextureView *pDepthStencil, Uint32 Dummy )
 {
     bool bBindRenderTargets = false;
-    if( NumRenderTargets != m_pBoundRenderTargets.size() )
+    if( NumRenderTargets != m_NumBoundRenderTargets )
     {
         bBindRenderTargets = true;
-        m_pBoundRenderTargets.resize(NumRenderTargets);
+        for(Uint32 rt=NumRenderTargets; rt<m_NumBoundRenderTargets; ++rt )
+            m_pBoundRenderTargets[rt].Release();
+
+        m_NumBoundRenderTargets = NumRenderTargets;
     }
 
     for( Uint32 rt = 0; rt < NumRenderTargets; ++rt )
@@ -587,9 +495,9 @@ bool DeviceContextBase<BaseInterface> :: SetRenderTargets( Uint32 NumRenderTarge
 }
 
 template<typename BaseInterface>
-void DeviceContextBase<BaseInterface> :: GetRenderTargets( Uint32 &NumRenderTargets, ITextureView **ppRTVs, ITextureView **ppDSV )
+inline void DeviceContextBase<BaseInterface> :: GetRenderTargets( Uint32 &NumRenderTargets, ITextureView **ppRTVs, ITextureView **ppDSV )
 {
-    NumRenderTargets = static_cast<Uint32>( m_pBoundRenderTargets.size() );
+    NumRenderTargets = m_NumBoundRenderTargets;
 
     if( ppRTVs )
     {
@@ -620,40 +528,51 @@ void DeviceContextBase<BaseInterface> :: GetRenderTargets( Uint32 &NumRenderTarg
 }
 
 template<typename BaseInterface>
-void DeviceContextBase<BaseInterface> :: CreateDefaultStates()
+inline void DeviceContextBase<BaseInterface> :: ClearStateCache()
 {
-    DepthStencilStateDesc DefaultDSSDesc;
-    DefaultDSSDesc.Name = "Default depth stencil state";
-    m_pDevice->CreateDepthStencilState( DefaultDSSDesc, &m_pDefaultDSS );
-    
-    RasterizerStateDesc DefaultRSDesc;
-    DefaultRSDesc.Name = "Default rasterizer state";
-    m_pDevice->CreateRasterizerState( DefaultRSDesc, &m_pDefaultRS );
-
-    BlendStateDesc DefaultBlendState;
-    DefaultBlendState.Name = "Default blend state";
-    m_pDevice->CreateBlendState( DefaultBlendState, &m_pDefaultBS );
-
-    SetDepthStencilState( m_pDefaultDSS, 0 );
-    SetRasterizerState( m_pDefaultRS );
-    float BlendFactors[4] = { 1, 1, 1, 1 };
-    SetBlendState( m_pDefaultBS, BlendFactors, 0xFFFFFFFF );
-}
-
-template<typename BaseInterface>
-void DeviceContextBase<BaseInterface> :: GetShaders( IShader **ppShaders, Uint32 &NumShaders )
-{
-    NumShaders = static_cast<Uint32>( m_pBoundShaders.size() );
-    if( ppShaders == nullptr )
-        return;
-    for( Uint32 s = 0; s < NumShaders; ++s )
-    { 
-        VERIFY( ppShaders[s] == nullptr, "Non-null pointer found in shader array element #", s );
-        if( auto pBoundShader = m_pBoundShaders[s] )
-            pBoundShader->QueryInterface( IID_Shader, reinterpret_cast<IObject**>( ppShaders + s ) );
-        else
-            ppShaders[s] = nullptr;
+    for(Uint32 stream=0; stream < m_NumVertexStreams; ++stream)
+        m_VertexStreams[stream] = VertexStreamInfo();
+#ifdef _DEBUG
+    for(Uint32 stream=m_NumVertexStreams; stream < _countof(m_VertexStreams); ++stream)
+    {
+        VERIFY(m_VertexStreams[stream].pBuffer == nullptr, "Unexpected non-null buffer");
+        VERIFY(m_VertexStreams[stream].Offset == 0, "Unexpected non-zero offset");
+        VERIFY(m_VertexStreams[stream].Stride == 0, "Unexpected non-zero stride");
     }
+#endif
+    m_NumVertexStreams = 0;
+
+    m_pPipelineState.Release();
+
+    m_pIndexBuffer.Release();
+    m_IndexDataStartOffset = 0;
+
+    m_StencilRef = 0;
+
+    for( int i = 0; i < 4; ++i )
+        m_BlendFactors[i] = -1;
+
+	for(Uint32 vp=0; vp < m_NumViewports; ++vp)
+        m_Viewports[vp] = Viewport();
+    m_NumViewports = 0;
+
+	for(Uint32 sr=0; sr < m_NumScissorRects; ++sr)
+        m_ScissorRects[sr] = Rect();
+    m_NumScissorRects = 0;
+
+    /// Vector of strong references to bound render targets
+    for(Uint32 rt=0; rt < m_NumBoundRenderTargets; ++rt )
+        m_pBoundRenderTargets[rt].Release();
+#ifdef _DEBUG
+    for (Uint32 rt = m_NumBoundRenderTargets; rt < _countof(m_pBoundRenderTargets); ++rt)
+    {
+        VERIFY(m_pBoundRenderTargets[rt] == nullptr, "Non-null render target found")
+    }
+#endif
+    // Set this to max RT count to force render targets to be bound next time
+    m_NumBoundRenderTargets = _countof(m_pBoundRenderTargets);
+
+    m_pBoundDepthStencil.Release();
 }
 
 }

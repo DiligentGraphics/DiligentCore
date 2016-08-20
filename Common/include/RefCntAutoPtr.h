@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -66,18 +66,8 @@ class RefCntWeakPtr;
 // RefCntWeakPtr<ObjectBase> pWeakPtr(pRawPtr);
 //
 
-template<typename T>
-class DefaultBlockAddRefRelease : public T
-{
-private:
-	// Note that the null pointer constant nullptr or any other value of type std::nullptr_t 
-	// cannot be converted to a pointer with reinterpret_cast: implicit conversion or 
-	// static_cast should be used for this purpose.
-	virtual decltype( static_cast<T*>(nullptr)->AddRef() )  AddRef()override  = 0;
-	virtual decltype( static_cast<T*>(nullptr)->Release() ) Release()override = 0;
-};
-
-template <typename T, template<typename> class BlockAddRefRelease = DefaultBlockAddRefRelease>
+/// Template class that implements reference counting
+template <typename T>
 class RefCntAutoPtr
 {
 public:
@@ -86,6 +76,13 @@ public:
     {
         if( m_pObject )
             m_pObject->AddRef();
+    }
+
+    RefCntAutoPtr(IObject *pObj, const INTERFACE_ID &IID) :
+        m_pObject(nullptr)
+    {
+        if(pObj)
+            pObj->QueryInterface( IID, reinterpret_cast<IObject**>(&m_pObject) );
     }
 
     RefCntAutoPtr(const RefCntAutoPtr &AutoPtr) : 
@@ -186,8 +183,18 @@ public:
     operator const T* ()const { return RawPtr(); }
 
 
-		  BlockAddRefRelease<T>* operator -> ()     { return static_cast<BlockAddRefRelease<T>*> (m_pObject); }
-    const BlockAddRefRelease<T>* operator -> ()const{ return static_cast<BlockAddRefRelease<T>*> (m_pObject); }
+    class BlockAddRefRelease : public T
+    {
+    private:
+	    // Note that the null pointer constant nullptr or any other value of type std::nullptr_t 
+	    // cannot be converted to a pointer with reinterpret_cast: implicit conversion or 
+	    // static_cast should be used for this purpose.
+	    virtual decltype( static_cast<T*>(nullptr)->AddRef() )  AddRef()override  = 0;
+	    virtual decltype( static_cast<T*>(nullptr)->Release() ) Release()override = 0;
+    };
+
+		  BlockAddRefRelease* operator -> ()     { return static_cast<BlockAddRefRelease*> (m_pObject); }
+    const BlockAddRefRelease* operator -> ()const{ return static_cast<BlockAddRefRelease*> (m_pObject); }
 
 private:
     // Note that the DoublePtrHelper is a private class, and can be created only by RefCntWeakPtr

@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -34,7 +34,8 @@ namespace Diligent
     enum class DeviceType : Int32
     {
         Undefined = 0,  ///< Undefined device
-        DirectX,    ///< DirectX device
+        D3D11,      ///< D3D11 device
+        D3D12,      ///< D3D12 device
         OpenGL,     ///< OpenGL device 
         OpenGLES    ///< OpenGLES device
     };
@@ -77,13 +78,17 @@ namespace Diligent
         /// Indicates if device supports texture views
         bool bTextureViewSupported;
 
+        /// Indicates if device supports cubemap arrays
+        bool bCubemapArraysSupported;
+
         /// Initializes the structure members with default values
         TextureCaps():
             bTexture1DSupported( True ),
             bTexture1DArraySupported( True ),
             bTexture2DMSSupported( True ),
             bTexture2DMSArraySupported( True ),
-            bTextureViewSupported( True )
+            bTextureViewSupported( True ),
+            bCubemapArraysSupported( True )
         {}
     };
     
@@ -110,6 +115,9 @@ namespace Diligent
         /// Indicates if device supports wireframe fill mode
         Bool bWireframeFillSupported;
 
+        /// Indicates if device supports multithreaded resource creation
+        Bool bMultithreadedResourceCreationSupported;
+
         /// Texture sampling capabilities. See Diligent::SamplerCaps.
         SamplerCaps SamCaps;
 
@@ -123,7 +131,8 @@ namespace Diligent
             MinorVersion( 0 ),
             bSeparableProgramSupported( True ),
             bIndirectRenderingSupported( True ),
-            bWireframeFillSupported( True )
+            bWireframeFillSupported( True ),
+            bMultithreadedResourceCreationSupported( False )
         {}
     };
 }

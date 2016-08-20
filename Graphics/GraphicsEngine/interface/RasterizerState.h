@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -24,9 +24,9 @@
 #pragma once
 
 /// \file
-/// Definition of the Diligent::IRasterizerState interface and related data structures
+/// Rasterizer state description
 
-#include "DeviceObject.h"
+#include "BasicTypes.h"
 
 namespace Diligent
 {
@@ -34,19 +34,20 @@ namespace Diligent
 /// Fill mode
 
 /// [D3D11_FILL_MODE]: https://msdn.microsoft.com/en-us/library/windows/desktop/ff476131(v=vs.85).aspx
-/// This enumeration determines the fill mode to use when rendering triangles and mirrows the 
-/// [D3D11_FILL_MODE][] enum. It is used by RasterizerStateDesc structure to define the fill mode.
+/// [D3D12_FILL_MODE]: https://msdn.microsoft.com/en-us/library/windows/desktop/dn770366(v=vs.85).aspx
+/// This enumeration determines the fill mode to use when rendering triangles and mirrors the 
+/// [D3D11_FILL_MODE][]/[D3D12_FILL_MODE][] enum. It is used by RasterizerStateDesc structure to define the fill mode.
 enum FILL_MODE : Int32
 { 
     /// Undefined fill mode.
     FILL_MODE_UNDEFINED = 0,
 
     /// Rasterize triangles using wireframe fill. \n
-    /// D3D11 counterpart: D3D11_FILL_WIREFRAME. OpenGL counterpart: GL_LINE.
+    /// Direct3D counterpart: D3D11_FILL_WIREFRAME/D3D12_FILL_MODE_WIREFRAME. OpenGL counterpart: GL_LINE.
     FILL_MODE_WIREFRAME,    
 
     /// Rasterize triangles using solid fill. \n
-    /// D3D11 counterpart: D3D11_FILL_SOLID. OpenGL counterpart: GL_FILL.
+    /// Direct3D counterpart: D3D11_FILL_SOLID/D3D12_FILL_MODE_SOLID. OpenGL counterpart: GL_FILL.
     FILL_MODE_SOLID,        
 
     /// Helper value that stores the total number of fill modes in the enumeration.
@@ -56,40 +57,37 @@ enum FILL_MODE : Int32
 /// Cull mode
 
 /// [D3D11_CULL_MODE]: https://msdn.microsoft.com/en-us/library/windows/desktop/ff476108(v=vs.85).aspx
-/// This enumeration defines which triangles are not drawn during the rasterization and mirrows
-/// [D3D11_CULL_MODE][] enum. It is used by RasterizerStateDesc structure to define the polygin cull mode.
+/// [D3D12_CULL_MODE]: https://msdn.microsoft.com/en-us/library/windows/desktop/dn770354(v=vs.85).aspx
+/// This enumeration defines which triangles are not drawn during the rasterization and mirrors
+/// [D3D11_CULL_MODE][]/[D3D12_CULL_MODE][] enum. It is used by RasterizerStateDesc structure to define the polygon cull mode.
 enum CULL_MODE : Int32
 {
     /// Undefined cull mode.
     CULL_MODE_UNDEFINED = 0,
 
     /// Draw all triangles. \n
-    /// D3D11 counterpart: D3D11_CULL_NONE. OpenGL counterpart: glDisable( GL_CULL_FACE ).
+    /// Direct3D counterpart: D3D11_CULL_NONE/D3D12_CULL_MODE_NONE. OpenGL counterpart: glDisable( GL_CULL_FACE ).
     CULL_MODE_NONE,
 
     /// Do not draw triangles that are front-facing. Front- and back-facing triangles are determined
     /// by the RasterizerStateDesc::FrontCounterClockwise member. \n
-    /// D3D11 counterpart: D3D11_CULL_FRONT. OpenGL counterpart: GL_FRONT.
+    /// Direct3D counterpart: D3D11_CULL_FRONT/D3D12_CULL_MODE_FRONT. OpenGL counterpart: GL_FRONT.
     CULL_MODE_FRONT,
 
     /// Do not draw triangles that are back-facing. Front- and back-facing triangles are determined
     /// by the RasterizerStateDesc::FrontCounterClockwise member. \n
-    /// D3D11 counterpart: D3D11_CULL_BACK. OpenGL counterpart: GL_BACK.
+    /// Direct3D counterpart: D3D11_CULL_BACK/D3D12_CULL_MODE_BACK. OpenGL counterpart: GL_BACK.
     CULL_MODE_BACK,
 
     /// Helper value that stores the total number of cull modes in the enumeration.
     CULL_MODE_NUM_MODES
 };
 
-// {530A181E-2777-4DAA-B837-ED7D3C28418E}
-static const Diligent::INTERFACE_ID IID_RasterizerState =
-{ 0x530a181e, 0x2777, 0x4daa, { 0xb8, 0x37, 0xed, 0x7d, 0x3c, 0x28, 0x41, 0x8e } };
 
 /// Rasterizer state description
 
-/// This structure describes the rasterizer state which is used in a call to 
-/// IRenderDevice::CreateRasterizerState() to create a rasterizer state object
-struct RasterizerStateDesc : DeviceObjectAttribs
+/// This structure describes the rasterizer state and is part of the GraphicsPipelineDesc.
+struct RasterizerStateDesc
 {
     /// Determines traingle fill mode, see Diligent::FILL_MODE for details.
     FILL_MODE FillMode;
@@ -157,14 +155,9 @@ struct RasterizerStateDesc : DeviceObjectAttribs
     /// \return 
     /// - True if all members of the two structures are equal.
     /// - False otherwise
-    /// The operator ignores DeviceObjectAttribs::Name field as it does not affect 
-    /// the rasterizer state.
     bool operator == (const RasterizerStateDesc& RHS)const
     {
-                // Name is primarily used for debug purposes and does not affect the state.
-                // It is ignored in comparison operation.
-        return  // strcmp(Name, RHS.Name) == 0                       &&
-                FillMode              == RHS.FillMode              &&
+        return  FillMode              == RHS.FillMode              &&
                 CullMode              == RHS.CullMode              &&
                 FrontCounterClockwise == RHS.FrontCounterClockwise &&
                 DepthBias             == RHS.DepthBias             &&
@@ -174,21 +167,6 @@ struct RasterizerStateDesc : DeviceObjectAttribs
                 ScissorEnable         == RHS.ScissorEnable         &&
                 AntialiasedLineEnable == RHS.AntialiasedLineEnable;
     }
-};
-
-/// Rasterizer state interface
-
-/// The interface holds the rasterizer state object that can be bound to the pipeline by a call
-/// to IDeviceContext::SetRasterizerState(). To create a rasterizer state, call 
-/// IRenderDevice::CreateRasterizerState().
-class IRasterizerState : public IDeviceObject
-{
-public:
-    /// Queries the specific interface, see IObject::QueryInterface() for details
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface ) = 0;
-
-    /// Returns the rasterizer state description used to create the object
-    virtual const RasterizerStateDesc& GetDesc()const = 0;
 };
 
 }

@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -395,5 +395,7 @@ namespace Diligent
         TexCaps.bTexture2DMSSupported          = IsGLES31OrAbove;
         TexCaps.bTexture2DMSArraySupported     = False;     // Not supported in GLES 3.1
         TexCaps.bTextureViewSupported          = False;     // Not supported in GLES 3.1
+        TexCaps.bCubemapArraysSupported        = False;     // Not supported in GLES 3.1
+        DeviceCaps.bMultithreadedResourceCreationSupported = False;
     }
 }

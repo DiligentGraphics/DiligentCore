@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -25,7 +25,6 @@
 #include "RenderDeviceD3D11Impl.h"
 #include "DeviceContextD3D11Impl.h"
 #include "BufferD3D11Impl.h"
-#include "VertexDescD3D11Impl.h"
 #include "ShaderD3D11Impl.h"
 #include "Texture1D_D3D11.h"
 #include "Texture2D_D3D11.h"
@@ -33,129 +32,25 @@
 #include "SamplerD3D11Impl.h"
 #include "D3D11TypeConversions.h"
 #include "TextureViewD3D11Impl.h"
-#include "DSStateD3D11Impl.h"
-#include "RasterizerStateD3D11Impl.h"
-#include "BlendStateD3D11Impl.h"
+#include "PipelineStateD3D11Impl.h"
+#include "ShaderResourceBindingD3D11Impl.h"
+#include "EngineMemory.h"
 
 namespace Diligent
 {
 
-RenderDeviceD3D11Impl :: RenderDeviceD3D11Impl(ID3D11Device *pd3d11Device) : 
+RenderDeviceD3D11Impl :: RenderDeviceD3D11Impl(IMemoryAllocator &RawMemAllocator, const EngineD3D11Attribs& EngineAttribs, ID3D11Device *pd3d11Device, Uint32 NumDeferredContexts) : 
+    TRenderDeviceBase(RawMemAllocator, NumDeferredContexts, sizeof(TextureBaseD3D11), sizeof(TextureViewD3D11Impl), sizeof(BufferD3D11Impl), sizeof(BufferViewD3D11Impl), sizeof(ShaderD3D11Impl), sizeof(SamplerD3D11Impl), sizeof(PipelineStateD3D11Impl), sizeof(ShaderResourceBindingD3D11Impl)),
+    m_EngineAttribs(EngineAttribs),
     m_pd3d11Device(pd3d11Device)
 {
-    m_DeviceCaps.DevType = DeviceType::DirectX;
+    m_DeviceCaps.DevType = DeviceType::D3D11;
     m_DeviceCaps.MajorVersion = 11;
     m_DeviceCaps.MinorVersion = 0;
-    m_DeviceCaps.bSeparableProgramSupported = true;
-
-    FlagSupportedTexFormats();
+    m_DeviceCaps.bSeparableProgramSupported = True;
+    m_DeviceCaps.bMultithreadedResourceCreationSupported = True;
 }
 
-void RenderDeviceD3D11Impl::FlagSupportedTexFormats()
-{
-#define FLAG_FORMAT(Fmt, IsSupported)\
-    m_TextureFormatsInfo[Fmt].Supported  = IsSupported;
-
-    FLAG_FORMAT(TEX_FORMAT_RGBA32_TYPELESS,            true);
-    FLAG_FORMAT(TEX_FORMAT_RGBA32_FLOAT,               true);
-    FLAG_FORMAT(TEX_FORMAT_RGBA32_UINT,                true);
-    FLAG_FORMAT(TEX_FORMAT_RGBA32_SINT,                true);
-    FLAG_FORMAT(TEX_FORMAT_RGB32_TYPELESS,             true);
-    FLAG_FORMAT(TEX_FORMAT_RGB32_FLOAT,                true);
-    FLAG_FORMAT(TEX_FORMAT_RGB32_UINT,                 true);
-    FLAG_FORMAT(TEX_FORMAT_RGB32_SINT,                 true);
-    FLAG_FORMAT(TEX_FORMAT_RGBA16_TYPELESS,            true);
-    FLAG_FORMAT(TEX_FORMAT_RGBA16_FLOAT,               true);
-    FLAG_FORMAT(TEX_FORMAT_RGBA16_UNORM,               true);
-    FLAG_FORMAT(TEX_FORMAT_RGBA16_UINT,                true);
-    FLAG_FORMAT(TEX_FORMAT_RGBA16_SNORM,               true);
-    FLAG_FORMAT(TEX_FORMAT_RGBA16_SINT,                true);
-    FLAG_FORMAT(TEX_FORMAT_RG32_TYPELESS,              true);
-    FLAG_FORMAT(TEX_FORMAT_RG32_FLOAT,                 true);
-    FLAG_FORMAT(TEX_FORMAT_RG32_UINT,                  true);
-    FLAG_FORMAT(TEX_FORMAT_RG32_SINT,                  true);
-    FLAG_FORMAT(TEX_FORMAT_R32G8X24_TYPELESS,          true);
-    FLAG_FORMAT(TEX_FORMAT_D32_FLOAT_S8X24_UINT,       true);
-    FLAG_FORMAT(TEX_FORMAT_R32_FLOAT_X8X24_TYPELESS,   true);
-    FLAG_FORMAT(TEX_FORMAT_X32_TYPELESS_G8X24_UINT,    true);
-    FLAG_FORMAT(TEX_FORMAT_RGB10A2_TYPELESS,           true);
-    FLAG_FORMAT(TEX_FORMAT_RGB10A2_UNORM,              true);
-    FLAG_FORMAT(TEX_FORMAT_RGB10A2_UINT,               true);
-    FLAG_FORMAT(TEX_FORMAT_R11G11B10_FLOAT,            true);
-    FLAG_FORMAT(TEX_FORMAT_RGBA8_TYPELESS,             true);
-    FLAG_FORMAT(TEX_FORMAT_RGBA8_UNORM,                true);
-    FLAG_FORMAT(TEX_FORMAT_RGBA8_UNORM_SRGB,           true);
-    FLAG_FORMAT(TEX_FORMAT_RGBA8_UINT,                 true);
-    FLAG_FORMAT(TEX_FORMAT_RGBA8_SNORM,                true);
-    FLAG_FORMAT(TEX_FORMAT_RGBA8_SINT,                 true);
-    FLAG_FORMAT(TEX_FORMAT_RG16_TYPELESS,              true);
-    FLAG_FORMAT(TEX_FORMAT_RG16_FLOAT,                 true);
-    FLAG_FORMAT(TEX_FORMAT_RG16_UNORM,                 true);
-    FLAG_FORMAT(TEX_FORMAT_RG16_UINT,                  true);
-    FLAG_FORMAT(TEX_FORMAT_RG16_SNORM,                 true);
-    FLAG_FORMAT(TEX_FORMAT_RG16_SINT,                  true);
-    FLAG_FORMAT(TEX_FORMAT_R32_TYPELESS,               true);
-    FLAG_FORMAT(TEX_FORMAT_D32_FLOAT,                  true);
-    FLAG_FORMAT(TEX_FORMAT_R32_FLOAT,                  true);
-    FLAG_FORMAT(TEX_FORMAT_R32_UINT,                   true);
-    FLAG_FORMAT(TEX_FORMAT_R32_SINT,                   true);
-    FLAG_FORMAT(TEX_FORMAT_R24G8_TYPELESS,             true);
-    FLAG_FORMAT(TEX_FORMAT_D24_UNORM_S8_UINT,          true);
-    FLAG_FORMAT(TEX_FORMAT_R24_UNORM_X8_TYPELESS,      true);
-    FLAG_FORMAT(TEX_FORMAT_X24_TYPELESS_G8_UINT,       true);
-    FLAG_FORMAT(TEX_FORMAT_RG8_TYPELESS,               true);
-    FLAG_FORMAT(TEX_FORMAT_RG8_UNORM,                  true);
-    FLAG_FORMAT(TEX_FORMAT_RG8_UINT,                   true);
-    FLAG_FORMAT(TEX_FORMAT_RG8_SNORM,                  true);
-    FLAG_FORMAT(TEX_FORMAT_RG8_SINT,                   true);
-    FLAG_FORMAT(TEX_FORMAT_R16_TYPELESS,               true);
-    FLAG_FORMAT(TEX_FORMAT_R16_FLOAT,                  true);
-    FLAG_FORMAT(TEX_FORMAT_D16_UNORM,                  true);
-    FLAG_FORMAT(TEX_FORMAT_R16_UNORM,                  true);
-    FLAG_FORMAT(TEX_FORMAT_R16_UINT,                   true);
-    FLAG_FORMAT(TEX_FORMAT_R16_SNORM,                  true);
-    FLAG_FORMAT(TEX_FORMAT_R16_SINT,                   true);
-    FLAG_FORMAT(TEX_FORMAT_R8_TYPELESS,                true);
-    FLAG_FORMAT(TEX_FORMAT_R8_UNORM,                   true);
-    FLAG_FORMAT(TEX_FORMAT_R8_UINT,                    true);
-    FLAG_FORMAT(TEX_FORMAT_R8_SNORM,                   true);
-    FLAG_FORMAT(TEX_FORMAT_R8_SINT,                    true);
-    FLAG_FORMAT(TEX_FORMAT_A8_UNORM,                   true);
-    FLAG_FORMAT(TEX_FORMAT_R1_UNORM,                   true);
-    FLAG_FORMAT(TEX_FORMAT_RGB9E5_SHAREDEXP,           true);
-    FLAG_FORMAT(TEX_FORMAT_RG8_B8G8_UNORM,             true);
-    FLAG_FORMAT(TEX_FORMAT_G8R8_G8B8_UNORM,            true);
-    FLAG_FORMAT(TEX_FORMAT_BC1_TYPELESS,               true);
-    FLAG_FORMAT(TEX_FORMAT_BC1_UNORM,                  true);
-    FLAG_FORMAT(TEX_FORMAT_BC1_UNORM_SRGB,             true);
-    FLAG_FORMAT(TEX_FORMAT_BC2_TYPELESS,               true);
-    FLAG_FORMAT(TEX_FORMAT_BC2_UNORM,                  true);
-    FLAG_FORMAT(TEX_FORMAT_BC2_UNORM_SRGB,             true);
-    FLAG_FORMAT(TEX_FORMAT_BC3_TYPELESS,               true);
-    FLAG_FORMAT(TEX_FORMAT_BC3_UNORM,                  true);
-    FLAG_FORMAT(TEX_FORMAT_BC3_UNORM_SRGB,             true);
-    FLAG_FORMAT(TEX_FORMAT_BC4_TYPELESS,               true);
-    FLAG_FORMAT(TEX_FORMAT_BC4_UNORM,                  true);
-    FLAG_FORMAT(TEX_FORMAT_BC4_SNORM,                  true);
-    FLAG_FORMAT(TEX_FORMAT_BC5_TYPELESS,               true);
-    FLAG_FORMAT(TEX_FORMAT_BC5_UNORM,                  true);
-    FLAG_FORMAT(TEX_FORMAT_BC5_SNORM,                  true);
-    FLAG_FORMAT(TEX_FORMAT_B5G6R5_UNORM,               true);
-    FLAG_FORMAT(TEX_FORMAT_B5G5R5A1_UNORM,             true);
-    FLAG_FORMAT(TEX_FORMAT_BGRA8_UNORM,                true);
-    FLAG_FORMAT(TEX_FORMAT_BGRX8_UNORM,                true);
-    FLAG_FORMAT(TEX_FORMAT_R10G10B10_XR_BIAS_A2_UNORM, true);
-    FLAG_FORMAT(TEX_FORMAT_BGRA8_TYPELESS,             true);
-    FLAG_FORMAT(TEX_FORMAT_BGRA8_UNORM_SRGB,           true);
-    FLAG_FORMAT(TEX_FORMAT_BGRX8_TYPELESS,             true);
-    FLAG_FORMAT(TEX_FORMAT_BGRX8_UNORM_SRGB,           true);
-    FLAG_FORMAT(TEX_FORMAT_BC6H_TYPELESS,              true);
-    FLAG_FORMAT(TEX_FORMAT_BC6H_UF16,                  true);
-    FLAG_FORMAT(TEX_FORMAT_BC6H_SF16,                  true);
-    FLAG_FORMAT(TEX_FORMAT_BC7_TYPELESS,               true);
-    FLAG_FORMAT(TEX_FORMAT_BC7_UNORM,                  true);
-    FLAG_FORMAT(TEX_FORMAT_BC7_UNORM_SRGB,             true);
-}
 
 bool CreateTestTexture1D(ID3D11Device *pDevice, const D3D11_TEXTURE1D_DESC &TexDesc)
 {
@@ -261,7 +156,8 @@ void RenderDeviceD3D11Impl::TestTextureFormat( TEXTURE_FORMAT TexFormat )
                     TexFormatInfo.SupportsMS = CreateTestTexture2D( m_pd3d11Device, Tex2DDesc );
                 }
             }
-            else if( TexFormatInfo.ComponentType != COMPONENT_TYPE_COMPRESSED )
+            else if( TexFormatInfo.ComponentType != COMPONENT_TYPE_COMPRESSED && 
+                     TexFormatInfo.Format != DXGI_FORMAT_R9G9B9E5_SHAREDEXP)
             {
                 Tex2DDesc.BindFlags = D3D11_BIND_RENDER_TARGET;
                 TexFormatInfo.ColorRenderable = CreateTestTexture2D( m_pd3d11Device, Tex2DDesc );
@@ -303,23 +199,10 @@ void RenderDeviceD3D11Impl :: CreateBuffer(const BufferDesc& BuffDesc, const Buf
     CreateDeviceObject("buffer", BuffDesc, ppBuffer, 
         [&]()
         {
-            BufferD3D11Impl *pBufferD3D11( new BufferD3D11Impl( this, BuffDesc, BuffData ) );
+            BufferD3D11Impl *pBufferD3D11( NEW(m_BufObjAllocator, "BufferD3D11Impl instance", BufferD3D11Impl, m_BuffViewObjAllocator, this, BuffDesc, BuffData ) );
             pBufferD3D11->QueryInterface( IID_Buffer, reinterpret_cast<IObject**>(ppBuffer) );
             pBufferD3D11->CreateDefaultViews();
             OnCreateDeviceObject( pBufferD3D11 );
-        } 
-    );
-}
-
-void RenderDeviceD3D11Impl :: CreateVertexDescription(const LayoutDesc& LayoutDesc, IShader *pVertexShader, IVertexDescription **ppVertexDesc)
-{
-    CreateDeviceObject( "vertex description", LayoutDesc, ppVertexDesc, 
-        [&]()
-        {
-            VertexDescD3D11Impl *pDescD3D11( new VertexDescD3D11Impl( this, LayoutDesc, pVertexShader ) );
-            pDescD3D11->QueryInterface( IID_VertexDescription, reinterpret_cast<IObject**>(ppVertexDesc) );
-
-            OnCreateDeviceObject( pDescD3D11 );
         } 
     );
 }
@@ -329,7 +212,7 @@ void RenderDeviceD3D11Impl :: CreateShader(const ShaderCreationAttribs &ShaderCr
     CreateDeviceObject( "shader", ShaderCreationAttribs.Desc, ppShader, 
         [&]()
         {
-            ShaderD3D11Impl *pShaderD3D11( new ShaderD3D11Impl( this, ShaderCreationAttribs ) );
+            ShaderD3D11Impl *pShaderD3D11( NEW(m_ShaderObjAllocator, "ShaderD3D11Impl instance", ShaderD3D11Impl, this, ShaderCreationAttribs ) );
             pShaderD3D11->QueryInterface( IID_Shader, reinterpret_cast<IObject**>(ppShader) );
 
             OnCreateDeviceObject( pShaderD3D11 );
@@ -345,18 +228,20 @@ void RenderDeviceD3D11Impl :: CreateTexture(const TextureDesc& TexDesc, const Te
             TextureBaseD3D11 *pTextureD3D11 = nullptr;
             switch( TexDesc.Type )
             {
-                case TEXTURE_TYPE_1D:
-                case TEXTURE_TYPE_1D_ARRAY:
-                    pTextureD3D11 = new Texture1D_D3D11( this, TexDesc, Data );
+                case RESOURCE_DIM_TEX_1D:
+                case RESOURCE_DIM_TEX_1D_ARRAY:
+                    pTextureD3D11 = NEW(m_TexObjAllocator, "Texture1D_D3D11 instance", Texture1D_D3D11, m_TexViewObjAllocator, this, TexDesc, Data );
                 break;
 
-                case TEXTURE_TYPE_2D:
-                case TEXTURE_TYPE_2D_ARRAY:
-                    pTextureD3D11 = new Texture2D_D3D11( this, TexDesc, Data );
+                case RESOURCE_DIM_TEX_2D:
+                case RESOURCE_DIM_TEX_2D_ARRAY:
+                case RESOURCE_DIM_TEX_CUBE:
+                case RESOURCE_DIM_TEX_CUBE_ARRAY:
+                    pTextureD3D11 = NEW(m_TexObjAllocator, "Texture2D_D3D11 instance", Texture2D_D3D11, m_TexViewObjAllocator, this, TexDesc, Data );
                 break;
 
-                case TEXTURE_TYPE_3D:
-                    pTextureD3D11 = new Texture3D_D3D11( this, TexDesc, Data );
+                case RESOURCE_DIM_TEX_3D:
+                    pTextureD3D11 = NEW(m_TexObjAllocator, "Texture3D_D3D11 instance", Texture3D_D3D11, m_TexViewObjAllocator, this, TexDesc, Data );
                 break;
 
                 default: LOG_ERROR_AND_THROW( "Unknown texture type. (Did you forget to initialize the Type member of TextureDesc structure?)" );
@@ -376,7 +261,7 @@ void RenderDeviceD3D11Impl :: CreateSampler(const SamplerDesc& SamplerDesc, ISam
             m_SamplersRegistry.Find( SamplerDesc, reinterpret_cast<IDeviceObject**>(ppSampler) );
             if( *ppSampler == nullptr )
             {
-                SamplerD3D11Impl *pSamplerD3D11( new SamplerD3D11Impl( this, SamplerDesc ) );
+                SamplerD3D11Impl *pSamplerD3D11( NEW(m_SamplerObjAllocator, "SamplerD3D11Impl instance",  SamplerD3D11Impl, this, SamplerDesc ) );
                 pSamplerD3D11->QueryInterface( IID_Sampler, reinterpret_cast<IObject**>(ppSampler) );
                 OnCreateDeviceObject( pSamplerD3D11 );
                 m_SamplersRegistry.Add( SamplerDesc, *ppSampler );
@@ -385,54 +270,14 @@ void RenderDeviceD3D11Impl :: CreateSampler(const SamplerDesc& SamplerDesc, ISam
     );
 }
 
-void RenderDeviceD3D11Impl::CreateDepthStencilState( const DepthStencilStateDesc &DSSDesc, IDepthStencilState **ppDepthStencilState )
+void RenderDeviceD3D11Impl::CreatePipelineState(const PipelineStateDesc &PipelineDesc, IPipelineState **ppPipelineState)
 {
-    CreateDeviceObject( "depth-stencil state", DSSDesc, ppDepthStencilState, 
+    CreateDeviceObject( "Pipeline state", PipelineDesc, ppPipelineState, 
         [&]()
         {
-            m_DSSRegistry.Find( DSSDesc, reinterpret_cast<IDeviceObject**>(ppDepthStencilState) );
-            if( *ppDepthStencilState == nullptr )
-            {
-                DSStateD3D11Impl *pDepthStencilStateD3D11( new DSStateD3D11Impl( this, DSSDesc ) );
-                pDepthStencilStateD3D11->QueryInterface( IID_DepthStencilState, reinterpret_cast<IObject**>(ppDepthStencilState) );
-                OnCreateDeviceObject( pDepthStencilStateD3D11 );
-                m_DSSRegistry.Add( DSSDesc, *ppDepthStencilState );
-            }
-        } 
-    );
-}
-
-void RenderDeviceD3D11Impl::CreateRasterizerState( const RasterizerStateDesc &RSDesc, IRasterizerState **ppRasterizerState )
-{
-    CreateDeviceObject( "rasterizer state", RSDesc, ppRasterizerState, 
-        [&]()
-        {
-            m_RSRegistry.Find( RSDesc, reinterpret_cast<IDeviceObject**>(ppRasterizerState) );
-            if( *ppRasterizerState == nullptr )
-            {
-                RasterizerStateD3D11Impl *pRasterizerStateD3D11( new RasterizerStateD3D11Impl( this, RSDesc ) );
-                pRasterizerStateD3D11->QueryInterface( IID_RasterizerState, reinterpret_cast<IObject**>(ppRasterizerState) );
-                OnCreateDeviceObject( pRasterizerStateD3D11 );
-                m_RSRegistry.Add( RSDesc, *ppRasterizerState );
-            }
-        } 
-    );
-}
-
-
-void RenderDeviceD3D11Impl::CreateBlendState( const BlendStateDesc &BSDesc, IBlendState **ppBlendState )
-{
-    CreateDeviceObject( "blend state", BSDesc, ppBlendState, 
-        [&]()
-        {
-            m_BSRegistry.Find( BSDesc, reinterpret_cast<IDeviceObject**>(ppBlendState) );
-            if( *ppBlendState == nullptr )
-            {
-                BlendStateD3D11Impl *pBlendStateD3D11( new BlendStateD3D11Impl( this, BSDesc ) );
-                pBlendStateD3D11->QueryInterface( IID_BlendState, reinterpret_cast<IObject**>(ppBlendState) );
-                OnCreateDeviceObject( pBlendStateD3D11 );
-                m_BSRegistry.Add( BSDesc, *ppBlendState );
-            }
+            PipelineStateD3D11Impl *pPipelineStateD3D11( NEW(m_PSOAllocator, "PipelineStateD3D11Impl instance", PipelineStateD3D11Impl, this, PipelineDesc ) );
+            pPipelineStateD3D11->QueryInterface( IID_PipelineState, reinterpret_cast<IObject**>(ppPipelineState) );
+            OnCreateDeviceObject( pPipelineStateD3D11 );
         } 
     );
 }

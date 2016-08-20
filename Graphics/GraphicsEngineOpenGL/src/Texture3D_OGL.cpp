@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -32,17 +32,18 @@
 namespace Diligent
 {
 
-Texture3D_OGL::Texture3D_OGL( class RenderDeviceGLImpl *pDeviceGL, 
+Texture3D_OGL::Texture3D_OGL( FixedBlockMemoryAllocator& TexObjAllocator, 
+                              FixedBlockMemoryAllocator& TexViewObjAllocator,
+                              class RenderDeviceGLImpl *pDeviceGL, 
                               class DeviceContextGLImpl *pDeviceContext, 
                               const TextureDesc& TexDesc, 
                               const TextureData &InitData /*= TextureData()*/,
 						      bool bIsDeviceInternal /*= false*/) : 
-    TextureBaseGL(pDeviceGL, TexDesc, InitData, bIsDeviceInternal)
+    TextureBaseGL(TexObjAllocator, TexViewObjAllocator, pDeviceGL, TexDesc, GL_TEXTURE_3D, InitData, bIsDeviceInternal)
 {
     auto &ContextState = pDeviceContext->GetContextState();
-
-    m_BindTarget = GL_TEXTURE_3D;
     ContextState.BindTexture(-1, m_BindTarget, m_GlTexture);
+
     //                             levels             format          width        height          depth
     glTexStorage3D(m_BindTarget, m_Desc.MipLevels, m_GLTexFormat, m_Desc.Width, m_Desc.Height, m_Desc.Depth);
     CHECK_GL_ERROR_AND_THROW("Failed to allocate storage for the 3D texture");
@@ -89,18 +90,8 @@ Texture3D_OGL::~Texture3D_OGL()
 
 void Texture3D_OGL::UpdateData( IDeviceContext *pContext, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData )
 {
-    TextureBaseGL::UpdateData(pContext, MipLevel, Slice, DstBox, SubresData);
-
-    auto *pDeviceContextGL = ValidatedCast<DeviceContextGLImpl>(pContext);
-    auto &ContextState = pDeviceContextGL->GetContextState();
-
-    // GL_TEXTURE_UPDATE_BARRIER_BIT: 
-    //      Writes to a texture via glTex( Sub )Image*, glCopyTex( Sub )Image*, glClearTex*Image, 
-    //      glCompressedTex( Sub )Image*, and reads via glTexImage() after the barrier will reflect 
-    //      data written by shaders prior to the barrier. Additionally, texture writes from these 
-    //      commands issued after the barrier will not execute until all shader writes initiated prior 
-    //      to the barrier complete
-    TextureMemoryBarrier( GL_TEXTURE_UPDATE_BARRIER_BIT, ContextState );
+    auto &ContextState = ValidatedCast<DeviceContextGLImpl>(pContext)->GetContextState();
+    TextureBaseGL::UpdateData(ContextState, pContext, MipLevel, Slice, DstBox, SubresData);
 
     ContextState.BindTexture(-1, m_BindTarget, m_GlTexture);
 

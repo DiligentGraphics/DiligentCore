@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -28,25 +28,25 @@
 
 namespace Diligent
 {
-    typedef float       Float32;
+    typedef float       Float32; ///< 32-bit float
 
-    typedef int64_t     Int64;
-    typedef int32_t     Int32;
-    typedef int16_t     Int16;
-    typedef int8_t      Int8;
+    typedef int64_t     Int64;   ///< 64-bit signed integer
+    typedef int32_t     Int32;   ///< 32-bit signed integer
+    typedef int16_t     Int16;   ///< 16-bit signed integer
+    typedef int8_t      Int8;    ///< 8-bit signed integer
 
-    typedef uint64_t    Uint64;
-    typedef uint32_t    Uint32;
-    typedef uint16_t    Uint16;
-    typedef uint8_t     Uint8;
+    typedef uint64_t    Uint64;  ///< 64-bit unsigned integer
+    typedef uint32_t    Uint32;  ///< 32-bit unsigned integer
+    typedef uint16_t    Uint16;  ///< 16-bit unsigned integer
+    typedef uint8_t     Uint8;   ///< 8-bit unsigned integer
 
     typedef size_t SizeType;
     typedef void* PVoid;
 
-    typedef bool Bool;
+    typedef bool Bool;          ///< Boolean
     static const Bool False = false;
     static const Bool True = true;
 
     typedef char Char;
-    typedef std::basic_string<Char> String;
+    typedef std::basic_string<Char> String; ///< String variable
 }

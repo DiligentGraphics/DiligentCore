@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -55,7 +55,7 @@ namespace Diligent
     /// [D3D11_BIND_FLAG]: https://msdn.microsoft.com/en-us/library/windows/desktop/ff476085(v=vs.85).aspx
     ///
     /// This enumeration describes which parts of the pipeline a resource can be bound to.
-    /// It generally mirrows [D3D11_BIND_FLAG][] enumeration. It is used by
+    /// It generally mirrors [D3D11_BIND_FLAG][] enumeration. It is used by
     /// - BufferDesc to describe bind flags for a buffer
     /// - TextureDesc to describe bind flags for a texture
     enum BIND_FLAGS : Int32
@@ -77,7 +77,7 @@ namespace Diligent
     /// Resource usage
 
     /// [D3D11_USAGE]: https://msdn.microsoft.com/en-us/library/windows/desktop/ff476259(v=vs.85).aspx
-    /// This enumeration describes expected resource usage. It generally mirrows [D3D11_USAGE] enumeration.
+    /// This enumeration describes expected resource usage. It generally mirrors [D3D11_USAGE] enumeration.
     /// The enumeration is used by
     /// - BufferDesc to describe usage for a buffer
     /// - TextureDesc to describe usage for a texture
@@ -119,7 +119,7 @@ namespace Diligent
 
     /// [D3D11_MAP]: https://msdn.microsoft.com/en-us/library/windows/desktop/ff476181(v=vs.85).aspx
     /// Describes how a mapped resource will be accessed. This enumeration generally
-    /// mirrows [D3D11_MAP][] enumeration. It is used by
+    /// mirrors [D3D11_MAP][] enumeration. It is used by
     /// - IBuffer::Map to describe buffer mapping type
     /// - ITexture::Map to describe texture mapping type
     enum MAP_TYPE : Int32
@@ -162,22 +162,23 @@ namespace Diligent
         MAP_FLAG_DO_NOT_WAIT = 0x001
     };
 
-    /// Describes texture type
+    /// Describes resource dimension
 
     /// This enumeration is used by
     /// - TextureDesc to describe texture type
     /// - TextureViewDesc to describe texture view type
-    enum TEXTURE_TYPE : Int32
+    enum RESOURCE_DIMENSION : Int32
     {
-        TEXTURE_TYPE_UNDEFINED = 0, ///< Texture type undefined
-        TEXTURE_TYPE_1D,            ///< One-dimensional texture
-        TEXTURE_TYPE_1D_ARRAY,      ///< One-dimensional texture array
-        TEXTURE_TYPE_2D,            ///< Two-dimensional texture
-        TEXTURE_TYPE_2D_ARRAY,      ///< Two-dimensional texture array
-        TEXTURE_TYPE_3D,            ///< Three-dimensional texture
-        TEXTURE_TYPE_CUBE,          ///< Cube-map texture
-        TEXTURE_TYPE_CUBE_ARRAY,    ///< Cube-map array texture
-        TEXTURE_TYPE_NUM_TYPES      ///< Helper value that stores the total number of texture types in the enumeration
+        RESOURCE_DIM_UNDEFINED = 0, ///< Texture type undefined
+        RESOURCE_DIM_BUFFER,            ///< Buffer
+        RESOURCE_DIM_TEX_1D,            ///< One-dimensional texture
+        RESOURCE_DIM_TEX_1D_ARRAY,      ///< One-dimensional texture array
+        RESOURCE_DIM_TEX_2D,            ///< Two-dimensional texture
+        RESOURCE_DIM_TEX_2D_ARRAY,      ///< Two-dimensional texture array
+        RESOURCE_DIM_TEX_3D,            ///< Three-dimensional texture
+        RESOURCE_DIM_TEX_CUBE,          ///< Cube-map texture
+        RESOURCE_DIM_TEX_CUBE_ARRAY,    ///< Cube-map array texture
+        RESOURCE_DIM_NUM_DIMENSIONS     ///< Helper value that stores the total number of texture types in the enumeration
     };
 
     /// Texture view type
@@ -232,7 +233,7 @@ namespace Diligent
 
     /// Texture formats
 
-    /// This enumeration describes available texture formats and generally mirrows DXGI_FORMAT enumeration.
+    /// This enumeration describes available texture formats and generally mirrors DXGI_FORMAT enumeration.
     /// The table below provides detailed information on each format. Most of the formats are widely supported 
     /// by all modern APIs (DX10+, OpenGL3.3+ and OpenGLES3.0+). Specific requirements are additionally indicated.
     /// \sa <a href = "https://msdn.microsoft.com/en-us/library/windows/desktop/bb173059(v=vs.85).aspx">DXGI_FORMAT enumeration on MSDN</a>, 
@@ -783,14 +784,21 @@ namespace Diligent
         FILTER_TYPE_COMPARISON_POINT,       ///< Comparison-point filtering
         FILTER_TYPE_COMPARISON_LINEAR,      ///< Comparison-linear filtering
         FILTER_TYPE_COMPARISON_ANISOTROPIC, ///< Comparison-anisotropic filtering
+        FILTER_TYPE_MINIMUM_POINT,          ///< Minimum-point filtering (DX12 only)
+        FILTER_TYPE_MINIMUM_LINEAR,         ///< Minimum-linear filtering (DX12 only)
+        FILTER_TYPE_MINIMUM_ANISOTROPIC,    ///< Minimum-anisotropic filtering (DX12 only)
+        FILTER_TYPE_MAXIMUM_POINT,          ///< Maximum-point filtering (DX12 only)
+        FILTER_TYPE_MAXIMUM_LINEAR,         ///< Maximum-linear filtering (DX12 only)
+        FILTER_TYPE_MAXIMUM_ANISOTROPIC,    ///< Maximum-anisotropic filtering (DX12 only)
         FILTER_TYPE_NUM_FILTERS             ///< Helper value that stores the total number of filter types in the enumeration
     };
 
     /// Texture address mode
 
     /// [D3D11_TEXTURE_ADDRESS_MODE]: https://msdn.microsoft.com/en-us/library/windows/desktop/ff476256(v=vs.85).aspx
+    /// [D3D12_TEXTURE_ADDRESS_MODE]: https://msdn.microsoft.com/en-us/library/windows/desktop/dn770441(v=vs.85).aspx
     /// Defines a technique for resolving texture coordinates that are outside of 
-    /// the boundaries of a texture. The enumeration generally mirrows [D3D11_TEXTURE_ADDRESS_MODE][] enumeration. 
+    /// the boundaries of a texture. The enumeration generally mirrors [D3D11_TEXTURE_ADDRESS_MODE][]/[D3D12_TEXTURE_ADDRESS_MODE][] enumeration. 
     /// It is used by SamplerDesc structure to define the address mode for U,V and W texture coordinates.
     enum TEXTURE_ADDRESS_MODE : Int32
     {
@@ -798,27 +806,27 @@ namespace Diligent
         TEXTURE_ADDRESS_UNKNOWN = 0,
 
         /// Tile the texture at every integer junction. \n
-        /// D3D11 Counterpart: D3D11_TEXTURE_ADDRESS_WRAP. OpenGL counterpart: GL_REPEAT
+        /// Direct3D Counterpart: D3D11_TEXTURE_ADDRESS_WRAP/D3D12_TEXTURE_ADDRESS_MODE_WRAP. OpenGL counterpart: GL_REPEAT
         TEXTURE_ADDRESS_WRAP	= 1,
 
         /// Flip the texture at every integer junction. \n
-        /// D3D11 Counterpart: D3D11_TEXTURE_ADDRESS_MIRROR. OpenGL counterpart: GL_MIRRORED_REPEAT
+        /// Direct3D Counterpart: D3D11_TEXTURE_ADDRESS_MIRROR/D3D12_TEXTURE_ADDRESS_MODE_MIRROR. OpenGL counterpart: GL_MIRRORED_REPEAT
 	    TEXTURE_ADDRESS_MIRROR	= 2,
 
         /// Texture coordinates outside the range [0.0, 1.0] are set to the 
         /// texture color at 0.0 or 1.0, respectively. \n
-        /// D3D11 Counterpart: D3D11_TEXTURE_ADDRESS_CLAMP. OpenGL counterpart: GL_CLAMP_TO_EDGE
+        /// Direct3D Counterpart: D3D11_TEXTURE_ADDRESS_CLAMP/D3D12_TEXTURE_ADDRESS_MODE_CLAMP. OpenGL counterpart: GL_CLAMP_TO_EDGE
 	    TEXTURE_ADDRESS_CLAMP	= 3,
 
         /// Texture coordinates outside the range [0.0, 1.0] are set to the border color specified
         /// specified in SamplerDesc structure. \n
-        /// D3D11 Counterpart: D3D11_TEXTURE_ADDRESS_BORDER. OpenGL counterpart: GL_CLAMP_TO_BORDER
+        /// Direct3D Counterpart: D3D11_TEXTURE_ADDRESS_BORDER/D3D12_TEXTURE_ADDRESS_MODE_BORDER. OpenGL counterpart: GL_CLAMP_TO_BORDER
 	    TEXTURE_ADDRESS_BORDER	= 4,
 
         /// Similar to TEXTURE_ADDRESS_MIRROR and TEXTURE_ADDRESS_CLAMP. Takes the absolute 
         /// value of the texture coordinate (thus, mirroring around 0), and then clamps to 
         /// the maximum value. \n
-        /// D3D11 Counterpart: D3D11_TEXTURE_ADDRESS_MIRROR_ONCE. OpenGL counterpart: GL_MIRROR_CLAMP_TO_EDGE
+        /// Direct3D Counterpart: D3D11_TEXTURE_ADDRESS_MIRROR_ONCE/D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE. OpenGL counterpart: GL_MIRROR_CLAMP_TO_EDGE
         /// \note GL_MIRROR_CLAMP_TO_EDGE is only available in OpenGL4.4+, and is not available until at least OpenGLES3.1
 	    TEXTURE_ADDRESS_MIRROR_ONCE	= 5,
 
@@ -829,45 +837,46 @@ namespace Diligent
     /// Comparison function
 
     /// [D3D11_COMPARISON_FUNC]: https://msdn.microsoft.com/en-us/library/windows/desktop/ff476101(v=vs.85).aspx
-    /// This enumeartion defines a comparison function. It generally mirrows [D3D11_COMPARISON_FUNC] enum and is used by
+    /// [D3D12_COMPARISON_FUNC]: https://msdn.microsoft.com/en-us/library/windows/desktop/dn770349(v=vs.85).aspx
+    /// This enumeartion defines a comparison function. It generally mirrors [D3D11_COMPARISON_FUNC]/[D3D12_COMPARISON_FUNC] enum and is used by
     /// - SamplerDesc to define a comparison function if one of the comparison mode filters is used
     /// - StencilOpDesc to define a stencil function
     /// - DepthStencilStateDesc to define a depth function
     enum COMPARISON_FUNCTION : Int32
     {
         /// Unknown comparison function
-        COMPARISON_FUNC_UNKNOW = 0,
+        COMPARISON_FUNC_UNKNOWN = 0,
 
         /// Comparison never passes. \n
-        /// D3D11 counterpart: D3D11_COMPARISON_NEVER. OpenGL counterpart: GL_NEVER.
+        /// Direct3D counterpart: D3D11_COMPARISON_NEVER/D3D12_COMPARISON_FUNC_NEVER. OpenGL counterpart: GL_NEVER.
         COMPARISON_FUNC_NEVER,
 
         /// Comparison passes if the source data is less than the destination data.\n
-        /// D3D11 counterpart: D3D11_COMPARISON_LESS. OpenGL counterpart: GL_LESS.
+        /// Direct3D counterpart: D3D11_COMPARISON_LESS/D3D12_COMPARISON_FUNC_LESS. OpenGL counterpart: GL_LESS.
 	    COMPARISON_FUNC_LESS,
 
         /// Comparison passes if the source data is equal to the destination data.\n
-        /// D3D11 counterpart: 3D11_COMPARISON_EQUAL. OpenGL counterpart: GL_EQUAL.
+        /// Direct3D counterpart: D3D11_COMPARISON_EQUAL/D3D12_COMPARISON_FUNC_EQUAL. OpenGL counterpart: GL_EQUAL.
 	    COMPARISON_FUNC_EQUAL,
 
         /// Comparison passes if the source data is less than or equal to the destination data.\n
-        /// D3D11 counterpart: D3D11_COMPARISON_LESS_EQUAL. OpenGL counterpart: GL_LEQUAL.
+        /// Direct3D counterpart: D3D11_COMPARISON_LESS_EQUAL/D3D12_COMPARISON_FUNC_LESS_EQUAL. OpenGL counterpart: GL_LEQUAL.
 	    COMPARISON_FUNC_LESS_EQUAL,
 
         /// Comparison passes if the source data is greater than the destination data.\n
-        /// D3D11 counterpart: 3D11_COMPARISON_GREATER. OpenGL counterpart: GL_GREATER.
+        /// Direct3D counterpart: 3D11_COMPARISON_GREATER/D3D12_COMPARISON_FUNC_GREATER. OpenGL counterpart: GL_GREATER.
 	    COMPARISON_FUNC_GREATER,
 
         /// Comparison passes if the source data is not equal to the destination data.\n
-        /// D3D11 counterpart: D3D11_COMPARISON_NOT_EQUAL. OpenGL counterpart: GL_NOTEQUAL.
+        /// Direct3D counterpart: D3D11_COMPARISON_NOT_EQUAL/D3D12_COMPARISON_FUNC_NOT_EQUAL. OpenGL counterpart: GL_NOTEQUAL.
 	    COMPARISON_FUNC_NOT_EQUAL,
         
         /// Comparison passes if the source data is greater than or equal to the destination data.\n
-        /// D3D11 counterpart: D3D11_COMPARISON_GREATER_EQUAL. OpenGL counterpart: GL_GEQUAL.
+        /// Direct3D counterpart: D3D11_COMPARISON_GREATER_EQUAL/D3D12_COMPARISON_FUNC_GREATER_EQUAL. OpenGL counterpart: GL_GEQUAL.
 	    COMPARISON_FUNC_GREATER_EQUAL,
 	    
         /// Comparison always passes. \n
-        /// D3D11 counterpart: D3D11_COMPARISON_ALWAYS. OpenGL counterpart: GL_ALWAYS.
+        /// Direct3D counterpart: D3D11_COMPARISON_ALWAYS/D3D12_COMPARISON_FUNC_ALWAYS. OpenGL counterpart: GL_ALWAYS.
         COMPARISON_FUNC_ALWAYS,
 
         /// Helper value that stores the total number of comparison functions in the enumeration
@@ -915,13 +924,25 @@ namespace Diligent
         /// Sample count. Default value is 1
         Uint32 SamplesCount;
 
+        /// Number of buffers int the swap chain
+        Uint32 BufferCount;
+
+        /// Default depth value, which is used as optimized depth clear value in D3D12
+        Float32 DefaultDepthValue;
+
+        /// Default stencil value, which is used as optimized stencil clear value in D3D12
+        Uint8 DefaultStencilValue;
+
         /// Constructor intializes the structure members with default values
         SwapChainDesc() :
             Width(0),
             Height(0),
             ColorBufferFormat( TEX_FORMAT_RGBA8_UNORM_SRGB ),
             DepthBufferFormat( TEX_FORMAT_D32_FLOAT ),
-            SamplesCount( 1 )
+            SamplesCount( 1 ),
+            BufferCount( 2 ),
+            DefaultDepthValue(1.f),
+            DefaultStencilValue(0)
         {}
     };
 
@@ -929,10 +950,45 @@ namespace Diligent
     struct EngineCreationAttribs
     {
         const Char* strShaderCachePath;
-
+        /// Pointer to the raw memory allocator that will be used for all memory allocation/deallocation
+        /// operations in an engine
+        class IMemoryAllocator *pRawMemAllocator;
         EngineCreationAttribs() : 
-            strShaderCachePath(nullptr)
+            strShaderCachePath(nullptr),
+            pRawMemAllocator(nullptr)
         {}
+    };
+
+    /// Attributes specific to D3D12 engine
+    struct EngineD3D12Attribs : public EngineCreationAttribs
+    {
+        /// Size of the CPU descriptor heap allocations for different heap types.
+        Uint32 CPUDescriptorHeapAllocationSize[4] = 
+        {
+            1024,  // D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
+            256,   // D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER
+            128,   // D3D12_DESCRIPTOR_HEAP_TYPE_RTV
+            64     // D3D12_DESCRIPTOR_HEAP_TYPE_DSV
+        };
+
+        /// Size of the GPU descriptor heap allocations for different heap types.
+        Uint32 GPUDescriptorHeapSize[2] = 
+        {
+            16384,  // D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
+            1024    // D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER
+        };
+
+        /// Size of the dynamic GPU descriptor heap region for different heap types.
+        Uint32 GPUDescriptorHeapDynamicSize[2] = 
+        {
+            4096,  // D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
+            1024   // D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER
+        };
+
+        /// Number of commands to flush the command list. Only draw/dispatch commands count
+        /// towards the limit. Command lists are only flushed when pipeline state is changed
+        /// or when backbuffer is presented.
+        Uint32 NumCommandsToFlushCmdList = 256;
     };
 
     /// Box

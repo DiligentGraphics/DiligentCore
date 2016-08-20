@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -27,47 +27,41 @@
 /// Declaration of Diligent::RenderDeviceD3D11Impl class
 
 #include "RenderDeviceD3D11.h"
-#include "RenderDeviceBase.h"
+#include "RenderDeviceD3DBase.h"
 #include "DeviceContextD3D11.h"
+#include "EngineD3D11Attribs.h"
 
-/// Namespace for the Direct3D11 implementation of the graphics engine
 namespace Diligent
 {
 
 /// Implementation of the Diligent::IRenderDeviceD3D11 interface
-class RenderDeviceD3D11Impl : public RenderDeviceBase<IRenderDeviceD3D11>
+class RenderDeviceD3D11Impl : public RenderDeviceD3DBase<IRenderDeviceD3D11>
 {
 public:
-    typedef RenderDeviceBase<IRenderDeviceD3D11> TRenderDeviceBase;
+    typedef RenderDeviceD3DBase<IRenderDeviceD3D11> TRenderDeviceBase;
 
-    RenderDeviceD3D11Impl( ID3D11Device *pd3d11Device );
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface );
+    RenderDeviceD3D11Impl( IMemoryAllocator &RawMemAllocator, const EngineD3D11Attribs& EngineAttribs, ID3D11Device *pd3d11Device, Uint32 NumDeferredContexts );
+    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
 
-    virtual void CreateBuffer(const BufferDesc& BuffDesc, const BufferData &BuffData, IBuffer **ppBuffer);
+    virtual void CreateBuffer(const BufferDesc& BuffDesc, const BufferData &BuffData, IBuffer **ppBuffer)override final;
 
-    virtual void CreateVertexDescription( const LayoutDesc& LayoutDesc, IShader *pVertexShader, IVertexDescription **ppVertexDesc );
+    virtual void CreateShader(const ShaderCreationAttribs &ShaderCreationAttribs, IShader **ppShader)override final;
 
-    virtual void CreateShader(const ShaderCreationAttribs &ShaderCreationAttribs, IShader **ppShader);
-
-    virtual void CreateTexture(const TextureDesc& TexDesc, const TextureData &Data, ITexture **ppTexture);
+    virtual void CreateTexture(const TextureDesc& TexDesc, const TextureData &Data, ITexture **ppTexture)override final;
     
-    virtual void CreateSampler(const SamplerDesc& SamplerDesc, ISampler **ppSampler);
+    virtual void CreateSampler(const SamplerDesc& SamplerDesc, ISampler **ppSampler)override final;
 
-    virtual void CreateDepthStencilState( const DepthStencilStateDesc &DSSDesc, IDepthStencilState **ppDepthStencilState );
+    virtual void CreatePipelineState( const PipelineStateDesc &PipelineDesc, IPipelineState **ppPipelineState )override final;
 
-    virtual void CreateRasterizerState( const RasterizerStateDesc &RSDesc, IRasterizerState **ppRasterizerState );
+    ID3D11Device* GetD3D11Device()override final{return m_pd3d11Device;}
 
-    virtual void CreateBlendState( const BlendStateDesc &BSDesc, IBlendState **ppBlendState );
-
-    ID3D11Device* GetD3D11Device(){return m_pd3d11Device;}
-    
 private:
     virtual void TestTextureFormat( TEXTURE_FORMAT TexFormat );
 
-    void FlagSupportedTexFormats();
+    EngineD3D11Attribs m_EngineAttribs;
 
     /// D3D11 device
-    Diligent::CComPtr<ID3D11Device> m_pd3d11Device;
+    CComPtr<ID3D11Device> m_pd3d11Device;
 };
 
 }

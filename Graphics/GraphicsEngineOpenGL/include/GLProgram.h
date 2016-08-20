@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -23,92 +23,42 @@
 
 #pragma once
 #include "GLObjectWrapper.h"
-
-#ifdef _DEBUG
-#   define VERIFY_RESOURCE_BINDINGS
-#endif
+#include "GLProgramResources.h"
 
 namespace Diligent
 {
-
     class GLProgram : public GLObjectWrappers::GLProgramObj
     {
     public:
         GLProgram( bool CreateObject );
         GLProgram( GLProgram&& Program );
 
-        void LoadUniforms();
+        void InitResources(RenderDeviceGLImpl* pDeviceGLImpl, 
+                           SHADER_VARIABLE_TYPE DefaultVariableType, 
+                           const ShaderVariableDesc *VariableDesc, 
+                           Uint32 NumVars, 
+                           const StaticSamplerDesc *StaticSamplers,
+                           Uint32 NumStaticSamplers,
+                           IObject &Owner);
 
-        struct GLProgramVariableBase
-        {
-            GLProgramVariableBase( const Char* _Name ) :
-                Name( _Name )
-            {}
+        void BindConstantResources(IResourceMapping *pResourceMapping, Uint32 Flags);
 
-            String Name;
-            RefCntAutoPtr<IDeviceObject> pResource;
-        };
-
-        struct UniformBufferInfo : GLProgramVariableBase
-        {
-            UniformBufferInfo(const Char* _Name, GLint _Index) :
-                GLProgramVariableBase(_Name),
-                Index(_Index)
-            {}
-
-            GLuint Index;
-        };
-        std::vector<UniformBufferInfo>& GetUniformBlocks(){ return m_UniformBlocks; }
-
-        struct SamplerInfo : GLProgramVariableBase
-        {
-            SamplerInfo(const Char* _Name, GLint _Location, GLenum _Type) :
-                GLProgramVariableBase(_Name),
-                Location(_Location),
-                Type(_Type)
-            {}
-            GLint Location;
-            GLenum Type;
-        };
-        std::vector<SamplerInfo>& GetSamplers(){ return m_Samplers; }
+        const GLProgramResources& GetAllResources(){return m_AllResources;}
+        GLProgramResources& GetConstantResources(){return m_ConstantResources;}
         
-        struct ImageInfo : GLProgramVariableBase
-        {
-            ImageInfo(const Char* _Name, GLint _BindingPoint, GLenum _Type) :
-                GLProgramVariableBase(_Name),
-                BindingPoint(_BindingPoint),
-                Type(_Type)
-            {}
-
-            GLint BindingPoint;
-            GLenum Type;
-        };
-        std::vector<ImageInfo>& GetImages(){ return m_Images; }
-
-        struct StorageBlockInfo : GLProgramVariableBase
-        {
-            StorageBlockInfo(const Char* _Name, GLint _Binding) :
-                GLProgramVariableBase(_Name),
-                Binding(_Binding)
-            {}
-
-            GLint Binding;
-        };
-        std::vector<StorageBlockInfo>& GetStorageBlocks(){ return m_StorageBlocks; }
-
-        void BindResources(IResourceMapping *pResourceMapping, Uint32 Flags);
 
 #ifdef VERIFY_RESOURCE_BINDINGS
-        void dbgVerifyResourceBindings();
+        template<typename TResArrayType>
+        void dbgVerifyBindingCompletenessHelper(TResArrayType &ResArr, GLProgramResources *pDynamicResources);
+        void dbgVerifyBindingCompleteness(GLProgramResources *pDynamicResources, class PipelineStateGLImpl *pPSO);
 #endif
 
     private:
         GLProgram( const GLProgram& Program );
         const GLProgram& operator = (const GLProgram& Program);
-        std::vector<UniformBufferInfo> m_UniformBlocks;
-        std::vector< SamplerInfo > m_Samplers;
-        std::vector< ImageInfo > m_Images;
-        std::vector< StorageBlockInfo > m_StorageBlocks;
+
+        GLProgramResources m_AllResources;
+        GLProgramResources m_ConstantResources;
         // When adding new member DO NOT FORGET TO UPDATE GLProgram( GLProgram&& Program )!!!
     };
 }

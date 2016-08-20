@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -29,14 +29,20 @@
 namespace Diligent
 {
 
-Texture2D_D3D11 :: Texture2D_D3D11(RenderDeviceD3D11Impl *pRenderDeviceD3D11, const TextureDesc& TexDesc, const TextureData &InitData /*= TextureData()*/) : 
-    TextureBaseD3D11(pRenderDeviceD3D11, TexDesc, InitData)
+Texture2D_D3D11 :: Texture2D_D3D11(FixedBlockMemoryAllocator &TexObjAllocator, 
+                                   FixedBlockMemoryAllocator &TexViewObjAllocator, 
+                                   RenderDeviceD3D11Impl *pRenderDeviceD3D11, 
+                                   const TextureDesc& TexDesc, 
+                                   const TextureData &InitData /*= TextureData()*/) : 
+    TextureBaseD3D11(TexObjAllocator, TexViewObjAllocator, pRenderDeviceD3D11, TexDesc, InitData)
 {
     auto D3D11TexFormat = TexFormatToDXGI_Format(m_Desc.Format, m_Desc.BindFlags);
     auto D3D11BindFlags = BindFlagsToD3D11BindFlags(m_Desc.BindFlags);
     auto D3D11CPUAccessFlags = CPUAccessFlagsToD3D11CPUAccessFlags(m_Desc.CPUAccessFlags);
     auto D3D11Usage = UsageToD3D11Usage(m_Desc.Usage);
     UINT MiscFlags = MiscTextureFlagsToD3D11Flags(m_Desc.MiscFlags);
+    if(m_Desc.Type == RESOURCE_DIM_TEX_CUBE || m_Desc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY)
+        MiscFlags |= D3D11_RESOURCE_MISC_TEXTURECUBE;
     DXGI_SAMPLE_DESC D3D11SampleDesc = {m_Desc.SampleCount, 0};
     auto *pDeviceD3D11 = pRenderDeviceD3D11->GetD3D11Device();
 
@@ -54,7 +60,7 @@ Texture2D_D3D11 :: Texture2D_D3D11(RenderDeviceD3D11Impl *pRenderDeviceD3D11, co
         MiscFlags
     };
     
-    std::vector<D3D11_SUBRESOURCE_DATA> D3D11InitData;
+    std::vector<D3D11_SUBRESOURCE_DATA, STDAllocatorRawMem<D3D11_SUBRESOURCE_DATA>> D3D11InitData( STD_ALLOCATOR_RAW_MEM(D3D11_SUBRESOURCE_DATA, GetRawAllocator(), "Allocator for vector<D3D11_SUBRESOURCE_DATA>") );
     PrepareD3D11InitData(InitData, Tex2DDesc.ArraySize * Tex2DDesc.MipLevels, D3D11InitData);
 
     ID3D11Texture2D *ptex2D = nullptr;
@@ -72,8 +78,9 @@ void Texture2D_D3D11::CreateSRV( TextureViewDesc &SRVDesc, ID3D11ShaderResourceV
     VERIFY( ppD3D11SRV && *ppD3D11SRV == nullptr, "SRV pointer address is null or contains non-null pointer to an existing object" );
 
     VERIFY( SRVDesc.ViewType == TEXTURE_VIEW_SHADER_RESOURCE, "Incorrect view type: shader resource is expected" );
-    if( !(SRVDesc.TextureType == TEXTURE_TYPE_2D || SRVDesc.TextureType == TEXTURE_TYPE_2D_ARRAY) )
-        LOG_ERROR_AND_THROW("Unsupported texture type. Only TEXTURE_TYPE_2D or TEXTURE_TYPE_2D_ARRAY is allowed");
+    if( !(SRVDesc.TextureDim == RESOURCE_DIM_TEX_2D || SRVDesc.TextureDim == RESOURCE_DIM_TEX_2D_ARRAY || 
+          SRVDesc.TextureDim == RESOURCE_DIM_TEX_CUBE || SRVDesc.TextureDim == RESOURCE_DIM_TEX_CUBE_ARRAY) )
+        LOG_ERROR_AND_THROW("Unsupported texture type. Only RESOURCE_DIM_TEX_2D,  RESOURCE_DIM_TEX_2D_ARRAY, RESOURCE_DIM_TEX_CUBE, or RESOURCE_DIM_TEX_CUBE_ARRAY is allowed");
 
     if( SRVDesc.Format == TEX_FORMAT_UNKNOWN )
     {
@@ -81,45 +88,7 @@ void Texture2D_D3D11::CreateSRV( TextureViewDesc &SRVDesc, ID3D11ShaderResourceV
     }
 
     D3D11_SHADER_RESOURCE_VIEW_DESC D3D11_SRVDesc;
-    memset(&D3D11_SRVDesc, 0, sizeof(D3D11_SRVDesc));
-    D3D11_SRVDesc.Format = TexFormatToDXGI_Format(SRVDesc.Format, BIND_SHADER_RESOURCE);
-
-    
-    if( SRVDesc.TextureType == TEXTURE_TYPE_2D )
-    {
-        if( m_Desc.SampleCount > 1 )
-        {
-            D3D11_SRVDesc.ViewDimension =  D3D11_SRV_DIMENSION_TEXTURE2DMS;
-            D3D11_SRVDesc.Texture2DMS.UnusedField_NothingToDefine = 0;
-        }
-        else
-        {
-            D3D11_SRVDesc.ViewDimension =  D3D11_SRV_DIMENSION_TEXTURE2D;
-            D3D11_SRVDesc.Texture2D.MipLevels = SRVDesc.NumMipLevels;
-            D3D11_SRVDesc.Texture2D.MostDetailedMip = SRVDesc.MostDetailedMip;
-        }
-    }
-    else if( SRVDesc.TextureType == TEXTURE_TYPE_2D_ARRAY )
-    {
-        if( m_Desc.SampleCount > 1 )
-        {
-            D3D11_SRVDesc.ViewDimension =  D3D11_SRV_DIMENSION_TEXTURE2DMSARRAY;
-            D3D11_SRVDesc.Texture2DMSArray.ArraySize = SRVDesc.NumArraySlices;
-            D3D11_SRVDesc.Texture2DMSArray.FirstArraySlice = SRVDesc.FirstArraySlice;
-        }
-        else
-        {
-            D3D11_SRVDesc.ViewDimension =  D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
-            D3D11_SRVDesc.Texture2DArray.ArraySize = SRVDesc.NumArraySlices;
-            D3D11_SRVDesc.Texture2DArray.FirstArraySlice = SRVDesc.FirstArraySlice;
-            D3D11_SRVDesc.Texture2DArray.MipLevels = SRVDesc.NumMipLevels;
-            D3D11_SRVDesc.Texture2DArray.MostDetailedMip = SRVDesc.MostDetailedMip;
-        }
-    }
-    else
-    {
-        UNEXPECTED( "Unexpected view type" );
-    }
+    TextureViewDesc_to_D3D11_SRV_DESC(SRVDesc, D3D11_SRVDesc, m_Desc.SampleCount);
 
     auto *pDeviceD3D11 = static_cast<RenderDeviceD3D11Impl*>(GetDevice())->GetD3D11Device();
     CHECK_D3D_RESULT_THROW( pDeviceD3D11->CreateShaderResourceView( m_pd3d11Texture, &D3D11_SRVDesc, ppD3D11SRV ),
@@ -131,8 +100,8 @@ void Texture2D_D3D11::CreateRTV( TextureViewDesc &RTVDesc, ID3D11RenderTargetVie
     VERIFY( ppD3D11RTV && *ppD3D11RTV == nullptr, "RTV pointer address is null or contains non-null pointer to an existing object"  );
 
     VERIFY( RTVDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET, "Incorrect view type: render target is expected" );
-    if( !(RTVDesc.TextureType == TEXTURE_TYPE_2D || RTVDesc.TextureType == TEXTURE_TYPE_2D_ARRAY) )
-        LOG_ERROR_AND_THROW( "Unsupported texture type. Only TEXTURE_TYPE_2D or TEXTURE_TYPE_2D_ARRAY is allowed" );
+    if( !(RTVDesc.TextureDim == RESOURCE_DIM_TEX_2D || RTVDesc.TextureDim == RESOURCE_DIM_TEX_2D_ARRAY) )
+        LOG_ERROR_AND_THROW( "Unsupported texture type. Only RESOURCE_DIM_TEX_2D or RESOURCE_DIM_TEX_2D_ARRAY is allowed" );
     
     if( RTVDesc.Format == TEX_FORMAT_UNKNOWN )
     {
@@ -140,43 +109,7 @@ void Texture2D_D3D11::CreateRTV( TextureViewDesc &RTVDesc, ID3D11RenderTargetVie
     }
 
     D3D11_RENDER_TARGET_VIEW_DESC D3D11_RTVDesc;
-    memset(&D3D11_RTVDesc, 0, sizeof(D3D11_RTVDesc));
-    D3D11_RTVDesc.Format = TexFormatToDXGI_Format(RTVDesc.Format, BIND_RENDER_TARGET);
-
-    if( RTVDesc.TextureType == TEXTURE_TYPE_2D )
-    {
-        if( m_Desc.SampleCount > 1 )
-        {
-            D3D11_RTVDesc.ViewDimension =  D3D11_RTV_DIMENSION_TEXTURE2DMS;
-            D3D11_RTVDesc.Texture2DMS.UnusedField_NothingToDefine = 0;
-        }
-        else
-        {
-            D3D11_RTVDesc.ViewDimension =  D3D11_RTV_DIMENSION_TEXTURE2D;
-            D3D11_RTVDesc.Texture2D.MipSlice = RTVDesc.MostDetailedMip;
-        }
-    }
-    else if( RTVDesc.TextureType == TEXTURE_TYPE_2D_ARRAY )
-    {
-        if( m_Desc.SampleCount > 1 )
-        {
-            D3D11_RTVDesc.ViewDimension =  D3D11_RTV_DIMENSION_TEXTURE2DMSARRAY;
-            D3D11_RTVDesc.Texture2DMSArray.ArraySize = RTVDesc.NumArraySlices;
-            D3D11_RTVDesc.Texture2DMSArray.FirstArraySlice = RTVDesc.FirstArraySlice;
-        }
-        else
-        {
-            D3D11_RTVDesc.ViewDimension =  D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
-            D3D11_RTVDesc.Texture2DArray.ArraySize = RTVDesc.NumArraySlices;
-            D3D11_RTVDesc.Texture2DArray.FirstArraySlice = RTVDesc.FirstArraySlice;
-            D3D11_RTVDesc.Texture2DArray.MipSlice = RTVDesc.MostDetailedMip;
-        }
-    }
-    else
-    {
-        UNEXPECTED( "Unexpected view type" );
-    }
-
+    TextureViewDesc_to_D3D11_RTV_DESC(RTVDesc, D3D11_RTVDesc, m_Desc.SampleCount);
 
     auto *pDeviceD3D11 = static_cast<RenderDeviceD3D11Impl*>(GetDevice())->GetD3D11Device();
     CHECK_D3D_RESULT_THROW( pDeviceD3D11->CreateRenderTargetView( m_pd3d11Texture, &D3D11_RTVDesc, ppD3D11RTV ),
@@ -188,8 +121,8 @@ void Texture2D_D3D11::CreateDSV( TextureViewDesc &DSVDesc, ID3D11DepthStencilVie
     VERIFY( ppD3D11DSV && *ppD3D11DSV == nullptr, "DSV pointer address is null or contains non-null pointer to an existing object"  );
         
     VERIFY( DSVDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL, "Incorrect view type: depth stencil is expected" );
-    if( !(DSVDesc.TextureType == TEXTURE_TYPE_2D || DSVDesc.TextureType == TEXTURE_TYPE_2D_ARRAY) )
-        LOG_ERROR_AND_THROW("Unsupported texture type. Only TEXTURE_TYPE_2D or TEXTURE_TYPE_2D_ARRAY is allowed");
+    if( !(DSVDesc.TextureDim == RESOURCE_DIM_TEX_2D || DSVDesc.TextureDim == RESOURCE_DIM_TEX_2D_ARRAY) )
+        LOG_ERROR_AND_THROW("Unsupported texture type. Only RESOURCE_DIM_TEX_2D or RESOURCE_DIM_TEX_2D_ARRAY is allowed");
     
     if( DSVDesc.Format == TEX_FORMAT_UNKNOWN )
     {
@@ -197,42 +130,7 @@ void Texture2D_D3D11::CreateDSV( TextureViewDesc &DSVDesc, ID3D11DepthStencilVie
     }
 
     D3D11_DEPTH_STENCIL_VIEW_DESC D3D11_DSVDesc;
-    memset(&D3D11_DSVDesc, 0, sizeof(D3D11_DSVDesc));
-    D3D11_DSVDesc.Format = TexFormatToDXGI_Format(DSVDesc.Format, BIND_DEPTH_STENCIL);
-
-    if( DSVDesc.TextureType == TEXTURE_TYPE_2D )
-    {
-        if( m_Desc.SampleCount > 1 )
-        {
-            D3D11_DSVDesc.ViewDimension =  D3D11_DSV_DIMENSION_TEXTURE2DMS;
-            D3D11_DSVDesc.Texture2DMS.UnusedField_NothingToDefine = 0;
-        }
-        else
-        {
-            D3D11_DSVDesc.ViewDimension =  D3D11_DSV_DIMENSION_TEXTURE2D;
-            D3D11_DSVDesc.Texture2D.MipSlice = DSVDesc.MostDetailedMip;
-        }
-    }
-    else if( DSVDesc.TextureType == TEXTURE_TYPE_2D_ARRAY )
-    {
-        if( m_Desc.SampleCount > 1 )
-        {
-            D3D11_DSVDesc.ViewDimension =  D3D11_DSV_DIMENSION_TEXTURE2DMSARRAY;
-            D3D11_DSVDesc.Texture2DMSArray.ArraySize = DSVDesc.NumArraySlices;
-            D3D11_DSVDesc.Texture2DMSArray.FirstArraySlice = DSVDesc.FirstArraySlice;
-        }
-        else
-        {
-            D3D11_DSVDesc.ViewDimension =  D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
-            D3D11_DSVDesc.Texture2DArray.ArraySize = DSVDesc.NumArraySlices;
-            D3D11_DSVDesc.Texture2DArray.FirstArraySlice = DSVDesc.FirstArraySlice;
-            D3D11_DSVDesc.Texture2DArray.MipSlice = DSVDesc.MostDetailedMip;
-        }
-    }
-    else
-    {
-        UNEXPECTED( "Unexpected view type" );
-    }
+    TextureViewDesc_to_D3D11_DSV_DESC(DSVDesc, D3D11_DSVDesc, m_Desc.SampleCount);
 
     auto *pDeviceD3D11 = static_cast<RenderDeviceD3D11Impl*>(GetDevice())->GetD3D11Device();
     CHECK_D3D_RESULT_THROW( pDeviceD3D11->CreateDepthStencilView( m_pd3d11Texture, &D3D11_DSVDesc, ppD3D11DSV ),
@@ -247,8 +145,8 @@ void Texture2D_D3D11::CreateUAV( TextureViewDesc &UAVDesc, ID3D11UnorderedAccess
         LOG_ERROR_AND_THROW("UAVs are not allowed for multisampled resources");
 
     VERIFY( UAVDesc.ViewType == TEXTURE_VIEW_UNORDERED_ACCESS, "Incorrect view type: unordered access is expected" );
-    if( !(UAVDesc.TextureType == TEXTURE_TYPE_2D || UAVDesc.TextureType == TEXTURE_TYPE_2D_ARRAY) )
-        LOG_ERROR_AND_THROW( "Unsupported texture type. Only TEXTURE_TYPE_2D or TEXTURE_TYPE_2D_ARRAY is allowed" );
+    if( !(UAVDesc.TextureDim == RESOURCE_DIM_TEX_2D || UAVDesc.TextureDim == RESOURCE_DIM_TEX_2D_ARRAY) )
+        LOG_ERROR_AND_THROW( "Unsupported texture type. Only RESOURCE_DIM_TEX_2D or RESOURCE_DIM_TEX_2D_ARRAY is allowed" );
 
     if( UAVDesc.Format == TEX_FORMAT_UNKNOWN )
     {
@@ -256,25 +154,7 @@ void Texture2D_D3D11::CreateUAV( TextureViewDesc &UAVDesc, ID3D11UnorderedAccess
     }
 
     D3D11_UNORDERED_ACCESS_VIEW_DESC D3D11_UAVDesc;
-    memset(&D3D11_UAVDesc, 0, sizeof(D3D11_UAVDesc));
-    D3D11_UAVDesc.Format = TexFormatToDXGI_Format(UAVDesc.Format, BIND_UNORDERED_ACCESS);
-
-    if( UAVDesc.TextureType == TEXTURE_TYPE_2D )
-    {
-        D3D11_UAVDesc.ViewDimension =  D3D11_UAV_DIMENSION_TEXTURE2D;
-        D3D11_UAVDesc.Texture2D.MipSlice = UAVDesc.MostDetailedMip;
-    }
-    else if( UAVDesc.TextureType == TEXTURE_TYPE_2D_ARRAY )
-    {
-        D3D11_UAVDesc.ViewDimension =  D3D11_UAV_DIMENSION_TEXTURE2DARRAY;
-        D3D11_UAVDesc.Texture2DArray.ArraySize = UAVDesc.NumArraySlices;
-        D3D11_UAVDesc.Texture2DArray.FirstArraySlice = UAVDesc.FirstArraySlice;
-        D3D11_UAVDesc.Texture2DArray.MipSlice = UAVDesc.MostDetailedMip;
-    }
-    else
-    {
-        UNEXPECTED( "Unexpected view type" );
-    }
+    TextureViewDesc_to_D3D11_UAV_DESC(UAVDesc, D3D11_UAVDesc);
 
     auto *pDeviceD3D11 = static_cast<RenderDeviceD3D11Impl*>(GetDevice())->GetD3D11Device();
     CHECK_D3D_RESULT_THROW( pDeviceD3D11->CreateUnorderedAccessView( m_pd3d11Texture, &D3D11_UAVDesc, ppD3D11UAV ),

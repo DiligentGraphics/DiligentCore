@@ -1,0 +1,40 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <ItemsProjectGuid>{3bb4f2ac-1d2f-4af6-b9cc-bdc17bb8bc39}</ItemsProjectGuid>
+    <ItemsRootNamespace>GraphicsTools</ItemsRootNamespace>
+    <ItemsProjectName>GraphicsTools.Shared</ItemsProjectName>
+    <CodeSharingProject>248F659F-DAC5-46E8-AC09-60EC9FC95053</CodeSharingProject>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(MSBuildThisFileDirectory)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ProjectCapability Include="SourceItemsFromImports" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\BasicShaderSourceStreamFactory.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\FreeBlockListManager.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\FreeBlockListManagerGPU.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\GraphicsUtilities.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\pch.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\RingBuffer.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\ShaderMacroHelper.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\src\BasicShaderSourceStreamFactory.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\src\GraphicsUtilities.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\src\pch.cpp">
+      <PrecompiledHeader>Create</PrecompiledHeader>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="$(MSBuildThisFileDirectory)..\..\CMakeLists.txt">
+      <DeploymentContent>false</DeploymentContent>
+    </Text>
+  </ItemGroup>
+</Project>

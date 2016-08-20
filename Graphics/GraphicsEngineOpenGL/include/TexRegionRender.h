@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@ public:
     void RestoreStates(class DeviceContextGLImpl *pCtxGL);
     void Render(class DeviceContextGLImpl *pCtxGL,
                 ITextureView *pSrcSRV,
-                TEXTURE_TYPE TexType,
+                RESOURCE_DIMENSION TexType,
                 TEXTURE_FORMAT TexFormat,
                 Int32 DstToSrcXOffset, 
                 Int32 DstToSrcYOffset,
@@ -44,22 +44,16 @@ public:
 
 private:
     Diligent::RefCntAutoPtr<IShader> m_pVertexShader;
-    Diligent::RefCntAutoPtr<IShader> m_pFragmentShaders[TEXTURE_TYPE_NUM_TYPES * 3];
+    Diligent::RefCntAutoPtr<IShader> m_pFragmentShaders[RESOURCE_DIM_NUM_DIMENSIONS * 3];
     Diligent::RefCntAutoPtr<IBuffer> m_pConstantBuffer;
-    Diligent::RefCntAutoPtr<IRasterizerState> m_pSolidFillNoCullRS;
-    Diligent::RefCntAutoPtr<IDepthStencilState> m_pDisableDetphDS;
-    Diligent::RefCntAutoPtr<IBlendState> m_pDefaultBS;
+    Diligent::RefCntAutoPtr<IPipelineState> m_pPSO[RESOURCE_DIM_NUM_DIMENSIONS * 3];
 
-    Diligent::RefCntAutoPtr<IRasterizerState> m_pOrigRS;
-    Diligent::RefCntAutoPtr<IDepthStencilState> m_pOrigDS;
+    Diligent::RefCntAutoPtr<IPipelineState> m_pOrigPSO;
     Uint32 m_OrigStencilRef;
-    Diligent::RefCntAutoPtr<IBlendState> m_pOrigBS;
     float m_OrigBlendFactors[4];
-    Uint32 m_OrigSamplesBlendMask;
     Uint32 m_NumRenderTargets;
     ITextureView *m_pOrigRTVs[MaxRenderTargets];
     Diligent::RefCntAutoPtr<ITextureView> m_pOrigDSV;
-    std::vector<IShader*> m_pOrigShaders;
     std::vector<Viewport> m_OrigViewports;
 };
 

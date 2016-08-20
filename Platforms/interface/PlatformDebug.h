@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -25,12 +25,12 @@
 
 #include "PlatformDefinitions.h"
 
-#if defined( PLATFORM_WINDOWS )
-    #include "..\Windows\include\WindowsDebug.h"
+#if defined( PLATFORM_WIN32 )
+    #include "..\Win32\include\Win32Debug.h"
     typedef WindowsDebug PlatformDebug;
 
-#elif defined( PLATFORM_WINDOWS_STORE )
-    #include "..\WindowsStore\include\WindowsStoreDebug.h"
+#elif defined( PLATFORM_UNIVERSAL_WINDOWS )
+    #include "..\UWP\include\UWPDebug.h"
     typedef WindowsStoreDebug PlatformDebug;
 
 #elif defined ( PLATFORM_ANDROID )

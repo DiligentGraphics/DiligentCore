@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@
 #include "DeviceObject.h"
 #include "ResourceMapping.h"
 #include "FileStream.h"
+#include "Sampler.h"
 
 namespace Diligent
 {
@@ -58,13 +59,20 @@ enum SHADER_PROFILE : Int32
     SHADER_PROFILE_DEFAULT = 0,
     SHADER_PROFILE_DX_4_0,
     SHADER_PROFILE_DX_5_0,
+    SHADER_PROFILE_DX_5_1,
     SHADER_PROFILE_GL_4_2
 };
 
+/// Describes shader source code language
 enum SHADER_SOURCE_LANGUAGE : Int32
 {
+    /// Default language (GLSL for OpenGL/OpenGLES devices, HLSL for Direct3D11/Direct3D12 devices)
     SHADER_SOURCE_LANGUAGE_DEFAULT = 0,
+
+    /// The source language is HLSL
     SHADER_SOURCE_LANGUAGE_HLSL,
+
+    /// The source language is GLSL
     SHADER_SOURCE_LANGUAGE_GLSL
 };
 
@@ -72,8 +80,8 @@ enum SHADER_SOURCE_LANGUAGE : Int32
 /// and IDeviceContext::BindShaderResources().
 enum BIND_SHADER_RESOURCES_FLAGS : Int32
 {
-    /// Reset all bindings. If this specified, all existing bindings will be
-    /// broken. By default all existing bindings are presereved.
+    /// Reset all bindings. If this flag is specified, all existing bindings will be
+    /// broken. By default all existing bindings are preserved.
     BIND_SHADER_RESOURCES_RESET_BINDINGS = 0x01,
 
     /// If this flag is specified, only unresolved bindings will be updated.
@@ -84,8 +92,54 @@ enum BIND_SHADER_RESOURCES_FLAGS : Int32
 
     /// If this flag is specified, all shader bindings are expected
     /// to be resolved after the call. If this is not the case, debug error 
-    /// will be output.
+    /// will be displayed.
     BIND_SHADER_RESOURCES_ALL_RESOLVED = 0x04
+};
+
+/// Describes shader variable type that is used by ShaderVariableDesc
+enum SHADER_VARIABLE_TYPE : Int32
+{
+    /// Shader variable is constant across all shader instances.
+    /// It must be set *once* directly through IShader::BindResources() or through 
+    /// the shader variable.
+    SHADER_VARIABLE_TYPE_STATIC = 0, 
+
+    /// Shader variable is constant across shader resource bindings instance (see IShaderResourceBinding).
+    /// It must be set *once* through IShaderResourceBinding::BindResources() or through
+    /// the shader variable. It cannot be set through IShader interface
+    SHADER_VARIABLE_TYPE_MUTABLE,
+
+    /// Shader variable is dynamic. It can be set multiple times for every instance of shader resource 
+    /// bindings (see IShaderResourceBinding). It cannot be set through IShader interface
+    SHADER_VARIABLE_TYPE_DYNAMIC,
+
+    /// Total number of shader variable types
+    SHADER_VARIABLE_TYPE_NUM_TYPES
+};
+
+/// Describes shader variable
+struct ShaderVariableDesc
+{
+    /// Shader variable name
+    const char *Name;
+
+    /// Shader variable type. See Diligent::SHADER_VARIABLE_TYPE for a list of allowed types
+    SHADER_VARIABLE_TYPE Type;
+    ShaderVariableDesc(const char *_Name = nullptr, SHADER_VARIABLE_TYPE _Type = SHADER_VARIABLE_TYPE_STATIC) : 
+        Name(_Name),
+        Type(_Type)
+    {}
+};
+
+
+/// Static sampler description
+struct StaticSamplerDesc
+{
+    /// Sampler description
+    SamplerDesc Desc;
+
+    /// Name of the texture variable that static sampler will be assigned to
+    const char* TextureName = nullptr;
 };
 
 /// Shader description
@@ -97,10 +151,32 @@ struct ShaderDesc : DeviceObjectAttribs
     Bool bCacheCompiledShader;
     SHADER_PROFILE TargetProfile;
 
+    /// Default shader variable type. This type will be used if shader 
+    /// variable description is not found in array VariableDesc points to
+    /// or if VariableDesc == nullptr
+    SHADER_VARIABLE_TYPE DefaultVariableType;
+
+    /// Array of shader variable descriptions
+    const ShaderVariableDesc *VariableDesc;
+
+    /// Number of elements in VariableDesc array
+    Uint32 NumVariables;
+
+    /// Number of static samplers in StaticSamplers array
+    Uint32 NumStaticSamplers;
+    
+    /// Array of static sampler descriptions
+    StaticSamplerDesc *StaticSamplers;
+
     ShaderDesc() : 
         ShaderType(SHADER_TYPE_VERTEX),
         bCacheCompiledShader(False),
-        TargetProfile(SHADER_PROFILE_DEFAULT)
+        TargetProfile(SHADER_PROFILE_DEFAULT),
+        DefaultVariableType(SHADER_VARIABLE_TYPE_STATIC),
+        VariableDesc(nullptr),
+        NumVariables(0),
+        NumStaticSamplers(0),
+        StaticSamplers(nullptr)
     {}
 };
 
@@ -170,12 +246,7 @@ public:
     ///         be assigned to a constant buffer variable.
     virtual void Set(IDeviceObject *pObject) = 0;
 
-    /// Returns the shader which this shader variable
-    /// belongs to
-
-    /// \remark The method does not increment the reference counter
-    ///         of the returned interface.
-    virtual class IShader* GetShader() = 0;
+    virtual void SetArray(IDeviceObject* const* ppObjects, Uint32 FirstElement, Uint32 NumElements) = 0;
 };
 
 /// Shader interface

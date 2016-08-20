@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -29,15 +29,17 @@
 namespace Diligent
 {
 
+class IMemoryAllocator;
 /// Implementation of the Diligent::ISwapChainGL interface
-class SwapChainGLImpl : public SwapChainBase<ISwapChainGL>
+class SwapChainGLImpl : public SwapChainBase<ISwapChainGL, IMemoryAllocator>
 {
 public:
-    typedef SwapChainBase<ISwapChainGL> TSwapChainBase;
+    typedef SwapChainBase<ISwapChainGL, IMemoryAllocator> TSwapChainBase;
 
-    SwapChainGLImpl(const SwapChainDesc& SwapChainDesc, 
-                     class RenderDeviceGLImpl* pRenderDeviceGL,
-                     class DeviceContextGLImpl* pImmediateContextGL);
+    SwapChainGLImpl(IMemoryAllocator &Allocator,
+                    const SwapChainDesc& SwapChainDesc, 
+                    class RenderDeviceGLImpl* pRenderDeviceGL,
+                    class DeviceContextGLImpl* pImmediateContextGL);
     ~SwapChainGLImpl();
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface );

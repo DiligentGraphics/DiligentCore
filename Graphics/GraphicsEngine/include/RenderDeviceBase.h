@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -36,9 +36,9 @@
 #include "DeviceContext.h"
 #include "SwapChain.h"
 #include "GraphicsUtilities.h"
-
-using Diligent::RefCntAutoPtr;
-using Diligent::RefCntWeakPtr;
+#include "FixedBlockMemoryAllocator.h"
+#include "EngineMemory.h"
+#include "STDAllocator.h"
 
 namespace std
 {
@@ -48,8 +48,8 @@ namespace std
     {
         size_t operator()( const Diligent::SamplerDesc &SamDesc ) const
         {
-                                           // Sampler name is ignored in comparison operator
-                                           // and should not be hashed
+                                          // Sampler name is ignored in comparison operator
+                                          // and should not be hashed
             return Diligent::ComputeHash( // SamDesc.Name,
                                            static_cast<int>(SamDesc.MinFilter),
                                            static_cast<int>(SamDesc.MagFilter),
@@ -75,9 +75,9 @@ namespace std
         size_t operator()( const Diligent::StencilOpDesc &StOpDesc ) const
         {
             return Diligent::ComputeHash( static_cast<int>( StOpDesc.StencilFailOp ),
-                                           static_cast<int>( StOpDesc.StencilDepthFailOp ),
-                                           static_cast<int>( StOpDesc.StencilPassOp ),
-                                           static_cast<int>( StOpDesc.StencilFunc ) );
+                                          static_cast<int>( StOpDesc.StencilDepthFailOp ),
+                                          static_cast<int>( StOpDesc.StencilPassOp ),
+                                          static_cast<int>( StOpDesc.StencilFunc ) );
         }
     };
 
@@ -85,19 +85,16 @@ namespace std
     template<>
     struct hash<Diligent::DepthStencilStateDesc>
     {
-        size_t operator()( const Diligent::DepthStencilStateDesc &DSSDesc ) const
+        size_t operator()( const Diligent::DepthStencilStateDesc &DepthStencilDesc ) const
         {
-                                           // Depth-stencil state name is ignored in comparison operator
-                                           // and should not be hashed
-            return Diligent::ComputeHash( // DSSDesc.Name,
-                                           DSSDesc.DepthEnable,
-                                           DSSDesc.DepthWriteEnable,
-                                           static_cast<int>(DSSDesc.DepthFunc),
-                                           DSSDesc.StencilEnable,
-                                           DSSDesc.StencilReadMask,
-                                           DSSDesc.StencilWriteMask,
-                                           DSSDesc.FrontFace,
-                                           DSSDesc.BackFace );
+            return Diligent::ComputeHash( DepthStencilDesc.DepthEnable,
+                                          DepthStencilDesc.DepthWriteEnable,
+                                          static_cast<int>(DepthStencilDesc.DepthFunc),
+                                          DepthStencilDesc.StencilEnable,
+                                          DepthStencilDesc.StencilReadMask,
+                                          DepthStencilDesc.StencilWriteMask,
+                                          DepthStencilDesc.FrontFace,
+                                          DepthStencilDesc.BackFace );
         }
     };
 
@@ -105,20 +102,17 @@ namespace std
     template<>
     struct hash<Diligent::RasterizerStateDesc>
     {
-        size_t operator()( const Diligent::RasterizerStateDesc &RSDesc ) const
+        size_t operator()( const Diligent::RasterizerStateDesc &RasterizerDesc ) const
         {
-                                           // Rasterizer state name is ignored in comparison operator
-                                           // and should not be hashed
-            return Diligent::ComputeHash( // RSDesc.Name,
-                                           static_cast<int>( RSDesc.FillMode ),
-                                           static_cast<int>( RSDesc.CullMode ),
-                                           RSDesc.FrontCounterClockwise,
-                                           RSDesc.DepthBias,
-                                           RSDesc.DepthBiasClamp,
-                                           RSDesc.SlopeScaledDepthBias,
-                                           RSDesc.DepthClipEnable,
-                                           RSDesc.ScissorEnable,
-                                           RSDesc.AntialiasedLineEnable );
+            return Diligent::ComputeHash( static_cast<int>( RasterizerDesc.FillMode ),
+                                          static_cast<int>( RasterizerDesc.CullMode ),
+                                          RasterizerDesc.FrontCounterClockwise,
+                                          RasterizerDesc.DepthBias,
+                                          RasterizerDesc.DepthBiasClamp,
+                                          RasterizerDesc.SlopeScaledDepthBias,
+                                          RasterizerDesc.DepthClipEnable,
+                                          RasterizerDesc.ScissorEnable,
+                                          RasterizerDesc.AntialiasedLineEnable );
         }
     };
 
@@ -143,17 +137,14 @@ namespace std
                              rt.RenderTargetWriteMask );
             }
             Diligent::HashCombine( Seed,
-                                    // Blend state name is ignored in comparison operator
-                                    // and should not be hashed
-                                    // BSDesc.Name,
-                                    BSDesc.AlphaToCoverageEnable,
-                                    BSDesc.IndependentBlendEnable );
+                                   BSDesc.AlphaToCoverageEnable,
+                                   BSDesc.IndependentBlendEnable );
             return Seed;
         }
     };
 
 
-    /// Hash function specialization for Diligent::BlendStateDesc structure.
+    /// Hash function specialization for Diligent::TextureViewDesc structure.
     template<>
     struct hash<Diligent::TextureViewDesc>
     {
@@ -162,7 +153,7 @@ namespace std
             std::size_t Seed = 0;
             Diligent::HashCombine( Seed,
                                     static_cast<Diligent::Int32>(TexViewDesc.ViewType),
-                                    static_cast<Diligent::Int32>(TexViewDesc.TextureType),
+                                    static_cast<Diligent::Int32>(TexViewDesc.TextureDim),
                                     static_cast<Diligent::Int32>(TexViewDesc.Format),
                                     TexViewDesc.MostDetailedMip,
                                     TexViewDesc.NumMipLevels,
@@ -179,30 +170,63 @@ namespace Diligent
 
 /// Base implementation of a render device
 
+/// \tparam BaseInterface - base interface that this class will inheret.
 /// \warning
 /// Render device must *NOT* hold strong references to any
 /// object it creates to avoid circular dependencies.
 /// Device context, swap chain and all object the device creates
 /// keep strong reference to the device.
-/// Device only holds weak reference to immediate context.
-template<typename BaseInterface = IRenderDevice>
-class RenderDeviceBase : public ObjectBase<BaseInterface>
+/// Device only holds weak reference to the immediate context.
+template<typename BaseInterface>
+class RenderDeviceBase : public ObjectBase<BaseInterface, IMemoryAllocator>
 {
 public:
-    RenderDeviceBase() :
-        m_TextureFormatsInfo( TEX_FORMAT_NUM_FORMATS ),
-        m_TexFmtInfoInitFlags( TEX_FORMAT_NUM_FORMATS ),
-        m_SamplersRegistry("sampler"),
-        m_DSSRegistry("ds state"),
-        m_RSRegistry("rasterizer state"),
-        m_BSRegistry("blend state")
+    
+    typedef ObjectBase<BaseInterface, IMemoryAllocator> TObjectBase;
+
+    /// \param RawMemAllocator - allocator that will be used to allocate memory for all device objects (including render device itself)
+    /// \param NumDeferredContexts - number of deferred device contexts 
+    /// \param TextureObjSize - size of the texture object, in bytes
+    /// \param TexViewObjSize - size of the texture view object, in bytes
+    /// \param BufferObjSize - size of the buffer object, in bytes
+    /// \param BuffViewObjSize - size of the buffer view object, in bytes
+    /// \param ShaderObjSize - size of the shader object, in bytes
+    /// \param SamplerObjSize - size of the sampler object, in bytes
+    /// \param PSOSize - size of the pipeline state object, in bytes
+    /// \param SRBSize - size of the shader resource binding object, in bytes
+    /// \remarks Render device uses fixed block allocators (see FixedBlockMemoryAllocator) to allocate memory for
+    ///          device objects. The object sizes provided to constructor are used to initialize the allocators.
+    RenderDeviceBase(IMemoryAllocator &RawMemAllocator, 
+                     Uint32 NumDeferredContexts,
+                     size_t TextureObjSize, 
+                     size_t TexViewObjSize,
+                     size_t BufferObjSize, 
+                     size_t BuffViewObjSize,
+                     size_t ShaderObjSize, 
+                     size_t SamplerObjSize,
+                     size_t PSOSize,
+                     size_t SRBSize) :
+        TObjectBase(nullptr, &RawMemAllocator),
+        m_TextureFormatsInfo( TEX_FORMAT_NUM_FORMATS, TextureFormatInfoExt(), STD_ALLOCATOR_RAW_MEM(TextureFormatInfoExt, RawMemAllocator, "Allocator for vector<TextureFormatInfoExt>") ),
+        m_TexFmtInfoInitFlags( TEX_FORMAT_NUM_FORMATS, false, STD_ALLOCATOR_RAW_MEM(bool, RawMemAllocator, "Allocator for vector<bool>") ),
+        m_wpDeferredContexts(NumDeferredContexts, RefCntWeakPtr<IDeviceContext>(), STD_ALLOCATOR_RAW_MEM(RefCntWeakPtr<IDeviceContext>, RawMemAllocator, "Allocator for vector< RefCntWeakPtr<IDeviceContext> >")),
+        m_SamplersRegistry(RawMemAllocator, "sampler"),
+        m_TexObjAllocator(RawMemAllocator, TextureObjSize, 64),
+        m_TexViewObjAllocator(RawMemAllocator, TexViewObjSize, 64),
+        m_BufObjAllocator(RawMemAllocator, BufferObjSize, 128),
+        m_BuffViewObjAllocator(RawMemAllocator, BuffViewObjSize, 128),
+        m_ShaderObjAllocator(RawMemAllocator, ShaderObjSize, 32),
+        m_SamplerObjAllocator(RawMemAllocator, SamplerObjSize, 32),
+        m_PSOAllocator(RawMemAllocator, PSOSize, 128),
+        m_SRBAllocator(RawMemAllocator, SRBSize, 1024),
+        m_ResMappingAllocator(RawMemAllocator, sizeof(ResourceMappingImpl), 16)
     {
         // Initialize texture format info
         for( Uint32 Fmt = TEX_FORMAT_UNKNOWN; Fmt < TEX_FORMAT_NUM_FORMATS; ++Fmt )
             static_cast<TextureFormatAttribs&>(m_TextureFormatsInfo[Fmt]) = GetTextureFormatAttribs( static_cast<TEXTURE_FORMAT>(Fmt) );
 
         // https://msdn.microsoft.com/en-us/library/windows/desktop/ff471325(v=vs.85).aspx
-        std::vector<TEXTURE_FORMAT> FilterableFormats =
+        TEXTURE_FORMAT FilterableFormats[] =
         {
             TEX_FORMAT_RGBA32_FLOAT,    // OpenGL ES3.1 does not require this format to be filterable
             TEX_FORMAT_RGBA16_FLOAT,
@@ -243,8 +267,8 @@ public:
             TEX_FORMAT_BC5_SNORM,
             TEX_FORMAT_B5G6R5_UNORM
         };
-        for( auto fmt = FilterableFormats.begin(); fmt != FilterableFormats.end(); ++fmt )
-            m_TextureFormatsInfo[ *fmt ].Filterable = true;
+        for( Uint32 fmt = 0; fmt < _countof(FilterableFormats); ++fmt )
+            m_TextureFormatsInfo[ FilterableFormats[fmt] ].Filterable = true;
     }
 
     ~RenderDeviceBase()
@@ -253,14 +277,17 @@ public:
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE( IID_RenderDevice, ObjectBase<BaseInterface> )
 
-    virtual void CreateResourceMapping( const ResourceMappingDesc &MappingDesc, IResourceMapping **ppMapping );
+    /// Implementation of IRenderDevice::CreateResourceMapping().
+    virtual void CreateResourceMapping( const ResourceMappingDesc &MappingDesc, IResourceMapping **ppMapping )override final;
    
-    virtual const DeviceCaps& GetDeviceCaps()const
+    /// Implementation of IRenderDevice::GetDeviceCaps().
+    virtual const DeviceCaps& GetDeviceCaps()const override final
     {
         return m_DeviceCaps;
     }
 
-    virtual const TextureFormatInfo &GetTextureFormatInfo(TEXTURE_FORMAT TexFormat)
+    /// Implementation of IRenderDevice::GetTextureFormatInfo().
+    virtual const TextureFormatInfo &GetTextureFormatInfo(TEXTURE_FORMAT TexFormat)override final
     {
         VERIFY( TexFormat >= TEX_FORMAT_UNKNOWN && TexFormat < TEX_FORMAT_NUM_FORMATS, "Texture format out of range" );
         const auto& TexFmtInfo = m_TextureFormatsInfo[TexFormat];
@@ -268,7 +295,8 @@ public:
         return TexFmtInfo;
     }
 
-    virtual const TextureFormatInfoExt &GetTextureFormatInfoExt( TEXTURE_FORMAT TexFormat )
+    /// Implementation of IRenderDevice::GetTextureFormatInfoExt().
+    virtual const TextureFormatInfoExt &GetTextureFormatInfoExt( TEXTURE_FORMAT TexFormat )override final
     {
         VERIFY( TexFormat >= TEX_FORMAT_UNKNOWN && TexFormat < TEX_FORMAT_NUM_FORMATS, "Texture format out of range" );
         const auto& TexFmtInfo = m_TextureFormatsInfo[TexFormat];
@@ -287,9 +315,6 @@ public:
     }
 
     StateObjectsRegistry<SamplerDesc>           &GetSamplerRegistry(){ return m_SamplersRegistry; }
-    StateObjectsRegistry<DepthStencilStateDesc> &GetDSStateRegistry(){ return m_DSSRegistry;  }
-    StateObjectsRegistry<RasterizerStateDesc>   &GetRSRegistry()     { return m_RSRegistry;  }
-    StateObjectsRegistry<BlendStateDesc>        &GetBSRegistry()     { return m_BSRegistry;  }
     
     /// Set weak reference to the immediate context
     void SetImmediateContext(IDeviceContext *pImmediateContext)
@@ -298,7 +323,25 @@ public:
         m_wpImmediateContext = pImmediateContext;
     }
 
+    /// Set weak reference to the deferred context
+    void SetDeferredContext(size_t Ctx, IDeviceContext *pDeferredCtx)
+    {
+        VERIFY( m_wpDeferredContexts[Ctx].Lock() == nullptr, "Deferred context has already been set" );
+        m_wpDeferredContexts[Ctx] = pDeferredCtx;
+    }
+
+    /// Returns number of deferred contexts
+    size_t GetNumDeferredContexts()const
+    {
+        return m_wpDeferredContexts.size();
+    }
+
     RefCntAutoPtr<IDeviceContext> GetImmediateContext(){ return m_wpImmediateContext.Lock(); }
+    RefCntAutoPtr<IDeviceContext> GetDeferredContext(size_t Ctx){ return m_wpDeferredContexts[Ctx].Lock(); }
+
+    FixedBlockMemoryAllocator& GetTexViewObjAllocator(){return m_TexViewObjAllocator;}
+    FixedBlockMemoryAllocator& GetBuffViewObjAllocator(){return m_BuffViewObjAllocator;}
+    FixedBlockMemoryAllocator& GetSRBAllocator(){return m_SRBAllocator;}
 
 protected:
     
@@ -314,15 +357,25 @@ protected:
     // This is safe because every object unregisters itself
     // when it is deleted.
     StateObjectsRegistry<SamplerDesc> m_SamplersRegistry;     ///< Sampler state registry
-    StateObjectsRegistry<DepthStencilStateDesc> m_DSSRegistry;///< Depth-stencil state registry
-    StateObjectsRegistry<RasterizerStateDesc> m_RSRegistry;   ///< Rasterizer state registry
-    StateObjectsRegistry<BlendStateDesc> m_BSRegistry;        ///< Blend state registry
-    std::vector<TextureFormatInfoExt> m_TextureFormatsInfo;
-    std::vector<bool> m_TexFmtInfoInitFlags;
+    std::vector<TextureFormatInfoExt, STDAllocatorRawMem<TextureFormatInfoExt> > m_TextureFormatsInfo;
+    std::vector<bool, STDAllocatorRawMem<bool> > m_TexFmtInfoInitFlags;
     
     /// Weak reference to the immediate context. Immediate context holds strong reference
     /// to the device, so we must use weak reference to avoid circular dependencies.
-    Diligent::RefCntWeakPtr<IDeviceContext> m_wpImmediateContext;
+    RefCntWeakPtr<IDeviceContext> m_wpImmediateContext;
+
+    /// Weak references to deferred contexts. 
+    std::vector< RefCntWeakPtr<IDeviceContext>, STDAllocatorRawMem<RefCntWeakPtr<IDeviceContext> > > m_wpDeferredContexts;
+
+    FixedBlockMemoryAllocator m_TexObjAllocator;         ///< Allocator for texture objects
+    FixedBlockMemoryAllocator m_TexViewObjAllocator;     ///< Allocator for texture view objects
+    FixedBlockMemoryAllocator m_BufObjAllocator;         ///< Allocator for buffer objects
+    FixedBlockMemoryAllocator m_BuffViewObjAllocator;    ///< Allocator for buffer view objects
+    FixedBlockMemoryAllocator m_ShaderObjAllocator;      ///< Allocator for shader objects
+    FixedBlockMemoryAllocator m_SamplerObjAllocator;     ///< Allocator for sampler objects
+    FixedBlockMemoryAllocator m_PSOAllocator;            ///< Allocator for pipeline state objects
+    FixedBlockMemoryAllocator m_SRBAllocator;            ///< Allocator for shader resource binding objects
+    FixedBlockMemoryAllocator m_ResMappingAllocator;     ///< Allocator for resource mapping objects
 };
 
 
@@ -334,20 +387,20 @@ void RenderDeviceBase<BaseInterface>::CreateResourceMapping( const ResourceMappi
         return;
     VERIFY( *ppMapping == nullptr, "Overwriting reference to existing object may cause memory leaks" );
 
-    auto *pResourceMapping( new ResourceMappingImpl() );
+    auto *pResourceMapping( NEW(m_ResMappingAllocator, "ResourceMappingImpl instance",  ResourceMappingImpl, GetRawAllocator()) );
     pResourceMapping->QueryInterface( IID_ResourceMapping, reinterpret_cast<IObject**>(ppMapping) );
     if( MappingDesc.pEntries )
     {
         for( auto *pEntry = MappingDesc.pEntries; pEntry->Name && pEntry->pObject; ++pEntry )
         {
-            (*ppMapping)->AddResource( pEntry->Name, pEntry->pObject, true );
+            (*ppMapping)->AddResourceArray( pEntry->Name, pEntry->ArrayIndex, &pEntry->pObject, 1, true );
         }
     }
 }
 
 
-/// \tparam TObjectType - type of the object being created (IBuffer, ITexture, IBlendState, etc.)
-/// \tparam TObjectDescType - type of the object description structure (BufferDesc, TextureDesc, BlendStateDesc, etc.)
+/// \tparam TObjectType - type of the object being created (IBuffer, ITexture, etc.)
+/// \tparam TObjectDescType - type of the object description structure (BufferDesc, TextureDesc, etc.)
 /// \tparam TObjectConstructor - type of the function that constructs the object
 /// \param ObjectTypeName - string name of the object type ("buffer", "texture", etc.)
 /// \param Desc - object description

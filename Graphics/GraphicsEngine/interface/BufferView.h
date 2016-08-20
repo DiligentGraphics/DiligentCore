@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -53,7 +53,7 @@ struct BufferViewDesc : DeviceObjectAttribs
     /// Default values:
     /// Member              | Default value
     /// --------------------|--------------
-    /// ViewType            | BUFFER_VIEW_UNDEFINED
+    /// ViewType            | Diligent::BUFFER_VIEW_UNDEFINED
     /// ByteOffset          | 0
     /// ByteWidth           | 0
     BufferViewDesc() :

@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -31,12 +31,13 @@
 
 namespace Diligent
 {
-    BufferViewGLImpl::BufferViewGLImpl( IRenderDevice *pDevice, 
-                                          IDeviceContext *pContext,
-                                          const BufferViewDesc& ViewDesc, 
-                                          BufferGLImpl* pBuffer,
-                                          bool bIsDefaultView) :
-        TBuffViewBase(pDevice, ViewDesc, pBuffer, bIsDefaultView ),
+    BufferViewGLImpl::BufferViewGLImpl( FixedBlockMemoryAllocator& BuffViewObjAllocator,
+                                        IRenderDevice *pDevice, 
+                                        IDeviceContext *pContext,
+                                        const BufferViewDesc& ViewDesc, 
+                                        BufferGLImpl* pBuffer,
+                                        bool bIsDefaultView) :
+        TBuffViewBase(BuffViewObjAllocator, pDevice, ViewDesc, pBuffer, bIsDefaultView ),
         m_GLTexBuffer(false)
     {
         if( ViewDesc.ViewType == BUFFER_VIEW_SHADER_RESOURCE )

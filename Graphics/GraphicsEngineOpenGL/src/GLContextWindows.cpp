@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -134,8 +134,8 @@ namespace Diligent
 			if( wglewIsSupported( "WGL_ARB_create_context" ) == 1 )
 			{
 				MajorVersion = 4;
-				MinorVersion = 2;
-				// Setup attributes for a new OpenGL 4.2 rendering context
+				MinorVersion = 4;
+				// Setup attributes for a new OpenGL rendering context
 				int attribs[] =
 				{
 					WGL_CONTEXT_MAJOR_VERSION_ARB, MajorVersion,
@@ -206,6 +206,15 @@ namespace Diligent
                 &unusedIds,
                 true );
         }
+
+        // Under the standard filtering rules for cubemaps, filtering does not work across faces of the cubemap. 
+        // This results in a seam across the faces of a cubemap. This was a hardware limitation in the past, but 
+        // modern hardware is capable of interpolating across a cube face boundary.
+        // GL_TEXTURE_CUBE_MAP_SEAMLESS is not defined in OpenGLES
+        glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+        if( glGetError() != GL_NO_ERROR )
+            LOG_ERROR_MESSAGE("Failed to enable seamless cubemap filtering");
+
         DeviceCaps.DevType = DeviceType::OpenGL;
         DeviceCaps.MajorVersion = MajorVersion;
         DeviceCaps.MinorVersion = MinorVersion;
@@ -214,6 +223,8 @@ namespace Diligent
         TexCaps.bTexture2DMSSupported      = IsGL43OrAbove;
         TexCaps.bTexture2DMSArraySupported = IsGL43OrAbove;
         TexCaps.bTextureViewSupported      = IsGL43OrAbove;
+        TexCaps.bCubemapArraysSupported    = IsGL43OrAbove;
+        DeviceCaps.bMultithreadedResourceCreationSupported = False;
     }
 
     GLContext::~GLContext()

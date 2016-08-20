@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ImportGroup Label="PropertySheets" />
+  <PropertyGroup Label="UserMacros">
+    <EngineRoot>..\..\..\..</EngineRoot>
+    <GraphicsRoot>..\..\..</GraphicsRoot>
+    <ProjectRoot>..\..</ProjectRoot>
+  </PropertyGroup>
+  <PropertyGroup>
+    <IncludePath>$(GraphicsRoot)\GraphicsEngineD3DBase\include;$(GraphicsRoot)\GraphicsEngine\include;$(GraphicsRoot)\GraphicsEngine\interface;$(GraphicsRoot)\GraphicsTools\include;$(EngineRoot)\Common\include;$(EngineRoot)\Common\interface;$(EngineRoot)\Platforms\interface;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <BuildMacro Include="EngineRoot">
+      <Value>$(EngineRoot)</Value>
+    </BuildMacro>
+    <BuildMacro Include="GraphicsRoot">
+      <Value>$(GraphicsRoot)</Value>
+    </BuildMacro>
+    <BuildMacro Include="ProjectRoot">
+      <Value>$(ProjectRoot)</Value>
+    </BuildMacro>
+  </ItemGroup>
+</Project>

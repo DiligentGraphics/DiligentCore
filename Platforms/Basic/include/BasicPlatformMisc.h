@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -36,5 +36,16 @@ struct BasicPlatformMisc
             --MSB;
 
         return MSB;
+    }
+
+    static Diligent::Uint32 GetLSB(Diligent::Uint32 Val)
+    {
+        if( Val == 0 )return 32;
+
+        Diligent::Uint32 LSB = 0;
+        while( !(Val & (1 << LSB)) )
+            ++LSB;
+
+        return LSB;
     }
 };

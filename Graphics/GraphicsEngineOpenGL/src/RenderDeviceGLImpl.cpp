@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -26,29 +26,29 @@
 #include "RenderDeviceGLImpl.h"
 
 #include "BufferGLImpl.h"
-#include "VertexDescGLImpl.h"
 #include "ShaderGLImpl.h"
 #include "VAOCache.h"
-#include "ProgramPipelineCache.h"
 #include "Texture1D_OGL.h"
 #include "Texture1DArray_OGL.h"
 #include "Texture2D_OGL.h"
 #include "Texture2DArray_OGL.h"
 #include "Texture3D_OGL.h"
+#include "TextureCube_OGL.h"
+#include "TextureCubeArray_OGL.h"
 #include "SamplerGLImpl.h"
-#include "DSStateGLImpl.h"
-#include "RasterizerStateGLImpl.h"
-#include "BlendStateGLImpl.h"
 #include "DeviceContextGLImpl.h"
 #include "GLTypeConversions.h"
+#include "PipelineStateGLImpl.h"
+#include "ShaderResourceBindingGLImpl.h"
+#include "EngineMemory.h"
 
 namespace Diligent
 {
 
-RenderDeviceGLImpl :: RenderDeviceGLImpl(const ContextInitInfo &InitInfo):
+RenderDeviceGLImpl :: RenderDeviceGLImpl(IMemoryAllocator &RawMemAllocator, const ContextInitInfo &InitInfo):
+    TRenderDeviceBase(RawMemAllocator, 0, sizeof(TextureBaseGL), sizeof(TextureViewGLImpl), sizeof(BufferGLImpl), sizeof(BufferViewGLImpl), sizeof(ShaderGLImpl), sizeof(SamplerGLImpl), sizeof(PipelineStateGLImpl), sizeof(ShaderResourceBindingGLImpl)),
     // Device caps must be filled in before the constructor of Pipeline Cache is called!
     m_GLContext(InitInfo, m_DeviceCaps),
-    m_PipelineCache(this),
     m_EmptyVAO(true),
     m_TexRegionRender(this)
 {
@@ -89,7 +89,7 @@ void RenderDeviceGLImpl :: CreateBuffer(const BufferDesc& BuffDesc, const Buffer
     CreateDeviceObject( "buffer", BuffDesc, ppBuffer, 
         [&]()
         {
-            BufferGLImpl *pBufferOGL( new BufferGLImpl( this, BuffDesc, BuffData, bIsDeviceInternal ) );
+            BufferGLImpl *pBufferOGL( NEW(m_BufObjAllocator, "BufferGLImpl instance", BufferGLImpl, m_BuffViewObjAllocator, this, BuffDesc, BuffData, bIsDeviceInternal ) );
             pBufferOGL->QueryInterface( IID_Buffer, reinterpret_cast<IObject**>(ppBuffer) );
             pBufferOGL->CreateDefaultViews();
             OnCreateDeviceObject( pBufferOGL );
@@ -102,30 +102,13 @@ void RenderDeviceGLImpl :: CreateBuffer(const BufferDesc& BuffDesc, const Buffer
 	CreateBuffer(BuffDesc, BuffData, ppBuffer, false);
 }
 
-void RenderDeviceGLImpl::CreateVertexDescription( const LayoutDesc& LayoutDesc, IShader *pVertexShader, IVertexDescription **ppVertexDesc, bool bIsDeviceInternal )
-{
-    CreateDeviceObject( "vertex description", LayoutDesc, ppVertexDesc, 
-        [&]()
-        {
-            VertexDescGLImpl *pDescOGL( new VertexDescGLImpl( this, LayoutDesc, bIsDeviceInternal ) );
-            pDescOGL->QueryInterface(IID_VertexDescription, reinterpret_cast<IObject**>(ppVertexDesc) );
-
-            OnCreateDeviceObject( pDescOGL );
-        }
-    );
-}
-void RenderDeviceGLImpl::CreateVertexDescription(const LayoutDesc& LayoutDesc, IShader *pVertexShader, IVertexDescription **ppVertexDesc)
-{
-	CreateVertexDescription(LayoutDesc, pVertexShader, ppVertexDesc, false);
-}
-
 
 void RenderDeviceGLImpl :: CreateShader(const ShaderCreationAttribs &ShaderCreationAttribs, IShader **ppShader, bool bIsDeviceInternal)
 {
     CreateDeviceObject( "shader", ShaderCreationAttribs.Desc, ppShader, 
         [&]()
         {
-            ShaderGLImpl *pShaderOGL(new ShaderGLImpl(this, ShaderCreationAttribs, bIsDeviceInternal));
+            ShaderGLImpl *pShaderOGL(NEW(m_ShaderObjAllocator, "ShaderGLImpl instance", ShaderGLImpl, this, ShaderCreationAttribs, bIsDeviceInternal));
             pShaderOGL->QueryInterface(IID_Shader, reinterpret_cast<IObject**>(ppShader) );
 
             OnCreateDeviceObject( pShaderOGL );
@@ -155,24 +138,32 @@ void RenderDeviceGLImpl :: CreateTexture(const TextureDesc& TexDesc, const Textu
             TextureBaseGL *pTextureOGL = nullptr;
             switch(TexDesc.Type)
             {
-                case TEXTURE_TYPE_1D:
-                    pTextureOGL = new Texture1D_OGL(this, pDeviceContext, TexDesc, Data, bIsDeviceInternal);
+                case RESOURCE_DIM_TEX_1D:
+                    pTextureOGL = NEW(m_TexObjAllocator, "Texture1D_OGL instance", Texture1D_OGL, m_TexViewObjAllocator, this, pDeviceContext, TexDesc, Data, bIsDeviceInternal);
                     break;
         
-                case TEXTURE_TYPE_1D_ARRAY:
-                    pTextureOGL = new Texture1DArray_OGL(this, pDeviceContext, TexDesc, Data, bIsDeviceInternal);
+                case RESOURCE_DIM_TEX_1D_ARRAY:
+                    pTextureOGL = NEW(m_TexObjAllocator, "Texture1DArray_OGL instance", Texture1DArray_OGL, m_TexViewObjAllocator, this, pDeviceContext, TexDesc, Data, bIsDeviceInternal);
                     break;
 
-                case TEXTURE_TYPE_2D:
-                    pTextureOGL = new Texture2D_OGL(this, pDeviceContext, TexDesc, Data, bIsDeviceInternal);
+                case RESOURCE_DIM_TEX_2D:
+                    pTextureOGL = NEW(m_TexObjAllocator, "Texture2D_OGL instance", Texture2D_OGL, m_TexViewObjAllocator, this, pDeviceContext, TexDesc, Data, bIsDeviceInternal);
                     break;
         
-                case TEXTURE_TYPE_2D_ARRAY:
-                    pTextureOGL = new Texture2DArray_OGL(this, pDeviceContext, TexDesc, Data, bIsDeviceInternal);
+                case RESOURCE_DIM_TEX_2D_ARRAY:
+                    pTextureOGL = NEW(m_TexObjAllocator, "Texture2DArray_OGL instance", Texture2DArray_OGL, m_TexViewObjAllocator, this, pDeviceContext, TexDesc, Data, bIsDeviceInternal);
                     break;
 
-                case TEXTURE_TYPE_3D:
-                    pTextureOGL = new Texture3D_OGL(this, pDeviceContext, TexDesc, Data, bIsDeviceInternal);
+                case RESOURCE_DIM_TEX_3D:
+                    pTextureOGL = NEW(m_TexObjAllocator, "Texture3D_OGL instance", Texture3D_OGL, m_TexViewObjAllocator, this, pDeviceContext, TexDesc, Data, bIsDeviceInternal);
+                    break;
+
+                case RESOURCE_DIM_TEX_CUBE:
+                    pTextureOGL = NEW(m_TexObjAllocator, "TextureCube_OGL instance", TextureCube_OGL, m_TexViewObjAllocator, this, pDeviceContext, TexDesc, Data, bIsDeviceInternal);
+                    break;
+
+                case RESOURCE_DIM_TEX_CUBE_ARRAY:
+                    pTextureOGL = NEW(m_TexObjAllocator, "TextureCubeArray_OGL instance", TextureCubeArray_OGL, m_TexViewObjAllocator, this, pDeviceContext, TexDesc, Data, bIsDeviceInternal);
                     break;
 
                 default: LOG_ERROR_AND_THROW( "Unknown texture type. (Did you forget to initialize the Type member of TextureDesc structure?)" );
@@ -198,7 +189,7 @@ void RenderDeviceGLImpl :: CreateSampler(const SamplerDesc& SamplerDesc, ISample
             m_SamplersRegistry.Find( SamplerDesc, reinterpret_cast<IDeviceObject**>(ppSampler) );
             if( *ppSampler == nullptr )
             {
-                SamplerGLImpl *pSamplerOGL( new SamplerGLImpl( this, SamplerDesc, bIsDeviceInternal ) );
+                SamplerGLImpl *pSamplerOGL( NEW(m_SamplerObjAllocator, "SamplerGLImpl instance", SamplerGLImpl, this, SamplerDesc, bIsDeviceInternal ) );
                 pSamplerOGL->QueryInterface( IID_Sampler, reinterpret_cast<IObject**>(ppSampler) );
                 OnCreateDeviceObject( pSamplerOGL );
                 m_SamplersRegistry.Add( SamplerDesc, *ppSampler );
@@ -212,69 +203,24 @@ void RenderDeviceGLImpl::CreateSampler(const SamplerDesc& SamplerDesc, ISampler 
 	CreateSampler(SamplerDesc, ppSampler, false);
 }
 
-void RenderDeviceGLImpl::CreateDepthStencilState( const DepthStencilStateDesc &DSSDesc, IDepthStencilState **ppDepthStencilState, bool bIsDeviceInternal )
+
+void RenderDeviceGLImpl::CreatePipelineState( const PipelineStateDesc &PipelineDesc, IPipelineState **ppPipelineState)
 {
-    CreateDeviceObject( "depth-stencil state", DSSDesc, ppDepthStencilState, 
+    CreatePipelineState(PipelineDesc, ppPipelineState, false);
+}
+
+void RenderDeviceGLImpl::CreatePipelineState(const PipelineStateDesc &PipelineDesc, IPipelineState **ppPipelineState, bool bIsDeviceInternal)
+{
+    CreateDeviceObject( "Pipeline state", PipelineDesc, ppPipelineState, 
         [&]()
         {
-            m_DSSRegistry.Find( DSSDesc, reinterpret_cast<IDeviceObject**>(ppDepthStencilState) );
-            if( *ppDepthStencilState == nullptr )
-            {
-                DSStateGLImpl *pDSSOGL( new DSStateGLImpl( this, DSSDesc, bIsDeviceInternal ) );
-                pDSSOGL->QueryInterface( IID_DepthStencilState, reinterpret_cast<IObject**>(ppDepthStencilState) );
-                OnCreateDeviceObject( pDSSOGL );
-                m_DSSRegistry.Add( DSSDesc, pDSSOGL );
-            }
+            PipelineStateGLImpl *pPipelineStateOGL( NEW(m_PSOAllocator, "PipelineStateGLImpl instance", PipelineStateGLImpl, this, PipelineDesc, bIsDeviceInternal ) );
+            pPipelineStateOGL->QueryInterface( IID_PipelineState, reinterpret_cast<IObject**>(ppPipelineState) );
+            OnCreateDeviceObject( pPipelineStateOGL );
         }
     );
 }
 
-void RenderDeviceGLImpl::CreateDepthStencilState(const DepthStencilStateDesc &DSSDesc, IDepthStencilState **ppDepthStencilState)
-{
-	CreateDepthStencilState( DSSDesc, ppDepthStencilState, false );
-}
-
-void RenderDeviceGLImpl::CreateRasterizerState( const RasterizerStateDesc &RSDesc, IRasterizerState **ppRasterizerState, bool bIsDeviceInternal )
-{
-    CreateDeviceObject( "rasterizer state", RSDesc, ppRasterizerState, 
-        [&]()
-        {
-            m_RSRegistry.Find( RSDesc, reinterpret_cast<IDeviceObject**>(ppRasterizerState) );
-            if( *ppRasterizerState == nullptr )
-            {
-                RasterizerStateGLImpl *pRSOGL( new RasterizerStateGLImpl( this, RSDesc, bIsDeviceInternal ) );
-                pRSOGL->QueryInterface( IID_RasterizerState, reinterpret_cast<IObject**>(ppRasterizerState) );
-                OnCreateDeviceObject( pRSOGL );
-                m_RSRegistry.Add( RSDesc, pRSOGL );
-            }
-        }
-    );
-}
-void RenderDeviceGLImpl::CreateRasterizerState(const RasterizerStateDesc &RSDesc, IRasterizerState **ppRasterizerState)
-{
-	CreateRasterizerState( RSDesc, ppRasterizerState, false );
-}
-
-void RenderDeviceGLImpl::CreateBlendState( const BlendStateDesc &BSDesc, IBlendState **ppBlendState, bool bIsDeviceInternal )
-{
-    CreateDeviceObject( "blend state", BSDesc, ppBlendState, 
-        [&]()
-        {
-            m_BSRegistry.Find( BSDesc, reinterpret_cast<IDeviceObject**>(ppBlendState) );
-            if( *ppBlendState == nullptr )
-            {
-                BlendStateGLImpl *pBSOGL( new BlendStateGLImpl( this, BSDesc, bIsDeviceInternal ) );
-                pBSOGL->QueryInterface( IID_BlendState, reinterpret_cast<IObject**>(ppBlendState) );
-                OnCreateDeviceObject( pBSOGL );
-                m_BSRegistry.Add( BSDesc, pBSOGL );
-            }
-        }
-    );
-}
-void RenderDeviceGLImpl::CreateBlendState(const BlendStateDesc &BSDesc, IBlendState **ppBlendState)
-{
-	CreateBlendState( BSDesc, ppBlendState, false );
-}
 
 bool RenderDeviceGLImpl::CheckExtension( const Char *ExtensionString )
 {

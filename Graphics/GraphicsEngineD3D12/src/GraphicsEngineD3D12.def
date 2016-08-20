@@ -1,0 +1,3 @@
+EXPORTS
+	 CreateDeviceAndContextsD3D12
+	 CreateSwapChainD3D12

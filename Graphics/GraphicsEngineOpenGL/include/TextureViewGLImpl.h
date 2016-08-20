@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -32,13 +32,15 @@
 namespace Diligent
 {
 
+class FixedBlockMemoryAllocator;
 /// Implementation of the Diligent::ITextureViewGL interface
-class TextureViewGLImpl : public TextureViewBase<ITextureViewGL>
+class TextureViewGLImpl : public TextureViewBase<ITextureViewGL, FixedBlockMemoryAllocator>
 {
 public:
-    typedef TextureViewBase<ITextureViewGL> TTextureViewBase;
+    typedef TextureViewBase<ITextureViewGL, FixedBlockMemoryAllocator> TTextureViewBase;
 
-    TextureViewGLImpl( class IRenderDevice *pDevice, 
+    TextureViewGLImpl( FixedBlockMemoryAllocator &TexViewObjAllocator,
+                     class IRenderDevice *pDevice, 
                      const struct TextureViewDesc& ViewDesc, 
                      class TextureBaseGL *pTexture,
                      bool bCreateGLViewTex,

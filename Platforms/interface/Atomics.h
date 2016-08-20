@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -25,8 +25,17 @@
 
 #include "PlatformDefinitions.h"
 
-// Atomics are implemented using c++11 standard atomics, so there is no need
-// to use different implementations for different platforms
-#include "..\Basic\include\BasicAtomics.h"
+#if defined( PLATFORM_WIN32 ) || defined( PLATFORM_UNIVERSAL_WINDOWS )
 
-typedef BasicAtomics Atomics;
+    #include "..\Win32\include\Win32Atomics.h"
+    typedef WindowsAtomics Atomics;
+
+#else
+
+    // Use c++11 standard atomics
+    #include "..\Basic\include\BasicAtomics.h"
+    typedef BasicAtomics Atomics;
+
+#endif
+
+

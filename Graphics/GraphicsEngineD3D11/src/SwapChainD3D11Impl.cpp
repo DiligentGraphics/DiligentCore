@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -25,24 +25,22 @@
 #include "SwapChainD3D11Impl.h"
 #include "RenderDeviceD3D11Impl.h"
 #include "DeviceContextD3D11Impl.h"
+#include <dxgi1_2.h>
 
 using namespace Diligent;
 
 namespace Diligent
 {
 
-SwapChainD3D11Impl::SwapChainD3D11Impl(const SwapChainDesc& SCDesc, 
-                                         RenderDeviceD3D11Impl* pRenderDeviceD3D11, 
-                                         DeviceContextD3D11Impl* pDeviceContextD3D11, 
-                                         void* pNativeWndHandle) : 
-    TSwapChainBase(pRenderDeviceD3D11, pDeviceContextD3D11, SCDesc)
+SwapChainD3D11Impl::SwapChainD3D11Impl(IMemoryAllocator &Allocator,
+                                       const SwapChainDesc& SCDesc, 
+                                       RenderDeviceD3D11Impl* pRenderDeviceD3D11, 
+                                       DeviceContextD3D11Impl* pDeviceContextD3D11, 
+                                       void* pNativeWndHandle) : 
+    TSwapChainBase(Allocator, pRenderDeviceD3D11, pDeviceContextD3D11, SCDesc)
 {
-    auto *pDevice = pRenderDeviceD3D11->GetD3D11Device();
 
-    auto DXGIColorBuffFmt = TexFormatToDXGI_Format(m_SwapChainDesc.ColorBufferFormat);
-
-#if defined( PLATFORM_WINDOWS )
-
+#ifdef PLATFORM_WIN32
     auto hWnd = reinterpret_cast<HWND>(pNativeWndHandle);
 
     if( m_SwapChainDesc.Width == 0 || m_SwapChainDesc.Height == 0 )
@@ -52,50 +50,48 @@ SwapChainD3D11Impl::SwapChainD3D11Impl(const SwapChainDesc& SCDesc,
         m_SwapChainDesc.Width = rc.right - rc.left;
         m_SwapChainDesc.Height = rc.bottom - rc.top;
     }
+#endif
 
+    auto *pDevice = pRenderDeviceD3D11->GetD3D11Device();
+
+    auto DXGIColorBuffFmt = TexFormatToDXGI_Format(m_SwapChainDesc.ColorBufferFormat);
+
+    DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
+    swapChainDesc.Width = m_SwapChainDesc.Width;
+    swapChainDesc.Height = m_SwapChainDesc.Height;
+    //  Flip model swapchains (DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL and DXGI_SWAP_EFFECT_FLIP_DISCARD) only support the following Formats: 
+    //  - DXGI_FORMAT_R16G16B16A16_FLOAT 
+    //  - DXGI_FORMAT_B8G8R8A8_UNORM
+    //  - DXGI_FORMAT_R8G8B8A8_UNORM
+    //  - DXGI_FORMAT_R10G10B10A2_UNORM
+    // If RGBA8_UNORM_SRGB swap chain is required, we will create RGBA8_UNORM swap chain, but
+    // create RGBA8_UNORM_SRGB render target view
+    swapChainDesc.Format = DXGIColorBuffFmt == DXGI_FORMAT_R8G8B8A8_UNORM_SRGB ? DXGI_FORMAT_R8G8B8A8_UNORM : DXGIColorBuffFmt;
+    swapChainDesc.Stereo = FALSE;
+    swapChainDesc.SampleDesc.Count = 1;
+    swapChainDesc.SampleDesc.Quality = 0;
+    swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+    swapChainDesc.BufferCount = m_SwapChainDesc.BufferCount;
+    swapChainDesc.Scaling = DXGI_SCALING_NONE;
+    swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
+    swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED; // Not used
+    swapChainDesc.Flags = 0;
+
+    CComPtr<IDXGISwapChain1> pSwapChain1;
+
+#if defined( PLATFORM_WIN32 )
 	// This sequence obtains the DXGI factory that was used to create the Direct3D device above.
 	CComPtr<IDXGIDevice> pDXGIDevice;
 	pDevice->QueryInterface(__uuidof(IDXGIDevice), reinterpret_cast<void**>( static_cast<IDXGIDevice**>(&pDXGIDevice) ) );
     CComPtr<IDXGIAdapter> pDXGIAdapter;
     pDXGIDevice->GetAdapter(&pDXGIAdapter);
-	CComPtr<IDXGIFactory> pDXGIFactory;
-    pDXGIAdapter->GetParent(__uuidof(pDXGIFactory), reinterpret_cast<void**>( static_cast<IDXGIFactory**>(&pDXGIFactory) ));
+	CComPtr<IDXGIFactory2> pDXGIFactory;
+    pDXGIAdapter->GetParent(__uuidof(pDXGIFactory), reinterpret_cast<void**>( static_cast<IDXGIFactory2**>(&pDXGIFactory) ));
 
-    DXGI_SWAP_CHAIN_DESC sd;
-    ZeroMemory( &sd, sizeof( sd ) );
-    sd.BufferCount = 1;
-    sd.BufferDesc.Width = m_SwapChainDesc.Width;
-    sd.BufferDesc.Height = m_SwapChainDesc.Height;
-    sd.BufferDesc.Format = DXGIColorBuffFmt;
-    sd.BufferDesc.RefreshRate.Numerator = 0;
-    sd.BufferDesc.RefreshRate.Denominator = 0;
-    sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-    sd.OutputWindow = hWnd;
-    sd.SampleDesc.Count = m_SwapChainDesc.SamplesCount;
-    sd.SampleDesc.Quality = 0;
-    sd.Windowed = TRUE;
-    sd.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH; // Set this flag to enable an application to switch 
-    // modes by calling IDXGISwapChain::ResizeTarget. When switching from windowed to full-screen mode, the 
-    // display mode (or monitor resolution) will be changed to match the dimensions of the application window.
-    CHECK_D3D_RESULT_THROW( pDXGIFactory->CreateSwapChain(pDevice, &sd, &m_pSwapChain),
+    CHECK_D3D_RESULT_THROW( pDXGIFactory->CreateSwapChainForHwnd(pDevice, hWnd, &swapChainDesc, nullptr, nullptr, &pSwapChain1), 
                             "Failed to create DXGI swap chain" );
 
-#elif defined( PLATFORM_WINDOWS_STORE )
-
-	DXGI_SWAP_CHAIN_DESC1 swapChainDesc = { 0 };
-
-	swapChainDesc.Width = m_SwapChainDesc.Width;
-	swapChainDesc.Height = m_SwapChainDesc.Height;
-	swapChainDesc.Format = DXGIColorBuffFmt;
-	swapChainDesc.Stereo = false;
-	swapChainDesc.SampleDesc.Count = 1; // Don't use multi-sampling.
-	swapChainDesc.SampleDesc.Quality = 0;
-	swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	swapChainDesc.BufferCount = 2; // Use double-buffering to minimize latency.
-	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL; // All Windows Store apps must use this SwapEffect.
-	swapChainDesc.Flags = 0;
-	swapChainDesc.Scaling = DXGI_SCALING_NONE;
-	swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
+#elif defined( PLATFORM_UNIVERSAL_WINDOWS )
 
 	CComPtr<IDXGIDevice3> pDXGIDevice;
 	pDevice->QueryInterface(__uuidof(IDXGIDevice3), reinterpret_cast<void**>(static_cast<IDXGIDevice3**>(&pDXGIDevice)));
@@ -103,8 +99,7 @@ SwapChainD3D11Impl::SwapChainD3D11Impl(const SwapChainDesc& SCDesc,
     pDXGIDevice->GetAdapter(&pDXGIAdapter);
 	CComPtr<IDXGIFactory2> pDXGIFactory;
     pDXGIAdapter->GetParent(__uuidof(pDXGIFactory), reinterpret_cast<void**>(static_cast<IDXGIFactory2**>(&pDXGIFactory)));
-
-    CComPtr<IDXGISwapChain1> pSwapChain1;
+    
     HRESULT hr = pDXGIFactory->CreateSwapChainForCoreWindow(
 		pDevice,
 		reinterpret_cast<IUnknown*>(pNativeWndHandle),
@@ -113,13 +108,13 @@ SwapChainD3D11Impl::SwapChainD3D11Impl(const SwapChainDesc& SCDesc,
 		&pSwapChain1);
     CHECK_D3D_RESULT_THROW( hr, "Failed to create DXGI swap chain" );
 
-    pSwapChain1->QueryInterface( __uuidof(m_pSwapChain), reinterpret_cast<void**>(static_cast<IDXGISwapChain**>(&m_pSwapChain)) );
-
 	// Ensure that DXGI does not queue more than one frame at a time. This both reduces latency and
 	// ensures that the application will only render after each VSync, minimizing power consumption.
     pDXGIDevice->SetMaximumFrameLatency( 1 );
 
 #endif
+
+    pSwapChain1->QueryInterface( __uuidof(m_pSwapChain), reinterpret_cast<void**>(static_cast<IDXGISwapChain**>(&m_pSwapChain)) );
 
     CreateRTVandDSV();
 }
@@ -141,7 +136,13 @@ void SwapChainD3D11Impl::CreateRTVandDSV()
     CHECK_D3D_RESULT_THROW( m_pSwapChain->GetBuffer( 0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>( static_cast<ID3D11Texture2D**>(&pBackBuffer) ) ),
                             "Failed to get back buffer from swap chain" );
 
-    CHECK_D3D_RESULT_THROW( pDevice->CreateRenderTargetView( pBackBuffer, NULL, &m_pRenderTargetView ),
+    D3D11_RENDER_TARGET_VIEW_DESC RTVDesc = {};
+    RTVDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+    // We need to explicitly specify RTV format, as we may need to create RGBA8_UNORM_SRGB RTV for
+    // a RGBA8_UNORM swap chain
+    RTVDesc.Format = TexFormatToDXGI_Format(m_SwapChainDesc.ColorBufferFormat);
+    RTVDesc.Texture2D.MipSlice = 0;
+    CHECK_D3D_RESULT_THROW( pDevice->CreateRenderTargetView( pBackBuffer, &RTVDesc, &m_pRenderTargetView ),
                             "Failed to get RTV for the back buffer" );
 
     // Create depth buffer
@@ -172,7 +173,7 @@ IMPLEMENT_QUERY_INTERFACE( SwapChainD3D11Impl, IID_SwapChainD3D11, TSwapChainBas
 void SwapChainD3D11Impl::Present()
 {
     UINT SyncInterval = 0;
-#ifdef PLATFORM_WINDOWS_STORE
+#ifdef PLATFORM_UNIVERSAL_WINDOWS
     SyncInterval = 1; // Interval 0 is not supported on Windows Phone 
 #endif
 
@@ -193,13 +194,11 @@ void SwapChainD3D11Impl::Present()
 
     m_pSwapChain->Present( SyncInterval, 0 );
 
-#ifdef PLATFORM_WINDOWS_STORE
     // A successful Present call for DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL SwapChains unbinds 
     // backbuffer 0 from all GPU writeable bind points.
     // We need to rebind all render targets to make sure that
     // the back buffer is not unbound
     pImmediateCtxD3D11->RebindRenderTargets();
-#endif
 }
 
 void SwapChainD3D11Impl::Resize( Uint32 NewWidth, Uint32 NewHeight )

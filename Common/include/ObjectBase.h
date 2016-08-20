@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -58,12 +58,12 @@ namespace Diligent
 
 
 /// Template class implementing base functionality for an object
-template<typename BaseInterface>
-class ObjectBase : public RefCountedObject<BaseInterface>
+template<typename BaseInterface, typename TObjectAllocator = IMemoryAllocator>
+class ObjectBase : public RefCountedObject<BaseInterface, TObjectAllocator>
 {
 public:
-    ObjectBase(IObject *pOwner = nullptr) : 
-        RefCountedObject<BaseInterface>( pOwner )
+    ObjectBase(IObject *pOwner = nullptr, TObjectAllocator *pObjAllocator = nullptr) : 
+        RefCountedObject<BaseInterface, TObjectAllocator>( pOwner, pObjAllocator )
     {}
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )

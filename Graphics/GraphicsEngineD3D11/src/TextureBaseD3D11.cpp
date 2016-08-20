@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -27,14 +27,13 @@
 #include "DeviceContextD3D11Impl.h"
 #include "D3D11TypeConversions.h"
 #include "TextureViewD3D11Impl.h"
-
-using namespace Diligent;
+#include "EngineMemory.h"
 
 namespace Diligent
 {
 
-TextureBaseD3D11 :: TextureBaseD3D11(RenderDeviceD3D11Impl *pRenderDeviceD3D11, const TextureDesc& TexDesc, const TextureData &InitData /*= TextureData()*/) : 
-    TTextureBase(pRenderDeviceD3D11, TexDesc)
+TextureBaseD3D11 :: TextureBaseD3D11(FixedBlockMemoryAllocator &TexObjAllocator, FixedBlockMemoryAllocator &TexViewObjAllocator, RenderDeviceD3D11Impl *pRenderDeviceD3D11, const TextureDesc& TexDesc, const TextureData &InitData /*= TextureData()*/) : 
+    TTextureBase(TexObjAllocator, TexViewObjAllocator, pRenderDeviceD3D11, TexDesc)
 {
     if( TexDesc.Usage == USAGE_STATIC && InitData.pSubResources == nullptr )
         LOG_ERROR_AND_THROW("Static Texture must be initialized with data at creation time");
@@ -53,7 +52,6 @@ void TextureBaseD3D11::CreateViewInternal( const struct TextureViewDesc &ViewDes
     try
     {
         auto UpdatedViewDesc = ViewDesc;
-
         CorrectTextureViewDesc( UpdatedViewDesc );
 
         RefCntAutoPtr<ID3D11View> pD3D11View;
@@ -98,7 +96,11 @@ void TextureBaseD3D11::CreateViewInternal( const struct TextureViewDesc &ViewDes
             default: UNEXPECTED( "Unknown view type" ); break;
         }
 
-        auto pViewD3D11 = new TextureViewD3D11Impl( GetDevice(), UpdatedViewDesc, this, pD3D11View, bIsDefaultView );
+        auto *pDeviceD3D11Impl = ValidatedCast<RenderDeviceD3D11Impl>(GetDevice());
+        auto &TexViewAllocator = pDeviceD3D11Impl->GetTexViewObjAllocator();
+        VERIFY( &TexViewAllocator == &m_dbgTexViewObjAllocator, "Texture view allocator does not match allocator provided during texture initialization" );
+
+        auto pViewD3D11 = NEW(TexViewAllocator, "TextureViewD3D11Impl instance", TextureViewD3D11Impl, pDeviceD3D11Impl, UpdatedViewDesc, this, pD3D11View, bIsDefaultView );
         VERIFY( pViewD3D11->GetDesc().ViewType == ViewDesc.ViewType, "Incorrect view type" );
 
         if( bIsDefaultView )
@@ -113,7 +115,8 @@ void TextureBaseD3D11::CreateViewInternal( const struct TextureViewDesc &ViewDes
     }
 }
 
-void TextureBaseD3D11 :: PrepareD3D11InitData(const TextureData &InitData, Uint32 NumSubresources, std::vector<D3D11_SUBRESOURCE_DATA> &D3D11InitData)
+void TextureBaseD3D11 :: PrepareD3D11InitData(const TextureData &InitData, Uint32 NumSubresources, 
+                                              std::vector<D3D11_SUBRESOURCE_DATA, STDAllocatorRawMem<D3D11_SUBRESOURCE_DATA> >  &D3D11InitData)
 {
     if( InitData.pSubResources )
     {
@@ -205,9 +208,9 @@ void TextureBaseD3D11 :: Map(IDeviceContext *pContext, MAP_TYPE MapType, Uint32 
     //VERIFY( pMappedData, "Map failed" );
 }
 
-void TextureBaseD3D11::Unmap( IDeviceContext *pContext )
+void TextureBaseD3D11::Unmap( IDeviceContext *pContext, MAP_TYPE MapType )
 {
-    TTextureBase::Unmap( pContext );
+    TTextureBase::Unmap( pContext, MapType );
 
     //auto *pd3d11DeviceContext = static_cast<RenderDeviceD3D11Impl*>( static_cast<CRenderDevice*>(m_pDevice) )->GetD3D11DeviceContext();
     //pd3d11DeviceContext->Unmap(m_pd3d11Texture, 0);

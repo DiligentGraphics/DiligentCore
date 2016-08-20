@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -51,6 +51,7 @@ public:
     void SetDepthFunc(COMPARISON_FUNCTION CmpFunc);
     void EnableStencilTest( Bool bEnable );
     void SetStencilWriteMask( Uint8 StencilWriteMask );
+    void SetStencilRef( GLenum Face, Int32 Ref );
     void SetStencilFunc( GLenum Face, COMPARISON_FUNCTION Func, Int32 Ref, Uint32 Mask );
     void SetStencilOp( GLenum Face, STENCIL_OP StencilFailOp, STENCIL_OP StencilDepthFailOp, STENCIL_OP StencilPassOp );
 
@@ -61,7 +62,8 @@ public:
     void SetDepthClamp( Bool bEnableDepthClamp );
     void EnableScissorTest( Bool bEnableScissorTest );
 
-    void SetBlendState(const BlendStateDesc &BSDsc, const float *BlendFactors, Uint32 SampleMask);
+    void SetBlendFactors(const float *BlendFactors);
+    void SetBlendState(const BlendStateDesc &BSDsc, Uint32 SampleMask);
 
     Bool GetDepthWritesEnabled(){ return m_DepthWritesEnableState; }
     Bool GetScissorTestEnabled(){ return m_RSState.ScissorTestEnable; }
@@ -168,7 +170,7 @@ private:
         Int32 Ref;
         Uint32 Mask;
         StencilOpState() :
-            Func( COMPARISON_FUNC_UNKNOW ),
+            Func( COMPARISON_FUNC_UNKNOWN ),
             StencilFailOp(STENCIL_OP_UNDEFINED),
             StencilDepthFailOp( STENCIL_OP_UNDEFINED ),
             StencilPassOp( STENCIL_OP_UNDEFINED ),

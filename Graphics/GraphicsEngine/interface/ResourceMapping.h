@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -43,13 +43,16 @@ namespace Diligent
         /// Pointer to the object's interface
         IDeviceObject *pObject;
 
+        Uint32 ArrayIndex;
         /// Initializes the structure members
 
-        /// \param [in] InitName - Object name. Default value is nullptr
-        /// \param [in] pInitObject - Pointer to the object. Default value is nullptr
-        ResourceMappingEntry( const Char* InitName = nullptr, IDeviceObject *pInitObject = nullptr) : 
-            Name( InitName ), 
-            pObject( pInitObject )
+        /// \param [in] _Name - Object name. Default value is nullptr
+        /// \param [in] _pObject - Pointer to the object. Default value is nullptr
+        /// \param [in] _ArrayIndex - For array resources, index in the array
+        ResourceMappingEntry( const Char* _Name = nullptr, IDeviceObject *_pObject = nullptr, Uint32 _ArrayIndex = 0) : 
+            Name( _Name ), 
+            pObject( _pObject ),
+            ArrayIndex(_ArrayIndex)
         {}
     };
 
@@ -92,25 +95,38 @@ namespace Diligent
         ///          object will not be released as long as it is in the resource mapping.
         virtual void AddResource( const Char *Name, IDeviceObject *pObject, bool bIsUnique ) = 0;
 
-        /// Removes a resource from the mapping.
 
-        /// \param [in] pObject - Pointer to the object to remove.
-        virtual void RemoveResource( IDeviceObject *pObject ) = 0;
+        /// Adds resource array to the mapping.
+
+        /// \param [in] Name - Resource array name.
+        /// \param [in] StartIndex - First index in the array, where the first element will be inserted
+        /// \param [in] ppObjects - Pointer to the array of objects.
+        /// \param [in] NumElements - Number of elements to add
+        /// \param [in] bIsUnique - Flag indicating if a resource with the same name
+        ///                         is allowed to be found in the mapping. In the latter
+        ///                         case, the new resource replaces the existing one.
+        ///
+        /// \remarks Resource mapping increases the reference counter for referenced objects. So an 
+        ///          object will not be released as long as it is in the resource mapping.
+        virtual void AddResourceArray( const Char *Name, Uint32 StartIndex, IDeviceObject* const* ppObjects, Uint32 NumElements, bool bIsUnique ) = 0;
+
 
         /// Removes a resource from the mapping using its literal name.
 
         /// \param [in] Name - Name of the resource to remove.
-        virtual void RemoveResourceByName( const Char *Name ) = 0;
+        /// \param [in] ArrayIndex - For array resources, index in the array
+        virtual void RemoveResourceByName( const Char *Name, Uint32 ArrayIndex = 0 ) = 0;
 
         /// Finds a resource in the mapping.
 
         /// \param [in] Name - Resource name.
+        /// \param [in] ArrayIndex - for arrays, index of the array element.
         /// \param [out] ppResource - Address of the memory location where the pointer 
         ///                           to the object with the given name will be written.
         ///                           If no object is found, nullptr will be written.
         /// \remarks The method increases the reference counter
         ///          of the returned object, so Release() must be called.
-        virtual void GetResource( const Char *Name, IDeviceObject **ppResource ) = 0;
+        virtual void GetResource( const Char *Name, IDeviceObject **ppResource, Uint32 ArrayIndex = 0 ) = 0;
 
         /// Returns the size of the resource mapping, i.e. the number of objects.
         virtual size_t GetSize() = 0;

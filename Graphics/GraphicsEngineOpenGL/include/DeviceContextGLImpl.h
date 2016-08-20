@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -37,45 +37,47 @@ class DeviceContextGLImpl : public DeviceContextBase<IDeviceContextGL>
 public:
     typedef DeviceContextBase<IDeviceContextGL> TDeviceContextBase;
 
-    DeviceContextGLImpl( class RenderDeviceGLImpl *pDeviceGL );
+    DeviceContextGLImpl( IMemoryAllocator &RawMemAllocator, class RenderDeviceGLImpl *pDeviceGL, bool bIsDeferred );
 
     /// Queries the specific interface, see IObject::QueryInterface() for details.
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
+    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
 
-    virtual void SetShaders( IShader **ppShaders, Uint32 NumShadersToSet )override;
+    virtual void SetPipelineState(IPipelineState *pPipelineState)override final;
 
-    virtual void BindShaderResources( IResourceMapping *pResourceMapping, Uint32 Flags )override;
+    virtual void TransitionShaderResources(IPipelineState *pPipelineState, IShaderResourceBinding *pShaderResourceBinding)override final;
 
-    virtual void SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer **ppBuffers, Uint32 *pStrides, Uint32 *pOffsets, Uint32 Flags )override;
-    virtual void ClearState()override;
+    virtual void CommitShaderResources(IShaderResourceBinding *pShaderResourceBinding, Uint32 Flags)override final;
 
-    virtual void SetVertexDescription( IVertexDescription *pVertexDesc )override;
+    virtual void SetStencilRef(Uint32 StencilRef)override final;
 
-    virtual void SetIndexBuffer( IBuffer *pIndexBuffer, Uint32 ByteOffset )override;
+    virtual void SetBlendFactors(const float* pBlendFactors = nullptr)override final;
 
-    virtual void SetDepthStencilState( IDepthStencilState *pDepthStencilState, Uint32 StencilRef = 0 )override;
+    virtual void SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer **ppBuffers, Uint32 *pStrides, Uint32 *pOffsets, Uint32 Flags )override final;
+    virtual void ClearState()override final;
 
-    virtual void SetRasterizerState( IRasterizerState *pRS )override;
+    virtual void SetIndexBuffer( IBuffer *pIndexBuffer, Uint32 ByteOffset )override final;
 
-    virtual void SetBlendState( IBlendState *pBS, const float* pBlendFactors, Uint32 SampleMask )override;
+    virtual void SetViewports( Uint32 NumViewports, const Viewport *pViewports, Uint32 RTWidth, Uint32 RTHeight )override final;
 
-    virtual void SetViewports( Uint32 NumViewports, const Viewport *pViewports, Uint32 RTWidth, Uint32 RTHeight )override;
+    virtual void SetScissorRects( Uint32 NumRects, const Rect *pRects, Uint32 RTWidth, Uint32 RTHeight )override final;
 
-    virtual void SetScissorRects( Uint32 NumRects, const Rect *pRects, Uint32 RTWidth, Uint32 RTHeight )override;
+    virtual void SetRenderTargets( Uint32 NumRenderTargets, ITextureView *ppRenderTargets[], ITextureView *pDepthStencil )override final;
 
-    virtual void SetRenderTargets( Uint32 NumRenderTargets, ITextureView *ppRenderTargets[], ITextureView *pDepthStencil )override;
+    virtual void Draw( DrawAttribs &DrawAttribs )override final;
 
-    virtual void Draw( DrawAttribs &DrawAttribs )override;
+    virtual void DispatchCompute( const DispatchComputeAttribs &DispatchAttrs )override final;
 
-    virtual void DispatchCompute( const DispatchComputeAttribs &DispatchAttrs )override;
+    virtual void ClearDepthStencil( ITextureView *pView, Uint32 ClearFlags, float fDepth, Uint8 Stencil)override final;
 
-    virtual void ClearDepthStencil( ITextureView *pView, Uint32 ClearFlags, float fDepth, Uint8 Stencil)override;
+    virtual void ClearRenderTarget( ITextureView *pView, const float *RGBA )override final;
 
-    virtual void ClearRenderTarget( ITextureView *pView, const float *RGBA )override;
+    virtual void Flush()override final;
 
-    virtual void Flush()override;
+    virtual void FinishCommandList(class ICommandList **ppCommandList)override final;
 
-    void BindProgramResources( Uint32 &NewMemoryBarriers );
+    virtual void ExecuteCommandList(class ICommandList *pCommandList)override final;
+
+    void BindProgramResources( Uint32 &NewMemoryBarriers, IShaderResourceBinding *pResBinding );
 
     GLContextState &GetContextState(){return m_ContextState;}
     
@@ -84,14 +86,17 @@ public:
 protected:
     friend class BufferGLImpl;
     friend class TextureBaseGL;
-    friend class VertexDescGLImpl;
     friend class ShaderGLImpl;
 
     GLContextState m_ContextState;
 
 private:
+    Uint32 m_CommitedResourcesTentativeBarriers;
+
     std::vector<class TextureBaseGL*> m_BoundWritableTextures;
     std::vector<class BufferGLImpl*> m_BoundWritableBuffers;
+
+    bool m_bVAOIsUpToDate = false;
 };
 
 }

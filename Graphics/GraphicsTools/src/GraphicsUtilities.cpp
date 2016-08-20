@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -28,42 +28,6 @@
 
 namespace Diligent
 {
-
-Uint32 GetValueSize( VALUE_TYPE Val )
-{
-    static Uint32 Sizes[VT_NUM_TYPES] = {};
-    static bool bIsInit = false;
-    // Note that this implementation is thread-safe
-    // Even if two threads try to call the function at the same time,
-    // the worst thing that might happen is that the array will be
-    // initialized multiple times. But the result will always be correct
-    if( !bIsInit )
-    {
-        Sizes[VT_UNDEFINED] = 0;
-#define INIT_VALUE_SIZE( ValType ) Sizes[ValType] = sizeof(VALUE_TYPE2CType<ValType>::CType)
-        INIT_VALUE_SIZE( VT_INT8    );
-        INIT_VALUE_SIZE( VT_INT16   );
-        INIT_VALUE_SIZE( VT_INT32   );
-        INIT_VALUE_SIZE( VT_UINT8   );
-        INIT_VALUE_SIZE( VT_UINT16  );
-        INIT_VALUE_SIZE( VT_UINT32  );
-        INIT_VALUE_SIZE( VT_FLOAT16 );
-        INIT_VALUE_SIZE( VT_FLOAT32 );
-#undef  INIT_VALUE_SIZE
-        static_assert(VT_NUM_TYPES == VT_FLOAT32 + 1, "Not all value type sizes initialized.");
-        bIsInit = true;
-    }
-
-    if( Val > VT_UNDEFINED && Val < VT_NUM_TYPES )
-    {
-        return Sizes[Val];
-    }
-    else
-    {
-        UNEXPECTED( "Incorrect value type (", Val, ")" )
-        return 0;
-    }
-}
 
 const Char* GetValueTypeString( VALUE_TYPE Val )
 {
@@ -233,7 +197,7 @@ const TextureFormatAttribs& GetTextureFormatAttribs( TEXTURE_FORMAT Format )
 
 #ifdef _DEBUG
         for( Uint32 Fmt = TEX_FORMAT_UNKNOWN; Fmt < TEX_FORMAT_NUM_FORMATS; ++Fmt )
-            VERIFY(FmtAttribs[Fmt].Format == Fmt, "Uninitialized format");
+            VERIFY(FmtAttribs[Fmt].Format == static_cast<TEXTURE_FORMAT>(Fmt), "Uninitialized format");
 #endif
 
         bIsInit = true;
@@ -337,6 +301,33 @@ const Char *GetShaderTypeLiteralName( SHADER_TYPE ShaderType )
     }
 }
 
+const Char *GetShaderVariableTypeLiteralName(SHADER_VARIABLE_TYPE VarType, bool bGetFullName)
+{
+    static const Char* ShortVarTypeNameStrings[SHADER_VARIABLE_TYPE_NUM_TYPES];
+    static const Char* FullVarTypeNameStrings[SHADER_VARIABLE_TYPE_NUM_TYPES];
+    static bool bVarTypeStrsInit = false;
+    if( !bVarTypeStrsInit )
+    {
+        ShortVarTypeNameStrings[SHADER_VARIABLE_TYPE_STATIC]  = "static";
+        ShortVarTypeNameStrings[SHADER_VARIABLE_TYPE_MUTABLE] = "mutable";
+        ShortVarTypeNameStrings[SHADER_VARIABLE_TYPE_DYNAMIC] = "dynamic";
+        FullVarTypeNameStrings[SHADER_VARIABLE_TYPE_STATIC]  = "SHADER_VARIABLE_TYPE_STATIC";
+        FullVarTypeNameStrings[SHADER_VARIABLE_TYPE_MUTABLE] = "SHADER_VARIABLE_TYPE_MUTABLE";
+        FullVarTypeNameStrings[SHADER_VARIABLE_TYPE_DYNAMIC] = "SHADER_VARIABLE_TYPE_DYNAMIC";
+
+        static_assert(SHADER_VARIABLE_TYPE_NUM_TYPES == SHADER_VARIABLE_TYPE_DYNAMIC + 1, "Not all shader variable types initialized.");
+
+        bVarTypeStrsInit = true;
+    }
+    if( VarType >= SHADER_VARIABLE_TYPE_STATIC && VarType < SHADER_VARIABLE_TYPE_NUM_TYPES )
+        return (bGetFullName ? FullVarTypeNameStrings : ShortVarTypeNameStrings)[VarType];
+    else
+    {
+        UNEXPECTED("Unknow shader variable type")
+        return "unknow";
+    }
+}
+
 /// Returns the string containing the usage
 const Char* GetUsageString( USAGE Usage )
 {
@@ -361,25 +352,26 @@ const Char* GetUsageString( USAGE Usage )
     }
 }
 
-const Char* GetTextureTypeString( TEXTURE_TYPE TexType )
+const Char* GetResourceDimString( RESOURCE_DIMENSION TexType )
 {
-    static const Char* TexTypeStrings[TEXTURE_TYPE_NUM_TYPES];
+    static const Char* TexTypeStrings[RESOURCE_DIM_NUM_DIMENSIONS];
     static bool bTexTypeStrsInit = false;
     if( !bTexTypeStrsInit )
     {
-        TexTypeStrings[TEXTURE_TYPE_UNDEFINED]  = "Undefined";
-        TexTypeStrings[TEXTURE_TYPE_1D]         = "1D";
-        TexTypeStrings[TEXTURE_TYPE_1D_ARRAY]   = "1D Array";
-        TexTypeStrings[TEXTURE_TYPE_2D]         = "2D";
-        TexTypeStrings[TEXTURE_TYPE_2D_ARRAY]   = "2D Array";
-        TexTypeStrings[TEXTURE_TYPE_3D]         = "3D";
-        TexTypeStrings[TEXTURE_TYPE_2D_ARRAY]   = "Cube";
-        TexTypeStrings[TEXTURE_TYPE_3D]         = "Cube Array";
-        static_assert(TEXTURE_TYPE_NUM_TYPES == TEXTURE_TYPE_CUBE_ARRAY + 1, "Not all texture type strings initialized.");
+        TexTypeStrings[RESOURCE_DIM_UNDEFINED]      = "Undefined";
+        TexTypeStrings[RESOURCE_DIM_BUFFER]         = "Buffer";
+        TexTypeStrings[RESOURCE_DIM_TEX_1D]         = "Tex 1D";
+        TexTypeStrings[RESOURCE_DIM_TEX_1D_ARRAY]   = "Tex 1D Array";
+        TexTypeStrings[RESOURCE_DIM_TEX_2D]         = "Tex 2D";
+        TexTypeStrings[RESOURCE_DIM_TEX_2D_ARRAY]   = "Tex 2D Array";
+        TexTypeStrings[RESOURCE_DIM_TEX_3D]         = "Tex 3D";
+        TexTypeStrings[RESOURCE_DIM_TEX_2D_ARRAY]   = "Tex Cube";
+        TexTypeStrings[RESOURCE_DIM_TEX_3D]         = "Tex Cube Array";
+        static_assert(RESOURCE_DIM_NUM_DIMENSIONS == RESOURCE_DIM_TEX_CUBE_ARRAY + 1, "Not all texture type strings initialized.");
 
         bTexTypeStrsInit = true;
     }
-    if( TexType >= TEXTURE_TYPE_UNDEFINED && TexType < TEXTURE_TYPE_NUM_TYPES )
+    if( TexType >= RESOURCE_DIM_UNDEFINED && TexType < RESOURCE_DIM_NUM_DIMENSIONS )
         return TexTypeStrings[TexType];
     else
     {
@@ -473,22 +465,22 @@ String ToString( T Val )
 String GetTextureDescString( const TextureDesc &Desc )
 {
     String Str = "Type: ";
-    Str += GetTextureTypeString(Desc.Type);
+    Str += GetResourceDimString(Desc.Type);
     Str += "; size: ";
     Str += ToString(Desc.Width);
-    if( Desc.Type == TEXTURE_TYPE_2D || Desc.Type == TEXTURE_TYPE_2D_ARRAY || Desc.Type == TEXTURE_TYPE_3D)
+    if( Desc.Type == RESOURCE_DIM_TEX_2D || Desc.Type == RESOURCE_DIM_TEX_2D_ARRAY || Desc.Type == RESOURCE_DIM_TEX_3D || Desc.Type == RESOURCE_DIM_TEX_CUBE || Desc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY)
     {
         Str += "x";
         Str += ToString( Desc.Height );
     }
 
-    if( Desc.Type == TEXTURE_TYPE_3D )
+    if( Desc.Type == RESOURCE_DIM_TEX_3D )
     {
         Str += "x";
         Str += ToString( Desc.Depth );
     }
     
-    if( Desc.Type == TEXTURE_TYPE_1D_ARRAY || Desc.Type == TEXTURE_TYPE_2D_ARRAY )
+    if( Desc.Type == RESOURCE_DIM_TEX_1D_ARRAY || Desc.Type == RESOURCE_DIM_TEX_2D_ARRAY || Desc.Type == RESOURCE_DIM_TEX_CUBE || Desc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY )
     {
         Str += "; Num Slices: ";
         Str += ToString( Desc.ArraySize );
@@ -593,8 +585,9 @@ String GetBufferDescString( const BufferDesc &Desc )
 Uint32 ComputeMipLevelsCount( Uint32 Width )
 {
     Uint32 MipLevels = 0;
-    while( (Width >> MipLevels) > 1 )
+    while( (Width >> MipLevels) > 0 )
         ++MipLevels;
+    VERIFY( Width >= (1U << (MipLevels-1)) && Width < (1U << MipLevels), "Incorrect number of Mip levels" )
     return MipLevels;
 }
 

@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -27,8 +27,8 @@
 
 namespace Diligent
 {
-    RenderDeviceGLESImpl::RenderDeviceGLESImpl( const ContextInitInfo &InitInfo ) :
-        RenderDeviceGLImpl( InitInfo )
+    RenderDeviceGLESImpl::RenderDeviceGLESImpl( IMemoryAllocator &RawMemAllocator, const ContextInitInfo &InitInfo ) :
+        RenderDeviceGLImpl( RawMemAllocator, InitInfo )
     {
     }
 

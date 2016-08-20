@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -1631,15 +1631,15 @@ void HLSL2GLSLConverter::ProcessTextureDeclaration( TokenListType::iterator &Tok
                                                      ObjectsTypeHashType &Objects )
 {
     auto TexDeclToken = Token;
-    auto TextureType = TexDeclToken->Type;
+    auto TextureDim = TexDeclToken->Type;
     // Texture2D < float > ... ;
     // ^
     bool IsRWTexture = 
-        TextureType == TokenType::RWTexture1D      ||
-        TextureType == TokenType::RWTexture1DArray ||
-        TextureType == TokenType::RWTexture2D      ||
-        TextureType == TokenType::RWTexture2DArray ||
-        TextureType == TokenType::RWTexture3D;
+        TextureDim == TokenType::RWTexture1D      ||
+        TextureDim == TokenType::RWTexture1DArray ||
+        TextureDim == TokenType::RWTexture2D      ||
+        TextureDim == TokenType::RWTexture2DArray ||
+        TextureDim == TokenType::RWTexture3D;
 
     ++Token;
     // Texture2D < float > ... ;
@@ -1700,8 +1700,8 @@ void HLSL2GLSLConverter::ProcessTextureDeclaration( TokenListType::iterator &Tok
         CHECK_EOF();
         // Texture2D < float > ... ;
         //                   ^
-        if( (TextureType == TokenType::Texture2DMS ||
-             TextureType == TokenType::Texture2DMSArray ) &&
+        if( (TextureDim == TokenType::Texture2DMS ||
+             TextureDim == TokenType::Texture2DMSArray ) &&
              Token->Literal == "," )
         {
             // Texture2DMS < float, 4 > ... ;
@@ -1754,7 +1754,7 @@ void HLSL2GLSLConverter::ProcessTextureDeclaration( TokenListType::iterator &Tok
     else
         GLSLSampler.append( "sampler" );
 
-    switch( TextureType )
+    switch( TextureDim )
     {
         case TokenType::RWTexture1D:
         case TokenType::Texture1D:          GLSLSampler += "1D";        break;
@@ -1864,7 +1864,7 @@ void HLSL2GLSLConverter::ProcessTextureDeclaration( TokenListType::iterator &Tok
                 //                    ^
 
                 // Insert empty token that will contain next sampler/image declaration
-                TexDeclToken = m_Tokens.insert( Token, TokenInfo(TextureType, "", "\n") );
+                TexDeclToken = m_Tokens.insert( Token, TokenInfo(TextureDim, "", "\n") );
                 // Texture2D TexName;
                 // <Texture Declaration TBD> TexName2 ;
                 // ^                         ^

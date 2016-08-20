@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -33,23 +33,23 @@
 namespace Diligent
 {
 
+class FixedBlockMemoryAllocator;
 /// Implementation of the Diligent::ISamplerD3D11 interface
-class SamplerD3D11Impl : public SamplerBase<ISamplerD3D11, IRenderDeviceD3D11>
+class SamplerD3D11Impl : public SamplerBase<ISamplerD3D11, IRenderDeviceD3D11, FixedBlockMemoryAllocator>
 {
 public:
-    typedef SamplerBase<ISamplerD3D11, IRenderDeviceD3D11> TSamplerBase;
+    typedef SamplerBase<ISamplerD3D11, IRenderDeviceD3D11, FixedBlockMemoryAllocator> TSamplerBase;
 
-    SamplerD3D11Impl(class RenderDeviceD3D11Impl *pRenderDeviceD3D11, const SamplerDesc& SamplerDesc);
+    SamplerD3D11Impl(FixedBlockMemoryAllocator &SamplerObjAllocator, class RenderDeviceD3D11Impl *pRenderDeviceD3D11, const SamplerDesc& SamplerDesc);
     ~SamplerD3D11Impl();
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface );
+    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface ) final;
 
-    virtual ID3D11SamplerState* GetD3D11SamplerState(){ return m_pd3dSampler; }
+    virtual ID3D11SamplerState* GetD3D11SamplerState()override final{ return m_pd3dSampler; }
 
 private:
-    friend class ShaderD3D11Impl;
     /// D3D11 sampler
-    Diligent::CComPtr<ID3D11SamplerState> m_pd3dSampler;
+    CComPtr<ID3D11SamplerState> m_pd3dSampler;
 };
 
 }

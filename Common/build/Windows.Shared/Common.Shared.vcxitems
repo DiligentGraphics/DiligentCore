@@ -1,0 +1,65 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <ItemsProjectGuid>{d716bf4d-094b-47d7-9137-a01c690c3616}</ItemsProjectGuid>
+    <ItemsRootNamespace>Common</ItemsRootNamespace>
+    <ItemsProjectName>Common.Shared</ItemsProjectName>
+    <CodeSharingProject>248F659F-DAC5-46E8-AC09-60EC9FC95053</CodeSharingProject>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(MSBuildThisFileDirectory)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ProjectCapability Include="SourceItemsFromImports" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\AdaptiveFixedBlockAllocator.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\BasicFileStream.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\BasicTypes.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\DataBlobImpl.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\DebugUtilities.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\DefaultRawMemoryAllocator.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\Errors.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\FileWrapper.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\FixedBlockMemoryAllocator.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\FormatMessage.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\InterfaceID.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\HashUtils.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\LockHelper.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\ObjectBase.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\pch.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\RefCntAutoPtr.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\RefCountedObjectImpl.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\STDAllocator.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\StringTools.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\Timer.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\UniqueIdentifier.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\ValidatedCast.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\interface\AdvancedMath.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\interface\MemoryAllocator.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\interface\BasicMath.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\interface\DataBlob.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\interface\FileStream.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\interface\Object.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\interface\ReferenceCounters.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\src\BasicFileStream.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\src\DataBlobImpl.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\src\DefaultRawMemoryAllocator.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\src\FixedBlockMemoryAllocator.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\src\pch.cpp">
+      <PrecompiledHeader>Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\src\Timer.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="$(MSBuildThisFileDirectory)..\..\CMakeLists.txt">
+      <DeploymentContent>false</DeploymentContent>
+    </Text>
+  </ItemGroup>
+</Project>

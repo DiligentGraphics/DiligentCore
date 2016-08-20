@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -33,41 +33,51 @@ namespace Diligent
     {
     }
 
-    IMPLEMENT_QUERY_INTERFACE( ResourceMappingImpl, IID_ResourceMapping, ObjectBase<IResourceMapping> )
+    IMPLEMENT_QUERY_INTERFACE( ResourceMappingImpl, IID_ResourceMapping, TObjectBase )
 
     ThreadingTools::LockHelper ResourceMappingImpl::Lock()
     {
         return std::move( ThreadingTools::LockHelper( m_LockFlag ) );
     }
 
-    void ResourceMappingImpl::AddResource( const Char *Name, IDeviceObject *pObject, bool bIsUnique )
+    void ResourceMappingImpl::AddResourceArray( const Char *Name, Uint32 StartIndex, IDeviceObject * const* ppObjects, Uint32 NumElements, bool bIsUnique )
     {
         if( Name == nullptr || *Name == 0 )
             return;
 
         auto LockHelper = Lock();
-        // Try to construct new element in place
-        auto Elems = 
-            m_HashTable.emplace( 
-                                make_pair( Diligent::HashMapStringKey(Name, true), // Make a copy of the source string
-                                           Diligent::RefCntAutoPtr<IDeviceObject>(pObject) 
-                                          ) 
-                                );
-        // If there is already element with the same name, replace it
-        if( !Elems.second && Elems.first->second != pObject )
+        for(Uint32 Elem = 0; Elem < NumElements; ++Elem)
         {
-            if( bIsUnique )
+            auto *pObject = ppObjects[Elem];
+
+            // Try to construct new element in place
+            auto Elems = 
+                m_HashTable.emplace( 
+                                    make_pair( Diligent::ResMappingHashKey(Name, true, StartIndex+Elem), // Make a copy of the source string
+                                               Diligent::RefCntAutoPtr<IDeviceObject>(pObject) 
+                                              ) 
+                                    );
+            // If there is already element with the same name, replace it
+            if( !Elems.second && Elems.first->second != pObject )
             {
-                UNEXPECTED( "Resource with the same name already exists" );
-                LOG_WARNING_MESSAGE(
-                    "Resource with name ", Name, " marked is unique, but already present in the hash.\n"
-                    "New resource will be used\n." );
+                if( bIsUnique )
+                {
+                    UNEXPECTED( "Resource with the same name already exists" );
+                    LOG_WARNING_MESSAGE(
+                        "Resource with name ", Name, " marked is unique, but already present in the hash.\n"
+                        "New resource will be used\n." );
+                }
+                Elems.first->second = pObject;
             }
-            Elems.first->second = pObject;
         }
     }
 
-    void ResourceMappingImpl::RemoveResourceByName( const Char *Name )
+    void ResourceMappingImpl::AddResource(const Char *Name, IDeviceObject *pObject, bool bIsUnique)
+    {
+        AddResourceArray( Name, 0, &pObject, 1, bIsUnique );
+    }
+
+    void ResourceMappingImpl::RemoveResourceByName( const Char *Name, Uint32 ArrayIndex )
     {
         if( *Name == 0 )
             return;
@@ -75,29 +85,10 @@ namespace Diligent
         auto LockHelper = Lock();
         // Remove object with the given name
         // Name will be implicitly converted to HashMapStringKey without making a copy
-        auto It = m_HashTable.erase( Name );
+        m_HashTable.erase( ResMappingHashKey(Name, false, ArrayIndex) );
     }
 
-    void ResourceMappingImpl::RemoveResource( IDeviceObject *pObject )
-    {
-        const auto *Name = pObject->GetDesc().Name;
-        VERIFY( Name, "Name is null" );
-        if( *Name == 0 )
-            return;
-
-        auto LockHelper = Lock();
-
-        // Find active object with the same name
-        // Name will be implicitly converted to HashMapStringKey without making a copy
-        auto It = m_HashTable.find( Name );
-        // Check if the active object is in fact the object being removed
-        if( It != m_HashTable.end() && It->second == pObject )
-        {
-            m_HashTable.erase( It );
-        }
-    }
-
-    void ResourceMappingImpl::GetResource( const Char *Name, IDeviceObject **ppResource )
+    void ResourceMappingImpl::GetResource( const Char *Name, IDeviceObject **ppResource, Uint32 ArrayIndex )
     {
         VERIFY(Name, "Name is null")
         if( *Name == 0 )
@@ -114,7 +105,7 @@ namespace Diligent
 
         // Find an object with the requested name
         // Name will be implicitly converted to HashMapStringKey without making a copy
-        auto It = m_HashTable.find( Name );
+        auto It = m_HashTable.find( ResMappingHashKey(Name, false, ArrayIndex) );
         if( It != m_HashTable.end() )
         {
             *ppResource = It->second.RawPtr();

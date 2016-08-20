@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -181,6 +181,14 @@
 
 #ifndef GL_TEXTURE_BINDING_2D_MULTISAMPLE_ARRAY
 #   define GL_TEXTURE_BINDING_2D_MULTISAMPLE_ARRAY 0x9105
+#endif
+
+#ifndef GL_TEXTURE_CUBE_MAP_ARRAY
+#   define GL_TEXTURE_CUBE_MAP_ARRAY 0x9009
+#endif
+
+#ifndef GL_TEXTURE_BINDING_CUBE_MAP_ARRAY
+#   define GL_TEXTURE_BINDING_CUBE_MAP_ARRAY 0x900A
 #endif
 
 #ifndef GL_TEXTURE_BUFFER

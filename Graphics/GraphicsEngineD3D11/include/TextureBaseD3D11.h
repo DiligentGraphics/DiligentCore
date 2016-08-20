@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -34,24 +34,40 @@
 namespace Diligent
 {
 
+class FixedBlockMemoryAllocator;
+
+enum class D3D11TextureState
+{
+    Undefined       = 0x0,
+    ShaderResource  = 0x1,
+    RenderTarget    = 0x2,
+    DepthStencil    = 0x4,
+    UnorderedAccess = 0x8,
+    Output = RenderTarget | DepthStencil | UnorderedAccess
+};
+
 /// Base implementation of the Diligent::ITextureD3D11 interface
-class TextureBaseD3D11 : public TextureBase<ITextureD3D11, TextureViewD3D11Impl>
+class TextureBaseD3D11 : public TextureBase<ITextureD3D11, TextureViewD3D11Impl, FixedBlockMemoryAllocator, FixedBlockMemoryAllocator>
 {
 public:
-    typedef TextureBase<ITextureD3D11, TextureViewD3D11Impl> TTextureBase;
+    typedef TextureBase<ITextureD3D11, TextureViewD3D11Impl, FixedBlockMemoryAllocator, FixedBlockMemoryAllocator> TTextureBase;
 
-    TextureBaseD3D11(class RenderDeviceD3D11Impl *pDeviceD3D11, const TextureDesc& TexDesc, const TextureData &InitData = TextureData());
+    TextureBaseD3D11(FixedBlockMemoryAllocator &TexObjAllocator, 
+                     FixedBlockMemoryAllocator &TexViewObjAllocator, 
+                     class RenderDeviceD3D11Impl *pDeviceD3D11, 
+                     const TextureDesc& TexDesc, 
+                     const TextureData &InitData = TextureData());
     ~TextureBaseD3D11();
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
+    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
 
-    virtual void UpdateData( IDeviceContext *pContext, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData )override;
+    virtual void UpdateData( IDeviceContext *pContext, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData )override final;
 
     //virtual void CopyData(CTexture *pSrcTexture, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size);
-    virtual void Map( IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid &pMappedData )override;
-    virtual void Unmap( IDeviceContext *pContext )override;
+    virtual void Map( IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid &pMappedData )override final;
+    virtual void Unmap( IDeviceContext *pContext, MAP_TYPE MapType )override final;
 
-    virtual ID3D11Resource* GetD3D11Texture(){ return m_pd3d11Texture; }
+    virtual ID3D11Resource* GetD3D11Texture()override final{ return m_pd3d11Texture; }
 
     void CopyData(IDeviceContext *pContext, 
                           ITexture *pSrcTexture, 
@@ -64,9 +80,15 @@ public:
                           Uint32 DstY,
                           Uint32 DstZ);
 
+    void ResetState(D3D11TextureState State){m_State = static_cast<Uint32>(State);}
+    void AddState(D3D11TextureState State){m_State |= static_cast<Uint32>(State);}
+    void ClearState(D3D11TextureState State){m_State &= ~static_cast<Uint32>(State);}
+    bool CheckState(D3D11TextureState State){return (m_State & static_cast<Uint32>(State)) ? true : false;}
+
 protected:
-    void CreateViewInternal( const struct TextureViewDesc &ViewDesc, ITextureView **ppView, bool bIsDefaultView )override;
-    void PrepareD3D11InitData(const TextureData &InitData, Uint32 NumSubresources, std::vector<D3D11_SUBRESOURCE_DATA> &D3D11InitData);
+    void CreateViewInternal( const struct TextureViewDesc &ViewDesc, ITextureView **ppView, bool bIsDefaultView )override final;
+    void PrepareD3D11InitData(const TextureData &InitData, Uint32 NumSubresources, 
+                              std::vector<D3D11_SUBRESOURCE_DATA, STDAllocatorRawMem<D3D11_SUBRESOURCE_DATA> > &D3D11InitData);
 
     virtual void CreateSRV( TextureViewDesc &SRVDesc, ID3D11ShaderResourceView  **ppD3D11SRV ) = 0;
     virtual void CreateRTV( TextureViewDesc &RTVDesc, ID3D11RenderTargetView    **ppD3D11RTV ) = 0;
@@ -75,7 +97,9 @@ protected:
 
     friend class RenderDeviceD3D11Impl;
     /// D3D11 texture
-    Diligent::CComPtr<ID3D11Resource> m_pd3d11Texture;
+    CComPtr<ID3D11Resource> m_pd3d11Texture;
+
+    Uint32 m_State = static_cast<Uint32>(D3D11TextureState::Undefined);
 };
 
 }

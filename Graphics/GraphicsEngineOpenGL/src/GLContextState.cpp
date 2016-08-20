@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ namespace Diligent
 {
     GLContextState::GLContextState( RenderDeviceGLImpl *pDeviceGL ) :
         m_PendingMemoryBarriers( 0 ),
-        m_DepthCmpFunc( COMPARISON_FUNC_UNKNOW ),
+        m_DepthCmpFunc( COMPARISON_FUNC_UNKNOWN ),
         m_StencilReadMask( 0xFF ),
         m_StencilWriteMask( 0xFF ),
         m_GLProgId( 0 ),
@@ -336,6 +336,14 @@ namespace Diligent
         }
     }
 
+    void GLContextState::SetStencilRef(GLenum Face, Int32 Ref)
+    {
+        auto& FaceStencilOp = m_StencilOpState[Face == GL_FRONT ? 0 : 1];
+        auto GlStencilFunc = CompareFuncToGLCompareFunc( FaceStencilOp.Func );
+        glStencilFuncSeparate( Face, GlStencilFunc, Ref, FaceStencilOp.Mask );
+        CHECK_GL_ERROR( "Failed to set stencil function" );
+    }
+
     void GLContextState::SetStencilFunc( GLenum Face, COMPARISON_FUNCTION Func, Int32 Ref, Uint32 Mask )
     {
         auto& FaceStencilOp = m_StencilOpState[Face == GL_FRONT ? 0 : 1];
@@ -343,13 +351,11 @@ namespace Diligent
             FaceStencilOp.Ref != Ref ||
             FaceStencilOp.Mask != Mask )
         {
-            auto GlStencilFunc = CompareFuncToGLCompareFunc( Func );
-            glStencilFuncSeparate( Face, GlStencilFunc, Ref, Mask );
-            CHECK_GL_ERROR( "Failed to set stencil function" );
-
             FaceStencilOp.Func = Func;
             FaceStencilOp.Ref = Ref;
             FaceStencilOp.Mask = Mask;
+
+            SetStencilRef(Face, Ref);
         }
     }
 
@@ -501,8 +507,16 @@ namespace Diligent
         }
     }
 
-    void GLContextState::SetBlendState( const BlendStateDesc &BSDsc, const float *BlendFactors, Uint32 SampleMask )
+    void GLContextState::SetBlendFactors(const float *BlendFactors)
     {
+        glBlendColor( BlendFactors[0], BlendFactors[1], BlendFactors[2], BlendFactors[3] );
+        CHECK_GL_ERROR( "Failed to set blend color" );
+    }
+
+    void GLContextState::SetBlendState( const BlendStateDesc &BSDsc, Uint32 SampleMask )
+    {
+        VERIFY(SampleMask = 0xFFFFFFFF, "Sample mask is not currently implemented in GL");
+
         bool bEnableBlend = false;
         if( BSDsc.IndependentBlendEnable )
         {
@@ -527,9 +541,6 @@ namespace Diligent
             //  Sets the blend enable flag for ALL color buffers.
             glEnable( GL_BLEND );
             CHECK_GL_ERROR( "Failed to enable alpha blending" );
-
-            glBlendColor( BlendFactors[0], BlendFactors[1], BlendFactors[2], BlendFactors[3] );
-            CHECK_GL_ERROR( "Failed to set blend color" );
 
             if( BSDsc.AlphaToCoverageEnable )
             {

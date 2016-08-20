@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -31,6 +31,7 @@
 #include "Texture.h"
 #include "Buffer.h"
 #include "RenderDevice.h"
+#include "DebugUtilities.h"
 
 namespace Diligent
 {
@@ -99,8 +100,26 @@ template<>struct VALUE_TYPE2CType<VT_FLOAT16>{ typedef Uint16 CType; };
 template<>struct VALUE_TYPE2CType<VT_FLOAT32>{ typedef Float32 CType; };
 
 
+static const Uint32 ValueTypeToSizeMap[] = 
+{
+    0,
+    sizeof(VALUE_TYPE2CType<VT_INT8>    :: CType),
+    sizeof(VALUE_TYPE2CType<VT_INT16>   :: CType),
+    sizeof(VALUE_TYPE2CType<VT_INT32>   :: CType),
+    sizeof(VALUE_TYPE2CType<VT_UINT8>   :: CType),
+    sizeof(VALUE_TYPE2CType<VT_UINT16>  :: CType),
+    sizeof(VALUE_TYPE2CType<VT_UINT32>  :: CType),
+    sizeof(VALUE_TYPE2CType<VT_FLOAT16> :: CType),
+    sizeof(VALUE_TYPE2CType<VT_FLOAT32> :: CType)
+};
+static_assert(VT_NUM_TYPES == VT_FLOAT32 + 1, "Not all value type sizes initialized.");
+
 /// Returns the size of the specified value type
-Uint32 GetValueSize( VALUE_TYPE Val );
+inline Uint32 GetValueSize(VALUE_TYPE Val)
+{
+    VERIFY_EXPR(Val < _countof(ValueTypeToSizeMap));
+    return ValueTypeToSizeMap[Val];
+}
 
 /// Returns the string representing the specified value type
 const Char* GetValueTypeString( VALUE_TYPE Val );
@@ -134,6 +153,16 @@ const Char *GetBufferViewTypeLiteralName(BUFFER_VIEW_TYPE ViewType);
 /// \return Literal name of the shader type.
 const Char *GetShaderTypeLiteralName(SHADER_TYPE ShaderType);
 
+
+/// Returns the literal name of a shader variable type. For instance,
+/// for SHADER_VARIABLE_TYPE_STATIC, if bGetFullName == true, "SHADER_VARIABLE_TYPE_STATIC" will be returned;
+/// if bGetFullName == false, "static" will be returned
+
+/// \param [in] VarType - Variable type.
+/// \param [in] bGetFullName - Whether to return string representation of the enum value
+/// \return Literal name of the shader variable type.
+const Char *GetShaderVariableTypeLiteralName(SHADER_VARIABLE_TYPE VarType, bool bGetFullName = false);
+
 /// Overloaded function that returns the literal name of a texture view type.
 /// see GetTexViewTypeLiteralName().
 inline const Char* GetViewTypeLiteralName(TEXTURE_VIEW_TYPE TexViewType)
@@ -152,7 +181,7 @@ inline const Char* GetViewTypeLiteralName(BUFFER_VIEW_TYPE BuffViewType)
 const Char* GetUsageString(USAGE Usage);
 
 /// Returns the string containing the texture type
-const Char* GetTextureTypeString( TEXTURE_TYPE TexType );
+const Char* GetResourceDimString( RESOURCE_DIMENSION TexType );
 
 /// Returns the string containing the bind flags
 String GetBindFlagsString( Uint32 BindFlags );

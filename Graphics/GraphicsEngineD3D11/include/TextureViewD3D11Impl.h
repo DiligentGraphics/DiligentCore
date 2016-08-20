@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -33,27 +33,33 @@
 namespace Diligent
 {
 
+class FixedBlockMemoryAllocator;
+
 /// Implementation of the Diligent::ITextureViewD3D11 interface
-class TextureViewD3D11Impl : public TextureViewBase<ITextureViewD3D11>
+class TextureViewD3D11Impl : public TextureViewBase<ITextureViewD3D11, FixedBlockMemoryAllocator>
 {
 public:
-    typedef TextureViewBase<ITextureViewD3D11> TTextureViewBase;
+    typedef TextureViewBase<ITextureViewD3D11, FixedBlockMemoryAllocator> TTextureViewBase;
 
-    TextureViewD3D11Impl( IRenderDevice *pDevice, 
+    TextureViewD3D11Impl( FixedBlockMemoryAllocator &TexViewAllocator,
+                          IRenderDevice *pDevice, 
                           const TextureViewDesc& ViewDesc, 
                           class ITexture *pTexture,
                           ID3D11View* pD3D11View,
                           bool bIsDefaultView);
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
+    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
 
-    virtual ID3D11View* GetD3D11View()override;
+    virtual ID3D11View* GetD3D11View()override final
+    {
+        return m_pD3D11View;
+    }
    
-    void GenerateMips( IDeviceContext *pContext )override;
+    void GenerateMips( IDeviceContext *pContext )override final;
 
 protected:
     /// D3D11 view
-    Diligent::CComPtr<ID3D11View> m_pD3D11View;
+    CComPtr<ID3D11View> m_pD3D11View;
 };
 
 }

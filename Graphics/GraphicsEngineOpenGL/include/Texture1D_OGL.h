@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -31,11 +31,13 @@ namespace Diligent
 class Texture1D_OGL : public TextureBaseGL
 {
 public:
-    Texture1D_OGL( class RenderDeviceGLImpl *pDeviceGL, 
-                    class DeviceContextGLImpl *pDeviceContext, 
-                    const TextureDesc& BuffDesc, 
-                    const TextureData &InitData = TextureData(), 
-					bool bIsDeviceInternal = false);
+    Texture1D_OGL( FixedBlockMemoryAllocator& TexObjAllocator, 
+                   FixedBlockMemoryAllocator& TexViewObjAllocator,     
+                   class RenderDeviceGLImpl *pDeviceGL, 
+                   class DeviceContextGLImpl *pDeviceContext, 
+                   const TextureDesc& BuffDesc, 
+                   const TextureData &InitData = TextureData(), 
+				   bool bIsDeviceInternal = false);
     ~Texture1D_OGL();
 
     virtual void UpdateData( IDeviceContext *pContext, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData );

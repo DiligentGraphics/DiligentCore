@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -32,30 +32,39 @@ void ValidateTextureDesc( const TextureDesc& Desc )
 #define LOG_TEXTURE_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Texture \"", Desc.Name ? Desc.Name : "", "\": ", ##__VA_ARGS__)
 
     // Perform some parameter correctness check
-    if( Desc.Type == TEXTURE_TYPE_1D || Desc.Type == TEXTURE_TYPE_1D_ARRAY )
+    if( Desc.Type == RESOURCE_DIM_TEX_1D || Desc.Type == RESOURCE_DIM_TEX_1D_ARRAY )
     {
         if( Desc.Height != 1 )
             LOG_TEXTURE_ERROR_AND_THROW("Height (", Desc.Height,") of Texture 1D/Texture 1D Array must be 1");
     }
 
-    if(  Desc.Type == TEXTURE_TYPE_1D || Desc.Type == TEXTURE_TYPE_2D )
+    if(  Desc.Type == RESOURCE_DIM_TEX_1D || Desc.Type == RESOURCE_DIM_TEX_2D )
     {
         if( Desc.ArraySize != 1 )
             LOG_TEXTURE_ERROR_AND_THROW("Texture 1D/2D must have one array slice (", Desc.ArraySize, " provided). Use Texture 1D/2D array if you need more than one slice.");
     }
 
+    if(  Desc.Type == RESOURCE_DIM_TEX_CUBE || Desc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY )
+    {
+        if( Desc.Width != Desc.Height )
+            LOG_TEXTURE_ERROR_AND_THROW("For cube map textures, texture width (",  Desc.Width," provided) must match texture height (",  Desc.Height, " provided)");
+        
+        if( Desc.ArraySize < 6 )
+            LOG_TEXTURE_ERROR_AND_THROW("Texture cube/cube array must have at least 6 slices (", Desc.ArraySize, " provided).");
+    }
+
     Uint32 MaxDim = 0;
-    if( Desc.Type == TEXTURE_TYPE_1D || Desc.Type == TEXTURE_TYPE_1D_ARRAY )
+    if( Desc.Type == RESOURCE_DIM_TEX_1D || Desc.Type == RESOURCE_DIM_TEX_1D_ARRAY )
         MaxDim = Desc.Width;
-    else if( Desc.Type == TEXTURE_TYPE_2D || Desc.Type == TEXTURE_TYPE_2D_ARRAY )
+    else if( Desc.Type == RESOURCE_DIM_TEX_2D || Desc.Type == RESOURCE_DIM_TEX_2D_ARRAY  || Desc.Type == RESOURCE_DIM_TEX_CUBE || Desc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY )
         MaxDim = std::max(Desc.Width, Desc.Height);
-    else if( Desc.Type == TEXTURE_TYPE_3D )
+    else if( Desc.Type == RESOURCE_DIM_TEX_3D )
         MaxDim = std::max( std::max(Desc.Width, Desc.Height), Desc.Depth );
     VERIFY( MaxDim >= (1U << (Desc.MipLevels-1)), "Texture \"", Desc.Name ? Desc.Name : "", "\": Incorrect number of Mip levels (", Desc.MipLevels, ")" )
 
     if( Desc.SampleCount > 1 )
     {
-        if( !(Desc.Type == TEXTURE_TYPE_2D || Desc.Type == TEXTURE_TYPE_2D_ARRAY) )
+        if( !(Desc.Type == RESOURCE_DIM_TEX_2D || Desc.Type == RESOURCE_DIM_TEX_2D_ARRAY) )
             LOG_TEXTURE_ERROR_AND_THROW("Only Texture 2D/Texture 2D Array can be multisampled");
 
         if( Desc.MipLevels != 1 )
@@ -80,14 +89,16 @@ void ValidateTextureDesc( const TextureDesc& Desc )
 void ValidateTextureRegion(const TextureDesc &TexDesc, Uint32 MipLevel, Uint32 Slice, const Box &Box)
 {
 #define VERIFY_TEX_PARAMS(Expr, ...) VERIFY(Expr, "Texture \"", TexDesc.Name ? TexDesc.Name : "", "\": ", ##__VA_ARGS__)
-
+#ifdef _DEBUG
     VERIFY_TEX_PARAMS( MipLevel < TexDesc.MipLevels, "Mip level (", MipLevel, ") is out of allowed range [0, ", TexDesc.MipLevels-1, "]" );
     VERIFY_TEX_PARAMS( Box.MinX < Box.MaxX, "Incorrect X range [",Box.MinX, ", ", Box.MaxX, ")" );
     VERIFY_TEX_PARAMS( Box.MinY < Box.MaxY, "Incorrect Y range [",Box.MinY, ", ", Box.MaxY, ")" );
     VERIFY_TEX_PARAMS( Box.MinZ < Box.MaxZ, "Incorrect Z range [",Box.MinZ, ", ", Box.MaxZ, ")" );
     
-    if( TexDesc.Type == TEXTURE_TYPE_1D_ARRAY ||
-        TexDesc.Type == TEXTURE_TYPE_2D_ARRAY )
+    if( TexDesc.Type == RESOURCE_DIM_TEX_1D_ARRAY ||
+        TexDesc.Type == RESOURCE_DIM_TEX_2D_ARRAY ||
+        TexDesc.Type == RESOURCE_DIM_TEX_CUBE     || 
+        TexDesc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY)
     {
         VERIFY_TEX_PARAMS( Slice < TexDesc.ArraySize, "Array slice (", Slice, ") is out of range [0,", TexDesc.ArraySize-1, "]" );
     }
@@ -96,20 +107,22 @@ void ValidateTextureRegion(const TextureDesc &TexDesc, Uint32 MipLevel, Uint32 S
         VERIFY_TEX_PARAMS( Slice == 0, "Array slice (", Slice, ") must be 0 for non-array textures" );
     }
 
+
     Uint32 MipWidth = std::max(TexDesc.Width >> MipLevel, 1U);
     VERIFY_TEX_PARAMS( Box.MaxX <= MipWidth, "Region max X coordinate (", Box.MaxX, ") is out of allowed range [0, ", MipWidth, "]" );
-    if( TexDesc.Type != TEXTURE_TYPE_1D && 
-        TexDesc.Type != TEXTURE_TYPE_1D_ARRAY )
+    if( TexDesc.Type != RESOURCE_DIM_TEX_1D && 
+        TexDesc.Type != RESOURCE_DIM_TEX_1D_ARRAY )
     {
         Uint32 MipHeight = std::max(TexDesc.Height >> MipLevel, 1U);
         VERIFY_TEX_PARAMS( Box.MaxY <= MipHeight, "Region max Y coordinate (", Box.MaxY, ") is out of allowed range [0, ", MipHeight, "]" );
     }
 
-    if( TexDesc.Type == TEXTURE_TYPE_3D )
+    if( TexDesc.Type == RESOURCE_DIM_TEX_3D )
     {
         Uint32 MipDepth = std::max(TexDesc.Depth >> MipLevel, 1U);
         VERIFY_TEX_PARAMS( Box.MaxZ <= MipDepth, "Region max Z coordinate (", Box.MaxZ, ") is out of allowed range  [0, ", MipDepth, "]" );
     }
+#endif
 }
 
 void ValidateUpdateDataParams( const TextureDesc &TexDesc, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData )
@@ -128,13 +141,13 @@ void VliadateCopyTextureDataParams( const TextureDesc &SrcTexDesc, Uint32 SrcMip
     if( pSrcBox == nullptr )
     {
         SrcBox.MaxX = std::max( SrcTexDesc.Width >> SrcMipLevel, 1u );
-        if( SrcTexDesc.Type == TEXTURE_TYPE_1D || 
-            SrcTexDesc.Type == TEXTURE_TYPE_1D_ARRAY )
+        if( SrcTexDesc.Type == RESOURCE_DIM_TEX_1D || 
+            SrcTexDesc.Type == RESOURCE_DIM_TEX_1D_ARRAY )
             SrcBox.MaxY = 1;
         else
             SrcBox.MaxY = std::max( SrcTexDesc.Height >> SrcMipLevel, 1u );
 
-        if( SrcTexDesc.Type == TEXTURE_TYPE_3D )
+        if( SrcTexDesc.Type == RESOURCE_DIM_TEX_3D )
             SrcBox.MaxZ = std::max( SrcTexDesc.Depth >> SrcMipLevel, 1u );
         else
             SrcBox.MaxZ = 1;

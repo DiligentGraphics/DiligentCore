@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@
 /// Type conversion routines
 
 #include "GraphicsTypes.h"
+#include "DXGITypeConversions.h"
 
 namespace Diligent
 {
@@ -45,22 +46,7 @@ inline UINT BindFlagsToD3D11BindFlags(Uint32 BindFlags)
     return D3D11BindFlags;
 }
 
-inline D3D11_PRIMITIVE_TOPOLOGY TopologyToDX11Topology(PRIMITIVE_TOPOLOGY Topology)
-{
-    switch( Topology )
-    {
-        case PRIMITIVE_TOPOLOGY_UNDEFINED:      return D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED;
-        case PRIMITIVE_TOPOLOGY_TRIANGLE_LIST:   return D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-        case PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP:  return D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
-        case PRIMITIVE_TOPOLOGY_POINT_LIST:     return D3D11_PRIMITIVE_TOPOLOGY_POINTLIST;
-        case PRIMITIVE_TOPOLOGY_LINE_LIST:      return D3D11_PRIMITIVE_TOPOLOGY_LINELIST;
-        default: UNEXPECTED("Unsupported primitive topology" ); return D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED;
-    }
-}
-
-DXGI_FORMAT TypeToDXGI_Format(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIsNormalized);
-
-DXGI_FORMAT TexFormatToDXGI_Format(TEXTURE_FORMAT TexFormat, Uint32 BindFlags = 0);
+D3D11_PRIMITIVE_TOPOLOGY TopologyToD3D11Topology(PRIMITIVE_TOPOLOGY Topology);
 
 inline D3D11_USAGE UsageToD3D11Usage(USAGE Usage)
 {
@@ -110,38 +96,21 @@ inline UINT MiscTextureFlagsToD3D11Flags(Uint32 Flags)
 }
 
 D3D11_FILTER FilterTypeToD3D11Filter(FILTER_TYPE MinFilter, FILTER_TYPE MagFilter, FILTER_TYPE MipFilter);
+D3D11_TEXTURE_ADDRESS_MODE TexAddressModeToD3D11AddressMode(TEXTURE_ADDRESS_MODE Mode);
 
-inline D3D11_TEXTURE_ADDRESS_MODE TexAddressModeToD3D11AddressMode(TEXTURE_ADDRESS_MODE Mode)
-{
-    switch(Mode)
-    {
-        case TEXTURE_ADDRESS_UNKNOWN: UNEXPECTED("Texture address mode is not specified" ); return D3D11_TEXTURE_ADDRESS_CLAMP;
-        case TEXTURE_ADDRESS_WRAP:          return D3D11_TEXTURE_ADDRESS_WRAP;
-        case TEXTURE_ADDRESS_MIRROR:        return D3D11_TEXTURE_ADDRESS_MIRROR;
-        case TEXTURE_ADDRESS_CLAMP:         return D3D11_TEXTURE_ADDRESS_CLAMP;
-        case TEXTURE_ADDRESS_BORDER:        return D3D11_TEXTURE_ADDRESS_BORDER;
-        case TEXTURE_ADDRESS_MIRROR_ONCE:   return D3D11_TEXTURE_ADDRESS_MIRROR_ONCE;
-        default: UNEXPECTED("Unknown texture address mode" ); return D3D11_TEXTURE_ADDRESS_CLAMP;
-    }
-}
+D3D11_COMPARISON_FUNC ComparisonFuncToD3D11ComparisonFunc(COMPARISON_FUNCTION Func);
+void DepthStencilStateDesc_To_D3D11_DEPTH_STENCIL_DESC(const DepthStencilStateDesc &DepthStencilDesc, D3D11_DEPTH_STENCIL_DESC &d3d11DSSDesc);
+void RasterizerStateDesc_To_D3D11_RASTERIZER_DESC(const RasterizerStateDesc &RasterizerDesc, D3D11_RASTERIZER_DESC &d3d11RSDesc);
+void BlendStateDesc_To_D3D11_BLEND_DESC(const BlendStateDesc &BSDesc, D3D11_BLEND_DESC &D3D11BSDesc);
+void LayoutElements_To_D3D11_INPUT_ELEMENT_DESCs(const std::vector<LayoutElement, STDAllocatorRawMem<LayoutElement> > &LayoutElements, 
+                                                 std::vector<D3D11_INPUT_ELEMENT_DESC, STDAllocatorRawMem<D3D11_INPUT_ELEMENT_DESC> > &D3D11InputElements);
 
-inline D3D11_COMPARISON_FUNC ComparisonFuncToD3D11ComparisonFunc(COMPARISON_FUNCTION Func)
-{
-    switch(Func)
-    {
-        case COMPARISON_FUNC_UNKNOW: UNEXPECTED("Comparison function is not specified" ); return D3D11_COMPARISON_ALWAYS;
-        case COMPARISON_FUNC_NEVER:         return D3D11_COMPARISON_NEVER;
-	    case COMPARISON_FUNC_LESS:          return D3D11_COMPARISON_LESS;
-	    case COMPARISON_FUNC_EQUAL:         return D3D11_COMPARISON_EQUAL;
-	    case COMPARISON_FUNC_LESS_EQUAL:    return D3D11_COMPARISON_LESS_EQUAL;
-	    case COMPARISON_FUNC_GREATER:       return D3D11_COMPARISON_GREATER;
-	    case COMPARISON_FUNC_NOT_EQUAL:     return D3D11_COMPARISON_NOT_EQUAL;
-	    case COMPARISON_FUNC_GREATER_EQUAL: return D3D11_COMPARISON_GREATER_EQUAL;
-	    case COMPARISON_FUNC_ALWAYS:        return D3D11_COMPARISON_ALWAYS;
-        default: UNEXPECTED("Unknown comparison function" ); return D3D11_COMPARISON_ALWAYS;
-    }
-}
+void TextureViewDesc_to_D3D11_SRV_DESC(const TextureViewDesc& TexViewDesc, D3D11_SHADER_RESOURCE_VIEW_DESC &D3D11SRVDesc,  Uint32 SampleCount);
+void TextureViewDesc_to_D3D11_RTV_DESC(const TextureViewDesc& TexViewDesc, D3D11_RENDER_TARGET_VIEW_DESC &D3D11RTVDesc,    Uint32 SampleCount);
+void TextureViewDesc_to_D3D11_DSV_DESC(const TextureViewDesc& TexViewDesc, D3D11_DEPTH_STENCIL_VIEW_DESC &D3D11DSVDesc,    Uint32 SampleCount);
+void TextureViewDesc_to_D3D11_UAV_DESC(const TextureViewDesc& TexViewDesc, D3D11_UNORDERED_ACCESS_VIEW_DESC &D3D11UAVDesc);
 
-D3D11_STENCIL_OP StencilOpToD3D11StencilOp( STENCIL_OP );
+void BufferViewDesc_to_D3D11_SRV_DESC(const BufferDesc &BuffDesc, const BufferViewDesc& SRVDesc, D3D11_SHADER_RESOURCE_VIEW_DESC &D3D11SRVDesc);
+void BufferViewDesc_to_D3D11_UAV_DESC(const BufferDesc &BuffDesc, const BufferViewDesc& UAVDesc, D3D11_UNORDERED_ACCESS_VIEW_DESC &D3D11UAVDesc);
 
 }

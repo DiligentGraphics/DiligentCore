@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -25,15 +25,15 @@
 
 #include "PlatformDefinitions.h"
 
-#if defined( PLATFORM_WINDOWS )
+#if defined( PLATFORM_WIN32 )
 
-    #include "..\Windows\include\WindowsFileSystem.h"
+    #include "..\Win32\include\Win32FileSystem.h"
     typedef WindowsFileSystem FileSystem;
     typedef WindowsFile       CFile;
 
-#elif defined( PLATFORM_WINDOWS_STORE )
+#elif defined( PLATFORM_UNIVERSAL_WINDOWS )
 
-    #include "..\WindowsStore\include\WindowsStoreFileSystem.h"
+    #include "..\UWP\include\UWPFileSystem.h"
     typedef WindowsStoreFileSystem FileSystem;
     typedef WindowsStoreFile       CFile;
 

@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@
 
 #include "GraphicsTypes.h"
 #include "Buffer.h"
-#include "VertexDescription.h"
+#include "InputLayout.h"
 #include "LockHelper.h"
 #include "HashUtils.h"
 #include "DeviceContextBase.h"
@@ -40,12 +40,13 @@ public:
     VAOCache();
     ~VAOCache();
 
-    const GLObjectWrappers::GLVertexArrayObj& GetVAO( IVertexDescription &VertexDesc,
+    const GLObjectWrappers::GLVertexArrayObj& GetVAO( IPipelineState *pPSO,
                                                        IBuffer *pIndexBuffer,
-                                                       vector< VertexStreamInfo > &VertexStreams,
+                                                       VertexStreamInfo VertexStreams[],
+                                                       Uint32 NumVertexStreams,
                                                        class GLContextState &GLContextState);
     void OnDestroyBuffer(IBuffer *pBuffer);
-    void OnDestroyVertexDesc(IVertexDescription *pVertexDesc);
+    void OnDestroyPSO(IPipelineState *pPSO);
 
 private:
     // This structure is used as the key to find VAO
@@ -53,7 +54,7 @@ private:
     {
         // Note that the the pointers are used for ordering only
         // They are not used to access the objects
-        IVertexDescription* pVertexDesc;
+        IPipelineState* pPSO;
         IBuffer* pIndexBuffer;
         struct StreamAttribs
         {
@@ -64,7 +65,7 @@ private:
         
         bool operator == (const VAOCacheKey &Key)const
         {
-            return (pVertexDesc == Key.pVertexDesc) &&
+            return (pPSO == Key.pPSO) &&
                    (pIndexBuffer ==  Key.pIndexBuffer) &&
                    (memcmp(Streams, Key.Streams, sizeof(Streams)) == 0);
         }
@@ -75,7 +76,7 @@ private:
         std::size_t operator() ( const VAOCacheKey& Key )const
         {
             std::size_t Seed = 0;
-            HashCombine(Seed, Key.pVertexDesc);
+            HashCombine(Seed, Key.pPSO);
             if(Key.pIndexBuffer)
                 HashCombine(Seed, Key.pIndexBuffer);
             for(int iStream = 0; iStream < _countof(Key.Streams); ++iStream )
@@ -96,7 +97,7 @@ private:
     friend class RenderDeviceGLImpl;
     ThreadingTools::LockFlag m_CacheLockFlag;
     std::unordered_map<VAOCacheKey, GLObjectWrappers::GLVertexArrayObj, VAOCacheKeyHashFunc> m_Cache;
-    std::unordered_multimap<IVertexDescription*, VAOCacheKey> m_VertexDescToKey;
+    std::unordered_multimap<IPipelineState*, VAOCacheKey> m_PSOToKey;
     std::unordered_multimap<IBuffer*, VAOCacheKey> m_BuffToKey;
 };
 

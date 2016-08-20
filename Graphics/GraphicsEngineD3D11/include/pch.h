@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -38,13 +38,13 @@
 #include <vector>
 #include <exception>
 #include <algorithm>
-#if defined(PLATFORM_WINDOWS)
+#if defined(PLATFORM_WIN32)
     #include <d3d11.h>
-#elif defined(PLATFORM_WINDOWS_STORE)
+#elif defined(PLATFORM_UNIVERSAL_WINDOWS)
     #include <d3d11_2.h>
 #endif
 
-#include "PlatformDefinitions.h"
+#include "EngineD3D11Defines.h"
 #include "Errors.h"
 #include "RefCntAutoPtr.h"
 #include "DebugUtilities.h"
@@ -52,4 +52,4 @@
 #include "RenderDeviceBase.h"
 #include "D3D11TypeConversions.h"
 #include "ValidatedCast.h"
-#include "ComPtr.h"
+#include <atlcomcli.h>

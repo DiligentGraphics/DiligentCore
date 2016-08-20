@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -29,8 +29,8 @@
 namespace Diligent
 {
 
-SamplerD3D11Impl::SamplerD3D11Impl(class RenderDeviceD3D11Impl *pRenderDeviceD3D11, const SamplerDesc& SamplerDesc) : 
-    TSamplerBase(pRenderDeviceD3D11, SamplerDesc)
+SamplerD3D11Impl::SamplerD3D11Impl(FixedBlockMemoryAllocator &SamplerObjAllocator, class RenderDeviceD3D11Impl *pRenderDeviceD3D11, const SamplerDesc& SamplerDesc) : 
+    TSamplerBase(SamplerObjAllocator, pRenderDeviceD3D11, SamplerDesc)
 {
     auto *pd3d11Device = pRenderDeviceD3D11->GetD3D11Device();
     D3D11_SAMPLER_DESC D3D11SamplerDesc = 

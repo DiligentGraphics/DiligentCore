@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -23,10 +23,13 @@
 
 #pragma once
 
+/// \file
+/// Declaration of functions that create OpenGL-based engine implementation
+
 #include "RenderDevice.h"
 #include "SwapChain.h"
 
-#if defined(PLATFORM_WINDOWS) || defined(PLATFORM_WINDOWS_STORE)
+#if defined(PLATFORM_WIN32) || defined(PLATFORM_UNIVERSAL_WINDOWS)
 
 #   define API_QUALIFIER
 
@@ -49,12 +52,12 @@
 extern "C"
 {
 
-#if defined(ENGINE_DLL) && (defined(PLATFORM_WINDOWS) || defined(PLATFORM_WINDOWS_STORE))
+#if defined(ENGINE_DLL) && (defined(PLATFORM_WIN32) || defined(PLATFORM_UNIVERSAL_WINDOWS))
 
     typedef void (*CreateDeviceAndSwapChainGLType)( const Diligent::EngineCreationAttribs& CreationAttribs, 
                                      Diligent::IRenderDevice **ppDevice,
                                      Diligent::IDeviceContext **ppImmediateContext,
-                                     const Diligent::SwapChainDesc& SwapChainDesc, 
+                                     const Diligent::SwapChainDesc& SCDesc, 
                                      void *pNativeWndHandle, 
                                      Diligent::ISwapChain **ppSwapChain );
 
@@ -99,7 +102,7 @@ extern "C"
     void CreateDeviceAndSwapChainGL( const Diligent::EngineCreationAttribs& CreationAttribs, 
                                      Diligent::IRenderDevice **ppDevice,
                                      Diligent::IDeviceContext **ppImmediateContext,
-                                     const Diligent::SwapChainDesc& SwapChainDesc, 
+                                     const Diligent::SwapChainDesc& SCDesc, 
                                      void *pNativeWndHandle, 
                                      Diligent::ISwapChain **ppSwapChain );
 #endif

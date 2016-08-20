@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@
 #include "BufferGLImpl.h"
 #include "GLTypeConversions.h"
 #include "GLContextState.h"
+#include "PipelineStateGLImpl.h"
 
 namespace Diligent
 {
@@ -36,14 +37,14 @@ namespace Diligent
 VAOCache::VAOCache()
 {
     m_Cache.max_load_factor(0.5f);
-    m_VertexDescToKey.max_load_factor(0.5f);
+    m_PSOToKey.max_load_factor(0.5f);
     m_BuffToKey.max_load_factor(0.5f);
 }
 
 VAOCache::~VAOCache()
 {
     VERIFY(m_Cache.empty(), "VAO cache is not empty. Are there any unreleased objects?");
-    VERIFY(m_VertexDescToKey.empty(), "VertexDescToKey hash is not empty" );
+    VERIFY(m_PSOToKey.empty(), "PSOToKey hash is not empty" );
     VERIFY(m_BuffToKey.empty(), "BuffToKey hash is not empty");
 }
 
@@ -58,21 +59,22 @@ void VAOCache::OnDestroyBuffer(IBuffer *pBuffer)
     m_BuffToKey.erase(EqualRange.first, EqualRange.second);
 }
 
-void VAOCache::OnDestroyVertexDesc(IVertexDescription *pVertexDesc)
+void VAOCache::OnDestroyPSO(IPipelineState *pPSO)
 {
     ThreadingTools::LockHelper CacheLock(m_CacheLockFlag);
-    auto EqualRange = m_VertexDescToKey.equal_range(pVertexDesc);
+    auto EqualRange = m_PSOToKey.equal_range(pPSO);
     for(auto It = EqualRange.first; It != EqualRange.second; ++It)
     {
         m_Cache.erase(It->second);
     }
-    m_VertexDescToKey.erase(EqualRange.first, EqualRange.second);
+    m_PSOToKey.erase(EqualRange.first, EqualRange.second);
 }
 
-const GLObjectWrappers::GLVertexArrayObj& VAOCache::GetVAO( IVertexDescription &VertexDesc,
-                                                              IBuffer *pIndexBuffer,
-                                                              vector< VertexStreamInfo > &VertexStreams,
-                                                              GLContextState &GLContextState )
+const GLObjectWrappers::GLVertexArrayObj& VAOCache::GetVAO( IPipelineState *pPSO,
+                                                            IBuffer *pIndexBuffer,
+                                                            VertexStreamInfo VertexStreams[],
+                                                            Uint32 NumVertexStreams,
+                                                            GLContextState &GLContextState )
 {
     // Lock the cache
     ThreadingTools::LockHelper CacheLock(m_CacheLockFlag);
@@ -80,19 +82,22 @@ const GLObjectWrappers::GLVertexArrayObj& VAOCache::GetVAO( IVertexDescription &
     RefCntAutoPtr<IBuffer> spVertexBuffers[MaxBufferSlots];
     
     // Get layout
-    const auto *LayoutElems = VertexDesc.GetDesc().LayoutElements;
-    auto NumElems = VertexDesc.GetDesc().NumElements;
-    const auto *TightStrides = VertexDesc.GetTightStrides();
+    auto *pPSOGL = ValidatedCast<PipelineStateGLImpl>(pPSO);
+
+    const auto &InputLayout = pPSOGL->GetDesc().GraphicsPipeline.InputLayout;
+    const LayoutElement *LayoutElems =  InputLayout.LayoutElements;
+    Uint32 NumElems = InputLayout.NumElements;
+    const Uint32 *TightStrides = pPSOGL->GetTightStrides();
     // Construct the key
     VAOCacheKey Key = {0};
-    Key.pVertexDesc = &VertexDesc;
+    Key.pPSO = pPSO;
     Key.pIndexBuffer = pIndexBuffer;
     
     auto LayoutIt = LayoutElems;
     for( size_t Elem = 0; Elem < NumElems; ++Elem, ++LayoutIt )
     {
         auto BuffSlot = LayoutIt->BufferSlot;
-        if( BuffSlot >= VertexStreams.size() )
+        if( BuffSlot >= NumVertexStreams )
         {
             UNEXPECTED( "Input layout requires more buffers than bound to the pipeline" );
             continue;
@@ -160,7 +165,7 @@ const GLObjectWrappers::GLVertexArrayObj& VAOCache::GetVAO( IVertexDescription &
         for( size_t Elem = 0; Elem < NumElems; ++Elem, ++LayoutIt )
         {
             auto BuffSlot = LayoutIt->BufferSlot;
-            if( BuffSlot >= VertexStreams.size() || BuffSlot >= MaxBufferSlots )
+            if( BuffSlot >= NumVertexStreams || BuffSlot >= MaxBufferSlots )
             {
                 UNEXPECTED( "Incorrect input buffer slot" );
                 continue;
@@ -205,7 +210,7 @@ const GLObjectWrappers::GLVertexArrayObj& VAOCache::GetVAO( IVertexDescription &
         auto NewElems = m_Cache.emplace( make_pair(Key, std::move(NewVAO)) );
         // New element must be actually inserted
         VERIFY( NewElems.second, "New element was not inserted into the cache" ); 
-        m_VertexDescToKey.insert( make_pair(Key.pVertexDesc, Key) );
+        m_PSOToKey.insert( make_pair(Key.pPSO, Key) );
         for(int iStream = 0; iStream < _countof(Key.Streams); ++iStream)
         {
             auto *pCurrBuff = Key.Streams[iStream].pBuffer;

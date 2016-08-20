@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -36,10 +36,10 @@ namespace Diligent
 {
 
 /// Basic file stream implementation
-class BasicFileStream : public ObjectBase<IFileStream>
+class BasicFileStream : public ObjectBase<IFileStream, IMemoryAllocator>
 {
 public:
-    typedef ObjectBase<IFileStream> TBase;
+    typedef ObjectBase<IFileStream, IMemoryAllocator> TBase;
 
     BasicFileStream(const Diligent::Char *Path, 
                      EFileAccessMode Access = EFileAccessMode::Read);

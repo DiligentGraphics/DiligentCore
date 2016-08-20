@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -29,8 +29,12 @@
 namespace Diligent
 {
 
-Texture3D_D3D11 :: Texture3D_D3D11(RenderDeviceD3D11Impl *pRenderDeviceD3D11, const TextureDesc& TexDesc, const TextureData &InitData /*= TextureData()*/) : 
-    TextureBaseD3D11(pRenderDeviceD3D11, TexDesc, InitData)
+Texture3D_D3D11 :: Texture3D_D3D11(FixedBlockMemoryAllocator &TexObjAllocator, 
+                                   FixedBlockMemoryAllocator &TexViewObjAllocator, 
+                                   RenderDeviceD3D11Impl *pRenderDeviceD3D11, 
+                                   const TextureDesc& TexDesc, 
+                                   const TextureData &InitData /*= TextureData()*/) : 
+    TextureBaseD3D11(TexObjAllocator, TexViewObjAllocator, pRenderDeviceD3D11, TexDesc, InitData)
 {
     auto D3D11TexFormat = TexFormatToDXGI_Format(m_Desc.Format, m_Desc.BindFlags);
     auto D3D11BindFlags = BindFlagsToD3D11BindFlags(m_Desc.BindFlags);
@@ -52,7 +56,7 @@ Texture3D_D3D11 :: Texture3D_D3D11(RenderDeviceD3D11Impl *pRenderDeviceD3D11, co
         MiscFlags
     };
 
-    std::vector<D3D11_SUBRESOURCE_DATA> D3D11InitData;
+    std::vector<D3D11_SUBRESOURCE_DATA, STDAllocatorRawMem<D3D11_SUBRESOURCE_DATA>> D3D11InitData( STD_ALLOCATOR_RAW_MEM(D3D11_SUBRESOURCE_DATA, GetRawAllocator(), "Allocator for vector<D3D11_SUBRESOURCE_DATA>") );
     PrepareD3D11InitData(InitData, Tex3DDesc.MipLevels, D3D11InitData);
 
     ID3D11Texture3D *ptex3D = nullptr;
@@ -66,8 +70,8 @@ void Texture3D_D3D11::CreateSRV( TextureViewDesc &SRVDesc, ID3D11ShaderResourceV
     VERIFY( ppD3D11SRV && *ppD3D11SRV == nullptr, "SRV pointer address is null or contains non-null pointer to an existing object"  );
     
     VERIFY( SRVDesc.ViewType == TEXTURE_VIEW_SHADER_RESOURCE, "Incorrect view type: shader resource is expected" );
-    if( SRVDesc.TextureType != TEXTURE_TYPE_3D )
-        LOG_ERROR_AND_THROW("Unsupported texture view type. Only TEXTURE_TYPE_3D is allowed");
+    if( SRVDesc.TextureDim != RESOURCE_DIM_TEX_3D )
+        LOG_ERROR_AND_THROW("Unsupported texture view type. Only RESOURCE_DIM_TEX_3D is allowed");
     
     if( SRVDesc.Format == TEX_FORMAT_UNKNOWN )
     {
@@ -75,12 +79,7 @@ void Texture3D_D3D11::CreateSRV( TextureViewDesc &SRVDesc, ID3D11ShaderResourceV
     }
 
     D3D11_SHADER_RESOURCE_VIEW_DESC D3D11_SRVDesc;
-    memset(&D3D11_SRVDesc, 0, sizeof(D3D11_SRVDesc));
-    D3D11_SRVDesc.Format = TexFormatToDXGI_Format(SRVDesc.Format, BIND_SHADER_RESOURCE);
-    
-    D3D11_SRVDesc.ViewDimension =  D3D11_SRV_DIMENSION_TEXTURE3D;
-    D3D11_SRVDesc.Texture3D.MipLevels = SRVDesc.NumMipLevels;
-    D3D11_SRVDesc.Texture3D.MostDetailedMip = SRVDesc.MostDetailedMip;
+    TextureViewDesc_to_D3D11_SRV_DESC(SRVDesc, D3D11_SRVDesc, m_Desc.SampleCount);
 
     auto *pDeviceD3D11 = static_cast<RenderDeviceD3D11Impl*>(GetDevice())->GetD3D11Device();
     CHECK_D3D_RESULT_THROW( pDeviceD3D11->CreateShaderResourceView( m_pd3d11Texture, &D3D11_SRVDesc, ppD3D11SRV ),
@@ -92,8 +91,8 @@ void Texture3D_D3D11::CreateRTV( TextureViewDesc &RTVDesc, ID3D11RenderTargetVie
     VERIFY( ppD3D11RTV && *ppD3D11RTV == nullptr, "RTV pointer address is null or contains non-null pointer to an existing object"  );
 
     VERIFY( RTVDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET, "Incorrect view type: render target is expected" );
-    if( RTVDesc.TextureType != TEXTURE_TYPE_3D )
-        LOG_ERROR_AND_THROW( "Unsupported texture view type. Only TEXTURE_TYPE_3D is allowed" );
+    if( RTVDesc.TextureDim != RESOURCE_DIM_TEX_3D )
+        LOG_ERROR_AND_THROW( "Unsupported texture view type. Only RESOURCE_DIM_TEX_3D is allowed" );
     
     if( RTVDesc.Format == TEX_FORMAT_UNKNOWN )
     {
@@ -101,13 +100,7 @@ void Texture3D_D3D11::CreateRTV( TextureViewDesc &RTVDesc, ID3D11RenderTargetVie
     }
 
     D3D11_RENDER_TARGET_VIEW_DESC D3D11_RTVDesc;
-    memset(&D3D11_RTVDesc, 0, sizeof(D3D11_RTVDesc));
-    D3D11_RTVDesc.Format = TexFormatToDXGI_Format(RTVDesc.Format, BIND_RENDER_TARGET);
-
-    D3D11_RTVDesc.ViewDimension =  D3D11_RTV_DIMENSION_TEXTURE3D;
-    D3D11_RTVDesc.Texture3D.FirstWSlice = RTVDesc.FirstDepthSlice;
-    D3D11_RTVDesc.Texture3D.WSize = RTVDesc.NumDepthSlices;
-    D3D11_RTVDesc.Texture3D.MipSlice = RTVDesc.MostDetailedMip;
+    TextureViewDesc_to_D3D11_RTV_DESC(RTVDesc, D3D11_RTVDesc, m_Desc.SampleCount);
 
     auto *pDeviceD3D11 = static_cast<RenderDeviceD3D11Impl*>(GetDevice())->GetD3D11Device();
     CHECK_D3D_RESULT_THROW( pDeviceD3D11->CreateRenderTargetView( m_pd3d11Texture, &D3D11_RTVDesc, ppD3D11RTV ),
@@ -124,8 +117,8 @@ void Texture3D_D3D11::CreateUAV( TextureViewDesc &UAVDesc, ID3D11UnorderedAccess
     VERIFY( ppD3D11UAV && *ppD3D11UAV == nullptr, "UAV pointer address is null or contains non-null pointer to an existing object"  );
 
     VERIFY( UAVDesc.ViewType == TEXTURE_VIEW_UNORDERED_ACCESS, "Incorrect view type: unordered access is expected" );
-    if( UAVDesc.TextureType != TEXTURE_TYPE_3D )
-        LOG_ERROR_AND_THROW("Unsupported texture view type. Only TEXTURE_TYPE_3D is allowed");
+    if( UAVDesc.TextureDim != RESOURCE_DIM_TEX_3D )
+        LOG_ERROR_AND_THROW("Unsupported texture view type. Only RESOURCE_DIM_TEX_3D is allowed");
     
     if( UAVDesc.Format == TEX_FORMAT_UNKNOWN )
     {
@@ -133,13 +126,7 @@ void Texture3D_D3D11::CreateUAV( TextureViewDesc &UAVDesc, ID3D11UnorderedAccess
     }
 
     D3D11_UNORDERED_ACCESS_VIEW_DESC D3D11_UAVDesc;
-    memset(&D3D11_UAVDesc, 0, sizeof(D3D11_UAVDesc));
-    D3D11_UAVDesc.Format = TexFormatToDXGI_Format(UAVDesc.Format, BIND_UNORDERED_ACCESS);
-
-    D3D11_UAVDesc.ViewDimension =  D3D11_UAV_DIMENSION_TEXTURE3D;
-    D3D11_UAVDesc.Texture3D.FirstWSlice = UAVDesc.FirstDepthSlice;
-    D3D11_UAVDesc.Texture3D.WSize = UAVDesc.NumDepthSlices;
-    D3D11_UAVDesc.Texture3D.MipSlice = UAVDesc.MostDetailedMip;
+    TextureViewDesc_to_D3D11_UAV_DESC(UAVDesc, D3D11_UAVDesc);
 
     auto *pDeviceD3D11 = static_cast<RenderDeviceD3D11Impl*>(GetDevice())->GetD3D11Device();
     CHECK_D3D_RESULT_THROW( pDeviceD3D11->CreateUnorderedAccessView( m_pd3d11Texture, &D3D11_UAVDesc, ppD3D11UAV ),

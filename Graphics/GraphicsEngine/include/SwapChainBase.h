@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -34,17 +34,26 @@ namespace Diligent
 
 /// Base implementation of the swap chain.
 
+/// \tparam BaseInterface - base interface that this class will inheret 
+///                         (Diligent::ISwapChainGL, Diligent::ISwapChainD3D11, or Diligent::ISwapChainD3D12).
+/// \tparam SwapChainAllocator - type of the allocator that is used to allocate memory for the swap chain object instance
 /// \remarks Swap chain holds the strong reference to the device and a weak reference to the
 ///          immediate context.
-template<class BaseInterface = ISwapChain>
-class SwapChainBase : public ObjectBase<BaseInterface>
+template<class BaseInterface, class SwapChainAllocator>
+class SwapChainBase : public ObjectBase<BaseInterface, SwapChainAllocator>
 {
 public:
-    typedef ObjectBase<BaseInterface> TObjectBase;
+    typedef ObjectBase<BaseInterface, SwapChainAllocator> TObjectBase;
 
-    SwapChainBase( IRenderDevice *pDevice,
-                    IDeviceContext *pDeviceContext,
-                    const SwapChainDesc& SCDesc ) : 
+    /// \param Allocator - allocator that was used to allocate memory for this instance of the swap chain object
+	/// \param pDevice - pointer to the device.
+	/// \param pDeviceContext - pointer to the device context.
+	/// \param SCDesc - swap chain description
+    SwapChainBase( SwapChainAllocator &Allocator,
+                   IRenderDevice *pDevice,
+                   IDeviceContext *pDeviceContext,
+                   const SwapChainDesc& SCDesc ) : 
+        TObjectBase(nullptr, &Allocator),
         m_pRenderDevice(pDevice),
         m_wpDeviceContext(pDeviceContext),
         m_SwapChainDesc(SCDesc)
@@ -57,7 +66,8 @@ public:
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE( IID_SwapChain, TObjectBase )
 
-    virtual const SwapChainDesc& GetDesc()const
+    /// Implementation of ISwapChain::GetDesc()
+    virtual const SwapChainDesc& GetDesc()const override final
     {
         return m_SwapChainDesc;
     }
@@ -70,6 +80,7 @@ protected:
         {
             m_SwapChainDesc.Width = NewWidth;
             m_SwapChainDesc.Height = NewHeight;
+            LOG_INFO_MESSAGE("Changing display resolution to ", m_SwapChainDesc.Width, "x", m_SwapChainDesc.Height);
             return true;
         }
 

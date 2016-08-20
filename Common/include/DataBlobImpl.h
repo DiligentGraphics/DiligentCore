@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -35,10 +35,10 @@ namespace Diligent
 {
     
 /// Base interface for a file stream
-class DataBlobImpl : public Diligent::ObjectBase<IDataBlob>
+class DataBlobImpl : public Diligent::ObjectBase<IDataBlob, IMemoryAllocator>
 {
 public:
-    typedef Diligent::ObjectBase<IDataBlob> TBase;
+    typedef Diligent::ObjectBase<IDataBlob, IMemoryAllocator> TBase;
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
 

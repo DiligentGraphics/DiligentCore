@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -60,7 +60,6 @@ namespace Diligent
 
     TexRegionRender::TexRegionRender( class RenderDeviceGLImpl *pDeviceGL ) : 
         m_OrigStencilRef(0),
-        m_OrigSamplesBlendMask(0),
         m_NumRenderTargets(0)
     {
         memset( m_OrigBlendFactors, 0, sizeof(m_OrigBlendFactors) );
@@ -74,25 +73,25 @@ namespace Diligent
 							     true // We must indicate the shader is internal device object
 							   );
 
-        static const char* SamplerType[TEXTURE_TYPE_NUM_TYPES] = {};
-        SamplerType[TEXTURE_TYPE_1D]           = "sampler1D";
-        SamplerType[TEXTURE_TYPE_1D_ARRAY]     = "sampler1DArray";
-        SamplerType[TEXTURE_TYPE_2D]           = "sampler2D";
-        SamplerType[TEXTURE_TYPE_2D_ARRAY]     = "sampler2DArray",
-        SamplerType[TEXTURE_TYPE_3D]           = "sampler3D";
+        static const char* SamplerType[RESOURCE_DIM_NUM_DIMENSIONS] = {};
+        SamplerType[RESOURCE_DIM_TEX_1D]           = "sampler1D";
+        SamplerType[RESOURCE_DIM_TEX_1D_ARRAY]     = "sampler1DArray";
+        SamplerType[RESOURCE_DIM_TEX_2D]           = "sampler2D";
+        SamplerType[RESOURCE_DIM_TEX_2D_ARRAY]     = "sampler2DArray",
+        SamplerType[RESOURCE_DIM_TEX_3D]           = "sampler3D";
         // There is no texelFetch() for texture cube [array]
-        //SamplerType[TEXTURE_TYPE_CUBE]         = "samplerCube";
-        //SamplerType[TEXTURE_TYPE_CUBE_ARRAY]   = "smaplerCubeArray";
+        //SamplerType[RESOURCE_DIM_TEX_CUBE]         = "samplerCube";
+        //SamplerType[RESOURCE_DIM_TEX_CUBE_ARRAY]   = "smaplerCubeArray";
 
-        static const char* SrcLocations[TEXTURE_TYPE_NUM_TYPES] = {};
-        SrcLocations[TEXTURE_TYPE_1D]           = "int(gl_FragCoord.x) + Constants.x";
-        SrcLocations[TEXTURE_TYPE_1D_ARRAY]     = "ivec2(int(gl_FragCoord.x) + Constants.x, Constants.z)";
-        SrcLocations[TEXTURE_TYPE_2D]           = "ivec2(gl_FragCoord.xy) + Constants.xy";
-        SrcLocations[TEXTURE_TYPE_2D_ARRAY]     = "ivec3(ivec2(gl_FragCoord.xy) + Constants.xy, Constants.z)",
-        SrcLocations[TEXTURE_TYPE_3D]           = "ivec3(ivec2(gl_FragCoord.xy) + Constants.xy, Constants.z)";
+        static const char* SrcLocations[RESOURCE_DIM_NUM_DIMENSIONS] = {};
+        SrcLocations[RESOURCE_DIM_TEX_1D]           = "int(gl_FragCoord.x) + Constants.x";
+        SrcLocations[RESOURCE_DIM_TEX_1D_ARRAY]     = "ivec2(int(gl_FragCoord.x) + Constants.x, Constants.z)";
+        SrcLocations[RESOURCE_DIM_TEX_2D]           = "ivec2(gl_FragCoord.xy) + Constants.xy";
+        SrcLocations[RESOURCE_DIM_TEX_2D_ARRAY]     = "ivec3(ivec2(gl_FragCoord.xy) + Constants.xy, Constants.z)",
+        SrcLocations[RESOURCE_DIM_TEX_3D]           = "ivec3(ivec2(gl_FragCoord.xy) + Constants.xy, Constants.z)";
         // There is no texelFetch() for texture cube [array]
-        //CoordDim[TEXTURE_TYPE_CUBE]         = "ivec2(gl_FragCoord.xy)";
-        //CoordDim[TEXTURE_TYPE_CUBE_ARRAY]   = "ivec2(gl_FragCoord.xy)";
+        //CoordDim[RESOURCE_DIM_TEX_CUBE]         = "ivec2(gl_FragCoord.xy)";
+        //CoordDim[RESOURCE_DIM_TEX_CUBE_ARRAY]   = "ivec2(gl_FragCoord.xy)";
 
         BufferDesc CBDesc;
         CBDesc.uiSizeInBytes = sizeof(Int32)*4;
@@ -103,8 +102,17 @@ namespace Diligent
 								 true // We must indicate the buffer is internal device object
 							   );
 
+        PipelineStateDesc PSODesc;
+        auto &GraphicsPipeline = PSODesc.GraphicsPipeline;
+        GraphicsPipeline.RasterizerDesc.CullMode = CULL_MODE_NONE;
+        GraphicsPipeline.RasterizerDesc.FillMode = FILL_MODE_SOLID;
+
+        GraphicsPipeline.DepthStencilDesc.DepthEnable = false;
+        GraphicsPipeline.DepthStencilDesc.DepthWriteEnable = false;
+        GraphicsPipeline.pVS = m_pVertexShader;
+
         static const char* CmpTypePrefix[3] = { "", "i", "u" };
-        for( Int32 Dim = TEXTURE_TYPE_2D; Dim <= TEXTURE_TYPE_3D; ++Dim )
+        for( Int32 Dim = RESOURCE_DIM_TEX_2D; Dim <= RESOURCE_DIM_TEX_3D; ++Dim )
         {
             const auto *SamplerDim = SamplerType[Dim];
             const auto *SrcLocation = SrcLocations[Dim];
@@ -133,42 +141,20 @@ namespace Diligent
                 ShaderAttrs.Source = Source.c_str();
                 auto &FragmetShader = m_pFragmentShaders[Dim*3 + Fmt];
                 pDeviceGL->CreateShader( ShaderAttrs, &FragmetShader, 
-										 true // We must indicate the shader is internal device object
+										 true // We must indicate the shader is an internal device object
 									   );
+                GraphicsPipeline.pPS = FragmetShader;
+                pDeviceGL->CreatePipelineState( PSODesc, &m_pPSO[Dim*3 + Fmt], 
+										        true // We must indicate the PSO is an internal device object
+									           );
+
                 FragmetShader->GetShaderVariable( "cbConstants" )->Set( m_pConstantBuffer );
             }
         }
-
-        RasterizerStateDesc RSDesc;
-        RSDesc.CullMode = CULL_MODE_NONE;
-        RSDesc.FillMode = FILL_MODE_SOLID;
-        RSDesc.Name = "TexRegionRender : Solid fill no cull RS";
-        pDeviceGL->CreateRasterizerState( RSDesc, &m_pSolidFillNoCullRS, 
-									      true // We must indicate the RS state is internal device object
-									    );
-
-        DepthStencilStateDesc DSSDesc;
-        DSSDesc.Name = "TexRegionRender : disable depth DSS";
-        DSSDesc.DepthEnable = false;
-        DSSDesc.DepthWriteEnable = false;
-        pDeviceGL->CreateDepthStencilState( DSSDesc, &m_pDisableDetphDS, 
-									        true // We must indicate the DSS state is internal device object
-									       );
-
-        BlendStateDesc BSDesc;
-        BSDesc.Name = "TexRegionRender : default BS";
-        pDeviceGL->CreateBlendState(BSDesc, &m_pDefaultBS, 
-									true // We must indicate the BS state is internal device object
-									);
     }
 
     void TexRegionRender::SetStates( DeviceContextGLImpl *pCtxGL )
     {
-        Uint32 NumShaders = 0;
-        pCtxGL->GetShaders( nullptr, NumShaders );
-        m_pOrigShaders.resize( NumShaders );
-        pCtxGL->GetShaders( m_pOrigShaders.data(), NumShaders );
-
         pCtxGL->GetRenderTargets( m_NumRenderTargets, m_pOrigRTVs, &m_pOrigDSV );
 
         Uint32 NumViewports = 0;
@@ -176,28 +162,11 @@ namespace Diligent
         m_OrigViewports.resize(NumViewports);
         pCtxGL->GetViewports( NumViewports, m_OrigViewports.data() );
 
-        pCtxGL->GetDepthStencilState(&m_pOrigDS, m_OrigStencilRef);
-        VERIFY( m_pOrigDS, "At least default depth-stencil state must be bound" );
-
-        pCtxGL->GetBlendState(&m_pOrigBS, m_OrigBlendFactors, m_OrigSamplesBlendMask);
-        VERIFY( m_pOrigBS, "At least default blend state must be bound" );
-
-        pCtxGL->GetRasterizerState(&m_pOrigRS);
-        VERIFY( m_pOrigRS, "At least default rasterizer state must be bound" );
-
-        pCtxGL->SetDepthStencilState( m_pDisableDetphDS, m_OrigStencilRef );
-        pCtxGL->SetBlendState(m_pDefaultBS, m_OrigBlendFactors, m_OrigSamplesBlendMask);
-        pCtxGL->SetRasterizerState(m_pSolidFillNoCullRS);
-
+        pCtxGL->GetPipelineState(&m_pOrigPSO, m_OrigBlendFactors, m_OrigStencilRef);
     }
 
     void TexRegionRender::RestoreStates( DeviceContextGLImpl *pCtxGL )
     {
-        pCtxGL->SetShaders( m_pOrigShaders.data(), (Uint32)m_pOrigShaders.size() );
-        for( auto pSh = m_pOrigShaders.begin(); pSh != m_pOrigShaders.end(); ++pSh )
-            (*pSh)->Release();
-        m_pOrigShaders.clear();
-
         pCtxGL->SetRenderTargets( m_NumRenderTargets, m_pOrigRTVs, m_pOrigDSV );
         for( Uint32 rt = 0; rt < _countof( m_pOrigRTVs ); ++rt )
         {
@@ -209,19 +178,15 @@ namespace Diligent
 
         pCtxGL->SetViewports( (Uint32)m_OrigViewports.size(), m_OrigViewports.data(), 0, 0 );
 
-        pCtxGL->SetDepthStencilState( m_pOrigDS, m_OrigStencilRef );
-        m_pOrigDS.Release();
-
-        pCtxGL->SetBlendState(m_pOrigBS, m_OrigBlendFactors, m_OrigSamplesBlendMask);
-        m_pOrigBS.Release();
-        
-        pCtxGL->SetRasterizerState(m_pOrigRS);
-        m_pOrigRS.Release();
+        pCtxGL->SetPipelineState( m_pOrigPSO );
+        m_pOrigPSO.Release();
+        pCtxGL->SetStencilRef(m_OrigStencilRef);
+        pCtxGL->SetBlendFactors(m_OrigBlendFactors);
     }
 
     void TexRegionRender::Render( DeviceContextGLImpl *pCtxGL,
                                    ITextureView *pSrcSRV,
-                                   TEXTURE_TYPE TexType,
+                                   RESOURCE_DIMENSION TexType,
                                    TEXTURE_FORMAT TexFormat,
                                    Int32 DstToSrcXOffset,
                                    Int32 DstToSrcYOffset,
@@ -249,11 +214,10 @@ namespace Diligent
                                 "There might be an issue in OpenGL driver on NVidia hardware: when rendering to SNORM textures, all negative values are clamped to zero.")
         }
 
-        IShader *ppShaders[2] = { m_pVertexShader, m_pFragmentShaders[FSInd] };
-        auto SrcTexVar = ppShaders[1]->GetShaderVariable( "gSourceTex" );
+        pCtxGL->SetPipelineState(m_pPSO[FSInd]);
+        auto SrcTexVar = m_pFragmentShaders[FSInd]->GetShaderVariable( "gSourceTex" );
         SrcTexVar->Set( pSrcSRV );
 
-        pCtxGL->SetShaders( ppShaders, _countof(ppShaders) );
         DrawAttribs DrawAttrs;
         DrawAttrs.NumVertices = 4;
         DrawAttrs.Topology = PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;

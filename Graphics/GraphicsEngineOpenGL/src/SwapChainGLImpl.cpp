@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -28,10 +28,11 @@
 
 namespace Diligent
 {
-SwapChainGLImpl::SwapChainGLImpl(const SwapChainDesc& SCDesc, 
-                                   RenderDeviceGLImpl* pRenderDeviceGL, 
-                                   DeviceContextGLImpl* pImmediateContextGL) : 
-    TSwapChainBase( pRenderDeviceGL, pImmediateContextGL, pRenderDeviceGL->m_GLContext.GetSwapChainDesc() )
+SwapChainGLImpl::SwapChainGLImpl(IMemoryAllocator &Allocator,
+                                 const SwapChainDesc& SCDesc, 
+                                 RenderDeviceGLImpl* pRenderDeviceGL, 
+                                 DeviceContextGLImpl* pImmediateContextGL) : 
+    TSwapChainBase( Allocator, pRenderDeviceGL, pImmediateContextGL, pRenderDeviceGL->m_GLContext.GetSwapChainDesc() )
 {
 }
 

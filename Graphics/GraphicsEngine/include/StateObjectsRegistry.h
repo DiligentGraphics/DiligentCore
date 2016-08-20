@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@
 
 #include "DeviceObject.h"
 #include <unordered_map>
+#include "STDAllocator.h"
 
 namespace Diligent
 {
@@ -60,8 +61,9 @@ namespace Diligent
         /// Number of outstanding deleted objects to purge the registry.
         static const int DeletedObjectsToPurge = 32;
 
-        StateObjectsRegistry(const Char* RegistryName) :
-            m_RegistryName( RegistryName )
+        StateObjectsRegistry(IMemoryAllocator &RawAllocator, const Char* RegistryName) :
+            m_RegistryName( RegistryName ),
+            m_DescToObjHashMap(STD_ALLOCATOR_RAW_MEM(HashMapElem, RawAllocator, "Allocator for unordered_map<ResourceDescType, RefCntWeakPtr<IDeviceObject> >") )
         {}
         
         ~StateObjectsRegistry()
@@ -196,7 +198,8 @@ namespace Diligent
         Atomics::AtomicLong m_NumDeletedObjects;
 
         /// Hash map that stores weak pointers to the referenced objects
-        std::unordered_map<ResourceDescType, Diligent::RefCntWeakPtr<IDeviceObject> > m_DescToObjHashMap;
+        typedef std::pair< ResourceDescType, RefCntWeakPtr<IDeviceObject> > HashMapElem;
+        std::unordered_map<ResourceDescType, RefCntWeakPtr<IDeviceObject>, std::hash<ResourceDescType>, std::equal_to<ResourceDescType>, STDAllocatorRawMem<HashMapElem> > m_DescToObjHashMap;
 
         /// Registry name used for debug output
         const String m_RegistryName;

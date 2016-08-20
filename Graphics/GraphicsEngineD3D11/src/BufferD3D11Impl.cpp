@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -22,20 +22,25 @@
  */
 
 #include "pch.h"
+#include <atlbase.h>
+
 #include "BufferD3D11Impl.h"
 #include "RenderDeviceD3D11Impl.h"
 #include "DeviceContextD3D11Impl.h"
 #include "D3D11TypeConversions.h"
 #include "BufferViewD3D11Impl.h"
 #include "GraphicsUtilities.h"
-
-using namespace Diligent;
+#include "EngineMemory.h"
 
 namespace Diligent
 {
 
-BufferD3D11Impl :: BufferD3D11Impl(RenderDeviceD3D11Impl *pRenderDeviceD3D11, const BufferDesc& BuffDesc, const BufferData &BuffData /*= BufferData()*/) : 
-    TBufferBase(pRenderDeviceD3D11, BuffDesc)
+BufferD3D11Impl :: BufferD3D11Impl(FixedBlockMemoryAllocator &BufferObjMemAllocator, 
+                                   FixedBlockMemoryAllocator &BuffViewObjMemAllocator,
+                                   RenderDeviceD3D11Impl *pRenderDeviceD3D11, 
+                                   const BufferDesc& BuffDesc, 
+                                   const BufferData &BuffData /*= BufferData()*/) : 
+    TBufferBase(BufferObjMemAllocator, BuffViewObjMemAllocator, pRenderDeviceD3D11, BuffDesc, false)
 {
 #define LOG_BUFFER_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Buffer \"", BuffDesc.Name ? BuffDesc.Name : "", "\": ", ##__VA_ARGS__);
 
@@ -141,9 +146,9 @@ void BufferD3D11Impl :: Map(IDeviceContext *pContext, MAP_TYPE MapType, Uint32 M
     VERIFY( pMappedData || (MapFlags & MAP_FLAG_DO_NOT_WAIT) && (hr == DXGI_ERROR_WAS_STILL_DRAWING), "Map failed" );
 }
 
-void BufferD3D11Impl::Unmap( IDeviceContext *pContext )
+void BufferD3D11Impl::Unmap( IDeviceContext *pContext, MAP_TYPE MapType )
 {
-    TBufferBase::Unmap( pContext );
+    TBufferBase::Unmap( pContext, MapType );
 
     auto *pd3d11DeviceContext = static_cast<DeviceContextD3D11Impl*>(pContext)->GetD3D11DeviceContext();
     pd3d11DeviceContext->Unmap(m_pd3d11Buffer, 0);
@@ -159,18 +164,22 @@ void BufferD3D11Impl::CreateViewInternal( const BufferViewDesc &OrigViewDesc, IB
 
     try
     {
+        auto *pDeviceD3D11Impl = ValidatedCast<RenderDeviceD3D11Impl>(GetDevice());
+        auto &BuffViewAllocator = pDeviceD3D11Impl->GetBuffViewObjAllocator();
+        VERIFY( &BuffViewAllocator == &m_dbgBuffViewAllocator, "Buff view allocator does not match allocator provided at buffer initialization" );
+
         BufferViewDesc ViewDesc = OrigViewDesc;
         if( ViewDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS )
         {
             CComPtr<ID3D11UnorderedAccessView> pUAV;
             CreateUAV( ViewDesc, &pUAV );
-            *ppView = new BufferViewD3D11Impl( GetDevice(), ViewDesc, this, pUAV, bIsDefaultView );
+            *ppView = NEW(BuffViewAllocator, "BufferViewD3D11Impl instance",  BufferViewD3D11Impl, pDeviceD3D11Impl, ViewDesc, this, pUAV, bIsDefaultView );
         }
         else if( ViewDesc.ViewType == BUFFER_VIEW_SHADER_RESOURCE )
         {
 			CComPtr<ID3D11ShaderResourceView> pSRV;
             CreateSRV( ViewDesc, &pSRV );
-            *ppView = new BufferViewD3D11Impl( GetDevice(), ViewDesc, this, pSRV, bIsDefaultView );
+            *ppView = NEW(BuffViewAllocator, "BufferViewD3D11Impl instance",  BufferViewD3D11Impl, pDeviceD3D11Impl, ViewDesc, this, pSRV, bIsDefaultView );
         }
 
         if( !bIsDefaultView && *ppView )
@@ -185,24 +194,10 @@ void BufferD3D11Impl::CreateViewInternal( const BufferViewDesc &OrigViewDesc, IB
 
 void BufferD3D11Impl::CreateUAV( BufferViewDesc &UAVDesc, ID3D11UnorderedAccessView **ppD3D11UAV )
 {
-    D3D11_UNORDERED_ACCESS_VIEW_DESC D3D11_UAVDesc;
-    memset( &D3D11_UAVDesc, 0, sizeof(D3D11_UAVDesc) );
-    const auto &BuffFmt = m_Desc.Format;
-    if( m_Desc.Mode == BUFFER_MODE_FORMATED )
-        D3D11_UAVDesc.Format = TypeToDXGI_Format( BuffFmt.ValueType, BuffFmt.NumComponents, BuffFmt.IsNormalized );
-    
     CorrectBufferViewDesc( UAVDesc );
-    if( UAVDesc.ByteOffset != 0 )
-    {
-        VERIFY( m_Desc.Mode == BUFFER_MODE_STRUCTURED, "Non-zero byte offset is only supported for structured buffers" );
-    }
-    VERIFY( UAVDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS,         "Incorrect view type: unordered access is expected" );
-    VERIFY( (UAVDesc.ByteOffset % m_Desc.ElementByteStride) == 0, "Byte offest is not multiple of element byte stride" );
-    VERIFY( (UAVDesc.ByteWidth % m_Desc.ElementByteStride) == 0,  "Byte width is not multiple of element byte stride" );
-    D3D11_UAVDesc.Buffer.FirstElement = UAVDesc.ByteOffset / m_Desc.ElementByteStride;
-    D3D11_UAVDesc.Buffer.NumElements = UAVDesc.ByteWidth / m_Desc.ElementByteStride;
-    D3D11_UAVDesc.Buffer.Flags = 0; // D3D11_BUFFER_UAV_FLAG_RAW, D3D11_BUFFER_UAV_FLAG_APPEND, D3D11_BUFFER_UAV_FLAG_COUNTER
-    D3D11_UAVDesc.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
+
+    D3D11_UNORDERED_ACCESS_VIEW_DESC D3D11_UAVDesc;
+    BufferViewDesc_to_D3D11_UAV_DESC(m_Desc, UAVDesc, D3D11_UAVDesc);
 
     auto *pDeviceD3D11 = static_cast<RenderDeviceD3D11Impl*>(GetDevice())->GetD3D11Device();
     CHECK_D3D_RESULT_THROW( pDeviceD3D11->CreateUnorderedAccessView( m_pd3d11Buffer, &D3D11_UAVDesc, ppD3D11UAV ),
@@ -211,23 +206,10 @@ void BufferD3D11Impl::CreateUAV( BufferViewDesc &UAVDesc, ID3D11UnorderedAccessV
 
 void BufferD3D11Impl::CreateSRV( struct BufferViewDesc &SRVDesc, ID3D11ShaderResourceView **ppD3D11SRV )
 {
-    D3D11_SHADER_RESOURCE_VIEW_DESC D3D11_SRVDesc;
-    memset( &D3D11_SRVDesc, 0, sizeof( D3D11_SRVDesc ) );
-    const auto &BuffFmt = m_Desc.Format;
-    if( m_Desc.Mode == BUFFER_MODE_FORMATED )
-        D3D11_SRVDesc.Format = TypeToDXGI_Format( BuffFmt.ValueType, BuffFmt.NumComponents, BuffFmt.IsNormalized );
-
     CorrectBufferViewDesc( SRVDesc );
-    if( SRVDesc.ByteOffset != 0 )
-    {
-        VERIFY( m_Desc.Mode == BUFFER_MODE_STRUCTURED, "Non-zero byte offset is only supported for structured buffers" );
-    }
-    VERIFY( SRVDesc.ViewType == BUFFER_VIEW_SHADER_RESOURCE,          "Incorrect view type: shader resource is expected" );
-    VERIFY( (SRVDesc.ByteOffset % m_Desc.ElementByteStride) == 0, "Byte offest is not multiple of element byte stride" );
-    VERIFY( (SRVDesc.ByteWidth % m_Desc.ElementByteStride) == 0,  "Byte width is not multiple of element byte stride" );
-    D3D11_SRVDesc.Buffer.FirstElement = SRVDesc.ByteOffset / m_Desc.ElementByteStride;
-    D3D11_SRVDesc.Buffer.NumElements = SRVDesc.ByteWidth / m_Desc.ElementByteStride;
-    D3D11_SRVDesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
+
+    D3D11_SHADER_RESOURCE_VIEW_DESC D3D11_SRVDesc;
+    BufferViewDesc_to_D3D11_SRV_DESC(m_Desc, SRVDesc, D3D11_SRVDesc);
 
     auto *pDeviceD3D11 = static_cast<RenderDeviceD3D11Impl*>(GetDevice())->GetD3D11Device();
     CHECK_D3D_RESULT_THROW( pDeviceD3D11->CreateShaderResourceView( m_pd3d11Buffer, &D3D11_SRVDesc, ppD3D11SRV ),

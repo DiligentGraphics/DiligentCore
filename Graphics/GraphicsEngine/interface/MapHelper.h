@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -43,21 +43,24 @@ namespace Diligent
 ///         MapHelper<float> UniformData( pDeviceContext, pUniformBuff, MAP_WRITE_DISCARD, 0 );
 ///         UniformData[0] = UniformData[1] = UniformData[2] = UniformData[3] = 1;
 ///     }
-template<typename DataType>
+template<typename DataType, bool KeepStrongReferences = false>
 class MapHelper
 {
 public:
 
     /// Initializes the class member with null values
     MapHelper() : 
-        m_pMappedData(nullptr)
+        m_pMappedData(nullptr),
+        m_pBuffer(nullptr),
+        m_pContext(nullptr),
+        m_MapType(static_cast<MAP_TYPE>(-1))
     {
     }
 
     /// Initializes the object and maps the provided resource.
     /// See Map() for details.
     MapHelper( IDeviceContext *pContext, IBuffer *pBuffer, MAP_TYPE MapType, Uint32 MapFlags ) :
-        m_pMappedData(nullptr)
+        MapHelper()
     {
         Map(pContext, pBuffer, MapType, MapFlags);
     }
@@ -66,11 +69,13 @@ public:
     MapHelper(MapHelper&& Helper) :
         m_pBuffer( std::move(Helper.m_pBuffer) ),
         m_pMappedData( std::move(Helper.m_pMappedData) ),
-        m_pContext( std::move(Helper.m_pContext) )
+        m_pContext( std::move(Helper.m_pContext) ),
+        m_MapType( std::move(Helper.m_MapType) )
     {
-        Helper.m_pBuffer.Release();
-        Helper.m_pContext.Release();
+        Helper.m_pBuffer = nullptr;
+        Helper.m_pContext = nullptr;
         Helper.m_pMappedData = nullptr;
+        Helper.m_MapType = static_cast<MAP_TYPE>(-1);
     }
 
     /// Move-assignement operator: takes over resource ownership from Helper
@@ -79,9 +84,11 @@ public:
         m_pBuffer = std::move(Helper.m_pBuffer);
         m_pMappedData = std::move(Helper.m_pMappedData);
         m_pContext = std::move( Helper.m_pContext );
-        Helper.m_pBuffer.Release();
-        Helper.m_pContext.Release();
+        m_MapType = std::move(Helper.m_MapType);
+        Helper.m_pBuffer = nullptr;
+        Helper.m_pContext = nullptr;
         Helper.m_pMappedData = nullptr;
+        Helper.m_MapType = static_cast<MAP_TYPE>(-1);
         return *this;
     }
 
@@ -97,6 +104,7 @@ public:
         Unmap();
         m_pContext = pContext;
         m_pBuffer = pBuffer;
+        m_MapType = MapType;
         m_pBuffer->Map(m_pContext, MapType, MapFlags, (PVoid&)m_pMappedData);
         VERIFY( m_pMappedData, "Map failed" );
     }
@@ -106,10 +114,11 @@ public:
     {
         if( m_pBuffer )
         {
-            m_pBuffer->Unmap(m_pContext);
-            m_pBuffer.Release();
+            m_pBuffer->Unmap(m_pContext, m_MapType);
+            m_pBuffer = nullptr;
+            m_MapType = static_cast<MAP_TYPE>(-1);
         }
-        m_pContext.Release();
+        m_pContext = nullptr;
         m_pMappedData = nullptr;
     }
     
@@ -135,14 +144,31 @@ private:
     MapHelper(const MapHelper&);
     MapHelper& operator=(const MapHelper&);
 
-    /// Strong auto pointer to the resource
-    RefCntAutoPtr<IBuffer> m_pBuffer;
+    template<typename PtrType, bool UseStrongReference>
+    struct PtrTypeSelector{};
 
-    /// Strong auto pointer to the context
-    RefCntAutoPtr<IDeviceContext> m_pContext;
+    template<typename PtrType>
+    struct PtrTypeSelector<PtrType, true>
+    {
+        typedef RefCntAutoPtr<PtrType> Type;
+    };
+
+    template<typename PtrType>
+    struct PtrTypeSelector<PtrType, false>
+    {
+        typedef PtrType* Type;
+    };
+
+    /// Pointer / strong auto pointer to the resource
+    typename PtrTypeSelector<IBuffer, KeepStrongReferences>::Type m_pBuffer;
+
+    /// Pointer / strong auto pointer to the context
+    typename PtrTypeSelector<IDeviceContext, KeepStrongReferences>::Type m_pContext;
 
     /// Pointer to the mapped data
     DataType *m_pMappedData;
+
+    MAP_TYPE m_MapType;
 };
 
 }

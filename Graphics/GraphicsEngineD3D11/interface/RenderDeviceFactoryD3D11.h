@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -23,24 +23,30 @@
 
 #pragma once
 
+/// \file
+/// Declaration of functions that initialize Direct3D11-based engine implementation
+
 #include "Errors.h"
+#include "EngineD3D11Attribs.h"
 
 extern "C"
 {
 #ifdef ENGINE_DLL
-    typedef void (*CreateDeviceAndImmediateContextD3D11Type)( 
-        const Diligent::EngineCreationAttribs& CreationAttribs, 
+
+    typedef void (*CreateDeviceAndContextsD3D11Type)( 
+        const Diligent::EngineD3D11Attribs& EngineAttribs, 
         Diligent::IRenderDevice **ppDevice, 
-        Diligent::IDeviceContext **ppContext );
+        Diligent::IDeviceContext **ppContexts,
+        Diligent::Uint32 NumDeferredContexts );
 
     typedef void (*CreateSwapChainD3D11Type)( 
         Diligent::IRenderDevice *pDevice, 
         Diligent::IDeviceContext *pImmediateContext, 
-        const Diligent::SwapChainDesc& SwapChainDesc, 
+        const Diligent::SwapChainDesc& SCDesc, 
         void* pNativeWndHandle, 
         Diligent::ISwapChain **ppSwapChain );
 
-    static void LoadGraphicsEngineD3D11(CreateDeviceAndImmediateContextD3D11Type &CreateDeviceFunc, CreateSwapChainD3D11Type &CreateSwapChainFunc)
+    static void LoadGraphicsEngineD3D11(CreateDeviceAndContextsD3D11Type &CreateDeviceFunc, CreateSwapChainD3D11Type &CreateSwapChainFunc)
     {
         CreateDeviceFunc = nullptr;
         CreateSwapChainFunc = nullptr;
@@ -66,10 +72,10 @@ extern "C"
             return;
         }
 
-        CreateDeviceFunc = reinterpret_cast<CreateDeviceAndImmediateContextD3D11Type>( GetProcAddress(hModule, "CreateDeviceAndImmediateContextD3D11") );
+        CreateDeviceFunc = reinterpret_cast<CreateDeviceAndContextsD3D11Type>( GetProcAddress(hModule, "CreateDeviceAndContextsD3D11") );
         if( CreateDeviceFunc == NULL )
         {
-            LOG_ERROR_MESSAGE( "Failed to load CreateDeviceAndImmediateContextD3D11() from ", LibName, " library." );
+            LOG_ERROR_MESSAGE( "Failed to load CreateDeviceAndContextsD3D11() from ", LibName, " library." );
             FreeLibrary( hModule );
             return;
         }
@@ -83,12 +89,14 @@ extern "C"
         }
     }
 #else
-    void CreateDeviceAndImmediateContextD3D11( const Diligent::EngineCreationAttribs& CreationAttribs, 
-                                               Diligent::IRenderDevice **ppDevice, 
-                                               Diligent::IDeviceContext **ppContext );
-    void CreateSwapChainD3D11( Diligent::IRenderDevice *pDevice, 
+    void CreateDeviceAndContextsD3D11( const Diligent::EngineD3D11Attribs& EngineAttribs, 
+                                       Diligent::IRenderDevice **ppDevice, 
+                                       Diligent::IDeviceContext **ppContexts,
+                                       Diligent::Uint32 NumDeferredContexts );
+
+   void CreateSwapChainD3D11( Diligent::IRenderDevice *pDevice, 
                                Diligent::IDeviceContext *pImmediateContext, 
-                               const Diligent::SwapChainDesc& SwapChainDesc, 
+                               const Diligent::SwapChainDesc& SCDesc, 
                                void* pNativeWndHandle, 
                                Diligent::ISwapChain **ppSwapChain );
 #endif

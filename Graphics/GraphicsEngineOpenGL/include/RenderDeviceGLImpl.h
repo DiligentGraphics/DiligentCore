@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@
 
 #include "RenderDeviceBase.h"
 
-#ifdef _WINDOWS
+#ifdef PLATFORM_WIN32
 #include "GLContextWindows.h"
 #endif
 
@@ -34,7 +34,6 @@
 #endif
 
 #include "VAOCache.h"
-#include "ProgramPipelineCache.h"
 #include "BaseInterfacesGL.h"
 #include "FBOCache.h"
 #include "TexRegionRender.h"
@@ -64,15 +63,12 @@ class RenderDeviceGLImpl : public RenderDeviceBase<IGLDeviceBaseInterface>
 public:
     typedef RenderDeviceBase<IGLDeviceBaseInterface> TRenderDeviceBase;
 
-    RenderDeviceGLImpl( const ContextInitInfo &InitInfo );
+    RenderDeviceGLImpl( IMemoryAllocator &RawMemAllocator, const ContextInitInfo &InitInfo );
     ~RenderDeviceGLImpl();
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
     
 	void CreateBuffer(const BufferDesc& BuffDesc, const BufferData &BuffData, IBuffer **ppBufferLayout, bool bIsDeviceInternal);
     virtual void CreateBuffer(const BufferDesc& BuffDesc, const BufferData &BuffData, IBuffer **ppBufferLayout)override;
-
-	void CreateVertexDescription( const LayoutDesc& LayoutDesc, IShader *pVertexShader, IVertexDescription **ppVertexDesc, bool bIsDeviceInternal );
-    virtual void CreateVertexDescription( const LayoutDesc& LayoutDesc, IShader *pVertexShader, IVertexDescription **ppVertexDesc )override;
 
 	void CreateShader(const ShaderCreationAttribs &ShaderCreationAttribs, IShader **ppShader, bool bIsDeviceInternal );
     virtual void CreateShader(const ShaderCreationAttribs &ShaderCreationAttribs, IShader **ppShader)override;
@@ -83,21 +79,15 @@ public:
 	void CreateSampler(const SamplerDesc& SamplerDesc, ISampler **ppSampler, bool bIsDeviceInternal);
     virtual void CreateSampler(const SamplerDesc& SamplerDesc, ISampler **ppSampler)override;
 
-	void CreateDepthStencilState( const DepthStencilStateDesc &DSSDesc, IDepthStencilState **ppDepthStencilState, bool bIsDeviceInternal );
-    virtual void CreateDepthStencilState( const DepthStencilStateDesc &DSSDesc, IDepthStencilState **ppDepthStencilState )override;
-
-	void CreateRasterizerState( const RasterizerStateDesc &RSDesc, IRasterizerState **ppRasterizerState, bool bIsDeviceInternal);
-    virtual void CreateRasterizerState( const RasterizerStateDesc &RSDesc, IRasterizerState **ppRasterizerState )override;
-
-	void CreateBlendState( const BlendStateDesc &BSDesc, IBlendState **ppBlendState, bool bIsDeviceInternal );
-    virtual void CreateBlendState( const BlendStateDesc &BSDesc, IBlendState **ppBlendState )override;
-
+    void CreatePipelineState( const PipelineStateDesc &PipelineDesc, IPipelineState **ppPipelineState, bool bIsDeviceInternal);
+    virtual void CreatePipelineState( const PipelineStateDesc &PipelineDesc, IPipelineState **ppPipelineState )override;
+    
     const GPUInfo& GetGPUInfo(){ return m_GPUInfo; }
 
 protected:
     friend class DeviceContextGLImpl;
     friend class TextureBaseGL;
-    friend class VertexDescGLImpl;
+    friend class PipelineStateGLImpl;
     friend class ShaderGLImpl;
     friend class BufferGLImpl;
     friend class TextureViewGLImpl;
@@ -110,7 +100,6 @@ protected:
 
     VAOCache m_VAOCache;
     FBOCache m_FBOCache;
-    ProgramPipelineCache m_PipelineCache;
 
     GPUInfo m_GPUInfo;
 

@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -31,17 +31,22 @@
 namespace Diligent
 {
 
+/// Implementation of a 2D texture
 class Texture2D_D3D11 : public TextureBaseD3D11
 {
 public:
-    Texture2D_D3D11(class RenderDeviceD3D11Impl *pDeviceD3D11, const TextureDesc& TexDesc, const TextureData &InitData = TextureData());
+    Texture2D_D3D11(FixedBlockMemoryAllocator &TexObjAllocator, 
+                    FixedBlockMemoryAllocator &TexViewObjAllocator, 
+                    class RenderDeviceD3D11Impl *pDeviceD3D11, 
+                    const TextureDesc& TexDesc, 
+                    const TextureData &InitData = TextureData());
     ~Texture2D_D3D11();
 
 protected:
-    virtual void CreateSRV( TextureViewDesc &SRVDesc, ID3D11ShaderResourceView   **ppD3D11SRV );
-    virtual void CreateRTV( TextureViewDesc &RTVDesc, ID3D11RenderTargetView     **ppD3D11RTV );
-    virtual void CreateDSV( TextureViewDesc &DSVDesc, ID3D11DepthStencilView     **ppD3D11DSV );
-    virtual void CreateUAV( TextureViewDesc &UAVDesc, ID3D11UnorderedAccessView  **ppD3D11UAV );
+    virtual void CreateSRV( TextureViewDesc &SRVDesc, ID3D11ShaderResourceView   **ppD3D11SRV )override final;
+    virtual void CreateRTV( TextureViewDesc &RTVDesc, ID3D11RenderTargetView     **ppD3D11RTV )override final;
+    virtual void CreateDSV( TextureViewDesc &DSVDesc, ID3D11DepthStencilView     **ppD3D11DSV )override final;
+    virtual void CreateUAV( TextureViewDesc &UAVDesc, ID3D11UnorderedAccessView  **ppD3D11UAV )override final;
 };
 
 }

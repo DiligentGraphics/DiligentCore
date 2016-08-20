@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -59,10 +59,10 @@ struct TextureViewDesc : DeviceObjectAttribs
 
     /// View interpretation of the original texture. For instance, 
     /// one slice of a 2D texture array can be viewed as a 2D texture.
-    /// See Diligent::TEXTURE_TYPE for a list of texture types.
-    /// If default value Diligent::TEXTURE_TYPE_UNDEFINED is provided,
+    /// See Diligent::RESOURCE_DIMENSION for a list of texture types.
+    /// If default value Diligent::RESOURCE_DIM_UNDEFINED is provided,
     /// the view type will match the type of the referenced texture.
-    TEXTURE_TYPE TextureType;
+    RESOURCE_DIMENSION TextureDim;
 
     /// View format. If default value Diligent::TEX_FORMAT_UNKNOWN is provided,
     /// the view format will match the referenced texture format.
@@ -109,7 +109,7 @@ struct TextureViewDesc : DeviceObjectAttribs
     /// Member              | Default value
     /// --------------------|--------------
     /// ViewType            | TEXTURE_VIEW_UNDEFINED
-    /// TextureType         | TEXTURE_TYPE_UNDEFINED
+    /// TextureDim         | RESOURCE_DIM_UNDEFINED
     /// Format              | TEX_FORMAT_UNKNOWN
     /// MostDetailedMip     | 0
     /// NumMipLevels        | 0
@@ -118,7 +118,7 @@ struct TextureViewDesc : DeviceObjectAttribs
     /// AccessFlags         | 0
     TextureViewDesc() : 
         ViewType( TEXTURE_VIEW_UNDEFINED ),
-        TextureType( TEXTURE_TYPE_UNDEFINED ),
+        TextureDim( RESOURCE_DIM_UNDEFINED ),
         Format(TEX_FORMAT_UNKNOWN),
         MostDetailedMip(0),
         NumMipLevels(0),
@@ -140,7 +140,7 @@ struct TextureViewDesc : DeviceObjectAttribs
                // It is ignored in comparison operation.
         return //strcmp(Name, RHS.Name) == 0      &&
                ViewType     == RHS.ViewType     &&
-               TextureType  == RHS.TextureType  &&
+               TextureDim  == RHS.TextureDim  &&
                Format       == RHS.Format       &&
                MostDetailedMip == RHS.MostDetailedMip &&
                NumMipLevels    == RHS.NumMipLevels    &&

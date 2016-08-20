@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@
 
 #pragma once
 
+#include <thread>
 #include "Atomics.h"
 
 namespace ThreadingTools
@@ -34,7 +35,8 @@ public:
     enum {LOCK_FLAG_UNLOCKED = 0, LOCK_FLAG_LOCKED = 1};
     LockFlag(Atomics::Long InitFlag = LOCK_FLAG_UNLOCKED)
     {
-        m_Flag.store(InitFlag);
+        //m_Flag.store(InitFlag);
+        m_Flag = InitFlag;
     }
 
     operator Atomics::Long()const{return m_Flag;}
@@ -97,9 +99,7 @@ public:
     static void UnsafeLock(LockFlag &LockFlag)
     {
         while( !UnsafeTryLock( LockFlag ) )
-            /*Sleep(5)*/
-            // TODO
-            ;
+            std::this_thread::yield();
     }
 
     void Lock(LockFlag &LockFlag)
@@ -107,9 +107,7 @@ public:
         VERIFY( m_pLockFlag == NULL, "Object already locked" );
         // Wait for the flag to become unlocked and lock it
         while( !TryLock( LockFlag ) )
-            /*Sleep(5)*/
-            // TODO
-            ;
+            std::this_thread::yield();
     }
 
     static void UnsafeUnlock(LockFlag &LockFlag)

@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -30,12 +30,13 @@
 
 namespace Diligent
 {
-    TextureViewGLImpl::TextureViewGLImpl( IRenderDevice *pDevice, 
-                                      const TextureViewDesc& ViewDesc, 
-                                      TextureBaseGL* pTexture,
-                                      bool bCreateGLViewTex,
-                                      bool bIsDefaultView ) :
-        TTextureViewBase(pDevice, ViewDesc, pTexture, bIsDefaultView),
+    TextureViewGLImpl::TextureViewGLImpl( FixedBlockMemoryAllocator &TexViewObjAllocator,
+                                          IRenderDevice *pDevice, 
+                                          const TextureViewDesc& ViewDesc, 
+                                          TextureBaseGL* pTexture,
+                                          bool bCreateGLViewTex,
+                                          bool bIsDefaultView ) :
+        TTextureViewBase(TexViewObjAllocator, pDevice, ViewDesc, pTexture, bIsDefaultView),
         m_ViewTexGLHandle( bCreateGLViewTex ),
         m_ViewTexBindTarget(0)
     {

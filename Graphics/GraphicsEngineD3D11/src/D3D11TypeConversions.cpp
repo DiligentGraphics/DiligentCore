@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -24,481 +24,98 @@
 #include "pch.h"
 #include "D3D11TypeConversions.h"
 
+#include "D3D11TypeDefinitions.h"
+#include "D3DTypeConversionImpl.h"
+#include "D3DViewDescConversionImpl.h"
+
 namespace Diligent
 {
 
-DXGI_FORMAT TypeToDXGI_Format(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIsNormalized)
-{
-    switch(ValType)
-    {
-        case VT_FLOAT16:
-        {
-            VERIFY( !bIsNormalized, "Floating point formats cannot be normalized" );
-            switch(NumComponents)
-            {
-                case 1: return DXGI_FORMAT_R16_FLOAT;
-                case 2: return DXGI_FORMAT_R16G16_FLOAT;
-                case 4: return DXGI_FORMAT_R16G16B16A16_FLOAT;
-                default: UNEXPECTED("Unusupported number of components" ); return DXGI_FORMAT_UNKNOWN;
-            }
-        }
-
-        case VT_FLOAT32:
-        {
-            VERIFY( !bIsNormalized, "Floating point formats cannot be normalized" );
-            switch(NumComponents)
-            {
-                case 1: return DXGI_FORMAT_R32_FLOAT;
-                case 2: return DXGI_FORMAT_R32G32_FLOAT;
-                case 3: return DXGI_FORMAT_R32G32B32_FLOAT;
-                case 4: return DXGI_FORMAT_R32G32B32A32_FLOAT;
-                default: UNEXPECTED( "Unusupported number of components" ); return DXGI_FORMAT_UNKNOWN;
-            }
-        }
-
-        case VT_INT32:
-        {
-            VERIFY( !bIsNormalized, "32-bit UNORM formats are not supported. Use R32_FLOAT instead" );
-            switch(NumComponents)
-            {
-                case 1: return DXGI_FORMAT_R32_SINT;
-                case 2: return DXGI_FORMAT_R32G32_SINT;
-                case 3: return DXGI_FORMAT_R32G32B32_SINT;
-                case 4: return DXGI_FORMAT_R32G32B32A32_SINT;
-                default: UNEXPECTED("Unusupported number of components" ); return DXGI_FORMAT_UNKNOWN;
-            }
-        }
-
-        case VT_UINT32:
-        {
-            VERIFY( !bIsNormalized, "32-bit UNORM formats are not supported. Use R32_FLOAT instead" );
-            switch(NumComponents)
-            {
-                case 1: return DXGI_FORMAT_R32_UINT;
-                case 2: return DXGI_FORMAT_R32G32_UINT;
-                case 3: return DXGI_FORMAT_R32G32B32_UINT;
-                case 4: return DXGI_FORMAT_R32G32B32A32_UINT;
-                default: UNEXPECTED( "Unusupported number of components" ); return DXGI_FORMAT_UNKNOWN;
-            }
-        }
-
-        case VT_INT16:
-        {
-            if( bIsNormalized )
-            {
-                switch(NumComponents)
-                {
-                    case 1: return DXGI_FORMAT_R16_SNORM;
-                    case 2: return DXGI_FORMAT_R16G16_SNORM;
-                    case 4: return DXGI_FORMAT_R16G16B16A16_SNORM;
-                    default: UNEXPECTED( "Unusupported number of components" ); return DXGI_FORMAT_UNKNOWN;
-                }
-            }
-            else
-            {
-                switch(NumComponents)
-                {
-                    case 1: return DXGI_FORMAT_R16_SINT;
-                    case 2: return DXGI_FORMAT_R16G16_SINT;
-                    case 4: return DXGI_FORMAT_R16G16B16A16_SINT;
-                    default: UNEXPECTED( "Unusupported number of components" ); return DXGI_FORMAT_UNKNOWN;
-                }
-            }
-        }
-
-        case VT_UINT16:
-        {
-            if( bIsNormalized )
-            {
-                switch(NumComponents)
-                {
-                    case 1: return DXGI_FORMAT_R16_UNORM;
-                    case 2: return DXGI_FORMAT_R16G16_UNORM;
-                    case 4: return DXGI_FORMAT_R16G16B16A16_UNORM;
-                    default: UNEXPECTED( "Unusupported number of components" ); return DXGI_FORMAT_UNKNOWN;
-                }
-            }
-            else
-            {
-                switch(NumComponents)
-                {
-                    case 1: return DXGI_FORMAT_R16_UINT;
-                    case 2: return DXGI_FORMAT_R16G16_UINT;
-                    case 4: return DXGI_FORMAT_R16G16B16A16_UINT;
-                    default: UNEXPECTED( "Unusupported number of components" ); return DXGI_FORMAT_UNKNOWN;
-                }
-            }
-        }
-
-        case VT_INT8:
-        {
-            if( bIsNormalized )
-            {
-                switch(NumComponents)
-                {
-                    case 1: return DXGI_FORMAT_R8_SNORM;
-                    case 2: return DXGI_FORMAT_R8G8_SNORM;
-                    case 4: return DXGI_FORMAT_R8G8B8A8_SNORM;
-                    default: UNEXPECTED( "Unusupported number of components" ); return DXGI_FORMAT_UNKNOWN;
-                }
-            }
-            else
-            {
-                switch(NumComponents)
-                {
-                    case 1: return DXGI_FORMAT_R8_SINT;
-                    case 2: return DXGI_FORMAT_R8G8_SINT;
-                    case 4: return DXGI_FORMAT_R8G8B8A8_SINT;
-                    default: UNEXPECTED( "Unusupported number of components" ); return DXGI_FORMAT_UNKNOWN;
-                }
-            }
-        }
-
-        case VT_UINT8:
-        {
-            if( bIsNormalized )
-            {
-                switch(NumComponents)
-                {
-                    case 1: return DXGI_FORMAT_R8_UNORM;
-                    case 2: return DXGI_FORMAT_R8G8_UNORM;
-                    case 4: return DXGI_FORMAT_R8G8B8A8_UNORM;
-                    default: UNEXPECTED( "Unusupported number of components" ); return DXGI_FORMAT_UNKNOWN;
-                }
-            }
-            else
-            {
-                switch(NumComponents)
-                {
-                    case 1: return DXGI_FORMAT_R8_UINT;
-                    case 2: return DXGI_FORMAT_R8G8_UINT;
-                    case 4: return DXGI_FORMAT_R8G8B8A8_UINT;
-                    default: UNEXPECTED( "Unusupported number of components" ); return DXGI_FORMAT_UNKNOWN;
-                }
-            }
-        }
-
-        default: UNEXPECTED( "Unusupported format" ); return DXGI_FORMAT_UNKNOWN;
-    }
-}
-
-DXGI_FORMAT CorrectDXGIFormat( DXGI_FORMAT DXGIFormat, Uint32 BindFlags )
-{
-    if( (BindFlags & BIND_DEPTH_STENCIL) && (BindFlags != BIND_DEPTH_STENCIL) )
-    {
-        switch( DXGIFormat )
-        {
-            case DXGI_FORMAT_R32_FLOAT:
-            case DXGI_FORMAT_D32_FLOAT: 
-                DXGIFormat = DXGI_FORMAT_R32_TYPELESS; 
-                break;
-
-            case DXGI_FORMAT_R16_UNORM:
-            case DXGI_FORMAT_D16_UNORM: 
-                DXGIFormat = DXGI_FORMAT_R16_TYPELESS; 
-                break;
-
-            default: 
-                UNEXPECTED( "Unsupported format" );
-                break;
-        }
-    }
-
-    if( BindFlags == BIND_DEPTH_STENCIL )
-    {
-        switch( DXGIFormat )
-        {
-            case DXGI_FORMAT_R32_FLOAT:
-                DXGIFormat = DXGI_FORMAT_D32_FLOAT; 
-                break;
-
-            case DXGI_FORMAT_R16_UNORM:
-                DXGIFormat = DXGI_FORMAT_D16_UNORM; 
-                break;
-        }
-    }
-
-    if( BindFlags == BIND_SHADER_RESOURCE || BindFlags == BIND_UNORDERED_ACCESS )
-    {
-        switch( DXGIFormat )
-        {
-            case DXGI_FORMAT_D32_FLOAT:
-                DXGIFormat = DXGI_FORMAT_R32_FLOAT; 
-                break;
-
-            case DXGI_FORMAT_D16_UNORM:
-                DXGIFormat = DXGI_FORMAT_R16_UNORM; 
-                break;
-        }
-    }
-
-    return DXGIFormat;
-}
-
-DXGI_FORMAT TexFormatToDXGI_Format(TEXTURE_FORMAT TexFormat, Uint32 BindFlags)
-{
-    static Bool bFormatMapIntialized = false;
-    static DXGI_FORMAT FmtToDXGIFmtMap[TEX_FORMAT_NUM_FORMATS] = {DXGI_FORMAT_UNKNOWN};
-    if( !bFormatMapIntialized )
-    {
-        FmtToDXGIFmtMap[ TEX_FORMAT_UNKNOWN ]                = DXGI_FORMAT_UNKNOWN;
-
-        FmtToDXGIFmtMap[ TEX_FORMAT_RGBA32_TYPELESS ]        = DXGI_FORMAT_R32G32B32A32_TYPELESS; 
-        FmtToDXGIFmtMap[ TEX_FORMAT_RGBA32_FLOAT ]           = DXGI_FORMAT_R32G32B32A32_FLOAT;
-        FmtToDXGIFmtMap[ TEX_FORMAT_RGBA32_UINT ]            = DXGI_FORMAT_R32G32B32A32_UINT;
-        FmtToDXGIFmtMap[ TEX_FORMAT_RGBA32_SINT ]            = DXGI_FORMAT_R32G32B32A32_SINT;
-
-        FmtToDXGIFmtMap[ TEX_FORMAT_RGB32_TYPELESS ]         = DXGI_FORMAT_R32G32B32_TYPELESS;
-        FmtToDXGIFmtMap[ TEX_FORMAT_RGB32_FLOAT ]            = DXGI_FORMAT_R32G32B32_FLOAT;
-        FmtToDXGIFmtMap[ TEX_FORMAT_RGB32_UINT ]             = DXGI_FORMAT_R32G32B32_UINT;
-        FmtToDXGIFmtMap[ TEX_FORMAT_RGB32_SINT ]             = DXGI_FORMAT_R32G32B32_SINT;
-
-        FmtToDXGIFmtMap[ TEX_FORMAT_RGBA16_TYPELESS ]        = DXGI_FORMAT_R16G16B16A16_TYPELESS;
-        FmtToDXGIFmtMap[ TEX_FORMAT_RGBA16_FLOAT ]           = DXGI_FORMAT_R16G16B16A16_FLOAT;
-        FmtToDXGIFmtMap[ TEX_FORMAT_RGBA16_UNORM ]           = DXGI_FORMAT_R16G16B16A16_UNORM;
-        FmtToDXGIFmtMap[ TEX_FORMAT_RGBA16_UINT ]            = DXGI_FORMAT_R16G16B16A16_UINT;
-        FmtToDXGIFmtMap[ TEX_FORMAT_RGBA16_SNORM ]           = DXGI_FORMAT_R16G16B16A16_SNORM;
-        FmtToDXGIFmtMap[ TEX_FORMAT_RGBA16_SINT ]            = DXGI_FORMAT_R16G16B16A16_SINT;
-
-        FmtToDXGIFmtMap[ TEX_FORMAT_RG32_TYPELESS ]          = DXGI_FORMAT_R32G32_TYPELESS;
-        FmtToDXGIFmtMap[ TEX_FORMAT_RG32_FLOAT ]             = DXGI_FORMAT_R32G32_FLOAT;
-        FmtToDXGIFmtMap[ TEX_FORMAT_RG32_UINT ]              = DXGI_FORMAT_R32G32_UINT;
-        FmtToDXGIFmtMap[ TEX_FORMAT_RG32_SINT ]              = DXGI_FORMAT_R32G32_SINT;
-
-        FmtToDXGIFmtMap[ TEX_FORMAT_R32G8X24_TYPELESS ]      = DXGI_FORMAT_R32G8X24_TYPELESS;
-        FmtToDXGIFmtMap[ TEX_FORMAT_D32_FLOAT_S8X24_UINT ]   = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
-        FmtToDXGIFmtMap[ TEX_FORMAT_R32_FLOAT_X8X24_TYPELESS ]= DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
-        FmtToDXGIFmtMap[ TEX_FORMAT_X32_TYPELESS_G8X24_UINT ]= DXGI_FORMAT_X32_TYPELESS_G8X24_UINT;
-
-        FmtToDXGIFmtMap[ TEX_FORMAT_RGB10A2_TYPELESS ]       = DXGI_FORMAT_R10G10B10A2_TYPELESS;
-        FmtToDXGIFmtMap[ TEX_FORMAT_RGB10A2_UNORM ]          = DXGI_FORMAT_R10G10B10A2_UNORM;
-        FmtToDXGIFmtMap[ TEX_FORMAT_RGB10A2_UINT ]           = DXGI_FORMAT_R10G10B10A2_UINT;
-
-        FmtToDXGIFmtMap[ TEX_FORMAT_R11G11B10_FLOAT ]        = DXGI_FORMAT_R11G11B10_FLOAT;
-
-        FmtToDXGIFmtMap[ TEX_FORMAT_RGBA8_TYPELESS ]         = DXGI_FORMAT_R8G8B8A8_TYPELESS;
-        FmtToDXGIFmtMap[ TEX_FORMAT_RGBA8_UNORM ]            = DXGI_FORMAT_R8G8B8A8_UNORM;
-        FmtToDXGIFmtMap[ TEX_FORMAT_RGBA8_UNORM_SRGB ]       = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-        FmtToDXGIFmtMap[ TEX_FORMAT_RGBA8_UINT ]             = DXGI_FORMAT_R8G8B8A8_UINT;
-        FmtToDXGIFmtMap[ TEX_FORMAT_RGBA8_SNORM ]            = DXGI_FORMAT_R8G8B8A8_SNORM;
-        FmtToDXGIFmtMap[ TEX_FORMAT_RGBA8_SINT ]             = DXGI_FORMAT_R8G8B8A8_SINT;
-
-        FmtToDXGIFmtMap[ TEX_FORMAT_RG16_TYPELESS ]          = DXGI_FORMAT_R16G16_TYPELESS;
-        FmtToDXGIFmtMap[ TEX_FORMAT_RG16_FLOAT ]             = DXGI_FORMAT_R16G16_FLOAT;
-        FmtToDXGIFmtMap[ TEX_FORMAT_RG16_UNORM ]             = DXGI_FORMAT_R16G16_UNORM;
-        FmtToDXGIFmtMap[ TEX_FORMAT_RG16_UINT ]              = DXGI_FORMAT_R16G16_UINT;
-        FmtToDXGIFmtMap[ TEX_FORMAT_RG16_SNORM ]             = DXGI_FORMAT_R16G16_SNORM;
-        FmtToDXGIFmtMap[ TEX_FORMAT_RG16_SINT ]              = DXGI_FORMAT_R16G16_SINT;
-
-        FmtToDXGIFmtMap[ TEX_FORMAT_R32_TYPELESS ]           = DXGI_FORMAT_R32_TYPELESS;
-        FmtToDXGIFmtMap[ TEX_FORMAT_D32_FLOAT ]              = DXGI_FORMAT_D32_FLOAT;
-        FmtToDXGIFmtMap[ TEX_FORMAT_R32_FLOAT ]              = DXGI_FORMAT_R32_FLOAT;
-        FmtToDXGIFmtMap[ TEX_FORMAT_R32_UINT ]               = DXGI_FORMAT_R32_UINT;
-        FmtToDXGIFmtMap[ TEX_FORMAT_R32_SINT ]               = DXGI_FORMAT_R32_SINT;
-
-        FmtToDXGIFmtMap[ TEX_FORMAT_R24G8_TYPELESS ]         = DXGI_FORMAT_R24G8_TYPELESS;
-        FmtToDXGIFmtMap[ TEX_FORMAT_D24_UNORM_S8_UINT ]      = DXGI_FORMAT_D24_UNORM_S8_UINT;
-        FmtToDXGIFmtMap[ TEX_FORMAT_R24_UNORM_X8_TYPELESS ]  = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
-        FmtToDXGIFmtMap[ TEX_FORMAT_X24_TYPELESS_G8_UINT ]   = DXGI_FORMAT_X24_TYPELESS_G8_UINT;
-
-        FmtToDXGIFmtMap[ TEX_FORMAT_RG8_TYPELESS ]           = DXGI_FORMAT_R8G8_TYPELESS;
-        FmtToDXGIFmtMap[ TEX_FORMAT_RG8_UNORM ]              = DXGI_FORMAT_R8G8_UNORM;
-        FmtToDXGIFmtMap[ TEX_FORMAT_RG8_UINT ]               = DXGI_FORMAT_R8G8_UINT;
-        FmtToDXGIFmtMap[ TEX_FORMAT_RG8_SNORM ]              = DXGI_FORMAT_R8G8_SNORM;
-        FmtToDXGIFmtMap[ TEX_FORMAT_RG8_SINT ]               = DXGI_FORMAT_R8G8_SINT;
-
-        FmtToDXGIFmtMap[ TEX_FORMAT_R16_TYPELESS ]           = DXGI_FORMAT_R16_TYPELESS;
-        FmtToDXGIFmtMap[ TEX_FORMAT_R16_FLOAT ]              = DXGI_FORMAT_R16_FLOAT;
-        FmtToDXGIFmtMap[ TEX_FORMAT_D16_UNORM ]              = DXGI_FORMAT_D16_UNORM;
-        FmtToDXGIFmtMap[ TEX_FORMAT_R16_UNORM ]              = DXGI_FORMAT_R16_UNORM;
-        FmtToDXGIFmtMap[ TEX_FORMAT_R16_UINT ]               = DXGI_FORMAT_R16_UINT;
-        FmtToDXGIFmtMap[ TEX_FORMAT_R16_SNORM ]              = DXGI_FORMAT_R16_SNORM;
-        FmtToDXGIFmtMap[ TEX_FORMAT_R16_SINT ]               = DXGI_FORMAT_R16_SINT;
-
-        FmtToDXGIFmtMap[ TEX_FORMAT_R8_TYPELESS ]            = DXGI_FORMAT_R8_TYPELESS;
-        FmtToDXGIFmtMap[ TEX_FORMAT_R8_UNORM ]               = DXGI_FORMAT_R8_UNORM;
-        FmtToDXGIFmtMap[ TEX_FORMAT_R8_UINT ]                = DXGI_FORMAT_R8_UINT;
-        FmtToDXGIFmtMap[ TEX_FORMAT_R8_SNORM ]               = DXGI_FORMAT_R8_SNORM;
-        FmtToDXGIFmtMap[ TEX_FORMAT_R8_SINT ]                = DXGI_FORMAT_R8_SINT;
-        FmtToDXGIFmtMap[ TEX_FORMAT_A8_UNORM ]               = DXGI_FORMAT_A8_UNORM;
-
-        FmtToDXGIFmtMap[ TEX_FORMAT_R1_UNORM ]               = DXGI_FORMAT_R1_UNORM ;
-        FmtToDXGIFmtMap[ TEX_FORMAT_RGB9E5_SHAREDEXP ]       = DXGI_FORMAT_R9G9B9E5_SHAREDEXP;
-        FmtToDXGIFmtMap[ TEX_FORMAT_RG8_B8G8_UNORM ]         = DXGI_FORMAT_R8G8_B8G8_UNORM;
-        FmtToDXGIFmtMap[ TEX_FORMAT_G8R8_G8B8_UNORM ]        = DXGI_FORMAT_G8R8_G8B8_UNORM;
-
-        FmtToDXGIFmtMap[ TEX_FORMAT_BC1_TYPELESS ]           = DXGI_FORMAT_BC1_TYPELESS;
-        FmtToDXGIFmtMap[ TEX_FORMAT_BC1_UNORM ]              = DXGI_FORMAT_BC1_UNORM;
-        FmtToDXGIFmtMap[ TEX_FORMAT_BC1_UNORM_SRGB ]         = DXGI_FORMAT_BC1_UNORM_SRGB;
-        FmtToDXGIFmtMap[ TEX_FORMAT_BC2_TYPELESS ]           = DXGI_FORMAT_BC2_TYPELESS;
-        FmtToDXGIFmtMap[ TEX_FORMAT_BC2_UNORM ]              = DXGI_FORMAT_BC2_UNORM;
-        FmtToDXGIFmtMap[ TEX_FORMAT_BC2_UNORM_SRGB ]         = DXGI_FORMAT_BC2_UNORM_SRGB;
-        FmtToDXGIFmtMap[ TEX_FORMAT_BC3_TYPELESS ]           = DXGI_FORMAT_BC3_TYPELESS;
-        FmtToDXGIFmtMap[ TEX_FORMAT_BC3_UNORM ]              = DXGI_FORMAT_BC3_UNORM;
-        FmtToDXGIFmtMap[ TEX_FORMAT_BC3_UNORM_SRGB ]         = DXGI_FORMAT_BC3_UNORM_SRGB;
-        FmtToDXGIFmtMap[ TEX_FORMAT_BC4_TYPELESS ]           = DXGI_FORMAT_BC4_TYPELESS;
-        FmtToDXGIFmtMap[ TEX_FORMAT_BC4_UNORM ]              = DXGI_FORMAT_BC4_UNORM;
-        FmtToDXGIFmtMap[ TEX_FORMAT_BC4_SNORM ]              = DXGI_FORMAT_BC4_SNORM;
-        FmtToDXGIFmtMap[ TEX_FORMAT_BC5_TYPELESS ]           = DXGI_FORMAT_BC5_TYPELESS;
-        FmtToDXGIFmtMap[ TEX_FORMAT_BC5_UNORM ]              = DXGI_FORMAT_BC5_UNORM;
-        FmtToDXGIFmtMap[ TEX_FORMAT_BC5_SNORM ]              = DXGI_FORMAT_BC5_SNORM;
-
-        FmtToDXGIFmtMap[ TEX_FORMAT_B5G6R5_UNORM ]           = DXGI_FORMAT_B5G6R5_UNORM;
-        FmtToDXGIFmtMap[ TEX_FORMAT_B5G5R5A1_UNORM ]         = DXGI_FORMAT_B5G5R5A1_UNORM;
-        FmtToDXGIFmtMap[ TEX_FORMAT_BGRA8_UNORM ]            = DXGI_FORMAT_B8G8R8A8_UNORM;
-        FmtToDXGIFmtMap[ TEX_FORMAT_BGRX8_UNORM ]            = DXGI_FORMAT_B8G8R8X8_UNORM;
-
-        FmtToDXGIFmtMap[ TEX_FORMAT_R10G10B10_XR_BIAS_A2_UNORM ]= DXGI_FORMAT_R10G10B10_XR_BIAS_A2_UNORM;
-
-        FmtToDXGIFmtMap[ TEX_FORMAT_BGRA8_TYPELESS ]         = DXGI_FORMAT_B8G8R8A8_TYPELESS;
-        FmtToDXGIFmtMap[ TEX_FORMAT_BGRA8_UNORM_SRGB ]       = DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
-        FmtToDXGIFmtMap[ TEX_FORMAT_BGRX8_TYPELESS ]         = DXGI_FORMAT_B8G8R8X8_TYPELESS;
-        FmtToDXGIFmtMap[ TEX_FORMAT_BGRX8_UNORM_SRGB ]       = DXGI_FORMAT_B8G8R8X8_UNORM_SRGB;
-
-        FmtToDXGIFmtMap[ TEX_FORMAT_BC6H_TYPELESS ]          = DXGI_FORMAT_BC6H_TYPELESS;
-        FmtToDXGIFmtMap[ TEX_FORMAT_BC6H_UF16 ]              = DXGI_FORMAT_BC6H_UF16;
-        FmtToDXGIFmtMap[ TEX_FORMAT_BC6H_SF16 ]              = DXGI_FORMAT_BC6H_SF16;
-        FmtToDXGIFmtMap[ TEX_FORMAT_BC7_TYPELESS ]           = DXGI_FORMAT_BC7_TYPELESS ;
-        FmtToDXGIFmtMap[ TEX_FORMAT_BC7_UNORM ]              = DXGI_FORMAT_BC7_UNORM;
-        FmtToDXGIFmtMap[ TEX_FORMAT_BC7_UNORM_SRGB ]         = DXGI_FORMAT_BC7_UNORM_SRGB;
-        
-        bFormatMapIntialized = true;
-    }
-
-    if( TexFormat >= TEX_FORMAT_UNKNOWN && TexFormat < TEX_FORMAT_NUM_FORMATS )
-    {
-        auto DXGIFormat = FmtToDXGIFmtMap[TexFormat];
-        VERIFY( TexFormat == TEX_FORMAT_UNKNOWN || DXGIFormat != DXGI_FORMAT_UNKNOWN, "Unsupported texture format" );
-        if( BindFlags != 0 )
-            DXGIFormat = CorrectDXGIFormat( DXGIFormat, BindFlags );
-        return DXGIFormat;
-    }
-    else
-    {
-        UNEXPECTED( "Texture format (", TexFormat, ") is out of allowed range [0, ", TEX_FORMAT_NUM_FORMATS-1, "]" );
-        return DXGI_FORMAT_UNKNOWN;
-    }
-}
-
 D3D11_FILTER FilterTypeToD3D11Filter(FILTER_TYPE MinFilter, FILTER_TYPE MagFilter, FILTER_TYPE MipFilter)
 {
-    switch( MinFilter )
-    {
-        case FILTER_TYPE_POINT:
-            if( MagFilter == FILTER_TYPE_POINT )
-            {
-                if( MipFilter == FILTER_TYPE_POINT )
-                    return D3D11_FILTER_MIN_MAG_MIP_POINT;
-                else if( MipFilter == FILTER_TYPE_LINEAR )
-                    return D3D11_FILTER_MIN_MAG_POINT_MIP_LINEAR;
-            }
-            else if( MagFilter == FILTER_TYPE_LINEAR )
-            {
-                if( MipFilter == FILTER_TYPE_POINT )
-	                return D3D11_FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT;
-                else if( MipFilter == FILTER_TYPE_LINEAR )
-                    return D3D11_FILTER_MIN_POINT_MAG_MIP_LINEAR;
-            }
-        break;
-        
-        case FILTER_TYPE_LINEAR:
-            if( MagFilter == FILTER_TYPE_POINT )
-            {
-                if( MipFilter == FILTER_TYPE_POINT )
-                    return D3D11_FILTER_MIN_LINEAR_MAG_MIP_POINT;
-                else if( MipFilter == FILTER_TYPE_LINEAR )
-                    return D3D11_FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR;
-            }
-            else if( MagFilter == FILTER_TYPE_LINEAR )
-            {
-                if( MipFilter == FILTER_TYPE_POINT )
-	                return D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT;
-                else if( MipFilter == FILTER_TYPE_LINEAR )
-                    return D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-            }
-        break;
-
-        case FILTER_TYPE_ANISOTROPIC:
-            VERIFY( MagFilter == FILTER_TYPE_ANISOTROPIC && MipFilter == FILTER_TYPE_ANISOTROPIC,
-                    "For anistropic filtering, all filters must be anisotropic" );
-            return D3D11_FILTER_ANISOTROPIC;
-        break;
-
-        case FILTER_TYPE_COMPARISON_POINT:
-            if( MagFilter == FILTER_TYPE_COMPARISON_POINT )
-            {
-                if( MipFilter == FILTER_TYPE_COMPARISON_POINT )
-                    return D3D11_FILTER_COMPARISON_MIN_MAG_MIP_POINT;
-                else if( MipFilter == FILTER_TYPE_COMPARISON_LINEAR )
-                    return D3D11_FILTER_COMPARISON_MIN_MAG_POINT_MIP_LINEAR;
-            }
-            else if( MagFilter == FILTER_TYPE_COMPARISON_LINEAR )
-            {
-                if( MipFilter == FILTER_TYPE_COMPARISON_POINT )
-	                return D3D11_FILTER_COMPARISON_MIN_POINT_MAG_LINEAR_MIP_POINT;
-                else if( MipFilter == FILTER_TYPE_COMPARISON_LINEAR )
-                    return D3D11_FILTER_COMPARISON_MIN_POINT_MAG_MIP_LINEAR;
-            }
-        break;
-
-        case FILTER_TYPE_COMPARISON_LINEAR:
-            if( MagFilter == FILTER_TYPE_COMPARISON_POINT )
-            {
-                if( MipFilter == FILTER_TYPE_COMPARISON_POINT )
-                    return D3D11_FILTER_COMPARISON_MIN_LINEAR_MAG_MIP_POINT;
-                else if( MipFilter == FILTER_TYPE_COMPARISON_LINEAR )
-                    return D3D11_FILTER_COMPARISON_MIN_LINEAR_MAG_POINT_MIP_LINEAR;
-            }
-            else if( MagFilter == FILTER_TYPE_COMPARISON_LINEAR )
-            {
-                if( MipFilter == FILTER_TYPE_COMPARISON_POINT )
-	                return D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
-                else if( MipFilter == FILTER_TYPE_COMPARISON_LINEAR )
-                    return D3D11_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR;
-            }
-        break;
-
-        case FILTER_TYPE_COMPARISON_ANISOTROPIC:
-            VERIFY( MagFilter == FILTER_TYPE_COMPARISON_ANISOTROPIC && MipFilter == FILTER_TYPE_COMPARISON_ANISOTROPIC,
-                    "For comparison anistropic filtering, all filters must be anisotropic" );
-            return D3D11_FILTER_COMPARISON_ANISOTROPIC;
-        break;
-    }
-
-	UNEXPECTED( "Unsupported filter combination" );
-    return D3D11_FILTER_MIN_MAG_MIP_POINT;
+    return FilterTypeToD3DFilter<D3D11_FILTER>(MinFilter, MagFilter, MipFilter);
 }
 
-D3D11_STENCIL_OP StencilOpToD3D11StencilOp( STENCIL_OP StencilOp )
+D3D11_TEXTURE_ADDRESS_MODE TexAddressModeToD3D11AddressMode(TEXTURE_ADDRESS_MODE Mode)
 {
-    static bool bIsInit = false;
-    static D3D11_STENCIL_OP StOp2D3D11StOpMap[STENCIL_OP_NUM_OPS] = {};
-    if( !bIsInit )
-    {
-        StOp2D3D11StOpMap[ STENCIL_OP_KEEP     ] = D3D11_STENCIL_OP_KEEP;
-        StOp2D3D11StOpMap[ STENCIL_OP_ZERO     ] = D3D11_STENCIL_OP_ZERO;
-        StOp2D3D11StOpMap[ STENCIL_OP_REPLACE  ] = D3D11_STENCIL_OP_REPLACE;
-        StOp2D3D11StOpMap[ STENCIL_OP_INCR_SAT ] = D3D11_STENCIL_OP_INCR_SAT;
-        StOp2D3D11StOpMap[ STENCIL_OP_DECR_SAT ] = D3D11_STENCIL_OP_DECR_SAT;
-        StOp2D3D11StOpMap[ STENCIL_OP_INVERT   ] = D3D11_STENCIL_OP_INVERT;
-        StOp2D3D11StOpMap[ STENCIL_OP_INCR_WRAP] = D3D11_STENCIL_OP_INCR;
-        StOp2D3D11StOpMap[ STENCIL_OP_DECR_WRAP] = D3D11_STENCIL_OP_DECR;
+    return TexAddressModeToD3DAddressMode<D3D11_TEXTURE_ADDRESS_MODE>(Mode);
+}
 
-        bIsInit = true;
-    }
+D3D11_COMPARISON_FUNC ComparisonFuncToD3D11ComparisonFunc(COMPARISON_FUNCTION Func)
+{
+    return ComparisonFuncToD3DComparisonFunc<D3D11_COMPARISON_FUNC>(Func);
+}
 
-    if( StencilOp > STENCIL_OP_UNDEFINED && StencilOp < STENCIL_OP_NUM_OPS )
+void DepthStencilStateDesc_To_D3D11_DEPTH_STENCIL_DESC(const DepthStencilStateDesc &DepthStencilDesc, D3D11_DEPTH_STENCIL_DESC &d3d11DSSDesc)
+{
+    DepthStencilStateDesc_To_D3D_DEPTH_STENCIL_DESC<D3D11_DEPTH_STENCIL_DESC, D3D11_DEPTH_STENCILOP_DESC, D3D11_STENCIL_OP, D3D11_COMPARISON_FUNC>(DepthStencilDesc, d3d11DSSDesc);
+}
+
+void RasterizerStateDesc_To_D3D11_RASTERIZER_DESC(const RasterizerStateDesc &RasterizerDesc, D3D11_RASTERIZER_DESC &d3d11RSDesc)
+{
+    RasterizerStateDesc_To_D3D_RASTERIZER_DESC<D3D11_RASTERIZER_DESC, D3D11_FILL_MODE, D3D11_CULL_MODE>(RasterizerDesc, d3d11RSDesc);
+    d3d11RSDesc.ScissorEnable         = RasterizerDesc.ScissorEnable         ? TRUE : FALSE;    
+}
+
+
+void BlendStateDesc_To_D3D11_BLEND_DESC(const BlendStateDesc &BSDesc, D3D11_BLEND_DESC &d3d11BSDesc)
+{
+    BlendStateDescToD3DBlendDesc<D3D11_BLEND_DESC, D3D11_BLEND, D3D11_BLEND_OP>(BSDesc, d3d11BSDesc);
+
+    for( int i = 0; i < 8; ++i )
     {
-        auto D3D11StencilOp = StOp2D3D11StOpMap[StencilOp];
-        VERIFY( D3D11StencilOp != 0, "Unexpected stencil op" );
-        return D3D11StencilOp;
-    }
-    else
-    {
-        UNEXPECTED( "Stencil operation (", StencilOp, ") is out of allowed range [1, ", STENCIL_OP_NUM_OPS - 1, "]" )
-        return static_cast<D3D11_STENCIL_OP>(0);
+        const auto& SrcRTDesc = BSDesc.RenderTargets[i];
+        if (SrcRTDesc.LogicOperationEnable)
+        {
+            LOG_ERROR("Logical operations on render targets are not supported by D3D11 device");
+        }
     }
 }
 
+void LayoutElements_To_D3D11_INPUT_ELEMENT_DESCs(const std::vector<LayoutElement, STDAllocatorRawMem<LayoutElement> > &LayoutElements, 
+                                                 std::vector<D3D11_INPUT_ELEMENT_DESC, STDAllocatorRawMem<D3D11_INPUT_ELEMENT_DESC> > &D3D11InputElements)
+{
+    LayoutElements_To_D3D_INPUT_ELEMENT_DESCs<D3D11_INPUT_ELEMENT_DESC>(LayoutElements, D3D11InputElements);
+}
+
+D3D11_PRIMITIVE_TOPOLOGY TopologyToD3D11Topology(PRIMITIVE_TOPOLOGY Topology)
+{
+    return TopologyToD3DTopology<D3D11_PRIMITIVE_TOPOLOGY>(Topology);
+}
+
+
+
+void TextureViewDesc_to_D3D11_SRV_DESC(const TextureViewDesc& TexViewDesc, D3D11_SHADER_RESOURCE_VIEW_DESC &D3D11SRVDesc, Uint32 SampleCount)
+{
+    TextureViewDesc_to_D3D_SRV_DESC(TexViewDesc, D3D11SRVDesc, SampleCount);
+}
+
+void TextureViewDesc_to_D3D11_RTV_DESC(const TextureViewDesc& TexViewDesc, D3D11_RENDER_TARGET_VIEW_DESC &D3D11RTVDesc, Uint32 SampleCount)
+{
+    TextureViewDesc_to_D3D_RTV_DESC(TexViewDesc, D3D11RTVDesc, SampleCount);
+}
+
+void TextureViewDesc_to_D3D11_DSV_DESC(const TextureViewDesc& TexViewDesc, D3D11_DEPTH_STENCIL_VIEW_DESC &D3D11DSVDesc, Uint32 SampleCount)
+{
+    TextureViewDesc_to_D3D_DSV_DESC(TexViewDesc, D3D11DSVDesc, SampleCount);
+}
+
+void TextureViewDesc_to_D3D11_UAV_DESC(const TextureViewDesc& TexViewDesc, D3D11_UNORDERED_ACCESS_VIEW_DESC &D3D11UAVDesc)
+{
+    TextureViewDesc_to_D3D_UAV_DESC(TexViewDesc, D3D11UAVDesc);
+}
+
+
+
+void BufferViewDesc_to_D3D11_SRV_DESC(const BufferDesc &BuffDesc, const BufferViewDesc& SRVDesc, D3D11_SHADER_RESOURCE_VIEW_DESC &D3D11SRVDesc)
+{
+    BufferViewDesc_to_D3D_SRV_DESC(BuffDesc, SRVDesc, D3D11SRVDesc);
+}
+
+void BufferViewDesc_to_D3D11_UAV_DESC(const BufferDesc &BuffDesc, const BufferViewDesc& UAVDesc, D3D11_UNORDERED_ACCESS_VIEW_DESC &D3D11UAVDesc)
+{
+    BufferViewDesc_to_D3D_UAV_DESC(BuffDesc, UAVDesc, D3D11UAVDesc);
+    D3D11UAVDesc.Buffer.Flags = 0; // D3D11_BUFFER_UAV_FLAG_RAW, D3D11_BUFFER_UAV_FLAG_APPEND, D3D11_BUFFER_UAV_FLAG_COUNTER
+}
 
 }

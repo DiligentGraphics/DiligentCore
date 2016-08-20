@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -28,12 +28,18 @@
 #include "GLTypeConversions.h"
 #include "BufferViewGLImpl.h"
 #include "DeviceContextGLImpl.h"
+#include "EngineMemory.h"
 
 namespace Diligent
 {
 
-BufferGLImpl::BufferGLImpl(class RenderDeviceGLImpl *pDeviceGL, const BufferDesc& BuffDesc, const BufferData &BuffData /*= BufferData()*/, bool IsDeviceInternal /*= false*/) : 
-    TBufferBase( pDeviceGL, BuffDesc, IsDeviceInternal ),
+BufferGLImpl::BufferGLImpl(FixedBlockMemoryAllocator &BufferObjMemAllocator, 
+                           FixedBlockMemoryAllocator &BuffViewObjMemAllocator, 
+                           class RenderDeviceGLImpl *pDeviceGL, 
+                           const BufferDesc& BuffDesc, 
+                           const BufferData &BuffData /*= BufferData()*/, 
+                           bool IsDeviceInternal /*= false*/) : 
+    TBufferBase( BufferObjMemAllocator, BuffViewObjMemAllocator, pDeviceGL, BuffDesc, IsDeviceInternal),
     m_GlBuffer(true), // Create buffer immediately
     m_uiMapTarget(0),
     m_GLUsageHint(0),
@@ -245,9 +251,9 @@ void BufferGLImpl :: Map(IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapF
     glBindBuffer(m_uiMapTarget, 0);
 }
 
-void BufferGLImpl::Unmap( IDeviceContext *pContext )
+void BufferGLImpl::Unmap( IDeviceContext *pContext, MAP_TYPE MapType )
 {
-    TBufferBase::Unmap(pContext);
+    TBufferBase::Unmap(pContext, MapType);
 
     glBindBuffer(m_uiMapTarget, m_GlBuffer);
     auto Result = glUnmapBuffer(m_uiMapTarget);
@@ -294,9 +300,14 @@ void BufferGLImpl::CreateViewInternal( const BufferViewDesc &OrigViewDesc, class
         auto ViewDesc = OrigViewDesc;
         CorrectBufferViewDesc( ViewDesc );
 
-        auto pContext = ValidatedCast<RenderDeviceGLImpl>( GetDevice() )->GetImmediateContext();
+        auto *pDeviceGLImpl = ValidatedCast<RenderDeviceGLImpl>(GetDevice());
+        auto &BuffViewAllocator = pDeviceGLImpl->GetBuffViewObjAllocator();
+        VERIFY( &BuffViewAllocator == &m_dbgBuffViewAllocator, "Buff view allocator does not match allocator provided at buffer initialization" );
+
+        auto pContext = pDeviceGLImpl->GetImmediateContext();
         VERIFY( pContext, "Immediate context has been released" );
-        *ppView = new BufferViewGLImpl( GetDevice(), pContext, ViewDesc, this, bIsDefaultView );
+        
+        *ppView = NEW(BuffViewAllocator, "BufferViewGLImpl instance", BufferViewGLImpl, pDeviceGLImpl, pContext, ViewDesc, this, bIsDefaultView );
         
         if( !bIsDefaultView )
             (*ppView)->AddRef();

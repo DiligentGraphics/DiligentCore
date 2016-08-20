@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@
 #include "Buffer.h"
 #include "DeviceObjectBase.h"
 #include "GraphicsUtilities.h"
+#include "STDAllocator.h"
 #include <memory>
 
 namespace Diligent
@@ -37,22 +38,39 @@ namespace Diligent
 /// Template class implementing base functionality for a buffer object
 
 /// \tparam BaseInterface - base interface that this class will inheret 
-///                         (Diligent::IBufferD3D11 or Diligent::IBufferGL).
+///                         (Diligent::IBufferD3D11, Diligent::IBufferD3D12 or Diligent::IBufferGL).
 /// \tparam BufferViewImplType - type of the buffer view implementation
-///                              (Diligent::BufferViewD3D11Impl or Diligent::BufferVeiwGLImpl)
-template<class BaseInterface, class BufferViewImplType>
-class BufferBase : public DeviceObjectBase < BaseInterface, BufferDesc >
+///                              (Diligent::BufferViewD3D11Impl, Diligent::BufferViewD3D12Impl or Diligent::BufferViewGLImpl)
+/// \tparam TBuffObjAllocator - type of the allocator that is used to allocate memory for the buffer object instances
+/// \tparam TBuffViewObjAllocator - type of the allocator that is used to allocate memory for the buffer view object instances
+template<class BaseInterface, class BufferViewImplType, class TBuffObjAllocator, class TBuffViewObjAllocator>
+class BufferBase : public DeviceObjectBase < BaseInterface, BufferDesc, TBuffObjAllocator >
 {
 public:
-    typedef DeviceObjectBase<BaseInterface, BufferDesc> TDeviceObjectBase;
+    typedef DeviceObjectBase<BaseInterface, BufferDesc, TBuffObjAllocator> TDeviceObjectBase;
 
+    /// \param BuffObjAllocator - allocator that was used to allocate memory for this instance of the buffer object.
+    /// \param BuffViewObjAllocator - allocator that is used to allocate memory for the buffer view instances.
+    ///                               This parameter is only used for debug purposes.
 	/// \param pDevice - pointer to the device.
 	/// \param BuffDesc - buffer description.
 	/// \param bIsDeviceInternal - flag indicating if the buffer is an internal device object and 
 	///							   must not keep a strong reference to the device.
-    BufferBase( IRenderDevice *pDevice, const BufferDesc& BuffDesc, bool bIsDeviceInternal = false ) :
-        TDeviceObjectBase( pDevice, BuffDesc, nullptr, bIsDeviceInternal )
+    BufferBase( TBuffObjAllocator &BuffObjAllocator, 
+                TBuffViewObjAllocator &BuffViewObjAllocator, 
+                IRenderDevice *pDevice, 
+                const BufferDesc& BuffDesc, 
+                bool bIsDeviceInternal = false ) :
+        TDeviceObjectBase( BuffObjAllocator, pDevice, BuffDesc, nullptr, bIsDeviceInternal ),
+#ifdef _DEBUG
+        m_dbgBuffViewAllocator(BuffViewObjAllocator),
+#endif
+        m_pDefaultUAV(nullptr, STDDeleter<BufferViewImplType, TBuffViewObjAllocator>(BuffViewObjAllocator) ),
+        m_pDefaultSRV(nullptr, STDDeleter<BufferViewImplType, TBuffViewObjAllocator>(BuffViewObjAllocator) )
     {
+#define VERIFY_BUFFER(Expr, ...) VERIFY(Expr, "Buffer \"",  this->m_Desc.Name ? this->m_Desc.Name : "", "\": ", ##__VA_ARGS__)
+
+#ifdef _DEBUG
         Uint32 AllowedBindFlags =
             BIND_VERTEX_BUFFER | BIND_INDEX_BUFFER | BIND_UNIFORM_BUFFER |
             BIND_SHADER_RESOURCE | BIND_STREAM_OUTPUT | BIND_UNORDERED_ACCESS |
@@ -62,142 +80,162 @@ public:
             "BIND_SHADER_RESOURCE (8), BIND_STREAM_OUTPUT (16), BIND_UNORDERED_ACCESS (128), "
             "BIND_INDIRECT_DRAW_ARGS (256)";
 
-#define VERIFY_BUFFER(Expr, ...) VERIFY(Expr, "Buffer \"",  m_Desc.Name ? m_Desc.Name : "", "\": ", ##__VA_ARGS__)
-
         VERIFY_BUFFER( (BuffDesc.BindFlags & ~AllowedBindFlags) == 0, "Incorrect bind flags specified (", BuffDesc.BindFlags & ~AllowedBindFlags, "). Only the following flags are allowed:\n", strAllowedBindFlags );
-
-        m_Desc = BuffDesc;
-        if( (m_Desc.BindFlags & BIND_UNORDERED_ACCESS) ||
-            (m_Desc.BindFlags & BIND_SHADER_RESOURCE) )
+#endif
+        
+        if( (this->m_Desc.BindFlags & BIND_UNORDERED_ACCESS) ||
+            (this->m_Desc.BindFlags & BIND_SHADER_RESOURCE) )
         {
-            VERIFY_BUFFER( m_Desc.Mode > BUFFER_MODE_UNDEFINED && m_Desc.Mode < BUFFER_MODE_NUM_MODES, "Buffer mode (", m_Desc.Mode, ") is not correct" );
-            if( m_Desc.Mode == BUFFER_MODE_STRUCTURED )
+            VERIFY_BUFFER( this->m_Desc.Mode > BUFFER_MODE_UNDEFINED && this->m_Desc.Mode < BUFFER_MODE_NUM_MODES, "Buffer mode (", this->m_Desc.Mode, ") is not correct" );
+            if( this->m_Desc.Mode == BUFFER_MODE_STRUCTURED )
             {
-                VERIFY_BUFFER( m_Desc.ElementByteStride != 0, "Element stride cannot be zero for structured buffer" );
+                VERIFY_BUFFER( this->m_Desc.ElementByteStride != 0, "Element stride cannot be zero for structured buffer" );
             }
 
-            if( m_Desc.Mode == BUFFER_MODE_FORMATED )
+            if( this->m_Desc.Mode == BUFFER_MODE_FORMATED )
             {
-                VERIFY_BUFFER( m_Desc.Format.ValueType != VT_UNDEFINED, "Value type is not specified for a formated buffer" );
-                VERIFY_BUFFER( m_Desc.Format.NumComponents != 0, "Num components cannot be zero in a formated buffer" );
-                if( m_Desc.ElementByteStride == 0 )
-                    m_Desc.ElementByteStride = static_cast<Uint32>(GetValueSize( m_Desc.Format.ValueType )) * m_Desc.Format.NumComponents;
+                VERIFY_BUFFER( this->m_Desc.Format.ValueType != VT_UNDEFINED, "Value type is not specified for a formated buffer" );
+                VERIFY_BUFFER( this->m_Desc.Format.NumComponents != 0, "Num components cannot be zero in a formated buffer" );
+                if( this->m_Desc.ElementByteStride == 0 )
+                    this->m_Desc.ElementByteStride = static_cast<Uint32>(GetValueSize( this->m_Desc.Format.ValueType )) * this->m_Desc.Format.NumComponents;
             }
         }
     }
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE( IID_Buffer, TDeviceObjectBase )
 
+    /// Base implementation of IBuffer::UpdateData(); validates input parameters.
     virtual void UpdateData( IDeviceContext *pContext, Uint32 Offset, Uint32 Size, const PVoid pData )override = 0;
 
+    /// Base implementation of IBuffer::CopyData(); validates input parameters.
     virtual void CopyData( IDeviceContext *pContext, IBuffer *pSrcBuffer, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size )override = 0;
 
+    /// Base implementation of IBuffer::Map(); validates input parameters.
     virtual void Map( IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid &pMappedData )override;
 
-    virtual void Unmap( IDeviceContext *pContext )override = 0;
+    /// Base implementation of IBuffer::Unmap()
+    virtual void Unmap( IDeviceContext *pContext, MAP_TYPE MapType )override = 0;
 
+    /// Implementation of IBuffer::CreateView(); calls CreateViewInternal() virtual function
+    /// that creates buffer view for the specific engine implementation.
     virtual void CreateView( const struct BufferViewDesc &ViewDesc, IBufferView **ppView )override;
 
+    /// Implementation of IBuffer::GetDefaultView().
     virtual IBufferView* GetDefaultView( BUFFER_VIEW_TYPE ViewType )override;
 
+    /// Creates default buffer views.
+
+    /// 
+    /// - Creates default shader resource view addressing the entire buffer if Diligent::BIND_SHADER_RESOURCE flag is set
+    /// - Creates default unordered access view addressing the entire buffer if Diligent::BIND_UNORDERED_ACCESS flag is set 
+    ///
+    /// The function calls CreateViewInternal().
     void CreateDefaultViews();
 
 protected:
+
+    /// Pure virtual function that creates buffer view for the specific engine implementation.
     virtual void CreateViewInternal( const struct BufferViewDesc &ViewDesc, IBufferView **ppView, bool bIsDefaultView ) = 0;
 
+    /// Corrects buffer view description and validates view parameters.
     void CorrectBufferViewDesc( struct BufferViewDesc &ViewDesc );
 
-    BufferDesc m_Desc;
+#ifdef _DEBUG
+    TBuffViewObjAllocator &m_dbgBuffViewAllocator;
+#endif
 
-    std::unique_ptr<BufferViewImplType> m_pDefaultUAV;
-    std::unique_ptr<BufferViewImplType> m_pDefaultSRV;
+    /// Default UAV addressing the entire buffer
+    std::unique_ptr<BufferViewImplType, STDDeleter<BufferViewImplType, TBuffViewObjAllocator> > m_pDefaultUAV;
+
+    /// Default SRV addressing the entire buffer
+    std::unique_ptr<BufferViewImplType, STDDeleter<BufferViewImplType, TBuffViewObjAllocator> > m_pDefaultSRV;
 };
 
-template<class BaseInterface, class BufferViewImplType>
-void BufferBase<BaseInterface, BufferViewImplType> :: UpdateData( IDeviceContext *pContext, Uint32 Offset, Uint32 Size, const PVoid pData )
+template<class BaseInterface, class BufferViewImplType, class TBuffObjAllocator, class TBuffViewObjAllocator>
+void BufferBase<BaseInterface, BufferViewImplType, TBuffObjAllocator, TBuffViewObjAllocator> :: UpdateData( IDeviceContext *pContext, Uint32 Offset, Uint32 Size, const PVoid pData )
 {
-    VERIFY_BUFFER( m_Desc.Usage == USAGE_DEFAULT, "Only default usage buffers can be updated with UpdateData()" );
-    VERIFY_BUFFER( Offset < m_Desc.uiSizeInBytes, "Offset (", Offset, ") exceeds the buffer size (", m_Desc.uiSizeInBytes, ")" );
-    VERIFY_BUFFER( Size + Offset <= m_Desc.uiSizeInBytes, "Update region [", Offset, ",", Size + Offset, ") is out of buffer bounds [0,",m_Desc.uiSizeInBytes,")" );
+    VERIFY_BUFFER( this->m_Desc.Usage == USAGE_DEFAULT, "Only default usage buffers can be updated with UpdateData()" );
+    VERIFY_BUFFER( Offset < this->m_Desc.uiSizeInBytes, "Offset (", Offset, ") exceeds the buffer size (", this->m_Desc.uiSizeInBytes, ")" );
+    VERIFY_BUFFER( Size + Offset <= this->m_Desc.uiSizeInBytes, "Update region [", Offset, ",", Size + Offset, ") is out of buffer bounds [0,",this->m_Desc.uiSizeInBytes,")" );
 }
 
-template<class BaseInterface, class BufferViewImplType>
-void BufferBase<BaseInterface, BufferViewImplType> :: CopyData( IDeviceContext *pContext, IBuffer *pSrcBuffer, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size )
+template<class BaseInterface, class BufferViewImplType, class TBuffObjAllocator, class TBuffViewObjAllocator>
+void BufferBase<BaseInterface, BufferViewImplType, TBuffObjAllocator, TBuffViewObjAllocator> :: CopyData( IDeviceContext *pContext, IBuffer *pSrcBuffer, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size )
 {
-    VERIFY_BUFFER( DstOffset + Size <= m_Desc.uiSizeInBytes, "Destination range [", DstOffset, ",", DstOffset + Size, ") is out of buffer bounds [0,",m_Desc.uiSizeInBytes,")" );
-    VERIFY_BUFFER( SrcOffset + Size <= pSrcBuffer->GetDesc().uiSizeInBytes, "Source range [", SrcOffset, ",", SrcOffset + Size, ") is out of buffer bounds [0,",m_Desc.uiSizeInBytes,")" );
+    VERIFY_BUFFER( DstOffset + Size <= this->m_Desc.uiSizeInBytes, "Destination range [", DstOffset, ",", DstOffset + Size, ") is out of buffer bounds [0,",this->m_Desc.uiSizeInBytes,")" );
+    VERIFY_BUFFER( SrcOffset + Size <= pSrcBuffer->GetDesc().uiSizeInBytes, "Source range [", SrcOffset, ",", SrcOffset + Size, ") is out of buffer bounds [0,",this->m_Desc.uiSizeInBytes,")" );
 }
 
 
-template<class BaseInterface, class BufferViewImplType>
-void BufferBase<BaseInterface, BufferViewImplType> :: Map( IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid &pMappedData )
+template<class BaseInterface, class BufferViewImplType, class TBuffObjAllocator, class TBuffViewObjAllocator>
+void BufferBase<BaseInterface, BufferViewImplType, TBuffObjAllocator, TBuffViewObjAllocator> :: Map( IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid &pMappedData )
 {
     switch( MapType )
     {
     case MAP_READ:
-        VERIFY_BUFFER( m_Desc.Usage == USAGE_CPU_ACCESSIBLE,      "Only buffers with usage USAGE_CPU_ACCESSIBLE can be read from" );
-        VERIFY_BUFFER( (m_Desc.CPUAccessFlags & CPU_ACCESS_READ), "Buffer being mapped for reading was not created with CPU_ACCESS_READ flag" );
+        VERIFY_BUFFER( this->m_Desc.Usage == USAGE_CPU_ACCESSIBLE,      "Only buffers with usage USAGE_CPU_ACCESSIBLE can be read from" );
+        VERIFY_BUFFER( (this->m_Desc.CPUAccessFlags & CPU_ACCESS_READ), "Buffer being mapped for reading was not created with CPU_ACCESS_READ flag" );
         break;
 
     case MAP_WRITE:
-        VERIFY_BUFFER( m_Desc.Usage == USAGE_CPU_ACCESSIBLE,       "Only buffers with usage USAGE_CPU_ACCESSIBLE can be written to" );
-        VERIFY_BUFFER( (m_Desc.CPUAccessFlags & CPU_ACCESS_WRITE), "Buffer being mapped for writing was not created with CPU_ACCESS_WRITE flag" );
+        VERIFY_BUFFER( this->m_Desc.Usage == USAGE_CPU_ACCESSIBLE,       "Only buffers with usage USAGE_CPU_ACCESSIBLE can be written to" );
+        VERIFY_BUFFER( (this->m_Desc.CPUAccessFlags & CPU_ACCESS_WRITE), "Buffer being mapped for writing was not created with CPU_ACCESS_WRITE flag" );
         break;
 
     case MAP_READ_WRITE:
-        VERIFY_BUFFER( m_Desc.Usage == USAGE_CPU_ACCESSIBLE,       "Only buffers with usage USAGE_CPU_ACCESSIBLE can be read and written" );
-        VERIFY_BUFFER( (m_Desc.CPUAccessFlags & CPU_ACCESS_WRITE), "Buffer being mapped for reading & writing was not created with CPU_ACCESS_WRITE flag" );
-        VERIFY_BUFFER( (m_Desc.CPUAccessFlags & CPU_ACCESS_READ),  "Buffer being mapped for reading & writing was not created with CPU_ACCESS_READ flag" );
+        VERIFY_BUFFER( this->m_Desc.Usage == USAGE_CPU_ACCESSIBLE,       "Only buffers with usage USAGE_CPU_ACCESSIBLE can be read and written" );
+        VERIFY_BUFFER( (this->m_Desc.CPUAccessFlags & CPU_ACCESS_WRITE), "Buffer being mapped for reading & writing was not created with CPU_ACCESS_WRITE flag" );
+        VERIFY_BUFFER( (this->m_Desc.CPUAccessFlags & CPU_ACCESS_READ),  "Buffer being mapped for reading & writing was not created with CPU_ACCESS_READ flag" );
         break;
 
     case MAP_WRITE_DISCARD:
-        VERIFY_BUFFER( m_Desc.Usage == USAGE_DYNAMIC,              "Only dynamic buffers can be mapped with write discard flag" );
-        VERIFY_BUFFER( (m_Desc.CPUAccessFlags & CPU_ACCESS_WRITE), "Dynamic buffer must be created with CPU_ACCESS_WRITE flag" );
+        VERIFY_BUFFER( this->m_Desc.Usage == USAGE_DYNAMIC,              "Only dynamic buffers can be mapped with write discard flag" );
+        VERIFY_BUFFER( (this->m_Desc.CPUAccessFlags & CPU_ACCESS_WRITE), "Dynamic buffer must be created with CPU_ACCESS_WRITE flag" );
         break;
 
     case MAP_WRITE_NO_OVERWRITE:
-        VERIFY_BUFFER( m_Desc.Usage == USAGE_DYNAMIC,              "Only dynamic buffers can be mapped with write no overwrite flag" );
-        VERIFY_BUFFER( (m_Desc.CPUAccessFlags & CPU_ACCESS_WRITE), "Dynamic buffer must be created with CPU_ACCESS_WRITE flag" );
+        VERIFY_BUFFER( this->m_Desc.Usage == USAGE_DYNAMIC,              "Only dynamic buffers can be mapped with write no overwrite flag" );
+        VERIFY_BUFFER( (this->m_Desc.CPUAccessFlags & CPU_ACCESS_WRITE), "Dynamic buffer must be created with CPU_ACCESS_WRITE flag" );
         break;
 
     default: UNEXPECTED( "Unknown map type" );
     }
 }
 
-template<class BaseInterface, class BufferViewImplType>
-void BufferBase<BaseInterface, BufferViewImplType> :: Unmap( IDeviceContext *pContext )
+template<class BaseInterface, class BufferViewImplType, class TBuffObjAllocator, class TBuffViewObjAllocator>
+void BufferBase<BaseInterface, BufferViewImplType, TBuffObjAllocator, TBuffViewObjAllocator> :: Unmap( IDeviceContext *pContext, MAP_TYPE MapType )
 {
 
 }
 
 
-template<class BaseInterface, class BufferViewImplType>
-void BufferBase<BaseInterface, BufferViewImplType> :: CreateView( const struct BufferViewDesc &ViewDesc, IBufferView **ppView )
+template<class BaseInterface, class BufferViewImplType, class TBuffObjAllocator, class TBuffViewObjAllocator>
+void BufferBase<BaseInterface, BufferViewImplType, TBuffObjAllocator, TBuffViewObjAllocator> :: CreateView( const struct BufferViewDesc &ViewDesc, IBufferView **ppView )
 {
     CreateViewInternal( ViewDesc, ppView, false );
 }
 
 
-template<class BaseInterface, class BufferViewImplType>
-void BufferBase<BaseInterface, BufferViewImplType> :: CorrectBufferViewDesc( struct BufferViewDesc &ViewDesc )
+template<class BaseInterface, class BufferViewImplType, class TBuffObjAllocator, class TBuffViewObjAllocator>
+void BufferBase<BaseInterface, BufferViewImplType, TBuffObjAllocator, TBuffViewObjAllocator> :: CorrectBufferViewDesc( struct BufferViewDesc &ViewDesc )
 {
     if( ViewDesc.ByteWidth == 0 )
-        ViewDesc.ByteWidth = m_Desc.uiSizeInBytes;
-    if( ViewDesc.ByteOffset + ViewDesc.ByteWidth > m_Desc.uiSizeInBytes )
-        LOG_ERROR_AND_THROW( "Buffer view range [", ViewDesc.ByteOffset, ", ", ViewDesc.ByteOffset + ViewDesc.ByteWidth, ") is out of the buffer boundaries [0, ", m_Desc.uiSizeInBytes, ")." );
-    if( (m_Desc.BindFlags & BIND_UNORDERED_ACCESS) ||
-        (m_Desc.BindFlags & BIND_SHADER_RESOURCE) )
+        ViewDesc.ByteWidth = this->m_Desc.uiSizeInBytes;
+    if( ViewDesc.ByteOffset + ViewDesc.ByteWidth > this->m_Desc.uiSizeInBytes )
+        LOG_ERROR_AND_THROW( "Buffer view range [", ViewDesc.ByteOffset, ", ", ViewDesc.ByteOffset + ViewDesc.ByteWidth, ") is out of the buffer boundaries [0, ", this->m_Desc.uiSizeInBytes, ")." );
+    if( (this->m_Desc.BindFlags & BIND_UNORDERED_ACCESS) ||
+        (this->m_Desc.BindFlags & BIND_SHADER_RESOURCE) )
     {
-        VERIFY( m_Desc.ElementByteStride != 0, "Element byte stride is zero" );
-        if( (ViewDesc.ByteOffset % m_Desc.ElementByteStride) != 0 )
-            LOG_ERROR_AND_THROW( "Buffer view byte offset (", ViewDesc.ByteOffset, ") is not multiple of element byte stride (", m_Desc.ElementByteStride, ")." );
-        if( (ViewDesc.ByteWidth % m_Desc.ElementByteStride) != 0 )
-            LOG_ERROR_AND_THROW( "Buffer view byte width (", ViewDesc.ByteWidth, ") is not multiple of element byte stride (", m_Desc.ElementByteStride, ")." );
+        VERIFY( this->m_Desc.ElementByteStride != 0, "Element byte stride is zero" );
+        if( (ViewDesc.ByteOffset % this->m_Desc.ElementByteStride) != 0 )
+            LOG_ERROR_AND_THROW( "Buffer view byte offset (", ViewDesc.ByteOffset, ") is not multiple of element byte stride (", this->m_Desc.ElementByteStride, ")." );
+        if( (ViewDesc.ByteWidth % this->m_Desc.ElementByteStride) != 0 )
+            LOG_ERROR_AND_THROW( "Buffer view byte width (", ViewDesc.ByteWidth, ") is not multiple of element byte stride (", this->m_Desc.ElementByteStride, ")." );
     }
 }
 
-template<class BaseInterface, class BufferViewImplType>
-IBufferView* BufferBase<BaseInterface, BufferViewImplType> ::GetDefaultView( BUFFER_VIEW_TYPE ViewType )
+template<class BaseInterface, class BufferViewImplType, class TBuffObjAllocator, class TBuffViewObjAllocator>
+IBufferView* BufferBase<BaseInterface, BufferViewImplType, TBuffObjAllocator, TBuffViewObjAllocator> ::GetDefaultView( BUFFER_VIEW_TYPE ViewType )
 {
     switch( ViewType )
     {
@@ -207,10 +245,10 @@ IBufferView* BufferBase<BaseInterface, BufferViewImplType> ::GetDefaultView( BUF
     }
 }
 
-template<class BaseInterface, class BufferViewImplType>
-void BufferBase<BaseInterface, BufferViewImplType> :: CreateDefaultViews()
+template<class BaseInterface, class BufferViewImplType, class TBuffObjAllocator, class TBuffViewObjAllocator>
+void BufferBase<BaseInterface, BufferViewImplType, TBuffObjAllocator, TBuffViewObjAllocator> :: CreateDefaultViews()
 {
-    if( m_Desc.BindFlags & BIND_UNORDERED_ACCESS )
+    if( this->m_Desc.BindFlags & BIND_UNORDERED_ACCESS )
     {
         BufferViewDesc ViewDesc;
         ViewDesc.ViewType = BUFFER_VIEW_UNORDERED_ACCESS;
@@ -220,7 +258,7 @@ void BufferBase<BaseInterface, BufferViewImplType> :: CreateDefaultViews()
         VERIFY( m_pDefaultUAV->GetDesc().ViewType == BUFFER_VIEW_UNORDERED_ACCESS, "Unexpected view type" );
     }
 
-    if( m_Desc.BindFlags & BIND_SHADER_RESOURCE )
+    if( this->m_Desc.BindFlags & BIND_SHADER_RESOURCE )
     {
         BufferViewDesc ViewDesc;
         ViewDesc.ViewType = BUFFER_VIEW_SHADER_RESOURCE;

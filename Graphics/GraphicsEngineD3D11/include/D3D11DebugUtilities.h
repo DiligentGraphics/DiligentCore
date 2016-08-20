@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -26,32 +26,8 @@
 /// \file
 /// Debug utilities
 
-#include "DeviceObject.h"
-#include "ShaderD3D11Impl.h"
-
-#ifdef _DEBUG
-#   define VERIFY_RESOURCE_ARRAYS
-#endif
 
 namespace Diligent
 {
-#ifdef VERIFY_RESOURCE_ARRAYS
 
-    /// Debug function that verifies that cached engine objects and d3d11 shader resource views in two provided arrays are consistent
-    void dbgVerifyResourceArrays( const std::vector< ShaderD3D11Impl::BoundSRV > &SRVs, const std::vector<ID3D11ShaderResourceView*> d3d11SRVs, IShader *pShader );
-
-    /// Debug function that verifies that cached engine objects and d3d11 unordered access views in two provided arrays are consistent
-    void dbgVerifyResourceArrays( const std::vector< ShaderD3D11Impl::BoundUAV > &UAVs, const std::vector<ID3D11UnorderedAccessView*> d3d11UAVs, IShader *pShader );
-
-    /// Debug function that verifies that cached engine objects and d3d11 constant buffers in two provided arrays are consistent
-    void dbgVerifyResourceArrays( const std::vector< ShaderD3D11Impl::BoundCB > &CBs, const std::vector<ID3D11Buffer*> d3d11CBs, IShader *pShader );
-
-    /// Debug function that verifies that cached engine objects and d3d11 samplers in two provided arrays are consistent
-    void dbgVerifyResourceArrays( const std::vector< ShaderD3D11Impl::BoundSampler >&Samplers, const std::vector<ID3D11SamplerState*> d3d11Samplers, IShader *pShader );
-
-#else
-
-    #define dbgVerifyResourceArrays(...)
-
-#endif
 }

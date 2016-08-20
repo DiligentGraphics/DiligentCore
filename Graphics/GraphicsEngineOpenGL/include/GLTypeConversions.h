@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -26,31 +26,64 @@
 namespace Diligent
 {
 
+static const GLenum PrimTopologyToGLTopologyMap[] = 
+{
+    0,                 //PRIMITIVE_TOPOLOGY_UNDEFINED = 0
+    GL_TRIANGLES,      //PRIMITIVE_TOPOLOGY_TRIANGLE_LIST
+    GL_TRIANGLE_STRIP, //PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
+    GL_POINTS,         //PRIMITIVE_TOPOLOGY_POINT_LIST
+    GL_LINES           //PRIMITIVE_TOPOLOGY_LINE_LIST
+};
+
 inline GLenum PrimitiveTopologyToGLTopology(PRIMITIVE_TOPOLOGY PrimTopology)
 {
+    VERIFY_EXPR(PrimTopology < _countof(PrimTopologyToGLTopologyMap));
+    auto GLTopology = PrimTopologyToGLTopologyMap[PrimTopology];
+#ifdef _DEBUG
     switch(PrimTopology)
     {
-        case PRIMITIVE_TOPOLOGY_TRIANGLE_LIST:   return GL_TRIANGLES;      break;
-        case PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP:  return GL_TRIANGLE_STRIP; break;
-        case PRIMITIVE_TOPOLOGY_POINT_LIST:     return GL_POINTS;         break;
-        case PRIMITIVE_TOPOLOGY_LINE_LIST:      return GL_LINES;          break;
-        default: return 0;
+        case PRIMITIVE_TOPOLOGY_UNDEFINED:      VERIFY_EXPR(GLTopology == 0);                 break;
+        case PRIMITIVE_TOPOLOGY_TRIANGLE_LIST:  VERIFY_EXPR(GLTopology == GL_TRIANGLES);      break;
+        case PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP: VERIFY_EXPR(GLTopology == GL_TRIANGLE_STRIP); break;
+        case PRIMITIVE_TOPOLOGY_POINT_LIST:     VERIFY_EXPR(GLTopology == GL_POINTS);         break;
+        case PRIMITIVE_TOPOLOGY_LINE_LIST:      VERIFY_EXPR(GLTopology == GL_LINES);          break;
+        default: UNEXPECTED("Unexpected primitive topology");
     }
+#endif
+    return GLTopology;
 }
+
+static const GLenum TypeToGLTypeMap[] = 
+{
+    0,                  //VT_UNDEFINED = 0
+    GL_BYTE,            //VT_INT8
+    GL_SHORT,           //VT_INT16
+    GL_INT,             //VT_INT32
+    GL_UNSIGNED_BYTE,   //VT_UINT8
+    GL_UNSIGNED_SHORT,  //VT_UINT16
+    GL_UNSIGNED_INT,    //VT_UINT32
+    0,                  //VT_FLOAT16
+    GL_FLOAT            //VT_FLOAT32
+};
 
 inline GLenum TypeToGLType(VALUE_TYPE Value)
 {
+    VERIFY_EXPR(Value < _countof(TypeToGLTypeMap));
+    auto GLType = TypeToGLTypeMap[Value];
+#ifdef _DEBUG
     switch(Value)
     {
-        case VT_INT8:    return GL_BYTE;           break;
-        case VT_INT16:   return GL_SHORT;          break;
-        case VT_INT32:   return GL_INT;            break;
-        case VT_UINT8:   return GL_UNSIGNED_BYTE;  break;
-        case VT_UINT16:  return GL_UNSIGNED_SHORT; break;
-        case VT_UINT32:  return GL_UNSIGNED_INT;   break;
-        case VT_FLOAT32: return GL_FLOAT;          break;
-        default: return 0;
+        case VT_INT8:    VERIFY_EXPR(GLType == GL_BYTE);           break;
+        case VT_INT16:   VERIFY_EXPR(GLType == GL_SHORT);          break;
+        case VT_INT32:   VERIFY_EXPR(GLType == GL_INT);            break;
+        case VT_UINT8:   VERIFY_EXPR(GLType == GL_UNSIGNED_BYTE);  break;
+        case VT_UINT16:  VERIFY_EXPR(GLType == GL_UNSIGNED_SHORT); break;
+        case VT_UINT32:  VERIFY_EXPR(GLType == GL_UNSIGNED_INT);   break;
+        case VT_FLOAT32: VERIFY_EXPR(GLType == GL_FLOAT);          break;
+        default: UNEXPECTED("Unexpected value type");
     }
+#endif
+    return GLType;
 }
 
 inline GLenum UsageToGLUsage(USAGE Usage)
@@ -148,7 +181,7 @@ inline GLenum CompareFuncToGLCompareFunc(COMPARISON_FUNCTION Func)
 {
     switch(Func)
     {
-        case COMPARISON_FUNC_UNKNOW: UNEXPECTED( "Comparison function is not specified" ); return GL_ALWAYS;
+        case COMPARISON_FUNC_UNKNOWN: UNEXPECTED( "Comparison function is not specified" ); return GL_ALWAYS;
         case COMPARISON_FUNC_NEVER:         return GL_NEVER;
 	    case COMPARISON_FUNC_LESS:          return GL_LESS;
 	    case COMPARISON_FUNC_EQUAL:         return GL_EQUAL;

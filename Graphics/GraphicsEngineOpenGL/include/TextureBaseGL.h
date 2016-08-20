@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -31,25 +31,34 @@
 #include "TextureViewGLImpl.h"
 #include "AsyncWritableResource.h"
 
+
 namespace Diligent
 {
 
+class FixedBlockMemoryAllocator;
+
 /// Base implementation of the Diligent::ITextureGL interface
-class TextureBaseGL : public TextureBase<ITextureGL, TextureViewGLImpl>, public AsyncWritableResource
+class TextureBaseGL : public TextureBase<ITextureGL, TextureViewGLImpl, FixedBlockMemoryAllocator, FixedBlockMemoryAllocator>, public AsyncWritableResource
 {
 public:
-    typedef TextureBase<ITextureGL, TextureViewGLImpl> TTextureBase;
+    typedef TextureBase<ITextureGL, TextureViewGLImpl, FixedBlockMemoryAllocator, FixedBlockMemoryAllocator> TTextureBase;
 
-    TextureBaseGL(class RenderDeviceGLImpl *pDeviceGL, const TextureDesc& BuffDesc, const TextureData &InitData = TextureData(), bool bIsDeviceInternal = false);
+    TextureBaseGL(FixedBlockMemoryAllocator& TexObjAllocator, 
+                  FixedBlockMemoryAllocator& TexViewObjAllocator, 
+                  class RenderDeviceGLImpl *pDeviceGL, 
+                  const TextureDesc &TexDesc, 
+                  GLenum BindTarget,
+                  const TextureData &InitData = TextureData(), 
+                  bool bIsDeviceInternal = false);
     ~TextureBaseGL();
     
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
 
-    virtual void UpdateData( IDeviceContext *pContext, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData )override;
+    virtual void UpdateData( class GLContextState &CtxState, IDeviceContext *pContext, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData );
 
     //virtual void CopyData(CTexture *pSrcTexture, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size);
     virtual void Map( IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid &pMappedData )override;
-    virtual void Unmap( IDeviceContext *pContext )override;
+    virtual void Unmap( IDeviceContext *pContext, MAP_TYPE MapType )override;
 
     const GLObjectWrappers::GLTextureObj& GetGLHandle()const{ return m_GlTexture; }
     GLenum GetBindTarget()const{return m_BindTarget;}
@@ -75,8 +84,8 @@ protected:
     void SetDefaultGLParameters();
 
     GLObjectWrappers::GLTextureObj m_GlTexture;
-    GLenum m_BindTarget;
-    GLenum m_GLTexFormat;
+    const GLenum m_BindTarget;
+    const GLenum m_GLTexFormat;
     //Uint32 m_uiMapTarget;
 };
 

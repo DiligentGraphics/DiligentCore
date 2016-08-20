@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -31,13 +31,15 @@
 #include "DeviceCaps.h"
 #include "Constants.h"
 #include "Buffer.h"
-#include "VertexDescription.h"
+#include "InputLayout.h"
 #include "Shader.h"
 #include "Texture.h"
 #include "Sampler.h"
 #include "ResourceMapping.h"
 #include "TextureView.h"
 #include "BufferView.h"
+#include "PipelineState.h"
+
 #include "DepthStencilState.h"
 #include "RasterizerState.h"
 #include "BlendState.h"
@@ -49,9 +51,7 @@ namespace Diligent
 static const Diligent::INTERFACE_ID IID_RenderDevice =
 { 0xf0e9b607, 0xae33, 0x4b2b, { 0xb1, 0xaf, 0xa8, 0xb2, 0xc3, 0x10, 0x40, 0x22 } };
 
-/**
-  * Render device interface
-  */
+/// Render device interface
 class IRenderDevice : public IObject
 {
 public:
@@ -77,22 +77,6 @@ public:
     virtual void CreateBuffer(const BufferDesc& BuffDesc, 
                               const BufferData& BuffData, 
                               IBuffer **ppBuffer) = 0;
-
-    /// Creates a new vertex description object.
-
-    /// \param [in] LayoutDesc    - Layout description, see GraphisEngine::LayoutDesc for details.
-    /// \param [in] pVertexShader - Pointer to the vertex shader which this input layout
-    ///                             will be used with. If layout description is not compatible
-    ///                             with the shader's input signature, the method fails.
-    /// \param [out] ppVertexDesc - Address of the memory location where the pointer to the
-    ///                             vertex description interface will be stored. 
-    ///                             The function calls AddRef(), so that the new object will contain 
-    ///                             one refernce.
-    /// \remark The same vertex description object can be used with all shaders that have
-    ///         the same input semantic.
-    virtual void CreateVertexDescription( const LayoutDesc& LayoutDesc, 
-                                          IShader *pVertexShader, 
-                                          IVertexDescription **ppVertexDesc ) = 0;
 
     /// Creates a new shader object
 
@@ -154,44 +138,16 @@ public:
     virtual void CreateResourceMapping( const ResourceMappingDesc &MappingDesc, 
                                         IResourceMapping **ppMapping ) = 0;
 
-    /// Creates a new depth stencil state object
+    /// Creates a new pipeline state object
 
-    /// \param [in] DSSDesc - Depth-stencil state description, see Diligent::DepthStencilStateDesc for details.
-    /// \param [out] ppDepthStencilState - Address of the memory location where the pointer to the
-    ///                                    depth-stencil state interface will be stored. 
-    ///                                    The function calls AddRef(), so that the new object will contain 
-    ///                                    one refernce.
-    /// \remark If an application attempts to create a depth-stencil state interface with the same attributes 
-    ///         as an existing interface, the same interface will be returned.
-    /// \note   In D3D11, 4096 unique depth-stencil state objects can be created on a device at a time.        
-    virtual void CreateDepthStencilState( const DepthStencilStateDesc &DSSDesc, 
-                                          IDepthStencilState **ppDepthStencilState ) = 0;
-    
-    /// Creates a rasterizer state object
+    /// \param [in] PipelineDesc - Pipeline state description, see Diligent::PipelineStateDesc for details.
+    /// \param [out] ppPipelineState - Address of the memory location where the pointer to the
+    ///                                pipeline state interface will be stored. 
+    ///                                The function calls AddRef(), so that the new object will contain 
+    ///                                one refernce.
+    virtual void CreatePipelineState( const PipelineStateDesc &PipelineDesc, 
+                                      IPipelineState **ppPipelineState ) = 0;
 
-    /// \param [in] RSDesc - Rasterizer state description, see Diligent::RasterizerStateDesc for details.
-    /// \param [out] ppRasterizerState - Address of the memory location where the pointer to the
-    ///                         rasterizer state interface will be stored. 
-    ///                         The function calls AddRef(), so that the new object will contain 
-    ///                         one refernce.
-    /// \remark If an application attempts to create a rasterizer state interface with the same attributes 
-    ///         as an existing interface, the same interface will be returned.
-    /// \note   In D3D11, 4096 unique rasterizer state objects can be created on a device at a time.        
-    virtual void CreateRasterizerState( const RasterizerStateDesc &RSDesc, 
-                                        IRasterizerState **ppRasterizerState ) = 0;
-
-    /// Creates a blend state object
-
-    /// \param [in] BSDesc - Blend state description, see Diligent::BlendStateDesc for details.
-    /// \param [out] ppBlendState - Address of the memory location where the pointer to the
-    ///                         blend state interface will be stored. 
-    ///                         The function calls AddRef(), so that the new object will contain 
-    ///                         one refernce.
-    /// \remark If an application attempts to create a blend state interface with the same attributes 
-    ///         as an existing interface, the same interface will be returned.
-    /// \note   In D3D11, 4096 unique blend state objects can be created on a device at a time.        
-    virtual void CreateBlendState( const BlendStateDesc &BSDesc, 
-                                   IBlendState **ppBlendState ) = 0;
 
     /// Gets the device capabilities, see Diligent::DeviceCaps for details
     virtual const DeviceCaps& GetDeviceCaps()const = 0;

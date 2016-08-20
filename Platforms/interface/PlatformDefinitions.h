@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -23,20 +23,19 @@
 
 #pragma once
 
-#if defined(_WINDOWS)
-    #define PLATFORM_WINDOWS
-#elif defined (_WINDOWS_STORE)
-    #define PLATFORM_WINDOWS_STORE
-#elif defined (ANDROID)
+#if defined(ANDROID)
+    #if defined (PLATFORM_UNIVERSAL_WINDOWS) || defined (PLATFORM_WIN32) 
+        #error Conflicting platform macros
+    #endif
     #define PLATFORM_ANDROID
-#else
+#elif !defined (PLATFORM_UNIVERSAL_WINDOWS) && !defined (PLATFORM_WIN32) 
     #error Platform is not defined
 #endif
 
-#if defined( PLATFORM_WINDOWS )
-    #include "..\Windows\include\WindowsPlatformDefinitions.h"
-#elif defined( PLATFORM_WINDOWS_STORE )
-    #include "..\WindowsStore\include\WindowsStorePlatformDefinitions.h"
+#if defined( PLATFORM_WIN32 )
+    #include "..\Win32\include\Win32PlatformDefinitions.h"
+#elif defined( PLATFORM_UNIVERSAL_WINDOWS )
+    #include "..\UWP\include\UWPDefinitions.h"
 #elif defined ( PLATFORM_ANDROID )
     #include "..\Android\include\AndroidPlatformDefinitions.h"
 #endif

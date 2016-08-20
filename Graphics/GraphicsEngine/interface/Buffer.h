@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -129,9 +129,9 @@ struct BufferDesc : DeviceObjectAttribs
     /// --------------------|--------------
     /// uiSizeInBytes       | 0
     /// BindFlags           | 0
-    /// Usage               | USAGE_DEFAULT
+    /// Usage               | Diligent::USAGE_DEFAULT
     /// CPUAccessFlags      | 0
-    /// Mode                | BUFFER_MODE_UNDEFINED
+    /// Mode                | Diligent::BUFFER_MODE_UNDEFINED
     /// ElementByteStride   | 0
     /// Members of BufferDesc::Format are initialized with default values by BufferFormat::BufferFormat()
     BufferDesc() : 
@@ -148,7 +148,7 @@ struct BufferDesc : DeviceObjectAttribs
 struct BufferData
 {
     /// Pointer to the data
-    PVoid pData;
+    const void* pData;
 
     /// Data size, in bytes
     Uint32 DataSize;
@@ -206,7 +206,9 @@ public:
 
     /// Unmaps the previously mapped buffer
     /// \param [in] pContext - Pointer to the device context interface to be used to perform the operation.
-    virtual void Unmap( IDeviceContext *pContext ) = 0;
+    /// \param [in] MapType - Type of the map operation. This parameter must match to the type that was 
+    ///                       provided to the Map() method. 
+    virtual void Unmap( IDeviceContext *pContext, MAP_TYPE MapType ) = 0;
 
     /// Creates a new buffer view
 

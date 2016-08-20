@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@
 #include <algorithm>
 
 // Must be defined to use static version of glew
-#ifdef _WINDOWS
+#ifdef PLATFORM_WIN32
     #define GLEW_STATIC
     #include "glew.h"
     // Glew includes <windows.h>

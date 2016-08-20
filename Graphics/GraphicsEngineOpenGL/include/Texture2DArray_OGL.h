@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -31,7 +31,9 @@ namespace Diligent
 class Texture2DArray_OGL : public TextureBaseGL
 {
 public:
-    Texture2DArray_OGL( class RenderDeviceGLImpl *pDeviceGL, 
+    Texture2DArray_OGL( FixedBlockMemoryAllocator& TexObjAllocator, 
+                        FixedBlockMemoryAllocator& TexViewObjAllocator,
+                        class RenderDeviceGLImpl *pDeviceGL, 
                         class DeviceContextGLImpl *pDeviceContext, 
                         const TextureDesc& BuffDesc, 
                         const TextureData &InitData = TextureData(), 

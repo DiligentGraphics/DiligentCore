@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -27,19 +27,15 @@
 namespace Diligent
 {
 
-BufferViewD3D11Impl::BufferViewD3D11Impl( IRenderDevice *pDevice, 
-                                      const BufferViewDesc& ViewDesc, 
-                                      IBuffer *pBuffer,
-                                      ID3D11View* pD3D11View,
-                                      bool bIsDefaultView ) :
-    TBufferViewBase( pDevice, ViewDesc, pBuffer, bIsDefaultView ),
+BufferViewD3D11Impl::BufferViewD3D11Impl( FixedBlockMemoryAllocator &BuffViewObjAllocator,
+                                          IRenderDevice *pDevice, 
+                                          const BufferViewDesc& ViewDesc, 
+                                          IBuffer *pBuffer,
+                                          ID3D11View* pD3D11View,
+                                          bool bIsDefaultView ) :
+    TBufferViewBase( BuffViewObjAllocator, pDevice, ViewDesc, pBuffer, bIsDefaultView ),
     m_pD3D11View( pD3D11View )
 {
-}
-
-ID3D11View* BufferViewD3D11Impl::GetD3D11View()
-{
-    return m_pD3D11View;
 }
 
 IMPLEMENT_QUERY_INTERFACE( BufferViewD3D11Impl, IID_BufferViewD3D11, TBufferViewBase )

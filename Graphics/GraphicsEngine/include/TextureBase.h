@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@
 #include "Texture.h"
 #include "DeviceObjectBase.h"
 #include "GraphicsUtilities.h"
+#include "STDAllocator.h"
 #include <memory>
 
 namespace Diligent
@@ -43,49 +44,61 @@ void VliadateCopyTextureDataParams( const TextureDesc &SrcTexDesc, Uint32 SrcMip
 /// Base implementation of the ITexture interface
 
 /// \tparam BaseInterface - base interface that this class will inheret 
-///                         (Diligent::ITextureD3D11 or Diligent::ITextureGL).
+///                         (Diligent::ITextureD3D11, Diligent::ITextureD3D12 or Diligent::ITextureGL).
 /// \tparam TTextureViewImpl - type of the texture view implementation 
-///                            (Diligent::TextureViewD3D11Impl or Diligent::TextureViewGLImpl).
-template<class BaseInterface, class TTextureViewImpl>
-class TextureBase : public DeviceObjectBase<BaseInterface, TextureDesc>
+///                            (Diligent::TextureViewD3D11Impl, Diligent::TextureViewD3D12Impl or Diligent::TextureViewGLImpl).
+/// \tparam TTexObjAllocator - type of the allocator that is used to allocate memory for the texture object instances
+/// \tparam TTexViewObjAllocator - type of the allocator that is used to allocate memory for the texture view object instances
+template<class BaseInterface, class TTextureViewImpl, class TTexObjAllocator, class TTexViewObjAllocator>
+class TextureBase : public DeviceObjectBase<BaseInterface, TextureDesc, TTexObjAllocator>
 {
 public:
-    typedef DeviceObjectBase<BaseInterface, TextureDesc> TDeviceObjectBase;
+    typedef DeviceObjectBase<BaseInterface, TextureDesc, TTexObjAllocator> TDeviceObjectBase;
 
+    /// \param TexObjAllocator - allocator that was used to allocate memory for this instance of the texture object
+    /// \param TexViewObjAllocator - allocator that is used to allocate memory for the instances of the texture view object.
+    ///                              This parameter is only used for debug purposes.
 	/// \param pDevice - pointer to the device
 	/// \param Desc - texture description
 	/// \param bIsDeviceInternal - flag indicating if the texture is an internal device object and 
 	///							   must not keep a strong reference to the device
-    TextureBase( IRenderDevice *pDevice, const TextureDesc& Desc, bool bIsDeviceInternal = false ) :
-        TDeviceObjectBase( pDevice, Desc, nullptr, bIsDeviceInternal )
+    TextureBase( TTexObjAllocator &TexObjAllocator, 
+                 TTexViewObjAllocator &TexViewObjAllocator,
+                 IRenderDevice *pDevice, 
+                 const TextureDesc& Desc, 
+                 bool bIsDeviceInternal = false ) :
+        TDeviceObjectBase( TexObjAllocator, pDevice, Desc, nullptr, bIsDeviceInternal ),
+#ifdef _DEBUG
+        m_dbgTexViewObjAllocator(TexViewObjAllocator),
+#endif
+        m_pDefaultSRV(nullptr, STDDeleter<TTextureViewImpl, TTexViewObjAllocator>(TexViewObjAllocator)),
+        m_pDefaultRTV(nullptr, STDDeleter<TTextureViewImpl, TTexViewObjAllocator>(TexViewObjAllocator)),
+        m_pDefaultDSV(nullptr, STDDeleter<TTextureViewImpl, TTexViewObjAllocator>(TexViewObjAllocator)),
+        m_pDefaultUAV(nullptr, STDDeleter<TTextureViewImpl, TTexViewObjAllocator>(TexViewObjAllocator))
     {
         if( this->m_Desc.MipLevels == 0 )
         {
-            // Compute the number of levels in the full mipmap chain based 
-            // on the maximum texture dimension
-            Uint32 MaxDim = 0; 
-            if( this->m_Desc.Type == TEXTURE_TYPE_1D ||
-                this->m_Desc.Type == TEXTURE_TYPE_1D_ARRAY )
+            // Compute the number of levels in the full mipmap chain
+            if( this->m_Desc.Type == RESOURCE_DIM_TEX_1D ||
+                this->m_Desc.Type == RESOURCE_DIM_TEX_1D_ARRAY )
             {
-                MaxDim = this->m_Desc.Width;
+                this->m_Desc.MipLevels = ComputeMipLevelsCount(this->m_Desc.Width);
             }
-            else if( this->m_Desc.Type == TEXTURE_TYPE_2D ||
-                     this->m_Desc.Type == TEXTURE_TYPE_2D_ARRAY )
+            else if( this->m_Desc.Type == RESOURCE_DIM_TEX_2D ||
+                     this->m_Desc.Type == RESOURCE_DIM_TEX_2D_ARRAY || 
+                     this->m_Desc.Type == RESOURCE_DIM_TEX_CUBE || 
+                     this->m_Desc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY )
             { 
-                MaxDim = std::max( this->m_Desc.Width, this->m_Desc.Height );
+                this->m_Desc.MipLevels = ComputeMipLevelsCount( this->m_Desc.Width, this->m_Desc.Height );
             }
-            else if( this->m_Desc.Type == TEXTURE_TYPE_3D )
+            else if( this->m_Desc.Type == RESOURCE_DIM_TEX_3D )
             {
-                MaxDim = std::max( this->m_Desc.Width, this->m_Desc.Height );
-                MaxDim = std::max( MaxDim, this->m_Desc.Depth );
+                this->m_Desc.MipLevels = ComputeMipLevelsCount( this->m_Desc.Width, this->m_Desc.Height, this->m_Desc.Depth );
             }
             else
             {
                 UNEXPECTED( "Unkwnown texture type" );
             }
-            while( (MaxDim >> this->m_Desc.MipLevels) > 0 )
-                ++this->m_Desc.MipLevels;
-            VERIFY( MaxDim >= (1U << (this->m_Desc.MipLevels-1)) && MaxDim < (1U << this->m_Desc.MipLevels), "Incorrect number of Mip levels" )
         }
 
         // Validate correctness of texture description
@@ -94,14 +107,17 @@ public:
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE( IID_Texture, TDeviceObjectBase )
    
+    /// Implementaiton of ITexture::CreateView(); calls CreateViewInternal() virtual function that
+    /// creates texture view for the specific engine implementation.
     virtual void CreateView( const struct TextureViewDesc &ViewDesc, ITextureView **ppView )override
     {
         CreateViewInternal( ViewDesc, ppView, false );
     }
 
+    /// Base implementaiton of ITexture::UpdateData(); validates input parameters
     virtual void UpdateData( IDeviceContext *pContext, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData ) = 0;
 
-
+    /// Base implementaiton of ITexture::CopyData(); validates input parameters
     virtual void CopyData( IDeviceContext *pContext,
                            ITexture *pSrcTexture,
                            Uint32 SrcMipLevel,
@@ -113,22 +129,42 @@ public:
                            Uint32 DstY,
                            Uint32 DstZ ) = 0;
 
+    /// Base implementaiton of ITexture::Map()
     virtual void Map( IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid &pMappedData ) = 0;
 
-    virtual void Unmap( IDeviceContext *pContext ) = 0;
+    /// Base implementaiton of ITexture::Unmap()
+    virtual void Unmap( IDeviceContext *pContext, MAP_TYPE MapType ) = 0;
 
+    /// Creates default texture views.
+
+    ///
+    /// - Creates default shader resource view addressing the entire texture if Diligent::BIND_SHADER_RESOURCE flag is set.
+    /// - Creates default render target view addressing the most detailed mip level if Diligent::BIND_RENDER_TARGET flag is set.
+    /// - Creates default depth-stencil view addressing the most detailed mip level if Diligent::BIND_DEPTH_STENCIL flag is set.
+    /// - Creates default unordered access view addressing the entire texture if Diligent::BIND_UNORDERED_ACCESS flag is set.
+    ///
+    /// The function calls CreateViewInternal().
     void CreateDefaultViews();
 
 protected:
     
+    /// Pure virtual function that creates texture view for the specific engine implementation.
     virtual void CreateViewInternal( const struct TextureViewDesc &ViewDesc, ITextureView **ppView, bool bIsDefaultView ) = 0;
 
+#ifdef _DEBUG
+    TTexViewObjAllocator &m_dbgTexViewObjAllocator;
+#endif
     // WARNING! We cannot use ITextureView here, because ITextureView has no virtual dtor!
-    std::unique_ptr<TTextureViewImpl> m_pDefaultSRV;
-    std::unique_ptr<TTextureViewImpl> m_pDefaultRTV;
-    std::unique_ptr<TTextureViewImpl> m_pDefaultDSV;
-    std::unique_ptr<TTextureViewImpl> m_pDefaultUAV;
+    /// Default SRV addressing the entire texture
+    std::unique_ptr<TTextureViewImpl, STDDeleter<TTextureViewImpl, TTexViewObjAllocator>> m_pDefaultSRV;
+    /// Default RTV addressing the most detailed mip level
+    std::unique_ptr<TTextureViewImpl, STDDeleter<TTextureViewImpl, TTexViewObjAllocator>> m_pDefaultRTV;
+    /// Default DSV addressing the most detailed mip level
+    std::unique_ptr<TTextureViewImpl, STDDeleter<TTextureViewImpl, TTexViewObjAllocator>> m_pDefaultDSV;
+    /// Default UAV addressing the entire texture
+    std::unique_ptr<TTextureViewImpl, STDDeleter<TTextureViewImpl, TTexViewObjAllocator>> m_pDefaultUAV;
 
+    /// Implementation of ITexture::GetDefaultView().
     ITextureView* GetDefaultView( TEXTURE_VIEW_TYPE ViewType )override
     {
         switch( ViewType )
@@ -150,8 +186,8 @@ protected:
 };
 
 
-template<class BaseInterface, class TTextureViewImpl>
-TEXTURE_FORMAT TextureBase<BaseInterface, TTextureViewImpl> :: CorrectTextureViewFormat( TEXTURE_FORMAT Fmt, TEXTURE_VIEW_TYPE TexViewType )
+template<class BaseInterface, class TTextureViewImpl, class TTexObjAllocator, class TTexViewObjAllocator>
+TEXTURE_FORMAT TextureBase<BaseInterface, TTextureViewImpl, TTexObjAllocator, TTexViewObjAllocator> :: CorrectTextureViewFormat( TEXTURE_FORMAT Fmt, TEXTURE_VIEW_TYPE TexViewType )
 {
     // Correct texture view format for depth stencil view
     if( TexViewType == TEXTURE_VIEW_DEPTH_STENCIL )
@@ -203,8 +239,8 @@ TEXTURE_FORMAT TextureBase<BaseInterface, TTextureViewImpl> :: CorrectTextureVie
     return Fmt;
 }
 
-template<class BaseInterface, class TTextureViewImpl>
-void TextureBase<BaseInterface, TTextureViewImpl> :: CorrectTextureViewDesc(struct TextureViewDesc &ViewDesc)
+template<class BaseInterface, class TTextureViewImpl, class TTexObjAllocator, class TTexViewObjAllocator>
+void TextureBase<BaseInterface, TTextureViewImpl, TTexObjAllocator, TTexViewObjAllocator> :: CorrectTextureViewDesc(struct TextureViewDesc &ViewDesc)
 {
 #define TEX_VIEW_VALIDATION_ERROR(...) LOG_ERROR_AND_THROW( "Texture view \"", ViewDesc.Name ? ViewDesc.Name : "", "\": ", ##__VA_ARGS__ );
 
@@ -217,45 +253,108 @@ void TextureBase<BaseInterface, TTextureViewImpl> :: CorrectTextureViewDesc(stru
     if( ViewDesc.Format == TEX_FORMAT_UNKNOWN )
         ViewDesc.Format = CorrectTextureViewFormat( this->m_Desc.Format, ViewDesc.ViewType );
 
-    if( ViewDesc.TextureType == TEXTURE_TYPE_UNDEFINED )
-        ViewDesc.TextureType = this->m_Desc.Type;
+    if( ViewDesc.TextureDim == RESOURCE_DIM_UNDEFINED )
+    {
+        if (this->m_Desc.Type == RESOURCE_DIM_TEX_CUBE || this->m_Desc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY)
+        {
+            switch (ViewDesc.ViewType)
+            {
+                case TEXTURE_VIEW_SHADER_RESOURCE: 
+                    ViewDesc.TextureDim = this->m_Desc.Type;
+                break;
+
+                case TEXTURE_VIEW_RENDER_TARGET: 
+                case TEXTURE_VIEW_DEPTH_STENCIL: 
+                case TEXTURE_VIEW_UNORDERED_ACCESS: 
+                    ViewDesc.TextureDim = RESOURCE_DIM_TEX_2D_ARRAY;
+                break;
+
+                default: UNEXPECTED("Unexpected view type")
+            }
+        }
+        else
+        {
+            ViewDesc.TextureDim = this->m_Desc.Type;
+        }
+    }
 
     switch( this->m_Desc.Type )
     {
-        case TEXTURE_TYPE_1D:
-            if( ViewDesc.TextureType != TEXTURE_TYPE_1D )
+        case RESOURCE_DIM_TEX_1D:
+            if( ViewDesc.TextureDim != RESOURCE_DIM_TEX_1D )
             {
                 TEX_VIEW_VALIDATION_ERROR( "Incorrect texture type for Texture 1D view: only Texture 1D is allowed" );
             }
         break;
 
-        case TEXTURE_TYPE_1D_ARRAY:
-            if( ViewDesc.TextureType != TEXTURE_TYPE_1D_ARRAY && 
-                ViewDesc.TextureType != TEXTURE_TYPE_1D )
+        case RESOURCE_DIM_TEX_1D_ARRAY:
+            if( ViewDesc.TextureDim != RESOURCE_DIM_TEX_1D_ARRAY && 
+                ViewDesc.TextureDim != RESOURCE_DIM_TEX_1D )
             {
                 TEX_VIEW_VALIDATION_ERROR( "Incorrect view type for Texture 1D Array: only Texture 1D or Texture 1D Array are allowed" );
             }
         break;
 
-        case TEXTURE_TYPE_2D:
-            if(ViewDesc.TextureType != TEXTURE_TYPE_2D )
+        case RESOURCE_DIM_TEX_2D:
+            if(ViewDesc.TextureDim != RESOURCE_DIM_TEX_2D )
             {
                 TEX_VIEW_VALIDATION_ERROR( "Incorrect texture type for Texture 2D view: only Texture 2D is allowed" );
             }
         break;
 
-        case TEXTURE_TYPE_2D_ARRAY:
-            if( ViewDesc.TextureType != TEXTURE_TYPE_2D_ARRAY && 
-                ViewDesc.TextureType != TEXTURE_TYPE_2D )
+        case RESOURCE_DIM_TEX_2D_ARRAY:
+            if( ViewDesc.TextureDim != RESOURCE_DIM_TEX_2D_ARRAY && 
+                ViewDesc.TextureDim != RESOURCE_DIM_TEX_2D )
             {
                 TEX_VIEW_VALIDATION_ERROR( "Incorrect texture type for Texture 2D Array view: only Texture 2D or Texture 2D Array are allowed" );
             }
         break;
 
-        case TEXTURE_TYPE_3D:
-            if( ViewDesc.TextureType != TEXTURE_TYPE_3D )
+        case RESOURCE_DIM_TEX_3D:
+            if( ViewDesc.TextureDim != RESOURCE_DIM_TEX_3D )
             {
                 TEX_VIEW_VALIDATION_ERROR( "Incorrect texture type for Texture 3D view: only Texture 3D is allowed" );
+            }
+        break;
+
+        case RESOURCE_DIM_TEX_CUBE:
+            if(ViewDesc.ViewType == TEXTURE_VIEW_SHADER_RESOURCE)
+            {
+                if(ViewDesc.TextureDim != RESOURCE_DIM_TEX_2D &&
+                   ViewDesc.TextureDim != RESOURCE_DIM_TEX_2D_ARRAY && 
+                   ViewDesc.TextureDim != RESOURCE_DIM_TEX_CUBE)
+                {
+                    TEX_VIEW_VALIDATION_ERROR( "Incorrect texture type for Texture cube SRV: Texture 2D, Texture 2D array or Texture Cube is allowed" );
+                }
+            }
+            else
+            {
+                if(ViewDesc.TextureDim != RESOURCE_DIM_TEX_2D &&
+                   ViewDesc.TextureDim != RESOURCE_DIM_TEX_2D_ARRAY)
+                {
+                    TEX_VIEW_VALIDATION_ERROR( "Incorrect texture type for Texture cube non-shader resource view: Texture 2D or Texture 2D array is allowed" );
+                }
+            }
+        break;
+
+        case RESOURCE_DIM_TEX_CUBE_ARRAY:
+            if(ViewDesc.ViewType == TEXTURE_VIEW_SHADER_RESOURCE)
+            {
+                if(ViewDesc.TextureDim != RESOURCE_DIM_TEX_2D &&
+                   ViewDesc.TextureDim != RESOURCE_DIM_TEX_2D_ARRAY && 
+                   ViewDesc.TextureDim != RESOURCE_DIM_TEX_CUBE && 
+                   ViewDesc.TextureDim != RESOURCE_DIM_TEX_CUBE_ARRAY)
+                {
+                    TEX_VIEW_VALIDATION_ERROR( "Incorrect texture type for Texture cube array SRV: Texture 2D, Texture 2D array, Texture Cube or Texture Cube Array is allowed" );
+                }
+            }
+            else
+            {
+                if(ViewDesc.TextureDim != RESOURCE_DIM_TEX_2D &&
+                   ViewDesc.TextureDim != RESOURCE_DIM_TEX_2D_ARRAY)
+                {
+                    TEX_VIEW_VALIDATION_ERROR( "Incorrect texture type for Texture cube array non-shader resource view: Texture 2D or Texture 2D array is allowed" );
+                }
             }
         break;
 
@@ -264,18 +363,49 @@ void TextureBase<BaseInterface, TTextureViewImpl> :: CorrectTextureViewDesc(stru
         break;
     }
 
-    if( ViewDesc.TextureType == TEXTURE_TYPE_1D_ARRAY || 
-        ViewDesc.TextureType == TEXTURE_TYPE_2D_ARRAY )
+    if ( ViewDesc.TextureDim == RESOURCE_DIM_TEX_CUBE )
+    {
+        VERIFY(ViewDesc.ViewType == TEXTURE_VIEW_SHADER_RESOURCE, "Unexpected view type: SRV is expected");
+        if(ViewDesc.NumArraySlices != 6 && ViewDesc.NumArraySlices != 0)
+            TEX_VIEW_VALIDATION_ERROR( "Texture cube SRV is expected to have 6 array slices, while ", ViewDesc.NumArraySlices, " is provided" );
+        if(ViewDesc.FirstArraySlice != 0)
+            TEX_VIEW_VALIDATION_ERROR( "First slice (", ViewDesc.FirstArraySlice, ") must be 0 for non-array texture cube SRV" );
+    }
+    if ( ViewDesc.TextureDim == RESOURCE_DIM_TEX_CUBE_ARRAY )
+    {
+        VERIFY(ViewDesc.ViewType == TEXTURE_VIEW_SHADER_RESOURCE, "Unexpected view type: SRV is expected");
+        if((ViewDesc.NumArraySlices % 6) != 0)
+            TEX_VIEW_VALIDATION_ERROR( "Number of slices in texture cube array SRV is expected to be multiple of 6. ", ViewDesc.NumArraySlices, " slices provided." );
+    }
+
+    if (ViewDesc.TextureDim == RESOURCE_DIM_TEX_1D ||
+        ViewDesc.TextureDim == RESOURCE_DIM_TEX_2D)
+    {
+        if(ViewDesc.FirstArraySlice != 0)
+            TEX_VIEW_VALIDATION_ERROR( "First slice (", ViewDesc.FirstArraySlice, ") must be 0 for non-array texture 1D/2D views" );
+
+        if(ViewDesc.NumArraySlices > 1)
+            TEX_VIEW_VALIDATION_ERROR( "Number of slices in the view (", ViewDesc.NumArraySlices, ") must be 1 (or 0) for non-array texture 1D/2D views" );
+    }
+    else if( ViewDesc.TextureDim == RESOURCE_DIM_TEX_1D_ARRAY || 
+             ViewDesc.TextureDim == RESOURCE_DIM_TEX_2D_ARRAY || 
+             ViewDesc.TextureDim == RESOURCE_DIM_TEX_CUBE     || 
+             ViewDesc.TextureDim == RESOURCE_DIM_TEX_CUBE_ARRAY )
     {
         if( ViewDesc.FirstArraySlice + ViewDesc.NumArraySlices > this->m_Desc.ArraySize )
             TEX_VIEW_VALIDATION_ERROR( "First slice (", ViewDesc.FirstArraySlice, ") and number of slices in the view (", ViewDesc.NumArraySlices, ") specify more slices than target texture has (", this->m_Desc.ArraySize, ")" );
     }
-    else if( ViewDesc.TextureType == TEXTURE_TYPE_3D )
+    else if( ViewDesc.TextureDim == RESOURCE_DIM_TEX_3D )
     {
         auto MipDepth = this->m_Desc.Depth >> ViewDesc.MostDetailedMip;
         if( ViewDesc.FirstDepthSlice + ViewDesc.NumDepthSlices > MipDepth )
             TEX_VIEW_VALIDATION_ERROR( "First slice (", ViewDesc.FirstDepthSlice, ") and number of slices in the view (", ViewDesc.NumDepthSlices, ") specify more slices than target 3D texture mip level has (", MipDepth, ")" );
     }
+    else
+    {
+        UNEXPECTED("Unexpected texture dimension")
+    }
+
 #undef TEX_VIEW_VALIDATION_ERROR
 
     if( ViewDesc.NumMipLevels == 0 )
@@ -288,10 +418,12 @@ void TextureBase<BaseInterface, TTextureViewImpl> :: CorrectTextureViewDesc(stru
         
     if( ViewDesc.NumArraySlices == 0 )
     {
-        if( ViewDesc.TextureType == TEXTURE_TYPE_1D_ARRAY || 
-            ViewDesc.TextureType == TEXTURE_TYPE_2D_ARRAY )
+        if( ViewDesc.TextureDim == RESOURCE_DIM_TEX_1D_ARRAY || 
+            ViewDesc.TextureDim == RESOURCE_DIM_TEX_2D_ARRAY || 
+            ViewDesc.TextureDim == RESOURCE_DIM_TEX_CUBE     || 
+            ViewDesc.TextureDim == RESOURCE_DIM_TEX_CUBE_ARRAY )
             ViewDesc.NumArraySlices = this->m_Desc.ArraySize - ViewDesc.FirstArraySlice;
-        else if( ViewDesc.TextureType == TEXTURE_TYPE_3D )
+        else if( ViewDesc.TextureDim == RESOURCE_DIM_TEX_3D )
         {
             auto MipDepth = this->m_Desc.Depth >> ViewDesc.MostDetailedMip;
             ViewDesc.NumDepthSlices = MipDepth - ViewDesc.FirstDepthSlice;
@@ -311,8 +443,8 @@ void TextureBase<BaseInterface, TTextureViewImpl> :: CorrectTextureViewDesc(stru
     }
 }
 
-template<class BaseInterface, class TTextureViewImpl>
-void TextureBase<BaseInterface, TTextureViewImpl> :: CreateDefaultViews()
+template<class BaseInterface, class TTextureViewImpl, class TTexObjAllocator, class TTexViewObjAllocator>
+void TextureBase<BaseInterface, TTextureViewImpl, TTexObjAllocator, TTexViewObjAllocator> :: CreateDefaultViews()
 {
     if(this->m_Desc.BindFlags & BIND_SHADER_RESOURCE )
     {
@@ -357,14 +489,14 @@ void TextureBase<BaseInterface, TTextureViewImpl> :: CreateDefaultViews()
 }
 
 
-template<class BaseInterface, class TTextureViewImpl>
-void TextureBase<BaseInterface, TTextureViewImpl> :: UpdateData( IDeviceContext *pContext, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData )
+template<class BaseInterface, class TTextureViewImpl, class TTexObjAllocator, class TTexViewObjAllocator>
+void TextureBase<BaseInterface, TTextureViewImpl, TTexObjAllocator, TTexViewObjAllocator> :: UpdateData( IDeviceContext *pContext, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData )
 {
     ValidateUpdateDataParams( this->m_Desc, MipLevel, Slice, DstBox, SubresData );
 }
 
-template<class BaseInterface, class TTextureViewImpl>
-void TextureBase<BaseInterface, TTextureViewImpl> :: CopyData( IDeviceContext *pContext,
+template<class BaseInterface, class TTextureViewImpl, class TTexObjAllocator, class TTexViewObjAllocator>
+void TextureBase<BaseInterface, TTextureViewImpl, TTexObjAllocator, TTexViewObjAllocator> :: CopyData( IDeviceContext *pContext,
                                                                 ITexture *pSrcTexture,
                                                                 Uint32 SrcMipLevel,
                                                                 Uint32 SrcSlice,
@@ -381,13 +513,13 @@ void TextureBase<BaseInterface, TTextureViewImpl> :: CopyData( IDeviceContext *p
                                    this->GetDesc(), DstMipLevel, DstSlice, DstX, DstY, DstZ );
 }
 
-template<class BaseInterface, class TTextureViewImpl>
-void TextureBase<BaseInterface, TTextureViewImpl> :: Map( IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid &pMappedData )
+template<class BaseInterface, class TTextureViewImpl, class TTexObjAllocator, class TTexViewObjAllocator>
+void TextureBase<BaseInterface, TTextureViewImpl, TTexObjAllocator, TTexViewObjAllocator> :: Map( IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid &pMappedData )
 {
 }
 
-template<class BaseInterface, class TTextureViewImpl>
-void TextureBase<BaseInterface, TTextureViewImpl> :: Unmap( IDeviceContext *pContext )
+template<class BaseInterface, class TTextureViewImpl, class TTexObjAllocator, class TTexViewObjAllocator>
+void TextureBase<BaseInterface, TTextureViewImpl, TTexObjAllocator, TTexViewObjAllocator> :: Unmap( IDeviceContext *pContext, MAP_TYPE MapType )
 {
 }
 

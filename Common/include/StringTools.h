@@ -1,4 +1,4 @@
-/*     Copyright 2015 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@
 #include <string>
 #include <sstream>
 #include <locale>
+#include "DebugUtilities.h"
 
 namespace Diligent
 {
@@ -70,6 +71,30 @@ inline int StrCmpNoCase(const char* Str1, const char* Str2)
 #endif
 
     return _stricmp( Str1, Str2 );
+}
+
+// Returns true if RefStr == Str + Suff
+inline bool StrCmpSuff(const char *RefStr, const char *Str, const char *Suff)
+{
+    VERIFY_EXPR(RefStr != nullptr && Str!= nullptr && Suff != nullptr);
+    if(RefStr==nullptr)
+        return false;
+
+    const auto *r = RefStr;
+    const auto *s = Str;
+    for(; *r!=0 && *s!=0; ++r, ++s)
+    {
+        if (*r != *s)
+            return false;
+    }
+
+    if( *s != 0 )
+    {
+        VERIFY_EXPR(*r == 0);
+        return false;
+    }
+
+    return strcmp(r, Suff) == 0;
 }
 
 }
