@@ -246,6 +246,15 @@ public:
     ///         be assigned to a constant buffer variable.
     virtual void Set(IDeviceObject *pObject) = 0;
 
+    /// Sets the variable array
+
+    /// \param [in] ppObjects - pointer to the array of objects
+    /// \param [in] FirstElement - first array element to set
+    /// \param [in] NumElements - number of objects in ppObjects array
+    ///
+    /// \remark The method performs run-time correctness checks.
+    ///         For instance, shader resource view cannot
+    ///         be assigned to a constant buffer variable.
     virtual void SetArray(IDeviceObject* const* ppObjects, Uint32 FirstElement, Uint32 NumElements) = 0;
 };
 

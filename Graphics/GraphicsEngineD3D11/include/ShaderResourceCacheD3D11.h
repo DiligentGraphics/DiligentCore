@@ -154,6 +154,45 @@ public:
         SetD3D11ResourceInternal<CachedSampler>(Slot, GetSamplerCount(), &ShaderResourceCacheD3D11::GetSamplerArrays, pSampler, pd3d11Sampler);
     }
 
+
+
+    __forceinline CachedCB& GetCB(Uint32 Slot)
+    {
+        VERIFY(Slot < GetCBCount(), "CB slot is out of range" );
+        ShaderResourceCacheD3D11::CachedCB *CBs;
+        ID3D11Buffer **pd3d11CBs;
+        GetCBArrays(CBs, pd3d11CBs);
+        return CBs[Slot];
+    }
+
+    __forceinline CachedResource& GetSRV(Uint32 Slot)
+    {
+        VERIFY(Slot < GetSRVCount(), "SRV slot is out of range" );
+        ShaderResourceCacheD3D11::CachedResource *SRVResources;
+        ID3D11ShaderResourceView **pd3d11SRVs;
+        GetSRVArrays(SRVResources, pd3d11SRVs);
+        return SRVResources[Slot];
+    }
+
+    __forceinline CachedResource& GetUAV(Uint32 Slot)
+    {
+        VERIFY(Slot < GetUAVCount(), "UAV slot is out of range" );
+        ShaderResourceCacheD3D11::CachedResource *UAVResources;
+        ID3D11UnorderedAccessView **pd3d11UAVs;
+        GetUAVArrays(UAVResources, pd3d11UAVs);
+        return UAVResources[Slot];
+    }
+    
+    __forceinline CachedSampler& GetSampler(Uint32 Slot)
+    {
+        VERIFY(Slot < GetSamplerCount(), "Sampler slot is out of range" );
+        ShaderResourceCacheD3D11::CachedSampler *Samplers;
+        ID3D11SamplerState **pd3d11Samplers;
+        GetSamplerArrays(Samplers, pd3d11Samplers);
+        return Samplers[Slot];
+    }
+
+
     __forceinline bool IsCBBound(Uint32 Slot)const
     {
         CachedCB* CBs = nullptr;

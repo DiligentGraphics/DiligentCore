@@ -480,7 +480,7 @@ void ShaderResourceLayoutD3D12::SRV_CBV_UAV::CacheResourceView(IDeviceObject *pV
         if( Attribs.GetVariableType() != SHADER_VARIABLE_TYPE_DYNAMIC && DstRes.pObject != nullptr && DstRes.pObject != pViewD3D12)
         {
             auto VarTypeStr = GetShaderVariableTypeLiteralName(Attribs.GetVariableType());
-            LOG_ERROR_MESSAGE( "Non-null resource is already bound to ", VarTypeStr, " shader variable \"", Attribs.GetPrintName(ArrayIndex), "\" in shader \"", m_ParentResLayout.GetShaderName(), "\". Attempting to bind another resource is an error and may cause unpredicted behavior. Use another shader resource binding instance or mark shader variable as dynamic." );
+            LOG_ERROR_MESSAGE( "Non-null resource is already bound to ", VarTypeStr, " shader variable \"", Attribs.GetPrintName(ArrayIndex), "\" in shader \"", m_ParentResLayout.GetShaderName(), "\". Attempting to bind another resource or null is an error and may cause unpredicted behavior. Use another shader resource binding instance or mark shader variable as dynamic." );
         }
 
         DstRes.Type = GetResType();
@@ -907,7 +907,7 @@ void ShaderResourceLayoutD3D12::dbgVerifyBindings()const
                         if( auto *pTexView = ValidatedCast<const ITextureView>(CachedRes.pObject.RawPtr()) )
                         {
                             auto *pSampler = const_cast<ITextureView*>(pTexView)->GetSampler();
-                            if (CachedSampler.pObject != pSampler)
+                            if (pSampler != nullptr && CachedSampler.pObject != pSampler)
                                 LOG_ERROR_MESSAGE( "All elements of texture array \"", res.Attribs.Name, "\" in shader \"", GetShaderName(), "\" share the same sampler. However, the sampler set in view for element ", ArrInd, " does not match bound sampler. This may cause incorrect behavior on GL platform."  )
                         }
                     }
