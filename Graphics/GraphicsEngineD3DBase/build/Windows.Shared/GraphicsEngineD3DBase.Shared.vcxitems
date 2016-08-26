@@ -30,7 +30,7 @@
   <ItemGroup>
     <CustomBuild Include="$(MSBuildThisFileDirectory)..\..\include\HLSLDefinitions.fxh">
       <FileType>Document</FileType>
-      <Command>$(EngineRoot)\Utilities\File2Include\File2String.exe %(FullPath) $(ProjectRoot)\include\%(Filename)_inc.fxh</Command>
+      <Command>"$(EngineRoot)\Utilities\File2Include\File2String.exe" "%(FullPath)" "$(ProjectRoot)\include\%(Filename)_inc.fxh"</Command>
       <Outputs>$(ProjectRoot)\include\%(Filename)_inc.h</Outputs>
       <Message>Processing HLSLDefinitions.fxh...</Message>
     </CustomBuild>

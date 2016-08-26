@@ -347,21 +347,21 @@
     <ClInclude Include="..\..\include\GLObjectWrapper.h" />
     <ClInclude Include="..\..\include\GLProgram.h" />
     <CustomBuild Include="..\..\include\GLSLDefinitions.h">
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(EngineRoot)\Utilities\File2Include\File2String.exe %(FullPath) $(ProjectRoot)\include\%(Filename)_inc.h</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">"$(EngineRoot)\Utilities\File2Include\File2String.exe" "%(FullPath)" "$(ProjectRoot)\include\%(Filename)_inc.h"</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ProjectRoot)\include\%(Filename)_inc.h</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(EngineRoot)\Utilities\File2Include\File2String.exe %(FullPath) $(ProjectRoot)\include\%(Filename)_inc.h</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">"$(EngineRoot)\Utilities\File2Include\File2String.exe" "%(FullPath)" "$(ProjectRoot)\include\%(Filename)_inc.h"</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ProjectRoot)\include\%(Filename)_inc.h</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='DbgDLL|Win32'">$(EngineRoot)\Utilities\File2Include\File2String.exe %(FullPath) $(ProjectRoot)\include\%(Filename)_inc.h</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='DbgDLL|Win32'">"$(EngineRoot)\Utilities\File2Include\File2String.exe" "%(FullPath)" "$(ProjectRoot)\include\%(Filename)_inc.h"</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='DbgDLL|Win32'">$(ProjectRoot)\include\%(Filename)_inc.h</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='RelDLL|Win32'">$(EngineRoot)\Utilities\File2Include\File2String.exe %(FullPath) $(ProjectRoot)\include\%(Filename)_inc.h</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='RelDLL|Win32'">"$(EngineRoot)\Utilities\File2Include\File2String.exe" "%(FullPath)" "$(ProjectRoot)\include\%(Filename)_inc.h"</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='RelDLL|Win32'">$(ProjectRoot)\include\%(Filename)_inc.h</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(EngineRoot)\Utilities\File2Include\File2String.exe %(FullPath) $(ProjectRoot)\include\%(Filename)_inc.h</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"$(EngineRoot)\Utilities\File2Include\File2String.exe" "%(FullPath)" "$(ProjectRoot)\include\%(Filename)_inc.h"</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectRoot)\include\%(Filename)_inc.h</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(EngineRoot)\Utilities\File2Include\File2String.exe %(FullPath) $(ProjectRoot)\include\%(Filename)_inc.h</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(EngineRoot)\Utilities\File2Include\File2String.exe" "%(FullPath)" "$(ProjectRoot)\include\%(Filename)_inc.h"</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectRoot)\include\%(Filename)_inc.h</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='DbgDLL|x64'">$(EngineRoot)\Utilities\File2Include\File2String.exe %(FullPath) $(ProjectRoot)\include\%(Filename)_inc.h</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='DbgDLL|x64'">"$(EngineRoot)\Utilities\File2Include\File2String.exe" "%(FullPath)" "$(ProjectRoot)\include\%(Filename)_inc.h"</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='DbgDLL|x64'">$(ProjectRoot)\include\%(Filename)_inc.h</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='RelDLL|x64'">$(EngineRoot)\Utilities\File2Include\File2String.exe %(FullPath) $(ProjectRoot)\include\%(Filename)_inc.h</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='RelDLL|x64'">"$(EngineRoot)\Utilities\File2Include\File2String.exe" "%(FullPath)" "$(ProjectRoot)\include\%(Filename)_inc.h"</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='RelDLL|x64'">$(ProjectRoot)\include\%(Filename)_inc.h</Outputs>
     </CustomBuild>
     <ClInclude Include="..\..\include\GLProgramResources.h" />
