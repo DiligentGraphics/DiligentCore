@@ -1,4 +1,4 @@
-/*     Copyright 2015-2016 Egor Yusov
+/*     Copyright 2015-2017 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -83,8 +83,6 @@ public:
 
 	// Submit the command buffer and reset it.  This is encouraged to keep the GPU busy and reduce latency.
 	// Taking too long to build command lists and submit them can idle the GPU.
-	// Returns a fence value to verify completion.  (Use it with the CommandListManager.)
-
 	ID3D12GraphicsCommandList* Close(ID3D12CommandAllocator **ppAllocator);
 	void Reset( CommandListManager& CmdListManager );
 

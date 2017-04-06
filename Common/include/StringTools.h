@@ -1,4 +1,4 @@
-/*     Copyright 2015-2016 Egor Yusov
+/*     Copyright 2015-2017 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -41,6 +41,16 @@ inline std::string NarrowString(const std::wstring &WideStr)
          NarrowStr.push_back( ctfacet.narrow( *CurrWChar, 0 ) );
          
 	return NarrowStr;
+}
+
+inline std::wstring WidenString(const char *Str)
+{
+	std::wstring WideStr;
+    const std::ctype<wchar_t>& ctfacet = std::use_facet< std::ctype<wchar_t> >( std::wstringstream().getloc() ) ;
+    for( auto CurrChar = Str; *CurrChar != 0; ++CurrChar )
+         WideStr.push_back( ctfacet.widen( *CurrChar ) );
+         
+	return WideStr;
 }
 
 inline std::wstring WidenString(const std::string &Str)

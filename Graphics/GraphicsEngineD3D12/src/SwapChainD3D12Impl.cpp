@@ -1,4 +1,4 @@
-/*     Copyright 2015-2016 Egor Yusov
+/*     Copyright 2015-2017 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -125,6 +125,9 @@ void SwapChainD3D12Impl::InitBuffersAndViews()
         if(FAILED(hr))
             LOG_ERROR_AND_THROW("Failed to get back buffer ", backbuff," from the swap chain");
 
+        hr = pBackBuffer->SetName(L"Main back buffer");
+        VERIFY_EXPR(SUCCEEDED(hr));
+
         TextureDesc BackBufferDesc;
         BackBufferDesc.Format = m_SwapChainDesc.ColorBufferFormat;
         String Name = "Main back buffer ";
@@ -152,7 +155,7 @@ void SwapChainD3D12Impl::InitBuffersAndViews()
     DepthBufferDesc.ClearValue.Format = DepthBufferDesc.Format;
     DepthBufferDesc.ClearValue.DepthStencil.Depth = m_SwapChainDesc.DefaultDepthValue;
     DepthBufferDesc.ClearValue.DepthStencil.Stencil = m_SwapChainDesc.DefaultStencilValue;
-    String Name = "Main depth buffer";
+    DepthBufferDesc.Name = "Main depth buffer";
     RefCntAutoPtr<ITexture> pDepthBufferTex;
     m_pRenderDevice->CreateTexture(DepthBufferDesc, TextureData(), static_cast<ITexture**>(&pDepthBufferTex) );
     m_pDepthBufferDSV = pDepthBufferTex->GetDefaultView(TEXTURE_VIEW_DEPTH_STENCIL);

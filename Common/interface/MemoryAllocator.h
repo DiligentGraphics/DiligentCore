@@ -1,4 +1,4 @@
-/*     Copyright 2015-2016 Egor Yusov
+/*     Copyright 2015-2017 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ class IMemoryAllocator
 {
 public:
     /// Allocates block of memory
-    virtual void* Allocate( size_t Size, const Char* dbgDescription, const char* dbgFileName, const  Int32 dbgLineNumber) = 0;
+    virtual void* Allocate( size_t Size, const Char* dbgDescription, const char* dbgFileName, const Int32 dbgLineNumber) = 0;
 
     /// Releases memory
     virtual void Free(void *Ptr) = 0;

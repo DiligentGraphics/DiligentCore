@@ -18,8 +18,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\BasicShaderSourceStreamFactory.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\FreeBlockListManager.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\FreeBlockListManagerGPU.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\VariableSizeAllocationsManager.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\VariableSizeGPUAllocationsManager.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\GraphicsUtilities.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\pch.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\RingBuffer.h" />

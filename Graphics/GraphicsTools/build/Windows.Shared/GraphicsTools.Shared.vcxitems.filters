@@ -24,10 +24,10 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\RingBuffer.h">
       <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\FreeBlockListManager.h">
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\VariableSizeAllocationsManager.h">
       <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\FreeBlockListManagerGPU.h">
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\VariableSizeGPUAllocationsManager.h">
       <Filter>include</Filter>
     </ClInclude>
   </ItemGroup>

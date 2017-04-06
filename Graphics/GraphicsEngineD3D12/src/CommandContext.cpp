@@ -1,4 +1,4 @@
-/*     Copyright 2015-2016 Egor Yusov
+/*     Copyright 2015-2017 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -243,7 +243,7 @@ void CommandContext::TransitionResource(D3D12ResourceBase& Resource, IDeviceObje
 	D3D12_RESOURCE_STATES OldState = Resource.GetState();
 
     // Check if required state is already set
-	if ( (OldState & NewState) != NewState )
+	if ( (OldState & NewState) != NewState || NewState == 0 && OldState != 0 )
 	{
         // If both old state and new state are read-only states, combine the two
         if( (OldState & D3D12_RESOURCE_STATE_GENERIC_READ) == OldState &&

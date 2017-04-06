@@ -1,4 +1,4 @@
-/*     Copyright 2015-2016 Egor Yusov
+/*     Copyright 2015-2017 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -166,14 +166,19 @@ namespace Diligent
             
             // TODO: Shouldn't we transition top mip to shader resource state?
             D3D12_CPU_DESCRIPTOR_HANDLE DstDescriptorRange = DescriptorAlloc.GetCpuHandle();
-            UINT DstRangeSize = 1+NumMips;
+            const Uint32 MaxMipsHandledByCS = 4; // Max number of mip levels processed by one CS shader invocation
+            UINT DstRangeSize = 1 + MaxMipsHandledByCS;
             D3D12_CPU_DESCRIPTOR_HANDLE SrcDescriptorRanges[5] = {};
             SrcDescriptorRanges[0] = SRVDescriptorHandle;
             UINT SrcRangeSizes[5] = {1,1,1,1,1};
-            for(Uint32 u=0; u < NumMips; ++u)
-                SrcDescriptorRanges[1+u] = pTexD3D12->GetUAVDescriptorHandle(TopMip+u+1, 0);
+            // On Resource Binding Tier 2 hardware, all descriptor tables of type CBV and UAV declared in the set 
+            // Root Signature must be populated and initialized, even if the shaders do not need the descriptor.
+            // So we must populate all 4 slots even though we may actually process less than 4 mip levels
+            // Copy top mip level UAV descriptor handle to all unused slots
+            for(Uint32 u=0; u < MaxMipsHandledByCS; ++u)
+                SrcDescriptorRanges[1+u] = pTexD3D12->GetUAVDescriptorHandle( std::min( TopMip+u+1, TexDesc.MipLevels-1), 0);
 
-            pd3d12Device->CopyDescriptors(1, &DstDescriptorRange, &DstRangeSize, 1+NumMips, SrcDescriptorRanges, SrcRangeSizes, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+            pd3d12Device->CopyDescriptors(1, &DstDescriptorRange, &DstRangeSize, 1+MaxMipsHandledByCS, SrcDescriptorRanges, SrcRangeSizes, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
 		    ComputeCtx.Dispatch((DstWidth+7)/8, (DstHeight+7)/8);
 

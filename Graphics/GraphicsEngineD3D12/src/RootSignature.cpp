@@ -1,4 +1,4 @@
-/*     Copyright 2015-2016 Egor Yusov
+/*     Copyright 2015-2017 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -449,6 +449,8 @@ void RootSignature::Finalize(ID3D12Device *pd3d12Device)
     hr = pd3d12Device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), __uuidof(m_pd3d12RootSignature), reinterpret_cast<void**>( static_cast<ID3D12RootSignature**>(&m_pd3d12RootSignature)));
     CHECK_D3D_RESULT_THROW(hr, "Failed to create root signature")
 
+    //if( *m_Desc.Name != 0)
+    //    m_pd3d12RootSignature->SetName(WidenString(m_Desc.Name).c_str());
 
     bool bHasDynamicResources = m_TotalSrvCbvUavSlots[SHADER_VARIABLE_TYPE_DYNAMIC]!=0 || m_TotalSamplerSlots[SHADER_VARIABLE_TYPE_DYNAMIC]!=0;
     if(bHasDynamicResources)

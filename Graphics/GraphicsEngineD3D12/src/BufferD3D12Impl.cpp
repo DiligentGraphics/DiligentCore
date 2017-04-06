@@ -1,4 +1,4 @@
-/*     Copyright 2015-2016 Egor Yusov
+/*     Copyright 2015-2017 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@
 #include "GraphicsUtilities.h"
 #include "DXGITypeConversions.h"
 #include "EngineMemory.h"
+#include "StringTools.h"
 
 namespace Diligent
 {
@@ -108,6 +109,9 @@ BufferD3D12Impl :: BufferD3D12Impl(FixedBlockMemoryAllocator &BufferObjMemAlloca
 		    &D3D12BuffDesc, m_UsageState, nullptr, __uuidof(m_pd3d12Resource), reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&m_pd3d12Resource)) );
         if(FAILED(hr))
             LOG_ERROR_AND_THROW("Failed to create D3D12 buffer")
+
+        if( *m_Desc.Name != 0)
+            m_pd3d12Resource->SetName(WidenString(m_Desc.Name).c_str());
 
 	    if( bInitializeBuffer )
         {

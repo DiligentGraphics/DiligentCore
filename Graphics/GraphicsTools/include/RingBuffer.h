@@ -1,4 +1,4 @@
-/*     Copyright 2015-2016 Egor Yusov
+/*     Copyright 2015-2017 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -23,6 +23,10 @@
 
 #pragma once
 
+/// \file
+/// Implementation of Diligent::RingBuffer class
+
+
 #include <deque>
 #include "MemoryAllocator.h"
 #include "STDAllocator.h"
@@ -30,6 +34,7 @@
 
 namespace Diligent
 {
+    /// Implementation of a ring buffer. The class is not thread-safe.
     class RingBuffer
     {
     public:
