@@ -13,7 +13,7 @@ Core module implements key engine functionality. It provides the engine implemen
     * Added memory allocation control
 
 ## License
-Copyright 2015-2016 Egor Yusov.
+Copyright 2015-2017 Egor Yusov.
 Licensed under the [Apache License, Version 2.0](License.txt)
 
 ## Resources
