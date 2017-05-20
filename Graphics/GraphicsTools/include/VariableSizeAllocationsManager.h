@@ -298,11 +298,7 @@ namespace Diligent
                 VERIFY_EXPR(BlockIt->first >= 0 && BlockIt->first + BlockIt->second.Size <= m_MaxSize);
                 VERIFY_EXPR(BlockIt == BlockIt->second.OrderBySizeIt->second);
                 VERIFY_EXPR(BlockIt->second.Size == BlockIt->second.OrderBySizeIt->first);
-                //   PrevBlock.Offset                   BlockIt.first                     
-                //     |                                  |                            
-                // ~ ~ |<-----PrevBlock.Size----->| ~ ~ ~ |<------Size-------->| ~ ~ ~
-                //
-                VERIFY(PrevBlockIt == m_FreeBlocksByOffset.end() || BlockIt->first > PrevBlockIt->first + PrevBlockIt->second.Size, "Unmerged adjacent or overlapping blocks detected" );
+                VERIFY(PrevBlockIt == m_FreeBlocksByOffset.end() || BlockIt->first > PrevBlockIt->first + PrevBlockIt->second.Size, "Not merged adjacent or overlapping blocks detected" );
                 TotalFreeSize += BlockIt->second.Size;
 
                 PrevBlockIt = BlockIt;

@@ -1,4 +1,4 @@
-/*     Copyright 2015-2017 Egor Yusov
+/*     Copyright 2015-2016 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@
 namespace Diligent
 {
 
-// Creates a new descriptor heap and reference the entire heap
+
 DescriptorHeapAllocationManager::DescriptorHeapAllocationManager(IMemoryAllocator &Allocator, 
                                                                  RenderDeviceD3D12Impl *pDeviceD3D12Impl,
                                                                  IDescriptorAllocator *pParentAllocator,
@@ -54,8 +54,6 @@ DescriptorHeapAllocationManager::DescriptorHeapAllocationManager(IMemoryAllocato
         m_FirstGPUHandle = m_pd3d12DescriptorHeap->GetGPUDescriptorHandleForHeapStart();
 }
 
-// Uses subrange of descriptors in the existing D3D12 descriptor heap
-// that starts at offset FirstDescriptor and uses NumDescriptors descriptors
 DescriptorHeapAllocationManager::DescriptorHeapAllocationManager(IMemoryAllocator &Allocator, 
                                                                  RenderDeviceD3D12Impl *pDeviceD3D12Impl,
                                                                  IDescriptorAllocator *pParentAllocator,
@@ -92,47 +90,39 @@ DescriptorHeapAllocationManager::~DescriptorHeapAllocationManager()
 DescriptorHeapAllocation DescriptorHeapAllocationManager::Allocate(uint32_t Count)
 {
     std::lock_guard<std::mutex> LockGuard(m_AllocationMutex);
-    // Methods of VariableSizeGPUAllocationsManager class are not thread safe!
 
-    // Use variable-size GPU allocations manager to allocate the requested number of descriptors
     auto DescriptorHandleOffset = m_FreeBlockManager.Allocate(Count);
     if (DescriptorHandleOffset == VariableSizeGPUAllocationsManager::InvalidOffset)
     {
         return DescriptorHeapAllocation();
     }
 
-    // Compute the first CPU and GPU descriptor handles in the allocation by
-    // offseting the first CPU and GPU descriptor handle in the range
     auto CPUHandle = m_FirstCPUHandle;
     CPUHandle.ptr += DescriptorHandleOffset * m_DescriptorSize;
 
-    auto GPUHandle = m_FirstGPUHandle; // Will be null if the heap is not GPU-visible
+    auto GPUHandle = m_FirstGPUHandle;
     if(m_HeapDesc.Flags & D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE)
         GPUHandle.ptr += DescriptorHandleOffset * m_DescriptorSize;
 
-    VERIFY(m_ThisManagerId < std::numeric_limits<Uint16>::max(), "ManagerID exceeds 16-bit range");
-	return DescriptorHeapAllocation( m_pParentAllocator, m_pd3d12DescriptorHeap, CPUHandle, GPUHandle, Count, static_cast<Uint16>(m_ThisManagerId));
+    VERIFY(m_ThisManagerId < std::numeric_limits<Uint16>::max(), "ManagerID exceed allowed limit");
+	DescriptorHeapAllocation Allocation( m_pParentAllocator, m_pd3d12DescriptorHeap, CPUHandle, GPUHandle, Count, static_cast<Uint16>(m_ThisManagerId));
+
+	return Allocation;
 }
 
 void DescriptorHeapAllocationManager::Free(DescriptorHeapAllocation&& Allocation)
 {
     std::lock_guard<std::mutex> LockGuard(m_AllocationMutex);
-    // Methods of VariableSizeGPUAllocationsManager class are not thread safe!
 
     VERIFY(Allocation.GetAllocationManagerId() == m_ThisManagerId, "Invalid descriptor heap manager Id")
 
     auto DescriptorOffset = (Allocation.GetCpuHandle().ptr - m_FirstCPUHandle.ptr) / m_DescriptorSize;
-    // Note that the allocation is not released immediately, but added to the release queue in the allocations manager
     m_FreeBlockManager.Free(DescriptorOffset, Allocation.GetNumHandles(), m_pDeviceD3D12Impl->GetCurrentFrame());
-    // Clear the allocation
     Allocation = DescriptorHeapAllocation();
 }
 
 void DescriptorHeapAllocationManager::ReleaseStaleAllocations(Uint64 NumCompletedFrames)
 {
-    std::lock_guard<std::mutex> LockGuard(m_AllocationMutex);
-    // Methods of VariableSizeGPUAllocationsManager class are not thread safe!
-
     m_FreeBlockManager.ReleaseCompletedFrames(NumCompletedFrames);
 }
 
@@ -173,37 +163,21 @@ DescriptorHeapAllocation CPUDescriptorHeap::Allocate( uint32_t Count )
 {
     std::lock_guard<std::mutex> LockGuard(m_AllocationMutex);
     DescriptorHeapAllocation Allocation;
-    // Go through all descriptor heap managers that have free descriptors
     for (auto AvailableHeapIt = m_AvailableHeaps.begin(); AvailableHeapIt != m_AvailableHeaps.end(); ++AvailableHeapIt)
     {
-        // Try to allocate descriptor using the current descriptor heap manager
         Allocation = m_HeapPool[*AvailableHeapIt].Allocate(Count);
-        // Remove the manager from the pool if it has no more available descriptors
         if(m_HeapPool[*AvailableHeapIt].GetNumAvailableDescriptors() == 0)
             m_AvailableHeaps.erase(*AvailableHeapIt);
 
-        // Terminate the loop if descriptor was successfully allocated, otherwise
-        // go to the next manager
         if(Allocation.GetCpuHandle().ptr != 0)
             break;
     }
 
-    // If there were no available descriptor heap managers or no manager was able 
-    // to suffice the allocation request, create a new manager
     if(Allocation.GetCpuHandle().ptr == 0)
     {
-        // Make sure the heap is large enough to accomodate the requested number of descriptors
-        if(Count > m_HeapDesc.NumDescriptors)
-        {
-            LOG_WARNING_MESSAGE("Number of requested descriptors exceeds the descriptor heap size. Increasing the number of descriptors in the heap")
-        }
-        m_HeapDesc.NumDescriptors = std::max(m_HeapDesc.NumDescriptors, static_cast<UINT>(Count));
-        // Create a new descriptor heap manager. Note that this constructor creates a new D3D12 descriptor
-        // heap and references the entire heap. Pool index is used as manager ID
         m_HeapPool.emplace_back(m_MemAllocator, m_pDeviceD3D12Impl, this, m_HeapPool.size(), m_HeapDesc);
         auto NewHeapIt = m_AvailableHeaps.insert(m_HeapPool.size()-1);
 
-        // Use the new manager to allocate descriptor handles
         Allocation = m_HeapPool[*NewHeapIt.first].Allocate(Count);
     }
 
@@ -227,7 +201,6 @@ void CPUDescriptorHeap::ReleaseStaleAllocations(Uint64 NumCompletedFrames)
     for (size_t HeapManagerInd = 0; HeapManagerInd < m_HeapPool.size(); ++HeapManagerInd)
     {
         m_HeapPool[HeapManagerInd].ReleaseStaleAllocations(NumCompletedFrames);
-        // Return the manager to the pool of available managers if it has available descriptors
         if(m_HeapPool[HeapManagerInd].GetNumAvailableDescriptors() > 0)
             m_AvailableHeaps.insert(HeapManagerInd);
     }
@@ -268,7 +241,7 @@ GPUDescriptorHeap::~GPUDescriptorHeap()
 
 DescriptorHeapAllocation GPUDescriptorHeap::Allocate(uint32_t Count)
 {
-    std::lock_guard<std::mutex> LockGuard(m_AllocMutex);
+    std::lock_guard<std::mutex> LockGuard(m_Mutex);
     DescriptorHeapAllocation Allocation = m_HeapAllocationManager.Allocate(Count);
 
     m_CurrentSize += (Allocation.GetCpuHandle().ptr != 0) ? Count : 0;
@@ -279,7 +252,7 @@ DescriptorHeapAllocation GPUDescriptorHeap::Allocate(uint32_t Count)
 
 DescriptorHeapAllocation GPUDescriptorHeap::AllocateDynamic(uint32_t Count)
 {
-    std::lock_guard<std::mutex> LockGuard(m_DynAllocMutex);
+    std::lock_guard<std::mutex> LockGuard(m_Mutex);
     DescriptorHeapAllocation Allocation = m_DynamicAllocationsManager.Allocate(Count);
 
     m_CurrentDynamicSize += (Allocation.GetCpuHandle().ptr != 0) ? Count : 0;
@@ -293,15 +266,15 @@ void GPUDescriptorHeap::Free(DescriptorHeapAllocation&& Allocation)
     auto MgrId = Allocation.GetAllocationManagerId();
     VERIFY(MgrId == 0 || MgrId == 1, "Unexpected allocation manager ID");
 
+    std::lock_guard<std::mutex> LockGuard(m_Mutex);
+
     if(MgrId == 0)
     {
-        std::lock_guard<std::mutex> LockGuard(m_AllocMutex);
         m_CurrentSize -= static_cast<Uint32>(Allocation.GetNumHandles());
         m_HeapAllocationManager.Free(std::move(Allocation));
     }
     else
     {
-        std::lock_guard<std::mutex> LockGuard(m_DynAllocMutex);
         m_CurrentDynamicSize -= static_cast<Uint32>(Allocation.GetNumHandles());
         m_DynamicAllocationsManager.Free(std::move(Allocation));
     }
@@ -309,15 +282,8 @@ void GPUDescriptorHeap::Free(DescriptorHeapAllocation&& Allocation)
 
 void GPUDescriptorHeap::ReleaseStaleAllocations(Uint64 NumCompletedFrames)
 {
-    {
-        std::lock_guard<std::mutex> LockGuard(m_AllocMutex);
-        m_HeapAllocationManager.ReleaseStaleAllocations(NumCompletedFrames);
-    }
-
-    {
-        std::lock_guard<std::mutex> LockGuard(m_DynAllocMutex);
-        m_DynamicAllocationsManager.ReleaseStaleAllocations(NumCompletedFrames);
-    }
+    m_HeapAllocationManager.ReleaseStaleAllocations(NumCompletedFrames);
+    m_DynamicAllocationsManager.ReleaseStaleAllocations(NumCompletedFrames);
 }
 
 
@@ -333,20 +299,14 @@ DynamicSuballocationsManager::DynamicSuballocationsManager(IMemoryAllocator &All
 
 void DynamicSuballocationsManager::DiscardAllocations(Uint64 FrameNumber)
 {
-    // Clear the list and dispose all allocated chunks of GPU descriptor heap.
     m_Suballocations.clear();
 }
 
 DescriptorHeapAllocation DynamicSuballocationsManager::Allocate(Uint32 Count)
 {
-    // This method is intentionally lock-free as it is expected to
-    // be called through device context from single thread only
-
-    // Check if there are no chunks or the last chunk does not have enough space
     if( m_Suballocations.empty() || 
         m_CurrentSuballocationOffset + Count > m_Suballocations.back().GetNumHandles() )
     {
-        // Request a new chunk from the GPU descriptor heap
         auto SuballocationSize = std::max(m_DynamicChunkSize, Count);
         auto NewDynamicSubAllocation = m_ParentGPUHeap.AllocateDynamic(SuballocationSize);
         if (NewDynamicSubAllocation.GetCpuHandle().ptr == 0)
@@ -358,7 +318,6 @@ DescriptorHeapAllocation DynamicSuballocationsManager::Allocate(Uint32 Count)
         m_CurrentSuballocationOffset = 0;
     }
 
-    // Perform suballocation from the last chunk
     auto &CurrentSuballocation = m_Suballocations.back();
     
     auto ManagerId = CurrentSuballocation.GetAllocationManagerId();
@@ -376,7 +335,7 @@ DescriptorHeapAllocation DynamicSuballocationsManager::Allocate(Uint32 Count)
 
 void DynamicSuballocationsManager::Free(DescriptorHeapAllocation&& Allocation)
 {
-    // Do nothing. Dynamic allocations are not disposed individually, but as whole chunks at the end of the frame
+    // Do nothing
     Allocation = DescriptorHeapAllocation();
 }
 
