@@ -21,6 +21,9 @@
  *  of the possibility of such damages.
  */
 
+// Helper class that handles free memory block management to accommodate variable-size allocation requests
+// See http://diligentgraphics.com/diligent-engine/architecture/d3d12/variable-size-memory-allocations-manager/
+
 #pragma once
 
 #include <map>
@@ -298,7 +301,11 @@ namespace Diligent
                 VERIFY_EXPR(BlockIt->first >= 0 && BlockIt->first + BlockIt->second.Size <= m_MaxSize);
                 VERIFY_EXPR(BlockIt == BlockIt->second.OrderBySizeIt->second);
                 VERIFY_EXPR(BlockIt->second.Size == BlockIt->second.OrderBySizeIt->first);
-                VERIFY(PrevBlockIt == m_FreeBlocksByOffset.end() || BlockIt->first > PrevBlockIt->first + PrevBlockIt->second.Size, "Not merged adjacent or overlapping blocks detected" );
+                //   PrevBlock.Offset                   BlockIt.first                     
+                //     |                                  |                            
+                // ~ ~ |<-----PrevBlock.Size----->| ~ ~ ~ |<------Size-------->| ~ ~ ~
+                //
+                VERIFY(PrevBlockIt == m_FreeBlocksByOffset.end() || BlockIt->first > PrevBlockIt->first + PrevBlockIt->second.Size, "Unmerged adjacent or overlapping blocks detected" );
                 TotalFreeSize += BlockIt->second.Size;
 
                 PrevBlockIt = BlockIt;

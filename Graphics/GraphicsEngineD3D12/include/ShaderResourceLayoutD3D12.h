@@ -1,4 +1,4 @@
-/*     Copyright 2015-2016 Egor Yusov
+/*     Copyright 2015-2017 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@
 /// \file
 /// Declaration of Diligent::ShaderResourceLayoutD3D12 class
 
+// http://diligentgraphics.com/diligent-engine/architecture/d3d12/shader-resource-layout/
 
 // All resources are stored in a single continuous chunk of memory using the following layout:
 //
@@ -51,9 +52,9 @@
 //
 //
 //   Every SRV_CBV_UAV and Sampler structure holds a reference to D3DShaderResourceAttribs structure from ShaderResources.
-//   ShaderResourceLayoutD3D12 holds shared pointer to ShaderResources instance. Note that ShaderResources::SamplerId references
-//   a sampler in ShaderResources, while SRV_CBV_UAV::SamplerId references a sampler in ShaderResourceLayoutD3D12, and the
-//   two are not the same
+//   ShaderResourceLayoutD3D12 holds shared pointer to ShaderResourcesD3D12 instance. Note that ShaderResources::SamplerId 
+//   references a sampler in ShaderResources, while SRV_CBV_UAV::SamplerId references a sampler in ShaderResourceLayoutD3D12, 
+//   and the two are not the same
 //
 //
 //                                                      ________________SamplerId____________________
@@ -77,18 +78,27 @@
 //   |                          |                 |                                                                        |                   
 //   | ShaderResourceCacheD3D12 |---------------->|                                   Resources                            | 
 //   |__________________________|                 |________________________________________________________________________|                   
-//                                                    
+//
+//   http://diligentgraphics.com/diligent-engine/architecture/d3d12/shader-resource-layout#Figure2
 //   Resources in the resource cache are identified by the root index and offset in the descriptor table
 //
 //                                
-//    ShaderResourceLayoutD3D12 is used by
-//      - ShaderD3D12Impl class instance to hold static resources of a shader; shader resource
-//        cache is used to store satatic resource bindings
-//      - PipelineStateD3D12Impl class instance to hold all kinds of resources. Root indices and
-//        descriptor table offsets are assigned during the initialization; no shader resource cache is used
-//      - ShaderResourceBindingD3D12Impl to hold all kind of resources; shader resource cache is assigned
+//    ShaderResourceLayoutD3D12 is used as follows:
+//    * Every pipeline state object (PipelineStateD3D12Impl) maintains shader resource layout for every active shader stage
+//      ** These resource layouts are not bound to a resource cache and are used as reference layouts for shader resource binding objects
+//      ** All variable types are preserved
+//      ** Root indices and descriptor table offsets are assigned during the initialization
+//      ** Resource cache is not assigned
+//    * Every shader object (ShaderD3D12Impl) contains shader resource layout that facilitates management of static shader resources
+//      ** The resource layout defines artificial layout and is bound to a resource cache that actually holds references to resources
+//      ** Resource cache is assigned and initialized
+//    * Every shader resource binding object (ShaderResourceBindingD3D12Impl) encompasses shader resource layout for every active shader 
+//      stage in the parent pipeline state
+//      ** Resource layouts are initialized by clonning reference layouts from the pipeline state object and are bound to the resource 
+//         cache that holds references to resources set by the application
+//      ** All shader variable types are clonned
+//      ** Resource cache is assigned, but not initialized; Initialization is performed by the root signature
 //
-
 
 // Set this define to 1 to use unordered_map to store shader variables. 
 // Note that sizeof(m_VariableHash)==128 (release mode, MS compiler, x64).
@@ -118,7 +128,7 @@ public:
     ShaderResourceLayoutD3D12(IObject &Owner, IMemoryAllocator &ResourceLayoutDataAllocator);
 
     // This constructor is used by ShaderResourceBindingD3D12Impl to clone layout from the reference layout in PipelineStateD3D12Impl. 
-    // Root indices and descriptor table offsets must be correct. Resource cache is not initialized.
+    // Root indices and descriptor table offsets must be correct. Resource cache is assigned, but not initialized.
     ShaderResourceLayoutD3D12(IObject &Owner, 
                               const ShaderResourceLayoutD3D12& SrcLayout, 
                               IMemoryAllocator &ResourceLayoutDataAllocator,
@@ -136,8 +146,9 @@ public:
     //  The method is called by
     //  - ShaderD3D12Impl class instance to initialize static resource layout and initialize shader resource cache
     //    to hold static resources
-    //  - PipelineStateD3D12Impl class instance to hold all kind of resources. Root indices and
-    //    descriptor table offsets are assigned during the initialization; no shader resource cache is provided
+    //  - PipelineStateD3D12Impl class instance to reference all types of resources (static, mutable, dynamic). 
+    //    Root indices and descriptor table offsets are assigned during the initialization; 
+    //    no shader resource cache is provided
     void Initialize(ID3D12Device *pd3d12Device,
                     const std::shared_ptr<const ShaderResourcesD3D12>& pSrcResources, 
                     IMemoryAllocator &LayoutDataAllocator,
@@ -149,10 +160,10 @@ public:
     // sizeof(SRV_CBV_UAV) == 32 (x64)
     struct SRV_CBV_UAV : ShaderVariableD3DBase<ShaderResourceLayoutD3D12>
     {
-        SRV_CBV_UAV(const SRV_CBV_UAV&) = delete;
-        SRV_CBV_UAV(SRV_CBV_UAV&&) = delete;
+        SRV_CBV_UAV(const SRV_CBV_UAV&)              = delete;
+        SRV_CBV_UAV(SRV_CBV_UAV&&)                   = delete;
         SRV_CBV_UAV& operator = (const SRV_CBV_UAV&) = delete;
-        SRV_CBV_UAV& operator = (SRV_CBV_UAV&&) = delete;
+        SRV_CBV_UAV& operator = (SRV_CBV_UAV&&)      = delete;
 
         static const Uint32 ResTypeBits = 3;
         static const Uint32 RootIndBits = 16-ResTypeBits;
@@ -170,6 +181,8 @@ public:
         
         const Uint32 OffsetFromTableStart;
 
+        // Special copy constructor. Note that sampler ID refers to the ID of the sampler
+        // within THIS layout, and may not be the same as in original layout
         SRV_CBV_UAV(ShaderResourceLayoutD3D12 &ParentLayout, const SRV_CBV_UAV &rhs, Uint32 SamId ) :
             ResType_RootIndex(rhs.ResType_RootIndex),
             SamplerId(static_cast<Uint16>(SamId)),
@@ -182,8 +195,12 @@ public:
             VERIFY(IsValidRootIndex(), "Root index must be valid" )
         }
 
-        SRV_CBV_UAV(ShaderResourceLayoutD3D12 &ParentLayout, const D3DShaderResourceAttribs &_Attribs, 
-                    CachedResourceType ResType, Uint32 RootIndex, Uint32 _OffsetFromTableStart, Uint32 _SamplerId) :
+        SRV_CBV_UAV(ShaderResourceLayoutD3D12 &ParentLayout, 
+                    const D3DShaderResourceAttribs &_Attribs, 
+                    CachedResourceType ResType, 
+                    Uint32 RootIndex, 
+                    Uint32 _OffsetFromTableStart, 
+                    Uint32 _SamplerId) :
             ResType_RootIndex( (static_cast<Uint16>(ResType) << RootIndBits) | (RootIndex & RootIndMask)),
             SamplerId( static_cast<Uint16>(_SamplerId) ),
             OffsetFromTableStart(_OffsetFromTableStart),
@@ -206,9 +223,9 @@ public:
                 BindResource(ppObjects[Elem], FirstElement+Elem, nullptr);
         }
 
-        bool IsValidSampler()const{return GetSamplerId() != InvalidSamplerId;}
-        bool IsValidRootIndex()const{return GetRootIndex() != InvalidRootIndex;}
-        bool IsValidOffset()const{return OffsetFromTableStart != InvalidOffset;}
+        bool IsValidSampler()  const{return GetSamplerId()       != InvalidSamplerId;}
+        bool IsValidRootIndex()const{return GetRootIndex()       != InvalidRootIndex;}
+        bool IsValidOffset()   const{return OffsetFromTableStart != InvalidOffset;   }
 
         CachedResourceType GetResType()const
         {
@@ -231,7 +248,10 @@ public:
                                         // |  Root index  |   ResType   |
         const Uint16 SamplerId;
 
-        void CacheCB(IDeviceObject *pBuffer, ShaderResourceCacheD3D12::Resource& DstRes, Uint32 ArrayInd, D3D12_CPU_DESCRIPTOR_HANDLE ShdrVisibleHeapCPUDescriptorHandle);
+        void CacheCB(IDeviceObject *pBuffer, 
+                     ShaderResourceCacheD3D12::Resource& DstRes, 
+                     Uint32 ArrayInd, 
+                     D3D12_CPU_DESCRIPTOR_HANDLE ShdrVisibleHeapCPUDescriptorHandle);
 
         template<typename TResourceViewType, 
                  typename TViewTypeEnum,
@@ -247,16 +267,16 @@ public:
     // sizeof(Sampler) == 24 (x64)
     struct Sampler
     {
-        Sampler(const Sampler&) = delete;
-        Sampler(Sampler&&) = delete;
+        Sampler(const Sampler&)              = delete;
+        Sampler(Sampler&&)                   = delete;
         Sampler& operator = (const Sampler&) = delete;
-        Sampler& operator = (Sampler&&) = delete;
+        Sampler& operator = (Sampler&&)      = delete;
 
         const D3DShaderResourceAttribs &Attribs;
         ShaderResourceLayoutD3D12 &m_ParentResLayout;
 
         static const Uint32 InvalidRootIndex = static_cast<Uint32>(-1);
-        static const Uint32 InvalidOffset = static_cast<Uint32>(-1);
+        static const Uint32 InvalidOffset    = static_cast<Uint32>(-1);
 
         const Uint32 RootIndex;
         const Uint32 OffsetFromTableStart;
@@ -282,8 +302,8 @@ public:
             VERIFY(IsValidOffset(), "Offset must be valid" )
         }
 
-        bool IsValidRootIndex()const{return RootIndex != InvalidRootIndex;}
-        bool IsValidOffset()const{return OffsetFromTableStart != InvalidOffset;}
+        bool IsValidRootIndex()const{return RootIndex            != InvalidRootIndex;}
+        bool IsValidOffset()   const{return OffsetFromTableStart != InvalidOffset;   }
 
         void CacheSampler(class ITextureViewD3D12 *pTexViewD3D12, Uint32 ArrayIndex, D3D12_CPU_DESCRIPTOR_HANDLE ShdrVisibleHeapCPUDescriptorHandle);
     };
@@ -317,7 +337,7 @@ private:
     std::unique_ptr<void, STDDeleterRawMem<void> > m_ResourceBuffer;
     Sampler* m_Samplers = nullptr;
     Uint16 m_NumCbvSrvUav[SHADER_VARIABLE_TYPE_NUM_TYPES] = {0,0,0};
-    Uint16 m_NumSamplers[SHADER_VARIABLE_TYPE_NUM_TYPES] = {0,0,0};
+    Uint16 m_NumSamplers [SHADER_VARIABLE_TYPE_NUM_TYPES] = {0,0,0};
 
     Uint32 GetSrvCbvUavOffset(SHADER_VARIABLE_TYPE VarType, Uint32 r)const
     {

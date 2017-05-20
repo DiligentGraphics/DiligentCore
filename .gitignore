@@ -35,3 +35,6 @@ doc/latex
 *.obj
 Debug
 Release
+*.json
+*.db
+*.sqlite

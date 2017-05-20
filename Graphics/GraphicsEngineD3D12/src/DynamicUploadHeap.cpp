@@ -1,4 +1,4 @@
-/*     Copyright 2015-2016 Egor Yusov
+/*     Copyright 2015-2017 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -72,15 +72,22 @@ namespace Diligent
 	    m_pBuffer->SetName(L"Upload Ring Buffer");
         
         m_GpuVirtualAddress = m_pBuffer->GetGPUVirtualAddress();
-
-	    if (AllowCPUAccess)
+        
+        if (AllowCPUAccess)
         {
 	        m_pBuffer->Map(0, nullptr, &m_CpuVirtualAddress);
         }
+
+        LOG_INFO_MESSAGE("GPU ring buffer created. Size: ", MaxSize, "; GPU virtual address 0x", std::hex, m_GpuVirtualAddress)
     }
 
     void GPURingBuffer::Destroy()
     {
+        if(m_pBuffer)
+        {
+            LOG_INFO_MESSAGE("Destroying GPU ring buffer. Size: ", m_pBuffer->GetDesc().Width, "; GPU virtual address 0x", std::hex, m_GpuVirtualAddress)
+        }
+
 	    if (m_CpuVirtualAddress)
         {
 	        m_pBuffer->Unmap(0, nullptr);
@@ -106,10 +113,14 @@ namespace Diligent
 
     DynamicAllocation DynamicUploadHeap::Allocate(size_t SizeInBytes, size_t Alignment /*= DEFAULT_ALIGN*/)
     {
-        // This is very expensive! Currently other threads cannot allocate dynamic 
-        // data while frame is being finished.
+        // Every device context has its own upload heap, so there is no need to lock
 
         //std::lock_guard<std::mutex> Lock(m_Mutex);
+
+        //
+        //      Deferred contexts must not update resources or map dynamic buffers
+        //      across several frames!
+        //
 
 	    const size_t AlignmentMask = Alignment - 1;
 	    // Assert that it's a power of two.
@@ -125,14 +136,20 @@ namespace Diligent
             DynAlloc = m_RingBuffers.back().Allocate(AlignedSize);
         }
 #ifdef _DEBUG
-        DynAlloc.FrameNum = m_pDeviceD3D12->GetCurrentFrame();
+		DynAlloc.FrameNum = m_pDeviceD3D12->GetCurrentFrameNumber();
 #endif
         return DynAlloc;
     }
 
     void DynamicUploadHeap::FinishFrame(Uint64 FrameNum, Uint64 NumCompletedFrames)
     {
+        // Every device context has its own upload heap, so there is no need to lock
         //std::lock_guard<std::mutex> Lock(m_Mutex);
+
+        //
+        //      Deferred contexts must not update resources or map dynamic buffers
+        //      across several frames!
+        //
 
         size_t NumBuffsToDelete = 0;
         for(size_t Ind = 0; Ind < m_RingBuffers.size(); ++Ind)
@@ -145,7 +162,7 @@ namespace Diligent
                 ++NumBuffsToDelete;
             }
         }
-
+        
         if(NumBuffsToDelete)
             m_RingBuffers.erase(m_RingBuffers.begin(), m_RingBuffers.begin()+NumBuffsToDelete);
     }

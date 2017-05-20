@@ -1,4 +1,4 @@
-/*     Copyright 2015-2016 Egor Yusov
+/*     Copyright 2015-2017 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -142,6 +142,7 @@ namespace Diligent
         &ID3D11DeviceContext::CSSetUnorderedAccessViews
     };
 
+    // http://diligentgraphics.com/diligent-engine/architecture/d3d11/committing-shader-resources-to-the-gpu-pipeline/
     template<bool TransitionResources,
              bool CommitResources>
     void DeviceContextD3D11Impl::TransitionAndCommitShaderResources(IPipelineState *pPSO, IShaderResourceBinding *pShaderResourceBinding)

@@ -1,4 +1,4 @@
-/*     Copyright 2015-2016 Egor Yusov
+/*     Copyright 2015-2017 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -34,6 +34,7 @@ namespace Diligent
 {
     void ShaderResourceCacheD3D11::Initialize(Int32 CBCount, Int32 SRVCount, Int32 SamplerCount, Int32 UAVCount, IMemoryAllocator &MemAllocator)
     {
+        // http://diligentgraphics.com/diligent-engine/architecture/d3d11/shader-resource-cache/
         if (IsInitialized())
         {
             LOG_ERROR_MESSAGE("Resource cache is already intialized")

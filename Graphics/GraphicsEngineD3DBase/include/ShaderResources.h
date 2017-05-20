@@ -1,4 +1,4 @@
-/*     Copyright 2015-2016 Egor Yusov
+/*     Copyright 2015-2017 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@
 
 /// \file
 /// Declaration of Diligent::ShaderResources class
+/// See http://diligentgraphics.com/diligent-engine/architecture/d3d12/shader-resources/
 
 // ShaderResources class uses continuous chunk of memory to store all resources, as follows:
 //
@@ -259,6 +260,7 @@ private:
     const Uint32 PackedAttribs;
 };
 
+
 /// Diligent::ShaderResources class
 class ShaderResources
 {
@@ -266,6 +268,7 @@ public:
     ShaderResources(IMemoryAllocator &Allocator, SHADER_TYPE ShaderType);
 
     // Copies specified types of resources from another ShaderResources objects
+    // Only resources listed in AllowedVarTypes are copied
     ShaderResources(IMemoryAllocator &Allocator, 
                     const ShaderResources& SrcResources, 
                     const SHADER_VARIABLE_TYPE *AllowedVarTypes, 
@@ -299,6 +302,7 @@ public:
 
     SHADER_TYPE GetShaderType()const noexcept{return m_ShaderType;}
 
+    // Process only resources listed in AllowedVarTypes
     template<typename THandleCB,
              typename THandleTexSRV,
              typename THandleTexUAV,

@@ -1,4 +1,4 @@
-/*     Copyright 2015-2016 Egor Yusov
+/*     Copyright 2015-2017 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -53,6 +53,7 @@ public:
     virtual D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle()override{return m_DescriptorHandle.GetCpuHandle();}
    
 protected:
+    // Allocation in a CPU-only descriptor heap
     DescriptorHeapAllocation m_DescriptorHandle;
 };
 

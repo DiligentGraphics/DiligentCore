@@ -1,4 +1,4 @@
-/*     Copyright 2015-2016 Egor Yusov
+/*     Copyright 2015-2017 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -367,7 +367,7 @@ void BufferD3D12Impl::CreateCBV(D3D12_CPU_DESCRIPTOR_HANDLE CBVDescriptor)
 void BufferD3D12Impl::DbgVerifyDynamicAllocation(Uint32 ContextId)
 {
     VERIFY(m_DynamicData[ContextId].GPUAddress != 0, "Dynamic buffer must be mapped before the first use");
-    auto CurrentFrame = ValidatedCast<RenderDeviceD3D12Impl>(GetDevice())->GetCurrentFrame();
+	auto CurrentFrame = ValidatedCast<RenderDeviceD3D12Impl>(GetDevice())->GetCurrentFrameNumber();
     VERIFY(m_DynamicData[ContextId].FrameNum == CurrentFrame, "Dynamic allocation is out-of-date. Dynamic buffer must be mapped in the same frame it is used.");
     VERIFY(GetState() == D3D12_RESOURCE_STATE_GENERIC_READ, "Dynamic buffers are expected to always be in D3D12_RESOURCE_STATE_GENERIC_READ state")
 }

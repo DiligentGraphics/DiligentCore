@@ -1,4 +1,4 @@
-/*     Copyright 2015-2016 Egor Yusov
+/*     Copyright 2015-2017 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -74,7 +74,7 @@ D3D12_DESCRIPTOR_RANGE* RootSignature::RootParamsManager::Extend(Uint32 NumExtra
         pCurrDescriptorRangePtr += NumRanges;
     }
 
-    // Copy existing root view to new memory
+    // Copy existing root views to new memory
     for (Uint32 rv = 0; rv < m_NumRootViews; ++rv)
     {
         const auto &SrcView = GetRootView(rv);
@@ -236,47 +236,72 @@ void RootSignature::InitStaticSampler(SHADER_TYPE ShaderType, const String &Text
     }
 }
 
-void RootSignature::AllocateResourceSlot(SHADER_TYPE ShaderType, const D3DShaderResourceAttribs &ShaderResAttribs, D3D12_DESCRIPTOR_RANGE_TYPE RangeType, Uint32 &RootIndex, Uint32 &OffsetFromTableStart)
+// http://diligentgraphics.com/diligent-engine/architecture/d3d12/shader-resource-layout#Initializing-Shader-Resource-Layouts-and-Root-Signature-in-a-Pipeline-State-Object
+void RootSignature::AllocateResourceSlot(SHADER_TYPE ShaderType, 
+                                         const D3DShaderResourceAttribs &ShaderResAttribs, 
+                                         D3D12_DESCRIPTOR_RANGE_TYPE RangeType, 
+                                         Uint32 &RootIndex, // Output parameter
+                                         Uint32 &OffsetFromTableStart // Output parameter
+                                        )
 {
     auto ShaderInd = GetShaderTypeIndex(ShaderType);
     auto ShaderVisibility = GetShaderVisibility(ShaderType);
     if (RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_CBV && ShaderResAttribs.BindCount == 1)
     {
-        // Allocate CBV directly in the root signature
-        RootIndex = m_RootParams.GetNumRootTables() +  m_RootParams.GetNumRootViews();
+        // Allocate single CBV directly in the root signature
+
+        // Get the next available root index past all allocated tables and root views
+        RootIndex = m_RootParams.GetNumRootTables() + m_RootParams.GetNumRootViews();
         OffsetFromTableStart = 0;
 
+        // Add new root view to existing root parameters
         m_RootParams.AddRootView(D3D12_ROOT_PARAMETER_TYPE_CBV, RootIndex, ShaderResAttribs.BindPoint, ShaderVisibility, ShaderResAttribs.GetVariableType());
     }
     else
     {
-        // Use the same table for static and mutable resources. Mark table type as static (mutable is an equivalent option)
+        // Use the same table for static and mutable resources. Treat both as static
         auto RootTableType = (ShaderResAttribs.GetVariableType() == SHADER_VARIABLE_TYPE_DYNAMIC) ? SHADER_VARIABLE_TYPE_DYNAMIC : SHADER_VARIABLE_TYPE_STATIC;
         auto TableIndKey = ShaderInd * SHADER_VARIABLE_TYPE_NUM_TYPES + RootTableType;
-        auto &RootTableInd = (( RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER ) ? m_SamplerRootTablesMap : m_SrvCbvUavRootTablesMap)[ TableIndKey ];
-        if (RootTableInd == InvalidRootTableIndex)
+        // Get the table array index (this is not the root index!)
+        auto &RootTableArrayInd = (( RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER ) ? m_SamplerRootTablesMap : m_SrvCbvUavRootTablesMap)[ TableIndKey ];
+        if (RootTableArrayInd == InvalidRootTableIndex)
         {
+            // Root table has not been assigned to this combination yet
+
+            // Get the next available root index past all allocated tables and root views
             RootIndex = m_RootParams.GetNumRootTables() +  m_RootParams.GetNumRootViews();
             VERIFY_EXPR(m_RootParams.GetNumRootTables() < 255);
-            RootTableInd = static_cast<Uint8>( m_RootParams.GetNumRootTables() );
+            RootTableArrayInd = static_cast<Uint8>( m_RootParams.GetNumRootTables() );
+            // Add root table with one single-descriptor range
             m_RootParams.AddRootTable(RootIndex, ShaderVisibility, RootTableType, 1);
         }
         else
         {
-            m_RootParams.AddDescriptorRanges(RootTableInd, 1);
+            // Add a new single-descriptor range to the existing table at index RootTableArrayInd
+            m_RootParams.AddDescriptorRanges(RootTableArrayInd, 1);
         }
-
-        auto &CurrParam = m_RootParams.GetRootTable(RootTableInd);
+        
+        // Reference to either existing or just added table
+        auto &CurrParam = m_RootParams.GetRootTable(RootTableArrayInd);
         RootIndex = CurrParam.GetRootIndex();
 
         const auto& d3d12RootParam = static_cast<const D3D12_ROOT_PARAMETER&>(CurrParam);
 
         VERIFY( d3d12RootParam.ShaderVisibility == ShaderVisibility, "Shader visibility is not correct" );
         
+        // Descriptors are tightly packed, so the next descriptor offset is the
+        // current size of the table
         OffsetFromTableStart = CurrParam.GetDescriptorTableSize();
 
+        // New just added range is the last range in the descriptor table
         Uint32 NewDescriptorRangeIndex = d3d12RootParam.DescriptorTable.NumDescriptorRanges-1;
-        CurrParam.SetDescriptorRange(NewDescriptorRangeIndex, RangeType, ShaderResAttribs.BindPoint, ShaderResAttribs.BindCount, 0, OffsetFromTableStart);
+        CurrParam.SetDescriptorRange(NewDescriptorRangeIndex, 
+                                     RangeType, // Range type (CBV, SRV, UAV or SAMPLER)
+                                     ShaderResAttribs.BindPoint, // Shader register
+                                     ShaderResAttribs.BindCount, // Number of registers used (1 for non-array resources)
+                                     0, // Register space. Always 0 for now
+                                     OffsetFromTableStart // Offset in descriptors from the table start
+                                     );
     }
 }
 
@@ -465,8 +490,12 @@ void RootSignature::Finalize(ID3D12Device *pd3d12Device)
     }
 }
 
+//http://diligentgraphics.com/diligent-engine/architecture/d3d12/shader-resource-cache#Initializing-the-Cache-for-Shader-Resource-Binding-Object
 void RootSignature::InitResourceCache(RenderDeviceD3D12Impl *pDeviceD3D12Impl, ShaderResourceCacheD3D12& ResourceCache, IMemoryAllocator &CacheMemAllocator)const
 {
+    // Get root table size for every root index
+    // m_RootParams keeps root tables sorted by the array index, not the root index
+    // Root views are treated as one-descriptor tables
     std::vector<Uint32, STDAllocatorRawMem<Uint32> > CacheTableSizes(m_RootParams.GetNumRootTables() + m_RootParams.GetNumRootViews(), 0, STD_ALLOCATOR_RAW_MEM(Uint32, GetRawAllocator(), "Allocator for vector<Uint32>") );
     for(Uint32 rt = 0; rt < m_RootParams.GetNumRootTables(); ++rt)
     {
@@ -479,8 +508,10 @@ void RootSignature::InitResourceCache(RenderDeviceD3D12Impl *pDeviceD3D12Impl, S
         auto &RootParam = m_RootParams.GetRootView(rv);
         CacheTableSizes[RootParam.GetRootIndex()] = 1;
     }
+    // Initialize resource cache to hold root tables 
     ResourceCache.Initialize(CacheMemAllocator, static_cast<Uint32>(CacheTableSizes.size()), CacheTableSizes.data());
 
+    // Allocate space in GPU-visible descriptor heap for static and mutable variables only
     Uint32 TotalSrvCbvUavDescriptors =
                 m_TotalSrvCbvUavSlots[SHADER_VARIABLE_TYPE_STATIC] + 
                 m_TotalSrvCbvUavSlots[SHADER_VARIABLE_TYPE_MUTABLE];
@@ -495,6 +526,10 @@ void RootSignature::InitResourceCache(RenderDeviceD3D12Impl *pDeviceD3D12Impl, S
     if(TotalSamplerDescriptors)
         SamplerHeapSpace = pDeviceD3D12Impl->AllocateGPUDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, TotalSamplerDescriptors);
 
+    // Iterate through all root static/mutable tables and assign start offsets. The tables are tightly packed, so
+    // start offset of table N+1 is start offset of table N plus the size of table N.
+    // Root tables with dynamic resources as well as root views are not assigned space in GPU-visible allocation
+    // (root views are simply not processed)
     Uint32 SrvCbvUavTblStartOffset = 0;
     Uint32 SamplerTblStartOffset = 0;
     for(Uint32 rt = 0; rt < m_RootParams.GetNumRootTables(); ++rt)
@@ -523,18 +558,18 @@ void RootSignature::InitResourceCache(RenderDeviceD3D12Impl *pDeviceD3D12Impl, S
         {
             if( HeapType == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV )
             {
-                RootTableCache.TableStartOffset = SrvCbvUavTblStartOffset;
+                RootTableCache.m_TableStartOffset = SrvCbvUavTblStartOffset;
                 SrvCbvUavTblStartOffset += TableSize;
             }
             else
             {
-                RootTableCache.TableStartOffset = SamplerTblStartOffset;
+                RootTableCache.m_TableStartOffset = SamplerTblStartOffset;
                 SamplerTblStartOffset += TableSize;
             }
         }
         else
         {
-            VERIFY_EXPR(RootTableCache.TableStartOffset == ShaderResourceCacheD3D12::InvalidDescriptorOffset)
+            VERIFY_EXPR(RootTableCache.m_TableStartOffset == ShaderResourceCacheD3D12::InvalidDescriptorOffset)
         }
     }
 
@@ -544,7 +579,8 @@ void RootSignature::InitResourceCache(RenderDeviceD3D12Impl *pDeviceD3D12Impl, S
         auto &RootParam = m_RootParams.GetRootView(rv);
         const auto& D3D12RootParam = static_cast<const D3D12_ROOT_PARAMETER&>(RootParam);
         auto &RootTableCache = ResourceCache.GetRootTable(RootParam.GetRootIndex());
-        VERIFY_EXPR(RootTableCache.TableStartOffset == ShaderResourceCacheD3D12::InvalidDescriptorOffset)
+        // Root views are not assigned valid table start offset
+        VERIFY_EXPR(RootTableCache.m_TableStartOffset == ShaderResourceCacheD3D12::InvalidDescriptorOffset)
         
         SHADER_TYPE dbgShaderType = ShaderTypeFromShaderVisibility(D3D12RootParam.ShaderVisibility);
         VERIFY_EXPR(D3D12RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_CBV);

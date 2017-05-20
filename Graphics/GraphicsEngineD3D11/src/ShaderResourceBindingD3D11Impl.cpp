@@ -1,4 +1,4 @@
-/*     Copyright 2015-2016 Egor Yusov
+/*     Copyright 2015-2017 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -54,8 +54,6 @@ ShaderResourceBindingD3D11Impl::ShaderResourceBindingD3D11Impl( FixedBlockMemory
         auto ShaderInd = pShaderD3D11->GetShaderTypeIndex();
         VERIFY_EXPR(static_cast<Int32>(ShaderInd) == GetShaderTypeIndex(pShaderD3D11->GetDesc().ShaderType));
 
-        SHADER_VARIABLE_TYPE VarTypes[] = {SHADER_VARIABLE_TYPE_MUTABLE, SHADER_VARIABLE_TYPE_DYNAMIC};
-
         auto &ResCacheDataAllocator = pPSO->GetResourceCacheDataAllocator(s);
         auto &ResLayoutDataAllocator = pPSO->GetShaderResLayoutDataAllocators(s);
         
@@ -69,6 +67,9 @@ ShaderResourceBindingD3D11Impl::ShaderResourceBindingD3D11Impl( FixedBlockMemory
         new (m_pBoundResourceCaches+s) ShaderResourceCacheD3D11;
         m_pBoundResourceCaches[s].Initialize(CBCount, SRVCount, SamplerCount, UAVCount, ResCacheDataAllocator);
 
+        // Shader resource layout will only contain dynamic and mutable variables
+        // http://diligentgraphics.com/diligent-engine/architecture/d3d11/shader-resource-cache#Shader-Resource-Cache-Initialization
+        SHADER_VARIABLE_TYPE VarTypes[] = {SHADER_VARIABLE_TYPE_MUTABLE, SHADER_VARIABLE_TYPE_DYNAMIC};
         new (m_pResourceLayouts + s) ShaderResourceLayoutD3D11(*this, ResLayoutDataAllocator);
         m_pResourceLayouts[s].Initialize(pShaderD3D11->GetResources(), VarTypes, _countof(VarTypes), m_pBoundResourceCaches[s], ResCacheDataAllocator, ResLayoutDataAllocator);
 

@@ -21,6 +21,10 @@
  *  of the possibility of such damages.
  */
 
+
+// An GPU-tailored extension of the basic variable-size allocations manager
+// See http://diligentgraphics.com/diligent-engine/architecture/d3d12/variable-size-memory-allocations-manager/
+
 #pragma once
 
 #include <deque>
@@ -29,60 +33,74 @@
 
 namespace Diligent
 {
+    // Class extends basic variable-size memory block allocator by deferring deallocation
+    // of freed blocks untill the corresponding frame is completed
     class VariableSizeGPUAllocationsManager : public VariableSizeAllocationsManager
     {
     private:
-        struct FreedAllocationInfo
+        struct StaleAllocationAttribs
         {
             OffsetType Offset;
             OffsetType Size;
-            Uint64 FrameNumber;
-            FreedAllocationInfo(OffsetType _Offset, OffsetType _Size, Uint64 _FrameNumber) : 
-                Offset(_Offset), Size(_Size), FrameNumber(_FrameNumber)
+            Uint64 CmdListNumber;
+			StaleAllocationAttribs(OffsetType _Offset, OffsetType _Size, Uint64 _CmdListNumber) :
+                Offset(_Offset), Size(_Size), CmdListNumber(_CmdListNumber)
             {}
         };
 
     public:
         VariableSizeGPUAllocationsManager(OffsetType MaxSize, IMemoryAllocator &Allocator) : 
             VariableSizeAllocationsManager(MaxSize, Allocator),
-            m_StaleAllocations(0, FreedAllocationInfo(0,0,0), STD_ALLOCATOR_RAW_MEM(FreedAllocationInfo, Allocator, "Allocator for deque< FreedAllocationInfo>" ))
+            m_StaleAllocations(0, StaleAllocationAttribs(0,0,0), STD_ALLOCATOR_RAW_MEM(StaleAllocationAttribs, Allocator, "Allocator for deque<StaleAllocationAttribs>" ))
         {}
 
         ~VariableSizeGPUAllocationsManager()
         {
             VERIFY(m_StaleAllocations.empty(), "Not all stale allocations released");
+			VERIFY(m_StaleAllocationsSize == 0, "Not all stale allocations released")
         }
 
         // = default causes compiler error when instantiating std::vector::emplace_back() in Visual Studio 2015 (Version 14.0.23107.0 D14REL)
         VariableSizeGPUAllocationsManager(VariableSizeGPUAllocationsManager&& rhs) : 
             VariableSizeAllocationsManager(std::move(rhs)),
-            m_StaleAllocations(std::move(rhs.m_StaleAllocations))
+            m_StaleAllocations(std::move(rhs.m_StaleAllocations)),
+			m_StaleAllocationsSize(rhs.m_StaleAllocationsSize)
         {
+			rhs.m_StaleAllocationsSize = 0;
         }
 
-        VariableSizeGPUAllocationsManager& operator = (VariableSizeGPUAllocationsManager&& rhs) = default;
+		VariableSizeGPUAllocationsManager& operator = (VariableSizeGPUAllocationsManager&& rhs) = delete;
         VariableSizeGPUAllocationsManager(const VariableSizeGPUAllocationsManager&) = delete;
         VariableSizeGPUAllocationsManager& operator = (const VariableSizeGPUAllocationsManager&) = delete;
 
-        void Free(OffsetType Offset, OffsetType Size, Uint64 FrameNumber)
+        void Free(OffsetType Offset, OffsetType Size, Uint64 CmdListNumber)
         {
             // Do not release the block immediately, but add
             // it to the queue instead
-            m_StaleAllocations.emplace_back(Offset, Size, FrameNumber);
+            m_StaleAllocations.emplace_back(Offset, Size, CmdListNumber);
+			m_StaleAllocationsSize += Size;
         }
 
-        void ReleaseCompletedFrames(Uint64 NumCompletedFrames)
+		// Releases stale allocation from completed command lists
+		// The method takes the NUMBER of completed cmd lists (N)
+		// and releases all allocations whose number n < N 
+		// (n == N is NOT released)
+        void ReleaseStaleAllocations(Uint64 NumCompletedCmdLists)
         {
-            // Free all allocations from the beginning of the queue that belong to completed frames
-            while(!m_StaleAllocations.empty() && m_StaleAllocations.front().FrameNumber < NumCompletedFrames)
+            // Free all allocations from the beginning of the queue that belong to completed command lists
+            while(!m_StaleAllocations.empty() && m_StaleAllocations.front().CmdListNumber < NumCompletedCmdLists)
             {
                 auto &OldestAllocation = m_StaleAllocations.front();
                 VariableSizeAllocationsManager::Free(OldestAllocation.Offset, OldestAllocation.Size);
-                m_StaleAllocations.pop_front();
+				m_StaleAllocationsSize -= OldestAllocation.Size;
+				m_StaleAllocations.pop_front();
             }
         }
 
+		size_t GetStaleAllocationsSize()const { return m_StaleAllocationsSize; }
+
     private:
-        std::deque< FreedAllocationInfo, STDAllocatorRawMem<FreedAllocationInfo> > m_StaleAllocations;
+        std::deque< StaleAllocationAttribs, STDAllocatorRawMem<StaleAllocationAttribs> > m_StaleAllocations;
+		size_t m_StaleAllocationsSize = 0;
     };
 }

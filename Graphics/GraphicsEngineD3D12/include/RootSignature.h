@@ -1,4 +1,4 @@
-/*     Copyright 2015-2016 Egor Yusov
+/*     Copyright 2015-2017 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -272,8 +272,15 @@ private:
     };
 
     static const Uint8 InvalidRootTableIndex = static_cast<Uint8>(-1);
+    
+    // The array below contains array index of a CBV/SRV/UAV root table 
+    // in m_RootParams (NOT the Root Index!), for every variable type 
+    // (static, mutable, dynamic) and every shader type,
+    // or -1, if the table is not yet assigned to the combination
     Uint8 m_SrvCbvUavRootTablesMap[SHADER_VARIABLE_TYPE_NUM_TYPES * 6];
+    // This array contains the same data for Sampler root table
     Uint8 m_SamplerRootTablesMap[SHADER_VARIABLE_TYPE_NUM_TYPES * 6];
+
     RootParamsManager m_RootParams;
     
     struct StaticSamplerAttribs

@@ -1,4 +1,4 @@
-/*     Copyright 2015-2016 Egor Yusov
+/*     Copyright 2015-2017 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -51,6 +51,7 @@ ShaderResourceBindingD3D12Impl::ShaderResourceBindingD3D12Impl( FixedBlockMemory
         
         auto &ShaderResLayoutDataAllocator = pPSO->GetShaderResourceLayoutDataAllocator(ShaderInd);
 
+        // http://diligentgraphics.com/diligent-engine/architecture/d3d12/shader-resource-layout#Initializing-Resource-Layouts-in-a-Shader-Resource-Binding-Object
         SHADER_VARIABLE_TYPE Types[] = {SHADER_VARIABLE_TYPE_STATIC, SHADER_VARIABLE_TYPE_MUTABLE, SHADER_VARIABLE_TYPE_DYNAMIC};
         const auto &SrcLayout = pPSO->GetShaderResLayout(ShaderType);
         new (m_pResourceLayouts + s) ShaderResourceLayoutD3D12(*this, SrcLayout, ShaderResLayoutDataAllocator, Types, _countof(Types), m_ShaderResourceCache);

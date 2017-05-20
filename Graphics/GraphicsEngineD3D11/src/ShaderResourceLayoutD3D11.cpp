@@ -1,4 +1,4 @@
-/*     Copyright 2015-2016 Egor Yusov
+/*     Copyright 2015-2017 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -86,16 +86,26 @@ void ShaderResourceLayoutD3D11::Initialize(const std::shared_ptr<const ShaderRes
                                            IMemoryAllocator& ResCacheDataAllocator,
                                            IMemoryAllocator& ResLayoutDataAllocator)
 {
+    // http://diligentgraphics.com/diligent-engine/architecture/d3d11/shader-resource-layout#Shader-Resource-Layout-Initialization
+
     VERIFY(&m_ResourceBuffer.get_deleter().m_Allocator == &ResLayoutDataAllocator, "Incosistent memory alloctor");
 
     m_pResources = pSrcResources;
     m_pResourceCache = &ResourceCache;
 
+    // In release mode, MS compiler generates this false warning:
+    // Warning	C4189 'AllowedTypeBits': local variable is initialized but not referenced
+    // Most likely it somehow gets confused by the variable being eliminated during function inlining
+#pragma warning(push)
+#pragma warning(disable : 4189)
     Uint32 AllowedTypeBits = GetAllowedTypeBits(VarTypes, NumVarTypes);
+#pragma warning(pop)
 
+    // Count total number of resources of allowed types
     Uint32 NumCBs, NumTexSRVs, NumTexUAVs, NumBufSRVs, NumBufUAVs, NumSamplers;
     pSrcResources->CountResources(VarTypes, NumVarTypes, NumCBs, NumTexSRVs, NumTexUAVs, NumBufSRVs, NumBufUAVs, NumSamplers);
 
+    // Initialize offsets
     m_TexAndSamplersOffset = 0                      + static_cast<Uint16>( NumCBs     * sizeof(ConstBuffBindInfo)     );
     m_TexUAVsOffset        = m_TexAndSamplersOffset + static_cast<Uint16>( NumTexSRVs * sizeof(TexAndSamplerBindInfo) );
     m_BuffUAVsOffset       = m_TexUAVsOffset        + static_cast<Uint16>( NumTexUAVs * sizeof(TexUAVBindInfo)        );
@@ -119,67 +129,78 @@ void ShaderResourceLayoutD3D11::Initialize(const std::shared_ptr<const ShaderRes
     m_NumBufSRVs = static_cast<Uint8>(NumBufSRVs);
     m_NumBufUAVs = static_cast<Uint8>(NumBufUAVs);
 
+    // Current resource index for every resource type
     Uint32 cb = 0;
     Uint32 texSrv = 0;
     Uint32 texUav = 0;
     Uint32 bufSrv = 0;
     Uint32 bufUav = 0;
 
-    Int32 MaxCBBindPoint = -1;
-    Int32 MaxSRVBindPoint = -1;
-    Int32 MaxSamplerBindPoint = -1;
-    Int32 MaxUAVBindPoint = -1;
+    Uint32 NumCBSlots = 0;
+    Uint32 NumSRVSlots = 0;
+    Uint32 NumSamplerSlots = 0;
+    Uint32 NumUAVSlots = 0;
     pSrcResources->ProcessResources(
         VarTypes, NumVarTypes,
 
         [&](const D3DShaderResourceAttribs &CB)
         {
             VERIFY_EXPR( IsAllowedType(CB.GetVariableType(), AllowedTypeBits) );
+            // Initialize current CB in place, increment CB counter
             new (&GetCB(cb++)) ConstBuffBindInfo( CB, *this );
-            MaxCBBindPoint = std::max(MaxCBBindPoint, static_cast<Int32>(CB.BindPoint + CB.BindCount-1));
+            NumCBSlots = std::max(NumCBSlots, static_cast<Uint32>(CB.BindPoint + CB.BindCount));
         },
 
         [&](const D3DShaderResourceAttribs& TexSRV)
         {
             VERIFY_EXPR( IsAllowedType(TexSRV.GetVariableType(), AllowedTypeBits) );
-            
+            // Set reference to a special static instance representing invalid sampler            
+            // if no sampler is assigned to texture SRV           
             const D3DShaderResourceAttribs& SamplerAttribs = TexSRV.IsValidSampler() ? 
                 pSrcResources->GetSampler(TexSRV.GetSamplerId()) : TexAndSamplerBindInfo::InvalidSamplerAttribs;
+            // Initialize tex SRV in place, increment counter of tex SRVs
             new (&GetTexSRV(texSrv++)) TexAndSamplerBindInfo( TexSRV, SamplerAttribs, *this );
-            MaxSRVBindPoint = std::max(MaxSRVBindPoint, static_cast<Int32>(TexSRV.BindPoint + TexSRV.BindCount-1));
+            NumSRVSlots = std::max(NumSRVSlots, static_cast<Uint32>(TexSRV.BindPoint + TexSRV.BindCount));
             if( SamplerAttribs.IsValidBindPoint() )
-                MaxSamplerBindPoint = std::max(MaxSamplerBindPoint, static_cast<Int32>(SamplerAttribs.BindPoint + SamplerAttribs.BindCount-1));
+                NumSamplerSlots = std::max(NumSamplerSlots, static_cast<Uint32>(SamplerAttribs.BindPoint + SamplerAttribs.BindCount));
         },
 
         [&](const D3DShaderResourceAttribs &TexUAV)
         {
             VERIFY_EXPR( IsAllowedType(TexUAV.GetVariableType(), AllowedTypeBits) );
-            
+             
+            // Initialize tex UAV in place, increment counter of tex UAVs
             new (&GetTexUAV(texUav++)) TexUAVBindInfo( TexUAV, *this );
-            MaxUAVBindPoint = std::max(MaxUAVBindPoint, static_cast<Int32>(TexUAV.BindPoint + TexUAV.BindCount-1));
+            NumUAVSlots = std::max(NumUAVSlots, static_cast<Uint32>(TexUAV.BindPoint + TexUAV.BindCount));
         },
 
         [&](const D3DShaderResourceAttribs &BuffSRV)
         {
             VERIFY_EXPR(IsAllowedType(BuffSRV.GetVariableType(), AllowedTypeBits));
             
+            // Initialize buff SRV in place, increment counter of buff SRVs
             new (&GetBufSRV(bufSrv++)) BuffSRVBindInfo( BuffSRV, *this );
-            MaxSRVBindPoint = std::max(MaxSRVBindPoint, static_cast<Int32>(BuffSRV.BindPoint + BuffSRV.BindCount-1));
+            NumSRVSlots = std::max(NumSRVSlots, static_cast<Uint32>(BuffSRV.BindPoint + BuffSRV.BindCount));
         },
 
         [&](const D3DShaderResourceAttribs &BuffUAV)
         {
             VERIFY_EXPR(IsAllowedType(BuffUAV.GetVariableType(), AllowedTypeBits));
             
+            // Initialize buff UAV in place, increment counter of buff UAVs
             new (&GetBufUAV(bufUav++)) BuffUAVBindInfo( BuffUAV, *this );
-            MaxUAVBindPoint = std::max(MaxUAVBindPoint, static_cast<Int32>(BuffUAV.BindPoint + BuffUAV.BindCount-1));
+            NumUAVSlots = std::max(NumUAVSlots, static_cast<Uint32>(BuffUAV.BindPoint + BuffUAV.BindCount));
         }
     );
 
+    // Shader resource cache in the SRB is initialized by the constructor of ShaderResourceBindingD3D11Impl to
+    // hold all variable types. The corresponding layout in the SRB is initialized to keep mutable and dynamic 
+    // variables only
+    // http://diligentgraphics.com/diligent-engine/architecture/d3d11/shader-resource-cache#Shader-Resource-Cache-Initialization
     if (!m_pResourceCache->IsInitialized())
     {
         // NOTE that here we are using max bind points required to cache only the shader variables of allowed types!
-        m_pResourceCache->Initialize(MaxCBBindPoint+1, MaxSRVBindPoint+1, MaxSamplerBindPoint+1, MaxUAVBindPoint+1, ResCacheDataAllocator);
+        m_pResourceCache->Initialize(NumCBSlots, NumSRVSlots, NumSamplerSlots, NumUAVSlots, ResCacheDataAllocator);
     }
 
     VERIFY(cb == m_NumCBs, "Not all CBs are initialized, which will result in a crash when dtor is called");

@@ -1,4 +1,4 @@
-/*     Copyright 2015-2016 Egor Yusov
+/*     Copyright 2015-2017 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -72,9 +72,23 @@ void CommandListManager::RequestAllocator(ID3D12CommandAllocator** ppAllocator)
 
     if (!m_DiscardedAllocators.empty())
 	{
+        // Pick the oldest allocator at the front of the deque
+        // If this allocator is not yet available, there is no sense in
+        // looking at the rest of allocators
 		auto& AllocatorPair = m_DiscardedAllocators.front();
+        
+        // Get the NUMBER OF COMPLETED cmd lists
+        auto NumCompeltedCmdLists = m_pDeviceD3D12->GetNumCompletedCmdLists();
+        // Note that NumCompeltedCmdLists only grows. So if after we queried
+        // the value, the actual value is increased in other thread, this will not
+        // be an issue as the only consequence is that the allocator that is 
+        // potentially available may not be used.
 
-		if (m_pDeviceD3D12->IsFenceComplete(AllocatorPair.first))
+        // AllocatorPair.first is the NUMBER of the command list.
+        // If command list number is N, it can be reused when
+        // NumCompeltedCmdLists is at least N+1
+        // (To reuse allocator used to create CmdList 0, NumCompeltedCmdLists must be at least 1)
+		if ( AllocatorPair.first < NumCompeltedCmdLists )
 		{
 			*ppAllocator = AllocatorPair.second.Detach();
 			auto hr = (*ppAllocator)->Reset();
@@ -95,12 +109,13 @@ void CommandListManager::RequestAllocator(ID3D12CommandAllocator** ppAllocator)
 	}
 }
 
-void CommandListManager::DiscardAllocator( Uint64 FenceValue, ID3D12CommandAllocator* pAllocator )
+void CommandListManager::DiscardAllocator( Uint64 CmdListNum, ID3D12CommandAllocator* pAllocator )
 {
 	std::lock_guard<std::mutex> LockGuard(m_AllocatorMutex);
 
-	// That fence value indicates we are free to reset the allocator
-	m_DiscardedAllocators.emplace_back( FenceValue, CComPtr<ID3D12CommandAllocator>(pAllocator) );
+    // CmdListNum is the number of the command list that was created by this allocator.
+    // This value is used to understand when it is safe to reuse the allocator
+	m_DiscardedAllocators.emplace_back( CmdListNum, CComPtr<ID3D12CommandAllocator>(pAllocator) );
 }
 
 }

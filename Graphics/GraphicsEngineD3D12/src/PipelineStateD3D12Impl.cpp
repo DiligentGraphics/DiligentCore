@@ -1,4 +1,4 @@
-/*     Copyright 2015-2016 Egor Yusov
+/*     Copyright 2015-2017 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -282,6 +282,8 @@ ShaderResourceCacheD3D12* PipelineStateD3D12Impl::CommitAndTransitionShaderResou
     }
 #endif
 
+    // If the shaders contain no resources or static resources only, shader resource binding may be null. 
+    // In this case use special internal SRB object
     auto *pResBindingD3D12Impl = pShaderResourceBinding ? ValidatedCast<ShaderResourceBindingD3D12Impl>(pShaderResourceBinding) : m_pDefaultShaderResBinding.get();
     
 #ifdef VERIFY_SHADER_BINDINGS
@@ -295,6 +297,7 @@ ShaderResourceCacheD3D12* PipelineStateD3D12Impl::CommitAndTransitionShaderResou
     }
 #endif
 
+    // First time only, copy static shader resources to the cache
     if(!pResBindingD3D12Impl->StaticResourcesInitialized())
         pResBindingD3D12Impl->InitializeStaticResources(this);
 

@@ -1,4 +1,4 @@
-/*     Copyright 2015-2016 Egor Yusov
+/*     Copyright 2015-2017 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -507,7 +507,7 @@ namespace Diligent
     {
         if( m_pCurrCmdCtx )
         {
-            VERIFY(!m_bIsDeferred, "Deferred contexts cannot executre command lists directly");
+            VERIFY(!m_bIsDeferred, "Deferred contexts cannot execute command lists directly");
             ValidatedCast<RenderDeviceD3D12Impl>(m_pDevice.RawPtr())->CloseAndExecuteCommandContext(m_pCurrCmdCtx);
         }
 

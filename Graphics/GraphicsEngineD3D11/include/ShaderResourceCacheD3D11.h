@@ -1,4 +1,4 @@
-/*     Copyright 2015-2016 Egor Yusov
+/*     Copyright 2015-2017 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -42,6 +42,7 @@ namespace Diligent
 //    --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 //
 //
+// http://diligentgraphics.com/diligent-engine/architecture/d3d11/shader-resource-cache/
 class ShaderResourceCacheD3D11
 {
 public:

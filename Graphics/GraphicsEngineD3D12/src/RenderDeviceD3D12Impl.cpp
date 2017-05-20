@@ -1,4 +1,4 @@
-/*     Copyright 2015-2016 Egor Yusov
+/*     Copyright 2015-2017 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -41,9 +41,10 @@ RenderDeviceD3D12Impl :: RenderDeviceD3D12Impl(IMemoryAllocator &RawMemAllocator
     m_pd3d12Device(pd3d12Device),
     m_pd3d12CmdQueue(pd3d12CmdQueue),
     m_EngineAttribs(CreationAttribs),
-    m_NextFenceValue(1),
-    m_LastCompletedFenceValue(0),
-    m_FenceEventHandle( CreateEvent(nullptr, false, false, nullptr) ),
+	m_CurrentFrameNumber(0),
+    m_NextCmdList(0),
+    m_NumCompletedCmdLists(0),
+    m_WaitForGPUEventHandle( CreateEvent(nullptr, false, false, nullptr) ),
     m_CmdListManager(this),
     m_CPUDescriptorHeaps
     {
@@ -57,6 +58,11 @@ RenderDeviceD3D12Impl :: RenderDeviceD3D12Impl(IMemoryAllocator &RawMemAllocator
         {RawMemAllocator, this, CreationAttribs.GPUDescriptorHeapSize[0], CreationAttribs.GPUDescriptorHeapDynamicSize[0], D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE},
         {RawMemAllocator, this, CreationAttribs.GPUDescriptorHeapSize[1], CreationAttribs.GPUDescriptorHeapDynamicSize[1], D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER,     D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE}
     },
+	m_DynamicDescriptorAllocationChunkSize
+	{
+		CreationAttribs.DynamicDescriptorAllocationChunkSize[0], // D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
+		CreationAttribs.DynamicDescriptorAllocationChunkSize[1]  // D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER
+	},
     m_ContextPool(STD_ALLOCATOR_RAW_MEM(ContextPoolElemType, GetRawAllocator(), "Allocator for vector<unique_ptr<CommandContext>>")),
     m_AvailableContexts(STD_ALLOCATOR_RAW_MEM(CommandContext*, GetRawAllocator(), "Allocator for vector<CommandContext*>")),
     m_D3D12ObjReleaseQueue(STD_ALLOCATOR_RAW_MEM(ReleaseQueueElemType, GetRawAllocator(), "Allocator for queue<ReleaseQueueElemType>")),
@@ -68,22 +74,17 @@ RenderDeviceD3D12Impl :: RenderDeviceD3D12Impl(IMemoryAllocator &RawMemAllocator
     m_DeviceCaps.bSeparableProgramSupported = True;
     m_DeviceCaps.bMultithreadedResourceCreationSupported = True;
 
-    VERIFY_EXPR(m_FenceEventHandle != INVALID_HANDLE_VALUE);
+    VERIFY_EXPR(m_WaitForGPUEventHandle != INVALID_HANDLE_VALUE);
 
-    auto hr = pd3d12Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, __uuidof(m_pFence), reinterpret_cast<void**>(static_cast<ID3D12Fence**>(&m_pFence)));
-    VERIFY(SUCCEEDED(hr), "Failed to create fence");
-	m_pFence->SetName(L"CommandListManager::m_pFence");
-	m_pFence->Signal(m_LastCompletedFenceValue);
-
-    hr = pd3d12Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, __uuidof(m_pNumCompletedFramesFence), reinterpret_cast<void**>(static_cast<ID3D12Fence**>(&m_pNumCompletedFramesFence)));
-    VERIFY(SUCCEEDED(hr), "Failed to create fence");
-	m_pNumCompletedFramesFence->SetName(L"Last completed frame fence");
-	m_pNumCompletedFramesFence->Signal(m_NumCompletedFrames);
+    auto hr = pd3d12Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, __uuidof(m_pCompletedCmdListFence), reinterpret_cast<void**>(static_cast<ID3D12Fence**>(&m_pCompletedCmdListFence)));
+    VERIFY(SUCCEEDED(hr), "Failed to create the fence");
+	m_pCompletedCmdListFence->SetName(L"RenderDeviceD3D12Impl::m_pCompletedCmdListFence fence");
+	m_pCompletedCmdListFence->Signal(m_NumCompletedCmdLists); // 0 cmd lists are completed
 }
 
 RenderDeviceD3D12Impl::~RenderDeviceD3D12Impl()
 {
-    // Finish current frame. This will release resources taken by previous frames, and
+	// Finish current frame. This will release resources taken by previous frames, and
     // will signal current frame as completed. If we do not call FinishFrame(), then
     // current frame will not be signaled as completed and the second call to FinishFrame()
     // will not release current frame's resources.
@@ -92,7 +93,7 @@ RenderDeviceD3D12Impl::~RenderDeviceD3D12Impl()
     IdleGPU();
     // Call FinishFrame() again to release all resources associated with the current frame
     FinishFrame();
-    CloseHandle(m_FenceEventHandle);
+    CloseHandle(m_WaitForGPUEventHandle);
 
 	//LinearAllocator::DestroyAll();
 	//DynamicDescriptorHeap::DestroyAll();
@@ -105,49 +106,69 @@ void RenderDeviceD3D12Impl::DisposeCommandContext(CommandContext* pCtx)
     m_AvailableContexts.push_back(pCtx);
 }
 
-Uint64 RenderDeviceD3D12Impl::CloseAndExecuteCommandContext(CommandContext *pCtx)
+void RenderDeviceD3D12Impl::CloseAndExecuteCommandContext(CommandContext *pCtx)
 {
     CComPtr<ID3D12CommandAllocator> pAllocator;
 	auto *pCmdList = pCtx->Close(&pAllocator);
 
-	uint64_t FenceValue = 0;
+    Uint64 SubmittedCmdListNum = 0;
     {
-	    std::lock_guard<std::mutex> LockGuard(m_FenceMutex);
+	    std::lock_guard<std::mutex> LockGuard(m_CmdQueueMutex);
 
-	    // Kickoff the command list
+	    // Submit the command list to the queue
         ID3D12CommandList *const ppCmdLists[] = {pCmdList};
 	    m_pd3d12CmdQueue->ExecuteCommandLists(1, ppCmdLists);
 
-	    // Signal the next fence value (with the GPU)
-	    m_pd3d12CmdQueue->Signal(m_pFence, m_NextFenceValue);
+        // Increment the counter before signaling the fence.
+		SubmittedCmdListNum = m_NextCmdList;
+		Atomics::AtomicIncrement(m_NextCmdList);
 
-	    // And increment the fence value.  
-	    FenceValue = m_NextFenceValue++;
+	    // Signal the fence value. Note that for cmd list N that has just been submitted,
+        // we are signaling value N+1, that has a meaning of the TOTAL NUMBER OF COMPLETED 
+        // cmd lists rather than the index number of the LAST completed cmd list.
+        // This is convenient as the natural default fence value of 0
+        // corresponds to no completed cmd lists
+	    m_pd3d12CmdQueue->Signal(m_pCompletedCmdListFence, m_NextCmdList);
     }
 
-	m_CmdListManager.DiscardAllocator(FenceValue, pAllocator);
-    pCtx->DiscardUsedDescriptorHeaps(m_CurrentFrame);
+    // DiscardAllocator() is thread-safe
+	m_CmdListManager.DiscardAllocator(SubmittedCmdListNum, pAllocator);
+    
+    // m_NextCmdList may be different at this point, which does not matter.
+    // SubmittedCmdListNum stores the actual number when the command list
+    // was sent for executrion
+    pCtx->DiscardDynamicDescriptors(SubmittedCmdListNum);
 
     {
 	    std::lock_guard<std::mutex> LockGuard(m_ContextAllocationMutex);
     	m_AvailableContexts.push_back(pCtx);
     }
-
-	return FenceValue;
 }
 
-
-Uint64 RenderDeviceD3D12Impl::IncrementFence(void)
-{
-	std::lock_guard<std::mutex> LockGuard(m_FenceMutex);
-    m_pd3d12CmdQueue->Signal(m_pFence, m_NextFenceValue);
-	return m_NextFenceValue++;
-}
 
 void RenderDeviceD3D12Impl::IdleGPU(bool ReleasePendingObjects) 
 { 
-    auto FenceValue = IncrementFence();
-    WaitForFence(FenceValue); 
+    // We must lock the command queue to avoid other threads interfering with the GPU
+    std::lock_guard<std::mutex> LockGuard(m_CmdQueueMutex);
+
+	// Simulate execution of an empty command list
+
+	// Increment the counter before signaling the fence.
+	Atomics::AtomicIncrement(m_NextCmdList);
+
+	// Signal the fence value. Note that for cmd list N that has just been submitted, 
+	// we are signaling value N+1, that has a meaning of the TOTAL NUMBER OF COMPLETED cmd lists
+	m_pd3d12CmdQueue->Signal(m_pCompletedCmdListFence, m_NextCmdList);
+	
+	// Wait for the fence
+	m_pCompletedCmdListFence->SetEventOnCompletion(m_NextCmdList, m_WaitForGPUEventHandle);
+	WaitForSingleObject(m_WaitForGPUEventHandle, INFINITE);
+
+	VERIFY(GetNumCompletedCmdLists() == m_NextCmdList, "Unexpected number of completed cmd lists");
+
+    // Note: release queues may now contain objects released during the current frame
+	// that have cmd list number (m_NextCmdList-1)
+
     if(ReleasePendingObjects)
     {
         // Do not wait until the end of the frame and force deletion. 
@@ -158,74 +179,63 @@ void RenderDeviceD3D12Impl::IdleGPU(bool ReleasePendingObjects)
     }
 }
 
-
-bool RenderDeviceD3D12Impl::IsFenceComplete(Uint64 FenceValue)
+Uint64 RenderDeviceD3D12Impl::GetNumCompletedCmdLists()
 {
-	// Avoid querying the fence value by testing against the last one seen.
-	// The max() is to protect against an unlikely race condition that could cause the last
-	// completed fence value to regress.
-	if (FenceValue > m_LastCompletedFenceValue)
-		m_LastCompletedFenceValue = std::max(m_LastCompletedFenceValue, m_pFence->GetCompletedValue());
+    auto NumCompletedCmdLists = m_pCompletedCmdListFence->GetCompletedValue();
+    if(NumCompletedCmdLists > m_NumCompletedCmdLists)
+        m_NumCompletedCmdLists = NumCompletedCmdLists;
 
-	return FenceValue <= m_LastCompletedFenceValue;
+    return m_NumCompletedCmdLists;
 }
 
-Uint64 RenderDeviceD3D12Impl::FinishFrame()
+void RenderDeviceD3D12Impl::FinishFrame()
 {
-    m_NumCompletedFrames = std::max(m_NumCompletedFrames, m_pNumCompletedFramesFence->GetCompletedValue());
-    for (auto &UploadHeap : m_UploadHeaps)
+    auto NumCompletedCmdLists = GetNumCompletedCmdLists();
+
     {
-        // Currently upload heaps are free-threaded, so other threads must not allocate
-        // resources at the same time
-        UploadHeap->FinishFrame(m_CurrentFrame, m_NumCompletedFrames);
+        // There is no need to lock as new heaps are only created during initialization
+        // time for every context
+        //std::lock_guard<std::mutex> LockGuard(m_UploadHeapMutex);
+        
+        // Upload heaps are used to update resource contents as well as to allocate
+        // space for dynamic resources.
+        // Initial resource data is uploaded using temporary one-time upload buffers, so can 
+        // performed in parallel across frame boundaries
+        for (auto &UploadHeap : m_UploadHeaps)
+        {
+            // Currently upload heaps are free-threaded, so other threads must not allocate
+            // resources at the same time. This means that all dynamic buffers must be unmaped 
+            // in the same frame and all resources must be updated within boundaries of a single frame.
+            //
+            //   worker thread 2    | pDevice->CrateTexture(InitData) |    | pDevice->CrateBuffer(InitData) |    | pDevice->CrateTexture(InitData) |
+            //                                                                                               
+            //    worker thread 2     | pDfrdCtx2->UpdateResource()  |                                              ||
+            //                                                                                                      ||
+            //    worker thread 1       |  pDfrdCtx1->Map(WRITE_DISCARD) |    | pDfrdCtx1->UpdateResource()  |      ||
+            //                                                                                                      ||
+            //    main thread        |  pCtx->Map(WRITE_DISCARD )|  | pCtx->UpdateResource()  |                     ||   | Present() |
+            //
+            //
+            UploadHeap->FinishFrame(GetNextCmdListNumber(), NumCompletedCmdLists);
+        }
     }
 
     for(Uint32 CPUHeap=0; CPUHeap < _countof(m_CPUDescriptorHeaps); ++CPUHeap)
     {
-        m_CPUDescriptorHeaps[CPUHeap].ReleaseStaleAllocations(m_NumCompletedFrames);
+        // This is OK if other thread disposes descriptor heap allocation at this time
+        // The allocation will be registered as part of the current frame
+        m_CPUDescriptorHeaps[CPUHeap].ReleaseStaleAllocations(NumCompletedCmdLists);
     }
         
     for(Uint32 GPUHeap=0; GPUHeap < _countof(m_GPUDescriptorHeaps); ++GPUHeap)
     {
-        m_GPUDescriptorHeaps[GPUHeap].ReleaseStaleAllocations(m_NumCompletedFrames);
+        m_GPUDescriptorHeaps[GPUHeap].ReleaseStaleAllocations(NumCompletedCmdLists);
     }
 
 
     ProcessReleaseQueue();
 
-    // How does this work in a multi-threaded environment??
-    auto CompletedFrame = m_CurrentFrame++;
-    m_pd3d12CmdQueue->Signal(m_pNumCompletedFramesFence, m_CurrentFrame);
-	return CompletedFrame;
-}
-
-bool RenderDeviceD3D12Impl::IsFrameComplete(Uint64 Frame)
-{
-	// Avoid querying the fence value by testing against the last one seen.
-	// The max() is to protect against an unlikely race condition that could cause the last
-	// completed fence value to regress.
-	if (Frame > m_NumCompletedFrames)
-		m_NumCompletedFrames = std::max(m_NumCompletedFrames, m_pNumCompletedFramesFence->GetCompletedValue());
-
-	return Frame <= m_NumCompletedFrames;
-}
-
-void RenderDeviceD3D12Impl::WaitForFence(Uint64 FenceValue)
-{
-	if (IsFenceComplete(FenceValue))
-		return;
-
-	// TODO:  Think about how this might affect a multi-threaded situation.  Suppose thread A
-	// wants to wait for fence 100, then thread B comes along and wants to wait for 99.  If
-	// the fence can only have one event set on completion, then thread B has to wait for 
-	// 100 before it knows 99 is ready.  Maybe insert sequential events?
-	{
-		std::lock_guard<std::mutex> LockGuard(m_EventMutex);
-
-		m_pFence->SetEventOnCompletion(FenceValue, m_FenceEventHandle);
-		WaitForSingleObject(m_FenceEventHandle, INFINITE);
-		m_LastCompletedFenceValue = FenceValue;
-	}
+    Atomics::AtomicIncrement(m_CurrentFrameNumber);
 }
 
 DynamicUploadHeap* RenderDeviceD3D12Impl::RequestUploadHeap()
@@ -257,10 +267,9 @@ CommandContext* RenderDeviceD3D12Impl::AllocateCommandContext(const Char *ID)
 	CommandContext* ret = nullptr;
 	if (m_AvailableContexts.empty())
 	{
-        Uint32 DynamicDescriptorAllocationChunkSize[] = {256, 32};
         auto &CmdCtxAllocator = GetRawAllocator();
         auto *pRawMem = ALLOCATE(CmdCtxAllocator, "CommandContext instance", sizeof(CommandContext));
-		ret = new (pRawMem) CommandContext( GetRawAllocator(), m_CmdListManager, m_GPUDescriptorHeaps, DynamicDescriptorAllocationChunkSize);
+		ret = new (pRawMem) CommandContext( GetRawAllocator(), m_CmdListManager, m_GPUDescriptorHeaps, m_DynamicDescriptorAllocationChunkSize);
 		m_ContextPool.emplace_back(ret, STDDeleterRawMem<CommandContext>(CmdCtxAllocator) );
 	}
 	else
@@ -280,19 +289,21 @@ CommandContext* RenderDeviceD3D12Impl::AllocateCommandContext(const Char *ID)
 void RenderDeviceD3D12Impl::SafeReleaseD3D12Object(ID3D12Object* pObj)
 {
     std::lock_guard<std::mutex> LockGuard(m_ReleasedObjectsMutex);
-    m_D3D12ObjReleaseQueue.emplace_back( m_CurrentFrame, CComPtr<ID3D12Object>(pObj) );
+    m_D3D12ObjReleaseQueue.emplace_back( GetNextCmdListNumber(), CComPtr<ID3D12Object>(pObj) );
 }
 
 void RenderDeviceD3D12Impl::ProcessReleaseQueue(bool ForceRelease)
 {
     std::lock_guard<std::mutex> LockGuard(m_ReleasedObjectsMutex);
 
-    // Release all objects whose frame number value < number of completed frames
-    while (m_D3D12ObjReleaseQueue.size())
+	auto NumCompletedCmdLists = GetNumCompletedCmdLists();
+    // Release all objects whose cmd list number value < number of completed cmd lists
+    // See http://diligentgraphics.com/diligent-engine/architecture/d3d12/managing-resource-lifetimes/
+    while (!m_D3D12ObjReleaseQueue.empty())
     {
         auto &FirstObj = m_D3D12ObjReleaseQueue.front();
         // GPU must have been idled when ForceRelease == true 
-        if (FirstObj.first < m_NumCompletedFrames || ForceRelease)
+        if (FirstObj.first < NumCompletedCmdLists || ForceRelease)
             m_D3D12ObjReleaseQueue.pop_front();
         else
             break;

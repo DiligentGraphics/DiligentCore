@@ -1,4 +1,4 @@
-/*     Copyright 2015-2016 Egor Yusov
+/*     Copyright 2015-2017 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -21,20 +21,6 @@
  *  of the possibility of such damages.
  */
 
-//
-// Copyright (c) Microsoft. All rights reserved.
-// This code is licensed under the MIT License (MIT).
-// THIS CODE IS PROVIDED *AS IS* WITHOUT WARRANTY OF
-// ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING ANY
-// IMPLIED WARRANTIES OF FITNESS FOR A PARTICULAR
-// PURPOSE, MERCHANTABILITY, OR NON-INFRINGEMENT.
-//
-// Developed by Minigraph
-//
-// Author:  James Stanard 
-//
-// Adapted to Diligent Engine: Egor Yusov
-//
 
 #pragma once
 
@@ -77,7 +63,7 @@ public:
 	CommandContext( IMemoryAllocator &MemAllocator,
                     class CommandListManager& CmdListManager, 
                     GPUDescriptorHeap GPUDescriptorHeaps[],
-                    Uint32 DynamicDescriptorAllocationChunkSize[]);
+                    const Uint32 DynamicDescriptorAllocationChunkSize[]);
 
     ~CommandContext(void);
 
@@ -97,24 +83,10 @@ public:
         m_pCommandList->CopyResource(pDstRes, pSrcRes);
     }
 
-	//void CopyBuffer( GpuResource& Dest, GpuResource& Src );
-	//void CopyBufferRegion( GpuResource& Dest, size_t DestOffset, GpuResource& Src, size_t SrcOffset, size_t NumBytes );
-	//void CopySubresource(GpuResource& Dest, UINT DestSubIndex, GpuResource& Src, UINT SrcSubIndex);
-	//void CopyCounter(GpuResource& Dest, size_t DestOffset, StructuredBuffer& Src);
-	//void ResetCounter(StructuredBuffer& Buf, uint32_t Value = 0);
-
-	//static void InitializeTextureArraySlice(GpuResource& Dest, UINT SliceIndex, GpuResource& Src);
-
     void TransitionResource(ITextureD3D12 *pTexture, D3D12_RESOURCE_STATES NewState, bool FlushImmediate = false);
     void TransitionResource(IBufferD3D12 *pBuffer, D3D12_RESOURCE_STATES NewState, bool FlushImmediate = false);
 	//void BeginResourceTransition(GpuResource& Resource, D3D12_RESOURCE_STATES NewState, bool FlushImmediate = false);
 	void FlushResourceBarriers();
-
-	//void InsertTimeStamp( ID3D12QueryHeap* pQueryHeap, uint32_t QueryIdx );
-	//void ResolveTimeStamps( ID3D12Resource* pReadbackHeap, ID3D12QueryHeap* pQueryHeap, uint32_t NumQueries );
-	//void PIXBeginEvent(const wchar_t* label);
-	//void PIXEndEvent(void);
-	//void PIXSetMarker(const wchar_t* label);
 
     struct ShaderDescriptorHeaps
     {
@@ -144,7 +116,7 @@ public:
     void SetID(const Char* ID) { m_ID = ID; }
     ID3D12GraphicsCommandList *GetCommandList(){return m_pCommandList;}
     
-    void DiscardUsedDescriptorHeaps(Uint64 FrameNumber);
+    void DiscardDynamicDescriptors(Uint64 FrameNumber);
     DescriptorHeapAllocation AllocateDynamicGPUVisibleDescriptor( D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count = 1 );
 
     void InsertUAVBarrier(D3D12ResourceBase& Resource, IDeviceObject &Object, bool FlushImmediate = false);
@@ -152,9 +124,6 @@ public:
 protected:
     void TransitionResource(D3D12ResourceBase& Resource, IDeviceObject &Object, D3D12_RESOURCE_STATES NewState, bool FlushImmediate);
     void InsertAliasBarrier(D3D12ResourceBase& Before, D3D12ResourceBase& After, IDeviceObject &BeforeObj, IDeviceObject &AfterObj, bool FlushImmediate = false);
-
-	//void FinishTimeStampQueryBatch();
-	//void BindDescriptorHeaps( void );
 
 	CComPtr<ID3D12GraphicsCommandList> m_pCommandList;
 	CComPtr<ID3D12CommandAllocator> m_pCurrentAllocator;
@@ -274,17 +243,10 @@ public:
 	    m_pCommandList->SetGraphicsRootConstantBufferView(RootIndex, CBV);
     }
 
-	//void SetDynamicConstantBufferView( UINT RootIndex, size_t BufferSize, const void* BufferData );
-	//void SetBufferSRV( UINT RootIndex, const GpuBuffer& SRV );
-	//void SetBufferUAV( UINT RootIndex, const GpuBuffer& UAV );
 	void SetDescriptorTable( UINT RootIndex, D3D12_GPU_DESCRIPTOR_HANDLE FirstHandle )
     {
 	    m_pCommandList->SetGraphicsRootDescriptorTable( RootIndex, FirstHandle );
     }
-
-
-	//void SetDynamicDescriptor( UINT RootIndex, UINT Offset, D3D12_CPU_DESCRIPTOR_HANDLE Handle );
-	//void SetDynamicDescriptors( UINT RootIndex, UINT Offset, UINT Count, const D3D12_CPU_DESCRIPTOR_HANDLE Handles[] );
 
 	void SetIndexBuffer( const D3D12_INDEX_BUFFER_VIEW& IBView )
     {
@@ -295,10 +257,6 @@ public:
     {
 	    m_pCommandList->IASetVertexBuffers(StartSlot, Count, VBViews);
     }
-
-	//void SetDynamicVB( UINT Slot, size_t NumVertices, size_t VertexStride, const void* VBData );
-	//void SetDynamicIB( size_t IndexCount, const uint16_t* IBData );
-	//void SetDynamicSRV(UINT RootIndex, size_t BufferSize, const void* BufferData);
 
 	void Draw(UINT VertexCountPerInstance, UINT InstanceCount,
 	          UINT StartVertexLocation, UINT StartInstanceLocation)
@@ -373,18 +331,10 @@ public:
 	    m_pCommandList->SetComputeRootConstantBufferView(RootIndex, CBV);
     }
 
-	//void SetDynamicConstantBufferView( UINT RootIndex, size_t BufferSize, const void* BufferData );
-	//void SetDynamicSRV( UINT RootIndex, size_t BufferSize, const void* BufferData ); 
-	//void SetBufferSRV( UINT RootIndex, const GpuBuffer& SRV );
-	//void SetBufferUAV( UINT RootIndex, const GpuBuffer& UAV );
 	void SetDescriptorTable( UINT RootIndex, D3D12_GPU_DESCRIPTOR_HANDLE FirstHandle )
     {
 	    m_pCommandList->SetComputeRootDescriptorTable( RootIndex, FirstHandle );
     }
-
-
-	//void SetDynamicDescriptor( UINT RootIndex, UINT Offset, D3D12_CPU_DESCRIPTOR_HANDLE Handle );
-	//void SetDynamicDescriptors( UINT RootIndex, UINT Offset, UINT Count, const D3D12_CPU_DESCRIPTOR_HANDLE Handles[] );
 
 	void Dispatch( size_t GroupCountX = 1, size_t GroupCountY = 1, size_t GroupCountZ = 1 )
     {
@@ -402,112 +352,6 @@ inline ComputeContext& CommandContext::AsComputeContext()
 {
     return static_cast<ComputeContext&>(*this);
 }
-
-#if 0
-
-inline void GraphicsContext::SetDynamicConstantBufferView( UINT RootIndex, size_t BufferSize, const void* BufferData )
-{
-	ASSERT(BufferData != nullptr && Math::IsAligned(BufferData, 16));
-	DynAlloc cb = m_CpuLinearAllocator.Allocate(BufferSize);
-	//SIMDMemCopy(cb.DataPtr, BufferData, Math::AlignUp(BufferSize, 16) >> 4);
-	memcpy(cb.DataPtr, BufferData, BufferSize);
-	m_pCommandList->SetGraphicsRootConstantBufferView(RootIndex, cb.GpuAddress);
-}
-
-inline void ComputeContext::SetDynamicConstantBufferView( UINT RootIndex, size_t BufferSize, const void* BufferData )
-{
-	ASSERT(BufferData != nullptr && Math::IsAligned(BufferData, 16));
-	DynAlloc cb = m_CpuLinearAllocator.Allocate(BufferSize);
-	//SIMDMemCopy(cb.DataPtr, BufferData, Math::AlignUp(BufferSize, 16) >> 4);
-	memcpy(cb.DataPtr, BufferData, BufferSize);
-	m_pCommandList->SetComputeRootConstantBufferView(RootIndex, cb.GpuAddress);
-}
-
-inline void GraphicsContext::SetDynamicVB( UINT Slot, size_t NumVertices, size_t VertexStride, const void* VertexData )
-{
-	ASSERT(VertexData != nullptr && Math::IsAligned(VertexData, 16));
-
-	size_t BufferSize = Math::AlignUp(NumVertices * VertexStride, 16);
-	DynAlloc vb = m_CpuLinearAllocator.Allocate(BufferSize);
-
-	SIMDMemCopy(vb.DataPtr, VertexData, BufferSize >> 4);
-
-	D3D12_VERTEX_BUFFER_VIEW VBView;
-	VBView.BufferLocation = vb.GpuAddress;
-	VBView.SizeInBytes = (UINT)BufferSize;
-	VBView.StrideInBytes = (UINT)VertexStride;
-
-	m_pCommandList->IASetVertexBuffers(Slot, 1, &VBView);
-}
-
-inline void GraphicsContext::SetDynamicIB( size_t IndexCount, const uint16_t* IndexData )
-{
-	ASSERT(IndexData != nullptr && Math::IsAligned(IndexData, 16));
-
-	size_t BufferSize = Math::AlignUp(IndexCount * sizeof(uint16_t), 16);
-	DynAlloc ib = m_CpuLinearAllocator.Allocate(BufferSize);
-
-	SIMDMemCopy(ib.DataPtr, IndexData, BufferSize >> 4);
-
-	D3D12_INDEX_BUFFER_VIEW IBView;
-	IBView.BufferLocation = ib.GpuAddress;
-	IBView.SizeInBytes = (UINT)(IndexCount * sizeof(uint16_t));
-	IBView.Format = DXGI_FORMAT_R16_UINT;
-
-	m_pCommandList->IASetIndexBuffer(&IBView);
-}
-
-inline void GraphicsContext::SetDynamicSRV(UINT RootIndex, size_t BufferSize, const void* BufferData)
-{
-	ASSERT(BufferData != nullptr && Math::IsAligned(BufferData, 16));
-	DynAlloc cb = m_CpuLinearAllocator.Allocate(BufferSize);
-	SIMDMemCopy(cb.DataPtr, BufferData, Math::AlignUp(BufferSize, 16) >> 4);
-	m_pCommandList->SetGraphicsRootShaderResourceView(RootIndex, cb.GpuAddress);
-}
-
-inline void ComputeContext::SetDynamicSRV(UINT RootIndex, size_t BufferSize, const void* BufferData)
-{
-	ASSERT(BufferData != nullptr && Math::IsAligned(BufferData, 16));
-	DynAlloc cb = m_CpuLinearAllocator.Allocate(BufferSize);
-	SIMDMemCopy(cb.DataPtr, BufferData, Math::AlignUp(BufferSize, 16) >> 4);
-	m_pCommandList->SetComputeRootShaderResourceView(RootIndex, cb.GpuAddress);
-}
-
-inline void GraphicsContext::SetBufferSRV( UINT RootIndex, const GpuBuffer& SRV )
-{
-	ASSERT((SRV.m_UsageState & (D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE)) != 0);
-	m_pCommandList->SetGraphicsRootShaderResourceView(RootIndex, SRV.GetGpuVirtualAddress());
-}
-
-inline void ComputeContext::SetBufferSRV( UINT RootIndex, const GpuBuffer& SRV )
-{
-	ASSERT((SRV.m_UsageState & D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE) != 0);
-	m_pCommandList->SetComputeRootShaderResourceView(RootIndex, SRV.GetGpuVirtualAddress());
-}
-
-inline void GraphicsContext::SetBufferUAV( UINT RootIndex, const GpuBuffer& UAV )
-{
-	ASSERT((UAV.m_UsageState & D3D12_RESOURCE_STATE_UNORDERED_ACCESS) != 0);
-	m_pCommandList->SetGraphicsRootUnorderedAccessView(RootIndex, UAV.GetGpuVirtualAddress());
-}
-
-inline void ComputeContext::SetBufferUAV( UINT RootIndex, const GpuBuffer& UAV )
-{
-	ASSERT((UAV.m_UsageState & D3D12_RESOURCE_STATE_UNORDERED_ACCESS) != 0);
-	m_pCommandList->SetComputeRootUnorderedAccessView(RootIndex, UAV.GetGpuVirtualAddress());
-}
-
-
-
-inline void CommandContext::SetDescriptorHeap( D3D12_DESCRIPTOR_HEAP_TYPE Type, ID3D12DescriptorHeap* HeapPtr )
-{
-	if (m_CurrentDescriptorHeaps[Type] != HeapPtr)
-	{
-		m_CurrentDescriptorHeaps[Type] = HeapPtr;
-		BindDescriptorHeaps();
-	}
-}
-#endif
 
 inline void CommandContext::SetDescriptorHeaps( ShaderDescriptorHeaps& Heaps )
 {
@@ -530,84 +374,4 @@ inline void CommandContext::SetDescriptorHeaps( ShaderDescriptorHeaps& Heaps )
     }
 }
 
-#if 0
-inline void GraphicsContext::SetDynamicDescriptor( UINT RootIndex, UINT Offset, D3D12_CPU_DESCRIPTOR_HANDLE Handle )
-{
-	SetDynamicDescriptors(RootIndex, Offset, 1, &Handle);
-}
-
-inline void ComputeContext::SetDynamicDescriptor( UINT RootIndex, UINT Offset, D3D12_CPU_DESCRIPTOR_HANDLE Handle )
-{
-	SetDynamicDescriptors(RootIndex, Offset, 1, &Handle);
-}
-
-inline void GraphicsContext::SetDynamicDescriptors( UINT RootIndex, UINT Offset, UINT Count, const D3D12_CPU_DESCRIPTOR_HANDLE Handles[] )
-{
-	m_DynamicDescriptorHeap.SetGraphicsDescriptorHandles(RootIndex, Offset, Count, Handles);
-}
-
-inline void ComputeContext::SetDynamicDescriptors( UINT RootIndex, UINT Offset, UINT Count, const D3D12_CPU_DESCRIPTOR_HANDLE Handles[] )
-{
-	m_DynamicDescriptorHeap.SetComputeDescriptorHandles(RootIndex, Offset, Count, Handles);
-}
-
-
-inline void CommandContext::CopyBuffer( GpuResource& Dest, GpuResource& Src )
-{
-	TransitionResource(Dest, D3D12_RESOURCE_STATE_COPY_DEST);
-	TransitionResource(Src, D3D12_RESOURCE_STATE_COPY_SOURCE);
-	FlushResourceBarriers();
-	m_pCommandList->CopyResource(Dest.GetResource(), Src.GetResource());
-}
-
-
-inline void CommandContext::CopyCounter(GpuResource& Dest, size_t DestOffset, StructuredBuffer& Src)
-{
-	TransitionResource(Dest, D3D12_RESOURCE_STATE_COPY_DEST);
-	TransitionResource(Src.GetCounterBuffer(), D3D12_RESOURCE_STATE_COPY_SOURCE);
-	FlushResourceBarriers();
-	m_pCommandList->CopyBufferRegion(Dest.GetResource(), DestOffset, Src.GetCounterBuffer().GetResource(), 0, 4);
-}
-
-inline void CommandContext::ResetCounter(StructuredBuffer& Buf, uint32_t Value )
-{
-	FillBuffer(Buf.GetCounterBuffer(), 0, Value, sizeof(uint32_t));
-	TransitionResource(Buf.GetCounterBuffer(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-}
-
-inline void CommandContext::InsertTimeStamp(ID3D12QueryHeap* pQueryHeap, uint32_t QueryIdx)
-{
-	m_pCommandList->EndQuery(pQueryHeap, D3D12_QUERY_TYPE_TIMESTAMP, QueryIdx);
-}
-
-inline void CommandContext::ResolveTimeStamps(ID3D12Resource* pReadbackHeap, ID3D12QueryHeap* pQueryHeap, uint32_t NumQueries)
-{
-	m_pCommandList->ResolveQueryData(pQueryHeap, D3D12_QUERY_TYPE_TIMESTAMP, 0, NumQueries, pReadbackHeap, 0);
-}
-
-inline void CommandContext::PIXBeginEvent(const wchar_t* label)
-{
-#if defined(RELEASE) || _MSC_VER < 1800
-	(label);
-#else
-	::PIXBeginEvent(m_pCommandList, 0, label);
-#endif
-}
-
-inline void CommandContext::PIXEndEvent(void)
-{
-#if !defined(RELEASE) && _MSC_VER >= 1800
-	::PIXEndEvent(m_pCommandList);
-#endif
-}
-
-inline void CommandContext::PIXSetMarker(const wchar_t* label)
-{
-#if defined(RELEASE) || _MSC_VER < 1800
-	(label);
-#else
-	::PIXSetMarker(m_pCommandList, 0, label);
-#endif
-}
-#endif
 }

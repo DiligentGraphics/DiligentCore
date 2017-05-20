@@ -1,4 +1,4 @@
-/*     Copyright 2015-2016 Egor Yusov
+/*     Copyright 2015-2017 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -32,6 +32,7 @@
 #include "CommandListManager.h"
 #include "CommandContext.h"
 #include "DynamicUploadHeap.h"
+#include "Atomics.h"
 
 /// Namespace for the Direct3D11 implementation of the graphics engine
 namespace Diligent
@@ -65,24 +66,22 @@ public:
     DescriptorHeapAllocation AllocateDescriptor( D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count = 1 );
     DescriptorHeapAllocation AllocateGPUDescriptors( D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count = 1 );
 
-    bool IsFenceComplete(Uint64 FenceValue);
-    bool IsFrameComplete(Uint64 Frame);
+    Uint64 GetNumCompletedCmdLists();
+	Uint64 GetNextCmdListNumber() const {return static_cast<Uint64>(m_NextCmdList);}
+	Uint64 GetCurrentFrameNumber()const {return static_cast<Uint64>(m_CurrentFrameNumber);}
 
     ID3D12CommandQueue *GetCmdQueue(){return m_pd3d12CmdQueue;}
 
-	Uint64 IncrementFence();
-	void WaitForFence(Uint64 FenceValue);
 	void IdleGPU(bool ReleasePendingObjects = false);
     CommandContext* AllocateCommandContext(const Char *ID = "");
-    Uint64 CloseAndExecuteCommandContext(CommandContext *pCtx);
+    void CloseAndExecuteCommandContext(CommandContext *pCtx);
     void DisposeCommandContext(CommandContext*);
 
     void SafeReleaseD3D12Object(ID3D12Object* pObj);
-    Uint64 FinishFrame();
+    void FinishFrame();
     
     DynamicUploadHeap* RequestUploadHeap();
     void ReleaseUploadHeap(DynamicUploadHeap* pUploadHeap);
-    Uint64 GetCurrentFrame()const {return m_CurrentFrame;}
 
 private:
     virtual void TestTextureFormat( TEXTURE_FORMAT TexFormat );
@@ -97,20 +96,64 @@ private:
     CPUDescriptorHeap m_CPUDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
     GPUDescriptorHeap m_GPUDescriptorHeaps[2]; // D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV == 0
                                                // D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER	 == 1
+	
+	const Uint32 m_DynamicDescriptorAllocationChunkSize[2];
 
-	std::mutex m_FenceMutex;
-	std::mutex m_EventMutex;
+	std::mutex m_CmdQueueMutex;
 
-	CComPtr<ID3D12Fence> m_pFence;
-	Uint64 m_NextFenceValue;
-	Uint64 m_LastCompletedFenceValue;
-	HANDLE m_FenceEventHandle;
+	Atomics::AtomicInt64 m_CurrentFrameNumber;
 
-    CComPtr<ID3D12Fence> m_pNumCompletedFramesFence;
-    Uint64 m_CurrentFrame = 0;
-    Uint64 m_NumCompletedFrames = 0;
+    // 0-based ordinal number of the command list that will be submitted to the GPU next time
+    Atomics::AtomicInt64 m_NextCmdList;
 
+    // Number of command lists that retired the GPU pipeline
+    //
+    //      To check if frame X is completed, 
+    //      strong inequality must be used:
+    //        X < m_NumCompletedCmdLists
+    //
+    volatile Uint64 m_NumCompletedCmdLists;
 
+    // The following basic requirement guarantees correctness of resource deallocation:
+    //
+    //        A resource is never released before the last draw command referencing it is invoked on the immediate context
+    //
+    // See http://diligentgraphics.com/diligent-engine/architecture/d3d12/managing-resource-lifetimes/
+
+    //
+    // CPU
+    //                       Last Reference
+    //                        of resource X
+    //                             |
+    //                             |     Submit Cmd       Submit Cmd            Submit Cmd
+    //                             |      List N           List N+1              List N+2
+    //                             V         |                |                     |
+    //    m_NextCmdList        |   *  N      |      N+1       |          N+2        |
+    //
+    //
+    //    m_NumCompletedCmdLists    |     N-2      |      N-1      |        N          |        N+1     |
+    //                              .              .               .                   .                .
+    // -----------------------------.--------------.---------------.-------------------.----------------.-------------
+    //                              .              .               .                   .                .
+    //       
+    // GPU                          | Cmd List N-2 | Cmd List N-1  |    Cmd List N     |   Cmd List N+1 |
+    //                                                                                 |
+    //                                                                                 |
+    //                                                                          Resource X can
+    //                                                                           be released
+    
+    // The fence is signaled right after the command list has been 
+    // submitted to the command queue for execution.
+    // Note that the meaning of the fence value is the TOTAL NUMBER OF COMPLETED COMMAND LISTS,
+    // NOT the ordinal number of the LAST completed cmd list
+    // If ordinal number of the current cmd list is N, then N+1 is signaled, so the
+    // cmd list X is complete when X < m_NumCompletedCmdLists
+    // This is convenient as the default fence value is 0, and hence 
+    // by default there are no completed cmd lists
+    CComPtr<ID3D12Fence> m_pCompletedCmdListFence;
+
+	HANDLE m_WaitForGPUEventHandle;
+    
     CommandListManager m_CmdListManager;
 
     typedef std::unique_ptr<CommandContext, STDDeleterRawMem<CommandContext> > ContextPoolElemType;

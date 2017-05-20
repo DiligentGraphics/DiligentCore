@@ -1,4 +1,4 @@
-/*     Copyright 2015-2016 Egor Yusov
+/*     Copyright 2015-2017 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -126,7 +126,7 @@ public:
 private:
     const bool m_bIsCPUAccessible;
     // When a chunk of dynamic memory is requested, the heap first tries to allocate the memory in the largest GPU buffer. 
-    // If allocation fails, it a new ring buffer is created that provides enough space and requests memory from that buffer.
+    // If allocation fails, a new ring buffer is created that provides enough space and requests memory from that buffer.
     // Only the largest buffer is used for allocation and all other buffers are released when GPU is done with corresponding frames
     std::vector<GPURingBuffer, STDAllocatorRawMem<GPURingBuffer> > m_RingBuffers;
     IMemoryAllocator &m_Allocator;

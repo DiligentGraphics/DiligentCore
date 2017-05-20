@@ -1,4 +1,4 @@
-/*     Copyright 2015-2016 Egor Yusov
+/*     Copyright 2015-2017 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -98,7 +98,13 @@ void ShaderResources::CountResources(const SHADER_VARIABLE_TYPE *AllowedVarTypes
                                      Uint32& NumCBs, Uint32& NumTexSRVs, Uint32& NumTexUAVs, 
                                      Uint32& NumBufSRVs, Uint32& NumBufUAVs, Uint32& NumSamplers)const noexcept
 {
+    // In release mode, MS compiler generates this false warning:
+    // Warning	C4189 'AllowedTypeBits': local variable is initialized but not referenced
+    // Most likely it somehow gets confused by the variable being eliminated during function inlining
+#pragma warning(push)
+#pragma warning(disable : 4189)
     Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
+#pragma warning (pop)   
 
     NumCBs = 0;
     NumTexSRVs = 0;
@@ -150,7 +156,13 @@ ShaderResources::ShaderResources(IMemoryAllocator &Allocator,
 
     Initialize(Allocator, NumCBs, NumTexSRVs, NumTexUAVs, NumBufSRVs, NumBufUAVs, NumSamplers);
 
+    // In release mode, MS compiler generates this false warning:
+    // Warning	C4189 'AllowedTypeBits': local variable is initialized but not referenced
+    // Most likely it somehow gets confused by the variable being eliminated during function inlining
+#pragma warning(push)
+#pragma warning(disable : 4189)
     Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
+#pragma warning(pop)
 
     Uint32 CurrCB = 0, CurrTexSRV = 0, CurrTexUAV = 0, CurrBufSRV = 0, CurrBufUAV = 0, CurrSampler = 0;
     ProcessResources(

@@ -1,4 +1,4 @@
-/*     Copyright 2015-2016 Egor Yusov
+/*     Copyright 2015-2017 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -57,12 +57,16 @@ public:
     CommandListManager& operator = (CommandListManager&&) = delete;
 
     void CreateNewCommandList( ID3D12GraphicsCommandList** ppList, ID3D12CommandAllocator** ppAllocator );
-    void DiscardAllocator( Uint64 FenceValueForReset, ID3D12CommandAllocator* pAllocator );
+    
+    // Discards the allocator.
+    // CmdListNum is the serial number of the command list that was created by this allocator
+    void DiscardAllocator( Uint64 CmdListNum, ID3D12CommandAllocator* pAllocator );
+
     void RequestAllocator(ID3D12CommandAllocator** ppAllocator);
 
 private:
-	// Since there is only a "main pool" so far, everything below corresponds to that pool. It should be renamed and/or 
-	// restructured if we add other pools.
+    // fist    - the SERIAL NUMBER of command list that was created by the allocator 
+    // second  - the allocator to be discarded
     typedef std::pair<Uint64, CComPtr<ID3D12CommandAllocator> > DiscardedAllocatorQueueElemType;
 	std::deque< DiscardedAllocatorQueueElemType, STDAllocatorRawMem<DiscardedAllocatorQueueElemType> > m_DiscardedAllocators;
 

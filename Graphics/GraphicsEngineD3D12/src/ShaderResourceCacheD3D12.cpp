@@ -1,4 +1,4 @@
-/*     Copyright 2015-2016 Egor Yusov
+/*     Copyright 2015-2017 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -27,13 +27,14 @@
 
 namespace Diligent
 {
+    // http://diligentgraphics.com/diligent-engine/architecture/d3d12/shader-resource-cache#Cache-Structure
     void ShaderResourceCacheD3D12::Initialize(IMemoryAllocator &MemAllocator, Uint32 NumTables, Uint32 TableSizes[])
     {
         // Memory layout:
         //                                         __________________________________________________________
-        //                                        |             m_pResources, m_NumResources                 |
-        //  m_pMemory                             |                                                          |
-        //  |                                     |                                                          V
+        //  m_pMemory                             |             m_pResources, m_NumResources                 |
+        //  |                                     |                                                          |
+        //  V                                     |                                                          V
         //  |  RootTable[0]  |   ....    |  RootTable[Nrt-1]  |  Res[0]  |  ... |  Res[n-1]  |    ....     | Res[0]  |  ... |  Res[m-1]  |
         //       |                                                A  
         //       |                                                |   

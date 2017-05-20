@@ -1,4 +1,4 @@
-/*     Copyright 2015-2016 Egor Yusov
+/*     Copyright 2015-2017 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -44,11 +44,13 @@ class TextureD3D12Impl : public TextureBase<ITextureD3D12, TextureViewD3D12Impl,
 public:
     typedef TextureBase<ITextureD3D12, TextureViewD3D12Impl, FixedBlockMemoryAllocator, FixedBlockMemoryAllocator> TTextureBase;
 
+    // Creates a new D3D12 resource
     TextureD3D12Impl(FixedBlockMemoryAllocator &TexObjAllocator, 
                      FixedBlockMemoryAllocator &TexViewObjAllocator,
                      class RenderDeviceD3D12Impl *pDeviceD3D12, 
                      const TextureDesc& TexDesc, 
                      const TextureData &InitData = TextureData());
+    // Attaches to an existing D3D12 resource
     TextureD3D12Impl(FixedBlockMemoryAllocator &TexObjAllocator, 
                      FixedBlockMemoryAllocator &TexViewObjAllocator,
                      class RenderDeviceD3D12Impl *pDeviceD3D12, 

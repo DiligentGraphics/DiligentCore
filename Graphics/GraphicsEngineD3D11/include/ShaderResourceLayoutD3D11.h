@@ -1,4 +1,4 @@
-/*     Copyright 2015-2016 Egor Yusov
+/*     Copyright 2015-2017 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -45,12 +45,14 @@ namespace Diligent
 class IMemoryAllocator;
 
 /// Diligent::ShaderResourceLayoutD3D11 class
+/// http://diligentgraphics.com/diligent-engine/architecture/d3d11/shader-resource-layout/
 class ShaderResourceLayoutD3D11
 {
 public:
     ShaderResourceLayoutD3D11(IObject &Owner, IMemoryAllocator& ResLayoutDataAllocator);
     ~ShaderResourceLayoutD3D11();
 
+    // No copies or moves
     ShaderResourceLayoutD3D11(const ShaderResourceLayoutD3D11&) = delete;
     ShaderResourceLayoutD3D11& operator = (const ShaderResourceLayoutD3D11&) = delete;
     ShaderResourceLayoutD3D11(ShaderResourceLayoutD3D11&&) = default;

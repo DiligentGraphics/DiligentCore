@@ -1,4 +1,4 @@
-/*     Copyright 2015-2016 Egor Yusov
+/*     Copyright 2015-2017 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -50,12 +50,9 @@ public:
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
 
-    //virtual ID3D12View* GetD3D12View()override;
-   
     void GenerateMips( IDeviceContext *pContext )override;
     
     virtual D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle()override{return m_Descriptor.GetCpuHandle();}
-    //virtual D3D12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptorHandle()override{return m_Descriptor.GetGpuHandle();}
 
 protected:
     /// D3D12 view descriptor handle

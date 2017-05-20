@@ -1,4 +1,4 @@
-/*     Copyright 2015-2016 Egor Yusov
+/*     Copyright 2015-2017 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -984,6 +984,14 @@ namespace Diligent
             4096,  // D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
             1024   // D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER
         };
+
+		/// This is the size of the chunk that dynamic descriptor allocations manager
+		/// request from the main GPU descriptor heap.
+		Uint32 DynamicDescriptorAllocationChunkSize[2] = 
+		{
+			128,  // D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
+			16    // D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER
+		};
 
         /// Number of commands to flush the command list. Only draw/dispatch commands count
         /// towards the limit. Command lists are only flushed when pipeline state is changed

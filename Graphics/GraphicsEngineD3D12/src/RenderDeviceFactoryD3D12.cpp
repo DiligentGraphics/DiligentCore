@@ -1,4 +1,4 @@
-/*     Copyright 2015-2016 Egor Yusov
+/*     Copyright 2015-2017 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -179,7 +179,7 @@ void CreateDeviceAndContextsD3D12( const EngineD3D12Attribs& CreationAttribs,
 
 #ifndef RELEASE
 	    // Prevent the GPU from overclocking or underclocking to get consistent timings
-	    d3d12Device->SetStablePowerState(TRUE);
+	    //d3d12Device->SetStablePowerState(TRUE);
 #endif
 
 	    // Describe and create the command queue.
