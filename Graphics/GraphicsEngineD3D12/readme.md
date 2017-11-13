@@ -61,6 +61,8 @@ Below are some of the methods that provide access to internal D3D12 objects:
 
 ## Synchronization Tools
 
+|                              Function                         |                              Description                                                                      |
+|---------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------|
 | `Uint64 IRenderDeviceD3D12::GetNextFenceValue()`              | returns the fence value that will be signaled by the GPU command queue when the next command list is submitted for execution |
 | `Bool IRenderDeviceD3D12::IsFenceSignaled(Uint64 FenceValue)` | checks if the fence value has been signaled by the GPU. True means that all associated work has been finished |
 | `void IRenderDeviceD3D12::FinishFrame()`                      |  this method should be called at the end of the frame when attached to existing D3D12 device. Otherwise the method is automatically called before present |
