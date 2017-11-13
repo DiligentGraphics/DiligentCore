@@ -86,7 +86,7 @@ void InitDevice(HWND hWnd,
 #ifdef ENGINE_DLL
             // Declare function pointer
             GetEngineFactoryOpenGLType GetEngineFactoryOpenGL = nullptr;
-			// Load the dll and import GetEngineFactoryOpenGL() function
+            // Load the dll and import GetEngineFactoryOpenGL() function
             LoadGraphicsEngineOpenGL(GetEngineFactoryOpenGL);
 #endif
             EngineCreationAttribs EngineCreationAttribs;
@@ -220,7 +220,7 @@ Use `IBuffer::CreateView()` to create additional views of a buffer.
 
 ## Initializing Pipeline State
 
-Diligent Engine 2.0 follows Direct3D12 style to configure the graphics/compute pipeline. One big Pipelines State Object (PSO) 
+Diligent Engine follows Direct3D12 style to configure the graphics/compute pipeline. One big Pipelines State Object (PSO) 
 encompasses all required states (all shader stages, input layout description, depth stencil, rasterizer and blend state 
 descriptions etc.)
 
@@ -241,7 +241,7 @@ An important member is `ShaderCreationAttribs::SourceLanguage`. The following ar
 * `SHADER_SOURCE_LANGUAGE_HLSL`    - The shader source is in HLSL. For OpenGL and OpenGLES modes, the source code will be converted to GLSL. See shader converter for details.
 * `SHADER_SOURCE_LANGUAGE_GLSL`    - The shader source is in GLSL. There is currently no GLSL to HLSL converter.
 
-To allow grouping of resources based on the frequency of expected change, Diligent Engine 2.0 introduces 
+To allow grouping of resources based on the frequency of expected change, Diligent Engine introduces 
 classification of shader variables:
 
 * Static variables (`SHADER_VARIABLE_TYPE_STATIC`) are variables that are expected to be set only once. They may not be changed once a resource is bound to the variable. Such variables are intended to hold global constants such as camera attributes or global light attributes constant buffers.
@@ -249,7 +249,7 @@ classification of shader variables:
 * Dynamic variables (`SHADER_VARIABLE_TYPE_DYNAMIC`) are expected to change frequently and randomly.
 
 [This post](http://diligentgraphics.com/2016/03/23/resource-binding-model-in-diligent-engine-2-0) gives more details about the 
-resource binding model in Diligent Engine 2.0. To define variable types, prepare an array of `ShaderVariableDesc` structures and 
+resource binding model in Diligent Engine. To define variable types, prepare an array of `ShaderVariableDesc` structures and 
 initialize `ShaderCreationAttribs::Desc::VariableDesc` and `ShaderCreationAttribs::Desc::NumVariables`. Also 
 `ShaderCreationAttribs::Desc::DefaultVariableType` can be used to set the type that will be used if variable name is not provided.
 
