@@ -28,11 +28,11 @@
 
 namespace Diligent
 {
-SwapChainGLImpl::SwapChainGLImpl(IMemoryAllocator &Allocator,
+SwapChainGLImpl::SwapChainGLImpl(IReferenceCounters *pRefCounters,
                                  const SwapChainDesc& SCDesc, 
                                  RenderDeviceGLImpl* pRenderDeviceGL, 
                                  DeviceContextGLImpl* pImmediateContextGL) : 
-    TSwapChainBase( Allocator, pRenderDeviceGL, pImmediateContextGL, pRenderDeviceGL->m_GLContext.GetSwapChainDesc() )
+    TSwapChainBase( pRefCounters, pRenderDeviceGL, pImmediateContextGL, pRenderDeviceGL->m_GLContext.GetSwapChainDesc() )
 {
 }
 

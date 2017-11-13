@@ -26,8 +26,10 @@
 
 namespace Diligent
 {
-    BasicFileStream::BasicFileStream(const Diligent::Char *Path, 
-                                       EFileAccessMode Access/* = EFileAccessMode::Read*/) :
+    BasicFileStream::BasicFileStream(IReferenceCounters *pRefCounters,
+                                     const Diligent::Char *Path, 
+                                     EFileAccessMode Access/* = EFileAccessMode::Read*/) :
+        TBase(pRefCounters),
         m_FileWrpr(Path, Access)
     {
     }

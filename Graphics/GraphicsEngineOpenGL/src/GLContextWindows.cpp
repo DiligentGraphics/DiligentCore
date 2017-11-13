@@ -36,7 +36,7 @@ namespace Diligent
         GLenum severity,
         GLsizei length,
         const GLchar* message,
-        void* userParam )
+        const void* userParam )
     {
         std::stringstream MessageSS;
 
@@ -129,7 +129,6 @@ namespace Diligent
 			GLenum err = glewInit();
 			if( GLEW_OK != err )
 				LOG_ERROR_AND_THROW( "Failed to initialize GLEW" );
-
         
 			if( wglewIsSupported( "WGL_ARB_create_context" ) == 1 )
 			{
@@ -145,9 +144,9 @@ namespace Diligent
 					0, 0
 				};
 
-	#ifdef _DEBUG
+#ifdef _DEBUG
 				attribs[5] |= WGL_CONTEXT_DEBUG_BIT_ARB;
-	#endif 
+#endif 
 
 				// Create new rendering context
 				// In order to create new OpenGL rendering context we have to call function wglCreateContextAttribsARB(), 
@@ -159,24 +158,32 @@ namespace Diligent
 				// Delete tempContext
 				wglMakeCurrent( NULL, NULL );
 				wglDeleteContext( tempContext );
-				// 
+				// Make new context current
 				wglMakeCurrent( m_WindowHandleToDeviceContext, m_Context );
 				wglSwapIntervalEXT( 0 );
 			}
 			else
-			{       //It's not possible to make a GL 3.x context. Use the old style context (GL 2.1 and before)
+			{       //It's not possible to make a GL 4.x context. Use the old style context (GL 2.1 and before)
 				m_Context = tempContext;
 			}
+
+            if( glDebugMessageCallback )
+            {
+                glEnable( GL_DEBUG_OUTPUT_SYNCHRONOUS );
+                glDebugMessageCallback( openglCallbackFunction, nullptr );
+                GLuint unusedIds = 0;
+                glDebugMessageControl( GL_DONT_CARE,
+                    GL_DONT_CARE,
+                    GL_DONT_CARE,
+                    0,
+                    &unusedIds,
+                    true );
+            }
 		}
 		else
 		{
 			auto CurrentCtx = wglGetCurrentContext();
-			m_WindowHandleToDeviceContext = wglGetCurrentDC();
-			if (CurrentCtx != 0)
-			{
-				LOG_INFO_MESSAGE("Attaching to existing OpenGL context")
-			}
-			else
+			if (CurrentCtx == 0)
 			{
 				LOG_ERROR_AND_THROW("No current GL context found! Provide non-null handle to a native Window to create a GL context")
 			}
@@ -193,19 +200,7 @@ namespace Diligent
         //Or better yet, use the GL3 way to get the version number
         glGetIntegerv( GL_MAJOR_VERSION, &MajorVersion );
         glGetIntegerv( GL_MINOR_VERSION, &MinorVersion );
-
-        if( glDebugMessageCallback )
-        {
-            glEnable( GL_DEBUG_OUTPUT_SYNCHRONOUS );
-            glDebugMessageCallback( openglCallbackFunction, nullptr );
-            GLuint unusedIds = 0;
-            glDebugMessageControl( GL_DONT_CARE,
-                GL_DONT_CARE,
-                GL_DONT_CARE,
-                0,
-                &unusedIds,
-                true );
-        }
+        LOG_INFO_MESSAGE(Info.pNativeWndHandle != nullptr ? "Initialized OpenGL " : "Attached to OpenGL ", MajorVersion, '.', MinorVersion, " context (", GLVersionString, ')')
 
         // Under the standard filtering rules for cubemaps, filtering does not work across faces of the cubemap. 
         // This results in a seam across the faces of a cubemap. This was a hardware limitation in the past, but 
@@ -214,6 +209,15 @@ namespace Diligent
         glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
         if( glGetError() != GL_NO_ERROR )
             LOG_ERROR_MESSAGE("Failed to enable seamless cubemap filtering");
+
+        // When GL_FRAMEBUFFER_SRGB is enabled, and if the destination image is in the sRGB colorspace
+        // then OpenGL will assume the shader's output is in the linear RGB colorspace. It will therefore 
+        // convert the output from linear RGB to sRGB.
+        // Any writes to images that are not in the sRGB format should not be affected.
+        // Thus this setting should be just set once and left that way
+        glEnable(GL_FRAMEBUFFER_SRGB);
+        if( glGetError() != GL_NO_ERROR )
+            LOG_ERROR_MESSAGE("Failed to enable SRGB framebuffers");
 
         DeviceCaps.DevType = DeviceType::OpenGL;
         DeviceCaps.MajorVersion = MajorVersion;
@@ -229,7 +233,7 @@ namespace Diligent
 
     GLContext::~GLContext()
     {
-		// Do not destroy context if it was create by the app.
+		// Do not destroy context if it was created by the app.
         if( m_Context )
 		{
 			wglMakeCurrent( m_WindowHandleToDeviceContext, 0 );
@@ -239,6 +243,14 @@ namespace Diligent
 
     void GLContext::SwapBuffers()
     {
-        ::SwapBuffers( m_WindowHandleToDeviceContext );
+        if(m_WindowHandleToDeviceContext)
+            ::SwapBuffers( m_WindowHandleToDeviceContext );
+        else
+            LOG_ERROR("Swap buffer failed because window handle to device context is not initialized")
+    }
+
+    GLContext::NativeGLContextType GLContext::GetCurrentNativeGLContext()
+    {
+        return wglGetCurrentContext();
     }
 }

@@ -29,6 +29,11 @@
 namespace Diligent
 {
     
+DataBlobImpl::DataBlobImpl( IReferenceCounters *pRefCounters, size_t InitialSize ) : 
+    TBase(pRefCounters),
+    m_DataBuff(InitialSize)
+{}
+
 /// Sets the size of the internal data buffer
 void DataBlobImpl::Resize( size_t NewSize )
 {

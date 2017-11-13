@@ -132,6 +132,15 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\interface\TextureViewD3D12.h">
       <Filter>interface</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\interface\DeviceContextD3D12.h">
+      <Filter>interface</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\interface\CommandQueueD3D12.h">
+      <Filter>interface</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\CommandQueueD3D12Impl.h">
+      <Filter>include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="$(MSBuildThisFileDirectory)..\..\shaders\GenerateMips\GenerateMipsGammaCS.hlsl">
@@ -163,6 +172,7 @@
     <None Include="$(MSBuildThisFileDirectory)..\..\shaders\GenerateMips\GenerateMipsCS.hlsli">
       <Filter>Shaders\GenerateMips</Filter>
     </None>
+    <None Include="$(MSBuildThisFileDirectory)..\..\readme.md" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)..\..\src\BufferD3D12Impl.cpp">
@@ -238,6 +248,9 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)..\..\src\TextureViewD3D12Impl.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\src\CommandQueueD3D12Impl.cpp">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>

@@ -40,7 +40,7 @@ namespace Diligent
 /// It generatlly mirrors [D3D11_BLEND][] and [D3D12_BLEND][] enumerations and is used by RenderTargetBlendDesc structure
 /// to define source and destination blend factors for color and alpha channels.
 /// \sa [D3D11_BLEND on MSDN][D3D11_BLEND], [D3D12_BLEND on MSDN][D3D12_BLEND], [glBlendFuncSeparate on OpenGL.org][glBlendFuncSeparate]
-enum BLEND_FACTOR : Int32
+enum BLEND_FACTOR : Int8
 {
     /// Undefined blend factor
     BLEND_FACTOR_UNDEFINED = 0,
@@ -127,7 +127,7 @@ enum BLEND_FACTOR : Int32
 /// [D3D11_BLEND_OP][] and [D3D12_BLEND_OP][] enums. It is used by RenderTargetBlendDesc structure to define RGB and Alpha 
 /// blending operations
 /// \sa [D3D11_BLEND_OP on MSDN][D3D11_BLEND_OP], [D3D12_BLEND_OP on MSDN][D3D12_BLEND_OP], [glBlendEquationSeparate on OpenGL.org][glBlendEquationSeparate]
-enum BLEND_OPERATION : Int32
+enum BLEND_OPERATION : Int8
 {
     /// Undefined blend operation
     BLEND_OPERATION_UNDEFINED = 0,
@@ -186,7 +186,7 @@ enum COLOR_MASK : Int32
 /// It is used by RenderTargetBlendDesc structure to define logic operation.
 /// Only available on D3D12 engine
 /// \sa [D3D12_LOGIC_OP on MSDN][D3D12_LOGIC_OP]
-enum LOGIC_OPERATION
+enum LOGIC_OPERATION : Int8
 {
     /// Clear the render target.\n
     /// Direct3D12 counterpart: D3D12_LOGIC_OP_CLEAR.

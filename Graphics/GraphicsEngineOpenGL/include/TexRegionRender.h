@@ -49,10 +49,10 @@ private:
     Diligent::RefCntAutoPtr<IPipelineState> m_pPSO[RESOURCE_DIM_NUM_DIMENSIONS * 3];
 
     Diligent::RefCntAutoPtr<IPipelineState> m_pOrigPSO;
-    Uint32 m_OrigStencilRef;
-    float m_OrigBlendFactors[4];
-    Uint32 m_NumRenderTargets;
-    ITextureView *m_pOrigRTVs[MaxRenderTargets];
+    Uint32 m_OrigStencilRef = 0;
+    float m_OrigBlendFactors[4] = {};
+    Uint32 m_NumRenderTargets = 0;
+    ITextureView *m_pOrigRTVs[MaxRenderTargets] = {};
     Diligent::RefCntAutoPtr<ITextureView> m_pOrigDSV;
     std::vector<Viewport> m_OrigViewports;
 };

@@ -42,9 +42,9 @@ namespace Diligent
         {
             OffsetType Offset;
             OffsetType Size;
-            Uint64 CmdListNumber;
-			StaleAllocationAttribs(OffsetType _Offset, OffsetType _Size, Uint64 _CmdListNumber) :
-                Offset(_Offset), Size(_Size), CmdListNumber(_CmdListNumber)
+            Uint64 FenceValue;
+			StaleAllocationAttribs(OffsetType _Offset, OffsetType _Size, Uint64 _FenceValue) :
+                Offset(_Offset), Size(_Size), FenceValue(_FenceValue)
             {}
         };
 
@@ -73,22 +73,22 @@ namespace Diligent
         VariableSizeGPUAllocationsManager(const VariableSizeGPUAllocationsManager&) = delete;
         VariableSizeGPUAllocationsManager& operator = (const VariableSizeGPUAllocationsManager&) = delete;
 
-        void Free(OffsetType Offset, OffsetType Size, Uint64 CmdListNumber)
+        void Free(OffsetType Offset, OffsetType Size, Uint64 FenceValue)
         {
             // Do not release the block immediately, but add
             // it to the queue instead
-            m_StaleAllocations.emplace_back(Offset, Size, CmdListNumber);
+            m_StaleAllocations.emplace_back(Offset, Size, FenceValue);
 			m_StaleAllocationsSize += Size;
         }
 
 		// Releases stale allocation from completed command lists
-		// The method takes the NUMBER of completed cmd lists (N)
-		// and releases all allocations whose number n < N 
-		// (n == N is NOT released)
-        void ReleaseStaleAllocations(Uint64 NumCompletedCmdLists)
+		// The method takes the last known completed fence value N
+		// and releases all allocations whose associated fence value 
+        // is at most N (n <= N)
+        void ReleaseStaleAllocations(Uint64 LastCompletedFenceValue)
         {
             // Free all allocations from the beginning of the queue that belong to completed command lists
-            while(!m_StaleAllocations.empty() && m_StaleAllocations.front().CmdListNumber < NumCompletedCmdLists)
+            while(!m_StaleAllocations.empty() && m_StaleAllocations.front().FenceValue <= LastCompletedFenceValue)
             {
                 auto &OldestAllocation = m_StaleAllocations.front();
                 VariableSizeAllocationsManager::Free(OldestAllocation.Offset, OldestAllocation.Size);

@@ -36,8 +36,8 @@ namespace Diligent
 {
 
 
-ShaderD3D12Impl::ShaderD3D12Impl(FixedBlockMemoryAllocator& ShaderObjAllocator, RenderDeviceD3D12Impl *pRenderDeviceD3D12, const ShaderCreationAttribs &ShaderCreationAttribs) : 
-    TShaderBase(ShaderObjAllocator, pRenderDeviceD3D12, ShaderCreationAttribs.Desc),
+ShaderD3D12Impl::ShaderD3D12Impl(IReferenceCounters *pRefCounters, RenderDeviceD3D12Impl *pRenderDeviceD3D12, const ShaderCreationAttribs &ShaderCreationAttribs) : 
+    TShaderBase(pRefCounters, pRenderDeviceD3D12, ShaderCreationAttribs.Desc),
     ShaderD3DBase(ShaderCreationAttribs),
     m_StaticResLayout(*this, GetRawAllocator()),
     m_DummyShaderVar(*this),

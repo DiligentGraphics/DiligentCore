@@ -54,23 +54,23 @@ namespace Diligent
         * Below, we select an EGLConfig with at least 8 bits per color
         * component compatible with on-screen windows
         */
+        color_size_ = 8;
+        depth_size_ = 24;
         const EGLint attribs[] = 
         { 
             EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT, //Request opengl ES2.0
             EGL_SURFACE_TYPE, EGL_WINDOW_BIT, 
             //EGL_COLORSPACE, EGL_COLORSPACE_sRGB, // does not work
-            EGL_BLUE_SIZE, 8, 
-            EGL_GREEN_SIZE, 8,
-            EGL_RED_SIZE, 8, 
-            EGL_ALPHA_SIZE, 8,
-            EGL_DEPTH_SIZE, 24,
+            EGL_BLUE_SIZE,  color_size_, 
+            EGL_GREEN_SIZE, color_size_,
+            EGL_RED_SIZE,   color_size_, 
+            EGL_ALPHA_SIZE, color_size_,
+            EGL_DEPTH_SIZE, depth_size_,
             //EGL_SAMPLE_BUFFERS  , 1,
             //EGL_SAMPLES         , 4,
             EGL_NONE 
         };
-        color_size_ = 8;
-        depth_size_ = 24;
-
+                
         // Get a list of EGL frame buffer configurations that match specified attributes
         EGLint num_configs;
         success = eglChooseConfig( display_, attribs, &config_, 1, &num_configs );
@@ -82,15 +82,16 @@ namespace Diligent
         if( !num_configs )
         {
             //Fall back to 16bit depth buffer
+            depth_size_ = 16;
             const EGLint attribs[] = 
             { 
                 EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT, //Request opengl ES2.0
                 EGL_SURFACE_TYPE, EGL_WINDOW_BIT, 
-                EGL_BLUE_SIZE, 8, 
-                EGL_GREEN_SIZE, 8,
-                EGL_RED_SIZE, 8,
-                EGL_ALPHA_SIZE, 8,
-                EGL_DEPTH_SIZE, 16, 
+                EGL_BLUE_SIZE,  color_size_, 
+                EGL_GREEN_SIZE, color_size_,
+                EGL_RED_SIZE,   color_size_,
+                EGL_ALPHA_SIZE, color_size_,
+                EGL_DEPTH_SIZE, depth_size_, 
                 EGL_NONE 
             };
             success = eglChooseConfig( display_, attribs, &config_, 1, &num_configs );
@@ -98,14 +99,14 @@ namespace Diligent
             {
                 LOG_ERROR_AND_THROW( "Failed to choose 16-bit depth config" );
             }
-
-            depth_size_ = 16;
         }
 
         if( !num_configs )
         {
             LOG_ERROR_AND_THROW( "Unable to retrieve EGL config" );
         }
+
+        LOG_INFO_MESSAGE("Chosen EGL config: ", color_size_, " bit color, ", depth_size_, " bit depth");
 
         surface_ = eglCreateWindowSurface( display_, config_, window_, NULL );
         if( surface_ == EGL_NO_SURFACE )
@@ -126,8 +127,6 @@ namespace Diligent
         EGLint format;
         eglGetConfigAttrib( display_, config_, EGL_NATIVE_VISUAL_ID, &format );
         ANativeWindow_setBuffersGeometry( window_, 0, 0, format );
-
-        LoadGLFunctions();
 
         return true;
     }
@@ -162,6 +161,22 @@ namespace Diligent
         return true;
     }
 
+    void GLContext::AttachToCurrentEGLContext()
+    {
+        if( eglGetCurrentContext() == EGL_NO_CONTEXT )
+        {
+            LOG_ERROR_AND_THROW( "Failed to attach to EGLContext: no active context" );
+        }
+        context_valid_ = true;
+        glGetIntegerv( GL_MAJOR_VERSION, &major_version_ );
+        glGetIntegerv( GL_MINOR_VERSION, &minor_version_ );
+    }
+
+    GLContext::NativeGLContextType GLContext::GetCurrentNativeGLContext()
+    {
+        return eglGetCurrentContext();
+    }
+
     void GLContext::InitGLES()
     {
         if( gles_initialized_ )
@@ -169,21 +184,23 @@ namespace Diligent
         //
         //Initialize OpenGL ES 3 if available
         //
-        LOG_INFO_MESSAGE( "GL Version: \n", glGetString( GL_VERSION ), '\n' );
         const char* versionStr = (const char*)glGetString( GL_VERSION );
-        if( strstr( versionStr, "OpenGL ES 3." ) 
+        LOG_INFO_MESSAGE( "GL Version: ", versionStr, '\n' );
+        
 #if USE_GL3_STUB
-            && gl3stubInit() 
+        gl3stubInit();
 #endif
-            )
-        {
-            es3_supported_ = true;
-            gl_version_ = 3.0f;
-        }
-        else
-        {
-            gl_version_ = 2.0f;
-        }
+        
+        LoadGLFunctions();
+
+        // When GL_FRAMEBUFFER_SRGB is enabled, and if the destination image is in the sRGB colorspace
+        // then OpenGL will assume the shader's output is in the linear RGB colorspace. It will therefore 
+        // convert the output from linear RGB to sRGB.
+        // Any writes to images that are not in the sRGB format should not be affected.
+        // Thus this setting should be just set once and left that way
+        glEnable(GL_FRAMEBUFFER_SRGB);
+        if( glGetError() != GL_NO_ERROR )
+            LOG_ERROR_MESSAGE("Failed to enable SRGB framebuffers");
 
         gles_initialized_ = true;
     }
@@ -197,8 +214,15 @@ namespace Diligent
         //Initialize EGL
         //
         window_ = window;
-        InitEGLSurface();
-        InitEGLContext();
+        if (window != nullptr)
+        {
+            InitEGLSurface();
+            InitEGLContext();
+        }
+        else
+        {
+            AttachToCurrentEGLContext();
+        }
         InitGLES();
 
         egl_context_initialized_ = true;
@@ -210,7 +234,6 @@ namespace Diligent
         display_( EGL_NO_DISPLAY ),
         surface_( EGL_NO_SURFACE ),
         context_( EGL_NO_CONTEXT ),
-        es3_supported_( false ),
         egl_context_initialized_( false ),
         gles_initialized_( false ),
         major_version_(0),
@@ -380,7 +403,7 @@ namespace Diligent
         DeviceCaps.DevType = DeviceType::OpenGLES;
         DeviceCaps.MajorVersion = major_version_;
         DeviceCaps.MinorVersion = minor_version_;
-        bool IsGLES31OrAbove = (major_version_ >= 4 || major_version_ == 3 && minor_version_ >= 1);
+        bool IsGLES31OrAbove = (major_version_ >= 4 || (major_version_ == 3 && minor_version_ >= 1) );
         DeviceCaps.bSeparableProgramSupported      = IsGLES31OrAbove;
         DeviceCaps.bIndirectRenderingSupported     = IsGLES31OrAbove;
 

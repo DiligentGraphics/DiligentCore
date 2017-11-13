@@ -33,17 +33,22 @@ namespace Diligent
 {
 
 class FixedBlockMemoryAllocator;
+class IRenderDevice;
+class IDeviceContext;
+class BufferGLImpl;
+struct BufferViewDesc;
+
 /// Implementation of the Diligent::IBufferViewGL interface
-class BufferViewGLImpl : public BufferViewBase<IBufferViewGL, FixedBlockMemoryAllocator>
+class BufferViewGLImpl : public BufferViewBase<IBufferViewGL>
 {
 public:
-    typedef BufferViewBase<IBufferViewGL, FixedBlockMemoryAllocator> TBuffViewBase;
+    typedef BufferViewBase<IBufferViewGL> TBuffViewBase;
 
-    BufferViewGLImpl( FixedBlockMemoryAllocator& BuffViewObjAllocator,
-                      class IRenderDevice *pDevice, 
-                      class IDeviceContext *pContext,
-                      const struct BufferViewDesc& ViewDesc, 
-                      class BufferGLImpl *pBuffer,
+    BufferViewGLImpl( IReferenceCounters *pRefCounters,
+                      IRenderDevice *pDevice, 
+                      IDeviceContext *pContext,
+                      const BufferViewDesc& ViewDesc, 
+                      BufferGLImpl *pBuffer,
                       bool bIsDefaultView);
     
     /// Queries the specific interface, see IObject::QueryInterface() for details

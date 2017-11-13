@@ -55,7 +55,7 @@
         #include <GLES2/gl2platform.h>
     #else
         #include <GLES3/gl3.h>
-        #include <GLES3/gl3platform.h>
+        #include <GLES3/gl3ext.h>
     #endif
 #endif
 
@@ -70,13 +70,9 @@
 #include "RefCntAutoPtr.h"
 #include "DebugUtilities.h"
 #include "GLObjectWrapper.h"
-#include "DebugUtilities.h"
 #include "ValidatedCast.h"
 #include "RenderDevice.h"
 #include "BaseInterfacesGL.h"
-
-using namespace Diligent;
-using namespace std;
 
 #define CHECK_GL_ERROR(...)\
 {                                       \

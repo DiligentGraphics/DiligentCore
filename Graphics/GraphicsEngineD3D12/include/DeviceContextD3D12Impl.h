@@ -26,7 +26,7 @@
 /// \file
 /// Declaration of Diligent::DeviceContextD3D12Impl class
 
-#include "DeviceContext.h"
+#include "DeviceContextD3D12.h"
 #include "DeviceContextBase.h"
 #include "GenerateMips.h"
 
@@ -38,14 +38,15 @@ namespace Diligent
 {
 
 /// Implementation of the Diligent::IDeviceContext interface
-class DeviceContextD3D12Impl : public DeviceContextBase<IDeviceContext>
+class DeviceContextD3D12Impl : public DeviceContextBase<IDeviceContextD3D12>
 {
 public:
-    typedef DeviceContextBase<IDeviceContext> TDeviceContextBase;
+    typedef DeviceContextBase<IDeviceContextD3D12> TDeviceContextBase;
 
-    DeviceContextD3D12Impl(IMemoryAllocator &RawMemAllocator, class RenderDeviceD3D12Impl *pDevice, bool bIsDeferred, const EngineD3D12Attribs &Attribs, Uint32 ContextId);
+    DeviceContextD3D12Impl(IReferenceCounters *pRefCounters, class RenderDeviceD3D12Impl *pDevice, bool bIsDeferred, const EngineD3D12Attribs &Attribs, Uint32 ContextId);
     ~DeviceContextD3D12Impl();
-    //virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
+    
+    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
 
     virtual void SetPipelineState(IPipelineState *pPipelineState)override final;
 
@@ -58,7 +59,8 @@ public:
     virtual void SetBlendFactors(const float* pBlendFactors = nullptr)override final;
 
     virtual void SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer **ppBuffers, Uint32 *pStrides, Uint32 *pOffsets, Uint32 Flags )override final;
-    virtual void ClearState()override final;
+    
+    virtual void InvalidateState()override final;
 
     virtual void SetIndexBuffer( IBuffer *pIndexBuffer, Uint32 ByteOffset )override final;
 
@@ -82,6 +84,10 @@ public:
 
     virtual void ExecuteCommandList(class ICommandList *pCommandList)override final;
 
+    virtual void TransitionTextureState(ITexture *pTexture, D3D12_RESOURCE_STATES State)override final;
+
+    virtual void TransitionBufferState(IBuffer *pBuffer, D3D12_RESOURCE_STATES State)override final;
+
     ///// Clears the state caches. This function is called once per frame
     ///// (before present) to release all outstanding objects
     ///// that are only kept alive by references in the cache
@@ -90,10 +96,12 @@ public:
     ///// Number of different shader types (Vertex, Pixel, Geometry, Domain, Hull, Compute)
     //static const int NumShaderTypes = 6;
 
+    void UpdateBufferRegion(class BufferD3D12Impl *pBuffD3D12, struct DynamicAllocation& Allocation, Uint64 DstOffset, Uint64 NumBytes);
     void UpdateBufferRegion(class BufferD3D12Impl *pBuffD3D12, const void *pData, Uint64 DstOffset, Uint64 NumBytes);
     void CopyBufferRegion(class BufferD3D12Impl *pSrcBuffD3D12, class BufferD3D12Impl *pDstBuffD3D12, Uint64 SrcOffset, Uint64 DstOffset, Uint64 NumBytes);
     void CopyTextureRegion(class TextureD3D12Impl *pSrcTexture, Uint32 SrcSubResIndex, const D3D12_BOX *pD3D12SrcBox,
                            class TextureD3D12Impl *pDstTexture, Uint32 DstSubResIndex, Uint32 DstX, Uint32 DstY, Uint32 DstZ);
+    void CopyTextureRegion(IBuffer *pSrcBuffer, Uint32 SrcStride, Uint32 SrcDepthStride, class TextureD3D12Impl *pTextureD3D12, Uint32 DstSubResIndex, const Box &DstBox);
 
     void GenerateMips(class TextureViewD3D12Impl *pTexView);
 
@@ -101,17 +109,25 @@ public:
     
     Uint32 GetContextId()const{return m_ContextId;}
 
+    size_t GetNumCommandsInCtx()const { return m_NumCommandsInCurCtx; }
+
 private:
     void CommitD3D12IndexBuffer(VALUE_TYPE IndexType);
     void CommitD3D12VertexBuffers(class GraphicsContext &GraphCtx);
     void TransitionD3D12VertexBuffers(class GraphicsContext &GraphCtx);
-    void RebindRenderTargets();
+    void CommitRenderTargets();
     void CommitViewports();
     void CommitScissorRects();
     void Flush(bool RequestNewCmdCtx);
 
     friend class SwapChainD3D12Impl;
-    inline class CommandContext* RequestCmdContext(){return m_pCurrCmdCtx;}
+    inline class CommandContext* RequestCmdContext()
+    {
+        // Make sure that the number of commands in the context is at least one,
+        // so that the context cannot be disposed by Flush()
+        m_NumCommandsInCurCtx = m_NumCommandsInCurCtx != 0 ? m_NumCommandsInCurCtx : 1;
+        return m_pCurrCmdCtx;
+    }
     size_t m_NumCommandsInCurCtx = 0;
     const Uint32  m_NumCommandsToFlush = 192;
     CommandContext* m_pCurrCmdCtx = nullptr;

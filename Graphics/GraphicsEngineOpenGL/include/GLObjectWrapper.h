@@ -41,10 +41,7 @@ public:
             Create();
             if(!m_uiHandle)
             {
-                std::string ErrorStr("Failed to create ");
-                ErrorStr += m_CreateReleaseHelper.Name;
-                ErrorStr += " object";
-                LOG_ERROR_AND_THROW(ErrorStr.c_str());
+                LOG_ERROR_AND_THROW("Failed to create ", m_CreateReleaseHelper.Name, " GL object");
             }
         }
     }
@@ -114,9 +111,29 @@ private:
 class GLBufferObjCreateReleaseHelper
 {
 public:
-    static void Create(GLuint &BuffObj){ glGenBuffers   (1, &BuffObj); }
-    static void Release(GLuint BuffObj){ glDeleteBuffers(1, &BuffObj); }
+    explicit GLBufferObjCreateReleaseHelper(GLuint ExternalGLBufferHandle = 0) :
+        m_ExternalGLBufferHandle(ExternalGLBufferHandle)
+    {}
+
+    void Create(GLuint &BuffObj)
+    { 
+        if (m_ExternalGLBufferHandle != 0)
+            BuffObj = m_ExternalGLBufferHandle; // Attach to external GL buffer handle
+        else
+            glGenBuffers(1, &BuffObj); 
+    }
+
+    void Release(GLuint BuffObj)
+    { 
+        if (m_ExternalGLBufferHandle != 0)
+            m_ExternalGLBufferHandle = 0; // Detach from external GL buffer. DO NOT delete the buffer
+        else
+            glDeleteBuffers(1, &BuffObj); 
+    }
     static const char *Name;
+
+private:
+    GLuint m_ExternalGLBufferHandle;
 };
 typedef GLObjWrapper<GLBufferObjCreateReleaseHelper> GLBufferObj;
 
@@ -167,9 +184,30 @@ typedef GLObjWrapper<GLVAOCreateReleaseHelper> GLVertexArrayObj;
 class GLTextureCreateReleaseHelper
 {
 public:
-    void Create(GLuint &Tex) { glGenTextures(1, &Tex); }
-    void Release(GLuint Tex) { glDeleteTextures(1, &Tex); }
+    explicit GLTextureCreateReleaseHelper(GLuint ExternalGLTextureHandle = 0) :
+        m_ExternalGLTextureHandle(ExternalGLTextureHandle)
+    {}
+
+    void Create(GLuint &Tex) 
+    { 
+        if (m_ExternalGLTextureHandle != 0)
+            Tex = m_ExternalGLTextureHandle; // Attach to the external texture
+        else
+            glGenTextures(1, &Tex);
+    }
+
+    void Release(GLuint Tex)
+    { 
+        if (m_ExternalGLTextureHandle != 0)
+            m_ExternalGLTextureHandle = 0; // Detach from the external texture. DO NOT delete it!
+        else
+            glDeleteTextures(1, &Tex);
+    }
+
     static const char *Name;
+
+private:
+    GLuint m_ExternalGLTextureHandle;
 };
 typedef GLObjWrapper<GLTextureCreateReleaseHelper> GLTextureObj;
 

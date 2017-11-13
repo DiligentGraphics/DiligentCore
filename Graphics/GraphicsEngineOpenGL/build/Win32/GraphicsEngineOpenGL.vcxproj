@@ -214,7 +214,6 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
@@ -225,7 +224,6 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DbgDLL|Win32'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
@@ -238,7 +236,6 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
@@ -252,7 +249,6 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DbgDLL|x64'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
@@ -268,11 +264,11 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <DisableSpecificWarnings>4100;4505;4189</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -283,11 +279,11 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='RelDLL|Win32'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <DisableSpecificWarnings>4100;4505;4189</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -300,11 +296,11 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <DisableSpecificWarnings>4100;4505;4189</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -318,11 +314,11 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='RelDLL|x64'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <DisableSpecificWarnings>4100;4505;4189</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -341,33 +337,15 @@
     <ClInclude Include="..\..\include\BufferViewGLImpl.h" />
     <ClInclude Include="..\..\include\DeviceContextGLImpl.h" />
     <ClInclude Include="..\..\include\FBOCache.h" />
+    <ClInclude Include="..\..\include\GLContext.h" />
     <ClInclude Include="..\..\include\GLContextAndroid.h" />
     <ClInclude Include="..\..\include\GLContextState.h" />
     <ClInclude Include="..\..\include\GLContextWindows.h" />
     <ClInclude Include="..\..\include\GLObjectWrapper.h" />
     <ClInclude Include="..\..\include\GLProgram.h" />
-    <CustomBuild Include="..\..\include\GLSLDefinitions.h">
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">"$(EngineRoot)\Utilities\File2Include\File2String.exe" "%(FullPath)" "$(ProjectRoot)\include\%(Filename)_inc.h"</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ProjectRoot)\include\%(Filename)_inc.h</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">"$(EngineRoot)\Utilities\File2Include\File2String.exe" "%(FullPath)" "$(ProjectRoot)\include\%(Filename)_inc.h"</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ProjectRoot)\include\%(Filename)_inc.h</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='DbgDLL|Win32'">"$(EngineRoot)\Utilities\File2Include\File2String.exe" "%(FullPath)" "$(ProjectRoot)\include\%(Filename)_inc.h"</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='DbgDLL|Win32'">$(ProjectRoot)\include\%(Filename)_inc.h</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='RelDLL|Win32'">"$(EngineRoot)\Utilities\File2Include\File2String.exe" "%(FullPath)" "$(ProjectRoot)\include\%(Filename)_inc.h"</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='RelDLL|Win32'">$(ProjectRoot)\include\%(Filename)_inc.h</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"$(EngineRoot)\Utilities\File2Include\File2String.exe" "%(FullPath)" "$(ProjectRoot)\include\%(Filename)_inc.h"</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectRoot)\include\%(Filename)_inc.h</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(EngineRoot)\Utilities\File2Include\File2String.exe" "%(FullPath)" "$(ProjectRoot)\include\%(Filename)_inc.h"</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectRoot)\include\%(Filename)_inc.h</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='DbgDLL|x64'">"$(EngineRoot)\Utilities\File2Include\File2String.exe" "%(FullPath)" "$(ProjectRoot)\include\%(Filename)_inc.h"</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='DbgDLL|x64'">$(ProjectRoot)\include\%(Filename)_inc.h</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='RelDLL|x64'">"$(EngineRoot)\Utilities\File2Include\File2String.exe" "%(FullPath)" "$(ProjectRoot)\include\%(Filename)_inc.h"</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='RelDLL|x64'">$(ProjectRoot)\include\%(Filename)_inc.h</Outputs>
-    </CustomBuild>
     <ClInclude Include="..\..\include\GLProgramResources.h" />
     <ClInclude Include="..\..\include\GLStubs.h" />
     <ClInclude Include="..\..\include\GLTypeConversions.h" />
-    <ClInclude Include="..\..\include\HLSL2GLSLConverter.h" />
     <ClInclude Include="..\..\include\PipelineStateGLImpl.h" />
     <ClInclude Include="..\..\include\RenderDeviceGLImpl.h" />
     <ClInclude Include="..\..\include\RenderDeviceGLESImpl.h" />
@@ -449,7 +427,6 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='RelDLL|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="..\..\src\GLTypeConversions.cpp" />
-    <ClCompile Include="..\..\src\HLSL2GLSLConverter.cpp" />
     <ClCompile Include="..\..\src\PipelineStateGLImpl.cpp" />
     <ClCompile Include="..\..\src\RenderDeviceGLImpl.cpp" />
     <ClCompile Include="..\..\src\RenderDeviceGLESImpl.cpp">
@@ -490,6 +467,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\..\readme.md" />
     <None Include="..\..\src\GraphicsEngineOpenGL.def" />
     <None Include="jni\Android.mk" />
     <None Include="jni\Application.mk" />
@@ -498,7 +476,7 @@
     <ProjectReference Include="..\..\..\..\Common\build\Win32\Common.vcxproj">
       <Project>{7380f7e6-315f-4b4e-92eb-e6aeee865298}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\..\External\glew-1.10.0\build\Win32\glew_static.vcxproj">
+    <ProjectReference Include="..\..\..\..\External\glew\build\Win32\glew_static.vcxproj">
       <Project>{664e6f0d-6784-4760-9565-d54f8eb1edf4}</Project>
     </ProjectReference>
     <ProjectReference Include="..\..\..\..\Platforms\Basic\build\Win32\BasicPlatform.vcxproj">
@@ -512,6 +490,9 @@
     </ProjectReference>
     <ProjectReference Include="..\..\..\GraphicsTools\build\Win32\GraphicsTools.vcxproj">
       <Project>{c6014499-0cf2-43ec-a773-a4e354fb2d74}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\HLSL2GLSLConverterLib\build\Win32\HLSL2GLSLConverterLib.vcxproj">
+      <Project>{1a782154-a5bd-4a05-b837-efc77f126c84}</Project>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

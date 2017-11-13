@@ -126,24 +126,15 @@ namespace Diligent
     {
         /// Resource is mapped for reading. \n
         /// D3D11 counterpart: D3D11_MAP_READ. OpenGL counterpart: GL_MAP_READ_BIT
-        MAP_READ = 0,       
+        MAP_READ = 0x01,       
 
         /// Resource is mapped for writing. \n
         /// D3D11 counterpart: D3D11_MAP_WRITE. OpenGL counterpart: GL_MAP_WRITE_BIT
-	    MAP_WRITE,          
+	    MAP_WRITE = 0x02,          
 
         /// Resource is mapped for reading and writing. \n
         /// D3D11 counterpart: D3D11_MAP_READ_WRITE. OpenGL counterpart: GL_MAP_WRITE_BIT | GL_MAP_READ_BIT
-	    MAP_READ_WRITE,     
-
-        /// Resource is mapped for writing; the previous contents of the resource will be undefined. \n
-        /// D3D11 counterpart: D3D11_MAP_WRITE_DISCARD. OpenGL counterpart: GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT
-        /// \note OpenGL implementation may orphan a buffer instead 
-	    MAP_WRITE_DISCARD,  
-
-        /// Resource is mapped for writing; the existing contents of the resource cannot be overwritten. \n
-        /// D3D11 counterpart:  D3D11_MAP_WRITE_NO_OVERWRITE. OpenGL counterpart: GL_MAP_WRITE_BIT | GL_MAP_UNSYNCHRONIZED_BIT
-	    MAP_WRITE_NO_OVERWRITE 
+	    MAP_READ_WRITE = 0x03
     };
 
     /// Special map flags
@@ -159,7 +150,18 @@ namespace Diligent
         /// is still in use.\n
         /// D3D11 counterpart:  D3D11_MAP_FLAG_DO_NOT_WAIT
         /// \note: OpenGL does not have corresponding flag, so a buffer will always be mapped
-        MAP_FLAG_DO_NOT_WAIT = 0x001
+        MAP_FLAG_DO_NOT_WAIT = 0x001,
+
+        /// Previous contents of the resource will be undefined. This flag is only compatible with MAP_WRITE\n
+        /// D3D11 counterpart: D3D11_MAP_WRITE_DISCARD. OpenGL counterpart: GL_MAP_INVALIDATE_BUFFER_BIT
+        /// \note OpenGL implementation may orphan a buffer instead 
+	    MAP_FLAG_DISCARD = 0x002,
+
+        /// The system will not synchronize pending operations before mapping the buffer. It is responsibility
+        /// of the application to make sure that the buffer contents is not overwritten while it is in use by 
+        /// the GPU.\n
+        /// D3D11 counterpart:  D3D11_MAP_WRITE_NO_OVERWRITE. OpenGL counterpart: GL_MAP_UNSYNCHRONIZED_BIT
+	    MAP_FLAG_DO_NOT_SYNCHRONIZE = 0x004
     };
 
     /// Describes resource dimension

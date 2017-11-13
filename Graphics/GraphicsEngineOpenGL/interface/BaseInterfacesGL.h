@@ -27,8 +27,7 @@
     #include "RenderDeviceGLES.h"
     namespace Diligent
     {
-        static const Diligent::INTERFACE_ID IID_GLDeviceBaseInterface = IID_RenderDeviceGLES;
-        typedef IRenderDeviceGLES IGLDeviceBaseInterface;
+        using IGLDeviceBaseInterface = IRenderDeviceGLES;
     }
 #endif
 
@@ -36,13 +35,12 @@
     #include "RenderDeviceGL.h"
     namespace Diligent
     {
-        static const Diligent::INTERFACE_ID IID_GLDeviceBaseInterface = IID_RenderDeviceGL;
-        typedef IRenderDeviceGL IGLDeviceBaseInterface;
+        using IGLDeviceBaseInterface = IRenderDeviceGL;
     }
 #endif
 
 #include "DeviceContextGL.h"
 namespace Diligent
 {
-    typedef IDeviceContextGL IGLDeviceContextBaseInterface;
+    using IGLDeviceContextBaseInterface = IDeviceContextGL;
 }

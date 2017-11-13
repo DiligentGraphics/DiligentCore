@@ -21,20 +21,6 @@
  *  of the possibility of such damages.
  */
 
-//
-// Copyright (c) Microsoft. All rights reserved.
-// This code is licensed under the MIT License (MIT).
-// THIS CODE IS PROVIDED *AS IS* WITHOUT WARRANTY OF
-// ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING ANY
-// IMPLIED WARRANTIES OF FITNESS FOR A PARTICULAR
-// PURPOSE, MERCHANTABILITY, OR NON-INFRINGEMENT.
-//
-// Developed by Minigraph
-//
-// Author:  James Stanard
-//
-// Adapted to Diligent Engine: Egor Yusov
-
 #pragma once
 
 #include <vector>
@@ -59,19 +45,22 @@ public:
     void CreateNewCommandList( ID3D12GraphicsCommandList** ppList, ID3D12CommandAllocator** ppAllocator );
     
     // Discards the allocator.
-    // CmdListNum is the serial number of the command list that was created by this allocator
-    void DiscardAllocator( Uint64 CmdListNum, ID3D12CommandAllocator* pAllocator );
+    // FenceValue is the value that was signaled by the command queue after it 
+    // executed the the command list created by the allocator
+    void DiscardAllocator( Uint64 FenceValue, ID3D12CommandAllocator* pAllocator );
 
     void RequestAllocator(ID3D12CommandAllocator** ppAllocator);
 
 private:
-    // fist    - the SERIAL NUMBER of command list that was created by the allocator 
+    // fist    - the fence value associated with the command list that was created by the allocator 
     // second  - the allocator to be discarded
     typedef std::pair<Uint64, CComPtr<ID3D12CommandAllocator> > DiscardedAllocatorQueueElemType;
 	std::deque< DiscardedAllocatorQueueElemType, STDAllocatorRawMem<DiscardedAllocatorQueueElemType> > m_DiscardedAllocators;
 
 	std::mutex m_AllocatorMutex;
     RenderDeviceD3D12Impl *m_pDeviceD3D12;
+
+    Atomics::AtomicLong m_NumAllocators = 0; // For debug purposes only
 };
 
 }

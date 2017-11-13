@@ -90,15 +90,15 @@ namespace Diligent
     class FixedBlockMemoryAllocator;
 
     /// Implementation of the resource mapping
-    class ResourceMappingImpl : public ObjectBase<IResourceMapping, FixedBlockMemoryAllocator>
+    class ResourceMappingImpl : public ObjectBase<IResourceMapping>
     {
     public:
-        typedef ObjectBase<IResourceMapping, FixedBlockMemoryAllocator> TObjectBase;
+        typedef ObjectBase<IResourceMapping> TObjectBase;
 
-        /// \param ObjAllocator allocator that was used to allocate memory for this instance of the resource mapping object.
-        /// \param RawMemAllocator raw memory allocator that is used by the m_HashTable member
-        ResourceMappingImpl(FixedBlockMemoryAllocator &ObjAllocator, IMemoryAllocator &RawMemAllocator) : 
-            TObjectBase(nullptr, &ObjAllocator),
+        /// \param pRefCounters - reference counters object that controls the lifetime of this resource mapping
+        /// \param RawMemAllocator - raw memory allocator that is used by the m_HashTable member
+        ResourceMappingImpl(IReferenceCounters *pRefCounters, IMemoryAllocator &RawMemAllocator) : 
+            TObjectBase(pRefCounters),
             m_HashTable(STD_ALLOCATOR_RAW_MEM(HashTableElem, RawMemAllocator, "Allocator for unordered_map< ResMappingHashKey, RefCntAutoPtr<IDeviceObject> >") )
         {}
 
@@ -119,7 +119,7 @@ namespace Diligent
         virtual void GetResource( const Char *Name, IDeviceObject **ppResource, Uint32 ArrayIndex )override final;
 
         /// Returns number of resources in the resource mapping.
-        virtual size_t GetSize();
+        virtual size_t GetSize()override final;
 
     private:
 

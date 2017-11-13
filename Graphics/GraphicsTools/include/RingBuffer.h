@@ -41,23 +41,26 @@ namespace Diligent
         typedef size_t OffsetType;
         struct FrameTailAttribs
         {
-            FrameTailAttribs(Uint64 fn, OffsetType off, OffsetType sz) : 
-                FrameNum(fn),
+            FrameTailAttribs(Uint64 fv, OffsetType off, OffsetType sz) : 
+                FenceValue(fv),
                 Offset(off),
                 Size(sz)
             {}
-            Uint64 FrameNum;
+
+            // Fence value associated with the command list in which 
+            // the allocation could have been referenced last time
+            Uint64 FenceValue;
             OffsetType Offset;
             OffsetType Size;
         };
         static const OffsetType InvalidOffset = static_cast<OffsetType>(-1);
 
-        RingBuffer(OffsetType MaxSize, IMemoryAllocator &Allocator) : 
+        RingBuffer(OffsetType MaxSize, IMemoryAllocator &Allocator)noexcept : 
             m_CompletedFrameTails(0, FrameTailAttribs(0,0,0), STD_ALLOCATOR_RAW_MEM(FrameTailAttribs, Allocator, "Allocator for vector<FrameNumOffsetPair>" )),
             m_MaxSize(MaxSize)
         {}
 
-        RingBuffer(RingBuffer&& rhs) : 
+        RingBuffer(RingBuffer&& rhs)noexcept : 
             m_CompletedFrameTails(std::move(rhs.m_CompletedFrameTails)),
             m_Head(rhs.m_Head),
             m_Tail(rhs.m_Tail),
@@ -72,12 +75,7 @@ namespace Diligent
             rhs.m_CurrFrameSize = 0;
         }
 
-        ~RingBuffer()
-        {
-            VERIFY(m_UsedSize==0, "All space in the ring buffer must be released")
-        }
-
-        RingBuffer& operator = (RingBuffer&& rhs)
+        RingBuffer& operator = (RingBuffer&& rhs)noexcept
         {
             m_CompletedFrameTails = std::move(rhs.m_CompletedFrameTails);
             m_Head = rhs.m_Head;
@@ -97,6 +95,11 @@ namespace Diligent
 
         RingBuffer(const RingBuffer&) = delete;
         RingBuffer& operator = (const RingBuffer&) = delete;
+
+        ~RingBuffer()
+        {
+            VERIFY(m_UsedSize==0, "All space in the ring buffer must be released")
+        }
 
         OffsetType Allocate(OffsetType Size)
         {
@@ -147,24 +150,24 @@ namespace Diligent
             return InvalidOffset;
         }
 
-        // FrameNum is the number of the frame (or command list) in which the tail
+        // FenceValue is the fence value associated with the command list in which the tail
         // could have been referenced last time
         // See http://diligentgraphics.com/diligent-engine/architecture/d3d12/managing-resource-lifetimes/
-        void FinishCurrentFrame(Uint64 FrameNum)
+        void FinishCurrentFrame(Uint64 FenceValue)
         {
-            m_CompletedFrameTails.emplace_back(FrameNum, m_Tail, m_CurrFrameSize);
+            m_CompletedFrameTails.emplace_back(FenceValue, m_Tail, m_CurrFrameSize);
             m_CurrFrameSize = 0;
         }
 
-        // NumCompletedFrames is the number of completed frames (or command lists)
+        // CompletedFenceValue indicates GPU progress
         // See http://diligentgraphics.com/diligent-engine/architecture/d3d12/managing-resource-lifetimes/
-        void ReleaseCompletedFrames(Uint64 NumCompletedFrames)
+        void ReleaseCompletedFrames(Uint64 CompletedFenceValue)
         {
-            // Command list is completed when its number is strictly less than the number of completed frames
-            while(!m_CompletedFrameTails.empty() && m_CompletedFrameTails.front().FrameNum < NumCompletedFrames)
+            // We can release all tails whose associated fence value is less than or equal to CompletedFenceValue
+            while(!m_CompletedFrameTails.empty() && m_CompletedFrameTails.front().FenceValue <= CompletedFenceValue)
             {
                 const auto &OldestFrameTail = m_CompletedFrameTails.front();
-                VERIFY_EXPR(OldestFrameTail.Size <= m_MaxSize);
+                VERIFY_EXPR(OldestFrameTail.Size <= m_UsedSize);
                 m_UsedSize -= OldestFrameTail.Size;
                 m_Head = OldestFrameTail.Offset;
                 m_CompletedFrameTails.pop_front();
@@ -177,7 +180,7 @@ namespace Diligent
         OffsetType GetUsedSize()const{return m_UsedSize;}
 
     private:
-        // Consider the following scenario for 1024 buffer:
+        // Consider the following scenario for a 1024-byte buffer:
         // Allocate(512)
         //
         //  h     t     m

@@ -178,12 +178,13 @@ namespace Diligent
 /// keep strong reference to the device.
 /// Device only holds weak reference to the immediate context.
 template<typename BaseInterface>
-class RenderDeviceBase : public ObjectBase<BaseInterface, IMemoryAllocator>
+class RenderDeviceBase : public ObjectBase<BaseInterface>
 {
 public:
     
-    typedef ObjectBase<BaseInterface, IMemoryAllocator> TObjectBase;
+    typedef ObjectBase<BaseInterface> TObjectBase;
 
+    /// \param pRefCounters - reference counters object that controls the lifetime of this render device
     /// \param RawMemAllocator - allocator that will be used to allocate memory for all device objects (including render device itself)
     /// \param NumDeferredContexts - number of deferred device contexts 
     /// \param TextureObjSize - size of the texture object, in bytes
@@ -196,7 +197,8 @@ public:
     /// \param SRBSize - size of the shader resource binding object, in bytes
     /// \remarks Render device uses fixed block allocators (see FixedBlockMemoryAllocator) to allocate memory for
     ///          device objects. The object sizes provided to constructor are used to initialize the allocators.
-    RenderDeviceBase(IMemoryAllocator &RawMemAllocator, 
+    RenderDeviceBase(IReferenceCounters *pRefCounters,
+                     IMemoryAllocator &RawMemAllocator, 
                      Uint32 NumDeferredContexts,
                      size_t TextureObjSize, 
                      size_t TexViewObjSize,
@@ -206,7 +208,7 @@ public:
                      size_t SamplerObjSize,
                      size_t PSOSize,
                      size_t SRBSize) :
-        TObjectBase(nullptr, &RawMemAllocator),
+        TObjectBase(pRefCounters),
         m_TextureFormatsInfo( TEX_FORMAT_NUM_FORMATS, TextureFormatInfoExt(), STD_ALLOCATOR_RAW_MEM(TextureFormatInfoExt, RawMemAllocator, "Allocator for vector<TextureFormatInfoExt>") ),
         m_TexFmtInfoInitFlags( TEX_FORMAT_NUM_FORMATS, false, STD_ALLOCATOR_RAW_MEM(bool, RawMemAllocator, "Allocator for vector<bool>") ),
         m_wpDeferredContexts(NumDeferredContexts, RefCntWeakPtr<IDeviceContext>(), STD_ALLOCATOR_RAW_MEM(RefCntWeakPtr<IDeviceContext>, RawMemAllocator, "Allocator for vector< RefCntWeakPtr<IDeviceContext> >")),
@@ -387,7 +389,7 @@ void RenderDeviceBase<BaseInterface>::CreateResourceMapping( const ResourceMappi
         return;
     VERIFY( *ppMapping == nullptr, "Overwriting reference to existing object may cause memory leaks" );
 
-    auto *pResourceMapping( NEW(m_ResMappingAllocator, "ResourceMappingImpl instance",  ResourceMappingImpl, GetRawAllocator()) );
+    auto *pResourceMapping( NEW_RC_OBJ(m_ResMappingAllocator, "ResourceMappingImpl instance",  ResourceMappingImpl)(GetRawAllocator()) );
     pResourceMapping->QueryInterface( IID_ResourceMapping, reinterpret_cast<IObject**>(ppMapping) );
     if( MappingDesc.pEntries )
     {

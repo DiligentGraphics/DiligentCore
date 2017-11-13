@@ -31,7 +31,7 @@ namespace Diligent
 class RenderDeviceGLESImpl : public RenderDeviceGLImpl
 {
 public:
-    RenderDeviceGLESImpl( IMemoryAllocator &RawMemAllocator, const ContextInitInfo &InitInfo );
+    RenderDeviceGLESImpl( IReferenceCounters *pRefCounters, IMemoryAllocator &RawMemAllocator, const ContextInitInfo &InitInfo );
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface );
 

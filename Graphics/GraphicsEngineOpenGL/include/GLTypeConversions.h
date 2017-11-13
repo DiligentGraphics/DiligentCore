@@ -156,6 +156,7 @@ inline void FilterTypeToGLFilterType(FILTER_TYPE Filter, GLenum &GLFilter, Bool 
 }
 
 GLenum TexFormatToGLInternalTexFormat(TEXTURE_FORMAT TexFormat, Uint32 BindFlags = 0);
+TEXTURE_FORMAT GLInternalTexFormatToTexFormat(GLenum GlFormat);
 GLenum CorrectGLTexFormat(GLenum GLTexFormat, Uint32 BindFlags);
 
 inline GLenum TexAddressModeToGLAddressMode(TEXTURE_ADDRESS_MODE Mode)

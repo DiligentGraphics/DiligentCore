@@ -281,10 +281,9 @@ public:
     void Free(DescriptorHeapAllocation&& Allocation);
     
     // Releases all stale allocation used by completed command lists
-	// The method takes the NUMBER of completed command lists (N)
-	// and releases all allocations whose number n < N 
-	// (cmd list n == N is NOT released)
-    void ReleaseStaleAllocations(Uint64 NumCompletedCmdLists);
+	// The method takes the last known completed fence value N
+	// and releases all allocations whose associated fence value n <= N 
+    void ReleaseStaleAllocations(Uint64 LastCompletedFenceValue);
 
     size_t GetNumAvailableDescriptors()const{return m_FreeBlockManager.GetFreeSize();}
 	size_t GetNumStaleDescriptors()const { return m_FreeBlockManager.GetStaleAllocationsSize(); }
@@ -360,10 +359,9 @@ public:
     virtual Uint32 GetDescriptorSize()const override{return m_DescriptorSize;}
 
 	// Releases all stale allocation used by completed command lists
-	// The method takes the NUMBER of completed command lists (N)
-	// and releases all allocations whose number n < N 
-	// (cmd list n == N is NOT released)
-    void ReleaseStaleAllocations(Uint64 NumCompletedCmdLists);
+	// The method takes the last known completed fence value N
+	// and releases all allocations whose associated fence value n <= N 
+    void ReleaseStaleAllocations(Uint64 LastCompletedFenceValue);
 
 protected:
 
@@ -448,10 +446,9 @@ public:
     DescriptorHeapAllocation AllocateDynamic( uint32_t Count );
 
 	// Releases all stale allocation used by completed command lists
-	// The method takes the NUMBER of completed command lists (N)
-	// and releases all allocations whose number n < N 
-	// (cmd list n == N is NOT released)
-    void ReleaseStaleAllocations(Uint64 NumCompletedCmdLists);
+	// The method takes the last known completed fence value N
+	// and releases all allocations whose associated fence value n <= N 
+    void ReleaseStaleAllocations(Uint64 LastCompletedFenceValue);
 
     const D3D12_DESCRIPTOR_HEAP_DESC &GetHeapDesc()const{return m_HeapDesc;}
 	Uint32 GetMaxStaticDescriptors()const { return m_HeapAllocationManager.GetMaxDescriptors(); }
@@ -503,7 +500,7 @@ public:
     DynamicSuballocationsManager& operator = (const DynamicSuballocationsManager&) = delete;
     DynamicSuballocationsManager& operator = (DynamicSuballocationsManager&&) = delete;
 
-    void DiscardAllocations(Uint64 FrameNumber);
+    void DiscardAllocations(Uint64 /*FenceValue*/);
 
 	virtual DescriptorHeapAllocation Allocate( Uint32 Count )override;
     virtual void Free(DescriptorHeapAllocation&& Allocation)override;

@@ -10,7 +10,6 @@ include $(CLEAR_VARS)
 LOCAL_MODULE := Common
 LOCAL_CFLAGS := -std=c++11
 LOCAL_CPP_FEATURES := exceptions
-LOCAL_STATIC_LIBRARIES += ndk_helper native_app_glue
 
 # Include paths
 PROJECT_ROOT := $(LOCAL_PATH)/../../..
@@ -22,6 +21,3 @@ LOCAL_C_INCLUDES := $(PROJECT_ROOT)/include $(PROJECT_ROOT)/interface $(SOLUTION
 LOCAL_SRC_FILES := ../../../src/BasicFileStream.cpp ../../../src/DataBlobImpl.cpp ../../../src/DefaultRawMemoryAllocator.cpp ../../../src/FixedBlockMemoryAllocator.cpp ../../../src/Timer.cpp
 
 include $(BUILD_STATIC_LIBRARY)
-
-$(call import-module,android/ndk_helper)
-$(call import-module,android/native_app_glue)

@@ -105,19 +105,15 @@ void FBOCache::OnReleaseTexture(ITexture *pTexture)
 }
 
 const GLObjectWrappers::GLFrameBufferObj& FBOCache::GetFBO( Uint32 NumRenderTargets, 
-                                                              ITextureView *ppRenderTargets[], 
-                                                              ITextureView *pDepthStencil,
-                                                              GLContextState &ContextState )
+                                                            ITextureView *ppRenderTargets[], 
+                                                            ITextureView *pDepthStencil,
+                                                            GLContextState &ContextState )
 {
     // Pop null render targets from the end of the list
     while( NumRenderTargets > 0 && ppRenderTargets[NumRenderTargets - 1] == nullptr )
         --NumRenderTargets;
 
-    if( NumRenderTargets == 0 && pDepthStencil == nullptr )
-    {
-        static const GLObjectWrappers::GLFrameBufferObj DefaultFBO( false );
-        return DefaultFBO;
-    }
+    VERIFY(NumRenderTargets != 0 || pDepthStencil != nullptr, "At least one render target or a depth-stencil buffer must be provided");
 
     // Lock the cache
     ThreadingTools::LockHelper CacheLock(m_CacheLockFlag);
@@ -262,15 +258,15 @@ const GLObjectWrappers::GLFrameBufferObj& FBOCache::GetFBO( Uint32 NumRenderTarg
             UNEXPECTED( "Framebuffer is incomplete" );
         }
 
-        auto NewElems = m_Cache.emplace( make_pair(Key, std::move(NewFBO)) );
+        auto NewElems = m_Cache.emplace( std::make_pair(Key, std::move(NewFBO)) );
         // New element must be actually inserted
         VERIFY( NewElems.second, "New element was not inserted" ); 
         if( Key.DSId  )
-            m_TexIdToKey.insert( make_pair(Key.DSId, Key) );
+            m_TexIdToKey.insert( std::make_pair(Key.DSId, Key) );
         for( Uint32 rt = 0; rt < NumRenderTargets; ++rt )
         {
             if( Key.RTIds[rt] )
-                m_TexIdToKey.insert( make_pair(Key.RTIds[rt], Key) );
+                m_TexIdToKey.insert( std::make_pair(Key.RTIds[rt], Key) );
         }
 
         return NewElems.first->second;

@@ -1,2 +1,2 @@
 EXPORTS
-	 CreateDeviceAndSwapChainGL
+	 GetEngineFactoryOpenGL

@@ -37,17 +37,23 @@ namespace Diligent
 class FixedBlockMemoryAllocator;
 
 /// Implementation of the Diligent::IBufferGL interface
-class BufferGLImpl : public BufferBase<IBufferGL, BufferViewGLImpl, FixedBlockMemoryAllocator, FixedBlockMemoryAllocator>, public AsyncWritableResource
+class BufferGLImpl : public BufferBase<IBufferGL, BufferViewGLImpl, FixedBlockMemoryAllocator>, public AsyncWritableResource
 {
 public:
-    typedef BufferBase<IBufferGL, BufferViewGLImpl, FixedBlockMemoryAllocator, FixedBlockMemoryAllocator> TBufferBase;
+    typedef BufferBase<IBufferGL, BufferViewGLImpl, FixedBlockMemoryAllocator> TBufferBase;
 
-    BufferGLImpl(FixedBlockMemoryAllocator &BufferObjMemAllocator, 
+    BufferGLImpl(IReferenceCounters *pRefCounters, 
                  FixedBlockMemoryAllocator &BuffViewObjMemAllocator, 
                  class RenderDeviceGLImpl *pDeviceGL, 
                  const BufferDesc& BuffDesc, 
-                 const BufferData &BuffData = BufferData(), 
-                 bool IsDeviceInternal = false);
+                 const BufferData& BuffData,
+                 bool bIsDeviceInternal);
+    BufferGLImpl(IReferenceCounters *pRefCounters, 
+                 FixedBlockMemoryAllocator &BuffViewObjMemAllocator, 
+                 class RenderDeviceGLImpl *pDeviceGL, 
+                 const BufferDesc& BuffDesc, 
+                 GLuint GLHandle,
+                 bool bIsDeviceInternal);
     ~BufferGLImpl();
     
     /// Queries the specific interface, see IObject::QueryInterface() for details
@@ -56,11 +62,14 @@ public:
     virtual void UpdateData(IDeviceContext *pContext, Uint32 Offset, Uint32 Size, const PVoid pData)override;
     virtual void CopyData( IDeviceContext *pContext, IBuffer *pSrcBuffer, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size )override;
     virtual void Map( IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid &pMappedData )override;
-    virtual void Unmap( IDeviceContext *pContext, MAP_TYPE MapType )override;
+    virtual void Unmap( IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags )override;
 
     void BufferMemoryBarrier( Uint32 RequiredBarriers, class GLContextState &GLContextState );
 
-    const GLObjectWrappers::GLBufferObj& GetGLBufferHandle(){ return m_GlBuffer; }
+    const GLObjectWrappers::GLBufferObj& GetGLHandle(){ return m_GlBuffer; }
+
+    virtual GLuint GetGLBufferHandle()override final { return GetGLHandle(); }
+    virtual void* GetNativeHandle()override final { return reinterpret_cast<void*>(static_cast<size_t>(GetGLBufferHandle())); }
 
 private:
     virtual void CreateViewInternal( const struct BufferViewDesc &ViewDesc, class IBufferView **ppView, bool bIsDefaultView )override;
@@ -70,8 +79,8 @@ private:
 
     GLObjectWrappers::GLBufferObj m_GlBuffer;
     Uint32 m_uiMapTarget;
-    GLenum m_GLUsageHint;
-    Bool m_bUseMapWriteDiscardBugWA;
+    const GLenum m_GLUsageHint;
+    const Bool m_bUseMapWriteDiscardBugWA;
 };
 
 }

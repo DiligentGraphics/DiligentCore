@@ -37,11 +37,11 @@ namespace Diligent
 
 class FixedBlockMemoryAllocator;
 /// Implementation of the Diligent::IShaderResourceBindingGL interface
-class ShaderResourceBindingGLImpl : public ShaderResourceBindingBase<IShaderResourceBindingGL, FixedBlockMemoryAllocator>
+class ShaderResourceBindingGLImpl : public ShaderResourceBindingBase<IShaderResourceBindingGL>
 {
 public:
-    typedef ShaderResourceBindingBase<IShaderResourceBindingGL, FixedBlockMemoryAllocator> TBase;
-    ShaderResourceBindingGLImpl(FixedBlockMemoryAllocator& SRBAllocator, class PipelineStateGLImpl *pPSO);
+    typedef ShaderResourceBindingBase<IShaderResourceBindingGL> TBase;
+    ShaderResourceBindingGLImpl(IReferenceCounters *pRefCounters, class PipelineStateGLImpl *pPSO);
     ~ShaderResourceBindingGLImpl();
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;

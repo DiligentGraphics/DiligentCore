@@ -36,7 +36,7 @@ static const Diligent::INTERFACE_ID IID_SwapChainD3D11 =
 { 0x4daf2e76, 0x9204, 0x4dc4, { 0xa5, 0x3a, 0xb0, 0x0, 0x97, 0x41, 0x2d, 0x3a } };
 
 /// Interface to the swap chain object implemented in D3D11
-class ISwapChainD3D11 : public Diligent::ISwapChain
+class ISwapChainD3D11 : public ISwapChain
 {
 public:
 
@@ -45,6 +45,18 @@ public:
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
     virtual IDXGISwapChain *GetDXGISwapChain() = 0;
+
+    /// Returns d3d11 render target view of the swap chain's back buffer
+
+    /// The method does *NOT* call AddRef() on the returned interface,
+    /// so Release() must not be called.
+    virtual ID3D11RenderTargetView *GetRTV() = 0;
+
+    /// Returns d3d11 depth stencil view of the internal depth buffer object
+
+    /// The method does *NOT* call AddRef() on the returned interface,
+    /// so Release() must not be called.
+    virtual ID3D11DepthStencilView *GetDSV() = 0;
 };
 
 }

@@ -432,13 +432,17 @@ namespace Diligent
                 RefCntAutoPtr<IDeviceObject> pNewRes;
                 pResourceMapping->GetResource( Name.c_str(), static_cast<IDeviceObject**>(&pNewRes), ArrInd );
 
-                if( !pNewRes )
+                if (pNewRes != nullptr)
                 {
-                    if( Flags & BIND_SHADER_RESOURCES_ALL_RESOLVED )
-                        LOG_ERROR_MESSAGE( "Resource \"", Name, "\" is not found in the resource mapping" );
-                    continue;
+                    if(res->VarType == SHADER_VARIABLE_TYPE_STATIC && CurrResource !=  nullptr && CurrResource != pNewRes )
+                        LOG_ERROR_MESSAGE( "Updating binding for static variable \"", Name, "\" is invalid and may result in an undefined behavior" );
+                    CurrResource = pNewRes;
                 }
-                CurrResource = pNewRes;
+                else
+                {
+                    if ( CurrResource == nullptr && (Flags & BIND_SHADER_RESOURCES_ALL_RESOLVED) )
+                        LOG_ERROR_MESSAGE("Resource \"", Name, "\" is not found in the resource mapping");
+                }
             }
         }
     }
@@ -460,7 +464,6 @@ namespace Diligent
     {
         for( auto res = ResArr.begin(); res != ResArr.end(); ++res )
         {
-            auto &Name = res->Name;
             for(Uint32 ArrInd = 0; ArrInd < res->pResources.size(); ++ArrInd)
             {
                 if( !res->pResources[ArrInd] )

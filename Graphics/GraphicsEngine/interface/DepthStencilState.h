@@ -171,7 +171,7 @@ struct DepthStencilStateDesc
     /// Identify stencil operations for the back-facing triangles, see Diligent::StencilOpDesc.
     StencilOpDesc      BackFace;
 
-    /// Initializes the structure members with default values
+    /// Initializes the structure members
 
     /// Default values:
     /// Member              | Default value
@@ -185,13 +185,18 @@ struct DepthStencilStateDesc
     /// 
     /// Members of FrontFace and BackFace
     /// are initialized by StencilOpDesc::StencilOpDesc()
-    DepthStencilStateDesc() : 
-        DepthEnable     ( True ),
-        DepthWriteEnable( True ),
-        DepthFunc       ( COMPARISON_FUNC_LESS ),
-        StencilEnable   ( False ),
-        StencilReadMask ( 0xFF ),
-        StencilWriteMask( 0xFF )
+    DepthStencilStateDesc(Bool                _DepthEnable      = True,
+                          Bool                _DepthWriteEnable = True,
+                          COMPARISON_FUNCTION _DepthFunc        = COMPARISON_FUNC_LESS,
+                          Bool                _StencilEnable    = False,
+                          Uint8               _StencilReadMask  = 0xFF,
+                          Uint8               _StencilWriteMask = 0xFF) : 
+        DepthEnable     ( _DepthEnable ),
+        DepthWriteEnable( _DepthWriteEnable ),
+        DepthFunc       ( _DepthFunc ),
+        StencilEnable   ( _StencilEnable ),
+        StencilReadMask ( _StencilReadMask ),
+        StencilWriteMask( _StencilWriteMask )
     {}
 
     /// Tests if two structures are equivalent

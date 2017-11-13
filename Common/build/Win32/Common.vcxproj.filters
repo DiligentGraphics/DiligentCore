@@ -36,5 +36,6 @@
     <None Include="..\..\make\AppCommon.mk">
       <Filter>jni</Filter>
     </None>
+    <None Include="..\..\readme.md" />
   </ItemGroup>
 </Project>

@@ -31,12 +31,12 @@ namespace Diligent
 
 class IMemoryAllocator;
 /// Implementation of the Diligent::ISwapChainGL interface
-class SwapChainGLImpl : public SwapChainBase<ISwapChainGL, IMemoryAllocator>
+class SwapChainGLImpl : public SwapChainBase<ISwapChainGL>
 {
 public:
-    typedef SwapChainBase<ISwapChainGL, IMemoryAllocator> TSwapChainBase;
+    typedef SwapChainBase<ISwapChainGL> TSwapChainBase;
 
-    SwapChainGLImpl(IMemoryAllocator &Allocator,
+    SwapChainGLImpl(IReferenceCounters *pRefCounters,
                     const SwapChainDesc& SwapChainDesc, 
                     class RenderDeviceGLImpl* pRenderDeviceGL,
                     class DeviceContextGLImpl* pImmediateContextGL);

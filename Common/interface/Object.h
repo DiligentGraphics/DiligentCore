@@ -71,7 +71,7 @@ public:
 
 
     /// Returns the pointer to IReferenceCounters interface of the associated 
-    /// reference counters object. The metod does *NOT* increment
+    /// reference counters object. The method does *NOT* increment
     /// the number of strong references to the returned object.
     virtual IReferenceCounters* GetReferenceCounters()const = 0;
 };

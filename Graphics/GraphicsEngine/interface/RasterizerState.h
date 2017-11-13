@@ -122,7 +122,7 @@ struct RasterizerStateDesc
     /// Specifies whether to enable line antialiasing.
     Bool      AntialiasedLineEnable;
 
-    /// Initializes the structure members with default values
+    /// Initializes the structure members
 
     /// Member                | Default value
     /// ----------------------|--------------
@@ -135,16 +135,24 @@ struct RasterizerStateDesc
     /// DepthClipEnable       | True
     /// ScissorEnable         | False
     /// AntialiasedLineEnable | False
-    RasterizerStateDesc() : 
-        FillMode             ( FILL_MODE_SOLID ),
-        CullMode             ( CULL_MODE_BACK ),
-        FrontCounterClockwise( False ),
-        DepthBias            ( 0 ),
-        DepthBiasClamp       ( 0.f ),
-        SlopeScaledDepthBias ( 0.f ),
-        DepthClipEnable      ( True ),
-        ScissorEnable        ( False ),
-        AntialiasedLineEnable( False )
+    RasterizerStateDesc(FILL_MODE _FillMode              = FILL_MODE_SOLID,
+                        CULL_MODE _CullMode              = CULL_MODE_BACK,
+                        Bool      _FrontCounterClockwise = False,
+                        Int32     _DepthBias             = 0,
+                        Float32   _DepthBiasClamp        = 0.f,
+                        Float32   _SlopeScaledDepthBias  = 0.f,
+                        Bool      _DepthClipEnable       = True,
+                        Bool      _ScissorEnable         = False,
+                        Bool      _AntialiasedLineEnable = False) : 
+        FillMode             ( _FillMode ),
+        CullMode             ( _CullMode ),
+        FrontCounterClockwise( _FrontCounterClockwise ),
+        DepthBias            ( _DepthBias ),
+        DepthBiasClamp       ( _DepthBiasClamp ),
+        SlopeScaledDepthBias ( _SlopeScaledDepthBias ),
+        DepthClipEnable      ( _DepthClipEnable ),
+        ScissorEnable        ( _ScissorEnable ),
+        AntialiasedLineEnable( _AntialiasedLineEnable )
     {
     }
     

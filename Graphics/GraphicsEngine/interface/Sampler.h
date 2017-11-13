@@ -93,7 +93,7 @@ struct SamplerDesc : DeviceObjectAttribs
     /// Must be greater than or equal to MinLOD.
     float MaxLOD;
 
-    /// Initializes the structure members with default values
+    /// Initializes the structure members
 
     /// Member              | Default value
     /// --------------------|--------------
@@ -109,21 +109,36 @@ struct SamplerDesc : DeviceObjectAttribs
     /// BorderColor         | (0,0,0,0)
     /// MinLOD              | 0
     /// MaxLOD              | +FLT_MAX
-    SamplerDesc() : 
-        MinFilter(FILTER_TYPE_LINEAR),
-        MagFilter(FILTER_TYPE_LINEAR),
-        MipFilter(FILTER_TYPE_LINEAR),
-        AddressU(TEXTURE_ADDRESS_CLAMP),
-        AddressV(TEXTURE_ADDRESS_CLAMP),
-        AddressW(TEXTURE_ADDRESS_CLAMP),
-        MipLODBias(0),
-        MaxAnisotropy(0),
-        ComparisonFunc(COMPARISON_FUNC_NEVER),
-        MinLOD(0),
-        MaxLOD(+FLT_MAX)
+    SamplerDesc(FILTER_TYPE          _MinFilter      = FILTER_TYPE_LINEAR,
+                FILTER_TYPE          _MagFilter      = FILTER_TYPE_LINEAR,
+                FILTER_TYPE          _MipFilter      = FILTER_TYPE_LINEAR,
+                TEXTURE_ADDRESS_MODE _AddressU       = TEXTURE_ADDRESS_CLAMP,
+                TEXTURE_ADDRESS_MODE _AddressV       = TEXTURE_ADDRESS_CLAMP,
+                TEXTURE_ADDRESS_MODE _AddressW       = TEXTURE_ADDRESS_CLAMP,
+                Float32              _MipLODBias     = 0,
+                Uint32               _MaxAnisotropy  = 0,
+                COMPARISON_FUNCTION  _ComparisonFunc = COMPARISON_FUNC_NEVER,
+                float                _MinLOD         = 0,
+                float                _MaxLOD         = +FLT_MAX) : 
+        MinFilter(_MinFilter),
+        MagFilter(_MagFilter),
+        MipFilter(_MipFilter),
+        AddressU(_AddressU),
+        AddressV(_AddressV),
+        AddressW(_AddressW),
+        MipLODBias(_MipLODBias),
+        MaxAnisotropy(_MaxAnisotropy),
+        ComparisonFunc(_ComparisonFunc),
+        MinLOD(_MinLOD),
+        MaxLOD(_MaxLOD)
     {
         BorderColor[0] = BorderColor[1] = BorderColor[2] = BorderColor[3] = 0;
     }
+
+    SamplerDesc(const SamplerDesc&) = default;
+    SamplerDesc(SamplerDesc&&) = default;
+    SamplerDesc& operator = (const SamplerDesc&) = default;
+    SamplerDesc& operator = (SamplerDesc&&) = default;
 
     /// Tests if two structures are equivalent
 

@@ -34,33 +34,36 @@
 namespace Diligent
 {
 
+class IRenderDevice;
+class IBuffer;
+
 /// Template class implementing base functionality for a buffer view object
 
 /// \tparam BaseInterface - base interface that this class will inheret 
 ///                         (Diligent::IBufferViewD3D11, Diligent::IBufferViewD3D12 or Diligent::IBufferViewGL).
 /// \tparam BuffViewObjAllocator - type of the allocator that is used to allocate memory for the buffer view object instances 
-template<class BaseInterface, class BuffViewObjAllocator>
-class BufferViewBase : public DeviceObjectBase<BaseInterface, BufferViewDesc, BuffViewObjAllocator>
+template<class BaseInterface>
+class BufferViewBase : public DeviceObjectBase<BaseInterface, BufferViewDesc>
 {
 public:
-    typedef DeviceObjectBase<BaseInterface, BufferViewDesc, BuffViewObjAllocator> TDeviceObjectBase;
+    typedef DeviceObjectBase<BaseInterface, BufferViewDesc> TDeviceObjectBase;
 
-    /// \param ObjAllocator - allocator that was used to allocate memory for this instance of the buffer view object
+    /// \param pRefCounters - reference counters object that controls the lifetime of this buffer view.
 	/// \param pDevice - pointer to the render device.
 	/// \param ViewDesc - buffer view description.
 	/// \param pBuffer - pointer to the buffer that the view is to be created for.
 	/// \param bIsDefaultView - flag indicating if the view is default view, and is thus
 	///						    part of the buffer object. In this case the view will attach 
 	///							to the buffer's reference counters.
-    BufferViewBase( BuffViewObjAllocator &ObjAllocator,
-                    class IRenderDevice *pDevice,
+    BufferViewBase( IReferenceCounters *pRefCounters,
+                    IRenderDevice *pDevice,
                     const BufferViewDesc& ViewDesc, 
-                    class IBuffer *pBuffer,
+                    IBuffer *pBuffer,
                     bool bIsDefaultView ) :
         // Default views are created as part of the buffer, so we cannot not keep strong 
         // reference to the buffer to avoid cyclic links. Instead, we will attach to the 
         // reference counters of the buffer.
-        TDeviceObjectBase( ObjAllocator, pDevice, ViewDesc, bIsDefaultView ? pBuffer : nullptr ),
+        TDeviceObjectBase( pRefCounters, pDevice, ViewDesc),
         m_pBuffer( pBuffer ),
         // For non-default view, we will keep strong reference to buffer
         m_spBuffer(bIsDefaultView ? nullptr : pBuffer)
@@ -81,7 +84,7 @@ protected:
 
     /// Strong reference to the buffer. Used for non-default views
     /// to keep the buffer alive
-    Diligent::RefCntAutoPtr<IBuffer> m_spBuffer;
+    RefCntAutoPtr<IBuffer> m_spBuffer;
 };
 
 }

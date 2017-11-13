@@ -38,11 +38,11 @@ namespace Diligent
 
 class FixedBlockMemoryAllocator;
 /// Implementation of the Diligent::IShaderResourceBindingD3D11 interface
-class ShaderResourceBindingD3D11Impl : public ShaderResourceBindingBase<IShaderResourceBindingD3D11, FixedBlockMemoryAllocator>
+class ShaderResourceBindingD3D11Impl : public ShaderResourceBindingBase<IShaderResourceBindingD3D11>
 {
 public:
-    typedef ShaderResourceBindingBase<IShaderResourceBindingD3D11, FixedBlockMemoryAllocator> TBase;
-    ShaderResourceBindingD3D11Impl(FixedBlockMemoryAllocator &SRBAllocator, class PipelineStateD3D11Impl *pPSO, bool IsInternal);
+    typedef ShaderResourceBindingBase<IShaderResourceBindingD3D11> TBase;
+    ShaderResourceBindingD3D11Impl(IReferenceCounters *pRefCounters, class PipelineStateD3D11Impl *pPSO, bool IsInternal);
     ~ShaderResourceBindingD3D11Impl();
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;

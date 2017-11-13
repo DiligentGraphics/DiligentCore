@@ -34,11 +34,11 @@ namespace Diligent
 
 class IMemoryAllocator;
 /// Implementation of the Diligent::ISwapChainD3D11 interface
-class SwapChainD3D11Impl : public SwapChainBase<ISwapChainD3D11, IMemoryAllocator>
+class SwapChainD3D11Impl : public SwapChainBase<ISwapChainD3D11>
 {
 public:
-    typedef SwapChainBase<ISwapChainD3D11, IMemoryAllocator> TSwapChainBase;
-    SwapChainD3D11Impl(IMemoryAllocator &Allocator,
+    typedef SwapChainBase<ISwapChainD3D11> TSwapChainBase;
+    SwapChainD3D11Impl(IReferenceCounters *pRefCounters,
                        const SwapChainDesc& SwapChainDesc, 
                        class RenderDeviceD3D11Impl* pRenderDeviceD3D11,
                        class DeviceContextD3D11Impl* pDeviceContextD3D11,
@@ -50,10 +50,10 @@ public:
     virtual void Present()override final;
     virtual void Resize( Uint32 NewWidth, Uint32 NewHeight )override final;
 
-    virtual IDXGISwapChain *GetDXGISwapChain(){ return m_pSwapChain; }
+    virtual IDXGISwapChain *GetDXGISwapChain()override final{ return m_pSwapChain; }
 
-    ID3D11RenderTargetView* GetRTV(){ return m_pRenderTargetView; }
-    ID3D11DepthStencilView* GetDSV(){ return m_pDepthStencilView; }
+    virtual ID3D11RenderTargetView* GetRTV()override final{ return m_pRenderTargetView; }
+    virtual ID3D11DepthStencilView* GetDSV()override final{ return m_pDepthStencilView; }
 
 private:
     void CreateRTVandDSV();

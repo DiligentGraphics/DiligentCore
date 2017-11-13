@@ -35,6 +35,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\RefCntAutoPtr.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\RefCountedObjectImpl.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\STDAllocator.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\StringDataBlobImpl.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\StringTools.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\Timer.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\UniqueIdentifier.h" />

@@ -6,7 +6,7 @@
     <GraphicsRoot>..\..\..</GraphicsRoot>
   </PropertyGroup>
   <PropertyGroup>
-    <IncludePath>$(GraphicsRoot)\GraphicsTools\include;$(GraphicsRoot)\GraphicsEngine\interface;$(GraphicsRoot)\TextureLoader\interface;$(EngineRoot)\Common\include;$(EngineRoot)\Common\interface;$(EngineRoot)\Platforms\interface;$(VC_IncludePath);$(WindowsSDK_IncludePath);$(IncludePath)</IncludePath>
+    <IncludePath>$(GraphicsRoot)\GraphicsTools\include;$(GraphicsRoot)\GraphicsEngine\interface;$(GraphicsRoot)\GraphicsEngineD3D11\interface;$(GraphicsRoot)\GraphicsEngineD3D12\interface;$(GraphicsRoot)\GraphicsEngineD3DBase\include;$(GraphicsRoot)\GraphicsEngineOpenGL\interface;$(GraphicsRoot)\TextureLoader\interface;$(EngineRoot)\Common\include;$(EngineRoot)\Common\interface;$(EngineRoot)\Platforms\interface;$(VC_IncludePath);$(WindowsSDK_IncludePath);$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup />
   <ItemGroup>

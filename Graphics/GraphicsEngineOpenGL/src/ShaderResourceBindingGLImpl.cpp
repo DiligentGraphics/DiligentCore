@@ -30,8 +30,8 @@
 namespace Diligent
 {
 
-ShaderResourceBindingGLImpl::ShaderResourceBindingGLImpl( FixedBlockMemoryAllocator& SRBAllocator, PipelineStateGLImpl *pPSO) :
-    TBase( SRBAllocator, pPSO ),
+ShaderResourceBindingGLImpl::ShaderResourceBindingGLImpl( IReferenceCounters *pRefCounters, PipelineStateGLImpl *pPSO) :
+    TBase( pRefCounters, pPSO ),
     m_DummyShaderVar(*this),
     m_wpPSO(pPSO)
 {

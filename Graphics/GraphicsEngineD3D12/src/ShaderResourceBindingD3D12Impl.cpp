@@ -30,8 +30,8 @@
 namespace Diligent
 {
 
-ShaderResourceBindingD3D12Impl::ShaderResourceBindingD3D12Impl( FixedBlockMemoryAllocator &SRBAllocator, PipelineStateD3D12Impl *pPSO, bool IsPSOInternal) :
-    TBase( SRBAllocator, pPSO, IsPSOInternal ),
+ShaderResourceBindingD3D12Impl::ShaderResourceBindingD3D12Impl( IReferenceCounters *pRefCounters, PipelineStateD3D12Impl *pPSO, bool IsPSOInternal) :
+    TBase( pRefCounters, pPSO, IsPSOInternal ),
     m_ShaderResourceCache(ShaderResourceCacheD3D12::DbgCacheContentType::SRBResources)
 {
     auto *ppShaders = pPSO->GetShaders();
@@ -49,7 +49,7 @@ ShaderResourceBindingD3D12Impl::ShaderResourceBindingD3D12Impl( FixedBlockMemory
         auto ShaderType = pShader->GetDesc().ShaderType;
         auto ShaderInd = GetShaderTypeIndex(ShaderType);
         
-        auto &ShaderResLayoutDataAllocator = pPSO->GetShaderResourceLayoutDataAllocator(ShaderInd);
+        auto &ShaderResLayoutDataAllocator = pPSO->GetShaderResourceLayoutDataAllocator(s);
 
         // http://diligentgraphics.com/diligent-engine/architecture/d3d12/shader-resource-layout#Initializing-Resource-Layouts-in-a-Shader-Resource-Binding-Object
         SHADER_VARIABLE_TYPE Types[] = {SHADER_VARIABLE_TYPE_STATIC, SHADER_VARIABLE_TYPE_MUTABLE, SHADER_VARIABLE_TYPE_DYNAMIC};

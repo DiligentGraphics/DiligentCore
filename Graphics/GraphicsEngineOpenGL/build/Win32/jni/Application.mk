@@ -4,4 +4,4 @@ DEPENDENCY_PATH := $(call my-dir)
 LOCAL_PATH := $(abspath $(DEPENDENCY_PATH))
 include $(LOCAL_PATH)/../../../../../Common/make/AppCommon.mk
 
-APP_MODULES := GraphicsEngineOpenGL
+APP_MODULES := GraphicsEngineOpenGL GraphicsEngineOpenGL_static

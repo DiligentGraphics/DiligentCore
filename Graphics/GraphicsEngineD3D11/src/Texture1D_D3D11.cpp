@@ -29,12 +29,12 @@
 namespace Diligent
 {
 
-Texture1D_D3D11 :: Texture1D_D3D11(FixedBlockMemoryAllocator &TexObjAllocator, 
+Texture1D_D3D11 :: Texture1D_D3D11(IReferenceCounters *pRefCounters,
                                    FixedBlockMemoryAllocator &TexViewObjAllocator, 
                                    RenderDeviceD3D11Impl *pRenderDeviceD3D11, 
                                    const TextureDesc& TexDesc, 
                                    const TextureData &InitData /*= TextureData()*/) : 
-    TextureBaseD3D11(TexObjAllocator, TexViewObjAllocator, pRenderDeviceD3D11, TexDesc, InitData)
+    TextureBaseD3D11(pRefCounters, TexViewObjAllocator, pRenderDeviceD3D11, TexDesc, InitData)
 {
     auto D3D11TexFormat = TexFormatToDXGI_Format(m_Desc.Format, m_Desc.BindFlags);
     auto D3D11BindFlags = BindFlagsToD3D11BindFlags(m_Desc.BindFlags);
@@ -62,6 +62,37 @@ Texture1D_D3D11 :: Texture1D_D3D11(FixedBlockMemoryAllocator &TexObjAllocator,
     HRESULT hr = pDeviceD3D11->CreateTexture1D(&Tex1DDesc, D3D11InitData.size() ? D3D11InitData.data() : nullptr, &ptex1D);
     m_pd3d11Texture.Attach(ptex1D);
     CHECK_D3D_RESULT_THROW( hr, "Failed to create the Direct3D11 Texture1D" );
+}
+
+static TextureDesc TexDescFromD3D11Texture1D(ID3D11Texture1D *pd3d11Texture)
+{
+    D3D11_TEXTURE1D_DESC D3D11TexDesc;
+    pd3d11Texture->GetDesc(&D3D11TexDesc);
+
+    TextureDesc TexDesc;
+    TexDesc.Name = "Texture1D_D3D11 from native d3d11 texture";
+    TexDesc.Type = D3D11TexDesc.ArraySize > 1 ? RESOURCE_DIM_TEX_1D_ARRAY : RESOURCE_DIM_TEX_1D;
+    TexDesc.Width = Uint32{D3D11TexDesc.Width};
+    TexDesc.Height = 1;
+    TexDesc.ArraySize = Uint32{D3D11TexDesc.ArraySize};
+    TexDesc.Format = DXGI_FormatToTexFormat(D3D11TexDesc.Format);
+    TexDesc.MipLevels = Uint32{D3D11TexDesc.MipLevels};
+    TexDesc.SampleCount = 1;
+    TexDesc.Usage = D3D11UsageToUsage(D3D11TexDesc.Usage);
+    TexDesc.BindFlags = D3D11BindFlagsToBindFlags(D3D11TexDesc.BindFlags);
+    TexDesc.CPUAccessFlags = D3D11CPUAccessFlagsToCPUAccessFlags(D3D11TexDesc.CPUAccessFlags);
+    TexDesc.MiscFlags = D3D11MiscFlagsToMiscTextureFlags(D3D11TexDesc.MiscFlags);
+
+    return TexDesc;
+}
+
+Texture1D_D3D11 :: Texture1D_D3D11(IReferenceCounters *pRefCounters, 
+                                   FixedBlockMemoryAllocator &TexViewObjAllocator, 
+                                   RenderDeviceD3D11Impl *pDeviceD3D11, 
+                                   ID3D11Texture1D *pd3d11Texture) : 
+    TextureBaseD3D11(pRefCounters, TexViewObjAllocator, pDeviceD3D11, TexDescFromD3D11Texture1D(pd3d11Texture), TextureData())
+{
+    m_pd3d11Texture = pd3d11Texture;
 }
 
 Texture1D_D3D11 :: ~Texture1D_D3D11()

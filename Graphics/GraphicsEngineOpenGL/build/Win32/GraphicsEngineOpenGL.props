@@ -3,7 +3,7 @@
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <IncludePath>$(GraphicsRoot)\GraphicsEngineOpenGL\include;$(GraphicsRoot)\GraphicsEngineOpenGL\interface;$(GraphicsRoot)\GraphicsEngine\include;$(GraphicsRoot)\GraphicsEngine\interface;$(GraphicsRoot)\GraphicsTools\include;$(EngineRoot)\Common\include;$(EngineRoot)\Common\interface;$(EngineRoot)\External\glew-1.10.0\include\GL;$(EngineRoot)\Platforms\interface;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
+    <IncludePath>$(GraphicsRoot)\GraphicsEngineOpenGL\include;$(GraphicsRoot)\GraphicsEngineOpenGL\interface;$(GraphicsRoot)\GraphicsEngine\include;$(GraphicsRoot)\GraphicsEngine\interface;$(GraphicsRoot)\HLSL2GLSLConverterLib\include;$(GraphicsRoot)\HLSL2GLSLConverterLib\interface;$(GraphicsRoot)\GraphicsTools\include;$(EngineRoot)\Common\include;$(EngineRoot)\Common\interface;$(EngineRoot)\External\glew\include\GL;$(EngineRoot)\Platforms\interface;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup />
   <ItemGroup />

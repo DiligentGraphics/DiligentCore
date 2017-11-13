@@ -195,6 +195,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\make\AppCommon.mk" />
+    <None Include="..\..\readme.md" />
     <None Include="jni\Android.mk" />
     <None Include="jni\Application.mk" />
   </ItemGroup>

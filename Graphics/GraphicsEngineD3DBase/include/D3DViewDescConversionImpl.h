@@ -285,7 +285,7 @@ namespace Diligent
 
         memset( &d3dSRVDesc, 0, sizeof( d3dSRVDesc ) );
         const auto &BuffFmt = BuffDesc.Format;
-        if( BuffDesc.Mode == BUFFER_MODE_FORMATED )
+        if( BuffDesc.Mode == BUFFER_MODE_FORMATTED )
             d3dSRVDesc.Format = TypeToDXGI_Format( BuffFmt.ValueType, BuffFmt.NumComponents, BuffFmt.IsNormalized );
 
         VERIFY( SRVDesc.ViewType == BUFFER_VIEW_SHADER_RESOURCE,          "Incorrect view type: shader resource is expected" );
@@ -306,7 +306,7 @@ namespace Diligent
 
         memset( &d3dUAVDesc, 0, sizeof(d3dUAVDesc) );
         const auto &BuffFmt = BuffDesc.Format;
-        if( BuffDesc.Mode == BUFFER_MODE_FORMATED )
+        if( BuffDesc.Mode == BUFFER_MODE_FORMATTED )
             d3dUAVDesc.Format = TypeToDXGI_Format( BuffFmt.ValueType, BuffFmt.NumComponents, BuffFmt.IsNormalized );
     
         VERIFY( UAVDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS,         "Incorrect view type: unordered access is expected" );

@@ -36,6 +36,7 @@
 // assume any responsibility for any errors which may appear in this software nor any
 // responsibility to update it.
 //--------------------------------------------------------------------------------------
+#pragma once
 
 #include <set>
 #include <vector>
@@ -51,12 +52,10 @@ namespace Diligent
 class ShaderMacroHelper
 {
 public:
-    ShaderMacroHelper() : m_bIsFinalized(false) {}
 
     template<typename DefintionType>
 	void AddShaderMacro( const Diligent::Char* Name, DefintionType Definition )
 	{
-        assert( !m_bIsFinalized );
 		std::ostringstream ss;
 		ss << Definition;
 		AddShaderMacro<const Diligent::Char*>( Name, ss.str().c_str() );
@@ -64,49 +63,61 @@ public:
 	
     void Finalize()
 	{
-		ShaderMacro LastMacro = {NULL, NULL};
-		m_Macros.push_back(LastMacro);
-        m_bIsFinalized = true;
+        if (!m_bIsFinalized)
+        {
+            m_Macros.emplace_back(nullptr, nullptr);
+            m_bIsFinalized = true;
+        }
 	}
+
+    void Reopen()
+    {
+        if (m_bIsFinalized)
+        {
+            VERIFY_EXPR(m_Macros.size() > 0 && m_Macros.back().Name == nullptr && m_Macros.back().Definition == nullptr);
+            m_Macros.pop_back();
+            m_bIsFinalized = false;
+        }
+    }
+
+    void Clear()
+    {
+        m_Macros.clear();
+        m_DefinitionsPool.clear();
+        m_bIsFinalized = false;
+    }
 
 	operator const ShaderMacro* ()
 	{
-        assert( !m_Macros.size() || m_bIsFinalized );
-        if( m_Macros.size() && !m_bIsFinalized )
+        if (m_Macros.size() > 0 && !m_bIsFinalized)
             Finalize();
-        return m_Macros.size() ? &m_Macros[0] : NULL;
+        return m_Macros.size() ? m_Macros.data() : nullptr;
 	}
     
 private:
 
 	std::vector< ShaderMacro > m_Macros;
-	std::set< std::string > m_DefinitionsPull;
-    bool m_bIsFinalized;
+	std::set< std::string > m_DefinitionsPool;
+    bool m_bIsFinalized = false;
 };
 
 template<>
 inline void ShaderMacroHelper::AddShaderMacro( const Diligent::Char* Name, const Diligent::Char* Definition )
 {
-    VERIFY_EXPR( !m_bIsFinalized );
-	ShaderMacro NewMacro = 
-	{
-		Name,
-		m_DefinitionsPull.insert(Definition).first->c_str()
-	};
-	m_Macros.push_back(NewMacro);
+    Reopen();
+    auto *PooledDefinition = m_DefinitionsPool.insert(Definition).first->c_str();
+	m_Macros.emplace_back(Name, PooledDefinition);
 }
 
 template<>
 inline void ShaderMacroHelper::AddShaderMacro( const Diligent::Char* Name, bool Definition )
 {
-    assert( !m_bIsFinalized );
 	AddShaderMacro( Name, Definition ? "1" : "0");
 }
 
 template<>
 inline void ShaderMacroHelper::AddShaderMacro( const Diligent::Char* Name, float Definition )
 {
-    assert( !m_bIsFinalized );
 	std::ostringstream ss;
     
     // Make sure that when floating point represents integer, it is still

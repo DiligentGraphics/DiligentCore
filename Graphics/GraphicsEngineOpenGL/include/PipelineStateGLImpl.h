@@ -28,6 +28,7 @@
 #include "RenderDevice.h"
 #include "GLProgram.h"
 #include "GLObjectWrapper.h"
+#include "GLContext.h"
 
 namespace Diligent
 {
@@ -35,12 +36,12 @@ namespace Diligent
 class FixedBlockMemoryAllocator;
 
 /// Implementation of the Diligent::IPipelineStateGL interface
-class PipelineStateGLImpl : public PipelineStateBase<IPipelineStateGL, IGLDeviceBaseInterface, FixedBlockMemoryAllocator>
+class PipelineStateGLImpl : public PipelineStateBase<IPipelineStateGL, IGLDeviceBaseInterface>
 {
 public:
-    typedef PipelineStateBase<IPipelineStateGL, IGLDeviceBaseInterface, FixedBlockMemoryAllocator> TPipelineStateBase;
+    typedef PipelineStateBase<IPipelineStateGL, IGLDeviceBaseInterface> TPipelineStateBase;
 
-    PipelineStateGLImpl(FixedBlockMemoryAllocator &PSOAllocator, class RenderDeviceGLImpl *pDeviceGL, const PipelineStateDesc& PipelineDesc, bool IsDeviceInternal = false);
+    PipelineStateGLImpl(IReferenceCounters *pRefCounters, class RenderDeviceGLImpl *pDeviceGL, const PipelineStateDesc& PipelineDesc, bool IsDeviceInternal = false);
     ~PipelineStateGLImpl();
     
     /// Queries the specific interface, see IObject::QueryInterface() for details
@@ -51,12 +52,14 @@ public:
     virtual void CreateShaderResourceBinding( IShaderResourceBinding **ppShaderResourceBinding )override;
 
     GLProgram &GetGLProgram(){return m_GLProgram;}
-    GLObjectWrappers::GLPipelineObj &GetGLProgramPipeline(){return m_GLProgPipeline;}
+    GLObjectWrappers::GLPipelineObj &GetGLProgramPipeline(GLContext::NativeGLContextType Context);
+
 private:
     void LinkGLProgram(bool bIsProgramPipelineSupported);
 
     GLProgram m_GLProgram;
-    GLObjectWrappers::GLPipelineObj m_GLProgPipeline;
+    ThreadingTools::LockFlag m_ProgPipelineLockFlag;
+    std::unordered_map<GLContext::NativeGLContextType, GLObjectWrappers::GLPipelineObj> m_GLProgPipelines;
 };
 
 }

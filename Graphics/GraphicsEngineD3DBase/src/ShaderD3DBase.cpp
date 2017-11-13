@@ -57,7 +57,7 @@ public:
             return E_FAIL;
         }
 
-        RefCntAutoPtr<Diligent::IDataBlob> pFileData( new Diligent::DataBlobImpl );
+        RefCntAutoPtr<Diligent::IDataBlob> pFileData( MakeNewRCObj<Diligent::DataBlobImpl>()(0) );
         pSourceStream->Read( pFileData );
         *ppData = pFileData->GetDataPtr();
         *pBytes = static_cast<UINT>( pFileData->GetSize() );
@@ -171,7 +171,9 @@ ShaderD3DBase::ShaderD3DBase(const ShaderCreationAttribs &CreationAttribs)
         VERIFY(CreationAttribs.FilePath, "File path is null. Either shader source or source file path must be specified.");
         RefCntAutoPtr<IFileStream> pSourceStream;
         CreationAttribs.pShaderSourceStreamFactory->CreateInputStream( CreationAttribs.FilePath, &pSourceStream );
-        RefCntAutoPtr<Diligent::IDataBlob> pFileData( new Diligent::DataBlobImpl );
+        RefCntAutoPtr<Diligent::IDataBlob> pFileData( MakeNewRCObj<Diligent::DataBlobImpl>()(0) );
+        if (pSourceStream == nullptr)
+            LOG_ERROR_AND_THROW("Failed to open shader source file")
         pSourceStream->Read( pFileData );
         // Null terminator is not read from the stream!
         auto* FileDataPtr = reinterpret_cast<Char*>( pFileData->GetDataPtr() );

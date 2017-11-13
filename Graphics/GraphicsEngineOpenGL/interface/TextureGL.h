@@ -39,9 +39,11 @@ static const Diligent::INTERFACE_ID IID_TextureGL =
 class ITextureGL : public Diligent::ITexture
 {
 public:
-    //const GLObjectWrappers::GLTextureObj& GetGLHandle()const{ return m_GlTexture; }
-    //GLenum GetBindTarget()const{return m_BindTarget;}
+    /// Returns OpenGL texture handle
+    virtual GLuint GetGLTextureHandle() = 0;
 
+    /// Returns bind target of the native OpenGL texture
+    virtual GLenum GetBindTarget()const = 0;
 };
 
 }

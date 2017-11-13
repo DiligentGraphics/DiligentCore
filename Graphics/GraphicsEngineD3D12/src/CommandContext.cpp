@@ -35,9 +35,8 @@ CommandContext::CommandContext( IMemoryAllocator &MemAllocator,
                                 GPUDescriptorHeap GPUDescriptorHeaps[],
                                 const Uint32 DynamicDescriptorAllocationChunkSize[]) :
 	m_pCurGraphicsRootSignature( nullptr),
-	m_pCurGraphicsPipelineState( nullptr),
+	m_pCurPipelineState( nullptr),
 	m_pCurComputeRootSignature( nullptr),
-	m_pCurComputePipelineState( nullptr),
     m_DynamicGPUDescriptorAllocator
     {
         {MemAllocator, GPUDescriptorHeaps[0], DynamicDescriptorAllocationChunkSize[0]},
@@ -60,17 +59,19 @@ CommandContext::~CommandContext( void )
 
 void CommandContext::Reset( CommandListManager& CmdListManager )
 {
-	// We only call Reset() on previously freed contexts.  The command list persists, but we must
-	// request a new allocator.
-	VERIFY_EXPR(m_pCommandList != nullptr && m_pCurrentAllocator == nullptr);
-    m_pCurrentAllocator.Release();
-    CmdListManager.RequestAllocator(&m_pCurrentAllocator);
-	m_pCommandList->Reset(m_pCurrentAllocator, nullptr);
+	// We only call Reset() on previously freed contexts. The command list persists, but we need to
+	// request a new allocator if there is none
+    // The allocator may not be null if the command context was previously disposed without being executed
+	VERIFY_EXPR(m_pCommandList != nullptr)
+    if( !m_pCurrentAllocator )
+    {
+        CmdListManager.RequestAllocator(&m_pCurrentAllocator);
+        m_pCommandList->Reset(m_pCurrentAllocator, nullptr);
+    }
 
+    m_pCurPipelineState = nullptr;
 	m_pCurGraphicsRootSignature = nullptr;
-	m_pCurGraphicsPipelineState = nullptr;
 	m_pCurComputeRootSignature = nullptr;
-	m_pCurComputePipelineState = nullptr;
 	m_PendingResourceBarriers.clear();
     m_PendingBarrierObjects.clear();
     m_BoundDescriptorHeaps = ShaderDescriptorHeaps();
@@ -92,7 +93,8 @@ ID3D12GraphicsCommandList* CommandContext::Close(ID3D12CommandAllocator **ppAllo
 	auto hr = m_pCommandList->Close();
     VERIFY(SUCCEEDED(hr), "Failed to close the command list");
 
-    *ppAllocator = m_pCurrentAllocator.Detach();
+    if( ppAllocator != nullptr )
+        *ppAllocator = m_pCurrentAllocator.Detach();
     return m_pCommandList;
 }
 
@@ -110,6 +112,7 @@ void GraphicsContext::SetRenderTargets( UINT NumRTVs, ITextureViewD3D12** ppRTVs
             auto *pTexture = ValidatedCast<TextureD3D12Impl>( pRTV->GetTexture() );
 	        TransitionResource(pTexture, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		    RTVHandles[i] = pRTV->GetCPUDescriptorHandle();
+            VERIFY_EXPR(RTVHandles[i].ptr != 0);
         }
 	}
 
@@ -125,10 +128,11 @@ void GraphicsContext::SetRenderTargets( UINT NumRTVs, ITextureViewD3D12** ppRTVs
 		{
 			TransitionResource(pTexture, D3D12_RESOURCE_STATE_DEPTH_WRITE);
             auto DSVHandle = pDSV->GetCPUDescriptorHandle();
+            VERIFY_EXPR(DSVHandle.ptr != 0);
 			m_pCommandList->OMSetRenderTargets( NumRTVs, RTVHandles, FALSE, &DSVHandle );
 		}
 	}
-	else
+	else if(NumRTVs > 0)
 	{
 		m_pCommandList->OMSetRenderTargets( NumRTVs, RTVHandles, FALSE, nullptr );
 	}
@@ -190,11 +194,12 @@ void CommandContext::TransitionResource(IBufferD3D12 *pBuffer, D3D12_RESOURCE_ST
     auto *pBuffD3D12 = ValidatedCast<BufferD3D12Impl>(pBuffer);
 
 #ifdef _DEBUG
-    // Dynamic buffers are suballocated in the upload heap when Map() is called 
-    // and must always be in D3D12_RESOURCE_STATE_GENERIC_READ state
-    if(pBuffD3D12->GetDesc().Usage == USAGE_DYNAMIC)
+    // Dynamic buffers wtih no SRV/UAV bind flags are suballocated in 
+    // the upload heap when Map() is called and must always be in 
+    // D3D12_RESOURCE_STATE_GENERIC_READ state
+    if(pBuffD3D12->GetDesc().Usage == USAGE_DYNAMIC && (pBuffD3D12->GetDesc().BindFlags & (BIND_SHADER_RESOURCE|BIND_UNORDERED_ACCESS)) == 0)
     {
-        VERIFY(pBuffD3D12->GetState() == D3D12_RESOURCE_STATE_GENERIC_READ, "Dynamic buffers are expected to always be in D3D12_RESOURCE_STATE_GENERIC_READ state")
+        VERIFY(pBuffD3D12->GetState() == D3D12_RESOURCE_STATE_GENERIC_READ, "Dynamic buffers that cannot be bound as SRV or UAV are expected to always be in D3D12_RESOURCE_STATE_GENERIC_READ state")
         VERIFY( (NewState & D3D12_RESOURCE_STATE_GENERIC_READ) == NewState, "Dynamic buffers can only transition to one of D3D12_RESOURCE_STATE_GENERIC_READ states")
     }
 #endif
@@ -202,8 +207,8 @@ void CommandContext::TransitionResource(IBufferD3D12 *pBuffer, D3D12_RESOURCE_ST
     TransitionResource(*pBuffD3D12, *pBuffD3D12, NewState, FlushImmediate);
 
 #ifdef _DEBUG
-    if(pBuffD3D12->GetDesc().Usage == USAGE_DYNAMIC)
-        VERIFY(pBuffD3D12->GetState() == D3D12_RESOURCE_STATE_GENERIC_READ, "Dynamic buffers are expected to never transition from D3D12_RESOURCE_STATE_GENERIC_READ state")
+    if(pBuffD3D12->GetDesc().Usage == USAGE_DYNAMIC && (pBuffD3D12->GetDesc().BindFlags & (BIND_SHADER_RESOURCE|BIND_UNORDERED_ACCESS)) == 0)
+        VERIFY(pBuffD3D12->GetState() == D3D12_RESOURCE_STATE_GENERIC_READ, "Dynamic buffers without SRV/UAV bind flag are expected to never transition from D3D12_RESOURCE_STATE_GENERIC_READ state")
 #endif
 }
 
@@ -293,10 +298,10 @@ void CommandContext::InsertAliasBarrier(D3D12ResourceBase& Before, D3D12Resource
         FlushResourceBarriers();
 }
 
-void CommandContext::DiscardDynamicDescriptors(Uint64 FrameNumber)
+void CommandContext::DiscardDynamicDescriptors(Uint64 FenceValue)
 {
     for(size_t HeapType = 0; HeapType < _countof(m_DynamicGPUDescriptorAllocator); ++HeapType)
-        m_DynamicGPUDescriptorAllocator[HeapType].DiscardAllocations(FrameNumber);
+        m_DynamicGPUDescriptorAllocator[HeapType].DiscardAllocations(FenceValue);
 }
 
 DescriptorHeapAllocation CommandContext::AllocateDynamicGPUVisibleDescriptor( D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count )

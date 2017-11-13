@@ -65,6 +65,17 @@ struct OptimizedClearValue
         Color[2] = 0;
         Color[3] = 0;
     }
+
+    bool operator == (const OptimizedClearValue& rhs)const
+    {
+        return Format == rhs.Format &&
+               Color[0] == rhs.Color[0] &&
+               Color[1] == rhs.Color[1] &&
+               Color[2] == rhs.Color[2] &&
+               Color[3] == rhs.Color[3] &&
+               DepthStencil.Depth   == rhs.DepthStencil.Depth &&
+               DepthStencil.Stencil == rhs.DepthStencil.Stencil;
+    }
 };
 
 /// Texture description
@@ -149,13 +160,45 @@ struct TextureDesc : DeviceObjectAttribs
         MiscFlags(0)
     {
     }
+
+    /// Tests if two structures are equivalent
+
+    /// \param [in] RHS - reference to the structure to perform comparison with
+    /// \return 
+    /// - True if all members of the two structures except for the Name are equal.
+    /// - False otherwise.
+    /// The operator ignores DeviceObjectAttribs::Name field as it does not affect 
+    /// the texture description state.
+    bool operator ==(const TextureDesc& RHS)const
+    {
+                // Name is primarily used for debug purposes and does not affect the state.
+                // It is ignored in comparison operation.
+        return  // strcmp(Name, RHS.Name) == 0          &&
+                Type           == RHS.Type           &&
+                Width          == RHS.Width          &&
+                Height         == RHS.Height         &&
+                ArraySize      == RHS.ArraySize      &&
+                Format         == RHS.Format         &&
+                MipLevels      == RHS.MipLevels      &&
+                SampleCount    == RHS.SampleCount    &&
+                Usage          == RHS.Usage          &&
+                BindFlags      == RHS.BindFlags      &&
+                CPUAccessFlags == RHS.CPUAccessFlags &&
+                MiscFlags      == RHS.MiscFlags      &&
+                ClearValue     == RHS.ClearValue;
+    }
 };
 
 /// Describes data for one subresource
 struct TextureSubResData
 {
-    /// Pointer to the subresource data
+    /// Pointer to the subresource data in CPU memory.
+    /// If provided, pSrcBuffer must be null
     const void* pData;
+
+    /// Pointer to the GPU buffer that contains subresource data.
+    /// If provided, pData must be null
+    class IBuffer *pSrcBuffer;
 
     /// For 2D and 3D textures, row stride in bytes
     Uint32 Stride;
@@ -174,13 +217,23 @@ struct TextureSubResData
     /// DepthStride     | 0
     TextureSubResData():
         pData(nullptr),
+        pSrcBuffer(nullptr),
         Stride(0),
         DepthStride(0)
     {}
     
-    /// Initializes the structure members with provided values
-    TextureSubResData(void *_pData, Uint32 _Stride, Uint32 _DepthStride=0):
+    /// Initializes the structure members to perform copy from the CPU memory
+    TextureSubResData(void *_pData, Uint32 _Stride, Uint32 _DepthStride=0) :
         pData(_pData),
+        pSrcBuffer(nullptr),
+        Stride(_Stride),
+        DepthStride(_DepthStride)
+    {}
+
+    /// Initializes the structure members to perform copy from the GPU buffer
+    TextureSubResData(IBuffer *_pBuffer, Uint32 _Stride, Uint32 _DepthStride=0) :
+        pData(nullptr),
+        pSrcBuffer(_pBuffer),
         Stride(_Stride),
         DepthStride(_DepthStride)
     {}
@@ -210,6 +263,13 @@ struct TextureData
         pSubResources(nullptr),
         NumSubresources(0)
     {}
+};
+
+struct MappedTextureSubresource
+{
+    PVoid pData = nullptr;
+    Uint32 Stride = 0;
+    Uint32 DepthStride = 0;
 };
 
 /// Texture inteface
@@ -288,9 +348,16 @@ public:
                           Uint32 DstZ) = 0;
 
     /// Map the texture - not implemented yet
-    virtual void Map( IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid &pMappedData ) = 0;
+    virtual void Map( IDeviceContext *pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags, MappedTextureSubresource &MappedData ) = 0;
     /// Unmap the textute - not implemented yet
-    virtual void Unmap( IDeviceContext *pContext, MAP_TYPE MapType ) = 0;
+    virtual void Unmap( IDeviceContext *pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags ) = 0;
+
+    /// Returns native texture handle specific to the underlying graphics API
+
+    /// \return pointer to ID3D11Resource interface, for D3D11 implementation\n
+    ///         pointer to ID3D12Resource interface, for D3D12 implementation\n
+    ///         GL buffer handle, for GL implementation
+    virtual void* GetNativeHandle() = 0;
 };
 
 }

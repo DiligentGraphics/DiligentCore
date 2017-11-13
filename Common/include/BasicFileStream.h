@@ -36,13 +36,14 @@ namespace Diligent
 {
 
 /// Basic file stream implementation
-class BasicFileStream : public ObjectBase<IFileStream, IMemoryAllocator>
+class BasicFileStream : public ObjectBase<IFileStream>
 {
 public:
-    typedef ObjectBase<IFileStream, IMemoryAllocator> TBase;
+    typedef ObjectBase<IFileStream> TBase;
 
-    BasicFileStream(const Diligent::Char *Path, 
-                     EFileAccessMode Access = EFileAccessMode::Read);
+    BasicFileStream(IReferenceCounters *pRefCounters,
+                    const Diligent::Char *Path, 
+                    EFileAccessMode Access = EFileAccessMode::Read);
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
 

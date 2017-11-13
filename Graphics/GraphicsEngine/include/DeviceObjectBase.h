@@ -35,25 +35,25 @@ namespace Diligent
 template<typename BaseInterface>
 class RenderDeviceBase;
 
+class IRenderDevice;
+
 /// Template class implementing base functionality for a device object
-template<class BaseInterface, typename ObjectDescType, typename TObjectAllocator>
-class DeviceObjectBase : public ObjectBase<BaseInterface, TObjectAllocator>
+template<class BaseInterface, typename ObjectDescType>
+class DeviceObjectBase : public ObjectBase<BaseInterface>
 {
 public:
-    typedef ObjectBase<BaseInterface, TObjectAllocator> TBase;
+    typedef ObjectBase<BaseInterface> TBase;
 
-    /// \param ObjAllocator - allocator that was used to allocate memory for this instance
+    /// \param pRefCounters - reference counters object that controls the lifetime of this device object
 	/// \param pDevice - pointer to the render device.
 	/// \param ObjDesc - object description.
-	/// \param pOwner - owner object.
 	/// \param bIsDeviceInternal - flag indicating if the object is an internal device object
 	///							   and must not keep a strong reference to the device.
-    DeviceObjectBase( TObjectAllocator &ObjAllocator,
-                      class IRenderDevice *pDevice,
+    DeviceObjectBase( IReferenceCounters *pRefCounters,
+                      IRenderDevice *pDevice,
 					  const ObjectDescType &ObjDesc,
-					  IObject *pOwner = nullptr,
 				      bool bIsDeviceInternal = false) :
-        TBase(pOwner, &ObjAllocator),
+        TBase(pRefCounters),
         m_pDevice( pDevice ),
 		// Do not keep strong reference to the device if the object is an internal device object
 		m_spDevice( bIsDeviceInternal ? nullptr : pDevice ),
@@ -69,8 +69,33 @@ public:
         //m_pDevice->AddResourceToHash( this ); - ERROR!
     }
 
+    DeviceObjectBase( const DeviceObjectBase&  ) = delete;
+    DeviceObjectBase(       DeviceObjectBase&& ) = delete;
+    DeviceObjectBase& operator = ( const DeviceObjectBase&  ) = delete;
+    DeviceObjectBase& operator = (       DeviceObjectBase&& ) = delete;
+
     virtual ~DeviceObjectBase()
     {
+    }
+
+    inline virtual Atomics::Long Release()override final
+    {
+        // Render device owns allocators for all types of device objects,
+        // so it must be destroyed after all device objects are released. 
+        // Consider the following scenario: an object A ownes last strong 
+        // reference to the device:
+        // 
+        // 1. A::~A() completes
+        // 2. A::~DeviceObjectBase() completes
+        // 3. A::m_spDevice is released
+        //       Render device is destroyed, all allocators are invalid
+        // 4. RefCountersImpl::ObjectWrapperBase::DestroyObject() calls 
+        //    m_pAllocator->Free(m_pObject) - crash!
+         
+        // We must keep the device alive while the object is being destroyed
+        RefCntAutoPtr<IRenderDevice> pDevice(m_spDevice);
+        // Note that internal device object do not keep strong reference to the device
+        return TBase::Release();
     }
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE( IID_DeviceObject, TBase )
@@ -93,6 +118,13 @@ public:
 
 	IRenderDevice *GetDevice()const{return m_pDevice;}
 
+private:
+	/// Strong reference to the device
+	RefCntAutoPtr<IRenderDevice> m_spDevice;
+
+    /// Pointer to the device
+    IRenderDevice *m_pDevice;
+
 protected:
 	
     /// Copy of a device object name.
@@ -108,17 +140,6 @@ protected:
     // Template argument is only used to separate counters for 
     // different groups of objects
     UniqueIdHelper<BaseInterface> m_UniqueID;
-
-private:
-    /// Pointer to the device
-    IRenderDevice *m_pDevice;
-	/// Strong reference to the device
-	RefCntAutoPtr<IRenderDevice> m_spDevice;
-
-    DeviceObjectBase( const DeviceObjectBase& );
-    DeviceObjectBase( DeviceObjectBase&& );
-    const DeviceObjectBase& operator = ( const DeviceObjectBase& );
-    const DeviceObjectBase& operator = ( DeviceObjectBase&& );
 };
 
 }

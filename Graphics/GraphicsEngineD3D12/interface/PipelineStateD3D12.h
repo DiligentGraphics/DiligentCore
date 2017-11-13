@@ -41,17 +41,17 @@ class IPipelineStateD3D12 : public IPipelineState
 {
 public:
 
-    /// Returns a pointer to the ID3D12PipelineState interface of the internal Direct3D12 object.
+    /// Returns ID3D12PipelineState interface of the internal D3D12 pipeline state object object.
     
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
-    virtual ID3D12PipelineState *GetD3D12PipelineState()const = 0;
+    virtual ID3D12PipelineState* GetD3D12PipelineState()const = 0;
 
     /// Returns a pointer to the root signature object associated with this pipeline state.
     
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
-    virtual ID3D12RootSignature *GetD3D12RootSignature()const = 0;
+    virtual ID3D12RootSignature* GetD3D12RootSignature()const = 0;
 };
 
 }

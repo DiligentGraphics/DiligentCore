@@ -58,13 +58,8 @@ namespace Diligent
         "}                                              \n"
     };
 
-    TexRegionRender::TexRegionRender( class RenderDeviceGLImpl *pDeviceGL ) : 
-        m_OrigStencilRef(0),
-        m_NumRenderTargets(0)
+    TexRegionRender::TexRegionRender( class RenderDeviceGLImpl *pDeviceGL )
     {
-        memset( m_OrigBlendFactors, 0, sizeof(m_OrigBlendFactors) );
-        memset( m_pOrigRTVs, 0, sizeof( m_pOrigRTVs ) );
-
         ShaderCreationAttribs ShaderAttrs;
         ShaderAttrs.Desc.Name = "TexRegionRender : Vertex shader";
         ShaderAttrs.Desc.ShaderType = SHADER_TYPE_VERTEX;
@@ -94,6 +89,7 @@ namespace Diligent
         //CoordDim[RESOURCE_DIM_TEX_CUBE_ARRAY]   = "ivec2(gl_FragCoord.xy)";
 
         BufferDesc CBDesc;
+        CBDesc.Name = "TexRegionRender: FS constants CB";
         CBDesc.uiSizeInBytes = sizeof(Int32)*4;
         CBDesc.Usage = USAGE_DYNAMIC;
         CBDesc.BindFlags = BIND_UNIFORM_BUFFER;
@@ -194,7 +190,7 @@ namespace Diligent
                                    Int32 SrcMipLevel)
     {
         {
-            MapHelper< int > pConstant( pCtxGL, m_pConstantBuffer, MAP_WRITE_DISCARD, 0 );
+            MapHelper< int > pConstant( pCtxGL, m_pConstantBuffer, MAP_WRITE, MAP_FLAG_DISCARD );
             pConstant[0] = DstToSrcXOffset;
             pConstant[1] = DstToSrcYOffset;
             pConstant[2] = SrcZ;
@@ -215,8 +211,10 @@ namespace Diligent
         }
 
         pCtxGL->SetPipelineState(m_pPSO[FSInd]);
+        // Technically resetting static varaibles is not allowed, but in GL this is OK
         auto SrcTexVar = m_pFragmentShaders[FSInd]->GetShaderVariable( "gSourceTex" );
         SrcTexVar->Set( pSrcSRV );
+        pCtxGL->CommitShaderResources(nullptr, COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES);
 
         DrawAttribs DrawAttrs;
         DrawAttrs.NumVertices = 4;

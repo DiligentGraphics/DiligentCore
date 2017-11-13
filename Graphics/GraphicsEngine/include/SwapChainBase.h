@@ -28,6 +28,7 @@
 
 #include "SwapChain.h"
 #include "DeviceObjectBase.h"
+#include "Errors.h"
 
 namespace Diligent
 {
@@ -36,24 +37,23 @@ namespace Diligent
 
 /// \tparam BaseInterface - base interface that this class will inheret 
 ///                         (Diligent::ISwapChainGL, Diligent::ISwapChainD3D11, or Diligent::ISwapChainD3D12).
-/// \tparam SwapChainAllocator - type of the allocator that is used to allocate memory for the swap chain object instance
 /// \remarks Swap chain holds the strong reference to the device and a weak reference to the
 ///          immediate context.
-template<class BaseInterface, class SwapChainAllocator>
-class SwapChainBase : public ObjectBase<BaseInterface, SwapChainAllocator>
+template<class BaseInterface>
+class SwapChainBase : public ObjectBase<BaseInterface>
 {
 public:
-    typedef ObjectBase<BaseInterface, SwapChainAllocator> TObjectBase;
+    typedef ObjectBase<BaseInterface> TObjectBase;
 
-    /// \param Allocator - allocator that was used to allocate memory for this instance of the swap chain object
+    /// \param pRefCounters - reference counters object that controls the lifetime of this swap chain.
 	/// \param pDevice - pointer to the device.
 	/// \param pDeviceContext - pointer to the device context.
 	/// \param SCDesc - swap chain description
-    SwapChainBase( SwapChainAllocator &Allocator,
+    SwapChainBase( IReferenceCounters *pRefCounters,
                    IRenderDevice *pDevice,
                    IDeviceContext *pDeviceContext,
                    const SwapChainDesc& SCDesc ) : 
-        TObjectBase(nullptr, &Allocator),
+        TObjectBase(pRefCounters),
         m_pRenderDevice(pDevice),
         m_wpDeviceContext(pDeviceContext),
         m_SwapChainDesc(SCDesc)

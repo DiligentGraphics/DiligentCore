@@ -131,6 +131,36 @@ const Char* GetValueTypeString( VALUE_TYPE Val );
 ///         format attributes.
 const TextureFormatAttribs& GetTextureFormatAttribs(TEXTURE_FORMAT Format);
 
+/// Returns the default format for a specified texture view type
+
+/// The default view is defined as follows:
+/// * For a fully qualified texture format, the SRV/RTV/UAV view format is the same as texture format;
+///   DSV format, if avaialble, is adjusted accrodingly (R32_FLOAT -> D32_FLOAT)
+/// * For 32-bit typeless formats, default view is XXXX32_FLOAT (where XXXX are the actual format components)\n
+/// * For 16-bit typeless formats, default view is XXXX16_FLOAT (where XXXX are the actual format components)\n
+/// ** R16_TYPELESS is special. If BIND_DEPTH_STENCIL flag is set, it is translated to R16_UNORM/D16_UNORM;
+///    otherwise it is translated to R16_FLOAT.
+/// * For 8-bit typeless formats, default view is XXXX8_UNORM (where XXXX are the actual format components)\n
+/// * sRGB is always chosen if it is available (RGBA8_UNORM_SRGB, TEX_FORMAT_BC1_UNORM_SRGB, etc.)
+/// * For combined depth-stencil formats, SRV format references depth component (R24_UNORM_X8_TYPELESS for D24S8 formats, and
+///   R32_FLOAT_X8X24_TYPELESS for D32S8X24 formats)
+/// * For compressed formats, only SRV format is defined
+///
+/// \param [in] Format - texture format, for which the view format is requested
+/// \param [in] ViewType - texture view type
+/// \param [in] BindFlags - texture bind flags
+/// \return  texture view type format
+TEXTURE_FORMAT GetDefaultTextureViewFormat(TEXTURE_FORMAT TextureFormat, TEXTURE_VIEW_TYPE ViewType, Uint32 BindFlags);
+
+/// Returns the default format for a specified texture view type
+
+/// \param [in] TexDesc - texture description
+/// \param [in] ViewType - texture view type
+/// \return  texture view type format
+inline TEXTURE_FORMAT GetDefaultTextureViewFormat(const TextureDesc &TexDesc, TEXTURE_VIEW_TYPE ViewType)
+{
+    return GetDefaultTextureViewFormat(TexDesc.Format, ViewType, TexDesc.BindFlags);
+}
 
 /// Returns the literal name of a texture view type. For instance,
 /// for a shader resource view, "TEXTURE_VIEW_SHADER_RESOURCE" will be returned.
@@ -225,6 +255,6 @@ Uint32 ComputeMipLevelsCount( Uint32 Width );
 Uint32 ComputeMipLevelsCount( Uint32 Width, Uint32 Height );
 Uint32 ComputeMipLevelsCount( Uint32 Width, Uint32 Height, Uint32 Depth );
 
-void CreateUniformBuffer( IRenderDevice *pDevice, Uint32 Size, IBuffer **ppBuffer, USAGE Usage = USAGE_DYNAMIC, Uint32 BindFlag = BIND_UNIFORM_BUFFER, Uint32 CPUAccessFlags = CPU_ACCESS_WRITE );
-
+void CreateUniformBuffer( IRenderDevice *pDevice, Uint32 Size, const Char *Name, IBuffer **ppBuffer, USAGE Usage = USAGE_DYNAMIC, Uint32 BindFlag = BIND_UNIFORM_BUFFER, Uint32 CPUAccessFlags = CPU_ACCESS_WRITE );
+void GenerateCheckerBoardPattern(Uint32 Width, Uint32 Height, TEXTURE_FORMAT Fmt, Uint32 HorzCells, Uint32 VertCells, Uint8 *pData, Uint32 StrideInBytes );
 }

@@ -30,6 +30,7 @@
 #include "ShaderResourceBindingD3D12Impl.h"
 #include "CommandContext.h"
 #include "EngineMemory.h"
+#include "StringTools.h"
 
 namespace Diligent
 {
@@ -79,19 +80,10 @@ void PipelineStateD3D12Impl::ParseShaderResourceLayout(IShader *pShader)
     m_pShaderResourceLayouts[ShaderInd]->Initialize(pDeviceD3D12Impl->GetD3D12Device(), pShaderD3D12->GetShaderResources(), GetRawAllocator(), nullptr, 0, nullptr, &m_RootSig);
 }
 
-PipelineStateD3D12Impl :: PipelineStateD3D12Impl(FixedBlockMemoryAllocator &PSOAllocator, RenderDeviceD3D12Impl *pDeviceD3D12, const PipelineStateDesc &PipelineDesc) : 
-    TPipelineStateBase(PSOAllocator, pDeviceD3D12, PipelineDesc),
+PipelineStateD3D12Impl :: PipelineStateD3D12Impl(IReferenceCounters *pRefCounters, RenderDeviceD3D12Impl *pDeviceD3D12, const PipelineStateDesc &PipelineDesc) : 
+    TPipelineStateBase(pRefCounters, pDeviceD3D12, PipelineDesc),
     m_DummyVar(*this),
     m_ResourceCacheDataAllocator(GetRawAllocator(), PipelineDesc.SRBAllocationGranularity),
-    m_ShaderResLayoutDataAllocators
-    {
-        {GetRawAllocator(), PipelineDesc.SRBAllocationGranularity},
-        {GetRawAllocator(), PipelineDesc.SRBAllocationGranularity},
-        {GetRawAllocator(), PipelineDesc.SRBAllocationGranularity},
-        {GetRawAllocator(), PipelineDesc.SRBAllocationGranularity},
-        {GetRawAllocator(), PipelineDesc.SRBAllocationGranularity},
-        {GetRawAllocator(), PipelineDesc.SRBAllocationGranularity},
-    },
     m_pDefaultShaderResBinding(nullptr, STDDeleter<ShaderResourceBindingD3D12Impl, FixedBlockMemoryAllocator>(pDeviceD3D12->GetSRBAllocator()) )
 {
     auto pd3d12Device = pDeviceD3D12->GetD3D12Device();
@@ -213,9 +205,21 @@ PipelineStateD3D12Impl :: PipelineStateD3D12Impl(FixedBlockMemoryAllocator &PSOA
             LOG_ERROR_AND_THROW("Failed to create pipeline state");
     }
 
+    if (*m_Desc.Name != 0)
+    {
+        m_pd3d12PSO->SetName(WidenString(m_Desc.Name).c_str());
+        String RootSignatureDesc("Root signature for PSO \"");
+        RootSignatureDesc.append(m_Desc.Name);
+        RootSignatureDesc.push_back('\"');
+        m_RootSig.GetD3D12RootSignature()->SetName(WidenString(RootSignatureDesc).c_str());
+    }
+
+    if(PipelineDesc.SRBAllocationGranularity > 1)
+        m_ResLayoutDataAllocators.Init(m_NumShaders, PipelineDesc.SRBAllocationGranularity);
+
     auto &SRBAllocator = pDeviceD3D12->GetSRBAllocator();
     // Default shader resource binding must be initialized after resource layouts are parsed!
-    m_pDefaultShaderResBinding.reset( NEW(SRBAllocator, "ShaderResourceBindingD3D12Impl instance", ShaderResourceBindingD3D12Impl, this, true) );
+    m_pDefaultShaderResBinding.reset( NEW_RC_OBJ(SRBAllocator, "ShaderResourceBindingD3D12Impl instance", ShaderResourceBindingD3D12Impl, this)(this, true) );
 }
 
 PipelineStateD3D12Impl::~PipelineStateD3D12Impl()
@@ -257,7 +261,7 @@ void PipelineStateD3D12Impl::CreateShaderResourceBinding(IShaderResourceBinding 
 {
     auto *pRenderDeviceD3D12 = ValidatedCast<RenderDeviceD3D12Impl>( GetDevice() );
     auto &SRBAllocator = pRenderDeviceD3D12->GetSRBAllocator();
-    auto pResBindingD3D12 = NEW(SRBAllocator, "ShaderResourceBindingD3D12Impl instance", ShaderResourceBindingD3D12Impl, this, false);
+    auto pResBindingD3D12 = NEW_RC_OBJ(SRBAllocator, "ShaderResourceBindingD3D12Impl instance", ShaderResourceBindingD3D12Impl)(this, false);
     pResBindingD3D12->QueryInterface(IID_ShaderResourceBinding, reinterpret_cast<IObject**>(ppShaderResourceBinding));
 }
 

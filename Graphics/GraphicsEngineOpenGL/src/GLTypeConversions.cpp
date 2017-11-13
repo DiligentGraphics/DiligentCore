@@ -23,143 +23,153 @@
 
 #include "pch.h"
 #include "GLTypeConversions.h"
+#include "GraphicsUtilities.h"
 
 namespace Diligent
 {
 
-
-GLenum TexFormatToGLInternalTexFormat(TEXTURE_FORMAT TexFormat, Uint32 BindFlags)
+class FormatToGLInternalTexFormatMap
 {
-    static Bool bFormatMapIntialized = false;
-    static GLenum FmtToGLFmtMap[TEX_FORMAT_NUM_FORMATS] = {0};
-    if( !bFormatMapIntialized )
+public:
+    FormatToGLInternalTexFormatMap()
     {
         // http://www.opengl.org/wiki/Image_Format
-        FmtToGLFmtMap[ TEX_FORMAT_UNKNOWN ]                = 0;
+        m_FmtToGLFmtMap[ TEX_FORMAT_UNKNOWN ]                = 0;
 
-        FmtToGLFmtMap[ TEX_FORMAT_RGBA32_TYPELESS ]        = GL_RGBA32F;
-        FmtToGLFmtMap[ TEX_FORMAT_RGBA32_FLOAT ]           = GL_RGBA32F;
-        FmtToGLFmtMap[ TEX_FORMAT_RGBA32_UINT ]            = GL_RGBA32UI;
-        FmtToGLFmtMap[ TEX_FORMAT_RGBA32_SINT ]            = GL_RGBA32I;
+        m_FmtToGLFmtMap[ TEX_FORMAT_RGBA32_TYPELESS ]        = GL_RGBA32F;
+        m_FmtToGLFmtMap[ TEX_FORMAT_RGBA32_FLOAT ]           = GL_RGBA32F;
+        m_FmtToGLFmtMap[ TEX_FORMAT_RGBA32_UINT ]            = GL_RGBA32UI;
+        m_FmtToGLFmtMap[ TEX_FORMAT_RGBA32_SINT ]            = GL_RGBA32I;
 
-        FmtToGLFmtMap[ TEX_FORMAT_RGB32_TYPELESS ]         = GL_RGB32F;
-        FmtToGLFmtMap[ TEX_FORMAT_RGB32_FLOAT ]            = GL_RGB32F;
-        FmtToGLFmtMap[ TEX_FORMAT_RGB32_UINT ]             = GL_RGB32UI;
-        FmtToGLFmtMap[ TEX_FORMAT_RGB32_SINT ]             = GL_RGB32I;
+        m_FmtToGLFmtMap[ TEX_FORMAT_RGB32_TYPELESS ]         = GL_RGB32F;
+        m_FmtToGLFmtMap[ TEX_FORMAT_RGB32_FLOAT ]            = GL_RGB32F;
+        m_FmtToGLFmtMap[ TEX_FORMAT_RGB32_UINT ]             = GL_RGB32UI;
+        m_FmtToGLFmtMap[ TEX_FORMAT_RGB32_SINT ]             = GL_RGB32I;
 
-        FmtToGLFmtMap[ TEX_FORMAT_RGBA16_TYPELESS ]        = GL_RGBA16F;
-        FmtToGLFmtMap[ TEX_FORMAT_RGBA16_FLOAT ]           = GL_RGBA16F;
-        FmtToGLFmtMap[ TEX_FORMAT_RGBA16_UNORM ]           = GL_RGBA16;
-        FmtToGLFmtMap[ TEX_FORMAT_RGBA16_UINT ]            = GL_RGBA16UI;
-        FmtToGLFmtMap[ TEX_FORMAT_RGBA16_SNORM ]           = GL_RGBA16_SNORM;
-        FmtToGLFmtMap[ TEX_FORMAT_RGBA16_SINT ]            = GL_RGBA16I;
+        m_FmtToGLFmtMap[ TEX_FORMAT_RGBA16_TYPELESS ]        = GL_RGBA16F;
+        m_FmtToGLFmtMap[ TEX_FORMAT_RGBA16_FLOAT ]           = GL_RGBA16F;
+        m_FmtToGLFmtMap[ TEX_FORMAT_RGBA16_UNORM ]           = GL_RGBA16;
+        m_FmtToGLFmtMap[ TEX_FORMAT_RGBA16_UINT ]            = GL_RGBA16UI;
+        m_FmtToGLFmtMap[ TEX_FORMAT_RGBA16_SNORM ]           = GL_RGBA16_SNORM;
+        m_FmtToGLFmtMap[ TEX_FORMAT_RGBA16_SINT ]            = GL_RGBA16I;
 
-        FmtToGLFmtMap[ TEX_FORMAT_RG32_TYPELESS ]          = GL_RG32F;
-        FmtToGLFmtMap[ TEX_FORMAT_RG32_FLOAT ]             = GL_RG32F;
-        FmtToGLFmtMap[ TEX_FORMAT_RG32_UINT ]              = GL_RG32UI;
-        FmtToGLFmtMap[ TEX_FORMAT_RG32_SINT ]              = GL_RG32I;
+        m_FmtToGLFmtMap[ TEX_FORMAT_RG32_TYPELESS ]          = GL_RG32F;
+        m_FmtToGLFmtMap[ TEX_FORMAT_RG32_FLOAT ]             = GL_RG32F;
+        m_FmtToGLFmtMap[ TEX_FORMAT_RG32_UINT ]              = GL_RG32UI;
+        m_FmtToGLFmtMap[ TEX_FORMAT_RG32_SINT ]              = GL_RG32I;
 
-        FmtToGLFmtMap[ TEX_FORMAT_R32G8X24_TYPELESS ]      = GL_DEPTH32F_STENCIL8;
-        FmtToGLFmtMap[ TEX_FORMAT_D32_FLOAT_S8X24_UINT ]   = GL_DEPTH32F_STENCIL8;
-        FmtToGLFmtMap[ TEX_FORMAT_R32_FLOAT_X8X24_TYPELESS ]=GL_DEPTH32F_STENCIL8;
-        FmtToGLFmtMap[ TEX_FORMAT_X32_TYPELESS_G8X24_UINT ]= 0;//GL_DEPTH32F_STENCIL8;
+        m_FmtToGLFmtMap[ TEX_FORMAT_R32G8X24_TYPELESS ]      = GL_DEPTH32F_STENCIL8;
+        m_FmtToGLFmtMap[ TEX_FORMAT_D32_FLOAT_S8X24_UINT ]   = GL_DEPTH32F_STENCIL8;
+        m_FmtToGLFmtMap[ TEX_FORMAT_R32_FLOAT_X8X24_TYPELESS ]=GL_DEPTH32F_STENCIL8;
+        m_FmtToGLFmtMap[ TEX_FORMAT_X32_TYPELESS_G8X24_UINT ]= 0;//GL_DEPTH32F_STENCIL8;
 
-        FmtToGLFmtMap[ TEX_FORMAT_RGB10A2_TYPELESS ]       = GL_RGB10_A2;
-        FmtToGLFmtMap[ TEX_FORMAT_RGB10A2_UNORM ]          = GL_RGB10_A2;
-        FmtToGLFmtMap[ TEX_FORMAT_RGB10A2_UINT ]           = GL_RGB10_A2UI;
-        FmtToGLFmtMap[ TEX_FORMAT_R11G11B10_FLOAT ]        = GL_R11F_G11F_B10F;
+        m_FmtToGLFmtMap[ TEX_FORMAT_RGB10A2_TYPELESS ]       = GL_RGB10_A2;
+        m_FmtToGLFmtMap[ TEX_FORMAT_RGB10A2_UNORM ]          = GL_RGB10_A2;
+        m_FmtToGLFmtMap[ TEX_FORMAT_RGB10A2_UINT ]           = GL_RGB10_A2UI;
+        m_FmtToGLFmtMap[ TEX_FORMAT_R11G11B10_FLOAT ]        = GL_R11F_G11F_B10F;
 
-        FmtToGLFmtMap[ TEX_FORMAT_RGBA8_TYPELESS ]         = GL_RGBA8;
-        FmtToGLFmtMap[ TEX_FORMAT_RGBA8_UNORM ]            = GL_RGBA8;
-        FmtToGLFmtMap[ TEX_FORMAT_RGBA8_UNORM_SRGB ]       = GL_SRGB8_ALPHA8;
-        FmtToGLFmtMap[ TEX_FORMAT_RGBA8_UINT ]             = GL_RGBA8UI;
-        FmtToGLFmtMap[ TEX_FORMAT_RGBA8_SNORM ]            = GL_RGBA8_SNORM;
-        FmtToGLFmtMap[ TEX_FORMAT_RGBA8_SINT ]             = GL_RGBA8I;
+        m_FmtToGLFmtMap[ TEX_FORMAT_RGBA8_TYPELESS ]         = GL_RGBA8;
+        m_FmtToGLFmtMap[ TEX_FORMAT_RGBA8_UNORM ]            = GL_RGBA8;
+        m_FmtToGLFmtMap[ TEX_FORMAT_RGBA8_UNORM_SRGB ]       = GL_SRGB8_ALPHA8;
+        m_FmtToGLFmtMap[ TEX_FORMAT_RGBA8_UINT ]             = GL_RGBA8UI;
+        m_FmtToGLFmtMap[ TEX_FORMAT_RGBA8_SNORM ]            = GL_RGBA8_SNORM;
+        m_FmtToGLFmtMap[ TEX_FORMAT_RGBA8_SINT ]             = GL_RGBA8I;
 
-        FmtToGLFmtMap[ TEX_FORMAT_RG16_TYPELESS ]          = GL_RG16F;
-        FmtToGLFmtMap[ TEX_FORMAT_RG16_FLOAT ]             = GL_RG16F;
-        FmtToGLFmtMap[ TEX_FORMAT_RG16_UNORM ]             = GL_RG16;
-        FmtToGLFmtMap[ TEX_FORMAT_RG16_UINT ]              = GL_RG16UI;
-        FmtToGLFmtMap[ TEX_FORMAT_RG16_SNORM ]             = GL_RG16_SNORM;
-        FmtToGLFmtMap[ TEX_FORMAT_RG16_SINT ]              = GL_RG16I;
+        m_FmtToGLFmtMap[ TEX_FORMAT_RG16_TYPELESS ]          = GL_RG16F;
+        m_FmtToGLFmtMap[ TEX_FORMAT_RG16_FLOAT ]             = GL_RG16F;
+        m_FmtToGLFmtMap[ TEX_FORMAT_RG16_UNORM ]             = GL_RG16;
+        m_FmtToGLFmtMap[ TEX_FORMAT_RG16_UINT ]              = GL_RG16UI;
+        m_FmtToGLFmtMap[ TEX_FORMAT_RG16_SNORM ]             = GL_RG16_SNORM;
+        m_FmtToGLFmtMap[ TEX_FORMAT_RG16_SINT ]              = GL_RG16I;
 
-        FmtToGLFmtMap[ TEX_FORMAT_R32_TYPELESS ]           = GL_R32F;
-        FmtToGLFmtMap[ TEX_FORMAT_D32_FLOAT ]              = GL_DEPTH_COMPONENT32F;
-        FmtToGLFmtMap[ TEX_FORMAT_R32_FLOAT ]              = GL_R32F;
-        FmtToGLFmtMap[ TEX_FORMAT_R32_UINT ]               = GL_R32UI;
-        FmtToGLFmtMap[ TEX_FORMAT_R32_SINT ]               = GL_R32I;
+        m_FmtToGLFmtMap[ TEX_FORMAT_R32_TYPELESS ]           = GL_R32F;
+        m_FmtToGLFmtMap[ TEX_FORMAT_D32_FLOAT ]              = GL_DEPTH_COMPONENT32F;
+        m_FmtToGLFmtMap[ TEX_FORMAT_R32_FLOAT ]              = GL_R32F;
+        m_FmtToGLFmtMap[ TEX_FORMAT_R32_UINT ]               = GL_R32UI;
+        m_FmtToGLFmtMap[ TEX_FORMAT_R32_SINT ]               = GL_R32I;
 
-        FmtToGLFmtMap[ TEX_FORMAT_R24G8_TYPELESS ]         = GL_DEPTH24_STENCIL8;
-        FmtToGLFmtMap[ TEX_FORMAT_D24_UNORM_S8_UINT ]      = GL_DEPTH24_STENCIL8;
-        FmtToGLFmtMap[ TEX_FORMAT_R24_UNORM_X8_TYPELESS ]  = GL_DEPTH24_STENCIL8;
-        FmtToGLFmtMap[ TEX_FORMAT_X24_TYPELESS_G8_UINT ]   = 0;//GL_DEPTH24_STENCIL8;
+        m_FmtToGLFmtMap[ TEX_FORMAT_R24G8_TYPELESS ]         = GL_DEPTH24_STENCIL8;
+        m_FmtToGLFmtMap[ TEX_FORMAT_D24_UNORM_S8_UINT ]      = GL_DEPTH24_STENCIL8;
+        m_FmtToGLFmtMap[ TEX_FORMAT_R24_UNORM_X8_TYPELESS ]  = GL_DEPTH24_STENCIL8;
+        m_FmtToGLFmtMap[ TEX_FORMAT_X24_TYPELESS_G8_UINT ]   = 0;//GL_DEPTH24_STENCIL8;
 
-        FmtToGLFmtMap[ TEX_FORMAT_RG8_TYPELESS ]           = GL_RG8;
-        FmtToGLFmtMap[ TEX_FORMAT_RG8_UNORM ]              = GL_RG8;
-        FmtToGLFmtMap[ TEX_FORMAT_RG8_UINT ]               = GL_RG8UI;
-        FmtToGLFmtMap[ TEX_FORMAT_RG8_SNORM ]              = GL_RG8_SNORM;
-        FmtToGLFmtMap[ TEX_FORMAT_RG8_SINT ]               = GL_RG8I;
+        m_FmtToGLFmtMap[ TEX_FORMAT_RG8_TYPELESS ]           = GL_RG8;
+        m_FmtToGLFmtMap[ TEX_FORMAT_RG8_UNORM ]              = GL_RG8;
+        m_FmtToGLFmtMap[ TEX_FORMAT_RG8_UINT ]               = GL_RG8UI;
+        m_FmtToGLFmtMap[ TEX_FORMAT_RG8_SNORM ]              = GL_RG8_SNORM;
+        m_FmtToGLFmtMap[ TEX_FORMAT_RG8_SINT ]               = GL_RG8I;
 
-        FmtToGLFmtMap[ TEX_FORMAT_R16_TYPELESS ]           = GL_R16F;
-        FmtToGLFmtMap[ TEX_FORMAT_R16_FLOAT ]              = GL_R16F;
-        FmtToGLFmtMap[ TEX_FORMAT_D16_UNORM ]              = GL_DEPTH_COMPONENT16;
-        FmtToGLFmtMap[ TEX_FORMAT_R16_UNORM ]              = GL_R16;
-        FmtToGLFmtMap[ TEX_FORMAT_R16_UINT ]               = GL_R16UI;
-        FmtToGLFmtMap[ TEX_FORMAT_R16_SNORM ]              = GL_R16_SNORM;
-        FmtToGLFmtMap[ TEX_FORMAT_R16_SINT ]               = GL_R16I;
+        m_FmtToGLFmtMap[ TEX_FORMAT_R16_TYPELESS ]           = GL_R16F;
+        m_FmtToGLFmtMap[ TEX_FORMAT_R16_FLOAT ]              = GL_R16F;
+        m_FmtToGLFmtMap[ TEX_FORMAT_D16_UNORM ]              = GL_DEPTH_COMPONENT16;
+        m_FmtToGLFmtMap[ TEX_FORMAT_R16_UNORM ]              = GL_R16;
+        m_FmtToGLFmtMap[ TEX_FORMAT_R16_UINT ]               = GL_R16UI;
+        m_FmtToGLFmtMap[ TEX_FORMAT_R16_SNORM ]              = GL_R16_SNORM;
+        m_FmtToGLFmtMap[ TEX_FORMAT_R16_SINT ]               = GL_R16I;
 
-        FmtToGLFmtMap[ TEX_FORMAT_R8_TYPELESS ]            = GL_R8;
-        FmtToGLFmtMap[ TEX_FORMAT_R8_UNORM ]               = GL_R8;
-        FmtToGLFmtMap[ TEX_FORMAT_R8_UINT ]                = GL_R8UI;
-        FmtToGLFmtMap[ TEX_FORMAT_R8_SNORM ]               = GL_R8_SNORM;
-        FmtToGLFmtMap[ TEX_FORMAT_R8_SINT ]                = GL_R8I;
-        FmtToGLFmtMap[ TEX_FORMAT_A8_UNORM ]               = 0;
+        m_FmtToGLFmtMap[ TEX_FORMAT_R8_TYPELESS ]            = GL_R8;
+        m_FmtToGLFmtMap[ TEX_FORMAT_R8_UNORM ]               = GL_R8;
+        m_FmtToGLFmtMap[ TEX_FORMAT_R8_UINT ]                = GL_R8UI;
+        m_FmtToGLFmtMap[ TEX_FORMAT_R8_SNORM ]               = GL_R8_SNORM;
+        m_FmtToGLFmtMap[ TEX_FORMAT_R8_SINT ]                = GL_R8I;
+        m_FmtToGLFmtMap[ TEX_FORMAT_A8_UNORM ]               = 0;
 
-        FmtToGLFmtMap[ TEX_FORMAT_R1_UNORM ]               = 0;
+        m_FmtToGLFmtMap[ TEX_FORMAT_R1_UNORM ]               = 0;
 
-        FmtToGLFmtMap[ TEX_FORMAT_RGB9E5_SHAREDEXP ]       = GL_RGB9_E5;
-        FmtToGLFmtMap[ TEX_FORMAT_RG8_B8G8_UNORM ]         = 0;
-        FmtToGLFmtMap[ TEX_FORMAT_G8R8_G8B8_UNORM ]        = 0;
+        m_FmtToGLFmtMap[ TEX_FORMAT_RGB9E5_SHAREDEXP ]       = GL_RGB9_E5;
+        m_FmtToGLFmtMap[ TEX_FORMAT_RG8_B8G8_UNORM ]         = 0;
+        m_FmtToGLFmtMap[ TEX_FORMAT_G8R8_G8B8_UNORM ]        = 0;
 
         // http://www.g-truc.net/post-0335.html
         // http://renderingpipeline.com/2012/07/texture-compression/
-        FmtToGLFmtMap[ TEX_FORMAT_BC1_TYPELESS ]           = GL_COMPRESSED_RGB_S3TC_DXT1_EXT;
-        FmtToGLFmtMap[ TEX_FORMAT_BC1_UNORM ]              = GL_COMPRESSED_RGB_S3TC_DXT1_EXT;  // GL_COMPRESSED_RGBA_S3TC_DXT1_EXT;
-        FmtToGLFmtMap[ TEX_FORMAT_BC1_UNORM_SRGB ]         = GL_COMPRESSED_SRGB_S3TC_DXT1_EXT; // GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT;
-        FmtToGLFmtMap[ TEX_FORMAT_BC2_TYPELESS ]           = GL_COMPRESSED_RGBA_S3TC_DXT3_EXT;
-        FmtToGLFmtMap[ TEX_FORMAT_BC2_UNORM ]              = GL_COMPRESSED_RGBA_S3TC_DXT3_EXT;
-        FmtToGLFmtMap[ TEX_FORMAT_BC2_UNORM_SRGB ]         = GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT;
-        FmtToGLFmtMap[ TEX_FORMAT_BC3_TYPELESS ]           = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
-        FmtToGLFmtMap[ TEX_FORMAT_BC3_UNORM ]              = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
-        FmtToGLFmtMap[ TEX_FORMAT_BC3_UNORM_SRGB ]         = GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT;
-        FmtToGLFmtMap[ TEX_FORMAT_BC4_TYPELESS ]           = GL_COMPRESSED_RED_RGTC1;
-        FmtToGLFmtMap[ TEX_FORMAT_BC4_UNORM ]              = GL_COMPRESSED_RED_RGTC1;
-        FmtToGLFmtMap[ TEX_FORMAT_BC4_SNORM ]              = GL_COMPRESSED_SIGNED_RED_RGTC1;
-        FmtToGLFmtMap[ TEX_FORMAT_BC5_TYPELESS ]           = GL_COMPRESSED_RG_RGTC2;
-        FmtToGLFmtMap[ TEX_FORMAT_BC5_UNORM ]              = GL_COMPRESSED_RG_RGTC2;
-        FmtToGLFmtMap[ TEX_FORMAT_BC5_SNORM ]              = GL_COMPRESSED_SIGNED_RG_RGTC2;
-        FmtToGLFmtMap[ TEX_FORMAT_B5G6R5_UNORM ]           = 0;
-        FmtToGLFmtMap[ TEX_FORMAT_B5G5R5A1_UNORM ]         = 0;
-        FmtToGLFmtMap[ TEX_FORMAT_BGRA8_UNORM ]            = 0;
-        FmtToGLFmtMap[ TEX_FORMAT_BGRX8_UNORM ]            = 0;
-        FmtToGLFmtMap[ TEX_FORMAT_R10G10B10_XR_BIAS_A2_UNORM ] = 0;
-        FmtToGLFmtMap[ TEX_FORMAT_BGRA8_TYPELESS ]         = 0;
-        FmtToGLFmtMap[ TEX_FORMAT_BGRA8_UNORM_SRGB ]       = 0;
-        FmtToGLFmtMap[ TEX_FORMAT_BGRX8_TYPELESS ]         = 0;
-        FmtToGLFmtMap[ TEX_FORMAT_BGRX8_UNORM_SRGB ]       = 0;
-        FmtToGLFmtMap[ TEX_FORMAT_BC6H_TYPELESS ]          = GL_COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT;
-        FmtToGLFmtMap[ TEX_FORMAT_BC6H_UF16 ]              = GL_COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT;
-        FmtToGLFmtMap[ TEX_FORMAT_BC6H_SF16 ]              = GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT;
-        FmtToGLFmtMap[ TEX_FORMAT_BC7_TYPELESS ]           = GL_COMPRESSED_RGBA_BPTC_UNORM;
-        FmtToGLFmtMap[ TEX_FORMAT_BC7_UNORM ]              = GL_COMPRESSED_RGBA_BPTC_UNORM;
-        FmtToGLFmtMap[ TEX_FORMAT_BC7_UNORM_SRGB ]         = GL_COMPRESSED_SRGB_ALPHA_BPTC_UNORM;
-
-        bFormatMapIntialized = true;
+        m_FmtToGLFmtMap[ TEX_FORMAT_BC1_TYPELESS ]           = GL_COMPRESSED_RGB_S3TC_DXT1_EXT;
+        m_FmtToGLFmtMap[ TEX_FORMAT_BC1_UNORM ]              = GL_COMPRESSED_RGB_S3TC_DXT1_EXT;  // GL_COMPRESSED_RGBA_S3TC_DXT1_EXT;
+        m_FmtToGLFmtMap[ TEX_FORMAT_BC1_UNORM_SRGB ]         = GL_COMPRESSED_SRGB_S3TC_DXT1_EXT; // GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT;
+        m_FmtToGLFmtMap[ TEX_FORMAT_BC2_TYPELESS ]           = GL_COMPRESSED_RGBA_S3TC_DXT3_EXT;
+        m_FmtToGLFmtMap[ TEX_FORMAT_BC2_UNORM ]              = GL_COMPRESSED_RGBA_S3TC_DXT3_EXT;
+        m_FmtToGLFmtMap[ TEX_FORMAT_BC2_UNORM_SRGB ]         = GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT;
+        m_FmtToGLFmtMap[ TEX_FORMAT_BC3_TYPELESS ]           = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
+        m_FmtToGLFmtMap[ TEX_FORMAT_BC3_UNORM ]              = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
+        m_FmtToGLFmtMap[ TEX_FORMAT_BC3_UNORM_SRGB ]         = GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT;
+        m_FmtToGLFmtMap[ TEX_FORMAT_BC4_TYPELESS ]           = GL_COMPRESSED_RED_RGTC1;
+        m_FmtToGLFmtMap[ TEX_FORMAT_BC4_UNORM ]              = GL_COMPRESSED_RED_RGTC1;
+        m_FmtToGLFmtMap[ TEX_FORMAT_BC4_SNORM ]              = GL_COMPRESSED_SIGNED_RED_RGTC1;
+        m_FmtToGLFmtMap[ TEX_FORMAT_BC5_TYPELESS ]           = GL_COMPRESSED_RG_RGTC2;
+        m_FmtToGLFmtMap[ TEX_FORMAT_BC5_UNORM ]              = GL_COMPRESSED_RG_RGTC2;
+        m_FmtToGLFmtMap[ TEX_FORMAT_BC5_SNORM ]              = GL_COMPRESSED_SIGNED_RG_RGTC2;
+        m_FmtToGLFmtMap[ TEX_FORMAT_B5G6R5_UNORM ]           = 0;
+        m_FmtToGLFmtMap[ TEX_FORMAT_B5G5R5A1_UNORM ]         = 0;
+        m_FmtToGLFmtMap[ TEX_FORMAT_BGRA8_UNORM ]            = 0;
+        m_FmtToGLFmtMap[ TEX_FORMAT_BGRX8_UNORM ]            = 0;
+        m_FmtToGLFmtMap[ TEX_FORMAT_R10G10B10_XR_BIAS_A2_UNORM ] = 0;
+        m_FmtToGLFmtMap[ TEX_FORMAT_BGRA8_TYPELESS ]         = 0;
+        m_FmtToGLFmtMap[ TEX_FORMAT_BGRA8_UNORM_SRGB ]       = 0;
+        m_FmtToGLFmtMap[ TEX_FORMAT_BGRX8_TYPELESS ]         = 0;
+        m_FmtToGLFmtMap[ TEX_FORMAT_BGRX8_UNORM_SRGB ]       = 0;
+        m_FmtToGLFmtMap[ TEX_FORMAT_BC6H_TYPELESS ]          = GL_COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT;
+        m_FmtToGLFmtMap[ TEX_FORMAT_BC6H_UF16 ]              = GL_COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT;
+        m_FmtToGLFmtMap[ TEX_FORMAT_BC6H_SF16 ]              = GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT;
+        m_FmtToGLFmtMap[ TEX_FORMAT_BC7_TYPELESS ]           = GL_COMPRESSED_RGBA_BPTC_UNORM;
+        m_FmtToGLFmtMap[ TEX_FORMAT_BC7_UNORM ]              = GL_COMPRESSED_RGBA_BPTC_UNORM;
+        m_FmtToGLFmtMap[ TEX_FORMAT_BC7_UNORM_SRGB ]         = GL_COMPRESSED_SRGB_ALPHA_BPTC_UNORM;
     }
 
+    GLenum operator[](TEXTURE_FORMAT TexFormat)const
+    {
+        VERIFY_EXPR(TexFormat < _countof(m_FmtToGLFmtMap));
+        return m_FmtToGLFmtMap[TexFormat];
+    }
+
+private:
+    GLenum m_FmtToGLFmtMap[TEX_FORMAT_NUM_FORMATS] = {0};
+};
+
+GLenum TexFormatToGLInternalTexFormat(TEXTURE_FORMAT TexFormat, Uint32 BindFlags)
+{
+    static const FormatToGLInternalTexFormatMap FormatMap;
     if( TexFormat >= TEX_FORMAT_UNKNOWN && TexFormat < TEX_FORMAT_NUM_FORMATS )
     {
-        auto GLFormat = FmtToGLFmtMap[TexFormat];
+        auto GLFormat = FormatMap[TexFormat];
         if( BindFlags != 0 )
             GLFormat = CorrectGLTexFormat( GLFormat, BindFlags );
         return GLFormat;
@@ -169,6 +179,61 @@ GLenum TexFormatToGLInternalTexFormat(TEXTURE_FORMAT TexFormat, Uint32 BindFlags
         UNEXPECTED( "Texture format (", TexFormat, ") out of allowed range [0, ", TEX_FORMAT_NUM_FORMATS-1, "]" );
         return 0;
     }
+}
+
+class InternalTexFormatToTexFormatMap
+{
+public:
+    InternalTexFormatToTexFormatMap()
+    {
+        for (TEXTURE_FORMAT TexFmt = TEX_FORMAT_UNKNOWN; TexFmt < TEX_FORMAT_NUM_FORMATS; TexFmt = static_cast<TEXTURE_FORMAT>(static_cast<int>(TexFmt) + 1) )
+        {
+            auto ComponentType = GetTextureFormatAttribs(TexFmt).ComponentType;
+            if ( ComponentType == COMPONENT_TYPE_UNDEFINED || 
+                 ComponentType == COMPONENT_TYPE_DEPTH_STENCIL ||
+                 TexFmt == TEX_FORMAT_RGB10A2_TYPELESS ||
+                 TexFmt == TEX_FORMAT_BC1_TYPELESS ||
+                 TexFmt == TEX_FORMAT_BC2_TYPELESS ||
+                 TexFmt == TEX_FORMAT_BC3_TYPELESS ||
+                 TexFmt == TEX_FORMAT_BC4_TYPELESS ||
+                 TexFmt == TEX_FORMAT_BC5_TYPELESS ||
+                 TexFmt == TEX_FORMAT_BC6H_TYPELESS ||
+                 TexFmt == TEX_FORMAT_BC7_TYPELESS)
+                continue; // Skip typeless and depth-stencil formats
+            auto GlTexFormat = TexFormatToGLInternalTexFormat(TexFmt);
+            if (GlTexFormat != 0)
+            {
+                VERIFY_EXPR(m_FormatMap.find(GlTexFormat) == m_FormatMap.end());
+                m_FormatMap[GlTexFormat] = TexFmt;
+            }
+            m_FormatMap[TexFormatToGLInternalTexFormat(TEX_FORMAT_D32_FLOAT_S8X24_UINT)] = TEX_FORMAT_D32_FLOAT_S8X24_UINT;
+            m_FormatMap[TexFormatToGLInternalTexFormat(TEX_FORMAT_D24_UNORM_S8_UINT)] = TEX_FORMAT_D24_UNORM_S8_UINT;
+        }
+    }
+
+    TEXTURE_FORMAT operator[](GLenum GlFormat)const
+    {
+        auto formatIt = m_FormatMap.find(GlFormat);
+        if (formatIt != m_FormatMap.end())
+        {
+            VERIFY_EXPR(GlFormat == TexFormatToGLInternalTexFormat(formatIt->second));
+            return formatIt->second;
+        }
+        else
+        {
+            UNEXPECTED("Unknown GL format");
+            return TEX_FORMAT_UNKNOWN;
+        }
+    }
+
+private:
+    std::unordered_map<GLenum, TEXTURE_FORMAT> m_FormatMap;
+};
+
+TEXTURE_FORMAT GLInternalTexFormatToTexFormat(GLenum GlFormat)
+{
+    static const InternalTexFormatToTexFormatMap FormatMap;
+    return FormatMap[GlFormat];
 }
 
 GLenum CorrectGLTexFormat( GLenum GLTexFormat, Uint32 BindFlags )

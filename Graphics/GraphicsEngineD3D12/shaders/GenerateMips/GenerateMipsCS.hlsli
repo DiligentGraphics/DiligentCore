@@ -13,7 +13,7 @@
 
 #define RootSig \
 	"RootFlags(0), " \
-	"RootConstants(b0, num32BitConstants = 4), " \
+	"RootConstants(b0, num32BitConstants = 6), " \
 	"DescriptorTable(SRV(t0, numDescriptors = 1))," \
 	"DescriptorTable(UAV(u0, numDescriptors = 4))," \
 	"StaticSampler(s0," \
@@ -26,17 +26,19 @@
 #define NON_POWER_OF_TWO 0
 #endif
 
-RWTexture2D<float4> OutMip1 : register(u0);
-RWTexture2D<float4> OutMip2 : register(u1);
-RWTexture2D<float4> OutMip3 : register(u2);
-RWTexture2D<float4> OutMip4 : register(u3);
-Texture2D<float4> SrcTex : register(t0);
+RWTexture2DArray<float4> OutMip1 : register(u0);
+RWTexture2DArray<float4> OutMip2 : register(u1);
+RWTexture2DArray<float4> OutMip3 : register(u2);
+RWTexture2DArray<float4> OutMip4 : register(u3);
+Texture2DArray<float4> SrcTex : register(t0);
 SamplerState BilinearClamp : register(s0);
 
 cbuffer CB : register(b0)
 {
 	uint SrcMipLevel;	// Texture level of source mip
 	uint NumMipLevels;	// Number of OutMips to write: [1, 4]
+    uint ArraySlice;	// Texture array slice
+    uint Dummy;
 	float2 TexelSize;	// 1.0 / OutMip1.Dimensions
 }
 
@@ -84,7 +86,8 @@ float4 PackColor(float4 Linear)
 void main( uint GI : SV_GroupIndex, uint3 DTid : SV_DispatchThreadID )
 {
     uint2 DstMipSize;
-    SrcTex.GetDimensions(DstMipSize.x, DstMipSize.y);
+    uint Elements;
+    SrcTex.GetDimensions(DstMipSize.x, DstMipSize.y, Elements);
     DstMipSize >>= SrcMipLevel;
     bool IsValidThread = all(DTid.xy < DstMipSize);
     
@@ -99,37 +102,37 @@ void main( uint GI : SV_GroupIndex, uint3 DTid : SV_DispatchThreadID )
         // have to take more source texture samples.
 #if NON_POWER_OF_TWO == 0
         float2 UV = TexelSize * (DTid.xy + 0.5);
-        Src1 = SrcTex.SampleLevel(BilinearClamp, UV, SrcMipLevel);
+        Src1 = SrcTex.SampleLevel(BilinearClamp, float3(UV, ArraySlice), SrcMipLevel);
 #elif NON_POWER_OF_TWO == 1
         // > 2:1 in X dimension
         // Use 2 bilinear samples to guarantee we don't undersample when downsizing by more than 2x
         // horizontally.
         float2 UV1 = TexelSize * (DTid.xy + float2(0.25, 0.5));
         float2 Off = TexelSize * float2(0.5, 0.0);
-        Src1 = 0.5 * (SrcTex.SampleLevel(BilinearClamp, UV1, SrcMipLevel) +
-                      SrcTex.SampleLevel(BilinearClamp, UV1 + Off, SrcMipLevel));
+        Src1 = 0.5 * (SrcTex.SampleLevel(BilinearClamp, float3(UV1,       ArraySlice), SrcMipLevel) +
+                      SrcTex.SampleLevel(BilinearClamp, float3(UV1 + Off, ArraySlice), SrcMipLevel));
 #elif NON_POWER_OF_TWO == 2
         // > 2:1 in Y dimension
         // Use 2 bilinear samples to guarantee we don't undersample when downsizing by more than 2x
         // vertically.
         float2 UV1 = TexelSize * (DTid.xy + float2(0.5, 0.25));
         float2 Off = TexelSize * float2(0.0, 0.5);
-        Src1 = 0.5 * (SrcTex.SampleLevel(BilinearClamp, UV1, SrcMipLevel) +
-                      SrcTex.SampleLevel(BilinearClamp, UV1 + Off, SrcMipLevel));
+        Src1 = 0.5 * (SrcTex.SampleLevel(BilinearClamp, float3(UV1,       ArraySlice), SrcMipLevel) +
+                      SrcTex.SampleLevel(BilinearClamp, float3(UV1 + Off, ArraySlice), SrcMipLevel));
 #elif NON_POWER_OF_TWO == 3
         // > 2:1 in in both dimensions
         // Use 4 bilinear samples to guarantee we don't undersample when downsizing by more than 2x
         // in both directions.
         float2 UV1 = TexelSize * (DTid.xy + float2(0.25, 0.25));
         float2 Off = TexelSize * 0.5;
-        Src1 += SrcTex.SampleLevel(BilinearClamp, UV1, SrcMipLevel);
-        Src1 += SrcTex.SampleLevel(BilinearClamp, UV1 + float2(Off.x, 0.0),   SrcMipLevel);
-        Src1 += SrcTex.SampleLevel(BilinearClamp, UV1 + float2(0.0,   Off.y), SrcMipLevel);
-        Src1 += SrcTex.SampleLevel(BilinearClamp, UV1 + float2(Off.x, Off.y), SrcMipLevel);
+        Src1 += SrcTex.SampleLevel(BilinearClamp, float3(UV1,                        ArraySlice), SrcMipLevel);
+        Src1 += SrcTex.SampleLevel(BilinearClamp, float3(UV1 + float2(Off.x, 0.0),   ArraySlice), SrcMipLevel);
+        Src1 += SrcTex.SampleLevel(BilinearClamp, float3(UV1 + float2(0.0,   Off.y), ArraySlice), SrcMipLevel);
+        Src1 += SrcTex.SampleLevel(BilinearClamp, float3(UV1 + float2(Off.x, Off.y), ArraySlice), SrcMipLevel);
         Src1 *= 0.25;
 #endif
 
-        OutMip1[DTid.xy] = PackColor(Src1);
+        OutMip1[ uint3(DTid.xy, ArraySlice) ] = PackColor(Src1);
     }
 
 	// A scalar (constant) branch can exit all threads coherently.
@@ -159,7 +162,7 @@ void main( uint GI : SV_GroupIndex, uint3 DTid : SV_DispatchThreadID )
 		    float4 Src4 = LoadColor(GI + 0x09);
 		    Src1 = 0.25 * (Src1 + Src2 + Src3 + Src4);
 
-		    OutMip2[DTid.xy / 2] = PackColor(Src1);
+		    OutMip2[ uint3(DTid.xy / 2, ArraySlice) ] = PackColor(Src1);
 		    StoreColor(GI, Src1);
 	    }
     }
@@ -179,7 +182,7 @@ void main( uint GI : SV_GroupIndex, uint3 DTid : SV_DispatchThreadID )
 		    float4 Src4 = LoadColor(GI + 0x12);
 		    Src1 = 0.25 * (Src1 + Src2 + Src3 + Src4);
 
-		    OutMip3[DTid.xy / 4] = PackColor(Src1);
+		    OutMip3[ uint3(DTid.xy / 4, ArraySlice) ] = PackColor(Src1);
 		    StoreColor(GI, Src1);
 	    }
     }
@@ -200,7 +203,7 @@ void main( uint GI : SV_GroupIndex, uint3 DTid : SV_DispatchThreadID )
 		    float4 Src4 = LoadColor(GI + 0x24);
 		    Src1 = 0.25 * (Src1 + Src2 + Src3 + Src4);
 
-		    OutMip4[DTid.xy / 8] = PackColor(Src1);
+		    OutMip4[ uint3(DTid.xy / 8, ArraySlice) ] = PackColor(Src1);
 	    }
     }
 }

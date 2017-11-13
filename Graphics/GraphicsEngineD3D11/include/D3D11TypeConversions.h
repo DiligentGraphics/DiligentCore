@@ -46,46 +46,99 @@ inline UINT BindFlagsToD3D11BindFlags(Uint32 BindFlags)
     return D3D11BindFlags;
 }
 
+inline Uint32 D3D11BindFlagsToBindFlags(UINT D3D11BindFlags)
+{
+    Uint32 BindFlags = 0;
+    BindFlags = BindFlags | ((D3D11BindFlags & D3D11_BIND_VERTEX_BUFFER)     ? BIND_VERTEX_BUFFER    : 0);
+    BindFlags = BindFlags | ((D3D11BindFlags & D3D11_BIND_INDEX_BUFFER)      ? BIND_INDEX_BUFFER     : 0);
+    BindFlags = BindFlags | ((D3D11BindFlags & D3D11_BIND_CONSTANT_BUFFER)   ? BIND_UNIFORM_BUFFER   : 0);
+    BindFlags = BindFlags | ((D3D11BindFlags & D3D11_BIND_SHADER_RESOURCE)   ? BIND_SHADER_RESOURCE  : 0);
+    BindFlags = BindFlags | ((D3D11BindFlags & D3D11_BIND_STREAM_OUTPUT)     ? BIND_STREAM_OUTPUT    : 0);
+    BindFlags = BindFlags | ((D3D11BindFlags & D3D11_BIND_RENDER_TARGET)     ? BIND_RENDER_TARGET    : 0);
+    BindFlags = BindFlags | ((D3D11BindFlags & D3D11_BIND_DEPTH_STENCIL)     ? BIND_DEPTH_STENCIL    : 0);
+    BindFlags = BindFlags | ((D3D11BindFlags & D3D11_BIND_UNORDERED_ACCESS)  ? BIND_UNORDERED_ACCESS : 0);
+    VERIFY_EXPR( (D3D11BindFlags & 
+                 (D3D11_BIND_VERTEX_BUFFER|D3D11_BIND_INDEX_BUFFER|D3D11_BIND_CONSTANT_BUFFER|
+                  D3D11_BIND_SHADER_RESOURCE|D3D11_BIND_STREAM_OUTPUT|D3D11_BIND_RENDER_TARGET|
+                  D3D11_BIND_DEPTH_STENCIL|D3D11_BIND_UNORDERED_ACCESS)) == BindFlagsToD3D11BindFlags(BindFlags));
+    return BindFlags;
+}
+
 D3D11_PRIMITIVE_TOPOLOGY TopologyToD3D11Topology(PRIMITIVE_TOPOLOGY Topology);
 
 inline D3D11_USAGE UsageToD3D11Usage(USAGE Usage)
 {
     switch(Usage)
     {
-        case USAGE_STATIC:       return D3D11_USAGE_IMMUTABLE;
-        case USAGE_DEFAULT:      return D3D11_USAGE_DEFAULT;
-        case USAGE_DYNAMIC:      return D3D11_USAGE_DYNAMIC;
+        case USAGE_STATIC:         return D3D11_USAGE_IMMUTABLE;
+        case USAGE_DEFAULT:        return D3D11_USAGE_DEFAULT;
+        case USAGE_DYNAMIC:        return D3D11_USAGE_DYNAMIC;
         case USAGE_CPU_ACCESSIBLE: return D3D11_USAGE_STAGING;
         default: UNEXPECTED("Unknow usage" ); return D3D11_USAGE_DEFAULT;
     }
 }
 
-inline D3D11_MAP MapTypeToD3D11MapType(MAP_TYPE MapType)
+inline USAGE D3D11UsageToUsage(D3D11_USAGE D3D11Usage)
+{
+    switch(D3D11Usage)
+    {
+        case D3D11_USAGE_IMMUTABLE: return USAGE_STATIC;
+        case D3D11_USAGE_DEFAULT:   return USAGE_DEFAULT;
+        case D3D11_USAGE_DYNAMIC:   return USAGE_DYNAMIC;
+        case D3D11_USAGE_STAGING:   return USAGE_CPU_ACCESSIBLE;
+        default: UNEXPECTED("Unknow D3D11 usage" ); return USAGE_DEFAULT;
+    }
+}
+
+inline void MapParamsToD3D11MapParams(MAP_TYPE MapType, Uint32 MapFlags, D3D11_MAP &d3d11MapType, UINT d3d11MapFlags)
 { 
+    d3d11MapType = static_cast<D3D11_MAP>(0);
     switch(MapType)
     {
-        case MAP_READ:              return D3D11_MAP_READ;
-        case MAP_WRITE:             return D3D11_MAP_WRITE;
-        case MAP_READ_WRITE:        return D3D11_MAP_READ_WRITE;
-        case MAP_WRITE_DISCARD:     return D3D11_MAP_WRITE_DISCARD;
-        case MAP_WRITE_NO_OVERWRITE:return D3D11_MAP_WRITE_NO_OVERWRITE;
-        default: UNEXPECTED( "Unknown map type" ); return D3D11_MAP_READ;
+        case MAP_READ: 
+            d3d11MapType = D3D11_MAP_READ;
+        break;
+
+        case MAP_WRITE:             
+            if(MapFlags & MAP_FLAG_DISCARD)
+                d3d11MapType = D3D11_MAP_WRITE_DISCARD;
+            else if(MapFlags & MAP_FLAG_DO_NOT_SYNCHRONIZE)
+                d3d11MapType = D3D11_MAP_WRITE_NO_OVERWRITE;
+            else 
+                d3d11MapType = D3D11_MAP_WRITE;
+        break;
+
+        case MAP_READ_WRITE:        
+            d3d11MapType = D3D11_MAP_READ_WRITE;
+        break;
+
+        default: 
+            UNEXPECTED( "Unknown map type" );
     }
+
+    d3d11MapFlags = 0;
+    d3d11MapFlags |= (MapFlags & MAP_FLAG_DO_NOT_WAIT) ? D3D11_MAP_FLAG_DO_NOT_WAIT : 0;
 }
 
 inline UINT MapFlagsToD3D11MapFlags(Uint32 MapFlags)
 {
-    UINT D3D11MapFlags = 0;
-    D3D11MapFlags |= (MapFlags & MAP_FLAG_DO_NOT_WAIT) ? D3D11_MAP_FLAG_DO_NOT_WAIT : 0;
-    return D3D11MapFlags;
 }
 
 inline UINT CPUAccessFlagsToD3D11CPUAccessFlags(Uint32 Flags)
 {
     UINT D3D11CPUAccessFlags = 0;
-    D3D11CPUAccessFlags |= (Flags & CPU_ACCESS_READ) ? D3D11_CPU_ACCESS_READ : 0;
+    D3D11CPUAccessFlags |= (Flags & CPU_ACCESS_READ)  ? D3D11_CPU_ACCESS_READ  : 0;
     D3D11CPUAccessFlags |= (Flags & CPU_ACCESS_WRITE) ? D3D11_CPU_ACCESS_WRITE : 0;
     return D3D11CPUAccessFlags;
+}
+
+inline Uint32 D3D11CPUAccessFlagsToCPUAccessFlags(UINT D3D11CPUAccessFlags)
+{
+    Uint32 CPUAccessFlags = 0;
+    CPUAccessFlags |= (D3D11CPUAccessFlags & D3D11_CPU_ACCESS_READ)  ? CPU_ACCESS_READ  : 0;
+    CPUAccessFlags |= (D3D11CPUAccessFlags & D3D11_CPU_ACCESS_WRITE) ? CPU_ACCESS_WRITE : 0;
+    VERIFY_EXPR(D3D11CPUAccessFlags == CPUAccessFlagsToD3D11CPUAccessFlags(CPUAccessFlags));
+    return CPUAccessFlags;
 }
 
 inline UINT MiscTextureFlagsToD3D11Flags(Uint32 Flags)
@@ -93,6 +146,13 @@ inline UINT MiscTextureFlagsToD3D11Flags(Uint32 Flags)
     UINT D3D11MiscFlags = 0;
     D3D11MiscFlags |= (Flags & MISC_TEXTURE_FLAG_GENERATE_MIPS) ? D3D11_RESOURCE_MISC_GENERATE_MIPS : 0;
     return D3D11MiscFlags;
+}
+
+inline Uint32 D3D11MiscFlagsToMiscTextureFlags(UINT D3D11MiscFlags)
+{
+    Uint32 MiscFlags = 0;
+    MiscFlags |= (D3D11MiscFlags & D3D11_RESOURCE_MISC_GENERATE_MIPS) ? MISC_TEXTURE_FLAG_GENERATE_MIPS : 0;
+    return MiscFlags;
 }
 
 D3D11_FILTER FilterTypeToD3D11Filter(FILTER_TYPE MinFilter, FILTER_TYPE MagFilter, FILTER_TYPE MipFilter);

@@ -40,7 +40,7 @@ class ITextureViewD3D12 : public Diligent::ITextureView
 {
 public:
     
-    /// Returns CPU descriptor handle of the internal Direct3D12 object.
+    /// Returns CPU descriptor handle of the texture view.
     virtual D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle() = 0;
 };
 

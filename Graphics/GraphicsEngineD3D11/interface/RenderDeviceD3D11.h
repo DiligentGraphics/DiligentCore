@@ -45,6 +45,47 @@ public:
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
     virtual ID3D11Device* GetD3D11Device() = 0;
+
+    /// Creates a buffer object from native d3d11 buffer
+
+    /// \param [in] pd3d11Buffer - Pointer to the native buffer
+    /// \param [in] BuffDesc - Buffer description. Most of the fields will be 
+    ///                        populated automatically if left in default values. 
+    ///                        The only field that must be populated is BufferDesc::Format,
+    ///                        when initializing a formatted buffer.
+    /// \param [out] ppBuffer - Address of the memory location where the pointer to the
+    ///                         buffer interface will be stored. 
+    ///                         The function calls AddRef(), so that the new object will contain 
+    ///                         one reference.
+    virtual void CreateBufferFromD3DResource(ID3D11Buffer *pd3d11Buffer, const BufferDesc& BuffDesc, IBuffer **ppBuffer) = 0;
+
+    /// Creates a texture object from native d3d11 1D texture
+
+    /// \param [in] pd3d11Texture - pointer to the native 1D texture
+    /// \param [out] ppTexture - Address of the memory location where the pointer to the
+    ///                          texture interface will be stored. 
+    ///                          The function calls AddRef(), so that the new object will contain 
+    ///                          one reference.
+    virtual void CreateTextureFromD3DResource(ID3D11Texture1D *pd3d11Texture, ITexture **ppTexture) = 0;
+
+    /// Creates a texture object from native d3d11 2D texture
+
+    /// \param [in] pd3d11Texture - pointer to the native 2D texture
+    /// \param [out] ppTexture - Address of the memory location where the pointer to the
+    ///                          texture interface will be stored. 
+    ///                          The function calls AddRef(), so that the new object will contain 
+    ///                          one reference.
+    virtual void CreateTextureFromD3DResource(ID3D11Texture2D *pd3d11Texture, ITexture **ppTexture) = 0;
+
+    /// Creates a texture object from native d3d11 3D texture
+
+    /// \param [in] pd3d11Texture - pointer to the native 3D texture
+    /// \param [out] ppTexture - Address of the memory location where the pointer to the
+    ///                          texture interface will be stored. 
+    ///                          The function calls AddRef(), so that the new object will contain 
+    ///                          one reference.
+    virtual void CreateTextureFromD3DResource(ID3D11Texture3D *pd3d11Texture, ITexture **ppTexture) = 0;
+
 };
 
 }

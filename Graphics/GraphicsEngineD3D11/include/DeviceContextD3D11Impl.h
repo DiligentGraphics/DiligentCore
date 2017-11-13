@@ -43,7 +43,7 @@ class DeviceContextD3D11Impl : public DeviceContextBase<IDeviceContextD3D11>
 public:
     typedef DeviceContextBase<IDeviceContextD3D11> TDeviceContextBase;
 
-    DeviceContextD3D11Impl(IMemoryAllocator &Allocator, IRenderDevice *pDevice, ID3D11DeviceContext *pd3d11DeviceContext, const struct EngineD3D11Attribs &EngineAttribs, bool bIsDeferred);
+    DeviceContextD3D11Impl(IReferenceCounters *pRefCounters, IMemoryAllocator &Allocator, IRenderDevice *pDevice, ID3D11DeviceContext *pd3d11DeviceContext, const struct EngineD3D11Attribs &EngineAttribs, bool bIsDeferred);
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
 
     virtual void SetPipelineState(IPipelineState *pPipelineState)override final;
@@ -57,7 +57,8 @@ public:
     virtual void SetBlendFactors(const float* pBlendFactors = nullptr)override final;
 
     virtual void SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer **ppBuffers, Uint32 *pStrides, Uint32 *pOffsets, Uint32 Flags )override final;
-    virtual void ClearState()override final;
+    
+    virtual void InvalidateState()override final;
 
     virtual void SetIndexBuffer( IBuffer *pIndexBuffer, Uint32 ByteOffset )override final;
 
@@ -83,12 +84,15 @@ public:
 
     ID3D11DeviceContext* GetD3D11DeviceContext(){ return m_pd3d11DeviceContext; }
     
-    void RebindRenderTargets();
+    void CommitRenderTargets();
 
-    /// Clears the state caches. This function is called once per frame
-    /// (before present) to release all outstanding objects
-    /// that are only kept alive by references in the cache
-    void ClearShaderStateCache();
+    /// Clears the committed shader resource cache. This function 
+    /// is called once per frame (before present) to release all 
+    /// outstanding objects that are only kept alive by references 
+    /// in the cache. The function does not release cached vertex and
+    /// index buffers, input layout, depth-stencil, rasterizer, and blend
+    /// states.
+    void ReleaseCommittedShaderResources();
 
     /// Number of different shader types (Vertex, Pixel, Geometry, Domain, Hull, Compute)
     static const int NumShaderTypes = 6;

@@ -35,8 +35,7 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 
-// This header defines math and matrix helper functions and structures used 
-// by DirectX SDK samples.
+#include "HashUtils.h"
 
 // Common Constants
 
@@ -930,16 +929,13 @@ inline float4x4 scaleMatrix(float x, float y, float z)
                     0, 0, 0, 1);
 }
 
-inline float4x4 rotationX(float degreeX)
+inline float4x4 rotationX(float angleInRadians)
 {
-    float angleInRadians = degreeX * (PI_F / 180.0f);
-
     float sinAngle = sinf(angleInRadians);
     float cosAngle = cosf(angleInRadians);
 
     float4x4 mOut;
 
-    UNSUPPORTED("This function is not tested, it might be incorrect.")
     mOut._11 = 1.0f; mOut._12 = 0.0f;     mOut._13 = 0.0f;      mOut._14 = 0.0f;
     mOut._21 = 0.0f; mOut._22 = cosAngle; mOut._23 = -sinAngle; mOut._24 = 0.0f;
     mOut._31 = 0.0f; mOut._32 = sinAngle; mOut._33 = cosAngle;  mOut._34 = 0.0f;
@@ -948,16 +944,13 @@ inline float4x4 rotationX(float degreeX)
     return mOut;
 }
 
-inline float4x4 rotationY(float degreeY)
+inline float4x4 rotationY(float angleInRadians)
 {
-    float angleInRadians = degreeY * (PI_F / 180.0f);
-
     float sinAngle = sinf(angleInRadians);
     float cosAngle = cosf(angleInRadians);
 
     float4x4 mOut;
 
-    UNSUPPORTED("This function is not tested, it might be incorrect.")
     mOut._11 = cosAngle;  mOut._12 = 0.0f; mOut._13 = sinAngle; mOut._14 = 0.0f;
     mOut._21 = 0.0f;      mOut._22 = 1.0f; mOut._23 = 0.0f;     mOut._24 = 0.0f;
     mOut._31 = -sinAngle; mOut._32 = 0.0f; mOut._33 = cosAngle; mOut._34 = 0.0f;
@@ -966,16 +959,13 @@ inline float4x4 rotationY(float degreeY)
     return mOut;
 }
 
-inline float4x4 rotationZ(float degreeZ)
+inline float4x4 rotationZ(float angleInRadians)
 {
-    float angleInRadians = degreeZ * (PI_F / 180.0f);
-
     float sinAngle = sinf(angleInRadians);
     float cosAngle = cosf(angleInRadians);
 
     float4x4 mOut;
 
-    UNSUPPORTED("This function is not tested, it might be incorrect.")
     mOut._11 = cosAngle; mOut._12 = -sinAngle; mOut._13 = 0.0f; mOut._14 = 0.0f;
     mOut._21 = sinAngle; mOut._22 = cosAngle;  mOut._23 = 0.0f; mOut._24 = 0.0f;
     mOut._31 = 0.0f;     mOut._32 = 0.0f;      mOut._33 = 1.0f; mOut._34 = 0.0f;
@@ -1341,4 +1331,59 @@ namespace std
             std::min( Left.w, Right.w )
             );
     }
+
+
+    template<typename T>
+    struct hash<Vector2<T>>
+    {
+        size_t operator()( const Vector2<T> &v2 ) const
+        {
+            return Diligent::ComputeHash(v2.x, v2.y);
+        }
+    };
+
+    template<typename T>
+    struct hash<Vector3<T>>
+    {
+        size_t operator()( const Vector3<T> &v3 ) const
+        {
+            return Diligent::ComputeHash(v3.x, v3.y, v3.z);
+        }
+    };
+
+    template<typename T>
+    struct hash<Vector4<T>>
+    {
+        size_t operator()( const Vector4<T> &v4 ) const
+        {
+            return Diligent::ComputeHash(v4.x, v4.y, v4.z, v4.w);
+        }
+    };
+
+    template<typename T>
+    struct hash<Matrix3x3<T>>
+    {
+        size_t operator()( const Matrix3x3<T> &m ) const
+        {
+            return Diligent::ComputeHash(            
+                m._m00,  m._m01,  m._m02,
+                m._m10,  m._m11,  m._m12,
+                m._m20,  m._m21,  m._m22
+            );
+        }
+    };
+
+    template<typename T>
+    struct hash<Matrix4x4<T>>
+    {
+        size_t operator()( const Matrix4x4<T> &m ) const
+        {
+            return Diligent::ComputeHash(            
+                m._m00,  m._m01,  m._m02,  m._m03,
+                m._m10,  m._m11,  m._m12,  m._m13,
+                m._m20,  m._m21,  m._m22,  m._m23,
+                m._m30,  m._m31,  m._m32,  m._m33
+            );
+        }
+    };
 }

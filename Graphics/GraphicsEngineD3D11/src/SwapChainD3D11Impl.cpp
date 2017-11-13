@@ -32,12 +32,12 @@ using namespace Diligent;
 namespace Diligent
 {
 
-SwapChainD3D11Impl::SwapChainD3D11Impl(IMemoryAllocator &Allocator,
+SwapChainD3D11Impl::SwapChainD3D11Impl(IReferenceCounters *pRefCounters,
                                        const SwapChainDesc& SCDesc, 
                                        RenderDeviceD3D11Impl* pRenderDeviceD3D11, 
                                        DeviceContextD3D11Impl* pDeviceContextD3D11, 
                                        void* pNativeWndHandle) : 
-    TSwapChainBase(Allocator, pRenderDeviceD3D11, pDeviceContextD3D11, SCDesc)
+    TSwapChainBase(pRefCounters, pRenderDeviceD3D11, pDeviceContextD3D11, SCDesc)
 {
 
 #ifdef PLATFORM_WIN32
@@ -190,7 +190,10 @@ void SwapChainD3D11Impl::Present()
     // that are only kept alive by references in the cache
     // It is better to do this before calling Present() as D3D11
     // also releases resources during present.
-    pImmediateCtxD3D11->ClearShaderStateCache();
+    pImmediateCtxD3D11->ReleaseCommittedShaderResources();
+    // ReleaseCommittedShaderResources() does not unbind vertex and index buffers
+    // as this can explicitly be done by the user
+
 
     m_pSwapChain->Present( SyncInterval, 0 );
 
@@ -198,7 +201,7 @@ void SwapChainD3D11Impl::Present()
     // backbuffer 0 from all GPU writeable bind points.
     // We need to rebind all render targets to make sure that
     // the back buffer is not unbound
-    pImmediateCtxD3D11->RebindRenderTargets();
+    pImmediateCtxD3D11->CommitRenderTargets();
 }
 
 void SwapChainD3D11Impl::Resize( Uint32 NewWidth, Uint32 NewHeight )

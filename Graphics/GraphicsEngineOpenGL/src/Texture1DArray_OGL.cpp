@@ -27,19 +27,20 @@
 #include "RenderDeviceGLImpl.h"
 #include "DeviceContextGLImpl.h"
 #include "GLTypeConversions.h"
-
+#include "BufferGLImpl.h"
 
 namespace Diligent
 {
 
-Texture1DArray_OGL::Texture1DArray_OGL( FixedBlockMemoryAllocator& TexObjAllocator, 
+Texture1DArray_OGL::Texture1DArray_OGL( IReferenceCounters *pRefCounters, 
                                         FixedBlockMemoryAllocator& TexViewObjAllocator,
-                                        class RenderDeviceGLImpl *pDeviceGL, 
-                                        class DeviceContextGLImpl *pDeviceContext, 
+                                        RenderDeviceGLImpl *pDeviceGL, 
+                                        DeviceContextGLImpl *pDeviceContext, 
                                         const TextureDesc& TexDesc, 
                                         const TextureData &InitData /*= TextureData()*/, 
 									    bool bIsDeviceInternal /*= false*/) : 
-    TextureBaseGL(TexObjAllocator, TexViewObjAllocator, pDeviceGL, TexDesc, GL_TEXTURE_1D_ARRAY, InitData, bIsDeviceInternal)
+    TextureBaseGL(pRefCounters, TexViewObjAllocator, pDeviceGL, TexDesc,
+                  GL_TEXTURE_1D_ARRAY, InitData, bIsDeviceInternal)
 {
     auto &ContextState = pDeviceContext->GetContextState();
     
@@ -84,6 +85,17 @@ Texture1DArray_OGL::Texture1DArray_OGL( FixedBlockMemoryAllocator& TexObjAllocat
     ContextState.BindTexture( -1, m_BindTarget, GLObjectWrappers::GLTextureObj( false ) );
 }
 
+Texture1DArray_OGL::Texture1DArray_OGL( IReferenceCounters *pRefCounters, 
+                                        FixedBlockMemoryAllocator& TexViewObjAllocator,     
+                                        RenderDeviceGLImpl *pDeviceGL, 
+                                        DeviceContextGLImpl *pDeviceContext,
+                                        const TextureDesc& TexDesc, 
+                                        GLuint GLTextureHandle,
+                                        bool bIsDeviceInternal)  : 
+    TextureBaseGL(pRefCounters, TexViewObjAllocator, pDeviceGL, pDeviceContext, TexDesc, GLTextureHandle, GL_TEXTURE_1D_ARRAY, bIsDeviceInternal)
+{
+}
+
 Texture1DArray_OGL::~Texture1DArray_OGL()
 {
 }
@@ -95,12 +107,20 @@ void Texture1DArray_OGL::UpdateData( IDeviceContext *pContext, Uint32 MipLevel, 
 
     ContextState.BindTexture( -1, m_BindTarget, m_GlTexture );
 
+    // Bind buffer if it is provided; copy from CPU memory otherwise
+    GLuint UnpackBuffer = 0;
+    if (SubresData.pSrcBuffer != nullptr)
+    {
+        auto *pBufferGL = ValidatedCast<BufferGLImpl>(SubresData.pSrcBuffer);
+        UnpackBuffer = pBufferGL->GetGLHandle();
+    }
+
     // Transfers to OpenGL memory are called unpack operations
     // If there is a buffer bound to GL_PIXEL_UNPACK_BUFFER target, then all the pixel transfer
-    // operations will be performed from this buffer. We need to make sure none is bound
-    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+    // operations will be performed from this buffer.
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, UnpackBuffer);
 
-    auto TransferAttribs = GetNativePixelTransferAttribs(m_Desc.Format);
+    const auto &TransferAttribs = GetNativePixelTransferAttribs(m_Desc.Format);
     
     glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
     glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
@@ -116,6 +136,9 @@ void Texture1DArray_OGL::UpdateData( IDeviceContext *pContext, Uint32 MipLevel, 
                     SubresData.pData);
     
     CHECK_GL_ERROR("Failed to update subimage data");
+
+    if(UnpackBuffer != 0)
+        glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 
     ContextState.BindTexture( -1, m_BindTarget, GLObjectWrappers::GLTextureObj(false) );
 }

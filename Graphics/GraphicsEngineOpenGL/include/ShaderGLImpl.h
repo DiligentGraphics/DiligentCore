@@ -64,12 +64,12 @@ inline GLenum ShaderTypeToGLShaderBit(SHADER_TYPE ShaderType)
 }
 
 /// Implementation of the Diligent::IShaderGL interface
-class ShaderGLImpl : public ShaderBase<IShaderGL, IGLDeviceBaseInterface, FixedBlockMemoryAllocator>
+class ShaderGLImpl : public ShaderBase<IShaderGL, IGLDeviceBaseInterface>
 {
 public:
-    typedef ShaderBase<IShaderGL, IGLDeviceBaseInterface, FixedBlockMemoryAllocator> TShaderBase;
+    typedef ShaderBase<IShaderGL, IGLDeviceBaseInterface> TShaderBase;
 
-    ShaderGLImpl( FixedBlockMemoryAllocator& ShaderObjAllocator, class RenderDeviceGLImpl *pDeviceGL, const ShaderCreationAttribs &ShaderCreationAttribs, bool bIsDeviceInternal = false );
+    ShaderGLImpl( IReferenceCounters *pRefCounters, class RenderDeviceGLImpl *pDeviceGL, const ShaderCreationAttribs &ShaderCreationAttribs, bool bIsDeviceInternal = false );
     ~ShaderGLImpl();
 
     virtual void BindResources( IResourceMapping* pResourceMapping, Uint32 Flags  )override;

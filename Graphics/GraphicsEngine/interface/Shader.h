@@ -121,11 +121,11 @@ enum SHADER_VARIABLE_TYPE : Int32
 struct ShaderVariableDesc
 {
     /// Shader variable name
-    const char *Name;
+    const Char *Name;
 
     /// Shader variable type. See Diligent::SHADER_VARIABLE_TYPE for a list of allowed types
     SHADER_VARIABLE_TYPE Type;
-    ShaderVariableDesc(const char *_Name = nullptr, SHADER_VARIABLE_TYPE _Type = SHADER_VARIABLE_TYPE_STATIC) : 
+    ShaderVariableDesc(const Char *_Name = nullptr, SHADER_VARIABLE_TYPE _Type = SHADER_VARIABLE_TYPE_STATIC) : 
         Name(_Name),
         Type(_Type)
     {}
@@ -135,11 +135,17 @@ struct ShaderVariableDesc
 /// Static sampler description
 struct StaticSamplerDesc
 {
+    /// Name of the texture variable that static sampler will be assigned to
+    const Char* TextureName = nullptr;
+
     /// Sampler description
     SamplerDesc Desc;
 
-    /// Name of the texture variable that static sampler will be assigned to
-    const char* TextureName = nullptr;
+    StaticSamplerDesc(){};
+    StaticSamplerDesc(const Char* _TexName, const SamplerDesc &_Desc) : 
+        TextureName(_TexName),
+        Desc(_Desc)
+    {}
 };
 
 /// Shader description
@@ -166,7 +172,7 @@ struct ShaderDesc : DeviceObjectAttribs
     Uint32 NumStaticSamplers;
     
     /// Array of static sampler descriptions
-    StaticSamplerDesc *StaticSamplers;
+    const StaticSamplerDesc *StaticSamplers;
 
     ShaderDesc() : 
         ShaderType(SHADER_TYPE_VERTEX),
@@ -205,14 +211,24 @@ struct ShaderCreationAttribs
 	/// shader include files
     IShaderSourceInputStreamFactory *pShaderSourceStreamFactory;
 
+    /// HLSL->GLSL conversion stream
+    
+    /// If HLSL->GLSL converter is used to convert HLSL shader source to
+    /// GLSL, this member can provide pointer to the conversion stream. It is useful
+    /// when the same file is used to create a number of different shaders. If
+    /// ppConversionStream is null, the converter will parse the same file
+    /// every time new shader is converted. If ppConversionStream is not null,
+    /// the converter will write pointer to the conversion stream to *ppConversionStream
+    /// the first time and will use it in all subsequent times. 
+    /// For all subsequent conversions, FilePath member must be the same, or 
+    /// new stream will be crated and warning message will be displayed.
+    class IHLSL2GLSLConversionStream **ppConversionStream;
+
 	/// Shader source
     const Char* Source;
 
 	/// Shader entry point
     const Char* EntryPoint;
-
-	/// Semicolon-separated list of include search directories.
-    const Char* SearchDirectories;
 
 	/// Shader macros
     const ShaderMacro *Macros;
@@ -227,8 +243,8 @@ struct ShaderCreationAttribs
         FilePath( nullptr ),
         Source( nullptr ),
         pShaderSourceStreamFactory( nullptr ),
+        ppConversionStream( nullptr ),
         EntryPoint("main"),
-        SearchDirectories(nullptr),
         Macros(nullptr),
         SourceLanguage(SHADER_SOURCE_LANGUAGE_DEFAULT)
     {}

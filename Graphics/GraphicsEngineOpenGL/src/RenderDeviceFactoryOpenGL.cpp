@@ -30,6 +30,7 @@
 #include "DeviceContextGLImpl.h"
 #include "SwapChainGLImpl.h"
 #include "EngineMemory.h"
+#include "HLSL2GLSLConverterObject.h"
 
 #ifdef PLATFORM_ANDROID
     #include "RenderDeviceGLESImpl.h"
@@ -43,6 +44,31 @@ namespace Diligent
 #elif defined(PLATFORM_ANDROID)
     typedef RenderDeviceGLESImpl TRenderDeviceGLImpl;
 #endif
+
+/// Engine factory for OpenGL implementation
+class EngineFactoryOpenGLImpl : public IEngineFactoryOpenGL
+{
+public:
+    static EngineFactoryOpenGLImpl* GetInstance()
+    {
+        static EngineFactoryOpenGLImpl TheFactory;
+        return &TheFactory;
+    }
+
+    virtual void CreateDeviceAndSwapChainGL( const EngineCreationAttribs& CreationAttribs, 
+                                             IRenderDevice **ppDevice,
+                                             IDeviceContext **ppImmediateContext,
+                                             const SwapChainDesc& SCDesc, 
+                                             void *pNativeWndHandle, 
+                                             ISwapChain **ppSwapChain )override final;
+
+    virtual void CreateHLSL2GLSLConverter(IHLSL2GLSLConverter **ppConverter)override final;
+
+    virtual void AttachToActiveGLContext( const EngineCreationAttribs& CreationAttribs, 
+                                          IRenderDevice **ppDevice,
+                                          IDeviceContext **ppImmediateContext )override final;
+};
+
 
 
 /// Creates render device, device context and swap chain for OpenGL/GLES-based engine implementation
@@ -59,18 +85,16 @@ namespace Diligent
 ///                                * On Android platform, this should be a pointer to the native window (ANativeWindow*)
 /// \param [out] ppSwapChain    - Address of the memory location where pointer to the new 
 ///                               swap chain will be written.
-void CreateDeviceAndSwapChainGL( const EngineCreationAttribs& CreationAttribs, 
-                                 IRenderDevice **ppDevice,
-                                 IDeviceContext **ppImmediateContext,
-                                 const SwapChainDesc& SCDesc, 
-                                 void *pNativeWndHandle,
-                                 Diligent::ISwapChain **ppSwapChain )
+void EngineFactoryOpenGLImpl::CreateDeviceAndSwapChainGL( const EngineCreationAttribs& CreationAttribs, 
+                                                          IRenderDevice **ppDevice,
+                                                          IDeviceContext **ppImmediateContext,
+                                                          const SwapChainDesc& SCDesc, 
+                                                          void *pNativeWndHandle,
+                                                          Diligent::ISwapChain **ppSwapChain )
 {
-    VERIFY( ppDevice && ppImmediateContext && ppSwapChain, "Null pointer is provided" );
+    VERIFY( ppDevice && ppImmediateContext && ppSwapChain, "Null pointer provided" );
     if( !ppDevice || !ppImmediateContext || !ppSwapChain )
         return;
-
-    SetRawAllocator(CreationAttribs.pRawMemAllocator);
 
     *ppDevice = nullptr;
     *ppImmediateContext = nullptr;
@@ -78,21 +102,22 @@ void CreateDeviceAndSwapChainGL( const EngineCreationAttribs& CreationAttribs,
 
     try
     {
+        SetRawAllocator(CreationAttribs.pRawMemAllocator);
         auto &RawMemAllocator = GetRawAllocator();
 
         ContextInitInfo InitInfo;
         InitInfo.pNativeWndHandle = pNativeWndHandle;
         InitInfo.SwapChainAttribs = SCDesc;
-        RenderDeviceGLImpl *pRenderDeviceOpenGL( NEW(RawMemAllocator, "TRenderDeviceGLImpl instance", TRenderDeviceGLImpl, InitInfo ) );
+        RenderDeviceGLImpl *pRenderDeviceOpenGL( NEW_RC_OBJ(RawMemAllocator, "TRenderDeviceGLImpl instance", TRenderDeviceGLImpl)(RawMemAllocator, InitInfo) );
         pRenderDeviceOpenGL->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice) );
 
-        DeviceContextGLImpl *pDeviceContextOpenGL( NEW(RawMemAllocator, "DeviceContextGLImpl instance", DeviceContextGLImpl, pRenderDeviceOpenGL, false ) );
+        DeviceContextGLImpl *pDeviceContextOpenGL( NEW_RC_OBJ(RawMemAllocator, "DeviceContextGLImpl instance", DeviceContextGLImpl)(pRenderDeviceOpenGL, false ) );
         // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceOpenGL will
         // keep a weak reference to the context
         pDeviceContextOpenGL->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppImmediateContext) );
         pRenderDeviceOpenGL->SetImmediateContext(pDeviceContextOpenGL);
 
-        SwapChainGLImpl *pSwapChainGL = NEW(RawMemAllocator, "SwapChainGLImpl instance", SwapChainGLImpl, SCDesc, pRenderDeviceOpenGL, pDeviceContextOpenGL );
+        SwapChainGLImpl *pSwapChainGL = NEW_RC_OBJ(RawMemAllocator, "SwapChainGLImpl instance", SwapChainGLImpl)(SCDesc, pRenderDeviceOpenGL, pDeviceContextOpenGL );
         pSwapChainGL->QueryInterface(IID_SwapChain, reinterpret_cast<IObject**>(ppSwapChain) );
 
         pDeviceContextOpenGL->SetSwapChain(pSwapChainGL);
@@ -124,10 +149,66 @@ void CreateDeviceAndSwapChainGL( const EngineCreationAttribs& CreationAttribs,
     }
 }
 
+
+/// Creates render device, device context and attaches to existing GL context
+
+/// \param [in] CreationAttribs - Engine creation attributes.
+/// \param [out] ppDevice - Address of the memory location where pointer to 
+///                         the created device will be written.
+/// \param [out] ppImmediateContext - Address of the memory location where pointers to 
+///                                   the immediate context will be written.
+void EngineFactoryOpenGLImpl::AttachToActiveGLContext( const EngineCreationAttribs& CreationAttribs, 
+                                                       IRenderDevice **ppDevice,
+                                                       IDeviceContext **ppImmediateContext )
+{
+    VERIFY( ppDevice && ppImmediateContext, "Null pointer provided" );
+    if( !ppDevice || !ppImmediateContext )
+        return;
+
+    *ppDevice = nullptr;
+    *ppImmediateContext = nullptr;
+
+    try
+    {
+        SetRawAllocator(CreationAttribs.pRawMemAllocator);
+        auto &RawMemAllocator = GetRawAllocator();
+
+        ContextInitInfo InitInfo;
+        InitInfo.SwapChainAttribs.BufferCount = 0;
+        InitInfo.SwapChainAttribs.ColorBufferFormat = TEX_FORMAT_UNKNOWN;
+        InitInfo.SwapChainAttribs.DepthBufferFormat = TEX_FORMAT_UNKNOWN;
+        RenderDeviceGLImpl *pRenderDeviceOpenGL( NEW_RC_OBJ(RawMemAllocator, "TRenderDeviceGLImpl instance", TRenderDeviceGLImpl)(RawMemAllocator, InitInfo) );
+        pRenderDeviceOpenGL->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice) );
+
+        DeviceContextGLImpl *pDeviceContextOpenGL( NEW_RC_OBJ(RawMemAllocator, "DeviceContextGLImpl instance", DeviceContextGLImpl)(pRenderDeviceOpenGL, false ) );
+        // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceOpenGL will
+        // keep a weak reference to the context
+        pDeviceContextOpenGL->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppImmediateContext) );
+        pRenderDeviceOpenGL->SetImmediateContext(pDeviceContextOpenGL);
+    }
+    catch( const std::runtime_error & )
+    {
+        if( *ppDevice )
+        {
+            (*ppDevice)->Release();
+            *ppDevice = nullptr;
+        }
+
+        if( *ppImmediateContext )
+        {
+            (*ppImmediateContext)->Release();
+            *ppImmediateContext = nullptr;
+        }
+
+        LOG_ERROR( "Failed to initialize OpenGL-based render device" );
+    }
+}
+
 #ifdef DOXYGEN
 /// Loads OpenGL-based engine implementation and exports factory functions
-/// \param [out] CreateDeviceFunc    - Pointer to the function that creates render device, device context and swap chain.
-///                                    See CreateDeviceAndSwapChainGL().
+/// \param [out] GetFactoryFunc - Pointer to the function that returns pointer to the factory for 
+///                               the OpenGL engine implementation
+///                               See EngineFactoryOpenGLImpl::CreateDeviceAndSwapChainGL().
 /// \remarks Depending on the configuration and platform, the function loads different dll:
 /// Platform\\Configuration    |           Debug              |         Release
 /// --------------------------|------------------------------|----------------------------
@@ -135,26 +216,27 @@ void CreateDeviceAndSwapChainGL( const EngineCreationAttribs& CreationAttribs,
 ///   Win32/x64               | GraphicsEngineOpenGL_64d.dll | GraphicsEngineOpenGL_64r.dll
 ///
 /// To load the library on Android, it is necessary to call System.loadLibrary("GraphicsEngineOpenGL") from Java.
-void LoadGraphicsEngineOpenGL(CreateDeviceAndSwapChainGLType &CreateDeviceFunc)
+void LoadGraphicsEngineOpenGL(GetEngineFactoryOpenGLType &GetFactoryFunc)
 {
     // This function is only required because DoxyGen refuses to generate documentation for a static function when SHOW_FILES==NO
     #error This function must never be compiled;    
 }
 #endif
 
+void EngineFactoryOpenGLImpl::CreateHLSL2GLSLConverter(IHLSL2GLSLConverter **ppConverter)
+{
+    HLSL2GLSLConverterObject *pConverter( NEW_RC_OBJ(GetRawAllocator(), "HLSL2GLSLConverterObject instance", HLSL2GLSLConverterObject)() );
+    pConverter->QueryInterface( IID_HLSL2GLSLConverter, reinterpret_cast<IObject**>(ppConverter) );
+}
+
 }
 
 extern "C"
 {
 API_QUALIFIER
-void CreateDeviceAndSwapChainGL( const EngineCreationAttribs& CreationAttribs, 
-                                 IRenderDevice **ppDevice,
-                                 IDeviceContext **ppImmediateContext,
-                                 const SwapChainDesc& SwapChainDesc, 
-                                 void *pNativeWndHandle,
-                                 Diligent::ISwapChain **ppSwapChain )
+Diligent::IEngineFactoryOpenGL* GetEngineFactoryOpenGL()
 {
-    Diligent::CreateDeviceAndSwapChainGL( CreationAttribs, ppDevice, ppImmediateContext, SwapChainDesc, pNativeWndHandle, ppSwapChain );
+    return Diligent::EngineFactoryOpenGLImpl::GetInstance();
 }
 
 }

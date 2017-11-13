@@ -31,12 +31,14 @@ namespace Diligent
     struct ContextInitInfo
     {
         SwapChainDesc SwapChainAttribs;
-        void *pNativeWndHandle;
+        void *pNativeWndHandle = nullptr;
     };
 
     class GLContext
     {
     public:
+        typedef EGLContext NativeGLContextType;
+
         GLContext( const ContextInitInfo &Info, DeviceCaps &DeviceCaps );
         ~GLContext();
 
@@ -50,27 +52,27 @@ namespace Diligent
         EGLint Resume( ANativeWindow* window );
 
         const SwapChainDesc& GetSwapChainDesc(){ return SwapChainAttribs_; }
+        
+        NativeGLContextType GetCurrentNativeGLContext();
 
     private:
         //EGL configurations
-        ANativeWindow* window_;
-        EGLDisplay display_;
-        EGLSurface surface_;
-        EGLContext context_;
+        ANativeWindow* window_ = nullptr;
+        EGLDisplay display_ = EGL_NO_DISPLAY;
+        EGLSurface surface_ = EGL_NO_SURFACE;
+        EGLContext context_ = EGL_NO_CONTEXT;
         EGLConfig config_;
 
         //Screen parameters
-        int32_t color_size_;
-        int32_t depth_size_;
-        int32_t major_version_;
-        int32_t minor_version_;
+        int32_t color_size_ = 0;
+        int32_t depth_size_ = 0;
+        int32_t major_version_ = 0;
+        int32_t minor_version_ = 0;
 
         //Flags
-        bool gles_initialized_;
-        bool egl_context_initialized_;
-        bool es3_supported_;
-        float gl_version_;
-        bool context_valid_;
+        bool gles_initialized_ = false;
+        bool egl_context_initialized_ = false;
+        bool context_valid_ = false;
 
         SwapChainDesc SwapChainAttribs_;
 
@@ -78,6 +80,7 @@ namespace Diligent
         void Terminate();
         bool InitEGLSurface();
         bool InitEGLContext();
+        void AttachToCurrentEGLContext();
         void FillDeviceCaps( DeviceCaps &DeviceCaps );
     };
 }

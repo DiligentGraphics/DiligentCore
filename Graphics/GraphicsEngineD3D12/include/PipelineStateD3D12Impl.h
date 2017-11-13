@@ -39,12 +39,12 @@ namespace Diligent
 
 class FixedBlockMemoryAllocator;
 /// Implementation of the Diligent::IRenderDeviceD3D12 interface
-class PipelineStateD3D12Impl : public PipelineStateBase<IPipelineStateD3D12, IRenderDeviceD3D12, FixedBlockMemoryAllocator>
+class PipelineStateD3D12Impl : public PipelineStateBase<IPipelineStateD3D12, IRenderDeviceD3D12>
 {
 public:
-    typedef PipelineStateBase<IPipelineStateD3D12, IRenderDeviceD3D12, FixedBlockMemoryAllocator> TPipelineStateBase;
+    typedef PipelineStateBase<IPipelineStateD3D12, IRenderDeviceD3D12> TPipelineStateBase;
 
-    PipelineStateD3D12Impl( FixedBlockMemoryAllocator &PSOAllocator, class RenderDeviceD3D12Impl *pDeviceD3D12, const PipelineStateDesc &PipelineDesc );
+    PipelineStateD3D12Impl( IReferenceCounters *pRefCounters, class RenderDeviceD3D12Impl *pDeviceD3D12, const PipelineStateDesc &PipelineDesc );
     ~PipelineStateD3D12Impl();
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface );
@@ -69,7 +69,12 @@ public:
     bool dbgContainsShaderResources()const;
 
     IMemoryAllocator &GetResourceCacheDataAllocator(){return m_ResourceCacheDataAllocator;}
-    IMemoryAllocator &GetShaderResourceLayoutDataAllocator(Uint32 ShaderInd){return m_ShaderResLayoutDataAllocators[ShaderInd];}
+    IMemoryAllocator &GetShaderResourceLayoutDataAllocator(Uint32 ActiveShaderInd)
+    {
+        VERIFY_EXPR(ActiveShaderInd < m_NumShaders);
+        auto *pAllocator = m_ResLayoutDataAllocators.GetAllocator(ActiveShaderInd);
+        return pAllocator != nullptr ? *pAllocator : GetRawAllocator();
+    }
 
     IShaderVariable *GetDummyShaderVar(){return &m_DummyVar;}
 
@@ -82,11 +87,37 @@ private:
     RootSignature m_RootSig;
     DummyShaderVariable m_DummyVar;
     
-    AdaptiveFixedBlockAllocator m_ShaderResLayoutDataAllocators[6];
+    // Looks like there may be a bug in msvc: when allocators are declared as 
+    // an array and if an exception is thrown from constructor, the app crashes
+    class ResLayoutDataAllocators
+    {
+    public:
+        ~ResLayoutDataAllocators()
+        {
+            for(size_t i=0; i < _countof(m_pAllocators); ++i)
+                if(m_pAllocators[i] != nullptr)
+                    DESTROY_POOL_OBJECT(m_pAllocators[i]);
+        }
+        void Init(Uint32 NumActiveShaders, Uint32 SRBAllocationGranularity)
+        {
+            VERIFY_EXPR(NumActiveShaders <= _countof(m_pAllocators) );
+            for(Uint32 i=0; i < NumActiveShaders; ++i)
+                m_pAllocators[i] = NEW_POOL_OBJECT(AdaptiveFixedBlockAllocator, "Shader resource layout data allocator", GetRawAllocator(), SRBAllocationGranularity);
+        }
+        AdaptiveFixedBlockAllocator *GetAllocator(Uint32 ActiveShaderInd)
+        {
+            VERIFY_EXPR(ActiveShaderInd < _countof(m_pAllocators) );
+            return m_pAllocators[ActiveShaderInd];
+        }
+    private:
+        AdaptiveFixedBlockAllocator *m_pAllocators[5] = {};
+    }m_ResLayoutDataAllocators; // Allocators must be defined before default SRB
+
     ShaderResourceLayoutD3D12* m_pShaderResourceLayouts[6] = {};
     AdaptiveFixedBlockAllocator m_ResourceCacheDataAllocator; // Use separate allocator for every shader stage
 
     // Do not use strong reference to avoid cyclic references
+    // Default SRB must be defined after allocators
     std::unique_ptr<class ShaderResourceBindingD3D12Impl, STDDeleter<ShaderResourceBindingD3D12Impl, FixedBlockMemoryAllocator> > m_pDefaultShaderResBinding;
 };
 

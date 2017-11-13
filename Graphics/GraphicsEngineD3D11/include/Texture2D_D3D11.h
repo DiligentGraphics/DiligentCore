@@ -35,11 +35,15 @@ namespace Diligent
 class Texture2D_D3D11 : public TextureBaseD3D11
 {
 public:
-    Texture2D_D3D11(FixedBlockMemoryAllocator &TexObjAllocator, 
+    Texture2D_D3D11(IReferenceCounters *pRefCounters, 
                     FixedBlockMemoryAllocator &TexViewObjAllocator, 
                     class RenderDeviceD3D11Impl *pDeviceD3D11, 
                     const TextureDesc& TexDesc, 
                     const TextureData &InitData = TextureData());
+    Texture2D_D3D11(IReferenceCounters *pRefCounters, 
+                    FixedBlockMemoryAllocator &TexViewObjAllocator, 
+                    class RenderDeviceD3D11Impl *pDeviceD3D11, 
+                    ID3D11Texture2D *pd3d11Texture);
     ~Texture2D_D3D11();
 
 protected:

@@ -40,7 +40,7 @@ class IBufferViewD3D12 : public IBufferView
 {
 public:
 
-    /// Returns CPU descriptor handle of the internal Direct3D12 object.
+    /// Returns CPU descriptor handle of the buffer view.
     virtual D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle() = 0;
 };
 

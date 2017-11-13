@@ -53,17 +53,17 @@ namespace Diligent
     IMPLEMENT_QUERY_INTERFACE_BODY(InterfaceID, ParentClassName)
 
 #define IMPLEMENT_QUERY_INTERFACE_IN_PLACE(InterfaceID, ParentClassName) \
-    virtual void QueryInterface(const Diligent::INTERFACE_ID &IID, IObject **ppInterface) \
+    virtual void QueryInterface(const Diligent::INTERFACE_ID &IID, IObject **ppInterface)override \
     IMPLEMENT_QUERY_INTERFACE_BODY(InterfaceID, ParentClassName)
 
 
 /// Template class implementing base functionality for an object
-template<typename BaseInterface, typename TObjectAllocator = IMemoryAllocator>
-class ObjectBase : public RefCountedObject<BaseInterface, TObjectAllocator>
+template<typename BaseInterface>
+class ObjectBase : public RefCountedObject<BaseInterface>
 {
 public:
-    ObjectBase(IObject *pOwner = nullptr, TObjectAllocator *pObjAllocator = nullptr) : 
-        RefCountedObject<BaseInterface, TObjectAllocator>( pOwner, pObjAllocator )
+    ObjectBase(IReferenceCounters *pRefCounters) : 
+        RefCountedObject<BaseInterface>( pRefCounters )
     {}
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )

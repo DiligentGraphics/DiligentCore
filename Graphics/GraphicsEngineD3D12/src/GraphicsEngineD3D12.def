@@ -1,3 +1,2 @@
 EXPORTS
-	 CreateDeviceAndContextsD3D12
-	 CreateSwapChainD3D12
+	 GetEngineFactoryD3D12

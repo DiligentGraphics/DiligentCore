@@ -28,28 +28,46 @@
 
 #include "Errors.h"
 #include "EngineD3D11Attribs.h"
+#include "RenderDevice.h"
+#include "DeviceContext.h"
+#include "SwapChain.h"
+
+namespace Diligent
+{
+
+class IEngineFactoryD3D11
+{
+public:
+    virtual void CreateDeviceAndContextsD3D11( const EngineD3D11Attribs& EngineAttribs, 
+                                               IRenderDevice **ppDevice, 
+                                               IDeviceContext **ppContexts,
+                                               Uint32 NumDeferredContexts ) = 0;
+
+   virtual void CreateSwapChainD3D11( IRenderDevice *pDevice, 
+                                      IDeviceContext *pImmediateContext, 
+                                      const SwapChainDesc& SCDesc, 
+                                      void* pNativeWndHandle, 
+                                      ISwapChain **ppSwapChain ) = 0;
+
+   virtual void AttachToD3D11Device(void *pd3d11NativeDevice, 
+                                    void *pd3d11ImmediateContext,
+                                    const EngineD3D11Attribs& EngineAttribs, 
+                                    IRenderDevice **ppDevice, 
+                                    IDeviceContext **ppContexts,
+                                    Uint32 NumDeferredContexts) = 0;
+};
+
+}
 
 extern "C"
 {
 #ifdef ENGINE_DLL
 
-    typedef void (*CreateDeviceAndContextsD3D11Type)( 
-        const Diligent::EngineD3D11Attribs& EngineAttribs, 
-        Diligent::IRenderDevice **ppDevice, 
-        Diligent::IDeviceContext **ppContexts,
-        Diligent::Uint32 NumDeferredContexts );
+    typedef Diligent::IEngineFactoryD3D11* (*GetEngineFactoryD3D11Type)();
 
-    typedef void (*CreateSwapChainD3D11Type)( 
-        Diligent::IRenderDevice *pDevice, 
-        Diligent::IDeviceContext *pImmediateContext, 
-        const Diligent::SwapChainDesc& SCDesc, 
-        void* pNativeWndHandle, 
-        Diligent::ISwapChain **ppSwapChain );
-
-    static void LoadGraphicsEngineD3D11(CreateDeviceAndContextsD3D11Type &CreateDeviceFunc, CreateSwapChainD3D11Type &CreateSwapChainFunc)
+    static bool LoadGraphicsEngineD3D11(GetEngineFactoryD3D11Type &GetFactoryFunc)
     {
-        CreateDeviceFunc = nullptr;
-        CreateSwapChainFunc = nullptr;
+        GetFactoryFunc = nullptr;
         std::string LibName = "GraphicsEngineD3D11_";
 
 #if _WIN64
@@ -69,35 +87,22 @@ extern "C"
         if( hModule == NULL )
         {
             LOG_ERROR_MESSAGE( "Failed to load ", LibName, " library." );
-            return;
+            return false;
         }
 
-        CreateDeviceFunc = reinterpret_cast<CreateDeviceAndContextsD3D11Type>( GetProcAddress(hModule, "CreateDeviceAndContextsD3D11") );
-        if( CreateDeviceFunc == NULL )
+        GetFactoryFunc = reinterpret_cast<GetEngineFactoryD3D11Type>( GetProcAddress(hModule, "GetEngineFactoryD3D11") );
+        if( GetFactoryFunc == NULL )
         {
-            LOG_ERROR_MESSAGE( "Failed to load CreateDeviceAndContextsD3D11() from ", LibName, " library." );
+            LOG_ERROR_MESSAGE( "Failed to load GetEngineFactoryD3D11() from ", LibName, " library." );
             FreeLibrary( hModule );
-            return;
+            return false;
         }
 
-        CreateSwapChainFunc = reinterpret_cast<CreateSwapChainD3D11Type>( GetProcAddress(hModule, "CreateSwapChainD3D11") );
-        if( CreateSwapChainFunc == NULL )
-        {
-            LOG_ERROR_MESSAGE( "Failed to load CreateSwapChainD3D11() from ", LibName, " library." );
-            FreeLibrary( hModule );
-            return;
-        }
+        return true;
     }
 #else
-    void CreateDeviceAndContextsD3D11( const Diligent::EngineD3D11Attribs& EngineAttribs, 
-                                       Diligent::IRenderDevice **ppDevice, 
-                                       Diligent::IDeviceContext **ppContexts,
-                                       Diligent::Uint32 NumDeferredContexts );
 
-   void CreateSwapChainD3D11( Diligent::IRenderDevice *pDevice, 
-                               Diligent::IDeviceContext *pImmediateContext, 
-                               const Diligent::SwapChainDesc& SCDesc, 
-                               void* pNativeWndHandle, 
-                               Diligent::ISwapChain **ppSwapChain );
+    Diligent::IEngineFactoryD3D11* GetEngineFactoryD3D11();
+
 #endif
 }

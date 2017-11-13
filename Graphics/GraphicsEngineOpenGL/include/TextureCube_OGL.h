@@ -31,17 +31,25 @@ namespace Diligent
 class TextureCube_OGL : public TextureBaseGL
 {
 public:
-    TextureCube_OGL( FixedBlockMemoryAllocator& TexObjAllocator, 
+    TextureCube_OGL( IReferenceCounters *pRefCounters, 
                      FixedBlockMemoryAllocator& TexViewObjAllocator,
                      class RenderDeviceGLImpl *pDeviceGL, 
                      class DeviceContextGLImpl *pDeviceContext, 
-                     const TextureDesc& BuffDesc, 
-                     const TextureData &InitData = TextureData(), 
+                     const TextureDesc& TexDesc, 
+                     const TextureData& InitData = TextureData(), 
+				     bool bIsDeviceInternal = false);
+
+    TextureCube_OGL( IReferenceCounters *pRefCounters, 
+                     FixedBlockMemoryAllocator& TexViewObjAllocator,     
+                     class RenderDeviceGLImpl *pDeviceGL, 
+                     class DeviceContextGLImpl *pDeviceContext, 
+                     const TextureDesc& TexDesc, 
+                     GLuint GLTextureHandle,
 				     bool bIsDeviceInternal = false);
     ~TextureCube_OGL();
 
-    virtual void UpdateData( IDeviceContext *pContext, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData );
-    virtual void AttachToFramebuffer( const struct TextureViewDesc& ViewDesc, GLenum AttachmentPoint );
+    virtual void UpdateData( IDeviceContext *pContext, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData )override final;
+    virtual void AttachToFramebuffer( const struct TextureViewDesc& ViewDesc, GLenum AttachmentPoint )override final;
 
 private:
 

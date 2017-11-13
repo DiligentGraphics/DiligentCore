@@ -29,17 +29,21 @@ namespace Diligent
     struct ContextInitInfo
     {
         SwapChainDesc SwapChainAttribs;
-        void *pNativeWndHandle;
+        void *pNativeWndHandle = nullptr;
     };
 
     class GLContext
     {
     public:
+        typedef HGLRC NativeGLContextType;
+
         GLContext( const ContextInitInfo &Info, struct DeviceCaps &DeviceCaps );
         ~GLContext();
         void SwapBuffers();
 
         const SwapChainDesc& GetSwapChainDesc(){ return m_SwapChainAttribs; }
+
+        NativeGLContextType GetCurrentNativeGLContext();
 
     private:
         HGLRC m_Context;

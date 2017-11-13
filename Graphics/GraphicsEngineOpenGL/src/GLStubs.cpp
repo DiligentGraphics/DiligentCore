@@ -144,6 +144,15 @@
     DECLARE_GL_FUNCTION( glCopyImageSubData, PFNGLCOPYIMAGESUBDATAPROC, GLuint srcName, GLenum srcTarget, GLint srcLevel, GLint srcX, GLint srcY, GLint srcZ, GLuint dstName, GLenum dstTarget, GLint dstLevel, GLint dstX, GLint dstY, GLint dstZ, GLsizei srcWidth, GLsizei srcHeight, GLsizei srcDepth )
 #endif
 
+#ifdef LOAD_GL_PATCH_PARAMTER_I
+    DECLARE_GL_FUNCTION( glPatchParameteri, PFNGLPATCHPARAMETERIPROC, GLenum pname, GLint value )
+#endif
+
+#ifdef LOAD_GET_TEX_LEVEL_PARAMETER_IV
+    DECLARE_GL_FUNCTION( glGetTexLevelParameteriv, PFNGLGETTEXLEVELPARAMETERIVPROC, GLenum target, GLint level, GLenum pname, GLint *params )
+#endif
+
+
 void LoadGLFunctions()
 {
 
@@ -261,6 +270,14 @@ Func = (FuncType)eglGetProcAddress( #Func );\
 
 #ifdef LOAD_GL_COPY_IMAGE_SUB_DATA
     // Do not use proxy if function is not available!
-    glCopyImageSubData = (PFNGLCOPYIMAGESUBDATAPROC)eglGetProcAddress( "glCopyImageSubData" );
+    LOAD_GL_FUNCTION(glCopyImageSubData, PFNGLCOPYIMAGESUBDATAPROC)
+#endif
+
+#ifdef LOAD_GL_PATCH_PARAMTER_I
+    LOAD_GL_FUNCTION(glPatchParameteri, PFNGLPATCHPARAMETERIPROC)
+#endif
+
+#ifdef LOAD_GET_TEX_LEVEL_PARAMETER_IV
+    LOAD_GL_FUNCTION(glGetTexLevelParameteriv, PFNGLGETTEXLEVELPARAMETERIVPROC)
 #endif
 }

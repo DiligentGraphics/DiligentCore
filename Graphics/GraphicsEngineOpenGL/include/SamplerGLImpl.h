@@ -34,12 +34,12 @@ namespace Diligent
 
 class FixedBlockMemoryAllocator;
 /// Implementation of the Diligent::ISamplerGL interface
-class SamplerGLImpl : public SamplerBase<ISamplerGL, IGLDeviceBaseInterface, FixedBlockMemoryAllocator>
+class SamplerGLImpl : public SamplerBase<ISamplerGL, IGLDeviceBaseInterface>
 {
 public:
-    typedef SamplerBase<ISamplerGL, IGLDeviceBaseInterface, FixedBlockMemoryAllocator> TSamplerBase;
+    typedef SamplerBase<ISamplerGL, IGLDeviceBaseInterface> TSamplerBase;
 
-    SamplerGLImpl( FixedBlockMemoryAllocator &SamplerObjAllocator, class RenderDeviceGLImpl *pDeviceGL, const SamplerDesc& SamplerDesc, bool bIsDeviceInternal = false );
+    SamplerGLImpl( IReferenceCounters *pRefCounters, class RenderDeviceGLImpl *pDeviceGL, const SamplerDesc& SamplerDesc, bool bIsDeviceInternal = false );
     ~SamplerGLImpl();
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface );

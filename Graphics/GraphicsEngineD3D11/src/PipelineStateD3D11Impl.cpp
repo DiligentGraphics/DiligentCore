@@ -30,25 +30,9 @@
 namespace Diligent
 {
 
-PipelineStateD3D11Impl::PipelineStateD3D11Impl(FixedBlockMemoryAllocator &PSOAllocator, RenderDeviceD3D11Impl *pRenderDeviceD3D11, const PipelineStateDesc& PipelineDesc) : 
-    TPipelineStateBase(PSOAllocator, pRenderDeviceD3D11, PipelineDesc),
+PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters *pRefCounters, RenderDeviceD3D11Impl *pRenderDeviceD3D11, const PipelineStateDesc& PipelineDesc) : 
+    TPipelineStateBase(pRefCounters, pRenderDeviceD3D11, PipelineDesc),
     m_pDefaultShaderResBinding( nullptr, STDDeleter<ShaderResourceBindingD3D11Impl, FixedBlockMemoryAllocator>(pRenderDeviceD3D11->GetSRBAllocator()) ),
-    m_ResourceCacheDataAllocators
-    {
-        {GetRawAllocator(), PipelineDesc.SRBAllocationGranularity},
-        {GetRawAllocator(), PipelineDesc.SRBAllocationGranularity},
-        {GetRawAllocator(), PipelineDesc.SRBAllocationGranularity},
-        {GetRawAllocator(), PipelineDesc.SRBAllocationGranularity},
-        {GetRawAllocator(), PipelineDesc.SRBAllocationGranularity}
-    },
-    m_ShaderResLayoutDataAllocators
-    {
-        {GetRawAllocator(), PipelineDesc.SRBAllocationGranularity},
-        {GetRawAllocator(), PipelineDesc.SRBAllocationGranularity},
-        {GetRawAllocator(), PipelineDesc.SRBAllocationGranularity},
-        {GetRawAllocator(), PipelineDesc.SRBAllocationGranularity},
-        {GetRawAllocator(), PipelineDesc.SRBAllocationGranularity}
-    },
     m_DummyShaderVar(*this)
 {
     if (PipelineDesc.IsComputePipeline)
@@ -62,7 +46,7 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(FixedBlockMemoryAllocator &PSOAll
         if (m_pCS && m_pCS->GetDesc().ShaderType != SHADER_TYPE_COMPUTE)
         { 
             LOG_ERROR_AND_THROW( GetShaderTypeLiteralName(SHADER_TYPE_COMPUTE), " shader is expeceted while ", GetShaderTypeLiteralName(m_pCS->GetDesc().ShaderType)," provided" );
-        } 
+        }
     }
     else
     {
@@ -120,13 +104,39 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(FixedBlockMemoryAllocator &PSOAll
         }
     }
 
+    if(PipelineDesc.SRBAllocationGranularity > 1)
+        m_Allocators.Init(m_NumShaders, PipelineDesc.SRBAllocationGranularity);
+
     auto &SRBAllocator = pRenderDeviceD3D11->GetSRBAllocator();
-    m_pDefaultShaderResBinding.reset( NEW(SRBAllocator, "ShaderResourceBindingD3D11Impl instance", ShaderResourceBindingD3D11Impl, this, true) );
+    m_pDefaultShaderResBinding.reset( NEW_RC_OBJ(SRBAllocator, "ShaderResourceBindingD3D11Impl instance", ShaderResourceBindingD3D11Impl, this)(this, true) );
+}
+
+void PipelineStateD3D11Impl::DataAllocators::Init(size_t NumActiveShaders, Uint32 SRBAllocationGranularity)
+{
+    VERIFY_EXPR(NumActiveShaders <= _countof(m_pShaderResLayoutDataAllocators) );
+    // Since this is not constructor, there is no need to 
+    // handle exceptions. If exception is thrown, ~DataAllocators()
+    // will destroy all allocators that have been initialized
+    for(size_t stage = 0; stage < NumActiveShaders; ++stage)
+    {
+        m_pShaderResLayoutDataAllocators[stage] = NEW_POOL_OBJECT(AdaptiveFixedBlockAllocator, "Shader resource layout data allocator", GetRawAllocator(), SRBAllocationGranularity);
+        m_pResourceCacheDataAllocators[stage] = NEW_POOL_OBJECT(AdaptiveFixedBlockAllocator, "Shader resource cache data allocator", GetRawAllocator(), SRBAllocationGranularity);
+    }
+}
+
+PipelineStateD3D11Impl::DataAllocators::~DataAllocators()
+{
+    for(size_t i=0; i < _countof(m_pShaderResLayoutDataAllocators); ++i)
+        if(m_pShaderResLayoutDataAllocators[i] != nullptr)
+            DESTROY_POOL_OBJECT(m_pShaderResLayoutDataAllocators[i]);
+
+    for(size_t i=0; i < _countof(m_pResourceCacheDataAllocators); ++i)
+        if(m_pResourceCacheDataAllocators[i] != nullptr)
+            DESTROY_POOL_OBJECT(m_pResourceCacheDataAllocators[i]);
 }
 
 PipelineStateD3D11Impl::~PipelineStateD3D11Impl()
 {
-
 }
 
 IMPLEMENT_QUERY_INTERFACE( PipelineStateD3D11Impl, IID_PipelineStateD3D11, TPipelineStateBase )
@@ -172,7 +182,7 @@ void PipelineStateD3D11Impl::CreateShaderResourceBinding(IShaderResourceBinding 
 {
     auto *pRenderDeviceD3D11 = ValidatedCast<RenderDeviceD3D11Impl>( GetDevice() );
     auto &SRBAllocator = pRenderDeviceD3D11->GetSRBAllocator();
-    auto pShaderResBinding = NEW(SRBAllocator, "ShaderResourceBindingD3D11Impl instance", ShaderResourceBindingD3D11Impl, this, false);
+    auto pShaderResBinding = NEW_RC_OBJ(SRBAllocator, "ShaderResourceBindingD3D11Impl instance", ShaderResourceBindingD3D11Impl)(this, false);
     pShaderResBinding->QueryInterface(IID_ShaderResourceBinding, reinterpret_cast<IObject**>(static_cast<IShaderResourceBinding**>(ppShaderResourceBinding)));
 }
 

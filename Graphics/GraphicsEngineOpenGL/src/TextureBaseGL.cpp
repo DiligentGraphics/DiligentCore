@@ -30,17 +30,18 @@
 #include "GLContextState.h"
 #include "DeviceContextGLImpl.h"
 #include "EngineMemory.h"
+#include "GraphicsUtilities.h"
 
 namespace Diligent
 {
 
-TextureBaseGL::TextureBaseGL(FixedBlockMemoryAllocator& TexObjAllocator, 
+TextureBaseGL::TextureBaseGL(IReferenceCounters *pRefCounters, 
                              FixedBlockMemoryAllocator& TexViewObjAllocator, 
-                             class RenderDeviceGLImpl *pDeviceGL, 
+                             RenderDeviceGLImpl *pDeviceGL, 
                              const TextureDesc& TexDesc, 
                              GLenum BindTarget,
                              const TextureData &InitData /*= TextureData()*/, bool bIsDeviceInternal /*= false*/) : 
-    TTextureBase( TexObjAllocator, TexViewObjAllocator, pDeviceGL, TexDesc, bIsDeviceInternal ),
+    TTextureBase( pRefCounters, TexViewObjAllocator, pDeviceGL, TexDesc, bIsDeviceInternal ),
     m_GlTexture(true), // Create Texture immediately
     m_BindTarget(BindTarget),
     m_GLTexFormat( TexFormatToGLInternalTexFormat(m_Desc.Format, m_Desc.BindFlags) )
@@ -51,6 +52,97 @@ TextureBaseGL::TextureBaseGL(FixedBlockMemoryAllocator& TexObjAllocator,
         LOG_ERROR_AND_THROW("Static Texture must be initialized with data at creation time");
 }
 
+static GLenum GetTextureInternalFormat(DeviceContextGLImpl *pDeviceContextGL, GLenum BindTarget, const GLObjectWrappers::GLTextureObj& GLTex)
+{
+    auto &ContextState = pDeviceContextGL->GetContextState();
+    ContextState.BindTexture(-1, BindTarget, GLTex);
+
+    GLenum QueryBindTarget = BindTarget;
+    if (BindTarget == GL_TEXTURE_CUBE_MAP || BindTarget == GL_TEXTURE_CUBE_MAP_ARRAY)
+        QueryBindTarget = GL_TEXTURE_CUBE_MAP_POSITIVE_X;
+
+    GLint GlFormat = 0;
+    glGetTexLevelParameteriv(QueryBindTarget, 0, GL_TEXTURE_INTERNAL_FORMAT, &GlFormat);
+    CHECK_GL_ERROR( "Failed to get texture format through glGetTexLevelParameteriv()" );
+    VERIFY(GlFormat != 0, "Unable to get texture format")
+
+    ContextState.BindTexture(-1, BindTarget, GLObjectWrappers::GLTextureObj(false) );
+
+    return GlFormat;
+}
+
+static TextureDesc GetTextureDescFromGLHandle(DeviceContextGLImpl *pDeviceContextGL, TextureDesc TexDesc, GLuint GLHandle, GLenum BindTarget)
+{
+    auto &ContextState = pDeviceContextGL->GetContextState();
+    
+    VERIFY(BindTarget != GL_TEXTURE_CUBE_MAP_ARRAY, "Cubemap arrays are not currently supported")
+
+    GLObjectWrappers::GLTextureObj TmpGLTexWrapper(true, GLObjectWrappers::GLTextureCreateReleaseHelper(GLHandle));
+    ContextState.BindTexture(-1, BindTarget, TmpGLTexWrapper);
+
+    GLenum QueryBindTarget = BindTarget;
+    if (BindTarget == GL_TEXTURE_CUBE_MAP)
+        QueryBindTarget = GL_TEXTURE_CUBE_MAP_POSITIVE_X;
+
+    GLint TexWidth = 0, TexHeight = 0, TexDepth = 0;
+    glGetTexLevelParameteriv(QueryBindTarget, 0, GL_TEXTURE_WIDTH, &TexWidth);
+    if (TexDesc.Type >= RESOURCE_DIM_TEX_2D)
+        glGetTexLevelParameteriv(QueryBindTarget, 0, GL_TEXTURE_HEIGHT, &TexHeight);
+    else
+        TexHeight = 1;
+
+    if (TexDesc.Type == RESOURCE_DIM_TEX_3D)
+        glGetTexLevelParameteriv(QueryBindTarget, 0, GL_TEXTURE_DEPTH, &TexDepth);
+    else
+        TexDepth = 1;
+    
+    GLint GlFormat = 0;
+    glGetTexLevelParameteriv(QueryBindTarget, 0, GL_TEXTURE_INTERNAL_FORMAT, &GlFormat);
+    CHECK_GL_ERROR( "Failed to get texture level 0 parameters through glGetTexLevelParameteriv()" );
+
+    VERIFY(GlFormat != 0, "Unable to get texture format")
+    if (TexDesc.Format != TEX_FORMAT_UNKNOWN)
+        VERIFY(static_cast<GLenum>(GlFormat) == TexFormatToGLInternalTexFormat(TexDesc.Format), "Specified texture format (", GetTextureFormatAttribs(TexDesc.Format).Name,") does not match GL texture internal format (", GlFormat, ")")
+    else
+        TexDesc.Format = GLInternalTexFormatToTexFormat(GlFormat);
+
+    VERIFY_EXPR(TexWidth > 0 && TexHeight > 0 && TexDepth > 0);
+    VERIFY(TexDesc.Width == 0 || TexDesc.Width == static_cast<Uint32>(TexWidth), "Specified texture width (", TexDesc.Width, ") does not match the actual width (", TexWidth, ")");
+    VERIFY(TexDesc.Height == 0 || TexDesc.Height == static_cast<Uint32>(TexHeight), "Specified texture height (", TexDesc.Height,") does not match the actual height (", TexHeight, ")");
+    TexDesc.Width = static_cast<Uint32>(TexWidth);
+    TexDesc.Height = static_cast<Uint32>(TexHeight);
+    if (TexDesc.Type == RESOURCE_DIM_TEX_3D)
+    {
+        VERIFY(TexDesc.Depth == 0 || TexDesc.Depth == static_cast<Uint32>(TexDepth), "Specified texture depth (", TexDesc.Depth, ") does not match the actual depth (", TexDepth, ")");
+        TexDesc.Depth = static_cast<Uint32>(TexDepth);
+    }
+
+    GLint MipLevels = 0;
+    glGetTexParameteriv(BindTarget, GL_TEXTURE_IMMUTABLE_LEVELS, &MipLevels);
+    CHECK_GL_ERROR( "Failed to get texture parameters through glGetTexParameteriv()" );
+    VERIFY(TexDesc.MipLevels == 0 || TexDesc.MipLevels == static_cast<Uint32>(MipLevels), "Specified number of mip levels (", TexDesc.MipLevels, ") does not match the actual number of mip levels (", MipLevels, ")");
+    TexDesc.MipLevels = static_cast<Uint32>(MipLevels);
+    
+    ContextState.BindTexture(-1, BindTarget, GLObjectWrappers::GLTextureObj(false) );
+    return TexDesc;
+}
+
+TextureBaseGL::TextureBaseGL(IReferenceCounters *pRefCounters, 
+                             FixedBlockMemoryAllocator& TexViewObjAllocator, 
+                             RenderDeviceGLImpl *pDeviceGL, 
+                             DeviceContextGLImpl *pDeviceContext, 
+                             const TextureDesc& TexDesc, 
+                             GLuint GLTextureHandle,
+                             GLenum BindTarget,
+                             bool bIsDeviceInternal/* = false*/)  : 
+    TTextureBase( pRefCounters, TexViewObjAllocator, pDeviceGL, GetTextureDescFromGLHandle(pDeviceContext, TexDesc, GLTextureHandle, BindTarget), bIsDeviceInternal ),
+    // Create texture object wrapper, but use external texture handle
+    m_GlTexture(true, GLObjectWrappers::GLTextureCreateReleaseHelper(GLTextureHandle)),
+    m_BindTarget(BindTarget),
+    m_GLTexFormat( GetTextureInternalFormat(pDeviceContext, BindTarget, m_GlTexture) )
+{
+}
+
 TextureBaseGL::~TextureBaseGL()
 {
     // Release all FBOs that contain current texture
@@ -58,7 +150,7 @@ TextureBaseGL::~TextureBaseGL()
     // flag is set, because CopyData() can bind
     // texture as render target even when no flag
     // is set
-    static_cast<RenderDeviceGLImpl*>( GetDevice() )->m_FBOCache.OnReleaseTexture(this);
+    static_cast<RenderDeviceGLImpl*>( GetDevice() )->OnReleaseTexture(this);
 }
 
 IMPLEMENT_QUERY_INTERFACE( TextureBaseGL, IID_TextureGL, TTextureBase )
@@ -90,14 +182,14 @@ void TextureBaseGL::CreateViewInternal( const struct TextureViewDesc &OrigViewDe
         if( ViewDesc.ViewType == TEXTURE_VIEW_SHADER_RESOURCE )
         {
             bool bIsFullTextureView =
-                ViewDesc.TextureDim     == m_Desc.Type      &&
-                ViewDesc.Format          == CorrectTextureViewFormat( m_Desc.Format, ViewDesc.ViewType ) &&
+                ViewDesc.TextureDim     == m_Desc.Type       &&
+                ViewDesc.Format          == GetDefaultTextureViewFormat( m_Desc.Format, ViewDesc.ViewType, m_Desc.BindFlags ) &&
                 ViewDesc.MostDetailedMip == 0                &&
                 ViewDesc.NumMipLevels    == m_Desc.MipLevels &&
                 ViewDesc.FirstArraySlice == 0                &&
                 ViewDesc.NumArraySlices  == m_Desc.ArraySize;
 
-            pViewOGL = NEW(TexViewAllocator, "TextureViewGLImpl instance", TextureViewGLImpl, 
+            pViewOGL = NEW_RC_OBJ(TexViewAllocator, "TextureViewGLImpl instance", TextureViewGLImpl, bIsDefaultView ? this : nullptr)(
                                                pDeviceGLImpl, ViewDesc, this, 
                                                !bIsFullTextureView, // Create OpenGL texture view object if view
                                                                     // does not address the whole texture
@@ -143,6 +235,7 @@ void TextureBaseGL::CreateViewInternal( const struct TextureViewDesc &OrigViewDe
 
                 glTextureView( pViewOGL->GetHandle(), GLViewTarget, m_GlTexture, GLViewFormat, ViewDesc.MostDetailedMip, ViewDesc.NumMipLevels, ViewDesc.FirstArraySlice, ViewDesc.NumArraySlices );
                 CHECK_GL_ERROR_AND_THROW( "Failed to create texture view" );
+                pViewOGL->SetBindTarget(GLViewTarget);
             }
         }
         else if( ViewDesc.ViewType == TEXTURE_VIEW_UNORDERED_ACCESS )
@@ -150,7 +243,7 @@ void TextureBaseGL::CreateViewInternal( const struct TextureViewDesc &OrigViewDe
             VERIFY( ViewDesc.NumArraySlices == 1 || ViewDesc.NumArraySlices == m_Desc.ArraySize,
                     "Only single array/depth slice or the whole texture can be bound as UAV in OpenGL");
             VERIFY( ViewDesc.AccessFlags != 0, "At least one access flag must be specified" );
-            pViewOGL = NEW(TexViewAllocator, "TextureViewGLImpl instance", TextureViewGLImpl, 
+            pViewOGL = NEW_RC_OBJ(TexViewAllocator, "TextureViewGLImpl instance", TextureViewGLImpl, bIsDefaultView ? this : nullptr)(
                                                pDeviceGLImpl, ViewDesc, this, 
                                                false, // Do NOT create texture view OpenGL object
                                                bIsDefaultView
@@ -159,7 +252,7 @@ void TextureBaseGL::CreateViewInternal( const struct TextureViewDesc &OrigViewDe
         else if( ViewDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET )
         {
             VERIFY( ViewDesc.NumMipLevels == 1, "Only single mip level can be bound as RTV" );
-            pViewOGL = NEW(TexViewAllocator, "TextureViewGLImpl instance", TextureViewGLImpl, 
+            pViewOGL = NEW_RC_OBJ(TexViewAllocator, "TextureViewGLImpl instance", TextureViewGLImpl, bIsDefaultView ? this : nullptr)(
                                                pDeviceGLImpl, ViewDesc, this, 
                                                false, // Do NOT create texture view OpenGL object
                                                bIsDefaultView
@@ -168,7 +261,7 @@ void TextureBaseGL::CreateViewInternal( const struct TextureViewDesc &OrigViewDe
         else if( ViewDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL )
         {
             VERIFY( ViewDesc.NumMipLevels == 1, "Only single mip level can be bound as DSV" );
-            pViewOGL = NEW(TexViewAllocator, "TextureViewGLImpl instance", TextureViewGLImpl, 
+            pViewOGL = NEW_RC_OBJ(TexViewAllocator, "TextureViewGLImpl instance", TextureViewGLImpl, bIsDefaultView ? this : nullptr)(
                                                pDeviceGLImpl, ViewDesc, this, 
                                                false, // Do NOT create texture view OpenGL object
                                                bIsDefaultView
@@ -253,10 +346,10 @@ void TextureBaseGL :: CopyData(IDeviceContext *pContext,
 
     if( glCopyImageSubData )
     {
-        GLint SrcSliceY = (SrcTexDesc.Type == GL_TEXTURE_1D_ARRAY) ? SrcSlice : 0;
-        GLint SrcSliceZ = (SrcTexDesc.Type == GL_TEXTURE_2D_ARRAY) ? SrcSlice : 0;
-        GLint DstSliceY = (m_Desc.Type == GL_TEXTURE_1D_ARRAY) ? DstSlice : 0;
-        GLint DstSliceZ = (m_Desc.Type == GL_TEXTURE_2D_ARRAY) ? DstSlice : 0;
+        GLint SrcSliceY = (SrcTexDesc.Type == RESOURCE_DIM_TEX_1D_ARRAY) ? SrcSlice : 0;
+        GLint SrcSliceZ = (SrcTexDesc.Type == RESOURCE_DIM_TEX_2D_ARRAY) ? SrcSlice : 0;
+        GLint DstSliceY = (m_Desc.Type == RESOURCE_DIM_TEX_1D_ARRAY) ? DstSlice : 0;
+        GLint DstSliceZ = (m_Desc.Type == RESOURCE_DIM_TEX_2D_ARRAY) ? DstSlice : 0;
         glCopyImageSubData(
             pSrcTextureGL->GetGLHandle(),
             pSrcTextureGL->GetBindTarget(),
@@ -288,7 +381,6 @@ void TextureBaseGL :: CopyData(IDeviceContext *pContext,
         auto &TexViewObjAllocator = pRenderDeviceGL->GetTexViewObjAllocator();
         VERIFY( &TexViewObjAllocator == &m_dbgTexViewObjAllocator, "Texture view allocator does not match allocator provided during texture initialization" );
 
-        auto &FBOCache = pRenderDeviceGL->m_FBOCache;
         auto &TexRegionRender = pRenderDeviceGL->m_TexRegionRender;
         TexRegionRender.SetStates(pDeviceCtxGL);
 
@@ -300,7 +392,7 @@ void TextureBaseGL :: CopyData(IDeviceContext *pContext,
         // Note: texture view allocates memory for the copy of the name
         // If the name is empty, memory should not be allocated
         // We have to provide allocator even though it will never be used
-        TextureViewGLImpl SRV( TexViewObjAllocator, GetDevice(), SRVDesc, pSrcTextureGL,
+        TextureViewGLImpl SRV( GetReferenceCounters(), GetDevice(), SRVDesc, pSrcTextureGL,
             false, // Do NOT create texture view OpenGL object
             true   // The view, like default view, should not
                    // keep strong reference to the texture
@@ -319,7 +411,7 @@ void TextureBaseGL :: CopyData(IDeviceContext *pContext,
             // Note: texture view allocates memory for the copy of the name
             // If the name is empty, memory should not be allocated
             // We have to provide allocator even though it will never be used
-            TextureViewGLImpl RTV( TexViewObjAllocator, GetDevice(), RTVDesc, this,
+            TextureViewGLImpl RTV( GetReferenceCounters(), GetDevice(), RTVDesc, this,
                 false, // Do NOT create texture view OpenGL object
                 true   // The view, like default view, should not
                        // keep strong reference to the texture
@@ -328,12 +420,7 @@ void TextureBaseGL :: CopyData(IDeviceContext *pContext,
             ITextureView *pRTVs[] = { &RTV };
             pDeviceCtxGL->SetRenderTargets( _countof( pRTVs ), pRTVs, nullptr );
 
-            Viewport VP;
-            VP.TopLeftX = static_cast<float>( DstX );
-            VP.TopLeftY = static_cast<float>( DstY );
-            VP.Width    = static_cast<float>(pSrcBox->MaxX - pSrcBox->MinX);
-            VP.Height   = static_cast<float>(pSrcBox->MaxY - pSrcBox->MinY);
-            pDeviceCtxGL->SetViewports( 1, &VP, 0, 0 );
+            // No need to set up the viewport as SetRenderTargets() does that
 
             TexRegionRender.Render( pDeviceCtxGL,
                                     &SRV,
@@ -350,65 +437,16 @@ void TextureBaseGL :: CopyData(IDeviceContext *pContext,
 }
 
 
-void TextureBaseGL :: Map(IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid &pMappedData)
+void TextureBaseGL :: Map(IDeviceContext *pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags, MappedTextureSubresource &MappedData)
 {
-    TTextureBase::Map( pContext, MapType, MapFlags, pMappedData );
-    //VERIFY( m_uiMapTarget == 0 && "Texture is already mapped");
-
-    //m_uiMapTarget = ( MapType == MAP_READ ) ? GL_COPY_READ_Texture : GL_COPY_WRITE_Texture;
-    //glBindTexture(m_uiMapTarget, m_GlTexture);
-
-    //// !!!WARNING!!! GL_MAP_UNSYNCHRONIZED_BIT is not the same thing as MAP_FLAG_DO_NOT_WAIT.
-    //// If GL_MAP_UNSYNCHRONIZED_BIT flag is set, OpenGL will not attempt to synchronize operations 
-    //// on the Texture. This does not mean that map will fail if the Texture still in use. It is thus
-    //// what WRITE_NO_OVERWRITE does
-
-    //GLbitfield Access = 0;
-    //switch(MapType)
-    //{
-    //    case MAP_READ: 
-    //        Access |= GL_MAP_READ_BIT;
-    //    break;
-
-    //    case MAP_WRITE:
-    //        Access |= GL_MAP_WRITE_BIT;
-    //    break;
-
-    //    case MAP_READ_WRITE:
-    //        Access |= GL_MAP_WRITE_BIT | GL_MAP_READ_BIT;
-    //    break;
-
-    //    case MAP_WRITE_DISCARD:
-    //        // If GL_MAP_INVALIDATE_Texture_BIT is specified, the entire contents of the Texture may 
-    //        // be discarded and considered invalid, regardless of the specified range. Any data 
-    //        // lying outside the mapped range of the Texture object becomes undefined,as does any 
-    //        // data within the range but not subsequently written by the application.This flag may 
-    //        // not be used with GL_MAP_READ_BIT.
-    //        Access |= GL_MAP_INVALIDATE_Texture_BIT | GL_MAP_WRITE_BIT;
-    //    break;
-
-    //    case MAP_WRITE_NO_OVERWRITE:
-    //        // If GL_MAP_UNSYNCHRONIZED_BIT flag is set, OpenGL will not attempt to synchronize 
-    //        // operations on the Texture. 
-    //        Access |= GL_MAP_WRITE_BIT | GL_MAP_UNSYNCHRONIZED_BIT;
-    //    break;
-
-    //    default: UNEXPECTED("Unknown map type" );
-    //}
-
-    //pMappedData = glMapTextureRange(m_uiMapTarget, 0, m_Desc.uiSizeInBytes,  Access);
-    //VERIFY( "Map failed" && pMappedData );
-    //glBindTexture(m_uiMapTarget, 0);
+    TTextureBase::Map( pContext, Subresource, MapType, MapFlags, MappedData );
+    LOG_ERROR_MESSAGE("Texture mapping is not supported in OpenGL")
 }
 
-void TextureBaseGL::Unmap( IDeviceContext *pContext, MAP_TYPE MapType )
+void TextureBaseGL::Unmap( IDeviceContext *pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags )
 {
-    TTextureBase::Unmap(pContext, MapType);
-
-    //glBindTexture(m_uiMapTarget, m_GlTexture);
-    //glUnmapTexture(m_uiMapTarget);
-    //glBindTexture(m_uiMapTarget, 0);
-    //m_uiMapTarget = 0;
+    TTextureBase::Unmap(pContext, Subresource, MapType, MapFlags);
+    LOG_ERROR_MESSAGE("Texture mapping is not supported in OpenGL")
 }
 
 void TextureBaseGL::TextureMemoryBarrier( Uint32 RequiredBarriers, GLContextState &GLContextState )
@@ -445,7 +483,7 @@ void TextureBaseGL::SetDefaultGLParameters()
     }
     glGetIntegerv( TextureBinding, &BoundTex );
     CHECK_GL_ERROR( "Failed to set GL_TEXTURE_MIN_FILTER texture parameter" );
-    VERIFY( BoundTex == m_GlTexture, "Current texture is not bound to GL context" );
+    VERIFY( static_cast<GLuint>(BoundTex) == m_GlTexture, "Current texture is not bound to GL context" );
 #endif
 
     if( m_BindTarget != GL_TEXTURE_2D_MULTISAMPLE &&

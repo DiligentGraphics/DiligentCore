@@ -195,4 +195,7 @@
   <ItemGroup>
     <Text Include="$(MSBuildThisFileDirectory)..\..\CMakeLists.txt" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)..\..\readme.md" />
+  </ItemGroup>
 </Project>

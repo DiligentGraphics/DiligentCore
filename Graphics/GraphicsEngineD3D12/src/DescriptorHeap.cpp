@@ -131,20 +131,20 @@ void DescriptorHeapAllocationManager::Free(DescriptorHeapAllocation&& Allocation
     //
     // See http://diligentgraphics.com/diligent-engine/architecture/d3d12/managing-resource-lifetimes/
     //
-    // If basic requirement is met, GetNextCmdListNumber() will never return a number that is less than the last
-    // command list number that references descriptors from the allocation
-    m_FreeBlockManager.Free(DescriptorOffset, Allocation.GetNumHandles(), m_pDeviceD3D12Impl->GetNextCmdListNumber());
+    // If basic requirement is met, GetNextFenceValue() will never return a number that is less than the fence value 
+    // associated with the last command list that references descriptors from the allocation
+    m_FreeBlockManager.Free(DescriptorOffset, Allocation.GetNumHandles(), m_pDeviceD3D12Impl->GetNextFenceValue());
     
 	// Clear the allocation
     Allocation = DescriptorHeapAllocation();
 }
 
-void DescriptorHeapAllocationManager::ReleaseStaleAllocations(Uint64 NumCompletedCmdLists)
+void DescriptorHeapAllocationManager::ReleaseStaleAllocations(Uint64 LastCompletedFenceValue)
 {
     std::lock_guard<std::mutex> LockGuard(m_AllocationMutex);
     // Methods of VariableSizeGPUAllocationsManager class are not thread safe!
 
-    m_FreeBlockManager.ReleaseStaleAllocations(NumCompletedCmdLists);
+    m_FreeBlockManager.ReleaseStaleAllocations(LastCompletedFenceValue);
 }
 
 
@@ -175,9 +175,10 @@ CPUDescriptorHeap::~CPUDescriptorHeap()
 	Uint32 TotalDescriptors = 0;
     for (auto HeapPoolIt = m_HeapPool.begin(); HeapPoolIt != m_HeapPool.end(); ++HeapPoolIt)
     {
-        VERIFY(HeapPoolIt->GetNumAvailableDescriptors() == m_HeapDesc.NumDescriptors, "Not all descriptors in the descriptor pool are released");
+        VERIFY(HeapPoolIt->GetNumAvailableDescriptors() == HeapPoolIt->GetMaxDescriptors(), "Not all descriptors in the descriptor pool are released");
 		TotalDescriptors += HeapPoolIt->GetMaxDescriptors();
 	}
+    TotalDescriptors = std::max(TotalDescriptors, 1u);
 
     LOG_INFO_MESSAGE(GetD3D12DescriptorHeapTypeLiteralName(m_HeapDesc.Type), " CPU heap max size: ", m_MaxHeapSize, " (", m_MaxHeapSize*100/ TotalDescriptors, "%) "
 					 ". Max stale size: ", m_MaxStaleSize, " (", m_MaxStaleSize * 100 / TotalDescriptors, "%)");
@@ -191,18 +192,22 @@ DescriptorHeapAllocation CPUDescriptorHeap::Allocate( uint32_t Count )
 
     DescriptorHeapAllocation Allocation;
     // Go through all descriptor heap managers that have free descriptors
-    for (auto AvailableHeapIt = m_AvailableHeaps.begin(); AvailableHeapIt != m_AvailableHeaps.end(); ++AvailableHeapIt)
+    auto AvailableHeapIt = m_AvailableHeaps.begin();
+    while( AvailableHeapIt != m_AvailableHeaps.end() )
     {
+        auto NextIt = AvailableHeapIt;
+        ++NextIt;
         // Try to allocate descriptor using the current descriptor heap manager
         Allocation = m_HeapPool[*AvailableHeapIt].Allocate(Count);
         // Remove the manager from the pool if it has no more available descriptors
-        if(m_HeapPool[*AvailableHeapIt].GetNumAvailableDescriptors() == 0)
+        if (m_HeapPool[*AvailableHeapIt].GetNumAvailableDescriptors() == 0)
             m_AvailableHeaps.erase(*AvailableHeapIt);
 
         // Terminate the loop if descriptor was successfully allocated, otherwise
         // go to the next manager
         if(Allocation.GetCpuHandle().ptr != 0)
             break;
+        AvailableHeapIt = NextIt;
     }
 
     // If there were no available descriptor heap managers or no manager was able 
@@ -212,7 +217,7 @@ DescriptorHeapAllocation CPUDescriptorHeap::Allocate( uint32_t Count )
         // Make sure the heap is large enough to accomodate the requested number of descriptors
         if(Count > m_HeapDesc.NumDescriptors)
         {
-            LOG_WARNING_MESSAGE("Number of requested descriptors exceeds the descriptor heap size. Increasing the number of descriptors in the heap")
+            LOG_WARNING_MESSAGE("Number of requested CPU descriptors handles (", Count, ") exceeds the descriptor heap size (", m_HeapDesc.NumDescriptors,"). Increasing the number of descriptors in the heap")
         }
         m_HeapDesc.NumDescriptors = std::max(m_HeapDesc.NumDescriptors, static_cast<UINT>(Count));
         // Create a new descriptor heap manager. Note that this constructor creates a new D3D12 descriptor
@@ -239,7 +244,7 @@ void CPUDescriptorHeap::Free(DescriptorHeapAllocation&& Allocation)
     m_HeapPool[ManagerId].Free(std::move(Allocation));
 }
 
-void CPUDescriptorHeap::ReleaseStaleAllocations(Uint64 NumCompletedCmdLists)
+void CPUDescriptorHeap::ReleaseStaleAllocations(Uint64 LastCompletedFenceValue)
 {
     std::lock_guard<std::mutex> LockGuard(m_AllocationMutex);
 	size_t StaleSize = 0;
@@ -248,7 +253,7 @@ void CPUDescriptorHeap::ReleaseStaleAllocations(Uint64 NumCompletedCmdLists)
 		// Update size before releasing stale allocations	
 		StaleSize += m_HeapPool[HeapManagerInd].GetNumStaleDescriptors();
 
-        m_HeapPool[HeapManagerInd].ReleaseStaleAllocations(NumCompletedCmdLists);
+        m_HeapPool[HeapManagerInd].ReleaseStaleAllocations(LastCompletedFenceValue);
         // Return the manager to the pool of available managers if it has available descriptors
         if(m_HeapPool[HeapManagerInd].GetNumAvailableDescriptors() > 0)
             m_AvailableHeaps.insert(HeapManagerInd);
@@ -297,9 +302,11 @@ GPUDescriptorHeap::~GPUDescriptorHeap()
 
 DescriptorHeapAllocation GPUDescriptorHeap::Allocate(uint32_t Count)
 {
+    VERIFY_EXPR(Count > 0);
     // Note: this mutex may be redundant as DescriptorHeapAllocationManager::Allocate() is itself thread-safe
     std::lock_guard<std::mutex> LockGuard(m_AllocMutex);
     DescriptorHeapAllocation Allocation = m_HeapAllocationManager.Allocate(Count);
+    VERIFY(!Allocation.IsNull(), "Failed to allocate ", Count, " GPU descriptors");
 
     m_CurrentSize += (Allocation.GetCpuHandle().ptr != 0) ? Count : 0;
     m_MaxHeapSize = std::max(m_MaxHeapSize, m_CurrentSize);
@@ -309,9 +316,11 @@ DescriptorHeapAllocation GPUDescriptorHeap::Allocate(uint32_t Count)
 
 DescriptorHeapAllocation GPUDescriptorHeap::AllocateDynamic(uint32_t Count)
 {
+    VERIFY_EXPR(Count > 0);
     // Note: this mutex may be redundant as DescriptorHeapAllocationManager::Allocate() is itself thread-safe
     std::lock_guard<std::mutex> LockGuard(m_DynAllocMutex);
     DescriptorHeapAllocation Allocation = m_DynamicAllocationsManager.Allocate(Count);
+    VERIFY(!Allocation.IsNull(), "Failed to allocate ", Count, " dynamic GPU descriptors");
 
     m_CurrentDynamicSize += (Allocation.GetCpuHandle().ptr != 0) ? Count : 0;
     m_MaxDynamicSize = std::max(m_MaxDynamicSize, m_CurrentDynamicSize);
@@ -339,18 +348,18 @@ void GPUDescriptorHeap::Free(DescriptorHeapAllocation&& Allocation)
     }
 }
 
-void GPUDescriptorHeap::ReleaseStaleAllocations(Uint64 NumCompletedCmdLists)
+void GPUDescriptorHeap::ReleaseStaleAllocations(Uint64 LastCompletedFenceValue)
 {
     {
         std::lock_guard<std::mutex> LockGuard(m_AllocMutex);
 		m_MaxStaleSize = std::max(m_MaxStaleSize, static_cast<Uint32>(m_HeapAllocationManager.GetNumStaleDescriptors()));
-        m_HeapAllocationManager.ReleaseStaleAllocations(NumCompletedCmdLists);
+        m_HeapAllocationManager.ReleaseStaleAllocations(LastCompletedFenceValue);
     }
 
     {
         std::lock_guard<std::mutex> LockGuard(m_DynAllocMutex);
 		m_MaxDynamicStaleSize = std::max(m_MaxDynamicStaleSize, static_cast<Uint32>(m_DynamicAllocationsManager.GetNumStaleDescriptors()));
-        m_DynamicAllocationsManager.ReleaseStaleAllocations(NumCompletedCmdLists);
+        m_DynamicAllocationsManager.ReleaseStaleAllocations(LastCompletedFenceValue);
     }
 }
 
@@ -365,7 +374,7 @@ DynamicSuballocationsManager::DynamicSuballocationsManager(IMemoryAllocator &All
 {
 }
 
-void DynamicSuballocationsManager::DiscardAllocations(Uint64 FrameNumber)
+void DynamicSuballocationsManager::DiscardAllocations(Uint64 /*FenceValue*/)
 {
     // Clear the list and dispose all allocated chunks of GPU descriptor heap.
     // The chunks will be added to the release queue in the allocations manager

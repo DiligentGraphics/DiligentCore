@@ -49,8 +49,12 @@ public:
     ///                            is required for dynamic buffers, which are
     ///                            suballocated in a dynamic upload heap
     /// \param [in] ContextId - Id of the context within which address of the buffer is requested.
-    ///                         
-    virtual ID3D12Resource *GetD3D12Buffer(size_t &DataStartByteOffset, Uint32 ContextId) = 0;
+    virtual ID3D12Resource* GetD3D12Buffer(size_t &DataStartByteOffset, Uint32 ContextId) = 0;
+
+    /// Sets the buffer usage state
+
+    /// \param [in] state - D3D12 resource state to be set for this buffer
+    virtual void SetD3D12ResourceState(D3D12_RESOURCE_STATES state) = 0;
 };
 
 }

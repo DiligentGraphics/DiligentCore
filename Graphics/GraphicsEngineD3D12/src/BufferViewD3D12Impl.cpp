@@ -27,13 +27,13 @@
 namespace Diligent
 {
 
-BufferViewD3D12Impl::BufferViewD3D12Impl( FixedBlockMemoryAllocator &BuffViewAllocator,
+BufferViewD3D12Impl::BufferViewD3D12Impl( IReferenceCounters *pRefCounters,
                                           IRenderDevice *pDevice, 
                                           const BufferViewDesc& ViewDesc, 
                                           IBuffer *pBuffer,
                                           DescriptorHeapAllocation &&HandleAlloc,
                                           bool bIsDefaultView ) :
-    TBufferViewBase( BuffViewAllocator, pDevice, ViewDesc, pBuffer, bIsDefaultView ),
+    TBufferViewBase( pRefCounters, pDevice, ViewDesc, pBuffer, bIsDefaultView ),
     m_DescriptorHandle( std::move(HandleAlloc) )
 {
 }

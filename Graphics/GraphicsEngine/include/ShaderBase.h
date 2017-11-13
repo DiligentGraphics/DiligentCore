@@ -168,20 +168,19 @@ struct DummyShaderVariable : ShaderVariableBase
 ///                         (Diligent::IShaderD3D11, Diligent::IShaderD3D12 or Diligent::IShaderGL).
 /// \tparam RenderDeviceBaseInterface - base interface for the render device
 ///                                     (Diligent::IRenderDeviceD3D11, Diligent::IRenderDeviceD3D12, Diligent::IRenderDeviceGL, or Diligent::IRenderDeviceGLES).
-/// \tparam ShaderObjAllocator - type of the allocator that is used to allocate memory for the shader object instances
-template<class BaseInterface, class RenderDeviceBaseInterface, class ShaderObjAllocator>
-class ShaderBase : public DeviceObjectBase<BaseInterface, ShaderDesc, ShaderObjAllocator>
+template<class BaseInterface, class RenderDeviceBaseInterface>
+class ShaderBase : public DeviceObjectBase<BaseInterface, ShaderDesc>
 {
 public:
-    typedef DeviceObjectBase<BaseInterface, ShaderDesc, ShaderObjAllocator> TDeviceObjectBase;
+    typedef DeviceObjectBase<BaseInterface, ShaderDesc> TDeviceObjectBase;
 
-    /// \param ObjAllocator - allocator that was used to allocate memory for this instance of the shader object
+    /// \param pRefCounters - reference counters object that controls the lifetime of this shader.
 	/// \param pDevice - pointer to the device.
 	/// \param ShdrDesc - shader description.
 	/// \param bIsDeviceInternal - flag indicating if the shader is an internal device object and 
 	///							   must not keep a strong reference to the device.
-    ShaderBase( ShaderObjAllocator &ObjAllocator, IRenderDevice *pDevice, const ShaderDesc& ShdrDesc, bool bIsDeviceInternal = false ) :
-        TDeviceObjectBase( ObjAllocator, pDevice, ShdrDesc, nullptr, bIsDeviceInternal ),
+    ShaderBase( IReferenceCounters *pRefCounters, IRenderDevice *pDevice, const ShaderDesc& ShdrDesc, bool bIsDeviceInternal = false ) :
+        TDeviceObjectBase( pRefCounters, pDevice, ShdrDesc, bIsDeviceInternal ),
         m_DummyShaderVar(*this),
         m_VariablesDesc(ShdrDesc.NumVariables, ShaderVariableDesc(), STD_ALLOCATOR_RAW_MEM(ShaderVariableDesc, GetRawAllocator(), "Allocator for vector<ShaderVariableDesc>") ),
         m_StringPool(ShdrDesc.NumVariables + ShdrDesc.NumStaticSamplers, String(), STD_ALLOCATOR_RAW_MEM(String, GetRawAllocator(), "Allocator for vector<String>")),
@@ -209,9 +208,9 @@ public:
                 m_StaticSamplers[s].TextureName = Str->c_str();
 #ifdef _DEBUG
                 const auto &BorderColor = m_StaticSamplers[s].Desc.BorderColor;
-                if( !(BorderColor[0] == 0 && BorderColor[1] == 0 && BorderColor[2] == 0 && BorderColor[3] == 0 ||
-                      BorderColor[0] == 0 && BorderColor[1] == 0 && BorderColor[2] == 0 && BorderColor[3] == 1 ||
-                      BorderColor[0] == 1 && BorderColor[1] == 1 && BorderColor[2] == 1 && BorderColor[3] == 0) )
+                if( !( (BorderColor[0] == 0 && BorderColor[1] == 0 && BorderColor[2] == 0 && BorderColor[3] == 0) ||
+                       (BorderColor[0] == 0 && BorderColor[1] == 0 && BorderColor[2] == 0 && BorderColor[3] == 1) ||
+                       (BorderColor[0] == 1 && BorderColor[1] == 1 && BorderColor[2] == 1 && BorderColor[3] == 0) ) )
                 {
                     LOG_WARNING_MESSAGE("Static sampler for variable \"", *Str , "\" specifies border color (", BorderColor[0], ", ", BorderColor[1], ", ",  BorderColor[2], ", ",  BorderColor[3], "). D3D12 static samplers only allow transparent black (0,0,0,1), opaque black (0,0,0,0) or opaque white (1,1,1,0) as border colors")
                 }

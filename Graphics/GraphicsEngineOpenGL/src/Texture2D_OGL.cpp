@@ -28,18 +28,19 @@
 #include "DeviceContextGLImpl.h"
 #include "GLTypeConversions.h"
 #include "GraphicsUtilities.h"
+#include "BufferGLImpl.h"
 
 namespace Diligent
 {
 
-Texture2D_OGL::Texture2D_OGL( FixedBlockMemoryAllocator& TexObjAllocator, 
+Texture2D_OGL::Texture2D_OGL( IReferenceCounters *pRefCounters, 
                               FixedBlockMemoryAllocator& TexViewObjAllocator,
-                              class RenderDeviceGLImpl *pDeviceGL, 
-                              class DeviceContextGLImpl *pDeviceContext, 
+                              RenderDeviceGLImpl *pDeviceGL, 
+                              DeviceContextGLImpl *pDeviceContext, 
                               const TextureDesc& TexDesc, 
                               const TextureData &InitData /*= TextureData()*/,
 							  bool bIsDeviceInternal /*= false*/) : 
-    TextureBaseGL(TexObjAllocator, TexViewObjAllocator, pDeviceGL, TexDesc, TexDesc.SampleCount > 1 ? GL_TEXTURE_2D_MULTISAMPLE : GL_TEXTURE_2D, InitData, bIsDeviceInternal)
+    TextureBaseGL(pRefCounters, TexViewObjAllocator, pDeviceGL, TexDesc, TexDesc.SampleCount > 1 ? GL_TEXTURE_2D_MULTISAMPLE : GL_TEXTURE_2D, InitData, bIsDeviceInternal)
 {
     auto &ContextState = pDeviceContext->GetContextState();
     ContextState.BindTexture(-1, m_BindTarget, m_GlTexture);
@@ -102,6 +103,18 @@ Texture2D_OGL::Texture2D_OGL( FixedBlockMemoryAllocator& TexObjAllocator,
     ContextState.BindTexture( -1, m_BindTarget, GLObjectWrappers::GLTextureObj(false) );
 }
 
+Texture2D_OGL::Texture2D_OGL( IReferenceCounters *pRefCounters, 
+                              FixedBlockMemoryAllocator& TexViewObjAllocator,     
+                              RenderDeviceGLImpl *pDeviceGL, 
+                              DeviceContextGLImpl *pDeviceContext,
+                              const TextureDesc& TexDesc, 
+                              GLuint GLTextureHandle,
+                              bool bIsDeviceInternal)  : 
+    TextureBaseGL(pRefCounters, TexViewObjAllocator, pDeviceGL, pDeviceContext, TexDesc, GLTextureHandle, 
+                  TexDesc.SampleCount > 1 ? GL_TEXTURE_2D_MULTISAMPLE : GL_TEXTURE_2D, bIsDeviceInternal)
+{
+}
+
 Texture2D_OGL::~Texture2D_OGL()
 {
 }
@@ -113,12 +126,20 @@ void Texture2D_OGL::UpdateData( IDeviceContext *pContext, Uint32 MipLevel, Uint3
 
     ContextState.BindTexture(-1, m_BindTarget, m_GlTexture);
 
+    // Bind buffer if it is provided; copy from CPU memory otherwise
+    GLuint UnpackBuffer = 0;
+    if (SubresData.pSrcBuffer != nullptr)
+    {
+        auto *pBufferGL = ValidatedCast<BufferGLImpl>(SubresData.pSrcBuffer);
+        UnpackBuffer = pBufferGL->GetGLHandle();
+    }
+
     // Transfers to OpenGL memory are called unpack operations
     // If there is a buffer bound to GL_PIXEL_UNPACK_BUFFER target, then all the pixel transfer
-    // operations will be performed from this buffer. We need to make sure none is bound
-    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+    // operations will be performed from this buffer.
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, UnpackBuffer);
 
-    auto TransferAttribs = GetNativePixelTransferAttribs(m_Desc.Format);
+    const auto &TransferAttribs = GetNativePixelTransferAttribs(m_Desc.Format);
     
     glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 
@@ -169,6 +190,9 @@ void Texture2D_OGL::UpdateData( IDeviceContext *pContext, Uint32 MipLevel, Uint3
                         SubresData.pData);
     }
     CHECK_GL_ERROR("Failed to update subimage data");
+
+    if(UnpackBuffer != 0)
+        glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 
     ContextState.BindTexture( -1, m_BindTarget, GLObjectWrappers::GLTextureObj(false) );
 }

@@ -45,6 +45,11 @@ public:
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
     virtual ID3D12Resource* GetD3D12Texture() = 0;
+
+    /// Sets the texture usage state
+
+    /// \param [in] state - D3D12 resource state to be set for this texture
+    virtual void SetD3D12ResourceState(D3D12_RESOURCE_STATES state) = 0;
 };
 
 }

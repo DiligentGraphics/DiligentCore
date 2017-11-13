@@ -35,12 +35,12 @@ namespace Diligent
 
 class FixedBlockMemoryAllocator;
 /// Implementation of the Diligent::IBufferViewD3D11 interface
-class BufferViewD3D11Impl : public BufferViewBase<IBufferViewD3D11, FixedBlockMemoryAllocator>
+class BufferViewD3D11Impl : public BufferViewBase<IBufferViewD3D11>
 {
 public:
-    typedef BufferViewBase<IBufferViewD3D11, FixedBlockMemoryAllocator> TBufferViewBase;
+    typedef BufferViewBase<IBufferViewD3D11> TBufferViewBase;
 
-    BufferViewD3D11Impl( FixedBlockMemoryAllocator &BuffViewObjAllocator,
+    BufferViewD3D11Impl( IReferenceCounters *pRefCounters,
                          IRenderDevice *pDevice, 
                          const BufferViewDesc& ViewDesc, 
                          class IBuffer *pBuffer,

@@ -37,7 +37,7 @@ class DeviceContextGLImpl : public DeviceContextBase<IDeviceContextGL>
 public:
     typedef DeviceContextBase<IDeviceContextGL> TDeviceContextBase;
 
-    DeviceContextGLImpl( IMemoryAllocator &RawMemAllocator, class RenderDeviceGLImpl *pDeviceGL, bool bIsDeferred );
+    DeviceContextGLImpl( IReferenceCounters *pRefCounters, class RenderDeviceGLImpl *pDeviceGL, bool bIsDeferred );
 
     /// Queries the specific interface, see IObject::QueryInterface() for details.
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
@@ -53,7 +53,8 @@ public:
     virtual void SetBlendFactors(const float* pBlendFactors = nullptr)override final;
 
     virtual void SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer **ppBuffers, Uint32 *pStrides, Uint32 *pOffsets, Uint32 Flags )override final;
-    virtual void ClearState()override final;
+    
+    virtual void InvalidateState()override final;
 
     virtual void SetIndexBuffer( IBuffer *pIndexBuffer, Uint32 ByteOffset )override final;
 
@@ -77,11 +78,13 @@ public:
 
     virtual void ExecuteCommandList(class ICommandList *pCommandList)override final;
 
+    virtual bool UpdateCurrentGLContext()override final;
+
     void BindProgramResources( Uint32 &NewMemoryBarriers, IShaderResourceBinding *pResBinding );
 
     GLContextState &GetContextState(){return m_ContextState;}
     
-    void RebindRenderTargets();
+    void CommitRenderTargets();
 
 protected:
     friend class BufferGLImpl;

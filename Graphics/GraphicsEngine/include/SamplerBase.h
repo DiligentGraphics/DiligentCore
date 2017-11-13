@@ -39,21 +39,20 @@ namespace Diligent
 ///                         (Diligent::ISamplerD3D11, Diligent::ISamplerD3D12 or Diligent::ISamplerGL).
 /// \tparam RenderDeviceBaseInterface - base interface for the render device
 ///                                     (Diligent::IRenderDeviceD3D11, Diligent::IRenderDeviceD3D12, Diligent::IRenderDeviceGL, or Diligent::IRenderDeviceGLES).
-/// \tparam SamplerObjAllocator - type of the allocator that is used to allocate memory for the sampler object instances
-template<class BaseInterface, class RenderDeviceBaseInterface, class SamplerObjAllocator>
-class SamplerBase : public DeviceObjectBase<BaseInterface, SamplerDesc, SamplerObjAllocator>
+template<class BaseInterface, class RenderDeviceBaseInterface>
+class SamplerBase : public DeviceObjectBase<BaseInterface, SamplerDesc>
 {
 public:
-    typedef DeviceObjectBase<BaseInterface, SamplerDesc, SamplerObjAllocator> TDeviceObjectBase;
+    typedef DeviceObjectBase<BaseInterface, SamplerDesc> TDeviceObjectBase;
     typedef RenderDeviceBase<RenderDeviceBaseInterface> TRenderDeviceBase;
 
-    /// \param ObjAllocator - allocator that was used to allocate memory for this instance of the sampler object
+    /// \param pRefCounters - reference counters object that controls the lifetime of this sampler.
 	/// \param pDevice - pointer to the device.
 	/// \param SamDesc - sampler description.
 	/// \param bIsDeviceInternal - flag indicating if the sampler is an internal device object and 
 	///							   must not keep a strong reference to the device.
-    SamplerBase( SamplerObjAllocator &ObjAllocator, IRenderDevice *pDevice, const SamplerDesc& SamDesc, bool bIsDeviceInternal = false ) :
-        TDeviceObjectBase( ObjAllocator, pDevice, SamDesc, nullptr, bIsDeviceInternal )
+    SamplerBase( IReferenceCounters *pRefCounters, IRenderDevice *pDevice, const SamplerDesc& SamDesc, bool bIsDeviceInternal = false ) :
+        TDeviceObjectBase( pRefCounters, pDevice, SamDesc, bIsDeviceInternal )
     {}
 
     ~SamplerBase()

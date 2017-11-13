@@ -32,8 +32,8 @@
 namespace Diligent
 {
 
-TextureBaseD3D11 :: TextureBaseD3D11(FixedBlockMemoryAllocator &TexObjAllocator, FixedBlockMemoryAllocator &TexViewObjAllocator, RenderDeviceD3D11Impl *pRenderDeviceD3D11, const TextureDesc& TexDesc, const TextureData &InitData /*= TextureData()*/) : 
-    TTextureBase(TexObjAllocator, TexViewObjAllocator, pRenderDeviceD3D11, TexDesc)
+TextureBaseD3D11 :: TextureBaseD3D11(IReferenceCounters *pRefCounters, FixedBlockMemoryAllocator &TexViewObjAllocator, RenderDeviceD3D11Impl *pRenderDeviceD3D11, const TextureDesc& TexDesc, const TextureData &InitData /*= TextureData()*/) : 
+    TTextureBase(pRefCounters, TexViewObjAllocator, pRenderDeviceD3D11, TexDesc)
 {
     if( TexDesc.Usage == USAGE_STATIC && InitData.pSubResources == nullptr )
         LOG_ERROR_AND_THROW("Static Texture must be initialized with data at creation time");
@@ -100,7 +100,8 @@ void TextureBaseD3D11::CreateViewInternal( const struct TextureViewDesc &ViewDes
         auto &TexViewAllocator = pDeviceD3D11Impl->GetTexViewObjAllocator();
         VERIFY( &TexViewAllocator == &m_dbgTexViewObjAllocator, "Texture view allocator does not match allocator provided during texture initialization" );
 
-        auto pViewD3D11 = NEW(TexViewAllocator, "TextureViewD3D11Impl instance", TextureViewD3D11Impl, pDeviceD3D11Impl, UpdatedViewDesc, this, pD3D11View, bIsDefaultView );
+        auto pViewD3D11 = NEW_RC_OBJ(TexViewAllocator, "TextureViewD3D11Impl instance", TextureViewD3D11Impl, bIsDefaultView ? this : nullptr)
+                                    (pDeviceD3D11Impl, UpdatedViewDesc, this, pD3D11View, bIsDefaultView );
         VERIFY( pViewD3D11->GetDesc().ViewType == ViewDesc.ViewType, "Incorrect view type" );
 
         if( bIsDefaultView )
@@ -144,6 +145,12 @@ TextureBaseD3D11 :: ~TextureBaseD3D11()
 void TextureBaseD3D11::UpdateData( IDeviceContext *pContext, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData )
 {
     TTextureBase::UpdateData( pContext, MipLevel, Slice, DstBox, SubresData );
+    if (SubresData.pSrcBuffer != nullptr)
+    {
+        LOG_ERROR("D3D11 does not support updating texture subresource from a GPU buffer");
+        return;
+    }
+
     VERIFY( m_Desc.Usage == USAGE_DEFAULT, "Only default usage resiurces can be updated with UpdateData()" );
     
     auto *pd3d11DeviceContext = static_cast<DeviceContextD3D11Impl*>(pContext)->GetD3D11DeviceContext();
@@ -192,28 +199,36 @@ void TextureBaseD3D11 ::  CopyData(IDeviceContext *pContext,
     pd3d11DeviceContext->CopySubresourceRegion(m_pd3d11Texture, DstSubRes, DstX, DstY, DstZ, pSrTextureBaseD3D11->GetD3D11Texture(), SrcSubRes, pD3D11SrcBox);
 }
 
-void TextureBaseD3D11 :: Map(IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid &pMappedData)
+void TextureBaseD3D11 :: Map( IDeviceContext *pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags, MappedTextureSubresource &MappedData )
 {
-    TTextureBase::Map( pContext, MapType, MapFlags, pMappedData );
+    TTextureBase::Map( pContext, Subresource, MapType, MapFlags, MappedData );
 
-    //auto *pd3d11DeviceContext = static_cast<RenderDeviceD3D11Impl*>( static_cast<CRenderDevice*>(m_pDevice) )->GetD3D11DeviceContext();
-    //auto d3d11MapType = MapTypeToD3D11MapType(MapType);
-    //auto d3d11MapFlags = MapFlagsToD3D11MapFlags(MapFlags);
+    auto *pd3d11DeviceContext = static_cast<DeviceContextD3D11Impl*>(pContext)->GetD3D11DeviceContext();
+    D3D11_MAP d3d11MapType = static_cast<D3D11_MAP>(0);
+    UINT d3d11MapFlags = 0;
+    MapParamsToD3D11MapParams(MapType, MapFlags, d3d11MapType, d3d11MapFlags);
 
-    //D3D11_MAPPED_SUBRESOURCE MappedBuff;
-    //pd3d11DeviceContext->Map(m_pd3d11Texture, 0, d3d11MapType, d3d11MapFlags, &MappedBuff);
-
-    //pMappedData = MappedBuff.pData;
-
-    //VERIFY( pMappedData, "Map failed" );
+    D3D11_MAPPED_SUBRESOURCE MappedTex;
+    auto hr = pd3d11DeviceContext->Map(m_pd3d11Texture, Subresource, d3d11MapType, d3d11MapFlags, &MappedTex);
+    if( FAILED(hr) )
+    {
+        VERIFY_EXPR( hr == DXGI_ERROR_WAS_STILL_DRAWING  );
+        MappedData = MappedTextureSubresource();
+    }
+    else
+    {
+        MappedData.pData = MappedTex.pData;
+        MappedData.Stride = MappedTex.RowPitch;
+        MappedData.DepthStride = MappedTex.DepthPitch;
+    }
 }
 
-void TextureBaseD3D11::Unmap( IDeviceContext *pContext, MAP_TYPE MapType )
+void TextureBaseD3D11::Unmap( IDeviceContext *pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags )
 {
-    TTextureBase::Unmap( pContext, MapType );
+    TTextureBase::Unmap( pContext, Subresource, MapType, MapFlags );
 
-    //auto *pd3d11DeviceContext = static_cast<RenderDeviceD3D11Impl*>( static_cast<CRenderDevice*>(m_pDevice) )->GetD3D11DeviceContext();
-    //pd3d11DeviceContext->Unmap(m_pd3d11Texture, 0);
+    auto *pd3d11DeviceContext = static_cast<DeviceContextD3D11Impl*>(pContext)->GetD3D11DeviceContext();
+    pd3d11DeviceContext->Unmap(m_pd3d11Texture, Subresource);
 }
 
 }

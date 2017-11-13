@@ -65,51 +65,42 @@ struct VertexStreamInfo
 ///          The context also keeps strong references to the device and
 ///          the swap chain.
 template<typename BaseInterface>
-class DeviceContextBase : public ObjectBase<BaseInterface, IMemoryAllocator>
+class DeviceContextBase : public ObjectBase<BaseInterface>
 {
 public:
 
-    typedef ObjectBase<BaseInterface, IMemoryAllocator> TObjectBase;
+    typedef ObjectBase<BaseInterface> TObjectBase;
 
-    /// \param RawMemAllocator - allocator that was used to allocate memory for this instance of the device context object.
+    /// \param pRefCounters - reference counters object that controls the lifetime of this device context.
     /// \param pRenderDevice - render device.
     /// \param bIsDeferred - flag indicating if this instance is a deferred context
-    DeviceContextBase(IMemoryAllocator& RawMemAllocator, IRenderDevice *pRenderDevice, bool bIsDeferred) :
-        TObjectBase(nullptr, &RawMemAllocator),
+    DeviceContextBase(IReferenceCounters *pRefCounters, IRenderDevice *pRenderDevice, bool bIsDeferred) :
+        TObjectBase(pRefCounters),
         m_pDevice(pRenderDevice),
-        m_IndexDataStartOffset( 0 ),
-        m_StencilRef( 0 ),
-        m_NumVertexStreams(0),
         m_bIsDeferred(bIsDeferred)
     {
-        for( int i = 0; i < 4; ++i )
-            m_BlendFactors[i] = -1;
-        // Set dummy render target array size to make sure that
-        // render targets are actually bound the first time 
-        // SetRenderTargets() is called 
-        m_NumBoundRenderTargets = _countof(m_pBoundRenderTargets);
     }
 
     ~DeviceContextBase()
     {
     }
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE( IID_DeviceContext, ObjectBase<BaseInterface> )
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE( IID_DeviceContext, TObjectBase )
 
     /// Base implementation of IDeviceContext::SetVertexBuffers(); validates parameters and 
     /// caches references to the buffers.
-    inline virtual void SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer **ppBuffers, Uint32 *pStrides, Uint32 *pOffsets, Uint32 Flags ) = 0;
+    inline virtual void SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer **ppBuffers, Uint32 *pStrides, Uint32 *pOffsets, Uint32 Flags )override = 0;
 
-    inline virtual void ClearState() = 0;
+    inline virtual void InvalidateState()override = 0;
 
     /// Base implementation of IDeviceContext::SetPipelineState(); caches references to the pipeline state object.
-    inline virtual void SetPipelineState(IPipelineState *pPipelineState) = 0;
+    inline virtual void SetPipelineState(IPipelineState *pPipelineState)override = 0;
 
     /// Base implementation of IDeviceContext::CommitShaderResources(); validates parameters.
     inline bool CommitShaderResources(IShaderResourceBinding *pShaderResourceBinding, Uint32 Flags, int);
 
     /// Base implementation of IDeviceContext::SetIndexBuffer(); caches the strong reference to the index buffer
-    inline virtual void SetIndexBuffer( IBuffer *pIndexBuffer, Uint32 ByteOffset ) = 0;
+    inline virtual void SetIndexBuffer( IBuffer *pIndexBuffer, Uint32 ByteOffset )override = 0;
 
     /// Caches the viewports
     inline void SetViewports( Uint32 NumViewports, const Viewport *pViewports, Uint32 &RTWidth, Uint32 &RTHeight );
@@ -122,13 +113,13 @@ public:
     inline bool SetRenderTargets( Uint32 NumRenderTargets, ITextureView *ppRenderTargets[], ITextureView *pDepthStencil, Uint32 Dummy = 0 );
 
     /// Sets the strong pointer to the swap chain
-    inline void SetSwapChain( ISwapChain *pSwapChain ) { m_pSwapChain = pSwapChain; }
+    virtual void SetSwapChain( ISwapChain *pSwapChain )override final { m_pSwapChain = pSwapChain; }
 
     /// Returns the swap chain
     ISwapChain *GetSwapChain() { return m_pSwapChain; }
 
     /// Returns true if currently bound frame buffer is the default frame buffer
-    inline bool IsDefaultFBBound(){ return m_NumBoundRenderTargets == 0 && m_pBoundDepthStencil == nullptr; }
+    inline bool IsDefaultFBBound(){ return m_IsDefaultFramebufferBound; }
 
     /// Returns currently bound pipeline state and blend factors
     inline void GetPipelineState(IPipelineState **ppPSO, float* BlendFactors, Uint32 &StencilRef);
@@ -173,13 +164,13 @@ protected:
     RefCntAutoPtr<IBuffer> m_pIndexBuffer;
 
     /// Offset from the beginning of the index buffer to the start of the index data, in bytes.
-    Uint32 m_IndexDataStartOffset;
+    Uint32 m_IndexDataStartOffset = 0;
 
 	/// Current stencil reference value
-    Uint32 m_StencilRef;
+    Uint32 m_StencilRef = 0;
 
 	/// Curent blend factors
-    Float32 m_BlendFactors[4];
+    Float32 m_BlendFactors[4] = { -1, -1, -1, -1 };
 
 	/// Current viewports
     Viewport m_Viewports[MaxRenderTargets];
@@ -195,11 +186,14 @@ protected:
     RefCntAutoPtr<ITextureView> m_pBoundRenderTargets[MaxRenderTargets];
     /// Number of bound render targets
     Uint32 m_NumBoundRenderTargets = 0;
+    /// Flag indicating if default render target & depth-stencil 
+    /// buffer are currently bound
+    bool m_IsDefaultFramebufferBound = false;
 
     /// Strong references to the bound depth stencil view
     RefCntAutoPtr<ITextureView> m_pBoundDepthStencil;
 
-    bool m_bIsDeferred = false;
+    const bool m_bIsDeferred = false;
 };
 
 
@@ -278,12 +272,10 @@ inline bool DeviceContextBase<BaseInterface> :: CommitShaderResources(IShaderRes
 }
 
 template<typename BaseInterface>
-inline void DeviceContextBase<BaseInterface> :: ClearState()
+inline void DeviceContextBase<BaseInterface> :: InvalidateState()
 {
-    UNSUPPORTED("This function is deprecated")
-    //m_VertexStreams.clear();
-    //m_pIndexBuffer.Release();
-    //m_IndexDataStartOffset = 0;
+    DeviceContextBase<BaseInterface> :: ClearStateCache();
+    m_IsDefaultFramebufferBound = false;
 }
 
 template<typename BaseInterface>
@@ -351,6 +343,7 @@ inline void DeviceContextBase<BaseInterface> :: GetRenderTargetSize( Uint32 &RTW
     RTHeight = 0;
     // First, try to find non-null render target 
     for( Uint32 rt = 0; rt < m_NumBoundRenderTargets; ++rt )
+    {
         if( auto *pRTView = m_pBoundRenderTargets[rt].RawPtr() )
         {
             // Use render target size as viewport size
@@ -362,6 +355,7 @@ inline void DeviceContextBase<BaseInterface> :: GetRenderTargetSize( Uint32 &RTW
             VERIFY( RTWidth > 0 && RTHeight > 0, "RT dimension is zero" );
             break;
         }
+    }
 
     // If render target was not found, check depth stencil
     if( RTWidth == 0 || RTHeight == 0 )
@@ -381,9 +375,16 @@ inline void DeviceContextBase<BaseInterface> :: GetRenderTargetSize( Uint32 &RTW
     // use default RT size
     if( RTWidth == 0 || RTHeight == 0 )
     {
-        const auto &SwapChainDesc = m_pSwapChain->GetDesc();
-        RTWidth  = SwapChainDesc.Width;
-        RTHeight = SwapChainDesc.Height;
+        if (m_pSwapChain)
+        {
+            const auto &SwapChainDesc = m_pSwapChain->GetDesc();
+            RTWidth  = SwapChainDesc.Width;
+            RTHeight = SwapChainDesc.Height;
+        }
+        else
+        {
+            LOG_ERROR("Failed to determine default render target size: swap chain is not initialized in the device context")
+        }
     }
 }
 
@@ -451,7 +452,7 @@ inline bool DeviceContextBase<BaseInterface> :: SetRenderTargets( Uint32 NumRend
     if( NumRenderTargets != m_NumBoundRenderTargets )
     {
         bBindRenderTargets = true;
-        for(Uint32 rt=NumRenderTargets; rt<m_NumBoundRenderTargets; ++rt )
+        for(Uint32 rt = NumRenderTargets; rt < m_NumBoundRenderTargets; ++rt )
             m_pBoundRenderTargets[rt].Release();
 
         m_NumBoundRenderTargets = NumRenderTargets;
@@ -490,6 +491,17 @@ inline bool DeviceContextBase<BaseInterface> :: SetRenderTargets( Uint32 NumRend
         m_pBoundDepthStencil = pDepthStencil;
         bBindRenderTargets = true;
     }
+
+    if (NumRenderTargets == 0 && pDepthStencil == nullptr)
+    {
+        if (!m_IsDefaultFramebufferBound)
+        {
+            m_IsDefaultFramebufferBound = true;
+            bBindRenderTargets = true;
+        }
+    }
+    else
+        m_IsDefaultFramebufferBound = false;
 
     return bBindRenderTargets;
 }
@@ -560,7 +572,7 @@ inline void DeviceContextBase<BaseInterface> :: ClearStateCache()
         m_ScissorRects[sr] = Rect();
     m_NumScissorRects = 0;
 
-    /// Vector of strong references to bound render targets
+    // Vector of strong references to bound render targets
     for(Uint32 rt=0; rt < m_NumBoundRenderTargets; ++rt )
         m_pBoundRenderTargets[rt].Release();
 #ifdef _DEBUG
@@ -569,8 +581,7 @@ inline void DeviceContextBase<BaseInterface> :: ClearStateCache()
         VERIFY(m_pBoundRenderTargets[rt] == nullptr, "Non-null render target found")
     }
 #endif
-    // Set this to max RT count to force render targets to be bound next time
-    m_NumBoundRenderTargets = _countof(m_pBoundRenderTargets);
+    m_NumBoundRenderTargets = 0;
 
     m_pBoundDepthStencil.Release();
 }

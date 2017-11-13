@@ -24,7 +24,6 @@
 
 #pragma once
 
-#include "pch.h"
 #include <vector>
 
 #include "D3D12ResourceBase.h"
@@ -116,10 +115,18 @@ public:
     void SetID(const Char* ID) { m_ID = ID; }
     ID3D12GraphicsCommandList *GetCommandList(){return m_pCommandList;}
     
-    void DiscardDynamicDescriptors(Uint64 FrameNumber);
+    void DiscardDynamicDescriptors(Uint64 FenceValue);
     DescriptorHeapAllocation AllocateDynamicGPUVisibleDescriptor( D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count = 1 );
 
     void InsertUAVBarrier(D3D12ResourceBase& Resource, IDeviceObject &Object, bool FlushImmediate = false);
+
+	void SetPipelineState( ID3D12PipelineState* pPSO )
+    {
+	    if (pPSO != m_pCurPipelineState)
+        {   	    
+            m_pCommandList->SetPipelineState(m_pCurPipelineState = pPSO);
+        }
+    }
 
 protected:
     void TransitionResource(D3D12ResourceBase& Resource, IDeviceObject &Object, D3D12_RESOURCE_STATES NewState, bool FlushImmediate);
@@ -128,10 +135,9 @@ protected:
 	CComPtr<ID3D12GraphicsCommandList> m_pCommandList;
 	CComPtr<ID3D12CommandAllocator> m_pCurrentAllocator;
 
-	ID3D12RootSignature* m_pCurGraphicsRootSignature;
-	ID3D12PipelineState* m_pCurGraphicsPipelineState;
-	ID3D12RootSignature* m_pCurComputeRootSignature;
-	ID3D12PipelineState* m_pCurComputePipelineState;
+    ID3D12PipelineState* m_pCurPipelineState = nullptr;
+	ID3D12RootSignature* m_pCurGraphicsRootSignature = nullptr;
+	ID3D12RootSignature* m_pCurComputeRootSignature = nullptr;
 
     static const int MaxPendingBarriers = 16;
 	std::vector<D3D12_RESOURCE_BARRIER, STDAllocatorRawMem<D3D12_RESOURCE_BARRIER> > m_PendingResourceBarriers;
@@ -196,14 +202,6 @@ public:
         {
             m_PrimitiveTopology = Topology;
 	        m_pCommandList->IASetPrimitiveTopology(Topology);
-        }
-    }
-
-	void SetPipelineState( ID3D12PipelineState* pPSO )
-    {
-        if (pPSO != m_pCurGraphicsPipelineState)
-        {
-	        m_pCommandList->SetPipelineState(m_pCurGraphicsPipelineState = pPSO);
         }
     }
 
@@ -282,15 +280,6 @@ public:
 	    if (pRootSig != m_pCurComputeRootSignature)
         {
 	        m_pCommandList->SetComputeRootSignature(m_pCurComputeRootSignature = pRootSig);
-        }
-    }
-
-
-	void SetPipelineState( ID3D12PipelineState* pPSO )
-    {
-	    if (pPSO != m_pCurComputePipelineState)
-        {   	    
-            m_pCommandList->SetPipelineState(m_pCurComputePipelineState = pPSO);
         }
     }
 

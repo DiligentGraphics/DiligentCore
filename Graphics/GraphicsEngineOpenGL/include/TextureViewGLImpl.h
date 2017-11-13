@@ -34,12 +34,12 @@ namespace Diligent
 
 class FixedBlockMemoryAllocator;
 /// Implementation of the Diligent::ITextureViewGL interface
-class TextureViewGLImpl : public TextureViewBase<ITextureViewGL, FixedBlockMemoryAllocator>
+class TextureViewGLImpl : public TextureViewBase<ITextureViewGL>
 {
 public:
-    typedef TextureViewBase<ITextureViewGL, FixedBlockMemoryAllocator> TTextureViewBase;
+    typedef TextureViewBase<ITextureViewGL> TTextureViewBase;
 
-    TextureViewGLImpl( FixedBlockMemoryAllocator &TexViewObjAllocator,
+    TextureViewGLImpl(IReferenceCounters *pRefCounters,
                      class IRenderDevice *pDevice, 
                      const struct TextureViewDesc& ViewDesc, 
                      class TextureBaseGL *pTexture,
@@ -51,6 +51,7 @@ public:
 
     const GLObjectWrappers::GLTextureObj& GetHandle();
     GLenum GetBindTarget();
+    void SetBindTarget(GLenum ViewTexBindTarget) { m_ViewTexBindTarget = ViewTexBindTarget; }
 
     void GenerateMips( IDeviceContext *pContext )override;
 

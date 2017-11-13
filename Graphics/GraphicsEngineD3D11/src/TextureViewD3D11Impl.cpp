@@ -28,13 +28,13 @@
 namespace Diligent
 {
 
-TextureViewD3D11Impl::TextureViewD3D11Impl( FixedBlockMemoryAllocator &TexViewAllocator,
+TextureViewD3D11Impl::TextureViewD3D11Impl( IReferenceCounters *pRefCounters,
                                             IRenderDevice *pDevice, 
                                             const TextureViewDesc& ViewDesc, 
                                             ITexture *pTexture,
                                             ID3D11View* pD3D11View,
                                             bool bIsDefaultView ) :
-    TTextureViewBase( TexViewAllocator, pDevice, ViewDesc, pTexture, bIsDefaultView ),
+    TTextureViewBase( pRefCounters, pDevice, ViewDesc, pTexture, bIsDefaultView ),
     m_pD3D11View( pD3D11View )
 {
 }

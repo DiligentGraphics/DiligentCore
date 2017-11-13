@@ -33,6 +33,7 @@
 #include "CommandContext.h"
 #include "DynamicUploadHeap.h"
 #include "Atomics.h"
+#include "CommandQueueD3D12.h"
 
 /// Namespace for the Direct3D11 implementation of the graphics engine
 namespace Diligent
@@ -44,52 +45,63 @@ class RenderDeviceD3D12Impl : public RenderDeviceD3DBase<IRenderDeviceD3D12>
 public:
     typedef RenderDeviceD3DBase<IRenderDeviceD3D12> TRenderDeviceBase;
 
-    RenderDeviceD3D12Impl( IMemoryAllocator &RawMemAllocator, const EngineD3D12Attribs &CreationAttribs, ID3D12Device *pD3D12Device, ID3D12CommandQueue *pd3d12CmdQueue, Uint32 NumDeferredContexts );
+    RenderDeviceD3D12Impl( IReferenceCounters *pRefCounters, IMemoryAllocator &RawMemAllocator, const EngineD3D12Attribs &CreationAttribs, ID3D12Device *pD3D12Device, ICommandQueueD3D12 *pCmdQueue, Uint32 NumDeferredContexts );
     ~RenderDeviceD3D12Impl();
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
+    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
 
-    virtual void CreatePipelineState( const PipelineStateDesc &PipelineDesc, IPipelineState **ppPipelineState )override;
+    virtual void CreatePipelineState( const PipelineStateDesc &PipelineDesc, IPipelineState **ppPipelineState )override final;
 
-    virtual void CreateBuffer(const BufferDesc& BuffDesc, const BufferData &BuffData, IBuffer **ppBuffer);
+    virtual void CreateBuffer(const BufferDesc& BuffDesc, const BufferData &BuffData, IBuffer **ppBuffer)override final;
 
-    virtual void CreateShader(const ShaderCreationAttribs &ShaderCreationAttribs, IShader **ppShader);
+    virtual void CreateShader(const ShaderCreationAttribs &ShaderCreationAttribs, IShader **ppShader)override final;
 
-    virtual void CreateTexture(const TextureDesc& TexDesc, const TextureData &Data, ITexture **ppTexture);
+    virtual void CreateTexture(const TextureDesc& TexDesc, const TextureData &Data, ITexture **ppTexture)override final;
     
-    void CreateTexture(TextureDesc& TexDesc, ID3D12Resource *pd3d12Texture, class TextureD3D12Impl **ppTexture);
+    void CreateTexture(const TextureDesc& TexDesc, ID3D12Resource *pd3d12Texture, class TextureD3D12Impl **ppTexture);
     
-    virtual void CreateSampler(const SamplerDesc& SamplerDesc, ISampler **ppSampler);
+    virtual void CreateSampler(const SamplerDesc& SamplerDesc, ISampler **ppSampler)override final;
 
-    virtual ID3D12Device* GetD3D12Device()override{return m_pd3d12Device;}
+    virtual ID3D12Device* GetD3D12Device()override final{return m_pd3d12Device;}
     
+    virtual void CreateTextureFromD3DResource(ID3D12Resource *pd3d12Texture, ITexture **ppTexture)override final;
+
+    virtual void CreateBufferFromD3DResource(ID3D12Resource *pd3d12Buffer, const BufferDesc& BuffDesc, IBuffer **ppBuffer)override final;
+
     DescriptorHeapAllocation AllocateDescriptor( D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count = 1 );
     DescriptorHeapAllocation AllocateGPUDescriptors( D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count = 1 );
 
-    Uint64 GetNumCompletedCmdLists();
-	Uint64 GetNextCmdListNumber() const {return static_cast<Uint64>(m_NextCmdList);}
-	Uint64 GetCurrentFrameNumber()const {return static_cast<Uint64>(m_CurrentFrameNumber);}
+    Uint64 GetCompletedFenceValue();
+	virtual Uint64 GetNextFenceValue() override final
+    {
+        return m_pCommandQueue->GetNextFenceValue();
+    }
 
-    ID3D12CommandQueue *GetCmdQueue(){return m_pd3d12CmdQueue;}
+	Uint64 GetCurrentFrameNumber()const {return static_cast<Uint64>(m_FrameNumber);}
+    virtual Bool IsFenceSignaled(Uint64 FenceValue) override final;
 
-	void IdleGPU(bool ReleasePendingObjects = false);
+    ICommandQueueD3D12 *GetCmdQueue(){return m_pCommandQueue;}
+
+	void IdleGPU(bool ReleaseStaleObjects);
     CommandContext* AllocateCommandContext(const Char *ID = "");
-    void CloseAndExecuteCommandContext(CommandContext *pCtx);
+    void CloseAndExecuteCommandContext(CommandContext *pCtx, bool DiscardStaleObjects);
     void DisposeCommandContext(CommandContext*);
 
     void SafeReleaseD3D12Object(ID3D12Object* pObj);
-    void FinishFrame();
-    
+    void FinishFrame(bool ReleaseAllResources);
+    virtual void FinishFrame()override final { FinishFrame(false); }
+
     DynamicUploadHeap* RequestUploadHeap();
     void ReleaseUploadHeap(DynamicUploadHeap* pUploadHeap);
 
 private:
     virtual void TestTextureFormat( TEXTURE_FORMAT TexFormat );
-    void ProcessReleaseQueue(bool ForceRelease = false);
+    void ProcessReleaseQueue(Uint64 CompletedFenceValue);
+    void DiscardStaleD3D12Objects(Uint64 CmdListNumber, Uint64 FenceValue);
 
     /// D3D12 device
     CComPtr<ID3D12Device> m_pd3d12Device;
-    CComPtr<ID3D12CommandQueue> m_pd3d12CmdQueue;
+    RefCntAutoPtr<ICommandQueueD3D12> m_pCommandQueue;
 
     EngineD3D12Attribs m_EngineAttribs;
 
@@ -101,18 +113,8 @@ private:
 
 	std::mutex m_CmdQueueMutex;
 
-	Atomics::AtomicInt64 m_CurrentFrameNumber;
-
-    // 0-based ordinal number of the command list that will be submitted to the GPU next time
-    Atomics::AtomicInt64 m_NextCmdList;
-
-    // Number of command lists that retired the GPU pipeline
-    //
-    //      To check if frame X is completed, 
-    //      strong inequality must be used:
-    //        X < m_NumCompletedCmdLists
-    //
-    volatile Uint64 m_NumCompletedCmdLists;
+	Atomics::AtomicInt64 m_FrameNumber;
+    Atomics::AtomicInt64 m_NextCmdListNumber;
 
     // The following basic requirement guarantees correctness of resource deallocation:
     //
@@ -128,10 +130,10 @@ private:
     //                             |     Submit Cmd       Submit Cmd            Submit Cmd
     //                             |      List N           List N+1              List N+2
     //                             V         |                |                     |
-    //    m_NextCmdList        |   *  N      |      N+1       |          N+2        |
+    //    NextFenceValue       |   *  N      |      N+1       |          N+2        |
     //
     //
-    //    m_NumCompletedCmdLists    |     N-2      |      N-1      |        N          |        N+1     |
+    //    CompletedFenceValue       |     N-3      |      N-2      |        N-1        |        N       |
     //                              .              .               .                   .                .
     // -----------------------------.--------------.---------------.-------------------.----------------.-------------
     //                              .              .               .                   .                .
@@ -141,19 +143,7 @@ private:
     //                                                                                 |
     //                                                                          Resource X can
     //                                                                           be released
-    
-    // The fence is signaled right after the command list has been 
-    // submitted to the command queue for execution.
-    // Note that the meaning of the fence value is the TOTAL NUMBER OF COMPLETED COMMAND LISTS,
-    // NOT the ordinal number of the LAST completed cmd list
-    // If ordinal number of the current cmd list is N, then N+1 is signaled, so the
-    // cmd list X is complete when X < m_NumCompletedCmdLists
-    // This is convenient as the default fence value is 0, and hence 
-    // by default there are no completed cmd lists
-    CComPtr<ID3D12Fence> m_pCompletedCmdListFence;
 
-	HANDLE m_WaitForGPUEventHandle;
-    
     CommandListManager m_CmdListManager;
 
     typedef std::unique_ptr<CommandContext, STDDeleterRawMem<CommandContext> > ContextPoolElemType;
@@ -162,11 +152,12 @@ private:
 	std::deque<CommandContext*, STDAllocatorRawMem<CommandContext*> > m_AvailableContexts;
 	std::mutex m_ContextAllocationMutex;
 
-    // Object that must be kept alive
-    std::mutex m_ReleasedObjectsMutex;
-    // Release queue
+    std::mutex m_ReleaseQueueMutex;
     typedef std::pair<Uint64, CComPtr<ID3D12Object> > ReleaseQueueElemType;
     std::deque< ReleaseQueueElemType, STDAllocatorRawMem<ReleaseQueueElemType> > m_D3D12ObjReleaseQueue;
+
+    std::mutex m_StaleObjectsMutex;
+    std::deque< ReleaseQueueElemType, STDAllocatorRawMem<ReleaseQueueElemType> > m_StaleD3D12Objects;
 
     std::mutex m_UploadHeapMutex;
     typedef std::unique_ptr<DynamicUploadHeap, STDDeleterRawMem<DynamicUploadHeap> > UploadHeapPoolElemType;

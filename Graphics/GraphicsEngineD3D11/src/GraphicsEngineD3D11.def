@@ -1,3 +1,2 @@
 EXPORTS
-	 CreateDeviceAndContextsD3D11
-	 CreateSwapChainD3D11
+	 GetEngineFactoryD3D11

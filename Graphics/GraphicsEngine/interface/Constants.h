@@ -29,6 +29,7 @@
 namespace Diligent
 {
     /// Maximum number of input buffer slots.
+    /// D3D11_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT == 32
     static const Uint32 MaxBufferSlots = 32;
 
     /// Maximum number of simultaneous render targets.

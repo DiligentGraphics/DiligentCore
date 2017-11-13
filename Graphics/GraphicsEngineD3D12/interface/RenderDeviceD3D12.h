@@ -39,11 +39,43 @@ class IRenderDeviceD3D12 : public Diligent::IRenderDevice
 {
 public:
 
-    /// Returns a pointer to the ID3D12Device interface of the internal Direct3D12 object.
+    /// Returns ID3D12Device interface of the internal Direct3D12 device object.
 
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
     virtual ID3D12Device* GetD3D12Device() = 0;
+
+    /// Returns the fence value that will be signaled by the GPU command queue next
+    virtual Uint64 GetNextFenceValue() = 0;
+
+    /// Checks if the fence value has been signaled by the GPU. True means
+    /// that all associated work has been finished
+    virtual Bool IsFenceSignaled(Uint64 FenceValue) = 0;
+
+    /// Should be called at the end of the frame when attached to existing D3D12 device
+    /// Otherwise the method is automatically called before present
+    virtual void FinishFrame() = 0;
+
+    /// Creates a texture object from native d3d12 resource
+
+    /// \param [in] pd3d12Texture - pointer to the native D3D12 texture
+    /// \param [out] ppTexture - Address of the memory location where the pointer to the
+    ///                          texture interface will be stored. 
+    ///                          The function calls AddRef(), so that the new object will contain 
+    ///                          one refernce.
+    virtual void CreateTextureFromD3DResource(ID3D12Resource *pd3d12Texture, ITexture **ppTexture) = 0;
+
+    /// Creates a buffer object from native d3d12 resoruce
+
+    /// \param [in] pd3d12Buffer - Pointer to the native d3d12 buffer resource
+    /// \param [in] BuffDesc - Buffer description. The system can recover buffer size, but
+    ///                        the rest of the fields need to be populated by the client 
+    ///                        as they cannot be recovered from d3d12 resource description
+    /// \param [out] ppBuffer - Address of the memory location where the pointer to the
+    ///                         buffer interface will be stored. 
+    ///                         The function calls AddRef(), so that the new object will contain 
+    ///                         one reference.
+    virtual void CreateBufferFromD3DResource(ID3D12Resource *pd3d12Buffer, const BufferDesc& BuffDesc, IBuffer **ppBuffer) = 0;
 };
 
 }

@@ -26,6 +26,7 @@
 #include "GraphicsTypes.h"
 #include "GLObjectWrapper.h"
 #include "UniqueIdentifier.h"
+#include "GLContext.h"
 
 namespace Diligent
 {
@@ -65,10 +66,16 @@ public:
     void SetBlendFactors(const float *BlendFactors);
     void SetBlendState(const BlendStateDesc &BSDsc, Uint32 SampleMask);
 
-    Bool GetDepthWritesEnabled(){ return m_DepthWritesEnableState; }
+    Bool GetDepthWritesEnabled(){ return m_DSState.m_DepthWritesEnableState; }
     Bool GetScissorTestEnabled(){ return m_RSState.ScissorTestEnable; }
     void GetColorWriteMask( Uint32 RTIndex, Uint32 &WriteMask, Bool &bIsIndependent );
     void SetColorWriteMask( Uint32 RTIndex, Uint32 WriteMask, Bool bIsIndependent );
+
+    void SetNumPatchVertices( Int32 NumVertices);
+    void Invalidate();
+
+    void SetCurrentGLContext(GLContext::NativeGLContextType Context) { m_CurrentGLContext = Context; }
+    GLContext::NativeGLContextType GetCurrentGLContext()const { return m_CurrentGLContext; }
 
 private:
     // It is unsafe to use GL handle to keep track of bound objects
@@ -78,27 +85,29 @@ private:
     // the system can reuse the same address
     // The safest way is to keep global unique ID for all objects
 
-    Diligent::UniqueIdentifier m_GLProgId;
-    Diligent::UniqueIdentifier m_GLPipelineId;
-    Diligent::UniqueIdentifier m_VAOId;
-    Diligent::UniqueIdentifier m_FBOId;
+    Diligent::UniqueIdentifier m_GLProgId = -1;
+    Diligent::UniqueIdentifier m_GLPipelineId = -1;
+    Diligent::UniqueIdentifier m_VAOId = -1;
+    Diligent::UniqueIdentifier m_FBOId = -1;
     std::vector< Diligent::UniqueIdentifier > m_BoundTextures;
     std::vector< Diligent::UniqueIdentifier > m_BoundSamplers;
     struct BoundImageInfo
     {
-        Diligent::UniqueIdentifier InterfaceID;
-        GLint MipLevel;
-        GLboolean IsLayered;
-        GLint Layer;
-        GLenum Access;
-        GLenum Format;
+        Diligent::UniqueIdentifier InterfaceID = -1;
+        GLint MipLevel = 0;
+        GLboolean IsLayered = 0;
+        GLint Layer = 0;
+        GLenum Access = 0;
+        GLenum Format = 0;
         
-        BoundImageInfo( Diligent::UniqueIdentifier _UniqueID = 0, 
-                         GLint _MipLevel = 0,
-                         GLboolean _IsLayered = 0,
-                         GLint _Layer = 0,
-                         GLenum _Access = 0,
-                         GLenum _Format = 0) :
+        BoundImageInfo() {};
+
+        BoundImageInfo( Diligent::UniqueIdentifier _UniqueID,
+                        GLint _MipLevel,
+                        GLboolean _IsLayered,
+                        GLint _Layer,
+                        GLenum _Access,
+                        GLenum _Format) :
             InterfaceID  (_UniqueID ),
             MipLevel  (_MipLevel ),
             IsLayered (_IsLayered),
@@ -109,7 +118,7 @@ private:
 
         bool operator==(const BoundImageInfo &rhs)const
         {
-            return  InterfaceID    == rhs.InterfaceID  &&
+            return  InterfaceID == rhs.InterfaceID  &&
                     MipLevel    == rhs.MipLevel  &&
                     IsLayered   == rhs.IsLayered &&
                     Layer       == rhs.Layer     &&
@@ -117,24 +126,24 @@ private:
                     Format      == rhs.Format;
         }
     };
-    std::vector< BoundImageInfo > m_pBoundImages;
-    Uint32 m_PendingMemoryBarriers;
+    std::vector< BoundImageInfo > m_BoundImages;
+
+    Uint32 m_PendingMemoryBarriers = 0;
 
     class EnableStateHelper
     {
     public:
-        enum class ENABLE_STATE
+        enum class ENABLE_STATE : Int32
         {
             UNKNOWN,
             ENABLED,
             DISABLED
         };
 
-        EnableStateHelper() : m_EnableState( ENABLE_STATE::UNKNOWN ) {}
         bool operator == (bool bEnabled)const
         {
-            return  bEnabled && m_EnableState == ENABLE_STATE::ENABLED ||
-                   !bEnabled && m_EnableState == ENABLE_STATE::DISABLED;
+            return  (bEnabled && m_EnableState == ENABLE_STATE::ENABLED) ||
+                   (!bEnabled && m_EnableState == ENABLE_STATE::DISABLED);
         }
         bool operator != (bool bEnabled) const
         {
@@ -153,62 +162,51 @@ private:
         }
 
     private:
-        ENABLE_STATE m_EnableState;
+        ENABLE_STATE m_EnableState = ENABLE_STATE::UNKNOWN;
     };
-    EnableStateHelper m_DepthEnableState;
-    EnableStateHelper m_DepthWritesEnableState;
-    COMPARISON_FUNCTION m_DepthCmpFunc;
-    EnableStateHelper m_StencilTestEnableState;
-    Uint8 m_StencilReadMask;
-    Uint8 m_StencilWriteMask;
-    struct StencilOpState
+
+    struct DepthStencilGLState
     {
-        COMPARISON_FUNCTION Func;
-        STENCIL_OP          StencilFailOp;
-        STENCIL_OP          StencilDepthFailOp;
-        STENCIL_OP          StencilPassOp;
-        Int32 Ref;
-        Uint32 Mask;
-        StencilOpState() :
-            Func( COMPARISON_FUNC_UNKNOWN ),
-            StencilFailOp(STENCIL_OP_UNDEFINED),
-            StencilDepthFailOp( STENCIL_OP_UNDEFINED ),
-            StencilPassOp( STENCIL_OP_UNDEFINED ),
-            Ref( -1 ),
-            Mask( -1 )
-        {}
-    }m_StencilOpState[2];
+        EnableStateHelper m_DepthEnableState;
+        EnableStateHelper m_DepthWritesEnableState;
+        COMPARISON_FUNCTION m_DepthCmpFunc = COMPARISON_FUNC_UNKNOWN;
+        EnableStateHelper m_StencilTestEnableState;
+        Uint16 m_StencilReadMask  = 0xFFFF;
+        Uint16 m_StencilWriteMask = 0xFFFF;
+        struct StencilOpState
+        {
+            COMPARISON_FUNCTION Func = COMPARISON_FUNC_UNKNOWN;
+            STENCIL_OP StencilFailOp      = STENCIL_OP_UNDEFINED;
+            STENCIL_OP StencilDepthFailOp = STENCIL_OP_UNDEFINED;
+            STENCIL_OP StencilPassOp      = STENCIL_OP_UNDEFINED;
+            Int32 Ref = std::numeric_limits<Int32>::min();
+            Uint32 Mask = static_cast<Uint32>(-1);
+        }m_StencilOpState[2];
+    }m_DSState;
 
     struct RasterizerGLState
     {
-        FILL_MODE FillMode;
-        CULL_MODE CullMode;
+        FILL_MODE FillMode = FILL_MODE_UNDEFINED;
+        CULL_MODE CullMode = CULL_MODE_UNDEFINED;
         EnableStateHelper FrontCounterClockwise;
-        float fDepthBias;
-        float fSlopeScaledDepthBias;
+        float fDepthBias = std::numeric_limits<float>::max();
+        float fSlopeScaledDepthBias = std::numeric_limits<float>::max();
         EnableStateHelper DepthClampEnable;
         EnableStateHelper ScissorTestEnable;
-        RasterizerGLState() : 
-            FillMode(FILL_MODE_UNDEFINED),
-            CullMode(CULL_MODE_UNDEFINED),
-            fDepthBias( std::numeric_limits<float>::max() ),
-            fSlopeScaledDepthBias( std::numeric_limits<float>::max() )
-        {}
     }m_RSState;
 
     struct ContextCaps
     {
-        bool bFillModeSelectionSupported;
-        GLint m_iMaxCombinedTexUnits;
-        ContextCaps() :
-            bFillModeSelectionSupported(True),
-            m_iMaxCombinedTexUnits(0)
-        {}
+        bool bFillModeSelectionSupported = True;
+        GLint m_iMaxCombinedTexUnits = 0;
     }m_Caps;
 
-    Uint32 m_ColorWriteMasks[MaxRenderTargets];
+    Uint32 m_ColorWriteMasks[MaxRenderTargets] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
     EnableStateHelper m_bIndependentWriteMasks;
-    Int32 m_iActiveTexture;
+    Int32 m_iActiveTexture = -1;
+    Int32 m_NumPatchVertices = -1;
+    
+    GLContext::NativeGLContextType m_CurrentGLContext = {};
 };
 
 }

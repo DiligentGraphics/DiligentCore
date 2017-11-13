@@ -33,9 +33,27 @@
 #endif
 
 #if defined( PLATFORM_WIN32 )
-    #include "..\Win32\include\Win32PlatformDefinitions.h"
+
+#   include "..\Win32\include\Win32PlatformDefinitions.h"
+
+#   define OPENGL_SUPPORTED 1
+#   define D3D11_SUPPORTED 1
+#   define D3D12_SUPPORTED 1
+
 #elif defined( PLATFORM_UNIVERSAL_WINDOWS )
-    #include "..\UWP\include\UWPDefinitions.h"
+
+#   include "..\UWP\include\UWPDefinitions.h"
+
+#   define OPENGL_SUPPORTED 0
+#   define D3D11_SUPPORTED 1
+#   define D3D12_SUPPORTED 1
+
 #elif defined ( PLATFORM_ANDROID )
-    #include "..\Android\include\AndroidPlatformDefinitions.h"
+
+#   include "..\Android\include\AndroidPlatformDefinitions.h"
+
+#   define OPENGL_SUPPORTED 1
+#   define D3D11_SUPPORTED 0
+#   define D3D12_SUPPORTED 0
+
 #endif

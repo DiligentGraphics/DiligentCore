@@ -27,7 +27,9 @@
 /// Declaration of functions that create OpenGL-based engine implementation
 
 #include "RenderDevice.h"
+#include "DeviceContext.h"
 #include "SwapChain.h"
+#include "HLSL2GLSLConverter.h"
 
 #if defined(PLATFORM_WIN32) || defined(PLATFORM_UNIVERSAL_WINDOWS)
 
@@ -48,22 +50,37 @@
 
 #endif
 
+namespace Diligent
+{
+
+class IEngineFactoryOpenGL
+{
+public:
+    virtual void CreateDeviceAndSwapChainGL( const EngineCreationAttribs& CreationAttribs, 
+                                             IRenderDevice **ppDevice,
+                                             IDeviceContext **ppImmediateContext,
+                                             const SwapChainDesc& SCDesc, 
+                                             void *pNativeWndHandle, 
+                                             ISwapChain **ppSwapChain ) = 0;
+    virtual void CreateHLSL2GLSLConverter(IHLSL2GLSLConverter **ppConverter) = 0;
+    
+    virtual void AttachToActiveGLContext( const EngineCreationAttribs& CreationAttribs, 
+                                          IRenderDevice **ppDevice,
+                                          IDeviceContext **ppImmediateContext ) = 0;
+};
+
+}
 
 extern "C"
 {
 
 #if defined(ENGINE_DLL) && (defined(PLATFORM_WIN32) || defined(PLATFORM_UNIVERSAL_WINDOWS))
 
-    typedef void (*CreateDeviceAndSwapChainGLType)( const Diligent::EngineCreationAttribs& CreationAttribs, 
-                                     Diligent::IRenderDevice **ppDevice,
-                                     Diligent::IDeviceContext **ppImmediateContext,
-                                     const Diligent::SwapChainDesc& SCDesc, 
-                                     void *pNativeWndHandle, 
-                                     Diligent::ISwapChain **ppSwapChain );
+    typedef Diligent::IEngineFactoryOpenGL* (*GetEngineFactoryOpenGLType)();
 
-    static void LoadGraphicsEngineOpenGL(CreateDeviceAndSwapChainGLType &CreateDeviceFunc)
+    static bool LoadGraphicsEngineOpenGL(GetEngineFactoryOpenGLType &GetFactoryFunc)
     {
-        CreateDeviceFunc = nullptr;
+        GetFactoryFunc = nullptr;
         std::string LibName = "GraphicsEngineOpenGL_";
 
 #if _WIN64
@@ -83,27 +100,23 @@ extern "C"
         if( hModule == NULL )
         {
             LOG_ERROR_MESSAGE( "Failed to load ", LibName, " library." );
-            return;
+            return false;
         }
 
-        CreateDeviceFunc = reinterpret_cast<CreateDeviceAndSwapChainGLType>( GetProcAddress(hModule, "CreateDeviceAndSwapChainGL") );
-        if( CreateDeviceFunc == NULL )
+        GetFactoryFunc = reinterpret_cast<GetEngineFactoryOpenGLType>( GetProcAddress(hModule, "GetEngineFactoryOpenGL") );
+        if( GetFactoryFunc == NULL )
         {
-            LOG_ERROR_MESSAGE( "Failed to load CreateDeviceAndSwapChainGL() from ", LibName, " library." );
+            LOG_ERROR_MESSAGE( "Failed to load GetEngineFactoryOpenGL() from ", LibName, " library." );
             FreeLibrary( hModule );
-            return;
+            return false;
         }
+        return true;
     }
 
 #else
 
     // Do not forget to call System.loadLibrary("GraphicsEngineOpenGL") in Java on Android!
     API_QUALIFIER
-    void CreateDeviceAndSwapChainGL( const Diligent::EngineCreationAttribs& CreationAttribs, 
-                                     Diligent::IRenderDevice **ppDevice,
-                                     Diligent::IDeviceContext **ppImmediateContext,
-                                     const Diligent::SwapChainDesc& SCDesc, 
-                                     void *pNativeWndHandle, 
-                                     Diligent::ISwapChain **ppSwapChain );
+    Diligent::IEngineFactoryOpenGL* GetEngineFactoryOpenGL();
 #endif
 }

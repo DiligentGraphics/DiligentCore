@@ -39,7 +39,15 @@ static const Diligent::INTERFACE_ID IID_DeviceContextGL =
 class IDeviceContextGL : public Diligent::IDeviceContext
 {
 public:
-    
+
+    /// Attaches to the active GL context in the thread.
+
+    /// If an application uses multiple GL contexts, this method must be called before any 
+    /// other command to let the engine update active context every time when control flow 
+    /// is passed over from the main application
+    ///
+    /// \return false if there is no active GL context, and true otherwise
+    virtual bool UpdateCurrentGLContext() = 0;
 };
 
 }

@@ -38,19 +38,18 @@ namespace Diligent
 
 /// \tparam BaseInterface - base interface that this class will inheret 
 ///                         (Diligent::IShaderResourceBindingGL, Diligent::IShaderResourceBindingD3D11, or Diligent::IShaderResourceBindingD3D12).
-/// \tparam SRBAllocator - type of the allocator that is used to allocate memory for the shader resource binding object instances
-template<class BaseInterface, class SRBAllocator>
-class ShaderResourceBindingBase : public ObjectBase<BaseInterface, SRBAllocator>
+template<class BaseInterface>
+class ShaderResourceBindingBase : public ObjectBase<BaseInterface>
 {
 public:
-    typedef ObjectBase<BaseInterface, SRBAllocator> TObjectBase;
+    typedef ObjectBase<BaseInterface> TObjectBase;
 
-    /// \param ObjAllocator - allocator that was used to allocate memory for this instance of the shader resource binding object
+    /// \param pRefCounters - reference counters object that controls the lifetime of this SRB.
 	/// \param pPSO - pipeline state that this SRB belongs to.
 	/// \param IsInternal - flag indicating if the shader resource binding is an internal PSO object and 
 	///						must not keep a strong reference to the PSO.
-    ShaderResourceBindingBase( SRBAllocator &ObjAllocator, IPipelineState *pPSO, bool IsInternal = false ) :
-        TObjectBase( IsInternal ? pPSO : nullptr, &ObjAllocator ),
+    ShaderResourceBindingBase( IReferenceCounters *pRefCounters, IPipelineState *pPSO, bool IsInternal = false ) :
+        TObjectBase( pRefCounters ),
         m_pPSO( pPSO ),
         m_spPSO( IsInternal ? nullptr : pPSO )
     {}
@@ -68,7 +67,7 @@ protected:
     /// Strong reference to PSO. We must use strong reference, because
     /// shader resource binding uses PSO's memory allocator to allocate
     /// memory for shader resource cache.
-    Diligent::RefCntAutoPtr<IPipelineState> m_spPSO;
+    RefCntAutoPtr<IPipelineState> m_spPSO;
     IPipelineState *m_pPSO;
 };
 

@@ -32,12 +32,12 @@ namespace Diligent
 {
 
 /// Implementation of the Diligent::ICommandList interface
-class CommandListD3D12Impl : public CommandListBase<ICommandList, FixedBlockMemoryAllocator>
+class CommandListD3D12Impl : public CommandListBase<ICommandList>
 {
 public:
-    typedef CommandListBase<ICommandList, FixedBlockMemoryAllocator> TCommandListBase;
-    CommandListD3D12Impl(FixedBlockMemoryAllocator &Allocator, IRenderDevice *pDevice, class CommandContext* pCmdContext) :
-        TCommandListBase(Allocator, pDevice),
+    typedef CommandListBase<ICommandList> TCommandListBase;
+    CommandListD3D12Impl(IReferenceCounters *pRefCounters, IRenderDevice *pDevice, class CommandContext* pCmdContext) :
+        TCommandListBase(pRefCounters, pDevice),
         m_pCmdContext(pCmdContext)
     {
     }

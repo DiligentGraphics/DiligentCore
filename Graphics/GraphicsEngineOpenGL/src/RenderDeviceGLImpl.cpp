@@ -45,11 +45,10 @@
 namespace Diligent
 {
 
-RenderDeviceGLImpl :: RenderDeviceGLImpl(IMemoryAllocator &RawMemAllocator, const ContextInitInfo &InitInfo):
-    TRenderDeviceBase(RawMemAllocator, 0, sizeof(TextureBaseGL), sizeof(TextureViewGLImpl), sizeof(BufferGLImpl), sizeof(BufferViewGLImpl), sizeof(ShaderGLImpl), sizeof(SamplerGLImpl), sizeof(PipelineStateGLImpl), sizeof(ShaderResourceBindingGLImpl)),
+RenderDeviceGLImpl :: RenderDeviceGLImpl(IReferenceCounters *pRefCounters, IMemoryAllocator &RawMemAllocator, const ContextInitInfo &InitInfo):
+    TRenderDeviceBase(pRefCounters, RawMemAllocator, 0, sizeof(TextureBaseGL), sizeof(TextureViewGLImpl), sizeof(BufferGLImpl), sizeof(BufferViewGLImpl), sizeof(ShaderGLImpl), sizeof(SamplerGLImpl), sizeof(PipelineStateGLImpl), sizeof(ShaderResourceBindingGLImpl)),
     // Device caps must be filled in before the constructor of Pipeline Cache is called!
     m_GLContext(InitInfo, m_DeviceCaps),
-    m_EmptyVAO(true),
     m_TexRegionRender(this)
 {
     GLint NumExtensions = 0;
@@ -69,12 +68,12 @@ RenderDeviceGLImpl :: RenderDeviceGLImpl(IMemoryAllocator &RawMemAllocator, cons
     std::basic_string<GLubyte> glstrVendor = glGetString( GL_VENDOR );
     std::string Vendor(glstrVendor.begin(), glstrVendor.end());
     transform(Vendor.begin(), Vendor.end(), Vendor.begin(), ::tolower);
-    if( Vendor.find( "intel" ) != string::npos )
+    if( Vendor.find( "intel" ) != std::string::npos )
         m_GPUInfo.Vendor = GPU_VENDOR::INTEL;
-    else if( Vendor.find( "nvidia" ) != string::npos )
+    else if( Vendor.find( "nvidia" ) != std::string::npos )
         m_GPUInfo.Vendor = GPU_VENDOR::NVIDIA;
-    else if( Vendor.find( "ati" ) != string::npos || 
-             Vendor.find( "amd" ) != string::npos )
+    else if( Vendor.find( "ati" ) != std::string::npos || 
+             Vendor.find( "amd" ) != std::string::npos )
         m_GPUInfo.Vendor = GPU_VENDOR::ATI;
 }
 
@@ -82,14 +81,15 @@ RenderDeviceGLImpl :: ~RenderDeviceGLImpl()
 {
 }
 
-IMPLEMENT_QUERY_INTERFACE( RenderDeviceGLImpl, IID_GLDeviceBaseInterface, TRenderDeviceBase )
+IMPLEMENT_QUERY_INTERFACE( RenderDeviceGLImpl, IID_RenderDeviceGL, TRenderDeviceBase )
 
 void RenderDeviceGLImpl :: CreateBuffer(const BufferDesc& BuffDesc, const BufferData &BuffData, IBuffer **ppBuffer, bool bIsDeviceInternal)
 {
     CreateDeviceObject( "buffer", BuffDesc, ppBuffer, 
         [&]()
         {
-            BufferGLImpl *pBufferOGL( NEW(m_BufObjAllocator, "BufferGLImpl instance", BufferGLImpl, m_BuffViewObjAllocator, this, BuffDesc, BuffData, bIsDeviceInternal ) );
+            BufferGLImpl *pBufferOGL( NEW_RC_OBJ(m_BufObjAllocator, "BufferGLImpl instance", BufferGLImpl)
+                                                (m_BuffViewObjAllocator, this, BuffDesc, BuffData, bIsDeviceInternal ) );
             pBufferOGL->QueryInterface( IID_Buffer, reinterpret_cast<IObject**>(ppBuffer) );
             pBufferOGL->CreateDefaultViews();
             OnCreateDeviceObject( pBufferOGL );
@@ -102,13 +102,27 @@ void RenderDeviceGLImpl :: CreateBuffer(const BufferDesc& BuffDesc, const Buffer
 	CreateBuffer(BuffDesc, BuffData, ppBuffer, false);
 }
 
+void RenderDeviceGLImpl :: CreateBufferFromGLHandle(Uint32 GLHandle, const BufferDesc &BuffDesc, IBuffer **ppBuffer)
+{
+    CreateDeviceObject( "buffer", BuffDesc, ppBuffer, 
+        [&]()
+        {
+            BufferGLImpl *pBufferOGL( NEW_RC_OBJ(m_BufObjAllocator, "BufferGLImpl instance", BufferGLImpl)
+                                                (m_BuffViewObjAllocator, this, BuffDesc, GLHandle, false ) );
+            pBufferOGL->QueryInterface( IID_Buffer, reinterpret_cast<IObject**>(ppBuffer) );
+            pBufferOGL->CreateDefaultViews();
+            OnCreateDeviceObject( pBufferOGL );
+        } 
+    );
+}
 
 void RenderDeviceGLImpl :: CreateShader(const ShaderCreationAttribs &ShaderCreationAttribs, IShader **ppShader, bool bIsDeviceInternal)
 {
     CreateDeviceObject( "shader", ShaderCreationAttribs.Desc, ppShader, 
         [&]()
         {
-            ShaderGLImpl *pShaderOGL(NEW(m_ShaderObjAllocator, "ShaderGLImpl instance", ShaderGLImpl, this, ShaderCreationAttribs, bIsDeviceInternal));
+            ShaderGLImpl *pShaderOGL(NEW_RC_OBJ(m_ShaderObjAllocator, "ShaderGLImpl instance", ShaderGLImpl)
+                                               (this, ShaderCreationAttribs, bIsDeviceInternal));
             pShaderOGL->QueryInterface(IID_Shader, reinterpret_cast<IObject**>(ppShader) );
 
             OnCreateDeviceObject( pShaderOGL );
@@ -139,31 +153,38 @@ void RenderDeviceGLImpl :: CreateTexture(const TextureDesc& TexDesc, const Textu
             switch(TexDesc.Type)
             {
                 case RESOURCE_DIM_TEX_1D:
-                    pTextureOGL = NEW(m_TexObjAllocator, "Texture1D_OGL instance", Texture1D_OGL, m_TexViewObjAllocator, this, pDeviceContext, TexDesc, Data, bIsDeviceInternal);
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture1D_OGL instance", Texture1D_OGL)
+                                            (m_TexViewObjAllocator, this, pDeviceContext, TexDesc, Data, bIsDeviceInternal);
                     break;
         
                 case RESOURCE_DIM_TEX_1D_ARRAY:
-                    pTextureOGL = NEW(m_TexObjAllocator, "Texture1DArray_OGL instance", Texture1DArray_OGL, m_TexViewObjAllocator, this, pDeviceContext, TexDesc, Data, bIsDeviceInternal);
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture1DArray_OGL instance", Texture1DArray_OGL)
+                                            (m_TexViewObjAllocator, this, pDeviceContext, TexDesc, Data, bIsDeviceInternal);
                     break;
 
                 case RESOURCE_DIM_TEX_2D:
-                    pTextureOGL = NEW(m_TexObjAllocator, "Texture2D_OGL instance", Texture2D_OGL, m_TexViewObjAllocator, this, pDeviceContext, TexDesc, Data, bIsDeviceInternal);
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture2D_OGL instance", Texture2D_OGL)
+                                            (m_TexViewObjAllocator, this, pDeviceContext, TexDesc, Data, bIsDeviceInternal);
                     break;
         
                 case RESOURCE_DIM_TEX_2D_ARRAY:
-                    pTextureOGL = NEW(m_TexObjAllocator, "Texture2DArray_OGL instance", Texture2DArray_OGL, m_TexViewObjAllocator, this, pDeviceContext, TexDesc, Data, bIsDeviceInternal);
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture2DArray_OGL instance", Texture2DArray_OGL)
+                                            (m_TexViewObjAllocator, this, pDeviceContext, TexDesc, Data, bIsDeviceInternal);
                     break;
 
                 case RESOURCE_DIM_TEX_3D:
-                    pTextureOGL = NEW(m_TexObjAllocator, "Texture3D_OGL instance", Texture3D_OGL, m_TexViewObjAllocator, this, pDeviceContext, TexDesc, Data, bIsDeviceInternal);
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture3D_OGL instance", Texture3D_OGL)
+                                            (m_TexViewObjAllocator, this, pDeviceContext, TexDesc, Data, bIsDeviceInternal);
                     break;
 
                 case RESOURCE_DIM_TEX_CUBE:
-                    pTextureOGL = NEW(m_TexObjAllocator, "TextureCube_OGL instance", TextureCube_OGL, m_TexViewObjAllocator, this, pDeviceContext, TexDesc, Data, bIsDeviceInternal);
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "TextureCube_OGL instance", TextureCube_OGL)
+                                            (m_TexViewObjAllocator, this, pDeviceContext, TexDesc, Data, bIsDeviceInternal);
                     break;
 
                 case RESOURCE_DIM_TEX_CUBE_ARRAY:
-                    pTextureOGL = NEW(m_TexObjAllocator, "TextureCubeArray_OGL instance", TextureCubeArray_OGL, m_TexViewObjAllocator, this, pDeviceContext, TexDesc, Data, bIsDeviceInternal);
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "TextureCubeArray_OGL instance", TextureCubeArray_OGL)
+                                            (m_TexViewObjAllocator, this, pDeviceContext, TexDesc, Data, bIsDeviceInternal);
                     break;
 
                 default: LOG_ERROR_AND_THROW( "Unknown texture type. (Did you forget to initialize the Type member of TextureDesc structure?)" );
@@ -181,6 +202,62 @@ void RenderDeviceGLImpl::CreateTexture(const TextureDesc& TexDesc, const Texture
 	CreateTexture(TexDesc, Data, ppTexture, false);
 }
 
+void RenderDeviceGLImpl::CreateTextureFromGLHandle(Uint32 GLHandle, const TextureDesc &TexDesc, ITexture **ppTexture)
+{
+    CreateDeviceObject( "texture", TexDesc, ppTexture, 
+        [&]()
+        {
+            auto spDeviceContext = GetImmediateContext();
+            VERIFY(spDeviceContext, "Immediate device context has been destroyed");
+            auto pDeviceContext = ValidatedCast<DeviceContextGLImpl>( spDeviceContext.RawPtr() );
+            TextureBaseGL *pTextureOGL = nullptr;
+            switch(TexDesc.Type)
+            {
+                case RESOURCE_DIM_TEX_1D:
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture1D_OGL instance", Texture1D_OGL)
+                                            (m_TexViewObjAllocator, this, pDeviceContext, TexDesc, GLHandle);
+                    break;
+        
+                case RESOURCE_DIM_TEX_1D_ARRAY:
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture1DArray_OGL instance", Texture1DArray_OGL)
+                                            (m_TexViewObjAllocator, this, pDeviceContext, TexDesc, GLHandle);
+                    break;
+
+                case RESOURCE_DIM_TEX_2D:
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture2D_OGL instance", Texture2D_OGL)
+                                            (m_TexViewObjAllocator, this, pDeviceContext, TexDesc, GLHandle);
+                    break;
+        
+                case RESOURCE_DIM_TEX_2D_ARRAY:
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture2DArray_OGL instance", Texture2DArray_OGL)
+                                            (m_TexViewObjAllocator, this, pDeviceContext, TexDesc, GLHandle);
+                    break;
+
+                case RESOURCE_DIM_TEX_3D:
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture3D_OGL instance", Texture3D_OGL)
+                                            (m_TexViewObjAllocator, this, pDeviceContext, TexDesc, GLHandle);
+                    break;
+
+                case RESOURCE_DIM_TEX_CUBE:
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "TextureCube_OGL instance", TextureCube_OGL)
+                                            (m_TexViewObjAllocator, this, pDeviceContext, TexDesc, GLHandle);
+                    break;
+
+                case RESOURCE_DIM_TEX_CUBE_ARRAY:
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "TextureCubeArray_OGL instance", TextureCubeArray_OGL)
+                                            (m_TexViewObjAllocator, this, pDeviceContext, TexDesc, GLHandle);
+                    break;
+
+                default: LOG_ERROR_AND_THROW( "Unknown texture type. (Did you forget to initialize the Type member of TextureDesc structure?)" );
+            }
+    
+            pTextureOGL->QueryInterface( IID_Texture, reinterpret_cast<IObject**>(ppTexture) );
+            pTextureOGL->CreateDefaultViews();
+            OnCreateDeviceObject( pTextureOGL );
+        }
+    );
+}
+
 void RenderDeviceGLImpl :: CreateSampler(const SamplerDesc& SamplerDesc, ISampler **ppSampler, bool bIsDeviceInternal)
 {
     CreateDeviceObject( "sampler", SamplerDesc, ppSampler, 
@@ -189,7 +266,8 @@ void RenderDeviceGLImpl :: CreateSampler(const SamplerDesc& SamplerDesc, ISample
             m_SamplersRegistry.Find( SamplerDesc, reinterpret_cast<IDeviceObject**>(ppSampler) );
             if( *ppSampler == nullptr )
             {
-                SamplerGLImpl *pSamplerOGL( NEW(m_SamplerObjAllocator, "SamplerGLImpl instance", SamplerGLImpl, this, SamplerDesc, bIsDeviceInternal ) );
+                SamplerGLImpl *pSamplerOGL( NEW_RC_OBJ(m_SamplerObjAllocator, "SamplerGLImpl instance", SamplerGLImpl)
+                                                      (this, SamplerDesc, bIsDeviceInternal ) );
                 pSamplerOGL->QueryInterface( IID_Sampler, reinterpret_cast<IObject**>(ppSampler) );
                 OnCreateDeviceObject( pSamplerOGL );
                 m_SamplersRegistry.Add( SamplerDesc, *ppSampler );
@@ -214,7 +292,8 @@ void RenderDeviceGLImpl::CreatePipelineState(const PipelineStateDesc &PipelineDe
     CreateDeviceObject( "Pipeline state", PipelineDesc, ppPipelineState, 
         [&]()
         {
-            PipelineStateGLImpl *pPipelineStateOGL( NEW(m_PSOAllocator, "PipelineStateGLImpl instance", PipelineStateGLImpl, this, PipelineDesc, bIsDeviceInternal ) );
+            PipelineStateGLImpl *pPipelineStateOGL( NEW_RC_OBJ(m_PSOAllocator, "PipelineStateGLImpl instance", PipelineStateGLImpl)
+                                                              (this, PipelineDesc, bIsDeviceInternal ) );
             pPipelineStateOGL->QueryInterface( IID_PipelineState, reinterpret_cast<IObject**>(ppPipelineState) );
             OnCreateDeviceObject( pPipelineStateOGL );
         }
@@ -231,7 +310,7 @@ void RenderDeviceGLImpl::FlagSupportedTexFormats()
 {
     const auto &DeviceCaps = GetDeviceCaps();
     bool bGL33OrAbove = DeviceCaps.DevType == DeviceType::OpenGL && 
-                        (DeviceCaps.MajorVersion >= 4 || DeviceCaps.MajorVersion == 3 && DeviceCaps.MinorVersion >= 3);
+                        (DeviceCaps.MajorVersion >= 4 || (DeviceCaps.MajorVersion == 3 && DeviceCaps.MinorVersion >= 3) );
 
     bool bRGTC = CheckExtension( "GL_ARB_texture_compression_rgtc" );
     bool bBPTC = CheckExtension( "GL_ARB_texture_compression_bptc" );
@@ -350,7 +429,7 @@ void RenderDeviceGLImpl::FlagSupportedTexFormats()
 
 #ifdef _DEBUG
     bool bGL43OrAbove = DeviceCaps.DevType == DeviceType::OpenGL && 
-                        (DeviceCaps.MajorVersion >= 5 || DeviceCaps.MajorVersion == 4 && DeviceCaps.MinorVersion >= 3);
+                        (DeviceCaps.MajorVersion >= 5 || (DeviceCaps.MajorVersion == 4 && DeviceCaps.MinorVersion >= 3) );
 
     const int TestTextureDim = 32;
     const int MaxTexelSize = 16;
@@ -392,7 +471,7 @@ void RenderDeviceGLImpl::FlagSupportedTexFormats()
             // For some reason glTexStorage2D() may succeed, but upload operation
             // will later fail. So we need to additionally try to upload some
             // data to the texture
-            auto TransferAttribs = GetNativePixelTransferAttribs( FmtInfo->Format );
+            const auto &TransferAttribs = GetNativePixelTransferAttribs( FmtInfo->Format );
             if( FmtInfo->ComponentType != COMPONENT_TYPE_COMPRESSED )
             {
                 glTexSubImage2D( GL_TEXTURE_2D, 0,  // mip level
@@ -572,6 +651,40 @@ void RenderDeviceGLImpl :: QueryDeviceCaps()
         if( glGetError() != GL_NO_ERROR )
             m_DeviceCaps.bWireframeFillSupported = False;
     }
+}
+
+
+FBOCache& RenderDeviceGLImpl::GetFBOCache(GLContext::NativeGLContextType Context)
+{
+    ThreadingTools::LockHelper FBOCacheLock(m_FBOCacheLockFlag);
+    return m_FBOCache[Context];
+}
+
+void RenderDeviceGLImpl::OnReleaseTexture(ITexture *pTexture)
+{
+    ThreadingTools::LockHelper FBOCacheLock(m_FBOCacheLockFlag);
+    for (auto& FBOCacheIt : m_FBOCache)
+        FBOCacheIt.second.OnReleaseTexture(pTexture);
+}
+
+VAOCache& RenderDeviceGLImpl::GetVAOCache(GLContext::NativeGLContextType Context)
+{
+    ThreadingTools::LockHelper VAOCacheLock(m_VAOCacheLockFlag);
+    return m_VAOCache[Context];
+}
+
+void RenderDeviceGLImpl::OnDestroyPSO(IPipelineState *pPSO)
+{
+    ThreadingTools::LockHelper VAOCacheLock(m_VAOCacheLockFlag);
+    for (auto& VAOCacheIt : m_VAOCache)
+        VAOCacheIt.second.OnDestroyPSO(pPSO);
+}
+
+void RenderDeviceGLImpl::OnDestroyBuffer(IBuffer *pBuffer)
+{
+    ThreadingTools::LockHelper VAOCacheLock(m_VAOCacheLockFlag);
+    for (auto& VAOCacheIt : m_VAOCache)
+        VAOCacheIt.second.OnDestroyBuffer(pBuffer);
 }
 
 }

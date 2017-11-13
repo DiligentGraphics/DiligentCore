@@ -474,9 +474,6 @@ void RootSignature::Finalize(ID3D12Device *pd3d12Device)
     hr = pd3d12Device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), __uuidof(m_pd3d12RootSignature), reinterpret_cast<void**>( static_cast<ID3D12RootSignature**>(&m_pd3d12RootSignature)));
     CHECK_D3D_RESULT_THROW(hr, "Failed to create root signature")
 
-    //if( *m_Desc.Name != 0)
-    //    m_pd3d12RootSignature->SetName(WidenString(m_Desc.Name).c_str());
-
     bool bHasDynamicResources = m_TotalSrvCbvUavSlots[SHADER_VARIABLE_TYPE_DYNAMIC]!=0 || m_TotalSamplerSlots[SHADER_VARIABLE_TYPE_DYNAMIC]!=0;
     if(bHasDynamicResources)
     {
@@ -522,9 +519,11 @@ void RootSignature::InitResourceCache(RenderDeviceD3D12Impl *pDeviceD3D12Impl, S
     DescriptorHeapAllocation CbcSrvUavHeapSpace, SamplerHeapSpace;
     if(TotalSrvCbvUavDescriptors)
         CbcSrvUavHeapSpace = pDeviceD3D12Impl->AllocateGPUDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, TotalSrvCbvUavDescriptors);
+    VERIFY_EXPR(TotalSrvCbvUavDescriptors == 0 && CbcSrvUavHeapSpace.IsNull() || CbcSrvUavHeapSpace.GetNumHandles() == TotalSrvCbvUavDescriptors);
 
     if(TotalSamplerDescriptors)
         SamplerHeapSpace = pDeviceD3D12Impl->AllocateGPUDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, TotalSamplerDescriptors);
+    VERIFY_EXPR(TotalSamplerDescriptors == 0 && SamplerHeapSpace.IsNull() || SamplerHeapSpace.GetNumHandles() == TotalSamplerDescriptors);
 
     // Iterate through all root static/mutable tables and assign start offsets. The tables are tightly packed, so
     // start offset of table N+1 is start offset of table N plus the size of table N.
@@ -588,8 +587,8 @@ void RootSignature::InitResourceCache(RenderDeviceD3D12Impl *pDeviceD3D12Impl, S
     }
 #endif
     
-    VERIFY_EXPR(SrvCbvUavTblStartOffset == SrvCbvUavTblStartOffset);
-    VERIFY_EXPR(SamplerTblStartOffset == SamplerTblStartOffset);
+    VERIFY_EXPR(SrvCbvUavTblStartOffset == TotalSrvCbvUavDescriptors);
+    VERIFY_EXPR(SamplerTblStartOffset == TotalSamplerDescriptors);
 
     ResourceCache.SetDescriptorHeapSpace(std::move(CbcSrvUavHeapSpace), std::move(SamplerHeapSpace));
 }

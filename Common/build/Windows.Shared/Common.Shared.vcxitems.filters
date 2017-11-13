@@ -99,6 +99,9 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\AdaptiveFixedBlockAllocator.h">
       <Filter>include</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\StringDataBlobImpl.h">
+      <Filter>include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)..\..\src\Timer.cpp">

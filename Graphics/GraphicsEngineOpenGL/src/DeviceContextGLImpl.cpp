@@ -48,22 +48,13 @@ using namespace std;
 
 namespace Diligent
 {
-    DeviceContextGLImpl::DeviceContextGLImpl( IMemoryAllocator &RawMemAllocator, class RenderDeviceGLImpl *pDeviceGL, bool bIsDeferred ) : 
-        TDeviceContextBase(RawMemAllocator, pDeviceGL, bIsDeferred),
+    DeviceContextGLImpl::DeviceContextGLImpl( IReferenceCounters *pRefCounters, class RenderDeviceGLImpl *pDeviceGL, bool bIsDeferred ) : 
+        TDeviceContextBase(pRefCounters, pDeviceGL, bIsDeferred),
         m_ContextState(pDeviceGL),
         m_CommitedResourcesTentativeBarriers(0)
     {
         m_BoundWritableTextures.reserve( 16 );
         m_BoundWritableBuffers.reserve( 16 );
-
-        // When GL_FRAMEBUFFER_SRGB is enabled, and if the destination image is in the sRGB colorspace
-        // then OpenGL will assume the shader's output is in the linear RGB colorspace. It will therefore 
-        // convert the output from linear RGB to sRGB.
-        // Any writes to images that are not in the sRGB format should not be affected.
-        // Thus this setting should be just set once and left that way
-        glEnable(GL_FRAMEBUFFER_SRGB);
-        if( glGetError() != GL_NO_ERROR )
-            LOG_ERROR_MESSAGE("Failed to enable SRGB framebuffers");
     }
 
     IMPLEMENT_QUERY_INTERFACE( DeviceContextGLImpl, IID_DeviceContextGL, TDeviceContextBase )
@@ -74,7 +65,6 @@ namespace Diligent
         TDeviceContextBase::SetPipelineState(pPipelineState);
 
         const auto &Desc = pPipelineState->GetDesc();
-        auto *pPipelineStateGL = ValidatedCast<PipelineStateGLImpl>(pPipelineState);
         if (Desc.IsComputePipeline)
         {
         }
@@ -174,10 +164,14 @@ namespace Diligent
         m_bVAOIsUpToDate = false;
     }
 
-    void DeviceContextGLImpl::ClearState()
+    void DeviceContextGLImpl::InvalidateState()
     {
-        TDeviceContextBase::ClearState();
+        TDeviceContextBase::InvalidateState();
 
+        m_ContextState.Invalidate();
+        m_BoundWritableTextures.clear();
+        m_BoundWritableBuffers.clear();
+        m_bVAOIsUpToDate = false;
     }
 
     void DeviceContextGLImpl::SetIndexBuffer( IBuffer *pIndexBuffer, Uint32 ByteOffset )
@@ -287,24 +281,33 @@ namespace Diligent
         }
     }
 
-    void DeviceContextGLImpl::RebindRenderTargets()
+    void DeviceContextGLImpl::CommitRenderTargets()
     {
-        Uint32 NumRenderTargets = m_NumBoundRenderTargets;
-        VERIFY( NumRenderTargets < MaxRenderTargets, "Too many render targets (", NumRenderTargets, ") are being set" );
-        
-        NumRenderTargets = std::min( NumRenderTargets, MaxRenderTargets );
-        ITextureView *pBoundRTVs[MaxRenderTargets] = {};
-        for( Uint32 rt = 0; rt < NumRenderTargets; ++rt )
-            pBoundRTVs[rt] = m_pBoundRenderTargets[rt];
+        if (m_IsDefaultFramebufferBound)
+        {
+            m_ContextState.BindFBO( GLObjectWrappers::GLFrameBufferObj(false) );
+        }
+        else
+        {
+            VERIFY(m_NumBoundRenderTargets != 0 || m_pBoundDepthStencil, "At least one render target or a depth stencil is expected" )
 
-        auto *pRenderDeviceGL = ValidatedCast<RenderDeviceGLImpl>(m_pDevice.RawPtr());
-        auto &FBOCache = pRenderDeviceGL->m_FBOCache;
-        const auto& FBO = FBOCache.GetFBO( NumRenderTargets, pBoundRTVs, m_pBoundDepthStencil, m_ContextState );
-        // Even though the write mask only applies to writes to a framebuffer, the mask state is NOT 
-        // Framebuffer state. So it is NOT part of a Framebuffer Object or the Default Framebuffer. 
-        // Binding a new framebuffer will NOT affect the mask.
-        m_ContextState.BindFBO( FBO );
+            Uint32 NumRenderTargets = m_NumBoundRenderTargets;
+            VERIFY(NumRenderTargets < MaxRenderTargets, "Too many render targets (", NumRenderTargets, ") are being set");
 
+            NumRenderTargets = std::min(NumRenderTargets, MaxRenderTargets);
+            ITextureView *pBoundRTVs[MaxRenderTargets] = {};
+            for (Uint32 rt = 0; rt < NumRenderTargets; ++rt)
+                pBoundRTVs[rt] = m_pBoundRenderTargets[rt];
+
+            auto *pRenderDeviceGL = ValidatedCast<RenderDeviceGLImpl>(m_pDevice.RawPtr());
+            auto CurrentNativeGLContext = m_ContextState.GetCurrentGLContext();
+            auto &FBOCache = pRenderDeviceGL->GetFBOCache(CurrentNativeGLContext);
+            const auto& FBO = FBOCache.GetFBO(NumRenderTargets, pBoundRTVs, m_pBoundDepthStencil, m_ContextState);
+            // Even though the write mask only applies to writes to a framebuffer, the mask state is NOT 
+            // Framebuffer state. So it is NOT part of a Framebuffer Object or the Default Framebuffer. 
+            // Binding a new framebuffer will NOT affect the mask.
+            m_ContextState.BindFBO(FBO);
+        }
         // Set the viewport to match the render target size
         SetViewports(1, nullptr, 0, 0);
     }
@@ -312,7 +315,7 @@ namespace Diligent
     void DeviceContextGLImpl::SetRenderTargets( Uint32 NumRenderTargets, ITextureView *ppRenderTargets[], ITextureView *pDepthStencil )
     {
         if( TDeviceContextBase::SetRenderTargets( NumRenderTargets, ppRenderTargets, pDepthStencil ) )
-            RebindRenderTargets();
+            CommitRenderTargets();
     }
 
     void DeviceContextGLImpl::BindProgramResources( Uint32 &NewMemoryBarriers, IShaderResourceBinding *pResBinding )
@@ -328,7 +331,7 @@ namespace Diligent
 
         const auto &DeviceCaps = pRenderDeviceGL->GetDeviceCaps();
         auto &Prog = pPipelineStateGL->GetGLProgram();
-        auto &Pipeline = pPipelineStateGL->GetGLProgramPipeline();
+        auto &Pipeline = pPipelineStateGL->GetGLProgramPipeline( m_ContextState.GetCurrentGLContext() );
         VERIFY( Prog ^ Pipeline, "Only one of program or pipeline can be specified" );
         if( !(Prog || Pipeline) )
         {
@@ -559,7 +562,7 @@ namespace Diligent
                         {
                             auto *pBufferViewOGL = ValidatedCast<BufferViewGLImpl>(Resource.RawPtr());
                             const auto &ViewDesc = pBufferViewOGL->GetDesc();
-                            VERIFY( ViewDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS, "Incorrect buffer view type" );
+                            VERIFY( ViewDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS || ViewDesc.ViewType == BUFFER_VIEW_SHADER_RESOURCE, "Unexpceted buffer view type" );
 
                             auto *pBuffer = pBufferViewOGL->GetBuffer();
                             CHECK_DYNAMIC_TYPE( BufferGLImpl, pBuffer );
@@ -573,7 +576,8 @@ namespace Diligent
                             glBindBufferRange( GL_SHADER_STORAGE_BUFFER, it->Binding + ArrInd, pBufferOGL->m_GlBuffer, ViewDesc.ByteOffset, ViewDesc.ByteWidth );
                             CHECK_GL_ERROR( "Failed to bind shader storage buffer" );
 
-                            m_BoundWritableBuffers.push_back( pBufferOGL );
+                            if( ViewDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS )
+                                m_BoundWritableBuffers.push_back( pBufferOGL );
                         }
                         else
                         {
@@ -646,14 +650,15 @@ namespace Diligent
             return;
         }
 
+        auto *pRenderDeviceGL = ValidatedCast<RenderDeviceGLImpl>(m_pDevice.RawPtr());
+        auto CurrNativeGLContext = pRenderDeviceGL->m_GLContext.GetCurrentNativeGLContext();
         if(!m_bVAOIsUpToDate)
         {
-            auto *pRenderDeviceGL = ValidatedCast<RenderDeviceGLImpl>(m_pDevice.RawPtr());
-            if( m_pPipelineState->GetDesc().GraphicsPipeline.InputLayout.NumElements > 0 )
+            auto &VAOCache = pRenderDeviceGL->GetVAOCache(CurrNativeGLContext);
+            IBuffer *pIndexBuffer = DrawAttribs.IsIndexed ? m_pIndexBuffer.RawPtr() : nullptr;
+            if( m_pPipelineState->GetDesc().GraphicsPipeline.InputLayout.NumElements > 0 || pIndexBuffer != nullptr)
             {
-                IBuffer *pIndexBuffer = DrawAttribs.IsIndexed ? m_pIndexBuffer.RawPtr() : nullptr;
-                auto &VAOCache = pRenderDeviceGL->m_VAOCache;
-                const auto& VAO = VAOCache.GetVAO( m_pPipelineState.RawPtr(), pIndexBuffer, m_VertexStreams, m_NumVertexStreams, m_ContextState );
+                const auto& VAO = VAOCache.GetVAO( m_pPipelineState, pIndexBuffer, m_VertexStreams, m_NumVertexStreams, m_ContextState );
                 m_ContextState.BindVAO( VAO );
             }
             else
@@ -661,12 +666,23 @@ namespace Diligent
                 // Draw command will fail if no VAO is bound. If no vertex description is set
                 // (which is the case if, for instance, the command only inputs VertexID),
                 // use empty VAO
-                m_ContextState.BindVAO( pRenderDeviceGL->m_EmptyVAO );
+                const auto& VAO = VAOCache.GetEmptyVAO();
+                m_ContextState.BindVAO( VAO );
             }
             m_bVAOIsUpToDate = true;
         }
 
-        auto GlTopology = PrimitiveTopologyToGLTopology( DrawAttribs.Topology );
+        GLenum GlTopology;
+        if (DrawAttribs.Topology >= PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST)
+        {
+            GlTopology = GL_PATCHES;
+            auto NumVertices = static_cast<Int32>(DrawAttribs.Topology - PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST + 1);
+            m_ContextState.SetNumPatchVertices(NumVertices);
+        }
+        else
+        {
+            GlTopology = PrimitiveTopologyToGLTopology( DrawAttribs.Topology );
+        }
         GLenum IndexType = 0;
         Uint32 FirstIndexByteOffset = 0;
         if( DrawAttribs.IsIndexed )
@@ -830,7 +846,6 @@ namespace Diligent
             const auto& ViewDesc = pView->GetDesc();
             VERIFY( ViewDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL, "Incorrect view type: depth stencil is expected" );
             CHECK_DYNAMIC_TYPE( TextureViewGLImpl, pView );
-            auto *pViewGL = static_cast<TextureViewGLImpl*>(pView);
             if( pView != m_pBoundDepthStencil )
             {
                 UNEXPECTED( "Depth stencil buffer being cleared is not bound to the pipeline" );
@@ -839,7 +854,7 @@ namespace Diligent
         }
         else
         {
-            if( !(nullptr == m_pBoundDepthStencil && m_NumBoundRenderTargets == 0) )
+            if( !m_IsDefaultFramebufferBound )
             {
                 UNEXPECTED( "Default depth stencil buffer being cleared is not bound to the pipeline" );
                 LOG_ERROR_MESSAGE( "Default depth stencil buffer must be bound to the pipeline to be cleared" );
@@ -876,7 +891,6 @@ namespace Diligent
             const auto& ViewDesc = pView->GetDesc();
             VERIFY( ViewDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET, "Incorrect view type: render target is expected" );
             CHECK_DYNAMIC_TYPE( TextureViewGLImpl, pView );
-            auto *pViewGL = static_cast<TextureViewGLImpl*>(pView);
             for( Uint32 rt = 0; rt < m_NumBoundRenderTargets; ++rt )
                 if( m_pBoundRenderTargets[rt] == pView )
                 {
@@ -892,7 +906,7 @@ namespace Diligent
         }
         else
         {
-            if( m_NumBoundRenderTargets == 0 && m_pBoundDepthStencil == nullptr )
+            if( m_IsDefaultFramebufferBound )
                 RTIndex = 0;
             else
             {
@@ -942,4 +956,14 @@ namespace Diligent
         LOG_ERROR("Deferred contexts are not supported in OpenGL mode");
     }
 
+    bool DeviceContextGLImpl::UpdateCurrentGLContext()
+    {
+        auto *pRenderDeviceGL = ValidatedCast<RenderDeviceGLImpl>(m_pDevice.RawPtr());
+        auto NativeGLContext = pRenderDeviceGL->m_GLContext.GetCurrentNativeGLContext();
+        if (NativeGLContext == NULL)
+            return false;
+
+        m_ContextState.SetCurrentGLContext(NativeGLContext);
+        return true;
+    }
 }

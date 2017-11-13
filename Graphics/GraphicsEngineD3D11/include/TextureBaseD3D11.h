@@ -47,12 +47,12 @@ enum class D3D11TextureState
 };
 
 /// Base implementation of the Diligent::ITextureD3D11 interface
-class TextureBaseD3D11 : public TextureBase<ITextureD3D11, TextureViewD3D11Impl, FixedBlockMemoryAllocator, FixedBlockMemoryAllocator>
+class TextureBaseD3D11 : public TextureBase<ITextureD3D11, TextureViewD3D11Impl, FixedBlockMemoryAllocator>
 {
 public:
-    typedef TextureBase<ITextureD3D11, TextureViewD3D11Impl, FixedBlockMemoryAllocator, FixedBlockMemoryAllocator> TTextureBase;
+    typedef TextureBase<ITextureD3D11, TextureViewD3D11Impl, FixedBlockMemoryAllocator> TTextureBase;
 
-    TextureBaseD3D11(FixedBlockMemoryAllocator &TexObjAllocator, 
+    TextureBaseD3D11(IReferenceCounters *pRefCounters,
                      FixedBlockMemoryAllocator &TexViewObjAllocator, 
                      class RenderDeviceD3D11Impl *pDeviceD3D11, 
                      const TextureDesc& TexDesc, 
@@ -64,10 +64,12 @@ public:
     virtual void UpdateData( IDeviceContext *pContext, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData )override final;
 
     //virtual void CopyData(CTexture *pSrcTexture, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size);
-    virtual void Map( IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid &pMappedData )override final;
-    virtual void Unmap( IDeviceContext *pContext, MAP_TYPE MapType )override final;
+    virtual void Map( IDeviceContext *pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags, MappedTextureSubresource &MappedData )override final;
+    virtual void Unmap( IDeviceContext *pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags )override final;
 
     virtual ID3D11Resource* GetD3D11Texture()override final{ return m_pd3d11Texture; }
+
+    virtual void* GetNativeHandle()override final { return GetD3D11Texture(); }
 
     void CopyData(IDeviceContext *pContext, 
                           ITexture *pSrcTexture, 

@@ -36,11 +36,12 @@ namespace Diligent
 
     /// Returns raw memory allocator
     IMemoryAllocator& GetRawAllocator();
-}
 
-#define NEW(Allocator, Desc, Type, ...) new(Allocator, Desc, __FILE__, __LINE__) Type(Allocator, ##__VA_ARGS__)
 #define ALLOCATE(Allocator, Desc, Size) (Allocator).Allocate(Size, Desc, __FILE__, __LINE__)
 #define FREE(Allocator, Ptr) Allocator.Free(Ptr)
+
+}
+
 
 #if 0
 inline void* operator new(size_t Size, const char* dbgDescription, const char* dbgFileName, const int dbgLineNumber)

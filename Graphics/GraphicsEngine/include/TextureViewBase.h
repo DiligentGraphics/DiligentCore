@@ -38,22 +38,21 @@ namespace Diligent
 
 /// \tparam BaseInterface - base interface that this class will inheret 
 ///                         (Diligent::ITextureViewD3D11, Diligent::ITextureViewD3D12 or Diligent::ITextureViewGL).
-/// \taparam TexViewObjAllocator -  type of the allocator that is used to allocate memory for the texture view object instances 
-template<class BaseInterface, class TexViewObjAllocator>
-class TextureViewBase : public DeviceObjectBase<BaseInterface, TextureViewDesc, TexViewObjAllocator>
+template<class BaseInterface>
+class TextureViewBase : public DeviceObjectBase<BaseInterface, TextureViewDesc>
 {
 public:
-    typedef DeviceObjectBase<BaseInterface, TextureViewDesc, TexViewObjAllocator> TDeviceObjectBase;
+    typedef DeviceObjectBase<BaseInterface, TextureViewDesc> TDeviceObjectBase;
 
 
-    /// \param ObjAllocator - allocator that was used to allocate memory for this instance of the texture view object
+    /// \param pRefCounters - reference counters object that controls the lifetime of this texture view.
 	/// \param pDevice - pointer to the render device.
 	/// \param ViewDesc - texture view description.
 	/// \param pTexture - pointer to the texture that the view is to be created for.
 	/// \param bIsDefaultView - flag indicating if the view is default view, and is thus
 	///						    part of the texture object. In this case the view will attach 
 	///							to the texture's reference counters.
-    TextureViewBase( TexViewObjAllocator &ObjAllocator,
+    TextureViewBase( IReferenceCounters *pRefCounters,
                      IRenderDevice *pDevice,
                      const TextureViewDesc& ViewDesc, 
                      class ITexture *pTexture,
@@ -61,7 +60,7 @@ public:
         // Default views are created as part of the texture, so we cannot not keep strong 
         // reference to the texture to avoid cyclic links. Instead, we will attach to the 
         // reference counters of the texture.
-        TDeviceObjectBase( ObjAllocator, pDevice, ViewDesc, bIsDefaultView ? pTexture : nullptr ),
+        TDeviceObjectBase( pRefCounters, pDevice, ViewDesc ),
         m_pTexture( pTexture ),
         // For non-default view, we will keep strong reference to texture
         m_spTexture(bIsDefaultView ? nullptr : pTexture)

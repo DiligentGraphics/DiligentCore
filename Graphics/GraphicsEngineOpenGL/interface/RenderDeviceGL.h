@@ -27,6 +27,7 @@
 /// Definition of the Diligent::IRenderDeviceGL interface
 
 #include "RenderDevice.h"
+#include "HLSL2GLSLConverter.h"
 
 /// Namespace for the OpenGL implementation of the graphics engine
 namespace Diligent
@@ -40,7 +41,34 @@ static const Diligent::INTERFACE_ID IID_RenderDeviceGL =
 class IRenderDeviceGL : public IRenderDevice
 {
 public:
-    
+
+    /// Creates a texture from OpenGL handle
+
+    /// \param [in] GLHandle - OpenGL texture handle
+    /// \param [in] TexDesc - Texture description. The engine can automatically 
+    ///                       set texture width, height, depth, mip levels count, and format.
+    ///                       Remaining fields should be set up by the app.
+    /// \param [out] ppTexture - Address of the memory location where the pointer to the
+    ///                          texture interface will be stored. 
+    ///                          The function calls AddRef(), so that the new object will contain 
+    ///                          one refernce.
+    /// \note  Diligent engine texture object does not take ownership of the GL resource, 
+    ///        and the application must not destroy it while it is in use by the engine.
+    virtual void CreateTextureFromGLHandle(Uint32 GLHandle, const TextureDesc &TexDesc, ITexture **ppTexture) = 0;
+
+    /// Creates a buffer from OpenGL handle
+
+    /// \param [in] GLHandle - OpenGL buffer handle
+    /// \param [in] TexDesc - Buffer description. The engine can automatically 
+    ///                       recover buffer size, but the rest of the fields need to 
+    ///                       be set by the client.
+    /// \param [out] ppBuffer - Address of the memory location where the pointer to the
+    ///                         texture interface will be stored. 
+    ///                         The function calls AddRef(), so that the new object will contain 
+    ///                         one refernce.
+    /// \note  Diligent engine buffer object does not take ownership of the GL resource, 
+    ///        and the application must not destroy it while it is in use by the engine.
+    virtual void CreateBufferFromGLHandle(Uint32 GLHandle, const BufferDesc &BuffDesc, IBuffer **ppBuffer) = 0;
 };
 
 }

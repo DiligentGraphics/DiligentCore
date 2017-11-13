@@ -121,7 +121,7 @@ public:
 
 	DynamicAllocation Allocate( size_t SizeInBytes, size_t Alignment = DEFAULT_ALIGN );
 
-    void FinishFrame(Uint64 FrameNum, Uint64 NumCompletedFrames);
+    void FinishFrame(Uint64 FenceValue, Uint64 LastCompletedFenceValue);
 
 private:
     const bool m_bIsCPUAccessible;

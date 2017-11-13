@@ -41,19 +41,18 @@ struct CommandListDesc : public DeviceObjectAttribs
 
 /// \tparam BaseInterface - base interface that this class will inheret 
 ///                         (Diligent::ICommandListD3D11 or Diligent::ICommandListD3D12).
-/// \tparam CommandListObjAllocator - allocator that is used to allocate memory for command list object instances
-template<class BaseInterface, class CommandListObjAllocator>
-class CommandListBase : public DeviceObjectBase<BaseInterface, CommandListDesc, CommandListObjAllocator>
+template<class BaseInterface>
+class CommandListBase : public DeviceObjectBase<BaseInterface, CommandListDesc>
 {
 public:
-    typedef DeviceObjectBase<BaseInterface, CommandListDesc, CommandListObjAllocator> TDeviceObjectBase;
+    typedef DeviceObjectBase<BaseInterface, CommandListDesc> TDeviceObjectBase;
 
-    /// \param ObjAllocator - Allocator that was used to allocate memory for this instance of the command list object
+    /// \param pRefCounters - reference counters object that controls the lifetime of this command list.
 	/// \param pDevice - pointer to the device.
 	/// \param bIsDeviceInternal - flag indicating if the CommandList is an internal device object and 
 	///							   must not keep a strong reference to the device.
-    CommandListBase( CommandListObjAllocator &ObjAllocator, IRenderDevice *pDevice, bool bIsDeviceInternal = false ) :
-        TDeviceObjectBase( ObjAllocator, pDevice, CommandListDesc(), nullptr, bIsDeviceInternal )
+    CommandListBase( IReferenceCounters *pRefCounters, IRenderDevice *pDevice, bool bIsDeviceInternal = false ) :
+        TDeviceObjectBase( pRefCounters, pDevice, CommandListDesc(), bIsDeviceInternal )
     {}
 
     ~CommandListBase()

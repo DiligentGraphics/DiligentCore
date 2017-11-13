@@ -18,6 +18,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\BasicShaderSourceStreamFactory.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\CommonlyUsedStates.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\TextureUploader.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\TextureUploaderBase.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\TextureUploaderD3D11.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\TextureUploaderD3D12.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\TextureUploaderGL.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\VariableSizeAllocationsManager.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\VariableSizeGPUAllocationsManager.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\GraphicsUtilities.h" />
@@ -31,10 +37,17 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)..\..\src\pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\src\TextureUploader.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\src\TextureUploaderD3D11.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\src\TextureUploaderD3D12.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\src\TextureUploaderGL.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="$(MSBuildThisFileDirectory)..\..\CMakeLists.txt">
       <DeploymentContent>false</DeploymentContent>
     </Text>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)..\..\readme.md" />
   </ItemGroup>
 </Project>

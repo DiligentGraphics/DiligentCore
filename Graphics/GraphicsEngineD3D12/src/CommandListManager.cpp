@@ -21,20 +21,6 @@
  *  of the possibility of such damages.
  */
 
-//
-// Copyright (c) Microsoft. All rights reserved.
-// This code is licensed under the MIT License (MIT).
-// THIS CODE IS PROVIDED *AS IS* WITHOUT WARRANTY OF
-// ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING ANY
-// IMPLIED WARRANTIES OF FITNESS FOR A PARTICULAR
-// PURPOSE, MERCHANTABILITY, OR NON-INFRINGEMENT.
-//
-// Developed by Minigraph
-//
-// Author:  James Stanard
-//
-// Adapted to Diligent Engine: Egor Yusov
-
 #include "pch.h"
 #include "CommandListManager.h"
 #include "RenderDeviceD3D12Impl.h"
@@ -73,22 +59,22 @@ void CommandListManager::RequestAllocator(ID3D12CommandAllocator** ppAllocator)
     if (!m_DiscardedAllocators.empty())
 	{
         // Pick the oldest allocator at the front of the deque
-        // If this allocator is not yet available, there is no sense in
-        // looking at the rest of allocators
+        // If this allocator is not yet available, there is no point in
+        // looking at other allocators since they were released even
+        // later
 		auto& AllocatorPair = m_DiscardedAllocators.front();
         
-        // Get the NUMBER OF COMPLETED cmd lists
-        auto NumCompeltedCmdLists = m_pDeviceD3D12->GetNumCompletedCmdLists();
-        // Note that NumCompeltedCmdLists only grows. So if after we queried
+        // Get the last completed fence value
+        auto CompletedFenceValue = m_pDeviceD3D12->GetCompletedFenceValue();
+        // Note that CompletedFenceValue only grows. So if after we queried
         // the value, the actual value is increased in other thread, this will not
-        // be an issue as the only consequence is that the allocator that is 
-        // potentially available may not be used.
+        // be an issue as the only consequence is that potentially available  
+        // allocator may not be used.
 
-        // AllocatorPair.first is the NUMBER of the command list.
-        // If command list number is N, it can be reused when
-        // NumCompeltedCmdLists is at least N+1
-        // (To reuse allocator used to create CmdList 0, NumCompeltedCmdLists must be at least 1)
-		if ( AllocatorPair.first < NumCompeltedCmdLists )
+        // AllocatorPair.first is the fence value that was signaled AFTER the
+        // command list has been submitted. If CompletedFenceValue is at least
+        // this value, the allocator can be safely reused
+		if ( CompletedFenceValue >= AllocatorPair.first )
 		{
 			*ppAllocator = AllocatorPair.second.Detach();
 			auto hr = (*ppAllocator)->Reset();
@@ -103,19 +89,19 @@ void CommandListManager::RequestAllocator(ID3D12CommandAllocator** ppAllocator)
         auto *pd3d12Device = m_pDeviceD3D12->GetD3D12Device();
 		auto hr = pd3d12Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, __uuidof(*ppAllocator), reinterpret_cast<void**>(ppAllocator));
         VERIFY(SUCCEEDED(hr), "Failed to create command allocator")
-		//wchar_t AllocatorName[32];
-		//swprintf(AllocatorName, 32, L"CommandAllocator %zu", m_AllocatorPool.size());
-		//(*ppAllocator)->SetName(AllocatorName);
+		wchar_t AllocatorName[32];
+        swprintf(AllocatorName, _countof(AllocatorName), L"Cmd list allocator %ld", Atomics::AtomicIncrement(m_NumAllocators)-1);
+		(*ppAllocator)->SetName(AllocatorName);
 	}
 }
 
-void CommandListManager::DiscardAllocator( Uint64 CmdListNum, ID3D12CommandAllocator* pAllocator )
+void CommandListManager::DiscardAllocator( Uint64 FenceValue, ID3D12CommandAllocator* pAllocator )
 {
 	std::lock_guard<std::mutex> LockGuard(m_AllocatorMutex);
 
-    // CmdListNum is the number of the command list that was created by this allocator.
-    // This value is used to understand when it is safe to reuse the allocator
-	m_DiscardedAllocators.emplace_back( CmdListNum, CComPtr<ID3D12CommandAllocator>(pAllocator) );
+    // FenceValue is the value that was signaled by the command queue after it 
+    // executed the command list created by the allocator
+	m_DiscardedAllocators.emplace_back( FenceValue, CComPtr<ID3D12CommandAllocator>(pAllocator) );
 }
 
 }

@@ -45,7 +45,7 @@ void SetRawAllocator(IMemoryAllocator *pRawAllocator)
 
 IMemoryAllocator& GetRawAllocator()
 {
-    return *g_pRawAllocator;
+    return g_pRawAllocator != nullptr ? *g_pRawAllocator : DefaultRawMemoryAllocator::GetAllocator();
 }
 
 }

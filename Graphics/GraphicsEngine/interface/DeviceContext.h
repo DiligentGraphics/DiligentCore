@@ -41,6 +41,7 @@
 #include "BlendState.h"
 #include "PipelineState.h"
 #include "CommandList.h"
+#include "SwapChain.h"
 
 namespace Diligent
 {
@@ -72,6 +73,134 @@ enum PRIMITIVE_TOPOLOGY : Int32
     /// Interpret the vertex data as a list of lines.\n
     /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_LINELIST. OpenGL counterpart: GL_LINES.
     PRIMITIVE_TOPOLOGY_LINE_LIST,
+
+    /// Interpret the vertex data as a list of one control point patches.\n
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST,
+
+    /// Interpret the vertex data as a list of two control point patches.\n
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_2_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    PRIMITIVE_TOPOLOGY_2_CONTROL_POINT_PATCHLIST,
+
+    /// Interpret the vertex data as a list of three control point patches.\n
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST,
+
+    /// Interpret the vertex data as a list of four control point patches.\n
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_4_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    PRIMITIVE_TOPOLOGY_4_CONTROL_POINT_PATCHLIST,
+
+    /// Interpret the vertex data as a list of five control point patches.\n
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_5_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    PRIMITIVE_TOPOLOGY_5_CONTROL_POINT_PATCHLIST,
+
+    /// Interpret the vertex data as a list of six control point patches.\n
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_6_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    PRIMITIVE_TOPOLOGY_6_CONTROL_POINT_PATCHLIST,
+
+    /// Interpret the vertex data as a list of seven control point patches.\n
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_7_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    PRIMITIVE_TOPOLOGY_7_CONTROL_POINT_PATCHLIST,
+
+    /// Interpret the vertex data as a list of eight control point patches.\n
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_8_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    PRIMITIVE_TOPOLOGY_8_CONTROL_POINT_PATCHLIST,
+
+    /// Interpret the vertex data as a list of nine control point patches.\n
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_9_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    PRIMITIVE_TOPOLOGY_9_CONTROL_POINT_PATCHLIST,
+
+    /// Interpret the vertex data as a list of ten control point patches.\n
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_10_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    PRIMITIVE_TOPOLOGY_10_CONTROL_POINT_PATCHLIST,
+
+    /// Interpret the vertex data as a list of 11 control point patches.\n
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_11_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    PRIMITIVE_TOPOLOGY_11_CONTROL_POINT_PATCHLIST,
+
+    /// Interpret the vertex data as a list of 12 control point patches.\n
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_12_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    PRIMITIVE_TOPOLOGY_12_CONTROL_POINT_PATCHLIST,
+
+    /// Interpret the vertex data as a list of 13 control point patches.\n
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_13_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    PRIMITIVE_TOPOLOGY_13_CONTROL_POINT_PATCHLIST,
+        
+    /// Interpret the vertex data as a list of 14 control point patches.\n
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_14_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    PRIMITIVE_TOPOLOGY_14_CONTROL_POINT_PATCHLIST,
+
+    /// Interpret the vertex data as a list of 15 control point patches.\n
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_15_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    PRIMITIVE_TOPOLOGY_15_CONTROL_POINT_PATCHLIST,
+
+    /// Interpret the vertex data as a list of 16 control point patches.\n
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_16_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    PRIMITIVE_TOPOLOGY_16_CONTROL_POINT_PATCHLIST,
+
+    /// Interpret the vertex data as a list of 17 control point patches.\n
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_17_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    PRIMITIVE_TOPOLOGY_17_CONTROL_POINT_PATCHLIST,
+    
+    /// Interpret the vertex data as a list of 18 control point patches.\n
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_18_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    PRIMITIVE_TOPOLOGY_18_CONTROL_POINT_PATCHLIST,
+
+    /// Interpret the vertex data as a list of 19 control point patches.\n
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_19_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    PRIMITIVE_TOPOLOGY_19_CONTROL_POINT_PATCHLIST,
+
+    /// Interpret the vertex data as a list of 20 control point patches.\n
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_20_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    PRIMITIVE_TOPOLOGY_20_CONTROL_POINT_PATCHLIST,
+
+    /// Interpret the vertex data as a list of 21 control point patches.\n
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_21_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    PRIMITIVE_TOPOLOGY_21_CONTROL_POINT_PATCHLIST,
+
+    /// Interpret the vertex data as a list of 22 control point patches.\n
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_22_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    PRIMITIVE_TOPOLOGY_22_CONTROL_POINT_PATCHLIST,
+
+    /// Interpret the vertex data as a list of 23 control point patches.\n
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_23_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    PRIMITIVE_TOPOLOGY_23_CONTROL_POINT_PATCHLIST,
+
+    /// Interpret the vertex data as a list of 24 control point patches.\n
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_24_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    PRIMITIVE_TOPOLOGY_24_CONTROL_POINT_PATCHLIST,
+
+    /// Interpret the vertex data as a list of 25 control point patches.\n
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_25_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    PRIMITIVE_TOPOLOGY_25_CONTROL_POINT_PATCHLIST,
+    
+    /// Interpret the vertex data as a list of 26 control point patches.\n
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_26_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    PRIMITIVE_TOPOLOGY_26_CONTROL_POINT_PATCHLIST,
+
+    /// Interpret the vertex data as a list of 27 control point patches.\n
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_27_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    PRIMITIVE_TOPOLOGY_27_CONTROL_POINT_PATCHLIST,
+
+    /// Interpret the vertex data as a list of 28 control point patches.\n
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_28_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    PRIMITIVE_TOPOLOGY_28_CONTROL_POINT_PATCHLIST,
+
+    /// Interpret the vertex data as a list of 29 control point patches.\n
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_29_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    PRIMITIVE_TOPOLOGY_29_CONTROL_POINT_PATCHLIST,
+
+    /// Interpret the vertex data as a list of 30 control point patches.\n
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_30_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    PRIMITIVE_TOPOLOGY_30_CONTROL_POINT_PATCHLIST,
+
+    /// Interpret the vertex data as a list of 31 control point patches.\n
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_31_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    PRIMITIVE_TOPOLOGY_31_CONTROL_POINT_PATCHLIST,
+    
+    /// Interpret the vertex data as a list of 32 control point patches.\n
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_32_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
+    PRIMITIVE_TOPOLOGY_32_CONTROL_POINT_PATCHLIST,
 
     /// Helper value that stores the total number of topologies in the enumeration
     PRIMITIVE_TOPOLOGY_NUM_TOPOLOGIES
@@ -395,8 +524,11 @@ public:
                                   Uint32 *pOffsets,
                                   Uint32 Flags) = 0;
 
-    /// Clears the context state.
-    virtual void ClearState() = 0;
+    /// Invalidates the cached context state.
+
+    /// This method should be called by say Unity plugin before (or after)
+    /// issuing draw commands to invalidate cached states
+    virtual void InvalidateState() = 0;
 
 
     /// Binds an index buffer to the pipeline
@@ -501,16 +633,33 @@ public:
     /// Finishes recording commands and generates a command list
     
     /// \param [out] ppCommandList - Memory location where pointer to the recorded command list will be written.
-    virtual void FinishCommandList(class ICommandList **ppCommandList) = 0;
+    virtual void FinishCommandList( ICommandList **ppCommandList) = 0;
 
     /// Executes recorded commands in a command list
 
     /// \param [in] pCommandList - Pointer to the command list to executre.
     /// \remarks After command list is executed, it is no longer valid and should be released.
-    virtual void ExecuteCommandList(class ICommandList *pCommandList) = 0;
+    virtual void ExecuteCommandList( ICommandList *pCommandList) = 0;
 
     /// Flushes the command buffer
     virtual void Flush() = 0;
+
+    /// Sets the swap chain in the device context
+
+    /// The swap chain is used by the device context to work with the
+    /// default framebuffer. Specifically, if the swap chain is set in the context,
+    /// the following commands can be used:
+    /// * SetRenderTargets(0, nullptr, nullptr) - to bind the default back buffer & depth buffer
+    /// * SetViewports(1, nullptr, 0, 0) - to set the viewport to match the size of the back buffer
+    /// * ClearRenderTarget(nullptr, color) - to clear the default back buffer
+    /// * ClearDepthStencil(nullptr, ...) - to clear the default depth buffer
+    /// The swap chain is automatically initialized for immediate and all deferred contexts
+    /// by factory functions EngineFactoryD3D11Impl::CreateSwapChainD3D11(),
+    /// EngineFactoryD3D12Impl::CreateSwapChainD3D12(), and EngineFactoryOpenGLImpl::CreateDeviceAndSwapChainGL().
+    /// However, when the engine is initialized by attaching to existing d3d11/d3d12 device or OpenGL/GLES context, the
+    /// swap chain needs to be set manually if the device context will be using any of the commands above.\n
+    /// Device context keeps strong reference to the swap chain.
+    virtual void SetSwapChain( ISwapChain *pSwapChain) = 0;
 };
 
 }

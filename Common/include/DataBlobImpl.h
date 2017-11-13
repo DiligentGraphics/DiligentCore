@@ -35,10 +35,12 @@ namespace Diligent
 {
     
 /// Base interface for a file stream
-class DataBlobImpl : public Diligent::ObjectBase<IDataBlob, IMemoryAllocator>
+class DataBlobImpl : public Diligent::ObjectBase<IDataBlob>
 {
 public:
-    typedef Diligent::ObjectBase<IDataBlob, IMemoryAllocator> TBase;
+    typedef Diligent::ObjectBase<IDataBlob> TBase;
+
+    DataBlobImpl( IReferenceCounters *pRefCounters, size_t InitialSize = 0 );
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
 

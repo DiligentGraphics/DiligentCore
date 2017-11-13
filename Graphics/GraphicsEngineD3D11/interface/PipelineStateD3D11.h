@@ -72,7 +72,7 @@ public:
     /// so Release() must not be called.
     virtual ID3D11VertexShader* GetD3D11VertexShader() = 0;
 
-    /// Returns a pointer to the  interface of the internal pixel shader object.
+    /// Returns a pointer to the ID3D11PixelShader interface of the internal pixel shader object.
 
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.

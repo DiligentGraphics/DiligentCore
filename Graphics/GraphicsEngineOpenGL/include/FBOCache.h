@@ -38,6 +38,11 @@ public:
     FBOCache();
     ~FBOCache();
 
+    FBOCache(const FBOCache&)  = delete;
+    FBOCache(      FBOCache&&) = delete;
+    FBOCache& operator = (const FBOCache&)  = delete;
+    FBOCache& operator = (      FBOCache&&) = delete;
+
     const GLObjectWrappers::GLFrameBufferObj& GetFBO( Uint32 NumRenderTargets, 
                                                        ITextureView *ppRenderTargets[], 
                                                        ITextureView *pDepthStencil,

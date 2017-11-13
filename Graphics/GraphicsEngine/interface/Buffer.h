@@ -44,7 +44,7 @@ enum BUFFER_MODE : Int32
     BUFFER_MODE_UNDEFINED = 0,
 
     /// Formated buffer. 
-    BUFFER_MODE_FORMATED,
+    BUFFER_MODE_FORMATTED,
 
     /// Structured buffer.
     BUFFER_MODE_STRUCTURED,
@@ -107,17 +107,25 @@ struct BufferDesc : DeviceObjectAttribs
             NumComponents( 0 ),
             IsNormalized(True)
         {}
+        
+        /// Tests if two structures are equivalent
+        bool operator == (const BufferFormat& RHS)const
+        {
+            return ValueType     == RHS.ValueType && 
+                   NumComponents == RHS.NumComponents &&
+                   IsNormalized  == RHS.IsNormalized;
+        }
     };
 
     /// Buffer format
 
-    /// For a formatted buffer (BufferDesc::Mode equals Diligent::BUFFER_MODE_FORMATED), this member describes the 
+    /// For a formatted buffer (BufferDesc::Mode equals Diligent::BUFFER_MODE_FORMATTED), this member describes the 
     /// buffer format, see BufferFormat. Ignored otherwise.
     BufferFormat Format;
 
     /// Buffer element stride, in bytes. For a structured buffer (BufferDesc::Mode 
     /// equals Diligent::BUFFER_MODE_STRUCTURED), this member cannot be zero. For a formatted buffer
-    /// (BufferDesc::Mode equals Diligent::BUFFER_MODE_FORMATED), this member can either specify the stride, or 
+    /// (BufferDesc::Mode equals Diligent::BUFFER_MODE_FORMATTED), this member can either specify the stride, or 
     /// be 0. In the latter case, the stride is computed automatically based
     /// on the format size and assuming that elements are densely packed.
     Uint32 ElementByteStride;
@@ -142,6 +150,26 @@ struct BufferDesc : DeviceObjectAttribs
         Mode( BUFFER_MODE_UNDEFINED ),
         ElementByteStride(0)
     {}
+
+
+    /// Tests if two structures are equivalent
+
+    /// \param [in] RHS - reference to the structure to perform comparison with
+    /// \return 
+    /// - True if all members of the two structures except for the Name are equal.
+    /// - False otherwise.
+    /// The operator ignores DeviceObjectAttribs::Name field as it does not affect 
+    /// the buffer description.
+    bool operator == (const BufferDesc& RHS)const
+    {
+        return uiSizeInBytes     == RHS.uiSizeInBytes  && 
+               BindFlags         == RHS.BindFlags      &&
+               Usage             == RHS.Usage          &&
+               CPUAccessFlags    == RHS.CPUAccessFlags &&
+               Mode              == RHS.Mode           &&
+               Format            == RHS.Format         &&
+               ElementByteStride == RHS.ElementByteStride;
+    }
 };
 
 /// Describes the buffer initial data
@@ -206,9 +234,11 @@ public:
 
     /// Unmaps the previously mapped buffer
     /// \param [in] pContext - Pointer to the device context interface to be used to perform the operation.
-    /// \param [in] MapType - Type of the map operation. This parameter must match to the type that was 
+    /// \param [in] MapType - Type of the map operation. This parameter must match the type that was 
     ///                       provided to the Map() method. 
-    virtual void Unmap( IDeviceContext *pContext, MAP_TYPE MapType ) = 0;
+    /// \param [in] MapFlags - Map flags. This parameter must match the flags that were provided to 
+    ///                        the Map() method. 
+    virtual void Unmap( IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags ) = 0;
 
     /// Creates a new buffer view
 
@@ -231,6 +261,13 @@ public:
     /// \note The function does not increase the reference counter for the returned interface, so
     ///       Release() must *NOT* be called.
     virtual IBufferView* GetDefaultView( BUFFER_VIEW_TYPE ViewType ) = 0;
+
+    /// Returns native buffer handle specific to the underlying graphics API
+
+    /// \return pointer to ID3D11Resource interface, for D3D11 implementation\n
+    ///         pointer to ID3D12Resource interface, for D3D12 implementation\n
+    ///         GL buffer handle, for GL implementation
+    virtual void* GetNativeHandle() = 0;
 };
 
 }

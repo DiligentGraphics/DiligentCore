@@ -86,4 +86,7 @@
       <DeploymentContent>false</DeploymentContent>
     </Text>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)..\..\readme.md" />
+  </ItemGroup>
 </Project>

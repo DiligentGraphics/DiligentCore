@@ -36,16 +36,7 @@ using namespace Diligent;
 
 namespace Diligent
 {
-    GLContextState::GLContextState( RenderDeviceGLImpl *pDeviceGL ) :
-        m_PendingMemoryBarriers( 0 ),
-        m_DepthCmpFunc( COMPARISON_FUNC_UNKNOWN ),
-        m_StencilReadMask( 0xFF ),
-        m_StencilWriteMask( 0xFF ),
-        m_GLProgId( 0 ),
-        m_GLPipelineId( 0 ),
-        m_VAOId( 0 ),
-        m_FBOId( 0 ),
-        m_iActiveTexture(-1)
+    GLContextState::GLContextState( RenderDeviceGLImpl *pDeviceGL )
     {
         const DeviceCaps &DeviceCaps = pDeviceGL->GetDeviceCaps();
         m_Caps.bFillModeSelectionSupported = DeviceCaps.bWireframeFillSupported;
@@ -59,10 +50,52 @@ namespace Diligent
 
         m_BoundTextures.reserve( m_Caps.m_iMaxCombinedTexUnits );
         m_BoundSamplers.reserve( 32 );
-        m_pBoundImages.reserve( 32 );
+        m_BoundImages.reserve( 32 );
+
+        Invalidate();
+
+        m_CurrentGLContext = pDeviceGL->m_GLContext.GetCurrentNativeGLContext();
+    }
+
+    void GLContextState::Invalidate()
+    {
+#if !defined(PLATFORM_ANDROID)
+        // On Android this results in OpenGL error, so we will not
+        // clear the barriers. All the required barriers will be
+        // executed next frame when needed
+        if(m_PendingMemoryBarriers != 0)
+            EnsureMemoryBarrier(m_PendingMemoryBarriers);
+        m_PendingMemoryBarriers = 0;
+#endif
+
+        // Unity messes up at least VAO left in the context,
+        // so unbid what we bound
+        glUseProgram( 0 );
+        glBindProgramPipeline( 0 );
+        glBindVertexArray( 0 );
+        glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0 );
+        glBindFramebuffer( GL_READ_FRAMEBUFFER, 0 );
+        CHECK_GL_ERROR( "Failed to reset GL context state" );
+
+        m_GLProgId = -1;
+        m_GLPipelineId = -1;
+        m_VAOId = -1;
+        m_FBOId = -1;
+        
+        m_BoundTextures.clear();
+        m_BoundSamplers.clear();
+        m_BoundImages.clear();
+
+        m_DSState = DepthStencilGLState();
+        m_RSState = RasterizerGLState();
 
         for( Uint32 rt = 0; rt < _countof( m_ColorWriteMasks ); ++rt )
-            m_ColorWriteMasks[rt] = COLOR_MASK_ALL;
+            m_ColorWriteMasks[rt] = 0xFF;
+
+        m_bIndependentWriteMasks = EnableStateHelper();
+
+        m_iActiveTexture = -1;
+        m_NumPatchVertices = -1;
     }
 
     template<typename ObjectType>
@@ -142,7 +175,7 @@ namespace Diligent
     bool UpdateBoundObjectsArr( std::vector< UniqueIdentifier >& BoundObjectIDs, Uint32 Index, const ObjectType &NewObject, GLuint &NewGLHandle )
     {
         if( Index >= BoundObjectIDs.size() )
-            BoundObjectIDs.resize( Index + 1 );
+            BoundObjectIDs.resize( Index + 1, -1 );
 
         return UpdateBoundObject( BoundObjectIDs[Index], NewObject, NewGLHandle );
     }
@@ -208,11 +241,11 @@ namespace Diligent
             Access,
             Format
             );
-        if( Index >= m_pBoundImages.size() )
-            m_pBoundImages.resize( Index + 1 );
-        if( !(m_pBoundImages[Index] == NewImageInfo) )
+        if( Index >= m_BoundImages.size() )
+            m_BoundImages.resize( Index + 1 );
+        if( !(m_BoundImages[Index] == NewImageInfo) )
         {
-            m_pBoundImages[Index] = NewImageInfo;
+            m_BoundImages[Index] = NewImageInfo;
             GLint GLTexHandle = pTexView->GetHandle();
             glBindImageTexture( Index, GLTexHandle, MipLevel, IsLayered, Layer, Access, Format );
             CHECK_GL_ERROR( "glBindImageTexture() failed" );
@@ -271,7 +304,7 @@ namespace Diligent
 
     void GLContextState::EnableDepthTest( bool bEnable )
     {
-        if( m_DepthEnableState != bEnable )
+        if( m_DSState.m_DepthEnableState != bEnable )
         {
             if( bEnable )
             {
@@ -283,35 +316,35 @@ namespace Diligent
                 glDisable( GL_DEPTH_TEST );
                 CHECK_GL_ERROR( "Failed to disable detph test" );
             }
-            m_DepthEnableState = bEnable;
+            m_DSState.m_DepthEnableState = bEnable;
         }
     }
 
     void GLContextState::EnableDepthWrites( bool bEnable )
     {
-        if( m_DepthWritesEnableState != bEnable )
+        if( m_DSState.m_DepthWritesEnableState != bEnable )
         {
             // If mask is non-zero, the depth buffer is enabled for writing; otherwise, it is disabled.
             glDepthMask( bEnable ? 1 : 0 );
             CHECK_GL_ERROR( "Failed to enale/disable depth writes" );
-            m_DepthWritesEnableState = bEnable;
+            m_DSState.m_DepthWritesEnableState = bEnable;
         }
     }
 
     void GLContextState::SetDepthFunc( COMPARISON_FUNCTION CmpFunc )
     {
-        if( m_DepthCmpFunc != CmpFunc )
+        if( m_DSState.m_DepthCmpFunc != CmpFunc )
         {
             auto GlCmpFunc = CompareFuncToGLCompareFunc( CmpFunc );
             glDepthFunc( GlCmpFunc );
             CHECK_GL_ERROR( "Failed to set GL comparison function" );
-            m_DepthCmpFunc = CmpFunc;
+            m_DSState.m_DepthCmpFunc = CmpFunc;
         }
     }
 
     void GLContextState::EnableStencilTest( bool bEnable )
     {
-        if( m_StencilTestEnableState != bEnable )
+        if( m_DSState.m_StencilTestEnableState != bEnable )
         {
             if( bEnable )
             {
@@ -323,22 +356,22 @@ namespace Diligent
                 glDisable( GL_STENCIL_TEST );
                 CHECK_GL_ERROR( "Failed to disable stencil test" );
             }
-            m_StencilTestEnableState = bEnable;
+            m_DSState.m_StencilTestEnableState = bEnable;
         }
     }
 
     void GLContextState::SetStencilWriteMask( Uint8 StencilWriteMask )
     {
-        if( m_StencilWriteMask != StencilWriteMask )
+        if( m_DSState.m_StencilWriteMask != StencilWriteMask )
         {
             glStencilMask( StencilWriteMask );
-            m_StencilWriteMask = StencilWriteMask;
+            m_DSState.m_StencilWriteMask = StencilWriteMask;
         }
     }
 
     void GLContextState::SetStencilRef(GLenum Face, Int32 Ref)
     {
-        auto& FaceStencilOp = m_StencilOpState[Face == GL_FRONT ? 0 : 1];
+        auto& FaceStencilOp = m_DSState.m_StencilOpState[Face == GL_FRONT ? 0 : 1];
         auto GlStencilFunc = CompareFuncToGLCompareFunc( FaceStencilOp.Func );
         glStencilFuncSeparate( Face, GlStencilFunc, Ref, FaceStencilOp.Mask );
         CHECK_GL_ERROR( "Failed to set stencil function" );
@@ -346,7 +379,7 @@ namespace Diligent
 
     void GLContextState::SetStencilFunc( GLenum Face, COMPARISON_FUNCTION Func, Int32 Ref, Uint32 Mask )
     {
-        auto& FaceStencilOp = m_StencilOpState[Face == GL_FRONT ? 0 : 1];
+        auto& FaceStencilOp = m_DSState.m_StencilOpState[Face == GL_FRONT ? 0 : 1];
         if( FaceStencilOp.Func != Func ||
             FaceStencilOp.Ref != Ref ||
             FaceStencilOp.Mask != Mask )
@@ -361,7 +394,7 @@ namespace Diligent
 
     void GLContextState::SetStencilOp( GLenum Face, STENCIL_OP StencilFailOp, STENCIL_OP StencilDepthFailOp, STENCIL_OP StencilPassOp )
     {
-        auto& FaceStencilOp = m_StencilOpState[Face == GL_FRONT ? 0 : 1];
+        auto& FaceStencilOp = m_DSState.m_StencilOpState[Face == GL_FRONT ? 0 : 1];
         if( FaceStencilOp.StencilFailOp != StencilFailOp ||
             FaceStencilOp.StencilDepthFailOp != StencilDepthFailOp ||
             FaceStencilOp.StencilPassOp != StencilPassOp )
@@ -463,6 +496,8 @@ namespace Diligent
         {
             if( bEnableDepthClamp )
             {
+#pragma warning(push)
+#pragma warning(disable : 4127)
                 if( GL_DEPTH_CLAMP )
                 {
                     glEnable( GL_DEPTH_CLAMP );
@@ -483,6 +518,7 @@ namespace Diligent
                 {
                     LOG_WARNING_MESSAGE( "Disabling depth clamp is not supported" )
                 }
+#pragma warning(pop)
             }
             m_RSState.DepthClampEnable = bEnableDepthClamp;
         }
@@ -515,7 +551,7 @@ namespace Diligent
 
     void GLContextState::SetBlendState( const BlendStateDesc &BSDsc, Uint32 SampleMask )
     {
-        VERIFY(SampleMask = 0xFFFFFFFF, "Sample mask is not currently implemented in GL");
+        VERIFY(SampleMask == 0xFFFFFFFF, "Sample mask is not currently implemented in GL");
 
         bool bEnableBlend = false;
         if( BSDsc.IndependentBlendEnable )
@@ -654,5 +690,15 @@ namespace Diligent
             RTIndex = 0;
         WriteMask = m_ColorWriteMasks[ RTIndex ];
         bIsIndependent = m_bIndependentWriteMasks;
+    }
+
+    void GLContextState::SetNumPatchVertices(Int32 NumVertices)
+    {
+        if (NumVertices != m_NumPatchVertices)
+        {
+            m_NumPatchVertices = NumVertices;
+            glPatchParameteri(GL_PATCH_VERTICES, static_cast<GLint>(NumVertices));
+            CHECK_GL_ERROR( "Failed to set the number of patch vertices" );
+        }
     }
 }

@@ -32,6 +32,8 @@
 #include <vector>
 #include "MemoryAllocator.h"
 #include "STDAllocator.h"
+#include "Errors.h"
+
 namespace Diligent
 {
 
@@ -217,8 +219,93 @@ private:
     IMemoryAllocator &m_RawMemoryAllocator;
     size_t m_BlockSize;
     Uint32 m_NumBlocksInPage;
-    
-    //Uint8 *tmpLargeBuffer, *tmpCurrPtr;
 };
- 
+
+IMemoryAllocator& GetRawAllocator();
+
+template<typename ObjectType>
+class ObjectPool
+{
+public:
+    static void SetRawAllocator(IMemoryAllocator &Allocator)
+    {
+#ifdef _DEBUG
+        if(m_bPoolInitialized && m_pRawAllocator != &Allocator)
+        {
+            LOG_WARNING_MESSAGE("Setting pool raw allocator after the pool has been initialized has no effect")
+        }
+#endif
+        m_pRawAllocator = &Allocator;
+    }
+    static void SetPageSize(Uint32 NumAllocationsInPage)
+    {
+#ifdef _DEBUG
+        if(m_bPoolInitialized && m_NumAllocationsInPage != NumAllocationsInPage)
+        {
+            LOG_WARNING_MESSAGE("Setting pool page size after the pool has been initialized has no effect")
+        }
+#endif
+        m_NumAllocationsInPage = NumAllocationsInPage;
+    }
+    static ObjectPool& GetPool()
+    {
+        static ObjectPool ThePool;
+#ifdef _DEBUG
+        m_bPoolInitialized = true;
+#endif
+        return ThePool;
+    }
+
+    template<typename ... CtorArgTypes>
+    ObjectType* NewObject(const Char* dbgDescription, const char* dbgFileName, const Int32 dbgLineNumber, CtorArgTypes&& ... CtorArgs)
+    {
+        void *pRawMem = m_FixedBlockAlloctor.Allocate(sizeof(ObjectType), dbgDescription, dbgFileName, dbgLineNumber);
+        try
+        {
+            return new(pRawMem) ObjectType(std::forward<CtorArgTypes>(CtorArgs)...);
+        }
+        catch (...)
+        {
+            m_FixedBlockAlloctor.Free(pRawMem);
+            return nullptr;
+        }
+    }
+
+    void Destroy(ObjectType* pObj)
+    {
+        if(pObj != nullptr)
+        {
+            pObj->~ObjectType();
+            m_FixedBlockAlloctor.Free(pObj);
+        }
+    }
+
+private:
+    static Uint32 m_NumAllocationsInPage;
+    static IMemoryAllocator *m_pRawAllocator;
+
+    ObjectPool() : 
+        m_FixedBlockAlloctor(m_pRawAllocator ? *m_pRawAllocator : GetRawAllocator(), sizeof(ObjectType),  m_NumAllocationsInPage)
+    {}
+#ifdef _DEBUG
+    static bool m_bPoolInitialized;
+#endif
+    FixedBlockMemoryAllocator m_FixedBlockAlloctor;
+};
+template<typename ObjectType>
+Uint32 ObjectPool<ObjectType>::m_NumAllocationsInPage = 64;
+
+template<typename ObjectType>
+IMemoryAllocator* ObjectPool<ObjectType>::m_pRawAllocator = nullptr;
+
+#ifdef _DEBUG
+template<typename ObjectType>
+bool ObjectPool<ObjectType>::m_bPoolInitialized = false;
+#endif
+
+#define SET_POOL_RAW_ALLOCATOR(ObjectType, Allocator)ObjectPool<ObjectType>::SetRawAllocator(Allocator)
+#define SET_POOL_PAGE_SIZE(ObjectType, NumAllocationsInPage)ObjectPool<ObjectType>::SetPageSize(NumAllocationsInPage)
+#define NEW_POOL_OBJECT(ObjectType, Desc, ...)ObjectPool<ObjectType>::GetPool().NewObject(Desc, __FILE__, __LINE__, ##__VA_ARGS__)
+#define DESTROY_POOL_OBJECT(pObject)ObjectPool< std::remove_reference<decltype(*pObject)>::type >::GetPool().Destroy(pObject)
+
 }

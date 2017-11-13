@@ -30,13 +30,13 @@
 
 namespace Diligent
 {
-    TextureViewGLImpl::TextureViewGLImpl( FixedBlockMemoryAllocator &TexViewObjAllocator,
+    TextureViewGLImpl::TextureViewGLImpl( IReferenceCounters *pRefCounters,
                                           IRenderDevice *pDevice, 
                                           const TextureViewDesc& ViewDesc, 
                                           TextureBaseGL* pTexture,
                                           bool bCreateGLViewTex,
                                           bool bIsDefaultView ) :
-        TTextureViewBase(TexViewObjAllocator, pDevice, ViewDesc, pTexture, bIsDefaultView),
+        TTextureViewBase(pRefCounters, pDevice, ViewDesc, pTexture, bIsDefaultView),
         m_ViewTexGLHandle( bCreateGLViewTex ),
         m_ViewTexBindTarget(0)
     {

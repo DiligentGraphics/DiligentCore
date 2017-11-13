@@ -39,15 +39,20 @@ namespace Diligent
 class FixedBlockMemoryAllocator;
 
 /// Implementation of the Diligent::IBufferD3D12 interface
-class BufferD3D12Impl : public BufferBase<IBufferD3D12, BufferViewD3D12Impl, FixedBlockMemoryAllocator, FixedBlockMemoryAllocator>, public D3D12ResourceBase
+class BufferD3D12Impl : public BufferBase<IBufferD3D12, BufferViewD3D12Impl, FixedBlockMemoryAllocator>, public D3D12ResourceBase
 {
 public:
-    typedef BufferBase<IBufferD3D12, BufferViewD3D12Impl, FixedBlockMemoryAllocator, FixedBlockMemoryAllocator> TBufferBase;
-    BufferD3D12Impl(FixedBlockMemoryAllocator &BufferObjMemAllocator, 
+    typedef BufferBase<IBufferD3D12, BufferViewD3D12Impl, FixedBlockMemoryAllocator> TBufferBase;
+    BufferD3D12Impl(IReferenceCounters *pRefCounters, 
                     FixedBlockMemoryAllocator &BuffViewObjMemAllocator, 
                     class RenderDeviceD3D12Impl *pDeviceD3D12, 
                     const BufferDesc& BuffDesc, 
                     const BufferData &BuffData = BufferData());
+    BufferD3D12Impl(IReferenceCounters *pRefCounters, 
+                    FixedBlockMemoryAllocator &BuffViewObjMemAllocator, 
+                    class RenderDeviceD3D12Impl *pDeviceD3D12, 
+                    const BufferDesc& BuffDesc, 
+                    ID3D12Resource *pd3d12Buffer);
     ~BufferD3D12Impl();
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
@@ -55,7 +60,7 @@ public:
     virtual void UpdateData( IDeviceContext *pContext, Uint32 Offset, Uint32 Size, const PVoid pData )override;
     virtual void CopyData( IDeviceContext *pContext, IBuffer *pSrcBuffer, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size )override;
     virtual void Map( IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid &pMappedData )override;
-    virtual void Unmap( IDeviceContext *pContext, MAP_TYPE MapType )override;
+    virtual void Unmap( IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags )override;
 
 #ifdef _DEBUG
     void DbgVerifyDynamicAllocation(Uint32 ContextId);
@@ -63,21 +68,36 @@ public:
 
     virtual ID3D12Resource *GetD3D12Buffer(size_t &DataStartByteOffset, Uint32 ContextId)override final
     { 
-        if(m_Desc.Usage == USAGE_DYNAMIC)
+        auto *pd3d12Resource = GetD3D12Resource();
+        if(pd3d12Resource != nullptr)
         {
+            VERIFY(m_Desc.Usage != USAGE_DYNAMIC || (m_Desc.BindFlags | (BIND_SHADER_RESOURCE|BIND_UNORDERED_ACCESS)) != 0, "Expected non-dynamic buffer or a buffer with SRV or UAV bind flags")
+            DataStartByteOffset = 0;
+            return pd3d12Resource; 
+        }
+        else
+        {
+            VERIFY(m_Desc.Usage == USAGE_DYNAMIC, "Dynamic buffer is expected")
+
 #ifdef _DEBUG
             DbgVerifyDynamicAllocation(ContextId);
 #endif
             DataStartByteOffset = m_DynamicData[ContextId].Offset;
             return m_DynamicData[ContextId].pBuffer;
         }
-        else
-        {
-            DataStartByteOffset = 0;
-            return GetD3D12Resource(); 
-        }
     }
     
+    virtual void* GetNativeHandle()override final
+    { 
+        VERIFY(GetD3D12Resource() != nullptr, "The buffer is dynamic and has no pointer to D3D12 resource");
+        size_t DataStartByteOffset = 0;
+        auto *pd3d12Buffer = GetD3D12Buffer(DataStartByteOffset, 0); 
+        VERIFY(DataStartByteOffset == 0, "0 offset expected");
+        return pd3d12Buffer;
+    }
+
+    virtual void SetD3D12ResourceState(D3D12_RESOURCE_STATES state)override final{ SetState(state); }
+
     D3D12_GPU_VIRTUAL_ADDRESS GetGPUAddress(Uint32 ContextId)
     {
         if(m_Desc.Usage == USAGE_DYNAMIC)
@@ -104,7 +124,7 @@ private:
     DescriptorHeapAllocation m_CBVDescriptorAllocation;
 
 #ifdef _DEBUG
-    std::vector<MAP_TYPE, STDAllocatorRawMem<MAP_TYPE> > m_DbgMapType;
+    std::vector< std::pair<MAP_TYPE, Uint32>, STDAllocatorRawMem<std::pair<MAP_TYPE, Uint32>> > m_DbgMapType;
 #endif
 
     friend class DeviceContextD3D12Impl;

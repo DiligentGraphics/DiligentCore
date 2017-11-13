@@ -63,7 +63,7 @@ namespace Diligent
             String FullPath = SearchDir + ( (Name[0] == '\\' || Name[0] == '/') ? Name + 1 : Name);
             if( !FileSystem::FileExists( FullPath.c_str() ) )
                 continue;
-            pBasicFileStream = new BasicFileStream( FullPath.c_str(), EFileAccessMode::Read );
+            pBasicFileStream = MakeNewRCObj<BasicFileStream>()( FullPath.c_str(), EFileAccessMode::Read );
             if( pBasicFileStream->IsValid() )
             {
                 bFileCreated = true;
@@ -81,7 +81,7 @@ namespace Diligent
         else
         {
             *ppStream = nullptr;
-            LOG_ERROR_AND_THROW( "Failed to create input stream for source file ", Name )
+            LOG_ERROR( "Failed to create input stream for source file ", Name )
         }
     }
 }

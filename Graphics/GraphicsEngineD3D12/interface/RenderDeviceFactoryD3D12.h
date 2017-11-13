@@ -27,29 +27,47 @@
 /// Declaration of functions that initialize Direct3D12-based engine implementation
 
 #include "Errors.h"
+#include "RenderDevice.h"
+#include "DeviceContext.h"
+#include "SwapChain.h"
+
+namespace Diligent
+{
+
+class IEngineFactoryD3D12
+{
+public:
+    virtual void CreateDeviceAndContextsD3D12( const EngineD3D12Attribs& CreationAttribs, 
+                                               IRenderDevice **ppDevice, 
+                                               IDeviceContext **ppContexts,
+                                               Uint32 NumDeferredContexts) = 0;
+
+    virtual void AttachToD3D12Device(void *pd3d12NativeDevice, 
+                                     class ICommandQueueD3D12 *pCommandQueue,
+                                     const EngineD3D12Attribs& EngineAttribs, 
+                                     IRenderDevice **ppDevice, 
+                                     IDeviceContext **ppContexts,
+                                     Uint32 NumDeferredContexts) = 0;
+
+    virtual void CreateSwapChainD3D12( IRenderDevice *pDevice, 
+                                       IDeviceContext *pImmediateContext, 
+                                       const SwapChainDesc& SwapChainDesc, 
+                                       void* pNativeWndHandle, 
+                                       ISwapChain **ppSwapChain ) = 0;
+
+};
+
+}
 
 extern "C"
 {
 #ifdef ENGINE_DLL
 
-    typedef void (*CreateDeviceAndContextsD3D12Type)( 
-        const Diligent::EngineD3D12Attribs& CreationAttribs, 
-        Diligent::IRenderDevice **ppDevice, 
-        Diligent::IDeviceContext **ppContexts,
-        Diligent::Uint32 NumDeferredContexts );
+    typedef Diligent::IEngineFactoryD3D12* (*GetEngineFactoryD3D12Type)();
 
-
-    typedef void (*CreateSwapChainD3D12Type)( 
-        Diligent::IRenderDevice *pDevice, 
-        Diligent::IDeviceContext *pImmediateContext, 
-        const Diligent::SwapChainDesc& SwapChainDesc, 
-        void* pNativeWndHandle, 
-        Diligent::ISwapChain **ppSwapChain );
-
-    static void LoadGraphicsEngineD3D12(CreateDeviceAndContextsD3D12Type &CreateDeviceFunc, CreateSwapChainD3D12Type &CreateSwapChainFunc)
+    static bool LoadGraphicsEngineD3D12(GetEngineFactoryD3D12Type &GetFactoryFunc)
     {
-        CreateDeviceFunc = nullptr;
-        CreateSwapChainFunc = nullptr;
+        GetFactoryFunc = nullptr;
         std::string LibName = "GraphicsEngineD3D12_";
 
 #if _WIN64
@@ -69,36 +87,22 @@ extern "C"
         if( hModule == NULL )
         {
             LOG_ERROR_MESSAGE( "Failed to load ", LibName, " library." );
-            return;
+            return false;
         }
 
-        CreateDeviceFunc = reinterpret_cast<CreateDeviceAndContextsD3D12Type>( GetProcAddress(hModule, "CreateDeviceAndContextsD3D12") );
-        if( CreateDeviceFunc == NULL )
+        GetFactoryFunc = reinterpret_cast<GetEngineFactoryD3D12Type>( GetProcAddress(hModule, "GetEngineFactoryD3D12") );
+        if( GetFactoryFunc == NULL )
         {
-            LOG_ERROR_MESSAGE( "Failed to load CreateDeviceAndContextsD3D12() from ", LibName, " library." );
+            LOG_ERROR_MESSAGE( "Failed to load GetEngineFactoryD3D12() from ", LibName, " library." );
             FreeLibrary( hModule );
-            return;
+            return false;
         }
-
-        CreateSwapChainFunc = reinterpret_cast<CreateSwapChainD3D12Type>( GetProcAddress(hModule, "CreateSwapChainD3D12") );
-        if( CreateSwapChainFunc == NULL )
-        {
-            LOG_ERROR_MESSAGE( "Failed to load CreateSwapChainD3D12() from ", LibName, " library." );
-            FreeLibrary( hModule );
-            return;
-        }
+        
+        return true;
     }
 #else
 
-    void CreateDeviceAndContextsD3D12( const Diligent::EngineD3D12Attribs& CreationAttribs, 
-                                       Diligent::IRenderDevice **ppDevice, 
-                                       Diligent::IDeviceContext **ppContexts,
-                                       Diligent::Uint32 NumDeferredContexts);
+    Diligent::IEngineFactoryD3D12* GetEngineFactoryD3D12();
 
-    void CreateSwapChainD3D12( Diligent::IRenderDevice *pDevice, 
-                               Diligent::IDeviceContext *pImmediateContext, 
-                               const Diligent::SwapChainDesc& SwapChainDesc, 
-                               void* pNativeWndHandle, 
-                               Diligent::ISwapChain **ppSwapChain );
 #endif
 }

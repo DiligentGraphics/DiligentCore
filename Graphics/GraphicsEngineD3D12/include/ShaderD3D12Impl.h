@@ -43,12 +43,12 @@ class ResourceMapping;
 class FixedBlockMemoryAllocator;
 
 /// Implementation of the Diligent::IShaderD3D12 interface
-class ShaderD3D12Impl : public ShaderBase<IShaderD3D12, IRenderDeviceD3D12, FixedBlockMemoryAllocator>, public ShaderD3DBase
+class ShaderD3D12Impl : public ShaderBase<IShaderD3D12, IRenderDeviceD3D12>, public ShaderD3DBase
 {
 public:
-    typedef ShaderBase<IShaderD3D12, IRenderDeviceD3D12, FixedBlockMemoryAllocator> TShaderBase;
+    typedef ShaderBase<IShaderD3D12, IRenderDeviceD3D12> TShaderBase;
 
-    ShaderD3D12Impl(FixedBlockMemoryAllocator& ShaderObjAllocator, class RenderDeviceD3D12Impl *pRenderDeviceD3D12, const ShaderCreationAttribs &ShaderCreationAttribs);
+    ShaderD3D12Impl(IReferenceCounters *pRefCounters, class RenderDeviceD3D12Impl *pRenderDeviceD3D12, const ShaderCreationAttribs &ShaderCreationAttribs);
     ~ShaderD3D12Impl();
     
     //virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;

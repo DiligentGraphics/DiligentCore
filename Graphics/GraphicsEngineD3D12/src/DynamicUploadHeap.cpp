@@ -131,7 +131,7 @@ namespace Diligent
         if (!DynAlloc.pBuffer)
         {
             auto NewMaxSize = m_RingBuffers.back().GetMaxSize() * 2;
-            while(NewMaxSize < SizeInBytes)NewMaxSize*=2;
+            while(NewMaxSize < AlignedSize)NewMaxSize*=2;
             m_RingBuffers.emplace_back(NewMaxSize, m_Allocator, m_pDeviceD3D12->GetD3D12Device(), m_bIsCPUAccessible);
             DynAlloc = m_RingBuffers.back().Allocate(AlignedSize);
         }
@@ -141,7 +141,7 @@ namespace Diligent
         return DynAlloc;
     }
 
-    void DynamicUploadHeap::FinishFrame(Uint64 FrameNum, Uint64 NumCompletedFrames)
+    void DynamicUploadHeap::FinishFrame(Uint64 FenceValue, Uint64 LastCompletedFenceValue)
     {
         // Every device context has its own upload heap, so there is no need to lock
         //std::lock_guard<std::mutex> Lock(m_Mutex);
@@ -155,8 +155,8 @@ namespace Diligent
         for(size_t Ind = 0; Ind < m_RingBuffers.size(); ++Ind)
         {
             auto &RingBuff = m_RingBuffers[Ind];
-            RingBuff.FinishCurrentFrame(FrameNum);
-            RingBuff.ReleaseCompletedFrames(NumCompletedFrames);
+            RingBuff.FinishCurrentFrame(FenceValue);
+            RingBuff.ReleaseCompletedFrames(LastCompletedFenceValue);
             if ( NumBuffsToDelete == Ind && Ind < m_RingBuffers.size()-1 && RingBuff.IsEmpty())
             {
                 ++NumBuffsToDelete;

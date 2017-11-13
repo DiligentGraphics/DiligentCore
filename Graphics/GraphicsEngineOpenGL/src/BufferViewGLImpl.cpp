@@ -31,16 +31,16 @@
 
 namespace Diligent
 {
-    BufferViewGLImpl::BufferViewGLImpl( FixedBlockMemoryAllocator& BuffViewObjAllocator,
+    BufferViewGLImpl::BufferViewGLImpl( IReferenceCounters *pRefCounters,
                                         IRenderDevice *pDevice, 
                                         IDeviceContext *pContext,
                                         const BufferViewDesc& ViewDesc, 
                                         BufferGLImpl* pBuffer,
                                         bool bIsDefaultView) :
-        TBuffViewBase(BuffViewObjAllocator, pDevice, ViewDesc, pBuffer, bIsDefaultView ),
+        TBuffViewBase(pRefCounters, pDevice, ViewDesc, pBuffer, bIsDefaultView ),
         m_GLTexBuffer(false)
     {
-        if( ViewDesc.ViewType == BUFFER_VIEW_SHADER_RESOURCE )
+        if( ViewDesc.ViewType == BUFFER_VIEW_SHADER_RESOURCE && pBuffer->GetDesc().Mode == BUFFER_MODE_FORMATTED )
         {
             auto *pContextGL = ValidatedCast<DeviceContextGLImpl>(pContext);
             auto &ContextState = pContextGL->GetContextState();
@@ -49,8 +49,9 @@ namespace Diligent
             ContextState.BindTexture(-1, GL_TEXTURE_BUFFER, m_GLTexBuffer );
 
             const auto &BuffFmt = pBuffer->GetDesc().Format;
+            VERIFY_EXPR(BuffFmt.ValueType != VT_UNDEFINED)
             auto GLFormat = TypeToGLTexFormat( BuffFmt.ValueType, BuffFmt.NumComponents, BuffFmt.IsNormalized );
-            glTexBuffer( GL_TEXTURE_BUFFER, GLFormat, pBuffer->GetGLBufferHandle() );
+            glTexBuffer( GL_TEXTURE_BUFFER, GLFormat, pBuffer->GetGLHandle() );
             CHECK_GL_ERROR_AND_THROW( "Failed to create texture buffer" );
 
             ContextState.BindTexture(-1, GL_TEXTURE_BUFFER, GLObjectWrappers::GLTextureObj(false) );

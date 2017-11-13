@@ -40,7 +40,7 @@ namespace Diligent
 /// Usage example:
 ///
 ///     {
-///         MapHelper<float> UniformData( pDeviceContext, pUniformBuff, MAP_WRITE_DISCARD, 0 );
+///         MapHelper<float> UniformData( pDeviceContext, pUniformBuff, MAP_WRITE, MAP_FLAG_DISCARD );
 ///         UniformData[0] = UniformData[1] = UniformData[2] = UniformData[3] = 1;
 ///     }
 template<typename DataType, bool KeepStrongReferences = false>
@@ -53,7 +53,8 @@ public:
         m_pMappedData(nullptr),
         m_pBuffer(nullptr),
         m_pContext(nullptr),
-        m_MapType(static_cast<MAP_TYPE>(-1))
+        m_MapType(static_cast<MAP_TYPE>(-1)),
+        m_MapFlags(static_cast<Uint32>(-1))
     {
     }
 
@@ -70,12 +71,14 @@ public:
         m_pBuffer( std::move(Helper.m_pBuffer) ),
         m_pMappedData( std::move(Helper.m_pMappedData) ),
         m_pContext( std::move(Helper.m_pContext) ),
-        m_MapType( std::move(Helper.m_MapType) )
+        m_MapType( std::move(Helper.m_MapType) ),
+        m_MapFlags( std::move(Helper.m_MapFlags) )
     {
         Helper.m_pBuffer = nullptr;
         Helper.m_pContext = nullptr;
         Helper.m_pMappedData = nullptr;
         Helper.m_MapType = static_cast<MAP_TYPE>(-1);
+        Helper.m_MapFlags = static_cast<Uint32>(-1);
     }
 
     /// Move-assignement operator: takes over resource ownership from Helper
@@ -85,10 +88,12 @@ public:
         m_pMappedData = std::move(Helper.m_pMappedData);
         m_pContext = std::move( Helper.m_pContext );
         m_MapType = std::move(Helper.m_MapType);
+        m_MapFlags = std::move(Helper.m_MapFlags);
         Helper.m_pBuffer = nullptr;
         Helper.m_pContext = nullptr;
         Helper.m_pMappedData = nullptr;
         Helper.m_MapType = static_cast<MAP_TYPE>(-1);
+        Helper.m_MapFlags = static_cast<Uint32>(-1);
         return *this;
     }
 
@@ -102,9 +107,14 @@ public:
     {
         VERIFY(!m_pBuffer && !m_pMappedData && !m_pContext, "Object already mapped");
         Unmap();
+#ifdef _DEBUG
+        auto &BuffDesc = pBuffer->GetDesc();
+        VERIFY(sizeof(DataType) <= BuffDesc.uiSizeInBytes, "Data type size exceeds buffer size")
+#endif
         m_pContext = pContext;
         m_pBuffer = pBuffer;
         m_MapType = MapType;
+        m_MapFlags = MapFlags;
         m_pBuffer->Map(m_pContext, MapType, MapFlags, (PVoid&)m_pMappedData);
         VERIFY( m_pMappedData, "Map failed" );
     }
@@ -114,9 +124,10 @@ public:
     {
         if( m_pBuffer )
         {
-            m_pBuffer->Unmap(m_pContext, m_MapType);
+            m_pBuffer->Unmap(m_pContext, m_MapType, m_MapFlags);
             m_pBuffer = nullptr;
             m_MapType = static_cast<MAP_TYPE>(-1);
+            m_MapFlags = static_cast<Uint32>(-1);
         }
         m_pContext = nullptr;
         m_pMappedData = nullptr;
@@ -169,6 +180,8 @@ private:
     DataType *m_pMappedData;
 
     MAP_TYPE m_MapType;
+
+    Uint32 m_MapFlags;
 };
 
 }

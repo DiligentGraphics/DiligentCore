@@ -24,15 +24,7 @@
 #pragma once
 
 #include "RenderDeviceBase.h"
-
-#ifdef PLATFORM_WIN32
-#include "GLContextWindows.h"
-#endif
-
-#ifdef ANDROID
-#include "GLContextAndroid.h"
-#endif
-
+#include "GLContext.h"
 #include "VAOCache.h"
 #include "BaseInterfacesGL.h"
 #include "FBOCache.h"
@@ -63,26 +55,37 @@ class RenderDeviceGLImpl : public RenderDeviceBase<IGLDeviceBaseInterface>
 public:
     typedef RenderDeviceBase<IGLDeviceBaseInterface> TRenderDeviceBase;
 
-    RenderDeviceGLImpl( IMemoryAllocator &RawMemAllocator, const ContextInitInfo &InitInfo );
+    RenderDeviceGLImpl( IReferenceCounters *pRefCounters, IMemoryAllocator &RawMemAllocator, const ContextInitInfo &InitInfo );
     ~RenderDeviceGLImpl();
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
     
 	void CreateBuffer(const BufferDesc& BuffDesc, const BufferData &BuffData, IBuffer **ppBufferLayout, bool bIsDeviceInternal);
-    virtual void CreateBuffer(const BufferDesc& BuffDesc, const BufferData &BuffData, IBuffer **ppBufferLayout)override;
+    virtual void CreateBuffer(const BufferDesc& BuffDesc, const BufferData &BuffData, IBuffer **ppBufferLayout)override final;
 
 	void CreateShader(const ShaderCreationAttribs &ShaderCreationAttribs, IShader **ppShader, bool bIsDeviceInternal );
-    virtual void CreateShader(const ShaderCreationAttribs &ShaderCreationAttribs, IShader **ppShader)override;
+    virtual void CreateShader(const ShaderCreationAttribs &ShaderCreationAttribs, IShader **ppShader)override final;
 
 	void CreateTexture(const TextureDesc& TexDesc, const TextureData &Data, ITexture **ppTexture, bool bIsDeviceInternal);
-    virtual void CreateTexture(const TextureDesc& TexDesc, const TextureData &Data, ITexture **ppTexture)override;
+    virtual void CreateTexture(const TextureDesc& TexDesc, const TextureData &Data, ITexture **ppTexture)override final;
     
 	void CreateSampler(const SamplerDesc& SamplerDesc, ISampler **ppSampler, bool bIsDeviceInternal);
-    virtual void CreateSampler(const SamplerDesc& SamplerDesc, ISampler **ppSampler)override;
+    virtual void CreateSampler(const SamplerDesc& SamplerDesc, ISampler **ppSampler)override final;
 
     void CreatePipelineState( const PipelineStateDesc &PipelineDesc, IPipelineState **ppPipelineState, bool bIsDeviceInternal);
-    virtual void CreatePipelineState( const PipelineStateDesc &PipelineDesc, IPipelineState **ppPipelineState )override;
+    virtual void CreatePipelineState( const PipelineStateDesc &PipelineDesc, IPipelineState **ppPipelineState )override final;
     
+    virtual void CreateTextureFromGLHandle(Uint32 GLHandle, const TextureDesc &TexDesc, ITexture **ppTexture)override final;
+
+    virtual void CreateBufferFromGLHandle(Uint32 GLHandle, const BufferDesc &BuffDesc, IBuffer **ppBuffer)override final;
+
     const GPUInfo& GetGPUInfo(){ return m_GPUInfo; }
+
+    FBOCache& GetFBOCache(GLContext::NativeGLContextType Context);
+    void OnReleaseTexture(ITexture *pTexture);
+
+    VAOCache& GetVAOCache(GLContext::NativeGLContextType Context);
+    void OnDestroyPSO(IPipelineState *pPSO);
+    void OnDestroyBuffer(IBuffer *pBuffer);
 
 protected:
     friend class DeviceContextGLImpl;
@@ -92,26 +95,25 @@ protected:
     friend class BufferGLImpl;
     friend class TextureViewGLImpl;
     friend class SwapChainGLImpl;
+    friend class GLContextState;
 
     // Must be the first member because its constructor initializes OpenGL
     GLContext m_GLContext; 
 
     std::unordered_set<String> m_ExtensionStrings;
 
-    VAOCache m_VAOCache;
-    FBOCache m_FBOCache;
+    ThreadingTools::LockFlag m_VAOCacheLockFlag;
+    std::unordered_map<GLContext::NativeGLContextType, VAOCache> m_VAOCache;
+
+    ThreadingTools::LockFlag m_FBOCacheLockFlag;
+    std::unordered_map<GLContext::NativeGLContextType, FBOCache> m_FBOCache;
 
     GPUInfo m_GPUInfo;
 
-    // Any draw command fails if no VAO is bound. We will use this empty
-    // VAO for draw commands with null input layout, such as these that
-    // only use VertexID as input.
-    GLObjectWrappers::GLVertexArrayObj m_EmptyVAO;
-
     TexRegionRender m_TexRegionRender;
-
+    
 private:
-    virtual void TestTextureFormat( TEXTURE_FORMAT TexFormat );
+    virtual void TestTextureFormat( TEXTURE_FORMAT TexFormat )override;
     bool CheckExtension(const Char *ExtensionString);
     void FlagSupportedTexFormats();
     void QueryDeviceCaps();

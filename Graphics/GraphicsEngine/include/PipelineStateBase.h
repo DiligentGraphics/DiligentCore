@@ -42,20 +42,20 @@ namespace Diligent
 /// \tparam RenderDeviceBaseInterface - base interface for the render device
 ///                                     (Diligent::IRenderDeviceD3D11, Diligent::IRenderDeviceD3D12, Diligent::IRenderDeviceGL,
 ///                                      or Diligent::IRenderDeviceGLES).
-template<class BaseInterface, class RenderDeviceBaseInterface, class PSOAllocator>
-class PipelineStateBase : public DeviceObjectBase<BaseInterface, PipelineStateDesc, PSOAllocator>
+template<class BaseInterface, class RenderDeviceBaseInterface>
+class PipelineStateBase : public DeviceObjectBase<BaseInterface, PipelineStateDesc>
 {
 public:
-    typedef DeviceObjectBase<BaseInterface, PipelineStateDesc, PSOAllocator> TDeviceObjectBase;
+    typedef DeviceObjectBase<BaseInterface, PipelineStateDesc> TDeviceObjectBase;
     typedef RenderDeviceBase < RenderDeviceBaseInterface > TRenderDeviceBase;
 
-    /// \param ObjAllocator - allocator that was used to allocate memory for this instance of the pipeline state object
+    /// \param pRefCounters - reference counters object that controls the lifetime of this PSO
 	/// \param pDevice - pointer to the device.
 	/// \param PSODesc - pipeline state description.
 	/// \param bIsDeviceInternal - flag indicating if the blend state is an internal device object and 
 	///							   must not keep a strong reference to the device.
-    PipelineStateBase( PSOAllocator &ObjAllocator, IRenderDevice *pDevice, const PipelineStateDesc& PSODesc, bool bIsDeviceInternal = false ) :
-        TDeviceObjectBase( ObjAllocator, pDevice, PSODesc, nullptr, bIsDeviceInternal ),
+    PipelineStateBase( IReferenceCounters *pRefCounters, IRenderDevice *pDevice, const PipelineStateDesc& PSODesc, bool bIsDeviceInternal = false ) :
+        TDeviceObjectBase( pRefCounters, pDevice, PSODesc, bIsDeviceInternal ),
         m_LayoutElements( PSODesc.GraphicsPipeline.InputLayout.NumElements, LayoutElement(), STD_ALLOCATOR_RAW_MEM(LayoutElement, GetRawAllocator(), "Allocator for vector<LayoutElement>" ) ),
         m_NumShaders(0)
     {

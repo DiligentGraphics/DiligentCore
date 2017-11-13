@@ -403,4 +403,38 @@ DXGI_FORMAT TexFormatToDXGI_Format(TEXTURE_FORMAT TexFormat, Uint32 BindFlags)
     }
 }
 
+class DXGIFmtToFmtMapInitializer
+{
+public:
+    DXGIFmtToFmtMapInitializer(TEXTURE_FORMAT DXGIFmtToFmtMap[])
+    {
+        for (TEXTURE_FORMAT fmt = TEX_FORMAT_UNKNOWN; fmt < TEX_FORMAT_NUM_FORMATS; fmt = static_cast<TEXTURE_FORMAT>(fmt +1))
+        {
+            auto DXGIFmt = TexFormatToDXGI_Format(fmt);
+            VERIFY_EXPR(DXGIFmt <= DXGI_FORMAT_B4G4R4A4_UNORM);
+            DXGIFmtToFmtMap[DXGIFmt] = fmt;
+        }
+    }
+};
+
+TEXTURE_FORMAT DXGI_FormatToTexFormat(DXGI_FORMAT DXGIFormat)
+{
+    static_assert(DXGI_FORMAT_B4G4R4A4_UNORM == 115, "Unexpected DXGI format value");
+    static TEXTURE_FORMAT DXGIFmtToFmtMap[DXGI_FORMAT_B4G4R4A4_UNORM+1];
+    static DXGIFmtToFmtMapInitializer Initializer(DXGIFmtToFmtMap);
+
+    if( DXGIFormat >= DXGI_FORMAT_UNKNOWN && DXGIFormat <= DXGI_FORMAT_BC7_UNORM_SRGB )
+    {
+        auto Format = DXGIFmtToFmtMap[DXGIFormat];
+        VERIFY( DXGIFormat == DXGI_FORMAT_UNKNOWN || Format != TEX_FORMAT_UNKNOWN, "Unsupported texture format" );
+        VERIFY_EXPR(DXGIFormat == TexFormatToDXGI_Format(Format));
+        return Format;
+    }
+    else
+    {
+        UNEXPECTED( "DXGI texture format (", DXGIFormat, ") is out of allowed range [0, ", DXGI_FORMAT_BC7_UNORM_SRGB, "]" );
+        return TEX_FORMAT_UNKNOWN;
+    }
+}
+
 }

@@ -31,8 +31,8 @@ namespace Diligent
 {
 
 
-ShaderResourceBindingD3D11Impl::ShaderResourceBindingD3D11Impl( FixedBlockMemoryAllocator &SRBAllocator, PipelineStateD3D11Impl *pPSO, bool IsInternal) :
-    TBase( SRBAllocator, pPSO, IsInternal ),
+ShaderResourceBindingD3D11Impl::ShaderResourceBindingD3D11Impl( IReferenceCounters *pRefCounters, PipelineStateD3D11Impl *pPSO, bool IsInternal) :
+    TBase( pRefCounters, pPSO, IsInternal ),
     m_bIsStaticResourcesBound(false)
 {
     for(size_t s=0; s < _countof(m_ResourceLayoutIndex); ++s)

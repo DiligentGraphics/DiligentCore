@@ -25,6 +25,9 @@
 #include "GraphicsUtilities.h"
 #include "DebugUtilities.h"
 #include <algorithm>
+#include <functional>
+
+#define PI_F 3.1415926f
 
 namespace Diligent
 {
@@ -61,9 +64,184 @@ const Char* GetValueTypeString( VALUE_TYPE Val )
     }
 }
 
+class TexFormatToViewFormatConverter
+{
+public:
+    TexFormatToViewFormatConverter()
+    {
+        static_assert(TEXTURE_VIEW_SHADER_RESOURCE == 1, "TEXTURE_VIEW_SHADER_RESOURCE == 1 expected");
+        static_assert(TEXTURE_VIEW_RENDER_TARGET == 2, "TEXTURE_VIEW_RENDER_TARGET == 2 expected");
+        static_assert(TEXTURE_VIEW_DEPTH_STENCIL == 3, "TEXTURE_VIEW_DEPTH_STENCIL == 3 expected");
+        static_assert(TEXTURE_VIEW_UNORDERED_ACCESS == 4, "TEXTURE_VIEW_UNORDERED_ACCESS == 4 expected");
+#define INIT_TEX_VIEW_FORMAT_INFO(TexFmt, SRVFmt, RTVFmt, DSVFmt, UAVFmt)\
+        {\
+            m_ViewFormats[ TexFmt ][TEXTURE_VIEW_SHADER_RESOURCE-1]  = TEX_FORMAT_##SRVFmt; \
+            m_ViewFormats[ TexFmt ][TEXTURE_VIEW_RENDER_TARGET-1]    = TEX_FORMAT_##RTVFmt; \
+            m_ViewFormats[ TexFmt ][TEXTURE_VIEW_DEPTH_STENCIL-1]    = TEX_FORMAT_##DSVFmt; \
+            m_ViewFormats[ TexFmt ][TEXTURE_VIEW_UNORDERED_ACCESS-1] = TEX_FORMAT_##UAVFmt; \
+        }
+        
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_UNKNOWN,                 UNKNOWN, UNKNOWN, UNKNOWN, UNKNOWN);
+
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGBA32_TYPELESS,         RGBA32_FLOAT, RGBA32_FLOAT, UNKNOWN, RGBA32_FLOAT);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGBA32_FLOAT,            RGBA32_FLOAT, RGBA32_FLOAT, UNKNOWN, RGBA32_FLOAT);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGBA32_UINT,             RGBA32_UINT,  RGBA32_UINT,  UNKNOWN, RGBA32_UINT);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGBA32_SINT,             RGBA32_SINT,  RGBA32_SINT,  UNKNOWN, RGBA32_SINT);
+                                                                       
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGB32_TYPELESS,          RGB32_FLOAT, RGB32_FLOAT, UNKNOWN, RGB32_FLOAT);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGB32_FLOAT,             RGB32_FLOAT, RGB32_FLOAT, UNKNOWN, RGB32_FLOAT);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGB32_UINT,              RGB32_UINT,  RGB32_UINT,  UNKNOWN, RGB32_UINT);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGB32_SINT,              RGB32_SINT,  RGB32_SINT,  UNKNOWN, RGB32_SINT);
+                                                                      
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGBA16_TYPELESS,         RGBA16_FLOAT, RGBA16_FLOAT, UNKNOWN, RGBA16_FLOAT);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGBA16_FLOAT,            RGBA16_FLOAT, RGBA16_FLOAT, UNKNOWN, RGBA16_FLOAT);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGBA16_UNORM,            RGBA16_UNORM, RGBA16_UNORM, UNKNOWN, RGBA16_UNORM);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGBA16_UINT,             RGBA16_UINT,  RGBA16_UINT,  UNKNOWN, RGBA16_UINT);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGBA16_SNORM,            RGBA16_SNORM, RGBA16_SNORM, UNKNOWN, RGBA16_SNORM);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGBA16_SINT,             RGBA16_SINT,  RGBA16_SINT,  UNKNOWN, RGBA16_SINT);
+                                                                       
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RG32_TYPELESS,           RG32_FLOAT, RG32_FLOAT, UNKNOWN, RG32_FLOAT);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RG32_FLOAT,              RG32_FLOAT, RG32_FLOAT, UNKNOWN, RG32_FLOAT);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RG32_UINT,               RG32_UINT,  RG32_UINT,  UNKNOWN, RG32_UINT);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RG32_SINT,               RG32_SINT,  RG32_SINT,  UNKNOWN, RG32_SINT);
+                                                                       
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_R32G8X24_TYPELESS,       R32_FLOAT_X8X24_TYPELESS, UNKNOWN, D32_FLOAT_S8X24_UINT, UNKNOWN);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_D32_FLOAT_S8X24_UINT,    R32_FLOAT_X8X24_TYPELESS, UNKNOWN, D32_FLOAT_S8X24_UINT, UNKNOWN);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_R32_FLOAT_X8X24_TYPELESS,R32_FLOAT_X8X24_TYPELESS, UNKNOWN, D32_FLOAT_S8X24_UINT, R32_FLOAT_X8X24_TYPELESS);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_X32_TYPELESS_G8X24_UINT, X32_TYPELESS_G8X24_UINT,  UNKNOWN, D32_FLOAT_S8X24_UINT, X32_TYPELESS_G8X24_UINT);
+                                                                       
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGB10A2_TYPELESS,        RGB10A2_UNORM, RGB10A2_UNORM, UNKNOWN, RGB10A2_UNORM);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGB10A2_UNORM,           RGB10A2_UNORM, RGB10A2_UNORM, UNKNOWN, RGB10A2_UNORM);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGB10A2_UINT,            RGB10A2_UINT,  RGB10A2_UINT,  UNKNOWN, RGB10A2_UINT);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_R11G11B10_FLOAT,         R11G11B10_FLOAT, R11G11B10_FLOAT, UNKNOWN, R11G11B10_FLOAT);
+
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGBA8_TYPELESS,          RGBA8_UNORM_SRGB, RGBA8_UNORM_SRGB, UNKNOWN, RGBA8_UNORM_SRGB);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGBA8_UNORM,             RGBA8_UNORM,      RGBA8_UNORM,      UNKNOWN, RGBA8_UNORM);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGBA8_UNORM_SRGB,        RGBA8_UNORM_SRGB, RGBA8_UNORM_SRGB, UNKNOWN, RGBA8_UNORM_SRGB);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGBA8_UINT,              RGBA8_UINT,       RGBA8_UINT,       UNKNOWN, RGBA8_UINT);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGBA8_SNORM,             RGBA8_SNORM,      RGBA8_SNORM,      UNKNOWN, RGBA8_SNORM);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGBA8_SINT,              RGBA8_SINT,       RGBA8_SINT,       UNKNOWN, RGBA8_SINT);
+
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RG16_TYPELESS,           RG16_FLOAT, RG16_FLOAT, UNKNOWN, RG16_FLOAT);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RG16_FLOAT,              RG16_FLOAT, RG16_FLOAT, UNKNOWN, RG16_FLOAT);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RG16_UNORM,              RG16_UNORM, RG16_UNORM, UNKNOWN, RG16_UNORM);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RG16_UINT,               RG16_UINT,  RG16_UINT,  UNKNOWN, RG16_UINT);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RG16_SNORM,              RG16_SNORM, RG16_SNORM, UNKNOWN, RG16_SNORM);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RG16_SINT,               RG16_SINT,  RG16_SINT,  UNKNOWN, RG16_SINT);
+
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_R32_TYPELESS,            R32_FLOAT, R32_FLOAT, D32_FLOAT, R32_FLOAT);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_D32_FLOAT,               R32_FLOAT, R32_FLOAT, D32_FLOAT, R32_FLOAT);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_R32_FLOAT,               R32_FLOAT, R32_FLOAT, D32_FLOAT, R32_FLOAT);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_R32_UINT,                R32_UINT,  R32_UINT,  UNKNOWN,   R32_UINT);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_R32_SINT,                R32_SINT,  R32_SINT,  UNKNOWN,   R32_SINT);
+
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_R24G8_TYPELESS,          R24_UNORM_X8_TYPELESS, UNKNOWN, D24_UNORM_S8_UINT, UNKNOWN);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_D24_UNORM_S8_UINT,       R24_UNORM_X8_TYPELESS, UNKNOWN, D24_UNORM_S8_UINT, UNKNOWN);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_R24_UNORM_X8_TYPELESS,   R24_UNORM_X8_TYPELESS, UNKNOWN, D24_UNORM_S8_UINT, R24_UNORM_X8_TYPELESS);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_X24_TYPELESS_G8_UINT,    X24_TYPELESS_G8_UINT,  UNKNOWN, D24_UNORM_S8_UINT, X24_TYPELESS_G8_UINT);
+
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RG8_TYPELESS,            RG8_UNORM, RG8_UNORM, UNKNOWN, RG8_UNORM);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RG8_UNORM,               RG8_UNORM, RG8_UNORM, UNKNOWN, RG8_UNORM);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RG8_UINT,                RG8_UINT,  RG8_UINT,  UNKNOWN, RG8_UINT);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RG8_SNORM,               RG8_SNORM, RG8_SNORM, UNKNOWN, RG8_SNORM);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RG8_SINT,                RG8_SINT,  RG8_SINT,  UNKNOWN, RG8_SINT);
+
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_R16_TYPELESS,            R16_FLOAT, R16_FLOAT, UNKNOWN,   R16_FLOAT);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_R16_FLOAT,               R16_FLOAT, R16_FLOAT, UNKNOWN,   R16_FLOAT);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_D16_UNORM,               R16_UNORM, R16_UNORM, D16_UNORM, R16_UNORM);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_R16_UNORM,               R16_UNORM, R16_UNORM, D16_UNORM, R16_UNORM);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_R16_UINT,                R16_UINT,  R16_UINT,  UNKNOWN,   R16_UINT);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_R16_SNORM,               R16_SNORM, R16_SNORM, UNKNOWN,   R16_SNORM);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_R16_SINT,                R16_SINT,  R16_SINT,  UNKNOWN,   R16_SINT);
+
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_R8_TYPELESS,             R8_UNORM, R8_UNORM, UNKNOWN, R8_UNORM);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_R8_UNORM,                R8_UNORM, R8_UNORM, UNKNOWN, R8_UNORM);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_R8_UINT,                 R8_UINT,  R8_UINT,  UNKNOWN, R8_UINT);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_R8_SNORM,                R8_SNORM, R8_SNORM, UNKNOWN, R8_SNORM);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_R8_SINT,                 R8_SINT,  R8_SINT,  UNKNOWN, R8_SINT);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_A8_UNORM,                A8_UNORM, A8_UNORM, UNKNOWN, A8_UNORM);
+
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_R1_UNORM,                R1_UNORM, R1_UNORM, UNKNOWN, R1_UNORM);
+
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RGB9E5_SHAREDEXP,        RGB9E5_SHAREDEXP, RGB9E5_SHAREDEXP, UNKNOWN, RGB9E5_SHAREDEXP);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_RG8_B8G8_UNORM,          RG8_B8G8_UNORM,  RG8_B8G8_UNORM,  UNKNOWN, RG8_B8G8_UNORM);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_G8R8_G8B8_UNORM,         G8R8_G8B8_UNORM, G8R8_G8B8_UNORM, UNKNOWN, G8R8_G8B8_UNORM);
+
+        // http://www.g-truc.net/post-0335.html
+        // http://renderingpipeline.com/2012/07/texture-compression/
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_BC1_TYPELESS,            BC1_UNORM_SRGB, UNKNOWN, UNKNOWN, UNKNOWN);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_BC1_UNORM,               BC1_UNORM,      UNKNOWN, UNKNOWN, UNKNOWN);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_BC1_UNORM_SRGB,          BC1_UNORM_SRGB, UNKNOWN, UNKNOWN, UNKNOWN);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_BC2_TYPELESS,            BC2_UNORM_SRGB, UNKNOWN, UNKNOWN, UNKNOWN);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_BC2_UNORM,               BC2_UNORM,      UNKNOWN, UNKNOWN, UNKNOWN);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_BC2_UNORM_SRGB,          BC2_UNORM_SRGB, UNKNOWN, UNKNOWN, UNKNOWN);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_BC3_TYPELESS,            BC3_UNORM_SRGB, UNKNOWN, UNKNOWN, UNKNOWN);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_BC3_UNORM,               BC3_UNORM,      UNKNOWN, UNKNOWN, UNKNOWN);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_BC3_UNORM_SRGB,          BC3_UNORM_SRGB, UNKNOWN, UNKNOWN, UNKNOWN);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_BC4_TYPELESS,            BC4_UNORM,      UNKNOWN, UNKNOWN, UNKNOWN);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_BC4_UNORM,               BC4_UNORM,      UNKNOWN, UNKNOWN, UNKNOWN);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_BC4_SNORM,               BC4_SNORM,      UNKNOWN, UNKNOWN, UNKNOWN);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_BC5_TYPELESS,            BC5_UNORM,      UNKNOWN, UNKNOWN, UNKNOWN);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_BC5_UNORM,               BC5_UNORM,      UNKNOWN, UNKNOWN, UNKNOWN);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_BC5_SNORM,               BC5_SNORM,      UNKNOWN, UNKNOWN, UNKNOWN);
+
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_B5G6R5_UNORM,            B5G6R5_UNORM,   B5G6R5_UNORM,    UNKNOWN, B5G6R5_UNORM);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_B5G5R5A1_UNORM,          B5G5R5A1_UNORM, B5G5R5A1_UNORM,  UNKNOWN, B5G5R5A1_UNORM);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_BGRA8_UNORM,             BGRA8_UNORM,    BGRA8_UNORM,     UNKNOWN, BGRA8_UNORM);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_BGRX8_UNORM,             BGRX8_UNORM,    BGRX8_UNORM,     UNKNOWN, BGRX8_UNORM);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_R10G10B10_XR_BIAS_A2_UNORM, R10G10B10_XR_BIAS_A2_UNORM, UNKNOWN, UNKNOWN, UNKNOWN);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_BGRA8_TYPELESS,          BGRA8_UNORM_SRGB, BGRA8_UNORM_SRGB, UNKNOWN, BGRA8_UNORM_SRGB);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_BGRA8_UNORM_SRGB,        BGRA8_UNORM_SRGB, BGRA8_UNORM_SRGB, UNKNOWN, BGRA8_UNORM_SRGB);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_BGRX8_TYPELESS,          BGRX8_UNORM_SRGB, BGRX8_UNORM_SRGB, UNKNOWN, BGRX8_UNORM_SRGB);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_BGRX8_UNORM_SRGB,        BGRX8_UNORM_SRGB, BGRX8_UNORM_SRGB, UNKNOWN, BGRX8_UNORM_SRGB);
+
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_BC6H_TYPELESS,           BC6H_UF16,      UNKNOWN, UNKNOWN, UNKNOWN);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_BC6H_UF16,               BC6H_UF16,      UNKNOWN, UNKNOWN, UNKNOWN);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_BC6H_SF16,               BC6H_SF16,      UNKNOWN, UNKNOWN, UNKNOWN);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_BC7_TYPELESS,            BC7_UNORM_SRGB, UNKNOWN, UNKNOWN, UNKNOWN);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_BC7_UNORM,               BC7_UNORM,      UNKNOWN, UNKNOWN, UNKNOWN);
+        INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_BC7_UNORM_SRGB,          BC7_UNORM_SRGB, UNKNOWN, UNKNOWN, UNKNOWN);
+#undef INIT_TVIEW_FORMAT_INFO
+    }
+
+    TEXTURE_FORMAT GetViewFormat(TEXTURE_FORMAT Format, TEXTURE_VIEW_TYPE ViewType, Uint32 BindFlags)
+    {
+        VERIFY(ViewType > TEXTURE_VIEW_UNDEFINED && ViewType < TEXTURE_VIEW_NUM_VIEWS, "Unexpected texture view type");
+        VERIFY(Format >= TEX_FORMAT_UNKNOWN && Format < TEX_FORMAT_NUM_FORMATS, "Unknown texture format");
+        switch (Format)
+        {
+            case TEX_FORMAT_R16_TYPELESS:
+            {
+                if (BindFlags & BIND_DEPTH_STENCIL)
+                {
+                    static TEXTURE_FORMAT D16_ViewFmts[] = 
+                    {
+                        TEX_FORMAT_R16_UNORM, TEX_FORMAT_R16_UNORM, TEX_FORMAT_D16_UNORM, TEX_FORMAT_R16_UNORM
+                    };
+                    return D16_ViewFmts[ViewType - 1];
+                }
+            }
+
+            default: /*do nothing*/break;
+        }
+
+        return m_ViewFormats[Format][ViewType-1];
+    }
+
+private:
+
+    TEXTURE_FORMAT m_ViewFormats[TEX_FORMAT_NUM_FORMATS][TEXTURE_VIEW_NUM_VIEWS-1];
+};
+
+TEXTURE_FORMAT GetDefaultTextureViewFormat(TEXTURE_FORMAT TextureFormat, TEXTURE_VIEW_TYPE ViewType, Uint32 BindFlags)
+{
+    static TexFormatToViewFormatConverter FmtConverter;
+    return FmtConverter.GetViewFormat(TextureFormat, ViewType, BindFlags);
+}
+
 const TextureFormatAttribs& GetTextureFormatAttribs( TEXTURE_FORMAT Format )
 {
-    static TextureFormatAttribs FmtAttribs[TEX_FORMAT_NUM_FORMATS] = {};
+    static TextureFormatAttribs FmtAttribs[TEX_FORMAT_NUM_FORMATS];
     static bool bIsInit = false;
     // Note that this implementation is thread-safe
     // Even if two threads try to call the function at the same time,
@@ -516,7 +694,7 @@ static const Char* GetBufferModeString( BUFFER_MODE Mode )
     {
 #define INIT_BUFF_MODE_STR(Mode)BufferModeStrings[Mode] = #Mode
         INIT_BUFF_MODE_STR( BUFFER_MODE_UNDEFINED );
-        INIT_BUFF_MODE_STR( BUFFER_MODE_FORMATED );
+        INIT_BUFF_MODE_STR( BUFFER_MODE_FORMATTED );
         INIT_BUFF_MODE_STR( BUFFER_MODE_STRUCTURED );
 #undef  INIT_BUFF_MODE_STR
         static_assert(BUFFER_MODE_NUM_MODES == BUFFER_MODE_STRUCTURED + 1, "Not all buffer mode strings initialized.");
@@ -556,7 +734,7 @@ String GetBufferDescString( const BufferDesc &Desc )
     
     Str += "; Mode: ";
     Str += GetBufferModeString(Desc.Mode);
-    if( Desc.Mode == BUFFER_MODE_FORMATED )
+    if( Desc.Mode == BUFFER_MODE_FORMATTED )
     {
         Str += "; Format: ";
         Str += GetValueTypeString( Desc.Format.ValueType );
@@ -601,14 +779,86 @@ Uint32 ComputeMipLevelsCount( Uint32 Width, Uint32 Height, Uint32 Depth )
     return ComputeMipLevelsCount( std::max(std::max( Width, Height ), Depth) );
 }
 
-void CreateUniformBuffer( IRenderDevice *pDevice, Uint32 Size, IBuffer **ppBuffer, USAGE Usage, Uint32 BindFlag, Uint32 CPUAccessFlags)
+void CreateUniformBuffer( IRenderDevice *pDevice, Uint32 Size, const Char *Name, IBuffer **ppBuffer, USAGE Usage, Uint32 BindFlag, Uint32 CPUAccessFlags)
 {
     BufferDesc CBDesc;
+    CBDesc.Name = Name;
     CBDesc.uiSizeInBytes = Size;
     CBDesc.Usage = Usage;
     CBDesc.BindFlags = BindFlag;
     CBDesc.CPUAccessFlags = CPUAccessFlags;
     pDevice->CreateBuffer( CBDesc, BufferData(), ppBuffer );
+}
+
+template<class TConverter>
+void GenerateCheckerBoardPatternInternal(Uint32 Width, Uint32 Height, TEXTURE_FORMAT Fmt, Uint32 HorzCells, Uint32 VertCells, Uint8 *pData, Uint32 StrideInBytes, TConverter Converter)
+{
+    const auto& FmtAttribs = GetTextureFormatAttribs(Fmt);
+    for (Uint32 y = 0; y < Height; ++y)
+    {
+        for (Uint32 x = 0; x < Width; ++x)
+        {
+            float horzWave = sin((static_cast<float>(x) + 0.5f) / static_cast<float>(Width)  * PI_F * static_cast<float>(HorzCells));
+            float vertWave = sin((static_cast<float>(y) + 0.5f) / static_cast<float>(Height) * PI_F * static_cast<float>(VertCells));
+            float val = horzWave * vertWave;
+            val = std::max( std::min( val*20.f, +1.f), -1.f );
+            val = val * 0.5f + 1.f;
+            val = val * 0.5f + 0.25f;
+            Uint8 *pDstTexel = pData + x * FmtAttribs.NumComponents * FmtAttribs.ComponentSize + y * StrideInBytes;
+            Converter(pDstTexel, FmtAttribs.NumComponents, val);
+        }
+    }
+}
+
+static float LinearToSRGB(float x)
+{
+	// This is exactly the sRGB curve
+	//return x < 0.0031308 ? 12.92 * x : 1.055 * pow(abs(x), 1.0 / 2.4) - 0.055;
+	 
+	// This is cheaper but nearly equivalent
+	return x < 0.0031308f ? 12.92f * x : 1.13005f * sqrtf(abs(x - 0.00228f)) - 0.13448f * x + 0.005719f;
+}
+
+
+void GenerateCheckerBoardPattern(Uint32 Width, Uint32 Height, TEXTURE_FORMAT Fmt, Uint32 HorzCells, Uint32 VertCells, Uint8 *pData, Uint32 StrideInBytes)
+{
+    const auto& FmtAttribs = GetTextureFormatAttribs(Fmt);
+    switch (FmtAttribs.ComponentType)
+    {
+        case COMPONENT_TYPE_UINT:
+        case COMPONENT_TYPE_UNORM:
+            GenerateCheckerBoardPatternInternal(Width, Height, Fmt, HorzCells, VertCells, pData, StrideInBytes, 
+                [](Uint8 *pDstTexel, Uint32 NumComponents, float fVal)
+                {
+                    Uint8 uVal = static_cast<Uint8>(fVal * 255.f);
+                    for (Uint32 c = 0; c < NumComponents; ++c)
+                        pDstTexel[c] = uVal;
+                });
+            break;
+
+        case COMPONENT_TYPE_UNORM_SRGB:
+            GenerateCheckerBoardPatternInternal(Width, Height, Fmt, HorzCells, VertCells, pData, StrideInBytes, 
+                [](Uint8 *pDstTexel, Uint32 NumComponents, float fVal)
+                {
+                    Uint8 uVal = static_cast<Uint8>(  LinearToSRGB(fVal) * 255.f);
+                    for (Uint32 c = 0; c < NumComponents; ++c)
+                        pDstTexel[c] = uVal;
+                });
+            break;
+
+        case COMPONENT_TYPE_FLOAT:
+            GenerateCheckerBoardPatternInternal(Width, Height, Fmt, HorzCells, VertCells, pData, StrideInBytes, 
+                [](Uint8 *pDstTexel, Uint32 NumComponents, float fVal)
+                {
+                    for (Uint32 c = 0; c < NumComponents; ++c)
+                        (reinterpret_cast<float*>(pDstTexel))[c] = fVal;
+                });
+            break;
+
+        default:
+            UNSUPPORTED("Unsupported component type")
+            return;
+    }
 }
 
 }

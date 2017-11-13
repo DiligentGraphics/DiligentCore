@@ -27,6 +27,7 @@
 /// Definition of the Engine D3D11 attribs
 
 #include "BasicTypes.h"
+#include "GraphicsTypes.h"
 
 namespace Diligent
 {

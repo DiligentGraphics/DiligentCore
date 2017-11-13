@@ -22,6 +22,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\CommandContext.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\CommandListD3D12Impl.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\CommandListManager.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\CommandQueueD3D12Impl.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\D3D12ResourceBase.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\D3D12TypeConversions.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\D3D12TypeDefinitions.h" />
@@ -46,6 +47,8 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\include\TextureViewD3D12Impl.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\interface\BufferD3D12.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\interface\BufferViewD3D12.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\interface\CommandQueueD3D12.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\interface\DeviceContextD3D12.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\interface\PipelineStateD3D12.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\interface\RenderDeviceD3D12.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\interface\RenderDeviceFactoryD3D12.h" />
@@ -123,6 +126,7 @@
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)..\..\readme.md" />
     <None Include="$(MSBuildThisFileDirectory)..\..\shaders\GenerateMips\GenerateMipsCS.hlsli">
       <FileType>Document</FileType>
     </None>
@@ -132,6 +136,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)..\..\src\BufferViewD3D12Impl.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)..\..\src\CommandContext.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)..\..\src\CommandListManager.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\src\CommandQueueD3D12Impl.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)..\..\src\D3D12ResourceBase.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)..\..\src\D3D12TypeConversions.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)..\..\src\D3D12Utils.cpp" />

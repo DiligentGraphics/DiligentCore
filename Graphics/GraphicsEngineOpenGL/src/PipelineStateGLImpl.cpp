@@ -31,10 +31,9 @@
 namespace Diligent
 {
 
-PipelineStateGLImpl::PipelineStateGLImpl(FixedBlockMemoryAllocator &PSOAllocator, class RenderDeviceGLImpl *pDeviceGL, const PipelineStateDesc& PipelineDesc, bool bIsDeviceInternal) : 
-    TPipelineStateBase(PSOAllocator, pDeviceGL, PipelineDesc, bIsDeviceInternal),
-    m_GLProgram(false),
-    m_GLProgPipeline(false)
+PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters *pRefCounters, class RenderDeviceGLImpl *pDeviceGL, const PipelineStateDesc& PipelineDesc, bool bIsDeviceInternal) : 
+    TPipelineStateBase(pRefCounters, pDeviceGL, PipelineDesc, bIsDeviceInternal),
+    m_GLProgram(false)
 {
 
     auto &DeviceCaps = pDeviceGL->GetDeviceCaps();
@@ -48,18 +47,8 @@ void PipelineStateGLImpl::LinkGLProgram(bool bIsProgramPipelineSupported)
 {
     if( bIsProgramPipelineSupported )
     {
-        // Create new progam pipeline
-        m_GLProgPipeline.Create();
-        for( Uint32 Shader = 0; Shader < m_NumShaders; ++Shader )
-        {
-            auto *pCurrShader = static_cast<ShaderGLImpl*>(m_ppShaders[Shader]);
-            auto GLShaderBit = ShaderTypeToGLShaderBit( pCurrShader->GetDesc().ShaderType );
-            // If the program has an active code for each stage mentioned in set flags,
-            // then that code will be used by the pipeline. If program is 0, then the given
-            // stages are cleared from the pipeline.
-            glUseProgramStages( m_GLProgPipeline, GLShaderBit, pCurrShader->m_GlProgObj );
-            CHECK_GL_ERROR( "glUseProgramStages() failed" );
-        }
+        // Program pipelines are not shared between GL contexts, so we cannot create
+        // it now
     }
     else
     {
@@ -137,7 +126,7 @@ void PipelineStateGLImpl::LinkGLProgram(bool bIsProgramPipelineSupported)
 
 PipelineStateGLImpl::~PipelineStateGLImpl()
 {
-    static_cast<RenderDeviceGLImpl*>( GetDevice() )->m_VAOCache.OnDestroyPSO(this);
+    static_cast<RenderDeviceGLImpl*>( GetDevice() )->OnDestroyPSO(this);
 }
 
 IMPLEMENT_QUERY_INTERFACE( PipelineStateGLImpl, IID_PipelineStateGL, TPipelineStateBase )
@@ -162,8 +151,33 @@ void PipelineStateGLImpl::CreateShaderResourceBinding(IShaderResourceBinding **p
 {
     auto *pRenderDeviceGL = ValidatedCast<RenderDeviceGLImpl>( GetDevice() );
     auto &SRBAllocator = pRenderDeviceGL->GetSRBAllocator();
-    auto pResBinding = NEW( SRBAllocator, "ShaderResourceBindingGLImpl instance", ShaderResourceBindingGLImpl, this);
+    auto pResBinding = NEW_RC_OBJ( SRBAllocator, "ShaderResourceBindingGLImpl instance", ShaderResourceBindingGLImpl)(this);
     pResBinding->QueryInterface(IID_ShaderResourceBinding, reinterpret_cast<IObject**>(ppShaderResourceBinding));
+}
+
+GLObjectWrappers::GLPipelineObj &PipelineStateGLImpl::GetGLProgramPipeline(GLContext::NativeGLContextType Context)
+{
+    ThreadingTools::LockHelper Lock(m_ProgPipelineLockFlag);
+    auto it = m_GLProgPipelines.find(Context);
+    if (it != m_GLProgPipelines.end())
+        return it->second;
+    else
+    {
+        // Create new progam pipeline
+        it = m_GLProgPipelines.emplace( Context, true ).first;
+        GLuint Pipeline = it->second;
+        for (Uint32 Shader = 0; Shader < m_NumShaders; ++Shader)
+        {
+            auto *pCurrShader = static_cast<ShaderGLImpl*>(m_ppShaders[Shader]);
+            auto GLShaderBit = ShaderTypeToGLShaderBit(pCurrShader->GetDesc().ShaderType);
+            // If the program has an active code for each stage mentioned in set flags,
+            // then that code will be used by the pipeline. If program is 0, then the given
+            // stages are cleared from the pipeline.
+            glUseProgramStages(Pipeline, GLShaderBit, pCurrShader->m_GlProgObj);
+            CHECK_GL_ERROR("glUseProgramStages() failed");
+        }
+        return it->second;
+    }
 }
 
 }

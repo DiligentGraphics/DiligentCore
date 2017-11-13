@@ -474,23 +474,19 @@
 #   define GL_COMPUTE_SHADER 0x91B9
 #endif
 
-#ifndef glBindImageTexture
-    #define LOAD_GL_BIND_IMAGE_TEXTURE
-    typedef void (* PFNGLBINDIMAGETEXTUREPROC) (GLuint unit, GLuint texture, GLint level, GLboolean layered, GLint layer, GLenum access, GLenum format);
-    extern PFNGLBINDIMAGETEXTUREPROC glBindImageTexture;
-#endif
+#ifndef GL_ES_VERSION_3_1
+#define LOAD_GL_BIND_IMAGE_TEXTURE
+typedef void (GL_APIENTRY* PFNGLBINDIMAGETEXTUREPROC) (GLuint unit, GLuint texture, GLint level, GLboolean layered, GLint layer, GLenum access, GLenum format);
+extern PFNGLBINDIMAGETEXTUREPROC glBindImageTexture;
 
-#ifndef glDispatchCompute
-    #define LOAD_GL_DISPATCH_COMPUTE
-    typedef void (* PFNGLDISPATCHCOMPUTEPROC) (GLuint num_groups_x, GLuint num_groups_y, GLuint num_groups_z);
-    extern PFNGLDISPATCHCOMPUTEPROC glDispatchCompute;
-#endif
+#define LOAD_GL_DISPATCH_COMPUTE
+typedef void (GL_APIENTRY* PFNGLDISPATCHCOMPUTEPROC) (GLuint num_groups_x, GLuint num_groups_y, GLuint num_groups_z);
+extern PFNGLDISPATCHCOMPUTEPROC glDispatchCompute;
 
-#ifndef glMemoryBarrier
-    #define LOAD_GL_MEMORY_BARRIER 
-    typedef void (* PFNGLMEMORYBARRIERPROC) (GLbitfield barriers);
-    extern PFNGLMEMORYBARRIERPROC glMemoryBarrier;
-#endif
+#define LOAD_GL_MEMORY_BARRIER 
+typedef void (GL_APIENTRY* PFNGLMEMORYBARRIERPROC) (GLbitfield barriers);
+extern PFNGLMEMORYBARRIERPROC glMemoryBarrier;
+#endif // GL_ES_VERSION_3_1
 
 #ifndef GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT
 #   define GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT   0x00000001
@@ -541,6 +537,23 @@
 #   define GL_ALL_BARRIER_BITS                  0xFFFFFFFF
 #endif
 
+
+//--------------------------- Texture queries -----------------------------
+#ifndef GL_TEXTURE_WIDTH
+#   define GL_TEXTURE_WIDTH 0x1000
+#endif
+
+#ifndef GL_TEXTURE_HEIGHT
+#   define GL_TEXTURE_HEIGHT 0x1001
+#endif
+
+#ifndef GL_TEXTURE_DEPTH
+#   define GL_TEXTURE_DEPTH 0x8071
+#endif
+
+#ifndef GL_TEXTURE_INTERNAL_FORMAT
+#   define GL_TEXTURE_INTERNAL_FORMAT 0x1003
+#endif
 
 
 //------------------------ Program interface query ------------------------
@@ -860,6 +873,15 @@
 #   define GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER 0x8CDC
 #endif
 
+/* ---------------------- ARB_tessellation_shader --------------------- */
+#ifndef GL_PATCHES
+#   define GL_PATCHES 0xE
+#endif
+
+#ifndef GL_PATCH_VERTICES
+#   define GL_PATCH_VERTICES 0x8E72
+#endif
+
 
 // Define unsupported GL function stubs
 template<typename T>
@@ -868,192 +890,126 @@ void UnsupportedGLFunctionStub( const T &Name )
     LOG_ERROR_MESSAGE( Name, "() is not supported in this API!\n" );
 }
 
-#ifndef glGenProgramPipelines
+#define glDrawElementsInstancedBaseVertexBaseInstance(...) UnsupportedGLFunctionStub("glDrawElementsInstancedBaseVertexBaseInstance")
+#define glDrawElementsInstancedBaseVertex(...) UnsupportedGLFunctionStub("glDrawElementsInstancedBaseVertex")
+#define glDrawElementsInstancedBaseInstance(...) UnsupportedGLFunctionStub("glDrawElementsInstancedBaseInstance")
+#define glDrawArraysInstancedBaseInstance(...) UnsupportedGLFunctionStub("glDrawArraysInstancedBaseInstance")
+#define glDrawElementsBaseVertex(...) UnsupportedGLFunctionStub("glDrawElementsBaseVertex")
+#define glTextureView(...) UnsupportedGLFunctionStub("glTextureView")
+#define glTexStorage1D(...) UnsupportedGLFunctionStub("glTexStorage1D")
+#define glTexSubImage1D(...) UnsupportedGLFunctionStub("glTexSubImage1D")
+#define glTexStorage3DMultisample(...) UnsupportedGLFunctionStub("glTexStorage3DMultisample")
+
+#ifndef GL_ES_VERSION_3_1
+
     #define LOAD_GEN_PROGRAM_PIPELINES
-    typedef void (* PFNGLGENPROGRAMPIPELINESPROC) (GLsizei n, GLuint* pipelines);    
+    typedef void (GL_APIENTRY* PFNGLGENPROGRAMPIPELINESPROC) (GLsizei n, GLuint* pipelines);    
     extern PFNGLGENPROGRAMPIPELINESPROC glGenProgramPipelines;
-#endif
 
-
-#ifndef glDeleteProgramPipelines
     #define LOAD_GL_DELETE_PROGRAM_PIPELINES
-    typedef void (* PFNGLDELETEPROGRAMPIPELINESPROC) (GLsizei n, const GLuint* pipelines);
+    typedef void (GL_APIENTRY* PFNGLDELETEPROGRAMPIPELINESPROC) (GLsizei n, const GLuint* pipelines);
     extern PFNGLDELETEPROGRAMPIPELINESPROC glDeleteProgramPipelines;
-#endif
 
-#ifndef glBindProgramPipeline
     #define LOAD_GL_BIND_PROGRAM_PIPELINE
-    typedef void (* PFNGLBINDPROGRAMPIPELINEPROC) (GLuint pipeline);
+    typedef void (GL_APIENTRY* PFNGLBINDPROGRAMPIPELINEPROC) (GLuint pipeline);
     extern PFNGLBINDPROGRAMPIPELINEPROC glBindProgramPipeline;
-#endif
 
-#ifndef glDrawElementsIndirect
     #define LOAD_DRAW_ELEMENTS_INDIRECT
-    typedef void (* PFNGLDRAWELEMENTSINDIRECTPROC) (GLenum mode, GLenum type, const GLvoid *indirect);
+    typedef void (GL_APIENTRY* PFNGLDRAWELEMENTSINDIRECTPROC) (GLenum mode, GLenum type, const GLvoid *indirect);
     extern PFNGLDRAWELEMENTSINDIRECTPROC glDrawElementsIndirect;
-#endif
 
-#ifndef glDrawArraysIndirect
     #define LOAD_DRAW_ARRAYS_INDIRECT
-    typedef void (* PFNGLDRAWARRAYSINDIRECTPROC)( GLenum mode, const GLvoid *indirect );
+    typedef void (GL_APIENTRY* PFNGLDRAWARRAYSINDIRECTPROC)( GLenum mode, const GLvoid *indirect );
     extern PFNGLDRAWARRAYSINDIRECTPROC glDrawArraysIndirect;
-#endif
 
-#ifndef glDispatchComputeIndirect
     #define LOAD_DISPATCH_COMPUTE_INDIRECT
-    typedef void (* PFNGLDISPATCHCOMPUTEINDIRECTPROC) (GLintptr indirect);
+    typedef void (GL_APIENTRY* PFNGLDISPATCHCOMPUTEINDIRECTPROC) (GLintptr indirect);
     extern PFNGLDISPATCHCOMPUTEINDIRECTPROC glDispatchComputeIndirect;
-#endif
 
-#ifndef glDrawElementsInstancedBaseVertexBaseInstance
-#   define glDrawElementsInstancedBaseVertexBaseInstance(...) UnsupportedGLFunctionStub("glDrawElementsInstancedBaseVertexBaseInstance")
-#endif
-
-#ifndef glDrawElementsInstancedBaseVertex
-#   define glDrawElementsInstancedBaseVertex(...) UnsupportedGLFunctionStub("glDrawElementsInstancedBaseVertex")
-#endif
-
-#ifndef glDrawElementsInstancedBaseInstance
-#   define glDrawElementsInstancedBaseInstance(...) UnsupportedGLFunctionStub("glDrawElementsInstancedBaseInstance")
-#endif
-
-#ifndef glDrawArraysInstancedBaseInstance
-#   define glDrawArraysInstancedBaseInstance(...) UnsupportedGLFunctionStub("glDrawArraysInstancedBaseInstance")
-#endif
-
-#ifndef glDrawElementsBaseVertex
-#   define glDrawElementsBaseVertex(...) UnsupportedGLFunctionStub("glDrawElementsBaseVertex")
-#endif
-
-#ifndef glUseProgramStages
     #define LOAD_GL_USE_PROGRAM_STAGES
-    typedef void (* PFNGLUSEPROGRAMSTAGESPROC) (GLuint pipeline, GLbitfield stages, GLuint program);
+    typedef void (GL_APIENTRY* PFNGLUSEPROGRAMSTAGESPROC) (GLuint pipeline, GLbitfield stages, GLuint program);
     extern PFNGLUSEPROGRAMSTAGESPROC glUseProgramStages;
-#endif 
 
-#ifndef glTexStorage1D
-#   define glTexStorage1D(...) UnsupportedGLFunctionStub("glTexStorage1D")
-#endif
-
-#ifndef glTexSubImage1D
-#   define glTexSubImage1D(...) UnsupportedGLFunctionStub("glTexSubImage1D")
-#endif
-
-#ifndef glTexStorage3DMultisample
-#   define glTexStorage3DMultisample(...) UnsupportedGLFunctionStub("glTexStorage3DMultisample")
-#endif
-
-#ifndef glTexStorage2DMultisample
     #define LOAD_GL_TEX_STORAGE_2D_MULTISAMPLE
-    typedef void (* PFNGLTEXSTORAGE2DMULTISAMPLEPROC) (GLenum target, GLsizei samples, GLenum internalformat, GLsizei width, GLsizei height, GLboolean fixedsamplelocations);
+    typedef void (GL_APIENTRY* PFNGLTEXSTORAGE2DMULTISAMPLEPROC) (GLenum target, GLsizei samples, GLenum internalformat, GLsizei width, GLsizei height, GLboolean fixedsamplelocations);
     extern PFNGLTEXSTORAGE2DMULTISAMPLEPROC glTexStorage2DMultisample;
-#endif
 
-#ifndef glTextureView
-#   define glTextureView(...) UnsupportedGLFunctionStub("glTextureView")
-#endif
-
-#ifndef glTexBuffer
-    #define LOAD_GL_TEX_BUFFER
-    typedef void (* PFNGLTEXBUFFERPROC) (GLenum, GLenum, GLuint);
-    extern PFNGLTEXBUFFERPROC glTexBuffer;
-#endif
-
-#ifndef glProgramUniform1i
     #define LOAD_GL_PROGRAM_UNIFORM_1I
-    typedef void (* PFNGLPROGRAMUNIFORM1IPROC) (GLuint program, GLint location, GLint x);
+    typedef void (GL_APIENTRY* PFNGLPROGRAMUNIFORM1IPROC) (GLuint program, GLint location, GLint x);
     extern PFNGLPROGRAMUNIFORM1IPROC glProgramUniform1i;
-#endif
 
-#ifndef glGetProgramInterfaceiv
     #define LOAD_GL_GET_PROGRAM_INTERFACEIV
-    typedef void (* PFNGLGETPROGRAMINTERFACEIVPROC) (GLuint program, GLenum programInterface, GLenum pname, GLint* params);
+    typedef void (GL_APIENTRY* PFNGLGETPROGRAMINTERFACEIVPROC) (GLuint program, GLenum programInterface, GLenum pname, GLint* params);
     extern PFNGLGETPROGRAMINTERFACEIVPROC glGetProgramInterfaceiv;
-#endif
 
-#ifndef glGetProgramResourceName
     #define LOAD_GL_GET_PROGRAM_RESOURCE_NAME
-    typedef void (* PFNGLGETPROGRAMRESOURCENAMEPROC) (GLuint program, GLenum programInterface, GLuint index, GLsizei bufSize, GLsizei* length, GLchar *name);
+    typedef void (GL_APIENTRY* PFNGLGETPROGRAMRESOURCENAMEPROC) (GLuint program, GLenum programInterface, GLuint index, GLsizei bufSize, GLsizei* length, GLchar *name);
     extern PFNGLGETPROGRAMRESOURCENAMEPROC glGetProgramResourceName;
-#endif
 
-#ifndef glGetProgramResourceiv
     #define LOAD_GL_GET_PROGRAM_RESOURCEIV
-    typedef void (* PFNGLGETPROGRAMRESOURCEIVPROC) (GLuint program, GLenum programInterface, GLuint index, GLsizei propCount, const GLenum* props, GLsizei bufSize, GLsizei *length, GLint *params);
+    typedef void (GL_APIENTRY* PFNGLGETPROGRAMRESOURCEIVPROC) (GLuint program, GLenum programInterface, GLuint index, GLsizei propCount, const GLenum* props, GLsizei bufSize, GLsizei *length, GLint *params);
     extern PFNGLGETPROGRAMRESOURCEIVPROC glGetProgramResourceiv;
-#endif
 
-#ifndef glPolygonMode
-    #define LOAD_GL_POLYGON_MODE
-    typedef void (* PFNGLPOLYGONMODE) (GLenum face, GLenum mode);
-    extern PFNGLPOLYGONMODE glPolygonMode;
-#endif
+    #define LOAD_GET_TEX_LEVEL_PARAMETER_IV
+    typedef void (GL_APIENTRY* PFNGLGETTEXLEVELPARAMETERIVPROC) (GLenum target, GLint level, GLenum pname, GLint *params);
+    extern PFNGLGETTEXLEVELPARAMETERIVPROC glGetTexLevelParameteriv;
 
+#endif //GL_ES_VERSION_3_1
 
-#ifndef glEnablei
-    #define LOAD_GL_ENABLEI
-    typedef void (* PFNGLENABLEIPROC) (GLenum, GLuint);
-    extern PFNGLENABLEIPROC glEnablei;
-#endif
+#define LOAD_GL_TEX_BUFFER
+typedef void (GL_APIENTRY* PFNGLTEXBUFFERPROC) (GLenum, GLenum, GLuint);
+extern PFNGLTEXBUFFERPROC glTexBuffer;
 
-#ifndef glBlendFuncSeparatei
-    #define LOAD_GL_BLEND_FUNC_SEPARATEI
-    typedef void (* PFNGLBLENDFUNCSEPARATEIPROC) (GLuint buf, GLenum srcRGB, GLenum dstRGB, GLenum srcAlpha, GLenum dstAlpha);
-    extern PFNGLBLENDFUNCSEPARATEIPROC glBlendFuncSeparatei;
-#endif
+#define LOAD_GL_VIEWPORT_INDEXEDF
+typedef void (GL_APIENTRY* PFNGLVIEWPORTINDEXEDFPROC) (GLuint index, GLfloat x, GLfloat y, GLfloat w, GLfloat h);
+extern PFNGLVIEWPORTINDEXEDFPROC glViewportIndexedf;
 
-#ifndef glBlendEquationSeparatei
-    #define LOAD_GL_BLEND_EQUATION_SEPARATEI
-    typedef void (* PFNGLBLENDEQUATIONSEPARATEIPROC) (GLuint buf, GLenum modeRGB, GLenum modeAlpha);
-    extern PFNGLBLENDEQUATIONSEPARATEIPROC glBlendEquationSeparatei;
-#endif
+#define LOAD_GL_SCISSOR_INDEXED
+typedef void (GL_APIENTRY* PFNGLSCISSORINDEXEDPROC) (GLuint index, GLint left, GLint bottom, GLsizei width, GLsizei height);
+extern PFNGLSCISSORINDEXEDPROC glScissorIndexed;
 
-#ifndef glDisablei
-    #define LOAD_GL_DISABLEI
-    typedef void (* PFNGLDISABLEIPROC) (GLenum, GLuint);
-    extern PFNGLDISABLEIPROC glDisablei;
-#endif
+#define LOAD_GL_POLYGON_MODE
+typedef void (GL_APIENTRY* PFNGLPOLYGONMODE) (GLenum face, GLenum mode);
+extern PFNGLPOLYGONMODE glPolygonMode;
 
-#ifndef glColorMaski
-    #define LOAD_GL_COLOR_MASKI
-    typedef void (* PFNGLCOLORMASKIPROC) (GLuint, GLboolean, GLboolean, GLboolean, GLboolean);
-    extern PFNGLCOLORMASKIPROC glColorMaski;
-#endif
+#define LOAD_GL_ENABLEI
+typedef void (GL_APIENTRY* PFNGLENABLEIPROC) (GLenum, GLuint);
+extern PFNGLENABLEIPROC glEnablei;
 
-#ifndef glViewportIndexedf
-    #define LOAD_GL_VIEWPORT_INDEXEDF
-    typedef void (* PFNGLVIEWPORTINDEXEDFPROC) (GLuint index, GLfloat x, GLfloat y, GLfloat w, GLfloat h);
-    extern PFNGLVIEWPORTINDEXEDFPROC glViewportIndexedf;
-#endif
+#define LOAD_GL_BLEND_FUNC_SEPARATEI
+typedef void (GL_APIENTRY* PFNGLBLENDFUNCSEPARATEIPROC) (GLuint buf, GLenum srcRGB, GLenum dstRGB, GLenum srcAlpha, GLenum dstAlpha);
+extern PFNGLBLENDFUNCSEPARATEIPROC glBlendFuncSeparatei;
 
-#ifndef glScissorIndexed
-    #define LOAD_GL_SCISSOR_INDEXED
-    typedef void (* PFNGLSCISSORINDEXEDPROC) (GLuint index, GLint left, GLint bottom, GLsizei width, GLsizei height);
-    extern PFNGLSCISSORINDEXEDPROC glScissorIndexed;
-#endif
+#define LOAD_GL_BLEND_EQUATION_SEPARATEI
+typedef void (GL_APIENTRY* PFNGLBLENDEQUATIONSEPARATEIPROC) (GLuint buf, GLenum modeRGB, GLenum modeAlpha);
+extern PFNGLBLENDEQUATIONSEPARATEIPROC glBlendEquationSeparatei;
 
-#ifndef glFramebufferTexture
-    #define LOAD_GL_FRAMEBUFFER_TEXTURE
-    typedef void (* PFNGLFRAMEBUFFERTEXTUREPROC) (GLenum, GLenum, GLuint, GLint);
-    extern PFNGLFRAMEBUFFERTEXTUREPROC glFramebufferTexture;
-#endif
+#define LOAD_GL_DISABLEI
+typedef void (GL_APIENTRY* PFNGLDISABLEIPROC) (GLenum, GLuint);
+extern PFNGLDISABLEIPROC glDisablei;
 
-#ifndef glFramebufferTexture1D
-    #define LOAD_GL_FRAMEBUFFER_TEXTURE_1D
-    typedef void (* PFNGLFRAMEBUFFERTEXTURE1DPROC) (GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level);
-    extern PFNGLFRAMEBUFFERTEXTURE1DPROC glFramebufferTexture1D;
-#endif
+#define LOAD_GL_COLOR_MASKI
+typedef void (GL_APIENTRY* PFNGLCOLORMASKIPROC) (GLuint, GLboolean, GLboolean, GLboolean, GLboolean);
+extern PFNGLCOLORMASKIPROC glColorMaski;
 
-#ifndef glFramebufferTexture3D
-    #define LOAD_GL_FRAMEBUFFER_TEXTURE_3D
-    typedef void (* PFNGLFRAMEBUFFERTEXTURE3DPROC) (GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level, GLint layer);
-    extern PFNGLFRAMEBUFFERTEXTURE3DPROC glFramebufferTexture3D;
-#endif
+#define LOAD_GL_PATCH_PARAMTER_I
+typedef void (GL_APIENTRY* PFNGLPATCHPARAMETERIPROC) (GLenum pname, GLint value);
+extern PFNGLPATCHPARAMETERIPROC glPatchParameteri;
 
-#ifndef glCopyImageSubData
-    #define LOAD_GL_COPY_IMAGE_SUB_DATA
-    typedef void (* PFNGLCOPYIMAGESUBDATAPROC) (GLuint srcName, GLenum srcTarget, GLint srcLevel, GLint srcX, GLint srcY, GLint srcZ, GLuint dstName, GLenum dstTarget, GLint dstLevel, GLint dstX, GLint dstY, GLint dstZ, GLsizei srcWidth, GLsizei srcHeight, GLsizei srcDepth);
-    extern PFNGLCOPYIMAGESUBDATAPROC glCopyImageSubData;
-#endif
+#define LOAD_GL_FRAMEBUFFER_TEXTURE
+typedef void (GL_APIENTRY* PFNGLFRAMEBUFFERTEXTUREPROC) (GLenum, GLenum, GLuint, GLint);
+extern PFNGLFRAMEBUFFERTEXTUREPROC glFramebufferTexture;
+
+#define LOAD_GL_FRAMEBUFFER_TEXTURE_1D
+typedef void (GL_APIENTRY* PFNGLFRAMEBUFFERTEXTURE1DPROC) (GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level);
+extern PFNGLFRAMEBUFFERTEXTURE1DPROC glFramebufferTexture1D;
+
+#define LOAD_GL_FRAMEBUFFER_TEXTURE_3D
+typedef void (GL_APIENTRY* PFNGLFRAMEBUFFERTEXTURE3DPROC) (GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level, GLint layer);
+extern PFNGLFRAMEBUFFERTEXTURE3DPROC glFramebufferTexture3D;
+
+#define LOAD_GL_COPY_IMAGE_SUB_DATA
+typedef void (GL_APIENTRY* PFNGLCOPYIMAGESUBDATAPROC) (GLuint srcName, GLenum srcTarget, GLint srcLevel, GLint srcX, GLint srcY, GLint srcZ, GLuint dstName, GLenum dstTarget, GLint dstLevel, GLint dstX, GLint dstY, GLint dstZ, GLsizei srcWidth, GLsizei srcHeight, GLsizei srcDepth);
+extern PFNGLCOPYIMAGESUBDATAPROC glCopyImageSubData;
 
 void LoadGLFunctions();

@@ -35,12 +35,12 @@ namespace Diligent
 
 class FixedBlockMemoryAllocator;
 /// Implementation of the Diligent::ISamplerD3D11 interface
-class SamplerD3D11Impl : public SamplerBase<ISamplerD3D11, IRenderDeviceD3D11, FixedBlockMemoryAllocator>
+class SamplerD3D11Impl : public SamplerBase<ISamplerD3D11, IRenderDeviceD3D11>
 {
 public:
-    typedef SamplerBase<ISamplerD3D11, IRenderDeviceD3D11, FixedBlockMemoryAllocator> TSamplerBase;
+    typedef SamplerBase<ISamplerD3D11, IRenderDeviceD3D11> TSamplerBase;
 
-    SamplerD3D11Impl(FixedBlockMemoryAllocator &SamplerObjAllocator, class RenderDeviceD3D11Impl *pRenderDeviceD3D11, const SamplerDesc& SamplerDesc);
+    SamplerD3D11Impl(IReferenceCounters *pRefCounters, class RenderDeviceD3D11Impl *pRenderDeviceD3D11, const SamplerDesc& SamplerDesc);
     ~SamplerD3D11Impl();
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface ) final;

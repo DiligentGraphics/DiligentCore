@@ -26,20 +26,15 @@
 #include "ShaderGLImpl.h"
 #include "RenderDeviceGLImpl.h"
 #include "DataBlobImpl.h"
-#include "HLSL2GLSLConverter.h"
+#include "HLSL2GLSLConverterImpl.h"
 
 using namespace Diligent;
 
 namespace Diligent
 {
 
-static const Char* g_GLSLDefinitions = 
-{
-    #include "GLSLDefinitions_inc.h"
-};
-
-ShaderGLImpl::ShaderGLImpl(FixedBlockMemoryAllocator& ShaderObjAllocator, RenderDeviceGLImpl *pDeviceGL, const ShaderCreationAttribs &ShaderCreationAttribs, bool bIsDeviceInternal) : 
-    TShaderBase( ShaderObjAllocator, pDeviceGL, ShaderCreationAttribs.Desc, bIsDeviceInternal ),
+ShaderGLImpl::ShaderGLImpl(IReferenceCounters *pRefCounters, RenderDeviceGLImpl *pDeviceGL, const ShaderCreationAttribs &ShaderCreationAttribs, bool bIsDeviceInternal) : 
+    TShaderBase( pRefCounters, pDeviceGL, ShaderCreationAttribs.Desc, bIsDeviceInternal ),
     m_GlProgObj(false),
     m_GLShaderObj( false, GLObjectWrappers::GLShaderObjCreateReleaseHelper( GetGLShaderType( m_Desc.ShaderType ) ) )
 {
@@ -50,15 +45,25 @@ ShaderGLImpl::ShaderGLImpl(FixedBlockMemoryAllocator& ShaderObjAllocator, Render
     // Not specifying lengths causes shader compilation errors on Android
     std::vector<GLint> Lenghts;
 
-    ShaderStrings.push_back(
+    String Settings;
+    
 #if defined(PLATFORM_WIN32)
+    Settings.append(
         "#version 430 core\n"
         "#define DESKTOP_GL 1\n"
+    );
 #elif defined(ANDROID)
+    Settings.append(
         "#version 310 es\n"
-        
-        "#extension GL_EXT_shader_io_blocks : enable\n" // This is required on NVidia
+    );
 
+    if(m_Desc.ShaderType == SHADER_TYPE_GEOMETRY)
+        Settings.append("#extension GL_EXT_geometry_shader : enable\n");
+
+    if(m_Desc.ShaderType == SHADER_TYPE_HULL || m_Desc.ShaderType == SHADER_TYPE_DOMAIN)
+        Settings.append("#extension GL_EXT_tessellation_shader : enable\n");
+
+    Settings.append(
         "#ifndef GL_ES\n"
         "#  define GL_ES 1\n"
         "#endif\n"
@@ -106,6 +111,7 @@ ShaderGLImpl::ShaderGLImpl(FixedBlockMemoryAllocator& ShaderObjAllocator, Render
         "precision highp uimage3D;\n"
         "precision highp uimageCube;\n"
         "precision highp uimage2DArray;\n"
+    );
 #endif
         // It would be much more convenient to use row_major matrices.
         // But unfortunatelly on NVIDIA, the following directive 
@@ -113,9 +119,12 @@ ShaderGLImpl::ShaderGLImpl(FixedBlockMemoryAllocator& ShaderObjAllocator, Render
         // does not have any effect on matrices that are part of structures
         // So we have to use column-major matrices which are default in both
         // DX and GLSL.
+    Settings.append(
         "layout(std140) uniform;\n"
     );
-    Lenghts.push_back( static_cast<GLint>( strlen( ShaderStrings.back() ) ) );
+
+    ShaderStrings.push_back(Settings.c_str());
+    Lenghts.push_back( static_cast<GLint>( Settings.length() ) );
 
     const Char* ShaderTypeDefine = nullptr;
     switch( m_Desc.ShaderType )
@@ -148,7 +157,7 @@ ShaderGLImpl::ShaderGLImpl(FixedBlockMemoryAllocator& ShaderObjAllocator, Render
         Lenghts.push_back( static_cast<GLint>( UserDefines.length() ) );
     }
 
-    RefCntAutoPtr<Diligent::IDataBlob> pFileData(new Diligent::DataBlobImpl);
+    RefCntAutoPtr<IDataBlob> pFileData(MakeNewRCObj<DataBlobImpl>()(0));
     auto ShaderSource = ShaderCreationAttribs.Source;
     GLuint SourceLen = 0;
     if( ShaderSource )
@@ -160,6 +169,9 @@ ShaderGLImpl::ShaderGLImpl(FixedBlockMemoryAllocator& ShaderObjAllocator, Render
         VERIFY(ShaderCreationAttribs.pShaderSourceStreamFactory, "Input stream factory is null");
         RefCntAutoPtr<IFileStream> pSourceStream;
         ShaderCreationAttribs.pShaderSourceStreamFactory->CreateInputStream( ShaderCreationAttribs.FilePath, &pSourceStream );
+        if (pSourceStream == nullptr)
+            LOG_ERROR_AND_THROW("Failed to open shader source file")
+
         pSourceStream->Read( pFileData );
         ShaderSource = reinterpret_cast<char*>(pFileData->GetDataPtr());
         SourceLen = static_cast<GLint>( pFileData->GetSize() );
@@ -168,13 +180,18 @@ ShaderGLImpl::ShaderGLImpl(FixedBlockMemoryAllocator& ShaderObjAllocator, Render
     String ConvertedSource;
     if( ShaderCreationAttribs.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL )
     {
-        ShaderStrings.push_back( g_GLSLDefinitions );
-        static const auto GLSLDefinitionsLen = strlen( g_GLSLDefinitions );
-        Lenghts.push_back( static_cast<GLint>( GLSLDefinitionsLen ) );
-
         // Convert HLSL to GLSL
-        HLSL2GLSLConverter Converter(ShaderCreationAttribs.pShaderSourceStreamFactory);
-        ConvertedSource = Converter.Convert(ShaderSource, SourceLen, ShaderCreationAttribs.EntryPoint, ShaderCreationAttribs.Desc.ShaderType);
+        const auto &Converter = HLSL2GLSLConverterImpl::GetInstance();
+        HLSL2GLSLConverterImpl::ConversionAttribs Attribs;
+        Attribs.pSourceStreamFactory = ShaderCreationAttribs.pShaderSourceStreamFactory;
+        Attribs.ppConversionStream = ShaderCreationAttribs.ppConversionStream;
+        Attribs.HLSLSource = ShaderSource;
+        Attribs.NumSymbols = SourceLen;
+        Attribs.EntryPoint = ShaderCreationAttribs.EntryPoint;
+        Attribs.ShaderType = ShaderCreationAttribs.Desc.ShaderType;
+        Attribs.IncludeDefinitions = true;
+        Attribs.InputFileName = ShaderCreationAttribs.FilePath;
+        ConvertedSource = Converter.Convert(Attribs);
 
         ShaderSource = ConvertedSource.c_str();
         SourceLen = static_cast<GLint>( ConvertedSource.length() );

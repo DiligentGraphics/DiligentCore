@@ -35,14 +35,14 @@
 namespace Diligent
 {
 
-BufferD3D12Impl :: BufferD3D12Impl(FixedBlockMemoryAllocator &BufferObjMemAllocator, 
+BufferD3D12Impl :: BufferD3D12Impl(IReferenceCounters *pRefCounters, 
                                    FixedBlockMemoryAllocator &BuffViewObjMemAllocator, 
                                    RenderDeviceD3D12Impl *pRenderDeviceD3D12, 
                                    const BufferDesc& BuffDesc, 
                                    const BufferData &BuffData /*= BufferData()*/) : 
-    TBufferBase(BufferObjMemAllocator, BuffViewObjMemAllocator, pRenderDeviceD3D12, BuffDesc),
+    TBufferBase(pRefCounters, BuffViewObjMemAllocator, pRenderDeviceD3D12, BuffDesc, false),
 #ifdef _DEBUG
-    m_DbgMapType(1 + pRenderDeviceD3D12->GetNumDeferredContexts(), static_cast<MAP_TYPE>(-1), STD_ALLOCATOR_RAW_MEM(DynamicAllocation, GetRawAllocator(), "Allocator for vector<MAP_TYPE>")),
+    m_DbgMapType(1 + pRenderDeviceD3D12->GetNumDeferredContexts(), std::make_pair(static_cast<MAP_TYPE>(-1), static_cast<Uint32>(-1)), STD_ALLOCATOR_RAW_MEM(DynamicAllocation, GetRawAllocator(), "Allocator for vector<pair<MAP_TYPE,Uint32>>")),
 #endif
     m_DynamicData(BuffDesc.Usage == USAGE_DYNAMIC ? (1 + pRenderDeviceD3D12->GetNumDeferredContexts()) : 0, DynamicAllocation(), STD_ALLOCATOR_RAW_MEM(DynamicAllocation, GetRawAllocator(), "Allocator for vector<DynamicAllocation>"))
 {
@@ -54,15 +54,31 @@ BufferD3D12Impl :: BufferD3D12Impl(FixedBlockMemoryAllocator &BufferObjMemAlloca
     if( m_Desc.Usage == USAGE_DYNAMIC && BuffData.pData != nullptr )
         LOG_BUFFER_ERROR_AND_THROW("Dynamic buffer must be initialized via Map()")
 
+    Uint32 AlignmentMask = 1;
     if (m_Desc.BindFlags & BIND_UNIFORM_BUFFER)
+        AlignmentMask = 255;
+    
+    if (m_Desc.Usage == USAGE_CPU_ACCESSIBLE)
     {
-        Uint32 AlignmentMask = 255;
-        m_Desc.uiSizeInBytes = (m_Desc.uiSizeInBytes + AlignmentMask) & (~AlignmentMask);
-    }
+        if (m_Desc.CPUAccessFlags != CPU_ACCESS_WRITE && m_Desc.CPUAccessFlags != CPU_ACCESS_READ)
+            LOG_BUFFER_ERROR_AND_THROW("Exactly one of the CPU_ACCESS_WRITE or CPU_ACCESS_READ flags must be specified for a cpu-accessible buffer")
 
-    if(m_Desc.Usage == USAGE_DYNAMIC)
+        if (m_Desc.CPUAccessFlags == CPU_ACCESS_WRITE)
+        {
+            if(BuffData.pData != nullptr )
+                LOG_BUFFER_ERROR_AND_THROW("CPU-writable staging buffers must be updated via map")
+
+            AlignmentMask = D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1;
+        }
+    }
+    
+    if(AlignmentMask != 1)
+        m_Desc.uiSizeInBytes = (m_Desc.uiSizeInBytes + AlignmentMask) & (~AlignmentMask);
+
+    if(m_Desc.Usage == USAGE_DYNAMIC && (m_Desc.BindFlags & (BIND_SHADER_RESOURCE|BIND_UNORDERED_ACCESS)) == 0)
     {
-        // Dynamic buffers are suballocated in the upload heap when Map() is called.
+        // Dynamic constant/vertex/index buffers are suballocated in the upload heap when Map() is called.
+        // Dynamic buffers with SRV or UAV flags need to be allocated in GPU-only memory
         // Dynamic upload heap buffer is always in D3D12_RESOURCE_STATE_GENERIC_READ state
 
         m_UsageState = D3D12_RESOURCE_STATE_GENERIC_READ;
@@ -86,12 +102,17 @@ BufferD3D12Impl :: BufferD3D12Impl(FixedBlockMemoryAllocator &BufferObjMemAlloca
         D3D12BuffDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
         if( m_Desc.BindFlags & BIND_UNORDERED_ACCESS )
             D3D12BuffDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-    
+        if( !(m_Desc.BindFlags & BIND_SHADER_RESOURCE) )
+            D3D12BuffDesc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
+
         auto *pd3d12Device = pRenderDeviceD3D12->GetD3D12Device();
 
+        D3D12_HEAP_PROPERTIES HeapProps;
+        if (m_Desc.Usage == USAGE_CPU_ACCESSIBLE)
+            HeapProps.Type = m_Desc.CPUAccessFlags == CPU_ACCESS_READ ? D3D12_HEAP_TYPE_READBACK : D3D12_HEAP_TYPE_UPLOAD;
+        else
+            HeapProps.Type = D3D12_HEAP_TYPE_DEFAULT;
 
-	    D3D12_HEAP_PROPERTIES HeapProps;
-	    HeapProps.Type = m_Desc.Usage == USAGE_CPU_ACCESSIBLE ? D3D12_HEAP_TYPE_READBACK : D3D12_HEAP_TYPE_DEFAULT;
         if(HeapProps.Type == D3D12_HEAP_TYPE_READBACK)
             m_UsageState = D3D12_RESOURCE_STATE_COPY_DEST;
         else if(HeapProps.Type == D3D12_HEAP_TYPE_UPLOAD)
@@ -145,7 +166,25 @@ BufferD3D12Impl :: BufferD3D12Impl(FixedBlockMemoryAllocator &BufferObjMemAlloca
             // the object is not constructed yet
 	        pInitContext->CopyResource(m_pd3d12Resource, UploadBuffer);
 
-	        pRenderDeviceD3D12->CloseAndExecuteCommandContext(pInitContext);
+            // Command list fence should only be signaled when submitting cmd list
+            // from the immediate context, otherwise the basic requirement will be violated
+            // as in the scenario below
+            // See http://diligentgraphics.com/diligent-engine/architecture/d3d12/managing-resource-lifetimes/
+            //                                                           
+            //  Signaled Fence  |        Immediate Context               |            InitContext            |
+            //                  |                                        |                                   |
+            //    N             |  Draw(ResourceX)                       |                                   |
+            //                  |  Release(ResourceX)                    |                                   |
+            //                  |   - (ResourceX, N) -> Release Queue    |                                   |
+            //                  |                                        | CopyResource()                    |
+            //   N+1            |                                        | CloseAndExecuteCommandContext()   |
+            //                  |                                        |                                   |
+            //   N+2            |  CloseAndExecuteCommandContext()       |                                   |
+            //                  |   - Cmd list is submitted with number  |                                   |
+            //                  |     N+1, but resource it references    |                                   |
+            //                  |     was added to the delete queue      |                                   |
+            //                  |     with value N                       |                                   |
+	        pRenderDeviceD3D12->CloseAndExecuteCommandContext(pInitContext, false);
 
             // Add reference to the object to the release queue to keep it alive
             // until copy operation is complete. This must be done after
@@ -159,51 +198,68 @@ BufferD3D12Impl :: BufferD3D12Impl(FixedBlockMemoryAllocator &BufferObjMemAlloca
             CreateCBV(m_CBVDescriptorAllocation.GetCpuHandle());
         }
     }
-#if 0
-    D3D12BuffDesc.BindFlags = BindFlagsToD3D12BindFlags(BuffDesc.BindFlags);
-    D3D12BuffDesc.ByteWidth = 
-    D3D12BuffDesc.MiscFlags = 0;
-    if( BuffDesc.BindFlags & BIND_INDIRECT_DRAW_ARGS )
+}
+
+static BufferDesc BufferDescFromD3D12Resource(BufferDesc BuffDesc, ID3D12Resource *pd3d12Buffer)
+{
+    VERIFY(BuffDesc.Usage != USAGE_DYNAMIC, "Dynamic buffers cannot be attached to native d3d12 resource")
+
+    auto D3D12BuffDesc = pd3d12Buffer->GetDesc();
+    VERIFY(D3D12BuffDesc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER, "D3D12 resource is not a buffer")
+
+    VERIFY(BuffDesc.uiSizeInBytes == 0 || BuffDesc.uiSizeInBytes == D3D12BuffDesc.Width, "Buffer size specified by the BufferDesc (", BuffDesc.uiSizeInBytes,") does not match d3d12 resource size (", D3D12BuffDesc.Width, ")" )
+    BuffDesc.uiSizeInBytes = static_cast<Uint32>( D3D12BuffDesc.Width );
+
+    if (D3D12BuffDesc.Flags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)
     {
-        D3D12BuffDesc.MiscFlags |= D3D12_RESOURCE_MISC_DRAWINDIRECT_ARGS;
+        VERIFY(BuffDesc.BindFlags == 0 || (BuffDesc.BindFlags & BIND_UNORDERED_ACCESS), "BIND_UNORDERED_ACCESS flag is not specified by the BufferDesc, while d3d12 resource was created with D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS flag")
+        BuffDesc.BindFlags |= BIND_UNORDERED_ACCESS;
     }
-    D3D12BuffDesc.Usage = UsageToD3D12Usage(BuffDesc.Usage);
-    
-    D3D12BuffDesc.StructureByteStride = 0;
-    if( (BuffDesc.BindFlags & BIND_UNORDERED_ACCESS) )
+    if (D3D12BuffDesc.Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE)
     {
-        if( BuffDesc.Mode == BUFFER_MODE_STRUCTURED )
+        VERIFY( !(BuffDesc.BindFlags & BIND_SHADER_RESOURCE), "BIND_SHADER_RESOURCE flag is specified by the BufferDesc, while d3d12 resource was created with D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE flag")
+        BuffDesc.BindFlags &= ~BIND_SHADER_RESOURCE;
+    }
+
+    if( (BuffDesc.BindFlags & BIND_UNORDERED_ACCESS) || (BuffDesc.BindFlags & BIND_SHADER_RESOURCE) )
+    {
+        if(BuffDesc.Mode == BUFFER_MODE_STRUCTURED)
         {
-            D3D12BuffDesc.MiscFlags |= D3D12_RESOURCE_MISC_BUFFER_STRUCTURED;
-            D3D12BuffDesc.StructureByteStride = BuffDesc.ElementByteStride;
+            VERIFY(BuffDesc.ElementByteStride != 0, "Element byte stride cannot be 0 for a structured buffer")
         }
-        else if( BuffDesc.Mode == BUFFER_MODE_FORMATED )
+        else if(BuffDesc.Mode == BUFFER_MODE_FORMATTED)
         {
-            auto ElementStride = GetValueSize( BuffDesc.Format.ValueType ) * BuffDesc.Format.NumComponents;
-            VERIFY( m_Desc.ElementByteStride == 0 || m_Desc.ElementByteStride == ElementStride, "Element byte stride does not match buffer format" );
-            m_Desc.ElementByteStride = ElementStride;
-            if( BuffDesc.Format.ValueType == VT_FLOAT32 || BuffDesc.Format.ValueType == VT_FLOAT16 )
-                m_Desc.Format.IsNormalized = false;
+            VERIFY( BuffDesc.Format.ValueType != VT_UNDEFINED, "Value type is not specified for a formatted buffer" );
+            VERIFY( BuffDesc.Format.NumComponents != 0, "Num components cannot be zero in a formated buffer" );
         }
         else
         {
-            UNEXPECTED( "Buffer UAV type is not correct" );
+            UNEXPECTED("Buffer mode must be structured or formatted")
         }
     }
 
-    D3D12BuffDesc.CPUAccessFlags = CPUAccessFlagsToD3D12CPUAccessFlags( BuffDesc.CPUAccessFlags );
-
-    D3D12_SUBRESOURCE_DATA InitData;
-    InitData.pSysMem = BuffData.pData;
-    InitData.SysMemPitch = BuffData.DataSize;
-    InitData.SysMemSlicePitch = 0;
-
-    auto *pDeviceD3D12 = pRenderDeviceD3D12->GetD3D12Device();
-    CHECK_D3D_RESULT_THROW( pDeviceD3D12->CreateBuffer(&D3D12BuffDesc, InitData.pSysMem ? &InitData : nullptr, &m_pD3D12Buffer),
-                            "Failed to create the Direct3D11 buffer" );
-#endif
+    return BuffDesc;
 }
 
+BufferD3D12Impl :: BufferD3D12Impl(IReferenceCounters *pRefCounters, 
+                                   FixedBlockMemoryAllocator &BuffViewObjMemAllocator, 
+                                   RenderDeviceD3D12Impl *pRenderDeviceD3D12, 
+                                   const BufferDesc& BuffDesc,
+                                   ID3D12Resource *pd3d12Buffer) : 
+    TBufferBase(pRefCounters, BuffViewObjMemAllocator, pRenderDeviceD3D12, BufferDescFromD3D12Resource(BuffDesc, pd3d12Buffer), false),
+#ifdef _DEBUG
+    m_DbgMapType(1 + pRenderDeviceD3D12->GetNumDeferredContexts(), std::make_pair(static_cast<MAP_TYPE>(-1), static_cast<Uint32>(-1)), STD_ALLOCATOR_RAW_MEM(DynamicAllocation, GetRawAllocator(), "Allocator for vector<pair<MAP_TYPE,Uint32>>")),
+#endif
+    m_DynamicData(BuffDesc.Usage == USAGE_DYNAMIC ? (1 + pRenderDeviceD3D12->GetNumDeferredContexts()) : 0, DynamicAllocation(), STD_ALLOCATOR_RAW_MEM(DynamicAllocation, GetRawAllocator(), "Allocator for vector<DynamicAllocation>"))
+{
+    m_pd3d12Resource = pd3d12Buffer;
+
+    if (m_Desc.BindFlags & BIND_UNIFORM_BUFFER)
+    {
+        m_CBVDescriptorAllocation = pRenderDeviceD3D12->AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+        CreateCBV(m_CBVDescriptorAllocation.GetCpuHandle());
+    }
+}
 BufferD3D12Impl :: ~BufferD3D12Impl()
 {
     // D3D12 object can only be destroyed when it is no longer used by the GPU
@@ -235,14 +291,15 @@ void BufferD3D12Impl :: Map(IDeviceContext *pContext, MAP_TYPE MapType, Uint32 M
     TBufferBase::Map( pContext, MapType, MapFlags, pMappedData );
     auto *pDeviceContextD3D12 = ValidatedCast<DeviceContextD3D12Impl>(pContext);
 #ifdef _DEBUG
-    m_DbgMapType[pDeviceContextD3D12->GetContextId()] = MapType;
+    if(pDeviceContextD3D12 != nullptr)
+        m_DbgMapType[pDeviceContextD3D12->GetContextId()] = std::make_pair(MapType, MapFlags);
 #endif
     if (MapType == MAP_READ )
     {
         LOG_WARNING_MESSAGE_ONCE("Mapping CPU buffer for reading on D3D12 currently requires flushing context and idling GPU");
         pDeviceContextD3D12->Flush();
         auto *pDeviceD3D12 = ValidatedCast<RenderDeviceD3D12Impl>(GetDevice());
-        pDeviceD3D12->IdleGPU();
+        pDeviceD3D12->IdleGPU(false);
 
         VERIFY(m_Desc.Usage == USAGE_CPU_ACCESSIBLE, "Buffer must be created as USAGE_CPU_ACCESSIBLE to be mapped for reading")
         D3D12_RANGE MapRange;
@@ -250,16 +307,33 @@ void BufferD3D12Impl :: Map(IDeviceContext *pContext, MAP_TYPE MapType, Uint32 M
         MapRange.End = m_Desc.uiSizeInBytes;
         m_pd3d12Resource->Map(0, &MapRange, &pMappedData);
     }
-    else if(MapType == MAP_WRITE_DISCARD)
+    else if(MapType == MAP_WRITE)
     {
-        auto *pCtxD3D12 = ValidatedCast<DeviceContextD3D12Impl>(pContext);
-        auto ContextId = pDeviceContextD3D12->GetContextId();
-        m_DynamicData[ContextId] = pCtxD3D12->AllocateDynamicSpace(m_Desc.uiSizeInBytes);
-        pMappedData = m_DynamicData[ContextId].CPUAddress;
+        if (m_Desc.Usage == USAGE_CPU_ACCESSIBLE)
+        {
+            VERIFY(m_pd3d12Resource != nullptr, "USAGE_CPU_ACCESSIBLE buffer mapped for writing must intialize D3D12 resource")
+            if (MapFlags & MAP_FLAG_DISCARD)
+            {
+                
+            }
+            m_pd3d12Resource->Map(0, nullptr, &pMappedData);
+        }
+        else if (m_Desc.Usage == USAGE_DYNAMIC)
+        {
+            VERIFY(MapFlags & MAP_FLAG_DISCARD, "D3D12 buffer must be mapped for writing with MAP_FLAG_DISCARD flag")
+            auto *pCtxD3D12 = ValidatedCast<DeviceContextD3D12Impl>(pContext);
+            auto ContextId = pDeviceContextD3D12->GetContextId();
+            m_DynamicData[ContextId] = pCtxD3D12->AllocateDynamicSpace(m_Desc.uiSizeInBytes);
+            pMappedData = m_DynamicData[ContextId].CPUAddress;
+        }
+        else
+        {
+            LOG_ERROR("Only USAGE_DYNAMIC and USAGE_CPU_ACCESSIBLE D3D12 buffers can be mapped for writing")
+        }
     }
-    else if(MapType == MAP_READ_WRITE || MapType == MAP_WRITE)
+    else if(MapType == MAP_READ_WRITE)
     {
-        LOG_ERROR("D3D12 allows writing to CPU-readable buffer, but it is not accessable by GPU")
+        LOG_ERROR("MAP_READ_WRITE is not supported on D3D12")
     }
     else
     {
@@ -267,13 +341,17 @@ void BufferD3D12Impl :: Map(IDeviceContext *pContext, MAP_TYPE MapType, Uint32 M
     }
 }
 
-void BufferD3D12Impl::Unmap( IDeviceContext *pContext, MAP_TYPE MapType )
+void BufferD3D12Impl::Unmap( IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags )
 {
-    TBufferBase::Unmap( pContext, MapType );
+    TBufferBase::Unmap( pContext, MapType, MapFlags );
     auto *pDeviceContextD3D12 = ValidatedCast<DeviceContextD3D12Impl>(pContext);
-    auto CtxId = pDeviceContextD3D12->GetContextId();
+    Uint32 CtxId = pDeviceContextD3D12 != nullptr ? pDeviceContextD3D12->GetContextId() : static_cast<Uint32>(-1);
 #ifdef _DEBUG
-    VERIFY(m_DbgMapType[CtxId] == MapType, "Map type provided does not match the type provided to Map()" );
+    if (pDeviceContextD3D12 != nullptr)
+    {
+        VERIFY(m_DbgMapType[CtxId].first == MapType, "Map type does not match the type provided to Map()");
+        VERIFY(m_DbgMapType[CtxId].second == MapFlags, "Map flags do not match the flags provided to Map()");
+    }
 #endif
 
     if (MapType == MAP_READ )
@@ -284,12 +362,27 @@ void BufferD3D12Impl::Unmap( IDeviceContext *pContext, MAP_TYPE MapType )
         MapRange.End = 0;
         m_pd3d12Resource->Unmap(0, &MapRange);
     }
-    else if(MapType == MAP_WRITE_DISCARD)
+    else if(MapType == MAP_WRITE)
     {
-        // Nothing needs to be done.
+        if (m_Desc.Usage == USAGE_CPU_ACCESSIBLE)
+        {
+            VERIFY(m_pd3d12Resource != nullptr, "USAGE_CPU_ACCESSIBLE buffer mapped for writing must intialize D3D12 resource")
+            m_pd3d12Resource->Unmap(0, nullptr);
+        }
+        else if (m_Desc.Usage == USAGE_DYNAMIC)
+        {
+            VERIFY(MapFlags & MAP_FLAG_DISCARD, "D3D12 buffer must be mapped for writing with MAP_FLAG_DISCARD flag")
+            // Copy data into the resource
+            if (m_pd3d12Resource)
+            {
+                pDeviceContextD3D12->UpdateBufferRegion(this, m_DynamicData[CtxId], 0, m_Desc.uiSizeInBytes);
+            }
+        }
     }
+
 #ifdef _DEBUG
-    m_DbgMapType[CtxId] = static_cast<MAP_TYPE>(-1);
+    if(pDeviceContextD3D12 != nullptr)
+        m_DbgMapType[CtxId] = std::make_pair(static_cast<MAP_TYPE>(-1), static_cast<Uint32>(-1));
 #endif
 }
 
@@ -312,13 +405,15 @@ void BufferD3D12Impl::CreateViewInternal( const BufferViewDesc &OrigViewDesc, IB
         {
             auto UAVHandleAlloc = pDeviceD3D12Impl->AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
             CreateUAV( ViewDesc, UAVHandleAlloc.GetCpuHandle() );
-            *ppView = NEW(BuffViewAllocator, "BufferViewD3D12Impl instance", BufferViewD3D12Impl, GetDevice(), ViewDesc, this, std::move(UAVHandleAlloc), bIsDefaultView );
+            *ppView = NEW_RC_OBJ(BuffViewAllocator, "BufferViewD3D12Impl instance", BufferViewD3D12Impl, bIsDefaultView ? this : nullptr)
+                                (GetDevice(), ViewDesc, this, std::move(UAVHandleAlloc), bIsDefaultView );
         }
         else if( ViewDesc.ViewType == BUFFER_VIEW_SHADER_RESOURCE )
         {
 			auto SRVHandleAlloc = pDeviceD3D12Impl->AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
             CreateSRV( ViewDesc, SRVHandleAlloc.GetCpuHandle() );
-            *ppView = NEW(BuffViewAllocator, "BufferViewD3D12Impl instance", BufferViewD3D12Impl, GetDevice(), ViewDesc, this, std::move(SRVHandleAlloc), bIsDefaultView );
+            *ppView = NEW_RC_OBJ(BuffViewAllocator, "BufferViewD3D12Impl instance", BufferViewD3D12Impl, bIsDefaultView ? this : nullptr)
+                                (GetDevice(), ViewDesc, this, std::move(SRVHandleAlloc), bIsDefaultView );
         }
 
         if( !bIsDefaultView && *ppView )
@@ -368,7 +463,7 @@ void BufferD3D12Impl::DbgVerifyDynamicAllocation(Uint32 ContextId)
 {
     VERIFY(m_DynamicData[ContextId].GPUAddress != 0, "Dynamic buffer must be mapped before the first use");
 	auto CurrentFrame = ValidatedCast<RenderDeviceD3D12Impl>(GetDevice())->GetCurrentFrameNumber();
-    VERIFY(m_DynamicData[ContextId].FrameNum == CurrentFrame, "Dynamic allocation is out-of-date. Dynamic buffer must be mapped in the same frame it is used.");
+    VERIFY(m_DynamicData[ContextId].FrameNum == CurrentFrame, "Dynamic allocation is out-of-date. Dynamic buffer \"", m_Desc.Name, "\" must be mapped in the same frame it is used.");
     VERIFY(GetState() == D3D12_RESOURCE_STATE_GENERIC_READ, "Dynamic buffers are expected to always be in D3D12_RESOURCE_STATE_GENERIC_READ state")
 }
 #endif

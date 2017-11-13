@@ -39,7 +39,8 @@ static const Diligent::INTERFACE_ID IID_BufferGL =
 class IBufferGL : public Diligent::IBuffer
 {
 public:
-    //const GLObjectWrappers::GLBufferObj& GetGLBufferHandle()
+    /// Returns OpenGL buffer handle
+    virtual GLuint GetGLBufferHandle() = 0;
 };
 
 }

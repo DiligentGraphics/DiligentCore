@@ -27,7 +27,7 @@
 #include "LockHelper.h"
 #include "Atomics.h"
 #include "ValidatedCast.h"
-#include "ReferenceCounters.h"
+#include "RefCountedObjectImpl.h"
 #include "Object.h"
 
 namespace Diligent
@@ -182,19 +182,8 @@ public:
     operator       T* ()      { return RawPtr(); }
     operator const T* ()const { return RawPtr(); }
 
-
-    class BlockAddRefRelease : public T
-    {
-    private:
-	    // Note that the null pointer constant nullptr or any other value of type std::nullptr_t 
-	    // cannot be converted to a pointer with reinterpret_cast: implicit conversion or 
-	    // static_cast should be used for this purpose.
-	    virtual decltype( static_cast<T*>(nullptr)->AddRef() )  AddRef()override  = 0;
-	    virtual decltype( static_cast<T*>(nullptr)->Release() ) Release()override = 0;
-    };
-
-		  BlockAddRefRelease* operator -> ()     { return static_cast<BlockAddRefRelease*> (m_pObject); }
-    const BlockAddRefRelease* operator -> ()const{ return static_cast<BlockAddRefRelease*> (m_pObject); }
+		  T* operator -> ()     { return m_pObject; }
+    const T* operator -> ()const{ return m_pObject; }
 
 private:
     // Note that the DoublePtrHelper is a private class, and can be created only by RefCntWeakPtr
@@ -249,6 +238,9 @@ public:
         return DoublePtrHelper(*this);
     }
 
+          T** GetRawDblPtr()     {return &m_pObject;}
+    const T** GetRawDblPtr()const{return &m_pObject;}
+
 private:
     T *m_pObject;
 };
@@ -264,7 +256,7 @@ public:
     {
         if( m_pObject )
         {
-            m_pRefCounters = m_pObject->GetReferenceCounters();
+            m_pRefCounters = ValidatedCast<RefCountersImpl>( m_pObject->GetReferenceCounters() );
             m_pRefCounters->AddWeakRef();
         }
     }
@@ -292,7 +284,7 @@ public:
 
     explicit RefCntWeakPtr(RefCntAutoPtr<T>& AutoPtr) :
         m_pObject( static_cast<T*>(AutoPtr) ),
-        m_pRefCounters(AutoPtr ? AutoPtr->GetReferenceCounters() : nullptr)
+        m_pRefCounters(AutoPtr ? ValidatedCast<RefCountersImpl>( AutoPtr->GetReferenceCounters() ) : nullptr)
     {
         if( m_pRefCounters )
             m_pRefCounters->AddWeakRef();
@@ -333,7 +325,7 @@ public:
     {
         Release();
         m_pObject = static_cast<T*>( AutoPtr );
-        m_pRefCounters = m_pObject ? m_pObject->GetReferenceCounters() : nullptr;
+        m_pRefCounters = m_pObject ? ValidatedCast<RefCountersImpl>( m_pObject->GetReferenceCounters() ) : nullptr;
         if( m_pRefCounters )
             m_pRefCounters->AddWeakRef();
         return *this;
@@ -387,7 +379,7 @@ public:
     bool operator != (const RefCntWeakPtr& Ptr)const{return m_pRefCounters != Ptr.m_pRefCounters;}
 
 protected:
-    Diligent::IReferenceCounters *m_pRefCounters;
+    RefCountersImpl *m_pRefCounters;
     // We need to store raw pointer to object itself,
     // because if the object is owned by another object,
     // m_pRefCounters->GetObject( &pObj ) will return

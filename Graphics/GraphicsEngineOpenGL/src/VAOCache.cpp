@@ -34,7 +34,8 @@
 namespace Diligent
 {
 
-VAOCache::VAOCache()
+VAOCache::VAOCache() : 
+    m_EmptyVAO(true)
 {
     m_Cache.max_load_factor(0.5f);
     m_PSOToKey.max_load_factor(0.5f);
@@ -79,7 +80,9 @@ const GLObjectWrappers::GLVertexArrayObj& VAOCache::GetVAO( IPipelineState *pPSO
     // Lock the cache
     ThreadingTools::LockHelper CacheLock(m_CacheLockFlag);
 
-    RefCntAutoPtr<IBuffer> spVertexBuffers[MaxBufferSlots];
+    IBuffer* VertexBuffers[MaxBufferSlots];
+    for (Uint32 s = 0; s < NumVertexStreams; ++s)
+        VertexBuffers[s] = nullptr;
     
     // Get layout
     auto *pPSOGL = ValidatedCast<PipelineStateGLImpl>(pPSO);
@@ -89,58 +92,61 @@ const GLObjectWrappers::GLVertexArrayObj& VAOCache::GetVAO( IPipelineState *pPSO
     Uint32 NumElems = InputLayout.NumElements;
     const Uint32 *TightStrides = pPSOGL->GetTightStrides();
     // Construct the key
-    VAOCacheKey Key = {0};
-    Key.pPSO = pPSO;
-    Key.pIndexBuffer = pIndexBuffer;
+    VAOCacheKey Key(pPSO, pIndexBuffer);
     
-    auto LayoutIt = LayoutElems;
-    for( size_t Elem = 0; Elem < NumElems; ++Elem, ++LayoutIt )
     {
-        auto BuffSlot = LayoutIt->BufferSlot;
-        if( BuffSlot >= NumVertexStreams )
+        auto LayoutIt = LayoutElems;
+        for (size_t Elem = 0; Elem < NumElems; ++Elem, ++LayoutIt)
         {
-            UNEXPECTED( "Input layout requires more buffers than bound to the pipeline" );
-            continue;
-        }
-        if( BuffSlot >= MaxBufferSlots )
-        {
-            VERIFY( BuffSlot >= MaxBufferSlots, "Incorrect input slot" );
-            continue;
-        }
-        auto &CurrStream = VertexStreams[BuffSlot];
-        auto Stride = CurrStream.Stride ? CurrStream.Stride : TightStrides[BuffSlot];
-        auto &spCurrBuf = spVertexBuffers[BuffSlot];
-        auto &CurrStreamKey = Key.Streams[BuffSlot];
-        if( !spCurrBuf )
-        {
-            spCurrBuf = CurrStream.pBuffer;
-            VERIFY( spCurrBuf, "Buffer no longer exists" );
+            auto BuffSlot = LayoutIt->BufferSlot;
+            if (BuffSlot >= NumVertexStreams)
+            {
+                UNEXPECTED("Input layout requires more buffers than bound to the pipeline");
+                continue;
+            }
+            if (BuffSlot >= MaxBufferSlots)
+            {
+                VERIFY(BuffSlot >= MaxBufferSlots, "Incorrect input slot");
+                continue;
+            }
+            auto MaxUsedSlot = std::max(Key.NumUsedSlots, BuffSlot + 1);
+            for (Uint32 s = Key.NumUsedSlots; s < MaxUsedSlot; ++s)
+                Key.Streams[s] = VAOCacheKey::StreamAttribs{};
+            Key.NumUsedSlots = MaxUsedSlot;
 
-            CHECK_DYNAMIC_TYPE( BufferGLImpl, spCurrBuf.RawPtr() );
-            static_cast<BufferGLImpl*>(spCurrBuf.RawPtr())->BufferMemoryBarrier(
-                GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT,// Vertex data sourced from buffer objects after the barrier 
-                                                   // will reflect data written by shaders prior to the barrier.
-                                                   // The set of buffer objects affected by this bit is derived 
-                                                   // from the GL_VERTEX_ARRAY_BUFFER_BINDING bindings
-                GLContextState);
+            auto &CurrStream = VertexStreams[BuffSlot];
+            auto Stride = CurrStream.Stride ? CurrStream.Stride : TightStrides[BuffSlot];
+            auto &pCurrBuf = VertexBuffers[BuffSlot];
+            auto &CurrStreamKey = Key.Streams[BuffSlot];
+            if (pCurrBuf == nullptr)
+            {
+                pCurrBuf = CurrStream.pBuffer;
+                VERIFY(pCurrBuf != nullptr, "No buffer bound to slot ", BuffSlot);
 
-            CurrStreamKey.pBuffer = spCurrBuf.RawPtr();
-            CurrStreamKey.Stride = Stride;
-            CurrStreamKey.Offset = CurrStream.Offset;
-        }
-        else
-        {
-            VERIFY( spCurrBuf == CurrStream.pBuffer, "Buffer no longer exists" );
-            VERIFY( CurrStreamKey.pBuffer == spCurrBuf.RawPtr(), "Unexpected buffer" );
-            VERIFY( CurrStreamKey.Stride == Stride, "Unexpected buffer stride" );
-            VERIFY( CurrStreamKey.Offset == CurrStream.Offset, "Unexpected buffer offset" );
+                ValidatedCast<BufferGLImpl>(pCurrBuf)->BufferMemoryBarrier(
+                    GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT,// Vertex data sourced from buffer objects after the barrier 
+                                                       // will reflect data written by shaders prior to the barrier.
+                                                       // The set of buffer objects affected by this bit is derived 
+                                                       // from the GL_VERTEX_ARRAY_BUFFER_BINDING bindings
+                    GLContextState);
+
+                CurrStreamKey.pBuffer = pCurrBuf;
+                CurrStreamKey.Stride = Stride;
+                CurrStreamKey.Offset = CurrStream.Offset;
+            }
+            else
+            {
+                VERIFY(pCurrBuf == CurrStream.pBuffer, "Buffer no longer exists");
+                VERIFY(CurrStreamKey.pBuffer == pCurrBuf, "Unexpected buffer");
+                VERIFY(CurrStreamKey.Stride == Stride, "Unexpected buffer stride");
+                VERIFY(CurrStreamKey.Offset == CurrStream.Offset, "Unexpected buffer offset");
+            }
         }
     }
 
     if( pIndexBuffer )
     {
-        CHECK_DYNAMIC_TYPE( BufferGLImpl, pIndexBuffer );
-        static_cast<BufferGLImpl*>(pIndexBuffer)->BufferMemoryBarrier(
+        ValidatedCast<BufferGLImpl>(pIndexBuffer)->BufferMemoryBarrier(
             GL_ELEMENT_ARRAY_BARRIER_BIT,// Vertex array indices sourced from buffer objects after the barrier 
                                          // will reflect data written by shaders prior to the barrier.
                                          // The buffer objects affected by this bit are derived from the
@@ -174,9 +180,9 @@ const GLObjectWrappers::GLVertexArrayObj& VAOCache::GetVAO( IPipelineState *pPSO
             // using pointers stored in the key for safety
             auto &CurrStream = VertexStreams[BuffSlot];
             auto Stride = CurrStream.Stride ? CurrStream.Stride : TightStrides[BuffSlot];
-            auto &spBuff = spVertexBuffers[BuffSlot];
-            VERIFY( spBuff, "Vertex buffer is null" );
-            const BufferGLImpl *pBufferOGL = static_cast<const BufferGLImpl*>( spBuff.RawPtr() );
+            auto *pBuff = VertexBuffers[BuffSlot];
+            VERIFY( pBuff != nullptr, "Vertex buffer is null" );
+            const BufferGLImpl *pBufferOGL = static_cast<const BufferGLImpl*>( pBuff );
 
             glBindBuffer(GL_ARRAY_BUFFER, pBufferOGL->m_GlBuffer);
             GLvoid* DataStartOffset = reinterpret_cast<GLvoid*>( static_cast<size_t>( CurrStream.Offset + LayoutIt->RelativeOffset ) );
@@ -207,19 +213,24 @@ const GLObjectWrappers::GLVertexArrayObj& VAOCache::GetVAO( IPipelineState *pPSO
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, pIndBufferOGL->m_GlBuffer);
         }
             
-        auto NewElems = m_Cache.emplace( make_pair(Key, std::move(NewVAO)) );
+        auto NewElems = m_Cache.emplace( std::make_pair(Key, std::move(NewVAO)) );
         // New element must be actually inserted
         VERIFY( NewElems.second, "New element was not inserted into the cache" ); 
-        m_PSOToKey.insert( make_pair(Key.pPSO, Key) );
-        for(int iStream = 0; iStream < _countof(Key.Streams); ++iStream)
+        m_PSOToKey.insert( std::make_pair(Key.pPSO, Key) );
+        for(Uint32 Slot = 0; Slot < Key.NumUsedSlots; ++Slot)
         {
-            auto *pCurrBuff = Key.Streams[iStream].pBuffer;
+            auto *pCurrBuff = Key.Streams[Slot].pBuffer;
             if( pCurrBuff )
-                m_BuffToKey.insert( make_pair(pCurrBuff, Key) );
+                m_BuffToKey.insert( std::make_pair(pCurrBuff, Key) );
         }
 
         return NewElems.first->second;
     }
+}
+
+const GLObjectWrappers::GLVertexArrayObj& VAOCache::GetEmptyVAO()
+{
+    return m_EmptyVAO;
 }
 
 }

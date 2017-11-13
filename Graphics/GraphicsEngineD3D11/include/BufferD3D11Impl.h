@@ -48,15 +48,21 @@ enum class D3D11BufferState
 };
 
 /// Implementation of the Diligent::IBufferD3D11 interface
-class BufferD3D11Impl : public BufferBase<IBufferD3D11, BufferViewD3D11Impl, FixedBlockMemoryAllocator, FixedBlockMemoryAllocator>
+class BufferD3D11Impl : public BufferBase<IBufferD3D11, BufferViewD3D11Impl, FixedBlockMemoryAllocator>
 {
 public:
-    typedef BufferBase<IBufferD3D11, BufferViewD3D11Impl, FixedBlockMemoryAllocator, FixedBlockMemoryAllocator> TBufferBase;
-    BufferD3D11Impl(FixedBlockMemoryAllocator &BufferObjMemAllocator,
+    typedef BufferBase<IBufferD3D11, BufferViewD3D11Impl, FixedBlockMemoryAllocator> TBufferBase;
+    BufferD3D11Impl(IReferenceCounters *pRefCounters,
                     FixedBlockMemoryAllocator &BuffViewObjMemAllocator,
                     class RenderDeviceD3D11Impl *pDeviceD3D11, 
                     const BufferDesc& BuffDesc, 
                     const BufferData &BuffData = BufferData());
+    BufferD3D11Impl(IReferenceCounters *pRefCounters,
+                    FixedBlockMemoryAllocator &BuffViewObjMemAllocator,
+                    class RenderDeviceD3D11Impl *pDeviceD3D11, 
+                    const BufferDesc& BuffDesc, 
+                    ID3D11Buffer *pd3d11Buffer);
+
     ~BufferD3D11Impl();
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
@@ -64,8 +70,10 @@ public:
     virtual void UpdateData( IDeviceContext *pContext, Uint32 Offset, Uint32 Size, const PVoid pData )override final;
     virtual void CopyData( IDeviceContext *pContext, IBuffer *pSrcBuffer, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size )override final;
     virtual void Map( IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid &pMappedData )override final;
-    virtual void Unmap( IDeviceContext *pContext, MAP_TYPE MapType )override final;
+    virtual void Unmap( IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags )override final;
     virtual ID3D11Buffer *GetD3D11Buffer()override final{ return m_pd3d11Buffer; }
+
+    virtual void* GetNativeHandle()override final { return GetD3D11Buffer(); }
 
     void ResetState(D3D11BufferState State){m_State = static_cast<Uint32>(State);}
     void AddState(D3D11BufferState State){m_State |= static_cast<Uint32>(State);}

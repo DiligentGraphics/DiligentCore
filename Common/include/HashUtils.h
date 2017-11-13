@@ -26,6 +26,8 @@
 #include <functional>
 #include <memory>
 
+#include "Errors.h"
+
 #define LOG_HASH_CONFLICTS 1
 
 namespace Diligent

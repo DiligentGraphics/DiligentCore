@@ -28,18 +28,19 @@
 #include "DeviceContextGLImpl.h"
 #include "GLTypeConversions.h"
 #include "GraphicsUtilities.h"
+#include "BufferGLImpl.h"
 
 namespace Diligent
 {
 
-TextureCube_OGL::TextureCube_OGL( FixedBlockMemoryAllocator& TexObjAllocator, 
+TextureCube_OGL::TextureCube_OGL( IReferenceCounters *pRefCounters, 
                                   FixedBlockMemoryAllocator& TexViewObjAllocator,
                                   class RenderDeviceGLImpl *pDeviceGL, 
                                   class DeviceContextGLImpl *pDeviceContext, 
                                   const TextureDesc& TexDesc, 
                                   const TextureData &InitData /*= TextureData()*/,
 							      bool bIsDeviceInternal /*= false*/) : 
-    TextureBaseGL(TexObjAllocator, TexViewObjAllocator, pDeviceGL, TexDesc, GL_TEXTURE_CUBE_MAP, InitData, bIsDeviceInternal)
+    TextureBaseGL(pRefCounters, TexViewObjAllocator, pDeviceGL, TexDesc, GL_TEXTURE_CUBE_MAP, InitData, bIsDeviceInternal)
 {
     VERIFY(m_Desc.SampleCount == 1, "Multisampled cubemap textures are not supported");
     
@@ -89,6 +90,17 @@ TextureCube_OGL::TextureCube_OGL( FixedBlockMemoryAllocator& TexObjAllocator,
     ContextState.BindTexture( -1, m_BindTarget, GLObjectWrappers::GLTextureObj(false) );
 }
 
+TextureCube_OGL::TextureCube_OGL( IReferenceCounters *pRefCounters, 
+                                  FixedBlockMemoryAllocator& TexViewObjAllocator,     
+                                  RenderDeviceGLImpl *pDeviceGL, 
+                                  DeviceContextGLImpl *pDeviceContext,
+                                  const TextureDesc& TexDesc, 
+                                  GLuint GLTextureHandle,
+                                  bool bIsDeviceInternal)  : 
+    TextureBaseGL(pRefCounters, TexViewObjAllocator, pDeviceGL, pDeviceContext, TexDesc, GLTextureHandle, GL_TEXTURE_CUBE_MAP, bIsDeviceInternal)
+{
+}
+
 TextureCube_OGL::~TextureCube_OGL()
 {
 }
@@ -116,12 +128,20 @@ void TextureCube_OGL::UpdateData( IDeviceContext *pContext, Uint32 MipLevel, Uin
 
     auto CubeMapFaceBindTarget = CubeMapFaces[Slice];
 
+    // Bind buffer if it is provided; copy from CPU memory otherwise
+    GLuint UnpackBuffer = 0;
+    if (SubresData.pSrcBuffer != nullptr)
+    {
+        auto *pBufferGL = ValidatedCast<BufferGLImpl>(SubresData.pSrcBuffer);
+        UnpackBuffer = pBufferGL->GetGLHandle();
+    }
+
     // Transfers to OpenGL memory are called unpack operations
     // If there is a buffer bound to GL_PIXEL_UNPACK_BUFFER target, then all the pixel transfer
-    // operations will be performed from this buffer. We need to make sure none is bound
-    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+    // operations will be performed from this buffer.
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, UnpackBuffer);
 
-    auto TransferAttribs = GetNativePixelTransferAttribs(m_Desc.Format);
+    const auto &TransferAttribs = GetNativePixelTransferAttribs(m_Desc.Format);
     
     glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 
@@ -177,6 +197,9 @@ void TextureCube_OGL::UpdateData( IDeviceContext *pContext, Uint32 MipLevel, Uin
                         SubresData.pData);
     }
     CHECK_GL_ERROR("Failed to update subimage data");
+
+    if(UnpackBuffer != 0)
+        glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 
     ContextState.BindTexture( -1, m_BindTarget, GLObjectWrappers::GLTextureObj(false) );
 }

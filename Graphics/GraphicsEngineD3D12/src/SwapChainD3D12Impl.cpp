@@ -32,12 +32,12 @@
 namespace Diligent
 {
 
-SwapChainD3D12Impl::SwapChainD3D12Impl(IMemoryAllocator &Allocator,
+SwapChainD3D12Impl::SwapChainD3D12Impl(IReferenceCounters *pRefCounters,
                                        const SwapChainDesc& SCDesc, 
                                        RenderDeviceD3D12Impl* pRenderDeviceD3D12, 
                                        DeviceContextD3D12Impl* pDeviceContextD3D12, 
                                        void* pNativeWndHandle) : 
-    TSwapChainBase(Allocator, pRenderDeviceD3D12, pDeviceContextD3D12, SCDesc),
+    TSwapChainBase(pRefCounters, pRenderDeviceD3D12, pDeviceContextD3D12, SCDesc),
     m_pBackBufferRTV(STD_ALLOCATOR_RAW_MEM(RefCntAutoPtr<ITextureView>, GetRawAllocator(), "Allocator for vector<RefCntAutoPtr<ITextureView>>"))
 {
 
@@ -81,7 +81,7 @@ SwapChainD3D12Impl::SwapChainD3D12Impl(IMemoryAllocator &Allocator,
     HRESULT hr = CreateDXGIFactory1(__uuidof(factory), reinterpret_cast<void**>(static_cast<IDXGIFactory4**>(&factory)) );
     CHECK_D3D_RESULT_THROW(hr, "Failed to create DXGI factory")
 
-    auto *pd3d12CmdQueue = pRenderDeviceD3D12->GetCmdQueue();
+    auto *pd3d12CmdQueue = pRenderDeviceD3D12->GetCmdQueue()->GetD3D12CommandQueue();
 #if defined( PLATFORM_WIN32 )
     hr = factory->CreateSwapChainForHwnd(pd3d12CmdQueue, hWnd, &swapChainDesc, nullptr, nullptr, &pSwapChain1);
     CHECK_D3D_RESULT_THROW( hr, "Failed to create Swap Chain" );
@@ -140,7 +140,7 @@ void SwapChainD3D12Impl::InitBuffersAndViews()
         RTVDesc.ViewType = TEXTURE_VIEW_RENDER_TARGET;
         RefCntAutoPtr<ITextureView> pRTV;
         pBackBufferTex->CreateView(RTVDesc, &pRTV);
-        m_pBackBufferRTV[backbuff] = pRTV;
+        m_pBackBufferRTV[backbuff] = RefCntAutoPtr<ITextureViewD3D12>(pRTV, IID_TextureViewD3D12);
     }
 
     TextureDesc DepthBufferDesc;
@@ -158,7 +158,8 @@ void SwapChainD3D12Impl::InitBuffersAndViews()
     DepthBufferDesc.Name = "Main depth buffer";
     RefCntAutoPtr<ITexture> pDepthBufferTex;
     m_pRenderDevice->CreateTexture(DepthBufferDesc, TextureData(), static_cast<ITexture**>(&pDepthBufferTex) );
-    m_pDepthBufferDSV = pDepthBufferTex->GetDefaultView(TEXTURE_VIEW_DEPTH_STENCIL);
+    auto pDSV = pDepthBufferTex->GetDefaultView(TEXTURE_VIEW_DEPTH_STENCIL);
+    m_pDepthBufferDSV = RefCntAutoPtr<ITextureViewD3D12>(pDSV, IID_TextureViewD3D12);
 }
 
 IMPLEMENT_QUERY_INTERFACE( SwapChainD3D12Impl, IID_SwapChainD3D12, TSwapChainBase )
@@ -200,7 +201,7 @@ void SwapChainD3D12Impl::Present()
     // backbuffer 0 from all GPU writeable bind points.
     // We need to rebind all render targets to make sure that
     // the back buffer is not unbound
-    pImmediateCtxD3D12->RebindRenderTargets();
+    pImmediateCtxD3D12->CommitRenderTargets();
 #endif
 #endif
 }
@@ -255,10 +256,10 @@ void SwapChainD3D12Impl::Resize( Uint32 NewWidth, Uint32 NewHeight )
     }
 }
 
-ITextureView *SwapChainD3D12Impl::GetCurrentBackBufferRTV()
+ITextureViewD3D12 *SwapChainD3D12Impl::GetCurrentBackBufferRTV()
 {
     auto CurrentBackBufferIndex = m_pSwapChain->GetCurrentBackBufferIndex();
-    VERIFY_EXPR(CurrentBackBufferIndex>=0 && CurrentBackBufferIndex < m_SwapChainDesc.BufferCount);
+    VERIFY_EXPR(CurrentBackBufferIndex >= 0 && CurrentBackBufferIndex < m_SwapChainDesc.BufferCount);
     return m_pBackBufferRTV[CurrentBackBufferIndex];
 }
 

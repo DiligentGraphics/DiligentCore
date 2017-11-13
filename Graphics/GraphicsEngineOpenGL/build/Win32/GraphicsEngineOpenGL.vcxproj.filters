@@ -149,9 +149,6 @@
     <ClInclude Include="..\..\include\pch.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\HLSL2GLSLConverter.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\include\TexRegionRender.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -174,6 +171,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\TextureCubeArray_OGL.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\GLContext.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -259,9 +259,6 @@
     <ClCompile Include="..\..\src\DLLMain.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\HLSL2GLSLConverter.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\TexRegionRender.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -291,11 +288,7 @@
     <None Include="..\..\src\GraphicsEngineOpenGL.def">
       <Filter>Source Files</Filter>
     </None>
-  </ItemGroup>
-  <ItemGroup>
-    <CustomBuild Include="..\..\include\GLSLDefinitions.h">
-      <Filter>Header Files</Filter>
-    </CustomBuild>
+    <None Include="..\..\readme.md" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\..\CMakeLists.txt" />

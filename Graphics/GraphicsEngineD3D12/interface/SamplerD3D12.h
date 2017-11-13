@@ -40,7 +40,7 @@ class ISamplerD3D12 : public Diligent::ISampler
 {
 public:
 
-    /// Returns a pointer to the ID3D12SamplerState interface of the internal Direct3D12 object.
+    /// Returns a CPU descriptor handle of the D3D12 sampler object
     
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
