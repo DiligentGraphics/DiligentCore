@@ -1,4 +1,4 @@
-#DiligentCore
+# DiligentCore
 
 This module implements key engine functionality. It provides API implementations with Direct3D11, Direct3D12, 
 OpenGL and OpenGLES as well as basic platform-specific utilities.
