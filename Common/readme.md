@@ -1,5 +1,5 @@
 
-# HLSL2GLSLConverterLib
+# Common
 
 Implementation of common utilities
 
