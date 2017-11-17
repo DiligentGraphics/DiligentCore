@@ -10,11 +10,11 @@ include $(CLEAR_VARS)
 LOCAL_MODULE := AndroidPlatform
 LOCAL_CFLAGS := -std=c++11
 LOCAL_CPP_FEATURES := exceptions
-LOCAL_STATIC_LIBRARIES += ndk_helper native_app_glue
+LOCAL_STATIC_LIBRARIES += NdkHelper-prebuilt android_native_app_glue
 
 # Include paths
-SOLUTION_ROOT := $(LOCAL_PATH)/../../../../..
-LOCAL_C_INCLUDES := $(LOCAL_PATH)/../../../include $(LOCAL_PATH)/../../../../interface $(LOCAL_PATH)/../../../../interface $(SOLUTION_ROOT)/Common/include $(SOLUTION_ROOT)/Common/interface
+CORE_ROOT := $(LOCAL_PATH)/../../../../..
+LOCAL_C_INCLUDES := $(LOCAL_PATH)/../../../include $(LOCAL_PATH)/../../../../interface $(LOCAL_PATH)/../../../../interface $(CORE_ROOT)/Common/include $(CORE_ROOT)/Common/interface
 
 # Source files
 #VisualGDBAndroid: AutoUpdateSourcesInNextLine
@@ -22,5 +22,10 @@ LOCAL_SRC_FILES := ../../../src/AndroidDebug.cpp ../../../src/AndroidFileSystem.
 
 include $(BUILD_STATIC_LIBRARY)
 
-$(call import-module,android/ndk_helper)
+include $(CLEAR_VARS)
+LOCAL_MODULE := NdkHelper-prebuilt
+LOCAL_SRC_FILES := $(CORE_ROOT)/External/Android/ndk_helper/build/obj/local/$(TARGET_ARCH_ABI)/libNdkHelper.a
+LOCAL_EXPORT_C_INCLUDES := $(CORE_ROOT)/External/Android/ndk_helper/include
+include $(PREBUILT_STATIC_LIBRARY)
+
 $(call import-module,android/native_app_glue)

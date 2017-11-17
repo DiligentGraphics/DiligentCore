@@ -34,5 +34,5 @@ DstType* ValidatedCast( SrcType *Ptr )
         CHECK_DYNAMIC_TYPE( DstType, Ptr );
     }
 #endif
-    return static_cast<DstType*>( Ptr );
+    return Ptr != nullptr ? static_cast<DstType*>( Ptr ) : nullptr;
 }

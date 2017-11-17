@@ -68,7 +68,7 @@ namespace Diligent
             std::map<OffsetType,    
                      FreeBlockInfo, 
                      std::less<OffsetType>, // Standard ordering
-                     STDAllocatorRawMem<std::pair<OffsetType,  FreeBlockInfo>> // Raw memory allocator
+                     STDAllocatorRawMem<std::pair<const OffsetType,  FreeBlockInfo>> // Raw memory allocator
                      >;
 
         // Type of the map that keeps memory blocks sorted by their sizes
@@ -76,7 +76,7 @@ namespace Diligent
             std::multimap<OffsetType, 
                           TFreeBlocksByOffsetMap::iterator, 
                           std::less<OffsetType>, // Standard ordering
-                          STDAllocatorRawMem<std::pair<OffsetType, TFreeBlocksByOffsetMap::iterator>> // Raw memory allocator
+                          STDAllocatorRawMem<std::pair<const OffsetType, TFreeBlocksByOffsetMap::iterator>> // Raw memory allocator
                           >;
 
         struct FreeBlockInfo

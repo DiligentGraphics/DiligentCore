@@ -103,7 +103,7 @@ void InitDevice(HWND hWnd,
 ```
 
 On Windows, the engine can be statically linked to the application or built as a separate DLL. In the former case, 
-factory functions `GetEngineFactoryGL()`, `GetEngineFactoryD3D11()`, and `GetEngineFactoryD3D12()` can be called directly. 
+factory functions `GetEngineFactoryOpenGL()`, `GetEngineFactoryD3D11()`, and `GetEngineFactoryD3D12()` can be called directly. 
 In the latter case, you need to load the DLL into the process's address space using `LoadGraphicsEngineOpenGL()`, 
 `LoadGraphicsEngineD3D11()` or `LoadGraphicsEngineD3D12()` function. Each function loads appropriate dynamic library and 
 imports the functions required to initialize the engine. You need to include the following headers:

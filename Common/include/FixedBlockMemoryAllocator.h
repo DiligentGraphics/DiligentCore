@@ -211,7 +211,7 @@ private:
 
     std::vector<MemoryPage, STDAllocatorRawMem<MemoryPage> > m_PagePool;
     std::unordered_set<size_t, std::hash<size_t>, std::equal_to<size_t>, STDAllocatorRawMem<size_t> > m_AvailablePages;
-    typedef std::pair<void*, size_t> AddrToPageIdMapElem;
+    typedef std::pair<void* const, size_t> AddrToPageIdMapElem;
     std::unordered_map<void*, size_t, std::hash<void*>, std::equal_to<void*>, STDAllocatorRawMem<AddrToPageIdMapElem> > m_AddrToPageId;
 
     std::mutex m_Mutex;

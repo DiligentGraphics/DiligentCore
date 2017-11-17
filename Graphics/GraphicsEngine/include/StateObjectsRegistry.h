@@ -198,7 +198,7 @@ namespace Diligent
         Atomics::AtomicLong m_NumDeletedObjects;
 
         /// Hash map that stores weak pointers to the referenced objects
-        typedef std::pair< ResourceDescType, RefCntWeakPtr<IDeviceObject> > HashMapElem;
+        typedef std::pair< const ResourceDescType, RefCntWeakPtr<IDeviceObject> > HashMapElem;
         std::unordered_map<ResourceDescType, RefCntWeakPtr<IDeviceObject>, std::hash<ResourceDescType>, std::equal_to<ResourceDescType>, STDAllocatorRawMem<HashMapElem> > m_DescToObjHashMap;
 
         /// Registry name used for debug output

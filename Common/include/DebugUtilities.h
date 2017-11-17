@@ -28,6 +28,8 @@
 
 #ifdef _DEBUG
 
+#include <typeinfo>
+
 // This function is only requried to ensure that Message argument passed to the macro
 // is actually string and not something else
 inline void EnsureStr( const char* ){}
@@ -58,7 +60,7 @@ inline void EnsureStr( const char* ){}
 template<typename DstType, typename SrcType>
 void CheckDynamicType( SrcType *pSrcPtr )
 {
-    VERIFY( pSrcPtr == nullptr || dynamic_cast<DstType*> (pSrcPtr) != nullptr, "Dynamic type cast failed!" );
+    VERIFY(pSrcPtr == nullptr || dynamic_cast<DstType*> (pSrcPtr) != nullptr, "Dynamic type cast failed. Src typeid: \'", typeid(*pSrcPtr).name(), "\' Dst typeid: \'", typeid(DstType).name(), '\'');
 }
 #   define CHECK_DYNAMIC_TYPE(DstType, pSrcPtr) CheckDynamicType<DstType>(pSrcPtr)
 

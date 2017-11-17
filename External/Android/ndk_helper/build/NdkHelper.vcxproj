@@ -11,7 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{E333476E-15E3-4D43-A4CF-8748058B3BE9}</ProjectGuid>
+    <ProjectGuid>{22BA09AE-E0B5-49F1-8403-2A824762376E}</ProjectGuid>
     <RootNamespace>AndroidPlatform</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -39,19 +39,20 @@
     <None Include="jni\Application.mk" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\include\AndroidDebug.h" />
-    <ClInclude Include="..\..\include\AndroidFileSystem.h" />
-    <ClInclude Include="..\..\include\AndroidPlatformDefinitions.h" />
-    <ClInclude Include="..\..\include\AndroidPlatformMisc.h" />
+    <ClCompile Include="..\src\gestureDetector.cpp" />
+    <ClCompile Include="..\src\JNIHelper.cpp" />
+    <ClCompile Include="..\src\perfMonitor.cpp" />
+    <ClCompile Include="..\src\sensorManager.cpp" />
+    <ClCompile Include="..\src\tapCamera.cpp" />
+    <ClCompile Include="..\src\vecmath.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\src\AndroidDebug.cpp" />
-    <ClCompile Include="..\..\src\AndroidFileSystem.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\..\..\External\Android\ndk_helper\build\NdkHelper.vcxproj">
-      <Project>{22ba09ae-e0b5-49f1-8403-2a824762376e}</Project>
-    </ProjectReference>
+    <ClInclude Include="..\include\gestureDetector.h" />
+    <ClInclude Include="..\include\JNIHelper.h" />
+    <ClInclude Include="..\include\perfMonitor.h" />
+    <ClInclude Include="..\include\sensorManager.h" />
+    <ClInclude Include="..\include\tapCamera.h" />
+    <ClInclude Include="..\include\vecmath.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

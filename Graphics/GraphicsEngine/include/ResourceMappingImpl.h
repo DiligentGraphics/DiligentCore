@@ -126,7 +126,7 @@ namespace Diligent
         ThreadingTools::LockHelper Lock();
 
         ThreadingTools::LockFlag m_LockFlag;
-        typedef std::pair<ResMappingHashKey, RefCntAutoPtr<IDeviceObject> > HashTableElem;
+        typedef std::pair<const ResMappingHashKey, RefCntAutoPtr<IDeviceObject> > HashTableElem;
         std::unordered_map< ResMappingHashKey, RefCntAutoPtr<IDeviceObject>, std::hash<ResMappingHashKey>, std::equal_to<ResMappingHashKey>, STDAllocatorRawMem<HashTableElem>  > m_HashTable;
     };
 }

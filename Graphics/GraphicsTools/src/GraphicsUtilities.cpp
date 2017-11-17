@@ -26,6 +26,7 @@
 #include "DebugUtilities.h"
 #include <algorithm>
 #include <functional>
+#include <math.h>
 
 #define PI_F 3.1415926f
 
