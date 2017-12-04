@@ -1935,7 +1935,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessTextureDeclaration( TokenL
             TexDeclToken->Literal.append( "uniform " );
         }
         TexDeclToken->Literal.append( CompleteGLSLSampler );
-        Objects.insert( std::make_pair( HashMapStringKey(TextureName), HLSLObjectInfo(CompleteGLSLSampler, NumComponents) ) );
+        Objects.m.insert( std::make_pair( HashMapStringKey(TextureName), HLSLObjectInfo(CompleteGLSLSampler, NumComponents) ) );
 
         // In global sceop, multiple variables can be declared in the same statement
         if( IsGlobalScope )
@@ -1987,8 +1987,8 @@ const HLSL2GLSLConverterImpl::HLSLObjectInfo *HLSL2GLSLConverterImpl::Conversion
 {
     for( auto ScopeIt = m_Objects.rbegin(); ScopeIt != m_Objects.rend(); ++ScopeIt )
     {
-        auto It = ScopeIt->find( Name.c_str() );
-        if( It != ScopeIt->end() )
+        auto It = ScopeIt->m.find( Name.c_str() );
+        if( It != ScopeIt->m.end() )
             return &It->second;
     }
     return nullptr;
@@ -4448,8 +4448,8 @@ String HLSL2GLSLConverterImpl::ConversionStream::Convert( const Char* EntryPoint
         std::vector< SamplerHashType > Samplers;
         
         // Find all samplers in the global scope
-        Samplers.emplace_back( SamplerHashType() );
-        m_Objects.emplace_back( ObjectsTypeHashType() );
+        Samplers.emplace_back();
+        m_Objects.emplace_back();
         Token = m_Tokens.begin();
         ParseSamplers( Token, Samplers.back() );
         VERIFY_EXPR( Token == m_Tokens.end() );

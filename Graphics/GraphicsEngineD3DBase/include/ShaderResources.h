@@ -54,6 +54,9 @@
 #define NOMINMAX
 #include <d3dcommon.h>
 
+#include "Shader.h"
+#include "STDAllocator.h"
+
 namespace Diligent
 {
 

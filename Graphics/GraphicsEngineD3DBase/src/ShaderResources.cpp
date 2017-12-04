@@ -22,6 +22,7 @@
  */
 
 #include "pch.h"
+#include "EngineMemory.h"
 #include "StringTools.h"
 #include "ShaderResources.h"
 

@@ -2,9 +2,6 @@ cmake_minimum_required (VERSION 3.3)
 
 project(glew-static)
 
-add_definitions(-DGLEW_STATIC)
-
-
 set(SOURCE 
 	src/glew.c
 )
@@ -14,12 +11,18 @@ set(INCLUDE
 	include/GL/wglew.h
 )
 
-include_directories(
-	include
+add_library(glew-static STATIC ${SOURCE} ${INCLUDE})
+
+target_compile_definitions(glew-static 
+PUBLIC
+	-DGLEW_STATIC
 )
 
-add_library(
-	glew-static ${SOURCE} ${INCLUDE}
+target_include_directories(glew-static 
+PRIVATE
+	include
+INTERFACE
+	include/GL
 )
 
 source_group("source" FILES ${SOURCE})

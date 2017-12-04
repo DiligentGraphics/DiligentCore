@@ -123,7 +123,20 @@ namespace Diligent
                 NumComponents( NComp )
             {}
         };
-        typedef std::unordered_map<HashMapStringKey, HLSLObjectInfo> ObjectsTypeHashType;
+        struct ObjectsTypeHashType
+        {
+            // This is only required to make the code compile on paranoid MSVC 2017 compiler (19.10.25017):
+            // https://stackoverflow.com/questions/47604029/move-constructors-of-stl-containers-in-msvc-2017-are-not-marked-as-noexcept
+            ObjectsTypeHashType()noexcept {}
+            ObjectsTypeHashType(ObjectsTypeHashType&& rhs)noexcept : 
+                m(std::move(rhs.m))
+            {}
+            ObjectsTypeHashType& operator = (ObjectsTypeHashType&&) = delete;
+            ObjectsTypeHashType(ObjectsTypeHashType&) = delete;
+            ObjectsTypeHashType& operator = (ObjectsTypeHashType&) = delete;
+
+            std::unordered_map<HashMapStringKey, HLSLObjectInfo> m;
+        };
         
         struct GLSLStubInfo
         {
