@@ -39,7 +39,7 @@ add_custom_command(TARGET ProcessHLSLDefinitions
 				   # Unfortunately it is not possible to set TARGET directly to GraphicsEngineD3DBase
 				   # because PRE_BUILD is only supported on Visual Studio 8 or later. For all other generators 
 				   # PRE_BUILD is treated as PRE_LINK.
-                   COMMAND ${CMAKE_CURRENT_BINARY_DIR}/../../Utilities/File2Include/File2String.exe include/HLSLDefinitions.fxh include/HLSLDefinitions_inc.fxh
+                   COMMAND $<TARGET_FILE:File2String> include/HLSLDefinitions.fxh include/HLSLDefinitions_inc.fxh
 				   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
                    COMMENT "Processing HLSLDefinitions.fxh"
                    VERBATIM
