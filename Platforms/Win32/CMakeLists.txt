@@ -34,3 +34,7 @@ PUBLIC
 
 source_group("src" FILES ${SOURCE})
 source_group("include" FILES ${INCLUDE})
+
+set_target_properties(WindowsPlatform PROPERTIES
+	FOLDER Core/Platforms
+)

@@ -63,3 +63,10 @@ add_dependencies(HLSL2GLSLConverterLib ProcessGLSLDefinitions)
 source_group("src" FILES ${SOURCE})
 source_group("include" FILES ${INCLUDE})
 source_group("interface" FILES ${INTERFACE})
+
+set_target_properties(HLSL2GLSLConverterLib PROPERTIES
+	FOLDER Core/Graphics
+)
+set_target_properties(ProcessGLSLDefinitions PROPERTIES
+	FOLDER Core/Graphics/Helper
+)

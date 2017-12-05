@@ -59,3 +59,10 @@ target_link_libraries(GraphicsEngineD3DBase PRIVATE BuildSettings GraphicsEngine
 
 source_group("src" FILES ${SOURCE})
 source_group("include" FILES ${INCLUDE})
+
+set_target_properties(GraphicsEngineD3DBase PROPERTIES
+	FOLDER Core/Graphics
+)
+set_target_properties(ProcessHLSLDefinitions PROPERTIES
+	FOLDER Core/Graphics/Helper
+)

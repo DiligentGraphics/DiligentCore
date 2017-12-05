@@ -180,3 +180,13 @@ source_group("src" FILES
 source_group("include" FILES ${INCLUDE})
 source_group("interface" FILES ${INTERFACE})
 source_group("shaders/GenerateMips" FILES ${SHADERS})
+
+set_target_properties(GraphicsEngineD3D12-static PROPERTIES
+	FOLDER Core/Graphics
+)
+set_target_properties(GraphicsEngineD3D12-shared PROPERTIES
+	FOLDER Core/Graphics
+)
+set_target_properties(GenerateMipsShaders PROPERTIES
+	FOLDER Core/Graphics/Helper
+)

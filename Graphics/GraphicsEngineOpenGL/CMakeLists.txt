@@ -154,3 +154,10 @@ source_group("src" FILES
 
 source_group("include" FILES ${INCLUDE})
 source_group("interface" FILES ${INTERFACE})
+
+set_target_properties(GraphicsEngineOpenGL-static PROPERTIES
+	FOLDER Core/Graphics
+)
+set_target_properties(GraphicsEngineOpenGL-shared PROPERTIES
+	FOLDER Core/Graphics
+)

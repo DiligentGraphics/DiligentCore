@@ -126,3 +126,10 @@ source_group("src" FILES
 
 source_group("include" FILES ${INCLUDE})
 source_group("interface" FILES ${INTERFACE})
+
+set_target_properties(GraphicsEngineD3D11-static PROPERTIES
+	FOLDER Core/Graphics
+)
+set_target_properties(GraphicsEngineD3D11-shared PROPERTIES
+	FOLDER Core/Graphics
+)

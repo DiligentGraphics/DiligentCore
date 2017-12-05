@@ -9,3 +9,7 @@ set(SOURCE
 add_executable(File2String ${SOURCE})
 
 source_group("source" FILES ${SOURCE})
+
+set_target_properties(File2String PROPERTIES
+	FOLDER Utilities
+)

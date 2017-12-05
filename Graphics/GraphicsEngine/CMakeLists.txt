@@ -66,7 +66,9 @@ target_include_directories(GraphicsEngine
 PRIVATE
 	../GraphicsTools/include
 )
-
+set_target_properties(GraphicsEngine PROPERTIES
+	FOLDER Core/Graphics
+)
 target_link_libraries(GraphicsEngine PRIVATE BuildSettings PlatformInterface Common)
 
 source_group("src" FILES ${SOURCE})

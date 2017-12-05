@@ -63,3 +63,7 @@ PRIVATE
 source_group("src" FILES ${SOURCE})
 source_group("include" FILES ${INCLUDE})
 source_group("interface" FILES ${INTERFACE})
+
+set_target_properties(Common PROPERTIES
+	FOLDER Core
+)
