@@ -14,7 +14,15 @@ set(INCLUDE
 	include/pch.h
 )
 
-add_library(BasicPlatform STATIC ${SOURCE} ${INCLUDE})
+set(PLATFORM_INTERFACE_SRC
+	../interface/Atomics.h
+	../interface/FileSystem.h
+	../interface/PlatformDebug.h
+	../interface/PlatformDefinitions.h
+	../interface/PlatformMisc.h
+)
+
+add_library(BasicPlatform STATIC ${SOURCE} ${INCLUDE} ${PLATFORM_INTERFACE_SRC})
 
 target_include_directories(BasicPlatform 
 PUBLIC
@@ -30,6 +38,7 @@ PRIVATE
 
 source_group("source" FILES ${SOURCE})
 source_group("include" FILES ${INCLUDE})
+source_group("interface" FILES ${PLATFORM_INTERFACE_SRC})
 
 set_target_properties(BasicPlatform PROPERTIES
 	FOLDER Core/Platforms

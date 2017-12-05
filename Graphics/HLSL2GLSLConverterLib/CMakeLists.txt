@@ -16,15 +16,14 @@ set(INTERFACE
 set(SOURCE 
 	src/HLSL2GLSLConverterImpl.cpp
 	src/HLSL2GLSLConverterObject.cpp
-	include/GLSLDefinitions_inc.h
 )
+
+add_library(HLSL2GLSLConverterLib STATIC ${SOURCE} ${INTERFACE} ${INCLUDE} include/GLSLDefinitions_inc.h)
 
 set_source_files_properties(
-    include/GLSLDefinitions_inc.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/GLSLDefinitions_inc.h
     PROPERTIES GENERATED TRUE
 )
-
-add_library(HLSL2GLSLConverterLib STATIC ${SOURCE} ${INTERFACE} ${INCLUDE})
 
 target_include_directories(HLSL2GLSLConverterLib 
 PUBLIC 
@@ -44,7 +43,10 @@ PRIVATE
 
 
 # Create custom target to convert GLSLDefinitions.h to GLSLDefinitions_inc.h
-add_custom_target(ProcessGLSLDefinitions)
+add_custom_target(ProcessGLSLDefinitions 
+SOURCES
+	include/GLSLDefinitions.h
+)
 add_dependencies(ProcessGLSLDefinitions File2String)
 
 add_custom_command(TARGET ProcessGLSLDefinitions 
@@ -63,6 +65,7 @@ add_dependencies(HLSL2GLSLConverterLib ProcessGLSLDefinitions)
 source_group("src" FILES ${SOURCE})
 source_group("include" FILES ${INCLUDE})
 source_group("interface" FILES ${INTERFACE})
+source_group("generated" FILES include/GLSLDefinitions_inc.h)
 
 set_target_properties(HLSL2GLSLConverterLib PROPERTIES
 	FOLDER Core/Graphics

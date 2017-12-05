@@ -73,12 +73,14 @@ set(SRC
 
 add_library(GraphicsEngineD3D11-static STATIC 
 	${SRC} ${INTERFACE} ${INCLUDE}
+	readme.md
 )
 
 add_library(GraphicsEngineD3D11-shared SHARED 
 	${SRC} ${INTERFACE} ${INCLUDE}
 	src/DLLMain.cpp
 	src/GraphicsEngineD3D11.def
+	readme.md
 )
 
 set_target_properties(GraphicsEngineD3D11-shared PROPERTIES
@@ -120,6 +122,9 @@ target_compile_definitions(GraphicsEngineD3D11-shared PUBLIC ENGINE_DLL)
 
 source_group("src" FILES 
 	${SRC}
+)
+
+source_group("dll" FILES 
 	src/DLLMain.cpp
 	src/GraphicsEngineD3D11.def
 )
@@ -132,4 +137,8 @@ set_target_properties(GraphicsEngineD3D11-static PROPERTIES
 )
 set_target_properties(GraphicsEngineD3D11-shared PROPERTIES
 	FOLDER Core/Graphics
+)
+
+set_source_files_properties(
+    readme.md PROPERTIES HEADER_FILE_ONLY TRUE
 )

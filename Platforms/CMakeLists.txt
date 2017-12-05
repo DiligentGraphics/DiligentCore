@@ -1,25 +1,20 @@
 cmake_minimum_required (VERSION 3.3)
 
-add_subdirectory(Basic)
-
-if(WIN32)
-	add_subdirectory(Win32)
-	add_library(TargetPlatform ALIAS WindowsPlatform)
-elseif(ANDROID)
-	add_subdirectory(Android)
-	add_library(TargetPlatform ALIAS AndroidPlatform)
-endif()
-
-set(INTERFACE
-	../interface/Atomics.h
-	../interface/FileSystem.h
-	../interface/PlatformDebug.h
-	../interface/PlatformDefinitions.h
-	../interface/PlatformMisc.h
-)
-
 add_library(PlatformInterface INTERFACE)
 
 target_include_directories(PlatformInterface INTERFACE interface)
 
-source_group("interface" FILES ${INTERFACE})
+add_subdirectory(Basic)
+
+if(PLATFORM_WIN32)
+	add_subdirectory(Win32)
+	add_library(TargetPlatform ALIAS Win32Platform)
+elseif(PLATFORM_UNVIRSAL_WINDOWS)
+	add_subdirectory(UWP)
+	add_library(TargetPlatform ALIAS UniversalWindowsPlatform)
+elseif(PLATFORM_ANDROID)
+	add_subdirectory(Android)
+	add_library(TargetPlatform ALIAS AndroidPlatform)
+else()
+	message(FATAL_ERROR "No PLATFORM_XXX variable defined. Make sure that 'DiligentCore' folder is processed first")
+endif()

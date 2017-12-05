@@ -9,16 +9,12 @@ set(INCLUDE
 	include/DeviceContextGLImpl.h 
 	include/FBOCache.h
 	include/GLContext.h
-	include/GLContextAndroid.h
 	include/GLContextState.h
-	include/GLContextWindows.h
 	include/GLObjectWrapper.h
 	include/GLProgram.h
 	include/GLProgramResources.h
-	include/GLStubs.h
 	include/GLTypeConversions.h
 	include/PipelineStateGLImpl.h
-	include/RenderDeviceGLESImpl.h
 	include/RenderDeviceGLImpl.h
 	include/SamplerGLImpl.h
 	include/ShaderGLImpl.h
@@ -45,7 +41,6 @@ set(INTERFACE
 	interface/PipelineStateGL.h
 	interface/RenderDeviceFactoryOpenGL.h
 	interface/RenderDeviceGL.h
-	interface/RenderDeviceGLES.h
 	interface/SamplerGL.h
 	interface/ShaderGL.h
 	interface/ShaderResourceBindingGL.h
@@ -83,25 +78,43 @@ set(SOURCE
 	src/TextureViewGLImpl.cpp
 	src/VAOCache.cpp
 )
-if(WIN32)
+
+if(PLATFORM_WIN32)
 	list(APPEND SOURCE src/GLContextWindows.cpp)
 	list(APPEND SOURCE src/RenderDeviceGLImpl.cpp)
-elseif(ANRDOID)
+
+	set(APPEND INCLUDE include/GLContextWindows.h)
+elseif(PLATFORM_ANRDOID)
 	list(APPEND SOURCE src/GLContextAndroid.cpp)
 	list(APPEND SOURCE src/RenderDeviceGLESImpl.cpp)
 	list(APPEND SOURCE src/GLStubs.cpp)
+
+	set(APPEND INCLUDE include/GLContextAndroid.h)
+	set(APPEND INCLUDE include/GLStubs.h)
+	set(APPEND INCLUDE include/RenderDeviceGLESImpl.h)
+
+	set(APPEND INTERFACE interface/RenderDeviceGLES.h)
+else()
+	message(FATAL_ERROR "Unknown platform")
 endif()
 
 
 add_library(GraphicsEngineOpenGL-static STATIC 
 	${SOURCE} ${INTERFACE} ${INCLUDE}
+	readme.md
 )
 
 add_library(GraphicsEngineOpenGL-shared SHARED 
 	${SOURCE} ${INTERFACE} ${INCLUDE}
-	src/DLLMain.cpp
-	src/GraphicsEngineOpenGL.def
+	readme.md
 )
+if(PLATFORM_WIN32)
+	target_sources(GraphicsEngineOpenGL-shared 
+	PRIVATE	
+		src/DLLMain.cpp
+		src/GraphicsEngineOpenGL.def
+	)
+endif()
 
 target_include_directories(GraphicsEngineOpenGL-static
 PUBLIC
@@ -150,7 +163,14 @@ set_target_properties(GraphicsEngineOpenGL-shared PROPERTIES
 source_group("src" FILES 
 	${SOURCE}
 	src/DLLMain.cpp
+	src/GraphicsEngineOpenGL.def
 )
+if(PLATFORM_WIN32)
+	source_group("dll" FILES 
+		src/DLLMain.cpp
+		src/GraphicsEngineOpenGL.def
+	)
+endif()
 
 source_group("include" FILES ${INCLUDE})
 source_group("interface" FILES ${INTERFACE})
@@ -160,4 +180,8 @@ set_target_properties(GraphicsEngineOpenGL-static PROPERTIES
 )
 set_target_properties(GraphicsEngineOpenGL-shared PROPERTIES
 	FOLDER Core/Graphics
+)
+
+set_source_files_properties(
+    readme.md PROPERTIES HEADER_FILE_ONLY TRUE
 )

@@ -78,14 +78,30 @@ set(SRC
 	src/TextureViewD3D12Impl.cpp
 )
 
+set(SHADERS
+	shaders/GenerateMips/GenerateMipsGammaCS.hlsl
+	shaders/GenerateMips/GenerateMipsGammaOddCS.hlsl
+	shaders/GenerateMips/GenerateMipsGammaOddXCS.hlsl
+	shaders/GenerateMips/GenerateMipsGammaOddYCS.hlsl
+	shaders/GenerateMips/GenerateMipsLinearCS.hlsl
+	shaders/GenerateMips/GenerateMipsLinearOddCS.hlsl
+	shaders/GenerateMips/GenerateMipsLinearOddXCS.hlsl
+	shaders/GenerateMips/GenerateMipsLinearOddYCS.hlsl
+)
+
+
 add_library(GraphicsEngineD3D12-static STATIC 
-	${SRC} ${INTERFACE} ${INCLUDE}
+	${SRC} ${INTERFACE} ${INCLUDE} ${SHADERS}
+	readme.md
+	shaders/GenerateMips/GenerateMipsCS.hlsli
 )
 
 add_library(GraphicsEngineD3D12-shared SHARED 
-	${SRC} ${INTERFACE} ${INCLUDE}
+	${SRC} ${INTERFACE} ${INCLUDE} ${SHADERS}
 	src/DLLMain.cpp
 	src/GraphicsEngineD3D12.def
+	readme.md
+	shaders/GenerateMips/GenerateMipsCS.hlsli
 )
 
 target_include_directories(GraphicsEngineD3D12-static 
@@ -112,19 +128,11 @@ if(NOT FXC)
 	message(FATAL_ERROR "Cannot find fxc!")
 endif(NOT FXC)
 
-set(SHADERS
-	shaders/GenerateMips/GenerateMipsGammaCS.hlsl
-	shaders/GenerateMips/GenerateMipsGammaOddCS.hlsl
-	shaders/GenerateMips/GenerateMipsGammaOddXCS.hlsl
-	shaders/GenerateMips/GenerateMipsGammaOddYCS.hlsl
-	shaders/GenerateMips/GenerateMipsLinearCS.hlsl
-	shaders/GenerateMips/GenerateMipsLinearOddCS.hlsl
-	shaders/GenerateMips/GenerateMipsLinearOddXCS.hlsl
-	shaders/GenerateMips/GenerateMipsLinearOddYCS.hlsl
-)
-
 # Create custom target to compile shaders, which GraphicsEngineD3D12-static/shared will depend on
-add_custom_target(GenerateMipsShaders )
+add_custom_target(GenerateMipsShaders 
+SOURCES 
+	shaders/GenerateMips/GenerateMipsCS.hlsli
+)
 
 set(SHADER_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/GenerateMips)
 file(MAKE_DIRECTORY ${SHADER_OUTPUT_DIR})
@@ -173,13 +181,19 @@ set_target_properties(GraphicsEngineD3D12-shared PROPERTIES
 
 source_group("src" FILES 
 	${SRC}
+)
+
+source_group("dll" FILES 
 	src/DLLMain.cpp
 	src/GraphicsEngineD3D12.def
 )
 
 source_group("include" FILES ${INCLUDE})
 source_group("interface" FILES ${INTERFACE})
-source_group("shaders/GenerateMips" FILES ${SHADERS})
+source_group("shaders" FILES 
+	${SHADERS}
+	shaders/GenerateMips/GenerateMipsCS.hlsli
+)
 
 set_target_properties(GraphicsEngineD3D12-static PROPERTIES
 	FOLDER Core/Graphics
@@ -190,3 +204,14 @@ set_target_properties(GraphicsEngineD3D12-shared PROPERTIES
 set_target_properties(GenerateMipsShaders PROPERTIES
 	FOLDER Core/Graphics/Helper
 )
+
+set_source_files_properties(
+    readme.md PROPERTIES HEADER_FILE_ONLY TRUE
+)
+
+foreach(FILE ${SHADERS})
+	set_source_files_properties(
+		${FILE} PROPERTIES HEADER_FILE_ONLY TRUE
+	)
+endforeach(FILE)
+

@@ -16,14 +16,14 @@ set(SOURCE
 	src/Win32FileSystem.cpp
 )
 
-add_library(WindowsPlatform ${SOURCE} ${INCLUDE})
+add_library(Win32Platform ${SOURCE} ${INCLUDE})
 
-target_include_directories(WindowsPlatform 
+target_include_directories(Win32Platform 
 PUBLIC
 	include
 )
 
-target_link_libraries(WindowsPlatform 
+target_link_libraries(Win32Platform 
 PRIVATE 
 	BuildSettings 
 	Common 
@@ -35,6 +35,6 @@ PUBLIC
 source_group("src" FILES ${SOURCE})
 source_group("include" FILES ${INCLUDE})
 
-set_target_properties(WindowsPlatform PROPERTIES
+set_target_properties(Win32Platform PROPERTIES
 	FOLDER Core/Platforms
 )

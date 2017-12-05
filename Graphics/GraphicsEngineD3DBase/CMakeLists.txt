@@ -19,20 +19,22 @@ set(SOURCE
 	src/DXGITypeConversions.cpp
 	src/ShaderD3DBase.cpp
 	src/ShaderResources.cpp
-	include/HLSLDefinitions_inc.fxh
 )
 
 add_library(GraphicsEngineD3DBase STATIC 
-	${SOURCE} ${INCLUDE}
+	${SOURCE} ${INCLUDE} include/HLSLDefinitions_inc.fxh
 )
 
 set_source_files_properties(
-    include/HLSLDefinitions_inc.fxh
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/HLSLDefinitions_inc.fxh
     PROPERTIES GENERATED TRUE
 )
 
 # Create custom target to convert HLSLDefinitions.fxh to HLSLDefinitions_inc.fxh
-add_custom_target(ProcessHLSLDefinitions)
+add_custom_target(ProcessHLSLDefinitions
+SOURCES
+	include/HLSLDefinitions.fxh
+)
 add_dependencies(ProcessHLSLDefinitions File2String)
 
 add_custom_command(TARGET ProcessHLSLDefinitions 
@@ -59,6 +61,7 @@ target_link_libraries(GraphicsEngineD3DBase PRIVATE BuildSettings GraphicsEngine
 
 source_group("src" FILES ${SOURCE})
 source_group("include" FILES ${INCLUDE})
+source_group("generated" FILES include/HLSLDefinitions_inc.fxh)
 
 set_target_properties(GraphicsEngineD3DBase PROPERTIES
 	FOLDER Core/Graphics
