@@ -136,7 +136,6 @@ PRIVATE
 set(PRIVATE_DEPENDENCIES 
 	BuildSettings 
 	glew-static 
-	PlatformInterface 
 	Common 
 	GraphicsEngine 
 	GraphicsTools 

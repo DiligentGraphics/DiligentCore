@@ -1,7 +1,7 @@
 cmake_minimum_required (VERSION 3.3)
 
 if(WIN32)
-	set(PLATFORM_WIN32 TRUE) #WIN32 is a variable, so we cannot use string "WIN32"
+	set(PLATFORM_WIN32 TRUE CACHE INTERNAL "Target platform: Win32") #WIN32 is a variable, so we cannot use string "WIN32"
 else()
 	message(FATAL_ERROR "Unknown platform")
 endif(WIN32)

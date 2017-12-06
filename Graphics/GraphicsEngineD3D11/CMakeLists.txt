@@ -106,7 +106,6 @@ PRIVATE
 
 set(DEPENDENCIES 
 	BuildSettings 
-	PlatformInterface 
 	Common 
 	GraphicsEngine 
 	GraphicsEngineD3DBase 

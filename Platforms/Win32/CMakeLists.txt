@@ -27,8 +27,8 @@ target_link_libraries(Win32Platform
 PRIVATE 
 	BuildSettings 
 	Common 
+PUBLIC
 	PlatformInterface
-PUBLIC 
 	BasicPlatform
 )
 
