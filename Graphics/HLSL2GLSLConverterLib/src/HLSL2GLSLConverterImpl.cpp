@@ -357,6 +357,7 @@
 #include "ShaderBase.h"
 #include "DataBlobImpl.h"
 #include "StringDataBlobImpl.h"
+#include "StringTools.h"
 
 namespace Diligent
 {
@@ -1022,8 +1023,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::InsertIncludes( String &GLSLSourc
         GLSLSource.erase( IncludeStartPos, Pos );
 
         // Convert the name to lower case
-        String IncludeFileLowercase = IncludeName;
-        std::transform( IncludeFileLowercase.begin(), IncludeFileLowercase.end(), IncludeFileLowercase.begin(), ::tolower );
+        String IncludeFileLowercase = StrToLower(IncludeName);
         // Insert the lower-case name into the set
         auto It = ProcessedIncludes.insert( IncludeFileLowercase );
         // If the name was actually inserted, which means the include encountered for the first time,
@@ -2507,9 +2507,8 @@ void HLSL2GLSLConverterImpl::ConversionStream::ParseShaderParameter(TokenListTyp
             //                             ^
             VERIFY_PARSER_STATE( Token, Token != m_Tokens.end(), "Unexpected end of file while looking for semantic for argument \"", ParamInfo.Name, '\"' );
             VERIFY_PARSER_STATE( Token, Token->Type == TokenType::Identifier, "Missing semantic for argument \"", ParamInfo.Name, '\"' );
-            ParamInfo.Semantic = Token->Literal;
             // Transform to lower case -  semantics are case-insensitive
-            std::transform( ParamInfo.Semantic.begin(), ParamInfo.Semantic.end(), ParamInfo.Semantic.begin(), ::tolower );
+            ParamInfo.Semantic = StrToLower(Token->Literal);
             
             ++Token;
             //          out float4 Color : SV_Target,
@@ -2791,9 +2790,8 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessFunctionParameters( TokenL
             //                                SemanticToken
             VERIFY_PARSER_STATE( SemanticToken, SemanticToken != m_Tokens.end(), "Unexpected EOF" );
             VERIFY_PARSER_STATE( SemanticToken, SemanticToken->Type == TokenType::Identifier, "Exepcted semantic for the return argument ");
-            RetParam.Semantic = SemanticToken->Literal;
             // Transform to lower case -  semantics are case-insensitive
-            std::transform( RetParam.Semantic.begin(), RetParam.Semantic.end(), RetParam.Semantic.begin(), ::tolower );
+            RetParam.Semantic = StrToLower(SemanticToken->Literal);
             ++SemanticToken;
             // float4 TestPS  ( in VSOutput In ) : SV_Target
             // {
@@ -3474,7 +3472,8 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessShaderAttributes(TokenList
         // [domain("quad")]
         //  ^
         auto &Attrib = TmpToken->Literal;
-        std::transform( Attrib.begin(), Attrib.end(), Attrib.begin(), ::tolower );
+        StrToLowerInPlace(Attrib);
+
         ++TmpToken;
         VERIFY_PARSER_STATE( TmpToken, TmpToken != m_Tokens.end() && TmpToken->Type == TokenType::OpenBracket, "\'(\' expected");
         String AttribValue;

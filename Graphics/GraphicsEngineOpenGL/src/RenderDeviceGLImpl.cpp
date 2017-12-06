@@ -41,6 +41,7 @@
 #include "PipelineStateGLImpl.h"
 #include "ShaderResourceBindingGLImpl.h"
 #include "EngineMemory.h"
+#include "StringTools.h"
 
 namespace Diligent
 {
@@ -66,8 +67,8 @@ RenderDeviceGLImpl :: RenderDeviceGLImpl(IReferenceCounters *pRefCounters, IMemo
     QueryDeviceCaps();
 
     std::basic_string<GLubyte> glstrVendor = glGetString( GL_VENDOR );
-    std::string Vendor(glstrVendor.begin(), glstrVendor.end());
-    transform(Vendor.begin(), Vendor.end(), Vendor.begin(), ::tolower);
+    std::string Vendor = StrToLower(std::string(glstrVendor.begin(), glstrVendor.end()));
+
     if( Vendor.find( "intel" ) != std::string::npos )
         m_GPUInfo.Vendor = GPU_VENDOR::INTEL;
     else if( Vendor.find( "nvidia" ) != std::string::npos )

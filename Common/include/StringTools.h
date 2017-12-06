@@ -26,6 +26,9 @@
 #include <string>
 #include <sstream>
 #include <locale>
+#include <algorithm>
+#include <cctype>
+
 #include "DebugUtilities.h"
 
 namespace Diligent
@@ -105,6 +108,20 @@ inline bool StrCmpSuff(const char *RefStr, const char *Str, const char *Suff)
     }
 
     return strcmp(r, Suff) == 0;
+}
+
+inline void StrToLowerInPlace(std::string &str)
+{
+    std::transform(str.begin(), str.end(), str.begin(),
+        // http://en.cppreference.com/w/cpp/string/byte/tolower
+        [](unsigned char c) { return static_cast<char>(std::tolower(c)); }
+    );
+}
+
+inline std::string StrToLower(std::string str)
+{
+    StrToLowerInPlace(str);
+    return str;
 }
 
 }
