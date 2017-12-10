@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.3)
 
-project(GraphicsEngineD3DBase)
+project(GraphicsEngineD3DBase CXX)
 
 set(INCLUDE 
 	include/D3DErrors.h
@@ -58,6 +58,16 @@ PRIVATE
 )
 
 target_link_libraries(GraphicsEngineD3DBase PRIVATE BuildSettings GraphicsEngine PlatformInterface Common)
+
+if(MSVC)
+	# Enable link-time code generation for release builds (I was not able to 
+	# find any way to set these settings through interface library BuildSettings)
+	set_target_properties(GraphicsEngineD3DBase PROPERTIES
+		STATIC_LIBRARY_FLAGS_RELEASE /LTCG
+		STATIC_LIBRARY_FLAGS_MINSIZEREL /LTCG
+		STATIC_LIBRARY_FLAGS_RELWITHDEBINFO /LTCG
+	)
+endif()
 
 source_group("src" FILES ${SOURCE})
 source_group("include" FILES ${INCLUDE})

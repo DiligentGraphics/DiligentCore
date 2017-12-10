@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.3)
 
-project(GraphicsEngine)
+project(GraphicsEngine CXX)
 
 set(INCLUDE 
 	include/BufferBase.h
@@ -60,16 +60,24 @@ target_include_directories(GraphicsEngine
 PUBLIC
 	include
 	interface
-)
-
-target_include_directories(GraphicsEngine 
 PRIVATE
 	../GraphicsTools/include
 )
+
 set_target_properties(GraphicsEngine PROPERTIES
 	FOLDER Core/Graphics
 )
 target_link_libraries(GraphicsEngine PRIVATE BuildSettings PlatformInterface Common)
+
+if(MSVC)
+	# Enable link-time code generation for release builds (I was not able to 
+	# find any way to set these settings through interface library BuildSettings)
+	set_target_properties(GraphicsEngine PROPERTIES
+		STATIC_LIBRARY_FLAGS_RELEASE /LTCG
+		STATIC_LIBRARY_FLAGS_MINSIZEREL /LTCG
+		STATIC_LIBRARY_FLAGS_RELWITHDEBINFO /LTCG
+	)
+endif()
 
 source_group("src" FILES ${SOURCE})
 source_group("include" FILES ${INCLUDE})

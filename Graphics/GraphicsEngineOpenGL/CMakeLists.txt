@@ -159,6 +159,21 @@ set_target_properties(GraphicsEngineOpenGL-shared PROPERTIES
 	OUTPUT_NAME_MINSIZEREL GraphicsEngineOpenGL${DLL_REL_SUFFIX}
 )
 
+if(MSVC)
+	# Enable link-time code generation for release builds (I was not able to 
+	# find any way to set these settings through interface library BuildSettings)
+	set_target_properties(GraphicsEngineOpenGL-shared PROPERTIES
+		LINK_FLAGS_RELEASE /LTCG
+		LINK_FLAGS_MINSIZEREL /LTCG
+		LINK_FLAGS_RELWITHDEBINFO /LTCG
+	)
+	set_target_properties(GraphicsEngineOpenGL-static PROPERTIES
+		STATIC_LIBRARY_FLAGS_RELEASE /LTCG
+		STATIC_LIBRARY_FLAGS_MINSIZEREL /LTCG
+		STATIC_LIBRARY_FLAGS_RELWITHDEBINFO /LTCG
+	)
+endif()
+
 source_group("src" FILES 
 	${SOURCE}
 	src/DLLMain.cpp
