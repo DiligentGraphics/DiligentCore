@@ -30,8 +30,10 @@ if(MSVC)
 	# - Enable whole program optimizaion (/GL)
 	set(MSVC_ALL_RELEASE_COMPILE_OPTIONS /arch:AVX2 /wd4189 /GR- /GL)
 	#target_compile_options(BuildSettings INTERFACE "$<$<CONFIG:RELEASE>:/arch:AVX2 /wd4189 /Ot")
-	# In RELEASE mode set favor fast code option (/Ot)
-	set(MSVC_RELEASE_COMPILE_OPTIONS ${MSVC_ALL_RELEASE_COMPILE_OPTIONS} /Ot)
+	# In RELEASE mode:
+	# - Set favor fast code option (/Ot)
+	# - Enable intrinsic functions (/Oi)
+	set(MSVC_RELEASE_COMPILE_OPTIONS ${MSVC_ALL_RELEASE_COMPILE_OPTIONS} /Ot /Oi)
 	# In MINSIZEREL mode set favor small code option (/Os)
 	set(MSVC_MINSIZEREL_COMPILE_OPTIONS ${MSVC_ALL_RELEASE_COMPILE_OPTIONS} /Os)
 	set(MSVC_RELWITHDEBINFO_COMPILE_OPTIONS ${MSVC_ALL_RELEASE_COMPILE_OPTIONS})
@@ -46,6 +48,38 @@ endif(MSVC)
 
 # https://cmake.org/cmake/help/v3.8/prop_gbl/CMAKE_CXX_KNOWN_FEATURES.html#prop_gbl:CMAKE_CXX_KNOWN_FEATURES
 target_compile_features(BuildSettings INTERFACE cxx_std_11)
+
+if(PLATFORM_WIN32 OR PLATFORM_UNVIRSAL_WINDOWS)
+	function(copy_required_dlls TARGET_NAME)
+		set(ENGINE_DLLS 
+			GraphicsEngineD3D11-shared 
+			GraphicsEngineD3D12-shared 
+		)
+		if(PLATFORM_WIN32)
+			list(APPEND ENGINE_DLLS GraphicsEngineOpenGL-shared)
+		endif()
+
+		foreach(DLL ${ENGINE_DLLS})
+			add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
+				COMMAND ${CMAKE_COMMAND} -E copy_if_different
+					"\"$<TARGET_FILE:${DLL}>\""
+					"\"$<TARGET_FILE_DIR:${TARGET_NAME}>\"")
+		endforeach(DLL)
+
+		# Copy D3Dcompiler_47.dll 
+		if(MSVC)
+			if(WIN64)
+				set(D3D_COMPILER_PATH "\"$(VC_ExecutablePath_x64_x64)\\D3Dcompiler_47.dll\"")
+			else()
+				set(D3D_COMPILER_PATH "\"$(VC_ExecutablePath_x86_x86)\\D3Dcompiler_47.dll\"")
+			endif()
+			add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
+				COMMAND ${CMAKE_COMMAND} -E copy_if_different
+					${D3D_COMPILER_PATH}
+					"\"$<TARGET_FILE_DIR:${TARGET_NAME}>\"")
+		endif()
+	endfunction(copy_required_dlls)
+endif()
 
 add_subdirectory(Utilities)
 add_subdirectory(Platforms)

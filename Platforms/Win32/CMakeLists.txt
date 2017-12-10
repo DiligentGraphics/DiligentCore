@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.3)
 
-project(WindowsPlatform)
+project(WindowsPlatform CXX)
 
 set(INCLUDE 
 	include/Win32Atomics.h

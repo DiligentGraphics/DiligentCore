@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.3)
 
-project(GraphicsEngineOpenGL)
+project(GraphicsEngineOpenGL CXX)
 
 set(INCLUDE 
 	include/AsyncWritableResource.h
@@ -139,7 +139,6 @@ set(PRIVATE_DEPENDENCIES
 	Common 
 	GraphicsEngine 
 	GraphicsTools 
-	glew-static
 	opengl32.lib
 	TargetPlatform
 )

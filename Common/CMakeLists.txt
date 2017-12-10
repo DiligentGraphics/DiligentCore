@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.3)
 
-project(Common)
+project(Common CXX)
 
 set(INCLUDE 
 	include/AdaptiveFixedBlockAllocator.h

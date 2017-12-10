@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.3)
 
-project(HLSL2GLSLConverterLib)
+project(HLSL2GLSLConverterLib CXX)
 
 set(INCLUDE 
 	include/GLSLDefinitions.h

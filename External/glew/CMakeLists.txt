@@ -38,6 +38,8 @@ if(MSVC)
 		STATIC_LIBRARY_FLAGS_MINSIZEREL /LTCG
 		STATIC_LIBRARY_FLAGS_RELWITHDEBINFO /LTCG
 	)
+
+	target_compile_options(glew-static PRIVATE /wd4456)
 endif()
 
 set_target_properties(glew-static PROPERTIES
