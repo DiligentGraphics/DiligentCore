@@ -28,7 +28,7 @@ INTERFACE
 source_group("source" FILES ${SOURCE})
 source_group("include" FILES ${INCLUDE})
 
-target_link_libraries(glew-static PRiVATE BuildSettings)
+target_link_libraries(glew-static PRIVATE BuildSettings)
 
 if(MSVC)
 	# Enable link-time code generation for release builds (I was not able to 
