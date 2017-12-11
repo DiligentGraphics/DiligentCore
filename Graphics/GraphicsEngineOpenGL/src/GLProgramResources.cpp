@@ -111,7 +111,7 @@ namespace Diligent
             // Uniform variables other than arrays will have a size of 1
             glGetActiveUniform( GLProgram, i, MaxNameLength, &NameLen, &size, &dataType, Name.data() );
             CHECK_GL_ERROR_AND_THROW( "Unable to get active uniform\n" );
-            VERIFY( NameLen < MaxNameLength && NameLen == strlen( Name.data() ), "Incorrect uniform name" );
+            VERIFY( NameLen < MaxNameLength && static_cast<size_t>(NameLen) == strlen( Name.data() ), "Incorrect uniform name" );
             VERIFY( size >= 1, "Size is expected to be at least 1" );
             // Note that 
             // glGetActiveUniform( program, index, bufSize, length, size, type, name );
@@ -250,7 +250,7 @@ namespace Diligent
             GLsizei NameLen = 0;
             glGetActiveUniformBlockName( GLProgram, i, MaxNameLength, &NameLen, Name.data() );
             CHECK_GL_ERROR_AND_THROW( "Unable to get active uniform block name\n" );
-            VERIFY( NameLen < MaxNameLength && NameLen == strlen( Name.data() ), "Incorrect uniform block name" );
+            VERIFY( NameLen < MaxNameLength && static_cast<size_t>(NameLen) == strlen( Name.data() ), "Incorrect uniform block name" );
 
             // glGetActiveUniformBlockName( program, uniformBlockIndex, bufSize, length, uniformBlockName );
             // is equivalent to
@@ -300,7 +300,7 @@ namespace Diligent
             GLsizei Length = 0;
             glGetProgramResourceName( GLProgram, GL_SHADER_STORAGE_BLOCK, i, MaxNameLength, &Length, Name.data() );
             CHECK_GL_ERROR_AND_THROW( "Unable to get shader storage block name\n" );
-            VERIFY( Length < MaxNameLength && Length == strlen( Name.data() ), "Incorrect shader storage block name" );
+            VERIFY( Length < MaxNameLength && static_cast<size_t>(Length) == strlen( Name.data() ), "Incorrect shader storage block name" );
 
             GLenum Props[] = {GL_BUFFER_BINDING};
             GLint Binding = -1;
