@@ -120,14 +120,6 @@ PRIVATE
 	include
 )
 
-# FXC is already set when building from Visual Studio 2017
-if(NOT FXC)
-	find_program(FXC fxc DOC "fxc compiler")
-endif(NOT FXC)
-if(NOT FXC)
-	message(FATAL_ERROR "Cannot find fxc!")
-endif(NOT FXC)
-
 # Create custom target to compile shaders, which GraphicsEngineD3D12-static/shared will depend on
 add_custom_target(GenerateMipsShaders 
 SOURCES 

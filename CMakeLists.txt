@@ -46,46 +46,26 @@ if(MSVC)
 	# does not work as expected
 endif(MSVC)
 
+if(PLATFORM_WIN32 OR PLATFORM_UNVIRSAL_WINDOWS)
+	# FXC is already set when building from Visual Studio 2017
+	if(NOT FXC)
+		set(DEFAULT_FXC_PATH "C:/Program Files (x86)/Windows Kits/10/bin/x86/fxc.exe")
+		if(EXISTS ${DEFAULT_FXC_PATH})
+			message("Path to fxc compiler is not specified. Using default location: " ${DEFAULT_FXC_PATH})
+			set(FXC ${DEFAULT_FXC_PATH} CACHE FILEPATH "Default path to fxc compiler")
+		else()
+			message(FATAL_ERROR "Unable to find fxc compiler at default location: " ${DEFAULT_FXC_PATH} ". Please use -D FXC=<path to fxc>")
+		endif()
+	endif(NOT FXC)
+endif()
+
 # https://cmake.org/cmake/help/v3.8/prop_gbl/CMAKE_CXX_KNOWN_FEATURES.html#prop_gbl:CMAKE_CXX_KNOWN_FEATURES
 target_compile_features(BuildSettings INTERFACE cxx_std_11)
 
-if(PLATFORM_WIN32 OR PLATFORM_UNVIRSAL_WINDOWS)
-	function(copy_required_dlls TARGET_NAME)
-		set(ENGINE_DLLS 
-			GraphicsEngineD3D11-shared 
-			GraphicsEngineD3D12-shared 
-		)
-		if(PLATFORM_WIN32)
-			list(APPEND ENGINE_DLLS GraphicsEngineOpenGL-shared)
-		endif()
-
-		foreach(DLL ${ENGINE_DLLS})
-			add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
-				COMMAND ${CMAKE_COMMAND} -E copy_if_different
-					"\"$<TARGET_FILE:${DLL}>\""
-					"\"$<TARGET_FILE_DIR:${TARGET_NAME}>\"")
-		endforeach(DLL)
-
-		# Copy D3Dcompiler_47.dll 
-		if(MSVC)
-			if(WIN64)
-				set(D3D_COMPILER_PATH "\"$(VC_ExecutablePath_x64_x64)\\D3Dcompiler_47.dll\"")
-			else()
-				set(D3D_COMPILER_PATH "\"$(VC_ExecutablePath_x86_x86)\\D3Dcompiler_47.dll\"")
-			endif()
-			add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
-				COMMAND ${CMAKE_COMMAND} -E copy_if_different
-					${D3D_COMPILER_PATH}
-					"\"$<TARGET_FILE_DIR:${TARGET_NAME}>\"")
-		endif()
-	endfunction(copy_required_dlls)
-endif()
+include(BuildUtils.cmake)
 
 add_subdirectory(Utilities)
 add_subdirectory(Platforms)
 add_subdirectory(External)
 add_subdirectory(Common)
 add_subdirectory(Graphics)
-
-
-

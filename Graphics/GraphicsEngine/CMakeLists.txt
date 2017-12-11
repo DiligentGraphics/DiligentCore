@@ -67,7 +67,13 @@ PRIVATE
 set_target_properties(GraphicsEngine PROPERTIES
 	FOLDER Core/Graphics
 )
-target_link_libraries(GraphicsEngine PRIVATE BuildSettings PlatformInterface Common)
+target_link_libraries(GraphicsEngine 
+PRIVATE 
+	BuildSettings 
+PUBLIC
+	PlatformInterface 
+	Common
+)
 
 if(MSVC)
 	# Enable link-time code generation for release builds (I was not able to 
