@@ -137,13 +137,13 @@ set(PRIVATE_DEPENDENCIES
 	BuildSettings 
 	glew-static 
 	Common 
-	GraphicsEngine 
 	GraphicsTools 
 	opengl32.lib
 	TargetPlatform
 )
 
 set(PUBLIC_DEPENDENCIES 
+	GraphicsEngine
 	HLSL2GLSLConverterLib
 )
 

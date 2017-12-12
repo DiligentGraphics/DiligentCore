@@ -145,10 +145,9 @@ foreach(FILE ${SHADERS})
   )
 endforeach(FILE)
 
-set(DEPENDENCIES 
+set(PRIVATE_DEPENDENCIES 
 	BuildSettings 
 	Common 
-	GraphicsEngine 
 	GraphicsEngineD3DBase 
 	GraphicsTools 
 	TargetPlatform 
@@ -156,10 +155,15 @@ set(DEPENDENCIES
 	D3D12.lib 
 	d3dcompiler.lib
 )
-target_link_libraries(GraphicsEngineD3D12-static PRIVATE ${DEPENDENCIES})
+
+set(PUBLIC_DEPENDENCIES 
+	GraphicsEngine 
+)
+
+target_link_libraries(GraphicsEngineD3D12-static PRIVATE ${PRIVATE_DEPENDENCIES} PUBLIC ${PUBLIC_DEPENDENCIES})
 add_dependencies(GraphicsEngineD3D12-static GenerateMipsShaders)
 
-target_link_libraries(GraphicsEngineD3D12-shared PRIVATE ${DEPENDENCIES} )
+target_link_libraries(GraphicsEngineD3D12-shared PRIVATE ${PRIVATE_DEPENDENCIES} PUBLIC ${PUBLIC_DEPENDENCIES})
 add_dependencies(GraphicsEngineD3D12-shared GenerateMipsShaders)
 target_compile_definitions(GraphicsEngineD3D12-shared PUBLIC ENGINE_DLL)
 

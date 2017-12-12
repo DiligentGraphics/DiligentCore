@@ -119,19 +119,23 @@ PRIVATE
 	include
 )
 
-set(DEPENDENCIES 
+set(PRIVATE_DEPENDENCIES 
 	BuildSettings 
-	Common 
-	GraphicsEngine 
+	Common
 	GraphicsEngineD3DBase 
 	GraphicsTools
 	TargetPlatform
 	d3d11.lib 
 	d3dcompiler.lib
 )
-target_link_libraries(GraphicsEngineD3D11-static PRIVATE ${DEPENDENCIES})
 
-target_link_libraries(GraphicsEngineD3D11-shared PRIVATE ${DEPENDENCIES})
+set(PUBLIC_DEPENDENCIES 
+	GraphicsEngine 
+)
+
+target_link_libraries(GraphicsEngineD3D11-static PRIVATE ${PRIVATE_DEPENDENCIES} PUBLIC ${PUBLIC_DEPENDENCIES})
+
+target_link_libraries(GraphicsEngineD3D11-shared PRIVATE ${PRIVATE_DEPENDENCIES} PUBLIC ${PUBLIC_DEPENDENCIES})
 target_compile_definitions(GraphicsEngineD3D11-shared PUBLIC ENGINE_DLL)
 
 source_group("src" FILES 
