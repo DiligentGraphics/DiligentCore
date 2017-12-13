@@ -204,12 +204,15 @@ struct ShaderMacro
 struct ShaderCreationAttribs
 {
 	/// Source file path
-    const Char* FilePath;
+
+    /// If source file path is provided, Source and ByteCode members must be null
+    const Char* FilePath = nullptr;
 
 	/// Pointer to the shader source input stream factory.
-	/// The factory is used to create additional input streams for
-	/// shader include files
-    IShaderSourceInputStreamFactory *pShaderSourceStreamFactory;
+
+    /// The factory is used to load the shader source file if FilePath is not null.
+	/// It is also used to create additional input streams for shader include files
+    IShaderSourceInputStreamFactory *pShaderSourceStreamFactory = nullptr;
 
     /// HLSL->GLSL conversion stream
     
@@ -222,32 +225,39 @@ struct ShaderCreationAttribs
     /// the first time and will use it in all subsequent times. 
     /// For all subsequent conversions, FilePath member must be the same, or 
     /// new stream will be crated and warning message will be displayed.
-    class IHLSL2GLSLConversionStream **ppConversionStream;
+    class IHLSL2GLSLConversionStream **ppConversionStream = nullptr;
 
 	/// Shader source
-    const Char* Source;
+
+    /// If shader source is provided, FilePath and ByteCode members must be null
+    const Char* Source = nullptr;
+
+    /// Compiled shader bytecode. 
+    
+    /// If shader byte code is provided, FilePath and Source members must be null
+    /// \note. This option is currently only supported for D3D11 and D3D12
+    const void *ByteCode = nullptr;
+
+    /// Size of the compiled shader bytecode
+
+    /// Byte code size must be provided if ByteCode is not null
+    size_t ByteCodeSize = 0;
 
 	/// Shader entry point
-    const Char* EntryPoint;
+
+    /// This member is ignored if ByteCode is not null
+    const Char* EntryPoint = "main";
 
 	/// Shader macros
-    const ShaderMacro *Macros;
+
+    /// This member is ignored if ByteCode is not null
+    const ShaderMacro *Macros = nullptr;
 
 	/// Shader description. See Diligent::ShaderDesc.
     ShaderDesc Desc;
 
 	/// Shader source language. See Diligent::SHADER_SOURCE_LANGUAGE.
-    SHADER_SOURCE_LANGUAGE SourceLanguage;
-
-    ShaderCreationAttribs() :
-        FilePath( nullptr ),
-        Source( nullptr ),
-        pShaderSourceStreamFactory( nullptr ),
-        ppConversionStream( nullptr ),
-        EntryPoint("main"),
-        Macros(nullptr),
-        SourceLanguage(SHADER_SOURCE_LANGUAGE_DEFAULT)
-    {}
+    SHADER_SOURCE_LANGUAGE SourceLanguage = SHADER_SOURCE_LANGUAGE_DEFAULT;
 };
 
 

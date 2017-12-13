@@ -146,55 +146,74 @@ const char* DXShaderProfileToString(SHADER_PROFILE DXProfile)
 
 ShaderD3DBase::ShaderD3DBase(const ShaderCreationAttribs &CreationAttribs)
 {
-    std::string strShaderProfile;
-    switch(CreationAttribs.Desc.ShaderType)
+    if (CreationAttribs.Source || CreationAttribs.FilePath)
     {
-        case SHADER_TYPE_VERTEX:  strShaderProfile="vs"; break;
-        case SHADER_TYPE_PIXEL:   strShaderProfile="ps"; break;
-        case SHADER_TYPE_GEOMETRY:strShaderProfile="gs"; break;
-        case SHADER_TYPE_HULL:    strShaderProfile="hs"; break;
-        case SHADER_TYPE_DOMAIN:  strShaderProfile="ds"; break;
-        case SHADER_TYPE_COMPUTE: strShaderProfile="cs"; break;
+        VERIFY(CreationAttribs.ByteCode == nullptr, "'ByteCode' must be null when shader is created from the source code or a file");
+        VERIFY(CreationAttribs.ByteCodeSize == 0, "'ByteCodeSize' must be 0 when shader is created from the source code or a file");
 
-        default: UNEXPECTED( "Unknown shader type" );
+        std::string strShaderProfile;
+        switch(CreationAttribs.Desc.ShaderType)
+        {
+            case SHADER_TYPE_VERTEX:  strShaderProfile="vs"; break;
+            case SHADER_TYPE_PIXEL:   strShaderProfile="ps"; break;
+            case SHADER_TYPE_GEOMETRY:strShaderProfile="gs"; break;
+            case SHADER_TYPE_HULL:    strShaderProfile="hs"; break;
+            case SHADER_TYPE_DOMAIN:  strShaderProfile="ds"; break;
+            case SHADER_TYPE_COMPUTE: strShaderProfile="cs"; break;
+
+            default: UNEXPECTED( "Unknown shader type" );
+        }
+        strShaderProfile += "_";
+        auto *pProfileSuffix = DXShaderProfileToString(CreationAttribs.Desc.TargetProfile);
+        strShaderProfile += pProfileSuffix;
+
+        String ShaderSource(g_HLSLDefinitions);
+        if (CreationAttribs.Source)
+        {
+            VERIFY(CreationAttribs.FilePath == nullptr, "'FilePath' is expected to be null when shader source code is provided");
+            ShaderSource.append(CreationAttribs.Source);
+        }
+        else
+        {
+            VERIFY(CreationAttribs.pShaderSourceStreamFactory, "Input stream factory is null");
+            RefCntAutoPtr<IFileStream> pSourceStream;
+            CreationAttribs.pShaderSourceStreamFactory->CreateInputStream(CreationAttribs.FilePath, &pSourceStream);
+            RefCntAutoPtr<Diligent::IDataBlob> pFileData(MakeNewRCObj<Diligent::DataBlobImpl>()(0));
+            if (pSourceStream == nullptr)
+                LOG_ERROR_AND_THROW("Failed to open shader source file")
+            pSourceStream->Read(pFileData);
+            // Null terminator is not read from the stream!
+            auto* FileDataPtr = reinterpret_cast<Char*>(pFileData->GetDataPtr());
+            auto Size = pFileData->GetSize();
+            ShaderSource.append(FileDataPtr, FileDataPtr + Size / sizeof(*FileDataPtr));
+        }
+
+        const D3D_SHADER_MACRO *pDefines = nullptr;
+        std::vector<D3D_SHADER_MACRO> D3DMacros;
+        if (CreationAttribs.Macros)
+        {
+            for (auto* pCurrMacro = CreationAttribs.Macros; pCurrMacro->Name && pCurrMacro->Definition; ++pCurrMacro)
+            {
+                D3DMacros.push_back({ pCurrMacro->Name, pCurrMacro->Definition });
+            }
+            D3DMacros.push_back({ nullptr, nullptr });
+            pDefines = D3DMacros.data();
+        }
+
+        VERIFY(CreationAttribs.EntryPoint != nullptr, "Entry point must not be null");
+        CHECK_D3D_RESULT_THROW(CompileShader(ShaderSource.c_str(), CreationAttribs.EntryPoint, pDefines, CreationAttribs.pShaderSourceStreamFactory, strShaderProfile.c_str(), &m_pShaderByteCode),
+            "Failed to compile the shader");
     }
-    strShaderProfile += "_";
-    auto *pProfileSuffix = DXShaderProfileToString(CreationAttribs.Desc.TargetProfile);
-    strShaderProfile += pProfileSuffix;
-
-    String ShaderSource(g_HLSLDefinitions);
-    if( CreationAttribs.Source )
-        ShaderSource.append( CreationAttribs.Source );
+    else if (CreationAttribs.ByteCode)
+    {
+        VERIFY(CreationAttribs.ByteCodeSize != 0, "ByteCode size must be greater than 0");
+        CHECK_D3D_RESULT_THROW(D3DCreateBlob(CreationAttribs.ByteCodeSize, &m_pShaderByteCode), "Failed to create D3D blob");
+        memcpy(m_pShaderByteCode->GetBufferPointer(), CreationAttribs.ByteCode, CreationAttribs.ByteCodeSize);
+    }
     else
     {
-        VERIFY(CreationAttribs.pShaderSourceStreamFactory, "Input stream factory is null");
-        VERIFY(CreationAttribs.FilePath, "File path is null. Either shader source or source file path must be specified.");
-        RefCntAutoPtr<IFileStream> pSourceStream;
-        CreationAttribs.pShaderSourceStreamFactory->CreateInputStream( CreationAttribs.FilePath, &pSourceStream );
-        RefCntAutoPtr<Diligent::IDataBlob> pFileData( MakeNewRCObj<Diligent::DataBlobImpl>()(0) );
-        if (pSourceStream == nullptr)
-            LOG_ERROR_AND_THROW("Failed to open shader source file")
-        pSourceStream->Read( pFileData );
-        // Null terminator is not read from the stream!
-        auto* FileDataPtr = reinterpret_cast<Char*>( pFileData->GetDataPtr() );
-        auto Size = pFileData->GetSize();
-        ShaderSource.append( FileDataPtr, FileDataPtr + Size/sizeof(*FileDataPtr) );
+        LOG_ERROR_AND_THROW("Shader source must be provided through one of the 'Source', 'FilePath' or 'ByteCode' members")
     }
-
-    const D3D_SHADER_MACRO *pDefines = nullptr;
-    std::vector<D3D_SHADER_MACRO> D3DMacros;
-    if( CreationAttribs.Macros )
-    {
-        for( auto* pCurrMacro = CreationAttribs.Macros; pCurrMacro->Name && pCurrMacro->Definition; ++pCurrMacro )
-        {
-            D3DMacros.push_back( {pCurrMacro->Name, pCurrMacro->Definition} );
-        }
-        D3DMacros.push_back( {nullptr, nullptr} );
-        pDefines = D3DMacros.data();
-    }
-
-    CHECK_D3D_RESULT_THROW( CompileShader( ShaderSource.c_str(), CreationAttribs.EntryPoint, pDefines, CreationAttribs.pShaderSourceStreamFactory, strShaderProfile.c_str(), &m_pShaderByteCode ),
-                            "Failed to compile the shader");
 }
 
 }
