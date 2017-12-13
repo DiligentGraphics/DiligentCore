@@ -173,11 +173,7 @@ if(MSVC)
 	)
 endif()
 
-source_group("src" FILES 
-	${SOURCE}
-	src/DLLMain.cpp
-	src/GraphicsEngineOpenGL.def
-)
+source_group("src" FILES ${SOURCE})
 if(PLATFORM_WIN32)
 	source_group("dll" FILES 
 		src/DLLMain.cpp

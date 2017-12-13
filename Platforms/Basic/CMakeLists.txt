@@ -46,7 +46,7 @@ PRIVATE
 	PlatformInterface
 )
 
-source_group("source" FILES ${SOURCE})
+source_group("src" FILES ${SOURCE})
 source_group("include" FILES ${INCLUDE})
 source_group("interface" FILES ${PLATFORM_INTERFACE_SRC})
 

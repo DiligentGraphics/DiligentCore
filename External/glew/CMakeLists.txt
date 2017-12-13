@@ -25,9 +25,6 @@ INTERFACE
 	include/GL
 )
 
-source_group("source" FILES ${SOURCE})
-source_group("include" FILES ${INCLUDE})
-
 target_link_libraries(glew-static PRIVATE BuildSettings)
 
 if(MSVC)
@@ -41,6 +38,9 @@ if(MSVC)
 
 	target_compile_options(glew-static PRIVATE /wd4456)
 endif()
+
+source_group("src" FILES ${SOURCE})
+source_group("include" FILES ${INCLUDE})
 
 set_target_properties(glew-static PROPERTIES
 	FOLDER Core/External

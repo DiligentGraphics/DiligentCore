@@ -138,9 +138,7 @@ target_link_libraries(GraphicsEngineD3D11-static PRIVATE ${PRIVATE_DEPENDENCIES}
 target_link_libraries(GraphicsEngineD3D11-shared PRIVATE ${PRIVATE_DEPENDENCIES} PUBLIC ${PUBLIC_DEPENDENCIES})
 target_compile_definitions(GraphicsEngineD3D11-shared PUBLIC ENGINE_DLL)
 
-source_group("src" FILES 
-	${SRC}
-)
+source_group("src" FILES ${SRC} )
 
 source_group("dll" FILES 
 	src/DLLMain.cpp

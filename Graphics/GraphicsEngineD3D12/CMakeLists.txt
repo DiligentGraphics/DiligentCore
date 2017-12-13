@@ -139,7 +139,7 @@ foreach(FILE ${SHADERS})
 					 # PRE_BUILD is treated as PRE_LINK.
                      COMMAND ${FXC} /T cs_5_0 ${FILE_NAME} /E "main" /O3 /Vn g_p${FILE_NAME_WE} /Fh ${OUT_FILE} /nologo
                      MAIN_DEPENDENCY ${FILE} # the primary input source file to the command
-					 WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/shaders/GenerateMips/
+					 WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/shaders/GenerateMips/"
                      COMMENT "Compiling shader ${FILE}"
                      VERBATIM
   )
@@ -190,9 +190,7 @@ if(MSVC)
 endif()
 
 
-source_group("src" FILES 
-	${SRC}
-)
+source_group("src" FILES ${SRC})
 
 source_group("dll" FILES 
 	src/DLLMain.cpp
@@ -225,4 +223,3 @@ foreach(FILE ${SHADERS})
 		${FILE} PROPERTIES HEADER_FILE_ONLY TRUE
 	)
 endforeach(FILE)
-

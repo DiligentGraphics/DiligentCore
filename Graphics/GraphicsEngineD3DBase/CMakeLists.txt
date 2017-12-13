@@ -57,7 +57,13 @@ PRIVATE
 	../GraphicsTools/include
 )
 
-target_link_libraries(GraphicsEngineD3DBase PRIVATE BuildSettings GraphicsEngine PlatformInterface Common)
+target_link_libraries(GraphicsEngineD3DBase 
+PRIVATE 
+	BuildSettings 
+	GraphicsEngine 
+	PlatformInterface 
+	Common
+)
 
 if(MSVC)
 	# Enable link-time code generation for release builds (I was not able to 
