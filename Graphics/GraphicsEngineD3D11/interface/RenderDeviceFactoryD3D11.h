@@ -32,6 +32,10 @@
 #include "DeviceContext.h"
 #include "SwapChain.h"
 
+#if PLATFORM_UNIVERSAL_WINDOWS && defined(ENGINE_DLL)
+#   include "StringTools.h"
+#endif
+
 namespace Diligent
 {
 
@@ -83,7 +87,13 @@ extern "C"
 #endif
 
         LibName += ".dll";
+#if PLATFORM_WIN32
         auto hModule = LoadLibraryA( LibName.c_str() );
+#elif PLATFORM_UNIVERSAL_WINDOWS
+        auto hModule = LoadPackagedLibrary(Diligent::WidenString(LibName).c_str(), 0);
+#else
+#   error Unexpected platform
+#endif
         if( hModule == NULL )
         {
             LOG_ERROR_MESSAGE( "Failed to load ", LibName, " library." );

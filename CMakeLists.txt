@@ -1,7 +1,19 @@
-cmake_minimum_required (VERSION 3.3)
+cmake_minimum_required (VERSION 3.8)
+
+set(PLATFORM_WIN32 FALSE CACHE INTERNAL "")
+set(PLATFORM_UNIVERSAL_WINDOWS FALSE CACHE INTERNAL "")
+set(PLATFORM_ANDROID FALSE CACHE INTERNAL "")
+set(D3D11_SUPPORTED FALSE CACHE INTERNAL "D3D11 is not spported")
+set(D3D12_SUPPORTED FALSE CACHE INTERNAL "D3D12 is not spported")
+set(GL_SUPPORTED FALSE CACHE INTERNAL "GL is not spported")
+set(GLES_SUPPORTED FALSE CACHE INTERNAL "GLES is not spported")
 
 if(WIN32)
-	set(PLATFORM_WIN32 TRUE CACHE INTERNAL "Target platform: Win32") #WIN32 is a variable, so we cannot use string "WIN32"
+	if(${CMAKE_SYSTEM_NAME} STREQUAL "WindowsStore")
+		set(PLATFORM_UNIVERSAL_WINDOWS TRUE CACHE INTERNAL "Target platform: Windows Store")
+	else()
+		set(PLATFORM_WIN32 TRUE CACHE INTERNAL "Target platform: Win32") #WIN32 is a variable, so we cannot use string "WIN32"
+	endif()
 else()
 	message(FATAL_ERROR "Unknown platform")
 endif(WIN32)
@@ -13,7 +25,7 @@ if(PLATFORM_WIN32)
 	set(D3D12_SUPPORTED TRUE CACHE INTERNAL "D3D12 supported on Win32 platform")
 	set(GL_SUPPORTED TRUE CACHE INTERNAL "OpenGL supported on Win32 platform")
 	target_compile_definitions(BuildSettings INTERFACE PLATFORM_WIN32=1)
-elseif(PLATFORM_UNVIRSAL_WINDOWS)
+elseif(PLATFORM_UNIVERSAL_WINDOWS)
 	set(D3D11_SUPPORTED TRUE CACHE INTERNAL "D3D11 supported on Univeral Windows platform")
 	set(D3D12_SUPPORTED TRUE CACHE INTERNAL "D3D12 supported on Univeral Windows platform")
 	target_compile_definitions(BuildSettings INTERFACE PLATFORM_UNIVERSAL_WINDOWS=1)
@@ -53,7 +65,7 @@ if(MSVC)
 	# does not work as expected
 endif(MSVC)
 
-if(PLATFORM_WIN32 OR PLATFORM_UNVIRSAL_WINDOWS)
+if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS)
 	# FXC is already set when building from Visual Studio 2017
 	if(NOT FXC)
 		set(DEFAULT_FXC_PATH "C:/Program Files (x86)/Windows Kits/10/bin/x86/fxc.exe")
