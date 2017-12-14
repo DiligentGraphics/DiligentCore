@@ -61,6 +61,13 @@ function(set_common_target_properties TARGET)
 				LINK_FLAGS_MINSIZEREL /LTCG
 				LINK_FLAGS_RELWITHDEBINFO /LTCG
 			)
+
+			if(PLATFORM_UNIVERSAL_WINDOWS)
+				# On UWP, disable incremental link to avoid linker warnings
+				set_target_properties(${TARGET} PROPERTIES
+					LINK_FLAGS_DEBUG /INCREMENTAL:NO
+				)
+			endif()
 		endif()
 	endif()
 
