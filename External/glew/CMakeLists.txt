@@ -12,6 +12,7 @@ set(INCLUDE
 )
 
 add_library(glew-static STATIC ${SOURCE} ${INCLUDE})
+set_common_target_properties(glew-static)
 
 target_compile_definitions(glew-static 
 PUBLIC
@@ -28,14 +29,6 @@ INTERFACE
 target_link_libraries(glew-static PRIVATE BuildSettings)
 
 if(MSVC)
-	# Enable link-time code generation for release builds (I was not able to 
-	# find any way to set these settings through interface library BuildSettings)
-	set_target_properties(glew-static PROPERTIES
-		STATIC_LIBRARY_FLAGS_RELEASE /LTCG
-		STATIC_LIBRARY_FLAGS_MINSIZEREL /LTCG
-		STATIC_LIBRARY_FLAGS_RELWITHDEBINFO /LTCG
-	)
-
 	target_compile_options(glew-static PRIVATE /wd4456)
 endif()
 

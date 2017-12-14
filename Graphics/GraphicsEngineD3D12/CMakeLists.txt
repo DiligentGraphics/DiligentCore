@@ -174,21 +174,8 @@ set_target_properties(GraphicsEngineD3D12-shared PROPERTIES
 	OUTPUT_NAME_MINSIZEREL GraphicsEngineD3D12${DLL_REL_SUFFIX}
 )
 
-if(MSVC)
-	# Enable link-time code generation for release builds (I was not able to 
-	# find any way to set these settings through interface library BuildSettings)
-	set_target_properties(GraphicsEngineD3D12-shared PROPERTIES
-		LINK_FLAGS_RELEASE /LTCG
-		LINK_FLAGS_MINSIZEREL /LTCG
-		LINK_FLAGS_RELWITHDEBINFO /LTCG
-	)
-	set_target_properties(GraphicsEngineD3D12-static PROPERTIES
-		STATIC_LIBRARY_FLAGS_RELEASE /LTCG
-		STATIC_LIBRARY_FLAGS_MINSIZEREL /LTCG
-		STATIC_LIBRARY_FLAGS_RELWITHDEBINFO /LTCG
-	)
-endif()
-
+set_common_target_properties(GraphicsEngineD3D12-shared)
+set_common_target_properties(GraphicsEngineD3D12-static)
 
 source_group("src" FILES ${SRC})
 

@@ -40,3 +40,28 @@ if(PLATFORM_WIN32 OR PLATFORM_UNVIRSAL_WINDOWS)
 	endfunction()
 
 endif(PLATFORM_WIN32 OR PLATFORM_UNVIRSAL_WINDOWS)
+
+
+function(set_common_target_properties TARGET)
+	
+	get_target_property(TARGET_TYPE ${TARGET} TYPE)
+
+	if(MSVC)
+		# For msvc, enable link-time code generation for release builds (I was not able to 
+		# find any way to set these settings through interface library BuildSettings)
+		if(TARGET_TYPE STREQUAL STATIC_LIBRARY)
+			set_target_properties(${TARGET} PROPERTIES
+				STATIC_LIBRARY_FLAGS_RELEASE /LTCG
+				STATIC_LIBRARY_FLAGS_MINSIZEREL /LTCG
+				STATIC_LIBRARY_FLAGS_RELWITHDEBINFO /LTCG
+			)
+		else()
+			set_target_properties(${TARGET} PROPERTIES
+				LINK_FLAGS_RELEASE /LTCG
+				LINK_FLAGS_MINSIZEREL /LTCG
+				LINK_FLAGS_RELWITHDEBINFO /LTCG
+			)
+		endif()
+	endif()
+
+endfunction()
