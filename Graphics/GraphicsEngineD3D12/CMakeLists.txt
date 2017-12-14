@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.8)
+cmake_minimum_required (VERSION 3.10)
 
 project(GraphicsEngineD3D12 CXX)
 
@@ -89,6 +89,12 @@ set(SHADERS
 	shaders/GenerateMips/GenerateMipsLinearOddYCS.hlsl
 )
 
+set_property(SOURCE ${SHADERS} PROPERTY VS_SHADER_TYPE Compute)
+set_property(SOURCE ${SHADERS} PROPERTY VS_SHADER_ENTRYPOINT main)
+set_property(SOURCE ${SHADERS} PROPERTY VS_SHADER_MODEL 5.0)
+set_property(SOURCE ${SHADERS} PROPERTY VS_SHADER_VARIABLE_NAME "g_p%(Filename)")
+set_property(SOURCE ${SHADERS} PROPERTY VS_SHADER_OUTPUT_HEADER_FILE "${CMAKE_CURRENT_BINARY_DIR}/CompiledShaders/GenerateMips/%(Filename).h")
+#set_property(SOURCE ${SHADERS} PROPERTY VS_SHADER_FLAGS "/O3")
 
 add_library(GraphicsEngineD3D12-static STATIC 
 	${SRC} ${INTERFACE} ${INCLUDE} ${SHADERS}
@@ -108,7 +114,7 @@ target_include_directories(GraphicsEngineD3D12-static
 PUBLIC
 	interface
 PRIVATE
-	${CMAKE_CURRENT_BINARY_DIR}
+	${CMAKE_CURRENT_BINARY_DIR}/CompiledShaders
 	include
 )
 
@@ -116,34 +122,9 @@ target_include_directories(GraphicsEngineD3D12-shared
 PUBLIC
 	interface
 PRIVATE
-	${CMAKE_CURRENT_BINARY_DIR}	
+	${CMAKE_CURRENT_BINARY_DIR}/CompiledShaders
 	include
 )
-
-# Create custom target to compile shaders, which GraphicsEngineD3D12-static/shared will depend on
-add_custom_target(GenerateMipsShaders 
-SOURCES 
-	shaders/GenerateMips/GenerateMipsCS.hlsli
-)
-
-set(SHADER_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/GenerateMips)
-file(MAKE_DIRECTORY ${SHADER_OUTPUT_DIR})
-
-foreach(FILE ${SHADERS})
-  get_filename_component(FILE_NAME_WE ${FILE} NAME_WE)
-  get_filename_component(FILE_NAME ${FILE} NAME)
-  set(OUT_FILE ${SHADER_OUTPUT_DIR}/${FILE_NAME_WE}.h)
-  add_custom_command(TARGET GenerateMipsShaders 
-					 # Unfortunately it is not possible to set TARGET directly to GraphicsEngineD3D12-static/shared
-					 # because PRE_BUILD is only supported on Visual Studio 8 or later. For all other generators 
-					 # PRE_BUILD is treated as PRE_LINK.
-                     COMMAND ${FXC} /T cs_5_0 ${FILE_NAME} /E "main" /O3 /Vn g_p${FILE_NAME_WE} /Fh ${OUT_FILE} /nologo
-                     MAIN_DEPENDENCY ${FILE} # the primary input source file to the command
-					 WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/shaders/GenerateMips/"
-                     COMMENT "Compiling shader ${FILE}"
-                     VERBATIM
-  )
-endforeach(FILE)
 
 set(PRIVATE_DEPENDENCIES 
 	BuildSettings 
@@ -161,10 +142,8 @@ set(PUBLIC_DEPENDENCIES
 )
 
 target_link_libraries(GraphicsEngineD3D12-static PRIVATE ${PRIVATE_DEPENDENCIES} PUBLIC ${PUBLIC_DEPENDENCIES})
-add_dependencies(GraphicsEngineD3D12-static GenerateMipsShaders)
 
 target_link_libraries(GraphicsEngineD3D12-shared PRIVATE ${PRIVATE_DEPENDENCIES} PUBLIC ${PUBLIC_DEPENDENCIES})
-add_dependencies(GraphicsEngineD3D12-shared GenerateMipsShaders)
 target_compile_definitions(GraphicsEngineD3D12-shared PUBLIC ENGINE_DLL)
 
 set_target_properties(GraphicsEngineD3D12-shared PROPERTIES
@@ -197,16 +176,7 @@ set_target_properties(GraphicsEngineD3D12-static PROPERTIES
 set_target_properties(GraphicsEngineD3D12-shared PROPERTIES
 	FOLDER Core/Graphics
 )
-set_target_properties(GenerateMipsShaders PROPERTIES
-	FOLDER Core/Graphics/Helper
-)
 
 set_source_files_properties(
     readme.md PROPERTIES HEADER_FILE_ONLY TRUE
 )
-
-foreach(FILE ${SHADERS})
-	set_source_files_properties(
-		${FILE} PROPERTIES HEADER_FILE_ONLY TRUE
-	)
-endforeach(FILE)
