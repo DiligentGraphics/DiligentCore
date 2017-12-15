@@ -89,12 +89,14 @@ set(SHADERS
 	shaders/GenerateMips/GenerateMipsLinearOddYCS.hlsl
 )
 
-set_property(SOURCE ${SHADERS} PROPERTY VS_SHADER_TYPE Compute)
-set_property(SOURCE ${SHADERS} PROPERTY VS_SHADER_ENTRYPOINT main)
-set_property(SOURCE ${SHADERS} PROPERTY VS_SHADER_MODEL 5.0)
-set_property(SOURCE ${SHADERS} PROPERTY VS_SHADER_VARIABLE_NAME "g_p%(Filename)")
-set_property(SOURCE ${SHADERS} PROPERTY VS_SHADER_OUTPUT_HEADER_FILE "${CMAKE_CURRENT_BINARY_DIR}/CompiledShaders/GenerateMips/%(Filename).h")
-#set_property(SOURCE ${SHADERS} PROPERTY VS_SHADER_FLAGS "/O3")
+set_source_files_properties(${SHADERS} PROPERTIES 
+	VS_SHADER_TYPE Compute
+	VS_SHADER_ENTRYPOINT main
+	VS_SHADER_MODEL 5.0
+	VS_SHADER_VARIABLE_NAME "g_p%(Filename)"
+	VS_SHADER_OUTPUT_HEADER_FILE "${CMAKE_CURRENT_BINARY_DIR}/CompiledShaders/GenerateMips/%(Filename).h"
+	#VS_SHADER_FLAGS "/O3"
+)
 
 add_library(GraphicsEngineD3D12-static STATIC 
 	${SRC} ${INTERFACE} ${INCLUDE} ${SHADERS}
