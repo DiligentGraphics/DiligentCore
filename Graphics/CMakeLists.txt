@@ -1,13 +1,5 @@
 cmake_minimum_required (VERSION 3.8)
 
-if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS)
-	if("${CMAKE_SIZEOF_VOID_P}" EQUAL "8")
-	   set(ARCH 64)
-	else("${CMAKE_SIZEOF_VOID_P}" EQUAL "8")
-	   set(ARCH 32)
-	endif("${CMAKE_SIZEOF_VOID_P}" EQUAL "8")
-endif()
-
 set(DLL_REL_SUFFIX _${ARCH}r)
 set(DLL_DBG_SUFFIX _${ARCH}d)
 

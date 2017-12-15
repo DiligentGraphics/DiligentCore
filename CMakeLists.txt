@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.8)
+cmake_minimum_required (VERSION 3.10)
 
 set(PLATFORM_WIN32 FALSE CACHE INTERNAL "")
 set(PLATFORM_UNIVERSAL_WINDOWS FALSE CACHE INTERNAL "")
@@ -65,17 +65,10 @@ if(MSVC)
 	# does not work as expected
 endif(MSVC)
 
-if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS)
-	# FXC is already set when building from Visual Studio 2017
-	if(NOT FXC)
-		set(DEFAULT_FXC_PATH "C:/Program Files (x86)/Windows Kits/10/bin/x86/fxc.exe")
-		if(EXISTS ${DEFAULT_FXC_PATH})
-			message("Path to fxc compiler is not specified. Using default location: " ${DEFAULT_FXC_PATH})
-			set(FXC ${DEFAULT_FXC_PATH} CACHE FILEPATH "Default path to fxc compiler")
-		else()
-			message(FATAL_ERROR "Unable to find fxc compiler at default location: " ${DEFAULT_FXC_PATH} ". Please use -D FXC=<path to fxc>")
-		endif()
-	endif(NOT FXC)
+if("${CMAKE_SIZEOF_VOID_P}" EQUAL "8")
+	set(ARCH 64 CACHE INTERNAL "64-bit architecture")
+else()
+	set(ARCH 32 CACHE INTERNAL "32-bit architecture")
 endif()
 
 # https://cmake.org/cmake/help/v3.8/prop_gbl/CMAKE_CXX_KNOWN_FEATURES.html#prop_gbl:CMAKE_CXX_KNOWN_FEATURES
