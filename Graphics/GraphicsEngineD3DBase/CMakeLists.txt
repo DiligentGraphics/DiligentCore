@@ -39,7 +39,7 @@ SOURCES
 if(PLATFORM_UNIVERSAL_WINDOWS)
 	# On Universal Windows Platform, we cannot run File2String utility and will use prebuilt Win32 version
 	get_target_property(FILE2STRING_SOURCE_DIR File2String SOURCE_DIR)
-	set(FILE2STRING_PATH "${FILE2STRING_SOURCE_DIR}/File2String.exe")
+	set(FILE2STRING_PATH "${FILE2STRING_SOURCE_DIR}/bin/Win32/File2String.exe")
 else()
 	add_dependencies(ProcessHLSLDefinitions File2String)
 	set(FILE2STRING_PATH $<TARGET_FILE:File2String>)

@@ -30,15 +30,6 @@ if(PLATFORM_WIN32 OR PLATFORM_UNVIRSAL_WINDOWS)
 		endif()
 	endfunction()
 
-	
-	function(set_header_file_only_property FILES)
-		foreach(FILE ${FILES})
-			set_source_files_properties(
-				${FILE} PROPERTIES HEADER_FILE_ONLY TRUE
-			)
-		endforeach(FILE)
-	endfunction()
-
 endif(PLATFORM_WIN32 OR PLATFORM_UNVIRSAL_WINDOWS)
 
 
