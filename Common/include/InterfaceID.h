@@ -23,6 +23,7 @@
 
 #pragma once
 
+#include <cstring>
 #include "BasicTypes.h"
 
 /// Unique identification structures
@@ -41,7 +42,7 @@ namespace Diligent
             return Data1 == rhs.Data1 && 
                    Data2 == rhs.Data2 &&
                    Data3 == rhs.Data3 &&
-                   memcmp(Data4, rhs.Data4, sizeof(Data4)) == 0;
+                   std::memcmp(Data4, rhs.Data4, sizeof(Data4)) == 0;
         }
     };
 

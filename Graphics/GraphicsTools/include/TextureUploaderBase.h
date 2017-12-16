@@ -51,7 +51,6 @@ namespace Diligent
         {
         }
 
-        virtual void WaitForCopyScheduled() = 0;
         virtual void* GetDataPtr()   override final { return m_pData; }
         virtual size_t GetRowStride()  const override final{ return m_RowStride;  }
         virtual size_t GetDepthStride()const override final{ return m_DepthStride;  }

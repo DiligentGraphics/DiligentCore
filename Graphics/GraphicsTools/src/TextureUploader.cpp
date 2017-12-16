@@ -45,6 +45,9 @@ namespace Diligent
             case DeviceType::OpenGL:
                 *ppUploader = MakeNewRCObj<TextureUploaderGL>()( pDevice, Desc );
                 break;
+            
+            default:
+                UNEXPECTED("Unexpected device type")
         }
         if (*ppUploader != nullptr)
             (*ppUploader)->AddRef();

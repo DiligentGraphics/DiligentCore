@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.10)
+cmake_minimum_required (VERSION 3.6)
 
 set(PLATFORM_WIN32 FALSE CACHE INTERNAL "")
 set(PLATFORM_UNIVERSAL_WINDOWS FALSE CACHE INTERNAL "")
@@ -8,6 +8,8 @@ set(D3D12_SUPPORTED FALSE CACHE INTERNAL "D3D12 is not spported")
 set(GL_SUPPORTED FALSE CACHE INTERNAL "GL is not spported")
 set(GLES_SUPPORTED FALSE CACHE INTERNAL "GLES is not spported")
 
+set(CMAKE_OBJECT_PATH_MAX 4096)
+
 if(WIN32)
 	if(${CMAKE_SYSTEM_NAME} STREQUAL "WindowsStore")
 		set(PLATFORM_UNIVERSAL_WINDOWS TRUE CACHE INTERNAL "Target platform: Windows Store")
@@ -15,7 +17,9 @@ if(WIN32)
 		set(PLATFORM_WIN32 TRUE CACHE INTERNAL "Target platform: Win32") #WIN32 is a variable, so we cannot use string "WIN32"
 	endif()
 else()
-	message(FATAL_ERROR "Unknown platform")
+	if(${CMAKE_SYSTEM_NAME} STREQUAL "Android")
+		set(PLATFORM_ANDROID TRUE CACHE INTERNAL "Target platform: Android")
+	endif()
 endif(WIN32)
 
 add_library(BuildSettings INTERFACE)
@@ -71,12 +75,28 @@ else()
 	set(ARCH 32 CACHE INTERNAL "32-bit architecture")
 endif()
 
-# https://cmake.org/cmake/help/v3.8/prop_gbl/CMAKE_CXX_KNOWN_FEATURES.html#prop_gbl:CMAKE_CXX_KNOWN_FEATURES
-target_compile_features(BuildSettings INTERFACE cxx_std_11)
+if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS)
+	# https://cmake.org/cmake/help/v3.8/prop_gbl/CMAKE_CXX_KNOWN_FEATURES.html#prop_gbl:CMAKE_CXX_KNOWN_FEATURES
+	target_compile_features(BuildSettings INTERFACE cxx_std_11) # Generates an error in gradle build on Android
+elseif(PLATFORM_ANDROID)
+	if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+		target_compile_options(BuildSettings INTERFACE -std=c++11)
+	elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
+		target_compile_options(BuildSettings INTERFACE -std=gnu++11) # Generates an error in gradle build on Android
+	else()
+		message(WARNING "Unknown compiler")
+	endif()
+
+	# LOCAL_CPP_FEATURES := exceptions rtti
+	
+endif()
 
 include(BuildUtils.cmake)
 
-add_subdirectory(Utilities)
+if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS)
+	add_subdirectory(Utilities)
+endif()
+
 add_subdirectory(Platforms)
 add_subdirectory(External)
 add_subdirectory(Common)

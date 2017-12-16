@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.10)
+cmake_minimum_required (VERSION 3.6)
 
 project(GraphicsTools CXX)
 
@@ -11,9 +11,6 @@ set(INCLUDE
 	include/RingBuffer.h
 	include/TextureUploader.h
 	include/TextureUploaderBase.h
-	include/TextureUploaderD3D11.h
-	include/TextureUploaderD3D12.h
-	include/TextureUploaderGL.h
 	include/VariableSizeAllocationsManager.h
 	include/VariableSizeGPUAllocationsManager.h
 )
@@ -23,11 +20,22 @@ set(SOURCE
 	src/GraphicsUtilities.cpp
 	src/pch.cpp
 	src/TextureUploader.cpp
-	src/TextureUploaderD3D11.cpp
-	src/TextureUploaderD3D12.cpp
-	src/TextureUploaderGL.cpp
 )
 
+if(D3D11_SUPPORTED)
+	list(APPEND SOURCE src/TextureUploaderD3D11.cpp)
+	list(APPEND INCLUDE include/TextureUploaderD3D11.h)
+endif()
+
+if(D3D12_SUPPORTED)
+	list(APPEND SOURCE src/TextureUploaderD3D12.cpp)
+	list(APPEND INCLUDE include/TextureUploaderD3D12.h)
+endif()
+
+if(GL_SUPPORTED OR GLES_SUPPORTED)
+	list(APPEND SOURCE src/TextureUploaderGL.cpp)
+	list(APPEND INCLUDE include/TextureUploaderGL.h)
+endif()
 
 add_library(GraphicsTools STATIC ${SOURCE} ${INCLUDE})
 

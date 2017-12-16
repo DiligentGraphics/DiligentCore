@@ -23,6 +23,7 @@
 
 #pragma once
 
+#include <cstring>
 #include "GraphicsTypes.h"
 #include "Buffer.h"
 #include "InputLayout.h"
@@ -91,7 +92,7 @@ private:
             return pPSO            == Key.pPSO            &&
                    pIndexBuffer    == Key.pIndexBuffer    &&
                    NumUsedSlots    == Key.NumUsedSlots    &&
-                   memcmp(Streams, Key.Streams, sizeof(StreamAttribs) * NumUsedSlots) == 0;
+                   std::memcmp(Streams, Key.Streams, sizeof(StreamAttribs) * NumUsedSlots) == 0;
         }
     };
 

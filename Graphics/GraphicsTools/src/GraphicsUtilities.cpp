@@ -814,10 +814,10 @@ void GenerateCheckerBoardPatternInternal(Uint32 Width, Uint32 Height, TEXTURE_FO
 static float LinearToSRGB(float x)
 {
 	// This is exactly the sRGB curve
-	//return x < 0.0031308 ? 12.92 * x : 1.055 * pow(abs(x), 1.0 / 2.4) - 0.055;
+	//return x < 0.0031308 ? 12.92 * x : 1.055 * pow(std::abs(x), 1.0 / 2.4) - 0.055;
 	 
 	// This is cheaper but nearly equivalent
-	return x < 0.0031308f ? 12.92f * x : 1.13005f * sqrtf(abs(x - 0.00228f)) - 0.13448f * x + 0.005719f;
+	return x < 0.0031308f ? 12.92f * x : 1.13005f * sqrtf(std::abs(x - 0.00228f)) - 0.13448f * x + 0.005719f;
 }
 
 

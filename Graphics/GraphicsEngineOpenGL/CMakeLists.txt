@@ -84,7 +84,7 @@ if(PLATFORM_WIN32)
 	list(APPEND SOURCE src/RenderDeviceGLImpl.cpp)
 
 	set(APPEND INCLUDE include/GLContextWindows.h)
-elseif(PLATFORM_ANRDOID)
+elseif(PLATFORM_ANDROID)
 	list(APPEND SOURCE src/GLContextAndroid.cpp)
 	list(APPEND SOURCE src/RenderDeviceGLESImpl.cpp)
 	list(APPEND SOURCE src/GLStubs.cpp)
@@ -132,13 +132,10 @@ PRIVATE
 	../HLSL2GLSLConverterLib/include
 )
 
-
 set(PRIVATE_DEPENDENCIES 
 	BuildSettings 
-	glew-static 
 	Common 
 	GraphicsTools 
-	opengl32.lib
 	TargetPlatform
 )
 
@@ -146,6 +143,17 @@ set(PUBLIC_DEPENDENCIES
 	GraphicsEngine
 	HLSL2GLSLConverterLib
 )
+
+if(PLATFORM_WIN32)
+	set(PRIVATE_DEPENDENCIES ${PRIVATE_DEPENDENCIES} glew-static opengl32.lib)
+elseif(PLATFORM_ANDROID)
+	set(PRIVATE_DEPENDENCIES ${PRIVATE_DEPENDENCIES} GLESv3 EGL android)
+	target_compile_definitions(GraphicsEngineOpenGL-static PRIVATE BUILDING_DLL USE_GL3_STUB=0)
+	target_compile_definitions(GraphicsEngineOpenGL-shared PRIVATE BUILDING_DLL USE_GL3_STUB=0)
+	# LOCAL_CFLAGS := -fvisibility=hidden
+else()
+	message(FATAL_ERROR "Unknown platform")
+endif()
 
 target_link_libraries(GraphicsEngineOpenGL-static PRIVATE ${PRIVATE_DEPENDENCIES} PUBLIC ${PUBLIC_DEPENDENCIES})
 target_link_libraries(GraphicsEngineOpenGL-shared PRIVATE ${PRIVATE_DEPENDENCIES} PUBLIC ${PUBLIC_DEPENDENCIES})

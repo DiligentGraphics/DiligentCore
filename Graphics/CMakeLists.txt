@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.8)
+cmake_minimum_required (VERSION 3.6)
 
 set(DLL_REL_SUFFIX _${ARCH}r)
 set(DLL_DBG_SUFFIX _${ARCH}d)

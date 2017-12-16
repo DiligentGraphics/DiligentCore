@@ -24,10 +24,12 @@
 #pragma once
 
 #if defined(ANDROID)
-    #if defined (PLATFORM_UNIVERSAL_WINDOWS) || defined (PLATFORM_WIN32) 
-        #error Conflicting platform macros
-    #endif
-    #define PLATFORM_ANDROID
+#   if defined (PLATFORM_UNIVERSAL_WINDOWS) || defined (PLATFORM_WIN32) 
+#       error Conflicting platform macros
+#   endif
+#   ifndef PLATFORM_ANDROID
+#       define PLATFORM_ANDROID
+#   endif
 #elif !defined (PLATFORM_UNIVERSAL_WINDOWS) && !defined (PLATFORM_WIN32) 
     #error Platform is not defined
 #endif
