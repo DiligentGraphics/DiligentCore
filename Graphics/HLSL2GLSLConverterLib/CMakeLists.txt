@@ -53,15 +53,15 @@ if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows")
 		set(FILE2STRING_PATH $<TARGET_FILE:File2String>)
 		add_dependencies(ProcessGLSLDefinitions File2String)	
 	else()
-		# We cannot run File2String utility and will use prebuilt Win32 version
+		# We cannot build File2String utility and will use prebuilt Win32 version
 		set(FILE2STRING_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../Utilities/File2Include/bin/Win32/File2String.exe")
 	endif()
 
 	add_custom_command(TARGET ProcessGLSLDefinitions 
-					   # Unfortunately it is not possible to set TARGET directly to GraphicsEngineD3DBase
+					   # Unfortunately it is not possible to set TARGET directly to HLSL2GLSLConverterLib
 					   # because PRE_BUILD is only supported on Visual Studio 8 or later. For all other generators 
 					   # PRE_BUILD is treated as PRE_LINK.
-					   COMMAND COMMAND ${FILE2STRING_PATH} include/GLSLDefinitions.h include/GLSLDefinitions_inc.h
+					   COMMAND ${FILE2STRING_PATH} include/GLSLDefinitions.h include/GLSLDefinitions_inc.h
 					   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 					   COMMENT "Processing GLSLDefinitions.h"
 					   VERBATIM

@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.6)
 
-project(NdkHelper CXX)
+project(NDKHelper CXX)
 
 set(SOURCE 
 	src/gestureDetector.cpp
@@ -19,15 +19,15 @@ set(INCLUDE
 	include/tapCamera.h
 )
 
-add_library(NdkHelper STATIC ${SOURCE} ${INCLUDE})
-set_common_target_properties(NdkHelper)
+add_library(NDKHelper STATIC ${SOURCE} ${INCLUDE})
+set_common_target_properties(NDKHelper)
 
-target_include_directories(NdkHelper
+target_include_directories(NDKHelper
 PUBLIC
 	include
 )
 
-target_link_libraries(NdkHelper 
+target_link_libraries(NDKHelper 
 PRIVATE 
 	BuildSettings
 PUBLIC
@@ -37,6 +37,6 @@ PUBLIC
 source_group("src" FILES ${SOURCE})
 source_group("include" FILES ${INCLUDE})
 
-set_target_properties(NdkHelper PROPERTIES
+set_target_properties(NDKHelper PROPERTIES
 	FOLDER Core/External
 )

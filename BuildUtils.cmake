@@ -62,4 +62,11 @@ function(set_common_target_properties TARGET)
 		endif()
 	endif()
 
+	if(PLATFORM_ANDROID)
+		# target_compile_features(BuildSettings INTERFACE cxx_std_11) generates an error in gradle build on Android
+		# It is crucial to set CXX_STANDARD flag to only affect c++ files and avoid failures compiling c-files:
+		# error: invalid argument '-std=c++11' not allowed with 'C/ObjC'
+		set_target_properties(${TARGET} PROPERTIES CXX_STANDARD 11)
+	endif()
+
 endfunction()

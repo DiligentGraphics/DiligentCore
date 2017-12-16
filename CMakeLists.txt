@@ -19,6 +19,8 @@ if(WIN32)
 else()
 	if(${CMAKE_SYSTEM_NAME} STREQUAL "Android")
 		set(PLATFORM_ANDROID TRUE CACHE INTERNAL "Target platform: Android")
+	else()
+		message(FATAL_ERROR "Unsupported platform")
 	endif()
 endif(WIN32)
 
@@ -81,14 +83,6 @@ if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS)
 	target_compile_features(BuildSettings INTERFACE cxx_std_11) # Generates an error in gradle build on Android
 
 elseif(PLATFORM_ANDROID)
-
-	if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
-		target_compile_options(BuildSettings INTERFACE -std=c++11)
-	elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
-		target_compile_options(BuildSettings INTERFACE -std=gnu++11)
-	else()
-		message(WARNING "Unknown compiler")
-	endif()
 
 	# LOCAL_CPP_FEATURES := exceptions rtti
 	

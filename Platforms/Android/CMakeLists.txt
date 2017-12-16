@@ -26,7 +26,7 @@ target_link_libraries(AndroidPlatform
 PRIVATE 
 	BuildSettings 
 	Common 
-	NdkHelper
+	NDKHelper
 	log
 PUBLIC
 	PlatformInterface
