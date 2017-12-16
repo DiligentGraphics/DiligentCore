@@ -76,13 +76,16 @@ else()
 endif()
 
 if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS)
+
 	# https://cmake.org/cmake/help/v3.8/prop_gbl/CMAKE_CXX_KNOWN_FEATURES.html#prop_gbl:CMAKE_CXX_KNOWN_FEATURES
 	target_compile_features(BuildSettings INTERFACE cxx_std_11) # Generates an error in gradle build on Android
+
 elseif(PLATFORM_ANDROID)
+
 	if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
 		target_compile_options(BuildSettings INTERFACE -std=c++11)
 	elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
-		target_compile_options(BuildSettings INTERFACE -std=gnu++11) # Generates an error in gradle build on Android
+		target_compile_options(BuildSettings INTERFACE -std=gnu++11)
 	else()
 		message(WARNING "Unknown compiler")
 	endif()

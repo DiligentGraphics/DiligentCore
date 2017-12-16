@@ -150,7 +150,7 @@ elseif(PLATFORM_ANDROID)
 	set(PRIVATE_DEPENDENCIES ${PRIVATE_DEPENDENCIES} GLESv3 EGL android)
 	target_compile_definitions(GraphicsEngineOpenGL-static PRIVATE BUILDING_DLL USE_GL3_STUB=0)
 	target_compile_definitions(GraphicsEngineOpenGL-shared PRIVATE BUILDING_DLL USE_GL3_STUB=0)
-	# LOCAL_CFLAGS := -fvisibility=hidden
+	set_target_properties(GraphicsEngineOpenGL-shared PROPERTIES CXX_VISIBILITY_PRESET hidden) # -fvisibility=hidden
 else()
 	message(FATAL_ERROR "Unknown platform")
 endif()
