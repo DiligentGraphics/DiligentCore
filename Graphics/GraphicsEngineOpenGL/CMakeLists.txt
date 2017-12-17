@@ -159,12 +159,18 @@ target_link_libraries(GraphicsEngineOpenGL-static PRIVATE ${PRIVATE_DEPENDENCIES
 target_link_libraries(GraphicsEngineOpenGL-shared PRIVATE ${PRIVATE_DEPENDENCIES} PUBLIC ${PUBLIC_DEPENDENCIES})
 target_compile_definitions(GraphicsEngineOpenGL-shared PUBLIC ENGINE_DLL)
 
-set_target_properties(GraphicsEngineOpenGL-shared PROPERTIES
-	OUTPUT_NAME_DEBUG GraphicsEngineOpenGL${DLL_DBG_SUFFIX}
-	OUTPUT_NAME_RELEASE GraphicsEngineOpenGL${DLL_REL_SUFFIX}
-	OUTPUT_NAME_RELWITHDEBINFO GraphicsEngineOpenGL${DLL_REL_SUFFIX}
-	OUTPUT_NAME_MINSIZEREL GraphicsEngineOpenGL${DLL_REL_SUFFIX}
-)
+if(PLATFORM_WIN32)
+	set_target_properties(GraphicsEngineOpenGL-shared PROPERTIES
+		OUTPUT_NAME_DEBUG GraphicsEngineOpenGL${DLL_DBG_SUFFIX}
+		OUTPUT_NAME_RELEASE GraphicsEngineOpenGL${DLL_REL_SUFFIX}
+		OUTPUT_NAME_RELWITHDEBINFO GraphicsEngineOpenGL${DLL_REL_SUFFIX}
+		OUTPUT_NAME_MINSIZEREL GraphicsEngineOpenGL${DLL_REL_SUFFIX}
+	)
+else()
+	set_target_properties(GraphicsEngineOpenGL-shared PROPERTIES
+		OUTPUT_NAME GraphicsEngineOpenGL
+	)
+endif()
 
 set_common_target_properties(GraphicsEngineOpenGL-shared)
 set_common_target_properties(GraphicsEngineOpenGL-static)
