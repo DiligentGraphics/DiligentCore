@@ -7,20 +7,11 @@
     <Filter Include="src">
       <UniqueIdentifier>{78bd0645-1204-447a-be54-1a4dcc0f0a6a}</UniqueIdentifier>
     </Filter>
-    <Filter Include="jni">
-      <UniqueIdentifier>{35b072d0-8dc8-47dc-80a2-04671fdd688e}</UniqueIdentifier>
-    </Filter>
     <Filter Include="interface">
       <UniqueIdentifier>{3537c2b0-8793-4498-9773-6006530f63be}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <None Include="jni\Application.mk">
-      <Filter>jni</Filter>
-    </None>
-    <None Include="jni\Android.mk">
-      <Filter>jni</Filter>
-    </None>
     <None Include="..\..\readme.md" />
   </ItemGroup>
   <ItemGroup>

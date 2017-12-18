@@ -9,9 +9,6 @@
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
     </Filter>
-    <Filter Include="jni">
-      <UniqueIdentifier>{658fdc9e-6df5-44d2-9888-cdce02006b44}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Header Files\Windows">
       <UniqueIdentifier>{f078efc4-26ba-4803-a3a1-eb22a55e7ada}</UniqueIdentifier>
     </Filter>
@@ -279,12 +276,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="jni\Application.mk">
-      <Filter>jni</Filter>
-    </None>
-    <None Include="jni\Android.mk">
-      <Filter>jni</Filter>
-    </None>
     <None Include="..\..\src\GraphicsEngineOpenGL.def">
       <Filter>Source Files</Filter>
     </None>
