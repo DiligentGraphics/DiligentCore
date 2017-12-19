@@ -33,7 +33,7 @@
 #else
 
     // Use c++11 standard atomics
-    #include "..\Basic\include\BasicAtomics.h"
+    #include "../Basic/include/BasicAtomics.h"
     typedef BasicAtomics Atomics;
 
 #endif

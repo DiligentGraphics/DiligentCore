@@ -24,7 +24,7 @@
 #pragma once
 
 #include <EGL/egl.h>
-#include <android\native_window.h>
+#include <android/native_window.h>
 
 namespace Diligent
 {

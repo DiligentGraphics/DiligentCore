@@ -23,7 +23,7 @@
 
 #pragma once
 
-#include "..\Basic\include\BasicPlatformMisc.h"
+#include "../Basic/include/BasicPlatformMisc.h"
 #include "DebugUtilities.h"
 
 struct AndroidMisc : public BasicPlatformMisc

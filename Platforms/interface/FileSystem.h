@@ -39,7 +39,7 @@
 
 #elif defined ( PLATFORM_ANDROID )
 
-    #include "..\Android\include\AndroidFileSystem.h"
+    #include "../Android/include/AndroidFileSystem.h"
     typedef AndroidFileSystem FileSystem;
     typedef AndroidFile       CFile;
 #endif

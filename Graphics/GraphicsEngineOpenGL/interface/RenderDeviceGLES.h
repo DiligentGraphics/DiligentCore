@@ -27,7 +27,7 @@
 /// Definition of the Diligent::IRenderDeviceGLES interface
 
 #include "RenderDeviceGL.h"
-#include <android\native_window.h>
+#include <android/native_window.h>
 #include <EGL/egl.h>
 
 namespace Diligent

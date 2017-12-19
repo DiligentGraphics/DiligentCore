@@ -34,6 +34,6 @@
     typedef WindowsStoreDebug PlatformDebug;
 
 #elif defined ( PLATFORM_ANDROID )
-    #include "..\Android\include\AndroidDebug.h"
+    #include "../Android/include/AndroidDebug.h"
     typedef AndroidDebug PlatformDebug;
 #endif

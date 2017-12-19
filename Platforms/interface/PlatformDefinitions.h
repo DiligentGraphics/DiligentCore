@@ -52,7 +52,7 @@
 
 #elif defined ( PLATFORM_ANDROID )
 
-#   include "..\Android\include\AndroidPlatformDefinitions.h"
+#   include "../Android/include/AndroidPlatformDefinitions.h"
 
 #   define OPENGL_SUPPORTED 1
 #   define D3D11_SUPPORTED 0
