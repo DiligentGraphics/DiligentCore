@@ -23,10 +23,12 @@
 
 #pragma once
 
-#ifdef PLATFORM_WIN32
-#include "GLContextWindows.h"
-#endif
-
-#ifdef ANDROID
-#include "GLContextAndroid.h"
+#if defined(PLATFORM_WIN32)
+#   include "GLContextWindows.h"
+#elif defined(PLATFORM_ANDROID)
+#   include "GLContextAndroid.h"
+#elif defined(PLATFORM_LINUX)
+#   include "GLContextLinux.h"
+#else
+#   error Unsupported platform
 #endif

@@ -39,10 +39,12 @@
 namespace Diligent
 {
 
-#if defined(PLATFORM_WIN32) || defined(PLATFORM_UNIVERSAL_WINDOWS)
+#if defined(PLATFORM_WIN32) || defined(PLATFORM_UNIVERSAL_WINDOWS) || defined(PLATFORM_LINUX)
     typedef RenderDeviceGLImpl TRenderDeviceGLImpl;
 #elif defined(PLATFORM_ANDROID)
     typedef RenderDeviceGLESImpl TRenderDeviceGLImpl;
+#else
+#   error Unsupported platform
 #endif
 
 /// Engine factory for OpenGL implementation

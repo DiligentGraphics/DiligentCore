@@ -21,26 +21,30 @@
  *  of the possibility of such damages.
  */
 
-#pragma once
+#include "LinuxDebug.h"
+#include "FormatMessage.h"
+#include "FileSystem.h"
+//#include <Linux/log.h>
+#include <csignal>
+#include <cassert>
 
-#include "PlatformDefinitions.h"
+void LinuxDebug :: AssertionFailed( const Diligent::Char *Message, const char *Function, const char *File, int Line )
+{
+    assert(false);
+    //std::string FileName;
+    //FileSystem::SplitFilePath( File, nullptr, &FileName );
+    //std::stringstream msgss;
+    //Diligent::FormatMsg( msgss, "\nDebug assertion failed in ", Function, "(), file ", FileName, ", line ", Line, ":\n", Message);
+    //auto FullMsg = msgss.str();
+    //OutputDebugMessage( DebugMessageSeverity::Error, FullMsg.c_str() );
 
-#if defined( PLATFORM_WIN32 )
-    #include "..\Win32\include\Win32Debug.h"
-    typedef WindowsDebug PlatformDebug;
+    //raise( SIGTRAP );
+};
 
-#elif defined( PLATFORM_UNIVERSAL_WINDOWS )
-    #include "..\UWP\include\UWPDebug.h"
-    typedef WindowsStoreDebug PlatformDebug;
 
-#elif defined ( PLATFORM_ANDROID )
-    #include "../Android/include/AndroidDebug.h"
-    typedef AndroidDebug PlatformDebug;
-
-#elif defined ( PLATFORM_LINUX )
-    #include "../Linux/include/LinuxDebug.h"
-    typedef LinuxDebug PlatformDebug;
-
-#else
-    #error Unsupported platform
-#endif
+void LinuxDebug::OutputDebugMessage( DebugMessageSeverity Severity, const Diligent::Char *Message )
+{
+    assert(false);
+    //static const Linux_LogPriority Priorities[] = { Linux_LOG_INFO, Linux_LOG_WARN, Linux_LOG_ERROR, Linux_LOG_FATAL };
+    //__Linux_log_print( Priorities[static_cast<int>(Severity)], "Graphics Engine", "%s", Message );
+}

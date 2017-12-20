@@ -41,7 +41,7 @@ namespace Diligent
         ~GLContext();
         void SwapBuffers();
 
-        const SwapChainDesc& GetSwapChainDesc(){ return m_SwapChainAttribs; }
+        const SwapChainDesc& GetSwapChainDesc()const{ return m_SwapChainAttribs; }
 
         NativeGLContextType GetCurrentNativeGLContext();
 

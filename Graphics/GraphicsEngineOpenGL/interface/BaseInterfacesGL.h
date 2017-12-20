@@ -23,20 +23,20 @@
 
 #pragma once
 
-#ifdef ANDROID
+#if defined(PLATFORM_ANDROID)
     #include "RenderDeviceGLES.h"
     namespace Diligent
     {
         using IGLDeviceBaseInterface = IRenderDeviceGLES;
     }
-#endif
-
-#ifdef PLATFORM_WIN32
+#elif defined(PLATFORM_WIN32) || defined(PLATFORM_LINUX)
     #include "RenderDeviceGL.h"
     namespace Diligent
     {
         using IGLDeviceBaseInterface = IRenderDeviceGL;
     }
+#else
+#   error Unsupported platform
 #endif
 
 #include "DeviceContextGL.h"

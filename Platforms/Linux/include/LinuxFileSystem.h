@@ -23,24 +23,44 @@
 
 #pragma once
 
-#include "PlatformDefinitions.h"
+#include "../Basic/include/BasicFileSystem.h"
 
-#if defined( PLATFORM_WIN32 )
-    #include "..\Win32\include\Win32Debug.h"
-    typedef WindowsDebug PlatformDebug;
+#include <memory>
+#include <vector>
 
-#elif defined( PLATFORM_UNIVERSAL_WINDOWS )
-    #include "..\UWP\include\UWPDebug.h"
-    typedef WindowsStoreDebug PlatformDebug;
+class LinuxFile : public BasicFile
+{
+public:
+    LinuxFile( const FileOpenAttribs &OpenAttribs );
+    ~LinuxFile();
 
-#elif defined ( PLATFORM_ANDROID )
-    #include "../Android/include/AndroidDebug.h"
-    typedef AndroidDebug PlatformDebug;
+    void Read( Diligent::IDataBlob *pData );
 
-#elif defined ( PLATFORM_LINUX )
-    #include "../Linux/include/LinuxDebug.h"
-    typedef LinuxDebug PlatformDebug;
+    bool Read( void* Data, size_t BufferSize );
 
-#else
-    #error Unsupported platform
-#endif
+    bool Write( const void *Data, size_t BufferSize );
+
+    size_t GetSize();
+
+    size_t GetPos();
+
+    void SetPos(size_t Offset, FilePosOrigin Origin);
+
+private:
+    //FILE *m_pFile;
+};
+
+struct LinuxFileSystem : public BasicFileSystem
+{
+public:
+    static LinuxFile* OpenFile( const FileOpenAttribs &OpenAttribs );
+    static inline Diligent::Char GetSlashSymbol(){ return '/'; }
+
+    static bool FileExists( const Diligent::Char *strFilePath );
+    static bool PathExists( const Diligent::Char *strPath );
+    
+    static bool CreateDirectory( const Diligent::Char *strPath );
+    static void ClearDirectory( const Diligent::Char *strPath );
+    static void DeleteFile( const Diligent::Char *strPath );
+    static std::vector<std::unique_ptr<FindFileData>> Search(const Diligent::Char *SearchPattern);
+};

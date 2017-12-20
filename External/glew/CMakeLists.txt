@@ -16,7 +16,8 @@ set_common_target_properties(glew-static)
 
 target_compile_definitions(glew-static 
 PUBLIC
-	-DGLEW_STATIC
+	GLEW_STATIC
+	GLEW_NO_GLU
 )
 
 target_include_directories(glew-static 

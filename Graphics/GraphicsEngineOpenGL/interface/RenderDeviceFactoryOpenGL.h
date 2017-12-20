@@ -35,7 +35,7 @@
 
 #   define API_QUALIFIER
 
-#elif defined(PLATFORM_ANDROID)
+#elif defined(PLATFORM_ANDROID) || defined(PLATFORM_LINUX)
 
 #   ifdef ENGINE_DLL
 #       ifdef BUILDING_DLL

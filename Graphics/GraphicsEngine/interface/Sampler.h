@@ -26,6 +26,7 @@
 /// \file
 /// Definition of the Diligent::ISampler interface and related data structures
 
+#include <cfloat>
 #include "DeviceObject.h"
 
 namespace Diligent

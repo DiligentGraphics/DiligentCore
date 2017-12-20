@@ -48,7 +48,7 @@ Texture2DArray_OGL::Texture2DArray_OGL( IReferenceCounters *pRefCounters,
     if( m_Desc.SampleCount > 1 )
     {
         //                                                              format          width         height          depth
-        glTexStorage3DMultisample(m_BindTarget, m_Desc.SampleCount, m_GLTexFormat, m_Desc.Width, m_Desc.Height, m_Desc.ArraySize, TRUE);
+        glTexStorage3DMultisample(m_BindTarget, m_Desc.SampleCount, m_GLTexFormat, m_Desc.Width, m_Desc.Height, m_Desc.ArraySize, GL_TRUE);
         // The last parameter specifies whether the image will use identical sample locations and the same number of 
         // samples for all texels in the image, and the sample locations will not depend on the internal format or size 
         // of the image.

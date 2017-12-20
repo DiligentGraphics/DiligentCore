@@ -35,35 +35,48 @@
 #include <unordered_set>
 #include <algorithm>
 
-// Must be defined to use static version of glew
-#ifdef PLATFORM_WIN32
+#if defined(PLATFORM_WIN32)
+
 #   ifndef GLEW_STATIC
-#       define GLEW_STATIC
+#       define GLEW_STATIC // Must be defined to use static version of glew
 #   endif
-    #include "glew.h"
+#   include "glew.h"
     // Glew includes <windows.h>
-    #define NOMINMAX
-    #include "wglew.h"
-    #include <GL/GL.h>
-#endif
+#   define NOMINMAX
+#   include "wglew.h"
+#   include <GL/GL.h>
 
+#elif defined(PLATFORM_LINUX)
 
-#ifdef ANDROID
-#ifndef USE_GL3_STUB
-    #define USE_GL3_STUB 0
-#endif
-    #if USE_GL3_STUB
-        #include "gl3stub.h"
-        #include <GLES2/gl2platform.h>
-    #else
-        #include <GLES3/gl3.h>
-        #include <GLES3/gl3ext.h>
-    #endif
+#   ifndef GLEW_STATIC
+#       define GLEW_STATIC // Must be defined to use static version of glew
+#   endif
+#   ifndef GLEW_NO_GLU
+#       define GLEW_NO_GLU
+#   endif
+
+#   include "glew.h"
+
+#   elif defined(PLATFORM_ANDROID)
+
+#   ifndef USE_GL3_STUB
+#       define USE_GL3_STUB 0
+#   endif
+#   if USE_GL3_STUB
+#       include "gl3stub.h"
+#       include <GLES2/gl2platform.h>
+#   else
+#       include <GLES3/gl3.h>
+#       include <GLES3/gl3ext.h>
+#   endif
+
+#else
+#   error Unsupported platform
 #endif
 
 #include "Errors.h"
 
-#ifdef ANDROID
+#ifdef PLATFORM_ANDROID
     // GLStubs must be included after GLFeatures!
     #include "GLStubs.h"
 #endif

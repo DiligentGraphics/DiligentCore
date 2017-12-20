@@ -32,4 +32,10 @@
 #elif defined ( PLATFORM_ANDROID )
     #include "../Android/include/AndroidPlatformMisc.h"
     typedef AndroidMisc PlatformMisc;
+
+#elif defined ( PLATFORM_LINUX )
+    #include "../Linux/include/LinuxPlatformMisc.h"
+    typedef LinuxMisc PlatformMisc;
+#else
+    #error Unsupported platform
 #endif

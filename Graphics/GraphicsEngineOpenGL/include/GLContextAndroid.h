@@ -51,7 +51,7 @@ namespace Diligent
         void Suspend();
         EGLint Resume( ANativeWindow* window );
 
-        const SwapChainDesc& GetSwapChainDesc(){ return SwapChainAttribs_; }
+        const SwapChainDesc& GetSwapChainDesc()const{ return SwapChainAttribs_; }
         
         NativeGLContextType GetCurrentNativeGLContext();
 

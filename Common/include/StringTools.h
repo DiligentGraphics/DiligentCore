@@ -70,7 +70,7 @@ inline std::wstring WidenString(const std::string &Str)
 
 inline int StrCmpNoCase(const char* Str1, const char* Str2, size_t NumChars)
 {
-#ifdef PLATFORM_ANDROID
+#if defined(PLATFORM_ANDROID) || defined(PLATFORM_LINUX)
 #   define _strnicmp strncasecmp
 #endif
 
@@ -79,7 +79,7 @@ inline int StrCmpNoCase(const char* Str1, const char* Str2, size_t NumChars)
 
 inline int StrCmpNoCase(const char* Str1, const char* Str2)
 {
-#ifdef PLATFORM_ANDROID
+#if defined(PLATFORM_ANDROID) || defined(PLATFORM_LINUX)
 #   define _stricmp strcasecmp
 #endif
 

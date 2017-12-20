@@ -24,17 +24,20 @@
 #pragma once
 
 #if defined(ANDROID)
-#   if defined (PLATFORM_UNIVERSAL_WINDOWS) || defined (PLATFORM_WIN32) 
-#       error Conflicting platform macros
-#   endif
 #   ifndef PLATFORM_ANDROID
 #       define PLATFORM_ANDROID
 #   endif
-#elif !defined (PLATFORM_UNIVERSAL_WINDOWS) && !defined (PLATFORM_WIN32) 
+#endif
+
+#if !defined(PLATFORM_WIN32) && !defined(PLATFORM_UNIVERSAL_WINDOWS) && !defined(PLATFORM_ANDROID) && !defined(PLATFORM_LINUX)
     #error Platform is not defined
 #endif
 
 #if defined( PLATFORM_WIN32 )
+
+#   if defined(PLATFORM_UNIVERSAL_WINDOWS) || defined(PLATFORM_ANDROID) || defined(PLATFORM_LINUX) 
+#       error Conflicting platform macros
+#   endif
 
 #   include "..\Win32\include\Win32PlatformDefinitions.h"
 
@@ -44,15 +47,35 @@
 
 #elif defined( PLATFORM_UNIVERSAL_WINDOWS )
 
+#   if defined(PLATFORM_WIN32) || defined(PLATFORM_ANDROID) || defined(PLATFORM_LINUX) 
+#       error Conflicting platform macros
+#   endif
+
 #   include "..\UWP\include\UWPDefinitions.h"
 
 #   define OPENGL_SUPPORTED 0
 #   define D3D11_SUPPORTED 1
 #   define D3D12_SUPPORTED 1
 
-#elif defined ( PLATFORM_ANDROID )
+#elif defined( PLATFORM_ANDROID )
+
+#   if defined (PLATFORM_WIN32) || defined(PLATFORM_UNIVERSAL_WINDOWS) || defined (PLATFORM_LINUX) 
+#       error Conflicting platform macros
+#   endif
 
 #   include "../Android/include/AndroidPlatformDefinitions.h"
+
+#   define OPENGL_SUPPORTED 1
+#   define D3D11_SUPPORTED 0
+#   define D3D12_SUPPORTED 0
+
+#elif defined( PLATFORM_LINUX )
+
+#   if defined(PLATFORM_WIN32) || defined(PLATFORM_UNIVERSAL_WINDOWS) || defined(PLATFORM_ANDROID) 
+#       error Conflicting platform macros
+#   endif
+
+#   include "../Linux/include/LinuxPlatformDefinitions.h"
 
 #   define OPENGL_SUPPORTED 1
 #   define D3D11_SUPPORTED 0

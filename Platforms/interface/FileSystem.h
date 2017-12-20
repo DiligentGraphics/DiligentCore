@@ -42,4 +42,13 @@
     #include "../Android/include/AndroidFileSystem.h"
     typedef AndroidFileSystem FileSystem;
     typedef AndroidFile       CFile;
+
+#elif defined ( PLATFORM_LINUX )
+
+    #include "../Linux/include/LinuxFileSystem.h"
+    typedef LinuxFileSystem FileSystem;
+    typedef LinuxFile       CFile;
+
+#elif
+    #error Unsupported platform
 #endif
