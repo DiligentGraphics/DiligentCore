@@ -40,10 +40,10 @@
 #   ifndef GLEW_STATIC
 #       define GLEW_STATIC // Must be defined to use static version of glew
 #   endif
-#   include "glew.h"
+#   include "GL/glew.h"
     // Glew includes <windows.h>
 #   define NOMINMAX
-#   include "wglew.h"
+#   include "GL/wglew.h"
 #   include <GL/GL.h>
 
 #elif defined(PLATFORM_LINUX)
@@ -55,7 +55,7 @@
 #       define GLEW_NO_GLU
 #   endif
 
-#   include "glew.h"
+#   include "GL/glew.h"
 
 #   elif defined(PLATFORM_ANDROID)
 

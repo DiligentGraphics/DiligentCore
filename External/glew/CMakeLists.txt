@@ -21,10 +21,8 @@ PUBLIC
 )
 
 target_include_directories(glew-static 
-PRIVATE
+PUBLIC
 	include
-INTERFACE
-	include/GL
 )
 
 target_link_libraries(glew-static PRIVATE BuildSettings)
