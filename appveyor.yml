@@ -44,6 +44,6 @@ before_build:
   - cmake %cmake_args% -H. -B./cmk_build -G %generator%
 
 build:
-  project: c:\projects\DiligentCore\cmk_build\DiligentCore.sln
+  project: c:\projects\DiligentCore\cmk_build\Project.sln
   verbosity: minimal
   parallel: true
