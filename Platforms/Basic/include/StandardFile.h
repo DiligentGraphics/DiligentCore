@@ -23,25 +23,30 @@
 
 #pragma once
 
-#include "../Basic/include/BasicFileSystem.h"
-#include "../Basic/include/StandardFile.h"
+#include <stdio.h>
 
-#include <memory>
-#include <vector>
+#include "BasicFileSystem.h"
 
-using LinuxFile = StandardFile;
-
-struct LinuxFileSystem : public BasicFileSystem
+class StandardFile : public BasicFile
 {
 public:
-    static LinuxFile* OpenFile( const FileOpenAttribs &OpenAttribs );
-    static inline Diligent::Char GetSlashSymbol(){ return '/'; }
+    StandardFile( const FileOpenAttribs &OpenAttribs, Diligent::Char SlashSymbol );
+    virtual ~StandardFile()override;
 
-    static bool FileExists( const Diligent::Char *strFilePath );
-    static bool PathExists( const Diligent::Char *strPath );
+    void Read(Diligent::IDataBlob *pData);
+
+    bool Read(void *Data, size_t BufferSize);
+
+    bool Write(const void *Data, size_t BufferSize);
+
+    size_t GetSize();
+
+    size_t GetPos();
+
+    void SetPos(size_t Offset, FilePosOrigin Origin);
     
-    static bool CreateDirectory( const Diligent::Char *strPath );
-    static void ClearDirectory( const Diligent::Char *strPath );
-    static void DeleteFile( const Diligent::Char *strPath );
-    static std::vector<std::unique_ptr<FindFileData>> Search(const Diligent::Char *SearchPattern);
+    bool IsValid()const { return m_pFile != nullptr; }
+
+protected:
+    FILE * m_pFile;
 };

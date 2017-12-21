@@ -23,29 +23,15 @@
 
 #pragma once
 
-#include "..\Basic\include\BasicFileSystem.h"
 #include <memory>
+#include "..\Basic\include\BasicFileSystem.h"
+#include "..\Basic\include\StandardFile.h"
 
-class WindowsFile : public BasicFile
+
+class WindowsFile : public StandardFile
 {
 public:
     WindowsFile( const FileOpenAttribs &OpenAttribs );
-    ~WindowsFile();
-
-    void Read( Diligent::IDataBlob *pData );
-
-    bool Read( void *Data, size_t BufferSize );
-
-    bool Write( const void *Data, size_t BufferSize );
-
-    size_t GetSize();
-
-    size_t GetPos();
-
-    void SetPos(size_t Offset, FilePosOrigin Origin);
-
-private:
-    FILE *m_pFile;
 };
 
 

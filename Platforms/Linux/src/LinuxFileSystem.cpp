@@ -21,144 +21,35 @@
  *  of the possibility of such damages.
  */
 
+#include <stdio.h>
+#include <unistd.h>
+#include <cstdio>
+
 #include "LinuxFileSystem.h"
 #include "Errors.h"
 #include "DebugUtilities.h"
 
-LinuxFile::LinuxFile( const FileOpenAttribs &OpenAttribs ) : 
-    BasicFile(OpenAttribs, LinuxFileSystem::GetSlashSymbol())/*,
-    m_pFile(nullptr)*/
-{
-    //auto OpenModeStr = GetOpenModeStr();
-
-    //for (;; )
-    //{
-    //    errno_t err = fopen_s(&m_pFile, m_OpenAttribs.strFilePath, OpenModeStr.c_str());
-    //    if (err == 0)
-    //    {
-    //        break;
-    //    }
-    //    else if (err == ENFILE || // Too many files open in system 
-    //        err == EMFILE)  // Too many open files 
-    //    {
-    //        // No more file descriptors are available: we have to wait
-    //        //g_SystemMetricsStream << "Failed to open file " << FileName;
-    //        //g_SystemMetricsStream << "\nWaiting 50 ms...\n";
-    //        //Sleep(50);
-    //        continue;
-    //    }
-    //    else
-    //    {
-    //        char errstr[128];
-    //        strerror_s(errstr, _countof(errstr), err);
-    //        LOG_ERROR_AND_THROW("Failed to open file ", m_OpenAttribs.strFilePath,
-    //            "\nThe following error occured: ", errstr);
-    //    }
-    //}
-}
-
-LinuxFile::~LinuxFile()
-{
-    //if( m_pFile )
-    //{
-    //    fclose( m_pFile );
-    //    m_pFile = nullptr;
-    //}
-}
-
-void LinuxFile::Read( Diligent::IDataBlob *pData )
-{
-#if 0
-    auto FullPath = m_OpenAttribs.strFilePath;
-    std::vector<Diligent::Uint8> Data;
-    bool b = JNIHelper::GetInstance()->ReadFile( FullPath, &Data );
-    if( b )
-    {
-        pData->Resize( Data.size() );
-        memcpy( pData->GetDataPtr(), Data.data(), Data.size() );
-    }
-    else
-    {
-        LOG_ERROR_MESSAGE( "Unable to open file ", m_OpenAttribs.strFilePath, "\nFull path: ", FullPath );
-    }
-#endif
-    UNSUPPORTED("Not implemented")
-}
-
-size_t LinuxFile::GetSize()
-{
-    UNSUPPORTED( "Not implemented" );
-
-    return 0;
-}
-
-bool LinuxFile::Read( void *Data, size_t BufferSize )
-{
-    UNSUPPORTED( "Not implemented" );
-
-    //VERIFY( m_pFile, "File not opened" );
-    //auto OrigPos = ftell( m_pFile );
-    //fseek( m_pFile, 0, SEEK_END );
-    //auto FileSize = ftell( m_pFile );
-    //fseek( m_pFile, 0, SEEK_SET );
-    //Data.resize( FileSize );
-    //auto ItemsRead = fread( Data.data(), FileSize, 1, m_pFile );
-    //fseek( m_pFile, OrigPos, SEEK_SET );
-    //return ItemsRead == 1;
-    return false;
-}
-
-bool LinuxFile::Write( const void *Data, size_t BufferSize )
-{
-    UNSUPPORTED( "Not implemented" );
-
-    return false;
-}
-
-size_t LinuxFile::GetPos()
-{
-    UNSUPPORTED( "Not implemented" );
-
-    return 0;
-}
-
-void LinuxFile::SetPos(size_t Offset, FilePosOrigin Origin)
-{
-    UNSUPPORTED( "Not implemented" );
-}
-
-
 LinuxFile* LinuxFileSystem::OpenFile( const FileOpenAttribs &OpenAttribs )
 {
     LinuxFile *pFile = nullptr;
-#if 0
     try
     {
-        pFile = new LinuxFile( OpenAttribs );
+        pFile = new LinuxFile(OpenAttribs, LinuxFileSystem::GetSlashSymbol());
     }
     catch( const std::runtime_error &err )
     {
 
     }
-#endif
-    UNSUPPORTED("Not implemented")
     return pFile;
 }
 
 
 bool LinuxFileSystem::FileExists( const Diligent::Char *strFilePath )
 {
-#if 0
     FileOpenAttribs OpenAttribs;
     OpenAttribs.strFilePath = strFilePath;
-    BasicFile DummyFile( OpenAttribs, LinuxFileSystem::GetSlashSymbol() );
-    const auto& Path = DummyFile.GetPath();
-    std::vector<Diligent::Uint8> Data;
-    bool b = JNIHelper::GetInstance()->ReadFile( Path.c_str(), &Data );
-    return b;
-#endif
-    UNSUPPORTED("Not implemented")
-    return false;
+    LinuxFile DummyFile(OpenAttribs, LinuxFileSystem::GetSlashSymbol());
+    return DummyFile.IsValid();
 }
 
 bool LinuxFileSystem::PathExists( const Diligent::Char *strPath )
@@ -180,7 +71,7 @@ void LinuxFileSystem::ClearDirectory( const Diligent::Char *strPath )
 
 void LinuxFileSystem::DeleteFile( const Diligent::Char *strPath )
 {
-    UNSUPPORTED( "Not implemented" );
+    remove(strPath);
 }
     
 std::vector<std::unique_ptr<FindFileData>> LinuxFileSystem::Search(const Diligent::Char *SearchPattern)

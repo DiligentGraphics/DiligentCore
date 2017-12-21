@@ -49,9 +49,9 @@ void WindowsFileSystem::DeleteFile( const Diligent::Char *strPath )
 using namespace Diligent;
 
 WindowsFile::WindowsFile( const FileOpenAttribs &OpenAttribs ) : 
-    BasicFile(OpenAttribs, WindowsFileSystem::GetSlashSymbol()),
-    m_pFile(nullptr)
+    StandardFile(OpenAttribs, WindowsFileSystem::GetSlashSymbol())
 {
+    VERIFY_EXPR(m_pFile == nullptr );
     auto OpenModeStr = GetOpenModeStr();
     
     for( ;; )
@@ -78,80 +78,6 @@ WindowsFile::WindowsFile( const FileOpenAttribs &OpenAttribs ) :
                                  "\nThe following error occured: ", errstr );
         }
     }
-}
-
-WindowsFile::~WindowsFile()
-{
-    if( m_pFile )
-    {
-        fclose( m_pFile );
-        m_pFile = nullptr;
-    }
-}
-
-void WindowsFile::Read( Diligent::IDataBlob *pData )
-{
-    auto FileSize = GetSize();
-    pData->Resize(FileSize);
-    auto Res = Read( pData->GetDataPtr(), pData->GetSize() );
-    VERIFY( Res, "Failed to read ", FileSize, " bytes from file" );
-}
-
-bool WindowsFile::Read( void *Data, size_t BufferSize )
-{
-    VERIFY( m_pFile, "File is not opened" );
-    if( !m_pFile )
-        return 0;
-    auto BytesRead = fread( Data, 1, BufferSize, m_pFile );
-    
-    return BytesRead == BufferSize;
-}
-
-bool WindowsFile::Write( const void *Data, size_t BufferSize )
-{
-    VERIFY( m_pFile, "File is not opened" );
-    if( !m_pFile )
-        return 0;
-    auto BytesWritten = fwrite( Data, 1, BufferSize, m_pFile );
-    
-    return BytesWritten == BufferSize;
-}
-
-size_t WindowsFile::GetSize()
-{
-    auto OrigPos = ftell( m_pFile );
-    fseek( m_pFile, 0, SEEK_END );
-    auto FileSize = ftell( m_pFile );
-
-    fseek( m_pFile, OrigPos, SEEK_SET );
-    return FileSize;
-}
-
-size_t WindowsFile::GetPos()
-{
-    VERIFY( m_pFile, "File is not opened" );
-    if( !m_pFile )
-        return 0;
-
-    return ftell(m_pFile);
-}
-
-void WindowsFile::SetPos(size_t Offset, FilePosOrigin Origin)
-{
-    VERIFY( m_pFile, "File is not opened" );
-    if( !m_pFile )
-        return;
-
-    int orig = SEEK_SET;
-    switch( Origin )
-    {
-        case FilePosOrigin::Start: orig = SEEK_SET; break;
-        case FilePosOrigin::Curr:  orig = SEEK_CUR; break;
-        case FilePosOrigin::End:   orig = SEEK_END; break;
-        default: UNEXPECTED("Unknown origin");
-    }
-
-    fseek(m_pFile, static_cast<long>(Offset), orig);
 }
 
 WindowsFile* WindowsFileSystem::OpenFile( const FileOpenAttribs &OpenAttribs )

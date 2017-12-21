@@ -23,6 +23,11 @@ set(PLATFORM_INTERFACE_SRC
 	../interface/PlatformMisc.h
 )
 
+if(PLATFORM_LINUX OR PLATFORM_WIN32)
+	list(APPEND SOURCE src/StandardFile.cpp)
+	list(APPEND INCLUDE include/StandardFile.h)
+endif()
+
 add_library(BasicPlatform STATIC ${SOURCE} ${INCLUDE} ${PLATFORM_INTERFACE_SRC})
 set_common_target_properties(BasicPlatform)
 
