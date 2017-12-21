@@ -1,0 +1,42 @@
+sudo: required
+
+language: cpp
+
+notifications:
+  email:
+    on_success: never
+    on_failure: always
+
+compiler:
+  #- clang
+  - gcc
+
+os:
+  - linux
+
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+    packages:
+      - gcc-7
+      - g++-7
+      - cmake
+
+script:
+  # Link gcc-7 and g++-7 to their standard commands
+  - sudo ln -s /usr/bin/gcc-7 /usr/local/bin/gcc
+  - sudo ln -s /usr/bin/g++-7 /usr/local/bin/g++
+  # Export CC and CXX to tell cmake which compiler to use
+  - export CC=/usr/bin/gcc-7
+  - export CXX=/usr/bin/g++-7
+  # Check versions of gcc, g++ and cmake
+  - gcc -v
+  - g++ -v
+  - cmake --version
+  # Run cmake
+  - mkdir cmk_build
+  - cd cmk_build
+  - cmake .. -G "Unix Makefiles" -DCMAKE_BUILD_TYPE="Debug"
+  # Build
+  - cmake --build .
