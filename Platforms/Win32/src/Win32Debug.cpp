@@ -34,17 +34,11 @@ using namespace Diligent;
 
 void WindowsDebug :: AssertionFailed( const Diligent::Char *Message, const char *Function, const char *File, int Line )
 {
-    std::string FileName;
-    FileSystem::SplitFilePath( File, nullptr, &FileName );
-    std::stringstream msgss;
-    Diligent::FormatMsg( msgss, "Debug assertion failed in ", Function, "(), file ", FileName, ", line ", Line, ":\n");
-    auto Msg = msgss.str();
-    String DebugOutput = Msg + Message;
-    OutputDebugMessage( DebugMessageSeverity::Error, DebugOutput.c_str());
+    auto AssertionFailedMessage = FormatAssertionFailedMessage(Message, Function, File, Line);
+    OutputDebugMessage( DebugMessageSeverity::Error, AssertionFailedMessage.c_str());
 
-    String MBText = Msg + "\n" + Message;
     int nCode = MessageBoxA(NULL,
-                            MBText.c_str(),
+                            AssertionFailedMessage.c_str(),
                             "Runtime assertion failed",
                             MB_TASKMODAL|MB_ICONHAND|MB_ABORTRETRYIGNORE|MB_SETFOREGROUND);
 
@@ -74,7 +68,7 @@ void WindowsDebug :: AssertionFailed( const Diligent::Char *Message, const char 
 
 void WindowsDebug::OutputDebugMessage( DebugMessageSeverity Severity, const Diligent::Char *Message )
 {
-    static Char* strSeverities[] = { "Info: ", "Warning: ", "ERROR: ", "CRITICAL ERROR: " };
+    static const Char* const strSeverities[] = { "Info: ", "Warning: ", "ERROR: ", "CRITICAL ERROR: " };
     auto* MessageSevery = strSeverities[ static_cast<int>(Severity) ];
     String str = MessageSevery;
     str += Message;

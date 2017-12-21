@@ -21,23 +21,23 @@
  *  of the possibility of such damages.
  */
 
-#include "AndroidDebug.h"
+#include "pch.h"
+
+#include "BasicPlatformDebug.h"
 #include "FormatMessage.h"
-#include "FileSystem.h"
-#include <android/log.h>
-#include <csignal>
+#include "BasicFileSystem.h"
+#include <iostream>
 
-void AndroidDebug :: AssertionFailed( const Diligent::Char *Message, const char *Function, const char *File, int Line )
+using namespace Diligent;
+
+String BasicPlatformDebug :: FormatAssertionFailedMessage( const Diligent::Char *Message, 
+                                                           const char *Function, 
+                                                           const char *File, 
+                                                           int Line )
 {
-    auto AssertionFailedMessage = FormatAssertionFailedMessage(Message, Function, File, Line);
-    OutputDebugMessage( DebugMessageSeverity::Error, AssertionFailedMessage.c_str() );
-
-    raise( SIGTRAP );
-};
-
-
-void AndroidDebug::OutputDebugMessage( DebugMessageSeverity Severity, const Diligent::Char *Message )
-{
-    static const android_LogPriority Priorities[] = { ANDROID_LOG_INFO, ANDROID_LOG_WARN, ANDROID_LOG_ERROR, ANDROID_LOG_FATAL };
-    __android_log_print( Priorities[static_cast<int>(Severity)], "Diligent Engine", "%s", Message );
+    std::string FileName;
+    BasicFileSystem::SplitFilePath( File, nullptr, &FileName );
+    std::stringstream msgss;
+    Diligent::FormatMsg( msgss, "Debug assertion failed in ", Function, "(), file ", FileName, ", line ", Line, ":\n", Message);
+    return msgss.str();
 }

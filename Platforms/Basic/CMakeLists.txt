@@ -4,6 +4,7 @@ project(BasicPlatform CXX)
 
 set(SOURCE 
 	src/BasicFileSystem.cpp
+	src/BasicPlatformDebug.cpp
 )
 
 set(INCLUDE 

@@ -37,4 +37,5 @@ struct BasicPlatformDebug
 
     static void AssertionFailed( const Diligent::Char* /*Message*/, const char* /*Function*/, const char* /*File*/, int /*Line*/ ){}
     static void OutputDebugMessage( DebugMessageSeverity /*Severity*/, const Diligent::Char* /*Message */){}
+    static Diligent::String FormatAssertionFailedMessage(const Diligent::Char* /*Message*/, const char* /*Function*/, const char* /*File*/, int /*Line*/);
 };

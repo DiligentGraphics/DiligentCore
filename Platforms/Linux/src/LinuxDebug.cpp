@@ -21,30 +21,30 @@
  *  of the possibility of such damages.
  */
 
+#include <csignal>
+#include <iostream>
+
 #include "LinuxDebug.h"
 #include "FormatMessage.h"
 #include "FileSystem.h"
-//#include <Linux/log.h>
-#include <csignal>
-#include <cassert>
 
-void LinuxDebug :: AssertionFailed( const Diligent::Char *Message, const char *Function, const char *File, int Line )
+using namespace Diligent;
+
+void LinuxDebug :: AssertionFailed( const Char *Message, const char *Function, const char *File, int Line )
 {
-    assert(false);
-    //std::string FileName;
-    //FileSystem::SplitFilePath( File, nullptr, &FileName );
-    //std::stringstream msgss;
-    //Diligent::FormatMsg( msgss, "\nDebug assertion failed in ", Function, "(), file ", FileName, ", line ", Line, ":\n", Message);
-    //auto FullMsg = msgss.str();
-    //OutputDebugMessage( DebugMessageSeverity::Error, FullMsg.c_str() );
+    auto AssertionFailedMessage = FormatAssertionFailedMessage(Message, Function, File, Line);
+    OutputDebugMessage(DebugMessageSeverity::Error, AssertionFailedMessage.c_str());
 
-    //raise( SIGTRAP );
+    raise( SIGTRAP );
 };
 
 
-void LinuxDebug::OutputDebugMessage( DebugMessageSeverity Severity, const Diligent::Char *Message )
+void LinuxDebug::OutputDebugMessage( DebugMessageSeverity Severity, const Char *Message )
 {
-    assert(false);
-    //static const Linux_LogPriority Priorities[] = { Linux_LOG_INFO, Linux_LOG_WARN, Linux_LOG_ERROR, Linux_LOG_FATAL };
-    //__Linux_log_print( Priorities[static_cast<int>(Severity)], "Graphics Engine", "%s", Message );
+    static const Char* const strSeverities[] = { "Info: ", "Warning: ", "ERROR: ", "CRITICAL ERROR: " };
+    auto* MessageSevery = strSeverities[static_cast<int>(Severity)];
+    String str = MessageSevery;
+    str += Message;
+    str += '\n';
+    std::cerr << str;
 }
