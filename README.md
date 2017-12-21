@@ -3,6 +3,14 @@
 This module implements key engine functionality. It provides API implementations with Direct3D11, Direct3D12, 
 OpenGL and OpenGLES as well as basic platform-specific utilities.
 
+# Build Status
+
+| Platform                   | Status        |
+| -------------------------- | ------------- |
+| Win32/Universal Windows    | [![Build Status](https://ci.appveyor.com/api/projects/status/github/DiligentGraphics/DiligentCore?svg=true)](https://ci.appveyor.com/project/DiligentGraphics/diligentcore) |
+| Linux                      | [![Build Status](https://travis-ci.org/DiligentGraphics/DiligentCore.svg?branch=master)](https://travis-ci.org/DiligentGraphics/DiligentCore)      |
+
+
 # Repository structure
 
  The repository contains the following projects:
