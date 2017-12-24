@@ -45,8 +45,6 @@ public:
 
     void SetPos(size_t Offset, FilePosOrigin Origin);
     
-    bool IsValid()const { return m_pFile != nullptr; }
-
 protected:
     FILE * m_pFile;
 };

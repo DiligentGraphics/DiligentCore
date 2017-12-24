@@ -56,12 +56,15 @@ namespace Diligent
 class IEngineFactoryOpenGL
 {
 public:
-    virtual void CreateDeviceAndSwapChainGL( const EngineCreationAttribs& CreationAttribs, 
-                                             IRenderDevice **ppDevice,
-                                             IDeviceContext **ppImmediateContext,
-                                             const SwapChainDesc& SCDesc, 
-                                             void *pNativeWndHandle, 
-                                             ISwapChain **ppSwapChain ) = 0;
+    virtual void CreateDeviceAndSwapChainGL(const EngineCreationAttribs& CreationAttribs, 
+                                            IRenderDevice **ppDevice,
+                                            IDeviceContext **ppImmediateContext,
+                                            const SwapChainDesc& SCDesc,
+                                            void *pNativeWndHandle,
+                                            #if PLATFORM_LINUX
+                                                void *pDisplay,
+                                            #endif
+                                            ISwapChain **ppSwapChain ) = 0;
     virtual void CreateHLSL2GLSLConverter(IHLSL2GLSLConverter **ppConverter) = 0;
     
     virtual void AttachToActiveGLContext( const EngineCreationAttribs& CreationAttribs, 

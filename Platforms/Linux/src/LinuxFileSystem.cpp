@@ -48,8 +48,13 @@ bool LinuxFileSystem::FileExists( const Diligent::Char *strFilePath )
 {
     FileOpenAttribs OpenAttribs;
     OpenAttribs.strFilePath = strFilePath;
-    LinuxFile DummyFile(OpenAttribs, LinuxFileSystem::GetSlashSymbol());
-    return DummyFile.IsValid();
+    BasicFile DummyFile( OpenAttribs, LinuxFileSystem::GetSlashSymbol() );
+    const auto& Path = DummyFile.GetPath(); // This is necessary to correct slashes
+    FILE *pFile = fopen( Path.c_str(), "r" );
+    bool Exists = (pFile != nullptr);
+    if( Exists && pFile )
+        fclose( pFile );
+    return Exists;
 }
 
 bool LinuxFileSystem::PathExists( const Diligent::Char *strPath )

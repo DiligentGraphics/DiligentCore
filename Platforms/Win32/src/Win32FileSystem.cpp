@@ -100,7 +100,7 @@ bool WindowsFileSystem::FileExists( const Char *strFilePath )
     FileOpenAttribs OpenAttribs;
     OpenAttribs.strFilePath = strFilePath;
     BasicFile DummyFile( OpenAttribs, WindowsFileSystem::GetSlashSymbol() );
-    const auto& Path = DummyFile.GetPath();
+    const auto& Path = DummyFile.GetPath(); // This is necessary to correct slashes
     FILE *pFile = nullptr;
     auto err = fopen_s( &pFile, Path.c_str(), "r" );
     bool Exists = (err == 0);

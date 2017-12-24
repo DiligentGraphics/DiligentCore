@@ -56,6 +56,24 @@
 #   endif
 
 #   include "GL/glew.h"
+#   include <GL/glx.h>
+
+// Undefine beautiful defines from GL/glx.h -> X11/Xlib.h
+#   ifdef Bool
+#       undef Bool
+#   endif
+#   ifdef True
+#       undef True
+#   endif
+#   ifdef False
+#       undef False
+#   endif
+#   ifdef Status
+#       undef Status
+#   endif
+#   ifdef Success
+#       undef Success
+#   endif
 
 #   elif defined(PLATFORM_ANDROID)
 

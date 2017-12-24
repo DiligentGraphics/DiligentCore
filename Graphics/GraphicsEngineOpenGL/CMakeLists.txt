@@ -81,21 +81,20 @@ set(SOURCE
 
 if(PLATFORM_WIN32)
 	list(APPEND SOURCE src/GLContextWindows.cpp)
-	list(APPEND SOURCE src/RenderDeviceGLImpl.cpp)
-
-	set(APPEND INCLUDE include/GLContextWindows.h)
+	list(APPEND INCLUDE include/GLContextWindows.h)
 elseif(PLATFORM_ANDROID)
 	list(APPEND SOURCE src/GLContextAndroid.cpp)
 	list(APPEND SOURCE src/RenderDeviceGLESImpl.cpp)
 	list(APPEND SOURCE src/GLStubs.cpp)
 
-	set(APPEND INCLUDE include/GLContextAndroid.h)
-	set(APPEND INCLUDE include/GLStubs.h)
-	set(APPEND INCLUDE include/RenderDeviceGLESImpl.h)
+	list(APPEND INCLUDE include/GLContextAndroid.h)
+	list(APPEND INCLUDE include/GLStubs.h)
+	list(APPEND INCLUDE include/RenderDeviceGLESImpl.h)
 
-	set(APPEND INTERFACE interface/RenderDeviceGLES.h)
+	list(APPEND INTERFACE interface/RenderDeviceGLES.h)
 elseif(PLATFORM_LINUX)
-	set(APPEND INCLUDE include/GLContextLinux.h)
+	list(APPEND SOURCE src/GLContextLinux.cpp)
+	list(APPEND INCLUDE include/GLContextLinux.h)
 else()
 	message(FATAL_ERROR "Unknown platform")
 endif()

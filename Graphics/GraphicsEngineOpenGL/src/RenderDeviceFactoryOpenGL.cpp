@@ -57,12 +57,15 @@ public:
         return &TheFactory;
     }
 
-    virtual void CreateDeviceAndSwapChainGL( const EngineCreationAttribs& CreationAttribs, 
-                                             IRenderDevice **ppDevice,
-                                             IDeviceContext **ppImmediateContext,
-                                             const SwapChainDesc& SCDesc, 
-                                             void *pNativeWndHandle, 
-                                             ISwapChain **ppSwapChain )override final;
+    virtual void CreateDeviceAndSwapChainGL(const EngineCreationAttribs& CreationAttribs, 
+                                            IRenderDevice **ppDevice,
+                                            IDeviceContext **ppImmediateContext,
+                                            const SwapChainDesc& SCDesc, 
+                                            void *pNativeWndHandle, 
+                                            #if PLATFORM_LINUX
+                                                void *pDisplay,
+                                            #endif
+                                            ISwapChain **ppSwapChain )override final;
 
     virtual void CreateHLSL2GLSLConverter(IHLSL2GLSLConverter **ppConverter)override final;
 
@@ -87,12 +90,15 @@ public:
 ///                                * On Android platform, this should be a pointer to the native window (ANativeWindow*)
 /// \param [out] ppSwapChain    - Address of the memory location where pointer to the new 
 ///                               swap chain will be written.
-void EngineFactoryOpenGLImpl::CreateDeviceAndSwapChainGL( const EngineCreationAttribs& CreationAttribs, 
-                                                          IRenderDevice **ppDevice,
-                                                          IDeviceContext **ppImmediateContext,
-                                                          const SwapChainDesc& SCDesc, 
-                                                          void *pNativeWndHandle,
-                                                          Diligent::ISwapChain **ppSwapChain )
+void EngineFactoryOpenGLImpl::CreateDeviceAndSwapChainGL(const EngineCreationAttribs& CreationAttribs, 
+                                                         IRenderDevice **ppDevice,
+                                                         IDeviceContext **ppImmediateContext,
+                                                         const SwapChainDesc& SCDesc, 
+                                                         void *pNativeWndHandle,
+                                                         #if PLATFORM_LINUX
+                                                             void *pDisplay,
+                                                         #endif
+                                                         ISwapChain **ppSwapChain )
 {
     VERIFY( ppDevice && ppImmediateContext && ppSwapChain, "Null pointer provided" );
     if( !ppDevice || !ppImmediateContext || !ppSwapChain )
@@ -109,6 +115,9 @@ void EngineFactoryOpenGLImpl::CreateDeviceAndSwapChainGL( const EngineCreationAt
 
         ContextInitInfo InitInfo;
         InitInfo.pNativeWndHandle = pNativeWndHandle;
+        #if PLATFORM_LINUX
+            InitInfo.pDisplay = pDisplay;
+        #endif
         InitInfo.SwapChainAttribs = SCDesc;
         RenderDeviceGLImpl *pRenderDeviceOpenGL( NEW_RC_OBJ(RawMemAllocator, "TRenderDeviceGLImpl instance", TRenderDeviceGLImpl)(RawMemAllocator, InitInfo) );
         pRenderDeviceOpenGL->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice) );

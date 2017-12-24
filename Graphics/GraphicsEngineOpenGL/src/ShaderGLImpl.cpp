@@ -47,7 +47,7 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters *pRefCounters, RenderDeviceGLImpl 
 
     String Settings;
     
-#if defined(PLATFORM_WIN32)
+#if defined(PLATFORM_WIN32) || defined(PLATFORM_LINUX)
     Settings.append(
         "#version 430 core\n"
         "#define DESKTOP_GL 1\n"
@@ -112,6 +112,8 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters *pRefCounters, RenderDeviceGLImpl 
         "precision highp uimageCube;\n"
         "precision highp uimage2DArray;\n"
     );
+#elif
+#   error "Undefined platform"
 #endif
         // It would be much more convenient to use row_major matrices.
         // But unfortunatelly on NVIDIA, the following directive 
@@ -225,6 +227,12 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters *pRefCounters, RenderDeviceGLImpl 
     glGetShaderiv(ShaderObj, GL_COMPILE_STATUS, &compiled);
     if(!compiled) 
     {
+        std::string FullSource;
+        for(const auto *str : ShaderStrings)
+            FullSource.append(str);
+
+        LOG_INFO_MESSAGE("Failed shader full source: \n\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n", FullSource, "\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n\n");
+
         std::stringstream ErrorMsgSS;
 		ErrorMsgSS << "Failed to compile shader file \""<< (ShaderCreationAttribs.FilePath != nullptr ? ShaderCreationAttribs.FilePath : "") << '\"' << std::endl;
         int infoLogLen = 0;
