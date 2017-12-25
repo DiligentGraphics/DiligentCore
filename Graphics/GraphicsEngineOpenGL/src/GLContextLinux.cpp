@@ -39,43 +39,46 @@ namespace Diligent
     {
         std::stringstream MessageSS;
 
-        MessageSS << std::endl << "OPENGL DEBUG MESSAGE: " << message << std::endl;
-        MessageSS << "Type: ";
-        switch( type ) {
-        case GL_DEBUG_TYPE_ERROR:
-            MessageSS << "ERROR";
-            break;
-        case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR:
-            MessageSS << "DEPRECATED_BEHAVIOR";
-            break;
-        case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:
-            MessageSS << "UNDEFINED_BEHAVIOR";
-            break;
-        case GL_DEBUG_TYPE_PORTABILITY:
-            MessageSS << "PORTABILITY";
-            break;
-        case GL_DEBUG_TYPE_PERFORMANCE:
-            MessageSS << "PERFORMANCE";
-            break;
-        case GL_DEBUG_TYPE_OTHER:
-            MessageSS << "OTHER";
-            break;
+        MessageSS << "OpenGL debug message (";
+        switch( type ) 
+        {
+            case GL_DEBUG_TYPE_ERROR:
+                MessageSS << "ERROR";
+                break;
+            case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR:
+                MessageSS << "DEPRECATED_BEHAVIOR";
+                break;
+            case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:
+                MessageSS << "UNDEFINED_BEHAVIOR";
+                break;
+            case GL_DEBUG_TYPE_PORTABILITY:
+                MessageSS << "PORTABILITY";
+                break;
+            case GL_DEBUG_TYPE_PERFORMANCE:
+                MessageSS << "PERFORMANCE";
+                break;
+            case GL_DEBUG_TYPE_OTHER:
+                MessageSS << "OTHER";
+                break;
         }
-        MessageSS << std::endl;
 
-        MessageSS << "Severity: ";
-        switch( severity ){
-        case GL_DEBUG_SEVERITY_LOW:
-            MessageSS << "LOW";
-            break;
-        case GL_DEBUG_SEVERITY_MEDIUM:
-            MessageSS << "MEDIUM";
-            break;
-        case GL_DEBUG_SEVERITY_HIGH:
-            MessageSS << "HIGH";
-            break;
+        switch( severity )
+        {
+            case GL_DEBUG_SEVERITY_LOW:
+                MessageSS << ", low severity";
+                break;
+            case GL_DEBUG_SEVERITY_MEDIUM:
+                MessageSS << ", medium severity";
+                break;
+            case GL_DEBUG_SEVERITY_HIGH:
+                MessageSS << ", HIGH severity";
+                break;
+            case GL_DEBUG_SEVERITY_NOTIFICATION:
+                MessageSS << ", notification";
+                break;
         }
-        MessageSS << std::endl;
+
+        MessageSS << ")" << std::endl << message << std::endl;
 
         LOG_INFO_MESSAGE_ONCE( MessageSS.str().c_str() );
     }
@@ -83,14 +86,24 @@ namespace Diligent
     GLContext::GLContext( const ContextInitInfo &Info, DeviceCaps &DeviceCaps ) :
         m_SwapChainAttribs(Info.SwapChainAttribs),
 		m_Context(0),
-		m_pNativeWindow(nullptr)
+		m_pNativeWindow(Info.pNativeWndHandle),
+        m_pDisplay(Info.pDisplay)
     {
-		Int32 MajorVersion = 0, MinorVersion = 0;
-		if(Info.pNativeWndHandle != nullptr)
+        auto CurrentCtx = glXGetCurrentContext();
+        if (CurrentCtx == 0)
+        {
+            LOG_ERROR_AND_THROW("No current GL context found!")
+        }
+        
+        // Initialize GLEW
+        GLenum err = glewInit();
+        if( GLEW_OK != err )
+            LOG_ERROR_AND_THROW( "Failed to initialize GLEW" );
+        
+		if(Info.pNativeWndHandle != nullptr && Info.pDisplay != nullptr)
 		{
 			auto wnd = static_cast<Window>(reinterpret_cast<size_t>(Info.pNativeWndHandle));
             auto display = reinterpret_cast<Display*>(Info.pDisplay);
-            VERIFY_EXPR(display != nullptr);
 
             XWindowAttributes XWndAttribs;
             XGetWindowAttributes(display, wnd, &XWndAttribs);
@@ -98,116 +111,8 @@ namespace Diligent
 			m_SwapChainAttribs.Width = XWndAttribs.width;
 			m_SwapChainAttribs.Height = XWndAttribs.height;
 
-#if 0
-            auto tmpCtx = glXCreateContext(display, XWndAttribs.visual, NULL, GL_TRUE);
-            glXMakeCurrent(display, wnd, tmpCtx);
+            //glXSwapIntervalEXT(0);
 
-            glxewInit();
-            int scrnum = DefaultScreen(display);
-            int elemc = 0;
-            GLXFBConfig *fbcfg = glXChooseFBConfig(display, scrnum, NULL, &elemc);
-            if (!fbcfg)
-            {
-                LOG_ERROR_AND_THROW("Couldn't get FB configs\n");
-            }
-            else
-            {
-                LOG_INFO_MESSAGE("Got ", elemc," FB configs\n");
-            }
-
-            MajorVersion = 4;
-            MinorVersion = 3;
-            int glattr[] = {
-                GLX_CONTEXT_MAJOR_VERSION_ARB, MajorVersion,
-                GLX_CONTEXT_MINOR_VERSION_ARB, MinorVersion,
-                GLX_CONTEXT_FLAGS_ARB, GLX_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB,
-                None
-            };
-
-            m_Context = glXCreateContextAttribsARB(display, fbcfg[0], NULL, true, glattr);
-
-            glXMakeCurrent(display, None, NULL);
-            glXDestroyContext(display, tmpCtx);
-
-            glXMakeCurrent(display, wnd, m_Context);
-
-            // glewExperimental = GL_TRUE;
-            GLenum err = glewInit();
-            if( GLEW_OK != err ){
-                LOG_ERROR( "Failed to initialize GLEW" );
-                exit(1);
-            }
-
-			// See http://www.opengl.org/wiki/Tutorial:_OpenGL_3.1_The_First_Triangle_(C%2B%2B/Win)
-			//     http://www.opengl.org/wiki/Creating_an_OpenGL_Context_(WGL)
-			PIXELFORMATDESCRIPTOR pfd;
-			memset( &pfd, 0, sizeof( PIXELFORMATDESCRIPTOR ) );
-			pfd.nSize = sizeof( PIXELFORMATDESCRIPTOR );
-			pfd.nVersion = 1;
-			pfd.dwFlags = PFD_DOUBLEBUFFER | PFD_SUPPORT_OPENGL | PFD_DRAW_TO_WINDOW;
-			pfd.iPixelType = PFD_TYPE_RGBA;
-			pfd.cColorBits = 32;
-			pfd.cDepthBits = 32;
-			pfd.iLayerType = PFD_MAIN_PLANE;
-
-
-			m_WindowHandleToDeviceContext = GetDC( hWnd );
-			int nPixelFormat = ChoosePixelFormat( m_WindowHandleToDeviceContext, &pfd );
-
-			if( nPixelFormat == 0 )
-				LOG_ERROR_AND_THROW( "Invalid Pixel Format" );
-
-			BOOL bResult = SetPixelFormat( m_WindowHandleToDeviceContext, nPixelFormat, &pfd );
-			if( !bResult )
-				LOG_ERROR_AND_THROW( "Failed to set Pixel Format" );
-
-			// Create standard OpenGL (2.1) rendering context which will be used only temporarily, 
-			HGLRC tempContext = wglCreateContext( m_WindowHandleToDeviceContext );
-			// and make it current
-			wglMakeCurrent( m_WindowHandleToDeviceContext, tempContext );
-#endif
-			// Initialize GLEW
-			GLenum err = glewInit();
-			if( GLEW_OK != err )
-				LOG_ERROR_AND_THROW( "Failed to initialize GLEW" );
-#if 0        
-			if( wglewIsSupported( "WGL_ARB_create_context" ) == 1 )
-			{
-				MajorVersion = 4;
-				MinorVersion = 4;
-				// Setup attributes for a new OpenGL rendering context
-				int attribs[] =
-				{
-					WGL_CONTEXT_MAJOR_VERSION_ARB, MajorVersion,
-					WGL_CONTEXT_MINOR_VERSION_ARB, MinorVersion,
-					WGL_CONTEXT_FLAGS_ARB, WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB,
-					GL_CONTEXT_PROFILE_MASK, GL_CONTEXT_CORE_PROFILE_BIT,
-					0, 0
-				};
-
-#ifdef _DEBUG
-				attribs[5] |= WGL_CONTEXT_DEBUG_BIT_ARB;
-#endif 
-
-				// Create new rendering context
-				// In order to create new OpenGL rendering context we have to call function wglCreateContextAttribsARB(), 
-				// which is an OpenGL function and requires OpenGL to be active when it is called. 
-				// The only way is to create an old context, activate it, and while it is active create a new one. 
-				// Very inconsistent, but we have to live with it!
-				m_Context = wglCreateContextAttribsARB( m_WindowHandleToDeviceContext, 0, attribs );
-
-				// Delete tempContext
-				wglMakeCurrent( NULL, NULL );
-				wglDeleteContext( tempContext );
-				// Make new context current
-				wglMakeCurrent( m_WindowHandleToDeviceContext, m_Context );
-				wglSwapIntervalEXT( 0 );
-			}
-			else
-			{       //It's not possible to make a GL 4.x context. Use the old style context (GL 2.1 and before)
-				m_Context = tempContext;
-			}
-#endif
             if( glDebugMessageCallback )
             {
                 glEnable( GL_DEBUG_OUTPUT_SYNCHRONOUS );
@@ -221,24 +126,12 @@ namespace Diligent
                     true );
             }
 		}
-		else
-		{
-			auto CurrentCtx = glXGetCurrentContext();
-			if (CurrentCtx == 0)
-			{
-				LOG_ERROR_AND_THROW("No current GL context found! Provide non-null handle to a native Window to create a GL context")
-			}
-			
-			// Initialize GLEW
-			GLenum err = glewInit();
-			if( GLEW_OK != err )
-				LOG_ERROR_AND_THROW( "Failed to initialize GLEW" );
-		}
 
         //Checking GL version
         const GLubyte *GLVersionString = glGetString( GL_VERSION );
         const GLubyte *GLRenderer = glGetString(GL_RENDERER);
 
+        Int32 MajorVersion = 0, MinorVersion = 0;
         //Or better yet, use the GL3 way to get the version number
         glGetIntegerv( GL_MAJOR_VERSION, &MajorVersion );
         glGetIntegerv( GL_MINOR_VERSION, &MinorVersion );
@@ -275,23 +168,20 @@ namespace Diligent
 
     GLContext::~GLContext()
     {
-#if 0
-		// Do not destroy context if it was created by the app.
-        if( m_Context )
-		{
-			wglMakeCurrent( m_WindowHandleToDeviceContext, 0 );
-            wglDeleteContext( m_Context );
-		}
-#endif        
     }
 
     void GLContext::SwapBuffers()
     {
-        //glXSwapBuffers(display, wnd);        
-        // if(m_WindowHandleToDeviceContext)
-        //     ::SwapBuffers( m_WindowHandleToDeviceContext );
-        // else
-            LOG_ERROR("Swap buffer failed because window handle to device context is not initialized")
+        if(m_pNativeWindow != nullptr && m_pDisplay != nullptr)
+        {
+			auto wnd = static_cast<Window>(reinterpret_cast<size_t>(m_pNativeWindow));
+            auto display = reinterpret_cast<Display*>(m_pDisplay);
+            glXSwapBuffers(display, wnd);          
+        }
+        else
+        {
+            LOG_ERROR("Swap buffer failed because window and/or display handle is not initialized")
+        }
     }
 
     GLContext::NativeGLContextType GLContext::GetCurrentNativeGLContext()

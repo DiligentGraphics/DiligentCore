@@ -40,47 +40,48 @@ namespace Diligent
     {
         std::stringstream MessageSS;
 
-        MessageSS << std::endl << "OPENGL DEBUG MESSAGE: " << message << std::endl;
-        MessageSS << "Type: ";
-        switch( type ) {
-        case GL_DEBUG_TYPE_ERROR:
-            MessageSS << "ERROR";
-            break;
-        case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR:
-            MessageSS << "DEPRECATED_BEHAVIOR";
-            break;
-        case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:
-            MessageSS << "UNDEFINED_BEHAVIOR";
-            break;
-        case GL_DEBUG_TYPE_PORTABILITY:
-            MessageSS << "PORTABILITY";
-            break;
-        case GL_DEBUG_TYPE_PERFORMANCE:
-            MessageSS << "PERFORMANCE";
-            break;
-        case GL_DEBUG_TYPE_OTHER:
-            MessageSS << "OTHER";
-            break;
+        MessageSS << "OpenGL debug message (";
+        switch( type ) 
+        {
+            case GL_DEBUG_TYPE_ERROR:
+                MessageSS << "ERROR";
+                break;
+            case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR:
+                MessageSS << "DEPRECATED_BEHAVIOR";
+                break;
+            case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:
+                MessageSS << "UNDEFINED_BEHAVIOR";
+                break;
+            case GL_DEBUG_TYPE_PORTABILITY:
+                MessageSS << "PORTABILITY";
+                break;
+            case GL_DEBUG_TYPE_PERFORMANCE:
+                MessageSS << "PERFORMANCE";
+                break;
+            case GL_DEBUG_TYPE_OTHER:
+                MessageSS << "OTHER";
+                break;
         }
-        MessageSS << std::endl;
 
-        MessageSS << "Severity: ";
-        switch( severity ){
-        case GL_DEBUG_SEVERITY_LOW:
-            MessageSS << "LOW";
-            break;
-        case GL_DEBUG_SEVERITY_MEDIUM:
-            MessageSS << "MEDIUM";
-            break;
-        case GL_DEBUG_SEVERITY_HIGH:
-            MessageSS << "HIGH";
-            break;
+        switch( severity )
+        {
+            case GL_DEBUG_SEVERITY_LOW:
+                MessageSS << ", low severity";
+                break;
+            case GL_DEBUG_SEVERITY_MEDIUM:
+                MessageSS << ", medium severity";
+                break;
+            case GL_DEBUG_SEVERITY_HIGH:
+                MessageSS << ", HIGH severity";
+                break;
+            case GL_DEBUG_SEVERITY_NOTIFICATION:
+                MessageSS << ", notification";
+                break;
         }
-        MessageSS << std::endl;
 
-        //MessageSS << "Id: "<< id << std::endl;
+        MessageSS << ")" << std::endl << message << std::endl;
 
-        OutputDebugStringA( MessageSS.str().c_str() );
+        LOG_INFO_MESSAGE_ONCE( MessageSS.str().c_str() );
     }
 
     GLContext::GLContext( const ContextInitInfo &Info, DeviceCaps &DeviceCaps ) :

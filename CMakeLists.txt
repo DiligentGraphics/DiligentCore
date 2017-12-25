@@ -79,6 +79,15 @@ if(MSVC)
 	# For instance, this way
 	# target_compile_options(BuildSettings INTERFACE "$<$<CONFIG:RELEASE>:/Ot>")
 	# does not work as expected
+else()
+
+	set(DEBUG_MACROS _DEBUG DEBUG)
+	set(RELEASE_MACROS NDEBUG)
+	target_compile_definitions(BuildSettings INTERFACE "$<$<CONFIG:DEBUG>:${DEBUG_MACROS}>")
+	target_compile_definitions(BuildSettings INTERFACE "$<$<CONFIG:RELEASE>:${RELEASE_MACROS}>")
+	target_compile_definitions(BuildSettings INTERFACE "$<$<CONFIG:MINSIZEREL>:${RELEASE_MACROS}>")
+	target_compile_definitions(BuildSettings INTERFACE "$<$<CONFIG:RELWITHDEBINFO>:${RELEASE_MACROS}>")
+
 endif(MSVC)
 
 if(PLATFORM_LINUX)
