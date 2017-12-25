@@ -150,6 +150,13 @@ calling `IEngineFactoryD3D11::CreateDeviceAndContextsD3D11()` or `IEngineFactory
 The swap chain is created later by a call to `IEngineFactoryD3D11::CreateSwapChainD3D11()` or `IEngineFactoryD3D12::CreateSwapChainD3D12()`. 
 Please look at the [DeviceResources.cpp](https://github.com/DiligentGraphics/DiligentSamples/blob/master/Samples/SampleBase/Src/UWP/Common/DeviceResources.cpp) file for more details.
 
+### Linux
+
+On Linux platform, the only API currently supported is OpenGL. Initialization of GL context on Linux is tightly 
+coupled with window creation. As a result, Diligent Engine does not initialize the context, but
+attaches to the one initialized by the app. An example of the engine initialization on Linux can be found in
+[LinuxMain.cpp](https://github.com/DiligentGraphics/DiligentSamples/blob/master/Samples/SampleBase/src/Linux/LinuxMain.cpp).
+
 ### Android
 
 On Android, you can only create OpenGLES device. The following code snippet shows an example:
