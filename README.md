@@ -564,6 +564,11 @@ objects. Refer to the following pages for more information:
 
 # Version History
 
+## v2.1.a
+
+* Refactored build system to use CMake
+* Added support for Linux platform
+
 ## v2.1
 
 ### New Features
