@@ -564,6 +564,10 @@ objects. Refer to the following pages for more information:
 
 # Version History
 
+## Current Progress
+
+* Removed legacy Visual Studio solution and project files
+
 ## v2.1.a
 
 * Refactored build system to use CMake
