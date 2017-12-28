@@ -24,7 +24,6 @@
 #pragma once
 
 #include <stdexcept>
-#include <mutex>
 
 #include "BasicPlatformDebug.h"
 #include "FormatMessage.h"
@@ -85,20 +84,16 @@ do{                                     \
 #define LOG_WARNING_MESSAGE(...)  LOG_DEBUG_MESSAGE(BasicPlatformDebug::DebugMessageSeverity::Warning, ##__VA_ARGS__)
 #define LOG_INFO_MESSAGE(...)     LOG_DEBUG_MESSAGE(BasicPlatformDebug::DebugMessageSeverity::Info,    ##__VA_ARGS__)
 
-#define LOG_ERROR_MESSAGE_ONCE(...)\
-do{                                                                         \
-    static std::once_flag FirstTimeFlag;                                    \
-    std::call_once(FirstTimeFlag, [&](){ LOG_ERROR_MESSAGE(__VA_ARGS__); });\
-} while (false)
-
-#define LOG_WARNING_MESSAGE_ONCE(...)\
-do{                                                                           \
-    static std::once_flag FirstTimeFlag;                                      \
-    std::call_once(FirstTimeFlag, [&](){ LOG_WARNING_MESSAGE(__VA_ARGS__); });\
+#define LOG_DEBUG_MESSAGE_ONCE(Severity, ...)\
+do{                                                \
+    static bool IsFirstTime = true;                \
+    if(IsFirstTime)                                \
+    {                                              \
+        LOG_DEBUG_MESSAGE(Severity, ##__VA_ARGS__);\
+        IsFirstTime = false;                       \
+    }                                              \
 }while(false)
 
-#define LOG_INFO_MESSAGE_ONCE(...)\
-do{                                                                        \
-    static std::once_flag FirstTimeFlag;                                   \
-    std::call_once(FirstTimeFlag, [&](){ LOG_INFO_MESSAGE(__VA_ARGS__); });\
-} while(false)
+#define LOG_ERROR_MESSAGE_ONCE(...)    LOG_DEBUG_MESSAGE_ONCE(BasicPlatformDebug::DebugMessageSeverity::Error,   ##__VA_ARGS__)
+#define LOG_WARNING_MESSAGE_ONCE(...)  LOG_DEBUG_MESSAGE_ONCE(BasicPlatformDebug::DebugMessageSeverity::Warning, ##__VA_ARGS__)
+#define LOG_INFO_MESSAGE_ONCE(...)     LOG_DEBUG_MESSAGE_ONCE(BasicPlatformDebug::DebugMessageSeverity::Info,    ##__VA_ARGS__)
