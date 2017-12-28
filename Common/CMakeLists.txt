@@ -46,7 +46,8 @@ PUBLIC
 )
 
 target_link_libraries(Common 
-PUBLIC 
+PUBLIC
+	BuildSettings
 	TargetPlatform 
 )
 set_common_target_properties(Common)

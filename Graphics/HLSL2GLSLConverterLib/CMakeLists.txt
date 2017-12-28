@@ -38,8 +38,9 @@ PRIVATE
 	BuildSettings 
 	Common 
 	PlatformInterface 
-	GraphicsEngine 
-	GraphicsTools
+	GraphicsEngine
+PUBLIC
+	GraphicsEngineInterface
 )
 
 if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows")

@@ -35,7 +35,7 @@
 #include "DebugUtilities.h"
 #include "SwapChain.h"
 #include "ValidatedCast.h"
-#include "GraphicsUtilities.h"
+#include "GraphicsAccessories.h"
 
 #ifdef _DEBUG
 #   define DEBUG_CHECKS

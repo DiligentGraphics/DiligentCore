@@ -28,7 +28,7 @@
 
 #include "Texture.h"
 #include "DeviceObjectBase.h"
-#include "GraphicsUtilities.h"
+#include "GraphicsAccessories.h"
 #include "STDAllocator.h"
 #include <memory>
 

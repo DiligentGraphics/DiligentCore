@@ -39,7 +39,7 @@
 #include "Texture2DArray_OGL.h"
 #include "Texture3D_OGL.h"
 #include "SamplerGLImpl.h"
-#include "GraphicsUtilities.h"
+#include "GraphicsAccessories.h"
 #include "BufferViewGLImpl.h"
 #include "PipelineStateGLImpl.h"
 #include "ShaderResourceBindingGLImpl.h"

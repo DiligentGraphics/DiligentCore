@@ -24,7 +24,7 @@
 #include "pch.h"
 #include "UWPFileSystem.h"
 #include "Errors.h"
-#include "StringTools.h"
+#include "../../Common/interface/StringTools.h"
 #include "DebugUtilities.h"
 
 

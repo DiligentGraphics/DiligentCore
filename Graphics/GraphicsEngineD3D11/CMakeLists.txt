@@ -71,6 +71,17 @@ set(SRC
 	src/TextureViewD3D11Impl.cpp
 )
 
+add_library(GraphicsEngineD3D11Interface INTERFACE)
+target_include_directories(GraphicsEngineD3D11Interface
+INTERFACE
+	interface
+)
+target_link_libraries(GraphicsEngineD3D11Interface 
+INTERFACE 
+	GraphicsEngineInterface
+)
+
+
 add_library(GraphicsEngineD3D11-static STATIC 
 	${SRC} ${INTERFACE} ${INCLUDE}
 	readme.md
@@ -94,31 +105,26 @@ set_common_target_properties(GraphicsEngineD3D11-shared)
 set_common_target_properties(GraphicsEngineD3D11-static)
 
 target_include_directories(GraphicsEngineD3D11-static 
-PUBLIC
-	interface
 PRIVATE
 	include
 )
 
 target_include_directories(GraphicsEngineD3D11-shared
-PUBLIC
-	interface
 PRIVATE
 	include
 )
 
 set(PRIVATE_DEPENDENCIES 
 	BuildSettings 
-	Common
 	GraphicsEngineD3DBase 
-	GraphicsTools
 	TargetPlatform
+	Common
 	d3d11.lib 
 	d3dcompiler.lib
 )
 
 set(PUBLIC_DEPENDENCIES 
-	GraphicsEngine 
+	GraphicsEngineD3D11Interface
 )
 
 target_link_libraries(GraphicsEngineD3D11-static PRIVATE ${PRIVATE_DEPENDENCIES} PUBLIC ${PUBLIC_DEPENDENCIES})

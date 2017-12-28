@@ -23,8 +23,6 @@ target_include_directories(UniversalWindowsPlatform
 PUBLIC
 	../Win32/include
 	include
-PRIVATE
-	../../Common/interface # Required to find StringTools.h 
 )
 
 target_link_libraries(UniversalWindowsPlatform 

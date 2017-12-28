@@ -61,16 +61,14 @@ target_include_directories(GraphicsEngine
 PUBLIC
 	include
 	interface
-PRIVATE
-	../GraphicsTools/include
 )
 
 target_link_libraries(GraphicsEngine 
-PRIVATE 
-	BuildSettings 
 PUBLIC
+	BuildSettings 
 	PlatformInterface 
 	Common
+	GraphicsAccessories
 )
 
 source_group("src" FILES ${SOURCE})

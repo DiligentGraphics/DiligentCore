@@ -14,7 +14,7 @@ set(SOURCE
 	src/LinuxFileSystem.cpp
 )
 
-add_library(LinuxPlatform ${SOURCE} ${INCLUDE})
+add_library(LinuxPlatform ${SOURCE} ${INCLUDE} ${PLATFORM_INTERFACE_HEADERS})
 set_common_target_properties(LinuxPlatform)
 
 target_include_directories(LinuxPlatform 
@@ -31,6 +31,7 @@ PUBLIC
 
 source_group("src" FILES ${SOURCE})
 source_group("include" FILES ${INCLUDE})
+source_group("interface" FILES ${PLATFORM_INTERFACE_HEADERS})
 
 set_target_properties(LinuxPlatform PROPERTIES
 	FOLDER Core/Platforms

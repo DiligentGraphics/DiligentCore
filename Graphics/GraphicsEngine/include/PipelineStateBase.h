@@ -30,7 +30,7 @@
 #include "DeviceObjectBase.h"
 #include "STDAllocator.h"
 #include "EngineMemory.h"
-#include "GraphicsUtilities.h"
+#include "GraphicsAccessories.h"
 
 namespace Diligent
 {

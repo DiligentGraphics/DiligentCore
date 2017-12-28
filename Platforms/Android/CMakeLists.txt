@@ -14,7 +14,7 @@ set(SOURCE
 	src/AndroidFileSystem.cpp
 )
 
-add_library(AndroidPlatform ${SOURCE} ${INCLUDE})
+add_library(AndroidPlatform ${SOURCE} ${INCLUDE} ${PLATFORM_INTERFACE_HEADERS})
 set_common_target_properties(AndroidPlatform)
 
 target_include_directories(AndroidPlatform 
@@ -34,6 +34,7 @@ PUBLIC
 
 source_group("src" FILES ${SOURCE})
 source_group("include" FILES ${INCLUDE})
+source_group("interface" FILES ${PLATFORM_INTERFACE_HEADERS})
 
 set_target_properties(AndroidPlatform PROPERTIES
 	FOLDER Core/Platforms

@@ -25,6 +25,7 @@
 
 /// \file
 /// Defines Diligent::DefaultRawMemoryAllocator class
+#include <limits>
 
 #include "BasicTypes.h"
 #include "MemoryAllocator.h"

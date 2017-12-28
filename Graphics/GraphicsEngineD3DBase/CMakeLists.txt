@@ -59,17 +59,12 @@ add_dependencies(GraphicsEngineD3DBase ProcessHLSLDefinitions)
 target_include_directories(GraphicsEngineD3DBase
 PUBLIC
 	include
-	interface
-PRIVATE
-	../GraphicsTools/include
 )
 
 target_link_libraries(GraphicsEngineD3DBase 
-PRIVATE 
+PUBLIC
 	BuildSettings 
 	GraphicsEngine 
-	PlatformInterface 
-	Common
 )
 set_common_target_properties(GraphicsEngineD3DBase)
 

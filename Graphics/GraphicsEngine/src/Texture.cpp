@@ -23,6 +23,7 @@
 
 #include "pch.h"
 #include "Texture.h"
+#include "GraphicsAccessories.h"
 
 namespace Diligent
 {

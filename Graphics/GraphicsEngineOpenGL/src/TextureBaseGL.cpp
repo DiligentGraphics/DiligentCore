@@ -30,7 +30,7 @@
 #include "GLContextState.h"
 #include "DeviceContextGLImpl.h"
 #include "EngineMemory.h"
-#include "GraphicsUtilities.h"
+#include "GraphicsAccessories.h"
 
 namespace Diligent
 {

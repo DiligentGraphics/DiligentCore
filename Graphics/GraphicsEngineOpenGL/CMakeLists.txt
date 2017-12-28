@@ -100,6 +100,16 @@ else()
 	message(FATAL_ERROR "Unknown platform")
 endif()
 
+add_library(GraphicsEngineOpenGLInterface INTERFACE)
+target_include_directories(GraphicsEngineOpenGLInterface
+INTERFACE
+	interface
+)
+target_link_libraries(GraphicsEngineOpenGLInterface 
+INTERFACE 
+	GraphicsEngineInterface
+)
+
 
 add_library(GraphicsEngineOpenGL-static STATIC 
 	${SOURCE} ${INTERFACE} ${INCLUDE}
@@ -119,30 +129,26 @@ if(PLATFORM_WIN32)
 endif()
 
 target_include_directories(GraphicsEngineOpenGL-static
-PUBLIC
-	include
-	interface
 PRIVATE
+	include
 	../HLSL2GLSLConverterLib/include
 )
 
 target_include_directories(GraphicsEngineOpenGL-shared
-PUBLIC
-	include
-	interface
 PRIVATE
+	include
 	../HLSL2GLSLConverterLib/include
 )
 
 set(PRIVATE_DEPENDENCIES 
 	BuildSettings 
 	Common 
-	GraphicsTools 
 	TargetPlatform
+	GraphicsEngine
 )
 
 set(PUBLIC_DEPENDENCIES 
-	GraphicsEngine
+	GraphicsEngineOpenGLInterface
 	HLSL2GLSLConverterLib
 )
 

@@ -27,7 +27,7 @@
 #include "DeviceContextD3D12Impl.h"
 #include "D3D12TypeConversions.h"
 #include "BufferViewD3D12Impl.h"
-#include "GraphicsUtilities.h"
+#include "GraphicsAccessories.h"
 #include "DXGITypeConversions.h"
 #include "EngineMemory.h"
 #include "StringTools.h"

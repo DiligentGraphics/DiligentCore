@@ -8,11 +8,8 @@ set(INCLUDE
 	include/GraphicsUtilities.h
 	include/pch.h
 	include/ShaderMacroHelper.h
-	include/RingBuffer.h
 	include/TextureUploader.h
 	include/TextureUploaderBase.h
-	include/VariableSizeAllocationsManager.h
-	include/VariableSizeGPUAllocationsManager.h
 )
 
 set(SOURCE 
@@ -22,19 +19,24 @@ set(SOURCE
 	src/TextureUploader.cpp
 )
 
+set(DEPENDENCIES)
+
 if(D3D11_SUPPORTED)
 	list(APPEND SOURCE src/TextureUploaderD3D11.cpp)
 	list(APPEND INCLUDE include/TextureUploaderD3D11.h)
+	list(APPEND DEPENDENCIES GraphicsEngineD3D11Interface)
 endif()
 
 if(D3D12_SUPPORTED)
 	list(APPEND SOURCE src/TextureUploaderD3D12.cpp)
 	list(APPEND INCLUDE include/TextureUploaderD3D12.h)
+	list(APPEND DEPENDENCIES GraphicsEngineD3D12Interface)
 endif()
 
 if(GL_SUPPORTED OR GLES_SUPPORTED)
 	list(APPEND SOURCE src/TextureUploaderGL.cpp)
 	list(APPEND INCLUDE include/TextureUploaderGL.h)
+	list(APPEND DEPENDENCIES GraphicsEngineOpenGLInterface)
 endif()
 
 add_library(GraphicsTools STATIC ${SOURCE} ${INCLUDE})
@@ -43,19 +45,18 @@ target_include_directories(GraphicsTools
 PUBLIC
 	include
 PRIVATE
-	../GraphicsEngineD3D11/interface
-	../GraphicsEngineD3D12/interface
 	../GraphicsEngineD3DBase/include
-	../GraphicsEngineOpenGL/interface
-	../GraphicsEngine/interface
-	../TextureLoader/interface
 )
 
 target_link_libraries(GraphicsTools 
 PRIVATE 
 	Common 
-	BuildSettings 
+	BuildSettings
 	PlatformInterface
+	GraphicsAccessories
+	${DEPENDENCIES}
+PUBLIC
+	GraphicsEngineInterface
 )
 
 set_common_target_properties(GraphicsTools)

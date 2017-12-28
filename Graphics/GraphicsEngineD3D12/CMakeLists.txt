@@ -98,6 +98,16 @@ set_source_files_properties(${SHADERS} PROPERTIES
 	#VS_SHADER_FLAGS "/O3"
 )
 
+add_library(GraphicsEngineD3D12Interface INTERFACE)
+target_include_directories(GraphicsEngineD3D12Interface
+INTERFACE
+	interface
+)
+target_link_libraries(GraphicsEngineD3D12Interface 
+INTERFACE 
+	GraphicsEngineInterface
+)
+
 add_library(GraphicsEngineD3D12-static STATIC 
 	${SRC} ${INTERFACE} ${INCLUDE} ${SHADERS}
 	readme.md
@@ -113,16 +123,12 @@ add_library(GraphicsEngineD3D12-shared SHARED
 )
 
 target_include_directories(GraphicsEngineD3D12-static 
-PUBLIC
-	interface
 PRIVATE
 	${CMAKE_CURRENT_BINARY_DIR}/CompiledShaders
 	include
 )
 
 target_include_directories(GraphicsEngineD3D12-shared 
-PUBLIC
-	interface
 PRIVATE
 	${CMAKE_CURRENT_BINARY_DIR}/CompiledShaders
 	include
@@ -132,7 +138,6 @@ set(PRIVATE_DEPENDENCIES
 	BuildSettings 
 	Common 
 	GraphicsEngineD3DBase 
-	GraphicsTools 
 	TargetPlatform 
 	dxgi.lib
 	D3D12.lib 
@@ -140,7 +145,7 @@ set(PRIVATE_DEPENDENCIES
 )
 
 set(PUBLIC_DEPENDENCIES 
-	GraphicsEngine 
+	GraphicsEngineD3D12Interface
 )
 
 target_link_libraries(GraphicsEngineD3D12-static PRIVATE ${PRIVATE_DEPENDENCIES} PUBLIC ${PUBLIC_DEPENDENCIES})
