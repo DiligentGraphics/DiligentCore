@@ -67,10 +67,10 @@ void CheckDynamicType( SrcType *pSrcPtr )
 
 #else
 
-#   define CHECK_DYNAMIC_TYPE(...){}
-#   define VERIFY(...){}
-#   define UNEXPECTED(...){}
-#   define UNSUPPORTED(...){}
-#   define VERIFY_EXPR(...){}
+#   define CHECK_DYNAMIC_TYPE(...)do{}while(false)
+#   define VERIFY(...)do{}while(false)
+#   define UNEXPECTED(...)do{}while(false)
+#   define UNSUPPORTED(...)do{}while(false)
+#   define VERIFY_EXPR(...)do{}while(false)
 
 #endif
