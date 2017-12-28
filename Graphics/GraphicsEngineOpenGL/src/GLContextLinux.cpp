@@ -92,7 +92,7 @@ namespace Diligent
         auto CurrentCtx = glXGetCurrentContext();
         if (CurrentCtx == 0)
         {
-            LOG_ERROR_AND_THROW("No current GL context found!")
+            LOG_ERROR_AND_THROW("No current GL context found!");
         }
         
         // Initialize GLEW
@@ -135,7 +135,7 @@ namespace Diligent
         //Or better yet, use the GL3 way to get the version number
         glGetIntegerv( GL_MAJOR_VERSION, &MajorVersion );
         glGetIntegerv( GL_MINOR_VERSION, &MinorVersion );
-        LOG_INFO_MESSAGE(Info.pNativeWndHandle != nullptr ? "Initialized OpenGL " : "Attached to OpenGL ", MajorVersion, '.', MinorVersion, " context (", GLVersionString, ", ", GLRenderer, ')')
+        LOG_INFO_MESSAGE(Info.pNativeWndHandle != nullptr ? "Initialized OpenGL " : "Attached to OpenGL ", MajorVersion, '.', MinorVersion, " context (", GLVersionString, ", ", GLRenderer, ')');
 
         // Under the standard filtering rules for cubemaps, filtering does not work across faces of the cubemap. 
         // This results in a seam across the faces of a cubemap. This was a hardware limitation in the past, but 
@@ -180,7 +180,7 @@ namespace Diligent
         }
         else
         {
-            LOG_ERROR("Swap buffer failed because window and/or display handle is not initialized")
+            LOG_ERROR("Swap buffer failed because window and/or display handle is not initialized");
         }
     }
 
