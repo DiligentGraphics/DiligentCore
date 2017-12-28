@@ -194,7 +194,7 @@ void BufferBase<BaseInterface, BufferViewImplType, TBuffViewObjAllocator> :: Map
     
     if (this->m_Desc.Usage == USAGE_DYNAMIC)
     {
-        VERIFY((MapFlags & MAP_FLAG_DISCARD) != 0 && MapType == MAP_WRITE, "Dynamic buffers can only be mapped for writing with discard flag")
+        VERIFY((MapFlags & MAP_FLAG_DISCARD) != 0 && MapType == MAP_WRITE, "Dynamic buffers can only be mapped for writing with discard flag");
     }
 
     if ( (MapFlags & MAP_FLAG_DISCARD) != 0 )

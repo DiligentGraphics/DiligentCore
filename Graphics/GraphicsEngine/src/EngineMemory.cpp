@@ -37,7 +37,7 @@ void SetRawAllocator(IMemoryAllocator *pRawAllocator)
 {
     if (pRawAllocator == nullptr)
     {
-        LOG_INFO_MESSAGE("User-defined allocator is not provided. Using default allocator.")
+        LOG_INFO_MESSAGE("User-defined allocator is not provided. Using default allocator.");
         pRawAllocator = &DefaultRawMemoryAllocator::GetAllocator();
     }
     g_pRawAllocator = pRawAllocator;

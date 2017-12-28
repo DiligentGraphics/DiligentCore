@@ -1033,7 +1033,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::InsertIncludes( String &GLSLSourc
             RefCntAutoPtr<IFileStream> pIncludeDataStream;
             pSourceStreamFactory->CreateInputStream( IncludeName.c_str(), &pIncludeDataStream );
             if( !pIncludeDataStream )
-                LOG_ERROR_AND_THROW( "Failed to open include file ", IncludeName )
+                LOG_ERROR_AND_THROW( "Failed to open include file ", IncludeName );
             RefCntAutoPtr<IDataBlob> pIncludeData( MakeNewRCObj<DataBlobImpl>()(0) );
             pIncludeDataStream->Read( pIncludeData );
 
@@ -1084,14 +1084,16 @@ void ReadNumericConstant(const String &Source, String::const_iterator &Pos, Stri
 
 
 // The function convertes source code into a token list
-void HLSL2GLSLConverterImpl::ConversionStream::Tokenize( const String &Source )
+void HLSL2GLSLConverterImpl::ConversionStream::Tokenize(const String &Source)
 {
 #define CHECK_END(...) \
+do{                                     \
     if( SrcPos == Source.end() )        \
     {                                   \
-        LOG_ERROR_MESSAGE(__VA_ARGS__)  \
+        LOG_ERROR_MESSAGE(__VA_ARGS__); \
         break;                          \
-    }
+    }                                   \
+}while(false)
 
     int OpenBracketCount = 0;
     int OpenBraceCount = 0;
@@ -1490,7 +1492,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::RegisterStruct(TokenListType::ite
 {
     // struct VSOutput
     // ^
-    VERIFY_EXPR(Token->Type == TokenType::kw_struct && Token->Literal == "struct")
+    VERIFY_EXPR(Token->Type == TokenType::kw_struct && Token->Literal == "struct");
 
     ++Token;
     // struct VSOutput
@@ -2520,7 +2522,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ParseShaderParameter(TokenListTyp
         const auto &StructName = TypeToken->Literal;
         auto it = m_StructDefinitions.find(StructName.c_str());
         if(it == m_StructDefinitions.end())
-            LOG_ERROR_AND_THROW("Unable to find definition for type \'", StructName, "\'")
+            LOG_ERROR_AND_THROW("Unable to find definition for type \'", StructName, "\'");
 
         TypeToken = it->second;
         // struct VSOutput
@@ -2691,7 +2693,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessFunctionParameters( TokenL
                     break;
 
                     default:
-                        UNEXPECTED("Unexpected keyword ")
+                        UNEXPECTED("Unexpected keyword ");
                 }
 
                 {
@@ -3096,8 +3098,8 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessGeometryShaderArguments( T
     std::unordered_map<HashMapStringKey, String> Attributes;
     ProcessShaderAttributes(Token, Attributes);
     auto MaxVertexCountIt = Attributes.find("maxvertexcount");
-    if(MaxVertexCountIt == Attributes.end())
-        LOG_ERROR_AND_THROW("Geomtry shader \"", Token->Literal, "\" misses \"maxvertexcount\" attribute")
+    if (MaxVertexCountIt == Attributes.end())
+        LOG_ERROR_AND_THROW("Geomtry shader \"", Token->Literal, "\" misses \"maxvertexcount\" attribute");
     const Char *MaxVertexCount = MaxVertexCountIt->second.c_str();
 
     stringstream GlobalVarsSS, PrologueSS, InterfaceVarsInSS, InterfaceVarsOutSS, EmitVertexDefineSS;
@@ -3393,7 +3395,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessHullShaderConstantFunction
                         if(Getter.empty())
                         {
                             LOG_ERROR_AND_THROW("Supported inputs to a hull shader constant function are \"InputPatch<>\" and variables with SV_ semantic.\n"
-                                                "Variable \"", Param.Name, "\" with semantic \"", Param.Semantic, "\" is not supported")
+                                                "Variable \"", Param.Name, "\" with semantic \"", Param.Semantic, "\" is not supported");
                         }
                         PrologueSS << "    " << Getter << '(' << FullIndexedParamName << ");\n";
                     }
@@ -3410,7 +3412,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessHullShaderConstantFunction
                     if(Setter.empty())
                     {
                         LOG_ERROR_AND_THROW("Supported output semantics of a hull shader constant function are \"SV_TessFactor\" and \"SV_InsideTessFactor\".\n"
-                                            "Variable \"", Param.Name, "\" with semantic \"", Param.Semantic, "\" is not supported")
+                                            "Variable \"", Param.Name, "\" with semantic \"", Param.Semantic, "\" is not supported");
                     }
 
                     // A TCS can only ever write to the per-vertex output variable that corresponds to their invocation,
@@ -3551,7 +3553,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessHullShaderArguments( Token
         else if(DomainIt->second=="isoline")
             domain = Domain::isoline;
         else
-            LOG_ERROR_AND_THROW( "Unexpected domain value \"", DomainIt->second, "\". String constant \"tri\", \"quad\" or \"isoline\" expected")
+            LOG_ERROR_AND_THROW( "Unexpected domain value \"", DomainIt->second, "\". String constant \"tri\", \"quad\" or \"isoline\" expected");
     }
 
     auto PartitioningIt = Attributes.find("partitioning");
@@ -3566,7 +3568,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessHullShaderArguments( Token
         else if(PartitioningIt->second=="pow2")
             partitioning = Partitioning::pow2;
         else
-            LOG_ERROR_AND_THROW( "Unexpected partitioning \"", PartitioningIt->second, "\". String constant \"integer\", \"fractional_even\", \"fractional_odd\", or \"pow2\" expected")
+            LOG_ERROR_AND_THROW( "Unexpected partitioning \"", PartitioningIt->second, "\". String constant \"integer\", \"fractional_even\", \"fractional_odd\", or \"pow2\" expected");
     }
 
     auto TopologyIt = Attributes.find("outputtopology");
@@ -3581,17 +3583,17 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessHullShaderArguments( Token
         else if(TopologyIt->second=="triangle_ccw")
             topology = OutputTopology::triangle_ccw;
         else
-            LOG_ERROR_AND_THROW( "Unexpected topology \"", TopologyIt->second, "\". String constant \"point\", \"line\", \"triangle_cw\", or \"triangle_ccw\" expected")
+            LOG_ERROR_AND_THROW( "Unexpected topology \"", TopologyIt->second, "\". String constant \"point\", \"line\", \"triangle_cw\", or \"triangle_ccw\" expected");
     }
 
     auto ConstFuncIt = Attributes.find("patchconstantfunc");
     if (ConstFuncIt == Attributes.end())
-        LOG_ERROR_AND_THROW( "Hull shader patch constant function is not specified. Use \"patchconstantfunc\" attribute" )
+        LOG_ERROR_AND_THROW( "Hull shader patch constant function is not specified. Use \"patchconstantfunc\" attribute" );
     
     auto MaxTessFactorIt = Attributes.find("maxtessfactor");
     auto NumControlPointsIt = Attributes.find("outputcontrolpoints");
     if(NumControlPointsIt == Attributes.end())
-        LOG_ERROR_AND_THROW( "Number of output control points is not specified. Use \"outputcontrolpoints\" attribute" )
+        LOG_ERROR_AND_THROW( "Number of output control points is not specified. Use \"outputcontrolpoints\" attribute" );
     const Char* NumControlPoints = NumControlPointsIt->second.c_str();
    
     bool bConstFuncTakesInputPatch = false;
@@ -3787,7 +3789,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessDomainShaderArguments( Tok
     stringstream GlobalsSS;
     auto DomainIt = Attributes.find("domain");
     if (DomainIt == Attributes.end())
-        LOG_ERROR_AND_THROW( "Domain shader misses \"domain\" attribute")
+        LOG_ERROR_AND_THROW( "Domain shader misses \"domain\" attribute");
 
     GlobalsSS << "layout(";
     if(DomainIt->second=="tri")
@@ -3797,13 +3799,13 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessDomainShaderArguments( Tok
     else if(DomainIt->second=="isoline")
         GlobalsSS<<"isolines";
     else
-        LOG_ERROR_AND_THROW( "Unexpected domain value \"", DomainIt->second, "\". String constant \"tri\", \"quad\" or \"isoline\" expected")
+        LOG_ERROR_AND_THROW( "Unexpected domain value \"", DomainIt->second, "\". String constant \"tri\", \"quad\" or \"isoline\" expected");
 
     auto PartitioningIt = Attributes.find("partitioning");
     if (PartitioningIt == Attributes.end())
         LOG_ERROR_AND_THROW( "Undefined partitioning. In GLSL, partitioning is specified by the tessellation evaluation shader (domain shader) rather than by the tessellation control shader (hull shader)\n"
                              "Please use the following comment right above the function declaration to deine partitioning and output topology:\n"
-                             "/* partitioning = {integer|fractional_even|fractional_odd}, outputtopology = {triangle_cw|triangle_ccw} */")
+                             "/* partitioning = {integer|fractional_even|fractional_odd}, outputtopology = {triangle_cw|triangle_ccw} */");
 
     if(PartitioningIt->second=="integer")
         GlobalsSS<<", equal_spacing";
@@ -3813,17 +3815,17 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessDomainShaderArguments( Tok
         GlobalsSS<<", fractional_odd_spacing";
     else if(PartitioningIt->second=="pow2")
     {
-        LOG_WARNING_MESSAGE("pow2 partitioning is not supported by OpenGL. Using integer partitioning")
+        LOG_WARNING_MESSAGE("pow2 partitioning is not supported by OpenGL. Using integer partitioning");
         GlobalsSS<<", equal_spacing";
     }
     else
-        LOG_ERROR_AND_THROW( "Unexpected partitioning \"", PartitioningIt->second, "\". String constant \"integer\", \"fractional_even\", \"fractional_odd\", or \"pow2\" expected")
+        LOG_ERROR_AND_THROW( "Unexpected partitioning \"", PartitioningIt->second, "\". String constant \"integer\", \"fractional_even\", \"fractional_odd\", or \"pow2\" expected");
 
     auto TopologyIt = Attributes.find("outputtopology");
     if(TopologyIt==Attributes.end())
         LOG_ERROR_AND_THROW( "Undefined outputtopology. In GLSL, outputtopology is specified by the tessellation evaluation shader (domain shader) rather than by the tessellation control shader (hull shader)\n"
                              "Please use the following comment right above the function declaration to deine partitioning and output topology:\n"
-                             "/* partitioning = {integer|fractional_even|fractional_odd}, outputtopology = {triangle_cw|triangle_ccw} */")
+                             "/* partitioning = {integer|fractional_even|fractional_odd}, outputtopology = {triangle_cw|triangle_ccw} */");
 
     if(TopologyIt->second=="point")
         GlobalsSS<<"";
@@ -3834,7 +3836,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessDomainShaderArguments( Tok
     else if(TopologyIt->second=="triangle_ccw")
         GlobalsSS<<", ccw";
     else
-        LOG_ERROR_AND_THROW( "Unexpected topology \"", TopologyIt->second, "\". String constant \"point\", \"line\", \"triangle_cw\", or \"triangle_ccw\" expected")
+        LOG_ERROR_AND_THROW( "Unexpected topology \"", TopologyIt->second, "\". String constant \"point\", \"line\", \"triangle_cw\", or \"triangle_ccw\" expected");
 
     GlobalsSS<<")in;\n";
 
@@ -4345,7 +4347,7 @@ String HLSL2GLSLConverterImpl::Convert(ConversionAttribs &Attribs)const
                 const auto &FileNameFromStream = pStream->GetInputFileName();
                 if (FileNameFromStream != Attribs.InputFileName)
                 {
-                    LOG_WARNING_MESSAGE("Input stream was initialized for input file \"", FileNameFromStream, "\" that does not match the name of the file to be converted \"", Attribs.InputFileName, "\". New stream will be created")
+                    LOG_WARNING_MESSAGE("Input stream was initialized for input file \"", FileNameFromStream, "\" that does not match the name of the file to be converted \"", Attribs.InputFileName, "\". New stream will be created");
                     (*Attribs.ppConversionStream)->Release();
                     *Attribs.ppConversionStream = nullptr;
                 }

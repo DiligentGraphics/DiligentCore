@@ -23,7 +23,8 @@
 
 #pragma once
 
-#include "../Basic/include/BasicFileSystem.h"
+#include "BasicFileSystem.h"
+#include "DataBlob.h"
 
 #include <memory>
 #include <vector>

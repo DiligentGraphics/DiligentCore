@@ -35,11 +35,11 @@ namespace Diligent
 {
 
 // {2989B45C-143D-4886-B89C-C3271C2DCC5D}
-static const Diligent::INTERFACE_ID IID_Shader =
+static constexpr INTERFACE_ID IID_Shader =
 { 0x2989b45c, 0x143d, 0x4886, { 0xb8, 0x9c, 0xc3, 0x27, 0x1c, 0x2d, 0xcc, 0x5d } };
 
 // {0D57DF3F-977D-4C8F-B64C-6675814BC80C}
-static const Diligent::INTERFACE_ID IID_ShaderVariable =
+static constexpr INTERFACE_ID IID_ShaderVariable =
 { 0xd57df3f, 0x977d, 0x4c8f, { 0xb6, 0x4c, 0x66, 0x75, 0x81, 0x4b, 0xc8, 0xc } };
 
 /// Describes the shader type

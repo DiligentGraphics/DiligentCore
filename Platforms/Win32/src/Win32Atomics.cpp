@@ -22,7 +22,7 @@
  */
 
 #include "pch.h"
-#include "..\Win32\include\Win32Atomics.h"
+#include "Win32Atomics.h"
 
 #include <Windows.h>
 

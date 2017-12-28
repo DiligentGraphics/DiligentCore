@@ -977,7 +977,7 @@ inline float4x4 rotationZ(float angleInRadians)
 // 3D Rotation matrix for an arbitrary axis specified by x, y and z
 inline float4x4 rotationArbitrary(float3 axis, float degree)
 {
-    UNSUPPORTED("This function is not tested, it might be incorrect")
+    UNSUPPORTED("This function is not tested, it might be incorrect");
 
     axis = normalize(axis);
 

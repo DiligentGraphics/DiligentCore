@@ -48,7 +48,7 @@ namespace Diligent
 {
 
 // {F0E9B607-AE33-4B2B-B1AF-A8B2C3104022}
-static const Diligent::INTERFACE_ID IID_RenderDevice =
+static constexpr INTERFACE_ID IID_RenderDevice =
 { 0xf0e9b607, 0xae33, 0x4b2b, { 0xb1, 0xaf, 0xa8, 0xb2, 0xc3, 0x10, 0x40, 0x22 } };
 
 /// Render device interface
@@ -56,7 +56,7 @@ class IRenderDevice : public IObject
 {
 public:
     /// Queries the specific interface, see IObject::QueryInterface() for details
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface ) = 0;
+    virtual void QueryInterface( const INTERFACE_ID &IID, IObject **ppInterface ) = 0;
 
     /// Creates a new buffer object
 

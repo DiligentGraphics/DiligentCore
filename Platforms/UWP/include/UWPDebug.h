@@ -23,7 +23,7 @@
 
 #pragma once
 
-#include "..\Basic\include\BasicPlatformDebug.h"
+#include "BasicPlatformDebug.h"
 
 struct WindowsStoreDebug : public BasicPlatformDebug
 {

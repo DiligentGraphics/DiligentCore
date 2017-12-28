@@ -23,7 +23,7 @@
 
 #pragma once
 
-#include "..\Basic\include\BasicPlatformMisc.h"
+#include "BasicPlatformMisc.h"
 #include "DebugUtilities.h"
 
 #include <intrin.h>

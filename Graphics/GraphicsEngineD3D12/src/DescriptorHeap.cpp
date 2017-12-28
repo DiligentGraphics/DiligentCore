@@ -119,7 +119,7 @@ void DescriptorHeapAllocationManager::Free(DescriptorHeapAllocation&& Allocation
     std::lock_guard<std::mutex> LockGuard(m_AllocationMutex);
     // Methods of VariableSizeGPUAllocationsManager class are not thread safe!
 
-    VERIFY(Allocation.GetAllocationManagerId() == m_ThisManagerId, "Invalid descriptor heap manager Id")
+    VERIFY(Allocation.GetAllocationManagerId() == m_ThisManagerId, "Invalid descriptor heap manager Id");
 
     auto DescriptorOffset = (Allocation.GetCpuHandle().ptr - m_FirstCPUHandle.ptr) / m_DescriptorSize;
     
@@ -217,7 +217,7 @@ DescriptorHeapAllocation CPUDescriptorHeap::Allocate( uint32_t Count )
         // Make sure the heap is large enough to accomodate the requested number of descriptors
         if(Count > m_HeapDesc.NumDescriptors)
         {
-            LOG_WARNING_MESSAGE("Number of requested CPU descriptors handles (", Count, ") exceeds the descriptor heap size (", m_HeapDesc.NumDescriptors,"). Increasing the number of descriptors in the heap")
+            LOG_WARNING_MESSAGE("Number of requested CPU descriptors handles (", Count, ") exceeds the descriptor heap size (", m_HeapDesc.NumDescriptors,"). Increasing the number of descriptors in the heap");
         }
         m_HeapDesc.NumDescriptors = std::max(m_HeapDesc.NumDescriptors, static_cast<UINT>(Count));
         // Create a new descriptor heap manager. Note that this constructor creates a new D3D12 descriptor
@@ -395,7 +395,7 @@ DescriptorHeapAllocation DynamicSuballocationsManager::Allocate(Uint32 Count)
         auto NewDynamicSubAllocation = m_ParentGPUHeap.AllocateDynamic(SuballocationSize);
         if (NewDynamicSubAllocation.GetCpuHandle().ptr == 0)
         {
-            LOG_ERROR_MESSAGE("Failed to suballocate region for dynamic descriptors")
+            LOG_ERROR_MESSAGE("Failed to suballocate region for dynamic descriptors");
             return DescriptorHeapAllocation();
         }
         m_Suballocations.emplace_back(std::move(NewDynamicSubAllocation));

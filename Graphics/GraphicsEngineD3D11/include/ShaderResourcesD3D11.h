@@ -115,7 +115,7 @@ private:
     MaxBindPointType m_MaxUAVBindPoint     = -1; // Max == 7
     Uint8            m_NumStaticSamplers   =  0; // Max == 16
 
-    static const UINT MaxAllowedBindPoint = std::numeric_limits<MaxBindPointType>::max();
+    static constexpr UINT MaxAllowedBindPoint = std::numeric_limits<MaxBindPointType>::max();
     static_assert(D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT-1 <= MaxAllowedBindPoint, "Not enough bits to represent max CB slot" );
     static_assert(D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT-1      <= MaxAllowedBindPoint, "Not enough bits to represent max SRV slot");
     static_assert(D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT-1             <= MaxAllowedBindPoint, "Not enough bits to represent max Sampler slot");

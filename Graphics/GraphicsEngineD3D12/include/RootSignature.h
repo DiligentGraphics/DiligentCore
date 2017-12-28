@@ -84,7 +84,7 @@ public:
         m_ShaderVarType(RP.m_ShaderVarType),
         m_RootIndex(RP.m_RootIndex)
     {
-        VERIFY(m_RootParam.ParameterType != D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, "Use another constructor to copy descriptor table")
+        VERIFY(m_RootParam.ParameterType != D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, "Use another constructor to copy descriptor table");
     }
 
     RootParameter(const RootParameter &RP, UINT NumRanges, D3D12_DESCRIPTOR_RANGE *pRanges):
@@ -93,8 +93,8 @@ public:
         m_ShaderVarType(RP.m_ShaderVarType),
         m_RootIndex(RP.m_RootIndex)
     {
-        VERIFY(m_RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, "Root parameter is expected to be a descriptor table")
-        VERIFY(NumRanges >= m_RootParam.DescriptorTable.NumDescriptorRanges, "New table must be larger than source one")
+        VERIFY(m_RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, "Root parameter is expected to be a descriptor table");
+        VERIFY(NumRanges >= m_RootParam.DescriptorTable.NumDescriptorRanges, "New table must be larger than source one");
         auto &DstTbl = m_RootParam.DescriptorTable;
         DstTbl.NumDescriptorRanges = NumRanges;
         DstTbl.pDescriptorRanges = pRanges;
@@ -271,7 +271,7 @@ private:
         RootParameter *m_pRootViews = nullptr;
     };
 
-    static const Uint8 InvalidRootTableIndex = static_cast<Uint8>(-1);
+    static constexpr Uint8 InvalidRootTableIndex = static_cast<Uint8>(-1);
     
     // The array below contains array index of a CBV/SRV/UAV root table 
     // in m_RootParams (NOT the Root Index!), for every variable type 

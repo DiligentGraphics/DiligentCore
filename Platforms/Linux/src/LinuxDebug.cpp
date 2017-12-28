@@ -26,7 +26,6 @@
 
 #include "LinuxDebug.h"
 #include "FormatMessage.h"
-#include "FileSystem.h"
 
 using namespace Diligent;
 
@@ -47,4 +46,14 @@ void LinuxDebug::OutputDebugMessage( DebugMessageSeverity Severity, const Char *
     str += Message;
     str += '\n';
     std::cerr << str;
+}
+
+void DebugAssertionFailed(const Diligent::Char* Message, const char* Function, const char* File, int Line)
+{
+    LinuxDebug :: AssertionFailed( Message, Function, File, Line );
+}
+
+void OutputDebugMessage(BasicPlatformDebug::DebugMessageSeverity Severity, const Diligent::Char* Message)
+{
+    LinuxDebug::OutputDebugMessage( Severity, Message );
 }

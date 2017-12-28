@@ -25,7 +25,6 @@
 
 #include "Win32Debug.h"
 #include "FormatMessage.h"
-#include "FileSystem.h"
 #include <csignal>
 #include <iostream>
 #include <Windows.h>
@@ -79,4 +78,14 @@ void WindowsDebug::OutputDebugMessage( DebugMessageSeverity Severity, const Dili
         std::cerr<<str;
     else
         std::cout<<str;
+}
+
+void DebugAssertionFailed(const Diligent::Char* Message, const char* Function, const char* File, int Line)
+{
+    WindowsDebug :: AssertionFailed( Message, Function, File, Line );
+}
+
+void OutputDebugMessage(BasicPlatformDebug::DebugMessageSeverity Severity, const Diligent::Char* Message)
+{
+    WindowsDebug::OutputDebugMessage( Severity, Message );
 }

@@ -14,6 +14,7 @@ set(INCLUDE
 	include/GLProgram.h
 	include/GLProgramResources.h
 	include/GLTypeConversions.h
+	include/pch.h
 	include/PipelineStateGLImpl.h
 	include/RenderDeviceGLImpl.h
 	include/SamplerGLImpl.h

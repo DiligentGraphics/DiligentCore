@@ -98,7 +98,7 @@ namespace Diligent
 
         ~RingBuffer()
         {
-            VERIFY(m_UsedSize==0, "All space in the ring buffer must be released")
+            VERIFY(m_UsedSize==0, "All space in the ring buffer must be released");
         }
 
         OffsetType Allocate(OffsetType Size)

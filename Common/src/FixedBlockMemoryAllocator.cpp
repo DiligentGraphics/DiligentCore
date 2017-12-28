@@ -48,8 +48,8 @@ namespace Diligent
 #ifdef _DEBUG
         for (size_t p = 0; p < m_PagePool.size(); ++p)
         {
-            VERIFY(!m_PagePool[p].HasAllocations(), "Memory leak detected: memory page has allocated block")
-            VERIFY(m_AvailablePages.find(p) != m_AvailablePages.end(), "Memory page is not in the available page pool")
+            VERIFY(!m_PagePool[p].HasAllocations(), "Memory leak detected: memory page has allocated block");
+            VERIFY(m_AvailablePages.find(p) != m_AvailablePages.end(), "Memory page is not in the available page pool");
         }
 #endif
     }
@@ -110,7 +110,7 @@ namespace Diligent
         }
         else
         {
-            UNEXPECTED("Address not found in the allocations list - double freeing memory?")
+            UNEXPECTED("Address not found in the allocations list - double freeing memory?");
         }
     }
 }

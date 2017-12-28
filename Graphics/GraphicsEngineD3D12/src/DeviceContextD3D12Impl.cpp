@@ -81,7 +81,7 @@ namespace Diligent
         else
         {
             if (m_NumCommandsInCurCtx != 0)
-                LOG_WARNING_MESSAGE("Flusing outstanding commands from the device context being destroyed. This may result in D3D12 synchronization errors")
+                LOG_WARNING_MESSAGE("Flusing outstanding commands from the device context being destroyed. This may result in D3D12 synchronization errors");
 
             Flush(false);
         }
@@ -366,7 +366,7 @@ namespace Diligent
         else
         {
             if( pPipelineStateD3D12->dbgContainsShaderResources() )
-                LOG_ERROR_MESSAGE("Pipeline state \"", pPipelineStateD3D12->GetDesc().Name, "\" contains shader resources, but IDeviceContext::CommitShaderResources() was not called" )
+                LOG_ERROR_MESSAGE("Pipeline state \"", pPipelineStateD3D12->GetDesc().Name, "\" contains shader resources, but IDeviceContext::CommitShaderResources() was not called" );
         }
 #endif
         
@@ -387,7 +387,7 @@ namespace Diligent
             }
             else
             {
-                LOG_ERROR_MESSAGE("Valid pIndirectDrawAttribs must be provided for indirect draw command")
+                LOG_ERROR_MESSAGE("Valid pIndirectDrawAttribs must be provided for indirect draw command");
             }
         }
         else
@@ -428,7 +428,7 @@ namespace Diligent
         else
         {
             if( pPipelineStateD3D12->dbgContainsShaderResources() )
-                LOG_ERROR_MESSAGE("Pipeline state \"", pPipelineStateD3D12->GetDesc().Name, "\" contains shader resources, but IDeviceContext::CommitShaderResources() was not called" )
+                LOG_ERROR_MESSAGE("Pipeline state \"", pPipelineStateD3D12->GetDesc().Name, "\" contains shader resources, but IDeviceContext::CommitShaderResources() was not called" );
         }
 #endif
 
@@ -448,7 +448,7 @@ namespace Diligent
             }
             else
             {
-                LOG_ERROR_MESSAGE("Valid pIndirectDrawAttribs must be provided for indirect dispatch command")
+                LOG_ERROR_MESSAGE("Valid pIndirectDrawAttribs must be provided for indirect dispatch command");
             }
         }
         else
@@ -558,7 +558,7 @@ namespace Diligent
     void DeviceContextD3D12Impl::InvalidateState()
     {
         if (m_NumCommandsInCurCtx != 0)
-            LOG_WARNING_MESSAGE("Invalidating context that has outstanding commands in it. Call Flush() to submit commands for execution")
+            LOG_WARNING_MESSAGE("Invalidating context that has outstanding commands in it. Call Flush() to submit commands for execution");
 
         TDeviceContextBase::InvalidateState();
         m_CommittedD3D12IndexBuffer = nullptr;
@@ -693,7 +693,7 @@ namespace Diligent
 
     void DeviceContextD3D12Impl::UpdateBufferRegion(BufferD3D12Impl *pBuffD3D12, const void *pData, Uint64 DstOffset, Uint64 NumBytes)
     {
-        VERIFY(pBuffD3D12->GetDesc().Usage != USAGE_DYNAMIC, "Dynamic buffers must be updated via Map()")
+        VERIFY(pBuffD3D12->GetDesc().Usage != USAGE_DYNAMIC, "Dynamic buffers must be updated via Map()");
         VERIFY_EXPR( static_cast<size_t>(NumBytes) == NumBytes );
         auto TmpSpace = m_pUploadHeap->Allocate(static_cast<size_t>(NumBytes));
 	    memcpy(TmpSpace.CPUAddress, pData, static_cast<size_t>(NumBytes));
@@ -702,7 +702,7 @@ namespace Diligent
 
     void DeviceContextD3D12Impl::CopyBufferRegion(BufferD3D12Impl *pSrcBuffD3D12, BufferD3D12Impl *pDstBuffD3D12, Uint64 SrcOffset, Uint64 DstOffset, Uint64 NumBytes)
     {
-        VERIFY(pDstBuffD3D12->GetDesc().Usage != USAGE_DYNAMIC, "Dynamic buffers cannot be copy destinations")
+        VERIFY(pDstBuffD3D12->GetDesc().Usage != USAGE_DYNAMIC, "Dynamic buffers cannot be copy destinations");
 
         auto pCmdCtx = RequestCmdContext();
         pCmdCtx->TransitionResource(pSrcBuffD3D12, D3D12_RESOURCE_STATE_COPY_SOURCE);
@@ -742,7 +742,7 @@ namespace Diligent
     {
         auto *pBufferD3D12 = ValidatedCast<BufferD3D12Impl>(pSrcBuffer);
         const auto& TexDesc = pTextureD3D12->GetDesc();
-        VERIFY(pBufferD3D12->GetState() == D3D12_RESOURCE_STATE_GENERIC_READ, "Staging buffer is expected to always be in D3D12_RESOURCE_STATE_GENERIC_READ state")
+        VERIFY(pBufferD3D12->GetState() == D3D12_RESOURCE_STATE_GENERIC_READ, "Staging buffer is expected to always be in D3D12_RESOURCE_STATE_GENERIC_READ state");
 
         auto *pCmdCtx = RequestCmdContext();
         auto *pCmdList = pCmdCtx->GetCommandList();

@@ -88,7 +88,7 @@ public:
 	{
         VERIFY_EXPR(m_pAllocator != nullptr && m_pDescriptorHeap != nullptr);
         auto DescriptorSize = m_pAllocator->GetDescriptorSize();
-        VERIFY(DescriptorSize < std::numeric_limits<Uint16>::max(), "DescriptorSize exceeds allowed limit")
+        VERIFY(DescriptorSize < std::numeric_limits<Uint16>::max(), "DescriptorSize exceeds allowed limit");
         m_DescriptorSize = static_cast<Uint16>( DescriptorSize );
 	}
 
@@ -139,7 +139,7 @@ public:
         if(!IsNull() && m_pAllocator)
             m_pAllocator->Free(std::move(*this));
         // Allocation must have been disposed by the allocator
-        VERIFY(IsNull(), "Non-null descriptor is being destroyed")
+        VERIFY(IsNull(), "Non-null descriptor is being destroyed");
     }
 
     // Returns CPU descriptor handle at the specified offset

@@ -64,7 +64,7 @@ static GLenum GetTextureInternalFormat(DeviceContextGLImpl *pDeviceContextGL, GL
     GLint GlFormat = 0;
     glGetTexLevelParameteriv(QueryBindTarget, 0, GL_TEXTURE_INTERNAL_FORMAT, &GlFormat);
     CHECK_GL_ERROR( "Failed to get texture format through glGetTexLevelParameteriv()" );
-    VERIFY(GlFormat != 0, "Unable to get texture format")
+    VERIFY(GlFormat != 0, "Unable to get texture format");
 
     ContextState.BindTexture(-1, BindTarget, GLObjectWrappers::GLTextureObj(false) );
 
@@ -75,7 +75,7 @@ static TextureDesc GetTextureDescFromGLHandle(DeviceContextGLImpl *pDeviceContex
 {
     auto &ContextState = pDeviceContextGL->GetContextState();
     
-    VERIFY(BindTarget != GL_TEXTURE_CUBE_MAP_ARRAY, "Cubemap arrays are not currently supported")
+    VERIFY(BindTarget != GL_TEXTURE_CUBE_MAP_ARRAY, "Cubemap arrays are not currently supported");
 
     GLObjectWrappers::GLTextureObj TmpGLTexWrapper(true, GLObjectWrappers::GLTextureCreateReleaseHelper(GLHandle));
     ContextState.BindTexture(-1, BindTarget, TmpGLTexWrapper);
@@ -100,9 +100,9 @@ static TextureDesc GetTextureDescFromGLHandle(DeviceContextGLImpl *pDeviceContex
     glGetTexLevelParameteriv(QueryBindTarget, 0, GL_TEXTURE_INTERNAL_FORMAT, &GlFormat);
     CHECK_GL_ERROR( "Failed to get texture level 0 parameters through glGetTexLevelParameteriv()" );
 
-    VERIFY(GlFormat != 0, "Unable to get texture format")
+    VERIFY(GlFormat != 0, "Unable to get texture format");
     if (TexDesc.Format != TEX_FORMAT_UNKNOWN)
-        VERIFY(static_cast<GLenum>(GlFormat) == TexFormatToGLInternalTexFormat(TexDesc.Format), "Specified texture format (", GetTextureFormatAttribs(TexDesc.Format).Name,") does not match GL texture internal format (", GlFormat, ")")
+        VERIFY(static_cast<GLenum>(GlFormat) == TexFormatToGLInternalTexFormat(TexDesc.Format), "Specified texture format (", GetTextureFormatAttribs(TexDesc.Format).Name,") does not match GL texture internal format (", GlFormat, ")");
     else
         TexDesc.Format = GLInternalTexFormatToTexFormat(GlFormat);
 
@@ -281,7 +281,7 @@ void TextureBaseGL::CreateViewInternal( const struct TextureViewDesc &OrigViewDe
     catch( const std::runtime_error& )
     {
         const auto *ViewTypeName = GetTexViewTypeLiteralName(OrigViewDesc.ViewType);
-        LOG_ERROR("Failed to create view \"", OrigViewDesc.Name ? OrigViewDesc.Name : "", "\" (", ViewTypeName, ") for texture \"", m_Desc.Name ? m_Desc.Name : "", "\"" )
+        LOG_ERROR("Failed to create view \"", OrigViewDesc.Name ? OrigViewDesc.Name : "", "\" (", ViewTypeName, ") for texture \"", m_Desc.Name ? m_Desc.Name : "", "\"" );
     }
 }
 
@@ -440,13 +440,13 @@ void TextureBaseGL :: CopyData(IDeviceContext *pContext,
 void TextureBaseGL :: Map(IDeviceContext *pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags, MappedTextureSubresource &MappedData)
 {
     TTextureBase::Map( pContext, Subresource, MapType, MapFlags, MappedData );
-    LOG_ERROR_MESSAGE("Texture mapping is not supported in OpenGL")
+    LOG_ERROR_MESSAGE("Texture mapping is not supported in OpenGL");
 }
 
 void TextureBaseGL::Unmap( IDeviceContext *pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags )
 {
     TTextureBase::Unmap(pContext, Subresource, MapType, MapFlags);
-    LOG_ERROR_MESSAGE("Texture mapping is not supported in OpenGL")
+    LOG_ERROR_MESSAGE("Texture mapping is not supported in OpenGL");
 }
 
 void TextureBaseGL::TextureMemoryBarrier( Uint32 RequiredBarriers, GLContextState &GLContextState )

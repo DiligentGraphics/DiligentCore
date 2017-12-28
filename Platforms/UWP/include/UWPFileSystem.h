@@ -23,7 +23,8 @@
 
 #pragma once
 
-#include "..\Basic\include\BasicFileSystem.h"
+#include "BasicFileSystem.h"
+#include "DataBlob.h"
 #include <memory>
 
 // Do not include windows headers here as they will mess up CreateDirectory()

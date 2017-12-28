@@ -23,38 +23,29 @@
 
 #pragma once
 
-/// \file
-/// Implementation for the IDataBlob interface
+#include <stdio.h>
 
+#include "BasicFileSystem.h"
 #include "DataBlob.h"
-#include "BasicTypes.h"
-#include "ObjectBase.h"
-#include <vector>
 
-namespace Diligent
-{
-    
-/// Base interface for a file stream
-class DataBlobImpl : public Diligent::ObjectBase<IDataBlob>
+class StandardFile : public BasicFile
 {
 public:
-    typedef Diligent::ObjectBase<IDataBlob> TBase;
+    StandardFile( const FileOpenAttribs &OpenAttribs, Diligent::Char SlashSymbol );
+    virtual ~StandardFile()override;
 
-    DataBlobImpl( IReferenceCounters *pRefCounters, size_t InitialSize = 0 );
+    void Read(Diligent::IDataBlob *pData);
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
+    bool Read(void *Data, size_t BufferSize);
 
-    /// Sets the size of the internal data buffer
-    virtual void Resize( size_t NewSize )override;
+    bool Write(const void *Data, size_t BufferSize);
 
-    /// Returns the size of the internal data buffer
-    virtual size_t GetSize()override;
+    size_t GetSize();
 
-    /// Returns the pointer to the internal data buffer
-    virtual void* GetDataPtr()override;
+    size_t GetPos();
 
-private:
-    std::vector<Diligent::Uint8> m_DataBuff;
+    void SetPos(size_t Offset, FilePosOrigin Origin);
+    
+protected:
+    FILE * m_pFile;
 };
-
-}

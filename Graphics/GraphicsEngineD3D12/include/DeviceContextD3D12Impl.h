@@ -94,7 +94,7 @@ public:
     //void ClearShaderStateCache();
 
     ///// Number of different shader types (Vertex, Pixel, Geometry, Domain, Hull, Compute)
-    //static const int NumShaderTypes = 6;
+    //static constexpr int NumShaderTypes = 6;
 
     void UpdateBufferRegion(class BufferD3D12Impl *pBuffD3D12, struct DynamicAllocation& Allocation, Uint64 DstOffset, Uint64 NumBytes);
     void UpdateBufferRegion(class BufferD3D12Impl *pBuffD3D12, const void *pData, Uint64 DstOffset, Uint64 NumBytes);

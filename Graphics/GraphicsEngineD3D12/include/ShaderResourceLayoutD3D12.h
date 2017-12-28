@@ -165,17 +165,17 @@ public:
         SRV_CBV_UAV& operator = (const SRV_CBV_UAV&) = delete;
         SRV_CBV_UAV& operator = (SRV_CBV_UAV&&)      = delete;
 
-        static const Uint32 ResTypeBits = 3;
-        static const Uint32 RootIndBits = 16-ResTypeBits;
-        static const Uint32 RootIndMask = (1 << RootIndBits)-1;
-        static const Uint32 ResTypeMask = (1 << ResTypeBits)-1;
+        static constexpr Uint32 ResTypeBits = 3;
+        static constexpr Uint32 RootIndBits = 16-ResTypeBits;
+        static constexpr Uint32 RootIndMask = (1 << RootIndBits)-1;
+        static constexpr Uint32 ResTypeMask = (1 << ResTypeBits)-1;
 
-        static const Uint16 InvalidRootIndex = RootIndMask;
-        static const Uint16 MaxRootIndex = RootIndMask-1;
+        static constexpr Uint16 InvalidRootIndex = RootIndMask;
+        static constexpr Uint16 MaxRootIndex = RootIndMask-1;
 
-        static const Uint32 InvalidSamplerId = 0xFFFF;
-        static const Uint32 MaxSamplerId = InvalidSamplerId-1;
-        static const Uint32 InvalidOffset = static_cast<Uint32>(-1);
+        static constexpr Uint32 InvalidSamplerId = 0xFFFF;
+        static constexpr Uint32 MaxSamplerId = InvalidSamplerId-1;
+        static constexpr Uint32 InvalidOffset = static_cast<Uint32>(-1);
 
         static_assert( static_cast<int>(CachedResourceType::NumTypes) <= ResTypeMask, "3 bits is not enough to store CachedResourceType");
         
@@ -189,10 +189,10 @@ public:
             OffsetFromTableStart(rhs.OffsetFromTableStart),
             ShaderVariableD3DBase<ShaderResourceLayoutD3D12>(ParentLayout, rhs.Attribs)
         {
-            VERIFY(SamId == InvalidSamplerId || SamId <= MaxSamplerId, "Sampler id exceeds max allowed value (", MaxSamplerId, ")" )
+            VERIFY(SamId == InvalidSamplerId || SamId <= MaxSamplerId, "Sampler id exceeds max allowed value (", MaxSamplerId, ")" );
             VERIFY(rhs.m_ParentResLayout.m_pResources == m_ParentResLayout.m_pResources, "Incosistent resource references");
-            VERIFY(IsValidOffset(), "Offset must be valid" )
-            VERIFY(IsValidRootIndex(), "Root index must be valid" )
+            VERIFY(IsValidOffset(), "Offset must be valid" );
+            VERIFY(IsValidRootIndex(), "Root index must be valid" );
         }
 
         SRV_CBV_UAV(ShaderResourceLayoutD3D12 &ParentLayout, 
@@ -206,9 +206,9 @@ public:
             OffsetFromTableStart(_OffsetFromTableStart),
             ShaderVariableD3DBase<ShaderResourceLayoutD3D12>(ParentLayout, _Attribs)
         {
-            VERIFY(RootIndex == InvalidRootIndex || RootIndex <= MaxRootIndex, "Root index exceeds max allowed value (", MaxRootIndex, ")" )
-            VERIFY(IsValidOffset(), "Offset must be valid" )
-            VERIFY(SamplerId == InvalidSamplerId || SamplerId <= MaxSamplerId, "Sampler id exceeds max allowed value (", MaxSamplerId, ")" )
+            VERIFY(RootIndex == InvalidRootIndex || RootIndex <= MaxRootIndex, "Root index exceeds max allowed value (", MaxRootIndex, ")" );
+            VERIFY(IsValidOffset(), "Offset must be valid" );
+            VERIFY(SamplerId == InvalidSamplerId || SamplerId <= MaxSamplerId, "Sampler id exceeds max allowed value (", MaxSamplerId, ")" );
         }
 
         bool IsBound(Uint32 ArrayIndex);
@@ -275,8 +275,8 @@ public:
         const D3DShaderResourceAttribs &Attribs;
         ShaderResourceLayoutD3D12 &m_ParentResLayout;
 
-        static const Uint32 InvalidRootIndex = static_cast<Uint32>(-1);
-        static const Uint32 InvalidOffset    = static_cast<Uint32>(-1);
+        static constexpr Uint32 InvalidRootIndex = static_cast<Uint32>(-1);
+        static constexpr Uint32 InvalidOffset    = static_cast<Uint32>(-1);
 
         const Uint32 RootIndex;
         const Uint32 OffsetFromTableStart;
@@ -288,8 +288,8 @@ public:
             OffsetFromTableStart(Sam.OffsetFromTableStart)
         {
             VERIFY(Sam.m_ParentResLayout.m_pResources == m_ParentResLayout.m_pResources, "Incosistent resource references");
-            VERIFY(IsValidRootIndex(), "Root index must be valid" )
-            VERIFY(IsValidOffset(), "Offset must be valid" )
+            VERIFY(IsValidRootIndex(), "Root index must be valid" );
+            VERIFY(IsValidOffset(), "Offset must be valid" );
         }
 
         Sampler(ShaderResourceLayoutD3D12 &ParentResLayout, const D3DShaderResourceAttribs &_Attribs, Uint32 _RootIndex, Uint32 _OffsetFromTableStart) :
@@ -298,8 +298,8 @@ public:
             Attribs(_Attribs),
             m_ParentResLayout(ParentResLayout)
         {
-            VERIFY(IsValidRootIndex(), "Root index must be valid" )
-            VERIFY(IsValidOffset(), "Offset must be valid" )
+            VERIFY(IsValidRootIndex(), "Root index must be valid" );
+            VERIFY(IsValidOffset(), "Offset must be valid" );
         }
 
         bool IsValidRootIndex()const{return RootIndex            != InvalidRootIndex;}

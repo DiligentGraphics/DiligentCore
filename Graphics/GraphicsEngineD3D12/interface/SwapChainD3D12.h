@@ -34,11 +34,11 @@ namespace Diligent
 {
 
 // {C9F8384D-A45E-4970-8447-394177E5B0EE}
-static const Diligent::INTERFACE_ID IID_SwapChainD3D12 =
+static constexpr INTERFACE_ID IID_SwapChainD3D12 =
 { 0xc9f8384d, 0xa45e, 0x4970, { 0x84, 0x47, 0x39, 0x41, 0x77, 0xe5, 0xb0, 0xee } };
 
 /// Interface to the swap chain object implemented in D3D12
-class ISwapChainD3D12 : public Diligent::ISwapChain
+class ISwapChainD3D12 : public ISwapChain
 {
 public:
 

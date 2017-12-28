@@ -139,7 +139,7 @@ protected:
 	ID3D12RootSignature* m_pCurGraphicsRootSignature = nullptr;
 	ID3D12RootSignature* m_pCurComputeRootSignature = nullptr;
 
-    static const int MaxPendingBarriers = 16;
+    static constexpr int MaxPendingBarriers = 16;
 	std::vector<D3D12_RESOURCE_BARRIER, STDAllocatorRawMem<D3D12_RESOURCE_BARRIER> > m_PendingResourceBarriers;
     // We must make sure that all referenced objects are alive until barriers are executed
     // Keeping reference to ID3D12Resource is not sufficient!

@@ -32,11 +32,11 @@ namespace Diligent
 {
 
 // {0767EBE4-AD47-4E70-9B65-38C6B9CAC37D}
-static const Diligent::INTERFACE_ID IID_TextureViewD3D11 =
+static constexpr INTERFACE_ID IID_TextureViewD3D11 =
 { 0x767ebe4, 0xad47, 0x4e70, { 0x9b, 0x65, 0x38, 0xc6, 0xb9, 0xca, 0xc3, 0x7d } };
 
 /// Interface to the texture view object implemented in D3D11
-class ITextureViewD3D11 : public Diligent::ITextureView
+class ITextureViewD3D11 : public ITextureView
 {
 public:
 

@@ -60,7 +60,7 @@ void ValidateTextureDesc( const TextureDesc& Desc )
         MaxDim = std::max(Desc.Width, Desc.Height);
     else if( Desc.Type == RESOURCE_DIM_TEX_3D )
         MaxDim = std::max( std::max(Desc.Width, Desc.Height), Desc.Depth );
-    VERIFY( MaxDim >= (1U << (Desc.MipLevels-1)), "Texture \"", Desc.Name ? Desc.Name : "", "\": Incorrect number of Mip levels (", Desc.MipLevels, ")" )
+    VERIFY( MaxDim >= (1U << (Desc.MipLevels-1)), "Texture \"", Desc.Name ? Desc.Name : "", "\": Incorrect number of Mip levels (", Desc.MipLevels, ")" );
 
     if( Desc.SampleCount > 1 )
     {
@@ -127,7 +127,7 @@ void ValidateTextureRegion(const TextureDesc &TexDesc, Uint32 MipLevel, Uint32 S
 
 void ValidateUpdateDataParams( const TextureDesc &TexDesc, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData )
 {
-    VERIFY((SubresData.pData != nullptr) ^ (SubresData.pSrcBuffer != nullptr), "Either CPU memory pointer or GPU buffer must be provided, exclusively")
+    VERIFY((SubresData.pData != nullptr) ^ (SubresData.pSrcBuffer != nullptr), "Either CPU memory pointer or GPU buffer must be provided, exclusively");
     ValidateTextureRegion(TexDesc, MipLevel, Slice, DstBox);
 
     VERIFY_TEX_PARAMS( (SubresData.Stride & 0x03) == 0, "Texture data stride (", SubresData.Stride, ") must be at least 32-bit aligned" );

@@ -28,7 +28,6 @@
 #include <locale>
 #include <algorithm>
 #include <cctype>
-
 #include "DebugUtilities.h"
 
 namespace Diligent

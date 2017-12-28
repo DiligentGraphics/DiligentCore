@@ -51,6 +51,8 @@
 //  
 //
 
+#include <memory>
+
 #define NOMINMAX
 #include <d3dcommon.h>
 
@@ -118,7 +120,7 @@ struct D3DShaderResourceAttribs
         }
         else
         {
-            VERIFY(SamplerId == InvalidSamplerId, "Only textures can be assigned valid texture sampler")
+            VERIFY(SamplerId == InvalidSamplerId, "Only textures can be assigned valid texture sampler");
         }
 
         if(_IsStaticSampler)
@@ -202,7 +204,7 @@ struct D3DShaderResourceAttribs
         return BindPoint != InvalidBindPoint;
     }
 
-    static const Uint16 InvalidBindPoint = std::numeric_limits<Uint16>::max();
+    static constexpr Uint16 InvalidBindPoint = std::numeric_limits<Uint16>::max();
 
     String Name; // Move ctor will not work if it is const
     const Uint16 BindPoint;
@@ -217,34 +219,34 @@ struct D3DShaderResourceAttribs
             return Name;
     }
 private:
-    static const Uint16 MaxBindPoint = InvalidBindPoint-1;
-    static const Uint16 MaxBindCount = std::numeric_limits<Uint16>::max();
+    static constexpr Uint16 MaxBindPoint = InvalidBindPoint-1;
+    static constexpr Uint16 MaxBindCount = std::numeric_limits<Uint16>::max();
 
-    static const Uint32 ShaderInputTypeBits = 4; // Max value: D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER==11
-    static const Uint32 ShaderInputTypeMask = (1 << ShaderInputTypeBits)-1;
-    static const Uint32 ShaderInputTypeBitOffset = 0;
+    static constexpr Uint32 ShaderInputTypeBits = 4; // Max value: D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER==11
+    static constexpr Uint32 ShaderInputTypeMask = (1 << ShaderInputTypeBits)-1;
+    static constexpr Uint32 ShaderInputTypeBitOffset = 0;
     static_assert( D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER <= ShaderInputTypeMask, "Not enough bits to represent D3D_SHADER_INPUT_TYPE" );
 
-    static const Uint32 VariableTypeBits = 3; // Max value: SHADER_VARIABLE_TYPE_DYNAMIC == 2
-    static const Uint32 VariableTypeMask = (1<<VariableTypeBits)-1;
-    static const Uint32 VariableTypeBitOffset = ShaderInputTypeBitOffset + ShaderInputTypeBits;
+    static constexpr Uint32 VariableTypeBits = 3; // Max value: SHADER_VARIABLE_TYPE_DYNAMIC == 2
+    static constexpr Uint32 VariableTypeMask = (1<<VariableTypeBits)-1;
+    static constexpr Uint32 VariableTypeBitOffset = ShaderInputTypeBitOffset + ShaderInputTypeBits;
     static_assert( SHADER_VARIABLE_TYPE_NUM_TYPES-1 <= VariableTypeMask, "Not enough bits to represent SHADER_VARIABLE_TYPE" );
 
-    static const Uint32 SRVDimBits = 4; // Max value: D3D_SRV_DIMENSION_BUFFEREX == 11
-    static const Uint32 SRVDimMask = (1<<SRVDimBits)-1;
-    static const Uint32 SRVDimBitOffset = VariableTypeBitOffset + VariableTypeBits;
+    static constexpr Uint32 SRVDimBits = 4; // Max value: D3D_SRV_DIMENSION_BUFFEREX == 11
+    static constexpr Uint32 SRVDimMask = (1<<SRVDimBits)-1;
+    static constexpr Uint32 SRVDimBitOffset = VariableTypeBitOffset + VariableTypeBits;
     static_assert( D3D_SRV_DIMENSION_BUFFEREX <= SRVDimMask, "Not enough bits to represent D3D_SRV_DIMENSION" );
 
-    static const Uint32 SamplerIdBits = 32 - 1 - ShaderInputTypeBits - VariableTypeBits - SRVDimBits;
-    static const Uint32 SamplerIdMask = (1 << SamplerIdBits) - 1;
-    static const Uint32 SamplerIdBitOffset = SRVDimBitOffset + SRVDimBits;
+    static constexpr Uint32 SamplerIdBits = 32 - 1 - ShaderInputTypeBits - VariableTypeBits - SRVDimBits;
+    static constexpr Uint32 SamplerIdMask = (1 << SamplerIdBits) - 1;
+    static constexpr Uint32 SamplerIdBitOffset = SRVDimBitOffset + SRVDimBits;
 public:
-    static const Uint32 InvalidSamplerId = SamplerIdMask;
+    static constexpr Uint32 InvalidSamplerId = SamplerIdMask;
 private:
 
-    static const Uint32 IsStaticSamplerFlagBits = 1;
-    static const Uint32 IsStaticSamplerFlagMask = (1 << IsStaticSamplerFlagBits) - 1;
-    static const Uint32 IsStaticSamplerFlagBitOffset = SamplerIdBitOffset + SamplerIdBits;
+    static constexpr Uint32 IsStaticSamplerFlagBits = 1;
+    static constexpr Uint32 IsStaticSamplerFlagMask = (1 << IsStaticSamplerFlagBits) - 1;
+    static constexpr Uint32 IsStaticSamplerFlagBitOffset = SamplerIdBitOffset + SamplerIdBits;
     static_assert(IsStaticSamplerFlagBitOffset == 31, "Unexpected static sampler flag offset");
 
     static Uint32 PackAttribs(D3D_SHADER_INPUT_TYPE _InputType, SHADER_VARIABLE_TYPE _VariableType, D3D_SRV_DIMENSION SRVDimension, Uint32 SamplerId, bool _IsStaticSampler)

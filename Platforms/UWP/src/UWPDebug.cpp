@@ -25,7 +25,6 @@
 
 #include "UWPDebug.h"
 #include "FormatMessage.h"
-#include "FileSystem.h"
 #include <csignal>
 
 #define NOMINMAX
@@ -77,4 +76,14 @@ void WindowsStoreDebug::OutputDebugMessage( DebugMessageSeverity Severity, const
     str += Message;
     str += '\n';
     OutputDebugStringA( str.c_str() );
+}
+
+void DebugAssertionFailed(const Diligent::Char* Message, const char* Function, const char* File, int Line)
+{
+    WindowsStoreDebug :: AssertionFailed( Message, Function, File, Line );
+}
+
+void OutputDebugMessage(BasicPlatformDebug::DebugMessageSeverity Severity, const Diligent::Char* Message)
+{
+    WindowsStoreDebug::OutputDebugMessage( Severity, Message );
 }

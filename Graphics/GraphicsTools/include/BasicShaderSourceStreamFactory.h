@@ -33,9 +33,9 @@ namespace Diligent
     public:
         BasicShaderSourceStreamFactory( const Char *SearchDirectories = nullptr );
 
-        virtual void CreateInputStream( const Diligent::Char *Name, IFileStream **ppStream )override;
+        virtual void CreateInputStream( const Char *Name, IFileStream **ppStream )override;
 
     private:
-        std::vector<Diligent::String> m_SearchDirectories;
+        std::vector<String> m_SearchDirectories;
     };
 }

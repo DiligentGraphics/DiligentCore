@@ -55,7 +55,7 @@ namespace Diligent
                                           const StaticSamplerDesc *StaticSamplers,
                                           Uint32 NumStaticSamplers)
     {
-        VERIFY(GLProgram != 0, "Null GL program")
+        VERIFY(GLProgram != 0, "Null GL program");
 
         GLint numActiveUniforms = 0;
         glGetProgramiv( GLProgram, GL_ACTIVE_UNIFORMS, &numActiveUniforms );
@@ -284,7 +284,7 @@ namespace Diligent
                     {
 #ifdef _DEBUG
                         for(const auto &ub : m_UniformBlocks)
-                            VERIFY(ub.Name.compare(Name.data()) != 0, "Uniform block with the name \"", ub.Name, "\" has already been enumerated")
+                            VERIFY(ub.Name.compare(Name.data()) != 0, "Uniform block with the name \"", ub.Name, "\" has already been enumerated");
 #endif
                     }
                 }
@@ -332,7 +332,7 @@ namespace Diligent
                     {
 #ifdef _DEBUG
                         for(const auto &sb : m_StorageBlocks)
-                            VERIFY(sb.Name.compare(Name.data()) != 0, "Storage block with the name \"", sb.Name, "\" has already been enumerated")
+                            VERIFY(sb.Name.compare(Name.data()) != 0, "Storage block with the name \"", sb.Name, "\" has already been enumerated");
 #endif
                     }
                 }
@@ -469,9 +469,9 @@ namespace Diligent
                 if( !res->pResources[ArrInd] )
                 {
                     if( res->pResources.size() > 1)
-                        LOG_ERROR_MESSAGE( "No resource is bound to ", VarType, " variable \"", res->Name, "[", ArrInd, "]\"" )
+                        LOG_ERROR_MESSAGE( "No resource is bound to ", VarType, " variable \"", res->Name, "[", ArrInd, "]\"" );
                     else
-                        LOG_ERROR_MESSAGE( "No resource is bound to ", VarType, " variable \"", res->Name, "\"" )
+                        LOG_ERROR_MESSAGE( "No resource is bound to ", VarType, " variable \"", res->Name, "\"" );
                 }
             }
         }

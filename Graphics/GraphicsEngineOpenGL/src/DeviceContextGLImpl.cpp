@@ -289,7 +289,7 @@ namespace Diligent
         }
         else
         {
-            VERIFY(m_NumBoundRenderTargets != 0 || m_pBoundDepthStencil, "At least one render target or a depth stencil is expected" )
+            VERIFY(m_NumBoundRenderTargets != 0 || m_pBoundDepthStencil, "At least one render target or a depth stencil is expected");
 
             Uint32 NumRenderTargets = m_NumBoundRenderTargets;
             VERIFY(NumRenderTargets < MaxRenderTargets, "Too many render targets (", NumRenderTargets, ") are being set");
@@ -323,7 +323,7 @@ namespace Diligent
         auto *pRenderDeviceGL = ValidatedCast<RenderDeviceGLImpl>(m_pDevice.RawPtr());
         if (!m_pPipelineState)
         {
-            LOG_ERROR("No pipeline state is bound")
+            LOG_ERROR("No pipeline state is bound");
             return;
         }
         auto *pPipelineStateGL = ValidatedCast<PipelineStateGLImpl>(m_pPipelineState.RawPtr());
@@ -335,7 +335,7 @@ namespace Diligent
         VERIFY( Prog ^ Pipeline, "Only one of program or pipeline can be specified" );
         if( !(Prog || Pipeline) )
         {
-            LOG_ERROR_MESSAGE( "No program/program pipeline is set for the draw call" )
+            LOG_ERROR_MESSAGE("No program/program pipeline is set for the draw call");
             return;
         }
         auto ProgramPipelineSupported = DeviceCaps.bSeparableProgramSupported;
@@ -377,7 +377,7 @@ namespace Diligent
                     for(Uint32 ArrInd = 0; ArrInd < it->pResources.size(); ++ArrInd)
                     {
                         auto& Resource = it->pResources[ArrInd];
-                        if( Resource )
+                        if (Resource)
                         {
                             auto *pBufferOGL = ValidatedCast<BufferGLImpl>(Resource.RawPtr());
                             pBufferOGL->BufferMemoryBarrier(
@@ -385,26 +385,26 @@ namespace Diligent
                                                        // will reflect data written by shaders prior to the barrier
                                 m_ContextState);
 
-                            glBindBufferBase( GL_UNIFORM_BUFFER, UniformBuffBindPoint, pBufferOGL->m_GlBuffer );
-                            CHECK_GL_ERROR( "Failed to bind uniform buffer" );
+                            glBindBufferBase(GL_UNIFORM_BUFFER, UniformBuffBindPoint, pBufferOGL->m_GlBuffer);
+                            CHECK_GL_ERROR("Failed to bind uniform buffer");
                             //glBindBufferRange(GL_UNIFORM_BUFFER, it->Index, pBufferOGL->m_GlBuffer, 0, pBufferOGL->GetDesc().uiSizeInBytes);
 
-                            glUniformBlockBinding( GLProgID, it->Index + ArrInd, UniformBuffBindPoint );
-                            CHECK_GL_ERROR( "glUniformBlockBinding() failed" );
+                            glUniformBlockBinding(GLProgID, it->Index + ArrInd, UniformBuffBindPoint);
+                            CHECK_GL_ERROR("glUniformBlockBinding() failed");
 
                             ++UniformBuffBindPoint;
                         }
                         else
                         {
-                            #define LOG_MISSING_BINDING(VarType, Res, ArrInd)\
-                            {                                        \
+#define LOG_MISSING_BINDING(VarType, Res, ArrInd)\
+                            do{                                      \
                                 if(Res->pResources.size()>1)         \
-                                    LOG_ERROR_MESSAGE( "No ", VarType, " is bound to \"", Res->Name, '[', ArrInd, "]\" variable in shader \"", pShaderGL->GetDesc().Name, "\"" )\
+                                    LOG_ERROR_MESSAGE( "No ", VarType, " is bound to \"", Res->Name, '[', ArrInd, "]\" variable in shader \"", pShaderGL->GetDesc().Name, "\"" );\
                                 else                                 \
-                                    LOG_ERROR_MESSAGE( "No ", VarType, " is bound to \"", Res->Name, "\" variable in shader \"", pShaderGL->GetDesc().Name, "\"" )\
-                            }
+                                    LOG_ERROR_MESSAGE( "No ", VarType, " is bound to \"", Res->Name, "\" variable in shader \"", pShaderGL->GetDesc().Name, "\"" );\
+                            }while(false)
 
-                            LOG_MISSING_BINDING("uniform buffer", it, ArrInd)
+                            LOG_MISSING_BINDING("uniform buffer", it, ArrInd);
                         }
                     }
                 }
@@ -482,7 +482,7 @@ namespace Diligent
                         }
                         else
                         {
-                            LOG_MISSING_BINDING("texture sampler", it, ArrInd)
+                            LOG_MISSING_BINDING("texture sampler", it, ArrInd);
                         }
                     }
                 }
@@ -547,7 +547,7 @@ namespace Diligent
                         }
                         else
                         {
-                            LOG_MISSING_BINDING("image", it, ArrInd)
+                            LOG_MISSING_BINDING("image", it, ArrInd);
                         }
                     }
                 }
@@ -581,7 +581,7 @@ namespace Diligent
                         }
                         else
                         {
-                            LOG_MISSING_BINDING("shader storage block", it, ArrInd )
+                            LOG_MISSING_BINDING("shader storage block", it, ArrInd);
                         }
                     }
                 }
@@ -646,7 +646,7 @@ namespace Diligent
 
         if (!m_pPipelineState)
         {
-            LOG_ERROR("No pipeline state is bound.")
+            LOG_ERROR("No pipeline state is bound.");
             return;
         }
 

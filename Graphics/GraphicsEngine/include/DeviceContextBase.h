@@ -202,13 +202,13 @@ inline void DeviceContextBase<BaseInterface> :: SetVertexBuffers( Uint32 StartSl
 {
     if( StartSlot >= MaxBufferSlots )
     {
-        LOG_ERROR_MESSAGE( "Start vertex buffer slot ", StartSlot, " is out of allowed range [0, ", MaxBufferSlots-1, "]." )
+        LOG_ERROR_MESSAGE( "Start vertex buffer slot ", StartSlot, " is out of allowed range [0, ", MaxBufferSlots-1, "]." );
         return;
     }
 
     if( StartSlot + NumBuffersSet > MaxBufferSlots )
     {
-        LOG_ERROR_MESSAGE( "The range of vertex buffer slots being set [", StartSlot, ", ", StartSlot + NumBuffersSet - 1, "] is out of allowed range  [0, ", MaxBufferSlots - 1, "]." )
+        LOG_ERROR_MESSAGE( "The range of vertex buffer slots being set [", StartSlot, ", ", StartSlot + NumBuffersSet - 1, "] is out of allowed range  [0, ", MaxBufferSlots - 1, "]." );
         NumBuffersSet = MaxBufferSlots - StartSlot;
     }
 
@@ -383,7 +383,7 @@ inline void DeviceContextBase<BaseInterface> :: GetRenderTargetSize( Uint32 &RTW
         }
         else
         {
-            LOG_ERROR("Failed to determine default render target size: swap chain is not initialized in the device context")
+            LOG_ERROR("Failed to determine default render target size: swap chain is not initialized in the device context");
         }
     }
 }
@@ -396,7 +396,7 @@ inline void DeviceContextBase<BaseInterface> :: SetViewports( Uint32 NumViewport
         GetRenderTargetSize( RTWidth, RTHeight );
     }
 
-    VERIFY(NumViewports < MaxRenderTargets, "Num viewports (", NumViewports,") exceeds the limit (", MaxRenderTargets, ")")
+    VERIFY(NumViewports < MaxRenderTargets, "Num viewports (", NumViewports, ") exceeds the limit (", MaxRenderTargets, ")");
     m_NumViewports = std::min(MaxRenderTargets, NumViewports);
     
     Viewport DefaultVP( 0, 0, static_cast<float>(RTWidth), static_cast<float>(RTHeight) );
@@ -434,7 +434,7 @@ inline void DeviceContextBase<BaseInterface> :: SetScissorRects( Uint32 NumRects
         GetRenderTargetSize( RTWidth, RTHeight );
     }
 
-    VERIFY(NumRects < MaxRenderTargets, "Num scissor rects (", NumRects,") exceeds the limit (", MaxRenderTargets, ")")
+    VERIFY(NumRects < MaxRenderTargets, "Num scissor rects (", NumRects, ") exceeds the limit (", MaxRenderTargets, ")");
     m_NumScissorRects = std::min(MaxRenderTargets, NumRects);
 
     for( Uint32 sr = 0; sr < m_NumScissorRects; ++sr )
@@ -578,7 +578,7 @@ inline void DeviceContextBase<BaseInterface> :: ClearStateCache()
 #ifdef _DEBUG
     for (Uint32 rt = m_NumBoundRenderTargets; rt < _countof(m_pBoundRenderTargets); ++rt)
     {
-        VERIFY(m_pBoundRenderTargets[rt] == nullptr, "Non-null render target found")
+        VERIFY(m_pBoundRenderTargets[rt] == nullptr, "Non-null render target found");
     }
 #endif
     m_NumBoundRenderTargets = 0;

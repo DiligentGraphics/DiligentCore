@@ -192,7 +192,7 @@ public:
             for (Uint32 v = 0; v < this->m_Desc.NumVariables; ++v, ++Str)
             {
                 m_VariablesDesc[v] = this->m_Desc.VariableDesc[v];
-                VERIFY( m_VariablesDesc[v].Name != nullptr, "Variable name not provided" )
+                VERIFY(m_VariablesDesc[v].Name != nullptr, "Variable name not provided");
                 *Str = m_VariablesDesc[v].Name;
                 m_VariablesDesc[v].Name = Str->c_str();
             }
@@ -203,7 +203,7 @@ public:
             for (Uint32 s = 0; s < this->m_Desc.NumStaticSamplers; ++s, ++Str)
             {
                 m_StaticSamplers[s] = this->m_Desc.StaticSamplers[s];
-                VERIFY( m_StaticSamplers[s].TextureName != nullptr, "Static sampler texture name not provided" )
+                VERIFY(m_StaticSamplers[s].TextureName != nullptr, "Static sampler texture name not provided");
                 *Str = m_StaticSamplers[s].TextureName;
                 m_StaticSamplers[s].TextureName = Str->c_str();
 #ifdef _DEBUG
@@ -212,14 +212,14 @@ public:
                        (BorderColor[0] == 0 && BorderColor[1] == 0 && BorderColor[2] == 0 && BorderColor[3] == 1) ||
                        (BorderColor[0] == 1 && BorderColor[1] == 1 && BorderColor[2] == 1 && BorderColor[3] == 0) ) )
                 {
-                    LOG_WARNING_MESSAGE("Static sampler for variable \"", *Str , "\" specifies border color (", BorderColor[0], ", ", BorderColor[1], ", ",  BorderColor[2], ", ",  BorderColor[3], "). D3D12 static samplers only allow transparent black (0,0,0,1), opaque black (0,0,0,0) or opaque white (1,1,1,0) as border colors")
+                    LOG_WARNING_MESSAGE("Static sampler for variable \"", *Str , "\" specifies border color (", BorderColor[0], ", ", BorderColor[1], ", ",  BorderColor[2], ", ",  BorderColor[3], "). D3D12 static samplers only allow transparent black (0,0,0,1), opaque black (0,0,0,0) or opaque white (1,1,1,0) as border colors");
                 }
 #endif
             }
             this->m_Desc.StaticSamplers = m_StaticSamplers.data();
         }
 
-        VERIFY_EXPR(Str == m_StringPool.end())
+        VERIFY_EXPR(Str == m_StringPool.end());
     }
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE( IID_Shader, TDeviceObjectBase )

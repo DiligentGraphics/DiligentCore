@@ -67,7 +67,7 @@ namespace Diligent
 	    auto hr = pd3d12Device->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE, &ResourceDesc,
 		    DefaultUsage, nullptr, __uuidof(m_pBuffer), reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&m_pBuffer)) );
         if(FAILED(hr))
-            LOG_ERROR("Failed to create new upload ring buffer")
+            LOG_ERROR("Failed to create new upload ring buffer");
 
 	    m_pBuffer->SetName(L"Upload Ring Buffer");
         
@@ -78,14 +78,14 @@ namespace Diligent
 	        m_pBuffer->Map(0, nullptr, &m_CpuVirtualAddress);
         }
 
-        LOG_INFO_MESSAGE("GPU ring buffer created. Size: ", MaxSize, "; GPU virtual address 0x", std::hex, m_GpuVirtualAddress)
+        LOG_INFO_MESSAGE("GPU ring buffer created. Size: ", MaxSize, "; GPU virtual address 0x", std::hex, m_GpuVirtualAddress);
     }
 
     void GPURingBuffer::Destroy()
     {
         if(m_pBuffer)
         {
-            LOG_INFO_MESSAGE("Destroying GPU ring buffer. Size: ", m_pBuffer->GetDesc().Width, "; GPU virtual address 0x", std::hex, m_GpuVirtualAddress)
+            LOG_INFO_MESSAGE("Destroying GPU ring buffer. Size: ", m_pBuffer->GetDesc().Width, "; GPU virtual address 0x", std::hex, m_GpuVirtualAddress);
         }
 
 	    if (m_CpuVirtualAddress)

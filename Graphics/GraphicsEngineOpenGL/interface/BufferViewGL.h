@@ -32,11 +32,11 @@ namespace Diligent
 {
 
 // {927A865B-3CEB-4743-9A22-2A1397A73E6D}
-static const Diligent::INTERFACE_ID IID_BufferViewGL =
+static constexpr INTERFACE_ID IID_BufferViewGL =
 { 0x927a865b, 0x3ceb, 0x4743, { 0x9a, 0x22, 0x2a, 0x13, 0x97, 0xa7, 0x3e, 0x6d } };
 
 /// Interface to the buffer view object implemented in OpenGL
-class IBufferViewGL : public Diligent::IBufferView
+class IBufferViewGL : public IBufferView
 {
 public:
     //const GLObjectWrappers::GLTextureObj& GetTexBufferHandle(){ return m_GLTexBuffer; }

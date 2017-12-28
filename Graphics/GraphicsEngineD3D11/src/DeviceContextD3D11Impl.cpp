@@ -246,13 +246,13 @@ namespace Diligent
 #ifdef _DEBUG
                     else
                     {
-                        VERIFY_EXPR(CommitResources)
+                        VERIFY_EXPR(CommitResources);
                         auto &CB = CachedCBs[cb];
                         if( auto *pBuff = const_cast<BufferD3D11Impl*>(CB.pBuff.RawPtr()) )
                         {
                             if (!pBuff->CheckState(D3D11BufferState::ConstantBuffer))
                             {
-                                LOG_ERROR_MESSAGE("Buffer \"", pBuff->GetDesc().Name, "\" has not been transitioned to Constant Buffer state. Did you forget to call TransitionResources()?")
+                                LOG_ERROR_MESSAGE("Buffer \"", pBuff->GetDesc().Name, "\" has not been transitioned to Constant Buffer state. Did you forget to call TransitionResources()?");
                             }
                         }
                     }
@@ -336,19 +336,19 @@ namespace Diligent
 #ifdef _DEBUG
                     else
                     {
-                        VERIFY_EXPR(CommitResources)
+                        VERIFY_EXPR(CommitResources);
                         if (auto *pTexture = const_cast<TextureBaseD3D11*>(SRVRes.pTexture))
                         {
                             if( !pTexture->CheckState(D3D11TextureState::ShaderResource) )
                             {
-                                LOG_ERROR_MESSAGE("Texture \"", pTexture->GetDesc().Name, "\" has not been transitioned to Shader Resource state. Did you forget to call TransitionResources()?")
+                                LOG_ERROR_MESSAGE("Texture \"", pTexture->GetDesc().Name, "\" has not been transitioned to Shader Resource state. Did you forget to call TransitionResources()?");
                             }
                         }
                         else if(auto *pBuffer = const_cast<BufferD3D11Impl*>(SRVRes.pBuffer))
                         {
                             if( !pBuffer->CheckState(D3D11BufferState::ShaderResource) )
                             {
-                                LOG_ERROR_MESSAGE("Texture \"", pBuffer->GetDesc().Name, "\" has not been transitioned to Shader Resource state. Did you forget to call TransitionResources()?")
+                                LOG_ERROR_MESSAGE("Texture \"", pBuffer->GetDesc().Name, "\" has not been transitioned to Shader Resource state. Did you forget to call TransitionResources()?");
                             }
                         }
                     }
@@ -463,14 +463,14 @@ namespace Diligent
                         {
                             if( !pTexture->CheckState(D3D11TextureState::UnorderedAccess) )
                             {
-                                LOG_ERROR_MESSAGE("Texture \"", pTexture->GetDesc().Name, "\" has not been transitioned to Unordered Access state. Did you forget to call TransitionResources()?")
+                                LOG_ERROR_MESSAGE("Texture \"", pTexture->GetDesc().Name, "\" has not been transitioned to Unordered Access state. Did you forget to call TransitionResources()?");
                             }
                         }
                         else if( auto *pBuffer = const_cast<BufferD3D11Impl*>(UAVRes.pBuffer) )
                         {
                             if( !pBuffer->CheckState(D3D11BufferState::UnorderedAccess) )
                             {
-                                LOG_ERROR_MESSAGE("Buffer \"", pBuffer->GetDesc().Name, "\" has not been transitioned to Unordered Access state. Did you forget to call TransitionResources()?")
+                                LOG_ERROR_MESSAGE("Buffer \"", pBuffer->GetDesc().Name, "\" has not been transitioned to Unordered Access state. Did you forget to call TransitionResources()?");
                             }
                         }
                     }
@@ -1013,7 +1013,7 @@ namespace Diligent
             // Pop null resources from the end of arrays
             while( NumCommittedSlots > 0 && CommittedD3D11Resources[NumCommittedSlots-1] == nullptr )
             {
-                VERIFY( CommittedD3D11Views[NumSlots-1] == nullptr, "Unexpected non-null resource view" )
+                VERIFY( CommittedD3D11Views[NumSlots-1] == nullptr, "Unexpected non-null resource view" );
                 --NumCommittedSlots;
             }
         }
@@ -1021,7 +1021,7 @@ namespace Diligent
 
     void DeviceContextD3D11Impl::UnbindTextureFromInput( TextureBaseD3D11 *pTexture, ID3D11Resource *pd3d11Resource )
     {
-        VERIFY( pTexture, "Null texture provided" )
+        VERIFY( pTexture, "Null texture provided" );
         if( !pTexture )return;
 
         UnbindResourceView( m_CommittedD3D11SRVs, m_CommittedD3D11SRVResources, m_NumCommittedSRVs, pTexture, pd3d11Resource, SetSRVMethods );
@@ -1030,7 +1030,7 @@ namespace Diligent
 
     void DeviceContextD3D11Impl::UnbindBufferFromInput( BufferD3D11Impl *pBuffer, ID3D11Resource *pd3d11Buffer )
     {
-        VERIFY( pBuffer, "Null buffer provided" )
+        VERIFY( pBuffer, "Null buffer provided" );
         if( !pBuffer )return;
 
         if( pBuffer->CheckState(D3D11BufferState::ShaderResource) )
@@ -1112,7 +1112,7 @@ namespace Diligent
 
     void DeviceContextD3D11Impl::UnbindResourceFromUAV( IDeviceObject *pResource, ID3D11Resource *pd3d11Resource )
     {
-        VERIFY( pResource, "Null resource provided" )
+        VERIFY( pResource, "Null resource provided" );
         if( !pResource )return;
 
         UnbindResourceView( m_CommittedD3D11UAVs, m_CommittedD3D11UAVResources, m_NumCommittedUAVs, pResource, pd3d11Resource, SetUAVMethods );
@@ -1120,7 +1120,7 @@ namespace Diligent
 
     void DeviceContextD3D11Impl::UnbindTextureFromRenderTarget( TextureBaseD3D11 *pTexture )
     {
-        VERIFY( pTexture, "Null resource provided" )
+        VERIFY( pTexture, "Null resource provided" );
         if( !pTexture )return;
 
         bool bCommitRenderTargets = false;
@@ -1144,7 +1144,7 @@ namespace Diligent
 
     void DeviceContextD3D11Impl::UnbindTextureFromDepthStencil(TextureBaseD3D11 *pTexD3D11)
     {
-        VERIFY( pTexD3D11, "Null resource provided" )
+        VERIFY( pTexD3D11, "Null resource provided" );
         if( !pTexD3D11 )return;
         
         if( m_pBoundDepthStencil && m_pBoundDepthStencil->GetTexture() == pTexD3D11 )
@@ -1518,12 +1518,12 @@ namespace Diligent
             {
                 if( Slot < NumCommittedResources )
                 {
-                    VERIFY( CommittedResources[Slot] == pctxResources[Slot], ResourceName, " binding mismatch found for ", ShaderName, " shader type at slot ", Slot )
+                    VERIFY( CommittedResources[Slot] == pctxResources[Slot], ResourceName, " binding mismatch found for ", ShaderName, " shader type at slot ", Slot );
                 }
                 else
                 {
-                    VERIFY( pctxResources[Slot] == nullptr, ResourceName, " binding mismatch found for ", ShaderName, " shader type at slot ", Slot )
-                    VERIFY( CommittedResources[Slot] == nullptr, ResourceName, " unexpected non-null resource found for ", ShaderName, " shader type at slot ", Slot )
+                    VERIFY( pctxResources[Slot] == nullptr, ResourceName, " binding mismatch found for ", ShaderName, " shader type at slot ", Slot );
+                    VERIFY( CommittedResources[Slot] == nullptr, ResourceName, " unexpected non-null resource found for ", ShaderName, " shader type at slot ", Slot );
                 }
                 
                 if( pctxResources[Slot] )
@@ -1557,7 +1557,7 @@ namespace Diligent
                 {
                     CComPtr<ID3D11Resource> pRefRes;
                     Views[Slot]->GetResource(&pRefRes);
-                    VERIFY( pRefRes == Resources[Slot], "Inconsistent ", ResourceName, " detected at slot ", Slot, " in shader ", ShaderName, ". The resource in the view does not match cached D3D11 resource" )
+                    VERIFY( pRefRes == Resources[Slot], "Inconsistent ", ResourceName, " detected at slot ", Slot, " in shader ", ShaderName, ". The resource in the view does not match cached D3D11 resource" );
                 }
             }
         }
@@ -1601,7 +1601,7 @@ namespace Diligent
             VERIFY(m_CommittedD3D11IndexBuffer == pctxIndexBuffer, "Index buffer binding mismatch detected");
             if( Fmt==DXGI_FORMAT_R32_UINT )
             {
-                VERIFY(m_CommittedIBFormat == VT_UINT32, "Index buffer format mismatch detected")
+                VERIFY(m_CommittedIBFormat == VT_UINT32, "Index buffer format mismatch detected");
             }
             else if( Fmt==DXGI_FORMAT_R16_UINT )
             {

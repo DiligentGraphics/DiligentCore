@@ -34,7 +34,7 @@ namespace Diligent
 {
 
 // {B4B395B9-AC99-4E8A-B7E1-9DCA0D485618}
-static const Diligent::INTERFACE_ID IID_RenderDeviceGL =
+static constexpr INTERFACE_ID IID_RenderDeviceGL =
 { 0xb4b395b9, 0xac99, 0x4e8a, { 0xb7, 0xe1, 0x9d, 0xca, 0xd, 0x48, 0x56, 0x18 } };
 
 /// Interface to the render device object implemented in OpenGL

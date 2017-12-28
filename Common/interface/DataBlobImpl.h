@@ -23,19 +23,38 @@
 
 #pragma once
 
+/// \file
+/// Implementation for the IDataBlob interface
+
 #include "BasicTypes.h"
+#include "ObjectBase.h"
+#include "DataBlob.h"
+#include <vector>
 
-struct BasicPlatformDebug
+namespace Diligent
 {
-    enum class DebugMessageSeverity
-    {
-        Info,
-        Warning,
-        Error,
-        FatalError
-    };
+    
+/// Base interface for a file stream
+class DataBlobImpl : public Diligent::ObjectBase<IDataBlob>
+{
+public:
+    typedef Diligent::ObjectBase<IDataBlob> TBase;
 
-    static void AssertionFailed( const Diligent::Char* /*Message*/, const char* /*Function*/, const char* /*File*/, int /*Line*/ ){}
-    static void OutputDebugMessage( DebugMessageSeverity /*Severity*/, const Diligent::Char* /*Message */){}
-    static Diligent::String FormatAssertionFailedMessage(const Diligent::Char* /*Message*/, const char* /*Function*/, const char* /*File*/, int /*Line*/);
+    DataBlobImpl( IReferenceCounters *pRefCounters, size_t InitialSize = 0 );
+
+    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
+
+    /// Sets the size of the internal data buffer
+    virtual void Resize( size_t NewSize )override;
+
+    /// Returns the size of the internal data buffer
+    virtual size_t GetSize()override;
+
+    /// Returns the pointer to the internal data buffer
+    virtual void* GetDataPtr()override;
+
+private:
+    std::vector<Diligent::Uint8> m_DataBuff;
 };
+
+}

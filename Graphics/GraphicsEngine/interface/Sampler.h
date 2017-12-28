@@ -33,7 +33,7 @@ namespace Diligent
 {
 
 // {595A59BF-FA81-4855-BC5E-C0E048745A95}
-static const Diligent::INTERFACE_ID IID_Sampler =
+static constexpr INTERFACE_ID IID_Sampler =
 { 0x595a59bf, 0xfa81, 0x4855, { 0xbc, 0x5e, 0xc0, 0xe0, 0x48, 0x74, 0x5a, 0x95 } };
 
 /// Sampler description

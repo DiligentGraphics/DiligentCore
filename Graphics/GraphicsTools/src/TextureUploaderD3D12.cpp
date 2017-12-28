@@ -59,7 +59,7 @@ namespace Diligent
         ~UploadBufferD3D12()
         {
             m_pStagingBuffer->Unmap(nullptr, MAP_WRITE, 0);
-            LOG_INFO_MESSAGE("Releasing staging buffer of size ", m_pStagingBuffer->GetDesc().uiSizeInBytes )
+            LOG_INFO_MESSAGE("Releasing staging buffer of size ", m_pStagingBuffer->GetDesc().uiSizeInBytes);
         }
           
         void SignalCopyScheduled()
@@ -156,7 +156,7 @@ namespace Diligent
             {
                 const auto &desc = BuffQueueIt.first;
                 auto &FmtInfo = m_pDevice->GetTextureFormatInfo(desc.Format);
-                LOG_INFO_MESSAGE("TextureUploaderD3D12: releasing ", BuffQueueIt.second.size(), ' ', desc.Width, 'x', desc.Height, 'x', desc.Depth, ' ', FmtInfo.Name, " upload buffer(s) ")
+                LOG_INFO_MESSAGE("TextureUploaderD3D12: releasing ", BuffQueueIt.second.size(), ' ', desc.Width, 'x', desc.Height, 'x', desc.Depth, ' ', FmtInfo.Name, " upload buffer(s) ");
             }
         }
     }
@@ -238,11 +238,11 @@ namespace Diligent
             pStagingBuffer->Map(nullptr, MAP_WRITE, 0, CpuVirtualAddress);
             if (CpuVirtualAddress == nullptr)
             {
-                LOG_ERROR_MESSAGE("Failed to map upload buffer")
+                LOG_ERROR_MESSAGE("Failed to map upload buffer");
                 return;
             }
 
-            LOG_INFO_MESSAGE("Created staging buffer of size ", BuffDesc.uiSizeInBytes )
+            LOG_INFO_MESSAGE("Created staging buffer of size ", BuffDesc.uiSizeInBytes);
 
             RefCntAutoPtr<UploadBufferD3D12> pUploadBuffer(MakeNewRCObj<UploadBufferD3D12>()(m_pInternalData->m_pDeviceD3D12, Desc, pStagingBuffer, CpuVirtualAddress, RowStride, 0));
             *ppBuffer = pUploadBuffer.Detach();

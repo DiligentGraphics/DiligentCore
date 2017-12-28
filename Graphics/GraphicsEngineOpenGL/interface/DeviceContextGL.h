@@ -32,11 +32,11 @@ namespace Diligent
 {
 
 // {3464FDF1-C548-4935-96C3-B454C9DF6F6A}
-static const Diligent::INTERFACE_ID IID_DeviceContextGL =
+static constexpr INTERFACE_ID IID_DeviceContextGL =
 { 0x3464fdf1, 0xc548, 0x4935, { 0x96, 0xc3, 0xb4, 0x54, 0xc9, 0xdf, 0x6f, 0x6a } };
 
 /// Interface to the device context object implemented in OpenGL
-class IDeviceContextGL : public Diligent::IDeviceContext
+class IDeviceContextGL : public IDeviceContext
 {
 public:
 

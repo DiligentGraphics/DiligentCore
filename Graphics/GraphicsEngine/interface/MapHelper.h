@@ -109,7 +109,7 @@ public:
         Unmap();
 #ifdef _DEBUG
         auto &BuffDesc = pBuffer->GetDesc();
-        VERIFY(sizeof(DataType) <= BuffDesc.uiSizeInBytes, "Data type size exceeds buffer size")
+        VERIFY(sizeof(DataType) <= BuffDesc.uiSizeInBytes, "Data type size exceeds buffer size");
 #endif
         m_pContext = pContext;
         m_pBuffer = pBuffer;

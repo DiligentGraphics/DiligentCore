@@ -4,6 +4,14 @@ add_library(PlatformInterface INTERFACE)
 
 target_include_directories(PlatformInterface INTERFACE interface)
 
+set(PLATFORM_INTERFACE_HEADERS
+	../interface/Atomics.h
+	../interface/FileSystem.h
+	../interface/PlatformDebug.h
+	../interface/PlatformDefinitions.h
+	../interface/PlatformMisc.h
+)
+
 add_subdirectory(Basic)
 
 if(PLATFORM_WIN32)

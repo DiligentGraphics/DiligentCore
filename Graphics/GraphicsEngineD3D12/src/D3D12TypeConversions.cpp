@@ -103,7 +103,7 @@ D3D12_LOGIC_OP LogicOperationToD3D12LogicOp( LOGIC_OPERATION lo )
     }
     else
     {
-        UNEXPECTED("Incorrect blend factor (", lo, ")" )
+        UNEXPECTED("Incorrect blend factor (", lo, ")" );
         return static_cast<D3D12_LOGIC_OP>( 0 );
     }
 }
@@ -268,7 +268,7 @@ void BufferViewDesc_to_D3D12_SRV_DESC(const BufferDesc &BuffDesc, const BufferVi
     BufferViewDesc_to_D3D_SRV_DESC(BuffDesc, SRVDesc, D3D12SRVDesc);
     D3D12SRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
     D3D12SRVDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
-    VERIFY_EXPR(BuffDesc.BindFlags & BIND_SHADER_RESOURCE)
+    VERIFY_EXPR(BuffDesc.BindFlags & BIND_SHADER_RESOURCE);
     if (BuffDesc.Mode == BUFFER_MODE_STRUCTURED)
         D3D12SRVDesc.Buffer.StructureByteStride = BuffDesc.ElementByteStride; 
 }
@@ -277,7 +277,7 @@ void BufferViewDesc_to_D3D12_UAV_DESC(const BufferDesc &BuffDesc, const BufferVi
 {
     BufferViewDesc_to_D3D_UAV_DESC(BuffDesc, UAVDesc, D3D12UAVDesc);
     D3D12UAVDesc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
-    VERIFY_EXPR(BuffDesc.BindFlags & BIND_UNORDERED_ACCESS)
+    VERIFY_EXPR(BuffDesc.BindFlags & BIND_UNORDERED_ACCESS);
     if (BuffDesc.Mode == BUFFER_MODE_STRUCTURED)
         D3D12UAVDesc.Buffer.StructureByteStride = BuffDesc.ElementByteStride; 
 }
@@ -293,7 +293,7 @@ D3D12_STATIC_BORDER_COLOR BorderColorToD3D12StaticBorderColor(const Float32 Bord
         StaticBorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE;
     else
     {
-        LOG_ERROR_MESSAGE("Static samplers only allow transparent black (0,0,0,1), opaque black (0,0,0,0) or opaque white (1,1,1,0) as border colors.")
+        LOG_ERROR_MESSAGE("Static samplers only allow transparent black (0,0,0,1), opaque black (0,0,0,0) or opaque white (1,1,1,0) as border colors.");
     }
     return StaticBorderColor;
 }

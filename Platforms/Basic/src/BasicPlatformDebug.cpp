@@ -21,8 +21,6 @@
  *  of the possibility of such damages.
  */
 
-#include "pch.h"
-
 #include "BasicPlatformDebug.h"
 #include "FormatMessage.h"
 #include "BasicFileSystem.h"

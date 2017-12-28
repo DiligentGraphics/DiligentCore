@@ -102,35 +102,35 @@ static BufferDesc BuffDescFromD3D11Buffer(ID3D11Buffer *pd3d11Buffer, BufferDesc
     D3D11_BUFFER_DESC D3D11BuffDesc;
     pd3d11Buffer->GetDesc(&D3D11BuffDesc);
 
-    VERIFY(BuffDesc.uiSizeInBytes == 0 || BuffDesc.uiSizeInBytes == D3D11BuffDesc.ByteWidth, "Buffer size specified by the BufferDesc (",BuffDesc.uiSizeInBytes,") does not match d3d11 buffer size (", D3D11BuffDesc.ByteWidth, ")" )
+    VERIFY(BuffDesc.uiSizeInBytes == 0 || BuffDesc.uiSizeInBytes == D3D11BuffDesc.ByteWidth, "Buffer size specified by the BufferDesc (",BuffDesc.uiSizeInBytes,") does not match d3d11 buffer size (", D3D11BuffDesc.ByteWidth, ")" );
     BuffDesc.uiSizeInBytes = Uint32{ D3D11BuffDesc.ByteWidth };
 
     auto BindFlags = D3D11BindFlagsToBindFlags(D3D11BuffDesc.BindFlags);
     if (D3D11BuffDesc.MiscFlags & D3D11_RESOURCE_MISC_DRAWINDIRECT_ARGS)
         BindFlags |= BIND_INDIRECT_DRAW_ARGS;
-    VERIFY(BuffDesc.BindFlags == 0 || BuffDesc.BindFlags == BindFlags, "Bind flags specified by the BufferDesc (", BuffDesc.BindFlags,") do not match bind flags recovered from d3d11 buffer desc (", BindFlags, ")" )
+    VERIFY(BuffDesc.BindFlags == 0 || BuffDesc.BindFlags == BindFlags, "Bind flags specified by the BufferDesc (", BuffDesc.BindFlags,") do not match bind flags recovered from d3d11 buffer desc (", BindFlags, ")" );
     BuffDesc.BindFlags = BindFlags;
 
     auto Usage = D3D11UsageToUsage(D3D11BuffDesc.Usage);
-    VERIFY(BuffDesc.Usage == 0 || BuffDesc.Usage == Usage, "Usage specified by the BufferDesc (", BuffDesc.Usage,") do not match buffer usage recovered from d3d11 buffer desc (", Usage, ")" )
+    VERIFY(BuffDesc.Usage == 0 || BuffDesc.Usage == Usage, "Usage specified by the BufferDesc (", BuffDesc.Usage,") do not match buffer usage recovered from d3d11 buffer desc (", Usage, ")" );
     BuffDesc.Usage = Usage;
 
     auto CPUAccessFlags = D3D11CPUAccessFlagsToCPUAccessFlags(D3D11BuffDesc.CPUAccessFlags);
-    VERIFY(BuffDesc.CPUAccessFlags == 0 || BuffDesc.CPUAccessFlags == CPUAccessFlags, "CPU access flags specified by the BufferDesc (", BuffDesc.CPUAccessFlags, ") do not match CPU access flags recovered from d3d11 buffer desc (", CPUAccessFlags, ")")
+    VERIFY(BuffDesc.CPUAccessFlags == 0 || BuffDesc.CPUAccessFlags == CPUAccessFlags, "CPU access flags specified by the BufferDesc (", BuffDesc.CPUAccessFlags, ") do not match CPU access flags recovered from d3d11 buffer desc (", CPUAccessFlags, ")");
     BuffDesc.CPUAccessFlags = CPUAccessFlags;
 
     if( (BuffDesc.BindFlags & BIND_UNORDERED_ACCESS) || (BuffDesc.BindFlags & BIND_SHADER_RESOURCE) )
     {
         if(D3D11BuffDesc.MiscFlags & D3D11_RESOURCE_MISC_BUFFER_STRUCTURED)
         {
-            VERIFY(BuffDesc.Mode == BUFFER_MODE_UNDEFINED || BuffDesc.Mode == BUFFER_MODE_STRUCTURED, "Unexpected buffer mode")
+            VERIFY(BuffDesc.Mode == BUFFER_MODE_UNDEFINED || BuffDesc.Mode == BUFFER_MODE_STRUCTURED, "Unexpected buffer mode");
             BuffDesc.Mode = BUFFER_MODE_STRUCTURED;
-            VERIFY(BuffDesc.ElementByteStride == 0 || BuffDesc.ElementByteStride == D3D11BuffDesc.StructureByteStride, "Element byte stride specified by the BufferDesc (", BuffDesc.ElementByteStride, ") does not match structured byte stride recovered from d3d11 buffer desc (", D3D11BuffDesc.StructureByteStride, ")")
+            VERIFY(BuffDesc.ElementByteStride == 0 || BuffDesc.ElementByteStride == D3D11BuffDesc.StructureByteStride, "Element byte stride specified by the BufferDesc (", BuffDesc.ElementByteStride, ") does not match structured byte stride recovered from d3d11 buffer desc (", D3D11BuffDesc.StructureByteStride, ")");
             BuffDesc.ElementByteStride = Uint32{ D3D11BuffDesc.StructureByteStride };
         }
         else
         {
-            VERIFY(BuffDesc.Mode == BUFFER_MODE_UNDEFINED || BuffDesc.Mode == BUFFER_MODE_FORMATTED, "Unexpected buffer mode")
+            VERIFY(BuffDesc.Mode == BUFFER_MODE_UNDEFINED || BuffDesc.Mode == BUFFER_MODE_FORMATTED, "Unexpected buffer mode");
             BuffDesc.Mode = BUFFER_MODE_FORMATTED;
             VERIFY( BuffDesc.Format.ValueType != VT_UNDEFINED, "Value type is not specified for a formatted buffer" );
             VERIFY( BuffDesc.Format.NumComponents != 0, "Num components cannot be zero in a formated buffer" );
@@ -250,7 +250,7 @@ void BufferD3D11Impl::CreateViewInternal( const BufferViewDesc &OrigViewDesc, IB
     catch( const std::runtime_error & )
     {
         const auto *ViewTypeName = GetBufferViewTypeLiteralName(OrigViewDesc.ViewType);
-        LOG_ERROR("Failed to create view \"", OrigViewDesc.Name ? OrigViewDesc.Name : "", "\" (", ViewTypeName, ") for buffer \"", m_Desc.Name, "\"" )
+        LOG_ERROR("Failed to create view \"", OrigViewDesc.Name ? OrigViewDesc.Name : "", "\" (", ViewTypeName, ") for buffer \"", m_Desc.Name, "\"" );
     }
 }
 

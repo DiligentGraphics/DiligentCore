@@ -16,25 +16,27 @@ set(SOURCE
 	../Win32/src/Win32Atomics.cpp
 )
 
-add_library(UniversalWindowsPlatform ${SOURCE} ${INCLUDE})
+add_library(UniversalWindowsPlatform ${SOURCE} ${INCLUDE} ${PLATFORM_INTERFACE_HEADERS})
 set_common_target_properties(UniversalWindowsPlatform)
 
 target_include_directories(UniversalWindowsPlatform 
 PUBLIC
+	../Win32/include
 	include
+PRIVATE
+	../../Common/interface # Required to find StringTools.h 
 )
 
 target_link_libraries(UniversalWindowsPlatform 
-PRIVATE 
-	BuildSettings 
-	Common 
 PUBLIC
-	PlatformInterface
+	BuildSettings 
 	BasicPlatform
+	PlatformInterface
 )
 
 source_group("src" FILES ${SOURCE})
 source_group("include" FILES ${INCLUDE})
+source_group("interface" FILES ${PLATFORM_INTERFACE_HEADERS})
 
 set_target_properties(UniversalWindowsPlatform PROPERTIES
 	FOLDER Core/Platforms

@@ -58,7 +58,7 @@ namespace Diligent
     {
     public:
         typedef size_t OffsetType;
-        static const OffsetType InvalidOffset = static_cast<OffsetType>(-1);
+        static constexpr OffsetType InvalidOffset = static_cast<OffsetType>(-1);
 
     private:
         struct FreeBlockInfo;

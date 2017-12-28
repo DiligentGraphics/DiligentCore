@@ -117,7 +117,7 @@ public:
 
     void Initialize(IMemoryAllocator &MemAllocator, Uint32 NumTables, Uint32 TableSizes[]);
 
-    static const Uint32 InvalidDescriptorOffset = static_cast<Uint32>(-1);
+    static constexpr Uint32 InvalidDescriptorOffset = static_cast<Uint32>(-1);
 
     //http://diligentgraphics.com/diligent-engine/architecture/d3d12/shader-resource-cache#Cache-Structure
     struct Resource
@@ -141,8 +141,8 @@ public:
                                      const D3D12_DESCRIPTOR_HEAP_TYPE dbgDescriptorHeapType, 
                                      const SHADER_TYPE dbgRefShaderType)
         {
-            VERIFY(m_dbgHeapType == dbgDescriptorHeapType, "Incosistent descriptor heap type" )
-            VERIFY(m_dbgShaderType == dbgRefShaderType, "Incosistent shader type" )
+            VERIFY(m_dbgHeapType == dbgDescriptorHeapType, "Incosistent descriptor heap type" );
+            VERIFY(m_dbgShaderType == dbgRefShaderType, "Incosistent shader type" );
 
             VERIFY(OffsetFromTableStart < m_NumResources, "Root table at index is not large enough to store descriptor at offset ", OffsetFromTableStart );
             return m_pResources[OffsetFromTableStart];
@@ -197,18 +197,18 @@ public:
             {
                 if(Tbl.DbgGetHeapType() == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
                 {
-                    VERIFY(Tbl.m_TableStartOffset == NumSrvCbvUavDescriptors, "Descriptor space allocation is not continuous")
+                    VERIFY(Tbl.m_TableStartOffset == NumSrvCbvUavDescriptors, "Descriptor space allocation is not continuous");
                     NumSrvCbvUavDescriptors = std::max(NumSrvCbvUavDescriptors, Tbl.m_TableStartOffset + Tbl.GetSize());
                 }
                 else
                 {
-                    VERIFY(Tbl.m_TableStartOffset == NumSamplerDescriptors, "Descriptor space allocation is not continuous")
+                    VERIFY(Tbl.m_TableStartOffset == NumSamplerDescriptors, "Descriptor space allocation is not continuous");
                     NumSamplerDescriptors = std::max(NumSamplerDescriptors, Tbl.m_TableStartOffset + Tbl.GetSize());
                 }
             }
         }
-        VERIFY(NumSrvCbvUavDescriptors == CbcSrvUavHeapSpace.GetNumHandles() || NumSrvCbvUavDescriptors == 0 && CbcSrvUavHeapSpace.GetCpuHandle(0).ptr == 0, "Unexpected descriptor heap allocation size" )
-        VERIFY(NumSamplerDescriptors == SamplerHeapSpace.GetNumHandles() || NumSamplerDescriptors == 0 && SamplerHeapSpace.GetCpuHandle(0).ptr == 0, "Unexpected descriptor heap allocation size" )
+        VERIFY(NumSrvCbvUavDescriptors == CbcSrvUavHeapSpace.GetNumHandles() || NumSrvCbvUavDescriptors == 0 && CbcSrvUavHeapSpace.GetCpuHandle(0).ptr == 0, "Unexpected descriptor heap allocation size" );
+        VERIFY(NumSamplerDescriptors == SamplerHeapSpace.GetNumHandles() || NumSamplerDescriptors == 0 && SamplerHeapSpace.GetCpuHandle(0).ptr == 0, "Unexpected descriptor heap allocation size" );
 #endif
 
         m_CbvSrvUavHeapSpace = std::move(CbcSrvUavHeapSpace);

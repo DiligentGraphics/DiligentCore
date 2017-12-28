@@ -40,17 +40,17 @@ namespace Diligent
 class RefCountersImpl : public IReferenceCounters
 {
 public:
-    inline virtual Atomics::Long AddStrongRef()override final
+    inline virtual CounterValueType AddStrongRef()override final
     {
         VERIFY( m_ObjectState == ObjectState::Alive, "Attempting to increment strong reference counter for a destroyed or not itialized object!" );
-        VERIFY( m_ObjectWrapperBuffer[0] != 0 && m_ObjectWrapperBuffer[1] != 0, "Object wrapper is not initialized")
+        VERIFY( m_ObjectWrapperBuffer[0] != 0 && m_ObjectWrapperBuffer[1] != 0, "Object wrapper is not initialized");
         return Atomics::AtomicIncrement(m_lNumStrongReferences);
     }
 
-    inline virtual Atomics::Long ReleaseStrongRef()override final
+    inline virtual CounterValueType ReleaseStrongRef()override final
     {
-        VERIFY( m_ObjectState == ObjectState::Alive, "Attempting to decrement strong reference counter for an object that is not alive" )
-        VERIFY( m_ObjectWrapperBuffer[0] != 0 && m_ObjectWrapperBuffer[1] != 0, "Object wrapper is not initialized")
+        VERIFY( m_ObjectState == ObjectState::Alive, "Attempting to decrement strong reference counter for an object that is not alive" );
+        VERIFY( m_ObjectWrapperBuffer[0] != 0 && m_ObjectWrapperBuffer[1] != 0, "Object wrapper is not initialized");
 
         // Decrement strong reference counter without acquiring the lock. 
         auto RefCount = Atomics::AtomicDecrement(m_lNumStrongReferences);
@@ -149,12 +149,12 @@ public:
             // decrements the ref counter. If it reads 1 after incremeting the counter,
             // it does not return the reference to the object and decrements the counter.
             // If we acquired the lock, GetObject() will not start until we are done
-            VERIFY_EXPR( m_lNumStrongReferences == 0 && m_ObjectState == ObjectState::Alive )
+            VERIFY_EXPR( m_lNumStrongReferences == 0 && m_ObjectState == ObjectState::Alive );
                 
             // Extra caution
             if(m_lNumStrongReferences == 0 && m_ObjectState == ObjectState::Alive)
             {
-                VERIFY(m_ObjectWrapperBuffer[0] != 0 && m_ObjectWrapperBuffer[1] != 0, "Object wrapper is not initialized")
+                VERIFY(m_ObjectWrapperBuffer[0] != 0 && m_ObjectWrapperBuffer[1] != 0, "Object wrapper is not initialized");
                 // We cannot destroy the object while reference counters are locked as this will  
                 // cause a deadlock in cases like this:
                 //
@@ -234,12 +234,12 @@ public:
         return RefCount;
     }
 
-    inline virtual Atomics::Long AddWeakRef()override final
+    inline virtual CounterValueType AddWeakRef()override final
     {
         return Atomics::AtomicIncrement(m_lNumWeakReferences);
     }
 
-    inline virtual Atomics::Long ReleaseWeakRef()override final
+    inline virtual CounterValueType ReleaseWeakRef()override final
     {
         // The method must be serialized!
         ThreadingTools::LockHelper Lock(m_LockFlag);
@@ -293,7 +293,7 @@ public:
         if( NumWeakReferences == 0 && /*m_lNumStrongReferences == 0 &&*/ m_ObjectState == ObjectState::Destroyed )
         {
             VERIFY_EXPR(m_lNumStrongReferences == 0);
-            VERIFY( m_ObjectWrapperBuffer[0] == 0 && m_ObjectWrapperBuffer[1] == 0, "Object wrapper must be null")
+            VERIFY( m_ObjectWrapperBuffer[0] == 0 && m_ObjectWrapperBuffer[1] == 0, "Object wrapper must be null");
             // m_ObjectState is set to ObjectState::Destroyed under the lock. If the state is not Destroyed, 
             // ReleaseStrongRef() will take care of it. 
             // Access to Object wrapper and decrementing m_lNumWeakReferences is atomic. Since we acquired the lock, 
@@ -352,7 +352,7 @@ public:
 
         if( m_ObjectState == ObjectState::Alive && StrongRefCnt > 1 )
         {
-            VERIFY( m_ObjectWrapperBuffer[0] != 0 && m_ObjectWrapperBuffer[1] != 0, "Object wrapper is not initialized")
+            VERIFY( m_ObjectWrapperBuffer[0] != 0 && m_ObjectWrapperBuffer[1] != 0, "Object wrapper is not initialized");
             // QueryInterface() must not lock the object, or a deadlock happens.
             // The only other two methods that lock the object are ReleaseStrongRef()
             // and ReleaseWeakRef(), which are never called by QueryInterface()
@@ -362,12 +362,12 @@ public:
         Atomics::AtomicDecrement(m_lNumStrongReferences);
     }
 
-    inline virtual Atomics::Long GetNumStrongRefs()const override final
+    inline virtual CounterValueType GetNumStrongRefs()const override final
     {
         return m_lNumStrongReferences;
     }
 
-    inline virtual Atomics::Long GetNumWeakRefs()const override final
+    inline virtual CounterValueType GetNumWeakRefs()const override final
     {
         return m_lNumWeakReferences;
     }
@@ -450,7 +450,7 @@ private:
     RefCountersImpl& operator = (const RefCountersImpl&) = delete;
     RefCountersImpl& operator = (RefCountersImpl&&) = delete;
 
-    static const size_t ObjectWrapperBufferSize = sizeof(ObjectWrapper<IObject, IMemoryAllocator>) / sizeof(size_t);
+    static constexpr size_t ObjectWrapperBufferSize = sizeof(ObjectWrapper<IObject, IMemoryAllocator>) / sizeof(size_t);
     size_t m_ObjectWrapperBuffer[ObjectWrapperBufferSize];
     Atomics::AtomicLong m_lNumStrongReferences;
     Atomics::AtomicLong m_lNumWeakReferences;
@@ -470,6 +470,8 @@ template<typename Base>
 class RefCountedObject : public Base
 {
 public:
+    using CounterValueType = IReferenceCounters::CounterValueType;
+
     RefCountedObject(IReferenceCounters *pRefCounters)noexcept :
         m_pRefCounters( ValidatedCast<RefCountersImpl>(pRefCounters) )
     {
@@ -504,21 +506,21 @@ public:
 
     inline virtual IReferenceCounters* GetReferenceCounters()const override final
     {
-        VERIFY_EXPR(m_pRefCounters != nullptr)
+        VERIFY_EXPR(m_pRefCounters != nullptr);
         return m_pRefCounters;
     }
 
-    inline virtual Atomics::Long AddRef()override final
+    inline virtual CounterValueType AddRef()override final
     {
-        VERIFY_EXPR(m_pRefCounters != nullptr)
+        VERIFY_EXPR(m_pRefCounters != nullptr);
         // Since type of m_pRefCounters is RefCountersImpl,
         // this call will not be virtual and should be inlined
         return m_pRefCounters->AddStrongRef();
     }
 
-    inline virtual Atomics::Long Release()override
+    inline virtual CounterValueType Release()override
     {
-        VERIFY_EXPR(m_pRefCounters != nullptr)
+        VERIFY_EXPR(m_pRefCounters != nullptr);
         // Since type of m_pRefCounters is RefCountersImpl,
         // this call will not be virtual and should be inlined
         return m_pRefCounters->ReleaseStrongRef();

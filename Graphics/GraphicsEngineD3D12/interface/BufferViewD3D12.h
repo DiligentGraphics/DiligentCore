@@ -32,7 +32,7 @@ namespace Diligent
 {
 
 // {09643F2F-40D4-4076-B086-9E5CDC2CC4FC}
-static const Diligent::INTERFACE_ID IID_BufferViewD3D12 =
+static constexpr INTERFACE_ID IID_BufferViewD3D12 =
 { 0x9643f2f, 0x40d4, 0x4076, { 0xb0, 0x86, 0x9e, 0x5c, 0xdc, 0x2c, 0xc4, 0xfc } };
 
 /// Interface to the buffer view object implemented in D3D12

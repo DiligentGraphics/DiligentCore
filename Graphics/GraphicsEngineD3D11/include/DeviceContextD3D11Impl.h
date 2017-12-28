@@ -95,7 +95,7 @@ public:
     void ReleaseCommittedShaderResources();
 
     /// Number of different shader types (Vertex, Pixel, Geometry, Domain, Hull, Compute)
-    static const int NumShaderTypes = 6;
+    static constexpr int NumShaderTypes = 6;
 
 private:
     

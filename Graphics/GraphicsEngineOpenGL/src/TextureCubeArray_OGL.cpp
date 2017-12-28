@@ -42,7 +42,7 @@ TextureCubeArray_OGL::TextureCubeArray_OGL( IReferenceCounters *pRefCounters,
 									        bool bIsDeviceInternal /*= false*/) : 
     TextureBaseGL(pRefCounters, TexViewObjAllocator, pDeviceGL, TexDesc, GL_TEXTURE_CUBE_MAP_ARRAY, InitData, bIsDeviceInternal)
 {
-    VERIFY(m_Desc.SampleCount == 1, "Multisampled texture cube arrays are not supported")
+    VERIFY(m_Desc.SampleCount == 1, "Multisampled texture cube arrays are not supported");
     
     auto &ContextState = pDeviceContext->GetContextState();
     ContextState.BindTexture(-1, m_BindTarget, m_GlTexture);

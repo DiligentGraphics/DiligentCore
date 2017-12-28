@@ -26,15 +26,15 @@
 #include "PlatformDefinitions.h"
 
 #if defined( PLATFORM_WIN32 ) || defined( PLATFORM_UNIVERSAL_WINDOWS )
-    #include "..\Win32\include\Win32PlatformMisc.h"
+    #include "Win32PlatformMisc.h"
     typedef WindowsMisc PlatformMisc;
 
 #elif defined ( PLATFORM_ANDROID )
-    #include "../Android/include/AndroidPlatformMisc.h"
+    #include "AndroidPlatformMisc.h"
     typedef AndroidMisc PlatformMisc;
 
 #elif defined ( PLATFORM_LINUX )
-    #include "../Linux/include/LinuxPlatformMisc.h"
+    #include "LinuxPlatformMisc.h"
     typedef LinuxMisc PlatformMisc;
 #else
     #error Unsupported platform

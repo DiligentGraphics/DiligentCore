@@ -32,11 +32,11 @@ namespace Diligent
 {
 
 // {F578FF0D-ABD2-4514-9D32-7CB454D4A73B}
-static const Diligent::INTERFACE_ID IID_DataBlob = 
+static constexpr INTERFACE_ID IID_DataBlob = 
 { 0xf578ff0d, 0xabd2, 0x4514, { 0x9d, 0x32, 0x7c, 0xb4, 0x54, 0xd4, 0xa7, 0x3b } };
 
 /// Base interface for a file stream
-class IDataBlob : public Diligent::IObject
+class IDataBlob : public IObject
 {
 public:
     

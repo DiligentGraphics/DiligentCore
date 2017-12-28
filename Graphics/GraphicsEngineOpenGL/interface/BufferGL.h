@@ -32,11 +32,11 @@ namespace Diligent
 {
 
 // {08DF7319-F425-4EC7-8D2B-1B3FC0BDDBB4}
-static const Diligent::INTERFACE_ID IID_BufferGL =
+static constexpr INTERFACE_ID IID_BufferGL =
 { 0x8df7319, 0xf425, 0x4ec7, { 0x8d, 0x2b, 0x1b, 0x3f, 0xc0, 0xbd, 0xdb, 0xb4 } };
 
 /// Interface to the buffer object implemented in OpenGL
-class IBufferGL : public Diligent::IBuffer
+class IBufferGL : public IBuffer
 {
 public:
     /// Returns OpenGL buffer handle

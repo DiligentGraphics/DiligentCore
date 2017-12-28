@@ -72,10 +72,10 @@ private:
     class MemoryPage
     { 
     public:
-        static const Uint8 NewPageMemPattern = 0xAA;
-        static const Uint8 AllocatedBlockMemPattern = 0xAB;
-        static const Uint8 DeallocatedBlockMemPattern = 0xDE;
-        static const Uint8 InitializedBlockMemPattern = 0xCF;
+        static constexpr Uint8 NewPageMemPattern = 0xAA;
+        static constexpr Uint8 AllocatedBlockMemPattern = 0xAB;
+        static constexpr Uint8 DeallocatedBlockMemPattern = 0xDE;
+        static constexpr Uint8 InitializedBlockMemPattern = 0xCF;
 
         MemoryPage(FixedBlockMemoryAllocator &OwnerAllocator):
             m_pOwnerAllocator(&OwnerAllocator),
@@ -113,7 +113,7 @@ private:
         void* GetBlockStartAddress(Uint32 BlockIndex) const
         {
             VERIFY_EXPR(m_pOwnerAllocator != nullptr);
-            VERIFY(BlockIndex >= 0 && BlockIndex < m_pOwnerAllocator->m_NumBlocksInPage, "Invalid block index" )
+            VERIFY(BlockIndex >= 0 && BlockIndex < m_pOwnerAllocator->m_NumBlocksInPage, "Invalid block index" );
             return reinterpret_cast<Uint8*>(m_pPageStart) + BlockIndex * m_pOwnerAllocator->m_BlockSize;
         }
 
@@ -232,7 +232,7 @@ public:
 #ifdef _DEBUG
         if(m_bPoolInitialized && m_pRawAllocator != &Allocator)
         {
-            LOG_WARNING_MESSAGE("Setting pool raw allocator after the pool has been initialized has no effect")
+            LOG_WARNING_MESSAGE("Setting pool raw allocator after the pool has been initialized has no effect");
         }
 #endif
         m_pRawAllocator = &Allocator;
@@ -242,7 +242,7 @@ public:
 #ifdef _DEBUG
         if(m_bPoolInitialized && m_NumAllocationsInPage != NumAllocationsInPage)
         {
-            LOG_WARNING_MESSAGE("Setting pool page size after the pool has been initialized has no effect")
+            LOG_WARNING_MESSAGE("Setting pool page size after the pool has been initialized has no effect");
         }
 #endif
         m_NumAllocationsInPage = NumAllocationsInPage;

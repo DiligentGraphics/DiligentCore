@@ -49,7 +49,7 @@ namespace Diligent
             ContextState.BindTexture(-1, GL_TEXTURE_BUFFER, m_GLTexBuffer );
 
             const auto &BuffFmt = pBuffer->GetDesc().Format;
-            VERIFY_EXPR(BuffFmt.ValueType != VT_UNDEFINED)
+            VERIFY_EXPR(BuffFmt.ValueType != VT_UNDEFINED);
             auto GLFormat = TypeToGLTexFormat( BuffFmt.ValueType, BuffFmt.NumComponents, BuffFmt.IsNormalized );
             glTexBuffer( GL_TEXTURE_BUFFER, GLFormat, pBuffer->GetGLHandle() );
             CHECK_GL_ERROR_AND_THROW( "Failed to create texture buffer" );

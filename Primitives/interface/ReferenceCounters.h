@@ -27,7 +27,6 @@
 /// Defines Diligent::IReferenceCounters interface
 
 #include "InterfaceID.h"
-#include "Atomics.h"
 
 namespace Diligent
 {
@@ -38,13 +37,15 @@ namespace Diligent
 class IReferenceCounters
 {
 public:
+    using CounterValueType = long;
+
     /// Increments the number of strong references by 1.
 
     /// \return The number of strong references after incrementing the counter.
     /// \remark The method is thread-safe and does not require explicit synchronization.
     /// \note   In a multithreaded environment, the returned number may not be reliable
     ///         as other threads may simultaneously change the actual value of the counter.
-    virtual Atomics::Long AddStrongRef() = 0;
+    virtual CounterValueType AddStrongRef() = 0;
 
 
     /// Decrements the number of strong references by 1 and destroys the referenced object 
@@ -60,7 +61,7 @@ public:
     ///         as other threads may simultaneously change the actual value of the counter.
     ///         The only reliable value is 0 as the object is destroyed when the last 
     ///         strong reference is released.
-    virtual Atomics::Long ReleaseStrongRef() = 0;
+    virtual CounterValueType ReleaseStrongRef() = 0;
 
 
     /// Increments the number of weak references by 1.
@@ -69,7 +70,7 @@ public:
     /// \remark The method is thread-safe and does not require explicit synchronization.
     /// \note   In a multithreaded environment, the returned number may not be reliable
     ///         as other threads may simultaneously change the actual value of the counter.
-    virtual Atomics::Long AddWeakRef() = 0;
+    virtual CounterValueType AddWeakRef() = 0;
 
 
     /// Decrements the number of weak references by 1. If there are no more strong and weak
@@ -79,7 +80,7 @@ public:
     /// \remark The method is thread-safe and does not require explicit synchronization.
     /// \note   In a multithreaded environment, the returned number may not be reliable
     ///         as other threads may simultaneously change the actual value of the counter.
-    virtual Atomics::Long ReleaseWeakRef() = 0;
+    virtual CounterValueType ReleaseWeakRef() = 0;
 
 
     /// Gets the pointer to the IUnknown interface of the referenced object.
@@ -101,7 +102,7 @@ public:
     ///         as other threads may simultaneously change the actual value of the counter.
     ///         The only reliable value is 0 as the object is destroyed when the last 
     ///         strong reference is released.
-    virtual Atomics::Long GetNumStrongRefs()const = 0;
+    virtual CounterValueType GetNumStrongRefs()const = 0;
 
 
     /// Returns the number of outstanding weak references.
@@ -109,7 +110,7 @@ public:
     /// \return The number of weak references.
     /// \note   In a multithreaded environment, the returned number may not be reliable
     ///         as other threads may simultaneously change the actual value of the counter.
-    virtual Atomics::Long GetNumWeakRefs()const = 0;
+    virtual CounterValueType GetNumWeakRefs()const = 0;
 };
 
 }

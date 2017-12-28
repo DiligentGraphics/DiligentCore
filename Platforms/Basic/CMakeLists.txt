@@ -7,45 +7,36 @@ set(SOURCE
 	src/BasicPlatformDebug.cpp
 )
 
-set(INCLUDE 
-	include/BasicAtomics.h
-	include/BasicFileSystem.h
-	include/BasicPlatformDebug.h
-	include/BasicPlatformMisc.h
-	include/pch.h
-)
-
-set(PLATFORM_INTERFACE_SRC
-	../interface/Atomics.h
-	../interface/FileSystem.h
-	../interface/PlatformDebug.h
-	../interface/PlatformDefinitions.h
-	../interface/PlatformMisc.h
+set(INTERFACE 
+	interface/BasicAtomics.h
+	interface/BasicFileSystem.h
+	interface/BasicPlatformDebug.h
+	interface/BasicPlatformMisc.h
+	interface/DebugUtilities.h
+	interface/Errors.h
 )
 
 if(PLATFORM_LINUX OR PLATFORM_WIN32)
 	list(APPEND SOURCE src/StandardFile.cpp)
-	list(APPEND INCLUDE include/StandardFile.h)
+	list(APPEND INTERFACE interface/StandardFile.h)
 endif()
 
-add_library(BasicPlatform STATIC ${SOURCE} ${INCLUDE} ${PLATFORM_INTERFACE_SRC})
+add_library(BasicPlatform STATIC ${SOURCE} ${INTERFACE})
 set_common_target_properties(BasicPlatform)
 
 target_include_directories(BasicPlatform 
 PUBLIC
-	include
+	interface
 )
 
 target_link_libraries(BasicPlatform 
-PRIVATE 
+PUBLIC
 	BuildSettings 
-	Common 
-	PlatformInterface
+	Primitives
 )
 
 source_group("src" FILES ${SOURCE})
-source_group("include" FILES ${INCLUDE})
-source_group("interface" FILES ${PLATFORM_INTERFACE_SRC})
+source_group("interface" FILES ${INTERFACE})
 
 set_target_properties(BasicPlatform PROPERTIES
 	FOLDER Core/Platforms

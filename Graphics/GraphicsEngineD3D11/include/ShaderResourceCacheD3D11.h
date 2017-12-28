@@ -201,7 +201,7 @@ public:
         const_cast<ShaderResourceCacheD3D11*>(this)->GetCBArrays(CBs, d3d11CBs);
         if( Slot < GetCBCount() && d3d11CBs[Slot] != nullptr )
         {
-            VERIFY(CBs[Slot].pBuff != nullptr, "No relevant buffer resource")
+            VERIFY(CBs[Slot].pBuff != nullptr, "No relevant buffer resource");
             return true;
         }
         return false;
@@ -242,7 +242,7 @@ public:
         const_cast<ShaderResourceCacheD3D11*>(this)->GetSamplerArrays(Samplers, d3d11Samplers);
         if( Slot < GetSamplerCount() && d3d11Samplers[Slot] != nullptr )
         {
-            VERIFY(Samplers[Slot].pSampler != nullptr, "No relevant sampler")
+            VERIFY(Samplers[Slot].pSampler != nullptr, "No relevant sampler");
             return true;
         }
         return false;
@@ -326,9 +326,9 @@ private:
                                                 TSrcResourceType &&pResource, 
                                                 TD3D11ResourceType *pd3d11Resource)
     {
-        VERIFY(Slot < Size, "Resource cache is not big enough" )
+        VERIFY(Slot < Size, "Resource cache is not big enough" );
         VERIFY(pResource != nullptr && pd3d11Resource != nullptr || pResource == nullptr && pd3d11Resource == nullptr, 
-               "Resource and D3D11 resource must be set/unset atomically")
+               "Resource and D3D11 resource must be set/unset atomically");
         TCachedResourceType* Resources;
         TD3D11ResourceType** d3d11ResArr;
         (this->*GetArrays)(Resources, d3d11ResArr);
@@ -336,7 +336,7 @@ private:
         d3d11ResArr[Slot] = pd3d11Resource;
     }
 
-    static const Uint32 InvalidResourceCounts = 0xFFFFFFFF;
+    static constexpr Uint32 InvalidResourceCounts = 0xFFFFFFFF;
     // Resource limits in D3D11:
     // Max CB count:        14
     // Max SRV count:       128

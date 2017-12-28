@@ -32,11 +32,11 @@ namespace Diligent
 {
 
 // {F0EE0335-C8AB-4EC1-BB15-B8EE5F003B99}
-static const Diligent::INTERFACE_ID IID_DeviceContextD3D11 =
+static constexpr INTERFACE_ID IID_DeviceContextD3D11 =
 { 0xf0ee0335, 0xc8ab, 0x4ec1, { 0xbb, 0x15, 0xb8, 0xee, 0x5f, 0x0, 0x3b, 0x99 } };
 
 /// Interface to the device context object implemented in D3D11
-class IDeviceContextD3D11 : public Diligent::IDeviceContext
+class IDeviceContextD3D11 : public IDeviceContext
 {
 public:
 

@@ -39,7 +39,7 @@
 #       error Conflicting platform macros
 #   endif
 
-#   include "..\Win32\include\Win32PlatformDefinitions.h"
+#   include "Win32PlatformDefinitions.h"
 
 #   define OPENGL_SUPPORTED 1
 #   define D3D11_SUPPORTED 1
@@ -51,7 +51,7 @@
 #       error Conflicting platform macros
 #   endif
 
-#   include "..\UWP\include\UWPDefinitions.h"
+#   include "UWPDefinitions.h"
 
 #   define OPENGL_SUPPORTED 0
 #   define D3D11_SUPPORTED 1
@@ -63,7 +63,7 @@
 #       error Conflicting platform macros
 #   endif
 
-#   include "../Android/include/AndroidPlatformDefinitions.h"
+#   include "AndroidPlatformDefinitions.h"
 
 #   define OPENGL_SUPPORTED 1
 #   define D3D11_SUPPORTED 0
@@ -75,10 +75,14 @@
 #       error Conflicting platform macros
 #   endif
 
-#   include "../Linux/include/LinuxPlatformDefinitions.h"
+#   include "LinuxPlatformDefinitions.h"
 
 #   define OPENGL_SUPPORTED 1
 #   define D3D11_SUPPORTED 0
 #   define D3D12_SUPPORTED 0
+
+#else
+
+#   error Unsupported platform
 
 #endif

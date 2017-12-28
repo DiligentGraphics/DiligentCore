@@ -47,8 +47,8 @@ namespace Diligent
 
         ~UploadBufferD3D11()
         {
-            if(m_pStagingTexture)
-                LOG_INFO_MESSAGE("UploadBufferD3D11: releasing ", m_Desc.Width, 'x', m_Desc.Height, " Fmt=", m_Desc.Format, " staging texture")
+            if (m_pStagingTexture)
+                LOG_INFO_MESSAGE("UploadBufferD3D11: releasing ", m_Desc.Width, 'x', m_Desc.Height, " Fmt=", m_Desc.Format, " staging texture");
         }
 
         void SetDataPtr(void *pData, size_t RowStride, size_t DepthStride)
@@ -179,7 +179,7 @@ namespace Diligent
             {
                 const auto &desc = BuffQueueIt.first;
                 auto &FmtInfo = m_pDevice->GetTextureFormatInfo(desc.Format);
-                LOG_INFO_MESSAGE("TextureUploaderD3D11: releasing ", BuffQueueIt.second.size(), ' ', desc.Width, 'x', desc.Height, 'x', desc.Depth, ' ', FmtInfo.Name, " staging texture(s) ")
+                LOG_INFO_MESSAGE("TextureUploaderD3D11: releasing ", BuffQueueIt.second.size(), ' ', desc.Width, 'x', desc.Height, 'x', desc.Depth, ' ', FmtInfo.Name, " staging texture(s) ");
             }
         }
     }
@@ -222,7 +222,7 @@ namespace Diligent
                             }
                             else
                             {
-                                LOG_ERROR("Unknown DX error when mapping staging texture: ", hr)
+                                LOG_ERROR("Unknown DX error when mapping staging texture: ", hr);
                             }
                         }
                     }
@@ -289,11 +289,11 @@ namespace Diligent
             HRESULT hr = m_pInternalData->m_pd3d11NativeDevice->CreateTexture2D(&StagingTexDesc, nullptr, &pStagingTex);
             if (FAILED(hr))
             {
-                LOG_ERROR_MESSAGE("Failed to allocate staging D3D11 texture")
-                    return;
+                LOG_ERROR_MESSAGE("Failed to allocate staging D3D11 texture");
+                return;
             }
 
-            LOG_INFO_MESSAGE("TextureUploaderD3D11: created ", Desc.Width, 'x', Desc.Height, ' ', m_pDevice->GetTextureFormatInfo(Desc.Format).Name, " staging texture")
+            LOG_INFO_MESSAGE("TextureUploaderD3D11: created ", Desc.Width, 'x', Desc.Height, ' ', m_pDevice->GetTextureFormatInfo(Desc.Format).Name, " staging texture");
 
             RefCntAutoPtr<UploadBufferD3D11> pUploadBuffer(MakeNewRCObj<UploadBufferD3D11>()(Desc, pStagingTex));
             m_pInternalData->EnqueMap(pUploadBuffer, InternalData::PendingBufferOperation::Map);

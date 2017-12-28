@@ -32,7 +32,7 @@ namespace Diligent
 {
 
 // {5B2EA04E-8128-45E4-AA4D-6DC7E70DC424}
-static const Diligent::INTERFACE_ID IID_TextureView =
+static constexpr INTERFACE_ID IID_TextureView =
 { 0x5b2ea04e, 0x8128, 0x45e4, { 0xaa, 0x4d, 0x6d, 0xc7, 0xe7, 0xd, 0xc4, 0x24 } };
 
 /// Describes allowed unordered access view mode

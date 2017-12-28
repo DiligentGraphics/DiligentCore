@@ -25,7 +25,6 @@
 
 #include <vector>
 #include "BasicTypes.h"
-#include "DataBlob.h"
 
 enum class EFileAccessMode
 {

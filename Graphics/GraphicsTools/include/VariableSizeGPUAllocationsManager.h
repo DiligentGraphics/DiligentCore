@@ -57,7 +57,7 @@ namespace Diligent
         ~VariableSizeGPUAllocationsManager()
         {
             VERIFY(m_StaleAllocations.empty(), "Not all stale allocations released");
-			VERIFY(m_StaleAllocationsSize == 0, "Not all stale allocations released")
+			VERIFY(m_StaleAllocationsSize == 0, "Not all stale allocations released");
         }
 
         // = default causes compiler error when instantiating std::vector::emplace_back() in Visual Studio 2015 (Version 14.0.23107.0 D14REL)

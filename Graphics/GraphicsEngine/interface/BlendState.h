@@ -359,7 +359,7 @@ struct BlendStateDesc
     Bool IndependentBlendEnable;
 
     /// Constant member defining the maximum number of render targets
-    static const int MaxRenderTargets = 8;
+    static constexpr int MaxRenderTargets = 8;
 
     /// An array of RenderTargetBlendDesc structures that describe the blend 
     /// states for render targets

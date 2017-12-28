@@ -16,7 +16,7 @@ set(SOURCE
 	src/Win32FileSystem.cpp
 )
 
-add_library(Win32Platform ${SOURCE} ${INCLUDE})
+add_library(Win32Platform ${SOURCE} ${INCLUDE} ${PLATFORM_INTERFACE_HEADERS})
 set_common_target_properties(Win32Platform)
 
 target_include_directories(Win32Platform 
@@ -25,16 +25,15 @@ PUBLIC
 )
 
 target_link_libraries(Win32Platform 
-PRIVATE 
-	BuildSettings 
-	Common 
 PUBLIC
-	PlatformInterface
+	BuildSettings 
 	BasicPlatform
+	PlatformInterface
 )
 
 source_group("src" FILES ${SOURCE})
 source_group("include" FILES ${INCLUDE})
+source_group("interface" FILES ${PLATFORM_INTERFACE_HEADERS})
 
 set_target_properties(Win32Platform PROPERTIES
 	FOLDER Core/Platforms

@@ -33,6 +33,7 @@
 #include "DepthStencilState.h"
 #include "InputLayout.h"
 #include "ShaderResourceBinding.h"
+#include "PlatformDefinitions.h"
 
 namespace Diligent
 {
@@ -199,7 +200,7 @@ struct PipelineStateDesc : DeviceObjectAttribs
 };
 
 // {06084AE5-6A71-4FE8-84B9-395DD489A28C}
-static const Diligent::INTERFACE_ID IID_PipelineState =
+static constexpr INTERFACE_ID IID_PipelineState =
 { 0x6084ae5, 0x6a71, 0x4fe8, { 0x84, 0xb9, 0x39, 0x5d, 0xd4, 0x89, 0xa2, 0x8c } };
 
 /**
@@ -209,7 +210,7 @@ class IPipelineState : public IDeviceObject
 {
 public:
     /// Queries the specific interface, see IObject::QueryInterface() for details
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface ) = 0;
+    virtual void QueryInterface( const INTERFACE_ID &IID, IObject **ppInterface ) = 0;
 
     /// Returns the blend state description used to create the object
     virtual const PipelineStateDesc& GetDesc()const = 0;

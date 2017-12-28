@@ -59,7 +59,7 @@ namespace Diligent
     {
     public:
         /// Number of outstanding deleted objects to purge the registry.
-        static const int DeletedObjectsToPurge = 32;
+        static constexpr int DeletedObjectsToPurge = 32;
 
         StateObjectsRegistry(IMemoryAllocator &RawAllocator, const Char* RegistryName) :
             m_RegistryName( RegistryName ),

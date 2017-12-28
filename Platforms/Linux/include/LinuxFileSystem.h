@@ -23,8 +23,8 @@
 
 #pragma once
 
-#include "../Basic/include/BasicFileSystem.h"
-#include "../Basic/include/StandardFile.h"
+#include "BasicFileSystem.h"
+#include "StandardFile.h"
 
 #include <memory>
 #include <vector>

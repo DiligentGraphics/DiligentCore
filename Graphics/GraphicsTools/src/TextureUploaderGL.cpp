@@ -150,7 +150,7 @@ namespace Diligent
             {
                 const auto &desc = BuffQueueIt.first;
                 auto &FmtInfo = m_pDevice->GetTextureFormatInfo(desc.Format);
-                LOG_INFO_MESSAGE("TextureUploaderGL: releasing ", BuffQueueIt.second.size(), ' ', desc.Width, 'x', desc.Height, 'x', desc.Depth, ' ', FmtInfo.Name, " upload buffer(s) ")
+                LOG_INFO_MESSAGE("TextureUploaderGL: releasing ", BuffQueueIt.second.size(), ' ', desc.Width, 'x', desc.Height, 'x', desc.Depth, ' ', FmtInfo.Name, " upload buffer(s) ");
             }
         }
     }
@@ -240,7 +240,7 @@ namespace Diligent
         if( !pUploadBuffer )
         {
             pUploadBuffer = MakeNewRCObj<UploadBufferGL>()(Desc);
-            LOG_INFO_MESSAGE("TextureUploaderGL: created upload buffer for ", Desc.Width, 'x', Desc.Height, 'x', Desc.Depth, ' ', m_pDevice->GetTextureFormatInfo(Desc.Format).Name, " texture" )
+            LOG_INFO_MESSAGE("TextureUploaderGL: created upload buffer for ", Desc.Width, 'x', Desc.Height, 'x', Desc.Depth, ' ', m_pDevice->GetTextureFormatInfo(Desc.Format).Name, " texture");
         }
 
         m_pInternalData->EnqueMap(pUploadBuffer);

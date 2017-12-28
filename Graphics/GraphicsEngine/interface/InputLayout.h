@@ -31,7 +31,7 @@
 namespace Diligent
 {
 
-static const Uint32 iMaxLayoutElements = 16;
+static constexpr Uint32 iMaxLayoutElements = 16;
 
 /// Description of a single element of the input layout
 struct LayoutElement

@@ -32,7 +32,7 @@ namespace Diligent
 {
 
 // {061F8774-9A09-48E8-8411-B5BD20560104}
-static const Diligent::INTERFACE_ID IID_ShaderResourceBinding =
+static constexpr INTERFACE_ID IID_ShaderResourceBinding =
 { 0x61f8774, 0x9a09, 0x48e8, { 0x84, 0x11, 0xb5, 0xbd, 0x20, 0x56, 0x1, 0x4 } };
 
 
@@ -41,7 +41,7 @@ class IShaderResourceBinding : public IObject
 {
 public:
     /// Queries the specific interface, see IObject::QueryInterface() for details
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface ) = 0;
+    virtual void QueryInterface( const INTERFACE_ID &IID, IObject **ppInterface ) = 0;
 
     /// Returns pointer to the referenced buffer object.
 

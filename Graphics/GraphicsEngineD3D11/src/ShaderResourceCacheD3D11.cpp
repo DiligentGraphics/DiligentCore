@@ -37,7 +37,7 @@ namespace Diligent
         // http://diligentgraphics.com/diligent-engine/architecture/d3d11/shader-resource-cache/
         if (IsInitialized())
         {
-            LOG_ERROR_MESSAGE("Resource cache is already intialized")
+            LOG_ERROR_MESSAGE("Resource cache is already intialized");
             return;
         }
 
@@ -127,8 +127,8 @@ namespace Diligent
 
     void ShaderResourceCacheD3D11::Destroy(IMemoryAllocator &MemAllocator)
     {
-        VERIFY( IsInitialized(), "Resource cache is not initialized")
-        VERIFY( m_pdbgMemoryAllocator == &MemAllocator, "The allocator does not match the one used to create resources")
+        VERIFY( IsInitialized(), "Resource cache is not initialized");
+        VERIFY( m_pdbgMemoryAllocator == &MemAllocator, "The allocator does not match the one used to create resources");
 
         if( IsInitialized() ) 
         {
@@ -164,54 +164,54 @@ namespace Diligent
 
     ShaderResourceCacheD3D11::~ShaderResourceCacheD3D11()
     {
-        VERIFY( !IsInitialized(), "Shader resource cache memory must be released with ShaderResourceCacheD3D11::Destroy()" )
+        VERIFY( !IsInitialized(), "Shader resource cache memory must be released with ShaderResourceCacheD3D11::Destroy()" );
     }
 
     void dbgVerifyResource(ShaderResourceCacheD3D11::CachedResource &Res, ID3D11View *pd3d11View, const char *ViewType)
     {
         if (pd3d11View != nullptr)
         {
-            VERIFY(Res.pView != nullptr, "Resource view is not initialized")
-            VERIFY(Res.pBuffer==nullptr && Res.pTexture!=nullptr || Res.pBuffer!=nullptr && Res.pTexture==nullptr, "Texture and buffer resources are mutually exclusive")
-            VERIFY(Res.pd3d11Resource!=nullptr, "D3D11 resource is missing")
+            VERIFY(Res.pView != nullptr, "Resource view is not initialized");
+            VERIFY(Res.pBuffer==nullptr && Res.pTexture!=nullptr || Res.pBuffer!=nullptr && Res.pTexture==nullptr, "Texture and buffer resources are mutually exclusive");
+            VERIFY(Res.pd3d11Resource!=nullptr, "D3D11 resource is missing");
 
             CComPtr<ID3D11Resource> pd3d11ActualResource;
             pd3d11View->GetResource(&pd3d11ActualResource);
-            VERIFY(pd3d11ActualResource == Res.pd3d11Resource, "Inconsistent D3D11 resource")
+            VERIFY(pd3d11ActualResource == Res.pd3d11Resource, "Inconsistent D3D11 resource");
             if (Res.pBuffer)
             {
-                VERIFY(pd3d11ActualResource == Res.pBuffer->GetD3D11Buffer(), "Inconsistent buffer ", ViewType)
+                VERIFY(pd3d11ActualResource == Res.pBuffer->GetD3D11Buffer(), "Inconsistent buffer ", ViewType);
                 if (Res.pView)
                 {
                     RefCntAutoPtr<IBufferViewD3D11> pBufView(Res.pView, IID_BufferViewD3D11);
-                    VERIFY(pBufView != nullptr, "Provided resource view is not D3D11 buffer view")
+                    VERIFY(pBufView != nullptr, "Provided resource view is not D3D11 buffer view");
                     if(pBufView)
-                        VERIFY(pBufView->GetBuffer() == Res.pBuffer, "Provided resource view is not a view of the buffer")
+                        VERIFY(pBufView->GetBuffer() == Res.pBuffer, "Provided resource view is not a view of the buffer");
                 }
             }
             else if(Res.pTexture)
             {
-                VERIFY(pd3d11ActualResource == Res.pTexture->GetD3D11Texture(), "Inconsistent texture ", ViewType)
+                VERIFY(pd3d11ActualResource == Res.pTexture->GetD3D11Texture(), "Inconsistent texture ", ViewType);
                 if (Res.pView)
                 {
                     RefCntAutoPtr<ITextureViewD3D11> pTexView(Res.pView, IID_TextureViewD3D11);
-                    VERIFY(pTexView != nullptr, "Provided resource view is not D3D11 texture view")
+                    VERIFY(pTexView != nullptr, "Provided resource view is not D3D11 texture view");
                     if(pTexView)
-                        VERIFY(pTexView->GetTexture() == Res.pTexture, "Provided resource view is not a view of the texture")
+                        VERIFY(pTexView->GetTexture() == Res.pTexture, "Provided resource view is not a view of the texture");
                 }
             }
         }
         else
         {
-            VERIFY(Res.pView==nullptr, "Resource view is unexpected")
-            VERIFY(Res.pBuffer==nullptr && Res.pTexture==nullptr, "Niether texture nor buffer resource is expected")
-            VERIFY(Res.pd3d11Resource==nullptr, "Unexepected D3D11 resource")
+            VERIFY(Res.pView==nullptr, "Resource view is unexpected");
+            VERIFY(Res.pBuffer==nullptr && Res.pTexture==nullptr, "Niether texture nor buffer resource is expected");
+            VERIFY(Res.pd3d11Resource==nullptr, "Unexepected D3D11 resource");
         }        
     }
 
     void ShaderResourceCacheD3D11::dbgVerifyCacheConsistency()
     {
-        VERIFY(IsInitialized(), "Cache is not initialized")
+        VERIFY(IsInitialized(), "Cache is not initialized");
 
         CachedCB* CBs = nullptr;
         ID3D11Buffer** d3d11CBs = nullptr; 
@@ -228,10 +228,10 @@ namespace Diligent
         {
             auto &pBuff = CBs[cb].pBuff;
             auto *pd3d11Buff = d3d11CBs[cb];
-            VERIFY(pBuff==nullptr && pd3d11Buff==nullptr || pBuff!=nullptr && pd3d11Buff!=nullptr, "CB resource and d3d11 buffer must be set/unset atomically")
+            VERIFY(pBuff==nullptr && pd3d11Buff==nullptr || pBuff!=nullptr && pd3d11Buff!=nullptr, "CB resource and d3d11 buffer must be set/unset atomically");
             if(pBuff != nullptr && pd3d11Buff != nullptr )
             {
-                VERIFY(pd3d11Buff == pBuff->GetD3D11Buffer(), "Inconsistent D3D11 buffer")
+                VERIFY(pd3d11Buff == pBuff->GetD3D11Buffer(), "Inconsistent D3D11 buffer");
             }
         }
 
@@ -256,10 +256,10 @@ namespace Diligent
         {
             auto &pSampler = Samplers[sam].pSampler;
             auto *pd3d11Sampler = d3d11Samplers[sam];
-            VERIFY(pSampler==nullptr && pd3d11Sampler==nullptr || pSampler!=nullptr && pd3d11Sampler!=nullptr, "CB resource and d3d11 buffer must be set/unset atomically")
+            VERIFY(pSampler==nullptr && pd3d11Sampler==nullptr || pSampler!=nullptr && pd3d11Sampler!=nullptr, "CB resource and d3d11 buffer must be set/unset atomically");
             if(pSampler!=nullptr && pd3d11Sampler!=nullptr)
             {
-                VERIFY(pd3d11Sampler==pSampler->GetD3D11SamplerState(), "Inconsistent D3D11 sampler")
+                VERIFY(pd3d11Sampler==pSampler->GetD3D11SamplerState(), "Inconsistent D3D11 sampler");
             }
         }
     }

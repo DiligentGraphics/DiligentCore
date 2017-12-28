@@ -221,8 +221,8 @@ Uint32 ShaderResources::FindAssignedSamplerId(const D3DShaderResourceAttribs& Te
         const auto &Sampler = GetSampler(s);
         if( StrCmpSuff(Sampler.Name.c_str(), TexSRV.Name.c_str(), D3DSamplerSuffix) )
         {
-            VERIFY(Sampler.GetVariableType() == TexSRV.GetVariableType(), "Inconsistent texture and sampler variable types")
-            VERIFY(Sampler.BindCount == TexSRV.BindCount || Sampler.BindCount == 1, "Sampler assigned to array \"", TexSRV.Name, "\" is expected to be scalar or have the same dimension (",TexSRV.BindCount,"). Actual sampler array dimension : ",  Sampler.BindCount)
+            VERIFY(Sampler.GetVariableType() == TexSRV.GetVariableType(), "Inconsistent texture and sampler variable types");
+            VERIFY(Sampler.BindCount == TexSRV.BindCount || Sampler.BindCount == 1, "Sampler assigned to array \"", TexSRV.Name, "\" is expected to be scalar or have the same dimension (",TexSRV.BindCount,"). Actual sampler array dimension : ",  Sampler.BindCount);
             return s;
         }
     }

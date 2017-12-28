@@ -23,12 +23,10 @@ PUBLIC
 )
 
 target_link_libraries(LinuxPlatform 
-PRIVATE 
-	BuildSettings 
-	Common 
 PUBLIC
-	PlatformInterface
+	BuildSettings 
 	BasicPlatform
+	PlatformInterface
 )
 
 source_group("src" FILES ${SOURCE})

@@ -123,6 +123,7 @@ if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS)
 	add_subdirectory(Utilities)
 endif()
 
+add_subdirectory(Primitives)
 add_subdirectory(Platforms)
 add_subdirectory(External)
 add_subdirectory(Common)

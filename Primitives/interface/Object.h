@@ -27,7 +27,6 @@
 /// Defines Diligent::IObject interface
 
 #include "InterfaceID.h"
-#include "Atomics.h"
 #include "ReferenceCounters.h"
 
 namespace Diligent
@@ -37,6 +36,8 @@ namespace Diligent
 class IObject
 {
 public:
+    using CounterValueType = IReferenceCounters::CounterValueType;
+
     /// Queries the specific interface. 
 
     /// \param [in] IID - Unique identifier of the requested interface.
@@ -54,7 +55,7 @@ public:
     /// \return The number of strong references after incrementing the counter.
     /// \note   In a multithreaded environment, the returned number may not be reliable
     ///         as other threads may simultaneously change the actual value of the counter.
-    virtual Atomics::Long AddRef() = 0;
+    virtual CounterValueType AddRef() = 0;
 
 
     /// Decrements the number of strong references by 1 and destroys the object when the 
@@ -67,7 +68,7 @@ public:
     ///         as other threads may simultaneously change the actual value of the counter.
     ///         The only reliable value is 0 as the object is destroyed when the last 
     ///         strong reference is released.
-    virtual Atomics::Long Release() = 0;
+    virtual CounterValueType Release() = 0;
 
 
     /// Returns the pointer to IReferenceCounters interface of the associated 

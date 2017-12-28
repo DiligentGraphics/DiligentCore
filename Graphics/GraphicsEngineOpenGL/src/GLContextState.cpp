@@ -516,7 +516,7 @@ namespace Diligent
                 }
                 else
                 {
-                    LOG_WARNING_MESSAGE( "Disabling depth clamp is not supported" )
+                    LOG_WARNING_MESSAGE("Disabling depth clamp is not supported");
                 }
 #pragma warning(pop)
             }

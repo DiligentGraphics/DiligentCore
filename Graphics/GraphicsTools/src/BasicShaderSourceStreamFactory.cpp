@@ -81,7 +81,7 @@ namespace Diligent
         else
         {
             *ppStream = nullptr;
-            LOG_ERROR( "Failed to create input stream for source file ", Name )
+            LOG_ERROR( "Failed to create input stream for source file ", Name );
         }
     }
 }

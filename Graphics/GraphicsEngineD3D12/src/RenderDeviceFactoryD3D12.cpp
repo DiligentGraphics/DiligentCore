@@ -167,7 +167,7 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12( const EngineD3D12Attr
         hr = D3D12CreateDevice(hardwareAdapter, D3D_FEATURE_LEVEL_11_0, __uuidof(d3d12Device), reinterpret_cast<void**>(static_cast<ID3D12Device**>(&d3d12Device)) );
         if( FAILED(hr))
         {
-            LOG_WARNING_MESSAGE("Failed to create hardware device. Attempting to create WARP device")
+            LOG_WARNING_MESSAGE("Failed to create hardware device. Attempting to create WARP device");
 
 		    CComPtr<IDXGIAdapter> warpAdapter;
 		    hr = factory->EnumWarpAdapter( __uuidof(warpAdapter),  reinterpret_cast<void**>(static_cast<IDXGIAdapter**>(&warpAdapter)) );

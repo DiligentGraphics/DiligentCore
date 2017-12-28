@@ -207,7 +207,7 @@ namespace Diligent
         if( TexFmtAttribs.ComponentType == COMPONENT_TYPE_SNORM )
         {
             LOG_WARNING_MESSAGE("CopyData() is performed by rendering to texture.\n"
-                                "There might be an issue in OpenGL driver on NVidia hardware: when rendering to SNORM textures, all negative values are clamped to zero.")
+                                "There might be an issue in OpenGL driver on NVidia hardware: when rendering to SNORM textures, all negative values are clamped to zero.");
         }
 
         pCtxGL->SetPipelineState(m_pPSO[FSInd]);

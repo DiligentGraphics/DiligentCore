@@ -23,7 +23,6 @@
 
 #include "AndroidDebug.h"
 #include "FormatMessage.h"
-#include "FileSystem.h"
 #include <android/log.h>
 #include <csignal>
 
@@ -40,4 +39,14 @@ void AndroidDebug::OutputDebugMessage( DebugMessageSeverity Severity, const Dili
 {
     static const android_LogPriority Priorities[] = { ANDROID_LOG_INFO, ANDROID_LOG_WARN, ANDROID_LOG_ERROR, ANDROID_LOG_FATAL };
     __android_log_print( Priorities[static_cast<int>(Severity)], "Diligent Engine", "%s", Message );
+}
+
+void DebugAssertionFailed(const Diligent::Char* Message, const char* Function, const char* File, int Line)
+{
+    AndroidDebug :: AssertionFailed( Message, Function, File, Line );
+}
+
+void OutputDebugMessage(BasicPlatformDebug::DebugMessageSeverity Severity, const Diligent::Char* Message)
+{
+    AndroidDebug::OutputDebugMessage( Severity, Message );
 }

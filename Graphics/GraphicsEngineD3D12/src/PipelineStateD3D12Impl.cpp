@@ -57,7 +57,7 @@ D3D12_PRIMITIVE_TOPOLOGY_TYPE PrimitiveTopologyType_To_D3D12_PRIMITIVE_TOPOLOGY_
     }
     else
     {
-        UNEXPECTED( "Incorrect topology type operation (", TopologyType, ")" )
+        UNEXPECTED( "Incorrect topology type operation (", TopologyType, ")" );
         return static_cast<D3D12_PRIMITIVE_TOPOLOGY_TYPE>(0);
     }
 }
@@ -132,7 +132,7 @@ PipelineStateD3D12Impl :: PipelineStateD3D12Impl(IReferenceCounters *pRefCounter
         {                                                                           \
             auto ShaderType = GraphicsPipeline.p##VarName->GetDesc().ShaderType;    \
             if( ShaderType != ExpectedType )                                        \
-                LOG_ERROR_AND_THROW( GetShaderTypeLiteralName(ShaderType), " shader is provided while ", GetShaderTypeLiteralName(ExpectedType), " is expected") \
+                LOG_ERROR_AND_THROW( GetShaderTypeLiteralName(ShaderType), " shader is provided while ", GetShaderTypeLiteralName(ExpectedType), " is expected");\
             auto *pByteCode = ValidatedCast<ShaderD3D12Impl>(GraphicsPipeline.p##VarName)->GetShaderByteCode(); \
             d3d12PSODesc.VarName.pShaderBytecode = pByteCode->GetBufferPointer();   \
             d3d12PSODesc.VarName.BytecodeLength = pByteCode->GetBufferSize();       \
@@ -268,7 +268,7 @@ void PipelineStateD3D12Impl::CreateShaderResourceBinding(IShaderResourceBinding 
 const ShaderResourceLayoutD3D12& PipelineStateD3D12Impl::GetShaderResLayout(SHADER_TYPE ShaderType)const 
 {
     auto ShaderInd = GetShaderTypeIndex(ShaderType);
-    VERIFY_EXPR(m_pShaderResourceLayouts[ShaderInd] != nullptr)
+    VERIFY_EXPR(m_pShaderResourceLayouts[ShaderInd] != nullptr);
     return *m_pShaderResourceLayouts[ShaderInd];
 }
 
@@ -282,7 +282,7 @@ ShaderResourceCacheD3D12* PipelineStateD3D12Impl::CommitAndTransitionShaderResou
         (m_RootSig.GetTotalSrvCbvUavSlots(SHADER_VARIABLE_TYPE_MUTABLE) != 0 ||
          m_RootSig.GetTotalSrvCbvUavSlots(SHADER_VARIABLE_TYPE_DYNAMIC) != 0))
     {
-        LOG_ERROR_MESSAGE("Pipeline state \"", m_Desc.Name, "\" contains mutable/dynamic shader variables and requires shader resource binding to commit all resources, but none is provided.")
+        LOG_ERROR_MESSAGE("Pipeline state \"", m_Desc.Name, "\" contains mutable/dynamic shader variables and requires shader resource binding to commit all resources, but none is provided.");
     }
 #endif
 
@@ -325,7 +325,7 @@ ShaderResourceCacheD3D12* PipelineStateD3D12Impl::CommitAndTransitionShaderResou
     }
     else
     {
-        VERIFY(TransitionResources, "Resources should be transitioned or committed or both")
+        VERIFY(TransitionResources, "Resources should be transitioned or committed or both");
         m_RootSig.TransitionResources(ResourceCache, Ctx);
     }
     return &ResourceCache;

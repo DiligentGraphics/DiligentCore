@@ -60,7 +60,7 @@ const Char* GetValueTypeString( VALUE_TYPE Val )
     }
     else
     {
-        UNEXPECTED( "Incorrect value type (", Val, ")" )
+        UNEXPECTED( "Incorrect value type (", Val, ")" );
         return "unknown value type";
     }
 }
@@ -455,7 +455,7 @@ const Char *GetBufferViewTypeLiteralName( BUFFER_VIEW_TYPE ViewType )
     }
     else
     {
-        UNEXPECTED( "Buffer view type (", ViewType, ") is out of allowed range [0, ", BUFFER_VIEW_NUM_VIEWS-1, "]" )
+        UNEXPECTED( "Buffer view type (", ViewType, ") is out of allowed range [0, ", BUFFER_VIEW_NUM_VIEWS-1, "]" );
         return "<Unknown buffer view type>";
     }
 }
@@ -502,7 +502,7 @@ const Char *GetShaderVariableTypeLiteralName(SHADER_VARIABLE_TYPE VarType, bool 
         return (bGetFullName ? FullVarTypeNameStrings : ShortVarTypeNameStrings)[VarType];
     else
     {
-        UNEXPECTED("Unknow shader variable type")
+        UNEXPECTED("Unknow shader variable type");
         return "unknow";
     }
 }
@@ -526,7 +526,7 @@ const Char* GetUsageString( USAGE Usage )
         return UsageStrings[Usage];
     else
     {
-        UNEXPECTED("Unknow usage" )
+        UNEXPECTED("Unknow usage");
         return "Unknown usage";
     }
 }
@@ -554,7 +554,7 @@ const Char* GetResourceDimString( RESOURCE_DIMENSION TexType )
         return TexTypeStrings[TexType];
     else
     {
-        UNEXPECTED("Unknow texture type")
+        UNEXPECTED("Unknow texture type");
         return "Unknow texture type";
     }
 }
@@ -766,7 +766,7 @@ Uint32 ComputeMipLevelsCount( Uint32 Width )
     Uint32 MipLevels = 0;
     while( (Width >> MipLevels) > 0 )
         ++MipLevels;
-    VERIFY( Width >= (1U << (MipLevels-1)) && Width < (1U << MipLevels), "Incorrect number of Mip levels" )
+    VERIFY( Width >= (1U << (MipLevels-1)) && Width < (1U << MipLevels), "Incorrect number of Mip levels" );
     return MipLevels;
 }
 
@@ -857,7 +857,7 @@ void GenerateCheckerBoardPattern(Uint32 Width, Uint32 Height, TEXTURE_FORMAT Fmt
             break;
 
         default:
-            UNSUPPORTED("Unsupported component type")
+            UNSUPPORTED("Unsupported component type");
             return;
     }
 }

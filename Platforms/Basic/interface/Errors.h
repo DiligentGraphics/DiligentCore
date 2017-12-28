@@ -24,10 +24,11 @@
 #pragma once
 
 #include <stdexcept>
+#include <mutex>
 
-#include "PlatformDebug.h"
+#include "BasicPlatformDebug.h"
 #include "FormatMessage.h"
-#include "FileSystem.h"
+#include "BasicFileSystem.h"
 
 template<bool>
 void ThrowIf(std::string &&)
@@ -44,72 +45,60 @@ template<bool bThrowException, typename FirstArgType, typename... RestArgsType>
 void LogError( const char *strFunctionName, const char *strFullFilePath, int Line, const FirstArgType& first, const RestArgsType&... RestArgs )
 {
     std::string FileName;
-    FileSystem::SplitFilePath( strFullFilePath, nullptr, &FileName );
+    BasicFileSystem::SplitFilePath( strFullFilePath, nullptr, &FileName );
     Diligent::MsgStream ss;
     ss << "The following error occured in the " << strFunctionName << "() function (" << FileName << ", line " << Line << "):\n";
     Diligent::FormatMsg( ss, first, RestArgs... );
     auto strFullMessage = ss.str();
-    PlatformDebug::OutputDebugMessage( bThrowException ? PlatformDebug::DebugMessageSeverity::FatalError : PlatformDebug::DebugMessageSeverity::Error, strFullMessage.c_str() );
+    OutputDebugMessage( bThrowException ? BasicPlatformDebug::DebugMessageSeverity::FatalError : BasicPlatformDebug::DebugMessageSeverity::Error, strFullMessage.c_str() );
     ThrowIf<bThrowException>(std::move(strFullMessage));
 }
 
 #define LOG_ERROR(...)\
-{                                       \
+do{                                       \
     LogError<false>(__FUNCTION__, __FILE__, __LINE__, ##__VA_ARGS__); \
-}
+}while(false)
 
 #define LOG_ERROR_ONCE(...)\
-{                                       \
+do{                                     \
     static bool IsFirstTime = true;     \
     if(IsFirstTime)                     \
     {                                   \
         LogError<false>(__FUNCTION__, __FILE__, __LINE__, ##__VA_ARGS__); \
         IsFirstTime = false;            \
     }                                   \
-}
+}while(false)
 
-#define LOG_ERROR_AND_THROW(...) \
-{                                       \
-    LogError<true>(__FUNCTION__, __FILE__, __LINE__, ##__VA_ARGS__); \
-}
+#define LOG_ERROR_AND_THROW(...)\
+do{                                     \
+    LogError<true>(__FUNCTION__, __FILE__, __LINE__, ##__VA_ARGS__);\
+}while(false)
 
-#define LOG_DEBUG_MESSAGE(Severity, ...)  \
-{                                   \
-    Diligent::MsgStream ss;        \
-    Diligent::FormatMsg( ss, ##__VA_ARGS__ );   \
-    PlatformDebug::OutputDebugMessage( Severity, ss.str().c_str() ); \
-}
+#define LOG_DEBUG_MESSAGE(Severity, ...)\
+do{                                     \
+    Diligent::MsgStream ss;             \
+    Diligent::FormatMsg( ss, ##__VA_ARGS__ );\
+    OutputDebugMessage( Severity, ss.str().c_str() );\
+}while(false)
 
-#define LOG_ERROR_MESSAGE(...)    LOG_DEBUG_MESSAGE(PlatformDebug::DebugMessageSeverity::Error,   ##__VA_ARGS__)
-#define LOG_WARNING_MESSAGE(...)  LOG_DEBUG_MESSAGE(PlatformDebug::DebugMessageSeverity::Warning, ##__VA_ARGS__)
-#define LOG_INFO_MESSAGE(...)     LOG_DEBUG_MESSAGE(PlatformDebug::DebugMessageSeverity::Info,    ##__VA_ARGS__)
+#define LOG_ERROR_MESSAGE(...)    LOG_DEBUG_MESSAGE(BasicPlatformDebug::DebugMessageSeverity::Error,   ##__VA_ARGS__)
+#define LOG_WARNING_MESSAGE(...)  LOG_DEBUG_MESSAGE(BasicPlatformDebug::DebugMessageSeverity::Warning, ##__VA_ARGS__)
+#define LOG_INFO_MESSAGE(...)     LOG_DEBUG_MESSAGE(BasicPlatformDebug::DebugMessageSeverity::Info,    ##__VA_ARGS__)
 
 #define LOG_ERROR_MESSAGE_ONCE(...)\
-{                                       \
-    static bool IsFirstTime = true;     \
-    if(IsFirstTime)                     \
-    {                                   \
-        LOG_ERROR_MESSAGE(__VA_ARGS__)  \
-        IsFirstTime = false;            \
-    }                                   \
-}
+do{                                                                         \
+    static std::once_flag FirstTimeFlag;                                    \
+    std::call_once(FirstTimeFlag, [&](){ LOG_ERROR_MESSAGE(__VA_ARGS__); });\
+} while (false)
 
 #define LOG_WARNING_MESSAGE_ONCE(...)\
-{                                       \
-    static bool IsFirstTime = true;     \
-    if(IsFirstTime)                     \
-    {                                   \
-        LOG_WARNING_MESSAGE(__VA_ARGS__)\
-        IsFirstTime = false;            \
-    }                                   \
-}
+do{                                                                           \
+    static std::once_flag FirstTimeFlag;                                      \
+    std::call_once(FirstTimeFlag, [&](){ LOG_WARNING_MESSAGE(__VA_ARGS__); });\
+}while(false)
 
 #define LOG_INFO_MESSAGE_ONCE(...)\
-{                                       \
-    static bool IsFirstTime = true;     \
-    if(IsFirstTime)                     \
-    {                                   \
-        LOG_INFO_MESSAGE(__VA_ARGS__)   \
-        IsFirstTime = false;            \
-    }                                   \
-}
+do{                                                                        \
+    static std::once_flag FirstTimeFlag;                                   \
+    std::call_once(FirstTimeFlag, [&](){ LOG_INFO_MESSAGE(__VA_ARGS__); });\
+} while(false)

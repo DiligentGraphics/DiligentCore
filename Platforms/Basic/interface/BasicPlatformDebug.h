@@ -23,28 +23,21 @@
 
 #pragma once
 
-#include <stdio.h>
+#include "BasicTypes.h"
 
-#include "BasicFileSystem.h"
-
-class StandardFile : public BasicFile
+struct BasicPlatformDebug
 {
-public:
-    StandardFile( const FileOpenAttribs &OpenAttribs, Diligent::Char SlashSymbol );
-    virtual ~StandardFile()override;
+    enum class DebugMessageSeverity
+    {
+        Info,
+        Warning,
+        Error,
+        FatalError
+    };
 
-    void Read(Diligent::IDataBlob *pData);
-
-    bool Read(void *Data, size_t BufferSize);
-
-    bool Write(const void *Data, size_t BufferSize);
-
-    size_t GetSize();
-
-    size_t GetPos();
-
-    void SetPos(size_t Offset, FilePosOrigin Origin);
-    
-protected:
-    FILE * m_pFile;
+    static Diligent::String FormatAssertionFailedMessage(const Diligent::Char* Message, const char* Function, const char* File, int Line);
 };
+
+// Forward declarations of platform-specific debug functions
+void DebugAssertionFailed(const Diligent::Char* Message, const char* Function, const char* File, int Line);
+void OutputDebugMessage(BasicPlatformDebug::DebugMessageSeverity Severity, const Diligent::Char* Message);

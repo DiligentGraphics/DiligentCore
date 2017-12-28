@@ -32,11 +32,11 @@ namespace Diligent
 {
 
 // {D7BC9FF0-28F0-4636-9732-710C204D1D63}
-static const Diligent::INTERFACE_ID IID_TextureGL =
+static constexpr INTERFACE_ID IID_TextureGL =
 { 0xd7bc9ff0, 0x28f0, 0x4636, { 0x97, 0x32, 0x71, 0xc, 0x20, 0x4d, 0x1d, 0x63 } };
 
 /// Interface to the texture object implemented in OpenGL
-class ITextureGL : public Diligent::ITexture
+class ITextureGL : public ITexture
 {
 public:
     /// Returns OpenGL texture handle

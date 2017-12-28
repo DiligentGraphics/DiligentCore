@@ -24,7 +24,7 @@
 #pragma once
 
 #include "FormatMessage.h"
-#include "PlatformDebug.h"
+#include "BasicPlatformDebug.h"
 
 #ifdef _DEBUG
 
@@ -35,21 +35,21 @@
 inline void EnsureStr( const char* ){}
 
 #define ASSERTION_FAILED(Message, ...)\
-{                                           \
+do{                                         \
     EnsureStr(Message);                     \
     Diligent::MsgStream ms;                 \
     Diligent::FormatMsg( ms, Message, ##__VA_ARGS__);\
-    PlatformDebug::AssertionFailed( ms.str().c_str(), __FUNCTION__, __FILE__, __LINE__); \
-}
+    DebugAssertionFailed( ms.str().c_str(), __FUNCTION__, __FILE__, __LINE__); \
+}while(false)
 
 #   define VERIFY(Expr, Message, ...)\
-    {                                \
+    do{                              \
         EnsureStr(Message);          \
         if( !(Expr) )                \
         {                            \
-            ASSERTION_FAILED(Message, ##__VA_ARGS__)\
+            ASSERTION_FAILED(Message, ##__VA_ARGS__);\
         }                            \
-    }
+    }while(false)
 
 #   define UNEXPECTED   ASSERTION_FAILED
 #   define UNSUPPORTED  ASSERTION_FAILED
@@ -62,7 +62,7 @@ void CheckDynamicType( SrcType *pSrcPtr )
 {
     VERIFY(pSrcPtr == nullptr || dynamic_cast<DstType*> (pSrcPtr) != nullptr, "Dynamic type cast failed. Src typeid: \'", typeid(*pSrcPtr).name(), "\' Dst typeid: \'", typeid(DstType).name(), '\'');
 }
-#   define CHECK_DYNAMIC_TYPE(DstType, pSrcPtr) CheckDynamicType<DstType>(pSrcPtr)
+#   define CHECK_DYNAMIC_TYPE(DstType, pSrcPtr) do{ CheckDynamicType<DstType>(pSrcPtr); }while(false)
 
 
 #else

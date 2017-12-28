@@ -147,7 +147,7 @@ TextureD3D12Impl :: TextureD3D12Impl(IReferenceCounters *pRefCounters,
     auto hr = pd3d12Device->CreateCommittedResource( &HeapProps, D3D12_HEAP_FLAG_NONE,
 		&Desc, m_UsageState, pClearValue, __uuidof(m_pd3d12Resource), reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&m_pd3d12Resource)) );
     if(FAILED(hr))
-        LOG_ERROR_AND_THROW("Failed to create D3D12 texture")
+        LOG_ERROR_AND_THROW("Failed to create D3D12 texture");
 
     if( *m_Desc.Name != 0)
         m_pd3d12Resource->SetName(WidenString(m_Desc.Name).c_str());
@@ -156,7 +156,7 @@ TextureD3D12Impl :: TextureD3D12Impl(IReferenceCounters *pRefCounters,
     {
         Uint32 ExpectedNumSubresources = static_cast<Uint32>(Desc.MipLevels * (Desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D ? 1 : Desc.DepthOrArraySize) );
         if( InitData.NumSubresources != ExpectedNumSubresources )
-            LOG_ERROR_AND_THROW("Incorrect number of subresources in init data. ", ExpectedNumSubresources, " expected, while ", InitData.NumSubresources, " provided")
+            LOG_ERROR_AND_THROW("Incorrect number of subresources in init data. ", ExpectedNumSubresources, " expected, while ", InitData.NumSubresources, " provided");
 
 	    UINT64 uploadBufferSize = GetRequiredIntermediateSize(m_pd3d12Resource, 0, InitData.NumSubresources);
 
@@ -185,7 +185,7 @@ TextureD3D12Impl :: TextureD3D12Impl(IReferenceCounters *pRefCounters,
 		    &BufferDesc, D3D12_RESOURCE_STATE_GENERIC_READ,
 		    nullptr,  __uuidof(UploadBuffer), reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&UploadBuffer)));
         if(FAILED(hr))
-            LOG_ERROR_AND_THROW("Failed to create committed resource in an upload heap")
+            LOG_ERROR_AND_THROW("Failed to create committed resource in an upload heap");
 
         auto *pInitContext = pRenderDeviceD3D12->AllocateCommandContext();
 	    // copy data to the intermediate upload heap and then schedule a copy from the upload heap to the default texture
@@ -233,7 +233,7 @@ TextureD3D12Impl :: TextureD3D12Impl(IReferenceCounters *pRefCounters,
     {
         if (m_Desc.Type != RESOURCE_DIM_TEX_2D && m_Desc.Type != RESOURCE_DIM_TEX_2D_ARRAY)
         {
-            LOG_ERROR_AND_THROW("Mipmap generation is only supported for 2D textures and texture arrays")
+            LOG_ERROR_AND_THROW("Mipmap generation is only supported for 2D textures and texture arrays");
         }
 
         m_MipUAVs = pRenderDeviceD3D12->AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, m_Desc.MipLevels);
@@ -390,7 +390,7 @@ void TextureD3D12Impl::CreateViewInternal( const struct TextureViewDesc &ViewDes
     catch( const std::runtime_error & )
     {
         const auto *ViewTypeName = GetTexViewTypeLiteralName(ViewDesc.ViewType);
-        LOG_ERROR("Failed to create view \"", ViewDesc.Name ? ViewDesc.Name : "", "\" (", ViewTypeName, ") for texture \"", m_Desc.Name ? m_Desc.Name : "", "\"" )
+        LOG_ERROR("Failed to create view \"", ViewDesc.Name ? ViewDesc.Name : "", "\" (", ViewTypeName, ") for texture \"", m_Desc.Name ? m_Desc.Name : "", "\"" );
     }
 }
 

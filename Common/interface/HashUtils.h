@@ -72,7 +72,7 @@ namespace Diligent
     {
         bool operator()( const CharType *str1, const CharType *str2 )const
         {
-            UNSUPPORTED( "Template specialization is not implemented" )
+            UNSUPPORTED( "Template specialization is not implemented" );
             return false;
         }
     };

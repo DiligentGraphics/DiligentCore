@@ -3,39 +3,29 @@ cmake_minimum_required (VERSION 3.6)
 project(Common CXX)
 
 set(INCLUDE 
-	include/AdaptiveFixedBlockAllocator.h
-	include/BasicFileStream.h
-	include/BasicTypes.h
-	include/DataBlobImpl.h
-	include/DebugUtilities.h
-	include/DefaultRawMemoryAllocator.h
-	include/Errors.h
-	include/FileWrapper.h
-	include/FixedBlockMemoryAllocator.h
-	include/FormatMessage.h
-	include/HashUtils.h
-	include/InterfaceID.h
-	include/LockHelper.h 
-	include/ObjectBase.h
 	include/pch.h
-	include/RefCntAutoPtr.h
-	include/RefCountedObjectImpl.h
-	include/STDAllocator.h
-	include/StringDataBlobImpl.h
-	include/StringTools.h
-	include/Timer.h
-	include/UniqueIdentifier.h
-	include/ValidatedCast.h
 )
 
 set(INTERFACE 
 	interface/AdvancedMath.h
 	interface/BasicMath.h
-	interface/DataBlob.h
-	interface/FileStream.h
-	interface/MemoryAllocator.h
-	interface/Object.h
-	interface/ReferenceCounters.h
+	interface/AdaptiveFixedBlockAllocator.h
+	interface/BasicFileStream.h
+	interface/DataBlobImpl.h
+	interface/DefaultRawMemoryAllocator.h
+	interface/FileWrapper.h
+	interface/FixedBlockMemoryAllocator.h
+	interface/HashUtils.h
+	interface/LockHelper.h 
+	interface/ObjectBase.h
+	interface/RefCntAutoPtr.h
+	interface/RefCountedObjectImpl.h
+	interface/STDAllocator.h
+	interface/StringDataBlobImpl.h
+	interface/StringTools.h
+	interface/Timer.h
+	interface/UniqueIdentifier.h
+	interface/ValidatedCast.h
 )
 
 set(SOURCE 
@@ -49,15 +39,15 @@ set(SOURCE
 add_library(Common STATIC ${SOURCE} ${INCLUDE} ${INTERFACE})
 
 target_include_directories(Common 
+PRIVATE
+	include
 PUBLIC 
-	include 
 	interface
 )
 
 target_link_libraries(Common 
-PRIVATE 
-	BuildSettings 
-	TargetPlatform
+PUBLIC 
+	TargetPlatform 
 )
 set_common_target_properties(Common)
 

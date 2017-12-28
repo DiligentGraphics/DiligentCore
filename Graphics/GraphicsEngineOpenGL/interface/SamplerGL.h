@@ -32,11 +32,11 @@ namespace Diligent
 {
 
 // {3E9EB89E-E955-447A-9D13-92C10541F727}
-static const Diligent::INTERFACE_ID IID_SamplerGL =
+static constexpr INTERFACE_ID IID_SamplerGL =
 { 0x3e9eb89e, 0xe955, 0x447a, { 0x9d, 0x13, 0x92, 0xc1, 0x5, 0x41, 0xf7, 0x27 } };
 
 /// Interface to the sampler object object implemented in OpenGL
-class ISamplerGL : public Diligent::ISampler
+class ISamplerGL : public ISampler
 {
 public:
     //const GLObjectWrappers::GLSamplerObj& GetHandle(){ return m_GlSampler; }

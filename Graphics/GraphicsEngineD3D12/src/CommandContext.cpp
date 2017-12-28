@@ -62,7 +62,7 @@ void CommandContext::Reset( CommandListManager& CmdListManager )
 	// We only call Reset() on previously freed contexts. The command list persists, but we need to
 	// request a new allocator if there is none
     // The allocator may not be null if the command context was previously disposed without being executed
-	VERIFY_EXPR(m_pCommandList != nullptr)
+	VERIFY_EXPR(m_pCommandList != nullptr);
     if( !m_pCurrentAllocator )
     {
         CmdListManager.RequestAllocator(&m_pCurrentAllocator);
@@ -199,8 +199,8 @@ void CommandContext::TransitionResource(IBufferD3D12 *pBuffer, D3D12_RESOURCE_ST
     // D3D12_RESOURCE_STATE_GENERIC_READ state
     if(pBuffD3D12->GetDesc().Usage == USAGE_DYNAMIC && (pBuffD3D12->GetDesc().BindFlags & (BIND_SHADER_RESOURCE|BIND_UNORDERED_ACCESS)) == 0)
     {
-        VERIFY(pBuffD3D12->GetState() == D3D12_RESOURCE_STATE_GENERIC_READ, "Dynamic buffers that cannot be bound as SRV or UAV are expected to always be in D3D12_RESOURCE_STATE_GENERIC_READ state")
-        VERIFY( (NewState & D3D12_RESOURCE_STATE_GENERIC_READ) == NewState, "Dynamic buffers can only transition to one of D3D12_RESOURCE_STATE_GENERIC_READ states")
+        VERIFY(pBuffD3D12->GetState() == D3D12_RESOURCE_STATE_GENERIC_READ, "Dynamic buffers that cannot be bound as SRV or UAV are expected to always be in D3D12_RESOURCE_STATE_GENERIC_READ state");
+        VERIFY( (NewState & D3D12_RESOURCE_STATE_GENERIC_READ) == NewState, "Dynamic buffers can only transition to one of D3D12_RESOURCE_STATE_GENERIC_READ states");
     }
 #endif
 
@@ -208,7 +208,7 @@ void CommandContext::TransitionResource(IBufferD3D12 *pBuffer, D3D12_RESOURCE_ST
 
 #ifdef _DEBUG
     if(pBuffD3D12->GetDesc().Usage == USAGE_DYNAMIC && (pBuffD3D12->GetDesc().BindFlags & (BIND_SHADER_RESOURCE|BIND_UNORDERED_ACCESS)) == 0)
-        VERIFY(pBuffD3D12->GetState() == D3D12_RESOURCE_STATE_GENERIC_READ, "Dynamic buffers without SRV/UAV bind flag are expected to never transition from D3D12_RESOURCE_STATE_GENERIC_READ state")
+        VERIFY(pBuffD3D12->GetState() == D3D12_RESOURCE_STATE_GENERIC_READ, "Dynamic buffers without SRV/UAV bind flag are expected to never transition from D3D12_RESOURCE_STATE_GENERIC_READ state");
 #endif
 }
 

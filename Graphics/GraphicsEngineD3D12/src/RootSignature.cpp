@@ -232,7 +232,7 @@ void RootSignature::InitStaticSampler(SHADER_TYPE ShaderType, const String &Text
 
     if (!SamplerFound)
     {
-        LOG_ERROR("Failed to find static sampler for variable \"", TextureName, '\"')
+        LOG_ERROR("Failed to find static sampler for variable \"", TextureName, '\"');
     }
 }
 
@@ -327,12 +327,12 @@ void RootSignature::dbgVerifyRootParameters()const
             {
                 VERIFY( range.RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_SRV ||
                         range.RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_CBV || 
-                        range.RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_UAV, "Resource type is expected to be SRV, CBV or UAV")
+                        range.RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_UAV, "Resource type is expected to be SRV, CBV or UAV");
                 dbgTotalSrvCbvUavSlots += range.NumDescriptors;
             }
             else
             {
-                VERIFY(range.RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER, "Resource type is expected to be sampler")
+                VERIFY(range.RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER, "Resource type is expected to be sampler");
                 dbgTotalSamplerSlots += range.NumDescriptors;
             }
 
@@ -353,11 +353,11 @@ void RootSignature::dbgVerifyRootParameters()const
     VERIFY(dbgTotalSrvCbvUavSlots == 
                 m_TotalSrvCbvUavSlots[SHADER_VARIABLE_TYPE_STATIC] + 
                 m_TotalSrvCbvUavSlots[SHADER_VARIABLE_TYPE_MUTABLE] + 
-                m_TotalSrvCbvUavSlots[SHADER_VARIABLE_TYPE_DYNAMIC], "Unexpected number of SRV CBV UAV resource slots")
+                m_TotalSrvCbvUavSlots[SHADER_VARIABLE_TYPE_DYNAMIC], "Unexpected number of SRV CBV UAV resource slots");
     VERIFY(dbgTotalSamplerSlots == 
                 m_TotalSamplerSlots[SHADER_VARIABLE_TYPE_STATIC] +
                 m_TotalSamplerSlots[SHADER_VARIABLE_TYPE_MUTABLE] + 
-                m_TotalSamplerSlots[SHADER_VARIABLE_TYPE_DYNAMIC], "Unexpected number of sampler slots")
+                m_TotalSamplerSlots[SHADER_VARIABLE_TYPE_DYNAMIC], "Unexpected number of sampler slots");
 }
 #endif
 
@@ -409,14 +409,14 @@ void RootSignature::Finalize(ID3D12Device *pd3d12Device)
     {
         auto &RootTable = m_RootParams.GetRootTable(rt);
         const D3D12_ROOT_PARAMETER &SrcParam = RootTable;
-        VERIFY( SrcParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE && SrcParam.DescriptorTable.NumDescriptorRanges > 0, "Non-empty descriptor table is expected" )
+        VERIFY( SrcParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE && SrcParam.DescriptorTable.NumDescriptorRanges > 0, "Non-empty descriptor table is expected" );
         D3D12Parameters[RootTable.GetRootIndex()] = SrcParam;
     }
     for(Uint32 rv = 0; rv < m_RootParams.GetNumRootViews(); ++rv)
     {
         auto &RootView = m_RootParams.GetRootView(rv);
         const D3D12_ROOT_PARAMETER &SrcParam = RootView;
-        VERIFY( SrcParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_CBV, "Root CBV is expected" )
+        VERIFY( SrcParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_CBV, "Root CBV is expected" );
         D3D12Parameters[RootView.GetRootIndex()] = SrcParam;
     }
 
@@ -472,7 +472,7 @@ void RootSignature::Finalize(ID3D12Device *pd3d12Device)
 	CComPtr<ID3DBlob> error;
     HRESULT hr = D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error);
     hr = pd3d12Device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), __uuidof(m_pd3d12RootSignature), reinterpret_cast<void**>( static_cast<ID3D12RootSignature**>(&m_pd3d12RootSignature)));
-    CHECK_D3D_RESULT_THROW(hr, "Failed to create root signature")
+    CHECK_D3D_RESULT_THROW(hr, "Failed to create root signature");
 
     bool bHasDynamicResources = m_TotalSrvCbvUavSlots[SHADER_VARIABLE_TYPE_DYNAMIC]!=0 || m_TotalSamplerSlots[SHADER_VARIABLE_TYPE_DYNAMIC]!=0;
     if(bHasDynamicResources)
@@ -541,7 +541,7 @@ void RootSignature::InitResourceCache(RenderDeviceD3D12Impl *pDeviceD3D12Impl, S
 #ifdef _DEBUG
         dbgShaderType = ShaderTypeFromShaderVisibility(D3D12RootParam.ShaderVisibility);
 #endif
-        VERIFY_EXPR( D3D12RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE )
+        VERIFY_EXPR( D3D12RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE );
         
         auto TableSize = RootParam.GetDescriptorTableSize();
         VERIFY(TableSize > 0, "Unexpected empty descriptor table");
@@ -568,7 +568,7 @@ void RootSignature::InitResourceCache(RenderDeviceD3D12Impl *pDeviceD3D12Impl, S
         }
         else
         {
-            VERIFY_EXPR(RootTableCache.m_TableStartOffset == ShaderResourceCacheD3D12::InvalidDescriptorOffset)
+            VERIFY_EXPR(RootTableCache.m_TableStartOffset == ShaderResourceCacheD3D12::InvalidDescriptorOffset);
         }
     }
 
@@ -579,7 +579,7 @@ void RootSignature::InitResourceCache(RenderDeviceD3D12Impl *pDeviceD3D12Impl, S
         const auto& D3D12RootParam = static_cast<const D3D12_ROOT_PARAMETER&>(RootParam);
         auto &RootTableCache = ResourceCache.GetRootTable(RootParam.GetRootIndex());
         // Root views are not assigned valid table start offset
-        VERIFY_EXPR(RootTableCache.m_TableStartOffset == ShaderResourceCacheD3D12::InvalidDescriptorOffset)
+        VERIFY_EXPR(RootTableCache.m_TableStartOffset == ShaderResourceCacheD3D12::InvalidDescriptorOffset);
         
         SHADER_TYPE dbgShaderType = ShaderTypeFromShaderVisibility(D3D12RootParam.ShaderVisibility);
         VERIFY_EXPR(D3D12RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_CBV);
@@ -658,8 +658,8 @@ void TransitionResource(CommandContext &Ctx,
 
         default:
             // Resource not bound
-            VERIFY(Res.Type == CachedResourceType::Unknown, "Unexpected resource type") 
-            VERIFY(Res.pObject == nullptr && Res.CPUDescriptorHandle.ptr == 0, "Bound resource is unexpected")
+            VERIFY(Res.Type == CachedResourceType::Unknown, "Unexpected resource type");
+            VERIFY(Res.pObject == nullptr && Res.CPUDescriptorHandle.ptr == 0, "Bound resource is unexpected");
     }
 }
 
@@ -731,8 +731,8 @@ void DbgVerifyResourceState(ShaderResourceCacheD3D12::Resource &Res,
 
         default:
             // Resource not bound
-            VERIFY(Res.Type == CachedResourceType::Unknown, "Unexpected resource type") 
-            VERIFY(Res.pObject == nullptr && Res.CPUDescriptorHandle.ptr == 0, "Bound resource is unexpected")
+            VERIFY(Res.Type == CachedResourceType::Unknown, "Unexpected resource type");
+            VERIFY(Res.pObject == nullptr && Res.CPUDescriptorHandle.ptr == 0, "Bound resource is unexpected");
     }
 }
 #endif
@@ -811,9 +811,9 @@ void RootSignature::CommitDescriptorHandlesInternal_SMD(RenderDeviceD3D12Impl *p
         Heaps.pSrvCbvUavHeap = DynamicCbvSrvUavDescriptors.GetDescriptorHeap();
 
     if(NumDynamicCbvSrvUavDescriptors)
-        VERIFY(DynamicCbvSrvUavDescriptors.GetDescriptorHeap() == Heaps.pSrvCbvUavHeap, "Inconsistent CbvSrvUav descriptor heaps" )
+        VERIFY(DynamicCbvSrvUavDescriptors.GetDescriptorHeap() == Heaps.pSrvCbvUavHeap, "Inconsistent CbvSrvUav descriptor heaps" );
     if(NumDynamicSamplerDescriptors)
-        VERIFY(DynamicSamplerDescriptors.GetDescriptorHeap() == Heaps.pSamplerHeap, "Inconsistent Sampler descriptor heaps" )
+        VERIFY(DynamicSamplerDescriptors.GetDescriptorHeap() == Heaps.pSamplerHeap, "Inconsistent Sampler descriptor heaps" );
 
     if(Heaps)
         Ctx.SetDescriptorHeaps(Heaps);
@@ -840,7 +840,7 @@ void RootSignature::CommitDescriptorHandlesInternal_SMD(RenderDeviceD3D12Impl *p
                 RootTableGPUDescriptorHandle = IsResourceTable ? 
                     ResourceCache.GetShaderVisibleTableGPUDescriptorHandle<D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV>(RootInd) : 
                     ResourceCache.GetShaderVisibleTableGPUDescriptorHandle<D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER>(RootInd);
-                VERIFY(RootTableGPUDescriptorHandle.ptr != 0, "Unexpected null GPU descriptor handle")
+                VERIFY(RootTableGPUDescriptorHandle.ptr != 0, "Unexpected null GPU descriptor handle");
             }
 
             if(IsCompute)
@@ -867,9 +867,9 @@ void RootSignature::CommitDescriptorHandlesInternal_SMD(RenderDeviceD3D12Impl *p
                         if (IsResourceTable)
                         {
                             if( Res.CPUDescriptorHandle.ptr == 0 )
-                                LOG_ERROR_MESSAGE("No valid CbvSrvUav descriptor handle found for root parameter ", RootInd, ", descriptor slot ", OffsetFromTableStart)
+                                LOG_ERROR_MESSAGE("No valid CbvSrvUav descriptor handle found for root parameter ", RootInd, ", descriptor slot ", OffsetFromTableStart);
 
-                            VERIFY( DynamicCbvSrvUavTblOffset < NumDynamicCbvSrvUavDescriptors, "Not enough space in the descriptor heap allocation")
+                            VERIFY( DynamicCbvSrvUavTblOffset < NumDynamicCbvSrvUavDescriptors, "Not enough space in the descriptor heap allocation");
                             
                             pd3d12Device->CopyDescriptorsSimple(1, DynamicCbvSrvUavDescriptors.GetCpuHandle(DynamicCbvSrvUavTblOffset), Res.CPUDescriptorHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
                             ++DynamicCbvSrvUavTblOffset;
@@ -877,9 +877,9 @@ void RootSignature::CommitDescriptorHandlesInternal_SMD(RenderDeviceD3D12Impl *p
                         else
                         {
                             if( Res.CPUDescriptorHandle.ptr == 0 )
-                                LOG_ERROR_MESSAGE("No valid sampler descriptor handle found for root parameter ", RootInd, ", descriptor slot ", OffsetFromTableStart)
+                                LOG_ERROR_MESSAGE("No valid sampler descriptor handle found for root parameter ", RootInd, ", descriptor slot ", OffsetFromTableStart);
 
-                            VERIFY( DynamicSamplerTblOffset < NumDynamicSamplerDescriptors, "Not enough space in the descriptor heap allocation")
+                            VERIFY( DynamicSamplerTblOffset < NumDynamicSamplerDescriptors, "Not enough space in the descriptor heap allocation");
                             
                             pd3d12Device->CopyDescriptorsSimple(1, DynamicSamplerDescriptors.GetCpuHandle(DynamicSamplerTblOffset), Res.CPUDescriptorHandle, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
                             ++DynamicSamplerTblOffset;
@@ -914,7 +914,7 @@ void RootSignature::CommitDescriptorHandlesInternal_SM(RenderDeviceD3D12Impl *pR
             D3D12_GPU_DESCRIPTOR_HANDLE RootTableGPUDescriptorHandle = IsResourceTable ? 
                 ResourceCache.GetShaderVisibleTableGPUDescriptorHandle<D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV>(RootInd) : 
                 ResourceCache.GetShaderVisibleTableGPUDescriptorHandle<D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER>(RootInd);
-            VERIFY(RootTableGPUDescriptorHandle.ptr != 0, "Unexpected null GPU descriptor handle")
+            VERIFY(RootTableGPUDescriptorHandle.ptr != 0, "Unexpected null GPU descriptor handle");
 
             if(IsCompute)
                 Ctx.GetCommandList()->SetComputeRootDescriptorTable(RootInd, RootTableGPUDescriptorHandle);

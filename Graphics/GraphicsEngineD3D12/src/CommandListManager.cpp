@@ -88,7 +88,7 @@ void CommandListManager::RequestAllocator(ID3D12CommandAllocator** ppAllocator)
 	{
         auto *pd3d12Device = m_pDeviceD3D12->GetD3D12Device();
 		auto hr = pd3d12Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, __uuidof(*ppAllocator), reinterpret_cast<void**>(ppAllocator));
-        VERIFY(SUCCEEDED(hr), "Failed to create command allocator")
+        VERIFY(SUCCEEDED(hr), "Failed to create command allocator");
 		wchar_t AllocatorName[32];
         swprintf(AllocatorName, _countof(AllocatorName), L"Cmd list allocator %ld", Atomics::AtomicIncrement(m_NumAllocators)-1);
 		(*ppAllocator)->SetName(AllocatorName);

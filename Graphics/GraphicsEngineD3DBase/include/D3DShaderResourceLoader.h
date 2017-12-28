@@ -96,7 +96,7 @@ namespace Diligent
             auto OpenBracketPos = Name.find('[');
             if (String::npos != OpenBracketPos)
             {
-                VERIFY(BindCount == 1, "When array elements are enumerated individually, BindCount is expected to always be 1")
+                VERIFY(BindCount == 1, "When array elements are enumerated individually, BindCount is expected to always be 1");
 
                 // Name == "g_tex2DDiffuse[0]"
                 //                        ^
@@ -107,7 +107,7 @@ namespace Diligent
 #ifdef _DEBUG
                 for (const auto &ExistingRes : Resources)
                 {
-                    VERIFY(ExistingRes.Name != Name, "Resource with the same name has already been enumerated. All array elements are expected to be enumerated one after another")
+                    VERIFY(ExistingRes.Name != Name, "Resource with the same name has already been enumerated. All array elements are expected to be enumerated one after another");
                 }
 #endif
                 for( UINT ArrElem = Res+1; ArrElem < shaderDesc.BoundResources; ++ArrElem)
@@ -179,7 +179,7 @@ namespace Diligent
                 case D3D_SIT_UAV_APPEND_STRUCTURED:         UNSUPPORTED( "Append structured buffers are not supported" );                    break;
                 case D3D_SIT_UAV_CONSUME_STRUCTURED:        UNSUPPORTED( "Consume structured buffers are not supported" );                   break;
                 case D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER: UNSUPPORTED( "RW structured buffers with counter are not supported" );           break;
-                default: UNEXPECTED("Unexpected resource type")
+                default: UNEXPECTED("Unexpected resource type");
             }
             Resources.emplace_back(std::move(Name), BindingDesc.BindPoint, BindCount, BindingDesc.Type, VarType, BindingDesc.Dimension, D3DShaderResourceAttribs::InvalidSamplerId, IsStaticSampler);
         }

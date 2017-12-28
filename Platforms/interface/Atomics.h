@@ -27,13 +27,13 @@
 
 #if defined( PLATFORM_WIN32 ) || defined( PLATFORM_UNIVERSAL_WINDOWS )
 
-    #include "..\Win32\include\Win32Atomics.h"
+    #include "Win32Atomics.h"
     typedef WindowsAtomics Atomics;
 
 #else
 
     // Use c++11 standard atomics
-    #include "../Basic/include/BasicAtomics.h"
+    #include "BasicAtomics.h"
     typedef BasicAtomics Atomics;
 
 #endif

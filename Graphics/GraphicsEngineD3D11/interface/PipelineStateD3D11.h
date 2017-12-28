@@ -32,7 +32,7 @@ namespace Diligent
 {
 
 // {3EA6E3F4-9966-47FC-8CE8-0EB3E2273061}
-static const INTERFACE_ID IID_PipelineStateD3D11 = 
+static constexpr INTERFACE_ID IID_PipelineStateD3D11 = 
 { 0x3ea6e3f4, 0x9966, 0x47fc, { 0x8c, 0xe8, 0xe, 0xb3, 0xe2, 0x27, 0x30, 0x61 } };
 
 /// Interface to the blend state object implemented in D3D11

@@ -21,8 +21,6 @@
  *  of the possibility of such damages.
  */
 
-#include "pch.h"
-
 #include "StandardFile.h"
 #include "DebugUtilities.h"
 #include "Errors.h"

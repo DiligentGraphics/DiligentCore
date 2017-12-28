@@ -204,7 +204,7 @@ void RenderDeviceD3D12Impl::FinishFrame(bool ReleaseAllResources)
         {
             auto pImmediateCtxD3D12 = ValidatedCast<DeviceContextD3D12Impl>(pImmediateCtx.RawPtr());
             if(pImmediateCtxD3D12->GetNumCommandsInCtx() != 0)
-                LOG_ERROR_MESSAGE("There are outstanding commands in the immediate device context when finishing the frame. This is an error and may cause unpredicted behaviour. Call Flush() to submit all commands for execution before finishing the frame")
+                LOG_ERROR_MESSAGE("There are outstanding commands in the immediate device context when finishing the frame. This is an error and may cause unpredicted behaviour. Call Flush() to submit all commands for execution before finishing the frame");
         }
 
         for (auto wpDeferredCtx : m_wpDeferredContexts)
@@ -213,7 +213,7 @@ void RenderDeviceD3D12Impl::FinishFrame(bool ReleaseAllResources)
             {
                 auto pDeferredCtxD3D12 = ValidatedCast<DeviceContextD3D12Impl>(pDeferredCtx.RawPtr());
                 if(pDeferredCtxD3D12->GetNumCommandsInCtx() != 0)
-                    LOG_ERROR_MESSAGE("There are outstanding commands in the deferred device context when finishing the frame. This is an error and may cause unpredicted behaviour. Close all deferred contexts and execute them before finishing the frame")
+                    LOG_ERROR_MESSAGE("There are outstanding commands in the deferred device context when finishing the frame. This is an error and may cause unpredicted behaviour. Close all deferred contexts and execute them before finishing the frame");
             }
         }
     }

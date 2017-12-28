@@ -21,7 +21,6 @@
  *  of the possibility of such damages.
  */
 
-#include "pch.h"
 #include "BasicFileSystem.h"
 #include "DebugUtilities.h"
 #include <algorithm>

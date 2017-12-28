@@ -24,8 +24,8 @@
 #pragma once
 
 #include <memory>
-#include "..\Basic\include\BasicFileSystem.h"
-#include "..\Basic\include\StandardFile.h"
+#include "BasicFileSystem.h"
+#include "StandardFile.h"
 
 
 class WindowsFile : public StandardFile

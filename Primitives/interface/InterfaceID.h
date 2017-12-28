@@ -23,45 +23,29 @@
 
 #pragma once
 
-/// \file
-/// Implementation of the Diligent::BasicFileStream class
+#include <cstring>
+#include "BasicTypes.h"
 
-#include "FileStream.h"
-#include "ObjectBase.h"
-#include "RefCountedObjectImpl.h"
-#include "FileWrapper.h"
-#include "DataBlob.h"
-
+/// Unique identification structures
 namespace Diligent
 {
+    /// Describes unique identifier
+    struct INTERFACE_ID
+    {
+        Uint32 Data1;
+        Uint16 Data2;
+        Uint16 Data3;
+        Uint8  Data4[8];
+        
+        bool operator == (const INTERFACE_ID& rhs)const
+        {
+            return Data1 == rhs.Data1 && 
+                   Data2 == rhs.Data2 &&
+                   Data3 == rhs.Data3 &&
+                   std::memcmp(Data4, rhs.Data4, sizeof(Data4)) == 0;
+        }
+    };
 
-/// Basic file stream implementation
-class BasicFileStream : public ObjectBase<IFileStream>
-{
-public:
-    typedef ObjectBase<IFileStream> TBase;
-
-    BasicFileStream(IReferenceCounters *pRefCounters,
-                    const Diligent::Char *Path, 
-                    EFileAccessMode Access = EFileAccessMode::Read);
-
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
-
-    /// Reads data from the stream
-    virtual void Read( Diligent::IDataBlob *pData )override;
-
-    /// Reads data from the stream
-    virtual bool Read( void *Data, size_t BufferSize )override;
-
-    /// Writes data to the stream
-    virtual bool Write( const void *Data, size_t Size )override;
-
-    virtual size_t GetSize()override;
-
-    virtual bool IsValid()override;
-
-private:
-    Diligent::FileWrapper m_FileWrpr;
-};
-
+    /// Unknown interface
+    static constexpr INTERFACE_ID IID_Unknown = { 0, 0, 0, { 0, 0, 0, 0, 0, 0, 0, 0 } };
 }

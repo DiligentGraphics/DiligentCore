@@ -142,7 +142,7 @@ static BufferDesc GetBufferDescFromGLHandle(BufferDesc BuffDesc, GLuint BufferHa
     CHECK_GL_ERROR("glGetBufferParameteriv() failed");
     VERIFY_EXPR(BufferSize > 0);
 
-    VERIFY(BuffDesc.uiSizeInBytes == 0 || BuffDesc.uiSizeInBytes == static_cast<Uint32>(BufferSize), "Buffer size specified by the BufferDesc (", BuffDesc.uiSizeInBytes, ") does not match the size recovered from gl buffer object (", BufferSize, ")")
+    VERIFY(BuffDesc.uiSizeInBytes == 0 || BuffDesc.uiSizeInBytes == static_cast<Uint32>(BufferSize), "Buffer size specified by the BufferDesc (", BuffDesc.uiSizeInBytes, ") does not match the size recovered from gl buffer object (", BufferSize, ")");
     if(BufferSize > 0)
         BuffDesc.uiSizeInBytes = static_cast<Uint32>( BufferSize );
 
@@ -375,7 +375,7 @@ void BufferGLImpl::CreateViewInternal( const BufferViewDesc &OrigViewDesc, class
     catch( const std::runtime_error & )
     {
         const auto *ViewTypeName = GetBufferViewTypeLiteralName(OrigViewDesc.ViewType);
-        LOG_ERROR("Failed to create view \"", OrigViewDesc.Name ? OrigViewDesc.Name : "", "\" (", ViewTypeName, ") for buffer \"", m_Desc.Name ? m_Desc.Name : "", "\"" )
+        LOG_ERROR("Failed to create view \"", OrigViewDesc.Name ? OrigViewDesc.Name : "", "\" (", ViewTypeName, ") for buffer \"", m_Desc.Name ? m_Desc.Name : "", "\"");
     }
 }
 

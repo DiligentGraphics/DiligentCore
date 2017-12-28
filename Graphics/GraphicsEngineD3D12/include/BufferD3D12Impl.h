@@ -71,13 +71,13 @@ public:
         auto *pd3d12Resource = GetD3D12Resource();
         if(pd3d12Resource != nullptr)
         {
-            VERIFY(m_Desc.Usage != USAGE_DYNAMIC || (m_Desc.BindFlags | (BIND_SHADER_RESOURCE|BIND_UNORDERED_ACCESS)) != 0, "Expected non-dynamic buffer or a buffer with SRV or UAV bind flags")
+            VERIFY(m_Desc.Usage != USAGE_DYNAMIC || (m_Desc.BindFlags | (BIND_SHADER_RESOURCE|BIND_UNORDERED_ACCESS)) != 0, "Expected non-dynamic buffer or a buffer with SRV or UAV bind flags");
             DataStartByteOffset = 0;
             return pd3d12Resource; 
         }
         else
         {
-            VERIFY(m_Desc.Usage == USAGE_DYNAMIC, "Dynamic buffer is expected")
+            VERIFY(m_Desc.Usage == USAGE_DYNAMIC, "Dynamic buffer is expected");
 
 #ifdef _DEBUG
             DbgVerifyDynamicAllocation(ContextId);

@@ -90,7 +90,7 @@ namespace Diligent
 
     void ResourceMappingImpl::GetResource( const Char *Name, IDeviceObject **ppResource, Uint32 ArrayIndex )
     {
-        VERIFY(Name, "Name is null")
+        VERIFY(Name, "Name is null");
         if( *Name == 0 )
             return;
 

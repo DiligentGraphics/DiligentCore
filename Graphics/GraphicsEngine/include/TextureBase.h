@@ -183,7 +183,7 @@ protected:
 template<class BaseInterface, class TTextureViewImpl, class TTexViewObjAllocator>
 void TextureBase<BaseInterface, TTextureViewImpl, TTexViewObjAllocator> :: CorrectTextureViewDesc(struct TextureViewDesc &ViewDesc)
 {
-#define TEX_VIEW_VALIDATION_ERROR(...) LOG_ERROR_AND_THROW( "Texture view \"", ViewDesc.Name ? ViewDesc.Name : "", "\": ", ##__VA_ARGS__ );
+#define TEX_VIEW_VALIDATION_ERROR(...) LOG_ERROR_AND_THROW( "Texture view \"", ViewDesc.Name ? ViewDesc.Name : "", "\": ", ##__VA_ARGS__ )
 
     if( !(ViewDesc.ViewType > TEXTURE_VIEW_UNDEFINED && ViewDesc.ViewType < TEXTURE_VIEW_NUM_VIEWS) )
         TEX_VIEW_VALIDATION_ERROR( "Texture view type is not specified" );
@@ -210,7 +210,7 @@ void TextureBase<BaseInterface, TTextureViewImpl, TTexViewObjAllocator> :: Corre
                     ViewDesc.TextureDim = RESOURCE_DIM_TEX_2D_ARRAY;
                 break;
 
-                default: UNEXPECTED("Unexpected view type")
+                default: UNEXPECTED("Unexpected view type");
             }
         }
         else
@@ -344,7 +344,7 @@ void TextureBase<BaseInterface, TTextureViewImpl, TTexViewObjAllocator> :: Corre
     }
     else
     {
-        UNEXPECTED("Unexpected texture dimension")
+        UNEXPECTED("Unexpected texture dimension");
     }
 
 #undef TEX_VIEW_VALIDATION_ERROR

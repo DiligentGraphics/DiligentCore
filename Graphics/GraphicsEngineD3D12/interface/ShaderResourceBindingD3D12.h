@@ -32,7 +32,7 @@ namespace Diligent
 {
 
 // {70DD5C7C-81FA-4D9A-942F-D1B91423FAAC}
-static const Diligent::INTERFACE_ID IID_ShaderResourceBindingD3D12 =
+static constexpr INTERFACE_ID IID_ShaderResourceBindingD3D12 =
 { 0x70dd5c7c, 0x81fa, 0x4d9a, { 0x94, 0x2f, 0xd1, 0xb9, 0x14, 0x23, 0xfa, 0xac } };
 
 /// Shader resource binding interface

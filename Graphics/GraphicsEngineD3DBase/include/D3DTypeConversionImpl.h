@@ -142,7 +142,7 @@ namespace Diligent
         }
         else
         {
-            UNEXPECTED( "Incorrect fill mode (", FillMode, ")" )
+            UNEXPECTED( "Incorrect fill mode (", FillMode, ")" );
             return static_cast<D3D_FILL_MODE>(0);
         }
     }
@@ -170,7 +170,7 @@ namespace Diligent
         }
         else
         {
-            UNEXPECTED( "Incorrect cull mode (", CullMode, ")" )
+            UNEXPECTED( "Incorrect cull mode (", CullMode, ")" );
             return static_cast<D3D_CULL_MODE>(0);
         }
     }
@@ -238,7 +238,7 @@ namespace Diligent
         }
         else
         {
-            UNEXPECTED("Incorrect blend factor (", bf, ")" )
+            UNEXPECTED("Incorrect blend factor (", bf, ")" );
             return static_cast<D3D_BLEND>( 0 );
         }
     }
@@ -269,7 +269,7 @@ namespace Diligent
         }
         else
         {
-            UNEXPECTED( "Incorrect blend operation (", BlendOp, ")" )
+            UNEXPECTED( "Incorrect blend operation (", BlendOp, ")" );
             return static_cast<D3D_BLEND_OP>(0);
         }
     }
@@ -334,7 +334,7 @@ namespace Diligent
         }
         else
         {
-            UNEXPECTED( "Stencil operation (", StencilOp, ") is out of allowed range [1, ", STENCIL_OP_NUM_OPS - 1, "]" )
+            UNEXPECTED( "Stencil operation (", StencilOp, ") is out of allowed range [1, ", STENCIL_OP_NUM_OPS - 1, "]" );
             return static_cast<D3D_STENCIL_OP>(0);
         }
     }

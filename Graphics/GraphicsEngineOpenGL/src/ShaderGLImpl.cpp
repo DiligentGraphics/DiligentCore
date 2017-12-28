@@ -172,7 +172,7 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters *pRefCounters, RenderDeviceGLImpl 
         RefCntAutoPtr<IFileStream> pSourceStream;
         ShaderCreationAttribs.pShaderSourceStreamFactory->CreateInputStream( ShaderCreationAttribs.FilePath, &pSourceStream );
         if (pSourceStream == nullptr)
-            LOG_ERROR_AND_THROW("Failed to open shader source file")
+            LOG_ERROR_AND_THROW("Failed to open shader source file");
 
         pSourceStream->Read( pFileData );
         ShaderSource = reinterpret_cast<char*>(pFileData->GetDataPtr());

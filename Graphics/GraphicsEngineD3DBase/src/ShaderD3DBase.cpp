@@ -180,7 +180,7 @@ ShaderD3DBase::ShaderD3DBase(const ShaderCreationAttribs &CreationAttribs)
             CreationAttribs.pShaderSourceStreamFactory->CreateInputStream(CreationAttribs.FilePath, &pSourceStream);
             RefCntAutoPtr<Diligent::IDataBlob> pFileData(MakeNewRCObj<Diligent::DataBlobImpl>()(0));
             if (pSourceStream == nullptr)
-                LOG_ERROR_AND_THROW("Failed to open shader source file")
+                LOG_ERROR_AND_THROW("Failed to open shader source file");
             pSourceStream->Read(pFileData);
             // Null terminator is not read from the stream!
             auto* FileDataPtr = reinterpret_cast<Char*>(pFileData->GetDataPtr());
@@ -212,7 +212,7 @@ ShaderD3DBase::ShaderD3DBase(const ShaderCreationAttribs &CreationAttribs)
     }
     else
     {
-        LOG_ERROR_AND_THROW("Shader source must be provided through one of the 'Source', 'FilePath' or 'ByteCode' members")
+        LOG_ERROR_AND_THROW("Shader source must be provided through one of the 'Source', 'FilePath' or 'ByteCode' members");
     }
 }
 

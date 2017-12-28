@@ -47,7 +47,7 @@ namespace Diligent
                 break;
             
             default:
-                UNEXPECTED("Unexpected device type")
+                UNEXPECTED("Unexpected device type");
         }
         if (*ppUploader != nullptr)
             (*ppUploader)->AddRef();

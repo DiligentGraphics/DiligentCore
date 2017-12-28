@@ -44,8 +44,8 @@ namespace Diligent
     typedef void* PVoid;
 
     typedef bool Bool;          ///< Boolean
-    static const Bool False = false;
-    static const Bool True = true;
+    static constexpr Bool False = false;
+    static constexpr Bool True = true;
 
     typedef char Char;
     typedef std::basic_string<Char> String; ///< String variable

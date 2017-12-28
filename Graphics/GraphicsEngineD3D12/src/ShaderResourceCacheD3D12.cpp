@@ -42,7 +42,7 @@ namespace Diligent
         //                    m_pResources, m_NumResources                            
         //                                                             
 
-        VERIFY(m_pAllocator == nullptr && m_pMemory == nullptr, "Cache already initialized")
+        VERIFY(m_pAllocator == nullptr && m_pMemory == nullptr, "Cache already initialized");
         m_pAllocator = &MemAllocator;
         m_NumTables = NumTables;
         Uint32 TotalResources = 0;

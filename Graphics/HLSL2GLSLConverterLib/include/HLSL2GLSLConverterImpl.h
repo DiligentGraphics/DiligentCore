@@ -419,8 +419,8 @@ namespace Diligent
         // HLSL semantic -> glsl variable, for every shader stage and input/output type (in == 0, out == 1)
         // Example: [vertex, output] SV_Position -> gl_Position
         //          [fragment, input] SV_Position -> gl_FragCoord
-        static const int InVar = 0;
-        static const int OutVar = 1;
+        static constexpr int InVar = 0;
+        static constexpr int OutVar = 1;
         std::unordered_map<HashMapStringKey, String> m_HLSLSemanticToGLSLVar[6][2];
     };
 }
