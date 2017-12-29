@@ -43,20 +43,12 @@ PUBLIC
 	GraphicsEngineInterface
 )
 
-if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows")
+if(NOT FILE2STRING_PATH STREQUAL "")
 	# Create custom target to convert GLSLDefinitions.h to GLSLDefinitions_inc.h
 	add_custom_target(ProcessGLSLDefinitions 
 	SOURCES
 		include/GLSLDefinitions.h
 	)
-
-	if(PLATFORM_WIN32)
-		set(FILE2STRING_PATH $<TARGET_FILE:File2String>)
-		add_dependencies(ProcessGLSLDefinitions File2String)	
-	else()
-		# We cannot build File2String utility and will use prebuilt Win32 version
-		set(FILE2STRING_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../Utilities/File2Include/bin/Win32/File2String.exe")
-	endif()
 
 	add_custom_command(TARGET ProcessGLSLDefinitions 
 					   # Unfortunately it is not possible to set TARGET directly to HLSL2GLSLConverterLib
@@ -72,6 +64,8 @@ if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows")
 	set_target_properties(ProcessGLSLDefinitions PROPERTIES
 		FOLDER Core/Graphics/Helper
 	)
+else()
+	message(WARNING "File2String utility is currently unavailable on this host system. This is not an issues unless you modify GLSLDefinitions.h file")
 endif()
 
 source_group("src" FILES ${SOURCE})

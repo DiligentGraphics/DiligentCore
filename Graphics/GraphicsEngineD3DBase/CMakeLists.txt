@@ -36,14 +36,6 @@ SOURCES
 	include/HLSLDefinitions.fxh
 )
 
-if(PLATFORM_UNIVERSAL_WINDOWS)
-	# On Universal Windows Platform, we cannot build File2String utility and will use prebuilt Win32 version
-	set(FILE2STRING_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../Utilities/File2Include/bin/Win32/File2String.exe")
-else()
-	add_dependencies(ProcessHLSLDefinitions File2String)
-	set(FILE2STRING_PATH $<TARGET_FILE:File2String>)
-endif()
-
 add_custom_command(TARGET ProcessHLSLDefinitions 
 				   # Unfortunately it is not possible to set TARGET directly to GraphicsEngineD3DBase
 				   # because PRE_BUILD is only supported on Visual Studio 8 or later. For all other generators 

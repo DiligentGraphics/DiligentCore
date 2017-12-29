@@ -1,5 +1,3 @@
 cmake_minimum_required (VERSION 3.3)
 
-if(PLATFORM_WIN32)
-	add_subdirectory(File2Include)
-endif()
+add_subdirectory(File2Include)
