@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.10)
+cmake_minimum_required (VERSION 3.6)
 
 if(PLATFORM_WIN32)
 	project(File2Include)
