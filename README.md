@@ -17,22 +17,22 @@ OpenGL and OpenGLES as well as basic platform-specific utilities.
 
  | Project                                                          | Description       |
  |------------------------------------------------------------------|-------------------|
- | [Primitives](Primitives) 										| definition of basic types (Int32, Int16, Uint32, etc.) and interfaces (IObject, IReferenceCounters, etc.) |
- | [Common](Common)													| common functionality such as file wrapper, logging, debug utilities, etc. |
- | [Graphics/GraphicsAccessories](Graphics/GraphicsAccessories)	    | basic graphics accessories used by all implementations  |
- | [Graphics/GraphicsEngine](Graphics/GraphicsEngine)	            | platform-independent base functionality |
- | [Graphics/GraphicsEngineD3DBase](Graphics/GraphicsEngineD3DBase) | base functionality for D3D11/D3D12 implementations |
- | [Graphics/GraphicsEngineD3D11](Graphics/GraphicsEngineD3D11)     | engine implementation with Direct3D11 |
- | [Graphics/GraphicsEngineD3D12](Graphics/GraphicsEngineD3D12)     | engine implementation with Direct3D12 |
- | [Graphics/GraphicsEngineOpenGL](Graphics/GraphicsEngineOpenGL)   | engine implementation with OpenGL/GLES |
- | [Graphics/GraphicsTools](Graphics/GraphicsTools)                 | graphics utilities build on top of core interfaces (definitions of commonly used states, texture uploaders, etc.) | 
+ | [Primitives](Primitives) 										| Definitions of basic types (Int32, Int16, Uint32, etc.) and interfaces (IObject, IReferenceCounters, etc.) |
+ | [Common](Common)													| Common functionality such as file wrapper, logging, debug utilities, etc. |
+ | [Graphics/GraphicsAccessories](Graphics/GraphicsAccessories)	    | Basic graphics accessories used by all implementations  |
+ | [Graphics/GraphicsEngine](Graphics/GraphicsEngine)	            | Platform-independent base functionality |
+ | [Graphics/GraphicsEngineD3DBase](Graphics/GraphicsEngineD3DBase) | Base functionality for D3D11/D3D12 implementations |
+ | [Graphics/GraphicsEngineD3D11](Graphics/GraphicsEngineD3D11)     | Engine implementation with Direct3D11 |
+ | [Graphics/GraphicsEngineD3D12](Graphics/GraphicsEngineD3D12)     | Engine implementation with Direct3D12 |
+ | [Graphics/GraphicsEngineOpenGL](Graphics/GraphicsEngineOpenGL)   | Engine implementation with OpenGL/GLES |
+ | [Graphics/GraphicsTools](Graphics/GraphicsTools)                 | Graphics utilities build on top of core interfaces (definitions of commonly used states, texture uploaders, etc.) | 
  | [Graphics/HLSL2GLSLConverterLib](Graphics/HLSL2GLSLConverterLib) | HLSL to GLSL source code converter library |
- | [Platforms/Basic](Platforms/Basic)      | defines interface for platform-specific routines and implements some common functionality |
- | [Platforms/Android](Platforms/Android)  | implementation of platform-specific routines on Android |
- | [Platforms/UWP](Platforms/UWP)          | implementation of platform-specific routines on Universal Windows platform |
- | [Platforms/Win32](Platforms/Win32)      | implementation of platform-specific routines on Win32 platform |
- | [Platforms/Linux](Platforms/Linux)      | implementation of platform-specific routines on Linux platform |
- | External/glew | cross-platform library for loading OpenGL extensions |
+ | [Platforms/Basic](Platforms/Basic)      | Interface for platform-specific routines and implementation of some common functionality |
+ | [Platforms/Android](Platforms/Android)  | Implementation of platform-specific routines on Android |
+ | [Platforms/UWP](Platforms/UWP)          | Implementation of platform-specific routines on Universal Windows platform |
+ | [Platforms/Win32](Platforms/Win32)      | Implementation of platform-specific routines on Win32 platform |
+ | [Platforms/Linux](Platforms/Linux)      | Implementation of platform-specific routines on Linux platform |
+ | External/glew | Cross-platform library for loading OpenGL extensions |
 
 
 # API Basics
