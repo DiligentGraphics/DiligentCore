@@ -1,11 +1,10 @@
 // File2Include.cpp : Defines the entry point for the console application.
 //
 
-#include "stdafx.h"
-#include "stdio.h"
-#include "tchar.h"
+#include <stdio.h>
+#include <string.h>
 
-int _tmain(int argc, _TCHAR* argv[])
+int main(int argc, char* argv[])
 {
     if( argc < 3 )
     {
@@ -14,45 +13,51 @@ int _tmain(int argc, _TCHAR* argv[])
     }
     auto SrcFile = argv[1];
     auto DstFile = argv[2];
-    FILE *pSrcFile = nullptr;
-    if( _tfopen_s( &pSrcFile, SrcFile, _T( "r" ) ) != 0 )
+    if (strcmp(SrcFile, DstFile) == 0)
     {
-        _tprintf( _T("Failed to open source file %s\n"), SrcFile );
+        printf( "Source and destination files must be different\n");
         return -1;
     }
 
-    FILE *pDstFile = nullptr;
-    if( _tfopen_s(&pDstFile, DstFile, _T( "w" ) ) != 0 )
+    FILE *pSrcFile = fopen( SrcFile, "r" );
+    if( pSrcFile == nullptr )
     {
-        _tprintf( _T("Failed to open destination file %s\n"), DstFile );
+        printf( "Failed to open source file %s\n", SrcFile );
+        return -1;
+    }
+
+    FILE *pDstFile = fopen( DstFile, "w" );
+    if( pDstFile == nullptr )
+    {
+        printf( "Failed to open destination file %s\n", DstFile );
         fclose(pSrcFile);
         return -1;
     }
 
 
-    _TCHAR Buff[1024];
-    _TCHAR SpecialChars[] = _T( "\'\"\\" );
+    char Buff[2048];
+    char SpecialChars[] = "\'\"\\";
     while( !feof( pSrcFile ) )
     {
-        auto Line = _fgetts( Buff, sizeof( Buff )/sizeof(Buff[0]) , pSrcFile );
+        auto Line = fgets( Buff, sizeof( Buff )/sizeof(Buff[0]) , pSrcFile );
         if( Line == nullptr )
             break;
-        _fputtc( _T( '\"' ), pDstFile );
+        fputc( '\"', pDstFile );
         auto CurrChar = Line;
         while( CurrChar && *CurrChar != '\n' )
         {
-            if( _tcschr( SpecialChars, *CurrChar) )
-                _fputtc( _T( '\\' ), pDstFile );
-            _fputtc( *CurrChar, pDstFile );
+            if( strchr( SpecialChars, *CurrChar) )
+                fputc( '\\', pDstFile );
+            fputc( *CurrChar, pDstFile );
             ++CurrChar;
         }
-        _fputts( _T("\\n\"\n"), pDstFile );
+        fputs( "\\n\"\n", pDstFile );
     }
 
     fclose(pDstFile);
     fclose(pSrcFile);
 
-    _tprintf( _T("File2String: sucessfully converted %s to %s\n"), SrcFile, DstFile );
+    printf( "File2String: sucessfully converted %s to %s\n", SrcFile, DstFile );
 
 	return 0;
 }
