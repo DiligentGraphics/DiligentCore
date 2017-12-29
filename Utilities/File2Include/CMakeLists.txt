@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.6)
 
-if(PLATFORM_WIN32)
+if(PLATFORM_WIN32 OR PLATFORM_LINUX)
 	project(File2Include)
 
 	set(SOURCE 
@@ -22,6 +22,10 @@ if(PLATFORM_WIN32)
 		set_target_properties(File2String PROPERTIES 
 			RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/bin/Win32/x${ARCH}"
 		)
+	elseif(PLATFORM_LINUX)
+		set_target_properties(File2String PROPERTIES 
+			RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/bin/Linux"
+		)
 	endif()
 	source_group("source" FILES ${SOURCE})
 
@@ -33,6 +37,9 @@ endif()
 if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows")
 	# Use prebuilt 32-bit version
 	set(FILE2STRING_PATH "${CMAKE_CURRENT_SOURCE_DIR}/bin/Win32/x32/File2String.exe" CACHE INTERNAL "File2String utility")
+elseif(CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")
+	# Use prebuilt 32-bit version
+	set(FILE2STRING_PATH "${CMAKE_CURRENT_SOURCE_DIR}/bin/Linux/File2String" CACHE INTERNAL "File2String utility")
 else()
 	set(FILE2STRING_PATH "" CACHE INTERNAL "File2String utility unavailable on this host system")
 endif()
