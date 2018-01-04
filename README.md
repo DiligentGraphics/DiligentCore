@@ -543,7 +543,7 @@ DispatchComputeAttribs DispatchAttrs(64, 64, 8);
 m_pContext->DispatchCompute(DispatchAttrs);
 ```
 
-You can learn more about the engine API by looking at the [engine samples' source code](https://github.com/DiligentGraphics/DiligentSamples) and the [API Reference](https://github.com/DiligentGraphics/DiligentEngine/doc/index.html).
+You can learn more about the engine API by looking at the [engine samples' source code](https://github.com/DiligentGraphics/DiligentSamples) and the [API Reference][1].
 
 
 # Low-level API interoperability
@@ -560,10 +560,17 @@ objects. Refer to the following pages for more information:
 
 # References
 
-[Dilgeint Engine](http://diligentgraphics.com/diligent-engine/).
-[API Basics](http://diligentgraphics.com/diligent-engine/api-basics/).
+[Diligent Engine on the Web](http://diligentgraphics.com)
+
+[Diligent Engine on Twitter](https://twitter.com/diligentengine)
+
+[Diligent Engine on Facebook](https://www.facebook.com/DiligentGraphics/)
+
 [Diligent Engine Architecture](http://diligentgraphics.com/diligent-engine/architecture/).
 
+[API Basics](http://diligentgraphics.com/diligent-engine/api-basics/).
+
+[API Reference][1]
 
 # Version History
 
@@ -623,12 +630,8 @@ Initial release
 
 Licensed under the [Apache License, Version 2.0](License.txt)
 
-# References
 
-[Diligent Graphics on the Web](http://diligentgraphics.com)
-
-[Diligent Graphics on Twitter](https://twitter.com/diligentengine)
-
-[Diligent Graphics on Facebook](https://www.facebook.com/DiligentGraphics/)
 
 **Copyright 2015-2018 Egor Yusov**
+
+[1]: https://cdn.rawgit.com/DiligentGraphics/DiligentCore/f0c41bba/doc/html/index.html
