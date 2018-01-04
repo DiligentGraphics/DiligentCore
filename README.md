@@ -636,4 +636,4 @@ Licensed under the [Apache License, Version 2.0](License.txt)
 
 [diligentgraphics.com](http://diligentgraphics.com)
 
-[1]: https://cdn.rawgit.com/DiligentGraphics/DiligentCore/349de946/doc/html/index.html
+[1]: https://cdn.rawgit.com/DiligentGraphics/DiligentCore/4949ec8a/doc/html/index.html
