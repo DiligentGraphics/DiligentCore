@@ -382,11 +382,10 @@ void EngineFactoryD3D12Impl::CreateSwapChainD3D12( IRenderDevice *pDevice,
 
 #ifdef DOXYGEN
 /// Loads Direct3D12-based engine implementation and exports factory functions
-/// \param [out] GetFactoryFunc - Pointer to the function that returns factory for D3D12 engine implementation
-/// \param [out] CreateSwapChainFunc - Pointer to the function that creates swap chain.
-///                                    See EngineFactoryD3D12Impl.
+/// \param [out] GetFactoryFunc - Pointer to the function that returns factory for D3D12 engine implementation.
+///                               See EngineFactoryD3D12Impl.
 /// \remarks Depending on the configuration and platform, the function loads different dll:
-/// Platform\\Configuration    |           Debug               |        Release
+/// Platform\\Configuration   |           Debug               |        Release
 /// --------------------------|-------------------------------|----------------------------
 ///         x86               | GraphicsEngineD3D12_32d.dll   |    GraphicsEngineD3D12_32r.dll
 ///         x64               | GraphicsEngineD3D12_64d.dll   |    GraphicsEngineD3D12_64r.dll

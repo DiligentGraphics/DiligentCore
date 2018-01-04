@@ -59,7 +59,7 @@ public:
     /// Creates a buffer from OpenGL handle
 
     /// \param [in] GLHandle - OpenGL buffer handle
-    /// \param [in] TexDesc - Buffer description. The engine can automatically 
+    /// \param [in] BuffDesc - Buffer description. The engine can automatically 
     ///                       recover buffer size, but the rest of the fields need to 
     ///                       be set by the client.
     /// \param [out] ppBuffer - Address of the memory location where the pointer to the

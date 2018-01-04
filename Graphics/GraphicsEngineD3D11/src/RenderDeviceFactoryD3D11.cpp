@@ -331,7 +331,7 @@ void EngineFactoryD3D11Impl::CreateSwapChainD3D11( IRenderDevice *pDevice, Dilig
 /// \param [out] GetFactoryFunc - Pointer to the function that returns factory for D3D11 engine implementation
 ///                               See EngineFactoryD3D11Impl.
 /// \remarks Depending on the configuration and platform, the function loads different dll:
-/// Platform\\Configuration    |           Debug               |        Release
+/// Platform\\Configuration   |           Debug               |        Release
 /// --------------------------|-------------------------------|----------------------------
 ///         x86               | GraphicsEngineD3D11_32d.dll   |    GraphicsEngineD3D11_32r.dll
 ///         x64               | GraphicsEngineD3D11_64d.dll   |    GraphicsEngineD3D11_64r.dll

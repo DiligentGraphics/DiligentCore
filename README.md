@@ -17,8 +17,8 @@ OpenGL and OpenGLES as well as basic platform-specific utilities.
 
  | Project                                                          | Description       |
  |------------------------------------------------------------------|-------------------|
- | [Primitives](Primitives) 										| Definitions of basic types (Int32, Int16, Uint32, etc.) and interfaces (IObject, IReferenceCounters, etc.) |
- | [Common](Common)													| Common functionality such as file wrapper, logging, debug utilities, etc. |
+ | [Primitives](/Primitives) 										| Definitions of basic types (Int32, Int16, Uint32, etc.) and interfaces (IObject, IReferenceCounters, etc.) |
+ | [Common](/Common)												| Common functionality such as file wrapper, logging, debug utilities, etc. |
  | [Graphics/GraphicsAccessories](Graphics/GraphicsAccessories)	    | Basic graphics accessories used by all implementations  |
  | [Graphics/GraphicsEngine](Graphics/GraphicsEngine)	            | Platform-independent base functionality |
  | [Graphics/GraphicsEngineD3DBase](Graphics/GraphicsEngineD3DBase) | Base functionality for D3D11/D3D12 implementations |
@@ -127,9 +127,9 @@ imports the functions required to initialize the engine. You need to include the
 ```
 You also need to add the following directories to the include search paths:
 
-* diligentcore\Graphics\GraphicsEngineD3D11\interface
-* diligentcore\Graphics\GraphicsEngineD3D12\interface
-* diligentcore\Graphics\GraphicsEngineOpenGL\interface
+* diligentcore/Graphics/GraphicsEngineD3D11/interface
+* diligentcore/Graphics/GraphicsEngineD3D12/interface
+* diligentcore/Graphics/GraphicsEngineOpenGL/interface
 
 Also, enable Diligent namespace:
 
@@ -543,7 +543,7 @@ DispatchComputeAttribs DispatchAttrs(64, 64, 8);
 m_pContext->DispatchCompute(DispatchAttrs);
 ```
 
-You can learn more about the engine API by looking at the [engine samples' source code](http://diligentgraphics.com/diligent-engine/samples/) and the [API Reference](http://diligentgraphics.com/diligent-engine/api-reference/).
+You can learn more about the engine API by looking at the [engine samples' source code](https://github.com/DiligentGraphics/DiligentSamples) and the [API Reference](https://github.com/DiligentGraphics/DiligentEngine/doc/index.html).
 
 
 # Low-level API interoperability
@@ -623,6 +623,12 @@ Initial release
 
 Licensed under the [Apache License, Version 2.0](License.txt)
 
-**Copyright 2015-2017 Egor Yusov**
+# References
 
-[Diligent Graphics](http://diligentgraphics.com)
+[Diligent Graphics on the Web](http://diligentgraphics.com)
+
+[Diligent Graphics on Twitter](https://twitter.com/diligentengine)
+
+[Diligent Graphics on Facebook](https://www.facebook.com/DiligentGraphics/)
+
+**Copyright 2015-2018 Egor Yusov**

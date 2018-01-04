@@ -30,7 +30,6 @@ tmp
 local.properties
 project.properties
 proguard-project.txt
-html
 doc/latex
 *.obj
 Debug
