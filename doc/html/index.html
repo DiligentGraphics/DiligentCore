@@ -193,7 +193,7 @@ $(function() {
 <div class="fragment"><div class="line">m_pContext-&gt;TransitionShaderResources(m_pPSO, m_pSRB);</div></div><!-- fragment --><p>Note that the method requires pointer to the pipeline state that created the shader resource binding.</p>
 <p>When all required states and resources are bound, <code>IDeviceContext::Draw()</code> can be used to execute draw command or <code>IDeviceContext::DispatchCompute()</code> can be used to execute compute command. Note that for a draw command, graphics pipeline must be bound, and for dispatch command, compute pipeline must be bound. <code>Draw()</code> takes <code>DrawAttribs</code> structure as an argument. The structure members define all attributes required to perform the command (primitive topology, number of vertices or indices, if draw call is indexed or not, if draw call is instanced or not, if draw call is indirect or not, etc.). For example:</p>
 <div class="fragment"><div class="line">DrawAttribs attrs;</div><div class="line">attrs.IsIndexed = <span class="keyword">true</span>;</div><div class="line">attrs.IndexType = <a class="code" href="namespace_diligent.html#a1d12e97c6da58b2d4dd003db4a8a957aa0e15f9d0c65df848ae20a42d67b78ee2">VT_UINT16</a>;</div><div class="line">attrs.NumIndices = 36;</div><div class="line">attrs.Topology = <a class="code" href="namespace_diligent.html#ae132e96b4b52bcb52026444873a794c5ae92cbcbf18a66dbe4463436512255d71">PRIMITIVE_TOPOLOGY_TRIANGLE_LIST</a>;</div><div class="line">pContext-&gt;Draw(attrs);</div></div><!-- fragment --><p><code>DispatchCompute()</code> takes DispatchComputeAttribs structure that defines compute grid dimensions:</p>
-<div class="fragment"><div class="line">m_pContext-&gt;SetPipelineState(m_pComputePSO);</div><div class="line">m_pContext-&gt;CommitShaderResources(m_pComputeSRB, COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES);</div><div class="line">DispatchComputeAttribs DispatchAttrs(64, 64, 8);</div><div class="line">m_pContext-&gt;DispatchCompute(DispatchAttrs);</div></div><!-- fragment --><p>You can learn more about the engine API by looking at the <a href="https://github.com/DiligentGraphics/DiligentSamples">engine samples' source code</a> and the <a href="https://cdn.rawgit.com/DiligentGraphics/DiligentCore/f0c41bba/doc/html/index.html">API Reference</a>.</p>
+<div class="fragment"><div class="line">m_pContext-&gt;SetPipelineState(m_pComputePSO);</div><div class="line">m_pContext-&gt;CommitShaderResources(m_pComputeSRB, COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES);</div><div class="line">DispatchComputeAttribs DispatchAttrs(64, 64, 8);</div><div class="line">m_pContext-&gt;DispatchCompute(DispatchAttrs);</div></div><!-- fragment --><p>You can learn more about the engine API by looking at the <a href="https://github.com/DiligentGraphics/DiligentSamples">engine samples' source code</a> and the <a href="https://cdn.rawgit.com/DiligentGraphics/DiligentCore/349de946/doc/html/index.html">API Reference</a>.</p>
 <h1>Low-level API interoperability</h1>
 <p><a class="el" href="namespace_diligent.html" title="Namespace for the OpenGL implementation of the graphics engine. ">Diligent</a> Engine extensively supports interoperability with underlying low-level APIs. The engine can be initialized by attaching to existing D3D11/D3D12 device or OpenGL/GLES context and provides access to the underlying native API objects. Refer to the following pages for more information:</p>
 <p><a href="http://diligentgraphics.com/diligent-engine/native-api-interoperability/direct3d11-interoperability/">Direct3D11 Interoperability</a></p>
@@ -205,7 +205,7 @@ $(function() {
 <p><a href="https://www.facebook.com/DiligentGraphics/">Diligent Engine on Facebook</a></p>
 <p><a href="http://diligentgraphics.com/diligent-engine/architecture/">Diligent Engine Architecture</a></p>
 <p><a href="http://diligentgraphics.com/diligent-engine/api-basics/">API Basics</a></p>
-<p><a href="https://cdn.rawgit.com/DiligentGraphics/DiligentCore/f0c41bba/doc/html/index.html">API Reference</a></p>
+<p><a href="https://cdn.rawgit.com/DiligentGraphics/DiligentCore/349de946/doc/html/index.html">API Reference</a></p>
 <h1>Version History</h1>
 <h2>Current Progress</h2>
 <ul>
@@ -256,7 +256,7 @@ $(function() {
 <!-- start footer part -->
 <!--
 <hr class="footer"/><address class="footer"><small>
-Generated on Wed Jan 3 2018 21:39:08 for Diligent Engine API Reference by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Wed Jan 3 2018 22:00:34 for Diligent Engine API Reference by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.14
 </small></address>
