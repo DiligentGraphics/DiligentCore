@@ -17,21 +17,21 @@ OpenGL and OpenGLES as well as basic platform-specific utilities.
 
  | Project                                                          | Description       |
  |------------------------------------------------------------------|-------------------|
- | [Primitives](/Primitives) 										| Definitions of basic types (Int32, Int16, Uint32, etc.) and interfaces (IObject, IReferenceCounters, etc.) |
- | [Common](/Common)												| Common functionality such as file wrapper, logging, debug utilities, etc. |
- | [Graphics/GraphicsAccessories](Graphics/GraphicsAccessories)	    | Basic graphics accessories used by all implementations  |
- | [Graphics/GraphicsEngine](Graphics/GraphicsEngine)	            | Platform-independent base functionality |
- | [Graphics/GraphicsEngineD3DBase](Graphics/GraphicsEngineD3DBase) | Base functionality for D3D11/D3D12 implementations |
- | [Graphics/GraphicsEngineD3D11](Graphics/GraphicsEngineD3D11)     | Engine implementation with Direct3D11 |
- | [Graphics/GraphicsEngineD3D12](Graphics/GraphicsEngineD3D12)     | Engine implementation with Direct3D12 |
- | [Graphics/GraphicsEngineOpenGL](Graphics/GraphicsEngineOpenGL)   | Engine implementation with OpenGL/GLES |
- | [Graphics/GraphicsTools](Graphics/GraphicsTools)                 | Graphics utilities build on top of core interfaces (definitions of commonly used states, texture uploaders, etc.) | 
- | [Graphics/HLSL2GLSLConverterLib](Graphics/HLSL2GLSLConverterLib) | HLSL to GLSL source code converter library |
- | [Platforms/Basic](Platforms/Basic)      | Interface for platform-specific routines and implementation of some common functionality |
- | [Platforms/Android](Platforms/Android)  | Implementation of platform-specific routines on Android |
- | [Platforms/UWP](Platforms/UWP)          | Implementation of platform-specific routines on Universal Windows platform |
- | [Platforms/Win32](Platforms/Win32)      | Implementation of platform-specific routines on Win32 platform |
- | [Platforms/Linux](Platforms/Linux)      | Implementation of platform-specific routines on Linux platform |
+ | [Primitives](https://github.com/DiligentGraphics/DiligentCore/tree/master/Primitives) 										| Definitions of basic types (Int32, Int16, Uint32, etc.) and interfaces (IObject, IReferenceCounters, etc.) |
+ | [Common](https://github.com/DiligentGraphics/DiligentCore/tree/master/Common)												| Common functionality such as file wrapper, logging, debug utilities, etc. |
+ | [Graphics/GraphicsAccessories](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsAccessories)	| Basic graphics accessories used by all implementations  |
+ | [Graphics/GraphicsEngine](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngine)	            | Platform-independent base functionality |
+ | [Graphics/GraphicsEngineD3DBase](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngineD3DBase)| Base functionality for D3D11/D3D12 implementations |
+ | [Graphics/GraphicsEngineD3D11](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngineD3D11)     | Engine implementation with Direct3D11 |
+ | [Graphics/GraphicsEngineD3D12](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngineD3D12)     | Engine implementation with Direct3D12 |
+ | [Graphics/GraphicsEngineOpenGL](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngineOpenGL)   | Engine implementation with OpenGL/GLES |
+ | [Graphics/GraphicsTools](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsTools)                 | Graphics utilities build on top of core interfaces (definitions of commonly used states, texture uploaders, etc.) | 
+ | [Graphics/HLSL2GLSLConverterLib](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/HLSL2GLSLConverterLib) | HLSL to GLSL source code converter library |
+ | [Platforms/Basic](https://github.com/DiligentGraphics/DiligentCore/tree/master/Platforms/Basic)      | Interface for platform-specific routines and implementation of some common functionality |
+ | [Platforms/Android](https://github.com/DiligentGraphics/DiligentCore/tree/master/Platforms/Android)  | Implementation of platform-specific routines on Android |
+ | [Platforms/UWP](https://github.com/DiligentGraphics/DiligentCore/tree/master/Platforms/UWP)          | Implementation of platform-specific routines on Universal Windows platform |
+ | [Platforms/Win32](https://github.com/DiligentGraphics/DiligentCore/tree/master/Platforms/Win32)      | Implementation of platform-specific routines on Win32 platform |
+ | [Platforms/Linux](https://github.com/DiligentGraphics/DiligentCore/tree/master/Platforms/Linux)      | Implementation of platform-specific routines on Linux platform |
  | External/glew | Cross-platform library for loading OpenGL extensions |
 
 
@@ -142,7 +142,7 @@ also create a specified number of deferred contexts, which can be used for multi
 Deferred contexts can only be created during the initialization of the engine. The function populates an array of pointers 
 to the contexts, where the immediate context goes at position 0, followed by all deferred contexts.
 
-For more details, take a look at [WinMain.cpp](https://github.com/DiligentGraphics/DiligentSamples/blob/master/Samples/SampleBase/Src/Win32/WinMain.cpp) file.
+For more details, take a look at [WinMain.cpp](https://github.com/DiligentGraphics/DiligentSamples/blob/master/Samples/SampleBase/src/Win32/WinMain.cpp) file.
 
 ### Universal Windows Platform
 
@@ -151,7 +151,7 @@ currently supported, but dynamic linking can also be implemented. Initialization
 way as on Win32 Platform. The difference is that you first create the render device and device contexts by 
 calling `IEngineFactoryD3D11::CreateDeviceAndContextsD3D11()` or `IEngineFactoryD3D12::CreateDeviceAndContextsD3D12()`. 
 The swap chain is created later by a call to `IEngineFactoryD3D11::CreateSwapChainD3D11()` or `IEngineFactoryD3D12::CreateSwapChainD3D12()`. 
-Please look at the [DeviceResources.cpp](https://github.com/DiligentGraphics/DiligentSamples/blob/master/Samples/SampleBase/Src/UWP/Common/DeviceResources.cpp) file for more details.
+Please look at the [DeviceResources.cpp](https://github.com/DiligentGraphics/DiligentSamples/blob/master/Samples/SampleBase/src/UWP/Common/DeviceResources.cpp) file for more details.
 
 ### Linux
 
@@ -566,9 +566,9 @@ objects. Refer to the following pages for more information:
 
 [Diligent Engine on Facebook](https://www.facebook.com/DiligentGraphics/)
 
-[Diligent Engine Architecture](http://diligentgraphics.com/diligent-engine/architecture/).
+[Diligent Engine Architecture](http://diligentgraphics.com/diligent-engine/architecture/)
 
-[API Basics](http://diligentgraphics.com/diligent-engine/api-basics/).
+[API Basics](http://diligentgraphics.com/diligent-engine/api-basics/)
 
 [API Reference][1]
 
@@ -633,5 +633,7 @@ Licensed under the [Apache License, Version 2.0](License.txt)
 
 
 **Copyright 2015-2018 Egor Yusov**
+
+[diligentgraphics.com](http://diligentgraphics.com)
 
 [1]: https://cdn.rawgit.com/DiligentGraphics/DiligentCore/f0c41bba/doc/html/index.html

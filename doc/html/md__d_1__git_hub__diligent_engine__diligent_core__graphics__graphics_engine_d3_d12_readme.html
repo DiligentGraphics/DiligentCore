@@ -122,7 +122,7 @@ $(function() {
 <div class="fragment"><div class="line"><span class="keywordtype">void</span> IEngineFactoryD3D12::AttachToD3D12Device(<span class="keywordtype">void</span> *pd3d12NativeDevice,</div><div class="line">                                              <span class="keyword">class</span> ICommandQueueD3D12 *pCommandQueue,</div><div class="line">                                              <span class="keyword">const</span> EngineD3D12Attribs&amp; EngineAttribs,</div><div class="line">                                              IRenderDevice **ppDevice,</div><div class="line">                                              IDeviceContext **ppContexts,</div><div class="line">                                              Uint32 NumDeferredContexts);</div></div><!-- fragment --><p>The method takes a pointer to the native D3D12 device <code>pd3d12NativeDevice</code>, initialization parameters <code>EngineAttribs</code>, and returns diligent engine device interface in <code>ppDevice</code>, and diligent engine contexts in <code>ppContexts</code>. Pointer to the immediate goes at position 0. If <code>NumDeferredContexts</code> &gt; 0, pointers to deferred contexts go afterwards. The function also takes a pointer to the command queue object <code>pCommandQueue</code>, which needs to implement <code>ICommandQueueD3D12</code> interface.</p>
 <p>For more information about interoperability with D3D12, please visit <a href="http://diligentgraphics.com/diligent-engine/native-api-interoperability/direct3d12-interoperability/">Diligent Engine web site</a></p>
 <h1>References</h1>
-<p><a href="http://diligentgraphics.com/diligent-engine">Diligent Engine</a></p>
+<p><a href="http://diligentgraphics.com/diligent-engine">Diligent Engine on the Web</a></p>
 <p><a href="http://diligentgraphics.com/diligent-engine/native-api-interoperability/direct3d12-interoperability/">Interoperability with Direct3D12</a></p>
 <p><a href="http://diligentgraphics.com/diligent-engine/architecture/D3D12">Architecture of D3D12-based implementation</a></p>
 <h1>Release Notes</h1>
@@ -158,14 +158,14 @@ $(function() {
 <p>Reworked the API to follow D3D12 style</p>
 <h2>1.0</h2>
 <p>Initial release</p>
-<p><b>Copyright 2015-2017 Egor Yusov</b></p>
-<p><a href="http://diligentgraphics.com">Diligent Graphics</a> </p>
+<p><b>Copyright 2015-2018 Egor Yusov</b></p>
+<p><a href="http://diligentgraphics.com">diligentgraphics.com</a> </p>
 </div></div><!-- contents -->
 <!-- HTML footer for doxygen 1.8.10-->
 <!-- start footer part -->
 <!--
 <hr class="footer"/><address class="footer"><small>
-Generated on Wed Jan 3 2018 20:17:25 for Diligent Engine API Reference by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Wed Jan 3 2018 21:39:02 for Diligent Engine API Reference by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.14
 </small></address>

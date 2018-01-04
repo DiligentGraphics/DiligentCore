@@ -100,7 +100,7 @@ $(function() {
 <p>The code snippet below shows how diligent engine can be attached to D3D11 device returned by Unity</p>
 <div class="fragment"><div class="line">IUnityGraphicsD3D11* d3d = interfaces-&gt;Get&lt;IUnityGraphicsD3D11&gt;();</div><div class="line">ID3D11Device* d3d11NativeDevice = d3d-&gt;GetDevice();</div><div class="line">CComPtr&lt;ID3D11DeviceContext&gt; d3d11ImmediateContext;</div><div class="line">d3d11NativeDevice-&gt;GetImmediateContext(&amp;d3d11ImmediateContext);</div><div class="line"><span class="keyword">auto</span> *pFactoryD3d11 = GetEngineFactoryD3D11();</div><div class="line">EngineD3D11Attribs Attribs;</div><div class="line">pFactoryD3d11-&gt;AttachToD3D11Device(d3d11NativeDevice, d3d11ImmediateContext, Attribs, &amp;m_Device, &amp;m_Context, 0);</div></div><!-- fragment --><p>For more information about interoperability with D3D11, please visit <a href="http://diligentgraphics.com/diligent-engine/native-api-interoperability/direct3d11-interoperability/">Diligent Engine web site</a></p>
 <h1>References</h1>
-<p><a href="http://diligentgraphics.com/diligent-engine">Diligent Engine</a></p>
+<p><a href="http://diligentgraphics.com/diligent-engine">Diligent Engine on the Web</a></p>
 <p><a href="http://diligentgraphics.com/diligent-engine/native-api-interoperability/direct3d11-interoperability/">Interoperability with Direct3D11</a></p>
 <p><a href="http://diligentgraphics.com/diligent-engine/architecture/d3d11">Architecture of D3D11-based implementation</a></p>
 <h1>Release Notes</h1>
@@ -130,14 +130,14 @@ $(function() {
 <p>Reworked the API to follow D3D12 style</p>
 <h2>1.0</h2>
 <p>Initial release</p>
-<p><b>Copyright 2015-2017 Egor Yusov</b></p>
-<p><a href="http://diligentgraphics.com">Diligent Graphics</a> </p>
+<p><b>Copyright 2015-2018 Egor Yusov</b></p>
+<p><a href="http://diligentgraphics.com">diligentgraphics.com</a> </p>
 </div></div><!-- contents -->
 <!-- HTML footer for doxygen 1.8.10-->
 <!-- start footer part -->
 <!--
 <hr class="footer"/><address class="footer"><small>
-Generated on Wed Jan 3 2018 20:17:25 for Diligent Engine API Reference by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Wed Jan 3 2018 21:39:02 for Diligent Engine API Reference by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.14
 </small></address>

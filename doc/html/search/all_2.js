@@ -84,6 +84,5 @@ var searchData=
   ['cull_5fmode_5fnone',['CULL_MODE_NONE',['../namespace_diligent.html#aeeda8d41835aaaca5142122552880896a88bffa666bf1f0913c785f5adcc51a3c',1,'Diligent']]],
   ['cull_5fmode_5fnum_5fmodes',['CULL_MODE_NUM_MODES',['../namespace_diligent.html#aeeda8d41835aaaca5142122552880896a0b91e2f89b17819acce7200fbdf87d8d',1,'Diligent']]],
   ['cull_5fmode_5fundefined',['CULL_MODE_UNDEFINED',['../namespace_diligent.html#aeeda8d41835aaaca5142122552880896aceb414f364000c13d75a7a17fa0416ca',1,'Diligent']]],
-  ['cullmode',['CullMode',['../struct_diligent_1_1_rasterizer_state_desc.html#a5c331b6d0f4f320e6f088af64da6b842',1,'Diligent::RasterizerStateDesc']]],
-  ['common',['Common',['../md__d_1__git_hub__diligent_engine__diligent_core__common_readme.html',1,'']]]
+  ['cullmode',['CullMode',['../struct_diligent_1_1_rasterizer_state_desc.html#a5c331b6d0f4f320e6f088af64da6b842',1,'Diligent::RasterizerStateDesc']]]
 ];

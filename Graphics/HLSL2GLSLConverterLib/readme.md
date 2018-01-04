@@ -294,6 +294,6 @@ Initial release
 
 
 
-**Copyright 2015-2017 Egor Yusov**
+**Copyright 2015-2018 Egor Yusov**
 
-[Diligent Graphics](http://diligentgraphics.com)
+[diligentgraphics.com](http://diligentgraphics.com)

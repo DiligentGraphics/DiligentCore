@@ -101,7 +101,7 @@ For more information about interoperability with D3D12, please visit [Diligent E
 
 # References
 
-[Diligent Engine](http://diligentgraphics.com/diligent-engine)
+[Diligent Engine on the Web](http://diligentgraphics.com/diligent-engine)
 
 [Interoperability with Direct3D12](http://diligentgraphics.com/diligent-engine/native-api-interoperability/direct3d12-interoperability/)
 
@@ -151,6 +151,6 @@ Initial release
 
 
 
-**Copyright 2015-2017 Egor Yusov**
+**Copyright 2015-2018 Egor Yusov**
 
-[Diligent Graphics](http://diligentgraphics.com)
+[diligentgraphics.com](http://diligentgraphics.com)
