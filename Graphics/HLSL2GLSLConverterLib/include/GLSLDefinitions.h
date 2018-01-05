@@ -974,6 +974,11 @@ float DepthToNormalizedDeviceZ(float fDepth)
 
 #define MATRIX_ELEMENT(mat, row, col) mat[col][row]
 
+float4x4 MatrixFromRows(float4 row0, float4 row1, float4 row2, float4 row3)
+{
+    return transpose(float4x4(row0, row1, row2, row3));
+}
+
 // ---------------------------------- Vertex shader ----------------------------------
 #ifdef VERTEX_SHADER
 

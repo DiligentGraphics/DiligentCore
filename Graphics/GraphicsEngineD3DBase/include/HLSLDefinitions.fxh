@@ -58,4 +58,9 @@ float BoolToFloat( bool b )
 
 #define MATRIX_ELEMENT(mat, row, col) mat[row][col]
 
+float4x4 MatrixFromRows(float4 row0, float4 row1, float4 row2, float4 row3)
+{
+    return float4x4(row0, row1, row2, row3);
+}
+
 #endif // _HLSL_DEFINITIONS_
