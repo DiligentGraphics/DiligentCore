@@ -137,7 +137,7 @@ public:
     Signal() {}
 
     // http://en.cppreference.com/w/cpp/thread/condition_variable
-    void Trigger()
+    void Trigger(bool bNotifyAll = false)
     {
         //  The thread that intends to modify the variable has to
         //  * acquire a std::mutex (typically via std::lock_guard)
@@ -150,7 +150,10 @@ public:
         }
         // Unlocking is done before notifying, to avoid waking up the waiting 
         // thread only to block again (see notify_one for details)
-        m_CondVar.notify_one();
+        if(bNotifyAll)
+            m_CondVar.notify_all();
+        else
+            m_CondVar.notify_one();
     }
 
     void Wait()
@@ -182,7 +185,7 @@ private:
     std::mutex m_Mutex;
     std::condition_variable m_CondVar;
     volatile bool m_bIsTriggered = false;
-    
+
     Signal(const Signal&) = delete;
     Signal& operator = (const Signal&) = delete;
 };
