@@ -135,7 +135,11 @@ private:
 class Signal
 {
 public:
-    Signal() {}
+    Signal() 
+    {
+        m_SignalledValue = 0;
+        m_NumThreadsAwaken = 0;
+    }
 
     // http://en.cppreference.com/w/cpp/thread/condition_variable
     void Trigger(bool NotifyAll = false, int SignalValue = 1)
@@ -211,8 +215,8 @@ private:
     
     std::mutex m_Mutex;
     std::condition_variable m_CondVar;
-    std::atomic_int m_SignalledValue = 0;
-    std::atomic_int m_NumThreadsAwaken = 0;
+    std::atomic_int m_SignalledValue;
+    std::atomic_int m_NumThreadsAwaken;
     
     Signal(const Signal&) = delete;
     Signal& operator = (const Signal&) = delete;
