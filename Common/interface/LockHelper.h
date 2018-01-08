@@ -26,6 +26,7 @@
 #include <thread>
 #include <mutex>
 #include <condition_variable>
+#include <atomic>
 
 #include "Atomics.h"
 
@@ -137,7 +138,7 @@ public:
     Signal() {}
 
     // http://en.cppreference.com/w/cpp/thread/condition_variable
-    void Trigger(bool bNotifyAll = false)
+    void Trigger(bool NotifyAll = false, int SignalValue = 1)
     {
         //  The thread that intends to modify the variable has to
         //  * acquire a std::mutex (typically via std::lock_guard)
@@ -146,17 +147,25 @@ public:
         {
             // std::condition_variable works only with std::unique_lock<std::mutex>
             std::lock_guard<std::mutex> Lock(m_Mutex);
-            m_bIsTriggered = true;
+            VERIFY(SignalValue != 0, "Signal value must not be 0");
+            VERIFY(m_SignalledValue == 0 && m_NumThreadsAwaken == 0, "Not all threads have been awaken since the signal was triggered last time, or the signal has not been reset");
+            m_SignalledValue = SignalValue;
         }
         // Unlocking is done before notifying, to avoid waking up the waiting 
         // thread only to block again (see notify_one for details)
-        if(bNotifyAll)
+        if(NotifyAll)
             m_CondVar.notify_all();
         else
             m_CondVar.notify_one();
     }
 
-    void Wait()
+    // WARNING!
+    // If multiple threads are waiting for a signal in an infinite loop,
+    // autoresetting the signal does not guarantee that one thread cannot 
+    // go through the loop twice. In this case, every thread must wait for its 
+    // own auto-reset signal or the threads must be blocked by another signal
+
+    int Wait(bool AutoReset = false, int NumThreadsWaiting = 0)
     {
         //  Any thread that intends to wait on std::condition_variable has to
         //  * acquire a std::unique_lock<std::mutex>, on the SAME MUTEX as used to protect the shared variable
@@ -166,26 +175,45 @@ public:
         //    the thread is awakened, and the mutex is atomically reacquired: 
         //    - The thread should then check the condition and resume waiting if the wake up was spurious.
         std::unique_lock<std::mutex> Lock(m_Mutex);
-        if (!m_bIsTriggered)
+        // It is safe to check m_SignalledValue since we are holding
+        // the mutex
+        if(m_SignalledValue == 0)
         {
-            m_CondVar.wait(Lock, [&] {return m_bIsTriggered; });
+            m_CondVar.wait(Lock, [&] {return m_SignalledValue != 0;} );
         }
+        int SignalledValue = m_SignalledValue;
+        // Count the number of threads awaken while holding the mutex
+        ++m_NumThreadsAwaken;
+        if (AutoReset)
+        {
+            VERIFY(NumThreadsWaiting > 0, "Number of waiting threads must not be 0 when auto resetting the signal");
+            // Reset the signal while holding the mutex. If Trigger() is executed by another
+            // thread, it will wait until we release the mutex
+            if(m_NumThreadsAwaken == NumThreadsWaiting)
+            {
+                m_SignalledValue = 0;
+                m_NumThreadsAwaken = 0;
+            }
+        }
+        return SignalledValue;
     }
 
     void Reset()
     {
         std::lock_guard<std::mutex> Lock(m_Mutex);
-        m_bIsTriggered = false;
+        m_SignalledValue = 0;
+        m_NumThreadsAwaken = 0;
     }
 
-    volatile bool IsTriggered()const { return m_bIsTriggered; }
+    bool IsTriggered()const { return m_SignalledValue != 0; }
 
 private:
     
     std::mutex m_Mutex;
     std::condition_variable m_CondVar;
-    volatile bool m_bIsTriggered = false;
-
+    std::atomic_int m_SignalledValue = 0;
+    std::atomic_int m_NumThreadsAwaken = 0;
+    
     Signal(const Signal&) = delete;
     Signal& operator = (const Signal&) = delete;
 };
