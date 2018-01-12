@@ -32,14 +32,14 @@
 //   
 //
 //                                         __________________________________________________________
-//  m_pMemory                             |             m_pResources, m_NumResources                 |
+//  m_pMemory                             |             m_pResources, m_NumResources == m            |
 //  |                                     |                                                          |
 //  V                                     |                                                          V
 //  |  RootTable[0]  |   ....    |  RootTable[Nrt-1]  |  Res[0]  |  ... |  Res[n-1]  |    ....     | Res[0]  |  ... |  Res[m-1]  |
 //       |                                                A \
 //       |                                                |  \
 //       |________________________________________________|   \RefCntAutoPtr
-//                    m_pResources, m_NumResources             \_________     
+//                    m_pResources, m_NumResources == n        \_________     
 //                                                             |  Object |
 //                                                              --------- 
 //
@@ -231,7 +231,7 @@ public:
         // variable assignments for a shader. It is also not assigned to root views
         if( RootParam.m_TableStartOffset != InvalidDescriptorOffset )
         {
-            VERIFY(RootParam.m_TableStartOffset + OffsetFromTableStart < RootParam.m_NumResources, "Offset is out of range");
+            VERIFY(OffsetFromTableStart < RootParam.m_NumResources, "Offset is out of range");
             if( HeapType == D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER  )
             {
                 VERIFY_EXPR(!m_SamplerHeapSpace.IsNull());
@@ -257,7 +257,7 @@ public:
     {
         auto &RootParam = GetRootTable(RootParamInd);
         VERIFY(RootParam.m_TableStartOffset != InvalidDescriptorOffset, "GPU descriptor handle must never be requested for dynamic resources");
-        VERIFY(RootParam.m_TableStartOffset + OffsetFromTableStart < RootParam.m_NumResources, "Offset is out of range");
+        VERIFY(OffsetFromTableStart < RootParam.m_NumResources, "Offset is out of range");
 
         D3D12_GPU_DESCRIPTOR_HANDLE GPUDescriptorHandle = {0};
         VERIFY( HeapType == RootParam.DbgGetHeapType(), "Invalid descriptor heap type");
