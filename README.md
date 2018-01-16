@@ -574,7 +574,7 @@ objects. Refer to the following pages for more information:
 
 # Version History
 
-## Current Progress
+## v2.1.b
 
 * Removed legacy Visual Studio solution and project files
 
