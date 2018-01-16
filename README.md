@@ -577,6 +577,7 @@ objects. Refer to the following pages for more information:
 ## v2.1.b
 
 * Removed legacy Visual Studio solution and project files
+* Added API reference
 
 ## v2.1.a
 
