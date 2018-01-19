@@ -75,7 +75,18 @@
 #       undef Success
 #   endif
 
-#   elif defined(PLATFORM_ANDROID)
+#elif defined(PLATFORM_MACOS)
+
+#   ifndef GLEW_STATIC
+#       define GLEW_STATIC // Must be defined to use static version of glew
+#   endif
+#   ifndef GLEW_NO_GLU
+#       define GLEW_NO_GLU
+#   endif
+
+#   include "GL/glew.h"
+
+#elif defined(PLATFORM_ANDROID)
 
 #   ifndef USE_GL3_STUB
 #       define USE_GL3_STUB 0

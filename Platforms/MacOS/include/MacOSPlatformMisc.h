@@ -23,28 +23,21 @@
 
 #pragma once
 
-#include "PlatformDefinitions.h"
+#include "BasicPlatformMisc.h"
+#include "DebugUtilities.h"
 
-#if defined( PLATFORM_WIN32 )
-    #include "Win32Debug.h"
-    typedef WindowsDebug PlatformDebug;
+struct MacOSMisc : public BasicPlatformMisc
+{
+    static Diligent::Uint32 GetMSB(Diligent::Uint32 Val)
+    {
+        if( Val == 0 )return 32;
 
-#elif defined( PLATFORM_UNIVERSAL_WINDOWS )
-    #include "UWPDebug.h"
-    typedef WindowsStoreDebug PlatformDebug;
+        // Returns the number of leading 0-bits in x, starting at the 
+        // most significant bit position. If x is 0, the result is undefined.
+        auto LeadingZeros = __builtin_clz(Val);
+        auto MSB = 31 - LeadingZeros;
+        VERIFY_EXPR(MSB == BasicPlatformMisc::GetMSB(Val));
 
-#elif defined ( PLATFORM_ANDROID )
-    #include "AndroidDebug.h"
-    typedef AndroidDebug PlatformDebug;
-
-#elif defined ( PLATFORM_LINUX )
-    #include "LinuxDebug.h"
-    typedef LinuxDebug PlatformDebug;
-
-#elif defined ( PLATFORM_LINUX )
-    #include "MacOSDebug.h"
-    typedef MacOSDebug PlatformDebug;
-
-#else
-    #error Unsupported platform
-#endif
+        return MSB;
+    }
+};

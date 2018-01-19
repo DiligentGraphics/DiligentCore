@@ -52,6 +52,11 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters *pRefCounters, RenderDeviceGLImpl 
         "#version 430 core\n"
         "#define DESKTOP_GL 1\n"
     );
+#elif defined(PLATFORM_MACOS)
+    Settings.append(
+        "#version 410 core\n"
+        "#define DESKTOP_GL 1\n"
+    );
 #elif defined(ANDROID)
     Settings.append(
         "#version 310 es\n"

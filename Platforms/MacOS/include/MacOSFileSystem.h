@@ -23,28 +23,25 @@
 
 #pragma once
 
-#include "PlatformDefinitions.h"
+#include "BasicFileSystem.h"
+#include "StandardFile.h"
 
-#if defined( PLATFORM_WIN32 )
-    #include "Win32Debug.h"
-    typedef WindowsDebug PlatformDebug;
+#include <memory>
+#include <vector>
 
-#elif defined( PLATFORM_UNIVERSAL_WINDOWS )
-    #include "UWPDebug.h"
-    typedef WindowsStoreDebug PlatformDebug;
+using MacOSFile = StandardFile;
 
-#elif defined ( PLATFORM_ANDROID )
-    #include "AndroidDebug.h"
-    typedef AndroidDebug PlatformDebug;
+struct MacOSFileSystem : public BasicFileSystem
+{
+public:
+    static MacOSFile* OpenFile( const FileOpenAttribs &OpenAttribs );
+    static inline Diligent::Char GetSlashSymbol(){ return '/'; }
 
-#elif defined ( PLATFORM_LINUX )
-    #include "LinuxDebug.h"
-    typedef LinuxDebug PlatformDebug;
-
-#elif defined ( PLATFORM_LINUX )
-    #include "MacOSDebug.h"
-    typedef MacOSDebug PlatformDebug;
-
-#else
-    #error Unsupported platform
-#endif
+    static bool FileExists( const Diligent::Char *strFilePath );
+    static bool PathExists( const Diligent::Char *strPath );
+    
+    static bool CreateDirectory( const Diligent::Char *strPath );
+    static void ClearDirectory( const Diligent::Char *strPath );
+    static void DeleteFile( const Diligent::Char *strPath );
+    static std::vector<std::unique_ptr<FindFileData>> Search(const Diligent::Char *SearchPattern);
+};

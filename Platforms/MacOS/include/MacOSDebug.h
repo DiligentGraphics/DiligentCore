@@ -23,28 +23,10 @@
 
 #pragma once
 
-#include "PlatformDefinitions.h"
+#include "BasicPlatformDebug.h"
 
-#if defined( PLATFORM_WIN32 )
-    #include "Win32Debug.h"
-    typedef WindowsDebug PlatformDebug;
-
-#elif defined( PLATFORM_UNIVERSAL_WINDOWS )
-    #include "UWPDebug.h"
-    typedef WindowsStoreDebug PlatformDebug;
-
-#elif defined ( PLATFORM_ANDROID )
-    #include "AndroidDebug.h"
-    typedef AndroidDebug PlatformDebug;
-
-#elif defined ( PLATFORM_LINUX )
-    #include "LinuxDebug.h"
-    typedef LinuxDebug PlatformDebug;
-
-#elif defined ( PLATFORM_LINUX )
-    #include "MacOSDebug.h"
-    typedef MacOSDebug PlatformDebug;
-
-#else
-    #error Unsupported platform
-#endif
+struct MacOSDebug : public BasicPlatformDebug
+{
+    static void AssertionFailed( const Diligent::Char *Message, const char *Function, const char *File, int Line );
+    static void OutputDebugMessage( DebugMessageSeverity Severity, const Diligent::Char *Message );
+};

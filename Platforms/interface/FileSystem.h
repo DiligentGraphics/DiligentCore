@@ -49,6 +49,14 @@
     typedef LinuxFileSystem FileSystem;
     typedef LinuxFile       CFile;
 
-#elif
+#elif defined ( PLATFORM_MACOS )
+
+    #include "MacOSFileSystem.h"
+    typedef MacOSFileSystem FileSystem;
+    typedef MacOSFile       CFile;
+
+#else
+
     #error Unsupported platform
+
 #endif

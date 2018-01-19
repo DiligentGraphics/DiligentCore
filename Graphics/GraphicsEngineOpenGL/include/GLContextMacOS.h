@@ -23,28 +23,33 @@
 
 #pragma once
 
-#include "PlatformDefinitions.h"
+namespace Diligent
+{
 
-#if defined( PLATFORM_WIN32 )
-    #include "Win32Debug.h"
-    typedef WindowsDebug PlatformDebug;
+    struct ContextInitInfo
+    {
+        SwapChainDesc SwapChainAttribs;
+        void *pNativeWndHandle = nullptr;
+        void *pDisplay = nullptr;
+    };
 
-#elif defined( PLATFORM_UNIVERSAL_WINDOWS )
-    #include "UWPDebug.h"
-    typedef WindowsStoreDebug PlatformDebug;
+    class GLContext
+    {
+    public:
+        typedef void* NativeGLContextType;
 
-#elif defined ( PLATFORM_ANDROID )
-    #include "AndroidDebug.h"
-    typedef AndroidDebug PlatformDebug;
+        GLContext(const ContextInitInfo &Info, struct DeviceCaps &DeviceCaps);
+        ~GLContext();
+        void SwapBuffers();
 
-#elif defined ( PLATFORM_LINUX )
-    #include "LinuxDebug.h"
-    typedef LinuxDebug PlatformDebug;
+        const SwapChainDesc& GetSwapChainDesc()const{ return m_SwapChainAttribs; }
 
-#elif defined ( PLATFORM_LINUX )
-    #include "MacOSDebug.h"
-    typedef MacOSDebug PlatformDebug;
+        NativeGLContextType GetCurrentNativeGLContext();
 
-#else
-    #error Unsupported platform
-#endif
+    private:
+        void *m_pNativeWindow = nullptr;
+        void *m_pDisplay = nullptr;
+        NativeGLContextType m_Context;
+        SwapChainDesc m_SwapChainAttribs;
+    };
+}

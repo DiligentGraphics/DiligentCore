@@ -23,28 +23,8 @@
 
 #pragma once
 
-#include "PlatformDefinitions.h"
+#include <cstddef>
 
-#if defined( PLATFORM_WIN32 )
-    #include "Win32Debug.h"
-    typedef WindowsDebug PlatformDebug;
-
-#elif defined( PLATFORM_UNIVERSAL_WINDOWS )
-    #include "UWPDebug.h"
-    typedef WindowsStoreDebug PlatformDebug;
-
-#elif defined ( PLATFORM_ANDROID )
-    #include "AndroidDebug.h"
-    typedef AndroidDebug PlatformDebug;
-
-#elif defined ( PLATFORM_LINUX )
-    #include "LinuxDebug.h"
-    typedef LinuxDebug PlatformDebug;
-
-#elif defined ( PLATFORM_LINUX )
-    #include "MacOSDebug.h"
-    typedef MacOSDebug PlatformDebug;
-
-#else
-    #error Unsupported platform
-#endif
+template <typename _CountofType, std::size_t _SizeOfArray>
+char (*__countof_helper(_CountofType (&_Array)[_SizeOfArray]))[_SizeOfArray];
+#define _countof(_Array) (sizeof(*__countof_helper(_Array)) + 0)

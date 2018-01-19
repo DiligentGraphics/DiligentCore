@@ -21,30 +21,39 @@
  *  of the possibility of such damages.
  */
 
-#pragma once
+#include <csignal>
+#include <iostream>
 
-#include "PlatformDefinitions.h"
+#include "MacOSDebug.h"
+#include "FormatMessage.h"
 
-#if defined( PLATFORM_WIN32 )
-    #include "Win32Debug.h"
-    typedef WindowsDebug PlatformDebug;
+using namespace Diligent;
 
-#elif defined( PLATFORM_UNIVERSAL_WINDOWS )
-    #include "UWPDebug.h"
-    typedef WindowsStoreDebug PlatformDebug;
+void MacOSDebug :: AssertionFailed( const Char *Message, const char *Function, const char *File, int Line )
+{
+    auto AssertionFailedMessage = FormatAssertionFailedMessage(Message, Function, File, Line);
+    OutputDebugMessage(DebugMessageSeverity::Error, AssertionFailedMessage.c_str());
 
-#elif defined ( PLATFORM_ANDROID )
-    #include "AndroidDebug.h"
-    typedef AndroidDebug PlatformDebug;
+    raise( SIGTRAP );
+};
 
-#elif defined ( PLATFORM_LINUX )
-    #include "LinuxDebug.h"
-    typedef LinuxDebug PlatformDebug;
 
-#elif defined ( PLATFORM_LINUX )
-    #include "MacOSDebug.h"
-    typedef MacOSDebug PlatformDebug;
+void MacOSDebug::OutputDebugMessage( DebugMessageSeverity Severity, const Char *Message )
+{
+    static const Char* const strSeverities[] = { "Info: ", "Warning: ", "ERROR: ", "CRITICAL ERROR: " };
+    auto* MessageSevery = strSeverities[static_cast<int>(Severity)];
+    String str = MessageSevery;
+    str += Message;
+    str += '\n';
+    std::cerr << str;
+}
 
-#else
-    #error Unsupported platform
-#endif
+void DebugAssertionFailed(const Diligent::Char* Message, const char* Function, const char* File, int Line)
+{
+    MacOSDebug :: AssertionFailed( Message, Function, File, Line );
+}
+
+void OutputDebugMessage(BasicPlatformDebug::DebugMessageSeverity Severity, const Diligent::Char* Message)
+{
+    MacOSDebug::OutputDebugMessage( Severity, Message );
+}

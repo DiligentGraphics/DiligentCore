@@ -39,7 +39,7 @@
 namespace Diligent
 {
 
-#if defined(PLATFORM_WIN32) || defined(PLATFORM_UNIVERSAL_WINDOWS) || defined(PLATFORM_LINUX)
+#if defined(PLATFORM_WIN32) || defined(PLATFORM_UNIVERSAL_WINDOWS) || defined(PLATFORM_LINUX) || defined(PLATFORM_MACOS)
     typedef RenderDeviceGLImpl TRenderDeviceGLImpl;
 #elif defined(PLATFORM_ANDROID)
     typedef RenderDeviceGLESImpl TRenderDeviceGLImpl;

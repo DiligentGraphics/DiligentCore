@@ -29,7 +29,7 @@
     {
         using IGLDeviceBaseInterface = IRenderDeviceGLES;
     }
-#elif defined(PLATFORM_WIN32) || defined(PLATFORM_LINUX)
+#elif defined(PLATFORM_WIN32) || defined(PLATFORM_LINUX) || defined(PLATFORM_MACOS)
     #include "RenderDeviceGL.h"
     namespace Diligent
     {

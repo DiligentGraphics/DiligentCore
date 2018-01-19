@@ -26,7 +26,7 @@
 #include "DebugUtilities.h"
 #include "GraphicsAccessories.h"
 #include <algorithm>
-#include <math.h>
+#include <cmath>
 
 #define PI_F 3.1415926f
 

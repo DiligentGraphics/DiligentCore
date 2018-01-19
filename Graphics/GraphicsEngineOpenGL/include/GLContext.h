@@ -29,6 +29,8 @@
 #   include "GLContextAndroid.h"
 #elif defined(PLATFORM_LINUX)
 #   include "GLContextLinux.h"
+#elif defined(PLATFORM_MACOS)
+#   include "GLContextMacOS.h"
 #else
 #   error Unsupported platform
 #endif

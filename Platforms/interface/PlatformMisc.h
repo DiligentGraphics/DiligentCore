@@ -36,6 +36,13 @@
 #elif defined ( PLATFORM_LINUX )
     #include "LinuxPlatformMisc.h"
     typedef LinuxMisc PlatformMisc;
+
+#elif defined ( PLATFORM_MACOS )
+    #include "MacOSPlatformMisc.h"
+    typedef MacOSMisc PlatformMisc;
+
 #else
+
     #error Unsupported platform
+
 #endif
