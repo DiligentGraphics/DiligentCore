@@ -89,19 +89,19 @@ struct SampleDesc
 struct GraphicsPipelineDesc
 {
     /// Vertex shader to be used with the pipeline
-    IShader *pVS;
+    IShader *pVS = nullptr;
 
     /// Pixel shader to be used with the pipeline
-    IShader *pPS;
+    IShader *pPS = nullptr;
 
     /// Domain shader to be used with the pipeline
-    IShader *pDS;
+    IShader *pDS = nullptr;
 
     /// Hull shader to be used with the pipeline
-    IShader *pHS;
+    IShader *pHS = nullptr;
 
     /// Geometry shader to be used with the pipeline
-    IShader *pGS;
+    IShader *pGS = nullptr;
     
     //D3D12_STREAM_OUTPUT_DESC StreamOutput;
     
@@ -112,7 +112,7 @@ struct GraphicsPipelineDesc
     /// in all the active render targets. A sample mask is always applied; 
     /// it is independent of whether multisampling is enabled, and does not 
     /// depend on whether an application uses multisample render targets.
-    Uint32 SampleMask;
+    Uint32 SampleMask = 0xFFFFFFFF;
 
     /// Rasterizer state description
     RasterizerStateDesc RasterizerDesc;
@@ -125,10 +125,10 @@ struct GraphicsPipelineDesc
     //D3D12_INDEX_BUFFER_STRIP_CUT_VALUE IBStripCutValue;
 
     /// Primitive topology type
-    PRIMITIVE_TOPOLOGY_TYPE PrimitiveTopologyType;
+    PRIMITIVE_TOPOLOGY_TYPE PrimitiveTopologyType = PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 
     /// Number of render targets in the RTVFormats member
-    Uint32 NumRenderTargets;
+    Uint32 NumRenderTargets = 0;
 
     /// Render target formats
     TEXTURE_FORMAT RTVFormats[8];
@@ -140,21 +140,12 @@ struct GraphicsPipelineDesc
     SampleDesc SmplDesc;
 
     /// Node mask.
-    Uint32 NodeMask;
+    Uint32 NodeMask = 0;
 
     //D3D12_CACHED_PIPELINE_STATE CachedPSO;
     //D3D12_PIPELINE_STATE_FLAGS Flags;
 
-    GraphicsPipelineDesc() : 
-        pVS(nullptr),
-        pPS(nullptr),
-        pDS(nullptr),
-        pHS(nullptr),
-        pGS(nullptr),
-        PrimitiveTopologyType(PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE),
-        SampleMask(0xFFFFFFFF),
-        NumRenderTargets(0),
-        NodeMask(0)
+    GraphicsPipelineDesc()
     {
         for(size_t rt = 0; rt < _countof(RTVFormats); ++rt)
             RTVFormats[rt] = TEX_FORMAT_UNKNOWN;

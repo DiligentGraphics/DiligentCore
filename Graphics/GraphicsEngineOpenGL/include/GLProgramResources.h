@@ -56,8 +56,8 @@ namespace Diligent
         {
             GLProgramVariableBase( const Char* _Name, size_t _ArraySize, SHADER_VARIABLE_TYPE _VarType) :
                 Name( _Name ),
-                VarType(_VarType),
-                pResources(_ArraySize)
+                pResources(_ArraySize),
+                VarType(_VarType)
             {
                 VERIFY_EXPR(_ArraySize >= 1);
             }

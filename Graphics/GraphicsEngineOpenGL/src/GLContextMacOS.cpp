@@ -84,10 +84,10 @@ namespace Diligent
     }*/
 
     GLContext::GLContext( const ContextInitInfo &Info, DeviceCaps &DeviceCaps ) :
-        m_SwapChainAttribs(Info.SwapChainAttribs),
-		m_Context(0),
-		m_pNativeWindow(Info.pNativeWndHandle),
-        m_pDisplay(Info.pDisplay)
+        m_pNativeWindow(Info.pNativeWndHandle),
+        m_pDisplay(Info.pDisplay),
+        m_Context(0),
+        m_SwapChainAttribs(Info.SwapChainAttribs)
     {
 #if 0
         auto CurrentCtx = glXGetCurrentContext();

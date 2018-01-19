@@ -37,7 +37,7 @@ namespace Diligent
 {
 
 // This class controls the lifetime of a refcounted object
-class RefCountersImpl : public IReferenceCounters
+class RefCountersImpl final : public IReferenceCounters
 {
 public:
     inline virtual CounterValueType AddStrongRef()override final

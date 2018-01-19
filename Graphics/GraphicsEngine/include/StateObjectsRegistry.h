@@ -62,8 +62,8 @@ namespace Diligent
         static constexpr int DeletedObjectsToPurge = 32;
 
         StateObjectsRegistry(IMemoryAllocator &RawAllocator, const Char* RegistryName) :
-            m_RegistryName( RegistryName ),
-            m_DescToObjHashMap(STD_ALLOCATOR_RAW_MEM(HashMapElem, RawAllocator, "Allocator for unordered_map<ResourceDescType, RefCntWeakPtr<IDeviceObject> >") )
+            m_DescToObjHashMap(STD_ALLOCATOR_RAW_MEM(HashMapElem, RawAllocator, "Allocator for unordered_map<ResourceDescType, RefCntWeakPtr<IDeviceObject> >") ),
+            m_RegistryName( RegistryName )
         {}
         
         ~StateObjectsRegistry()

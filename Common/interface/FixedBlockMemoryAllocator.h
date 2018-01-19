@@ -78,9 +78,9 @@ private:
         static constexpr Uint8 InitializedBlockMemPattern = 0xCF;
 
         MemoryPage(FixedBlockMemoryAllocator &OwnerAllocator):
-            m_pOwnerAllocator(&OwnerAllocator),
             m_NumFreeBlocks(OwnerAllocator.m_NumBlocksInPage),
-            m_NumInitializedBlocks(0)
+            m_NumInitializedBlocks(0),
+            m_pOwnerAllocator(&OwnerAllocator)
         {
             auto PageSize = OwnerAllocator.m_BlockSize * OwnerAllocator.m_NumBlocksInPage;
             m_pPageStart = reinterpret_cast<Uint8*>(

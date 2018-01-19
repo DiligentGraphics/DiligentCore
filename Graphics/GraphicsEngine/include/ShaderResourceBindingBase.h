@@ -50,8 +50,8 @@ public:
 	///						must not keep a strong reference to the PSO.
     ShaderResourceBindingBase( IReferenceCounters *pRefCounters, IPipelineState *pPSO, bool IsInternal = false ) :
         TObjectBase( pRefCounters ),
-        m_pPSO( pPSO ),
-        m_spPSO( IsInternal ? nullptr : pPSO )
+        m_spPSO( IsInternal ? nullptr : pPSO ),
+        m_pPSO( pPSO )
     {}
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE( IID_ShaderResourceBinding, TObjectBase )

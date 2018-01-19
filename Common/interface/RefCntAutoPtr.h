@@ -251,8 +251,8 @@ class RefCntWeakPtr
 {
 public:
     explicit RefCntWeakPtr(T *pObj = nullptr) : 
-        m_pObject(pObj),
-        m_pRefCounters(nullptr)
+        m_pRefCounters(nullptr),
+        m_pObject(pObj)
     {
         if( m_pObject )
         {
@@ -267,16 +267,16 @@ public:
     }
 
     RefCntWeakPtr(const RefCntWeakPtr& WeakPtr) :
-        m_pObject(WeakPtr.m_pObject),
-        m_pRefCounters(WeakPtr.m_pRefCounters)
+        m_pRefCounters(WeakPtr.m_pRefCounters),
+        m_pObject(WeakPtr.m_pObject)
     {
         if( m_pRefCounters )
             m_pRefCounters->AddWeakRef();
     }
 
     RefCntWeakPtr(RefCntWeakPtr&& WeakPtr) :
-        m_pObject(std::move(WeakPtr.m_pObject)),
-        m_pRefCounters(std::move(WeakPtr.m_pRefCounters))
+        m_pRefCounters(std::move(WeakPtr.m_pRefCounters)),
+        m_pObject(std::move(WeakPtr.m_pObject))
     {
         WeakPtr.m_pRefCounters = nullptr;
         WeakPtr.m_pObject = nullptr;

@@ -54,9 +54,9 @@ public:
 					  const ObjectDescType &ObjDesc,
 				      bool bIsDeviceInternal = false) :
         TBase(pRefCounters),
-        m_pDevice( pDevice ),
 		// Do not keep strong reference to the device if the object is an internal device object
 		m_spDevice( bIsDeviceInternal ? nullptr : pDevice ),
+        m_pDevice( pDevice ),
         m_ObjectNameCopy(ObjDesc.Name ? ObjDesc.Name : ""),
         m_Desc( ObjDesc )
     {

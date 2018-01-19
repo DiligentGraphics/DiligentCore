@@ -1425,7 +1425,6 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessStructuredBuffer(TokenList
     Token->Literal = "layout(std140) buffer";
     // buffer<DataType> g_Data;
     // ^
-    auto StructuredBftToken = Token;
     
     ++Token;
     // buffer<DataType> g_Data;
@@ -3590,7 +3589,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessHullShaderArguments( Token
     if (ConstFuncIt == Attributes.end())
         LOG_ERROR_AND_THROW( "Hull shader patch constant function is not specified. Use \"patchconstantfunc\" attribute" );
     
-    auto MaxTessFactorIt = Attributes.find("maxtessfactor");
+    //auto MaxTessFactorIt = Attributes.find("maxtessfactor");
     auto NumControlPointsIt = Attributes.find("outputcontrolpoints");
     if(NumControlPointsIt == Attributes.end())
         LOG_ERROR_AND_THROW( "Number of output control points is not specified. Use \"outputcontrolpoints\" attribute" );
@@ -4144,7 +4143,6 @@ void HLSL2GLSLConverterImpl::ConversionStream::RemoveSemanticsFromBlock(TokenLis
                 //              ^
                 if( tkn->Type == TokenType::Identifier )
                 {
-                    auto SemanticToken = tkn;
                     ++tkn;
                     // float4 Pos : POSITION;
                     //                      ^

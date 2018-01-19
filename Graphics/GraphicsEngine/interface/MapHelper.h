@@ -49,10 +49,10 @@ class MapHelper
 public:
 
     /// Initializes the class member with null values
-    MapHelper() : 
-        m_pMappedData(nullptr),
+    MapHelper() :
         m_pBuffer(nullptr),
         m_pContext(nullptr),
+        m_pMappedData(nullptr),
         m_MapType(static_cast<MAP_TYPE>(-1)),
         m_MapFlags(static_cast<Uint32>(-1))
     {

@@ -209,10 +209,10 @@ public:
                      size_t PSOSize,
                      size_t SRBSize) :
         TObjectBase(pRefCounters),
+        m_SamplersRegistry(RawMemAllocator, "sampler"),
         m_TextureFormatsInfo( TEX_FORMAT_NUM_FORMATS, TextureFormatInfoExt(), STD_ALLOCATOR_RAW_MEM(TextureFormatInfoExt, RawMemAllocator, "Allocator for vector<TextureFormatInfoExt>") ),
         m_TexFmtInfoInitFlags( TEX_FORMAT_NUM_FORMATS, false, STD_ALLOCATOR_RAW_MEM(bool, RawMemAllocator, "Allocator for vector<bool>") ),
         m_wpDeferredContexts(NumDeferredContexts, RefCntWeakPtr<IDeviceContext>(), STD_ALLOCATOR_RAW_MEM(RefCntWeakPtr<IDeviceContext>, RawMemAllocator, "Allocator for vector< RefCntWeakPtr<IDeviceContext> >")),
-        m_SamplersRegistry(RawMemAllocator, "sampler"),
         m_TexObjAllocator(RawMemAllocator, TextureObjSize, 64),
         m_TexViewObjAllocator(RawMemAllocator, TexViewObjSize, 64),
         m_BufObjAllocator(RawMemAllocator, BufferObjSize, 128),

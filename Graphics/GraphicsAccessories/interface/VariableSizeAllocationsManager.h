@@ -92,10 +92,10 @@ namespace Diligent
 
     public:
         VariableSizeAllocationsManager(OffsetType MaxSize, IMemoryAllocator &Allocator) : 
-            m_MaxSize(MaxSize),
-            m_FreeSize(MaxSize),
             m_FreeBlocksByOffset( STD_ALLOCATOR_RAW_MEM(TFreeBlocksByOffsetMap::value_type, Allocator, "Allocator for map<OffsetType, FreeBlockInfo>") ),
-            m_FreeBlocksBySize( STD_ALLOCATOR_RAW_MEM(TFreeBlocksBySizeMap::value_type, Allocator, "Allocator for multimap<OffsetType, TFreeBlocksByOffsetMap::iterator>") )
+            m_FreeBlocksBySize( STD_ALLOCATOR_RAW_MEM(TFreeBlocksBySizeMap::value_type, Allocator, "Allocator for multimap<OffsetType, TFreeBlocksByOffsetMap::iterator>") ),
+            m_MaxSize(MaxSize),
+            m_FreeSize(MaxSize)
         {
             // Insert single maximum-size block
             AddNewBlock(0, m_MaxSize);
