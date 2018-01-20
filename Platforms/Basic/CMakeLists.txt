@@ -16,7 +16,7 @@ set(INTERFACE
 	interface/Errors.h
 )
 
-if(PLATFORM_LINUX OR PLATFORM_WIN32)
+if(PLATFORM_LINUX OR PLATFORM_WIN32 OR PLATFORM_MACOS)
 	list(APPEND SOURCE src/StandardFile.cpp)
 	list(APPEND INTERFACE interface/StandardFile.h)
 endif()
