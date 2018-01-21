@@ -30,7 +30,6 @@ namespace Diligent
     {
         SwapChainDesc SwapChainAttribs;
         void *pNativeWndHandle = nullptr;
-        void *pDisplay = nullptr;
     };
 
     class GLContext
@@ -48,7 +47,6 @@ namespace Diligent
 
     private:
         void *m_pNativeWindow = nullptr;
-        void *m_pDisplay = nullptr;
         NativeGLContextType m_Context;
         SwapChainDesc m_SwapChainAttribs;
     };

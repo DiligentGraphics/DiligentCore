@@ -83,19 +83,21 @@ namespace Diligent
             LOG_WARNING_MESSAGE( "Unable to get the maximum uniform block name length. Using 1024 as a workaround\n" );
             activeUniformBlockMaxLength = 1024;
         }
-        
-
-        GLint numActiveShaderStorageBlocks = 0;
-        glGetProgramInterfaceiv( GLProgram, GL_SHADER_STORAGE_BLOCK, GL_ACTIVE_RESOURCES, &numActiveShaderStorageBlocks );
-        CHECK_GL_ERROR_AND_THROW( "Unable to get the number of shader storage blocks blocks\n" );
-
-        // Query the maximum name length of the active shader storage block (including null terminator)
-        GLint MaxShaderStorageBlockNameLen = 0;
-        glGetProgramInterfaceiv( GLProgram, GL_SHADER_STORAGE_BLOCK, GL_MAX_NAME_LENGTH, &MaxShaderStorageBlockNameLen );
-        CHECK_GL_ERROR_AND_THROW( "Unable to get the maximum shader storage block name length\n" );
 
         auto MaxNameLength = std::max( activeUniformMaxLength, activeUniformBlockMaxLength );
-        MaxNameLength = std::max( MaxNameLength, MaxShaderStorageBlockNameLen );
+
+        GLint numActiveShaderStorageBlocks = 0;
+        if(glGetProgramInterfaceiv)
+        {
+            glGetProgramInterfaceiv( GLProgram, GL_SHADER_STORAGE_BLOCK, GL_ACTIVE_RESOURCES, &numActiveShaderStorageBlocks );
+            CHECK_GL_ERROR_AND_THROW( "Unable to get the number of shader storage blocks blocks\n" );
+
+            // Query the maximum name length of the active shader storage block (including null terminator)
+            GLint MaxShaderStorageBlockNameLen = 0;
+            glGetProgramInterfaceiv( GLProgram, GL_SHADER_STORAGE_BLOCK, GL_MAX_NAME_LENGTH, &MaxShaderStorageBlockNameLen );
+            CHECK_GL_ERROR_AND_THROW( "Unable to get the maximum shader storage block name length\n" );
+            MaxNameLength = std::max( MaxNameLength, MaxShaderStorageBlockNameLen );
+        }
 
         MaxNameLength = std::max( MaxNameLength, 512 );
         std::vector<GLchar> Name( MaxNameLength + 1 );

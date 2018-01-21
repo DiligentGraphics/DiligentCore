@@ -171,6 +171,14 @@ else()
 	message(FATAL_ERROR "Unknown platform")
 endif()
 
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    # Disable the following clang warning
+    #    '<function name>' hides overloaded virtual function
+    # as hiding is intended
+    target_compile_options(GraphicsEngineOpenGL-static PRIVATE -Wno-overloaded-virtual)
+    target_compile_options(GraphicsEngineOpenGL-shared PRIVATE -Wno-overloaded-virtual)
+endif()
+
 target_link_libraries(GraphicsEngineOpenGL-static PRIVATE ${PRIVATE_DEPENDENCIES} PUBLIC ${PUBLIC_DEPENDENCIES})
 target_link_libraries(GraphicsEngineOpenGL-shared PRIVATE ${PRIVATE_DEPENDENCIES} PUBLIC ${PUBLIC_DEPENDENCIES})
 target_compile_definitions(GraphicsEngineOpenGL-shared PUBLIC ENGINE_DLL)

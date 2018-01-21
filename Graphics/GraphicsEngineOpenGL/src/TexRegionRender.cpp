@@ -47,13 +47,11 @@ namespace Diligent
         "void main()                                    \n"
         "{                                              \n"
         "   vec4 Bounds = vec4(-1.0, -1.0, 1.0, 1.0);   \n"
-        "   vec2 PosXY[4] =                             \n"
-        "   {                                           \n"
-        "       Bounds.xy,                              \n"
-        "       Bounds.xw,                              \n"
-        "       Bounds.zy,                              \n"
-        "       Bounds.zw                               \n"
-        "   };                                          \n"
+        "   vec2 PosXY[4];                              \n"
+        "   PosXY[0] = Bounds.xy;                       \n"
+        "   PosXY[1] = Bounds.xw;                       \n"
+        "   PosXY[2] = Bounds.zy;                       \n"
+        "   PosXY[3] = Bounds.zw;                       \n"
         "   gl_Position = vec4(PosXY[gl_VertexID], 0.0, 1.0);\n"
         "}                                              \n"
     };
@@ -174,7 +172,8 @@ namespace Diligent
 
         pCtxGL->SetViewports( (Uint32)m_OrigViewports.size(), m_OrigViewports.data(), 0, 0 );
 
-        pCtxGL->SetPipelineState( m_pOrigPSO );
+        if(m_pOrigPSO)
+            pCtxGL->SetPipelineState( m_pOrigPSO );
         m_pOrigPSO.Release();
         pCtxGL->SetStencilRef(m_OrigStencilRef);
         pCtxGL->SetBlendFactors(m_OrigBlendFactors);

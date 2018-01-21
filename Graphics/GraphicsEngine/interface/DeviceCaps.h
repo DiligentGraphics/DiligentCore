@@ -118,6 +118,9 @@ namespace Diligent
         /// Indicates if device supports multithreaded resource creation
         Bool bMultithreadedResourceCreationSupported;
 
+        /// Indicates if device supports compute shaders
+        Bool bComputeShadersSupported;
+
         /// Texture sampling capabilities. See Diligent::SamplerCaps.
         SamplerCaps SamCaps;
 
@@ -132,7 +135,8 @@ namespace Diligent
             bSeparableProgramSupported( True ),
             bIndirectRenderingSupported( True ),
             bWireframeFillSupported( True ),
-            bMultithreadedResourceCreationSupported( False )
+            bMultithreadedResourceCreationSupported( False ),
+            bComputeShadersSupported(True)
         {}
     };
 }

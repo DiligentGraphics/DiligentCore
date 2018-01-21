@@ -29,78 +29,24 @@
 
 namespace Diligent
 {
-    /*void openglCallbackFunction( GLenum source,
-        GLenum type,
-        GLuint id,
-        GLenum severity,
-        GLsizei length,
-        const GLchar* message,
-        const void* userParam )
-    {
-        std::stringstream MessageSS;
-
-        MessageSS << "OpenGL debug message (";
-        switch( type ) 
-        {
-            case GL_DEBUG_TYPE_ERROR:
-                MessageSS << "ERROR";
-                break;
-            case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR:
-                MessageSS << "DEPRECATED_BEHAVIOR";
-                break;
-            case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:
-                MessageSS << "UNDEFINED_BEHAVIOR";
-                break;
-            case GL_DEBUG_TYPE_PORTABILITY:
-                MessageSS << "PORTABILITY";
-                break;
-            case GL_DEBUG_TYPE_PERFORMANCE:
-                MessageSS << "PERFORMANCE";
-                break;
-            case GL_DEBUG_TYPE_OTHER:
-                MessageSS << "OTHER";
-                break;
-        }
-
-        switch( severity )
-        {
-            case GL_DEBUG_SEVERITY_LOW:
-                MessageSS << ", low severity";
-                break;
-            case GL_DEBUG_SEVERITY_MEDIUM:
-                MessageSS << ", medium severity";
-                break;
-            case GL_DEBUG_SEVERITY_HIGH:
-                MessageSS << ", HIGH severity";
-                break;
-            case GL_DEBUG_SEVERITY_NOTIFICATION:
-                MessageSS << ", notification";
-                break;
-        }
-
-        MessageSS << ")" << std::endl << message << std::endl;
-
-        LOG_INFO_MESSAGE_ONCE( MessageSS.str().c_str() );
-    }*/
 
     GLContext::GLContext( const ContextInitInfo &Info, DeviceCaps &DeviceCaps ) :
         m_pNativeWindow(Info.pNativeWndHandle),
-        m_pDisplay(Info.pDisplay),
         m_Context(0),
         m_SwapChainAttribs(Info.SwapChainAttribs)
     {
-#if 0
-        auto CurrentCtx = glXGetCurrentContext();
-        if (CurrentCtx == 0)
-        {
-            LOG_ERROR_AND_THROW("No current GL context found!");
-        }
+        //auto CurrentCtx = glXGetCurrentContext();
+        //if (CurrentCtx == 0)
+        //{
+        //    LOG_ERROR_AND_THROW("No current GL context found!");
+        //}
         
         // Initialize GLEW
+        glewExperimental = true; // This is required on MacOS
         GLenum err = glewInit();
         if( GLEW_OK != err )
             LOG_ERROR_AND_THROW( "Failed to initialize GLEW" );
-        
+#if 0
 		if(Info.pNativeWndHandle != nullptr && Info.pDisplay != nullptr)
 		{
 			auto wnd = static_cast<Window>(reinterpret_cast<size_t>(Info.pNativeWndHandle));
@@ -113,20 +59,11 @@ namespace Diligent
 			m_SwapChainAttribs.Height = XWndAttribs.height;
 
             //glXSwapIntervalEXT(0);
-
-            if( glDebugMessageCallback )
-            {
-                glEnable( GL_DEBUG_OUTPUT_SYNCHRONOUS );
-                glDebugMessageCallback( openglCallbackFunction, nullptr );
-                GLuint unusedIds = 0;
-                glDebugMessageControl( GL_DONT_CARE,
-                    GL_DONT_CARE,
-                    GL_DONT_CARE,
-                    0,
-                    &unusedIds,
-                    true );
-            }
 		}
+#endif
+
+                m_SwapChainAttribs.Width = 1024;
+                m_SwapChainAttribs.Height = 768;
 
         //Checking GL version
         const GLubyte *GLVersionString = glGetString( GL_VERSION );
@@ -158,14 +95,15 @@ namespace Diligent
         DeviceCaps.DevType = DeviceType::OpenGL;
         DeviceCaps.MajorVersion = MajorVersion;
         DeviceCaps.MinorVersion = MinorVersion;
-        bool IsGL43OrAbove = MajorVersion >= 5 || MajorVersion == 4 && MinorVersion >= 3;
+        bool IsGL43OrAbove = MajorVersion >= 5 || (MajorVersion == 4 && MinorVersion >= 3);
+        bool IsGL42OrAbove = MajorVersion >= 5 || (MajorVersion == 4 && MinorVersion >= 2);
+        DeviceCaps.bComputeShadersSupported = IsGL42OrAbove;
         auto &TexCaps = DeviceCaps.TexCaps;
         TexCaps.bTexture2DMSSupported      = IsGL43OrAbove;
         TexCaps.bTexture2DMSArraySupported = IsGL43OrAbove;
         TexCaps.bTextureViewSupported      = IsGL43OrAbove;
         TexCaps.bCubemapArraysSupported    = IsGL43OrAbove;
         DeviceCaps.bMultithreadedResourceCreationSupported = False;
-#endif
     }
 
     GLContext::~GLContext()
