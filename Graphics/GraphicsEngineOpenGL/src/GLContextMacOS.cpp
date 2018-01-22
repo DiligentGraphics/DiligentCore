@@ -23,6 +23,8 @@
 
 #include "pch.h"
 
+#import <AppKit/AppKit.h>
+
 #include "GLContextMacOS.h"
 #include "DeviceCaps.h"
 #include "GLTypeConversions.h"
@@ -31,39 +33,24 @@ namespace Diligent
 {
 
     GLContext::GLContext( const ContextInitInfo &Info, DeviceCaps &DeviceCaps ) :
-        m_pNativeWindow(Info.pNativeWndHandle),
-        m_Context(0),
         m_SwapChainAttribs(Info.SwapChainAttribs)
     {
-        //auto CurrentCtx = glXGetCurrentContext();
-        //if (CurrentCtx == 0)
-        //{
-        //    LOG_ERROR_AND_THROW("No current GL context found!");
-        //}
+        if (GetCurrentNativeGLContext() == nullptr)
+        {
+            LOG_ERROR_AND_THROW("No current GL context found!");
+        }
         
         // Initialize GLEW
         glewExperimental = true; // This is required on MacOS
         GLenum err = glewInit();
         if( GLEW_OK != err )
             LOG_ERROR_AND_THROW( "Failed to initialize GLEW" );
-#if 0
-		if(Info.pNativeWndHandle != nullptr && Info.pDisplay != nullptr)
-		{
-			auto wnd = static_cast<Window>(reinterpret_cast<size_t>(Info.pNativeWndHandle));
-            auto display = reinterpret_cast<Display*>(Info.pDisplay);
 
-            XWindowAttributes XWndAttribs;
-            XGetWindowAttributes(display, wnd, &XWndAttribs);
-
-			m_SwapChainAttribs.Width = XWndAttribs.width;
-			m_SwapChainAttribs.Height = XWndAttribs.height;
-
-            //glXSwapIntervalEXT(0);
-		}
-#endif
-
-                m_SwapChainAttribs.Width = 1024;
-                m_SwapChainAttribs.Height = 768;
+        //Set dummy width and height until resize is called by the app
+        if(m_SwapChainAttribs.Width == 0)
+            m_SwapChainAttribs.Width = 1024;
+        if(m_SwapChainAttribs.Height)
+            m_SwapChainAttribs.Height = 768;
 
         //Checking GL version
         const GLubyte *GLVersionString = glGetString( GL_VERSION );
@@ -106,31 +93,14 @@ namespace Diligent
         DeviceCaps.bMultithreadedResourceCreationSupported = False;
     }
 
-    GLContext::~GLContext()
-    {
-    }
-
     void GLContext::SwapBuffers()
     {
-#if 0
-        if(m_pNativeWindow != nullptr && m_pDisplay != nullptr)
-        {
-			auto wnd = static_cast<Window>(reinterpret_cast<size_t>(m_pNativeWindow));
-            auto display = reinterpret_cast<Display*>(m_pDisplay);
-            glXSwapBuffers(display, wnd);          
-        }
-        else
-        {
-            LOG_ERROR("Swap buffer failed because window and/or display handle is not initialized");
-        }
-#endif
+        LOG_ERROR("Swap buffers operation must be performed by the app on MacOS");
     }
 
     GLContext::NativeGLContextType GLContext::GetCurrentNativeGLContext()
     {
-#if 0
-        return glXGetCurrentContext();
-#endif
-        return nullptr;
+        NSOpenGLContext* CurrentCtx = [NSOpenGLContext currentContext];
+        return CurrentCtx;
     }
 }
