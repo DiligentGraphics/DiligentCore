@@ -24,6 +24,8 @@
 #include <csignal>
 #include <iostream>
 
+#import <Cocoa/Cocoa.h>
+
 #include "MacOSDebug.h"
 #include "FormatMessage.h"
 
@@ -44,8 +46,7 @@ void MacOSDebug::OutputDebugMessage( DebugMessageSeverity Severity, const Char *
     auto* MessageSevery = strSeverities[static_cast<int>(Severity)];
     String str = MessageSevery;
     str += Message;
-    str += '\n';
-    std::cerr << str;
+    NSLog(@"%s", str.c_str());
 }
 
 void DebugAssertionFailed(const Diligent::Char* Message, const char* Function, const char* File, int Line)

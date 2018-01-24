@@ -15,6 +15,11 @@ set(SOURCE
 	src/MacOSFileSystem.cpp
 )
 
+set_source_files_properties(
+    src/MacOSDebug.cpp
+    COMPILE_FLAGS "-x objective-c++"
+)
+
 add_library(MacOSPlatform ${SOURCE} ${INCLUDE} ${PLATFORM_INTERFACE_HEADERS})
 set_common_target_properties(MacOSPlatform)
 
