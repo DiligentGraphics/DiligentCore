@@ -24,21 +24,68 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <cstdio>
+#include <CoreFoundation/CoreFoundation.h>
+
+#include "CFObjectWrapper.h"
 
 #include "MacOSFileSystem.h"
 #include "Errors.h"
 #include "DebugUtilities.h"
 
+namespace
+{
+    std::string FindResource(std::string FilePath)
+    {
+        std::string dir, name;
+        BasicFileSystem::SplitFilePath(FilePath, &dir, &name);
+        auto dotPos = name.find(".");
+        std::string type = (dotPos != std::string::npos) ? name.substr(dotPos+1) : "";
+        if(dotPos != std::string::npos)
+            name.erase(dotPos);
+
+        // get bundle and CFStrings
+        CFBundleRef mainBundle = CFBundleGetMainBundle();
+        CFStringWrapper cf_resource_path = CFStringCreateWithCString(NULL, dir.c_str(), kCFStringEncodingUTF8);
+        CFStringWrapper cf_filename = CFStringCreateWithCString(NULL, name.c_str(), kCFStringEncodingUTF8);
+        CFStringWrapper cf_file_type = CFStringCreateWithCString(NULL, type.c_str(), kCFStringEncodingUTF8);
+        CFURLWrapper cf_url_resource = CFBundleCopyResourceURL(mainBundle, cf_filename, cf_file_type, cf_resource_path);
+        std::string resource_path;
+        if(cf_url_resource != NULL)
+        {
+            CFStringWrapper cf_url_string = CFURLCopyFileSystemPath(cf_url_resource, kCFURLPOSIXPathStyle);
+            const char* url_string = CFStringGetCStringPtr(cf_url_string, kCFStringEncodingUTF8);
+            resource_path = url_string;
+        }
+        return resource_path;
+    }
+}
 MacOSFile* MacOSFileSystem::OpenFile( const FileOpenAttribs &OpenAttribs )
 {
+    // Try to find the file in the bundle first
+    auto resource_path = FindResource(OpenAttribs.strFilePath);
     MacOSFile *pFile = nullptr;
-    try
+    if(!resource_path.empty())
     {
-        pFile = new MacOSFile(OpenAttribs, MacOSFileSystem::GetSlashSymbol());
+        try
+        {
+            FileOpenAttribs BundleResourceOpenAttribs = OpenAttribs;
+            BundleResourceOpenAttribs.strFilePath = resource_path.c_str();
+            pFile = new MacOSFile(BundleResourceOpenAttribs, MacOSFileSystem::GetSlashSymbol());
+        }
+        catch( const std::runtime_error &err )
+        {
+        }
     }
-    catch( const std::runtime_error &err )
-    {
 
+    if(pFile == nullptr)
+    {
+        try
+        {
+            pFile = new MacOSFile(OpenAttribs, MacOSFileSystem::GetSlashSymbol());
+        }
+        catch( const std::runtime_error &err )
+        {
+        }
     }
     return pFile;
 }
@@ -46,15 +93,11 @@ MacOSFile* MacOSFileSystem::OpenFile( const FileOpenAttribs &OpenAttribs )
 
 bool MacOSFileSystem::FileExists( const Diligent::Char *strFilePath )
 {
-    FileOpenAttribs OpenAttribs;
-    OpenAttribs.strFilePath = strFilePath;
-    BasicFile DummyFile( OpenAttribs, MacOSFileSystem::GetSlashSymbol() );
-    const auto& Path = DummyFile.GetPath(); // This is necessary to correct slashes
-    FILE *pFile = fopen( Path.c_str(), "r" );
-    bool Exists = (pFile != nullptr);
-    if( Exists && pFile )
-        fclose( pFile );
-    return Exists;
+    if(!FindResource(strFilePath).empty())
+        return true;
+
+    auto res = access(strFilePath, F_OK);
+    return res == 0;
 }
 
 bool MacOSFileSystem::PathExists( const Diligent::Char *strPath )

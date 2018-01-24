@@ -2,7 +2,8 @@ cmake_minimum_required (VERSION 3.6)
 
 project(MacOSPlatform CXX)
 
-set(INCLUDE 
+set(INCLUDE
+    include/CFObjectWrapper.h
 	include/MacOSDebug.h
 	include/MacOSFileSystem.h
 	include/MacOSPlatformDefinitions.h
@@ -27,6 +28,8 @@ PUBLIC
 	BuildSettings 
 	BasicPlatform
 	PlatformInterface
+PRIVATE
+    ${APP_KIT}
 )
 
 source_group("src" FILES ${SOURCE})

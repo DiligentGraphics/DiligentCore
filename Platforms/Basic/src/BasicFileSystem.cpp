@@ -118,6 +118,6 @@ void BasicFileSystem::SplitFilePath(const Diligent::String& FullName,
         if( LastSlashPos != Diligent::String::npos )
             *Name = FullName.substr( LastSlashPos+1 );
         else
-            *Path = FullName;
+            *Name = FullName;
     }
 }

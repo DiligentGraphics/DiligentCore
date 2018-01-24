@@ -124,6 +124,13 @@ elseif(PLATFORM_ANDROID)
 	
 endif()
 
+if(PLATFORM_MACOS)
+	find_library(APP_KIT AppKit)
+	if (NOT APP_KIT)
+    		message(FATAL_ERROR "AppKit not found")
+	endif()
+endif()
+
 include(BuildUtils.cmake)
 
 add_subdirectory(Utilities)
