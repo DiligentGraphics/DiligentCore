@@ -43,6 +43,13 @@ namespace
         if(dotPos != std::string::npos)
             name.erase(dotPos);
 
+        // Naming convention established by Core Foundation library:
+        // * If a function name contains the word "Create" or "Copy", you own the object.
+        // * If a function name contains the word "Get", you do not own the object.
+        // If you own an object, it is your responsibility to relinquish ownership
+        // (using CFRelease) when you have finished with it.
+        // https://developer.apple.com/library/content/documentation/CoreFoundation/Conceptual/CFMemoryMgmt/Concepts/Ownership.html
+
         // get bundle and CFStrings
         CFBundleRef mainBundle = CFBundleGetMainBundle();
         CFStringWrapper cf_resource_path = CFStringCreateWithCString(NULL, dir.c_str(), kCFStringEncodingUTF8);
