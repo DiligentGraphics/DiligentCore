@@ -19,17 +19,11 @@ if(PLATFORM_WIN32 OR PLATFORM_LINUX OR PLATFORM_MACOS)
 			target_compile_options(File2String PRIVATE "$<$<CONFIG:MINSIZEREL>:${MSVC_REL_COMPILE_OPTIONS}>")
 			target_compile_options(File2String PRIVATE "$<$<CONFIG:RELWITHDEBINFO>:${MSVC_REL_COMPILE_OPTIONS}>")
 		endif()
-		set_target_properties(File2String PROPERTIES 
-			RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/bin/Win32/x${ARCH}"
-		)
+        set(DST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/bin/Win32/x${ARCH}/")
 	elseif(PLATFORM_LINUX)
-		set_target_properties(File2String PROPERTIES 
-			RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/bin/Linux"
-		)
+        set(DST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/bin/Linux/")
     elseif(PLATFORM_MACOS)
-        set_target_properties(File2String PROPERTIES
-            RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/bin/MacOS"
-        )
+        set(DST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/bin/MacOS/")
         target_compile_features(File2String PRIVATE cxx_std_11)
 	endif()
 	source_group("source" FILES ${SOURCE})
@@ -37,6 +31,16 @@ if(PLATFORM_WIN32 OR PLATFORM_LINUX OR PLATFORM_MACOS)
 	set_target_properties(File2String PROPERTIES
 		FOLDER Utilities
 	)
+
+    # When setting RUNTIME_OUTPUT_DIRECTORY_RELEASE to DST_DIR,
+    # the executable is deleted by the clean build command
+    add_custom_command(TARGET File2String POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "\"$<TARGET_FILE:File2String>\""
+        # In release build, copy to the destination folder
+        # In all other configurations, do nothing by copying to the same target folder
+        $<IF:$<CONFIG:RELEASE>,${DST_DIR},$<TARGET_FILE_DIR:File2String>>
+    )
 endif()
 
 if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows")

@@ -99,9 +99,8 @@ elseif(PLATFORM_LINUX)
 elseif(PLATFORM_MACOS)
 	list(APPEND SOURCE src/GLContextMacOS.cpp)
 	list(APPEND INCLUDE include/GLContextMacOS.h)
-    set_source_files_properties(
-        src/GLContextMacOS.cpp
-        COMPILE_FLAGS "-x objective-c++"
+    set_source_files_properties(src/GLContextMacOS.cpp
+        PROPERTIES COMPILE_FLAGS "-x objective-c++"
     )
 else()
 	message(FATAL_ERROR "Unknown platform")
