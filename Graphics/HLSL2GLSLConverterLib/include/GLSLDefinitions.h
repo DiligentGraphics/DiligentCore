@@ -160,10 +160,10 @@ uvec2 asuint( vec2  x ){ return floatBitsToUint(x); }
 uvec3 asuint( vec3  x ){ return floatBitsToUint(x); }
 uvec4 asuint( vec4  x ){ return floatBitsToUint(x); }
 
-
+#if !defined(GL_ES) && (__VERSION__>=420)
 float f16tof32( uint u1 )
-{ 
-    return unpackHalf2x16( u1 ).x; 
+{
+    return unpackHalf2x16( u1 ).x;
 }
 vec2 f16tof32( uvec2 u2 )
 { 
@@ -185,7 +185,7 @@ vec4  f16tof32( ivec4 i4 ){ return f16tof32( uvec4( i4 ) ); }
 
 uint f32tof16( float f )
 { 
-    return packHalf2x16( vec2( f, 0.0 ) ) & 0x0ffffu; 
+    return packHalf2x16( vec2( f, 0.0 ) ) & 0x0ffffu;
 }
 uvec2 f32tof16( vec2 f2 )
 { 
@@ -200,6 +200,7 @@ uvec4 f32tof16( vec4 f4 )
 {
     return uvec4( f32tof16( f4.xy ), f32tof16( f4.zw ) );
 }
+#endif
 
 #ifndef GL_ES // double is not supported on GLES
 double asdouble(uint lowbits, uint highbits)
