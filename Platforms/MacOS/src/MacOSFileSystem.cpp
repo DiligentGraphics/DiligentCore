@@ -34,7 +34,7 @@
 
 namespace
 {
-    std::string FindResource(std::string FilePath)
+    std::string FindResource(const std::string &FilePath)
     {
         std::string dir, name;
         BasicFileSystem::SplitFilePath(FilePath, &dir, &name);
@@ -69,7 +69,10 @@ namespace
 MacOSFile* MacOSFileSystem::OpenFile( const FileOpenAttribs &OpenAttribs )
 {
     // Try to find the file in the bundle first
-    auto resource_path = FindResource(OpenAttribs.strFilePath);
+    std::string path(OpenAttribs.strFilePath);
+    CorrectSlashes(path, MacOSFileSystem::GetSlashSymbol());
+    auto resource_path = FindResource(path);
+
     MacOSFile *pFile = nullptr;
     if(!resource_path.empty())
     {
@@ -100,10 +103,14 @@ MacOSFile* MacOSFileSystem::OpenFile( const FileOpenAttribs &OpenAttribs )
 
 bool MacOSFileSystem::FileExists( const Diligent::Char *strFilePath )
 {
-    if(!FindResource(strFilePath).empty())
+    std::string path(strFilePath);
+    CorrectSlashes(path, MacOSFileSystem::GetSlashSymbol());
+    auto resource_path = FindResource(path);
+
+    if(!FindResource(path).empty())
         return true;
 
-    auto res = access(strFilePath, F_OK);
+    auto res = access(path.c_str(), F_OK);
     return res == 0;
 }
 
