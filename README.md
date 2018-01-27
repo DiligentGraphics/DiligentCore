@@ -8,7 +8,7 @@ OpenGL and OpenGLES as well as basic platform-specific utilities.
 | Platform                   | Status        |
 | -------------------------- | ------------- |
 | Win32/Universal Windows    | [![Build Status](https://ci.appveyor.com/api/projects/status/github/DiligentGraphics/DiligentCore?svg=true)](https://ci.appveyor.com/project/DiligentGraphics/diligentcore) |
-| Linux                      | [![Build Status](https://travis-ci.org/DiligentGraphics/DiligentCore.svg?branch=master)](https://travis-ci.org/DiligentGraphics/DiligentCore)      |
+| Linux/MacOS                | [![Build Status](https://travis-ci.org/DiligentGraphics/DiligentCore.svg?branch=master)](https://travis-ci.org/DiligentGraphics/DiligentCore)      |
 
 
 # Repository structure
@@ -159,6 +159,12 @@ On Linux platform, the only API currently supported is OpenGL. Initialization of
 coupled with window creation. As a result, Diligent Engine does not initialize the context, but
 attaches to the one initialized by the app. An example of the engine initialization on Linux can be found in
 [LinuxMain.cpp](https://github.com/DiligentGraphics/DiligentSamples/blob/master/Samples/SampleBase/src/Linux/LinuxMain.cpp).
+
+### MacOS
+
+Similar to Linux, the only API currently supported by Diligent Engine on MacOS is OpenGL. Initialization of GL context on MacOS is 
+performed by the application, and the engine attaches to the context initialized by the app; see
+[GLView.m](https://github.com/DiligentGraphics/DiligentSamples/blob/master/Samples/SampleBase/Apple/Source/Classes/OSX/GLView.m) for details.
 
 ### Android
 
@@ -573,6 +579,10 @@ objects. Refer to the following pages for more information:
 [API Reference][1]
 
 # Version History
+
+## Current Progress
+
+* Added MacOS support
 
 ## v2.1.b
 
