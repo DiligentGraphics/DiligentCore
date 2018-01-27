@@ -117,11 +117,18 @@ static TextureDesc GetTextureDescFromGLHandle(DeviceContextGLImpl *pDeviceContex
         TexDesc.Depth = static_cast<Uint32>(TexDepth);
     }
 
+    // GL_TEXTURE_IMMUTABLE_LEVELS is only supported in GL4.3+ and GLES3.1+
     GLint MipLevels = 0;
     glGetTexParameteriv(BindTarget, GL_TEXTURE_IMMUTABLE_LEVELS, &MipLevels);
-    CHECK_GL_ERROR( "Failed to get texture parameters through glGetTexParameteriv()" );
-    VERIFY(TexDesc.MipLevels == 0 || TexDesc.MipLevels == static_cast<Uint32>(MipLevels), "Specified number of mip levels (", TexDesc.MipLevels, ") does not match the actual number of mip levels (", MipLevels, ")");
-    TexDesc.MipLevels = static_cast<Uint32>(MipLevels);
+    if(glGetError() == GL_NO_ERROR)
+    {
+        VERIFY(TexDesc.MipLevels == 0 || TexDesc.MipLevels == static_cast<Uint32>(MipLevels), "Specified number of mip levels (", TexDesc.MipLevels, ") does not match the actual number of mip levels (", MipLevels, ")");
+        TexDesc.MipLevels = static_cast<Uint32>(MipLevels);
+    }
+    else
+    {
+        VERIFY(TexDesc.MipLevels != 0, "Unable to query the number of mip levels, so it must be specified by the texture description.");
+    }
     
     ContextState.BindTexture(-1, BindTarget, GLObjectWrappers::GLTextureObj(false) );
     return TexDesc;
