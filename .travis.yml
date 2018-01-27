@@ -14,7 +14,7 @@ before_install:
        else
          brew install cmake;
        fi;
-       brew cmake --version
+       brew cmake --version;
     fi'
   - 'if [ "$TRAVIS_OS_NAME" = "linux" ];  then
        # Link gcc-7 and g++-7 to their standard commands
@@ -30,7 +30,7 @@ before_install:
     fi'
 
 compiler:
-  # - clang
+  - clang
   - gcc
 
 os:
@@ -60,6 +60,6 @@ script:
        cmake --build .
      fi'
   - 'if [ "$TRAVIS_OS_NAME" = "osx" ]; then 
-       cmake .. -G "Xcode"
-       cmake --build . --config ${CONFIG}
+       brew cmake .. -G "Xcode";
+       brew cmake --build . --config ${CONFIG};
      fi'
