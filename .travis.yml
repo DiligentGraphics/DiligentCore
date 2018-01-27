@@ -11,11 +11,11 @@ before_install:
   - |
     if [ "$TRAVIS_OS_NAME" = "osx" ];  then
       if brew ls --versions cmake > /dev/null; then
-        echo cmake already installed.;
+        echo cmake already installed.
       else
-        brew install cmake;
+        brew install cmake
       fi;
-      brew cmake --version;
+      cmake --version
     fi
   - |
     if [ "$TRAVIS_OS_NAME" = "linux" ]; then
@@ -31,18 +31,6 @@ before_install:
       cmake --version
     fi
 
-compiler:
-  - clang
-  - gcc
-
-os:
-  - osx
-  - linux
-
-env:
-  - CONFIG=Debug
-  - CONFIG=Release
-
 addons:
   apt:
     sources:
@@ -51,6 +39,7 @@ addons:
       - gcc-7
       - g++-7
       - cmake
+      
 matrix:
   include:
   - os: linux
@@ -78,6 +67,6 @@ script:
     fi
   - |
     if [ "$TRAVIS_OS_NAME" = "osx" ]; then 
-      brew cmake .. -G "Xcode";
-      brew cmake --build . --config ${CONFIG};
+      cmake .. -G "Xcode"
+      cmake --build . --config ${CONFIG}
     fi
