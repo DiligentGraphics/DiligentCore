@@ -23,25 +23,21 @@
 
 #pragma once
 
-#include "BasicFileSystem.h"
-#include "StandardFile.h"
+#include "BasicPlatformMisc.h"
+#include "DebugUtilities.h"
 
-#include <memory>
-#include <vector>
-
-using MacOSFile = StandardFile;
-
-struct MacOSFileSystem : public BasicFileSystem
+struct AppleMisc : public BasicPlatformMisc
 {
-public:
-    static MacOSFile* OpenFile( const FileOpenAttribs &OpenAttribs );
-    static inline Diligent::Char GetSlashSymbol(){ return '/'; }
+    static Diligent::Uint32 GetMSB(Diligent::Uint32 Val)
+    {
+        if( Val == 0 )return 32;
 
-    static bool FileExists( const Diligent::Char *strFilePath );
-    static bool PathExists( const Diligent::Char *strPath );
-    
-    static bool CreateDirectory( const Diligent::Char *strPath );
-    static void ClearDirectory( const Diligent::Char *strPath );
-    static void DeleteFile( const Diligent::Char *strPath );
-    static std::vector<std::unique_ptr<FindFileData>> Search(const Diligent::Char *SearchPattern);
+        // Returns the number of leading 0-bits in x, starting at the 
+        // most significant bit position. If x is 0, the result is undefined.
+        auto LeadingZeros = __builtin_clz(Val);
+        auto MSB = 31 - LeadingZeros;
+        VERIFY_EXPR(MSB == BasicPlatformMisc::GetMSB(Val));
+
+        return MSB;
+    }
 };

@@ -86,6 +86,7 @@ namespace Diligent
 
         auto MaxNameLength = std::max( activeUniformMaxLength, activeUniformBlockMaxLength );
 
+#if GL_ARB_program_interface_query
         GLint numActiveShaderStorageBlocks = 0;
         if(glGetProgramInterfaceiv)
         {
@@ -98,6 +99,7 @@ namespace Diligent
             CHECK_GL_ERROR_AND_THROW( "Unable to get the maximum shader storage block name length\n" );
             MaxNameLength = std::max( MaxNameLength, MaxShaderStorageBlockNameLen );
         }
+#endif
 
         MaxNameLength = std::max( MaxNameLength, 512 );
         std::vector<GLchar> Name( MaxNameLength + 1 );
@@ -192,6 +194,7 @@ namespace Diligent
                     break;
                 }
 
+#if GL_ARB_shader_image_load_store
                 case GL_IMAGE_1D:
                 case GL_IMAGE_2D:
                 case GL_IMAGE_3D:
@@ -239,7 +242,7 @@ namespace Diligent
                     m_Images.emplace_back( Name.data(), size, VarType, BindingPoint, dataType );
                     break;
                 }
-
+#endif
                 default:
                     // Some other uniform type like scalar, matrix etc.
                     break;
@@ -297,6 +300,7 @@ namespace Diligent
             m_UniformBlocks.emplace_back( Name.data(), ArraySize, VarType, UniformBlockIndex );
         }
 
+#if GL_ARB_shader_storage_buffer_object
         for( int i = 0; i < numActiveShaderStorageBlocks; ++i )
         {
             GLsizei Length = 0;
@@ -343,6 +347,8 @@ namespace Diligent
             auto VarType = GetShaderVariableType(Name.data(), DefaultVariableType, VariableDesc, NumVars);
             m_StorageBlocks.emplace_back( Name.data(), ArraySize, VarType, Binding );
         }
+#endif
+
     }
 
     static bool CheckType(SHADER_VARIABLE_TYPE Type, SHADER_VARIABLE_TYPE* AllowedTypes, Uint32 NumAllowedTypes)

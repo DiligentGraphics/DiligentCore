@@ -35,6 +35,12 @@
     {
         using IGLDeviceBaseInterface = IRenderDeviceGL;
     }
+#elif defined(PLATFORM_IOS)
+    #include "RenderDeviceGL.h"
+    namespace Diligent
+    {
+        using IGLDeviceBaseInterface = IRenderDeviceGL;
+    }
 #else
 #   error Unsupported platform
 #endif

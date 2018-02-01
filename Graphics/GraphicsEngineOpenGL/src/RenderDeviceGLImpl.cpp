@@ -449,6 +449,7 @@ void RenderDeviceGLImpl::FlagSupportedTexFormats()
             continue;
         }
 
+#if GL_ARB_internalformat_query2
         // Only works on GL4.3+
         if( bGL43OrAbove )
         {
@@ -457,6 +458,7 @@ void RenderDeviceGLImpl::FlagSupportedTexFormats()
             CHECK_GL_ERROR( "glGetInternalformativ() failed" );
             VERIFY( FmtInfo->Supported == (params == GL_TRUE), "This internal format should be supported" );
         }
+#endif
 
         // Check that the format is indeed supported
         if( FmtInfo->Supported )
@@ -616,11 +618,13 @@ void RenderDeviceGLImpl::TestTextureFormat( TEXTURE_FORMAT TexFormat )
     if( TexFormatInfo.ComponentType != COMPONENT_TYPE_COMPRESSED && 
         m_DeviceCaps.TexCaps.bTexture2DMSSupported )
     {
+#if GL_ARB_texture_storage_multisample
         GLObjectWrappers::GLTextureObj TestGLTex( true );
         TexFormatInfo.SupportsMS = CreateTestGLTexture( ContextState, GL_TEXTURE_2D_MULTISAMPLE, TestGLTex, [&]()
         {
             glTexStorage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, 4, GLFmt, TestTextureDim, TestTextureDim, GL_TRUE);
         } );
+#endif
     }
 
     // Create test texture 3D

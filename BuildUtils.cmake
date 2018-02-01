@@ -68,5 +68,10 @@ function(set_common_target_properties TARGET)
 		# error: invalid argument '-std=c++11' not allowed with 'C/ObjC'
 		set_target_properties(${TARGET} PROPERTIES CXX_STANDARD 11)
 	endif()
-
+	
+	if(PLATFORM_IOS)
+		set_target_properties(${TARGET} PROPERTIES
+		    XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET 10.0
+		)
+	endif()
 endfunction()

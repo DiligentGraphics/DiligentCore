@@ -37,9 +37,9 @@
     #include "LinuxPlatformMisc.h"
     typedef LinuxMisc PlatformMisc;
 
-#elif defined ( PLATFORM_MACOS )
-    #include "MacOSPlatformMisc.h"
-    typedef MacOSMisc PlatformMisc;
+#elif defined ( PLATFORM_MACOS ) || defined ( PLATFORM_IOS )
+    #include "ApplePlatformMisc.h"
+    typedef AppleMisc PlatformMisc;
 
 #else
 

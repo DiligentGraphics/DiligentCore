@@ -21,12 +21,40 @@
  *  of the possibility of such damages.
  */
 
-#pragma once
+#include <csignal>
+#include <iostream>
 
-#include "BasicPlatformDebug.h"
+#import <Foundation/Foundation.h>
 
-struct MacOSDebug : public BasicPlatformDebug
+#include "AppleDebug.h"
+#include "FormatMessage.h"
+
+using namespace Diligent;
+
+void AppleDebug :: AssertionFailed( const Char *Message, const char *Function, const char *File, int Line )
 {
-    static void AssertionFailed( const Diligent::Char *Message, const char *Function, const char *File, int Line );
-    static void OutputDebugMessage( DebugMessageSeverity Severity, const Diligent::Char *Message );
+    auto AssertionFailedMessage = FormatAssertionFailedMessage(Message, Function, File, Line);
+    OutputDebugMessage(DebugMessageSeverity::Error, AssertionFailedMessage.c_str());
+
+    raise( SIGTRAP );
 };
+
+
+void AppleDebug::OutputDebugMessage( DebugMessageSeverity Severity, const Char *Message )
+{
+    static const Char* const strSeverities[] = { "Info: ", "Warning: ", "ERROR: ", "CRITICAL ERROR: " };
+    auto* MessageSevery = strSeverities[static_cast<int>(Severity)];
+    String str = MessageSevery;
+    str += Message;
+    NSLog(@"%s", str.c_str());
+}
+
+void DebugAssertionFailed(const Diligent::Char* Message, const char* Function, const char* File, int Line)
+{
+    AppleDebug :: AssertionFailed( Message, Function, File, Line );
+}
+
+void OutputDebugMessage(BasicPlatformDebug::DebugMessageSeverity Severity, const Diligent::Char* Message)
+{
+    AppleDebug::OutputDebugMessage( Severity, Message );
+}

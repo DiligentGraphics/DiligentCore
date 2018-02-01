@@ -51,7 +51,10 @@ static GLenum GetBufferBindTarget(const BufferDesc& Desc)
     else if (Desc.BindFlags & BIND_UNIFORM_BUFFER)
         Target = GL_UNIFORM_BUFFER;
     else if(Desc.BindFlags & BIND_INDIRECT_DRAW_ARGS)
+    {
+		VERIFY(GL_DRAW_INDIRECT_BUFFER != 0, "Inidrect draw is not supported");
         Target = GL_DRAW_INDIRECT_BUFFER;
+    }
     else if (Desc.Usage == USAGE_CPU_ACCESSIBLE && Desc.CPUAccessFlags == CPU_ACCESS_WRITE)
         Target = GL_PIXEL_UNPACK_BUFFER;
     
@@ -178,8 +181,7 @@ void BufferGLImpl :: UpdateData(IDeviceContext *pContext, Uint32 Offset, Uint32 
 {
     TBufferBase::UpdateData( pContext, Offset, Size, pData );
 
-    CHECK_DYNAMIC_TYPE( DeviceContextGLImpl, pContext );
-    auto *pDeviceContextGL = static_cast<DeviceContextGLImpl*>(pContext);
+    auto *pDeviceContextGL = ValidatedCast<DeviceContextGLImpl>(pContext);
 
     BufferMemoryBarrier(
         GL_BUFFER_UPDATE_BARRIER_BIT,// Reads or writes to buffer objects via any OpenGL API functions that allow 
@@ -201,18 +203,17 @@ void BufferGLImpl :: CopyData(IDeviceContext *pContext, IBuffer *pSrcBuffer, Uin
 {
     TBufferBase::CopyData( pContext, pSrcBuffer, SrcOffset, DstOffset, Size );
 
-    CHECK_DYNAMIC_TYPE( DeviceContextGLImpl, pContext );
-    auto *pDeviceContextGL = static_cast<DeviceContextGLImpl*>(pContext);
-
+    auto *pDeviceContextGL = ValidatedCast<DeviceContextGLImpl>(pContext);
     auto *pSrcBufferGL = static_cast<BufferGLImpl*>( pSrcBuffer );
-
     BufferMemoryBarrier(
         GL_BUFFER_UPDATE_BARRIER_BIT,// Reads or writes to buffer objects via any OpenGL API functions that allow 
                                      // modifying their contents will reflect data written by shaders prior to the barrier. 
                                      // Additionally, writes via these commands issued after the barrier will wait on 
                                      // the completion of any shader writes to the same memory initiated prior to the barrier.
         pDeviceContextGL->GetContextState());
-    pSrcBufferGL->BufferMemoryBarrier( GL_BUFFER_UPDATE_BARRIER_BIT, pDeviceContextGL->GetContextState() );
+    pSrcBufferGL->BufferMemoryBarrier(
+        GL_BUFFER_UPDATE_BARRIER_BIT,
+        pDeviceContextGL->GetContextState() );
 
     // Whilst glCopyBufferSubData() can be used to copy data between buffers bound to any two targets, 
     // the targets GL_COPY_READ_BUFFER and GL_COPY_WRITE_BUFFER are provided specifically for this purpose. 
@@ -232,14 +233,13 @@ void BufferGLImpl :: Map(IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapF
     TBufferBase::Map( pContext, MapType, MapFlags, pMappedData );
     VERIFY( m_uiMapTarget == 0, "Buffer is already mapped");
 
-    CHECK_DYNAMIC_TYPE( DeviceContextGLImpl, pContext );
-    auto *pDeviceContextGL = static_cast<DeviceContextGLImpl*>(pContext);
-
-    BufferMemoryBarrier( 
+    auto *pDeviceContextGL = ValidatedCast<DeviceContextGLImpl>(pContext);
+    BufferMemoryBarrier(
         GL_CLIENT_MAPPED_BUFFER_BARRIER_BIT,// Access by the client to persistent mapped regions of buffer 
                                             // objects will reflect data written by shaders prior to the barrier. 
                                             // Note that this may cause additional synchronization operations.
-        pDeviceContextGL->GetContextState()); 
+        pDeviceContextGL->GetContextState());
+
     m_uiMapTarget = ( MapType == MAP_READ ) ? GL_COPY_READ_BUFFER : GL_COPY_WRITE_BUFFER;
     glBindBuffer(m_uiMapTarget, m_GlBuffer);
 
@@ -317,13 +317,13 @@ void BufferGLImpl::Unmap( IDeviceContext *pContext, MAP_TYPE MapType, Uint32 Map
 
     glBindBuffer(m_uiMapTarget, m_GlBuffer);
     auto Result = glUnmapBuffer(m_uiMapTarget);
-    // glUnmapBuffer() returns TRUE unless data values in the buffer’s data store have
+    // glUnmapBuffer() returns TRUE unless data values in the bufferï¿½s data store have
     // become corrupted during the period that the buffer was mapped. Such corruption
     // can be the result of a screen resolution change or other window system - dependent
     // event that causes system heaps such as those for high - performance graphics memory
     // to be discarded. GL implementations must guarantee that such corruption can
-    // occur only during the periods that a buffer’s data store is mapped. If such corruption
-    // has occurred, glUnmapBuffer() returns FALSE, and the contents of the buffer’s
+    // occur only during the periods that a bufferï¿½s data store is mapped. If such corruption
+    // has occurred, glUnmapBuffer() returns FALSE, and the contents of the bufferï¿½s
     // data store become undefined.
     VERIFY( Result != GL_FALSE, "Failed to unmap buffer. The data may have been corrupted" );
     glBindBuffer(m_uiMapTarget, 0);
@@ -332,6 +332,7 @@ void BufferGLImpl::Unmap( IDeviceContext *pContext, MAP_TYPE MapType, Uint32 Map
 
 void BufferGLImpl::BufferMemoryBarrier( Uint32 RequiredBarriers, GLContextState &GLContextState )
 {
+#if GL_ARB_shader_image_load_store
     const Uint32 BufferBarriers = 
         GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT | 
         GL_ELEMENT_ARRAY_BARRIER_BIT | 
@@ -345,6 +346,7 @@ void BufferGLImpl::BufferMemoryBarrier( Uint32 RequiredBarriers, GLContextState 
     VERIFY( (RequiredBarriers & ~BufferBarriers) == 0, "Inappropriate buffer memory barrier flag" );
 
     GLContextState.EnsureMemoryBarrier( RequiredBarriers, this );
+#endif
 }
 
 void BufferGLImpl::CreateViewInternal( const BufferViewDesc &OrigViewDesc, class IBufferView **ppView, bool bIsDefaultView )

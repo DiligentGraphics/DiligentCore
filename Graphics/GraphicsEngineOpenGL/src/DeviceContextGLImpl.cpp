@@ -487,6 +487,7 @@ namespace Diligent
                     }
                 }
 
+#if GL_ARB_shader_image_load_store
                 auto &Images = ProgResources.GetImages();
                 for( auto it = Images.begin(); it != Images.end(); ++it )
                 {
@@ -551,7 +552,9 @@ namespace Diligent
                         }
                     }
                 }
+#endif
 
+#if GL_ARB_shader_storage_buffer_object
                 auto &StorageBlocks = ProgResources.GetStorageBlocks();
                 for( auto it = StorageBlocks.begin(); it != StorageBlocks.end(); ++it )
                 {
@@ -585,9 +588,11 @@ namespace Diligent
                         }
                     }
                 }
+#endif
             }
         }
 
+#if GL_ARB_shader_image_load_store
         // Go through the list of textures bound as AUVs and set the required memory barriers
         for( auto pWritableTex = m_BoundWritableTextures.begin(); pWritableTex != m_BoundWritableTextures.end(); ++pWritableTex )
         {
@@ -634,6 +639,7 @@ namespace Diligent
             // Set new required barriers for the time when buffer is used next time
             (*pWritableBuff)->SetPendingMemoryBarriers( BufferMemoryBarriers );
         }
+#endif
     }
 
     void DeviceContextGLImpl::Draw( DrawAttribs &DrawAttribs )
@@ -675,9 +681,13 @@ namespace Diligent
         GLenum GlTopology;
         if (DrawAttribs.Topology >= PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST)
         {
+#if GL_ARB_tessellation_shader
             GlTopology = GL_PATCHES;
             auto NumVertices = static_cast<Int32>(DrawAttribs.Topology - PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST + 1);
             m_ContextState.SetNumPatchVertices(NumVertices);
+#else
+            UNSUPPORTED("Tessellation is not supported");
+#endif
         }
         else
         {
@@ -702,6 +712,7 @@ namespace Diligent
         // http://www.opengl.org/wiki/Vertex_Rendering
         if( DrawAttribs.IsIndirect )
         {
+#if GL_ARB_draw_indirect
             // The indirect rendering functions take their data from the buffer currently bound to the 
             // GL_DRAW_INDIRECT_BUFFER binding. Thus, any of indirect draw functions will fail if no buffer is 
             // bound to that binding.
@@ -748,6 +759,9 @@ namespace Diligent
             }
 
             glBindBuffer( GL_DRAW_INDIRECT_BUFFER, 0 );
+#else
+            UNSUPPORTED("Indirect rendering is not supported");
+#endif
         }
         else
         {
@@ -803,6 +817,7 @@ namespace Diligent
 
     void DeviceContextGLImpl::DispatchCompute( const DispatchComputeAttribs &DispatchAttrs )
     {
+#if GL_ARB_compute_shader
         if( DispatchAttrs.pIndirectDispatchAttribs )
         {
             CHECK_DYNAMIC_TYPE( BufferGLImpl, DispatchAttrs.pIndirectDispatchAttribs );
@@ -835,6 +850,9 @@ namespace Diligent
         // AFTER the actual draw/dispatch command is executed. 
         m_ContextState.SetPendingMemoryBarriers( m_CommitedResourcesTentativeBarriers );
         m_CommitedResourcesTentativeBarriers = 0;
+#else
+        UNSUPPORTED("Compute shaders are not supported");
+#endif
     }
 
     void DeviceContextGLImpl::ClearDepthStencil( ITextureView *pView, Uint32 ClearFlags, float fDepth, Uint8 Stencil )

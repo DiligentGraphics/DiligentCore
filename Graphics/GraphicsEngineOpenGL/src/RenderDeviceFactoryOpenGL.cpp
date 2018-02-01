@@ -43,6 +43,8 @@ namespace Diligent
     typedef RenderDeviceGLImpl TRenderDeviceGLImpl;
 #elif defined(PLATFORM_ANDROID)
     typedef RenderDeviceGLESImpl TRenderDeviceGLImpl;
+#elif defined(PLATFORM_IOS)
+    typedef RenderDeviceGLImpl TRenderDeviceGLImpl;
 #else
 #   error Unsupported platform
 #endif

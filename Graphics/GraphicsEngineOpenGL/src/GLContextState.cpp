@@ -233,6 +233,7 @@ namespace Diligent
         GLenum Access,
         GLenum Format )
     {
+#if GL_ARB_shader_image_load_store
         BoundImageInfo NewImageInfo(
             pTexView->GetUniqueID(),
             MipLevel,
@@ -250,10 +251,14 @@ namespace Diligent
             glBindImageTexture( Index, GLTexHandle, MipLevel, IsLayered, Layer, Access, Format );
             CHECK_GL_ERROR( "glBindImageTexture() failed" );
         }
+#else
+        UNSUPPORTED("GL_ARB_shader_image_load_store is not supported");
+#endif
     }
 
     void GLContextState::EnsureMemoryBarrier( Uint32 RequiredBarriers, AsyncWritableResource *pRes/* = nullptr */ )
     {
+#if GL_ARB_shader_image_load_store
         // Every resource tracks its own pending memory barriers.
         // Device context also tracks which barriers have not been executed
         // When a resource with pending memory barrier flag is bound to the context,
@@ -295,6 +300,9 @@ namespace Diligent
         // Leave only these barriers that are still pending
         if( pRes )
             pRes->ResetPendingMemoryBarriers( m_PendingMemoryBarriers & ResourcePendingBarriers );
+#else
+        UNSUPPORTED("GL_ARB_shader_image_load_store is not supported");
+#endif
     }
 
     void GLContextState::SetPendingMemoryBarriers( Uint32 PendingBarriers )
@@ -694,11 +702,13 @@ namespace Diligent
 
     void GLContextState::SetNumPatchVertices(Int32 NumVertices)
     {
+#if GL_ARB_tessellation_shader
         if (NumVertices != m_NumPatchVertices)
         {
             m_NumPatchVertices = NumVertices;
             glPatchParameteri(GL_PATCH_VERTICES, static_cast<GLint>(NumVertices));
             CHECK_GL_ERROR( "Failed to set the number of patch vertices" );
         }
+#endif
     }
 }

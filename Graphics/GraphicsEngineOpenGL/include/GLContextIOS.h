@@ -21,40 +21,29 @@
  *  of the possibility of such damages.
  */
 
-#include <csignal>
-#include <iostream>
+#pragma once
 
-#import <Cocoa/Cocoa.h>
-
-#include "MacOSDebug.h"
-#include "FormatMessage.h"
-
-using namespace Diligent;
-
-void MacOSDebug :: AssertionFailed( const Char *Message, const char *Function, const char *File, int Line )
+namespace Diligent
 {
-    auto AssertionFailedMessage = FormatAssertionFailedMessage(Message, Function, File, Line);
-    OutputDebugMessage(DebugMessageSeverity::Error, AssertionFailedMessage.c_str());
+    struct ContextInitInfo
+    {
+        SwapChainDesc SwapChainAttribs;
+        void *pNativeWndHandle = nullptr;
+    };
 
-    raise( SIGTRAP );
-};
+    class GLContext
+    {
+    public:
+        typedef void* NativeGLContextType; // NSOpenGLContext*
 
+        GLContext(const ContextInitInfo &Info, struct DeviceCaps &DeviceCaps);
+        void SwapBuffers();
 
-void MacOSDebug::OutputDebugMessage( DebugMessageSeverity Severity, const Char *Message )
-{
-    static const Char* const strSeverities[] = { "Info: ", "Warning: ", "ERROR: ", "CRITICAL ERROR: " };
-    auto* MessageSevery = strSeverities[static_cast<int>(Severity)];
-    String str = MessageSevery;
-    str += Message;
-    NSLog(@"%s", str.c_str());
-}
+        const SwapChainDesc& GetSwapChainDesc()const{ return m_SwapChainAttribs; }
 
-void DebugAssertionFailed(const Diligent::Char* Message, const char* Function, const char* File, int Line)
-{
-    MacOSDebug :: AssertionFailed( Message, Function, File, Line );
-}
+        NativeGLContextType GetCurrentNativeGLContext();
 
-void OutputDebugMessage(BasicPlatformDebug::DebugMessageSeverity Severity, const Diligent::Char* Message)
-{
-    MacOSDebug::OutputDebugMessage( Severity, Message );
+    private:
+        SwapChainDesc m_SwapChainAttribs;
+    };
 }

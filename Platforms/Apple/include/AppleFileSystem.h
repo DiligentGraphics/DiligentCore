@@ -23,40 +23,25 @@
 
 #pragma once
 
-#include "PlatformDefinitions.h"
+#include "BasicFileSystem.h"
+#include "StandardFile.h"
 
-#if defined( PLATFORM_WIN32 )
+#include <memory>
+#include <vector>
 
-    #include "Win32FileSystem.h"
-    typedef WindowsFileSystem FileSystem;
-    typedef WindowsFile       CFile;
+using AppleFile = StandardFile;
 
-#elif defined( PLATFORM_UNIVERSAL_WINDOWS )
+struct AppleFileSystem : public BasicFileSystem
+{
+public:
+    static AppleFile* OpenFile( const FileOpenAttribs &OpenAttribs );
+    static inline Diligent::Char GetSlashSymbol(){ return '/'; }
 
-    #include "UWPFileSystem.h"
-    typedef WindowsStoreFileSystem FileSystem;
-    typedef WindowsStoreFile       CFile;
-
-#elif defined ( PLATFORM_ANDROID )
-
-    #include "AndroidFileSystem.h"
-    typedef AndroidFileSystem FileSystem;
-    typedef AndroidFile       CFile;
-
-#elif defined ( PLATFORM_LINUX )
-
-    #include "LinuxFileSystem.h"
-    typedef LinuxFileSystem FileSystem;
-    typedef LinuxFile       CFile;
-
-#elif defined ( PLATFORM_MACOS ) || defined ( PLATFORM_IOS )
-
-    #include "AppleFileSystem.h"
-    typedef AppleFileSystem FileSystem;
-    typedef AppleFile       CFile;
-
-#else
-
-    #error Unsupported platform
-
-#endif
+    static bool FileExists( const Diligent::Char *strFilePath );
+    static bool PathExists( const Diligent::Char *strPath );
+    
+    static bool CreateDirectory( const Diligent::Char *strPath );
+    static void ClearDirectory( const Diligent::Char *strPath );
+    static void DeleteFile( const Diligent::Char *strPath );
+    static std::vector<std::unique_ptr<FindFileData>> Search(const Diligent::Char *SearchPattern);
+};

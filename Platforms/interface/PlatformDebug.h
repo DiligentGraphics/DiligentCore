@@ -41,9 +41,9 @@
     #include "LinuxDebug.h"
     typedef LinuxDebug PlatformDebug;
 
-#elif defined ( PLATFORM_LINUX )
-    #include "MacOSDebug.h"
-    typedef MacOSDebug PlatformDebug;
+#elif defined ( PLATFORM_MACOS )| | defined ( PLATFORM_IOS )
+    #include "AppleDebug.h"
+    typedef AppleDebug PlatformDebug;
 
 #else
     #error Unsupported platform

@@ -57,6 +57,27 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters *pRefCounters, RenderDeviceGLImpl 
         "#version 410 core\n"
         "#define DESKTOP_GL 1\n"
     );
+#elif defined(PLATFORM_IOS)
+    Settings.append(
+        "#version 300 es\n"
+        "#ifndef GL_ES\n"
+        "#  define GL_ES 1\n"
+        "#endif\n"
+
+        "precision highp float;\n"
+        "precision highp int;\n"
+        //"precision highp uint;\n"
+
+        "precision highp sampler2D;\n"
+        "precision highp sampler3D;\n"
+        "precision highp samplerCube;\n"
+        "precision highp samplerCubeArray;\n"
+        "precision highp samplerCubeShadow;\n"
+        "precision highp samplerCubeArrayShadow;\n"
+        "precision highp sampler2DShadow;\n"
+        "precision highp sampler2DArray;\n"
+        "precision highp sampler2DArrayShadow;\n"
+    );
 #elif defined(ANDROID)
     Settings.append(
         "#version 310 es\n"

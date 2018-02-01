@@ -92,12 +92,18 @@
 #       define USE_GL3_STUB 0
 #   endif
 #   if USE_GL3_STUB
-#       include "gl3stub.h"
+#       include "GLStubsAndroid.h"
 #       include <GLES2/gl2platform.h>
 #   else
 #       include <GLES3/gl3.h>
 #       include <GLES3/gl3ext.h>
 #   endif
+
+#elif defined(PLATFORM_IOS)
+
+#   include <OpenGLES/ES3/gl.h>
+#   include <OpenGLES/ES3/glext.h>
+#   include "GLStubsIOS.h"
 
 #else
 #   error Unsupported platform

@@ -28,7 +28,7 @@
 
 #include "CFObjectWrapper.h"
 
-#include "MacOSFileSystem.h"
+#include "AppleFileSystem.h"
 #include "Errors.h"
 #include "DebugUtilities.h"
 
@@ -66,21 +66,21 @@ namespace
         return resource_path;
     }
 }
-MacOSFile* MacOSFileSystem::OpenFile( const FileOpenAttribs &OpenAttribs )
+AppleFile* AppleFileSystem::OpenFile( const FileOpenAttribs &OpenAttribs )
 {
     // Try to find the file in the bundle first
     std::string path(OpenAttribs.strFilePath);
-    CorrectSlashes(path, MacOSFileSystem::GetSlashSymbol());
+    CorrectSlashes(path, AppleFileSystem::GetSlashSymbol());
     auto resource_path = FindResource(path);
 
-    MacOSFile *pFile = nullptr;
+    AppleFile *pFile = nullptr;
     if(!resource_path.empty())
     {
         try
         {
             FileOpenAttribs BundleResourceOpenAttribs = OpenAttribs;
             BundleResourceOpenAttribs.strFilePath = resource_path.c_str();
-            pFile = new MacOSFile(BundleResourceOpenAttribs, MacOSFileSystem::GetSlashSymbol());
+            pFile = new AppleFile(BundleResourceOpenAttribs, AppleFileSystem::GetSlashSymbol());
         }
         catch( const std::runtime_error &err )
         {
@@ -91,7 +91,7 @@ MacOSFile* MacOSFileSystem::OpenFile( const FileOpenAttribs &OpenAttribs )
     {
         try
         {
-            pFile = new MacOSFile(OpenAttribs, MacOSFileSystem::GetSlashSymbol());
+            pFile = new AppleFile(OpenAttribs, AppleFileSystem::GetSlashSymbol());
         }
         catch( const std::runtime_error &err )
         {
@@ -101,10 +101,10 @@ MacOSFile* MacOSFileSystem::OpenFile( const FileOpenAttribs &OpenAttribs )
 }
 
 
-bool MacOSFileSystem::FileExists( const Diligent::Char *strFilePath )
+bool AppleFileSystem::FileExists( const Diligent::Char *strFilePath )
 {
     std::string path(strFilePath);
-    CorrectSlashes(path, MacOSFileSystem::GetSlashSymbol());
+    CorrectSlashes(path, AppleFileSystem::GetSlashSymbol());
     auto resource_path = FindResource(path);
 
     if(!FindResource(path).empty())
@@ -114,29 +114,29 @@ bool MacOSFileSystem::FileExists( const Diligent::Char *strFilePath )
     return res == 0;
 }
 
-bool MacOSFileSystem::PathExists( const Diligent::Char *strPath )
+bool AppleFileSystem::PathExists( const Diligent::Char *strPath )
 {
     UNSUPPORTED( "Not implemented" );
     return false;
 }
     
-bool MacOSFileSystem::CreateDirectory( const Diligent::Char *strPath )
+bool AppleFileSystem::CreateDirectory( const Diligent::Char *strPath )
 {
     UNSUPPORTED( "Not implemented" );
     return false;
 }
 
-void MacOSFileSystem::ClearDirectory( const Diligent::Char *strPath )
+void AppleFileSystem::ClearDirectory( const Diligent::Char *strPath )
 {
     UNSUPPORTED( "Not implemented" );
 }
 
-void MacOSFileSystem::DeleteFile( const Diligent::Char *strPath )
+void AppleFileSystem::DeleteFile( const Diligent::Char *strPath )
 {
     remove(strPath);
 }
     
-std::vector<std::unique_ptr<FindFileData>> MacOSFileSystem::Search(const Diligent::Char *SearchPattern)
+std::vector<std::unique_ptr<FindFileData>> AppleFileSystem::Search(const Diligent::Char *SearchPattern)
 {
     UNSUPPORTED( "Not implemented" );
     return std::vector<std::unique_ptr<FindFileData>>();

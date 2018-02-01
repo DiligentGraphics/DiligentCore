@@ -47,6 +47,7 @@ Texture2D_OGL::Texture2D_OGL( IReferenceCounters *pRefCounters,
 
     if( m_Desc.SampleCount > 1 )
     {
+#if GL_ARB_texture_storage_multisample
         //                                               format          width          height         depth
         glTexStorage2DMultisample(m_BindTarget, m_Desc.SampleCount, m_GLTexFormat, m_Desc.Width, m_Desc.Height, GL_TRUE);
         // The last parameter specifies whether the image will use identical sample locations and the same number of 
@@ -62,6 +63,9 @@ Texture2D_OGL::Texture2D_OGL( IReferenceCounters *pRefCounters,
         SetDefaultGLParameters();
 
         VERIFY( InitData.pSubResources == nullptr, "Multisampled textures cannot be modified directly" );
+#else
+        LOG_ERROR_AND_THROW("Multisampled textures are not supported");
+#endif
     }
     else
     {

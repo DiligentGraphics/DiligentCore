@@ -23,6 +23,8 @@
 
 #pragma once
 
+#include "Errors.h"
+
 // Define unsupported formats for OpenGL ES
 #ifndef GL_RGBA16
 #   define GL_RGBA16 0x805B
@@ -143,6 +145,10 @@
 #endif
 
 // Define unsupported bind points
+#ifndef GL_ARB_draw_indirect
+#   define GL_ARB_draw_indirect 1
+#endif
+
 #ifndef GL_DRAW_INDIRECT_BUFFER
 #   define GL_DRAW_INDIRECT_BUFFER 0x8F3F
 #endif
@@ -165,6 +171,10 @@
 
 #ifndef GL_TEXTURE_BINDING_1D
 #   define GL_TEXTURE_BINDING_1D 0x8068
+#endif
+
+#ifndef GL_ARB_texture_storage_multisample
+#   define GL_ARB_texture_storage_multisample 1
 #endif
 
 #ifndef GL_TEXTURE_2D_MULTISAMPLE
@@ -458,6 +468,10 @@
 
 
 // Compute shader stubs
+#ifndef GL_ARB_compute_shader
+#   define GL_ARB_compute_shader 1
+#endif
+
 #ifndef GL_READ_ONLY
 #   define GL_READ_ONLY 0x88B8
 #endif
@@ -487,6 +501,14 @@ extern PFNGLDISPATCHCOMPUTEPROC glDispatchCompute;
 typedef void (GL_APIENTRY* PFNGLMEMORYBARRIERPROC) (GLbitfield barriers);
 extern PFNGLMEMORYBARRIERPROC glMemoryBarrier;
 #endif // GL_ES_VERSION_3_1
+
+#ifndef GL_ARB_shader_image_load_store
+#   define GL_ARB_shader_image_load_store 1
+#endif
+
+#ifndef GL_ARB_shader_storage_buffer_object
+#   define GL_ARB_shader_storage_buffer_object 1
+#endif
 
 #ifndef GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT
 #   define GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT   0x00000001
@@ -575,6 +597,10 @@ extern PFNGLMEMORYBARRIERPROC glMemoryBarrier;
 
 #ifndef GL_BUFFER_VARIABLE
 #   define GL_BUFFER_VARIABLE 0x92E5
+#endif
+
+#ifndef GL_ARB_program_interface_query
+#   define GL_ARB_program_interface_query 1
 #endif
 
 #ifndef GL_SHADER_STORAGE_BLOCK
@@ -850,6 +876,9 @@ extern PFNGLMEMORYBARRIERPROC glMemoryBarrier;
 #endif
 
 /* ---------------------- GL_ARB_internalformat_query2 --------------------- */
+#ifndef GL_ARB_internalformat_query2
+#   define GL_ARB_internalformat_query2 1
+#endif
 
 #ifndef GL_INTERNALFORMAT_SUPPORTED
 #   define GL_INTERNALFORMAT_SUPPORTED 0x826F
@@ -874,6 +903,10 @@ extern PFNGLMEMORYBARRIERPROC glMemoryBarrier;
 #endif
 
 /* ---------------------- ARB_tessellation_shader --------------------- */
+#ifndef GL_ARB_tessellation_shader
+#   define GL_ARB_tessellation_shader 1
+#endif
+
 #ifndef GL_PATCHES
 #   define GL_PATCHES 0xE
 #endif
@@ -1007,6 +1040,10 @@ extern PFNGLFRAMEBUFFERTEXTURE1DPROC glFramebufferTexture1D;
 #define LOAD_GL_FRAMEBUFFER_TEXTURE_3D
 typedef void (GL_APIENTRY* PFNGLFRAMEBUFFERTEXTURE3DPROC) (GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level, GLint layer);
 extern PFNGLFRAMEBUFFERTEXTURE3DPROC glFramebufferTexture3D;
+
+#ifndef GL_ARB_copy_image
+#   define GL_ARB_copy_image 1
+#endif
 
 #define LOAD_GL_COPY_IMAGE_SUB_DATA
 typedef void (GL_APIENTRY* PFNGLCOPYIMAGESUBDATAPROC) (GLuint srcName, GLenum srcTarget, GLint srcLevel, GLint srcX, GLint srcY, GLint srcZ, GLuint dstName, GLenum dstTarget, GLint dstLevel, GLint dstX, GLint dstY, GLint dstZ, GLsizei srcWidth, GLsizei srcHeight, GLsizei srcDepth);

@@ -121,6 +121,12 @@ namespace Diligent
         /// Indicates if device supports compute shaders
         Bool bComputeShadersSupported;
 
+        /// Indicates if device supports geometry shaders
+        Bool bGeometryShadersSupported;
+        
+        /// Indicates if device supports tessellation
+        Bool bTessellationSupported;
+        
         /// Texture sampling capabilities. See Diligent::SamplerCaps.
         SamplerCaps SamCaps;
 
@@ -136,7 +142,9 @@ namespace Diligent
             bIndirectRenderingSupported( True ),
             bWireframeFillSupported( True ),
             bMultithreadedResourceCreationSupported( False ),
-            bComputeShadersSupported(True)
+            bComputeShadersSupported(True),
+            bGeometryShadersSupported(True),
+            bTessellationSupported(True)
         {}
     };
 }

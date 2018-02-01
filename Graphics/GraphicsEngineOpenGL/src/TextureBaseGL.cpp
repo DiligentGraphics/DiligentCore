@@ -62,10 +62,13 @@ static GLenum GetTextureInternalFormat(DeviceContextGLImpl *pDeviceContextGL, GL
         QueryBindTarget = GL_TEXTURE_CUBE_MAP_POSITIVE_X;
 
     GLint GlFormat = 0;
+#if GL_TEXTURE_INTERNAL_FORMAT
     glGetTexLevelParameteriv(QueryBindTarget, 0, GL_TEXTURE_INTERNAL_FORMAT, &GlFormat);
     CHECK_GL_ERROR( "Failed to get texture format through glGetTexLevelParameteriv()" );
     VERIFY(GlFormat != 0, "Unable to get texture format");
-
+#else
+    UNSUPPORTED("Texture format query is not supported");
+#endif
     ContextState.BindTexture(-1, BindTarget, GLObjectWrappers::GLTextureObj(false) );
 
     return GlFormat;
@@ -84,18 +87,49 @@ static TextureDesc GetTextureDescFromGLHandle(DeviceContextGLImpl *pDeviceContex
     if (BindTarget == GL_TEXTURE_CUBE_MAP)
         QueryBindTarget = GL_TEXTURE_CUBE_MAP_POSITIVE_X;
 
-    GLint TexWidth = 0, TexHeight = 0, TexDepth = 0;
+
+#if GL_TEXTURE_WIDTH
+    GLint TexWidth = 0;
     glGetTexLevelParameteriv(QueryBindTarget, 0, GL_TEXTURE_WIDTH, &TexWidth);
+    VERIFY_EXPR(TexWidth > 0);
+    VERIFY(TexDesc.Width == 0 || TexDesc.Width == static_cast<Uint32>(TexWidth), "Specified texture width (", TexDesc.Width, ") does not match the actual width (", TexWidth, ")");
+    TexDesc.Width = static_cast<Uint32>(TexWidth);
+#else
+    VERIFY(TexDesc.Width != 0, "Texture width query is not supported; it must be specified by the texture description.");
+#endif
+    
     if (TexDesc.Type >= RESOURCE_DIM_TEX_2D)
+    {
+#if GL_TEXTURE_HEIGHT
+        GLint TexHeight = 0;
         glGetTexLevelParameteriv(QueryBindTarget, 0, GL_TEXTURE_HEIGHT, &TexHeight);
+        VERIFY_EXPR(TexHeight > 0);
+
+        VERIFY(TexDesc.Height == 0 || TexDesc.Height == static_cast<Uint32>(TexHeight), "Specified texture height (", TexDesc.Height,") does not match the actual height (", TexHeight, ")");
+        TexDesc.Height = static_cast<Uint32>(TexHeight);
+#else
+        VERIFY(TexDesc.Height != 0, "Texture height query is not supported; it must be specified by the texture description.");
+#endif
+    }
     else
-        TexHeight = 1;
+        TexDesc.Height = 1;
 
     if (TexDesc.Type == RESOURCE_DIM_TEX_3D)
+    {
+#if GL_TEXTURE_DEPTH
+        GLint TexDepth = 0;
         glGetTexLevelParameteriv(QueryBindTarget, 0, GL_TEXTURE_DEPTH, &TexDepth);
+        VERIFY_EXPR(TexDepth > 0);
+        VERIFY(TexDesc.Depth == 0 || TexDesc.Depth == static_cast<Uint32>(TexDepth), "Specified texture depth (", TexDesc.Depth, ") does not match the actual depth (", TexDepth, ")");
+        TexDesc.Depth = static_cast<Uint32>(TexDepth);
+#else
+        VERIFY(TexDesc.Depth != 0, "Texture depth query is not supported; it must be specified by the texture description.");
+#endif
+    }
     else
-        TexDepth = 1;
+        TexDesc.Depth = 1;
     
+#if GL_TEXTURE_INTERNAL_FORMAT
     GLint GlFormat = 0;
     glGetTexLevelParameteriv(QueryBindTarget, 0, GL_TEXTURE_INTERNAL_FORMAT, &GlFormat);
     CHECK_GL_ERROR( "Failed to get texture level 0 parameters through glGetTexLevelParameteriv()" );
@@ -105,17 +139,9 @@ static TextureDesc GetTextureDescFromGLHandle(DeviceContextGLImpl *pDeviceContex
         VERIFY(static_cast<GLenum>(GlFormat) == TexFormatToGLInternalTexFormat(TexDesc.Format), "Specified texture format (", GetTextureFormatAttribs(TexDesc.Format).Name,") does not match GL texture internal format (", GlFormat, ")");
     else
         TexDesc.Format = GLInternalTexFormatToTexFormat(GlFormat);
-
-    VERIFY_EXPR(TexWidth > 0 && TexHeight > 0 && TexDepth > 0);
-    VERIFY(TexDesc.Width == 0 || TexDesc.Width == static_cast<Uint32>(TexWidth), "Specified texture width (", TexDesc.Width, ") does not match the actual width (", TexWidth, ")");
-    VERIFY(TexDesc.Height == 0 || TexDesc.Height == static_cast<Uint32>(TexHeight), "Specified texture height (", TexDesc.Height,") does not match the actual height (", TexHeight, ")");
-    TexDesc.Width = static_cast<Uint32>(TexWidth);
-    TexDesc.Height = static_cast<Uint32>(TexHeight);
-    if (TexDesc.Type == RESOURCE_DIM_TEX_3D)
-    {
-        VERIFY(TexDesc.Depth == 0 || TexDesc.Depth == static_cast<Uint32>(TexDepth), "Specified texture depth (", TexDesc.Depth, ") does not match the actual depth (", TexDepth, ")");
-        TexDesc.Depth = static_cast<Uint32>(TexDepth);
-    }
+#else
+    VERIFY(TexDesc.Format != TEX_FORMAT_UNKNOWN, "Texture format query is not supported; it must be specified by the texture description.");
+#endif
 
     // GL_TEXTURE_IMMUTABLE_LEVELS is only supported in GL4.3+ and GLES3.1+
     GLint MipLevels = 0;
@@ -297,7 +323,7 @@ void TextureBaseGL::UpdateData(  GLContextState &CtxState, IDeviceContext *pCont
 {
     TTextureBase::UpdateData(pContext, MipLevel, Slice, DstBox, SubresData);
 
-    // GL_TEXTURE_UPDATE_BARRIER_BIT: 
+    // GL_TEXTURE_UPDATE_BARRIER_BIT:
     //      Writes to a texture via glTex( Sub )Image*, glCopyTex( Sub )Image*, glClearTex*Image, 
     //      glCompressedTex( Sub )Image*, and reads via glTexImage() after the barrier will reflect 
     //      data written by shaders prior to the barrier. Additionally, texture writes from these 
@@ -351,6 +377,7 @@ void TextureBaseGL :: CopyData(IDeviceContext *pContext,
     TTextureBase::CopyData( pContext, pSrcTexture, SrcMipLevel, SrcSlice, pSrcBox,
                             DstMipLevel, DstSlice, DstX, DstY, DstZ );
 
+#if GL_ARB_copy_image
     if( glCopyImageSubData )
     {
         GLint SrcSliceY = (SrcTexDesc.Type == RESOURCE_DIM_TEX_1D_ARRAY) ? SrcSlice : 0;
@@ -376,6 +403,7 @@ void TextureBaseGL :: CopyData(IDeviceContext *pContext,
         CHECK_GL_ERROR( "glCopyImageSubData() failed" );
     }
     else
+#endif
     {
         const auto &FmtAttribs = GetDevice()->GetTextureFormatInfoExt( m_Desc.Format );
         if( !FmtAttribs.ColorRenderable )
@@ -458,6 +486,7 @@ void TextureBaseGL::Unmap( IDeviceContext *pContext, Uint32 Subresource, MAP_TYP
 
 void TextureBaseGL::TextureMemoryBarrier( Uint32 RequiredBarriers, GLContextState &GLContextState )
 {
+#if GL_ARB_shader_image_load_store
     const Uint32 TextureBarriers =
         GL_TEXTURE_FETCH_BARRIER_BIT |
         GL_SHADER_IMAGE_ACCESS_BARRIER_BIT |
@@ -468,6 +497,7 @@ void TextureBaseGL::TextureMemoryBarrier( Uint32 RequiredBarriers, GLContextStat
     VERIFY( (RequiredBarriers & ~TextureBarriers) == 0, "Inappropriate texture memory barrier flag" );
 
     GLContextState.EnsureMemoryBarrier( RequiredBarriers, this );
+#endif
 }
 
 void TextureBaseGL::SetDefaultGLParameters()

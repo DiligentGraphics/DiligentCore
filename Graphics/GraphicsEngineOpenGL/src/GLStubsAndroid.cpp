@@ -22,7 +22,7 @@
  */
 
 #include "pch.h"
-#include "GLStubs.h"
+#include "GLStubsAndroid.h"
 #include <EGL/egl.h>
 
 #define DECLARE_GL_FUNCTION(Func, FuncType, ...)\
