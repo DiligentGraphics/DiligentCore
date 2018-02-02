@@ -70,6 +70,10 @@ function(set_common_target_properties TARGET)
 	endif()
 	
 	if(PLATFORM_IOS)
+		# Feature detection fails for iOS build, so we have to set CXX_STANDARD
+		# as a workaround
+		set_target_properties(${TARGET} PROPERTIES CXX_STANDARD 11)
+
 		set_target_properties(${TARGET} PROPERTIES
 		    XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET 10.0
 		)

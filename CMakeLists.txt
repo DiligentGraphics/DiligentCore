@@ -133,7 +133,6 @@ elseif(PLATFORM_ANDROID)
 
 elseif(PLATFORM_IOS)
 
-	target_compile_options(BuildSettings INTERFACE -std=c++11)
 	
 endif()
 
