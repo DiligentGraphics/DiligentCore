@@ -56,8 +56,8 @@ SwapChainGLImpl::SwapChainGLImpl(IReferenceCounters *pRefCounters,
     m_SwapChainDesc.Height = GLContext.GetScreenHeight();
 #elif defined(PLATFORM_MACOS)
     //Set dummy width and height until resize is called by the app
-    m_SwapChainAttribs.Width = 1024;
-    m_SwapChainAttribs.Height = 768;
+    m_SwapChainDesc.Width = 1024;
+    m_SwapChainDesc.Height = 768;
 #else
 #   error Unsupported platform
 #endif
