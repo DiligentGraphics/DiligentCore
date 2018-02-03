@@ -643,6 +643,7 @@ void RenderDeviceGLImpl::TestTextureFormat( TEXTURE_FORMAT TexFormat )
 
 void RenderDeviceGLImpl :: QueryDeviceCaps()
 {
+    if(m_DeviceCaps.bWireframeFillSupported)
     {
         // Test glPolygonMode() function to check if it fails
         // (It does fail on NVidia Shield tablet, but works fine 

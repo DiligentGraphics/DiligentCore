@@ -34,4 +34,5 @@ namespace GLObjectWrappers
     const char *GLTextureCreateReleaseHelper    :: Name = "texture";
     const char *GLSamplerCreateReleaseHelper    :: Name = "sampler";
     const char *GLFBOCreateReleaseHelper        :: Name = "framebuffer";
+    const char *GLRBOCreateReleaseHelper        :: Name = "renderbuffer";
 }

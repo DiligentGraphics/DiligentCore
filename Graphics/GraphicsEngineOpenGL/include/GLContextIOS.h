@@ -23,6 +23,8 @@
 
 #pragma once
 
+#include "GLObjectWrapper.h"
+
 namespace Diligent
 {
     struct ContextInitInfo
@@ -34,7 +36,7 @@ namespace Diligent
     class GLContext
     {
     public:
-        typedef void* NativeGLContextType; // NSOpenGLContext*
+        typedef void* NativeGLContextType; // EAGLContext*
 
         GLContext(const ContextInitInfo &Info, struct DeviceCaps &DeviceCaps);
         void SwapBuffers();
@@ -45,5 +47,8 @@ namespace Diligent
 
     private:
         SwapChainDesc m_SwapChainAttribs;
+        GLObjectWrappers::GLRenderBufferObj m_ColorRenderBuffer;
+        GLObjectWrappers::GLRenderBufferObj m_DepthRenderBuffer;
+        GLObjectWrappers::GLFrameBufferObj m_FBO;
     };
 }

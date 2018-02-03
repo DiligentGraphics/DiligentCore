@@ -60,6 +60,7 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters *pRefCounters, RenderDeviceGLImpl 
 #elif defined(PLATFORM_IOS)
     Settings.append(
         "#version 300 es\n"
+        "#extension GL_EXT_separate_shader_objects : enable\n"
         "#ifndef GL_ES\n"
         "#  define GL_ES 1\n"
         "#endif\n"
@@ -71,13 +72,26 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters *pRefCounters, RenderDeviceGLImpl 
         "precision highp sampler2D;\n"
         "precision highp sampler3D;\n"
         "precision highp samplerCube;\n"
-        "precision highp samplerCubeArray;\n"
         "precision highp samplerCubeShadow;\n"
-        "precision highp samplerCubeArrayShadow;\n"
         "precision highp sampler2DShadow;\n"
         "precision highp sampler2DArray;\n"
         "precision highp sampler2DArrayShadow;\n"
+
+        "precision highp isampler2D;\n"
+        "precision highp isampler3D;\n"
+        "precision highp isamplerCube;\n"
+        "precision highp isampler2DArray;\n"
+
+        "precision highp usampler2D;\n"
+        "precision highp usampler3D;\n"
+        "precision highp usamplerCube;\n"
+        "precision highp usampler2DArray;\n"
     );
+
+    // Built-in variable 'gl_Position' must be redeclared before use, with separate shader objects.
+    if(m_Desc.ShaderType == SHADER_TYPE_VERTEX)
+        Settings.append("out vec4 gl_Position;\n");
+
 #elif defined(ANDROID)
     Settings.append(
         "#version 310 es\n"

@@ -23,7 +23,8 @@
 
 #include "pch.h"
 
-//#import <AppKit/AppKit.h>
+#import <OpenGLES/EAGL.h>
+#import <OpenGLES/EAGLDrawable.h>
 
 #include "GLContextIOS.h"
 #include "DeviceCaps.h"
@@ -31,21 +32,17 @@
 
 namespace Diligent
 {
-
     GLContext::GLContext( const ContextInitInfo &Info, DeviceCaps &DeviceCaps ) :
-        m_SwapChainAttribs(Info.SwapChainAttribs)
+        m_SwapChainAttribs(Info.SwapChainAttribs),
+        m_ColorRenderBuffer(false),
+        m_DepthRenderBuffer(false),
+        m_FBO(false)
     {
-        /*if (GetCurrentNativeGLContext() == nullptr)
+        if (GetCurrentNativeGLContext() == nullptr)
         {
             LOG_ERROR_AND_THROW("No current GL context found!");
         }
         
-        // Initialize GLEW
-        glewExperimental = true; // This is required on MacOS
-        GLenum err = glewInit();
-        if( GLEW_OK != err )
-            LOG_ERROR_AND_THROW( "Failed to initialize GLEW" );
-
         //Set dummy width and height until resize is called by the app
         if(m_SwapChainAttribs.Width == 0)
             m_SwapChainAttribs.Width = 1024;
@@ -66,35 +63,28 @@ namespace Diligent
         // This results in a seam across the faces of a cubemap. This was a hardware limitation in the past, but 
         // modern hardware is capable of interpolating across a cube face boundary.
         // GL_TEXTURE_CUBE_MAP_SEAMLESS is not defined in OpenGLES
-        glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
-        if( glGetError() != GL_NO_ERROR )
-            LOG_ERROR_MESSAGE("Failed to enable seamless cubemap filtering");
+        //glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+        //if( glGetError() != GL_NO_ERROR )
+        //    LOG_ERROR_MESSAGE("Failed to enable seamless cubemap filtering");
 
         // When GL_FRAMEBUFFER_SRGB is enabled, and if the destination image is in the sRGB colorspace
         // then OpenGL will assume the shader's output is in the linear RGB colorspace. It will therefore 
         // convert the output from linear RGB to sRGB.
         // Any writes to images that are not in the sRGB format should not be affected.
         // Thus this setting should be just set once and left that way
-        glEnable(GL_FRAMEBUFFER_SRGB);
-        if( glGetError() != GL_NO_ERROR )
-            LOG_ERROR_MESSAGE("Failed to enable SRGB framebuffers");
+        //glEnable(GL_FRAMEBUFFER_SRGB);
+        //if( glGetError() != GL_NO_ERROR )
+        //    LOG_ERROR_MESSAGE("Failed to enable SRGB framebuffers");
 
-        DeviceCaps.DevType = DeviceType::OpenGL;
+        DeviceCaps.DevType = DeviceType::OpenGLES;
         DeviceCaps.MajorVersion = MajorVersion;
         DeviceCaps.MinorVersion = MinorVersion;
-        bool IsGL43OrAbove = MajorVersion >= 5 || (MajorVersion == 4 && MinorVersion >= 3);
-        bool IsGL42OrAbove = MajorVersion >= 5 || (MajorVersion == 4 && MinorVersion >= 2);
-        DeviceCaps.bComputeShadersSupported = IsGL42OrAbove;
-        auto &TexCaps = DeviceCaps.TexCaps;
-        TexCaps.bTexture2DMSSupported      = IsGL43OrAbove;
-        TexCaps.bTexture2DMSArraySupported = IsGL43OrAbove;
-        TexCaps.bTextureViewSupported      = IsGL43OrAbove;
-        TexCaps.bCubemapArraysSupported    = IsGL43OrAbove;
-        DeviceCaps.bMultithreadedResourceCreationSupported = False;*/
+        DeviceCaps.bMultithreadedResourceCreationSupported = False;
         DeviceCaps.bIndirectRenderingSupported = False;
         DeviceCaps.bGeometryShadersSupported = False;
         DeviceCaps.bTessellationSupported = False;
         DeviceCaps.bWireframeFillSupported = False;
+        DeviceCaps.bComputeShadersSupported = False;
         DeviceCaps.SamCaps.bLODBiasSupported = False;
         DeviceCaps.SamCaps.bBorderSamplingModeSupported = False;
         DeviceCaps.TexCaps.bTexture1DSupported = False;
@@ -113,7 +103,7 @@ namespace Diligent
 
     GLContext::NativeGLContextType GLContext::GetCurrentNativeGLContext()
     {
-        //NSOpenGLContext* CurrentCtx = [NSOpenGLContext currentContext];
-        return nullptr;//CurrentCtx;
+        EAGLContext* CurrentCtx = [EAGLContext currentContext];
+        return (__bridge void*)CurrentCtx;
     }
 }

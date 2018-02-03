@@ -230,4 +230,14 @@ public:
 };
 typedef GLObjWrapper<GLFBOCreateReleaseHelper> GLFrameBufferObj;
 
+
+class GLRBOCreateReleaseHelper
+{
+public:
+    void Create(GLuint &RBO) { glGenRenderbuffers(1, &RBO); }
+    void Release(GLuint RBO) { glDeleteRenderbuffers(1, &RBO); }
+    static const char *Name;
+};
+typedef GLObjWrapper<GLRBOCreateReleaseHelper> GLRenderBufferObj;
+    
 }
