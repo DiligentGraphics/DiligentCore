@@ -28,12 +28,11 @@
 #include "GLContextMacOS.h"
 #include "DeviceCaps.h"
 #include "GLTypeConversions.h"
+#include "EngineGLAttribs.h"
 
 namespace Diligent
 {
-
-    GLContext::GLContext( const ContextInitInfo &Info, DeviceCaps &DeviceCaps ) :
-        m_SwapChainAttribs(Info.SwapChainAttribs)
+    GLContext::GLContext( struct EngineGLAttribs &InitAttribs, DeviceCaps &DeviceCaps )
     {
         if (GetCurrentNativeGLContext() == nullptr)
         {
@@ -46,12 +45,6 @@ namespace Diligent
         if( GLEW_OK != err )
             LOG_ERROR_AND_THROW( "Failed to initialize GLEW" );
 
-        //Set dummy width and height until resize is called by the app
-        if(m_SwapChainAttribs.Width == 0)
-            m_SwapChainAttribs.Width = 1024;
-        if(m_SwapChainAttribs.Height)
-            m_SwapChainAttribs.Height = 768;
-
         //Checking GL version
         const GLubyte *GLVersionString = glGetString( GL_VERSION );
         const GLubyte *GLRenderer = glGetString(GL_RENDERER);
@@ -60,7 +53,7 @@ namespace Diligent
         //Or better yet, use the GL3 way to get the version number
         glGetIntegerv( GL_MAJOR_VERSION, &MajorVersion );
         glGetIntegerv( GL_MINOR_VERSION, &MinorVersion );
-        LOG_INFO_MESSAGE(Info.pNativeWndHandle != nullptr ? "Initialized OpenGL " : "Attached to OpenGL ", MajorVersion, '.', MinorVersion, " context (", GLVersionString, ", ", GLRenderer, ')');
+        LOG_INFO_MESSAGE(InitAttribs.pNativeWndHandle != nullptr ? "Initialized OpenGL " : "Attached to OpenGL ", MajorVersion, '.', MinorVersion, " context (", GLVersionString, ", ", GLRenderer, ')');
 
         // Under the standard filtering rules for cubemaps, filtering does not work across faces of the cubemap. 
         // This results in a seam across the faces of a cubemap. This was a hardware limitation in the past, but 
@@ -91,11 +84,6 @@ namespace Diligent
         TexCaps.bTextureViewSupported      = IsGL43OrAbove;
         TexCaps.bCubemapArraysSupported    = IsGL43OrAbove;
         DeviceCaps.bMultithreadedResourceCreationSupported = False;
-    }
-
-    void GLContext::SwapBuffers()
-    {
-        LOG_ERROR("Swap buffers operation must be performed by the app on MacOS");
     }
 
     GLContext::NativeGLContextType GLContext::GetCurrentNativeGLContext()

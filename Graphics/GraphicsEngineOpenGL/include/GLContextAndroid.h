@@ -28,18 +28,12 @@
 
 namespace Diligent
 {
-    struct ContextInitInfo
-    {
-        SwapChainDesc SwapChainAttribs;
-        void *pNativeWndHandle = nullptr;
-    };
-
     class GLContext
     {
     public:
         typedef EGLContext NativeGLContextType;
 
-        GLContext( const ContextInitInfo &Info, DeviceCaps &DeviceCaps );
+        GLContext( const struct EngineGLAttribs &InitAttribs, DeviceCaps &DeviceCaps );
         ~GLContext();
 
         bool Init( ANativeWindow* window );
@@ -51,9 +45,9 @@ namespace Diligent
         void Suspend();
         EGLint Resume( ANativeWindow* window );
 
-        const SwapChainDesc& GetSwapChainDesc()const{ return SwapChainAttribs_; }
-        
         NativeGLContextType GetCurrentNativeGLContext();
+        int32_t GetScreenWidth()const{return screen_width_;}
+        int32_t GetScreenHeight()const{return screen_height_;}
 
     private:
         //EGL configurations
@@ -68,6 +62,8 @@ namespace Diligent
         int32_t depth_size_ = 0;
         int32_t major_version_ = 0;
         int32_t minor_version_ = 0;
+        int32_t screen_width_ = 0;
+        int32_t screen_height_ = 0;
 
         //Flags
         bool gles_initialized_ = false;

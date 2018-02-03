@@ -32,7 +32,7 @@ template<class CreateReleaseHelperType>
 class GLObjWrapper
 {
 public:
-    explicit GLObjWrapper(bool CreateObject, CreateReleaseHelperType CreateReleaseHelper = CreateReleaseHelperType()) : 
+    GLObjWrapper(bool CreateObject, CreateReleaseHelperType CreateReleaseHelper = CreateReleaseHelperType()) : 
         m_uiHandle(0),
         m_CreateReleaseHelper(CreateReleaseHelper)
     {
