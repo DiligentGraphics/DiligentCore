@@ -29,11 +29,38 @@
 namespace Diligent
 {
 SwapChainGLImpl::SwapChainGLImpl(IReferenceCounters *pRefCounters,
+                                 const EngineGLAttribs &InitAttribs,
                                  const SwapChainDesc& SCDesc, 
                                  RenderDeviceGLImpl* pRenderDeviceGL, 
                                  DeviceContextGLImpl* pImmediateContextGL) : 
-    TSwapChainBase( pRefCounters, pRenderDeviceGL, pImmediateContextGL, pRenderDeviceGL->m_GLContext.GetSwapChainDesc() )
+    TSwapChainBase( pRefCounters, pRenderDeviceGL, pImmediateContextGL, SCDesc)
 {
+#if defined(PLATFORM_WIN32)
+    HWND hWnd = reinterpret_cast<HWND>(InitAttribs.pNativeWndHandle);
+    RECT rc;
+    GetClientRect(hWnd, &rc);
+    m_SwapChainDesc.Width = rc.right - rc.left;
+    m_SwapChainDesc.Height = rc.bottom - rc.top;
+#elif defined(PLATFORM_LINUX)
+    auto wnd = static_cast<Window>(reinterpret_cast<size_t>(InitAttribs.pNativeWndHandle));
+    auto display = reinterpret_cast<Display*>(InitAttribs.pDisplay);
+
+    XWindowAttributes XWndAttribs;
+    XGetWindowAttributes(display, wnd, &XWndAttribs);
+
+    m_SwapChainDesc.Width = XWndAttribs.width;
+    m_SwapChainDesc.Height = XWndAttribs.height;
+#elif defined(PLATFORM_ANDROID)
+    auto &GLContext = pRenderDeviceGL->m_GLContext;
+    m_SwapChainDesc.Width = GLContext.GetScreenWidth();
+    m_SwapChainDesc.Height = GLContext.GetScreenHeight();
+#elif defined(PLATFORM_MACOS)
+    //Set dummy width and height until resize is called by the app
+    m_SwapChainDesc.Width = 1024;
+    m_SwapChainDesc.Height = 768;
+#else
+#   error Unsupported platform
+#endif
 }
 
 SwapChainGLImpl::~SwapChainGLImpl()
@@ -45,7 +72,14 @@ IMPLEMENT_QUERY_INTERFACE( SwapChainGLImpl, IID_SwapChainGL, TSwapChainBase )
 void SwapChainGLImpl::Present()
 {
     auto *pDeviceGL = ValidatedCast<RenderDeviceGLImpl>(m_pRenderDevice.RawPtr());
-    pDeviceGL->m_GLContext.SwapBuffers();
+    auto &GLContext = pDeviceGL->m_GLContext;
+#if defined(PLATFORM_WIN32) || defined(PLATFORM_LINUX) ||defined(PLATFORM_ANDROID)
+    GLContext.SwapBuffers();
+#elif defined(PLATFORM_MACOS)
+    LOG_ERROR("Swap buffers operation must be performed by the app on MacOS");
+#else
+#   error Unsupported platform
+#endif
 }
 
 void SwapChainGLImpl::Resize( Uint32 NewWidth, Uint32 NewHeight )

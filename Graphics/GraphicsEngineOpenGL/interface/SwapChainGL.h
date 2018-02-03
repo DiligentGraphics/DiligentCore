@@ -39,6 +39,8 @@ static constexpr INTERFACE_ID IID_SwapChainGL =
 class ISwapChainGL : public ISwapChain
 {
 public:
+    /// Returns the default framebuffer handle
+    virtual GLuint GetDefaultFBO()const = 0;
 };
 
 }

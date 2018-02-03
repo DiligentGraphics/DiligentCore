@@ -39,6 +39,7 @@ set(INTERFACE
 	interface/BufferGL.h
 	interface/BufferViewGL.h
 	interface/DeviceContextGL.h
+	interface/EngineGLAttribs.h
 	interface/PipelineStateGL.h
 	interface/RenderDeviceFactoryOpenGL.h
 	interface/RenderDeviceGL.h

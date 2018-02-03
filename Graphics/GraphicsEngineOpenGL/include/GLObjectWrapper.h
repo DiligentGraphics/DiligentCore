@@ -224,9 +224,30 @@ typedef GLObjWrapper<GLSamplerCreateReleaseHelper> GLSamplerObj;
 class GLFBOCreateReleaseHelper
 {
 public:
-    void Create(GLuint &FBO) { glGenFramebuffers(1, &FBO); }
-    void Release(GLuint FBO) { glDeleteFramebuffers(1, &FBO); }
+    explicit GLFBOCreateReleaseHelper(GLuint ExternalFBOHandle = 0) :
+        m_ExternalFBOHandle(ExternalFBOHandle)
+    {}
+
+    void Create(GLuint &FBO) 
+    { 
+        if (m_ExternalFBOHandle != 0)
+            FBO = m_ExternalFBOHandle; // Attach to external FBO handle
+        else
+            glGenFramebuffers(1, &FBO); 
+    }
+
+    void Release(GLuint FBO) 
+    { 
+        if (m_ExternalFBOHandle != 0)
+            m_ExternalFBOHandle = 0; // DO NOT delete the FBO
+        else
+            glDeleteFramebuffers(1, &FBO); 
+    }
+
     static const char *Name;
+
+private:
+    GLuint m_ExternalFBOHandle;
 };
 typedef GLObjWrapper<GLFBOCreateReleaseHelper> GLFrameBufferObj;
 

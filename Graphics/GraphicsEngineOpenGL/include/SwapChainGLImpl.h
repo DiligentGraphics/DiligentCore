@@ -25,6 +25,7 @@
 
 #include "SwapChainGL.h"
 #include "SwapChainBase.h"
+#include "GLObjectWrapper.h"
 
 namespace Diligent
 {
@@ -37,16 +38,19 @@ public:
     typedef SwapChainBase<ISwapChainGL> TSwapChainBase;
 
     SwapChainGLImpl(IReferenceCounters *pRefCounters,
+                    const EngineGLAttribs &InitAttribs,
                     const SwapChainDesc& SwapChainDesc, 
                     class RenderDeviceGLImpl* pRenderDeviceGL,
                     class DeviceContextGLImpl* pImmediateContextGL);
     ~SwapChainGLImpl();
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface );
+    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
 
-    virtual void Present();
+    virtual void Present()override;
 
-    virtual void Resize( Uint32 NewWidth, Uint32 NewHeight );
+    virtual void Resize( Uint32 NewWidth, Uint32 NewHeight )override;
+
+    virtual GLuint GetDefaultFBO()const override { return 0; }
 };
 
 }

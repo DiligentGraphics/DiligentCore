@@ -27,6 +27,7 @@
 #include "DeviceContextBase.h"
 #include "BaseInterfacesGL.h"
 #include "GLContextState.h"
+#include "GLObjectWrapper.h"
 
 namespace Diligent
 {
@@ -100,6 +101,7 @@ private:
     std::vector<class BufferGLImpl*> m_BoundWritableBuffers;
 
     bool m_bVAOIsUpToDate = false;
+    GLObjectWrappers::GLFrameBufferObj m_DefaultFBO;
 };
 
 }

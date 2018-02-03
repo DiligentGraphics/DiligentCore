@@ -26,6 +26,7 @@
 #include "GLContextLinux.h"
 #include "DeviceCaps.h"
 #include "GLTypeConversions.h"
+#include "EngineGLAttribs.h"
 
 namespace Diligent
 {
@@ -83,11 +84,10 @@ namespace Diligent
         LOG_INFO_MESSAGE_ONCE( MessageSS.str().c_str() );
     }
 
-    GLContext::GLContext( const ContextInitInfo &Info, DeviceCaps &DeviceCaps ) :
-        m_SwapChainAttribs(Info.SwapChainAttribs),
+    GLContext::GLContext( const EngineGLAttribs &InitAttribs, DeviceCaps &DeviceCaps ) :
 		m_Context(0),
-		m_pNativeWindow(Info.pNativeWndHandle),
-        m_pDisplay(Info.pDisplay)
+		m_pNativeWindow(InitAttribs.pNativeWndHandle),
+        m_pDisplay(InitAttribs.pDisplay)
     {
         auto CurrentCtx = glXGetCurrentContext();
         if (CurrentCtx == 0)
@@ -100,17 +100,8 @@ namespace Diligent
         if( GLEW_OK != err )
             LOG_ERROR_AND_THROW( "Failed to initialize GLEW" );
         
-		if(Info.pNativeWndHandle != nullptr && Info.pDisplay != nullptr)
+		if(InitAttribs.pNativeWndHandle != nullptr && InitAttribs.pDisplay != nullptr)
 		{
-			auto wnd = static_cast<Window>(reinterpret_cast<size_t>(Info.pNativeWndHandle));
-            auto display = reinterpret_cast<Display*>(Info.pDisplay);
-
-            XWindowAttributes XWndAttribs;
-            XGetWindowAttributes(display, wnd, &XWndAttribs);
-
-			m_SwapChainAttribs.Width = XWndAttribs.width;
-			m_SwapChainAttribs.Height = XWndAttribs.height;
-
             //glXSwapIntervalEXT(0);
 
             if( glDebugMessageCallback )
@@ -135,7 +126,7 @@ namespace Diligent
         //Or better yet, use the GL3 way to get the version number
         glGetIntegerv( GL_MAJOR_VERSION, &MajorVersion );
         glGetIntegerv( GL_MINOR_VERSION, &MinorVersion );
-        LOG_INFO_MESSAGE(Info.pNativeWndHandle != nullptr ? "Initialized OpenGL " : "Attached to OpenGL ", MajorVersion, '.', MinorVersion, " context (", GLVersionString, ", ", GLRenderer, ')');
+        LOG_INFO_MESSAGE(InitAttribs.pNativeWndHandle != nullptr ? "Initialized OpenGL " : "Attached to OpenGL ", MajorVersion, '.', MinorVersion, " context (", GLVersionString, ", ", GLRenderer, ')');
 
         // Under the standard filtering rules for cubemaps, filtering does not work across faces of the cubemap. 
         // This results in a seam across the faces of a cubemap. This was a hardware limitation in the past, but 

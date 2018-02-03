@@ -21,31 +21,29 @@
  *  of the possibility of such damages.
  */
 
-#include "pch.h"
+#pragma once
 
-#include "RenderDeviceGLESImpl.h"
+/// \file
+/// Definition of the Engine OpenGL/GLES attribs
+
+#include "BasicTypes.h"
+#include "GraphicsTypes.h"
 
 namespace Diligent
 {
-    RenderDeviceGLESImpl::RenderDeviceGLESImpl( IReferenceCounters *pRefCounters, IMemoryAllocator &RawMemAllocator, const EngineGLAttribs &InitAttribs ) :
-        RenderDeviceGLImpl( pRefCounters, RawMemAllocator, InitAttribs )
+    /// Attributes of the OpenGL-based engine implementation
+    struct EngineGLAttribs : public EngineCreationAttribs
     {
-    }
+        /// Native window handle
 
-    IMPLEMENT_QUERY_INTERFACE( RenderDeviceGLESImpl, IID_RenderDeviceGLES, RenderDeviceGLImpl )
+        /// * On Win32 platform, this is a window handle (HWND)
+        /// * On Android platform, this is a pointer to the native window (ANativeWindow*)
+        /// * On Linux, this is the native window (Window)
+        void *pNativeWndHandle = nullptr;
 
-    bool RenderDeviceGLESImpl::Invalidate()
-    {
-        return m_GLContext.Invalidate();
-    }
-
-    void RenderDeviceGLESImpl::Suspend()
-    {
-        m_GLContext.Suspend();
-    }
-
-    EGLint RenderDeviceGLESImpl::Resume( ANativeWindow* window )
-    {
-        return m_GLContext.Resume(window);
-    }
+#if PLATFORM_LINUX
+        /// For linux platform only, this is the pointer to the display
+        void *pDisplay = nullptr;
+#endif
+    };
 }

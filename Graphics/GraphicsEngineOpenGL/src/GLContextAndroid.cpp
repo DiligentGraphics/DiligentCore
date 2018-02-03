@@ -24,6 +24,7 @@
 #include "pch.h"
 
 #include "GLContextAndroid.h"
+#include "EngineGLAttribs.h"
 
 #ifndef EGL_CONTEXT_MINOR_VERSION_KHR
 #define EGL_CONTEXT_MINOR_VERSION_KHR 0x30FB
@@ -114,11 +115,8 @@ namespace Diligent
             LOG_ERROR_AND_THROW( "Failed to create EGLSurface" );
         }
 
-        int32_t screen_width = 0, screen_height = 0;
-        eglQuerySurface( display_, surface_, EGL_WIDTH, &screen_width );
-        eglQuerySurface( display_, surface_, EGL_HEIGHT, &screen_height );
-        SwapChainAttribs_.Width  = screen_width;
-        SwapChainAttribs_.Height = screen_height;
+        eglQuerySurface( display_, surface_, EGL_WIDTH, &screen_width_ );
+        eglQuerySurface( display_, surface_, EGL_HEIGHT, &screen_height_ );
 
         /* EGL_NATIVE_VISUAL_ID is an attribute of the EGLConfig that is
         * guaranteed to be accepted by ANativeWindow_setBuffersGeometry().
@@ -230,17 +228,16 @@ namespace Diligent
         return true;
     }
 
-    GLContext::GLContext( const ContextInitInfo &Info, DeviceCaps &DeviceCaps ) :
+    GLContext::GLContext( const EngineGLAttribs &InitAttribs, DeviceCaps &DeviceCaps ) :
         display_( EGL_NO_DISPLAY ),
         surface_( EGL_NO_SURFACE ),
         context_( EGL_NO_CONTEXT ),
         egl_context_initialized_( false ),
         gles_initialized_( false ),
         major_version_(0),
-        minor_version_(0),
-        SwapChainAttribs_(Info.SwapChainAttribs)
+        minor_version_(0)
     {
-        auto *NativeWindow = reinterpret_cast<ANativeWindow*>(Info.pNativeWndHandle);
+        auto *NativeWindow = reinterpret_cast<ANativeWindow*>(InitAttribs.pNativeWndHandle);
         Init( NativeWindow );
 
         FillDeviceCaps(DeviceCaps);
@@ -351,7 +348,7 @@ namespace Diligent
         eglQuerySurface( display_, surface_, EGL_WIDTH, &new_screen_width );
         eglQuerySurface( display_, surface_, EGL_HEIGHT, &new_screen_height );
 
-        if( new_screen_width != SwapChainAttribs_.Width || new_screen_height != SwapChainAttribs_.Height )
+        if( new_screen_width != screen_width_ || new_screen_height != screen_height_ )
         {
             //Screen resized
             LOG_INFO_MESSAGE( "Screen resized\n" );

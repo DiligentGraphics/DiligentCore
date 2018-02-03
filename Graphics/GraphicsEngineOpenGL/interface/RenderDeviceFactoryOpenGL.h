@@ -30,6 +30,7 @@
 #include "DeviceContext.h"
 #include "SwapChain.h"
 #include "HLSL2GLSLConverter.h"
+#include "EngineGLAttribs.h"
 
 #if defined(PLATFORM_WIN32) || defined(PLATFORM_UNIVERSAL_WINDOWS)
 
@@ -56,18 +57,14 @@ namespace Diligent
 class IEngineFactoryOpenGL
 {
 public:
-    virtual void CreateDeviceAndSwapChainGL(const EngineCreationAttribs& CreationAttribs, 
+    virtual void CreateDeviceAndSwapChainGL(const EngineGLAttribs& CreationAttribs,
                                             IRenderDevice **ppDevice,
                                             IDeviceContext **ppImmediateContext,
                                             const SwapChainDesc& SCDesc,
-                                            void *pNativeWndHandle,
-                                            #if PLATFORM_LINUX
-                                                void *pDisplay,
-                                            #endif
                                             ISwapChain **ppSwapChain ) = 0;
     virtual void CreateHLSL2GLSLConverter(IHLSL2GLSLConverter **ppConverter) = 0;
     
-    virtual void AttachToActiveGLContext( const EngineCreationAttribs& CreationAttribs, 
+    virtual void AttachToActiveGLContext( const EngineGLAttribs& CreationAttribs,
                                           IRenderDevice **ppDevice,
                                           IDeviceContext **ppImmediateContext ) = 0;
 };
