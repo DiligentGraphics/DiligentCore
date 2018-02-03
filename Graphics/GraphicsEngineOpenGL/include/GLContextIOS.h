@@ -23,32 +23,15 @@
 
 #pragma once
 
-#include "GLObjectWrapper.h"
-
 namespace Diligent
 {
-    struct ContextInitInfo
-    {
-        SwapChainDesc SwapChainAttribs;
-        void *pNativeWndHandle = nullptr;
-    };
-
     class GLContext
     {
     public:
         typedef void* NativeGLContextType; // EAGLContext*
 
-        GLContext(const ContextInitInfo &Info, struct DeviceCaps &DeviceCaps);
-        void SwapBuffers();
-
-        const SwapChainDesc& GetSwapChainDesc()const{ return m_SwapChainAttribs; }
+        GLContext(const struct EngineGLAttribs &InitAttribs, struct DeviceCaps &DeviceCaps);
 
         NativeGLContextType GetCurrentNativeGLContext();
-
-    private:
-        SwapChainDesc m_SwapChainAttribs;
-        GLObjectWrappers::GLRenderBufferObj m_ColorRenderBuffer;
-        GLObjectWrappers::GLRenderBufferObj m_DepthRenderBuffer;
-        GLObjectWrappers::GLFrameBufferObj m_FBO;
     };
 }

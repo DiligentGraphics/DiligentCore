@@ -28,12 +28,17 @@
 #include "RenderDeviceFactoryOpenGL.h"
 #include "RenderDeviceGLImpl.h"
 #include "DeviceContextGLImpl.h"
-#include "SwapChainGLImpl.h"
 #include "EngineMemory.h"
 #include "HLSL2GLSLConverterObject.h"
 
+#ifdef PLATFORM_IOS
+#   include "SwapChainGLIOS.h"
+#else
+#   include "SwapChainGLImpl.h"
+#endif
+
 #ifdef PLATFORM_ANDROID
-    #include "RenderDeviceGLESImpl.h"
+#   include "RenderDeviceGLESImpl.h"
 #endif
 
 namespace Diligent
@@ -41,10 +46,13 @@ namespace Diligent
 
 #if defined(PLATFORM_WIN32) || defined(PLATFORM_UNIVERSAL_WINDOWS) || defined(PLATFORM_LINUX) || defined(PLATFORM_MACOS)
     typedef RenderDeviceGLImpl TRenderDeviceGLImpl;
+    typedef SwapChainGLImpl TSwapChain;
 #elif defined(PLATFORM_ANDROID)
     typedef RenderDeviceGLESImpl TRenderDeviceGLImpl;
+    typedef SwapChainGLImpl TSwapChain;
 #elif defined(PLATFORM_IOS)
     typedef RenderDeviceGLImpl TRenderDeviceGLImpl;
+    typedef SwapChainGLIOS TSwapChain;
 #else
 #   error Unsupported platform
 #endif
@@ -112,7 +120,7 @@ void EngineFactoryOpenGLImpl::CreateDeviceAndSwapChainGL(const EngineGLAttribs& 
         pDeviceContextOpenGL->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppImmediateContext) );
         pRenderDeviceOpenGL->SetImmediateContext(pDeviceContextOpenGL);
 
-        SwapChainGLImpl *pSwapChainGL = NEW_RC_OBJ(RawMemAllocator, "SwapChainGLImpl instance", SwapChainGLImpl)(CreationAttribs, SCDesc, pRenderDeviceOpenGL, pDeviceContextOpenGL );
+        TSwapChain *pSwapChainGL = NEW_RC_OBJ(RawMemAllocator, "SwapChainGLImpl instance", TSwapChain)(CreationAttribs, SCDesc, pRenderDeviceOpenGL, pDeviceContextOpenGL );
         pSwapChainGL->QueryInterface(IID_SwapChain, reinterpret_cast<IObject**>(ppSwapChain) );
 
         pDeviceContextOpenGL->SetSwapChain(pSwapChainGL);

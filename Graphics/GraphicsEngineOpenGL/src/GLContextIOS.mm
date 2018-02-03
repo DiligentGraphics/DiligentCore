@@ -24,31 +24,21 @@
 #include "pch.h"
 
 #import <OpenGLES/EAGL.h>
-#import <OpenGLES/EAGLDrawable.h>
 
 #include "GLContextIOS.h"
 #include "DeviceCaps.h"
 #include "GLTypeConversions.h"
+#include "EngineGLAttribs.h"
 
 namespace Diligent
 {
-    GLContext::GLContext( const ContextInitInfo &Info, DeviceCaps &DeviceCaps ) :
-        m_SwapChainAttribs(Info.SwapChainAttribs),
-        m_ColorRenderBuffer(false),
-        m_DepthRenderBuffer(false),
-        m_FBO(false)
+    GLContext::GLContext( const EngineGLAttribs &Info, DeviceCaps &DeviceCaps )
     {
         if (GetCurrentNativeGLContext() == nullptr)
         {
             LOG_ERROR_AND_THROW("No current GL context found!");
         }
         
-        //Set dummy width and height until resize is called by the app
-        if(m_SwapChainAttribs.Width == 0)
-            m_SwapChainAttribs.Width = 1024;
-        if(m_SwapChainAttribs.Height)
-            m_SwapChainAttribs.Height = 768;
-
         //Checking GL version
         const GLubyte *GLVersionString = glGetString( GL_VERSION );
         const GLubyte *GLRenderer = glGetString(GL_RENDERER);
@@ -94,11 +84,6 @@ namespace Diligent
         DeviceCaps.TexCaps.bTextureViewSupported = False;
         DeviceCaps.TexCaps.bTexture2DMSSupported = False;
         DeviceCaps.TexCaps.bTexture2DMSArraySupported = False;
-    }
-
-    void GLContext::SwapBuffers()
-    {
-        LOG_ERROR("Swap buffers operation must be performed by the app on MacOS");
     }
 
     GLContext::NativeGLContextType GLContext::GetCurrentNativeGLContext()

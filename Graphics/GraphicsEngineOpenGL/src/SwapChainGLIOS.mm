@@ -22,33 +22,119 @@
  */
 
 #include "pch.h"
+
+#import <QuartzCore/QuartzCore.h>
+#import <OpenGLES/EAGL.h>
+#import <OpenGLES/EAGLDrawable.h>
+
+#include "DeviceContextGLImpl.h"
+#include "RenderDeviceGLImpl.h"
 #include "SwapChainGLIOS.h"
+#include "EngineGLAttribs.h"
 
 namespace Diligent
 {
 SwapChainGLIOS::SwapChainGLIOS(IReferenceCounters *pRefCounters,
-                                const SwapChainDesc& SCDesc,
-                                RenderDeviceGLImpl* pRenderDeviceGL,
-                                DeviceContextGLImpl* pImmediateContextGL) :
-    SwapChainGLImpl( pRefCounters, SCDesc, pRenderDeviceGL, pImmediateContextGL )
+                               const EngineGLAttribs &InitAttribs,
+                               const SwapChainDesc& SCDesc,
+                               RenderDeviceGLImpl* pRenderDeviceGL,
+                               DeviceContextGLImpl* pImmediateContextGL) :
+    TSwapChainBase( pRefCounters, pRenderDeviceGL, pImmediateContextGL, SCDesc),
+    m_ColorRenderBuffer(false),
+    m_DepthRenderBuffer(false),
+    m_DefaultFBO(false)
 {
+    m_CALayer = InitAttribs.pNativeWndHandle;
+    InitRenderBuffers(true, m_SwapChainDesc.Width, m_SwapChainDesc.Height);
 }
 
+IMPLEMENT_QUERY_INTERFACE( SwapChainGLIOS, IID_SwapChainGL, TSwapChainBase )
+    
 void SwapChainGLIOS::Present()
 {
+    EAGLContext* context = [EAGLContext currentContext];
+    glBindRenderbuffer(GL_RENDERBUFFER, m_ColorRenderBuffer);
+    [context presentRenderbuffer:GL_RENDERBUFFER];
     //auto *pDeviceGL = ValidatedCast<RenderDeviceGLImpl>(m_pRenderDevice.RawPtr());
     //pDeviceGL->m_GLContext.SwapBuffers();
 }
 
-void SwapChainGLIOS::Resize( Uint32 NewWidth, Uint32 NewHeight )
+void SwapChainGLIOS::InitRenderBuffers(bool InitFromDrawable, Uint32 &Width, Uint32 &Height)
 {
-    if( NewWidth != 0 && NewHeight != 0 &&
-       (m_SwapChainDesc.Width != NewWidth || m_SwapChainDesc.Height != NewHeight) )
+    EAGLContext* context = [EAGLContext currentContext];
+    
+    m_DefaultFBO.Release();
+    m_DefaultFBO.Create();
+    glBindFramebuffer(GL_FRAMEBUFFER, m_DefaultFBO);
+    
+    m_ColorRenderBuffer.Release();
+    m_ColorRenderBuffer.Create();
+    glBindRenderbuffer(GL_RENDERBUFFER, m_ColorRenderBuffer);
+    
+    if(InitFromDrawable)
     {
-        
+        // This call associates the storage for the current render buffer with the
+        // EAGLDrawable (our CAEAGLLayer) allowing us to draw into a buffer that
+        // will later be rendered to the screen wherever the layer is (which
+        // corresponds with our view).
+        id<EAGLDrawable> drawable = (__bridge id<EAGLDrawable>)m_CALayer;
+        [context renderbufferStorage:GL_RENDERBUFFER fromDrawable:drawable];
+    }
+    else
+    {
+        CAEAGLLayer* layer = (__bridge CAEAGLLayer*)m_CALayer;
+        [context renderbufferStorage:GL_RENDERBUFFER fromDrawable:layer];
     }
     
-    SwapChainGLImpl::Resize(NewWidth, NewHeight);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, m_ColorRenderBuffer);
+    
+    // Get the drawable buffer's width and height so we can create a depth buffer for the FBO
+    GLint backingWidth;
+    GLint backingHeight;
+    glGetRenderbufferParameteriv(GL_RENDERBUFFER, GL_RENDERBUFFER_WIDTH, &backingWidth);
+    glGetRenderbufferParameteriv(GL_RENDERBUFFER, GL_RENDERBUFFER_HEIGHT, &backingHeight);
+    Width = backingWidth;
+    Height = backingHeight;
+    
+    // Create a depth buffer to use with our drawable FBO
+    m_DepthRenderBuffer.Release();
+    m_DepthRenderBuffer.Create();
+    glBindRenderbuffer(GL_RENDERBUFFER, m_DepthRenderBuffer);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, backingWidth, backingHeight);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_DepthRenderBuffer);
+    
+    if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+    {
+        LOG_ERROR_AND_THROW("Failed to make complete framebuffer object %x", glCheckFramebufferStatus(GL_FRAMEBUFFER));
+    }
+}
+    
+void SwapChainGLIOS::Resize( Uint32 NewWidth, Uint32 NewHeight )
+{
+    InitRenderBuffers(false, NewWidth, NewHeight);
+    
+    if( TSwapChainBase::Resize( NewWidth, NewHeight ) )
+    {
+        auto pDeviceContext = m_wpDeviceContext.Lock();
+        VERIFY( pDeviceContext, "Immediate context has been released" );
+        if( pDeviceContext )
+        {
+            auto *pImmediateCtxGL = ValidatedCast<DeviceContextGLImpl>( pDeviceContext.RawPtr() );
+            bool bIsDefaultFBBound = pImmediateCtxGL->IsDefaultFBBound();
+            
+            // To update the viewport is the only thing we need to do in OpenGL
+            if( bIsDefaultFBBound )
+            {
+                // Update viewport
+                pImmediateCtxGL->SetViewports( 1, nullptr, 0, 0 );
+            }
+        }
+    }
 }
 
+GLuint SwapChainGLIOS::GetDefaultFBO()const
+{
+    return m_DefaultFBO;
+}
+    
 }

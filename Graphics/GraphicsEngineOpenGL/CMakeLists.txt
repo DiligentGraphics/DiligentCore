@@ -20,7 +20,6 @@ set(INCLUDE
 	include/SamplerGLImpl.h
 	include/ShaderGLImpl.h
 	include/ShaderResourceBindingGLImpl.h
-	include/SwapChainGLImpl.h
 	include/TexRegionRender.h
 	include/Texture1D_OGL.h
 	include/Texture1DArray_OGL.h
@@ -67,7 +66,6 @@ set(SOURCE
 	src/SamplerGLImpl.cpp
 	src/ShaderGLImpl.cpp
 	src/ShaderResourceBindingGLImpl.cpp
-	src/SwapChainGLImpl.cpp
 	src/TexRegionRender.cpp
 	src/Texture1D_OGL.cpp
 	src/Texture1DArray_OGL.cpp
@@ -83,23 +81,31 @@ set(SOURCE
 
 if(PLATFORM_WIN32)
 	list(APPEND SOURCE src/GLContextWindows.cpp)
+    list(APPEND SOURCE src/SwapChainGLImpl.cpp)
 	list(APPEND INCLUDE include/GLContextWindows.h)
+    list(APPEND INCLUDE include/SwapChainGLImpl.h)
 elseif(PLATFORM_ANDROID)
 	list(APPEND SOURCE src/GLContextAndroid.cpp)
 	list(APPEND SOURCE src/RenderDeviceGLESImpl.cpp)
 	list(APPEND SOURCE src/GLStubsAndroid.cpp)
+    list(APPEND SOURCE src/SwapChainGLImpl.cpp)
 
 	list(APPEND INCLUDE include/GLContextAndroid.h)
 	list(APPEND INCLUDE include/GLStubsAndroid.h)
 	list(APPEND INCLUDE include/RenderDeviceGLESImpl.h)
+    list(APPEND INCLUDE include/SwapChainGLImpl.h)
 
 	list(APPEND INTERFACE interface/RenderDeviceGLES.h)
 elseif(PLATFORM_LINUX)
 	list(APPEND SOURCE src/GLContextLinux.cpp)
+    list(APPEND SOURCE src/SwapChainGLImpl.cpp)
 	list(APPEND INCLUDE include/GLContextLinux.h)
+    list(APPEND INCLUDE include/SwapChainGLImpl.h)
 elseif(PLATFORM_MACOS)
 	list(APPEND SOURCE src/GLContextMacOS.mm)
 	list(APPEND INCLUDE include/GLContextMacOS.h)
+    list(APPEND SOURCE src/SwapChainGLImpl.cpp)
+    list(APPEND INCLUDE include/SwapChainGLImpl.h)
 elseif(PLATFORM_IOS)
 	list(APPEND SOURCE src/GLContextIOS.mm)
 	list(APPEND INCLUDE include/GLContextIOS.h)

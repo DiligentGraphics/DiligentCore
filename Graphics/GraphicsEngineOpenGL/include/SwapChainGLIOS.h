@@ -23,24 +23,43 @@
 
 #pragma once
 
-#include "SwapChainGLImpl.h"
+#include "EngineGLAttribs.h"
+#include "SwapChainGL.h"
+#include "SwapChainBase.h"
+#include "GLObjectWrapper.h"
 
 namespace Diligent
 {
 
 class IMemoryAllocator;
 /// Implementation of the Diligent::ISwapChainGL interface on IOS
-class SwapChainGLIOS final : public SwapChainGLImpl
+class SwapChainGLIOS final :  public SwapChainBase<ISwapChainGL>
 {
 public:
-    SwapChainGLIOS(IReferenceCounters *pRefCounters,
-                   const SwapChainDesc& SwapChainDesc,
-                   class RenderDeviceGLImpl* pRenderDeviceGL,
-                   class DeviceContextGLImpl* pImmediateContextGL);
+    typedef SwapChainBase<ISwapChainGL> TSwapChainBase;
     
-    virtual void Present();
-
-    virtual void Resize( Uint32 NewWidth, Uint32 NewHeight );
+    SwapChainGLIOS(IReferenceCounters *pRefCounters,
+                    const EngineGLAttribs &InitAttribs,
+                    const SwapChainDesc& SwapChainDesc,
+                    class RenderDeviceGLImpl* pRenderDeviceGL,
+                    class DeviceContextGLImpl* pImmediateContextGL);
+    SwapChainGLIOS();
+    
+    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
+    
+    virtual void Present()override final;
+    
+    virtual void Resize( Uint32 NewWidth, Uint32 NewHeight )override final;
+    
+    virtual GLuint GetDefaultFBO()const override final;
+    
+private:
+    void InitRenderBuffers(bool InitFromDrawable, Uint32 &Width, Uint32 &Height);
+    
+    GLObjectWrappers::GLRenderBufferObj m_ColorRenderBuffer;
+    GLObjectWrappers::GLRenderBufferObj m_DepthRenderBuffer;
+    GLObjectWrappers::GLFrameBufferObj m_DefaultFBO;
+    void  *m_CALayer;
 };
 
 }

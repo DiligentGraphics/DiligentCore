@@ -23,6 +23,7 @@
 
 #pragma once
 
+#include "EngineGLAttribs.h"
 #include "SwapChainGL.h"
 #include "SwapChainBase.h"
 #include "GLObjectWrapper.h"
@@ -32,7 +33,7 @@ namespace Diligent
 
 class IMemoryAllocator;
 /// Implementation of the Diligent::ISwapChainGL interface
-class SwapChainGLImpl : public SwapChainBase<ISwapChainGL>
+class SwapChainGLImpl final : public SwapChainBase<ISwapChainGL>
 {
 public:
     typedef SwapChainBase<ISwapChainGL> TSwapChainBase;
@@ -44,13 +45,13 @@ public:
                     class DeviceContextGLImpl* pImmediateContextGL);
     ~SwapChainGLImpl();
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
+    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
 
-    virtual void Present()override;
+    virtual void Present()override final;
 
-    virtual void Resize( Uint32 NewWidth, Uint32 NewHeight )override;
+    virtual void Resize( Uint32 NewWidth, Uint32 NewHeight )override final;
 
-    virtual GLuint GetDefaultFBO()const override { return 0; }
+    virtual GLuint GetDefaultFBO()const override final{ return 0; }
 };
 
 }
