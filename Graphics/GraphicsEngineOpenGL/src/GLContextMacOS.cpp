@@ -32,7 +32,7 @@
 
 namespace Diligent
 {
-    GLContext::GLContext( struct EngineGLAttribs &InitAttribs, DeviceCaps &DeviceCaps )
+    GLContext::GLContext( const EngineGLAttribs &InitAttribs, DeviceCaps &DeviceCaps )
     {
         if (GetCurrentNativeGLContext() == nullptr)
         {
