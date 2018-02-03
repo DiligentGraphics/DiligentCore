@@ -29,6 +29,7 @@
 #include "BaseInterfacesGL.h"
 #include "FBOCache.h"
 #include "TexRegionRender.h"
+#include "EngineGLAttribs.h"
 
 enum class GPU_VENDOR
 {
@@ -55,7 +56,7 @@ class RenderDeviceGLImpl : public RenderDeviceBase<IGLDeviceBaseInterface>
 public:
     typedef RenderDeviceBase<IGLDeviceBaseInterface> TRenderDeviceBase;
 
-    RenderDeviceGLImpl( IReferenceCounters *pRefCounters, IMemoryAllocator &RawMemAllocator, const ContextInitInfo &InitInfo );
+    RenderDeviceGLImpl( IReferenceCounters *pRefCounters, IMemoryAllocator &RawMemAllocator, const EngineGLAttribs &InitAttribs );
     ~RenderDeviceGLImpl();
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
     

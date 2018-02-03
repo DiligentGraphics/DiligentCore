@@ -29,11 +29,21 @@
 namespace Diligent
 {
 SwapChainGLImpl::SwapChainGLImpl(IReferenceCounters *pRefCounters,
+                                 const EngineGLAttribs &InitAttribs,
                                  const SwapChainDesc& SCDesc, 
                                  RenderDeviceGLImpl* pRenderDeviceGL, 
                                  DeviceContextGLImpl* pImmediateContextGL) : 
-    TSwapChainBase( pRefCounters, pRenderDeviceGL, pImmediateContextGL, pRenderDeviceGL->m_GLContext.GetSwapChainDesc() )
+    TSwapChainBase( pRefCounters, pRenderDeviceGL, pImmediateContextGL, SCDesc)
 {
+#if defined(PLATFORM_WIN32)
+    HWND hWnd = reinterpret_cast<HWND>(InitAttribs.pNativeWndHandle);
+    RECT rc;
+    GetClientRect(hWnd, &rc);
+    m_SwapChainDesc.Width = rc.right - rc.left;
+    m_SwapChainDesc.Height = rc.bottom - rc.top;
+#else
+#   error Unsupported platform
+#endif
 }
 
 SwapChainGLImpl::~SwapChainGLImpl()
@@ -45,7 +55,12 @@ IMPLEMENT_QUERY_INTERFACE( SwapChainGLImpl, IID_SwapChainGL, TSwapChainBase )
 void SwapChainGLImpl::Present()
 {
     auto *pDeviceGL = ValidatedCast<RenderDeviceGLImpl>(m_pRenderDevice.RawPtr());
-    pDeviceGL->m_GLContext.SwapBuffers();
+    auto &GLContext = pDeviceGL->m_GLContext;
+#if defined(PLATFORM_WIN32)
+    GLContext.SwapBuffers();
+#else
+#   error Unsupported platform
+#endif
 }
 
 void SwapChainGLImpl::Resize( Uint32 NewWidth, Uint32 NewHeight )

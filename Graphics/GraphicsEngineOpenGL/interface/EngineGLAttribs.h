@@ -23,34 +23,26 @@
 
 #pragma once
 
-#include "SwapChainGL.h"
-#include "SwapChainBase.h"
-#include "GLObjectWrapper.h"
+/// \file
+/// Definition of the Engine OpenGL/GLES attribs
+
+#include "BasicTypes.h"
+#include "GraphicsTypes.h"
 
 namespace Diligent
 {
+    /// Attributes of the OpenGL-based engine implementation
+    struct EngineGLAttribs : public EngineCreationAttribs
+    {
+        /// Native window handle
 
-class IMemoryAllocator;
-/// Implementation of the Diligent::ISwapChainGL interface
-class SwapChainGLImpl : public SwapChainBase<ISwapChainGL>
-{
-public:
-    typedef SwapChainBase<ISwapChainGL> TSwapChainBase;
+        /// * On Win32 platform, this is a window handle (HWND)
+        /// * On Android platform, this is a pointer to the native window (ANativeWindow*)
+        void *pNativeWndHandle = nullptr;
 
-    SwapChainGLImpl(IReferenceCounters *pRefCounters,
-                    const EngineGLAttribs &InitAttribs,
-                    const SwapChainDesc& SwapChainDesc, 
-                    class RenderDeviceGLImpl* pRenderDeviceGL,
-                    class DeviceContextGLImpl* pImmediateContextGL);
-    ~SwapChainGLImpl();
-
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
-
-    virtual void Present()override;
-
-    virtual void Resize( Uint32 NewWidth, Uint32 NewHeight )override;
-
-    virtual GLuint GetDefaultFBO()const override { return 0; }
-};
-
+#if PLATFORM_LINUX
+        /// For linux platform only, this is the pointer to the display
+        void *pDisplay = nullptr;
+#endif
+    };
 }

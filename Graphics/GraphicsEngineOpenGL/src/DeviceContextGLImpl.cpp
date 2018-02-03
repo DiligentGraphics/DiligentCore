@@ -22,13 +22,14 @@
  */
 
 #include "pch.h"
-#include "DeviceContextGLImpl.h"
-#include "RenderDeviceGLImpl.h"
-#include "GLTypeConversions.h"
-
 #include <iostream>
 #include <fstream>
 #include <string>
+
+#include "SwapChainGL.h"
+#include "DeviceContextGLImpl.h"
+#include "RenderDeviceGLImpl.h"
+#include "GLTypeConversions.h"
 
 #include "BufferGLImpl.h"
 #include "ShaderGLImpl.h"
@@ -51,7 +52,8 @@ namespace Diligent
     DeviceContextGLImpl::DeviceContextGLImpl( IReferenceCounters *pRefCounters, class RenderDeviceGLImpl *pDeviceGL, bool bIsDeferred ) : 
         TDeviceContextBase(pRefCounters, pDeviceGL, bIsDeferred),
         m_ContextState(pDeviceGL),
-        m_CommitedResourcesTentativeBarriers(0)
+        m_CommitedResourcesTentativeBarriers(0),
+        m_DefaultFBO(false)
     {
         m_BoundWritableTextures.reserve( 16 );
         m_BoundWritableBuffers.reserve( 16 );
@@ -285,7 +287,13 @@ namespace Diligent
     {
         if (m_IsDefaultFramebufferBound)
         {
-            m_ContextState.BindFBO( GLObjectWrappers::GLFrameBufferObj(false) );
+            auto *pSwapChainGL = ValidatedCast<ISwapChainGL>(m_pSwapChain.RawPtr());
+            GLuint DefaultFBOHandle = pSwapChainGL->GetDefaultFBO();
+            if (m_DefaultFBO != DefaultFBOHandle)
+            {
+                m_DefaultFBO = GLObjectWrappers::GLFrameBufferObj(true, GLObjectWrappers::GLFBOCreateReleaseHelper(DefaultFBOHandle));
+            }
+            m_ContextState.BindFBO(m_DefaultFBO);
         }
         else
         {

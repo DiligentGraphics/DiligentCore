@@ -26,6 +26,7 @@
 #include "GLContextWindows.h"
 #include "DeviceCaps.h"
 #include "GLTypeConversions.h"
+#include "EngineGLAttribs.h"
 
 namespace Diligent
 {
@@ -84,19 +85,14 @@ namespace Diligent
         LOG_INFO_MESSAGE_ONCE( MessageSS.str().c_str() );
     }
 
-    GLContext::GLContext( const ContextInitInfo &Info, DeviceCaps &DeviceCaps ) :
-        m_SwapChainAttribs(Info.SwapChainAttribs),
+    GLContext::GLContext(const EngineGLAttribs &InitAttribs, DeviceCaps &DeviceCaps ) :
 		m_Context(0),
 		m_WindowHandleToDeviceContext(0)
     {
 		Int32 MajorVersion = 0, MinorVersion = 0;
-		if(Info.pNativeWndHandle != nullptr)
+		if(InitAttribs.pNativeWndHandle != nullptr)
 		{
-			HWND hWnd = reinterpret_cast<HWND>(Info.pNativeWndHandle);
-			RECT rc;
-			GetClientRect( hWnd, &rc );
-			m_SwapChainAttribs.Width = rc.right - rc.left;
-			m_SwapChainAttribs.Height = rc.bottom - rc.top;
+			HWND hWnd = reinterpret_cast<HWND>(InitAttribs.pNativeWndHandle);
 
 			// See http://www.opengl.org/wiki/Tutorial:_OpenGL_3.1_The_First_Triangle_(C%2B%2B/Win)
 			//     http://www.opengl.org/wiki/Creating_an_OpenGL_Context_(WGL)
@@ -201,7 +197,7 @@ namespace Diligent
         //Or better yet, use the GL3 way to get the version number
         glGetIntegerv( GL_MAJOR_VERSION, &MajorVersion );
         glGetIntegerv( GL_MINOR_VERSION, &MinorVersion );
-        LOG_INFO_MESSAGE(Info.pNativeWndHandle != nullptr ? "Initialized OpenGL " : "Attached to OpenGL ", MajorVersion, '.', MinorVersion, " context (", GLVersionString, ')');
+        LOG_INFO_MESSAGE(InitAttribs.pNativeWndHandle != nullptr ? "Initialized OpenGL " : "Attached to OpenGL ", MajorVersion, '.', MinorVersion, " context (", GLVersionString, ')');
 
         // Under the standard filtering rules for cubemaps, filtering does not work across faces of the cubemap. 
         // This results in a seam across the faces of a cubemap. This was a hardware limitation in the past, but 

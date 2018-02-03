@@ -46,10 +46,10 @@
 namespace Diligent
 {
 
-RenderDeviceGLImpl :: RenderDeviceGLImpl(IReferenceCounters *pRefCounters, IMemoryAllocator &RawMemAllocator, const ContextInitInfo &InitInfo):
+RenderDeviceGLImpl :: RenderDeviceGLImpl(IReferenceCounters *pRefCounters, IMemoryAllocator &RawMemAllocator, const EngineGLAttribs &InitAttribs):
     TRenderDeviceBase(pRefCounters, RawMemAllocator, 0, sizeof(TextureBaseGL), sizeof(TextureViewGLImpl), sizeof(BufferGLImpl), sizeof(BufferViewGLImpl), sizeof(ShaderGLImpl), sizeof(SamplerGLImpl), sizeof(PipelineStateGLImpl), sizeof(ShaderResourceBindingGLImpl)),
     // Device caps must be filled in before the constructor of Pipeline Cache is called!
-    m_GLContext(InitInfo, m_DeviceCaps),
+    m_GLContext(InitAttribs, m_DeviceCaps),
     m_TexRegionRender(this)
 {
     GLint NumExtensions = 0;
