@@ -29,19 +29,14 @@ PUBLIC
 	BuildSettings 
 	BasicPlatform
 	PlatformInterface
-PRIVATE
-    ${APP_KIT}
 )
 
-if(PLATFORM_IOS)
-    if(NOT CORE_FOUNDATION)
-        message(FATAL_ERROR "Cannot find CoreFoundation framework")
-    endif()
-
-    if(NOT FOUNDATION)
-        message(FATAL_ERROR "Cannot find Foundation framework")
-    endif()
-
+if(PLATFORM_MACOS)
+    target_link_libraries(ApplePlatform
+    PRIVATE
+        ${APP_KIT}
+    )
+elseif(PLATFORM_IOS)
     target_link_libraries(ApplePlatform
     PRIVATE
         ${CORE_FOUNDATION}
