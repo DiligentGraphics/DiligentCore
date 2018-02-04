@@ -88,16 +88,10 @@
 
 #elif defined(PLATFORM_ANDROID)
 
-#   ifndef USE_GL3_STUB
-#       define USE_GL3_STUB 0
-#   endif
-#   if USE_GL3_STUB
-#       include "GLStubsAndroid.h"
-#       include <GLES2/gl2platform.h>
-#   else
-#       include <GLES3/gl3.h>
-#       include <GLES3/gl3ext.h>
-#   endif
+#   include <GLES3/gl3.h>
+#   include <GLES3/gl3ext.h>
+    // GLStubs must be included after GLFeatures!
+#   include "GLStubsAndroid.h"
 
 #elif defined(PLATFORM_IOS)
 
@@ -110,11 +104,6 @@
 #endif
 
 #include "Errors.h"
-
-#ifdef PLATFORM_ANDROID
-    // GLStubs must be included after GLFeatures!
-    #include "GLStubs.h"
-#endif
 
 #include "PlatformDefinitions.h"
 #include "RefCntAutoPtr.h"

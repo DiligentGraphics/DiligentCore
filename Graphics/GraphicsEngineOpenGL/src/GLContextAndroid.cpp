@@ -185,10 +185,6 @@ namespace Diligent
         const char* versionStr = (const char*)glGetString( GL_VERSION );
         LOG_INFO_MESSAGE( "GL Version: ", versionStr, '\n' );
         
-#if USE_GL3_STUB
-        gl3stubInit();
-#endif
-        
         LoadGLFunctions();
 
         // When GL_FRAMEBUFFER_SRGB is enabled, and if the destination image is in the sRGB colorspace
