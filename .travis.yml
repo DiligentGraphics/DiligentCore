@@ -81,7 +81,7 @@ script:
     fi
   - |
     if [ "$TRAVIS_OS_NAME" = "osx" ]; then 
-      if [ "$IOS" = "true" ]
+      if [ "$IOS" = "true" ]; then 
         cmake .. -DCMAKE_TOOLCHAIN_FILE=../DiligentCore/ios.toolchain.cmake -DIOSPLATFORM=OS -G "Xcode"
       else
         cmake .. -G "Xcode"
