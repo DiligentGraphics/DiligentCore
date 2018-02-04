@@ -50,10 +50,24 @@ matrix:
     env: CONFIG=Release
   - os: osx
     compiler: clang
-    env: CONFIG=Release
+    env: 
+      - CONFIG=Release
+      - IOS=false
   - os: osx
     compiler: clang
-    env: CONFIG=Debug
+    env: 
+      - CONFIG=Debug
+      - IOS=false
+  - os: osx
+    compiler: clang
+    env: 
+      - CONFIG=Release
+      - IOS=true
+  - os: osx
+    compiler: clang
+    env: 
+      - CONFIG=Debug
+      - IOS=true
     
 script:
 
@@ -67,6 +81,10 @@ script:
     fi
   - |
     if [ "$TRAVIS_OS_NAME" = "osx" ]; then 
-      cmake .. -G "Xcode"
+      if [ "$IOS" = "true" ]
+        cmake .. -DCMAKE_TOOLCHAIN_FILE=../DiligentCore/ios.toolchain.cmake -DIOSPLATFORM=OS -G "Xcode"
+      else
+        cmake .. -G "Xcode"
+      fi
       cmake --build . --config ${CONFIG}
     fi
