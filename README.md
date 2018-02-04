@@ -1,14 +1,18 @@
 # DiligentCore
 
-This module implements key engine functionality. It provides API implementations with Direct3D11, Direct3D12, 
-OpenGL and OpenGLES as well as basic platform-specific utilities.
+This module implements [Diligent Engine](https://github.com/DiligentGraphics/DiligentEngine)'s core functionality: Direct3D11, Direct3D12, 
+OpenGL, and OpenGLES rendering backends as well as basic platform-specific utilities. It is self-contained and can be built by its own. 
+The module's cmake script defines a number of variables that are required to generate build files for other modules,
+so it must always be handled first. 
+
+To build the module, see [build instrcutions](https://github.com/DiligentGraphics/DiligentEngine/blob/master/README.md) in the master repository.
 
 # Build Status
 
 | Platform                   | Status        |
 | -------------------------- | ------------- |
 | Win32/Universal Windows    | [![Build Status](https://ci.appveyor.com/api/projects/status/github/DiligentGraphics/DiligentCore?svg=true)](https://ci.appveyor.com/project/DiligentGraphics/diligentcore) |
-| Linux/MacOS                | [![Build Status](https://travis-ci.org/DiligentGraphics/DiligentCore.svg?branch=master)](https://travis-ci.org/DiligentGraphics/DiligentCore)      |
+| Linux/MacOS/iOS            | [![Build Status](https://travis-ci.org/DiligentGraphics/DiligentCore.svg?branch=master)](https://travis-ci.org/DiligentGraphics/DiligentCore)      |
 
 
 # Repository structure
@@ -22,13 +26,14 @@ OpenGL and OpenGLES as well as basic platform-specific utilities.
  | [Graphics/GraphicsAccessories](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsAccessories)	| Basic graphics accessories used by all implementations  |
  | [Graphics/GraphicsEngine](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngine)	            | Platform-independent base functionality |
  | [Graphics/GraphicsEngineD3DBase](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngineD3DBase)| Base functionality for D3D11/D3D12 implementations |
- | [Graphics/GraphicsEngineD3D11](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngineD3D11)     | Engine implementation with Direct3D11 |
- | [Graphics/GraphicsEngineD3D12](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngineD3D12)     | Engine implementation with Direct3D12 |
- | [Graphics/GraphicsEngineOpenGL](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngineOpenGL)   | Engine implementation with OpenGL/GLES |
+ | [Graphics/GraphicsEngineD3D11](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngineD3D11)     | Implementation of Direct3D11 rendering backend |
+ | [Graphics/GraphicsEngineD3D12](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngineD3D12)     | Implementation of Direct3D12 rendering backend |
+ | [Graphics/GraphicsEngineOpenGL](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngineOpenGL)   | Implementation of OpenGL/GLES rendering backend |
  | [Graphics/GraphicsTools](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsTools)                 | Graphics utilities build on top of core interfaces (definitions of commonly used states, texture uploaders, etc.) | 
  | [Graphics/HLSL2GLSLConverterLib](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/HLSL2GLSLConverterLib) | HLSL to GLSL source code converter library |
  | [Platforms/Basic](https://github.com/DiligentGraphics/DiligentCore/tree/master/Platforms/Basic)      | Interface for platform-specific routines and implementation of some common functionality |
  | [Platforms/Android](https://github.com/DiligentGraphics/DiligentCore/tree/master/Platforms/Android)  | Implementation of platform-specific routines on Android |
+ | [Platforms/Apple](https://github.com/DiligentGraphics/DiligentCore/tree/master/Platforms/Apple)      | Implementation of platform-specific routines on Apple platforms (MacOS, iOS)|
  | [Platforms/UWP](https://github.com/DiligentGraphics/DiligentCore/tree/master/Platforms/UWP)          | Implementation of platform-specific routines on Universal Windows platform |
  | [Platforms/Win32](https://github.com/DiligentGraphics/DiligentCore/tree/master/Platforms/Win32)      | Implementation of platform-specific routines on Win32 platform |
  | [Platforms/Linux](https://github.com/DiligentGraphics/DiligentCore/tree/master/Platforms/Linux)      | Implementation of platform-specific routines on Linux platform |
@@ -47,19 +52,19 @@ On Win32 platform, you can create OpenGL, Direct3D11 or Direct3D12 device as sho
 ```cpp
 void InitDevice(HWND hWnd, 
                 IRenderDevice **ppRenderDevice, 
-                IDeviceContext **ppImmediateContext,  
+                std::vector<IDeviceContext*> &ppContexts,  
                 ISwapChain **ppSwapChain, 
                 DeviceType DevType)
 {
     SwapChainDesc SCDesc;
     SCDesc.SamplesCount = 1;
+    Uint32 NumDeferredCtx = 0;
     switch (DevType)
     {
         case DeviceType::D3D11:
         {
             EngineD3D11Attribs DeviceAttribs;
-            DeviceAttribs.DebugFlags = (Uint32)EngineD3D11DebugFlags::VerifyCommittedShaderResources |
-                                       (Uint32)EngineD3D11DebugFlags::VerifyCommittedResourceRelevance;
+            g_pSample->GetEngineInitializationAttribs(DevType, DeviceAttribs, NumDeferredCtx);
 
 #ifdef ENGINE_DLL
             GetEngineFactoryD3D11Type GetEngineFactoryD3D11 = nullptr;
@@ -67,8 +72,9 @@ void InitDevice(HWND hWnd,
             LoadGraphicsEngineD3D11(GetEngineFactoryD3D11);
 #endif
             auto *pFactoryD3D11 = GetEngineFactoryD3D11();
-            pFactoryD3D11->CreateDeviceAndContextsD3D11( DeviceAttribs, ppRenderDevice, ppImmediateContext, 0 );
-            pFactoryD3D11->CreateSwapChainD3D11( *ppRenderDevice, *ppImmediateContext, SCDesc, hWnd, ppSwapChain );
+            ppContexts.resize(1 + NumDeferredCtx);
+            pFactoryD3D11->CreateDeviceAndContextsD3D11( DeviceAttribs, ppRenderDevice, ppContexts.data(), NumDeferredCtx );
+            pFactoryD3D11->CreateSwapChainD3D11( *ppRenderDevice, ppContexts[0], SCDesc, hWnd, ppSwapChain );
         }
         break;
 
@@ -82,13 +88,15 @@ void InitDevice(HWND hWnd,
 
             auto *pFactoryD3D12 = GetEngineFactoryD3D12();
             EngineD3D12Attribs EngD3D12Attribs;
+            g_pSample->GetEngineInitializationAttribs(DevType, EngD3D12Attribs, NumDeferredCtx);
             EngineD3D12Attribs.GPUDescriptorHeapDynamicSize[0] = 32768;
             EngineD3D12Attribs.GPUDescriptorHeapSize[1] = 128;
             EngineD3D12Attribs.GPUDescriptorHeapDynamicSize[1] = 2048-128;
             EngineD3D12Attribs.DynamicDescriptorAllocationChunkSize[0] = 32;
-            EngineD3D12Attribs.DynamicDescriptorAllocationChunkSize[1] = 8; // D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER
-            pFactoryD3D12->CreateDeviceAndContextsD3D12( EngD3D12Attribs, ppRenderDevice, ppImmediateContext, 0);
-            pFactoryD3D12->CreateSwapChainD3D12( *ppRenderDevice, *ppImmediateContext, SCDesc, hWnd, ppSwapChain );
+            EngineD3D12Attribs.DynamicDescriptorAllocationChunkSize[1] = 8; // D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER            
+            ppContexts.resize(1 + NumDeferredCtx);
+            pFactoryD3D12->CreateDeviceAndContextsD3D12( EngD3D12Attribs, ppRenderDevice, ppContexts.data(), NumDeferredCtx);
+            pFactoryD3D12->CreateSwapChainD3D12( *ppRenderDevice, ppContexts[0], SCDesc, hWnd, ppSwapChain );
         }
         break;
 
@@ -100,9 +108,17 @@ void InitDevice(HWND hWnd,
             // Load the dll and import GetEngineFactoryOpenGL() function
             LoadGraphicsEngineOpenGL(GetEngineFactoryOpenGL);
 #endif
-            EngineCreationAttribs EngineCreationAttribs;
+            EngineGLAttribs CreationAttribs;
+            CreationAttribs.pNativeWndHandle = hWnd;
+            g_pSample->GetEngineInitializationAttribs(DevType, CreationAttribs, NumDeferredCtx);
+            if(NumDeferredCtx != 0)
+            {
+                LOG_ERROR_MESSAGE("Deferred contexts are not supported in OpenGL mode");
+                NumDeferredCtx = 0;
+            }
+            ppContexts.resize(1 + NumDeferredCtx);
             GetEngineFactoryOpenGL()->CreateDeviceAndSwapChainGL(
-                EngineCreationAttribs, ppRenderDevice, ppImmediateContext, SCDesc, hWnd, ppSwapChain );
+                CreationAttribs, ppRenderDevice, ppContexts.data(), SCDesc, ppSwapChain );
         }
         break;
 
@@ -194,6 +210,12 @@ static
     }
 }
 ```
+
+### iOS
+
+iOS implementation only supports OpenGLES backend. Initialization of GL context on iOS is 
+performed by the application, and the engine attaches to the context initialized by the app; see
+[EAGLView.m](https://github.com/DiligentGraphics/DiligentSamples/blob/master/Samples/SampleBase/Apple/Source/Classes/iOS/EAGLView.m) for details.
 
 ### Attaching to Already Initialized Graphics API
 
@@ -582,7 +604,7 @@ objects. Refer to the following pages for more information:
 
 ## Current Progress
 
-* Added MacOS support
+* Added MacOS and iOS support
 
 ## v2.1.b
 
