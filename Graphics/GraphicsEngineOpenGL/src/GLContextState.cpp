@@ -45,7 +45,7 @@ namespace Diligent
             m_Caps.m_iMaxCombinedTexUnits = 0;
             glGetIntegerv( GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &m_Caps.m_iMaxCombinedTexUnits );
             CHECK_GL_ERROR( "Failed to get max combined tex image units count" );
-            m_Caps.m_iMaxCombinedTexUnits = std::max( m_Caps.m_iMaxCombinedTexUnits, 80 ); // Must be at least 80 in GL4.2
+            VERIFY_EXPR(m_Caps.m_iMaxCombinedTexUnits > 0);
         }
 
         m_BoundTextures.reserve( m_Caps.m_iMaxCombinedTexUnits );
