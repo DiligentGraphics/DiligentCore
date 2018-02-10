@@ -11,10 +11,10 @@ The following code snippet shows how to initialize diligent engine in D3D11 mode
 #include "RenderDeviceFactoryD3D11.h"
 using namespace Diligent;
 
-// ... 
+// ...
 
 EngineD3D11Attribs DeviceAttribs;
-DeviceAttribs.DebugFlags = 
+DeviceAttribs.DebugFlags =
     (Uint32)EngineD3D11DebugFlags::VerifyCommittedShaderResources |
     (Uint32)EngineD3D11DebugFlags::VerifyCommittedResourceRelevance;
 
@@ -38,8 +38,8 @@ Alternatively, the engine can be initialized by attaching to existing D3D11 devi
 
 # Interoperability with Direct3D11
 
-Diligent Engine exposes methods to access internal D3D11 objects, is able to create diligent engine buffers 
-and textures from existing Direct3D11 buffers and textures, and can be initialized by attaching to existing D3D11 
+Diligent Engine exposes methods to access internal D3D11 objects, is able to create diligent engine buffers
+and textures from existing Direct3D11 buffers and textures, and can be initialized by attaching to existing D3D11
 device and immediate context.
 
 ## Accessing Native D3D11 objects
@@ -57,13 +57,13 @@ Below are some of the methods that provide access to internal D3D11 objects:
 
 ## Creating Diligent Engine Objects from D3D11 Resources
 
-* `void IRenderDeviceD3D11::CreateBufferFromD3DResource(ID3D11Buffer *pd3d11Buffer, const BufferDesc& BuffDesc, IBuffer **ppBuffer)` - 
+* `void IRenderDeviceD3D11::CreateBufferFromD3DResource(ID3D11Buffer *pd3d11Buffer, const BufferDesc& BuffDesc, IBuffer **ppBuffer)` -
    creates a diligent engine buffer object from the native d3d11 buffer
-* `void IRenderDeviceD3D11::CreateTextureFromD3DResource(ID3D11Texture1D *pd3d11Texture, ITexture **ppTexture)` - 
+* `void IRenderDeviceD3D11::CreateTextureFromD3DResource(ID3D11Texture1D *pd3d11Texture, ITexture **ppTexture)` -
    create a diligent engine texture object from the native D3D11 1D texture
-* `void IRenderDeviceD3D11::CreateTextureFromD3DResource(ID3D11Texture2D *pd3d11Texture, ITexture **ppTexture)` - 
+* `void IRenderDeviceD3D11::CreateTextureFromD3DResource(ID3D11Texture2D *pd3d11Texture, ITexture **ppTexture)` -
    create a diligent engine texture object from the native D3D11 2D texture
-* `void IRenderDeviceD3D11::CreateTextureFromD3DResource(ID3D11Texture3D *pd3d11Texture, ITexture **ppTexture)` - 
+* `void IRenderDeviceD3D11::CreateTextureFromD3DResource(ID3D11Texture3D *pd3d11Texture, ITexture **ppTexture)` -
    create a diligent engine texture object from the native D3D11 3D texture
 
 ## Initializing the Engine by Attaching to Existing D3D11 Device and Immediate Context

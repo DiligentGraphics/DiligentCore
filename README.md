@@ -1,9 +1,9 @@
 # DiligentCore
 
-This module implements [Diligent Engine](https://github.com/DiligentGraphics/DiligentEngine)'s core functionality: Direct3D11, Direct3D12, 
-OpenGL, and OpenGLES rendering backends as well as basic platform-specific utilities. It is self-contained and can be built by its own. 
+This module implements [Diligent Engine](https://github.com/DiligentGraphics/DiligentEngine)'s core functionality: Direct3D11, Direct3D12,
+OpenGL, and OpenGLES rendering backends as well as basic platform-specific utilities. It is self-contained and can be built by its own.
 The module's cmake script defines a number of variables that are required to generate build files for other modules,
-so it must always be handled first. 
+so it must always be handled first.
 
 To build the module, see [build instrcutions](https://github.com/DiligentGraphics/DiligentEngine/blob/master/README.md) in the master repository.
 
@@ -21,15 +21,15 @@ To build the module, see [build instrcutions](https://github.com/DiligentGraphic
 
  | Project                                                          | Description       |
  |------------------------------------------------------------------|-------------------|
- | [Primitives](https://github.com/DiligentGraphics/DiligentCore/tree/master/Primitives) 										| Definitions of basic types (Int32, Int16, Uint32, etc.) and interfaces (IObject, IReferenceCounters, etc.) |
- | [Common](https://github.com/DiligentGraphics/DiligentCore/tree/master/Common)												| Common functionality such as file wrapper, logging, debug utilities, etc. |
- | [Graphics/GraphicsAccessories](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsAccessories)	| Basic graphics accessories used by all implementations  |
- | [Graphics/GraphicsEngine](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngine)	            | Platform-independent base functionality |
+ | [Primitives](https://github.com/DiligentGraphics/DiligentCore/tree/master/Primitives)                                        | Definitions of basic types (Int32, Int16, Uint32, etc.) and interfaces (IObject, IReferenceCounters, etc.) |
+ | [Common](https://github.com/DiligentGraphics/DiligentCore/tree/master/Common)                                                | Common functionality such as file wrapper, logging, debug utilities, etc. |
+ | [Graphics/GraphicsAccessories](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsAccessories)    | Basic graphics accessories used by all implementations  |
+ | [Graphics/GraphicsEngine](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngine               | Platform-independent base functionality |
  | [Graphics/GraphicsEngineD3DBase](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngineD3DBase)| Base functionality for D3D11/D3D12 implementations |
  | [Graphics/GraphicsEngineD3D11](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngineD3D11)     | Implementation of Direct3D11 rendering backend |
  | [Graphics/GraphicsEngineD3D12](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngineD3D12)     | Implementation of Direct3D12 rendering backend |
  | [Graphics/GraphicsEngineOpenGL](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngineOpenGL)   | Implementation of OpenGL/GLES rendering backend |
- | [Graphics/GraphicsTools](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsTools)                 | Graphics utilities build on top of core interfaces (definitions of commonly used states, texture uploaders, etc.) | 
+ | [Graphics/GraphicsTools](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsTools)                 | Graphics utilities build on top of core interfaces (definitions of commonly used states, texture uploaders, etc.) |
  | [Graphics/HLSL2GLSLConverterLib](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/HLSL2GLSLConverterLib) | HLSL to GLSL source code converter library |
  | [Platforms/Basic](https://github.com/DiligentGraphics/DiligentCore/tree/master/Platforms/Basic)      | Interface for platform-specific routines and implementation of some common functionality |
  | [Platforms/Android](https://github.com/DiligentGraphics/DiligentCore/tree/master/Platforms/Android)  | Implementation of platform-specific routines on Android |
@@ -50,10 +50,10 @@ Before you can use any functionality provided by the engine, you need to create 
 On Win32 platform, you can create OpenGL, Direct3D11 or Direct3D12 device as shown below:
 
 ```cpp
-void InitDevice(HWND hWnd, 
-                IRenderDevice **ppRenderDevice, 
-                std::vector<IDeviceContext*> &ppContexts,  
-                ISwapChain **ppSwapChain, 
+void InitDevice(HWND hWnd,
+                IRenderDevice **ppRenderDevice,
+                std::vector<IDeviceContext*> &ppContexts,
+                ISwapChain **ppSwapChain,
                 DeviceType DevType)
 {
     SwapChainDesc SCDesc;
@@ -129,10 +129,10 @@ void InitDevice(HWND hWnd,
 }
 ```
 
-On Windows, the engine can be statically linked to the application or built as a separate DLL. In the former case, 
-factory functions `GetEngineFactoryOpenGL()`, `GetEngineFactoryD3D11()`, and `GetEngineFactoryD3D12()` can be called directly. 
-In the latter case, you need to load the DLL into the process's address space using `LoadGraphicsEngineOpenGL()`, 
-`LoadGraphicsEngineD3D11()` or `LoadGraphicsEngineD3D12()` function. Each function loads appropriate dynamic library and 
+On Windows, the engine can be statically linked to the application or built as a separate DLL. In the former case,
+factory functions `GetEngineFactoryOpenGL()`, `GetEngineFactoryD3D11()`, and `GetEngineFactoryD3D12()` can be called directly.
+In the latter case, you need to load the DLL into the process's address space using `LoadGraphicsEngineOpenGL()`,
+`LoadGraphicsEngineD3D11()` or `LoadGraphicsEngineD3D12()` function. Each function loads appropriate dynamic library and
 imports the functions required to initialize the engine. You need to include the following headers:
 
 ```cpp
@@ -153,32 +153,32 @@ Also, enable Diligent namespace:
 using namespace Diligent;
 ```
 
-`IEngineFactoryD3D11::CreateDeviceAndContextsD3D11()` and `IEngineFactoryD3D12::CreateDeviceAndContextsD3D12()` functions can 
-also create a specified number of deferred contexts, which can be used for multi-threaded command recording. 
-Deferred contexts can only be created during the initialization of the engine. The function populates an array of pointers 
+`IEngineFactoryD3D11::CreateDeviceAndContextsD3D11()` and `IEngineFactoryD3D12::CreateDeviceAndContextsD3D12()` functions can
+also create a specified number of deferred contexts, which can be used for multi-threaded command recording.
+Deferred contexts can only be created during the initialization of the engine. The function populates an array of pointers
 to the contexts, where the immediate context goes at position 0, followed by all deferred contexts.
 
 For more details, take a look at [WinMain.cpp](https://github.com/DiligentGraphics/DiligentSamples/blob/master/Samples/SampleBase/src/Win32/WinMain.cpp) file.
 
 ### Universal Windows Platform
 
-On Universal Windows Platform, you can create Direct3D11 or Direct3D12 device. Only static linking is 
-currently supported, but dynamic linking can also be implemented. Initialization is performed the same 
-way as on Win32 Platform. The difference is that you first create the render device and device contexts by 
-calling `IEngineFactoryD3D11::CreateDeviceAndContextsD3D11()` or `IEngineFactoryD3D12::CreateDeviceAndContextsD3D12()`. 
-The swap chain is created later by a call to `IEngineFactoryD3D11::CreateSwapChainD3D11()` or `IEngineFactoryD3D12::CreateSwapChainD3D12()`. 
+On Universal Windows Platform, you can create Direct3D11 or Direct3D12 device. Only static linking is
+currently supported, but dynamic linking can also be implemented. Initialization is performed the same
+way as on Win32 Platform. The difference is that you first create the render device and device contexts by
+calling `IEngineFactoryD3D11::CreateDeviceAndContextsD3D11()` or `IEngineFactoryD3D12::CreateDeviceAndContextsD3D12()`.
+The swap chain is created later by a call to `IEngineFactoryD3D11::CreateSwapChainD3D11()` or `IEngineFactoryD3D12::CreateSwapChainD3D12()`.
 Please look at the [DeviceResources.cpp](https://github.com/DiligentGraphics/DiligentSamples/blob/master/Samples/SampleBase/src/UWP/Common/DeviceResources.cpp) file for more details.
 
 ### Linux
 
-On Linux platform, the only API currently supported is OpenGL. Initialization of GL context on Linux is tightly 
+On Linux platform, the only API currently supported is OpenGL. Initialization of GL context on Linux is tightly
 coupled with window creation. As a result, Diligent Engine does not initialize the context, but
 attaches to the one initialized by the app. An example of the engine initialization on Linux can be found in
 [LinuxMain.cpp](https://github.com/DiligentGraphics/DiligentSamples/blob/master/Samples/SampleBase/src/Linux/LinuxMain.cpp).
 
 ### MacOS
 
-Similar to Linux, the only API currently supported by Diligent Engine on MacOS is OpenGL. Initialization of GL context on MacOS is 
+Similar to Linux, the only API currently supported by Diligent Engine on MacOS is OpenGL. Initialization of GL context on MacOS is
 performed by the application, and the engine attaches to the context initialized by the app; see
 [GLView.m](https://github.com/DiligentGraphics/DiligentSamples/blob/master/Samples/SampleBase/Apple/Source/Classes/OSX/GLView.m) for details.
 
@@ -191,13 +191,13 @@ EngineCreationAttribs EngineCreationAttribs;
 RefCntAutoPtr<IRenderDevice> pRenderDevice;
 SwapChainDesc SwapChainDesc;
 auto pFactory = GetEngineFactoryOpenGL();
-pFactory->CreateDeviceAndSwapChainGL( EngineCreationAttribs, &pRenderDevice, &pDeviceContext_, 
+pFactory->CreateDeviceAndSwapChainGL( EngineCreationAttribs, &pRenderDevice, &pDeviceContext_,
                                       SwapChainDesc, app_->window, &pSwapChain_ );
 
 IRenderDeviceGLES *pRenderDeviceOpenGLES;
 pRenderDevice->QueryInterface( IID_RenderDeviceGLES, reinterpret_cast<IObject**>(&pRenderDeviceOpenGLES) );
 ```
- 
+
 If engine is built as dynamic library, the library needs to be loaded by the native activity. The following code shows one possible way:
 
 ```java
@@ -213,20 +213,20 @@ static
 
 ### iOS
 
-iOS implementation only supports OpenGLES backend. Initialization of GL context on iOS is 
+iOS implementation only supports OpenGLES backend. Initialization of GL context on iOS is
 performed by the application, and the engine attaches to the context initialized by the app; see
 [EAGLView.m](https://github.com/DiligentGraphics/DiligentSamples/blob/master/Samples/SampleBase/Apple/Source/Classes/iOS/EAGLView.m) for details.
 
 ### Attaching to Already Initialized Graphics API
 
-An alternative way to initialize the engine is to attach to existing D3D11/D3D12 device or OpenGL/GLES context. 
+An alternative way to initialize the engine is to attach to existing D3D11/D3D12 device or OpenGL/GLES context.
 Refer to [Native API interoperability](http://diligentgraphics.com/diligent-engine/native-api-interoperability/) for more details.
 
 ## Creating Resources
 
-Device resources are created by the render device. The two main resource types are buffers, 
-which represent linear memory, and textures, which use memory layouts optimized for fast filtering. 
-To create a buffer, you need to populate `BufferDesc` structure and call `IRenderDevice::CreateBuffer()`. 
+Device resources are created by the render device. The two main resource types are buffers,
+which represent linear memory, and textures, which use memory layouts optimized for fast filtering.
+To create a buffer, you need to populate `BufferDesc` structure and call `IRenderDevice::CreateBuffer()`.
 The following code creates a uniform (constant) buffer:
 
 ```cpp
@@ -254,31 +254,31 @@ TexDesc.Name = "Sample 2D Texture";
 m_pRenderDevice->CreateTexture( TexDesc, TextureData(), &m_pTestTex );
 ```
 
-There is only one function `CreateTexture()` that is capable of creating all types of textures. Type, format, 
+There is only one function `CreateTexture()` that is capable of creating all types of textures. Type, format,
 array size and all other parameters are specified by the members of the `TextureDesc` structure.
 
-For every bind flag specified during the texture creation time, the texture object creates a default view. 
-Default shader resource view addresses the entire texture, default render target and depth stencil views reference 
-all array slices in the most detailed mip level, and unordered access view references the entire texture. To get a 
-default view from the texture, use `ITexture::GetDefaultView()` function. Note that this function does not increase 
-reference counter on the returned interface. You can create additional texture views using `ITexture::CreateView()`. 
+For every bind flag specified during the texture creation time, the texture object creates a default view.
+Default shader resource view addresses the entire texture, default render target and depth stencil views reference
+all array slices in the most detailed mip level, and unordered access view references the entire texture. To get a
+default view from the texture, use `ITexture::GetDefaultView()` function. Note that this function does not increase
+reference counter on the returned interface. You can create additional texture views using `ITexture::CreateView()`.
 Use `IBuffer::CreateView()` to create additional views of a buffer.
 
 ## Initializing Pipeline State
 
-Diligent Engine follows Direct3D12 style to configure the graphics/compute pipeline. One big Pipelines State Object (PSO) 
-encompasses all required states (all shader stages, input layout description, depth stencil, rasterizer and blend state 
+Diligent Engine follows Direct3D12 style to configure the graphics/compute pipeline. One big Pipelines State Object (PSO)
+encompasses all required states (all shader stages, input layout description, depth stencil, rasterizer and blend state
 descriptions etc.)
 
 ### Creating Shaders
 
-To create a shader, populate `ShaderCreationAttribs` structure. There are two ways to create a shader. 
-The first way is to provide a pointer to the shader source code through  `ShaderCreationAttribs::Source` member. 
-The second way is to provide a file name. Graphics Engine is entirely decoupled from the platform. Since the host 
-file system is platform-dependent, the structure exposes `ShaderCreationAttribs::pShaderSourceStreamFactory` member 
-that is intended to provide the engine access to the file system. If you provided the source file name, you must 
-also provide non-null pointer to the shader source stream factory. If the shader source contains any `#include` directives, 
-the source stream factory will also be used to load these files. The engine provides default implementation for every 
+To create a shader, populate `ShaderCreationAttribs` structure. There are two ways to create a shader.
+The first way is to provide a pointer to the shader source code through  `ShaderCreationAttribs::Source` member.
+The second way is to provide a file name. Graphics Engine is entirely decoupled from the platform. Since the host
+file system is platform-dependent, the structure exposes `ShaderCreationAttribs::pShaderSourceStreamFactory` member
+that is intended to provide the engine access to the file system. If you provided the source file name, you must
+also provide non-null pointer to the shader source stream factory. If the shader source contains any `#include` directives,
+the source stream factory will also be used to load these files. The engine provides default implementation for every
 supported platform that should be sufficient in most cases. You can however define your own implementation.
 
 An important member is `ShaderCreationAttribs::SourceLanguage`. The following are valid values for this member:
@@ -287,25 +287,25 @@ An important member is `ShaderCreationAttribs::SourceLanguage`. The following ar
 * `SHADER_SOURCE_LANGUAGE_HLSL`    - The shader source is in HLSL. For OpenGL and OpenGLES modes, the source code will be converted to GLSL. See shader converter for details.
 * `SHADER_SOURCE_LANGUAGE_GLSL`    - The shader source is in GLSL. There is currently no GLSL to HLSL converter.
 
-To allow grouping of resources based on the frequency of expected change, Diligent Engine introduces 
+To allow grouping of resources based on the frequency of expected change, Diligent Engine introduces
 classification of shader variables:
 
 * Static variables (`SHADER_VARIABLE_TYPE_STATIC`) are variables that are expected to be set only once. They may not be changed once a resource is bound to the variable. Such variables are intended to hold global constants such as camera attributes or global light attributes constant buffers.
 * Mutable variables (`SHADER_VARIABLE_TYPE_MUTABLE`) define resources that are expected to change on a per-material frequency. Examples may include diffuse textures, normal maps etc.
 * Dynamic variables (`SHADER_VARIABLE_TYPE_DYNAMIC`) are expected to change frequently and randomly.
 
-[This post](http://diligentgraphics.com/2016/03/23/resource-binding-model-in-diligent-engine-2-0) gives more details about the 
-resource binding model in Diligent Engine. To define variable types, prepare an array of `ShaderVariableDesc` structures and 
-initialize `ShaderCreationAttribs::Desc::VariableDesc` and `ShaderCreationAttribs::Desc::NumVariables`. Also 
+[This post](http://diligentgraphics.com/2016/03/23/resource-binding-model-in-diligent-engine-2-0) gives more details about the
+resource binding model in Diligent Engine. To define variable types, prepare an array of `ShaderVariableDesc` structures and
+initialize `ShaderCreationAttribs::Desc::VariableDesc` and `ShaderCreationAttribs::Desc::NumVariables`. Also
 `ShaderCreationAttribs::Desc::DefaultVariableType` can be used to set the type that will be used if variable name is not provided.
 
-When creating a shader, textures can be assigned static samplers. If static sampler is assigned, it will always be used instead 
-of the one initialized in the texture shader resource view. To initialize static samplers, prepare an array of 
-`StaticSamplerDesc` structures and intialize `ShaderCreationAttribs::Desc::StaticSamplers` and 
-`ShaderCreationAttribs::Desc::NumStaticSamplers`. Notice that static samplers can be assigned to texture variable of any type, 
+When creating a shader, textures can be assigned static samplers. If static sampler is assigned, it will always be used instead
+of the one initialized in the texture shader resource view. To initialize static samplers, prepare an array of
+`StaticSamplerDesc` structures and intialize `ShaderCreationAttribs::Desc::StaticSamplers` and
+`ShaderCreationAttribs::Desc::NumStaticSamplers`. Notice that static samplers can be assigned to texture variable of any type,
 not necessarily static. It is highly recommended to use static samplers whenever possible.
 
-Other members of the `ShaderCreationAttribs` structure define shader include search directories, shader macro definitions, 
+Other members of the `ShaderCreationAttribs` structure define shader include search directories, shader macro definitions,
 shader entry point and other parameters. The following is an example of shader initialization:
 
 ```cpp
@@ -319,7 +319,7 @@ Attrs.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
 BasicShaderSourceStreamFactory BasicSSSFactory(Attrs.SearchDirectories);
 Attrs.pShaderSourceStreamFactory = &BasicSSSFactory;
 
-ShaderVariableDesc ShaderVars[] = 
+ShaderVariableDesc ShaderVars[] =
 {
     {"g_StaticTexture", SHADER_VARIABLE_TYPE_STATIC},
     {"g_MutableTexture", SHADER_VARIABLE_TYPE_MUTABLE},
@@ -355,7 +355,7 @@ To create a pipeline state object, define instance of `PipelineStateDesc` struct
 PipelineStateDesc PSODesc;
 ```
 
-Describe the pipeline specifics such as if the pipeline is a compute pipeline, number and format 
+Describe the pipeline specifics such as if the pipeline is a compute pipeline, number and format
 of render targets as well as depth-stencil format:
 
 ```cpp
@@ -410,7 +410,7 @@ Initialize input layout description structure `InputLayoutDesc`:
 ```cpp
 // Define input layout
 InputLayoutDesc &Layout = PSODesc.GraphicsPipeline.InputLayout;
-LayoutElement TextLayoutElems[] = 
+LayoutElement TextLayoutElems[] =
 {
     LayoutElement( 0, 0, 3, VT_FLOAT32, False ),
     LayoutElement( 1, 0, 4, VT_UINT8, True ),
@@ -434,17 +434,17 @@ m_pDev->CreatePipelineState(PSODesc, &m_pPSO);
 
 ## Binding Shader Resources
 
-[Shader resource binding in Diligent Engine](http://diligentgraphics.com/2016/03/23/resource-binding-model-in-diligent-engine-2-0/) 
-is based on grouping variables in 3 different groups (static, mutable and dynamic). Static variables are variables that are 
-expected to be set only once. They may not be changed once a resource is bound to the variable. Such variables are intended 
-to hold global constants such as camera attributes or global light attributes constant buffers. They are bound directly to the 
+[Shader resource binding in Diligent Engine](http://diligentgraphics.com/2016/03/23/resource-binding-model-in-diligent-engine-2-0/)
+is based on grouping variables in 3 different groups (static, mutable and dynamic). Static variables are variables that are
+expected to be set only once. They may not be changed once a resource is bound to the variable. Such variables are intended
+to hold global constants such as camera attributes or global light attributes constant buffers. They are bound directly to the
 shader object:
 
 ```cpp
 PixelShader->GetShaderVariable( "g_tex2DShadowMap" )->Set( pShadowMapSRV );
 ```
 
-Mutable and dynamic variables are bound via a new object called Shader Resource Binding (SRB), which is created by the pipeline state 
+Mutable and dynamic variables are bound via a new object called Shader Resource Binding (SRB), which is created by the pipeline state
 (`IPipelineState::CreateShaderResourceBinding()`):
 
 ```cpp
@@ -458,18 +458,18 @@ m_pSRB->GetVariable(SHADER_TYPE_VERTEX, "tex2DDiffuse")->Set(pDiffuseTexSRV);
 m_pSRB->GetVariable(SHADER_TYPE_VERTEX, "cbRandomAttribs")->Set(pRandomAttrsCB);
 ```
 
-The difference between mutable and dynamic resources is that mutable ones can only be set once for every instance 
-of a shader resource binding. Dynamic resources can be set multiple times. It is important to properly set the variable type as 
-this may affect performance. Static variables are generally most efficient, followed by mutable. Dynamic variables are most expensive 
+The difference between mutable and dynamic resources is that mutable ones can only be set once for every instance
+of a shader resource binding. Dynamic resources can be set multiple times. It is important to properly set the variable type as
+this may affect performance. Static variables are generally most efficient, followed by mutable. Dynamic variables are most expensive
 from performance point of view.
 
-An alternative way to bind shader resources is to create `IResourceMapping` interface that maps resource literal names to the 
+An alternative way to bind shader resources is to create `IResourceMapping` interface that maps resource literal names to the
 actual resources:
 
 ```cpp
-ResourceMappingEntry Entries[] = { 
+ResourceMappingEntry Entries[] = {
     { "g_Texture", pTexture->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE)},
-    ResourceMappingEntry() 
+    ResourceMappingEntry()
 };
 ResourceMappingDesc ResMappingDesc;
 ResMappingDesc.pEntries= Entries;
@@ -501,15 +501,15 @@ The last parameter to all `BindResources()` functions defines how resources shou
 * `BIND_SHADER_RESOURCES_UPDATE_UNRESOLVED` - If this flag is specified, only unresolved bindings will be updated. All resolved bindings will keep their original values. If this flag is not specified, every shader variable will be updated if the mapping contains corresponding resource.
 * `BIND_SHADER_RESOURCES_ALL_RESOLVED`      - If this flag is specified, all shader bindings are expected be resolved after the call. If this is not the case, debug error will be displayed.
 
-`BindResources()` may be called several times with different resource mappings to bind resources. 
+`BindResources()` may be called several times with different resource mappings to bind resources.
 However, it is recommended to use one large resource mapping as the size of the mapping does not affect element search time.
 
-The engine performs run-time checks to verify that correct resources are being bound. For example, if you try to bind 
+The engine performs run-time checks to verify that correct resources are being bound. For example, if you try to bind
 a constant buffer to a shader resource view variable, an error will be output to the debug console.
 
 ## Setting the Pipeline State and Invoking Draw Command
 
-Before any draw command can be invoked, all required vertex and index buffers as well as the pipeline state should 
+Before any draw command can be invoked, all required vertex and index buffers as well as the pipeline state should
 be bound to the device context:
 
 ```cpp
@@ -527,17 +527,17 @@ m_pContext->SetIndexBuffer(m_pIndexBuffer, 0);
 m_pContext->SetPipelineState(m_pPSO);
 ```
 
-Also, all shader resources must be committed to the device context. This is accomplished by 
+Also, all shader resources must be committed to the device context. This is accomplished by
 the `IDeviceContext::CommitShaderResources()` method:
 
 ```cpp
 m_pContext->CommitShaderResources(m_pSRB, COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES);
 ```
 
-If the method is not called, the engine will detect that resources are not committed and output 
-debug message. Note that `CommitShaderResources()` must be called after the right pipeline state has been 
-bound to the context. Note that the last parameter tells the system to transition resources to the correct states. 
-If this flag is not specified, the resources must be explicitly transitioned to the right states by a call to 
+If the method is not called, the engine will detect that resources are not committed and output
+debug message. Note that `CommitShaderResources()` must be called after the right pipeline state has been
+bound to the context. Note that the last parameter tells the system to transition resources to the correct states.
+If this flag is not specified, the resources must be explicitly transitioned to the right states by a call to
 `IDeviceContext::TransitionShaderResources()`:
 
 ```cpp
@@ -546,11 +546,11 @@ m_pContext->TransitionShaderResources(m_pPSO, m_pSRB);
 
 Note that the method requires pointer to the pipeline state that created the shader resource binding.
 
-When all required states and resources are bound, `IDeviceContext::Draw()` can be used to execute draw 
-command or `IDeviceContext::DispatchCompute()` can be used to execute compute command. Note that for a draw command, 
-graphics pipeline must be bound, and for dispatch command, compute pipeline must be bound. `Draw()` takes 
-`DrawAttribs` structure as an argument. The structure members define all attributes required to perform the command 
-(primitive topology, number of vertices or indices, if draw call is indexed or not, if draw call is instanced or not, 
+When all required states and resources are bound, `IDeviceContext::Draw()` can be used to execute draw
+command or `IDeviceContext::DispatchCompute()` can be used to execute compute command. Note that for a draw command,
+graphics pipeline must be bound, and for dispatch command, compute pipeline must be bound. `Draw()` takes
+`DrawAttribs` structure as an argument. The structure members define all attributes required to perform the command
+(primitive topology, number of vertices or indices, if draw call is indexed or not, if draw call is instanced or not,
 if draw call is indirect or not, etc.). For example:
 
 ```cpp
@@ -575,8 +575,8 @@ You can learn more about the engine API by looking at the [engine samples' sourc
 
 
 # Low-level API interoperability
-Diligent Engine extensively supports interoperability with underlying low-level APIs. The engine can be initialized 
-by attaching to existing D3D11/D3D12 device or OpenGL/GLES context and provides access to the underlying native API 
+Diligent Engine extensively supports interoperability with underlying low-level APIs. The engine can be initialized
+by attaching to existing D3D11/D3D12 device or OpenGL/GLES context and provides access to the underlying native API
 objects. Refer to the following pages for more information:
 
 [Direct3D11 Interoperability](http://diligentgraphics.com/diligent-engine/native-api-interoperability/direct3d11-interoperability/)

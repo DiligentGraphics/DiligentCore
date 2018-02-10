@@ -11,11 +11,11 @@ The following code snippet shows how to initialize diligent engine in D3D12 mode
 #include "RenderDeviceFactoryD3D12.h"
 using namespace Diligent;
 
-// ... 
+// ...
 #if ENGINE_DLL
-	GetEngineFactoryD3D12Type GetEngineFactoryD3D12 = nullptr;
-	// Load the dll and import GetEngineFactoryD3D12() function
-	LoadGraphicsEngineD3D12(GetEngineFactoryD3D12);
+  GetEngineFactoryD3D12Type GetEngineFactoryD3D12 = nullptr;
+  // Load the dll and import GetEngineFactoryD3D12() function
+  LoadGraphicsEngineD3D12(GetEngineFactoryD3D12);
 #endif
 auto *pFactoryD3D11 = GetEngineFactoryD3D12();
 EngineD3D12Attribs EngD3D12Attribs;
@@ -36,8 +36,8 @@ Alternatively, the engine can be initialized by attaching to existing D3D12 devi
 
 # Interoperability with Direct3D12
 
-Diligent Engine exposes methods to access internal D3D12 objects, is able to create diligent engine buffers 
-and textures from existing Direct3D12 resources, and can be initialized by attaching to existing D3D12 
+Diligent Engine exposes methods to access internal D3D12 objects, is able to create diligent engine buffers
+and textures from existing Direct3D12 resources, and can be initialized by attaching to existing D3D12
 device and provide synchronization tools.
 
 ## Accessing Native D3D12 Resources
@@ -69,12 +69,12 @@ Below are some of the methods that provide access to internal D3D12 objects:
 
 ## Creating Diligent Engine Objects from D3D12 Resources
 
-* `void IRenderDeviceD3D12::CreateTextureFromD3DResource(ID3D12Resource *pd3d12Texture, ITexture **ppTexture)` - 
+* `void IRenderDeviceD3D12::CreateTextureFromD3DResource(ID3D12Resource *pd3d12Texture, ITexture **ppTexture)` -
    creates a diligent engine texture object from native D3D12 resource.
-* `void IRenderDeviceD3D12::CreateBufferFromD3DResource(ID3D12Resource *pd3d12Buffer, const BufferDesc& BuffDesc, IBuffer **ppBuffer)` - 
+* `void IRenderDeviceD3D12::CreateBufferFromD3DResource(ID3D12Resource *pd3d12Buffer, const BufferDesc& BuffDesc, IBuffer **ppBuffer)` -
    creates a diligent engine buffer object from native D3D12 resource.
-   The method takes a pointer to the native d3d12 resiyrce pd3d12Buffer, buffer description BuffDesc and writes a pointer to the IBuffer 
-   interface at the memory location pointed to by ppBuffer. The system can recover buffer size, but the rest of the fields of 
+   The method takes a pointer to the native d3d12 resiyrce pd3d12Buffer, buffer description BuffDesc and writes a pointer to the IBuffer
+   interface at the memory location pointed to by ppBuffer. The system can recover buffer size, but the rest of the fields of
    BuffDesc structure need to be populated by the client as they cannot be recovered from d3d12 resource description.
 
 
@@ -91,10 +91,10 @@ void IEngineFactoryD3D12::AttachToD3D12Device(void *pd3d12NativeDevice,
                                               Uint32 NumDeferredContexts);
 ```
 
-The method takes a pointer to the native D3D12 device `pd3d12NativeDevice`, initialization parameters `EngineAttribs`, 
-and returns diligent engine device interface in `ppDevice`, and diligent engine contexts in `ppContexts`. Pointer to the 
-immediate goes at position 0. If `NumDeferredContexts` > 0, pointers to deferred contexts go afterwards. 
-The function also takes a pointer to the command queue object `pCommandQueue`, which needs to implement 
+The method takes a pointer to the native D3D12 device `pd3d12NativeDevice`, initialization parameters `EngineAttribs`,
+and returns diligent engine device interface in `ppDevice`, and diligent engine contexts in `ppContexts`. Pointer to the
+immediate goes at position 0. If `NumDeferredContexts` > 0, pointers to deferred contexts go afterwards.
+The function also takes a pointer to the command queue object `pCommandQueue`, which needs to implement
 `ICommandQueueD3D12` interface.
 
 For more information about interoperability with D3D12, please visit [Diligent Engine web site](http://diligentgraphics.com/diligent-engine/native-api-interoperability/direct3d12-interoperability/)

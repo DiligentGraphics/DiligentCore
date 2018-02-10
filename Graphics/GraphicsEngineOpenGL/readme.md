@@ -11,7 +11,7 @@ The following code snippet shows how to initialize diligent engine in OpenGL/GLE
 #include "RenderDeviceFactoryOpenGL.h"
 using namespace Diligent;
 
-// ... 
+// ...
 
 #if ENGINE_DLL
     GetEngineFactoryOpenGLType GetEngineFactoryOpenGL;
@@ -30,8 +30,8 @@ Alternatively, the engine can be initialized by attaching to existing OpenGL con
 
 # Interoperability with OpenGL/GLES
 
-Diligent Engine exposes methods to access internal OpenGL/GLES objects, is able to create diligent engine buffers 
-and textures from existing GL buffer and texture handles, and can be initialized by attaching to existing GL 
+Diligent Engine exposes methods to access internal OpenGL/GLES objects, is able to create diligent engine buffers
+and textures from existing GL buffer and texture handles, and can be initialized by attaching to existing GL
 context.
 
 ## Accessing Native GL objects
@@ -47,16 +47,16 @@ Below are some of the methods that provide access to internal D3D11 objects:
 
 ## Creating Diligent Engine Objects from OpenGL Handles
 
-* `void IRenderDeviceGL::CreateTextureFromGLHandle(Uint32 GLHandle, const TextureDesc &TexDesc, ITexture **ppTexture)`  - 
-	creates a diligent engine texture from OpenGL handle. The method takes OpenGL handle GLHandle, texture description TexDesc, 
-	and writes the pointer to the created texture object at the memory address pointed to by ppTexture. The engine can automatically 
-	set texture width, height, depth, mip levels count, and format, but the remaining field of TexDesc structure must be populated by 
-	the application. Note that diligent engine texture object does not take ownership of the GL resource, and the application must 
-	not destroy it while it is in use by the engine.
+* `void IRenderDeviceGL::CreateTextureFromGLHandle(Uint32 GLHandle, const TextureDesc &TexDesc, ITexture **ppTexture)` -
+    creates a diligent engine texture from OpenGL handle. The method takes OpenGL handle GLHandle, texture description TexDesc,
+    and writes the pointer to the created texture object at the memory address pointed to by ppTexture. The engine can automatically
+    set texture width, height, depth, mip levels count, and format, but the remaining field of TexDesc structure must be populated by
+    the application. Note that diligent engine texture object does not take ownership of the GL resource, and the application must
+    not destroy it while it is in use by the engine.
 * `void IRenderDeviceGL::CreateBufferFromGLHandle(Uint32 GLHandle, const BufferDesc &BuffDesc, IBuffer **ppBuffer)` -
-    creates a diligent engine buffer from OpenGL handle. The method takes OpenGL handle GLHandle, buffer description BuffDesc, 
-    and writes the pointer to the created buffer object at the memory address pointed to by ppBuffer. The engine can automatically 
-    set the buffer size, but the rest of the fields need to be set by the client. Note that diligent engine buffer object does not 
+    creates a diligent engine buffer from OpenGL handle. The method takes OpenGL handle GLHandle, buffer description BuffDesc,
+    and writes the pointer to the created buffer object at the memory address pointed to by ppBuffer. The engine can automatically
+    set the buffer size, but the rest of the fields need to be set by the client. Note that diligent engine buffer object does not
     take ownership of the GL resource, and the application must not destroy it while it is in use by the engine.
 
 ## Initializing the Engine by Attaching to Existing GL Context
