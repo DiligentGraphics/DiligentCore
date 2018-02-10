@@ -25,17 +25,17 @@
 
 #if defined(ANDROID)
 #   ifndef PLATFORM_ANDROID
-#       define PLATFORM_ANDROID
+#       define PLATFORM_ANDROID 1
 #   endif
 #endif
 
-#if !defined(PLATFORM_WIN32) && !defined(PLATFORM_UNIVERSAL_WINDOWS) && !defined(PLATFORM_ANDROID) && !defined(PLATFORM_LINUX) && !defined(PLATFORM_MACOS) && !defined(PLATFORM_IOS)
+#if !PLATFORM_WIN32 && !PLATFORM_UNIVERSAL_WINDOWS && !PLATFORM_ANDROID && !PLATFORM_LINUX && !PLATFORM_MACOS && !PLATFORM_IOS
     #error Platform is not defined
 #endif
 
-#if defined( PLATFORM_WIN32 )
+#if PLATFORM_WIN32
 
-#   if defined(PLATFORM_UNIVERSAL_WINDOWS) || defined(PLATFORM_ANDROID) || defined(PLATFORM_LINUX) || defined(PLATFORM_MACOS) || defined(PLATFORM_IOS)
+#   if PLATFORM_UNIVERSAL_WINDOWS || PLATFORM_ANDROID || PLATFORM_LINUX || PLATFORM_MACOS || PLATFORM_IOS
 #       error Conflicting platform macros
 #   endif
 
@@ -45,9 +45,9 @@
 #   define D3D11_SUPPORTED 1
 #   define D3D12_SUPPORTED 1
 
-#elif defined( PLATFORM_UNIVERSAL_WINDOWS )
+#elif PLATFORM_UNIVERSAL_WINDOWS
 
-#   if defined(PLATFORM_WIN32) || defined(PLATFORM_ANDROID) || defined(PLATFORM_LINUX) || defined(PLATFORM_MACOS) || defined(PLATFORM_IOS)
+#   if PLATFORM_WIN32 || PLATFORM_ANDROID || PLATFORM_LINUX || PLATFORM_MACOS || PLATFORM_IOS
 #       error Conflicting platform macros
 #   endif
 
@@ -57,9 +57,9 @@
 #   define D3D11_SUPPORTED 1
 #   define D3D12_SUPPORTED 1
 
-#elif defined( PLATFORM_ANDROID )
+#elif PLATFORM_ANDROID
 
-#   if defined (PLATFORM_WIN32) || defined(PLATFORM_UNIVERSAL_WINDOWS) || defined (PLATFORM_LINUX) || defined(PLATFORM_MACOS) || defined(PLATFORM_IOS)
+#   if PLATFORM_WIN32 || PLATFORM_UNIVERSAL_WINDOWS || PLATFORM_LINUX || PLATFORM_MACOS || PLATFORM_IOS
 #       error Conflicting platform macros
 #   endif
 
@@ -69,9 +69,9 @@
 #   define D3D11_SUPPORTED 0
 #   define D3D12_SUPPORTED 0
 
-#elif defined( PLATFORM_LINUX )
+#elif PLATFORM_LINUX
 
-#   if defined(PLATFORM_WIN32) || defined(PLATFORM_UNIVERSAL_WINDOWS) || defined(PLATFORM_ANDROID) || defined(PLATFORM_MACOS) || defined(PLATFORM_IOS)
+#   if PLATFORM_WIN32 || PLATFORM_UNIVERSAL_WINDOWS || PLATFORM_ANDROID || PLATFORM_MACOS || PLATFORM_IOS
 #       error Conflicting platform macros
 #   endif
 
@@ -81,9 +81,9 @@
 #   define D3D11_SUPPORTED 0
 #   define D3D12_SUPPORTED 0
 
-#elif defined( PLATFORM_MACOS )
+#elif PLATFORM_MACOS
 
-#   if defined(PLATFORM_WIN32) || defined(PLATFORM_UNIVERSAL_WINDOWS) || defined(PLATFORM_ANDROID) || defined(PLATFORM_LINUX) || defined(PLATFORM_IOS)
+#   if PLATFORM_WIN32 || PLATFORM_UNIVERSAL_WINDOWS || PLATFORM_ANDROID || PLATFORM_LINUX || PLATFORM_IOS
 #       error Conflicting platform macros
 #   endif
 
@@ -93,9 +93,9 @@
 #   define D3D11_SUPPORTED 0
 #   define D3D12_SUPPORTED 0
 
-#elif defined( PLATFORM_IOS )
+#elif PLATFORM_IOS
 
-#   if defined(PLATFORM_WIN32) || defined(PLATFORM_UNIVERSAL_WINDOWS) || defined(PLATFORM_ANDROID) || defined(PLATFORM_LINUX) || defined(PLATFORM_MACOS)
+#   if PLATFORM_WIN32 || PLATFORM_UNIVERSAL_WINDOWS || PLATFORM_ANDROID || PLATFORM_LINUX || PLATFORM_MACOS
 #       error Conflicting platform macros
 #   endif
 

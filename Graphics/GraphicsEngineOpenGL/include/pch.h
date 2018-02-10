@@ -35,7 +35,7 @@
 #include <unordered_set>
 #include <algorithm>
 
-#if defined(PLATFORM_WIN32)
+#if PLATFORM_WIN32
 
 #   ifndef GLEW_STATIC
 #       define GLEW_STATIC // Must be defined to use static version of glew
@@ -46,7 +46,7 @@
 #   include "GL/wglew.h"
 #   include <GL/GL.h>
 
-#elif defined(PLATFORM_LINUX)
+#elif PLATFORM_LINUX
 
 #   ifndef GLEW_STATIC
 #       define GLEW_STATIC // Must be defined to use static version of glew
@@ -75,7 +75,7 @@
 #       undef Success
 #   endif
 
-#elif defined(PLATFORM_MACOS)
+#elif PLATFORM_MACOS
 
 #   ifndef GLEW_STATIC
 #       define GLEW_STATIC // Must be defined to use static version of glew
@@ -86,14 +86,14 @@
 
 #   include "GL/glew.h"
 
-#elif defined(PLATFORM_ANDROID)
+#elif PLATFORM_ANDROID
 
 #   include <GLES3/gl3.h>
 #   include <GLES3/gl3ext.h>
     // GLStubs must be included after GLFeatures!
 #   include "GLStubsAndroid.h"
 
-#elif defined(PLATFORM_IOS)
+#elif PLATFORM_IOS
 
 #   include <OpenGLES/ES3/gl.h>
 #   include <OpenGLES/ES3/glext.h>

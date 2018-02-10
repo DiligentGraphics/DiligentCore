@@ -40,7 +40,7 @@ SwapChainD3D11Impl::SwapChainD3D11Impl(IReferenceCounters *pRefCounters,
     TSwapChainBase(pRefCounters, pRenderDeviceD3D11, pDeviceContextD3D11, SCDesc)
 {
 
-#ifdef PLATFORM_WIN32
+#if PLATFORM_WIN32
     auto hWnd = reinterpret_cast<HWND>(pNativeWndHandle);
 
     if( m_SwapChainDesc.Width == 0 || m_SwapChainDesc.Height == 0 )
@@ -79,7 +79,7 @@ SwapChainD3D11Impl::SwapChainD3D11Impl(IReferenceCounters *pRefCounters,
 
     CComPtr<IDXGISwapChain1> pSwapChain1;
 
-#if defined( PLATFORM_WIN32 )
+#if PLATFORM_WIN32
 	// This sequence obtains the DXGI factory that was used to create the Direct3D device above.
 	CComPtr<IDXGIDevice> pDXGIDevice;
 	pDevice->QueryInterface(__uuidof(IDXGIDevice), reinterpret_cast<void**>( static_cast<IDXGIDevice**>(&pDXGIDevice) ) );
@@ -91,7 +91,7 @@ SwapChainD3D11Impl::SwapChainD3D11Impl(IReferenceCounters *pRefCounters,
     CHECK_D3D_RESULT_THROW( pDXGIFactory->CreateSwapChainForHwnd(pDevice, hWnd, &swapChainDesc, nullptr, nullptr, &pSwapChain1), 
                             "Failed to create DXGI swap chain" );
 
-#elif defined( PLATFORM_UNIVERSAL_WINDOWS )
+#elif PLATFORM_UNIVERSAL_WINDOWS
 
 	CComPtr<IDXGIDevice3> pDXGIDevice;
 	pDevice->QueryInterface(__uuidof(IDXGIDevice3), reinterpret_cast<void**>(static_cast<IDXGIDevice3**>(&pDXGIDevice)));
@@ -173,7 +173,7 @@ IMPLEMENT_QUERY_INTERFACE( SwapChainD3D11Impl, IID_SwapChainD3D11, TSwapChainBas
 void SwapChainD3D11Impl::Present()
 {
     UINT SyncInterval = 0;
-#ifdef PLATFORM_UNIVERSAL_WINDOWS
+#if PLATFORM_UNIVERSAL_WINDOWS
     SyncInterval = 1; // Interval 0 is not supported on Windows Phone 
 #endif
 

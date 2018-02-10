@@ -23,19 +23,19 @@
 
 #pragma once
 
-#if defined(PLATFORM_ANDROID)
+#if PLATFORM_ANDROID
     #include "RenderDeviceGLES.h"
     namespace Diligent
     {
         using IGLDeviceBaseInterface = IRenderDeviceGLES;
     }
-#elif defined(PLATFORM_WIN32) || defined(PLATFORM_LINUX) || defined(PLATFORM_MACOS)
+#elif PLATFORM_WIN32 || PLATFORM_LINUX || PLATFORM_MACOS
     #include "RenderDeviceGL.h"
     namespace Diligent
     {
         using IGLDeviceBaseInterface = IRenderDeviceGL;
     }
-#elif defined(PLATFORM_IOS)
+#elif PLATFORM_IOS
     #include "RenderDeviceGL.h"
     namespace Diligent
     {

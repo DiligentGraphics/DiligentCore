@@ -31,26 +31,26 @@
 #include "EngineMemory.h"
 #include "HLSL2GLSLConverterObject.h"
 
-#ifdef PLATFORM_IOS
+#if PLATFORM_IOS
 #   include "SwapChainGLIOS.h"
 #else
 #   include "SwapChainGLImpl.h"
 #endif
 
-#ifdef PLATFORM_ANDROID
+#if PLATFORM_ANDROID
 #   include "RenderDeviceGLESImpl.h"
 #endif
 
 namespace Diligent
 {
 
-#if defined(PLATFORM_WIN32) || defined(PLATFORM_UNIVERSAL_WINDOWS) || defined(PLATFORM_LINUX) || defined(PLATFORM_MACOS)
+#if PLATFORM_WIN32 || PLATFORM_UNIVERSAL_WINDOWS || PLATFORM_LINUX || PLATFORM_MACOS
     typedef RenderDeviceGLImpl TRenderDeviceGLImpl;
     typedef SwapChainGLImpl TSwapChain;
-#elif defined(PLATFORM_ANDROID)
+#elif PLATFORM_ANDROID
     typedef RenderDeviceGLESImpl TRenderDeviceGLImpl;
     typedef SwapChainGLImpl TSwapChain;
-#elif defined(PLATFORM_IOS)
+#elif PLATFORM_IOS
     typedef RenderDeviceGLImpl TRenderDeviceGLImpl;
     typedef SwapChainGLIOS TSwapChain;
 #else

@@ -47,17 +47,17 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters *pRefCounters, RenderDeviceGLImpl 
 
     String Settings;
     
-#if defined(PLATFORM_WIN32) || defined(PLATFORM_LINUX)
+#if PLATFORM_WIN32 || PLATFORM_LINUX
     Settings.append(
         "#version 430 core\n"
         "#define DESKTOP_GL 1\n"
     );
-#elif defined(PLATFORM_MACOS)
+#elif PLATFORM_MACOS
     Settings.append(
         "#version 410 core\n"
         "#define DESKTOP_GL 1\n"
     );
-#elif defined(PLATFORM_IOS)
+#elif PLATFORM_IOS
     Settings.append(
         "#version 300 es\n"
         "#extension GL_EXT_separate_shader_objects : enable\n"

@@ -25,7 +25,7 @@
 
 #include "PlatformDefinitions.h"
 
-#if defined( PLATFORM_WIN32 ) || defined( PLATFORM_UNIVERSAL_WINDOWS )
+#if PLATFORM_WIN32 || PLATFORM_UNIVERSAL_WINDOWS
 
     #include "Win32Atomics.h"
     typedef WindowsAtomics Atomics;

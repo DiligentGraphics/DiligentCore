@@ -25,19 +25,19 @@
 
 #include "PlatformDefinitions.h"
 
-#if defined( PLATFORM_WIN32 ) || defined( PLATFORM_UNIVERSAL_WINDOWS )
+#if PLATFORM_WIN32 || PLATFORM_UNIVERSAL_WINDOWS
     #include "Win32PlatformMisc.h"
     typedef WindowsMisc PlatformMisc;
 
-#elif defined ( PLATFORM_ANDROID )
+#elif PLATFORM_ANDROID
     #include "AndroidPlatformMisc.h"
     typedef AndroidMisc PlatformMisc;
 
-#elif defined ( PLATFORM_LINUX )
+#elif PLATFORM_LINUX
     #include "LinuxPlatformMisc.h"
     typedef LinuxMisc PlatformMisc;
 
-#elif defined ( PLATFORM_MACOS ) || defined ( PLATFORM_IOS )
+#elif PLATFORM_MACOS || PLATFORM_IOS
     #include "ApplePlatformMisc.h"
     typedef AppleMisc PlatformMisc;
 

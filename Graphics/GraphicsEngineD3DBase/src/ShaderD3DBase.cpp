@@ -120,7 +120,7 @@ HRESULT CompileShader( const char* Source,
             auto ErrorDesc = errorss.str();
             OutputDebugStringW( ErrorDesc.c_str() );
 			if( FAILED(hr) 
-#ifdef PLATFORM_WIN32
+#if PLATFORM_WIN32
                 && IDRETRY != MessageBoxW( NULL, ErrorDesc.c_str() , L"FX Error", MB_ICONERROR | (Source == nullptr ? MB_ABORTRETRYIGNORE : 0) ) 
 #endif
                 )

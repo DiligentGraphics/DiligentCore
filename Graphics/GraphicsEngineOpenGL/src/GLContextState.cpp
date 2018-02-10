@@ -59,7 +59,7 @@ namespace Diligent
 
     void GLContextState::Invalidate()
     {
-#if !defined(PLATFORM_ANDROID)
+#if !PLATFORM_ANDROID
         // On Android this results in OpenGL error, so we will not
         // clear the barriers. All the required barriers will be
         // executed next frame when needed

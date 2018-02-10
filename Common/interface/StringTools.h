@@ -28,6 +28,7 @@
 #include <locale>
 #include <algorithm>
 #include <cctype>
+#include <string.h>
 #include "DebugUtilities.h"
 
 namespace Diligent
@@ -69,7 +70,7 @@ inline std::wstring WidenString(const std::string &Str)
 
 inline int StrCmpNoCase(const char* Str1, const char* Str2, size_t NumChars)
 {
-#if defined(PLATFORM_ANDROID) || defined(PLATFORM_LINUX) || defined(PLATFORM_MACOS) || defined(PLATFORM_IOS)
+#if PLATFORM_ANDROID || PLATFORM_LINUX || PLATFORM_MACOS || PLATFORM_IOS
 #   define _strnicmp strncasecmp
 #endif
 
@@ -78,7 +79,7 @@ inline int StrCmpNoCase(const char* Str1, const char* Str2, size_t NumChars)
 
 inline int StrCmpNoCase(const char* Str1, const char* Str2)
 {
-#if defined(PLATFORM_ANDROID) || defined(PLATFORM_LINUX) || defined(PLATFORM_MACOS) || defined(PLATFORM_IOS)
+#if PLATFORM_ANDROID || PLATFORM_LINUX || PLATFORM_MACOS || PLATFORM_IOS
 #   define _stricmp strcasecmp
 #endif
 

@@ -32,11 +32,11 @@
 #include "HLSL2GLSLConverter.h"
 #include "EngineGLAttribs.h"
 
-#if defined(PLATFORM_WIN32) || defined(PLATFORM_UNIVERSAL_WINDOWS)
+#if PLATFORM_WIN32 || PLATFORM_UNIVERSAL_WINDOWS
 
 #   define API_QUALIFIER
 
-#elif defined(PLATFORM_ANDROID) || defined(PLATFORM_LINUX) || defined(PLATFORM_MACOS) || defined(PLATFORM_IOS)
+#elif PLATFORM_ANDROID || PLATFORM_LINUX || PLATFORM_MACOS || PLATFORM_IOS
 
 #   ifdef ENGINE_DLL
 #       ifdef BUILDING_DLL
@@ -74,7 +74,7 @@ public:
 extern "C"
 {
 
-#if defined(ENGINE_DLL) && (defined(PLATFORM_WIN32) || defined(PLATFORM_UNIVERSAL_WINDOWS))
+#if ENGINE_DLL && (PLATFORM_WIN32 || PLATFORM_UNIVERSAL_WINDOWS)
 
     typedef Diligent::IEngineFactoryOpenGL* (*GetEngineFactoryOpenGLType)();
 

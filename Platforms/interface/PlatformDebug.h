@@ -25,23 +25,23 @@
 
 #include "PlatformDefinitions.h"
 
-#if defined( PLATFORM_WIN32 )
+#if PLATFORM_WIN32
     #include "Win32Debug.h"
     typedef WindowsDebug PlatformDebug;
 
-#elif defined( PLATFORM_UNIVERSAL_WINDOWS )
+#elif PLATFORM_UNIVERSAL_WINDOWS
     #include "UWPDebug.h"
     typedef WindowsStoreDebug PlatformDebug;
 
-#elif defined ( PLATFORM_ANDROID )
+#elif PLATFORM_ANDROID
     #include "AndroidDebug.h"
     typedef AndroidDebug PlatformDebug;
 
-#elif defined ( PLATFORM_LINUX )
+#elif PLATFORM_LINUX
     #include "LinuxDebug.h"
     typedef LinuxDebug PlatformDebug;
 
-#elif defined ( PLATFORM_MACOS )| | defined ( PLATFORM_IOS )
+#elif PLATFORM_MACOS || PLATFORM_IOS
     #include "AppleDebug.h"
     typedef AppleDebug PlatformDebug;
 

@@ -128,7 +128,7 @@ void EngineFactoryD3D11Impl::CreateDeviceAndContextsD3D11( const EngineD3D11Attr
 	// description.  All applications are assumed to support 9.1 unless otherwise stated.
 	D3D_FEATURE_LEVEL featureLevels[] = 
 	{
-#ifdef PLATFORM_UNIVERSAL_WINDOWS
+#if PLATFORM_UNIVERSAL_WINDOWS
 		D3D_FEATURE_LEVEL_11_1,
 #endif
 		D3D_FEATURE_LEVEL_11_0,

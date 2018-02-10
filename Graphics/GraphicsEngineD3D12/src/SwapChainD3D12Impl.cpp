@@ -41,7 +41,7 @@ SwapChainD3D12Impl::SwapChainD3D12Impl(IReferenceCounters *pRefCounters,
     m_pBackBufferRTV(STD_ALLOCATOR_RAW_MEM(RefCntAutoPtr<ITextureView>, GetRawAllocator(), "Allocator for vector<RefCntAutoPtr<ITextureView>>"))
 {
 
-#ifdef PLATFORM_WIN32
+#if PLATFORM_WIN32
     auto hWnd = reinterpret_cast<HWND>(pNativeWndHandle);
 
     if( m_SwapChainDesc.Width == 0 || m_SwapChainDesc.Height == 0 )
@@ -82,14 +82,14 @@ SwapChainD3D12Impl::SwapChainD3D12Impl(IReferenceCounters *pRefCounters,
     CHECK_D3D_RESULT_THROW(hr, "Failed to create DXGI factory")
 
     auto *pd3d12CmdQueue = pRenderDeviceD3D12->GetCmdQueue()->GetD3D12CommandQueue();
-#if defined( PLATFORM_WIN32 )
+#if PLATFORM_WIN32
     hr = factory->CreateSwapChainForHwnd(pd3d12CmdQueue, hWnd, &swapChainDesc, nullptr, nullptr, &pSwapChain1);
     CHECK_D3D_RESULT_THROW( hr, "Failed to create Swap Chain" );
 
 	// This sample does not support fullscreen transitions.
 	hr = factory->MakeWindowAssociation(hWnd, DXGI_MWA_NO_WINDOW_CHANGES | DXGI_MWA_NO_ALT_ENTER);
 
-#elif defined( PLATFORM_UNIVERSAL_WINDOWS )
+#elif PLATFORM_UNIVERSAL_WINDOWS
 
     hr = factory->CreateSwapChainForCoreWindow(
 		pd3d12CmdQueue,
@@ -168,7 +168,7 @@ IMPLEMENT_QUERY_INTERFACE( SwapChainD3D12Impl, IID_SwapChainD3D12, TSwapChainBas
 void SwapChainD3D12Impl::Present()
 {
     UINT SyncInterval = 0;
-#ifdef PLATFORM_UNIVERSAL_WINDOWS
+#if PLATFORM_UNIVERSAL_WINDOWS
     SyncInterval = 1; // Interval 0 is not supported on Windows Phone 
 #endif
 
@@ -196,7 +196,7 @@ void SwapChainD3D12Impl::Present()
     pDeviceD3D12->FinishFrame();
 
 #if 0
-#ifdef PLATFORM_UNIVERSAL_WINDOWS
+#if PLATFORM_UNIVERSAL_WINDOWS
     // A successful Present call for DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL SwapChains unbinds 
     // backbuffer 0 from all GPU writeable bind points.
     // We need to rebind all render targets to make sure that
