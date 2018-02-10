@@ -13,7 +13,7 @@ using namespace Diligent;
 
 // ... 
 
-#ifdef ENGINE_DLL
+#if ENGINE_DLL
     GetEngineFactoryOpenGLType GetEngineFactoryOpenGL;
     if( !LoadGraphicsEngineOpenGL(GetEngineFactoryOpenGL) )
         return FALSE;

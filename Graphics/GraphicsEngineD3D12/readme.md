@@ -12,7 +12,7 @@ The following code snippet shows how to initialize diligent engine in D3D12 mode
 using namespace Diligent;
 
 // ... 
-#ifdef ENGINE_DLL
+#if ENGINE_DLL
 	GetEngineFactoryD3D12Type GetEngineFactoryD3D12 = nullptr;
 	// Load the dll and import GetEngineFactoryD3D12() function
 	LoadGraphicsEngineD3D12(GetEngineFactoryD3D12);

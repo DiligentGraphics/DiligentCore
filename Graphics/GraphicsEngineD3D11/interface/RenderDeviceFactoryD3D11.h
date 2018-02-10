@@ -65,7 +65,7 @@ public:
 
 extern "C"
 {
-#ifdef ENGINE_DLL
+#if ENGINE_DLL
 
     typedef Diligent::IEngineFactoryD3D11* (*GetEngineFactoryD3D11Type)();
 

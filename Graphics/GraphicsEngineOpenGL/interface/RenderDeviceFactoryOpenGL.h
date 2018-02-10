@@ -38,8 +38,8 @@
 
 #elif PLATFORM_ANDROID || PLATFORM_LINUX || PLATFORM_MACOS || PLATFORM_IOS
 
-#   ifdef ENGINE_DLL
-#       ifdef BUILDING_DLL
+#   if ENGINE_DLL
+#       if BUILDING_DLL
             // https://gcc.gnu.org/wiki/Visibility
 #           define API_QUALIFIER __attribute__((visibility("default")))
 #       else

@@ -151,7 +151,7 @@ set(PUBLIC_DEPENDENCIES
 target_link_libraries(GraphicsEngineD3D12-static PRIVATE ${PRIVATE_DEPENDENCIES} PUBLIC ${PUBLIC_DEPENDENCIES})
 
 target_link_libraries(GraphicsEngineD3D12-shared PRIVATE ${PRIVATE_DEPENDENCIES} PUBLIC ${PUBLIC_DEPENDENCIES})
-target_compile_definitions(GraphicsEngineD3D12-shared PUBLIC ENGINE_DLL)
+target_compile_definitions(GraphicsEngineD3D12-shared PUBLIC ENGINE_DLL=1)
 
 set_target_properties(GraphicsEngineD3D12-shared PROPERTIES
 	OUTPUT_NAME_DEBUG GraphicsEngineD3D12${DLL_DBG_SUFFIX}

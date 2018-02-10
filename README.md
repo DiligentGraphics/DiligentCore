@@ -66,7 +66,7 @@ void InitDevice(HWND hWnd,
             EngineD3D11Attribs DeviceAttribs;
             g_pSample->GetEngineInitializationAttribs(DevType, DeviceAttribs, NumDeferredCtx);
 
-#ifdef ENGINE_DLL
+#if ENGINE_DLL
             GetEngineFactoryD3D11Type GetEngineFactoryD3D11 = nullptr;
             // Load the dll and import GetEngineFactoryD3D11() function
             LoadGraphicsEngineD3D11(GetEngineFactoryD3D11);
@@ -80,7 +80,7 @@ void InitDevice(HWND hWnd,
 
         case DeviceType::D3D12:
         {
-#ifdef ENGINE_DLL
+#if ENGINE_DLL
             GetEngineFactoryD3D12Type GetEngineFactoryD3D12 = nullptr;
             // Load the dll and import GetEngineFactoryD3D12() function
             LoadGraphicsEngineD3D12(GetEngineFactoryD3D12);
@@ -102,7 +102,7 @@ void InitDevice(HWND hWnd,
 
         case DeviceType::OpenGL:
         {
-#ifdef ENGINE_DLL
+#if ENGINE_DLL
             // Declare function pointer
             GetEngineFactoryOpenGLType GetEngineFactoryOpenGL = nullptr;
             // Load the dll and import GetEngineFactoryOpenGL() function

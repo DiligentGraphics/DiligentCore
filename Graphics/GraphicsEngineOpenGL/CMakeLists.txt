@@ -172,8 +172,6 @@ if(PLATFORM_WIN32)
 	set(PRIVATE_DEPENDENCIES ${PRIVATE_DEPENDENCIES} glew-static opengl32.lib)
 elseif(PLATFORM_ANDROID)
 	set(PRIVATE_DEPENDENCIES ${PRIVATE_DEPENDENCIES} GLESv3 EGL android)
-	target_compile_definitions(GraphicsEngineOpenGL-static PRIVATE BUILDING_DLL)
-	target_compile_definitions(GraphicsEngineOpenGL-shared PRIVATE BUILDING_DLL)
 	set_target_properties(GraphicsEngineOpenGL-shared PROPERTIES CXX_VISIBILITY_PRESET hidden) # -fvisibility=hidden
 elseif(PLATFORM_LINUX)
 	set(PRIVATE_DEPENDENCIES ${PRIVATE_DEPENDENCIES} glew-static)
@@ -196,7 +194,7 @@ endif()
 
 target_link_libraries(GraphicsEngineOpenGL-static PRIVATE ${PRIVATE_DEPENDENCIES} PUBLIC ${PUBLIC_DEPENDENCIES})
 target_link_libraries(GraphicsEngineOpenGL-shared PRIVATE ${PRIVATE_DEPENDENCIES} PUBLIC ${PUBLIC_DEPENDENCIES})
-target_compile_definitions(GraphicsEngineOpenGL-shared PUBLIC ENGINE_DLL)
+target_compile_definitions(GraphicsEngineOpenGL-shared PUBLIC ENGINE_DLL=1 PRIVATE BUILDING_DLL=1)
 
 if(PLATFORM_WIN32)
 	set_target_properties(GraphicsEngineOpenGL-shared PROPERTIES

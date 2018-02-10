@@ -19,7 +19,7 @@ DeviceAttribs.DebugFlags =
     (Uint32)EngineD3D11DebugFlags::VerifyCommittedResourceRelevance;
 
 // Get pointer to the function that returns the factory
-#ifdef ENGINE_DLL
+#if ENGINE_DLL
     GetEngineFactoryD3D11Type GetEngineFactoryD3D11 = nullptr;
     // Load the dll and import GetEngineFactoryD3D11() function
     LoadGraphicsEngineD3D11(GetEngineFactoryD3D11);
