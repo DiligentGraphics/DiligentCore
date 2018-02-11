@@ -281,13 +281,19 @@ namespace Diligent
 
     void GLContext::SwapBuffers()
     {
+        if(surface_ == EGL_NO_SURFACE)
+        {
+            LOG_WARNING_MESSAGE("No EGL surface when swapping buffers. This happens when SwapBuffers() is called after Suspend(). The operation will be ignored.");
+            return;
+        }
+
         bool b = eglSwapBuffers( display_, surface_ );
         if( !b )
         {
             EGLint err = eglGetError();
             if( err == EGL_BAD_SURFACE )
             {
-                //Recreate surface
+                LOG_INFO_MESSAGE("EGL surface has been lost. Attempting to recreate");
                 InitEGLSurface();
                 //return EGL_SUCCESS; //Still consider glContext is valid
             }
@@ -329,12 +335,13 @@ namespace Diligent
 
     EGLint GLContext::Resume( ANativeWindow* window )
     {
+        LOG_INFO_MESSAGE( "Resuming gl context\n" );
+
         if( egl_context_initialized_ == false )
         {
             Init( window );
             return EGL_SUCCESS;
         }
-
 
         //Create surface
         window_ = window;
@@ -365,19 +372,21 @@ namespace Diligent
         else
         {
             //Recreate surface
+            LOG_INFO_MESSAGE( "Re-creating egl context and surface\n" );
             Terminate();
             InitEGLSurface();
             InitEGLContext();
         }
 
         return err;
-
     }
 
     void GLContext::Suspend()
     {
+        LOG_INFO_MESSAGE( "Suspending gl context\n" );
         if( surface_ != EGL_NO_SURFACE )
         {
+            LOG_INFO_MESSAGE( "Destroying egl surface\n" );
             eglDestroySurface( display_, surface_ );
             surface_ = EGL_NO_SURFACE;
         }
@@ -385,6 +394,7 @@ namespace Diligent
 
     bool GLContext::Invalidate()
     {
+        LOG_INFO_MESSAGE( "Invalidating gl context\n" );
         Terminate();
 
         egl_context_initialized_ = false;
