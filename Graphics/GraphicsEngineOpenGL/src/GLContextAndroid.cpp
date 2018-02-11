@@ -294,7 +294,14 @@ namespace Diligent
             if( err == EGL_BAD_SURFACE )
             {
                 LOG_INFO_MESSAGE("EGL surface has been lost. Attempting to recreate");
-                InitEGLSurface();
+                try
+                {
+                    InitEGLSurface();
+                }
+                catch(std::runtime_error &)
+                {
+                    LOG_ERROR_MESSAGE("Failed to recreate EGL surface");
+                }
                 //return EGL_SUCCESS; //Still consider glContext is valid
             }
             else if( err == EGL_CONTEXT_LOST || err == EGL_BAD_CONTEXT )
