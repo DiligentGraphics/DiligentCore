@@ -52,7 +52,7 @@ TextureBaseGL::TextureBaseGL(IReferenceCounters *pRefCounters,
         LOG_ERROR_AND_THROW("Static Texture must be initialized with data at creation time");
 }
 
-static GLenum GetTextureInternalFormat(DeviceContextGLImpl *pDeviceContextGL, GLenum BindTarget, const GLObjectWrappers::GLTextureObj& GLTex)
+static GLenum GetTextureInternalFormat(DeviceContextGLImpl *pDeviceContextGL, GLenum BindTarget, const GLObjectWrappers::GLTextureObj& GLTex, TEXTURE_FORMAT TexFmtFromDesc)
 {
     auto &ContextState = pDeviceContextGL->GetContextState();
     ContextState.BindTexture(-1, BindTarget, GLTex);
@@ -66,8 +66,12 @@ static GLenum GetTextureInternalFormat(DeviceContextGLImpl *pDeviceContextGL, GL
     glGetTexLevelParameteriv(QueryBindTarget, 0, GL_TEXTURE_INTERNAL_FORMAT, &GlFormat);
     CHECK_GL_ERROR( "Failed to get texture format through glGetTexLevelParameteriv()" );
     VERIFY(GlFormat != 0, "Unable to get texture format");
+    VERIFY(TexFmtFromDesc == TEX_FORMAT_UNKNOWN || GlFormat == TexFormatToGLInternalTexFormat(TexFmtFromDesc), "Texture format does not match the format specified by the texture description");
 #else
-    UNSUPPORTED("Texture format query is not supported");
+    if(TexFmtFromDesc != TEX_FORMAT_UNKNOWN)
+        GlFormat = TexFormatToGLInternalTexFormat(TexFmtFromDesc);
+    else
+        UNSUPPORTED("Texture format cannot be queried and must be provided by the texture description");
 #endif
     ContextState.BindTexture(-1, BindTarget, GLObjectWrappers::GLTextureObj(false) );
 
@@ -172,7 +176,7 @@ TextureBaseGL::TextureBaseGL(IReferenceCounters *pRefCounters,
     // Create texture object wrapper, but use external texture handle
     m_GlTexture(true, GLObjectWrappers::GLTextureCreateReleaseHelper(GLTextureHandle)),
     m_BindTarget(BindTarget),
-    m_GLTexFormat( GetTextureInternalFormat(pDeviceContext, BindTarget, m_GlTexture) )
+    m_GLTexFormat( GetTextureInternalFormat(pDeviceContext, BindTarget, m_GlTexture, TexDesc.Format) )
 {
 }
 
