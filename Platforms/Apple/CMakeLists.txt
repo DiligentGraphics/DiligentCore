@@ -4,15 +4,15 @@ project(ApplePlatform CXX)
 
 set(INCLUDE
     include/CFObjectWrapper.h
-	include/AppleDebug.h
-	include/AppleFileSystem.h
-	include/ApplePlatformDefinitions.h
-	include/ApplePlatformMisc.h
+    include/AppleDebug.h
+    include/AppleFileSystem.h
+    include/ApplePlatformDefinitions.h
+    include/ApplePlatformMisc.h
 )
 
 set(SOURCE 
-	src/AppleDebug.mm
-	src/AppleFileSystem.cpp
+    src/AppleDebug.mm
+    src/AppleFileSystem.cpp
 )
 
 
@@ -21,14 +21,14 @@ set_common_target_properties(ApplePlatform)
 
 target_include_directories(ApplePlatform
 PUBLIC
-	include
+    include
 )
 
 target_link_libraries(ApplePlatform
 PUBLIC
-	BuildSettings 
-	BasicPlatform
-	PlatformInterface
+    BuildSettings 
+    BasicPlatform
+    PlatformInterface
 )
 
 if(PLATFORM_MACOS)
@@ -49,5 +49,5 @@ source_group("include" FILES ${INCLUDE})
 source_group("interface" FILES ${PLATFORM_INTERFACE_HEADERS})
 
 set_target_properties(ApplePlatform PROPERTIES
-	FOLDER Core/Platforms
+    FOLDER Core/Platforms
 )
