@@ -130,8 +130,9 @@ static TextureDesc GetTextureDescFromGLHandle(DeviceContextGLImpl *pDeviceContex
         VERIFY(TexDesc.Depth != 0, "Texture depth query is not supported; it must be specified by the texture description.");
 #endif
     }
-    else
-        TexDesc.Depth = 1;
+    
+    if (TexDesc.Type == RESOURCE_DIM_TEX_1D || TexDesc.Type == RESOURCE_DIM_TEX_2D)
+        TexDesc.ArraySize = 1; // TexDesc.Depth also
     
 #if GL_TEXTURE_INTERNAL_FORMAT
     GLint GlFormat = 0;
