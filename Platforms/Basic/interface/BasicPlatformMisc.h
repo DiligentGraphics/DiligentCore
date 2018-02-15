@@ -32,7 +32,7 @@ struct BasicPlatformMisc
         if( Val == 0 )return 32;
 
         Diligent::Uint32 MSB = 31;
-        while( !(Val & (1 << MSB)) )
+        while( !(Val & (1u << MSB)) )
             --MSB;
 
         return MSB;
@@ -43,7 +43,7 @@ struct BasicPlatformMisc
         if( Val == 0 )return 32;
 
         Diligent::Uint32 LSB = 0;
-        while( !(Val & (1 << LSB)) )
+        while( !(Val & (1u << LSB)) )
             ++LSB;
 
         return LSB;
