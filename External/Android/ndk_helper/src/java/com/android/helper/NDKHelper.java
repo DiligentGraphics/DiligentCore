@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-package com.sample.helper;
+// Must be changed with #define HELPER_CLASS_NAME "com/android/helper/NDKHelper" in AndroidMain.cpp
+package com.android.helper;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
