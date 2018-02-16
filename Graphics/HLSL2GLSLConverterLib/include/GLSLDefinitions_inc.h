@@ -160,7 +160,7 @@
 "uvec3 asuint( vec3  x ){ return floatBitsToUint(x); }\n"
 "uvec4 asuint( vec4  x ){ return floatBitsToUint(x); }\n"
 "\n"
-"#if !defined(GL_ES) && (__VERSION__>=420)\n"
+"#if defined(GL_ES) && (__VERSION__>=310) || !defined(GL_ES) && (__VERSION__>=420)\n"
 "float f16tof32( uint u1 )\n"
 "{\n"
 "    return unpackHalf2x16( u1 ).x;\n"
