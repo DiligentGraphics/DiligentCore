@@ -283,8 +283,8 @@ public:
     }
 
     explicit RefCntWeakPtr(RefCntAutoPtr<T>& AutoPtr) :
-        m_pObject( static_cast<T*>(AutoPtr) ),
-        m_pRefCounters(AutoPtr ? ValidatedCast<RefCountersImpl>( AutoPtr->GetReferenceCounters() ) : nullptr)
+        m_pRefCounters(AutoPtr ? ValidatedCast<RefCountersImpl>( AutoPtr->GetReferenceCounters() ) : nullptr),
+        m_pObject( static_cast<T*>(AutoPtr) )
     {
         if( m_pRefCounters )
             m_pRefCounters->AddWeakRef();

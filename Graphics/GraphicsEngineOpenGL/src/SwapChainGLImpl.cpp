@@ -71,9 +71,9 @@ IMPLEMENT_QUERY_INTERFACE( SwapChainGLImpl, IID_SwapChainGL, TSwapChainBase )
 
 void SwapChainGLImpl::Present()
 {
+#if PLATFORM_WIN32 || PLATFORM_LINUX || PLATFORM_ANDROID
     auto *pDeviceGL = ValidatedCast<RenderDeviceGLImpl>(m_pRenderDevice.RawPtr());
     auto &GLContext = pDeviceGL->m_GLContext;
-#if PLATFORM_WIN32 || PLATFORM_LINUX || PLATFORM_ANDROID
     GLContext.SwapBuffers();
 #elif PLATFORM_MACOS
     LOG_ERROR("Swap buffers operation must be performed by the app on MacOS");
