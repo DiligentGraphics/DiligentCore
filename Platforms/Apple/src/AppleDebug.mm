@@ -46,7 +46,9 @@ void AppleDebug::OutputDebugMessage( DebugMessageSeverity Severity, const Char *
     auto* MessageSevery = strSeverities[static_cast<int>(Severity)];
     String str = MessageSevery;
     str += Message;
-    NSLog(@"%s", str.c_str());
+    // NSLog truncates the log at 1024 symbols
+    printf("%s\n", str.c_str());
+    //NSLog(@"%s", str.c_str());
 }
 
 void DebugAssertionFailed(const Diligent::Char* Message, const char* Function, const char* File, int Line)

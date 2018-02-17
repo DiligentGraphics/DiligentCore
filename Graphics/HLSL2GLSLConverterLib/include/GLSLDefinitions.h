@@ -202,13 +202,8 @@ uvec4 f32tof16( vec4 f4 )
 }
 #endif
 
-#ifndef GL_ES // double is not supported on GLES
-double asdouble(uint lowbits, uint highbits)
-{
-    return packDouble2x32( uvec2( lowbits, highbits ) );
-}
-#endif
-
+// Use #define as double is not supported on GLES
+#define asdouble(lowbits, highbits) packDouble2x32( uvec2( lowbits, highbits ) )
 
 // Floating point functions
 
@@ -532,15 +527,50 @@ void _TypeConvertStore( out int   Dst, in int   Src ){ Dst = int( Src ); }
 void _TypeConvertStore( out int   Dst, in uint  Src ){ Dst = int( Src ); }
 void _TypeConvertStore( out int   Dst, in float Src ){ Dst = int( Src ); }
 
-int _ToInt( int x )  { return int(x);       }
-int _ToInt( uint x ) { return int(x);       }
-int _ToInt( float x ){ return int(x);       }
-int _ToInt( bool x ) { return x ? 1 : 0;    }
+
+int _ToInt( int x )    { return int(x);     }
+int _ToInt( ivec2 v )  { return int(v.x);   }
+int _ToInt( ivec3 v )  { return int(v.x);   }
+int _ToInt( ivec4 v )  { return int(v.x);   }
+
+int _ToInt( uint x )   { return int(x);     }
+int _ToInt( uvec2 v )  { return int(v.x);   }
+int _ToInt( uvec3 v )  { return int(v.x);   }
+int _ToInt( uvec4 v )  { return int(v.x);   }
+
+int _ToInt( float x )  { return int(x);     }
+int _ToInt( vec2 v )   { return int(v.x);   }
+int _ToInt( vec3 v )   { return int(v.x);   }
+int _ToInt( vec4 v )   { return int(v.x);   }
+
+int _ToInt( bool x )   { return x   ? 1 : 0;}
+int _ToInt( bvec2 v )  { return v.x ? 1 : 0;}
+int _ToInt( bvec3 v )  { return v.x ? 1 : 0;}
+int _ToInt( bvec4 v )  { return v.x ? 1 : 0;}
+
+
 
 float _ToFloat( int x )  { return float(x);     }
+float _ToFloat( ivec2 v ){ return float(v.x);   }
+float _ToFloat( ivec3 v ){ return float(v.x);   }
+float _ToFloat( ivec4 v ){ return float(v.x);   }
+
 float _ToFloat( uint x ) { return float(x);     }
+float _ToFloat( uvec2 v ){ return float(v.x);   }
+float _ToFloat( uvec3 v ){ return float(v.x);   }
+float _ToFloat( uvec4 v ){ return float(v.x);   }
+
 float _ToFloat( float x ){ return float(x);     }
-float _ToFloat( bool x ) { return x ? 1.0 : 0.0;}
+float _ToFloat( vec2 v ) { return float(v.x);   }
+float _ToFloat( vec3 v ) { return float(v.x);   }
+float _ToFloat( vec4 v ) { return float(v.x);   }
+
+float _ToFloat( bool x ) { return x   ? 1.0 : 0.0;}
+float _ToFloat( bvec2 v ){ return v.x ? 1.0 : 0.0;}
+float _ToFloat( bvec3 v ){ return v.x ? 1.0 : 0.0;}
+float _ToFloat( bvec4 v ){ return v.x ? 1.0 : 0.0;}
+
+
 
 uint _ToUint( int x )  { return uint(x);     }
 uint _ToUint( uint x ) { return uint(x);     }
@@ -796,7 +826,7 @@ uvec4  _ToUvec( vec4  f4 ){ return _ToUvec4( f4.x, f4.y, f4.z, f4.w ); }
 // in the second to last component of Coords. (The second component of Coords is unused for 1D shadow lookups.)
 // For cube array textures, Dsub is specified as a separate parameter
 //                                                                                                                                     mip
-#define SampleCmpLevel0Tex1D_3(Tex, Sampler, Coords, CompareValue)      textureLod(Tex, _ToVec3((Coords).x,        0.0, CompareValue), 0.0)
+#define SampleCmpLevel0Tex1D_3(Tex, Sampler, Coords, CompareValue)      textureLod(Tex, _ToVec3( Coords,           0.0, CompareValue), 0.0)
 #define SampleCmpLevel0Tex1DArr_3(Tex, Sampler, Coords, CompareValue)   textureLod(Tex, _ToVec3((Coords).x, (Coords).y, CompareValue), 0.0)
 #define SampleCmpLevel0Tex2D_3(Tex, Sampler, Coords, CompareValue)      textureLod(Tex, _ToVec3((Coords).x, (Coords).y, CompareValue), 0.0)
 #define SampleCmpLevel0Tex2DArr_3(Tex, Sampler, Coords, CompareValue)   0.0 // No textureLod for sampler2DArrayShadow
@@ -804,7 +834,7 @@ uvec4  _ToUvec( vec4  f4 ){ return _ToUvec4( f4.x, f4.y, f4.z, f4.w ); }
 #define SampleCmpLevel0TexCubeArr_3(Tex, Sampler, Coords, CompareValue) 0.0 // No textureLod for samplerCubeArrayShadow
 
 //                                                                                                                                                 mip
-#define SampleCmpLevel0Tex1D_4(Tex, Sampler, Coords, CompareValue, Offset)    textureLodOffset(Tex, _ToVec3((Coords).x,        0.0, CompareValue), 0.0, int(Offset))
+#define SampleCmpLevel0Tex1D_4(Tex, Sampler, Coords, CompareValue, Offset)    textureLodOffset(Tex, _ToVec3( Coords,           0.0, CompareValue), 0.0, int(Offset))
 #define SampleCmpLevel0Tex1DArr_4(Tex, Sampler, Coords, CompareValue, Offset) textureLodOffset(Tex, _ToVec3((Coords).x, (Coords).y, CompareValue), 0.0, int(Offset))
 #define SampleCmpLevel0Tex2D_4(Tex, Sampler, Coords, CompareValue, Offset)    textureLodOffset(Tex, _ToVec3((Coords).x, (Coords).y, CompareValue), 0.0, ivec2((Offset).xy))
 #define SampleCmpLevel0Tex2DArr_4(Tex, Sampler, Coords, CompareValue, Offset) 0.0 // No textureLodOffset for sampler2DArrayShadow
@@ -818,14 +848,14 @@ uvec4  _ToUvec( vec4  f4 ){ return _ToUvec4( f4.x, f4.y, f4.z, f4.w ); }
 #   define SampleBias_3(Tex, Sampler, Coords, Bias)         texture      (Tex, _ToVec(Coords), _ToFloat(Bias))
 #   define SampleBias_4(Tex, Sampler, Coords, Bias, Offset) textureOffset(Tex, _ToVec(Coords), Offset, _ToFloat(Bias))
 
-#   define SampleCmpTex1D_3(Tex, Sampler, Coords, CompareValue)      texture(Tex, _ToVec3((Coords).x,        0.0, CompareValue))
+#   define SampleCmpTex1D_3(Tex, Sampler, Coords, CompareValue)      texture(Tex, _ToVec3( Coords,           0.0, CompareValue))
 #   define SampleCmpTex1DArr_3(Tex, Sampler, Coords, CompareValue)   texture(Tex, _ToVec3((Coords).x, (Coords).y, CompareValue))
 #   define SampleCmpTex2D_3(Tex, Sampler, Coords, CompareValue)      texture(Tex, _ToVec3((Coords).x, (Coords).y, CompareValue))
 #   define SampleCmpTex2DArr_3(Tex, Sampler, Coords, CompareValue)   texture(Tex, _ToVec4((Coords).x, (Coords).y, (Coords).z, CompareValue))
 #   define SampleCmpTexCube_3(Tex, Sampler, Coords, CompareValue)    texture(Tex, _ToVec4((Coords).x, (Coords).y, (Coords).z, CompareValue))
 #   define SampleCmpTexCubeArr_3(Tex, Sampler, Coords, CompareValue) texture(Tex, _ToVec4((Coords).x, (Coords).y, (Coords).z, (Coords).w), _ToFloat(CompareValue))
 
-#   define SampleCmpTex1D_4(Tex, Sampler, Coords, CompareValue, Offset)    textureOffset(Tex, _ToVec3((Coords).x,        0.0, CompareValue), int(Offset))
+#   define SampleCmpTex1D_4(Tex, Sampler, Coords, CompareValue, Offset)    textureOffset(Tex, _ToVec3( Coords,           0.0, CompareValue), int(Offset))
 #   define SampleCmpTex1DArr_4(Tex, Sampler, Coords, CompareValue, Offset) textureOffset(Tex, _ToVec3((Coords).x, (Coords).y, CompareValue), int(Offset))
 #   define SampleCmpTex2D_4(Tex, Sampler, Coords, CompareValue, Offset)    textureOffset(Tex, _ToVec3((Coords).x, (Coords).y, CompareValue), ivec2((Offset).xy))
 #   define SampleCmpTex2DArr_4(Tex, Sampler, Coords, CompareValue, Offset) textureOffset(Tex, _ToVec4((Coords).x, (Coords).y, (Coords).z, CompareValue), ivec2((Offset).xy))
@@ -886,7 +916,7 @@ uvec4  _ToUvec( vec4  f4 ){ return _ToUvec4( f4.x, f4.y, f4.z, f4.w ); }
 #define LoadTex2DMSArr_3(Tex, Location, Sample, Offset)texelFetch(Tex, _ToIvec3( (Location).x + (Offset).x, (Location).y + (Offset).y, (Location).z), int(Sample)) // No texelFetchOffset for texture2DMSArray
 
 //https://www.opengl.org/sdk/docs/man/html/imageLoad.xhtml
-#define LoadRWTex1D_1(Tex, Location)    imageLoad(Tex, _ToIvec((Location).x)   )
+#define LoadRWTex1D_1(Tex, Location)    imageLoad(Tex, _ToInt(Location)        )
 #define LoadRWTex1DArr_1(Tex, Location) imageLoad(Tex, _ToIvec((Location).xy)  )
 #define LoadRWTex2D_1(Tex, Location)    imageLoad(Tex, _ToIvec((Location).xy)  )
 #define LoadRWTex2DArr_1(Tex, Location) imageLoad(Tex, _ToIvec((Location).xyz) )

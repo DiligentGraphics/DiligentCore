@@ -328,7 +328,7 @@ namespace Diligent
             };
             void ParseShaderParameter(TokenListType::iterator &Token, ShaderParameterInfo &ParamInfo);
             void ProcessFunctionParameters( TokenListType::iterator &Token, std::vector<ShaderParameterInfo>& Params, bool &bIsVoid );
-            String AddFlatQualifier(const String& Type);
+            bool RequiresFlatQualifier(const String& Type);
             void ProcessFragmentShaderArguments( std::vector<ShaderParameterInfo>& Params,
                                                  String &GlobalVariables,
                                                  std::stringstream &ReturnHandlerSS,

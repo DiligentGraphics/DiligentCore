@@ -2917,7 +2917,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessShaderArgument( const Shad
     }
 }
 
-String HLSL2GLSLConverterImpl::ConversionStream::AddFlatQualifier(const String& Type)
+bool HLSL2GLSLConverterImpl::ConversionStream::RequiresFlatQualifier(const String& Type)
 {
     auto keywordIt = m_Converter.m_HLSLKeywords.find(Type.c_str());
     bool RequiresFlat = false;
@@ -2931,7 +2931,7 @@ String HLSL2GLSLConverterImpl::ConversionStream::AddFlatQualifier(const String& 
                        (kw >= TokenType::kw_min12int  && kw <= TokenType::kw_min12int4x4) ||
                        (kw >= TokenType::kw_min16uint && kw <= TokenType::kw_min16uint4x4);
     }
-    return RequiresFlat ? String("flat ") + Type : Type;
+    return RequiresFlat;
 }
 
 void HLSL2GLSLConverterImpl::ConversionStream::ProcessFragmentShaderArguments(std::vector<ShaderParameterInfo>& Params,
@@ -2954,7 +2954,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessFragmentShaderArguments(st
                     else
                     {
                         auto InputVarName = BuildParameterName(MemberStack, '_', "_in_");
-                        DefineInterfaceVar(InLocation++, "in", AddFlatQualifier(Param.Type), InputVarName, InterfaceVarsSS );   
+                        DefineInterfaceVar(InLocation++, RequiresFlatQualifier(Param.Type) ? "flat in" : "in", Param.Type, InputVarName, InterfaceVarsSS );
                         InitVariable(FullParamName, InputVarName, PrologueSS );
                     }
                 }
@@ -3071,7 +3071,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessVertexShaderArguments( std
                     else
                     {
                         auto OutputVarName =  BuildParameterName(MemberStack, '_', "_vsout_");
-                        DefineInterfaceVar( OutLocation++, "out", AddFlatQualifier(Param.Type), OutputVarName, InterfaceVarsSS );
+                        DefineInterfaceVar( OutLocation++, RequiresFlatQualifier(Param.Type) ? "flat out" : "out", Param.Type, OutputVarName, InterfaceVarsSS );
                         ReturnHandlerSS << OutputVarName << " = " << FullParamName << ";\\\n";
                     }
                 }
@@ -3143,8 +3143,8 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessGeometryShaderArguments( T
                     {
                         auto VarName = BuildParameterName(MemberStack, '_', "_gsin_");
                         auto InputVarName = VarName+"[i]";
-                        DefineInterfaceVar( inLocation++, "in", AddFlatQualifier(Param.Type), VarName + "[]", InterfaceVarsInSS );   
-                        InitVariable( FullIndexedParamName, InputVarName, PrologueSS );                    
+                        DefineInterfaceVar( inLocation++, RequiresFlatQualifier(Param.Type) ? "flat in" : "in", Param.Type, VarName + "[]", InterfaceVarsInSS );
+                        InitVariable( FullIndexedParamName, InputVarName, PrologueSS );
                     }
                 }
             );
@@ -3181,7 +3181,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessGeometryShaderArguments( T
                         // variable that fragment shader will read.
                         // Note that gl_Layer is available in fragment shader, but only starting with GL4.3+
                         auto OutputVarName =  BuildParameterName(MemberStack, '_', "_gsout_");
-                        DefineInterfaceVar( outLocation++, "out", AddFlatQualifier(Param.Type), OutputVarName, InterfaceVarsOutSS );
+                        DefineInterfaceVar( outLocation++, RequiresFlatQualifier(Param.Type) ? "flat out" : "out", Param.Type, OutputVarName, InterfaceVarsOutSS );
                         EmitVertexDefineSS << OutputVarName << " = " << MacroArgumentName << ";\\\n";
                     }
                 }
@@ -3662,7 +3662,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessHullShaderArguments( Token
                         auto VarName = BuildParameterName(MemberStack, '_', "_hsin_");
                         auto InputVarName = VarName + (IsPatch ? "[i]" : "");
                         // User-defined inputs can be declared as unbounded arrays
-                        DefineInterfaceVar( inLocation++, "in", AddFlatQualifier(Param.Type), VarName + (IsPatch ? "[]" : ""), InterfaceVarsInSS );   
+                        DefineInterfaceVar( inLocation++, RequiresFlatQualifier(Param.Type) ? "flat in" : "in", Param.Type, VarName + (IsPatch ? "[]" : ""), InterfaceVarsInSS );
                         InitVariable( FullIndexedParamName, InputVarName, PrologueSS );
                     }
                 }
@@ -3692,7 +3692,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessHullShaderArguments( Token
                         auto OutputVarName =  BuildParameterName(MemberStack, '_', "_hsout_");
                         // Per-vertex outputs are aggregated into arrays.
                         // https://www.khronos.org/opengl/wiki/Tessellation_Control_Shader#Outputs
-                        DefineInterfaceVar( outLocation++, "out", AddFlatQualifier(Param.Type), OutputVarName + "[]", InterfaceVarsOutSS );
+                        DefineInterfaceVar( outLocation++, RequiresFlatQualifier(Param.Type) ? "flat out" : "out", Param.Type, OutputVarName + "[]", InterfaceVarsOutSS );
                         // A TCS can only ever write to the per-vertex output variable that corresponds to their invocation,
                         // so writes to per-vertex outputs must be of the form vertexTexCoord[gl_InvocationID]
                         ReturnHandlerSS << OutputVarName << "[gl_InvocationID] = " << SrcParamName << ";\\\n";
@@ -3868,7 +3868,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessDomainShaderArguments( Tok
                         auto VarName = BuildParameterName(MemberStack, '_', "_dsin_");
                         auto InputVarName = VarName + (IsPatch ? "[i]" : "");
                         // User-defined inputs can be declared as unbounded arrays
-                        DefineInterfaceVar( inLocation++, "in", AddFlatQualifier(Param.Type), VarName + (IsPatch ? "[]" : ""), InterfaceVarsInSS );   
+                        DefineInterfaceVar( inLocation++, RequiresFlatQualifier(Param.Type) ? "flat out" : "in", Param.Type, VarName + (IsPatch ? "[]" : ""), InterfaceVarsInSS );
                         InitVariable( FullIndexedParamName, InputVarName, PrologueSS );
                     }
                     else
@@ -3894,7 +3894,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessDomainShaderArguments( Tok
                         auto OutputVarName =  BuildParameterName(MemberStack, '_', "_hsout_");
                         // Per-vertex outputs are aggregated into arrays.
                         // https://www.khronos.org/opengl/wiki/Tessellation_Control_Shader#Outputs
-                        DefineInterfaceVar( outLocation++, "out", AddFlatQualifier(Param.Type), OutputVarName, InterfaceVarsOutSS );
+                        DefineInterfaceVar( outLocation++, RequiresFlatQualifier(Param.Type) ? "flat out" : "out", Param.Type, OutputVarName, InterfaceVarsOutSS );
                         // A TCS can only ever write to the per-vertex output variable that corresponds to their invocation,
                         // so writes to per-vertex outputs must be of the form vertexTexCoord[gl_InvocationID]
                         ReturnHandlerSS << OutputVarName << " = " << SrcParamName << ";\\\n";

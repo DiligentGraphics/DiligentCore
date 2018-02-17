@@ -30,6 +30,22 @@
 #include "GLTypeConversions.h"
 #include "EngineGLAttribs.h"
 
+static void glDrawArraysInstancedBaseInstance_stub(GLenum mode, GLint first, GLsizei count, GLsizei primcount, GLuint baseinstance)
+{
+    LOG_ERROR_MESSAGE_ONCE("glDrawArraysInstancedBaseInstance is not supported on MacOS");
+}
+
+static void glDrawElementsInstancedBaseInstance_stub(GLenum mode, GLsizei count, GLenum type, const void *indices, GLsizei primcount, GLuint baseinstance)
+{
+    LOG_ERROR_MESSAGE_ONCE("glDrawElementsInstancedBaseInstance is not supported on MacOS");
+}
+
+static void  glDrawElementsInstancedBaseVertexBaseInstance_stub(GLenum mode, GLsizei count, GLenum type, const void *indices, GLsizei primcount, GLint basevertex, GLuint baseinstance)
+{
+    LOG_ERROR_MESSAGE_ONCE("glDrawElementsInstancedBaseVertexBaseInstance is not supported on MacOS");
+}
+
+
 namespace Diligent
 {
     GLContext::GLContext( const EngineGLAttribs &InitAttribs, DeviceCaps &DeviceCaps )
@@ -44,7 +60,13 @@ namespace Diligent
         GLenum err = glewInit();
         if( GLEW_OK != err )
             LOG_ERROR_AND_THROW( "Failed to initialize GLEW" );
-
+        if(glDrawArraysInstancedBaseInstance == nullptr)
+            glDrawArraysInstancedBaseInstance = glDrawArraysInstancedBaseInstance_stub;
+        if(glDrawElementsInstancedBaseInstance == nullptr)
+            glDrawElementsInstancedBaseInstance = glDrawElementsInstancedBaseInstance_stub;
+        if(glDrawElementsInstancedBaseVertexBaseInstance == nullptr)
+            glDrawElementsInstancedBaseVertexBaseInstance = glDrawElementsInstancedBaseVertexBaseInstance_stub;
+  
         //Checking GL version
         const GLubyte *GLVersionString = glGetString( GL_VERSION );
         const GLubyte *GLRenderer = glGetString(GL_RENDERER);
