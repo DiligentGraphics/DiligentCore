@@ -32,17 +32,17 @@
 
 static void glDrawArraysInstancedBaseInstance_stub(GLenum mode, GLint first, GLsizei count, GLsizei primcount, GLuint baseinstance)
 {
-    LOG_ERROR_MESSAGE_ONCE("glDrawArraysInstancedBaseInstance is not supported on MacOS");
+    LOG_ERROR_MESSAGE("glDrawArraysInstancedBaseInstance is not supported on MacOS");
 }
 
 static void glDrawElementsInstancedBaseInstance_stub(GLenum mode, GLsizei count, GLenum type, const void *indices, GLsizei primcount, GLuint baseinstance)
 {
-    LOG_ERROR_MESSAGE_ONCE("glDrawElementsInstancedBaseInstance is not supported on MacOS");
+    LOG_ERROR_MESSAGE("glDrawElementsInstancedBaseInstance is not supported on MacOS");
 }
 
 static void  glDrawElementsInstancedBaseVertexBaseInstance_stub(GLenum mode, GLsizei count, GLenum type, const void *indices, GLsizei primcount, GLint basevertex, GLuint baseinstance)
 {
-    LOG_ERROR_MESSAGE_ONCE("glDrawElementsInstancedBaseVertexBaseInstance is not supported on MacOS");
+    LOG_ERROR_MESSAGE("glDrawElementsInstancedBaseVertexBaseInstance is not supported on MacOS");
 }
 
 

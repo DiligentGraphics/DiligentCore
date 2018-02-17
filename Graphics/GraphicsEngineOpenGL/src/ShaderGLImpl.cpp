@@ -52,10 +52,18 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters *pRefCounters, RenderDeviceGLImpl 
         "#version 430 core\n"
         "#define DESKTOP_GL 1\n"
     );
+#   if PLATFORM_WIN32
+        Settings.append("#define PLATFORM_WIN32 1\n");
+#   elif PLATFORM_LINUX
+        Settings.append("#define PLATFORM_LINUX 1\n");
+#   else
+#       error Unexpected platform
+#   endif
 #elif PLATFORM_MACOS
     Settings.append(
         "#version 410 core\n"
         "#define DESKTOP_GL 1\n"
+        "#define PLATFORM_MACOS 1\n"
     );
 #elif PLATFORM_IOS
     Settings.append(
@@ -64,6 +72,8 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters *pRefCounters, RenderDeviceGLImpl 
         "#ifndef GL_ES\n"
         "#  define GL_ES 1\n"
         "#endif\n"
+
+        "#define PLATFORM_IOS 1\n"
 
         "precision highp float;\n"
         "precision highp int;\n"
@@ -92,7 +102,7 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters *pRefCounters, RenderDeviceGLImpl 
     if(m_Desc.ShaderType == SHADER_TYPE_VERTEX)
         Settings.append("out vec4 gl_Position;\n");
 
-#elif defined(ANDROID)
+#elif PLATFORM_ANDROID
     Settings.append(
         "#version 310 es\n"
     );
@@ -107,6 +117,8 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters *pRefCounters, RenderDeviceGLImpl 
         "#ifndef GL_ES\n"
         "#  define GL_ES 1\n"
         "#endif\n"
+ 
+        "#define PLATFORM_ANDROID 1\n"
 
         "precision highp float;\n"
         "precision highp int;\n"
