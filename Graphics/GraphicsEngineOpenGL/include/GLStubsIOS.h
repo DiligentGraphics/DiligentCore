@@ -507,7 +507,7 @@
 template<typename T>
 void UnsupportedGLFunctionStub( const T &Name )
 {
-    LOG_ERROR_MESSAGE( Name, "() is not supported in this API!\n" );
+    LOG_ERROR_MESSAGE( Name, "() is not supported on iOS!\n" );
 }
 
 #define glDrawElementsInstancedBaseVertexBaseInstance(...) UnsupportedGLFunctionStub("glDrawElementsInstancedBaseVertexBaseInstance")
