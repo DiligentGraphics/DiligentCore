@@ -97,7 +97,7 @@
 #endif
 
 #ifdef LOAD_GL_POLYGON_MODE
-    DECLARE_GL_FUNCTION( glPolygonMode, PFNGLPOLYGONMODE, GLenum, GLenum)
+    PFNGLPOLYGONMODE glPolygonMode = nullptr;
 #endif
 
 #ifdef LOAD_GL_ENABLEI
@@ -225,7 +225,7 @@ Func = (FuncType)eglGetProcAddress( #Func );\
 #endif
 
 #ifdef LOAD_GL_POLYGON_MODE
-    LOAD_GL_FUNCTION( glPolygonMode, PFNGLPOLYGONMODE)
+    glPolygonMode = (PFNGLPOLYGONMODE)eglGetProcAddress("glPolygonMode");
 #endif
 
 #ifdef LOAD_GL_ENABLEI

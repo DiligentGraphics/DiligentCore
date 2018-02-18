@@ -426,9 +426,17 @@ namespace Diligent
         {
             if( m_RSState.FillMode != FillMode )
             {
-                auto PolygonMode = FillMode == FILL_MODE_WIREFRAME ? GL_LINE : GL_FILL;
-                glPolygonMode( GL_FRONT_AND_BACK, PolygonMode );
-                CHECK_GL_ERROR( "Failed to set polygon mode" );
+                if(glPolygonMode != nullptr)
+                {
+                    auto PolygonMode = FillMode == FILL_MODE_WIREFRAME ? GL_LINE : GL_FILL;
+                    glPolygonMode( GL_FRONT_AND_BACK, PolygonMode );
+                    CHECK_GL_ERROR( "Failed to set polygon mode" );
+                }
+                else
+                {
+                    if(FillMode != FILL_MODE_SOLID)
+                        LOG_ERROR("This API/device only supports solid fill mode");
+                }
 
                 m_RSState.FillMode = FillMode;
             }

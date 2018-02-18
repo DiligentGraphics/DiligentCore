@@ -643,6 +643,9 @@ void RenderDeviceGLImpl::TestTextureFormat( TEXTURE_FORMAT TexFormat )
 
 void RenderDeviceGLImpl :: QueryDeviceCaps()
 {
+    if(glPolygonMode == nullptr)
+        m_DeviceCaps.bWireframeFillSupported = false;
+        
     if(m_DeviceCaps.bWireframeFillSupported)
     {
         // Test glPolygonMode() function to check if it fails
