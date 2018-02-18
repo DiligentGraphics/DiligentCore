@@ -1095,7 +1095,23 @@ out gl_PerVertex
 #define _GET_GL_POSITION(Pos)_ResizeVector(Pos, gl_in[i].gl_Position)
 
 #define _SET_GL_POSITION(Pos)gl_out[gl_InvocationID].gl_Position=_ExpandVector(Pos)
-#define _SET_GL_TESS_LEVEL_OUTER(OuterLevel)for(int i=0; i < OuterLevel.length(); ++i)gl_TessLevelOuter[i] = OuterLevel[i]
+
+void _SetGLTessLevelOuter(float OuterLevel[2])
+{
+    for(int i=0; i < 2; ++i)
+        gl_TessLevelOuter[i] = OuterLevel[i];
+}
+void _SetGLTessLevelOuter(float OuterLevel[3])
+{
+    for(int i=0; i < 3; ++i)
+        gl_TessLevelOuter[i] = OuterLevel[i];
+}
+void _SetGLTessLevelOuter(float OuterLevel[4])
+{
+    for(int i=0; i < 4; ++i)
+        gl_TessLevelOuter[i] = OuterLevel[i];
+}
+
 
 void _SetGLTessLevelInner(float InnerLevel[2])
 {
@@ -1128,7 +1144,23 @@ out gl_PerVertex
 };
 
 #define _GET_GL_POSITION(Pos)_ResizeVector(Pos, gl_in[i].gl_Position)
-#define _GET_GL_TESS_LEVEL_OUTER(OuterLevel)for(int i=0; i < OuterLevel.length(); ++i)OuterLevel[i] = gl_TessLevelOuter[i]
+
+void _GetGLTessLevelOuter(out float OuterLevel[2])
+{
+    for(int i=0; i < 2; ++i)
+        OuterLevel[i] = gl_TessLevelOuter[i];
+}
+void _GetGLTessLevelOuter(out float OuterLevel[3])
+{
+    for(int i=0; i < 3; ++i)
+        OuterLevel[i] = gl_TessLevelOuter[i];
+}
+void _GetGLTessLevelOuter(out float OuterLevel[4])
+{
+    for(int i=0; i < 4; ++i)
+        OuterLevel[i] = gl_TessLevelOuter[i];
+}
+
 void _GetGLTessLevelInner(out float InnerLevel[2])
 {
     InnerLevel[0] = gl_TessLevelInner[0];

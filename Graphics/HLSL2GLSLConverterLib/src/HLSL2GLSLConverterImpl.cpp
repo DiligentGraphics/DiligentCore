@@ -723,11 +723,11 @@ HLSL2GLSLConverterImpl::HLSL2GLSLConverterImpl()
     DEFINE_VARIABLE(HSInd, InVar,  "sv_primitiveid",            "_GET_GL_PRIMITIVE_ID");
     DEFINE_VARIABLE(HSInd, InVar,  "sv_position",               "_GET_GL_POSITION");
     DEFINE_VARIABLE(HSInd, OutVar, "sv_position",               "_SET_GL_POSITION");
-    DEFINE_VARIABLE(HSInd, OutVar, "sv_tessfactor",             "_SET_GL_TESS_LEVEL_OUTER");
+    DEFINE_VARIABLE(HSInd, OutVar, "sv_tessfactor",             "_SetGLTessLevelOuter");
     DEFINE_VARIABLE(HSInd, OutVar, "sv_insidetessfactor",       "_SetGLTessLevelInner");
 
     DEFINE_VARIABLE(DSInd, InVar,  "sv_position",         "_GET_GL_POSITION");
-    DEFINE_VARIABLE(DSInd, InVar,  "sv_tessfactor",       "_GET_GL_TESS_LEVEL_OUTER");
+    DEFINE_VARIABLE(DSInd, InVar,  "sv_tessfactor",       "_GetGLTessLevelOuter");
     DEFINE_VARIABLE(DSInd, InVar,  "sv_insidetessfactor", "_GetGLTessLevelInner");
     DEFINE_VARIABLE(DSInd, InVar,  "sv_domainlocation",   "_GET_GL_TESS_COORD");
     DEFINE_VARIABLE(DSInd, InVar,  "sv_primitiveid",      "_GET_GL_PRIMITIVE_ID");
