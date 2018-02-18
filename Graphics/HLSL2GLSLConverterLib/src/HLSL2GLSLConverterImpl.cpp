@@ -3940,26 +3940,43 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessReturnStatements( TokenLis
                 Token->Literal = MacroName;
                 //if( x < 0.5 ) _RETURN_ float4(0.0, 0.0, 0.0, 1.0);
                 //              ^
-                
+
                 ++Token;
                 //if( x < 0.5 ) _RETURN_ float4(0.0, 0.0, 0.0, 1.0);
                 //                       ^
 
-                m_Tokens.insert( Token, TokenInfo(TokenType::OpenBracket, "("));
-                //if( x < 0.5 ) _RETURN_( float4(0.0, 0.0, 0.0, 1.0);
-                //                        ^
+                if(Token->Type != TokenType::Semicolon )
+                {
+                    m_Tokens.insert( Token, TokenInfo(TokenType::OpenBracket, "("));
+                    //if( x < 0.5 ) _RETURN_( float4(0.0, 0.0, 0.0, 1.0);
+                    //                        ^
 
-                while( Token->Type != TokenType::Semicolon )
+                    while( Token->Type != TokenType::Semicolon )
+                        ++Token;
+                    VERIFY_PARSER_STATE( Token, Token != m_Tokens.end(), "Unexpected end of file while looking for the \';\'" );
+                    //if( x < 0.5 ) _RETURN_( float4(0.0, 0.0, 0.0, 1.0);
+                    //                                                  ^
+
+                    // Replace semicolon with ):
+                    Token->Type = TokenType::ClosingBracket;
+                    Token->Literal = ")";
+                    //if( x < 0.5 ) _RETURN_( float4(0.0, 0.0, 0.0, 1.0))
+                    //                                                  ^
+                }
+                else
+                {
+                    //if( x < 0.5 ) _RETURN_ ;
+                    //                       ^
+                    auto SemicolonToken = Token;
                     ++Token;
-                VERIFY_PARSER_STATE( Token, Token != m_Tokens.end(), "Unexpected end of file while looking for the \';\'" );
-                //if( x < 0.5 ) _RETURN_( float4(0.0, 0.0, 0.0, 1.0);
-                //                                                  ^
-
-                // Replace semicolon with ):
-                Token->Type = TokenType::ClosingBracket;
-                Token->Literal = ")";
-                //if( x < 0.5 ) _RETURN_( float4(0.0, 0.0, 0.0, 1.0))
-                //                                                  ^
+                    //if( x < 0.5 ) _RETURN_ ;
+                    //int a;
+                    //^
+                    m_Tokens.erase(SemicolonToken);
+                    //if( x < 0.5 ) _RETURN_
+                    //int a;
+                    //^
+                }
 
                 continue;
             }
@@ -3978,9 +3995,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessReturnStatements( TokenLis
     if(IsVoid)
     {
         // Insert return handler before the closing brace
-        String NoArgMacro(MacroName);
-        NoArgMacro.append("()");
-        m_Tokens.insert(Token, TokenInfo(TokenType::TextBlock, NoArgMacro.c_str(), Token->Delimiter.c_str()));
+        m_Tokens.insert(Token, TokenInfo(TokenType::TextBlock, MacroName, Token->Delimiter.c_str()));
         Token->Delimiter = "\n";
     }
 }
@@ -4048,7 +4063,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessShaderDeclaration( TokenLi
 
     std::stringstream ReturnHandlerSS;
     const Char *ReturnMacroName = "_RETURN_";
-    ReturnHandlerSS << "#define " << ReturnMacroName << "(" << (bIsVoid ? "" : "_RET_VAL_") << "){\\\n";
+    ReturnHandlerSS << "#define " << ReturnMacroName << (bIsVoid ? "" : "(_RET_VAL_)") << "{\\\n";
 
     String GlobalVariables, Prologue;
     try
