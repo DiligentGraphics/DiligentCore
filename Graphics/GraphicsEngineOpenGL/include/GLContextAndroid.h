@@ -40,6 +40,8 @@ namespace Diligent
 
         void SwapBuffers();
 
+        void UpdateScreenSize();
+
         bool Invalidate();
 
         void Suspend();

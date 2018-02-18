@@ -84,6 +84,14 @@ void SwapChainGLImpl::Present()
 
 void SwapChainGLImpl::Resize( Uint32 NewWidth, Uint32 NewHeight )
 {
+#if PLATFORM_ANDROID
+    auto *pDeviceGL = ValidatedCast<RenderDeviceGLImpl>(m_pRenderDevice.RawPtr());
+    auto &GLContext = pDeviceGL->m_GLContext;
+    GLContext.UpdateScreenSize();
+    NewWidth = GLContext.GetScreenWidth();
+    NewHeight = GLContext.GetScreenHeight();
+#endif
+
     if( TSwapChainBase::Resize( NewWidth, NewHeight ) )
     {
         auto pDeviceContext = m_wpDeviceContext.Lock();
