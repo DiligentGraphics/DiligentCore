@@ -105,6 +105,7 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters *pRefCounters, RenderDeviceGLImpl 
 #elif PLATFORM_ANDROID
     Settings.append(
         "#version 310 es\n"
+        "#extension GL_EXT_texture_cube_map_array : enable\n"
     );
 
     if(m_Desc.ShaderType == SHADER_TYPE_GEOMETRY)
