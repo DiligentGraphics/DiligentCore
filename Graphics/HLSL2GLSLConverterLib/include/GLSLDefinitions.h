@@ -26,6 +26,15 @@
 
 #define GLSL
 
+#ifdef GL_ES
+// From GLES 3.1 spec:
+//    Except for image variables qualified with the format qualifiers r32f, r32i, and r32ui,
+//    image variables must specify either memory qualifier readonly or the memory qualifier writeonly.
+#   define IMAGE_WRITEONLY writeonly
+#else
+#   define IMAGE_WRITEONLY
+#endif 
+
 #define float4 vec4
 #define float3 vec3
 #define float2 vec2

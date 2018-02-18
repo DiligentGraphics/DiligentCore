@@ -1740,6 +1740,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessTextureDeclaration( TokenL
         TextureDim == TokenType::kw_RWTexture2D      ||
         TextureDim == TokenType::kw_RWTexture2DArray ||
         TextureDim == TokenType::kw_RWTexture3D;
+    String ImgFormat;
 
     ++Token;
     // Texture2D < float > ... ;
@@ -1822,7 +1823,6 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessTextureDeclaration( TokenL
 
         if( IsRWTexture )
         {
-            String ImgFormat;
             // RWTexture2D<float /* format = r32f */ >
             //                                       ^
             ParseImageFormat( Token->Delimiter, ImgFormat );
@@ -1928,12 +1928,19 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessTextureDeclaration( TokenL
         // Texture2D TexName ;
         //           ^
         TexDeclToken->Literal = "";
-        TexDeclToken->Literal.append( LayoutQualifier );
         if( IsGlobalScope )
         {
+            // Use layout qualifier for global variables only, not for function arguments
+            TexDeclToken->Literal.append( LayoutQualifier );
             // Samplers and images in global scope must be declared uniform.
             // Function arguments must not be declared uniform
             TexDeclToken->Literal.append( "uniform " );
+            // From GLES 3.1 spec:
+            //    Except for image variables qualified with the format qualifiers r32f, r32i, and r32ui,
+            //    image variables must specify either memory qualifier readonly or the memory qualifier writeonly.
+            // So on GLES we have to assume that an image is a writeonly variable
+            if(IsRWTexture && ImgFormat != "r32f" && ImgFormat != "r32i" && ImgFormat != "r32ui")
+                TexDeclToken->Literal.append( "IMAGE_WRITEONLY " ); // defined as 'writeonly' on GLES and as '' on desktop in GLSLDefinitions.h
         }
         TexDeclToken->Literal.append( CompleteGLSLSampler );
         Objects.m.insert( std::make_pair( HashMapStringKey(TextureName), HLSLObjectInfo(CompleteGLSLSampler, NumComponents) ) );
@@ -2379,13 +2386,16 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessAtomics(const TokenListTyp
             //               ^
             VERIFY_PARSER_STATE( Token, Token != ScopeEnd, "Unexpected EOF" );
             VERIFY_PARSER_STATE( Token, Token->Type == TokenType::OpenBracket, "Open bracket is expected" );
-           
+
             auto ArgsListEndToken = Token;
             auto NumArguments = CountFunctionArguments( ArgsListEndToken, ScopeEnd );
             // InterlockedAdd(Tex2D[GTid.xy], 1, iOldVal);
             //                                           ^
             //                                       ArgsListEndToken
             VERIFY_PARSER_STATE( ArgsListEndToken, ArgsListEndToken != ScopeEnd, "Unexpected EOF" );
+
+            ++Token;
+            VERIFY_PARSER_STATE( Token, Token != ScopeEnd, "Unexpected EOF" );
 
             const auto *pObjectInfo = FindHLSLObject(Token->Literal);
             if( pObjectInfo != nullptr )
@@ -3367,7 +3377,8 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessHullShaderConstantFunction
 
     std::stringstream PrologueSS, ReturnHandlerSS;
     const Char *ReturnMacroName = "_CONST_FUNC_RETURN_";
-    ReturnHandlerSS << "#define " << ReturnMacroName << "(" << (bIsVoid ? "" : "_RET_VAL_") << "){\\\n";
+    // Some GLES compilers cannot properly handle macros with empty argument lists, such as _CONST_FUNC_RETURN_()
+    ReturnHandlerSS << "#define " << ReturnMacroName << (bIsVoid ? "" : "(_RET_VAL_)") << "{\\\n";
 
     bTakesInputPatch = false;
     for( const auto &TopLevelParam : Params )
@@ -3951,13 +3962,13 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessReturnStatements( TokenLis
                     //if( x < 0.5 ) _RETURN_( float4(0.0, 0.0, 0.0, 1.0);
                     //                        ^
 
-                    while( Token->Type != TokenType::Semicolon )
+                    while( Token != m_Tokens.end() && Token->Type != TokenType::Semicolon )
                         ++Token;
                     VERIFY_PARSER_STATE( Token, Token != m_Tokens.end(), "Unexpected end of file while looking for the \';\'" );
                     //if( x < 0.5 ) _RETURN_( float4(0.0, 0.0, 0.0, 1.0);
                     //                                                  ^
 
-                    // Replace semicolon with ):
+                    // Replace semicolon with ')'
                     Token->Type = TokenType::ClosingBracket;
                     Token->Literal = ")";
                     //if( x < 0.5 ) _RETURN_( float4(0.0, 0.0, 0.0, 1.0))
@@ -3970,11 +3981,11 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessReturnStatements( TokenLis
                     auto SemicolonToken = Token;
                     ++Token;
                     //if( x < 0.5 ) _RETURN_ ;
-                    //int a;
+                    //else
                     //^
                     m_Tokens.erase(SemicolonToken);
                     //if( x < 0.5 ) _RETURN_
-                    //int a;
+                    //else
                     //^
                 }
 
@@ -3997,6 +4008,12 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessReturnStatements( TokenLis
         // Insert return handler before the closing brace
         m_Tokens.insert(Token, TokenInfo(TokenType::TextBlock, MacroName, Token->Delimiter.c_str()));
         Token->Delimiter = "\n";
+        // void main ()
+        // {
+        //      ...
+        //      _RETURN_
+        // }
+        // ^
     }
 }
 
@@ -4063,6 +4080,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessShaderDeclaration( TokenLi
 
     std::stringstream ReturnHandlerSS;
     const Char *ReturnMacroName = "_RETURN_";
+    // Some GLES compilers cannot properly handle macros with empty argument lists, such as _RETURN_()
     ReturnHandlerSS << "#define " << ReturnMacroName << (bIsVoid ? "" : "(_RET_VAL_)") << "{\\\n";
 
     String GlobalVariables, Prologue;
