@@ -602,9 +602,10 @@ objects. Refer to the following pages for more information:
 
 # Version History
 
-## Current Progress
+## v2.2
 
 * Added MacOS and iOS support
+* Improved GLSL2HLSL converter to fix multiple issues on GLES
 
 ## v2.1.b
 
