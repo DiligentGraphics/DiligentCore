@@ -620,12 +620,11 @@ namespace Diligent
                         auto srcFactorAlpha = BlendFactor2GLBlend( RT.SrcBlendAlpha );
                         auto dstFactorAlpha = BlendFactor2GLBlend( RT.DestBlendAlpha );
                         glBlendFuncSeparatei( i, srcFactorRGB, dstFactorRGB, srcFactorAlpha, dstFactorAlpha );
-                        CHECK_GL_ERROR( "Failed to set blending factors" );
-
+                        CHECK_GL_ERROR( "Failed to set separate blending factors" );
                         auto modeRGB = BlendOperation2GLBlendOp( RT.BlendOp );
                         auto modeAlpha = BlendOperation2GLBlendOp( RT.BlendOpAlpha );
                         glBlendEquationSeparatei( i, modeRGB, modeAlpha );
-                        CHECK_GL_ERROR( "Failed to set blending equations" );
+                        CHECK_GL_ERROR( "Failed to set separate blending equations" );
                     }
                     else
                     {
