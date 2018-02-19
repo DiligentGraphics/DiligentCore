@@ -46,6 +46,11 @@ namespace Diligent
             glGetIntegerv( GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &m_Caps.m_iMaxCombinedTexUnits );
             CHECK_GL_ERROR( "Failed to get max combined tex image units count" );
             VERIFY_EXPR(m_Caps.m_iMaxCombinedTexUnits > 0);
+
+            m_Caps.m_iMaxDrawBuffers = 0;
+            glGetIntegerv( GL_MAX_DRAW_BUFFERS, &m_Caps.m_iMaxDrawBuffers );
+            CHECK_GL_ERROR( "Failed to get max draw buffers count" );
+            VERIFY_EXPR(m_Caps.m_iMaxDrawBuffers > 0);
         }
 
         m_BoundTextures.reserve( m_Caps.m_iMaxCombinedTexUnits );
@@ -577,8 +582,15 @@ namespace Diligent
                 const auto& RT = BSDsc.RenderTargets[i];
                 if( RT.BlendEnable )
                     bEnableBlend = true;
-                                    
-                SetColorWriteMask(i, RT.RenderTargetWriteMask, True);
+
+                if(i < m_Caps.m_iMaxDrawBuffers)
+                {
+                    SetColorWriteMask(i, RT.RenderTargetWriteMask, True);
+                }
+                else
+                {
+                    VERIFY(RT.RenderTargetWriteMask == RenderTargetBlendDesc().RenderTargetWriteMask, "Render target write mask is specified for buffer ", i, " but this device only supports ", m_Caps.m_iMaxDrawBuffers, " draw buffers");
+                }
             }
         }
         else
@@ -610,6 +622,14 @@ namespace Diligent
                 for( int i = 0; i < BSDsc.MaxRenderTargets; ++i )
                 {
                     const auto& RT = BSDsc.RenderTargets[i];
+
+                    if(i >= m_Caps.m_iMaxDrawBuffers)
+                    {
+                        if( RT.BlendEnable )
+                            LOG_ERROR_MESSAGE("Blend is enabled for render target ", i, " but this device only supports ", m_Caps.m_iMaxDrawBuffers, " draw buffers");
+                        continue;
+                    }
+
                     if( RT.BlendEnable )
                     {
                         glEnablei( GL_BLEND, i );

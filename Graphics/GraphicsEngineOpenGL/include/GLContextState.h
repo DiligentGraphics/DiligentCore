@@ -77,6 +77,14 @@ public:
     void SetCurrentGLContext(GLContext::NativeGLContextType Context) { m_CurrentGLContext = Context; }
     GLContext::NativeGLContextType GetCurrentGLContext()const { return m_CurrentGLContext; }
 
+    struct ContextCaps
+    {
+        bool bFillModeSelectionSupported = True;
+        GLint m_iMaxCombinedTexUnits = 0;
+        GLint m_iMaxDrawBuffers = 0;
+    };
+    const ContextCaps& GetContextCaps(){return m_Caps;}
+
 private:
     // It is unsafe to use GL handle to keep track of bound objects
     // When an object is released, GL is free to reuse its handle for 
@@ -195,11 +203,7 @@ private:
         EnableStateHelper ScissorTestEnable;
     }m_RSState;
 
-    struct ContextCaps
-    {
-        bool bFillModeSelectionSupported = True;
-        GLint m_iMaxCombinedTexUnits = 0;
-    }m_Caps;
+    ContextCaps m_Caps;
 
     Uint32 m_ColorWriteMasks[MaxRenderTargets] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
     EnableStateHelper m_bIndependentWriteMasks;
