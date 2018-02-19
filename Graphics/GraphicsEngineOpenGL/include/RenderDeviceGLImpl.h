@@ -36,15 +36,13 @@ enum class GPU_VENDOR
     UNKNOWN, 
     INTEL,
     ATI,
-    NVIDIA
+    NVIDIA,
+    QUALCOMM
 };
 
 struct GPUInfo
 {
-    GPU_VENDOR Vendor;
-    GPUInfo() :
-        Vendor( GPU_VENDOR::UNKNOWN )
-    {}
+    GPU_VENDOR Vendor = GPU_VENDOR::UNKNOWN;
 };
 
 namespace Diligent

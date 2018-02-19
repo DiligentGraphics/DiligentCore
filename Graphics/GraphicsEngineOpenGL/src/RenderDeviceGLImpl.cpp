@@ -68,6 +68,7 @@ RenderDeviceGLImpl :: RenderDeviceGLImpl(IReferenceCounters *pRefCounters, IMemo
 
     std::basic_string<GLubyte> glstrVendor = glGetString( GL_VENDOR );
     std::string Vendor = StrToLower(std::string(glstrVendor.begin(), glstrVendor.end()));
+    LOG_INFO_MESSAGE("GPU Vendor: ", Vendor);
 
     if( Vendor.find( "intel" ) != std::string::npos )
         m_GPUInfo.Vendor = GPU_VENDOR::INTEL;
@@ -76,6 +77,8 @@ RenderDeviceGLImpl :: RenderDeviceGLImpl(IReferenceCounters *pRefCounters, IMemo
     else if( Vendor.find( "ati" ) != std::string::npos || 
              Vendor.find( "amd" ) != std::string::npos )
         m_GPUInfo.Vendor = GPU_VENDOR::ATI;
+    else if( Vendor.find( "qualcomm" ) )
+        m_GPUInfo.Vendor = GPU_VENDOR::QUALCOMM;
 }
 
 RenderDeviceGLImpl :: ~RenderDeviceGLImpl()
