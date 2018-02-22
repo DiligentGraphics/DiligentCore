@@ -24,7 +24,7 @@ To build the module, see [build instrcutions](https://github.com/DiligentGraphic
  | [Primitives](https://github.com/DiligentGraphics/DiligentCore/tree/master/Primitives)                                        | Definitions of basic types (Int32, Int16, Uint32, etc.) and interfaces (IObject, IReferenceCounters, etc.) |
  | [Common](https://github.com/DiligentGraphics/DiligentCore/tree/master/Common)                                                | Common functionality such as file wrapper, logging, debug utilities, etc. |
  | [Graphics/GraphicsAccessories](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsAccessories)    | Basic graphics accessories used by all implementations  |
- | [Graphics/GraphicsEngine](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngine               | Platform-independent base functionality |
+ | [Graphics/GraphicsEngine](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngine)              | Platform-independent base functionality |
  | [Graphics/GraphicsEngineD3DBase](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngineD3DBase)| Base functionality for D3D11/D3D12 implementations |
  | [Graphics/GraphicsEngineD3D11](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngineD3D11)     | Implementation of Direct3D11 rendering backend |
  | [Graphics/GraphicsEngineD3D12](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngineD3D12)     | Implementation of Direct3D12 rendering backend |
@@ -158,7 +158,9 @@ also create a specified number of deferred contexts, which can be used for multi
 Deferred contexts can only be created during the initialization of the engine. The function populates an array of pointers
 to the contexts, where the immediate context goes at position 0, followed by all deferred contexts.
 
-For more details, take a look at [WinMain.cpp](https://github.com/DiligentGraphics/DiligentSamples/blob/master/Samples/SampleBase/src/Win32/WinMain.cpp) file.
+For more details, take a look at 
+[SampleApp.cpp](https://github.com/DiligentGraphics/DiligentSamples/blob/master/Samples/SampleBase/src/SampleApp.cpp) 
+file.
 
 ### Universal Windows Platform
 
@@ -167,33 +169,34 @@ currently supported, but dynamic linking can also be implemented. Initialization
 way as on Win32 Platform. The difference is that you first create the render device and device contexts by
 calling `IEngineFactoryD3D11::CreateDeviceAndContextsD3D11()` or `IEngineFactoryD3D12::CreateDeviceAndContextsD3D12()`.
 The swap chain is created later by a call to `IEngineFactoryD3D11::CreateSwapChainD3D11()` or `IEngineFactoryD3D12::CreateSwapChainD3D12()`.
-Please look at the [DeviceResources.cpp](https://github.com/DiligentGraphics/DiligentSamples/blob/master/Samples/SampleBase/src/UWP/Common/DeviceResources.cpp) file for more details.
+Please look at
+[SampleAppUWP.cpp](https://github.com/DiligentGraphics/DiligentSamples/blob/master/Samples/SampleBase/src/UWP/SampleAppUWP.cpp) 
+file for more details.
 
 ### Linux
 
 On Linux platform, the only API currently supported is OpenGL. Initialization of GL context on Linux is tightly
 coupled with window creation. As a result, Diligent Engine does not initialize the context, but
 attaches to the one initialized by the app. An example of the engine initialization on Linux can be found in
-[LinuxMain.cpp](https://github.com/DiligentGraphics/DiligentSamples/blob/master/Samples/SampleBase/src/Linux/LinuxMain.cpp).
+[LinuxMain.cpp](https://github.com/DiligentGraphics/DiligentEngine/blob/master/Common/NativeApp/src/Linux/LinuxMain.cpp).
 
 ### MacOS
 
 Similar to Linux, the only API currently supported by Diligent Engine on MacOS is OpenGL. Initialization of GL context on MacOS is
 performed by the application, and the engine attaches to the context initialized by the app; see
-[GLView.m](https://github.com/DiligentGraphics/DiligentSamples/blob/master/Samples/SampleBase/Apple/Source/Classes/OSX/GLView.m) for details.
+[GLView.m](https://github.com/DiligentGraphics/DiligentEngine/blob/master/Common/NativeApp/Apple/Source/Classes/OSX/GLView.m)
+for details.
 
 ### Android
 
 On Android, you can only create OpenGLES device. The following code snippet shows an example:
 
 ```cpp
-EngineCreationAttribs EngineCreationAttribs;
-RefCntAutoPtr<IRenderDevice> pRenderDevice;
-SwapChainDesc SwapChainDesc;
-auto pFactory = GetEngineFactoryOpenGL();
-pFactory->CreateDeviceAndSwapChainGL( EngineCreationAttribs, &pRenderDevice, &pDeviceContext_,
-                                      SwapChainDesc, app_->window, &pSwapChain_ );
-
+auto *pFactoryOpenGL = GetEngineFactoryOpenGL();
+EngineGLAttribs CreationAttribs;
+CreationAttribs.pNativeWndHandle = NativeWindowHandle;
+pFactoryOpenGL->CreateDeviceAndSwapChainGL(
+    CreationAttribs, &m_pDevice, &m_pContext, SCDesc, &m_pSwapChain);
 IRenderDeviceGLES *pRenderDeviceOpenGLES;
 pRenderDevice->QueryInterface( IID_RenderDeviceGLES, reinterpret_cast<IObject**>(&pRenderDeviceOpenGLES) );
 ```
@@ -215,7 +218,8 @@ static
 
 iOS implementation only supports OpenGLES backend. Initialization of GL context on iOS is
 performed by the application, and the engine attaches to the context initialized by the app; see
-[EAGLView.m](https://github.com/DiligentGraphics/DiligentSamples/blob/master/Samples/SampleBase/Apple/Source/Classes/iOS/EAGLView.m) for details.
+[EAGLView.m](https://github.com/DiligentGraphics/DiligentEngine/blob/master/Common/NativeApp/Apple/Source/Classes/iOS/EAGLView.m)
+for details.
 
 ### Attaching to Already Initialized Graphics API
 
