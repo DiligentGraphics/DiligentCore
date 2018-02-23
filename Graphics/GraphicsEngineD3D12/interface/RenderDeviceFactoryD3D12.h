@@ -26,7 +26,7 @@
 /// \file
 /// Declaration of functions that initialize Direct3D12-based engine implementation
 
-#include "../../../Platforms/Basic/interface/Errors.h"
+#include <sstream>
 
 #include "../../GraphicsEngine/interface/RenderDevice.h"
 #include "../../GraphicsEngine/interface/DeviceContext.h"
@@ -98,14 +98,18 @@ extern "C"
 
         if( hModule == NULL )
         {
-            LOG_ERROR_MESSAGE( "Failed to load ", LibName, " library." );
+            std::stringstream ss;
+            ss << "Failed to load " << LibName << " library.\n";
+            OutputDebugStringA(ss.str().c_str());
             return false;
         }
 
         GetFactoryFunc = reinterpret_cast<GetEngineFactoryD3D12Type>( GetProcAddress(hModule, "GetEngineFactoryD3D12") );
         if( GetFactoryFunc == NULL )
         {
-            LOG_ERROR_MESSAGE( "Failed to load GetEngineFactoryD3D12() from ", LibName, " library." );
+            std::stringstream ss;
+            ss << "Failed to load GetEngineFactoryD3D12() from " << LibName << " library.\n";
+            OutputDebugStringA(ss.str().c_str());
             FreeLibrary( hModule );
             return false;
         }

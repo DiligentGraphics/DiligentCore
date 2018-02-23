@@ -26,7 +26,7 @@
 /// \file
 /// Declaration of functions that create OpenGL-based engine implementation
 
-#include "../../../Platforms/Basic/interface/Errors.h"
+#include <sstream>
 
 #include "../../GraphicsEngine/interface/RenderDevice.h"
 #include "../../GraphicsEngine/interface/DeviceContext.h"
@@ -103,14 +103,18 @@ extern "C"
         auto hModule = LoadLibraryA( LibName.c_str() );
         if( hModule == NULL )
         {
-            LOG_ERROR_MESSAGE( "Failed to load ", LibName, " library." );
+            std::stringstream ss;
+            ss << "Failed to load " << LibName << " library.\n";
+            OutputDebugStringA(ss.str().c_str());
             return false;
         }
 
         GetFactoryFunc = reinterpret_cast<GetEngineFactoryOpenGLType>( GetProcAddress(hModule, "GetEngineFactoryOpenGL") );
         if( GetFactoryFunc == NULL )
         {
-            LOG_ERROR_MESSAGE( "Failed to load GetEngineFactoryOpenGL() from ", LibName, " library." );
+            std::stringstream ss;
+            ss << "Failed to load GetEngineFactoryOpenGL() from " << LibName << " library.\n";
+            OutputDebugStringA(ss.str().c_str());
             FreeLibrary( hModule );
             return false;
         }
