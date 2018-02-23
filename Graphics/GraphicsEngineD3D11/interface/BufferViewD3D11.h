@@ -26,7 +26,7 @@
 /// \file
 /// Definition of the Diligent::IBufferViewD3D11 interface
 
-#include "BufferView.h"
+#include "../../GraphicsEngine/interface/BufferView.h"
 
 namespace Diligent
 {

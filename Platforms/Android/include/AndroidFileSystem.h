@@ -23,11 +23,11 @@
 
 #pragma once
 
-#include "BasicFileSystem.h"
-#include "DataBlob.h"
-
 #include <memory>
 #include <vector>
+
+#include "../../Basic/interface/BasicFileSystem.h"
+#include "../../../Primitives/interface/DataBlob.h"
 
 class AndroidFile : public BasicFile
 {

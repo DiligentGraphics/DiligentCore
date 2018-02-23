@@ -26,7 +26,7 @@
 /// \file
 /// Definition of the Diligent::ISamplerGL interface
 
-#include "Sampler.h"
+#include "../../GraphicsEngine/interface/Sampler.h"
 
 namespace Diligent
 {

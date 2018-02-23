@@ -26,7 +26,7 @@
 /// \file
 /// Definition of the Diligent::IBufferGL interface
 
-#include "Buffer.h"
+#include "../../GraphicsEngine/interface/Buffer.h"
 
 namespace Diligent
 {

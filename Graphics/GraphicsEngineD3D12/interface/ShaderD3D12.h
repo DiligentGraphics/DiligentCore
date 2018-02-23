@@ -26,7 +26,7 @@
 /// \file
 /// Definition of the Diligent::IShaderD3D12 interface
 
-#include "Shader.h"
+#include "../../GraphicsEngine/interface/Shader.h"
 
 namespace Diligent
 {

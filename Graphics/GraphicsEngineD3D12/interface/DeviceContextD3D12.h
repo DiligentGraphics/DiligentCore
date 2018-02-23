@@ -26,7 +26,7 @@
 /// \file
 /// Definition of the Diligent::IDeviceContextD3D11 interface
 
-#include "DeviceContext.h"
+#include "../../GraphicsEngine/interface/DeviceContext.h"
 
 namespace Diligent
 {

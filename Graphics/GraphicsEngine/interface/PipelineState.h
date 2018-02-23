@@ -26,14 +26,14 @@
 /// \file
 /// Definition of the Diligent::IRenderDevice interface and related data structures
 
+#include "../../../Primitives/interface/Object.h"
+#include "../../../Platforms/interface/PlatformDefinitions.h"
 #include "GraphicsTypes.h"
-#include "Object.h"
 #include "BlendState.h"
 #include "RasterizerState.h"
 #include "DepthStencilState.h"
 #include "InputLayout.h"
 #include "ShaderResourceBinding.h"
-#include "PlatformDefinitions.h"
 
 namespace Diligent
 {

@@ -26,7 +26,7 @@
 /// \file
 /// Defines Diligent::IDeviceObject interface
 
-#include "Object.h"
+#include "../../../Primitives/interface/Object.h"
 #include "GraphicsTypes.h"
 
 namespace Diligent

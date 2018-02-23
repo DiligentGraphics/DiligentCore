@@ -23,7 +23,7 @@
 
 #pragma once
 
-#include "FormatMessage.h"
+#include "../../../Primitives/interface/FormatMessage.h"
 #include "BasicPlatformDebug.h"
 
 #ifdef _DEBUG

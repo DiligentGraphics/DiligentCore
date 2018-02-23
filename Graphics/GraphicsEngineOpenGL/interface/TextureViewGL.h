@@ -26,7 +26,7 @@
 /// \file
 /// Definition of the Diligent::ITextureViewGL interface
 
-#include "TextureView.h"
+#include "../../GraphicsEngine/interface/TextureView.h"
 
 namespace Diligent
 {

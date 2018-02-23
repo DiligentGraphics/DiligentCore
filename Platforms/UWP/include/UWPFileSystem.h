@@ -23,9 +23,10 @@
 
 #pragma once
 
-#include "BasicFileSystem.h"
-#include "DataBlob.h"
 #include <memory>
+
+#include "../../Basic/interface/BasicFileSystem.h"
+#include "../../../Primitives/interface/DataBlob.h"
 
 // Do not include windows headers here as they will mess up CreateDirectory()
 // and DeleteFile() functions!

@@ -26,7 +26,7 @@
 /// \file
 /// Definition of the Diligent::ISamplerD3D11 interface
 
-#include "Sampler.h"
+#include "../../GraphicsEngine/interface/Sampler.h"
 
 namespace Diligent
 {

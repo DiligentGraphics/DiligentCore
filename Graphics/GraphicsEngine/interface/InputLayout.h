@@ -26,7 +26,7 @@
 /// \file
 /// Definition input layout
 
-#include "BasicTypes.h"
+#include "GraphicsTypes.h"
 
 namespace Diligent
 {

@@ -26,7 +26,7 @@
 /// \file
 /// Definition of the Diligent::IBufferView interface and related data structures
 
-#include "DeviceObject.h"
+#include "Buffer.h"
 
 namespace Diligent
 {

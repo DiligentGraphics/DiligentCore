@@ -26,7 +26,7 @@
 /// \file
 /// Definition of the Diligent::IDeviceContext interface and related data structures
 
-#include "Object.h"
+#include "../../../Primitives/interface/Object.h"
 #include "DeviceCaps.h"
 #include "Constants.h"
 #include "Buffer.h"

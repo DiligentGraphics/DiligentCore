@@ -26,6 +26,8 @@
 /// \file
 /// Definition of the engine constants
 
+#include "../../../Primitives/interface/BasicTypes.h"
+
 namespace Diligent
 {
     /// Maximum number of input buffer slots.

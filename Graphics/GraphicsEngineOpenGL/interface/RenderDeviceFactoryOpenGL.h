@@ -26,10 +26,14 @@
 /// \file
 /// Declaration of functions that create OpenGL-based engine implementation
 
-#include "RenderDevice.h"
-#include "DeviceContext.h"
-#include "SwapChain.h"
-#include "HLSL2GLSLConverter.h"
+#include "../../../Platforms/Basic/interface/Errors.h"
+
+#include "../../GraphicsEngine/interface/RenderDevice.h"
+#include "../../GraphicsEngine/interface/DeviceContext.h"
+#include "../../GraphicsEngine/interface/SwapChain.h"
+
+#include "../../HLSL2GLSLConverterLib/interface/HLSL2GLSLConverter.h"
+
 #include "EngineGLAttribs.h"
 
 #if PLATFORM_WIN32 || PLATFORM_UNIVERSAL_WINDOWS

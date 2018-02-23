@@ -26,7 +26,7 @@
 /// \file
 /// Definition of the Diligent::IShaderResourceBindingD3D11 interface and related data structures
 
-#include "ShaderResourceBinding.h"
+#include "../../GraphicsEngine/interface/ShaderResourceBinding.h"
 
 namespace Diligent
 {

@@ -23,7 +23,7 @@
 
 #pragma once
 
-#include "DebugUtilities.h"
+#include "../../../Platforms/Basic/interface/DebugUtilities.h"
 
 template<typename DstType, typename SrcType>
 DstType* ValidatedCast( SrcType *Ptr )

@@ -26,7 +26,7 @@
 /// \file
 /// Definition of the Diligent::ISwapChainGL interface
 
-#include "SwapChain.h"
+#include "../../GraphicsEngine/interface/SwapChain.h"
 
 namespace Diligent
 {

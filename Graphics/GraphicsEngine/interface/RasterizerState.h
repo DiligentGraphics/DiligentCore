@@ -26,7 +26,7 @@
 /// \file
 /// Rasterizer state description
 
-#include "BasicTypes.h"
+#include "GraphicsTypes.h"
 
 namespace Diligent
 {

@@ -26,7 +26,7 @@
 /// \file
 /// Definition of the Diligent::IBufferViewGL interface
 
-#include "BufferView.h"
+#include "../../GraphicsEngine/interface/BufferView.h"
 
 namespace Diligent
 {

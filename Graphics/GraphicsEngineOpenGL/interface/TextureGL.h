@@ -26,7 +26,7 @@
 /// \file
 /// Definition of the Diligent::ITextureGL interface
 
-#include "Texture.h"
+#include "../../GraphicsEngine/interface/Texture.h"
 
 namespace Diligent
 {

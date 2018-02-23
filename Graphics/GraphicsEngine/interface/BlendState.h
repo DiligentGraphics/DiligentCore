@@ -26,7 +26,7 @@
 /// \file
 /// Blend state description
 
-#include "BasicTypes.h"
+#include "../../../Primitives/interface/BasicTypes.h"
 
 namespace Diligent
 {

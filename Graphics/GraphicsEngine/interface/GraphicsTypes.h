@@ -26,7 +26,7 @@
 /// \file
 /// Contains basic graphics engine type defintions
 
-#include "BasicTypes.h"
+#include "../../../Primitives/interface/BasicTypes.h"
 
 /// Graphics engine namespace
 namespace Diligent

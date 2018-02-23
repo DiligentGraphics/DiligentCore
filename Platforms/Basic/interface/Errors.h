@@ -25,8 +25,8 @@
 
 #include <stdexcept>
 
+#include "../../../Primitives/interface/FormatMessage.h"
 #include "BasicPlatformDebug.h"
-#include "FormatMessage.h"
 #include "BasicFileSystem.h"
 
 template<bool>

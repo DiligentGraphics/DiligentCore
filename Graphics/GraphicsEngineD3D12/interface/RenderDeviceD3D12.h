@@ -26,7 +26,7 @@
 /// \file
 /// Definition of the Diligent::IRenderDeviceD3D12 interface
 
-#include "RenderDevice.h"
+#include "../../GraphicsEngine/interface/RenderDevice.h"
 
 namespace Diligent
 {

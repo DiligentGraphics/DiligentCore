@@ -26,10 +26,13 @@
 /// \file
 /// Definition of the Diligent::IShaderResourceBinding interface and related data structures
 
-#include "Object.h"
+#include "../../../Primitives/interface/Object.h"
+#include "Shader.h"
 
 namespace Diligent
 {
+
+class IPipelineState;
 
 // {061F8774-9A09-48E8-8411-B5BD20560104}
 static constexpr INTERFACE_ID IID_ShaderResourceBinding =
@@ -47,7 +50,7 @@ public:
 
     /// The method calls AddRef() on the returned interface, 
     /// so Release() must be called to avoid memory leaks.
-    virtual class IPipelineState* GetPipelineState() = 0;
+    virtual IPipelineState* GetPipelineState() = 0;
 
     /// Binds all resource using the resource mapping
 

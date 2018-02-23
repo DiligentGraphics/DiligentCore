@@ -26,8 +26,7 @@
 /// \file
 /// Definition of the Diligent::IRenderDeviceGL interface
 
-#include "RenderDevice.h"
-#include "HLSL2GLSLConverter.h"
+#include "../../GraphicsEngine/interface/RenderDevice.h"
 
 /// Namespace for the OpenGL implementation of the graphics engine
 namespace Diligent

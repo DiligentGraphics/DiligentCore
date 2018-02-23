@@ -26,12 +26,12 @@
 /// \file
 /// Implementation of the template base class for reference counting objects
 
-#include "Object.h"
-#include "Atomics.h"
-#include "DebugUtilities.h"
+#include "../../../Primitives/interface/Object.h"
+#include "../../../Primitives/interface/MemoryAllocator.h"
+#include "../../../Platforms/interface/Atomics.h"
+#include "../../../Platforms/Basic/interface/DebugUtilities.h"
 #include "LockHelper.h"
 #include "ValidatedCast.h"
-#include "MemoryAllocator.h"
 
 namespace Diligent
 {

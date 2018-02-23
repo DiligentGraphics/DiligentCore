@@ -29,7 +29,8 @@
 #include <algorithm>
 #include <cctype>
 #include <string.h>
-#include "DebugUtilities.h"
+
+#include "../../../Platforms/Basic/interface/DebugUtilities.h"
 
 namespace Diligent
 {

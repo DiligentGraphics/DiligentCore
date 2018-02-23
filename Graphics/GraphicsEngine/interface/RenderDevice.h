@@ -26,8 +26,8 @@
 /// \file
 /// Definition of the Diligent::IRenderDevice interface and related data structures
 
+#include "../../../Primitives/interface/Object.h"
 #include "GraphicsTypes.h"
-#include "Object.h"
 #include "DeviceCaps.h"
 #include "Constants.h"
 #include "Buffer.h"

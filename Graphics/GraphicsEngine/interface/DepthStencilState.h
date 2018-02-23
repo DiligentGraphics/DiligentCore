@@ -26,7 +26,7 @@
 /// \file
 /// Definition of data types that describe depth-stencil state
 
-#include "BasicTypes.h"
+#include "GraphicsTypes.h"
 
 namespace Diligent
 {

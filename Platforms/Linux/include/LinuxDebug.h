@@ -23,7 +23,7 @@
 
 #pragma once
 
-#include "BasicPlatformDebug.h"
+#include "../../Basic/interface/BasicPlatformDebug.h"
 
 struct LinuxDebug : public BasicPlatformDebug
 {

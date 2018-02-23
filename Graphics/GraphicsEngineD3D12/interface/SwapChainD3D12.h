@@ -27,7 +27,8 @@
 /// Definition of the Diligent::ISwapChainD3D12 interface
 
 #include <dxgi1_4.h>
-#include "SwapChain.h"
+
+#include "../../GraphicsEngine/interface/SwapChain.h"
 #include "TextureViewD3D12.h"
 
 namespace Diligent

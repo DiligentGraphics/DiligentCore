@@ -26,7 +26,7 @@
 /// \file
 /// Definition of the Diligent::ITextureD3D11 interface
 
-#include "Texture.h"
+#include "../../GraphicsEngine/interface/Texture.h"
 
 namespace Diligent
 {

@@ -26,7 +26,10 @@
 /// \file
 /// Definition of the Diligent::MapHelper helper template class
 
-#include "DebugUtilities.h"
+#include "../../../Platforms/Basic/interface/DebugUtilities.h"
+#include "../../../Common/interface/RefCntAutoPtr.h"
+#include "DeviceContext.h"
+#include "Buffer.h"
 
 namespace Diligent
 {

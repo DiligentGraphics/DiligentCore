@@ -26,7 +26,7 @@
 /// \file
 /// Definition of the Diligent::IDeviceContextGL interface
 
-#include "DeviceContext.h"
+#include "../../GraphicsEngine/interface/DeviceContext.h"
 
 namespace Diligent
 {

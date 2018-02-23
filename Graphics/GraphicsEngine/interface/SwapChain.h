@@ -26,7 +26,8 @@
 /// \file
 /// Definition of the Diligent::ISwapChain interface and related data structures
 
-#include "Object.h"
+#include "../../../Primitives/interface/Object.h"
+#include "GraphicsTypes.h"
 
 namespace Diligent
 {

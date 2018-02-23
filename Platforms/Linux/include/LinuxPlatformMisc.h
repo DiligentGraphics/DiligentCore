@@ -23,8 +23,8 @@
 
 #pragma once
 
-#include "BasicPlatformMisc.h"
-#include "DebugUtilities.h"
+#include "../../Basic/interface/BasicPlatformMisc.h"
+#include "../../../Platforms/Basic/interface/DebugUtilities.h"
 
 struct LinuxMisc : public BasicPlatformMisc
 {

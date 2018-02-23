@@ -26,9 +26,9 @@
 /// \file
 /// Definition of the Diligent::IShader interface and related data structures
 
+#include "../../../Primitives/interface/FileStream.h"
 #include "DeviceObject.h"
 #include "ResourceMapping.h"
-#include "FileStream.h"
 #include "Sampler.h"
 
 namespace Diligent

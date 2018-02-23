@@ -304,7 +304,7 @@ namespace Diligent
             NumRenderTargets = std::min(NumRenderTargets, MaxRenderTargets);
 
             const auto& CtxCaps = m_ContextState.GetContextCaps();
-            VERIFY(NumRenderTargets < CtxCaps.m_iMaxDrawBuffers, "This device only supports ", CtxCaps.m_iMaxDrawBuffers, " draw buffers, but ", NumRenderTargets, " are being set");
+            VERIFY(NumRenderTargets < static_cast<Uint32>(CtxCaps.m_iMaxDrawBuffers), "This device only supports ", CtxCaps.m_iMaxDrawBuffers, " draw buffers, but ", NumRenderTargets, " are being set");
             NumRenderTargets = std::min(NumRenderTargets, static_cast<Uint32>(CtxCaps.m_iMaxDrawBuffers));
 
             ITextureView *pBoundRTVs[MaxRenderTargets] = {};

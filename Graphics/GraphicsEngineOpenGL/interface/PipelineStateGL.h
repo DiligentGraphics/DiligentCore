@@ -26,7 +26,7 @@
 /// \file
 /// Definition of the Diligent::IPipelineStateGL interface
 
-#include "PipelineState.h"
+#include "../../GraphicsEngine/interface/PipelineState.h"
 
 namespace Diligent
 {

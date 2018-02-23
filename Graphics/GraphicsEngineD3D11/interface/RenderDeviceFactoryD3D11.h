@@ -26,15 +26,17 @@
 /// \file
 /// Declaration of functions that initialize Direct3D11-based engine implementation
 
-#include "Errors.h"
-#include "EngineD3D11Attribs.h"
-#include "RenderDevice.h"
-#include "DeviceContext.h"
-#include "SwapChain.h"
+#include "../../../Platforms/Basic/interface/Errors.h"
+
+#include "../../GraphicsEngine/interface/RenderDevice.h"
+#include "../../GraphicsEngine/interface/DeviceContext.h"
+#include "../../GraphicsEngine/interface/SwapChain.h"
 
 #if PLATFORM_UNIVERSAL_WINDOWS && defined(ENGINE_DLL)
-#   include "StringTools.h"
+#   include "../../../Common/interface/StringTools.h"
 #endif
+
+#include "EngineD3D11Attribs.h"
 
 namespace Diligent
 {

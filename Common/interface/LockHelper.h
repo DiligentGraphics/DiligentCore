@@ -28,7 +28,7 @@
 #include <condition_variable>
 #include <atomic>
 
-#include "Atomics.h"
+#include "../../../Platforms/interface/Atomics.h"
 
 namespace ThreadingTools
 {

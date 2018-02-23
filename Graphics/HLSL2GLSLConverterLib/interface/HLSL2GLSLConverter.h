@@ -26,8 +26,8 @@
 /// \file
 /// Definition of the Diligent::IHLSL2GLSLConverter interface
 
-#include "Shader.h"
-#include "DataBlob.h"
+#include "../../GraphicsEngine/interface/Shader.h"
+#include "../../../Primitives/interface/DataBlob.h"
 
 namespace Diligent
 {
