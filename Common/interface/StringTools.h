@@ -30,7 +30,7 @@
 #include <cctype>
 #include <string.h>
 
-#include "../../../Platforms/Basic/interface/DebugUtilities.h"
+#include "../../Platforms/Basic/interface/DebugUtilities.h"
 
 namespace Diligent
 {
