@@ -24,6 +24,7 @@
 #include "pch.h"
 #include "Win32FileSystem.h"
 #include "Errors.h"
+#include "../../Common/interface/StringTools.h"
 
 // We can't use namespace Diligent before #including <Windows.h> because Diligent::INTERFACE_ID will confilct with windows InterfaceID
 //using namespace Diligent;
@@ -48,15 +49,26 @@ void WindowsFileSystem::DeleteFile( const Diligent::Char *strPath )
 
 using namespace Diligent;
 
+static std::vector<wchar_t> UTF8ToUTF16(LPCSTR lpUTF8)
+{
+    // When last parameter is 0, the function returns the required buffer size, in characters, 
+    // including any terminating null character.
+    auto nChars = MultiByteToWideChar(CP_UTF8, 0, lpUTF8, -1, NULL, 0);
+    std::vector<wchar_t> wstr(nChars);
+    MultiByteToWideChar(CP_UTF8, 0, lpUTF8, -1, wstr.data(), nChars);
+    return wstr;
+}
+
 WindowsFile::WindowsFile( const FileOpenAttribs &OpenAttribs ) : 
     StandardFile(OpenAttribs, WindowsFileSystem::GetSlashSymbol())
 {
     VERIFY_EXPR(m_pFile == nullptr );
-    auto OpenModeStr = GetOpenModeStr();
+    auto OpenModeStr = WidenString( GetOpenModeStr() );
     
     for( ;; )
     {
-        errno_t err = fopen_s( &m_pFile, m_OpenAttribs.strFilePath, OpenModeStr.c_str() );
+        auto UTF16FilePath = UTF8ToUTF16(m_OpenAttribs.strFilePath);
+        errno_t err = _wfopen_s( &m_pFile, UTF16FilePath.data(), OpenModeStr.c_str() );
         if( err == 0 )
         {
             break;
@@ -101,8 +113,9 @@ bool WindowsFileSystem::FileExists( const Char *strFilePath )
     OpenAttribs.strFilePath = strFilePath;
     BasicFile DummyFile( OpenAttribs, WindowsFileSystem::GetSlashSymbol() );
     const auto& Path = DummyFile.GetPath(); // This is necessary to correct slashes
+    auto UTF16FilePath = UTF8ToUTF16(Path.c_str());
     FILE *pFile = nullptr;
-    auto err = fopen_s( &pFile, Path.c_str(), "r" );
+    auto err = _wfopen_s( &pFile, UTF16FilePath.data(), L"r" );
     bool Exists = (err == 0);
     if( Exists && pFile )
         fclose( pFile );
