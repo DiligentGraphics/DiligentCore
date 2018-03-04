@@ -343,13 +343,10 @@ void LoadGraphicsEngineD3D11(GetEngineFactoryD3D11Type &GetFactoryFunc)
 }
 #endif
 
+
+IEngineFactoryD3D11* GetEngineFactoryD3D11()
+{
+    return EngineFactoryD3D11Impl::GetInstance();
 }
 
-using namespace Diligent;
-extern "C"
-{
-    IEngineFactoryD3D11* GetEngineFactoryD3D11()
-    {
-        return EngineFactoryD3D11Impl::GetInstance();
-    }
 }

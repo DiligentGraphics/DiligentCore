@@ -228,10 +228,7 @@ void EngineFactoryOpenGLImpl::CreateHLSL2GLSLConverter(IHLSL2GLSLConverter **ppC
     pConverter->QueryInterface( IID_HLSL2GLSLConverter, reinterpret_cast<IObject**>(ppConverter) );
 }
 
-}
 
-extern "C"
-{
 API_QUALIFIER
 Diligent::IEngineFactoryOpenGL* GetEngineFactoryOpenGL()
 {

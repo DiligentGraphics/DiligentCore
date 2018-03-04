@@ -73,14 +73,10 @@ public:
                                           IDeviceContext **ppImmediateContext ) = 0;
 };
 
-}
-
-extern "C"
-{
 
 #if ENGINE_DLL && (PLATFORM_WIN32 || PLATFORM_UNIVERSAL_WINDOWS)
 
-    typedef Diligent::IEngineFactoryOpenGL* (*GetEngineFactoryOpenGLType)();
+    typedef IEngineFactoryOpenGL* (*GetEngineFactoryOpenGLType)();
 
     static bool LoadGraphicsEngineOpenGL(GetEngineFactoryOpenGLType &GetFactoryFunc)
     {
@@ -125,6 +121,8 @@ extern "C"
 
     // Do not forget to call System.loadLibrary("GraphicsEngineOpenGL") in Java on Android!
     API_QUALIFIER
-    Diligent::IEngineFactoryOpenGL* GetEngineFactoryOpenGL();
+    IEngineFactoryOpenGL* GetEngineFactoryOpenGL();
+
 #endif
+
 }

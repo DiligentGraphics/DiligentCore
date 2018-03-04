@@ -63,13 +63,9 @@ public:
                                     Uint32 NumDeferredContexts) = 0;
 };
 
-}
-
-extern "C"
-{
 #if ENGINE_DLL
 
-    typedef Diligent::IEngineFactoryD3D11* (*GetEngineFactoryD3D11Type)();
+    typedef IEngineFactoryD3D11* (*GetEngineFactoryD3D11Type)();
 
     static bool LoadGraphicsEngineD3D11(GetEngineFactoryD3D11Type &GetFactoryFunc)
     {
@@ -92,7 +88,7 @@ extern "C"
 #if PLATFORM_WIN32
         auto hModule = LoadLibraryA( LibName.c_str() );
 #elif PLATFORM_UNIVERSAL_WINDOWS
-        auto hModule = LoadPackagedLibrary(Diligent::WidenString(LibName).c_str(), 0);
+        auto hModule = LoadPackagedLibrary(WidenString(LibName).c_str(), 0);
 #else
 #   error Unexpected platform
 #endif
@@ -118,7 +114,8 @@ extern "C"
     }
 #else
 
-    Diligent::IEngineFactoryD3D11* GetEngineFactoryD3D11();
+    IEngineFactoryD3D11* GetEngineFactoryD3D11();
 
 #endif
+
 }

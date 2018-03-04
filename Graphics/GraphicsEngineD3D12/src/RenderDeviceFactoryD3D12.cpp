@@ -398,14 +398,9 @@ void LoadGraphicsEngineD3D12(GetEngineFactoryD3D12Type &GetFactoryFunc)
 #endif
 
 
+IEngineFactoryD3D12* GetEngineFactoryD3D12()
+{
+    return EngineFactoryD3D12Impl::GetInstance();
 }
 
-
-using namespace Diligent;
-extern "C"
-{
-    IEngineFactoryD3D12* GetEngineFactoryD3D12()
-    {
-        return EngineFactoryD3D12Impl::GetInstance();
-    }
 }
