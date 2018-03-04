@@ -10,19 +10,37 @@ image:
 #- Visual Studio 2015
 - Visual Studio 2017
 
-configuration:
-- Debug
-- Release
 
-platform:
-- Win32
-- x64
-
-environment:
-  matrix:
-  - cmake_args: 
-  - cmake_args: -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0
-
+matrix:
+- platform: x64
+  configuration: Debug
+  environment:
+    cmake_args:
+- platform: x64
+  configuration: Release
+  environment:
+    cmake_args:
+- platform: x64
+  configuration: Debug
+  environment:
+    cmake_args: -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0
+- platform: x64
+  configuration: Release
+  environment:
+    cmake_args: -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0
+- platform: Win32
+  configuration: Release
+  environment:
+    cmake_args:
+- platform: Win32
+  configuration: Release
+  environment:
+    cmake_args: -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0
+- platform: Win32
+  configuration: Release
+  environment:
+    cmake_args: -D CMAKE_SYSTEM_VERSION=8.1
+  
 # clone directory
 clone_folder: c:\projects\DiligentCore
 
