@@ -45,12 +45,16 @@ add_library(BuildSettings INTERFACE)
 
 if(PLATFORM_WIN32)
     set(D3D11_SUPPORTED TRUE CACHE INTERNAL "D3D11 supported on Win32 platform")
-    set(D3D12_SUPPORTED TRUE CACHE INTERNAL "D3D12 supported on Win32 platform")
+    if(NOT CMAKE_SYSTEM_VERSION STREQUAL "8.1")
+        set(D3D12_SUPPORTED TRUE CACHE INTERNAL "D3D12 supported on Win32 platform")
+    endif()
     set(GL_SUPPORTED TRUE CACHE INTERNAL "OpenGL supported on Win32 platform")
     target_compile_definitions(BuildSettings INTERFACE PLATFORM_WIN32=1)
 elseif(PLATFORM_UNIVERSAL_WINDOWS)
     set(D3D11_SUPPORTED TRUE CACHE INTERNAL "D3D11 supported on Univeral Windows platform")
-    set(D3D12_SUPPORTED TRUE CACHE INTERNAL "D3D12 supported on Univeral Windows platform")
+	if(NOT CMAKE_SYSTEM_VERSION STREQUAL "8.1")
+		set(D3D12_SUPPORTED TRUE CACHE INTERNAL "D3D12 supported on Univeral Windows platform")
+	endif()
     target_compile_definitions(BuildSettings INTERFACE PLATFORM_UNIVERSAL_WINDOWS=1)
 elseif(PLATFORM_ANDROID)
     set(GLES_SUPPORTED TRUE CACHE INTERNAL "OpenGLES supported on Android platform")
@@ -67,6 +71,15 @@ elseif(PLATFORM_IOS)
 else()
     message(FATAL_ERROR "No PLATFORM_XXX variable defined. Make sure that 'DiligentCore' folder is processed first")
 endif()
+
+target_compile_definitions(BuildSettings 
+INTERFACE 
+    D3D11_SUPPORTED=$<BOOL:${D3D11_SUPPORTED}>
+    D3D12_SUPPORTED=$<BOOL:${D3D12_SUPPORTED}>
+    GL_SUPPORTED=$<BOOL:${GL_SUPPORTED}>
+    GLES_SUPPORTED=$<BOOL:${GLES_SUPPORTED}>
+)
+
 
 if(MSVC)
     # For msvc, enable level 4 warnings except for

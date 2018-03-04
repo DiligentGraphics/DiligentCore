@@ -33,6 +33,11 @@
     #error Platform is not defined
 #endif
 
+
+#if !D3D11_SUPPORTED && !D3D12_SUPPORTED && !GL_SUPPORTED && !GLES_SUPPORTED
+    #error No API is supported on this platform. Did you define at least one of D3D11_SUPPORTED, D3D12_SUPPORTED, GL_SUPPORTED or GLES_SUPPORTED macros as 1?
+#endif
+
 #if PLATFORM_WIN32
 
 #   if PLATFORM_UNIVERSAL_WINDOWS || PLATFORM_ANDROID || PLATFORM_LINUX || PLATFORM_MACOS || PLATFORM_IOS
@@ -40,10 +45,6 @@
 #   endif
 
 #   include "../Win32/include/Win32PlatformDefinitions.h"
-
-#   define OPENGL_SUPPORTED 1
-#   define D3D11_SUPPORTED 1
-#   define D3D12_SUPPORTED 1
 
 #elif PLATFORM_UNIVERSAL_WINDOWS
 
@@ -53,10 +54,6 @@
 
 #   include "../UWP/include/UWPDefinitions.h"
 
-#   define OPENGL_SUPPORTED 0
-#   define D3D11_SUPPORTED 1
-#   define D3D12_SUPPORTED 1
-
 #elif PLATFORM_ANDROID
 
 #   if PLATFORM_WIN32 || PLATFORM_UNIVERSAL_WINDOWS || PLATFORM_LINUX || PLATFORM_MACOS || PLATFORM_IOS
@@ -64,10 +61,6 @@
 #   endif
 
 #   include "../Android/include/AndroidPlatformDefinitions.h"
-
-#   define OPENGL_SUPPORTED 1
-#   define D3D11_SUPPORTED 0
-#   define D3D12_SUPPORTED 0
 
 #elif PLATFORM_LINUX
 
@@ -77,10 +70,6 @@
 
 #   include "../Linux/include/LinuxPlatformDefinitions.h"
 
-#   define OPENGL_SUPPORTED 1
-#   define D3D11_SUPPORTED 0
-#   define D3D12_SUPPORTED 0
-
 #elif PLATFORM_MACOS
 
 #   if PLATFORM_WIN32 || PLATFORM_UNIVERSAL_WINDOWS || PLATFORM_ANDROID || PLATFORM_LINUX || PLATFORM_IOS
@@ -89,10 +78,6 @@
 
 #   include "../Apple/include/ApplePlatformDefinitions.h"
 
-#   define OPENGL_SUPPORTED 1
-#   define D3D11_SUPPORTED 0
-#   define D3D12_SUPPORTED 0
-
 #elif PLATFORM_IOS
 
 #   if PLATFORM_WIN32 || PLATFORM_UNIVERSAL_WINDOWS || PLATFORM_ANDROID || PLATFORM_LINUX || PLATFORM_MACOS
@@ -100,10 +85,6 @@
 #   endif
 
 #   include "../Apple/include/ApplePlatformDefinitions.h"
-
-#   define OPENGL_SUPPORTED 1
-#   define D3D11_SUPPORTED 0
-#   define D3D12_SUPPORTED 0
 
 #else
 
