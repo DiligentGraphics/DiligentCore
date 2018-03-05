@@ -16,10 +16,10 @@ set(CMAKE_OBJECT_PATH_MAX 4096)
 if(WIN32)
     if(${CMAKE_SYSTEM_NAME} STREQUAL "WindowsStore")
         set(PLATFORM_UNIVERSAL_WINDOWS TRUE CACHE INTERNAL "Target platform: Windows Store")
-        message("Target platform: Universal Windows")
+        message("Target platform: Universal Windows. SDK Version: " ${CMAKE_SYSTEM_VERSION})
     else()
         set(PLATFORM_WIN32 TRUE CACHE INTERNAL "Target platform: Win32") #WIN32 is a variable, so we cannot use string "WIN32"
-        message("Target platform: Win32")
+        message("Target platform: Win32. SDK Version: " ${CMAKE_SYSTEM_VERSION})
     endif()
 else()
     if(${CMAKE_SYSTEM_NAME} STREQUAL "Android")
@@ -71,6 +71,11 @@ elseif(PLATFORM_IOS)
 else()
     message(FATAL_ERROR "No PLATFORM_XXX variable defined. Make sure that 'DiligentCore' folder is processed first")
 endif()
+
+message("D3D11_SUPPORTED: " ${D3D11_SUPPORTED})
+message("D3D12_SUPPORTED: " ${D3D12_SUPPORTED})
+message("GL_SUPPORTED: " ${GL_SUPPORTED})
+message("GLES_SUPPORTED: " ${GLES_SUPPORTED})
 
 target_compile_definitions(BuildSettings 
 INTERFACE 
