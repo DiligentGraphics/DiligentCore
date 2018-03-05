@@ -1,4 +1,4 @@
-if(PLATFORM_WIN32 OR PLATFORM_UNVIRSAL_WINDOWS)
+if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS)
     
     function(copy_required_dlls TARGET_NAME)
         set(ENGINE_DLLS 
@@ -32,28 +32,53 @@ if(PLATFORM_WIN32 OR PLATFORM_UNVIRSAL_WINDOWS)
         endif()
     endfunction()
 
-endif(PLATFORM_WIN32 OR PLATFORM_UNVIRSAL_WINDOWS)
+    # Set dll output name by adding _{32|64}{r|d} suffix
+    function(set_dll_output_name TARGET_NAME OUTPUT_NAME_WITHOUT_SUFFIX)
+        foreach(DBG_CONFIG ${DEBUG_CONFIGURATIONS})
+            set_target_properties(${TARGET_NAME} PROPERTIES
+                OUTPUT_NAME_${DBG_CONFIG} ${OUTPUT_NAME_WITHOUT_SUFFIX}${DLL_DBG_SUFFIX}
+            )
+        endforeach()
+
+        foreach(REL_CONFIG ${RELEASE_CONFIGURATIONS})
+            set_target_properties(${TARGET_NAME} PROPERTIES
+                OUTPUT_NAME_${REL_CONFIG} ${OUTPUT_NAME_WITHOUT_SUFFIX}${DLL_REL_SUFFIX}
+            )
+        endforeach()
+    endfunction()
+
+endif(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS)
 
 
 function(set_common_target_properties TARGET)
     
+    if(COMMAND custom_configure_target)
+        custom_configure_target(${TARGET})
+        if(TARGET_CONFIGURATION_COMPLETE)
+            return()
+        endif()
+    endif()
+
     get_target_property(TARGET_TYPE ${TARGET} TYPE)
 
     if(MSVC)
         # For msvc, enable link-time code generation for release builds (I was not able to 
         # find any way to set these settings through interface library BuildSettings)
         if(TARGET_TYPE STREQUAL STATIC_LIBRARY)
-            set_target_properties(${TARGET} PROPERTIES
-                STATIC_LIBRARY_FLAGS_RELEASE /LTCG
-                STATIC_LIBRARY_FLAGS_MINSIZEREL /LTCG
-                STATIC_LIBRARY_FLAGS_RELWITHDEBINFO /LTCG
-            )
+
+            foreach(REL_CONFIG ${RELEASE_CONFIGURATIONS})
+                set_target_properties(${TARGET} PROPERTIES
+                    STATIC_LIBRARY_FLAGS_${REL_CONFIG} /LTCG
+                )
+            endforeach()
+
         else()
-            set_target_properties(${TARGET} PROPERTIES
-                LINK_FLAGS_RELEASE "/LTCG /OPT:REF"
-                LINK_FLAGS_MINSIZEREL "/LTCG /OPT:REF"
-                LINK_FLAGS_RELWITHDEBINFO "/LTCG /OPT:REF"
-            )
+
+            foreach(REL_CONFIG ${RELEASE_CONFIGURATIONS})
+                set_target_properties(${TARGET} PROPERTIES
+                    LINK_FLAGS_${REL_CONFIG} "/LTCG /OPT:REF"
+                )
+            endforeach()
 
             if(PLATFORM_UNIVERSAL_WINDOWS)
                 # On UWP, disable incremental link to avoid linker warnings

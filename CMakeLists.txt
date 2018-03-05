@@ -1,5 +1,20 @@
 cmake_minimum_required (VERSION 3.6)
 
+set(DEBUG_CONFIGURATIONS DEBUG CACHE INTERNAL "Debug configurations")
+set(RELEASE_CONFIGURATIONS RELEASE RELWITHDEBINFO MINSIZEREL CACHE INTERNAL "Release configurations")
+
+if(BUILD_CONFIGURATION_FILE)
+    message("Using build configuration file " ${CUSTOM_BUILD_SCRIPT})
+    include(${CMAKE_SOURCE_DIR}/${BUILD_CONFIGURATION_FILE})
+    
+    if(COMMAND custom_configure_build)
+        custom_configure_build()
+    else()
+        message("custom_configure_build() function not found in " ${CUSTOM_BUILD_SCRIPT})
+    endif()
+endif()
+
+
 set(PLATFORM_WIN32 FALSE CACHE INTERNAL "")
 set(PLATFORM_UNIVERSAL_WINDOWS FALSE CACHE INTERNAL "")
 set(PLATFORM_ANDROID FALSE CACHE INTERNAL "")
@@ -91,7 +106,7 @@ if(MSVC)
     # - w4100 - unreferenced formal parameter
     # - w4505 - unreferenced local function has been removed
     target_compile_options(BuildSettings INTERFACE /W4 /wd4100 /wd4505)
-    # In all releases mode also:
+    # In all release modes also:
     # - disable w4189 - local variable is initialized but not referenced
     # - Enable AVX2 instruction set (/arch:AVX2)
     # - Disable RTTI (/GR-)
@@ -117,10 +132,14 @@ else()
 
     set(DEBUG_MACROS _DEBUG DEBUG)
     set(RELEASE_MACROS NDEBUG)
-    target_compile_definitions(BuildSettings INTERFACE "$<$<CONFIG:DEBUG>:${DEBUG_MACROS}>")
-    target_compile_definitions(BuildSettings INTERFACE "$<$<CONFIG:RELEASE>:${RELEASE_MACROS}>")
-    target_compile_definitions(BuildSettings INTERFACE "$<$<CONFIG:MINSIZEREL>:${RELEASE_MACROS}>")
-    target_compile_definitions(BuildSettings INTERFACE "$<$<CONFIG:RELWITHDEBINFO>:${RELEASE_MACROS}>")
+
+    foreach(DBG_CONFIG ${DEBUG_CONFIGURATIONS})
+        target_compile_definitions(BuildSettings INTERFACE "$<$<CONFIG:${DBG_CONFIG}>:${DEBUG_MACROS}>")
+    endforeach()
+
+    foreach(REL_CONFIG ${RELEASE_CONFIGURATIONS})
+        target_compile_definitions(BuildSettings INTERFACE "$<$<CONFIG:${REL_CONFIG}>:${RELEASE_MACROS}>")
+    endforeach()
 
 endif(MSVC)
 

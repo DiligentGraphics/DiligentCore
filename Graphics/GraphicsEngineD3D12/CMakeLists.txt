@@ -153,12 +153,8 @@ target_link_libraries(GraphicsEngineD3D12-static PRIVATE ${PRIVATE_DEPENDENCIES}
 target_link_libraries(GraphicsEngineD3D12-shared PRIVATE ${PRIVATE_DEPENDENCIES} PUBLIC ${PUBLIC_DEPENDENCIES})
 target_compile_definitions(GraphicsEngineD3D12-shared PUBLIC ENGINE_DLL=1)
 
-set_target_properties(GraphicsEngineD3D12-shared PROPERTIES
-    OUTPUT_NAME_DEBUG GraphicsEngineD3D12${DLL_DBG_SUFFIX}
-    OUTPUT_NAME_RELEASE GraphicsEngineD3D12${DLL_REL_SUFFIX}
-    OUTPUT_NAME_RELWITHDEBINFO GraphicsEngineD3D12${DLL_REL_SUFFIX}
-    OUTPUT_NAME_MINSIZEREL GraphicsEngineD3D12${DLL_REL_SUFFIX}
-)
+# Set output name to GraphicsEngineD3D12_{32|64}{r|d}
+set_dll_output_name(GraphicsEngineD3D12-shared GraphicsEngineD3D12)
 
 set_common_target_properties(GraphicsEngineD3D12-shared)
 set_common_target_properties(GraphicsEngineD3D12-static)

@@ -94,12 +94,8 @@ add_library(GraphicsEngineD3D11-shared SHARED
     readme.md
 )
 
-set_target_properties(GraphicsEngineD3D11-shared PROPERTIES
-    OUTPUT_NAME_DEBUG GraphicsEngineD3D11${DLL_DBG_SUFFIX}
-    OUTPUT_NAME_RELEASE GraphicsEngineD3D11${DLL_REL_SUFFIX}
-    OUTPUT_NAME_RELWITHDEBINFO GraphicsEngineD3D11${DLL_REL_SUFFIX}
-    OUTPUT_NAME_MINSIZEREL GraphicsEngineD3D11${DLL_REL_SUFFIX}
-)
+# Set output name to GraphicsEngineD3D11_{32|64}{r|d}
+set_dll_output_name(GraphicsEngineD3D11-shared GraphicsEngineD3D11)
 
 set_common_target_properties(GraphicsEngineD3D11-shared)
 set_common_target_properties(GraphicsEngineD3D11-static)
