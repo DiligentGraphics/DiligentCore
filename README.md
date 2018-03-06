@@ -5,7 +5,9 @@ OpenGL, and OpenGLES rendering backends as well as basic platform-specific utili
 The module's cmake script defines a number of variables that are required to generate build files for other modules,
 so it must always be handled first.
 
-To build the module, see [build instrcutions](https://github.com/DiligentGraphics/DiligentEngine/blob/master/README.md) in the master repository.
+To build the module, see 
+[build instrcutions](https://github.com/DiligentGraphics/DiligentEngine/blob/master/README.md#build-and-run-instructions) 
+in the master repository.
 
 # Build Status
 
@@ -50,31 +52,24 @@ Before you can use any functionality provided by the engine, you need to create 
 On Win32 platform, you can create OpenGL, Direct3D11 or Direct3D12 device as shown below:
 
 ```cpp
-void InitDevice(HWND hWnd,
-                IRenderDevice **ppRenderDevice,
-                std::vector<IDeviceContext*> &ppContexts,
-                ISwapChain **ppSwapChain,
-                DeviceType DevType)
+void InitializeDiligentEngine(HWND NativeWindowHandle)
 {
     SwapChainDesc SCDesc;
     SCDesc.SamplesCount = 1;
     Uint32 NumDeferredCtx = 0;
-    switch (DevType)
+    switch (m_DeviceType)
     {
         case DeviceType::D3D11:
         {
             EngineD3D11Attribs DeviceAttribs;
-            g_pSample->GetEngineInitializationAttribs(DevType, DeviceAttribs, NumDeferredCtx);
-
 #if ENGINE_DLL
             GetEngineFactoryD3D11Type GetEngineFactoryD3D11 = nullptr;
             // Load the dll and import GetEngineFactoryD3D11() function
             LoadGraphicsEngineD3D11(GetEngineFactoryD3D11);
 #endif
             auto *pFactoryD3D11 = GetEngineFactoryD3D11();
-            ppContexts.resize(1 + NumDeferredCtx);
-            pFactoryD3D11->CreateDeviceAndContextsD3D11( DeviceAttribs, ppRenderDevice, ppContexts.data(), NumDeferredCtx );
-            pFactoryD3D11->CreateSwapChainD3D11( *ppRenderDevice, ppContexts[0], SCDesc, hWnd, ppSwapChain );
+            pFactoryD3D11->CreateDeviceAndContextsD3D11(DeviceAttribs, &m_pDevice, &m_pImmediateContext, NumDeferredCtx);
+            pFactoryD3D11->CreateSwapChainD3D11(m_pDevice, m_pImmediateContext, SCDesc, NativeWindowHandle, &m_pSwapChain);
         }
         break;
 
@@ -85,46 +80,32 @@ void InitDevice(HWND hWnd,
             // Load the dll and import GetEngineFactoryD3D12() function
             LoadGraphicsEngineD3D12(GetEngineFactoryD3D12);
 #endif
-
-            auto *pFactoryD3D12 = GetEngineFactoryD3D12();
             EngineD3D12Attribs EngD3D12Attribs;
-            g_pSample->GetEngineInitializationAttribs(DevType, EngD3D12Attribs, NumDeferredCtx);
-            EngineD3D12Attribs.GPUDescriptorHeapDynamicSize[0] = 32768;
-            EngineD3D12Attribs.GPUDescriptorHeapSize[1] = 128;
-            EngineD3D12Attribs.GPUDescriptorHeapDynamicSize[1] = 2048-128;
-            EngineD3D12Attribs.DynamicDescriptorAllocationChunkSize[0] = 32;
-            EngineD3D12Attribs.DynamicDescriptorAllocationChunkSize[1] = 8; // D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER            
-            ppContexts.resize(1 + NumDeferredCtx);
-            pFactoryD3D12->CreateDeviceAndContextsD3D12( EngD3D12Attribs, ppRenderDevice, ppContexts.data(), NumDeferredCtx);
-            pFactoryD3D12->CreateSwapChainD3D12( *ppRenderDevice, ppContexts[0], SCDesc, hWnd, ppSwapChain );
+            auto *pFactoryD3D12 = GetEngineFactoryD3D12();
+            pFactoryD3D12->CreateDeviceAndContextsD3D12(EngD3D12Attribs, &m_pDevice, &m_pImmediateContext, NumDeferredCtx);
+            pFactoryD3D12->CreateSwapChainD3D12(m_pDevice, m_pImmediateContext, SCDesc, NativeWindowHandle, &m_pSwapChain);
         }
         break;
 
-        case DeviceType::OpenGL:
-        {
+    case DeviceType::OpenGL:
+    {
+
 #if ENGINE_DLL
-            // Declare function pointer
-            GetEngineFactoryOpenGLType GetEngineFactoryOpenGL = nullptr;
-            // Load the dll and import GetEngineFactoryOpenGL() function
-            LoadGraphicsEngineOpenGL(GetEngineFactoryOpenGL);
+        // Declare function pointer
+        GetEngineFactoryOpenGLType GetEngineFactoryOpenGL = nullptr;
+        // Load the dll and import GetEngineFactoryOpenGL() function
+        LoadGraphicsEngineOpenGL(GetEngineFactoryOpenGL);
 #endif
-            EngineGLAttribs CreationAttribs;
-            CreationAttribs.pNativeWndHandle = hWnd;
-            g_pSample->GetEngineInitializationAttribs(DevType, CreationAttribs, NumDeferredCtx);
-            if(NumDeferredCtx != 0)
-            {
-                LOG_ERROR_MESSAGE("Deferred contexts are not supported in OpenGL mode");
-                NumDeferredCtx = 0;
-            }
-            ppContexts.resize(1 + NumDeferredCtx);
-            GetEngineFactoryOpenGL()->CreateDeviceAndSwapChainGL(
-                CreationAttribs, ppRenderDevice, ppContexts.data(), SCDesc, ppSwapChain );
-        }
-        break;
+        auto *pFactoryOpenGL = GetEngineFactoryOpenGL();
+        EngineGLAttribs CreationAttribs;
+        CreationAttribs.pNativeWndHandle = NativeWindowHandle;
+        pFactoryOpenGL->CreateDeviceAndSwapChainGL(
+            CreationAttribs, &m_pDevice, &m_pImmediateContext, SCDesc, &m_pSwapChain);
+    }
+    break;
 
-        default:
-            LOG_ERROR_AND_THROW("Unknown device type");
-        break;
+    default:
+        std::cerr << "Unknown device type";
     }
 }
 ```
@@ -159,7 +140,7 @@ Deferred contexts can only be created during the initialization of the engine. T
 to the contexts, where the immediate context goes at position 0, followed by all deferred contexts.
 
 For more details, take a look at 
-[SampleApp.cpp](https://github.com/DiligentGraphics/DiligentSamples/blob/master/Samples/SampleBase/src/SampleApp.cpp) 
+[Tutorial00_HelloWin32.cpp](https://github.com/DiligentGraphics/DiligentSamples/blob/master/Tutorials/Tutorial00_HelloWin32/src/Tutorial00_HelloWin32.cpp) 
 file.
 
 ### Universal Windows Platform
@@ -178,7 +159,7 @@ file for more details.
 On Linux platform, the only API currently supported is OpenGL. Initialization of GL context on Linux is tightly
 coupled with window creation. As a result, Diligent Engine does not initialize the context, but
 attaches to the one initialized by the app. An example of the engine initialization on Linux can be found in
-[LinuxMain.cpp](https://github.com/DiligentGraphics/DiligentEngine/blob/master/Common/NativeApp/src/Linux/LinuxMain.cpp).
+[Tutorial00_HelloLinux.cpp](https://github.com/DiligentGraphics/DiligentSamples/blob/master/Tutorials/Tutorial00_HelloLinux/src/Tutorial00_HelloLinux.cpp).
 
 ### MacOS
 
