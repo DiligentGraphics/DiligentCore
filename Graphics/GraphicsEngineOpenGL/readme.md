@@ -20,10 +20,13 @@ using namespace Diligent;
 #endif
 RefCntAutoPtr<IRenderDevice> pRenderDevice;
 RefCntAutoPtr<IDeviceContext> pImmediateContext;
-SwapChainDesc SwapChainDesc;
+SwapChainDesc SCDesc;
 RefCntAutoPtr<ISwapChain> pSwapChain;
-GetEngineFactoryOpenGL()->CreateDeviceAndSwapChainGL(
-    EngineCreationAttribs(), &pRenderDevice, &pImmediateContext, SwapChainDesc, hWnd, &pSwapChain );
+auto *pFactoryOpenGL = GetEngineFactoryOpenGL();
+EngineGLAttribs CreationAttribs;
+CreationAttribs.pNativeWndHandle = NativeWindowHandle;
+pFactoryOpenGL->CreateDeviceAndSwapChainGL(
+    CreationAttribs, &pRenderDevice, &pImmediateContext, SCDesc, &pSwapChain);
 ```
 
 Alternatively, the engine can be initialized by attaching to existing OpenGL context (see [below](#initializing-the-engine-by-attaching-to-existing-gl-context)).
