@@ -207,6 +207,10 @@ for details.
 An alternative way to initialize the engine is to attach to existing D3D11/D3D12 device or OpenGL/GLES context.
 Refer to [Native API interoperability](http://diligentgraphics.com/diligent-engine/native-api-interoperability/) for more details.
 
+### Destroying the Engine
+
+The engine performs automatic reference counting and shuts down when the last reference to an engine object is released.
+
 ## Creating Resources
 
 Device resources are created by the render device. The two main resource types are buffers,
