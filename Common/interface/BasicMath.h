@@ -566,6 +566,74 @@ Vector4<T> operator*(T s, const Vector4<T> &a)
     return a * s;
 }
 
+
+template <class T> struct Matrix2x2
+{
+    union
+    {
+        struct
+        {
+            T _11; T _12;
+            T _21; T _22;
+        };
+        struct
+        {
+            T _m00; T _m01;
+            T _m10; T _m11;
+        };
+    };
+
+    explicit
+        Matrix2x2(T value = 0)
+    {
+        _11 = _12 = value;
+        _21 = _22 = value;
+    }
+
+    explicit
+        Matrix2x2(
+            T i11, T i12,
+            T i21, T i22)
+    {
+        _11 = i11; _12 = i12;
+        _21 = i21; _22 = i22;
+    }
+
+    bool operator == (const Matrix2x2 &r)const
+    {
+        for (int i = 0; i < 2; ++i)
+            for (int j = 0; i < 2; ++i)
+                if ((*this)[i][j] != r[i][j])
+                    return false;
+
+        return true;
+    }
+
+    bool operator != (const Matrix2x2 &r)const
+    {
+        return !(*this == r);
+    }
+
+    T* operator[](size_t index)
+    {
+        return &(reinterpret_cast<T*>(this)[index * 2]);
+    }
+
+    const T* operator[](size_t index)const
+    {
+        return &(reinterpret_cast<const T*>(this)[index * 2]);
+    }
+
+    Matrix2x2& operator *=(T s)
+    {
+        for (int i = 0; i < 4; ++i)
+            (reinterpret_cast<T*>(this))[i] *= s;
+
+        return *this;
+    }
+};
+
+
 template <class T> struct Matrix3x3
 {
     union
@@ -886,6 +954,41 @@ Matrix3x3<T> operator* (const Matrix3x3<T> &m1, const Matrix3x3<T> &m2)
     return mul( m1, m2 );
 }
 
+
+
+template <class T>
+Matrix2x2<T> transposeMatrix(const Matrix2x2<T> &m)
+{
+    return Matrix2x2<T>(
+        m._11, m._21,
+        m._12, m._22
+        );
+}
+
+template <class T>
+Matrix2x2<T> mul(const Matrix2x2<T> &m1, const Matrix2x2<T> &m2)
+{
+    Matrix2x2<T> mOut;
+
+    for (int i = 0; i < 2; i++)
+    {
+        for (int j = 0; j < 2; j++)
+        {
+            for (int k = 0; k < 2; k++)
+            {
+                mOut[i][j] += m1[i][k] * m2[k][j];
+            }
+        }
+    }
+
+    return mOut;
+}
+
+template <class T>
+Matrix2x2<T> operator* (const Matrix2x2<T> &m1, const Matrix2x2<T> &m2)
+{
+    return mul(m1, m2);
+}
 // Common HLSL-compatible vector typedefs
 
 typedef unsigned int uint;
@@ -896,6 +999,7 @@ typedef Vector4<float> float4;
 
 typedef Matrix4x4<float> float4x4;
 typedef Matrix3x3<float> float3x3;
+typedef Matrix2x2<float> float2x2;
 
 // Standard Matrix Intializers
 
@@ -1357,6 +1461,18 @@ namespace std
         size_t operator()( const Vector4<T> &v4 ) const
         {
             return Diligent::ComputeHash(v4.x, v4.y, v4.z, v4.w);
+        }
+    };
+
+    template<typename T>
+    struct hash<Matrix2x2<T>>
+    {
+        size_t operator()(const Matrix2x2<T> &m) const
+        {
+            return Diligent::ComputeHash(
+                m._m00, m._m01,
+                m._m10, m._m11
+            );
         }
     };
 
