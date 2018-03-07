@@ -1019,6 +1019,16 @@ float4x4 MatrixFromRows(float4 row0, float4 row1, float4 row2, float4 row3)
     return transpose(float4x4(row0, row1, row2, row3));
 }
 
+float3x3 MatrixFromRows(float3 row0, float3 row1, float3 row2)
+{
+    return transpose(float3x3(row0, row1, row2));
+}
+
+float2x2 MatrixFromRows(float2 row0, float2 row1)
+{
+    return transpose(float2x2(row0, row1));
+}
+
 // ---------------------------------- Vertex shader ----------------------------------
 #ifdef VERTEX_SHADER
 
