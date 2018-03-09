@@ -213,11 +213,7 @@ namespace Diligent
 
     void DeviceContextD3D12Impl::CommitD3D12IndexBuffer(VALUE_TYPE IndexType)
     {
-        if( !m_pIndexBuffer )
-        {
-            LOG_ERROR_MESSAGE( "Index buffer is not set up for indexed draw command" );
-            return;
-        }
+        VERIFY( m_pIndexBuffer != nullptr, "Index buffer is not set up for indexed draw command" );
 
         D3D12_INDEX_BUFFER_VIEW IBView;
         BufferD3D12Impl *pBuffD3D12 = static_cast<BufferD3D12Impl *>(m_pIndexBuffer.RawPtr());
@@ -228,8 +224,7 @@ namespace Diligent
             IBView.Format = DXGI_FORMAT_R16_UINT;
         else
         {
-            LOG_ERROR_MESSAGE( "Unsupported index format. Only R16_UINT and R32_UINT are allowed." );
-            return;
+            UNEXPECTED( "Unsupported index format. Only R16_UINT and R32_UINT are allowed." );
         }
         // Note that for a dynamic buffer, what we use here is the size of the buffer itself, not the upload heap buffer!
         IBView.SizeInBytes = pBuffD3D12->GetDesc().uiSizeInBytes - m_IndexDataStartOffset;
@@ -241,8 +236,9 @@ namespace Diligent
         //auto *pd3d12Resource = pBuffD3D12->GetD3D12Buffer();
         //GraphicsCtx.AddReferencedObject(pd3d12Resource);
 
+        bool IsDynamic = pBuffD3D12->GetDesc().Usage == USAGE_DYNAMIC;
 #ifdef _DEBUG
-        if(pBuffD3D12->GetDesc().Usage == USAGE_DYNAMIC)
+        if(IsDynamic)
             pBuffD3D12->DbgVerifyDynamicAllocation(m_ContextId);
 #endif
         auto &GraphicsCtx = RequestCmdContext()->AsGraphicsContext();
@@ -252,7 +248,8 @@ namespace Diligent
         size_t BuffDataStartByteOffset;
         auto *pd3d12Buff = pBuffD3D12->GetD3D12Buffer(BuffDataStartByteOffset, m_ContextId);
 
-        if( m_CommittedD3D12IndexBuffer != pd3d12Buff ||
+        if( IsDynamic || 
+            m_CommittedD3D12IndexBuffer != pd3d12Buff ||
             m_CommittedIBFormat != IndexType ||
             m_CommittedD3D12IndexDataStartOffset != m_IndexDataStartOffset + BuffDataStartByteOffset)
         {
@@ -261,7 +258,10 @@ namespace Diligent
             m_CommittedD3D12IndexDataStartOffset = m_IndexDataStartOffset + static_cast<Uint32>(BuffDataStartByteOffset);
             GraphicsCtx.SetIndexBuffer( IBView );
         }
-        m_bCommittedD3D12IBUpToDate = true;
+        
+        // GPU virtual address of a dynamic index buffer can change every time
+        // a draw command is invoked
+        m_bCommittedD3D12IBUpToDate = !IsDynamic;
     }
 
     void DeviceContextD3D12Impl::TransitionD3D12VertexBuffers(GraphicsContext &GraphCtx)
@@ -284,6 +284,7 @@ namespace Diligent
         D3D12_VERTEX_BUFFER_VIEW VBViews[MaxBufferSlots];// = {}
         VERIFY( m_NumVertexStreams <= MaxBufferSlots, "Too many buffers are being set" );
         const auto *TightStrides = pPipelineStateD3D12->GetTightStrides();
+        bool DynamicBufferPresent = false;
         for( UINT Buff = 0; Buff < m_NumVertexStreams; ++Buff )
         {
             auto &CurrStream = m_VertexStreams[Buff];
@@ -291,10 +292,13 @@ namespace Diligent
             VERIFY( CurrStream.pBuffer, "Attempting to bind a null buffer for rendering" );
             
             auto *pBufferD3D12 = static_cast<BufferD3D12Impl*>(CurrStream.pBuffer.RawPtr());
+            if (pBufferD3D12->GetDesc().Usage == USAGE_DYNAMIC)
+            {
+                DynamicBufferPresent = true;
 #ifdef _DEBUG
-            if(pBufferD3D12->GetDesc().Usage == USAGE_DYNAMIC)
                 pBufferD3D12->DbgVerifyDynamicAllocation(m_ContextId);
 #endif
+            }
 
             GraphCtx.TransitionResource(pBufferD3D12, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
             
@@ -312,7 +316,9 @@ namespace Diligent
         GraphCtx.FlushResourceBarriers();
         GraphCtx.SetVertexBuffers( 0, m_NumVertexStreams, VBViews );
 
-        m_bCommittedD3D12VBsUpToDate = true;
+        // GPU virtual address of a dynamic vertex buffer can change every time
+        // a draw command is invoked
+        m_bCommittedD3D12VBsUpToDate = !DynamicBufferPresent;
     }
 
     void DeviceContextD3D12Impl::Draw( DrawAttribs &DrawAttribs )
