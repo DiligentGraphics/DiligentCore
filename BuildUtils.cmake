@@ -76,15 +76,17 @@ function(set_common_target_properties TARGET)
 
             foreach(REL_CONFIG ${RELEASE_CONFIGURATIONS})
                 set_target_properties(${TARGET} PROPERTIES
-                    LINK_FLAGS_${REL_CONFIG} "/LTCG /OPT:REF"
+                    LINK_FLAGS_${REL_CONFIG} "/LTCG /OPT:REF /INCREMENTAL:NO"
                 )
             endforeach()
 
             if(PLATFORM_UNIVERSAL_WINDOWS)
                 # On UWP, disable incremental link to avoid linker warnings
-                set_target_properties(${TARGET} PROPERTIES
-                    LINK_FLAGS_DEBUG /INCREMENTAL:NO
-                )
+                foreach(DBG_CONFIG ${DEBUG_CONFIGURATIONS})
+                    set_target_properties(${TARGET_NAME} PROPERTIES
+                        LINK_FLAGS_${DBG_CONFIG} "/INCREMENTAL:NO"
+                    )
+                endforeach()
             endif()
         endif()
     endif()

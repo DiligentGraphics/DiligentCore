@@ -122,6 +122,11 @@ namespace Diligent
             Flush(true);
         }
 
+        // If no pipeline state is bound, we are working with the fresh command
+        // list. We have to commit the states set in the context that are not
+        // committed by the draw command (render targets, viewports, scissor rects, etc.)
+        bool CommitStates = !m_pPipelineState;
+
         TDeviceContextBase::SetPipelineState( pPipelineState );
         auto *pPipelineStateD3D12 = ValidatedCast<PipelineStateD3D12Impl>(pPipelineState);
 
@@ -137,35 +142,33 @@ namespace Diligent
             auto &GraphicsCtx = pCmdCtx->AsGraphicsContext();
             GraphicsCtx.SetPipelineState(pd3d12PSO);
 
-            if (Desc.GraphicsPipeline.RasterizerDesc.ScissorEnable)
+            if (CommitStates)
             {
-                // Commit currently set scissor rectangles
-                D3D12_RECT d3d12ScissorRects[MaxD3D12ScissorRects]; // Do not waste time initializing array with zeroes
-                for( Uint32 sr = 0; sr < m_NumScissorRects; ++sr )
+                if (Desc.GraphicsPipeline.RasterizerDesc.ScissorEnable)
                 {
-                    d3d12ScissorRects[sr].left   = m_ScissorRects[sr].left;
-                    d3d12ScissorRects[sr].top    = m_ScissorRects[sr].top;
-                    d3d12ScissorRects[sr].right  = m_ScissorRects[sr].right;
-                    d3d12ScissorRects[sr].bottom = m_ScissorRects[sr].bottom;
+                    // Commit currently set scissor rectangles
+                    D3D12_RECT d3d12ScissorRects[MaxD3D12ScissorRects]; // Do not waste time initializing array with zeroes
+                    for( Uint32 sr = 0; sr < m_NumScissorRects; ++sr )
+                    {
+                        d3d12ScissorRects[sr].left   = m_ScissorRects[sr].left;
+                        d3d12ScissorRects[sr].top    = m_ScissorRects[sr].top;
+                        d3d12ScissorRects[sr].right  = m_ScissorRects[sr].right;
+                        d3d12ScissorRects[sr].bottom = m_ScissorRects[sr].bottom;
+                    }
+                    GraphicsCtx.SetScissorRects(m_NumScissorRects, d3d12ScissorRects);
                 }
-                GraphicsCtx.SetScissorRects(m_NumScissorRects, d3d12ScissorRects);
-            }
-            else
-            {
-                // Disable scissor rectangles
-                static_assert(_countof(MaxD3D12TexSizeRects) == MaxD3D12ScissorRects, "Unexpected array size");
-                GraphicsCtx.SetScissorRects(MaxD3D12ScissorRects, MaxD3D12TexSizeRects);
-            }
+                else
+                {
+                    // Disable scissor rectangles
+                    static_assert(_countof(MaxD3D12TexSizeRects) == MaxD3D12ScissorRects, "Unexpected array size");
+                    GraphicsCtx.SetScissorRects(MaxD3D12ScissorRects, MaxD3D12TexSizeRects);
+                }
 
-            GraphicsCtx.SetStencilRef( m_StencilRef );
-            GraphicsCtx.SetBlendFactor( m_BlendFactors );
-            m_CommittedD3D12IndexBuffer = nullptr;
-            m_CommittedD3D12IndexDataStartOffset = 0;
-            m_CommittedIBFormat = VT_UNDEFINED;
-            m_bCommittedD3D12VBsUpToDate = false;
-            m_bCommittedD3D12IBUpToDate = false;
-            CommitRenderTargets();
-            CommitViewports();
+                GraphicsCtx.SetStencilRef(m_StencilRef);
+                GraphicsCtx.SetBlendFactor(m_BlendFactors);
+                CommitRenderTargets();
+                CommitViewports();
+            }
         }
         m_pCommittedResourceCache = nullptr;
     }
@@ -545,6 +548,12 @@ namespace Diligent
 
         m_pCurrCmdCtx = RequestNewCmdCtx ? pDeviceD3D12Impl->AllocateCommandContext() : nullptr;
         m_NumCommandsInCurCtx = 0;
+
+        m_CommittedD3D12IndexBuffer = nullptr;
+        m_CommittedD3D12IndexDataStartOffset = 0;
+        m_CommittedIBFormat = VT_UNDEFINED;
+        m_bCommittedD3D12VBsUpToDate = false;
+        m_bCommittedD3D12IBUpToDate = false;
 
         m_pPipelineState.Release(); 
     }
