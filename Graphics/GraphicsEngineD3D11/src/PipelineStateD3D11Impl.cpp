@@ -193,10 +193,11 @@ void PipelineStateD3D11Impl::CreateShaderResourceBinding(IShaderResourceBinding 
 
 bool PipelineStateD3D11Impl::IsCompatibleWith(const IPipelineState *pPSO)const
 {
+    VERIFY_EXPR(pPSO != nullptr);
+
     if (pPSO == this)
         return true;
-
-    VERIFY_EXPR(pPSO != nullptr);
+    
     const PipelineStateD3D11Impl *pPSOD3D11 = ValidatedCast<const PipelineStateD3D11Impl>(pPSO);
     if (m_ShaderResourceLayoutHash != pPSOD3D11->m_ShaderResourceLayoutHash)
         return false;

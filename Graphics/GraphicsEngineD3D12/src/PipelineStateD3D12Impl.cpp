@@ -220,6 +220,8 @@ PipelineStateD3D12Impl :: PipelineStateD3D12Impl(IReferenceCounters *pRefCounter
     auto &SRBAllocator = pDeviceD3D12->GetSRBAllocator();
     // Default shader resource binding must be initialized after resource layouts are parsed!
     m_pDefaultShaderResBinding.reset( NEW_RC_OBJ(SRBAllocator, "ShaderResourceBindingD3D12Impl instance", ShaderResourceBindingD3D12Impl, this)(this, true) );
+
+    m_ShaderResourceLayoutHash = m_RootSig.GetHash();
 }
 
 PipelineStateD3D12Impl::~PipelineStateD3D12Impl()
@@ -267,8 +269,50 @@ void PipelineStateD3D12Impl::CreateShaderResourceBinding(IShaderResourceBinding 
 
 bool PipelineStateD3D12Impl::IsCompatibleWith(const IPipelineState *pPSO)const
 {
-    UNSUPPORTED("Not yet implemented");
-    return false;
+    VERIFY_EXPR(pPSO != nullptr);
+
+    if (pPSO == this)
+        return true;
+
+    const PipelineStateD3D12Impl *pPSOD3D12 = ValidatedCast<const PipelineStateD3D12Impl>(pPSO);
+    if (m_ShaderResourceLayoutHash != pPSOD3D12->m_ShaderResourceLayoutHash)
+        return false;
+
+    auto IsSameRootSignature = m_RootSig.IsSameAs(pPSOD3D12->m_RootSig);
+
+#ifdef _DEBUG
+    {
+        bool IsCompatibleShaders = true;
+        if (m_NumShaders != pPSOD3D12->m_NumShaders)
+            IsCompatibleShaders = false;
+
+        if(IsCompatibleShaders)
+        {
+            for (Uint32 s = 0; s < m_NumShaders; ++s)
+            {
+                auto *pShader0 = ValidatedCast<ShaderD3D12Impl>(m_ppShaders[s]);
+                auto *pShader1 = ValidatedCast<ShaderD3D12Impl>(pPSOD3D12->m_ppShaders[s]);
+                if (pShader0->GetDesc().ShaderType != pShader1->GetDesc().ShaderType)
+                {
+                    IsCompatibleShaders = false;
+                    break;
+                }
+                const ShaderResourcesD3D12 *pRes0 = pShader0->GetShaderResources().get();
+                const ShaderResourcesD3D12 *pRes1 = pShader1->GetShaderResources().get();
+                if (!pRes0->IsCompatibleWith(*pRes1))
+                {
+                    IsCompatibleShaders = false;
+                    break;
+                }
+            }
+        }
+
+        if(IsCompatibleShaders)
+            VERIFY(IsSameRootSignature, "Compatible shaders must have same root signatures");
+    }
+#endif
+    
+    return IsSameRootSignature;
 }
 
 const ShaderResourceLayoutD3D12& PipelineStateD3D12Impl::GetShaderResLayout(SHADER_TYPE ShaderType)const 
@@ -299,9 +343,9 @@ ShaderResourceCacheD3D12* PipelineStateD3D12Impl::CommitAndTransitionShaderResou
 #ifdef VERIFY_SHADER_BINDINGS
     {
         auto *pRefPSO = pResBindingD3D12Impl->GetPipelineState();
-        if (pRefPSO != this)
+        if ( IsIncompatibleWith(pRefPSO) )
         {
-            LOG_ERROR_MESSAGE("Shader resource binding does not match the pipeline state \"", m_Desc.Name, "\". Operation will be ignored.");
+            LOG_ERROR_MESSAGE("Shader resource binding is incompatible with the pipeline state \"", m_Desc.Name, "\". Operation will be ignored.");
             return nullptr;
         }
     }

@@ -32,6 +32,7 @@
 #include "TextureD3D12Impl.h"
 #include "BufferD3D12Impl.h"
 #include "D3D12TypeConversions.h"
+#include "HashUtils.h"
 
 namespace Diligent
 {
@@ -111,6 +112,42 @@ void RootSignature::RootParamsManager::AddDescriptorRanges(Uint32 RootTableInd, 
     VERIFY_EXPR( (char*)pRangePtr == (char*)m_pMemory.get() + GetRequiredMemorySize(0, 0, 0));
 }
 
+bool RootSignature::RootParamsManager::operator == (const RootParamsManager& RootParams)const
+{
+    if (m_NumRootTables != RootParams.m_NumRootTables ||
+        m_NumRootViews  != RootParams.m_NumRootViews)
+        return false;
+
+    for (Uint32 rv = 0; rv < m_NumRootViews; ++rv)
+    {
+        const auto &RV0 = GetRootView(rv);
+        const auto &RV1 = RootParams.GetRootView(rv);
+        if (RV0 != RV1)
+            return false;
+    }
+
+    for (Uint32 rv = 0; rv < m_NumRootTables; ++rv)
+    {
+        const auto &RT0 = GetRootTable(rv);
+        const auto &RT1 = RootParams.GetRootTable(rv);
+        if (RT0 != RT1)
+            return false;
+    }
+
+    return true;
+}
+
+size_t RootSignature::RootParamsManager::GetHash()const
+{
+    size_t hash = ComputeHash(m_NumRootTables, m_NumRootViews);
+    for (Uint32 rv = 0; rv < m_NumRootViews; ++rv)
+        HashCombine(hash, GetRootView(rv).GetHash());
+
+    for (Uint32 rv = 0; rv < m_NumRootTables; ++rv)
+        HashCombine(hash, GetRootTable(rv).GetHash());
+
+    return hash;
+}
 
 RootSignature::RootSignature() : 
     m_RootParams(GetRawAllocator()),

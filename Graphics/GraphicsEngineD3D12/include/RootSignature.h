@@ -146,6 +146,107 @@ public:
     Uint32 GetRootIndex()const{return m_RootIndex;}
 
 	operator const D3D12_ROOT_PARAMETER&()const{return m_RootParam;}
+    
+    bool operator == (const RootParameter&rhs)const
+    {
+        if (m_ShaderVarType       != rhs.m_ShaderVarType       ||
+            m_DescriptorTableSize != rhs.m_DescriptorTableSize ||
+            m_RootIndex           != rhs.m_RootIndex)
+            return false;
+
+        if (m_RootParam.ParameterType    != rhs.m_RootParam.ParameterType || 
+            m_RootParam.ShaderVisibility != rhs.m_RootParam.ShaderVisibility)
+            return false;
+
+        switch(m_RootParam.ParameterType)
+        {
+            case D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE:
+            {
+                const auto &tbl0 = m_RootParam.DescriptorTable;
+                const auto &tbl1 = rhs.m_RootParam.DescriptorTable;
+                if(tbl0.NumDescriptorRanges != tbl1.NumDescriptorRanges)
+                    return false;
+                for(UINT r=0; r < tbl0.NumDescriptorRanges; ++r)
+                {
+                    const auto &rng0 = tbl0.pDescriptorRanges[r];
+                    const auto &rng1 = tbl1.pDescriptorRanges[r];
+                    if( memcmp(&rng0, &rng1, sizeof(rng0)) != 0)
+                        return false;
+                }
+            }
+            break;
+
+            case D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS:
+            {
+                const auto &cnst0 = m_RootParam.Constants;
+                const auto &cnst1 = rhs.m_RootParam.Constants;
+                if (memcmp(&cnst0, &cnst1, sizeof(cnst0)) != 0)
+                    return false;
+            }
+            break;
+
+            case D3D12_ROOT_PARAMETER_TYPE_CBV:
+            case D3D12_ROOT_PARAMETER_TYPE_SRV:
+            case D3D12_ROOT_PARAMETER_TYPE_UAV:
+            {
+                const auto &dscr0 = m_RootParam.Descriptor;
+                const auto &dscr1 = rhs.m_RootParam.Descriptor;
+                if (memcmp(&dscr0, &dscr1, sizeof(dscr0)) != 0)
+                    return false;
+            }
+            break;
+
+            default: UNEXPECTED("Unexpected root parameter type");
+        }
+               
+        return true;
+    }
+
+    bool operator != (const RootParameter&rhs)const
+    {
+        return !(*this == rhs);
+    }
+
+    size_t GetHash()const
+    {
+        size_t hash = ComputeHash(m_ShaderVarType, m_DescriptorTableSize, m_RootIndex);
+        HashCombine(hash, m_RootParam.ParameterType, m_RootParam.ShaderVisibility);
+
+        switch (m_RootParam.ParameterType)
+        {
+            case D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE:
+            {
+                const auto &tbl = m_RootParam.DescriptorTable;
+                HashCombine(hash, tbl.NumDescriptorRanges);
+                for (UINT r = 0; r < tbl.NumDescriptorRanges; ++r)
+                {
+                    const auto &rng = tbl.pDescriptorRanges[r];
+                    HashCombine(hash, rng.BaseShaderRegister, rng.NumDescriptors, rng.OffsetInDescriptorsFromTableStart, rng.RangeType, rng.RegisterSpace);
+                }
+            }
+            break;
+
+            case D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS:
+            {
+                const auto &cnst = m_RootParam.Constants;
+                HashCombine(hash, cnst.Num32BitValues, cnst.RegisterSpace, cnst.ShaderRegister);
+            }
+            break;
+
+            case D3D12_ROOT_PARAMETER_TYPE_CBV:
+            case D3D12_ROOT_PARAMETER_TYPE_SRV:
+            case D3D12_ROOT_PARAMETER_TYPE_UAV:
+            {
+                const auto &dscr = m_RootParam.Descriptor;
+                HashCombine(hash, dscr.RegisterSpace, dscr.ShaderRegister);
+            }
+            break;
+
+            default: UNEXPECTED("Unexpected root parameter type");
+        }
+
+        return hash;
+    }
 
 private:
 
@@ -204,6 +305,15 @@ public:
         return m_TotalSamplerSlots[VarType];
     }
 
+    bool IsSameAs(const RootSignature& RS)const
+    {
+        return m_RootParams == RS.m_RootParams;
+    }
+    size_t GetHash()const
+    {
+        return m_RootParams.GetHash();
+    }
+
 private:
 #ifdef _DEBUG
     void dbgVerifyRootParameters()const;
@@ -257,6 +367,9 @@ private:
 
         template<class TOperation>
         void ProcessRootTables(TOperation)const;
+
+        bool operator == (const RootParamsManager& RootParams)const;
+        size_t GetHash()const;
 
     private:
         size_t GetRequiredMemorySize(Uint32 NumExtraRootTables, Uint32 NumExtraRootViews, Uint32 NumExtraDescriptorRanges)const;
