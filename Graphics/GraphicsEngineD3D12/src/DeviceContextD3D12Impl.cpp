@@ -184,13 +184,8 @@ namespace Diligent
 
     void DeviceContextD3D12Impl::CommitShaderResources(IShaderResourceBinding *pShaderResourceBinding, Uint32 Flags)
     {
-#ifdef _DEBUG
-        if (!m_pPipelineState)
-        {
-            LOG_ERROR("No pipeline state is bound");
+        if (!DeviceContextBase::CommitShaderResources<PipelineStateD3D12Impl>(pShaderResourceBinding, Flags, 0 /*Dummy*/))
             return;
-        }
-#endif
 
         auto *pCtx = RequestCmdContext();
         auto *pPipelineStateD3D12 = ValidatedCast<PipelineStateD3D12Impl>(m_pPipelineState.RawPtr());

@@ -55,6 +55,8 @@ public:
 
     virtual void CreateShaderResourceBinding( IShaderResourceBinding **ppShaderResourceBinding )override;
 
+    virtual bool IsCompatibleWith(const IPipelineState *pPSO)const override final;
+
     virtual ID3D12RootSignature *GetD3D12RootSignature()const override final{return m_RootSig.GetD3D12RootSignature(); }
 
     ShaderResourceCacheD3D12* CommitAndTransitionShaderResources(IShaderResourceBinding *pShaderResourceBinding, 

@@ -170,7 +170,7 @@ namespace Diligent
 #ifdef _DEBUG
         else
         {
-            if (pdbgPipelineStateD3D11 != pShaderResourceBinding->GetPipelineState())
+            if (pdbgPipelineStateD3D11->IsIncompatibleWith(pShaderResourceBinding->GetPipelineState()))
             {
                 LOG_ERROR_MESSAGE("Shader resource binding does not match Pipeline State");
                 return;
@@ -526,7 +526,7 @@ namespace Diligent
 
     void DeviceContextD3D11Impl::CommitShaderResources(IShaderResourceBinding *pShaderResourceBinding, Uint32 Flags)
     {
-        if( !DeviceContextBase::CommitShaderResources(pShaderResourceBinding, Flags, 0 /*Dummy*/) )
+        if( !DeviceContextBase::CommitShaderResources<PipelineStateD3D11Impl>(pShaderResourceBinding, Flags, 0 /*Dummy*/) )
             return;
 
         if(Flags & COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES)

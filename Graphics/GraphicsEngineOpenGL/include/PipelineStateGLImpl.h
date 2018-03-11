@@ -51,6 +51,8 @@ public:
     
     virtual void CreateShaderResourceBinding( IShaderResourceBinding **ppShaderResourceBinding )override;
 
+    virtual bool IsCompatibleWith(const IPipelineState *pPSO)const override final;
+
     GLProgram &GetGLProgram(){return m_GLProgram;}
     GLObjectWrappers::GLPipelineObj &GetGLProgramPipeline(GLContext::NativeGLContextType Context);
 

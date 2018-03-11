@@ -69,6 +69,8 @@ public:
 
     virtual void CreateShaderResourceBinding( IShaderResourceBinding **ppShaderResourceBinding )override final;
 
+    virtual bool IsCompatibleWith(const IPipelineState *pPSO)const override final;
+
     class ShaderResourceBindingD3D11Impl* GetDefaultResourceBinding(){return m_pDefaultShaderResBinding.get();}
     IMemoryAllocator &GetResourceCacheDataAllocator(Uint32 ActiveShaderInd)
     {

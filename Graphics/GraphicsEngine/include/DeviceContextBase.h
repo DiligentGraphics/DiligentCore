@@ -97,6 +97,7 @@ public:
     inline virtual void SetPipelineState(IPipelineState *pPipelineState)override = 0;
 
     /// Base implementation of IDeviceContext::CommitShaderResources(); validates parameters.
+    template<typename PSOImplType>
     inline bool CommitShaderResources(IShaderResourceBinding *pShaderResourceBinding, Uint32 Flags, int);
 
     /// Base implementation of IDeviceContext::SetIndexBuffer(); caches the strong reference to the index buffer
@@ -249,6 +250,7 @@ inline void DeviceContextBase<BaseInterface> :: SetPipelineState(IPipelineState 
 }
 
 template<typename BaseInterface>
+template<typename PSOImplType>
 inline bool DeviceContextBase<BaseInterface> :: CommitShaderResources(IShaderResourceBinding *pShaderResourceBinding, Uint32 Flags, int)
 {
 #ifdef _DEBUG
@@ -260,10 +262,10 @@ inline bool DeviceContextBase<BaseInterface> :: CommitShaderResources(IShaderRes
 
     if (pShaderResourceBinding)
     {
-        auto *pPSO = pShaderResourceBinding->GetPipelineState();
-        if (pPSO != m_pPipelineState)
+        auto *pPSOImpl = ValidatedCast<PSOImplType>(m_pPipelineState.RawPtr());
+        if (pPSOImpl->IsIncompatibleWith(pShaderResourceBinding->GetPipelineState()))
         {
-            LOG_ERROR_MESSAGE("Shader resource binding object does not match currently bound pipeline state");
+            LOG_ERROR_MESSAGE("Shader resource binding object is not compatible with the currently bound pipeline state");
             return false;
         }
     }

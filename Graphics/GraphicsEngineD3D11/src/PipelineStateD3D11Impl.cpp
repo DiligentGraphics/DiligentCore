@@ -37,27 +37,32 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters *pRefCounters,
 {
     if (PipelineDesc.IsComputePipeline)
     {
-        m_pCS = ValidatedCast<ShaderD3D11Impl>( PipelineDesc.ComputePipeline.pCS );
+        auto *pCS = ValidatedCast<ShaderD3D11Impl>(PipelineDesc.ComputePipeline.pCS);
+        m_pCS = pCS;
         if (m_pCS == nullptr)
         {
             LOG_ERROR_AND_THROW("Compute shader is null");
         }
 
         if (m_pCS && m_pCS->GetDesc().ShaderType != SHADER_TYPE_COMPUTE)
-        { 
-            LOG_ERROR_AND_THROW( GetShaderTypeLiteralName(SHADER_TYPE_COMPUTE), " shader is expeceted while ", GetShaderTypeLiteralName(m_pCS->GetDesc().ShaderType)," provided" );
+        {
+            LOG_ERROR_AND_THROW(GetShaderTypeLiteralName(SHADER_TYPE_COMPUTE), " shader is expeceted while ", GetShaderTypeLiteralName(m_pCS->GetDesc().ShaderType), " provided");
         }
+        m_ShaderResourceLayoutHash = pCS->GetResources()->GetHash();
     }
     else
     {
 
 #define INIT_SHADER(ShortName, ExpectedType)\
         {                                   \
-            m_p##ShortName = ValidatedCast<ShaderD3D11Impl>( PipelineDesc.GraphicsPipeline.p##ShortName );  \
+            auto *pShader = ValidatedCast<ShaderD3D11Impl>(PipelineDesc.GraphicsPipeline.p##ShortName); \
+            m_p##ShortName = pShader;  \
             if (m_p##ShortName && m_p##ShortName->GetDesc().ShaderType != ExpectedType)   \
             {   \
                 LOG_ERROR_AND_THROW( GetShaderTypeLiteralName(ExpectedType), " shader is expeceted while ", GetShaderTypeLiteralName(m_p##ShortName->GetDesc().ShaderType)," provided" );   \
             }   \
+            if(pShader!=nullptr)    \
+                HashCombine(m_ShaderResourceLayoutHash, pShader->GetResources()->GetHash() );   \
         }
 
         INIT_SHADER(VS, SHADER_TYPE_VERTEX);
@@ -186,6 +191,33 @@ void PipelineStateD3D11Impl::CreateShaderResourceBinding(IShaderResourceBinding 
     pShaderResBinding->QueryInterface(IID_ShaderResourceBinding, reinterpret_cast<IObject**>(static_cast<IShaderResourceBinding**>(ppShaderResourceBinding)));
 }
 
+bool PipelineStateD3D11Impl::IsCompatibleWith(const IPipelineState *pPSO)const
+{
+    if (pPSO == this)
+        return true;
+
+    VERIFY_EXPR(pPSO != nullptr);
+    const PipelineStateD3D11Impl *pPSOD3D11 = ValidatedCast<const PipelineStateD3D11Impl>(pPSO);
+    if (m_ShaderResourceLayoutHash != pPSOD3D11->m_ShaderResourceLayoutHash)
+        return false;
+
+    if (m_NumShaders != pPSOD3D11->m_NumShaders)
+        return false;
+
+    for (Uint32 s = 0; s < m_NumShaders; ++s)
+    {
+        auto *pShader0 = ValidatedCast<ShaderD3D11Impl>(m_ppShaders[s]);
+        auto *pShader1 = ValidatedCast<ShaderD3D11Impl>(pPSOD3D11->m_ppShaders[s]);
+        if (pShader0->GetShaderTypeIndex() != pShader1->GetShaderTypeIndex())
+            return false;
+        const ShaderResourcesD3D11 *pRes0 = pShader0->GetResources().get();
+        const ShaderResourcesD3D11 *pRes1 = pShader1->GetResources().get();
+        if (!pRes0->IsCompatibleWith(*pRes1))
+            return false;
+    }
+    
+    return true;
+}
 
 ID3D11VertexShader* PipelineStateD3D11Impl::GetD3D11VertexShader()
 {

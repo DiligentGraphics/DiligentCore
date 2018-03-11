@@ -220,6 +220,22 @@ public:
     /// \param [out] ppShaderResourceBinding - memory location where pointer to the new shader resource
     ///                                        binding object is written.
     virtual void CreateShaderResourceBinding( IShaderResourceBinding **ppShaderResourceBinding ) = 0;
+
+    /// Checks if this pipeline state object is compatible with another PSO
+
+    /// If two pipeline state objects are compatible, they can use shader resource binding
+    /// objects interchangebly, i.e. SRBs created by one PSO can be committed
+    /// when another PSO is bound.
+    /// \param [in] pPSO - Pointer to the pipeline state object to check compatibility with
+    /// \return     true if this PSO is compatbile with pPSO. false otherwise.
+    /// \remarks    The function only checks that shader resource layouts are compatible, but 
+    ///             does not check if resource types match. For instance, if a pixel shader in one PSO
+    ///             uses a texture at slot 0, and a pixel shader in another PSO uses texture array at slot 0,
+    ///             the pipelines will be compatible. However, if you try to use SRB object from the first pipeline
+    ///             to commit resources for the second pipeline, a runtime error will occur.\n
+    ///             The function only checks compatibility of shader resource layouts. It does not take
+    ///             into account vertex shader input layout, number of outputs, etc.
+    virtual bool IsCompatibleWith(const IPipelineState *pPSO)const = 0;
 };
 
 }

@@ -58,6 +58,7 @@
 
 #include "Shader.h"
 #include "STDAllocator.h"
+#include "HashUtils.h"
 
 namespace Diligent
 {
@@ -218,6 +219,19 @@ struct D3DShaderResourceAttribs
         else
             return Name;
     }
+
+    bool IsCompatibleWith(const D3DShaderResourceAttribs& Attibs)const
+    {
+        return BindPoint     == Attibs.BindPoint &&
+               BindCount     == Attibs.BindCount &&
+               PackedAttribs == Attibs.PackedAttribs;
+    }
+
+    size_t GetHash()const
+    {
+        return ComputeHash(BindPoint, BindCount, PackedAttribs);
+    }
+
 private:
     static constexpr Uint16 MaxBindPoint = InvalidBindPoint-1;
     static constexpr Uint16 MaxBindCount = std::numeric_limits<Uint16>::max();
@@ -327,37 +341,41 @@ public:
         {
             const auto& CB = GetCB(n);
             if( IsAllowedType(CB.GetVariableType(), AllowedTypeBits) )
-                HandleCB(CB);
+                HandleCB(CB, n);
         }
 
         for(Uint32 n=0; n < GetNumTexSRV(); ++n)
         {
             const auto &TexSRV = GetTexSRV(n);
             if( IsAllowedType(TexSRV.GetVariableType(), AllowedTypeBits) )
-                HandleTexSRV(TexSRV);
+                HandleTexSRV(TexSRV, n);
         }
     
         for(Uint32 n=0; n < GetNumTexUAV(); ++n)
         {
             const auto &TexUAV = GetTexUAV(n);
             if( IsAllowedType(TexUAV.GetVariableType(), AllowedTypeBits) )
-                HandleTexUAV(TexUAV);
+                HandleTexUAV(TexUAV, n);
         }
 
         for(Uint32 n=0; n < GetNumBufSRV(); ++n)
         {
             const auto &BufSRV = GetBufSRV(n);
             if( IsAllowedType(BufSRV.GetVariableType(), AllowedTypeBits) )
-                HandleBufSRV(BufSRV);
+                HandleBufSRV(BufSRV, n);
         }
 
         for(Uint32 n=0; n < GetNumBufUAV(); ++n)
         {
             const auto& BufUAV = GetBufUAV(n);
             if( IsAllowedType(BufUAV.GetVariableType(), AllowedTypeBits) )
-                HandleBufUAV(BufUAV);
+                HandleBufUAV(BufUAV, n);
         }
     }
+
+    bool IsCompatibleWith(const ShaderResources &Resources)const;
+    
+    size_t GetHash()const;
 
 protected:
     void Initialize(IMemoryAllocator &Allocator, Uint32 NumCBs, Uint32 NumTexSRVs, Uint32 NumTexUAVs, Uint32 NumBufSRVs, Uint32 NumBufUAVs, Uint32 NumSamplers);
@@ -402,4 +420,25 @@ private:
     SHADER_TYPE m_ShaderType = SHADER_TYPE_UNKNOWN;
 };
 
+}
+
+namespace std
+{
+    template<>
+    struct hash<Diligent::D3DShaderResourceAttribs>
+    {
+        size_t operator()(const Diligent::D3DShaderResourceAttribs &Attribs) const
+        {
+            return Attribs.GetHash();
+        }
+    };
+
+    template<>
+    struct hash<Diligent::ShaderResources>
+    {
+        size_t operator()(const Diligent::ShaderResources &Res) const
+        {
+            return Res.GetHash();
+        }
+    };
 }

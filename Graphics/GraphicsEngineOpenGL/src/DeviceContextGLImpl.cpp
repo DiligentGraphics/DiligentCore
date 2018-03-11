@@ -130,9 +130,8 @@ namespace Diligent
 
     void DeviceContextGLImpl::CommitShaderResources(IShaderResourceBinding *pShaderResourceBinding, Uint32 Flags)
     {
-        if(!DeviceContextBase::CommitShaderResources(pShaderResourceBinding, Flags, 0))
+        if(!DeviceContextBase::CommitShaderResources<PipelineStateGLImpl>(pShaderResourceBinding, Flags, 0))
             return;
-
 
         if(m_CommitedResourcesTentativeBarriers != 0)
             LOG_INFO_MESSAGE("Not all tentative resource barriers have been executed since the last call to CommitShaderResources(). Did you forget to call Draw()/DispatchCompute() ?");

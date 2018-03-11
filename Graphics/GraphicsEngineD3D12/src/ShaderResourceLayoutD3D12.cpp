@@ -192,12 +192,12 @@ void ShaderResourceLayoutD3D12::Initialize(ID3D12Device *pd3d12Device,
     m_pResources->ProcessResources(
         AllowedVarTypes, NumAllowedTypes,
 
-        [&](const D3DShaderResourceAttribs &CB)
+        [&](const D3DShaderResourceAttribs &CB, Uint32)
         {
             VERIFY_EXPR(IsAllowedType(CB.GetVariableType(), AllowedTypeBits));
             ++m_NumCbvSrvUav[CB.GetVariableType()];
         },
-        [&](const D3DShaderResourceAttribs& TexSRV)
+        [&](const D3DShaderResourceAttribs& TexSRV, Uint32)
         {
             auto VarType = TexSRV.GetVariableType();
             VERIFY_EXPR(IsAllowedType(VarType, AllowedTypeBits));
@@ -213,17 +213,17 @@ void ShaderResourceLayoutD3D12::Initialize(ID3D12Device *pd3d12Device,
                 }
             }
         },
-        [&](const D3DShaderResourceAttribs &TexUAV)
+        [&](const D3DShaderResourceAttribs &TexUAV, Uint32)
         {
             VERIFY_EXPR(IsAllowedType(TexUAV.GetVariableType(), AllowedTypeBits));
             ++m_NumCbvSrvUav[TexUAV.GetVariableType()];
         },
-        [&](const D3DShaderResourceAttribs &BufSRV)
+        [&](const D3DShaderResourceAttribs &BufSRV, Uint32)
         {
             VERIFY_EXPR(IsAllowedType(BufSRV.GetVariableType(), AllowedTypeBits));
             ++m_NumCbvSrvUav[BufSRV.GetVariableType()];
         },
-        [&](const D3DShaderResourceAttribs &BufUAV)
+        [&](const D3DShaderResourceAttribs &BufUAV, Uint32)
         {
             VERIFY_EXPR(IsAllowedType(BufUAV.GetVariableType(), AllowedTypeBits));
             ++m_NumCbvSrvUav[BufUAV.GetVariableType()];
@@ -277,12 +277,12 @@ void ShaderResourceLayoutD3D12::Initialize(ID3D12Device *pd3d12Device,
     m_pResources->ProcessResources(
         AllowedVarTypes, NumAllowedTypes,
 
-        [&](const D3DShaderResourceAttribs &CB)
+        [&](const D3DShaderResourceAttribs &CB, Uint32)
         {
             VERIFY_EXPR( IsAllowedType(CB.GetVariableType(), AllowedTypeBits) );
             AddResource(CB, CachedResourceType::CBV);
         },
-        [&](const D3DShaderResourceAttribs& TexSRV)
+        [&](const D3DShaderResourceAttribs& TexSRV, Uint32)
         {
             auto VarType = TexSRV.GetVariableType();
             VERIFY_EXPR(IsAllowedType(VarType, AllowedTypeBits) );
@@ -335,17 +335,17 @@ void ShaderResourceLayoutD3D12::Initialize(ID3D12Device *pd3d12Device,
             }
             AddResource(TexSRV, CachedResourceType::TexSRV, SamplerId);
         },
-        [&](const D3DShaderResourceAttribs &TexUAV)
+        [&](const D3DShaderResourceAttribs &TexUAV, Uint32)
         {
             VERIFY_EXPR( IsAllowedType(TexUAV.GetVariableType(), AllowedTypeBits) );
             AddResource(TexUAV, CachedResourceType::TexUAV);
         },
-        [&](const D3DShaderResourceAttribs &BufSRV)
+        [&](const D3DShaderResourceAttribs &BufSRV, Uint32)
         {
             VERIFY_EXPR( IsAllowedType(BufSRV.GetVariableType(), AllowedTypeBits) );
             AddResource(BufSRV, CachedResourceType::BufSRV);
         },
-        [&](const D3DShaderResourceAttribs &BufUAV)
+        [&](const D3DShaderResourceAttribs &BufUAV, Uint32)
         {
             VERIFY_EXPR( IsAllowedType(BufUAV.GetVariableType(), AllowedTypeBits) );
             AddResource(BufUAV, CachedResourceType::BufUAV);

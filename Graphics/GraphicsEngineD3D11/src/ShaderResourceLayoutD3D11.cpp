@@ -143,7 +143,7 @@ void ShaderResourceLayoutD3D11::Initialize(const std::shared_ptr<const ShaderRes
     pSrcResources->ProcessResources(
         VarTypes, NumVarTypes,
 
-        [&](const D3DShaderResourceAttribs &CB)
+        [&](const D3DShaderResourceAttribs &CB, Uint32)
         {
             VERIFY_EXPR( IsAllowedType(CB.GetVariableType(), AllowedTypeBits) );
             // Initialize current CB in place, increment CB counter
@@ -151,7 +151,7 @@ void ShaderResourceLayoutD3D11::Initialize(const std::shared_ptr<const ShaderRes
             NumCBSlots = std::max(NumCBSlots, static_cast<Uint32>(CB.BindPoint + CB.BindCount));
         },
 
-        [&](const D3DShaderResourceAttribs& TexSRV)
+        [&](const D3DShaderResourceAttribs& TexSRV, Uint32)
         {
             VERIFY_EXPR( IsAllowedType(TexSRV.GetVariableType(), AllowedTypeBits) );
             // Set reference to a special static instance representing invalid sampler            
@@ -165,7 +165,7 @@ void ShaderResourceLayoutD3D11::Initialize(const std::shared_ptr<const ShaderRes
                 NumSamplerSlots = std::max(NumSamplerSlots, static_cast<Uint32>(SamplerAttribs.BindPoint + SamplerAttribs.BindCount));
         },
 
-        [&](const D3DShaderResourceAttribs &TexUAV)
+        [&](const D3DShaderResourceAttribs &TexUAV, Uint32)
         {
             VERIFY_EXPR( IsAllowedType(TexUAV.GetVariableType(), AllowedTypeBits) );
              
@@ -174,7 +174,7 @@ void ShaderResourceLayoutD3D11::Initialize(const std::shared_ptr<const ShaderRes
             NumUAVSlots = std::max(NumUAVSlots, static_cast<Uint32>(TexUAV.BindPoint + TexUAV.BindCount));
         },
 
-        [&](const D3DShaderResourceAttribs &BuffSRV)
+        [&](const D3DShaderResourceAttribs &BuffSRV, Uint32)
         {
             VERIFY_EXPR(IsAllowedType(BuffSRV.GetVariableType(), AllowedTypeBits));
             
@@ -183,7 +183,7 @@ void ShaderResourceLayoutD3D11::Initialize(const std::shared_ptr<const ShaderRes
             NumSRVSlots = std::max(NumSRVSlots, static_cast<Uint32>(BuffSRV.BindPoint + BuffSRV.BindCount));
         },
 
-        [&](const D3DShaderResourceAttribs &BuffUAV)
+        [&](const D3DShaderResourceAttribs &BuffUAV, Uint32)
         {
             VERIFY_EXPR(IsAllowedType(BuffUAV.GetVariableType(), AllowedTypeBits));
             

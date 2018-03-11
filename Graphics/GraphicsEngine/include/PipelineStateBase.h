@@ -173,6 +173,13 @@ public:
     IShader* const* GetShaders()const{return m_ppShaders;}
     Uint32 GetNumShaders()const{return m_NumShaders;}
 
+    // This function only compares shader resource layout hashes, so
+    // it can potentially give false negatives
+    bool IsIncompatibleWith(IPipelineState *pPSO)const
+    {
+        return m_ShaderResourceLayoutHash != ValidatedCast<PipelineStateBase>(pPSO)->m_ShaderResourceLayoutHash;
+    }
+
 protected:
     std::vector<LayoutElement, STDAllocatorRawMem<LayoutElement> > m_LayoutElements;
 
@@ -189,6 +196,7 @@ protected:
     RefCntAutoPtr<IShader> m_pCS; ///< Strong reference to the compute shader
     IShader *m_ppShaders[5];  ///< Array of pointers to shaders that this PSO uses
     Uint32 m_NumShaders; ///< Number of shaders that this PSO uses
+    size_t m_ShaderResourceLayoutHash = 0;///< Hash computed from the shader resource layout
 };
 
 }

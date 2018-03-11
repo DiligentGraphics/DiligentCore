@@ -195,7 +195,7 @@ void ShaderResourcesD3D11::dbgVerifyCommittedResources(ID3D11Buffer*            
     ProcessResources(
         nullptr, 0,
 
-        [&](const D3DShaderResourceAttribs &cb)
+        [&](const D3DShaderResourceAttribs &cb, Uint32)
         {
             for(auto BindPoint = cb.BindPoint; BindPoint < cb.BindPoint + cb.BindCount; ++BindPoint)
             {
@@ -233,7 +233,7 @@ void ShaderResourcesD3D11::dbgVerifyCommittedResources(ID3D11Buffer*            
             }
         },
 
-        [&](const D3DShaderResourceAttribs& tex)
+        [&](const D3DShaderResourceAttribs& tex, Uint32)
         {
             for(auto BindPoint = tex.BindPoint; BindPoint < tex.BindPoint + tex.BindCount; ++BindPoint)
             {
@@ -308,7 +308,7 @@ void ShaderResourcesD3D11::dbgVerifyCommittedResources(ID3D11Buffer*            
             }
         },
 
-        [&](const D3DShaderResourceAttribs &uav)
+        [&](const D3DShaderResourceAttribs &uav, Uint32)
         {
             for(auto BindPoint = uav.BindPoint; BindPoint < uav.BindPoint + uav.BindCount; ++BindPoint)
             {
@@ -349,7 +349,7 @@ void ShaderResourcesD3D11::dbgVerifyCommittedResources(ID3D11Buffer*            
         },
 
 
-        [&](const D3DShaderResourceAttribs &buf)
+        [&](const D3DShaderResourceAttribs &buf, Uint32)
         {
             for(auto BindPoint = buf.BindPoint; BindPoint < buf.BindPoint + buf.BindCount; ++BindPoint)
             {
@@ -389,7 +389,7 @@ void ShaderResourcesD3D11::dbgVerifyCommittedResources(ID3D11Buffer*            
             }
         },
 
-        [&](const D3DShaderResourceAttribs &uav)
+        [&](const D3DShaderResourceAttribs &uav, Uint32)
         {
             for(auto BindPoint = uav.BindPoint; BindPoint < uav.BindPoint + uav.BindCount; ++BindPoint)
             {

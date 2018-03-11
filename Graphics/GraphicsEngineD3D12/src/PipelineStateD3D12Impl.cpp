@@ -265,6 +265,12 @@ void PipelineStateD3D12Impl::CreateShaderResourceBinding(IShaderResourceBinding 
     pResBindingD3D12->QueryInterface(IID_ShaderResourceBinding, reinterpret_cast<IObject**>(ppShaderResourceBinding));
 }
 
+bool PipelineStateD3D12Impl::IsCompatibleWith(const IPipelineState *pPSO)const
+{
+    UNSUPPORTED("Not yet implemented");
+    return false;
+}
+
 const ShaderResourceLayoutD3D12& PipelineStateD3D12Impl::GetShaderResLayout(SHADER_TYPE ShaderType)const 
 {
     auto ShaderInd = GetShaderTypeIndex(ShaderType);

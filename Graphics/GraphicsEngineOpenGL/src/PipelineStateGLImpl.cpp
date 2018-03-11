@@ -155,6 +155,12 @@ void PipelineStateGLImpl::CreateShaderResourceBinding(IShaderResourceBinding **p
     pResBinding->QueryInterface(IID_ShaderResourceBinding, reinterpret_cast<IObject**>(ppShaderResourceBinding));
 }
 
+bool PipelineStateGLImpl::IsCompatibleWith(const IPipelineState *pPSO)const
+{
+    UNSUPPORTED("Not yet implemented");
+    return false;
+}
+
 GLObjectWrappers::GLPipelineObj &PipelineStateGLImpl::GetGLProgramPipeline(GLContext::NativeGLContextType Context)
 {
     ThreadingTools::LockHelper Lock(m_ProgPipelineLockFlag);

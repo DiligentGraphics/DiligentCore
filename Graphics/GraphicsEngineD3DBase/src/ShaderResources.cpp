@@ -25,6 +25,7 @@
 #include "EngineMemory.h"
 #include "StringTools.h"
 #include "ShaderResources.h"
+#include "HashUtils.h"
 
 namespace Diligent
 {
@@ -116,28 +117,28 @@ void ShaderResources::CountResources(const SHADER_VARIABLE_TYPE *AllowedVarTypes
     ProcessResources(
         AllowedVarTypes, NumAllowedTypes,
 
-        [&](const D3DShaderResourceAttribs &CB)
+        [&](const D3DShaderResourceAttribs &CB, Uint32)
         {
             VERIFY_EXPR(IsAllowedType(CB.GetVariableType(), AllowedTypeBits));
             ++NumCBs;
         },
-        [&](const D3DShaderResourceAttribs& TexSRV)
+        [&](const D3DShaderResourceAttribs& TexSRV, Uint32)
         {
             VERIFY_EXPR(IsAllowedType(TexSRV.GetVariableType(), AllowedTypeBits));
             ++NumTexSRVs;
             NumSamplers += TexSRV.IsValidSampler() ? 1 : 0;
         },
-        [&](const D3DShaderResourceAttribs &TexUAV)
+        [&](const D3DShaderResourceAttribs &TexUAV, Uint32)
         {
             VERIFY_EXPR(IsAllowedType(TexUAV.GetVariableType(), AllowedTypeBits));
             ++NumTexUAVs;
         },
-        [&](const D3DShaderResourceAttribs &BufSRV)
+        [&](const D3DShaderResourceAttribs &BufSRV, Uint32)
         {
             VERIFY_EXPR(IsAllowedType(BufSRV.GetVariableType(), AllowedTypeBits));
             ++NumBufSRVs;
         },
-        [&](const D3DShaderResourceAttribs &BufUAV)
+        [&](const D3DShaderResourceAttribs &BufUAV, Uint32)
         {
             VERIFY_EXPR(IsAllowedType(BufUAV.GetVariableType(), AllowedTypeBits));
             ++NumBufUAVs;
@@ -169,12 +170,12 @@ ShaderResources::ShaderResources(IMemoryAllocator &Allocator,
     ProcessResources(
         AllowedVarTypes, NumAllowedTypes,
 
-        [&](const D3DShaderResourceAttribs &CB)
+        [&](const D3DShaderResourceAttribs &CB, Uint32)
         {
             VERIFY_EXPR( IsAllowedType(CB.GetVariableType(), AllowedTypeBits) );
             new (&GetCB(CurrCB++)) D3DShaderResourceAttribs(CB);
         },
-        [&](const D3DShaderResourceAttribs& TexSRV)
+        [&](const D3DShaderResourceAttribs& TexSRV, Uint32)
         {
             VERIFY_EXPR(IsAllowedType(TexSRV.GetVariableType(), AllowedTypeBits));
             
@@ -187,17 +188,17 @@ ShaderResources::ShaderResources(IMemoryAllocator &Allocator,
             
             new (&GetTexSRV(CurrTexSRV++)) D3DShaderResourceAttribs(TexSRV, SamplerId);
         },
-        [&](const D3DShaderResourceAttribs &TexUAV)
+        [&](const D3DShaderResourceAttribs &TexUAV, Uint32)
         {
             VERIFY_EXPR( IsAllowedType(TexUAV.GetVariableType(), AllowedTypeBits) );
             new (&GetTexUAV(CurrTexUAV++)) D3DShaderResourceAttribs(TexUAV);
         },
-        [&](const D3DShaderResourceAttribs &BufSRV)
+        [&](const D3DShaderResourceAttribs &BufSRV, Uint32)
         {
             VERIFY_EXPR( IsAllowedType(BufSRV.GetVariableType(), AllowedTypeBits) );
             new (&GetBufSRV(CurrBufSRV++)) D3DShaderResourceAttribs(BufSRV);
         },
-        [&](const D3DShaderResourceAttribs &BufUAV)
+        [&](const D3DShaderResourceAttribs &BufUAV, Uint32)
         {
             VERIFY_EXPR( IsAllowedType(BufUAV.GetVariableType(), AllowedTypeBits) );
             new (&GetBufUAV(CurrBufUAV++)) D3DShaderResourceAttribs(BufUAV);
@@ -227,6 +228,78 @@ Uint32 ShaderResources::FindAssignedSamplerId(const D3DShaderResourceAttribs& Te
         }
     }
     return D3DShaderResourceAttribs::InvalidSamplerId;
+}
+
+bool ShaderResources::IsCompatibleWith(const ShaderResources &Res)const
+{
+    if (GetNumCBs()    != Res.GetNumCBs()    ||
+        GetNumTexSRV() != Res.GetNumTexSRV() ||
+        GetNumTexUAV() != Res.GetNumTexUAV() ||
+        GetNumBufSRV() != Res.GetNumBufSRV() ||
+        GetNumBufUAV() != Res.GetNumBufUAV())
+        return false;
+
+    bool IsCompatible = true;
+    ProcessResources(
+        nullptr, 0,
+
+        [&](const D3DShaderResourceAttribs &CB, Uint32 n)
+        {
+            if(!CB.IsCompatibleWith(Res.GetCB(n)))
+                IsCompatible = false;
+        },
+        [&](const D3DShaderResourceAttribs& TexSRV, Uint32 n)
+        {
+            if(!TexSRV.IsCompatibleWith(Res.GetTexSRV(n)))
+                IsCompatible = false;
+        },
+        [&](const D3DShaderResourceAttribs &TexUAV, Uint32 n)
+        {
+            if(!TexUAV.IsCompatibleWith(Res.GetTexUAV(n)))
+                IsCompatible = false;
+        },
+        [&](const D3DShaderResourceAttribs &BufSRV, Uint32 n)
+        {
+            if(!BufSRV.IsCompatibleWith(Res.GetBufSRV(n)))
+                IsCompatible = false;
+        },
+        [&](const D3DShaderResourceAttribs &BufUAV, Uint32 n)
+        {
+            if(!BufUAV.IsCompatibleWith(Res.GetBufUAV(n)))
+                IsCompatible = false;
+        }
+    );
+    return IsCompatible;
+}
+
+size_t ShaderResources::GetHash()const
+{
+    size_t hash = ComputeHash(GetNumCBs(), GetNumTexSRV(), GetNumTexUAV(), GetNumBufSRV(), GetNumBufUAV());
+    ProcessResources(
+        nullptr, 0,
+        [&](const D3DShaderResourceAttribs &CB, Uint32 n)
+        {
+            HashCombine(hash, CB);
+        },
+        [&](const D3DShaderResourceAttribs& TexSRV, Uint32 n)
+        {
+            HashCombine(hash, TexSRV);
+        },
+        [&](const D3DShaderResourceAttribs &TexUAV, Uint32 n)
+        {
+            HashCombine(hash, TexUAV);
+        },
+        [&](const D3DShaderResourceAttribs &BufSRV, Uint32 n)
+        {
+            HashCombine(hash, BufSRV);
+        },
+        [&](const D3DShaderResourceAttribs &BufUAV, Uint32 n)
+        {
+            HashCombine(hash, BufUAV);
+        }
+    );
+
+    return hash;
 }
 
 }
