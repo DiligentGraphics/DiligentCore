@@ -591,6 +591,15 @@ objects. Refer to the following pages for more information:
 
 # Version History
 
+## v2.2.a
+
+### New Features
+
+* Implemented PSO compatibility: if two pipeline states share the same shader resource layout,
+  they can use SRB objects interchangeably.
+* Added `IPipelineState::IsCompatibleWith(const IPipelineState *pPSO)` method that returns true if two 
+  pipeline states are compatible.
+
 ## v2.2
 
 * Added MacOS and iOS support
