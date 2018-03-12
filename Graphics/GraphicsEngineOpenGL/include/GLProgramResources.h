@@ -71,7 +71,7 @@ namespace Diligent
 
             size_t GetHash()const
             {
-                return ComputeHash(VarType, pResources.size());
+                return ComputeHash(static_cast<Int32>(VarType), pResources.size());
             }
 
             String Name;
