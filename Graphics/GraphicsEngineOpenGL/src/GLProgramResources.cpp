@@ -466,6 +466,76 @@ namespace Diligent
         BindResourcesHelper( m_StorageBlocks, pResourceMapping, Flags );
     }
 
+    bool GLProgramResources::IsCompatibleWith(const GLProgramResources& Res)const
+    {
+        if (m_UniformBlocks.size() != Res.m_UniformBlocks.size() ||
+            m_Samplers.size()      != Res.m_Samplers.size()      ||
+            m_Images.size()        != Res.m_Images.size()        ||
+            m_StorageBlocks.size() != Res.m_StorageBlocks.size())
+            return false;
+
+        for (size_t ub = 0; ub < m_UniformBlocks.size(); ++ub)
+        {
+            const auto &UB0 = m_UniformBlocks[ub];
+            const auto &UB1 = Res.m_UniformBlocks[ub];
+            if(!UB0.IsCompatibleWith(UB1))
+                return false;
+        }
+
+        for (size_t sam = 0; sam < m_Samplers.size(); ++sam)
+        {
+            const auto &Sam0 = m_Samplers[sam];
+            const auto &Sam1 = Res.m_Samplers[sam];
+            if (!Sam0.IsCompatibleWith(Sam1))
+                return false;
+        }
+
+        for (size_t img = 0; img < m_Images.size(); ++img)
+        {
+            const auto &Img0 = m_Images[img];
+            const auto &Img1 = Res.m_Images[img];
+            if (!Img0.IsCompatibleWith(Img1))
+                return false;
+        }
+
+        for (size_t sb = 0; sb < m_StorageBlocks.size(); ++sb)
+        {
+            const auto &SB0 = m_StorageBlocks[sb];
+            const auto &SB1 = Res.m_StorageBlocks[sb];
+            if (!SB0.IsCompatibleWith(SB1))
+                return false;
+        }
+
+        return true;
+    }
+
+    size_t GLProgramResources::GetHash()const
+    {
+        size_t hash = ComputeHash(m_UniformBlocks.size(), m_Samplers.size(), m_Images.size(), m_StorageBlocks.size());
+
+        for (auto ub = m_UniformBlocks.begin(); ub != m_UniformBlocks.end(); ++ub)
+        {
+            HashCombine(hash, ub->GetHash());
+        }
+
+        for (auto sam = m_Samplers.begin(); sam != m_Samplers.end(); ++sam)
+        {
+            HashCombine(hash, sam->GetHash());
+        }
+
+        for (auto img = m_Images.begin(); img != m_Images.end(); ++img)
+        {
+            HashCombine(hash, img->GetHash());
+        }
+
+        for (auto sb = m_StorageBlocks.begin(); sb != m_StorageBlocks.end(); ++sb)
+        {
+            HashCombine(hash, sb->GetHash());
+        }
+
+        return hash;
+    }
+
 #ifdef VERIFY_RESOURCE_BINDINGS
     template<typename TResArrayType>
     void dbgVerifyResourceBindingsHelper(TResArrayType &ResArr, const Char *VarType)

@@ -99,9 +99,9 @@ GLProgramResources &ShaderResourceBindingGLImpl::GetProgramResources(SHADER_TYPE
 {
 #ifdef _DEBUG
     auto pPSO = m_wpPSO.Lock();
-    if (pPSO != pdbgPSO)
+    if (pdbgPSO->IsIncompatibleWith(pPSO))
     {
-        LOG_ERROR("Shader resource binding does not match the currently bound pipeline state.");
+        LOG_ERROR("Shader resource binding is incompatible with the currently bound pipeline state.");
     }
 #endif
     auto ShaderInd = GetShaderTypeIndex(ShaderType);

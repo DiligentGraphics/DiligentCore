@@ -49,6 +49,12 @@ void PipelineStateGLImpl::LinkGLProgram(bool bIsProgramPipelineSupported)
     {
         // Program pipelines are not shared between GL contexts, so we cannot create
         // it now
+        m_ShaderResourceLayoutHash = 0;
+        for (Uint32 Shader = 0; Shader < m_NumShaders; ++Shader)
+        {
+            auto *pShaderGL = static_cast<ShaderGLImpl*>(m_ppShaders[Shader]);
+            HashCombine(m_ShaderResourceLayoutHash, pShaderGL->m_GlProgObj.GetAllResources().GetHash());
+        }
     }
     else
     {
@@ -120,6 +126,8 @@ void PipelineStateGLImpl::LinkGLProgram(bool bIsProgramPipelineSupported)
 
         auto pDeviceGL = static_cast<RenderDeviceGLImpl*>( GetDevice() );
         m_GLProgram.InitResources(pDeviceGL, DefaultVarType, MergedVarTypesArray.data(), static_cast<Uint32>(MergedVarTypesArray.size()), MergedStSamArray.data(), static_cast<Uint32>(MergedStSamArray.size()), *this);
+
+        m_ShaderResourceLayoutHash = m_GLProgram.GetAllResources().GetHash();
     }   
 }
 
@@ -157,8 +165,16 @@ void PipelineStateGLImpl::CreateShaderResourceBinding(IShaderResourceBinding **p
 
 bool PipelineStateGLImpl::IsCompatibleWith(const IPipelineState *pPSO)const
 {
-    UNSUPPORTED("Not yet implemented");
-    return false;
+    VERIFY_EXPR(pPSO != nullptr);
+
+    if (pPSO == this)
+        return true;
+
+    const PipelineStateGLImpl *pPSOGL = ValidatedCast<const PipelineStateGLImpl>(pPSO);
+    if (m_ShaderResourceLayoutHash != pPSOGL->m_ShaderResourceLayoutHash)
+        return false;
+
+    return m_GLProgram.GetAllResources().IsCompatibleWith( pPSOGL->m_GLProgram.GetAllResources() );
 }
 
 GLObjectWrappers::GLPipelineObj &PipelineStateGLImpl::GetGLProgramPipeline(GLContext::NativeGLContextType Context)

@@ -26,6 +26,7 @@
 #include "HashUtils.h"
 #include "ShaderBase.h"
 #include "SamplerGLImpl.h"
+#include "HashUtils.h"
 
 #ifdef _DEBUG
 #   define VERIFY_RESOURCE_BINDINGS
@@ -62,6 +63,17 @@ namespace Diligent
                 VERIFY_EXPR(_ArraySize >= 1);
             }
 
+            bool IsCompatibleWith(const GLProgramVariableBase &Var)const
+            {
+                return VarType           == Var.VarType && 
+                       pResources.size() == Var.pResources.size();
+            }
+
+            size_t GetHash()const
+            {
+                return ComputeHash(VarType, pResources.size());
+            }
+
             String Name;
             std::vector< RefCntAutoPtr<IDeviceObject> > pResources;
             SHADER_VARIABLE_TYPE VarType;
@@ -73,6 +85,17 @@ namespace Diligent
                 GLProgramVariableBase(_Name, _ArraySize, _VarType),
                 Index(_Index)
             {}
+
+            bool IsCompatibleWith(const UniformBufferInfo& UBI)const
+            {
+                return Index == UBI.Index &&
+                       GLProgramVariableBase::IsCompatibleWith(UBI);
+            }
+
+            size_t GetHash()const
+            {
+                return ComputeHash(Index, GLProgramVariableBase::GetHash());
+            }
 
             GLuint Index;
         };
@@ -86,6 +109,19 @@ namespace Diligent
                 Type(_Type),
                 pStaticSampler(_pStaticSampler)
             {}
+
+            bool IsCompatibleWith(const SamplerInfo& SI)const
+            {
+                return Location == SI.Location &&
+                       Type     == SI.Type &&
+                       GLProgramVariableBase::IsCompatibleWith(SI);
+            }
+
+            size_t GetHash()const
+            {
+                return ComputeHash(Location, Type, GLProgramVariableBase::GetHash());
+            }
+
             GLint Location;
             GLenum Type;
             RefCntAutoPtr<class SamplerGLImpl> pStaticSampler;
@@ -100,6 +136,18 @@ namespace Diligent
                 Type(_Type)
             {}
 
+            bool IsCompatibleWith(const ImageInfo& II)const
+            {
+                return BindingPoint == II.BindingPoint &&
+                       Type         == II.Type &&
+                       GLProgramVariableBase::IsCompatibleWith(II);
+            }
+
+            size_t GetHash()const
+            {
+                return ComputeHash(BindingPoint, Type, GLProgramVariableBase::GetHash());
+            }
+
             GLint BindingPoint;
             GLenum Type;
         };
@@ -111,6 +159,17 @@ namespace Diligent
                 GLProgramVariableBase(_Name, _ArraySize, _VarType),
                 Binding(_Binding)
             {}
+
+            bool IsCompatibleWith(const StorageBlockInfo& SBI)const
+            {
+                return Binding == SBI.Binding &&
+                       GLProgramVariableBase::IsCompatibleWith(SBI);
+            }
+
+            size_t GetHash()const
+            {
+                return ComputeHash(Binding, GLProgramVariableBase::GetHash());
+            }
 
             GLint Binding;
         };
@@ -148,6 +207,9 @@ namespace Diligent
         IShaderVariable* GetShaderVariable( const Char* Name );
 
         const std::unordered_map<HashMapStringKey, CGLShaderVariable>& GetVariables(){return m_VariableHash;}
+
+        bool IsCompatibleWith(const GLProgramResources& Res)const;
+        size_t GetHash()const;
 
     private:
         const GLProgramResources& operator = (const GLProgramResources& Program);
