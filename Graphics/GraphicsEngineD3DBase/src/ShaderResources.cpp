@@ -277,23 +277,23 @@ size_t ShaderResources::GetHash()const
     size_t hash = ComputeHash(GetNumCBs(), GetNumTexSRV(), GetNumTexUAV(), GetNumBufSRV(), GetNumBufUAV());
     ProcessResources(
         nullptr, 0,
-        [&](const D3DShaderResourceAttribs &CB, Uint32 n)
+        [&](const D3DShaderResourceAttribs &CB, Uint32)
         {
             HashCombine(hash, CB);
         },
-        [&](const D3DShaderResourceAttribs& TexSRV, Uint32 n)
+        [&](const D3DShaderResourceAttribs &TexSRV, Uint32)
         {
             HashCombine(hash, TexSRV);
         },
-        [&](const D3DShaderResourceAttribs &TexUAV, Uint32 n)
+        [&](const D3DShaderResourceAttribs &TexUAV, Uint32)
         {
             HashCombine(hash, TexUAV);
         },
-        [&](const D3DShaderResourceAttribs &BufSRV, Uint32 n)
+        [&](const D3DShaderResourceAttribs &BufSRV, Uint32)
         {
             HashCombine(hash, BufSRV);
         },
-        [&](const D3DShaderResourceAttribs &BufUAV, Uint32 n)
+        [&](const D3DShaderResourceAttribs &BufUAV, Uint32)
         {
             HashCombine(hash, BufUAV);
         }
