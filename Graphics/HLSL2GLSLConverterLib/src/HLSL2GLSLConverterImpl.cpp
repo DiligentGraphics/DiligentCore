@@ -2598,185 +2598,191 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessFunctionParameters( TokenL
     // void TestPS  ( in VSOutput In,
     //                ^
     auto ArgsListStartToken = Token;
-    while(Token != m_Tokens.end())
+    // Handle empty argument list properly
+    // void TestPS  ( )
+    //                ^
+    if(Token != m_Tokens.end() && Token->Type != TokenType::ClosingBracket)
     {
-        ShaderParameterInfo ParamInfo;
-
-        // Process in/out qualifier
-        switch( Token->Type )
+        while(Token != m_Tokens.end())
         {
-            case TokenType::kw_in:
-                VERIFY_EXPR(Token->Literal == "in");
-                //void TestPS  ( in VSOutput In,
-                //               ^
-                ParamInfo.storageQualifier = ShaderParameterInfo::StorageQualifier::In;
-                ++Token;
-                //void TestPS  ( in VSOutput In,
-                //                  ^
-            break;
+            ShaderParameterInfo ParamInfo;
 
-            case TokenType::kw_out:
-                VERIFY_EXPR(Token->Literal == "out");
-                //          out float4 Color : SV_Target,
-                //          ^
-                ParamInfo.storageQualifier = ShaderParameterInfo::StorageQualifier::Out;
-                ++Token;
-                //          out float4 Color : SV_Target,
-                //              ^
-            break;
+            // Process in/out qualifier
+            switch( Token->Type )
+            {
+                case TokenType::kw_in:
+                    VERIFY_EXPR(Token->Literal == "in");
+                    //void TestPS  ( in VSOutput In,
+                    //               ^
+                    ParamInfo.storageQualifier = ShaderParameterInfo::StorageQualifier::In;
+                    ++Token;
+                    //void TestPS  ( in VSOutput In,
+                    //                  ^
+                break;
+
+                case TokenType::kw_out:
+                    VERIFY_EXPR(Token->Literal == "out");
+                    //          out float4 Color : SV_Target,
+                    //          ^
+                    ParamInfo.storageQualifier = ShaderParameterInfo::StorageQualifier::Out;
+                    ++Token;
+                    //          out float4 Color : SV_Target,
+                    //              ^
+                break;
         
-            case TokenType::kw_inout:
-                VERIFY_EXPR(Token->Literal == "inout");
-                //          inout TriangleStream<GSOut> triStream
-                //          ^
-                ParamInfo.storageQualifier = ShaderParameterInfo::StorageQualifier::InOut;
-                ++Token;
-                //          inout TriangleStream<GSOut> triStream
-                //                ^
-            break;
+                case TokenType::kw_inout:
+                    VERIFY_EXPR(Token->Literal == "inout");
+                    //          inout TriangleStream<GSOut> triStream
+                    //          ^
+                    ParamInfo.storageQualifier = ShaderParameterInfo::StorageQualifier::InOut;
+                    ++Token;
+                    //          inout TriangleStream<GSOut> triStream
+                    //                ^
+                break;
         
-            default:
-                ParamInfo.storageQualifier = ShaderParameterInfo::StorageQualifier::In;
-            break;
-        }
+                default:
+                    ParamInfo.storageQualifier = ShaderParameterInfo::StorageQualifier::In;
+                break;
+            }
 
 
-        // Process different GS/HS/DS attributes
-        switch(Token->Type)
-        {
-            case TokenType::kw_point:
-                // point QuadVSOut In[1]
-                // ^
-                ParamInfo.GSAttribs.PrimType = ShaderParameterInfo::GSAttributes::PrimitiveType::Point;
-                ++Token;
-            break;
+            // Process different GS/HS/DS attributes
+            switch(Token->Type)
+            {
+                case TokenType::kw_point:
+                    // point QuadVSOut In[1]
+                    // ^
+                    ParamInfo.GSAttribs.PrimType = ShaderParameterInfo::GSAttributes::PrimitiveType::Point;
+                    ++Token;
+                break;
         
-            case TokenType::kw_line:
-                // line QuadVSOut In[2]
-                // ^
-                ParamInfo.GSAttribs.PrimType = ShaderParameterInfo::GSAttributes::PrimitiveType::Line;
-                ++Token;
-            break;
+                case TokenType::kw_line:
+                    // line QuadVSOut In[2]
+                    // ^
+                    ParamInfo.GSAttribs.PrimType = ShaderParameterInfo::GSAttributes::PrimitiveType::Line;
+                    ++Token;
+                break;
 
-            case TokenType::kw_triangle:
-                // triangle QuadVSOut In[3]
-                // ^
-                ParamInfo.GSAttribs.PrimType = ShaderParameterInfo::GSAttributes::PrimitiveType::Triangle;
-                ++Token;
-            break;
+                case TokenType::kw_triangle:
+                    // triangle QuadVSOut In[3]
+                    // ^
+                    ParamInfo.GSAttribs.PrimType = ShaderParameterInfo::GSAttributes::PrimitiveType::Triangle;
+                    ++Token;
+                break;
 
-            case TokenType::kw_lineadj:
-                // lineadj QuadVSOut In[4]
-                // ^
-                ParamInfo.GSAttribs.PrimType = ShaderParameterInfo::GSAttributes::PrimitiveType::LineAdj;
-                ++Token;
-            break;
+                case TokenType::kw_lineadj:
+                    // lineadj QuadVSOut In[4]
+                    // ^
+                    ParamInfo.GSAttribs.PrimType = ShaderParameterInfo::GSAttributes::PrimitiveType::LineAdj;
+                    ++Token;
+                break;
 
-            case TokenType::kw_triangleadj:
-                // triangleadj QuadVSOut In[6]
-                // ^
-                ParamInfo.GSAttribs.PrimType = ShaderParameterInfo::GSAttributes::PrimitiveType::TriangleAdj;
-                ++Token;
+                case TokenType::kw_triangleadj:
+                    // triangleadj QuadVSOut In[6]
+                    // ^
+                    ParamInfo.GSAttribs.PrimType = ShaderParameterInfo::GSAttributes::PrimitiveType::TriangleAdj;
+                    ++Token;
             
-            case TokenType::kw_TriangleStream:
-            case TokenType::kw_PointStream:
-            case TokenType::kw_LineStream:
-                switch(Token->Type)
-                {
-                    case TokenType::kw_TriangleStream:
-                        // inout TriangleStream<GSOut> triStream 
-                        //       ^
-                        ParamInfo.GSAttribs.Stream = ShaderParameterInfo::GSAttributes::StreamType::Triangle;
-                    break;
+                case TokenType::kw_TriangleStream:
+                case TokenType::kw_PointStream:
+                case TokenType::kw_LineStream:
+                    switch(Token->Type)
+                    {
+                        case TokenType::kw_TriangleStream:
+                            // inout TriangleStream<GSOut> triStream 
+                            //       ^
+                            ParamInfo.GSAttribs.Stream = ShaderParameterInfo::GSAttributes::StreamType::Triangle;
+                        break;
 
-                    case TokenType::kw_PointStream:
-                        // inout PointStream<GSOut> ptStream 
-                        //       ^
-                        ParamInfo.GSAttribs.Stream = ShaderParameterInfo::GSAttributes::StreamType::Point;
-                    break;
+                        case TokenType::kw_PointStream:
+                            // inout PointStream<GSOut> ptStream 
+                            //       ^
+                            ParamInfo.GSAttribs.Stream = ShaderParameterInfo::GSAttributes::StreamType::Point;
+                        break;
 
-                    case TokenType::kw_LineStream:
+                        case TokenType::kw_LineStream:
+                            // inout LineStream<GSOut> lnStream 
+                            //       ^
+                            ParamInfo.GSAttribs.Stream = ShaderParameterInfo::GSAttributes::StreamType::Line;
+                        break;
+
+                        default:
+                            UNEXPECTED("Unexpected keyword ");
+                    }
+
+                    {
+                        ++Token;
+                        VERIFY_PARSER_STATE( Token, Token != m_Tokens.end() && Token->Literal == "<", "Angle bracket expected" );
                         // inout LineStream<GSOut> lnStream 
-                        //       ^
-                        ParamInfo.GSAttribs.Stream = ShaderParameterInfo::GSAttributes::StreamType::Line;
-                    break;
+                        //                 ^
+                        auto OpenAngleBarcket = Token++;
+                        m_Tokens.erase(OpenAngleBarcket);
+                        // inout LineStream GSOut> lnStream 
+                        //                  ^
 
-                    default:
-                        UNEXPECTED("Unexpected keyword ");
-                }
+                        VERIFY_PARSER_STATE( Token, Token != m_Tokens.end(), "Unexpected EOF" );
 
+                        auto ClosingAngleBarcket = Token;
+                        ++ClosingAngleBarcket;
+                        VERIFY_PARSER_STATE( ClosingAngleBarcket, ClosingAngleBarcket != m_Tokens.end() && ClosingAngleBarcket->Literal == ">", "Angle bracket expected" );
+                        m_Tokens.erase(ClosingAngleBarcket);
+                        // inout LineStream GSOut lnStream 
+                        //                  ^
+                    }
+                break;
+
+                case TokenType::kw_OutputPatch:
+                case TokenType::kw_InputPatch:
                 {
+                    ParamInfo.HSAttribs.PatchType = Token->Type == TokenType::kw_InputPatch ? ShaderParameterInfo::HSAttributes::InOutPatchType::InputPatch : ShaderParameterInfo::HSAttributes::InOutPatchType::OutputPatch;
+                    // HSOutput main(InputPatch<VSOutput, 1> inputPatch, uint uCPID : SV_OutputControlPointID)
+                    //               ^
                     ++Token;
                     VERIFY_PARSER_STATE( Token, Token != m_Tokens.end() && Token->Literal == "<", "Angle bracket expected" );
-                    // inout LineStream<GSOut> lnStream 
-                    //                 ^
+                    // HSOutput main(InputPatch<VSOutput, 1> inputPatch, uint uCPID : SV_OutputControlPointID)
+                    //                         ^
                     auto OpenAngleBarcket = Token++;
                     m_Tokens.erase(OpenAngleBarcket);
-                    // inout LineStream GSOut> lnStream 
-                    //                  ^
-
-                    VERIFY_PARSER_STATE( Token, Token != m_Tokens.end(), "Unexpected EOF" );
-
-                    auto ClosingAngleBarcket = Token;
-                    ++ClosingAngleBarcket;
-                    VERIFY_PARSER_STATE( ClosingAngleBarcket, ClosingAngleBarcket != m_Tokens.end() && ClosingAngleBarcket->Literal == ">", "Angle bracket expected" );
-                    m_Tokens.erase(ClosingAngleBarcket);
-                    // inout LineStream GSOut lnStream 
-                    //                  ^
-                }
-            break;
-
-            case TokenType::kw_OutputPatch:
-            case TokenType::kw_InputPatch:
-            {
-                ParamInfo.HSAttribs.PatchType = Token->Type == TokenType::kw_InputPatch ? ShaderParameterInfo::HSAttributes::InOutPatchType::InputPatch : ShaderParameterInfo::HSAttributes::InOutPatchType::OutputPatch;
-                // HSOutput main(InputPatch<VSOutput, 1> inputPatch, uint uCPID : SV_OutputControlPointID)
-                //               ^
-                ++Token;
-                VERIFY_PARSER_STATE( Token, Token != m_Tokens.end() && Token->Literal == "<", "Angle bracket expected" );
-                // HSOutput main(InputPatch<VSOutput, 1> inputPatch, uint uCPID : SV_OutputControlPointID)
-                //                         ^
-                auto OpenAngleBarcket = Token++;
-                m_Tokens.erase(OpenAngleBarcket);
-                // HSOutput main(InputPatch VSOutput, 1> inputPatch, uint uCPID : SV_OutputControlPointID)
-                //                          ^
+                    // HSOutput main(InputPatch VSOutput, 1> inputPatch, uint uCPID : SV_OutputControlPointID)
+                    //                          ^
                  
-                auto TmpToken = Token;
-                ++TmpToken;
-                // HSOutput main(InputPatch VSOutput, 1> inputPatch, uint uCPID : SV_OutputControlPointID)
-                //                                  ^
-                VERIFY_PARSER_STATE( TmpToken, TmpToken != m_Tokens.end() && TmpToken->Type == TokenType::Comma, "Comma expected" );
-                auto CommaToken = TmpToken;
-                ++TmpToken;
-                m_Tokens.erase(CommaToken);
-                // HSOutput main(InputPatch VSOutput 1> inputPatch, uint uCPID : SV_OutputControlPointID)
-                //                                   ^
-                VERIFY_PARSER_STATE( TmpToken, TmpToken != m_Tokens.end() && TmpToken->Type == TokenType::NumericConstant, "Numeric constant expected" );
+                    auto TmpToken = Token;
+                    ++TmpToken;
+                    // HSOutput main(InputPatch VSOutput, 1> inputPatch, uint uCPID : SV_OutputControlPointID)
+                    //                                  ^
+                    VERIFY_PARSER_STATE( TmpToken, TmpToken != m_Tokens.end() && TmpToken->Type == TokenType::Comma, "Comma expected" );
+                    auto CommaToken = TmpToken;
+                    ++TmpToken;
+                    m_Tokens.erase(CommaToken);
+                    // HSOutput main(InputPatch VSOutput 1> inputPatch, uint uCPID : SV_OutputControlPointID)
+                    //                                   ^
+                    VERIFY_PARSER_STATE( TmpToken, TmpToken != m_Tokens.end() && TmpToken->Type == TokenType::NumericConstant, "Numeric constant expected" );
                                 
-                ParamInfo.ArraySize = TmpToken->Literal;
-                auto NumCtrlPointsToken = TmpToken;
-                ++TmpToken;
-                VERIFY_PARSER_STATE( TmpToken, TmpToken != m_Tokens.end() && TmpToken->Literal == ">", "Angle bracket expected" );
-                m_Tokens.erase(NumCtrlPointsToken);
-                // HSOutput main(InputPatch VSOutput > inputPatch, uint uCPID : SV_OutputControlPointID)
-                //                                   ^
+                    ParamInfo.ArraySize = TmpToken->Literal;
+                    auto NumCtrlPointsToken = TmpToken;
+                    ++TmpToken;
+                    VERIFY_PARSER_STATE( TmpToken, TmpToken != m_Tokens.end() && TmpToken->Literal == ">", "Angle bracket expected" );
+                    m_Tokens.erase(NumCtrlPointsToken);
+                    // HSOutput main(InputPatch VSOutput > inputPatch, uint uCPID : SV_OutputControlPointID)
+                    //                                   ^
 
-                m_Tokens.erase(TmpToken);
-                // HSOutput main(InputPatch VSOutput inputPatch, uint uCPID : SV_OutputControlPointID)
-                //
-            }
-            break;
+                    m_Tokens.erase(TmpToken);
+                    // HSOutput main(InputPatch VSOutput inputPatch, uint uCPID : SV_OutputControlPointID)
+                    //
+                }
+                break;
 
-            default: /*do nothing*/break;
-        }        
+                default: /*do nothing*/break;
+            }        
 
-        ParseShaderParameter(Token, ParamInfo);
+            ParseShaderParameter(Token, ParamInfo);
 
-        VERIFY_PARSER_STATE( Token, Token->Literal == "," || Token->Type == TokenType::ClosingBracket, "\',\' or \')\' is expected after argument \"", ParamInfo.Name, '\"' );
-        Params.push_back( ParamInfo );
-        if( Token->Type == TokenType::ClosingBracket )
-            break;
-        ++Token;
+            VERIFY_PARSER_STATE( Token, Token->Literal == "," || Token->Type == TokenType::ClosingBracket, "\',\' or \')\' is expected after argument \"", ParamInfo.Name, '\"' );
+            Params.push_back( ParamInfo );
+            if( Token->Type == TokenType::ClosingBracket )
+                break;
+            ++Token;
+        }
     }
     VERIFY_PARSER_STATE( Token, Token != m_Tokens.end(), "Unexpected EOF" );
 
