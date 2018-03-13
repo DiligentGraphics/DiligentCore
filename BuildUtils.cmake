@@ -83,7 +83,7 @@ function(set_common_target_properties TARGET)
             if(PLATFORM_UNIVERSAL_WINDOWS)
                 # On UWP, disable incremental link to avoid linker warnings
                 foreach(DBG_CONFIG ${DEBUG_CONFIGURATIONS})
-                    set_target_properties(${TARGET_NAME} PROPERTIES
+                    set_target_properties(${TARGET} PROPERTIES
                         LINK_FLAGS_${DBG_CONFIG} "/INCREMENTAL:NO"
                     )
                 endforeach()
