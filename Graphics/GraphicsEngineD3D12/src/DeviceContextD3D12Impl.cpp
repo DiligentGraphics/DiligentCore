@@ -89,31 +89,6 @@ namespace Diligent
 
     IMPLEMENT_QUERY_INTERFACE( DeviceContextD3D12Impl, IID_DeviceContextD3D12, TDeviceContextBase )
     
-    const LONG MaxD3D12TexDim = D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION;
-    const Uint32 MaxD3D12ScissorRects = D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE;
-    static const RECT MaxD3D12TexSizeRects[D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE] = 
-    {
-        {0,0, MaxD3D12TexDim,MaxD3D12TexDim},
-        {0,0, MaxD3D12TexDim,MaxD3D12TexDim},
-        {0,0, MaxD3D12TexDim,MaxD3D12TexDim},
-        {0,0, MaxD3D12TexDim,MaxD3D12TexDim},
-
-        {0,0, MaxD3D12TexDim,MaxD3D12TexDim},
-        {0,0, MaxD3D12TexDim,MaxD3D12TexDim},
-        {0,0, MaxD3D12TexDim,MaxD3D12TexDim},
-        {0,0, MaxD3D12TexDim,MaxD3D12TexDim},
-
-        {0,0, MaxD3D12TexDim,MaxD3D12TexDim},
-        {0,0, MaxD3D12TexDim,MaxD3D12TexDim},
-        {0,0, MaxD3D12TexDim,MaxD3D12TexDim},
-        {0,0, MaxD3D12TexDim,MaxD3D12TexDim},
-
-        {0,0, MaxD3D12TexDim,MaxD3D12TexDim},
-        {0,0, MaxD3D12TexDim,MaxD3D12TexDim},
-        {0,0, MaxD3D12TexDim,MaxD3D12TexDim},
-        {0,0, MaxD3D12TexDim,MaxD3D12TexDim}
-    };
-
     void DeviceContextD3D12Impl::SetPipelineState(IPipelineState *pPipelineState)
     {
         // Never flush deferred context!
@@ -122,18 +97,36 @@ namespace Diligent
             Flush(true);
         }
 
-        // If no pipeline state is bound, we are working with the fresh command
-        // list. We have to commit the states set in the context that are not
-        // committed by the draw command (render targets, viewports, scissor rects, etc.)
-        bool CommitStates = !m_pPipelineState;
+        auto *pPipelineStateD3D12 = ValidatedCast<PipelineStateD3D12Impl>(pPipelineState);
+        const auto &PSODesc = pPipelineStateD3D12->GetDesc();
+
+        bool CommitStates = false;
+        bool CommitScissor = false;
+        if(!m_pPipelineState)
+        {
+            // If no pipeline state is bound, we are working with the fresh command
+            // list. We have to commit the states set in the context that are not
+            // committed by the draw command (render targets, viewports, scissor rects, etc.)
+            CommitStates = true;
+        }
+        else
+        {
+            const auto& OldPSODesc = m_pPipelineState->GetDesc();
+            // Commit all graphics states when switching from compute pipeline 
+            // This is necessary because if the command list had been flushed
+            // and the first PSO set on the command list was a compute pipeline, 
+            // the states would otherwise never be committed (since m_pPipelineState != nullptr)
+            CommitStates = OldPSODesc.IsComputePipeline;
+            // We also need to update scissor rect if ScissorEnable state has changed
+            CommitScissor = OldPSODesc.GraphicsPipeline.RasterizerDesc.ScissorEnable != PSODesc.GraphicsPipeline.RasterizerDesc.ScissorEnable;
+        }
 
         TDeviceContextBase::SetPipelineState( pPipelineState );
-        auto *pPipelineStateD3D12 = ValidatedCast<PipelineStateD3D12Impl>(pPipelineState);
 
         auto *pCmdCtx = RequestCmdContext();
-        const auto &Desc = pPipelineStateD3D12->GetDesc();
+        
         auto *pd3d12PSO = pPipelineStateD3D12->GetD3D12PipelineState();
-        if (Desc.IsComputePipeline)
+        if (PSODesc.IsComputePipeline)
         {
             pCmdCtx->AsComputeContext().SetPipelineState(pd3d12PSO);
         }
@@ -142,32 +135,17 @@ namespace Diligent
             auto &GraphicsCtx = pCmdCtx->AsGraphicsContext();
             GraphicsCtx.SetPipelineState(pd3d12PSO);
 
-            if (CommitStates)
+            if(CommitStates)
             {
-                if (Desc.GraphicsPipeline.RasterizerDesc.ScissorEnable)
-                {
-                    // Commit currently set scissor rectangles
-                    D3D12_RECT d3d12ScissorRects[MaxD3D12ScissorRects]; // Do not waste time initializing array with zeroes
-                    for( Uint32 sr = 0; sr < m_NumScissorRects; ++sr )
-                    {
-                        d3d12ScissorRects[sr].left   = m_ScissorRects[sr].left;
-                        d3d12ScissorRects[sr].top    = m_ScissorRects[sr].top;
-                        d3d12ScissorRects[sr].right  = m_ScissorRects[sr].right;
-                        d3d12ScissorRects[sr].bottom = m_ScissorRects[sr].bottom;
-                    }
-                    GraphicsCtx.SetScissorRects(m_NumScissorRects, d3d12ScissorRects);
-                }
-                else
-                {
-                    // Disable scissor rectangles
-                    static_assert(_countof(MaxD3D12TexSizeRects) == MaxD3D12ScissorRects, "Unexpected array size");
-                    GraphicsCtx.SetScissorRects(MaxD3D12ScissorRects, MaxD3D12TexSizeRects);
-                }
-
                 GraphicsCtx.SetStencilRef(m_StencilRef);
                 GraphicsCtx.SetBlendFactor(m_BlendFactors);
                 CommitRenderTargets();
                 CommitViewports();
+            }
+
+            if(CommitStates || CommitScissor)
+            {
+                CommitScissorRects(GraphicsCtx, PSODesc.GraphicsPipeline.RasterizerDesc.ScissorEnable);
             }
         }
         m_pCommittedResourceCache = nullptr;
@@ -516,7 +494,7 @@ namespace Diligent
             }
         }
 
-        static const float Zero[4] = { 0.f, 0.f, 0.f, 0.f };
+        static constexpr float Zero[4] = { 0.f, 0.f, 0.f, 0.f };
         if( RGBA == nullptr )
             RGBA = Zero;
 
@@ -586,7 +564,7 @@ namespace Diligent
 
     void DeviceContextD3D12Impl::CommitViewports()
     {
-        const Uint32 MaxViewports = D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE;
+        constexpr Uint32 MaxViewports = D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE;
         D3D12_VIEWPORT d3d12Viewports[MaxViewports]; // Do not waste time initializing array to zero
         
         for( Uint32 vp = 0; vp < m_NumViewports; ++vp )
@@ -605,7 +583,7 @@ namespace Diligent
 
     void DeviceContextD3D12Impl::SetViewports( Uint32 NumViewports, const Viewport *pViewports, Uint32 RTWidth, Uint32 RTHeight  )
     {
-        const Uint32 MaxViewports = D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE;
+        constexpr Uint32 MaxViewports = D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE;
         VERIFY( NumViewports < MaxViewports, "Too many viewports are being set" );
         NumViewports = std::min( NumViewports, MaxViewports );
 
@@ -613,6 +591,55 @@ namespace Diligent
         VERIFY( NumViewports == m_NumViewports, "Unexpected number of viewports" );
 
         CommitViewports();
+    }
+
+
+    constexpr LONG MaxD3D12TexDim = D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION;
+    constexpr Uint32 MaxD3D12ScissorRects = D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE;
+    static constexpr RECT MaxD3D12TexSizeRects[D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE] =
+    {
+        { 0,0, MaxD3D12TexDim,MaxD3D12TexDim },
+        { 0,0, MaxD3D12TexDim,MaxD3D12TexDim },
+        { 0,0, MaxD3D12TexDim,MaxD3D12TexDim },
+        { 0,0, MaxD3D12TexDim,MaxD3D12TexDim },
+
+        { 0,0, MaxD3D12TexDim,MaxD3D12TexDim },
+        { 0,0, MaxD3D12TexDim,MaxD3D12TexDim },
+        { 0,0, MaxD3D12TexDim,MaxD3D12TexDim },
+        { 0,0, MaxD3D12TexDim,MaxD3D12TexDim },
+
+        { 0,0, MaxD3D12TexDim,MaxD3D12TexDim },
+        { 0,0, MaxD3D12TexDim,MaxD3D12TexDim },
+        { 0,0, MaxD3D12TexDim,MaxD3D12TexDim },
+        { 0,0, MaxD3D12TexDim,MaxD3D12TexDim },
+
+        { 0,0, MaxD3D12TexDim,MaxD3D12TexDim },
+        { 0,0, MaxD3D12TexDim,MaxD3D12TexDim },
+        { 0,0, MaxD3D12TexDim,MaxD3D12TexDim },
+        { 0,0, MaxD3D12TexDim,MaxD3D12TexDim }
+    };
+
+    void DeviceContextD3D12Impl::CommitScissorRects(GraphicsContext &GraphCtx, bool ScissorEnable)
+    {
+        if (ScissorEnable)
+        {
+            // Commit currently set scissor rectangles
+            D3D12_RECT d3d12ScissorRects[MaxD3D12ScissorRects]; // Do not waste time initializing array with zeroes
+            for (Uint32 sr = 0; sr < m_NumScissorRects; ++sr)
+            {
+                d3d12ScissorRects[sr].left   = m_ScissorRects[sr].left;
+                d3d12ScissorRects[sr].top    = m_ScissorRects[sr].top;
+                d3d12ScissorRects[sr].right  = m_ScissorRects[sr].right;
+                d3d12ScissorRects[sr].bottom = m_ScissorRects[sr].bottom;
+            }
+            GraphCtx.SetScissorRects(m_NumScissorRects, d3d12ScissorRects);
+        }
+        else
+        {
+            // Disable scissor rectangles
+            static_assert(_countof(MaxD3D12TexSizeRects) == MaxD3D12ScissorRects, "Unexpected array size");
+            GraphCtx.SetScissorRects(MaxD3D12ScissorRects, MaxD3D12TexSizeRects);
+        }
     }
 
     void DeviceContextD3D12Impl::SetScissorRects( Uint32 NumRects, const Rect *pRects, Uint32 RTWidth, Uint32 RTHeight  )
@@ -624,18 +651,17 @@ namespace Diligent
         TDeviceContextBase::SetScissorRects(NumRects, pRects, RTWidth, RTHeight);
 
         // Only commit scissor rects if scissor test is enabled in the rasterizer state. 
-        if( !m_pPipelineState || m_pPipelineState->GetDesc().GraphicsPipeline.RasterizerDesc.ScissorEnable )
+        // If scissor is currently disabled, or no PSO is bound, scissor rects will be committed by 
+        // the SetPipelineState() when a PSO with enabled scissor test is set.
+        if( m_pPipelineState )
         {
-            D3D12_RECT d3d12ScissorRects[MaxScissorRects];
-            VERIFY( NumRects == m_NumScissorRects, "Unexpected number of scissor rects" );
-            for( Uint32 sr = 0; sr < NumRects; ++sr )
+            const auto &PSODesc = m_pPipelineState->GetDesc();
+            if(!PSODesc.IsComputePipeline && PSODesc.GraphicsPipeline.RasterizerDesc.ScissorEnable)
             {
-                d3d12ScissorRects[sr].left   = m_ScissorRects[sr].left;
-                d3d12ScissorRects[sr].top    = m_ScissorRects[sr].top;
-                d3d12ScissorRects[sr].right  = m_ScissorRects[sr].right;
-                d3d12ScissorRects[sr].bottom = m_ScissorRects[sr].bottom;
+                VERIFY(NumRects == m_NumScissorRects, "Unexpected number of scissor rects");
+                auto &Ctx = RequestCmdContext()->AsGraphicsContext();
+                CommitScissorRects(Ctx, true);
             }
-            RequestCmdContext()->AsGraphicsContext().SetScissorRects(NumRects, d3d12ScissorRects);
         }
     }
 

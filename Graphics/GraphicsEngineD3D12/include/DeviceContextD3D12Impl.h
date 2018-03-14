@@ -117,7 +117,7 @@ private:
     void TransitionD3D12VertexBuffers(class GraphicsContext &GraphCtx);
     void CommitRenderTargets();
     void CommitViewports();
-    void CommitScissorRects();
+    void CommitScissorRects(class GraphicsContext &GraphCtx, bool ScissorEnable);
     void Flush(bool RequestNewCmdCtx);
 
     friend class SwapChainD3D12Impl;
