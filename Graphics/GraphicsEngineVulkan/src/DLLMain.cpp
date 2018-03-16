@@ -21,36 +21,29 @@
  *  of the possibility of such damages.
  */
 
-#pragma once
+#include "pch.h"
 
-/// \file
-/// Definition of the Diligent::IDeviceContextD3D12 interface
-
-#include "../../GraphicsEngine/interface/DeviceContext.h"
-
-namespace Diligent
+BOOL APIENTRY DllMain(HANDLE hModule, 
+                      DWORD  ul_reason_for_call, 
+                      LPVOID lpReserved)
 {
+    switch( ul_reason_for_call ) 
+    {
+        case DLL_PROCESS_ATTACH:
+		#if defined(_DEBUG) || defined(DEBUG)
+			_CrtSetDbgFlag( _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF );
+		#endif
+        break;
 
-// {DDE9E3AB-5109-4026-92B7-F5E7EC83E21E}
-static constexpr INTERFACE_ID IID_DeviceContextD3D12 =
-{ 0xdde9e3ab, 0x5109, 0x4026, { 0x92, 0xb7, 0xf5, 0xe7, 0xec, 0x83, 0xe2, 0x1e } };
+        case DLL_THREAD_ATTACH:
+        break;
+        
+        case DLL_THREAD_DETACH:
+        break;
 
-/// Interface to the device context object implemented in D3D12
-class IDeviceContextD3D12 : public IDeviceContext
-{
-public:
+        case DLL_PROCESS_DETACH:
+        break;
+    }
 
-    /// Transitions internal D3D12 texture object to a specified state
-
-    /// \param [in] pTexture - texture to transition
-    /// \param [in] State - D3D12 resource state this texture to transition to
-    virtual void TransitionTextureState(ITexture *pTexture, D3D12_RESOURCE_STATES State) = 0;
-
-    /// Transitions internal D3D12 buffer object to a specified state
-
-    /// \param [in] pBuffer - Buffer to transition
-    /// \param [in] State - D3D12 resource state this buffer to transition to
-    virtual void TransitionBufferState(IBuffer *pBuffer, D3D12_RESOURCE_STATES State) = 0;
-};
-
+    return TRUE;
 }

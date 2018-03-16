@@ -37,7 +37,8 @@ namespace Diligent
         D3D11,      ///< D3D11 device
         D3D12,      ///< D3D12 device
         OpenGL,     ///< OpenGL device 
-        OpenGLES    ///< OpenGLES device
+        OpenGLES,   ///< OpenGLES device
+        Vulkan      ///< Vulkan device
     };
 
     /// Texture sampler capabilities

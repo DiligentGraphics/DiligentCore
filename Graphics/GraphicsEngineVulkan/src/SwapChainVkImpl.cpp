@@ -1,0 +1,275 @@
+/*     Copyright 2015-2018 Egor Yusov
+ *  
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ * 
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ *  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ *  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ *  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF ANY PROPRIETARY RIGHTS.
+ *
+ *  In no event and under no legal theory, whether in tort (including negligence), 
+ *  contract, or otherwise, unless required by applicable law (such as deliberate 
+ *  and grossly negligent acts) or agreed to in writing, shall any Contributor be
+ *  liable for any damages, including any direct, indirect, special, incidental, 
+ *  or consequential damages of any character arising as a result of this License or 
+ *  out of the use or inability to use the software (including but not limited to damages 
+ *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and 
+ *  all other commercial damages or losses), even if such Contributor has been advised 
+ *  of the possibility of such damages.
+ */
+
+#include "pch.h"
+#include "SwapChainVkImpl.h"
+#include "RenderDeviceVkImpl.h"
+#include "DeviceContextVkImpl.h"
+//#include "DXGITypeConversions.h"
+#include "TextureVkImpl.h"
+#include "EngineMemory.h"
+
+namespace Diligent
+{
+
+SwapChainVkImpl::SwapChainVkImpl(IReferenceCounters *pRefCounters,
+                                       const SwapChainDesc& SCDesc, 
+                                       RenderDeviceVkImpl* pRenderDeviceVk, 
+                                       DeviceContextVkImpl* pDeviceContextVk, 
+                                       void* pNativeWndHandle) : 
+    TSwapChainBase(pRefCounters, pRenderDeviceVk, pDeviceContextVk, SCDesc)/*,
+    m_pBackBufferRTV(STD_ALLOCATOR_RAW_MEM(RefCntAutoPtr<ITextureView>, GetRawAllocator(), "Allocator for vector<RefCntAutoPtr<ITextureView>>"))*/
+{
+#if 0
+#if PLATFORM_WIN32
+    auto hWnd = reinterpret_cast<HWND>(pNativeWndHandle);
+
+    if( m_SwapChainDesc.Width == 0 || m_SwapChainDesc.Height == 0 )
+    {
+        RECT rc;
+        GetClientRect( hWnd, &rc );
+        m_SwapChainDesc.Width = rc.right - rc.left;
+        m_SwapChainDesc.Height = rc.bottom - rc.top;
+    }
+#endif
+
+    auto DXGIColorBuffFmt = TexFormatToDXGI_Format(m_SwapChainDesc.ColorBufferFormat);
+
+    DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
+    swapChainDesc.Width = m_SwapChainDesc.Width;
+    swapChainDesc.Height = m_SwapChainDesc.Height;
+    //  Flip model swapchains (DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL and DXGI_SWAP_EFFECT_FLIP_DISCARD) only support the following Formats: 
+    //  - DXGI_FORMAT_R16G16B16A16_FLOAT 
+    //  - DXGI_FORMAT_B8G8R8A8_UNORM
+    //  - DXGI_FORMAT_R8G8B8A8_UNORM
+    //  - DXGI_FORMAT_R10G10B10A2_UNORM
+    // If RGBA8_UNORM_SRGB swap chain is required, we will create RGBA8_UNORM swap chain, but
+    // create RGBA8_UNORM_SRGB render target view
+    swapChainDesc.Format = DXGIColorBuffFmt == DXGI_FORMAT_R8G8B8A8_UNORM_SRGB ? DXGI_FORMAT_R8G8B8A8_UNORM : DXGIColorBuffFmt;
+    swapChainDesc.Stereo = FALSE;
+    swapChainDesc.SampleDesc.Count = 1;
+    swapChainDesc.SampleDesc.Quality = 0;
+    swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+    swapChainDesc.BufferCount = m_SwapChainDesc.BufferCount;
+    swapChainDesc.Scaling = DXGI_SCALING_NONE;
+    swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
+    swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED; // Not used
+    swapChainDesc.Flags = 0;
+
+    CComPtr<IDXGISwapChain1> pSwapChain1;
+	CComPtr<IDXGIFactory4> factory;
+    HRESULT hr = CreateDXGIFactory1(__uuidof(factory), reinterpret_cast<void**>(static_cast<IDXGIFactory4**>(&factory)) );
+    CHECK_D3D_RESULT_THROW(hr, "Failed to create DXGI factory")
+
+    auto *pVkCmdQueue = pRenderDeviceVk->GetCmdQueue()->GetVkCommandQueue();
+#if PLATFORM_WIN32
+    hr = factory->CreateSwapChainForHwnd(pVkCmdQueue, hWnd, &swapChainDesc, nullptr, nullptr, &pSwapChain1);
+    CHECK_D3D_RESULT_THROW( hr, "Failed to create Swap Chain" );
+
+	// This sample does not support fullscreen transitions.
+	hr = factory->MakeWindowAssociation(hWnd, DXGI_MWA_NO_WINDOW_CHANGES | DXGI_MWA_NO_ALT_ENTER);
+
+#elif PLATFORM_UNIVERSAL_WINDOWS
+
+    hr = factory->CreateSwapChainForCoreWindow(
+		pVkCmdQueue,
+		reinterpret_cast<IUnknown*>(pNativeWndHandle),
+		&swapChainDesc,
+		nullptr,
+		&pSwapChain1);
+    CHECK_D3D_RESULT_THROW( hr, "Failed to create DXGI swap chain" );
+
+	// Ensure that DXGI does not queue more than one frame at a time. This both reduces latency and
+	// ensures that the application will only render after each VSync, minimizing power consumption.
+    //pDXGIDevice->SetMaximumFrameLatency( 1 );
+
+#endif
+
+    pSwapChain1->QueryInterface(__uuidof(m_pSwapChain), reinterpret_cast<void**>( static_cast<IDXGISwapChain3**>(&m_pSwapChain) ));
+
+    InitBuffersAndViews();
+#endif
+}
+
+SwapChainVkImpl::~SwapChainVkImpl()
+{
+
+}
+
+#if 0
+void SwapChainVkImpl::InitBuffersAndViews()
+{
+    m_pBackBufferRTV.resize(m_SwapChainDesc.BufferCount);
+    for(Uint32 backbuff = 0; backbuff < m_SwapChainDesc.BufferCount; ++backbuff)
+    {
+		CComPtr<IVkResource> pBackBuffer;
+        auto hr = m_pSwapChain->GetBuffer(backbuff, __uuidof(pBackBuffer), reinterpret_cast<void**>( static_cast<IVkResource**>(&pBackBuffer) ));
+        if(FAILED(hr))
+            LOG_ERROR_AND_THROW("Failed to get back buffer ", backbuff," from the swap chain");
+
+        hr = pBackBuffer->SetName(L"Main back buffer");
+        VERIFY_EXPR(SUCCEEDED(hr));
+
+        TextureDesc BackBufferDesc;
+        BackBufferDesc.Format = m_SwapChainDesc.ColorBufferFormat;
+        String Name = "Main back buffer ";
+        Name += std::to_string(backbuff);
+        BackBufferDesc.Name = Name.c_str();
+
+        RefCntAutoPtr<TextureVkImpl> pBackBufferTex;
+        ValidatedCast<RenderDeviceVkImpl>(m_pRenderDevice.RawPtr())->CreateTexture(BackBufferDesc, pBackBuffer, &pBackBufferTex);
+        TextureViewDesc RTVDesc;
+        RTVDesc.ViewType = TEXTURE_VIEW_RENDER_TARGET;
+        RefCntAutoPtr<ITextureView> pRTV;
+        pBackBufferTex->CreateView(RTVDesc, &pRTV);
+        m_pBackBufferRTV[backbuff] = RefCntAutoPtr<ITextureViewVk>(pRTV, IID_TextureViewVk);
+    }
+
+    TextureDesc DepthBufferDesc;
+    DepthBufferDesc.Type = RESOURCE_DIM_TEX_2D;
+    DepthBufferDesc.Width = m_SwapChainDesc.Width;
+    DepthBufferDesc.Height = m_SwapChainDesc.Height;
+    DepthBufferDesc.Format = m_SwapChainDesc.DepthBufferFormat;
+    DepthBufferDesc.SampleCount = m_SwapChainDesc.SamplesCount;
+    DepthBufferDesc.Usage = USAGE_DEFAULT;
+    DepthBufferDesc.BindFlags = BIND_DEPTH_STENCIL;
+
+    DepthBufferDesc.ClearValue.Format = DepthBufferDesc.Format;
+    DepthBufferDesc.ClearValue.DepthStencil.Depth = m_SwapChainDesc.DefaultDepthValue;
+    DepthBufferDesc.ClearValue.DepthStencil.Stencil = m_SwapChainDesc.DefaultStencilValue;
+    DepthBufferDesc.Name = "Main depth buffer";
+    RefCntAutoPtr<ITexture> pDepthBufferTex;
+    m_pRenderDevice->CreateTexture(DepthBufferDesc, TextureData(), static_cast<ITexture**>(&pDepthBufferTex) );
+    auto pDSV = pDepthBufferTex->GetDefaultView(TEXTURE_VIEW_DEPTH_STENCIL);
+    m_pDepthBufferDSV = RefCntAutoPtr<ITextureViewVk>(pDSV, IID_TextureViewVk);
+}
+#endif
+
+IMPLEMENT_QUERY_INTERFACE( SwapChainVkImpl, IID_SwapChainVk, TSwapChainBase )
+
+
+void SwapChainVkImpl::Present()
+{
+#if 0
+    UINT SyncInterval = 0;
+#if PLATFORM_UNIVERSAL_WINDOWS
+    SyncInterval = 1; // Interval 0 is not supported on Windows Phone 
+#endif
+
+    auto pDeviceContext = m_wpDeviceContext.Lock();
+    if( !pDeviceContext )
+    {
+        LOG_ERROR_MESSAGE( "Immediate context has been released" );
+        return;
+    }
+
+    auto *pImmediateCtx = pDeviceContext.RawPtr();
+    auto *pImmediateCtxVk = ValidatedCast<DeviceContextVkImpl>( pImmediateCtx );
+
+    auto *pCmdCtx = pImmediateCtxVk->RequestCmdContext();
+    auto *pBackBuffer = ValidatedCast<TextureVkImpl>( GetCurrentBackBufferRTV()->GetTexture() );
+    pCmdCtx->TransitionResource( pBackBuffer, Vk_RESOURCE_STATE_PRESENT);
+
+    pImmediateCtxVk->Flush();
+
+    auto *pDeviceVk = ValidatedCast<RenderDeviceVkImpl>( pImmediateCtxVk->GetDevice() );
+    
+    auto hr = m_pSwapChain->Present( SyncInterval, 0 );
+    VERIFY(SUCCEEDED(hr), "Present failed");
+
+    pDeviceVk->FinishFrame();
+
+#if 0
+#if PLATFORM_UNIVERSAL_WINDOWS
+    // A successful Present call for DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL SwapChains unbinds 
+    // backbuffer 0 from all GPU writeable bind points.
+    // We need to rebind all render targets to make sure that
+    // the back buffer is not unbound
+    pImmediateCtxVk->CommitRenderTargets();
+#endif
+#endif
+#endif
+}
+
+void SwapChainVkImpl::Resize( Uint32 NewWidth, Uint32 NewHeight )
+{
+    if( TSwapChainBase::Resize(NewWidth, NewHeight) )
+    {
+#if 0
+        auto pDeviceContext = m_wpDeviceContext.Lock();
+        VERIFY( pDeviceContext, "Immediate context has been released" );
+        if( pDeviceContext )
+        {
+            RenderDeviceVkImpl *pDeviceVk = ValidatedCast<RenderDeviceVkImpl>(m_pRenderDevice.RawPtr());
+            pDeviceContext->Flush();
+
+            try
+            {
+                auto *pImmediateCtxVk = ValidatedCast<DeviceContextVkImpl>(pDeviceContext.RawPtr());
+                bool bIsDefaultFBBound = pImmediateCtxVk->IsDefaultFBBound();
+
+                // All references to the swap chain must be released before it can be resized
+                m_pBackBufferRTV.clear();
+                m_pDepthBufferDSV.Release();
+
+                // This will release references to Vk swap chain buffers hold by
+                // m_pBackBufferRTV[]
+                pDeviceVk->IdleGPU(true);
+
+                DXGI_SWAP_CHAIN_DESC SCDes;
+                memset( &SCDes, 0, sizeof( SCDes ) );
+                m_pSwapChain->GetDesc( &SCDes );
+                CHECK_D3D_RESULT_THROW( m_pSwapChain->ResizeBuffers(SCDes.BufferCount, m_SwapChainDesc.Width, 
+                                                                    m_SwapChainDesc.Height, SCDes.BufferDesc.Format, 
+                                                                    SCDes.Flags),
+                                        "Failed to resize the DXGI swap chain" );
+
+
+                InitBuffersAndViews();
+                
+                if( bIsDefaultFBBound )
+                {
+                    // Set default render target and viewport
+                    pDeviceContext->SetRenderTargets( 0, nullptr, nullptr );
+                    pDeviceContext->SetViewports( 1, nullptr, 0, 0 );
+                }
+            }
+            catch( const std::runtime_error & )
+            {
+                LOG_ERROR( "Failed to resize the swap chain" );
+            }
+        }
+#endif
+    }
+}
+
+#if 0
+ITextureViewVk *SwapChainVkImpl::GetCurrentBackBufferRTV()
+{
+    auto CurrentBackBufferIndex = m_pSwapChain->GetCurrentBackBufferIndex();
+    VERIFY_EXPR(CurrentBackBufferIndex >= 0 && CurrentBackBufferIndex < m_SwapChainDesc.BufferCount);
+    return m_pBackBufferRTV[CurrentBackBufferIndex];
+}
+#endif
+
+}

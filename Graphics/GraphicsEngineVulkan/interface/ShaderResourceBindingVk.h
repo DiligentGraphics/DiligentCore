@@ -24,33 +24,22 @@
 #pragma once
 
 /// \file
-/// Definition of the Diligent::IDeviceContextD3D12 interface
+/// Definition of the Diligent::IShaderResourceBindingVk interface and related data structures
 
-#include "../../GraphicsEngine/interface/DeviceContext.h"
+#include "../../GraphicsEngine/interface/ShaderResourceBinding.h"
 
 namespace Diligent
 {
 
-// {DDE9E3AB-5109-4026-92B7-F5E7EC83E21E}
-static constexpr INTERFACE_ID IID_DeviceContextD3D12 =
-{ 0xdde9e3ab, 0x5109, 0x4026, { 0x92, 0xb7, 0xf5, 0xe7, 0xec, 0x83, 0xe2, 0x1e } };
+// {1E8C82DC-5B3A-47D5-8AE9-197CAE8DB71F}
+static constexpr INTERFACE_ID IID_ShaderResourceBindingVk =
+{ 0x1e8c82dc, 0x5b3a, 0x47d5,{ 0x8a, 0xe9, 0x19, 0x7c, 0xae, 0x8d, 0xb7, 0x1f } };
 
-/// Interface to the device context object implemented in D3D12
-class IDeviceContextD3D12 : public IDeviceContext
+/// Shader resource binding interface
+class IShaderResourceBindingVk : public IShaderResourceBinding
 {
 public:
 
-    /// Transitions internal D3D12 texture object to a specified state
-
-    /// \param [in] pTexture - texture to transition
-    /// \param [in] State - D3D12 resource state this texture to transition to
-    virtual void TransitionTextureState(ITexture *pTexture, D3D12_RESOURCE_STATES State) = 0;
-
-    /// Transitions internal D3D12 buffer object to a specified state
-
-    /// \param [in] pBuffer - Buffer to transition
-    /// \param [in] State - D3D12 resource state this buffer to transition to
-    virtual void TransitionBufferState(IBuffer *pBuffer, D3D12_RESOURCE_STATES State) = 0;
 };
 
 }

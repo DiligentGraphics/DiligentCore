@@ -24,33 +24,33 @@
 #pragma once
 
 /// \file
-/// Definition of the Diligent::IDeviceContextD3D12 interface
+/// Definition of the Diligent::ITextureVk interface
 
-#include "../../GraphicsEngine/interface/DeviceContext.h"
+#include "../../GraphicsEngine/interface/Texture.h"
 
 namespace Diligent
 {
 
-// {DDE9E3AB-5109-4026-92B7-F5E7EC83E21E}
-static constexpr INTERFACE_ID IID_DeviceContextD3D12 =
-{ 0xdde9e3ab, 0x5109, 0x4026, { 0x92, 0xb7, 0xf5, 0xe7, 0xec, 0x83, 0xe2, 0x1e } };
+// {3BB9155F-22C5-4365-927E-8C4049F9B949}
+static constexpr INTERFACE_ID IID_TextureVk =
+{ 0x3bb9155f, 0x22c5, 0x4365,{ 0x92, 0x7e, 0x8c, 0x40, 0x49, 0xf9, 0xb9, 0x49 } };
 
-/// Interface to the device context object implemented in D3D12
-class IDeviceContextD3D12 : public IDeviceContext
+
+/// Interface to the texture object implemented in Vulkan
+class ITextureVk : public ITexture
 {
 public:
 
-    /// Transitions internal D3D12 texture object to a specified state
+    /// Returns a pointer to the ID3D12Resource interface of the internal Direct3D12 object.
 
-    /// \param [in] pTexture - texture to transition
-    /// \param [in] State - D3D12 resource state this texture to transition to
-    virtual void TransitionTextureState(ITexture *pTexture, D3D12_RESOURCE_STATES State) = 0;
+    /// The method does *NOT* call AddRef() on the returned interface,
+    /// so Release() must not be called.
+    //virtual ID3D12Resource* GetD3D12Texture() = 0;
 
-    /// Transitions internal D3D12 buffer object to a specified state
+    /// Sets the texture usage state
 
-    /// \param [in] pBuffer - Buffer to transition
-    /// \param [in] State - D3D12 resource state this buffer to transition to
-    virtual void TransitionBufferState(IBuffer *pBuffer, D3D12_RESOURCE_STATES State) = 0;
+    /// \param [in] state - D3D12 resource state to be set for this texture
+    //virtual void SetD3D12ResourceState(D3D12_RESOURCE_STATES state) = 0;
 };
 
 }

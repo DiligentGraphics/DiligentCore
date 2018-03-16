@@ -21,36 +21,44 @@
  *  of the possibility of such damages.
  */
 
+
+// The source code in this file is derived from ColorBuffer.h and GraphicsCore.h developed by Minigraph
+// Original source files header:
+
+//
+// Copyright (c) Microsoft. All rights reserved.
+// This code is licensed under the MIT License (MIT).
+// THIS CODE IS PROVIDED *AS IS* WITHOUT WARRANTY OF
+// ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING ANY
+// IMPLIED WARRANTIES OF FITNESS FOR A PARTICULAR
+// PURPOSE, MERCHANTABILITY, OR NON-INFRINGEMENT.
+//
+// Developed by Minigraph
+//
+// Author:  James Stanard 
+//
+
+
 #pragma once
 
 /// \file
-/// Definition of the Diligent::IDeviceContextD3D12 interface
+/// Implementation of mipmap generation routines
 
-#include "../../GraphicsEngine/interface/DeviceContext.h"
 
 namespace Diligent
 {
+    class GenerateMipsHelper
+    {
+#if 0
+    public:
+        GenerateMipsHelper(ID3D12Device *pd3d12Device);
 
-// {DDE9E3AB-5109-4026-92B7-F5E7EC83E21E}
-static constexpr INTERFACE_ID IID_DeviceContextD3D12 =
-{ 0xdde9e3ab, 0x5109, 0x4026, { 0x92, 0xb7, 0xf5, 0xe7, 0xec, 0x83, 0xe2, 0x1e } };
+        void GenerateMips(class RenderDeviceD3D12Impl *pRenderDeviceD3D12, class TextureViewD3D12Impl *pTexView, class CommandContext &Ctx);
 
-/// Interface to the device context object implemented in D3D12
-class IDeviceContextD3D12 : public IDeviceContext
-{
-public:
-
-    /// Transitions internal D3D12 texture object to a specified state
-
-    /// \param [in] pTexture - texture to transition
-    /// \param [in] State - D3D12 resource state this texture to transition to
-    virtual void TransitionTextureState(ITexture *pTexture, D3D12_RESOURCE_STATES State) = 0;
-
-    /// Transitions internal D3D12 buffer object to a specified state
-
-    /// \param [in] pBuffer - Buffer to transition
-    /// \param [in] State - D3D12 resource state this buffer to transition to
-    virtual void TransitionBufferState(IBuffer *pBuffer, D3D12_RESOURCE_STATES State) = 0;
-};
-
+    private:
+        CComPtr<ID3D12RootSignature> m_pGenerateMipsRS;
+	    CComPtr<ID3D12PipelineState> m_pGenerateMipsLinearPSO[4];
+	    CComPtr<ID3D12PipelineState> m_pGenerateMipsGammaPSO[4];
+#endif
+    };
 }

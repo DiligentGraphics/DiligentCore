@@ -24,33 +24,38 @@
 #pragma once
 
 /// \file
-/// Definition of the Diligent::IDeviceContextD3D12 interface
+/// Declaration of Diligent::CommandListD3D12Impl class
 
-#include "../../GraphicsEngine/interface/DeviceContext.h"
+#include "CommandListBase.h"
 
 namespace Diligent
 {
 
-// {DDE9E3AB-5109-4026-92B7-F5E7EC83E21E}
-static constexpr INTERFACE_ID IID_DeviceContextD3D12 =
-{ 0xdde9e3ab, 0x5109, 0x4026, { 0x92, 0xb7, 0xf5, 0xe7, 0xec, 0x83, 0xe2, 0x1e } };
-
-/// Interface to the device context object implemented in D3D12
-class IDeviceContextD3D12 : public IDeviceContext
+/// Implementation of the Diligent::ICommandList interface
+class CommandListD3D12Impl : public CommandListBase<ICommandList>
 {
 public:
+    typedef CommandListBase<ICommandList> TCommandListBase;
+    CommandListD3D12Impl(IReferenceCounters *pRefCounters, IRenderDevice *pDevice, class CommandContext* pCmdContext) :
+        TCommandListBase(pRefCounters, pDevice),
+        m_pCmdContext(pCmdContext)
+    {
+    }
+    
+    ~CommandListD3D12Impl()
+    {
+        VERIFY(m_pCmdContext == nullptr, "Destroying command list that was never executed");
+    }
 
-    /// Transitions internal D3D12 texture object to a specified state
+    CommandContext* Close()
+    {
+        CommandContext* pCmdContext = m_pCmdContext;
+        m_pCmdContext = nullptr;
+        return pCmdContext;
+    }
 
-    /// \param [in] pTexture - texture to transition
-    /// \param [in] State - D3D12 resource state this texture to transition to
-    virtual void TransitionTextureState(ITexture *pTexture, D3D12_RESOURCE_STATES State) = 0;
-
-    /// Transitions internal D3D12 buffer object to a specified state
-
-    /// \param [in] pBuffer - Buffer to transition
-    /// \param [in] State - D3D12 resource state this buffer to transition to
-    virtual void TransitionBufferState(IBuffer *pBuffer, D3D12_RESOURCE_STATES State) = 0;
+private:
+    CommandContext* m_pCmdContext = nullptr;
 };
 
 }

@@ -24,33 +24,27 @@
 #pragma once
 
 /// \file
-/// Definition of the Diligent::IDeviceContextD3D12 interface
+/// Definition of the Diligent::ISamplerVk interface
 
-#include "../../GraphicsEngine/interface/DeviceContext.h"
+#include "../../GraphicsEngine/interface/Sampler.h"
 
 namespace Diligent
 {
 
-// {DDE9E3AB-5109-4026-92B7-F5E7EC83E21E}
-static constexpr INTERFACE_ID IID_DeviceContextD3D12 =
-{ 0xdde9e3ab, 0x5109, 0x4026, { 0x92, 0xb7, 0xf5, 0xe7, 0xec, 0x83, 0xe2, 0x1e } };
+// {87C21E88-8A9F-4AD2-9A1E-D5EC140415EA}
+static constexpr INTERFACE_ID IID_SamplerVk =
+{ 0x87c21e88, 0x8a9f, 0x4ad2,{ 0x9a, 0x1e, 0xd5, 0xec, 0x14, 0x4, 0x15, 0xea } };
 
-/// Interface to the device context object implemented in D3D12
-class IDeviceContextD3D12 : public IDeviceContext
+/// Interface to the sampler object implemented in Vulkan
+class ISamplerVk : public ISampler
 {
 public:
 
-    /// Transitions internal D3D12 texture object to a specified state
-
-    /// \param [in] pTexture - texture to transition
-    /// \param [in] State - D3D12 resource state this texture to transition to
-    virtual void TransitionTextureState(ITexture *pTexture, D3D12_RESOURCE_STATES State) = 0;
-
-    /// Transitions internal D3D12 buffer object to a specified state
-
-    /// \param [in] pBuffer - Buffer to transition
-    /// \param [in] State - D3D12 resource state this buffer to transition to
-    virtual void TransitionBufferState(IBuffer *pBuffer, D3D12_RESOURCE_STATES State) = 0;
+    /// Returns a CPU descriptor handle of the D3D12 sampler object
+    
+    /// The method does *NOT* call AddRef() on the returned interface,
+    /// so Release() must not be called.
+    //virtual D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle() = 0;
 };
 
 }

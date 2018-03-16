@@ -28,7 +28,11 @@ if(D3D12_SUPPORTED)
 	add_subdirectory(GraphicsEngineD3D12)
 endif()
 
-if(GL_SUPPORTED OR GLES_SUPPORTED)
+if(VULKAN_SUPPORTED)
+	add_subdirectory(GraphicsEngineVulkan)
+endif()
+
+if(GL_SUPPORTED OR GLES_SUPPORTED OR VULKAN_SUPPORTED)
 	add_subdirectory(HLSL2GLSLConverterLib)
 	add_subdirectory(GraphicsEngineOpenGL)
 endif()

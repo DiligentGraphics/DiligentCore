@@ -24,19 +24,19 @@
 #pragma once
 
 /// \file
-/// Definition of the Diligent::IDeviceContextD3D12 interface
+/// Definition of the Diligent::IDeviceContextVk interface
 
 #include "../../GraphicsEngine/interface/DeviceContext.h"
 
 namespace Diligent
 {
 
-// {DDE9E3AB-5109-4026-92B7-F5E7EC83E21E}
-static constexpr INTERFACE_ID IID_DeviceContextD3D12 =
-{ 0xdde9e3ab, 0x5109, 0x4026, { 0x92, 0xb7, 0xf5, 0xe7, 0xec, 0x83, 0xe2, 0x1e } };
+// {72AEB1BA-C6AD-42EC-8811-7ED9C72176BB}
+static constexpr INTERFACE_ID IID_DeviceContextVk =
+{ 0x72aeb1ba, 0xc6ad, 0x42ec,{ 0x88, 0x11, 0x7e, 0xd9, 0xc7, 0x21, 0x76, 0xbb } };
 
-/// Interface to the device context object implemented in D3D12
-class IDeviceContextD3D12 : public IDeviceContext
+/// Interface to the device context object implemented in Vulkan
+class IDeviceContextVk : public IDeviceContext
 {
 public:
 
@@ -44,13 +44,13 @@ public:
 
     /// \param [in] pTexture - texture to transition
     /// \param [in] State - D3D12 resource state this texture to transition to
-    virtual void TransitionTextureState(ITexture *pTexture, D3D12_RESOURCE_STATES State) = 0;
+    //virtual void TransitionTextureState(ITexture *pTexture, D3D12_RESOURCE_STATES State) = 0;
 
     /// Transitions internal D3D12 buffer object to a specified state
 
     /// \param [in] pBuffer - Buffer to transition
     /// \param [in] State - D3D12 resource state this buffer to transition to
-    virtual void TransitionBufferState(IBuffer *pBuffer, D3D12_RESOURCE_STATES State) = 0;
+    //virtual void TransitionBufferState(IBuffer *pBuffer, D3D12_RESOURCE_STATES State) = 0;
 };
 
 }

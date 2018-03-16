@@ -24,33 +24,37 @@
 #pragma once
 
 /// \file
-/// Definition of the Diligent::IDeviceContextD3D12 interface
+/// Definition of the Diligent::ICommandQueueVk interface
 
-#include "../../GraphicsEngine/interface/DeviceContext.h"
+#include "../../../Primitives/interface/Object.h"
 
 namespace Diligent
 {
 
-// {DDE9E3AB-5109-4026-92B7-F5E7EC83E21E}
-static constexpr INTERFACE_ID IID_DeviceContextD3D12 =
-{ 0xdde9e3ab, 0x5109, 0x4026, { 0x92, 0xb7, 0xf5, 0xe7, 0xec, 0x83, 0xe2, 0x1e } };
+// {9FBF582F-3069-41B9-AC05-344D5AF5CE8C}
+static constexpr INTERFACE_ID IID_CommandQueueVk =
+{ 0x9fbf582f, 0x3069, 0x41b9,{ 0xac, 0x5, 0x34, 0x4d, 0x5a, 0xf5, 0xce, 0x8c } };
 
-/// Interface to the device context object implemented in D3D12
-class IDeviceContextD3D12 : public IDeviceContext
+/// Command queue interface
+class ICommandQueueVk : public Diligent::IObject
 {
 public:
+	/// Returns the fence value that will be signaled next time
+	//virtual UINT64 GetNextFenceValue() = 0;
 
-    /// Transitions internal D3D12 texture object to a specified state
+	/// Executes a given command list
 
-    /// \param [in] pTexture - texture to transition
-    /// \param [in] State - D3D12 resource state this texture to transition to
-    virtual void TransitionTextureState(ITexture *pTexture, D3D12_RESOURCE_STATES State) = 0;
+    /// \return Fence value associated with the executed command list
+	//virtual UINT64 ExecuteCommandList(ID3D12GraphicsCommandList* commandList) = 0;
 
-    /// Transitions internal D3D12 buffer object to a specified state
+    /// Returns D3D12 command queue. May return null if queue is anavailable
+    //virtual ID3D12CommandQueue* GetD3D12CommandQueue() = 0;
 
-    /// \param [in] pBuffer - Buffer to transition
-    /// \param [in] State - D3D12 resource state this buffer to transition to
-    virtual void TransitionBufferState(IBuffer *pBuffer, D3D12_RESOURCE_STATES State) = 0;
+    /// Returns value of the last completed fence
+    //virtual Uint64 GetCompletedFenceValue() = 0;
+
+    /// Blocks execution until all pending GPU commands are complete
+    //virtual void IdleGPU() = 0;
 };
 
 }

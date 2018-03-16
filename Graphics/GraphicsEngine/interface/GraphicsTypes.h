@@ -1001,6 +1001,12 @@ namespace Diligent
         Uint32 NumCommandsToFlushCmdList = 256;
     };
 
+    /// Attributes specific to Vulkan engine
+    struct EngineVkAttribs : public EngineCreationAttribs
+    {
+
+    };
+
     /// Box
     struct Box
     {

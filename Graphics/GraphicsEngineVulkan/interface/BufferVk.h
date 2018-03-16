@@ -24,33 +24,38 @@
 #pragma once
 
 /// \file
-/// Definition of the Diligent::IDeviceContextD3D12 interface
+/// Definition of the Diligent::IBufferVk interface
 
-#include "../../GraphicsEngine/interface/DeviceContext.h"
+#include "../../GraphicsEngine/interface/Buffer.h"
 
 namespace Diligent
 {
 
-// {DDE9E3AB-5109-4026-92B7-F5E7EC83E21E}
-static constexpr INTERFACE_ID IID_DeviceContextD3D12 =
-{ 0xdde9e3ab, 0x5109, 0x4026, { 0x92, 0xb7, 0xf5, 0xe7, 0xec, 0x83, 0xe2, 0x1e } };
+// {12D8EC02-96F4-431E-9695-C5F572CC7587}
+static constexpr INTERFACE_ID IID_BufferVk =
+{ 0x12d8ec02, 0x96f4, 0x431e,{ 0x96, 0x95, 0xc5, 0xf5, 0x72, 0xcc, 0x75, 0x87 } };
 
-/// Interface to the device context object implemented in D3D12
-class IDeviceContextD3D12 : public IDeviceContext
+
+/// Interface to the buffer object implemented in Vulkan
+class IBufferVk : public IBuffer
 {
 public:
 
-    /// Transitions internal D3D12 texture object to a specified state
+    /// Returns a pointer to the ID3D12Resource interface of the internal Direct3D12 object.
 
-    /// \param [in] pTexture - texture to transition
-    /// \param [in] State - D3D12 resource state this texture to transition to
-    virtual void TransitionTextureState(ITexture *pTexture, D3D12_RESOURCE_STATES State) = 0;
+    /// The method does *NOT* call AddRef() on the returned interface,
+    /// so Release() must not be called.
+    /// \param [in] DataStartByteOffset - Offset from the beginning of the buffer
+    ///                            to the start of the data. This parameter
+    ///                            is required for dynamic buffers, which are
+    ///                            suballocated in a dynamic upload heap
+    /// \param [in] ContextId - Id of the context within which address of the buffer is requested.
+    //virtual ID3D12Resource* GetD3D12Buffer(size_t &DataStartByteOffset, Uint32 ContextId) = 0;
 
-    /// Transitions internal D3D12 buffer object to a specified state
+    /// Sets the buffer usage state
 
-    /// \param [in] pBuffer - Buffer to transition
-    /// \param [in] State - D3D12 resource state this buffer to transition to
-    virtual void TransitionBufferState(IBuffer *pBuffer, D3D12_RESOURCE_STATES State) = 0;
+    /// \param [in] state - D3D12 resource state to be set for this buffer
+    //virtual void SetD3D12ResourceState(D3D12_RESOURCE_STATES state) = 0;
 };
 
 }

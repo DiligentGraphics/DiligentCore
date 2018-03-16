@@ -21,36 +21,27 @@
  *  of the possibility of such damages.
  */
 
-#pragma once
-
-/// \file
-/// Definition of the Diligent::IDeviceContextD3D12 interface
-
-#include "../../GraphicsEngine/interface/DeviceContext.h"
+#include "pch.h"
+#include "VulkanUtils.h"
 
 namespace Diligent
 {
+#if 0
+    const Char* GetD3D12DescriptorHeapTypeLiteralName(D3D12_DESCRIPTOR_HEAP_TYPE Type)
+    {
+        static bool bIsInitialized = false;
+        static const Char* HeapTypeNames[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
+        if (!bIsInitialized)
+        {
+            HeapTypeNames[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV] = "D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV";
+            HeapTypeNames[D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER]     = "D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER";
+            HeapTypeNames[D3D12_DESCRIPTOR_HEAP_TYPE_RTV]         = "D3D12_DESCRIPTOR_HEAP_TYPE_RTV";
+            HeapTypeNames[D3D12_DESCRIPTOR_HEAP_TYPE_DSV]         = "D3D12_DESCRIPTOR_HEAP_TYPE_DSV";
 
-// {DDE9E3AB-5109-4026-92B7-F5E7EC83E21E}
-static constexpr INTERFACE_ID IID_DeviceContextD3D12 =
-{ 0xdde9e3ab, 0x5109, 0x4026, { 0x92, 0xb7, 0xf5, 0xe7, 0xec, 0x83, 0xe2, 0x1e } };
-
-/// Interface to the device context object implemented in D3D12
-class IDeviceContextD3D12 : public IDeviceContext
-{
-public:
-
-    /// Transitions internal D3D12 texture object to a specified state
-
-    /// \param [in] pTexture - texture to transition
-    /// \param [in] State - D3D12 resource state this texture to transition to
-    virtual void TransitionTextureState(ITexture *pTexture, D3D12_RESOURCE_STATES State) = 0;
-
-    /// Transitions internal D3D12 buffer object to a specified state
-
-    /// \param [in] pBuffer - Buffer to transition
-    /// \param [in] State - D3D12 resource state this buffer to transition to
-    virtual void TransitionBufferState(IBuffer *pBuffer, D3D12_RESOURCE_STATES State) = 0;
-};
-
+            bIsInitialized = true;
+        }
+        VERIFY_EXPR(Type >= 0 && Type < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES);
+        return HeapTypeNames[Type];
+    }
+#endif
 }

@@ -24,33 +24,27 @@
 #pragma once
 
 /// \file
-/// Definition of the Diligent::IDeviceContextD3D12 interface
+/// Definition of the Diligent::IShaderVk interface
 
-#include "../../GraphicsEngine/interface/DeviceContext.h"
+#include "../../GraphicsEngine/interface/Shader.h"
 
 namespace Diligent
 {
 
-// {DDE9E3AB-5109-4026-92B7-F5E7EC83E21E}
-static constexpr INTERFACE_ID IID_DeviceContextD3D12 =
-{ 0xdde9e3ab, 0x5109, 0x4026, { 0x92, 0xb7, 0xf5, 0xe7, 0xec, 0x83, 0xe2, 0x1e } };
+// {8B0C91B4-B1D8-4E03-9250-A70E131A59FA}
+static constexpr INTERFACE_ID IID_ShaderVk =
+{ 0x8b0c91b4, 0xb1d8, 0x4e03,{ 0x92, 0x50, 0xa7, 0xe, 0x13, 0x1a, 0x59, 0xfa } };
 
-/// Interface to the device context object implemented in D3D12
-class IDeviceContextD3D12 : public IDeviceContext
+/// Interface to the shader object implemented in Vulkan
+class IShaderVk : public IShader
 {
 public:
 
-    /// Transitions internal D3D12 texture object to a specified state
+    /// Returns a pointer to the ID3D12DeviceChild interface of the internal Direct3D12 object.
 
-    /// \param [in] pTexture - texture to transition
-    /// \param [in] State - D3D12 resource state this texture to transition to
-    virtual void TransitionTextureState(ITexture *pTexture, D3D12_RESOURCE_STATES State) = 0;
-
-    /// Transitions internal D3D12 buffer object to a specified state
-
-    /// \param [in] pBuffer - Buffer to transition
-    /// \param [in] State - D3D12 resource state this buffer to transition to
-    virtual void TransitionBufferState(IBuffer *pBuffer, D3D12_RESOURCE_STATES State) = 0;
+    /// The method does *NOT* call AddRef() on the returned interface,
+    /// so Release() must not be called.
+    //virtual ID3D12DeviceChild* GetD3D12Shader() = 0;
 };
 
 }

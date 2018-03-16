@@ -24,33 +24,34 @@
 #pragma once
 
 /// \file
-/// Definition of the Diligent::IDeviceContextD3D12 interface
+/// Declaration of Diligent::SamplerVkImpl class
 
-#include "../../GraphicsEngine/interface/DeviceContext.h"
+#include "SamplerVk.h"
+#include "RenderDeviceVk.h"
+#include "SamplerBase.h"
+#include "DescriptorHeap.h"
 
 namespace Diligent
 {
 
-// {DDE9E3AB-5109-4026-92B7-F5E7EC83E21E}
-static constexpr INTERFACE_ID IID_DeviceContextD3D12 =
-{ 0xdde9e3ab, 0x5109, 0x4026, { 0x92, 0xb7, 0xf5, 0xe7, 0xec, 0x83, 0xe2, 0x1e } };
-
-/// Interface to the device context object implemented in D3D12
-class IDeviceContextD3D12 : public IDeviceContext
+class FixedBlockMemoryAllocator;
+/// Implementation of the Diligent::ISamplerVk interface
+class SamplerVkImpl : public SamplerBase<ISamplerVk, IRenderDeviceVk>
 {
 public:
+    typedef SamplerBase<ISamplerVk, IRenderDeviceVk> TSamplerBase;
 
-    /// Transitions internal D3D12 texture object to a specified state
+    SamplerVkImpl(IReferenceCounters *pRefCounters, class RenderDeviceVkImpl *pRenderDeviceVk, const SamplerDesc& SamplerDesc);
+    ~SamplerVkImpl();
 
-    /// \param [in] pTexture - texture to transition
-    /// \param [in] State - D3D12 resource state this texture to transition to
-    virtual void TransitionTextureState(ITexture *pTexture, D3D12_RESOURCE_STATES State) = 0;
+    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
 
-    /// Transitions internal D3D12 buffer object to a specified state
+    //virtual Vk_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle()override{ return m_Descriptor.GetCpuHandle(); }
 
-    /// \param [in] pBuffer - Buffer to transition
-    /// \param [in] State - D3D12 resource state this buffer to transition to
-    virtual void TransitionBufferState(IBuffer *pBuffer, D3D12_RESOURCE_STATES State) = 0;
+private:
+    friend class ShaderVkImpl;
+    /// Vk sampler
+    DescriptorHeapAllocation m_Descriptor;
 };
 
 }

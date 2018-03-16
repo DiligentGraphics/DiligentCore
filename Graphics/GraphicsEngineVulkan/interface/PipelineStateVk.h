@@ -24,33 +24,34 @@
 #pragma once
 
 /// \file
-/// Definition of the Diligent::IDeviceContextD3D12 interface
+/// Definition of the Diligent::IPipeplineStateVk interface
 
-#include "../../GraphicsEngine/interface/DeviceContext.h"
+#include "../../GraphicsEngine/interface/PipelineState.h"
 
 namespace Diligent
 {
 
-// {DDE9E3AB-5109-4026-92B7-F5E7EC83E21E}
-static constexpr INTERFACE_ID IID_DeviceContextD3D12 =
-{ 0xdde9e3ab, 0x5109, 0x4026, { 0x92, 0xb7, 0xf5, 0xe7, 0xec, 0x83, 0xe2, 0x1e } };
+// {2FEA0868-0932-412A-9F0A-7CEA7E61B5E0}
+static constexpr INTERFACE_ID IID_PipelineStateVk =
+{ 0x2fea0868, 0x932, 0x412a,{ 0x9f, 0xa, 0x7c, 0xea, 0x7e, 0x61, 0xb5, 0xe0 } };
 
-/// Interface to the device context object implemented in D3D12
-class IDeviceContextD3D12 : public IDeviceContext
+
+/// Interface to the blend state object implemented in Vulkan
+class IPipelineStateVk : public IPipelineState
 {
 public:
 
-    /// Transitions internal D3D12 texture object to a specified state
+    /// Returns ID3D12PipelineState interface of the internal D3D12 pipeline state object object.
+    
+    /// The method does *NOT* call AddRef() on the returned interface,
+    /// so Release() must not be called.
+    //virtual ID3D12PipelineState* GetD3D12PipelineState()const = 0;
 
-    /// \param [in] pTexture - texture to transition
-    /// \param [in] State - D3D12 resource state this texture to transition to
-    virtual void TransitionTextureState(ITexture *pTexture, D3D12_RESOURCE_STATES State) = 0;
-
-    /// Transitions internal D3D12 buffer object to a specified state
-
-    /// \param [in] pBuffer - Buffer to transition
-    /// \param [in] State - D3D12 resource state this buffer to transition to
-    virtual void TransitionBufferState(IBuffer *pBuffer, D3D12_RESOURCE_STATES State) = 0;
+    /// Returns a pointer to the root signature object associated with this pipeline state.
+    
+    /// The method does *NOT* call AddRef() on the returned interface,
+    /// so Release() must not be called.
+    //virtual ID3D12RootSignature* GetD3D12RootSignature()const = 0;
 };
 
 }

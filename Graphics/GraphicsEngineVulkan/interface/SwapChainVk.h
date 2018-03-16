@@ -24,33 +24,42 @@
 #pragma once
 
 /// \file
-/// Definition of the Diligent::IDeviceContextD3D12 interface
+/// Definition of the Diligent::ISwapChainVk interface
 
-#include "../../GraphicsEngine/interface/DeviceContext.h"
+//#include <dxgi1_4.h>
+
+#include "../../GraphicsEngine/interface/SwapChain.h"
+#include "TextureViewVk.h"
 
 namespace Diligent
 {
 
-// {DDE9E3AB-5109-4026-92B7-F5E7EC83E21E}
-static constexpr INTERFACE_ID IID_DeviceContextD3D12 =
-{ 0xdde9e3ab, 0x5109, 0x4026, { 0x92, 0xb7, 0xf5, 0xe7, 0xec, 0x83, 0xe2, 0x1e } };
+// {22A39881-5EC5-4A9C-8395-90215F04A5CC}
+static constexpr INTERFACE_ID IID_SwapChainVk =
+{ 0x22a39881, 0x5ec5, 0x4a9c,{ 0x83, 0x95, 0x90, 0x21, 0x5f, 0x4, 0xa5, 0xcc } };
 
-/// Interface to the device context object implemented in D3D12
-class IDeviceContextD3D12 : public IDeviceContext
+/// Interface to the swap chain object implemented in Vulkan
+class ISwapChainVk : public ISwapChain
 {
 public:
 
-    /// Transitions internal D3D12 texture object to a specified state
+    /// Returns a pointer to the IDXGISwapChain interface of the internal DXGI object.
 
-    /// \param [in] pTexture - texture to transition
-    /// \param [in] State - D3D12 resource state this texture to transition to
-    virtual void TransitionTextureState(ITexture *pTexture, D3D12_RESOURCE_STATES State) = 0;
+    /// The method does *NOT* call AddRef() on the returned interface,
+    /// so Release() must not be called.
+    //virtual IDXGISwapChain *GetDXGISwapChain() = 0;
 
-    /// Transitions internal D3D12 buffer object to a specified state
+    /// Returns a pointer to the render target view of the current back buffer in the swap chain
 
-    /// \param [in] pBuffer - Buffer to transition
-    /// \param [in] State - D3D12 resource state this buffer to transition to
-    virtual void TransitionBufferState(IBuffer *pBuffer, D3D12_RESOURCE_STATES State) = 0;
+    /// The method does *NOT* call AddRef() on the returned interface,
+    /// so Release() must not be called.
+    //virtual ITextureViewD3D12* GetCurrentBackBufferRTV() = 0;
+
+    /// Returns a pointer to the depth-stencil view of the depth buffer
+
+    /// The method does *NOT* call AddRef() on the returned interface,
+    /// so Release() must not be called.
+    //virtual ITextureViewD3D12* GetDepthBufferDSV() = 0;
 };
 
 }
