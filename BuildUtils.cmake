@@ -10,6 +10,9 @@ if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS)
         if(GL_SUPPORTED)
             list(APPEND ENGINE_DLLS GraphicsEngineOpenGL-shared)
         endif()
+        if(VULKAN_SUPPORTED)
+            list(APPEND ENGINE_DLLS GraphicsEngineVk-shared)
+        endif()
 
         foreach(DLL ${ENGINE_DLLS})
             add_custom_command(TARGET ${TARGET_NAME} POST_BUILD

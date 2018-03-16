@@ -33,8 +33,6 @@
 #include "StringTools.h"
 #include "EngineMemory.h"
 #include "CommandQueueVkImpl.h"
-#include <Windows.h>
-#include <dxgi1_4.h>
 
 namespace Diligent
 {
