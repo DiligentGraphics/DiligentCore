@@ -25,8 +25,6 @@
 /// Routines that initialize Vulkan-based engine implementation
 
 #include "pch.h"
-#include <unordered_set>
-
 #include "RenderDeviceFactoryVk.h"
 #include "RenderDeviceVkImpl.h"
 #include "DeviceContextVkImpl.h"
@@ -36,6 +34,7 @@
 #include "EngineMemory.h"
 #include "CommandQueueVkImpl.h"
 #include "VulkanUtilities/VulkanInstance.h"
+#include "VulkanUtilities/VulkanPhysicalDevice.h"
 
 namespace Diligent
 {
@@ -138,7 +137,10 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk( const EngineVkAttribs& Crea
         return;
     }
 
-    Instance->SelectPhysicalDevice();
+    auto vkDevice = Instance->SelectPhysicalDevice();
+    std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice> PhysicalDevice(new VulkanUtilities::VulkanPhysicalDevice(vkDevice));
+
+
 
 #if 0
     for(Uint32 Type=Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV; Type < Vk_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++Type)

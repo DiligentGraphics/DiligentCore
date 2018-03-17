@@ -35,6 +35,7 @@ set(INCLUDE
 set(VULKAN_UTILS_INCLUDE 
     include/VulkanUtilities/VulkanDebug.h
     include/VulkanUtilities/VulkanInstance.h
+    include/VulkanUtilities/VulkanPhysicalDevice.h
 )
 
 
@@ -86,6 +87,7 @@ set(SRC
 set(VULKAN_UTILS_SRC
     src/VulkanUtilities/VulkanDebug.cpp
     src/VulkanUtilities/VulkanInstance.cpp
+    src/VulkanUtilities/VulkanPhysicalDevice.cpp
 )
 
 #set(SHADERS
