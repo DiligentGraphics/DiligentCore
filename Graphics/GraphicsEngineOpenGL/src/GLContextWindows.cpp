@@ -82,7 +82,7 @@ namespace Diligent
 
         MessageSS << ")" << std::endl << message << std::endl;
 
-        LOG_INFO_MESSAGE_ONCE( MessageSS.str().c_str() );
+        LOG_INFO_MESSAGE( MessageSS.str().c_str() );
     }
 
     GLContext::GLContext(const EngineGLAttribs &InitAttribs, DeviceCaps &DeviceCaps ) :

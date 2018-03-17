@@ -1004,7 +1004,17 @@ namespace Diligent
     /// Attributes specific to Vulkan engine
     struct EngineVkAttribs : public EngineCreationAttribs
     {
+        /// Enable validation layers. Validation is always enabled in Debug mode
+        bool EnableValidation = false;
+        
+        /// Number of global Vulkan extensions
+        Uint32             GlobalExtensionCount = 0;
 
+        /// List of global Vulkan extensions to enable.
+        const char* const* ppGlobalExtensionNames = nullptr;
+
+        /// Allocator used as pAllocator parameter in callse to Vulkan Create* functions
+        void *pVkAllocator = nullptr;
     };
 
     /// Box

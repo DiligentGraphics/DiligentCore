@@ -30,6 +30,7 @@ set(INCLUDE
     include/SwapChainVkImpl.h
     include/TextureVkImpl.h
     include/TextureViewVkImpl.h
+    include/VulkanUtilities/VulkanDebug.h
 )
 
 set(INTERFACE 
@@ -75,6 +76,7 @@ set(SRC
     src/SwapChainVkImpl.cpp
     src/TextureVkImpl.cpp
     src/TextureViewVkImpl.cpp
+    src/VulkanUtilities/VulkanDebug.cpp
 )
 
 #set(SHADERS
@@ -125,12 +127,14 @@ target_include_directories(GraphicsEngineVk-static
 PRIVATE
     #${CMAKE_CURRENT_BINARY_DIR}/CompiledShaders
     include
+    ../../External/vulkan
 )
 
 target_include_directories(GraphicsEngineVk-shared 
 PRIVATE
     #${CMAKE_CURRENT_BINARY_DIR}/CompiledShaders
     include
+    ../../External/vulkan
 )
 
 set(PRIVATE_DEPENDENCIES 
@@ -140,6 +144,11 @@ set(PRIVATE_DEPENDENCIES
     GraphicsEngine
 )
 
+if(PLATFORM_WIN32)
+    find_library(Vulkan_LIBRARY NAMES vulkan-1 vulkan PATHS ../../External/vulkan/)    
+    list(APPEND PRIVATE_DEPENDENCIES ${Vulkan_LIBRARY})
+endif()
+
 set(PUBLIC_DEPENDENCIES 
     GraphicsEngineVkInterface
 )
@@ -148,6 +157,13 @@ target_link_libraries(GraphicsEngineVk-static PRIVATE ${PRIVATE_DEPENDENCIES} PU
 
 target_link_libraries(GraphicsEngineVk-shared PRIVATE ${PRIVATE_DEPENDENCIES} PUBLIC ${PUBLIC_DEPENDENCIES})
 target_compile_definitions(GraphicsEngineVk-shared PUBLIC ENGINE_DLL=1)
+
+
+if(PLATFORM_WIN32)
+    set(PRIVATE_COMPILE_DEFINITIONS VK_USE_PLATFORM_WIN32_KHR=1)
+endif()
+target_compile_definitions(GraphicsEngineVk-shared PRIVATE ${PRIVATE_COMPILE_DEFINITIONS})
+target_compile_definitions(GraphicsEngineVk-static PRIVATE ${PRIVATE_COMPILE_DEFINITIONS})
 
 # Set output name to GraphicsEngineVk_{32|64}{r|d}
 set_dll_output_name(GraphicsEngineVk-shared GraphicsEngineVk)
