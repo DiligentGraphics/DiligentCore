@@ -30,8 +30,13 @@ set(INCLUDE
     include/SwapChainVkImpl.h
     include/TextureVkImpl.h
     include/TextureViewVkImpl.h
-    include/VulkanUtilities/VulkanDebug.h
 )
+
+set(VULKAN_UTILS_INCLUDE 
+    include/VulkanUtilities/VulkanDebug.h
+    include/VulkanUtilities/VulkanInstance.h
+)
+
 
 set(INTERFACE 
     interface/BufferVk.h
@@ -76,7 +81,11 @@ set(SRC
     src/SwapChainVkImpl.cpp
     src/TextureVkImpl.cpp
     src/TextureViewVkImpl.cpp
+)
+
+set(VULKAN_UTILS_SRC
     src/VulkanUtilities/VulkanDebug.cpp
+    src/VulkanUtilities/VulkanInstance.cpp
 )
 
 #set(SHADERS
@@ -110,13 +119,13 @@ INTERFACE
 )
 
 add_library(GraphicsEngineVk-static STATIC 
-    ${SRC} ${INTERFACE} ${INCLUDE} ${SHADERS}
+    ${SRC} ${VULKAN_UTILS_SRC} ${INTERFACE} ${INCLUDE} ${VULKAN_UTILS_INCLUDE} ${SHADERS}
     readme.md
     #shaders/GenerateMips/GenerateMipsCS.hlsli
 )
 
 add_library(GraphicsEngineVk-shared SHARED 
-    ${SRC} ${INTERFACE} ${INCLUDE} ${SHADERS}
+    ${SRC} ${VULKAN_UTILS_SRC} ${INTERFACE} ${INCLUDE} ${VULKAN_UTILS_INCLUDE} ${SHADERS}
     src/DLLMain.cpp
     src/GraphicsEngineVk.def
     readme.md
@@ -172,6 +181,7 @@ set_common_target_properties(GraphicsEngineVk-shared)
 set_common_target_properties(GraphicsEngineVk-static)
 
 source_group("src" FILES ${SRC})
+source_group("src\\vulkan utils" FILES ${VULKAN_UTILS_SRC})
 
 source_group("dll" FILES 
     src/DLLMain.cpp
@@ -180,6 +190,7 @@ source_group("dll" FILES
 
 source_group("include" FILES ${INCLUDE})
 source_group("interface" FILES ${INTERFACE})
+source_group("include\\vulkan utils" FILES ${VULKAN_UTILS_INCLUDE})
 #source_group("shaders" FILES 
 #    ${SHADERS}
 #    shaders/GenerateMips/GenerateMipsCS.hlsli

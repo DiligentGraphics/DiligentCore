@@ -25,6 +25,8 @@
 /// Routines that initialize Vulkan-based engine implementation
 
 #include "pch.h"
+#include <unordered_set>
+
 #include "RenderDeviceFactoryVk.h"
 #include "RenderDeviceVkImpl.h"
 #include "DeviceContextVkImpl.h"
@@ -33,7 +35,7 @@
 #include "StringTools.h"
 #include "EngineMemory.h"
 #include "CommandQueueVkImpl.h"
-#include "VulkanUtilities/VulkanDebug.h"
+#include "VulkanUtilities/VulkanInstance.h"
 
 namespace Diligent
 {
@@ -66,9 +68,6 @@ public:
                                        const SwapChainDesc& SwapChainDesc, 
                                        void* pNativeWndHandle, 
                                        ISwapChain **ppSwapChain )override final;
-private:
-    void CreateVulkanInstance(const EngineVkAttribs& CreationAttribs, VkInstance &instance);
-
 };
 
 #if 0
@@ -102,66 +101,6 @@ void GetHardwareAdapter(IDXGIFactory2* pFactory, IDXGIAdapter1** ppAdapter)
 }
 #endif
 
-void EngineFactoryVkImpl::CreateVulkanInstance(const EngineVkAttribs& CreationAttribs, VkInstance &instance)
-{
-    bool EnableValidation = CreationAttribs.EnableValidation;
-#ifdef _DEBUG
-    EnableValidation = true;
-#endif
-
-    VkApplicationInfo appInfo = {};
-    appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    appInfo.pNext = nullptr; // Pointer to an extension-specific structure.
-    appInfo.pApplicationName = nullptr;
-    appInfo.applicationVersion = 0; // Developer-supplied version number of the application
-    appInfo.pEngineName = "Diligent Engine";
-    appInfo.engineVersion = 0;// Developer-supplied version number of the engine used to create the application.
-    appInfo.apiVersion = VK_API_VERSION_1_0;
-
-    std::vector<const char*> GlobalExtensions = { VK_KHR_SURFACE_EXTENSION_NAME };
-
-    // Enable surface extensions depending on os
-#if defined(VK_USE_PLATFORM_WIN32_KHR)
-    GlobalExtensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
-#elif defined(VK_USE_PLATFORM_ANDROID_KHR)
-    GlobalExtensions.push_back(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
-#elif defined(_DIRECT2DISPLAY)
-    GlobalExtensions.push_back(VK_KHR_DISPLAY_EXTENSION_NAME);
-#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
-    GlobalExtensions.push_back(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
-#elif defined(VK_USE_PLATFORM_XCB_KHR)
-    GlobalExtensions.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
-#elif defined(VK_USE_PLATFORM_IOS_MVK)
-    GlobalExtensions.push_back(VK_MVK_IOS_SURFACE_EXTENSION_NAME);
-#elif defined(VK_USE_PLATFORM_MACOS_MVK)
-    GlobalExtensions.push_back(VK_MVK_MACOS_SURFACE_EXTENSION_NAME);
-#endif
-
-    if (EnableValidation)
-    {
-        GlobalExtensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
-    }
-
-    for(Uint32 ext = 0; ext < CreationAttribs.GlobalExtensionCount; ++ext)
-        GlobalExtensions.push_back(CreationAttribs.ppGlobalExtensionNames[ext]);
-
-    VkInstanceCreateInfo InstanceCreateInfo = {};
-    InstanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-    InstanceCreateInfo.pNext = NULL; // Pointer to an extension-specific structure.
-    InstanceCreateInfo.flags = 0; // Reserved for future use.
-    InstanceCreateInfo.pApplicationInfo = &appInfo;
-    InstanceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(GlobalExtensions.size());
-    InstanceCreateInfo.ppEnabledExtensionNames = GlobalExtensions.empty() ? nullptr : GlobalExtensions.data();
-
-    if (EnableValidation)
-    {
-        InstanceCreateInfo.enabledLayerCount = static_cast<uint32_t>(_countof(VulkanUtilities::ValidationLayerNames));
-        InstanceCreateInfo.ppEnabledLayerNames = VulkanUtilities::ValidationLayerNames;
-    }
-    auto res = vkCreateInstance(&InstanceCreateInfo, reinterpret_cast<VkAllocationCallbacks*>(CreationAttribs.pVkAllocator), &instance);
-    CHECK_VK_ERROR_AND_THROW(res, "Failed to create Vulkan instance");
-}
-
 
 /// Creates render device and device contexts for Vulkan backend
 
@@ -177,19 +116,29 @@ void EngineFactoryVkImpl::CreateVulkanInstance(const EngineVkAttribs& CreationAt
 ///                                   contexts are written to ppContexts array starting 
 ///                                   at position 1
 void EngineFactoryVkImpl::CreateDeviceAndContextsVk( const EngineVkAttribs& CreationAttribs, 
-                                                           IRenderDevice **ppDevice, 
-                                                           IDeviceContext **ppContexts,
-                                                           Uint32 NumDeferredContexts)
+                                                     IRenderDevice **ppDevice, 
+                                                     IDeviceContext **ppContexts,
+                                                     Uint32 NumDeferredContexts)
 {
     VERIFY( ppDevice && ppContexts, "Null pointer provided" );
     if( !ppDevice || !ppContexts )
         return;
 
-    VkInstance instance;
-    CreateVulkanInstance(CreationAttribs, instance);
+    std::shared_ptr<VulkanUtilities::VulkanInstance> Instance;
+    try
+    {
+        Instance = std::make_shared<VulkanUtilities::VulkanInstance>(
+            CreationAttribs.EnableValidation, 
+            CreationAttribs.GlobalExtensionCount, 
+            CreationAttribs.ppGlobalExtensionNames,
+            reinterpret_cast<VkAllocationCallbacks*>(CreationAttribs.pVkAllocator));
+    }
+    catch(std::runtime_error& )
+    {
+        return;
+    }
 
-    // Vulkan instance
-    //err = createInstance(settings.validation);
+    Instance->SelectPhysicalDevice();
 
 #if 0
     for(Uint32 Type=Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV; Type < Vk_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++Type)
@@ -332,11 +281,11 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk( const EngineVkAttribs& Crea
 ///                                   contexts are written to ppContexts array starting 
 ///                                   at position 1
 void EngineFactoryVkImpl::AttachToVkDevice(void *pVkNativeDevice, 
-                                                 ICommandQueueVk *pCommandQueue,
-                                                 const EngineVkAttribs& EngineAttribs, 
-                                                 IRenderDevice **ppDevice, 
-                                                 IDeviceContext **ppContexts,
-                                                 Uint32 NumDeferredContexts)
+                                           ICommandQueueVk *pCommandQueue,
+                                           const EngineVkAttribs& EngineAttribs, 
+                                           IRenderDevice **ppDevice, 
+                                           IDeviceContext **ppContexts,
+                                           Uint32 NumDeferredContexts)
 {
     VERIFY( pVkNativeDevice && pCommandQueue && ppDevice && ppContexts, "Null pointer provided" );
     if( !pVkNativeDevice || !pCommandQueue || !ppDevice || !ppContexts )

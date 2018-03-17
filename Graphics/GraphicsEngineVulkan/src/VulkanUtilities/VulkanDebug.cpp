@@ -80,8 +80,11 @@ namespace VulkanUtilities
     void SetupDebugging(VkInstance instance, VkDebugReportFlagsEXT flags, VkDebugReportCallbackEXT callBack)
     {
         auto CreateDebugReportCallback = reinterpret_cast<PFN_vkCreateDebugReportCallbackEXT>(vkGetInstanceProcAddr(instance, "vkCreateDebugReportCallbackEXT"));
+        VERIFY_EXPR(CreateDebugReportCallback != VK_NULL_HANDLE);
         //auto dbgBreakCallback = reinterpret_cast<PFN_vkDebugReportMessageEXT>(vkGetInstanceProcAddr(instance, "vkDebugReportMessageEXT"));
+        
         DestroyDebugReportCallback = reinterpret_cast<PFN_vkDestroyDebugReportCallbackEXT>(vkGetInstanceProcAddr(instance, "vkDestroyDebugReportCallbackEXT"));
+        VERIFY_EXPR(DestroyDebugReportCallback != VK_NULL_HANDLE);
 
         VkDebugReportCallbackCreateInfoEXT dbgCreateInfo = {};
         dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
@@ -93,7 +96,7 @@ namespace VulkanUtilities
             &dbgCreateInfo,
             nullptr,
             (callBack != VK_NULL_HANDLE) ? &callBack : &msgCallback);
-        VERIFY_EXPR(err);
+        VERIFY_EXPR(err == VK_SUCCESS);
     }
 
     void FreeDebugCallback(VkInstance instance)

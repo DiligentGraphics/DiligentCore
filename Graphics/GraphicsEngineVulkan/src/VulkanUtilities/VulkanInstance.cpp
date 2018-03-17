@@ -1,0 +1,213 @@
+/*     Copyright 2015-2018 Egor Yusov
+*
+*  Licensed under the Apache License, Version 2.0 (the "License");
+*  you may not use this file except in compliance with the License.
+*  You may obtain a copy of the License at
+*
+*     http://www.apache.org/licenses/LICENSE-2.0
+*
+*  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+*  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+*  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF ANY PROPRIETARY RIGHTS.
+*
+*  In no event and under no legal theory, whether in tort (including negligence),
+*  contract, or otherwise, unless required by applicable law (such as deliberate
+*  and grossly negligent acts) or agreed to in writing, shall any Contributor be
+*  liable for any damages, including any direct, indirect, special, incidental,
+*  or consequential damages of any character arising as a result of this License or
+*  out of the use or inability to use the software (including but not limited to damages
+*  for loss of goodwill, work stoppage, computer failure or malfunction, or any and
+*  all other commercial damages or losses), even if such Contributor has been advised
+*  of the possibility of such damages.
+*/
+
+#include <vector>
+#include "pch.h"
+#include "VulkanUtilities/VulkanInstance.h"
+#include "VulkanUtilities/VulkanDebug.h"
+
+namespace VulkanUtilities
+{
+    bool VulkanInstance::IsLayerAvailable(const char *LayerName)const
+    {
+        for(const auto& Layer : m_Layers)
+            if(strcmp(Layer.layerName, LayerName) == 0)
+                return true;
+
+        return false;
+    }
+
+    bool VulkanInstance::IsExtensionAvailable(const char *ExtensionName)const
+    {
+        for (const auto& Extension : m_Extensions)
+            if (strcmp(Extension.extensionName, ExtensionName) == 0)
+                return true;
+
+        return false;
+    }
+
+    VulkanInstance::VulkanInstance(bool EnableValidation, 
+                                   uint32_t GlobalExtensionCount, 
+                                   const char* const* ppGlobalExtensionNames,
+                                   VkAllocationCallbacks* pVkAllocator) : 
+        m_pVkAllocator(pVkAllocator)
+    {
+#ifdef _DEBUG
+        EnableValidation = true;
+#endif
+
+        {
+            // Enumerate available layers
+            uint32_t LayerCount = 0;
+            auto res = vkEnumerateInstanceLayerProperties(&LayerCount, NULL);
+            CHECK_VK_ERROR_AND_THROW(res, "Failed to query layer count");
+            m_Layers.resize(LayerCount);
+            vkEnumerateInstanceLayerProperties(&LayerCount, m_Layers.data());
+            CHECK_VK_ERROR_AND_THROW(res, "Failed to enumerate extensions");
+            VERIFY_EXPR(LayerCount == m_Layers.size());
+        }
+
+        {
+            // Enumerate available extensions
+            uint32_t ExtensionCount = 0;
+            auto res = vkEnumerateInstanceExtensionProperties(NULL, &ExtensionCount, NULL);
+            CHECK_VK_ERROR_AND_THROW(res, "Failed to query extension count");
+            m_Extensions.resize(ExtensionCount);
+            vkEnumerateInstanceExtensionProperties(NULL, &ExtensionCount, m_Extensions.data());
+            CHECK_VK_ERROR_AND_THROW(res, "Failed to enumerate extensions");
+            VERIFY_EXPR(ExtensionCount == m_Extensions.size());
+        }
+
+        std::vector<const char*> GlobalExtensions = 
+        { 
+            VK_KHR_SURFACE_EXTENSION_NAME,
+
+            // Enable surface extensions depending on OS
+#if defined(VK_USE_PLATFORM_WIN32_KHR)
+            VK_KHR_WIN32_SURFACE_EXTENSION_NAME
+#elif defined(VK_USE_PLATFORM_ANDROID_KHR)
+            VK_KHR_ANDROID_SURFACE_EXTENSION_NAME
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
+            VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME
+#elif defined(VK_USE_PLATFORM_XCB_KHR)
+            VK_KHR_XCB_SURFACE_EXTENSION_NAME
+#elif defined(VK_USE_PLATFORM_IOS_MVK)
+            VK_MVK_IOS_SURFACE_EXTENSION_NAME
+#elif defined(VK_USE_PLATFORM_MACOS_MVK)
+            VK_MVK_MACOS_SURFACE_EXTENSION_NAME
+#endif
+        };
+
+        if (EnableValidation)
+        {
+            GlobalExtensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+        }
+
+        for (uint32_t ext = 0; ext < GlobalExtensionCount; ++ext)
+            GlobalExtensions.push_back(ppGlobalExtensionNames[ext]);
+
+        for(const auto* ExtName : GlobalExtensions)
+        {
+            if(!IsExtensionAvailable(ExtName))
+                LOG_ERROR_AND_THROW("Requested extension ", ExtName, " is not available");
+        }
+
+        VkApplicationInfo appInfo = {};
+        appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+        appInfo.pNext = nullptr; // Pointer to an extension-specific structure.
+        appInfo.pApplicationName = nullptr;
+        appInfo.applicationVersion = 0; // Developer-supplied version number of the application
+        appInfo.pEngineName = "Diligent Engine";
+        appInfo.engineVersion = 0;// Developer-supplied version number of the engine used to create the application.
+        appInfo.apiVersion = VK_API_VERSION_1_0;
+
+        VkInstanceCreateInfo InstanceCreateInfo = {};
+        InstanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+        InstanceCreateInfo.pNext = NULL; // Pointer to an extension-specific structure.
+        InstanceCreateInfo.flags = 0; // Reserved for future use.
+        InstanceCreateInfo.pApplicationInfo = &appInfo;
+        InstanceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(GlobalExtensions.size());
+        InstanceCreateInfo.ppEnabledExtensionNames = GlobalExtensions.empty() ? nullptr : GlobalExtensions.data();
+
+        if (EnableValidation)
+        {
+            bool ValidationLayersPresent = true;
+            for (size_t l = 0; l < _countof(VulkanUtilities::ValidationLayerNames); ++l)
+            {
+                auto *pLayerName = VulkanUtilities::ValidationLayerNames[l];
+                if (!IsLayerAvailable(pLayerName))
+                {
+                    ValidationLayersPresent = false;
+                    LOG_ERROR_MESSAGE("Failed to find ", pLayerName, " layer. Validation will be disabled");
+                }
+            }
+            if (ValidationLayersPresent)
+            {
+                InstanceCreateInfo.enabledLayerCount = static_cast<uint32_t>(_countof(VulkanUtilities::ValidationLayerNames));
+                InstanceCreateInfo.ppEnabledLayerNames = VulkanUtilities::ValidationLayerNames;
+                m_ValidationEnabled = true;
+            }
+        }
+        auto res = vkCreateInstance(&InstanceCreateInfo, m_pVkAllocator, &m_VkInstance);
+        CHECK_VK_ERROR_AND_THROW(res, "Failed to create Vulkan instance");
+
+        // If requested, we enable the default validation layers for debugging
+        if (m_ValidationEnabled)
+        {
+            // The report flags determine what type of messages for the layers will be displayed
+            // For validating (debugging) an appplication the error and warning bits should suffice
+            VkDebugReportFlagsEXT debugReportFlags =
+                VK_DEBUG_REPORT_ERROR_BIT_EXT |
+                VK_DEBUG_REPORT_WARNING_BIT_EXT |
+                VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
+            // Additional flags include performance info, loader and layer debug messages, etc.
+            VulkanUtilities::SetupDebugging(m_VkInstance, debugReportFlags, VK_NULL_HANDLE);
+        }
+
+        // Enumerate physical devices
+        {
+            // Physical device
+            uint32_t PhysicalDeviceCount = 0;
+            // Get the number of available physical devices
+            auto err = vkEnumeratePhysicalDevices(m_VkInstance, &PhysicalDeviceCount, nullptr);
+            CHECK_VK_ERROR(err, "Failed to get physical device count");
+            if (PhysicalDeviceCount == 0)
+                LOG_ERROR_AND_THROW("No physical devices found on the system");
+
+            // Enumerate devices
+            m_PhysicalDevices.resize(PhysicalDeviceCount);
+            err = vkEnumeratePhysicalDevices(m_VkInstance, &PhysicalDeviceCount, m_PhysicalDevices.data());
+            CHECK_VK_ERROR(err, "Failed to enumerate physical devices");
+            VERIFY_EXPR(m_PhysicalDevices.size() == PhysicalDeviceCount);
+        }
+    }
+
+    VulkanInstance::~VulkanInstance()
+    {
+        if(m_ValidationEnabled)
+        {
+            VulkanUtilities::FreeDebugCallback(m_VkInstance);
+        }
+        vkDestroyInstance(m_VkInstance, m_pVkAllocator);
+    }
+
+    VkPhysicalDevice VulkanInstance::SelectPhysicalDevice()
+    {
+        for (auto Device : m_PhysicalDevices)
+        {
+            VkPhysicalDeviceProperties DeviceProps;
+            vkGetPhysicalDeviceProperties(Device, &DeviceProps);
+            if (DeviceProps.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
+            {
+                m_SelectedPhysicalDevice = Device;
+                LOG_INFO_MESSAGE("Selected discrete GPU ", DeviceProps.deviceName);
+                break;
+            }
+        }
+
+        if(m_SelectedPhysicalDevice == VK_NULL_HANDLE)
+            LOG_ERROR_MESSAGE("Failed to find suitable physical device");
+
+        return m_SelectedPhysicalDevice;
+    }
+}
