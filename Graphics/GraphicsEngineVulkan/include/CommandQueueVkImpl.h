@@ -26,6 +26,7 @@
 /// \file
 /// Declaration of Diligent::CommandQueueVkImpl class
 
+#include "vulkan.h"
 #include "CommandQueueVk.h"
 #include "ObjectBase.h"
 
@@ -38,32 +39,35 @@ class CommandQueueVkImpl : public ObjectBase<ICommandQueueVk>
 public:
     typedef ObjectBase<ICommandQueueVk> TBase;
 
-    CommandQueueVkImpl(IReferenceCounters *pRefCounters, void *pVkNativeCmdQueue, void *pVkFence);
+    CommandQueueVkImpl(IReferenceCounters *pRefCounters, VkQueue VkNativeCmdQueue, uint32_t QueueFamilyIndex);
     ~CommandQueueVkImpl();
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
 
-/*	// Returns the fence value that will be signaled next time
-    virtual UINT64 GetNextFenceValue()override final { return m_NextFenceValue; }
+	// Returns the fence value that will be signaled next time
+    //virtual UINT64 GetNextFenceValue()override final { return m_NextFenceValue; }
 
 	// Executes a given command list
-	virtual UINT64 ExecuteCommandList(IVkGraphicsCommandList* commandList)override final;
+	//virtual UINT64 ExecuteCommandList(IVkGraphicsCommandList* commandList)override final;
 
-    virtual IVkCommandQueue* GetVkCommandQueue()override final { return m_pVkCmdQueue; }
+    virtual VkQueue GetVkQueue()override final{return m_VkQueue;}
 
-    virtual void IdleGPU()override final;
+    virtual uint32_t GetQueueFamilyIndex()override final { return m_QueueFamilyIndex; }
 
-    virtual Uint64 GetCompletedFenceValue()override final;
 
+    //virtual void IdleGPU()override final;
+
+    //virtual Uint64 GetCompletedFenceValue()override final;
 private:
     // A value that will be signaled by the command queue next
-    Atomics::AtomicInt64 m_NextFenceValue;
+    //Atomics::AtomicInt64 m_NextFenceValue;
 
     // Last fence value completed by the GPU
-    volatile Uint64 m_LastCompletedFenceValue = 0;
+    //volatile Uint64 m_LastCompletedFenceValue = 0;
 
-    CComPtr<IVkCommandQueue> m_pVkCmdQueue;
-
+    const VkQueue m_VkQueue;
+    const uint32_t m_QueueFamilyIndex;
+/*
     // The fence is signaled right after the command list has been 
     // submitted to the command queue for execution.
     // All command lists with fence value less or equal to the signaled value

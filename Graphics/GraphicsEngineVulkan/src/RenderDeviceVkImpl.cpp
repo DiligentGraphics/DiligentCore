@@ -36,12 +36,21 @@
 namespace Diligent
 {
 
-RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters *pRefCounters, IMemoryAllocator &RawMemAllocator, const EngineVkAttribs &CreationAttribs, void *pVkDevice, ICommandQueueVk *pCmdQueue, Uint32 NumDeferredContexts) : 
-    TRenderDeviceBase(pRefCounters, RawMemAllocator, NumDeferredContexts, sizeof(TextureVkImpl), sizeof(TextureViewVkImpl), sizeof(BufferVkImpl), sizeof(BufferViewVkImpl), sizeof(ShaderVkImpl), sizeof(SamplerVkImpl), sizeof(PipelineStateVkImpl), sizeof(ShaderResourceBindingVkImpl))/*,
-    m_pVkDevice(pVkDevice),
+RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters *pRefCounters, 
+                                         IMemoryAllocator &RawMemAllocator, 
+                                         const EngineVkAttribs &CreationAttribs, 
+                                         ICommandQueueVk *pCmdQueue,
+                                         std::shared_ptr<VulkanUtilities::VulkanInstance> Instance,
+                                         std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice> PhysicalDevice,
+                                         VkDevice vkLogicalDevice,
+                                         Uint32 NumDeferredContexts) : 
+    TRenderDeviceBase(pRefCounters, RawMemAllocator, NumDeferredContexts, sizeof(TextureVkImpl), sizeof(TextureViewVkImpl), sizeof(BufferVkImpl), sizeof(BufferViewVkImpl), sizeof(ShaderVkImpl), sizeof(SamplerVkImpl), sizeof(PipelineStateVkImpl), sizeof(ShaderResourceBindingVkImpl)),
+    m_VulkanInstance(Instance),
+    m_PhysicalDevice(std::move(PhysicalDevice)),
+    m_VkDevice(vkLogicalDevice),
     m_pCommandQueue(pCmdQueue),
-    m_EngineAttribs(CreationAttribs),
-	m_FrameNumber(0),
+    m_EngineAttribs(CreationAttribs)
+	/*m_FrameNumber(0),
     m_NextCmdListNumber(0),
     m_CmdListManager(this),
     m_CPUDescriptorHeaps
@@ -69,7 +78,7 @@ RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters *pRefCounters, IMemo
     */
 {
     m_DeviceCaps.DevType = DeviceType::Vulkan;
-    m_DeviceCaps.MajorVersion = 12;
+    m_DeviceCaps.MajorVersion = 1;
     m_DeviceCaps.MinorVersion = 0;
     m_DeviceCaps.bSeparableProgramSupported = True;
     m_DeviceCaps.bMultithreadedResourceCreationSupported = True;
@@ -90,6 +99,13 @@ RenderDeviceVkImpl::~RenderDeviceVkImpl()
     
 	m_ContextPool.clear();
 #endif
+
+    if(m_PhysicalDevice)
+    {
+        // If m_PhysicalDevice is empty, the device does not own vulkan logical device and must not
+        // destroy it
+        vkDestroyDevice(m_VkDevice, m_VulkanInstance->GetVkAllocator());
+    }
 }
 
 #if 0
@@ -399,9 +415,11 @@ bool CreateTestResource(IVkDevice *pDevice, const Vk_RESOURCE_DESC &ResDesc)
     auto hr = pDevice->CreateCommittedResource( &HeapProps, Vk_HEAP_FLAG_NONE, &ResDesc, Vk_RESOURCE_STATE_COMMON, nullptr, __uuidof(IVkResource), nullptr );
     return hr == S_FALSE; // S_FALSE means that input parameters passed validation
 }
+#endif
 
 void RenderDeviceVkImpl::TestTextureFormat( TEXTURE_FORMAT TexFormat )
 {
+#if 0
     auto &TexFormatInfo = m_TextureFormatsInfo[TexFormat];
     VERIFY( TexFormatInfo.Supported, "Texture format is not supported" );
 
@@ -496,8 +514,9 @@ void RenderDeviceVkImpl::TestTextureFormat( TEXTURE_FORMAT TexFormat )
         ResDesc.DepthOrArraySize = TestTextureDepth;
         TexFormatInfo.Tex3DFmt = CreateTestResource( m_pVkDevice, ResDesc );
     }
-}
 #endif
+}
+
 
 IMPLEMENT_QUERY_INTERFACE( RenderDeviceVkImpl, IID_RenderDeviceVk, TRenderDeviceBase )
 

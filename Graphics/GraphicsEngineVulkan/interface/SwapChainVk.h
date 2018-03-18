@@ -26,7 +26,7 @@
 /// \file
 /// Definition of the Diligent::ISwapChainVk interface
 
-//#include <dxgi1_4.h>
+#include "vulkan.h"
 
 #include "../../GraphicsEngine/interface/SwapChain.h"
 #include "TextureViewVk.h"

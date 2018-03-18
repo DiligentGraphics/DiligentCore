@@ -29,8 +29,6 @@
 #include "RenderDeviceVkImpl.h"
 #include "DeviceContextVkImpl.h"
 #include "SwapChainVkImpl.h"
-#include "VulkanTypeConversions.h"
-#include "StringTools.h"
 #include "EngineMemory.h"
 #include "CommandQueueVkImpl.h"
 #include "VulkanUtilities/VulkanInstance.h"
@@ -54,52 +52,21 @@ public:
                                        IDeviceContext **ppContexts,
                                        Uint32 NumDeferredContexts)override final;
 
-    /*void AttachToVkDevice(void *pVkNativeDevice, 
-                             ICommandQueueVk *pCommandQueue,
-                             const EngineVkAttribs& EngineAttribs, 
-                             IRenderDevice **ppDevice, 
-                             IDeviceContext **ppContexts,
-                             Uint32 NumDeferredContexts)override final;
-                             */
+    void AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::VulkanInstance>,
+                              std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice> PhysicalDevice,
+                              VkDevice vkLogicalDevice,
+                              ICommandQueueVk *pCommandQueue,
+                              const EngineVkAttribs& EngineAttribs, 
+                              IRenderDevice **ppDevice, 
+                              IDeviceContext **ppContexts,
+                              Uint32 NumDeferredContexts);//override final;
 
     void CreateSwapChainVk( IRenderDevice *pDevice, 
-                                       IDeviceContext *pImmediateContext, 
-                                       const SwapChainDesc& SwapChainDesc, 
-                                       void* pNativeWndHandle, 
-                                       ISwapChain **ppSwapChain )override final;
+                            IDeviceContext *pImmediateContext, 
+                            const SwapChainDesc& SwapChainDesc, 
+                            void* pNativeWndHandle, 
+                            ISwapChain **ppSwapChain )override final;
 };
-
-#if 0
-void GetHardwareAdapter(IDXGIFactory2* pFactory, IDXGIAdapter1** ppAdapter)
-{
-	CComPtr<IDXGIAdapter1> adapter;
-	*ppAdapter = nullptr;
-
-	for (UINT adapterIndex = 0; DXGI_ERROR_NOT_FOUND != pFactory->EnumAdapters1(adapterIndex, &adapter); ++adapterIndex)
-	{
-		DXGI_ADAPTER_DESC1 desc;
-		adapter->GetDesc1(&desc);
-
-		if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
-		{
-			// Don't select the Basic Render Driver adapter.
-			// If you want a software adapter, pass in "/warp" on the command line.
-			continue;
-		}
-
-		// Check to see if the adapter supports Direct3D 12, but don't create the
-		// actual device yet.
-		if (SUCCEEDED(VkCreateDevice(adapter, D3D_FEATURE_LEVEL_11_0, _uuidof(IVkDevice), nullptr)))
-		{
-            LOG_INFO_MESSAGE("Vk-capabale hardware found: ", NarrowString(desc.Description), " (", desc.DedicatedVideoMemory>>20, " MB)");
-			break;
-		}
-	}
-
-	*ppAdapter = adapter.Detach();
-}
-#endif
-
 
 /// Creates render device and device contexts for Vulkan backend
 
@@ -122,6 +89,25 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk( const EngineVkAttribs& Crea
     VERIFY( ppDevice && ppContexts, "Null pointer provided" );
     if( !ppDevice || !ppContexts )
         return;
+
+#if 0
+    for (Uint32 Type = Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV; Type < Vk_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++Type)
+    {
+        auto CPUHeapAllocSize = CreationAttribs.CPUDescriptorHeapAllocationSize[Type];
+        Uint32 MaxSize = 1 << 20;
+        if (CPUHeapAllocSize > 1 << 20)
+        {
+            LOG_ERROR("CPU Heap allocation size is too large (", CPUHeapAllocSize, "). Max allowed size is ", MaxSize);
+            return;
+        }
+
+        if ((CPUHeapAllocSize % 16) != 0)
+        {
+            LOG_ERROR("CPU Heap allocation size (", CPUHeapAllocSize, ") is expected to be multiple of 16");
+            return;
+        }
+    }
+#endif
 
     SetRawAllocator(CreationAttribs.pRawMemAllocator);
 
@@ -192,140 +178,19 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk( const EngineVkAttribs& Crea
         auto &RawMemAllocator = GetRawAllocator();
         pCmdQueueVk = NEW_RC_OBJ(RawMemAllocator, "CommandQueueVk instance", CommandQueueVkImpl)(Queue, QueueInfo.queueFamilyIndex);
 
-
-        //vkDestroyDevice(VulkanDevice, Instance->GetVkAllocator());
-
+        AttachToVulkanDevice(Instance, std::move(PhysicalDevice), VulkanDevice, pCmdQueueVk, CreationAttribs, ppDevice, ppContexts, NumDeferredContexts);
     }
     catch(std::runtime_error& )
     {
         return;
     }
-
-
-
-
-#if 0
-    for(Uint32 Type=Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV; Type < Vk_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++Type)
-    {
-        auto CPUHeapAllocSize = CreationAttribs.CPUDescriptorHeapAllocationSize[Type];
-        Uint32 MaxSize = 1 << 20;
-        if( CPUHeapAllocSize > 1 << 20 )
-        {
-            LOG_ERROR( "CPU Heap allocation size is too large (", CPUHeapAllocSize, "). Max allowed size is ", MaxSize );
-            return;
-        }
-
-        if( (CPUHeapAllocSize % 16) != 0 )
-        {
-            LOG_ERROR( "CPU Heap allocation size (", CPUHeapAllocSize, ") is expected to be multiple of 16" );
-            return;
-        }
-    }
-
-
-    
-    CComPtr<IVkDevice> VkDevice;
-    try
-    {
-#if defined(_DEBUG)
-	    // Enable the Vk debug layer.
-	    {
-		    CComPtr<IVkDebug> debugController;
-		    if (SUCCEEDED(VkGetDebugInterface(__uuidof(debugController), reinterpret_cast<void**>(static_cast<IVkDebug**>(&debugController)) )))
-		    {
-			    debugController->EnableDebugLayer();
-		    }
-	    }
-#endif
-
-	    CComPtr<IDXGIFactory4> factory;
-        HRESULT hr = CreateDXGIFactory1(__uuidof(factory), reinterpret_cast<void**>(static_cast<IDXGIFactory4**>(&factory)) );
-        CHECK_D3D_RESULT_THROW(hr, "Failed to create DXGI factory")
-
-	    CComPtr<IDXGIAdapter1> hardwareAdapter;
-	    GetHardwareAdapter(factory, &hardwareAdapter);
-    
-        hr = VkCreateDevice(hardwareAdapter, D3D_FEATURE_LEVEL_11_0, __uuidof(VkDevice), reinterpret_cast<void**>(static_cast<IVkDevice**>(&VkDevice)) );
-        if( FAILED(hr))
-        {
-            LOG_WARNING_MESSAGE("Failed to create hardware device. Attempting to create WARP device");
-
-		    CComPtr<IDXGIAdapter> warpAdapter;
-		    hr = factory->EnumWarpAdapter( __uuidof(warpAdapter),  reinterpret_cast<void**>(static_cast<IDXGIAdapter**>(&warpAdapter)) );
-            CHECK_D3D_RESULT_THROW(hr, "Failed to enum warp adapter")
-
-		    hr = VkCreateDevice( warpAdapter, D3D_FEATURE_LEVEL_11_0, __uuidof(VkDevice), reinterpret_cast<void**>(static_cast<IVkDevice**>(&VkDevice)) );
-            CHECK_D3D_RESULT_THROW(hr, "Failed to crate warp device")
-        }
-
-#if _DEBUG
-        {
-	        CComPtr<IVkInfoQueue> pInfoQueue;
-            hr = VkDevice->QueryInterface(__uuidof(pInfoQueue), reinterpret_cast<void**>(static_cast<IVkInfoQueue**>(&pInfoQueue)));
-	        if( SUCCEEDED(hr) )
-	        {
-		        // Suppress whole categories of messages
-		        //Vk_MESSAGE_CATEGORY Categories[] = {};
-
-		        // Suppress messages based on their severity level
-		        Vk_MESSAGE_SEVERITY Severities[] = 
-		        {
-			        Vk_MESSAGE_SEVERITY_INFO
-		        };
-
-		        // Suppress individual messages by their ID
-		        //Vk_MESSAGE_ID DenyIds[] = {};
-
-		        Vk_INFO_QUEUE_FILTER NewFilter = {};
-		        //NewFilter.DenyList.NumCategories = _countof(Categories);
-		        //NewFilter.DenyList.pCategoryList = Categories;
-		        NewFilter.DenyList.NumSeverities = _countof(Severities);
-		        NewFilter.DenyList.pSeverityList = Severities;
-		        //NewFilter.DenyList.NumIDs = _countof(DenyIds);
-		        //NewFilter.DenyList.pIDList = DenyIds;
-
-		        hr = pInfoQueue->PushStorageFilter(&NewFilter);
-                VERIFY(SUCCEEDED(hr), "Failed to push storage filter");
-            }
-        }
-#endif
-
-#ifndef RELEASE
-	    // Prevent the GPU from overclocking or underclocking to get consistent timings
-	    //VkDevice->SetStablePowerState(TRUE);
-#endif
-
-	    // Describe and create the command queue.
-	    Vk_COMMAND_QUEUE_DESC queueDesc = {};
-	    queueDesc.Flags = Vk_COMMAND_QUEUE_FLAG_NONE;
-	    queueDesc.Type = Vk_COMMAND_LIST_TYPE_DIRECT;
-
-        CComPtr<IVkCommandQueue> pVkCmdQueue;
-        hr = VkDevice->CreateCommandQueue(&queueDesc, __uuidof(pVkCmdQueue), reinterpret_cast<void**>(static_cast<IVkCommandQueue**>(&pVkCmdQueue)));
-        CHECK_D3D_RESULT_THROW(hr, "Failed to create command queue");
-        hr = pVkCmdQueue->SetName(L"Main Command Queue");
-        VERIFY_EXPR(SUCCEEDED(hr));
-
-        CComPtr<IVkFence> pVkFence;
-        hr = VkDevice->CreateFence(0, Vk_FENCE_FLAG_NONE, __uuidof(pVkFence), reinterpret_cast<void**>(static_cast<IVkFence**>(&pVkFence)));
-        CHECK_D3D_RESULT_THROW(hr, "Failed to create main command queue fence");
-	    VkDevice->SetName(L"Main Command Queue fence");
-
-    }
-    catch( const std::runtime_error & )
-    {
-        LOG_ERROR( "Failed to initialize Vk resources" );
-        return;
-    }
-        
-    AttachToVkDevice(VkDevice, pCmdQueueVk, CreationAttribs, ppDevice, ppContexts, NumDeferredContexts);
-#endif
 }
 
-#if 0
-/// Attaches to existing Vk device
+/// Attaches to existing Vulkan device
 
-/// \param [in] pVkNativeDevice - pointer to native Vk device
+/// \param [in] Instance - shared pointer to a VulkanUtilities::VulkanInstance object
+/// \param [in] PhysicalDevice - pointer to the object representing physical device
+/// \param [in] vkLogicalDevice - logical Vulkan device handle
 /// \param [in] pCommandQueue - pointer to the implementation of command queue
 /// \param [in] EngineAttribs - Engine creation attributes.
 /// \param [out] ppDevice - Address of the memory location where pointer to 
@@ -338,15 +203,17 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk( const EngineVkAttribs& Crea
 ///                                   of deferred contexts is requested, pointers to the
 ///                                   contexts are written to ppContexts array starting 
 ///                                   at position 1
-void EngineFactoryVkImpl::AttachToVkDevice(void *pVkNativeDevice, 
-                                           ICommandQueueVk *pCommandQueue,
-                                           const EngineVkAttribs& EngineAttribs, 
-                                           IRenderDevice **ppDevice, 
-                                           IDeviceContext **ppContexts,
-                                           Uint32 NumDeferredContexts)
+void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::VulkanInstance> Instance,
+                                               std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice> PhysicalDevice,
+                                               VkDevice vkLogicalDevice,
+                                               ICommandQueueVk *pCommandQueue,
+                                               const EngineVkAttribs& EngineAttribs, 
+                                               IRenderDevice **ppDevice, 
+                                               IDeviceContext **ppContexts,
+                                               Uint32 NumDeferredContexts)
 {
-    VERIFY( pVkNativeDevice && pCommandQueue && ppDevice && ppContexts, "Null pointer provided" );
-    if( !pVkNativeDevice || !pCommandQueue || !ppDevice || !ppContexts )
+    VERIFY( pCommandQueue && ppDevice && ppContexts, "Null pointer provided" );
+    if(vkLogicalDevice == VK_NULL_HANDLE || !pCommandQueue || !ppDevice || !ppContexts )
         return;
 
     *ppDevice = nullptr;
@@ -355,8 +222,7 @@ void EngineFactoryVkImpl::AttachToVkDevice(void *pVkNativeDevice,
     try
     {
         auto &RawMemAllocator = GetRawAllocator();
-        auto VkDevice = reinterpret_cast<IVkDevice*>(pVkNativeDevice);
-        RenderDeviceVkImpl *pRenderDeviceVk( NEW_RC_OBJ(RawMemAllocator, "RenderDeviceVkImpl instance", RenderDeviceVkImpl)(RawMemAllocator, EngineAttribs, VkDevice, pCommandQueue, NumDeferredContexts ) );
+        RenderDeviceVkImpl *pRenderDeviceVk( NEW_RC_OBJ(RawMemAllocator, "RenderDeviceVkImpl instance", RenderDeviceVkImpl)(RawMemAllocator, EngineAttribs, pCommandQueue, Instance, std::move(PhysicalDevice), vkLogicalDevice, NumDeferredContexts ) );
         pRenderDeviceVk->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice) );
 
         RefCntAutoPtr<DeviceContextVkImpl> pImmediateCtxVk( NEW_RC_OBJ(RawMemAllocator, "DeviceContextVkImpl instance", DeviceContextVkImpl)(pRenderDeviceVk, false, EngineAttribs, 0) );
@@ -393,7 +259,6 @@ void EngineFactoryVkImpl::AttachToVkDevice(void *pVkNativeDevice,
         LOG_ERROR( "Failed to create device and contexts" );
     }
 }
-#endif
 
 
 /// Creates a swap chain for Direct3D12-based engine implementation

@@ -45,107 +45,76 @@ namespace Diligent
     struct SamplerCaps
     {
         /// Indicates if device supports border texture addressing mode
-        Bool bBorderSamplingModeSupported;
+        Bool bBorderSamplingModeSupported = True;
 
         /// Indicates if device supports anisotrpoic filtering
-        Bool bAnisotropicFilteringSupported;
+        Bool bAnisotropicFilteringSupported = True;
 
         /// Indicates if device supports MIP load bias
-        Bool bLODBiasSupported;
-        
-        /// Initializes the structure members with default values
-        SamplerCaps() :
-            bBorderSamplingModeSupported( True ),
-            bAnisotropicFilteringSupported( True ),
-            bLODBiasSupported( True )
-        {}
+        Bool bLODBiasSupported = True;
     };
 
     /// Texture capabilities
     struct TextureCaps
     {
         /// Indicates if device supports 1D textures
-        Bool bTexture1DSupported;
+        Bool bTexture1DSupported = True;
 
         /// Indicates if device supports 1D texture arrays
-        Bool bTexture1DArraySupported;
+        Bool bTexture1DArraySupported = True;
 
         /// Indicates if device supports 2D multisampled textures
-        Bool bTexture2DMSSupported;
+        Bool bTexture2DMSSupported = True;
 
         /// Indicates if device supports 2D multisampled texture arrays
-        Bool bTexture2DMSArraySupported;
+        Bool bTexture2DMSArraySupported = True;
 
         /// Indicates if device supports texture views
-        bool bTextureViewSupported;
+        Bool bTextureViewSupported = True;
 
         /// Indicates if device supports cubemap arrays
-        bool bCubemapArraysSupported;
-
-        /// Initializes the structure members with default values
-        TextureCaps():
-            bTexture1DSupported( True ),
-            bTexture1DArraySupported( True ),
-            bTexture2DMSSupported( True ),
-            bTexture2DMSArraySupported( True ),
-            bTextureViewSupported( True ),
-            bCubemapArraysSupported( True )
-        {}
+        Bool bCubemapArraysSupported = True;
     };
     
     /// Device capabilities
     struct DeviceCaps
     {
         /// Device type. See Diligent::DeviceType.
-        DeviceType DevType;
+        DeviceType DevType = DeviceType::Undefined;
 
         /// Major API revision. For instance, for D3D11.2 this value would be 11,
         /// and for OpenGL4.3 this value would be 4.
-        Int32 MajorVersion;
+        Int32 MajorVersion = 0;
 
         /// Major API revision. For instance, for D3D11.2 this value would be 2,
         /// and for OpenGL4.3 this value would be 3.
-        Int32 MinorVersion;
+        Int32 MinorVersion = 0;
 
         /// Indicates if device supports separable programs
-        Bool bSeparableProgramSupported;
+        Bool bSeparableProgramSupported = True;
 
         /// Indicates if device supports indirect draw commands
-        Bool bIndirectRenderingSupported;
+        Bool bIndirectRenderingSupported = True;
 
         /// Indicates if device supports wireframe fill mode
-        Bool bWireframeFillSupported;
+        Bool bWireframeFillSupported = True;
 
         /// Indicates if device supports multithreaded resource creation
-        Bool bMultithreadedResourceCreationSupported;
+        Bool bMultithreadedResourceCreationSupported = False;
 
         /// Indicates if device supports compute shaders
-        Bool bComputeShadersSupported;
+        Bool bComputeShadersSupported = True;
 
         /// Indicates if device supports geometry shaders
-        Bool bGeometryShadersSupported;
+        Bool bGeometryShadersSupported = True;
         
         /// Indicates if device supports tessellation
-        Bool bTessellationSupported;
+        Bool bTessellationSupported = True;
         
         /// Texture sampling capabilities. See Diligent::SamplerCaps.
         SamplerCaps SamCaps;
 
         /// Texture capabilities. See Diligent::TextureCaps.
         TextureCaps TexCaps;
-
-        /// Initializes the structure members with default values
-        DeviceCaps() :
-            DevType( DeviceType::Undefined ),
-            MajorVersion( 0 ),
-            MinorVersion( 0 ),
-            bSeparableProgramSupported( True ),
-            bIndirectRenderingSupported( True ),
-            bWireframeFillSupported( True ),
-            bMultithreadedResourceCreationSupported( False ),
-            bComputeShadersSupported(True),
-            bGeometryShadersSupported(True),
-            bTessellationSupported(True)
-        {}
     };
 }

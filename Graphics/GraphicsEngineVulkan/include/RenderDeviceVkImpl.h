@@ -34,6 +34,8 @@
 #include "DynamicUploadHeap.h"
 #include "Atomics.h"
 #include "CommandQueueVk.h"
+#include "VulkanUtilities/VulkanInstance.h"
+#include "VulkanUtilities/VulkanPhysicalDevice.h"
 
 /// Namespace for the Direct3D11 implementation of the graphics engine
 namespace Diligent
@@ -45,7 +47,14 @@ class RenderDeviceVkImpl : public RenderDeviceBase<IRenderDeviceVk>
 public:
     typedef RenderDeviceBase<IRenderDeviceVk> TRenderDeviceBase;
 
-    RenderDeviceVkImpl( IReferenceCounters *pRefCounters, IMemoryAllocator &RawMemAllocator, const EngineVkAttribs &CreationAttribs, void *pVkDevice, ICommandQueueVk *pCmdQueue, Uint32 NumDeferredContexts );
+    RenderDeviceVkImpl( IReferenceCounters *pRefCounters, 
+                        IMemoryAllocator &RawMemAllocator, 
+                        const EngineVkAttribs &CreationAttribs, 
+                        ICommandQueueVk *pCmdQueue, 
+                        std::shared_ptr<VulkanUtilities::VulkanInstance> Instance,
+                        std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice> PhysicalDevice,
+                        VkDevice vkLogicalDevice,
+                        Uint32 NumDeferredContexts );
     ~RenderDeviceVkImpl();
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
@@ -96,17 +105,20 @@ public:
     void ReleaseUploadHeap(DynamicUploadHeap* pUploadHeap);
     */
 private:
-#if 0
     virtual void TestTextureFormat( TEXTURE_FORMAT TexFormat );
+#if 0
     void ProcessReleaseQueue(Uint64 CompletedFenceValue);
     void DiscardStaleVkObjects(Uint64 CmdListNumber, Uint64 FenceValue);
+#endif
+    std::shared_ptr<VulkanUtilities::VulkanInstance> m_VulkanInstance;
+    std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice> m_PhysicalDevice;
 
     /// Vk device
-    CComPtr<IVkDevice> m_pVkDevice;
+    VkDevice m_VkDevice = VK_NULL_HANDLE;
     RefCntAutoPtr<ICommandQueueVk> m_pCommandQueue;
 
     EngineVkAttribs m_EngineAttribs;
-
+#if 0
     CPUDescriptorHeap m_CPUDescriptorHeaps[Vk_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
     GPUDescriptorHeap m_GPUDescriptorHeaps[2]; // Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV == 0
                                                // Vk_DESCRIPTOR_HEAP_TYPE_SAMPLER	 == 1

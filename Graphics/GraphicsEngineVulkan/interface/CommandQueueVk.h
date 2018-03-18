@@ -26,6 +26,7 @@
 /// \file
 /// Definition of the Diligent::ICommandQueueVk interface
 
+#include "vulkan.h"
 #include "../../../Primitives/interface/Object.h"
 
 namespace Diligent
@@ -47,8 +48,11 @@ public:
     /// \return Fence value associated with the executed command list
 	//virtual UINT64 ExecuteCommandList(ID3D12GraphicsCommandList* commandList) = 0;
 
-    /// Returns D3D12 command queue. May return null if queue is anavailable
-    //virtual ID3D12CommandQueue* GetD3D12CommandQueue() = 0;
+    /// Returns Vulkan command queue. May return VK_NULL_HANDLE if queue is anavailable
+    virtual VkQueue GetVkQueue() = 0;
+
+    /// Returns vulkan command queue family index
+    virtual uint32_t GetQueueFamilyIndex() = 0;
 
     /// Returns value of the last completed fence
     //virtual Uint64 GetCompletedFenceValue() = 0;
