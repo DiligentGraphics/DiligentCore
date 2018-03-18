@@ -146,6 +146,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk( const EngineVkAttribs& Crea
 
         VkDeviceQueueCreateInfo QueueInfo{};
         QueueInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+        QueueInfo.flags = 0; // reserved for future use
         // All commands that are allowed on a queue that supports transfer operations are also allowed on a 
         // queue that supports either graphics or compute operations.Thus, if the capabilities of a queue family 
         // include VK_QUEUE_GRAPHICS_BIT or VK_QUEUE_COMPUTE_BIT, then reporting the VK_QUEUE_TRANSFER_BIT 
@@ -157,9 +158,14 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk( const EngineVkAttribs& Crea
 
         VkDeviceCreateInfo DeviceCreateInfo = {};
         DeviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+        DeviceCreateInfo.flags = 0; // Reserved for future use
+        // https://www.khronos.org/registry/vulkan/specs/1.0/html/vkspec.html#extended-functionality-device-layer-deprecation
+        DeviceCreateInfo.enabledLayerCount = 0; // Deprecated and ignored.
+        DeviceCreateInfo.ppEnabledLayerNames = nullptr; // Deprecated and ignored
         DeviceCreateInfo.queueCreateInfoCount = 1;
         DeviceCreateInfo.pQueueCreateInfos = &QueueInfo;
-        DeviceCreateInfo.pEnabledFeatures = nullptr;
+        DeviceCreateInfo.pEnabledFeatures = nullptr; // NULL or a pointer to a VkPhysicalDeviceFeatures structure that contains 
+                                                     // boolean indicators of all the features to be enabled.
 
         std::vector<const char*> DeviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
         if (PhysicalDevice->IsExtensionSupported(VK_EXT_DEBUG_MARKER_EXTENSION_NAME))
@@ -174,6 +180,14 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk( const EngineVkAttribs& Crea
         auto res = vkCreateDevice(PhysicalDevice->GetVkDeviceHandle(), &DeviceCreateInfo, Instance->GetVkAllocator(), &VulkanDevice);
         CHECK_VK_ERROR_AND_THROW(res, "Failed to create logical device");
 
+        VkQueue Queue = VK_NULL_HANDLE;
+        vkGetDeviceQueue(VulkanDevice, 
+            QueueInfo.queueFamilyIndex, // Index of the queue family to which the queue belongs
+            0,                          // Index within this queue family of the queue to retrieve
+            &Queue);
+        VERIFY_EXPR(Queue != VK_NULL_HANDLE);
+
+        //vkDestroyDevice(VulkanDevice, Instance->GetVkAllocator());
 
     }
     catch(std::runtime_error& )
