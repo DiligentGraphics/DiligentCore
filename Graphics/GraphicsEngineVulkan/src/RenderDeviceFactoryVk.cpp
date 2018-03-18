@@ -187,6 +187,12 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk( const EngineVkAttribs& Crea
             &Queue);
         VERIFY_EXPR(Queue != VK_NULL_HANDLE);
 
+        RefCntAutoPtr<CommandQueueVkImpl> pCmdQueueVk;
+
+        auto &RawMemAllocator = GetRawAllocator();
+        pCmdQueueVk = NEW_RC_OBJ(RawMemAllocator, "CommandQueueVk instance", CommandQueueVkImpl)(Queue, QueueInfo.queueFamilyIndex);
+
+
         //vkDestroyDevice(VulkanDevice, Instance->GetVkAllocator());
 
     }
@@ -217,7 +223,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk( const EngineVkAttribs& Crea
     }
 
 
-    RefCntAutoPtr<CommandQueueVkImpl> pCmdQueueVk;
+    
     CComPtr<IVkDevice> VkDevice;
     try
     {
@@ -305,8 +311,6 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk( const EngineVkAttribs& Crea
         CHECK_D3D_RESULT_THROW(hr, "Failed to create main command queue fence");
 	    VkDevice->SetName(L"Main Command Queue fence");
 
-        auto &RawMemAllocator = GetRawAllocator();
-        pCmdQueueVk = NEW_RC_OBJ(RawMemAllocator, "CommandQueueVk instance", CommandQueueVkImpl)(pVkCmdQueue, pVkFence);
     }
     catch( const std::runtime_error & )
     {

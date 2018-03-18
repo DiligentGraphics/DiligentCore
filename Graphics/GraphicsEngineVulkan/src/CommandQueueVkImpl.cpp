@@ -27,10 +27,11 @@
 namespace Diligent
 {
 
-CommandQueueVkImpl::CommandQueueVkImpl(IReferenceCounters *pRefCounters, void *pVkNativeCmdQueue, void *pVkFence) :
-        TBase(pRefCounters)/*,
-        m_pVkCmdQueue(pVkNativeCmdQueue), 
-        m_VkFence(pVkFence),
+CommandQueueVkImpl::CommandQueueVkImpl(IReferenceCounters *pRefCounters, VkQueue VkNativeCmdQueue, uint32_t QueueFamilyIndex) :
+        TBase(pRefCounters),
+        m_VkQueue(VkNativeCmdQueue),
+        m_QueueFamilyIndex(QueueFamilyIndex)
+        /*m_VkFence(pVkFence),
         m_NextFenceValue(1),
         m_WaitForGPUEventHandle( CreateEvent(nullptr, false, false, nullptr) )
         */
@@ -41,7 +42,9 @@ CommandQueueVkImpl::CommandQueueVkImpl(IReferenceCounters *pRefCounters, void *p
 
 CommandQueueVkImpl::~CommandQueueVkImpl()
 {
-//    CloseHandle(m_WaitForGPUEventHandle);
+    // Queues are created along with a logical device during vkCreateDevice.
+    // All queues associated with a logical device are destroyed when vkDestroyDevice 
+    // is called on that device.
 }
 
 IMPLEMENT_QUERY_INTERFACE( CommandQueueVkImpl, IID_CommandQueueVk, TBase )
