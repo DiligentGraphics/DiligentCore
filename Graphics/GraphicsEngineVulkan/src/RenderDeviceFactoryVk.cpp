@@ -123,6 +123,11 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk( const EngineVkAttribs& Crea
     if( !ppDevice || !ppContexts )
         return;
 
+    SetRawAllocator(CreationAttribs.pRawMemAllocator);
+
+    *ppDevice = nullptr;
+    memset(ppContexts, 0, sizeof(*ppContexts) * (1 + NumDeferredContexts));
+
     std::shared_ptr<VulkanUtilities::VulkanInstance> Instance;
     try
     {
@@ -131,14 +136,51 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk( const EngineVkAttribs& Crea
             CreationAttribs.GlobalExtensionCount, 
             CreationAttribs.ppGlobalExtensionNames,
             reinterpret_cast<VkAllocationCallbacks*>(CreationAttribs.pVkAllocator));
+
+        auto vkDevice = Instance->SelectPhysicalDevice();
+        std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice> PhysicalDevice(new VulkanUtilities::VulkanPhysicalDevice(vkDevice));
+
+        // If an implementation exposes any queue family that supports graphics operations, 
+        // at least one queue family of at least one physical device exposed by the implementation 
+        // must support both graphics and compute operations.
+
+        VkDeviceQueueCreateInfo QueueInfo{};
+        QueueInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+        // All commands that are allowed on a queue that supports transfer operations are also allowed on a 
+        // queue that supports either graphics or compute operations.Thus, if the capabilities of a queue family 
+        // include VK_QUEUE_GRAPHICS_BIT or VK_QUEUE_COMPUTE_BIT, then reporting the VK_QUEUE_TRANSFER_BIT 
+        // capability separately for that queue family is optional.
+        QueueInfo.queueFamilyIndex = PhysicalDevice->FindQueueFamily(VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT);
+        QueueInfo.queueCount = 1;
+        const float defaultQueuePriority = 1.0f; // Ask for highest priority for our queue. (range [0,1])
+        QueueInfo.pQueuePriorities = &defaultQueuePriority;
+
+        VkDeviceCreateInfo DeviceCreateInfo = {};
+        DeviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+        DeviceCreateInfo.queueCreateInfoCount = 1;
+        DeviceCreateInfo.pQueueCreateInfos = &QueueInfo;
+        DeviceCreateInfo.pEnabledFeatures = nullptr;
+
+        std::vector<const char*> DeviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+        if (PhysicalDevice->IsExtensionSupported(VK_EXT_DEBUG_MARKER_EXTENSION_NAME))
+        {
+            DeviceExtensions.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
+        }
+
+        DeviceCreateInfo.ppEnabledExtensionNames = DeviceExtensions.empty() ? nullptr : DeviceExtensions.data();
+        DeviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(DeviceExtensions.size());
+        
+        VkDevice VulkanDevice = VK_NULL_HANDLE;
+        auto res = vkCreateDevice(PhysicalDevice->GetVkDeviceHandle(), &DeviceCreateInfo, Instance->GetVkAllocator(), &VulkanDevice);
+        CHECK_VK_ERROR_AND_THROW(res, "Failed to create logical device");
+
+
     }
     catch(std::runtime_error& )
     {
         return;
     }
 
-    auto vkDevice = Instance->SelectPhysicalDevice();
-    std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice> PhysicalDevice(new VulkanUtilities::VulkanPhysicalDevice(vkDevice));
 
 
 
@@ -160,10 +202,6 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk( const EngineVkAttribs& Crea
         }
     }
 
-    SetRawAllocator(CreationAttribs.pRawMemAllocator);
-
-    *ppDevice = nullptr;
-    memset(ppContexts, 0, sizeof(*ppContexts) * (1+NumDeferredContexts));
 
     RefCntAutoPtr<CommandQueueVkImpl> pCmdQueueVk;
     CComPtr<IVkDevice> VkDevice;

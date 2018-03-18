@@ -40,7 +40,8 @@ namespace VulkanUtilities
         bool IsLayerAvailable(const char *LayerName)const;
         bool IsExtensionAvailable(const char *ExtensionName)const;
         VkPhysicalDevice SelectPhysicalDevice();
-
+        VkAllocationCallbacks* GetVkAllocator()const{return m_pVkAllocator;}
+        
     private:
 
         bool m_ValidationEnabled = false;

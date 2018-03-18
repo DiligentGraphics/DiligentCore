@@ -30,6 +30,7 @@ set(INCLUDE
     include/SwapChainVkImpl.h
     include/TextureVkImpl.h
     include/TextureViewVkImpl.h
+    include/VulkanErrors.h
 )
 
 set(VULKAN_UTILS_INCLUDE 
@@ -183,7 +184,7 @@ set_common_target_properties(GraphicsEngineVk-shared)
 set_common_target_properties(GraphicsEngineVk-static)
 
 source_group("src" FILES ${SRC})
-source_group("src\\vulkan utils" FILES ${VULKAN_UTILS_SRC})
+source_group("src\\Vulkan Utilities" FILES ${VULKAN_UTILS_SRC})
 
 source_group("dll" FILES 
     src/DLLMain.cpp
@@ -192,7 +193,7 @@ source_group("dll" FILES
 
 source_group("include" FILES ${INCLUDE})
 source_group("interface" FILES ${INTERFACE})
-source_group("include\\vulkan utils" FILES ${VULKAN_UTILS_INCLUDE})
+source_group("include\\Vulkan Utilities" FILES ${VULKAN_UTILS_INCLUDE})
 #source_group("shaders" FILES 
 #    ${SHADERS}
 #    shaders/GenerateMips/GenerateMipsCS.hlsli

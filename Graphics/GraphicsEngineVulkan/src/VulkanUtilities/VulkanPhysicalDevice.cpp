@@ -21,7 +21,7 @@
 *  of the possibility of such damages.
 */
 
-#include "pch.h"
+#include "VulkanErrors.h"
 #include "VulkanUtilities/VulkanPhysicalDevice.h"
 
 namespace VulkanUtilities
@@ -51,5 +51,38 @@ namespace VulkanUtilities
             VERIFY_EXPR(res == VK_SUCCESS);
             VERIFY_EXPR(ExtensionCount == m_SupportedExtensions.size());
         }
+    }
+
+    uint32_t VulkanPhysicalDevice::FindQueueFamily(VkQueueFlags QueueFlags)
+    {
+        for(uint32_t i=0; i < m_QueueFamilyProperties.size(); ++i)
+        {
+            auto &Props = m_QueueFamilyProperties[i];
+            if( (Props.queueFlags & QueueFlags) == QueueFlags)
+            {
+                if(QueueFlags & (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT))
+                {
+                    // Queues supporting graphics and/or compute operations must report (1,1,1) 
+                    // in minImageTransferGranularity, meaning that there are no additional restrictions 
+                    // on the granularity of image transfer operations for these queues. 
+                    VERIFY_EXPR(Props.minImageTransferGranularity.width  == 1 && 
+                                Props.minImageTransferGranularity.height == 1 &&
+                                Props.minImageTransferGranularity.depth  == 1);
+                    return i;
+                }
+            }
+        }
+
+        LOG_ERROR_AND_THROW("Failed to find suitable queue family");
+        return 0;
+    }
+
+    bool VulkanPhysicalDevice::IsExtensionSupported(const char *ExtensionName)
+    {
+        for(const auto& Extension : m_SupportedExtensions)
+            if(strcmp(Extension.extensionName, ExtensionName) == 0)
+                return true;
+
+        return false;
     }
 }

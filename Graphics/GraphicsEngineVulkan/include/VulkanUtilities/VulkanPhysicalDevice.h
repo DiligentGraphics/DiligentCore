@@ -32,6 +32,9 @@ namespace VulkanUtilities
     {
     public:
         VulkanPhysicalDevice(VkPhysicalDevice vkDevice);
+        uint32_t FindQueueFamily(VkQueueFlags QueueFlags);
+        VkPhysicalDevice GetVkDeviceHandle()const{return m_VkDevice;}
+        bool IsExtensionSupported(const char *ExtensionName);
 
     private:
         const VkPhysicalDevice m_VkDevice;

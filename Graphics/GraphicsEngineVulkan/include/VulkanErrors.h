@@ -21,33 +21,23 @@
  *  of the possibility of such damages.
  */
 
-// stdafx.h : include file for standard system include files,
-// or project specific include files that are used frequently, but
-// are changed infrequently
-//
-
 #pragma once
 
-#ifdef PLATFORM_WIN32
-#   ifndef WIN32_LEAN_AND_MEAN
-#       define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers
-#   endif
-
-#   ifndef NOMINMAX
-#       define NOMINMAX
-#   endif
-#endif
-
-#include <vector>
-#include <exception>
-#include <algorithm>
-
-#include "vulkan.h"
-
-#include "PlatformDefinitions.h"
 #include "Errors.h"
-#include "RefCntAutoPtr.h"
-#include "VulkanErrors.h"
-#include "RenderDeviceBase.h"
-#include "ValidatedCast.h"
+#include "DebugUtilities.h"
+#include "VulkanUtilities/VulkanDebug.h"
 
+#define CHECK_VK_ERROR(err, ...)\
+{                                       \
+    if( err < 0 )                       \
+    {                                   \
+        LogError<false>(__FUNCTION__, __FILE__, __LINE__, __VA_ARGS__, "\nVK Error: ", VulkanUtilities::VkResultToString(err)); \
+        UNEXPECTED("Error");            \
+    }                                   \
+}
+
+#define CHECK_VK_ERROR_AND_THROW(err, ...)\
+{                                       \
+    if( err < 0 )                       \
+        LogError<true>(__FUNCTION__, __FILE__, __LINE__, __VA_ARGS__, "\nVK Error Code: ", VulkanUtilities::VkResultToString(err)); \
+}

@@ -22,7 +22,7 @@
 */
 
 #include <vector>
-#include "pch.h"
+#include "VulkanErrors.h"
 #include "VulkanUtilities/VulkanInstance.h"
 #include "VulkanUtilities/VulkanDebug.h"
 
@@ -193,20 +193,51 @@ namespace VulkanUtilities
 
     VkPhysicalDevice VulkanInstance::SelectPhysicalDevice()
     {
+        // Select a device that exposes a queue family that suppors both compute and graphics operations
+        // Prefer discrete GPU
         for (auto Device : m_PhysicalDevices)
         {
             VkPhysicalDeviceProperties DeviceProps;
             vkGetPhysicalDeviceProperties(Device, &DeviceProps);
-            if (DeviceProps.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
+            
+            uint32_t QueueFamilyCount = 0;
+            vkGetPhysicalDeviceQueueFamilyProperties(Device, &QueueFamilyCount, nullptr);
+            VERIFY_EXPR(QueueFamilyCount> 0);
+            std::vector<VkQueueFamilyProperties> QueueFamilyProperties(QueueFamilyCount);
+            vkGetPhysicalDeviceQueueFamilyProperties(Device, &QueueFamilyCount, QueueFamilyProperties.data());
+            VERIFY_EXPR(QueueFamilyCount == QueueFamilyProperties.size());
+
+            // If an implementation exposes any queue family that supports graphics operations, 
+            // at least one queue family of at least one physical device exposed by the implementation 
+            // must support both graphics and compute operations.
+            bool GraphicsAndComputeQueueSupported = false;
+            for(const auto &QueueFamilyProps : QueueFamilyProperties)
+            {
+                if( (QueueFamilyProps.queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0 &&
+                    (QueueFamilyProps.queueFlags & VK_QUEUE_COMPUTE_BIT) != 0)
+                {
+                    GraphicsAndComputeQueueSupported = true;
+                    break;
+                }
+            }
+            if(GraphicsAndComputeQueueSupported)
             {
                 m_SelectedPhysicalDevice = Device;
-                LOG_INFO_MESSAGE("Selected discrete GPU ", DeviceProps.deviceName);
-                break;
+                if (DeviceProps.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
+                   break;
             }
         }
 
-        if(m_SelectedPhysicalDevice == VK_NULL_HANDLE)
+        if(m_SelectedPhysicalDevice != VK_NULL_HANDLE)
+        {
+            VkPhysicalDeviceProperties SelectedDeviceProps;
+            vkGetPhysicalDeviceProperties(m_SelectedPhysicalDevice, &SelectedDeviceProps);
+            LOG_INFO_MESSAGE("Using physical device ", SelectedDeviceProps.deviceName);
+        }
+        else
+        {
             LOG_ERROR_MESSAGE("Failed to find suitable physical device");
+        }
 
         return m_SelectedPhysicalDevice;
     }
