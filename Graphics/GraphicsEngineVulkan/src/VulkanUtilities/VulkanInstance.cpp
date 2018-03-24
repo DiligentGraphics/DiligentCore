@@ -193,6 +193,8 @@ namespace VulkanUtilities
 
     VkPhysicalDevice VulkanInstance::SelectPhysicalDevice()
     {
+        VkPhysicalDevice SelectedPhysicalDevice = VK_NULL_HANDLE;
+
         // Select a device that exposes a queue family that suppors both compute and graphics operations
         // Prefer discrete GPU
         for (auto Device : m_PhysicalDevices)
@@ -222,16 +224,16 @@ namespace VulkanUtilities
             }
             if(GraphicsAndComputeQueueSupported)
             {
-                m_SelectedPhysicalDevice = Device;
+                SelectedPhysicalDevice = Device;
                 if (DeviceProps.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
                    break;
             }
         }
 
-        if(m_SelectedPhysicalDevice != VK_NULL_HANDLE)
+        if(SelectedPhysicalDevice != VK_NULL_HANDLE)
         {
             VkPhysicalDeviceProperties SelectedDeviceProps;
-            vkGetPhysicalDeviceProperties(m_SelectedPhysicalDevice, &SelectedDeviceProps);
+            vkGetPhysicalDeviceProperties(SelectedPhysicalDevice, &SelectedDeviceProps);
             LOG_INFO_MESSAGE("Using physical device ", SelectedDeviceProps.deviceName);
         }
         else
@@ -239,6 +241,6 @@ namespace VulkanUtilities
             LOG_ERROR_MESSAGE("Failed to find suitable physical device");
         }
 
-        return m_SelectedPhysicalDevice;
+        return SelectedPhysicalDevice;
     }
 }

@@ -286,7 +286,6 @@ void EngineFactoryVkImpl::CreateSwapChainVk( IRenderDevice *pDevice,
 
     *ppSwapChain = nullptr;
 
-#if 0
     try
     {
         auto *pDeviceVk = ValidatedCast<RenderDeviceVkImpl>( pDevice );
@@ -325,7 +324,6 @@ void EngineFactoryVkImpl::CreateSwapChainVk( IRenderDevice *pDevice,
 
         LOG_ERROR( "Failed to create the swap chain" );
     }
-#endif
 }
 
 

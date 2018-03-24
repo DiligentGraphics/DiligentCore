@@ -21,6 +21,7 @@
 *  of the possibility of such damages.
 */
 
+#include <limits>
 #include "VulkanErrors.h"
 #include "VulkanUtilities/VulkanPhysicalDevice.h"
 
@@ -66,7 +67,7 @@ namespace VulkanUtilities
             QueueFlagsOpt = QueueFlags | VK_QUEUE_TRANSFER_BIT;
         }
 
-        static constexpr uint32_t InvalidFamilyInd = static_cast<uint32_t>(-1);
+        static constexpr uint32_t InvalidFamilyInd = std::numeric_limits<uint32_t>::max();
         uint32_t FamilyInd = InvalidFamilyInd;
 
         for(uint32_t i=0; i < m_QueueFamilyProperties.size(); ++i)
@@ -126,5 +127,12 @@ namespace VulkanUtilities
                 return true;
 
         return false;
+    }
+
+    bool VulkanPhysicalDevice::CheckPresentSupport(uint32_t queueFamilyIndex, VkSurfaceKHR VkSurface)const
+    {
+        VkBool32 PresentSupport = VK_FALSE;
+        vkGetPhysicalDeviceSurfaceSupportKHR(m_VkDevice, queueFamilyIndex, VkSurface, &PresentSupport);
+        return PresentSupport == VK_TRUE;
     }
 }

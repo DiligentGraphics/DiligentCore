@@ -28,6 +28,7 @@
 
 #include "SwapChainVk.h"
 #include "SwapChainBase.h"
+#include "VulkanUtilities/VulkanInstance.h"
 
 namespace Diligent
 {
@@ -55,16 +56,17 @@ public:
     virtual IDXGISwapChain* GetDXGISwapChain()override final{ return m_pSwapChain; }
     virtual ITextureViewVk* GetCurrentBackBufferRTV()override final;
     virtual ITextureViewVk* GetDepthBufferDSV()override final{return m_pDepthBufferDSV;}
-
+    */
 private:
     void InitBuffersAndViews();
 
-    /// DXGI swap chain
-    CComPtr<IDXGISwapChain3> m_pSwapChain;
+    std::shared_ptr<VulkanUtilities::VulkanInstance> m_VulkanInstance;
+    VkSurfaceKHR m_VkSurface = VK_NULL_HANDLE;
+    VkSwapchainKHR m_VkSwapChain = VK_NULL_HANDLE;
 
-    std::vector< RefCntAutoPtr<ITextureViewVk>, STDAllocatorRawMem<RefCntAutoPtr<ITextureViewVk>> > m_pBackBufferRTV;
-    RefCntAutoPtr<ITextureViewVk> m_pDepthBufferDSV;
-*/
+    //std::vector< RefCntAutoPtr<ITextureViewVk>, STDAllocatorRawMem<RefCntAutoPtr<ITextureViewVk>> > m_pBackBufferRTV;
+    //RefCntAutoPtr<ITextureViewVk> m_pDepthBufferDSV;
+
 };
 
 }

@@ -89,9 +89,9 @@ public:
 
 	Uint64 GetCurrentFrameNumber()const {return static_cast<Uint64>(m_FrameNumber);}
     virtual Bool IsFenceSignaled(Uint64 FenceValue) override final;
-
+    */
     ICommandQueueVk *GetCmdQueue(){return m_pCommandQueue;}
-
+    /*
 	void IdleGPU(bool ReleaseStaleObjects);
     CommandContext* AllocateCommandContext(const Char *ID = "");
     void CloseAndExecuteCommandContext(CommandContext *pCtx, bool DiscardStaleObjects);
@@ -104,6 +104,11 @@ public:
     DynamicUploadHeap* RequestUploadHeap();
     void ReleaseUploadHeap(DynamicUploadHeap* pUploadHeap);
     */
+
+    std::shared_ptr<VulkanUtilities::VulkanInstance> GetVulkanInstance(){return m_VulkanInstance;}
+    VulkanUtilities::VulkanPhysicalDevice &GetPhysicalDevice(){return *m_PhysicalDevice;}
+    VkDevice GetVkDevice()const{return m_VkDevice;}
+
 private:
     virtual void TestTextureFormat( TEXTURE_FORMAT TexFormat );
 #if 0

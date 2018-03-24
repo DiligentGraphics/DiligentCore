@@ -35,6 +35,7 @@ namespace VulkanUtilities
         uint32_t FindQueueFamily(VkQueueFlags QueueFlags);
         VkPhysicalDevice GetVkDeviceHandle()const{return m_VkDevice;}
         bool IsExtensionSupported(const char *ExtensionName);
+        bool CheckPresentSupport(uint32_t queueFamilyIndex, VkSurfaceKHR VkSurface)const;
 
     private:
         const VkPhysicalDevice m_VkDevice;

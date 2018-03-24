@@ -172,7 +172,7 @@ target_compile_definitions(GraphicsEngineVk-shared PUBLIC ENGINE_DLL=1)
 
 
 if(PLATFORM_WIN32)
-    set(PRIVATE_COMPILE_DEFINITIONS VK_USE_PLATFORM_WIN32_KHR=1)
+    set(PRIVATE_COMPILE_DEFINITIONS VK_USE_PLATFORM_WIN32_KHR=1 NOMINMAX)
 endif()
 target_compile_definitions(GraphicsEngineVk-shared PRIVATE ${PRIVATE_COMPILE_DEFINITIONS})
 target_compile_definitions(GraphicsEngineVk-static PRIVATE ${PRIVATE_COMPILE_DEFINITIONS})

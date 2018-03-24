@@ -41,7 +41,8 @@ namespace VulkanUtilities
         bool IsExtensionAvailable(const char *ExtensionName)const;
         VkPhysicalDevice SelectPhysicalDevice();
         VkAllocationCallbacks* GetVkAllocator()const{return m_pVkAllocator;}
-        
+        VkInstance GetVkInstance()const{return m_VkInstance;}
+
     private:
 
         bool m_ValidationEnabled = false;
@@ -50,6 +51,5 @@ namespace VulkanUtilities
         std::vector<VkLayerProperties> m_Layers;
         std::vector<VkExtensionProperties> m_Extensions;
         std::vector<VkPhysicalDevice> m_PhysicalDevices;
-        VkPhysicalDevice m_SelectedPhysicalDevice = VK_NULL_HANDLE;
     };
 }
