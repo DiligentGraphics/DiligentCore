@@ -55,26 +55,68 @@ namespace VulkanUtilities
 
     uint32_t VulkanPhysicalDevice::FindQueueFamily(VkQueueFlags QueueFlags)
     {
+        // All commands that are allowed on a queue that supports transfer operations are also allowed on 
+        // a queue that supports either graphics or compute operations. Thus, if the capabilities of a queue 
+        // family include VK_QUEUE_GRAPHICS_BIT or VK_QUEUE_COMPUTE_BIT, then reporting the VK_QUEUE_TRANSFER_BIT 
+        // capability separately for that queue family is optional.
+        VkQueueFlags QueueFlagsOpt = QueueFlags;
+        if (QueueFlags & (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT))
+        {
+            QueueFlags &= ~VK_QUEUE_TRANSFER_BIT;
+            QueueFlagsOpt = QueueFlags | VK_QUEUE_TRANSFER_BIT;
+        }
+
+        static constexpr uint32_t InvalidFamilyInd = static_cast<uint32_t>(-1);
+        uint32_t FamilyInd = InvalidFamilyInd;
+
         for(uint32_t i=0; i < m_QueueFamilyProperties.size(); ++i)
         {
-            auto &Props = m_QueueFamilyProperties[i];
-            if( (Props.queueFlags & QueueFlags) == QueueFlags)
+            // First try to find a queue, for which the flags match exactly
+            // (i.e. dedicated compute or transfer queue)
+            const auto &Props = m_QueueFamilyProperties[i];
+            if( Props.queueFlags == QueueFlags || 
+                Props.queueFlags == QueueFlagsOpt)
             {
-                if(QueueFlags & (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT))
+                FamilyInd = i;
+                break;
+            }
+        }
+
+        if(FamilyInd == InvalidFamilyInd)
+        {
+            for (uint32_t i = 0; i < m_QueueFamilyProperties.size(); ++i)
+            {
+                // Try to find a queue for which all requested flags are set
+                const auto &Props = m_QueueFamilyProperties[i];
+                // Check only QueueFlags as VK_QUEUE_TRANSFER_BIT is 
+                // optional for graphics and/or compute queues
+                if ((Props.queueFlags & QueueFlags) == QueueFlags)
                 {
-                    // Queues supporting graphics and/or compute operations must report (1,1,1) 
-                    // in minImageTransferGranularity, meaning that there are no additional restrictions 
-                    // on the granularity of image transfer operations for these queues. 
-                    VERIFY_EXPR(Props.minImageTransferGranularity.width  == 1 && 
-                                Props.minImageTransferGranularity.height == 1 &&
-                                Props.minImageTransferGranularity.depth  == 1);
-                    return i;
+                    FamilyInd = i;
+                    break;
                 }
             }
         }
 
-        LOG_ERROR_AND_THROW("Failed to find suitable queue family");
-        return 0;
+        if (FamilyInd != InvalidFamilyInd)
+        {
+            if (QueueFlags & (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT))
+            {
+                const auto &Props = m_QueueFamilyProperties[FamilyInd];
+                // Queues supporting graphics and/or compute operations must report (1,1,1) 
+                // in minImageTransferGranularity, meaning that there are no additional restrictions 
+                // on the granularity of image transfer operations for these queues. 
+                VERIFY_EXPR(Props.minImageTransferGranularity.width == 1 &&
+                            Props.minImageTransferGranularity.height == 1 &&
+                            Props.minImageTransferGranularity.depth == 1);
+            }
+        }
+        else
+        {
+            LOG_ERROR_AND_THROW("Failed to find suitable queue family");
+        }
+
+        return FamilyInd;
     }
 
     bool VulkanPhysicalDevice::IsExtensionSupported(const char *ExtensionName)
