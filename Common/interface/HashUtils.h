@@ -25,6 +25,7 @@
 
 #include <functional>
 #include <memory>
+#include <cstring>
 
 #include "../../Platforms/Basic/interface/Errors.h"
 #include "../../Platforms/Basic/interface/DebugUtilities.h"

@@ -24,6 +24,7 @@
 #pragma once
 
 #include "BasicMath.h"
+#include "../../Platforms/interface/PlatformDefinitions.h"
 
 // Structure describing a plane
 struct Plane3D
