@@ -46,16 +46,16 @@ public:
 
     // Creates a new Vk resource
     TextureVkImpl(IReferenceCounters *pRefCounters,
-                     FixedBlockMemoryAllocator &TexViewObjAllocator,
-                     class RenderDeviceVkImpl *pDeviceVk, 
-                     const TextureDesc& TexDesc, 
-                     const TextureData &InitData = TextureData());
+                  FixedBlockMemoryAllocator &TexViewObjAllocator,
+                  class RenderDeviceVkImpl *pDeviceVk, 
+                  const TextureDesc& TexDesc, 
+                  const TextureData &InitData = TextureData());
     // Attaches to an existing Vk resource
     TextureVkImpl(IReferenceCounters *pRefCounters,
-                     FixedBlockMemoryAllocator &TexViewObjAllocator,
-                     class RenderDeviceVkImpl *pDeviceVk, 
-                     const TextureDesc& TexDesc, 
-                     void *pTexture);
+                  FixedBlockMemoryAllocator &TexViewObjAllocator,
+                  class RenderDeviceVkImpl *pDeviceVk, 
+                  const TextureDesc& TexDesc, 
+                  void *pTexture);
     ~TextureVkImpl();
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;

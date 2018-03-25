@@ -63,6 +63,7 @@ private:
     std::shared_ptr<VulkanUtilities::VulkanInstance> m_VulkanInstance;
     VkSurfaceKHR m_VkSurface = VK_NULL_HANDLE;
     VkSwapchainKHR m_VkSwapChain = VK_NULL_HANDLE;
+    VkFormat m_VkColorFormat = VK_FORMAT_UNDEFINED;
 
     //std::vector< RefCntAutoPtr<ITextureViewVk>, STDAllocatorRawMem<RefCntAutoPtr<ITextureViewVk>> > m_pBackBufferRTV;
     //RefCntAutoPtr<ITextureViewVk> m_pDepthBufferDSV;

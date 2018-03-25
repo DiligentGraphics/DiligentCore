@@ -42,11 +42,11 @@ public:
     typedef TextureViewBase<ITextureViewVk> TTextureViewBase;
 
     TextureViewVkImpl( IReferenceCounters *pRefCounters,
-                          IRenderDevice *pDevice, 
-                          const TextureViewDesc& ViewDesc, 
-                          class ITexture *pTexture,
-                          DescriptorHeapAllocation &&HandleAlloc,
-                          bool bIsDefaultView);
+                       IRenderDevice *pDevice, 
+                       const TextureViewDesc& ViewDesc, 
+                       class ITexture *pTexture,
+                       DescriptorHeapAllocation &&HandleAlloc,
+                       bool bIsDefaultView);
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
 

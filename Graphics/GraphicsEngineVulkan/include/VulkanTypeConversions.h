@@ -30,6 +30,10 @@
 
 namespace Diligent
 {
+
+VkFormat TexFormatToVkFormat(TEXTURE_FORMAT TexFmt);
+TEXTURE_FORMAT VkFormatToTexFormat(VkFormat VkFmt);
+
 #if 0
 D3D12_COMPARISON_FUNC ComparisonFuncToD3D12ComparisonFunc(COMPARISON_FUNCTION Func);
 D3D12_FILTER FilterTypeToD3D12Filter(FILTER_TYPE MinFilter, FILTER_TYPE MagFilter, FILTER_TYPE MipFilter);

@@ -25,7 +25,7 @@
 #include "SwapChainVkImpl.h"
 #include "RenderDeviceVkImpl.h"
 #include "DeviceContextVkImpl.h"
-//#include "DXGITypeConversions.h"
+#include "VulkanTypeConversions.h"
 #include "TextureVkImpl.h"
 #include "EngineMemory.h"
 
@@ -103,18 +103,45 @@ SwapChainVkImpl::SwapChainVkImpl(IReferenceCounters *pRefCounters,
     err = vkGetPhysicalDeviceSurfaceFormatsKHR(vkDeviceHandle, m_VkSurface, &formatCount, SupportedFormats.data());
     CHECK_VK_ERROR_AND_THROW(err, "Failed to query supported format properties");
     VERIFY_EXPR(formatCount == SupportedFormats.size());
-    // If the format list includes just one entry of VK_FORMAT_UNDEFINED,
-    // the surface has no preferred format.  Otherwise, at least one
-    // supported format will be returned.
-    VkFormat vkBackBufferFormat = VK_FORMAT_UNDEFINED;
-    if (formatCount == 1 && SupportedFormats[0].format == VK_FORMAT_UNDEFINED) {
-        //info.format = VK_FORMAT_B8G8R8A8_UNORM;
-        //auto DXGIColorBuffFmt = TexFormatToDXGI_Format(m_SwapChainDesc.ColorBufferFormat);
+    m_VkColorFormat = TexFormatToVkFormat(m_SwapChainDesc.ColorBufferFormat);
+    if (formatCount == 1 && SupportedFormats[0].format == VK_FORMAT_UNDEFINED) 
+    {
+        // If the format list includes just one entry of VK_FORMAT_UNDEFINED,
+        // the surface has no preferred format.  Otherwise, at least one
+        // supported format will be returned.
+
+        // Do nothing
     }
-    else {
-        //assert(formatCount >= 1);
-        //info.format = surfFormats[0].format;
-        vkBackBufferFormat = SupportedFormats[0].format;
+    else 
+    {
+        bool FmtFound = std::find_if(SupportedFormats.begin(), SupportedFormats.end(), 
+            [&](const VkSurfaceFormatKHR &SrfFmt){return SrfFmt.format == m_VkColorFormat;}) != SupportedFormats.end();
+        if(!FmtFound)
+        {
+            VkFormat VkReplacementColorFormat = VK_FORMAT_UNDEFINED;
+            switch(m_VkColorFormat)
+            {
+                case VK_FORMAT_R8G8B8A8_UNORM: VkReplacementColorFormat = VK_FORMAT_B8G8R8A8_UNORM; break;
+                case VK_FORMAT_B8G8R8A8_UNORM: VkReplacementColorFormat = VK_FORMAT_R8G8B8A8_UNORM; break;
+                case VK_FORMAT_B8G8R8A8_SRGB: VkReplacementColorFormat = VK_FORMAT_R8G8B8A8_SRGB; break;
+                case VK_FORMAT_R8G8B8A8_SRGB: VkReplacementColorFormat = VK_FORMAT_B8G8R8A8_SRGB; break;
+                default: VkReplacementColorFormat = VK_FORMAT_UNDEFINED;
+            }
+
+            bool ReplacementFmtFound = std::find_if(SupportedFormats.begin(), SupportedFormats.end(),
+                [&](const VkSurfaceFormatKHR &SrfFmt) {return SrfFmt.format == VkReplacementColorFormat; }) != SupportedFormats.end();
+            if(ReplacementFmtFound)
+            {
+                m_VkColorFormat = VkReplacementColorFormat;
+                auto NewColorBufferFormat = VkFormatToTexFormat(VkReplacementColorFormat);
+                LOG_INFO_MESSAGE("Requested color buffer format ", GetTextureFormatAttribs(m_SwapChainDesc.ColorBufferFormat).Name, " is not supported by the surace, and will be replaced with ", GetTextureFormatAttribs(NewColorBufferFormat).Name);
+                m_SwapChainDesc.ColorBufferFormat = NewColorBufferFormat;
+            }
+            else
+            {
+                LOG_WARNING_MESSAGE("Requested color buffer format ", GetTextureFormatAttribs(m_SwapChainDesc.ColorBufferFormat).Name ,"is not supported by the surace");
+            }
+        }
     }
     
     VkSurfaceCapabilitiesKHR surfCapabilities = {};
@@ -130,7 +157,7 @@ SwapChainVkImpl::SwapChainVkImpl(IReferenceCounters *pRefCounters,
     CHECK_VK_ERROR_AND_THROW(err, "Failed to query surface present modes");
     VERIFY_EXPR(presentModeCount == presentModes.size());
 
-    VkExtent2D swapchainExtent;
+    VkExtent2D swapchainExtent = {};
     // width and height are either both 0xFFFFFFFF, or both not 0xFFFFFFFF.
     if (surfCapabilities.currentExtent.width == 0xFFFFFFFF) {
         // If the surface size is undefined, the size is set to
@@ -202,7 +229,7 @@ SwapChainVkImpl::SwapChainVkImpl(IReferenceCounters *pRefCounters,
     swapchain_ci.pNext = NULL;
     swapchain_ci.surface = m_VkSurface;
     swapchain_ci.minImageCount = desiredNumberOfSwapChainImages;
-    swapchain_ci.imageFormat = vkBackBufferFormat;
+    swapchain_ci.imageFormat = m_VkColorFormat;
     swapchain_ci.imageExtent.width = swapchainExtent.width;
     swapchain_ci.imageExtent.height = swapchainExtent.height;
     swapchain_ci.preTransform = preTransform;
@@ -231,51 +258,15 @@ SwapChainVkImpl::SwapChainVkImpl(IReferenceCounters *pRefCounters,
     err = vkCreateSwapchainKHR(LogicalVkDevice, &swapchain_ci, NULL, &m_VkSwapChain);
     CHECK_VK_ERROR_AND_THROW(err, "Failed to create Vulkan swapchain");
 
-#if 0
-    res = vkGetSwapchainImagesKHR(info.device, info.swap_chain, &info.swapchainImageCount, NULL);
-    assert(res == VK_SUCCESS);
-
-    VkImage *swapchainImages = (VkImage *)malloc(info.swapchainImageCount * sizeof(VkImage));
-    assert(swapchainImages);
-    res = vkGetSwapchainImagesKHR(info.device, info.swap_chain, &info.swapchainImageCount, swapchainImages);
-    assert(res == VK_SUCCESS);
-
-    info.buffers.resize(info.swapchainImageCount);
-    for (uint32_t i = 0; i < info.swapchainImageCount; i++) {
-        info.buffers[i].image = swapchainImages[i];
+    uint32_t swapchainImageCount = 0;
+    err = vkGetSwapchainImagesKHR(LogicalVkDevice, m_VkSwapChain, &swapchainImageCount, NULL);
+    CHECK_VK_ERROR_AND_THROW(err, "Failed to request swap chain image count");
+    VERIFY_EXPR(swapchainImageCount > 0);
+    if (swapchainImageCount != m_SwapChainDesc.BufferCount)
+    {
+        LOG_INFO_MESSAGE("Actual number of images in the created swap chain: ", m_SwapChainDesc.BufferCount);
+        m_SwapChainDesc.BufferCount = swapchainImageCount;
     }
-    free(swapchainImages);
-
-    for (uint32_t i = 0; i < info.swapchainImageCount; i++) {
-        VkImageViewCreateInfo color_image_view = {};
-        color_image_view.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        color_image_view.pNext = NULL;
-        color_image_view.flags = 0;
-        color_image_view.image = info.buffers[i].image;
-        color_image_view.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        color_image_view.format = info.format;
-        color_image_view.components.r = VK_COMPONENT_SWIZZLE_R;
-        color_image_view.components.g = VK_COMPONENT_SWIZZLE_G;
-        color_image_view.components.b = VK_COMPONENT_SWIZZLE_B;
-        color_image_view.components.a = VK_COMPONENT_SWIZZLE_A;
-        color_image_view.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        color_image_view.subresourceRange.baseMipLevel = 0;
-        color_image_view.subresourceRange.levelCount = 1;
-        color_image_view.subresourceRange.baseArrayLayer = 0;
-        color_image_view.subresourceRange.layerCount = 1;
-
-        res = vkCreateImageView(info.device, &color_image_view, NULL, &info.buffers[i].view);
-        assert(res == VK_SUCCESS);
-    }
-
-    /* VULKAN_KEY_END */
-
-    /* Clean Up */
-    for (uint32_t i = 0; i < info.swapchainImageCount; i++) {
-        vkDestroyImageView(info.device, info.buffers[i].view, NULL);
-    }
-    
-#endif
 
     InitBuffersAndViews();
 }
@@ -291,6 +282,62 @@ SwapChainVkImpl::~SwapChainVkImpl()
 
 void SwapChainVkImpl::InitBuffersAndViews()
 {
+    auto *pDeviceVkImpl = ValidatedCast<RenderDeviceVkImpl>(m_pRenderDevice.RawPtr());
+    auto LogicalVkDevice = pDeviceVkImpl->GetVkDevice();
+
+#ifdef _DEBUG
+    {
+        uint32_t swapchainImageCount = 0;
+        auto err = vkGetSwapchainImagesKHR(LogicalVkDevice, m_VkSwapChain, &swapchainImageCount, NULL);
+        VERIFY_EXPR(err == VK_SUCCESS);
+        VERIFY(swapchainImageCount == m_SwapChainDesc.BufferCount, "Unexpected swap chain buffer count");
+    }
+#endif
+
+    uint32_t swapchainImageCount = m_SwapChainDesc.BufferCount;
+    std::vector<VkImage> swapchainImages(swapchainImageCount);
+    auto err = vkGetSwapchainImagesKHR(LogicalVkDevice, m_VkSwapChain, &swapchainImageCount, swapchainImages.data());
+    CHECK_VK_ERROR_AND_THROW(err, "Failed to get swap chain images");
+    VERIFY_EXPR(swapchainImageCount == swapchainImages.size());
+
+    //info.buffers.resize(info.swapchainImageCount);
+    //for (uint32_t i = 0; i < info.swapchainImageCount; i++) {
+    //    info.buffers[i].image = swapchainImages[i];
+    //}
+    //free(swapchainImages);
+
+    for (uint32_t i = 0; i < swapchainImageCount; i++) {
+        VkImageViewCreateInfo color_image_view = {};
+        color_image_view.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        color_image_view.pNext = NULL;
+        color_image_view.flags = 0;
+        color_image_view.image = swapchainImages[i];
+        color_image_view.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        color_image_view.format = m_VkColorFormat;
+        color_image_view.components.r = VK_COMPONENT_SWIZZLE_R;
+        color_image_view.components.g = VK_COMPONENT_SWIZZLE_G;
+        color_image_view.components.b = VK_COMPONENT_SWIZZLE_B;
+        color_image_view.components.a = VK_COMPONENT_SWIZZLE_A;
+        color_image_view.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        color_image_view.subresourceRange.baseMipLevel = 0;
+        color_image_view.subresourceRange.levelCount = 1;
+        color_image_view.subresourceRange.baseArrayLayer = 0;
+        color_image_view.subresourceRange.layerCount = 1;
+
+        VkImageView vkImgView = VK_NULL_HANDLE;
+        err = vkCreateImageView(LogicalVkDevice, &color_image_view, NULL, &vkImgView);
+        CHECK_VK_ERROR_AND_THROW(err, "Failed to create view for a swap chain image");
+    }
+
+#if 0
+    /* VULKAN_KEY_END */
+
+    /* Clean Up */
+    for (uint32_t i = 0; i < info.swapchainImageCount; i++) {
+        vkDestroyImageView(LogicalVkDevice, info.buffers[i].view, NULL);
+    }
+#endif
+
 #if 0
     m_pBackBufferRTV.resize(m_SwapChainDesc.BufferCount);
     for(Uint32 backbuff = 0; backbuff < m_SwapChainDesc.BufferCount; ++backbuff)
