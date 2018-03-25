@@ -67,7 +67,7 @@ public:
 
     virtual void CreateTexture(const TextureDesc& TexDesc, const TextureData &Data, ITexture **ppTexture)override final;
     
-    //void CreateTexture(const TextureDesc& TexDesc, IVkResource *pVkTexture, class TextureVkImpl **ppTexture);
+    void CreateTexture(const TextureDesc& TexDesc, VkImage vkImgHandle, class TextureVkImpl **ppTexture);
     
     virtual void CreateSampler(const SamplerDesc& SamplerDesc, ISampler **ppSampler)override final;
 

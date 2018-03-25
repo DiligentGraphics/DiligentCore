@@ -29,20 +29,15 @@ namespace Diligent
 {
 
 TextureViewVkImpl::TextureViewVkImpl( IReferenceCounters *pRefCounters,
-                                            IRenderDevice *pDevice, 
-                                            const TextureViewDesc& ViewDesc, 
-                                            ITexture *pTexture,
-                                            DescriptorHeapAllocation &&HandleAlloc,
-                                            bool bIsDefaultView ) :
+                                      IRenderDevice *pDevice, 
+                                      const TextureViewDesc& ViewDesc, 
+                                      ITexture *pTexture,
+                                      VkImageView vkImgView,
+                                      bool bIsDefaultView ) :
     TTextureViewBase( pRefCounters, pDevice, ViewDesc, pTexture, bIsDefaultView ),
-    m_Descriptor(std::move(HandleAlloc))
+    m_VkImageView(vkImgView)
 {
 }
-//
-//IVkView* TextureViewVkImpl::GetVkView()
-//{
-//    return m_pVkView;
-//}
 
 IMPLEMENT_QUERY_INTERFACE( TextureViewVkImpl, IID_TextureViewVk, TTextureViewBase )
 

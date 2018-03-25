@@ -29,7 +29,6 @@
 #include "TextureViewVk.h"
 #include "RenderDeviceVk.h"
 #include "TextureViewBase.h"
-#include "DescriptorHeap.h"
 
 namespace Diligent
 {
@@ -45,18 +44,18 @@ public:
                        IRenderDevice *pDevice, 
                        const TextureViewDesc& ViewDesc, 
                        class ITexture *pTexture,
-                       DescriptorHeapAllocation &&HandleAlloc,
+                       VkImageView vkImgView,
                        bool bIsDefaultView);
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
 
     void GenerateMips( IDeviceContext *pContext )override;
     
-    //virtual Vk_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle()override{return m_Descriptor.GetCpuHandle();}
+    VkImageView GetVulkanImageView()const{return m_VkImageView;}
 
 protected:
-    /// Vk view descriptor handle
-    DescriptorHeapAllocation m_Descriptor;
+    /// Vulkan image view descriptor handle
+    VkImageView m_VkImageView;
 };
 
 }

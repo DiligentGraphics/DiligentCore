@@ -65,7 +65,7 @@ private:
     VkSwapchainKHR m_VkSwapChain = VK_NULL_HANDLE;
     VkFormat m_VkColorFormat = VK_FORMAT_UNDEFINED;
 
-    //std::vector< RefCntAutoPtr<ITextureViewVk>, STDAllocatorRawMem<RefCntAutoPtr<ITextureViewVk>> > m_pBackBufferRTV;
+    std::vector< RefCntAutoPtr<ITextureViewVk>, STDAllocatorRawMem<RefCntAutoPtr<ITextureViewVk>> > m_pBackBufferRTV;
     //RefCntAutoPtr<ITextureViewVk> m_pDepthBufferDSV;
 
 };

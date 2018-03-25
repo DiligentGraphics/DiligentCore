@@ -31,6 +31,11 @@ namespace Diligent
 void ValidateTextureDesc( const TextureDesc& Desc )
 {
 #define LOG_TEXTURE_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Texture \"", Desc.Name ? Desc.Name : "", "\": ", ##__VA_ARGS__)
+    
+    if (Desc.Type == RESOURCE_DIM_UNDEFINED)
+    {
+        LOG_TEXTURE_ERROR_AND_THROW("Resource dimension is undefined");
+    }
 
     // Perform some parameter correctness check
     if( Desc.Type == RESOURCE_DIM_TEX_1D || Desc.Type == RESOURCE_DIM_TEX_1D_ARRAY )

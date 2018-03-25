@@ -124,9 +124,9 @@ namespace Diligent
             // We also need to update scissor rect if ScissorEnable state has changed
             CommitScissor = OldPSODesc.GraphicsPipeline.RasterizerDesc.ScissorEnable != PSODesc.GraphicsPipeline.RasterizerDesc.ScissorEnable;
         }
-
+#endif
         TDeviceContextBase::SetPipelineState( pPipelineState );
-
+#if 0
         auto *pCmdCtx = RequestCmdContext();
         
         auto *pVkPSO = pPipelineStateVk->GetVkPipelineState();

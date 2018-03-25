@@ -27,7 +27,7 @@
 #include "DeviceContextVkImpl.h"
 #include "VulkanTypeConversions.h"
 #include "TextureViewVkImpl.h"
-//#include "DXGITypeConversions.h"
+#include "VulkanTypeConversions.h"
 #include "EngineMemory.h"
 #include "StringTools.h"
 
@@ -62,7 +62,8 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters *pRefCounters,
                                      RenderDeviceVkImpl *pRenderDeviceVk, 
                                      const TextureDesc& TexDesc, 
                                      const TextureData &InitData /*= TextureData()*/) : 
-    TTextureBase(pRefCounters, TexViewObjAllocator, pRenderDeviceVk, TexDesc)
+    TTextureBase(pRefCounters, TexViewObjAllocator, pRenderDeviceVk, TexDesc),
+    m_IsExternalHandle(false)
 {
     if( m_Desc.Usage == USAGE_STATIC && InitData.pSubResources == nullptr )
         LOG_ERROR_AND_THROW("Static Texture must be initialized with data at creation time");
@@ -268,63 +269,22 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters *pRefCounters,
 #endif
 }
 
-static TextureDesc InitTexDescFromVkResource(void *pTexture, const TextureDesc& SrcTexDesc)
+static TextureDesc InitTexDescFromVkImage(VkImage vkImg, const TextureDesc& SrcTexDesc)
 {
-    //auto ResourceDesc = pTexture->GetDesc();
-
-    TextureDesc TexDesc = SrcTexDesc;
-#if 0
-    if (TexDesc.Format == TEX_FORMAT_UNKNOWN)
-        TexDesc.Format = DXGI_FormatToTexFormat(ResourceDesc.Format);
-    auto RefDXGIFormat = TexFormatToDXGI_Format(TexDesc.Format);
-    if( RefDXGIFormat != TexDesc.Format)
-        LOG_ERROR_AND_THROW("Incorrect texture format (", GetTextureFormatAttribs(TexDesc.Format).Name, ")");
-
-    TexDesc.Width = static_cast<Uint32>( ResourceDesc.Width );
-    TexDesc.Height = Uint32{ ResourceDesc.Height };
-    TexDesc.ArraySize = Uint32{ ResourceDesc.DepthOrArraySize };
-    TexDesc.MipLevels = Uint32{ ResourceDesc.MipLevels };
-    switch(ResourceDesc.Dimension)
-    {
-        case Vk_RESOURCE_DIMENSION_TEXTURE1D: TexDesc.Type = TexDesc.ArraySize == 1 ? RESOURCE_DIM_TEX_1D : RESOURCE_DIM_TEX_1D_ARRAY; break;
-        case Vk_RESOURCE_DIMENSION_TEXTURE2D: TexDesc.Type = TexDesc.ArraySize == 1 ? RESOURCE_DIM_TEX_2D : RESOURCE_DIM_TEX_2D_ARRAY; break;
-        case Vk_RESOURCE_DIMENSION_TEXTURE3D: TexDesc.Type = RESOURCE_DIM_TEX_3D; break;
-    }
-         
-    TexDesc.SampleCount = ResourceDesc.SampleDesc.Count;
-    
-    TexDesc.Usage = USAGE_DEFAULT;
-    TexDesc.BindFlags = 0;
-    if( (ResourceDesc.Flags & Vk_RESOURCE_FLAG_ALLOW_RENDER_TARGET) != 0 )
-        TexDesc.BindFlags |= BIND_RENDER_TARGET;
-    if( (ResourceDesc.Flags & Vk_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL) != 0 )
-        TexDesc.BindFlags |= BIND_DEPTH_STENCIL;
-    if( (ResourceDesc.Flags & Vk_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS) != 0 )
-        TexDesc.BindFlags |= BIND_UNORDERED_ACCESS;
-    if ((ResourceDesc.Flags & Vk_RESOURCE_FLAG_DENY_SHADER_RESOURCE) == 0)
-    {
-        auto FormatAttribs = GetTextureFormatAttribs(TexDesc.Format);
-        if (FormatAttribs.ComponentType != COMPONENT_TYPE_DEPTH &&
-            FormatAttribs.ComponentType != COMPONENT_TYPE_DEPTH_STENCIL)
-        {
-            TexDesc.BindFlags |= BIND_SHADER_RESOURCE;
-        }
-    }
-#endif
-    return TexDesc;
+    // There is no way to query any image attribute in Vulkan
+    return SrcTexDesc;
 }
 
 
 TextureVkImpl::TextureVkImpl(IReferenceCounters *pRefCounters,
                                    FixedBlockMemoryAllocator &TexViewObjAllocator,
                                    RenderDeviceVkImpl *pDeviceVk, 
-                                   const TextureDesc& TexDesc, 
-                                   void *pTexture) : 
-    TTextureBase(pRefCounters, TexViewObjAllocator, pDeviceVk, InitTexDescFromVkResource(pTexture, TexDesc))
+                                   const TextureDesc& TexDesc,
+                                   VkImage VkImageHandle) :
+    TTextureBase(pRefCounters, TexViewObjAllocator, pDeviceVk, InitTexDescFromVkImage(VkImageHandle, TexDesc)),
+    m_VkImage(VkImageHandle),
+    m_IsExternalHandle(true)
 {
-#if 0
-    m_pVkResource = pTexture;
-#endif
 }
 IMPLEMENT_QUERY_INTERFACE( TextureVkImpl, IID_TextureVk, TTextureBase )
 
@@ -402,6 +362,10 @@ void TextureVkImpl::CreateViewInternal( const struct TextureViewDesc &ViewDesc, 
 
 TextureVkImpl :: ~TextureVkImpl()
 {
+    if(!m_IsExternalHandle)
+    {
+
+    }
 #if 0
     // Vk object can only be destroyed when it is no longer used by the GPU
     auto *pDeviceVkImpl = ValidatedCast<RenderDeviceVkImpl>(GetDevice());

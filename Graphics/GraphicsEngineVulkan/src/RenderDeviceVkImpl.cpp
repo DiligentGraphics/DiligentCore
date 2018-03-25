@@ -590,20 +590,19 @@ void RenderDeviceVkImpl::CreateTextureFromD3DResource(IVkResource *pVkTexture, I
         } 
     );
 }
+#endif
 
-
-void RenderDeviceVkImpl::CreateTexture(const TextureDesc& TexDesc, IVkResource *pVkTexture, class TextureVkImpl **ppTexture)
+void RenderDeviceVkImpl::CreateTexture(const TextureDesc& TexDesc, VkImage vkImgHandle, class TextureVkImpl **ppTexture)
 {
     CreateDeviceObject( "texture", TexDesc, ppTexture, 
         [&]()
         {
-            TextureVkImpl *pTextureVk = NEW_RC_OBJ(m_TexObjAllocator, "TextureVkImpl instance", TextureVkImpl)(m_TexViewObjAllocator, this, TexDesc, pVkTexture );
+            TextureVkImpl *pTextureVk = NEW_RC_OBJ(m_TexObjAllocator, "TextureVkImpl instance", TextureVkImpl)(m_TexViewObjAllocator, this, TexDesc, vkImgHandle);
             pTextureVk->QueryInterface( IID_TextureVk, reinterpret_cast<IObject**>(ppTexture) );
         }
     );
 }
 
-#endif
 
 void RenderDeviceVkImpl :: CreateTexture(const TextureDesc& TexDesc, const TextureData &Data, ITexture **ppTexture)
 {

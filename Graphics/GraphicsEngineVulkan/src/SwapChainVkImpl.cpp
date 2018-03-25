@@ -38,8 +38,8 @@ SwapChainVkImpl::SwapChainVkImpl(IReferenceCounters *pRefCounters,
                                  DeviceContextVkImpl* pDeviceContextVk, 
                                  void* pNativeWndHandle) : 
     TSwapChainBase(pRefCounters, pRenderDeviceVk, pDeviceContextVk, SCDesc),
-    m_VulkanInstance(pRenderDeviceVk->GetVulkanInstance())
-    /*m_pBackBufferRTV(STD_ALLOCATOR_RAW_MEM(RefCntAutoPtr<ITextureView>, GetRawAllocator(), "Allocator for vector<RefCntAutoPtr<ITextureView>>"))*/
+    m_VulkanInstance(pRenderDeviceVk->GetVulkanInstance()),
+    m_pBackBufferRTV(STD_ALLOCATOR_RAW_MEM(RefCntAutoPtr<ITextureView>, GetRawAllocator(), "Allocator for vector<RefCntAutoPtr<ITextureView>>"))
 {
     // Create OS-specific surface
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
@@ -134,7 +134,7 @@ SwapChainVkImpl::SwapChainVkImpl(IReferenceCounters *pRefCounters,
             {
                 m_VkColorFormat = VkReplacementColorFormat;
                 auto NewColorBufferFormat = VkFormatToTexFormat(VkReplacementColorFormat);
-                LOG_INFO_MESSAGE("Requested color buffer format ", GetTextureFormatAttribs(m_SwapChainDesc.ColorBufferFormat).Name, " is not supported by the surace, and will be replaced with ", GetTextureFormatAttribs(NewColorBufferFormat).Name);
+                LOG_INFO_MESSAGE("Requested color buffer format ", GetTextureFormatAttribs(m_SwapChainDesc.ColorBufferFormat).Name, " is not supported by the surace and will be replaced with ", GetTextureFormatAttribs(NewColorBufferFormat).Name);
                 m_SwapChainDesc.ColorBufferFormat = NewColorBufferFormat;
             }
             else
@@ -294,19 +294,32 @@ void SwapChainVkImpl::InitBuffersAndViews()
     }
 #endif
 
+    m_pBackBufferRTV.resize(m_SwapChainDesc.BufferCount);
+
     uint32_t swapchainImageCount = m_SwapChainDesc.BufferCount;
     std::vector<VkImage> swapchainImages(swapchainImageCount);
     auto err = vkGetSwapchainImagesKHR(LogicalVkDevice, m_VkSwapChain, &swapchainImageCount, swapchainImages.data());
     CHECK_VK_ERROR_AND_THROW(err, "Failed to get swap chain images");
     VERIFY_EXPR(swapchainImageCount == swapchainImages.size());
 
-    //info.buffers.resize(info.swapchainImageCount);
-    //for (uint32_t i = 0; i < info.swapchainImageCount; i++) {
-    //    info.buffers[i].image = swapchainImages[i];
-    //}
-    //free(swapchainImages);
-
     for (uint32_t i = 0; i < swapchainImageCount; i++) {
+
+        TextureDesc BackBufferDesc;
+        BackBufferDesc.Format = m_SwapChainDesc.ColorBufferFormat;
+        std::stringstream name_ss;
+        name_ss << "Main back buffer " << i;
+        auto name = name_ss.str();
+        BackBufferDesc.Name = name.c_str();
+        BackBufferDesc.Type = RESOURCE_DIM_TEX_2D;
+        BackBufferDesc.Width  = m_SwapChainDesc.Width;
+        BackBufferDesc.Height = m_SwapChainDesc.Height;
+        BackBufferDesc.Format = m_SwapChainDesc.ColorBufferFormat;
+        BackBufferDesc.MipLevels = 1;
+
+        RefCntAutoPtr<TextureVkImpl> pBackBufferTex;
+        ValidatedCast<RenderDeviceVkImpl>(m_pRenderDevice.RawPtr())->CreateTexture(BackBufferDesc, swapchainImages[i], &pBackBufferTex);
+        
+        UNSUPPORTED("TODO: move all this code to Texture creation");
         VkImageViewCreateInfo color_image_view = {};
         color_image_view.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         color_image_view.pNext = NULL;
@@ -327,6 +340,12 @@ void SwapChainVkImpl::InitBuffersAndViews()
         VkImageView vkImgView = VK_NULL_HANDLE;
         err = vkCreateImageView(LogicalVkDevice, &color_image_view, NULL, &vkImgView);
         CHECK_VK_ERROR_AND_THROW(err, "Failed to create view for a swap chain image");
+
+        TextureViewDesc RTVDesc;
+        RTVDesc.ViewType = TEXTURE_VIEW_RENDER_TARGET;
+        RefCntAutoPtr<ITextureView> pRTV;
+        pBackBufferTex->CreateView(RTVDesc, &pRTV);
+        m_pBackBufferRTV[i] = RefCntAutoPtr<ITextureViewVk>(pRTV, IID_TextureViewVk);
     }
 
 #if 0
@@ -339,7 +358,7 @@ void SwapChainVkImpl::InitBuffersAndViews()
 #endif
 
 #if 0
-    m_pBackBufferRTV.resize(m_SwapChainDesc.BufferCount);
+    
     for(Uint32 backbuff = 0; backbuff < m_SwapChainDesc.BufferCount; ++backbuff)
     {
 		CComPtr<IVkResource> pBackBuffer;
@@ -350,19 +369,6 @@ void SwapChainVkImpl::InitBuffersAndViews()
         hr = pBackBuffer->SetName(L"Main back buffer");
         VERIFY_EXPR(SUCCEEDED(hr));
 
-        TextureDesc BackBufferDesc;
-        BackBufferDesc.Format = m_SwapChainDesc.ColorBufferFormat;
-        String Name = "Main back buffer ";
-        Name += std::to_string(backbuff);
-        BackBufferDesc.Name = Name.c_str();
-
-        RefCntAutoPtr<TextureVkImpl> pBackBufferTex;
-        ValidatedCast<RenderDeviceVkImpl>(m_pRenderDevice.RawPtr())->CreateTexture(BackBufferDesc, pBackBuffer, &pBackBufferTex);
-        TextureViewDesc RTVDesc;
-        RTVDesc.ViewType = TEXTURE_VIEW_RENDER_TARGET;
-        RefCntAutoPtr<ITextureView> pRTV;
-        pBackBufferTex->CreateView(RTVDesc, &pRTV);
-        m_pBackBufferRTV[backbuff] = RefCntAutoPtr<ITextureViewVk>(pRTV, IID_TextureViewVk);
     }
 
     TextureDesc DepthBufferDesc;
