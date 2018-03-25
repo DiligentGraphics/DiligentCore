@@ -29,6 +29,7 @@
 #include <atomic>
 
 #include "../../Platforms/interface/Atomics.h"
+#include "../../Platforms/Basic/interface/DebugUtilities.h"
 
 namespace ThreadingTools
 {

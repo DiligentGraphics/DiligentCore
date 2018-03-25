@@ -30,9 +30,9 @@
 #include <mutex>
 #include <unordered_set>
 #include <vector>
-#include "MemoryAllocator.h"
+#include "../../Platforms/Basic/interface/Errors.h"
+#include "../../Primitives/interface/MemoryAllocator.h"
 #include "STDAllocator.h"
-#include "Errors.h"
 
 namespace Diligent
 {

@@ -21,21 +21,19 @@
  *  of the possibility of such damages.
  */
 
-//// THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF
-//// ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO
-//// THE IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A
-//// PARTICULAR PURPOSE.
-////
-//// Copyright (c) Microsoft Corporation. All rights reserved
-
 #pragma once
 
-#include "DebugUtilities.h"
+#include "../../Platforms/Basic/interface/DebugUtilities.h"
 
 #define _USE_MATH_DEFINES
 #include <math.h>
 
 #include "HashUtils.h"
+
+#ifdef _MSC_VER
+#   pragma warning(push)
+#   pragma warning(disable : 4201) // nonstandard extension used: nameless struct/union
+#endif
 
 // Common Constants
 
@@ -1503,3 +1501,7 @@ namespace std
         }
     };
 }
+
+#ifdef _MSC_VER
+#   pragma warning(pop)
+#endif

@@ -26,10 +26,10 @@
 /// \file
 /// Implementation for the IDataBlob interface
 
-#include "BasicTypes.h"
-#include "ObjectBase.h"
-#include "DataBlob.h"
 #include <vector>
+#include "../../Primitives/interface/BasicTypes.h"
+#include "../../Primitives/interface/DataBlob.h"
+#include "ObjectBase.h"
 
 namespace Diligent
 {

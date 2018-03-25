@@ -23,9 +23,9 @@
 
 #pragma once
 
-#include "MemoryAllocator.h"
+#include "../../Primitives/interface/MemoryAllocator.h"
+#include "../../Platforms/Basic/interface/DebugUtilities.h"
 #include "FixedBlockMemoryAllocator.h"
-#include "DebugUtilities.h"
 
 namespace Diligent
 {
