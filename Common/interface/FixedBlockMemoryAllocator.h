@@ -30,6 +30,8 @@
 #include <mutex>
 #include <unordered_set>
 #include <vector>
+#include <cstring>
+#include <memory>
 #include "../../Platforms/Basic/interface/Errors.h"
 #include "../../Primitives/interface/MemoryAllocator.h"
 #include "STDAllocator.h"

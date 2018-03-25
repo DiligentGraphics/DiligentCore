@@ -26,9 +26,9 @@
 /// \file
 /// Defines graphics engine utilities
 
-#include "Texture.h"
-#include "Buffer.h"
-#include "RenderDevice.h"
+#include "../../GraphicsEngine/interface/Texture.h"
+#include "../../GraphicsEngine/interface/Buffer.h"
+#include "../../GraphicsEngine/interface/RenderDevice.h"
 
 namespace Diligent
 {

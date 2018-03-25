@@ -42,9 +42,9 @@
 #include <vector>
 #include <sstream>
 #include <iomanip>
-#include "BasicTypes.h"
-#include "DebugUtilities.h"
-#include "Shader.h"
+#include "../../GraphicsEngine/interface/Shader.h"
+#include "../../../Platforms/Basic/interface/DebugUtilities.h"
+
 
 namespace Diligent
 {

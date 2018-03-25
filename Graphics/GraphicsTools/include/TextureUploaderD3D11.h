@@ -24,6 +24,7 @@
 #pragma once
 
 #include "TextureUploaderBase.h"
+
 namespace Diligent
 {
     class TextureUploaderD3D11 : public TextureUploaderBase
