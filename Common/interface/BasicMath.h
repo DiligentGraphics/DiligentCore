@@ -1180,6 +1180,22 @@ inline float4x4 Projection(float fov, float aspectRatio, float zNear, float zFar
     return mOut;
 }
 
+inline float4x4 OrthoOffCenter(float left, float right, float bottom, float top, float zNear, float zFar, bool bIsDirectX) // Left-handed ortho projection
+{
+    float _22 = (bIsDirectX ? 1.f : 2.f) / (zFar - zNear);
+    float _32 = (bIsDirectX ? zNear : zNear + zFar) / (zNear - zFar);
+    return float4x4 (
+                 2.f / (right - left),                             0.f,  0.f, 0.f,
+                                  0.f,              2.f/(top - bottom),  0.f, 0.f,
+                                  0.f,                             0.f,  _22, 0.f,                
+        (left + right)/(left - right), (top + bottom) / (bottom - top),  _32, 1.f
+    );
+}
+
+inline float4x4 Ortho(float width, float height, float zNear, float zFar, bool bIsDirectX) // Left-handed ortho projection
+{
+    return OrthoOffCenter(-width * 0.5f, +width * 0.5f, -height * 0.5f, +height * 0.5f, zNear, zFar, bIsDirectX);
+}
 
 struct Quaternion
 {
