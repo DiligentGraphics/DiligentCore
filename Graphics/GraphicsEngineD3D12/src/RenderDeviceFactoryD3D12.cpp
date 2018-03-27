@@ -116,6 +116,9 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12( const EngineD3D12Attr
                                                            IDeviceContext **ppContexts,
                                                            Uint32 NumDeferredContexts)
 {
+    if (CreationAttribs.DebugMessageCallback != nullptr)
+        SetDebugMessageCallback(CreationAttribs.DebugMessageCallback);
+
     VERIFY( ppDevice && ppContexts, "Null pointer provided" );
     if( !ppDevice || !ppContexts )
         return;
@@ -136,8 +139,6 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12( const EngineD3D12Attr
             return;
         }
     }
-
-    SetRawAllocator(CreationAttribs.pRawMemAllocator);
 
     *ppDevice = nullptr;
     memset(ppContexts, 0, sizeof(*ppContexts) * (1+NumDeferredContexts));
@@ -265,6 +266,9 @@ void EngineFactoryD3D12Impl::AttachToD3D12Device(void *pd3d12NativeDevice,
                                                  IDeviceContext **ppContexts,
                                                  Uint32 NumDeferredContexts)
 {
+    if (EngineAttribs.DebugMessageCallback != nullptr)
+        SetDebugMessageCallback(EngineAttribs.DebugMessageCallback);
+
     VERIFY( pd3d12NativeDevice && pCommandQueue && ppDevice && ppContexts, "Null pointer provided" );
     if( !pd3d12NativeDevice || !pCommandQueue || !ppDevice || !ppContexts )
         return;
@@ -274,6 +278,7 @@ void EngineFactoryD3D12Impl::AttachToD3D12Device(void *pd3d12NativeDevice,
 
     try
     {
+        SetRawAllocator(EngineAttribs.pRawMemAllocator);
         auto &RawMemAllocator = GetRawAllocator();
         auto d3d12Device = reinterpret_cast<ID3D12Device*>(pd3d12NativeDevice);
         RenderDeviceD3D12Impl *pRenderDeviceD3D12( NEW_RC_OBJ(RawMemAllocator, "RenderDeviceD3D12Impl instance", RenderDeviceD3D12Impl)(RawMemAllocator, EngineAttribs, d3d12Device, pCommandQueue, NumDeferredContexts ) );

@@ -102,6 +102,9 @@ inline bool SdkLayersAvailable()
 ///                                   at position 1
 void EngineFactoryD3D11Impl::CreateDeviceAndContextsD3D11( const EngineD3D11Attribs& EngineAttribs, IRenderDevice **ppDevice, IDeviceContext **ppContexts, Uint32 NumDeferredContexts )
 {
+    if (EngineAttribs.DebugMessageCallback != nullptr)
+        SetDebugMessageCallback(EngineAttribs.DebugMessageCallback);
+
     VERIFY( ppDevice && ppContexts, "Null pointer provided" );
     if( !ppDevice || !ppContexts )
         return;
@@ -204,6 +207,9 @@ void EngineFactoryD3D11Impl::AttachToD3D11Device(void *pd3d11NativeDevice,
                                                  IDeviceContext **ppContexts,
                                                  Uint32 NumDeferredContexts)
 {
+    if (EngineAttribs.DebugMessageCallback != nullptr)
+        SetDebugMessageCallback(EngineAttribs.DebugMessageCallback);
+
     VERIFY( ppDevice && ppContexts, "Null pointer provided" );
     if( !ppDevice || !ppContexts )
         return;

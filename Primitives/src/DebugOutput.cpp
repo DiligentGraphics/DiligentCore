@@ -21,7 +21,7 @@
 *  of the possibility of such damages.
 */
 
-#include "Errors.h"
+#include "DebugOutput.h"
 
 namespace Diligent
 {

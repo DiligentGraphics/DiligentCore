@@ -3,13 +3,14 @@ cmake_minimum_required (VERSION 3.6)
 project(Primitives CXX)
 
 set(SOURCE
-    src/Errors.cpp
+    src/DebugOutput.cpp
     src/test.cpp
 )
 
 set(INTERFACE
     interface/BasicTypes.h
     interface/DataBlob.h
+    interface/DebugOutput.h
     interface/Errors.h
     interface/FileStream.h
     interface/FormatMessage.h

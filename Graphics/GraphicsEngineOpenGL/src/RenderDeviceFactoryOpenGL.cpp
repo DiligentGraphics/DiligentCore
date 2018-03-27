@@ -98,6 +98,9 @@ void EngineFactoryOpenGLImpl::CreateDeviceAndSwapChainGL(const EngineGLAttribs& 
                                                          const SwapChainDesc& SCDesc, 
                                                          ISwapChain **ppSwapChain )
 {
+    if (CreationAttribs.DebugMessageCallback != nullptr)
+        SetDebugMessageCallback(CreationAttribs.DebugMessageCallback);
+
     VERIFY( ppDevice && ppImmediateContext && ppSwapChain, "Null pointer provided" );
     if( !ppDevice || !ppImmediateContext || !ppSwapChain )
         return;
@@ -164,6 +167,9 @@ void EngineFactoryOpenGLImpl::AttachToActiveGLContext( const EngineGLAttribs& Cr
                                                        IRenderDevice **ppDevice,
                                                        IDeviceContext **ppImmediateContext )
 {
+    if (CreationAttribs.DebugMessageCallback != nullptr)
+        SetDebugMessageCallback(CreationAttribs.DebugMessageCallback);
+
     VERIFY( ppDevice && ppImmediateContext, "Null pointer provided" );
     if( !ppDevice || !ppImmediateContext )
         return;

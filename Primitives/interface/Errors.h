@@ -27,33 +27,11 @@
 #include <string>
 #include <iostream>
 
-#include "BasicTypes.h"
+#include "DebugOutput.h"
 #include "FormatMessage.h"
 
 namespace Diligent
 {
-
-/// Describes debug message severity
-enum class DebugMessageSeverity : Int32
-{
-    /// Information message
-    Info = 0,
-
-    /// Warning message
-    Warning,
-
-    /// Error, with potential recovery
-    Error,
-
-    /// Fatal error - recovery is not possible
-    FatalError
-};
-
-using DebugMessageCallbackType = void(*)(DebugMessageSeverity, const Char* Message, const char* Function, const char* File, int Line);
-extern DebugMessageCallbackType DebugMessageCallback;
-
-void SetDebugMessageCallback(DebugMessageCallbackType DbgMessageCallback);
-
 
 template<bool>
 void ThrowIf(std::string &&)

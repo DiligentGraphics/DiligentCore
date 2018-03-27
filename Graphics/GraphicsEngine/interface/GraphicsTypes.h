@@ -27,6 +27,7 @@
 /// Contains basic graphics engine type defintions
 
 #include "../../../Primitives/interface/BasicTypes.h"
+#include "../../../Primitives/interface/DebugOutput.h"
 
 /// Graphics engine namespace
 namespace Diligent
@@ -951,14 +952,12 @@ namespace Diligent
     /// Engine creation attibutes
     struct EngineCreationAttribs
     {
-        const Char* strShaderCachePath;
         /// Pointer to the raw memory allocator that will be used for all memory allocation/deallocation
-        /// operations in an engine
-        class IMemoryAllocator *pRawMemAllocator;
-        EngineCreationAttribs() : 
-            strShaderCachePath(nullptr),
-            pRawMemAllocator(nullptr)
-        {}
+        /// operations in the engine
+        class IMemoryAllocator *pRawMemAllocator = nullptr;
+
+        /// Pointer to the user-specified debug message callback function
+        DebugMessageCallbackType DebugMessageCallback = nullptr;
     };
 
     /// Attributes specific to D3D12 engine
