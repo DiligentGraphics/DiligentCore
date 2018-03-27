@@ -27,6 +27,7 @@
 #include <deque>
 #include <mutex>
 #include <atlbase.h>
+#include <vector>
 #include <d3d11.h>
 
 #include "TextureUploaderD3D11.h"

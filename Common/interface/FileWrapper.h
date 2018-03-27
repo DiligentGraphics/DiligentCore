@@ -23,7 +23,7 @@
 
 #pragma once
 
-#include "../../Platforms/Basic/interface/Errors.h"
+#include "../../Primitives/interface/Errors.h"
 #include "../../Platforms/Basic/interface/DebugUtilities.h"
 #include "../../Platforms/interface/FileSystem.h"
 

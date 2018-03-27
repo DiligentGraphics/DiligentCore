@@ -13,7 +13,6 @@ set(INTERFACE
     interface/BasicPlatformDebug.h
     interface/BasicPlatformMisc.h
     interface/DebugUtilities.h
-    interface/Errors.h
 )
 
 if(PLATFORM_LINUX OR PLATFORM_WIN32 OR PLATFORM_MACOS OR PLATFORM_IOS)

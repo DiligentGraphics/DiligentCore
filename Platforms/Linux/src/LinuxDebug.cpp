@@ -32,20 +32,16 @@ using namespace Diligent;
 void LinuxDebug :: AssertionFailed( const Char *Message, const char *Function, const char *File, int Line )
 {
     auto AssertionFailedMessage = FormatAssertionFailedMessage(Message, Function, File, Line);
-    OutputDebugMessage(DebugMessageSeverity::Error, AssertionFailedMessage.c_str());
+    OutputDebugMessage(DebugMessageSeverity::Error, AssertionFailedMessage.c_str(), nullptr, nullptr, 0);
 
     raise( SIGTRAP );
 };
 
 
-void LinuxDebug::OutputDebugMessage( DebugMessageSeverity Severity, const Char *Message )
+void LinuxDebug::OutputDebugMessage(DebugMessageSeverity Severity, const Char *Message, const char *Function, const char *File, int Line)
 {
-    static const Char* const strSeverities[] = { "Info: ", "Warning: ", "ERROR: ", "CRITICAL ERROR: " };
-    auto* MessageSevery = strSeverities[static_cast<int>(Severity)];
-    String str = MessageSevery;
-    str += Message;
-    str += '\n';
-    std::cerr << str;
+    auto msg = FormatDebugMessage(Severity, Message, Function, File, Line);
+    std::cerr << msg;
 }
 
 void DebugAssertionFailed(const Diligent::Char* Message, const char* Function, const char* File, int Line)
@@ -53,7 +49,16 @@ void DebugAssertionFailed(const Diligent::Char* Message, const char* Function, c
     LinuxDebug :: AssertionFailed( Message, Function, File, Line );
 }
 
-void OutputDebugMessage(BasicPlatformDebug::DebugMessageSeverity Severity, const Diligent::Char* Message)
+namespace
 {
-    LinuxDebug::OutputDebugMessage( Severity, Message );
+
+class SetDefaultDebugMessageCallback
+{
+public:
+    SetDefaultDebugMessageCallback()
+    {
+        SetDebugMessageCallback(LinuxDebug::OutputDebugMessage);
+    }
+}static _SetDefaultDebugMessageCallback;
+
 }

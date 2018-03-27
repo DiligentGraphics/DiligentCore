@@ -24,10 +24,36 @@
 #pragma once
 
 #include <stdexcept>
+#include <string>
+#include <iostream>
 
-#include "../../../Primitives/interface/FormatMessage.h"
-#include "BasicPlatformDebug.h"
-#include "BasicFileSystem.h"
+#include "BasicTypes.h"
+#include "FormatMessage.h"
+
+namespace Diligent
+{
+
+/// Describes debug message severity
+enum class DebugMessageSeverity : Int32
+{
+    /// Information message
+    Info = 0,
+
+    /// Warning message
+    Warning,
+
+    /// Error, with potential recovery
+    Error,
+
+    /// Fatal error - recovery is not possible
+    FatalError
+};
+
+using DebugMessageCallbackType = void(*)(DebugMessageSeverity, const Char* Message, const char* Function, const char* File, int Line);
+extern DebugMessageCallbackType DebugMessageCallback;
+
+void SetDebugMessageCallback(DebugMessageCallbackType DbgMessageCallback);
+
 
 template<bool>
 void ThrowIf(std::string &&)
@@ -41,48 +67,65 @@ inline void ThrowIf<true>(std::string &&msg)
 }
 
 template<bool bThrowException, typename FirstArgType, typename... RestArgsType>
-void LogError( const char *strFunctionName, const char *strFullFilePath, int Line, const FirstArgType& first, const RestArgsType&... RestArgs )
+void LogError( const char *Function, const char *FullFilePath, int Line, const FirstArgType& first, const RestArgsType&... RestArgs )
 {
-    std::string FileName;
-    BasicFileSystem::SplitFilePath( strFullFilePath, nullptr, &FileName );
+    std::string FileName(FullFilePath);
+    auto LastSlashPos = FileName.find_last_of("/\\");
+    if(LastSlashPos != std::string::npos)
+        FileName.erase(0, LastSlashPos+1);
     Diligent::MsgStream ss;
-    ss << "The following error occured in the " << strFunctionName << "() function (" << FileName << ", line " << Line << "):\n";
     Diligent::FormatMsg( ss, first, RestArgs... );
-    auto strFullMessage = ss.str();
-    OutputDebugMessage( bThrowException ? BasicPlatformDebug::DebugMessageSeverity::FatalError : BasicPlatformDebug::DebugMessageSeverity::Error, strFullMessage.c_str() );
-    ThrowIf<bThrowException>(std::move(strFullMessage));
+    auto Msg = ss.str();
+    if(DebugMessageCallback != nullptr)
+    {
+        DebugMessageCallback( bThrowException ? DebugMessageSeverity::FatalError : DebugMessageSeverity::Error, Msg.c_str(), Function, FileName.c_str(), Line);
+    }
+    else
+    {
+        // No callback set - output to cerr
+        std::cerr << "Diligent Engine: " << (bThrowException ? "Fatal Error" : "Error") << " in " << Function << "() (" << FileName << ", " << Line << "): " << Msg << '\n';
+    }
+    ThrowIf<bThrowException>(std::move(Msg));
 }
+
+}
+
+
 
 #define LOG_ERROR(...)\
 do{                                       \
-    LogError<false>(__FUNCTION__, __FILE__, __LINE__, ##__VA_ARGS__); \
+    Diligent::LogError<false>(__FUNCTION__, __FILE__, __LINE__, ##__VA_ARGS__); \
 }while(false)
+
 
 #define LOG_ERROR_ONCE(...)\
 do{                                     \
     static bool IsFirstTime = true;     \
     if(IsFirstTime)                     \
     {                                   \
-        LogError<false>(__FUNCTION__, __FILE__, __LINE__, ##__VA_ARGS__); \
+        LOG_ERROR(##__VA_ARGS__);       \
         IsFirstTime = false;            \
     }                                   \
 }while(false)
 
+
 #define LOG_ERROR_AND_THROW(...)\
 do{                                     \
-    LogError<true>(__FUNCTION__, __FILE__, __LINE__, ##__VA_ARGS__);\
+    Diligent::LogError<true>(__FUNCTION__, __FILE__, __LINE__, ##__VA_ARGS__);\
 }while(false)
+
 
 #define LOG_DEBUG_MESSAGE(Severity, ...)\
 do{                                     \
     Diligent::MsgStream ss;             \
     Diligent::FormatMsg( ss, ##__VA_ARGS__ );\
-    OutputDebugMessage( Severity, ss.str().c_str() );\
+    if(Diligent::DebugMessageCallback != nullptr) Diligent::DebugMessageCallback( Severity, ss.str().c_str(), nullptr, nullptr, 0 );\
 }while(false)
 
-#define LOG_ERROR_MESSAGE(...)    LOG_DEBUG_MESSAGE(BasicPlatformDebug::DebugMessageSeverity::Error,   ##__VA_ARGS__)
-#define LOG_WARNING_MESSAGE(...)  LOG_DEBUG_MESSAGE(BasicPlatformDebug::DebugMessageSeverity::Warning, ##__VA_ARGS__)
-#define LOG_INFO_MESSAGE(...)     LOG_DEBUG_MESSAGE(BasicPlatformDebug::DebugMessageSeverity::Info,    ##__VA_ARGS__)
+#define LOG_ERROR_MESSAGE(...)    LOG_DEBUG_MESSAGE(Diligent::DebugMessageSeverity::Error,   ##__VA_ARGS__)
+#define LOG_WARNING_MESSAGE(...)  LOG_DEBUG_MESSAGE(Diligent::DebugMessageSeverity::Warning, ##__VA_ARGS__)
+#define LOG_INFO_MESSAGE(...)     LOG_DEBUG_MESSAGE(Diligent::DebugMessageSeverity::Info,    ##__VA_ARGS__)
+
 
 #define LOG_DEBUG_MESSAGE_ONCE(Severity, ...)\
 do{                                                \
@@ -94,6 +137,6 @@ do{                                                \
     }                                              \
 }while(false)
 
-#define LOG_ERROR_MESSAGE_ONCE(...)    LOG_DEBUG_MESSAGE_ONCE(BasicPlatformDebug::DebugMessageSeverity::Error,   ##__VA_ARGS__)
-#define LOG_WARNING_MESSAGE_ONCE(...)  LOG_DEBUG_MESSAGE_ONCE(BasicPlatformDebug::DebugMessageSeverity::Warning, ##__VA_ARGS__)
-#define LOG_INFO_MESSAGE_ONCE(...)     LOG_DEBUG_MESSAGE_ONCE(BasicPlatformDebug::DebugMessageSeverity::Info,    ##__VA_ARGS__)
+#define LOG_ERROR_MESSAGE_ONCE(...)    LOG_DEBUG_MESSAGE_ONCE(Diligent::DebugMessageSeverity::Error,   ##__VA_ARGS__)
+#define LOG_WARNING_MESSAGE_ONCE(...)  LOG_DEBUG_MESSAGE_ONCE(Diligent::DebugMessageSeverity::Warning, ##__VA_ARGS__)
+#define LOG_INFO_MESSAGE_ONCE(...)     LOG_DEBUG_MESSAGE_ONCE(Diligent::DebugMessageSeverity::Info,    ##__VA_ARGS__)

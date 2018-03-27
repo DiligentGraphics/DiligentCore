@@ -27,6 +27,13 @@
 
 struct AndroidDebug : public BasicPlatformDebug
 {
-    static void AssertionFailed( const Diligent::Char *Message, const char *Function, const char *File, int Line );
-    static void OutputDebugMessage( DebugMessageSeverity Severity, const Diligent::Char *Message );
+    static void AssertionFailed( const Diligent::Char *Message, 
+                                 const char *Function, // type of __FUNCTION__
+                                 const char *File,     // type of __FILE__
+                                 int Line );
+    static void OutputDebugMessage( Diligent::DebugMessageSeverity Severity, 
+                                    const Diligent::Char *Message, 
+                                    const char *Function, // type of __FUNCTION__
+                                    const char *File,     // type of __FILE__
+                                    int Line);
 };

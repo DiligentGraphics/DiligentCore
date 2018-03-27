@@ -34,20 +34,17 @@ using namespace Diligent;
 void AppleDebug :: AssertionFailed( const Char *Message, const char *Function, const char *File, int Line )
 {
     auto AssertionFailedMessage = FormatAssertionFailedMessage(Message, Function, File, Line);
-    OutputDebugMessage(DebugMessageSeverity::Error, AssertionFailedMessage.c_str());
+    OutputDebugMessage(DebugMessageSeverity::Error, AssertionFailedMessage.c_str(), nullptr, nullptr, 0);
 
     raise( SIGTRAP );
 };
 
 
-void AppleDebug::OutputDebugMessage( DebugMessageSeverity Severity, const Char *Message )
+void AppleDebug::OutputDebugMessage(DebugMessageSeverity Severity, const Char *Message, const char *Function, const char *File, int Line)
 {
-    static const Char* const strSeverities[] = { "Info: ", "Warning: ", "ERROR: ", "CRITICAL ERROR: " };
-    auto* MessageSevery = strSeverities[static_cast<int>(Severity)];
-    String str = MessageSevery;
-    str += Message;
+    auto msg = FormatDebugMessage(Severity, Message, Function, File, Line);
     // NSLog truncates the log at 1024 symbols
-    printf("%s\n", str.c_str());
+    printf("%s\n", msg.c_str());
     //NSLog(@"%s", str.c_str());
 }
 
@@ -56,7 +53,16 @@ void DebugAssertionFailed(const Diligent::Char* Message, const char* Function, c
     AppleDebug :: AssertionFailed( Message, Function, File, Line );
 }
 
-void OutputDebugMessage(BasicPlatformDebug::DebugMessageSeverity Severity, const Diligent::Char* Message)
+namespace
 {
-    AppleDebug::OutputDebugMessage( Severity, Message );
+
+class SetDefaultDebugMessageCallback
+{
+public:
+    SetDefaultDebugMessageCallback()
+    {
+        SetDebugMessageCallback(AppleDebug::OutputDebugMessage);
+    }
+}static _SetDefaultDebugMessageCallback;
+
 }

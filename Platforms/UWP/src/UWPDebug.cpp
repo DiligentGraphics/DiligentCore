@@ -35,7 +35,7 @@ using namespace Diligent;
 void WindowsStoreDebug :: AssertionFailed( const Diligent::Char *Message, const char *Function, const char *File, int Line )
 {
     auto AssertionFailedMessage = FormatAssertionFailedMessage(Message, Function, File, Line);
-    OutputDebugMessage( DebugMessageSeverity::Error, AssertionFailedMessage.c_str() );
+    OutputDebugMessage( DebugMessageSeverity::Error, AssertionFailedMessage.c_str(), nullptr, nullptr, 0 );
 
     __debugbreak();
     //int nCode = MessageBoxA(NULL,
@@ -68,14 +68,10 @@ void WindowsStoreDebug :: AssertionFailed( const Diligent::Char *Message, const 
 };
 
 
-void WindowsStoreDebug::OutputDebugMessage( DebugMessageSeverity Severity, const Diligent::Char *Message )
+void WindowsStoreDebug::OutputDebugMessage(DebugMessageSeverity Severity, const Char *Message, const char *Function, const char *File, int Line)
 {
-    static const Char* const strSeverities[] = { "Info: ", "Warning: ", "ERROR: ", "CRITICAL ERROR: " };
-    auto* MessageSevery = strSeverities[static_cast<int>(Severity)];
-    String str = MessageSevery;
-    str += Message;
-    str += '\n';
-    OutputDebugStringA( str.c_str() );
+    auto msg = FormatDebugMessage(Severity, Message, Function, File, Line);
+    OutputDebugStringA( msg.c_str() );
 }
 
 void DebugAssertionFailed(const Diligent::Char* Message, const char* Function, const char* File, int Line)
@@ -83,7 +79,16 @@ void DebugAssertionFailed(const Diligent::Char* Message, const char* Function, c
     WindowsStoreDebug :: AssertionFailed( Message, Function, File, Line );
 }
 
-void OutputDebugMessage(BasicPlatformDebug::DebugMessageSeverity Severity, const Diligent::Char* Message)
+namespace
 {
-    WindowsStoreDebug::OutputDebugMessage( Severity, Message );
+
+class SetDefaultDebugMessageCallback
+{
+public:
+    SetDefaultDebugMessageCallback()
+    {
+        SetDebugMessageCallback(WindowsStoreDebug::OutputDebugMessage);
+    }
+}static _SetDefaultDebugMessageCallback;
+
 }
