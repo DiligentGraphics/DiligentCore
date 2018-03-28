@@ -209,11 +209,11 @@ ShaderD3DBase::ShaderD3DBase(const ShaderCreationAttribs &CreationAttribs)
             ComErrorDesc ErrDesc(hr);
             if(CreationAttribs.ppCompilerOutput != nullptr)
             {
-                LOG_ERROR_AND_THROW("Failed to compile D3D shader (", ErrDesc.Get(), ").");
+                LOG_ERROR_AND_THROW("Failed to compile D3D shader \"",  (CreationAttribs.Desc.Name != nullptr ? CreationAttribs.Desc.Name : ""), "\" (", ErrDesc.Get(), ").");
             }
             else
             {
-                LOG_ERROR_AND_THROW("Failed to compile D3D shader (", ErrDesc.Get(), "):\n", CompilerMsg != nullptr ? CompilerMsg : "<no compiler log available>");
+                LOG_ERROR_AND_THROW("Failed to compile D3D shader \"", (CreationAttribs.Desc.Name != nullptr ? CreationAttribs.Desc.Name : ""), "\" (", ErrDesc.Get(), "):\n", (CompilerMsg != nullptr ? CompilerMsg : "<no compiler log available>") );
             }
         }
     }

@@ -285,7 +285,7 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters *pRefCounters, RenderDeviceGLImpl 
             FullSource.append(str);
 
         std::stringstream ErrorMsgSS;
-		ErrorMsgSS << "Failed to compile shader file \""<< (CreationAttribs.FilePath != nullptr ? CreationAttribs.FilePath : "") << '\"' << std::endl;
+		ErrorMsgSS << "Failed to compile shader file \""<< (CreationAttribs.Desc.Name != nullptr ? CreationAttribs.Desc.Name : "") << '\"' << std::endl;
         int infoLogLen = 0;
         // The function glGetShaderiv() tells how many bytes to allocate; the length includes the NULL terminator. 
         glGetShaderiv(ShaderObj, GL_INFO_LOG_LENGTH, &infoLogLen);
