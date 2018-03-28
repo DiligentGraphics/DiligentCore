@@ -74,3 +74,4 @@
 "}\n"
 "\n"
 "#endif // _HLSL_DEFINITIONS_\n"
+"\n"
