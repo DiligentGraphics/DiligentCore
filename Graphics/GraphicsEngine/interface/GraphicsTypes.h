@@ -909,6 +909,93 @@ namespace Diligent
         {}
     };
 
+    /// Hardware adapter attributes
+    struct HardwareAdapterAttribs
+    {
+        /// A string that contains the adapter description
+        char Description[128];
+
+        /// Dedicated video memory, in bytes
+        size_t DedicatedVideoMemory;
+
+        /// Dedicated system memory, in bytes
+        size_t DedicatedSystemMemory;
+
+        /// Dedicated shared memory, in bytes
+        size_t SharedSystemMemory;
+
+        /// The PCI ID of the hardware vendor
+        Uint32 VendorId;
+
+        /// The PCI ID of the hardware device
+        Uint32 DeviceId;
+
+        /// Number of outputs this device has
+        Uint32 NumOutputs;
+    };
+
+
+    /// Display mode attributes
+    struct DisplayModeAttribs
+    {
+        /// Flags indicating how an image is stretched to fit a given monitor's resolution.
+        /// \sa <a href = "https://msdn.microsoft.com/en-us/library/windows/desktop/bb173066(v=vs.85).aspx">DXGI_MODE_SCALING enumeration on MSDN</a>, 
+        enum SCALING
+        {
+            /// Unspecified scaling.
+            /// D3D Counterpart: DXGI_MODE_SCALING_UNSPECIFIED.
+            SCALING_UNSPECIFIED = 0,
+
+            /// Specifies no scaling. The image is centered on the display. 
+            /// This flag is typically used for a fixed-dot-pitch display (such as an LED display).
+            /// D3D Counterpart: DXGI_MODE_SCALING_CENTERED.
+            SCALING_CENTERED = 1,
+
+            /// Specifies stretched scaling.
+            /// D3D Counterpart: DXGI_MODE_SCALING_STRETCHED.
+            SCALING_STRETCHED = 2
+        };
+
+        /// Flags indicating the method the raster uses to create an image on a surface.
+        /// \sa <a href = "https://msdn.microsoft.com/en-us/library/windows/desktop/bb173067">DXGI_MODE_SCANLINE_ORDER enumeration on MSDN</a>, 
+        enum SCANLINE_ORDER
+        {
+            /// Scanline order is unspecified
+            /// D3D Counterpart: DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED.
+            SCANLINE_ORDER_UNSPECIFIED = 0,
+
+            /// The image is created from the first scanline to the last without skipping any
+            /// D3D Counterpart: DXGI_MODE_SCANLINE_ORDER_PROGRESSIVE.
+            SCANLINE_ORDER_PROGRESSIVE = 1,
+
+            /// The image is created beginning with the upper field
+            /// D3D Counterpart: DXGI_MODE_SCANLINE_ORDER_UPPER_FIELD_FIRST.
+            SCANLINE_ORDER_UPPER_FIELD_FIRST = 2,
+
+            /// The image is created beginning with the lower field
+            /// D3D Counterpart: DXGI_MODE_SCANLINE_ORDER_LOWER_FIELD_FIRST.
+            SCANLINE_ORDER_LOWER_FIELD_FIRST = 3
+        };
+        
+        /// Display resolution width
+        Uint32 Width = 0;
+
+        /// Display resolution height
+        Uint32 Height = 0;
+
+        /// Display format
+        TEXTURE_FORMAT Format = TEX_FORMAT_UNKNOWN;
+
+        /// Display refresh rate
+        double RefreshRate = 0.0;
+
+        /// The scanline drawing mode. 
+        SCALING Scaling = SCALING_UNSPECIFIED;
+
+        /// The scaling mode. 
+        SCANLINE_ORDER ScanlineOrder = SCANLINE_ORDER_UNSPECIFIED;
+    };
+
     /// Swap chain description
     struct SwapChainDesc
     {

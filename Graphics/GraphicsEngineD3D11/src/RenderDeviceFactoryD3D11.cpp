@@ -31,13 +31,15 @@
 #include "SwapChainD3D11Impl.h"
 #include "D3D11TypeConversions.h"
 #include "EngineMemory.h"
+#include "EngineFactoryD3DBase.h"
 #include <Windows.h>
+#include <dxgi1_2.h>
 
 namespace Diligent
 {
 
 /// Engine factory for D3D11 implementation
-class EngineFactoryD3D11Impl : public IEngineFactoryD3D11
+class EngineFactoryD3D11Impl : public EngineFactoryD3DBase<IEngineFactoryD3D11, DeviceType::D3D11>
 {
 public:
     static EngineFactoryD3D11Impl* GetInstance()

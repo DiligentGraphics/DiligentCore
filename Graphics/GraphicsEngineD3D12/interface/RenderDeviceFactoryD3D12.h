@@ -60,6 +60,15 @@ public:
                                        void* pNativeWndHandle, 
                                        ISwapChain **ppSwapChain ) = 0;
 
+   virtual void EnumerateHardwareAdapters(Uint32 &NumAdapters, 
+                                          HardwareAdapterAttribs *Adapters) = 0;
+
+   virtual void EnumerateDisplayModes(Uint32 AdapterId, 
+                                      Uint32 OutputId, 
+                                      TEXTURE_FORMAT Format, 
+                                      Uint32 &NumDisplayModes, 
+                                      DisplayModeAttribs *DisplayModes) = 0;
+
 };
 
 

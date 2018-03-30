@@ -8,6 +8,7 @@ set(INCLUDE
     include/D3DTypeConversionImpl.h
     include/D3DViewDescConversionImpl.h
     include/DXGITypeConversions.h
+    include/EngineFactoryD3DBase.h
     include/HLSLDefinitions.fxh
     include/RenderDeviceD3DBase.h
     include/ShaderD3DBase.h
@@ -58,6 +59,9 @@ PUBLIC
     BuildSettings 
     GraphicsEngine 
 )
+if(D3D12_SUPPORTED)
+    target_link_libraries(GraphicsEngineD3DBase PRIVATE D3D12.lib)
+endif()
 set_common_target_properties(GraphicsEngineD3DBase)
 
 source_group("src" FILES ${SOURCE})

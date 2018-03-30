@@ -30,6 +30,7 @@
 #include "DeviceContextD3D12Impl.h"
 #include "SwapChainD3D12Impl.h"
 #include "D3D12TypeConversions.h"
+#include "EngineFactoryD3DBase.h"
 #include "StringTools.h"
 #include "EngineMemory.h"
 #include "CommandQueueD3D12Impl.h"
@@ -40,7 +41,7 @@ namespace Diligent
 {
 
 /// Engine factory for D3D12 implementation
-class EngineFactoryD3D12Impl : public IEngineFactoryD3D12
+class EngineFactoryD3D12Impl : public EngineFactoryD3DBase<IEngineFactoryD3D12, DeviceType::D3D12>
 {
 public:
     static EngineFactoryD3D12Impl* GetInstance()
@@ -62,11 +63,10 @@ public:
                              Uint32 NumDeferredContexts)override final;
 
     void CreateSwapChainD3D12( IRenderDevice *pDevice, 
-                                       IDeviceContext *pImmediateContext, 
-                                       const SwapChainDesc& SwapChainDesc, 
-                                       void* pNativeWndHandle, 
-                                       ISwapChain **ppSwapChain )override final;
-
+                               IDeviceContext *pImmediateContext, 
+                               const SwapChainDesc& SwapChainDesc, 
+                               void* pNativeWndHandle, 
+                               ISwapChain **ppSwapChain )override final;
 };
 
 void GetHardwareAdapter(IDXGIFactory2* pFactory, IDXGIAdapter1** ppAdapter)
@@ -81,8 +81,7 @@ void GetHardwareAdapter(IDXGIFactory2* pFactory, IDXGIAdapter1** ppAdapter)
 
 		if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
 		{
-			// Don't select the Basic Render Driver adapter.
-			// If you want a software adapter, pass in "/warp" on the command line.
+			// Skip software devices
 			continue;
 		}
 
