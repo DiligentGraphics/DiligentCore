@@ -57,6 +57,7 @@ public:
     virtual void CreateSwapChainD3D12( IRenderDevice *pDevice, 
                                        IDeviceContext *pImmediateContext, 
                                        const SwapChainDesc& SwapChainDesc, 
+                                       const FullScreenModeDesc& FSDesc,
                                        void* pNativeWndHandle, 
                                        ISwapChain **ppSwapChain ) = 0;
 

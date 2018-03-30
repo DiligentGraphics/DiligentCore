@@ -94,10 +94,10 @@ do{                                     \
 
 
 #define LOG_DEBUG_MESSAGE(Severity, ...)\
-do{                                     \
-    Diligent::MsgStream ss;             \
-    Diligent::FormatMsg( ss, ##__VA_ARGS__ );\
-    if(Diligent::DebugMessageCallback != nullptr) Diligent::DebugMessageCallback( Severity, ss.str().c_str(), nullptr, nullptr, 0 );\
+do{                                               \
+    Diligent::MsgStream _msg_ss;                  \
+    Diligent::FormatMsg( _msg_ss, ##__VA_ARGS__ );\
+    if(Diligent::DebugMessageCallback != nullptr) Diligent::DebugMessageCallback( Severity, _msg_ss.str().c_str(), nullptr, nullptr, 0 );\
 }while(false)
 
 #define LOG_ERROR_MESSAGE(...)    LOG_DEBUG_MESSAGE(Diligent::DebugMessageSeverity::Error,   ##__VA_ARGS__)

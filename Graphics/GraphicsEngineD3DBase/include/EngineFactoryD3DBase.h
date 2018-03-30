@@ -135,7 +135,8 @@ public:
                 DstMode.Width = SrcMode.Width;
                 DstMode.Height = SrcMode.Height;
                 DstMode.Format = DXGI_FormatToTexFormat(SrcMode.Format);
-                DstMode.RefreshRate = static_cast<double>(SrcMode.RefreshRate.Numerator) / static_cast<double>(SrcMode.RefreshRate.Denominator);
+                DstMode.RefreshRateNumerator = SrcMode.RefreshRate.Numerator;
+                DstMode.RefreshRateDenominator = SrcMode.RefreshRate.Denominator;
                 DstMode.Scaling = static_cast<DisplayModeAttribs::SCALING>(SrcMode.Scaling);
                 DstMode.ScanlineOrder = static_cast<DisplayModeAttribs::SCANLINE_ORDER>(SrcMode.ScanlineOrdering);
             }

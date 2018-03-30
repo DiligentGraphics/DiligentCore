@@ -34,6 +34,7 @@ namespace Diligent
 
 SwapChainD3D12Impl::SwapChainD3D12Impl(IReferenceCounters *pRefCounters,
                                        const SwapChainDesc& SCDesc, 
+                                       const FullScreenModeDesc& FSDesc,
                                        RenderDeviceD3D12Impl* pRenderDeviceD3D12, 
                                        DeviceContextD3D12Impl* pDeviceContextD3D12, 
                                        void* pNativeWndHandle) : 
@@ -47,7 +48,15 @@ SwapChainD3D12Impl::SwapChainD3D12Impl(IReferenceCounters *pRefCounters,
     if( m_SwapChainDesc.Width == 0 || m_SwapChainDesc.Height == 0 )
     {
         RECT rc;
-        GetClientRect( hWnd, &rc );
+        if (FSDesc.Fullscreen)
+        {
+            const HWND hDesktop = GetDesktopWindow();
+            GetWindowRect(hDesktop, &rc);
+        }
+        else
+        {
+            GetClientRect(hWnd, &rc);
+        }
         m_SwapChainDesc.Width = rc.right - rc.left;
         m_SwapChainDesc.Height = rc.bottom - rc.top;
     }
@@ -72,9 +81,10 @@ SwapChainD3D12Impl::SwapChainD3D12Impl(IReferenceCounters *pRefCounters,
     swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
     swapChainDesc.BufferCount = m_SwapChainDesc.BufferCount;
     swapChainDesc.Scaling = DXGI_SCALING_NONE;
+    // Windows Store apps must use DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL or DXGI_SWAP_EFFECT_FLIP_DISCARD.
     swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
     swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED; // Not used
-    swapChainDesc.Flags = 0;
+    swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
 
     CComPtr<IDXGISwapChain1> pSwapChain1;
 	CComPtr<IDXGIFactory4> factory;
@@ -82,14 +92,25 @@ SwapChainD3D12Impl::SwapChainD3D12Impl(IReferenceCounters *pRefCounters,
     CHECK_D3D_RESULT_THROW(hr, "Failed to create DXGI factory")
 
     auto *pd3d12CmdQueue = pRenderDeviceD3D12->GetCmdQueue()->GetD3D12CommandQueue();
+
 #if PLATFORM_WIN32
-    hr = factory->CreateSwapChainForHwnd(pd3d12CmdQueue, hWnd, &swapChainDesc, nullptr, nullptr, &pSwapChain1);
+
+    DXGI_SWAP_CHAIN_FULLSCREEN_DESC FullScreenDesc = {};
+    FullScreenDesc.Windowed = FSDesc.Fullscreen ? FALSE : TRUE;
+    FullScreenDesc.RefreshRate.Numerator = FSDesc.RefreshRateNumerator;
+    FullScreenDesc.RefreshRate.Denominator = FSDesc.RefreshRateDenominator;
+    FullScreenDesc.Scaling = static_cast<DXGI_MODE_SCALING>(FSDesc.Scaling);
+    FullScreenDesc.ScanlineOrdering = static_cast<DXGI_MODE_SCANLINE_ORDER>(FSDesc.ScanlineOrder);
+    hr = factory->CreateSwapChainForHwnd(pd3d12CmdQueue, hWnd, &swapChainDesc, &FullScreenDesc, nullptr, &pSwapChain1);
     CHECK_D3D_RESULT_THROW( hr, "Failed to create Swap Chain" );
 
 	// This sample does not support fullscreen transitions.
 	hr = factory->MakeWindowAssociation(hWnd, DXGI_MWA_NO_WINDOW_CHANGES | DXGI_MWA_NO_ALT_ENTER);
 
 #elif PLATFORM_UNIVERSAL_WINDOWS
+
+    if (FSDesc.Fullscreen)
+        LOG_WARNING_MESSAGE("UWP applications do not support fullscreen mode");
 
     hr = factory->CreateSwapChainForCoreWindow(
 		pd3d12CmdQueue,
@@ -112,7 +133,13 @@ SwapChainD3D12Impl::SwapChainD3D12Impl(IReferenceCounters *pRefCounters,
 
 SwapChainD3D12Impl::~SwapChainD3D12Impl()
 {
-
+    if (m_pSwapChain)
+    {
+        BOOL IsFullScreen = FALSE;
+        m_pSwapChain->GetFullscreenState(&IsFullScreen, nullptr);
+        if (IsFullScreen)
+            m_pSwapChain->SetFullscreenState(FALSE, nullptr);
+    }
 }
 
 void SwapChainD3D12Impl::InitBuffersAndViews()

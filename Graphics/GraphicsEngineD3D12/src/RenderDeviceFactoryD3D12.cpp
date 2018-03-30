@@ -65,6 +65,7 @@ public:
     void CreateSwapChainD3D12( IRenderDevice *pDevice, 
                                IDeviceContext *pImmediateContext, 
                                const SwapChainDesc& SwapChainDesc, 
+                               const FullScreenModeDesc& FSDesc,
                                void* pNativeWndHandle, 
                                ISwapChain **ppSwapChain )override final;
 };
@@ -343,6 +344,7 @@ void EngineFactoryD3D12Impl::AttachToD3D12Device(void *pd3d12NativeDevice,
 /// \param [in] pDevice - Pointer to the render device
 /// \param [in] pImmediateContext - Pointer to the immediate device context
 /// \param [in] SCDesc - Swap chain description
+/// \param [in] FSDesc - Fullscreen mode description
 /// \param [in] pNativeWndHandle - Platform-specific native handle of the window 
 ///                                the swap chain will be associated with:
 ///                                * On Win32 platform, this should be window handle (HWND)
@@ -354,6 +356,7 @@ void EngineFactoryD3D12Impl::AttachToD3D12Device(void *pd3d12NativeDevice,
 void EngineFactoryD3D12Impl::CreateSwapChainD3D12( IRenderDevice *pDevice, 
                                                    IDeviceContext *pImmediateContext, 
                                                    const SwapChainDesc& SCDesc, 
+                                                   const FullScreenModeDesc& FSDesc,
                                                    void* pNativeWndHandle, 
                                                    ISwapChain **ppSwapChain )
 {
@@ -368,7 +371,7 @@ void EngineFactoryD3D12Impl::CreateSwapChainD3D12( IRenderDevice *pDevice,
         auto *pDeviceD3D12 = ValidatedCast<RenderDeviceD3D12Impl>( pDevice );
         auto *pDeviceContextD3D12 = ValidatedCast<DeviceContextD3D12Impl>(pImmediateContext);
         auto &RawMemAllocator = GetRawAllocator();
-        auto *pSwapChainD3D12 = NEW_RC_OBJ(RawMemAllocator, "SwapChainD3D12Impl instance", SwapChainD3D12Impl)(SCDesc, pDeviceD3D12, pDeviceContextD3D12, pNativeWndHandle);
+        auto *pSwapChainD3D12 = NEW_RC_OBJ(RawMemAllocator, "SwapChainD3D12Impl instance", SwapChainD3D12Impl)(SCDesc, FSDesc, pDeviceD3D12, pDeviceContextD3D12, pNativeWndHandle);
         pSwapChainD3D12->QueryInterface( IID_SwapChain, reinterpret_cast<IObject**>(ppSwapChain) );
 
         pDeviceContextD3D12->SetSwapChain(pSwapChainD3D12);

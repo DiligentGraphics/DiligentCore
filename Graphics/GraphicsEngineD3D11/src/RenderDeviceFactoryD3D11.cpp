@@ -56,6 +56,7 @@ public:
    void CreateSwapChainD3D11( IRenderDevice *pDevice, 
                               IDeviceContext *pImmediateContext, 
                               const SwapChainDesc& SCDesc, 
+                              const FullScreenModeDesc& FSDesc,
                               void* pNativeWndHandle, 
                               ISwapChain **ppSwapChain )override final;
 
@@ -166,7 +167,7 @@ void EngineFactoryD3D11Impl::CreateDeviceAndContextsD3D11( const EngineD3D11Attr
     D3D_FEATURE_LEVEL d3dFeatureLevel = D3D_FEATURE_LEVEL_11_0;
 	HRESULT hr = D3D11CreateDevice(
         hardwareAdapter,			// Specify nullptr to use the default adapter.
-        hardwareAdapter ? D3D_DRIVER_TYPE_UNKNOWN : D3D_DRIVER_TYPE_HARDWARE,	// Create a device using the hardware graphics driver.
+        hardwareAdapter ? D3D_DRIVER_TYPE_UNKNOWN : D3D_DRIVER_TYPE_HARDWARE,	// If no adapter specified, request hardware graphics driver.
 		0,							// Should be 0 unless the driver is D3D_DRIVER_TYPE_SOFTWARE.
 		creationFlags,				// Set debug and Direct2D compatibility flags.
 		featureLevels,				// List of feature levels this app can support.
@@ -289,6 +290,7 @@ void EngineFactoryD3D11Impl::AttachToD3D11Device(void *pd3d11NativeDevice,
 /// \param [in] pDevice - Pointer to the render device
 /// \param [in] pImmediateContext - Pointer to the immediate device context
 /// \param [in] SCDesc - Swap chain description
+/// \param [in] FSDesc - Fullscreen mode description
 /// \param [in] pNativeWndHandle - Platform-specific native handle of the window 
 ///                                the swap chain will be associated with:
 ///                                * On Win32 platform, this should be window handle (HWND)
@@ -297,7 +299,12 @@ void EngineFactoryD3D11Impl::AttachToD3D11Device(void *pd3d11NativeDevice,
 ///                                
 /// \param [out] ppSwapChain    - Address of the memory location where pointer to the new 
 ///                               swap chain will be written
-void EngineFactoryD3D11Impl::CreateSwapChainD3D11( IRenderDevice *pDevice, Diligent::IDeviceContext *pImmediateContext, const SwapChainDesc& SCDesc, void* pNativeWndHandle, ISwapChain **ppSwapChain )
+void EngineFactoryD3D11Impl::CreateSwapChainD3D11( IRenderDevice *pDevice, 
+                                                   IDeviceContext *pImmediateContext, 
+                                                   const SwapChainDesc& SCDesc, 
+                                                   const FullScreenModeDesc& FSDesc,
+                                                   void* pNativeWndHandle, 
+                                                   ISwapChain **ppSwapChain )
 {
     VERIFY( ppSwapChain, "Null pointer provided" );
     if( !ppSwapChain )
@@ -312,7 +319,7 @@ void EngineFactoryD3D11Impl::CreateSwapChainD3D11( IRenderDevice *pDevice, Dilig
         auto &RawMemAllocator = GetRawAllocator();
 
         auto *pSwapChainD3D11 = NEW_RC_OBJ(RawMemAllocator,  "SwapChainD3D11Impl instance", SwapChainD3D11Impl)
-                                          (SCDesc, pDeviceD3D11, pDeviceContextD3D11, pNativeWndHandle);
+                                          (SCDesc, FSDesc, pDeviceD3D11, pDeviceContextD3D11, pNativeWndHandle);
         pSwapChainD3D11->QueryInterface( IID_SwapChain, reinterpret_cast<IObject**>(ppSwapChain) );
 
         pDeviceContextD3D11->SetSwapChain(pSwapChainD3D11);

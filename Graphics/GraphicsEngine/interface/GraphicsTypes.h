@@ -986,8 +986,11 @@ namespace Diligent
         /// Display format
         TEXTURE_FORMAT Format = TEX_FORMAT_UNKNOWN;
 
-        /// Display refresh rate
-        double RefreshRate = 0.0;
+        /// Refresh rate numerator
+        Uint32 RefreshRateNumerator = 0;
+
+        /// Refresh rate denominator
+        Uint32 RefreshRateDenominator = 0;
 
         /// The scanline drawing mode. 
         SCALING Scaling = SCALING_UNSPECIFIED;
@@ -1034,6 +1037,26 @@ namespace Diligent
             DefaultDepthValue(1.f),
             DefaultStencilValue(0)
         {}
+    };
+
+    /// Full screen mode description
+    /// \sa <a href = "https://msdn.microsoft.com/en-us/library/windows/desktop/hh404531(v=vs.85).aspx">DXGI_SWAP_CHAIN_FULLSCREEN_DESC structure on MSDN</a>, 
+    struct FullScreenModeDesc
+    {
+        /// A Boolean value that specifies whether the swap chain is in fullscreen mode.
+        Bool Fullscreen = False;
+
+        /// Refresh rate numerator
+        Uint32 RefreshRateNumerator = 0;
+
+        /// Refresh rate denominator
+        Uint32 RefreshRateDenominator = 0;
+
+        /// The scanline drawing mode. 
+        DisplayModeAttribs::SCALING Scaling = DisplayModeAttribs::SCALING_UNSPECIFIED;
+
+        /// The scaling mode. 
+        DisplayModeAttribs::SCANLINE_ORDER ScanlineOrder = DisplayModeAttribs::SCANLINE_ORDER_UNSPECIFIED;
     };
 
     /// Engine creation attibutes

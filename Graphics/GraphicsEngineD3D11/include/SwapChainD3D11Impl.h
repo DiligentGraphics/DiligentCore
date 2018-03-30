@@ -39,7 +39,8 @@ class SwapChainD3D11Impl : public SwapChainBase<ISwapChainD3D11>
 public:
     typedef SwapChainBase<ISwapChainD3D11> TSwapChainBase;
     SwapChainD3D11Impl(IReferenceCounters *pRefCounters,
-                       const SwapChainDesc& SwapChainDesc, 
+                       const SwapChainDesc& SCDesc, 
+                       const FullScreenModeDesc& FSDesc,
                        class RenderDeviceD3D11Impl* pRenderDeviceD3D11,
                        class DeviceContextD3D11Impl* pDeviceContextD3D11,
                        void* pNativeWndHandle);
