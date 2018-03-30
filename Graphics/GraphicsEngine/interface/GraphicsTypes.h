@@ -1050,6 +1050,11 @@ namespace Diligent
     /// Attributes specific to D3D12 engine
     struct EngineD3D12Attribs : public EngineCreationAttribs
     {
+        static constexpr Uint32 DefaultAdapterId = 0xFFFFFFFF;
+
+        /// Id of the hardware adapter the engine should be initialized on
+        Uint32 AdapterId = DefaultAdapterId;
+
         /// Size of the CPU descriptor heap allocations for different heap types.
         Uint32 CPUDescriptorHeapAllocationSize[4] = 
         {

@@ -89,7 +89,6 @@ void GetHardwareAdapter(IDXGIFactory2* pFactory, IDXGIAdapter1** ppAdapter)
 		// actual device yet.
 		if (SUCCEEDED(D3D12CreateDevice(adapter, D3D_FEATURE_LEVEL_11_0, _uuidof(ID3D12Device), nullptr)))
 		{
-            LOG_INFO_MESSAGE("D3D12-capabale hardware found: ", NarrowString(desc.Description), " (", desc.DedicatedVideoMemory>>20, " MB)");
 			break;
 		}
 	}
@@ -162,8 +161,29 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12( const EngineD3D12Attr
         CHECK_D3D_RESULT_THROW(hr, "Failed to create DXGI factory")
 
 	    CComPtr<IDXGIAdapter1> hardwareAdapter;
-	    GetHardwareAdapter(factory, &hardwareAdapter);
-    
+        if(CreationAttribs.AdapterId == EngineD3D12Attribs::DefaultAdapterId)
+        {
+	        GetHardwareAdapter(factory, &hardwareAdapter);
+            if(hardwareAdapter == nullptr)
+                LOG_ERROR_AND_THROW("No suitable hardware adapter found");
+        }
+        else
+        {
+            auto Adapters = FindCompatibleAdapters();
+            if(CreationAttribs.AdapterId < Adapters.size())
+                hardwareAdapter = Adapters[CreationAttribs.AdapterId];
+            else
+            {
+                LOG_ERROR_AND_THROW(CreationAttribs.AdapterId, " is not a valid hardware adapter id. Total number of compatible adapters available on this system: ", Adapters.size());
+            }
+        }
+
+        {
+            DXGI_ADAPTER_DESC1 desc;
+            hardwareAdapter->GetDesc1(&desc);
+            LOG_INFO_MESSAGE("D3D12-capabale hardware found: ", NarrowString(desc.Description), " (", desc.DedicatedVideoMemory >> 20, " MB)");
+        }
+
         hr = D3D12CreateDevice(hardwareAdapter, D3D_FEATURE_LEVEL_11_0, __uuidof(d3d12Device), reinterpret_cast<void**>(static_cast<ID3D12Device**>(&d3d12Device)) );
         if( FAILED(hr))
         {

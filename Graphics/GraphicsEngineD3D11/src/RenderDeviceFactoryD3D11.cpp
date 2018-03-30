@@ -102,7 +102,10 @@ inline bool SdkLayersAvailable()
 ///                                   of deferred contexts is requested, pointers to the
 ///                                   contexts are written to ppContexts array starting 
 ///                                   at position 1
-void EngineFactoryD3D11Impl::CreateDeviceAndContextsD3D11( const EngineD3D11Attribs& EngineAttribs, IRenderDevice **ppDevice, IDeviceContext **ppContexts, Uint32 NumDeferredContexts )
+void EngineFactoryD3D11Impl::CreateDeviceAndContextsD3D11( const EngineD3D11Attribs& EngineAttribs, 
+                                                           IRenderDevice **ppDevice, 
+                                                           IDeviceContext **ppContexts, 
+                                                           Uint32 NumDeferredContexts )
 {
     if (EngineAttribs.DebugMessageCallback != nullptr)
         SetDebugMessageCallback(EngineAttribs.DebugMessageCallback);
@@ -148,10 +151,22 @@ void EngineFactoryD3D11Impl::CreateDeviceAndContextsD3D11( const EngineD3D11Attr
 	CComPtr<ID3D11Device> pd3d11Device;
 	CComPtr<ID3D11DeviceContext> pd3d11Context;
 
+    CComPtr<IDXGIAdapter1> hardwareAdapter;
+    if(EngineAttribs.AdapterId != EngineD3D11Attribs::DefaultAdapterId)
+    {
+        auto Adapters = FindCompatibleAdapters();
+        if (EngineAttribs.AdapterId < Adapters.size())
+            hardwareAdapter = Adapters[EngineAttribs.AdapterId];
+        else
+        {
+            LOG_ERROR_AND_THROW(EngineAttribs.AdapterId, " is not a valid hardware adapter id. Total number of compatible adapters available on this system: ", Adapters.size());
+        }
+    }
+
     D3D_FEATURE_LEVEL d3dFeatureLevel = D3D_FEATURE_LEVEL_11_0;
 	HRESULT hr = D3D11CreateDevice(
-		nullptr,					// Specify nullptr to use the default adapter.
-		D3D_DRIVER_TYPE_HARDWARE,	// Create a device using the hardware graphics driver.
+        hardwareAdapter,			// Specify nullptr to use the default adapter.
+        hardwareAdapter ? D3D_DRIVER_TYPE_UNKNOWN : D3D_DRIVER_TYPE_HARDWARE,	// Create a device using the hardware graphics driver.
 		0,							// Should be 0 unless the driver is D3D_DRIVER_TYPE_SOFTWARE.
 		creationFlags,				// Set debug and Direct2D compatibility flags.
 		featureLevels,				// List of feature levels this app can support.
@@ -168,7 +183,7 @@ void EngineFactoryD3D11Impl::CreateDeviceAndContextsD3D11( const EngineD3D11Attr
 		// For more information on WARP, see: 
 		// http://go.microsoft.com/fwlink/?LinkId=286690
 		hr = D3D11CreateDevice(
-				nullptr,
+                nullptr,
 				D3D_DRIVER_TYPE_WARP, // Create a WARP device instead of a hardware device.
 				0,
 				creationFlags,

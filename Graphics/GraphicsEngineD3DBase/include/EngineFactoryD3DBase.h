@@ -147,30 +147,13 @@ public:
         }
     }
 
-private:
-
-    template<DeviceType DevType>
-    bool CheckAdapterCompatibility(IDXGIAdapter1 *pDXGIAdapter);
-
-    template<>
-    bool CheckAdapterCompatibility<DeviceType::D3D11>(IDXGIAdapter1 *pDXGIAdapter)
-    {
-        return true;
-    }
-
-    template<>
-    bool CheckAdapterCompatibility<DeviceType::D3D12>(IDXGIAdapter1 *pDXGIAdapter)
-    {
-        auto hr = D3D12CreateDevice(pDXGIAdapter, D3D_FEATURE_LEVEL_11_0, _uuidof(ID3D12Device), nullptr);
-        return SUCCEEDED(hr);
-    }
 
     std::vector<CComPtr<IDXGIAdapter1>> FindCompatibleAdapters()
     {
         std::vector<CComPtr<IDXGIAdapter1>> DXGIAdapters;
 
         CComPtr<IDXGIFactory2> pFactory;
-        if (FAILED(CreateDXGIFactory(__uuidof(IDXGIFactory2), (void**)&pFactory)))
+        if (FAILED(CreateDXGIFactory1(__uuidof(IDXGIFactory2), (void**)&pFactory)))
         {
             LOG_ERROR_MESSAGE("Failed to create DXGI Factory");
             return std::move(DXGIAdapters);
@@ -197,6 +180,24 @@ private:
         }
 
         return std::move(DXGIAdapters);
+    }
+
+private:
+
+    template<DeviceType DevType>
+    bool CheckAdapterCompatibility(IDXGIAdapter1 *pDXGIAdapter);
+
+    template<>
+    bool CheckAdapterCompatibility<DeviceType::D3D11>(IDXGIAdapter1 *pDXGIAdapter)
+    {
+        return true;
+    }
+
+    template<>
+    bool CheckAdapterCompatibility<DeviceType::D3D12>(IDXGIAdapter1 *pDXGIAdapter)
+    {
+        auto hr = D3D12CreateDevice(pDXGIAdapter, D3D_FEATURE_LEVEL_11_0, _uuidof(ID3D12Device), nullptr);
+        return SUCCEEDED(hr);
     }
 };
 

@@ -49,6 +49,11 @@ namespace Diligent
     /// Attributes of the Direct3D11-based engine implementation
     struct EngineD3D11Attribs : public EngineCreationAttribs
     {
+        static constexpr Uint32 DefaultAdapterId = 0xFFFFFFFF;
+        
+        /// Id of the hardware adapter the engine should be initialized on
+        Uint32 AdapterId = DefaultAdapterId;
+
         /// Debug flags. See Diligent::EngineD3D11DebugFlags for a list of allowed values.
         ///
         /// \sa CreateDeviceAndContextsD3D11Type, CreateSwapChainD3D11Type, LoadGraphicsEngineD3D11
