@@ -102,9 +102,18 @@ namespace Diligent
             swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
             swapChainDesc.BufferCount = m_SwapChainDesc.BufferCount;
             swapChainDesc.Scaling = DXGI_SCALING_NONE;
+
+            // DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL is the flip presentation model, where the contents of the back 
+            // buffer is preserved after the call to Present. This flag cannot be used with multisampling.
+            // The only swap effect that supports multisampling is DXGI_SWAP_EFFECT_DISCARD.
             // Windows Store apps must use DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL or DXGI_SWAP_EFFECT_FLIP_DISCARD.
             swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
-            swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED; // Not used
+
+            swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED; //  Transparency behavior is not specified
+
+            // DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH enables an application to switch modes by calling 
+            // IDXGISwapChain::ResizeTarget(). When switching from windowed to fullscreen mode, the display 
+            // mode (or monitor resolution) will be changed to match the dimensions of the application window.
             swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
 
             CComPtr<IDXGISwapChain1> pSwapChain1;
@@ -154,7 +163,7 @@ namespace Diligent
             if (m_pSwapChain)
             {
                 // If we are already in fullscreen mode, we need to switch to windowed mode first,
-                // otherwise swap chain creation will fail
+                // because a swap chain must be in windowed mode when it is released.
                 if (m_FSDesc.Fullscreen)
                     m_pSwapChain->SetFullscreenState(FALSE, nullptr);
                 m_FSDesc.Fullscreen = True;

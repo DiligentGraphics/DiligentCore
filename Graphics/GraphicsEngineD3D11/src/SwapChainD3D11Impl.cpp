@@ -157,6 +157,15 @@ void SwapChainD3D11Impl::UpdateSwapChain(bool CreateNew)
             if(CreateNew)
             {
                 m_pSwapChain.Release();
+
+                // Only one flip presentation model swap chain can be associated with an HWND.
+                // We must make sure that the swap chain is actually released by D3D11 before creating a new one.
+                // To force the destruction, we need to ensure no views are bound to pipeline state, and then call Flush 
+                // on the immediate context. Dstruction must be forced before calling IDXGIFactory2::CreateSwapChainForHwnd(), or
+                // IDXGIFactory2::CreateSwapChainForCoreWindow() again to create a new swap chain.
+                // https://msdn.microsoft.com/en-us/library/windows/desktop/ff476425(v=vs.85).aspx#Defer_Issues_with_Flip
+                pImmediateCtxD3D11->Flush();
+
                 auto *pd3d11Device = ValidatedCast<RenderDeviceD3D11Impl>(m_pRenderDevice.RawPtr())->GetD3D11Device();
                 CreateDXGISwapChain(pd3d11Device);
             }
