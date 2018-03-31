@@ -50,8 +50,8 @@ public:
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface );
 
-    virtual void Present();
-    virtual void Resize( Uint32 NewWidth, Uint32 NewHeight );
+    virtual void Present(Uint32 SyncInterval)override final;
+    virtual void Resize( Uint32 NewWidth, Uint32 NewHeight )override final;
 
     virtual IDXGISwapChain* GetDXGISwapChain()override final{ return m_pSwapChain; }
     virtual ITextureViewD3D12* GetCurrentBackBufferRTV()override final;

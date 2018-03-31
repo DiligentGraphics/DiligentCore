@@ -100,9 +100,8 @@ void SwapChainD3D12Impl::InitBuffersAndViews()
 IMPLEMENT_QUERY_INTERFACE( SwapChainD3D12Impl, IID_SwapChainD3D12, TSwapChainBase )
 
 
-void SwapChainD3D12Impl::Present()
+void SwapChainD3D12Impl::Present(Uint32 SyncInterval)
 {
-    UINT SyncInterval = 0;
 #if PLATFORM_UNIVERSAL_WINDOWS
     SyncInterval = 1; // Interval 0 is not supported on Windows Phone 
 #endif

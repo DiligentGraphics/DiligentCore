@@ -43,8 +43,8 @@ class ISwapChain : public IObject
 {
 public:
 
-    /// Presents a rendered image to the user.
-    virtual void Present() = 0;
+    /// Presents a rendered image to the user
+    virtual void Present(Uint32 SyncInterval = 1) = 0;
 
     /// Returns the swap chain desctription
     virtual const SwapChainDesc& GetDesc()const = 0;

@@ -48,7 +48,7 @@ public:
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
 
-    virtual void Present()override final;
+    virtual void Present(Uint32 SyncInterval)override final;
     virtual void Resize( Uint32 NewWidth, Uint32 NewHeight )override final;
 
     virtual IDXGISwapChain *GetDXGISwapChain()override final{ return m_pSwapChain; }

@@ -50,7 +50,7 @@ SwapChainGLIOS::SwapChainGLIOS(IReferenceCounters *pRefCounters,
 
 IMPLEMENT_QUERY_INTERFACE( SwapChainGLIOS, IID_SwapChainGL, TSwapChainBase )
     
-void SwapChainGLIOS::Present()
+void SwapChainGLIOS::Present(Uint32 SyncInterval)
 {
     EAGLContext* context = [EAGLContext currentContext];
     glBindRenderbuffer(GL_RENDERBUFFER, m_ColorRenderBuffer);
