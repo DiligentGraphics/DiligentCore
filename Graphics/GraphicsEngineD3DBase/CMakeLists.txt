@@ -14,6 +14,7 @@ set(INCLUDE
     include/ShaderD3DBase.h
     include/ShaderResources.h
     include/ShaderVariableD3DBase.h
+    include/SwapChainD3DBase.h
 )
 
 set(SOURCE 

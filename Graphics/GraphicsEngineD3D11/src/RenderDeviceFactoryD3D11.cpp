@@ -254,7 +254,7 @@ void EngineFactoryD3D11Impl::AttachToD3D11Device(void *pd3d11NativeDevice,
         {
             CComPtr<ID3D11DeviceContext> pd3d11DeferredCtx;
             HRESULT hr = pd3d11Device->CreateDeferredContext(0, &pd3d11DeferredCtx);
-            CHECK_D3D_RESULT_THROW(hr, "Failed to create D3D11 deferred context")
+            CHECK_D3D_RESULT_THROW(hr, "Failed to create D3D11 deferred context");
             RefCntAutoPtr<DeviceContextD3D11Impl> pDeferredCtxD3D11(
                 NEW_RC_OBJ(RawAlloctor, "DeviceContextD3D11Impl instance", DeviceContextD3D11Impl)
                           (RawAlloctor, pRenderDeviceD3D11, pd3d11DeferredCtx, EngineAttribs, true));

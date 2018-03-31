@@ -54,6 +54,12 @@ public:
     /// \param [in] NewWidth - New swap chain width, in pixels
     /// \param [in] NewHeight - New swap chain height, in pixels
     virtual void Resize( Uint32 NewWidth, Uint32 NewHeight ) = 0;
+
+    /// Sets fullscreen mode (only supported on Win32 platform)
+    virtual void SetFullscreenMode(const DisplayModeAttribs &DisplayMode) = 0;
+
+    /// Sets windowed mode (only supported on Win32 platform)
+    virtual void SetWindowedMode() = 0;
 };
 
 }

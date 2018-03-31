@@ -159,7 +159,7 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12( const EngineD3D12Attr
 
 	    CComPtr<IDXGIFactory4> factory;
         HRESULT hr = CreateDXGIFactory1(__uuidof(factory), reinterpret_cast<void**>(static_cast<IDXGIFactory4**>(&factory)) );
-        CHECK_D3D_RESULT_THROW(hr, "Failed to create DXGI factory")
+        CHECK_D3D_RESULT_THROW(hr, "Failed to create DXGI factory");
 
 	    CComPtr<IDXGIAdapter1> hardwareAdapter;
         if(CreationAttribs.AdapterId == EngineD3D12Attribs::DefaultAdapterId)
@@ -192,10 +192,10 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12( const EngineD3D12Attr
 
 		    CComPtr<IDXGIAdapter> warpAdapter;
 		    hr = factory->EnumWarpAdapter( __uuidof(warpAdapter),  reinterpret_cast<void**>(static_cast<IDXGIAdapter**>(&warpAdapter)) );
-            CHECK_D3D_RESULT_THROW(hr, "Failed to enum warp adapter")
+            CHECK_D3D_RESULT_THROW(hr, "Failed to enum warp adapter");
 
 		    hr = D3D12CreateDevice( warpAdapter, D3D_FEATURE_LEVEL_11_0, __uuidof(d3d12Device), reinterpret_cast<void**>(static_cast<ID3D12Device**>(&d3d12Device)) );
-            CHECK_D3D_RESULT_THROW(hr, "Failed to crate warp device")
+            CHECK_D3D_RESULT_THROW(hr, "Failed to crate warp device");
         }
 
 #if _DEBUG

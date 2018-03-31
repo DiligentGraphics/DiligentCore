@@ -38,117 +38,15 @@ SwapChainD3D11Impl::SwapChainD3D11Impl(IReferenceCounters *pRefCounters,
                                        RenderDeviceD3D11Impl* pRenderDeviceD3D11, 
                                        DeviceContextD3D11Impl* pDeviceContextD3D11, 
                                        void* pNativeWndHandle) : 
-    TSwapChainBase(pRefCounters, pRenderDeviceD3D11, pDeviceContextD3D11, SCDesc)
+    TSwapChainBase(pRefCounters, pRenderDeviceD3D11, pDeviceContextD3D11, SCDesc, FSDesc, pNativeWndHandle)
 {
-
-#if PLATFORM_WIN32
-    auto hWnd = reinterpret_cast<HWND>(pNativeWndHandle);
-
-    if( m_SwapChainDesc.Width == 0 || m_SwapChainDesc.Height == 0 )
-    {
-        RECT rc;
-        if(FSDesc.Fullscreen)
-        {
-            const HWND hDesktop = GetDesktopWindow();
-            GetWindowRect(hDesktop, &rc);
-        }
-        else
-        {
-            GetClientRect(hWnd, &rc);
-        }
-        m_SwapChainDesc.Width = rc.right - rc.left;
-        m_SwapChainDesc.Height = rc.bottom - rc.top;
-    }
-#endif
-
-    auto *pDevice = pRenderDeviceD3D11->GetD3D11Device();
-
-    auto DXGIColorBuffFmt = TexFormatToDXGI_Format(m_SwapChainDesc.ColorBufferFormat);
-
-    DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
-    swapChainDesc.Width = m_SwapChainDesc.Width;
-    swapChainDesc.Height = m_SwapChainDesc.Height;
-    //  Flip model swapchains (DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL and DXGI_SWAP_EFFECT_FLIP_DISCARD) only support the following Formats: 
-    //  - DXGI_FORMAT_R16G16B16A16_FLOAT 
-    //  - DXGI_FORMAT_B8G8R8A8_UNORM
-    //  - DXGI_FORMAT_R8G8B8A8_UNORM
-    //  - DXGI_FORMAT_R10G10B10A2_UNORM
-    // If RGBA8_UNORM_SRGB swap chain is required, we will create RGBA8_UNORM swap chain, but
-    // create RGBA8_UNORM_SRGB render target view
-    swapChainDesc.Format = DXGIColorBuffFmt == DXGI_FORMAT_R8G8B8A8_UNORM_SRGB ? DXGI_FORMAT_R8G8B8A8_UNORM : DXGIColorBuffFmt;
-    swapChainDesc.Stereo = FALSE;
-    swapChainDesc.SampleDesc.Count = 1;
-    swapChainDesc.SampleDesc.Quality = 0;
-    swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-    swapChainDesc.BufferCount = m_SwapChainDesc.BufferCount;
-    swapChainDesc.Scaling = DXGI_SCALING_NONE;
-    // Windows Store apps must use DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL or DXGI_SWAP_EFFECT_FLIP_DISCARD.
-    swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL; 
-    swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED; // Not used
-    swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
-
-    CComPtr<IDXGISwapChain1> pSwapChain1;
-
-#if PLATFORM_WIN32
-
-	// This sequence obtains the DXGI factory that was used to create the Direct3D device above.
-	CComPtr<IDXGIDevice> pDXGIDevice;
-	pDevice->QueryInterface(__uuidof(IDXGIDevice), reinterpret_cast<void**>( static_cast<IDXGIDevice**>(&pDXGIDevice) ) );
-    CComPtr<IDXGIAdapter> pDXGIAdapter;
-    pDXGIDevice->GetAdapter(&pDXGIAdapter);
-	CComPtr<IDXGIFactory2> pDXGIFactory;
-    pDXGIAdapter->GetParent(__uuidof(pDXGIFactory), reinterpret_cast<void**>( static_cast<IDXGIFactory2**>(&pDXGIFactory) ));
-
-    DXGI_SWAP_CHAIN_FULLSCREEN_DESC FullScreenDesc = {};
-    FullScreenDesc.Windowed = FSDesc.Fullscreen ? FALSE : TRUE;
-    FullScreenDesc.RefreshRate.Numerator = FSDesc.RefreshRateNumerator;
-    FullScreenDesc.RefreshRate.Denominator = FSDesc.RefreshRateDenominator;
-    FullScreenDesc.Scaling = static_cast<DXGI_MODE_SCALING>(FSDesc.Scaling);
-    FullScreenDesc.ScanlineOrdering = static_cast<DXGI_MODE_SCANLINE_ORDER>(FSDesc.ScanlineOrder);
-    CHECK_D3D_RESULT_THROW( pDXGIFactory->CreateSwapChainForHwnd(pDevice, hWnd, &swapChainDesc, &FullScreenDesc, nullptr, &pSwapChain1),
-                            "Failed to create DXGI swap chain" );
-
-#elif PLATFORM_UNIVERSAL_WINDOWS
-
-    if (FSDesc.Fullscreen)
-        LOG_WARNING_MESSAGE("UWP applications do not support fullscreen mode");
-
-	CComPtr<IDXGIDevice3> pDXGIDevice;
-	pDevice->QueryInterface(__uuidof(IDXGIDevice3), reinterpret_cast<void**>(static_cast<IDXGIDevice3**>(&pDXGIDevice)));
-    CComPtr<IDXGIAdapter> pDXGIAdapter;
-    pDXGIDevice->GetAdapter(&pDXGIAdapter);
-	CComPtr<IDXGIFactory2> pDXGIFactory;
-    pDXGIAdapter->GetParent(__uuidof(pDXGIFactory), reinterpret_cast<void**>(static_cast<IDXGIFactory2**>(&pDXGIFactory)));
-    
-    HRESULT hr = pDXGIFactory->CreateSwapChainForCoreWindow(
-		pDevice,
-		reinterpret_cast<IUnknown*>(pNativeWndHandle),
-		&swapChainDesc,
-		nullptr,
-		&pSwapChain1);
-    CHECK_D3D_RESULT_THROW( hr, "Failed to create DXGI swap chain" );
-
-	// Ensure that DXGI does not queue more than one frame at a time. This both reduces latency and
-	// ensures that the application will only render after each VSync, minimizing power consumption.
-    pDXGIDevice->SetMaximumFrameLatency( 1 );
-
-#endif
-
-    pSwapChain1->QueryInterface( __uuidof(m_pSwapChain), reinterpret_cast<void**>(static_cast<IDXGISwapChain**>(&m_pSwapChain)) );
-
+    auto *pd3d11Device = pRenderDeviceD3D11->GetD3D11Device();
+    CreateDXGISwapChain(pd3d11Device);
     CreateRTVandDSV();
 }
 
 SwapChainD3D11Impl::~SwapChainD3D11Impl()
 {
-    // Swap chain must be in windowed mode when terminating the app
-    if(m_pSwapChain)
-    {
-        BOOL IsFullScreen = FALSE;
-        m_pSwapChain->GetFullscreenState(&IsFullScreen, nullptr);
-        if(IsFullScreen)
-            m_pSwapChain->SetFullscreenState(FALSE, nullptr);
-    }
 }
 
 void SwapChainD3D11Impl::CreateRTVandDSV()
@@ -231,53 +129,70 @@ void SwapChainD3D11Impl::Present()
     pImmediateCtxD3D11->CommitRenderTargets();
 }
 
-void SwapChainD3D11Impl::Resize( Uint32 NewWidth, Uint32 NewHeight )
+void SwapChainD3D11Impl::UpdateSwapChain(bool CreateNew)
 {
-    if( TSwapChainBase::Resize(NewWidth, NewHeight) )
+    // When switching to full screen mode, WM_SIZE is send to the window
+    // and Resize() is called before the new swap chain is created
+    if(!m_pSwapChain)
+        return;
+
+    auto pDeviceContext = m_wpDeviceContext.Lock();
+    VERIFY(pDeviceContext, "Immediate context has been released");
+    if (pDeviceContext)
     {
-        auto pDeviceContext = m_wpDeviceContext.Lock();
-        VERIFY( pDeviceContext, "Immediate context has been released" );
-        if( pDeviceContext )
+        auto *pImmediateCtxD3D11 = ValidatedCast<DeviceContextD3D11Impl>(pDeviceContext.RawPtr());
+        bool bIsDefaultFBBound = pImmediateCtxD3D11->IsDefaultFBBound();
+        if (bIsDefaultFBBound)
         {
-            auto *pImmediateCtxD3D11 = ValidatedCast<DeviceContextD3D11Impl>(pDeviceContext.RawPtr());
-            bool bIsDefaultFBBound = pImmediateCtxD3D11->IsDefaultFBBound();
-            if( bIsDefaultFBBound )
+            ITextureView *pNullTexView[] = { nullptr };
+            pImmediateCtxD3D11->SetRenderTargets(_countof(pNullTexView), pNullTexView, nullptr);
+        }
+
+        // Swap chain cannot be resized until all references are released
+        m_pRenderTargetView.Release();
+        m_pDepthStencilView.Release();
+
+        try
+        {
+            if(CreateNew)
             {
-                ITextureView *pNullTexView[] = { nullptr };
-                pImmediateCtxD3D11->SetRenderTargets( _countof( pNullTexView ), pNullTexView, nullptr );
+                m_pSwapChain.Release();
+                auto *pd3d11Device = ValidatedCast<RenderDeviceD3D11Impl>(m_pRenderDevice.RawPtr())->GetD3D11Device();
+                CreateDXGISwapChain(pd3d11Device);
             }
-
-            // Swap chain cannot be resized until all references are released
-            m_pRenderTargetView.Release();
-            m_pDepthStencilView.Release();
-
-            try
+            else
             {
                 DXGI_SWAP_CHAIN_DESC SCDes;
-                memset( &SCDes, 0, sizeof( SCDes ) );
-                m_pSwapChain->GetDesc( &SCDes );
-                CHECK_D3D_RESULT_THROW( m_pSwapChain->ResizeBuffers(SCDes.BufferCount, m_SwapChainDesc.Width, 
-                                                                     m_SwapChainDesc.Height, SCDes.BufferDesc.Format, 
-                                                                     SCDes.Flags),
-                                        "Failed to resize the DXGI swap chain" );
-
-
-                CreateRTVandDSV();
-                
-                if( bIsDefaultFBBound )
-                {
-                    // Set default render target and viewport
-                    pImmediateCtxD3D11->SetRenderTargets( 0, nullptr, nullptr );
-                    pImmediateCtxD3D11->SetViewports( 1, nullptr, 0, 0 );
-                }
+                memset(&SCDes, 0, sizeof(SCDes));
+                m_pSwapChain->GetDesc(&SCDes);
+                CHECK_D3D_RESULT_THROW(m_pSwapChain->ResizeBuffers(SCDes.BufferCount, m_SwapChainDesc.Width,
+                    m_SwapChainDesc.Height, SCDes.BufferDesc.Format,
+                    SCDes.Flags),
+                    "Failed to resize the DXGI swap chain");
             }
-            catch( const std::runtime_error & )
+
+            CreateRTVandDSV();
+
+            if (bIsDefaultFBBound)
             {
-                LOG_ERROR( "Failed to resize the swap chain" );
+                // Set default render target and viewport
+                pImmediateCtxD3D11->SetRenderTargets(0, nullptr, nullptr);
+                pImmediateCtxD3D11->SetViewports(1, nullptr, 0, 0);
             }
+        }
+        catch (const std::runtime_error &)
+        {
+            LOG_ERROR("Failed to resize the swap chain");
         }
     }
 }
 
+void SwapChainD3D11Impl::Resize( Uint32 NewWidth, Uint32 NewHeight )
+{
+    if( TSwapChainBase::Resize(NewWidth, NewHeight) )
+    {
+        UpdateSwapChain(false);
+    }
+}
 
 }

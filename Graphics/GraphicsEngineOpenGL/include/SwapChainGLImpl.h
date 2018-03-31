@@ -51,6 +51,10 @@ public:
 
     virtual void Resize( Uint32 NewWidth, Uint32 NewHeight )override final;
 
+    virtual void SetFullscreenMode(const DisplayModeAttribs &DisplayMode)override final;
+
+    virtual void SetWindowedMode()override final;
+
     virtual GLuint GetDefaultFBO()const override final{ return 0; }
 };
 

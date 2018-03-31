@@ -61,17 +61,17 @@ namespace Diligent
         CmdSignatureDesc.ByteStride = sizeof(UINT)*4;
         IndirectArg.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW;
         auto hr = pd3d12Device->CreateCommandSignature(&CmdSignatureDesc, nullptr, __uuidof(m_pDrawIndirectSignature), reinterpret_cast<void**>(static_cast<ID3D12CommandSignature**>(&m_pDrawIndirectSignature)) );
-        CHECK_D3D_RESULT_THROW(hr, "Failed to create indirect draw command signature")
+        CHECK_D3D_RESULT_THROW(hr, "Failed to create indirect draw command signature");
 
         CmdSignatureDesc.ByteStride = sizeof(UINT)*5;
         IndirectArg.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED;
         hr = pd3d12Device->CreateCommandSignature(&CmdSignatureDesc, nullptr, __uuidof(m_pDrawIndexedIndirectSignature), reinterpret_cast<void**>(static_cast<ID3D12CommandSignature**>(&m_pDrawIndexedIndirectSignature)) );
-        CHECK_D3D_RESULT_THROW(hr, "Failed to create draw indexed indirect command signature")
+        CHECK_D3D_RESULT_THROW(hr, "Failed to create draw indexed indirect command signature");
 
         CmdSignatureDesc.ByteStride = sizeof(UINT)*3;
         IndirectArg.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH;
         hr = pd3d12Device->CreateCommandSignature(&CmdSignatureDesc, nullptr, __uuidof(m_pDispatchIndirectSignature), reinterpret_cast<void**>(static_cast<ID3D12CommandSignature**>(&m_pDispatchIndirectSignature)) );
-        CHECK_D3D_RESULT_THROW(hr, "Failed to create dispatch indirect command signature")
+        CHECK_D3D_RESULT_THROW(hr, "Failed to create dispatch indirect command signature");
     }
 
     DeviceContextD3D12Impl::~DeviceContextD3D12Impl()

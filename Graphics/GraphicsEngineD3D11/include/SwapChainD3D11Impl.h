@@ -27,17 +27,17 @@
 /// Declaration of Diligent::SwapChainD3D11Impl class
 
 #include "SwapChainD3D11.h"
-#include "SwapChainBase.h"
+#include "SwapChainD3DBase.h"
 
 namespace Diligent
 {
 
 class IMemoryAllocator;
 /// Implementation of the Diligent::ISwapChainD3D11 interface
-class SwapChainD3D11Impl : public SwapChainBase<ISwapChainD3D11>
+class SwapChainD3D11Impl : public SwapChainD3DBase<ISwapChainD3D11, IDXGISwapChain>
 {
 public:
-    typedef SwapChainBase<ISwapChainD3D11> TSwapChainBase;
+    using TSwapChainBase = SwapChainD3DBase<ISwapChainD3D11, IDXGISwapChain>;
     SwapChainD3D11Impl(IReferenceCounters *pRefCounters,
                        const SwapChainDesc& SCDesc, 
                        const FullScreenModeDesc& FSDesc,
@@ -57,9 +57,9 @@ public:
     virtual ID3D11DepthStencilView* GetDSV()override final{ return m_pDepthStencilView; }
 
 private:
+    virtual void UpdateSwapChain(bool CreateNew)override final;
     void CreateRTVandDSV();
-    /// D3D11 swap chain
-    CComPtr<IDXGISwapChain> m_pSwapChain;
+
     /// Back buffer render target view
     CComPtr<ID3D11RenderTargetView> m_pRenderTargetView;
     /// Back buffer depth-stencil view

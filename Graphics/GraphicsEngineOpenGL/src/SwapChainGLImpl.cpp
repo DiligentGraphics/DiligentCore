@@ -111,4 +111,14 @@ void SwapChainGLImpl::Resize( Uint32 NewWidth, Uint32 NewHeight )
     }
 }
 
+void SwapChainGLImpl::SetFullscreenMode(const DisplayModeAttribs &DisplayMode)
+{
+    UNSUPPORTED("OpenGL does not support switching to the fullscreen mode");
+}
+
+void SwapChainGLImpl::SetWindowedMode()
+{
+    UNSUPPORTED("OpenGL does not support switching to the windowed mode");
+}
+
 }
