@@ -136,5 +136,15 @@ GLuint SwapChainGLIOS::GetDefaultFBO()const
 {
     return m_DefaultFBO;
 }
-    
+ 
+void SwapChainGLIOS::SetFullscreenMode(const DisplayModeAttribs &DisplayMode)
+{
+    UNSUPPORTED("Switching to fullscreen mode is not available on iOS");
+}
+
+void SwapChainGLIOS::SetWindowedMode()
+{
+    UNSUPPORTED("Switching to windowed mode is not available on iOS");
+}
+ 
 }
