@@ -23,9 +23,9 @@
 
 #pragma once
 
-#include "FileSystem.h"
-#include "Errors.h"
-#include "DebugUtilities.h"
+#include "../../Primitives/interface/Errors.h"
+#include "../../Platforms/Basic/interface/DebugUtilities.h"
+#include "../../Platforms/interface/FileSystem.h"
 
 namespace Diligent
 {

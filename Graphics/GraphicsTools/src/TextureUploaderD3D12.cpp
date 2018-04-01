@@ -27,6 +27,7 @@
 #include <mutex>
 #include <unordered_map>
 #include <deque>
+#include <vector>
 #include <d3d12.h>
 
 #include "TextureUploaderD3D12.h"

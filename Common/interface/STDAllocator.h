@@ -27,9 +27,9 @@
 /// Defines Diligent::DefaultRawMemoryAllocator class
 #include <limits>
 
-#include "BasicTypes.h"
-#include "MemoryAllocator.h"
-#include "DebugUtilities.h"
+#include "../../Primitives/interface/BasicTypes.h"
+#include "../../Primitives/interface/MemoryAllocator.h"
+#include "../../Platforms/Basic/interface/DebugUtilities.h"
 
 namespace Diligent
 {

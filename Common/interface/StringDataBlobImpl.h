@@ -26,8 +26,8 @@
 /// \file
 /// Implementation for the IDataBlob interface
 
-#include "DataBlob.h"
-#include "BasicTypes.h"
+#include "../../Primitives/interface/BasicTypes.h"
+#include "../../Primitives/interface/DataBlob.h"
 #include "ObjectBase.h"
 #include <vector>
 

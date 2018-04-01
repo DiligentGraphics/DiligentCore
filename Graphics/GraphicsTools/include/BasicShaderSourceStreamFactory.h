@@ -23,8 +23,8 @@
 
 #pragma once
 
-#include "BasicFileStream.h"
-#include "Shader.h"
+#include "../../../Common/interface/BasicFileStream.h"
+#include "../../GraphicsEngine/interface/Shader.h"
 
 namespace Diligent
 {

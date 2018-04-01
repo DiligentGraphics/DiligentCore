@@ -258,6 +258,13 @@ struct ShaderCreationAttribs
 
 	/// Shader source language. See Diligent::SHADER_SOURCE_LANGUAGE.
     SHADER_SOURCE_LANGUAGE SourceLanguage = SHADER_SOURCE_LANGUAGE_DEFAULT;
+
+    /// Memory address where pointer to the compiler messages data blob will be written
+
+    /// The buffer contains two null-terminated strings. The first one is the compiler
+    /// output message. The second one is the full shader source code including definitions added
+    /// by the engine. Data blob object must be released by the client.
+    IDataBlob **ppCompilerOutput = nullptr;
 };
 
 

@@ -42,7 +42,14 @@ namespace Diligent
     {
         if( ViewDesc.ViewType == BUFFER_VIEW_SHADER_RESOURCE && pBuffer->GetDesc().Mode == BUFFER_MODE_FORMATTED )
         {
+#ifdef _MSC_VER
+#   pragma warning(push)
+#   pragma warning(disable : 4127) // conditional expression is constant
+#endif
             VERIFY( GL_TEXTURE_BUFFER != 0, "GL texture buffers are not supported");
+#ifdef _MSC_VER
+#   pragma warning(pop)
+#endif
 
             auto *pContextGL = ValidatedCast<DeviceContextGLImpl>(pContext);
             auto &ContextState = pContextGL->GetContextState();

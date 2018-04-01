@@ -28,7 +28,7 @@
 
 #include <dxgi1_4.h>
 #include "SwapChainD3D12.h"
-#include "SwapChainBase.h"
+#include "SwapChainD3DBase.h"
 
 namespace Diligent
 {
@@ -36,12 +36,13 @@ namespace Diligent
 class ITextureViewD3D12;
 class IMemoryAllocator;
 /// Implementation of the Diligent::ISwapChainD3D12 interface
-class SwapChainD3D12Impl : public SwapChainBase<ISwapChainD3D12>
+class SwapChainD3D12Impl : public SwapChainD3DBase<ISwapChainD3D12, IDXGISwapChain3>
 {
 public:
-    typedef SwapChainBase<ISwapChainD3D12> TSwapChainBase;
+    using TSwapChainBase = SwapChainD3DBase<ISwapChainD3D12, IDXGISwapChain3>;
     SwapChainD3D12Impl(IReferenceCounters *pRefCounters,
                        const SwapChainDesc& SwapChainDesc, 
+                       const FullScreenModeDesc& FSDesc,
                        class RenderDeviceD3D12Impl* pRenderDeviceD3D12,
                        class DeviceContextD3D12Impl* pDeviceContextD3D12,
                        void* pNativeWndHandle);
@@ -49,18 +50,16 @@ public:
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface );
 
-    virtual void Present();
-    virtual void Resize( Uint32 NewWidth, Uint32 NewHeight );
+    virtual void Present(Uint32 SyncInterval)override final;
+    virtual void Resize( Uint32 NewWidth, Uint32 NewHeight )override final;
 
     virtual IDXGISwapChain* GetDXGISwapChain()override final{ return m_pSwapChain; }
     virtual ITextureViewD3D12* GetCurrentBackBufferRTV()override final;
     virtual ITextureViewD3D12* GetDepthBufferDSV()override final{return m_pDepthBufferDSV;}
 
 private:
+    virtual void UpdateSwapChain(bool CreateNew)override final;
     void InitBuffersAndViews();
-
-    /// DXGI swap chain
-    CComPtr<IDXGISwapChain3> m_pSwapChain;
 
     std::vector< RefCntAutoPtr<ITextureViewD3D12>, STDAllocatorRawMem<RefCntAutoPtr<ITextureViewD3D12>> > m_pBackBufferRTV;
     RefCntAutoPtr<ITextureViewD3D12> m_pDepthBufferDSV;

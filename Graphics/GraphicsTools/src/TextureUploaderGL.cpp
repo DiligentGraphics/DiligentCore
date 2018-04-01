@@ -25,6 +25,7 @@
 #include <mutex>
 #include <deque>
 #include <unordered_map>
+#include <vector>
 #include "TextureUploaderGL.h"
 
 namespace Diligent

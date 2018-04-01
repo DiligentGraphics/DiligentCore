@@ -30,6 +30,7 @@
 #include "DeviceContextD3D12Impl.h"
 #include "SwapChainD3D12Impl.h"
 #include "D3D12TypeConversions.h"
+#include "EngineFactoryD3DBase.h"
 #include "StringTools.h"
 #include "EngineMemory.h"
 #include "CommandQueueD3D12Impl.h"
@@ -40,7 +41,7 @@ namespace Diligent
 {
 
 /// Engine factory for D3D12 implementation
-class EngineFactoryD3D12Impl : public IEngineFactoryD3D12
+class EngineFactoryD3D12Impl : public EngineFactoryD3DBase<IEngineFactoryD3D12, DeviceType::D3D12>
 {
 public:
     static EngineFactoryD3D12Impl* GetInstance()
@@ -62,11 +63,11 @@ public:
                              Uint32 NumDeferredContexts)override final;
 
     void CreateSwapChainD3D12( IRenderDevice *pDevice, 
-                                       IDeviceContext *pImmediateContext, 
-                                       const SwapChainDesc& SwapChainDesc, 
-                                       void* pNativeWndHandle, 
-                                       ISwapChain **ppSwapChain )override final;
-
+                               IDeviceContext *pImmediateContext, 
+                               const SwapChainDesc& SwapChainDesc, 
+                               const FullScreenModeDesc& FSDesc,
+                               void* pNativeWndHandle, 
+                               ISwapChain **ppSwapChain )override final;
 };
 
 void GetHardwareAdapter(IDXGIFactory2* pFactory, IDXGIAdapter1** ppAdapter)
@@ -81,8 +82,7 @@ void GetHardwareAdapter(IDXGIFactory2* pFactory, IDXGIAdapter1** ppAdapter)
 
 		if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
 		{
-			// Don't select the Basic Render Driver adapter.
-			// If you want a software adapter, pass in "/warp" on the command line.
+			// Skip software devices
 			continue;
 		}
 
@@ -90,7 +90,6 @@ void GetHardwareAdapter(IDXGIFactory2* pFactory, IDXGIAdapter1** ppAdapter)
 		// actual device yet.
 		if (SUCCEEDED(D3D12CreateDevice(adapter, D3D_FEATURE_LEVEL_11_0, _uuidof(ID3D12Device), nullptr)))
 		{
-            LOG_INFO_MESSAGE("D3D12-capabale hardware found: ", NarrowString(desc.Description), " (", desc.DedicatedVideoMemory>>20, " MB)");
 			break;
 		}
 	}
@@ -116,6 +115,9 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12( const EngineD3D12Attr
                                                            IDeviceContext **ppContexts,
                                                            Uint32 NumDeferredContexts)
 {
+    if (CreationAttribs.DebugMessageCallback != nullptr)
+        SetDebugMessageCallback(CreationAttribs.DebugMessageCallback);
+
     VERIFY( ppDevice && ppContexts, "Null pointer provided" );
     if( !ppDevice || !ppContexts )
         return;
@@ -137,8 +139,6 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12( const EngineD3D12Attr
         }
     }
 
-    SetRawAllocator(CreationAttribs.pRawMemAllocator);
-
     *ppDevice = nullptr;
     memset(ppContexts, 0, sizeof(*ppContexts) * (1+NumDeferredContexts));
 
@@ -159,11 +159,32 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12( const EngineD3D12Attr
 
 	    CComPtr<IDXGIFactory4> factory;
         HRESULT hr = CreateDXGIFactory1(__uuidof(factory), reinterpret_cast<void**>(static_cast<IDXGIFactory4**>(&factory)) );
-        CHECK_D3D_RESULT_THROW(hr, "Failed to create DXGI factory")
+        CHECK_D3D_RESULT_THROW(hr, "Failed to create DXGI factory");
 
 	    CComPtr<IDXGIAdapter1> hardwareAdapter;
-	    GetHardwareAdapter(factory, &hardwareAdapter);
-    
+        if(CreationAttribs.AdapterId == EngineD3D12Attribs::DefaultAdapterId)
+        {
+	        GetHardwareAdapter(factory, &hardwareAdapter);
+            if(hardwareAdapter == nullptr)
+                LOG_ERROR_AND_THROW("No suitable hardware adapter found");
+        }
+        else
+        {
+            auto Adapters = FindCompatibleAdapters();
+            if(CreationAttribs.AdapterId < Adapters.size())
+                hardwareAdapter = Adapters[CreationAttribs.AdapterId];
+            else
+            {
+                LOG_ERROR_AND_THROW(CreationAttribs.AdapterId, " is not a valid hardware adapter id. Total number of compatible adapters available on this system: ", Adapters.size());
+            }
+        }
+
+        {
+            DXGI_ADAPTER_DESC1 desc;
+            hardwareAdapter->GetDesc1(&desc);
+            LOG_INFO_MESSAGE("D3D12-capabale hardware found: ", NarrowString(desc.Description), " (", desc.DedicatedVideoMemory >> 20, " MB)");
+        }
+
         hr = D3D12CreateDevice(hardwareAdapter, D3D_FEATURE_LEVEL_11_0, __uuidof(d3d12Device), reinterpret_cast<void**>(static_cast<ID3D12Device**>(&d3d12Device)) );
         if( FAILED(hr))
         {
@@ -171,10 +192,10 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12( const EngineD3D12Attr
 
 		    CComPtr<IDXGIAdapter> warpAdapter;
 		    hr = factory->EnumWarpAdapter( __uuidof(warpAdapter),  reinterpret_cast<void**>(static_cast<IDXGIAdapter**>(&warpAdapter)) );
-            CHECK_D3D_RESULT_THROW(hr, "Failed to enum warp adapter")
+            CHECK_D3D_RESULT_THROW(hr, "Failed to enum warp adapter");
 
 		    hr = D3D12CreateDevice( warpAdapter, D3D_FEATURE_LEVEL_11_0, __uuidof(d3d12Device), reinterpret_cast<void**>(static_cast<ID3D12Device**>(&d3d12Device)) );
-            CHECK_D3D_RESULT_THROW(hr, "Failed to crate warp device")
+            CHECK_D3D_RESULT_THROW(hr, "Failed to crate warp device");
         }
 
 #if _DEBUG
@@ -265,6 +286,9 @@ void EngineFactoryD3D12Impl::AttachToD3D12Device(void *pd3d12NativeDevice,
                                                  IDeviceContext **ppContexts,
                                                  Uint32 NumDeferredContexts)
 {
+    if (EngineAttribs.DebugMessageCallback != nullptr)
+        SetDebugMessageCallback(EngineAttribs.DebugMessageCallback);
+
     VERIFY( pd3d12NativeDevice && pCommandQueue && ppDevice && ppContexts, "Null pointer provided" );
     if( !pd3d12NativeDevice || !pCommandQueue || !ppDevice || !ppContexts )
         return;
@@ -274,6 +298,7 @@ void EngineFactoryD3D12Impl::AttachToD3D12Device(void *pd3d12NativeDevice,
 
     try
     {
+        SetRawAllocator(EngineAttribs.pRawMemAllocator);
         auto &RawMemAllocator = GetRawAllocator();
         auto d3d12Device = reinterpret_cast<ID3D12Device*>(pd3d12NativeDevice);
         RenderDeviceD3D12Impl *pRenderDeviceD3D12( NEW_RC_OBJ(RawMemAllocator, "RenderDeviceD3D12Impl instance", RenderDeviceD3D12Impl)(RawMemAllocator, EngineAttribs, d3d12Device, pCommandQueue, NumDeferredContexts ) );
@@ -319,6 +344,7 @@ void EngineFactoryD3D12Impl::AttachToD3D12Device(void *pd3d12NativeDevice,
 /// \param [in] pDevice - Pointer to the render device
 /// \param [in] pImmediateContext - Pointer to the immediate device context
 /// \param [in] SCDesc - Swap chain description
+/// \param [in] FSDesc - Fullscreen mode description
 /// \param [in] pNativeWndHandle - Platform-specific native handle of the window 
 ///                                the swap chain will be associated with:
 ///                                * On Win32 platform, this should be window handle (HWND)
@@ -330,6 +356,7 @@ void EngineFactoryD3D12Impl::AttachToD3D12Device(void *pd3d12NativeDevice,
 void EngineFactoryD3D12Impl::CreateSwapChainD3D12( IRenderDevice *pDevice, 
                                                    IDeviceContext *pImmediateContext, 
                                                    const SwapChainDesc& SCDesc, 
+                                                   const FullScreenModeDesc& FSDesc,
                                                    void* pNativeWndHandle, 
                                                    ISwapChain **ppSwapChain )
 {
@@ -344,7 +371,7 @@ void EngineFactoryD3D12Impl::CreateSwapChainD3D12( IRenderDevice *pDevice,
         auto *pDeviceD3D12 = ValidatedCast<RenderDeviceD3D12Impl>( pDevice );
         auto *pDeviceContextD3D12 = ValidatedCast<DeviceContextD3D12Impl>(pImmediateContext);
         auto &RawMemAllocator = GetRawAllocator();
-        auto *pSwapChainD3D12 = NEW_RC_OBJ(RawMemAllocator, "SwapChainD3D12Impl instance", SwapChainD3D12Impl)(SCDesc, pDeviceD3D12, pDeviceContextD3D12, pNativeWndHandle);
+        auto *pSwapChainD3D12 = NEW_RC_OBJ(RawMemAllocator, "SwapChainD3D12Impl instance", SwapChainD3D12Impl)(SCDesc, FSDesc, pDeviceD3D12, pDeviceContextD3D12, pNativeWndHandle);
         pSwapChainD3D12->QueryInterface( IID_SwapChain, reinterpret_cast<IObject**>(ppSwapChain) );
 
         pDeviceContextD3D12->SetSwapChain(pSwapChainD3D12);

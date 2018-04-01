@@ -24,9 +24,9 @@
 #pragma once
 
 #include "TextureUploader.h"
-#include "ObjectBase.h"
-#include "HashUtils.h"
-#include "RefCntAutoPtr.h"
+#include "../../../Common/interface/ObjectBase.h"
+#include "../../../Common/interface/HashUtils.h"
+#include "../../../Common/interface/RefCntAutoPtr.h"
 
 namespace std
 {

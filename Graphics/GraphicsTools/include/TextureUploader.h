@@ -23,8 +23,8 @@
 
 #pragma once
 
-#include "RenderDevice.h"
-#include "DeviceContext.h"
+#include "../../GraphicsEngine/interface/RenderDevice.h"
+#include "../../GraphicsEngine/interface/DeviceContext.h"
 
 namespace Diligent
 {

@@ -27,6 +27,7 @@
 /// Contains basic graphics engine type defintions
 
 #include "../../../Primitives/interface/BasicTypes.h"
+#include "../../../Primitives/interface/DebugOutput.h"
 
 /// Graphics engine namespace
 namespace Diligent
@@ -908,6 +909,96 @@ namespace Diligent
         {}
     };
 
+    /// Hardware adapter attributes
+    struct HardwareAdapterAttribs
+    {
+        /// A string that contains the adapter description
+        char Description[128];
+
+        /// Dedicated video memory, in bytes
+        size_t DedicatedVideoMemory;
+
+        /// Dedicated system memory, in bytes
+        size_t DedicatedSystemMemory;
+
+        /// Dedicated shared memory, in bytes
+        size_t SharedSystemMemory;
+
+        /// The PCI ID of the hardware vendor
+        Uint32 VendorId;
+
+        /// The PCI ID of the hardware device
+        Uint32 DeviceId;
+
+        /// Number of outputs this device has
+        Uint32 NumOutputs;
+    };
+
+
+    /// Display mode attributes
+    struct DisplayModeAttribs
+    {
+        /// Flags indicating how an image is stretched to fit a given monitor's resolution.
+        /// \sa <a href = "https://msdn.microsoft.com/en-us/library/windows/desktop/bb173066(v=vs.85).aspx">DXGI_MODE_SCALING enumeration on MSDN</a>, 
+        enum SCALING
+        {
+            /// Unspecified scaling.
+            /// D3D Counterpart: DXGI_MODE_SCALING_UNSPECIFIED.
+            SCALING_UNSPECIFIED = 0,
+
+            /// Specifies no scaling. The image is centered on the display. 
+            /// This flag is typically used for a fixed-dot-pitch display (such as an LED display).
+            /// D3D Counterpart: DXGI_MODE_SCALING_CENTERED.
+            SCALING_CENTERED = 1,
+
+            /// Specifies stretched scaling.
+            /// D3D Counterpart: DXGI_MODE_SCALING_STRETCHED.
+            SCALING_STRETCHED = 2
+        };
+
+        /// Flags indicating the method the raster uses to create an image on a surface.
+        /// \sa <a href = "https://msdn.microsoft.com/en-us/library/windows/desktop/bb173067">DXGI_MODE_SCANLINE_ORDER enumeration on MSDN</a>, 
+        enum SCANLINE_ORDER
+        {
+            /// Scanline order is unspecified
+            /// D3D Counterpart: DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED.
+            SCANLINE_ORDER_UNSPECIFIED = 0,
+
+            /// The image is created from the first scanline to the last without skipping any
+            /// D3D Counterpart: DXGI_MODE_SCANLINE_ORDER_PROGRESSIVE.
+            SCANLINE_ORDER_PROGRESSIVE = 1,
+
+            /// The image is created beginning with the upper field
+            /// D3D Counterpart: DXGI_MODE_SCANLINE_ORDER_UPPER_FIELD_FIRST.
+            SCANLINE_ORDER_UPPER_FIELD_FIRST = 2,
+
+            /// The image is created beginning with the lower field
+            /// D3D Counterpart: DXGI_MODE_SCANLINE_ORDER_LOWER_FIELD_FIRST.
+            SCANLINE_ORDER_LOWER_FIELD_FIRST = 3
+        };
+        
+        /// Display resolution width
+        Uint32 Width = 0;
+
+        /// Display resolution height
+        Uint32 Height = 0;
+
+        /// Display format
+        TEXTURE_FORMAT Format = TEX_FORMAT_UNKNOWN;
+
+        /// Refresh rate numerator
+        Uint32 RefreshRateNumerator = 0;
+
+        /// Refresh rate denominator
+        Uint32 RefreshRateDenominator = 0;
+
+        /// The scanline drawing mode. 
+        SCALING Scaling = SCALING_UNSPECIFIED;
+
+        /// The scaling mode. 
+        SCANLINE_ORDER ScanlineOrder = SCANLINE_ORDER_UNSPECIFIED;
+    };
+
     /// Swap chain description
     struct SwapChainDesc
     {
@@ -948,22 +1039,45 @@ namespace Diligent
         {}
     };
 
+    /// Full screen mode description
+    /// \sa <a href = "https://msdn.microsoft.com/en-us/library/windows/desktop/hh404531(v=vs.85).aspx">DXGI_SWAP_CHAIN_FULLSCREEN_DESC structure on MSDN</a>, 
+    struct FullScreenModeDesc
+    {
+        /// A Boolean value that specifies whether the swap chain is in fullscreen mode.
+        Bool Fullscreen = False;
+
+        /// Refresh rate numerator
+        Uint32 RefreshRateNumerator = 0;
+
+        /// Refresh rate denominator
+        Uint32 RefreshRateDenominator = 0;
+
+        /// The scanline drawing mode. 
+        DisplayModeAttribs::SCALING Scaling = DisplayModeAttribs::SCALING_UNSPECIFIED;
+
+        /// The scaling mode. 
+        DisplayModeAttribs::SCANLINE_ORDER ScanlineOrder = DisplayModeAttribs::SCANLINE_ORDER_UNSPECIFIED;
+    };
+
     /// Engine creation attibutes
     struct EngineCreationAttribs
     {
-        const Char* strShaderCachePath;
         /// Pointer to the raw memory allocator that will be used for all memory allocation/deallocation
-        /// operations in an engine
-        class IMemoryAllocator *pRawMemAllocator;
-        EngineCreationAttribs() : 
-            strShaderCachePath(nullptr),
-            pRawMemAllocator(nullptr)
-        {}
+        /// operations in the engine
+        class IMemoryAllocator *pRawMemAllocator = nullptr;
+
+        /// Pointer to the user-specified debug message callback function
+        DebugMessageCallbackType DebugMessageCallback = nullptr;
     };
 
     /// Attributes specific to D3D12 engine
     struct EngineD3D12Attribs : public EngineCreationAttribs
     {
+        static constexpr Uint32 DefaultAdapterId = 0xFFFFFFFF;
+
+        /// Id of the hardware adapter the engine should be initialized on
+        Uint32 AdapterId = DefaultAdapterId;
+
         /// Size of the CPU descriptor heap allocations for different heap types.
         Uint32 CPUDescriptorHeapAllocationSize[4] = 
         {

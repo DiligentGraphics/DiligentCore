@@ -23,15 +23,43 @@
 
 #pragma once
 
-/// \file
-/// Defines graphics engine utilities
-
-#include "../../GraphicsEngine/interface/Texture.h"
-#include "../../GraphicsEngine/interface/Buffer.h"
-#include "../../GraphicsEngine/interface/RenderDevice.h"
+#include "BasicTypes.h"
 
 namespace Diligent
 {
-void CreateUniformBuffer( IRenderDevice *pDevice, Uint32 Size, const Char *Name, IBuffer **ppBuffer, USAGE Usage = USAGE_DYNAMIC, Uint32 BindFlag = BIND_UNIFORM_BUFFER, Uint32 CPUAccessFlags = CPU_ACCESS_WRITE );
-void GenerateCheckerBoardPattern(Uint32 Width, Uint32 Height, TEXTURE_FORMAT Fmt, Uint32 HorzCells, Uint32 VertCells, Uint8 *pData, Uint32 StrideInBytes );
+
+/// Describes debug message severity
+enum class DebugMessageSeverity : Int32
+{
+    /// Information message
+    Info = 0,
+
+    /// Warning message
+    Warning,
+
+    /// Error, with potential recovery
+    Error,
+
+    /// Fatal error - recovery is not possible
+    FatalError
+};
+
+
+/// Type of the debug messag callback function
+
+/// \param [in] Severity - Message severity
+/// \param [in] Message - Debug message
+/// \param [in] Function - Name of the function or nullptr
+/// \param [in] Function - File name or nullptr
+/// \param [in] Line - Line number
+using DebugMessageCallbackType = void(*)(DebugMessageSeverity Severity, const Char* Message, const char* Function, const char* File, int Line);
+extern DebugMessageCallbackType DebugMessageCallback;
+
+
+/// Sets the debug message callback function
+
+/// \note This function needs to be called for every executable module that
+///       wants to use the callback.
+void SetDebugMessageCallback(DebugMessageCallbackType DbgMessageCallback);
+
 }

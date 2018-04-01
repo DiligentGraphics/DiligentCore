@@ -34,7 +34,7 @@ using namespace Diligent;
 void WindowsDebug :: AssertionFailed( const Diligent::Char *Message, const char *Function, const char *File, int Line )
 {
     auto AssertionFailedMessage = FormatAssertionFailedMessage(Message, Function, File, Line);
-    OutputDebugMessage( DebugMessageSeverity::Error, AssertionFailedMessage.c_str());
+    OutputDebugMessage( DebugMessageSeverity::Error, AssertionFailedMessage.c_str(), nullptr, nullptr, 0);
 
     int nCode = MessageBoxA(NULL,
                             AssertionFailedMessage.c_str(),
@@ -65,19 +65,15 @@ void WindowsDebug :: AssertionFailed( const Diligent::Char *Message, const char 
         return;
 };
 
-void WindowsDebug::OutputDebugMessage( DebugMessageSeverity Severity, const Diligent::Char *Message )
+void WindowsDebug::OutputDebugMessage( DebugMessageSeverity Severity, const Char *Message, const char *Function, const char *File, int Line)
 {
-    static const Char* const strSeverities[] = { "Info: ", "Warning: ", "ERROR: ", "CRITICAL ERROR: " };
-    auto* MessageSevery = strSeverities[ static_cast<int>(Severity) ];
-    String str = MessageSevery;
-    str += Message;
-    str += '\n';
-    OutputDebugStringA( str.c_str() );
+    auto msg = FormatDebugMessage(Severity, Message, Function, File, Line);
+    OutputDebugStringA(msg.c_str());
 
     if( Severity == DebugMessageSeverity::Error || Severity == DebugMessageSeverity::FatalError )
-        std::cerr<<str;
+        std::cerr << msg;
     else
-        std::cout<<str;
+        std::cout << msg;
 }
 
 void DebugAssertionFailed(const Diligent::Char* Message, const char* Function, const char* File, int Line)
@@ -85,7 +81,17 @@ void DebugAssertionFailed(const Diligent::Char* Message, const char* Function, c
     WindowsDebug :: AssertionFailed( Message, Function, File, Line );
 }
 
-void OutputDebugMessage(BasicPlatformDebug::DebugMessageSeverity Severity, const Diligent::Char* Message)
+
+namespace
 {
-    WindowsDebug::OutputDebugMessage( Severity, Message );
+
+class SetDefaultDebugMessageCallback
+{
+public:
+    SetDefaultDebugMessageCallback()
+    {
+        SetDebugMessageCallback(WindowsDebug::OutputDebugMessage);
+    }
+}static _SetDefaultDebugMessageCallback;
+
 }

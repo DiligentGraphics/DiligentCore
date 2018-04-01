@@ -67,17 +67,17 @@ private:
 
 
 #define CHECK_D3D_RESULT_THROW(Expr, Message)\
-{                           \
+do{                         \
     HRESULT _hr_ = Expr;    \
     if(FAILED(_hr_))        \
     {                       \
         ComErrorDesc ErrDesc( _hr_ );    \
         LOG_ERROR_AND_THROW( Message, "\nHRESULT Desc: ", ErrDesc.Get());\
     }                       \
-}
+}while(false)
 
 #define CHECK_D3D_RESULT_THROW_EX(Expr, ...)\
-{                           \
+do{                         \
     HRESULT _hr_ = Expr;    \
     if(FAILED(_hr_))        \
     {                       \
@@ -86,4 +86,14 @@ private:
         ComErrorDesc ErrDesc( _hr_ );          \
         LOG_ERROR_AND_THROW( ms.str(), "\nHRESULT Desc: ", ErrDesc.Get());\
     }                       \
-}
+}while(false)
+
+#define LOG_D3D_ERROR(Expr, Message)\
+do{                         \
+    HRESULT _hr_ = Expr;    \
+    if(FAILED(_hr_))        \
+    {                       \
+        ComErrorDesc ErrDesc( _hr_ );    \
+        LOG_ERROR_MESSAGE( Message, "\nHRESULT Desc: ", ErrDesc.Get());\
+    }                       \
+}while(false)

@@ -26,11 +26,11 @@
 /// \file
 /// Defines graphics engine utilities
 
-#include "GraphicsTypes.h"
-#include "DepthStencilState.h"
-#include "BlendState.h"
-#include "RasterizerState.h"
-#include "Sampler.h"
+#include "../../GraphicsEngine/interface/GraphicsTypes.h"
+#include "../../GraphicsEngine/interface/DepthStencilState.h"
+#include "../../GraphicsEngine/interface/BlendState.h"
+#include "../../GraphicsEngine/interface/RasterizerState.h"
+#include "../../GraphicsEngine/interface/Sampler.h"
 
 namespace Diligent
 {

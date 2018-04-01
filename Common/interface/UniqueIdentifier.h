@@ -23,7 +23,7 @@
 
 #pragma once
 
-#include "Atomics.h"
+#include "../../Platforms/interface/Atomics.h"
 
 namespace Diligent
 {

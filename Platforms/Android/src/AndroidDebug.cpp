@@ -26,27 +26,39 @@
 #include <android/log.h>
 #include <csignal>
 
-void AndroidDebug :: AssertionFailed( const Diligent::Char *Message, const char *Function, const char *File, int Line )
+using namespace Diligent;
+
+void AndroidDebug :: AssertionFailed( const Char *Message, const char *Function, const char *File, int Line )
 {
     auto AssertionFailedMessage = FormatAssertionFailedMessage(Message, Function, File, Line);
-    OutputDebugMessage( DebugMessageSeverity::Error, AssertionFailedMessage.c_str() );
+    OutputDebugMessage( DebugMessageSeverity::Error, AssertionFailedMessage.c_str(), nullptr, nullptr, 0 );
 
     raise( SIGTRAP );
 };
 
 
-void AndroidDebug::OutputDebugMessage( DebugMessageSeverity Severity, const Diligent::Char *Message )
+void AndroidDebug::OutputDebugMessage(DebugMessageSeverity Severity, const Char *Message, const char *Function, const char *File, int Line)
 {
+    auto msg = FormatDebugMessage(Severity, Message, Function, File, Line);
     static const android_LogPriority Priorities[] = { ANDROID_LOG_INFO, ANDROID_LOG_WARN, ANDROID_LOG_ERROR, ANDROID_LOG_FATAL };
-    __android_log_print( Priorities[static_cast<int>(Severity)], "Diligent Engine", "%s", Message );
+    __android_log_print( Priorities[static_cast<int>(Severity)], "Diligent Engine", "%s", msg.c_str() );
 }
 
-void DebugAssertionFailed(const Diligent::Char* Message, const char* Function, const char* File, int Line)
+void DebugAssertionFailed(const Char* Message, const char* Function, const char* File, int Line)
 {
     AndroidDebug :: AssertionFailed( Message, Function, File, Line );
 }
 
-void OutputDebugMessage(BasicPlatformDebug::DebugMessageSeverity Severity, const Diligent::Char* Message)
+namespace
 {
-    AndroidDebug::OutputDebugMessage( Severity, Message );
+
+class SetDefaultDebugMessageCallback
+{
+public:
+    SetDefaultDebugMessageCallback()
+    {
+        SetDebugMessageCallback(AndroidDebug::OutputDebugMessage);
+    }
+}static _SetDefaultDebugMessageCallback;
+
 }

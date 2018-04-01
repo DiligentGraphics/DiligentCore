@@ -43,8 +43,8 @@ class ISwapChain : public IObject
 {
 public:
 
-    /// Presents a rendered image to the user.
-    virtual void Present() = 0;
+    /// Presents a rendered image to the user
+    virtual void Present(Uint32 SyncInterval = 1) = 0;
 
     /// Returns the swap chain desctription
     virtual const SwapChainDesc& GetDesc()const = 0;
@@ -54,6 +54,12 @@ public:
     /// \param [in] NewWidth - New swap chain width, in pixels
     /// \param [in] NewHeight - New swap chain height, in pixels
     virtual void Resize( Uint32 NewWidth, Uint32 NewHeight ) = 0;
+
+    /// Sets fullscreen mode (only supported on Win32 platform)
+    virtual void SetFullscreenMode(const DisplayModeAttribs &DisplayMode) = 0;
+
+    /// Sets windowed mode (only supported on Win32 platform)
+    virtual void SetWindowedMode() = 0;
 };
 
 }

@@ -26,11 +26,11 @@
 /// \file
 /// Implementation of the BasicFileStream class
 
-#include "FileStream.h"
+#include "../../Primitives/interface/FileStream.h"
+#include "../../Primitives/interface/DataBlob.h"
 #include "ObjectBase.h"
 #include "RefCountedObjectImpl.h"
 #include "FileWrapper.h"
-#include "DataBlob.h"
 
 namespace Diligent
 {

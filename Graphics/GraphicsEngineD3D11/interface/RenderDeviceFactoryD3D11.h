@@ -52,6 +52,7 @@ public:
    virtual void CreateSwapChainD3D11( IRenderDevice *pDevice, 
                                       IDeviceContext *pImmediateContext, 
                                       const SwapChainDesc& SCDesc, 
+                                      const FullScreenModeDesc& FSDesc,
                                       void* pNativeWndHandle, 
                                       ISwapChain **ppSwapChain ) = 0;
 
@@ -61,6 +62,15 @@ public:
                                     IRenderDevice **ppDevice, 
                                     IDeviceContext **ppContexts,
                                     Uint32 NumDeferredContexts) = 0;
+
+   virtual void EnumerateHardwareAdapters(Uint32 &NumAdapters, 
+                                          HardwareAdapterAttribs *Adapters) = 0;
+
+   virtual void EnumerateDisplayModes(Uint32 AdapterId, 
+                                      Uint32 OutputId, 
+                                      TEXTURE_FORMAT Format, 
+                                      Uint32 &NumDisplayModes, 
+                                      DisplayModeAttribs *DisplayModes) = 0;
 };
 
 #if ENGINE_DLL

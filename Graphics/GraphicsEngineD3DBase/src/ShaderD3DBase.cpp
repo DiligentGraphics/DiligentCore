@@ -57,7 +57,7 @@ public:
             return E_FAIL;
         }
 
-        RefCntAutoPtr<Diligent::IDataBlob> pFileData( MakeNewRCObj<Diligent::DataBlobImpl>()(0) );
+        RefCntAutoPtr<IDataBlob> pFileData( MakeNewRCObj<DataBlobImpl>()(0) );
         pSourceStream->Read( pFileData );
         *ppData = pFileData->GetDataPtr();
         *pBytes = static_cast<UINT>( pFileData->GetSize() );
@@ -75,7 +75,7 @@ public:
 
 private:
     IShaderSourceInputStreamFactory *m_pStreamFactory;
-    std::unordered_map< LPCVOID, RefCntAutoPtr<Diligent::IDataBlob> > m_DataBlobs;
+    std::unordered_map< LPCVOID, RefCntAutoPtr<IDataBlob> > m_DataBlobs;
 };
 
 HRESULT CompileShader( const char* Source,
@@ -83,7 +83,8 @@ HRESULT CompileShader( const char* Source,
                        const D3D_SHADER_MACRO* pDefines, 
                        IShaderSourceInputStreamFactory *pIncludeStreamFactory,
                        LPCSTR profile, 
-                       ID3DBlob **ppBlobOut )
+                       ID3DBlob **ppBlobOut,
+                       ID3DBlob **ppCompilerOutput)
 {
     DWORD dwShaderFlags = D3DCOMPILE_ENABLE_STRICTNESS;
 #if defined( DEBUG ) || defined( _DEBUG )
@@ -98,37 +99,25 @@ HRESULT CompileShader( const char* Source,
     // dwShaderFlags |= D3D10_SHADER_OPTIMIZATION_LEVEL3;
 #endif
 	HRESULT hr;
-	do
-	{
-        CComPtr<ID3DBlob> errors;
+//	do
+//	{
         auto SourceLen = strlen(Source);
          
         D3DIncludeImpl IncludeImpl(pIncludeStreamFactory);
-        hr = D3DCompile( Source, SourceLen, NULL, pDefines, &IncludeImpl, strFunctionName, profile, dwShaderFlags, 0, ppBlobOut, &errors );
+        hr = D3DCompile( Source, SourceLen, NULL, pDefines, &IncludeImpl, strFunctionName, profile, dwShaderFlags, 0, ppBlobOut, ppCompilerOutput);
        
-		if( FAILED(hr) || errors )
-		{
-            std::wstringstream errorss;
-            ComErrorDesc ErrDesc(hr);
-            if( FAILED(hr) )
-                Diligent::FormatMsg( errorss, "Failed to compile shader\n" );
-            else
-                Diligent::FormatMsg( errorss, "Shader compiler output:\n" );
-            Diligent::FormatMsg( errorss, ErrDesc.Get(), "\n" );
-            if( errors )
-                Diligent::FormatMsg( errorss, (char*)errors->GetBufferPointer() );
-            auto ErrorDesc = errorss.str();
-            OutputDebugStringW( ErrorDesc.c_str() );
-			if( FAILED(hr) 
-#if PLATFORM_WIN32
-                && IDRETRY != MessageBoxW( NULL, ErrorDesc.c_str() , L"FX Error", MB_ICONERROR | (Source == nullptr ? MB_ABORTRETRYIGNORE : 0) ) 
-#endif
-                )
-			{
-				break;
-			}
-		}
-	} while( FAILED(hr) );
+//		if( FAILED(hr) || errors )
+//		{
+//			if( FAILED(hr) 
+//#if PLATFORM_WIN32
+//                && IDRETRY != MessageBoxW( NULL, L"Failed to compile shader", L"FX Error", MB_ICONERROR | (Source == nullptr ? MB_ABORTRETRYIGNORE : 0) ) 
+//#endif
+//                )
+//			{
+//				break;
+//			}
+//		}
+//	} while( FAILED(hr) );
 	return hr;
 }
 
@@ -178,7 +167,7 @@ ShaderD3DBase::ShaderD3DBase(const ShaderCreationAttribs &CreationAttribs)
             VERIFY(CreationAttribs.pShaderSourceStreamFactory, "Input stream factory is null");
             RefCntAutoPtr<IFileStream> pSourceStream;
             CreationAttribs.pShaderSourceStreamFactory->CreateInputStream(CreationAttribs.FilePath, &pSourceStream);
-            RefCntAutoPtr<Diligent::IDataBlob> pFileData(MakeNewRCObj<Diligent::DataBlobImpl>()(0));
+            RefCntAutoPtr<IDataBlob> pFileData(MakeNewRCObj<DataBlobImpl>()(0));
             if (pSourceStream == nullptr)
                 LOG_ERROR_AND_THROW("Failed to open shader source file");
             pSourceStream->Read(pFileData);
@@ -201,8 +190,32 @@ ShaderD3DBase::ShaderD3DBase(const ShaderCreationAttribs &CreationAttribs)
         }
 
         VERIFY(CreationAttribs.EntryPoint != nullptr, "Entry point must not be null");
-        CHECK_D3D_RESULT_THROW(CompileShader(ShaderSource.c_str(), CreationAttribs.EntryPoint, pDefines, CreationAttribs.pShaderSourceStreamFactory, strShaderProfile.c_str(), &m_pShaderByteCode),
-            "Failed to compile the shader");
+        CComPtr<ID3DBlob> errors;
+        auto hr = CompileShader(ShaderSource.c_str(), CreationAttribs.EntryPoint, pDefines, CreationAttribs.pShaderSourceStreamFactory, strShaderProfile.c_str(), &m_pShaderByteCode, &errors);
+
+        const char *CompilerMsg = errors ? reinterpret_cast<const char*>(errors->GetBufferPointer()) : nullptr;
+        if(CompilerMsg != nullptr && CreationAttribs.ppCompilerOutput != nullptr)
+        {
+            auto ErrorMsgLen = strlen(CompilerMsg);
+            auto *pOutputDataBlob = MakeNewRCObj<DataBlobImpl>()(ErrorMsgLen + 1 + ShaderSource.length() + 1);
+            char* DataPtr = reinterpret_cast<char*>(pOutputDataBlob->GetDataPtr());
+            memcpy(DataPtr, CompilerMsg, ErrorMsgLen+1);
+            memcpy(DataPtr + ErrorMsgLen + 1, ShaderSource.data(), ShaderSource.length() + 1);
+            pOutputDataBlob->QueryInterface(IID_DataBlob, reinterpret_cast<IObject**>(CreationAttribs.ppCompilerOutput));
+        }
+
+        if(FAILED(hr))
+        {
+            ComErrorDesc ErrDesc(hr);
+            if(CreationAttribs.ppCompilerOutput != nullptr)
+            {
+                LOG_ERROR_AND_THROW("Failed to compile D3D shader \"",  (CreationAttribs.Desc.Name != nullptr ? CreationAttribs.Desc.Name : ""), "\" (", ErrDesc.Get(), ").");
+            }
+            else
+            {
+                LOG_ERROR_AND_THROW("Failed to compile D3D shader \"", (CreationAttribs.Desc.Name != nullptr ? CreationAttribs.Desc.Name : ""), "\" (", ErrDesc.Get(), "):\n", (CompilerMsg != nullptr ? CompilerMsg : "<no compiler log available>") );
+            }
+        }
     }
     else if (CreationAttribs.ByteCode)
     {

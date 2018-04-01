@@ -74,3 +74,4 @@ float2x2 MatrixFromRows(float2 row0, float2 row1)
 }
 
 #endif // _HLSL_DEFINITIONS_
+

@@ -26,7 +26,7 @@
 /// \file
 /// Defines Diligent::DefaultRawMemoryAllocator class
 
-#include "MemoryAllocator.h"
+#include "../../Primitives/interface/MemoryAllocator.h"
 
 namespace Diligent
 {

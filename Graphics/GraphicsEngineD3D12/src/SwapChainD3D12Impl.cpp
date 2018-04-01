@@ -34,85 +34,20 @@ namespace Diligent
 
 SwapChainD3D12Impl::SwapChainD3D12Impl(IReferenceCounters *pRefCounters,
                                        const SwapChainDesc& SCDesc, 
+                                       const FullScreenModeDesc& FSDesc,
                                        RenderDeviceD3D12Impl* pRenderDeviceD3D12, 
                                        DeviceContextD3D12Impl* pDeviceContextD3D12, 
                                        void* pNativeWndHandle) : 
-    TSwapChainBase(pRefCounters, pRenderDeviceD3D12, pDeviceContextD3D12, SCDesc),
+    TSwapChainBase(pRefCounters, pRenderDeviceD3D12, pDeviceContextD3D12, SCDesc, FSDesc, pNativeWndHandle),
     m_pBackBufferRTV(STD_ALLOCATOR_RAW_MEM(RefCntAutoPtr<ITextureView>, GetRawAllocator(), "Allocator for vector<RefCntAutoPtr<ITextureView>>"))
 {
-
-#if PLATFORM_WIN32
-    auto hWnd = reinterpret_cast<HWND>(pNativeWndHandle);
-
-    if( m_SwapChainDesc.Width == 0 || m_SwapChainDesc.Height == 0 )
-    {
-        RECT rc;
-        GetClientRect( hWnd, &rc );
-        m_SwapChainDesc.Width = rc.right - rc.left;
-        m_SwapChainDesc.Height = rc.bottom - rc.top;
-    }
-#endif
-
-    auto DXGIColorBuffFmt = TexFormatToDXGI_Format(m_SwapChainDesc.ColorBufferFormat);
-
-    DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
-    swapChainDesc.Width = m_SwapChainDesc.Width;
-    swapChainDesc.Height = m_SwapChainDesc.Height;
-    //  Flip model swapchains (DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL and DXGI_SWAP_EFFECT_FLIP_DISCARD) only support the following Formats: 
-    //  - DXGI_FORMAT_R16G16B16A16_FLOAT 
-    //  - DXGI_FORMAT_B8G8R8A8_UNORM
-    //  - DXGI_FORMAT_R8G8B8A8_UNORM
-    //  - DXGI_FORMAT_R10G10B10A2_UNORM
-    // If RGBA8_UNORM_SRGB swap chain is required, we will create RGBA8_UNORM swap chain, but
-    // create RGBA8_UNORM_SRGB render target view
-    swapChainDesc.Format = DXGIColorBuffFmt == DXGI_FORMAT_R8G8B8A8_UNORM_SRGB ? DXGI_FORMAT_R8G8B8A8_UNORM : DXGIColorBuffFmt;
-    swapChainDesc.Stereo = FALSE;
-    swapChainDesc.SampleDesc.Count = 1;
-    swapChainDesc.SampleDesc.Quality = 0;
-    swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-    swapChainDesc.BufferCount = m_SwapChainDesc.BufferCount;
-    swapChainDesc.Scaling = DXGI_SCALING_NONE;
-    swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
-    swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED; // Not used
-    swapChainDesc.Flags = 0;
-
-    CComPtr<IDXGISwapChain1> pSwapChain1;
-	CComPtr<IDXGIFactory4> factory;
-    HRESULT hr = CreateDXGIFactory1(__uuidof(factory), reinterpret_cast<void**>(static_cast<IDXGIFactory4**>(&factory)) );
-    CHECK_D3D_RESULT_THROW(hr, "Failed to create DXGI factory")
-
     auto *pd3d12CmdQueue = pRenderDeviceD3D12->GetCmdQueue()->GetD3D12CommandQueue();
-#if PLATFORM_WIN32
-    hr = factory->CreateSwapChainForHwnd(pd3d12CmdQueue, hWnd, &swapChainDesc, nullptr, nullptr, &pSwapChain1);
-    CHECK_D3D_RESULT_THROW( hr, "Failed to create Swap Chain" );
-
-	// This sample does not support fullscreen transitions.
-	hr = factory->MakeWindowAssociation(hWnd, DXGI_MWA_NO_WINDOW_CHANGES | DXGI_MWA_NO_ALT_ENTER);
-
-#elif PLATFORM_UNIVERSAL_WINDOWS
-
-    hr = factory->CreateSwapChainForCoreWindow(
-		pd3d12CmdQueue,
-		reinterpret_cast<IUnknown*>(pNativeWndHandle),
-		&swapChainDesc,
-		nullptr,
-		&pSwapChain1);
-    CHECK_D3D_RESULT_THROW( hr, "Failed to create DXGI swap chain" );
-
-	// Ensure that DXGI does not queue more than one frame at a time. This both reduces latency and
-	// ensures that the application will only render after each VSync, minimizing power consumption.
-    //pDXGIDevice->SetMaximumFrameLatency( 1 );
-
-#endif
-
-    pSwapChain1->QueryInterface(__uuidof(m_pSwapChain), reinterpret_cast<void**>( static_cast<IDXGISwapChain3**>(&m_pSwapChain) ));
-
+    CreateDXGISwapChain(pd3d12CmdQueue);
     InitBuffersAndViews();
 }
 
 SwapChainD3D12Impl::~SwapChainD3D12Impl()
 {
-
 }
 
 void SwapChainD3D12Impl::InitBuffersAndViews()
@@ -165,9 +100,8 @@ void SwapChainD3D12Impl::InitBuffersAndViews()
 IMPLEMENT_QUERY_INTERFACE( SwapChainD3D12Impl, IID_SwapChainD3D12, TSwapChainBase )
 
 
-void SwapChainD3D12Impl::Present()
+void SwapChainD3D12Impl::Present(Uint32 SyncInterval)
 {
-    UINT SyncInterval = 0;
 #if PLATFORM_UNIVERSAL_WINDOWS
     SyncInterval = 1; // Interval 0 is not supported on Windows Phone 
 #endif
@@ -206,53 +140,71 @@ void SwapChainD3D12Impl::Present()
 #endif
 }
 
+void SwapChainD3D12Impl::UpdateSwapChain(bool CreateNew)
+{
+    // When switching to full screen mode, WM_SIZE is send to the window
+    // and Resize() is called before the new swap chain is created
+    if (!m_pSwapChain)
+        return;
+
+    auto pDeviceContext = m_wpDeviceContext.Lock();
+    VERIFY(pDeviceContext, "Immediate context has been released");
+    if (pDeviceContext)
+    {
+        RenderDeviceD3D12Impl *pDeviceD3D12 = ValidatedCast<RenderDeviceD3D12Impl>(m_pRenderDevice.RawPtr());
+        pDeviceContext->Flush();
+
+        try
+        {
+            auto *pImmediateCtxD3D12 = ValidatedCast<DeviceContextD3D12Impl>(pDeviceContext.RawPtr());
+            bool bIsDefaultFBBound = pImmediateCtxD3D12->IsDefaultFBBound();
+
+            // All references to the swap chain must be released before it can be resized
+            m_pBackBufferRTV.clear();
+            m_pDepthBufferDSV.Release();
+
+            // This will release references to D3D12 swap chain buffers hold by
+            // m_pBackBufferRTV[]
+            pDeviceD3D12->IdleGPU(true);
+
+            if(CreateNew)
+            {
+                m_pSwapChain.Release();
+                auto *pd3d12CmdQueue = ValidatedCast<RenderDeviceD3D12Impl>(m_pRenderDevice.RawPtr())->GetCmdQueue()->GetD3D12CommandQueue();
+                CreateDXGISwapChain(pd3d12CmdQueue);
+            }
+            else
+            {
+                DXGI_SWAP_CHAIN_DESC SCDes;
+                memset(&SCDes, 0, sizeof(SCDes));
+                m_pSwapChain->GetDesc(&SCDes);
+                CHECK_D3D_RESULT_THROW(m_pSwapChain->ResizeBuffers(SCDes.BufferCount, m_SwapChainDesc.Width,
+                    m_SwapChainDesc.Height, SCDes.BufferDesc.Format,
+                    SCDes.Flags),
+                    "Failed to resize the DXGI swap chain");
+            }
+
+            InitBuffersAndViews();
+
+            if (bIsDefaultFBBound)
+            {
+                // Set default render target and viewport
+                pDeviceContext->SetRenderTargets(0, nullptr, nullptr);
+                pDeviceContext->SetViewports(1, nullptr, 0, 0);
+            }
+        }
+        catch (const std::runtime_error &)
+        {
+            LOG_ERROR("Failed to resize the swap chain");
+        }
+    }
+}
+
 void SwapChainD3D12Impl::Resize( Uint32 NewWidth, Uint32 NewHeight )
 {
     if( TSwapChainBase::Resize(NewWidth, NewHeight) )
     {
-        auto pDeviceContext = m_wpDeviceContext.Lock();
-        VERIFY( pDeviceContext, "Immediate context has been released" );
-        if( pDeviceContext )
-        {
-            RenderDeviceD3D12Impl *pDeviceD3D12 = ValidatedCast<RenderDeviceD3D12Impl>(m_pRenderDevice.RawPtr());
-            pDeviceContext->Flush();
-
-            try
-            {
-                auto *pImmediateCtxD3D12 = ValidatedCast<DeviceContextD3D12Impl>(pDeviceContext.RawPtr());
-                bool bIsDefaultFBBound = pImmediateCtxD3D12->IsDefaultFBBound();
-
-                // All references to the swap chain must be released before it can be resized
-                m_pBackBufferRTV.clear();
-                m_pDepthBufferDSV.Release();
-
-                // This will release references to D3D12 swap chain buffers hold by
-                // m_pBackBufferRTV[]
-                pDeviceD3D12->IdleGPU(true);
-
-                DXGI_SWAP_CHAIN_DESC SCDes;
-                memset( &SCDes, 0, sizeof( SCDes ) );
-                m_pSwapChain->GetDesc( &SCDes );
-                CHECK_D3D_RESULT_THROW( m_pSwapChain->ResizeBuffers(SCDes.BufferCount, m_SwapChainDesc.Width, 
-                                                                    m_SwapChainDesc.Height, SCDes.BufferDesc.Format, 
-                                                                    SCDes.Flags),
-                                        "Failed to resize the DXGI swap chain" );
-
-
-                InitBuffersAndViews();
-                
-                if( bIsDefaultFBBound )
-                {
-                    // Set default render target and viewport
-                    pDeviceContext->SetRenderTargets( 0, nullptr, nullptr );
-                    pDeviceContext->SetViewports( 1, nullptr, 0, 0 );
-                }
-            }
-            catch( const std::runtime_error & )
-            {
-                LOG_ERROR( "Failed to resize the swap chain" );
-            }
-        }
+        UpdateSwapChain(false);
     }
 }
 

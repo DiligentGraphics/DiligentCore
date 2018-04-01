@@ -591,6 +591,13 @@ objects. Refer to the following pages for more information:
 
 # Version History
 
+## Current progress
+
+* Implemented hardware adapter & display mode enumeration in D3D11 and D3D12 modes
+* Implemented initialization in fullscreen mode as well as toggling between fullscreen and windowed modes in run time
+* Added sync interval parameter to ISwapChain::Present()
+* Fixed issues with relative paths in headers
+
 ## v2.2.a
 
 ### New Features

@@ -33,8 +33,8 @@ using namespace Diligent;
 namespace Diligent
 {
 
-ShaderGLImpl::ShaderGLImpl(IReferenceCounters *pRefCounters, RenderDeviceGLImpl *pDeviceGL, const ShaderCreationAttribs &ShaderCreationAttribs, bool bIsDeviceInternal) : 
-    TShaderBase( pRefCounters, pDeviceGL, ShaderCreationAttribs.Desc, bIsDeviceInternal ),
+ShaderGLImpl::ShaderGLImpl(IReferenceCounters *pRefCounters, RenderDeviceGLImpl *pDeviceGL, const ShaderCreationAttribs &CreationAttribs, bool bIsDeviceInternal) : 
+    TShaderBase( pRefCounters, pDeviceGL, CreationAttribs.Desc, bIsDeviceInternal ),
     m_GlProgObj(false),
     m_GLShaderObj( false, GLObjectWrappers::GLShaderObjCreateReleaseHelper( GetGLShaderType( m_Desc.ShaderType ) ) )
 {
@@ -196,9 +196,9 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters *pRefCounters, RenderDeviceGLImpl 
     Lenghts.push_back( static_cast<GLint>( strlen(ShaderTypeDefine) ) );
 
     String UserDefines;
-    if( ShaderCreationAttribs.Macros != nullptr)
+    if( CreationAttribs.Macros != nullptr)
     {
-        auto *pMacro = ShaderCreationAttribs.Macros;
+        auto *pMacro = CreationAttribs.Macros;
         while( pMacro->Name != nullptr && pMacro->Definition != nullptr )
         {
             UserDefines += "#define ";
@@ -213,7 +213,7 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters *pRefCounters, RenderDeviceGLImpl 
     }
 
     RefCntAutoPtr<IDataBlob> pFileData(MakeNewRCObj<DataBlobImpl>()(0));
-    auto ShaderSource = ShaderCreationAttribs.Source;
+    auto ShaderSource = CreationAttribs.Source;
     GLuint SourceLen = 0;
     if( ShaderSource )
     {
@@ -221,9 +221,9 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters *pRefCounters, RenderDeviceGLImpl 
     }
     else
     {
-        VERIFY(ShaderCreationAttribs.pShaderSourceStreamFactory, "Input stream factory is null");
+        VERIFY(CreationAttribs.pShaderSourceStreamFactory, "Input stream factory is null");
         RefCntAutoPtr<IFileStream> pSourceStream;
-        ShaderCreationAttribs.pShaderSourceStreamFactory->CreateInputStream( ShaderCreationAttribs.FilePath, &pSourceStream );
+        CreationAttribs.pShaderSourceStreamFactory->CreateInputStream( CreationAttribs.FilePath, &pSourceStream );
         if (pSourceStream == nullptr)
             LOG_ERROR_AND_THROW("Failed to open shader source file");
 
@@ -233,19 +233,19 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters *pRefCounters, RenderDeviceGLImpl 
     }
 
     String ConvertedSource;
-    if( ShaderCreationAttribs.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL )
+    if( CreationAttribs.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL )
     {
         // Convert HLSL to GLSL
         const auto &Converter = HLSL2GLSLConverterImpl::GetInstance();
         HLSL2GLSLConverterImpl::ConversionAttribs Attribs;
-        Attribs.pSourceStreamFactory = ShaderCreationAttribs.pShaderSourceStreamFactory;
-        Attribs.ppConversionStream = ShaderCreationAttribs.ppConversionStream;
+        Attribs.pSourceStreamFactory = CreationAttribs.pShaderSourceStreamFactory;
+        Attribs.ppConversionStream = CreationAttribs.ppConversionStream;
         Attribs.HLSLSource = ShaderSource;
         Attribs.NumSymbols = SourceLen;
-        Attribs.EntryPoint = ShaderCreationAttribs.EntryPoint;
-        Attribs.ShaderType = ShaderCreationAttribs.Desc.ShaderType;
+        Attribs.EntryPoint = CreationAttribs.EntryPoint;
+        Attribs.ShaderType = CreationAttribs.Desc.ShaderType;
         Attribs.IncludeDefinitions = true;
-        Attribs.InputFileName = ShaderCreationAttribs.FilePath;
+        Attribs.InputFileName = CreationAttribs.FilePath;
         ConvertedSource = Converter.Convert(Attribs);
 
         ShaderSource = ConvertedSource.c_str();
@@ -284,17 +284,15 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters *pRefCounters, RenderDeviceGLImpl 
         for(const auto *str : ShaderStrings)
             FullSource.append(str);
 
-        LOG_INFO_MESSAGE("Failed shader full source: \n\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n", FullSource, "\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n\n");
-
         std::stringstream ErrorMsgSS;
-		ErrorMsgSS << "Failed to compile shader file \""<< (ShaderCreationAttribs.FilePath != nullptr ? ShaderCreationAttribs.FilePath : "") << '\"' << std::endl;
+		ErrorMsgSS << "Failed to compile shader file \""<< (CreationAttribs.Desc.Name != nullptr ? CreationAttribs.Desc.Name : "") << '\"' << std::endl;
         int infoLogLen = 0;
         // The function glGetShaderiv() tells how many bytes to allocate; the length includes the NULL terminator. 
         glGetShaderiv(ShaderObj, GL_INFO_LOG_LENGTH, &infoLogLen);
 
+        std::vector<GLchar> infoLog(infoLogLen);
         if (infoLogLen > 0)
         {
-            std::vector<GLchar> infoLog(infoLogLen);
             int charsWritten = 0;
             // Get the log. infoLogLen is the size of infoLog. This tells OpenGL how many bytes at maximum it will write
             // charsWritten is a return value, specifying how many bytes it actually wrote. One may pass NULL if he 
@@ -303,6 +301,21 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters *pRefCounters, RenderDeviceGLImpl 
             VERIFY(charsWritten == infoLogLen-1, "Unexpected info log length");
             ErrorMsgSS << "InfoLog:" << std::endl << infoLog.data() << std::endl;
         }
+
+        if (CreationAttribs.ppCompilerOutput != nullptr)
+        {
+            auto *pOutputDataBlob = MakeNewRCObj<DataBlobImpl>()(infoLogLen + FullSource.length() + 1);
+            char* DataPtr = reinterpret_cast<char*>(pOutputDataBlob->GetDataPtr());
+            memcpy(DataPtr, !infoLog.empty() ? infoLog.data() : nullptr, infoLogLen);
+            memcpy(DataPtr + infoLogLen, FullSource.data(), FullSource.length() + 1);
+            pOutputDataBlob->QueryInterface(IID_DataBlob, reinterpret_cast<IObject**>(CreationAttribs.ppCompilerOutput));
+        }
+        else
+        {
+            // Dump full source code to debug output
+            LOG_INFO_MESSAGE("Failed shader full source: \n\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n", FullSource, "\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n\n");
+        }
+
         LOG_ERROR_AND_THROW(ErrorMsgSS.str().c_str());
     }
 

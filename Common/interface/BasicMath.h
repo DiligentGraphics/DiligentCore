@@ -21,21 +21,19 @@
  *  of the possibility of such damages.
  */
 
-//// THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF
-//// ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO
-//// THE IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A
-//// PARTICULAR PURPOSE.
-////
-//// Copyright (c) Microsoft Corporation. All rights reserved
-
 #pragma once
 
-#include "DebugUtilities.h"
+#include "../../Platforms/Basic/interface/DebugUtilities.h"
 
 #define _USE_MATH_DEFINES
 #include <math.h>
 
 #include "HashUtils.h"
+
+#ifdef _MSC_VER
+#   pragma warning(push)
+#   pragma warning(disable : 4201) // nonstandard extension used: nameless struct/union
+#endif
 
 // Common Constants
 
@@ -1182,6 +1180,22 @@ inline float4x4 Projection(float fov, float aspectRatio, float zNear, float zFar
     return mOut;
 }
 
+inline float4x4 OrthoOffCenter(float left, float right, float bottom, float top, float zNear, float zFar, bool bIsDirectX) // Left-handed ortho projection
+{
+    float _22 = (bIsDirectX ? 1.f : 2.f) / (zFar - zNear);
+    float _32 = (bIsDirectX ? zNear : zNear + zFar) / (zNear - zFar);
+    return float4x4 (
+                 2.f / (right - left),                             0.f,  0.f, 0.f,
+                                  0.f,              2.f/(top - bottom),  0.f, 0.f,
+                                  0.f,                             0.f,  _22, 0.f,                
+        (left + right)/(left - right), (top + bottom) / (bottom - top),  _32, 1.f
+    );
+}
+
+inline float4x4 Ortho(float width, float height, float zNear, float zFar, bool bIsDirectX) // Left-handed ortho projection
+{
+    return OrthoOffCenter(-width * 0.5f, +width * 0.5f, -height * 0.5f, +height * 0.5f, zNear, zFar, bIsDirectX);
+}
 
 struct Quaternion
 {
@@ -1503,3 +1517,7 @@ namespace std
         }
     };
 }
+
+#ifdef _MSC_VER
+#   pragma warning(pop)
+#endif

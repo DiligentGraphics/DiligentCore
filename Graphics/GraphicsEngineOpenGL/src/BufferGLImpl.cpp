@@ -52,7 +52,14 @@ static GLenum GetBufferBindTarget(const BufferDesc& Desc)
         Target = GL_UNIFORM_BUFFER;
     else if(Desc.BindFlags & BIND_INDIRECT_DRAW_ARGS)
     {
+#ifdef _MSC_VER
+#   pragma warning(push)
+#   pragma warning(disable : 4127) // conditional expression is constant
+#endif
 		VERIFY(GL_DRAW_INDIRECT_BUFFER != 0, "Inidrect draw is not supported");
+#ifdef _MSC_VER
+#   pragma warning(pop)
+#endif
         Target = GL_DRAW_INDIRECT_BUFFER;
     }
     else if (Desc.Usage == USAGE_CPU_ACCESSIBLE && Desc.CPUAccessFlags == CPU_ACCESS_WRITE)

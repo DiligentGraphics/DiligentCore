@@ -25,8 +25,10 @@
 
 #include <functional>
 #include <memory>
+#include <cstring>
 
-#include "Errors.h"
+#include "../../Primitives/interface/Errors.h"
+#include "../../Platforms/Basic/interface/DebugUtilities.h"
 
 #define LOG_HASH_CONFLICTS 1
 

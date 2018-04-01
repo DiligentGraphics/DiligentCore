@@ -28,14 +28,46 @@
 
 using namespace Diligent;
 
-String BasicPlatformDebug :: FormatAssertionFailedMessage( const Diligent::Char *Message, 
-                                                           const char *Function, 
-                                                           const char *File, 
+String BasicPlatformDebug :: FormatAssertionFailedMessage( const Char *Message, 
+                                                           const char *Function, // type of __FUNCTION__
+                                                           const char *File,     // type of __FILE__
                                                            int Line )
 {
-    std::string FileName;
+    String FileName;
     BasicFileSystem::SplitFilePath( File, nullptr, &FileName );
     std::stringstream msgss;
     Diligent::FormatMsg( msgss, "Debug assertion failed in ", Function, "(), file ", FileName, ", line ", Line, ":\n", Message);
     return msgss.str();
+}
+
+String BasicPlatformDebug::FormatDebugMessage(DebugMessageSeverity Severity, 
+                                              const Char* Message, 
+                                              const char* Function, // type of __FUNCTION__
+                                              const char* File,     // type of __FILE__
+                                              int Line)
+{
+    std::stringstream msg_ss;
+
+    static const Char* const strSeverities[] = { "Info", "Warning", "ERROR", "CRITICAL ERROR" };
+    const auto* MessageSevery = strSeverities[static_cast<int>(Severity)];
+    
+    msg_ss << "Diligent Engine: " << MessageSevery;
+    if(Function != nullptr || File != nullptr)
+    {
+        msg_ss << " in ";
+        if(Function != nullptr)
+        {
+            msg_ss << Function << "()";
+            if(File != nullptr)
+                msg_ss << " (";
+        }
+
+        if(File != nullptr)
+        {
+            msg_ss << File << ", " << Line << ')';
+        }
+    }
+    msg_ss << ": " << Message << '\n';
+
+    return msg_ss.str();
 }

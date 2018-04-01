@@ -79,7 +79,7 @@ namespace Diligent
 	    CComPtr<ID3DBlob> error;
         HRESULT hr = D3D12SerializeRootSignature(&RootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error);
         hr = pd3d12Device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), __uuidof(m_pGenerateMipsRS), reinterpret_cast<void**>( static_cast<ID3D12RootSignature**>(&m_pGenerateMipsRS)));
-        CHECK_D3D_RESULT_THROW(hr, "Failed to create root signature for mipmap generation")
+        CHECK_D3D_RESULT_THROW(hr, "Failed to create root signature for mipmap generation");
 
         D3D12_COMPUTE_PIPELINE_STATE_DESC PSODesc = {};
         PSODesc.pRootSignature = m_pGenerateMipsRS;
@@ -90,7 +90,7 @@ namespace Diligent
         PSODesc.CS.pShaderBytecode = ShaderByteCode;\
         PSODesc.CS.BytecodeLength = sizeof(ShaderByteCode);\
         hr = pd3d12Device->CreateComputePipelineState(&PSODesc, __uuidof(PSO), reinterpret_cast<void**>( static_cast<ID3D12PipelineState**>(&PSO))); \
-        CHECK_D3D_RESULT_THROW(hr, "Failed to create Pipeline state for mipmap generation") \
+        CHECK_D3D_RESULT_THROW(hr, "Failed to create Pipeline state for mipmap generation"); \
         PSO->SetName(L"Generate mips PSO");
 
         CreatePSO(m_pGenerateMipsLinearPSO[0], g_pGenerateMipsLinearCS);

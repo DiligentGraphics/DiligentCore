@@ -50,7 +50,7 @@ SwapChainGLIOS::SwapChainGLIOS(IReferenceCounters *pRefCounters,
 
 IMPLEMENT_QUERY_INTERFACE( SwapChainGLIOS, IID_SwapChainGL, TSwapChainBase )
     
-void SwapChainGLIOS::Present()
+void SwapChainGLIOS::Present(Uint32 SyncInterval)
 {
     EAGLContext* context = [EAGLContext currentContext];
     glBindRenderbuffer(GL_RENDERBUFFER, m_ColorRenderBuffer);
@@ -136,5 +136,15 @@ GLuint SwapChainGLIOS::GetDefaultFBO()const
 {
     return m_DefaultFBO;
 }
-    
+ 
+void SwapChainGLIOS::SetFullscreenMode(const DisplayModeAttribs &DisplayMode)
+{
+    UNSUPPORTED("Switching to fullscreen mode is not available on iOS");
+}
+
+void SwapChainGLIOS::SetWindowedMode()
+{
+    UNSUPPORTED("Switching to windowed mode is not available on iOS");
+}
+ 
 }

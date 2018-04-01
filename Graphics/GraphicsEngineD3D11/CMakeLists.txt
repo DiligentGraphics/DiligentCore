@@ -115,6 +115,7 @@ set(PRIVATE_DEPENDENCIES
     GraphicsEngineD3DBase 
     TargetPlatform
     Common
+    dxgi.lib
     d3d11.lib 
     d3dcompiler.lib
 )
