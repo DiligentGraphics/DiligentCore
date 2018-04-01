@@ -394,7 +394,7 @@ void SwapChainVkImpl::InitBuffersAndViews()
 IMPLEMENT_QUERY_INTERFACE( SwapChainVkImpl, IID_SwapChainVk, TSwapChainBase )
 
 
-void SwapChainVkImpl::Present()
+void SwapChainVkImpl::Present(Uint32 SyncInterval)
 {
 #if 0
     UINT SyncInterval = 0;
@@ -497,5 +497,14 @@ ITextureViewVk *SwapChainVkImpl::GetCurrentBackBufferRTV()
     return m_pBackBufferRTV[CurrentBackBufferIndex];
 }
 #endif
+
+void SwapChainVkImpl::SetFullscreenMode(const DisplayModeAttribs &DisplayMode)
+{
+}
+
+void SwapChainVkImpl::SetWindowedMode()
+{
+}
+
 
 }

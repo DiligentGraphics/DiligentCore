@@ -49,8 +49,12 @@ public:
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface );
 
-    virtual void Present();
-    virtual void Resize( Uint32 NewWidth, Uint32 NewHeight );
+    virtual void Present(Uint32 SyncInterval)override final;
+    virtual void Resize( Uint32 NewWidth, Uint32 NewHeight )override final;
+
+    virtual void SetFullscreenMode(const DisplayModeAttribs &DisplayMode)override final;
+
+    virtual void SetWindowedMode()override final;
 
 /*
     virtual IDXGISwapChain* GetDXGISwapChain()override final{ return m_pSwapChain; }

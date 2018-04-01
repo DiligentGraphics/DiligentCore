@@ -59,13 +59,13 @@ namespace VulkanUtilities
 
         debugMessage << " [" << pLayerPrefix << "] Code " << msgCode << "\n" << pMsg << std::endl;
 
-        BasicPlatformDebug::DebugMessageSeverity MsgSeverity = BasicPlatformDebug::DebugMessageSeverity::Info;
+        Diligent::DebugMessageSeverity MsgSeverity = Diligent::DebugMessageSeverity::Info;
         if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
-            MsgSeverity = BasicPlatformDebug::DebugMessageSeverity::Error;
+            MsgSeverity = Diligent::DebugMessageSeverity::Error;
         else if (flags & VK_DEBUG_REPORT_WARNING_BIT_EXT)
-            MsgSeverity = BasicPlatformDebug::DebugMessageSeverity::Warning;
+            MsgSeverity = Diligent::DebugMessageSeverity::Warning;
         else
-            MsgSeverity = BasicPlatformDebug::DebugMessageSeverity::Info;
+            MsgSeverity = Diligent::DebugMessageSeverity::Info;
         LOG_DEBUG_MESSAGE(MsgSeverity, debugMessage.str().c_str());
 
         // The return value of this callback controls wether the Vulkan call that caused
