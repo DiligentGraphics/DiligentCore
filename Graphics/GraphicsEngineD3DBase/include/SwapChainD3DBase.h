@@ -49,9 +49,10 @@ namespace Diligent
 
         ~SwapChainD3DBase()
         {
-            // Swap chain must be in windowed mode when terminating the app
             if (m_pSwapChain)
             {
+                // Swap chain must be in windowed mode when it is destroyed
+                // https://msdn.microsoft.com/en-us/library/windows/desktop/bb205075(v=vs.85).aspx#Destroying
                 BOOL IsFullScreen = FALSE;
                 m_pSwapChain->GetFullscreenState(&IsFullScreen, nullptr);
                 if (IsFullScreen)
@@ -173,6 +174,7 @@ namespace Diligent
             {
                 // If we are already in fullscreen mode, we need to switch to windowed mode first,
                 // because a swap chain must be in windowed mode when it is released.
+                // https://msdn.microsoft.com/en-us/library/windows/desktop/bb205075(v=vs.85).aspx#Destroying
                 if (m_FSDesc.Fullscreen)
                     m_pSwapChain->SetFullscreenState(FALSE, nullptr);
                 m_FSDesc.Fullscreen = True;
