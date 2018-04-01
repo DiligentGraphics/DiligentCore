@@ -131,10 +131,19 @@ namespace Diligent
             FullScreenDesc.ScanlineOrdering = static_cast<DXGI_MODE_SCANLINE_ORDER>(m_FSDesc.ScanlineOrder);
             hr = factory->CreateSwapChainForHwnd(pD3D11DeviceOrD3D12CmdQueue, hWnd, &swapChainDesc, &FullScreenDesc, nullptr, &pSwapChain1);
             CHECK_D3D_RESULT_THROW(hr, "Failed to create Swap Chain");
-
-            // Do not allow the swap chain handle Alt+Enter
-            hr = factory->MakeWindowAssociation(hWnd, DXGI_MWA_NO_WINDOW_CHANGES | DXGI_MWA_NO_ALT_ENTER);
-
+            
+            {
+                // This is silly, but IDXGIFactory used for MakeWindowAssociation must be retrieved via 
+                // calling IDXGISwapchain::GetParent first, otherwise it won't work
+                // https://www.gamedev.net/forums/topic/634235-dxgidisabling-altenter/?do=findComment&comment=4999990
+                CComPtr<IDXGIFactory1> pFactoryFromSC;
+                if (SUCCEEDED(pSwapChain1->GetParent(__uuidof(pFactoryFromSC), (void **)&pFactoryFromSC)))
+                {
+                    // Do not allow the swap chain to handle Alt+Enter
+                    pFactoryFromSC->MakeWindowAssociation(hWnd, DXGI_MWA_NO_WINDOW_CHANGES | DXGI_MWA_NO_ALT_ENTER);
+                }
+            }
+            
 #elif PLATFORM_UNIVERSAL_WINDOWS
 
             if (m_FSDesc.Fullscreen)
