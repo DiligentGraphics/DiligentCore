@@ -39,7 +39,7 @@ namespace Diligent
 /// [D3D11_STENCIL_OP][]/[D3D12_STENCIL_OP][] enumeration. 
 /// It is used by Diligent::StencilOpDesc structure to describe the stencil fail, depth fail
 /// and stencil pass operations
-enum STENCIL_OP : Int32
+enum STENCIL_OP : Int8
 {
     /// Undefined operation.
     STENCIL_OP_UNDEFINED = 0,

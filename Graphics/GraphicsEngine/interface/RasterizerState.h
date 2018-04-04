@@ -37,7 +37,7 @@ namespace Diligent
 /// [D3D12_FILL_MODE]: https://msdn.microsoft.com/en-us/library/windows/desktop/dn770366(v=vs.85).aspx
 /// This enumeration determines the fill mode to use when rendering triangles and mirrors the 
 /// [D3D11_FILL_MODE][]/[D3D12_FILL_MODE][] enum. It is used by RasterizerStateDesc structure to define the fill mode.
-enum FILL_MODE : Int32
+enum FILL_MODE : Int8
 { 
     /// Undefined fill mode.
     FILL_MODE_UNDEFINED = 0,
@@ -60,7 +60,7 @@ enum FILL_MODE : Int32
 /// [D3D12_CULL_MODE]: https://msdn.microsoft.com/en-us/library/windows/desktop/dn770354(v=vs.85).aspx
 /// This enumeration defines which triangles are not drawn during the rasterization and mirrors
 /// [D3D11_CULL_MODE][]/[D3D12_CULL_MODE][] enum. It is used by RasterizerStateDesc structure to define the polygon cull mode.
-enum CULL_MODE : Int32
+enum CULL_MODE : Int8
 {
     /// Undefined cull mode.
     CULL_MODE_UNDEFINED = 0,
@@ -101,16 +101,6 @@ struct RasterizerStateDesc
     /// If this parameter is False, the opposite is true.
     Bool      FrontCounterClockwise;
 
-    /// Constant value added to the depth of a given pixel.
-    Int32     DepthBias;
-
-    /// Maximum depth bias of a pixel.
-    /// \warning Depth bias clamp is not available in OpenGL
-    Float32   DepthBiasClamp;
-
-    /// Scalar that scales the given pixel's slope before adding to the pixel's depth.
-    Float32   SlopeScaledDepthBias;
-
     /// Enable clipping based on distance.
     /// \warning On DirectX this only disables clipping against far clipping plane,
     ///          while on OpenGL this disables clipping against both far and near clip planes.
@@ -122,7 +112,15 @@ struct RasterizerStateDesc
     /// Specifies whether to enable line antialiasing.
     Bool      AntialiasedLineEnable;
 
-    /// Initializes the structure members
+    /// Constant value added to the depth of a given pixel.
+    Int32     DepthBias;
+
+    /// Maximum depth bias of a pixel.
+    /// \warning Depth bias clamp is not available in OpenGL
+    Float32   DepthBiasClamp;
+
+    /// Scalar that scales the given pixel's slope before adding to the pixel's depth.
+    Float32   SlopeScaledDepthBias;
 
     /// Member                | Default value
     /// ----------------------|--------------

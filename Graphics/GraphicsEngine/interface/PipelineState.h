@@ -44,7 +44,7 @@ namespace Diligent
 /// This enumeration describes primitive topology type. It generally mirrors [D3D12_PRIMITIVE_TOPOLOGY_TYPE] enumeration.
 /// The enumeration is used by GraphicsPipelineDesc to describe how the pipeline interprets 
 /// geometry or hull shader input primitives
-enum PRIMITIVE_TOPOLOGY_TYPE : Int32
+enum PRIMITIVE_TOPOLOGY_TYPE : Int8
 {
     /// Topology is not defined
     PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED	= 0,
@@ -71,10 +71,10 @@ enum PRIMITIVE_TOPOLOGY_TYPE : Int32
 struct SampleDesc
 {
     /// Sample count
-    Uint32 Count;
+    Uint8 Count;
 
     /// Quality
-    Uint32 Quality;
+    Uint8 Quality;
 
     SampleDesc() : 
         Count(1),
@@ -128,7 +128,7 @@ struct GraphicsPipelineDesc
     PRIMITIVE_TOPOLOGY_TYPE PrimitiveTopologyType = PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 
     /// Number of render targets in the RTVFormats member
-    Uint32 NumRenderTargets = 0;
+    Uint8 NumRenderTargets = 0;
 
     /// Render target formats
     TEXTURE_FORMAT RTVFormats[8];
@@ -170,24 +170,19 @@ struct ComputePipelineDesc
 struct PipelineStateDesc : DeviceObjectAttribs
 {
     /// Flag indicating if pipeline state is a compute pipeline state
-    bool IsComputePipeline;
+    bool IsComputePipeline = false;
+
+    /// Shader resource binding allocation granularity
+
+    /// This member defines allocation granularity for internal resources required by the shader resource
+    /// binding object instances.
+    Uint32 SRBAllocationGranularity = 1;
 
     /// Graphics pipeline state description. This memeber is ignored if IsComputePipeline == True
     GraphicsPipelineDesc GraphicsPipeline;
 
     /// Compute pipeline state description. This memeber is ignored if IsComputePipeline == False
     ComputePipelineDesc ComputePipeline;
-
-    /// Shader resource binding allocation granularity
-    
-    /// This member defines allocation granularity for internal resources required by the shader resource
-    /// binding object instances.
-    Uint32 SRBAllocationGranularity;
-
-    PipelineStateDesc() : 
-        IsComputePipeline(false),
-        SRBAllocationGranularity(1)
-    {}
 };
 
 // {06084AE5-6A71-4FE8-84B9-395DD489A28C}

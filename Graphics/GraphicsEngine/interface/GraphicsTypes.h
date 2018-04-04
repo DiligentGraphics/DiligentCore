@@ -242,7 +242,7 @@ namespace Diligent
     /// \sa <a href = "https://msdn.microsoft.com/en-us/library/windows/desktop/bb173059(v=vs.85).aspx">DXGI_FORMAT enumeration on MSDN</a>, 
     ///     <a href = "https://www.opengl.org/wiki/Image_Format">OpenGL Texture Formats</a>
     ///
-    enum TEXTURE_FORMAT : Int32
+    enum TEXTURE_FORMAT : Int16
     {
         /// Unknown format
         TEX_FORMAT_UNKNOWN = 0,  
@@ -845,7 +845,7 @@ namespace Diligent
     /// - SamplerDesc to define a comparison function if one of the comparison mode filters is used
     /// - StencilOpDesc to define a stencil function
     /// - DepthStencilStateDesc to define a depth function
-    enum COMPARISON_FUNCTION : Int32
+    enum COMPARISON_FUNCTION : Int8
     {
         /// Unknown comparison function
         COMPARISON_FUNC_UNKNOWN = 0,
@@ -889,7 +889,7 @@ namespace Diligent
     /// Miscellaneous texture flags
 
     /// The enumeration is used by TextureDesc to describe misc texture flags
-    enum MISC_TEXTURE_FLAG
+    enum MISC_TEXTURE_FLAG : Int8
     {
         /// Allow automatic mipmap generation with ITextureView::GenerateMips()
 

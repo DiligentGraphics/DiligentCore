@@ -160,7 +160,7 @@ enum BLEND_OPERATION : Int8
 
 /// These flags are used by RenderTargetBlendDesc structure to define 
 /// writable components of the render target
-enum COLOR_MASK : Int32
+enum COLOR_MASK : Int8
 {
     /// Allow data to be stored in the red component.
     COLOR_MASK_RED	    = 1,
@@ -294,7 +294,7 @@ struct RenderTargetBlendDesc
 	LOGIC_OPERATION LogicOp;
 
     /// Render target write mask
-    Uint32          RenderTargetWriteMask;
+    Uint8           RenderTargetWriteMask;
 
     /// Constructor initializes structure members with default values
 
