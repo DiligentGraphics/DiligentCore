@@ -354,16 +354,20 @@ CommandContext* RenderDeviceVkImpl::AllocateCommandContext(const Char *ID)
 
 	return ret;
 }
+#endif
 
-void RenderDeviceVkImpl::SafeReleaseVkObject(IVkObject* pObj)
+void RenderDeviceVkImpl::SafeReleaseVkBuffer(VkBuffer vkBuffer)
 {
     // When Vk object is released, it is first moved into the
     // stale objects list. The list is moved into a release queue
     // when the next command list is executed. 
     std::lock_guard<std::mutex> LockGuard(m_StaleObjectsMutex);
+#if 0
     m_StaleVkObjects.emplace_back( m_NextCmdListNumber, CComPtr<IVkObject>(pObj) );
+#endif
 }
 
+#if 0
 void RenderDeviceVkImpl::DiscardStaleVkObjects(Uint64 CmdListNumber, Uint64 FenceValue)
 {
     // Only discard these stale objects that were released before CmdListNumber

@@ -42,19 +42,19 @@ public:
     typedef BufferViewBase<IBufferViewVk> TBufferViewBase;
 
     BufferViewVkImpl( IReferenceCounters *pRefCounters,
-                         IRenderDevice *pDevice, 
-                         const BufferViewDesc& ViewDesc, 
-                         class IBuffer *pBuffer,
-                         DescriptorHeapAllocation &&HandleAlloc,
-                         bool bIsDefaultView);
+                      IRenderDevice *pDevice, 
+                      const BufferViewDesc& ViewDesc, 
+                      class IBuffer *pBuffer,
+                      VkBufferView vkBuffView,
+                      bool bIsDefaultView);
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface );
 
-    //virtual Vk_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle()override{return m_DescriptorHandle.GetCpuHandle();}
+    virtual VkBufferView GetVkBufferView()override final{return m_VkBuffView;}
    
 protected:
-    // Allocation in a CPU-only descriptor heap
-    DescriptorHeapAllocation m_DescriptorHandle;
+    
+    VkBufferView m_VkBuffView;
 };
 
 }

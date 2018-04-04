@@ -50,7 +50,7 @@ public:
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface );
 
-    virtual D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle()override{return m_DescriptorHandle.GetCpuHandle();}
+    virtual D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle()override final{return m_DescriptorHandle.GetCpuHandle();}
    
 protected:
     // Allocation in a CPU-only descriptor heap

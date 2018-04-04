@@ -96,14 +96,17 @@ public:
     CommandContext* AllocateCommandContext(const Char *ID = "");
     void CloseAndExecuteCommandContext(CommandContext *pCtx, bool DiscardStaleObjects);
     void DisposeCommandContext(CommandContext*);
-
-    void SafeReleaseVkObject(IVkObject* pObj);
+*/
+    void SafeReleaseVkBuffer(VkBuffer vkBuffer);
+    
+/*
     void FinishFrame(bool ReleaseAllResources);
     virtual void FinishFrame()override final { FinishFrame(false); }
 
     DynamicUploadHeap* RequestUploadHeap();
     void ReleaseUploadHeap(DynamicUploadHeap* pUploadHeap);
     */
+    
 
     std::shared_ptr<VulkanUtilities::VulkanInstance> GetVulkanInstance(){return m_VulkanInstance;}
     VulkanUtilities::VulkanPhysicalDevice &GetPhysicalDevice(){return *m_PhysicalDevice;}
@@ -174,8 +177,9 @@ private:
     std::mutex m_ReleaseQueueMutex;
     typedef std::pair<Uint64, CComPtr<IVkObject> > ReleaseQueueElemType;
     std::deque< ReleaseQueueElemType, STDAllocatorRawMem<ReleaseQueueElemType> > m_VkObjReleaseQueue;
-
+#endif
     std::mutex m_StaleObjectsMutex;
+#if 0
     std::deque< ReleaseQueueElemType, STDAllocatorRawMem<ReleaseQueueElemType> > m_StaleVkObjects;
 
     std::mutex m_UploadHeapMutex;

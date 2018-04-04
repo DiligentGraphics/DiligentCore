@@ -121,11 +121,11 @@ public:
     */
 private:
     virtual void CreateViewInternal( const struct BufferViewDesc &ViewDesc, IBufferView **ppView, bool bIsDefaultView )override;
-/*
-    void CreateUAV( struct BufferViewDesc &UAVDesc, Vk_CPU_DESCRIPTOR_HANDLE UAVDescriptor );
-    void CreateSRV( struct BufferViewDesc &SRVDesc, Vk_CPU_DESCRIPTOR_HANDLE SRVDescriptor );
-    void CreateCBV( Vk_CPU_DESCRIPTOR_HANDLE CBVDescriptor );
-    DescriptorHeapAllocation m_CBVDescriptorAllocation;
+
+    VkBufferView CreateUAV(struct BufferViewDesc &UAVDesc);
+    VkBufferView CreateSRV(struct BufferViewDesc &SRVDesc);
+    VkBufferView CreateCBV(struct BufferViewDesc &CBVDesc);
+    /*    DescriptorHeapAllocation m_CBVDescriptorAllocation;
 
 #ifdef _DEBUG
     std::vector< std::pair<MAP_TYPE, Uint32>, STDAllocatorRawMem<std::pair<MAP_TYPE, Uint32>> > m_DbgMapType;
@@ -134,6 +134,8 @@ private:
     friend class DeviceContextVkImpl;
     // Array of dynamic allocations for every device context
     std::vector<DynamicAllocation,  STDAllocatorRawMem<DynamicAllocation> > m_DynamicData;*/
+    VkBuffer m_VkBuffer = VK_NULL_HANDLE;
+    VkDeviceMemory m_BufferMemory = VK_NULL_HANDLE;
 };
 
 }

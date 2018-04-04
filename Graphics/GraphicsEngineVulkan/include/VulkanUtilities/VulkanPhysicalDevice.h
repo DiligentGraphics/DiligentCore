@@ -36,12 +36,15 @@ namespace VulkanUtilities
         VkPhysicalDevice GetVkDeviceHandle()const{return m_VkDevice;}
         bool IsExtensionSupported(const char *ExtensionName);
         bool CheckPresentSupport(uint32_t queueFamilyIndex, VkSurfaceKHR VkSurface)const;
+        
+        static constexpr uint32_t InvalidMemoryTypeIndex = static_cast<uint32_t>(-1);
+        uint32_t GetMemoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags properties);
 
     private:
         const VkPhysicalDevice m_VkDevice;
-        VkPhysicalDeviceProperties m_Properties;
-        VkPhysicalDeviceFeatures m_Features;
-        VkPhysicalDeviceMemoryProperties m_MemoryProperties;
+        VkPhysicalDeviceProperties m_Properties = {};
+        VkPhysicalDeviceFeatures m_Features = {};
+        VkPhysicalDeviceMemoryProperties m_MemoryProperties = {};
         std::vector<VkQueueFamilyProperties> m_QueueFamilyProperties;
         std::vector<VkExtensionProperties> m_SupportedExtensions;
     };

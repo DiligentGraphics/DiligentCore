@@ -154,7 +154,8 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk( const EngineVkAttribs& Crea
                                                      // boolean indicators of all the features to be enabled.
 
         std::vector<const char*> DeviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
-        if (PhysicalDevice->IsExtensionSupported(VK_EXT_DEBUG_MARKER_EXTENSION_NAME))
+        const bool DebugMarkersSupported = PhysicalDevice->IsExtensionSupported(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
+        if (DebugMarkersSupported && CreationAttribs.EnableValidation)
         {
             DeviceExtensions.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
         }
@@ -166,13 +167,20 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk( const EngineVkAttribs& Crea
         auto res = vkCreateDevice(PhysicalDevice->GetVkDeviceHandle(), &DeviceCreateInfo, Instance->GetVkAllocator(), &VulkanDevice);
         CHECK_VK_ERROR_AND_THROW(res, "Failed to create logical device");
 
+        if (CreationAttribs.EnableValidation)
+        {
+            if(DebugMarkersSupported)
+                VulkanUtilities::SetupDebugMarkers(VulkanDevice);
+            else
+                LOG_INFO_MESSAGE("Debug marker extensions is not found on the system");
+        }
+
         VkQueue Queue = VK_NULL_HANDLE;
         vkGetDeviceQueue(VulkanDevice, 
             QueueInfo.queueFamilyIndex, // Index of the queue family to which the queue belongs
             0,                          // Index within this queue family of the queue to retrieve
             &Queue);
         VERIFY_EXPR(Queue != VK_NULL_HANDLE);
-
         RefCntAutoPtr<CommandQueueVkImpl> pCmdQueueVk;
 
         auto &RawMemAllocator = GetRawAllocator();

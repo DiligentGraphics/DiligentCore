@@ -31,10 +31,10 @@ BufferViewVkImpl::BufferViewVkImpl( IReferenceCounters *pRefCounters,
                                     IRenderDevice *pDevice, 
                                     const BufferViewDesc& ViewDesc, 
                                     IBuffer *pBuffer,
-                                    DescriptorHeapAllocation &&HandleAlloc,
+                                    VkBufferView vkBuffView,
                                     bool bIsDefaultView ) :
     TBufferViewBase( pRefCounters, pDevice, ViewDesc, pBuffer, bIsDefaultView ),
-    m_DescriptorHandle( std::move(HandleAlloc) )
+    m_VkBuffView(vkBuffView)
 {
 }
 

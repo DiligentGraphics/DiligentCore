@@ -40,8 +40,8 @@ class IBufferViewVk : public IBufferView
 {
 public:
 
-    /// Returns CPU descriptor handle of the buffer view.
-    //virtual D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle() = 0;
+    /// Returns Vulkan buffer view object.
+    virtual VkBufferView GetVkBufferView() = 0;
 };
 
 }

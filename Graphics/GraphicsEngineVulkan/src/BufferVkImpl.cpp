@@ -25,12 +25,12 @@
 #include "BufferVkImpl.h"
 #include "RenderDeviceVkImpl.h"
 #include "DeviceContextVkImpl.h"
-//#include "VkTypeConversions.h"
+//#include "VulkanTypeConversions.h"
 #include "BufferViewVkImpl.h"
 #include "GraphicsAccessories.h"
-//#include "DXGITypeConversions.h"
 #include "EngineMemory.h"
 #include "StringTools.h"
+#include "VulkanUtilities/VulkanDebug.h"
 
 namespace Diligent
 {
@@ -47,7 +47,6 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters *pRefCounters,
     m_DynamicData(BuffDesc.Usage == USAGE_DYNAMIC ? (1 + pRenderDeviceVk->GetNumDeferredContexts()) : 0, DynamicAllocation(), STD_ALLOCATOR_RAW_MEM(DynamicAllocation, GetRawAllocator(), "Allocator for vector<DynamicAllocation>"))
     */
 {
-#if 0
 #define LOG_BUFFER_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Buffer \"", BuffDesc.Name ? BuffDesc.Name : "", "\": ", ##__VA_ARGS__);
 
     if( m_Desc.Usage == USAGE_STATIC && BuffData.pData == nullptr )
@@ -56,10 +55,6 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters *pRefCounters,
     if( m_Desc.Usage == USAGE_DYNAMIC && BuffData.pData != nullptr )
         LOG_BUFFER_ERROR_AND_THROW("Dynamic buffer must be initialized via Map()")
 
-    Uint32 AlignmentMask = 1;
-    if (m_Desc.BindFlags & BIND_UNIFORM_BUFFER)
-        AlignmentMask = 255;
-    
     if (m_Desc.Usage == USAGE_CPU_ACCESSIBLE)
     {
         if (m_Desc.CPUAccessFlags != CPU_ACCESS_WRITE && m_Desc.CPUAccessFlags != CPU_ACCESS_READ)
@@ -69,75 +64,150 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters *pRefCounters,
         {
             if(BuffData.pData != nullptr )
                 LOG_BUFFER_ERROR_AND_THROW("CPU-writable staging buffers must be updated via map")
-
-            AlignmentMask = Vk_TEXTURE_DATA_PITCH_ALIGNMENT - 1;
         }
     }
-    
-    if(AlignmentMask != 1)
-        m_Desc.uiSizeInBytes = (m_Desc.uiSizeInBytes + AlignmentMask) & (~AlignmentMask);
 
     if(m_Desc.Usage == USAGE_DYNAMIC && (m_Desc.BindFlags & (BIND_SHADER_RESOURCE|BIND_UNORDERED_ACCESS)) == 0)
     {
+        UNSUPPORTED("Dynamic buffers are not yet implemented");
         // Dynamic constant/vertex/index buffers are suballocated in the upload heap when Map() is called.
         // Dynamic buffers with SRV or UAV flags need to be allocated in GPU-only memory
         // Dynamic upload heap buffer is always in Vk_RESOURCE_STATE_GENERIC_READ state
-
+#if 0
         m_UsageState = Vk_RESOURCE_STATE_GENERIC_READ;
         VERIFY_EXPR(m_DynamicData.size() == 1 + pRenderDeviceVk->GetNumDeferredContexts());
+#endif
     }
     else
     {
-        Vk_RESOURCE_DESC VkBuffDesc = {};
-        VkBuffDesc.Dimension = Vk_RESOURCE_DIMENSION_BUFFER;
-        VkBuffDesc.Alignment = 0;
-        VkBuffDesc.Width = m_Desc.uiSizeInBytes;
-        VkBuffDesc.Height = 1;
-        VkBuffDesc.DepthOrArraySize = 1;
-        VkBuffDesc.MipLevels = 1;
-        VkBuffDesc.Format = DXGI_FORMAT_UNKNOWN;
-        VkBuffDesc.SampleDesc.Count = 1;
-        VkBuffDesc.SampleDesc.Quality = 0;
-        // Layout must be Vk_TEXTURE_LAYOUT_ROW_MAJOR, as buffer memory layouts are 
-        // understood by applications and row-major texture data is commonly marshaled through buffers.
-        VkBuffDesc.Layout = Vk_TEXTURE_LAYOUT_ROW_MAJOR;
-        VkBuffDesc.Flags = Vk_RESOURCE_FLAG_NONE;
-        if( m_Desc.BindFlags & BIND_UNORDERED_ACCESS )
-            VkBuffDesc.Flags |= Vk_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-        if( !(m_Desc.BindFlags & BIND_SHADER_RESOURCE) )
-            VkBuffDesc.Flags |= Vk_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
+        VkBufferCreateInfo VkBuffCI = {};
+        VkBuffCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        VkBuffCI.pNext = nullptr;
+        VkBuffCI.flags = 0; // VK_BUFFER_CREATE_SPARSE_BINDING_BIT, VK_BUFFER_CREATE_SPARSE_RESIDENCY_BIT, VK_BUFFER_CREATE_SPARSE_ALIASED_BIT
+        VkBuffCI.size = m_Desc.uiSizeInBytes;
+        VkBuffCI.usage =
+            VK_BUFFER_USAGE_TRANSFER_SRC_BIT | // The buffer can be used as the source of a transfer command 
+            VK_BUFFER_USAGE_TRANSFER_DST_BIT;  // The buffer can be used as the destination of a transfer command
+        if (m_Desc.BindFlags & BIND_UNORDERED_ACCESS)
+            VkBuffCI.usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT; // | VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT
+        if (m_Desc.BindFlags & BIND_SHADER_RESOURCE)
+            VkBuffCI.usage |= VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER | VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        if (m_Desc.BindFlags & BIND_VERTEX_BUFFER)
+            VkBuffCI.usage |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+        if (m_Desc.BindFlags & BIND_INDEX_BUFFER)
+            VkBuffCI.usage |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+        if (m_Desc.BindFlags & BIND_INDIRECT_DRAW_ARGS)
+            VkBuffCI.usage |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
+        if (m_Desc.BindFlags & BIND_UNIFORM_BUFFER)
+            VkBuffCI.usage |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT; // | VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT
 
-        auto *pVkDevice = pRenderDeviceVk->GetVkDevice();
+        VkBuffCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // sharing mode of the buffer when it will be accessed by multiple queue families.
+        VkBuffCI.queueFamilyIndexCount = 0; // number of entries in the pQueueFamilyIndices array
+        VkBuffCI.pQueueFamilyIndices = nullptr; // list of queue families that will access this buffer 
+                                                // (ignored if sharingMode is not VK_SHARING_MODE_CONCURRENT).
 
-        Vk_HEAP_PROPERTIES HeapProps;
+        auto vkDevice = pRenderDeviceVk->GetVkDevice();
+        auto err = vkCreateBuffer(vkDevice, &VkBuffCI, nullptr, &m_VkBuffer);
+        CHECK_VK_ERROR_AND_THROW(err, "Failed to create Vulkan buffer object");
+
+        VkMemoryRequirements MemReqs = {};
+        vkGetBufferMemoryRequirements(vkDevice, m_VkBuffer, &MemReqs);
+
+        VkMemoryAllocateInfo MemAlloc = {};
+        MemAlloc.pNext = nullptr;
+        MemAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        MemAlloc.allocationSize = MemReqs.size;
+        
+        auto& PhysicalDevice = pRenderDeviceVk->GetPhysicalDevice();
+       
+        VkMemoryPropertyFlags BufferMemoryFlags = 0;
         if (m_Desc.Usage == USAGE_CPU_ACCESSIBLE)
-            HeapProps.Type = m_Desc.CPUAccessFlags == CPU_ACCESS_READ ? Vk_HEAP_TYPE_READBACK : Vk_HEAP_TYPE_UPLOAD;
+            BufferMemoryFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
         else
-            HeapProps.Type = Vk_HEAP_TYPE_DEFAULT;
+            BufferMemoryFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
-        if(HeapProps.Type == Vk_HEAP_TYPE_READBACK)
-            m_UsageState = Vk_RESOURCE_STATE_COPY_DEST;
-        else if(HeapProps.Type == Vk_HEAP_TYPE_UPLOAD)
-            m_UsageState = Vk_RESOURCE_STATE_GENERIC_READ;
-	    HeapProps.CPUPageProperty = Vk_CPU_PAGE_PROPERTY_UNKNOWN;
-	    HeapProps.MemoryPoolPreference = Vk_MEMORY_POOL_UNKNOWN;
-	    HeapProps.CreationNodeMask = 1;
-	    HeapProps.VisibleNodeMask = 1;
+        // memoryTypeBits is a bitmask and contains one bit set for every supported memory type for the resource. 
+        // Bit i is set if and only if the memory type i in the VkPhysicalDeviceMemoryProperties structure for the 
+        // physical device is supported for the resource.
+        MemAlloc.memoryTypeIndex = PhysicalDevice.GetMemoryTypeIndex(MemReqs.memoryTypeBits, BufferMemoryFlags);
+        if(BufferMemoryFlags == VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+        {
+            // There must be at least one memory type with the DEVICE_LOCAL_BIT bit set
+            VERIFY(MemAlloc.memoryTypeIndex != VulkanUtilities::VulkanPhysicalDevice::InvalidMemoryTypeIndex,
+                   "Vulkan spec requires that memoryTypeBits member always contains "
+                   "at least one bit set corresponding to a VkMemoryType with a propertyFlags that has the "
+                   "VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT bit set (11.6)");
+        }
+        else if(MemAlloc.memoryTypeIndex != VulkanUtilities::VulkanPhysicalDevice::InvalidMemoryTypeIndex)
+        {
+            LOG_ERROR_AND_THROW("Failed to find suitable device memory type for a buffer");
+        }
+
+        err = vkAllocateMemory(vkDevice, &MemAlloc, nullptr, &m_BufferMemory);
+        CHECK_VK_ERROR_AND_THROW(err, "Failed to allocate device local memory for a Vulkan buffer object");
+
+        err = vkBindBufferMemory(vkDevice, m_VkBuffer, m_BufferMemory, 0 /*offset*/);
+        CHECK_VK_ERROR_AND_THROW(err, "Failed to bind buffer memory");
 
         bool bInitializeBuffer = (BuffData.pData != nullptr && BuffData.DataSize > 0);
-        if(bInitializeBuffer)
-            m_UsageState = Vk_RESOURCE_STATE_COPY_DEST;
-
-        auto hr = pVkDevice->CreateCommittedResource( &HeapProps, Vk_HEAP_FLAG_NONE,
-		    &VkBuffDesc, m_UsageState, nullptr, __uuidof(m_pVkResource), reinterpret_cast<void**>(static_cast<IVkResource**>(&m_pVkResource)) );
-        if(FAILED(hr))
-            LOG_ERROR_AND_THROW("Failed to create Vk buffer");
+        //if(bInitializeBuffer)
+        //    m_UsageState = Vk_RESOURCE_STATE_COPY_DEST;
 
         if( *m_Desc.Name != 0)
-            m_pVkResource->SetName(WidenString(m_Desc.Name).c_str());
+            VulkanUtilities::SetBufferName(vkDevice, m_VkBuffer, m_Desc.Name);
 
 	    if( bInitializeBuffer )
         {
+            VkBufferCreateInfo VkStaginBuffCI = VkBuffCI;
+            VkStaginBuffCI.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+
+            VkBuffer vkStagingBuffer = VK_NULL_HANDLE;
+            err = vkCreateBuffer(vkDevice, &VkStaginBuffCI, nullptr, &vkStagingBuffer);
+            CHECK_VK_ERROR_AND_THROW(err, "Failed to create staging buffer");
+
+            VulkanUtilities::SetBufferName(vkDevice, vkStagingBuffer, "Staging buffer");
+
+            VkMemoryRequirements StagingBufferMemReqs = {};
+            vkGetBufferMemoryRequirements(vkDevice, vkStagingBuffer, &StagingBufferMemReqs);
+
+            VkMemoryAllocateInfo StagingMemAlloc = {};
+            StagingMemAlloc.pNext = nullptr;
+            StagingMemAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+            StagingMemAlloc.allocationSize = StagingBufferMemReqs.size;
+            
+            // VK_MEMORY_PROPERTY_HOST_COHERENT_BIT bit specifies that the host cache management commands vkFlushMappedMemoryRanges 
+            // and vkInvalidateMappedMemoryRanges are NOT needed to flush host writes to the device or make device writes visible
+            // to the host (10.2)
+            StagingMemAlloc.memoryTypeIndex = PhysicalDevice.GetMemoryTypeIndex(StagingBufferMemReqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+            VERIFY(StagingMemAlloc.memoryTypeIndex != VulkanUtilities::VulkanPhysicalDevice::InvalidMemoryTypeIndex,
+                   "Vulkan spec requires that for a VkBuffer not created with the "
+                   "VK_BUFFER_CREATE_SPARSE_BINDING_BIT bit set, the memoryTypeBits member always contains at least one bit set "
+                   "corresponding to a VkMemoryType with a propertyFlags that has both the VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT bit "
+                   "and the VK_MEMORY_PROPERTY_HOST_COHERENT_BIT bit set(11.6)");
+
+            VkDeviceMemory vkStagingBufferMemory = VK_NULL_HANDLE;
+            err = vkAllocateMemory(vkDevice, &StagingMemAlloc, nullptr, &vkStagingBufferMemory);
+            CHECK_VK_ERROR_AND_THROW(err, "Failed to allocate memory for a staging buffer object");
+
+            {
+                void *StagingData = nullptr;
+                err = vkMapMemory(vkDevice, vkStagingBufferMemory, 
+                    0, // offset
+                    StagingMemAlloc.allocationSize,
+                    0, // flags, reserved for future use
+                    &StagingData);
+                CHECK_VK_ERROR_AND_THROW(err, "Failed to map staging memory");
+                memcpy(StagingData, BuffData.pData, BuffData.DataSize);
+                vkUnmapMemory(vkDevice, vkStagingBufferMemory);
+            }
+            
+            err = vkBindBufferMemory(vkDevice, vkStagingBuffer, vkStagingBufferMemory, 0 /*offset*/);
+            CHECK_VK_ERROR_AND_THROW(err, "Failed to bind staging bufer memory");
+
+
+
+#if 0
             Vk_HEAP_PROPERTIES UploadHeapProps;
 	        UploadHeapProps.Type = Vk_HEAP_TYPE_UPLOAD;
 	        UploadHeapProps.CPUPageProperty = Vk_CPU_PAGE_PROPERTY_UNKNOWN;
@@ -192,15 +262,15 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters *pRefCounters,
             // until copy operation is complete. This must be done after
             // submitting command list for execution!
             pRenderDeviceVk->SafeReleaseVkObject(UploadBuffer);
+#endif
         }
 
-        if (m_Desc.BindFlags & BIND_UNIFORM_BUFFER)
-        {
-            m_CBVDescriptorAllocation = pRenderDeviceVk->AllocateDescriptor(Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-            CreateCBV(m_CBVDescriptorAllocation.GetCpuHandle());
-        }
+        //if (m_Desc.BindFlags & BIND_UNIFORM_BUFFER)
+        //{
+        //    m_CBVDescriptorAllocation = pRenderDeviceVk->AllocateDescriptor(Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+        //    CreateCBV(m_CBVDescriptorAllocation.GetCpuHandle());
+        //}
     }
-#endif
 }
 
 
@@ -270,11 +340,12 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters *pRefCounters,
 }
 BufferVkImpl :: ~BufferVkImpl()
 {
-#if 0
     // Vk object can only be destroyed when it is no longer used by the GPU
-    auto *pDeviceVkImpl = ValidatedCast<RenderDeviceVkImpl>(GetDevice());
-    pDeviceVkImpl->SafeReleaseVkObject(m_pVkResource);
-#endif
+    if(m_VkBuffer!=VK_NULL_HANDLE)
+    {
+        auto *pDeviceVkImpl = ValidatedCast<RenderDeviceVkImpl>(GetDevice());
+        pDeviceVkImpl->SafeReleaseVkBuffer(m_VkBuffer);
+    }
 }
 
 IMPLEMENT_QUERY_INTERFACE( BufferVkImpl, IID_BufferVk, TBufferBase )
@@ -412,7 +483,7 @@ void BufferVkImpl::CreateViewInternal( const BufferViewDesc &OrigViewDesc, IBuff
     VERIFY( *ppView == nullptr, "Overwriting reference to existing object may cause memory leaks" );
 
     *ppView = nullptr;
-#if 0
+
     try
     {
         auto *pDeviceVkImpl = ValidatedCast<RenderDeviceVkImpl>(GetDevice());
@@ -422,17 +493,15 @@ void BufferVkImpl::CreateViewInternal( const BufferViewDesc &OrigViewDesc, IBuff
         BufferViewDesc ViewDesc = OrigViewDesc;
         if( ViewDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS )
         {
-            auto UAVHandleAlloc = pDeviceVkImpl->AllocateDescriptor(Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-            CreateUAV( ViewDesc, UAVHandleAlloc.GetCpuHandle() );
+            auto UAV = CreateUAV(ViewDesc);
             *ppView = NEW_RC_OBJ(BuffViewAllocator, "BufferViewVkImpl instance", BufferViewVkImpl, bIsDefaultView ? this : nullptr)
-                                (GetDevice(), ViewDesc, this, std::move(UAVHandleAlloc), bIsDefaultView );
+                                (GetDevice(), ViewDesc, this, UAV, bIsDefaultView );
         }
         else if( ViewDesc.ViewType == BUFFER_VIEW_SHADER_RESOURCE )
         {
-			auto SRVHandleAlloc = pDeviceVkImpl->AllocateDescriptor(Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-            CreateSRV( ViewDesc, SRVHandleAlloc.GetCpuHandle() );
+            auto SRV = CreateSRV(ViewDesc);
             *ppView = NEW_RC_OBJ(BuffViewAllocator, "BufferViewVkImpl instance", BufferViewVkImpl, bIsDefaultView ? this : nullptr)
-                                (GetDevice(), ViewDesc, this, std::move(SRVHandleAlloc), bIsDefaultView );
+                                (GetDevice(), ViewDesc, this, SRV, bIsDefaultView );
         }
 
         if( !bIsDefaultView && *ppView )
@@ -443,42 +512,49 @@ void BufferVkImpl::CreateViewInternal( const BufferViewDesc &OrigViewDesc, IBuff
         const auto *ViewTypeName = GetBufferViewTypeLiteralName(OrigViewDesc.ViewType);
         LOG_ERROR("Failed to create view \"", OrigViewDesc.Name ? OrigViewDesc.Name : "", "\" (", ViewTypeName, ") for buffer \"", m_Desc.Name, "\"" );
     }
-#endif
 }
 
-#if 0
-void BufferVkImpl::CreateUAV( BufferViewDesc &UAVDesc, Vk_CPU_DESCRIPTOR_HANDLE UAVDescriptor )
+
+VkBufferView BufferVkImpl::CreateUAV(BufferViewDesc &UAVDesc)
 {
     CorrectBufferViewDesc( UAVDesc );
-
+#if 0
     Vk_UNORDERED_ACCESS_VIEW_DESC Vk_UAVDesc;
     BufferViewDesc_to_Vk_UAV_DESC(m_Desc, UAVDesc, Vk_UAVDesc);
 
     auto *pDeviceVk = static_cast<RenderDeviceVkImpl*>(GetDevice())->GetVkDevice();
     pDeviceVk->CreateUnorderedAccessView( m_pVkResource, nullptr, &Vk_UAVDesc, UAVDescriptor );
+#endif
+    return VK_NULL_HANDLE;
 }
 
-void BufferVkImpl::CreateSRV( struct BufferViewDesc &SRVDesc, Vk_CPU_DESCRIPTOR_HANDLE SRVDescriptor )
+VkBufferView BufferVkImpl::CreateSRV(BufferViewDesc &SRVDesc)
 {
     CorrectBufferViewDesc( SRVDesc );
-
+#if 0
     Vk_SHADER_RESOURCE_VIEW_DESC Vk_SRVDesc;
     BufferViewDesc_to_Vk_SRV_DESC(m_Desc, SRVDesc, Vk_SRVDesc);
 
     auto *pDeviceVk = static_cast<RenderDeviceVkImpl*>(GetDevice())->GetVkDevice();
     pDeviceVk->CreateShaderResourceView( m_pVkResource, &Vk_SRVDesc, SRVDescriptor );
+#endif
+    return VK_NULL_HANDLE;
 }
 
-void BufferVkImpl::CreateCBV(Vk_CPU_DESCRIPTOR_HANDLE CBVDescriptor)
+VkBufferView BufferVkImpl::CreateCBV(BufferViewDesc &CBVDesc)
 {
+#if 0
     Vk_CONSTANT_BUFFER_VIEW_DESC Vk_CBVDesc;
     Vk_CBVDesc.BufferLocation = m_pVkResource->GetGPUVirtualAddress();
     Vk_CBVDesc.SizeInBytes = m_Desc.uiSizeInBytes;
 
     auto *pDeviceVk = static_cast<RenderDeviceVkImpl*>(GetDevice())->GetVkDevice();
     pDeviceVk->CreateConstantBufferView( &Vk_CBVDesc, CBVDescriptor );
+#endif
+    return VK_NULL_HANDLE;
 }
 
+#if 0
 #ifdef _DEBUG
 void BufferVkImpl::DbgVerifyDynamicAllocation(Uint32 ContextId)
 {

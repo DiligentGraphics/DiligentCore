@@ -135,4 +135,51 @@ namespace VulkanUtilities
         vkGetPhysicalDeviceSurfaceSupportKHR(m_VkDevice, queueFamilyIndex, VkSurface, &PresentSupport);
         return PresentSupport == VK_TRUE;
     }
+
+
+    // This function is used to find a device memory type that supports all the property flags we request
+    // Params:
+    // * memoryTypeBitsRequirement  -  a bitmask that contains one bit set for every supported memory type for 
+    //                                 the resource. Bit i is set if and only if the memory type i in the 
+    //                                 VkPhysicalDeviceMemoryProperties structure for the physical device is 
+    //                                 supported for the resource.
+    // * requiredProperties   -  required memory properties (device local, host visible, etc.)
+    uint32_t VulkanPhysicalDevice::GetMemoryTypeIndex(uint32_t memoryTypeBitsRequirement,
+                                                      VkMemoryPropertyFlags requiredProperties)
+    {
+        // Iterate over all memory types available for the device
+        // For each pair of elements X and Y returned in memoryTypes, X must be placed at a lower index position than Y if:
+        //   * either the set of bit flags of X is a strict subset of the set of bit flags of Y.
+        //   * or the propertyFlags members of X and Y are equal, and X belongs to a memory heap with greater performance
+
+        for (uint32_t memoryIndex = 0; memoryIndex < m_MemoryProperties.memoryTypeCount; memoryIndex++)
+        {
+            // Each memory type returned by vkGetPhysicalDeviceMemoryProperties must have its propertyFlags set 
+            // to one of the following values:
+            // * 0
+            // * HOST_VISIBLE_BIT | HOST_COHERENT_BIT
+            // * HOST_VISIBLE_BIT | HOST_CACHED_BIT
+            // * HOST_VISIBLE_BIT | HOST_CACHED_BIT | HOST_COHERENT_BIT
+            // * DEVICE_LOCAL_BIT
+            // * DEVICE_LOCAL_BIT | HOST_VISIBLE_BIT | HOST_COHERENT_BIT
+            // * DEVICE_LOCAL_BIT | HOST_VISIBLE_BIT | HOST_CACHED_BIT
+            // * DEVICE_LOCAL_BIT | HOST_VISIBLE_BIT | HOST_CACHED_BIT | HOST_COHERENT_BIT
+            // * DEVICE_LOCAL_BIT | LAZILY_ALLOCATED_BIT
+            //
+            // There must be at least one memory type with both the HOST_VISIBLE_BIT and HOST_COHERENT_BIT bits set
+            // There must be at least one memory type with the DEVICE_LOCAL_BIT bit set
+
+            const uint32_t memoryTypeBit = (1 << memoryIndex);
+            const bool isRequiredMemoryType = (memoryTypeBitsRequirement & memoryTypeBit) != 0;
+            if(isRequiredMemoryType)
+            {
+                const VkMemoryPropertyFlags properties = m_MemoryProperties.memoryTypes[memoryIndex].propertyFlags;
+                const bool hasRequiredProperties = (properties & requiredProperties) == requiredProperties;
+
+                if (hasRequiredProperties)
+                    return memoryIndex;
+            }
+        }
+        return InvalidMemoryTypeIndex;
+    }
 }
