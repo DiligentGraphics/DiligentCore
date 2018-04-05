@@ -122,9 +122,7 @@ public:
 private:
     virtual void CreateViewInternal( const struct BufferViewDesc &ViewDesc, IBufferView **ppView, bool bIsDefaultView )override;
 
-    VkBufferView CreateUAV(struct BufferViewDesc &UAVDesc);
-    VkBufferView CreateSRV(struct BufferViewDesc &SRVDesc);
-    VkBufferView CreateCBV(struct BufferViewDesc &CBVDesc);
+    VkBufferView CreateView(struct BufferViewDesc &ViewDesc);
     /*    DescriptorHeapAllocation m_CBVDescriptorAllocation;
 
 #ifdef _DEBUG

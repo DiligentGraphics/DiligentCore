@@ -32,13 +32,13 @@ namespace VulkanUtilities
     {
     public:
         VulkanPhysicalDevice(VkPhysicalDevice vkDevice);
-        uint32_t FindQueueFamily(VkQueueFlags QueueFlags);
+        uint32_t FindQueueFamily(VkQueueFlags QueueFlags)const;
         VkPhysicalDevice GetVkDeviceHandle()const{return m_VkDevice;}
-        bool IsExtensionSupported(const char *ExtensionName);
+        bool IsExtensionSupported(const char *ExtensionName)const;
         bool CheckPresentSupport(uint32_t queueFamilyIndex, VkSurfaceKHR VkSurface)const;
         
         static constexpr uint32_t InvalidMemoryTypeIndex = static_cast<uint32_t>(-1);
-        uint32_t GetMemoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags properties);
+        uint32_t GetMemoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags properties)const;
 
     private:
         const VkPhysicalDevice m_VkDevice;

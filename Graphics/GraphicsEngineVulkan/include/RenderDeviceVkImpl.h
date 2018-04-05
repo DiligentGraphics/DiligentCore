@@ -109,7 +109,7 @@ public:
     
 
     std::shared_ptr<VulkanUtilities::VulkanInstance> GetVulkanInstance(){return m_VulkanInstance;}
-    VulkanUtilities::VulkanPhysicalDevice &GetPhysicalDevice(){return *m_PhysicalDevice;}
+    const VulkanUtilities::VulkanPhysicalDevice &GetPhysicalDevice(){return *m_PhysicalDevice;}
     VkDevice GetVkDevice()const{return m_VkDevice;}
 
 private:

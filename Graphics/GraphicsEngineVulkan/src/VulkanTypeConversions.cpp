@@ -458,6 +458,161 @@ TEXTURE_FORMAT VkFormatToTexFormat(VkFormat VkFmt)
 
 
 
+VkFormat TypeToVkFormat(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIsNormalized)
+{
+    switch (ValType)
+    {
+    case VT_FLOAT16:
+    {
+        VERIFY(!bIsNormalized, "Floating point formats cannot be normalized");
+        switch (NumComponents)
+        {
+        case 1: return VK_FORMAT_R16_SFLOAT;
+        case 2: return VK_FORMAT_R16G16_SFLOAT;
+        case 4: return VK_FORMAT_R16G16B16A16_SFLOAT;
+        default: UNEXPECTED("Unusupported number of components"); return VK_FORMAT_UNDEFINED;
+        }
+    }
+
+    case VT_FLOAT32:
+    {
+        VERIFY(!bIsNormalized, "Floating point formats cannot be normalized");
+        switch (NumComponents)
+        {
+        case 1: return VK_FORMAT_R32_SFLOAT;
+        case 2: return VK_FORMAT_R32G32_SFLOAT;
+        case 3: return VK_FORMAT_R32G32B32_SFLOAT;
+        case 4: return VK_FORMAT_R32G32B32A32_SFLOAT;
+        default: UNEXPECTED("Unusupported number of components"); return VK_FORMAT_UNDEFINED;
+        }
+    }
+
+    case VT_INT32:
+    {
+        VERIFY(!bIsNormalized, "32-bit UNORM formats are not supported. Use R32_FLOAT instead");
+        switch (NumComponents)
+        {
+        case 1: return VK_FORMAT_R32_SINT;
+        case 2: return VK_FORMAT_R32G32_SINT;
+        case 3: return VK_FORMAT_R32G32B32_SINT;
+        case 4: return VK_FORMAT_R32G32B32A32_SINT;
+        default: UNEXPECTED("Unusupported number of components"); return VK_FORMAT_UNDEFINED;
+        }
+    }
+
+    case VT_UINT32:
+    {
+        VERIFY(!bIsNormalized, "32-bit UNORM formats are not supported. Use R32_FLOAT instead");
+        switch (NumComponents)
+        {
+        case 1: return VK_FORMAT_R32_UINT;
+        case 2: return VK_FORMAT_R32G32_UINT;
+        case 3: return VK_FORMAT_R32G32B32_UINT;
+        case 4: return VK_FORMAT_R32G32B32A32_UINT;
+        default: UNEXPECTED("Unusupported number of components"); return VK_FORMAT_UNDEFINED;
+        }
+    }
+
+    case VT_INT16:
+    {
+        if (bIsNormalized)
+        {
+            switch (NumComponents)
+            {
+            case 1: return VK_FORMAT_R16_SNORM;
+            case 2: return VK_FORMAT_R16G16_SNORM;
+            case 4: return VK_FORMAT_R16G16B16A16_SNORM;
+            default: UNEXPECTED("Unusupported number of components"); return VK_FORMAT_UNDEFINED;
+            }
+        }
+        else
+        {
+            switch (NumComponents)
+            {
+            case 1: return VK_FORMAT_R16_SINT;
+            case 2: return VK_FORMAT_R16G16_SINT;
+            case 4: return VK_FORMAT_R16G16B16A16_SINT;
+            default: UNEXPECTED("Unusupported number of components"); return VK_FORMAT_UNDEFINED;
+            }
+        }
+    }
+
+    case VT_UINT16:
+    {
+        if (bIsNormalized)
+        {
+            switch (NumComponents)
+            {
+            case 1: return VK_FORMAT_R16_UNORM;
+            case 2: return VK_FORMAT_R16G16_UNORM;
+            case 4: return VK_FORMAT_R16G16B16A16_UNORM;
+            default: UNEXPECTED("Unusupported number of components"); return VK_FORMAT_UNDEFINED;
+            }
+        }
+        else
+        {
+            switch (NumComponents)
+            {
+            case 1: return VK_FORMAT_R16_UINT;
+            case 2: return VK_FORMAT_R16G16_UINT;
+            case 4: return VK_FORMAT_R16G16B16A16_UINT;
+            default: UNEXPECTED("Unusupported number of components"); return VK_FORMAT_UNDEFINED;
+            }
+        }
+    }
+
+    case VT_INT8:
+    {
+        if (bIsNormalized)
+        {
+            switch (NumComponents)
+            {
+            case 1: return VK_FORMAT_R8_SNORM;
+            case 2: return VK_FORMAT_R8G8_SNORM;
+            case 4: return VK_FORMAT_R8G8B8A8_SNORM;
+            default: UNEXPECTED("Unusupported number of components"); return VK_FORMAT_UNDEFINED;
+            }
+        }
+        else
+        {
+            switch (NumComponents)
+            {
+            case 1: return VK_FORMAT_R8_SINT;
+            case 2: return VK_FORMAT_R8G8_SINT;
+            case 4: return VK_FORMAT_R8G8B8A8_SINT;
+            default: UNEXPECTED("Unusupported number of components"); return VK_FORMAT_UNDEFINED;
+            }
+        }
+    }
+
+    case VT_UINT8:
+    {
+        if (bIsNormalized)
+        {
+            switch (NumComponents)
+            {
+            case 1: return VK_FORMAT_R8_UNORM;
+            case 2: return VK_FORMAT_R8G8_UNORM;
+            case 4: return VK_FORMAT_R8G8B8A8_UNORM;
+            default: UNEXPECTED("Unusupported number of components"); return VK_FORMAT_UNDEFINED;
+            }
+        }
+        else
+        {
+            switch (NumComponents)
+            {
+            case 1: return VK_FORMAT_R8_UINT;
+            case 2: return VK_FORMAT_R8G8_UINT;
+            case 4: return VK_FORMAT_R8G8B8A8_UINT;
+            default: UNEXPECTED("Unusupported number of components"); return VK_FORMAT_UNDEFINED;
+            }
+        }
+    }
+
+    default: UNEXPECTED("Unusupported format"); return VK_FORMAT_UNDEFINED;
+    }
+}
+
 #if 0
 D3D12_COMPARISON_FUNC ComparisonFuncToD3D12ComparisonFunc(COMPARISON_FUNCTION Func)
 {

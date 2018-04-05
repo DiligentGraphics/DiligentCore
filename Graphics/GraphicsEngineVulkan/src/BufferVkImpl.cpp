@@ -25,7 +25,7 @@
 #include "BufferVkImpl.h"
 #include "RenderDeviceVkImpl.h"
 #include "DeviceContextVkImpl.h"
-//#include "VulkanTypeConversions.h"
+#include "VulkanTypeConversions.h"
 #include "BufferViewVkImpl.h"
 #include "GraphicsAccessories.h"
 #include "EngineMemory.h"
@@ -67,6 +67,7 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters *pRefCounters,
         }
     }
 
+    auto vkAllocator = pRenderDeviceVk->GetVulkanInstance()->GetVkAllocator();
     if(m_Desc.Usage == USAGE_DYNAMIC && (m_Desc.BindFlags & (BIND_SHADER_RESOURCE|BIND_UNORDERED_ACCESS)) == 0)
     {
         UNSUPPORTED("Dynamic buffers are not yet implemented");
@@ -89,9 +90,9 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters *pRefCounters,
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT | // The buffer can be used as the source of a transfer command 
             VK_BUFFER_USAGE_TRANSFER_DST_BIT;  // The buffer can be used as the destination of a transfer command
         if (m_Desc.BindFlags & BIND_UNORDERED_ACCESS)
-            VkBuffCI.usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT; // | VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT
+            VkBuffCI.usage |= m_Desc.Mode == BUFFER_MODE_FORMATTED ? VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT : VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
         if (m_Desc.BindFlags & BIND_SHADER_RESOURCE)
-            VkBuffCI.usage |= VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER | VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            VkBuffCI.usage |= m_Desc.Mode == BUFFER_MODE_FORMATTED ? VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER : VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
         if (m_Desc.BindFlags & BIND_VERTEX_BUFFER)
             VkBuffCI.usage |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
         if (m_Desc.BindFlags & BIND_INDEX_BUFFER)
@@ -99,7 +100,7 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters *pRefCounters,
         if (m_Desc.BindFlags & BIND_INDIRECT_DRAW_ARGS)
             VkBuffCI.usage |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
         if (m_Desc.BindFlags & BIND_UNIFORM_BUFFER)
-            VkBuffCI.usage |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT; // | VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT
+            VkBuffCI.usage |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
 
         VkBuffCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // sharing mode of the buffer when it will be accessed by multiple queue families.
         VkBuffCI.queueFamilyIndexCount = 0; // number of entries in the pQueueFamilyIndices array
@@ -107,7 +108,7 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters *pRefCounters,
                                                 // (ignored if sharingMode is not VK_SHARING_MODE_CONCURRENT).
 
         auto vkDevice = pRenderDeviceVk->GetVkDevice();
-        auto err = vkCreateBuffer(vkDevice, &VkBuffCI, nullptr, &m_VkBuffer);
+        auto err = vkCreateBuffer(vkDevice, &VkBuffCI, vkAllocator, &m_VkBuffer);
         CHECK_VK_ERROR_AND_THROW(err, "Failed to create Vulkan buffer object");
 
         VkMemoryRequirements MemReqs = {};
@@ -143,7 +144,7 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters *pRefCounters,
             LOG_ERROR_AND_THROW("Failed to find suitable device memory type for a buffer");
         }
 
-        err = vkAllocateMemory(vkDevice, &MemAlloc, nullptr, &m_BufferMemory);
+        err = vkAllocateMemory(vkDevice, &MemAlloc, vkAllocator, &m_BufferMemory);
         CHECK_VK_ERROR_AND_THROW(err, "Failed to allocate device local memory for a Vulkan buffer object");
 
         err = vkBindBufferMemory(vkDevice, m_VkBuffer, m_BufferMemory, 0 /*offset*/);
@@ -162,7 +163,7 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters *pRefCounters,
             VkStaginBuffCI.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 
             VkBuffer vkStagingBuffer = VK_NULL_HANDLE;
-            err = vkCreateBuffer(vkDevice, &VkStaginBuffCI, nullptr, &vkStagingBuffer);
+            err = vkCreateBuffer(vkDevice, &VkStaginBuffCI, vkAllocator, &vkStagingBuffer);
             CHECK_VK_ERROR_AND_THROW(err, "Failed to create staging buffer");
 
             VulkanUtilities::SetBufferName(vkDevice, vkStagingBuffer, "Staging buffer");
@@ -187,7 +188,7 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters *pRefCounters,
                    "and the VK_MEMORY_PROPERTY_HOST_COHERENT_BIT bit set(11.6)");
 
             VkDeviceMemory vkStagingBufferMemory = VK_NULL_HANDLE;
-            err = vkAllocateMemory(vkDevice, &StagingMemAlloc, nullptr, &vkStagingBufferMemory);
+            err = vkAllocateMemory(vkDevice, &StagingMemAlloc, vkAllocator, &vkStagingBufferMemory);
             CHECK_VK_ERROR_AND_THROW(err, "Failed to allocate memory for a staging buffer object");
 
             {
@@ -204,32 +205,7 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters *pRefCounters,
             
             err = vkBindBufferMemory(vkDevice, vkStagingBuffer, vkStagingBufferMemory, 0 /*offset*/);
             CHECK_VK_ERROR_AND_THROW(err, "Failed to bind staging bufer memory");
-
-
-
 #if 0
-            Vk_HEAP_PROPERTIES UploadHeapProps;
-	        UploadHeapProps.Type = Vk_HEAP_TYPE_UPLOAD;
-	        UploadHeapProps.CPUPageProperty = Vk_CPU_PAGE_PROPERTY_UNKNOWN;
-	        UploadHeapProps.MemoryPoolPreference = Vk_MEMORY_POOL_UNKNOWN;
-	        UploadHeapProps.CreationNodeMask = 1;
-	        UploadHeapProps.VisibleNodeMask = 1;
-
-            VkBuffDesc.Flags = Vk_RESOURCE_FLAG_NONE;
-            CComPtr<IVkResource> UploadBuffer;
-            hr = pVkDevice->CreateCommittedResource( &UploadHeapProps, Vk_HEAP_FLAG_NONE,
-		                &VkBuffDesc, Vk_RESOURCE_STATE_GENERIC_READ, nullptr,  __uuidof(UploadBuffer), 
-                        reinterpret_cast<void**>(static_cast<IVkResource**>(&UploadBuffer)) );
-            if(FAILED(hr))
-                LOG_ERROR_AND_THROW("Failed to create uload buffer");
-
-	        void* DestAddress = nullptr;
-	        hr = UploadBuffer->Map(0, nullptr, &DestAddress);
-            if(FAILED(hr))
-                LOG_ERROR_AND_THROW("Failed to map uload buffer");
-	        memcpy(DestAddress, BuffData.pData, BuffData.DataSize);
-	        UploadBuffer->Unmap(0, nullptr);
-
             auto  *pInitContext = pRenderDeviceVk->AllocateCommandContext();
 	        // copy data to the intermediate upload heap and then schedule a copy from the upload heap to the default buffer
             VERIFY_EXPR(m_UsageState == Vk_RESOURCE_STATE_COPY_DEST);
@@ -491,17 +467,11 @@ void BufferVkImpl::CreateViewInternal( const BufferViewDesc &OrigViewDesc, IBuff
         VERIFY( &BuffViewAllocator == &m_dbgBuffViewAllocator, "Buff view allocator does not match allocator provided at buffer initialization" );
 
         BufferViewDesc ViewDesc = OrigViewDesc;
-        if( ViewDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS )
+        if( ViewDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS || ViewDesc.ViewType == BUFFER_VIEW_SHADER_RESOURCE )
         {
-            auto UAV = CreateUAV(ViewDesc);
+            auto vkView = CreateView(ViewDesc);
             *ppView = NEW_RC_OBJ(BuffViewAllocator, "BufferViewVkImpl instance", BufferViewVkImpl, bIsDefaultView ? this : nullptr)
-                                (GetDevice(), ViewDesc, this, UAV, bIsDefaultView );
-        }
-        else if( ViewDesc.ViewType == BUFFER_VIEW_SHADER_RESOURCE )
-        {
-            auto SRV = CreateSRV(ViewDesc);
-            *ppView = NEW_RC_OBJ(BuffViewAllocator, "BufferViewVkImpl instance", BufferViewVkImpl, bIsDefaultView ? this : nullptr)
-                                (GetDevice(), ViewDesc, this, SRV, bIsDefaultView );
+                                (GetDevice(), ViewDesc, this, vkView, bIsDefaultView );
         }
 
         if( !bIsDefaultView && *ppView )
@@ -515,43 +485,29 @@ void BufferVkImpl::CreateViewInternal( const BufferViewDesc &OrigViewDesc, IBuff
 }
 
 
-VkBufferView BufferVkImpl::CreateUAV(BufferViewDesc &UAVDesc)
+VkBufferView BufferVkImpl::CreateView(struct BufferViewDesc &ViewDesc)
 {
-    CorrectBufferViewDesc( UAVDesc );
-#if 0
-    Vk_UNORDERED_ACCESS_VIEW_DESC Vk_UAVDesc;
-    BufferViewDesc_to_Vk_UAV_DESC(m_Desc, UAVDesc, Vk_UAVDesc);
+    VkBufferView vkBuffView = VK_NULL_HANDLE;
+    CorrectBufferViewDesc(ViewDesc);
+    if( (ViewDesc.ViewType == BUFFER_VIEW_SHADER_RESOURCE || ViewDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS) && 
+        m_Desc.Mode == BUFFER_MODE_FORMATTED)
+    {
+        VkBufferViewCreateInfo ViewCI = {};
+        ViewCI.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
+        ViewCI.pNext = nullptr;
+        ViewCI.flags = 0; // reserved for future use
+        ViewCI.buffer = m_VkBuffer;
+        ViewCI.format = TypeToVkFormat(m_Desc.Format.ValueType, m_Desc.Format.NumComponents, m_Desc.Format.IsNormalized);
+        ViewCI.offset = ViewDesc.ByteOffset;
+        ViewCI.range = ViewDesc.ByteWidth; // size in bytes of the buffer view
 
-    auto *pDeviceVk = static_cast<RenderDeviceVkImpl*>(GetDevice())->GetVkDevice();
-    pDeviceVk->CreateUnorderedAccessView( m_pVkResource, nullptr, &Vk_UAVDesc, UAVDescriptor );
-#endif
-    return VK_NULL_HANDLE;
-}
-
-VkBufferView BufferVkImpl::CreateSRV(BufferViewDesc &SRVDesc)
-{
-    CorrectBufferViewDesc( SRVDesc );
-#if 0
-    Vk_SHADER_RESOURCE_VIEW_DESC Vk_SRVDesc;
-    BufferViewDesc_to_Vk_SRV_DESC(m_Desc, SRVDesc, Vk_SRVDesc);
-
-    auto *pDeviceVk = static_cast<RenderDeviceVkImpl*>(GetDevice())->GetVkDevice();
-    pDeviceVk->CreateShaderResourceView( m_pVkResource, &Vk_SRVDesc, SRVDescriptor );
-#endif
-    return VK_NULL_HANDLE;
-}
-
-VkBufferView BufferVkImpl::CreateCBV(BufferViewDesc &CBVDesc)
-{
-#if 0
-    Vk_CONSTANT_BUFFER_VIEW_DESC Vk_CBVDesc;
-    Vk_CBVDesc.BufferLocation = m_pVkResource->GetGPUVirtualAddress();
-    Vk_CBVDesc.SizeInBytes = m_Desc.uiSizeInBytes;
-
-    auto *pDeviceVk = static_cast<RenderDeviceVkImpl*>(GetDevice())->GetVkDevice();
-    pDeviceVk->CreateConstantBufferView( &Vk_CBVDesc, CBVDescriptor );
-#endif
-    return VK_NULL_HANDLE;
+        auto *pDeviceVkImpl = static_cast<RenderDeviceVkImpl*>(GetDevice());
+        auto vkAllocator = pDeviceVkImpl->GetVulkanInstance()->GetVkAllocator();
+        auto vkDevice = pDeviceVkImpl->GetVkDevice();
+        auto err = vkCreateBufferView(vkDevice, &ViewCI, vkAllocator, &vkBuffView);
+        CHECK_VK_ERROR_AND_THROW(err, "Failed to create Vulkan buffer view");
+    }
+    return vkBuffView;
 }
 
 #if 0

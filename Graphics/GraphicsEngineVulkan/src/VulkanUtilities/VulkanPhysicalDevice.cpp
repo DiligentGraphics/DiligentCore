@@ -54,7 +54,7 @@ namespace VulkanUtilities
         }
     }
 
-    uint32_t VulkanPhysicalDevice::FindQueueFamily(VkQueueFlags QueueFlags)
+    uint32_t VulkanPhysicalDevice::FindQueueFamily(VkQueueFlags QueueFlags)const
     {
         // All commands that are allowed on a queue that supports transfer operations are also allowed on 
         // a queue that supports either graphics or compute operations. Thus, if the capabilities of a queue 
@@ -120,7 +120,7 @@ namespace VulkanUtilities
         return FamilyInd;
     }
 
-    bool VulkanPhysicalDevice::IsExtensionSupported(const char *ExtensionName)
+    bool VulkanPhysicalDevice::IsExtensionSupported(const char *ExtensionName)const
     {
         for(const auto& Extension : m_SupportedExtensions)
             if(strcmp(Extension.extensionName, ExtensionName) == 0)
@@ -145,7 +145,7 @@ namespace VulkanUtilities
     //                                 supported for the resource.
     // * requiredProperties   -  required memory properties (device local, host visible, etc.)
     uint32_t VulkanPhysicalDevice::GetMemoryTypeIndex(uint32_t memoryTypeBitsRequirement,
-                                                      VkMemoryPropertyFlags requiredProperties)
+                                                      VkMemoryPropertyFlags requiredProperties)const
     {
         // Iterate over all memory types available for the device
         // For each pair of elements X and Y returned in memoryTypes, X must be placed at a lower index position than Y if:
