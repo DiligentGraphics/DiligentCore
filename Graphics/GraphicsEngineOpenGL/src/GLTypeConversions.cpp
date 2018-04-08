@@ -176,7 +176,7 @@ GLenum TexFormatToGLInternalTexFormat(TEXTURE_FORMAT TexFormat, Uint32 BindFlags
     }
     else
     {
-        UNEXPECTED( "Texture format (", TexFormat, ") out of allowed range [0, ", TEX_FORMAT_NUM_FORMATS-1, "]" );
+        UNEXPECTED( "Texture format (", int{TexFormat}, ") out of allowed range [0, ", int{TEX_FORMAT_NUM_FORMATS}-1, "]" );
         return 0;
     }
 }
@@ -389,7 +389,7 @@ NativePixelAttribs GetNativePixelTransferAttribs(TEXTURE_FORMAT TexFormat)
     }
     else
     {
-        UNEXPECTED( "Texture format (", TexFormat, ") is out of allowed range [1, ", TEX_FORMAT_NUM_FORMATS-1, "]" );
+        UNEXPECTED( "Texture format (", int{TexFormat}, ") is out of allowed range [1, ", int{TEX_FORMAT_NUM_FORMATS}-1, "]" );
         return FmtToGLPixelFmt[0];
     }
 }
