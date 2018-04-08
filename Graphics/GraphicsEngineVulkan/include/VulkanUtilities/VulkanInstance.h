@@ -29,7 +29,7 @@
 
 namespace VulkanUtilities
 {
-    class VulkanInstance : private std::enable_shared_from_this<VulkanInstance>
+    class VulkanInstance : public std::enable_shared_from_this<VulkanInstance>
     {
     public:
         static std::shared_ptr<VulkanInstance> Create(bool EnableValidation, 

@@ -29,7 +29,7 @@
 
 namespace VulkanUtilities
 {
-    class VulkanLogicalDevice : private std::enable_shared_from_this<VulkanLogicalDevice>
+    class VulkanLogicalDevice : public std::enable_shared_from_this<VulkanLogicalDevice>
     {
     public:
         static std::shared_ptr<VulkanLogicalDevice> Create(VkPhysicalDevice vkPhysicalDevice, 
