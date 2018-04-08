@@ -32,6 +32,7 @@
 #include "BufferViewVkImpl.h"
 #include "VulkanResourceBase.h"
 #include "DynamicUploadHeap.h"
+#include "VulkanUtilities/VulkanObjectWrappers.h"
 
 namespace Diligent
 {
@@ -122,7 +123,7 @@ public:
 private:
     virtual void CreateViewInternal( const struct BufferViewDesc &ViewDesc, IBufferView **ppView, bool bIsDefaultView )override;
 
-    VkBufferView CreateView(struct BufferViewDesc &ViewDesc);
+    VulkanUtilities::BufferViewWrapper CreateView(struct BufferViewDesc &ViewDesc);
     /*    DescriptorHeapAllocation m_CBVDescriptorAllocation;
 
 #ifdef _DEBUG
@@ -132,8 +133,9 @@ private:
     friend class DeviceContextVkImpl;
     // Array of dynamic allocations for every device context
     std::vector<DynamicAllocation,  STDAllocatorRawMem<DynamicAllocation> > m_DynamicData;*/
-    VkBuffer m_VkBuffer = VK_NULL_HANDLE;
-    VkDeviceMemory m_BufferMemory = VK_NULL_HANDLE;
+    
+    VulkanUtilities::BufferWrapper m_VulkanBuffer;
+    VulkanUtilities::DeviceMemoryWrapper m_BufferMemory;
 };
 
 }

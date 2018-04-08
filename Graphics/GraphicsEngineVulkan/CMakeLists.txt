@@ -7,7 +7,6 @@ set(INCLUDE
     include/BufferViewVkImpl.h
     include/CommandContext.h
     include/CommandListVkImpl.h
-    include/CommandListManager.h
     include/CommandQueueVkImpl.h
     include/VulkanResourceBase.h
     include/VulkanTypeConversions.h
@@ -34,8 +33,12 @@ set(INCLUDE
 )
 
 set(VULKAN_UTILS_INCLUDE 
+    include/VulkanUtilities/VulkanCommandBufferPool.h
     include/VulkanUtilities/VulkanDebug.h
+    include/VulkanUtilities/VulkanFencePool.h
     include/VulkanUtilities/VulkanInstance.h
+    include/VulkanUtilities/VulkanLogicalDevice.h
+    include/VulkanUtilities/VulkanObjectWrappers.h
     include/VulkanUtilities/VulkanPhysicalDevice.h
 )
 
@@ -61,7 +64,6 @@ set(SRC
     src/BufferVkImpl.cpp
     src/BufferViewVkImpl.cpp
     src/CommandContext.cpp
-    src/CommandListManager.cpp
     src/CommandQueueVkImpl.cpp
     src/VulkanResourceBase.cpp
     src/VulkanTypeConversions.cpp
@@ -86,8 +88,11 @@ set(SRC
 )
 
 set(VULKAN_UTILS_SRC
+    src/VulkanUtilities/VulkanCommandBufferPool.cpp
     src/VulkanUtilities/VulkanDebug.cpp
+    src/VulkanUtilities/VulkanFencePool.cpp
     src/VulkanUtilities/VulkanInstance.cpp
+    src/VulkanUtilities/VulkanLogicalDevice.cpp
     src/VulkanUtilities/VulkanPhysicalDevice.cpp
 )
 

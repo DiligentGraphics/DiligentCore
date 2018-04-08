@@ -54,7 +54,7 @@ public:
 
     void AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::VulkanInstance>,
                               std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice> PhysicalDevice,
-                              VkDevice vkLogicalDevice,
+                              std::shared_ptr<VulkanUtilities::VulkanLogicalDevice> LogicalDevice,
                               ICommandQueueVk *pCommandQueue,
                               const EngineVkAttribs& EngineAttribs, 
                               IRenderDevice **ppDevice, 
@@ -114,17 +114,16 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk( const EngineVkAttribs& Crea
     *ppDevice = nullptr;
     memset(ppContexts, 0, sizeof(*ppContexts) * (1 + NumDeferredContexts));
 
-    std::shared_ptr<VulkanUtilities::VulkanInstance> Instance;
     try
     {
-        Instance = std::make_shared<VulkanUtilities::VulkanInstance>(
+        auto Instance = VulkanUtilities::VulkanInstance::Create(
             CreationAttribs.EnableValidation, 
             CreationAttribs.GlobalExtensionCount, 
             CreationAttribs.ppGlobalExtensionNames,
             reinterpret_cast<VkAllocationCallbacks*>(CreationAttribs.pVkAllocator));
 
         auto vkDevice = Instance->SelectPhysicalDevice();
-        std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice> PhysicalDevice(new VulkanUtilities::VulkanPhysicalDevice(vkDevice));
+        auto PhysicalDevice = VulkanUtilities::VulkanPhysicalDevice::Create(vkDevice);
 
         // If an implementation exposes any queue family that supports graphics operations, 
         // at least one queue family of at least one physical device exposed by the implementation 
@@ -163,30 +162,20 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk( const EngineVkAttribs& Crea
         DeviceCreateInfo.ppEnabledExtensionNames = DeviceExtensions.empty() ? nullptr : DeviceExtensions.data();
         DeviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(DeviceExtensions.size());
         
-        VkDevice VulkanDevice = VK_NULL_HANDLE;
-        auto res = vkCreateDevice(PhysicalDevice->GetVkDeviceHandle(), &DeviceCreateInfo, Instance->GetVkAllocator(), &VulkanDevice);
-        CHECK_VK_ERROR_AND_THROW(res, "Failed to create logical device");
-
-        if (CreationAttribs.EnableValidation)
+        if (!DebugMarkersSupported && CreationAttribs.EnableValidation)
         {
-            if(DebugMarkersSupported)
-                VulkanUtilities::SetupDebugMarkers(VulkanDevice);
-            else
-                LOG_INFO_MESSAGE("Debug marker extensions is not found on the system");
+            LOG_INFO_MESSAGE("Debug marker extensions is not found on the system");
         }
 
-        VkQueue Queue = VK_NULL_HANDLE;
-        vkGetDeviceQueue(VulkanDevice, 
-            QueueInfo.queueFamilyIndex, // Index of the queue family to which the queue belongs
-            0,                          // Index within this queue family of the queue to retrieve
-            &Queue);
-        VERIFY_EXPR(Queue != VK_NULL_HANDLE);
+        auto vkAllocator = Instance->GetVkAllocator();
+        auto vkPhysicalDevice = PhysicalDevice->GetVkDeviceHandle();
+        auto LogicalDevice = VulkanUtilities::VulkanLogicalDevice::Create(vkPhysicalDevice, DeviceCreateInfo, vkAllocator, DebugMarkersSupported && CreationAttribs.EnableValidation);
+
         RefCntAutoPtr<CommandQueueVkImpl> pCmdQueueVk;
-
         auto &RawMemAllocator = GetRawAllocator();
-        pCmdQueueVk = NEW_RC_OBJ(RawMemAllocator, "CommandQueueVk instance", CommandQueueVkImpl)(Queue, QueueInfo.queueFamilyIndex);
+        pCmdQueueVk = NEW_RC_OBJ(RawMemAllocator, "CommandQueueVk instance", CommandQueueVkImpl)(LogicalDevice, QueueInfo.queueFamilyIndex);
 
-        AttachToVulkanDevice(Instance, std::move(PhysicalDevice), VulkanDevice, pCmdQueueVk, CreationAttribs, ppDevice, ppContexts, NumDeferredContexts);
+        AttachToVulkanDevice(Instance, std::move(PhysicalDevice), LogicalDevice, pCmdQueueVk, CreationAttribs, ppDevice, ppContexts, NumDeferredContexts);
     }
     catch(std::runtime_error& )
     {
@@ -198,7 +187,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk( const EngineVkAttribs& Crea
 
 /// \param [in] Instance - shared pointer to a VulkanUtilities::VulkanInstance object
 /// \param [in] PhysicalDevice - pointer to the object representing physical device
-/// \param [in] vkLogicalDevice - logical Vulkan device handle
+/// \param [in] LogicalDevice - shared pointer to a VulkanUtilities::VulkanLogicalDevice object
 /// \param [in] pCommandQueue - pointer to the implementation of command queue
 /// \param [in] EngineAttribs - Engine creation attributes.
 /// \param [out] ppDevice - Address of the memory location where pointer to 
@@ -213,7 +202,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk( const EngineVkAttribs& Crea
 ///                                   at position 1
 void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::VulkanInstance> Instance,
                                                std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice> PhysicalDevice,
-                                               VkDevice vkLogicalDevice,
+                                               std::shared_ptr<VulkanUtilities::VulkanLogicalDevice> LogicalDevice,
                                                ICommandQueueVk *pCommandQueue,
                                                const EngineVkAttribs& EngineAttribs, 
                                                IRenderDevice **ppDevice, 
@@ -221,7 +210,7 @@ void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::
                                                Uint32 NumDeferredContexts)
 {
     VERIFY( pCommandQueue && ppDevice && ppContexts, "Null pointer provided" );
-    if(vkLogicalDevice == VK_NULL_HANDLE || !pCommandQueue || !ppDevice || !ppContexts )
+    if(!LogicalDevice || !pCommandQueue || !ppDevice || !ppContexts )
         return;
 
     *ppDevice = nullptr;
@@ -230,7 +219,7 @@ void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::
     try
     {
         auto &RawMemAllocator = GetRawAllocator();
-        RenderDeviceVkImpl *pRenderDeviceVk( NEW_RC_OBJ(RawMemAllocator, "RenderDeviceVkImpl instance", RenderDeviceVkImpl)(RawMemAllocator, EngineAttribs, pCommandQueue, Instance, std::move(PhysicalDevice), vkLogicalDevice, NumDeferredContexts ) );
+        RenderDeviceVkImpl *pRenderDeviceVk( NEW_RC_OBJ(RawMemAllocator, "RenderDeviceVkImpl instance", RenderDeviceVkImpl)(RawMemAllocator, EngineAttribs, pCommandQueue, Instance, std::move(PhysicalDevice), LogicalDevice, NumDeferredContexts ) );
         pRenderDeviceVk->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice) );
 
         RefCntAutoPtr<DeviceContextVkImpl> pImmediateCtxVk( NEW_RC_OBJ(RawMemAllocator, "DeviceContextVkImpl instance", DeviceContextVkImpl)(pRenderDeviceVk, false, EngineAttribs, 0) );

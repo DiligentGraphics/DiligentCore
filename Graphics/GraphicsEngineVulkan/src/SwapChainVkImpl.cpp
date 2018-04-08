@@ -314,12 +314,14 @@ void SwapChainVkImpl::InitBuffersAndViews()
         BackBufferDesc.Width  = m_SwapChainDesc.Width;
         BackBufferDesc.Height = m_SwapChainDesc.Height;
         BackBufferDesc.Format = m_SwapChainDesc.ColorBufferFormat;
+        BackBufferDesc.BindFlags = BIND_RENDER_TARGET;
         BackBufferDesc.MipLevels = 1;
 
         RefCntAutoPtr<TextureVkImpl> pBackBufferTex;
         ValidatedCast<RenderDeviceVkImpl>(m_pRenderDevice.RawPtr())->CreateTexture(BackBufferDesc, swapchainImages[i], &pBackBufferTex);
         
-        UNSUPPORTED("TODO: move all this code to Texture creation");
+        //UNSUPPORTED("TODO: move all this code to Texture creation");
+
         VkImageViewCreateInfo color_image_view = {};
         color_image_view.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         color_image_view.pNext = NULL;
@@ -396,12 +398,6 @@ IMPLEMENT_QUERY_INTERFACE( SwapChainVkImpl, IID_SwapChainVk, TSwapChainBase )
 
 void SwapChainVkImpl::Present(Uint32 SyncInterval)
 {
-#if 0
-    UINT SyncInterval = 0;
-#if PLATFORM_UNIVERSAL_WINDOWS
-    SyncInterval = 1; // Interval 0 is not supported on Windows Phone 
-#endif
-
     auto pDeviceContext = m_wpDeviceContext.Lock();
     if( !pDeviceContext )
     {
@@ -412,16 +408,18 @@ void SwapChainVkImpl::Present(Uint32 SyncInterval)
     auto *pImmediateCtx = pDeviceContext.RawPtr();
     auto *pImmediateCtxVk = ValidatedCast<DeviceContextVkImpl>( pImmediateCtx );
 
+#if 0
     auto *pCmdCtx = pImmediateCtxVk->RequestCmdContext();
     auto *pBackBuffer = ValidatedCast<TextureVkImpl>( GetCurrentBackBufferRTV()->GetTexture() );
     pCmdCtx->TransitionResource( pBackBuffer, Vk_RESOURCE_STATE_PRESENT);
-
+#endif
     pImmediateCtxVk->Flush();
 
     auto *pDeviceVk = ValidatedCast<RenderDeviceVkImpl>( pImmediateCtxVk->GetDevice() );
-    
+#if 0
     auto hr = m_pSwapChain->Present( SyncInterval, 0 );
     VERIFY(SUCCEEDED(hr), "Present failed");
+#endif
 
     pDeviceVk->FinishFrame();
 
@@ -432,7 +430,6 @@ void SwapChainVkImpl::Present(Uint32 SyncInterval)
     // We need to rebind all render targets to make sure that
     // the back buffer is not unbound
     pImmediateCtxVk->CommitRenderTargets();
-#endif
 #endif
 #endif
 }
@@ -505,6 +502,5 @@ void SwapChainVkImpl::SetFullscreenMode(const DisplayModeAttribs &DisplayMode)
 void SwapChainVkImpl::SetWindowedMode()
 {
 }
-
 
 }

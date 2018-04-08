@@ -24,18 +24,29 @@
 #pragma once
 
 #include <vector>
+#include <memory>
 #include "vulkan.h"
 
 namespace VulkanUtilities
 {
-    class VulkanInstance
+    class VulkanInstance : private std::enable_shared_from_this<VulkanInstance>
     {
     public:
-        VulkanInstance(bool EnableValidation, 
-                       uint32_t GlobalExtensionCount, 
-                       const char* const* ppGlobalExtensionNames,
-                       VkAllocationCallbacks* pVkAllocator);
+        static std::shared_ptr<VulkanInstance> Create(bool EnableValidation, 
+                                                      uint32_t GlobalExtensionCount, 
+                                                      const char* const* ppGlobalExtensionNames,
+                                                      VkAllocationCallbacks* pVkAllocator);
         ~VulkanInstance();
+
+        std::shared_ptr<VulkanInstance> GetSharedPtr()
+        {
+            return shared_from_this();
+        }
+
+        std::shared_ptr<const VulkanInstance> GetSharedPtr()const
+        {
+            return shared_from_this();
+        }
 
         bool IsLayerAvailable(const char *LayerName)const;
         bool IsExtensionAvailable(const char *ExtensionName)const;
@@ -44,6 +55,10 @@ namespace VulkanUtilities
         VkInstance GetVkInstance()const{return m_VkInstance;}
 
     private:
+        VulkanInstance(bool EnableValidation, 
+                       uint32_t GlobalExtensionCount, 
+                       const char* const* ppGlobalExtensionNames,
+                       VkAllocationCallbacks* pVkAllocator);
 
         bool m_ValidationEnabled = false;
         VkAllocationCallbacks* const m_pVkAllocator;

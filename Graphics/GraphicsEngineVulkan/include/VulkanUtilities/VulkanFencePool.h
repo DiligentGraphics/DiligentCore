@@ -23,33 +23,30 @@
 
 #pragma once
 
-#include <memory>
 #include <vector>
+#include <memory>
 #include "vulkan.h"
+#include "VulkanLogicalDevice.h"
+#include "VulkanUtilities/VulkanObjectWrappers.h"
 
 namespace VulkanUtilities
 {
-    class VulkanPhysicalDevice
+    class VulkanFencePool
     {
     public:
-        static std::unique_ptr<VulkanPhysicalDevice> Create(VkPhysicalDevice vkDevice);
+        VulkanFencePool(std::shared_ptr<const VulkanLogicalDevice> LogicalDevice);
+        VulkanFencePool(const VulkanFencePool&) = delete;
+        VulkanFencePool(VulkanFencePool&&) = delete;
+        VulkanFencePool& operator = (const VulkanFencePool&) = delete;
+        VulkanFencePool& operator = (VulkanFencePool&&) = delete;
+        ~VulkanFencePool();
 
-        uint32_t FindQueueFamily(VkQueueFlags QueueFlags)const;
-        VkPhysicalDevice GetVkDeviceHandle()const{return m_VkDevice;}
-        bool IsExtensionSupported(const char *ExtensionName)const;
-        bool CheckPresentSupport(uint32_t queueFamilyIndex, VkSurfaceKHR VkSurface)const;
-        
-        static constexpr uint32_t InvalidMemoryTypeIndex = static_cast<uint32_t>(-1);
-        uint32_t GetMemoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags properties)const;
+        VulkanUtilities::FenceWrapper GetFence();
+        void DisposeFence(VulkanUtilities::FenceWrapper&& Fence);
 
     private:
-        VulkanPhysicalDevice(VkPhysicalDevice vkDevice);
-
-        const VkPhysicalDevice m_VkDevice;
-        VkPhysicalDeviceProperties m_Properties = {};
-        VkPhysicalDeviceFeatures m_Features = {};
-        VkPhysicalDeviceMemoryProperties m_MemoryProperties = {};
-        std::vector<VkQueueFamilyProperties> m_QueueFamilyProperties;
-        std::vector<VkExtensionProperties> m_SupportedExtensions;
+        // Shared pointer to logical device must be declared before fences
+        std::shared_ptr<const VulkanLogicalDevice> m_LogicalDevice;
+        std::vector<VulkanUtilities::FenceWrapper> m_Fences;
     };
 }

@@ -24,6 +24,7 @@
 #include "pch.h"
 #include "TextureViewVkImpl.h"
 #include "DeviceContextVkImpl.h"
+#include "RenderDeviceVkImpl.h"
 
 namespace Diligent
 {
@@ -32,11 +33,17 @@ TextureViewVkImpl::TextureViewVkImpl( IReferenceCounters *pRefCounters,
                                       IRenderDevice *pDevice, 
                                       const TextureViewDesc& ViewDesc, 
                                       ITexture *pTexture,
-                                      VkImageView vkImgView,
+                                      VulkanUtilities::ImageViewWrapper &&ImgView,
                                       bool bIsDefaultView ) :
     TTextureViewBase( pRefCounters, pDevice, ViewDesc, pTexture, bIsDefaultView ),
-    m_VkImageView(vkImgView)
+    m_ImageView(std::move(ImgView))
 {
+}
+
+TextureViewVkImpl::~TextureViewVkImpl()
+{
+    auto *pDeviceVkImpl = ValidatedCast<RenderDeviceVkImpl>(GetDevice());
+    pDeviceVkImpl->SafeReleaseVkObject(std::move(m_ImageView));
 }
 
 IMPLEMENT_QUERY_INTERFACE( TextureViewVkImpl, IID_TextureViewVk, TTextureViewBase )

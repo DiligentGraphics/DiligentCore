@@ -58,59 +58,92 @@ DXGI_FORMAT GetClearFormat(DXGI_FORMAT Fmt, Vk_RESOURCE_FLAGS Flags)
 #endif
 
 TextureVkImpl :: TextureVkImpl(IReferenceCounters *pRefCounters, 
-                                     FixedBlockMemoryAllocator &TexViewObjAllocator,
-                                     RenderDeviceVkImpl *pRenderDeviceVk, 
-                                     const TextureDesc& TexDesc, 
-                                     const TextureData &InitData /*= TextureData()*/) : 
+                               FixedBlockMemoryAllocator &TexViewObjAllocator,
+                               RenderDeviceVkImpl *pRenderDeviceVk, 
+                               const TextureDesc& TexDesc, 
+                               const TextureData &InitData /*= TextureData()*/) : 
     TTextureBase(pRefCounters, TexViewObjAllocator, pRenderDeviceVk, TexDesc),
     m_IsExternalHandle(false)
 {
     if( m_Desc.Usage == USAGE_STATIC && InitData.pSubResources == nullptr )
         LOG_ERROR_AND_THROW("Static Texture must be initialized with data at creation time");
-#if 0
-	Vk_RESOURCE_DESC Desc = {};
-	Desc.Alignment = 0;
-    if(m_Desc.Type == RESOURCE_DIM_TEX_1D_ARRAY || m_Desc.Type == RESOURCE_DIM_TEX_2D_ARRAY || m_Desc.Type == RESOURCE_DIM_TEX_CUBE || m_Desc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY)
-	    Desc.DepthOrArraySize = (UINT16)m_Desc.ArraySize;
-    else if(m_Desc.Type == RESOURCE_DIM_TEX_3D )
-        Desc.DepthOrArraySize = (UINT16)m_Desc.Depth;
-    else
-        Desc.DepthOrArraySize = 1;
+    
+    const auto& LogicalDevice = pRenderDeviceVk->GetLogicalDevice();
+    const auto& PhysicalDevice = pRenderDeviceVk->GetPhysicalDevice();
 
-    if( m_Desc.Type == RESOURCE_DIM_TEX_1D || m_Desc.Type == RESOURCE_DIM_TEX_1D_ARRAY )
-	    Desc.Dimension = Vk_RESOURCE_DIMENSION_TEXTURE1D;
-    else if( m_Desc.Type == RESOURCE_DIM_TEX_2D || m_Desc.Type == RESOURCE_DIM_TEX_2D_ARRAY || m_Desc.Type == RESOURCE_DIM_TEX_CUBE || m_Desc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY)
-	    Desc.Dimension = Vk_RESOURCE_DIMENSION_TEXTURE2D;
-    else if( m_Desc.Type == RESOURCE_DIM_TEX_3D )
-        Desc.Dimension = Vk_RESOURCE_DIMENSION_TEXTURE3D;
+    VkImageCreateInfo ImageCI = {};
+    ImageCI.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    ImageCI.pNext = nullptr;
+    ImageCI.flags = 0;
+    if(m_Desc.Type == RESOURCE_DIM_TEX_CUBE || m_Desc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY)
+        ImageCI.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+    const auto &FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
+    if(FmtAttribs.IsTypeless)
+        ImageCI.flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT; // Specifies that the image can be used to create a 
+                                                             // VkImageView with a different format from the image.
+
+    if (m_Desc.Type == RESOURCE_DIM_TEX_1D || m_Desc.Type == RESOURCE_DIM_TEX_1D_ARRAY)
+        ImageCI.imageType = VK_IMAGE_TYPE_1D;
+    else if (m_Desc.Type == RESOURCE_DIM_TEX_2D || m_Desc.Type == RESOURCE_DIM_TEX_2D_ARRAY || m_Desc.Type == RESOURCE_DIM_TEX_CUBE || m_Desc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY)
+        ImageCI.imageType = VK_IMAGE_TYPE_2D;
+    else if (m_Desc.Type == RESOURCE_DIM_TEX_3D)
+        ImageCI.imageType = VK_IMAGE_TYPE_3D;
     else
     {
         LOG_ERROR_AND_THROW("Unknown texture type");
     }
 
+    if (FmtAttribs.IsTypeless)
+    {
+        // Use SRV format to create the texture
+        auto SRVFormat = GetDefaultTextureViewFormat(m_Desc, TEXTURE_VIEW_SHADER_RESOURCE);
+        ImageCI.format = TexFormatToVkFormat(SRVFormat);
+    }
+    else
+    {
+        ImageCI.format = TexFormatToVkFormat(m_Desc.Format);
+    }
 
+    ImageCI.extent.width = m_Desc.Width;
+    ImageCI.extent.height = (m_Desc.Type == RESOURCE_DIM_TEX_1D || m_Desc.Type == RESOURCE_DIM_TEX_1D_ARRAY) ? 1 : m_Desc.Height;
+    ImageCI.extent.depth = (m_Desc.Type == RESOURCE_DIM_TEX_3D) ? m_Desc.Depth : 1;
+    
+    ImageCI.mipLevels = m_Desc.MipLevels;
+    if (m_Desc.Type == RESOURCE_DIM_TEX_1D_ARRAY || 
+        m_Desc.Type == RESOURCE_DIM_TEX_2D_ARRAY || 
+        m_Desc.Type == RESOURCE_DIM_TEX_CUBE || 
+        m_Desc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY)
+        ImageCI.arrayLayers = m_Desc.ArraySize;
+    else
+        ImageCI.arrayLayers = 1;
+
+    ImageCI.samples = static_cast<VkSampleCountFlagBits>(1 << (m_Desc.SampleCount-1));
+    ImageCI.tiling = VK_IMAGE_TILING_OPTIMAL;
+
+    ImageCI.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    if (m_Desc.BindFlags & BIND_RENDER_TARGET)
+        ImageCI.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    if (m_Desc.BindFlags & BIND_DEPTH_STENCIL)
+        ImageCI.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    if ((m_Desc.BindFlags & BIND_UNORDERED_ACCESS) || (m_Desc.MiscFlags & MISC_TEXTURE_FLAG_GENERATE_MIPS))
+        ImageCI.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
+    if ((m_Desc.BindFlags & BIND_SHADER_RESOURCE) == 0)
+        ImageCI.usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
+
+    ImageCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    ImageCI.queueFamilyIndexCount = 0;
+    ImageCI.pQueueFamilyIndices = nullptr;
+
+    ImageCI.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+#if 0
     Desc.Flags = Vk_RESOURCE_FLAG_NONE;
-    if( m_Desc.BindFlags & BIND_RENDER_TARGET )
-        Desc.Flags |= Vk_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
-    if( m_Desc.BindFlags & BIND_DEPTH_STENCIL )
-        Desc.Flags |= Vk_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
-    if( (m_Desc.BindFlags & BIND_UNORDERED_ACCESS) || (m_Desc.MiscFlags & MISC_TEXTURE_FLAG_GENERATE_MIPS) )
-        Desc.Flags |= Vk_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-    if( (m_Desc.BindFlags & BIND_SHADER_RESOURCE) == 0 )
-        Desc.Flags |= Vk_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 
     auto Format = TexFormatToDXGI_Format(m_Desc.Format, m_Desc.BindFlags);
     if (Format == DXGI_FORMAT_R8G8B8A8_UNORM_SRGB && (Desc.Flags & Vk_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS))
         Desc.Format = DXGI_FORMAT_R8G8B8A8_TYPELESS;
     else
         Desc.Format = Format;
-	Desc.Height = (UINT)m_Desc.Height;
-	Desc.Layout = Vk_TEXTURE_LAYOUT_UNKNOWN;
-	Desc.MipLevels = static_cast<Uint16>(m_Desc.MipLevels);
-	Desc.SampleDesc.Count = m_Desc.SampleCount;
-	Desc.SampleDesc.Quality = 0;
-	Desc.Width = (UINT64)m_Desc.Width;
-
 
 	Vk_HEAP_PROPERTIES HeapProps;
 	HeapProps.Type = Vk_HEAP_TYPE_DEFAULT;
@@ -141,19 +174,50 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters *pRefCounters,
         }
         pClearValue = &ClearValue;
     }
+#endif
 
     bool bInitializeTexture = (InitData.pSubResources != nullptr && InitData.NumSubresources > 0);
-    if(bInitializeTexture)
-        m_UsageState = Vk_RESOURCE_STATE_COPY_DEST;
+    //if(bInitializeTexture)
+    //    m_UsageState = Vk_RESOURCE_STATE_COPY_DEST;
 
-    auto hr = pVkDevice->CreateCommittedResource( &HeapProps, Vk_HEAP_FLAG_NONE,
-		&Desc, m_UsageState, pClearValue, __uuidof(m_pVkResource), reinterpret_cast<void**>(static_cast<IVkResource**>(&m_pVkResource)) );
-    if(FAILED(hr))
-        LOG_ERROR_AND_THROW("Failed to create Vk texture");
+    m_VulkanImage = LogicalDevice.CreateImage(ImageCI, m_Desc.Name);
 
-    if( *m_Desc.Name != 0)
-        m_pVkResource->SetName(WidenString(m_Desc.Name).c_str());
+    VkMemoryRequirements MemReqs = LogicalDevice.GetImageMemoryRequirements(m_VulkanImage);
 
+    VkMemoryAllocateInfo MemAlloc = {};
+    MemAlloc.pNext = nullptr;
+    MemAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    MemAlloc.allocationSize = MemReqs.size;
+
+    VkMemoryPropertyFlags ImageMemoryFlags = 0;
+    if (m_Desc.Usage == USAGE_CPU_ACCESSIBLE)
+        ImageMemoryFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+    else
+        ImageMemoryFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+
+    // memoryTypeBits is a bitmask and contains one bit set for every supported memory type for the resource. 
+    // Bit i is set if and only if the memory type i in the VkPhysicalDeviceMemoryProperties structure for the 
+    // physical device is supported for the resource.
+    MemAlloc.memoryTypeIndex = PhysicalDevice.GetMemoryTypeIndex(MemReqs.memoryTypeBits, ImageMemoryFlags);
+    if (ImageMemoryFlags == VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+    {
+        // There must be at least one memory type with the DEVICE_LOCAL_BIT bit set
+        VERIFY(MemAlloc.memoryTypeIndex != VulkanUtilities::VulkanPhysicalDevice::InvalidMemoryTypeIndex,
+               "Vulkan spec requires that memoryTypeBits member always contains "
+               "at least one bit set corresponding to a VkMemoryType with a propertyFlags that has the "
+               "VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT bit set (11.6)");
+    }          
+    else if (MemAlloc.memoryTypeIndex != VulkanUtilities::VulkanPhysicalDevice::InvalidMemoryTypeIndex)
+    {
+        LOG_ERROR_AND_THROW("Failed to find suitable device memory type for an image");
+    }
+
+    m_ImageMemory = LogicalDevice.AllocateDeviceMemory(MemAlloc);
+
+    auto err = LogicalDevice.BindImageMemory(m_VulkanImage, m_ImageMemory, 0 /*offset*/);
+    CHECK_VK_ERROR_AND_THROW(err, "Failed to bind image memory");
+
+#if 0
     if(bInitializeTexture)
     {
         Uint32 ExpectedNumSubresources = static_cast<Uint32>(Desc.MipLevels * (Desc.Dimension == Vk_RESOURCE_DIMENSION_TEXTURE3D ? 1 : Desc.DepthOrArraySize) );
@@ -277,12 +341,12 @@ static TextureDesc InitTexDescFromVkImage(VkImage vkImg, const TextureDesc& SrcT
 
 
 TextureVkImpl::TextureVkImpl(IReferenceCounters *pRefCounters,
-                                   FixedBlockMemoryAllocator &TexViewObjAllocator,
-                                   RenderDeviceVkImpl *pDeviceVk, 
-                                   const TextureDesc& TexDesc,
-                                   VkImage VkImageHandle) :
+                             FixedBlockMemoryAllocator &TexViewObjAllocator,
+                             RenderDeviceVkImpl *pDeviceVk, 
+                             const TextureDesc& TexDesc,
+                             VkImage VkImageHandle) :
     TTextureBase(pRefCounters, TexViewObjAllocator, pDeviceVk, InitTexDescFromVkImage(VkImageHandle, TexDesc)),
-    m_VkImage(VkImageHandle),
+    m_VulkanImage(nullptr, VkImageHandle),
     m_IsExternalHandle(true)
 {
 }
@@ -295,7 +359,7 @@ void TextureVkImpl::CreateViewInternal( const struct TextureViewDesc &ViewDesc, 
     VERIFY( *ppView == nullptr, "Overwriting reference to existing object may cause memory leaks" );
     
     *ppView = nullptr;
-#if 0
+
     try
     {
         auto *pDeviceVkImpl = ValidatedCast<RenderDeviceVkImpl>(GetDevice());
@@ -305,38 +369,38 @@ void TextureVkImpl::CreateViewInternal( const struct TextureViewDesc &ViewDesc, 
         auto UpdatedViewDesc = ViewDesc;
         CorrectTextureViewDesc( UpdatedViewDesc );
 
-        DescriptorHeapAllocation ViewHandleAlloc;
+        VulkanUtilities::ImageViewWrapper ImgView;
         switch( ViewDesc.ViewType )
         {
             case TEXTURE_VIEW_SHADER_RESOURCE:
             {
                 VERIFY( m_Desc.BindFlags & BIND_SHADER_RESOURCE, "BIND_SHADER_RESOURCE flag is not set" );
-                ViewHandleAlloc = pDeviceVkImpl->AllocateDescriptor(Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-                CreateSRV( UpdatedViewDesc, ViewHandleAlloc.GetCpuHandle() );
+                //ViewHandleAlloc = pDeviceVkImpl->AllocateDescriptor(Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+                //CreateSRV( UpdatedViewDesc, ViewHandleAlloc.GetCpuHandle() );
             }
             break;
 
             case TEXTURE_VIEW_RENDER_TARGET:
             {
                 VERIFY( m_Desc.BindFlags & BIND_RENDER_TARGET, "BIND_RENDER_TARGET flag is not set" );
-                ViewHandleAlloc = pDeviceVkImpl->AllocateDescriptor(Vk_DESCRIPTOR_HEAP_TYPE_RTV);
-                CreateRTV( UpdatedViewDesc, ViewHandleAlloc.GetCpuHandle() );
+                //ViewHandleAlloc = pDeviceVkImpl->AllocateDescriptor(Vk_DESCRIPTOR_HEAP_TYPE_RTV);
+                //CreateRTV( UpdatedViewDesc, ViewHandleAlloc.GetCpuHandle() );
             }
             break;
 
             case TEXTURE_VIEW_DEPTH_STENCIL:
             {
                 VERIFY( m_Desc.BindFlags & BIND_DEPTH_STENCIL, "BIND_DEPTH_STENCIL is not set" );
-                ViewHandleAlloc = pDeviceVkImpl->AllocateDescriptor(Vk_DESCRIPTOR_HEAP_TYPE_DSV);
-                CreateDSV( UpdatedViewDesc, ViewHandleAlloc.GetCpuHandle() );
+                //ViewHandleAlloc = pDeviceVkImpl->AllocateDescriptor(Vk_DESCRIPTOR_HEAP_TYPE_DSV);
+                //CreateDSV( UpdatedViewDesc, ViewHandleAlloc.GetCpuHandle() );
             }
             break;
 
             case TEXTURE_VIEW_UNORDERED_ACCESS:
             {
                 VERIFY( m_Desc.BindFlags & BIND_UNORDERED_ACCESS, "BIND_UNORDERED_ACCESS flag is not set" );
-                ViewHandleAlloc = pDeviceVkImpl->AllocateDescriptor(Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-                CreateUAV( UpdatedViewDesc, ViewHandleAlloc.GetCpuHandle() );
+                //ViewHandleAlloc = pDeviceVkImpl->AllocateDescriptor(Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+                //CreateUAV( UpdatedViewDesc, ViewHandleAlloc.GetCpuHandle() );
             }
             break;
 
@@ -344,7 +408,7 @@ void TextureVkImpl::CreateViewInternal( const struct TextureViewDesc &ViewDesc, 
         }
 
         auto pViewVk = NEW_RC_OBJ(TexViewAllocator, "TextureViewVkImpl instance", TextureViewVkImpl, bIsDefaultView ? this : nullptr)
-                                    (GetDevice(), UpdatedViewDesc, this, std::move(ViewHandleAlloc), bIsDefaultView );
+                                    (GetDevice(), UpdatedViewDesc, this, std::move(ImgView), bIsDefaultView );
         VERIFY( pViewVk->GetDesc().ViewType == ViewDesc.ViewType, "Incorrect view type" );
 
         if( bIsDefaultView )
@@ -357,20 +421,17 @@ void TextureVkImpl::CreateViewInternal( const struct TextureViewDesc &ViewDesc, 
         const auto *ViewTypeName = GetTexViewTypeLiteralName(ViewDesc.ViewType);
         LOG_ERROR("Failed to create view \"", ViewDesc.Name ? ViewDesc.Name : "", "\" (", ViewTypeName, ") for texture \"", m_Desc.Name ? m_Desc.Name : "", "\"" );
     }
-#endif
 }
 
 TextureVkImpl :: ~TextureVkImpl()
 {
     if(!m_IsExternalHandle)
     {
-
+        auto *pDeviceVkImpl = ValidatedCast<RenderDeviceVkImpl>(GetDevice());
+        // Vk object can only be destroyed when it is no longer used by the GPU
+        pDeviceVkImpl->SafeReleaseVkObject(std::move(m_VulkanImage));
+        pDeviceVkImpl->SafeReleaseVkObject(std::move(m_ImageMemory));
     }
-#if 0
-    // Vk object can only be destroyed when it is no longer used by the GPU
-    auto *pDeviceVkImpl = ValidatedCast<RenderDeviceVkImpl>(GetDevice());
-    pDeviceVkImpl->SafeReleaseVkObject(m_pVkResource);
-#endif
 }
 
 void TextureVkImpl::UpdateData( IDeviceContext *pContext, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData )

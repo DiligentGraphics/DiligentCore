@@ -29,6 +29,7 @@
 #include "TextureViewVk.h"
 #include "RenderDeviceVk.h"
 #include "TextureViewBase.h"
+#include "VulkanUtilities/VulkanObjectWrappers.h"
 
 namespace Diligent
 {
@@ -44,18 +45,19 @@ public:
                        IRenderDevice *pDevice, 
                        const TextureViewDesc& ViewDesc, 
                        class ITexture *pTexture,
-                       VkImageView vkImgView,
+                       VulkanUtilities::ImageViewWrapper &&ImgView,
                        bool bIsDefaultView);
+    ~TextureViewVkImpl();
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
 
     void GenerateMips( IDeviceContext *pContext )override;
     
-    VkImageView GetVulkanImageView()const{return m_VkImageView;}
+    VkImageView GetVulkanImageView()const{return m_ImageView;}
 
 protected:
     /// Vulkan image view descriptor handle
-    VkImageView m_VkImageView;
+    VulkanUtilities::ImageViewWrapper m_ImageView;
 };
 
 }

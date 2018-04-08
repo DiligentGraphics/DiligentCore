@@ -60,11 +60,14 @@ namespace VulkanUtilities
 	//void EndRegion(VkCommandBuffer cmdBuffer);
 
 	// Object specific naming functions
+    void SetCommandPoolName(VkDevice device, VkCommandPool cmdPool, const char * name);
 	void SetCommandBufferName(VkDevice device, VkCommandBuffer cmdBuffer, const char * name);
 	void SetQueueName(VkDevice device, VkQueue queue, const char * name);
 	void SetImageName(VkDevice device, VkImage image, const char * name);
+    void SetImageViewName(VkDevice device, VkImageView imageView, const char * name);
 	void SetSamplerName(VkDevice device, VkSampler sampler, const char * name);
 	void SetBufferName(VkDevice device, VkBuffer buffer, const char * name);
+    void SetBufferViewName(VkDevice device, VkBufferView bufferView, const char * name);
 	void SetDeviceMemoryName(VkDevice device, VkDeviceMemory memory, const char * name);
 	void SetShaderModuleName(VkDevice device, VkShaderModule shaderModule, const char * name);
 	void SetPipelineName(VkDevice device, VkPipeline pipeline, const char * name);

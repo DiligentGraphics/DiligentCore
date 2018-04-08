@@ -95,7 +95,7 @@ public:
     void ReleaseUploadHeap(DynamicUploadHeap* pUploadHeap);
 
 private:
-    virtual void TestTextureFormat( TEXTURE_FORMAT TexFormat );
+    virtual void TestTextureFormat( TEXTURE_FORMAT TexFormat )override final;
     void ProcessReleaseQueue(Uint64 CompletedFenceValue);
     void DiscardStaleD3D12Objects(Uint64 CmdListNumber, Uint64 FenceValue);
 

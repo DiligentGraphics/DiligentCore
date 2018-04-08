@@ -23,6 +23,7 @@
 
 #include "pch.h"
 #include "BufferViewVkImpl.h"
+#include "RenderDeviceVkImpl.h"
 
 namespace Diligent
 {
@@ -31,11 +32,17 @@ BufferViewVkImpl::BufferViewVkImpl( IReferenceCounters *pRefCounters,
                                     IRenderDevice *pDevice, 
                                     const BufferViewDesc& ViewDesc, 
                                     IBuffer *pBuffer,
-                                    VkBufferView vkBuffView,
+                                    VulkanUtilities::BufferViewWrapper &&BuffView,
                                     bool bIsDefaultView ) :
     TBufferViewBase( pRefCounters, pDevice, ViewDesc, pBuffer, bIsDefaultView ),
-    m_VkBuffView(vkBuffView)
+    m_BuffView(std::move(BuffView))
 {
+}
+
+BufferViewVkImpl::~BufferViewVkImpl()
+{
+    auto *pDeviceVkImpl = ValidatedCast<RenderDeviceVkImpl>(GetDevice());
+    pDeviceVkImpl->SafeReleaseVkObject(std::move(m_BuffView));
 }
 
 IMPLEMENT_QUERY_INTERFACE( BufferViewVkImpl, IID_BufferViewVk, TBufferViewBase )

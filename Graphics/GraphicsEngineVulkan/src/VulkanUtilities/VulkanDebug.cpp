@@ -187,6 +187,11 @@ namespace VulkanUtilities
     //    }
     //}
 
+    void SetCommandPoolName(VkDevice device, VkCommandPool cmdPool, const char * name)
+    {
+        SetObjectName(device, (uint64_t)cmdPool, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT, name);
+    }
+
     void SetCommandBufferName(VkDevice device, VkCommandBuffer cmdBuffer, const char * name)
     {
         SetObjectName(device, (uint64_t)cmdBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, name);
@@ -202,6 +207,11 @@ namespace VulkanUtilities
         SetObjectName(device, (uint64_t)image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, name);
     }
 
+    void SetImageViewName(VkDevice device, VkImageView imageView, const char * name)
+    {
+        SetObjectName(device, (uint64_t)imageView, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT, name);
+    }
+
     void SetSamplerName(VkDevice device, VkSampler sampler, const char * name)
     {
         SetObjectName(device, (uint64_t)sampler, VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT, name);
@@ -210,6 +220,11 @@ namespace VulkanUtilities
     void SetBufferName(VkDevice device, VkBuffer buffer, const char * name)
     {
         SetObjectName(device, (uint64_t)buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, name);
+    }
+
+    void SetBufferViewName(VkDevice device, VkBufferView bufferView, const char * name)
+    {
+        SetObjectName(device, (uint64_t)bufferView, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT, name);
     }
 
     void SetDeviceMemoryName(VkDevice device, VkDeviceMemory memory, const char * name)

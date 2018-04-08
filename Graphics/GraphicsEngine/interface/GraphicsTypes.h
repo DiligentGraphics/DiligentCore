@@ -1211,17 +1211,31 @@ namespace Diligent
         /// Component type, see Diligent::COMPONENT_TYPE for details.
         COMPONENT_TYPE ComponentType;    
 
+        /// Bool flag indicating if the format is a typeless format
+        bool IsTypeless;
+
         /// Initializes the structure
-        explicit TextureFormatAttribs( TEXTURE_FORMAT _Format = TEX_FORMAT_UNKNOWN, 
-                                        const Char *_Name = "TEX_FORMAT_UNKNOWN",
-                                        Uint32 _ComponentSize = 0,
-                                        Uint32 _NumComponents = 0,
-                                        COMPONENT_TYPE _ComponentType = COMPONENT_TYPE_UNDEFINED ) : 
+        explicit TextureFormatAttribs( TEXTURE_FORMAT _Format, 
+                                       const Char *_Name,
+                                       Uint32 _ComponentSize,
+                                       Uint32 _NumComponents,
+                                       COMPONENT_TYPE _ComponentType,
+                                       bool _IsTypeless) : 
             Format(_Format),
             Name(_Name),
             ComponentSize(_ComponentSize),
             NumComponents(_NumComponents),
-            ComponentType(_ComponentType)
+            ComponentType(_ComponentType),
+            IsTypeless(_IsTypeless)
+        {}
+
+        TextureFormatAttribs() : 
+            Format(TEX_FORMAT_UNKNOWN),
+            Name("TEX_FORMAT_UNKNOWN"),
+            ComponentSize(0),
+            NumComponents(0),
+            ComponentType(COMPONENT_TYPE_UNDEFINED),
+            IsTypeless(false)
         {}
     };
 

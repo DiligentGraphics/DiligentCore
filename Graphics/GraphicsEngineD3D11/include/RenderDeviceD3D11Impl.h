@@ -61,7 +61,7 @@ public:
     virtual void CreateTextureFromD3DResource(ID3D11Texture3D *pd3d11Texture, ITexture **ppTexture)override final;
 
 private:
-    virtual void TestTextureFormat( TEXTURE_FORMAT TexFormat );
+    virtual void TestTextureFormat( TEXTURE_FORMAT TexFormat )override final;
 
     EngineD3D11Attribs m_EngineAttribs;
 

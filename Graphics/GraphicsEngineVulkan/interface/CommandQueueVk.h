@@ -41,12 +41,12 @@ class ICommandQueueVk : public Diligent::IObject
 {
 public:
 	/// Returns the fence value that will be signaled next time
-	//virtual UINT64 GetNextFenceValue() = 0;
+	virtual UINT64 GetNextFenceValue() = 0;
 
-	/// Executes a given command list
+	/// Executes a given command buffer
 
-    /// \return Fence value associated with the executed command list
-	//virtual UINT64 ExecuteCommandList(ID3D12GraphicsCommandList* commandList) = 0;
+    /// \return Fence value associated with the executed command buffer
+	virtual Uint64 ExecuteCommandBuffer(VkCommandBuffer cmdBuffer) = 0;
 
     /// Returns Vulkan command queue. May return VK_NULL_HANDLE if queue is anavailable
     virtual VkQueue GetVkQueue() = 0;
@@ -55,10 +55,10 @@ public:
     virtual uint32_t GetQueueFamilyIndex() = 0;
 
     /// Returns value of the last completed fence
-    //virtual Uint64 GetCompletedFenceValue() = 0;
+    virtual Uint64 GetCompletedFenceValue() = 0;
 
     /// Blocks execution until all pending GPU commands are complete
-    //virtual void IdleGPU() = 0;
+    virtual void IdleGPU() = 0;
 };
 
 }

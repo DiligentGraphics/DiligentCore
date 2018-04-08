@@ -550,9 +550,9 @@ namespace Diligent
         m_CommittedIBFormat = VT_UNDEFINED;
         m_bCommittedVkVBsUpToDate = false;
         m_bCommittedVkIBUpToDate = false;
+#endif
 
         m_pPipelineState.Release(); 
-#endif
     }
 
     void DeviceContextVkImpl::Flush()

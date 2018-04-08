@@ -25,17 +25,20 @@
 
 /// \file
 /// Declaration of Diligent::RenderDeviceVkImpl class
+#include <memory>
 
 #include "RenderDeviceVk.h"
 #include "RenderDeviceBase.h"
 #include "DescriptorHeap.h"
-#include "CommandListManager.h"
 #include "CommandContext.h"
 #include "DynamicUploadHeap.h"
 #include "Atomics.h"
 #include "CommandQueueVk.h"
 #include "VulkanUtilities/VulkanInstance.h"
 #include "VulkanUtilities/VulkanPhysicalDevice.h"
+#include "VulkanUtilities/VulkanCommandBufferPool.h"
+#include "VulkanUtilities/VulkanLogicalDevice.h"
+#include "VulkanUtilities/VulkanObjectWrappers.h"
 
 /// Namespace for the Direct3D11 implementation of the graphics engine
 namespace Diligent
@@ -53,7 +56,7 @@ public:
                         ICommandQueueVk *pCmdQueue, 
                         std::shared_ptr<VulkanUtilities::VulkanInstance> Instance,
                         std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice> PhysicalDevice,
-                        VkDevice vkLogicalDevice,
+                        std::shared_ptr<VulkanUtilities::VulkanLogicalDevice> LogicalDevice,
                         Uint32 NumDeferredContexts );
     ~RenderDeviceVkImpl();
 
@@ -71,7 +74,7 @@ public:
     
     virtual void CreateSampler(const SamplerDesc& SamplerDesc, ISampler **ppSampler)override final;
 
-    //virtual IVkDevice* GetVkDevice()override final{return m_pVkDevice;}
+    virtual VkDevice GetVkDevice()override final{ return m_LogicalVkDevice->GetVkDevice();}
     
     //virtual void CreateTextureFromD3DResource(IVkResource *pVkTexture, ITexture **ppTexture)override final;
 
@@ -80,7 +83,7 @@ public:
 /*
     DescriptorHeapAllocation AllocateDescriptor( Vk_DESCRIPTOR_HEAP_TYPE Type, UINT Count = 1 );
     DescriptorHeapAllocation AllocateGPUDescriptors( Vk_DESCRIPTOR_HEAP_TYPE Type, UINT Count = 1 );
-
+*/
     Uint64 GetCompletedFenceValue();
 	virtual Uint64 GetNextFenceValue() override final
     {
@@ -89,40 +92,39 @@ public:
 
 	Uint64 GetCurrentFrameNumber()const {return static_cast<Uint64>(m_FrameNumber);}
     virtual Bool IsFenceSignaled(Uint64 FenceValue) override final;
-    */
+
     ICommandQueueVk *GetCmdQueue(){return m_pCommandQueue;}
-    /*
-	void IdleGPU(bool ReleaseStaleObjects);
-    CommandContext* AllocateCommandContext(const Char *ID = "");
-    void CloseAndExecuteCommandContext(CommandContext *pCtx, bool DiscardStaleObjects);
-    void DisposeCommandContext(CommandContext*);
-*/
-    void SafeReleaseVkBuffer(VkBuffer vkBuffer);
     
-/*
+	void IdleGPU(bool ReleaseStaleObjects);
+    VkCommandBuffer AllocateCommandBuffer(const Char *DebugName = nullptr);
+    void ExecuteCommandBuffer(VkCommandBuffer CmdBuff, bool DiscardStaleObjects);
+    void DisposeCommandBuffer(VkCommandBuffer CmdBuff);
+
+
+    template<typename VulkanObjectType>
+    void SafeReleaseVkObject(VulkanUtilities::VulkanObjectWrapper<VulkanObjectType>&& vkObject);
+
+
     void FinishFrame(bool ReleaseAllResources);
     virtual void FinishFrame()override final { FinishFrame(false); }
-
+    /*
     DynamicUploadHeap* RequestUploadHeap();
     void ReleaseUploadHeap(DynamicUploadHeap* pUploadHeap);
     */
     
-
-    std::shared_ptr<VulkanUtilities::VulkanInstance> GetVulkanInstance(){return m_VulkanInstance;}
+    std::shared_ptr<const VulkanUtilities::VulkanInstance> GetVulkanInstance()const{return m_VulkanInstance;}
     const VulkanUtilities::VulkanPhysicalDevice &GetPhysicalDevice(){return *m_PhysicalDevice;}
-    VkDevice GetVkDevice()const{return m_VkDevice;}
+    const auto &GetLogicalDevice(){return *m_LogicalVkDevice;}
 
 private:
-    virtual void TestTextureFormat( TEXTURE_FORMAT TexFormat );
-#if 0
+    virtual void TestTextureFormat( TEXTURE_FORMAT TexFormat )override final;
     void ProcessReleaseQueue(Uint64 CompletedFenceValue);
     void DiscardStaleVkObjects(Uint64 CmdListNumber, Uint64 FenceValue);
-#endif
+
     std::shared_ptr<VulkanUtilities::VulkanInstance> m_VulkanInstance;
     std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice> m_PhysicalDevice;
-
-    /// Vk device
-    VkDevice m_VkDevice = VK_NULL_HANDLE;
+    std::shared_ptr<VulkanUtilities::VulkanLogicalDevice> m_LogicalVkDevice;
+    
     RefCntAutoPtr<ICommandQueueVk> m_pCommandQueue;
 
     EngineVkAttribs m_EngineAttribs;
@@ -132,12 +134,12 @@ private:
                                                // Vk_DESCRIPTOR_HEAP_TYPE_SAMPLER	 == 1
 	
 	const Uint32 m_DynamicDescriptorAllocationChunkSize[2];
-
+#endif
 	std::mutex m_CmdQueueMutex;
 
 	Atomics::AtomicInt64 m_FrameNumber;
     Atomics::AtomicInt64 m_NextCmdListNumber;
-
+#if 0
     // The following basic requirement guarantees correctness of resource deallocation:
     //
     //        A resource is never released before the last draw command referencing it is invoked on the immediate context
@@ -170,18 +172,29 @@ private:
 
     typedef std::unique_ptr<CommandContext, STDDeleterRawMem<CommandContext> > ContextPoolElemType;
 	std::vector< ContextPoolElemType, STDAllocatorRawMem<ContextPoolElemType> > m_ContextPool;
-
-	std::deque<CommandContext*, STDAllocatorRawMem<CommandContext*> > m_AvailableContexts;
-	std::mutex m_ContextAllocationMutex;
+    std::deque<CommandContext*, STDAllocatorRawMem<CommandContext*> > m_AvailableContexts;
+#endif
+	
+    VulkanUtilities::VulkanCommandBufferPool m_CmdBufferPool;
+	std::mutex m_CmdPoolMutex;
 
     std::mutex m_ReleaseQueueMutex;
-    typedef std::pair<Uint64, CComPtr<IVkObject> > ReleaseQueueElemType;
+
+    class StaleVulkanObjectBase
+    {
+    public:
+        virtual ~StaleVulkanObjectBase() = 0 {}
+    };
+    template<typename VulkanObjectType>
+    class StaleVulkanObject;
+
+    using ReleaseQueueElemType = std::pair<Uint64, std::unique_ptr<StaleVulkanObjectBase> >;
     std::deque< ReleaseQueueElemType, STDAllocatorRawMem<ReleaseQueueElemType> > m_VkObjReleaseQueue;
-#endif
+
     std::mutex m_StaleObjectsMutex;
-#if 0
     std::deque< ReleaseQueueElemType, STDAllocatorRawMem<ReleaseQueueElemType> > m_StaleVkObjects;
 
+#if 0
     std::mutex m_UploadHeapMutex;
     typedef std::unique_ptr<DynamicUploadHeap, STDDeleterRawMem<DynamicUploadHeap> > UploadHeapPoolElemType;
     std::vector< UploadHeapPoolElemType, STDAllocatorRawMem<UploadHeapPoolElemType> > m_UploadHeaps;

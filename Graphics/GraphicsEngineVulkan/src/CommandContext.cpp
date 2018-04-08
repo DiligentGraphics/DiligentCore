@@ -25,7 +25,6 @@
 #include "CommandContext.h"
 #include "TextureVkImpl.h"
 #include "BufferVkImpl.h"
-#include "CommandListManager.h"
 
 namespace Diligent
 {

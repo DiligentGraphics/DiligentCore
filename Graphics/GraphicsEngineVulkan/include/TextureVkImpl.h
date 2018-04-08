@@ -77,15 +77,15 @@ public:
     */
 
     void CopyData(IDeviceContext *pContext, 
-                          ITexture *pSrcTexture, 
-                          Uint32 SrcMipLevel,
-                          Uint32 SrcSlice,
-                          const Box *pSrcBox,
-                          Uint32 DstMipLevel,
-                          Uint32 DstSlice,
-                          Uint32 DstX,
-                          Uint32 DstY,
-                          Uint32 DstZ);
+                  ITexture *pSrcTexture, 
+                  Uint32 SrcMipLevel,
+                  Uint32 SrcSlice,
+                  const Box *pSrcBox,
+                  Uint32 DstMipLevel,
+                  Uint32 DstSlice,
+                  Uint32 DstX,
+                  Uint32 DstY,
+                  Uint32 DstZ);
 /*    
     Vk_CPU_DESCRIPTOR_HANDLE GetMipLevelUAV(Uint32 Mip)
     {
@@ -114,7 +114,8 @@ protected:
 
     friend class RenderDeviceVkImpl;
 */
-    VkImage m_VkImage;
+    VulkanUtilities::ImageWrapper m_VulkanImage;
+    VulkanUtilities::DeviceMemoryWrapper m_ImageMemory;
     const bool m_IsExternalHandle;
 };
 

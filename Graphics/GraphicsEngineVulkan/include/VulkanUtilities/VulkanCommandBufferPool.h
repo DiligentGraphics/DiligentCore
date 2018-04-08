@@ -23,33 +23,37 @@
 
 #pragma once
 
+#include <deque>
 #include <memory>
-#include <vector>
 #include "vulkan.h"
+#include "VulkanLogicalDevice.h"
+#include "VulkanObjectWrappers.h"
 
 namespace VulkanUtilities
 {
-    class VulkanPhysicalDevice
+    class VulkanCommandBufferPool
     {
     public:
-        static std::unique_ptr<VulkanPhysicalDevice> Create(VkPhysicalDevice vkDevice);
+        VulkanCommandBufferPool(std::shared_ptr<VulkanUtilities::VulkanLogicalDevice> LogicalDevice, 
+                                uint32_t queueFamilyIndex, 
+                                VkCommandPoolCreateFlags flags);
+        VulkanCommandBufferPool(const VulkanCommandBufferPool&) = delete;
+        VulkanCommandBufferPool(VulkanCommandBufferPool&&) = delete;
+        VulkanCommandBufferPool& operator = (const VulkanCommandBufferPool&) = delete;
+        VulkanCommandBufferPool& operator = (VulkanCommandBufferPool&&) = delete;
+        ~VulkanCommandBufferPool();
 
-        uint32_t FindQueueFamily(VkQueueFlags QueueFlags)const;
-        VkPhysicalDevice GetVkDeviceHandle()const{return m_VkDevice;}
-        bool IsExtensionSupported(const char *ExtensionName)const;
-        bool CheckPresentSupport(uint32_t queueFamilyIndex, VkSurfaceKHR VkSurface)const;
-        
-        static constexpr uint32_t InvalidMemoryTypeIndex = static_cast<uint32_t>(-1);
-        uint32_t GetMemoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags properties)const;
+        VkCommandBuffer GetCommandBuffer(uint64_t LastCompletedFence, const char* DebugName = "");
+        void DisposeCommandBuffer(VkCommandBuffer CmdBuffer, uint64_t FenceValue);
 
     private:
-        VulkanPhysicalDevice(VkPhysicalDevice vkDevice);
+        // Shared point to logical device must be defined before the command pool
+        std::shared_ptr<VulkanUtilities::VulkanLogicalDevice> m_LogicalDevice;
+        CommandPoolWrapper m_CmdPool;
 
-        const VkPhysicalDevice m_VkDevice;
-        VkPhysicalDeviceProperties m_Properties = {};
-        VkPhysicalDeviceFeatures m_Features = {};
-        VkPhysicalDeviceMemoryProperties m_MemoryProperties = {};
-        std::vector<VkQueueFamilyProperties> m_QueueFamilyProperties;
-        std::vector<VkExtensionProperties> m_SupportedExtensions;
+        // fist    - the fence value associated with the command buffer when it was executed
+        // second  - the command buffer
+        typedef std::pair<uint64_t, VkCommandBuffer > QueueElemType;
+        std::deque< QueueElemType > m_DiscardedCmdBuffers;
     };
 }

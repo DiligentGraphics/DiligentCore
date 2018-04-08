@@ -67,7 +67,7 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters *pRefCounters,
         }
     }
 
-    auto vkAllocator = pRenderDeviceVk->GetVulkanInstance()->GetVkAllocator();
+    const auto& LogicalDevice = pRenderDeviceVk->GetLogicalDevice();
     if(m_Desc.Usage == USAGE_DYNAMIC && (m_Desc.BindFlags & (BIND_SHADER_RESOURCE|BIND_UNORDERED_ACCESS)) == 0)
     {
         UNSUPPORTED("Dynamic buffers are not yet implemented");
@@ -107,12 +107,9 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters *pRefCounters,
         VkBuffCI.pQueueFamilyIndices = nullptr; // list of queue families that will access this buffer 
                                                 // (ignored if sharingMode is not VK_SHARING_MODE_CONCURRENT).
 
-        auto vkDevice = pRenderDeviceVk->GetVkDevice();
-        auto err = vkCreateBuffer(vkDevice, &VkBuffCI, vkAllocator, &m_VkBuffer);
-        CHECK_VK_ERROR_AND_THROW(err, "Failed to create Vulkan buffer object");
+        m_VulkanBuffer = LogicalDevice.CreateBuffer(VkBuffCI, m_Desc.Name);
 
-        VkMemoryRequirements MemReqs = {};
-        vkGetBufferMemoryRequirements(vkDevice, m_VkBuffer, &MemReqs);
+        VkMemoryRequirements MemReqs = LogicalDevice.GetBufferMemoryRequirements(m_VulkanBuffer);
 
         VkMemoryAllocateInfo MemAlloc = {};
         MemAlloc.pNext = nullptr;
@@ -144,32 +141,31 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters *pRefCounters,
             LOG_ERROR_AND_THROW("Failed to find suitable device memory type for a buffer");
         }
 
-        err = vkAllocateMemory(vkDevice, &MemAlloc, vkAllocator, &m_BufferMemory);
-        CHECK_VK_ERROR_AND_THROW(err, "Failed to allocate device local memory for a Vulkan buffer object");
+        {
+            std::string MemoryName("Device local memory for buffer '");
+            MemoryName += m_Desc.Name;
+            MemoryName += '\'';
+            m_BufferMemory = LogicalDevice.AllocateDeviceMemory(MemAlloc, MemoryName.c_str());
+        }
 
-        err = vkBindBufferMemory(vkDevice, m_VkBuffer, m_BufferMemory, 0 /*offset*/);
+        auto err = LogicalDevice.BindBufferMemory(m_VulkanBuffer, m_BufferMemory, 0 /*offset*/);
         CHECK_VK_ERROR_AND_THROW(err, "Failed to bind buffer memory");
 
         bool bInitializeBuffer = (BuffData.pData != nullptr && BuffData.DataSize > 0);
         //if(bInitializeBuffer)
         //    m_UsageState = Vk_RESOURCE_STATE_COPY_DEST;
 
-        if( *m_Desc.Name != 0)
-            VulkanUtilities::SetBufferName(vkDevice, m_VkBuffer, m_Desc.Name);
-
 	    if( bInitializeBuffer )
         {
             VkBufferCreateInfo VkStaginBuffCI = VkBuffCI;
             VkStaginBuffCI.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 
-            VkBuffer vkStagingBuffer = VK_NULL_HANDLE;
-            err = vkCreateBuffer(vkDevice, &VkStaginBuffCI, vkAllocator, &vkStagingBuffer);
-            CHECK_VK_ERROR_AND_THROW(err, "Failed to create staging buffer");
+            std::string StagingBufferName = "Staging buffer for '";
+            StagingBufferName += m_Desc.Name;
+            StagingBufferName += '\'';
+            VulkanUtilities::BufferWrapper StagingBuffer = LogicalDevice.CreateBuffer(VkStaginBuffCI, StagingBufferName.c_str());
 
-            VulkanUtilities::SetBufferName(vkDevice, vkStagingBuffer, "Staging buffer");
-
-            VkMemoryRequirements StagingBufferMemReqs = {};
-            vkGetBufferMemoryRequirements(vkDevice, vkStagingBuffer, &StagingBufferMemReqs);
+            VkMemoryRequirements StagingBufferMemReqs = LogicalDevice.GetBufferMemoryRequirements(StagingBuffer);
 
             VkMemoryAllocateInfo StagingMemAlloc = {};
             StagingMemAlloc.pNext = nullptr;
@@ -187,32 +183,43 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters *pRefCounters,
                    "corresponding to a VkMemoryType with a propertyFlags that has both the VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT bit "
                    "and the VK_MEMORY_PROPERTY_HOST_COHERENT_BIT bit set(11.6)");
 
-            VkDeviceMemory vkStagingBufferMemory = VK_NULL_HANDLE;
-            err = vkAllocateMemory(vkDevice, &StagingMemAlloc, vkAllocator, &vkStagingBufferMemory);
-            CHECK_VK_ERROR_AND_THROW(err, "Failed to allocate memory for a staging buffer object");
+            std::string StagingMemoryName("Staging memory for buffer '");
+            StagingMemoryName += m_Desc.Name;
+            StagingMemoryName += '\'';
+            VulkanUtilities::DeviceMemoryWrapper StagingBufferMemory = LogicalDevice.AllocateDeviceMemory(StagingMemAlloc, StagingMemoryName.c_str());
 
             {
                 void *StagingData = nullptr;
-                err = vkMapMemory(vkDevice, vkStagingBufferMemory, 
+                err = LogicalDevice.MapMemory(StagingBufferMemory, 
                     0, // offset
                     StagingMemAlloc.allocationSize,
                     0, // flags, reserved for future use
                     &StagingData);
                 CHECK_VK_ERROR_AND_THROW(err, "Failed to map staging memory");
                 memcpy(StagingData, BuffData.pData, BuffData.DataSize);
-                vkUnmapMemory(vkDevice, vkStagingBufferMemory);
+                LogicalDevice.UnmapMemory(StagingBufferMemory);
             }
             
-            err = vkBindBufferMemory(vkDevice, vkStagingBuffer, vkStagingBufferMemory, 0 /*offset*/);
+            err = LogicalDevice.BindBufferMemory(StagingBuffer, StagingBufferMemory, 0 /*offset*/);
             CHECK_VK_ERROR_AND_THROW(err, "Failed to bind staging bufer memory");
+
+            auto vkCmdBuff = pRenderDeviceVk->AllocateCommandBuffer("Transient cmd buff to copy staging data to a device buffer");
+
 #if 0
-            auto  *pInitContext = pRenderDeviceVk->AllocateCommandContext();
 	        // copy data to the intermediate upload heap and then schedule a copy from the upload heap to the default buffer
             VERIFY_EXPR(m_UsageState == Vk_RESOURCE_STATE_COPY_DEST);
+#endif
             // We MUST NOT call TransitionResource() from here, because
             // it will call AddRef() and potentially Release(), while 
             // the object is not constructed yet
-	        pInitContext->CopyResource(m_pVkResource, UploadBuffer);
+
+            // Copy commands MUST be recorded outside of a render pass instance. This is OK here
+            // as copy will be the only command in the cmd buffer
+            VkBufferCopy BuffCopy = {};
+            BuffCopy.srcOffset = 0;
+            BuffCopy.dstOffset = 0;
+            BuffCopy.size = VkBuffCI.size;
+            vkCmdCopyBuffer(vkCmdBuff, StagingBuffer, m_VulkanBuffer, 1, &BuffCopy);
 
             // Command list fence should only be signaled when submitting cmd list
             // from the immediate context, otherwise the basic requirement will be violated
@@ -232,13 +239,14 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters *pRefCounters,
             //                  |     N+1, but resource it references    |                                   |
             //                  |     was added to the delete queue      |                                   |
             //                  |     with value N                       |                                   |
-	        pRenderDeviceVk->CloseAndExecuteCommandContext(pInitContext, false);
+	        pRenderDeviceVk->ExecuteCommandBuffer(vkCmdBuff, false);
+            pRenderDeviceVk->DisposeCommandBuffer(vkCmdBuff);
 
             // Add reference to the object to the release queue to keep it alive
             // until copy operation is complete. This must be done after
             // submitting command list for execution!
-            pRenderDeviceVk->SafeReleaseVkObject(UploadBuffer);
-#endif
+            pRenderDeviceVk->SafeReleaseVkObject(std::move(StagingBuffer));
+            pRenderDeviceVk->SafeReleaseVkObject(std::move(StagingBufferMemory));
         }
 
         //if (m_Desc.BindFlags & BIND_UNIFORM_BUFFER)
@@ -316,12 +324,10 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters *pRefCounters,
 }
 BufferVkImpl :: ~BufferVkImpl()
 {
+    auto *pDeviceVkImpl = ValidatedCast<RenderDeviceVkImpl>(GetDevice());
     // Vk object can only be destroyed when it is no longer used by the GPU
-    if(m_VkBuffer!=VK_NULL_HANDLE)
-    {
-        auto *pDeviceVkImpl = ValidatedCast<RenderDeviceVkImpl>(GetDevice());
-        pDeviceVkImpl->SafeReleaseVkBuffer(m_VkBuffer);
-    }
+    pDeviceVkImpl->SafeReleaseVkObject(std::move(m_VulkanBuffer));
+    pDeviceVkImpl->SafeReleaseVkObject(std::move(m_BufferMemory));
 }
 
 IMPLEMENT_QUERY_INTERFACE( BufferVkImpl, IID_BufferVk, TBufferBase )
@@ -469,9 +475,9 @@ void BufferVkImpl::CreateViewInternal( const BufferViewDesc &OrigViewDesc, IBuff
         BufferViewDesc ViewDesc = OrigViewDesc;
         if( ViewDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS || ViewDesc.ViewType == BUFFER_VIEW_SHADER_RESOURCE )
         {
-            auto vkView = CreateView(ViewDesc);
+            auto View = CreateView(ViewDesc);
             *ppView = NEW_RC_OBJ(BuffViewAllocator, "BufferViewVkImpl instance", BufferViewVkImpl, bIsDefaultView ? this : nullptr)
-                                (GetDevice(), ViewDesc, this, vkView, bIsDefaultView );
+                                (GetDevice(), ViewDesc, this, std::move(View), bIsDefaultView );
         }
 
         if( !bIsDefaultView && *ppView )
@@ -485,9 +491,9 @@ void BufferVkImpl::CreateViewInternal( const BufferViewDesc &OrigViewDesc, IBuff
 }
 
 
-VkBufferView BufferVkImpl::CreateView(struct BufferViewDesc &ViewDesc)
+VulkanUtilities::BufferViewWrapper BufferVkImpl::CreateView(struct BufferViewDesc &ViewDesc)
 {
-    VkBufferView vkBuffView = VK_NULL_HANDLE;
+    VulkanUtilities::BufferViewWrapper BuffView;
     CorrectBufferViewDesc(ViewDesc);
     if( (ViewDesc.ViewType == BUFFER_VIEW_SHADER_RESOURCE || ViewDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS) && 
         m_Desc.Mode == BUFFER_MODE_FORMATTED)
@@ -496,18 +502,16 @@ VkBufferView BufferVkImpl::CreateView(struct BufferViewDesc &ViewDesc)
         ViewCI.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
         ViewCI.pNext = nullptr;
         ViewCI.flags = 0; // reserved for future use
-        ViewCI.buffer = m_VkBuffer;
+        ViewCI.buffer = m_VulkanBuffer;
         ViewCI.format = TypeToVkFormat(m_Desc.Format.ValueType, m_Desc.Format.NumComponents, m_Desc.Format.IsNormalized);
         ViewCI.offset = ViewDesc.ByteOffset;
         ViewCI.range = ViewDesc.ByteWidth; // size in bytes of the buffer view
 
         auto *pDeviceVkImpl = static_cast<RenderDeviceVkImpl*>(GetDevice());
-        auto vkAllocator = pDeviceVkImpl->GetVulkanInstance()->GetVkAllocator();
-        auto vkDevice = pDeviceVkImpl->GetVkDevice();
-        auto err = vkCreateBufferView(vkDevice, &ViewCI, vkAllocator, &vkBuffView);
-        CHECK_VK_ERROR_AND_THROW(err, "Failed to create Vulkan buffer view");
+        const auto& LogicalDevice = pDeviceVkImpl->GetLogicalDevice();
+        BuffView = LogicalDevice.CreateBufferView(ViewCI, ViewDesc.Name);
     }
-    return vkBuffView;
+    return BuffView;
 }
 
 #if 0

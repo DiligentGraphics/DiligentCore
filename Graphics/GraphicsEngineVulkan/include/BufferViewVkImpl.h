@@ -30,6 +30,7 @@
 #include "RenderDeviceVk.h"
 #include "BufferViewBase.h"
 #include "DescriptorHeap.h"
+#include "VulkanUtilities/VulkanObjectWrappers.h"
 
 namespace Diligent
 {
@@ -45,16 +46,17 @@ public:
                       IRenderDevice *pDevice, 
                       const BufferViewDesc& ViewDesc, 
                       class IBuffer *pBuffer,
-                      VkBufferView vkBuffView,
+                      VulkanUtilities::BufferViewWrapper &&BuffView,
                       bool bIsDefaultView);
+    ~BufferViewVkImpl();
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface );
 
-    virtual VkBufferView GetVkBufferView()override final{return m_VkBuffView;}
+    virtual VkBufferView GetVkBufferView()override final{return m_BuffView;}
    
 protected:
     
-    VkBufferView m_VkBuffView;
+    VulkanUtilities::BufferViewWrapper m_BuffView;
 };
 
 }

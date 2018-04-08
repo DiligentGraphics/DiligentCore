@@ -26,7 +26,7 @@
 #include "PipelineStateVkImpl.h"
 #include "ShaderVkImpl.h"
 #include "TextureVkImpl.h"
-//#include "DXGITypeConversions.h"
+#include "VulkanTypeConversions.h"
 #include "SamplerVkImpl.h"
 #include "BufferVkImpl.h"
 #include "ShaderResourceBindingVkImpl.h"
@@ -42,17 +42,17 @@ RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters *pRefCounters,
                                          ICommandQueueVk *pCmdQueue,
                                          std::shared_ptr<VulkanUtilities::VulkanInstance> Instance,
                                          std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice> PhysicalDevice,
-                                         VkDevice vkLogicalDevice,
+                                         std::shared_ptr<VulkanUtilities::VulkanLogicalDevice> LogicalDevice,
                                          Uint32 NumDeferredContexts) : 
     TRenderDeviceBase(pRefCounters, RawMemAllocator, NumDeferredContexts, sizeof(TextureVkImpl), sizeof(TextureViewVkImpl), sizeof(BufferVkImpl), sizeof(BufferViewVkImpl), sizeof(ShaderVkImpl), sizeof(SamplerVkImpl), sizeof(PipelineStateVkImpl), sizeof(ShaderResourceBindingVkImpl)),
     m_VulkanInstance(Instance),
     m_PhysicalDevice(std::move(PhysicalDevice)),
-    m_VkDevice(vkLogicalDevice),
+    m_LogicalVkDevice(LogicalDevice),
     m_pCommandQueue(pCmdQueue),
-    m_EngineAttribs(CreationAttribs)
-	/*m_FrameNumber(0),
+    m_EngineAttribs(CreationAttribs),
+	m_FrameNumber(0),
     m_NextCmdListNumber(0),
-    m_CmdListManager(this),
+    /*m_CmdListManager(this),
     m_CPUDescriptorHeaps
     {
         {RawMemAllocator, this, CreationAttribs.CPUDescriptorHeapAllocationSize[0], Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, Vk_DESCRIPTOR_HEAP_FLAG_NONE},
@@ -71,54 +71,62 @@ RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters *pRefCounters,
 		CreationAttribs.DynamicDescriptorAllocationChunkSize[1]  // Vk_DESCRIPTOR_HEAP_TYPE_SAMPLER
 	},
     m_ContextPool(STD_ALLOCATOR_RAW_MEM(ContextPoolElemType, GetRawAllocator(), "Allocator for vector<unique_ptr<CommandContext>>")),
-    m_AvailableContexts(STD_ALLOCATOR_RAW_MEM(CommandContext*, GetRawAllocator(), "Allocator for vector<CommandContext*>")),
+    m_AvailableContexts(STD_ALLOCATOR_RAW_MEM(CommandContext*, GetRawAllocator(), "Allocator for vector<CommandContext*>")),*/
     m_VkObjReleaseQueue(STD_ALLOCATOR_RAW_MEM(ReleaseQueueElemType, GetRawAllocator(), "Allocator for queue<ReleaseQueueElemType>")),
-    m_StaleVkObjects(STD_ALLOCATOR_RAW_MEM(ReleaseQueueElemType, GetRawAllocator(), "Allocator for queue<ReleaseQueueElemType>")),
+    m_StaleVkObjects(STD_ALLOCATOR_RAW_MEM(ReleaseQueueElemType, GetRawAllocator(), "Allocator for queue<ReleaseQueueElemType>")),/*,
     m_UploadHeaps(STD_ALLOCATOR_RAW_MEM(UploadHeapPoolElemType, GetRawAllocator(), "Allocator for vector<unique_ptr<DynamicUploadHeap>>"))
     */
+    m_CmdBufferPool(m_LogicalVkDevice, pCmdQueue->GetQueueFamilyIndex(), VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT)
 {
     m_DeviceCaps.DevType = DeviceType::Vulkan;
     m_DeviceCaps.MajorVersion = 1;
     m_DeviceCaps.MinorVersion = 0;
     m_DeviceCaps.bSeparableProgramSupported = True;
     m_DeviceCaps.bMultithreadedResourceCreationSupported = True;
+    for(int fmt = 1; fmt < m_TextureFormatsInfo.size(); ++fmt)
+        m_TextureFormatsInfo[fmt].Supported = true; // We will test every format on a specific hardware device
 }
 
 RenderDeviceVkImpl::~RenderDeviceVkImpl()
 {
-#if 0
 	// Finish current frame. This will release resources taken by previous frames, and
     // will move all stale resources to the release queues. The resources will not be
     // release until next call to FinishFrame()
-    FinishFrame();
+    FinishFrame(false);
     // Wait for the GPU to complete all its operations
     IdleGPU(true);
     // Call FinishFrame() again to destroy resources in
     // release queues
     FinishFrame(true);
-    
+
+#if 0
 	m_ContextPool.clear();
 #endif
 
-    if(m_PhysicalDevice)
-    {
-        // If m_PhysicalDevice is empty, the device does not own vulkan logical device and must not
-        // destroy it
-        vkDestroyDevice(m_VkDevice, m_VulkanInstance->GetVkAllocator());
-    }
+    VERIFY(m_StaleVkObjects.empty(), "Not all stale objects were destroyed");
+    VERIFY(m_VkObjReleaseQueue.empty(), "Release queue is not empty");
+    
+    //if(m_PhysicalDevice)
+    //{
+    //    // If m_PhysicalDevice is empty, the device does not own vulkan logical device and must not
+    //    // destroy it
+    //    vkDestroyDevice(m_VkDevice, m_VulkanInstance->GetVkAllocator());
+    //}
 }
 
-#if 0
-void RenderDeviceVkImpl::DisposeCommandContext(CommandContext* pCtx)
+
+void RenderDeviceVkImpl::DisposeCommandBuffer(VkCommandBuffer CmdBuff)
 {
-	std::lock_guard<std::mutex> LockGuard(m_ContextAllocationMutex);
-    m_AvailableContexts.push_back(pCtx);
+	std::lock_guard<std::mutex> LockGuard(m_CmdPoolMutex);
+    m_CmdBufferPool.DisposeCommandBuffer(CmdBuff, GetNextFenceValue());
 }
 
-void RenderDeviceVkImpl::CloseAndExecuteCommandContext(CommandContext *pCtx, bool DiscardStaleObjects)
+
+void RenderDeviceVkImpl::ExecuteCommandBuffer(VkCommandBuffer CmdBuff, bool DiscardStaleObjects)
 {
-    CComPtr<IVkCommandAllocator> pAllocator;
-	auto *pCmdList = pCtx->Close(&pAllocator);
+    VERIFY_EXPR(CmdBuff != VK_NULL_HANDLE);
+    auto err = vkEndCommandBuffer(CmdBuff);
+    VERIFY(err == VK_SUCCESS, "Failed to end command buffer");
 
     Uint64 FenceValue = 0;
     Uint64 CmdListNumber = 0;
@@ -126,7 +134,7 @@ void RenderDeviceVkImpl::CloseAndExecuteCommandContext(CommandContext *pCtx, boo
 	    std::lock_guard<std::mutex> LockGuard(m_CmdQueueMutex);
         auto NextFenceValue = m_pCommandQueue->GetNextFenceValue();
 	    // Submit the command list to the queue
-        FenceValue = m_pCommandQueue->ExecuteCommandList(pCmdList);
+        FenceValue = m_pCommandQueue->ExecuteCommandBuffer(CmdBuff);
         VERIFY(FenceValue >= NextFenceValue, "Fence value of the executed command list is less than the next fence value previously queried through GetNextFenceValue()");
         FenceValue = std::max(FenceValue, NextFenceValue);
         CmdListNumber = m_NextCmdListNumber;
@@ -167,7 +175,7 @@ void RenderDeviceVkImpl::CloseAndExecuteCommandContext(CommandContext *pCtx, boo
         // the command list (as is the case with Unity command queue).
         DiscardStaleVkObjects(CmdListNumber, FenceValue);
     }
-
+#if 0
     // DiscardAllocator() is thread-safe
 	m_CmdListManager.DiscardAllocator(FenceValue, pAllocator);
     
@@ -177,26 +185,30 @@ void RenderDeviceVkImpl::CloseAndExecuteCommandContext(CommandContext *pCtx, boo
 	    std::lock_guard<std::mutex> LockGuard(m_ContextAllocationMutex);
     	m_AvailableContexts.push_back(pCtx);
     }
-}
 #endif
+}
 
-#if 0
+
 void RenderDeviceVkImpl::IdleGPU(bool ReleaseStaleObjects) 
 { 
     Uint64 FenceValue = 0;
     Uint64 CmdListNumber = 0;
+
     {
         // Lock the command queue to avoid other threads interfering with the GPU
         std::lock_guard<std::mutex> LockGuard(m_CmdQueueMutex);
         FenceValue = m_pCommandQueue->GetNextFenceValue();
         m_pCommandQueue->IdleGPU();
+
+        m_LogicalVkDevice->WaitIdle();
+
         // Increment cmd list number while keeping queue locked. 
         // This guarantees that any Vk object released after the lock
         // is released, will be associated with the incremented cmd list number
         CmdListNumber = m_NextCmdListNumber;
         Atomics::AtomicIncrement(m_NextCmdListNumber);
     }
-    
+
     if (ReleaseStaleObjects)
     {
         // Do not wait until the end of the frame and force deletion. 
@@ -208,6 +220,7 @@ void RenderDeviceVkImpl::IdleGPU(bool ReleaseStaleObjects)
     }
 }
 
+
 Bool RenderDeviceVkImpl::IsFenceSignaled(Uint64 FenceValue) 
 {
     return FenceValue <= GetCompletedFenceValue();
@@ -218,8 +231,10 @@ Uint64 RenderDeviceVkImpl::GetCompletedFenceValue()
     return m_pCommandQueue->GetCompletedFenceValue();
 }
 
+
 void RenderDeviceVkImpl::FinishFrame(bool ReleaseAllResources)
 {
+#if 0
     {
         if (auto pImmediateCtx = m_wpImmediateContext.Lock())
         {
@@ -238,7 +253,7 @@ void RenderDeviceVkImpl::FinishFrame(bool ReleaseAllResources)
             }
         }
     }
-    
+#endif
     auto CompletedFenceValue = ReleaseAllResources ? std::numeric_limits<Uint64>::max() : GetCompletedFenceValue();
 
     // We must use NextFenceValue here, NOT current value, because the 
@@ -258,6 +273,7 @@ void RenderDeviceVkImpl::FinishFrame(bool ReleaseAllResources)
         Atomics::AtomicIncrement(m_NextCmdListNumber);
     }
 
+#if 0
     {
         // There is no need to lock as new heaps are only created during initialization
         // time for every context
@@ -298,7 +314,7 @@ void RenderDeviceVkImpl::FinishFrame(bool ReleaseAllResources)
     {
         m_GPUDescriptorHeaps[GPUHeap].ReleaseStaleAllocations(CompletedFenceValue);
     }
-
+#endif
     // Discard all remaining objects. This is important to do if there were 
     // no command lists submitted during the frame
     DiscardStaleVkObjects(CmdListNumber, NextFenceValue);
@@ -307,6 +323,7 @@ void RenderDeviceVkImpl::FinishFrame(bool ReleaseAllResources)
     Atomics::AtomicIncrement(m_FrameNumber);
 }
 
+#if 0
 DynamicUploadHeap* RenderDeviceVkImpl::RequestUploadHeap()
 {
     std::lock_guard<std::mutex> LockGuard(m_UploadHeapMutex);
@@ -328,11 +345,15 @@ void RenderDeviceVkImpl::ReleaseUploadHeap(DynamicUploadHeap* pUploadHeap)
 {
 
 }
+#endif
 
-CommandContext* RenderDeviceVkImpl::AllocateCommandContext(const Char *ID)
+VkCommandBuffer RenderDeviceVkImpl::AllocateCommandBuffer(const Char *DebugName)
 {
-	std::lock_guard<std::mutex> LockGuard(m_ContextAllocationMutex);
+	std::lock_guard<std::mutex> LockGuard(m_CmdPoolMutex);
+    auto CmdBuffer = m_CmdBufferPool.GetCommandBuffer(GetCompletedFenceValue(), DebugName);
+    return CmdBuffer;
 
+#if 0
 	CommandContext* ret = nullptr;
 	if (m_AvailableContexts.empty())
 	{
@@ -353,21 +374,44 @@ CommandContext* RenderDeviceVkImpl::AllocateCommandContext(const Char *ID)
 	//	EngineProfiling::BeginBlock(ID, NewContext);
 
 	return ret;
-}
 #endif
+}
 
-void RenderDeviceVkImpl::SafeReleaseVkBuffer(VkBuffer vkBuffer)
+
+template<typename VulkanObjectType>
+class RenderDeviceVkImpl::StaleVulkanObject : public StaleVulkanObjectBase
+{
+public:
+    StaleVulkanObject(VulkanUtilities::VulkanObjectWrapper<VulkanObjectType> &&Object) :
+        m_VkObject(std::move(Object))
+    {}
+
+    ~StaleVulkanObject()
+    {
+        m_VkObject.Release();
+    }
+
+private:
+    VulkanUtilities::VulkanObjectWrapper<VulkanObjectType> m_VkObject;
+};
+
+template<typename VulkanObjectType>
+void RenderDeviceVkImpl::SafeReleaseVkObject(VulkanUtilities::VulkanObjectWrapper<VulkanObjectType>&& vkObject)
 {
     // When Vk object is released, it is first moved into the
     // stale objects list. The list is moved into a release queue
     // when the next command list is executed. 
     std::lock_guard<std::mutex> LockGuard(m_StaleObjectsMutex);
-#if 0
-    m_StaleVkObjects.emplace_back( m_NextCmdListNumber, CComPtr<IVkObject>(pObj) );
-#endif
+    m_StaleVkObjects.emplace_back(m_NextCmdListNumber, new StaleVulkanObject<VulkanObjectType>(std::move(vkObject)) );
 }
 
-#if 0
+template void RenderDeviceVkImpl::SafeReleaseVkObject<VkBuffer>(VulkanUtilities::BufferWrapper &&Object);
+template void RenderDeviceVkImpl::SafeReleaseVkObject<VkBufferView>(VulkanUtilities::BufferViewWrapper &&Object);
+template void RenderDeviceVkImpl::SafeReleaseVkObject<VkImage>(VulkanUtilities::ImageWrapper &&Object);
+template void RenderDeviceVkImpl::SafeReleaseVkObject<VkImageView>(VulkanUtilities::ImageViewWrapper &&Object);
+template void RenderDeviceVkImpl::SafeReleaseVkObject<VkDeviceMemory>(VulkanUtilities::DeviceMemoryWrapper &&Object);
+
+
 void RenderDeviceVkImpl::DiscardStaleVkObjects(Uint64 CmdListNumber, Uint64 FenceValue)
 {
     // Only discard these stale objects that were released before CmdListNumber
@@ -403,122 +447,94 @@ void RenderDeviceVkImpl::ProcessReleaseQueue(Uint64 CompletedFenceValue)
     }
 }
 
-bool CreateTestResource(IVkDevice *pDevice, const Vk_RESOURCE_DESC &ResDesc)
-{
-    // Set the texture pointer address to nullptr to validate input parameters
-    // without creating the texture
-    // https://msdn.microsoft.com/en-us/library/windows/desktop/dn899178(v=vs.85).aspx
-
-	Vk_HEAP_PROPERTIES HeapProps;
-	HeapProps.Type = Vk_HEAP_TYPE_DEFAULT;
-	HeapProps.CPUPageProperty = Vk_CPU_PAGE_PROPERTY_UNKNOWN;
-	HeapProps.MemoryPoolPreference = Vk_MEMORY_POOL_UNKNOWN;
-	HeapProps.CreationNodeMask = 1;
-	HeapProps.VisibleNodeMask = 1;
-        
-    auto hr = pDevice->CreateCommittedResource( &HeapProps, Vk_HEAP_FLAG_NONE, &ResDesc, Vk_RESOURCE_STATE_COMMON, nullptr, __uuidof(IVkResource), nullptr );
-    return hr == S_FALSE; // S_FALSE means that input parameters passed validation
-}
-#endif
 
 void RenderDeviceVkImpl::TestTextureFormat( TEXTURE_FORMAT TexFormat )
 {
-#if 0
     auto &TexFormatInfo = m_TextureFormatsInfo[TexFormat];
     VERIFY( TexFormatInfo.Supported, "Texture format is not supported" );
 
-    auto DXGIFormat = TexFormatToDXGI_Format(TexFormat);
-    Vk_RESOURCE_FLAGS DefaultResourceFlags = Vk_RESOURCE_FLAG_NONE;
-    if( TexFormatInfo.ComponentType == COMPONENT_TYPE_DEPTH ||
-        TexFormatInfo.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL )
-        DefaultResourceFlags = Vk_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
-    
-    const int TestTextureDim = 32;
-    const int TestTextureDepth = 8;
-    
-    Vk_RESOURCE_DESC ResDesc = 
-    {
-        Vk_RESOURCE_DIMENSION_TEXTURE1D,
-        0, // Alignment
-        TestTextureDim,
-        1, // Height
-        1, // DepthOrArraySize
-        1, // MipLevels
-        DXGIFormat,
-        {1, 0},
-        Vk_TEXTURE_LAYOUT_UNKNOWN,
-        DefaultResourceFlags
-    };
+    auto vkPhysicalDevice = m_PhysicalDevice->GetVkDeviceHandle();
 
-    // Create test texture 1D
-    TexFormatInfo.Tex1DFmt = false;
-    if( TexFormatInfo.ComponentType != COMPONENT_TYPE_COMPRESSED )
+    auto SRVFormat = GetDefaultTextureViewFormat(TexFormat, TEXTURE_VIEW_SHADER_RESOURCE, BIND_SHADER_RESOURCE);
+    auto RTVFormat = GetDefaultTextureViewFormat(TexFormat, TEXTURE_VIEW_RENDER_TARGET, BIND_RENDER_TARGET);
+    auto DSVFormat = GetDefaultTextureViewFormat(TexFormat, TEXTURE_VIEW_DEPTH_STENCIL, BIND_DEPTH_STENCIL);
+    
+    if(SRVFormat != TEX_FORMAT_UNKNOWN)
     {
-        TexFormatInfo.Tex1DFmt = CreateTestResource(m_pVkDevice, ResDesc );
+        VkFormat vkSrvFormat = TexFormatToVkFormat(SRVFormat);
+        VkFormatProperties vkSrvFmtProps = {};
+        vkGetPhysicalDeviceFormatProperties(vkPhysicalDevice, vkSrvFormat, &vkSrvFmtProps);
+
+        if(vkSrvFmtProps.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)
+        {
+            TexFormatInfo.Filterable = true;
+
+            {
+                VkImageFormatProperties ImgFmtProps = {};
+                auto err = vkGetPhysicalDeviceImageFormatProperties(vkPhysicalDevice, vkSrvFormat, VK_IMAGE_TYPE_1D, VK_IMAGE_TILING_OPTIMAL,
+                                                                    VK_IMAGE_USAGE_SAMPLED_BIT, 0, &ImgFmtProps);
+                TexFormatInfo.Tex1DFmt = err == VK_SUCCESS;
+            }
+
+            {
+                VkImageFormatProperties ImgFmtProps = {};
+                auto err = vkGetPhysicalDeviceImageFormatProperties(vkPhysicalDevice, vkSrvFormat, VK_IMAGE_TYPE_2D, VK_IMAGE_TILING_OPTIMAL,
+                                                                    VK_IMAGE_USAGE_SAMPLED_BIT, 0, &ImgFmtProps);
+                TexFormatInfo.Tex2DFmt = err == VK_SUCCESS;
+            }
+
+            {
+                VkImageFormatProperties ImgFmtProps = {};
+                auto err = vkGetPhysicalDeviceImageFormatProperties(vkPhysicalDevice, vkSrvFormat, VK_IMAGE_TYPE_3D, VK_IMAGE_TILING_OPTIMAL,
+                                                                    VK_IMAGE_USAGE_SAMPLED_BIT, 0, &ImgFmtProps);
+                TexFormatInfo.Tex3DFmt = err == VK_SUCCESS;
+            }
+
+            {
+                VkImageFormatProperties ImgFmtProps = {};
+                auto err = vkGetPhysicalDeviceImageFormatProperties(vkPhysicalDevice, vkSrvFormat, VK_IMAGE_TYPE_2D, VK_IMAGE_TILING_OPTIMAL,
+                                                                    VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT, &ImgFmtProps);
+                TexFormatInfo.TexCubeFmt = err == VK_SUCCESS;
+            }
+
+        }
     }
 
-    // Create test texture 2D
-    TexFormatInfo.Tex2DFmt = false;
-    TexFormatInfo.TexCubeFmt = false;
-    TexFormatInfo.ColorRenderable = false;
-    TexFormatInfo.DepthRenderable = false;
-    TexFormatInfo.SupportsMS = false;
+    if (RTVFormat != TEX_FORMAT_UNKNOWN)
     {
-        ResDesc.Dimension = Vk_RESOURCE_DIMENSION_TEXTURE2D;
-        ResDesc.Height = TestTextureDim;
-        TexFormatInfo.Tex2DFmt = CreateTestResource( m_pVkDevice, ResDesc );
-
-        if( TexFormatInfo.Tex2DFmt )
+        VkFormat vkRtvFormat = TexFormatToVkFormat(RTVFormat);
+        VkFormatProperties vkRtvFmtProps = {};
+        vkGetPhysicalDeviceFormatProperties(vkPhysicalDevice, vkRtvFormat, &vkRtvFmtProps);
+        if (vkRtvFmtProps.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT)
         {
+            VkImageFormatProperties ImgFmtProps = {};
+            auto err = vkGetPhysicalDeviceImageFormatProperties(vkPhysicalDevice, vkRtvFormat, VK_IMAGE_TYPE_2D, VK_IMAGE_TILING_OPTIMAL,
+                                                                VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, 0, &ImgFmtProps);
+            TexFormatInfo.ColorRenderable = err == VK_SUCCESS;
+            if (TexFormatInfo.ColorRenderable)
             {
-            //    Vk_TEXTURE2D_DESC CubeTexDesc = Tex2DDesc;
-                  ResDesc.DepthOrArraySize = 6;
-            //    CubeTexDesc.MiscFlags = Vk_RESOURCE_MISC_TEXTURECUBE;
-                  TexFormatInfo.TexCubeFmt = CreateTestResource( m_pVkDevice, ResDesc );
-                  ResDesc.DepthOrArraySize = 1;
-            }
-
-            if( TexFormatInfo.ComponentType == COMPONENT_TYPE_DEPTH ||
-                TexFormatInfo.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL )
-            {
-                ResDesc.Flags = Vk_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
-                ResDesc.SampleDesc.Count = 1;
-                TexFormatInfo.DepthRenderable = CreateTestResource( m_pVkDevice, ResDesc );
-
-                if( TexFormatInfo.DepthRenderable )
-                {
-                    ResDesc.SampleDesc.Count = 4;
-                    TexFormatInfo.SupportsMS = CreateTestResource( m_pVkDevice, ResDesc );
-                }
-            }
-            else if( TexFormatInfo.ComponentType != COMPONENT_TYPE_COMPRESSED && 
-                     TexFormatInfo.Format != DXGI_FORMAT_R9G9B9E5_SHAREDEXP )
-            {
-                ResDesc.Flags = Vk_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
-                ResDesc.SampleDesc.Count = 1;
-                TexFormatInfo.ColorRenderable = CreateTestResource( m_pVkDevice, ResDesc );
-                if( TexFormatInfo.ColorRenderable )
-                {
-                    ResDesc.SampleDesc.Count = 4;
-                    TexFormatInfo.SupportsMS = CreateTestResource( m_pVkDevice, ResDesc );
-                }
+                TexFormatInfo.SupportsMS = ImgFmtProps.sampleCounts > VK_SAMPLE_COUNT_1_BIT;
             }
         }
     }
 
-    // Create test texture 3D
-    TexFormatInfo.Tex3DFmt = false;
-    // 3D textures do not support depth formats
-    if( !(TexFormatInfo.ComponentType == COMPONENT_TYPE_DEPTH ||
-          TexFormatInfo.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL) )
+    if (DSVFormat != TEX_FORMAT_UNKNOWN)
     {
-        ResDesc.SampleDesc.Count = 1;
-        ResDesc.Dimension = Vk_RESOURCE_DIMENSION_TEXTURE3D;
-        ResDesc.Flags = DefaultResourceFlags;
-        ResDesc.DepthOrArraySize = TestTextureDepth;
-        TexFormatInfo.Tex3DFmt = CreateTestResource( m_pVkDevice, ResDesc );
+        VkFormat vkDsvFormat = TexFormatToVkFormat(DSVFormat);
+        VkFormatProperties vkDsvFmtProps = {};
+        vkGetPhysicalDeviceFormatProperties(vkPhysicalDevice, vkDsvFormat, &vkDsvFmtProps);
+        if (vkDsvFmtProps.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)
+        {
+            VkImageFormatProperties ImgFmtProps = {};
+            auto err = vkGetPhysicalDeviceImageFormatProperties(vkPhysicalDevice, vkDsvFormat, VK_IMAGE_TYPE_2D, VK_IMAGE_TILING_OPTIMAL,
+                                                                VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, 0, &ImgFmtProps);
+            TexFormatInfo.DepthRenderable = err == VK_SUCCESS;
+            if (TexFormatInfo.DepthRenderable)
+            {
+                TexFormatInfo.SupportsMS = ImgFmtProps.sampleCounts > VK_SAMPLE_COUNT_1_BIT;
+            }
+        }
     }
-#endif
 }
 
 

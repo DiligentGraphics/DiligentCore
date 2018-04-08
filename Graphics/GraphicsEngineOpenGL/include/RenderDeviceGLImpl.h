@@ -112,7 +112,7 @@ protected:
     TexRegionRender m_TexRegionRender;
     
 private:
-    virtual void TestTextureFormat( TEXTURE_FORMAT TexFormat )override;
+    virtual void TestTextureFormat( TEXTURE_FORMAT TexFormat )override final;
     bool CheckExtension(const Char *ExtensionString);
     void FlagSupportedTexFormats();
     void QueryDeviceCaps();
