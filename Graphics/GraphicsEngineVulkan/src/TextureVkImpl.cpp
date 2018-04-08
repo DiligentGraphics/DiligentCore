@@ -211,14 +211,32 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters *pRefCounters,
         LOG_ERROR_AND_THROW("Failed to find suitable device memory type for an image");
     }
 
-    m_ImageMemory = LogicalDevice.AllocateDeviceMemory(MemAlloc);
+    std::string MemoryName = "Device memory for \'";
+    MemoryName += m_Desc.Name;
+    MemoryName += '\'';
+    m_ImageMemory = LogicalDevice.AllocateDeviceMemory(MemAlloc, MemoryName.c_str());
 
     auto err = LogicalDevice.BindImageMemory(m_VulkanImage, m_ImageMemory, 0 /*offset*/);
     CHECK_VK_ERROR_AND_THROW(err, "Failed to bind image memory");
 
-#if 0
     if(bInitializeTexture)
     {
+        auto StagingImageCI = ImageCI;
+        StagingImageCI.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+
+        std::string StagingBufferName = "Staging buffer for \'";
+        StagingBufferName += m_Desc.Name;
+        StagingBufferName += '\'';
+
+
+        VkMemoryRequirements StagingMemReqs = LogicalDevice.GetImageMemoryRequirements(m_VulkanImage);
+
+        std::string StaginMemoryName = "Staging memory for \'";
+        StaginMemoryName += m_Desc.Name;
+        StaginMemoryName += '\'';
+
+
+#if 0
         Uint32 ExpectedNumSubresources = static_cast<Uint32>(Desc.MipLevels * (Desc.Dimension == Vk_RESOURCE_DIMENSION_TEXTURE3D ? 1 : Desc.DepthOrArraySize) );
         if( InitData.NumSubresources != ExpectedNumSubresources )
             LOG_ERROR_AND_THROW("Incorrect number of subresources in init data. ", ExpectedNumSubresources, " expected, while ", InitData.NumSubresources, " provided");
@@ -292,8 +310,10 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters *pRefCounters,
         // until copy operation is complete.  This must be done after
         // submitting command list for execution!
         pRenderDeviceVk->SafeReleaseVkObject(UploadBuffer);
+#endif
     }
 
+#if 0
     if(m_Desc.MiscFlags & MISC_TEXTURE_FLAG_GENERATE_MIPS)
     {
         if (m_Desc.Type != RESOURCE_DIM_TEX_2D && m_Desc.Type != RESOURCE_DIM_TEX_2D_ARRAY)
@@ -367,43 +387,7 @@ void TextureVkImpl::CreateViewInternal( const struct TextureViewDesc &ViewDesc, 
         auto UpdatedViewDesc = ViewDesc;
         CorrectTextureViewDesc( UpdatedViewDesc );
 
-        VulkanUtilities::ImageViewWrapper ImgView;
-        switch( ViewDesc.ViewType )
-        {
-            case TEXTURE_VIEW_SHADER_RESOURCE:
-            {
-                VERIFY( m_Desc.BindFlags & BIND_SHADER_RESOURCE, "BIND_SHADER_RESOURCE flag is not set" );
-                //ViewHandleAlloc = pDeviceVkImpl->AllocateDescriptor(Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-                //CreateSRV( UpdatedViewDesc, ViewHandleAlloc.GetCpuHandle() );
-            }
-            break;
-
-            case TEXTURE_VIEW_RENDER_TARGET:
-            {
-                VERIFY( m_Desc.BindFlags & BIND_RENDER_TARGET, "BIND_RENDER_TARGET flag is not set" );
-                //ViewHandleAlloc = pDeviceVkImpl->AllocateDescriptor(Vk_DESCRIPTOR_HEAP_TYPE_RTV);
-                //CreateRTV( UpdatedViewDesc, ViewHandleAlloc.GetCpuHandle() );
-            }
-            break;
-
-            case TEXTURE_VIEW_DEPTH_STENCIL:
-            {
-                VERIFY( m_Desc.BindFlags & BIND_DEPTH_STENCIL, "BIND_DEPTH_STENCIL is not set" );
-                //ViewHandleAlloc = pDeviceVkImpl->AllocateDescriptor(Vk_DESCRIPTOR_HEAP_TYPE_DSV);
-                //CreateDSV( UpdatedViewDesc, ViewHandleAlloc.GetCpuHandle() );
-            }
-            break;
-
-            case TEXTURE_VIEW_UNORDERED_ACCESS:
-            {
-                VERIFY( m_Desc.BindFlags & BIND_UNORDERED_ACCESS, "BIND_UNORDERED_ACCESS flag is not set" );
-                //ViewHandleAlloc = pDeviceVkImpl->AllocateDescriptor(Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-                //CreateUAV( UpdatedViewDesc, ViewHandleAlloc.GetCpuHandle() );
-            }
-            break;
-
-            default: UNEXPECTED( "Unknown view type" ); break;
-        }
+        VulkanUtilities::ImageViewWrapper ImgView = CreateImageView(UpdatedViewDesc);
 
         auto pViewVk = NEW_RC_OBJ(TexViewAllocator, "TextureViewVkImpl instance", TextureViewVkImpl, bIsDefaultView ? this : nullptr)
                                     (GetDevice(), UpdatedViewDesc, this, std::move(ImgView), bIsDefaultView );
@@ -488,80 +472,117 @@ void TextureVkImpl ::  CopyData(IDeviceContext *pContext,
 void TextureVkImpl :: Map(IDeviceContext *pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags, MappedTextureSubresource &MappedData)
 {
     TTextureBase::Map( pContext, Subresource, MapType, MapFlags, MappedData );
-    LOG_ERROR_ONCE("TextureVkImpl::Map() is not implemented");
-
-    static char TmpDummyBuffer[1024*1024*64];
-    MappedData.pData = TmpDummyBuffer;
+    UNEXPECTED("TextureVkImpl::Map() is not implemented");
 }
 
 void TextureVkImpl::Unmap( IDeviceContext *pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags )
 {
     TTextureBase::Unmap( pContext, Subresource, MapType, MapFlags );
-    LOG_ERROR_ONCE("TextureVkImpl::Unmap() is not implemented");
+    UNEXPECTED("TextureVkImpl::Unmap() is not implemented");
 }
 
-#if 0
-void TextureVkImpl::CreateSRV( TextureViewDesc &SRVDesc, Vk_CPU_DESCRIPTOR_HANDLE SRVHandle )
+VulkanUtilities::ImageViewWrapper TextureVkImpl::CreateImageView(TextureViewDesc &ViewDesc)
 {
-    VERIFY( SRVDesc.ViewType == TEXTURE_VIEW_SHADER_RESOURCE, "Incorrect view type: shader resource is expected" );
+    VERIFY(ViewDesc.ViewType == TEXTURE_VIEW_SHADER_RESOURCE ||
+           ViewDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET ||
+           ViewDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL ||
+           ViewDesc.ViewType == TEXTURE_VIEW_UNORDERED_ACCESS, "Unexpected view type");
+    if (ViewDesc.Format == TEX_FORMAT_UNKNOWN)
+    {
+        ViewDesc.Format = m_Desc.Format;
+    }
+
+    VkImageViewCreateInfo ImageViewCI = {};
+    ImageViewCI.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    ImageViewCI.pNext = nullptr;
+    ImageViewCI.flags = 0; // reserved for future use.
+    ImageViewCI.image = m_VulkanImage;
+
+    switch(ViewDesc.TextureDim)
+    {
+        case RESOURCE_DIM_TEX_1D:
+            ImageViewCI.viewType = VK_IMAGE_VIEW_TYPE_1D;
+        break;
+
+        case RESOURCE_DIM_TEX_1D_ARRAY:
+            ImageViewCI.viewType = VK_IMAGE_VIEW_TYPE_1D_ARRAY;
+        break;
+
+        case RESOURCE_DIM_TEX_2D:
+            ImageViewCI.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        break;
+
+        case RESOURCE_DIM_TEX_2D_ARRAY:
+            ImageViewCI.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+        break;
+
+        case RESOURCE_DIM_TEX_3D:
+            ImageViewCI.viewType = VK_IMAGE_VIEW_TYPE_3D;
+        break;
+
+        case RESOURCE_DIM_TEX_CUBE:
+            ImageViewCI.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
+        break;
+
+        case RESOURCE_DIM_TEX_CUBE_ARRAY:
+            ImageViewCI.viewType = VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
+        break;
+
+        default: UNEXPECTED("Unexpcted view dimension");
+    }
     
-    if( SRVDesc.Format == TEX_FORMAT_UNKNOWN )
+    ImageViewCI.format = TexFormatToVkFormat(ViewDesc.Format);
+    ImageViewCI.components = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
+    ImageViewCI.subresourceRange.baseMipLevel = ViewDesc.MostDetailedMip;
+    ImageViewCI.subresourceRange.levelCount = ViewDesc.NumMipLevels;
+    ImageViewCI.subresourceRange.baseArrayLayer = ViewDesc.FirstArraySlice;
+    ImageViewCI.subresourceRange.layerCount = ViewDesc.NumArraySlices;
+
+    const auto &FmtAttribs = GetTextureFormatAttribs(ViewDesc.Format);
+
+    if(ViewDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL)
     {
-        SRVDesc.Format = m_Desc.Format;
+        // When an imageView of a depth/stencil image is used as a depth/stencil framebuffer attachment, 
+        // the aspectMask is ignored and both depth and stencil image subresources are used. (11.5)
+        ImageViewCI.subresourceRange.aspectMask = 0;
     }
-    Vk_SHADER_RESOURCE_VIEW_DESC Vk_SRVDesc;
-    TextureViewDesc_to_Vk_SRV_DESC(SRVDesc, Vk_SRVDesc, m_Desc.SampleCount);
-
-    auto *pDeviceVk = static_cast<RenderDeviceVkImpl*>(GetDevice())->GetVkDevice();
-    pDeviceVk->CreateShaderResourceView(m_pVkResource, &Vk_SRVDesc, SRVHandle);
-}
-
-void TextureVkImpl::CreateRTV( TextureViewDesc &RTVDesc, Vk_CPU_DESCRIPTOR_HANDLE RTVHandle )
-{
-    VERIFY( RTVDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET, "Incorrect view type: render target is expected" );
-
-    if( RTVDesc.Format == TEX_FORMAT_UNKNOWN )
+    else
     {
-        RTVDesc.Format = m_Desc.Format;
-    }
-
-    Vk_RENDER_TARGET_VIEW_DESC Vk_RTVDesc;
-    TextureViewDesc_to_Vk_RTV_DESC(RTVDesc, Vk_RTVDesc, m_Desc.SampleCount);
-
-    auto *pDeviceVk = static_cast<RenderDeviceVkImpl*>(GetDevice())->GetVkDevice();
-    pDeviceVk->CreateRenderTargetView( m_pVkResource, &Vk_RTVDesc, RTVHandle );
-}
-
-void TextureVkImpl::CreateDSV( TextureViewDesc &DSVDesc, Vk_CPU_DESCRIPTOR_HANDLE DSVHandle )
-{
-    VERIFY( DSVDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL, "Incorrect view type: depth stencil is expected" );
-
-    if( DSVDesc.Format == TEX_FORMAT_UNKNOWN )
-    {
-        DSVDesc.Format = m_Desc.Format;
-    }
-
-    Vk_DEPTH_STENCIL_VIEW_DESC Vk_DSVDesc;
-    TextureViewDesc_to_Vk_DSV_DESC(DSVDesc, Vk_DSVDesc, m_Desc.SampleCount);
-
-    auto *pDeviceVk = static_cast<RenderDeviceVkImpl*>(GetDevice())->GetVkDevice();
-    pDeviceVk->CreateDepthStencilView( m_pVkResource, &Vk_DSVDesc, DSVHandle );
-}
-
-void TextureVkImpl::CreateUAV( TextureViewDesc &UAVDesc, Vk_CPU_DESCRIPTOR_HANDLE UAVHandle )
-{
-    VERIFY( UAVDesc.ViewType == TEXTURE_VIEW_UNORDERED_ACCESS, "Incorrect view type: unordered access is expected" );
-    
-    if( UAVDesc.Format == TEX_FORMAT_UNKNOWN )
-    {
-        UAVDesc.Format = m_Desc.Format;
+        // aspectMask must be only VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_ASPECT_DEPTH_BIT or VK_IMAGE_ASPECT_STENCIL_BIT 
+        // if format is a color, depth-only or stencil-only format, respectively.  (11.5)
+        if(FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH )
+            ImageViewCI.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+        else if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
+        {
+            if(ViewDesc.Format == TEX_FORMAT_D32_FLOAT_S8X24_UINT || 
+               ViewDesc.Format == TEX_FORMAT_D24_UNORM_S8_UINT)
+            {
+                ImageViewCI.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+            }
+            else if (ViewDesc.Format == TEX_FORMAT_R32_FLOAT_X8X24_TYPELESS ||
+                     ViewDesc.Format == TEX_FORMAT_R24_UNORM_X8_TYPELESS)
+            {
+                ImageViewCI.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+            }
+            else if (ViewDesc.Format == TEX_FORMAT_X32_TYPELESS_G8X24_UINT || 
+                     ViewDesc.Format == TEX_FORMAT_X24_TYPELESS_G8_UINT)
+            {
+                ImageViewCI.subresourceRange.aspectMask = VK_IMAGE_ASPECT_STENCIL_BIT;
+            }
+            else
+                UNEXPECTED("Unexpected depth-stencil texture format");
+        }
+        else
+            ImageViewCI.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     }
 
-    Vk_UNORDERED_ACCESS_VIEW_DESC Vk_UAVDesc;
-    TextureViewDesc_to_Vk_UAV_DESC(UAVDesc, Vk_UAVDesc);
+    auto *pRenderDeviceVk = static_cast<RenderDeviceVkImpl*>(GetDevice());
+    const auto& LogicalDevice = pRenderDeviceVk->GetLogicalDevice();
 
-    auto *pDeviceVk = static_cast<RenderDeviceVkImpl*>(GetDevice())->GetVkDevice();
-    pDeviceVk->CreateUnorderedAccessView( m_pVkResource, nullptr, &Vk_UAVDesc, UAVHandle );
+    std::string ViewName = "Image view for \'";
+    ViewName += m_Desc.Name;
+    ViewName += '\'';
+    return LogicalDevice.CreateImageView(ImageViewCI, ViewName.c_str());
 }
-#endif
+
 }

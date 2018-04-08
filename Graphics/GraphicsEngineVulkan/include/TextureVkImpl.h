@@ -101,12 +101,10 @@ protected:
 */
     void CreateViewInternal( const struct TextureViewDesc &ViewDesc, ITextureView **ppView, bool bIsDefaultView )override;
     //void PrepareVkInitData(const TextureData &InitData, Uint32 NumSubresources, std::vector<Vk_SUBRESOURCE_DATA> &VkInitData);
-/*
-    void CreateSRV( TextureViewDesc &SRVDesc, Vk_CPU_DESCRIPTOR_HANDLE SRVHandle );
-    void CreateRTV( TextureViewDesc &RTVDesc, Vk_CPU_DESCRIPTOR_HANDLE RTVHandle );
-    void CreateDSV( TextureViewDesc &DSVDesc, Vk_CPU_DESCRIPTOR_HANDLE DSVHandle );
-    void CreateUAV( TextureViewDesc &UAVDesc, Vk_CPU_DESCRIPTOR_HANDLE UAVHandle );
+    
+    VulkanUtilities::ImageViewWrapper CreateImageView(TextureViewDesc &ViewDesc);
 
+/*
     // UAVs for every mip level to facilitate mipmap generation
     DescriptorHeapAllocation m_MipUAVs;
     // SRV as texture array (even for a non-array texture) required for mipmap generation

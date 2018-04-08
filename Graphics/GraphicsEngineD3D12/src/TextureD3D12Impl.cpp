@@ -456,16 +456,16 @@ void TextureD3D12Impl ::  CopyData(IDeviceContext *pContext,
 void TextureD3D12Impl :: Map(IDeviceContext *pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags, MappedTextureSubresource &MappedData)
 {
     TTextureBase::Map( pContext, Subresource, MapType, MapFlags, MappedData );
-    LOG_ERROR_ONCE("TextureD3D12Impl::Map() is not implemented");
+    UNSUPPORTED("TextureD3D12Impl::Map() is not implemented");
 
-    static char TmpDummyBuffer[1024*1024*64];
-    MappedData.pData = TmpDummyBuffer;
+    //static char TmpDummyBuffer[1024*1024*64];
+    MappedData.pData = nullptr;//TmpDummyBuffer;
 }
 
 void TextureD3D12Impl::Unmap( IDeviceContext *pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags )
 {
     TTextureBase::Unmap( pContext, Subresource, MapType, MapFlags );
-    LOG_ERROR_ONCE("TextureD3D12Impl::Unmap() is not implemented");
+    UNSUPPORTED("TextureD3D12Impl::Unmap() is not implemented");
 }
 
 
