@@ -385,7 +385,7 @@ const TextureFormatAttribs& GetTextureFormatAttribs( TEXTURE_FORMAT Format )
     }
     else
     {
-        UNEXPECTED( "Texture format (", Format, ") is out of allowed range [0, ", TEX_FORMAT_NUM_FORMATS-1, "]" );
+        UNEXPECTED( "Texture format (", int{Format}, ") is out of allowed range [0, ", int{TEX_FORMAT_NUM_FORMATS}-1, "]" );
         return FmtAttribs[0];
     }
 }
