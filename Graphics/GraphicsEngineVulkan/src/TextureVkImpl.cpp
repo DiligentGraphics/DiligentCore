@@ -62,8 +62,7 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters *pRefCounters,
                                RenderDeviceVkImpl *pRenderDeviceVk, 
                                const TextureDesc& TexDesc, 
                                const TextureData &InitData /*= TextureData()*/) : 
-    TTextureBase(pRefCounters, TexViewObjAllocator, pRenderDeviceVk, TexDesc),
-    m_IsExternalHandle(false)
+    TTextureBase(pRefCounters, TexViewObjAllocator, pRenderDeviceVk, TexDesc)
 {
     if( m_Desc.Usage == USAGE_STATIC && InitData.pSubResources == nullptr )
         LOG_ERROR_AND_THROW("Static Texture must be initialized with data at creation time");
@@ -346,8 +345,7 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters *pRefCounters,
                              const TextureDesc& TexDesc,
                              VkImage VkImageHandle) :
     TTextureBase(pRefCounters, TexViewObjAllocator, pDeviceVk, InitTexDescFromVkImage(VkImageHandle, TexDesc)),
-    m_VulkanImage(nullptr, VkImageHandle),
-    m_IsExternalHandle(true)
+    m_VulkanImage(nullptr, VkImageHandle)
 {
 }
 IMPLEMENT_QUERY_INTERFACE( TextureVkImpl, IID_TextureVk, TTextureBase )
@@ -425,13 +423,11 @@ void TextureVkImpl::CreateViewInternal( const struct TextureViewDesc &ViewDesc, 
 
 TextureVkImpl :: ~TextureVkImpl()
 {
-    if(!m_IsExternalHandle)
-    {
-        auto *pDeviceVkImpl = ValidatedCast<RenderDeviceVkImpl>(GetDevice());
-        // Vk object can only be destroyed when it is no longer used by the GPU
-        pDeviceVkImpl->SafeReleaseVkObject(std::move(m_VulkanImage));
-        pDeviceVkImpl->SafeReleaseVkObject(std::move(m_ImageMemory));
-    }
+    auto *pDeviceVkImpl = ValidatedCast<RenderDeviceVkImpl>(GetDevice());
+    // Vk object can only be destroyed when it is no longer used by the GPU
+    // Wrappers for external texture will not be destroyed as they are created with null device pointer
+    pDeviceVkImpl->SafeReleaseVkObject(std::move(m_VulkanImage));
+    pDeviceVkImpl->SafeReleaseVkObject(std::move(m_ImageMemory));
 }
 
 void TextureVkImpl::UpdateData( IDeviceContext *pContext, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData )

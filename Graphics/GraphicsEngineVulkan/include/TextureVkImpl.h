@@ -116,7 +116,6 @@ protected:
 */
     VulkanUtilities::ImageWrapper m_VulkanImage;
     VulkanUtilities::DeviceMemoryWrapper m_ImageMemory;
-    const bool m_IsExternalHandle;
 };
 
 }
