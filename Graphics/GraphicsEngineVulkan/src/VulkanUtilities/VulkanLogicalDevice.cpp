@@ -87,7 +87,7 @@ namespace VulkanUtilities
         if(DebugName != nullptr && *DebugName != 0)
             VulkanUtilities::SetCommandPoolName(m_VkDevice, CmdPool, DebugName);
 
-        return CommandPoolWrapper{ GetSharedPtr(), CmdPool};
+        return CommandPoolWrapper{ GetSharedPtr(), std::move(CmdPool)};
     }
 
     BufferWrapper VulkanLogicalDevice::CreateBuffer(const VkBufferCreateInfo &BufferCI, 
@@ -103,7 +103,7 @@ namespace VulkanUtilities
         if (DebugName != nullptr && *DebugName != 0)
             VulkanUtilities::SetBufferName(m_VkDevice, vkBuffer, DebugName);
 
-        return BufferWrapper{ GetSharedPtr(), vkBuffer };
+        return BufferWrapper{ GetSharedPtr(), std::move(vkBuffer) };
     }
 
     BufferViewWrapper VulkanLogicalDevice::CreateBufferView(const VkBufferViewCreateInfo  &BuffViewCI, 
@@ -119,7 +119,7 @@ namespace VulkanUtilities
         if (DebugName != nullptr && *DebugName != 0)
             VulkanUtilities::SetBufferViewName(m_VkDevice, vkBufferView, DebugName);
 
-        return BufferViewWrapper{ GetSharedPtr(), vkBufferView };
+        return BufferViewWrapper{ GetSharedPtr(), std::move(vkBufferView) };
     }
 
     ImageWrapper VulkanLogicalDevice::CreateImage(const VkImageCreateInfo &ImageCI, 
@@ -135,7 +135,7 @@ namespace VulkanUtilities
         if (DebugName != nullptr && *DebugName != 0)
             VulkanUtilities::SetImageName(m_VkDevice, vkImage, DebugName);
 
-        return ImageWrapper{ GetSharedPtr(), vkImage };
+        return ImageWrapper{ GetSharedPtr(), std::move(vkImage) };
     }
 
     ImageViewWrapper VulkanLogicalDevice::CreateImageView(const VkImageViewCreateInfo &ImageViewCI, 
@@ -151,7 +151,7 @@ namespace VulkanUtilities
         if (DebugName != nullptr && *DebugName != 0)
             VulkanUtilities::SetImageViewName(m_VkDevice, vkImageView, DebugName);
 
-        return ImageViewWrapper{ GetSharedPtr(), vkImageView };
+        return ImageViewWrapper{ GetSharedPtr(), std::move(vkImageView) };
     }
 
     FenceWrapper VulkanLogicalDevice::CreateFence(const VkFenceCreateInfo &FenceCI, const char *DebugName)const
@@ -166,7 +166,7 @@ namespace VulkanUtilities
         if (DebugName != nullptr && *DebugName != 0)
             VulkanUtilities::SetFenceName(m_VkDevice, vkFence, DebugName);
 
-        return FenceWrapper{ GetSharedPtr(), vkFence };
+        return FenceWrapper{ GetSharedPtr(), std::move(vkFence) };
     }
 
     DeviceMemoryWrapper VulkanLogicalDevice::AllocateDeviceMemory(const VkMemoryAllocateInfo &AllocInfo, 
@@ -183,7 +183,7 @@ namespace VulkanUtilities
         if (DebugName != nullptr && *DebugName != 0)
             VulkanUtilities::SetDeviceMemoryName(m_VkDevice, vkDeviceMem, DebugName);
 
-        return DeviceMemoryWrapper{ GetSharedPtr(), vkDeviceMem };
+        return DeviceMemoryWrapper{ GetSharedPtr(), std::move(vkDeviceMem) };
     }
 
 

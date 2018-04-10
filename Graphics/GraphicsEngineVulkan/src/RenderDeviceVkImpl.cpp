@@ -617,7 +617,7 @@ void RenderDeviceVkImpl::CreateTexture(const TextureDesc& TexDesc, VkImage vkImg
     CreateDeviceObject( "texture", TexDesc, ppTexture, 
         [&]()
         {
-            TextureVkImpl *pTextureVk = NEW_RC_OBJ(m_TexObjAllocator, "TextureVkImpl instance", TextureVkImpl)(m_TexViewObjAllocator, this, TexDesc, vkImgHandle);
+            TextureVkImpl *pTextureVk = NEW_RC_OBJ(m_TexObjAllocator, "TextureVkImpl instance", TextureVkImpl)(m_TexViewObjAllocator, this, TexDesc, std::move(vkImgHandle));
             pTextureVk->QueryInterface( IID_TextureVk, reinterpret_cast<IObject**>(ppTexture) );
         }
     );

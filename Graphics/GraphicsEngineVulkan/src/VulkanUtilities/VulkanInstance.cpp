@@ -61,10 +61,6 @@ namespace VulkanUtilities
                                    VkAllocationCallbacks* pVkAllocator) : 
         m_pVkAllocator(pVkAllocator)
     {
-#ifdef _DEBUG
-        EnableValidation = true;
-#endif
-
         {
             // Enumerate available layers
             uint32_t LayerCount = 0;
@@ -243,7 +239,7 @@ namespace VulkanUtilities
         {
             VkPhysicalDeviceProperties SelectedDeviceProps;
             vkGetPhysicalDeviceProperties(SelectedPhysicalDevice, &SelectedDeviceProps);
-            LOG_INFO_MESSAGE("Using physical device ", SelectedDeviceProps.deviceName);
+            LOG_INFO_MESSAGE("Using physical device '", SelectedDeviceProps.deviceName, '\'');
         }
         else
         {

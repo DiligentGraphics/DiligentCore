@@ -56,7 +56,7 @@ public:
                   FixedBlockMemoryAllocator &TexViewObjAllocator,
                   class RenderDeviceVkImpl *pDeviceVk, 
                   const TextureDesc& TexDesc, 
-                  VkImage VkImageHandle);
+                  VkImage&& VkImageHandle);
 
     ~TextureVkImpl();
 

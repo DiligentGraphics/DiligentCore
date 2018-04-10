@@ -29,7 +29,8 @@ namespace VulkanUtilities
 	void SetupDebugging(
 		VkInstance instance,
 		VkDebugReportFlagsEXT flags,
-		VkDebugReportCallbackEXT callBack);
+		VkDebugReportCallbackEXT callBack,
+        void *pUserData = nullptr);
 	// Clear debug callback
 	void FreeDebugCallback(VkInstance instance);
 	

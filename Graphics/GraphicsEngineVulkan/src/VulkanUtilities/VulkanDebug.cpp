@@ -72,12 +72,10 @@ namespace VulkanUtilities
         // the validation message will be aborted or not
         // We return VK_FALSE as we DON'T want Vulkan calls that cause a validation message 
         // (and return a VkResult) to abort
-        // If you instead want to have calls abort, pass in VK_TRUE and the function will 
-        // return VK_ERROR_VALIDATION_FAILED_EXT 
         return VK_FALSE;
     }
 
-    void SetupDebugging(VkInstance instance, VkDebugReportFlagsEXT flags, VkDebugReportCallbackEXT callBack)
+    void SetupDebugging(VkInstance instance, VkDebugReportFlagsEXT flags, VkDebugReportCallbackEXT callBack, void *pUserData)
     {
         auto CreateDebugReportCallback = reinterpret_cast<PFN_vkCreateDebugReportCallbackEXT>(vkGetInstanceProcAddr(instance, "vkCreateDebugReportCallbackEXT"));
         VERIFY_EXPR(CreateDebugReportCallback != VK_NULL_HANDLE);
@@ -90,6 +88,7 @@ namespace VulkanUtilities
         dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
         dbgCreateInfo.pfnCallback = (PFN_vkDebugReportCallbackEXT)MessageCallback;
         dbgCreateInfo.flags = flags;
+        dbgCreateInfo.pUserData = pUserData;
 
         VkResult err = CreateDebugReportCallback(
             instance,

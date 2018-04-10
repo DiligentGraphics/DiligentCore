@@ -135,7 +135,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk( const EngineVkAttribs& Crea
         // All commands that are allowed on a queue that supports transfer operations are also allowed on a 
         // queue that supports either graphics or compute operations.Thus, if the capabilities of a queue family 
         // include VK_QUEUE_GRAPHICS_BIT or VK_QUEUE_COMPUTE_BIT, then reporting the VK_QUEUE_TRANSFER_BIT 
-        // capability separately for that queue family is optional.
+        // capability separately for that queue family is optional (4.1).
         QueueInfo.queueFamilyIndex = PhysicalDevice->FindQueueFamily(VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT);
         QueueInfo.queueCount = 1;
         const float defaultQueuePriority = 1.0f; // Ask for highest priority for our queue. (range [0,1])
@@ -164,7 +164,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk( const EngineVkAttribs& Crea
         
         if (!DebugMarkersSupported && CreationAttribs.EnableValidation)
         {
-            LOG_INFO_MESSAGE("Debug marker extensions is not found on the system");
+            LOG_INFO_MESSAGE("Debug marker extension \"", VK_EXT_DEBUG_MARKER_EXTENSION_NAME, "\" is not found");
         }
 
         auto vkAllocator = Instance->GetVkAllocator();

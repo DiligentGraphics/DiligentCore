@@ -126,7 +126,7 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters *pRefCounters,
         ImageCI.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
     if ((m_Desc.BindFlags & BIND_UNORDERED_ACCESS) || (m_Desc.MiscFlags & MISC_TEXTURE_FLAG_GENERATE_MIPS))
         ImageCI.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
-    if ((m_Desc.BindFlags & BIND_SHADER_RESOURCE) == 0)
+    if (m_Desc.BindFlags & BIND_SHADER_RESOURCE)
         ImageCI.usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
 
     ImageCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -363,9 +363,9 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters *pRefCounters,
                              FixedBlockMemoryAllocator &TexViewObjAllocator,
                              RenderDeviceVkImpl *pDeviceVk, 
                              const TextureDesc& TexDesc,
-                             VkImage VkImageHandle) :
+                             VkImage&& VkImageHandle) :
     TTextureBase(pRefCounters, TexViewObjAllocator, pDeviceVk, InitTexDescFromVkImage(VkImageHandle, TexDesc)),
-    m_VulkanImage(nullptr, VkImageHandle)
+    m_VulkanImage(nullptr, std::move(VkImageHandle))
 {
 }
 IMPLEMENT_QUERY_INTERFACE( TextureVkImpl, IID_TextureVk, TTextureBase )

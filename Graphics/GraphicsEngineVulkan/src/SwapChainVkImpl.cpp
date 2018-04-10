@@ -172,19 +172,15 @@ SwapChainVkImpl::SwapChainVkImpl(IReferenceCounters *pRefCounters,
     m_SwapChainDesc.Width  = swapchainExtent.width;
     m_SwapChainDesc.Height = swapchainExtent.height;
 
-    // The FIFO present mode is guaranteed by the spec to be supported
-    VkPresentModeKHR swapchainPresentMode = VK_PRESENT_MODE_FIFO_KHR;
-    bool PresentModeSupported = false;
-    for(auto presentMode : presentModes)
-    {
-        if(presentMode == swapchainPresentMode)
-        {
-            PresentModeSupported = true;
-            break;
-        }
-    }
+    // Mailbox is the lowest latency non-tearing presentation mode
+    VkPresentModeKHR swapchainPresentMode = VK_PRESENT_MODE_MAILBOX_KHR;
+    bool PresentModeSupported = std::find(presentModes.begin(), presentModes.end(), swapchainPresentMode) != presentModes.end();
     if(!PresentModeSupported)
-        LOG_ERROR_AND_THROW("Present mode is not supported by this surface");
+    {
+        swapchainPresentMode = VK_PRESENT_MODE_FIFO_KHR;
+        // The FIFO present mode is guaranteed by the spec to be supported
+        VERIFY(std::find(presentModes.begin(), presentModes.end(), swapchainPresentMode) != presentModes.end(), "FIFO present mode must be supported" );
+    }
 
     // Determine the number of VkImage's to use in the swap chain.
     // We need to acquire only 1 presentable image at at time.
@@ -196,7 +192,7 @@ SwapChainVkImpl::SwapChainVkImpl(IReferenceCounters *pRefCounters,
         LOG_INFO_MESSAGE("Requested back buffer count (", m_SwapChainDesc.BufferCount, ") is smaller than the minimal image count supported for this surface (", surfCapabilities.minImageCount, "). Resetting to ", surfCapabilities.minImageCount);
         m_SwapChainDesc.BufferCount = surfCapabilities.minImageCount;
     }
-    if (m_SwapChainDesc.BufferCount > surfCapabilities.maxImageCount)
+    if (surfCapabilities.maxImageCount != 0 && m_SwapChainDesc.BufferCount > surfCapabilities.maxImageCount)
     {
         LOG_INFO_MESSAGE("Requested back buffer count (", m_SwapChainDesc.BufferCount, ") is greater than the maximal image count supported for this surface (", surfCapabilities.maxImageCount, "). Resetting to ", surfCapabilities.maxImageCount);
         m_SwapChainDesc.BufferCount = surfCapabilities.maxImageCount;
@@ -237,7 +233,7 @@ SwapChainVkImpl::SwapChainVkImpl(IReferenceCounters *pRefCounters,
     swapchain_ci.imageArrayLayers = 1;
     swapchain_ci.presentMode = swapchainPresentMode;
     swapchain_ci.oldSwapchain = VK_NULL_HANDLE;
-    swapchain_ci.clipped = true;
+    swapchain_ci.clipped = VK_TRUE;
     swapchain_ci.imageColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
     swapchain_ci.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
     swapchain_ci.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -320,57 +316,11 @@ void SwapChainVkImpl::InitBuffersAndViews()
         RefCntAutoPtr<TextureVkImpl> pBackBufferTex;
         ValidatedCast<RenderDeviceVkImpl>(m_pRenderDevice.RawPtr())->CreateTexture(BackBufferDesc, swapchainImages[i], &pBackBufferTex);
         
-        //UNSUPPORTED("TODO: move all this code to Texture creation");
-
-        VkImageViewCreateInfo color_image_view = {};
-        color_image_view.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        color_image_view.pNext = NULL;
-        color_image_view.flags = 0;
-        color_image_view.image = swapchainImages[i];
-        color_image_view.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        color_image_view.format = m_VkColorFormat;
-        color_image_view.components.r = VK_COMPONENT_SWIZZLE_R;
-        color_image_view.components.g = VK_COMPONENT_SWIZZLE_G;
-        color_image_view.components.b = VK_COMPONENT_SWIZZLE_B;
-        color_image_view.components.a = VK_COMPONENT_SWIZZLE_A;
-        color_image_view.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        color_image_view.subresourceRange.baseMipLevel = 0;
-        color_image_view.subresourceRange.levelCount = 1;
-        color_image_view.subresourceRange.baseArrayLayer = 0;
-        color_image_view.subresourceRange.layerCount = 1;
-
-        VkImageView vkImgView = VK_NULL_HANDLE;
-        err = vkCreateImageView(LogicalVkDevice, &color_image_view, NULL, &vkImgView);
-        CHECK_VK_ERROR_AND_THROW(err, "Failed to create view for a swap chain image");
-
         TextureViewDesc RTVDesc;
         RTVDesc.ViewType = TEXTURE_VIEW_RENDER_TARGET;
         RefCntAutoPtr<ITextureView> pRTV;
         pBackBufferTex->CreateView(RTVDesc, &pRTV);
         m_pBackBufferRTV[i] = RefCntAutoPtr<ITextureViewVk>(pRTV, IID_TextureViewVk);
-    }
-
-#if 0
-    /* VULKAN_KEY_END */
-
-    /* Clean Up */
-    for (uint32_t i = 0; i < info.swapchainImageCount; i++) {
-        vkDestroyImageView(LogicalVkDevice, info.buffers[i].view, NULL);
-    }
-#endif
-
-#if 0
-    
-    for(Uint32 backbuff = 0; backbuff < m_SwapChainDesc.BufferCount; ++backbuff)
-    {
-		CComPtr<IVkResource> pBackBuffer;
-        auto hr = m_pSwapChain->GetBuffer(backbuff, __uuidof(pBackBuffer), reinterpret_cast<void**>( static_cast<IVkResource**>(&pBackBuffer) ));
-        if(FAILED(hr))
-            LOG_ERROR_AND_THROW("Failed to get back buffer ", backbuff," from the swap chain");
-
-        hr = pBackBuffer->SetName(L"Main back buffer");
-        VERIFY_EXPR(SUCCEEDED(hr));
-
     }
 
     TextureDesc DepthBufferDesc;
@@ -390,7 +340,6 @@ void SwapChainVkImpl::InitBuffersAndViews()
     m_pRenderDevice->CreateTexture(DepthBufferDesc, TextureData(), static_cast<ITexture**>(&pDepthBufferTex) );
     auto pDSV = pDepthBufferTex->GetDefaultView(TEXTURE_VIEW_DEPTH_STENCIL);
     m_pDepthBufferDSV = RefCntAutoPtr<ITextureViewVk>(pDSV, IID_TextureViewVk);
-#endif
 }
 
 IMPLEMENT_QUERY_INTERFACE( SwapChainVkImpl, IID_SwapChainVk, TSwapChainBase )

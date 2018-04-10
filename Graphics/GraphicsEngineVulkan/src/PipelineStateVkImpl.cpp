@@ -26,7 +26,6 @@
 #include "ShaderVkImpl.h"
 #include "VulkanTypeConversions.h"
 #include "RenderDeviceVkImpl.h"
-//#include "DXGITypeConversions.h"
 #include "ShaderResourceBindingVkImpl.h"
 #include "CommandContext.h"
 #include "EngineMemory.h"

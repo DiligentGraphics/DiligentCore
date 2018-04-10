@@ -65,7 +65,7 @@ namespace VulkanUtilities
         // All commands that are allowed on a queue that supports transfer operations are also allowed on 
         // a queue that supports either graphics or compute operations. Thus, if the capabilities of a queue 
         // family include VK_QUEUE_GRAPHICS_BIT or VK_QUEUE_COMPUTE_BIT, then reporting the VK_QUEUE_TRANSFER_BIT 
-        // capability separately for that queue family is optional.
+        // capability separately for that queue family is optional (4.1).
         VkQueueFlags QueueFlagsOpt = QueueFlags;
         if (QueueFlags & (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT))
         {
@@ -112,10 +112,10 @@ namespace VulkanUtilities
                 const auto &Props = m_QueueFamilyProperties[FamilyInd];
                 // Queues supporting graphics and/or compute operations must report (1,1,1) 
                 // in minImageTransferGranularity, meaning that there are no additional restrictions 
-                // on the granularity of image transfer operations for these queues. 
-                VERIFY_EXPR(Props.minImageTransferGranularity.width == 1 &&
+                // on the granularity of image transfer operations for these queues (4.1).
+                VERIFY_EXPR(Props.minImageTransferGranularity.width  == 1 &&
                             Props.minImageTransferGranularity.height == 1 &&
-                            Props.minImageTransferGranularity.depth == 1);
+                            Props.minImageTransferGranularity.depth  == 1);
             }
         }
         else

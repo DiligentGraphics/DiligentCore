@@ -70,7 +70,7 @@ private:
     VkFormat m_VkColorFormat = VK_FORMAT_UNDEFINED;
 
     std::vector< RefCntAutoPtr<ITextureViewVk>, STDAllocatorRawMem<RefCntAutoPtr<ITextureViewVk>> > m_pBackBufferRTV;
-    //RefCntAutoPtr<ITextureViewVk> m_pDepthBufferDSV;
+    RefCntAutoPtr<ITextureViewVk> m_pDepthBufferDSV;
 
 };
 
