@@ -22,6 +22,7 @@
 */
 
 #include <limits>
+#include <cstring>
 #include "VulkanErrors.h"
 #include "VulkanUtilities/VulkanPhysicalDevice.h"
 

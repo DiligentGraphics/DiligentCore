@@ -22,6 +22,7 @@
 */
 
 #include <vector>
+#include <cstring>
 #include "VulkanErrors.h"
 #include "VulkanUtilities/VulkanInstance.h"
 #include "VulkanUtilities/VulkanDebug.h"

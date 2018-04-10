@@ -86,10 +86,10 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters *pRefCounters, Ren
     m_pDefaultShaderResBinding(nullptr, STDDeleter<ShaderResourceBindingVkImpl, FixedBlockMemoryAllocator>(pDeviceVk->GetSRBAllocator()) )
 */
 {
-#if 0
-    auto pVkDevice = pDeviceVk->GetVkDevice();
+    //auto pVkDevice = pDeviceVk->GetVkDevice();
     if (PipelineDesc.IsComputePipeline)
     {
+#if 0
         auto &ComputePipeline = PipelineDesc.ComputePipeline;
 
         if( ComputePipeline.pCS == nullptr )
@@ -120,10 +120,12 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters *pRefCounters, Ren
         HRESULT hr = pVkDevice->CreateComputePipelineState(&VkPSODesc, __uuidof(IVkPipelineState), reinterpret_cast<void**>( static_cast<IVkPipelineState**>(&m_pVkPSO)) );
         if(FAILED(hr))
             LOG_ERROR_AND_THROW("Failed to create pipeline state");
+#endif
     }
     else
     {
         const auto& GraphicsPipeline = PipelineDesc.GraphicsPipeline;
+#if 0
         Vk_GRAPHICS_PIPELINE_STATE_DESC VkPSODesc = {};
 
         m_RootSig.AllocateStaticSamplers( GetShaders(), GetNumShaders() );
@@ -204,8 +206,9 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters *pRefCounters, Ren
         HRESULT hr = pVkDevice->CreateGraphicsPipelineState(&VkPSODesc, __uuidof(IVkPipelineState), reinterpret_cast<void**>( static_cast<IVkPipelineState**>(&m_pVkPSO)) );
         if(FAILED(hr))
             LOG_ERROR_AND_THROW("Failed to create pipeline state");
+#endif
     }
-
+#if 0
     if (*m_Desc.Name != 0)
     {
         m_pVkPSO->SetName(WidenString(m_Desc.Name).c_str());

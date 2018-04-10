@@ -104,6 +104,7 @@ SwapChainVkImpl::SwapChainVkImpl(IReferenceCounters *pRefCounters,
     CHECK_VK_ERROR_AND_THROW(err, "Failed to query supported format properties");
     VERIFY_EXPR(formatCount == SupportedFormats.size());
     m_VkColorFormat = TexFormatToVkFormat(m_SwapChainDesc.ColorBufferFormat);
+    VkColorSpaceKHR ColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
     if (formatCount == 1 && SupportedFormats[0].format == VK_FORMAT_UNDEFINED) 
     {
         // If the format list includes just one entry of VK_FORMAT_UNDEFINED,
@@ -114,8 +115,16 @@ SwapChainVkImpl::SwapChainVkImpl(IReferenceCounters *pRefCounters,
     }
     else 
     {
-        bool FmtFound = std::find_if(SupportedFormats.begin(), SupportedFormats.end(), 
-            [&](const VkSurfaceFormatKHR &SrfFmt){return SrfFmt.format == m_VkColorFormat;}) != SupportedFormats.end();
+        bool FmtFound = false;
+        for(const auto& SrfFmt : SupportedFormats)
+        {
+            if(SrfFmt.format == m_VkColorFormat)
+            {
+                FmtFound = true;
+                ColorSpace = SrfFmt.colorSpace;
+                break;
+            }
+        }
         if(!FmtFound)
         {
             VkFormat VkReplacementColorFormat = VK_FORMAT_UNDEFINED;
@@ -128,8 +137,17 @@ SwapChainVkImpl::SwapChainVkImpl(IReferenceCounters *pRefCounters,
                 default: VkReplacementColorFormat = VK_FORMAT_UNDEFINED;
             }
 
-            bool ReplacementFmtFound = std::find_if(SupportedFormats.begin(), SupportedFormats.end(),
-                [&](const VkSurfaceFormatKHR &SrfFmt) {return SrfFmt.format == VkReplacementColorFormat; }) != SupportedFormats.end();
+            bool ReplacementFmtFound = false;
+            for (const auto& SrfFmt : SupportedFormats)
+            {
+                if (SrfFmt.format == VkReplacementColorFormat)
+                {
+                    ReplacementFmtFound = true;
+                    ColorSpace = SrfFmt.colorSpace;
+                    break;
+                }
+            }
+
             if(ReplacementFmtFound)
             {
                 m_VkColorFormat = VkReplacementColorFormat;
@@ -234,7 +252,7 @@ SwapChainVkImpl::SwapChainVkImpl(IReferenceCounters *pRefCounters,
     swapchain_ci.presentMode = swapchainPresentMode;
     swapchain_ci.oldSwapchain = VK_NULL_HANDLE;
     swapchain_ci.clipped = VK_TRUE;
-    swapchain_ci.imageColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
+    swapchain_ci.imageColorSpace = ColorSpace;
     swapchain_ci.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
     swapchain_ci.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
     swapchain_ci.queueFamilyIndexCount = 0;
