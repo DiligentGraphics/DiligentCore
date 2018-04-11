@@ -95,4 +95,5 @@ namespace VulkanUtilities
     using ImageViewWrapper    = VulkanObjectWrapper<VkImageView>;
     using DeviceMemoryWrapper = VulkanObjectWrapper<VkDeviceMemory>;
     using FenceWrapper        = VulkanObjectWrapper<VkFence>;
+    using RenderPassWrapper   = VulkanObjectWrapper<VkRenderPass>;
 }

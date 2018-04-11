@@ -169,6 +169,21 @@ namespace VulkanUtilities
         return FenceWrapper{ GetSharedPtr(), std::move(vkFence) };
     }
 
+    RenderPassWrapper VulkanLogicalDevice::CreateRenderPass(const VkRenderPassCreateInfo  &RenderPassCI, const char *DebugName)const
+    {
+        if (DebugName == nullptr)
+            DebugName = "";
+
+        VkRenderPass vkRenderPass = VK_NULL_HANDLE;
+        auto err = vkCreateRenderPass(m_VkDevice, &RenderPassCI, m_VkAllocator, &vkRenderPass);
+        CHECK_VK_ERROR_AND_THROW(err, "Failed to create Render Pass '", DebugName, '\'');
+
+        if (DebugName != nullptr && *DebugName != 0)
+            VulkanUtilities::SetRenderPassName(m_VkDevice, vkRenderPass, DebugName);
+
+        return RenderPassWrapper{ GetSharedPtr(), std::move(vkRenderPass) };
+    }
+
     DeviceMemoryWrapper VulkanLogicalDevice::AllocateDeviceMemory(const VkMemoryAllocateInfo &AllocInfo, 
                                                                   const char *DebugName)const
     {
@@ -236,6 +251,12 @@ namespace VulkanUtilities
     {
         vkDestroyFence(m_VkDevice, Fence.m_VkObject, m_VkAllocator);
         Fence.m_VkObject = VK_NULL_HANDLE;
+    }
+
+    void VulkanLogicalDevice::ReleaseVulkanObject(RenderPassWrapper&& RenderPass)const
+    {
+        vkDestroyRenderPass(m_VkDevice, RenderPass.m_VkObject, m_VkAllocator);
+        RenderPass.m_VkObject = VK_NULL_HANDLE;
     }
 
     void VulkanLogicalDevice::ReleaseVulkanObject(DeviceMemoryWrapper&& Memory)const

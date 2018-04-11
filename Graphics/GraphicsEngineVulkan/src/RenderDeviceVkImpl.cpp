@@ -410,6 +410,7 @@ template void RenderDeviceVkImpl::SafeReleaseVkObject<VkBufferView>(VulkanUtilit
 template void RenderDeviceVkImpl::SafeReleaseVkObject<VkImage>(VulkanUtilities::ImageWrapper &&Object);
 template void RenderDeviceVkImpl::SafeReleaseVkObject<VkImageView>(VulkanUtilities::ImageViewWrapper &&Object);
 template void RenderDeviceVkImpl::SafeReleaseVkObject<VkDeviceMemory>(VulkanUtilities::DeviceMemoryWrapper &&Object);
+template void RenderDeviceVkImpl::SafeReleaseVkObject<VkRenderPass>(VulkanUtilities::RenderPassWrapper &&Object);
 
 
 void RenderDeviceVkImpl::DiscardStaleVkObjects(Uint64 CmdListNumber, Uint64 FenceValue)

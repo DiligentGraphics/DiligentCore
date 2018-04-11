@@ -32,6 +32,7 @@
 #include "RootSignature.h"
 #include "ShaderResourceLayoutVk.h"
 #include "AdaptiveFixedBlockAllocator.h"
+#include "VulkanUtilities/VulkanObjectWrappers.h"
 
 /// Namespace for the Direct3D11 implementation of the graphics engine
 namespace Diligent
@@ -82,6 +83,8 @@ public:
 
 private:
 
+    void CreateRenderPass(const VulkanUtilities::VulkanLogicalDevice &LogicalDevice);
+
 #if 0
     void ParseShaderResourceLayout(IShader *pShader);
 
@@ -123,6 +126,8 @@ private:
     // Default SRB must be defined after allocators
     std::unique_ptr<class ShaderResourceBindingVkImpl, STDDeleter<ShaderResourceBindingVkImpl, FixedBlockMemoryAllocator> > m_pDefaultShaderResBinding;
 #endif
+    VulkanUtilities::RenderPassWrapper m_RenderPass;
+
 };
 
 }

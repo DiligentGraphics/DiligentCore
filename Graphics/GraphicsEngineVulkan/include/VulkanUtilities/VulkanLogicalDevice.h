@@ -68,6 +68,7 @@ namespace VulkanUtilities
         ImageWrapper        CreateImage         (const VkImageCreateInfo       &ImageCI,     const char *DebugName = "")const;
         ImageViewWrapper    CreateImageView     (const VkImageViewCreateInfo   &ImageViewCI, const char *DebugName = "")const;
         FenceWrapper        CreateFence         (const VkFenceCreateInfo       &FenceCI,     const char *DebugName = "")const;
+        RenderPassWrapper   CreateRenderPass    (const VkRenderPassCreateInfo  &RenderPassCI,const char *DebugName = "")const;
         DeviceMemoryWrapper AllocateDeviceMemory(const VkMemoryAllocateInfo    &AllocInfo,   const char *DebugName = "")const;
         
         VkCommandBuffer     AllocateVkCommandBuffer(const VkCommandBufferAllocateInfo &AllocInfo, const char *DebugName = "")const;
@@ -78,6 +79,7 @@ namespace VulkanUtilities
         void ReleaseVulkanObject(ImageWrapper&&        Image)const;
         void ReleaseVulkanObject(ImageViewWrapper&&    ImageView)const;
         void ReleaseVulkanObject(FenceWrapper&&        Fence)const;
+        void ReleaseVulkanObject(RenderPassWrapper&&   RenderPass)const;
         void ReleaseVulkanObject(DeviceMemoryWrapper&& Memory)const;
 
         VkMemoryRequirements GetBufferMemoryRequirements(VkBuffer vkBuffer)const;
