@@ -36,15 +36,17 @@ TEXTURE_FORMAT VkFormatToTexFormat(VkFormat VkFmt);
 
 VkFormat TypeToVkFormat(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIsNormalized);
 
+VkPipelineRasterizationStateCreateInfo RasterizerStateDesc_To_VkRasterizationStateCI(const RasterizerStateDesc &RasterizerDesc);
+VkPipelineDepthStencilStateCreateInfo  DepthStencilStateDesc_To_VkDepthStencilStateCI(const DepthStencilStateDesc &DepthStencilDesc);
+VkPipelineColorBlendStateCreateInfo BlendStateDesc_To_VkBlendStateCI(const BlendStateDesc &BSDesc);
+
+
 #if 0
 D3D12_COMPARISON_FUNC ComparisonFuncToD3D12ComparisonFunc(COMPARISON_FUNCTION Func);
 D3D12_FILTER FilterTypeToD3D12Filter(FILTER_TYPE MinFilter, FILTER_TYPE MagFilter, FILTER_TYPE MipFilter);
 D3D12_TEXTURE_ADDRESS_MODE TexAddressModeToD3D12AddressMode(TEXTURE_ADDRESS_MODE Mode);
 D3D12_PRIMITIVE_TOPOLOGY TopologyToD3D12Topology(PRIMITIVE_TOPOLOGY Topology);
 
-void DepthStencilStateDesc_To_D3D12_DEPTH_STENCIL_DESC(const DepthStencilStateDesc &DepthStencilDesc, D3D12_DEPTH_STENCIL_DESC &d3d12DSSDesc);
-void RasterizerStateDesc_To_D3D12_RASTERIZER_DESC(const RasterizerStateDesc &RasterizerDesc, D3D12_RASTERIZER_DESC &d3d11RSDesc);
-void BlendStateDesc_To_D3D12_BLEND_DESC(const BlendStateDesc &BSDesc, D3D12_BLEND_DESC &d3d12BlendDesc);
 
 void LayoutElements_To_D3D12_INPUT_ELEMENT_DESCs(const std::vector<LayoutElement, STDAllocatorRawMem<LayoutElement>> &LayoutElements, 
                                                  std::vector<D3D12_INPUT_ELEMENT_DESC, STDAllocatorRawMem<D3D12_INPUT_ELEMENT_DESC> > &d3d12InputElements);

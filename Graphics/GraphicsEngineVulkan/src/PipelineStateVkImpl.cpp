@@ -211,7 +211,38 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters *pRefCounters, Ren
     }
     else
     {
+        auto &GraphicsPipeline = PipelineDesc.GraphicsPipeline;
+
         CreateRenderPass(LogicalDevice);
+        
+        VkGraphicsPipelineCreateInfo PipelineCI = {};
+        PipelineCI.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+
+        PipelineCI.pNext = nullptr;
+        PipelineCI.flags;
+        PipelineCI.stageCount;
+        PipelineCI.pStages;
+        PipelineCI.pVertexInputState;
+        PipelineCI.pInputAssemblyState;
+        PipelineCI.pTessellationState;
+        PipelineCI.pViewportState;
+        VkPipelineRasterizationStateCreateInfo RasterizerStateCI = 
+            RasterizerStateDesc_To_VkRasterizationStateCI(GraphicsPipeline.RasterizerDesc);
+        PipelineCI.pRasterizationState = &RasterizerStateCI;
+        PipelineCI.pMultisampleState;
+        VkPipelineDepthStencilStateCreateInfo DepthStencilStateCI = 
+            DepthStencilStateDesc_To_VkDepthStencilStateCI(GraphicsPipeline.DepthStencilDesc);
+        PipelineCI.pDepthStencilState = &DepthStencilStateCI;
+        VkPipelineColorBlendStateCreateInfo BlendStateCI = 
+            BlendStateDesc_To_VkBlendStateCI(GraphicsPipeline.BlendDesc);
+        PipelineCI.pColorBlendState;
+        PipelineCI.pDynamicState;
+        PipelineCI.layout;
+        PipelineCI.renderPass = m_RenderPass;
+        PipelineCI.subpass = 0;
+        PipelineCI.basePipelineHandle;
+        PipelineCI.basePipelineIndex;
+
 
 #if 0
         Vk_GRAPHICS_PIPELINE_STATE_DESC VkPSODesc = {};

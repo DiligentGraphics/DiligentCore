@@ -613,6 +613,150 @@ VkFormat TypeToVkFormat(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIsNormal
     }
 }
 
+VkPolygonMode FillModeToVkPolygonMode(FILL_MODE FillMode)
+{
+    switch(FillMode)
+    {
+        case FILL_MODE_UNDEFINED: 
+            UNEXPECTED("Undefined fill mode"); 
+            return VK_POLYGON_MODE_FILL;
+
+        case FILL_MODE_SOLID:     return VK_POLYGON_MODE_FILL;
+        case FILL_MODE_WIREFRAME: return VK_POLYGON_MODE_LINE;
+
+        default:
+            UNEXPECTED("Unexpected fill mode");
+            return VK_POLYGON_MODE_FILL;
+    }
+}
+
+VkCullModeFlagBits CullModeToVkCullMode(CULL_MODE CullMode)
+{
+    switch(CullMode)
+    {
+        case CULL_MODE_UNDEFINED:
+            UNEXPECTED("Undefined cull mode");
+            return VK_CULL_MODE_NONE;
+
+        case CULL_MODE_NONE:  return VK_CULL_MODE_NONE;
+        case CULL_MODE_FRONT: return VK_CULL_MODE_FRONT_BIT;
+        case CULL_MODE_BACK:  return VK_CULL_MODE_BACK_BIT;
+
+        default:
+            UNEXPECTED("Unexpected cull mode");
+            return VK_CULL_MODE_NONE;
+    }
+}
+
+VkPipelineRasterizationStateCreateInfo RasterizerStateDesc_To_VkRasterizationStateCI(const RasterizerStateDesc &RasterizerDesc)
+{
+    VkPipelineRasterizationStateCreateInfo RSStateCI = {};
+    RSStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    RSStateCI.pNext = nullptr;
+    RSStateCI.flags = 0; // Reserved for future use.
+    RSStateCI.depthClampEnable = RasterizerDesc.DepthClipEnable ? VK_FALSE : VK_TRUE; // whether to clamp the fragment’s depth 
+                                                // values instead of clipping primitives to the z planes of the frustum.
+                                                // This value is the opposite of clip enable
+    RSStateCI.rasterizerDiscardEnable = VK_FALSE; // Whether primitives are discarded immediately before the rasterization stage.
+    RSStateCI.polygonMode = FillModeToVkPolygonMode(RasterizerDesc.FillMode);
+    RSStateCI.cullMode = CullModeToVkCullMode(RasterizerDesc.CullMode);
+    RSStateCI.frontFace = RasterizerDesc.FrontCounterClockwise ? VK_FRONT_FACE_COUNTER_CLOCKWISE : VK_FRONT_FACE_CLOCKWISE;
+    RSStateCI.depthBiasEnable = (RasterizerDesc.DepthBias != 0 || RasterizerDesc.SlopeScaledDepthBias != 0.f) ? VK_TRUE : VK_FALSE;
+    RSStateCI.depthBiasConstantFactor = static_cast<float>(RasterizerDesc.DepthBias); // a scalar factor controlling the constant depth value added to each fragment.
+    RSStateCI.depthBiasClamp = RasterizerDesc.DepthBiasClamp; // maximum (or minimum) depth bias of a fragment.
+    RSStateCI.depthBiasSlopeFactor = RasterizerDesc.SlopeScaledDepthBias; //  a scalar factor applied to a fragment’s slope in depth bias calculations.
+    RSStateCI.lineWidth = 1.f;
+
+    return RSStateCI;
+}
+
+VkCompareOp ComparisonFuncToVkCompareOp(COMPARISON_FUNCTION CmpFunc)
+{
+    switch(CmpFunc)
+    {
+        case COMPARISON_FUNC_UNKNOWN: 
+            UNEXPECTED("Comparison function is not specified" ); 
+            return VK_COMPARE_OP_ALWAYS;
+
+        case COMPARISON_FUNC_NEVER:         return VK_COMPARE_OP_NEVER;
+	    case COMPARISON_FUNC_LESS:          return VK_COMPARE_OP_LESS;
+	    case COMPARISON_FUNC_EQUAL:         return VK_COMPARE_OP_EQUAL;
+	    case COMPARISON_FUNC_LESS_EQUAL:    return VK_COMPARE_OP_LESS_OR_EQUAL;
+	    case COMPARISON_FUNC_GREATER:       return VK_COMPARE_OP_GREATER;
+	    case COMPARISON_FUNC_NOT_EQUAL:     return VK_COMPARE_OP_NOT_EQUAL;
+	    case COMPARISON_FUNC_GREATER_EQUAL: return VK_COMPARE_OP_GREATER_OR_EQUAL;
+	    case COMPARISON_FUNC_ALWAYS:        return VK_COMPARE_OP_ALWAYS;
+
+        default: 
+            UNEXPECTED("Unknown comparison function" ); 
+            return VK_COMPARE_OP_ALWAYS;
+    }
+}
+
+VkStencilOp StencilOpToVkStencilOp(STENCIL_OP StencilOp)
+{
+    switch(StencilOp)
+    {
+        case STENCIL_OP_UNDEFINED:
+            UNEXPECTED("Undefined stencil operation");
+            return VK_STENCIL_OP_KEEP;
+
+        case STENCIL_OP_KEEP:       return VK_STENCIL_OP_KEEP;
+        case STENCIL_OP_ZERO:       return VK_STENCIL_OP_ZERO;
+        case STENCIL_OP_REPLACE:    return VK_STENCIL_OP_REPLACE;
+        case STENCIL_OP_INCR_SAT:   return VK_STENCIL_OP_INCREMENT_AND_CLAMP;
+        case STENCIL_OP_DECR_SAT:   return VK_STENCIL_OP_DECREMENT_AND_CLAMP;
+        case STENCIL_OP_INVERT:     return VK_STENCIL_OP_INVERT;
+        case STENCIL_OP_INCR_WRAP:  return VK_STENCIL_OP_INCREMENT_AND_WRAP;
+        case STENCIL_OP_DECR_WRAP:  return VK_STENCIL_OP_DECREMENT_AND_WRAP;
+
+        default:
+            UNEXPECTED("Unknown stencil operation");
+            return VK_STENCIL_OP_KEEP;
+    }
+}
+
+VkStencilOpState StencilOpDescToVkStencilOpState(const StencilOpDesc& desc, Uint8 StencilReadMask, Uint8 StencilWriteMask)
+{
+    VkStencilOpState StencilState = {};
+    StencilState.failOp = StencilOpToVkStencilOp(desc.StencilFailOp);
+    StencilState.passOp = StencilOpToVkStencilOp(desc.StencilPassOp);
+    StencilState.depthFailOp = StencilOpToVkStencilOp(desc.StencilDepthFailOp);
+    StencilState.compareOp = ComparisonFuncToVkCompareOp(desc.StencilFunc);
+    StencilState.compareMask = StencilReadMask;
+    StencilState.writeMask = StencilWriteMask;
+    StencilState.reference = 0;
+
+    return StencilState;
+}
+
+
+VkPipelineDepthStencilStateCreateInfo  DepthStencilStateDesc_To_VkDepthStencilStateCI(const DepthStencilStateDesc &DepthStencilDesc)
+{
+    VkPipelineDepthStencilStateCreateInfo DSStateCI = {};
+    DSStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+    DSStateCI.pNext = nullptr;
+    DSStateCI.flags = 0; // reserved for future use
+    DSStateCI.depthTestEnable = DepthStencilDesc.DepthEnable ? VK_TRUE : VK_FALSE;
+    DSStateCI.depthWriteEnable = DepthStencilDesc.DepthWriteEnable ? VK_TRUE : VK_FALSE;
+    DSStateCI.depthCompareOp = ComparisonFuncToVkCompareOp(DepthStencilDesc.DepthFunc);
+    DSStateCI.depthBoundsTestEnable = VK_FALSE;
+    DSStateCI.stencilTestEnable = DepthStencilDesc.StencilEnable;
+    DSStateCI.front = StencilOpDescToVkStencilOpState(DepthStencilDesc.FrontFace, DepthStencilDesc.StencilReadMask, DepthStencilDesc.StencilWriteMask);
+    DSStateCI.back = StencilOpDescToVkStencilOpState(DepthStencilDesc.BackFace, DepthStencilDesc.StencilReadMask, DepthStencilDesc.StencilWriteMask);
+    DSStateCI.minDepthBounds = -FLT_MAX;
+    DSStateCI.maxDepthBounds = +FLT_MAX;
+
+    return DSStateCI;
+}
+
+VkPipelineColorBlendStateCreateInfo BlendStateDesc_To_VkBlendStateCI(const BlendStateDesc &BSDesc)
+{
+    VkPipelineColorBlendStateCreateInfo BlendStateCI = {};
+    return BlendStateCI;
+}
+
+
 #if 0
 D3D12_COMPARISON_FUNC ComparisonFuncToD3D12ComparisonFunc(COMPARISON_FUNCTION Func)
 {
