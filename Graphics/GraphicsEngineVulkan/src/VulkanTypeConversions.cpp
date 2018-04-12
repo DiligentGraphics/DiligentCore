@@ -23,6 +23,7 @@
 
 #include "pch.h"
 #include <unordered_map>
+#include <array>
 
 #include "VulkanTypeConversions.h"
 #include "VulkanTypeDefinitions.h"
@@ -679,13 +680,13 @@ VkCompareOp ComparisonFuncToVkCompareOp(COMPARISON_FUNCTION CmpFunc)
             return VK_COMPARE_OP_ALWAYS;
 
         case COMPARISON_FUNC_NEVER:         return VK_COMPARE_OP_NEVER;
-	    case COMPARISON_FUNC_LESS:          return VK_COMPARE_OP_LESS;
-	    case COMPARISON_FUNC_EQUAL:         return VK_COMPARE_OP_EQUAL;
-	    case COMPARISON_FUNC_LESS_EQUAL:    return VK_COMPARE_OP_LESS_OR_EQUAL;
-	    case COMPARISON_FUNC_GREATER:       return VK_COMPARE_OP_GREATER;
-	    case COMPARISON_FUNC_NOT_EQUAL:     return VK_COMPARE_OP_NOT_EQUAL;
-	    case COMPARISON_FUNC_GREATER_EQUAL: return VK_COMPARE_OP_GREATER_OR_EQUAL;
-	    case COMPARISON_FUNC_ALWAYS:        return VK_COMPARE_OP_ALWAYS;
+        case COMPARISON_FUNC_LESS:          return VK_COMPARE_OP_LESS;
+        case COMPARISON_FUNC_EQUAL:         return VK_COMPARE_OP_EQUAL;
+        case COMPARISON_FUNC_LESS_EQUAL:    return VK_COMPARE_OP_LESS_OR_EQUAL;
+        case COMPARISON_FUNC_GREATER:       return VK_COMPARE_OP_GREATER;
+        case COMPARISON_FUNC_NOT_EQUAL:     return VK_COMPARE_OP_NOT_EQUAL;
+        case COMPARISON_FUNC_GREATER_EQUAL: return VK_COMPARE_OP_GREATER_OR_EQUAL;
+        case COMPARISON_FUNC_ALWAYS:        return VK_COMPARE_OP_ALWAYS;
 
         default: 
             UNEXPECTED("Unknown comparison function" ); 
@@ -750,10 +751,136 @@ VkPipelineDepthStencilStateCreateInfo  DepthStencilStateDesc_To_VkDepthStencilSt
     return DSStateCI;
 }
 
-VkPipelineColorBlendStateCreateInfo BlendStateDesc_To_VkBlendStateCI(const BlendStateDesc &BSDesc)
+class BlendFactorToVkBlendFactorMapper
 {
-    VkPipelineColorBlendStateCreateInfo BlendStateCI = {};
-    return BlendStateCI;
+public:
+    BlendFactorToVkBlendFactorMapper()
+    {
+        m_Map[BLEND_FACTOR_ZERO]            = VK_BLEND_FACTOR_ZERO;
+        m_Map[BLEND_FACTOR_ONE]             = VK_BLEND_FACTOR_ONE;
+        m_Map[BLEND_FACTOR_SRC_COLOR]       = VK_BLEND_FACTOR_SRC_COLOR;
+        m_Map[BLEND_FACTOR_INV_SRC_COLOR]   = VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR;
+        m_Map[BLEND_FACTOR_SRC_ALPHA]       = VK_BLEND_FACTOR_SRC_ALPHA;
+        m_Map[BLEND_FACTOR_INV_SRC_ALPHA]   = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+        m_Map[BLEND_FACTOR_DEST_ALPHA]      = VK_BLEND_FACTOR_DST_ALPHA;
+        m_Map[BLEND_FACTOR_INV_DEST_ALPHA]  = VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
+        m_Map[BLEND_FACTOR_DEST_COLOR]      = VK_BLEND_FACTOR_DST_COLOR;
+        m_Map[BLEND_FACTOR_INV_DEST_COLOR]  = VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR;
+        m_Map[BLEND_FACTOR_SRC_ALPHA_SAT]   = VK_BLEND_FACTOR_SRC_ALPHA_SATURATE;
+        m_Map[BLEND_FACTOR_BLEND_FACTOR]    = VK_BLEND_FACTOR_CONSTANT_COLOR;
+        m_Map[BLEND_FACTOR_INV_BLEND_FACTOR] = VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_COLOR;
+        m_Map[BLEND_FACTOR_SRC1_COLOR]      = VK_BLEND_FACTOR_SRC1_COLOR;
+        m_Map[BLEND_FACTOR_INV_SRC1_COLOR]  = VK_BLEND_FACTOR_ONE_MINUS_SRC1_COLOR;
+        m_Map[BLEND_FACTOR_SRC1_ALPHA]      = VK_BLEND_FACTOR_SRC1_ALPHA;
+        m_Map[BLEND_FACTOR_INV_SRC1_ALPHA]  = VK_BLEND_FACTOR_ONE_MINUS_SRC1_ALPHA;
+    }
+    
+    VkBlendFactor operator[](BLEND_FACTOR bf)const
+    {
+        VERIFY_EXPR(bf > BLEND_FACTOR_UNDEFINED && bf < BLEND_FACTOR_NUM_FACTORS);
+        return m_Map[static_cast<int>(bf)];
+    }
+
+private:
+    std::array<VkBlendFactor, BLEND_FACTOR_NUM_FACTORS> m_Map = {};
+};
+
+
+class LogicOperationToVkLogicOp
+{
+public:
+    LogicOperationToVkLogicOp()
+    {
+        m_Map[ LOGIC_OP_CLEAR		   ]  = VK_LOGIC_OP_CLEAR;
+        m_Map[ LOGIC_OP_SET			   ]  = VK_LOGIC_OP_SET;
+        m_Map[ LOGIC_OP_COPY		   ]  = VK_LOGIC_OP_COPY;
+        m_Map[ LOGIC_OP_COPY_INVERTED  ]  = VK_LOGIC_OP_COPY_INVERTED;
+        m_Map[ LOGIC_OP_NOOP		   ]  = VK_LOGIC_OP_NO_OP;
+        m_Map[ LOGIC_OP_INVERT		   ]  = VK_LOGIC_OP_INVERT;
+        m_Map[ LOGIC_OP_AND			   ]  = VK_LOGIC_OP_AND;
+        m_Map[ LOGIC_OP_NAND		   ]  = VK_LOGIC_OP_NAND;
+        m_Map[ LOGIC_OP_OR			   ]  = VK_LOGIC_OP_OR;
+        m_Map[ LOGIC_OP_NOR			   ]  = VK_LOGIC_OP_NOR;
+        m_Map[ LOGIC_OP_XOR			   ]  = VK_LOGIC_OP_XOR;
+        m_Map[ LOGIC_OP_EQUIV		   ]  = VK_LOGIC_OP_EQUIVALENT;
+        m_Map[ LOGIC_OP_AND_REVERSE	   ]  = VK_LOGIC_OP_AND_REVERSE;
+        m_Map[ LOGIC_OP_AND_INVERTED   ]  = VK_LOGIC_OP_AND_INVERTED;
+        m_Map[ LOGIC_OP_OR_REVERSE	   ]  = VK_LOGIC_OP_OR_REVERSE;
+        m_Map[ LOGIC_OP_OR_INVERTED	   ]  = VK_LOGIC_OP_OR_INVERTED;
+    }
+
+    VkLogicOp operator[](LOGIC_OPERATION op)const
+    {
+        VERIFY_EXPR(op >= LOGIC_OP_CLEAR && op < LOGIC_OP_NUM_OPERATIONS);
+        return m_Map[static_cast<int>(op)];
+    }
+
+private:
+    std::array<VkLogicOp, LOGIC_OP_NUM_OPERATIONS> m_Map = {};
+};
+
+class BlendOperationToVkBlendOp
+{
+public:
+    BlendOperationToVkBlendOp()
+    {
+        m_Map[ BLEND_OPERATION_ADD          ] = VK_BLEND_OP_ADD;
+        m_Map[ BLEND_OPERATION_SUBTRACT     ] = VK_BLEND_OP_SUBTRACT;
+        m_Map[ BLEND_OPERATION_REV_SUBTRACT ] = VK_BLEND_OP_REVERSE_SUBTRACT;
+        m_Map[ BLEND_OPERATION_MIN          ] = VK_BLEND_OP_MIN;
+        m_Map[ BLEND_OPERATION_MAX          ] = VK_BLEND_OP_MAX;
+    }
+
+    VkBlendOp operator[](BLEND_OPERATION op)const
+    {
+        VERIFY_EXPR(op > BLEND_OPERATION_UNDEFINED && op < BLEND_OPERATION_NUM_OPERATIONS);
+        return m_Map[static_cast<int>(op)];
+    }
+
+private:
+    std::array<VkBlendOp, BLEND_OPERATION_NUM_OPERATIONS> m_Map = {};
+};
+
+VkPipelineColorBlendAttachmentState RenderTargetBlendDescToVkColorBlendAttachmentState(const RenderTargetBlendDesc &RTBlendDesc)
+{
+    static const BlendFactorToVkBlendFactorMapper BFtoVKBF;
+    static const BlendOperationToVkBlendOp BOtoVKBO;
+    VkPipelineColorBlendAttachmentState AttachmentBlendState = {};
+    AttachmentBlendState.blendEnable         = RTBlendDesc.BlendEnable;
+    AttachmentBlendState.srcColorBlendFactor = BFtoVKBF[RTBlendDesc.SrcBlend];
+    AttachmentBlendState.dstColorBlendFactor = BFtoVKBF[RTBlendDesc.DestBlend];
+    AttachmentBlendState.colorBlendOp        = BOtoVKBO[RTBlendDesc.BlendOp];
+    AttachmentBlendState.srcAlphaBlendFactor = BFtoVKBF[RTBlendDesc.SrcBlendAlpha];
+    AttachmentBlendState.dstAlphaBlendFactor = BFtoVKBF[RTBlendDesc.DestBlendAlpha];
+    AttachmentBlendState.alphaBlendOp        = BOtoVKBO[RTBlendDesc.BlendOpAlpha];
+    AttachmentBlendState.colorWriteMask      = 
+        ((RTBlendDesc.RenderTargetWriteMask & COLOR_MASK_RED)   ? VK_COLOR_COMPONENT_R_BIT : 0) |
+        ((RTBlendDesc.RenderTargetWriteMask & COLOR_MASK_GREEN) ? VK_COLOR_COMPONENT_G_BIT : 0) |
+        ((RTBlendDesc.RenderTargetWriteMask & COLOR_MASK_BLUE)  ? VK_COLOR_COMPONENT_B_BIT : 0) |
+        ((RTBlendDesc.RenderTargetWriteMask & COLOR_MASK_ALPHA) ? VK_COLOR_COMPONENT_A_BIT : 0);
+
+    return AttachmentBlendState;
+}
+
+void BlendStateDesc_To_VkBlendStateCI(const BlendStateDesc &BSDesc, 
+                                      VkPipelineColorBlendStateCreateInfo &ColorBlendStateCI,
+                                      std::vector<VkPipelineColorBlendAttachmentState> &ColorBlendAttachments)
+{
+    static const LogicOperationToVkLogicOp LogicOpToVkLogicOp;
+    ColorBlendStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    ColorBlendStateCI.pNext = nullptr;
+    ColorBlendStateCI.flags = 0; // reserved for future use
+    ColorBlendStateCI.logicOpEnable = BSDesc.RenderTargets[0].LogicOperationEnable;
+    ColorBlendStateCI.logicOp = LogicOpToVkLogicOp[BSDesc.RenderTargets[0].LogicOp];
+    ColorBlendStateCI.blendConstants[0] = 0.f;
+    ColorBlendStateCI.blendConstants[1] = 0.f;
+    ColorBlendStateCI.blendConstants[2] = 0.f;
+    ColorBlendStateCI.blendConstants[3] = 0.f;
+    for(uint32_t attachment = 0; attachment < ColorBlendStateCI.attachmentCount; ++attachment)
+    {
+        const auto& RTBlendState = BSDesc.IndependentBlendEnable ? BSDesc.RenderTargets[attachment] : BSDesc.RenderTargets[0];
+        ColorBlendAttachments[attachment] = RenderTargetBlendDescToVkColorBlendAttachmentState(RTBlendState);
+    }
 }
 
 
@@ -803,22 +930,6 @@ D3D12_LOGIC_OP LogicOperationToD3D12LogicOp( LOGIC_OPERATION lo )
         // In a multithreaded environment, several threads can potentially enter
         // this block. This is not a problem since they will just initialize the 
         // memory with the same values more than once
-        D3D12LogicOp[ D3D12_LOGIC_OP_CLEAR		    ]  = D3D12_LOGIC_OP_CLEAR;
-        D3D12LogicOp[ D3D12_LOGIC_OP_SET			]  = D3D12_LOGIC_OP_SET;
-        D3D12LogicOp[ D3D12_LOGIC_OP_COPY			]  = D3D12_LOGIC_OP_COPY;
-        D3D12LogicOp[ D3D12_LOGIC_OP_COPY_INVERTED  ]  = D3D12_LOGIC_OP_COPY_INVERTED;
-        D3D12LogicOp[ D3D12_LOGIC_OP_NOOP			]  = D3D12_LOGIC_OP_NOOP;
-        D3D12LogicOp[ D3D12_LOGIC_OP_INVERT		    ]  = D3D12_LOGIC_OP_INVERT;
-        D3D12LogicOp[ D3D12_LOGIC_OP_AND			]  = D3D12_LOGIC_OP_AND;
-        D3D12LogicOp[ D3D12_LOGIC_OP_NAND			]  = D3D12_LOGIC_OP_NAND;
-        D3D12LogicOp[ D3D12_LOGIC_OP_OR			    ]  = D3D12_LOGIC_OP_OR;
-        D3D12LogicOp[ D3D12_LOGIC_OP_NOR			]  = D3D12_LOGIC_OP_NOR;
-        D3D12LogicOp[ D3D12_LOGIC_OP_XOR			]  = D3D12_LOGIC_OP_XOR;
-        D3D12LogicOp[ D3D12_LOGIC_OP_EQUIV		    ]  = D3D12_LOGIC_OP_EQUIV;
-        D3D12LogicOp[ D3D12_LOGIC_OP_AND_REVERSE	]  = D3D12_LOGIC_OP_AND_REVERSE;
-        D3D12LogicOp[ D3D12_LOGIC_OP_AND_INVERTED	]  = D3D12_LOGIC_OP_AND_INVERTED;
-        D3D12LogicOp[ D3D12_LOGIC_OP_OR_REVERSE	    ]  = D3D12_LOGIC_OP_OR_REVERSE;
-        D3D12LogicOp[ D3D12_LOGIC_OP_OR_INVERTED	]  = D3D12_LOGIC_OP_OR_INVERTED;
         
         bIsInit = true;
     }

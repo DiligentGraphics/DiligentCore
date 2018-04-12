@@ -38,7 +38,9 @@ VkFormat TypeToVkFormat(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIsNormal
 
 VkPipelineRasterizationStateCreateInfo RasterizerStateDesc_To_VkRasterizationStateCI(const RasterizerStateDesc &RasterizerDesc);
 VkPipelineDepthStencilStateCreateInfo  DepthStencilStateDesc_To_VkDepthStencilStateCI(const DepthStencilStateDesc &DepthStencilDesc);
-VkPipelineColorBlendStateCreateInfo BlendStateDesc_To_VkBlendStateCI(const BlendStateDesc &BSDesc);
+void BlendStateDesc_To_VkBlendStateCI(const BlendStateDesc &BSDesc, 
+                                      VkPipelineColorBlendStateCreateInfo &ColorBlendStateCI,
+                                      std::vector<VkPipelineColorBlendAttachmentState> &ColorBlendAttachments);
 
 
 #if 0
