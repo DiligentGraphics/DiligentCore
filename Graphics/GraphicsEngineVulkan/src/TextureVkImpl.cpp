@@ -544,7 +544,12 @@ VulkanUtilities::ImageViewWrapper TextureVkImpl::CreateImageView(TextureViewDesc
     {
         // When an imageView of a depth/stencil image is used as a depth/stencil framebuffer attachment, 
         // the aspectMask is ignored and both depth and stencil image subresources are used. (11.5)
-        ImageViewCI.subresourceRange.aspectMask = 0;
+        if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH)
+            ImageViewCI.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+        else if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
+            ImageViewCI.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+        else
+            UNEXPECTED("Unexpected component type for a depth-stencil view format");
     }
     else
     {

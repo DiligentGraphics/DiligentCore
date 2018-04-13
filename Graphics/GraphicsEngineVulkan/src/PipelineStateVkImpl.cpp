@@ -176,12 +176,37 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters *pRefCounters, Ren
 
     if (PipelineDesc.IsComputePipeline)
     {
-#if 0
         auto &ComputePipeline = PipelineDesc.ComputePipeline;
 
         if( ComputePipeline.pCS == nullptr )
             LOG_ERROR_AND_THROW("Compute shader is not set in the pipeline desc");
 
+        VkComputePipelineCreateInfo PipelineCI = {};
+        PipelineCI.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+        PipelineCI.pNext = nullptr;
+#ifdef _DEBUG
+        PipelineCI.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
+#endif  
+        PipelineCI.layout;
+        PipelineCI.basePipelineHandle = VK_NULL_HANDLE; // a pipeline to derive from
+        PipelineCI.basePipelineIndex = 0; // an index into the pCreateInfos parameter to use as a pipeline to derive from
+
+        auto &CSStage = PipelineCI.stage;
+        CSStage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        CSStage.pNext = nullptr;
+        CSStage.flags = 0; // reserved for future use
+        CSStage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+        CSStage.module;
+        CSStage.pName;
+        CSStage.pSpecializationInfo = nullptr;
+
+        bool IsCompleteDesc = false;
+        if(IsCompleteDesc)
+        {
+            LogicalDevice.CreateComputePipeline(PipelineCI, VK_NULL_HANDLE, m_Desc.Name);
+        }
+
+#if 0
         Vk_COMPUTE_PIPELINE_STATE_DESC VkPSODesc = {};
         VkPSODesc.pRootSignature = nullptr;
         
@@ -215,22 +240,69 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters *pRefCounters, Ren
 
         CreateRenderPass(LogicalDevice);
         
+
         VkGraphicsPipelineCreateInfo PipelineCI = {};
         PipelineCI.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-
         PipelineCI.pNext = nullptr;
-        PipelineCI.flags;
-        PipelineCI.stageCount;
-        PipelineCI.pStages;
+#ifdef _DEBUG
+        PipelineCI.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
+#endif  
+        PipelineCI.stageCount = (GraphicsPipeline.pVS != nullptr ? 1 : 0) + 
+                                (GraphicsPipeline.pPS != nullptr ? 1 : 0) + 
+                                (GraphicsPipeline.pHS != nullptr ? 1 : 0) + 
+                                (GraphicsPipeline.pDS != nullptr ? 1 : 0) + 
+                                (GraphicsPipeline.pGS != nullptr ? 1 : 0);
+        std::vector<VkPipelineShaderStageCreateInfo> Stages(PipelineCI.stageCount);
+        PipelineCI.pStages = Stages.data();
         PipelineCI.pVertexInputState;
         PipelineCI.pInputAssemblyState;
-        PipelineCI.pTessellationState;
-        PipelineCI.pViewportState;
 
+        VkPipelineTessellationStateCreateInfo TessStateCI = {};
+        if(GraphicsPipeline.pHS != nullptr && GraphicsPipeline.pDS)
+        {
+            TessStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
+            TessStateCI.pNext = nullptr;
+            TessStateCI.flags;
+            TessStateCI.patchControlPoints;
+
+            PipelineCI.pTessellationState = &TessStateCI;
+        }
+        else
+            PipelineCI.pTessellationState = nullptr;
+        
+
+        VkPipelineViewportStateCreateInfo ViewPortStateCI = {};
+        ViewPortStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+        ViewPortStateCI.pNext = nullptr;
+        ViewPortStateCI.flags;
+        ViewPortStateCI.viewportCount = 1; // Even though we use dynamic viewports, the number of viewports used 
+                                           // by the pipeline is still specified by the viewportCount member
+        ViewPortStateCI.pViewports = nullptr; // We will be using dynamic viewport & scissor states
+        ViewPortStateCI.scissorCount = 1;
+        ViewPortStateCI.pScissors = nullptr;
+        PipelineCI.pViewportState = &ViewPortStateCI; 
+        
         VkPipelineRasterizationStateCreateInfo RasterizerStateCI = 
             RasterizerStateDesc_To_VkRasterizationStateCI(GraphicsPipeline.RasterizerDesc);
         PipelineCI.pRasterizationState = &RasterizerStateCI;
-        PipelineCI.pMultisampleState;
+        
+        // Multisample state (24)
+        VkPipelineMultisampleStateCreateInfo MSStateCI = {};
+        MSStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+        MSStateCI.pNext = nullptr;
+        MSStateCI.flags = 0; // reserved for future use
+        // If subpass uses color and/or depth/stencil attachments, then the rasterizationSamples member of 
+        // pMultisampleState must be the same as the sample count for those subpass attachments
+        MSStateCI.rasterizationSamples = static_cast<VkSampleCountFlagBits>(1 << (GraphicsPipeline.SmplDesc.Count-1));
+        MSStateCI.sampleShadingEnable = VK_FALSE;
+        MSStateCI.minSampleShading = 0; // a minimum fraction of sample shading if sampleShadingEnable is set to VK_TRUE.
+        uint32_t SampleMask = GraphicsPipeline.SampleMask;
+        MSStateCI.pSampleMask = &SampleMask; // a bitmask of static coverage information that is ANDed with the coverage 
+                                             // information generated during rasterization
+        MSStateCI.alphaToCoverageEnable = VK_FALSE; // whether a temporary coverage value is generated based on 
+                                                    // the alpha component of the fragment’s first color output
+        MSStateCI.alphaToOneEnable = VK_FALSE; // whether the alpha component of the fragment’s first color output is replaced with one
+        PipelineCI.pMultisampleState = &MSStateCI;
 
         VkPipelineDepthStencilStateCreateInfo DepthStencilStateCI = 
             DepthStencilStateDesc_To_VkDepthStencilStateCI(GraphicsPipeline.DepthStencilDesc);
@@ -239,17 +311,52 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters *pRefCounters, Ren
         std::vector<VkPipelineColorBlendAttachmentState> ColorBlendAttachmentStates(m_Desc.GraphicsPipeline.NumRenderTargets);
         VkPipelineColorBlendStateCreateInfo BlendStateCI = {};
         BlendStateCI.pAttachments = !ColorBlendAttachmentStates.empty() ? ColorBlendAttachmentStates.data() : nullptr;
-        BlendStateCI.attachmentCount = m_Desc.GraphicsPipeline.NumRenderTargets; //  must equal the colorAttachmentCount for the subpass in which this pipeline is used.
+        BlendStateCI.attachmentCount = m_Desc.GraphicsPipeline.NumRenderTargets; //  must equal the colorAttachmentCount for the subpass 
+                                                                                 // in which this pipeline is used.
         BlendStateDesc_To_VkBlendStateCI(GraphicsPipeline.BlendDesc, BlendStateCI, ColorBlendAttachmentStates);
         PipelineCI.pColorBlendState = &BlendStateCI;
 
-        PipelineCI.pDynamicState;
+
+        VkPipelineDynamicStateCreateInfo DynamicStateCI = {};
+        DynamicStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+        DynamicStateCI.pNext = nullptr;
+        DynamicStateCI.flags = 0; // reserved for future use
+        VkDynamicState DynamicStates[] = 
+        { 
+            VK_DYNAMIC_STATE_VIEWPORT,// pViewports state in VkPipelineViewportStateCreateInfo will be ignored and must be 
+                                      // set dynamically with vkCmdSetViewport before any draw commands. The number of viewports 
+                                      // used by a pipeline is still specified by the viewportCount member of 
+                                      // VkPipelineViewportStateCreateInfo.
+
+            VK_DYNAMIC_STATE_SCISSOR, // pScissors state in VkPipelineViewportStateCreateInfo will be ignored and must be set 
+                                      // dynamically with vkCmdSetScissor before any draw commands. The number of scissor rectangles 
+                                      // used by a pipeline is still specified by the scissorCount member of 
+                                      // VkPipelineViewportStateCreateInfo.
+
+            VK_DYNAMIC_STATE_BLEND_CONSTANTS, // blendConstants state in VkPipelineColorBlendStateCreateInfo will be ignored 
+                                              // and must be set dynamically with vkCmdSetBlendConstants
+
+            VK_DYNAMIC_STATE_STENCIL_REFERENCE // pecifies that the reference state in VkPipelineDepthStencilStateCreateInfo 
+                                               // for both front and back will be ignored and must be set dynamically 
+                                               // with vkCmdSetStencilReference 
+        };
+        DynamicStateCI.dynamicStateCount = _countof(DynamicStates);
+        DynamicStateCI.pDynamicStates = DynamicStates;
+        PipelineCI.pDynamicState = &DynamicStateCI;
+
         PipelineCI.layout;
+
         PipelineCI.renderPass = m_RenderPass;
         PipelineCI.subpass = 0;
-        PipelineCI.basePipelineHandle;
-        PipelineCI.basePipelineIndex;
+        PipelineCI.basePipelineHandle = VK_NULL_HANDLE; // a pipeline to derive from
+        PipelineCI.basePipelineIndex = 0; // an index into the pCreateInfos parameter to use as a pipeline to derive from
 
+
+        bool IsCompleteDesc = false;
+        if (IsCompleteDesc)
+        {
+            LogicalDevice.CreateGraphicsPipeline(PipelineCI, VK_NULL_HANDLE, m_Desc.Name);
+        }
 
 #if 0
         Vk_GRAPHICS_PIPELINE_STATE_DESC VkPSODesc = {};
@@ -359,6 +466,7 @@ PipelineStateVkImpl::~PipelineStateVkImpl()
 {
     auto pDeviceVkImpl = ValidatedCast<RenderDeviceVkImpl>(GetDevice());
     pDeviceVkImpl->SafeReleaseVkObject(std::move(m_RenderPass));
+    pDeviceVkImpl->SafeReleaseVkObject(std::move(m_Pipeline));
 
 #if 0
     auto &ShaderResLayoutAllocator = GetRawAllocator();
