@@ -666,7 +666,9 @@ VkPipelineRasterizationStateCreateInfo RasterizerStateDesc_To_VkRasterizationSta
     RSStateCI.depthBiasConstantFactor = static_cast<float>(RasterizerDesc.DepthBias); // a scalar factor controlling the constant depth value added to each fragment.
     RSStateCI.depthBiasClamp = RasterizerDesc.DepthBiasClamp; // maximum (or minimum) depth bias of a fragment.
     RSStateCI.depthBiasSlopeFactor = RasterizerDesc.SlopeScaledDepthBias; //  a scalar factor applied to a fragment’s slope in depth bias calculations.
-    RSStateCI.lineWidth = 1.f;
+    RSStateCI.lineWidth = 1.f; // If the wide lines feature is not enabled, and no element of the pDynamicStates member of 
+                               // pDynamicState is VK_DYNAMIC_STATE_LINE_WIDTH, the lineWidth member of 
+                               // pRasterizationState must be 1.0 (9.2)
 
     return RSStateCI;
 }
@@ -745,8 +747,8 @@ VkPipelineDepthStencilStateCreateInfo  DepthStencilStateDesc_To_VkDepthStencilSt
     DSStateCI.stencilTestEnable = DepthStencilDesc.StencilEnable;
     DSStateCI.front = StencilOpDescToVkStencilOpState(DepthStencilDesc.FrontFace, DepthStencilDesc.StencilReadMask, DepthStencilDesc.StencilWriteMask);
     DSStateCI.back = StencilOpDescToVkStencilOpState(DepthStencilDesc.BackFace, DepthStencilDesc.StencilReadMask, DepthStencilDesc.StencilWriteMask);
-    DSStateCI.minDepthBounds = -FLT_MAX;
-    DSStateCI.maxDepthBounds = +FLT_MAX;
+    DSStateCI.minDepthBounds = 0;
+    DSStateCI.maxDepthBounds = 1;
 
     return DSStateCI;
 }

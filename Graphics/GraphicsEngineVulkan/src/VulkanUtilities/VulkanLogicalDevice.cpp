@@ -201,6 +201,40 @@ namespace VulkanUtilities
         return DeviceMemoryWrapper{ GetSharedPtr(), std::move(vkDeviceMem) };
     }
 
+    PipelineWrapper VulkanLogicalDevice::CreateComputePipeline(const VkComputePipelineCreateInfo  &PipelineCI, 
+                                                               VkPipelineCache cache, 
+                                                               const char *DebugName)const
+    {
+        if (DebugName == nullptr)
+            DebugName = "";
+
+        VkPipeline vkPipeline = VK_NULL_HANDLE;
+        auto err = vkCreateComputePipelines(m_VkDevice, cache, 1, &PipelineCI, m_VkAllocator, &vkPipeline);
+        CHECK_VK_ERROR_AND_THROW(err, "Failed to create compute pipeline '", DebugName, '\'');
+
+        if (DebugName != nullptr && *DebugName != 0)
+            VulkanUtilities::SetPipelineName(m_VkDevice, vkPipeline, DebugName);
+
+        return PipelineWrapper{ GetSharedPtr(), std::move(vkPipeline) };
+    }
+
+    PipelineWrapper VulkanLogicalDevice::CreateGraphicsPipeline(const VkGraphicsPipelineCreateInfo &PipelineCI, 
+                                                                VkPipelineCache cache, 
+                                                                const char *DebugName)const
+    {
+        if (DebugName == nullptr)
+            DebugName = "";
+
+        VkPipeline vkPipeline = VK_NULL_HANDLE;
+        auto err = vkCreateGraphicsPipelines(m_VkDevice, cache, 1, &PipelineCI, m_VkAllocator, &vkPipeline);
+        CHECK_VK_ERROR_AND_THROW(err, "Failed to create Graphics pipeline '", DebugName, '\'');
+
+        if (DebugName != nullptr && *DebugName != 0)
+            VulkanUtilities::SetPipelineName(m_VkDevice, vkPipeline, DebugName);
+
+        return PipelineWrapper{ GetSharedPtr(), std::move(vkPipeline) };
+    }
+
 
     VkCommandBuffer VulkanLogicalDevice::AllocateVkCommandBuffer(const VkCommandBufferAllocateInfo &AllocInfo, const char *DebugName)const
     {
@@ -263,6 +297,12 @@ namespace VulkanUtilities
     {
         vkFreeMemory(m_VkDevice, Memory.m_VkObject, m_VkAllocator);
         Memory.m_VkObject = VK_NULL_HANDLE;
+    }
+
+    void VulkanLogicalDevice::ReleaseVulkanObject(PipelineWrapper&& Pipeline)const
+    {
+        vkDestroyPipeline(m_VkDevice, Pipeline.m_VkObject, m_VkAllocator);
+        Pipeline.m_VkObject = VK_NULL_HANDLE;
     }
 
     VkMemoryRequirements VulkanLogicalDevice::GetBufferMemoryRequirements(VkBuffer vkBuffer)const

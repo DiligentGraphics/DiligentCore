@@ -124,7 +124,7 @@ namespace VulkanUtilities
     void SetObjectName(VkDevice device, uint64_t object, VkDebugReportObjectTypeEXT objectType, const char *name)
     {
         // Check for valid function pointer (may not be present if not running in a debugging application)
-        if (pfnDebugMarkerSetObjectName != VK_NULL_HANDLE)
+        if (pfnDebugMarkerSetObjectName != VK_NULL_HANDLE && name != nullptr && *name != 0)
         {
             VkDebugMarkerObjectNameInfoEXT nameInfo = {};
             nameInfo.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_NAME_INFO_EXT;

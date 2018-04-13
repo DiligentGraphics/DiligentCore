@@ -89,7 +89,6 @@ private:
     void ParseShaderResourceLayout(IShader *pShader);
 
     /// Vk device
-    CComPtr<IVkPipelineState> m_pVkPSO;
     RootSignature m_RootSig;
     DummyShaderVariable m_DummyVar;
     
@@ -127,6 +126,7 @@ private:
     std::unique_ptr<class ShaderResourceBindingVkImpl, STDDeleter<ShaderResourceBindingVkImpl, FixedBlockMemoryAllocator> > m_pDefaultShaderResBinding;
 #endif
     VulkanUtilities::RenderPassWrapper m_RenderPass;
+    VulkanUtilities::PipelineWrapper m_Pipeline;
 
 };
 

@@ -70,7 +70,9 @@ namespace VulkanUtilities
         FenceWrapper        CreateFence         (const VkFenceCreateInfo       &FenceCI,     const char *DebugName = "")const;
         RenderPassWrapper   CreateRenderPass    (const VkRenderPassCreateInfo  &RenderPassCI,const char *DebugName = "")const;
         DeviceMemoryWrapper AllocateDeviceMemory(const VkMemoryAllocateInfo    &AllocInfo,   const char *DebugName = "")const;
-        
+        PipelineWrapper     CreateComputePipeline (const VkComputePipelineCreateInfo  &PipelineCI, VkPipelineCache cache, const char *DebugName = "")const;
+        PipelineWrapper     CreateGraphicsPipeline(const VkGraphicsPipelineCreateInfo &PipelineCI, VkPipelineCache cache, const char *DebugName = "")const;
+
         VkCommandBuffer     AllocateVkCommandBuffer(const VkCommandBufferAllocateInfo &AllocInfo, const char *DebugName = "")const;
 
         void ReleaseVulkanObject(CommandPoolWrapper&&  CmdPool)const;
@@ -81,6 +83,7 @@ namespace VulkanUtilities
         void ReleaseVulkanObject(FenceWrapper&&        Fence)const;
         void ReleaseVulkanObject(RenderPassWrapper&&   RenderPass)const;
         void ReleaseVulkanObject(DeviceMemoryWrapper&& Memory)const;
+        void ReleaseVulkanObject(PipelineWrapper&&     Pipeline)const;
 
         VkMemoryRequirements GetBufferMemoryRequirements(VkBuffer vkBuffer)const;
         VkMemoryRequirements GetImageMemoryRequirements (VkImage vkImage  )const;

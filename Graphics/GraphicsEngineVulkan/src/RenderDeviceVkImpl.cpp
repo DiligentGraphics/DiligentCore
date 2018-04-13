@@ -405,12 +405,13 @@ void RenderDeviceVkImpl::SafeReleaseVkObject(VulkanUtilities::VulkanObjectWrappe
     m_StaleVkObjects.emplace_back(m_NextCmdListNumber, new StaleVulkanObject<VulkanObjectType>(std::move(vkObject)) );
 }
 
-template void RenderDeviceVkImpl::SafeReleaseVkObject<VkBuffer>(VulkanUtilities::BufferWrapper &&Object);
-template void RenderDeviceVkImpl::SafeReleaseVkObject<VkBufferView>(VulkanUtilities::BufferViewWrapper &&Object);
-template void RenderDeviceVkImpl::SafeReleaseVkObject<VkImage>(VulkanUtilities::ImageWrapper &&Object);
-template void RenderDeviceVkImpl::SafeReleaseVkObject<VkImageView>(VulkanUtilities::ImageViewWrapper &&Object);
-template void RenderDeviceVkImpl::SafeReleaseVkObject<VkDeviceMemory>(VulkanUtilities::DeviceMemoryWrapper &&Object);
-template void RenderDeviceVkImpl::SafeReleaseVkObject<VkRenderPass>(VulkanUtilities::RenderPassWrapper &&Object);
+template void RenderDeviceVkImpl::SafeReleaseVkObject<VkBuffer>       (VulkanUtilities::BufferWrapper       &&Object);
+template void RenderDeviceVkImpl::SafeReleaseVkObject<VkBufferView>   (VulkanUtilities::BufferViewWrapper   &&Object);
+template void RenderDeviceVkImpl::SafeReleaseVkObject<VkImage>        (VulkanUtilities::ImageWrapper        &&Object);
+template void RenderDeviceVkImpl::SafeReleaseVkObject<VkImageView>    (VulkanUtilities::ImageViewWrapper    &&Object);
+template void RenderDeviceVkImpl::SafeReleaseVkObject<VkDeviceMemory> (VulkanUtilities::DeviceMemoryWrapper &&Object);
+template void RenderDeviceVkImpl::SafeReleaseVkObject<VkRenderPass>   (VulkanUtilities::RenderPassWrapper   &&Object);
+template void RenderDeviceVkImpl::SafeReleaseVkObject<VkPipeline>     (VulkanUtilities::PipelineWrapper     &&Object);
 
 
 void RenderDeviceVkImpl::DiscardStaleVkObjects(Uint64 CmdListNumber, Uint64 FenceValue)

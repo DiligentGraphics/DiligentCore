@@ -34,6 +34,8 @@ namespace VulkanUtilities
     class VulkanObjectWrapper
     {
     public:
+        using VkObjectType = VulkanObjectType;
+
         VulkanObjectWrapper() : 
             m_pLogicalDevice(nullptr),
             m_VkObject(VK_NULL_HANDLE)
@@ -96,4 +98,5 @@ namespace VulkanUtilities
     using DeviceMemoryWrapper = VulkanObjectWrapper<VkDeviceMemory>;
     using FenceWrapper        = VulkanObjectWrapper<VkFence>;
     using RenderPassWrapper   = VulkanObjectWrapper<VkRenderPass>;
+    using PipelineWrapper     = VulkanObjectWrapper<VkPipeline>;
 }
