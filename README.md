@@ -602,10 +602,14 @@ objects. Refer to the following pages for more information:
 
 ### New Features
 
+* Implemented vulkan backend
 * Implemented PSO compatibility: if two pipeline states share the same shader resource layout,
   they can use SRB objects interchangeably.
 * Added `IPipelineState::IsCompatibleWith(const IPipelineState *pPSO)` method that returns true if two 
   pipeline states are compatible.
+* Added sync interval parameter to ISwapChain::Present()
+* API Changes
+  * Added `NumViewports` member to `GraphicsPipelineDesc` struct
 
 ## v2.2
 
@@ -629,10 +633,10 @@ objects. Refer to the following pages for more information:
 #### Core
 
 * Interoperability with native API
-** Accessing internal objects and handles
-** Createing diligent engine buffers/textures from native resources
-** Attaching to existing D3D11/D3D12 device or GL context
-** Resource state and command queue synchronization for D3D12
+  * Accessing internal objects and handles
+  * Createing diligent engine buffers/textures from native resources
+  * Attaching to existing D3D11/D3D12 device or GL context
+  * Resource state and command queue synchronization for D3D12
 * Integraion with Unity
 * Geometry shader support
 * Tessellation support
@@ -641,8 +645,8 @@ objects. Refer to the following pages for more information:
 #### HLSL->GLSL converter
 * Support for structured buffers
 * HLSL->GLSL conversion is now a two-stage process:
-** Creating conversion stream
-** Creating GLSL source from the stream
+  * Creating conversion stream
+  * Creating GLSL source from the stream
 * Geometry shader support
 * Tessellation control and tessellation evaluation shader support
 * Support for non-void shader functions

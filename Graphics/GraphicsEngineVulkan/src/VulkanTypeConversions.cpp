@@ -655,17 +655,25 @@ VkPipelineRasterizationStateCreateInfo RasterizerStateDesc_To_VkRasterizationSta
     RSStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     RSStateCI.pNext = nullptr;
     RSStateCI.flags = 0; // Reserved for future use.
-    RSStateCI.depthClampEnable = RasterizerDesc.DepthClipEnable ? VK_FALSE : VK_TRUE; // whether to clamp the fragment’s depth 
-                                                // values instead of clipping primitives to the z planes of the frustum.
-                                                // This value is the opposite of clip enable
+
+    // If depth clamping is enabled, before the incoming fragment’s zf is compared to za, zf is clamped to 
+    // [min(n,f), max(n,f)], where n and f are the minDepth and maxDepth depth range values of the viewport 
+    // used by this fragment, respectively (25.10)
+    // This value is the opposite of clip enable
+    RSStateCI.depthClampEnable = RasterizerDesc.DepthClipEnable ? VK_FALSE : VK_TRUE;
+                                                
     RSStateCI.rasterizerDiscardEnable = VK_FALSE; // Whether primitives are discarded immediately before the rasterization stage.
-    RSStateCI.polygonMode = FillModeToVkPolygonMode(RasterizerDesc.FillMode);
-    RSStateCI.cullMode = CullModeToVkCullMode(RasterizerDesc.CullMode);
-    RSStateCI.frontFace = RasterizerDesc.FrontCounterClockwise ? VK_FRONT_FACE_COUNTER_CLOCKWISE : VK_FRONT_FACE_CLOCKWISE;
+    RSStateCI.polygonMode = FillModeToVkPolygonMode(RasterizerDesc.FillMode); // 24.7.2
+    RSStateCI.cullMode = CullModeToVkCullMode(RasterizerDesc.CullMode); // 24.7.1
+    RSStateCI.frontFace = RasterizerDesc.FrontCounterClockwise ? VK_FRONT_FACE_COUNTER_CLOCKWISE : VK_FRONT_FACE_CLOCKWISE; // 24.7.1
+    // Depth bias (24.7.3)
     RSStateCI.depthBiasEnable = (RasterizerDesc.DepthBias != 0 || RasterizerDesc.SlopeScaledDepthBias != 0.f) ? VK_TRUE : VK_FALSE;
-    RSStateCI.depthBiasConstantFactor = static_cast<float>(RasterizerDesc.DepthBias); // a scalar factor controlling the constant depth value added to each fragment.
+    RSStateCI.depthBiasConstantFactor = 
+        static_cast<float>(RasterizerDesc.DepthBias); // a scalar factor applied to an implementation-dependent constant 
+                                                      // that relates to the usable resolution of the depth buffer
     RSStateCI.depthBiasClamp = RasterizerDesc.DepthBiasClamp; // maximum (or minimum) depth bias of a fragment.
-    RSStateCI.depthBiasSlopeFactor = RasterizerDesc.SlopeScaledDepthBias; //  a scalar factor applied to a fragment’s slope in depth bias calculations.
+    RSStateCI.depthBiasSlopeFactor = 
+        RasterizerDesc.SlopeScaledDepthBias; //  a scalar factor applied to a fragment’s slope in depth bias calculations.
     RSStateCI.lineWidth = 1.f; // If the wide lines feature is not enabled, and no element of the pDynamicStates member of 
                                // pDynamicState is VK_DYNAMIC_STATE_LINE_WIDTH, the lineWidth member of 
                                // pRasterizationState must be 1.0 (9.2)
@@ -721,14 +729,24 @@ VkStencilOp StencilOpToVkStencilOp(STENCIL_OP StencilOp)
 
 VkStencilOpState StencilOpDescToVkStencilOpState(const StencilOpDesc& desc, Uint8 StencilReadMask, Uint8 StencilWriteMask)
 {
+    // Stencil state (25.9)
     VkStencilOpState StencilState = {};
     StencilState.failOp = StencilOpToVkStencilOp(desc.StencilFailOp);
     StencilState.passOp = StencilOpToVkStencilOp(desc.StencilPassOp);
     StencilState.depthFailOp = StencilOpToVkStencilOp(desc.StencilDepthFailOp);
     StencilState.compareOp = ComparisonFuncToVkCompareOp(desc.StencilFunc);
+
+    // The s least significant bits of compareMask,  where s is the number of bits in the stencil framebuffer attachment,
+    // are bitwise ANDed with both the reference and the stored stencil value, and the resulting masked values are those 
+    // that participate in the comparison controlled by compareOp (25.9)
     StencilState.compareMask = StencilReadMask;
+
+    // The least significant s bits of writeMask, where s is the number of bits in the stencil framebuffer 
+    // attachment, specify an integer mask. Where a 1 appears in this mask, the corresponding bit in the stencil 
+    // value in the depth / stencil attachment is written; where a 0 appears, the bit is not written (25.9)
     StencilState.writeMask = StencilWriteMask;
-    StencilState.reference = 0;
+                                             
+    StencilState.reference = 0; // Set dynamically
 
     return StencilState;
 }
@@ -736,19 +754,21 @@ VkStencilOpState StencilOpDescToVkStencilOpState(const StencilOpDesc& desc, Uint
 
 VkPipelineDepthStencilStateCreateInfo  DepthStencilStateDesc_To_VkDepthStencilStateCI(const DepthStencilStateDesc &DepthStencilDesc)
 {
+    // Depth-stencil state (25.7)
     VkPipelineDepthStencilStateCreateInfo DSStateCI = {};
     DSStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
     DSStateCI.pNext = nullptr;
     DSStateCI.flags = 0; // reserved for future use
     DSStateCI.depthTestEnable = DepthStencilDesc.DepthEnable ? VK_TRUE : VK_FALSE;
     DSStateCI.depthWriteEnable = DepthStencilDesc.DepthWriteEnable ? VK_TRUE : VK_FALSE;
-    DSStateCI.depthCompareOp = ComparisonFuncToVkCompareOp(DepthStencilDesc.DepthFunc);
-    DSStateCI.depthBoundsTestEnable = VK_FALSE;
-    DSStateCI.stencilTestEnable = DepthStencilDesc.StencilEnable;
+    DSStateCI.depthCompareOp = ComparisonFuncToVkCompareOp(DepthStencilDesc.DepthFunc); // 25.10
+    DSStateCI.depthBoundsTestEnable = VK_FALSE; // 25.8
+    DSStateCI.stencilTestEnable = DepthStencilDesc.StencilEnable ? VK_TRUE : VK_FALSE; // 25.9
     DSStateCI.front = StencilOpDescToVkStencilOpState(DepthStencilDesc.FrontFace, DepthStencilDesc.StencilReadMask, DepthStencilDesc.StencilWriteMask);
     DSStateCI.back = StencilOpDescToVkStencilOpState(DepthStencilDesc.BackFace, DepthStencilDesc.StencilReadMask, DepthStencilDesc.StencilWriteMask);
-    DSStateCI.minDepthBounds = 0;
-    DSStateCI.maxDepthBounds = 1;
+    // Depth Bounds Test (25.8)
+    DSStateCI.minDepthBounds = 0; // must be between 0.0 and 1.0, inclusive
+    DSStateCI.maxDepthBounds = 1; // must be between 0.0 and 1.0, inclusive
 
     return DSStateCI;
 }
@@ -758,6 +778,7 @@ class BlendFactorToVkBlendFactorMapper
 public:
     BlendFactorToVkBlendFactorMapper()
     {
+        // 26.1.1
         m_Map[BLEND_FACTOR_ZERO]            = VK_BLEND_FACTOR_ZERO;
         m_Map[BLEND_FACTOR_ONE]             = VK_BLEND_FACTOR_ONE;
         m_Map[BLEND_FACTOR_SRC_COLOR]       = VK_BLEND_FACTOR_SRC_COLOR;
@@ -793,6 +814,7 @@ class LogicOperationToVkLogicOp
 public:
     LogicOperationToVkLogicOp()
     {
+        // 26.2
         m_Map[ LOGIC_OP_CLEAR		   ]  = VK_LOGIC_OP_CLEAR;
         m_Map[ LOGIC_OP_SET			   ]  = VK_LOGIC_OP_SET;
         m_Map[ LOGIC_OP_COPY		   ]  = VK_LOGIC_OP_COPY;
@@ -826,6 +848,7 @@ class BlendOperationToVkBlendOp
 public:
     BlendOperationToVkBlendOp()
     {
+        // 26.1.3
         m_Map[ BLEND_OPERATION_ADD          ] = VK_BLEND_OP_ADD;
         m_Map[ BLEND_OPERATION_SUBTRACT     ] = VK_BLEND_OP_SUBTRACT;
         m_Map[ BLEND_OPERATION_REV_SUBTRACT ] = VK_BLEND_OP_REVERSE_SUBTRACT;
@@ -868,16 +891,18 @@ void BlendStateDesc_To_VkBlendStateCI(const BlendStateDesc &BSDesc,
                                       VkPipelineColorBlendStateCreateInfo &ColorBlendStateCI,
                                       std::vector<VkPipelineColorBlendAttachmentState> &ColorBlendAttachments)
 {
+    // Color blend state (26.1)
     static const LogicOperationToVkLogicOp LogicOpToVkLogicOp;
     ColorBlendStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
     ColorBlendStateCI.pNext = nullptr;
     ColorBlendStateCI.flags = 0; // reserved for future use
-    ColorBlendStateCI.logicOpEnable = BSDesc.RenderTargets[0].LogicOperationEnable;
+    ColorBlendStateCI.logicOpEnable = BSDesc.RenderTargets[0].LogicOperationEnable; // 26.2
     ColorBlendStateCI.logicOp = LogicOpToVkLogicOp[BSDesc.RenderTargets[0].LogicOp];
-    ColorBlendStateCI.blendConstants[0] = 0.f;
+    ColorBlendStateCI.blendConstants[0] = 0.f; // We use dynamic blend constants
     ColorBlendStateCI.blendConstants[1] = 0.f;
     ColorBlendStateCI.blendConstants[2] = 0.f;
     ColorBlendStateCI.blendConstants[3] = 0.f;
+    // attachmentCount must equal the colorAttachmentCount for the subpass in which this pipeline is used.
     for(uint32_t attachment = 0; attachment < ColorBlendStateCI.attachmentCount; ++attachment)
     {
         const auto& RTBlendState = BSDesc.IndependentBlendEnable ? BSDesc.RenderTargets[attachment] : BSDesc.RenderTargets[0];

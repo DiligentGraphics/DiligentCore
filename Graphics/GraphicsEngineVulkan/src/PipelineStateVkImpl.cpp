@@ -173,7 +173,6 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters *pRefCounters, Ren
 */
 {
     const auto &LogicalDevice = pDeviceVk->GetLogicalDevice();
-
     if (PipelineDesc.IsComputePipeline)
     {
         auto &ComputePipeline = PipelineDesc.ComputePipeline;
@@ -236,10 +235,11 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters *pRefCounters, Ren
     }
     else
     {
+        const auto &PhysicalDevice = pDeviceVk->GetPhysicalDevice();
+        
         auto &GraphicsPipeline = PipelineDesc.GraphicsPipeline;
 
         CreateRenderPass(LogicalDevice);
-        
 
         VkGraphicsPipelineCreateInfo PipelineCI = {};
         PipelineCI.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -255,7 +255,14 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters *pRefCounters, Ren
         std::vector<VkPipelineShaderStageCreateInfo> Stages(PipelineCI.stageCount);
         PipelineCI.pStages = Stages.data();
         PipelineCI.pVertexInputState;
-        PipelineCI.pInputAssemblyState;
+
+        VkPipelineInputAssemblyStateCreateInfo InputAssemblyCI = {};
+        InputAssemblyCI.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+        InputAssemblyCI.pNext = nullptr;
+        InputAssemblyCI.flags;
+        InputAssemblyCI.topology;
+        InputAssemblyCI.primitiveRestartEnable = VK_FALSE;
+        PipelineCI.pInputAssemblyState = &InputAssemblyCI;
 
         VkPipelineTessellationStateCreateInfo TessStateCI = {};
         if(GraphicsPipeline.pHS != nullptr && GraphicsPipeline.pDS)
@@ -274,12 +281,28 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters *pRefCounters, Ren
         VkPipelineViewportStateCreateInfo ViewPortStateCI = {};
         ViewPortStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
         ViewPortStateCI.pNext = nullptr;
-        ViewPortStateCI.flags;
-        ViewPortStateCI.viewportCount = 1; // Even though we use dynamic viewports, the number of viewports used 
-                                           // by the pipeline is still specified by the viewportCount member
+        ViewPortStateCI.flags = 0; // reserved for future use
+        ViewPortStateCI.viewportCount = 
+            GraphicsPipeline.NumViewports; // Even though we use dynamic viewports, the number of viewports used 
+                                           // by the pipeline is still specified by the viewportCount member (23.5)
         ViewPortStateCI.pViewports = nullptr; // We will be using dynamic viewport & scissor states
-        ViewPortStateCI.scissorCount = 1;
-        ViewPortStateCI.pScissors = nullptr;
+        ViewPortStateCI.scissorCount = ViewPortStateCI.viewportCount; // the number of scissors must match the number of viewports (23.5)
+                                                                      // (why the hell it is in the struct then?)
+        VkRect2D ScissorRect = {};
+        if (GraphicsPipeline.RasterizerDesc.ScissorEnable)
+        {
+            ViewPortStateCI.pScissors = nullptr; // Ignored if the scissor state is dynamic
+        }
+        else
+        {
+            const auto &Props = PhysicalDevice.GetProperties();
+            // There are limitiations on the viewport width and height (23.5), but
+            // it is not clear if there are limitations on the scissor rect width and
+            // height
+            ScissorRect.extent.width  = Props.limits.maxViewportDimensions[0];
+            ScissorRect.extent.height = Props.limits.maxViewportDimensions[1];
+            ViewPortStateCI.pScissors = &ScissorRect;
+        }
         PipelineCI.pViewportState = &ViewPortStateCI; 
         
         VkPipelineRasterizationStateCreateInfo RasterizerStateCI = 
@@ -296,9 +319,9 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters *pRefCounters, Ren
         MSStateCI.rasterizationSamples = static_cast<VkSampleCountFlagBits>(1 << (GraphicsPipeline.SmplDesc.Count-1));
         MSStateCI.sampleShadingEnable = VK_FALSE;
         MSStateCI.minSampleShading = 0; // a minimum fraction of sample shading if sampleShadingEnable is set to VK_TRUE.
-        uint32_t SampleMask = GraphicsPipeline.SampleMask;
-        MSStateCI.pSampleMask = &SampleMask; // a bitmask of static coverage information that is ANDed with the coverage 
-                                             // information generated during rasterization
+        uint32_t SampleMask[] = {GraphicsPipeline.SampleMask, 0}; // Vulkan spec allows up to 64 samples
+        MSStateCI.pSampleMask = SampleMask; // an array of static coverage information that is ANDed with 
+                                            // the coverage information generated during rasterization (25.3)
         MSStateCI.alphaToCoverageEnable = VK_FALSE; // whether a temporary coverage value is generated based on 
                                                     // the alpha component of the fragment’s first color output
         MSStateCI.alphaToOneEnable = VK_FALSE; // whether the alpha component of the fragment’s first color output is replaced with one
@@ -321,16 +344,11 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters *pRefCounters, Ren
         DynamicStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
         DynamicStateCI.pNext = nullptr;
         DynamicStateCI.flags = 0; // reserved for future use
-        VkDynamicState DynamicStates[] = 
+        std::vector<VkDynamicState> DynamicStates = 
         { 
             VK_DYNAMIC_STATE_VIEWPORT,// pViewports state in VkPipelineViewportStateCreateInfo will be ignored and must be 
                                       // set dynamically with vkCmdSetViewport before any draw commands. The number of viewports 
                                       // used by a pipeline is still specified by the viewportCount member of 
-                                      // VkPipelineViewportStateCreateInfo.
-
-            VK_DYNAMIC_STATE_SCISSOR, // pScissors state in VkPipelineViewportStateCreateInfo will be ignored and must be set 
-                                      // dynamically with vkCmdSetScissor before any draw commands. The number of scissor rectangles 
-                                      // used by a pipeline is still specified by the scissorCount member of 
                                       // VkPipelineViewportStateCreateInfo.
 
             VK_DYNAMIC_STATE_BLEND_CONSTANTS, // blendConstants state in VkPipelineColorBlendStateCreateInfo will be ignored 
@@ -340,8 +358,17 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters *pRefCounters, Ren
                                                // for both front and back will be ignored and must be set dynamically 
                                                // with vkCmdSetStencilReference 
         };
-        DynamicStateCI.dynamicStateCount = _countof(DynamicStates);
-        DynamicStateCI.pDynamicStates = DynamicStates;
+
+        if(GraphicsPipeline.RasterizerDesc.ScissorEnable)
+        {
+            // pScissors state in VkPipelineViewportStateCreateInfo will be ignored and must be set 
+            // dynamically with vkCmdSetScissor before any draw commands. The number of scissor rectangles 
+            // used by a pipeline is still specified by the scissorCount member of 
+            // VkPipelineViewportStateCreateInfo.
+            DynamicStates.push_back(VK_DYNAMIC_STATE_SCISSOR);
+        }
+        DynamicStateCI.dynamicStateCount = static_cast<uint32_t>(DynamicStates.size());
+        DynamicStateCI.pDynamicStates = DynamicStates.data();
         PipelineCI.pDynamicState = &DynamicStateCI;
 
         PipelineCI.layout;

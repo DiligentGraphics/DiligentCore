@@ -127,6 +127,9 @@ struct GraphicsPipelineDesc
     /// Primitive topology type
     PRIMITIVE_TOPOLOGY_TYPE PrimitiveTopologyType = PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 
+    /// Number of viewports used by this pipeline
+    Uint8 NumViewports = 1;
+
     /// Number of render targets in the RTVFormats member
     Uint8 NumRenderTargets = 0;
 
