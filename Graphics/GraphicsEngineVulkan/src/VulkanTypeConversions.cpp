@@ -967,6 +967,39 @@ void InputLayoutDesc_To_VkVertexInputStateCI(const InputLayoutDesc& LayoutDesc,
 
 }
 
+void PrimitiveTopology_To_VkPrimitiveTopologyAndPatchCPCount(PRIMITIVE_TOPOLOGY PrimTopology, 
+                                                             VkPrimitiveTopology &VkPrimTopology, 
+                                                             uint32_t &PatchControlPoints)
+{
+    PatchControlPoints = 0;
+    switch(PrimTopology)
+    {
+        case PRIMITIVE_TOPOLOGY_UNDEFINED: 
+            UNEXPECTED("Undefined primitive topology"); 
+            VkPrimTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+            return;
+
+        case PRIMITIVE_TOPOLOGY_TRIANGLE_LIST:
+            VkPrimTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+            return;
+        
+        case PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP:
+            VkPrimTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+            return;
+
+        case PRIMITIVE_TOPOLOGY_POINT_LIST:
+            VkPrimTopology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+            return;
+
+        case PRIMITIVE_TOPOLOGY_LINE_LIST:
+            VkPrimTopology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+            return;
+    }
+
+    VERIFY_EXPR(PrimTopology >= PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST && PrimTopology < PRIMITIVE_TOPOLOGY_NUM_TOPOLOGIES);
+    VkPrimTopology = VK_PRIMITIVE_TOPOLOGY_PATCH_LIST;
+    PatchControlPoints = static_cast<uint32_t>(VkPrimTopology) - static_cast<uint32_t>(PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST) + 1;
+}
 
 #if 0
 D3D12_COMPARISON_FUNC ComparisonFuncToD3D12ComparisonFunc(COMPARISON_FUNCTION Func)

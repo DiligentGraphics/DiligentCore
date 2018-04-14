@@ -22,6 +22,7 @@
  */
 
 #include "pch.h"
+#include <array>
 #include "PipelineStateD3D12Impl.h"
 #include "ShaderD3D12Impl.h"
 #include "D3D12TypeConversions.h"
@@ -35,32 +36,28 @@
 namespace Diligent
 {
 
-D3D12_PRIMITIVE_TOPOLOGY_TYPE PrimitiveTopologyType_To_D3D12_PRIMITIVE_TOPOLOGY_TYPE( PRIMITIVE_TOPOLOGY_TYPE TopologyType )
+class PrimitiveTopology_To_D3D12_PRIMITIVE_TOPOLOGY_TYPE
 {
-    static bool bIsInit = false;
-    static D3D12_PRIMITIVE_TOPOLOGY_TYPE D3D12TopologyType[PRIMITIVE_TOPOLOGY_TYPE_NUM_TYPES] = {};
-    if( !bIsInit )
+public:
+    PrimitiveTopology_To_D3D12_PRIMITIVE_TOPOLOGY_TYPE()
     {
-        D3D12TopologyType[ PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED] =  D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED;
-        D3D12TopologyType[ PRIMITIVE_TOPOLOGY_TYPE_POINT    ] =  D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
-        D3D12TopologyType[ PRIMITIVE_TOPOLOGY_TYPE_LINE     ] =  D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;  
-        D3D12TopologyType[ PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE ] =  D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-        D3D12TopologyType[ PRIMITIVE_TOPOLOGY_TYPE_PATCH    ] =  D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH;
-
-        bIsInit = true;
+        m_Map[PRIMITIVE_TOPOLOGY_UNDEFINED]      = D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED;
+        m_Map[PRIMITIVE_TOPOLOGY_TRIANGLE_LIST]  = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+        m_Map[PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP] = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+        m_Map[PRIMITIVE_TOPOLOGY_POINT_LIST]     = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
+        m_Map[PRIMITIVE_TOPOLOGY_LINE_LIST]      = D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
+        for(int t = static_cast<int>(PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST); t < static_cast<int>(PRIMITIVE_TOPOLOGY_NUM_TOPOLOGIES); ++t)
+            m_Map[t] = D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH;
+    }
+    
+    D3D12_PRIMITIVE_TOPOLOGY_TYPE operator[](PRIMITIVE_TOPOLOGY Topology)const
+    {
+        return m_Map[static_cast<int>(Topology)];
     }
 
-    if( TopologyType >= PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED && TopologyType < PRIMITIVE_TOPOLOGY_TYPE_NUM_TYPES )
-    {
-        auto d3d12TopType = D3D12TopologyType[TopologyType];
-        return d3d12TopType;
-    }
-    else
-    {
-        UNEXPECTED( "Incorrect topology type operation (", TopologyType, ")" );
-        return static_cast<D3D12_PRIMITIVE_TOPOLOGY_TYPE>(0);
-    }
-}
+private:
+    std::array<D3D12_PRIMITIVE_TOPOLOGY_TYPE, PRIMITIVE_TOPOLOGY_NUM_TOPOLOGIES> m_Map;
+};
 
 void PipelineStateD3D12Impl::ParseShaderResourceLayout(IShader *pShader)
 {
@@ -177,7 +174,8 @@ PipelineStateD3D12Impl :: PipelineStateD3D12Impl(IReferenceCounters *pRefCounter
         }
 
         d3d12PSODesc.IBStripCutValue = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED;
-        d3d12PSODesc.PrimitiveTopologyType = PrimitiveTopologyType_To_D3D12_PRIMITIVE_TOPOLOGY_TYPE(GraphicsPipeline.PrimitiveTopologyType);
+        static const PrimitiveTopology_To_D3D12_PRIMITIVE_TOPOLOGY_TYPE PrimTopologyToD3D12TopologyType;
+        d3d12PSODesc.PrimitiveTopologyType = PrimTopologyToD3D12TopologyType[GraphicsPipeline.PrimitiveTopology];
 
         d3d12PSODesc.NumRenderTargets = GraphicsPipeline.NumRenderTargets;
         for (Uint32 rt = 0; rt < GraphicsPipeline.NumRenderTargets; ++rt)

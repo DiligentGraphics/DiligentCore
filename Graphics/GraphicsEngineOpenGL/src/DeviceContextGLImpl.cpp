@@ -655,12 +655,6 @@ namespace Diligent
 
     void DeviceContextGLImpl::Draw( DrawAttribs &DrawAttribs )
     {
-        if( DrawAttribs.Topology == PRIMITIVE_TOPOLOGY_UNDEFINED )
-        {
-            LOG_ERROR_MESSAGE("Primitive topology is undefined");
-            return;
-        }
-
         if (!m_pPipelineState)
         {
             LOG_ERROR("No pipeline state is bound.");
@@ -669,11 +663,12 @@ namespace Diligent
 
         auto *pRenderDeviceGL = ValidatedCast<RenderDeviceGLImpl>(m_pDevice.RawPtr());
         auto CurrNativeGLContext = pRenderDeviceGL->m_GLContext.GetCurrentNativeGLContext();
+        const auto& PipelineDesc = m_pPipelineState->GetDesc().GraphicsPipeline;
         if(!m_bVAOIsUpToDate)
         {
             auto &VAOCache = pRenderDeviceGL->GetVAOCache(CurrNativeGLContext);
             IBuffer *pIndexBuffer = DrawAttribs.IsIndexed ? m_pIndexBuffer.RawPtr() : nullptr;
-            if( m_pPipelineState->GetDesc().GraphicsPipeline.InputLayout.NumElements > 0 || pIndexBuffer != nullptr)
+            if(PipelineDesc.InputLayout.NumElements > 0 || pIndexBuffer != nullptr)
             {
                 const auto& VAO = VAOCache.GetVAO( m_pPipelineState, pIndexBuffer, m_VertexStreams, m_NumVertexStreams, m_ContextState );
                 m_ContextState.BindVAO( VAO );
@@ -690,11 +685,12 @@ namespace Diligent
         }
 
         GLenum GlTopology;
-        if (DrawAttribs.Topology >= PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST)
+        auto Topology = PipelineDesc.PrimitiveTopology;
+        if (Topology >= PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST)
         {
 #if GL_ARB_tessellation_shader
             GlTopology = GL_PATCHES;
-            auto NumVertices = static_cast<Int32>(DrawAttribs.Topology - PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST + 1);
+            auto NumVertices = static_cast<Int32>(Topology - PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST + 1);
             m_ContextState.SetNumPatchVertices(NumVertices);
 #else
             UNSUPPORTED("Tessellation is not supported");
@@ -702,7 +698,7 @@ namespace Diligent
         }
         else
         {
-            GlTopology = PrimitiveTopologyToGLTopology( DrawAttribs.Topology );
+            GlTopology = PrimitiveTopologyToGLTopology( Topology );
         }
         GLenum IndexType = 0;
         Uint32 FirstIndexByteOffset = 0;

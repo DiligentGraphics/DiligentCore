@@ -35,33 +35,6 @@
 namespace Diligent
 {
 /*
-Vk_PRIMITIVE_TOPOLOGY_TYPE PrimitiveTopologyType_To_Vk_PRIMITIVE_TOPOLOGY_TYPE( PRIMITIVE_TOPOLOGY_TYPE TopologyType )
-{
-    static bool bIsInit = false;
-    static Vk_PRIMITIVE_TOPOLOGY_TYPE VkTopologyType[PRIMITIVE_TOPOLOGY_TYPE_NUM_TYPES] = {};
-    if( !bIsInit )
-    {
-        VkTopologyType[ PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED] =  Vk_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED;
-        VkTopologyType[ PRIMITIVE_TOPOLOGY_TYPE_POINT    ] =  Vk_PRIMITIVE_TOPOLOGY_TYPE_POINT;
-        VkTopologyType[ PRIMITIVE_TOPOLOGY_TYPE_LINE     ] =  Vk_PRIMITIVE_TOPOLOGY_TYPE_LINE;  
-        VkTopologyType[ PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE ] =  Vk_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-        VkTopologyType[ PRIMITIVE_TOPOLOGY_TYPE_PATCH    ] =  Vk_PRIMITIVE_TOPOLOGY_TYPE_PATCH;
-
-        bIsInit = true;
-    }
-
-    if( TopologyType >= PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED && TopologyType < PRIMITIVE_TOPOLOGY_TYPE_NUM_TYPES )
-    {
-        auto VkTopType = VkTopologyType[TopologyType];
-        return VkTopType;
-    }
-    else
-    {
-        UNEXPECTED( "Incorrect topology type operation (", TopologyType, ")" );
-        return static_cast<Vk_PRIMITIVE_TOPOLOGY_TYPE>(0);
-    }
-}
-
 void PipelineStateVkImpl::ParseShaderResourceLayout(IShader *pShader)
 {
     VERIFY_EXPR(pShader);
@@ -266,23 +239,17 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters *pRefCounters, Ren
         VkPipelineInputAssemblyStateCreateInfo InputAssemblyCI = {};
         InputAssemblyCI.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
         InputAssemblyCI.pNext = nullptr;
-        InputAssemblyCI.flags;
-        InputAssemblyCI.topology;
+        InputAssemblyCI.flags = 0; // reserved for future use
         InputAssemblyCI.primitiveRestartEnable = VK_FALSE;
         PipelineCI.pInputAssemblyState = &InputAssemblyCI;
 
         VkPipelineTessellationStateCreateInfo TessStateCI = {};
-        if(GraphicsPipeline.pHS != nullptr && GraphicsPipeline.pDS)
-        {
-            TessStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
-            TessStateCI.pNext = nullptr;
-            TessStateCI.flags;
-            TessStateCI.patchControlPoints;
+        TessStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
+        TessStateCI.pNext = nullptr;
+        TessStateCI.flags = 0; // reserved for future use
+        PipelineCI.pTessellationState = &TessStateCI;
 
-            PipelineCI.pTessellationState = &TessStateCI;
-        }
-        else
-            PipelineCI.pTessellationState = nullptr;
+        PrimitiveTopology_To_VkPrimitiveTopologyAndPatchCPCount(GraphicsPipeline.PrimitiveTopology, InputAssemblyCI.topology, TessStateCI.patchControlPoints);
         
 
         VkPipelineViewportStateCreateInfo ViewPortStateCI = {};

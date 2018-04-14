@@ -50,169 +50,11 @@ namespace Diligent
 static constexpr INTERFACE_ID IID_DeviceContext =
 { 0xdc92711b, 0xa1be, 0x4319, { 0xb2, 0xbd, 0xc6, 0x62, 0xd1, 0xcc, 0x19, 0xe4 } };
 
-/// Input primitive topology.
-
-/// This enumeration is used by DrawAttribs structure to define input primitive topology.
-enum PRIMITIVE_TOPOLOGY : Int32
-{
-    /// Undefined topology
-    PRIMITIVE_TOPOLOGY_UNDEFINED = 0,
-    
-    /// Interpret the vertex data as a list of triangles.\n
-    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST. OpenGL counterpart: GL_TRIANGLES.
-    PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
-
-    /// Interpret the vertex data as a triangle strip.\n
-    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP. OpenGL counterpart: GL_TRIANGLE_STRIP.
-    PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
-
-    /// Interpret the vertex data as a list of points.\n
-    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_POINTLIST. OpenGL counterpart: GL_POINTS.
-    PRIMITIVE_TOPOLOGY_POINT_LIST,
-
-    /// Interpret the vertex data as a list of lines.\n
-    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_LINELIST. OpenGL counterpart: GL_LINES.
-    PRIMITIVE_TOPOLOGY_LINE_LIST,
-
-    /// Interpret the vertex data as a list of one control point patches.\n
-    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
-    PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST,
-
-    /// Interpret the vertex data as a list of two control point patches.\n
-    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_2_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
-    PRIMITIVE_TOPOLOGY_2_CONTROL_POINT_PATCHLIST,
-
-    /// Interpret the vertex data as a list of three control point patches.\n
-    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
-    PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST,
-
-    /// Interpret the vertex data as a list of four control point patches.\n
-    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_4_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
-    PRIMITIVE_TOPOLOGY_4_CONTROL_POINT_PATCHLIST,
-
-    /// Interpret the vertex data as a list of five control point patches.\n
-    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_5_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
-    PRIMITIVE_TOPOLOGY_5_CONTROL_POINT_PATCHLIST,
-
-    /// Interpret the vertex data as a list of six control point patches.\n
-    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_6_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
-    PRIMITIVE_TOPOLOGY_6_CONTROL_POINT_PATCHLIST,
-
-    /// Interpret the vertex data as a list of seven control point patches.\n
-    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_7_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
-    PRIMITIVE_TOPOLOGY_7_CONTROL_POINT_PATCHLIST,
-
-    /// Interpret the vertex data as a list of eight control point patches.\n
-    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_8_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
-    PRIMITIVE_TOPOLOGY_8_CONTROL_POINT_PATCHLIST,
-
-    /// Interpret the vertex data as a list of nine control point patches.\n
-    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_9_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
-    PRIMITIVE_TOPOLOGY_9_CONTROL_POINT_PATCHLIST,
-
-    /// Interpret the vertex data as a list of ten control point patches.\n
-    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_10_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
-    PRIMITIVE_TOPOLOGY_10_CONTROL_POINT_PATCHLIST,
-
-    /// Interpret the vertex data as a list of 11 control point patches.\n
-    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_11_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
-    PRIMITIVE_TOPOLOGY_11_CONTROL_POINT_PATCHLIST,
-
-    /// Interpret the vertex data as a list of 12 control point patches.\n
-    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_12_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
-    PRIMITIVE_TOPOLOGY_12_CONTROL_POINT_PATCHLIST,
-
-    /// Interpret the vertex data as a list of 13 control point patches.\n
-    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_13_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
-    PRIMITIVE_TOPOLOGY_13_CONTROL_POINT_PATCHLIST,
-        
-    /// Interpret the vertex data as a list of 14 control point patches.\n
-    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_14_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
-    PRIMITIVE_TOPOLOGY_14_CONTROL_POINT_PATCHLIST,
-
-    /// Interpret the vertex data as a list of 15 control point patches.\n
-    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_15_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
-    PRIMITIVE_TOPOLOGY_15_CONTROL_POINT_PATCHLIST,
-
-    /// Interpret the vertex data as a list of 16 control point patches.\n
-    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_16_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
-    PRIMITIVE_TOPOLOGY_16_CONTROL_POINT_PATCHLIST,
-
-    /// Interpret the vertex data as a list of 17 control point patches.\n
-    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_17_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
-    PRIMITIVE_TOPOLOGY_17_CONTROL_POINT_PATCHLIST,
-    
-    /// Interpret the vertex data as a list of 18 control point patches.\n
-    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_18_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
-    PRIMITIVE_TOPOLOGY_18_CONTROL_POINT_PATCHLIST,
-
-    /// Interpret the vertex data as a list of 19 control point patches.\n
-    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_19_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
-    PRIMITIVE_TOPOLOGY_19_CONTROL_POINT_PATCHLIST,
-
-    /// Interpret the vertex data as a list of 20 control point patches.\n
-    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_20_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
-    PRIMITIVE_TOPOLOGY_20_CONTROL_POINT_PATCHLIST,
-
-    /// Interpret the vertex data as a list of 21 control point patches.\n
-    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_21_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
-    PRIMITIVE_TOPOLOGY_21_CONTROL_POINT_PATCHLIST,
-
-    /// Interpret the vertex data as a list of 22 control point patches.\n
-    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_22_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
-    PRIMITIVE_TOPOLOGY_22_CONTROL_POINT_PATCHLIST,
-
-    /// Interpret the vertex data as a list of 23 control point patches.\n
-    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_23_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
-    PRIMITIVE_TOPOLOGY_23_CONTROL_POINT_PATCHLIST,
-
-    /// Interpret the vertex data as a list of 24 control point patches.\n
-    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_24_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
-    PRIMITIVE_TOPOLOGY_24_CONTROL_POINT_PATCHLIST,
-
-    /// Interpret the vertex data as a list of 25 control point patches.\n
-    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_25_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
-    PRIMITIVE_TOPOLOGY_25_CONTROL_POINT_PATCHLIST,
-    
-    /// Interpret the vertex data as a list of 26 control point patches.\n
-    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_26_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
-    PRIMITIVE_TOPOLOGY_26_CONTROL_POINT_PATCHLIST,
-
-    /// Interpret the vertex data as a list of 27 control point patches.\n
-    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_27_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
-    PRIMITIVE_TOPOLOGY_27_CONTROL_POINT_PATCHLIST,
-
-    /// Interpret the vertex data as a list of 28 control point patches.\n
-    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_28_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
-    PRIMITIVE_TOPOLOGY_28_CONTROL_POINT_PATCHLIST,
-
-    /// Interpret the vertex data as a list of 29 control point patches.\n
-    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_29_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
-    PRIMITIVE_TOPOLOGY_29_CONTROL_POINT_PATCHLIST,
-
-    /// Interpret the vertex data as a list of 30 control point patches.\n
-    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_30_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
-    PRIMITIVE_TOPOLOGY_30_CONTROL_POINT_PATCHLIST,
-
-    /// Interpret the vertex data as a list of 31 control point patches.\n
-    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_31_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
-    PRIMITIVE_TOPOLOGY_31_CONTROL_POINT_PATCHLIST,
-    
-    /// Interpret the vertex data as a list of 32 control point patches.\n
-    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_32_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
-    PRIMITIVE_TOPOLOGY_32_CONTROL_POINT_PATCHLIST,
-
-    /// Helper value that stores the total number of topologies in the enumeration
-    PRIMITIVE_TOPOLOGY_NUM_TOPOLOGIES
-};
-
 /// Defines the draw command attributes
 
 /// This structure is used by IRenderDevice::Draw()
 struct DrawAttribs
 {
-    /// Input primitive topology, see Diligent::PRIMITIVE_TOPOLOGY.
-    PRIMITIVE_TOPOLOGY Topology;
     union
     {
         /// For a non-indexed draw call, number of vertices to draw
@@ -269,7 +111,6 @@ struct DrawAttribs
     /// Default values:
     /// Member                  | Default value
     /// ------------------------|--------------
-    /// Topology                | PRIMITIVE_TOPOLOGY_UNDEFINED
     /// NumVertices             | 0
     /// IndexType               | VT_UNDEFINED
     /// IsIndexed               | False
@@ -281,7 +122,6 @@ struct DrawAttribs
     /// FirstInstanceLocation   | 0
     /// pIndirectDrawAttribs    | nullptr
     DrawAttribs() : 
-        Topology(PRIMITIVE_TOPOLOGY_UNDEFINED),
         NumVertices(0),
         IndexType(VT_UNDEFINED),
         IsIndexed(False),

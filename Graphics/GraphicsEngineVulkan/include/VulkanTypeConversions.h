@@ -48,6 +48,10 @@ void InputLayoutDesc_To_VkVertexInputStateCI(const InputLayoutDesc& LayoutDesc,
                                              std::array<VkVertexInputBindingDescription, iMaxLayoutElements>& BindingDescriptions,
                                              std::array<VkVertexInputAttributeDescription, iMaxLayoutElements>& AttributeDescription);
 
+void PrimitiveTopology_To_VkPrimitiveTopologyAndPatchCPCount(PRIMITIVE_TOPOLOGY PrimTopology, 
+                                                             VkPrimitiveTopology &VkPrimTopology, 
+                                                             uint32_t &PatchControlPoints);
+
 #if 0
 D3D12_COMPARISON_FUNC ComparisonFuncToD3D12ComparisonFunc(COMPARISON_FUNCTION Func);
 D3D12_FILTER FilterTypeToD3D12Filter(FILTER_TYPE MinFilter, FILTER_TYPE MagFilter, FILTER_TYPE MipFilter);

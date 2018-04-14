@@ -409,11 +409,11 @@ Layout.LayoutElements = TextLayoutElems;
 Layout.NumElements = _countof( TextLayoutElems );
 ```
 
-Finally, define primitive topology type, set shaders and call `IRenderDevice::CreatePipelineState()` to create the PSO:
+Finally, define primitive topology, set shaders and call `IRenderDevice::CreatePipelineState()` to create the PSO:
 
 ```cpp
 // Define shader and primitive topology
-PSODesc.GraphicsPipeline.PrimitiveTopologyType = PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+PSODesc.GraphicsPipeline.PrimitiveTopology = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 PSODesc.GraphicsPipeline.pVS = m_pTextVS;
 PSODesc.GraphicsPipeline.pPS = m_pTextPS;
 
@@ -539,7 +539,7 @@ When all required states and resources are bound, `IDeviceContext::Draw()` can b
 command or `IDeviceContext::DispatchCompute()` can be used to execute compute command. Note that for a draw command,
 graphics pipeline must be bound, and for dispatch command, compute pipeline must be bound. `Draw()` takes
 `DrawAttribs` structure as an argument. The structure members define all attributes required to perform the command
-(primitive topology, number of vertices or indices, if draw call is indexed or not, if draw call is instanced or not,
+(number of vertices or indices, if draw call is indexed or not, if draw call is instanced or not,
 if draw call is indirect or not, etc.). For example:
 
 ```cpp
@@ -547,7 +547,6 @@ DrawAttribs attrs;
 attrs.IsIndexed = true;
 attrs.IndexType = VT_UINT16;
 attrs.NumIndices = 36;
-attrs.Topology = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 pContext->Draw(attrs);
 ```
 
@@ -610,6 +609,8 @@ objects. Refer to the following pages for more information:
 * Added sync interval parameter to ISwapChain::Present()
 * API Changes
   * Added `NumViewports` member to `GraphicsPipelineDesc` struct
+  * Removed `PRIMITIVE_TOPOLOGY_TYPE` type; replaced `PRIMITIVE_TOPOLOGY_TYPE GraphicsPipelineDesc::PrimitiveTopologyType` 
+    with `PRIMITIVE_TOPOLOGY GraphicsPipelineDesc::PrimitiveTopology`; removed `DrawAttribs::Topology`
 
 ## v2.2
 

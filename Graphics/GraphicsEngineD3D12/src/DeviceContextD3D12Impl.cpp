@@ -135,6 +135,9 @@ namespace Diligent
             auto &GraphicsCtx = pCmdCtx->AsGraphicsContext();
             GraphicsCtx.SetPipelineState(pd3d12PSO);
 
+            auto D3D12Topology = TopologyToD3D12Topology(PSODesc.GraphicsPipeline.PrimitiveTopology);
+            GraphicsCtx.SetPrimitiveTopology(D3D12Topology);
+
             if(CommitStates)
             {
                 GraphicsCtx.SetStencilRef(m_StencilRef);
@@ -330,9 +333,6 @@ namespace Diligent
 
         auto *pPipelineStateD3D12 = ValidatedCast<PipelineStateD3D12Impl>(m_pPipelineState.RawPtr());
         
-        auto D3D12Topology = TopologyToD3D12Topology( DrawAttribs.Topology );
-        GraphCtx.SetPrimitiveTopology(D3D12Topology);
-
         if(m_bCommittedD3D12VBsUpToDate)
             TransitionD3D12VertexBuffers(GraphCtx);
         else

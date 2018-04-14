@@ -117,6 +117,14 @@ namespace Diligent
                 m_pd3d11DeviceContext->IASetInputLayout( pd3d11InputLayout );
                 m_CommittedD3D11InputLayout = pd3d11InputLayout;
             }
+
+            auto PrimTopology = Desc.GraphicsPipeline.PrimitiveTopology;
+            if (m_CommittedPrimitiveTopology != PrimTopology)
+            {
+                m_CommittedPrimitiveTopology = PrimTopology;
+                m_CommittedD3D11PrimTopology = TopologyToD3D11Topology(PrimTopology);
+                m_pd3d11DeviceContext->IASetPrimitiveTopology(m_CommittedD3D11PrimTopology);
+            }
         }
     }
 
@@ -707,13 +715,6 @@ namespace Diligent
         }
 #endif
 
-        if(m_CommittedPrimitiveTopology != DrawAttribs.Topology)
-        {
-            m_CommittedPrimitiveTopology = DrawAttribs.Topology;
-            m_CommittedD3D11PrimTopology = TopologyToD3D11Topology( DrawAttribs.Topology );
-            m_pd3d11DeviceContext->IASetPrimitiveTopology( m_CommittedD3D11PrimTopology );
-        }
-        
         if( DrawAttribs.IsIndirect )
         {
             VERIFY( DrawAttribs.pIndirectDrawAttribs, "Indirect draw command attributes buffer is not set" );

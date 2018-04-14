@@ -104,6 +104,7 @@ namespace Diligent
         GraphicsPipeline.DepthStencilDesc.DepthEnable = false;
         GraphicsPipeline.DepthStencilDesc.DepthWriteEnable = false;
         GraphicsPipeline.pVS = m_pVertexShader;
+        GraphicsPipeline.PrimitiveTopology = PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
 
         static const char* CmpTypePrefix[3] = { "", "i", "u" };
         for( Int32 Dim = RESOURCE_DIM_TEX_2D; Dim <= RESOURCE_DIM_TEX_3D; ++Dim )
@@ -217,7 +218,6 @@ namespace Diligent
 
         DrawAttribs DrawAttrs;
         DrawAttrs.NumVertices = 4;
-        DrawAttrs.Topology = PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
         pCtxGL->Draw( DrawAttrs );
 
         SrcTexVar->Set( nullptr );

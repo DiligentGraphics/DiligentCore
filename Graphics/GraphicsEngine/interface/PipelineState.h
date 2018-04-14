@@ -37,33 +37,6 @@
 
 namespace Diligent
 {
-
-/// Primitive topology type
-
-/// [D3D12_PRIMITIVE_TOPOLOGY_TYPE]: https://msdn.microsoft.com/en-us/library/windows/desktop/dn770385(v=vs.85).aspx
-/// This enumeration describes primitive topology type. It generally mirrors [D3D12_PRIMITIVE_TOPOLOGY_TYPE] enumeration.
-/// The enumeration is used by GraphicsPipelineDesc to describe how the pipeline interprets 
-/// geometry or hull shader input primitives
-enum PRIMITIVE_TOPOLOGY_TYPE : Int8
-{
-    /// Topology is not defined
-    PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED	= 0,
-
-    /// Interpret the input primitive as a point.
-    PRIMITIVE_TOPOLOGY_TYPE_POINT,
-
-    /// Interpret the input primitive as a line.
-    PRIMITIVE_TOPOLOGY_TYPE_LINE,
-
-    /// Interpret the input primitive as a triangle.
-    PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,
-
-    /// Interpret the input primitive as a control point patch.
-    PRIMITIVE_TOPOLOGY_TYPE_PATCH,
-
-    /// Total number of topology types
-    PRIMITIVE_TOPOLOGY_TYPE_NUM_TYPES
-};
     
 /// Sample description
 
@@ -125,7 +98,7 @@ struct GraphicsPipelineDesc
     //D3D12_INDEX_BUFFER_STRIP_CUT_VALUE IBStripCutValue;
 
     /// Primitive topology type
-    PRIMITIVE_TOPOLOGY_TYPE PrimitiveTopologyType = PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+    PRIMITIVE_TOPOLOGY PrimitiveTopology = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
     /// Number of viewports used by this pipeline
     Uint8 NumViewports = 1;
