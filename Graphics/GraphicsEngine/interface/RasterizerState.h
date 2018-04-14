@@ -145,12 +145,12 @@ struct RasterizerStateDesc
         FillMode             ( _FillMode ),
         CullMode             ( _CullMode ),
         FrontCounterClockwise( _FrontCounterClockwise ),
-        DepthBias            ( _DepthBias ),
-        DepthBiasClamp       ( _DepthBiasClamp ),
-        SlopeScaledDepthBias ( _SlopeScaledDepthBias ),
         DepthClipEnable      ( _DepthClipEnable ),
         ScissorEnable        ( _ScissorEnable ),
-        AntialiasedLineEnable( _AntialiasedLineEnable )
+        AntialiasedLineEnable( _AntialiasedLineEnable ),
+        DepthBias            ( _DepthBias ),
+        DepthBiasClamp       ( _DepthBiasClamp ),
+        SlopeScaledDepthBias ( _SlopeScaledDepthBias )
     {
     }
     
