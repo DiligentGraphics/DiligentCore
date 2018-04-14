@@ -22,6 +22,7 @@
  */
 
 #include "pch.h"
+#include <array>
 #include "PipelineStateVkImpl.h"
 #include "ShaderVkImpl.h"
 #include "VulkanTypeConversions.h"
@@ -254,7 +255,13 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters *pRefCounters, Ren
                                 (GraphicsPipeline.pGS != nullptr ? 1 : 0);
         std::vector<VkPipelineShaderStageCreateInfo> Stages(PipelineCI.stageCount);
         PipelineCI.pStages = Stages.data();
-        PipelineCI.pVertexInputState;
+        
+        VkPipelineVertexInputStateCreateInfo VertexInputStateCI = {};
+        std::array<VkVertexInputBindingDescription, iMaxLayoutElements> BindingDescriptions;
+        std::array<VkVertexInputAttributeDescription, iMaxLayoutElements> AttributeDescription;
+        InputLayoutDesc_To_VkVertexInputStateCI(GraphicsPipeline.InputLayout, VertexInputStateCI, BindingDescriptions, AttributeDescription);
+        PipelineCI.pVertexInputState = &VertexInputStateCI;
+
 
         VkPipelineInputAssemblyStateCreateInfo InputAssemblyCI = {};
         InputAssemblyCI.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;

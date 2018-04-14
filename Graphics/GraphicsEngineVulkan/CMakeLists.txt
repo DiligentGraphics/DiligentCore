@@ -10,7 +10,6 @@ set(INCLUDE
     include/CommandQueueVkImpl.h
     include/VulkanResourceBase.h
     include/VulkanTypeConversions.h
-    include/VulkanTypeDefinitions.h
     include/VulkanUtils.h
     include/DescriptorHeap.h
     include/DeviceContextVkImpl.h

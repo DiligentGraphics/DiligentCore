@@ -26,6 +26,7 @@
 /// \file
 /// Type conversion routines
 
+#include <array>
 #include "GraphicsTypes.h"
 
 namespace Diligent
@@ -42,6 +43,10 @@ void BlendStateDesc_To_VkBlendStateCI(const BlendStateDesc &BSDesc,
                                       VkPipelineColorBlendStateCreateInfo &ColorBlendStateCI,
                                       std::vector<VkPipelineColorBlendAttachmentState> &ColorBlendAttachments);
 
+void InputLayoutDesc_To_VkVertexInputStateCI(const InputLayoutDesc& LayoutDesc, 
+                                             VkPipelineVertexInputStateCreateInfo &VertexInputStateCI,
+                                             std::array<VkVertexInputBindingDescription, iMaxLayoutElements>& BindingDescriptions,
+                                             std::array<VkVertexInputAttributeDescription, iMaxLayoutElements>& AttributeDescription);
 
 #if 0
 D3D12_COMPARISON_FUNC ComparisonFuncToD3D12ComparisonFunc(COMPARISON_FUNCTION Func);

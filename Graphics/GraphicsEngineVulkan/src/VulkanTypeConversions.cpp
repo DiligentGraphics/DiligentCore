@@ -26,7 +26,6 @@
 #include <array>
 
 #include "VulkanTypeConversions.h"
-#include "VulkanTypeDefinitions.h"
 
 namespace Diligent
 {
@@ -463,154 +462,154 @@ VkFormat TypeToVkFormat(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIsNormal
 {
     switch (ValType)
     {
-    case VT_FLOAT16:
-    {
-        VERIFY(!bIsNormalized, "Floating point formats cannot be normalized");
-        switch (NumComponents)
+        case VT_FLOAT16:
         {
-        case 1: return VK_FORMAT_R16_SFLOAT;
-        case 2: return VK_FORMAT_R16G16_SFLOAT;
-        case 4: return VK_FORMAT_R16G16B16A16_SFLOAT;
-        default: UNEXPECTED("Unusupported number of components"); return VK_FORMAT_UNDEFINED;
-        }
-    }
-
-    case VT_FLOAT32:
-    {
-        VERIFY(!bIsNormalized, "Floating point formats cannot be normalized");
-        switch (NumComponents)
-        {
-        case 1: return VK_FORMAT_R32_SFLOAT;
-        case 2: return VK_FORMAT_R32G32_SFLOAT;
-        case 3: return VK_FORMAT_R32G32B32_SFLOAT;
-        case 4: return VK_FORMAT_R32G32B32A32_SFLOAT;
-        default: UNEXPECTED("Unusupported number of components"); return VK_FORMAT_UNDEFINED;
-        }
-    }
-
-    case VT_INT32:
-    {
-        VERIFY(!bIsNormalized, "32-bit UNORM formats are not supported. Use R32_FLOAT instead");
-        switch (NumComponents)
-        {
-        case 1: return VK_FORMAT_R32_SINT;
-        case 2: return VK_FORMAT_R32G32_SINT;
-        case 3: return VK_FORMAT_R32G32B32_SINT;
-        case 4: return VK_FORMAT_R32G32B32A32_SINT;
-        default: UNEXPECTED("Unusupported number of components"); return VK_FORMAT_UNDEFINED;
-        }
-    }
-
-    case VT_UINT32:
-    {
-        VERIFY(!bIsNormalized, "32-bit UNORM formats are not supported. Use R32_FLOAT instead");
-        switch (NumComponents)
-        {
-        case 1: return VK_FORMAT_R32_UINT;
-        case 2: return VK_FORMAT_R32G32_UINT;
-        case 3: return VK_FORMAT_R32G32B32_UINT;
-        case 4: return VK_FORMAT_R32G32B32A32_UINT;
-        default: UNEXPECTED("Unusupported number of components"); return VK_FORMAT_UNDEFINED;
-        }
-    }
-
-    case VT_INT16:
-    {
-        if (bIsNormalized)
-        {
+            VERIFY(!bIsNormalized, "Floating point formats cannot be normalized");
             switch (NumComponents)
             {
-            case 1: return VK_FORMAT_R16_SNORM;
-            case 2: return VK_FORMAT_R16G16_SNORM;
-            case 4: return VK_FORMAT_R16G16B16A16_SNORM;
-            default: UNEXPECTED("Unusupported number of components"); return VK_FORMAT_UNDEFINED;
+                case 1: return VK_FORMAT_R16_SFLOAT;
+                case 2: return VK_FORMAT_R16G16_SFLOAT;
+                case 4: return VK_FORMAT_R16G16B16A16_SFLOAT;
+                default: UNEXPECTED("Unusupported number of components"); return VK_FORMAT_UNDEFINED;
             }
         }
-        else
-        {
-            switch (NumComponents)
-            {
-            case 1: return VK_FORMAT_R16_SINT;
-            case 2: return VK_FORMAT_R16G16_SINT;
-            case 4: return VK_FORMAT_R16G16B16A16_SINT;
-            default: UNEXPECTED("Unusupported number of components"); return VK_FORMAT_UNDEFINED;
-            }
-        }
-    }
 
-    case VT_UINT16:
-    {
-        if (bIsNormalized)
+        case VT_FLOAT32:
         {
+            VERIFY(!bIsNormalized, "Floating point formats cannot be normalized");
             switch (NumComponents)
             {
-            case 1: return VK_FORMAT_R16_UNORM;
-            case 2: return VK_FORMAT_R16G16_UNORM;
-            case 4: return VK_FORMAT_R16G16B16A16_UNORM;
-            default: UNEXPECTED("Unusupported number of components"); return VK_FORMAT_UNDEFINED;
+                case 1: return VK_FORMAT_R32_SFLOAT;
+                case 2: return VK_FORMAT_R32G32_SFLOAT;
+                case 3: return VK_FORMAT_R32G32B32_SFLOAT;
+                case 4: return VK_FORMAT_R32G32B32A32_SFLOAT;
+                default: UNEXPECTED("Unusupported number of components"); return VK_FORMAT_UNDEFINED;
             }
         }
-        else
-        {
-            switch (NumComponents)
-            {
-            case 1: return VK_FORMAT_R16_UINT;
-            case 2: return VK_FORMAT_R16G16_UINT;
-            case 4: return VK_FORMAT_R16G16B16A16_UINT;
-            default: UNEXPECTED("Unusupported number of components"); return VK_FORMAT_UNDEFINED;
-            }
-        }
-    }
 
-    case VT_INT8:
-    {
-        if (bIsNormalized)
+        case VT_INT32:
         {
+            VERIFY(!bIsNormalized, "32-bit UNORM formats are not supported. Use R32_FLOAT instead");
             switch (NumComponents)
             {
-            case 1: return VK_FORMAT_R8_SNORM;
-            case 2: return VK_FORMAT_R8G8_SNORM;
-            case 4: return VK_FORMAT_R8G8B8A8_SNORM;
-            default: UNEXPECTED("Unusupported number of components"); return VK_FORMAT_UNDEFINED;
+                case 1: return VK_FORMAT_R32_SINT;
+                case 2: return VK_FORMAT_R32G32_SINT;
+                case 3: return VK_FORMAT_R32G32B32_SINT;
+                case 4: return VK_FORMAT_R32G32B32A32_SINT;
+                default: UNEXPECTED("Unusupported number of components"); return VK_FORMAT_UNDEFINED;
             }
         }
-        else
-        {
-            switch (NumComponents)
-            {
-            case 1: return VK_FORMAT_R8_SINT;
-            case 2: return VK_FORMAT_R8G8_SINT;
-            case 4: return VK_FORMAT_R8G8B8A8_SINT;
-            default: UNEXPECTED("Unusupported number of components"); return VK_FORMAT_UNDEFINED;
-            }
-        }
-    }
 
-    case VT_UINT8:
-    {
-        if (bIsNormalized)
+        case VT_UINT32:
         {
+            VERIFY(!bIsNormalized, "32-bit UNORM formats are not supported. Use R32_FLOAT instead");
             switch (NumComponents)
             {
-            case 1: return VK_FORMAT_R8_UNORM;
-            case 2: return VK_FORMAT_R8G8_UNORM;
-            case 4: return VK_FORMAT_R8G8B8A8_UNORM;
-            default: UNEXPECTED("Unusupported number of components"); return VK_FORMAT_UNDEFINED;
+                case 1: return VK_FORMAT_R32_UINT;
+                case 2: return VK_FORMAT_R32G32_UINT;
+                case 3: return VK_FORMAT_R32G32B32_UINT;
+                case 4: return VK_FORMAT_R32G32B32A32_UINT;
+                default: UNEXPECTED("Unusupported number of components"); return VK_FORMAT_UNDEFINED;
             }
         }
-        else
-        {
-            switch (NumComponents)
-            {
-            case 1: return VK_FORMAT_R8_UINT;
-            case 2: return VK_FORMAT_R8G8_UINT;
-            case 4: return VK_FORMAT_R8G8B8A8_UINT;
-            default: UNEXPECTED("Unusupported number of components"); return VK_FORMAT_UNDEFINED;
-            }
-        }
-    }
 
-    default: UNEXPECTED("Unusupported format"); return VK_FORMAT_UNDEFINED;
+        case VT_INT16:
+        {
+            if (bIsNormalized)
+            {
+                switch (NumComponents)
+                {
+                    case 1: return VK_FORMAT_R16_SNORM;
+                    case 2: return VK_FORMAT_R16G16_SNORM;
+                    case 4: return VK_FORMAT_R16G16B16A16_SNORM;
+                    default: UNEXPECTED("Unusupported number of components"); return VK_FORMAT_UNDEFINED;
+                }
+            }
+            else
+            {
+                switch (NumComponents)
+                {
+                    case 1: return VK_FORMAT_R16_SINT;
+                    case 2: return VK_FORMAT_R16G16_SINT;
+                    case 4: return VK_FORMAT_R16G16B16A16_SINT;
+                    default: UNEXPECTED("Unusupported number of components"); return VK_FORMAT_UNDEFINED;
+                }
+            }
+        }
+
+        case VT_UINT16:
+        {
+            if (bIsNormalized)
+            {
+                switch (NumComponents)
+                {
+                    case 1: return VK_FORMAT_R16_UNORM;
+                    case 2: return VK_FORMAT_R16G16_UNORM;
+                    case 4: return VK_FORMAT_R16G16B16A16_UNORM;
+                    default: UNEXPECTED("Unusupported number of components"); return VK_FORMAT_UNDEFINED;
+                }
+            }
+            else
+            {
+                switch (NumComponents)
+                {
+                    case 1: return VK_FORMAT_R16_UINT;
+                    case 2: return VK_FORMAT_R16G16_UINT;
+                    case 4: return VK_FORMAT_R16G16B16A16_UINT;
+                    default: UNEXPECTED("Unusupported number of components"); return VK_FORMAT_UNDEFINED;
+                }
+            }
+        }
+
+        case VT_INT8:
+        {
+            if (bIsNormalized)
+            {
+                switch (NumComponents)
+                {
+                    case 1: return VK_FORMAT_R8_SNORM;
+                    case 2: return VK_FORMAT_R8G8_SNORM;
+                    case 4: return VK_FORMAT_R8G8B8A8_SNORM;
+                    default: UNEXPECTED("Unusupported number of components"); return VK_FORMAT_UNDEFINED;
+                }
+            }
+            else
+            {
+                switch (NumComponents)
+                {
+                    case 1: return VK_FORMAT_R8_SINT;
+                    case 2: return VK_FORMAT_R8G8_SINT;
+                    case 4: return VK_FORMAT_R8G8B8A8_SINT;
+                    default: UNEXPECTED("Unusupported number of components"); return VK_FORMAT_UNDEFINED;
+                }
+            }
+        }
+
+        case VT_UINT8:
+        {
+            if (bIsNormalized)
+            {
+                switch (NumComponents)
+                {
+                    case 1: return VK_FORMAT_R8_UNORM;
+                    case 2: return VK_FORMAT_R8G8_UNORM;
+                    case 4: return VK_FORMAT_R8G8B8A8_UNORM;
+                    default: UNEXPECTED("Unusupported number of components"); return VK_FORMAT_UNDEFINED;
+                }
+            }
+            else
+            {
+                switch (NumComponents)
+                {
+                    case 1: return VK_FORMAT_R8_UINT;
+                    case 2: return VK_FORMAT_R8G8_UINT;
+                    case 4: return VK_FORMAT_R8G8B8A8_UINT;
+                    default: UNEXPECTED("Unusupported number of components"); return VK_FORMAT_UNDEFINED;
+                }
+            }
+        }
+
+        default: UNEXPECTED("Unusupported format"); return VK_FORMAT_UNDEFINED;
     }
 }
 
@@ -908,6 +907,64 @@ void BlendStateDesc_To_VkBlendStateCI(const BlendStateDesc &BSDesc,
         const auto& RTBlendState = BSDesc.IndependentBlendEnable ? BSDesc.RenderTargets[attachment] : BSDesc.RenderTargets[0];
         ColorBlendAttachments[attachment] = RenderTargetBlendDescToVkColorBlendAttachmentState(RTBlendState);
     }
+}
+
+VkVertexInputRate LayoutElemFrequencyToVkInputRate(LayoutElement::FREQUENCY frequency)
+{
+    switch(frequency)
+    {
+        case LayoutElement::FREQUENCY_UNDEFINED: 
+            UNEXPECTED("Undefined layout element frequency");
+            return VK_VERTEX_INPUT_RATE_VERTEX;
+        
+        case LayoutElement::FREQUENCY_PER_VERTEX:   return VK_VERTEX_INPUT_RATE_VERTEX;
+        case LayoutElement::FREQUENCY_PER_INSTANCE: return VK_VERTEX_INPUT_RATE_INSTANCE;
+
+        default:
+            UNEXPECTED("Unknown layout element frequency");
+            return VK_VERTEX_INPUT_RATE_VERTEX;
+    }
+}
+
+void InputLayoutDesc_To_VkVertexInputStateCI(const InputLayoutDesc& LayoutDesc,
+                                             VkPipelineVertexInputStateCreateInfo &VertexInputStateCI,
+                                             std::array<VkVertexInputBindingDescription, iMaxLayoutElements>& BindingDescriptions,
+                                             std::array<VkVertexInputAttributeDescription, iMaxLayoutElements>& AttributeDescription)
+{
+    // Vertex input description (20.2)
+    VertexInputStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    VertexInputStateCI.pNext = nullptr;
+    VertexInputStateCI.flags = 0; // reserved for future use.
+    VertexInputStateCI.vertexBindingDescriptionCount = 0;
+    VertexInputStateCI.pVertexBindingDescriptions = BindingDescriptions.data();
+    VertexInputStateCI.vertexAttributeDescriptionCount = LayoutDesc.NumElements;
+    VertexInputStateCI.pVertexAttributeDescriptions = AttributeDescription.data();
+    std::array<Int32, iMaxLayoutElements> BufferSlot2BindingDescInd;
+    BufferSlot2BindingDescInd.fill(-1);
+    for(Uint32 elem=0; elem < LayoutDesc.NumElements; ++elem)
+    {
+        auto &LayoutElem = LayoutDesc.LayoutElements[elem];
+        auto &BindingDescInd = BufferSlot2BindingDescInd[LayoutElem.BufferSlot];
+        if(BindingDescInd < 0)
+        {
+            BindingDescInd = VertexInputStateCI.vertexBindingDescriptionCount++;
+            auto &BindingDesc = BindingDescriptions[BindingDescInd];
+            BindingDesc.binding = LayoutElem.BufferSlot;
+            //BindingDesc.stride = LayoutElem.
+            BindingDesc.inputRate = LayoutElemFrequencyToVkInputRate(LayoutElem.Frequency);
+        }
+
+        const auto &BindingDesc = BindingDescriptions[BindingDescInd];
+        VERIFY(BindingDesc.binding == LayoutElem.BufferSlot, "Inconsistent buffer slot");
+        VERIFY(BindingDesc.inputRate == LayoutElemFrequencyToVkInputRate(LayoutElem.Frequency), "Incosistent layout element frequency");
+
+        auto &AttribDesc = AttributeDescription[elem];
+        AttribDesc.binding = BindingDesc.binding;
+        AttribDesc.location = LayoutElem.InputIndex;
+        AttribDesc.format = TypeToVkFormat(LayoutElem.ValueType, LayoutElem.NumComponents, LayoutElem.IsNormalized);
+        AttribDesc.offset = LayoutElem.RelativeOffset;
+    }
+
 }
 
 
