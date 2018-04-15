@@ -26,6 +26,7 @@
 #include "VulkanErrors.h"
 #include "VulkanUtilities/VulkanInstance.h"
 #include "VulkanUtilities/VulkanDebug.h"
+#include "GLSL2SPIRV.h"
 
 namespace VulkanUtilities
 {
@@ -186,6 +187,8 @@ namespace VulkanUtilities
             CHECK_VK_ERROR(err, "Failed to enumerate physical devices");
             VERIFY_EXPR(m_PhysicalDevices.size() == PhysicalDeviceCount);
         }
+
+        Diligent::InitializeGlslang();
     }
 
     VulkanInstance::~VulkanInstance()
@@ -195,6 +198,8 @@ namespace VulkanUtilities
             VulkanUtilities::FreeDebugCallback(m_VkInstance);
         }
         vkDestroyInstance(m_VkInstance, m_pVkAllocator);
+
+        Diligent::FinalizeGlslang();
     }
 
     VkPhysicalDevice VulkanInstance::SelectPhysicalDevice()

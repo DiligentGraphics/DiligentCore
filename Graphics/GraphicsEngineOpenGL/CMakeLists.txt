@@ -161,11 +161,12 @@ set(PRIVATE_DEPENDENCIES
     Common 
     TargetPlatform
     GraphicsEngine
+    GLSLTools
 )
 
 set(PUBLIC_DEPENDENCIES 
     GraphicsEngineOpenGLInterface
-    HLSL2GLSLConverterLib
+	HLSL2GLSLConverterLib
 )
 
 if(PLATFORM_WIN32)

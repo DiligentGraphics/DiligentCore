@@ -26,6 +26,8 @@
 #include "ShaderVkImpl.h"
 #include "RenderDeviceVkImpl.h"
 #include "DataBlobImpl.h"
+#include "GLSLSourceBuilder.h"
+#include "GLSL2SPIRV.h"
 //#include "D3DShaderResourceLoader.h"
 
 using namespace Diligent;
@@ -34,13 +36,19 @@ namespace Diligent
 {
 
 
-ShaderVkImpl::ShaderVkImpl(IReferenceCounters *pRefCounters, RenderDeviceVkImpl *pRenderDeviceVk, const ShaderCreationAttribs &ShaderCreationAttribs) : 
-    TShaderBase(pRefCounters, pRenderDeviceVk, ShaderCreationAttribs.Desc)/*,
+ShaderVkImpl::ShaderVkImpl(IReferenceCounters *pRefCounters, RenderDeviceVkImpl *pRenderDeviceVk, const ShaderCreationAttribs &CreationAttribs) : 
+    TShaderBase(pRefCounters, pRenderDeviceVk, CreationAttribs.Desc)/*,
     ShaderD3DBase(ShaderCreationAttribs),
     m_StaticResLayout(*this, GetRawAllocator()),
     m_DummyShaderVar(*this),
     m_ConstResCache(ShaderResourceCacheVk::DbgCacheContentType::StaticShaderResources)*/
 {
+    auto GLSLSource = BuildGLSLSourceString(CreationAttribs);
+    auto SPIRV = GLSLtoSPIRV(m_Desc.ShaderType, GLSLSource.c_str());
+    if(SPIRV.empty())
+    {
+        LOG_ERROR_AND_THROW("Failed to compile shader");
+    }
 /*
     // Load shader resources
     auto &Allocator = GetRawAllocator();

@@ -47,7 +47,7 @@ class ShaderVkImpl : public ShaderBase<IShaderVk, IRenderDeviceVk>
 public:
     typedef ShaderBase<IShaderVk, IRenderDeviceVk> TShaderBase;
 
-    ShaderVkImpl(IReferenceCounters *pRefCounters, class RenderDeviceVkImpl *pRenderDeviceVk, const ShaderCreationAttribs &ShaderCreationAttribs);
+    ShaderVkImpl(IReferenceCounters *pRefCounters, class RenderDeviceVkImpl *pRenderDeviceVk, const ShaderCreationAttribs &CreationAttribs);
     ~ShaderVkImpl();
     
     //virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;

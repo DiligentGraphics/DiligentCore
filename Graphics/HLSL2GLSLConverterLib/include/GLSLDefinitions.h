@@ -236,18 +236,6 @@ bool4 isfinite( vec4 f4 )
     return bool4( isfinite( f4.xyz ), isfinite( f4.w ) );
 }
 
-#ifndef GL_ES
-    float noise( float x ){ return noise1( x ); }
-    vec2  noise( vec2  x ){ return noise2( x ); }
-    vec3  noise( vec3  x ){ return noise3( x ); }
-    vec4  noise( vec4  x ){ return noise4( x ); }
-#else
-    float noise( float x ){ return 0.0; }
-    vec2  noise( vec2  x ){ return vec2(0.0, 0.0); }
-    vec3  noise( vec3  x ){ return vec3(0.0, 0.0, 0.0); }
-    vec4  noise( vec4  x ){ return vec4(0.0, 0.0, 0.0, 0.0); }
-#endif
-
 float log10( float x )
 {
     return log( x ) / log( 10.0 );

@@ -26,7 +26,7 @@
 #include "ShaderGLImpl.h"
 #include "RenderDeviceGLImpl.h"
 #include "DataBlobImpl.h"
-#include "HLSL2GLSLConverterImpl.h"
+#include "GLSLSourceBuilder.h"
 
 using namespace Diligent;
 
@@ -38,222 +38,7 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters *pRefCounters, RenderDeviceGLImpl 
     m_GlProgObj(false),
     m_GLShaderObj( false, GLObjectWrappers::GLShaderObjCreateReleaseHelper( GetGLShaderType( m_Desc.ShaderType ) ) )
 {
-    std::vector<const char *> ShaderStrings;
-
-    // Each element in the length array may contain the length of the corresponding string 
-    // (the null character is not counted as part of the string length).
-    // Not specifying lengths causes shader compilation errors on Android
-    std::vector<GLint> Lenghts;
-
-    String Settings;
-    
-#if PLATFORM_WIN32 || PLATFORM_LINUX
-    Settings.append(
-        "#version 430 core\n"
-        "#define DESKTOP_GL 1\n"
-    );
-#   if PLATFORM_WIN32
-        Settings.append("#define PLATFORM_WIN32 1\n");
-#   elif PLATFORM_LINUX
-        Settings.append("#define PLATFORM_LINUX 1\n");
-#   else
-#       error Unexpected platform
-#   endif
-#elif PLATFORM_MACOS
-    Settings.append(
-        "#version 410 core\n"
-        "#define DESKTOP_GL 1\n"
-        "#define PLATFORM_MACOS 1\n"
-    );
-#elif PLATFORM_IOS
-    Settings.append(
-        "#version 300 es\n"
-        "#extension GL_EXT_separate_shader_objects : enable\n"
-        "#ifndef GL_ES\n"
-        "#  define GL_ES 1\n"
-        "#endif\n"
-
-        "#define PLATFORM_IOS 1\n"
-
-        "precision highp float;\n"
-        "precision highp int;\n"
-        //"precision highp uint;\n"
-
-        "precision highp sampler2D;\n"
-        "precision highp sampler3D;\n"
-        "precision highp samplerCube;\n"
-        "precision highp samplerCubeShadow;\n"
-        "precision highp sampler2DShadow;\n"
-        "precision highp sampler2DArray;\n"
-        "precision highp sampler2DArrayShadow;\n"
-
-        "precision highp isampler2D;\n"
-        "precision highp isampler3D;\n"
-        "precision highp isamplerCube;\n"
-        "precision highp isampler2DArray;\n"
-
-        "precision highp usampler2D;\n"
-        "precision highp usampler3D;\n"
-        "precision highp usamplerCube;\n"
-        "precision highp usampler2DArray;\n"
-    );
-
-    // Built-in variable 'gl_Position' must be redeclared before use, with separate shader objects.
-    if(m_Desc.ShaderType == SHADER_TYPE_VERTEX)
-        Settings.append("out vec4 gl_Position;\n");
-
-#elif PLATFORM_ANDROID
-    Settings.append(
-        "#version 310 es\n"
-        "#extension GL_EXT_texture_cube_map_array : enable\n"
-    );
-
-    if(m_Desc.ShaderType == SHADER_TYPE_GEOMETRY)
-        Settings.append("#extension GL_EXT_geometry_shader : enable\n");
-
-    if(m_Desc.ShaderType == SHADER_TYPE_HULL || m_Desc.ShaderType == SHADER_TYPE_DOMAIN)
-        Settings.append("#extension GL_EXT_tessellation_shader : enable\n");
-
-    Settings.append(
-        "#ifndef GL_ES\n"
-        "#  define GL_ES 1\n"
-        "#endif\n"
- 
-        "#define PLATFORM_ANDROID 1\n"
-
-        "precision highp float;\n"
-        "precision highp int;\n"
-        //"precision highp uint;\n"  // This line causes shader compilation error on NVidia!
-
-        "precision highp sampler2D;\n"
-        "precision highp sampler3D;\n"
-        "precision highp samplerCube;\n"
-        "precision highp samplerCubeArray;\n"
-        "precision highp samplerCubeShadow;\n"
-        "precision highp samplerCubeArrayShadow;\n"
-        "precision highp sampler2DShadow;\n"
-        "precision highp sampler2DArray;\n"
-        "precision highp sampler2DArrayShadow;\n"
-        "precision highp sampler2DMS;\n"       // ES3.1
-
-        "precision highp isampler2D;\n"
-        "precision highp isampler3D;\n"
-        "precision highp isamplerCube;\n"
-        "precision highp isamplerCubeArray;\n"
-        "precision highp isampler2DArray;\n"
-        "precision highp isampler2DMS;\n"      // ES3.1
-
-        "precision highp usampler2D;\n"
-        "precision highp usampler3D;\n"
-        "precision highp usamplerCube;\n"
-        "precision highp usamplerCubeArray;\n"
-        "precision highp usampler2DArray;\n"
-        "precision highp usampler2DMS;\n"      // ES3.1
-
-        "precision highp image2D;\n"
-        "precision highp image3D;\n"
-        "precision highp imageCube;\n"
-        "precision highp image2DArray;\n"
-
-        "precision highp iimage2D;\n"
-        "precision highp iimage3D;\n"
-        "precision highp iimageCube;\n"
-        "precision highp iimage2DArray;\n"
-
-        "precision highp uimage2D;\n"
-        "precision highp uimage3D;\n"
-        "precision highp uimageCube;\n"
-        "precision highp uimage2DArray;\n"
-    );
-#elif
-#   error "Undefined platform"
-#endif
-        // It would be much more convenient to use row_major matrices.
-        // But unfortunatelly on NVIDIA, the following directive 
-        // layout(std140, row_major) uniform;
-        // does not have any effect on matrices that are part of structures
-        // So we have to use column-major matrices which are default in both
-        // DX and GLSL.
-    Settings.append(
-        "layout(std140) uniform;\n"
-    );
-
-    ShaderStrings.push_back(Settings.c_str());
-    Lenghts.push_back( static_cast<GLint>( Settings.length() ) );
-
-    const Char* ShaderTypeDefine = nullptr;
-    switch( m_Desc.ShaderType )
-    {
-        case SHADER_TYPE_VERTEX:    ShaderTypeDefine = "#define VERTEX_SHADER\n";         break;
-        case SHADER_TYPE_PIXEL:     ShaderTypeDefine = "#define FRAGMENT_SHADER\n";       break;
-        case SHADER_TYPE_GEOMETRY:  ShaderTypeDefine = "#define GEOMETRY_SHADER\n";       break;
-        case SHADER_TYPE_HULL:      ShaderTypeDefine = "#define TESS_CONTROL_SHADER\n";   break;
-        case SHADER_TYPE_DOMAIN:    ShaderTypeDefine = "#define TESS_EVALUATION_SHADER\n";break;
-        case SHADER_TYPE_COMPUTE:   ShaderTypeDefine = "#define COMPUTE_SHADER\n";        break;
-        default: UNEXPECTED("Shader type is not specified");
-    }
-    ShaderStrings.push_back( ShaderTypeDefine );
-    Lenghts.push_back( static_cast<GLint>( strlen(ShaderTypeDefine) ) );
-
-    String UserDefines;
-    if( CreationAttribs.Macros != nullptr)
-    {
-        auto *pMacro = CreationAttribs.Macros;
-        while( pMacro->Name != nullptr && pMacro->Definition != nullptr )
-        {
-            UserDefines += "#define ";
-            UserDefines += pMacro->Name;
-            UserDefines += ' ';
-            UserDefines += pMacro->Definition;
-            UserDefines += "\n";
-            ++pMacro;
-        }
-        ShaderStrings.push_back( UserDefines.c_str() );
-        Lenghts.push_back( static_cast<GLint>( UserDefines.length() ) );
-    }
-
-    RefCntAutoPtr<IDataBlob> pFileData(MakeNewRCObj<DataBlobImpl>()(0));
-    auto ShaderSource = CreationAttribs.Source;
-    GLuint SourceLen = 0;
-    if( ShaderSource )
-    {
-        SourceLen = (GLint)strlen(ShaderSource);
-    }
-    else
-    {
-        VERIFY(CreationAttribs.pShaderSourceStreamFactory, "Input stream factory is null");
-        RefCntAutoPtr<IFileStream> pSourceStream;
-        CreationAttribs.pShaderSourceStreamFactory->CreateInputStream( CreationAttribs.FilePath, &pSourceStream );
-        if (pSourceStream == nullptr)
-            LOG_ERROR_AND_THROW("Failed to open shader source file");
-
-        pSourceStream->Read( pFileData );
-        ShaderSource = reinterpret_cast<char*>(pFileData->GetDataPtr());
-        SourceLen = static_cast<GLint>( pFileData->GetSize() );
-    }
-
-    String ConvertedSource;
-    if( CreationAttribs.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL )
-    {
-        // Convert HLSL to GLSL
-        const auto &Converter = HLSL2GLSLConverterImpl::GetInstance();
-        HLSL2GLSLConverterImpl::ConversionAttribs Attribs;
-        Attribs.pSourceStreamFactory = CreationAttribs.pShaderSourceStreamFactory;
-        Attribs.ppConversionStream = CreationAttribs.ppConversionStream;
-        Attribs.HLSLSource = ShaderSource;
-        Attribs.NumSymbols = SourceLen;
-        Attribs.EntryPoint = CreationAttribs.EntryPoint;
-        Attribs.ShaderType = CreationAttribs.Desc.ShaderType;
-        Attribs.IncludeDefinitions = true;
-        Attribs.InputFileName = CreationAttribs.FilePath;
-        ConvertedSource = Converter.Convert(Attribs);
-
-        ShaderSource = ConvertedSource.c_str();
-        SourceLen = static_cast<GLint>( ConvertedSource.length() );
-    }
-
-    ShaderStrings.push_back( ShaderSource );
-    Lenghts.push_back( SourceLen );
+    auto GLSLSource = BuildGLSLSourceString(CreationAttribs);
 
     // Note: there is a simpler way to create the program:
     //m_uiShaderSeparateProg = glCreateShaderProgramv(GL_VERTEX_SHADER, _countof(ShaderStrings), ShaderStrings);
@@ -268,11 +53,15 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters *pRefCounters, RenderDeviceGLImpl 
     // Create empty shader object
     auto GLShaderType = GetGLShaderType(m_Desc.ShaderType);
     GLObjectWrappers::GLShaderObj ShaderObj(true, GLObjectWrappers::GLShaderObjCreateReleaseHelper(GLShaderType));
-    
-    VERIFY( ShaderStrings.size() == Lenghts.size(), "Incosistent array size" );
+
+    // Each element in the length array may contain the length of the corresponding string 
+    // (the null character is not counted as part of the string length).
+    // Not specifying lengths causes shader compilation errors on Android
+    const char * ShaderStrings[] = { GLSLSource.c_str() };
+    GLint Lenghts[] = { static_cast<GLint>(GLSLSource.length()) };
 
     // Provide source strings (the strings will be saved in internal OpenGL memory)
-    glShaderSource(ShaderObj, static_cast<GLuint>( ShaderStrings.size() ), ShaderStrings.data(), Lenghts.data() );
+    glShaderSource(ShaderObj, _countof(ShaderStrings), ShaderStrings, Lenghts );
     // When the shader is compiled, it will be compiled as if all of the given strings were concatenated end-to-end.
     glCompileShader(ShaderObj);
     GLint compiled = GL_FALSE;

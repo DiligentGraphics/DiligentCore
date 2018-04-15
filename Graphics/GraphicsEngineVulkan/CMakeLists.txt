@@ -158,6 +158,7 @@ set(PRIVATE_DEPENDENCIES
     Common 
     TargetPlatform
     GraphicsEngine
+    GLSLTools
 )
 
 if(PLATFORM_WIN32)
