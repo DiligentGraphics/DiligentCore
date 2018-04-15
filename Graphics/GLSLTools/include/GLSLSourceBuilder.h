@@ -29,6 +29,12 @@
 namespace Diligent
 {
     
-String BuildGLSLSourceString(const ShaderCreationAttribs &CreationAttribs);
+enum TargetGLSLCompiler
+{
+    glslang,
+    driver
+};
+
+String BuildGLSLSourceString(const ShaderCreationAttribs &CreationAttribs, TargetGLSLCompiler TargetCompiler);
 
 }

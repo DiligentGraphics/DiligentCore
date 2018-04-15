@@ -43,12 +43,22 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters *pRefCounters, RenderDeviceVkImpl 
     m_DummyShaderVar(*this),
     m_ConstResCache(ShaderResourceCacheVk::DbgCacheContentType::StaticShaderResources)*/
 {
-    auto GLSLSource = BuildGLSLSourceString(CreationAttribs);
+    auto GLSLSource = BuildGLSLSourceString(CreationAttribs, TargetGLSLCompiler::glslang);
     auto SPIRV = GLSLtoSPIRV(m_Desc.ShaderType, GLSLSource.c_str());
     if(SPIRV.empty())
     {
         LOG_ERROR_AND_THROW("Failed to compile shader");
     }
+
+    const auto &LogicalDevice = pRenderDeviceVk->GetLogicalDevice();
+    VkShaderModuleCreateInfo ShaderModuleCI = {};
+    ShaderModuleCI.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    ShaderModuleCI.pNext = NULL;
+    ShaderModuleCI.flags = 0;
+    ShaderModuleCI.codeSize = SPIRV.size() * sizeof(unsigned int);
+    ShaderModuleCI.pCode = SPIRV.data();
+    m_VkShaderModule = LogicalDevice.CreateShaderModule(ShaderModuleCI, m_Desc.Name);
+    
 /*
     // Load shader resources
     auto &Allocator = GetRawAllocator();
@@ -65,6 +75,8 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters *pRefCounters, RenderDeviceVkImpl 
 
 ShaderVkImpl::~ShaderVkImpl()
 {
+    auto pDeviceVkImpl = ValidatedCast<RenderDeviceVkImpl>(GetDevice());
+    pDeviceVkImpl->SafeReleaseVkObject(std::move(m_VkShaderModule));
 }
 
 void ShaderVkImpl::BindResources(IResourceMapping* pResourceMapping, Uint32 Flags)

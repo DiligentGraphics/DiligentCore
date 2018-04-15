@@ -235,6 +235,21 @@ namespace VulkanUtilities
         return PipelineWrapper{ GetSharedPtr(), std::move(vkPipeline) };
     }
 
+    ShaderModuleWrapper VulkanLogicalDevice::CreateShaderModule(const VkShaderModuleCreateInfo &ShaderModuleCI, const char *DebugName)const
+    {
+        if (DebugName == nullptr)
+            DebugName = "";
+
+        VkShaderModule vkShaderModule = VK_NULL_HANDLE;
+        auto err = vkCreateShaderModule(m_VkDevice, &ShaderModuleCI, m_VkAllocator, &vkShaderModule);
+        CHECK_VK_ERROR_AND_THROW(err, "Failed to create Render Pass '", DebugName, '\'');
+
+        if (DebugName != nullptr && *DebugName != 0)
+            VulkanUtilities::SetShaderModuleName(m_VkDevice, vkShaderModule, DebugName);
+
+        return ShaderModuleWrapper{ GetSharedPtr(), std::move(vkShaderModule) };
+    }
+
 
     VkCommandBuffer VulkanLogicalDevice::AllocateVkCommandBuffer(const VkCommandBufferAllocateInfo &AllocInfo, const char *DebugName)const
     {
@@ -303,6 +318,12 @@ namespace VulkanUtilities
     {
         vkDestroyPipeline(m_VkDevice, Pipeline.m_VkObject, m_VkAllocator);
         Pipeline.m_VkObject = VK_NULL_HANDLE;
+    }
+
+    void VulkanLogicalDevice::ReleaseVulkanObject(ShaderModuleWrapper&& ShaderModule)const
+    {
+        vkDestroyShaderModule(m_VkDevice, ShaderModule.m_VkObject, m_VkAllocator);
+        ShaderModule.m_VkObject = VK_NULL_HANDLE;
     }
 
     VkMemoryRequirements VulkanLogicalDevice::GetBufferMemoryRequirements(VkBuffer vkBuffer)const

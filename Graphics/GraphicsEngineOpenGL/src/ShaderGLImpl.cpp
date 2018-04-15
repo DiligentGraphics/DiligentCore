@@ -38,7 +38,7 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters *pRefCounters, RenderDeviceGLImpl 
     m_GlProgObj(false),
     m_GLShaderObj( false, GLObjectWrappers::GLShaderObjCreateReleaseHelper( GetGLShaderType( m_Desc.ShaderType ) ) )
 {
-    auto GLSLSource = BuildGLSLSourceString(CreationAttribs);
+    auto GLSLSource = BuildGLSLSourceString(CreationAttribs, TargetGLSLCompiler::driver);
 
     // Note: there is a simpler way to create the program:
     //m_uiShaderSeparateProg = glCreateShaderProgramv(GL_VERTEX_SHADER, _countof(ShaderStrings), ShaderStrings);

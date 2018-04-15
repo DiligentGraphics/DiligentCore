@@ -40,11 +40,8 @@ class IShaderVk : public IShader
 {
 public:
 
-    /// Returns a pointer to the ID3D12DeviceChild interface of the internal Direct3D12 object.
-
-    /// The method does *NOT* call AddRef() on the returned interface,
-    /// so Release() must not be called.
-    //virtual ID3D12DeviceChild* GetD3D12Shader() = 0;
+    /// Returns Vulkan shader module handle
+    virtual VkShaderModule GetVkShaderModule() = 0;
 };
 
 }

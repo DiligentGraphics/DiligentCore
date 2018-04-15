@@ -201,7 +201,9 @@ std::vector<unsigned int> GLSLtoSPIRV(const SHADER_TYPE ShaderType, const char *
     const char *ShaderStrings[] = { ShaderSource };
     Shader.setStrings(ShaderStrings, 1);
     
-    if (!Shader.parse(&Resources, 100, false, messages)) 
+    Shader.setAutoMapBindings(true);
+    Shader.setAutoMapLocations(true);
+    if (!Shader.parse(&Resources, 100, false, messages))
     {
         LOG_ERROR_MESSAGE("Failed to parse shader source: \n", Shader.getInfoLog(), '\n', Shader.getInfoDebugLog());
         return std::move(spirv);

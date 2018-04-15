@@ -30,6 +30,7 @@
 #include "ShaderVk.h"
 #include "ShaderBase.h"
 #include "ShaderResourceLayoutVk.h"
+#include "VulkanUtilities/VulkanObjectWrappers.h"
 
 #ifdef _DEBUG
 #   define VERIFY_SHADER_BINDINGS
@@ -56,8 +57,12 @@ public:
     
     virtual IShaderVariable* GetShaderVariable(const Char* Name)override;
 
+    virtual VkShaderModule GetVkShaderModule()override final
+    {
+        return m_VkShaderModule;
+    }
+
 /*
-    ID3DBlob* GetShaderByteCode(){return m_pShaderByteCode;}
     const std::shared_ptr<const ShaderResourcesVk>& GetShaderResources()const{return m_pShaderResources;}
     const ShaderResourceLayoutVk& GetConstResLayout()const{return m_StaticResLayout;}
 
@@ -75,6 +80,7 @@ private:
     ShaderResourceLayoutVk m_StaticResLayout;
     ShaderResourceCacheVk m_ConstResCache;
 */
+    VulkanUtilities::ShaderModuleWrapper m_VkShaderModule;
 };
 
 }

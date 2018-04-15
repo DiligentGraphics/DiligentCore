@@ -72,6 +72,7 @@ namespace VulkanUtilities
         DeviceMemoryWrapper AllocateDeviceMemory(const VkMemoryAllocateInfo    &AllocInfo,   const char *DebugName = "")const;
         PipelineWrapper     CreateComputePipeline (const VkComputePipelineCreateInfo  &PipelineCI, VkPipelineCache cache, const char *DebugName = "")const;
         PipelineWrapper     CreateGraphicsPipeline(const VkGraphicsPipelineCreateInfo &PipelineCI, VkPipelineCache cache, const char *DebugName = "")const;
+        ShaderModuleWrapper CreateShaderModule  (const VkShaderModuleCreateInfo &ShaderModuleCI,  const char *DebugName = "")const;
 
         VkCommandBuffer     AllocateVkCommandBuffer(const VkCommandBufferAllocateInfo &AllocInfo, const char *DebugName = "")const;
 
@@ -84,6 +85,7 @@ namespace VulkanUtilities
         void ReleaseVulkanObject(RenderPassWrapper&&   RenderPass)const;
         void ReleaseVulkanObject(DeviceMemoryWrapper&& Memory)const;
         void ReleaseVulkanObject(PipelineWrapper&&     Pipeline)const;
+        void ReleaseVulkanObject(ShaderModuleWrapper&& ShaderModule)const;
 
         VkMemoryRequirements GetBufferMemoryRequirements(VkBuffer vkBuffer)const;
         VkMemoryRequirements GetImageMemoryRequirements (VkImage vkImage  )const;

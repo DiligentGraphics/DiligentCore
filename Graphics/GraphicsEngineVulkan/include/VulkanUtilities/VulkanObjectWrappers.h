@@ -99,4 +99,5 @@ namespace VulkanUtilities
     using FenceWrapper        = VulkanObjectWrapper<VkFence>;
     using RenderPassWrapper   = VulkanObjectWrapper<VkRenderPass>;
     using PipelineWrapper     = VulkanObjectWrapper<VkPipeline>;
+    using ShaderModuleWrapper = VulkanObjectWrapper<VkShaderModule>;
 }
