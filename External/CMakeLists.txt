@@ -7,3 +7,16 @@ endif()
 if(PLATFORM_ANDROID)
 	add_subdirectory(Android)
 endif()
+
+if(PLATFORM_WIN32)
+    set(ENABLE_GLSLANG_BINARIES FALSE)
+    set(SKIP_GLSLANG_INSTALL TRUE)
+    add_subdirectory(glslang)
+    set_target_properties(glslang OGLCompiler OSDependent SPIRV SPVRemapper PROPERTIES
+        FOLDER Core/External/glslang/glslang
+    )
+    set_target_properties(HLSL PROPERTIES
+        FOLDER Core/External/glslang/hlsl
+    )
+
+endif()
