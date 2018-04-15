@@ -286,14 +286,14 @@ D3D12_STATIC_BORDER_COLOR BorderColorToD3D12StaticBorderColor(const Float32 Bord
 {
     D3D12_STATIC_BORDER_COLOR StaticBorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_BLACK;
     if(BorderColor[0] == 0 && BorderColor[1] == 0 && BorderColor[2] == 0 && BorderColor[3] == 0)
-        StaticBorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_BLACK;
-    else if(BorderColor[0] == 0 && BorderColor[1] == 0 && BorderColor[2] == 0 && BorderColor[3] == 1)
         StaticBorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
-    else if(BorderColor[0] == 1 && BorderColor[1] == 1 && BorderColor[2] == 1 && BorderColor[3] == 0)
+    else if(BorderColor[0] == 0 && BorderColor[1] == 0 && BorderColor[2] == 0 && BorderColor[3] == 1)
+        StaticBorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_BLACK;
+    else if(BorderColor[0] == 1 && BorderColor[1] == 1 && BorderColor[2] == 1 && BorderColor[3] == 1)
         StaticBorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE;
     else
     {
-        LOG_ERROR_MESSAGE("Static samplers only allow transparent black (0,0,0,1), opaque black (0,0,0,0) or opaque white (1,1,1,0) as border colors.");
+        LOG_ERROR_MESSAGE("Static samplers only allow transparent black (0,0,0,0), opaque black (0,0,0,1) or opaque white (1,1,1,1) as border colors.");
     }
     return StaticBorderColor;
 }

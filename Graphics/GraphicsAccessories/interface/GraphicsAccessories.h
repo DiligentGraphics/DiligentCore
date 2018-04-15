@@ -254,4 +254,20 @@ inline String GetObjectDescString( const BufferDesc& BuffDesc )
 Uint32 ComputeMipLevelsCount( Uint32 Width );
 Uint32 ComputeMipLevelsCount( Uint32 Width, Uint32 Height );
 Uint32 ComputeMipLevelsCount( Uint32 Width, Uint32 Height, Uint32 Depth );
+
+inline bool IsComparisonFilter(FILTER_TYPE FilterType)
+{
+    return FilterType == FILTER_TYPE_COMPARISON_POINT ||
+           FilterType == FILTER_TYPE_COMPARISON_LINEAR ||
+           FilterType == FILTER_TYPE_COMPARISON_ANISOTROPIC;
+}
+
+inline bool IsAnisotropicFilter(FILTER_TYPE FilterType)
+{
+    return FilterType == FILTER_TYPE_ANISOTROPIC ||
+           FilterType == FILTER_TYPE_COMPARISON_ANISOTROPIC ||
+           FilterType == FILTER_TYPE_MINIMUM_ANISOTROPIC || 
+           FilterType == FILTER_TYPE_MAXIMUM_ANISOTROPIC;
+}
+
 }

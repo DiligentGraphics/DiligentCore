@@ -149,8 +149,14 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk( const EngineVkAttribs& Crea
         DeviceCreateInfo.ppEnabledLayerNames = nullptr; // Deprecated and ignored
         DeviceCreateInfo.queueCreateInfoCount = 1;
         DeviceCreateInfo.pQueueCreateInfos = &QueueInfo;
-        DeviceCreateInfo.pEnabledFeatures = nullptr; // NULL or a pointer to a VkPhysicalDeviceFeatures structure that contains 
-                                                     // boolean indicators of all the features to be enabled.
+        VkPhysicalDeviceFeatures DeviceFeatures = {};
+        DeviceFeatures.depthBiasClamp    = VK_TRUE;
+        DeviceFeatures.fillModeNonSolid  = VK_TRUE;
+        DeviceFeatures.depthClamp        = VK_TRUE;
+        DeviceFeatures.independentBlend  = VK_TRUE;
+        DeviceFeatures.samplerAnisotropy = VK_TRUE;
+        DeviceCreateInfo.pEnabledFeatures = &DeviceFeatures; // NULL or a pointer to a VkPhysicalDeviceFeatures structure that contains 
+                                                             // boolean indicators of all the features to be enabled.
 
         std::vector<const char*> DeviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
         const bool DebugMarkersSupported = PhysicalDevice->IsExtensionSupported(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);

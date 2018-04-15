@@ -40,11 +40,8 @@ class ISamplerVk : public ISampler
 {
 public:
 
-    /// Returns a CPU descriptor handle of the D3D12 sampler object
-    
-    /// The method does *NOT* call AddRef() on the returned interface,
-    /// so Release() must not be called.
-    //virtual D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle() = 0;
+    /// Returns a vulkan sampler object handle
+    virtual VkSampler GetVkSampler() = 0;
 };
 
 }

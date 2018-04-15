@@ -52,24 +52,10 @@ void PrimitiveTopology_To_VkPrimitiveTopologyAndPatchCPCount(PRIMITIVE_TOPOLOGY 
                                                              VkPrimitiveTopology &VkPrimTopology, 
                                                              uint32_t &PatchControlPoints);
 
-#if 0
-D3D12_COMPARISON_FUNC ComparisonFuncToD3D12ComparisonFunc(COMPARISON_FUNCTION Func);
-D3D12_FILTER FilterTypeToD3D12Filter(FILTER_TYPE MinFilter, FILTER_TYPE MagFilter, FILTER_TYPE MipFilter);
-D3D12_TEXTURE_ADDRESS_MODE TexAddressModeToD3D12AddressMode(TEXTURE_ADDRESS_MODE Mode);
-D3D12_PRIMITIVE_TOPOLOGY TopologyToD3D12Topology(PRIMITIVE_TOPOLOGY Topology);
+VkCompareOp ComparisonFuncToVkCompareOp(COMPARISON_FUNCTION CmpFunc);
+VkFilter FilterTypeToVkFilter(FILTER_TYPE FilterType);
+VkSamplerMipmapMode FilterTypeToVkMipmapMode(FILTER_TYPE FilterType);
+VkSamplerAddressMode AddressModeToVkAddressMode(TEXTURE_ADDRESS_MODE AddressMode);
+VkBorderColor BorderColorToVkBorderColor(const Float32 BorderColor[]);
 
-
-void LayoutElements_To_D3D12_INPUT_ELEMENT_DESCs(const std::vector<LayoutElement, STDAllocatorRawMem<LayoutElement>> &LayoutElements, 
-                                                 std::vector<D3D12_INPUT_ELEMENT_DESC, STDAllocatorRawMem<D3D12_INPUT_ELEMENT_DESC> > &d3d12InputElements);
-
-void TextureViewDesc_to_D3D12_SRV_DESC(const TextureViewDesc& SRVDesc, D3D12_SHADER_RESOURCE_VIEW_DESC  &D3D12SRVDesc, Uint32 SampleCount);
-void TextureViewDesc_to_D3D12_RTV_DESC(const TextureViewDesc& RTVDesc, D3D12_RENDER_TARGET_VIEW_DESC    &D3D12RTVDesc, Uint32 SampleCount);
-void TextureViewDesc_to_D3D12_DSV_DESC(const TextureViewDesc& DSVDesc, D3D12_DEPTH_STENCIL_VIEW_DESC    &D3D12DSVDesc, Uint32 SampleCount);
-void TextureViewDesc_to_D3D12_UAV_DESC(const TextureViewDesc& UAVDesc, D3D12_UNORDERED_ACCESS_VIEW_DESC &D3D12UAVDesc);
-
-void BufferViewDesc_to_D3D12_SRV_DESC(const BufferDesc &BuffDesc, const BufferViewDesc& SRVDesc, D3D12_SHADER_RESOURCE_VIEW_DESC &D3D12SRVDesc);
-void BufferViewDesc_to_D3D12_UAV_DESC(const BufferDesc &BuffDesc, const BufferViewDesc& UAVDesc, D3D12_UNORDERED_ACCESS_VIEW_DESC &D3D12UAVDesc);
-
-D3D12_STATIC_BORDER_COLOR BorderColorToD3D12StaticBorderColor(const Float32 BorderColor[]);
-#endif
 }

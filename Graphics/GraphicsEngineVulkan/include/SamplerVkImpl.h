@@ -29,8 +29,7 @@
 #include "SamplerVk.h"
 #include "RenderDeviceVk.h"
 #include "SamplerBase.h"
-#include "DescriptorHeap.h"
-
+#include "VulkanUtilities/VulkanObjectWrappers.h"
 namespace Diligent
 {
 
@@ -46,12 +45,12 @@ public:
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
 
-    //virtual Vk_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle()override{ return m_Descriptor.GetCpuHandle(); }
+    virtual VkSampler GetVkSampler()override final{return m_VkSampler;}
 
 private:
     friend class ShaderVkImpl;
-    /// Vk sampler
-    DescriptorHeapAllocation m_Descriptor;
+    /// Vk sampler handle
+    VulkanUtilities::SamplerWrapper m_VkSampler;
 };
 
 }
