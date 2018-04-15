@@ -127,6 +127,7 @@ private:
 #endif
     VulkanUtilities::RenderPassWrapper m_RenderPass;
     VulkanUtilities::PipelineWrapper m_Pipeline;
+    VulkanUtilities::PipelineLayoutWrapper m_PipelineLayout;
 
 };
 
