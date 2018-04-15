@@ -266,6 +266,11 @@ namespace VulkanUtilities
         SetObjectName(device, (uint64_t)descriptorSet, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, name);
     }
 
+    void SetDescriptorPoolName(VkDevice device, VkDescriptorPool descriptorPool, const char * name)
+    {
+        SetObjectName(device, (uint64_t)descriptorPool, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT, name);
+    }
+
     void SetSemaphoreName(VkDevice device, VkSemaphore semaphore, const char * name)
     {
         SetObjectName(device, (uint64_t)semaphore, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT, name);
@@ -280,6 +285,111 @@ namespace VulkanUtilities
     {
         SetObjectName(device, (uint64_t)_event, VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT, name);
     }
+
+
+
+
+    void SetVulkanObjectName(VkDevice device, VkCommandPool cmdPool, const char * name)
+    {
+        SetCommandPoolName(device, cmdPool, name);
+    }
+
+    void SetVulkanObjectName(VkDevice device, VkCommandBuffer cmdBuffer, const char * name)
+    {
+        SetCommandBufferName(device, cmdBuffer, name);
+    }
+
+    void SetVulkanObjectName(VkDevice device, VkQueue queue, const char * name)
+    {
+        SetQueueName(device, queue, name);
+    }
+
+    void SetVulkanObjectName(VkDevice device, VkImage image, const char * name)
+    {
+        SetImageName(device, image, name);
+    }
+
+    void SetVulkanObjectName(VkDevice device, VkImageView imageView, const char * name)
+    {
+        SetImageViewName(device, imageView, name);
+    }
+
+    void SetVulkanObjectName(VkDevice device, VkSampler sampler, const char * name)
+    {
+        SetSamplerName(device, sampler, name);
+    }
+
+    void SetVulkanObjectName(VkDevice device, VkBuffer buffer, const char * name)
+    {
+        SetBufferName(device, buffer, name);
+    }
+
+    void SetVulkanObjectName(VkDevice device, VkBufferView bufferView, const char * name)
+    {
+        SetBufferViewName(device, bufferView, name);
+    }
+
+    void SetVulkanObjectName(VkDevice device, VkDeviceMemory memory, const char * name)
+    {
+        SetDeviceMemoryName(device, memory, name);
+    }
+
+    void SetVulkanObjectName(VkDevice device, VkShaderModule shaderModule, const char * name)
+    {
+        SetShaderModuleName(device, shaderModule, name);
+    }
+
+    void SetVulkanObjectName(VkDevice device, VkPipeline pipeline, const char * name)
+    {
+        SetPipelineName(device, pipeline, name);
+    }
+
+    void SetVulkanObjectName(VkDevice device, VkPipelineLayout pipelineLayout, const char * name)
+    {
+        SetPipelineLayoutName(device, pipelineLayout, name);
+    }
+
+    void SetVulkanObjectName(VkDevice device, VkRenderPass renderPass, const char * name)
+    {
+        SetRenderPassName(device, renderPass, name);
+    }
+
+    void SetVulkanObjectName(VkDevice device, VkFramebuffer framebuffer, const char * name)
+    {
+        SetFramebufferName(device, framebuffer, name);
+    }
+
+    void SetVulkanObjectName(VkDevice device, VkDescriptorSetLayout descriptorSetLayout, const char * name)
+    {
+        SetDescriptorSetLayoutName(device, descriptorSetLayout, name);
+    }
+
+    void SetVulkanObjectName(VkDevice device, VkDescriptorSet descriptorSet, const char * name)
+    {
+        SetDescriptorSetName(device, descriptorSet, name);
+    }
+
+    void SetVulkanObjectName(VkDevice device, VkDescriptorPool descriptorPool, const char * name)
+    {
+        SetDescriptorPoolName(device, descriptorPool, name);
+    }
+
+    void SetVulkanObjectName(VkDevice device, VkSemaphore semaphore, const char * name)
+    {
+        SetSemaphoreName(device, semaphore, name);
+    }
+
+    void SetVulkanObjectName(VkDevice device, VkFence fence, const char * name)
+    {
+        SetFenceName(device, fence, name);
+    }
+
+    void SetVulkanObjectName(VkDevice device, VkEvent _event, const char * name)
+    {
+        SetEventName(device, _event, name);
+    }
+    
+
 
     const char* VkResultToString(VkResult errorCode)
     {

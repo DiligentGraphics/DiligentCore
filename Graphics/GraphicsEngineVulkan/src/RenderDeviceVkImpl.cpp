@@ -409,10 +409,15 @@ template void RenderDeviceVkImpl::SafeReleaseVkObject<VkBuffer>       (VulkanUti
 template void RenderDeviceVkImpl::SafeReleaseVkObject<VkBufferView>   (VulkanUtilities::BufferViewWrapper   &&Object);
 template void RenderDeviceVkImpl::SafeReleaseVkObject<VkImage>        (VulkanUtilities::ImageWrapper        &&Object);
 template void RenderDeviceVkImpl::SafeReleaseVkObject<VkImageView>    (VulkanUtilities::ImageViewWrapper    &&Object);
+template void RenderDeviceVkImpl::SafeReleaseVkObject<VkSampler>      (VulkanUtilities::SamplerWrapper      &&Object);
 template void RenderDeviceVkImpl::SafeReleaseVkObject<VkDeviceMemory> (VulkanUtilities::DeviceMemoryWrapper &&Object);
 template void RenderDeviceVkImpl::SafeReleaseVkObject<VkRenderPass>   (VulkanUtilities::RenderPassWrapper   &&Object);
 template void RenderDeviceVkImpl::SafeReleaseVkObject<VkPipeline>     (VulkanUtilities::PipelineWrapper     &&Object);
 template void RenderDeviceVkImpl::SafeReleaseVkObject<VkShaderModule> (VulkanUtilities::ShaderModuleWrapper &&Object);
+template void RenderDeviceVkImpl::SafeReleaseVkObject<VkPipelineLayout>(VulkanUtilities::PipelineLayoutWrapper &&Object);
+template void RenderDeviceVkImpl::SafeReleaseVkObject<VkFramebuffer>   (VulkanUtilities::FramebufferWrapper    &&Object);
+template void RenderDeviceVkImpl::SafeReleaseVkObject<VkDescriptorPool> (VulkanUtilities::DescriptorPoolWrapper &&Object);
+template void RenderDeviceVkImpl::SafeReleaseVkObject<VkDescriptorSetLayout>(VulkanUtilities::DescriptorSetLayoutWrapper &&Object);
 
 
 void RenderDeviceVkImpl::DiscardStaleVkObjects(Uint64 CmdListNumber, Uint64 FenceValue)

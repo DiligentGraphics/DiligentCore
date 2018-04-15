@@ -53,7 +53,7 @@ namespace VulkanUtilities
 
         if (EnableDebugMarkers)
         {
-            VulkanUtilities::SetupDebugMarkers(m_VkDevice);
+            SetupDebugMarkers(m_VkDevice);
         }
     }
 
@@ -74,114 +74,68 @@ namespace VulkanUtilities
         VERIFY_EXPR(err == VK_SUCCESS);
     }
 
+    template<typename VkObjectType, typename VkCreateObjectFuncType, typename VkObjectCreateInfoType>
+    VulkanObjectWrapper<VkObjectType> VulkanLogicalDevice::CreateVulkanObject(VkCreateObjectFuncType VkCreateObject,
+                                                                              const VkObjectCreateInfoType& CreateInfo,
+                                                                              const char *DebugName,
+                                                                              const char *ObjectType)const
+    {
+        if (DebugName == nullptr)
+            DebugName = "";
+
+        VkObjectType VkObject = VK_NULL_HANDLE;
+        auto err = VkCreateObject(m_VkDevice, &CreateInfo, m_VkAllocator, &VkObject);
+        CHECK_VK_ERROR_AND_THROW(err, "Failed to create Vulkan ", ObjectType, " '", DebugName, '\'');
+        
+        if (DebugName != nullptr && *DebugName != 0)
+            SetVulkanObjectName(m_VkDevice, VkObject, DebugName);
+
+        return VulkanObjectWrapper<VkObjectType>{ GetSharedPtr(), std::move(VkObject) };
+    }
+
     CommandPoolWrapper VulkanLogicalDevice::CreateCommandPool(const VkCommandPoolCreateInfo &CmdPoolCI, 
                                                               const char *DebugName) const
     {
-        if(DebugName == nullptr)
-            DebugName = "";
-
-        VkCommandPool CmdPool = VK_NULL_HANDLE;
-        auto err = vkCreateCommandPool(m_VkDevice, &CmdPoolCI, m_VkAllocator, &CmdPool);
-        CHECK_VK_ERROR_AND_THROW(err, "Failed to create Vulkan command pool '", DebugName, '\'');
-
-        if(DebugName != nullptr && *DebugName != 0)
-            VulkanUtilities::SetCommandPoolName(m_VkDevice, CmdPool, DebugName);
-
-        return CommandPoolWrapper{ GetSharedPtr(), std::move(CmdPool)};
+        return CreateVulkanObject<VkCommandPool>(vkCreateCommandPool, CmdPoolCI, DebugName, "command pool");
     }
 
     BufferWrapper VulkanLogicalDevice::CreateBuffer(const VkBufferCreateInfo &BufferCI, 
                                                     const char *DebugName)const
     {
-        if (DebugName == nullptr)
-            DebugName = "";
-
-        VkBuffer vkBuffer = VK_NULL_HANDLE;
-        auto err = vkCreateBuffer(m_VkDevice, &BufferCI, m_VkAllocator, &vkBuffer);
-        CHECK_VK_ERROR_AND_THROW(err, "Failed to create Vulkan buffer '", DebugName, '\'');
-
-        if (DebugName != nullptr && *DebugName != 0)
-            VulkanUtilities::SetBufferName(m_VkDevice, vkBuffer, DebugName);
-
-        return BufferWrapper{ GetSharedPtr(), std::move(vkBuffer) };
+        return CreateVulkanObject<VkBuffer>(vkCreateBuffer, BufferCI, DebugName, "buffer");
     }
 
     BufferViewWrapper VulkanLogicalDevice::CreateBufferView(const VkBufferViewCreateInfo  &BuffViewCI, 
                                                             const char *DebugName)const
     {
-        if (DebugName == nullptr)
-            DebugName = "";
-
-        VkBufferView vkBufferView = VK_NULL_HANDLE;
-        auto err = vkCreateBufferView(m_VkDevice, &BuffViewCI, m_VkAllocator, &vkBufferView);
-        CHECK_VK_ERROR_AND_THROW(err, "Failed to create Vulkan buffer view '", DebugName, '\'');
-
-        if (DebugName != nullptr && *DebugName != 0)
-            VulkanUtilities::SetBufferViewName(m_VkDevice, vkBufferView, DebugName);
-
-        return BufferViewWrapper{ GetSharedPtr(), std::move(vkBufferView) };
+        return CreateVulkanObject<VkBufferView>(vkCreateBufferView, BuffViewCI, DebugName, "buffer view");
     }
 
     ImageWrapper VulkanLogicalDevice::CreateImage(const VkImageCreateInfo &ImageCI, 
                                                   const char *DebugName)const
     {
-        if (DebugName == nullptr)
-            DebugName = "";
-
-        VkImage vkImage = VK_NULL_HANDLE;
-        auto err = vkCreateImage(m_VkDevice, &ImageCI, m_VkAllocator, &vkImage);
-        CHECK_VK_ERROR_AND_THROW(err, "Failed to create Vulkan image '", DebugName, '\'');
-
-        if (DebugName != nullptr && *DebugName != 0)
-            VulkanUtilities::SetImageName(m_VkDevice, vkImage, DebugName);
-
-        return ImageWrapper{ GetSharedPtr(), std::move(vkImage) };
+        return CreateVulkanObject<VkImage>(vkCreateImage, ImageCI, DebugName, "image");
     }
 
     ImageViewWrapper VulkanLogicalDevice::CreateImageView(const VkImageViewCreateInfo &ImageViewCI, 
                                                           const char *DebugName)const
     {
-        if (DebugName == nullptr)
-            DebugName = "";
+        return CreateVulkanObject<VkImageView>(vkCreateImageView, ImageViewCI, DebugName, "image view");
+    }
 
-        VkImageView vkImageView = VK_NULL_HANDLE;
-        auto err = vkCreateImageView(m_VkDevice, &ImageViewCI, m_VkAllocator, &vkImageView);
-        CHECK_VK_ERROR_AND_THROW(err, "Failed to create Vulkan image view '", DebugName, '\'');
-
-        if (DebugName != nullptr && *DebugName != 0)
-            VulkanUtilities::SetImageViewName(m_VkDevice, vkImageView, DebugName);
-
-        return ImageViewWrapper{ GetSharedPtr(), std::move(vkImageView) };
+    SamplerWrapper VulkanLogicalDevice::CreateSampler(const VkSamplerCreateInfo &SamplerCI, const char *DebugName)const
+    {
+        return CreateVulkanObject<VkSampler>(vkCreateSampler, SamplerCI, DebugName, "sampler");
     }
 
     FenceWrapper VulkanLogicalDevice::CreateFence(const VkFenceCreateInfo &FenceCI, const char *DebugName)const
     {
-        if (DebugName == nullptr)
-            DebugName = "";
-
-        VkFence vkFence = VK_NULL_HANDLE;
-        auto err = vkCreateFence(m_VkDevice, &FenceCI, m_VkAllocator, &vkFence);
-        CHECK_VK_ERROR_AND_THROW(err, "Failed to create fence '", DebugName, '\'');
-
-        if (DebugName != nullptr && *DebugName != 0)
-            VulkanUtilities::SetFenceName(m_VkDevice, vkFence, DebugName);
-
-        return FenceWrapper{ GetSharedPtr(), std::move(vkFence) };
+        return CreateVulkanObject<VkFence>(vkCreateFence, FenceCI, DebugName, "fence");
     }
 
     RenderPassWrapper VulkanLogicalDevice::CreateRenderPass(const VkRenderPassCreateInfo  &RenderPassCI, const char *DebugName)const
     {
-        if (DebugName == nullptr)
-            DebugName = "";
-
-        VkRenderPass vkRenderPass = VK_NULL_HANDLE;
-        auto err = vkCreateRenderPass(m_VkDevice, &RenderPassCI, m_VkAllocator, &vkRenderPass);
-        CHECK_VK_ERROR_AND_THROW(err, "Failed to create Render Pass '", DebugName, '\'');
-
-        if (DebugName != nullptr && *DebugName != 0)
-            VulkanUtilities::SetRenderPassName(m_VkDevice, vkRenderPass, DebugName);
-
-        return RenderPassWrapper{ GetSharedPtr(), std::move(vkRenderPass) };
+        return CreateVulkanObject<VkRenderPass>(vkCreateRenderPass, RenderPassCI, DebugName, "render pass");
     }
 
     DeviceMemoryWrapper VulkanLogicalDevice::AllocateDeviceMemory(const VkMemoryAllocateInfo &AllocInfo, 
@@ -196,7 +150,7 @@ namespace VulkanUtilities
         CHECK_VK_ERROR_AND_THROW(err, "Failed to allocate device memory '", DebugName, '\'');
 
         if (DebugName != nullptr && *DebugName != 0)
-            VulkanUtilities::SetDeviceMemoryName(m_VkDevice, vkDeviceMem, DebugName);
+            SetDeviceMemoryName(m_VkDevice, vkDeviceMem, DebugName);
 
         return DeviceMemoryWrapper{ GetSharedPtr(), std::move(vkDeviceMem) };
     }
@@ -213,7 +167,7 @@ namespace VulkanUtilities
         CHECK_VK_ERROR_AND_THROW(err, "Failed to create compute pipeline '", DebugName, '\'');
 
         if (DebugName != nullptr && *DebugName != 0)
-            VulkanUtilities::SetPipelineName(m_VkDevice, vkPipeline, DebugName);
+            SetPipelineName(m_VkDevice, vkPipeline, DebugName);
 
         return PipelineWrapper{ GetSharedPtr(), std::move(vkPipeline) };
     }
@@ -227,29 +181,38 @@ namespace VulkanUtilities
 
         VkPipeline vkPipeline = VK_NULL_HANDLE;
         auto err = vkCreateGraphicsPipelines(m_VkDevice, cache, 1, &PipelineCI, m_VkAllocator, &vkPipeline);
-        CHECK_VK_ERROR_AND_THROW(err, "Failed to create Graphics pipeline '", DebugName, '\'');
+        CHECK_VK_ERROR_AND_THROW(err, "Failed to create graphics pipeline '", DebugName, '\'');
 
         if (DebugName != nullptr && *DebugName != 0)
-            VulkanUtilities::SetPipelineName(m_VkDevice, vkPipeline, DebugName);
+            SetPipelineName(m_VkDevice, vkPipeline, DebugName);
 
         return PipelineWrapper{ GetSharedPtr(), std::move(vkPipeline) };
     }
 
     ShaderModuleWrapper VulkanLogicalDevice::CreateShaderModule(const VkShaderModuleCreateInfo &ShaderModuleCI, const char *DebugName)const
     {
-        if (DebugName == nullptr)
-            DebugName = "";
-
-        VkShaderModule vkShaderModule = VK_NULL_HANDLE;
-        auto err = vkCreateShaderModule(m_VkDevice, &ShaderModuleCI, m_VkAllocator, &vkShaderModule);
-        CHECK_VK_ERROR_AND_THROW(err, "Failed to create Render Pass '", DebugName, '\'');
-
-        if (DebugName != nullptr && *DebugName != 0)
-            VulkanUtilities::SetShaderModuleName(m_VkDevice, vkShaderModule, DebugName);
-
-        return ShaderModuleWrapper{ GetSharedPtr(), std::move(vkShaderModule) };
+        return CreateVulkanObject<VkShaderModule>(vkCreateShaderModule, ShaderModuleCI, DebugName, "shader module");
     }
 
+    PipelineLayoutWrapper VulkanLogicalDevice::CreatePipelineLayout(const VkPipelineLayoutCreateInfo &PipelineLayoutCI, const char *DebugName)const
+    {
+        return CreateVulkanObject<VkPipelineLayout>(vkCreatePipelineLayout, PipelineLayoutCI, DebugName, "pipeline layout");
+    }
+
+    FramebufferWrapper VulkanLogicalDevice::CreateFramebuffer(const VkFramebufferCreateInfo &FramebufferCI, const char *DebugName)const
+    {
+        return CreateVulkanObject<VkFramebuffer>(vkCreateFramebuffer, FramebufferCI, DebugName, "framebuffer");
+    }
+
+    DescriptorPoolWrapper VulkanLogicalDevice::CreateDescriptorPool(const VkDescriptorPoolCreateInfo &DescrPoolCI, const char *DebugName)const
+    {
+        return CreateVulkanObject<VkDescriptorPool>(vkCreateDescriptorPool, DescrPoolCI, DebugName, "descriptor pool");
+    }
+
+    DescriptorSetLayoutWrapper VulkanLogicalDevice::CreateDescriptorSetLayout(const VkDescriptorSetLayoutCreateInfo &LayoutCI, const char *DebugName)const
+    {
+        return CreateVulkanObject<VkDescriptorSetLayout>(vkCreateDescriptorSetLayout, LayoutCI, DebugName, "descriptor set layout");
+    }
 
     VkCommandBuffer VulkanLogicalDevice::AllocateVkCommandBuffer(const VkCommandBufferAllocateInfo &AllocInfo, const char *DebugName)const
     {
@@ -296,6 +259,12 @@ namespace VulkanUtilities
         ImageView.m_VkObject = VK_NULL_HANDLE;
     }
 
+    void VulkanLogicalDevice::ReleaseVulkanObject(SamplerWrapper&& Sampler)const
+    {
+        vkDestroySampler(m_VkDevice, Sampler.m_VkObject, m_VkAllocator);
+        Sampler.m_VkObject = VK_NULL_HANDLE;
+    }
+
     void VulkanLogicalDevice::ReleaseVulkanObject(FenceWrapper&& Fence)const
     {
         vkDestroyFence(m_VkDevice, Fence.m_VkObject, m_VkAllocator);
@@ -325,6 +294,34 @@ namespace VulkanUtilities
         vkDestroyShaderModule(m_VkDevice, ShaderModule.m_VkObject, m_VkAllocator);
         ShaderModule.m_VkObject = VK_NULL_HANDLE;
     }
+
+    void VulkanLogicalDevice::ReleaseVulkanObject(PipelineLayoutWrapper&& PipelineLayout)const
+    {
+        vkDestroyPipelineLayout(m_VkDevice, PipelineLayout.m_VkObject, m_VkAllocator);
+        PipelineLayout.m_VkObject = VK_NULL_HANDLE;
+    }
+
+    void VulkanLogicalDevice::ReleaseVulkanObject(FramebufferWrapper&& Framebuffer)const
+    {
+        vkDestroyFramebuffer(m_VkDevice, Framebuffer.m_VkObject, m_VkAllocator);
+        Framebuffer.m_VkObject = VK_NULL_HANDLE;
+    }
+
+    void VulkanLogicalDevice::ReleaseVulkanObject(DescriptorPoolWrapper&& DescriptorPool)const
+    {
+        vkDestroyDescriptorPool(m_VkDevice, DescriptorPool.m_VkObject, m_VkAllocator);
+        DescriptorPool.m_VkObject = VK_NULL_HANDLE;
+    }
+
+    void VulkanLogicalDevice::ReleaseVulkanObject(DescriptorSetLayoutWrapper&& DescriptorSetLayout)const
+    {
+        vkDestroyDescriptorSetLayout(m_VkDevice, DescriptorSetLayout.m_VkObject, m_VkAllocator);
+        DescriptorSetLayout.m_VkObject = VK_NULL_HANDLE;
+    }
+
+
+
+
 
     VkMemoryRequirements VulkanLogicalDevice::GetBufferMemoryRequirements(VkBuffer vkBuffer)const
     {

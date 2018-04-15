@@ -100,4 +100,9 @@ namespace VulkanUtilities
     using RenderPassWrapper   = VulkanObjectWrapper<VkRenderPass>;
     using PipelineWrapper     = VulkanObjectWrapper<VkPipeline>;
     using ShaderModuleWrapper = VulkanObjectWrapper<VkShaderModule>;
+    using PipelineLayoutWrapper = VulkanObjectWrapper<VkPipelineLayout>;
+    using SamplerWrapper        = VulkanObjectWrapper<VkSampler>;
+    using FramebufferWrapper    = VulkanObjectWrapper<VkFramebuffer>;
+    using DescriptorPoolWrapper = VulkanObjectWrapper<VkDescriptorPool>;
+    using DescriptorSetLayoutWrapper = VulkanObjectWrapper<VkDescriptorSetLayout>;
 }

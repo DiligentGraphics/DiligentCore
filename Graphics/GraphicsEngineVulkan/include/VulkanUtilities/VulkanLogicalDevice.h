@@ -67,13 +67,18 @@ namespace VulkanUtilities
         BufferViewWrapper   CreateBufferView    (const VkBufferViewCreateInfo  &BuffViewCI,  const char *DebugName = "")const;
         ImageWrapper        CreateImage         (const VkImageCreateInfo       &ImageCI,     const char *DebugName = "")const;
         ImageViewWrapper    CreateImageView     (const VkImageViewCreateInfo   &ImageViewCI, const char *DebugName = "")const;
+        SamplerWrapper      CreateSampler       (const VkSamplerCreateInfo     &SamplerCI,   const char *DebugName = "")const;
         FenceWrapper        CreateFence         (const VkFenceCreateInfo       &FenceCI,     const char *DebugName = "")const;
         RenderPassWrapper   CreateRenderPass    (const VkRenderPassCreateInfo  &RenderPassCI,const char *DebugName = "")const;
         DeviceMemoryWrapper AllocateDeviceMemory(const VkMemoryAllocateInfo    &AllocInfo,   const char *DebugName = "")const;
         PipelineWrapper     CreateComputePipeline (const VkComputePipelineCreateInfo  &PipelineCI, VkPipelineCache cache, const char *DebugName = "")const;
         PipelineWrapper     CreateGraphicsPipeline(const VkGraphicsPipelineCreateInfo &PipelineCI, VkPipelineCache cache, const char *DebugName = "")const;
-        ShaderModuleWrapper CreateShaderModule  (const VkShaderModuleCreateInfo &ShaderModuleCI,  const char *DebugName = "")const;
-
+        ShaderModuleWrapper CreateShaderModule    (const VkShaderModuleCreateInfo &ShaderModuleCI,  const char *DebugName = "")const;
+        PipelineLayoutWrapper CreatePipelineLayout(const VkPipelineLayoutCreateInfo &LayoutCI,      const char *DebugName = "")const;
+        FramebufferWrapper    CreateFramebuffer   (const VkFramebufferCreateInfo    &FramebufferCI, const char *DebugName = "")const;
+        DescriptorPoolWrapper CreateDescriptorPool(const VkDescriptorPoolCreateInfo &DescrPoolCI,   const char *DebugName = "")const;
+        DescriptorSetLayoutWrapper CreateDescriptorSetLayout(const VkDescriptorSetLayoutCreateInfo &LayoutCI, const char *DebugName = "")const;
+        
         VkCommandBuffer     AllocateVkCommandBuffer(const VkCommandBufferAllocateInfo &AllocInfo, const char *DebugName = "")const;
 
         void ReleaseVulkanObject(CommandPoolWrapper&&  CmdPool)const;
@@ -81,11 +86,16 @@ namespace VulkanUtilities
         void ReleaseVulkanObject(BufferViewWrapper&&   BufferView)const;
         void ReleaseVulkanObject(ImageWrapper&&        Image)const;
         void ReleaseVulkanObject(ImageViewWrapper&&    ImageView)const;
+        void ReleaseVulkanObject(SamplerWrapper&&      Sampler)const;
         void ReleaseVulkanObject(FenceWrapper&&        Fence)const;
         void ReleaseVulkanObject(RenderPassWrapper&&   RenderPass)const;
         void ReleaseVulkanObject(DeviceMemoryWrapper&& Memory)const;
         void ReleaseVulkanObject(PipelineWrapper&&     Pipeline)const;
         void ReleaseVulkanObject(ShaderModuleWrapper&& ShaderModule)const;
+        void ReleaseVulkanObject(PipelineLayoutWrapper&& PipelineLayout)const;
+        void ReleaseVulkanObject(FramebufferWrapper&&   Framebuffer)const;
+        void ReleaseVulkanObject(DescriptorPoolWrapper&& DescriptorPool)const;
+        void ReleaseVulkanObject(DescriptorSetLayoutWrapper&& DescriptorSetLayout)const;
 
         VkMemoryRequirements GetBufferMemoryRequirements(VkBuffer vkBuffer)const;
         VkMemoryRequirements GetImageMemoryRequirements (VkImage vkImage  )const;
@@ -104,6 +114,12 @@ namespace VulkanUtilities
                             const VkDeviceCreateInfo &DeviceCI, 
                             const VkAllocationCallbacks* vkAllocator,
                             bool EnableDebugMarkers);
+
+        template<typename VkObjectType, typename VkCreateObjectFuncType, typename VkObjectCreateInfoType>
+        VulkanObjectWrapper<VkObjectType> CreateVulkanObject(VkCreateObjectFuncType VkCreateObject,
+                                                             const VkObjectCreateInfoType& CreateInfo,
+                                                             const char *DebugName,
+                                                             const char *ObjectType)const;
 
         VkDevice m_VkDevice = VK_NULL_HANDLE;
         const VkAllocationCallbacks* const m_VkAllocator; 
