@@ -169,15 +169,12 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters *pRefCounters, Ren
         CSStage.pNext = nullptr;
         CSStage.flags = 0; // reserved for future use
         CSStage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
-        CSStage.module;
-        CSStage.pName;
+        auto *pShaderVk = ValidatedCast<ShaderVkImpl>(ComputePipeline.pCS);
+        CSStage.module = pShaderVk->GetVkShaderModule();
+        CSStage.pName = "main";
         CSStage.pSpecializationInfo = nullptr;
 
-        bool IsCompleteDesc = false;
-        if(IsCompleteDesc)
-        {
-            LogicalDevice.CreateComputePipeline(PipelineCI, VK_NULL_HANDLE, m_Desc.Name);
-        }
+        m_Pipeline = LogicalDevice.CreateComputePipeline(PipelineCI, VK_NULL_HANDLE, m_Desc.Name);
 
 #if 0
         Vk_COMPUTE_PIPELINE_STATE_DESC VkPSODesc = {};
@@ -221,12 +218,33 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters *pRefCounters, Ren
 #ifdef _DEBUG
         PipelineCI.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
 #endif  
-        PipelineCI.stageCount = (GraphicsPipeline.pVS != nullptr ? 1 : 0) + 
-                                (GraphicsPipeline.pPS != nullptr ? 1 : 0) + 
-                                (GraphicsPipeline.pHS != nullptr ? 1 : 0) + 
-                                (GraphicsPipeline.pDS != nullptr ? 1 : 0) + 
-                                (GraphicsPipeline.pGS != nullptr ? 1 : 0);
+        PipelineCI.stageCount = m_NumShaders;
         std::vector<VkPipelineShaderStageCreateInfo> Stages(PipelineCI.stageCount);
+        for (Uint32 s = 0; s < m_NumShaders; ++s)
+        {
+            auto *pShader = m_ppShaders[s];
+            auto ShaderType = pShader->GetDesc().ShaderType;
+
+            auto &StageCI = Stages[s];
+            StageCI.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+            StageCI.pNext = nullptr;
+            StageCI.flags = 0; //  reserved for future use
+            switch(ShaderType)
+            {
+                case SHADER_TYPE_VERTEX:   StageCI.stage = VK_SHADER_STAGE_VERTEX_BIT;   break;
+                case SHADER_TYPE_HULL:     StageCI.stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT; break;
+                case SHADER_TYPE_DOMAIN:   StageCI.stage = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT; break;
+                case SHADER_TYPE_GEOMETRY: StageCI.stage = VK_SHADER_STAGE_GEOMETRY_BIT; break;
+                case SHADER_TYPE_PIXEL:    StageCI.stage = VK_SHADER_STAGE_FRAGMENT_BIT; break;
+                default: UNEXPECTED("Unknown shader type");
+            }
+            
+            auto *pShaderVk = ValidatedCast<ShaderVkImpl>(pShader);
+            StageCI.module = pShaderVk->GetVkShaderModule();
+            StageCI.pName = "main"; // entry point
+            StageCI.pSpecializationInfo = nullptr;
+        }
+
         PipelineCI.pStages = Stages.data();
         
         VkPipelineVertexInputStateCreateInfo VertexInputStateCI = {};
@@ -345,23 +363,26 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters *pRefCounters, Ren
         DynamicStateCI.pDynamicStates = DynamicStates.data();
         PipelineCI.pDynamicState = &DynamicStateCI;
 
-        PipelineCI.layout;
+
+        VkPipelineLayoutCreateInfo PipelineLayoutCI = {};
+        PipelineLayoutCI.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        PipelineLayoutCI.pNext = nullptr;
+        PipelineLayoutCI.flags = 0; // reserved for future use
+        PipelineLayoutCI.setLayoutCount = 0;
+        PipelineLayoutCI.pSetLayouts = nullptr;
+        PipelineLayoutCI.pushConstantRangeCount = 0;
+        PipelineLayoutCI.pPushConstantRanges = nullptr;
+        m_PipelineLayout = LogicalDevice.CreatePipelineLayout(PipelineLayoutCI);
+        PipelineCI.layout = m_PipelineLayout;
 
         PipelineCI.renderPass = m_RenderPass;
         PipelineCI.subpass = 0;
         PipelineCI.basePipelineHandle = VK_NULL_HANDLE; // a pipeline to derive from
         PipelineCI.basePipelineIndex = 0; // an index into the pCreateInfos parameter to use as a pipeline to derive from
 
-
-        bool IsCompleteDesc = false;
-        if (IsCompleteDesc)
-        {
-            LogicalDevice.CreateGraphicsPipeline(PipelineCI, VK_NULL_HANDLE, m_Desc.Name);
-        }
+        m_Pipeline = LogicalDevice.CreateGraphicsPipeline(PipelineCI, VK_NULL_HANDLE, m_Desc.Name);
 
 #if 0
-        Vk_GRAPHICS_PIPELINE_STATE_DESC VkPSODesc = {};
-
         m_RootSig.AllocateStaticSamplers( GetShaders(), GetNumShaders() );
             
 #define INIT_SHADER(VarName, ExpectedType)\
@@ -392,54 +413,6 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters *pRefCounters, Ren
         VkPSODesc.pRootSignature = m_RootSig.GetVkRootSignature();
         
         memset(&VkPSODesc.StreamOutput, 0, sizeof(VkPSODesc.StreamOutput));
-
-        BlendStateDesc_To_Vk_BLEND_DESC(GraphicsPipeline.BlendDesc, VkPSODesc.BlendState);
-        // The sample mask for the blend state.
-        VkPSODesc.SampleMask = GraphicsPipeline.SampleMask;
-    
-        RasterizerStateDesc_To_Vk_RASTERIZER_DESC(GraphicsPipeline.RasterizerDesc, VkPSODesc.RasterizerState);
-        DepthStencilStateDesc_To_Vk_DEPTH_STENCIL_DESC(GraphicsPipeline.DepthStencilDesc, VkPSODesc.DepthStencilState);
-
-        std::vector<Vk_INPUT_ELEMENT_DESC, STDAllocatorRawMem<Vk_INPUT_ELEMENT_DESC>> d312InputElements( STD_ALLOCATOR_RAW_MEM(Vk_INPUT_ELEMENT_DESC, GetRawAllocator(), "Allocator for vector<Vk_INPUT_ELEMENT_DESC>") );
-        if (m_LayoutElements.size() > 0)
-        {
-            LayoutElements_To_Vk_INPUT_ELEMENT_DESCs(m_LayoutElements, d312InputElements);
-            VkPSODesc.InputLayout.NumElements = static_cast<UINT>(d312InputElements.size());
-            VkPSODesc.InputLayout.pInputElementDescs = d312InputElements.data();
-        }
-        else
-        {
-            VkPSODesc.InputLayout.NumElements = 0;
-            VkPSODesc.InputLayout.pInputElementDescs = nullptr;
-        }
-
-        VkPSODesc.IBStripCutValue = Vk_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED;
-        VkPSODesc.PrimitiveTopologyType = PrimitiveTopologyType_To_Vk_PRIMITIVE_TOPOLOGY_TYPE(GraphicsPipeline.PrimitiveTopologyType);
-
-        VkPSODesc.NumRenderTargets = GraphicsPipeline.NumRenderTargets;
-        for (Uint32 rt = 0; rt < GraphicsPipeline.NumRenderTargets; ++rt)
-            VkPSODesc.RTVFormats[rt] = TexFormatToDXGI_Format(GraphicsPipeline.RTVFormats[rt]);
-        for (Uint32 rt = GraphicsPipeline.NumRenderTargets; rt < 8; ++rt)
-            VkPSODesc.RTVFormats[rt] = TexFormatToDXGI_Format(GraphicsPipeline.RTVFormats[rt]);
-        VkPSODesc.DSVFormat = TexFormatToDXGI_Format(GraphicsPipeline.DSVFormat);
-
-        VkPSODesc.SampleDesc.Count = GraphicsPipeline.SmplDesc.Count;
-        VkPSODesc.SampleDesc.Quality = GraphicsPipeline.SmplDesc.Quality;
-
-        // For single GPU operation, set this to zero. If there are multiple GPU nodes, 
-        // set bits to identify the nodes (the device's physical adapters) for which the 
-        // graphics pipeline state is to apply. Each bit in the mask corresponds to a single node. 
-        VkPSODesc.NodeMask = 0;
-
-        VkPSODesc.CachedPSO.pCachedBlob = nullptr;
-        VkPSODesc.CachedPSO.CachedBlobSizeInBytes = 0;
-
-        // The only valid bit is Vk_PIPELINE_STATE_FLAG_TOOL_DEBUG, which can only be set on WARP devices.
-        VkPSODesc.Flags = Vk_PIPELINE_STATE_FLAG_NONE;
-
-        HRESULT hr = pVkDevice->CreateGraphicsPipelineState(&VkPSODesc, __uuidof(IVkPipelineState), reinterpret_cast<void**>( static_cast<IVkPipelineState**>(&m_pVkPSO)) );
-        if(FAILED(hr))
-            LOG_ERROR_AND_THROW("Failed to create pipeline state");
 #endif
     }
 #if 0
@@ -468,6 +441,7 @@ PipelineStateVkImpl::~PipelineStateVkImpl()
     auto pDeviceVkImpl = ValidatedCast<RenderDeviceVkImpl>(GetDevice());
     pDeviceVkImpl->SafeReleaseVkObject(std::move(m_RenderPass));
     pDeviceVkImpl->SafeReleaseVkObject(std::move(m_Pipeline));
+    pDeviceVkImpl->SafeReleaseVkObject(std::move(m_PipelineLayout));
 
 #if 0
     auto &ShaderResLayoutAllocator = GetRawAllocator();
@@ -479,10 +453,6 @@ PipelineStateVkImpl::~PipelineStateVkImpl()
             ShaderResLayoutAllocator.Free(m_pShaderResourceLayouts[l]);
         }
     }
-
-    // Vk object can only be destroyed when it is no longer used by the GPU
-    auto *pDeviceVkImpl = ValidatedCast<RenderDeviceVkImpl>(GetDevice());
-    pDeviceVkImpl->SafeReleaseVkObject(m_pVkPSO);
 #endif
 }
 
