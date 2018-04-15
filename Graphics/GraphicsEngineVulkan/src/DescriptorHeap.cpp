@@ -24,7 +24,6 @@
 #include "pch.h"
 #include "DescriptorHeap.h"
 #include "RenderDeviceVkImpl.h"
-#include "VulkanUtils.h"
 
 namespace Diligent
 {
