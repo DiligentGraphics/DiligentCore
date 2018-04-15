@@ -26,6 +26,7 @@
 #include <list>
 #include <unordered_set>
 #include <unordered_map>
+#include <vector>
 
 #include "HLSL2GLSLConverter.h"
 #include "ObjectBase.h"

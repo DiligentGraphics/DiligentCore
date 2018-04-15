@@ -23,6 +23,7 @@
 
 #pragma once
 
+#include <vector>
 #include "Shader.h"
 
 namespace Diligent
