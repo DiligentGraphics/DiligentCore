@@ -92,11 +92,18 @@ SwapChainVkImpl::SwapChainVkImpl(IReferenceCounters *pRefCounters,
                             "Another way is to find another physical device that exposes queue family that supports present and graphics capability. Neither apporach is currently implemented in Diligent Engine.");
     }
 
+    CreateVulkanSwapChain();
+    InitBuffersAndViews();
+}
 
+void SwapChainVkImpl::CreateVulkanSwapChain()
+{
+    auto *pRenderDeviceVk = ValidatedCast<RenderDeviceVkImpl>(m_pRenderDevice.RawPtr());
+    const auto& PhysicalDevice = pRenderDeviceVk->GetPhysicalDevice();
     auto vkDeviceHandle = PhysicalDevice.GetVkDeviceHandle();
     // Get the list of VkFormats that are supported:
     uint32_t formatCount = 0;
-    err = vkGetPhysicalDeviceSurfaceFormatsKHR(vkDeviceHandle, m_VkSurface, &formatCount, NULL);
+    auto err = vkGetPhysicalDeviceSurfaceFormatsKHR(vkDeviceHandle, m_VkSurface, &formatCount, NULL);
     CHECK_VK_ERROR_AND_THROW(err, "Failed to query number of supported formats");
     VERIFY_EXPR(formatCount > 0);
     std::vector<VkSurfaceFormatKHR> SupportedFormats(formatCount);
@@ -177,13 +184,15 @@ SwapChainVkImpl::SwapChainVkImpl(IReferenceCounters *pRefCounters,
 
     VkExtent2D swapchainExtent = {};
     // width and height are either both 0xFFFFFFFF, or both not 0xFFFFFFFF.
-    if (surfCapabilities.currentExtent.width == 0xFFFFFFFF) {
+    if (surfCapabilities.currentExtent.width == 0xFFFFFFFF && m_SwapChainDesc.Width != 0 && m_SwapChainDesc.Height != 0)
+    {
         // If the surface size is undefined, the size is set to
         // the size of the images requested.
-        swapchainExtent.width  = std::min(std::max(SCDesc.Width,  surfCapabilities.minImageExtent.width),  surfCapabilities.maxImageExtent.width);
-        swapchainExtent.height = std::min(std::max(SCDesc.Height, surfCapabilities.minImageExtent.height), surfCapabilities.maxImageExtent.height);
+        swapchainExtent.width  = std::min(std::max(m_SwapChainDesc.Width,  surfCapabilities.minImageExtent.width),  surfCapabilities.maxImageExtent.width);
+        swapchainExtent.height = std::min(std::max(m_SwapChainDesc.Height, surfCapabilities.minImageExtent.height), surfCapabilities.maxImageExtent.height);
     }
-    else {
+    else 
+    {
         // If the surface size is defined, the swap chain size must match
         swapchainExtent = surfCapabilities.currentExtent;
     }
@@ -237,7 +246,8 @@ SwapChainVkImpl::SwapChainVkImpl(IReferenceCounters *pRefCounters,
         }
     }
 
-
+    auto oldSwapchain = m_VkSwapChain;
+    m_VkSwapChain = VK_NULL_HANDLE;
     VkSwapchainCreateInfoKHR swapchain_ci = {};
     swapchain_ci.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
     swapchain_ci.pNext = NULL;
@@ -250,7 +260,7 @@ SwapChainVkImpl::SwapChainVkImpl(IReferenceCounters *pRefCounters,
     swapchain_ci.compositeAlpha = compositeAlpha;
     swapchain_ci.imageArrayLayers = 1;
     swapchain_ci.presentMode = swapchainPresentMode;
-    swapchain_ci.oldSwapchain = VK_NULL_HANDLE;
+    swapchain_ci.oldSwapchain = oldSwapchain;
     swapchain_ci.clipped = VK_TRUE;
     swapchain_ci.imageColorSpace = ColorSpace;
     swapchain_ci.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
@@ -272,6 +282,11 @@ SwapChainVkImpl::SwapChainVkImpl(IReferenceCounters *pRefCounters,
     err = vkCreateSwapchainKHR(LogicalVkDevice, &swapchain_ci, NULL, &m_VkSwapChain);
     CHECK_VK_ERROR_AND_THROW(err, "Failed to create Vulkan swapchain");
 
+    if(oldSwapchain != VK_NULL_HANDLE)
+    {
+        vkDestroySwapchainKHR(LogicalVkDevice, oldSwapchain, NULL);
+    }
+
     uint32_t swapchainImageCount = 0;
     err = vkGetSwapchainImagesKHR(LogicalVkDevice, m_VkSwapChain, &swapchainImageCount, NULL);
     CHECK_VK_ERROR_AND_THROW(err, "Failed to request swap chain image count");
@@ -281,8 +296,6 @@ SwapChainVkImpl::SwapChainVkImpl(IReferenceCounters *pRefCounters,
         LOG_INFO_MESSAGE("Actual number of images in the created swap chain: ", m_SwapChainDesc.BufferCount);
         m_SwapChainDesc.BufferCount = swapchainImageCount;
     }
-
-    InitBuffersAndViews();
 }
 
 SwapChainVkImpl::~SwapChainVkImpl()
@@ -405,7 +418,6 @@ void SwapChainVkImpl::Resize( Uint32 NewWidth, Uint32 NewHeight )
 {
     if( TSwapChainBase::Resize(NewWidth, NewHeight) )
     {
-#if 0
         auto pDeviceContext = m_wpDeviceContext.Lock();
         VERIFY( pDeviceContext, "Immediate context has been released" );
         if( pDeviceContext )
@@ -426,15 +438,7 @@ void SwapChainVkImpl::Resize( Uint32 NewWidth, Uint32 NewHeight )
                 // m_pBackBufferRTV[]
                 pDeviceVk->IdleGPU(true);
 
-                DXGI_SWAP_CHAIN_DESC SCDes;
-                memset( &SCDes, 0, sizeof( SCDes ) );
-                m_pSwapChain->GetDesc( &SCDes );
-                CHECK_D3D_RESULT_THROW( m_pSwapChain->ResizeBuffers(SCDes.BufferCount, m_SwapChainDesc.Width, 
-                                                                    m_SwapChainDesc.Height, SCDes.BufferDesc.Format, 
-                                                                    SCDes.Flags),
-                                        "Failed to resize the DXGI swap chain" );
-
-
+                CreateVulkanSwapChain();
                 InitBuffersAndViews();
                 
                 if( bIsDefaultFBBound )
@@ -449,7 +453,6 @@ void SwapChainVkImpl::Resize( Uint32 NewWidth, Uint32 NewHeight )
                 LOG_ERROR( "Failed to resize the swap chain" );
             }
         }
-#endif
     }
 }
 

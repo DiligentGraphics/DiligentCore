@@ -62,6 +62,7 @@ public:
     virtual ITextureViewVk* GetDepthBufferDSV()override final{return m_pDepthBufferDSV;}
     */
 private:
+    void CreateVulkanSwapChain();
     void InitBuffersAndViews();
 
     std::shared_ptr<const VulkanUtilities::VulkanInstance> m_VulkanInstance;
