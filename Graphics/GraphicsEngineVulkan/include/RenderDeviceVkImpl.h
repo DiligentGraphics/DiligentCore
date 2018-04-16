@@ -39,6 +39,7 @@
 #include "VulkanUtilities/VulkanCommandBufferPool.h"
 #include "VulkanUtilities/VulkanLogicalDevice.h"
 #include "VulkanUtilities/VulkanObjectWrappers.h"
+#include "FramebufferCache.h"
 
 /// Namespace for the Direct3D11 implementation of the graphics engine
 namespace Diligent
@@ -115,6 +116,7 @@ public:
     std::shared_ptr<const VulkanUtilities::VulkanInstance> GetVulkanInstance()const{return m_VulkanInstance;}
     const VulkanUtilities::VulkanPhysicalDevice &GetPhysicalDevice(){return *m_PhysicalDevice;}
     const auto &GetLogicalDevice(){return *m_LogicalVkDevice;}
+    FramebufferCache& GetFramebufferCache(){return m_FramebufferCache;}
 
 private:
     virtual void TestTextureFormat( TEXTURE_FORMAT TexFormat )override final;
@@ -193,7 +195,7 @@ private:
 
     std::mutex m_StaleObjectsMutex;
     std::deque< ReleaseQueueElemType, STDAllocatorRawMem<ReleaseQueueElemType> > m_StaleVkObjects;
-
+    FramebufferCache m_FramebufferCache;
 #if 0
     std::mutex m_UploadHeapMutex;
     typedef std::unique_ptr<DynamicUploadHeap, STDDeleterRawMem<DynamicUploadHeap> > UploadHeapPoolElemType;

@@ -13,6 +13,7 @@ set(INCLUDE
     include/DescriptorHeap.h
     include/DeviceContextVkImpl.h
     include/DynamicUploadHeap.h
+    include/FramebufferCache.h
     include/GenerateMips.h
     include/pch.h
     include/PipelineStateVkImpl.h
@@ -68,6 +69,7 @@ set(SRC
     src/DescriptorHeap.cpp
     src/DeviceContextVkImpl.cpp
     src/DynamicUploadHeap.cpp
+    src/FramebufferCache.cpp
     src/GenerateMips.cpp
     src/PipelineStateVkImpl.cpp
     src/RenderDeviceVkImpl.cpp

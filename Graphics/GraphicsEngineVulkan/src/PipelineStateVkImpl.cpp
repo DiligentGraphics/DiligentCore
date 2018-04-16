@@ -439,6 +439,7 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters *pRefCounters, Ren
 PipelineStateVkImpl::~PipelineStateVkImpl()
 {
     auto pDeviceVkImpl = ValidatedCast<RenderDeviceVkImpl>(GetDevice());
+    pDeviceVkImpl->GetFramebufferCache().OnDestroyRenderPass(m_RenderPass);
     pDeviceVkImpl->SafeReleaseVkObject(std::move(m_RenderPass));
     pDeviceVkImpl->SafeReleaseVkObject(std::move(m_Pipeline));
     pDeviceVkImpl->SafeReleaseVkObject(std::move(m_PipelineLayout));

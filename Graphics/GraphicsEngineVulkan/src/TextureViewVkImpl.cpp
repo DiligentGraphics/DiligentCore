@@ -43,6 +43,8 @@ TextureViewVkImpl::TextureViewVkImpl( IReferenceCounters *pRefCounters,
 TextureViewVkImpl::~TextureViewVkImpl()
 {
     auto *pDeviceVkImpl = ValidatedCast<RenderDeviceVkImpl>(GetDevice());
+    if(m_Desc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL || m_Desc.ViewType == TEXTURE_VIEW_RENDER_TARGET)
+        pDeviceVkImpl->GetFramebufferCache().OnDestroyImageView(m_ImageView);
     pDeviceVkImpl->SafeReleaseVkObject(std::move(m_ImageView));
 }
 
