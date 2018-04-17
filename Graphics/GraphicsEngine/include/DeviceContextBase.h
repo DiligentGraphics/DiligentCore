@@ -262,7 +262,7 @@ inline bool DeviceContextBase<BaseInterface> :: CommitShaderResources(IShaderRes
 
     if (pShaderResourceBinding)
     {
-        auto *pPSOImpl = ValidatedCast<PSOImplType>(m_pPipelineState.RawPtr());
+        auto *pPSOImpl = m_pPipelineState.RawPtr<PSOImplType>();
         if (pPSOImpl->IsIncompatibleWith(pShaderResourceBinding->GetPipelineState()))
         {
             LOG_ERROR_MESSAGE("Shader resource binding object is not compatible with the currently bound pipeline state");

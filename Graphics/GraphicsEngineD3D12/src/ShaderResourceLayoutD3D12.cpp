@@ -734,7 +734,7 @@ bool ShaderResourceLayoutD3D12::SRV_CBV_UAV::IsBound(Uint32 ArrayIndex)
             auto &CachedRes = RootTable.GetResource(OffsetFromTableStart + ArrayIndex, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, m_ParentResLayout.m_pResources->GetShaderType());
             if( CachedRes.pObject != nullptr )
             {
-                VERIFY(CachedRes.CPUDescriptorHandle.ptr != 0 || ValidatedCast<BufferD3D12Impl>(CachedRes.pObject.RawPtr())->GetDesc().Usage == USAGE_DYNAMIC, "No relevant descriptor handle");
+                VERIFY(CachedRes.CPUDescriptorHandle.ptr != 0 || CachedRes.pObject.RawPtr<BufferD3D12Impl>()->GetDesc().Usage == USAGE_DYNAMIC, "No relevant descriptor handle");
                 return true;
             }
         }
@@ -948,7 +948,7 @@ void ShaderResourceLayoutD3D12::dbgVerifyBindings()const
 
                 if( !CachedRes.pObject || 
                      // Dynamic buffers do not have CPU descriptor handle as they do not keep D3D12 buffer, and space is allocated from the GPU ring buffer
-                     CachedRes.CPUDescriptorHandle.ptr == 0 && !(CachedRes.Type==CachedResourceType::CBV && ValidatedCast<const BufferD3D12Impl>(CachedRes.pObject.RawPtr())->GetDesc().Usage == USAGE_DYNAMIC) )
+                     CachedRes.CPUDescriptorHandle.ptr == 0 && !(CachedRes.Type==CachedResourceType::CBV && CachedRes.pObject.RawPtr<const BufferD3D12Impl>()->GetDesc().Usage == USAGE_DYNAMIC) )
                     LOG_ERROR_MESSAGE( "No resource is bound to ", GetShaderVariableTypeLiteralName(res.Attribs.GetVariableType()), " variable \"", res.Attribs.GetPrintName(ArrInd), "\" in shader \"", GetShaderName(), "\"" );
                 
                 if (res.Attribs.BindCount > 1 && res.IsValidSampler())
@@ -958,7 +958,7 @@ void ShaderResourceLayoutD3D12::dbgVerifyBindings()const
                     if(SamInfo.Attribs.BindCount == 1)
                     {
                         const auto &CachedSampler = m_pResourceCache->GetRootTable(SamInfo.RootIndex).GetResource(SamInfo.OffsetFromTableStart, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, m_pResources->GetShaderType());
-                        if( auto *pTexView = ValidatedCast<const ITextureView>(CachedRes.pObject.RawPtr()) )
+                        if( auto *pTexView = CachedRes.pObject.RawPtr<const ITextureView>() )
                         {
                             auto *pSampler = const_cast<ITextureView*>(pTexView)->GetSampler();
                             if (pSampler != nullptr && CachedSampler.pObject != pSampler)

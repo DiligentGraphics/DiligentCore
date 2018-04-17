@@ -72,7 +72,7 @@ IMPLEMENT_QUERY_INTERFACE( SwapChainGLImpl, IID_SwapChainGL, TSwapChainBase )
 void SwapChainGLImpl::Present(Uint32 SyncInterval)
 {
 #if PLATFORM_WIN32 || PLATFORM_LINUX || PLATFORM_ANDROID
-    auto *pDeviceGL = ValidatedCast<RenderDeviceGLImpl>(m_pRenderDevice.RawPtr());
+    auto *pDeviceGL = m_pRenderDevice.RawPtr<RenderDeviceGLImpl>();
     auto &GLContext = pDeviceGL->m_GLContext;
     GLContext.SwapBuffers();
 #elif PLATFORM_MACOS
@@ -85,7 +85,7 @@ void SwapChainGLImpl::Present(Uint32 SyncInterval)
 void SwapChainGLImpl::Resize( Uint32 NewWidth, Uint32 NewHeight )
 {
 #if PLATFORM_ANDROID
-    auto *pDeviceGL = ValidatedCast<RenderDeviceGLImpl>(m_pRenderDevice.RawPtr());
+    auto *pDeviceGL = m_pRenderDevice.RawPtr<RenderDeviceGLImpl>();
     auto &GLContext = pDeviceGL->m_GLContext;
     GLContext.UpdateScreenSize();
     NewWidth = GLContext.GetScreenWidth();
@@ -98,7 +98,7 @@ void SwapChainGLImpl::Resize( Uint32 NewWidth, Uint32 NewHeight )
         VERIFY( pDeviceContext, "Immediate context has been released" );
         if( pDeviceContext )
         {
-            auto *pImmediateCtxGL = ValidatedCast<DeviceContextGLImpl>( pDeviceContext.RawPtr() );
+            auto *pImmediateCtxGL = pDeviceContext.RawPtr<DeviceContextGLImpl>();
             bool bIsDefaultFBBound = pImmediateCtxGL->IsDefaultFBBound();
 
             // To update the viewport is the only thing we need to do in OpenGL

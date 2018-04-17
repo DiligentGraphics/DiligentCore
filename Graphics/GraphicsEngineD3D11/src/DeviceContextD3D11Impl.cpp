@@ -547,7 +547,8 @@ namespace Diligent
     {
         if (TDeviceContextBase::SetStencilRef(StencilRef, 0))
         {
-            ID3D11DepthStencilState *pd3d11DSS = m_pPipelineState ? ValidatedCast<PipelineStateD3D11Impl>(m_pPipelineState.RawPtr())->GetD3D11DepthStencilState() : nullptr;
+            ID3D11DepthStencilState *pd3d11DSS = 
+                m_pPipelineState ? m_pPipelineState.RawPtr<PipelineStateD3D11Impl>()->GetD3D11DepthStencilState() : nullptr;
             m_pd3d11DeviceContext->OMSetDepthStencilState( pd3d11DSS, m_StencilRef );
         }
     }
@@ -562,7 +563,7 @@ namespace Diligent
             if(m_pPipelineState)
             {
                 SampleMask = m_pPipelineState->GetDesc().GraphicsPipeline.SampleMask;
-                pd3d11BS = ValidatedCast<PipelineStateD3D11Impl>(m_pPipelineState.RawPtr())->GetD3D11BlendState();
+                pd3d11BS = m_pPipelineState.RawPtr<PipelineStateD3D11Impl>()->GetD3D11BlendState();
             }
             m_pd3d11DeviceContext->OMSetBlendState(pd3d11BS, m_BlendFactors, SampleMask);
         }
@@ -576,7 +577,7 @@ namespace Diligent
             return;
         }
 
-        BufferD3D11Impl *pBuffD3D11 = static_cast<BufferD3D11Impl *>(m_pIndexBuffer.RawPtr());
+        BufferD3D11Impl *pBuffD3D11 = m_pIndexBuffer.RawPtr<BufferD3D11Impl>();
         if( pBuffD3D11->CheckState( D3D11BufferState::UnorderedAccess ) )
         {
             UnbindResourceFromUAV(pBuffD3D11, pBuffD3D11->m_pd3d11Buffer);
@@ -620,7 +621,7 @@ namespace Diligent
         {
             auto &CurrStream = m_VertexStreams[Slot];
             VERIFY( CurrStream.pBuffer, "Attempting to bind a null buffer for rendering" );
-            auto *pBuffD3D11Impl = ValidatedCast<BufferD3D11Impl>(CurrStream.pBuffer.RawPtr());
+            auto *pBuffD3D11Impl = CurrStream.pBuffer.RawPtr<BufferD3D11Impl>();
             ID3D11Buffer *pd3d11Buffer = pBuffD3D11Impl->m_pd3d11Buffer;
             auto Stride = CurrStream.Stride ? CurrStream.Stride : TightStrides[Slot];
             auto Offset = CurrStream.Offset;
@@ -675,7 +676,7 @@ namespace Diligent
         }
 #endif
 
-        auto *pPipelineStateD3D11 = ValidatedCast<PipelineStateD3D11Impl>(m_pPipelineState.RawPtr());
+        auto *pPipelineStateD3D11 = m_pPipelineState.RawPtr<PipelineStateD3D11Impl>();
 #ifdef _DEBUG
         if (pPipelineStateD3D11->GetDesc().IsComputePipeline)
         {
@@ -793,7 +794,7 @@ namespace Diligent
         {
             if (m_pSwapChain)
             {
-                pd3d11DSV = ValidatedCast<ISwapChainD3D11>(m_pSwapChain.RawPtr())->GetDSV();
+                pd3d11DSV = m_pSwapChain.RawPtr<ISwapChainD3D11>()->GetDSV();
                 VERIFY_EXPR(pd3d11DSV != nullptr);
             }
             else
@@ -826,7 +827,7 @@ namespace Diligent
         {
             if (m_pSwapChain)
             {
-                pd3d11RTV = ValidatedCast<ISwapChainD3D11>(m_pSwapChain.RawPtr())->GetRTV();
+                pd3d11RTV = m_pSwapChain.RawPtr<ISwapChainD3D11>()->GetRTV();
                 VERIFY_EXPR(pd3d11RTV != nullptr);
             }
             else
@@ -925,7 +926,7 @@ namespace Diligent
             if (m_pSwapChain)
             {
                 NumRenderTargets = 1;
-                auto *pSwapChainD3D11 = ValidatedCast<ISwapChainD3D11>(m_pSwapChain.RawPtr());
+                auto *pSwapChainD3D11 = m_pSwapChain.RawPtr<ISwapChainD3D11>();
                 pd3d11RTs[0] = pSwapChainD3D11->GetRTV();
                 pd3d11DSV = pSwapChainD3D11->GetDSV();
                 VERIFY_EXPR(pd3d11RTs[0] != nullptr && pd3d11DSV != nullptr);

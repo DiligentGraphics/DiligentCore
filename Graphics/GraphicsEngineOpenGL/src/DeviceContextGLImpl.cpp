@@ -286,7 +286,7 @@ namespace Diligent
     {
         if (m_IsDefaultFramebufferBound)
         {
-            auto *pSwapChainGL = ValidatedCast<ISwapChainGL>(m_pSwapChain.RawPtr());
+            auto *pSwapChainGL = m_pSwapChain.RawPtr<ISwapChainGL>();
             GLuint DefaultFBOHandle = pSwapChainGL->GetDefaultFBO();
             if (m_DefaultFBO != DefaultFBOHandle)
             {
@@ -310,7 +310,7 @@ namespace Diligent
             for (Uint32 rt = 0; rt < NumRenderTargets; ++rt)
                 pBoundRTVs[rt] = m_pBoundRenderTargets[rt];
 
-            auto *pRenderDeviceGL = ValidatedCast<RenderDeviceGLImpl>(m_pDevice.RawPtr());
+            auto *pRenderDeviceGL = m_pDevice.RawPtr<RenderDeviceGLImpl>();
             auto CurrentNativeGLContext = m_ContextState.GetCurrentGLContext();
             auto &FBOCache = pRenderDeviceGL->GetFBOCache(CurrentNativeGLContext);
             const auto& FBO = FBOCache.GetFBO(NumRenderTargets, pBoundRTVs, m_pBoundDepthStencil, m_ContextState);
@@ -331,13 +331,13 @@ namespace Diligent
 
     void DeviceContextGLImpl::BindProgramResources( Uint32 &NewMemoryBarriers, IShaderResourceBinding *pResBinding )
     {
-        auto *pRenderDeviceGL = ValidatedCast<RenderDeviceGLImpl>(m_pDevice.RawPtr());
+        auto *pRenderDeviceGL = m_pDevice.RawPtr<RenderDeviceGLImpl>();
         if (!m_pPipelineState)
         {
             LOG_ERROR("No pipeline state is bound");
             return;
         }
-        auto *pPipelineStateGL = ValidatedCast<PipelineStateGLImpl>(m_pPipelineState.RawPtr());
+        auto *pPipelineStateGL = m_pPipelineState.RawPtr<PipelineStateGLImpl>();
         auto *pShaderResBindingGL = ValidatedCast<ShaderResourceBindingGLImpl>(pResBinding);
 
         const auto &DeviceCaps = pRenderDeviceGL->GetDeviceCaps();
@@ -390,7 +390,7 @@ namespace Diligent
                         auto& Resource = it->pResources[ArrInd];
                         if (Resource)
                         {
-                            auto *pBufferOGL = ValidatedCast<BufferGLImpl>(Resource.RawPtr());
+                            auto *pBufferOGL = Resource.RawPtr<BufferGLImpl>();
                             pBufferOGL->BufferMemoryBarrier(
                                 GL_UNIFORM_BARRIER_BIT,// Shader uniforms sourced from buffer objects after the barrier 
                                                        // will reflect data written by shaders prior to the barrier
@@ -432,7 +432,7 @@ namespace Diligent
                                 it->Type == GL_INT_SAMPLER_BUFFER ||
                                 it->Type == GL_UNSIGNED_INT_SAMPLER_BUFFER )
                             {
-                                auto *pBufViewOGL = ValidatedCast<BufferViewGLImpl>(Resource.RawPtr());
+                                auto *pBufViewOGL = Resource.RawPtr<BufferViewGLImpl>();
                                 auto *pBuffer = pBufViewOGL->GetBuffer();
 
                                 m_ContextState.BindTexture( TextureIndex, GL_TEXTURE_BUFFER, pBufViewOGL->GetTexBufferHandle() );
@@ -447,7 +447,7 @@ namespace Diligent
                             }
                             else
                             {
-                                auto *pTexViewOGL = ValidatedCast<TextureViewGLImpl>(Resource.RawPtr());
+                                auto *pTexViewOGL = Resource.RawPtr<TextureViewGLImpl>();
                                 m_ContextState.BindTexture( TextureIndex, pTexViewOGL->GetBindTarget(), pTexViewOGL->GetHandle() );
 
                                 auto *pTexture = pTexViewOGL->GetTexture();
@@ -507,7 +507,7 @@ namespace Diligent
                         auto &Resource = it->pResources[ArrInd];
                         if( Resource )
                         {
-                            auto *pTexViewOGL = ValidatedCast<TextureViewGLImpl>(Resource.RawPtr());
+                            auto *pTexViewOGL = Resource.RawPtr<TextureViewGLImpl>();
                             const auto &ViewDesc = pTexViewOGL->GetDesc();
 
                             if( ViewDesc.AccessFlags & UAV_ACCESS_FLAG_WRITE )
@@ -574,7 +574,7 @@ namespace Diligent
                         auto &Resource = it->pResources[ArrInd];
                         if( Resource )
                         {
-                            auto *pBufferViewOGL = ValidatedCast<BufferViewGLImpl>(Resource.RawPtr());
+                            auto *pBufferViewOGL = Resource.RawPtr<BufferViewGLImpl>();
                             const auto &ViewDesc = pBufferViewOGL->GetDesc();
                             VERIFY( ViewDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS || ViewDesc.ViewType == BUFFER_VIEW_SHADER_RESOURCE, "Unexpceted buffer view type" );
 
@@ -661,7 +661,7 @@ namespace Diligent
             return;
         }
 
-        auto *pRenderDeviceGL = ValidatedCast<RenderDeviceGLImpl>(m_pDevice.RawPtr());
+        auto *pRenderDeviceGL = m_pDevice.RawPtr<RenderDeviceGLImpl>();
         auto CurrNativeGLContext = pRenderDeviceGL->m_GLContext.GetCurrentNativeGLContext();
         const auto& PipelineDesc = m_pPipelineState->GetDesc().GraphicsPipeline;
         if(!m_bVAOIsUpToDate)
@@ -983,7 +983,7 @@ namespace Diligent
 
     bool DeviceContextGLImpl::UpdateCurrentGLContext()
     {
-        auto *pRenderDeviceGL = ValidatedCast<RenderDeviceGLImpl>(m_pDevice.RawPtr());
+        auto *pRenderDeviceGL = m_pDevice.RawPtr<RenderDeviceGLImpl>();
         auto NativeGLContext = pRenderDeviceGL->m_GLContext.GetCurrentNativeGLContext();
         if (NativeGLContext == NULL)
             return false;

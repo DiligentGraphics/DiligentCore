@@ -811,7 +811,7 @@ do{                                                \
                         auto &CachedResource = pCachedResources[BindPoint];
                         if(CachedResource.pView)
                         {
-                            auto *pTexView = ValidatedCast<ITextureView>(CachedResource.pView.RawPtr());
+                            auto *pTexView = CachedResource.pView.RawPtr<ITextureView>();
                             auto *pSampler = pTexView->GetSampler();
                             if(pSampler != nullptr && pSampler != Sampler.pSampler.RawPtr())
                                 LOG_ERROR_MESSAGE( "All elements of texture array \"", ts.Attribs.Name, "\" in shader \"", GetShaderName(), "\" share the same sampler. However, the sampler set in view for element ", BindPoint - ts.Attribs.BindPoint, " does not match bound sampler. This may cause incorrect behavior on GL platform."  );

@@ -51,7 +51,7 @@ SwapChainD3D11Impl::~SwapChainD3D11Impl()
 
 void SwapChainD3D11Impl::CreateRTVandDSV()
 {
-    auto *pDevice = ValidatedCast<RenderDeviceD3D11Impl>(m_pRenderDevice.RawPtr())->GetD3D11Device();
+    auto *pDevice = m_pRenderDevice.RawPtr<RenderDeviceD3D11Impl>()->GetD3D11Device();
 
     m_pRenderTargetView.Release();
     m_pDepthStencilView.Release();
@@ -139,7 +139,7 @@ void SwapChainD3D11Impl::UpdateSwapChain(bool CreateNew)
     VERIFY(pDeviceContext, "Immediate context has been released");
     if (pDeviceContext)
     {
-        auto *pImmediateCtxD3D11 = ValidatedCast<DeviceContextD3D11Impl>(pDeviceContext.RawPtr());
+        auto *pImmediateCtxD3D11 = pDeviceContext.RawPtr<DeviceContextD3D11Impl>();
         bool bIsDefaultFBBound = pImmediateCtxD3D11->IsDefaultFBBound();
         if (bIsDefaultFBBound)
         {
@@ -165,7 +165,7 @@ void SwapChainD3D11Impl::UpdateSwapChain(bool CreateNew)
                 // https://msdn.microsoft.com/en-us/library/windows/desktop/ff476425(v=vs.85).aspx#Defer_Issues_with_Flip
                 pImmediateCtxD3D11->Flush();
 
-                auto *pd3d11Device = ValidatedCast<RenderDeviceD3D11Impl>(m_pRenderDevice.RawPtr())->GetD3D11Device();
+                auto *pd3d11Device = m_pRenderDevice.RawPtr<RenderDeviceD3D11Impl>()->GetD3D11Device();
                 CreateDXGISwapChain(pd3d11Device);
             }
             else

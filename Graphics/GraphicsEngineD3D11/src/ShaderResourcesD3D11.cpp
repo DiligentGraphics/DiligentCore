@@ -160,7 +160,7 @@ void ShaderResourcesD3D11::InitStaticSamplers(ShaderResourceCacheD3D11 &Resource
         const auto *pSamAttribs = StaticSampler.first;
         auto EndBindPoint = std::min( static_cast<Uint32>(pSamAttribs->BindPoint) + pSamAttribs->BindCount, NumCachedSamplers);
         for(Uint32 BindPoint = pSamAttribs->BindPoint; BindPoint < EndBindPoint; ++BindPoint )
-            ResourceCache.SetSampler(BindPoint, ValidatedCast<SamplerD3D11Impl>(StaticSampler.second.RawPtr()) );
+            ResourceCache.SetSampler(BindPoint, StaticSampler.second.RawPtr<SamplerD3D11Impl>() );
     }
 }
 

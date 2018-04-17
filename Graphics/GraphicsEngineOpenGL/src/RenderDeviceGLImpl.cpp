@@ -147,7 +147,7 @@ void RenderDeviceGLImpl :: CreateTexture(const TextureDesc& TexDesc, const Textu
         {
             auto spDeviceContext = GetImmediateContext();
             VERIFY(spDeviceContext, "Immediate device context has been destroyed");
-            auto pDeviceContext = ValidatedCast<DeviceContextGLImpl>( spDeviceContext.RawPtr() );
+            auto pDeviceContext = spDeviceContext.RawPtr<DeviceContextGLImpl>();
             const auto &FmtInfo = GetTextureFormatInfo( TexDesc.Format );
             if( !FmtInfo.Supported )
             {
@@ -215,7 +215,7 @@ void RenderDeviceGLImpl::CreateTextureFromGLHandle(Uint32 GLHandle, const Textur
         {
             auto spDeviceContext = GetImmediateContext();
             VERIFY(spDeviceContext, "Immediate device context has been destroyed");
-            auto pDeviceContext = ValidatedCast<DeviceContextGLImpl>( spDeviceContext.RawPtr() );
+            auto pDeviceContext = spDeviceContext.RawPtr<DeviceContextGLImpl>();
             TextureBaseGL *pTextureOGL = nullptr;
             switch(TexDesc.Type)
             {
@@ -514,7 +514,7 @@ void RenderDeviceGLImpl::TestTextureFormat( TEXTURE_FORMAT TexFormat )
 
     auto spDeviceContext = GetImmediateContext();
     VERIFY(spDeviceContext, "Immediate device context has been destroyed");
-    auto *pContextGL = ValidatedCast<DeviceContextGLImpl>( spDeviceContext.RawPtr() );
+    auto *pContextGL = spDeviceContext.RawPtr<DeviceContextGLImpl>();
     auto &ContextState = pContextGL->GetContextState();
 
     const int TestTextureDim = 32;

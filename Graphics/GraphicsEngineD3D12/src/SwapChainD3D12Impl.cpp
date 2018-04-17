@@ -70,7 +70,7 @@ void SwapChainD3D12Impl::InitBuffersAndViews()
         BackBufferDesc.Name = Name.c_str();
 
         RefCntAutoPtr<TextureD3D12Impl> pBackBufferTex;
-        ValidatedCast<RenderDeviceD3D12Impl>(m_pRenderDevice.RawPtr())->CreateTexture(BackBufferDesc, pBackBuffer, &pBackBufferTex);
+        m_pRenderDevice.RawPtr<RenderDeviceD3D12Impl>()->CreateTexture(BackBufferDesc, pBackBuffer, &pBackBufferTex);
         TextureViewDesc RTVDesc;
         RTVDesc.ViewType = TEXTURE_VIEW_RENDER_TARGET;
         RefCntAutoPtr<ITextureView> pRTV;
@@ -151,12 +151,12 @@ void SwapChainD3D12Impl::UpdateSwapChain(bool CreateNew)
     VERIFY(pDeviceContext, "Immediate context has been released");
     if (pDeviceContext)
     {
-        RenderDeviceD3D12Impl *pDeviceD3D12 = ValidatedCast<RenderDeviceD3D12Impl>(m_pRenderDevice.RawPtr());
+        RenderDeviceD3D12Impl *pDeviceD3D12 = m_pRenderDevice.RawPtr<RenderDeviceD3D12Impl>();
         pDeviceContext->Flush();
 
         try
         {
-            auto *pImmediateCtxD3D12 = ValidatedCast<DeviceContextD3D12Impl>(pDeviceContext.RawPtr());
+            auto *pImmediateCtxD3D12 = pDeviceContext.RawPtr<DeviceContextD3D12Impl>();
             bool bIsDefaultFBBound = pImmediateCtxD3D12->IsDefaultFBBound();
 
             // All references to the swap chain must be released before it can be resized
@@ -170,7 +170,7 @@ void SwapChainD3D12Impl::UpdateSwapChain(bool CreateNew)
             if(CreateNew)
             {
                 m_pSwapChain.Release();
-                auto *pd3d12CmdQueue = ValidatedCast<RenderDeviceD3D12Impl>(m_pRenderDevice.RawPtr())->GetCmdQueue()->GetD3D12CommandQueue();
+                auto *pd3d12CmdQueue = m_pRenderDevice.RawPtr<RenderDeviceD3D12Impl>()->GetCmdQueue()->GetD3D12CommandQueue();
                 CreateDXGISwapChain(pd3d12CmdQueue);
             }
             else

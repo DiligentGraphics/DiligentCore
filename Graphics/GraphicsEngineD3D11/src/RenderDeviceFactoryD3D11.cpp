@@ -333,7 +333,7 @@ void EngineFactoryD3D11Impl::CreateSwapChainD3D11( IRenderDevice *pDevice,
         {
             if (auto pDeferredCtx = pDeviceD3D11->GetDeferredContext(ctx))
             {
-                auto *pDeferredCtxD3D11 = ValidatedCast<DeviceContextD3D11Impl>(pDeferredCtx.RawPtr());
+                auto *pDeferredCtxD3D11 = pDeferredCtx.RawPtr<DeviceContextD3D11Impl>();
                 pDeferredCtxD3D11->SetSwapChain(pSwapChainD3D11);
                 // Do not bind default render target and viewport to be
                 // consistent with D3D12

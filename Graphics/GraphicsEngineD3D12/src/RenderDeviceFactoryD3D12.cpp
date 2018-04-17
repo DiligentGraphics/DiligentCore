@@ -385,7 +385,7 @@ void EngineFactoryD3D12Impl::CreateSwapChainD3D12( IRenderDevice *pDevice,
         {
             if (auto pDeferredCtx = pDeviceD3D12->GetDeferredContext(ctx))
             {
-                auto *pDeferredCtxD3D12 = ValidatedCast<DeviceContextD3D12Impl>(pDeferredCtx.RawPtr());
+                auto *pDeferredCtxD3D12 = pDeferredCtx.RawPtr<DeviceContextD3D12Impl>();
                 pDeferredCtxD3D12->SetSwapChain(pSwapChainD3D12);
                 // We cannot bind default render target here because
                 // there is no guarantee that deferred context will be used
