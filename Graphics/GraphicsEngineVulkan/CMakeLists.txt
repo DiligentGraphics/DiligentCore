@@ -32,6 +32,7 @@ set(INCLUDE
 )
 
 set(VULKAN_UTILS_INCLUDE 
+    include/VulkanUtilities/VulkanCommandBuffer.h
     include/VulkanUtilities/VulkanCommandBufferPool.h
     include/VulkanUtilities/VulkanDebug.h
     include/VulkanUtilities/VulkanFencePool.h
