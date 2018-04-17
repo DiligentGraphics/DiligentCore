@@ -1285,6 +1285,11 @@ namespace Diligent
 
         /// Allocator used as pAllocator parameter in callse to Vulkan Create* functions
         void *pVkAllocator = nullptr;
+
+        /// Number of commands to flush the command buffer. Only draw/dispatch commands count
+        /// towards the limit. Command buffers are only flushed when pipeline state is changed
+        /// or when backbuffer is presented.
+        Uint32 NumCommandsToFlushCmdBuffer = 256;
     };
 
     /// Box

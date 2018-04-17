@@ -29,6 +29,8 @@
 #include "DeviceContextVk.h"
 #include "DeviceContextBase.h"
 #include "GenerateMips.h"
+#include "VulkanUtilities/VulkanCommandBufferPool.h"
+#include "VulkanUtilities/VulkanCommandBuffer.h"
 
 #ifdef _DEBUG
 #   define VERIFY_CONTEXT_BINDINGS
@@ -110,7 +112,7 @@ public:
     struct DynamicAllocation AllocateDynamicSpace(size_t NumBytes);
     
     Uint32 GetContextId()const{return m_ContextId;}
-
+#endif
     size_t GetNumCommandsInCtx()const { return m_NumCommandsInCurCtx; }
 
 private:
@@ -120,7 +122,7 @@ private:
     void CommitRenderTargets();
     void CommitViewports();
     void CommitScissorRects(class GraphicsContext &GraphCtx, bool ScissorEnable);
-#endif
+
     void Flush(bool RequestNewCmdCtx);
 #if 0
     friend class SwapChainVkImpl;
@@ -132,11 +134,21 @@ private:
         return m_pCurrCmdCtx;
     }
 #endif
-    size_t m_NumCommandsInCurCtx = 0;
-#if 0
-    const Uint32  m_NumCommandsToFlush = 192;
-    CommandContext* m_pCurrCmdCtx = nullptr;
+    
+    VulkanUtilities::VulkanCommandBuffer m_CommandBuffer;
 
+    struct ContextState
+    {
+        /// Flag indicating if currently committed vertex buffers are up to date
+        bool CommittedVBsUpToDate = false;
+
+        /// Flag indicating if currently committed index buffer is up to date
+        bool CommittedIBUpToDate = false;
+    }m_State;
+
+    Uint32  m_NumCommandsInCurCtx = 0;
+    const Uint32  m_NumCommandsToFlush = 192;
+#if 0
     CComPtr<IVkResource> m_CommittedVkIndexBuffer;
     VALUE_TYPE m_CommittedIBFormat = VT_UNDEFINED;
     Uint32 m_CommittedVkIndexDataStartOffset = 0;
@@ -148,17 +160,12 @@ private:
     GenerateMipsHelper m_MipsGenerator;
     class DynamicUploadHeap* m_pUploadHeap = nullptr;
     
-    /// Flag indicating if currently committed Vk vertex buffers are up to date
-    bool m_bCommittedVkVBsUpToDate = false;
-
-    /// Flag indicating if currently committed D3D11 index buffer is up to date
-    bool m_bCommittedVkIBUpToDate = false;
-
     class ShaderResourceCacheVk *m_pCommittedResourceCache = nullptr;
 
     FixedBlockMemoryAllocator m_CmdListAllocator;
     const Uint32 m_ContextId;
 #endif
+    VulkanUtilities::VulkanCommandBufferPool m_CmdPool;
 };
 
 }

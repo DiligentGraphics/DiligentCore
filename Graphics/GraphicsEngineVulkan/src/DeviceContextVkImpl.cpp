@@ -32,22 +32,22 @@
 #include "VulkanTypeConversions.h"
 #include "DynamicUploadHeap.h"
 #include "CommandListVkImpl.h"
-//#include "DXGITypeConversions.h"
 
 namespace Diligent
 {
 
     DeviceContextVkImpl::DeviceContextVkImpl( IReferenceCounters *pRefCounters, RenderDeviceVkImpl *pDeviceVkImpl, bool bIsDeferred, const EngineVkAttribs &Attribs, Uint32 ContextId) :
-        TDeviceContextBase(pRefCounters, pDeviceVkImpl, bIsDeferred)/*,
-        m_pUploadHeap(pDeviceVkImpl->RequestUploadHeap() ),
+        TDeviceContextBase(pRefCounters, pDeviceVkImpl, bIsDeferred),
+        //m_pUploadHeap(pDeviceVkImpl->RequestUploadHeap() ),
         m_NumCommandsInCurCtx(0),
-        m_NumCommandsToFlush(bIsDeferred ? std::numeric_limits<decltype(m_NumCommandsToFlush)>::max() : Attribs.NumCommandsToFlushCmdList),
-        m_pCurrCmdCtx(pDeviceVkImpl->AllocateCommandContext()),
+        m_NumCommandsToFlush(bIsDeferred ? std::numeric_limits<decltype(m_NumCommandsToFlush)>::max() : Attribs.NumCommandsToFlushCmdBuffer),
+        /*m_pCurrCmdCtx(pDeviceVkImpl->AllocateCommandContext()),
         m_CommittedIBFormat(VT_UNDEFINED),
         m_CommittedVkIndexDataStartOffset(0),
         m_MipsGenerator(pDeviceVkImpl->GetVkDevice()),
         m_CmdListAllocator(GetRawAllocator(), sizeof(CommandListVkImpl), 64 ),
-        m_ContextId(ContextId)*/
+        m_ContextId(ContextId),*/
+        m_CmdPool(pDeviceVkImpl->GetLogicalDevice().GetSharedPtr(), pDeviceVkImpl->GetCmdQueue()->GetQueueFamilyIndex(), VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT)
     {
 #if 0
         auto *pVkDevice = pDeviceVkImpl->GetVkDevice();
@@ -94,7 +94,6 @@ namespace Diligent
     
     void DeviceContextVkImpl::SetPipelineState(IPipelineState *pPipelineState)
     {
-#if 0
         // Never flush deferred context!
         if (!m_bIsDeferred && m_NumCommandsInCurCtx >= m_NumCommandsToFlush)
         {
@@ -124,7 +123,7 @@ namespace Diligent
             // We also need to update scissor rect if ScissorEnable state has changed
             CommitScissor = OldPSODesc.GraphicsPipeline.RasterizerDesc.ScissorEnable != PSODesc.GraphicsPipeline.RasterizerDesc.ScissorEnable;
         }
-#endif
+
         TDeviceContextBase::SetPipelineState( pPipelineState );
 #if 0
         auto *pCmdCtx = RequestCmdContext();
@@ -183,9 +182,7 @@ namespace Diligent
     {
         if (TDeviceContextBase::SetStencilRef(StencilRef, 0))
         {
-#if 0
-            RequestCmdContext()->AsGraphicsContext().SetStencilRef( m_StencilRef );
-#endif
+            m_CommandBuffer.SetStencilReference(m_StencilRef);
         }
     }
 
@@ -193,17 +190,14 @@ namespace Diligent
     {
         if (TDeviceContextBase::SetBlendFactors(m_BlendFactors, 0))
         {
-#if 0
-            RequestCmdContext()->AsGraphicsContext().SetBlendFactor( m_BlendFactors );
-#endif
+            m_CommandBuffer.SetBlendConstants(m_BlendFactors);
         }
     }
 
-#if 0
     void DeviceContextVkImpl::CommitVkIndexBuffer(VALUE_TYPE IndexType)
     {
         VERIFY( m_pIndexBuffer != nullptr, "Index buffer is not set up for indexed draw command" );
-
+#if 0
         Vk_INDEX_BUFFER_VIEW IBView;
         BufferVkImpl *pBuffVk = static_cast<BufferVkImpl *>(m_pIndexBuffer.RawPtr());
         IBView.BufferLocation = pBuffVk->GetGPUAddress(m_ContextId) + m_IndexDataStartOffset;
@@ -251,10 +245,12 @@ namespace Diligent
         // GPU virtual address of a dynamic index buffer can change every time
         // a draw command is invoked
         m_bCommittedVkIBUpToDate = !IsDynamic;
+#endif
     }
 
     void DeviceContextVkImpl::TransitionVkVertexBuffers(GraphicsContext &GraphCtx)
     {
+#if 0
         for( UINT Buff = 0; Buff < m_NumVertexStreams; ++Buff )
         {
             auto &CurrStream = m_VertexStreams[Buff];
@@ -263,12 +259,13 @@ namespace Diligent
             if(!pBufferVk->CheckAllStates(Vk_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER))
                 GraphCtx.TransitionResource(pBufferVk, Vk_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
         }
+#endif
     }
 
     void DeviceContextVkImpl::CommitVkVertexBuffers(GraphicsContext &GraphCtx)
     {
         auto *pPipelineStateVk = ValidatedCast<PipelineStateVkImpl>(m_pPipelineState.RawPtr());
-
+#if 0
         // Do not initialize array with zeroes for performance reasons
         Vk_VERTEX_BUFFER_VIEW VBViews[MaxBufferSlots];// = {}
         VERIFY( m_NumVertexStreams <= MaxBufferSlots, "Too many buffers are being set" );
@@ -308,8 +305,9 @@ namespace Diligent
         // GPU virtual address of a dynamic vertex buffer can change every time
         // a draw command is invoked
         m_bCommittedVkVBsUpToDate = !DynamicBufferPresent;
-    }
 #endif
+    }
+
 
     void DeviceContextVkImpl::Draw( DrawAttribs &DrawAttribs )
     {
@@ -528,29 +526,27 @@ namespace Diligent
 
     void DeviceContextVkImpl::Flush(bool RequestNewCmdCtx)
     {
-#if 0
         auto pDeviceVkImpl = ValidatedCast<RenderDeviceVkImpl>(m_pDevice.RawPtr());
-        if( m_pCurrCmdCtx )
+        auto vkCmdBuff = m_CommandBuffer.GetVkCmdBuffer();
+        if(vkCmdBuff != VK_NULL_HANDLE )
         {
             VERIFY(!m_bIsDeferred, "Deferred contexts cannot execute command lists directly");
             if (m_NumCommandsInCurCtx != 0)
             {
-                m_pCurrCmdCtx->FlushResourceBarriers();
-                pDeviceVkImpl->CloseAndExecuteCommandContext(m_pCurrCmdCtx, true);
+                //m_pCurrCmdCtx->FlushResourceBarriers();
+                pDeviceVkImpl->ExecuteCommandBuffer(vkCmdBuff, true);
             }
-            else
-                pDeviceVkImpl->DisposeCommandContext(m_pCurrCmdCtx);
+            m_CmdPool.DisposeCommandBuffer(vkCmdBuff, pDeviceVkImpl->GetNextFenceValue());
         }
 
-        m_pCurrCmdCtx = RequestNewCmdCtx ? pDeviceVkImpl->AllocateCommandContext() : nullptr;
         m_NumCommandsInCurCtx = 0;
+        m_CommandBuffer.Reset();
 
-        m_CommittedVkIndexBuffer = nullptr;
-        m_CommittedVkIndexDataStartOffset = 0;
-        m_CommittedIBFormat = VT_UNDEFINED;
-        m_bCommittedVkVBsUpToDate = false;
-        m_bCommittedVkIBUpToDate = false;
-#endif
+        if(RequestNewCmdCtx)
+        {
+            vkCmdBuff = m_CmdPool.GetCommandBuffer(pDeviceVkImpl->GetCompletedFenceValue());
+            m_CommandBuffer.SetVkCmdBuffer(vkCmdBuff);
+        }
 
         m_pPipelineState.Release(); 
     }
@@ -558,9 +554,7 @@ namespace Diligent
     void DeviceContextVkImpl::Flush()
     {
         VERIFY(!m_bIsDeferred, "Flush() should only be called for immediate contexts");
-#if 0
         Flush(true);
-#endif
     }
 
     void DeviceContextVkImpl::SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer **ppBuffers, Uint32 *pStrides, Uint32 *pOffsets, Uint32 Flags )
@@ -594,9 +588,10 @@ namespace Diligent
 #endif
     }
 
-#if 0
+
     void DeviceContextVkImpl::CommitViewports()
     {
+#if 0
         constexpr Uint32 MaxViewports = Vk_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE;
         Vk_VIEWPORT VkViewports[MaxViewports]; // Do not waste time initializing array to zero
         
@@ -612,8 +607,9 @@ namespace Diligent
         // All viewports must be set atomically as one operation. 
         // Any viewports not defined by the call are disabled.
         RequestCmdContext()->AsGraphicsContext().SetViewports( m_NumViewports, VkViewports );
-    }
 #endif
+    }
+
     void DeviceContextVkImpl::SetViewports( Uint32 NumViewports, const Viewport *pViewports, Uint32 RTWidth, Uint32 RTHeight  )
     {
 #if 0
@@ -628,7 +624,7 @@ namespace Diligent
 #endif
     }
 
-#if 0
+/*
     constexpr LONG MaxVkTexDim = Vk_REQ_TEXTURE2D_U_OR_V_DIMENSION;
     constexpr Uint32 MaxVkScissorRects = Vk_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE;
     static constexpr RECT MaxVkTexSizeRects[Vk_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE] =
@@ -653,9 +649,11 @@ namespace Diligent
         { 0,0, MaxVkTexDim,MaxVkTexDim },
         { 0,0, MaxVkTexDim,MaxVkTexDim }
     };
+*/
 
     void DeviceContextVkImpl::CommitScissorRects(GraphicsContext &GraphCtx, bool ScissorEnable)
     {
+#if 0
         if (ScissorEnable)
         {
             // Commit currently set scissor rectangles
@@ -675,8 +673,9 @@ namespace Diligent
             static_assert(_countof(MaxVkTexSizeRects) == MaxVkScissorRects, "Unexpected array size");
             GraphCtx.SetScissorRects(MaxVkScissorRects, MaxVkTexSizeRects);
         }
-    }
 #endif
+    }
+
 
     void DeviceContextVkImpl::SetScissorRects( Uint32 NumRects, const Rect *pRects, Uint32 RTWidth, Uint32 RTHeight  )
     {
@@ -704,9 +703,9 @@ namespace Diligent
     }
 
 
-#if 0
     void DeviceContextVkImpl::CommitRenderTargets()
     {
+#if 0
         const Uint32 MaxVkRTs = Vk_SIMULTANEOUS_RENDER_TARGET_COUNT;
         Uint32 NumRenderTargets = m_NumBoundRenderTargets;
         VERIFY( NumRenderTargets <= MaxVkRTs, "Vk only allows 8 simultaneous render targets" );
@@ -736,8 +735,9 @@ namespace Diligent
             pDSV = ValidatedCast<ITextureViewVk>(m_pBoundDepthStencil.RawPtr());
         }
         RequestCmdContext()->AsGraphicsContext().SetRenderTargets(NumRenderTargets, ppRTVs, pDSV);
-    }
 #endif
+    }
+
     void DeviceContextVkImpl::SetRenderTargets( Uint32 NumRenderTargets, ITextureView *ppRenderTargets[], ITextureView *pDepthStencil )
     {
         if( TDeviceContextBase::SetRenderTargets( NumRenderTargets, ppRenderTargets, pDepthStencil ) )

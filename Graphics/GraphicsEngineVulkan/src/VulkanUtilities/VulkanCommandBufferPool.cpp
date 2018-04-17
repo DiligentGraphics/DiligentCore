@@ -30,7 +30,7 @@
 
 namespace VulkanUtilities
 {
-    VulkanCommandBufferPool::VulkanCommandBufferPool(std::shared_ptr<VulkanUtilities::VulkanLogicalDevice> LogicalDevice, 
+    VulkanCommandBufferPool::VulkanCommandBufferPool(std::shared_ptr<const VulkanUtilities::VulkanLogicalDevice> LogicalDevice,
                                                      uint32_t queueFamilyIndex, 
                                                      VkCommandPoolCreateFlags flags) :
         m_LogicalDevice(LogicalDevice)

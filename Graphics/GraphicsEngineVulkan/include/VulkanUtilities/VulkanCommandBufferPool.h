@@ -34,7 +34,7 @@ namespace VulkanUtilities
     class VulkanCommandBufferPool
     {
     public:
-        VulkanCommandBufferPool(std::shared_ptr<VulkanUtilities::VulkanLogicalDevice> LogicalDevice, 
+        VulkanCommandBufferPool(std::shared_ptr<const VulkanUtilities::VulkanLogicalDevice> LogicalDevice, 
                                 uint32_t queueFamilyIndex, 
                                 VkCommandPoolCreateFlags flags);
         VulkanCommandBufferPool(const VulkanCommandBufferPool&) = delete;
@@ -48,7 +48,7 @@ namespace VulkanUtilities
 
     private:
         // Shared point to logical device must be defined before the command pool
-        std::shared_ptr<VulkanUtilities::VulkanLogicalDevice> m_LogicalDevice;
+        std::shared_ptr<const VulkanUtilities::VulkanLogicalDevice> m_LogicalDevice;
         CommandPoolWrapper m_CmdPool;
 
         // fist    - the fence value associated with the command buffer when it was executed

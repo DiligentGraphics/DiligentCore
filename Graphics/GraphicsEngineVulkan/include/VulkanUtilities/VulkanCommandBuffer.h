@@ -30,6 +30,7 @@ namespace VulkanUtilities
     class VulkanCommandBuffer
     {
     public:
+        VulkanCommandBuffer(){}
         VulkanCommandBuffer(const VulkanCommandBuffer&) = delete;
         VulkanCommandBuffer(VulkanCommandBuffer&&) = delete;
         VulkanCommandBuffer& operator = (const VulkanCommandBuffer&) = delete;
@@ -221,6 +222,21 @@ namespace VulkanUtilities
             vkCmdSetBlendConstants(m_VkCmdBuffer, blendConstants);
         }
 
+        void BindIndexBuffer(VkBuffer buffer, VkDeviceSize offset, VkIndexType indexType)
+        {
+            VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
+            vkCmdBindIndexBuffer(m_VkCmdBuffer, buffer, offset, indexType);
+            m_State.IndexBuffer = buffer;
+            m_State.IndexBufferOffset = offset;
+            m_State.IndexType = indexType;
+        }
+
+        void SetVkCmdBuffer(VkCommandBuffer VkCmdBuffer)
+        {
+            m_VkCmdBuffer = VkCmdBuffer;
+        }
+        VkCommandBuffer GetVkCmdBuffer()const{return m_VkCmdBuffer;}
+
         struct StateCache
         {
             VkRenderPass RenderPass = VK_NULL_HANDLE;
@@ -228,6 +244,8 @@ namespace VulkanUtilities
             VkPipeline GraphicsPipeline = VK_NULL_HANDLE;
             VkPipeline ComputePipeline = VK_NULL_HANDLE;
             VkBuffer IndexBuffer = VK_NULL_HANDLE;
+            VkDeviceSize IndexBufferOffset = 0;
+            VkIndexType IndexType = VK_INDEX_TYPE_MAX_ENUM;
         };
 
         const StateCache& GetState()const{return m_State;}
