@@ -50,15 +50,15 @@ public:
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface );
    
-    //virtual IVkPipelineState *GetVkPipelineState()const override final{return m_pVkPSO;}
-    
     virtual void BindShaderResources( IResourceMapping *pResourceMapping, Uint32 Flags )override;
 
     virtual void CreateShaderResourceBinding( IShaderResourceBinding **ppShaderResourceBinding )override;
 
     virtual bool IsCompatibleWith(const IPipelineState *pPSO)const override final;
 
-    //virtual IVkRootSignature *GetVkRootSignature()const override final{return m_RootSig.GetVkRootSignature(); }
+    virtual VkRenderPass GetVkRenderPass()const override final{return m_RenderPass;}
+
+    virtual VkPipeline GetVkPipeline()const override final { return m_Pipeline; }
 
     //ShaderResourceCacheVk* CommitAndTransitionShaderResources(IShaderResourceBinding *pShaderResourceBinding, 
     //                                                             class CommandContext &Ctx,

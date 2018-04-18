@@ -144,29 +144,31 @@ namespace VulkanUtilities
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
             VERIFY(m_State.RenderPass == VK_NULL_HANDLE, "Current pass has not been ended");
 
-            VkRenderPassBeginInfo BeginInfo;
-            BeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-            BeginInfo.pNext = nullptr;
-            BeginInfo.renderPass = RenderPass;
-            BeginInfo.framebuffer = Framebuffer;
-            // The render area MUST be contained within the framebuffer dimensions (7.4)
-            BeginInfo.renderArea = {{0,0}, { FramebufferWidth, FramebufferHeight }};
-            BeginInfo.clearValueCount = 0;
-            BeginInfo.pClearValues = nullptr; // an array of VkClearValue structures that contains clear values for 
-                                              // each attachment, if the attachment uses a loadOp value of VK_ATTACHMENT_LOAD_OP_CLEAR 
-                                              // or if the attachment has a depth/stencil format and uses a stencilLoadOp value of 
-                                              // VK_ATTACHMENT_LOAD_OP_CLEAR. The array is indexed by attachment number. Only elements 
-                                              // corresponding to cleared attachments are used. Other elements of pClearValues are 
-                                              // ignored (7.4)
+            if(m_State.RenderPass != RenderPass || m_State.Framebuffer != Framebuffer)
+            {
+                VkRenderPassBeginInfo BeginInfo;
+                BeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+                BeginInfo.pNext = nullptr;
+                BeginInfo.renderPass = RenderPass;
+                BeginInfo.framebuffer = Framebuffer;
+                // The render area MUST be contained within the framebuffer dimensions (7.4)
+                BeginInfo.renderArea = {{0,0}, { FramebufferWidth, FramebufferHeight }};
+                BeginInfo.clearValueCount = 0;
+                BeginInfo.pClearValues = nullptr; // an array of VkClearValue structures that contains clear values for 
+                                                  // each attachment, if the attachment uses a loadOp value of VK_ATTACHMENT_LOAD_OP_CLEAR 
+                                                  // or if the attachment has a depth/stencil format and uses a stencilLoadOp value of 
+                                                  // VK_ATTACHMENT_LOAD_OP_CLEAR. The array is indexed by attachment number. Only elements 
+                                                  // corresponding to cleared attachments are used. Other elements of pClearValues are 
+                                                  // ignored (7.4)
 
-            vkCmdBeginRenderPass(m_VkCmdBuffer, &BeginInfo, 
-                VK_SUBPASS_CONTENTS_INLINE // the contents of the subpass will be recorded inline in the 
-                                           // primary command buffer, and secondary command buffers must not 
-                                           // be executed within the subpass
-            );
-
-            m_State.RenderPass = RenderPass;
-            m_State.Framebuffer = Framebuffer;
+                vkCmdBeginRenderPass(m_VkCmdBuffer, &BeginInfo, 
+                    VK_SUBPASS_CONTENTS_INLINE // the contents of the subpass will be recorded inline in the 
+                                               // primary command buffer, and secondary command buffers must not 
+                                               // be executed within the subpass
+                );
+                m_State.RenderPass = RenderPass;
+                m_State.Framebuffer = Framebuffer;
+            }
         }
 
         void EndRenderPass()
@@ -186,16 +188,22 @@ namespace VulkanUtilities
         {
             // 9.8
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-            vkCmdBindPipeline(m_VkCmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, ComputePipeline);
-            m_State.ComputePipeline = ComputePipeline;
+            if(m_State.ComputePipeline != ComputePipeline)
+            {
+                vkCmdBindPipeline(m_VkCmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, ComputePipeline);
+                m_State.ComputePipeline = ComputePipeline;
+            }
         }
 
         void BindGraphicsPipeline(VkPipeline GraphicsPipeline)
         {
             // 9.8
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-            vkCmdBindPipeline(m_VkCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, GraphicsPipeline);
-            m_State.GraphicsPipeline = GraphicsPipeline;
+            if(m_State.GraphicsPipeline != GraphicsPipeline)
+            {
+                vkCmdBindPipeline(m_VkCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, GraphicsPipeline);
+                m_State.GraphicsPipeline = GraphicsPipeline;
+            }
         }
 
         void SetViewports(uint32_t firstViewport, uint32_t viewportCount, const VkViewport* pViewports)

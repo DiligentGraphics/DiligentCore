@@ -41,17 +41,11 @@ class IPipelineStateVk : public IPipelineState
 {
 public:
 
-    /// Returns ID3D12PipelineState interface of the internal D3D12 pipeline state object object.
-    
-    /// The method does *NOT* call AddRef() on the returned interface,
-    /// so Release() must not be called.
-    //virtual ID3D12PipelineState* GetD3D12PipelineState()const = 0;
+    /// Returns handle to a vulkan render pass object.
+    virtual VkRenderPass GetVkRenderPass()const = 0;
 
-    /// Returns a pointer to the root signature object associated with this pipeline state.
-    
-    /// The method does *NOT* call AddRef() on the returned interface,
-    /// so Release() must not be called.
-    //virtual ID3D12RootSignature* GetD3D12RootSignature()const = 0;
+    /// Returns handle to a vulkan pipeline pass object.
+    virtual VkPipeline GetVkPipeline()const = 0;
 };
 
 }

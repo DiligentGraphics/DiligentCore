@@ -116,24 +116,20 @@ public:
     size_t GetNumCommandsInCtx()const { return m_NumCommandsInCurCtx; }
 
 private:
+    void CommitRenderPassAndFramebuffer();
     void CommitVkIndexBuffer(VALUE_TYPE IndexType);
     void CommitVkVertexBuffers(class GraphicsContext &GraphCtx);
     void TransitionVkVertexBuffers(class GraphicsContext &GraphCtx);
     void CommitRenderTargets();
     void CommitViewports();
-    void CommitScissorRects(class GraphicsContext &GraphCtx, bool ScissorEnable);
+    void CommitScissorRects();
 
     void Flush(bool RequestNewCmdCtx);
 #if 0
     friend class SwapChainVkImpl;
-    inline class CommandContext* RequestCmdContext()
-    {
-        // Make sure that the number of commands in the context is at least one,
-        // so that the context cannot be disposed by Flush()
-        m_NumCommandsInCurCtx = m_NumCommandsInCurCtx != 0 ? m_NumCommandsInCurCtx : 1;
-        return m_pCurrCmdCtx;
-    }
 #endif
+    inline void EnsureVkCmdBuffer();
+    inline void DisposeVkCmdBuffer();
     
     VulkanUtilities::VulkanCommandBuffer m_CommandBuffer;
 

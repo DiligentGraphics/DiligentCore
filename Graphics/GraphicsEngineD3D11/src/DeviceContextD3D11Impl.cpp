@@ -865,10 +865,7 @@ namespace Diligent
 
     void DeviceContextD3D11Impl::SetViewports( Uint32 NumViewports, const Viewport *pViewports, Uint32 RTWidth, Uint32 RTHeight  )
     {
-        const Uint32 MaxViewports = D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE;
-        VERIFY( NumViewports < MaxViewports, "Too many viewports are being set" );
-        NumViewports = std::min( NumViewports, MaxViewports );
-
+        static_assert(MaxViewports >= D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE, "MaxViewports constant must be greater than D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE");
         TDeviceContextBase::SetViewports( NumViewports, pViewports, RTWidth, RTHeight );
         
         D3D11_VIEWPORT d3d11Viewports[MaxViewports];
@@ -889,13 +886,10 @@ namespace Diligent
 
     void DeviceContextD3D11Impl::SetScissorRects( Uint32 NumRects, const Rect *pRects, Uint32 RTWidth, Uint32 RTHeight  )
     {
-        const Uint32 MaxScissorRects = D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE;
-        VERIFY( NumRects < MaxScissorRects, "Too many scissor rects are being set" );
-        NumRects = std::min( NumRects, MaxScissorRects );
-
+        static_assert(MaxViewports >= D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE, "MaxViewports constant must be greater than D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE");
         TDeviceContextBase::SetScissorRects(NumRects, pRects, RTWidth, RTHeight);
 
-        D3D11_RECT d3d11ScissorRects[MaxScissorRects];
+        D3D11_RECT d3d11ScissorRects[MaxViewports];
         VERIFY( NumRects == m_NumScissorRects, "Unexpected number of scissor rects" );
         for( Uint32 sr = 0; sr < NumRects; ++sr )
         {

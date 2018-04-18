@@ -308,7 +308,7 @@ void EngineFactoryVkImpl::CreateSwapChainVk( IRenderDevice *pDevice,
         {
             if (auto pDeferredCtx = pDeviceVk->GetDeferredContext(ctx))
             {
-                auto *pDeferredCtxVk = ValidatedCast<DeviceContextVkImpl>(pDeferredCtx.RawPtr());
+                auto *pDeferredCtxVk = pDeferredCtx.RawPtr<DeviceContextVkImpl>();
                 pDeferredCtxVk->SetSwapChain(pSwapChainVk);
                 // We cannot bind default render target here because
                 // there is no guarantee that deferred context will be used

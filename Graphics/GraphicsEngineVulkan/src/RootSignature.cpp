@@ -643,7 +643,7 @@ void TransitionResource(CommandContext &Ctx,
         {
             VERIFY(RangeType == Vk_DESCRIPTOR_RANGE_TYPE_CBV, "Unexpected descriptor range type");
             // Not using QueryInterface() for the sake of efficiency
-            auto *pBuffToTransition = ValidatedCast<BufferVkImpl>(Res.pObject.RawPtr());
+            auto *pBuffToTransition = Res.pObject.RawPtr<BufferVkImpl>();
             if( !pBuffToTransition->CheckAllStates(Vk_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER) )
                 Ctx.TransitionResource(pBuffToTransition, Vk_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER );
         }
@@ -652,7 +652,7 @@ void TransitionResource(CommandContext &Ctx,
         case CachedResourceType::BufSRV:
         {
             VERIFY(RangeType == Vk_DESCRIPTOR_RANGE_TYPE_SRV, "Unexpected descriptor range type");
-            auto *pBuffViewVk = ValidatedCast<BufferViewVkImpl>(Res.pObject.RawPtr());
+            auto *pBuffViewVk = Res.pObject.RawPtr<BufferViewVkImpl>();
             auto *pBuffToTransition = ValidatedCast<BufferVkImpl>(pBuffViewVk->GetBuffer());
             if( !pBuffToTransition->CheckAllStates(Vk_RESOURCE_STATE_SHADER_RESOURCE) )
                 Ctx.TransitionResource(pBuffToTransition, Vk_RESOURCE_STATE_SHADER_RESOURCE );
@@ -662,7 +662,7 @@ void TransitionResource(CommandContext &Ctx,
         case CachedResourceType::BufUAV:
         {
             VERIFY(RangeType == Vk_DESCRIPTOR_RANGE_TYPE_UAV, "Unexpected descriptor range type");
-            auto *pBuffViewVk = ValidatedCast<BufferViewVkImpl>(Res.pObject.RawPtr());
+            auto *pBuffViewVk = Res.pObject.RawPtr<BufferViewVkImpl>();
             auto *pBuffToTransition = ValidatedCast<BufferVkImpl>(pBuffViewVk->GetBuffer());
             if( !pBuffToTransition->CheckAllStates(Vk_RESOURCE_STATE_UNORDERED_ACCESS) )
                 Ctx.TransitionResource(pBuffToTransition, Vk_RESOURCE_STATE_UNORDERED_ACCESS );
@@ -672,7 +672,7 @@ void TransitionResource(CommandContext &Ctx,
         case CachedResourceType::TexSRV:
         {
             VERIFY(RangeType == Vk_DESCRIPTOR_RANGE_TYPE_SRV, "Unexpected descriptor range type");
-            auto *pTexViewVk = ValidatedCast<TextureViewVkImpl>(Res.pObject.RawPtr());
+            auto *pTexViewVk = Res.pObject.RawPtr<TextureViewVkImpl>();
             auto *pTexToTransition = ValidatedCast<TextureVkImpl>(pTexViewVk->GetTexture());
             if( !pTexToTransition->CheckAllStates(Vk_RESOURCE_STATE_SHADER_RESOURCE) )
                 Ctx.TransitionResource(pTexToTransition, Vk_RESOURCE_STATE_SHADER_RESOURCE );
@@ -682,7 +682,7 @@ void TransitionResource(CommandContext &Ctx,
         case CachedResourceType::TexUAV:
         {
             VERIFY(RangeType == Vk_DESCRIPTOR_RANGE_TYPE_UAV, "Unexpected descriptor range type");
-            auto *pTexViewVk = ValidatedCast<TextureViewVkImpl>(Res.pObject.RawPtr());
+            auto *pTexViewVk = Res.pObject.RawPtr<TextureViewVkImpl>();
             auto *pTexToTransition = ValidatedCast<TextureVkImpl>(pTexViewVk->GetTexture());
             if( !pTexToTransition->CheckAllStates(Vk_RESOURCE_STATE_UNORDERED_ACCESS) )
                 Ctx.TransitionResource(pTexToTransition, Vk_RESOURCE_STATE_UNORDERED_ACCESS );
@@ -711,7 +711,7 @@ void DbgVerifyResourceState(ShaderResourceCacheVk::Resource &Res,
         {
             VERIFY(RangeType == Vk_DESCRIPTOR_RANGE_TYPE_CBV, "Unexpected descriptor range type");
             // Not using QueryInterface() for the sake of efficiency
-            auto *pBuffToTransition = ValidatedCast<BufferVkImpl>(Res.pObject.RawPtr());
+            auto *pBuffToTransition = Res.pObject.RawPtr<BufferVkImpl>();
             auto State = pBuffToTransition->GetState();
             if( (State & Vk_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER) != Vk_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER )
                 LOG_ERROR_MESSAGE("Resource \"", pBuffToTransition->GetDesc().Name, "\" is not in Vk_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER state. Did you forget to call TransitionShaderResources() or specify COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag in a call to CommitShaderResources()?" );
@@ -721,7 +721,7 @@ void DbgVerifyResourceState(ShaderResourceCacheVk::Resource &Res,
         case CachedResourceType::BufSRV:
         {
             VERIFY(RangeType == Vk_DESCRIPTOR_RANGE_TYPE_SRV, "Unexpected descriptor range type");
-            auto *pBuffViewVk = ValidatedCast<BufferViewVkImpl>(Res.pObject.RawPtr());
+            auto *pBuffViewVk = Res.pObject.RawPtr<BufferViewVkImpl>();
             auto *pBuffToTransition = ValidatedCast<BufferVkImpl>(pBuffViewVk->GetBuffer());
             auto State = pBuffToTransition->GetState();
             if( (State & Vk_RESOURCE_STATE_SHADER_RESOURCE) != Vk_RESOURCE_STATE_SHADER_RESOURCE )
@@ -732,7 +732,7 @@ void DbgVerifyResourceState(ShaderResourceCacheVk::Resource &Res,
         case CachedResourceType::BufUAV:
         {
             VERIFY(RangeType == Vk_DESCRIPTOR_RANGE_TYPE_UAV, "Unexpected descriptor range type");
-            auto *pBuffViewVk = ValidatedCast<BufferViewVkImpl>(Res.pObject.RawPtr());
+            auto *pBuffViewVk = Res.pObject.RawPtr<BufferViewVkImpl>();
             auto *pBuffToTransition = ValidatedCast<BufferVkImpl>(pBuffViewVk->GetBuffer());
             auto State = pBuffToTransition->GetState();
             if( (State & Vk_RESOURCE_STATE_UNORDERED_ACCESS) != Vk_RESOURCE_STATE_UNORDERED_ACCESS )
@@ -743,7 +743,7 @@ void DbgVerifyResourceState(ShaderResourceCacheVk::Resource &Res,
         case CachedResourceType::TexSRV:
         {
             VERIFY(RangeType == Vk_DESCRIPTOR_RANGE_TYPE_SRV, "Unexpected descriptor range type");
-            auto *pTexViewVk = ValidatedCast<TextureViewVkImpl>(Res.pObject.RawPtr());
+            auto *pTexViewVk = Res.pObject.RawPtr<TextureViewVkImpl>();
             auto *pTexToTransition = ValidatedCast<TextureVkImpl>(pTexViewVk->GetTexture());
             auto State = pTexToTransition->GetState();
             if( (State & Vk_RESOURCE_STATE_SHADER_RESOURCE) != Vk_RESOURCE_STATE_SHADER_RESOURCE )
@@ -754,7 +754,7 @@ void DbgVerifyResourceState(ShaderResourceCacheVk::Resource &Res,
         case CachedResourceType::TexUAV:
         {
             VERIFY(RangeType == Vk_DESCRIPTOR_RANGE_TYPE_UAV, "Unexpected descriptor range type");
-            auto *pTexViewVk = ValidatedCast<TextureViewVkImpl>(Res.pObject.RawPtr());
+            auto *pTexViewVk = Res.pObject.RawPtr<TextureViewVkImpl>();
             auto *pTexToTransition = ValidatedCast<TextureVkImpl>(pTexViewVk->GetTexture());
             auto State = pTexToTransition->GetState();
             if( (State & Vk_RESOURCE_STATE_UNORDERED_ACCESS) != Vk_RESOURCE_STATE_UNORDERED_ACCESS )
@@ -1018,7 +1018,7 @@ void RootSignature::CommitRootViews(ShaderResourceCacheVk& ResourceCache,
 #endif
 
         auto& Res = ResourceCache.GetRootTable(RootInd).GetResource(0, Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, dbgShaderType);
-        auto *pBuffToTransition = ValidatedCast<BufferVkImpl>(Res.pObject.RawPtr());
+        auto *pBuffToTransition = Res.pObject.RawPtr<BufferVkImpl>();
         if( !pBuffToTransition->CheckAllStates(Vk_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER) )
             Ctx.TransitionResource(pBuffToTransition, Vk_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 

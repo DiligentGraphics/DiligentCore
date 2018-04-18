@@ -564,7 +564,7 @@ namespace Diligent
 
     void DeviceContextD3D12Impl::CommitViewports()
     {
-        constexpr Uint32 MaxViewports = D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE;
+        static_assert(MaxViewports >= D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE, "MaxViewports constant must be greater than D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE");
         D3D12_VIEWPORT d3d12Viewports[MaxViewports]; // Do not waste time initializing array to zero
         
         for( Uint32 vp = 0; vp < m_NumViewports; ++vp )
@@ -583,10 +583,7 @@ namespace Diligent
 
     void DeviceContextD3D12Impl::SetViewports( Uint32 NumViewports, const Viewport *pViewports, Uint32 RTWidth, Uint32 RTHeight  )
     {
-        constexpr Uint32 MaxViewports = D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE;
-        VERIFY( NumViewports < MaxViewports, "Too many viewports are being set" );
-        NumViewports = std::min( NumViewports, MaxViewports );
-
+        static_assert(MaxViewports >= D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE, "MaxViewports constant must be greater than D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE");
         TDeviceContextBase::SetViewports( NumViewports, pViewports, RTWidth, RTHeight );
         VERIFY( NumViewports == m_NumViewports, "Unexpected number of viewports" );
 

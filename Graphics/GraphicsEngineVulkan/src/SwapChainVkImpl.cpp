@@ -98,7 +98,7 @@ SwapChainVkImpl::SwapChainVkImpl(IReferenceCounters *pRefCounters,
 
 void SwapChainVkImpl::CreateVulkanSwapChain()
 {
-    auto *pRenderDeviceVk = ValidatedCast<RenderDeviceVkImpl>(m_pRenderDevice.RawPtr());
+    auto *pRenderDeviceVk = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
     const auto& PhysicalDevice = pRenderDeviceVk->GetPhysicalDevice();
     auto vkDeviceHandle = PhysicalDevice.GetVkDeviceHandle();
     // Get the list of VkFormats that are supported:
@@ -302,14 +302,14 @@ SwapChainVkImpl::~SwapChainVkImpl()
 {
     if(m_VkSwapChain != VK_NULL_HANDLE)
     {
-        auto *pDeviceVkImpl = ValidatedCast<RenderDeviceVkImpl>(m_pRenderDevice.RawPtr());
+        auto *pDeviceVkImpl = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
         vkDestroySwapchainKHR(pDeviceVkImpl->GetVkDevice(), m_VkSwapChain, NULL);
     }
 }
 
 void SwapChainVkImpl::InitBuffersAndViews()
 {
-    auto *pDeviceVkImpl = ValidatedCast<RenderDeviceVkImpl>(m_pRenderDevice.RawPtr());
+    auto *pDeviceVkImpl = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
     auto LogicalVkDevice = pDeviceVkImpl->GetVkDevice();
 
 #ifdef _DEBUG
@@ -345,7 +345,7 @@ void SwapChainVkImpl::InitBuffersAndViews()
         BackBufferDesc.MipLevels = 1;
 
         RefCntAutoPtr<TextureVkImpl> pBackBufferTex;
-        ValidatedCast<RenderDeviceVkImpl>(m_pRenderDevice.RawPtr())->CreateTexture(BackBufferDesc, swapchainImages[i], &pBackBufferTex);
+        m_pRenderDevice.RawPtr<RenderDeviceVkImpl>()->CreateTexture(BackBufferDesc, swapchainImages[i], &pBackBufferTex);
         
         TextureViewDesc RTVDesc;
         RTVDesc.ViewType = TEXTURE_VIEW_RENDER_TARGET;
@@ -422,12 +422,12 @@ void SwapChainVkImpl::Resize( Uint32 NewWidth, Uint32 NewHeight )
         VERIFY( pDeviceContext, "Immediate context has been released" );
         if( pDeviceContext )
         {
-            RenderDeviceVkImpl *pDeviceVk = ValidatedCast<RenderDeviceVkImpl>(m_pRenderDevice.RawPtr());
+            RenderDeviceVkImpl *pDeviceVk = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
             pDeviceContext->Flush();
 
             try
             {
-                auto *pImmediateCtxVk = ValidatedCast<DeviceContextVkImpl>(pDeviceContext.RawPtr());
+                auto *pImmediateCtxVk = pDeviceContext.RawPtr<DeviceContextVkImpl>();
                 bool bIsDefaultFBBound = pImmediateCtxVk->IsDefaultFBBound();
 
                 // All references to the swap chain must be released before it can be resized

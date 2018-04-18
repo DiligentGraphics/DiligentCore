@@ -174,12 +174,12 @@ protected:
     Float32 m_BlendFactors[4] = { -1, -1, -1, -1 };
 
 	/// Current viewports
-    Viewport m_Viewports[MaxRenderTargets];
+    Viewport m_Viewports[MaxViewports];
     /// Number of current viewports
     Uint32 m_NumViewports = 0;
 
 	/// Current scissor rects
-    Rect m_ScissorRects[MaxRenderTargets];
+    Rect m_ScissorRects[MaxViewports];
     /// Number of current scissor rects
     Uint32 m_NumScissorRects = 0;
 
@@ -398,8 +398,8 @@ inline void DeviceContextBase<BaseInterface> :: SetViewports( Uint32 NumViewport
         GetRenderTargetSize( RTWidth, RTHeight );
     }
 
-    VERIFY(NumViewports < MaxRenderTargets, "Num viewports (", NumViewports, ") exceeds the limit (", MaxRenderTargets, ")");
-    m_NumViewports = std::min(MaxRenderTargets, NumViewports);
+    VERIFY(NumViewports < MaxViewports, "Number of viewports (", NumViewports, ") exceeds the limit (", MaxViewports, ")");
+    m_NumViewports = std::min(MaxViewports, NumViewports);
     
     Viewport DefaultVP( 0, 0, static_cast<float>(RTWidth), static_cast<float>(RTHeight) );
     // If no viewports are specified, use default viewport
@@ -436,8 +436,8 @@ inline void DeviceContextBase<BaseInterface> :: SetScissorRects( Uint32 NumRects
         GetRenderTargetSize( RTWidth, RTHeight );
     }
 
-    VERIFY(NumRects < MaxRenderTargets, "Num scissor rects (", NumRects, ") exceeds the limit (", MaxRenderTargets, ")");
-    m_NumScissorRects = std::min(MaxRenderTargets, NumRects);
+    VERIFY(NumRects < MaxViewports, "Number of scissor rects (", NumRects, ") exceeds the limit (", MaxViewports, ")");
+    m_NumScissorRects = std::min(MaxViewports, NumRects);
 
     for( Uint32 sr = 0; sr < m_NumScissorRects; ++sr )
     {

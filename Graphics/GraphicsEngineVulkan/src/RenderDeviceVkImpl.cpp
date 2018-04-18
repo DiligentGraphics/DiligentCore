@@ -235,11 +235,10 @@ Uint64 RenderDeviceVkImpl::GetCompletedFenceValue()
 
 void RenderDeviceVkImpl::FinishFrame(bool ReleaseAllResources)
 {
-#if 0
     {
         if (auto pImmediateCtx = m_wpImmediateContext.Lock())
         {
-            auto pImmediateCtxVk = ValidatedCast<DeviceContextVkImpl>(pImmediateCtx.RawPtr());
+            auto pImmediateCtxVk = pImmediateCtx.RawPtr<DeviceContextVkImpl>();
             if(pImmediateCtxVk->GetNumCommandsInCtx() != 0)
                 LOG_ERROR_MESSAGE("There are outstanding commands in the immediate device context when finishing the frame. This is an error and may cause unpredicted behaviour. Call Flush() to submit all commands for execution before finishing the frame");
         }
@@ -248,13 +247,13 @@ void RenderDeviceVkImpl::FinishFrame(bool ReleaseAllResources)
         {
             if (auto pDeferredCtx = wpDeferredCtx.Lock())
             {
-                auto pDeferredCtxVk = ValidatedCast<DeviceContextVkImpl>(pDeferredCtx.RawPtr());
+                auto pDeferredCtxVk = pDeferredCtx.RawPtr<DeviceContextVkImpl>();
                 if(pDeferredCtxVk->GetNumCommandsInCtx() != 0)
                     LOG_ERROR_MESSAGE("There are outstanding commands in the deferred device context when finishing the frame. This is an error and may cause unpredicted behaviour. Close all deferred contexts and execute them before finishing the frame");
             }
         }
     }
-#endif
+
     auto CompletedFenceValue = ReleaseAllResources ? std::numeric_limits<Uint64>::max() : GetCompletedFenceValue();
 
     // We must use NextFenceValue here, NOT current value, because the 
@@ -353,29 +352,6 @@ VkCommandBuffer RenderDeviceVkImpl::AllocateCommandBuffer(const Char *DebugName)
 	std::lock_guard<std::mutex> LockGuard(m_CmdPoolMutex);
     auto CmdBuffer = m_CmdBufferPool.GetCommandBuffer(GetCompletedFenceValue(), DebugName);
     return CmdBuffer;
-
-#if 0
-	CommandContext* ret = nullptr;
-	if (m_AvailableContexts.empty())
-	{
-        auto &CmdCtxAllocator = GetRawAllocator();
-        auto *pRawMem = ALLOCATE(CmdCtxAllocator, "CommandContext instance", sizeof(CommandContext));
-		ret = new (pRawMem) CommandContext( GetRawAllocator(), m_CmdListManager, m_GPUDescriptorHeaps, m_DynamicDescriptorAllocationChunkSize);
-		m_ContextPool.emplace_back(ret, STDDeleterRawMem<CommandContext>(CmdCtxAllocator) );
-	}
-	else
-	{
-		ret = m_AvailableContexts.front();
-		m_AvailableContexts.pop_front();
-		ret->Reset(m_CmdListManager);
-	}
-	VERIFY_EXPR(ret != nullptr);
-	ret->SetID(ID);
-	//if ( ID != nullptr && *ID != 0 )
-	//	EngineProfiling::BeginBlock(ID, NewContext);
-
-	return ret;
-#endif
 }
 
 

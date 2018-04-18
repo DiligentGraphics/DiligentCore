@@ -36,4 +36,7 @@ namespace Diligent
 
     /// Maximum number of simultaneous render targets.
     static constexpr Uint32 MaxRenderTargets = 8;
+
+    /// Maximum number of viewports.
+    static constexpr Uint32 MaxViewports = 16;
 }

@@ -77,23 +77,54 @@ namespace Diligent
 
     DeviceContextVkImpl::~DeviceContextVkImpl()
     {
-#if 0
         if(m_bIsDeferred)
-            ValidatedCast<RenderDeviceVkImpl>(m_pDevice.RawPtr())->DisposeCommandContext(m_pCurrCmdCtx);
+        {
+            DisposeVkCmdBuffer();
+        }
         else
         {
             if (m_NumCommandsInCurCtx != 0)
-                LOG_WARNING_MESSAGE("Flusing outstanding commands from the device context being destroyed. This may result in Vk synchronization errors");
+                LOG_WARNING_MESSAGE("Flusing outstanding commands from the device context being destroyed. This may result in synchronization errors");
 
             Flush(false);
         }
-#endif
     }
 
     IMPLEMENT_QUERY_INTERFACE( DeviceContextVkImpl, IID_DeviceContextVk, TDeviceContextBase )
     
+    inline void DeviceContextVkImpl::EnsureVkCmdBuffer()
+    {
+        // Make sure that the number of commands in the context is at least one,
+        // so that the context cannot be disposed by Flush()
+        m_NumCommandsInCurCtx = m_NumCommandsInCurCtx != 0 ? m_NumCommandsInCurCtx : 1;
+        if (m_CommandBuffer.GetVkCmdBuffer() == VK_NULL_HANDLE)
+        {
+            auto pDeviceVkImpl = m_pDevice.RawPtr<RenderDeviceVkImpl>();
+            auto vkCmdBuff = m_CmdPool.GetCommandBuffer(pDeviceVkImpl->GetCompletedFenceValue());
+            m_CommandBuffer.SetVkCmdBuffer(vkCmdBuff);
+        }
+    }
+
+    inline void DeviceContextVkImpl::DisposeVkCmdBuffer()
+    {
+        VERIFY(m_CommandBuffer.GetState().RenderPass == VK_NULL_HANDLE, "Disposing command buffer with unifinished render pass");
+        auto vkCmdBuff = m_CommandBuffer.GetVkCmdBuffer();
+        if(vkCmdBuff != VK_NULL_HANDLE)
+        {
+            auto pDeviceVkImpl = m_pDevice.RawPtr<RenderDeviceVkImpl>();
+            m_CmdPool.DisposeCommandBuffer(vkCmdBuff, pDeviceVkImpl->GetNextFenceValue());
+            m_CommandBuffer.Reset();
+        }
+    }
+
+
     void DeviceContextVkImpl::SetPipelineState(IPipelineState *pPipelineState)
     {
+        if (m_CommandBuffer.GetState().RenderPass)
+        {
+            m_CommandBuffer.EndRenderPass();
+        }
+
         // Never flush deferred context!
         if (!m_bIsDeferred && m_NumCommandsInCurCtx >= m_NumCommandsToFlush)
         {
@@ -120,37 +151,35 @@ namespace Diligent
             // and the first PSO set on the command list was a compute pipeline, 
             // the states would otherwise never be committed (since m_pPipelineState != nullptr)
             CommitStates = OldPSODesc.IsComputePipeline;
-            // We also need to update scissor rect if ScissorEnable state has changed
-            CommitScissor = OldPSODesc.GraphicsPipeline.RasterizerDesc.ScissorEnable != PSODesc.GraphicsPipeline.RasterizerDesc.ScissorEnable;
+            // We also need to update scissor rect if ScissorEnable state was disabled in previous pipeline
+            CommitScissor = !OldPSODesc.GraphicsPipeline.RasterizerDesc.ScissorEnable;
         }
 
         TDeviceContextBase::SetPipelineState( pPipelineState );
-#if 0
-        auto *pCmdCtx = RequestCmdContext();
-        
-        auto *pVkPSO = pPipelineStateVk->GetVkPipelineState();
+        EnsureVkCmdBuffer();
+
         if (PSODesc.IsComputePipeline)
         {
-            pCmdCtx->AsComputeContext().SetPipelineState(pVkPSO);
+            auto vkPipeline = pPipelineStateVk->GetVkPipeline();
+            m_CommandBuffer.BindComputePipeline(vkPipeline);
         }
         else
         {
-            auto &GraphicsCtx = pCmdCtx->AsGraphicsContext();
-            GraphicsCtx.SetPipelineState(pVkPSO);
-
             if(CommitStates)
             {
-                GraphicsCtx.SetStencilRef(m_StencilRef);
-                GraphicsCtx.SetBlendFactor(m_BlendFactors);
+                m_CommandBuffer.SetStencilReference(m_StencilRef);
+                m_CommandBuffer.SetBlendConstants(m_BlendFactors);
                 CommitRenderTargets();
                 CommitViewports();
             }
 
-            if(CommitStates || CommitScissor)
+            if(PSODesc.GraphicsPipeline.RasterizerDesc.ScissorEnable && (CommitStates || CommitScissor))
             {
-                CommitScissorRects(GraphicsCtx, PSODesc.GraphicsPipeline.RasterizerDesc.ScissorEnable);
+                CommitScissorRects();
             }
         }
+        
+#if 0
         m_pCommittedResourceCache = nullptr;
 #endif
     }
@@ -172,7 +201,7 @@ namespace Diligent
             return;
 #if 0
         auto *pCtx = RequestCmdContext();
-        auto *pPipelineStateVk = ValidatedCast<PipelineStateVkImpl>(m_pPipelineState.RawPtr());
+        auto *pPipelineStateVk = m_pPipelineState.RawPtr<PipelineStateVkImpl>();
 
         m_pCommittedResourceCache = pPipelineStateVk->CommitAndTransitionShaderResources(pShaderResourceBinding, *pCtx, true, (Flags & COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES)!=0);
 #endif
@@ -182,6 +211,7 @@ namespace Diligent
     {
         if (TDeviceContextBase::SetStencilRef(StencilRef, 0))
         {
+            EnsureVkCmdBuffer();
             m_CommandBuffer.SetStencilReference(m_StencilRef);
         }
     }
@@ -190,8 +220,15 @@ namespace Diligent
     {
         if (TDeviceContextBase::SetBlendFactors(m_BlendFactors, 0))
         {
+            EnsureVkCmdBuffer();
             m_CommandBuffer.SetBlendConstants(m_BlendFactors);
         }
+    }
+
+    void DeviceContextVkImpl::CommitRenderPassAndFramebuffer()
+    {
+        auto *pPipelineStateVk = m_pPipelineState.RawPtr<PipelineStateVkImpl>();
+        
     }
 
     void DeviceContextVkImpl::CommitVkIndexBuffer(VALUE_TYPE IndexType)
@@ -264,7 +301,7 @@ namespace Diligent
 
     void DeviceContextVkImpl::CommitVkVertexBuffers(GraphicsContext &GraphCtx)
     {
-        auto *pPipelineStateVk = ValidatedCast<PipelineStateVkImpl>(m_pPipelineState.RawPtr());
+        auto *pPipelineStateVk = m_pPipelineState.RawPtr<PipelineStateVkImpl>();
 #if 0
         // Do not initialize array with zeroes for performance reasons
         Vk_VERTEX_BUFFER_VIEW VBViews[MaxBufferSlots];// = {}
@@ -324,6 +361,9 @@ namespace Diligent
         }
 #endif
 
+        if(m_CommandBuffer.GetState().RenderPass == VK_NULL_HANDLE)
+            CommitRenderPassAndFramebuffer();
+
 #if 0
         auto &GraphCtx = RequestCmdContext()->AsGraphicsContext();
         if( DrawAttribs.IsIndexed )
@@ -341,7 +381,7 @@ namespace Diligent
                 CommitVkIndexBuffer(DrawAttribs.IndexType);
         }
 
-        auto *pPipelineStateVk = ValidatedCast<PipelineStateVkImpl>(m_pPipelineState.RawPtr());
+        auto *pPipelineStateVk = m_pPipelineState.RawPtr<PipelineStateVkImpl>();
         
         auto VkTopology = TopologyToVkTopology( DrawAttribs.Topology );
         GraphCtx.SetPrimitiveTopology(VkTopology);
@@ -412,7 +452,7 @@ namespace Diligent
 #endif
 
 #if 0
-        auto *pPipelineStateVk = ValidatedCast<PipelineStateVkImpl>(m_pPipelineState.RawPtr());
+        auto *pPipelineStateVk = m_pPipelineState.RawPtr<PipelineStateVkImpl>();
 
         auto &ComputeCtx = RequestCmdContext()->AsComputeContext();
         ComputeCtx.SetRootSignature( pPipelineStateVk->GetVkRootSignature() );
@@ -470,7 +510,7 @@ namespace Diligent
         {
             if (m_pSwapChain)
             {
-                pDSVVk = ValidatedCast<ISwapChainVk>(m_pSwapChain.RawPtr())->GetDepthBufferDSV();
+                pDSVVk = m_pSwapChain.RawPtr<ISwapChainVk>()->GetDepthBufferDSV();
             }
             else
             {
@@ -504,7 +544,7 @@ namespace Diligent
         {
             if (m_pSwapChain)
             {
-                pVkRTV = ValidatedCast<ISwapChainVk>(m_pSwapChain.RawPtr())->GetCurrentBackBufferRTV();
+                pVkRTV = m_pSwapChain.RawPtr<ISwapChainVk>()->GetCurrentBackBufferRTV();
             }
             else
             {
@@ -526,7 +566,7 @@ namespace Diligent
 
     void DeviceContextVkImpl::Flush(bool RequestNewCmdCtx)
     {
-        auto pDeviceVkImpl = ValidatedCast<RenderDeviceVkImpl>(m_pDevice.RawPtr());
+        auto pDeviceVkImpl = m_pDevice.RawPtr<RenderDeviceVkImpl>();
         auto vkCmdBuff = m_CommandBuffer.GetVkCmdBuffer();
         if(vkCmdBuff != VK_NULL_HANDLE )
         {
@@ -536,17 +576,13 @@ namespace Diligent
                 //m_pCurrCmdCtx->FlushResourceBarriers();
                 pDeviceVkImpl->ExecuteCommandBuffer(vkCmdBuff, true);
             }
-            m_CmdPool.DisposeCommandBuffer(vkCmdBuff, pDeviceVkImpl->GetNextFenceValue());
+            DisposeVkCmdBuffer();
         }
 
         m_NumCommandsInCurCtx = 0;
-        m_CommandBuffer.Reset();
 
         if(RequestNewCmdCtx)
-        {
-            vkCmdBuff = m_CmdPool.GetCommandBuffer(pDeviceVkImpl->GetCompletedFenceValue());
-            m_CommandBuffer.SetVkCmdBuffer(vkCmdBuff);
-        }
+            EnsureVkCmdBuffer();
 
         m_pPipelineState.Release(); 
     }
@@ -560,9 +596,7 @@ namespace Diligent
     void DeviceContextVkImpl::SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer **ppBuffers, Uint32 *pStrides, Uint32 *pOffsets, Uint32 Flags )
     {
         TDeviceContextBase::SetVertexBuffers( StartSlot, NumBuffersSet, ppBuffers, pStrides, pOffsets, Flags );
-#if 0
-        m_bCommittedVkVBsUpToDate = false;
-#endif
+        m_State.CommittedVBsUpToDate = false;
     }
 
     void DeviceContextVkImpl::InvalidateState()
@@ -571,119 +605,63 @@ namespace Diligent
             LOG_WARNING_MESSAGE("Invalidating context that has outstanding commands in it. Call Flush() to submit commands for execution");
 
         TDeviceContextBase::InvalidateState();
-#if 0
-        m_CommittedVkIndexBuffer = nullptr;
-        m_CommittedVkIndexDataStartOffset = 0;
-        m_CommittedIBFormat = VT_UNDEFINED;
-        m_bCommittedVkVBsUpToDate = false;
-        m_bCommittedVkIBUpToDate = false;
-#endif
+        m_State = ContextState{};
+        VERIFY(m_CommandBuffer.GetState().RenderPass == VK_NULL_HANDLE, "Invalidating context with unifinished render pass");
+        m_CommandBuffer.Reset();
     }
 
     void DeviceContextVkImpl::SetIndexBuffer( IBuffer *pIndexBuffer, Uint32 ByteOffset )
     {
         TDeviceContextBase::SetIndexBuffer( pIndexBuffer, ByteOffset );
-#if 0
-        m_bCommittedVkIBUpToDate = false;
-#endif
+        m_State.CommittedIBUpToDate = false;
     }
 
 
     void DeviceContextVkImpl::CommitViewports()
     {
-#if 0
-        constexpr Uint32 MaxViewports = Vk_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE;
-        Vk_VIEWPORT VkViewports[MaxViewports]; // Do not waste time initializing array to zero
-        
+        VkViewport VkViewports[MaxViewports]; // Do not waste time initializing array to zero
         for( Uint32 vp = 0; vp < m_NumViewports; ++vp )
         {
-            VkViewports[vp].TopLeftX = m_Viewports[vp].TopLeftX;
-            VkViewports[vp].TopLeftY = m_Viewports[vp].TopLeftY;
-            VkViewports[vp].Width    = m_Viewports[vp].Width;
-            VkViewports[vp].Height   = m_Viewports[vp].Height;
-            VkViewports[vp].MinDepth = m_Viewports[vp].MinDepth;
-            VkViewports[vp].MaxDepth = m_Viewports[vp].MaxDepth;
+            VkViewports[vp].x        = m_Viewports[vp].TopLeftX;
+            VkViewports[vp].y        = m_Viewports[vp].TopLeftY;
+            VkViewports[vp].width    = m_Viewports[vp].Width;
+            VkViewports[vp].height   = m_Viewports[vp].Height;
+            VkViewports[vp].minDepth = m_Viewports[vp].MinDepth;
+            VkViewports[vp].maxDepth = m_Viewports[vp].MaxDepth;
         }
-        // All viewports must be set atomically as one operation. 
-        // Any viewports not defined by the call are disabled.
-        RequestCmdContext()->AsGraphicsContext().SetViewports( m_NumViewports, VkViewports );
-#endif
+        EnsureVkCmdBuffer();
+        // TODO: reinterpret_cast m_Viewports to m_Viewports?
+        m_CommandBuffer.SetViewports(0, m_NumViewports, VkViewports);
     }
 
     void DeviceContextVkImpl::SetViewports( Uint32 NumViewports, const Viewport *pViewports, Uint32 RTWidth, Uint32 RTHeight  )
     {
-#if 0
-        constexpr Uint32 MaxViewports = Vk_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE;
-        VERIFY( NumViewports < MaxViewports, "Too many viewports are being set" );
-        NumViewports = std::min( NumViewports, MaxViewports );
-
         TDeviceContextBase::SetViewports( NumViewports, pViewports, RTWidth, RTHeight );
         VERIFY( NumViewports == m_NumViewports, "Unexpected number of viewports" );
 
         CommitViewports();
-#endif
     }
 
-/*
-    constexpr LONG MaxVkTexDim = Vk_REQ_TEXTURE2D_U_OR_V_DIMENSION;
-    constexpr Uint32 MaxVkScissorRects = Vk_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE;
-    static constexpr RECT MaxVkTexSizeRects[Vk_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE] =
+    void DeviceContextVkImpl::CommitScissorRects()
     {
-        { 0,0, MaxVkTexDim,MaxVkTexDim },
-        { 0,0, MaxVkTexDim,MaxVkTexDim },
-        { 0,0, MaxVkTexDim,MaxVkTexDim },
-        { 0,0, MaxVkTexDim,MaxVkTexDim },
+        VERIFY(m_pPipelineState && m_pPipelineState->GetDesc().GraphicsPipeline.RasterizerDesc.ScissorEnable, "Scissor test must be enabled in the graphics pipeline");
 
-        { 0,0, MaxVkTexDim,MaxVkTexDim },
-        { 0,0, MaxVkTexDim,MaxVkTexDim },
-        { 0,0, MaxVkTexDim,MaxVkTexDim },
-        { 0,0, MaxVkTexDim,MaxVkTexDim },
-
-        { 0,0, MaxVkTexDim,MaxVkTexDim },
-        { 0,0, MaxVkTexDim,MaxVkTexDim },
-        { 0,0, MaxVkTexDim,MaxVkTexDim },
-        { 0,0, MaxVkTexDim,MaxVkTexDim },
-
-        { 0,0, MaxVkTexDim,MaxVkTexDim },
-        { 0,0, MaxVkTexDim,MaxVkTexDim },
-        { 0,0, MaxVkTexDim,MaxVkTexDim },
-        { 0,0, MaxVkTexDim,MaxVkTexDim }
-    };
-*/
-
-    void DeviceContextVkImpl::CommitScissorRects(GraphicsContext &GraphCtx, bool ScissorEnable)
-    {
-#if 0
-        if (ScissorEnable)
+        VkRect2D VkScissorRects[MaxViewports]; // Do not waste time initializing array with zeroes
+        for (Uint32 sr = 0; sr < m_NumScissorRects; ++sr)
         {
-            // Commit currently set scissor rectangles
-            Vk_RECT VkScissorRects[MaxVkScissorRects]; // Do not waste time initializing array with zeroes
-            for (Uint32 sr = 0; sr < m_NumScissorRects; ++sr)
-            {
-                VkScissorRects[sr].left   = m_ScissorRects[sr].left;
-                VkScissorRects[sr].top    = m_ScissorRects[sr].top;
-                VkScissorRects[sr].right  = m_ScissorRects[sr].right;
-                VkScissorRects[sr].bottom = m_ScissorRects[sr].bottom;
-            }
-            GraphCtx.SetScissorRects(m_NumScissorRects, VkScissorRects);
+            const auto &SrcRect = m_ScissorRects[sr];
+            VkScissorRects[sr].offset = {SrcRect.left, SrcRect.top};
+            VkScissorRects[sr].extent = {static_cast<uint32_t>(SrcRect.right - SrcRect.left), static_cast<uint32_t>(SrcRect.bottom - SrcRect.top)};
         }
-        else
-        {
-            // Disable scissor rectangles
-            static_assert(_countof(MaxVkTexSizeRects) == MaxVkScissorRects, "Unexpected array size");
-            GraphCtx.SetScissorRects(MaxVkScissorRects, MaxVkTexSizeRects);
-        }
-#endif
+
+        EnsureVkCmdBuffer();
+        // TODO: reinterpret_cast m_Viewports to m_Viewports?
+        m_CommandBuffer.SetScissorRects(0, m_NumScissorRects, VkScissorRects);
     }
 
 
     void DeviceContextVkImpl::SetScissorRects( Uint32 NumRects, const Rect *pRects, Uint32 RTWidth, Uint32 RTHeight  )
     {
-#if 0
-        const Uint32 MaxScissorRects = Vk_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE;
-        VERIFY( NumRects < MaxScissorRects, "Too many scissor rects are being set" );
-        NumRects = std::min( NumRects, MaxScissorRects );
-
         TDeviceContextBase::SetScissorRects(NumRects, pRects, RTWidth, RTHeight);
 
         // Only commit scissor rects if scissor test is enabled in the rasterizer state. 
@@ -695,11 +673,9 @@ namespace Diligent
             if(!PSODesc.IsComputePipeline && PSODesc.GraphicsPipeline.RasterizerDesc.ScissorEnable)
             {
                 VERIFY(NumRects == m_NumScissorRects, "Unexpected number of scissor rects");
-                auto &Ctx = RequestCmdContext()->AsGraphicsContext();
-                CommitScissorRects(Ctx, true);
+                CommitScissorRects();
             }
         }
-#endif
     }
 
 
@@ -718,7 +694,7 @@ namespace Diligent
             if (m_pSwapChain)
             {
                 NumRenderTargets = 1;
-                auto *pSwapChainVk = ValidatedCast<ISwapChainVk>(m_pSwapChain.RawPtr());
+                auto *pSwapChainVk = m_pSwapChain.RawPtr<ISwapChainVk>();
                 ppRTVs[0] = pSwapChainVk->GetCurrentBackBufferRTV();
                 pDSV = pSwapChainVk->GetDepthBufferDSV();
             }
@@ -731,8 +707,8 @@ namespace Diligent
         else
         {
             for( Uint32 rt = 0; rt < NumRenderTargets; ++rt )
-                ppRTVs[rt] = ValidatedCast<ITextureViewVk>(m_pBoundRenderTargets[rt].RawPtr());
-            pDSV = ValidatedCast<ITextureViewVk>(m_pBoundDepthStencil.RawPtr());
+                ppRTVs[rt] = m_pBoundRenderTargets[rt].RawPtr<ITextureViewVk>();
+            pDSV = m_pBoundDepthStencil.RawPtr<ITextureViewVk>();
         }
         RequestCmdContext()->AsGraphicsContext().SetRenderTargets(NumRenderTargets, ppRTVs, pDSV);
 #endif
@@ -885,7 +861,7 @@ namespace Diligent
     {
 #if 0
         auto *pCtx = RequestCmdContext();
-        m_MipsGenerator.GenerateMips(ValidatedCast<RenderDeviceVkImpl>(m_pDevice.RawPtr()), pTexView, *pCtx);
+        m_MipsGenerator.GenerateMips(m_pDevice.RawPtr<RenderDeviceVkImpl>(), pTexView, *pCtx);
         ++m_NumCommandsInCurCtx;
 #endif
     }
@@ -917,7 +893,7 @@ namespace Diligent
         InvalidateState();
 
         CommandListVkImpl* pCmdListVk = ValidatedCast<CommandListVkImpl>(pCommandList);
-        ValidatedCast<RenderDeviceVkImpl>(m_pDevice.RawPtr())->CloseAndExecuteCommandContext(pCmdListVk->Close(), true);
+        m_pDevice.RawPtr<RenderDeviceVkImpl>()->CloseAndExecuteCommandContext(pCmdListVk->Close(), true);
 #endif
     }
 
