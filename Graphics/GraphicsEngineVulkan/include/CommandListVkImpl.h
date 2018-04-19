@@ -24,7 +24,7 @@
 #pragma once
 
 /// \file
-/// Declaration of Diligent::CommandListD3D12Impl class
+/// Declaration of Diligent::CommandListVkImpl class
 
 #include "CommandListBase.h"
 
@@ -32,17 +32,17 @@ namespace Diligent
 {
 
 /// Implementation of the Diligent::ICommandList interface
-class CommandListD3D12Impl : public CommandListBase<ICommandList>
+class CommandListVkImpl : public CommandListBase<ICommandList>
 {
 public:
     typedef CommandListBase<ICommandList> TCommandListBase;
-    CommandListD3D12Impl(IReferenceCounters *pRefCounters, IRenderDevice *pDevice, class CommandContext* pCmdContext) :
+    CommandListVkImpl(IReferenceCounters *pRefCounters, IRenderDevice *pDevice, class CommandContext* pCmdContext) :
         TCommandListBase(pRefCounters, pDevice),
         m_pCmdContext(pCmdContext)
     {
     }
     
-    ~CommandListD3D12Impl()
+    ~CommandListVkImpl()
     {
         VERIFY(m_pCmdContext == nullptr, "Destroying command list that was never executed");
     }

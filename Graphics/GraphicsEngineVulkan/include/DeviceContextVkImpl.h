@@ -113,7 +113,7 @@ public:
     
     Uint32 GetContextId()const{return m_ContextId;}
 #endif
-    size_t GetNumCommandsInCtx()const { return m_NumCommandsInCurCtx; }
+    size_t GetNumCommandsInCtx()const { return m_State.NumCommands; }
 
 private:
     void CommitRenderPassAndFramebuffer();
@@ -124,7 +124,6 @@ private:
     void CommitViewports();
     void CommitScissorRects();
 
-    void Flush(bool RequestNewCmdCtx);
 #if 0
     friend class SwapChainVkImpl;
 #endif
@@ -133,6 +132,7 @@ private:
     
     VulkanUtilities::VulkanCommandBuffer m_CommandBuffer;
 
+    const Uint32  m_NumCommandsToFlush = 192;
     struct ContextState
     {
         /// Flag indicating if currently committed vertex buffers are up to date
@@ -140,10 +140,10 @@ private:
 
         /// Flag indicating if currently committed index buffer is up to date
         bool CommittedIBUpToDate = false;
+
+        Uint32 NumCommands = 0;
     }m_State;
 
-    Uint32  m_NumCommandsInCurCtx = 0;
-    const Uint32  m_NumCommandsToFlush = 192;
 #if 0
     CComPtr<IVkResource> m_CommittedVkIndexBuffer;
     VALUE_TYPE m_CommittedIBFormat = VT_UNDEFINED;

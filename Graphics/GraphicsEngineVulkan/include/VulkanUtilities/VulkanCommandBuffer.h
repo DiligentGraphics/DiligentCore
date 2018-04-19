@@ -24,6 +24,7 @@
 #pragma once
 
 #include "vulkan.h"
+#include "DebugUtilities.h"
 
 namespace VulkanUtilities
 {
@@ -83,60 +84,60 @@ namespace VulkanUtilities
             );
         }
 
-        void Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
+        void Draw(uint32_t VertexCount, uint32_t InstanceCount, uint32_t FirstVertex, uint32_t FirstInstance)
         {
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
             VERIFY(m_State.RenderPass != VK_NULL_HANDLE, "vkCmdDraw() must be called inside render pass (19.3)");
             VERIFY(m_State.GraphicsPipeline != VK_NULL_HANDLE, "No graphics pipeline bound");
 
-            vkCmdDraw(m_VkCmdBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
+            vkCmdDraw(m_VkCmdBuffer, VertexCount, InstanceCount, FirstVertex, FirstInstance);
         }
 
-        void DrawIndexed(uint32_t  indexCount,uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset, uint32_t firstInstance)
+        void DrawIndexed(uint32_t  IndexCount,uint32_t InstanceCount, uint32_t FirstIndex, int32_t VertexOffset, uint32_t FirstInstance)
         {
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
             VERIFY(m_State.RenderPass != VK_NULL_HANDLE, "vkCmdDrawIndexed() must be called inside render pass (19.3)");
             VERIFY(m_State.GraphicsPipeline != VK_NULL_HANDLE, "No graphics pipeline bound");
             VERIFY(m_State.IndexBuffer != VK_NULL_HANDLE, "No index buffer bound");
 
-            vkCmdDrawIndexed(m_VkCmdBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
+            vkCmdDrawIndexed(m_VkCmdBuffer, IndexCount, InstanceCount, FirstIndex, VertexOffset, FirstInstance);
         }
 
-        void DrawIndirect(VkBuffer buffer, VkDeviceSize offset, uint32_t drawCount, uint32_t stride)
+        void DrawIndirect(VkBuffer Buffer, VkDeviceSize Offset, uint32_t DrawCount, uint32_t Stride)
         {
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
             VERIFY(m_State.RenderPass != VK_NULL_HANDLE, "vkCmdDrawIndirect() must be called inside render pass (19.3)");
             VERIFY(m_State.GraphicsPipeline != VK_NULL_HANDLE, "No graphics pipeline bound");
 
-            vkCmdDrawIndirect(m_VkCmdBuffer, buffer, offset, drawCount, stride);
+            vkCmdDrawIndirect(m_VkCmdBuffer, Buffer, Offset, DrawCount, Stride);
         }
 
-        void DrawIndexedIndirect(VkBuffer buffer, VkDeviceSize offset, uint32_t drawCount, uint32_t stride)
+        void DrawIndexedIndirect(VkBuffer Buffer, VkDeviceSize Offset, uint32_t DrawCount, uint32_t Stride)
         {
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
             VERIFY(m_State.RenderPass != VK_NULL_HANDLE, "vkCmdDrawIndirect() must be called inside render pass (19.3)");
             VERIFY(m_State.GraphicsPipeline != VK_NULL_HANDLE, "No graphics pipeline bound");
             VERIFY(m_State.IndexBuffer != VK_NULL_HANDLE, "No index buffer bound");
 
-            vkCmdDrawIndexedIndirect(m_VkCmdBuffer, buffer, offset, drawCount, stride);
+            vkCmdDrawIndexedIndirect(m_VkCmdBuffer, Buffer, Offset, DrawCount, Stride);
         }
 
-        void Dispatch(uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ)
+        void Dispatch(uint32_t GroupCountX, uint32_t GroupCountY, uint32_t GroupCountZ)
         {
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
             VERIFY(m_State.RenderPass == VK_NULL_HANDLE, "vkCmdDispatch() must be called outside of render pass (27)");
             VERIFY(m_State.ComputePipeline != VK_NULL_HANDLE, "No compute pipeline bound");
 
-            vkCmdDispatch(m_VkCmdBuffer, groupCountX, groupCountY, groupCountZ);
+            vkCmdDispatch(m_VkCmdBuffer, GroupCountX, GroupCountY, GroupCountZ);
         }
 
-        void DispatchIndirect(VkBuffer buffer, VkDeviceSize offset)
+        void DispatchIndirect(VkBuffer Buffer, VkDeviceSize Offset)
         {
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
             VERIFY(m_State.RenderPass == VK_NULL_HANDLE, "vkCmdDispatchIndirect() must be called outside of render pass (27)");
             VERIFY(m_State.ComputePipeline != VK_NULL_HANDLE, "No compute pipeline bound");
 
-            vkCmdDispatchIndirect(m_VkCmdBuffer, buffer, offset);
+            vkCmdDispatchIndirect(m_VkCmdBuffer, Buffer, Offset);
         }
 
         void BeginRenderPass(VkRenderPass RenderPass, VkFramebuffer Framebuffer, uint32_t FramebufferWidth, uint32_t FramebufferHeight)
@@ -206,38 +207,61 @@ namespace VulkanUtilities
             }
         }
 
-        void SetViewports(uint32_t firstViewport, uint32_t viewportCount, const VkViewport* pViewports)
+        void SetViewports(uint32_t FirstViewport, uint32_t ViewportCount, const VkViewport* pViewports)
         {
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-            vkCmdSetViewport(m_VkCmdBuffer, firstViewport, viewportCount, pViewports);
+            vkCmdSetViewport(m_VkCmdBuffer, FirstViewport, ViewportCount, pViewports);
         }
 
-        void SetScissorRects(uint32_t firstScissor, uint32_t scissorCount, const VkRect2D* pScissors)
+        void SetScissorRects(uint32_t FirstScissor, uint32_t ScissorCount, const VkRect2D* pScissors)
         {
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-            vkCmdSetScissor(m_VkCmdBuffer, firstScissor, scissorCount, pScissors);
+            vkCmdSetScissor(m_VkCmdBuffer, FirstScissor, ScissorCount, pScissors);
         }
 
-        void SetStencilReference(uint32_t reference)
+        void SetStencilReference(uint32_t Reference)
         {
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-            vkCmdSetStencilReference(m_VkCmdBuffer, VK_STENCIL_FRONT_AND_BACK, reference);
+            vkCmdSetStencilReference(m_VkCmdBuffer, VK_STENCIL_FRONT_AND_BACK, Reference);
         }
 
-        void SetBlendConstants(const float blendConstants[4])
+        void SetBlendConstants(const float BlendConstants[4])
         {
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-            vkCmdSetBlendConstants(m_VkCmdBuffer, blendConstants);
+            vkCmdSetBlendConstants(m_VkCmdBuffer, BlendConstants);
         }
 
-        void BindIndexBuffer(VkBuffer buffer, VkDeviceSize offset, VkIndexType indexType)
+        void BindIndexBuffer(VkBuffer Buffer, VkDeviceSize Offset, VkIndexType IndexType)
         {
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-            vkCmdBindIndexBuffer(m_VkCmdBuffer, buffer, offset, indexType);
-            m_State.IndexBuffer = buffer;
-            m_State.IndexBufferOffset = offset;
-            m_State.IndexType = indexType;
+            vkCmdBindIndexBuffer(m_VkCmdBuffer, Buffer, Offset, IndexType);
+            m_State.IndexBuffer = Buffer;
+            m_State.IndexBufferOffset = Offset;
+            m_State.IndexType = IndexType;
         }
+
+        static void TransitionImageLayout(VkCommandBuffer CmdBuffer,
+                                          VkImage Image, 
+                                          VkImageAspectFlags AspectMask, 
+                                          VkImageLayout OldLayout,
+                                          VkImageLayout NewLayout,
+                                          const VkImageSubresourceRange& SubresRange, 
+                                          VkPipelineStageFlags SrcStages, 
+                                          VkPipelineStageFlags DestStages);
+
+        void TransitionImageLayout(VkImage Image, 
+                                   VkImageAspectFlags AspectMask, 
+                                   VkImageLayout OldLayout,
+                                   VkImageLayout NewLayout,
+                                   const VkImageSubresourceRange& SubresRange,
+                                   VkPipelineStageFlags SrcStages, 
+                                   VkPipelineStageFlags DestStages)
+        {
+            VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
+            TransitionImageLayout(m_VkCmdBuffer, Image, AspectMask, OldLayout, NewLayout, SubresRange, SrcStages, DestStages);
+        }
+
+        void FlushBarriers();
 
         void SetVkCmdBuffer(VkCommandBuffer VkCmdBuffer)
         {

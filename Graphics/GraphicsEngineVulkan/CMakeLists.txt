@@ -88,6 +88,7 @@ set(SRC
 )
 
 set(VULKAN_UTILS_SRC
+    src/VulkanUtilities/VulkanCommandBuffer.cpp
     src/VulkanUtilities/VulkanCommandBufferPool.cpp
     src/VulkanUtilities/VulkanDebug.cpp
     src/VulkanUtilities/VulkanFencePool.cpp

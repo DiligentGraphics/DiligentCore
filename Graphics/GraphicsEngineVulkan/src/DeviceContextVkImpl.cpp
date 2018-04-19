@@ -39,12 +39,8 @@ namespace Diligent
     DeviceContextVkImpl::DeviceContextVkImpl( IReferenceCounters *pRefCounters, RenderDeviceVkImpl *pDeviceVkImpl, bool bIsDeferred, const EngineVkAttribs &Attribs, Uint32 ContextId) :
         TDeviceContextBase(pRefCounters, pDeviceVkImpl, bIsDeferred),
         //m_pUploadHeap(pDeviceVkImpl->RequestUploadHeap() ),
-        m_NumCommandsInCurCtx(0),
         m_NumCommandsToFlush(bIsDeferred ? std::numeric_limits<decltype(m_NumCommandsToFlush)>::max() : Attribs.NumCommandsToFlushCmdBuffer),
-        /*m_pCurrCmdCtx(pDeviceVkImpl->AllocateCommandContext()),
-        m_CommittedIBFormat(VT_UNDEFINED),
-        m_CommittedVkIndexDataStartOffset(0),
-        m_MipsGenerator(pDeviceVkImpl->GetVkDevice()),
+        /*m_MipsGenerator(pDeviceVkImpl->GetVkDevice()),
         m_CmdListAllocator(GetRawAllocator(), sizeof(CommandListVkImpl), 64 ),
         m_ContextId(ContextId),*/
         m_CmdPool(pDeviceVkImpl->GetLogicalDevice().GetSharedPtr(), pDeviceVkImpl->GetCmdQueue()->GetQueueFamilyIndex(), VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT)
@@ -83,10 +79,10 @@ namespace Diligent
         }
         else
         {
-            if (m_NumCommandsInCurCtx != 0)
+            if (m_State.NumCommands != 0)
                 LOG_WARNING_MESSAGE("Flusing outstanding commands from the device context being destroyed. This may result in synchronization errors");
 
-            Flush(false);
+            Flush();
         }
     }
 
@@ -96,7 +92,7 @@ namespace Diligent
     {
         // Make sure that the number of commands in the context is at least one,
         // so that the context cannot be disposed by Flush()
-        m_NumCommandsInCurCtx = m_NumCommandsInCurCtx != 0 ? m_NumCommandsInCurCtx : 1;
+        m_State.NumCommands = m_State.NumCommands != 0 ? m_State.NumCommands : 1;
         if (m_CommandBuffer.GetVkCmdBuffer() == VK_NULL_HANDLE)
         {
             auto pDeviceVkImpl = m_pDevice.RawPtr<RenderDeviceVkImpl>();
@@ -126,9 +122,9 @@ namespace Diligent
         }
 
         // Never flush deferred context!
-        if (!m_bIsDeferred && m_NumCommandsInCurCtx >= m_NumCommandsToFlush)
+        if (!m_bIsDeferred && m_State.NumCommands >= m_NumCommandsToFlush)
         {
-            Flush(true);
+            Flush();
         }
 
         auto *pPipelineStateVk = ValidatedCast<PipelineStateVkImpl>(pPipelineState);
@@ -433,7 +429,7 @@ namespace Diligent
                 GraphCtx.Draw(DrawAttribs.NumVertices, DrawAttribs.NumInstances, DrawAttribs.StartVertexLocation, DrawAttribs.FirstInstanceLocation );
         }
 #endif
-        ++m_NumCommandsInCurCtx;
+        ++m_State.NumCommands;
     }
 
     void DeviceContextVkImpl::DispatchCompute( const DispatchComputeAttribs &DispatchAttrs )
@@ -491,7 +487,7 @@ namespace Diligent
         else
             ComputeCtx.Dispatch(DispatchAttrs.ThreadGroupCountX, DispatchAttrs.ThreadGroupCountY, DispatchAttrs.ThreadGroupCountZ);
 #endif
-        ++m_NumCommandsInCurCtx;
+        ++m_State.NumCommands;
     }
 
     void DeviceContextVkImpl::ClearDepthStencil( ITextureView *pView, Uint32 ClearFlags, float fDepth, Uint8 Stencil )
@@ -525,7 +521,7 @@ namespace Diligent
         // Viewport and scissor settings are not applied??
         RequestCmdContext()->AsGraphicsContext().ClearDepthStencil( pDSVVk, VkClearFlags, fDepth, Stencil );
 #endif
-        ++m_NumCommandsInCurCtx;
+        ++m_State.NumCommands;
     }
 
     void DeviceContextVkImpl::ClearRenderTarget( ITextureView *pView, const float *RGBA )
@@ -561,17 +557,19 @@ namespace Diligent
         // Viewport and scissor settings are not applied??
         RequestCmdContext()->AsGraphicsContext().ClearRenderTarget( pVkRTV, RGBA );
 #endif
-        ++m_NumCommandsInCurCtx;
+        ++m_State.NumCommands;
     }
 
-    void DeviceContextVkImpl::Flush(bool RequestNewCmdCtx)
+    void DeviceContextVkImpl::Flush()
     {
+        VERIFY(!m_bIsDeferred, "Flush() should only be called for immediate contexts");
+
         auto pDeviceVkImpl = m_pDevice.RawPtr<RenderDeviceVkImpl>();
         auto vkCmdBuff = m_CommandBuffer.GetVkCmdBuffer();
         if(vkCmdBuff != VK_NULL_HANDLE )
         {
             VERIFY(!m_bIsDeferred, "Deferred contexts cannot execute command lists directly");
-            if (m_NumCommandsInCurCtx != 0)
+            if (m_State.NumCommands != 0)
             {
                 //m_pCurrCmdCtx->FlushResourceBarriers();
                 pDeviceVkImpl->ExecuteCommandBuffer(vkCmdBuff, true);
@@ -579,18 +577,8 @@ namespace Diligent
             DisposeVkCmdBuffer();
         }
 
-        m_NumCommandsInCurCtx = 0;
-
-        if(RequestNewCmdCtx)
-            EnsureVkCmdBuffer();
-
+        m_State.NumCommands = 0;
         m_pPipelineState.Release(); 
-    }
-
-    void DeviceContextVkImpl::Flush()
-    {
-        VERIFY(!m_bIsDeferred, "Flush() should only be called for immediate contexts");
-        Flush(true);
     }
 
     void DeviceContextVkImpl::SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer **ppBuffers, Uint32 *pStrides, Uint32 *pOffsets, Uint32 Flags )
@@ -601,7 +589,7 @@ namespace Diligent
 
     void DeviceContextVkImpl::InvalidateState()
     {
-        if (m_NumCommandsInCurCtx != 0)
+        if (m_State.NumCommands != 0)
             LOG_WARNING_MESSAGE("Invalidating context that has outstanding commands in it. Call Flush() to submit commands for execution");
 
         TDeviceContextBase::InvalidateState();
@@ -630,7 +618,7 @@ namespace Diligent
             VkViewports[vp].maxDepth = m_Viewports[vp].MaxDepth;
         }
         EnsureVkCmdBuffer();
-        // TODO: reinterpret_cast m_Viewports to m_Viewports?
+        // TODO: reinterpret_cast m_Viewports to VkViewports?
         m_CommandBuffer.SetViewports(0, m_NumViewports, VkViewports);
     }
 
@@ -744,7 +732,7 @@ namespace Diligent
         auto *pVkBuff = pBuffVk->GetVkBuffer(DstBuffDataStartByteOffset, m_ContextId);
         VERIFY(DstBuffDataStartByteOffset == 0, "Dst buffer must not be suballocated");
         pCmdCtx->GetCommandList()->CopyBufferRegion( pVkBuff, DstOffset + DstBuffDataStartByteOffset, Allocation.pBuffer, Allocation.Offset, NumBytes);
-        ++m_NumCommandsInCurCtx;
+        ++m_State.NumCommands;
     }
 
     void DeviceContextVkImpl::UpdateBufferRegion(BufferVkImpl *pBuffVk, const void *pData, Uint64 DstOffset, Uint64 NumBytes)
@@ -772,7 +760,7 @@ namespace Diligent
         size_t SrcDataStartByteOffset;
         auto *pVkSrcBuff = pSrcBuffVk->GetVkBuffer(SrcDataStartByteOffset, m_ContextId);
         pCmdCtx->GetCommandList()->CopyBufferRegion( pVkDstBuff, DstOffset + DstDataStartByteOffset, pVkSrcBuff, SrcOffset+SrcDataStartByteOffset, NumBytes);
-        ++m_NumCommandsInCurCtx;
+        ++m_State.NumCommands;
     }
 
     void DeviceContextVkImpl::CopyTextureRegion(TextureVkImpl *pSrcTexture, Uint32 SrcSubResIndex, const Vk_BOX *pVkSrcBox,
@@ -793,7 +781,7 @@ namespace Diligent
         SrcLocation.SubresourceIndex = SrcSubResIndex;
 
         pCmdCtx->GetCommandList()->CopyTextureRegion( &DstLocation, DstX, DstY, DstZ, &SrcLocation, pVkSrcBox);
-        ++m_NumCommandsInCurCtx;
+        ++m_State.NumCommands;
     }
 
     void DeviceContextVkImpl::CopyTextureRegion(IBuffer *pSrcBuffer, Uint32 SrcStride, Uint32 SrcDepthStride, class TextureVkImpl *pTextureVk, Uint32 DstSubResIndex, const Box &DstBox)
@@ -848,7 +836,7 @@ namespace Diligent
             static_cast<UINT>( DstBox.MinZ ),
             &SrcLocation, &VkSrcBox);
 
-        ++m_NumCommandsInCurCtx;
+        ++m_State.NumCommands;
 
         if (StateTransitionRequired)
         {
@@ -862,7 +850,7 @@ namespace Diligent
 #if 0
         auto *pCtx = RequestCmdContext();
         m_MipsGenerator.GenerateMips(m_pDevice.RawPtr<RenderDeviceVkImpl>(), pTexView, *pCtx);
-        ++m_NumCommandsInCurCtx;
+        ++m_State.NumCommands;
 #endif
     }
 
@@ -873,7 +861,11 @@ namespace Diligent
                                                        (m_pDevice, m_pCurrCmdCtx) );
         pCmdListVk->QueryInterface( IID_CommandList, reinterpret_cast<IObject**>(ppCommandList) );
         m_pCurrCmdCtx = nullptr;
-        Flush(true);
+        //Flush(); 
+
+        m_CommandBuffer.Reset();
+        m_State = ContextState{};
+        m_pPipelineState.Release();
 
         InvalidateState();
 #endif
@@ -888,7 +880,7 @@ namespace Diligent
         }
 #if 0
         // First execute commands in this context
-        Flush(true);
+        Flush();
 
         InvalidateState();
 

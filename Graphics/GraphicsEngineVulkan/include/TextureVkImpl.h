@@ -96,9 +96,13 @@ public:
     {
         return m_TexArraySRV.GetCpuHandle();
     }
+*/
+
+    void SetLayout(VkImageLayout NewLayout){ m_CurrentLayout = NewLayout;}
+    VkImageLayout GetLayout()const{return m_CurrentLayout;}
 
 protected:
-*/
+
     void CreateViewInternal( const struct TextureViewDesc &ViewDesc, ITextureView **ppView, bool bIsDefaultView )override;
     //void PrepareVkInitData(const TextureData &InitData, Uint32 NumSubresources, std::vector<Vk_SUBRESOURCE_DATA> &VkInitData);
     
@@ -114,6 +118,7 @@ protected:
 */
     VulkanUtilities::ImageWrapper m_VulkanImage;
     VulkanUtilities::DeviceMemoryWrapper m_ImageMemory;
+    VkImageLayout m_CurrentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 };
 
 }

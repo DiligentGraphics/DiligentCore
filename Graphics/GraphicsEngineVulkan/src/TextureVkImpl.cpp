@@ -121,19 +121,35 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters *pRefCounters,
 
     ImageCI.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     if (m_Desc.BindFlags & BIND_RENDER_TARGET)
-        ImageCI.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    {
+        // VK_IMAGE_USAGE_TRANSFER_DST_BIT is required for vkCmdClearColorImage()
+        ImageCI.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    }
     if (m_Desc.BindFlags & BIND_DEPTH_STENCIL)
-        ImageCI.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    {
+        // VK_IMAGE_USAGE_TRANSFER_DST_BIT is required for vkCmdClearDepthStencilImage()
+        ImageCI.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    }
     if ((m_Desc.BindFlags & BIND_UNORDERED_ACCESS) || (m_Desc.MiscFlags & MISC_TEXTURE_FLAG_GENERATE_MIPS))
+    {
         ImageCI.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
+    }
     if (m_Desc.BindFlags & BIND_SHADER_RESOURCE)
+    {
         ImageCI.usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
+    }
 
     ImageCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     ImageCI.queueFamilyIndexCount = 0;
     ImageCI.pQueueFamilyIndices = nullptr;
 
-    ImageCI.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    // initialLayout must be either VK_IMAGE_LAYOUT_UNDEFINED or VK_IMAGE_LAYOUT_PREINITIALIZED (11.4)
+    // If it is VK_IMAGE_LAYOUT_PREINITIALIZED, then the image data can be preinitialized by the host 
+    // while using this layout, and the transition away from this layout will preserve that data. 
+    // If it is VK_IMAGE_LAYOUT_UNDEFINED, then the contents of the data are considered to be undefined, 
+    // and the transition away from this layout is not guaranteed to preserve that data.
+    m_CurrentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    ImageCI.initialLayout = m_CurrentLayout;
 
 #if 0
     Desc.Flags = Vk_RESOURCE_FLAG_NONE;
