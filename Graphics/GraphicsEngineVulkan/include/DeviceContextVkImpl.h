@@ -86,9 +86,9 @@ public:
 
     virtual void ExecuteCommandList(class ICommandList *pCommandList)override final;
 
-#if 0
-    virtual void TransitionTextureState(ITexture *pTexture, Vk_RESOURCE_STATES State)override final;
+    virtual void TransitionImageLayout(ITexture *pTexture, VkImageLayout NewLayout)override final;
 
+#if 0
     virtual void TransitionBufferState(IBuffer *pBuffer, Vk_RESOURCE_STATES State)override final;
 
     ///// Clears the state caches. This function is called once per frame

@@ -145,7 +145,6 @@ static VkPipelineStageFlags PipelineStageFromAccessFlags(VkAccessFlags AccessFla
 
 void VulkanCommandBuffer::TransitionImageLayout(VkCommandBuffer CmdBuffer,
                                                 VkImage Image,
-                                                VkImageAspectFlags AspectMask, 
                                                 VkImageLayout OldLayout,
                                                 VkImageLayout NewLayout,
                                                 const VkImageSubresourceRange& SubresRange,
@@ -164,7 +163,6 @@ void VulkanCommandBuffer::TransitionImageLayout(VkCommandBuffer CmdBuffer,
     ImgBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED; // source queue family for a queue family ownership transfer.
     ImgBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED; // destination queue family for a queue family ownership transfer.
     ImgBarrier.image = Image;
-    ImgBarrier.subresourceRange.aspectMask = AspectMask;
     ImgBarrier.subresourceRange = SubresRange;
 
     switch (OldLayout) 
@@ -182,12 +180,12 @@ void VulkanCommandBuffer::TransitionImageLayout(VkCommandBuffer CmdBuffer,
 
         // must only be used as a color or resolve attachment in a VkFramebuffer (11.4)
         case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-            ImgBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+            ImgBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
         break;
 
         // must only be used as a depth/stencil attachment in a VkFramebuffer (11.4)
         case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
-            ImgBarrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+            ImgBarrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
         break;
 
         // must only be used as a read-only depth/stencil attachment in a VkFramebuffer and/or as a read-only image in a shader (11.4)
@@ -249,11 +247,11 @@ void VulkanCommandBuffer::TransitionImageLayout(VkCommandBuffer CmdBuffer,
         break;
 
         case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-            ImgBarrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+            ImgBarrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
         break;
 
         case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
-            ImgBarrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+            ImgBarrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
         break;
 
         case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
@@ -296,14 +294,44 @@ void VulkanCommandBuffer::TransitionImageLayout(VkCommandBuffer CmdBuffer,
     }
 
     if(SrcStages == 0)
-        SrcStages = PipelineStageFromAccessFlags(ImgBarrier.srcAccessMask);
+    {
+        if(ImgBarrier.srcAccessMask != 0)
+        {
+            SrcStages = PipelineStageFromAccessFlags(ImgBarrier.srcAccessMask); 
+        }
+        else
+        {
+            // An execution dependency with only VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT in the source stage 
+            // mask will effectively not wait for any prior commands to complete. (6.1.2)
+            SrcStages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        }
+    }
 
     if (DestStages == 0)
-        DestStages = PipelineStageFromAccessFlags(ImgBarrier.dstAccessMask);
+    {
+        if(ImgBarrier.dstAccessMask != 0)
+        {
+            DestStages = PipelineStageFromAccessFlags(ImgBarrier.dstAccessMask);
+        }
+        else
+        {
+            // An execution dependency with only VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT in the destination 
+            // stage mask will only prevent that stage from executing in subsequently submitted commands. 
+            // As this stage does not perform any actual execution, this is not observable - in effect, 
+            // it does not delay processing of subsequent commands. (6.1.2)
+            DestStages = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+        }
+    }
+
+    // Including a particular pipeline stage in the first synchronization scope of a command implicitly 
+    // includes logically earlier pipeline stages in the synchronization scope. Similarly, the second 
+    // synchronization scope includes logically later pipeline stages.
+    // However, note that access scopes are not affected in this way - only the precise stages specified 
+    // are considered part of each access scope.  (6.1.2)
 
     vkCmdPipelineBarrier(CmdBuffer,
-        SrcStages, 
-        DestStages,
+        SrcStages,  // must not be 0
+        DestStages, // must not be 0
         0, // a bitmask specifying how execution and memory dependencies are formed
         0,       // memoryBarrierCount
         nullptr, // pMemoryBarriers
@@ -311,6 +339,12 @@ void VulkanCommandBuffer::TransitionImageLayout(VkCommandBuffer CmdBuffer,
         nullptr, // pBufferMemoryBarriers
         1,
         &ImgBarrier);
+    // Each element of pMemoryBarriers, pBufferMemoryBarriers and pImageMemoryBarriers must not 
+    // have any access flag included in its srcAccessMask member if that bit is not supported by 
+    // any of the pipeline stages in srcStageMask.
+    // Each element of pMemoryBarriers, pBufferMemoryBarriers and pImageMemoryBarriers must not 
+    // have any access flag included in its dstAccessMask member if that bit is not supported by any 
+    // of the pipeline stages in dstStageMask (6.6)
 }
 
 void VulkanCommandBuffer::FlushBarriers()

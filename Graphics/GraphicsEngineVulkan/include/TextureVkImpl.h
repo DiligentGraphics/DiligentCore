@@ -68,10 +68,8 @@ public:
     virtual void Map( IDeviceContext *pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags, MappedTextureSubresource &MappedData )override;
     virtual void Unmap( IDeviceContext *pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags )override;
 
-/*
-    virtual IVkResource* GetVkTexture(){ return GetVkResource(); }
-    */
-    virtual void* GetNativeHandle()override final { return nullptr;/*GetVkTexture();*/ }
+    virtual VkImage GetVkImage(){ return m_VulkanImage; }
+    virtual void* GetNativeHandle()override final { return GetVkImage(); }
 /*
     virtual void SetVkResourceState(Vk_RESOURCE_STATES state)override final{ SetState(state); }
     */

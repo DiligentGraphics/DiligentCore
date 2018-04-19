@@ -889,14 +889,41 @@ namespace Diligent
 #endif
     }
 
-#if 0
-    void DeviceContextVkImpl::TransitionTextureState(ITexture *pTexture, Vk_RESOURCE_STATES State)
+
+    void DeviceContextVkImpl::TransitionImageLayout(ITexture *pTexture, VkImageLayout NewLayout)
     {
         VERIFY_EXPR(pTexture != nullptr);
-        auto *pCmdCtx = RequestCmdContext();
-        pCmdCtx->TransitionResource(ValidatedCast<ITextureVk>(pTexture), State);
+        auto pTextureVk = ValidatedCast<TextureVkImpl>(pTexture);
+        if(pTextureVk->GetLayout() != NewLayout)
+        {
+            EnsureVkCmdBuffer();
+        
+            auto vkImg = pTextureVk->GetVkImage();
+            const auto& TexDesc = pTextureVk->GetDesc();
+            auto Fmt = TexDesc.Format;
+            const auto& FmtAttribs = GetTextureFormatAttribs(Fmt);
+            VkImageSubresourceRange SubresRange;
+            if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH)
+                SubresRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+            else if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
+            {
+                // If image has a depth / stencil format with both depth and stencil components, then the 
+                // aspectMask member of subresourceRange must include both VK_IMAGE_ASPECT_DEPTH_BIT and 
+                // VK_IMAGE_ASPECT_STENCIL_BIT (6.7.3)
+                SubresRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+            }
+            else
+                SubresRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            SubresRange.baseArrayLayer = 0;
+            SubresRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+            SubresRange.baseMipLevel = 0;
+            SubresRange.levelCount = VK_REMAINING_MIP_LEVELS;
+            m_CommandBuffer.TransitionImageLayout(vkImg, pTextureVk->GetLayout(), NewLayout, SubresRange);
+            pTextureVk->SetLayout(NewLayout);
+        }
     }
 
+#if 0
     void DeviceContextVkImpl::TransitionBufferState(IBuffer *pBuffer, Vk_RESOURCE_STATES State)
     {
         VERIFY_EXPR(pBuffer != nullptr);

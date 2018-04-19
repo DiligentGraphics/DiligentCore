@@ -40,11 +40,11 @@ class IDeviceContextVk : public IDeviceContext
 {
 public:
 
-    /// Transitions internal D3D12 texture object to a specified state
+    /// Transitions internal vulkan image to a specified layout
 
     /// \param [in] pTexture - texture to transition
-    /// \param [in] State - D3D12 resource state this texture to transition to
-    //virtual void TransitionTextureState(ITexture *pTexture, D3D12_RESOURCE_STATES State) = 0;
+    /// \param [in] NewLayout - Vulkan image layout this texture to transition to
+    virtual void TransitionImageLayout(ITexture *pTexture, VkImageLayout NewLayout) = 0;
 
     /// Transitions internal D3D12 buffer object to a specified state
 

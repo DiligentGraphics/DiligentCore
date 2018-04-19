@@ -242,7 +242,6 @@ namespace VulkanUtilities
 
         static void TransitionImageLayout(VkCommandBuffer CmdBuffer,
                                           VkImage Image, 
-                                          VkImageAspectFlags AspectMask, 
                                           VkImageLayout OldLayout,
                                           VkImageLayout NewLayout,
                                           const VkImageSubresourceRange& SubresRange, 
@@ -250,15 +249,20 @@ namespace VulkanUtilities
                                           VkPipelineStageFlags DestStages);
 
         void TransitionImageLayout(VkImage Image, 
-                                   VkImageAspectFlags AspectMask, 
                                    VkImageLayout OldLayout,
                                    VkImageLayout NewLayout,
                                    const VkImageSubresourceRange& SubresRange,
-                                   VkPipelineStageFlags SrcStages, 
-                                   VkPipelineStageFlags DestStages)
+                                   VkPipelineStageFlags SrcStages = 0, 
+                                   VkPipelineStageFlags DestStages = 0)
         {
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-            TransitionImageLayout(m_VkCmdBuffer, Image, AspectMask, OldLayout, NewLayout, SubresRange, SrcStages, DestStages);
+            if(m_State.RenderPass  != VK_NULL_HANDLE)
+            {
+                // Image layout transitions within a render pass execute
+                // dependencies between attachments
+                EndRenderPass();
+            }
+            TransitionImageLayout(m_VkCmdBuffer, Image, OldLayout, NewLayout, SubresRange, SrcStages, DestStages);
         }
 
         void FlushBarriers();
