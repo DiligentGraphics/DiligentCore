@@ -214,6 +214,11 @@ namespace VulkanUtilities
         return CreateVulkanObject<VkDescriptorSetLayout>(vkCreateDescriptorSetLayout, LayoutCI, DebugName, "descriptor set layout");
     }
 
+    SemaphoreWrapper VulkanLogicalDevice::CreateSemaphore(const VkSemaphoreCreateInfo &SemaphoreCI, const char *DebugName)const
+    {
+        return CreateVulkanObject<VkSemaphore>(vkCreateSemaphore, SemaphoreCI, DebugName, "semaphore");
+    }
+
     VkCommandBuffer VulkanLogicalDevice::AllocateVkCommandBuffer(const VkCommandBufferAllocateInfo &AllocInfo, const char *DebugName)const
     {
         if (DebugName == nullptr)
@@ -317,6 +322,12 @@ namespace VulkanUtilities
     {
         vkDestroyDescriptorSetLayout(m_VkDevice, DescriptorSetLayout.m_VkObject, m_VkAllocator);
         DescriptorSetLayout.m_VkObject = VK_NULL_HANDLE;
+    }
+
+    void VulkanLogicalDevice::ReleaseVulkanObject(SemaphoreWrapper&& Semaphore)const
+    {
+        vkDestroySemaphore(m_VkDevice, Semaphore.m_VkObject, m_VkAllocator);
+        Semaphore.m_VkObject = VK_NULL_HANDLE;
     }
 
 

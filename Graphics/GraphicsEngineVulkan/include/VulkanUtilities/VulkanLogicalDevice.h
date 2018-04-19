@@ -78,6 +78,7 @@ namespace VulkanUtilities
         FramebufferWrapper    CreateFramebuffer   (const VkFramebufferCreateInfo    &FramebufferCI, const char *DebugName = "")const;
         DescriptorPoolWrapper CreateDescriptorPool(const VkDescriptorPoolCreateInfo &DescrPoolCI,   const char *DebugName = "")const;
         DescriptorSetLayoutWrapper CreateDescriptorSetLayout(const VkDescriptorSetLayoutCreateInfo &LayoutCI, const char *DebugName = "")const;
+        SemaphoreWrapper    CreateSemaphore(const VkSemaphoreCreateInfo &SemaphoreCI, const char *DebugName = "")const;
         
         VkCommandBuffer     AllocateVkCommandBuffer(const VkCommandBufferAllocateInfo &AllocInfo, const char *DebugName = "")const;
 
@@ -96,6 +97,7 @@ namespace VulkanUtilities
         void ReleaseVulkanObject(FramebufferWrapper&&   Framebuffer)const;
         void ReleaseVulkanObject(DescriptorPoolWrapper&& DescriptorPool)const;
         void ReleaseVulkanObject(DescriptorSetLayoutWrapper&& DescriptorSetLayout)const;
+        void ReleaseVulkanObject(SemaphoreWrapper&&     Semaphore)const;
 
         VkMemoryRequirements GetBufferMemoryRequirements(VkBuffer vkBuffer)const;
         VkMemoryRequirements GetImageMemoryRequirements (VkImage vkImage  )const;

@@ -105,4 +105,5 @@ namespace VulkanUtilities
     using FramebufferWrapper    = VulkanObjectWrapper<VkFramebuffer>;
     using DescriptorPoolWrapper = VulkanObjectWrapper<VkDescriptorPool>;
     using DescriptorSetLayoutWrapper = VulkanObjectWrapper<VkDescriptorSetLayout>;
+    using SemaphoreWrapper      = VulkanObjectWrapper<VkSemaphore>;
 }

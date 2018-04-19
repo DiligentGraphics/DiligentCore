@@ -395,6 +395,7 @@ template void RenderDeviceVkImpl::SafeReleaseVkObject<VkPipelineLayout>(VulkanUt
 template void RenderDeviceVkImpl::SafeReleaseVkObject<VkFramebuffer>   (VulkanUtilities::FramebufferWrapper    &&Object);
 template void RenderDeviceVkImpl::SafeReleaseVkObject<VkDescriptorPool> (VulkanUtilities::DescriptorPoolWrapper &&Object);
 template void RenderDeviceVkImpl::SafeReleaseVkObject<VkDescriptorSetLayout>(VulkanUtilities::DescriptorSetLayoutWrapper &&Object);
+template void RenderDeviceVkImpl::SafeReleaseVkObject<VkSemaphore>      (VulkanUtilities::SemaphoreWrapper &&Object);
 
 
 void RenderDeviceVkImpl::DiscardStaleVkObjects(Uint64 CmdListNumber, Uint64 FenceValue)
