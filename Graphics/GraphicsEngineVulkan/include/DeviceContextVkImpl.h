@@ -88,6 +88,16 @@ public:
 
     virtual void TransitionImageLayout(ITexture *pTexture, VkImageLayout NewLayout)override final;
 
+    void AddWaitSemaphore(VkSemaphore Semaphore, VkPipelineStageFlags WaitDstStageMask)
+    {
+        m_WaitSemaphores.push_back(Semaphore);
+        m_WaitDstStageMasks.push_back(WaitDstStageMask);
+    }
+    void AddSignalSemaphore(VkSemaphore Semaphore)
+    {
+        m_SignalSemaphores.push_back(Semaphore);
+    }
+
 #if 0
     virtual void TransitionBufferState(IBuffer *pBuffer, Vk_RESOURCE_STATES State)override final;
 
@@ -162,6 +172,10 @@ private:
     const Uint32 m_ContextId;
 #endif
     VulkanUtilities::VulkanCommandBufferPool m_CmdPool;
+
+    std::vector<VkSemaphore> m_WaitSemaphores;
+    std::vector<VkPipelineStageFlags> m_WaitDstStageMasks;
+    std::vector<VkSemaphore> m_SignalSemaphores;
 };
 
 }

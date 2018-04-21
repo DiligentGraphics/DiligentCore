@@ -56,6 +56,8 @@ public:
 	// Executes a given command buffer
 	virtual Uint64 ExecuteCommandBuffer(VkCommandBuffer cmdBuffer)override final;
 
+    virtual Uint64 ExecuteCommandBuffer(const VkSubmitInfo& SubmitInfo)override final;
+
     virtual VkQueue GetVkQueue()override final{return m_VkQueue;}
 
     virtual uint32_t GetQueueFamilyIndex()override final { return m_QueueFamilyIndex; }

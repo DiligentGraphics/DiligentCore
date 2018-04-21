@@ -295,7 +295,11 @@ void VulkanCommandBuffer::TransitionImageLayout(VkCommandBuffer CmdBuffer,
 
     if(SrcStages == 0)
     {
-        if(ImgBarrier.srcAccessMask != 0)
+        if(OldLayout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
+        {
+            SrcStages = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+        }
+        else if(ImgBarrier.srcAccessMask != 0)
         {
             SrcStages = PipelineStageFromAccessFlags(ImgBarrier.srcAccessMask); 
         }
@@ -309,7 +313,11 @@ void VulkanCommandBuffer::TransitionImageLayout(VkCommandBuffer CmdBuffer,
 
     if (DestStages == 0)
     {
-        if(ImgBarrier.dstAccessMask != 0)
+        if(NewLayout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
+        {
+            DestStages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        }
+        else if(ImgBarrier.dstAccessMask != 0)
         {
             DestStages = PipelineStageFromAccessFlags(ImgBarrier.dstAccessMask);
         }

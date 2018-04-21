@@ -98,6 +98,7 @@ public:
     
 	void IdleGPU(bool ReleaseStaleObjects);
     VkCommandBuffer AllocateCommandBuffer(const Char *DebugName = nullptr);
+    void ExecuteCommandBuffer(const VkSubmitInfo &SubmitInfo, bool DiscardStaleObjects);
     void ExecuteCommandBuffer(VkCommandBuffer CmdBuff, bool DiscardStaleObjects);
     void DisposeCommandBuffer(VkCommandBuffer CmdBuff);
 

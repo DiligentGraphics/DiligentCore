@@ -179,6 +179,12 @@ namespace VulkanUtilities
             m_State.Framebuffer = VK_NULL_HANDLE;
         }
 
+        void EndCommandBuffer()
+        {
+            VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
+            vkEndCommandBuffer(m_VkCmdBuffer);
+        }
+
         void Reset()
         {
             m_VkCmdBuffer = VK_NULL_HANDLE;

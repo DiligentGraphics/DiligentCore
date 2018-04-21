@@ -94,6 +94,7 @@ SwapChainVkImpl::SwapChainVkImpl(IReferenceCounters *pRefCounters,
 
     CreateVulkanSwapChain();
     InitBuffersAndViews();
+    AcquireNextImage(pDeviceContextVk);
 }
 
 void SwapChainVkImpl::CreateVulkanSwapChain()
@@ -263,7 +264,9 @@ void SwapChainVkImpl::CreateVulkanSwapChain()
     swapchain_ci.oldSwapchain = oldSwapchain;
     swapchain_ci.clipped = VK_TRUE;
     swapchain_ci.imageColorSpace = ColorSpace;
-    swapchain_ci.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    swapchain_ci.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    // vkCmdClearColorImage() command requires the image to use VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL layout
+    // that requires  VK_IMAGE_USAGE_TRANSFER_DST_BIT to be set
     swapchain_ci.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
     swapchain_ci.queueFamilyIndexCount = 0;
     swapchain_ci.pQueueFamilyIndices = NULL;
@@ -278,23 +281,36 @@ void SwapChainVkImpl::CreateVulkanSwapChain()
     //    swapchain_ci.pQueueFamilyIndices = queueFamilyIndices;
     //}
 
-    auto LogicalVkDevice = pRenderDeviceVk->GetVkDevice();
-    err = vkCreateSwapchainKHR(LogicalVkDevice, &swapchain_ci, NULL, &m_VkSwapChain);
+    const auto& LogicalDevice = pRenderDeviceVk->GetLogicalDevice();
+    auto vkDevice = pRenderDeviceVk->GetVkDevice();
+    err = vkCreateSwapchainKHR(vkDevice, &swapchain_ci, NULL, &m_VkSwapChain);
     CHECK_VK_ERROR_AND_THROW(err, "Failed to create Vulkan swapchain");
 
     if(oldSwapchain != VK_NULL_HANDLE)
     {
-        vkDestroySwapchainKHR(LogicalVkDevice, oldSwapchain, NULL);
+        vkDestroySwapchainKHR(vkDevice, oldSwapchain, NULL);
     }
 
     uint32_t swapchainImageCount = 0;
-    err = vkGetSwapchainImagesKHR(LogicalVkDevice, m_VkSwapChain, &swapchainImageCount, NULL);
+    err = vkGetSwapchainImagesKHR(vkDevice, m_VkSwapChain, &swapchainImageCount, NULL);
     CHECK_VK_ERROR_AND_THROW(err, "Failed to request swap chain image count");
     VERIFY_EXPR(swapchainImageCount > 0);
     if (swapchainImageCount != m_SwapChainDesc.BufferCount)
     {
         LOG_INFO_MESSAGE("Actual number of images in the created swap chain: ", m_SwapChainDesc.BufferCount);
         m_SwapChainDesc.BufferCount = swapchainImageCount;
+    }
+
+    m_ImageAcquiredSemaphores.resize(swapchainImageCount);
+    m_DrawCompleteSemaphores.resize(swapchainImageCount);
+    for(uint32_t i = 0; i < swapchainImageCount; ++i)
+    {
+        VkSemaphoreCreateInfo SemaphoreCI = {};
+        SemaphoreCI.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+        SemaphoreCI.pNext = nullptr;
+        SemaphoreCI.flags = 0; // reserved for future use
+        m_ImageAcquiredSemaphores[i] = LogicalDevice.CreateSemaphore(SemaphoreCI);
+        m_DrawCompleteSemaphores[i] = LogicalDevice.CreateSemaphore(SemaphoreCI);
     }
 }
 
@@ -329,8 +345,8 @@ void SwapChainVkImpl::InitBuffersAndViews()
     CHECK_VK_ERROR_AND_THROW(err, "Failed to get swap chain images");
     VERIFY_EXPR(swapchainImageCount == swapchainImages.size());
 
-    for (uint32_t i = 0; i < swapchainImageCount; i++) {
-
+    for (uint32_t i = 0; i < swapchainImageCount; i++) 
+    {
         TextureDesc BackBufferDesc;
         BackBufferDesc.Format = m_SwapChainDesc.ColorBufferFormat;
         std::stringstream name_ss;
@@ -373,6 +389,18 @@ void SwapChainVkImpl::InitBuffersAndViews()
     m_pDepthBufferDSV = RefCntAutoPtr<ITextureViewVk>(pDSV, IID_TextureViewVk);
 }
 
+void SwapChainVkImpl::AcquireNextImage(DeviceContextVkImpl *pDeviceCtxVk)
+{
+    auto *pDeviceVk = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
+    const auto& LogicalDevice = pDeviceVk->GetLogicalDevice();
+
+    auto res = vkAcquireNextImageKHR(LogicalDevice.GetVkDevice(), m_VkSwapChain, UINT64_MAX, m_ImageAcquiredSemaphores[m_SemaphoreIndex], (VkFence)nullptr, &m_BackBufferIndex);
+    VERIFY(res == VK_SUCCESS, "Failed to acquire next swap chain image");
+
+    // Next command in the device context must wait for the next image to be acquired
+    pDeviceCtxVk->AddWaitSemaphore(m_ImageAcquiredSemaphores[m_SemaphoreIndex], VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+}
+
 IMPLEMENT_QUERY_INTERFACE( SwapChainVkImpl, IID_SwapChainVk, TSwapChainBase )
 
 
@@ -385,21 +413,30 @@ void SwapChainVkImpl::Present(Uint32 SyncInterval)
         return;
     }
 
-    auto *pImmediateCtx = pDeviceContext.RawPtr();
-    auto *pImmediateCtxVk = ValidatedCast<DeviceContextVkImpl>( pImmediateCtx );
+    auto *pImmediateCtxVk = pDeviceContext.RawPtr<DeviceContextVkImpl>();
 
-#if 0
-    auto *pCmdCtx = pImmediateCtxVk->RequestCmdContext();
-    auto *pBackBuffer = ValidatedCast<TextureVkImpl>( GetCurrentBackBufferRTV()->GetTexture() );
-    pCmdCtx->TransitionResource( pBackBuffer, Vk_RESOURCE_STATE_PRESENT);
-#endif
+    // TransitionImageLayout() never triggers flush
+    pImmediateCtxVk->TransitionImageLayout(GetCurrentBackBufferRTV()->GetTexture(), VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+    VERIFY(pImmediateCtxVk->GetNumCommandsInCtx() != 0, "The context must not be flushed");
+    pImmediateCtxVk->AddSignalSemaphore(m_DrawCompleteSemaphores[m_SemaphoreIndex]);
     pImmediateCtxVk->Flush();
 
-    auto *pDeviceVk = ValidatedCast<RenderDeviceVkImpl>( pImmediateCtxVk->GetDevice() );
-#if 0
-    auto hr = m_pSwapChain->Present( SyncInterval, 0 );
-    VERIFY(SUCCEEDED(hr), "Present failed");
-#endif
+    VkPresentInfoKHR PresentInfo = {};
+    PresentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    PresentInfo.pNext = nullptr;
+    PresentInfo.waitSemaphoreCount = 1;
+    VkSemaphore WaitSemaphore[] = { m_DrawCompleteSemaphores[m_SemaphoreIndex] };
+    PresentInfo.pWaitSemaphores = WaitSemaphore;
+    PresentInfo.swapchainCount = 1;
+    PresentInfo.pSwapchains = &m_VkSwapChain;
+    PresentInfo.pImageIndices = &m_BackBufferIndex;
+    VkResult Result = VK_SUCCESS;
+    PresentInfo.pResults = &Result;
+    VERIFY(Result == VK_SUCCESS, "Present failed");
+
+    auto *pDeviceVk = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
+    auto vkCmdQueue = pDeviceVk->GetCmdQueue()->GetVkQueue();
+    vkQueuePresentKHR(vkCmdQueue, &PresentInfo);
 
     pDeviceVk->FinishFrame();
 
@@ -412,6 +449,11 @@ void SwapChainVkImpl::Present(Uint32 SyncInterval)
     pImmediateCtxVk->CommitRenderTargets();
 #endif
 #endif
+    ++m_SemaphoreIndex;
+    if (m_SemaphoreIndex >= m_SwapChainDesc.BufferCount)
+        m_SemaphoreIndex = 0;
+
+    AcquireNextImage(pImmediateCtxVk);
 }
 
 void SwapChainVkImpl::Resize( Uint32 NewWidth, Uint32 NewHeight )
@@ -433,6 +475,9 @@ void SwapChainVkImpl::Resize( Uint32 NewWidth, Uint32 NewHeight )
                 // All references to the swap chain must be released before it can be resized
                 m_pBackBufferRTV.clear();
                 m_pDepthBufferDSV.Release();
+                m_ImageAcquiredSemaphores.clear();
+                m_DrawCompleteSemaphores.clear();
+                m_SemaphoreIndex = 0;
 
                 // This will release references to Vk swap chain buffers hold by
                 // m_pBackBufferRTV[]
@@ -440,6 +485,7 @@ void SwapChainVkImpl::Resize( Uint32 NewWidth, Uint32 NewHeight )
 
                 CreateVulkanSwapChain();
                 InitBuffersAndViews();
+                AcquireNextImage(pImmediateCtxVk);
                 
                 if( bIsDefaultFBBound )
                 {
@@ -456,14 +502,12 @@ void SwapChainVkImpl::Resize( Uint32 NewWidth, Uint32 NewHeight )
     }
 }
 
-#if 0
 ITextureViewVk *SwapChainVkImpl::GetCurrentBackBufferRTV()
 {
-    auto CurrentBackBufferIndex = m_pSwapChain->GetCurrentBackBufferIndex();
-    VERIFY_EXPR(CurrentBackBufferIndex >= 0 && CurrentBackBufferIndex < m_SwapChainDesc.BufferCount);
-    return m_pBackBufferRTV[CurrentBackBufferIndex];
+    VERIFY_EXPR(m_BackBufferIndex >= 0 && m_BackBufferIndex < m_SwapChainDesc.BufferCount);
+    return m_pBackBufferRTV[m_BackBufferIndex];
 }
-#endif
+
 
 void SwapChainVkImpl::SetFullscreenMode(const DisplayModeAttribs &DisplayMode)
 {

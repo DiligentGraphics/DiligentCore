@@ -48,6 +48,11 @@ public:
     /// \return Fence value associated with the executed command buffer
 	virtual Uint64 ExecuteCommandBuffer(VkCommandBuffer cmdBuffer) = 0;
 
+    /// Submits a given chunk of work to the command queue
+
+    /// \return Fence value associated with the executed command buffer
+    virtual Uint64 ExecuteCommandBuffer(const VkSubmitInfo& SubmitInfo) = 0;
+
     /// Returns Vulkan command queue. May return VK_NULL_HANDLE if queue is anavailable
     virtual VkQueue GetVkQueue() = 0;
 

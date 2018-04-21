@@ -129,13 +129,23 @@ void RenderDeviceVkImpl::ExecuteCommandBuffer(VkCommandBuffer CmdBuff, bool Disc
     auto err = vkEndCommandBuffer(CmdBuff);
     VERIFY(err == VK_SUCCESS, "Failed to end command buffer");
 
+    VkSubmitInfo SubmitInfo = {};
+    SubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    SubmitInfo.commandBufferCount = 1;
+    SubmitInfo.pCommandBuffers = &CmdBuff;
+    ExecuteCommandBuffer(SubmitInfo, DiscardStaleObjects);
+}
+
+
+void RenderDeviceVkImpl::ExecuteCommandBuffer(const VkSubmitInfo &SubmitInfo, bool DiscardStaleObjects)
+{
     Uint64 FenceValue = 0;
     Uint64 CmdListNumber = 0;
     {
 	    std::lock_guard<std::mutex> LockGuard(m_CmdQueueMutex);
         auto NextFenceValue = m_pCommandQueue->GetNextFenceValue();
 	    // Submit the command list to the queue
-        FenceValue = m_pCommandQueue->ExecuteCommandBuffer(CmdBuff);
+        FenceValue = m_pCommandQueue->ExecuteCommandBuffer(SubmitInfo);
         VERIFY(FenceValue >= NextFenceValue, "Fence value of the executed command list is less than the next fence value previously queried through GetNextFenceValue()");
         FenceValue = std::max(FenceValue, NextFenceValue);
         CmdListNumber = m_NextCmdListNumber;

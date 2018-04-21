@@ -56,6 +56,7 @@ namespace VulkanUtilities
         }
         VulkanObjectWrapper& operator = (VulkanObjectWrapper&& rhs) 
         {
+            Release();
             m_pLogicalDevice = std::move(rhs.m_pLogicalDevice);
             m_VkObject = rhs.m_VkObject;
             rhs.m_VkObject = VK_NULL_HANDLE;

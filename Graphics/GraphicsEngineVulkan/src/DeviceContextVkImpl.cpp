@@ -492,13 +492,12 @@ namespace Diligent
 
     void DeviceContextVkImpl::ClearDepthStencil( ITextureView *pView, Uint32 ClearFlags, float fDepth, Uint8 Stencil )
     {
-#if 0
-        ITextureViewVk *pDSVVk = nullptr;
+        ITextureViewVk *pVkDSV = nullptr;
         if( pView != nullptr )
         {
-            pDSVVk = ValidatedCast<ITextureViewVk>(pView);
+            pVkDSV = ValidatedCast<ITextureViewVk>(pView);
 #ifdef _DEBUG
-            const auto& ViewDesc = pDSVVk->GetDesc();
+            const auto& ViewDesc = pVkDSV->GetDesc();
             VERIFY( ViewDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL, "Incorrect view type: depth stencil is expected" );
 #endif
         }
@@ -506,7 +505,7 @@ namespace Diligent
         {
             if (m_pSwapChain)
             {
-                pDSVVk = m_pSwapChain.RawPtr<ISwapChainVk>()->GetDepthBufferDSV();
+                pVkDSV = m_pSwapChain.RawPtr<ISwapChainVk>()->GetDepthBufferDSV();
             }
             else
             {
@@ -514,19 +513,62 @@ namespace Diligent
                 return;
             }
         }
-        Vk_CLEAR_FLAGS VkClearFlags = (Vk_CLEAR_FLAGS)0;
-        if( ClearFlags & CLEAR_DEPTH_FLAG )   VkClearFlags |= Vk_CLEAR_FLAG_DEPTH;
-        if( ClearFlags & CLEAR_STENCIL_FLAG ) VkClearFlags |= Vk_CLEAR_FLAG_STENCIL;
-        // The full extent of the resource view is always cleared. 
-        // Viewport and scissor settings are not applied??
-        RequestCmdContext()->AsGraphicsContext().ClearDepthStencil( pDSVVk, VkClearFlags, fDepth, Stencil );
-#endif
+
+        auto *pTexture = pVkDSV->GetTexture();
+        auto *pTextureVk = ValidatedCast<TextureVkImpl>(pTexture);
+        const auto &ViewDesc = pVkDSV->GetDesc();
+        EnsureVkCmdBuffer();
+        if(m_CommandBuffer.GetState().RenderPass != VK_NULL_HANDLE)
+        {
+            UNSUPPORTED("Not yet implemented");
+        }
+        else
+        {
+            // Image layout must be VK_IMAGE_LAYOUT_GENERAL or VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL (17.1)
+            TransitionImageLayout(pTexture, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+            VkClearDepthStencilValue ClearValue;
+            ClearValue.depth = fDepth;
+            ClearValue.stencil = Stencil;
+            VkImageSubresourceRange Subresource;
+            Subresource.aspectMask = 0;
+            if (ClearFlags & CLEAR_DEPTH_FLAG)   Subresource.aspectMask |= VK_IMAGE_ASPECT_DEPTH_BIT;
+            if (ClearFlags & CLEAR_STENCIL_FLAG) Subresource.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+            Subresource.baseArrayLayer = ViewDesc.FirstArraySlice;
+            Subresource.layerCount = ViewDesc.NumArraySlices;
+            Subresource.baseMipLevel = ViewDesc.MostDetailedMip;
+            Subresource.levelCount = ViewDesc.NumMipLevels;
+
+            m_CommandBuffer.ClearDepthStencilImage(pTextureVk->GetVkImage(), ClearValue, Subresource);
+        }
+
         ++m_State.NumCommands;
+    }
+
+    VkClearColorValue ClearValueToVkClearValue(const float *RGBA, TEXTURE_FORMAT TexFmt)
+    {
+        VkClearColorValue ClearValue;
+        const auto& FmtAttribs = GetTextureFormatAttribs(TexFmt);
+        if(FmtAttribs.ComponentType == COMPONENT_TYPE_SINT)
+        {
+            for(int i=0; i < 4; ++i)
+                ClearValue.int32[i] = static_cast<int32_t>(RGBA[i]);
+        }
+        else if (FmtAttribs.ComponentType == COMPONENT_TYPE_UINT)
+        {
+            for (int i = 0; i < 4; ++i)
+                ClearValue.uint32[i] = static_cast<uint32_t>(RGBA[i]);
+        }
+        else
+        {
+            for (int i = 0; i < 4; ++i)
+                ClearValue.float32[i] = RGBA[i];
+        }
+
+        return ClearValue;
     }
 
     void DeviceContextVkImpl::ClearRenderTarget( ITextureView *pView, const float *RGBA )
     {
-#if 0
         ITextureViewVk *pVkRTV = nullptr;
         if( pView != nullptr )
         {
@@ -552,11 +594,30 @@ namespace Diligent
         static constexpr float Zero[4] = { 0.f, 0.f, 0.f, 0.f };
         if( RGBA == nullptr )
             RGBA = Zero;
+        
+        auto *pTexture = pVkRTV->GetTexture();
+        auto *pTextureVk = ValidatedCast<TextureVkImpl>(pTexture);
+        const auto &ViewDesc = pVkRTV->GetDesc();
+        EnsureVkCmdBuffer();
+        if(m_CommandBuffer.GetState().RenderPass != VK_NULL_HANDLE)
+        {
+            UNSUPPORTED("Not yet implemented");
+        }
+        else
+        {
+            // Image layout must be VK_IMAGE_LAYOUT_GENERAL or VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL (17.1)
+            TransitionImageLayout(pTexture, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+            auto ClearValue = ClearValueToVkClearValue(RGBA, ViewDesc.Format);
+            VkImageSubresourceRange Subresource;
+            Subresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            Subresource.baseArrayLayer = ViewDesc.FirstArraySlice;
+            Subresource.layerCount = ViewDesc.NumArraySlices;
+            Subresource.baseMipLevel = ViewDesc.MostDetailedMip;
+            Subresource.levelCount = ViewDesc.NumMipLevels;
 
-        // The full extent of the resource view is always cleared. 
-        // Viewport and scissor settings are not applied??
-        RequestCmdContext()->AsGraphicsContext().ClearRenderTarget( pVkRTV, RGBA );
-#endif
+            m_CommandBuffer.ClearColorImage(pTextureVk->GetVkImage(), ClearValue, Subresource);
+        }
+
         ++m_State.NumCommands;
     }
 
@@ -571,8 +632,30 @@ namespace Diligent
             VERIFY(!m_bIsDeferred, "Deferred contexts cannot execute command lists directly");
             if (m_State.NumCommands != 0)
             {
-                //m_pCurrCmdCtx->FlushResourceBarriers();
-                pDeviceVkImpl->ExecuteCommandBuffer(vkCmdBuff, true);
+                if (m_CommandBuffer.GetState().RenderPass != VK_NULL_HANDLE)
+                {
+                    m_CommandBuffer.EndRenderPass();
+                }
+
+                m_CommandBuffer.FlushBarriers();
+                m_CommandBuffer.EndCommandBuffer();
+
+                VkSubmitInfo SubmitInfo = {};
+                SubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+                SubmitInfo.pNext = nullptr;
+                SubmitInfo.waitSemaphoreCount = static_cast<uint32_t>(m_WaitSemaphores.size());
+                VERIFY_EXPR(m_WaitSemaphores.size() == m_WaitDstStageMasks.size());
+                SubmitInfo.pWaitSemaphores = SubmitInfo.waitSemaphoreCount != 0 ? m_WaitSemaphores.data() : nullptr;
+                SubmitInfo.pWaitDstStageMask = SubmitInfo.waitSemaphoreCount != 0 ? m_WaitDstStageMasks.data() : nullptr;
+                SubmitInfo.commandBufferCount = 1;
+                SubmitInfo.pCommandBuffers = &vkCmdBuff;
+                SubmitInfo.signalSemaphoreCount = static_cast<uint32_t>(m_SignalSemaphores.size());
+                SubmitInfo.pSignalSemaphores = SubmitInfo.signalSemaphoreCount != 0 ? m_SignalSemaphores.data() : nullptr;
+                pDeviceVkImpl->ExecuteCommandBuffer(SubmitInfo, true);
+
+                m_WaitSemaphores.clear();
+                m_WaitDstStageMasks.clear();
+                m_SignalSemaphores.clear();
             }
             DisposeVkCmdBuffer();
         }
