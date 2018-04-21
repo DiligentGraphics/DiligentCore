@@ -134,13 +134,12 @@ public:
     /// Returns the render device
     IRenderDevice *GetDevice(){return m_pDevice;}
 
+    inline void ClearRenderTargets();
+
 protected:
     inline bool SetBlendFactors(const float *BlendFactors, int Dummy);
 
     inline bool SetStencilRef(Uint32 StencilRef, int Dummy);
-
-    /// Returns the size of the currently bound render target
-    inline void GetRenderTargetSize( Uint32 &RTWidth, Uint32 &RTHeight );
 
     /// Clears all cached resources
     inline void ClearStateCache();
@@ -187,6 +186,12 @@ protected:
     RefCntAutoPtr<ITextureView> m_pBoundRenderTargets[MaxRenderTargets];
     /// Number of bound render targets
     Uint32 m_NumBoundRenderTargets = 0;
+    /// Width of the currently bound framebuffer
+    Uint32 m_FramebufferWidth = 0;
+    /// Height of the currently bound framebuffer
+    Uint32 m_FramebufferHeight = 0;
+    /// Number of array slices in the currently bound framebuffer
+    Uint32 m_FramebufferSlices = 0;
     /// Flag indicating if default render target & depth-stencil 
     /// buffer are currently bound
     bool m_IsDefaultFramebufferBound = false;
@@ -339,63 +344,12 @@ inline bool DeviceContextBase<BaseInterface> :: SetStencilRef(Uint32 StencilRef,
 }
 
 template<typename BaseInterface>
-inline void DeviceContextBase<BaseInterface> :: GetRenderTargetSize( Uint32 &RTWidth, Uint32 &RTHeight )
-{
-    RTWidth  = 0;
-    RTHeight = 0;
-    // First, try to find non-null render target 
-    for( Uint32 rt = 0; rt < m_NumBoundRenderTargets; ++rt )
-    {
-        if( auto *pRTView = m_pBoundRenderTargets[rt].RawPtr() )
-        {
-            // Use render target size as viewport size
-            auto *pTex = pRTView->GetTexture();
-            auto MipLevel = pRTView->GetDesc().MostDetailedMip;
-            const auto &TexDesc = pTex->GetDesc();
-            RTWidth  = TexDesc.Width >> MipLevel;
-            RTHeight = TexDesc.Height >> MipLevel;
-            VERIFY( RTWidth > 0 && RTHeight > 0, "RT dimension is zero" );
-            break;
-        }
-    }
-
-    // If render target was not found, check depth stencil
-    if( RTWidth == 0 || RTHeight == 0 )
-    {
-        auto *pDSView = m_pBoundDepthStencil.RawPtr();
-        if( pDSView != nullptr )
-        {
-            // Use depth stencil size
-            auto *pTex = pDSView->GetTexture();
-            const auto &TexDesc = pTex->GetDesc();
-            RTWidth  = TexDesc.Width;
-            RTHeight = TexDesc.Height;
-        }
-    }
-
-    // Finally, if no render targets and depth stencil are bound,
-    // use default RT size
-    if( RTWidth == 0 || RTHeight == 0 )
-    {
-        if (m_pSwapChain)
-        {
-            const auto &SwapChainDesc = m_pSwapChain->GetDesc();
-            RTWidth  = SwapChainDesc.Width;
-            RTHeight = SwapChainDesc.Height;
-        }
-        else
-        {
-            LOG_ERROR("Failed to determine default render target size: swap chain is not initialized in the device context");
-        }
-    }
-}
-
-template<typename BaseInterface>
 inline void DeviceContextBase<BaseInterface> :: SetViewports( Uint32 NumViewports, const Viewport *pViewports, Uint32 &RTWidth, Uint32 &RTHeight )
 {
     if( RTWidth == 0 || RTHeight == 0 )
     {
-        GetRenderTargetSize( RTWidth, RTHeight );
+        RTWidth = m_FramebufferWidth;
+        RTHeight = m_FramebufferHeight;
     }
 
     VERIFY(NumViewports < MaxViewports, "Number of viewports (", NumViewports, ") exceeds the limit (", MaxViewports, ")");
@@ -433,7 +387,8 @@ inline void DeviceContextBase<BaseInterface> :: SetScissorRects( Uint32 NumRects
 {
     if( RTWidth == 0 || RTHeight == 0 )
     {
-        GetRenderTargetSize( RTWidth, RTHeight );
+        RTWidth = m_FramebufferWidth;
+        RTHeight = m_FramebufferHeight;
     }
 
     VERIFY(NumRects < MaxViewports, "Number of scissor rects (", NumRects, ") exceeds the limit (", MaxViewports, ")");
@@ -451,6 +406,9 @@ template<typename BaseInterface>
 inline bool DeviceContextBase<BaseInterface> :: SetRenderTargets( Uint32 NumRenderTargets, ITextureView *ppRenderTargets[], ITextureView *pDepthStencil, Uint32 Dummy )
 {
     bool bBindRenderTargets = false;
+    m_FramebufferWidth  = 0;
+    m_FramebufferHeight = 0;
+    m_FramebufferSlices = 0;
     if( NumRenderTargets != m_NumBoundRenderTargets )
     {
         bBindRenderTargets = true;
@@ -463,13 +421,31 @@ inline bool DeviceContextBase<BaseInterface> :: SetRenderTargets( Uint32 NumRend
     for( Uint32 rt = 0; rt < NumRenderTargets; ++rt )
     {
         auto *pRTView = ppRenderTargets[rt];
-#ifdef _DEBUG
         if( pRTView )
         {
-            const auto &ViewDesc = pRTView->GetDesc();
-            VERIFY( ViewDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET, "Texture view object named \"", ViewDesc.Name ? ViewDesc.Name : "", "\" has incorrect view type (", GetTexViewTypeLiteralName(ViewDesc.ViewType), "). Render target view is expected" );
-        }
+            const auto &RTVDesc = pRTView->GetDesc();
+            VERIFY(RTVDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET, "Texture view object named \"", RTVDesc.Name ? RTVDesc.Name : "", "\" has incorrect view type (", GetTexViewTypeLiteralName(RTVDesc.ViewType), "). Render target view is expected" );
+
+            // Use this RTV to set the render target size
+            if(m_FramebufferWidth == 0)
+            {
+                auto *pTex = pRTView->GetTexture();
+                const auto &TexDesc = pTex->GetDesc();
+                m_FramebufferWidth  = TexDesc.Width  >> RTVDesc.MostDetailedMip;
+                m_FramebufferHeight = TexDesc.Height >> RTVDesc.MostDetailedMip;
+                m_FramebufferSlices = RTVDesc.NumArraySlices;
+            }
+            else
+            {
+#ifdef _DEBUG
+                const auto &TexDesc = pRTView->GetTexture()->GetDesc();
+                VERIFY(m_FramebufferWidth  == TexDesc.Width  >> RTVDesc.MostDetailedMip, "Inconsitent render target sizes");
+                VERIFY(m_FramebufferHeight == TexDesc.Height >> RTVDesc.MostDetailedMip, "Inconsitent render target sizes");
+                VERIFY(m_FramebufferSlices == RTVDesc.NumArraySlices, "Inconsitent number of layers in bound render targets");
 #endif
+            }
+        }
+
         // Here both views a certainly live object, since we store
         // strong references to all bound render targets. So we
         // can safely compare pointers.
@@ -480,13 +456,30 @@ inline bool DeviceContextBase<BaseInterface> :: SetRenderTargets( Uint32 NumRend
         }
     }
 
-#ifdef _DEBUG
     if( pDepthStencil )
     {
-        const auto &ViewDesc = pDepthStencil->GetDesc();
-        VERIFY( ViewDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL, "Texture view object named \"", ViewDesc.Name ? ViewDesc.Name : "", "\" has incorrect view type (", GetTexViewTypeLiteralName(ViewDesc.ViewType), "). Depth stencil view is expected" );
-    }
+        const auto &DSVDesc = pDepthStencil->GetDesc();
+        VERIFY(DSVDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL, "Texture view object named \"", DSVDesc.Name ? DSVDesc.Name : "", "\" has incorrect view type (", GetTexViewTypeLiteralName(DSVDesc.ViewType), "). Depth stencil view is expected" );
+        
+        // Use depth stencil size to set render target size
+        if (m_FramebufferWidth == 0)
+        {
+            auto *pTex = pDepthStencil->GetTexture();
+            const auto &TexDesc = pTex->GetDesc();
+            m_FramebufferWidth  = TexDesc.Width  >> DSVDesc.MostDetailedMip;
+            m_FramebufferHeight = TexDesc.Height >> DSVDesc.MostDetailedMip;
+            m_FramebufferSlices = DSVDesc.NumArraySlices;
+        }
+        else
+        {
+#ifdef _DEBUG
+            const auto &TexDesc = pDepthStencil->GetTexture()->GetDesc();
+            VERIFY(m_FramebufferWidth  == TexDesc.Width  >> DSVDesc.MostDetailedMip, "Inconsitent render target sizes");
+            VERIFY(m_FramebufferHeight == TexDesc.Height >> DSVDesc.MostDetailedMip, "Inconsitent render target sizes");
+            VERIFY(m_FramebufferSlices == DSVDesc.NumArraySlices, "Inconsitent number of layers in bound render targets");
 #endif
+        }
+    }
 
     if( m_pBoundDepthStencil != pDepthStencil)
     {
@@ -501,9 +494,23 @@ inline bool DeviceContextBase<BaseInterface> :: SetRenderTargets( Uint32 NumRend
             m_IsDefaultFramebufferBound = true;
             bBindRenderTargets = true;
         }
+
+        if (m_pSwapChain)
+        {
+            const auto &SwapChainDesc = m_pSwapChain->GetDesc();
+            m_FramebufferWidth = SwapChainDesc.Width;
+            m_FramebufferHeight = SwapChainDesc.Height;
+            m_FramebufferSlices = 1;
+        }
+        else
+        {
+            UNEXPECTED("Swap chain is not initialized in the device context");
+        }
     }
     else
         m_IsDefaultFramebufferBound = false;
+
+    VERIFY_EXPR(m_FramebufferWidth > 0 && m_FramebufferHeight > 0 && m_FramebufferSlices > 0);
 
     return bBindRenderTargets;
 }
@@ -574,8 +581,13 @@ inline void DeviceContextBase<BaseInterface> :: ClearStateCache()
         m_ScissorRects[sr] = Rect();
     m_NumScissorRects = 0;
 
-    // Vector of strong references to bound render targets
-    for(Uint32 rt=0; rt < m_NumBoundRenderTargets; ++rt )
+    ClearRenderTargets();
+}
+
+template<typename BaseInterface>
+inline void DeviceContextBase<BaseInterface> :: ClearRenderTargets()
+{
+    for (Uint32 rt = 0; rt < m_NumBoundRenderTargets; ++rt)
         m_pBoundRenderTargets[rt].Release();
 #ifdef _DEBUG
     for (Uint32 rt = m_NumBoundRenderTargets; rt < _countof(m_pBoundRenderTargets); ++rt)
@@ -584,6 +596,10 @@ inline void DeviceContextBase<BaseInterface> :: ClearStateCache()
     }
 #endif
     m_NumBoundRenderTargets = 0;
+    m_FramebufferWidth = 0;
+    m_FramebufferHeight = 0;
+    m_FramebufferSlices = 0;
+    m_IsDefaultFramebufferBound = false;
 
     m_pBoundDepthStencil.Release();
 }

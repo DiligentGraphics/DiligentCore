@@ -104,7 +104,8 @@ void SwapChainGLImpl::Resize( Uint32 NewWidth, Uint32 NewHeight )
             // To update the viewport is the only thing we need to do in OpenGL
             if( bIsDefaultFBBound )
             {
-                // Update viewport
+                // Update framebuffer size and viewport
+                pImmediateCtxGL->SetRenderTargets(0, nullptr, nullptr);
                 pImmediateCtxGL->SetViewports( 1, nullptr, 0, 0 );
             }
         }

@@ -158,6 +158,8 @@ void SwapChainD3D12Impl::UpdateSwapChain(bool CreateNew)
         {
             auto *pImmediateCtxD3D12 = pDeviceContext.RawPtr<DeviceContextD3D12Impl>();
             bool bIsDefaultFBBound = pImmediateCtxD3D12->IsDefaultFBBound();
+            if(bIsDefaultFBBound)
+                pImmediateCtxD3D12->ClearRenderTargets();
 
             // All references to the swap chain must be released before it can be resized
             m_pBackBufferRTV.clear();
