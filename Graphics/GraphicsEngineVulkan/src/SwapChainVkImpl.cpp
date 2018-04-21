@@ -400,6 +400,7 @@ void SwapChainVkImpl::AcquireNextImage(DeviceContextVkImpl *pDeviceCtxVk)
     VERIFY(res == VK_SUCCESS, "Failed to acquire next swap chain image");
 
     // Next command in the device context must wait for the next image to be acquired
+    // Unlike fences or events, the act of waiting for a semaphore also unsignals that semaphore (6.4.2)
     pDeviceCtxVk->AddWaitSemaphore(m_ImageAcquiredSemaphores[m_SemaphoreIndex], VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
 }
 
@@ -427,6 +428,7 @@ void SwapChainVkImpl::Present(Uint32 SyncInterval)
     PresentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     PresentInfo.pNext = nullptr;
     PresentInfo.waitSemaphoreCount = 1;
+    // Unlike fences or events, the act of waiting for a semaphore also unsignals that semaphore (6.4.2)
     VkSemaphore WaitSemaphore[] = { m_DrawCompleteSemaphores[m_SemaphoreIndex] };
     PresentInfo.pWaitSemaphores = WaitSemaphore;
     PresentInfo.swapchainCount = 1;
