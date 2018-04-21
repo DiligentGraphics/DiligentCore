@@ -126,7 +126,7 @@ public:
     size_t GetNumCommandsInCtx()const { return m_State.NumCommands; }
 
 private:
-    void CommitRenderPassAndFramebuffer();
+    void CommitRenderPassAndFramebuffer(class PipelineStateVkImpl *pPipelineStateVk);
     void CommitVkIndexBuffer(VALUE_TYPE IndexType);
     void CommitVkVertexBuffers(class GraphicsContext &GraphCtx);
     void TransitionVkVertexBuffers(class GraphicsContext &GraphCtx);

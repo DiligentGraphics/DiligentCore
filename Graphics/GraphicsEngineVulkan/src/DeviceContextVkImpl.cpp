@@ -116,10 +116,11 @@ namespace Diligent
 
     void DeviceContextVkImpl::SetPipelineState(IPipelineState *pPipelineState)
     {
-        if (m_CommandBuffer.GetState().RenderPass)
+        if (m_CommandBuffer.GetState().RenderPass != VK_NULL_HANDLE)
         {
             m_CommandBuffer.EndRenderPass();
         }
+        m_CommandBuffer.ResetFramebuffer();
 
         // Never flush deferred context!
         if (!m_bIsDeferred && m_State.NumCommands >= m_NumCommandsToFlush)
@@ -221,10 +222,72 @@ namespace Diligent
         }
     }
 
-    void DeviceContextVkImpl::CommitRenderPassAndFramebuffer()
+    void DeviceContextVkImpl::CommitRenderPassAndFramebuffer(PipelineStateVkImpl *pPipelineStateVk)
     {
-        auto *pPipelineStateVk = m_pPipelineState.RawPtr<PipelineStateVkImpl>();
-        
+        auto *pRenderDeviceVk = m_pDevice.RawPtr<RenderDeviceVkImpl>();        
+        auto &FBCache = pRenderDeviceVk->GetFramebufferCache();
+        auto RenderPass = pPipelineStateVk->GetVkRenderPass();
+        const auto& CmdBufferState = m_CommandBuffer.GetState();
+        if(CmdBufferState.Framebuffer != VK_NULL_HANDLE)
+        {
+            // Render targets have not changed since last time, so we can reuse 
+            // previously bound framebuffer
+            VERIFY_EXPR(m_FramebufferWidth == CmdBufferState.FramebufferWidth && m_FramebufferHeight == CmdBufferState.FramebufferHeight);
+            m_CommandBuffer.BeginRenderPass(RenderPass, CmdBufferState.Framebuffer, CmdBufferState.FramebufferWidth, CmdBufferState.FramebufferHeight);
+            return;
+        }
+
+        FramebufferCache::FramebufferCacheKey Key;
+        Key.Pass = RenderPass;
+        if(m_NumBoundRenderTargets == 0 && !m_pBoundDepthStencil)
+        {
+            auto *pSwapChainVk = m_pSwapChain.RawPtr<ISwapChainVk>();
+            const auto &GrPipelineDesc = pPipelineStateVk->GetDesc().GraphicsPipeline;
+            if(GrPipelineDesc.DSVFormat != TEX_FORMAT_UNKNOWN)
+            {
+                auto *pDSV = pSwapChainVk->GetDepthBufferDSV();
+                TransitionImageLayout(pDSV->GetTexture(), VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+                Key.DSV = pDSV->GetVulkanImageView();
+            }
+            else 
+                Key.DSV = VK_NULL_HANDLE;
+
+            if(GrPipelineDesc.RTVFormats[0] != TEX_FORMAT_UNKNOWN)
+            {
+                auto *pRTV = pSwapChainVk->GetCurrentBackBufferRTV();
+                TransitionImageLayout(pRTV->GetTexture(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+                Key.NumRenderTargets = 1;
+                Key.RTVs[0] = pRTV->GetVulkanImageView();
+            }
+            else
+                Key.NumRenderTargets = 0;
+        }
+        else
+        {
+            if(m_pBoundDepthStencil)
+            {
+                auto *pDSVVk = m_pBoundDepthStencil.RawPtr<TextureViewVkImpl>();
+                TransitionImageLayout(pDSVVk->GetTexture(), VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+                Key.DSV = pDSVVk->GetVulkanImageView();
+            }
+            else
+                Key.DSV = nullptr;
+
+            Key.NumRenderTargets = m_NumBoundRenderTargets;
+            for(Uint32 rt=0; rt < m_NumBoundRenderTargets; ++rt)
+            {
+                if(ITextureView *pRTV = m_pBoundRenderTargets[rt])
+                {
+                    auto *pRTVVk = ValidatedCast<TextureViewVkImpl>(pRTV);
+                    TransitionImageLayout(pRTV->GetTexture(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+                    Key.RTVs[rt] = pRTVVk->GetVulkanImageView();
+                }
+                else
+                    Key.RTVs[rt] = nullptr;
+            }
+        }
+        auto vkFramebuffer = FBCache.GetFramebuffer(Key, m_FramebufferWidth, m_FramebufferHeight, m_FramebufferSlices);
+        m_CommandBuffer.BeginRenderPass(Key.Pass, vkFramebuffer, m_FramebufferWidth, m_FramebufferHeight);
     }
 
     void DeviceContextVkImpl::CommitVkIndexBuffer(VALUE_TYPE IndexType)
@@ -357,8 +420,11 @@ namespace Diligent
         }
 #endif
 
+        auto *pPipelineStateVk = m_pPipelineState.RawPtr<PipelineStateVkImpl>();
+
+        EnsureVkCmdBuffer();
         if(m_CommandBuffer.GetState().RenderPass == VK_NULL_HANDLE)
-            CommitRenderPassAndFramebuffer();
+            CommitRenderPassAndFramebuffer(pPipelineStateVk);
 
 #if 0
         auto &GraphCtx = RequestCmdContext()->AsGraphicsContext();
@@ -377,7 +443,7 @@ namespace Diligent
                 CommitVkIndexBuffer(DrawAttribs.IndexType);
         }
 
-        auto *pPipelineStateVk = m_pPipelineState.RawPtr<PipelineStateVkImpl>();
+        
         
         auto VkTopology = TopologyToVkTopology( DrawAttribs.Topology );
         GraphCtx.SetPrimitiveTopology(VkTopology);
@@ -799,12 +865,12 @@ namespace Diligent
     {
         if( TDeviceContextBase::SetRenderTargets( NumRenderTargets, ppRenderTargets, pDepthStencil ) )
         {
-#if 0
-            CommitRenderTargets();
+            if(m_CommandBuffer.GetState().RenderPass != VK_NULL_HANDLE)
+                m_CommandBuffer.EndRenderPass();
+            m_CommandBuffer.ResetFramebuffer();
 
             // Set the viewport to match the render target size
             SetViewports(1, nullptr, 0, 0);
-#endif
         }
     }
    

@@ -111,6 +111,10 @@ FramebufferCache::~FramebufferCache()
 
 void FramebufferCache::OnDestroyImageView(VkImageView ImgView)
 {
+    // TODO: when a render pass is released, we need to also destroy 
+    // all entries in the m_ViewToKeyMap that refer to all keys with
+    // that render pass
+
     std::lock_guard<std::mutex> Lock(m_Mutex);
     auto equal_range = m_ViewToKeyMap.equal_range(ImgView);
     for(auto it = equal_range.first; it != equal_range.second; ++it)
@@ -129,6 +133,9 @@ void FramebufferCache::OnDestroyImageView(VkImageView ImgView)
 
 void FramebufferCache::OnDestroyRenderPass(VkRenderPass Pass)
 {
+    // TODO: when an image view is released, we need to also destroy 
+    // all entries in the m_RenderPassToKeyMap that refer to the keys
+    // with the same image view
     std::lock_guard<std::mutex> Lock(m_Mutex);
     auto equal_range = m_RenderPassToKeyMap.equal_range(Pass);
     for (auto it = equal_range.first; it != equal_range.second; ++it)

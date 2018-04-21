@@ -40,8 +40,8 @@ class ITextureViewVk : public ITextureView
 {
 public:
     
-    /// Returns CPU descriptor handle of the texture view.
-    //virtual D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle() = 0;
+    /// Returns Vulkan image view handle
+    virtual VkImageView GetVulkanImageView()const = 0;
 };
 
 }

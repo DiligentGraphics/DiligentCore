@@ -53,7 +53,7 @@ public:
 
     void GenerateMips( IDeviceContext *pContext )override;
     
-    VkImageView GetVulkanImageView()const{return m_ImageView;}
+    VkImageView GetVulkanImageView()const override final{return m_ImageView;}
 
 protected:
     /// Vulkan image view descriptor handle

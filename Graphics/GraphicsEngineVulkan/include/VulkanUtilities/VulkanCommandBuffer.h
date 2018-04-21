@@ -169,14 +169,27 @@ namespace VulkanUtilities
                 );
                 m_State.RenderPass = RenderPass;
                 m_State.Framebuffer = Framebuffer;
+                m_State.FramebufferWidth = FramebufferWidth;
+                m_State.FramebufferHeight = FramebufferHeight;
             }
         }
 
         void EndRenderPass()
         {
+            VERIFY(m_State.RenderPass != VK_NULL_HANDLE, "Render pass has not been started");
+            VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
             vkCmdEndRenderPass(m_VkCmdBuffer);
             m_State.RenderPass = VK_NULL_HANDLE;
+            // Do not set framebuffer to null. We will reuse cached framebuffer handle
+            // if the render pass is restarted without changing render targets
+            //m_State.Framebuffer = VK_NULL_HANDLE;
+        }
+
+        void ResetFramebuffer()
+        {
             m_State.Framebuffer = VK_NULL_HANDLE;
+            m_State.FramebufferWidth = 0;
+            m_State.FramebufferHeight = 0;
         }
 
         void EndCommandBuffer()
@@ -287,6 +300,8 @@ namespace VulkanUtilities
             VkPipeline ComputePipeline = VK_NULL_HANDLE;
             VkBuffer IndexBuffer = VK_NULL_HANDLE;
             VkDeviceSize IndexBufferOffset = 0;
+            uint32_t FramebufferWidth = 0;
+            uint32_t FramebufferHeight = 0;
             VkIndexType IndexType = VK_INDEX_TYPE_MAX_ENUM;
         };
 
