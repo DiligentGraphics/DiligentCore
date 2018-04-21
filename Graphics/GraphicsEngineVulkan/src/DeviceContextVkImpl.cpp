@@ -162,6 +162,9 @@ namespace Diligent
         }
         else
         {
+            auto vkPipeline = pPipelineStateVk->GetVkPipeline();
+            m_CommandBuffer.BindGraphicsPipeline(vkPipeline);
+
             if(CommitStates)
             {
                 m_CommandBuffer.SetStencilReference(m_StencilRef);
@@ -466,10 +469,11 @@ namespace Diligent
                 LOG_ERROR_MESSAGE("Pipeline state \"", pPipelineStateVk->GetDesc().Name, "\" contains shader resources, but IDeviceContext::CommitShaderResources() was not called" );
         }
 #endif
-        
+#endif
 
         if( DrawAttribs.IsIndirect )
         {
+#if 0
             if( auto *pBufferVk = ValidatedCast<BufferVkImpl>(DrawAttribs.pIndirectDrawAttribs) )
             {
 #ifdef _DEBUG
@@ -486,15 +490,16 @@ namespace Diligent
             {
                 LOG_ERROR_MESSAGE("Valid pIndirectDrawAttribs must be provided for indirect draw command");
             }
+#endif
         }
         else
         {
             if( DrawAttribs.IsIndexed )
-                GraphCtx.DrawIndexed(DrawAttribs.NumIndices, DrawAttribs.NumInstances, DrawAttribs.FirstIndexLocation, DrawAttribs.BaseVertex, DrawAttribs.FirstInstanceLocation);
+                m_CommandBuffer.DrawIndexed(DrawAttribs.NumIndices, DrawAttribs.NumInstances, DrawAttribs.FirstIndexLocation, DrawAttribs.BaseVertex, DrawAttribs.FirstInstanceLocation);
             else
-                GraphCtx.Draw(DrawAttribs.NumVertices, DrawAttribs.NumInstances, DrawAttribs.StartVertexLocation, DrawAttribs.FirstInstanceLocation );
+                m_CommandBuffer.Draw(DrawAttribs.NumVertices, DrawAttribs.NumInstances, DrawAttribs.StartVertexLocation, DrawAttribs.FirstInstanceLocation );
         }
-#endif
+
         ++m_State.NumCommands;
     }
 
