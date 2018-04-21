@@ -134,7 +134,7 @@ public:
     /// Returns the render device
     IRenderDevice *GetDevice(){return m_pDevice;}
 
-    inline void ClearRenderTargets();
+    inline void ResetRenderTargets();
 
 protected:
     inline bool SetBlendFactors(const float *BlendFactors, int Dummy);
@@ -581,11 +581,11 @@ inline void DeviceContextBase<BaseInterface> :: ClearStateCache()
         m_ScissorRects[sr] = Rect();
     m_NumScissorRects = 0;
 
-    ClearRenderTargets();
+    ResetRenderTargets();
 }
 
 template<typename BaseInterface>
-inline void DeviceContextBase<BaseInterface> :: ClearRenderTargets()
+inline void DeviceContextBase<BaseInterface> :: ResetRenderTargets()
 {
     for (Uint32 rt = 0; rt < m_NumBoundRenderTargets; ++rt)
         m_pBoundRenderTargets[rt].Release();

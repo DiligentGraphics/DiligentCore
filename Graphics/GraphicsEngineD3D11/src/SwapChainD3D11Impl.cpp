@@ -142,7 +142,7 @@ void SwapChainD3D11Impl::UpdateSwapChain(bool CreateNew)
         auto *pImmediateCtxD3D11 = pDeviceContext.RawPtr<DeviceContextD3D11Impl>();
         bool bIsDefaultFBBound = pImmediateCtxD3D11->IsDefaultFBBound();
         if (bIsDefaultFBBound)
-            pImmediateCtxD3D11->ClearRenderTargets();
+            pImmediateCtxD3D11->ResetRenderTargets();
 
         // Swap chain cannot be resized until all references are released
         m_pRenderTargetView.Release();

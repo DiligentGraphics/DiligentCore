@@ -475,6 +475,8 @@ void SwapChainVkImpl::Resize( Uint32 NewWidth, Uint32 NewHeight )
             {
                 auto *pImmediateCtxVk = pDeviceContext.RawPtr<DeviceContextVkImpl>();
                 bool bIsDefaultFBBound = pImmediateCtxVk->IsDefaultFBBound();
+                if(bIsDefaultFBBound)
+                    pImmediateCtxVk->ResetRenderTargets();
 
                 // All references to the swap chain must be released before it can be resized
                 m_pBackBufferRTV.clear();
