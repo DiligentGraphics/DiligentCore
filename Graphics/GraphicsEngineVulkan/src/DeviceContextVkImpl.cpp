@@ -625,6 +625,10 @@ namespace Diligent
     {
         VERIFY(!m_bIsDeferred, "Flush() should only be called for immediate contexts");
 
+        VkSubmitInfo SubmitInfo = {};
+        SubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        SubmitInfo.pNext = nullptr;
+
         auto pDeviceVkImpl = m_pDevice.RawPtr<RenderDeviceVkImpl>();
         auto vkCmdBuff = m_CommandBuffer.GetVkCmdBuffer();
         if(vkCmdBuff != VK_NULL_HANDLE )
@@ -639,24 +643,30 @@ namespace Diligent
 
                 m_CommandBuffer.FlushBarriers();
                 m_CommandBuffer.EndCommandBuffer();
-
-                VkSubmitInfo SubmitInfo = {};
-                SubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-                SubmitInfo.pNext = nullptr;
-                SubmitInfo.waitSemaphoreCount = static_cast<uint32_t>(m_WaitSemaphores.size());
-                VERIFY_EXPR(m_WaitSemaphores.size() == m_WaitDstStageMasks.size());
-                SubmitInfo.pWaitSemaphores = SubmitInfo.waitSemaphoreCount != 0 ? m_WaitSemaphores.data() : nullptr;
-                SubmitInfo.pWaitDstStageMask = SubmitInfo.waitSemaphoreCount != 0 ? m_WaitDstStageMasks.data() : nullptr;
+                
                 SubmitInfo.commandBufferCount = 1;
                 SubmitInfo.pCommandBuffers = &vkCmdBuff;
-                SubmitInfo.signalSemaphoreCount = static_cast<uint32_t>(m_SignalSemaphores.size());
-                SubmitInfo.pSignalSemaphores = SubmitInfo.signalSemaphoreCount != 0 ? m_SignalSemaphores.data() : nullptr;
-                pDeviceVkImpl->ExecuteCommandBuffer(SubmitInfo, true);
-
-                m_WaitSemaphores.clear();
-                m_WaitDstStageMasks.clear();
-                m_SignalSemaphores.clear();
             }
+        }
+
+        SubmitInfo.waitSemaphoreCount = static_cast<uint32_t>(m_WaitSemaphores.size());
+        VERIFY_EXPR(m_WaitSemaphores.size() == m_WaitDstStageMasks.size());
+        SubmitInfo.pWaitSemaphores = SubmitInfo.waitSemaphoreCount != 0 ? m_WaitSemaphores.data() : nullptr;
+        SubmitInfo.pWaitDstStageMask = SubmitInfo.waitSemaphoreCount != 0 ? m_WaitDstStageMasks.data() : nullptr;
+        SubmitInfo.signalSemaphoreCount = static_cast<uint32_t>(m_SignalSemaphores.size());
+        SubmitInfo.pSignalSemaphores = SubmitInfo.signalSemaphoreCount != 0 ? m_SignalSemaphores.data() : nullptr;
+
+        if(SubmitInfo.commandBufferCount != 0 || SubmitInfo.waitSemaphoreCount !=0 || SubmitInfo.signalSemaphoreCount != 0)
+        {
+            pDeviceVkImpl->ExecuteCommandBuffer(SubmitInfo, true);
+        }
+
+        m_WaitSemaphores.clear();
+        m_WaitDstStageMasks.clear();
+        m_SignalSemaphores.clear();
+
+        if (vkCmdBuff != VK_NULL_HANDLE)
+        {
             DisposeVkCmdBuffer();
         }
 

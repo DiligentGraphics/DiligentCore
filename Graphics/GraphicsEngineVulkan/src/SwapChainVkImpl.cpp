@@ -197,6 +197,8 @@ void SwapChainVkImpl::CreateVulkanSwapChain()
         // If the surface size is defined, the swap chain size must match
         swapchainExtent = surfCapabilities.currentExtent;
     }
+    swapchainExtent.width  = std::max(swapchainExtent.width,  1u);
+    swapchainExtent.height = std::max(swapchainExtent.height, 1u);
     m_SwapChainDesc.Width  = swapchainExtent.width;
     m_SwapChainDesc.Height = swapchainExtent.height;
 
@@ -475,13 +477,16 @@ void SwapChainVkImpl::Resize( Uint32 NewWidth, Uint32 NewHeight )
                 // All references to the swap chain must be released before it can be resized
                 m_pBackBufferRTV.clear();
                 m_pDepthBufferDSV.Release();
-                m_ImageAcquiredSemaphores.clear();
-                m_DrawCompleteSemaphores.clear();
-                m_SemaphoreIndex = 0;
 
                 // This will release references to Vk swap chain buffers hold by
                 // m_pBackBufferRTV[]
                 pDeviceVk->IdleGPU(true);
+
+                // We must wait unitl GPU is idled before destroying semaphores as they
+                // are destroyed immediately
+                m_ImageAcquiredSemaphores.clear();
+                m_DrawCompleteSemaphores.clear();
+                m_SemaphoreIndex = 0;
 
                 CreateVulkanSwapChain();
                 InitBuffersAndViews();

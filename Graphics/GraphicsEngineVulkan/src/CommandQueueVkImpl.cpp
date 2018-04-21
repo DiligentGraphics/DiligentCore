@@ -21,6 +21,7 @@
  *  of the possibility of such damages.
  */
 
+#include <thread>
 #include "pch.h"
 #include "CommandQueueVkImpl.h"
 
@@ -103,6 +104,14 @@ void CommandQueueVkImpl::IdleGPU()
         m_LastCompletedFenceValue = LastCompletedFenceValue;
     for(auto& val_fence : m_PendingFences)
     {
+        // For some reason after idling the queue not all fences are signaled
+        while(m_LogicalDevice->GetFenceStatus(val_fence.second) != VK_SUCCESS)
+        {
+            VkFence FenceToWait = val_fence.second;
+            auto res = vkWaitForFences(m_LogicalDevice->GetVkDevice(), 1, &FenceToWait, VK_TRUE, UINT64_MAX);
+            VERIFY_EXPR(res == VK_SUCCESS);
+        }
+
         auto status = m_LogicalDevice->GetFenceStatus(val_fence.second);
         VERIFY(status == VK_SUCCESS, "All pending fences must now be complete!");
         m_FencePool.DisposeFence(std::move(val_fence.second));
