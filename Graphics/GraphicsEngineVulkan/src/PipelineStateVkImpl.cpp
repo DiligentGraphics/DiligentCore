@@ -56,6 +56,9 @@ void PipelineStateVkImpl::ParseShaderResourceLayout(IShader *pShader)
 
 void PipelineStateVkImpl::CreateRenderPass(const VulkanUtilities::VulkanLogicalDevice &LogicalDevice)
 {
+    // NOTE: framebuffer cache and clear commands assume that depth buffer
+    // attachment alwasy goes first followed by all color attachments
+
     const auto& GraphicsPipeline = m_Desc.GraphicsPipeline;
     // Create render pass (7.1)
     VkRenderPassCreateInfo RenderPassCI = {};

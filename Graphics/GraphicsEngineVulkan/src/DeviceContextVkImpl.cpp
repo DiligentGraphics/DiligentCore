@@ -589,11 +589,38 @@ namespace Diligent
         auto *pTextureVk = ValidatedCast<TextureVkImpl>(pTexture);
         const auto &ViewDesc = pVkDSV->GetDesc();
         EnsureVkCmdBuffer();
+        bool ClearedAsAttachment = false;
         if(m_CommandBuffer.GetState().RenderPass != VK_NULL_HANDLE)
         {
-            UNSUPPORTED("Not yet implemented");
+            if(m_pPipelineState && 
+               m_pPipelineState->GetDesc().GraphicsPipeline.DSVFormat != TEX_FORMAT_UNKNOWN && 
+               (pView == nullptr || pView == m_pBoundDepthStencil))
+            {
+                VkClearAttachment ClearAttachment = {};
+                ClearAttachment.aspectMask = 0;
+                if (ClearFlags & CLEAR_DEPTH_FLAG)   ClearAttachment.aspectMask |= VK_IMAGE_ASPECT_DEPTH_BIT;
+                if (ClearFlags & CLEAR_STENCIL_FLAG) ClearAttachment.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+                // colorAttachment is only meaningful if VK_IMAGE_ASPECT_COLOR_BIT is set in aspectMask
+                ClearAttachment.colorAttachment = VK_ATTACHMENT_UNUSED;
+                ClearAttachment.clearValue.depthStencil.depth = fDepth;
+                ClearAttachment.clearValue.depthStencil.stencil = Stencil;
+                VkClearRect ClearRect;
+                ClearRect.rect = { { 0,0 },{ m_FramebufferWidth, m_FramebufferHeight } };
+                ClearRect.baseArrayLayer = ViewDesc.FirstArraySlice;
+                ClearRect.layerCount = ViewDesc.NumArraySlices;
+                // No memory barriers are needed between vkCmdClearAttachments and preceding or 
+                // subsequent draw or attachment clear commands in the same subpass (17.2)
+                m_CommandBuffer.ClearAttachment(ClearAttachment, ClearRect);
+                ClearedAsAttachment = true;
+            }
+            else
+            {
+                // End render pass to clear the buffer with vkCmdClearDepthStencilImage
+                m_CommandBuffer.EndRenderPass();
+            }
         }
-        else
+
+        if(!ClearedAsAttachment)
         {
             // Image layout must be VK_IMAGE_LAYOUT_GENERAL or VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL (17.1)
             TransitionImageLayout(pTexture, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
@@ -670,11 +697,49 @@ namespace Diligent
         auto *pTextureVk = ValidatedCast<TextureVkImpl>(pTexture);
         const auto &ViewDesc = pVkRTV->GetDesc();
         EnsureVkCmdBuffer();
+
+        bool ClearedAsAttachment = false;
         if(m_CommandBuffer.GetState().RenderPass != VK_NULL_HANDLE)
         {
-            UNSUPPORTED("Not yet implemented");
+            Uint32 RTIndex = 0;
+            if(pView == nullptr)
+            {
+                RTIndex = 0;
+            }
+            else
+            {
+                for(; RTIndex < m_NumBoundRenderTargets; ++RTIndex)
+                    if(m_pBoundRenderTargets[RTIndex] == pView)
+                        break;
+            }
+
+            if(RTIndex == 0 && pView == nullptr || RTIndex < m_NumBoundRenderTargets)
+            {
+                VkClearAttachment ClearAttachment = {};
+                ClearAttachment.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                // colorAttachment is only meaningful if VK_IMAGE_ASPECT_COLOR_BIT is set in aspectMask, 
+                // in which case it is an index to the pColorAttachments array in the VkSubpassDescription 
+                // structure of the current subpass which selects the color attachment to clear (17.2)
+                // It is NOT the render pass attachment index
+                ClearAttachment.colorAttachment = RTIndex;
+                ClearAttachment.clearValue.color = ClearValueToVkClearValue(RGBA, ViewDesc.Format);
+                VkClearRect ClearRect;
+                ClearRect.rect = {{0,0}, {m_FramebufferWidth, m_FramebufferHeight}};
+                ClearRect.baseArrayLayer = ViewDesc.FirstArraySlice;
+                ClearRect.layerCount = ViewDesc.NumArraySlices;
+                // No memory barriers are needed between vkCmdClearAttachments and preceding or 
+                // subsequent draw or attachment clear commands in the same subpass (17.2)
+                m_CommandBuffer.ClearAttachment(ClearAttachment, ClearRect);
+                ClearedAsAttachment = true;
+            }
+            else
+            {
+                // End current render pass and clear the image with vkCmdClearColorImage
+                m_CommandBuffer.EndRenderPass();
+            }
         }
-        else
+
+        if(!ClearedAsAttachment)
         {
             // Image layout must be VK_IMAGE_LAYOUT_GENERAL or VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL (17.1)
             TransitionImageLayout(pTexture, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
@@ -685,6 +750,7 @@ namespace Diligent
             Subresource.layerCount = ViewDesc.NumArraySlices;
             Subresource.baseMipLevel = ViewDesc.MostDetailedMip;
             Subresource.levelCount = ViewDesc.NumMipLevels;
+            VERIFY(ViewDesc.NumMipLevels, "RTV must contain single mip level");
 
             m_CommandBuffer.ClearColorImage(pTextureVk->GetVkImage(), ClearValue, Subresource);
         }
