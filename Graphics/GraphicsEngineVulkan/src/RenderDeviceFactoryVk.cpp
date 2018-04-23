@@ -160,7 +160,11 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk( const EngineVkAttribs& Crea
         DeviceCreateInfo.pEnabledFeatures = &DeviceFeatures; // NULL or a pointer to a VkPhysicalDeviceFeatures structure that contains 
                                                              // boolean indicators of all the features to be enabled.
 
-        std::vector<const char*> DeviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+        std::vector<const char*> DeviceExtensions = 
+        { 
+            VK_KHR_SWAPCHAIN_EXTENSION_NAME, 
+            VK_KHR_MAINTENANCE1_EXTENSION_NAME // To allow negative viewport height
+        };
         const bool DebugMarkersSupported = PhysicalDevice->IsExtensionSupported(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
         if (DebugMarkersSupported && CreationAttribs.EnableValidation)
         {

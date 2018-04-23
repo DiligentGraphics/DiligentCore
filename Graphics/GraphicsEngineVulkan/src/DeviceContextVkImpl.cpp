@@ -775,9 +775,9 @@ namespace Diligent
         for( Uint32 vp = 0; vp < m_NumViewports; ++vp )
         {
             VkViewports[vp].x        = m_Viewports[vp].TopLeftX;
-            VkViewports[vp].y        = m_Viewports[vp].TopLeftY;
+            VkViewports[vp].y        = m_FramebufferHeight - m_Viewports[vp].TopLeftY;
             VkViewports[vp].width    = m_Viewports[vp].Width;
-            VkViewports[vp].height   = m_Viewports[vp].Height;
+            VkViewports[vp].height   = -m_Viewports[vp].Height;
             VkViewports[vp].minDepth = m_Viewports[vp].MinDepth;
             VkViewports[vp].maxDepth = m_Viewports[vp].MaxDepth;
         }
