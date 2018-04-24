@@ -84,6 +84,9 @@ namespace Diligent
 
             Flush();
         }
+
+        auto VkCmdPool = m_CmdPool.Release();
+        m_pDevice.RawPtr<RenderDeviceVkImpl>()->SafeReleaseVkObject(std::move(VkCmdPool));
     }
 
     IMPLEMENT_QUERY_INTERFACE( DeviceContextVkImpl, IID_DeviceContextVk, TDeviceContextBase )

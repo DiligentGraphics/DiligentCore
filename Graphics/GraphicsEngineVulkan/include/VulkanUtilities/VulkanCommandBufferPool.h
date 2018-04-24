@@ -45,6 +45,8 @@ namespace VulkanUtilities
 
         VkCommandBuffer GetCommandBuffer(uint64_t LastCompletedFence, const char* DebugName = "");
         void DisposeCommandBuffer(VkCommandBuffer CmdBuffer, uint64_t FenceValue);
+        
+        CommandPoolWrapper&& Release();
 
     private:
         // Shared point to logical device must be defined before the command pool

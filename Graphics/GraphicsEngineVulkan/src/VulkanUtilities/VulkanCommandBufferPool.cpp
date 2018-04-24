@@ -112,4 +112,11 @@ namespace VulkanUtilities
         // executed the command buffer
         m_DiscardedCmdBuffers.emplace_back(FenceValue, CmdBuffer);
     }
+
+    CommandPoolWrapper&& VulkanCommandBufferPool::Release()
+    {
+        m_LogicalDevice.reset();
+        m_DiscardedCmdBuffers.clear();
+        return std::move(m_CmdPool);
+    }
 }

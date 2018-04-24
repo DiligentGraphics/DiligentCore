@@ -134,9 +134,6 @@ private:
     void CommitViewports();
     void CommitScissorRects();
 
-#if 0
-    friend class SwapChainVkImpl;
-#endif
     inline void EnsureVkCmdBuffer();
     inline void DisposeVkCmdBuffer();
     
@@ -171,8 +168,10 @@ private:
     FixedBlockMemoryAllocator m_CmdListAllocator;
     const Uint32 m_ContextId;
 #endif
+
     VulkanUtilities::VulkanCommandBufferPool m_CmdPool;
 
+    // Semaphores are not owned by the command context
     std::vector<VkSemaphore> m_WaitSemaphores;
     std::vector<VkPipelineStageFlags> m_WaitDstStageMasks;
     std::vector<VkSemaphore> m_SignalSemaphores;

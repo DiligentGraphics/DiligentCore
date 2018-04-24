@@ -321,6 +321,7 @@ SwapChainVkImpl::~SwapChainVkImpl()
     if(m_VkSwapChain != VK_NULL_HANDLE)
     {
         auto *pDeviceVkImpl = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
+        pDeviceVkImpl->IdleGPU(true);
         vkDestroySwapchainKHR(pDeviceVkImpl->GetVkDevice(), m_VkSwapChain, NULL);
     }
 }
