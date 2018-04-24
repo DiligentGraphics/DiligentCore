@@ -233,19 +233,19 @@ namespace Diligent
         const auto& CmdBufferState = m_CommandBuffer.GetState();
         if(CmdBufferState.Framebuffer != VK_NULL_HANDLE)
         {
-            // Render targets have not changed since last time, so we can reuse 
+            // Render targets have not changed since the last time, so we can reuse 
             // previously bound framebuffer
             VERIFY_EXPR(m_FramebufferWidth == CmdBufferState.FramebufferWidth && m_FramebufferHeight == CmdBufferState.FramebufferHeight);
             m_CommandBuffer.BeginRenderPass(RenderPass, CmdBufferState.Framebuffer, CmdBufferState.FramebufferWidth, CmdBufferState.FramebufferHeight);
             return;
         }
 
+        const auto &GrPipelineDesc = pPipelineStateVk->GetDesc().GraphicsPipeline;
         FramebufferCache::FramebufferCacheKey Key;
         Key.Pass = RenderPass;
         if(m_NumBoundRenderTargets == 0 && !m_pBoundDepthStencil)
         {
             auto *pSwapChainVk = m_pSwapChain.RawPtr<ISwapChainVk>();
-            const auto &GrPipelineDesc = pPipelineStateVk->GetDesc().GraphicsPipeline;
             if(GrPipelineDesc.DSVFormat != TEX_FORMAT_UNKNOWN)
             {
                 auto *pDSV = pSwapChainVk->GetDepthBufferDSV();
@@ -255,6 +255,7 @@ namespace Diligent
             else 
                 Key.DSV = VK_NULL_HANDLE;
 
+            VERIFY(GrPipelineDesc.NumRenderTargets <= 1, "Pipeline state expects ", GrPipelineDesc.NumRenderTargets, " render targets, but default framebuffer has only one");
             if(GrPipelineDesc.RTVFormats[0] != TEX_FORMAT_UNKNOWN)
             {
                 auto *pRTV = pSwapChainVk->GetCurrentBackBufferRTV();
@@ -267,17 +268,26 @@ namespace Diligent
         }
         else
         {
-            if(m_pBoundDepthStencil)
+            if (GrPipelineDesc.DSVFormat != TEX_FORMAT_UNKNOWN)
             {
-                auto *pDSVVk = m_pBoundDepthStencil.RawPtr<TextureViewVkImpl>();
-                TransitionImageLayout(pDSVVk->GetTexture(), VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
-                Key.DSV = pDSVVk->GetVulkanImageView();
+                if(m_pBoundDepthStencil)
+                {
+                    auto *pDSVVk = m_pBoundDepthStencil.RawPtr<TextureViewVkImpl>();
+                    TransitionImageLayout(pDSVVk->GetTexture(), VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+                    Key.DSV = pDSVVk->GetVulkanImageView();
+                }
+                else
+                {
+                    LOG_ERROR("Currently bound graphics pipeline state expects depth-stencil buffer, but none is currently bound. This is an error and will result in undefined behavior");
+                    Key.DSV = VK_NULL_HANDLE;
+                }
             }
             else
                 Key.DSV = nullptr;
 
-            Key.NumRenderTargets = m_NumBoundRenderTargets;
-            for(Uint32 rt=0; rt < m_NumBoundRenderTargets; ++rt)
+            VERIFY(m_NumBoundRenderTargets >= GrPipelineDesc.NumRenderTargets, "Pipeline state expects ", GrPipelineDesc.NumRenderTargets, " render targets, but only ", m_NumBoundRenderTargets, " is bound");
+            Key.NumRenderTargets = GrPipelineDesc.NumRenderTargets;
+            for(Uint32 rt=0; rt < Key.NumRenderTargets; ++rt)
             {
                 if(ITextureView *pRTV = m_pBoundRenderTargets[rt])
                 {
@@ -701,19 +711,29 @@ namespace Diligent
         bool ClearedAsAttachment = false;
         if(m_CommandBuffer.GetState().RenderPass != VK_NULL_HANDLE)
         {
-            Uint32 RTIndex = 0;
+            static constexpr Uint32 InvalidAttachmentIndex = static_cast<Uint32>(-1);
+            Uint32 attachmentIndex = InvalidAttachmentIndex;
             if(pView == nullptr)
             {
-                RTIndex = 0;
+                attachmentIndex = 0;
             }
             else
             {
-                for(; RTIndex < m_NumBoundRenderTargets; ++RTIndex)
-                    if(m_pBoundRenderTargets[RTIndex] == pView)
+                VERIFY(m_pPipelineState, "Valid pipeline state must be bound inside active render pass");
+                const auto &GrPipelineDesc = m_pPipelineState->GetDesc().GraphicsPipeline;
+                VERIFY(m_NumBoundRenderTargets >= GrPipelineDesc.NumRenderTargets, "Pipeline state expects ", GrPipelineDesc.NumRenderTargets, " render targets, but only ", m_NumBoundRenderTargets, " is bound");
+                Uint32 MaxRTIndex = std::min(Uint32{GrPipelineDesc.NumRenderTargets}, m_NumBoundRenderTargets);
+                for(Uint32 rt = 0; rt < MaxRTIndex; ++rt)
+                {
+                    if(m_pBoundRenderTargets[rt] == pView)
+                    {
+                        attachmentIndex = rt;
                         break;
+                    }
+                }
             }
 
-            if(RTIndex == 0 && pView == nullptr || RTIndex < m_NumBoundRenderTargets)
+            if(attachmentIndex != InvalidAttachmentIndex)
             {
                 VkClearAttachment ClearAttachment = {};
                 ClearAttachment.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -721,7 +741,7 @@ namespace Diligent
                 // in which case it is an index to the pColorAttachments array in the VkSubpassDescription 
                 // structure of the current subpass which selects the color attachment to clear (17.2)
                 // It is NOT the render pass attachment index
-                ClearAttachment.colorAttachment = RTIndex;
+                ClearAttachment.colorAttachment = attachmentIndex;
                 ClearAttachment.clearValue.color = ClearValueToVkClearValue(RGBA, ViewDesc.Format);
                 VkClearRect ClearRect;
                 ClearRect.rect = {{0,0}, {m_FramebufferWidth, m_FramebufferHeight}};
@@ -808,6 +828,7 @@ namespace Diligent
         }
 
         m_State.NumCommands = 0;
+        m_CommandBuffer.Reset();
         m_pPipelineState.Release(); 
     }
 
