@@ -32,6 +32,11 @@ namespace VulkanUtilities
     class VulkanPhysicalDevice
     {
     public:
+        VulkanPhysicalDevice(const VulkanPhysicalDevice&) = delete;
+        VulkanPhysicalDevice(VulkanPhysicalDevice&&) = delete;
+        VulkanPhysicalDevice& operator = (const VulkanPhysicalDevice&) = delete;
+        VulkanPhysicalDevice& operator = (VulkanPhysicalDevice&&) = delete;
+
         static std::unique_ptr<VulkanPhysicalDevice> Create(VkPhysicalDevice vkDevice);
 
         uint32_t FindQueueFamily(VkQueueFlags QueueFlags)const;

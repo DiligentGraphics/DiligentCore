@@ -45,15 +45,15 @@ class BufferVkImpl : public BufferBase<IBufferVk, BufferViewVkImpl, FixedBlockMe
 public:
     typedef BufferBase<IBufferVk, BufferViewVkImpl, FixedBlockMemoryAllocator> TBufferBase;
     BufferVkImpl(IReferenceCounters *pRefCounters, 
-                    FixedBlockMemoryAllocator &BuffViewObjMemAllocator, 
-                    class RenderDeviceVkImpl *pDeviceVk, 
-                    const BufferDesc& BuffDesc, 
-                    const BufferData &BuffData = BufferData());
+                 FixedBlockMemoryAllocator &BuffViewObjMemAllocator, 
+                 class RenderDeviceVkImpl *pDeviceVk, 
+                 const BufferDesc& BuffDesc, 
+                 const BufferData &BuffData = BufferData());
     BufferVkImpl(IReferenceCounters *pRefCounters, 
-                    FixedBlockMemoryAllocator &BuffViewObjMemAllocator, 
-                    class RenderDeviceVkImpl *pDeviceVk, 
-                    const BufferDesc& BuffDesc, 
-                    void *pVkBuffer);
+                 FixedBlockMemoryAllocator &BuffViewObjMemAllocator, 
+                 class RenderDeviceVkImpl *pDeviceVk, 
+                 const BufferDesc& BuffDesc, 
+                 void *pVkBuffer);
     ~BufferVkImpl();
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
