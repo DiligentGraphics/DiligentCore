@@ -241,7 +241,7 @@ String BuildGLSLSourceString(const ShaderCreationAttribs &CreationAttribs, Targe
         GLSLSource.append(ConvertedSource);
     }
     else
-        GLSLSource.append(ShaderSource);
+        GLSLSource.append(ShaderSource, SourceLen);
 
     return GLSLSource;
 }
