@@ -31,6 +31,7 @@
 #include "ShaderBase.h"
 #include "ShaderResourceLayoutVk.h"
 #include "VulkanUtilities/VulkanObjectWrappers.h"
+#include "SPIRVShaderResources.h"
 
 #ifdef _DEBUG
 #   define VERIFY_SHADER_BINDINGS
@@ -62,10 +63,9 @@ public:
         return m_VkShaderModule;
     }
 
-/*
-    const std::shared_ptr<const ShaderResourcesVk>& GetShaderResources()const{return m_pShaderResources;}
-    const ShaderResourceLayoutVk& GetConstResLayout()const{return m_StaticResLayout;}
-
+    const std::shared_ptr<const SPIRVShaderResources>& GetShaderResources()const{return m_pShaderResources;}
+    //const ShaderResourceLayoutVk& GetConstResLayout()const{return m_StaticResLayout;}
+    /*
 #ifdef VERIFY_SHADER_BINDINGS
     void DbgVerifyStaticResourceBindings();
 #endif
@@ -73,13 +73,13 @@ public:
 private:
 
     DummyShaderVariable m_DummyShaderVar; ///< Dummy shader variable
-
+    */
     // ShaderResources class instance must be referenced through the shared pointer, because 
     // it is referenced by ShaderResourceLayoutVk class instances
-    std::shared_ptr<const ShaderResourcesVk> m_pShaderResources;
-    ShaderResourceLayoutVk m_StaticResLayout;
-    ShaderResourceCacheVk m_ConstResCache;
-*/
+    std::shared_ptr<const SPIRVShaderResources> m_pShaderResources;
+    //ShaderResourceLayoutVk m_StaticResLayout;
+    //ShaderResourceCacheVk m_ConstResCache;
+
     VulkanUtilities::ShaderModuleWrapper m_VkShaderModule;
 };
 

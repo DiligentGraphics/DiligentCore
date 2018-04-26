@@ -59,13 +59,13 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters *pRefCounters, RenderDeviceVkImpl 
     ShaderModuleCI.pCode = SPIRV.data();
     m_VkShaderModule = LogicalDevice.CreateShaderModule(ShaderModuleCI, m_Desc.Name);
     
-/*
     // Load shader resources
     auto &Allocator = GetRawAllocator();
-    auto *pRawMem = ALLOCATE(Allocator, "Allocator for ShaderResources", sizeof(ShaderResourcesVk));
-    auto *pResources = new (pRawMem) ShaderResourcesVk(m_pShaderByteCode, m_Desc);
-    m_pShaderResources.reset(pResources, STDDeleterRawMem<ShaderResourcesVk>(Allocator));
+    auto *pRawMem = ALLOCATE(Allocator, "Allocator for ShaderResources", sizeof(SPIRVShaderResources));
+    auto *pResources = new (pRawMem) SPIRVShaderResources(Allocator, m_Desc.ShaderType, std::move(SPIRV));
+    m_pShaderResources.reset(pResources, STDDeleterRawMem<SPIRVShaderResources>(Allocator));
 
+    /*
     // Clone only static resources that will be set directly in the shader
     // http://diligentgraphics.com/diligent-engine/architecture/Vk/shader-resource-layout#Initializing-Special-Resource-Layout-for-Managing-Static-Shader-Resources
     SHADER_VARIABLE_TYPE VarTypes[] = {SHADER_VARIABLE_TYPE_STATIC};

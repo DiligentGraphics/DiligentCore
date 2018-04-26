@@ -116,18 +116,14 @@ struct SPIRVShaderResourceAttribs
 class SPIRVShaderResources
 {
 public:
-    SPIRVShaderResources(IMemoryAllocator &Allocator, SHADER_TYPE ShaderType);
+    SPIRVShaderResources(IMemoryAllocator &Allocator, SHADER_TYPE ShaderType, std::vector<uint32_t> spirv_binary);
 
-    void Load(std::vector<uint32_t> spirv_binary);
-
-#if 0
     // Copies specified types of resources from another ShaderResources objects
     // Only resources listed in AllowedVarTypes are copied
     SPIRVShaderResources(IMemoryAllocator &Allocator,
-                    const ShaderResources& SPIRVShaderResources,
-                    const SHADER_VARIABLE_TYPE *AllowedVarTypes, 
-                    Uint32 NumAllowedTypes);
-#endif
+                         const SPIRVShaderResources& SrcResources,
+                         const SHADER_VARIABLE_TYPE *AllowedVarTypes, 
+                         Uint32 NumAllowedTypes);
 
     SPIRVShaderResources             (const SPIRVShaderResources&) = delete;
     SPIRVShaderResources             (SPIRVShaderResources&&)      = delete;
@@ -239,7 +235,7 @@ public:
     //size_t GetHash()const;
 
 protected:
-    void Initialize(IMemoryAllocator &Allocator, Uint32 NumCBs, Uint32 NumTexSRVs, Uint32 NumTexUAVs, Uint32 NumBufSRVs, Uint32 NumBufUAVs, Uint32 NumSamplers);
+    void Initialize(IMemoryAllocator &Allocator, Uint32 NumUBs, Uint32 NumSBs, Uint32 NumImgs, Uint32 NumSmplImgs, Uint32 NumACs, Uint32 NumSepImgs, Uint32 NumSepSmpls);
 
     __forceinline SPIRVShaderResourceAttribs& GetResAttribs(Uint32 n, Uint32 NumResources, Uint32 Offset)noexcept
     {
