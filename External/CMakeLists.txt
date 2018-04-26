@@ -15,4 +15,10 @@ if(PLATFORM_WIN32)
     set_target_properties(glslang OGLCompiler OSDependent SPIRV SPVRemapper HLSL PROPERTIES
         FOLDER Core/External/glslang
     )
+
+    add_subdirectory(SPIRV-Cross)
+    set_target_properties(SPIRVCross PROPERTIES
+        FOLDER Core/External
+    )
+
 endif()
