@@ -6,12 +6,12 @@ set(INCLUDE
     spirv.hpp
     spirv_cfg.hpp
     spirv_common.hpp
-    spirv_cpp.hpp
+    #spirv_cpp.hpp
     spirv_cross.hpp
     spirv_cross_util.hpp
-    spirv_glsl.hpp
-    spirv_hlsl.hpp
-    spirv_msl.hpp
+    #spirv_glsl.hpp
+    #spirv_hlsl.hpp
+    #spirv_msl.hpp
 )
 
 set(SRC
@@ -19,8 +19,8 @@ set(SRC
     #spirv_cpp.cpp
     spirv_cross.cpp
     spirv_cross_util.cpp
-    spirv_glsl.cpp
-    spirv_hlsl.cpp
+    #spirv_glsl.cpp
+    #spirv_hlsl.cpp
     #spirv_msl.cpp
 )
 

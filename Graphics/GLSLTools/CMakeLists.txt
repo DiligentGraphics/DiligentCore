@@ -12,9 +12,11 @@ set(SOURCE
 
 if(VULKAN_SUPPORTED)
     list(APPEND SOURCE 
+        src/SPIRVShaderResources.cpp
         src/GLSL2SPIRV.cpp
     )
     list(APPEND INCLUDE 
+        include/SPIRVShaderResources.h
         include/GLSL2SPIRV.h
     )
 endif()
@@ -42,6 +44,7 @@ if(VULKAN_SUPPORTED)
     PRIVATE
         glslang
         SPIRV
+        SPIRVCross
     )
     target_include_directories(GLSLTools 
     PRIVATE
