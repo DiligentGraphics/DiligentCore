@@ -167,7 +167,7 @@ ShaderResources::ShaderResources(IMemoryAllocator &Allocator,
 #pragma warning(pop)
 
     Uint32 CurrCB = 0, CurrTexSRV = 0, CurrTexUAV = 0, CurrBufSRV = 0, CurrBufUAV = 0, CurrSampler = 0;
-    ProcessResources(
+    SrcResources.ProcessResources(
         AllowedVarTypes, NumAllowedTypes,
 
         [&](const D3DShaderResourceAttribs &CB, Uint32)
