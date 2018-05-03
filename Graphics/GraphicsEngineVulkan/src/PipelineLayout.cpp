@@ -37,6 +37,23 @@ namespace Diligent
 {
 
 
+static VkShaderStageFlagBits ShaderTypeToVkShaderStageFlagBit(SHADER_TYPE ShaderType)
+{
+    switch(ShaderType)
+    {
+        case SHADER_TYPE_VERTEX:   return VK_SHADER_STAGE_VERTEX_BIT;
+        case SHADER_TYPE_HULL:     return VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+        case SHADER_TYPE_DOMAIN:   return VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+        case SHADER_TYPE_GEOMETRY: return VK_SHADER_STAGE_GEOMETRY_BIT;
+        case SHADER_TYPE_PIXEL:    return VK_SHADER_STAGE_FRAGMENT_BIT;
+        case SHADER_TYPE_COMPUTE:  return VK_SHADER_STAGE_COMPUTE_BIT;
+        
+        default: 
+            UNEXPECTED("Unknown shader type");
+            return VK_SHADER_STAGE_VERTEX_BIT;
+    }
+}
+
 PipelineLayout::DescriptorSetLayoutManager::DescriptorSetLayoutManager(IMemoryAllocator &MemAllocator):
     m_MemAllocator(MemAllocator),
     m_DescriptorSetLayouts(STD_ALLOCATOR_RAW_MEM(DescriptorSetLayout, MemAllocator, "Allocator for Decriptor Set Layouts")),
@@ -171,6 +188,18 @@ bool PipelineLayout::DescriptorSetLayoutManager::DescriptorSetLayout::operator =
     return true;
 }
 
+size_t PipelineLayout::DescriptorSetLayoutManager::DescriptorSetLayout::GetHash()const
+{
+    size_t Hash = ComputeHash(static_cast<Int32>(ShaderVarType), BindingCount);
+    for (uint32_t b = 0; b < BindingCount; ++b)
+    {
+        const auto &B = pBindings[b];
+        HashCombine(Hash, B.binding, static_cast<size_t>(B.descriptorType), B.descriptorCount, static_cast<size_t>(B.stageFlags), B.pImmutableSamplers != nullptr);
+    }
+
+    return Hash;
+}
+
 void PipelineLayout::DescriptorSetLayoutManager::Finalize(const VulkanUtilities::VulkanLogicalDevice &LogicalDevice)
 {
     size_t TotalBindings = 0;
@@ -233,65 +262,14 @@ bool PipelineLayout::DescriptorSetLayoutManager::operator == (const DescriptorSe
     return m_VarTypeToDescrSetLayout == rhs.m_VarTypeToDescrSetLayout;
 }
 
-
-#if 0
-size_t PipelineLayout::DescriptorSetLayoutManager::GetRequiredMemorySize(Uint32 NumExtraRootTables, Uint32 NumExtraRootViews, Uint32 NumExtraDescriptorRanges)const
+size_t PipelineLayout::DescriptorSetLayoutManager::GetHash()const
 {
-    return sizeof(RootParameter) * (m_NumRootTables + NumExtraRootTables + m_NumRootViews + NumExtraRootViews) +  sizeof(Vk_DESCRIPTOR_RANGE) * (m_TotalDescriptorRanges + NumExtraDescriptorRanges);
+    size_t Hash = ComputeHash(m_DescriptorSetLayouts.size());
+    for(const auto &SetLayout : m_DescriptorSetLayouts)
+        HashCombine(Hash, SetLayout.GetHash());
+
+    return Hash;
 }
-
-Vk_DESCRIPTOR_RANGE* PipelineLayout::DescriptorSetLayoutManager::Extend(Uint32 NumExtraRootTables, Uint32 NumExtraRootViews, Uint32 NumExtraDescriptorRanges, Uint32 RootTableToAddRanges)
-{
-    VERIFY(NumExtraRootTables > 0 || NumExtraRootViews > 0 || NumExtraDescriptorRanges > 0, "At least one root table, root view or descriptor range must be added" );
-    auto MemorySize = GetRequiredMemorySize(NumExtraRootTables, NumExtraRootViews, NumExtraDescriptorRanges);
-    VERIFY_EXPR(MemorySize > 0);
-    auto *pNewMemory = ALLOCATE(m_MemAllocator, "Memory buffer for root tables, root views & descriptor ranges", MemorySize);
-    memset(pNewMemory, 0, MemorySize);
-
-    // Note: this order is more efficient than views->tables->ranges
-    auto *pNewRootTables = reinterpret_cast<RootParameter*>(pNewMemory);
-    auto *pNewRootViews = pNewRootTables + (m_NumRootTables + NumExtraRootTables);
-    auto *pCurrDescriptorRangePtr = reinterpret_cast<Vk_DESCRIPTOR_RANGE*>(pNewRootViews+m_NumRootViews+NumExtraRootViews);
-
-    // Copy existing root tables to new memory
-    for (Uint32 rt = 0; rt < m_NumRootTables; ++rt)
-    {
-        const auto &SrcTbl = GetRootTable(rt);
-        auto &VkSrcTbl = static_cast<const Vk_ROOT_PARAMETER&>(SrcTbl).DescriptorTable;
-        auto NumRanges = VkSrcTbl.NumDescriptorRanges;
-        if(rt == RootTableToAddRanges)
-        {
-            VERIFY(NumExtraRootTables == 0 || NumExtraRootTables == 1, "Up to one descriptor table can be extended at a time");
-            NumRanges += NumExtraDescriptorRanges;
-        }
-        new(pNewRootTables + rt) RootParameter(SrcTbl, NumRanges, pCurrDescriptorRangePtr);
-        pCurrDescriptorRangePtr += NumRanges;
-    }
-
-    // Copy existing root views to new memory
-    for (Uint32 rv = 0; rv < m_NumRootViews; ++rv)
-    {
-        const auto &SrcView = GetRootView(rv);
-        new(pNewRootViews + rv) RootParameter(SrcView);
-    }
-
-    m_pMemory.reset(pNewMemory);
-    m_NumRootTables += NumExtraRootTables;
-    m_NumRootViews += NumExtraRootViews;
-    m_TotalDescriptorRanges += NumExtraDescriptorRanges;
-    m_pRootTables = m_NumRootTables != 0 ? pNewRootTables : nullptr;
-    m_pRootViews = m_NumRootViews != 0 ?  pNewRootViews : nullptr;
-
-    return pCurrDescriptorRangePtr;
-}
-
-void PipelineLayout::DescriptorSetLayoutManager::AddRootView(Vk_ROOT_PARAMETER_TYPE ParameterType, Uint32 RootIndex, UINT Register, Vk_SHADER_VISIBILITY Visibility, SHADER_VARIABLE_TYPE VarType)
-{
-    auto *pRangePtr = Extend(0, 1, 0);
-    VERIFY_EXPR((char*)pRangePtr == (char*)m_pMemory.get() + GetRequiredMemorySize(0, 0, 0));
-    new(m_pRootViews + m_NumRootViews-1) RootParameter(ParameterType, RootIndex, Register, 0u, Visibility, VarType);
-}
-#endif
 
 PipelineLayout::DescriptorSetLayoutManager::DescriptorSetLayout& PipelineLayout::DescriptorSetLayoutManager::GetDescriptorSet(SHADER_VARIABLE_TYPE VarType)
 {
@@ -306,75 +284,21 @@ PipelineLayout::DescriptorSetLayoutManager::DescriptorSetLayout& PipelineLayout:
     return m_DescriptorSetLayouts[DescrSetLayoutInd];
 }
 
-#if 0
-void PipelineLayout::DescriptorSetLayoutManager::AddDescriptorSet(SHADER_VARIABLE_TYPE VarType)
-{
-    VERIFY(m_VkPipelineLayout == VK_NULL_HANDLE, "Pipeline layout must not be finalized to add descriptor set");
-    m_DescriptorSetLayouts.emplace_back(VarType);
-}
-
-
-void PipelineLayout::DescriptorSetLayoutManager::AddDescriptorRanges(Uint32 RootTableInd, Uint32 NumExtraRanges)
-{
-    auto *pRangePtr = Extend(0, 0, NumExtraRanges, RootTableInd);
-    VERIFY_EXPR( (char*)pRangePtr == (char*)m_pMemory.get() + GetRequiredMemorySize(0, 0, 0));
-}
-
-bool PipelineLayout::DescriptorSetLayoutManager::operator == (const DescriptorSetLayoutManager& RootParams)const
-{
-    if (m_NumRootTables != RootParams.m_NumRootTables ||
-        m_NumRootViews  != RootParams.m_NumRootViews)
-        return false;
-
-    for (Uint32 rv = 0; rv < m_NumRootViews; ++rv)
-    {
-        const auto &RV0 = GetRootView(rv);
-        const auto &RV1 = RootParams.GetRootView(rv);
-        if (RV0 != RV1)
-            return false;
-    }
-
-    for (Uint32 rv = 0; rv < m_NumRootTables; ++rv)
-    {
-        const auto &RT0 = GetRootTable(rv);
-        const auto &RT1 = RootParams.GetRootTable(rv);
-        if (RT0 != RT1)
-            return false;
-    }
-
-    return true;
-}
-
-size_t PipelineLayout::DescriptorSetLayoutManager::GetHash()const
-{
-    size_t hash = ComputeHash(m_NumRootTables, m_NumRootViews);
-    for (Uint32 rv = 0; rv < m_NumRootViews; ++rv)
-        HashCombine(hash, GetRootView(rv).GetHash());
-
-    for (Uint32 rv = 0; rv < m_NumRootTables; ++rv)
-        HashCombine(hash, GetRootTable(rv).GetHash());
-
-    return hash;
-}
-
 PipelineLayout::PipelineLayout() : 
-    m_RootParams(GetRawAllocator()),
+    m_LayoutMgr(GetRawAllocator())/*,
     m_MemAllocator(GetRawAllocator()),
     m_StaticSamplers( STD_ALLOCATOR_RAW_MEM(StaticSamplerAttribs, GetRawAllocator(), "Allocator for vector<StaticSamplerAttribs>") )
+    */
 {
-    for(size_t s=0; s < SHADER_VARIABLE_TYPE_NUM_TYPES; ++s)
-    {
-        m_TotalSrvCbvUavSlots[s] = 0;
-        m_TotalSamplerSlots[s] = 0;
-    }
-
+#if 0
     for(size_t i=0; i < _countof(m_SrvCbvUavRootTablesMap); ++i)
         m_SrvCbvUavRootTablesMap[i] = InvalidRootTableIndex;
     for(size_t i=0; i < _countof(m_SamplerRootTablesMap); ++i)
         m_SamplerRootTablesMap[i] = InvalidRootTableIndex;
-
+#endif
 }
 
+#if 0
 static Vk_SHADER_VISIBILITY ShaderTypeInd2ShaderVisibilityMap[]
 {
     Vk_SHADER_VISIBILITY_VERTEX,     // 0
@@ -480,15 +404,17 @@ void PipelineLayout::InitStaticSampler(SHADER_TYPE ShaderType, const String &Tex
         LOG_ERROR("Failed to find static sampler for variable \"", TextureName, '\"');
     }
 }
+#endif
 
-// http://diligentgraphics.com/diligent-engine/architecture/Vk/shader-resource-layout#Initializing-Shader-Resource-Layouts-and-Root-Signature-in-a-Pipeline-State-Object
+
 void PipelineLayout::AllocateResourceSlot(SHADER_TYPE ShaderType, 
-                                         const D3DShaderResourceAttribs &ShaderResAttribs, 
-                                         Vk_DESCRIPTOR_RANGE_TYPE RangeType, 
-                                         Uint32 &RootIndex, // Output parameter
-                                         Uint32 &OffsetFromTableStart // Output parameter
+                                         VkDescriptorType DescriptorType, 
+                                         Uint32 DescriptorCount, 
+                                         Uint32 &DescriptorSet, // Output parameter
+                                         Uint32 &OffsetFromSetStart // Output parameter
                                         )
 {
+#if 0
     auto ShaderInd = GetShaderTypeIndex(ShaderType);
     auto ShaderVisibility = GetShaderVisibility(ShaderType);
     if (RangeType == Vk_DESCRIPTOR_RANGE_TYPE_CBV && ShaderResAttribs.BindCount == 1)
@@ -548,9 +474,10 @@ void PipelineLayout::AllocateResourceSlot(SHADER_TYPE ShaderType,
                                      OffsetFromTableStart // Offset in descriptors from the table start
                                      );
     }
+#endif
 }
 
-
+#if 0
 #ifdef _DEBUG
 void PipelineLayout::dbgVerifyRootParameters()const
 {
@@ -625,9 +552,10 @@ void PipelineLayout::AllocateStaticSamplers(IShader* const*ppShaders, Uint32 Num
         VERIFY_EXPR(m_StaticSamplers.size() == TotalSamplers);
     }
 }
-
+#endif
 void PipelineLayout::Finalize(IVkDevice *pVkDevice)
 {
+#if 0
     for(Uint32 rt = 0; rt < m_RootParams.GetNumRootTables(); ++rt)
     {
         auto &RootTbl = m_RootParams.GetRootTable(rt);
@@ -730,8 +658,10 @@ void PipelineLayout::Finalize(IVkDevice *pVkDevice)
         CommitDescriptorHandles = &PipelineLayout::CommitDescriptorHandlesInternal_SM<false>;
         TransitionAndCommitDescriptorHandles = &PipelineLayout::CommitDescriptorHandlesInternal_SM<true>;
     }
+#endif
 }
 
+#if 0
 //http://diligentgraphics.com/diligent-engine/architecture/Vk/shader-resource-cache#Initializing-the-Cache-for-Shader-Resource-Binding-Object
 void PipelineLayout::InitResourceCache(RenderDeviceVkImpl *pDeviceVkImpl, ShaderResourceCacheVk& ResourceCache, IMemoryAllocator &CacheMemAllocator)const
 {

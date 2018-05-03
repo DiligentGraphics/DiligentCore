@@ -31,7 +31,7 @@
 #include "TextureViewVkImpl.h"
 #include "SamplerVkImpl.h"
 #include "ShaderVkImpl.h"
-#include "RootSignature.h"
+#include "PipelineLayout.h"
 #include "PipelineStateVkImpl.h"
 
 namespace Diligent
