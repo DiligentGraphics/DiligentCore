@@ -16,9 +16,9 @@ set(INCLUDE
     include/FramebufferCache.h
     include/GenerateMips.h
     include/pch.h
+    include/PipelineLayout.h
     include/PipelineStateVkImpl.h
     include/RenderDeviceVkImpl.h
-    include/RootSignature.h
     include/SamplerVkImpl.h
     include/ShaderVkImpl.h
     include/ShaderResourceBindingVkImpl.h
@@ -72,10 +72,10 @@ set(SRC
     src/DynamicUploadHeap.cpp
     src/FramebufferCache.cpp
     src/GenerateMips.cpp
+    src/PipelineLayout.cpp
     src/PipelineStateVkImpl.cpp
     src/RenderDeviceVkImpl.cpp
     src/RenderDeviceFactoryVk.cpp
-    src/RootSignature.cpp
     src/SamplerVkImpl.cpp
     src/ShaderVkImpl.cpp
     src/ShaderResourceBindingVkImpl.cpp

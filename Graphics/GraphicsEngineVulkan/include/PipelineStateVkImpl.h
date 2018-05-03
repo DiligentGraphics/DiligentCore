@@ -29,7 +29,7 @@
 #include "RenderDeviceVk.h"
 #include "PipelineStateVk.h"
 #include "PipelineStateBase.h"
-#include "RootSignature.h"
+#include "PipelineLayout.h"
 #include "ShaderResourceLayoutVk.h"
 #include "AdaptiveFixedBlockAllocator.h"
 #include "VulkanUtilities/VulkanObjectWrappers.h"

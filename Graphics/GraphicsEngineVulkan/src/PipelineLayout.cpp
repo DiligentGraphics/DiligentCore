@@ -23,7 +23,7 @@
 
 #include "pch.h"
 
-#include "RootSignature.h"
+#include "PipelineLayout.h"
 #include "ShaderResourceLayoutVk.h"
 #include "ShaderVkImpl.h"
 #include "CommandContext.h"
@@ -36,18 +36,211 @@
 namespace Diligent
 {
 
-#if 0
-RootSignature::RootParamsManager::RootParamsManager(IMemoryAllocator &MemAllocator):
+
+PipelineLayout::DescriptorSetLayoutManager::DescriptorSetLayoutManager(IMemoryAllocator &MemAllocator):
     m_MemAllocator(MemAllocator),
-    m_pMemory(nullptr, STDDeleter<void, IMemoryAllocator>(MemAllocator))
+    m_DescriptorSetLayouts(STD_ALLOCATOR_RAW_MEM(DescriptorSetLayout, MemAllocator, "Allocator for Decriptor Set Layouts")),
+    m_LayoutBindings(STD_ALLOCATOR_RAW_MEM(VkDescriptorSetLayoutBinding, MemAllocator, "Allocator for Layout Bindings"))
 {}
 
-size_t RootSignature::RootParamsManager::GetRequiredMemorySize(Uint32 NumExtraRootTables, Uint32 NumExtraRootViews, Uint32 NumExtraDescriptorRanges)const
+
+void PipelineLayout::DescriptorSetLayoutManager::DescriptorSetLayout::AddBinding(const VkDescriptorSetLayoutBinding &Binding, IMemoryAllocator &MemAllocator)
+{
+    VERIFY(VkLayout == VK_NULL_HANDLE, "Descriptor set must not be finalized");
+    ReserveMemory(BindingCount + 1, MemAllocator);
+    pBindings[BindingCount++] = Binding;
+}
+
+size_t PipelineLayout::DescriptorSetLayoutManager::DescriptorSetLayout::GetMemorySize(Uint32 NumBindings)
+{
+    if(NumBindings == 0)
+        return 0;
+
+    // Align up to the nearest power of two
+    size_t MemSize = 0;
+    if(NumBindings == 1)
+        MemSize = 1;
+    else if(NumBindings > 1)
+    {
+        // NumBindings = 2^n
+        //             n n-1        2  1  0
+        //      2^n =  1  0    ...  0  0  0
+        //    
+        //             n n-1        2  1  0
+        //    2^n-1 =  0  1    ...  1  1  1
+        //    msb = n-1 
+        //    MemSize = 2^n
+
+
+        // NumBindings = 2^n + [1 .. 2^n-1]
+        //             n n-1        
+        //      2^n =  1  0  ...  1  ...  
+        //    
+        //             n n-1               
+        //    2^n-1 =  1  0  ...        
+        //    msb = n 
+        //    MemSize = 2^(n+1)
+
+        MemSize = Uint32{1U << PlatformMisc::GetMSB(NumBindings-1)};
+    }
+    VERIFY_EXPR(NumBindings <= MemSize);
+
+#ifdef _DEBUG
+    static constexpr size_t MinMemSize = 1;
+#else
+    static constexpr size_t MinMemSize = 16;
+#endif
+    MemSize = std::max(MemSize, MinMemSize);
+    return MemSize;
+}
+
+void PipelineLayout::DescriptorSetLayoutManager::DescriptorSetLayout::ReserveMemory(Uint32 NumBindings, IMemoryAllocator &MemAllocator)
+{
+    size_t ReservedMemory = GetMemorySize(BindingCount);
+    size_t RequiredMemory = GetMemorySize(NumBindings);
+    if(RequiredMemory > ReservedMemory)
+    {
+        void *pNewBindings = ALLOCATE(MemAllocator, "Memory buffer for descriptor set layout bindings", RequiredMemory);
+        if(pBindings != nullptr)
+        {
+            memcpy(pNewBindings, pBindings, sizeof(VkDescriptorSetLayoutBinding) * BindingCount);
+            MemAllocator.Free(pBindings);
+        }
+        pBindings = reinterpret_cast<VkDescriptorSetLayoutBinding*>(pNewBindings);
+    }
+}
+
+void PipelineLayout::DescriptorSetLayoutManager::DescriptorSetLayout::Finalize(const VulkanUtilities::VulkanLogicalDevice &LogicalDevice, 
+                                                                               IMemoryAllocator &MemAllocator, 
+                                                                               VkDescriptorSetLayoutBinding* pNewBindings)
+{
+    VERIFY_EXPR( memcmp(pBindings, pNewBindings, sizeof(VkDescriptorSetLayoutBinding)*BindingCount) == 0 );
+
+    VkDescriptorSetLayoutCreateInfo SetLayoutCI = {};
+    SetLayoutCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    SetLayoutCI.pNext = nullptr;
+    SetLayoutCI.flags = 0;
+    SetLayoutCI.bindingCount = BindingCount;
+    SetLayoutCI.pBindings = pBindings;
+    VkLayout = LogicalDevice.CreateDescriptorSetLayout(SetLayoutCI);
+
+    MemAllocator.Free(pBindings);
+    pBindings = pNewBindings;
+}
+
+void PipelineLayout::DescriptorSetLayoutManager::DescriptorSetLayout::Release(RenderDeviceVkImpl *pRenderDeviceVk)
+{
+    pRenderDeviceVk->SafeReleaseVkObject(std::move(VkLayout));
+    pBindings = nullptr;
+    BindingCount = 0;
+}
+
+PipelineLayout::DescriptorSetLayoutManager::DescriptorSetLayout::~DescriptorSetLayout()
+{
+    VERIFY(VkLayout == VK_NULL_HANDLE, "Vulkan descriptor set layout has not been released. Did you forget to call Release()?");
+}
+
+bool PipelineLayout::DescriptorSetLayoutManager::DescriptorSetLayout::operator == (const DescriptorSetLayout& rhs)const
+{
+    if(ShaderVarType != rhs.ShaderVarType ||
+        BindingCount != rhs.BindingCount)
+        return false;
+
+    for(uint32_t b=0; b < BindingCount; ++b)
+    {
+        const auto &B0 = pBindings[b];
+        const auto &B1 = rhs.pBindings[b];
+        if(B0.binding         != B1.binding || 
+           B0.descriptorType  != B1.descriptorType ||
+           B0.descriptorCount != B1.descriptorCount ||
+           B0.stageFlags      != B1.stageFlags)
+            return false;
+
+        if( B0.pImmutableSamplers != nullptr && B1.pImmutableSamplers == nullptr || 
+            B0.pImmutableSamplers == nullptr && B1.pImmutableSamplers != nullptr)
+            return false;
+        if(B0.pImmutableSamplers != nullptr && B1.pImmutableSamplers != nullptr)
+        {
+            // If descriptorType is VK_DESCRIPTOR_TYPE_SAMPLER or VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 
+            // and descriptorCount is not 0 and pImmutableSamplers is not NULL, pImmutableSamplers must be a 
+            // valid pointer to an array of descriptorCount valid VkSampler handles (13.2.1)
+            if(memcmp(B0.pImmutableSamplers, B1.pImmutableSamplers, sizeof(VkSampler) * B0.descriptorCount) != 0)
+                return false;
+        }
+    }
+    return true;
+}
+
+void PipelineLayout::DescriptorSetLayoutManager::Finalize(const VulkanUtilities::VulkanLogicalDevice &LogicalDevice)
+{
+    size_t TotalBindings = 0;
+    for (const auto &Layout : m_DescriptorSetLayouts)
+    {
+        TotalBindings += Layout.BindingCount;
+    }
+    m_LayoutBindings.resize(TotalBindings);
+    size_t BindingOffset = 0;
+    for(size_t i=0; i < m_DescriptorSetLayouts.size(); ++i)
+    {
+        auto &Layout = m_DescriptorSetLayouts[i];
+        std::copy(Layout.pBindings, Layout.pBindings + Layout.BindingCount, m_LayoutBindings.begin() + BindingOffset);
+        Layout.Finalize(LogicalDevice, m_MemAllocator, &m_LayoutBindings[BindingOffset]);
+        BindingOffset += Layout.BindingCount;
+    }
+
+    VkPipelineLayoutCreateInfo PipelineLayoutCI = {};
+    PipelineLayoutCI.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    PipelineLayoutCI.pNext = nullptr;
+    PipelineLayoutCI.flags = 0; // reserved for future use
+    PipelineLayoutCI.setLayoutCount = static_cast<uint32_t>(m_DescriptorSetLayouts.size());
+
+    std::vector<VkDescriptorSetLayout, STDAllocatorRawMem<VkDescriptorSetLayout> > 
+        VkDescrSetLayout(m_DescriptorSetLayouts.size(), 
+                         VK_NULL_HANDLE, 
+                         STD_ALLOCATOR_RAW_MEM(VkDescriptorSetLayout, m_MemAllocator, "Allocator for vector<VkDescriptorSetLayout>"));
+    for(size_t i=0; i < m_DescriptorSetLayouts.size(); ++i)
+        VkDescrSetLayout[i] = m_DescriptorSetLayouts[i].VkLayout;
+    PipelineLayoutCI.pSetLayouts = !VkDescrSetLayout.empty() ? VkDescrSetLayout.data() : nullptr;
+    PipelineLayoutCI.pushConstantRangeCount = 0;
+    PipelineLayoutCI.pPushConstantRanges = nullptr;
+    m_VkPipelineLayout = LogicalDevice.CreatePipelineLayout(PipelineLayoutCI);
+
+    VERIFY_EXPR(BindingOffset == TotalBindings);
+}
+
+void PipelineLayout::DescriptorSetLayoutManager::Release(RenderDeviceVkImpl *pRenderDeviceVk)
+{
+    for (auto &Layout : m_DescriptorSetLayouts)
+        Layout.Release(pRenderDeviceVk);
+
+    pRenderDeviceVk->SafeReleaseVkObject(std::move(m_VkPipelineLayout));
+}
+
+PipelineLayout::DescriptorSetLayoutManager::~DescriptorSetLayoutManager()
+{
+    VERIFY(m_VkPipelineLayout == VK_NULL_HANDLE, "Vulkan pipeline layout has not been released. Did you forget to call Release()?");
+}
+
+bool PipelineLayout::DescriptorSetLayoutManager::operator == (const DescriptorSetLayoutManager& rhs)const
+{
+    if(m_DescriptorSetLayouts.size() != rhs.m_DescriptorSetLayouts.size())
+        return false;
+
+    for(size_t i=0; i < m_DescriptorSetLayouts.size(); ++i)
+        if(m_DescriptorSetLayouts[i] != rhs.m_DescriptorSetLayouts[i])
+            return false;
+
+    return m_VarTypeToDescrSetLayout == rhs.m_VarTypeToDescrSetLayout;
+}
+
+
+#if 0
+size_t PipelineLayout::DescriptorSetLayoutManager::GetRequiredMemorySize(Uint32 NumExtraRootTables, Uint32 NumExtraRootViews, Uint32 NumExtraDescriptorRanges)const
 {
     return sizeof(RootParameter) * (m_NumRootTables + NumExtraRootTables + m_NumRootViews + NumExtraRootViews) +  sizeof(Vk_DESCRIPTOR_RANGE) * (m_TotalDescriptorRanges + NumExtraDescriptorRanges);
 }
 
-Vk_DESCRIPTOR_RANGE* RootSignature::RootParamsManager::Extend(Uint32 NumExtraRootTables, Uint32 NumExtraRootViews, Uint32 NumExtraDescriptorRanges, Uint32 RootTableToAddRanges)
+Vk_DESCRIPTOR_RANGE* PipelineLayout::DescriptorSetLayoutManager::Extend(Uint32 NumExtraRootTables, Uint32 NumExtraRootViews, Uint32 NumExtraDescriptorRanges, Uint32 RootTableToAddRanges)
 {
     VERIFY(NumExtraRootTables > 0 || NumExtraRootViews > 0 || NumExtraDescriptorRanges > 0, "At least one root table, root view or descriptor range must be added" );
     auto MemorySize = GetRequiredMemorySize(NumExtraRootTables, NumExtraRootViews, NumExtraDescriptorRanges);
@@ -92,27 +285,42 @@ Vk_DESCRIPTOR_RANGE* RootSignature::RootParamsManager::Extend(Uint32 NumExtraRoo
     return pCurrDescriptorRangePtr;
 }
 
-void RootSignature::RootParamsManager::AddRootView(Vk_ROOT_PARAMETER_TYPE ParameterType, Uint32 RootIndex, UINT Register, Vk_SHADER_VISIBILITY Visibility, SHADER_VARIABLE_TYPE VarType)
+void PipelineLayout::DescriptorSetLayoutManager::AddRootView(Vk_ROOT_PARAMETER_TYPE ParameterType, Uint32 RootIndex, UINT Register, Vk_SHADER_VISIBILITY Visibility, SHADER_VARIABLE_TYPE VarType)
 {
     auto *pRangePtr = Extend(0, 1, 0);
     VERIFY_EXPR((char*)pRangePtr == (char*)m_pMemory.get() + GetRequiredMemorySize(0, 0, 0));
     new(m_pRootViews + m_NumRootViews-1) RootParameter(ParameterType, RootIndex, Register, 0u, Visibility, VarType);
 }
+#endif
 
-void RootSignature::RootParamsManager::AddRootTable(Uint32 RootIndex, Vk_SHADER_VISIBILITY Visibility, SHADER_VARIABLE_TYPE VarType, Uint32 NumRangesInNewTable)
+PipelineLayout::DescriptorSetLayoutManager::DescriptorSetLayout& PipelineLayout::DescriptorSetLayoutManager::GetDescriptorSet(SHADER_VARIABLE_TYPE VarType)
 {
-    auto *pRangePtr = Extend(1, 0, NumRangesInNewTable);
-    VERIFY_EXPR( (char*)(pRangePtr + NumRangesInNewTable) == (char*)m_pMemory.get() + GetRequiredMemorySize(0, 0, 0));
-    new(m_pRootTables + m_NumRootTables-1) RootParameter(Vk_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, RootIndex, NumRangesInNewTable, pRangePtr, Visibility, VarType);
+    auto DescrSetLayoutInd = m_VarTypeToDescrSetLayout[VarType];
+    if(DescrSetLayoutInd < 0)
+    {
+        DescrSetLayoutInd = static_cast<Int8>(m_DescriptorSetLayouts.size());
+        m_DescriptorSetLayouts.emplace_back(VarType);
+        m_VarTypeToDescrSetLayout[VarType] = DescrSetLayoutInd;
+    }
+
+    return m_DescriptorSetLayouts[DescrSetLayoutInd];
 }
 
-void RootSignature::RootParamsManager::AddDescriptorRanges(Uint32 RootTableInd, Uint32 NumExtraRanges)
+#if 0
+void PipelineLayout::DescriptorSetLayoutManager::AddDescriptorSet(SHADER_VARIABLE_TYPE VarType)
+{
+    VERIFY(m_VkPipelineLayout == VK_NULL_HANDLE, "Pipeline layout must not be finalized to add descriptor set");
+    m_DescriptorSetLayouts.emplace_back(VarType);
+}
+
+
+void PipelineLayout::DescriptorSetLayoutManager::AddDescriptorRanges(Uint32 RootTableInd, Uint32 NumExtraRanges)
 {
     auto *pRangePtr = Extend(0, 0, NumExtraRanges, RootTableInd);
     VERIFY_EXPR( (char*)pRangePtr == (char*)m_pMemory.get() + GetRequiredMemorySize(0, 0, 0));
 }
 
-bool RootSignature::RootParamsManager::operator == (const RootParamsManager& RootParams)const
+bool PipelineLayout::DescriptorSetLayoutManager::operator == (const DescriptorSetLayoutManager& RootParams)const
 {
     if (m_NumRootTables != RootParams.m_NumRootTables ||
         m_NumRootViews  != RootParams.m_NumRootViews)
@@ -137,7 +345,7 @@ bool RootSignature::RootParamsManager::operator == (const RootParamsManager& Roo
     return true;
 }
 
-size_t RootSignature::RootParamsManager::GetHash()const
+size_t PipelineLayout::DescriptorSetLayoutManager::GetHash()const
 {
     size_t hash = ComputeHash(m_NumRootTables, m_NumRootViews);
     for (Uint32 rv = 0; rv < m_NumRootViews; ++rv)
@@ -149,7 +357,7 @@ size_t RootSignature::RootParamsManager::GetHash()const
     return hash;
 }
 
-RootSignature::RootSignature() : 
+PipelineLayout::PipelineLayout() : 
     m_RootParams(GetRawAllocator()),
     m_MemAllocator(GetRawAllocator()),
     m_StaticSamplers( STD_ALLOCATOR_RAW_MEM(StaticSamplerAttribs, GetRawAllocator(), "Allocator for vector<StaticSamplerAttribs>") )
@@ -250,7 +458,7 @@ Vk_DESCRIPTOR_HEAP_TYPE HeapTypeFromRangeType(Vk_DESCRIPTOR_RANGE_TYPE RangeType
 }
 
 
-void RootSignature::InitStaticSampler(SHADER_TYPE ShaderType, const String &TextureName, const D3DShaderResourceAttribs &SamplerAttribs)
+void PipelineLayout::InitStaticSampler(SHADER_TYPE ShaderType, const String &TextureName, const D3DShaderResourceAttribs &SamplerAttribs)
 {
     auto ShaderVisibility = GetShaderVisibility(ShaderType);
     auto SamplerFound = false;
@@ -274,7 +482,7 @@ void RootSignature::InitStaticSampler(SHADER_TYPE ShaderType, const String &Text
 }
 
 // http://diligentgraphics.com/diligent-engine/architecture/Vk/shader-resource-layout#Initializing-Shader-Resource-Layouts-and-Root-Signature-in-a-Pipeline-State-Object
-void RootSignature::AllocateResourceSlot(SHADER_TYPE ShaderType, 
+void PipelineLayout::AllocateResourceSlot(SHADER_TYPE ShaderType, 
                                          const D3DShaderResourceAttribs &ShaderResAttribs, 
                                          Vk_DESCRIPTOR_RANGE_TYPE RangeType, 
                                          Uint32 &RootIndex, // Output parameter
@@ -344,7 +552,7 @@ void RootSignature::AllocateResourceSlot(SHADER_TYPE ShaderType,
 
 
 #ifdef _DEBUG
-void RootSignature::dbgVerifyRootParameters()const
+void PipelineLayout::dbgVerifyRootParameters()const
 {
     Uint32 dbgTotalSrvCbvUavSlots = 0;
     Uint32 dbgTotalSamplerSlots = 0;
@@ -398,7 +606,7 @@ void RootSignature::dbgVerifyRootParameters()const
 }
 #endif
 
-void RootSignature::AllocateStaticSamplers(IShader* const*ppShaders, Uint32 NumShaders)
+void PipelineLayout::AllocateStaticSamplers(IShader* const*ppShaders, Uint32 NumShaders)
 {
     Uint32 TotalSamplers = 0;
     for(Uint32 s=0;s < NumShaders; ++s)
@@ -418,7 +626,7 @@ void RootSignature::AllocateStaticSamplers(IShader* const*ppShaders, Uint32 NumS
     }
 }
 
-void RootSignature::Finalize(IVkDevice *pVkDevice)
+void PipelineLayout::Finalize(IVkDevice *pVkDevice)
 {
     for(Uint32 rt = 0; rt < m_RootParams.GetNumRootTables(); ++rt)
     {
@@ -437,8 +645,8 @@ void RootSignature::Finalize(IVkDevice *pVkDevice)
     dbgVerifyRootParameters();
 #endif
 
-    Vk_ROOT_SIGNATURE_DESC rootSignatureDesc;
-    rootSignatureDesc.Flags = Vk_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+    Vk_ROOT_SIGNATURE_DESC PipelineLayoutDesc;
+    PipelineLayoutDesc.Flags = Vk_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
     
     auto TotalParams = m_RootParams.GetNumRootTables() + m_RootParams.GetNumRootViews();
     std::vector<Vk_ROOT_PARAMETER, STDAllocatorRawMem<Vk_ROOT_PARAMETER> > VkParameters( TotalParams, Vk_ROOT_PARAMETER(), STD_ALLOCATOR_RAW_MEM(Vk_ROOT_PARAMETER, GetRawAllocator(), "Allocator for vector<Vk_ROOT_PARAMETER>") );
@@ -458,14 +666,14 @@ void RootSignature::Finalize(IVkDevice *pVkDevice)
     }
 
 
-    rootSignatureDesc.NumParameters = static_cast<UINT>(VkParameters.size());
-    rootSignatureDesc.pParameters = VkParameters.size() ? VkParameters.data() : nullptr;
+    PipelineLayoutDesc.NumParameters = static_cast<UINT>(VkParameters.size());
+    PipelineLayoutDesc.pParameters = VkParameters.size() ? VkParameters.data() : nullptr;
 
     UINT TotalVkStaticSamplers = 0;
     for(const auto &StSam : m_StaticSamplers)
         TotalVkStaticSamplers += StSam.ArraySize;
-    rootSignatureDesc.NumStaticSamplers = TotalVkStaticSamplers;
-    rootSignatureDesc.pStaticSamplers = nullptr;
+    PipelineLayoutDesc.NumStaticSamplers = TotalVkStaticSamplers;
+    PipelineLayoutDesc.pStaticSamplers = nullptr;
     std::vector<Vk_STATIC_SAMPLER_DESC, STDAllocatorRawMem<Vk_STATIC_SAMPLER_DESC> > VkStaticSamplers( STD_ALLOCATOR_RAW_MEM(Vk_STATIC_SAMPLER_DESC, GetRawAllocator(), "Allocator for vector<Vk_STATIC_SAMPLER_DESC>") );
     VkStaticSamplers.reserve(TotalVkStaticSamplers);
     if ( !m_StaticSamplers.empty() )
@@ -495,7 +703,7 @@ void RootSignature::Finalize(IVkDevice *pVkDevice)
                 );
             }
         }
-        rootSignatureDesc.pStaticSamplers = VkStaticSamplers.data();
+        PipelineLayoutDesc.pStaticSamplers = VkStaticSamplers.data();
         
         // Release static samplers array, we no longer need it
         std::vector<StaticSamplerAttribs, STDAllocatorRawMem<StaticSamplerAttribs> > EmptySamplers( STD_ALLOCATOR_RAW_MEM(StaticSamplerAttribs, GetRawAllocator(), "Allocator for vector<StaticSamplerAttribs>") );
@@ -507,25 +715,25 @@ void RootSignature::Finalize(IVkDevice *pVkDevice)
 
 	CComPtr<ID3DBlob> signature;
 	CComPtr<ID3DBlob> error;
-    HRESULT hr = VkSerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error);
-    hr = pVkDevice->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), __uuidof(m_pVkRootSignature), reinterpret_cast<void**>( static_cast<IVkRootSignature**>(&m_pVkRootSignature)));
+    HRESULT hr = VkSerializePipelineLayout(&PipelineLayoutDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error);
+    hr = pVkDevice->CreatePipelineLayout(0, signature->GetBufferPointer(), signature->GetBufferSize(), __uuidof(m_pVkPipelineLayout), reinterpret_cast<void**>( static_cast<IVkPipelineLayout**>(&m_pVkPipelineLayout)));
     CHECK_D3D_RESULT_THROW(hr, "Failed to create root signature");
 
     bool bHasDynamicResources = m_TotalSrvCbvUavSlots[SHADER_VARIABLE_TYPE_DYNAMIC]!=0 || m_TotalSamplerSlots[SHADER_VARIABLE_TYPE_DYNAMIC]!=0;
     if(bHasDynamicResources)
     {
-        CommitDescriptorHandles = &RootSignature::CommitDescriptorHandlesInternal_SMD<false>;
-        TransitionAndCommitDescriptorHandles = &RootSignature::CommitDescriptorHandlesInternal_SMD<true>;
+        CommitDescriptorHandles = &PipelineLayout::CommitDescriptorHandlesInternal_SMD<false>;
+        TransitionAndCommitDescriptorHandles = &PipelineLayout::CommitDescriptorHandlesInternal_SMD<true>;
     }
     else
     {
-        CommitDescriptorHandles = &RootSignature::CommitDescriptorHandlesInternal_SM<false>;
-        TransitionAndCommitDescriptorHandles = &RootSignature::CommitDescriptorHandlesInternal_SM<true>;
+        CommitDescriptorHandles = &PipelineLayout::CommitDescriptorHandlesInternal_SM<false>;
+        TransitionAndCommitDescriptorHandles = &PipelineLayout::CommitDescriptorHandlesInternal_SM<true>;
     }
 }
 
 //http://diligentgraphics.com/diligent-engine/architecture/Vk/shader-resource-cache#Initializing-the-Cache-for-Shader-Resource-Binding-Object
-void RootSignature::InitResourceCache(RenderDeviceVkImpl *pDeviceVkImpl, ShaderResourceCacheVk& ResourceCache, IMemoryAllocator &CacheMemAllocator)const
+void PipelineLayout::InitResourceCache(RenderDeviceVkImpl *pDeviceVkImpl, ShaderResourceCacheVk& ResourceCache, IMemoryAllocator &CacheMemAllocator)const
 {
     // Get root table size for every root index
     // m_RootParams keeps root tables sorted by the array index, not the root index
@@ -775,7 +983,7 @@ void DbgVerifyResourceState(ShaderResourceCacheVk::Resource &Res,
 #endif
 
 template<class TOperation>
-__forceinline void RootSignature::RootParamsManager::ProcessRootTables(TOperation Operation)const
+__forceinline void PipelineLayout::DescriptorSetLayoutManager::ProcessRootTables(TOperation Operation)const
 {
     for(Uint32 rt = 0; rt < m_NumRootTables; ++rt)
     {
@@ -823,7 +1031,7 @@ __forceinline void ProcessCachedTableResources(Uint32 RootInd,
 
 
 template<bool PerformResourceTransitions>
-void RootSignature::CommitDescriptorHandlesInternal_SMD(RenderDeviceVkImpl *pRenderDeviceVk, 
+void PipelineLayout::CommitDescriptorHandlesInternal_SMD(RenderDeviceVkImpl *pRenderDeviceVk, 
                                                         ShaderResourceCacheVk& ResourceCache, 
                                                         CommandContext &Ctx, 
                                                         bool IsCompute)const
@@ -932,7 +1140,7 @@ void RootSignature::CommitDescriptorHandlesInternal_SMD(RenderDeviceVkImpl *pRen
 }
 
 template<bool PerformResourceTransitions>
-void RootSignature::CommitDescriptorHandlesInternal_SM(RenderDeviceVkImpl *pRenderDeviceVk, 
+void PipelineLayout::CommitDescriptorHandlesInternal_SM(RenderDeviceVkImpl *pRenderDeviceVk, 
                                                        ShaderResourceCacheVk& ResourceCache, 
                                                        CommandContext &Ctx, 
                                                        bool IsCompute)const
@@ -983,7 +1191,7 @@ void RootSignature::CommitDescriptorHandlesInternal_SM(RenderDeviceVkImpl *pRend
 }
 
 
-void RootSignature::TransitionResources(ShaderResourceCacheVk& ResourceCache, 
+void PipelineLayout::TransitionResources(ShaderResourceCacheVk& ResourceCache, 
                                         class CommandContext &Ctx)const
 {
     m_RootParams.ProcessRootTables(
@@ -1000,7 +1208,7 @@ void RootSignature::TransitionResources(ShaderResourceCacheVk& ResourceCache,
 }
 
 
-void RootSignature::CommitRootViews(ShaderResourceCacheVk& ResourceCache, 
+void PipelineLayout::CommitRootViews(ShaderResourceCacheVk& ResourceCache, 
                                     CommandContext &Ctx, 
                                     bool IsCompute,
                                     Uint32 ContextId)const

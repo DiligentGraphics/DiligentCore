@@ -177,35 +177,13 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters *pRefCounters, Ren
         CSStage.pName = "main";
         CSStage.pSpecializationInfo = nullptr;
 
-        m_Pipeline = LogicalDevice.CreateComputePipeline(PipelineCI, VK_NULL_HANDLE, m_Desc.Name);
-
 #if 0
-        Vk_COMPUTE_PIPELINE_STATE_DESC VkPSODesc = {};
-        VkPSODesc.pRootSignature = nullptr;
-        
-        auto *pByteCode = ValidatedCast<ShaderVkImpl>(ComputePipeline.pCS)->GetShaderByteCode();
-        VkPSODesc.CS.pShaderBytecode = pByteCode->GetBufferPointer();
-        VkPSODesc.CS.BytecodeLength = pByteCode->GetBufferSize();
-
-        // For single GPU operation, set this to zero. If there are multiple GPU nodes, 
-        // set bits to identify the nodes (the device's physical adapters) for which the 
-        // graphics pipeline state is to apply. Each bit in the mask corresponds to a single node. 
-        VkPSODesc.NodeMask = 0;
-
-        VkPSODesc.CachedPSO.pCachedBlob = nullptr;
-        VkPSODesc.CachedPSO.CachedBlobSizeInBytes = 0;
-        
-        // The only valid bit is Vk_PIPELINE_STATE_FLAG_TOOL_DEBUG, which can only be set on WARP devices.
-        VkPSODesc.Flags = Vk_PIPELINE_STATE_FLAG_NONE;
-
         ParseShaderResourceLayout(ComputePipeline.pCS);
         m_RootSig.Finalize(pVkDevice);
         VkPSODesc.pRootSignature = m_RootSig.GetVkRootSignature();
-
-        HRESULT hr = pVkDevice->CreateComputePipelineState(&VkPSODesc, __uuidof(IVkPipelineState), reinterpret_cast<void**>( static_cast<IVkPipelineState**>(&m_pVkPSO)) );
-        if(FAILED(hr))
-            LOG_ERROR_AND_THROW("Failed to create pipeline state");
 #endif
+
+        m_Pipeline = LogicalDevice.CreateComputePipeline(PipelineCI, VK_NULL_HANDLE, m_Desc.Name);
     }
     else
     {
