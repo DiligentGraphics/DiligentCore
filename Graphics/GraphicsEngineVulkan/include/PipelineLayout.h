@@ -25,6 +25,8 @@
 
 /// \file
 /// Declaration of Diligent::PipelineLayout class
+#include <array>
+
 #include "ShaderBase.h"
 #include "ShaderResourceLayoutVk.h"
 #include "VulkanUtilities/VulkanObjectWrappers.h"
@@ -41,11 +43,13 @@ class PipelineLayout
 {
 public:
     PipelineLayout();
+    void Release(RenderDeviceVkImpl *pDeviceVkImpl);
+
 #if 0
     void AllocateStaticSamplers(IShader* const *ppShaders, Uint32 NumShaders);
-
-    void Finalize(IVkDevice *pVkDevice);
 #endif
+    void Finalize(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice);
+
     VkPipelineLayout GetVkPipelineLayout()const{return m_LayoutMgr.GetVkPipelineLayout();}
 #if 0
     void InitResourceCache(RenderDeviceVkImpl *pDeviceVkImpl, class ShaderResourceCacheVk& ResourceCache, IMemoryAllocator &CacheMemAllocator)const;
@@ -53,7 +57,7 @@ public:
     void InitStaticSampler(SHADER_TYPE ShaderType, const String &TextureName, const D3DShaderResourceAttribs &ShaderResAttribs);
 #endif
 
-    void AllocateResourceSlot(SHADER_TYPE ShaderType, VkDescriptorType DescriptorType, Uint32 DescriptorCount, Uint32 &DescriptorSet, Uint32 &OffsetFromSetStart);
+    void AllocateResourceSlot(SHADER_VARIABLE_TYPE VarType, SHADER_TYPE ShaderType, VkDescriptorType DescriptorType, Uint32 DescriptorCount, Uint32 &DescriptorSet, Uint32 &OffsetFromSetStart);
 
 #if 0
     // This method should be thread-safe as it does not modify any object state
@@ -78,7 +82,7 @@ public:
     Uint32 GetTotalDescriptors(SHADER_VARIABLE_TYPE VarType)const
     {
         VERIFY_EXPR(VarType >= 0 && VarType < SHADER_VARIABLE_TYPE_NUM_TYPES);
-        return m_TotalDescriptors[VarType];
+        return m_LayoutMgr.GetDescriptorSet(VarType).TotalDescriptors;
     }
 
     bool IsSameAs(const PipelineLayout& RS)const
@@ -91,27 +95,21 @@ public:
     }
 
 private:
-#ifdef _DEBUG
-    //void dbgVerifyRootParameters()const;
-#endif
 
-    Uint32 m_TotalDescriptors[SHADER_VARIABLE_TYPE_NUM_TYPES] = {};
-    
     class DescriptorSetLayoutManager
     {
     public:
         struct DescriptorSetLayout
         {
-            DescriptorSetLayout(SHADER_VARIABLE_TYPE VarType) :
-                ShaderVarType(VarType)
-            {}
+            DescriptorSetLayout() = default;
             DescriptorSetLayout(DescriptorSetLayout&&) = default;
             DescriptorSetLayout(const DescriptorSetLayout&) = delete;
             DescriptorSetLayout& operator = (const DescriptorSetLayout&) = delete;
             DescriptorSetLayout& operator = (DescriptorSetLayout&&) = delete;
             
-            const SHADER_VARIABLE_TYPE ShaderVarType;
-            uint32_t BindingCount = 0;
+            uint32_t TotalDescriptors = 0;
+            int8_t SetIndex = -1;
+            uint16_t NumLayoutBindings = 0;
             VkDescriptorSetLayoutBinding* pBindings = nullptr;
             VulkanUtilities::DescriptorSetLayoutWrapper VkLayout;
             
@@ -140,22 +138,26 @@ private:
         void Finalize(const VulkanUtilities::VulkanLogicalDevice &LogicalDevice);
         void Release(RenderDeviceVkImpl *pRenderDeviceVk);
 
-        DescriptorSetLayout& GetDescriptorSet(SHADER_VARIABLE_TYPE VarType);
-        DescriptorSetLayout& GetDescriptorSetByInd(size_t Ind){return m_DescriptorSetLayouts[Ind];}
-        const DescriptorSetLayout& GetDescriptorSetByInd(size_t Ind)const { return m_DescriptorSetLayouts[Ind]; }
-        size_t GetNumDescriptorSetLayouts()const { return m_DescriptorSetLayouts.size(); }
+        DescriptorSetLayout& GetDescriptorSet(SHADER_VARIABLE_TYPE VarType){return m_DescriptorSetLayouts[VarType];}
+        const DescriptorSetLayout& GetDescriptorSet(SHADER_VARIABLE_TYPE VarType)const { return m_DescriptorSetLayouts[VarType]; }
 
         bool operator == (const DescriptorSetLayoutManager& rhs)const;
         bool operator != (const DescriptorSetLayoutManager& rhs)const {return !(*this == rhs);}
         size_t GetHash()const;
         VkPipelineLayout GetVkPipelineLayout()const{return m_VkPipelineLayout;}
 
+        void AllocateResourceSlot(SHADER_VARIABLE_TYPE VarType,
+                                  SHADER_TYPE ShaderType,
+                                  VkDescriptorType DescriptorType,
+                                  Uint32 DescriptorCount,
+                                  Uint32 &DescriptorSet,
+                                  Uint32 &OffsetFromSetStart);
     private:
         IMemoryAllocator &m_MemAllocator;
         VulkanUtilities::PipelineLayoutWrapper m_VkPipelineLayout;
-        std::vector<DescriptorSetLayout, STDAllocatorRawMem<DescriptorSetLayout>> m_DescriptorSetLayouts;
+        std::array<DescriptorSetLayout, 3> m_DescriptorSetLayouts;
         std::vector<VkDescriptorSetLayoutBinding, STDAllocatorRawMem<VkDescriptorSetLayoutBinding>> m_LayoutBindings;
-        Int8 m_VarTypeToDescrSetLayout[SHADER_VARIABLE_TYPE_NUM_TYPES] = {-1, -1, -1};
+        uint8_t m_ActiveSets = 0;
     };
 
 #if 0
@@ -170,6 +172,7 @@ private:
     Uint8 m_SamplerRootTablesMap[SHADER_VARIABLE_TYPE_NUM_TYPES * 6];
 #endif
 
+    IMemoryAllocator &m_MemAllocator;
     DescriptorSetLayoutManager m_LayoutMgr;
 
 #if 0
@@ -189,8 +192,6 @@ private:
     };
     // Note: sizeof(m_StaticSamplers) == 56 (MS compiler, release x64)
     std::vector<StaticSamplerAttribs, STDAllocatorRawMem<StaticSamplerAttribs> > m_StaticSamplers;
-
-    IMemoryAllocator &m_MemAllocator;
 
     // Commits descriptor handles for static and mutable variables
     template<bool PerformResourceTransitions>
