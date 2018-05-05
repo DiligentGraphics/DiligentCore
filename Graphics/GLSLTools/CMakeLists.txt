@@ -28,6 +28,7 @@ PUBLIC
     include
 PRIVATE
     ../HLSL2GLSLConverterLib/include
+    ../GraphicsEngine/include
 )
 
 target_link_libraries(GLSLTools 

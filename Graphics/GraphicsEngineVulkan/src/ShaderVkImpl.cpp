@@ -62,7 +62,7 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters *pRefCounters, RenderDeviceVkImpl 
     // Load shader resources
     auto &Allocator = GetRawAllocator();
     auto *pRawMem = ALLOCATE(Allocator, "Allocator for ShaderResources", sizeof(SPIRVShaderResources));
-    auto *pResources = new (pRawMem) SPIRVShaderResources(Allocator, m_Desc.ShaderType, std::move(SPIRV));
+    auto *pResources = new (pRawMem) SPIRVShaderResources(Allocator, m_Desc.ShaderType, std::move(SPIRV), m_Desc.DefaultVariableType, m_Desc.VariableDesc, m_Desc.NumVariables);
     m_pShaderResources.reset(pResources, STDDeleterRawMem<SPIRVShaderResources>(Allocator));
 
     /*

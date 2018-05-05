@@ -26,8 +26,10 @@
 /// \file
 /// Implementation of the Diligent::DeviceObjectBase template class
 
+#include "RefCntAutoPtr.h"
 #include "ObjectBase.h"
 #include "UniqueIdentifier.h"
+
 
 namespace Diligent
 {

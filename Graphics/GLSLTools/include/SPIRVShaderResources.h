@@ -116,7 +116,12 @@ struct SPIRVShaderResourceAttribs
 class SPIRVShaderResources
 {
 public:
-    SPIRVShaderResources(IMemoryAllocator &Allocator, SHADER_TYPE ShaderType, std::vector<uint32_t> spirv_binary);
+    SPIRVShaderResources(IMemoryAllocator &Allocator, 
+                         SHADER_TYPE ShaderType, 
+                         std::vector<uint32_t> spirv_binary,
+                         SHADER_VARIABLE_TYPE DefaultVariableType, 
+                         const ShaderVariableDesc *VariableDesc, 
+                         Uint32 NumVars);
 
     // Copies specified types of resources from another ShaderResources objects
     // Only resources listed in AllowedVarTypes are copied
