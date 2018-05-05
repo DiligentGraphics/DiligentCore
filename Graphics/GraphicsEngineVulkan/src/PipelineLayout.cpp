@@ -301,12 +301,6 @@ PipelineLayout::PipelineLayout() :
     m_StaticSamplers( STD_ALLOCATOR_RAW_MEM(StaticSamplerAttribs, GetRawAllocator(), "Allocator for vector<StaticSamplerAttribs>") )
     */
 {
-#if 0
-    for(size_t i=0; i < _countof(m_SrvCbvUavRootTablesMap); ++i)
-        m_SrvCbvUavRootTablesMap[i] = InvalidRootTableIndex;
-    for(size_t i=0; i < _countof(m_SamplerRootTablesMap); ++i)
-        m_SamplerRootTablesMap[i] = InvalidRootTableIndex;
-#endif
 }
 
 void PipelineLayout::Release(RenderDeviceVkImpl *pDeviceVkImpl)

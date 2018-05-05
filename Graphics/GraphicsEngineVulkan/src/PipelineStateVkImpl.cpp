@@ -144,7 +144,7 @@ void PipelineStateVkImpl::CreateRenderPass(const VulkanUtilities::VulkanLogicalD
 
 PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters *pRefCounters, RenderDeviceVkImpl *pDeviceVk, const PipelineStateDesc &PipelineDesc) : 
     TPipelineStateBase(pRefCounters, pDeviceVk, PipelineDesc)/*,
-    m_DummyVar(*this),
+    m_DummyVar(*this)
     m_ResourceCacheDataAllocator(GetRawAllocator(), PipelineDesc.SRBAllocationGranularity),
     m_pDefaultShaderResBinding(nullptr, STDDeleter<ShaderResourceBindingVkImpl, FixedBlockMemoryAllocator>(pDeviceVk->GetSRBAllocator()) )
 */
@@ -353,8 +353,8 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters *pRefCounters, Ren
         PipelineLayoutCI.pSetLayouts = nullptr;
         PipelineLayoutCI.pushConstantRangeCount = 0;
         PipelineLayoutCI.pPushConstantRanges = nullptr;
-        m_PipelineLayout = LogicalDevice.CreatePipelineLayout(PipelineLayoutCI);
-        PipelineCI.layout = m_PipelineLayout;
+        m_TmpPipelineLayout = LogicalDevice.CreatePipelineLayout(PipelineLayoutCI);
+        PipelineCI.layout = m_TmpPipelineLayout;
 
         PipelineCI.renderPass = m_RenderPass;
         PipelineCI.subpass = 0;
@@ -423,7 +423,8 @@ PipelineStateVkImpl::~PipelineStateVkImpl()
     pDeviceVkImpl->GetFramebufferCache().OnDestroyRenderPass(m_RenderPass);
     pDeviceVkImpl->SafeReleaseVkObject(std::move(m_RenderPass));
     pDeviceVkImpl->SafeReleaseVkObject(std::move(m_Pipeline));
-    pDeviceVkImpl->SafeReleaseVkObject(std::move(m_PipelineLayout));
+    m_PipelineLayout.Release(pDeviceVkImpl);
+    //pDeviceVkImpl->SafeReleaseVkObject(std::move(m_TmpPipelineLayout));
 
 #if 0
     auto &ShaderResLayoutAllocator = GetRawAllocator();

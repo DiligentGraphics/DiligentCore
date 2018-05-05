@@ -173,10 +173,102 @@ TBuiltInResource InitResources()
     return Resources;
 }
 
+class IoMapResolver : public glslang::TIoMapResolver
+{
+public:
+    // Should return true if the resulting/current binding would be okay.
+    // Basic idea is to do aliasing binding checks with this.
+    virtual bool validateBinding(EShLanguage stage, const char* name, const glslang::TType& type, bool is_live)
+    {
+        return true;
+    }
+
+    // Should return a value >= 0 if the current binding should be overridden.
+    // Return -1 if the current binding (including no binding) should be kept.
+    virtual int resolveBinding(EShLanguage stage, const char* name, const glslang::TType& type, bool is_live)
+    {
+        // We do not care about actual binding value here.
+        // We only need decoration to be present in SPIRV
+        return 0;
+    }
+
+    // Should return a value >= 0 if the current set should be overridden.
+    // Return -1 if the current set (including no set) should be kept.
+    virtual int resolveSet(EShLanguage stage, const char* name, const glslang::TType& type, bool is_live)
+    {
+        // We do not care about actual descriptor set value here.
+        // We only need decoration to be present in SPIRV
+        return 0;
+    }
+
+    // Should return a value >= 0 if the current location should be overridden.
+    // Return -1 if the current location (including no location) should be kept.
+    virtual int resolveUniformLocation(EShLanguage stage, const char* name, const glslang::TType& type, bool is_live)
+    {
+        return -1;
+    }
+
+    // Should return true if the resulting/current setup would be okay.
+    // Basic idea is to do aliasing checks and reject invalid semantic names.
+    virtual bool validateInOut(EShLanguage stage, const char* name, const glslang::TType& type, bool is_live)
+    {
+        return true;
+    }
+
+    // Should return a value >= 0 if the current location should be overridden.
+    // Return -1 if the current location (including no location) should be kept.
+    virtual int resolveInOutLocation(EShLanguage stage, const char* name, const glslang::TType& type, bool is_live)
+    {
+        return -1;
+    }
+
+    // Should return a value >= 0 if the current component index should be overridden.
+    // Return -1 if the current component index (including no index) should be kept.
+    virtual int resolveInOutComponent(EShLanguage stage, const char* name, const glslang::TType& type, bool is_live)
+    {
+        return -1;
+    }
+
+    // Should return a value >= 0 if the current color index should be overridden.
+    // Return -1 if the current color index (including no index) should be kept.
+    virtual int resolveInOutIndex(EShLanguage stage, const char* name, const glslang::TType& type, bool is_live)
+    {
+        return -1;
+    }
+
+    // Notification of a uniform variable
+    virtual void notifyBinding(EShLanguage stage, const char* name, const glslang::TType& type, bool is_live)
+    {
+    }
+
+    // Notification of a in or out variable
+    virtual void notifyInOut(EShLanguage stage, const char* name, const glslang::TType& type, bool is_live)
+    {
+    }
+
+    // Called by mapIO when it has finished the notify pass
+    virtual void endNotifications(EShLanguage stage)
+    {
+    }
+
+    // Called by mapIO when it starts its notify pass for the given stage
+    virtual void beginNotifications(EShLanguage stage)
+    {
+    }
+
+    // Called by mipIO when it starts its resolve pass for the given stage
+    virtual void beginResolve(EShLanguage stage)
+    {
+    }
+
+    // Called by mapIO when it has finished the resolve pass
+    virtual void endResolve(EShLanguage stage)
+    {
+    }
+};
+
 std::vector<unsigned int> GLSLtoSPIRV(const SHADER_TYPE ShaderType, const char *ShaderSource) 
 {
-    std::vector<unsigned int> spirv;
-
 #if PLATFORM_ANDROID
 
     // On Android, use shaderc instead.
@@ -187,6 +279,7 @@ std::vector<unsigned int> GLSLtoSPIRV(const SHADER_TYPE ShaderType, const char *
         LOGE("Error: Id=%d, Msg=%s", module.GetCompilationStatus(), module.GetErrorMessage().c_str());
         return false;
     }
+    std::vector<unsigned int> spirv;
     spirv.assign(module.cbegin(), module.cend());
 
 #else
@@ -202,25 +295,25 @@ std::vector<unsigned int> GLSLtoSPIRV(const SHADER_TYPE ShaderType, const char *
     Shader.setStrings(ShaderStrings, 1);
     
     Shader.setAutoMapBindings(true);
-    Shader.setAutoMapLocations(true);
     if (!Shader.parse(&Resources, 100, false, messages))
     {
         LOG_ERROR_MESSAGE("Failed to parse shader source: \n", Shader.getInfoLog(), '\n', Shader.getInfoDebugLog());
-        return std::move(spirv);
+        return {};
     }
 
     glslang::TProgram Program;
     Program.addShader(&Shader);
-
-    //
-    // Program-level processing...
-    //
     if (!Program.link(messages))
     {
         LOG_ERROR_MESSAGE("Failed to link program: \n", Shader.getInfoLog(), '\n', Shader.getInfoDebugLog());
-        return std::move(spirv);
+        return {};
     }
 
+    IoMapResolver Resovler;
+    // This step is essential to set bindings and descriptor sets
+    Program.mapIO(&Resovler);
+
+    std::vector<unsigned int> spirv;
     glslang::GlslangToSpv(*Program.getIntermediate(ShLang), spirv);
 #endif
 

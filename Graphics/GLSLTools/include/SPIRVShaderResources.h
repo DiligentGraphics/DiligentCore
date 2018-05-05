@@ -39,6 +39,12 @@
 #include "STDAllocator.h"
 #include "HashUtils.h"
 
+namespace spirv_cross
+{
+class Compiler;
+struct Resource;
+}
+
 namespace Diligent
 {
 
@@ -73,25 +79,19 @@ struct SPIRVShaderResourceAttribs
     };
 
     const String Name;
-    const Uint8 Binding;
-    const Uint8 Location;
-    const Uint16 ArraySize;
-    const ResourceType Type;
-    const SHADER_VARIABLE_TYPE VarType : 8;
 
-    SPIRVShaderResourceAttribs(String _Name,
-                               Uint8 _Binding,
-                               Uint8 _Location,
-                               Uint16 _ArraySize,
-                               ResourceType _Type,
-                               SHADER_VARIABLE_TYPE _VarType) :
-        Name(std::move(_Name)),
-        Binding(_Binding),
-        Location(_Location),
-        ArraySize(_ArraySize),
-        Type(_Type),
-        VarType(_VarType)
-    {}
+    const Uint16 Binding;
+    const Uint16 ArraySize;
+
+    // offset in SPIRV words (uint32_t) for a decoration which was originally declared in the SPIRV binary
+    const uint32_t BindingDecorationOffset;
+    const uint32_t DescriptorSetDecorationOffset;
+
+    const Uint8 DescriptorSet;
+    const ResourceType Type : 4;
+    const SHADER_VARIABLE_TYPE VarType : 4;
+
+    SPIRVShaderResourceAttribs(const spirv_cross::Compiler &Compiler, const spirv_cross::Resource &Res, ResourceType _Type, SHADER_VARIABLE_TYPE _VarType);
 
     String GetPrintName(Uint32 ArrayInd)const
     {
@@ -104,10 +104,10 @@ struct SPIRVShaderResourceAttribs
 
     bool IsCompatibleWith(const SPIRVShaderResourceAttribs& Attibs)const
     {
-        return Binding   == Attibs.Binding &&
-               Location  == Attibs.Location &&
-               ArraySize == Attibs.ArraySize && 
-               Type      == Attibs.Type;
+        return Binding       == Attibs.Binding &&
+               DescriptorSet == Attibs.DescriptorSet &&
+               ArraySize     == Attibs.ArraySize && 
+               Type          == Attibs.Type;
     }
 };
 

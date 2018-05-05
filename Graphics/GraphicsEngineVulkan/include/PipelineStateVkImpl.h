@@ -33,6 +33,7 @@
 #include "ShaderResourceLayoutVk.h"
 #include "AdaptiveFixedBlockAllocator.h"
 #include "VulkanUtilities/VulkanObjectWrappers.h"
+#include "PipelineLayout.h"
 
 /// Namespace for the Direct3D11 implementation of the graphics engine
 namespace Diligent
@@ -127,8 +128,8 @@ private:
 #endif
     VulkanUtilities::RenderPassWrapper m_RenderPass;
     VulkanUtilities::PipelineWrapper m_Pipeline;
-    VulkanUtilities::PipelineLayoutWrapper m_PipelineLayout;
-
+    PipelineLayout m_PipelineLayout;
+    VulkanUtilities::PipelineLayoutWrapper m_TmpPipelineLayout;
 };
 
 }

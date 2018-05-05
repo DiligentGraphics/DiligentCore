@@ -27,11 +27,57 @@
 namespace Diligent
 {
 
+template<typename Type>
+Type GetResourceArraySize(const spirv_cross::Compiler &Compiler,
+                          const spirv_cross::Resource &Res)
+{
+    const auto& type = Compiler.get_type(Res.type_id);
+    uint32_t arrSize = !type.array.empty() ? type.array[0] : 1;
+    VERIFY(arrSize <= std::numeric_limits<Type>::max(), "Array size exceeds maximum representable value ", std::numeric_limits<Type>::max());
+    return static_cast<Type>(arrSize);
+}
+
+static uint32_t GetDecorationOffset(const spirv_cross::Compiler &Compiler,
+                                    const spirv_cross::Resource &Res,
+                                    spv::Decoration Decoration)
+{
+    VERIFY(Compiler.has_decoration(Res.id, Decoration), "Res \'", Res.name, "\' has no requested decoration");
+    uint32_t offset = 0;
+    auto declared = Compiler.get_binary_offset_for_decoration(Res.id, Decoration, offset);
+    VERIFY(declared, "Requested decoration is not declared");
+    return offset;
+}
+
+template<typename Type>
+static Type GetDecoration(const spirv_cross::Compiler &Compiler,
+                          const spirv_cross::Resource &Res,
+                          spv::Decoration Decoration)
+{
+    auto dec = Compiler.get_decoration(Res.id, Decoration);
+    VERIFY(dec <= std::numeric_limits<Type>::max(), "Decoration value exceeds maximum representable value ", std::numeric_limits<Type>::max());
+    return static_cast<Type>(dec);
+}
+
+SPIRVShaderResourceAttribs::SPIRVShaderResourceAttribs(const spirv_cross::Compiler &Compiler,
+                                                       const spirv_cross::Resource &Res, 
+                                                       ResourceType _Type, 
+                                                       SHADER_VARIABLE_TYPE _VarType) :
+    Name(Res.name),
+    Binding(GetDecoration<decltype(Binding)>(Compiler, Res, spv::DecorationBinding)),
+    ArraySize(GetResourceArraySize<decltype(ArraySize)>(Compiler, Res)),
+    BindingDecorationOffset(GetDecorationOffset(Compiler, Res, spv::Decoration::DecorationBinding)),
+    DescriptorSetDecorationOffset(GetDecorationOffset(Compiler, Res, spv::Decoration::DecorationDescriptorSet)),
+    DescriptorSet(GetDecoration<decltype(DescriptorSet)>(Compiler,Res, spv::DecorationDescriptorSet)),
+    Type(_Type),
+    VarType(_VarType)
+{
+}
+
 SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator &Allocator, SHADER_TYPE ShaderType, std::vector<uint32_t> spirv_binary) :
     m_MemoryBuffer(nullptr, STDDeleterRawMem<void>(Allocator)),
     m_ShaderType(ShaderType)
 {
-    spirv_cross::Compiler Compiler(std::move(spirv_binary));
+    spirv_cross::Compiler Compiler(spirv_binary);
 
     // The SPIR-V is now parsed, and we can perform reflection on it.
     spirv_cross::ShaderResources resources = Compiler.get_shader_resources();
@@ -46,68 +92,49 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator &Allocator, SHADER_T
                static_cast<Uint32>(resources.separate_samplers.size())
                );
 
+    Uint32 CurrUB = 0, CurrSB = 0, CurrImg = 0, CurrSmplImg = 0, CurrAC = 0, CurrSepImg = 0, CurrSepSmpl = 0;
     for (const auto &UB : resources.uniform_buffers)
     {
-        UB.name;
-        unsigned location = Compiler.get_decoration(UB.id, spv::DecorationLocation);
-        unsigned binding = Compiler.get_decoration(UB.id, spv::DecorationBinding);
-
-        int a=0;
+        new (&GetUB(CurrUB++)) SPIRVShaderResourceAttribs(Compiler, UB, SPIRVShaderResourceAttribs::ResourceType::UniformBuffer, SHADER_VARIABLE_TYPE_STATIC);
     }
 
     for (const auto &SB : resources.storage_buffers)
     {
-        SB.name;
-        unsigned location = Compiler.get_decoration(SB.id, spv::DecorationLocation);
-        unsigned binding = Compiler.get_decoration(SB.id, spv::DecorationBinding);
-
-        int a = 0;
+        new (&GetSB(CurrSB++)) SPIRVShaderResourceAttribs(Compiler, SB, SPIRVShaderResourceAttribs::ResourceType::StorageBuffer, SHADER_VARIABLE_TYPE_STATIC);
     }
 
     for (const auto &SmplImg : resources.sampled_images)
     {
-        SmplImg.name;
-        unsigned location = Compiler.get_decoration(SmplImg.id, spv::DecorationLocation);
-        unsigned binding = Compiler.get_decoration(SmplImg.id, spv::DecorationBinding);
-
-        int a = 0;
+        new (&GetSmplImg(CurrSmplImg++)) SPIRVShaderResourceAttribs(Compiler, SmplImg, SPIRVShaderResourceAttribs::ResourceType::SampledImage, SHADER_VARIABLE_TYPE_STATIC);
     }
 
     for (const auto &Img : resources.storage_images)
     {
-        Img.name;
-        unsigned location = Compiler.get_decoration(Img.id, spv::DecorationLocation);
-        unsigned binding = Compiler.get_decoration(Img.id, spv::DecorationBinding);
-
-        int a = 0;
+        new (&GetImg(CurrImg++)) SPIRVShaderResourceAttribs(Compiler, Img, SPIRVShaderResourceAttribs::ResourceType::StorageImage, SHADER_VARIABLE_TYPE_STATIC);
     }
 
     for (const auto &AC : resources.atomic_counters)
     {
-        AC.name;
-        unsigned location = Compiler.get_decoration(AC.id, spv::DecorationLocation);
-        unsigned binding = Compiler.get_decoration(AC.id, spv::DecorationBinding);
-
-        int a = 0;
+        new (&GetAC(CurrAC++)) SPIRVShaderResourceAttribs(Compiler, AC, SPIRVShaderResourceAttribs::ResourceType::AtomicCounter, SHADER_VARIABLE_TYPE_STATIC);
     }
 
     for (const auto &SepImg : resources.separate_images)
     {
-        SepImg.name;
-        unsigned location = Compiler.get_decoration(SepImg.id, spv::DecorationLocation);
-        unsigned binding = Compiler.get_decoration(SepImg.id, spv::DecorationBinding);
-
-        int a = 0;
+        new (&GetSepImg(CurrSepImg++)) SPIRVShaderResourceAttribs(Compiler, SepImg, SPIRVShaderResourceAttribs::ResourceType::SeparateImage, SHADER_VARIABLE_TYPE_STATIC);
     }
 
     for (const auto &SepSam : resources.separate_samplers)
     {
-        SepSam.name;
-        unsigned location = Compiler.get_decoration(SepSam.id, spv::DecorationLocation);
-        unsigned binding = Compiler.get_decoration(SepSam.id, spv::DecorationBinding);
-
-        int a = 0;
+        new (&GetSepSmpl(CurrSepSmpl++)) SPIRVShaderResourceAttribs(Compiler, SepSam, SPIRVShaderResourceAttribs::ResourceType::SeparateSampler, SHADER_VARIABLE_TYPE_STATIC);
     }
+
+    VERIFY_EXPR(CurrUB      == GetNumUBs());
+    VERIFY_EXPR(CurrSB      == GetNumSBs());
+    VERIFY_EXPR(CurrImg     == GetNumImgs());
+    VERIFY_EXPR(CurrSmplImg == GetNumSmplImgs());
+    VERIFY_EXPR(CurrAC      == GetNumACs());
+    VERIFY_EXPR(CurrSepImg  == GetNumSepImgs());
+    VERIFY_EXPR(CurrSepSmpl == GetNumSepSmpls());
 }
 
 SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator &Allocator,
