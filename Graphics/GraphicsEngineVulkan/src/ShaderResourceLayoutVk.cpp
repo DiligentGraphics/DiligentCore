@@ -38,71 +38,61 @@ namespace Diligent
 {
  
 ShaderResourceLayoutVk::ShaderResourceLayoutVk(IObject &Owner,
-                                               IMemoryAllocator &ResourceLayoutDataAllocator) /*: 
+                                               IMemoryAllocator &ResourceLayoutDataAllocator) : 
     m_Owner(Owner),
 #if USE_VARIABLE_HASH_MAP
     m_VariableHash(STD_ALLOCATOR_RAW_MEM(VariableHashElemType, GetRawAllocator(), "Allocator for unordered_map<HashMapStringKey, IShaderVariable*>")),
 #endif
-    m_ResourceBuffer(nullptr, STDDeleterRawMem<void>(ResourceLayoutDataAllocator))*/
+    m_ResourceBuffer(nullptr, STDDeleterRawMem<void>(ResourceLayoutDataAllocator))
 {
 }
 
 ShaderResourceLayoutVk::~ShaderResourceLayoutVk()
 {
-#if 0
-    // For some reason MS compiler generates this false warning:
-    // warning C4189: 'CbvSrvUav': local variable is initialized but not referenced
-#pragma warning(push)
-#pragma warning(disable : 4189)
-    auto* CbvSrvUav = reinterpret_cast<SRV_CBV_UAV*>(m_ResourceBuffer.get());
-#pragma warning(pop)
-    for(Uint32 r=0; r < GetTotalSrvCbvUavCount(); ++r)
-        CbvSrvUav[r].~SRV_CBV_UAV();
-
-    for(Uint32 s=0; s < GetTotalSamplerCount(); ++s)
-        m_Samplers[s].~Sampler();
-#endif
+    auto* Resources = reinterpret_cast<VkResource*>(m_ResourceBuffer.get());
+    for(Uint32 r=0; r < GetTotalResourceCount(); ++r)
+        Resources[r].~VkResource();
 }
 
-#if 0
-Vk_DESCRIPTOR_RANGE_TYPE GetDescriptorRangeType(CachedResourceType ResType)
+class ResourceTypeToVkDescriptorType
 {
-    static Vk_DESCRIPTOR_RANGE_TYPE RangeTypes[(size_t)CachedResourceType::NumTypes] = {};
-    static bool Initialized = false;
-    if (!Initialized)
+public:
+    ResourceTypeToVkDescriptorType()
     {
-        RangeTypes[(size_t)CachedResourceType::CBV]    = Vk_DESCRIPTOR_RANGE_TYPE_CBV;
-        RangeTypes[(size_t)CachedResourceType::TexSRV] = Vk_DESCRIPTOR_RANGE_TYPE_SRV;
-        RangeTypes[(size_t)CachedResourceType::BufSRV] = Vk_DESCRIPTOR_RANGE_TYPE_SRV;
-        RangeTypes[(size_t)CachedResourceType::TexUAV] = Vk_DESCRIPTOR_RANGE_TYPE_UAV;
-        RangeTypes[(size_t)CachedResourceType::BufUAV] = Vk_DESCRIPTOR_RANGE_TYPE_UAV;
-        RangeTypes[(size_t)CachedResourceType::Sampler] = Vk_DESCRIPTOR_RANGE_TYPE_SAMPLER;
-        Initialized = true;
+        m_Map[SPIRVShaderResourceAttribs::ResourceType::UniformBuffer]   = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        m_Map[SPIRVShaderResourceAttribs::ResourceType::StorageBuffer]   = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        m_Map[SPIRVShaderResourceAttribs::ResourceType::StorageImage]    = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+        m_Map[SPIRVShaderResourceAttribs::ResourceType::SampledImage]    = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        m_Map[SPIRVShaderResourceAttribs::ResourceType::AtomicCounter]   = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        m_Map[SPIRVShaderResourceAttribs::ResourceType::SeparateImage]   = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        m_Map[SPIRVShaderResourceAttribs::ResourceType::SeparateSampler] = VK_DESCRIPTOR_TYPE_SAMPLER;
     }
-    auto Ind = static_cast<size_t>(ResType);
-    VERIFY(Ind >= 0 && Ind < (size_t)CachedResourceType::NumTypes, "Unexpected resource type");
-    return RangeTypes[Ind];
-}
+
+    VkDescriptorType operator[](SPIRVShaderResourceAttribs::ResourceType ResType)const
+    {
+        return m_Map[static_cast<int>(ResType)];
+    }
+
+private:
+    std::array<VkDescriptorType, SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes> m_Map = {};
+};
 
 void ShaderResourceLayoutVk::AllocateMemory(IMemoryAllocator &Allocator)
 {
     VERIFY( &m_ResourceBuffer.get_deleter().m_Allocator == &Allocator, "Inconsistent memory allocators" );
-    Uint32 TotalSrvCbvUav = GetTotalSrvCbvUavCount();
-    Uint32 TotalSamplers = GetTotalSamplerCount();
-    size_t MemSize = TotalSrvCbvUav * sizeof(SRV_CBV_UAV) + TotalSamplers * sizeof(Sampler);
+    Uint32 TotalResource = GetTotalResourceCount();
+    size_t MemSize = TotalResource * sizeof(VkResource);
     if(MemSize == 0)
         return;
 
     auto *pRawMem = ALLOCATE(Allocator, "Raw memory buffer for shader resource layout resources", MemSize);
     m_ResourceBuffer.reset(pRawMem);
-    if(TotalSamplers)
-        m_Samplers = reinterpret_cast<Sampler*>(reinterpret_cast<SRV_CBV_UAV*>(pRawMem) + TotalSrvCbvUav);
 }
 
+#if 0
 // Clones layout from the reference layout maintained by the pipeline state
 // Root indices and descriptor table offsets must be correct
 // Resource cache is not initialized.
-// http://diligentgraphics.com/diligent-engine/architecture/Vk/shader-resource-layout#Initializing-Resource-Layouts-in-a-Shader-Resource-Binding-Object
 ShaderResourceLayoutVk::ShaderResourceLayoutVk(IObject &Owner,
                                                      const ShaderResourceLayoutVk& SrcLayout, 
                                                      IMemoryAllocator &ResourceLayoutDataAllocator,
@@ -176,18 +166,17 @@ ShaderResourceLayoutVk::ShaderResourceLayoutVk(IObject &Owner,
 void ShaderResourceLayoutVk::Initialize(const VulkanUtilities::VulkanLogicalDevice &LogicalDevice,
                                         const std::shared_ptr<const SPIRVShaderResources>& pSrcResources,
                                         IMemoryAllocator &LayoutDataAllocator,
-                                        const SHADER_VARIABLE_TYPE *VarTypes,
+                                        const SHADER_VARIABLE_TYPE *AllowedVarTypes,
                                         Uint32 NumAllowedTypes,
                                         ShaderResourceCacheVk *pResourceCache,
                                         std::vector<uint32_t> *pSPIRV,
-                                        class PipelineLayout *pPipelineLayout)
+                                        PipelineLayout *pPipelineLayout)
 {
-#if 0
     m_pResources = pSrcResources;
     m_pResourceCache = pResourceCache;
-    m_pVkDevice = pVkDevice;
+    m_pLogicalDevice = LogicalDevice.GetSharedPtr();
 
-    VERIFY_EXPR( (pResourceCache != nullptr) ^ (pRootSig != nullptr) );
+    VERIFY_EXPR( (pResourceCache != nullptr) ^ (pPipelineLayout != nullptr) );
 
     Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
 
@@ -195,207 +184,164 @@ void ShaderResourceLayoutVk::Initialize(const VulkanUtilities::VulkanLogicalDevi
     m_pResources->ProcessResources(
         AllowedVarTypes, NumAllowedTypes,
 
-        [&](const D3DShaderResourceAttribs &CB, Uint32)
+        [&](const SPIRVShaderResourceAttribs &UB, Uint32)
         {
-            VERIFY_EXPR(IsAllowedType(CB.GetVariableType(), AllowedTypeBits));
-            ++m_NumCbvSrvUav[CB.GetVariableType()];
+            VERIFY_EXPR(IsAllowedType(UB.VarType, AllowedTypeBits));
+            ++m_NumResources[UB.VarType];
         },
-        [&](const D3DShaderResourceAttribs& TexSRV, Uint32)
+        [&](const SPIRVShaderResourceAttribs& SB, Uint32)
         {
-            auto VarType = TexSRV.GetVariableType();
-            VERIFY_EXPR(IsAllowedType(VarType, AllowedTypeBits));
-            ++m_NumCbvSrvUav[VarType];
-            if(TexSRV.IsValidSampler())
-            {
-                auto SamplerId = TexSRV.GetSamplerId();
-                const auto &SamplerAttribs = m_pResources->GetSampler(SamplerId);
-                VERIFY(SamplerAttribs.GetVariableType() == VarType, "Texture and sampler variable types are not conistent");
-                if(!SamplerAttribs.IsStaticSampler())
-                {
-                    ++m_NumSamplers[VarType];
-                }
-            }
+            VERIFY_EXPR(IsAllowedType(SB.VarType, AllowedTypeBits));
+            ++m_NumResources[SB.VarType];
         },
-        [&](const D3DShaderResourceAttribs &TexUAV, Uint32)
+        [&](const SPIRVShaderResourceAttribs &Img, Uint32)
         {
-            VERIFY_EXPR(IsAllowedType(TexUAV.GetVariableType(), AllowedTypeBits));
-            ++m_NumCbvSrvUav[TexUAV.GetVariableType()];
+            VERIFY_EXPR(IsAllowedType(Img.VarType, AllowedTypeBits));
+            ++m_NumResources[Img.VarType];
         },
-        [&](const D3DShaderResourceAttribs &BufSRV, Uint32)
+        [&](const SPIRVShaderResourceAttribs &SmplImg, Uint32)
         {
-            VERIFY_EXPR(IsAllowedType(BufSRV.GetVariableType(), AllowedTypeBits));
-            ++m_NumCbvSrvUav[BufSRV.GetVariableType()];
+            VERIFY_EXPR(IsAllowedType(SmplImg.VarType, AllowedTypeBits));
+            ++m_NumResources[SmplImg.VarType];
         },
-        [&](const D3DShaderResourceAttribs &BufUAV, Uint32)
+        [&](const SPIRVShaderResourceAttribs &AC, Uint32)
         {
-            VERIFY_EXPR(IsAllowedType(BufUAV.GetVariableType(), AllowedTypeBits));
-            ++m_NumCbvSrvUav[BufUAV.GetVariableType()];
+            VERIFY_EXPR(IsAllowedType(AC.VarType, AllowedTypeBits));
+            ++m_NumResources[AC.VarType];
+        },
+        [&](const SPIRVShaderResourceAttribs &SepImg, Uint32)
+        {
+            VERIFY_EXPR(IsAllowedType(SepImg.VarType, AllowedTypeBits));
+            ++m_NumResources[SepImg.VarType];
+        },
+            [&](const SPIRVShaderResourceAttribs &SepSmpl, Uint32)
+        {
+            VERIFY_EXPR(IsAllowedType(SepSmpl.VarType, AllowedTypeBits));
+            ++m_NumResources[SepSmpl.VarType];
         }
     );
 
 
     AllocateMemory(LayoutDataAllocator);
 
-    Uint32 CurrCbvSrvUav[SHADER_VARIABLE_TYPE_NUM_TYPES] = {0,0,0};
-    Uint32 CurrSampler[SHADER_VARIABLE_TYPE_NUM_TYPES] = {0,0,0};
-    Uint32 StaticResCacheTblSizes[4] = {0, 0, 0, 0};
+    std::array<Uint32, SHADER_VARIABLE_TYPE_NUM_TYPES> CurrResInd = {};
+    std::array<Uint32, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC + 1> StaticResCacheSetSizes = {};
 
-    auto AddResource = [&](const D3DShaderResourceAttribs &Attribs, CachedResourceType ResType, Uint32 SamplerId = SRV_CBV_UAV::InvalidSamplerId)
+    auto AddResource = [&](const SPIRVShaderResourceAttribs &Attribs)
     {
-        Uint32 RootIndex = SRV_CBV_UAV::InvalidRootIndex;
-        Uint32 Offset = SRV_CBV_UAV::InvalidOffset;
-        Vk_DESCRIPTOR_RANGE_TYPE DescriptorRangeType = GetDescriptorRangeType(ResType);
-        if (pRootSig)
+        Uint32 Binding = 0;
+        Uint32 DescriptorSet = 0;
+        static const ResourceTypeToVkDescriptorType ResTypeToVkDescType;
+        VkDescriptorType DescriptorType = ResTypeToVkDescType[Attribs.Type];
+        if (pPipelineLayout)
         {
-            pRootSig->AllocateResourceSlot(m_pResources->GetShaderType(), Attribs, DescriptorRangeType, RootIndex, Offset );
-            VERIFY(RootIndex <= SRV_CBV_UAV::MaxRootIndex, "Root index excceeds allowed limit");
+            pPipelineLayout->AllocateResourceSlot(Attribs.VarType, m_pResources->GetShaderType(), DescriptorType, Attribs.ArraySize, DescriptorSet, Binding);
+            VERIFY(DescriptorSet <= std::numeric_limits<decltype(VkResource::DescriptorSet)>::max(), "Descriptor set (", DescriptorSet, ") excceeds representable max value");
+            VERIFY(Binding <= std::numeric_limits<decltype(VkResource::Binding)>::max(), "Binding (", Binding, ") excceeds representable max value");
         }
         else
         {
-            // If root signature is not provided - use artifial root signature to store
+            // If pipeline layout is not provided - use artifial layout to store
             // static shader resources:
-            // SRVs at root index Vk_DESCRIPTOR_RANGE_TYPE_SRV (0)
-            // UAVs at root index Vk_DESCRIPTOR_RANGE_TYPE_UAV (1)
-            // CBVs at root index Vk_DESCRIPTOR_RANGE_TYPE_CBV (2)
-            // Samplers at root index Vk_DESCRIPTOR_RANGE_TYPE_SAMPLER (3)
-
-            // http://diligentgraphics.com/diligent-engine/architecture/Vk/shader-resource-layout#Initializing-Special-Resource-Layout-for-Managing-Static-Shader-Resources
-
+            // Separate samplers at index VK_DESCRIPTOR_TYPE_SAMPLER (0)
+            // SampledImages at index VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER (1)
+            // Separate images at index VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE (2)
+            // Storage images at index VK_DESCRIPTOR_TYPE_STORAGE_IMAGE (3)
+            // Index VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER (4) is unused
+            // Index VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER (5) is unused
+            // Uniform buffers at index VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER (6)
+            // Storage buffers at index VK_DESCRIPTOR_TYPE_STORAGE_BUFFER (7)
+            // Index VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC (8) is unused
+            // Index VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC (9) is unused
             VERIFY_EXPR(m_pResourceCache != nullptr);
 
-            RootIndex = DescriptorRangeType;
-            Offset = Attribs.BindPoint;
-            // Resources in the static resource cache are indexed by the bind point
-            StaticResCacheTblSizes[RootIndex] = std::max(StaticResCacheTblSizes[RootIndex], Offset + Attribs.BindCount);
+            DescriptorSet = DescriptorType;
+            Binding = StaticResCacheSetSizes[DescriptorSet];
+            StaticResCacheSetSizes[DescriptorSet] += Attribs.ArraySize;
         }
-        VERIFY(RootIndex != SRV_CBV_UAV::InvalidRootIndex, "Root index must be valid");
-        VERIFY(Offset != SRV_CBV_UAV::InvalidOffset, "Offset must be valid");
 
         // Static samplers are never copied, and SamplerId == InvalidSamplerId
-        ::new (&GetSrvCbvUav(Attribs.GetVariableType(), CurrCbvSrvUav[Attribs.GetVariableType()]++)) SRV_CBV_UAV( *this, Attribs, ResType, RootIndex, Offset, SamplerId);
+        ::new (&GetResource(Attribs.VarType, CurrResInd[Attribs.VarType]++)) VkResource( *this, Attribs, Binding, DescriptorSet );
     };
-
-
 
     m_pResources->ProcessResources(
         AllowedVarTypes, NumAllowedTypes,
 
-        [&](const D3DShaderResourceAttribs &CB, Uint32)
+        [&](const SPIRVShaderResourceAttribs &UB, Uint32)
         {
-            VERIFY_EXPR( IsAllowedType(CB.GetVariableType(), AllowedTypeBits) );
-            AddResource(CB, CachedResourceType::CBV);
+            VERIFY_EXPR(IsAllowedType(UB.VarType, AllowedTypeBits));
+            AddResource(UB);
         },
-        [&](const D3DShaderResourceAttribs& TexSRV, Uint32)
+        [&](const SPIRVShaderResourceAttribs& SB, Uint32)
         {
-            auto VarType = TexSRV.GetVariableType();
-            VERIFY_EXPR(IsAllowedType(VarType, AllowedTypeBits) );
-            
-            Uint32 SamplerId = SRV_CBV_UAV::InvalidSamplerId;
-            if(TexSRV.IsValidSampler())
-            {
-                const auto &SrcSamplerAttribs = m_pResources->GetSampler(TexSRV.GetSamplerId());
-                VERIFY(SrcSamplerAttribs.GetVariableType() == VarType, "Inconsistent texture and sampler variable types" );
-
-                if (SrcSamplerAttribs.IsStaticSampler())
-                {
-                    if(pRootSig != nullptr)
-                        pRootSig->InitStaticSampler(m_pResources->GetShaderType(), TexSRV.Name, SrcSamplerAttribs);
-
-                    // Static samplers are never copied, and SamplerId == InvalidSamplerId
-                }
-                else
-                {
-                    Uint32 SamplerRootIndex = Sampler::InvalidRootIndex;
-                    Uint32 SamplerOffset = Sampler::InvalidOffset;
-                    if (pRootSig)
-                    {
-                        pRootSig->AllocateResourceSlot(m_pResources->GetShaderType(), SrcSamplerAttribs, Vk_DESCRIPTOR_RANGE_TYPE_SAMPLER, SamplerRootIndex, SamplerOffset );
-                    }
-                    else
-                    {
-                        // If root signature is not provided, we are initializing resource cache to store 
-                        // static shader resources. 
-                        VERIFY_EXPR(m_pResourceCache != nullptr);
-
-                        // We use the following artifial root signature:
-                        // SRVs at root index Vk_DESCRIPTOR_RANGE_TYPE_SRV (0)
-                        // UAVs at root index Vk_DESCRIPTOR_RANGE_TYPE_UAV (1)
-                        // CBVs at root index Vk_DESCRIPTOR_RANGE_TYPE_CBV (2)
-                        // Samplers at root index Vk_DESCRIPTOR_RANGE_TYPE_SAMPLER (3)
-                        // Every resource is stored at offset that equals its bind point
-                        SamplerRootIndex = Vk_DESCRIPTOR_RANGE_TYPE_SAMPLER; 
-                        SamplerOffset = SrcSamplerAttribs.BindPoint;
-                        // Resources in the static resource cache are indexed by the bind point
-                        StaticResCacheTblSizes[SamplerRootIndex] = std::max(StaticResCacheTblSizes[SamplerRootIndex], SamplerOffset + SrcSamplerAttribs.BindCount);
-                    }
-                    VERIFY(SamplerRootIndex != Sampler::InvalidRootIndex, "Sampler root index must be valid");
-                    VERIFY(SamplerOffset != Sampler::InvalidOffset, "Sampler offset must be valid");
-
-                    SamplerId = CurrSampler[VarType];
-                    VERIFY(SamplerId <= SRV_CBV_UAV::MaxSamplerId, "Sampler index excceeds allowed limit");
-                    ::new (&GetSampler(VarType, CurrSampler[VarType]++)) Sampler( *this, SrcSamplerAttribs, SamplerRootIndex, SamplerOffset );
-                }
-            }
-            AddResource(TexSRV, CachedResourceType::TexSRV, SamplerId);
+            VERIFY_EXPR(IsAllowedType(SB.VarType, AllowedTypeBits));
+            AddResource(SB);
         },
-        [&](const D3DShaderResourceAttribs &TexUAV, Uint32)
+        [&](const SPIRVShaderResourceAttribs &Img, Uint32)
         {
-            VERIFY_EXPR( IsAllowedType(TexUAV.GetVariableType(), AllowedTypeBits) );
-            AddResource(TexUAV, CachedResourceType::TexUAV);
+            VERIFY_EXPR(IsAllowedType(Img.VarType, AllowedTypeBits));
+            AddResource(Img);
         },
-        [&](const D3DShaderResourceAttribs &BufSRV, Uint32)
+        [&](const SPIRVShaderResourceAttribs &SmplImg, Uint32)
         {
-            VERIFY_EXPR( IsAllowedType(BufSRV.GetVariableType(), AllowedTypeBits) );
-            AddResource(BufSRV, CachedResourceType::BufSRV);
+            VERIFY_EXPR(IsAllowedType(SmplImg.VarType, AllowedTypeBits));
+            AddResource(SmplImg);
         },
-        [&](const D3DShaderResourceAttribs &BufUAV, Uint32)
+        [&](const SPIRVShaderResourceAttribs &AC, Uint32)
         {
-            VERIFY_EXPR( IsAllowedType(BufUAV.GetVariableType(), AllowedTypeBits) );
-            AddResource(BufUAV, CachedResourceType::BufUAV);
+            VERIFY_EXPR(IsAllowedType(AC.VarType, AllowedTypeBits));
+            AddResource(AC);
+        },
+        [&](const SPIRVShaderResourceAttribs &SepImg, Uint32)
+        {
+            VERIFY_EXPR(IsAllowedType(SepImg.VarType, AllowedTypeBits));
+            AddResource(SepImg);
+        },
+
+        [&](const SPIRVShaderResourceAttribs &SepSmpl, Uint32)
+        {
+            VERIFY_EXPR(IsAllowedType(SepSmpl.VarType, AllowedTypeBits));
+            AddResource(SepSmpl);
         }
     );
 
 #ifdef _DEBUG
     for(SHADER_VARIABLE_TYPE VarType = SHADER_VARIABLE_TYPE_STATIC; VarType < SHADER_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_VARIABLE_TYPE>(VarType+1))
     {
-        VERIFY( CurrCbvSrvUav[VarType] == m_NumCbvSrvUav[VarType], "Not all Srv/Cbv/Uavs are initialized, which result in a crash when dtor is called" );
-        VERIFY( CurrSampler[VarType] == m_NumSamplers[VarType], "Not all Samplers are initialized, which result in a crash when dtor is called" );
+        VERIFY( CurrResInd[VarType] == m_NumResources[VarType], "Not all resources are initialized, which result in a crash when dtor is called" );
     }
 #endif
 
     if(m_pResourceCache)
     {
         // Initialize resource cache to store static resources
-        // http://diligentgraphics.com/diligent-engine/architecture/Vk/shader-resource-cache#Initializing-the-Cache-for-Static-Shader-Resources
-        // http://diligentgraphics.com/diligent-engine/architecture/Vk/shader-resource-cache#Initializing-Shader-Objects
-        VERIFY_EXPR(pRootSig == nullptr);
-        m_pResourceCache->Initialize(GetRawAllocator(), _countof(StaticResCacheTblSizes), StaticResCacheTblSizes);
+        VERIFY_EXPR(pPipelineLayout == nullptr && pSPIRV == nullptr);
+        m_pResourceCache->Initialize(GetRawAllocator(), static_cast<Uint32>(StaticResCacheSetSizes.size()), StaticResCacheSetSizes.data());
 #ifdef _DEBUG
-        m_pResourceCache->GetRootTable(Vk_DESCRIPTOR_RANGE_TYPE_SRV).SetDebugAttribs(StaticResCacheTblSizes[Vk_DESCRIPTOR_RANGE_TYPE_SRV], Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, m_pResources->GetShaderType());
-        m_pResourceCache->GetRootTable(Vk_DESCRIPTOR_RANGE_TYPE_UAV).SetDebugAttribs(StaticResCacheTblSizes[Vk_DESCRIPTOR_RANGE_TYPE_UAV], Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, m_pResources->GetShaderType());
-        m_pResourceCache->GetRootTable(Vk_DESCRIPTOR_RANGE_TYPE_CBV).SetDebugAttribs(StaticResCacheTblSizes[Vk_DESCRIPTOR_RANGE_TYPE_CBV], Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, m_pResources->GetShaderType());
-        m_pResourceCache->GetRootTable(Vk_DESCRIPTOR_RANGE_TYPE_SAMPLER).SetDebugAttribs(StaticResCacheTblSizes[Vk_DESCRIPTOR_RANGE_TYPE_SAMPLER], Vk_DESCRIPTOR_HEAP_TYPE_SAMPLER, m_pResources->GetShaderType());
+        for(VkDescriptorType DescriptorType = VK_DESCRIPTOR_TYPE_SAMPLER; DescriptorType <= VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC; DescriptorType = static_cast<VkDescriptorType>(DescriptorType+1))
+        {
+            m_pResourceCache->GetDescriptorSet(DescriptorType).SetDebugAttribs(StaticResCacheSetSizes[DescriptorType]);
+        }
 #endif
     }
 
     InitVariablesHashMap();
-#endif
 }
 
-#if 0
 void ShaderResourceLayoutVk::InitVariablesHashMap()
 {
 #if USE_VARIABLE_HASH_MAP
-    Uint32 TotalResources = GetTotalSrvCbvUavCount();
+    Uint32 TotalResources = GetTotalResourceCount();
     for(Uint32 r=0; r < TotalResources; ++r)
     {
-        auto &Res = GetSrvCbvUav(r);
+        auto &Res = GetResource(r);
         /* HashMapStringKey will make a copy of the string*/
         m_VariableHash.insert( std::make_pair( Diligent::HashMapStringKey(Res.Name), &Res ) );
     }
 #endif
 }
 
+#if 0
 
 #define LOG_RESOURCE_BINDING_ERROR(ResType, pResource, VarName, ShaderName, ...)\
 {                                                                                                   \
@@ -628,10 +574,11 @@ ShaderResourceLayoutVk::Sampler &ShaderResourceLayoutVk::GetAssignedSampler(cons
     VERIFY(SamInfo.Attribs.Name == TexSrv.Attribs.Name + D3DSamplerSuffix, "Sampler name \"", SamInfo.Attribs.Name, "\" does not match texture name \"", TexSrv.Attribs.Name, '\"');
     return SamInfo;
 }
+#endif
 
-
-void ShaderResourceLayoutVk::SRV_CBV_UAV::BindResource(IDeviceObject *pObj, Uint32 ArrayIndex, const ShaderResourceLayoutVk *dbgResLayout)
+void ShaderResourceLayoutVk::VkResource::BindResource(IDeviceObject *pObj, Uint32 ArrayIndex, const ShaderResourceLayoutVk *dbgResLayout)
 {
+#if 0
     auto *pResourceCache = m_ParentResLayout.m_pResourceCache;
     VERIFY(pResourceCache, "Resource cache is null");
     VERIFY(dbgResLayout == nullptr || pResourceCache == dbgResLayout->m_pResourceCache, "Invalid resource cache");
@@ -721,24 +668,26 @@ void ShaderResourceLayoutVk::SRV_CBV_UAV::BindResource(IDeviceObject *pObj, Uint
             Sam.CacheSampler(nullptr, SamplerArrInd, NullHandle);
         }
     }
+#endif
 }
 
-bool ShaderResourceLayoutVk::SRV_CBV_UAV::IsBound(Uint32 ArrayIndex)
+bool ShaderResourceLayoutVk::VkResource::IsBound(Uint32 ArrayIndex)
 {
-    auto *pResourceCache = m_ParentResLayout.m_pResourceCache;
+    auto *pResourceCache = ParentResLayout.m_pResourceCache;
     VERIFY(pResourceCache, "Resource cache is null");
-    VERIFY_EXPR(ArrayIndex < Attribs.BindCount);
+    VERIFY_EXPR(ArrayIndex < SpirvAttribs.ArraySize);
 
-    auto RootIndex = GetRootIndex();
-    if( RootIndex < pResourceCache->GetNumRootTables() )
+    if( DescriptorSet < pResourceCache->GetNumDescriptorSets() )
     {
-        auto &RootTable = pResourceCache->GetRootTable(RootIndex);
-        if(OffsetFromTableStart + ArrayIndex < RootTable.GetSize())
+        auto &RootTable = pResourceCache->GetDescriptorSet(DescriptorSet);
+        if(Binding + ArrayIndex < RootTable.GetSize())
         {
-            auto &CachedRes = RootTable.GetResource(OffsetFromTableStart + ArrayIndex, Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, m_ParentResLayout.m_pResources->GetShaderType());
+            auto &CachedRes = RootTable.GetResource(Binding + ArrayIndex);
             if( CachedRes.pObject != nullptr )
             {
+#if 0
                 VERIFY(CachedRes.CPUDescriptorHandle.ptr != 0 || CachedRes.pObject.RawPtr<BufferVkImpl>()->GetDesc().Usage == USAGE_DYNAMIC, "No relevant descriptor handle");
+#endif
                 return true;
             }
         }
@@ -747,11 +696,10 @@ bool ShaderResourceLayoutVk::SRV_CBV_UAV::IsBound(Uint32 ArrayIndex)
     return false;
 }
 
-#endif
+
 
 void ShaderResourceLayoutVk::BindResources( IResourceMapping* pResourceMapping, Uint32 Flags, const ShaderResourceCacheVk *dbgResourceCache )
 {
-#if 0
     VERIFY(dbgResourceCache == m_pResourceCache, "Resource cache does not match the cache provided at initialization");
 
     if( !pResourceMapping )
@@ -760,11 +708,11 @@ void ShaderResourceLayoutVk::BindResources( IResourceMapping* pResourceMapping, 
         return;
     }
 
-    Uint32 TotalResources = GetTotalSrvCbvUavCount();
+    Uint32 TotalResources = GetTotalResourceCount();
     for(Uint32 r=0; r < TotalResources; ++r)
     {
-        auto &Res = GetSrvCbvUav(r);
-        for(Uint32 ArrInd = 0; ArrInd < Res.Attribs.BindCount; ++ArrInd)
+        auto &Res = GetResource(r);
+        for(Uint32 ArrInd = 0; ArrInd < Res.SpirvAttribs.ArraySize; ++ArrInd)
         {
             if( Flags & BIND_SHADER_RESOURCES_RESET_BINDINGS )
                 Res.BindResource(nullptr, ArrInd, this);
@@ -772,7 +720,7 @@ void ShaderResourceLayoutVk::BindResources( IResourceMapping* pResourceMapping, 
             if( (Flags & BIND_SHADER_RESOURCES_UPDATE_UNRESOLVED) && Res.IsBound(ArrInd) )
                 return;
 
-            const auto& VarName = Res.Attribs.Name;
+            const auto& VarName = Res.SpirvAttribs.Name;
             RefCntAutoPtr<IDeviceObject> pObj;
             VERIFY_EXPR(pResourceMapping != nullptr);
             pResourceMapping->GetResource( VarName.c_str(), &pObj, ArrInd );
@@ -784,16 +732,14 @@ void ShaderResourceLayoutVk::BindResources( IResourceMapping* pResourceMapping, 
             else
             {
                 if( (Flags & BIND_SHADER_RESOURCES_ALL_RESOLVED) && !Res.IsBound(ArrInd) )
-                    LOG_ERROR_MESSAGE( "Cannot bind resource to shader variable \"", Res.Attribs.GetPrintName(ArrInd), "\": resource view not found in the resource mapping" );
+                    LOG_ERROR_MESSAGE( "Cannot bind resource to shader variable \"", Res.SpirvAttribs.GetPrintName(ArrInd), "\": resource view not found in the resource mapping" );
             }
         }
     }
-#endif
 }
 
 IShaderVariable* ShaderResourceLayoutVk::GetShaderVariable(const Char* Name)
 {
-#if 0
     IShaderVariable* pVar = nullptr;
 #if USE_VARIABLE_HASH_MAP
     // Name will be implicitly converted to HashMapStringKey without making a copy
@@ -801,11 +747,11 @@ IShaderVariable* ShaderResourceLayoutVk::GetShaderVariable(const Char* Name)
     if( it != m_VariableHash.end() )
         pVar = it->second;
 #else
-    Uint32 TotalResources = GetTotalSrvCbvUavCount();
+    Uint32 TotalResources = GetTotalResourceCount();
     for(Uint32 r=0; r < TotalResources; ++r)
     {
-        auto &Res = GetSrvCbvUav(r);
-        if(Res.Attribs.Name.compare(Name) == 0)
+        auto &Res = GetResource(r);
+        if(Res.SpirvAttribs.Name.compare(Name) == 0)
         {
             pVar = &Res;
             break;
@@ -818,8 +764,6 @@ IShaderVariable* ShaderResourceLayoutVk::GetShaderVariable(const Char* Name)
         LOG_ERROR_MESSAGE( "Shader variable \"", Name, "\" is not found in shader \"", GetShaderName(), "\" (", GetShaderTypeLiteralName(m_pResources->GetShaderType()), "). Attempts to set the variable will be silently ignored." );
     }
     return pVar;
-#endif
-    return nullptr;
 }
 
 
@@ -1067,8 +1011,6 @@ void ShaderResourceLayoutVk::dbgVerifyBindings()const
 }
 #endif
 
-#if 0
-
 const Char* ShaderResourceLayoutVk::GetShaderName()const
 {
     RefCntAutoPtr<IShader> pShader(&m_Owner, IID_Shader);
@@ -1100,6 +1042,5 @@ const Char* ShaderResourceLayoutVk::GetShaderName()const
     }
     return "";
 }
-#endif
 
 }

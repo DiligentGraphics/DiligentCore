@@ -27,41 +27,42 @@
 
 namespace Diligent
 {
-#if 0
-    // http://diligentgraphics.com/diligent-engine/architecture/Vk/shader-resource-cache#Cache-Structure
-    void ShaderResourceCacheVk::Initialize(IMemoryAllocator &MemAllocator, Uint32 NumTables, Uint32 TableSizes[])
+    void ShaderResourceCacheVk::Initialize(IMemoryAllocator &MemAllocator, Uint32 NumSets, Uint32 SetSizes[])
     {
         // Memory layout:
-        //                                         __________________________________________________________
-        //  m_pMemory                             |             m_pResources, m_NumResources                 |
-        //  |                                     |                                                          |
-        //  V                                     |                                                          V
-        //  |  RootTable[0]  |   ....    |  RootTable[Nrt-1]  |  Res[0]  |  ... |  Res[n-1]  |    ....     | Res[0]  |  ... |  Res[m-1]  |
-        //       |                                                A  
-        //       |                                                |   
-        //       |________________________________________________|                 
-        //                    m_pResources, m_NumResources                            
-        //                                                             
+        //                                              ______________________________________________________________
+        //  m_pMemory                                  |                 m_pResources, m_NumResources == m            |
+        //  |                                          |                                                              |
+        //  V                                          |                                                              V
+        //  |  DescriptorSet[0]  |   ....    |  DescriptorSet[Ns-1]  |  Res[0]  |  ... |  Res[n-1]  |    ....     | Res[0]  |  ... |  Res[m-1]  |
+        //            |                                                  A \
+        //            |                                                  |  \
+        //            |__________________________________________________|   \RefCntAutoPtr
+        //                       m_pResources, m_NumResources == n            \_________     
+        //                                                                    |  Object |
+        //                                                                     --------- 
+        //                                                                    
+        //  Ns = m_NumSets
 
         VERIFY(m_pAllocator == nullptr && m_pMemory == nullptr, "Cache already initialized");
         m_pAllocator = &MemAllocator;
-        m_NumTables = NumTables;
+        m_NumSets = NumSets;
         Uint32 TotalResources = 0;
-        for(Uint32 t=0; t < NumTables; ++t)
-            TotalResources += TableSizes[t];
-        auto MemorySize = NumTables * sizeof(RootTable) + TotalResources * sizeof(Resource);
+        for(Uint32 t=0; t < NumSets; ++t)
+            TotalResources += SetSizes[t];
+        auto MemorySize = NumSets * sizeof(DescriptorSet) + TotalResources * sizeof(Resource);
         if(MemorySize > 0)
         {
             m_pMemory = ALLOCATE( *m_pAllocator, "Memory for shader resource cache data", MemorySize);
-            auto *pTables = reinterpret_cast<RootTable*>(m_pMemory);
-            auto *pCurrResPtr = reinterpret_cast<Resource*>(pTables + m_NumTables);
+            auto *pSets = reinterpret_cast<DescriptorSet*>(m_pMemory);
+            auto *pCurrResPtr = reinterpret_cast<Resource*>(pSets + m_NumSets);
             for(Uint32 res=0; res < TotalResources; ++res)
                 new(pCurrResPtr + res) Resource();
 
-            for (Uint32 t = 0; t < NumTables; ++t)
+            for (Uint32 t = 0; t < NumSets; ++t)
             {
-                new(&GetRootTable(t)) RootTable(TableSizes[t], TableSizes[t] > 0 ? pCurrResPtr : nullptr);
-                pCurrResPtr += TableSizes[t];
+                new(&GetDescriptorSet(t)) DescriptorSet(SetSizes[t], SetSizes[t] > 0 ? pCurrResPtr : nullptr);
+                pCurrResPtr += SetSizes[t];
             }
             VERIFY_EXPR((char*)pCurrResPtr == (char*)m_pMemory + MemorySize);
         }
@@ -72,16 +73,15 @@ namespace Diligent
         if (m_pMemory)
         {
             Uint32 TotalResources = 0;
-            for (Uint32 t = 0; t < m_NumTables; ++t)
-                TotalResources += GetRootTable(t).GetSize();
-            auto *pResources = reinterpret_cast<Resource*>( reinterpret_cast<RootTable*>(m_pMemory) + m_NumTables);
+            for (Uint32 t = 0; t < m_NumSets; ++t)
+                TotalResources += GetDescriptorSet(t).GetSize();
+            auto *pResources = reinterpret_cast<Resource*>( reinterpret_cast<DescriptorSet*>(m_pMemory) + m_NumSets);
             for(Uint32 res=0; res < TotalResources; ++res)
                 pResources[res].~Resource();
-            for (Uint32 t = 0; t < m_NumTables; ++t)
-                GetRootTable(t).~RootTable();
+            for (Uint32 t = 0; t < m_NumSets; ++t)
+                GetDescriptorSet(t).~DescriptorSet();
 
             m_pAllocator->Free(m_pMemory);
         }
     }
-#endif
 }

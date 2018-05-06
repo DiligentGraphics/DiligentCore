@@ -39,7 +39,7 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters *pRefCounters, RenderDeviceVkImpl 
     TShaderBase(pRefCounters, pRenderDeviceVk, CreationAttribs.Desc),
     m_StaticResLayout(*this, GetRawAllocator()),
     m_DummyShaderVar(*this),
-    m_ConstResCache(/*ShaderResourceCacheVk::DbgCacheContentType::StaticShaderResources*/)
+    m_ConstResCache(ShaderResourceCacheVk::DbgCacheContentType::StaticShaderResources)
 {
     auto GLSLSource = BuildGLSLSourceString(CreationAttribs, TargetGLSLCompiler::glslang);
     m_SPIRV = GLSLtoSPIRV(m_Desc.ShaderType, GLSLSource.c_str());

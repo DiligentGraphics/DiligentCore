@@ -69,13 +69,14 @@ struct SPIRVShaderResourceAttribs
 {
     enum ResourceType : Uint8
     {
-        UniformBuffer,
+        UniformBuffer = 0,
         StorageBuffer,
         StorageImage,
         SampledImage,
         AtomicCounter,
         SeparateImage,
-        SeparateSampler
+        SeparateSampler,
+        NumResourceTypes
     };
 
     const String Name;

@@ -26,24 +26,22 @@
 /// \file
 /// Declaration of Diligent::ShaderResourceCacheVk class
 
-// http://diligentgraphics.com/diligent-engine/architecture/Vk/shader-resource-cache/
-
 // Shader resource cache stores Vk resources in a continuous chunk of memory:
 //   
 //
-//                                         __________________________________________________________
-//  m_pMemory                             |             m_pResources, m_NumResources == m            |
-//  |                                     |                                                          |
-//  V                                     |                                                          V
-//  |  RootTable[0]  |   ....    |  RootTable[Nrt-1]  |  Res[0]  |  ... |  Res[n-1]  |    ....     | Res[0]  |  ... |  Res[m-1]  |
-//       |                                                A \
-//       |                                                |  \
-//       |________________________________________________|   \RefCntAutoPtr
-//                    m_pResources, m_NumResources == n        \_________     
-//                                                             |  Object |
-//                                                              --------- 
-//
-//  Nrt = m_NumTables
+//                                              ______________________________________________________________
+//  m_pMemory                                  |                 m_pResources, m_NumResources == m            |
+//  |                                          |                                                              |
+//  V                                          |                                                              V
+//  |  DescriptorSet[0]  |   ....    |  DescriptorSet[Ns-1]  |  Res[0]  |  ... |  Res[n-1]  |    ....     | Res[0]  |  ... |  Res[m-1]  |
+//            |                                                  A \
+//            |                                                  |  \
+//            |__________________________________________________|   \RefCntAutoPtr
+//                       m_pResources, m_NumResources == n            \_________     
+//                                                                    |  Object |
+//                                                                     --------- 
+//                                                                    
+//  Ns = m_NumSets
 //
 //
 // The cache is also assigned decriptor heap space to store shader visible descriptor handles (for non-dynamic resources).
@@ -55,7 +53,7 @@
 //          |                                           |
 //          | TableStartOffset                          | TableStartOffset
 //          |                                           |
-//   |    RootTable[0]    |    RootTable[1]    |    RootTable[2]    |     ....      |   RootTable[Nrt]   |
+//   |    DescriptorSet[0]    |    DescriptorSet[1]    |    DescriptorSet[2]    |     ....      |   DescriptorSet[Nrt]   |
 //                              |                                                           | 
 //                              | TableStartOffset                                          | InvalidDescriptorOffset
 //                              |                                                           |
@@ -71,7 +69,7 @@
 //
 //
 //
-//   |      RootTable[i]       |       Res[0]      ...       Res[n-1]      |
+//   |      DescriptorSet[i]       |       Res[0]      ...       Res[n-1]      |
 //                      \
 //       TableStartOffset\____
 //                            \
@@ -98,7 +96,6 @@ enum class CachedResourceType : Int32
 #endif
 class ShaderResourceCacheVk
 {
-#if 0
 public:
     // This enum is used for debug purposes only
     enum DbgCacheContentType
@@ -116,76 +113,58 @@ public:
 
     ~ShaderResourceCacheVk();
 
-    void Initialize(IMemoryAllocator &MemAllocator, Uint32 NumTables, Uint32 TableSizes[]);
-
+    void Initialize(IMemoryAllocator &MemAllocator, Uint32 NumSets, Uint32 SetSizes[]);
+#if 0
     static constexpr Uint32 InvalidDescriptorOffset = static_cast<Uint32>(-1);
-
-    //http://diligentgraphics.com/diligent-engine/architecture/Vk/shader-resource-cache#Cache-Structure
+#endif
     struct Resource
     {
+#if 0
         CachedResourceType Type = CachedResourceType::Unknown;
         // CPU descriptor handle of a cached resource in CPU-only descriptor heap
         // Note that for dynamic resources, this is the only available CPU descriptor handle
         Vk_CPU_DESCRIPTOR_HANDLE CPUDescriptorHandle = {0};
+#endif
         RefCntAutoPtr<IDeviceObject> pObject;
     };
 
-    class RootTable
+    class DescriptorSet
     {
     public:
-        RootTable(Uint32 NumResources, Resource *pResources) : 
+        DescriptorSet(Uint32 NumResources, Resource *pResources) :
             m_NumResources(NumResources),
             m_pResources(pResources)
         {}
 
-        inline Resource& GetResource(Uint32 OffsetFromTableStart, 
-                                     const Vk_DESCRIPTOR_HEAP_TYPE dbgDescriptorHeapType, 
-                                     const SHADER_TYPE dbgRefShaderType)
+        inline Resource& GetResource(Uint32 OffsetFromTableStart)
         {
-            VERIFY(m_dbgHeapType == dbgDescriptorHeapType, "Incosistent descriptor heap type" );
-            VERIFY(m_dbgShaderType == dbgRefShaderType, "Incosistent shader type" );
-
             VERIFY(OffsetFromTableStart < m_NumResources, "Root table at index is not large enough to store descriptor at offset ", OffsetFromTableStart );
             return m_pResources[OffsetFromTableStart];
         }
 
         inline Uint32 GetSize()const{return m_NumResources; }
 
-        // Offset from the start of the descriptor heap allocation to the start of the table
-        Uint32 m_TableStartOffset = InvalidDescriptorOffset;
-
 #ifdef _DEBUG
-        void SetDebugAttribs(Uint32 MaxOffset, 
-                             const Vk_DESCRIPTOR_HEAP_TYPE dbgDescriptorHeapType, 
-                             const SHADER_TYPE dbgRefShaderType)
+        void SetDebugAttribs(Uint32 MaxOffset)
         { 
             VERIFY_EXPR(m_NumResources == MaxOffset);
-            m_dbgHeapType = dbgDescriptorHeapType;
-            m_dbgShaderType = dbgRefShaderType;
         }
-
-        Vk_DESCRIPTOR_HEAP_TYPE DbgGetHeapType()const{return m_dbgHeapType;}
 #endif
 
         const Uint32 m_NumResources = 0;
     private:
         
-#ifdef _DEBUG
-        Vk_DESCRIPTOR_HEAP_TYPE m_dbgHeapType = Vk_DESCRIPTOR_HEAP_TYPE_NUM_TYPES;
-        SHADER_TYPE m_dbgShaderType = SHADER_TYPE_UNKNOWN;
-#endif
-
         Resource* const m_pResources = nullptr;
     };
 
-    inline RootTable& GetRootTable(Uint32 RootIndex)
+    inline DescriptorSet& GetDescriptorSet(Uint32 Index)
     {
-        VERIFY_EXPR(RootIndex < m_NumTables);
-        return reinterpret_cast<RootTable*>(m_pMemory)[RootIndex];
+        VERIFY_EXPR(Index < m_NumSets);
+        return reinterpret_cast<DescriptorSet*>(m_pMemory)[Index];
     }
 
-    inline Uint32 GetNumRootTables()const{return m_NumTables; }
-
+    inline Uint32 GetNumDescriptorSets()const{return m_NumSets; }
+#if 0
     void SetDescriptorHeapSpace(DescriptorHeapAllocation &&CbcSrvUavHeapSpace, DescriptorHeapAllocation &&SamplerHeapSpace)
     {
         VERIFY(m_SamplerHeapSpace.GetCpuHandle().ptr == 0 && m_CbvSrvUavHeapSpace.GetCpuHandle().ptr == 0, "Space has already been allocated in GPU descriptor heaps");
@@ -193,7 +172,7 @@ public:
         Uint32 NumSamplerDescriptors = 0, NumSrvCbvUavDescriptors = 0;
         for (Uint32 rt = 0; rt < m_NumTables; ++rt)
         {
-            auto &Tbl = GetRootTable(rt);
+            auto &Tbl = GetDescriptorSet(rt);
             if(Tbl.m_TableStartOffset != InvalidDescriptorOffset)
             {
                 if(Tbl.DbgGetHeapType() == Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
@@ -223,7 +202,7 @@ public:
     template<Vk_DESCRIPTOR_HEAP_TYPE HeapType>
     Vk_CPU_DESCRIPTOR_HANDLE GetShaderVisibleTableCPUDescriptorHandle(Uint32 RootParamInd, Uint32 OffsetFromTableStart = 0)
     {
-        auto &RootParam = GetRootTable(RootParamInd);
+        auto &RootParam = GetDescriptorSet(RootParamInd);
         VERIFY(HeapType == RootParam.DbgGetHeapType(), "Invalid descriptor heap type");
 
         Vk_CPU_DESCRIPTOR_HANDLE CPUDescriptorHandle = {0};
@@ -256,7 +235,7 @@ public:
     template<Vk_DESCRIPTOR_HEAP_TYPE HeapType>
     Vk_GPU_DESCRIPTOR_HANDLE GetShaderVisibleTableGPUDescriptorHandle(Uint32 RootParamInd, Uint32 OffsetFromTableStart = 0)
     {
-        auto &RootParam = GetRootTable(RootParamInd);
+        auto &RootParam = GetDescriptorSet(RootParamInd);
         VERIFY(RootParam.m_TableStartOffset != InvalidDescriptorOffset, "GPU descriptor handle must never be requested for dynamic resources");
         VERIFY(OffsetFromTableStart < RootParam.m_NumResources, "Offset is out of range");
 
@@ -279,7 +258,7 @@ public:
 
         return GPUDescriptorHandle;
     }
-
+#endif
 #ifdef _DEBUG
     // Only for debug purposes: indicates what types of resources are stored in the cache
     DbgCacheContentType DbgGetContentType()const{return m_DbgContentType;}
@@ -291,20 +270,20 @@ private:
     ShaderResourceCacheVk& operator = (const ShaderResourceCacheVk&) = delete;
     ShaderResourceCacheVk& operator = (ShaderResourceCacheVk&&) = delete;
 
+#if 0
     // Allocation in a GPU-visible sampler descriptor heap
     DescriptorHeapAllocation m_SamplerHeapSpace;
     
     // Allocation in a GPU-visible CBV/SRV/UAV descriptor heap
     DescriptorHeapAllocation m_CbvSrvUavHeapSpace;
-
+#endif
     IMemoryAllocator *m_pAllocator=nullptr; 
     void *m_pMemory = nullptr;
-    Uint32 m_NumTables = 0;
+    Uint32 m_NumSets = 0;
 
 #ifdef _DEBUG
     // Only for debug purposes: indicates what types of resources are stored in the cache
     const DbgCacheContentType m_DbgContentType;
-#endif
 #endif
 };
 
