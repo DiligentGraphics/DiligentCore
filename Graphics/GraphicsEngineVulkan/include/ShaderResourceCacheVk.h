@@ -144,13 +144,6 @@ public:
 
         inline Uint32 GetSize()const{return m_NumResources; }
 
-#ifdef _DEBUG
-        void SetDebugAttribs(Uint32 MaxOffset)
-        { 
-            VERIFY_EXPR(m_NumResources == MaxOffset);
-        }
-#endif
-
         const Uint32 m_NumResources = 0;
     private:
         

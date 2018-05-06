@@ -57,7 +57,11 @@ public:
     void InitStaticSampler(SHADER_TYPE ShaderType, const String &TextureName, const D3DShaderResourceAttribs &ShaderResAttribs);
 #endif
 
-    void AllocateResourceSlot(SHADER_VARIABLE_TYPE VarType, SHADER_TYPE ShaderType, VkDescriptorType DescriptorType, Uint32 DescriptorCount, Uint32 &DescriptorSet, Uint32 &OffsetFromSetStart);
+    void AllocateResourceSlot(const SPIRVShaderResourceAttribs &ResAttribs, 
+                              SHADER_TYPE ShaderType, 
+                              Uint32 &DescriptorSet, 
+                              Uint32 &Binding,
+                              std::vector<uint32_t> &SPIRV);
 
 #if 0
     // This method should be thread-safe as it does not modify any object state
@@ -138,24 +142,22 @@ private:
         void Finalize(const VulkanUtilities::VulkanLogicalDevice &LogicalDevice);
         void Release(RenderDeviceVkImpl *pRenderDeviceVk);
 
-        DescriptorSetLayout& GetDescriptorSet(SHADER_VARIABLE_TYPE VarType){return m_DescriptorSetLayouts[VarType];}
-        const DescriptorSetLayout& GetDescriptorSet(SHADER_VARIABLE_TYPE VarType)const { return m_DescriptorSetLayouts[VarType]; }
+        DescriptorSetLayout& GetDescriptorSet(SHADER_VARIABLE_TYPE VarType){return m_DescriptorSetLayouts[VarType == SHADER_VARIABLE_TYPE_DYNAMIC ? 1 : 0];}
+        const DescriptorSetLayout& GetDescriptorSet(SHADER_VARIABLE_TYPE VarType)const { return m_DescriptorSetLayouts[VarType == SHADER_VARIABLE_TYPE_DYNAMIC ? 1 : 0]; }
 
         bool operator == (const DescriptorSetLayoutManager& rhs)const;
         bool operator != (const DescriptorSetLayoutManager& rhs)const {return !(*this == rhs);}
         size_t GetHash()const;
         VkPipelineLayout GetVkPipelineLayout()const{return m_VkPipelineLayout;}
 
-        void AllocateResourceSlot(SHADER_VARIABLE_TYPE VarType,
+        void AllocateResourceSlot(const SPIRVShaderResourceAttribs &ResAttribs,
                                   SHADER_TYPE ShaderType,
-                                  VkDescriptorType DescriptorType,
-                                  Uint32 DescriptorCount,
                                   Uint32 &DescriptorSet,
-                                  Uint32 &OffsetFromSetStart);
+                                  Uint32 &Binding);
     private:
         IMemoryAllocator &m_MemAllocator;
         VulkanUtilities::PipelineLayoutWrapper m_VkPipelineLayout;
-        std::array<DescriptorSetLayout, 3> m_DescriptorSetLayouts;
+        std::array<DescriptorSetLayout, 2> m_DescriptorSetLayouts;
         std::vector<VkDescriptorSetLayoutBinding, STDAllocatorRawMem<VkDescriptorSetLayoutBinding>> m_LayoutBindings;
         uint8_t m_ActiveSets = 0;
     };

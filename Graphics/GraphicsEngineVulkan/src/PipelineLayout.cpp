@@ -54,6 +54,29 @@ static VkShaderStageFlagBits ShaderTypeToVkShaderStageFlagBit(SHADER_TYPE Shader
     }
 }
 
+class ResourceTypeToVkDescriptorType
+{
+public:
+    ResourceTypeToVkDescriptorType()
+    {
+        m_Map[SPIRVShaderResourceAttribs::ResourceType::UniformBuffer]   = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        m_Map[SPIRVShaderResourceAttribs::ResourceType::StorageBuffer]   = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        m_Map[SPIRVShaderResourceAttribs::ResourceType::StorageImage]    = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+        m_Map[SPIRVShaderResourceAttribs::ResourceType::SampledImage]    = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        m_Map[SPIRVShaderResourceAttribs::ResourceType::AtomicCounter]   = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        m_Map[SPIRVShaderResourceAttribs::ResourceType::SeparateImage]   = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        m_Map[SPIRVShaderResourceAttribs::ResourceType::SeparateSampler] = VK_DESCRIPTOR_TYPE_SAMPLER;
+    }
+
+    VkDescriptorType operator[](SPIRVShaderResourceAttribs::ResourceType ResType)const
+    {
+        return m_Map[static_cast<int>(ResType)];
+    }
+
+private:
+    std::array<VkDescriptorType, SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes> m_Map = {};
+};
+
 PipelineLayout::DescriptorSetLayoutManager::DescriptorSetLayoutManager(IMemoryAllocator &MemAllocator):
     m_MemAllocator(MemAllocator),
     m_LayoutBindings(STD_ALLOCATOR_RAW_MEM(VkDescriptorSetLayoutBinding, MemAllocator, "Allocator for Layout Bindings"))
@@ -98,9 +121,9 @@ size_t PipelineLayout::DescriptorSetLayoutManager::DescriptorSetLayout::GetMemor
         //    msb = n 
         //    MemSize = 2^(n+1)
 
-        MemSize = Uint32{1U << PlatformMisc::GetMSB(NumBindings-1)};
+        MemSize = Uint32{2U << PlatformMisc::GetMSB(NumBindings-1)};
     }
-    VERIFY_EXPR(NumBindings <= MemSize);
+    VERIFY_EXPR( ((NumBindings & (NumBindings-1)) == 0) && NumBindings == MemSize || NumBindings < MemSize);
 
 #ifdef _DEBUG
     static constexpr size_t MinMemSize = 1;
@@ -108,7 +131,7 @@ size_t PipelineLayout::DescriptorSetLayoutManager::DescriptorSetLayout::GetMemor
     static constexpr size_t MinMemSize = 16;
 #endif
     MemSize = std::max(MemSize, MinMemSize);
-    return MemSize;
+    return MemSize * sizeof(VkDescriptorSetLayoutBinding);
 }
 
 void PipelineLayout::DescriptorSetLayoutManager::DescriptorSetLayout::ReserveMemory(Uint32 NumBindings, IMemoryAllocator &MemAllocator)
@@ -271,14 +294,12 @@ size_t PipelineLayout::DescriptorSetLayoutManager::GetHash()const
     return Hash;
 }
 
-void PipelineLayout::DescriptorSetLayoutManager::AllocateResourceSlot(SHADER_VARIABLE_TYPE VarType,
+void PipelineLayout::DescriptorSetLayoutManager::AllocateResourceSlot(const SPIRVShaderResourceAttribs &ResAttribs,
                                                                       SHADER_TYPE ShaderType,
-                                                                      VkDescriptorType DescriptorType,
-                                                                      Uint32 DescriptorCount,
                                                                       Uint32 &DescriptorSet,
-                                                                      Uint32 &OffsetFromSetStart)
+                                                                      Uint32 &Binding)
 {
-    auto& DescrSet = GetDescriptorSet(VarType);
+    auto& DescrSet = GetDescriptorSet(ResAttribs.VarType);
     if (DescrSet.SetIndex < 0)
     {
         DescrSet.SetIndex = m_ActiveSets++;
@@ -287,9 +308,10 @@ void PipelineLayout::DescriptorSetLayoutManager::AllocateResourceSlot(SHADER_VAR
 
     VkDescriptorSetLayoutBinding VkBinding = {};
     VkBinding.binding = DescrSet.TotalDescriptors;
-    OffsetFromSetStart = DescrSet.TotalDescriptors;
-    VkBinding.descriptorType = DescriptorType;
-    VkBinding.descriptorCount = DescriptorCount;
+    Binding = DescrSet.TotalDescriptors;
+    static const ResourceTypeToVkDescriptorType ResTypeToVkDescrType;
+    VkBinding.descriptorType = ResTypeToVkDescrType[ResAttribs.Type];
+    VkBinding.descriptorCount = ResAttribs.ArraySize;
     VkBinding.stageFlags = ShaderTypeToVkShaderStageFlagBit(ShaderType);
     VkBinding.pImmutableSamplers = nullptr;
     DescrSet.AddBinding(VkBinding, m_MemAllocator);
@@ -417,15 +439,15 @@ void PipelineLayout::InitStaticSampler(SHADER_TYPE ShaderType, const String &Tex
 #endif
 
 
-void PipelineLayout::AllocateResourceSlot(SHADER_VARIABLE_TYPE VarType, 
+void PipelineLayout::AllocateResourceSlot(const SPIRVShaderResourceAttribs &ResAttribs,
                                           SHADER_TYPE ShaderType,
-                                          VkDescriptorType DescriptorType, 
-                                          Uint32 DescriptorCount, 
                                           Uint32 &DescriptorSet, // Output parameter
-                                          Uint32 &OffsetFromSetStart // Output parameter
-                                          )
+                                          Uint32 &Binding, // Output parameter
+                                          std::vector<uint32_t> &SPIRV)
 {
-    m_LayoutMgr.AllocateResourceSlot(VarType, ShaderType, DescriptorType, DescriptorCount, DescriptorSet, OffsetFromSetStart);
+    m_LayoutMgr.AllocateResourceSlot(ResAttribs, ShaderType, DescriptorSet, Binding);
+    SPIRV[ResAttribs.BindingDecorationOffset] = Binding;
+    SPIRV[ResAttribs.DescriptorSetDecorationOffset] = DescriptorSet;
 
 #if 0
     auto ShaderInd = GetShaderTypeIndex(ShaderType);

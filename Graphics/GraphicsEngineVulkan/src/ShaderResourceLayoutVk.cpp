@@ -54,29 +54,6 @@ ShaderResourceLayoutVk::~ShaderResourceLayoutVk()
         Resources[r].~VkResource();
 }
 
-class ResourceTypeToVkDescriptorType
-{
-public:
-    ResourceTypeToVkDescriptorType()
-    {
-        m_Map[SPIRVShaderResourceAttribs::ResourceType::UniformBuffer]   = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        m_Map[SPIRVShaderResourceAttribs::ResourceType::StorageBuffer]   = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-        m_Map[SPIRVShaderResourceAttribs::ResourceType::StorageImage]    = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-        m_Map[SPIRVShaderResourceAttribs::ResourceType::SampledImage]    = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        m_Map[SPIRVShaderResourceAttribs::ResourceType::AtomicCounter]   = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-        m_Map[SPIRVShaderResourceAttribs::ResourceType::SeparateImage]   = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-        m_Map[SPIRVShaderResourceAttribs::ResourceType::SeparateSampler] = VK_DESCRIPTOR_TYPE_SAMPLER;
-    }
-
-    VkDescriptorType operator[](SPIRVShaderResourceAttribs::ResourceType ResType)const
-    {
-        return m_Map[static_cast<int>(ResType)];
-    }
-
-private:
-    std::array<VkDescriptorType, SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes> m_Map = {};
-};
-
 void ShaderResourceLayoutVk::AllocateMemory(IMemoryAllocator &Allocator)
 {
     VERIFY( &m_ResourceBuffer.get_deleter().m_Allocator == &Allocator, "Inconsistent memory allocators" );
@@ -176,7 +153,7 @@ void ShaderResourceLayoutVk::Initialize(const VulkanUtilities::VulkanLogicalDevi
     m_pResourceCache = pResourceCache;
     m_pLogicalDevice = LogicalDevice.GetSharedPtr();
 
-    VERIFY_EXPR( (pResourceCache != nullptr) ^ (pPipelineLayout != nullptr) );
+    VERIFY_EXPR( (pResourceCache != nullptr) ^ (pPipelineLayout != nullptr && pSPIRV != nullptr) );
 
     Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
 
@@ -214,7 +191,7 @@ void ShaderResourceLayoutVk::Initialize(const VulkanUtilities::VulkanLogicalDevi
             VERIFY_EXPR(IsAllowedType(SepImg.VarType, AllowedTypeBits));
             ++m_NumResources[SepImg.VarType];
         },
-            [&](const SPIRVShaderResourceAttribs &SepSmpl, Uint32)
+        [&](const SPIRVShaderResourceAttribs &SepSmpl, Uint32)
         {
             VERIFY_EXPR(IsAllowedType(SepSmpl.VarType, AllowedTypeBits));
             ++m_NumResources[SepSmpl.VarType];
@@ -225,17 +202,16 @@ void ShaderResourceLayoutVk::Initialize(const VulkanUtilities::VulkanLogicalDevi
     AllocateMemory(LayoutDataAllocator);
 
     std::array<Uint32, SHADER_VARIABLE_TYPE_NUM_TYPES> CurrResInd = {};
-    std::array<Uint32, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC + 1> StaticResCacheSetSizes = {};
+    std::array<Uint32, SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes > StaticResCacheSetSizes = {};
 
     auto AddResource = [&](const SPIRVShaderResourceAttribs &Attribs)
     {
         Uint32 Binding = 0;
         Uint32 DescriptorSet = 0;
-        static const ResourceTypeToVkDescriptorType ResTypeToVkDescType;
-        VkDescriptorType DescriptorType = ResTypeToVkDescType[Attribs.Type];
         if (pPipelineLayout)
         {
-            pPipelineLayout->AllocateResourceSlot(Attribs.VarType, m_pResources->GetShaderType(), DescriptorType, Attribs.ArraySize, DescriptorSet, Binding);
+            VERIFY_EXPR(pSPIRV != nullptr);
+            pPipelineLayout->AllocateResourceSlot(Attribs, m_pResources->GetShaderType(), DescriptorSet, Binding, *pSPIRV);
             VERIFY(DescriptorSet <= std::numeric_limits<decltype(VkResource::DescriptorSet)>::max(), "Descriptor set (", DescriptorSet, ") excceeds representable max value");
             VERIFY(Binding <= std::numeric_limits<decltype(VkResource::Binding)>::max(), "Binding (", Binding, ") excceeds representable max value");
         }
@@ -243,19 +219,16 @@ void ShaderResourceLayoutVk::Initialize(const VulkanUtilities::VulkanLogicalDevi
         {
             // If pipeline layout is not provided - use artifial layout to store
             // static shader resources:
-            // Separate samplers at index VK_DESCRIPTOR_TYPE_SAMPLER (0)
-            // SampledImages at index VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER (1)
-            // Separate images at index VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE (2)
-            // Storage images at index VK_DESCRIPTOR_TYPE_STORAGE_IMAGE (3)
-            // Index VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER (4) is unused
-            // Index VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER (5) is unused
-            // Uniform buffers at index VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER (6)
-            // Storage buffers at index VK_DESCRIPTOR_TYPE_STORAGE_BUFFER (7)
-            // Index VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC (8) is unused
-            // Index VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC (9) is unused
+            // Uniform buffers at index SPIRVShaderResourceAttribs::ResourceType::UniformBuffer (0)
+            // Storage buffers at index SPIRVShaderResourceAttribs::ResourceType::StorageBuffer (1)
+            // Storage images  at index SPIRVShaderResourceAttribs::ResourceType::StorageImage  (2)
+            // Sampled images  at index SPIRVShaderResourceAttribs::ResourceType::SampledImage  (3)
+            // Atomic counters at index SPIRVShaderResourceAttribs::ResourceType::AtomicCounter (4)
+            // Separate images at index SPIRVShaderResourceAttribs::ResourceType::SeparateImage (5)
+            // Separate samplers at index SPIRVShaderResourceAttribs::ResourceType::SeparateSampler(6)
             VERIFY_EXPR(m_pResourceCache != nullptr);
 
-            DescriptorSet = DescriptorType;
+            DescriptorSet = Attribs.Type;
             Binding = StaticResCacheSetSizes[DescriptorSet];
             StaticResCacheSetSizes[DescriptorSet] += Attribs.ArraySize;
         }
@@ -318,9 +291,11 @@ void ShaderResourceLayoutVk::Initialize(const VulkanUtilities::VulkanLogicalDevi
         VERIFY_EXPR(pPipelineLayout == nullptr && pSPIRV == nullptr);
         m_pResourceCache->Initialize(GetRawAllocator(), static_cast<Uint32>(StaticResCacheSetSizes.size()), StaticResCacheSetSizes.data());
 #ifdef _DEBUG
-        for(VkDescriptorType DescriptorType = VK_DESCRIPTOR_TYPE_SAMPLER; DescriptorType <= VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC; DescriptorType = static_cast<VkDescriptorType>(DescriptorType+1))
+        for(SPIRVShaderResourceAttribs::ResourceType ResType = SPIRVShaderResourceAttribs::ResourceType::UniformBuffer; 
+            ResType < SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes;
+            ResType = static_cast<SPIRVShaderResourceAttribs::ResourceType>(ResType +1))
         {
-            m_pResourceCache->GetDescriptorSet(DescriptorType).SetDebugAttribs(StaticResCacheSetSizes[DescriptorType]);
+            VERIFY_EXPR(m_pResourceCache->GetDescriptorSet(ResType).GetSize() == StaticResCacheSetSizes[ResType]);
         }
 #endif
     }
