@@ -34,6 +34,7 @@ PRIVATE
 target_link_libraries(GLSLTools 
 PRIVATE 
     BuildSettings
+    GraphicsAccessories
     Common
 PUBLIC
     HLSL2GLSLConverterLib

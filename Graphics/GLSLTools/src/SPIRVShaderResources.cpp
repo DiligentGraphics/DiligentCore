@@ -24,6 +24,7 @@
 #include "SPIRVShaderResources.h"
 #include "spirv_cross.hpp"
 #include "ShaderBase.h"
+#include "GraphicsAccessories.h"
 
 namespace Diligent
 {
@@ -67,7 +68,8 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator &Allocator,
                                            std::vector<uint32_t> spirv_binary,
                                            SHADER_VARIABLE_TYPE DefaultVariableType,
                                            const ShaderVariableDesc *VariableDesc,
-                                           Uint32 NumVars) :
+                                           Uint32 NumVars,
+                                           const char *ShaderName) :
     m_MemoryBuffer(nullptr, STDDeleterRawMem<void>(Allocator)),
     m_ShaderType(ShaderType)
 {
@@ -86,56 +88,101 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator &Allocator,
                static_cast<Uint32>(resources.separate_samplers.size())
                );
 
-    Uint32 CurrUB = 0, CurrSB = 0, CurrImg = 0, CurrSmplImg = 0, CurrAC = 0, CurrSepImg = 0, CurrSepSmpl = 0;
-    for (const auto &UB : resources.uniform_buffers)
     {
-        auto VarType = GetShaderVariableType(UB.name.c_str(), DefaultVariableType, VariableDesc, NumVars);
-        new (&GetUB(CurrUB++)) SPIRVShaderResourceAttribs(Compiler, UB, SPIRVShaderResourceAttribs::ResourceType::UniformBuffer, VarType);
+        Uint32 CurrUB = 0;
+        for (const auto &UB : resources.uniform_buffers)
+        {
+            auto VarType = GetShaderVariableType(UB.name.c_str(), DefaultVariableType, VariableDesc, NumVars);
+            new (&GetUB(CurrUB++)) SPIRVShaderResourceAttribs(Compiler, UB, SPIRVShaderResourceAttribs::ResourceType::UniformBuffer, VarType);
+        }
+        VERIFY_EXPR(CurrUB == GetNumUBs());
     }
 
-    for (const auto &SB : resources.storage_buffers)
     {
-        auto VarType = GetShaderVariableType(SB.name.c_str(), DefaultVariableType, VariableDesc, NumVars);
-        new (&GetSB(CurrSB++)) SPIRVShaderResourceAttribs(Compiler, SB, SPIRVShaderResourceAttribs::ResourceType::StorageBuffer, VarType);
+        Uint32 CurrSB = 0;
+        for (const auto &SB : resources.storage_buffers)
+        {
+            auto VarType = GetShaderVariableType(SB.name.c_str(), DefaultVariableType, VariableDesc, NumVars);
+            new (&GetSB(CurrSB++)) SPIRVShaderResourceAttribs(Compiler, SB, SPIRVShaderResourceAttribs::ResourceType::StorageBuffer, VarType);
+        }
+        VERIFY_EXPR(CurrSB == GetNumSBs());
     }
 
-    for (const auto &SmplImg : resources.sampled_images)
     {
-        auto VarType = GetShaderVariableType(SmplImg.name.c_str(), DefaultVariableType, VariableDesc, NumVars);
-        new (&GetSmplImg(CurrSmplImg++)) SPIRVShaderResourceAttribs(Compiler, SmplImg, SPIRVShaderResourceAttribs::ResourceType::SampledImage, VarType);
+        Uint32 CurrSmplImg = 0;
+        for (const auto &SmplImg : resources.sampled_images)
+        {
+            auto VarType = GetShaderVariableType(SmplImg.name.c_str(), DefaultVariableType, VariableDesc, NumVars);
+            new (&GetSmplImg(CurrSmplImg++)) SPIRVShaderResourceAttribs(Compiler, SmplImg, SPIRVShaderResourceAttribs::ResourceType::SampledImage, VarType);
+        }
+        VERIFY_EXPR(CurrSmplImg == GetNumSmplImgs()); 
     }
 
-    for (const auto &Img : resources.storage_images)
     {
-        auto VarType = GetShaderVariableType(Img.name.c_str(), DefaultVariableType, VariableDesc, NumVars);
-        new (&GetImg(CurrImg++)) SPIRVShaderResourceAttribs(Compiler, Img, SPIRVShaderResourceAttribs::ResourceType::StorageImage, VarType);
+        Uint32 CurrImg = 0;
+        for (const auto &Img : resources.storage_images)
+        {
+            auto VarType = GetShaderVariableType(Img.name.c_str(), DefaultVariableType, VariableDesc, NumVars);
+            new (&GetImg(CurrImg++)) SPIRVShaderResourceAttribs(Compiler, Img, SPIRVShaderResourceAttribs::ResourceType::StorageImage, VarType);
+        }
+        VERIFY_EXPR(CurrImg == GetNumImgs());
     }
 
-    for (const auto &AC : resources.atomic_counters)
     {
-        auto VarType = GetShaderVariableType(AC.name.c_str(), DefaultVariableType, VariableDesc, NumVars);
-        new (&GetAC(CurrAC++)) SPIRVShaderResourceAttribs(Compiler, AC, SPIRVShaderResourceAttribs::ResourceType::AtomicCounter, VarType);
+        Uint32 CurrAC = 0;
+        for (const auto &AC : resources.atomic_counters)
+        {
+            auto VarType = GetShaderVariableType(AC.name.c_str(), DefaultVariableType, VariableDesc, NumVars);
+            new (&GetAC(CurrAC++)) SPIRVShaderResourceAttribs(Compiler, AC, SPIRVShaderResourceAttribs::ResourceType::AtomicCounter, VarType);
+        }
+        VERIFY_EXPR(CurrAC == GetNumACs());
     }
 
-    for (const auto &SepImg : resources.separate_images)
     {
-        auto VarType = GetShaderVariableType(SepImg.name.c_str(), DefaultVariableType, VariableDesc, NumVars);
-        new (&GetSepImg(CurrSepImg++)) SPIRVShaderResourceAttribs(Compiler, SepImg, SPIRVShaderResourceAttribs::ResourceType::SeparateImage, VarType);
+        Uint32 CurrSepImg = 0;
+        for (const auto &SepImg : resources.separate_images)
+        {
+            auto VarType = GetShaderVariableType(SepImg.name.c_str(), DefaultVariableType, VariableDesc, NumVars);
+            new (&GetSepImg(CurrSepImg++)) SPIRVShaderResourceAttribs(Compiler, SepImg, SPIRVShaderResourceAttribs::ResourceType::SeparateImage, VarType);
+        }
+        VERIFY_EXPR(CurrSepImg == GetNumSepImgs());
     }
 
-    for (const auto &SepSam : resources.separate_samplers)
     {
-        auto VarType = GetShaderVariableType(SepSam.name.c_str(), DefaultVariableType, VariableDesc, NumVars);
-        new (&GetSepSmpl(CurrSepSmpl++)) SPIRVShaderResourceAttribs(Compiler, SepSam, SPIRVShaderResourceAttribs::ResourceType::SeparateSampler, VarType);
+        Uint32 CurrSepSmpl = 0;
+        for (const auto &SepSam : resources.separate_samplers)
+        {
+            auto VarType = GetShaderVariableType(SepSam.name.c_str(), DefaultVariableType, VariableDesc, NumVars);
+            new (&GetSepSmpl(CurrSepSmpl++)) SPIRVShaderResourceAttribs(Compiler, SepSam, SPIRVShaderResourceAttribs::ResourceType::SeparateSampler, VarType);
+        }
+        VERIFY_EXPR(CurrSepSmpl == GetNumSepSmpls());
     }
 
-    VERIFY_EXPR(CurrUB      == GetNumUBs());
-    VERIFY_EXPR(CurrSB      == GetNumSBs());
-    VERIFY_EXPR(CurrImg     == GetNumImgs());
-    VERIFY_EXPR(CurrSmplImg == GetNumSmplImgs());
-    VERIFY_EXPR(CurrAC      == GetNumACs());
-    VERIFY_EXPR(CurrSepImg  == GetNumSepImgs());
-    VERIFY_EXPR(CurrSepSmpl == GetNumSepSmpls());
+#ifdef _DEBUG
+    if (VariableDesc != nullptr || NumVars != 0)
+    {
+        for (Uint32 v = 0; v < NumVars; ++v)
+        {
+            bool VariableFound = false;
+            const auto *VarName = VariableDesc[v].Name;
+            auto VarType = VariableDesc[v].Type;
+
+            for (Uint32 res = 0; res < GetTotalResources(); ++res)
+            {
+                const auto &ResAttribs = GetResource(res);
+                if (ResAttribs.Name.compare(VarName) == 0)
+                {
+                    VariableFound = true;
+                    break;
+                }
+            }
+            if (!VariableFound)
+            {
+                LOG_WARNING_MESSAGE("Variable '", VarName, "' labeled as ", GetShaderVariableTypeLiteralName(VarType), " not found in shader \'", ShaderName, "'");
+            }
+        }
+    }
+#endif
 }
 
 SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator &Allocator,

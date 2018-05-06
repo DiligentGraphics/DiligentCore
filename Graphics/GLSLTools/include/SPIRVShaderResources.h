@@ -118,7 +118,8 @@ public:
                          std::vector<uint32_t> spirv_binary,
                          SHADER_VARIABLE_TYPE DefaultVariableType, 
                          const ShaderVariableDesc *VariableDesc, 
-                         Uint32 NumVars);
+                         Uint32 NumVars,
+                         const char *ShaderName);
 
     // Copies specified types of resources from another ShaderResources objects
     // Only resources listed in AllowedVarTypes are copied
@@ -141,6 +142,7 @@ public:
     Uint32 GetNumACs     ()const noexcept{ return (m_SeparateImageOffset   - m_AtomicCounterOffset);  }
     Uint32 GetNumSepImgs ()const noexcept{ return (m_SeparateSamplerOffset - m_SeparateImageOffset);  }
     Uint32 GetNumSepSmpls()const noexcept{ return (m_BufferEndOffset       - m_SeparateSamplerOffset);}
+    Uint32 GetTotalResources()const noexcept { return m_BufferEndOffset; }
 
     const SPIRVShaderResourceAttribs& GetUB      (Uint32 n)const noexcept{ return GetResAttribs(n, GetNumUBs(),      0                      ); }
     const SPIRVShaderResourceAttribs& GetSB      (Uint32 n)const noexcept{ return GetResAttribs(n, GetNumSBs(),      m_StorageBufferOffset  ); }
@@ -149,6 +151,7 @@ public:
     const SPIRVShaderResourceAttribs& GetAC      (Uint32 n)const noexcept{ return GetResAttribs(n, GetNumACs(),      m_AtomicCounterOffset  ); }
     const SPIRVShaderResourceAttribs& GetSepImg  (Uint32 n)const noexcept{ return GetResAttribs(n, GetNumSepImgs(),  m_SeparateImageOffset  ); }
     const SPIRVShaderResourceAttribs& GetSepSmpl (Uint32 n)const noexcept{ return GetResAttribs(n, GetNumSepSmpls(), m_SeparateSamplerOffset); }
+    const SPIRVShaderResourceAttribs& GetResource(Uint32 n)const noexcept{ return GetResAttribs(n, GetTotalResources(), 0); }
 
     void CountResources(const SHADER_VARIABLE_TYPE *AllowedVarTypes, 
                         Uint32 NumAllowedTypes, 
@@ -260,6 +263,7 @@ protected:
     SPIRVShaderResourceAttribs& GetAC      (Uint32 n)noexcept{ return GetResAttribs(n, GetNumACs(),      m_AtomicCounterOffset  ); }
     SPIRVShaderResourceAttribs& GetSepImg  (Uint32 n)noexcept{ return GetResAttribs(n, GetNumSepImgs(),  m_SeparateImageOffset  ); }
     SPIRVShaderResourceAttribs& GetSepSmpl (Uint32 n)noexcept{ return GetResAttribs(n, GetNumSepSmpls(), m_SeparateSamplerOffset); }
+    SPIRVShaderResourceAttribs& GetResource(Uint32 n)noexcept{ return GetResAttribs(n, GetTotalResources(), 0); }
 
 private:
     // Memory buffer that holds all resources as continuous chunk of memory:
