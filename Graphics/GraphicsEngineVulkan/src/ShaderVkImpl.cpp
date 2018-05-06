@@ -28,7 +28,6 @@
 #include "DataBlobImpl.h"
 #include "GLSLSourceBuilder.h"
 #include "GLSL2SPIRV.h"
-//#include "D3DShaderResourceLoader.h"
 
 using namespace Diligent;
 
@@ -37,73 +36,55 @@ namespace Diligent
 
 
 ShaderVkImpl::ShaderVkImpl(IReferenceCounters *pRefCounters, RenderDeviceVkImpl *pRenderDeviceVk, const ShaderCreationAttribs &CreationAttribs) : 
-    TShaderBase(pRefCounters, pRenderDeviceVk, CreationAttribs.Desc)/*,
-    ShaderD3DBase(ShaderCreationAttribs),
+    TShaderBase(pRefCounters, pRenderDeviceVk, CreationAttribs.Desc),
     m_StaticResLayout(*this, GetRawAllocator()),
     m_DummyShaderVar(*this),
-    m_ConstResCache(ShaderResourceCacheVk::DbgCacheContentType::StaticShaderResources)*/
+    m_ConstResCache(/*ShaderResourceCacheVk::DbgCacheContentType::StaticShaderResources*/)
 {
     auto GLSLSource = BuildGLSLSourceString(CreationAttribs, TargetGLSLCompiler::glslang);
-    auto SPIRV = GLSLtoSPIRV(m_Desc.ShaderType, GLSLSource.c_str());
-    if(SPIRV.empty())
+    m_SPIRV = GLSLtoSPIRV(m_Desc.ShaderType, GLSLSource.c_str());
+    if(m_SPIRV.empty())
     {
         LOG_ERROR_AND_THROW("Failed to compile shader");
     }
 
-    const auto &LogicalDevice = pRenderDeviceVk->GetLogicalDevice();
-    VkShaderModuleCreateInfo ShaderModuleCI = {};
-    ShaderModuleCI.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    ShaderModuleCI.pNext = NULL;
-    ShaderModuleCI.flags = 0;
-    ShaderModuleCI.codeSize = SPIRV.size() * sizeof(unsigned int);
-    ShaderModuleCI.pCode = SPIRV.data();
-    m_VkShaderModule = LogicalDevice.CreateShaderModule(ShaderModuleCI, m_Desc.Name);
-    
+    // We cannot create shader module here because resource bindings are assigned when
+    // pipeline state is created
+
     // Load shader resources
     auto &Allocator = GetRawAllocator();
     auto *pRawMem = ALLOCATE(Allocator, "Allocator for ShaderResources", sizeof(SPIRVShaderResources));
-    auto *pResources = new (pRawMem) SPIRVShaderResources(Allocator, m_Desc.ShaderType, std::move(SPIRV), m_Desc.DefaultVariableType, m_Desc.VariableDesc, m_Desc.NumVariables);
+    auto *pResources = new (pRawMem) SPIRVShaderResources(Allocator, m_Desc.ShaderType, m_SPIRV, m_Desc.DefaultVariableType, m_Desc.VariableDesc, m_Desc.NumVariables);
     m_pShaderResources.reset(pResources, STDDeleterRawMem<SPIRVShaderResources>(Allocator));
 
-    /*
     // Clone only static resources that will be set directly in the shader
     // http://diligentgraphics.com/diligent-engine/architecture/Vk/shader-resource-layout#Initializing-Special-Resource-Layout-for-Managing-Static-Shader-Resources
     SHADER_VARIABLE_TYPE VarTypes[] = {SHADER_VARIABLE_TYPE_STATIC};
-    m_StaticResLayout.Initialize(pRenderDeviceVk->GetVkDevice(), m_pShaderResources, GetRawAllocator(), VarTypes, _countof(VarTypes), &m_ConstResCache, nullptr);
-*/
+    m_StaticResLayout.Initialize(pRenderDeviceVk->GetLogicalDevice(), m_pShaderResources, GetRawAllocator(), VarTypes, _countof(VarTypes), &m_ConstResCache, nullptr, nullptr);
 }
 
 ShaderVkImpl::~ShaderVkImpl()
 {
-    auto pDeviceVkImpl = ValidatedCast<RenderDeviceVkImpl>(GetDevice());
-    pDeviceVkImpl->SafeReleaseVkObject(std::move(m_VkShaderModule));
 }
 
 void ShaderVkImpl::BindResources(IResourceMapping* pResourceMapping, Uint32 Flags)
 {
-#if 0
    m_StaticResLayout.BindResources(pResourceMapping, Flags, &m_ConstResCache);
-#endif
 }
     
 IShaderVariable* ShaderVkImpl::GetShaderVariable(const Char* Name)
 {
-#if 0
     auto *pVar = m_StaticResLayout.GetShaderVariable(Name);
     if(pVar == nullptr)
         pVar = &m_DummyShaderVar;
     return pVar;
-#endif
-    return nullptr;
 }
 
-#if 0
 #ifdef VERIFY_SHADER_BINDINGS
 void ShaderVkImpl::DbgVerifyStaticResourceBindings()
 {
     m_StaticResLayout.dbgVerifyBindings();
 }
-#endif
 #endif
 
 }

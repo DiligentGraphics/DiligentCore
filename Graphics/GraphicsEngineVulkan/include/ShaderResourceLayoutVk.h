@@ -107,11 +107,11 @@
 #include "unordered_map"
 
 #include "ShaderBase.h"
-#include "ShaderBase.h"
 #include "HashUtils.h"
 #include "ShaderResourcesVk.h"
 #include "ShaderResourceCacheVk.h"
-//#include "ShaderVariable.h"
+#include "SPIRVShaderResources.h"
+#include "VulkanUtilities/VulkanLogicalDevice.h"
 
 #ifdef _DEBUG
 #   define VERIFY_SHADER_BINDINGS
@@ -125,17 +125,16 @@ namespace Diligent
 class ShaderResourceLayoutVk
 {
 public:
-#if 0
     ShaderResourceLayoutVk(IObject &Owner, IMemoryAllocator &ResourceLayoutDataAllocator);
 
     // This constructor is used by ShaderResourceBindingVkImpl to clone layout from the reference layout in PipelineStateVkImpl. 
     // Root indices and descriptor table offsets must be correct. Resource cache is assigned, but not initialized.
-    ShaderResourceLayoutVk(IObject &Owner, 
-                              const ShaderResourceLayoutVk& SrcLayout, 
-                              IMemoryAllocator &ResourceLayoutDataAllocator,
-                              const SHADER_VARIABLE_TYPE *AllowedVarTypes, 
-                              Uint32 NumAllowedTypes, 
-                              ShaderResourceCacheVk &ResourceCache);
+    //ShaderResourceLayoutVk(IObject &Owner, 
+    //                       const ShaderResourceLayoutVk& SrcLayout, 
+    //                       IMemoryAllocator &ResourceLayoutDataAllocator,
+    //                       const SHADER_VARIABLE_TYPE *AllowedVarTypes, 
+    //                       Uint32 NumAllowedTypes, 
+    //                       ShaderResourceCacheVk &ResourceCache);
 
     ShaderResourceLayoutVk(const ShaderResourceLayoutVk&) = delete;
     ShaderResourceLayoutVk(ShaderResourceLayoutVk&&) = delete;
@@ -150,14 +149,15 @@ public:
     //  - PipelineStateVkImpl class instance to reference all types of resources (static, mutable, dynamic). 
     //    Root indices and descriptor table offsets are assigned during the initialization; 
     //    no shader resource cache is provided
-    void Initialize(IVkDevice *pVkDevice,
-                    const std::shared_ptr<const ShaderResourcesVk>& pSrcResources, 
+    void Initialize(const VulkanUtilities::VulkanLogicalDevice &LogicalDevice,
+                    const std::shared_ptr<const SPIRVShaderResources>& pSrcResources,
                     IMemoryAllocator &LayoutDataAllocator,
                     const SHADER_VARIABLE_TYPE *VarTypes, 
                     Uint32 NumAllowedTypes, 
                     ShaderResourceCacheVk *pResourceCache,
-                    class RootSignature *pRootSig);
-
+                    std::vector<uint32_t> *pSPIRV,
+                    class PipelineLayout *pPipelineLayout);
+#if 0
     // sizeof(SRV_CBV_UAV) == 32 (x64)
     struct SRV_CBV_UAV : ShaderVariableD3DBase<ShaderResourceLayoutVk>
     {
@@ -213,9 +213,10 @@ public:
         }
 
         bool IsBound(Uint32 ArrayIndex);
-
+#endif
         // Non-virtual function
         void BindResource(IDeviceObject *pObject, Uint32 ArrayIndex, const ShaderResourceLayoutVk *dbgResLayout);
+#if 0
         virtual void Set(IDeviceObject *pObject)override final{ BindResource(pObject, 0, nullptr); }
 
         virtual void SetArray(IDeviceObject* const* ppObjects, Uint32 FirstElement, Uint32 NumElements)override final
@@ -311,17 +312,16 @@ public:
 
 
     void CopyStaticResourceDesriptorHandles(const ShaderResourceLayoutVk &SrcLayout);
-
+#endif
     // dbgResourceCache is only used for sanity check and as a remainder that the resource cache must be alive
     // while Layout is alive
     void BindResources( IResourceMapping* pResourceMapping, Uint32 Flags, const ShaderResourceCacheVk *dbgResourceCache );
-
     IShaderVariable* GetShaderVariable( const Char* Name );
 
 #ifdef VERIFY_SHADER_BINDINGS
     void dbgVerifyBindings()const;
 #endif
-
+#if 0
     IObject& GetOwner(){return m_Owner;}
 
 private:

@@ -34,8 +34,8 @@
 
 namespace Diligent
 {
-/*
-void PipelineStateVkImpl::ParseShaderResourceLayout(IShader *pShader)
+
+void PipelineStateVkImpl::ParseResourceLayoutAndCreateShader(IShader *pShader)
 {
     VERIFY_EXPR(pShader);
 
@@ -46,13 +46,23 @@ void PipelineStateVkImpl::ParseShaderResourceLayout(IShader *pShader)
     VERIFY(m_pShaderResourceLayouts[ShaderInd] == nullptr, "Shader resource layout has already been initialized");
 
     auto pDeviceVkImpl = ValidatedCast<RenderDeviceVkImpl>(pShaderVk->GetDevice());
+    const auto &LogicalDevice = pDeviceVkImpl->GetLogicalDevice();
     auto &ShaderResLayoutAllocator = GetRawAllocator();
 
     auto *pRawMem = ALLOCATE(ShaderResLayoutAllocator, "Raw memory for ShaderResourceLayoutVk", sizeof(ShaderResourceLayoutVk));
     m_pShaderResourceLayouts[ShaderInd] = new (pRawMem) ShaderResourceLayoutVk(*this, GetRawAllocator());
-    m_pShaderResourceLayouts[ShaderInd]->Initialize(pDeviceVkImpl->GetVkDevice(), pShaderVk->GetShaderResources(), GetRawAllocator(), nullptr, 0, nullptr, &m_RootSig);
+    std::vector<uint32_t> SPIRV = pShaderVk->GetSPIRV();
+    m_pShaderResourceLayouts[ShaderInd]->Initialize(LogicalDevice, pShaderVk->GetShaderResources(), GetRawAllocator(), nullptr, 0, nullptr, &SPIRV, &m_PipelineLayout);
+
+    VkShaderModuleCreateInfo ShaderModuleCI = {};
+    ShaderModuleCI.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    ShaderModuleCI.pNext = NULL;
+    ShaderModuleCI.flags = 0;
+    ShaderModuleCI.codeSize = SPIRV.size() * sizeof(uint32_t);
+    ShaderModuleCI.pCode = SPIRV.data();
+    m_ShaderModules[ShaderInd] = LogicalDevice.CreateShaderModule(ShaderModuleCI, m_Desc.Name);
 }
-*/
+
 
 void PipelineStateVkImpl::CreateRenderPass(const VulkanUtilities::VulkanLogicalDevice &LogicalDevice)
 {
@@ -143,11 +153,10 @@ void PipelineStateVkImpl::CreateRenderPass(const VulkanUtilities::VulkanLogicalD
 }
 
 PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters *pRefCounters, RenderDeviceVkImpl *pDeviceVk, const PipelineStateDesc &PipelineDesc) : 
-    TPipelineStateBase(pRefCounters, pDeviceVk, PipelineDesc)/*,
-    m_DummyVar(*this)
-    m_ResourceCacheDataAllocator(GetRawAllocator(), PipelineDesc.SRBAllocationGranularity),
-    m_pDefaultShaderResBinding(nullptr, STDDeleter<ShaderResourceBindingVkImpl, FixedBlockMemoryAllocator>(pDeviceVk->GetSRBAllocator()) )
-*/
+    TPipelineStateBase(pRefCounters, pDeviceVk, PipelineDesc),
+    m_DummyVar(*this),
+    m_ResourceCacheDataAllocator(GetRawAllocator(), PipelineDesc.SRBAllocationGranularity)/*,
+    m_pDefaultShaderResBinding(nullptr, STDDeleter<ShaderResourceBindingVkImpl, FixedBlockMemoryAllocator>(pDeviceVk->GetSRBAllocator()) )*/
 {
     const auto &LogicalDevice = pDeviceVk->GetLogicalDevice();
     if (PipelineDesc.IsComputePipeline)
@@ -163,7 +172,6 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters *pRefCounters, Ren
 #ifdef _DEBUG
         PipelineCI.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
 #endif  
-        PipelineCI.layout;
         PipelineCI.basePipelineHandle = VK_NULL_HANDLE; // a pipeline to derive from
         PipelineCI.basePipelineIndex = 0; // an index into the pCreateInfos parameter to use as a pipeline to derive from
 
@@ -172,16 +180,15 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters *pRefCounters, Ren
         CSStage.pNext = nullptr;
         CSStage.flags = 0; // reserved for future use
         CSStage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
-        auto *pShaderVk = ValidatedCast<ShaderVkImpl>(ComputePipeline.pCS);
-        CSStage.module = pShaderVk->GetVkShaderModule();
+
+        ParseResourceLayoutAndCreateShader(ComputePipeline.pCS);
+        CSStage.module = m_ShaderModules[CSInd];
+
+        m_PipelineLayout.Finalize(LogicalDevice);
+        PipelineCI.layout = m_PipelineLayout.GetVkPipelineLayout();
+        
         CSStage.pName = "main";
         CSStage.pSpecializationInfo = nullptr;
-
-#if 0
-        ParseShaderResourceLayout(ComputePipeline.pCS);
-        m_RootSig.Finalize(pVkDevice);
-        VkPSODesc.pRootSignature = m_RootSig.GetVkRootSignature();
-#endif
 
         m_Pipeline = LogicalDevice.CreateComputePipeline(PipelineCI, VK_NULL_HANDLE, m_Desc.Name);
     }
@@ -199,6 +206,11 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters *pRefCounters, Ren
 #ifdef _DEBUG
         PipelineCI.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
 #endif  
+
+#if 0
+        m_PipelineLayout.AllocateStaticSamplers(GetShaders(), GetNumShaders());
+#endif
+
         PipelineCI.stageCount = m_NumShaders;
         std::vector<VkPipelineShaderStageCreateInfo> Stages(PipelineCI.stageCount);
         for (Uint32 s = 0; s < m_NumShaders; ++s)
@@ -220,11 +232,15 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters *pRefCounters, Ren
                 default: UNEXPECTED("Unknown shader type");
             }
             
-            auto *pShaderVk = ValidatedCast<ShaderVkImpl>(pShader);
-            StageCI.module = pShaderVk->GetVkShaderModule();
+            ParseResourceLayoutAndCreateShader(pShader);
+
+            StageCI.module = m_ShaderModules[GetShaderTypeIndex(ShaderType)];
             StageCI.pName = "main"; // entry point
             StageCI.pSpecializationInfo = nullptr;
         }
+
+        m_PipelineLayout.Finalize(LogicalDevice);
+        PipelineCI.layout = m_PipelineLayout.GetVkPipelineLayout();
 
         PipelineCI.pStages = Stages.data();
         
@@ -344,72 +360,20 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters *pRefCounters, Ren
         DynamicStateCI.pDynamicStates = DynamicStates.data();
         PipelineCI.pDynamicState = &DynamicStateCI;
 
-
-        VkPipelineLayoutCreateInfo PipelineLayoutCI = {};
-        PipelineLayoutCI.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        PipelineLayoutCI.pNext = nullptr;
-        PipelineLayoutCI.flags = 0; // reserved for future use
-        PipelineLayoutCI.setLayoutCount = 0;
-        PipelineLayoutCI.pSetLayouts = nullptr;
-        PipelineLayoutCI.pushConstantRangeCount = 0;
-        PipelineLayoutCI.pPushConstantRanges = nullptr;
-        m_TmpPipelineLayout = LogicalDevice.CreatePipelineLayout(PipelineLayoutCI);
-        PipelineCI.layout = m_TmpPipelineLayout;
-
+        
         PipelineCI.renderPass = m_RenderPass;
         PipelineCI.subpass = 0;
         PipelineCI.basePipelineHandle = VK_NULL_HANDLE; // a pipeline to derive from
         PipelineCI.basePipelineIndex = 0; // an index into the pCreateInfos parameter to use as a pipeline to derive from
 
         m_Pipeline = LogicalDevice.CreateGraphicsPipeline(PipelineCI, VK_NULL_HANDLE, m_Desc.Name);
-
-#if 0
-        m_RootSig.AllocateStaticSamplers( GetShaders(), GetNumShaders() );
-            
-#define INIT_SHADER(VarName, ExpectedType)\
-        if (GraphicsPipeline.p##VarName)                                            \
-        {                                                                           \
-            auto ShaderType = GraphicsPipeline.p##VarName->GetDesc().ShaderType;    \
-            if( ShaderType != ExpectedType )                                        \
-                LOG_ERROR_AND_THROW( GetShaderTypeLiteralName(ShaderType), " shader is provided while ", GetShaderTypeLiteralName(ExpectedType), " is expected");\
-            auto *pByteCode = ValidatedCast<ShaderVkImpl>(GraphicsPipeline.p##VarName)->GetShaderByteCode(); \
-            VkPSODesc.VarName.pShaderBytecode = pByteCode->GetBufferPointer();   \
-            VkPSODesc.VarName.BytecodeLength = pByteCode->GetBufferSize();       \
-            ParseShaderResourceLayout(GraphicsPipeline.p##VarName);                 \
-        }                                                                           \
-        else                                                                        \
-        {                                                                           \
-            VkPSODesc.VarName.pShaderBytecode = nullptr;                         \
-            VkPSODesc.VarName.BytecodeLength = 0;                                \
-        }
-
-        INIT_SHADER(VS, SHADER_TYPE_VERTEX);
-        INIT_SHADER(PS, SHADER_TYPE_PIXEL);
-        INIT_SHADER(GS, SHADER_TYPE_GEOMETRY);
-        INIT_SHADER(DS, SHADER_TYPE_DOMAIN);
-        INIT_SHADER(HS, SHADER_TYPE_HULL);
-#undef INIT_SHADER
-
-        m_RootSig.Finalize(pVkDevice);
-        VkPSODesc.pRootSignature = m_RootSig.GetVkRootSignature();
-        
-        memset(&VkPSODesc.StreamOutput, 0, sizeof(VkPSODesc.StreamOutput));
-#endif
-    }
-#if 0
-    if (*m_Desc.Name != 0)
-    {
-        m_pVkPSO->SetName(WidenString(m_Desc.Name).c_str());
-        String RootSignatureDesc("Root signature for PSO \"");
-        RootSignatureDesc.append(m_Desc.Name);
-        RootSignatureDesc.push_back('\"');
-        m_RootSig.GetVkRootSignature()->SetName(WidenString(RootSignatureDesc).c_str());
     }
 
     if(PipelineDesc.SRBAllocationGranularity > 1)
         m_ResLayoutDataAllocators.Init(m_NumShaders, PipelineDesc.SRBAllocationGranularity);
 
     auto &SRBAllocator = pDeviceVk->GetSRBAllocator();
+#if 0
     // Default shader resource binding must be initialized after resource layouts are parsed!
     m_pDefaultShaderResBinding.reset( NEW_RC_OBJ(SRBAllocator, "ShaderResourceBindingVkImpl instance", ShaderResourceBindingVkImpl, this)(this, true) );
 
@@ -424,9 +388,15 @@ PipelineStateVkImpl::~PipelineStateVkImpl()
     pDeviceVkImpl->SafeReleaseVkObject(std::move(m_RenderPass));
     pDeviceVkImpl->SafeReleaseVkObject(std::move(m_Pipeline));
     m_PipelineLayout.Release(pDeviceVkImpl);
-    //pDeviceVkImpl->SafeReleaseVkObject(std::move(m_TmpPipelineLayout));
 
-#if 0
+    for(auto &ShaderModule : m_ShaderModules)
+    {
+        if(ShaderModule != VK_NULL_HANDLE)
+        {
+            pDeviceVkImpl->SafeReleaseVkObject(std::move(ShaderModule));
+        }
+    }
+
     auto &ShaderResLayoutAllocator = GetRawAllocator();
     for(Int32 l = 0; l < _countof(m_pShaderResourceLayouts); ++l)
     {
@@ -436,14 +406,12 @@ PipelineStateVkImpl::~PipelineStateVkImpl()
             ShaderResLayoutAllocator.Free(m_pShaderResourceLayouts[l]);
         }
     }
-#endif
 }
 
 IMPLEMENT_QUERY_INTERFACE( PipelineStateVkImpl, IID_PipelineStateVk, TPipelineStateBase )
 
 void PipelineStateVkImpl::BindShaderResources(IResourceMapping *pResourceMapping, Uint32 Flags)
 {
-#if 0
     if( m_Desc.IsComputePipeline )
     { 
         if(m_pCS)m_pCS->BindResources(pResourceMapping, Flags);
@@ -456,7 +424,6 @@ void PipelineStateVkImpl::BindShaderResources(IResourceMapping *pResourceMapping
         if(m_pDS)m_pDS->BindResources(pResourceMapping, Flags);
         if(m_pHS)m_pHS->BindResources(pResourceMapping, Flags);
     }
-#endif
 }
 
 void PipelineStateVkImpl::CreateShaderResourceBinding(IShaderResourceBinding **ppShaderResourceBinding)

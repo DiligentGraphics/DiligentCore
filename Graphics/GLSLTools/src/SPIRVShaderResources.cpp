@@ -49,26 +49,14 @@ static uint32_t GetDecorationOffset(const spirv_cross::Compiler &Compiler,
     return offset;
 }
 
-template<typename Type>
-static Type GetDecoration(const spirv_cross::Compiler &Compiler,
-                          const spirv_cross::Resource &Res,
-                          spv::Decoration Decoration)
-{
-    auto dec = Compiler.get_decoration(Res.id, Decoration);
-    VERIFY(dec <= std::numeric_limits<Type>::max(), "Decoration value exceeds maximum representable value ", std::numeric_limits<Type>::max());
-    return static_cast<Type>(dec);
-}
-
 SPIRVShaderResourceAttribs::SPIRVShaderResourceAttribs(const spirv_cross::Compiler &Compiler,
                                                        const spirv_cross::Resource &Res, 
                                                        ResourceType _Type, 
                                                        SHADER_VARIABLE_TYPE _VarType) :
     Name(Res.name),
-    Binding(GetDecoration<decltype(Binding)>(Compiler, Res, spv::DecorationBinding)),
     ArraySize(GetResourceArraySize<decltype(ArraySize)>(Compiler, Res)),
     BindingDecorationOffset(GetDecorationOffset(Compiler, Res, spv::Decoration::DecorationBinding)),
     DescriptorSetDecorationOffset(GetDecorationOffset(Compiler, Res, spv::Decoration::DecorationDescriptorSet)),
-    DescriptorSet(GetDecoration<decltype(DescriptorSet)>(Compiler,Res, spv::DecorationDescriptorSet)),
     Type(_Type),
     VarType(_VarType)
 {

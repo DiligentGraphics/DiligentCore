@@ -80,16 +80,14 @@ struct SPIRVShaderResourceAttribs
 
     const String Name;
 
-    const Uint16 Binding;
     const Uint16 ArraySize;
+    const ResourceType Type;
+    const SHADER_VARIABLE_TYPE VarType : 8;
 
     // offset in SPIRV words (uint32_t) for a decoration which was originally declared in the SPIRV binary
     const uint32_t BindingDecorationOffset;
     const uint32_t DescriptorSetDecorationOffset;
 
-    const Uint8 DescriptorSet;
-    const ResourceType Type : 4;
-    const SHADER_VARIABLE_TYPE VarType : 4;
 
     SPIRVShaderResourceAttribs(const spirv_cross::Compiler &Compiler, const spirv_cross::Resource &Res, ResourceType _Type, SHADER_VARIABLE_TYPE _VarType);
 
@@ -104,9 +102,7 @@ struct SPIRVShaderResourceAttribs
 
     bool IsCompatibleWith(const SPIRVShaderResourceAttribs& Attibs)const
     {
-        return Binding       == Attibs.Binding &&
-               DescriptorSet == Attibs.DescriptorSet &&
-               ArraySize     == Attibs.ArraySize && 
+        return ArraySize     == Attibs.ArraySize && 
                Type          == Attibs.Type;
     }
 };

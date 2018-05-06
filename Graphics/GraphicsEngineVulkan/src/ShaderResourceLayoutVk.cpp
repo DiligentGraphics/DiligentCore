@@ -37,19 +37,19 @@
 namespace Diligent
 {
  
-#if 0
 ShaderResourceLayoutVk::ShaderResourceLayoutVk(IObject &Owner,
-                                                     IMemoryAllocator &ResourceLayoutDataAllocator) : 
+                                               IMemoryAllocator &ResourceLayoutDataAllocator) /*: 
     m_Owner(Owner),
 #if USE_VARIABLE_HASH_MAP
     m_VariableHash(STD_ALLOCATOR_RAW_MEM(VariableHashElemType, GetRawAllocator(), "Allocator for unordered_map<HashMapStringKey, IShaderVariable*>")),
 #endif
-    m_ResourceBuffer(nullptr, STDDeleterRawMem<void>(ResourceLayoutDataAllocator))
+    m_ResourceBuffer(nullptr, STDDeleterRawMem<void>(ResourceLayoutDataAllocator))*/
 {
 }
 
 ShaderResourceLayoutVk::~ShaderResourceLayoutVk()
 {
+#if 0
     // For some reason MS compiler generates this false warning:
     // warning C4189: 'CbvSrvUav': local variable is initialized but not referenced
 #pragma warning(push)
@@ -61,8 +61,10 @@ ShaderResourceLayoutVk::~ShaderResourceLayoutVk()
 
     for(Uint32 s=0; s < GetTotalSamplerCount(); ++s)
         m_Samplers[s].~Sampler();
+#endif
 }
 
+#if 0
 Vk_DESCRIPTOR_RANGE_TYPE GetDescriptorRangeType(CachedResourceType ResType)
 {
     static Vk_DESCRIPTOR_RANGE_TYPE RangeTypes[(size_t)CachedResourceType::NumTypes] = {};
@@ -169,17 +171,18 @@ ShaderResourceLayoutVk::ShaderResourceLayoutVk(IObject &Owner,
     }
 #endif
 }
+#endif
 
-// http://diligentgraphics.com/diligent-engine/architecture/Vk/shader-resource-layout#Initializing-Shader-Resource-Layouts-and-Root-Signature-in-a-Pipeline-State-Object
-// http://diligentgraphics.com/diligent-engine/architecture/Vk/shader-resource-cache#Initializing-Shader-Resource-Layouts-in-a-Pipeline-State
-void ShaderResourceLayoutVk::Initialize(IVkDevice *pVkDevice,
-                                           const std::shared_ptr<const ShaderResourcesVk>& pSrcResources, 
-                                           IMemoryAllocator &LayoutDataAllocator,
-                                           const SHADER_VARIABLE_TYPE *AllowedVarTypes, 
-                                           Uint32 NumAllowedTypes, 
-                                           ShaderResourceCacheVk* pResourceCache,
-                                           RootSignature *pRootSig)
+void ShaderResourceLayoutVk::Initialize(const VulkanUtilities::VulkanLogicalDevice &LogicalDevice,
+                                        const std::shared_ptr<const SPIRVShaderResources>& pSrcResources,
+                                        IMemoryAllocator &LayoutDataAllocator,
+                                        const SHADER_VARIABLE_TYPE *VarTypes,
+                                        Uint32 NumAllowedTypes,
+                                        ShaderResourceCacheVk *pResourceCache,
+                                        std::vector<uint32_t> *pSPIRV,
+                                        class PipelineLayout *pPipelineLayout)
 {
+#if 0
     m_pResources = pSrcResources;
     m_pResourceCache = pResourceCache;
     m_pVkDevice = pVkDevice;
@@ -376,9 +379,10 @@ void ShaderResourceLayoutVk::Initialize(IVkDevice *pVkDevice,
     }
 
     InitVariablesHashMap();
+#endif
 }
 
-
+#if 0
 void ShaderResourceLayoutVk::InitVariablesHashMap()
 {
 #if USE_VARIABLE_HASH_MAP
@@ -743,10 +747,11 @@ bool ShaderResourceLayoutVk::SRV_CBV_UAV::IsBound(Uint32 ArrayIndex)
     return false;
 }
 
-
+#endif
 
 void ShaderResourceLayoutVk::BindResources( IResourceMapping* pResourceMapping, Uint32 Flags, const ShaderResourceCacheVk *dbgResourceCache )
 {
+#if 0
     VERIFY(dbgResourceCache == m_pResourceCache, "Resource cache does not match the cache provided at initialization");
 
     if( !pResourceMapping )
@@ -783,11 +788,12 @@ void ShaderResourceLayoutVk::BindResources( IResourceMapping* pResourceMapping, 
             }
         }
     }
+#endif
 }
-
 
 IShaderVariable* ShaderResourceLayoutVk::GetShaderVariable(const Char* Name)
 {
+#if 0
     IShaderVariable* pVar = nullptr;
 #if USE_VARIABLE_HASH_MAP
     // Name will be implicitly converted to HashMapStringKey without making a copy
@@ -812,10 +818,12 @@ IShaderVariable* ShaderResourceLayoutVk::GetShaderVariable(const Char* Name)
         LOG_ERROR_MESSAGE( "Shader variable \"", Name, "\" is not found in shader \"", GetShaderName(), "\" (", GetShaderTypeLiteralName(m_pResources->GetShaderType()), "). Attempts to set the variable will be silently ignored." );
     }
     return pVar;
+#endif
+    return nullptr;
 }
 
 
-
+#if 0
 void ShaderResourceLayoutVk::CopyStaticResourceDesriptorHandles(const ShaderResourceLayoutVk &SrcLayout)
 {
     if (!m_pResourceCache)
@@ -924,11 +932,12 @@ void ShaderResourceLayoutVk::CopyStaticResourceDesriptorHandles(const ShaderReso
         }
     }
 }
-
+#endif
 
 #ifdef VERIFY_SHADER_BINDINGS
 void ShaderResourceLayoutVk::dbgVerifyBindings()const
 {
+#if 0
     VERIFY(m_pResourceCache, "Resource cache is null");
 
     for(SHADER_VARIABLE_TYPE VarType = SHADER_VARIABLE_TYPE_STATIC; VarType < SHADER_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_VARIABLE_TYPE>(VarType+1))
@@ -1054,8 +1063,11 @@ void ShaderResourceLayoutVk::dbgVerifyBindings()const
             }
         }
     }
+#endif
 }
 #endif
+
+#if 0
 
 const Char* ShaderResourceLayoutVk::GetShaderName()const
 {

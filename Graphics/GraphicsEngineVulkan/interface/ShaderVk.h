@@ -26,6 +26,7 @@
 /// \file
 /// Definition of the Diligent::IShaderVk interface
 
+#include <vector>
 #include "../../GraphicsEngine/interface/Shader.h"
 
 namespace Diligent
@@ -40,8 +41,8 @@ class IShaderVk : public IShader
 {
 public:
 
-    /// Returns Vulkan shader module handle
-    virtual VkShaderModule GetVkShaderModule() = 0;
+    /// Returns SPIRV bytecode
+    virtual const std::vector<uint32_t>& GetSPIRV()const = 0;
 };
 
 }

@@ -26,6 +26,8 @@
 /// \file
 /// Declaration of Diligent::PipelineStateVkImpl class
 
+#include <array>
+
 #include "RenderDeviceVk.h"
 #include "PipelineStateVk.h"
 #include "PipelineStateBase.h"
@@ -86,11 +88,8 @@ private:
 
     void CreateRenderPass(const VulkanUtilities::VulkanLogicalDevice &LogicalDevice);
 
-#if 0
-    void ParseShaderResourceLayout(IShader *pShader);
+    void ParseResourceLayoutAndCreateShader(IShader *pShader);
 
-    /// Vk device
-    RootSignature m_RootSig;
     DummyShaderVariable m_DummyVar;
     
     // Looks like there may be a bug in msvc: when allocators are declared as 
@@ -121,15 +120,15 @@ private:
 
     ShaderResourceLayoutVk* m_pShaderResourceLayouts[6] = {};
     AdaptiveFixedBlockAllocator m_ResourceCacheDataAllocator; // Use separate allocator for every shader stage
+    std::array<VulkanUtilities::ShaderModuleWrapper, 6> m_ShaderModules;
 
     // Do not use strong reference to avoid cyclic references
     // Default SRB must be defined after allocators
-    std::unique_ptr<class ShaderResourceBindingVkImpl, STDDeleter<ShaderResourceBindingVkImpl, FixedBlockMemoryAllocator> > m_pDefaultShaderResBinding;
-#endif
+    //std::unique_ptr<class ShaderResourceBindingVkImpl, STDDeleter<ShaderResourceBindingVkImpl, FixedBlockMemoryAllocator> > m_pDefaultShaderResBinding;
+
     VulkanUtilities::RenderPassWrapper m_RenderPass;
     VulkanUtilities::PipelineWrapper m_Pipeline;
     PipelineLayout m_PipelineLayout;
-    VulkanUtilities::PipelineLayoutWrapper m_TmpPipelineLayout;
 };
 
 }
