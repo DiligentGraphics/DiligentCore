@@ -232,27 +232,27 @@ void PipelineLayout::DescriptorSetLayoutManager::Finalize(const VulkanUtilities:
     }
     m_LayoutBindings.resize(TotalBindings);
     size_t BindingOffset = 0;
+    std::array<VkDescriptorSetLayout, 2> ActiveDescrSetLayouts;
+    int CurrActiveSet = 0;
     for(size_t i=0; i < m_DescriptorSetLayouts.size(); ++i)
     {
         auto &Layout = m_DescriptorSetLayouts[i];
-        std::copy(Layout.pBindings, Layout.pBindings + Layout.NumLayoutBindings, m_LayoutBindings.begin() + BindingOffset);
-        Layout.Finalize(LogicalDevice, m_MemAllocator, &m_LayoutBindings[BindingOffset]);
-        BindingOffset += Layout.NumLayoutBindings;
+        if(Layout.SetIndex >= 0)
+        {
+            std::copy(Layout.pBindings, Layout.pBindings + Layout.NumLayoutBindings, m_LayoutBindings.begin() + BindingOffset);
+            Layout.Finalize(LogicalDevice, m_MemAllocator, &m_LayoutBindings[BindingOffset]);
+            BindingOffset += Layout.NumLayoutBindings;
+            ActiveDescrSetLayouts[CurrActiveSet++] = Layout.VkLayout;
+        }
     }
+    VERIFY_EXPR(CurrActiveSet == m_ActiveSets);
 
     VkPipelineLayoutCreateInfo PipelineLayoutCI = {};
     PipelineLayoutCI.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     PipelineLayoutCI.pNext = nullptr;
     PipelineLayoutCI.flags = 0; // reserved for future use
-    PipelineLayoutCI.setLayoutCount = static_cast<uint32_t>(m_DescriptorSetLayouts.size());
-
-    std::vector<VkDescriptorSetLayout, STDAllocatorRawMem<VkDescriptorSetLayout> > 
-        VkDescrSetLayout(m_DescriptorSetLayouts.size(), 
-                         VK_NULL_HANDLE, 
-                         STD_ALLOCATOR_RAW_MEM(VkDescriptorSetLayout, m_MemAllocator, "Allocator for vector<VkDescriptorSetLayout>"));
-    for(size_t i=0; i < m_DescriptorSetLayouts.size(); ++i)
-        VkDescrSetLayout[i] = m_DescriptorSetLayouts[i].VkLayout;
-    PipelineLayoutCI.pSetLayouts = !VkDescrSetLayout.empty() ? VkDescrSetLayout.data() : nullptr;
+    PipelineLayoutCI.setLayoutCount = m_ActiveSets;
+    PipelineLayoutCI.pSetLayouts = PipelineLayoutCI.setLayoutCount != 0 ? ActiveDescrSetLayouts.data() : nullptr;
     PipelineLayoutCI.pushConstantRangeCount = 0;
     PipelineLayoutCI.pPushConstantRanges = nullptr;
     m_VkPipelineLayout = LogicalDevice.CreatePipelineLayout(PipelineLayoutCI);
