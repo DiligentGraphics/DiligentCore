@@ -208,10 +208,11 @@ void ShaderResourceLayoutVk::Initialize(const VulkanUtilities::VulkanLogicalDevi
     {
         Uint32 Binding = 0;
         Uint32 DescriptorSet = 0;
+        Uint32 OffsetFromSetStart = 0;
         if (pPipelineLayout)
         {
             VERIFY_EXPR(pSPIRV != nullptr);
-            pPipelineLayout->AllocateResourceSlot(Attribs, m_pResources->GetShaderType(), DescriptorSet, Binding, *pSPIRV);
+            pPipelineLayout->AllocateResourceSlot(Attribs, m_pResources->GetShaderType(), DescriptorSet, Binding, OffsetFromSetStart, *pSPIRV);
             VERIFY(DescriptorSet <= std::numeric_limits<decltype(VkResource::DescriptorSet)>::max(), "Descriptor set (", DescriptorSet, ") excceeds representable max value");
             VERIFY(Binding <= std::numeric_limits<decltype(VkResource::Binding)>::max(), "Binding (", Binding, ") excceeds representable max value");
         }
@@ -229,12 +230,13 @@ void ShaderResourceLayoutVk::Initialize(const VulkanUtilities::VulkanLogicalDevi
             VERIFY_EXPR(m_pResourceCache != nullptr);
 
             DescriptorSet = Attribs.Type;
-            Binding = StaticResCacheSetSizes[DescriptorSet];
+            OffsetFromSetStart = StaticResCacheSetSizes[DescriptorSet];
+            Binding = 0;
             StaticResCacheSetSizes[DescriptorSet] += Attribs.ArraySize;
         }
 
         // Static samplers are never copied, and SamplerId == InvalidSamplerId
-        ::new (&GetResource(Attribs.VarType, CurrResInd[Attribs.VarType]++)) VkResource( *this, Attribs, Binding, DescriptorSet );
+        ::new (&GetResource(Attribs.VarType, CurrResInd[Attribs.VarType]++)) VkResource( *this, Attribs, Binding, DescriptorSet, OffsetFromSetStart);
     };
 
     m_pResources->ProcessResources(

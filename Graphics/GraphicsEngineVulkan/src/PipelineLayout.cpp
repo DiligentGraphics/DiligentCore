@@ -297,7 +297,8 @@ size_t PipelineLayout::DescriptorSetLayoutManager::GetHash()const
 void PipelineLayout::DescriptorSetLayoutManager::AllocateResourceSlot(const SPIRVShaderResourceAttribs &ResAttribs,
                                                                       SHADER_TYPE ShaderType,
                                                                       Uint32 &DescriptorSet,
-                                                                      Uint32 &Binding)
+                                                                      Uint32 &Binding,
+                                                                      Uint32 &OffsetFromTableStart)
 {
     auto& DescrSet = GetDescriptorSet(ResAttribs.VarType);
     if (DescrSet.SetIndex < 0)
@@ -307,13 +308,14 @@ void PipelineLayout::DescriptorSetLayoutManager::AllocateResourceSlot(const SPIR
     DescriptorSet = DescrSet.SetIndex;
 
     VkDescriptorSetLayoutBinding VkBinding = {};
-    VkBinding.binding = DescrSet.TotalDescriptors;
-    Binding = DescrSet.TotalDescriptors;
+    Binding = DescrSet.NumLayoutBindings;
+    VkBinding.binding = Binding;
     static const ResourceTypeToVkDescriptorType ResTypeToVkDescrType;
     VkBinding.descriptorType = ResTypeToVkDescrType[ResAttribs.Type];
     VkBinding.descriptorCount = ResAttribs.ArraySize;
     VkBinding.stageFlags = ShaderTypeToVkShaderStageFlagBit(ShaderType);
     VkBinding.pImmutableSamplers = nullptr;
+    OffsetFromTableStart = DescrSet.TotalDescriptors;
     DescrSet.AddBinding(VkBinding, m_MemAllocator);
 }
 
@@ -443,9 +445,10 @@ void PipelineLayout::AllocateResourceSlot(const SPIRVShaderResourceAttribs &ResA
                                           SHADER_TYPE ShaderType,
                                           Uint32 &DescriptorSet, // Output parameter
                                           Uint32 &Binding, // Output parameter
+                                          Uint32 &OffsetFromTableStart,
                                           std::vector<uint32_t> &SPIRV)
 {
-    m_LayoutMgr.AllocateResourceSlot(ResAttribs, ShaderType, DescriptorSet, Binding);
+    m_LayoutMgr.AllocateResourceSlot(ResAttribs, ShaderType, DescriptorSet, Binding, OffsetFromTableStart);
     SPIRV[ResAttribs.BindingDecorationOffset] = Binding;
     SPIRV[ResAttribs.DescriptorSetDecorationOffset] = DescriptorSet;
 

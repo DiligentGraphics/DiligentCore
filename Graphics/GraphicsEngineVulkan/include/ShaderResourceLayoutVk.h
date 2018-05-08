@@ -165,15 +165,18 @@ public:
 
         const Uint16 Binding;
         const Uint16 DescriptorSet;
+        const Uint32 OffsetFromSetStart;
         const SPIRVShaderResourceAttribs &SpirvAttribs;
         ShaderResourceLayoutVk &ParentResLayout;
 
         VkResource(ShaderResourceLayoutVk &_ParentLayout,
                    const SPIRVShaderResourceAttribs &_SpirvAttribs,
                    uint32_t _Binding,
-                   uint32_t _DescriptorSet) :
+                   uint32_t _DescriptorSet,
+                   Uint32 _OffsetFromSetStart) :
             Binding(static_cast<decltype(Binding)>(_Binding)),
             DescriptorSet(static_cast<decltype(DescriptorSet)>(_DescriptorSet)),
+            OffsetFromSetStart(_OffsetFromSetStart),
             SpirvAttribs(_SpirvAttribs),
             ParentResLayout(_ParentLayout)
         {

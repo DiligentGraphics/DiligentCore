@@ -61,6 +61,7 @@ public:
                               SHADER_TYPE ShaderType, 
                               Uint32 &DescriptorSet, 
                               Uint32 &Binding,
+                              Uint32 &OffsetFromTableStart,
                               std::vector<uint32_t> &SPIRV);
 
 #if 0
@@ -153,7 +154,8 @@ private:
         void AllocateResourceSlot(const SPIRVShaderResourceAttribs &ResAttribs,
                                   SHADER_TYPE ShaderType,
                                   Uint32 &DescriptorSet,
-                                  Uint32 &Binding);
+                                  Uint32 &Binding, 
+                                  Uint32 &OffsetFromTableStart);
     private:
         IMemoryAllocator &m_MemAllocator;
         VulkanUtilities::PipelineLayoutWrapper m_VkPipelineLayout;
