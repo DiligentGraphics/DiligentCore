@@ -24,7 +24,6 @@ set(INCLUDE
     include/ShaderResourceBindingVkImpl.h
     include/ShaderResourceCacheVk.h
     include/ShaderResourceLayoutVk.h
-    include/ShaderResourcesVk.h
     include/SwapChainVkImpl.h
     include/TextureVkImpl.h
     include/TextureViewVkImpl.h
@@ -81,7 +80,6 @@ set(SRC
     src/ShaderResourceBindingVkImpl.cpp
     src/ShaderResourceCacheVk.cpp
     src/ShaderResourceLayoutVk.cpp
-    src/ShaderResourcesVk.cpp
     src/SwapChainVkImpl.cpp
     src/TextureVkImpl.cpp
     src/TextureViewVkImpl.cpp

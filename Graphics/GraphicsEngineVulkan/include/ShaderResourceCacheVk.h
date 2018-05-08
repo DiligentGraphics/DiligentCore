@@ -44,38 +44,17 @@
 //  Ns = m_NumSets
 //
 //
-// The cache is also assigned decriptor heap space to store shader visible descriptor handles (for non-dynamic resources).
+// For static and mutable variable types, the cache is also assigned decriptor set
 //
 //   
-//      DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
-//  |   DescrptHndl[0]  ...  DescrptHndl[n-1]   |  DescrptHndl[0]  ...  DescrptHndl[m-1] | 
-//          A                                           A
-//          |                                           |
-//          | TableStartOffset                          | TableStartOffset
-//          |                                           |
-//   |    DescriptorSet[0]    |    DescriptorSet[1]    |    DescriptorSet[2]    |     ....      |   DescriptorSet[Nrt]   |
-//                              |                                                           | 
-//                              | TableStartOffset                                          | InvalidDescriptorOffset
-//                              |                                                           |
-//                              V                                                           V
-//                      |   DescrptHndl[0]  ...  DescrptHndl[n-1]   |                       X
-//                       DESCRIPTOR_HEAP_TYPE_SAMPLER
+//  |  VkDescriptorSet  |
+//          A 
+//          | 
+//          |
+//   |    DescriptorSet[0]    |    DescriptorSet[1]    |
 //
 //
-//
-// The allocation is inexed by the offset from the beginning of the root table
-// Each root table is assigned the space to store exactly m_NumResources resources
-// Dynamic resources are not assigned space in the descriptor heap allocation.
-//
-//
-//
-//   |      DescriptorSet[i]       |       Res[0]      ...       Res[n-1]      |
-//                      \
-//       TableStartOffset\____
-//                            \
-//                             V
-//                 .....       |   DescrptHndl[0]  ...  DescrptHndl[n-1]   |    ....
-//
+// Dynamic resources are not VkDescriptorSet 
 
 #include "DescriptorHeap.h"
 
@@ -143,6 +122,12 @@ public:
         }
 
         inline Uint32 GetSize()const{return m_NumResources; }
+
+        VkDescriptorSet GetVkDescriptorSet()const
+        {
+            UNSUPPORTED("Not yet implemented");
+            return VK_NULL_HANDLE;
+        }
 
         const Uint32 m_NumResources = 0;
     private:
@@ -270,6 +255,7 @@ private:
     // Allocation in a GPU-visible CBV/SRV/UAV descriptor heap
     DescriptorHeapAllocation m_CbvSrvUavHeapSpace;
 #endif
+    
     IMemoryAllocator *m_pAllocator=nullptr; 
     void *m_pMemory = nullptr;
     Uint32 m_NumSets = 0;

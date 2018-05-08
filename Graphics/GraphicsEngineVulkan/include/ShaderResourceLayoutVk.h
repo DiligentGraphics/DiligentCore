@@ -50,37 +50,34 @@
 //   references a sampler in ShaderResources, while VkResource::SamplerId references a sampler in ShaderResourceLayoutVk, 
 //   and the two are not the same
 //
-//
-//                                                      ________________SamplerId____________________
-//                                                     |                                             |
-//    _________________                  ______________|_____________________________________________V________
-//   |                 |  unique_ptr    |        |           |           |           |           |            |
-//   | ShaderResources |--------------->|   CBs  |  TexSRVs  |  TexUAVs  |  BufSRVs  |  BufUAVs  |  Samplers  |
-//   |_________________|                |________|___________|___________|___________|___________|____________|
-//            A                                         A                              A                   A  
-//            |                                          \                            /                     \
-//            |shared_ptr                                Ref                        Ref                     Ref
-//    ________|__________________                  ________\________________________/_________________________\_________________________________________
-//   |                           |   unique_ptr   |                   |                 |               |                  |                 |          |
-//   | ShaderResourceLayoutVk |--------------->|   VkResource[0]  |  VkResource[1] |       ...     |    Sampler[0]    |    Sampler[1]   |   ...    |
-//   |___________________________|                |___________________|_________________|_______________|__________________|_________________|__________|
-//            |                                          |  |                                                    A    |     /        
-//            | Raw ptr                                  |  |___________________SamplerId________________________|    |    /
-//            |                                          |                                                           /    /
-//            |                                           \                                                         /    /
-//    ________V_________________                   ________V_______________________________________________________V____V__                     
+//    ______________________                  ________________________________________________________________________
+//   |                      |  unique_ptr    |        |         |          |          |       |         |             |
+//   | SPIRVShaderResources |--------------->|   UBs  |   SBs   | StrgImgs | SmplImgs |  ACs  | SepImgs | SepSamplers |
+//   |______________________|                |________|_________|__________|__________|_______|_________|_____________|
+//            A                                         A                       A
+//            |                                          \                      |
+//            |shared_ptr                                Ref                   Ref                     
+//    ________|__________________                  ________\____________________|_____________________________________________
+//   |                           |   unique_ptr   |                   |                 |               |                     |
+//   | ShaderResourceLayoutVk    |--------------->|   VkResource[0]   |  VkResource[1]  |       ...     | VkResource[s+m+d-1] |
+//   |___________________________|                |___________________|_________________|_______________|_____________________|
+//            |                                          |                                                            |              
+//            | Raw ptr                                  |                                                            |     
+//            |                                          |                                                           /     
+//            |                                           \                                                         /     
+//    ________V_________________                   ________V_______________________________________________________V_______                     
 //   |                          |                 |                                                                        |                   
-//   | ShaderResourceCacheVk |---------------->|                                   Resources                            | 
+//   |   ShaderResourceCacheVk  |---------------->|                                   Resources                            | 
 //   |__________________________|                 |________________________________________________________________________|                   
 //
-//   Resources in the resource cache are identified by the root index and offset in the descriptor table
+//   Resources in the resource cache are identified by the descriptor set index and the offset in from the set start
 //
 //                                
 //    ShaderResourceLayoutVk is used as follows:
 //    * Every pipeline state object (PipelineStateVkImpl) maintains shader resource layout for every active shader stage
 //      ** These resource layouts are not bound to a resource cache and are used as reference layouts for shader resource binding objects
 //      ** All variable types are preserved
-//      ** Root indices and descriptor table offsets are assigned during the initialization
+//      ** Bindings, descriptor sets and offsets are assigned during the initialization
 //      ** Resource cache is not assigned
 //    * Every shader object (ShaderVkImpl) contains shader resource layout that facilitates management of static shader resources
 //      ** The resource layout defines artificial layout and is bound to a resource cache that actually holds references to resources
@@ -90,7 +87,7 @@
 //      ** Resource layouts are initialized by clonning reference layouts from the pipeline state object and are bound to the resource 
 //         cache that holds references to resources set by the application
 //      ** All shader variable types are clonned
-//      ** Resource cache is assigned, but not initialized; Initialization is performed by the root signature
+//      ** Resource cache is assigned, but not initialized; Initialization is performed by the pipeline layout object
 //
 
 #include <array>
@@ -102,10 +99,8 @@
 #define USE_VARIABLE_HASH_MAP 0
 
 
-
 #include "ShaderBase.h"
 #include "HashUtils.h"
-#include "ShaderResourcesVk.h"
 #include "ShaderResourceCacheVk.h"
 #include "SPIRVShaderResources.h"
 #include "VulkanUtilities/VulkanLogicalDevice.h"

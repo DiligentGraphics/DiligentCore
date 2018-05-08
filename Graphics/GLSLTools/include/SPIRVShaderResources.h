@@ -235,6 +235,21 @@ public:
         }
     }
 
+    template<typename THandler>
+    void ProcessResources(const SHADER_VARIABLE_TYPE *AllowedVarTypes, 
+                          Uint32 NumAllowedTypes,
+                          THandler Handler)const
+    {
+        Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
+
+        for(Uint32 n=0; n < GetTotalResources(); ++n)
+        {
+            const auto& Res = GetResource(n);
+            if( IsAllowedType(Res.VarType, AllowedTypeBits) )
+                Handler(UB, n);
+        }
+    }
+
     //bool IsCompatibleWith(const ShaderResources &Resources)const;
     
     //size_t GetHash()const;
