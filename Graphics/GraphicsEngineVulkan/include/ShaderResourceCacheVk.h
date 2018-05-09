@@ -93,17 +93,9 @@ public:
     ~ShaderResourceCacheVk();
 
     void Initialize(IMemoryAllocator &MemAllocator, Uint32 NumSets, Uint32 SetSizes[]);
-#if 0
-    static constexpr Uint32 InvalidDescriptorOffset = static_cast<Uint32>(-1);
-#endif
+
     struct Resource
     {
-#if 0
-        CachedResourceType Type = CachedResourceType::Unknown;
-        // CPU descriptor handle of a cached resource in CPU-only descriptor heap
-        // Note that for dynamic resources, this is the only available CPU descriptor handle
-        Vk_CPU_DESCRIPTOR_HANDLE CPUDescriptorHandle = {0};
-#endif
         RefCntAutoPtr<IDeviceObject> pObject;
     };
 

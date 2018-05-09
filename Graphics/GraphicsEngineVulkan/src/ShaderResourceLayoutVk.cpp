@@ -731,135 +731,38 @@ void ShaderResourceLayoutVk::InitializeStaticResources(const ShaderResourceLayou
 #ifdef VERIFY_SHADER_BINDINGS
 void ShaderResourceLayoutVk::dbgVerifyBindings()const
 {
-#if 0
     VERIFY(m_pResourceCache, "Resource cache is null");
 
     for(SHADER_VARIABLE_TYPE VarType = SHADER_VARIABLE_TYPE_STATIC; VarType < SHADER_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_VARIABLE_TYPE>(VarType+1))
     {
-        for(Uint32 r=0; r < m_NumCbvSrvUav[VarType]; ++r)
+        for(Uint32 r=0; r < m_NumResources[VarType]; ++r)
         {
-            const auto &res = GetSrvCbvUav(VarType, r);
-            VERIFY(res.Attribs.GetVariableType() == VarType, "Unexpected variable type");
-
-            for(Uint32 ArrInd = 0; ArrInd < res.Attribs.BindCount; ++ArrInd)
+            const auto &Res = GetResource(VarType, r);
+            VERIFY(Res.SpirvAttribs.VarType == VarType, "Unexpected variable type");
+            for(Uint32 ArrInd = 0; ArrInd < Res.SpirvAttribs.ArraySize; ++ArrInd)
             {
-                const auto &CachedRes = m_pResourceCache->GetRootTable(res.GetRootIndex()).GetResource(res.OffsetFromTableStart + ArrInd, Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, m_pResources->GetShaderType());
-                if(CachedRes.pObject)
-                    VERIFY(CachedRes.Type == res.GetResType(), "Inconsistent cached resource types");
+                auto &CachedDescrSet = m_pResourceCache->GetDescriptorSet(Res.DescriptorSet);
+                const auto &CachedRes = CachedDescrSet.GetResource(Res.OffsetFromSetStart + ArrInd);
+                if(CachedRes.pObject == nullptr)
+                {
+                    LOG_ERROR_MESSAGE("No resource is bound to ", GetShaderVariableTypeLiteralName(Res.SpirvAttribs.VarType), " variable \"", Res.SpirvAttribs.GetPrintName(ArrInd), "\" in shader \"", GetShaderName(), "\"");
+                }
+                if(VarType == SHADER_VARIABLE_TYPE_DYNAMIC )
+                {
+                    if (CachedDescrSet.GetVkDescriptorSet() == VK_NULL_HANDLE)
+                        LOG_ERROR_MESSAGE("Dynamic resources should not have Vulkan descriptor set in the cache");
+                }
                 else
-                    VERIFY(CachedRes.Type == CachedResourceType::Unknown, "Unexpected cached resource types");
-
-                if( !CachedRes.pObject || 
-                     // Dynamic buffers do not have CPU descriptor handle as they do not keep Vk buffer, and space is allocated from the GPU ring buffer
-                     CachedRes.CPUDescriptorHandle.ptr == 0 && !(CachedRes.Type==CachedResourceType::CBV && CachedRes.pObject.RawPtr<const BufferVkImpl>()->GetDesc().Usage == USAGE_DYNAMIC) )
-                    LOG_ERROR_MESSAGE( "No resource is bound to ", GetShaderVariableTypeLiteralName(res.Attribs.GetVariableType()), " variable \"", res.Attribs.GetPrintName(ArrInd), "\" in shader \"", GetShaderName(), "\"" );
-                
-                if (res.Attribs.BindCount > 1 && res.IsValidSampler())
                 {
-                    // Verify that if single sampler is used for all texture array elements, all samplers set in the resource views are consistent
-                    const auto &SamInfo = const_cast<ShaderResourceLayoutVk*>(this)->GetAssignedSampler(res);
-                    if(SamInfo.Attribs.BindCount == 1)
-                    {
-                        const auto &CachedSampler = m_pResourceCache->GetRootTable(SamInfo.RootIndex).GetResource(SamInfo.OffsetFromTableStart, Vk_DESCRIPTOR_HEAP_TYPE_SAMPLER, m_pResources->GetShaderType());
-                        if( auto *pTexView = CachedRes.pObject.RawPtr<const ITextureView>() )
-                        {
-                            auto *pSampler = const_cast<ITextureView*>(pTexView)->GetSampler();
-                            if (pSampler != nullptr && CachedSampler.pObject != pSampler)
-                                LOG_ERROR_MESSAGE( "All elements of texture array \"", res.Attribs.Name, "\" in shader \"", GetShaderName(), "\" share the same sampler. However, the sampler set in view for element ", ArrInd, " does not match bound sampler. This may cause incorrect behavior on GL platform."  );
-                        }
-                    }
+                    if(CachedDescrSet.GetVkDescriptorSet() != VK_NULL_HANDLE)
+                        LOG_ERROR_MESSAGE("Static and mutable resources must have non-null vulkan descriptor set assigned"); 
                 }
-
-#ifdef _DEBUG
-                {
-                    auto ShdrVisibleHeapCPUDescriptorHandle = m_pResourceCache->GetShaderVisibleTableCPUDescriptorHandle<Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV>(res.GetRootIndex(), res.OffsetFromTableStart + ArrInd);
-                    if (m_pResourceCache->DbgGetContentType() == ShaderResourceCacheVk::DbgCacheContentType::StaticShaderResources)
-                    {
-                        VERIFY(ShdrVisibleHeapCPUDescriptorHandle.ptr == 0, "Static shader resources of a shader should not be assigned shader visible descriptor space");
-                    }
-                    else if (m_pResourceCache->DbgGetContentType() == ShaderResourceCacheVk::DbgCacheContentType::SRBResources)
-                    {
-                        if (res.GetResType() == CachedResourceType::CBV)
-                        {
-                            VERIFY(ShdrVisibleHeapCPUDescriptorHandle.ptr == 0, "Constant buffers are bound as root views and should not be assigned shader visible descriptor space");
-                        }
-                        else
-                        {
-                            if(res.Attribs.GetVariableType() == SHADER_VARIABLE_TYPE_DYNAMIC)
-                                VERIFY(ShdrVisibleHeapCPUDescriptorHandle.ptr == 0, "Dynamic resources of a shader resource binding should be assigned shader visible descriptor space at every draw call");
-                            else
-                                VERIFY(ShdrVisibleHeapCPUDescriptorHandle.ptr != 0, "Non-dynamics resources of a shader resource binding must be assigned shader visible descriptor space");
-                        }
-                    }
-                    else
-                    {
-                        UNEXPECTED("Unknown content type");
-                    }
-                }
-#endif
-            }
-
-            if (res.IsValidSampler())
-            {
-                VERIFY(res.GetResType() == CachedResourceType::TexSRV, "Sampler can only be assigned to a texture SRV" );
-                const auto &SamInfo = const_cast<ShaderResourceLayoutVk*>(this)->GetAssignedSampler(res);
-                VERIFY( !SamInfo.Attribs.IsStaticSampler(), "Static samplers should never be assigned space in the cache" );
-                VERIFY(SamInfo.Attribs.IsValidBindPoint(), "Sampler bind point must be valid");
-                
-                for(Uint32 ArrInd = 0; ArrInd < SamInfo.Attribs.BindCount; ++ArrInd)
-                {
-                    const auto &CachedSampler = m_pResourceCache->GetRootTable(SamInfo.RootIndex).GetResource(SamInfo.OffsetFromTableStart + ArrInd, Vk_DESCRIPTOR_HEAP_TYPE_SAMPLER, m_pResources->GetShaderType());
-                    if( CachedSampler.pObject )
-                        VERIFY(CachedSampler.Type == CachedResourceType::Sampler, "Incorrect cached sampler type");
-                    else
-                        VERIFY(CachedSampler.Type == CachedResourceType::Unknown, "Unexpected cached sampler type");
-                    if( !CachedSampler.pObject || CachedSampler.CPUDescriptorHandle.ptr == 0 )
-                        LOG_ERROR_MESSAGE("No sampler is assigned to texture variable \"", res.Attribs.GetPrintName(ArrInd), "\" in shader \"", GetShaderName(), "\"");
-
-    #ifdef _DEBUG
-                    {
-                        auto ShdrVisibleHeapCPUDescriptorHandle = m_pResourceCache->GetShaderVisibleTableCPUDescriptorHandle<Vk_DESCRIPTOR_HEAP_TYPE_SAMPLER>(SamInfo.RootIndex, SamInfo.OffsetFromTableStart + ArrInd);
-                        if (m_pResourceCache->DbgGetContentType() == ShaderResourceCacheVk::DbgCacheContentType::StaticShaderResources)
-                        {
-                            VERIFY(ShdrVisibleHeapCPUDescriptorHandle.ptr == 0, "Static shader resources of a shader should not be assigned shader visible descriptor space");
-                        }
-                        else if (m_pResourceCache->DbgGetContentType() == ShaderResourceCacheVk::DbgCacheContentType::SRBResources)
-                        {
-                            if(SamInfo.Attribs.GetVariableType() == SHADER_VARIABLE_TYPE_DYNAMIC)
-                                VERIFY(ShdrVisibleHeapCPUDescriptorHandle.ptr == 0, "Dynamic resources of a shader resource binding should be assigned shader visible descriptor space at every draw call");
-                            else
-                                VERIFY(ShdrVisibleHeapCPUDescriptorHandle.ptr != 0, "Non-dynamics resources of a shader resource binding must be assigned shader visible descriptor space");
-                        }
-                        else
-                        {
-                            UNEXPECTED("Unknown content type");
-                        }
-                    }
-    #endif
-                }
-            }
-        }
-
-        for(Uint32 s=0; s < m_NumSamplers[VarType]; ++s)
-        {
-            const auto &sam = GetSampler(VarType, s);
-            VERIFY(sam.Attribs.GetVariableType() == VarType, "Unexpected sampler variable type");
-            
-            for(Uint32 ArrInd = 0; ArrInd < sam.Attribs.BindCount; ++ArrInd)
-            {
-                const auto &CachedSampler = m_pResourceCache->GetRootTable(sam.RootIndex).GetResource(sam.OffsetFromTableStart + ArrInd, Vk_DESCRIPTOR_HEAP_TYPE_SAMPLER, m_pResources->GetShaderType());
-                if( CachedSampler.pObject )
-                    VERIFY(CachedSampler.Type == CachedResourceType::Sampler, "Incorrect cached sampler type");
-                else
-                    VERIFY(CachedSampler.Type == CachedResourceType::Unknown, "Unexpected cached sampler type");
-                if( !CachedSampler.pObject || CachedSampler.CPUDescriptorHandle.ptr == 0 )
-                    LOG_ERROR_MESSAGE( "No sampler is bound to sampler variable \"", sam.Attribs.GetPrintName(ArrInd), "\" in shader \"", GetShaderName(), "\"" );
             }
         }
     }
 #endif
 }
-#endif
+
 
 const Char* ShaderResourceLayoutVk::GetShaderName()const
 {
