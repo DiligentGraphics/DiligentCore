@@ -51,7 +51,7 @@ public:
 
     virtual IShaderVariable *GetVariable(SHADER_TYPE ShaderType, const char *Name)override;
 
-/*    ShaderResourceLayoutVk& GetResourceLayout(SHADER_TYPE ResType)
+    ShaderResourceLayoutVk& GetResourceLayout(SHADER_TYPE ResType)
     {
         auto ShaderInd = GetShaderTypeIndex(ResType);
         auto ResLayoutInd = m_ResourceLayoutIndex[ShaderInd];
@@ -76,7 +76,6 @@ private:
     Int8 m_ResourceLayoutIndex[6] = {-1, -1, -1, -1, -1, -1};
     bool m_bStaticResourcesInitialized = false;
     Uint32 m_NumShaders = 0;
-*/
 };
 
 }

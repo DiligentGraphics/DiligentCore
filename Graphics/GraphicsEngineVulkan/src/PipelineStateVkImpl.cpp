@@ -155,8 +155,8 @@ void PipelineStateVkImpl::CreateRenderPass(const VulkanUtilities::VulkanLogicalD
 PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters *pRefCounters, RenderDeviceVkImpl *pDeviceVk, const PipelineStateDesc &PipelineDesc) : 
     TPipelineStateBase(pRefCounters, pDeviceVk, PipelineDesc),
     m_DummyVar(*this),
-    m_ResourceCacheDataAllocator(GetRawAllocator(), PipelineDesc.SRBAllocationGranularity)/*,
-    m_pDefaultShaderResBinding(nullptr, STDDeleter<ShaderResourceBindingVkImpl, FixedBlockMemoryAllocator>(pDeviceVk->GetSRBAllocator()) )*/
+    m_ResourceCacheDataAllocator(GetRawAllocator(), PipelineDesc.SRBAllocationGranularity),
+    m_pDefaultShaderResBinding(nullptr, STDDeleter<ShaderResourceBindingVkImpl, FixedBlockMemoryAllocator>(pDeviceVk->GetSRBAllocator()) )
 {
     const auto &LogicalDevice = pDeviceVk->GetLogicalDevice();
     if (PipelineDesc.IsComputePipeline)
@@ -373,10 +373,9 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters *pRefCounters, Ren
         m_ResLayoutDataAllocators.Init(m_NumShaders, PipelineDesc.SRBAllocationGranularity);
 
     auto &SRBAllocator = pDeviceVk->GetSRBAllocator();
-#if 0
     // Default shader resource binding must be initialized after resource layouts are parsed!
     m_pDefaultShaderResBinding.reset( NEW_RC_OBJ(SRBAllocator, "ShaderResourceBindingVkImpl instance", ShaderResourceBindingVkImpl, this)(this, true) );
-
+#if 0
     m_ShaderResourceLayoutHash = m_RootSig.GetHash();
 #endif
 }
@@ -428,12 +427,10 @@ void PipelineStateVkImpl::BindShaderResources(IResourceMapping *pResourceMapping
 
 void PipelineStateVkImpl::CreateShaderResourceBinding(IShaderResourceBinding **ppShaderResourceBinding)
 {
-#if 0
     auto *pRenderDeviceVk = ValidatedCast<RenderDeviceVkImpl>( GetDevice() );
     auto &SRBAllocator = pRenderDeviceVk->GetSRBAllocator();
     auto pResBindingVk = NEW_RC_OBJ(SRBAllocator, "ShaderResourceBindingVkImpl instance", ShaderResourceBindingVkImpl)(this, false);
     pResBindingVk->QueryInterface(IID_ShaderResourceBinding, reinterpret_cast<IObject**>(ppShaderResourceBinding));
-#endif
 }
 
 bool PipelineStateVkImpl::IsCompatibleWith(const IPipelineState *pPSO)const
@@ -486,14 +483,8 @@ bool PipelineStateVkImpl::IsCompatibleWith(const IPipelineState *pPSO)const
     return true;
 }
 
-#if 0
-const ShaderResourceLayoutVk& PipelineStateVkImpl::GetShaderResLayout(SHADER_TYPE ShaderType)const 
-{
-    auto ShaderInd = GetShaderTypeIndex(ShaderType);
-    VERIFY_EXPR(m_pShaderResourceLayouts[ShaderInd] != nullptr);
-    return *m_pShaderResourceLayouts[ShaderInd];
-}
 
+#if 0
 ShaderResourceCacheVk* PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBinding *pShaderResourceBinding, 
                                                                                      CommandContext &Ctx,
                                                                                      bool CommitResources,

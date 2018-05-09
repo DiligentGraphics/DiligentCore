@@ -68,21 +68,26 @@ public:
     //                                                             bool CommitResources,
     //                                                             bool TransitionResources)const;
     
-    //const RootSignature& GetRootSignature()const{return m_RootSig;}
+    const PipelineLayout& GetPipelineLayout()const{return m_PipelineLayout;}
     
-    //const ShaderResourceLayoutVk& GetShaderResLayout(SHADER_TYPE ShaderType)const;
-    
+    const ShaderResourceLayoutVk& GetShaderResLayout(SHADER_TYPE ShaderType)const
+    {
+        auto ShaderInd = GetShaderTypeIndex(ShaderType);
+        VERIFY_EXPR(m_pShaderResourceLayouts[ShaderInd] != nullptr);
+        return *m_pShaderResourceLayouts[ShaderInd];
+    }
+
     //bool dbgContainsShaderResources()const;
 
-    //IMemoryAllocator &GetResourceCacheDataAllocator(){return m_ResourceCacheDataAllocator;}
-    //IMemoryAllocator &GetShaderResourceLayoutDataAllocator(Uint32 ActiveShaderInd)
-    //{
-    //    VERIFY_EXPR(ActiveShaderInd < m_NumShaders);
-    //    auto *pAllocator = m_ResLayoutDataAllocators.GetAllocator(ActiveShaderInd);
-    //    return pAllocator != nullptr ? *pAllocator : GetRawAllocator();
-    //}
+    IMemoryAllocator& GetResourceCacheDataAllocator(){return m_ResourceCacheDataAllocator;}
+    IMemoryAllocator& GetShaderResourceLayoutDataAllocator(Uint32 ActiveShaderInd)
+    {
+        VERIFY_EXPR(ActiveShaderInd < m_NumShaders);
+        auto *pAllocator = m_ResLayoutDataAllocators.GetAllocator(ActiveShaderInd);
+        return pAllocator != nullptr ? *pAllocator : GetRawAllocator();
+    }
 
-    //IShaderVariable *GetDummyShaderVar(){return &m_DummyVar;}
+    IShaderVariable *GetDummyShaderVar(){return &m_DummyVar;}
 
 private:
 
@@ -124,7 +129,7 @@ private:
 
     // Do not use strong reference to avoid cyclic references
     // Default SRB must be defined after allocators
-    //std::unique_ptr<class ShaderResourceBindingVkImpl, STDDeleter<ShaderResourceBindingVkImpl, FixedBlockMemoryAllocator> > m_pDefaultShaderResBinding;
+    std::unique_ptr<class ShaderResourceBindingVkImpl, STDDeleter<ShaderResourceBindingVkImpl, FixedBlockMemoryAllocator> > m_pDefaultShaderResBinding;
 
     VulkanUtilities::RenderPassWrapper m_RenderPass;
     VulkanUtilities::PipelineWrapper m_Pipeline;

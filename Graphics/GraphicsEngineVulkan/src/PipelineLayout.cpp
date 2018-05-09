@@ -553,10 +553,10 @@ void PipelineLayout::Finalize(const VulkanUtilities::VulkanLogicalDevice& Logica
 #endif
 }
 
-#if 0
 //http://diligentgraphics.com/diligent-engine/architecture/Vk/shader-resource-cache#Initializing-the-Cache-for-Shader-Resource-Binding-Object
 void PipelineLayout::InitResourceCache(RenderDeviceVkImpl *pDeviceVkImpl, ShaderResourceCacheVk& ResourceCache, IMemoryAllocator &CacheMemAllocator)const
 {
+#if 0
     // Get root table size for every root index
     // m_RootParams keeps root tables sorted by the array index, not the root index
     // Root views are treated as one-descriptor tables
@@ -657,9 +657,11 @@ void PipelineLayout::InitResourceCache(RenderDeviceVkImpl *pDeviceVkImpl, Shader
     VERIFY_EXPR(SrvCbvUavTblStartOffset == TotalSrvCbvUavDescriptors);
     VERIFY_EXPR(SamplerTblStartOffset == TotalSamplerDescriptors);
 
-    ResourceCache.SetDescriptorHeapSpace(std::move(CbcSrvUavHeapSpace), std::move(SamplerHeapSpace));
+    ResourceCache.SetDescriptorHeapSpace(std::move(CbcSrvUavHeapSpace), std::move(SamplerHeapSpace));'
+#endif
 }
 
+#if 0
 const Vk_RESOURCE_STATES Vk_RESOURCE_STATE_SHADER_RESOURCE  = Vk_RESOURCE_STATE_PIXEL_SHADER_RESOURCE | Vk_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
 
 __forceinline

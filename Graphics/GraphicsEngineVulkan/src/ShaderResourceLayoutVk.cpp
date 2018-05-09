@@ -66,79 +66,52 @@ void ShaderResourceLayoutVk::AllocateMemory(IMemoryAllocator &Allocator)
     m_ResourceBuffer.reset(pRawMem);
 }
 
-#if 0
 // Clones layout from the reference layout maintained by the pipeline state
-// Root indices and descriptor table offsets must be correct
+// Descriptor sets and bindings must be correct
 // Resource cache is not initialized.
 ShaderResourceLayoutVk::ShaderResourceLayoutVk(IObject &Owner,
-                                                     const ShaderResourceLayoutVk& SrcLayout, 
-                                                     IMemoryAllocator &ResourceLayoutDataAllocator,
-                                                     const SHADER_VARIABLE_TYPE *AllowedVarTypes, 
-                                                     Uint32 NumAllowedTypes, 
-                                                     ShaderResourceCacheVk &ResourceCache) :
+                                               const ShaderResourceLayoutVk& SrcLayout, 
+                                               IMemoryAllocator &ResourceLayoutDataAllocator,
+                                               const SHADER_VARIABLE_TYPE *AllowedVarTypes, 
+                                               Uint32 NumAllowedTypes, 
+                                               ShaderResourceCacheVk &ResourceCache) :
     ShaderResourceLayoutVk(Owner, ResourceLayoutDataAllocator)
 {
-    m_pVkDevice = SrcLayout.m_pVkDevice;
+    m_pLogicalDevice = SrcLayout.m_pLogicalDevice;
     m_pResources = SrcLayout.m_pResources;
     m_pResourceCache = &ResourceCache;
     
     Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
-    
     for(SHADER_VARIABLE_TYPE VarType = SHADER_VARIABLE_TYPE_STATIC; VarType < SHADER_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_VARIABLE_TYPE>(VarType+1))
     {
-        if( !IsAllowedType(VarType, AllowedTypeBits))
-            continue;
-
-        m_NumCbvSrvUav[VarType] = SrcLayout.m_NumCbvSrvUav[VarType];
-        m_NumSamplers[VarType] = SrcLayout.m_NumSamplers[VarType];
+        m_NumResources[VarType] = IsAllowedType(VarType, AllowedTypeBits) ? SrcLayout.m_NumResources[VarType] : 0;
     }
     
     AllocateMemory(ResourceLayoutDataAllocator);
 
-    Uint32 CurrCbvSrvUav[SHADER_VARIABLE_TYPE_NUM_TYPES] = {0,0,0};
-    Uint32 CurrSampler[SHADER_VARIABLE_TYPE_NUM_TYPES] = {0,0,0};
-
+    Uint32 CurrResInd[SHADER_VARIABLE_TYPE_NUM_TYPES] = {};
     for(SHADER_VARIABLE_TYPE VarType = SHADER_VARIABLE_TYPE_STATIC; VarType < SHADER_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_VARIABLE_TYPE>(VarType+1))
     {
         if( !IsAllowedType(VarType, AllowedTypeBits))
             continue;
 
-        Uint32 NumSrcCbvSrvUav = SrcLayout.m_NumCbvSrvUav[VarType];
-        VERIFY_EXPR(NumSrcCbvSrvUav == m_NumCbvSrvUav[VarType]);
-        for( Uint32 r=0; r < NumSrcCbvSrvUav; ++r )
+        Uint32 NumResources = SrcLayout.m_NumResources[VarType];
+        VERIFY_EXPR(NumResources == m_NumResources[VarType]);
+        for( Uint32 r=0; r < NumResources; ++r )
         {
-            const auto &SrcRes = SrcLayout.GetSrvCbvUav(VarType, r);
-            Uint32 SamplerId = SRV_CBV_UAV::InvalidSamplerId;
-            if (SrcRes.IsValidSampler())
-            {
-                const auto &SrcSamplerAttribs = SrcLayout.GetSampler(VarType, SrcRes.GetSamplerId());
-                VERIFY(!SrcSamplerAttribs.Attribs.IsStaticSampler(), "Only non-static samplers can be assigned space in shader cache");
-                VERIFY(SrcSamplerAttribs.Attribs.GetVariableType() == SrcRes.Attribs.GetVariableType(), "Inconsistent texture and sampler variable types" );
-                VERIFY(SrcSamplerAttribs.IsValidRootIndex(), "Root index must be valid");
-                VERIFY(SrcSamplerAttribs.IsValidOffset(), "Offset must be valid");
-                VERIFY_EXPR(SrcSamplerAttribs.Attribs.BindCount == SrcRes.Attribs.BindCount || SrcSamplerAttribs.Attribs.BindCount == 1);
-
-                SamplerId = CurrSampler[VarType];
-                VERIFY(SamplerId <= SRV_CBV_UAV::MaxSamplerId, "SamplerId exceeds maximum allowed value (", SRV_CBV_UAV::MaxSamplerId, ")");
-                VERIFY_EXPR(SamplerId == SrcRes.GetSamplerId());
-                ::new (&GetSampler(VarType, CurrSampler[VarType]++)) Sampler( *this, SrcSamplerAttribs );
-            }
-
-            VERIFY(SrcRes.IsValidRootIndex(), "Root index must be valid");
-            VERIFY(SrcRes.IsValidOffset(), "Offset must be valid");
-            ::new (&GetSrvCbvUav(VarType, CurrCbvSrvUav[VarType]++)) SRV_CBV_UAV( *this, SrcRes, SamplerId );
+            const auto &SrcRes = SrcLayout.GetResource(VarType, r);
+            ::new (&GetResource(VarType, CurrResInd[VarType]++)) VkResource( *this, SrcRes );
         }
     }
 
 #ifdef _DEBUG
     for(SHADER_VARIABLE_TYPE VarType = SHADER_VARIABLE_TYPE_STATIC; VarType < SHADER_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_VARIABLE_TYPE>(VarType+1))
     {
-        VERIFY_EXPR( CurrCbvSrvUav[VarType] == m_NumCbvSrvUav[VarType] );
-        VERIFY_EXPR( CurrSampler[VarType] == m_NumSamplers[VarType] );
+        VERIFY_EXPR(CurrResInd[VarType] == m_NumResources[VarType] );
     }
 #endif
 }
-#endif
+
 
 void ShaderResourceLayoutVk::Initialize(const VulkanUtilities::VulkanLogicalDevice&         LogicalDevice,
                                         const std::shared_ptr<const SPIRVShaderResources>&  pSrcResources,
@@ -208,11 +181,11 @@ void ShaderResourceLayoutVk::Initialize(const VulkanUtilities::VulkanLogicalDevi
     {
         Uint32 Binding = 0;
         Uint32 DescriptorSet = 0;
-        Uint32 OffsetFromSetStart = 0;
+        Uint32 CacheOffset = 0;
         if (pPipelineLayout)
         {
             VERIFY_EXPR(pSPIRV != nullptr);
-            pPipelineLayout->AllocateResourceSlot(Attribs, m_pResources->GetShaderType(), DescriptorSet, Binding, OffsetFromSetStart, *pSPIRV);
+            pPipelineLayout->AllocateResourceSlot(Attribs, m_pResources->GetShaderType(), DescriptorSet, Binding, CacheOffset, *pSPIRV);
             VERIFY(DescriptorSet <= std::numeric_limits<decltype(VkResource::DescriptorSet)>::max(), "Descriptor set (", DescriptorSet, ") excceeds representable max value");
             VERIFY(Binding <= std::numeric_limits<decltype(VkResource::Binding)>::max(), "Binding (", Binding, ") excceeds representable max value");
         }
@@ -230,13 +203,13 @@ void ShaderResourceLayoutVk::Initialize(const VulkanUtilities::VulkanLogicalDevi
             VERIFY_EXPR(m_pResourceCache != nullptr);
 
             DescriptorSet = Attribs.Type;
-            OffsetFromSetStart = StaticResCacheSetSizes[DescriptorSet];
+            CacheOffset = StaticResCacheSetSizes[DescriptorSet];
             Binding = CurrResInd[Attribs.VarType];
             StaticResCacheSetSizes[DescriptorSet] += Attribs.ArraySize;
         }
 
         // Static samplers are never copied, and SamplerId == InvalidSamplerId
-        ::new (&GetResource(Attribs.VarType, CurrResInd[Attribs.VarType]++)) VkResource( *this, Attribs, Binding, DescriptorSet, OffsetFromSetStart);
+        ::new (&GetResource(Attribs.VarType, CurrResInd[Attribs.VarType]++)) VkResource( *this, Attribs, Binding, DescriptorSet, CacheOffset);
     };
 
     m_pResources->ProcessResources(
@@ -547,7 +520,7 @@ void ShaderResourceLayoutVk::VkResource::BindResource(IDeviceObject *pObj, Uint3
                SpirvAttribs.VarType != SHADER_VARIABLE_TYPE_DYNAMIC && vkDescrSet != VK_NULL_HANDLE,
                "Static and mutable variables and only them are expected to have valid descriptor set assigned");
     }
-    auto &DstRes = DstDescrSet.GetResource(OffsetFromSetStart + ArrayIndex);
+    auto &DstRes = DstDescrSet.GetResource(CacheOffset + ArrayIndex);
 
     if( pObj )
     {
@@ -594,9 +567,9 @@ bool ShaderResourceLayoutVk::VkResource::IsBound(Uint32 ArrayIndex)
     if( DescriptorSet < pResourceCache->GetNumDescriptorSets() )
     {
         auto &Set = pResourceCache->GetDescriptorSet(DescriptorSet);
-        if(OffsetFromSetStart + ArrayIndex < Set.GetSize())
+        if(CacheOffset + ArrayIndex < Set.GetSize())
         {
-            auto &CachedRes = Set.GetResource(OffsetFromSetStart + ArrayIndex);
+            auto &CachedRes = Set.GetResource(CacheOffset + ArrayIndex);
             return CachedRes.pObject != nullptr;
         }
     }
@@ -711,12 +684,12 @@ void ShaderResourceLayoutVk::InitializeStaticResources(const ShaderResourceLayou
 
         for(Uint32 ArrInd = 0; ArrInd < DstRes.SpirvAttribs.ArraySize; ++ArrInd)
         {
-            auto SrcOffset = SrcRes.OffsetFromSetStart + ArrInd;
+            auto SrcOffset = SrcRes.CacheOffset + ArrInd;
             IDeviceObject *pObject = SrcLayout.m_pResourceCache->GetDescriptorSet(SrcRes.DescriptorSet).GetResource(SrcOffset).pObject;
             if (!pObject)
                 LOG_ERROR_MESSAGE("No resource assigned to static shader variable \"", SrcRes.SpirvAttribs.GetPrintName(ArrInd), "\" in shader \"", GetShaderName(), "\".");
             
-            auto DstOffset = DstRes.OffsetFromSetStart + ArrInd;
+            auto DstOffset = DstRes.CacheOffset + ArrInd;
             IDeviceObject *pCachedResource = m_pResourceCache->GetDescriptorSet(DstRes.DescriptorSet).GetResource(DstOffset).pObject;
             if(pCachedResource != pObject)
             {
@@ -742,7 +715,7 @@ void ShaderResourceLayoutVk::dbgVerifyBindings()const
             for(Uint32 ArrInd = 0; ArrInd < Res.SpirvAttribs.ArraySize; ++ArrInd)
             {
                 auto &CachedDescrSet = m_pResourceCache->GetDescriptorSet(Res.DescriptorSet);
-                const auto &CachedRes = CachedDescrSet.GetResource(Res.OffsetFromSetStart + ArrInd);
+                const auto &CachedRes = CachedDescrSet.GetResource(Res.CacheOffset + ArrInd);
                 if(CachedRes.pObject == nullptr)
                 {
                     LOG_ERROR_MESSAGE("No resource is bound to ", GetShaderVariableTypeLiteralName(Res.SpirvAttribs.VarType), " variable \"", Res.SpirvAttribs.GetPrintName(ArrInd), "\" in shader \"", GetShaderName(), "\"");

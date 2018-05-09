@@ -31,15 +31,14 @@ namespace Diligent
 {
 
 ShaderResourceBindingVkImpl::ShaderResourceBindingVkImpl( IReferenceCounters *pRefCounters, PipelineStateVkImpl *pPSO, bool IsPSOInternal) :
-    TBase( pRefCounters, pPSO, IsPSOInternal )/*,
-    m_ShaderResourceCache(ShaderResourceCacheVk::DbgCacheContentType::SRBResources)*/
+    TBase( pRefCounters, pPSO, IsPSOInternal ),
+    m_ShaderResourceCache(ShaderResourceCacheVk::DbgCacheContentType::SRBResources)
 {
-#if 0
     auto *ppShaders = pPSO->GetShaders();
     m_NumShaders = pPSO->GetNumShaders();
 
     auto *pRenderDeviceVkImpl = ValidatedCast<RenderDeviceVkImpl>(pPSO->GetDevice());
-    pPSO->GetRootSignature().InitResourceCache(pRenderDeviceVkImpl, m_ShaderResourceCache, pPSO->GetResourceCacheDataAllocator());
+    pPSO->GetPipelineLayout().InitResourceCache(pRenderDeviceVkImpl, m_ShaderResourceCache, pPSO->GetResourceCacheDataAllocator());
     
     auto *pResLayoutRawMem = ALLOCATE(GetRawAllocator(), "Raw memory for ShaderResourceLayoutVk", m_NumShaders * sizeof(ShaderResourceLayoutVk));
     m_pResourceLayouts = reinterpret_cast<ShaderResourceLayoutVk*>(pResLayoutRawMem);
@@ -59,24 +58,20 @@ ShaderResourceBindingVkImpl::ShaderResourceBindingVkImpl( IReferenceCounters *pR
 
         m_ResourceLayoutIndex[ShaderInd] = static_cast<Int8>(s);
     }
-#endif
 }
 
 ShaderResourceBindingVkImpl::~ShaderResourceBindingVkImpl()
 {
-#if 0
     for(Uint32 l = 0; l < m_NumShaders; ++l)
         m_pResourceLayouts[l].~ShaderResourceLayoutVk();
 
     GetRawAllocator().Free(m_pResourceLayouts);
-#endif
 }
 
 IMPLEMENT_QUERY_INTERFACE( ShaderResourceBindingVkImpl, IID_ShaderResourceBindingVk, TBase )
 
 void ShaderResourceBindingVkImpl::BindResources(Uint32 ShaderFlags, IResourceMapping *pResMapping, Uint32 Flags)
 {
-#if 0
     for (auto ShaderInd = 0; ShaderInd <= CSInd; ++ShaderInd )
     {
         if (ShaderFlags & GetShaderTypeFromIndex(ShaderInd))
@@ -88,12 +83,10 @@ void ShaderResourceBindingVkImpl::BindResources(Uint32 ShaderFlags, IResourceMap
             }
         }
     }
-#endif
 }
 
 IShaderVariable *ShaderResourceBindingVkImpl::GetVariable(SHADER_TYPE ShaderType, const char *Name)
 {
-#if 0
     auto ShaderInd = GetShaderTypeIndex(ShaderType);
     auto ResLayoutInd = m_ResourceLayoutIndex[ShaderInd];
     if (ResLayoutInd < 0)
@@ -106,11 +99,8 @@ IShaderVariable *ShaderResourceBindingVkImpl::GetVariable(SHADER_TYPE ShaderType
         pVar = ValidatedCast<PipelineStateVkImpl>(GetPipelineState())->GetDummyShaderVar();
 
     return pVar;
-#endif
-    return nullptr;
 }
 
-#if 0
 #ifdef VERIFY_SHADER_BINDINGS
 void ShaderResourceBindingVkImpl::dbgVerifyResourceBindings(const PipelineStateVkImpl *pPSO)
 {
@@ -124,9 +114,7 @@ void ShaderResourceBindingVkImpl::dbgVerifyResourceBindings(const PipelineStateV
         m_pResourceLayouts[l].dbgVerifyBindings();
 }
 #endif
-#endif
 
-#if 0
 void ShaderResourceBindingVkImpl::InitializeStaticResources(const PipelineStateVkImpl *pPSO)
 {
     VERIFY(!StaticResourcesInitialized(), "Static resources have already been initialized");
@@ -142,11 +130,10 @@ void ShaderResourceBindingVkImpl::InitializeStaticResources(const PipelineStateV
         pShader->DbgVerifyStaticResourceBindings();
 #endif
         auto &ConstResLayout = pShader->GetConstResLayout();
-        GetResourceLayout(pShader->GetDesc().ShaderType).CopyStaticResourceDesriptorHandles(ConstResLayout);
+        GetResourceLayout(pShader->GetDesc().ShaderType).InitializeStaticResources(ConstResLayout);
     }
 
     m_bStaticResourcesInitialized = true;
 }
-#endif
 
 }

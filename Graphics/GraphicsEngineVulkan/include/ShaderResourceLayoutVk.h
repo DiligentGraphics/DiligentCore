@@ -120,13 +120,13 @@ public:
     ShaderResourceLayoutVk(IObject &Owner, IMemoryAllocator &ResourceLayoutDataAllocator);
 
     // This constructor is used by ShaderResourceBindingVkImpl to clone layout from the reference layout in PipelineStateVkImpl. 
-    // Root indices and descriptor table offsets must be correct. Resource cache is assigned, but not initialized.
-    //ShaderResourceLayoutVk(IObject &Owner, 
-    //                       const ShaderResourceLayoutVk& SrcLayout, 
-    //                       IMemoryAllocator &ResourceLayoutDataAllocator,
-    //                       const SHADER_VARIABLE_TYPE *AllowedVarTypes, 
-    //                       Uint32 NumAllowedTypes, 
-    //                       ShaderResourceCacheVk &ResourceCache);
+    // Descriptor sets and bindings must be correct. Resource cache is assigned, but not initialized.
+    ShaderResourceLayoutVk(IObject &Owner, 
+                           const ShaderResourceLayoutVk& SrcLayout, 
+                           IMemoryAllocator &ResourceLayoutDataAllocator,
+                           const SHADER_VARIABLE_TYPE *AllowedVarTypes, 
+                           Uint32 NumAllowedTypes, 
+                           ShaderResourceCacheVk &ResourceCache);
 
     ShaderResourceLayoutVk(const ShaderResourceLayoutVk&) = delete;
     ShaderResourceLayoutVk(ShaderResourceLayoutVk&&) = delete;
@@ -160,7 +160,7 @@ public:
 
         const Uint16 Binding;
         const Uint16 DescriptorSet;
-        const Uint32 OffsetFromSetStart;
+        const Uint32 CacheOffset; // Offset from the beginning of the cached descriptor set
         const SPIRVShaderResourceAttribs &SpirvAttribs;
         ShaderResourceLayoutVk &ParentResLayout;
 
@@ -168,15 +168,25 @@ public:
                    const SPIRVShaderResourceAttribs&    _SpirvAttribs,
                    uint32_t                             _Binding,
                    uint32_t                             _DescriptorSet,
-                   Uint32                               _OffsetFromSetStart) :
-            Binding(static_cast<decltype(Binding)>(_Binding)),
-            DescriptorSet(static_cast<decltype(DescriptorSet)>(_DescriptorSet)),
-            OffsetFromSetStart(_OffsetFromSetStart),
-            SpirvAttribs(_SpirvAttribs),
-            ParentResLayout(_ParentLayout)
+                   Uint32                               _CacheOffset) :
+            Binding         (static_cast<decltype(Binding)>(_Binding)),
+            DescriptorSet   (static_cast<decltype(DescriptorSet)>(_DescriptorSet)),
+            CacheOffset     (_CacheOffset),
+            SpirvAttribs    (_SpirvAttribs),
+            ParentResLayout (_ParentLayout)
         {
             VERIFY(_Binding <= std::numeric_limits<decltype(Binding)>::max(), "Binding (", _Binding, ") exceeds representable max value", std::numeric_limits<decltype(Binding)>::max() );
             VERIFY(_DescriptorSet <= std::numeric_limits<decltype(DescriptorSet)>::max(), "Descriptor set (", _DescriptorSet, ") exceeds representable max value", std::numeric_limits<decltype(DescriptorSet)>::max());
+        }
+
+        VkResource(ShaderResourceLayoutVk&  _ParentLayout,
+                   const VkResource&        _SrcRes) :
+            Binding         (_SrcRes.Binding),
+            DescriptorSet   (_SrcRes.DescriptorSet),
+            CacheOffset     (_SrcRes.CacheOffset),
+            SpirvAttribs    (_SrcRes.SpirvAttribs),
+            ParentResLayout (_ParentLayout)
+        {
         }
 
         virtual IReferenceCounters* GetReferenceCounters()const override final
