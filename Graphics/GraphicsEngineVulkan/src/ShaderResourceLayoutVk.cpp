@@ -220,18 +220,18 @@ void ShaderResourceLayoutVk::Initialize(const VulkanUtilities::VulkanLogicalDevi
         {
             // If pipeline layout is not provided - use artifial layout to store
             // static shader resources:
-            // Uniform buffers at index SPIRVShaderResourceAttribs::ResourceType::UniformBuffer (0)
-            // Storage buffers at index SPIRVShaderResourceAttribs::ResourceType::StorageBuffer (1)
-            // Storage images  at index SPIRVShaderResourceAttribs::ResourceType::StorageImage  (2)
-            // Sampled images  at index SPIRVShaderResourceAttribs::ResourceType::SampledImage  (3)
-            // Atomic counters at index SPIRVShaderResourceAttribs::ResourceType::AtomicCounter (4)
-            // Separate images at index SPIRVShaderResourceAttribs::ResourceType::SeparateImage (5)
+            // Uniform buffers   at index SPIRVShaderResourceAttribs::ResourceType::UniformBuffer  (0)
+            // Storage buffers   at index SPIRVShaderResourceAttribs::ResourceType::StorageBuffer  (1)
+            // Storage images    at index SPIRVShaderResourceAttribs::ResourceType::StorageImage   (2)
+            // Sampled images    at index SPIRVShaderResourceAttribs::ResourceType::SampledImage   (3)
+            // Atomic counters   at index SPIRVShaderResourceAttribs::ResourceType::AtomicCounter  (4)
+            // Separate images   at index SPIRVShaderResourceAttribs::ResourceType::SeparateImage  (5)
             // Separate samplers at index SPIRVShaderResourceAttribs::ResourceType::SeparateSampler(6)
             VERIFY_EXPR(m_pResourceCache != nullptr);
 
             DescriptorSet = Attribs.Type;
             OffsetFromSetStart = StaticResCacheSetSizes[DescriptorSet];
-            Binding = 0;
+            Binding = CurrResInd[Attribs.VarType];
             StaticResCacheSetSizes[DescriptorSet] += Attribs.ArraySize;
         }
 
@@ -675,8 +675,7 @@ IShaderVariable* ShaderResourceLayoutVk::GetShaderVariable(const Char* Name)
 }
 
 
-#if 0
-void ShaderResourceLayoutVk::CopyStaticResourceDesriptorHandles(const ShaderResourceLayoutVk &SrcLayout)
+void ShaderResourceLayoutVk::InitializeStaticResources(const ShaderResourceLayoutVk &SrcLayout)
 {
     if (!m_pResourceCache)
     {
@@ -686,105 +685,48 @@ void ShaderResourceLayoutVk::CopyStaticResourceDesriptorHandles(const ShaderReso
 
     if (!SrcLayout.m_pResourceCache)
     {
-        LOG_ERROR("Dst layout has no resource cache");
+        LOG_ERROR("Src layout has no resource cache");
         return;
     }
 
-    // Static shader resources are stored as follows:
-    // CBVs at root index Vk_DESCRIPTOR_RANGE_TYPE_CBV,
-    // SRVs at root index Vk_DESCRIPTOR_RANGE_TYPE_SRV,
-    // UAVs at root index Vk_DESCRIPTOR_RANGE_TYPE_UAV, and
-    // Samplers at root index Vk_DESCRIPTOR_RANGE_TYPE_SAMPLER
-    // Every resource is stored at offset that equals resource bind point
+    VERIFY(m_NumResources[SHADER_VARIABLE_TYPE_STATIC] == SrcLayout.m_NumResources[SHADER_VARIABLE_TYPE_STATIC], "Inconsistent number of static resources");
+    VERIFY(SrcLayout.m_pResources->GetShaderType() == m_pResources->GetShaderType(), "Incosistent shader types");
 
-    for(Uint32 r=0; r < m_NumCbvSrvUav[SHADER_VARIABLE_TYPE_STATIC]; ++r)
+    // Static shader resources are stored as follows:
+    // Uniform buffers   at index SPIRVShaderResourceAttribs::ResourceType::UniformBuffer  (0)
+    // Storage buffers   at index SPIRVShaderResourceAttribs::ResourceType::StorageBuffer  (1)
+    // Storage images    at index SPIRVShaderResourceAttribs::ResourceType::StorageImage   (2)
+    // Sampled images    at index SPIRVShaderResourceAttribs::ResourceType::SampledImage   (3)
+    // Atomic counters   at index SPIRVShaderResourceAttribs::ResourceType::AtomicCounter  (4)
+    // Separate images   at index SPIRVShaderResourceAttribs::ResourceType::SeparateImage  (5)
+    // Separate samplers at index SPIRVShaderResourceAttribs::ResourceType::SeparateSampler(6)
+
+    for(Uint32 r=0; r < m_NumResources[SHADER_VARIABLE_TYPE_STATIC]; ++r)
     {
         // Get resource attributes
-        const auto &res = GetSrvCbvUav(SHADER_VARIABLE_TYPE_STATIC, r);
-        VERIFY(SrcLayout.m_pResources->GetShaderType() == m_pResources->GetShaderType(), "Incosistent shader types");
-        auto RangeType = GetDescriptorRangeType(res.GetResType());
-        for(Uint32 ArrInd = 0; ArrInd < res.Attribs.BindCount; ++ArrInd)
+        auto &DstRes = GetResource(SHADER_VARIABLE_TYPE_STATIC, r);
+        const auto &SrcRes = SrcLayout.GetResource(SHADER_VARIABLE_TYPE_STATIC, r);
+        VERIFY(SrcRes.Binding == r, "Unexpected binding");
+        VERIFY(SrcRes.SpirvAttribs.ArraySize == DstRes.SpirvAttribs.ArraySize, "Inconsistent array size");
+
+        for(Uint32 ArrInd = 0; ArrInd < DstRes.SpirvAttribs.ArraySize; ++ArrInd)
         {
-            auto BindPoint = res.Attribs.BindPoint + ArrInd;
-            // Source resource in the static resource cache is in the root table at index RangeType, at offset BindPoint 
-            // Vk_DESCRIPTOR_RANGE_TYPE_SRV = 0,
-            // Vk_DESCRIPTOR_RANGE_TYPE_UAV = 1
-            // Vk_DESCRIPTOR_RANGE_TYPE_CBV = 2
-            const auto &SrcRes = SrcLayout.m_pResourceCache->GetRootTable(RangeType).GetResource(BindPoint, Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, SrcLayout.m_pResources->GetShaderType());
-            if( !SrcRes.pObject )
-                LOG_ERROR_MESSAGE( "No resource assigned to static shader variable \"", res.Attribs.GetPrintName(ArrInd), "\" in shader \"", GetShaderName(), "\"." );
-            // Destination resource is at the root index and offset defined by the resource layout
-            auto &DstRes = m_pResourceCache->GetRootTable(res.GetRootIndex()).GetResource(res.OffsetFromTableStart + ArrInd, Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, m_pResources->GetShaderType());
-        
-            if(DstRes.pObject != SrcRes.pObject)
-            {
-                VERIFY(DstRes.pObject == nullptr, "Static resource has already been initialized, and the resource to be assigned from the shader does not match previously assigned resource");
-
-                DstRes.pObject = SrcRes.pObject;
-                DstRes.Type = SrcRes.Type;
-                DstRes.CPUDescriptorHandle = SrcRes.CPUDescriptorHandle;
-
-                auto ShdrVisibleHeapCPUDescriptorHandle = m_pResourceCache->GetShaderVisibleTableCPUDescriptorHandle<Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV>(res.GetRootIndex(), res.OffsetFromTableStart + ArrInd);
-                VERIFY_EXPR(ShdrVisibleHeapCPUDescriptorHandle.ptr != 0 || DstRes.Type == CachedResourceType::CBV);
-                // Root views are not assigned space in the GPU-visible descriptor heap allocation
-                if (ShdrVisibleHeapCPUDescriptorHandle.ptr != 0)
-                {
-                    m_pVkDevice->CopyDescriptorsSimple(1, ShdrVisibleHeapCPUDescriptorHandle, SrcRes.CPUDescriptorHandle, Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-                }
-            }
-            else
-            {
-                VERIFY_EXPR(DstRes.pObject == SrcRes.pObject);
-                VERIFY_EXPR(DstRes.Type == SrcRes.Type);
-                VERIFY_EXPR(DstRes.CPUDescriptorHandle.ptr == SrcRes.CPUDescriptorHandle.ptr);
-            }
-        }
-
-        if(res.IsValidSampler())
-        {
-            auto &SamInfo = GetAssignedSampler(res);
-
-            VERIFY(!SamInfo.Attribs.IsStaticSampler(), "Static samplers should never be assigned space in the cache");
+            auto SrcOffset = SrcRes.OffsetFromSetStart + ArrInd;
+            IDeviceObject *pObject = SrcLayout.m_pResourceCache->GetDescriptorSet(SrcRes.DescriptorSet).GetResource(SrcOffset).pObject;
+            if (!pObject)
+                LOG_ERROR_MESSAGE("No resource assigned to static shader variable \"", SrcRes.SpirvAttribs.GetPrintName(ArrInd), "\" in shader \"", GetShaderName(), "\".");
             
-            VERIFY(SamInfo.Attribs.IsValidBindPoint(), "Sampler bind point must be valid");
-            VERIFY_EXPR(SamInfo.Attribs.BindCount == res.Attribs.BindCount || SamInfo.Attribs.BindCount == 1);
-
-            for(Uint32 ArrInd = 0; ArrInd < SamInfo.Attribs.BindCount; ++ArrInd)
+            auto DstOffset = DstRes.OffsetFromSetStart + ArrInd;
+            IDeviceObject *pCachedResource = m_pResourceCache->GetDescriptorSet(DstRes.DescriptorSet).GetResource(DstOffset).pObject;
+            if(pCachedResource != pObject)
             {
-                auto BindPoint = SamInfo.Attribs.BindPoint + ArrInd;
-                // Source sampler in the static resource cache is in the root table at index 3 
-                // (Vk_DESCRIPTOR_RANGE_TYPE_SAMPLER = 3), at offset BindPoint 
-                auto& SrcSampler = SrcLayout.m_pResourceCache->GetRootTable(Vk_DESCRIPTOR_RANGE_TYPE_SAMPLER).GetResource(BindPoint, Vk_DESCRIPTOR_HEAP_TYPE_SAMPLER, SrcLayout.m_pResources->GetShaderType());
-                if( !SrcSampler.pObject )
-                    LOG_ERROR_MESSAGE( "No sampler assigned to static shader variable \"", res.Attribs.GetPrintName(ArrInd), "\" in shader \"", GetShaderName(), "\"." );
-                auto &DstSampler = m_pResourceCache->GetRootTable(SamInfo.RootIndex).GetResource(SamInfo.OffsetFromTableStart + ArrInd, Vk_DESCRIPTOR_HEAP_TYPE_SAMPLER, m_pResources->GetShaderType());
-            
-                if(DstSampler.pObject != SrcSampler.pObject)
-                {
-                    VERIFY(DstSampler.pObject == nullptr, "Static sampler resource has already been initialized, and the resource to be assigned from the shader does not match previously assigned resource");
-
-                    DstSampler.pObject = SrcSampler.pObject;
-                    DstSampler.Type = SrcSampler.Type;
-                    DstSampler.CPUDescriptorHandle = SrcSampler.CPUDescriptorHandle;
-
-                    auto ShdrVisibleSamplerHeapCPUDescriptorHandle = m_pResourceCache->GetShaderVisibleTableCPUDescriptorHandle<Vk_DESCRIPTOR_HEAP_TYPE_SAMPLER>(SamInfo.RootIndex, SamInfo.OffsetFromTableStart + ArrInd);
-                    VERIFY_EXPR(ShdrVisibleSamplerHeapCPUDescriptorHandle.ptr != 0);
-                    if (ShdrVisibleSamplerHeapCPUDescriptorHandle.ptr != 0)
-                    {
-                        m_pVkDevice->CopyDescriptorsSimple(1, ShdrVisibleSamplerHeapCPUDescriptorHandle, SrcSampler.CPUDescriptorHandle, Vk_DESCRIPTOR_HEAP_TYPE_SAMPLER);
-                    }
-                }
-                else
-                {
-                    VERIFY_EXPR(DstSampler.pObject == SrcSampler.pObject);
-                    VERIFY_EXPR(DstSampler.Type == SrcSampler.Type);
-                    VERIFY_EXPR(DstSampler.CPUDescriptorHandle.ptr == SrcSampler.CPUDescriptorHandle.ptr);
-                }
+                VERIFY(pObject == nullptr, "Static resource has already been initialized, and the resource to be assigned from the shader does not match previously assigned resource");
+                DstRes.SetArray(&pObject, ArrInd, 1);
             }
         }
     }
 }
-#endif
+
 
 #ifdef VERIFY_SHADER_BINDINGS
 void ShaderResourceLayoutVk::dbgVerifyBindings()const

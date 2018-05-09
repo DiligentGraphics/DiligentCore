@@ -826,9 +826,11 @@ void ShaderResourceLayoutD3D12::CopyStaticResourceDesriptorHandles(const ShaderR
 
     if (!SrcLayout.m_pResourceCache)
     {
-        LOG_ERROR("Dst layout has no resource cache");
+        LOG_ERROR("Src layout has no resource cache");
         return;
+
     }
+    VERIFY(SrcLayout.m_pResources->GetShaderType() == m_pResources->GetShaderType(), "Incosistent shader types");
 
     // Static shader resources are stored as follows:
     // CBVs at root index D3D12_DESCRIPTOR_RANGE_TYPE_CBV,
@@ -841,7 +843,6 @@ void ShaderResourceLayoutD3D12::CopyStaticResourceDesriptorHandles(const ShaderR
     {
         // Get resource attributes
         const auto &res = GetSrvCbvUav(SHADER_VARIABLE_TYPE_STATIC, r);
-        VERIFY(SrcLayout.m_pResources->GetShaderType() == m_pResources->GetShaderType(), "Incosistent shader types");
         auto RangeType = GetDescriptorRangeType(res.GetResType());
         for(Uint32 ArrInd = 0; ArrInd < res.Attribs.BindCount; ++ArrInd)
         {

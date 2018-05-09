@@ -252,7 +252,7 @@ public:
                                   const char*                        ResourceName);
     };
 
-    void CopyStaticResourceDesriptorHandles(const ShaderResourceLayoutVk &SrcLayout);
+    void InitializeStaticResources(const ShaderResourceLayoutVk &SrcLayout);
 
     // dbgResourceCache is only used for sanity check and as a remainder that the resource cache must be alive
     // while Layout is alive
