@@ -111,6 +111,11 @@ namespace VulkanUtilities
         VkResult GetFenceStatus(VkFence fence)const;
         VkResult ResetFence(VkFence fence)const;
 
+        void UpdateDescriptorSets(uint32_t                      descriptorWriteCount, 
+                                  const VkWriteDescriptorSet*   pDescriptorWrites,
+                                  uint32_t                      descriptorCopyCount,
+                                  const VkCopyDescriptorSet*    pDescriptorCopies)const;
+
     private:
         VulkanLogicalDevice(VkPhysicalDevice vkPhysicalDevice, 
                             const VkDeviceCreateInfo &DeviceCI, 

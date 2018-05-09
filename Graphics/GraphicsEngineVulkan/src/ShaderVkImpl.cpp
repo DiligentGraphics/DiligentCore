@@ -54,7 +54,7 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters *pRefCounters, RenderDeviceVkImpl 
     // Load shader resources
     auto &Allocator = GetRawAllocator();
     auto *pRawMem = ALLOCATE(Allocator, "Allocator for ShaderResources", sizeof(SPIRVShaderResources));
-    auto *pResources = new (pRawMem) SPIRVShaderResources(Allocator, m_Desc.ShaderType, m_SPIRV, m_Desc.DefaultVariableType, m_Desc.VariableDesc, m_Desc.NumVariables, m_Desc.Name);
+    auto *pResources = new (pRawMem) SPIRVShaderResources(Allocator, m_SPIRV, m_Desc);
     m_pShaderResources.reset(pResources, STDDeleterRawMem<SPIRVShaderResources>(Allocator));
 
     // Clone only static resources that will be set directly in the shader

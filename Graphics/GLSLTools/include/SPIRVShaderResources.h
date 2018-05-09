@@ -81,16 +81,21 @@ struct SPIRVShaderResourceAttribs
 
     const String Name;
 
-    const Uint16 ArraySize;
-    const ResourceType Type;
-    const SHADER_VARIABLE_TYPE VarType : 8;
+    const Uint16                ArraySize;
+    const ResourceType          Type;
+    const SHADER_VARIABLE_TYPE  VarType         : 7;
+    const bool                  IsStaticSampler : 1;
 
     // offset in SPIRV words (uint32_t) for a decoration which was originally declared in the SPIRV binary
     const uint32_t BindingDecorationOffset;
     const uint32_t DescriptorSetDecorationOffset;
 
 
-    SPIRVShaderResourceAttribs(const spirv_cross::Compiler &Compiler, const spirv_cross::Resource &Res, ResourceType _Type, SHADER_VARIABLE_TYPE _VarType);
+    SPIRVShaderResourceAttribs(const spirv_cross::Compiler& Compiler, 
+                               const spirv_cross::Resource& Res, 
+                               ResourceType                 _Type, 
+                               SHADER_VARIABLE_TYPE         _VarType,
+                               bool                         _IsStaticSampler);
 
     String GetPrintName(Uint32 ArrayInd)const
     {
@@ -113,13 +118,9 @@ struct SPIRVShaderResourceAttribs
 class SPIRVShaderResources
 {
 public:
-    SPIRVShaderResources(IMemoryAllocator &Allocator, 
-                         SHADER_TYPE ShaderType, 
-                         std::vector<uint32_t> spirv_binary,
-                         SHADER_VARIABLE_TYPE DefaultVariableType, 
-                         const ShaderVariableDesc *VariableDesc, 
-                         Uint32 NumVars,
-                         const char *ShaderName);
+    SPIRVShaderResources(IMemoryAllocator&          Allocator, 
+                         std::vector<uint32_t>      spirv_binary,
+                         const ShaderDesc&          shaderDesc);
 
     // Copies specified types of resources from another ShaderResources objects
     // Only resources listed in AllowedVarTypes are copied

@@ -77,6 +77,12 @@ private:
     std::array<VkDescriptorType, SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes> m_Map = {};
 };
 
+VkDescriptorType PipelineLayout::GetVkDescriptorType(const SPIRVShaderResourceAttribs &Res)
+{
+    static const ResourceTypeToVkDescriptorType ResTypeToVkDescrType;
+    return ResTypeToVkDescrType[Res.Type];
+}
+
 PipelineLayout::DescriptorSetLayoutManager::DescriptorSetLayoutManager(IMemoryAllocator &MemAllocator):
     m_MemAllocator(MemAllocator),
     m_LayoutBindings(STD_ALLOCATOR_RAW_MEM(VkDescriptorSetLayoutBinding, MemAllocator, "Allocator for Layout Bindings"))
@@ -310,8 +316,7 @@ void PipelineLayout::DescriptorSetLayoutManager::AllocateResourceSlot(const SPIR
     VkDescriptorSetLayoutBinding VkBinding = {};
     Binding = DescrSet.NumLayoutBindings;
     VkBinding.binding = Binding;
-    static const ResourceTypeToVkDescriptorType ResTypeToVkDescrType;
-    VkBinding.descriptorType = ResTypeToVkDescrType[ResAttribs.Type];
+    VkBinding.descriptorType = GetVkDescriptorType(ResAttribs);
     VkBinding.descriptorCount = ResAttribs.ArraySize;
     VkBinding.stageFlags = ShaderTypeToVkShaderStageFlagBit(ShaderType);
     VkBinding.pImmutableSamplers = nullptr;

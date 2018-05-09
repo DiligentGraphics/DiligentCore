@@ -141,14 +141,14 @@ public:
     //  - PipelineStateVkImpl class instance to reference all types of resources (static, mutable, dynamic). 
     //    Root indices and descriptor table offsets are assigned during the initialization; 
     //    no shader resource cache is provided
-    void Initialize(const VulkanUtilities::VulkanLogicalDevice &LogicalDevice,
-                    const std::shared_ptr<const SPIRVShaderResources>& pSrcResources,
-                    IMemoryAllocator &LayoutDataAllocator,
-                    const SHADER_VARIABLE_TYPE *AllowedVarTypes,
-                    Uint32 NumAllowedTypes, 
-                    ShaderResourceCacheVk *pResourceCache,
-                    std::vector<uint32_t> *pSPIRV,
-                    class PipelineLayout *pPipelineLayout);
+    void Initialize(const VulkanUtilities::VulkanLogicalDevice&         LogicalDevice,
+                    const std::shared_ptr<const SPIRVShaderResources>&  pSrcResources,
+                    IMemoryAllocator&                                   LayoutDataAllocator,
+                    const SHADER_VARIABLE_TYPE*                         AllowedVarTypes,
+                    Uint32                                              NumAllowedTypes, 
+                    ShaderResourceCacheVk*                              pResourceCache,
+                    std::vector<uint32_t>*                              pSPIRV,
+                    class PipelineLayout*                               pPipelineLayout);
 
     // sizeof(VkResource) == ?? (x64)
     struct VkResource : IShaderVariable
@@ -164,11 +164,11 @@ public:
         const SPIRVShaderResourceAttribs &SpirvAttribs;
         ShaderResourceLayoutVk &ParentResLayout;
 
-        VkResource(ShaderResourceLayoutVk &_ParentLayout,
-                   const SPIRVShaderResourceAttribs &_SpirvAttribs,
-                   uint32_t _Binding,
-                   uint32_t _DescriptorSet,
-                   Uint32 _OffsetFromSetStart) :
+        VkResource(ShaderResourceLayoutVk&              _ParentLayout,
+                   const SPIRVShaderResourceAttribs&    _SpirvAttribs,
+                   uint32_t                             _Binding,
+                   uint32_t                             _DescriptorSet,
+                   Uint32                               _OffsetFromSetStart) :
             Binding(static_cast<decltype(Binding)>(_Binding)),
             DescriptorSet(static_cast<decltype(DescriptorSet)>(_DescriptorSet)),
             OffsetFromSetStart(_OffsetFromSetStart),
@@ -218,41 +218,38 @@ public:
                 BindResource(ppObjects[Elem], FirstElement+Elem, nullptr);
         }
 
-#if 0
-        bool IsValidSampler()  const{return GetSamplerId()       != InvalidSamplerId;}
-        bool IsValidRootIndex()const{return GetRootIndex()       != InvalidRootIndex;}
-        bool IsValidOffset()   const{return OffsetFromTableStart != InvalidOffset;   }
-
-        CachedResourceType GetResType()const
-        {
-            return static_cast<CachedResourceType>( (ResType_RootIndex >> RootIndBits) & ResTypeMask );
-        }
-        Uint32 GetRootIndex()const
-        {
-            return ResType_RootIndex & RootIndMask;
-        }
-
-        Uint32 GetSamplerId()const
-        {
-            return SamplerId;
-        }
-
     private:
-        void CacheCB(IDeviceObject *pBuffer, 
-                     ShaderResourceCacheVk::Resource& DstRes, 
-                     Uint32 ArrayInd, 
-                     Vk_CPU_DESCRIPTOR_HANDLE ShdrVisibleHeapCPUDescriptorHandle);
+        void CacheBuffer(IDeviceObject*                     pBuffer, 
+                         ShaderResourceCacheVk::Resource&   DstRes, 
+                         VkDescriptorSet                    vkDescrSet,
+                         Uint32                             ArrayInd);
 
-        template<typename TResourceViewType, 
-                 typename TViewTypeEnum,
-                 typename TBindSamplerProcType>
-        void CacheResourceView(IDeviceObject *pView, 
-                               ShaderResourceCacheVk::Resource& DstRes, 
-                               Uint32 ArrayIndex,
-                               Vk_CPU_DESCRIPTOR_HANDLE ShdrVisibleHeapCPUDescriptorHandle, 
-                               TViewTypeEnum dbgExpectedViewType, 
-                               TBindSamplerProcType BindSamplerProc);
-#endif
+        void CacheTexelBuffer(IDeviceObject*                     pBufferView, 
+                              ShaderResourceCacheVk::Resource&   DstRes, 
+                              VkDescriptorSet                    vkDescrSet,
+                              Uint32                             ArrayInd);
+
+        void CacheImage(IDeviceObject*                   pTexView,
+                        ShaderResourceCacheVk::Resource& DstRes,
+                        VkDescriptorSet                  vkDescrSet,
+                        Uint32                           ArrayInd);
+
+        void CacheSeparateSampler(IDeviceObject*                   pSampler,
+                                  ShaderResourceCacheVk::Resource& DstRes,
+                                  VkDescriptorSet                  vkDescrSet,
+                                  Uint32                           ArrayInd);
+
+        inline void UpdateDescriptorHandle(VkDescriptorSet                  vkDescrSet,
+                                           uint32_t                         ArrayElement,
+                                           const VkDescriptorImageInfo*     pImageInfo,
+                                           const VkDescriptorBufferInfo*    pBufferInfo,
+                                           const VkBufferView*              pTexelBufferView);
+
+        bool UpdateCachedResource(ShaderResourceCacheVk::Resource&   DstRes,
+                                  Uint32                             ArrayInd,
+                                  IDeviceObject*                     pObject, 
+                                  INTERFACE_ID                       InterfaceId,
+                                  const char*                        ResourceName);
     };
 
     void CopyStaticResourceDesriptorHandles(const ShaderResourceLayoutVk &SrcLayout);

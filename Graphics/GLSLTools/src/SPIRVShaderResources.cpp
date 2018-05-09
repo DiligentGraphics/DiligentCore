@@ -50,28 +50,38 @@ static uint32_t GetDecorationOffset(const spirv_cross::Compiler &Compiler,
     return offset;
 }
 
-SPIRVShaderResourceAttribs::SPIRVShaderResourceAttribs(const spirv_cross::Compiler &Compiler,
-                                                       const spirv_cross::Resource &Res, 
-                                                       ResourceType _Type, 
-                                                       SHADER_VARIABLE_TYPE _VarType) :
+SPIRVShaderResourceAttribs::SPIRVShaderResourceAttribs(const spirv_cross::Compiler&  Compiler,
+                                                       const spirv_cross::Resource&  Res, 
+                                                       ResourceType                  _Type, 
+                                                       SHADER_VARIABLE_TYPE          _VarType,
+                                                       bool                          _IsStaticSampler) :
     Name(Res.name),
     ArraySize(GetResourceArraySize<decltype(ArraySize)>(Compiler, Res)),
     BindingDecorationOffset(GetDecorationOffset(Compiler, Res, spv::Decoration::DecorationBinding)),
     DescriptorSetDecorationOffset(GetDecorationOffset(Compiler, Res, spv::Decoration::DecorationDescriptorSet)),
     Type(_Type),
-    VarType(_VarType)
+    VarType(_VarType),
+    IsStaticSampler(_IsStaticSampler)
 {
 }
 
-SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator &Allocator, 
-                                           SHADER_TYPE ShaderType, 
-                                           std::vector<uint32_t> spirv_binary,
-                                           SHADER_VARIABLE_TYPE DefaultVariableType,
-                                           const ShaderVariableDesc *VariableDesc,
-                                           Uint32 NumVars,
-                                           const char *ShaderName) :
+bool FindStaticSampler(const ShaderDesc& shaderDesc, const char* SamplerName)
+{
+    for(Uint32 s=0; s < shaderDesc.NumStaticSamplers; ++s)
+    {
+        const auto& StSam = shaderDesc.StaticSamplers[s];
+        if(strcmp(SamplerName, StSam.TextureName) == 0)
+            return true;
+    }
+
+    return false;
+}
+
+SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&         Allocator, 
+                                           std::vector<uint32_t>     spirv_binary,
+                                           const ShaderDesc&         shaderDesc) :
     m_MemoryBuffer(nullptr, STDDeleterRawMem<void>(Allocator)),
-    m_ShaderType(ShaderType)
+    m_ShaderType(shaderDesc.ShaderType)
 {
     spirv_cross::Compiler Compiler(spirv_binary);
 
@@ -92,8 +102,8 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator &Allocator,
         Uint32 CurrUB = 0;
         for (const auto &UB : resources.uniform_buffers)
         {
-            auto VarType = GetShaderVariableType(UB.name.c_str(), DefaultVariableType, VariableDesc, NumVars);
-            new (&GetUB(CurrUB++)) SPIRVShaderResourceAttribs(Compiler, UB, SPIRVShaderResourceAttribs::ResourceType::UniformBuffer, VarType);
+            auto VarType = GetShaderVariableType(UB.name.c_str(), shaderDesc.DefaultVariableType, shaderDesc.VariableDesc, shaderDesc.NumVariables);
+            new (&GetUB(CurrUB++)) SPIRVShaderResourceAttribs(Compiler, UB, SPIRVShaderResourceAttribs::ResourceType::UniformBuffer, VarType, false);
         }
         VERIFY_EXPR(CurrUB == GetNumUBs());
     }
@@ -102,8 +112,8 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator &Allocator,
         Uint32 CurrSB = 0;
         for (const auto &SB : resources.storage_buffers)
         {
-            auto VarType = GetShaderVariableType(SB.name.c_str(), DefaultVariableType, VariableDesc, NumVars);
-            new (&GetSB(CurrSB++)) SPIRVShaderResourceAttribs(Compiler, SB, SPIRVShaderResourceAttribs::ResourceType::StorageBuffer, VarType);
+            auto VarType = GetShaderVariableType(SB.name.c_str(), shaderDesc.DefaultVariableType, shaderDesc.VariableDesc, shaderDesc.NumVariables);
+            new (&GetSB(CurrSB++)) SPIRVShaderResourceAttribs(Compiler, SB, SPIRVShaderResourceAttribs::ResourceType::StorageBuffer, VarType, false);
         }
         VERIFY_EXPR(CurrSB == GetNumSBs());
     }
@@ -112,8 +122,9 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator &Allocator,
         Uint32 CurrSmplImg = 0;
         for (const auto &SmplImg : resources.sampled_images)
         {
-            auto VarType = GetShaderVariableType(SmplImg.name.c_str(), DefaultVariableType, VariableDesc, NumVars);
-            new (&GetSmplImg(CurrSmplImg++)) SPIRVShaderResourceAttribs(Compiler, SmplImg, SPIRVShaderResourceAttribs::ResourceType::SampledImage, VarType);
+            auto VarType = GetShaderVariableType(SmplImg.name.c_str(), shaderDesc.DefaultVariableType, shaderDesc.VariableDesc, shaderDesc.NumVariables);
+            auto StaticSampler = FindStaticSampler(shaderDesc, SmplImg.name.c_str());
+            new (&GetSmplImg(CurrSmplImg++)) SPIRVShaderResourceAttribs(Compiler, SmplImg, SPIRVShaderResourceAttribs::ResourceType::SampledImage, VarType, StaticSampler);
         }
         VERIFY_EXPR(CurrSmplImg == GetNumSmplImgs()); 
     }
@@ -122,8 +133,8 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator &Allocator,
         Uint32 CurrImg = 0;
         for (const auto &Img : resources.storage_images)
         {
-            auto VarType = GetShaderVariableType(Img.name.c_str(), DefaultVariableType, VariableDesc, NumVars);
-            new (&GetImg(CurrImg++)) SPIRVShaderResourceAttribs(Compiler, Img, SPIRVShaderResourceAttribs::ResourceType::StorageImage, VarType);
+            auto VarType = GetShaderVariableType(Img.name.c_str(), shaderDesc.DefaultVariableType, shaderDesc.VariableDesc, shaderDesc.NumVariables);
+            new (&GetImg(CurrImg++)) SPIRVShaderResourceAttribs(Compiler, Img, SPIRVShaderResourceAttribs::ResourceType::StorageImage, VarType, false);
         }
         VERIFY_EXPR(CurrImg == GetNumImgs());
     }
@@ -132,8 +143,8 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator &Allocator,
         Uint32 CurrAC = 0;
         for (const auto &AC : resources.atomic_counters)
         {
-            auto VarType = GetShaderVariableType(AC.name.c_str(), DefaultVariableType, VariableDesc, NumVars);
-            new (&GetAC(CurrAC++)) SPIRVShaderResourceAttribs(Compiler, AC, SPIRVShaderResourceAttribs::ResourceType::AtomicCounter, VarType);
+            auto VarType = GetShaderVariableType(AC.name.c_str(), shaderDesc.DefaultVariableType, shaderDesc.VariableDesc, shaderDesc.NumVariables);
+            new (&GetAC(CurrAC++)) SPIRVShaderResourceAttribs(Compiler, AC, SPIRVShaderResourceAttribs::ResourceType::AtomicCounter, VarType, false);
         }
         VERIFY_EXPR(CurrAC == GetNumACs());
     }
@@ -142,8 +153,8 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator &Allocator,
         Uint32 CurrSepImg = 0;
         for (const auto &SepImg : resources.separate_images)
         {
-            auto VarType = GetShaderVariableType(SepImg.name.c_str(), DefaultVariableType, VariableDesc, NumVars);
-            new (&GetSepImg(CurrSepImg++)) SPIRVShaderResourceAttribs(Compiler, SepImg, SPIRVShaderResourceAttribs::ResourceType::SeparateImage, VarType);
+            auto VarType = GetShaderVariableType(SepImg.name.c_str(), shaderDesc.DefaultVariableType, shaderDesc.VariableDesc, shaderDesc.NumVariables);
+            new (&GetSepImg(CurrSepImg++)) SPIRVShaderResourceAttribs(Compiler, SepImg, SPIRVShaderResourceAttribs::ResourceType::SeparateImage, VarType, false);
         }
         VERIFY_EXPR(CurrSepImg == GetNumSepImgs());
     }
@@ -152,20 +163,21 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator &Allocator,
         Uint32 CurrSepSmpl = 0;
         for (const auto &SepSam : resources.separate_samplers)
         {
-            auto VarType = GetShaderVariableType(SepSam.name.c_str(), DefaultVariableType, VariableDesc, NumVars);
-            new (&GetSepSmpl(CurrSepSmpl++)) SPIRVShaderResourceAttribs(Compiler, SepSam, SPIRVShaderResourceAttribs::ResourceType::SeparateSampler, VarType);
+            auto VarType = GetShaderVariableType(SepSam.name.c_str(), shaderDesc.DefaultVariableType, shaderDesc.VariableDesc, shaderDesc.NumVariables);
+            auto StaticSampler = FindStaticSampler(shaderDesc, SepSam.name.c_str());
+            new (&GetSepSmpl(CurrSepSmpl++)) SPIRVShaderResourceAttribs(Compiler, SepSam, SPIRVShaderResourceAttribs::ResourceType::SeparateSampler, VarType, StaticSampler);
         }
         VERIFY_EXPR(CurrSepSmpl == GetNumSepSmpls());
     }
 
 #ifdef _DEBUG
-    if (VariableDesc != nullptr || NumVars != 0)
+    if (shaderDesc.VariableDesc != nullptr || shaderDesc.NumVariables != 0)
     {
-        for (Uint32 v = 0; v < NumVars; ++v)
+        for (Uint32 v = 0; v < shaderDesc.NumVariables; ++v)
         {
             bool VariableFound = false;
-            const auto *VarName = VariableDesc[v].Name;
-            auto VarType = VariableDesc[v].Type;
+            const auto *VarName = shaderDesc.VariableDesc[v].Name;
+            auto VarType = shaderDesc.VariableDesc[v].Type;
 
             for (Uint32 res = 0; res < GetTotalResources(); ++res)
             {
@@ -178,7 +190,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator &Allocator,
             }
             if (!VariableFound)
             {
-                LOG_WARNING_MESSAGE("Variable '", VarName, "' labeled as ", GetShaderVariableTypeLiteralName(VarType), " not found in shader \'", ShaderName, "'");
+                LOG_WARNING_MESSAGE("Variable '", VarName, "' labeled as ", GetShaderVariableTypeLiteralName(VarType), " not found in shader \'", shaderDesc.Name, "'");
             }
         }
     }

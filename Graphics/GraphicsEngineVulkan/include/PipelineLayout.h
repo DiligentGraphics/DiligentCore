@@ -42,6 +42,8 @@ class RenderDeviceVkImpl;
 class PipelineLayout
 {
 public:
+    static VkDescriptorType GetVkDescriptorType(const SPIRVShaderResourceAttribs &Res);
+
     PipelineLayout();
     void Release(RenderDeviceVkImpl *pDeviceVkImpl);
 

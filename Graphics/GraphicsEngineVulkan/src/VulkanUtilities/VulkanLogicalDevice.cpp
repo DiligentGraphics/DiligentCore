@@ -401,4 +401,12 @@ namespace VulkanUtilities
         VERIFY(err == VK_SUCCESS, "Failed to reset fence");
         return err;
     }
+
+    void VulkanLogicalDevice::UpdateDescriptorSets(uint32_t                     descriptorWriteCount, 
+                                                   const VkWriteDescriptorSet*  pDescriptorWrites,
+                                                   uint32_t                     descriptorCopyCount,
+                                                   const VkCopyDescriptorSet*   pDescriptorCopies)const
+    {
+        vkUpdateDescriptorSets(m_VkDevice, descriptorWriteCount, pDescriptorWrites, descriptorCopyCount, pDescriptorCopies);
+    }
 }

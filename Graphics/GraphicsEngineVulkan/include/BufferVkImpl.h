@@ -89,16 +89,18 @@ public:
     }
     */
 
+    VkBuffer GetVkBuffer()override final
+    {
+        return m_VulkanBuffer;
+    }
+
     virtual void* GetNativeHandle()override final
     { 
-        return nullptr;
-#if 0
-        VERIFY(GetVkResource() != nullptr, "The buffer is dynamic and has no pointer to Vk resource");
-        size_t DataStartByteOffset = 0;
-        auto *pVkBuffer = GetVkBuffer(DataStartByteOffset, 0); 
-        VERIFY(DataStartByteOffset == 0, "0 offset expected");
-        return pVkBuffer;
-#endif
+        //VERIFY(GetVkResource() != nullptr, "The buffer is dynamic and has no pointer to Vk resource");
+        //size_t DataStartByteOffset = 0;
+        auto VkBuffer = GetVkBuffer(); 
+        //VERIFY(DataStartByteOffset == 0, "0 offset expected");
+        return VkBuffer;
     }
 /*
     virtual void SetVkResourceState(Vk_RESOURCE_STATES state)override final{ SetState(state); }

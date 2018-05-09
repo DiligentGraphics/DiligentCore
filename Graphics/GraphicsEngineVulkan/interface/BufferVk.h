@@ -41,16 +41,8 @@ class IBufferVk : public IBuffer
 {
 public:
 
-    /// Returns a pointer to the ID3D12Resource interface of the internal Direct3D12 object.
-
-    /// The method does *NOT* call AddRef() on the returned interface,
-    /// so Release() must not be called.
-    /// \param [in] DataStartByteOffset - Offset from the beginning of the buffer
-    ///                            to the start of the data. This parameter
-    ///                            is required for dynamic buffers, which are
-    ///                            suballocated in a dynamic upload heap
-    /// \param [in] ContextId - Id of the context within which address of the buffer is requested.
-    //virtual ID3D12Resource* GetD3D12Buffer(size_t &DataStartByteOffset, Uint32 ContextId) = 0;
+    /// Returns a vulkan buffer handle
+    virtual VkBuffer GetVkBuffer() = 0;
 
     /// Sets the buffer usage state
 
