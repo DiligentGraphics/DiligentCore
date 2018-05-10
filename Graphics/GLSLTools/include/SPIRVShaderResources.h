@@ -28,16 +28,19 @@
 
 // SPIRVShaderResources class uses continuous chunk of memory to store all resources, as follows:
 //
-//   m_MemoryBuffer                                                                                                              m_BufferEndOffset
+//   m_MemoryBuffer                                                                                                              m_TotalResources
 //    |                                                                                                                             |
-//    | Uniform Buffers | Storage Buffers | Storage Images | Sampled Images | Atomic Counters | Separate Images | Separate Samplers |
+//    | Uniform Buffers | Storage Buffers | Storage Images | Sampled Images | Atomic Counters | Separate Images | Separate Samplers |  Static Samplers  |
 
 #include <memory>
 #include <vector>
 
 #include "Shader.h"
+#include "Sampler.h"
+#include "RenderDevice.h"
 #include "STDAllocator.h"
 #include "HashUtils.h"
+#include "RefCntAutoPtr.h"
 
 namespace spirv_cross
 {
@@ -82,20 +85,19 @@ struct SPIRVShaderResourceAttribs
     const String Name;
 
     const Uint16                ArraySize;
-    const ResourceType          Type;
-    const SHADER_VARIABLE_TYPE  VarType         : 7;
-    const bool                  IsStaticSampler : 1;
+    const ResourceType          Type            : 4;
+    const SHADER_VARIABLE_TYPE  VarType         : 4;
+    const Int8                  StaticSamplerInd;
 
     // offset in SPIRV words (uint32_t) for a decoration which was originally declared in the SPIRV binary
     const uint32_t BindingDecorationOffset;
     const uint32_t DescriptorSetDecorationOffset;
 
-
     SPIRVShaderResourceAttribs(const spirv_cross::Compiler& Compiler, 
                                const spirv_cross::Resource& Res, 
                                ResourceType                 _Type, 
                                SHADER_VARIABLE_TYPE         _VarType,
-                               bool                         _IsStaticSampler);
+                               Int32                        _StaticSamplerInd);
 
     String GetPrintName(Uint32 ArrayInd)const
     {
@@ -112,22 +114,16 @@ struct SPIRVShaderResourceAttribs
                Type          == Attibs.Type;
     }
 };
-
+static_assert(sizeof(SPIRVShaderResourceAttribs) % sizeof(void*) == 0, "Size of SPIRVShaderResourceAttribs struct must be multiple of sizeof(void*)" );
 
 /// Diligent::SPIRVShaderResources class
 class SPIRVShaderResources
 {
 public:
-    SPIRVShaderResources(IMemoryAllocator&          Allocator, 
+    SPIRVShaderResources(IMemoryAllocator&          Allocator,
+                         IRenderDevice*             pRenderDevice,
                          std::vector<uint32_t>      spirv_binary,
                          const ShaderDesc&          shaderDesc);
-
-    // Copies specified types of resources from another ShaderResources objects
-    // Only resources listed in AllowedVarTypes are copied
-    SPIRVShaderResources(IMemoryAllocator &Allocator,
-                         const SPIRVShaderResources& SrcResources,
-                         const SHADER_VARIABLE_TYPE *AllowedVarTypes, 
-                         Uint32 NumAllowedTypes);
 
     SPIRVShaderResources             (const SPIRVShaderResources&) = delete;
     SPIRVShaderResources             (SPIRVShaderResources&&)      = delete;
@@ -142,8 +138,9 @@ public:
     Uint32 GetNumSmplImgs()const noexcept{ return (m_AtomicCounterOffset   - m_SampledImageOffset);   }
     Uint32 GetNumACs     ()const noexcept{ return (m_SeparateImageOffset   - m_AtomicCounterOffset);  }
     Uint32 GetNumSepImgs ()const noexcept{ return (m_SeparateSamplerOffset - m_SeparateImageOffset);  }
-    Uint32 GetNumSepSmpls()const noexcept{ return (m_BufferEndOffset       - m_SeparateSamplerOffset);}
-    Uint32 GetTotalResources()const noexcept { return m_BufferEndOffset; }
+    Uint32 GetNumSepSmpls()const noexcept{ return (m_TotalResources        - m_SeparateSamplerOffset);}
+    Uint32 GetTotalResources()   const noexcept { return m_TotalResources; }
+    Uint32 GetNumStaticSamplers()const noexcept { return m_NumStaticSamplers; }
 
     const SPIRVShaderResourceAttribs& GetUB      (Uint32 n)const noexcept{ return GetResAttribs(n, GetNumUBs(),      0                      ); }
     const SPIRVShaderResourceAttribs& GetSB      (Uint32 n)const noexcept{ return GetResAttribs(n, GetNumSBs(),      m_StorageBufferOffset  ); }
@@ -153,6 +150,15 @@ public:
     const SPIRVShaderResourceAttribs& GetSepImg  (Uint32 n)const noexcept{ return GetResAttribs(n, GetNumSepImgs(),  m_SeparateImageOffset  ); }
     const SPIRVShaderResourceAttribs& GetSepSmpl (Uint32 n)const noexcept{ return GetResAttribs(n, GetNumSepSmpls(), m_SeparateSamplerOffset); }
     const SPIRVShaderResourceAttribs& GetResource(Uint32 n)const noexcept{ return GetResAttribs(n, GetTotalResources(), 0); }
+    ISampler* GetStaticSampler(const SPIRVShaderResourceAttribs& ResAttribs)const noexcept
+    { 
+        if(ResAttribs.StaticSamplerInd < 0)
+            return nullptr;
+
+        VERIFY(ResAttribs.StaticSamplerInd < m_NumStaticSamplers, "Static sampler index (", ResAttribs.StaticSamplerInd, ") is out of range. Array size: ", m_NumStaticSamplers);
+        auto *ResourceMemoryEnd = reinterpret_cast<SPIRVShaderResourceAttribs*>(m_MemoryBuffer.get()) + m_TotalResources;
+        return reinterpret_cast<RefCntAutoPtr<ISampler>*>(ResourceMemoryEnd)[ResAttribs.StaticSamplerInd];
+    }
 
     void CountResources(const SHADER_VARIABLE_TYPE *AllowedVarTypes, 
                         Uint32 NumAllowedTypes, 
@@ -256,19 +262,19 @@ public:
     //size_t GetHash()const;
 
 protected:
-    void Initialize(IMemoryAllocator &Allocator, Uint32 NumUBs, Uint32 NumSBs, Uint32 NumImgs, Uint32 NumSmplImgs, Uint32 NumACs, Uint32 NumSepImgs, Uint32 NumSepSmpls);
+    void Initialize(IMemoryAllocator &Allocator, Uint32 NumUBs, Uint32 NumSBs, Uint32 NumImgs, Uint32 NumSmplImgs, Uint32 NumACs, Uint32 NumSepImgs, Uint32 NumSepSmpls, Uint32 NumStaticSamplers);
 
     __forceinline SPIRVShaderResourceAttribs& GetResAttribs(Uint32 n, Uint32 NumResources, Uint32 Offset)noexcept
     {
-        VERIFY(n < NumResources, "Resource index (", n, ") is out of range. Max allowed index: ", NumResources-1);
-        VERIFY_EXPR(Offset + n < m_BufferEndOffset);
+        VERIFY(n < NumResources, "Resource index (", n, ") is out of range. Resource array size: ", NumResources);
+        VERIFY_EXPR(Offset + n < m_TotalResources);
         return reinterpret_cast<SPIRVShaderResourceAttribs*>(m_MemoryBuffer.get())[Offset + n];
     }
 
     __forceinline const SPIRVShaderResourceAttribs& GetResAttribs(Uint32 n, Uint32 NumResources, Uint32 Offset)const noexcept
     {
-        VERIFY(n < NumResources, "Resource index (", n, ") is out of range. Max allowed index: ", NumResources-1);
-        VERIFY_EXPR(Offset + n < m_BufferEndOffset);
+        VERIFY(n < NumResources, "Resource index (", n, ") is out of range. Resource array size: ", NumResources);
+        VERIFY_EXPR(Offset + n < m_TotalResources);
         return reinterpret_cast<SPIRVShaderResourceAttribs*>(m_MemoryBuffer.get())[Offset + n];
     }
 
@@ -280,10 +286,16 @@ protected:
     SPIRVShaderResourceAttribs& GetSepImg  (Uint32 n)noexcept{ return GetResAttribs(n, GetNumSepImgs(),  m_SeparateImageOffset  ); }
     SPIRVShaderResourceAttribs& GetSepSmpl (Uint32 n)noexcept{ return GetResAttribs(n, GetNumSepSmpls(), m_SeparateSamplerOffset); }
     SPIRVShaderResourceAttribs& GetResource(Uint32 n)noexcept{ return GetResAttribs(n, GetTotalResources(), 0); }
+    RefCntAutoPtr<ISampler>& GetStaticSampler(Uint32 n)noexcept
+    {
+        VERIFY(n < m_NumStaticSamplers, "Static sampler index (", n, ") is out of range. Array size: ", m_NumStaticSamplers);
+        auto *ResourceMemoryEnd = reinterpret_cast<SPIRVShaderResourceAttribs*>(m_MemoryBuffer.get()) + m_TotalResources;
+        return reinterpret_cast<RefCntAutoPtr<ISampler>*>(ResourceMemoryEnd)[n];
+    }
 
 private:
     // Memory buffer that holds all resources as continuous chunk of memory:
-    // |  UBs  |  SBs  |  StrgImgs  |  SmplImgs  |  ACs  |  SepImgs  |  SepSamplers  |
+    // |  UBs  |  SBs  |  StrgImgs  |  SmplImgs  |  ACs  |  SepImgs  |  SepSamplers  | Static Samplers |
     std::unique_ptr< void, STDDeleterRawMem<void> > m_MemoryBuffer;
 
     using OffsetType = Uint16;
@@ -293,7 +305,8 @@ private:
     OffsetType m_AtomicCounterOffset   = 0;
     OffsetType m_SeparateImageOffset   = 0;
     OffsetType m_SeparateSamplerOffset = 0;
-    OffsetType m_BufferEndOffset       = 0;
+    OffsetType m_TotalResources        = 0;
+    OffsetType m_NumStaticSamplers     = 0;
 
     SHADER_TYPE m_ShaderType = SHADER_TYPE_UNKNOWN;
 };

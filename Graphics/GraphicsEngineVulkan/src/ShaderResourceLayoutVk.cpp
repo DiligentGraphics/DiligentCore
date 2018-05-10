@@ -185,7 +185,11 @@ void ShaderResourceLayoutVk::Initialize(const VulkanUtilities::VulkanLogicalDevi
         if (pPipelineLayout)
         {
             VERIFY_EXPR(pSPIRV != nullptr);
-            pPipelineLayout->AllocateResourceSlot(Attribs, m_pResources->GetShaderType(), DescriptorSet, Binding, CacheOffset, *pSPIRV);
+            auto *pStaticSampler = m_pResources->GetStaticSampler(Attribs);
+            VkSampler vkStaticSampler = VK_NULL_HANDLE;
+            if(pStaticSampler != nullptr)
+                vkStaticSampler = ValidatedCast<SamplerVkImpl>(pStaticSampler)->GetVkSampler();
+            pPipelineLayout->AllocateResourceSlot(Attribs, vkStaticSampler, m_pResources->GetShaderType(), DescriptorSet, Binding, CacheOffset, *pSPIRV);
             VERIFY(DescriptorSet <= std::numeric_limits<decltype(VkResource::DescriptorSet)>::max(), "Descriptor set (", DescriptorSet, ") excceeds representable max value");
             VERIFY(Binding <= std::numeric_limits<decltype(VkResource::Binding)>::max(), "Binding (", Binding, ") excceeds representable max value");
         }
@@ -460,7 +464,7 @@ void ShaderResourceLayoutVk::VkResource::CacheImage(IDeviceObject *pTexView,
         {
             VkDescriptorImageInfo DescrImgInfo;
             DescrImgInfo.sampler = VK_NULL_HANDLE;
-            if(SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SampledImage && !SpirvAttribs.IsStaticSampler)
+            if(SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SampledImage && SpirvAttribs.StaticSamplerInd < 0)
             {
                 auto *pSamplerVk = ValidatedCast<ISamplerVk>(pTexViewVk->GetSampler());
                 if(pSamplerVk != nullptr)
@@ -538,9 +542,13 @@ void ShaderResourceLayoutVk::VkResource::BindResource(IDeviceObject *pObj, Uint3
             break;
 
             case SPIRVShaderResourceAttribs::ResourceType::SeparateSampler:
-                if(!SpirvAttribs.IsStaticSampler)
+                if(SpirvAttribs.StaticSamplerInd < 0)
                 {
                     CacheSeparateSampler(pObj, DstRes, vkDescrSet, ArrayIndex);
+                }
+                else
+                {
+                    LOG_ERROR_MESSAGE("Attempting to assign sampler to static sampler '", SpirvAttribs.Name, '\'');
                 }
             break;
 

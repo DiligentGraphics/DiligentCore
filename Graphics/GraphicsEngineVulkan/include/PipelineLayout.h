@@ -46,24 +46,18 @@ public:
 
     PipelineLayout();
     void Release(RenderDeviceVkImpl *pDeviceVkImpl);
-
-#if 0
-    void AllocateStaticSamplers(IShader* const *ppShaders, Uint32 NumShaders);
-#endif
     void Finalize(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice);
 
     VkPipelineLayout GetVkPipelineLayout()const{return m_LayoutMgr.GetVkPipelineLayout();}
     void InitResourceCache(RenderDeviceVkImpl *pDeviceVkImpl, class ShaderResourceCacheVk& ResourceCache, IMemoryAllocator &CacheMemAllocator)const;
-#if 0    
-    void InitStaticSampler(SHADER_TYPE ShaderType, const String &TextureName, const D3DShaderResourceAttribs &ShaderResAttribs);
-#endif
 
-    void AllocateResourceSlot(const SPIRVShaderResourceAttribs &ResAttribs, 
-                              SHADER_TYPE ShaderType, 
-                              Uint32 &DescriptorSet, 
-                              Uint32 &Binding,
-                              Uint32 &OffsetFromTableStart,
-                              std::vector<uint32_t> &SPIRV);
+    void AllocateResourceSlot(const SPIRVShaderResourceAttribs& ResAttribs, 
+                              VkSampler                         vkStaticSampler,
+                              SHADER_TYPE                       ShaderType, 
+                              Uint32&                           DescriptorSet, 
+                              Uint32&                           Binding,
+                              Uint32&                           OffsetInCache,
+                              std::vector<uint32_t>&            SPIRV);
 
 #if 0
     // This method should be thread-safe as it does not modify any object state
@@ -122,7 +116,7 @@ private:
             ~DescriptorSetLayout();
             void AddBinding(const VkDescriptorSetLayoutBinding &Binding, IMemoryAllocator &MemAllocator);
             void Finalize(const VulkanUtilities::VulkanLogicalDevice &LogicalDevice, IMemoryAllocator &MemAllocator, VkDescriptorSetLayoutBinding* pNewBindings);
-            void Release(RenderDeviceVkImpl *pRenderDeviceVk);
+            void Release(RenderDeviceVkImpl *pRenderDeviceVk, IMemoryAllocator &MemAllocator);
 
             bool operator == (const DescriptorSetLayout& rhs)const;
             bool operator != (const DescriptorSetLayout& rhs)const{return !(*this == rhs);}
@@ -153,10 +147,11 @@ private:
         VkPipelineLayout GetVkPipelineLayout()const{return m_VkPipelineLayout;}
 
         void AllocateResourceSlot(const SPIRVShaderResourceAttribs &ResAttribs,
+                                  VkSampler vkStaticSampler,
                                   SHADER_TYPE ShaderType,
                                   Uint32 &DescriptorSet,
                                   Uint32 &Binding, 
-                                  Uint32 &OffsetFromTableStart);
+                                  Uint32 &OffsetInCache);
     private:
         IMemoryAllocator &m_MemAllocator;
         VulkanUtilities::PipelineLayoutWrapper m_VkPipelineLayout;
@@ -169,23 +164,6 @@ private:
     DescriptorSetLayoutManager m_LayoutMgr;
 
 #if 0
-    struct StaticSamplerAttribs
-    {
-        StaticSamplerDesc SamplerDesc;
-        UINT ShaderRegister = static_cast<UINT>(-1);
-        UINT ArraySize = 0;
-        UINT RegisterSpace = 0;
-        Vk_SHADER_VISIBILITY ShaderVisibility = static_cast<Vk_SHADER_VISIBILITY>(-1);
-        
-        StaticSamplerAttribs(){}
-        StaticSamplerAttribs(const StaticSamplerDesc& SamDesc, Vk_SHADER_VISIBILITY Visibility) : 
-            SamplerDesc(SamDesc),
-            ShaderVisibility(Visibility)
-        {}
-    };
-    // Note: sizeof(m_StaticSamplers) == 56 (MS compiler, release x64)
-    std::vector<StaticSamplerAttribs, STDAllocatorRawMem<StaticSamplerAttribs> > m_StaticSamplers;
-
     // Commits descriptor handles for static and mutable variables
     template<bool PerformResourceTransitions>
     void CommitDescriptorHandlesInternal_SM(RenderDeviceVkImpl *pRenderDeviceVk, 

@@ -72,9 +72,9 @@ void ShaderResources::Initialize(IMemoryAllocator &Allocator, Uint32 NumCBs, Uin
     m_SamplersOffset  = m_BufUAVOffset   + static_cast<OffsetType>(NumBufUAVs);
 
     VERIFY(m_SamplersOffset + NumSamplers<= MaxOffset, "Max offset exceeded");
-    m_BufferEndOffset = m_SamplersOffset + static_cast<OffsetType>(NumSamplers);
+    m_TotalResources = m_SamplersOffset + static_cast<OffsetType>(NumSamplers);
 
-    auto MemorySize = m_BufferEndOffset * sizeof(D3DShaderResourceAttribs);
+    auto MemorySize = m_TotalResources * sizeof(D3DShaderResourceAttribs);
 
     VERIFY_EXPR(GetNumCBs()     == NumCBs);
     VERIFY_EXPR(GetNumTexSRV()  == NumTexSRVs);
@@ -146,72 +146,6 @@ void ShaderResources::CountResources(const SHADER_VARIABLE_TYPE *AllowedVarTypes
     );
 }
 
-ShaderResources::ShaderResources(IMemoryAllocator &Allocator, 
-                                 const ShaderResources& SrcResources, 
-                                 const SHADER_VARIABLE_TYPE *AllowedVarTypes, 
-                                 Uint32 NumAllowedTypes) :
-    m_MemoryBuffer(nullptr, STDDeleterRawMem<void>(Allocator)),
-    m_ShaderType(SrcResources.m_ShaderType)
-{
-    Uint32 NumCBs = 0, NumTexSRVs = 0, NumTexUAVs = 0, NumBufSRVs = 0, NumBufUAVs = 0, NumSamplers = 0;
-    SrcResources.CountResources(AllowedVarTypes, NumAllowedTypes, NumCBs, NumTexSRVs, NumTexUAVs, NumBufSRVs, NumBufUAVs, NumSamplers);
-
-    Initialize(Allocator, NumCBs, NumTexSRVs, NumTexUAVs, NumBufSRVs, NumBufUAVs, NumSamplers);
-
-    // In release mode, MS compiler generates this false warning:
-    // Warning	C4189 'AllowedTypeBits': local variable is initialized but not referenced
-    // Most likely it somehow gets confused by the variable being eliminated during function inlining
-#pragma warning(push)
-#pragma warning(disable : 4189)
-    Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
-#pragma warning(pop)
-
-    Uint32 CurrCB = 0, CurrTexSRV = 0, CurrTexUAV = 0, CurrBufSRV = 0, CurrBufUAV = 0, CurrSampler = 0;
-    SrcResources.ProcessResources(
-        AllowedVarTypes, NumAllowedTypes,
-
-        [&](const D3DShaderResourceAttribs &CB, Uint32)
-        {
-            VERIFY_EXPR( IsAllowedType(CB.GetVariableType(), AllowedTypeBits) );
-            new (&GetCB(CurrCB++)) D3DShaderResourceAttribs(CB);
-        },
-        [&](const D3DShaderResourceAttribs& TexSRV, Uint32)
-        {
-            VERIFY_EXPR(IsAllowedType(TexSRV.GetVariableType(), AllowedTypeBits));
-            
-            auto SamplerId = D3DShaderResourceAttribs::InvalidSamplerId;
-            if (TexSRV.IsValidSampler())
-            {
-                SamplerId = CurrSampler;
-                new (&GetSampler(CurrSampler++)) D3DShaderResourceAttribs(SrcResources.GetSampler(TexSRV.GetSamplerId()));
-            }
-            
-            new (&GetTexSRV(CurrTexSRV++)) D3DShaderResourceAttribs(TexSRV, SamplerId);
-        },
-        [&](const D3DShaderResourceAttribs &TexUAV, Uint32)
-        {
-            VERIFY_EXPR( IsAllowedType(TexUAV.GetVariableType(), AllowedTypeBits) );
-            new (&GetTexUAV(CurrTexUAV++)) D3DShaderResourceAttribs(TexUAV);
-        },
-        [&](const D3DShaderResourceAttribs &BufSRV, Uint32)
-        {
-            VERIFY_EXPR( IsAllowedType(BufSRV.GetVariableType(), AllowedTypeBits) );
-            new (&GetBufSRV(CurrBufSRV++)) D3DShaderResourceAttribs(BufSRV);
-        },
-        [&](const D3DShaderResourceAttribs &BufUAV, Uint32)
-        {
-            VERIFY_EXPR( IsAllowedType(BufUAV.GetVariableType(), AllowedTypeBits) );
-            new (&GetBufUAV(CurrBufUAV++)) D3DShaderResourceAttribs(BufUAV);
-        }
-    );
-
-    VERIFY_EXPR(CurrCB      == NumCBs);
-    VERIFY_EXPR(CurrTexSRV  == NumTexSRVs );
-    VERIFY_EXPR(CurrTexUAV  == NumTexUAVs );
-    VERIFY_EXPR(CurrBufSRV  == NumBufSRVs );
-    VERIFY_EXPR(CurrBufUAV  == NumBufUAVs );
-    VERIFY_EXPR(CurrSampler == NumSamplers );
-}
 
 Uint32 ShaderResources::FindAssignedSamplerId(const D3DShaderResourceAttribs& TexSRV)const
 {

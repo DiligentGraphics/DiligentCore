@@ -174,9 +174,14 @@ void PipelineLayout::DescriptorSetLayoutManager::DescriptorSetLayout::Finalize(c
     pBindings = pNewBindings;
 }
 
-void PipelineLayout::DescriptorSetLayoutManager::DescriptorSetLayout::Release(RenderDeviceVkImpl *pRenderDeviceVk)
+void PipelineLayout::DescriptorSetLayoutManager::DescriptorSetLayout::Release(RenderDeviceVkImpl *pRenderDeviceVk, IMemoryAllocator &MemAllocator)
 {
     pRenderDeviceVk->SafeReleaseVkObject(std::move(VkLayout));
+    for(uint32_t b=0; b < NumLayoutBindings; ++b)
+    {
+        if(pBindings[b].pImmutableSamplers != nullptr)
+            MemAllocator.Free(const_cast<VkSampler*>(pBindings[b].pImmutableSamplers));
+    }
     pBindings = nullptr;
     NumLayoutBindings = 0;
 }
@@ -269,7 +274,7 @@ void PipelineLayout::DescriptorSetLayoutManager::Finalize(const VulkanUtilities:
 void PipelineLayout::DescriptorSetLayoutManager::Release(RenderDeviceVkImpl *pRenderDeviceVk)
 {
     for (auto &Layout : m_DescriptorSetLayouts)
-        Layout.Release(pRenderDeviceVk);
+        Layout.Release(pRenderDeviceVk, m_MemAllocator);
 
     pRenderDeviceVk->SafeReleaseVkObject(std::move(m_VkPipelineLayout));
 }
@@ -301,10 +306,11 @@ size_t PipelineLayout::DescriptorSetLayoutManager::GetHash()const
 }
 
 void PipelineLayout::DescriptorSetLayoutManager::AllocateResourceSlot(const SPIRVShaderResourceAttribs &ResAttribs,
+                                                                      VkSampler vkStaticSampler,
                                                                       SHADER_TYPE ShaderType,
                                                                       Uint32 &DescriptorSet,
                                                                       Uint32 &Binding,
-                                                                      Uint32 &OffsetFromTableStart)
+                                                                      Uint32 &OffsetInCache)
 {
     auto& DescrSet = GetDescriptorSet(ResAttribs.VarType);
     if (DescrSet.SetIndex < 0)
@@ -319,16 +325,27 @@ void PipelineLayout::DescriptorSetLayoutManager::AllocateResourceSlot(const SPIR
     VkBinding.descriptorType = GetVkDescriptorType(ResAttribs);
     VkBinding.descriptorCount = ResAttribs.ArraySize;
     VkBinding.stageFlags = ShaderTypeToVkShaderStageFlagBit(ShaderType);
-    VkBinding.pImmutableSamplers = nullptr;
-    OffsetFromTableStart = DescrSet.TotalDescriptors;
+    if (ResAttribs.StaticSamplerInd >= 0)
+    {
+        VERIFY(vkStaticSampler != VK_NULL_HANDLE, "No static sampler provided");
+        // If descriptorType is VK_DESCRIPTOR_TYPE_SAMPLER or VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, and 
+        // descriptorCount is not 0 and pImmutableSamplers is not NULL, pImmutableSamplers must be a valid pointer 
+        // to an array of descriptorCount valid VkSampler handles (13.2.1)
+        auto *pStaticSamplers = reinterpret_cast<VkSampler*>(ALLOCATE(m_MemAllocator, "Memory buffer for immutable samplers", sizeof(VkSampler) * VkBinding.descriptorCount));
+        for(uint32_t s=0; s < VkBinding.descriptorCount; ++s)
+            pStaticSamplers[s] = vkStaticSampler;
+        VkBinding.pImmutableSamplers = pStaticSamplers;
+    }
+    else
+        VkBinding.pImmutableSamplers = nullptr;
+
+    OffsetInCache = DescrSet.TotalDescriptors;
     DescrSet.AddBinding(VkBinding, m_MemAllocator);
 }
 
 PipelineLayout::PipelineLayout() : 
     m_MemAllocator(GetRawAllocator()),
-    m_LayoutMgr(m_MemAllocator)/*,
-    m_StaticSamplers( STD_ALLOCATOR_RAW_MEM(StaticSamplerAttribs, GetRawAllocator(), "Allocator for vector<StaticSamplerAttribs>") )
-    */
+    m_LayoutMgr(m_MemAllocator)
 {
 }
 
@@ -337,40 +354,15 @@ void PipelineLayout::Release(RenderDeviceVkImpl *pDeviceVkImpl)
     m_LayoutMgr.Release(pDeviceVkImpl);
 }
 
-#if 0
-void PipelineLayout::InitStaticSampler(SHADER_TYPE ShaderType, const String &TextureName, const D3DShaderResourceAttribs &SamplerAttribs)
+void PipelineLayout::AllocateResourceSlot(const SPIRVShaderResourceAttribs& ResAttribs,
+                                          VkSampler                         vkStaticSampler,
+                                          SHADER_TYPE                       ShaderType,
+                                          Uint32&                           DescriptorSet, // Output parameter
+                                          Uint32&                           Binding, // Output parameter
+                                          Uint32&                           OffsetInCache,
+                                          std::vector<uint32_t>&            SPIRV)
 {
-    auto ShaderVisibility = GetShaderVisibility(ShaderType);
-    auto SamplerFound = false;
-    for (auto &StSmplr : m_StaticSamplers)
-    {
-        if (StSmplr.ShaderVisibility == ShaderVisibility &&
-            TextureName.compare(StSmplr.SamplerDesc.TextureName) == 0)
-        {
-            StSmplr.ShaderRegister = SamplerAttribs.BindPoint;
-            StSmplr.ArraySize = SamplerAttribs.BindCount;
-            StSmplr.RegisterSpace = 0;
-            SamplerFound = true;
-            break;
-        }
-    }
-
-    if (!SamplerFound)
-    {
-        LOG_ERROR("Failed to find static sampler for variable \"", TextureName, '\"');
-    }
-}
-#endif
-
-
-void PipelineLayout::AllocateResourceSlot(const SPIRVShaderResourceAttribs &ResAttribs,
-                                          SHADER_TYPE ShaderType,
-                                          Uint32 &DescriptorSet, // Output parameter
-                                          Uint32 &Binding, // Output parameter
-                                          Uint32 &OffsetFromTableStart,
-                                          std::vector<uint32_t> &SPIRV)
-{
-    m_LayoutMgr.AllocateResourceSlot(ResAttribs, ShaderType, DescriptorSet, Binding, OffsetFromTableStart);
+    m_LayoutMgr.AllocateResourceSlot(ResAttribs, vkStaticSampler, ShaderType, DescriptorSet, Binding, OffsetInCache);
     SPIRV[ResAttribs.BindingDecorationOffset] = Binding;
     SPIRV[ResAttribs.DescriptorSetDecorationOffset] = DescriptorSet;
 
@@ -383,7 +375,7 @@ void PipelineLayout::AllocateResourceSlot(const SPIRVShaderResourceAttribs &ResA
 
         // Get the next available root index past all allocated tables and root views
         RootIndex = m_RootParams.GetNumRootTables() + m_RootParams.GetNumRootViews();
-        OffsetFromTableStart = 0;
+        OffsetInCache = 0;
 
         // Add new root view to existing root parameters
         m_RootParams.AddRootView(Vk_ROOT_PARAMETER_TYPE_CBV, RootIndex, ShaderResAttribs.BindPoint, ShaderVisibility, ShaderResAttribs.GetVariableType());
@@ -422,7 +414,7 @@ void PipelineLayout::AllocateResourceSlot(const SPIRVShaderResourceAttribs &ResA
         
         // Descriptors are tightly packed, so the next descriptor offset is the
         // current size of the table
-        OffsetFromTableStart = CurrParam.GetDescriptorTableSize();
+        OffsetInCache = CurrParam.GetDescriptorTableSize();
 
         // New just added range is the last range in the descriptor table
         Uint32 NewDescriptorRangeIndex = VkRootParam.DescriptorTable.NumDescriptorRanges-1;
@@ -431,34 +423,11 @@ void PipelineLayout::AllocateResourceSlot(const SPIRVShaderResourceAttribs &ResA
                                      ShaderResAttribs.BindPoint, // Shader register
                                      ShaderResAttribs.BindCount, // Number of registers used (1 for non-array resources)
                                      0, // Register space. Always 0 for now
-                                     OffsetFromTableStart // Offset in descriptors from the table start
+                                     OffsetInCache // Offset in descriptors from the table start
                                      );
     }
 #endif
 }
-
-
-#if 0
-void PipelineLayout::AllocateStaticSamplers(IShader* const*ppShaders, Uint32 NumShaders)
-{
-    Uint32 TotalSamplers = 0;
-    for(Uint32 s=0;s < NumShaders; ++s)
-        TotalSamplers += ppShaders[s]->GetDesc().NumStaticSamplers;
-    if (TotalSamplers > 0)
-    {
-        m_StaticSamplers.reserve(TotalSamplers);
-        for(Uint32 sh=0;sh < NumShaders; ++sh)
-        {
-            const auto &Desc = ppShaders[sh]->GetDesc();
-            for(Uint32 sam=0; sam < Desc.NumStaticSamplers; ++sam)
-            {
-                m_StaticSamplers.emplace_back(Desc.StaticSamplers[sam], GetShaderVisibility(Desc.ShaderType));
-            }
-        }
-        VERIFY_EXPR(m_StaticSamplers.size() == TotalSamplers);
-    }
-}
-#endif
 
 void PipelineLayout::Finalize(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice)
 {
@@ -845,10 +814,10 @@ __forceinline void ProcessCachedTableResources(Uint32 RootInd,
             dbgShaderType = ShaderTypeFromShaderVisibility(VkParam.ShaderVisibility);
             VERIFY(dbgHeapType == HeapTypeFromRangeType(range.RangeType), "Mistmatch between descriptor heap type and descriptor range type");
 #endif
-            auto OffsetFromTableStart = range.OffsetInDescriptorsFromTableStart + d;
-            auto& Res = ResourceCache.GetRootTable(RootInd).GetResource(OffsetFromTableStart, dbgHeapType, dbgShaderType);
+            auto OffsetInCache = range.OffsetInDescriptorsFromTableStart + d;
+            auto& Res = ResourceCache.GetRootTable(RootInd).GetResource(OffsetInCache, dbgHeapType, dbgShaderType);
 
-            Operation(OffsetFromTableStart, range, Res);
+            Operation(OffsetInCache, range, Res);
         }
     }
 }
@@ -918,7 +887,7 @@ void PipelineLayout::CommitDescriptorHandlesInternal_SMD(RenderDeviceVkImpl *pRe
                 Ctx.GetCommandList()->SetGraphicsRootDescriptorTable(RootInd, RootTableGPUDescriptorHandle);
 
             ProcessCachedTableResources(RootInd, VkParam, ResourceCache, dbgHeapType, 
-                [&](UINT OffsetFromTableStart, const Vk_DESCRIPTOR_RANGE &range, ShaderResourceCacheVk::Resource &Res)
+                [&](UINT OffsetInCache, const Vk_DESCRIPTOR_RANGE &range, ShaderResourceCacheVk::Resource &Res)
                 {
                     if(PerformResourceTransitions)
                     {
@@ -936,7 +905,7 @@ void PipelineLayout::CommitDescriptorHandlesInternal_SMD(RenderDeviceVkImpl *pRe
                         if (IsResourceTable)
                         {
                             if( Res.CPUDescriptorHandle.ptr == 0 )
-                                LOG_ERROR_MESSAGE("No valid CbvSrvUav descriptor handle found for root parameter ", RootInd, ", descriptor slot ", OffsetFromTableStart);
+                                LOG_ERROR_MESSAGE("No valid CbvSrvUav descriptor handle found for root parameter ", RootInd, ", descriptor slot ", OffsetInCache);
 
                             VERIFY( DynamicCbvSrvUavTblOffset < NumDynamicCbvSrvUavDescriptors, "Not enough space in the descriptor heap allocation");
                             
@@ -946,7 +915,7 @@ void PipelineLayout::CommitDescriptorHandlesInternal_SMD(RenderDeviceVkImpl *pRe
                         else
                         {
                             if( Res.CPUDescriptorHandle.ptr == 0 )
-                                LOG_ERROR_MESSAGE("No valid sampler descriptor handle found for root parameter ", RootInd, ", descriptor slot ", OffsetFromTableStart);
+                                LOG_ERROR_MESSAGE("No valid sampler descriptor handle found for root parameter ", RootInd, ", descriptor slot ", OffsetInCache);
 
                             VERIFY( DynamicSamplerTblOffset < NumDynamicSamplerDescriptors, "Not enough space in the descriptor heap allocation");
                             
@@ -993,7 +962,7 @@ void PipelineLayout::CommitDescriptorHandlesInternal_SM(RenderDeviceVkImpl *pRen
             if(PerformResourceTransitions)
             {
                 ProcessCachedTableResources(RootInd, VkParam, ResourceCache, dbgHeapType, 
-                    [&](UINT OffsetFromTableStart, const Vk_DESCRIPTOR_RANGE &range, ShaderResourceCacheVk::Resource &Res)
+                    [&](UINT OffsetInCache, const Vk_DESCRIPTOR_RANGE &range, ShaderResourceCacheVk::Resource &Res)
                     {
                         TransitionResource(Ctx, Res, range.RangeType);
                     }
@@ -1003,7 +972,7 @@ void PipelineLayout::CommitDescriptorHandlesInternal_SM(RenderDeviceVkImpl *pRen
             else
             {
                 ProcessCachedTableResources(RootInd, VkParam, ResourceCache, dbgHeapType, 
-                    [&](UINT OffsetFromTableStart, const Vk_DESCRIPTOR_RANGE &range, ShaderResourceCacheVk::Resource &Res)
+                    [&](UINT OffsetInCache, const Vk_DESCRIPTOR_RANGE &range, ShaderResourceCacheVk::Resource &Res)
                     {
                         DbgVerifyResourceState(Res, range.RangeType);
                     }
@@ -1022,7 +991,7 @@ void PipelineLayout::TransitionResources(ShaderResourceCacheVk& ResourceCache,
         [&](Uint32 RootInd, const RootParameter &RootTable, const Vk_ROOT_PARAMETER& VkParam, bool IsResourceTable, Vk_DESCRIPTOR_HEAP_TYPE dbgHeapType )
         {
             ProcessCachedTableResources(RootInd, VkParam, ResourceCache, dbgHeapType, 
-                [&](UINT OffsetFromTableStart, const Vk_DESCRIPTOR_RANGE &range, ShaderResourceCacheVk::Resource &Res)
+                [&](UINT OffsetInCache, const Vk_DESCRIPTOR_RANGE &range, ShaderResourceCacheVk::Resource &Res)
                 {
                     TransitionResource(Ctx, Res, range.RangeType);
                 }

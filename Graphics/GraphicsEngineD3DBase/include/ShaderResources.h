@@ -286,13 +286,6 @@ class ShaderResources
 public:
     ShaderResources(IMemoryAllocator &Allocator, SHADER_TYPE ShaderType);
 
-    // Copies specified types of resources from another ShaderResources objects
-    // Only resources listed in AllowedVarTypes are copied
-    ShaderResources(IMemoryAllocator &Allocator, 
-                    const ShaderResources& SrcResources, 
-                    const SHADER_VARIABLE_TYPE *AllowedVarTypes, 
-                    Uint32 NumAllowedTypes);
-
     ShaderResources             (const ShaderResources&) = delete;
     ShaderResources             (ShaderResources&&)      = delete;
     ShaderResources& operator = (const ShaderResources&) = delete;
@@ -305,7 +298,7 @@ public:
     Uint32 GetNumTexUAV()  const noexcept{ return (m_BufSRVOffset   - m_TexUAVOffset);   }
     Uint32 GetNumBufSRV()  const noexcept{ return (m_BufUAVOffset   - m_BufSRVOffset);   }
     Uint32 GetNumBufUAV()  const noexcept{ return (m_SamplersOffset - m_BufUAVOffset);   }
-    Uint32 GetNumSamplers()const noexcept{ return (m_BufferEndOffset- m_SamplersOffset); }
+    Uint32 GetNumSamplers()const noexcept{ return (m_TotalResources - m_SamplersOffset); }
 
     const D3DShaderResourceAttribs& GetCB     (Uint32 n)const noexcept{ return GetResAttribs(n, GetNumCBs(),                   0); }
     const D3DShaderResourceAttribs& GetTexSRV (Uint32 n)const noexcept{ return GetResAttribs(n, GetNumTexSRV(),   m_TexSRVOffset); }
@@ -382,15 +375,15 @@ protected:
 
     __forceinline D3DShaderResourceAttribs& GetResAttribs(Uint32 n, Uint32 NumResources, Uint32 Offset)noexcept
     {
-        VERIFY(n < NumResources, "Resource index (", n, ") is out of range. Max allowed index: ", NumResources-1);
-        VERIFY_EXPR(Offset + n < m_BufferEndOffset);
+        VERIFY(n < NumResources, "Resource index (", n, ") is out of range. Resource array size: ", NumResources);
+        VERIFY_EXPR(Offset + n < m_TotalResources);
         return reinterpret_cast<D3DShaderResourceAttribs*>(m_MemoryBuffer.get())[Offset + n];
     }
 
     __forceinline const D3DShaderResourceAttribs& GetResAttribs(Uint32 n, Uint32 NumResources, Uint32 Offset)const noexcept
     {
-        VERIFY(n < NumResources, "Resource index (", n, ") is out of range. Max allowed index: ", NumResources-1);
-        VERIFY_EXPR(Offset + n < m_BufferEndOffset);
+        VERIFY(n < NumResources, "Resource index (", n, ") is out of range. Resource array size: ", NumResources);
+        VERIFY_EXPR(Offset + n < m_TotalResources);
         return reinterpret_cast<D3DShaderResourceAttribs*>(m_MemoryBuffer.get())[Offset + n];
     }
 
@@ -415,7 +408,7 @@ private:
     OffsetType m_BufSRVOffset = 0;
     OffsetType m_BufUAVOffset = 0;
     OffsetType m_SamplersOffset = 0;
-    OffsetType m_BufferEndOffset = 0;
+    OffsetType m_TotalResources = 0;
 
     SHADER_TYPE m_ShaderType = SHADER_TYPE_UNKNOWN;
 };
