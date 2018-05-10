@@ -256,6 +256,25 @@ namespace VulkanUtilities
         return CmdBuff;
     }
 
+    VkDescriptorSet VulkanLogicalDevice::AllocateVkDescriptorSet(const VkDescriptorSetAllocateInfo &AllocInfo, const char *DebugName)const
+    {
+        VERIFY_EXPR(AllocInfo.sType == VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO);
+        VERIFY_EXPR(AllocInfo.descriptorSetCount == 1);
+
+        if (DebugName == nullptr)
+            DebugName = "";
+
+        VkDescriptorSet DescrSet = VK_NULL_HANDLE;
+        auto err = vkAllocateDescriptorSets(m_VkDevice, &AllocInfo, &DescrSet);
+        if(err != VK_SUCCESS)
+            return VK_NULL_HANDLE;
+
+        if (DebugName != nullptr && *DebugName != 0)
+            SetDescriptorSetName(m_VkDevice, DescrSet, DebugName);
+
+        return DescrSet;
+    }
+
     void VulkanLogicalDevice::ReleaseVulkanObject(CommandPoolWrapper &&CmdPool)const
     {
         vkDestroyCommandPool(m_VkDevice, CmdPool.m_VkObject, m_VkAllocator);
@@ -352,6 +371,12 @@ namespace VulkanUtilities
         Semaphore.m_VkObject = VK_NULL_HANDLE;
     }
 
+
+    void VulkanLogicalDevice::FreeDescriptorSet(VkDescriptorPool Pool, VkDescriptorSet Set)const
+    {
+        VERIFY_EXPR(Pool != VK_NULL_HANDLE && Set != VK_NULL_HANDLE);
+        vkFreeDescriptorSets(m_VkDevice, Pool, 1, &Set);
+    }
 
 
 

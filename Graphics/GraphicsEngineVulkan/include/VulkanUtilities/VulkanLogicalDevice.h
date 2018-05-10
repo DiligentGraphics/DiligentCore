@@ -81,6 +81,7 @@ namespace VulkanUtilities
         SemaphoreWrapper    CreateSemaphore(const VkSemaphoreCreateInfo &SemaphoreCI, const char *DebugName = "")const;
         
         VkCommandBuffer     AllocateVkCommandBuffer(const VkCommandBufferAllocateInfo &AllocInfo, const char *DebugName = "")const;
+        VkDescriptorSet     AllocateVkDescriptorSet(const VkDescriptorSetAllocateInfo &AllocInfo, const char *DebugName = "")const;
 
         void ReleaseVulkanObject(CommandPoolWrapper&&  CmdPool)const;
         void ReleaseVulkanObject(BufferWrapper&&       Buffer)const;
@@ -98,6 +99,8 @@ namespace VulkanUtilities
         void ReleaseVulkanObject(DescriptorPoolWrapper&& DescriptorPool)const;
         void ReleaseVulkanObject(DescriptorSetLayoutWrapper&& DescriptorSetLayout)const;
         void ReleaseVulkanObject(SemaphoreWrapper&&     Semaphore)const;
+
+        void FreeDescriptorSet(VkDescriptorPool Pool, VkDescriptorSet Set)const;
 
         VkMemoryRequirements GetBufferMemoryRequirements(VkBuffer vkBuffer)const;
         VkMemoryRequirements GetImageMemoryRequirements (VkImage vkImage  )const;

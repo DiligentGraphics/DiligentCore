@@ -34,6 +34,7 @@ set(VULKAN_UTILS_INCLUDE
     include/VulkanUtilities/VulkanCommandBuffer.h
     include/VulkanUtilities/VulkanCommandBufferPool.h
     include/VulkanUtilities/VulkanDebug.h
+    include/VulkanUtilities/VulkanDescriptorPool.h
     include/VulkanUtilities/VulkanFencePool.h
     include/VulkanUtilities/VulkanInstance.h
     include/VulkanUtilities/VulkanLogicalDevice.h
@@ -89,6 +90,7 @@ set(VULKAN_UTILS_SRC
     src/VulkanUtilities/VulkanCommandBuffer.cpp
     src/VulkanUtilities/VulkanCommandBufferPool.cpp
     src/VulkanUtilities/VulkanDebug.cpp
+    src/VulkanUtilities/VulkanDescriptorPool.cpp
     src/VulkanUtilities/VulkanFencePool.cpp
     src/VulkanUtilities/VulkanInstance.cpp
     src/VulkanUtilities/VulkanLogicalDevice.cpp
