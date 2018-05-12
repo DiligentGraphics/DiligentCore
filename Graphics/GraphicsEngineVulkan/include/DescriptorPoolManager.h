@@ -34,36 +34,61 @@
 namespace Diligent
 {
 
+class DescriptorPoolManager;
+
 class DescriptorPoolAllocation
 {
 public:
     DescriptorPoolAllocation(VkDescriptorSet _Set,
-                             VulkanUtilities::VulkanDescriptorPool& _ParentPool) :
+                             VulkanUtilities::VulkanDescriptorPool& _ParentPool,
+                             DescriptorPoolManager& _ParentPoolMgr) :
         Set(_Set),
-        ParentPool(_ParentPool)
+        ParentPool(&_ParentPool),
+        ParentPoolMgr(&_ParentPoolMgr)
     {}
+    DescriptorPoolAllocation(){}
+
     DescriptorPoolAllocation(const DescriptorPoolAllocation&) = delete;
     DescriptorPoolAllocation& operator = (const DescriptorPoolAllocation&) = delete;
 
     DescriptorPoolAllocation(DescriptorPoolAllocation&& rhs) : 
-        Set(rhs.Set),
-        ParentPool(rhs.ParentPool)
+        Set          (rhs.Set),
+        ParentPool   (rhs.ParentPool),
+        ParentPoolMgr(rhs.ParentPoolMgr)
     {
-        rhs.Set = VK_NULL_HANDLE;
+        rhs.Set           = VK_NULL_HANDLE;
+        rhs.ParentPool    = nullptr;
+        rhs.ParentPoolMgr = nullptr;
     }
-    DescriptorPoolAllocation& operator = (DescriptorPoolAllocation&&) = delete;
+    
+    DescriptorPoolAllocation& operator = (DescriptorPoolAllocation&& rhs)
+    {
+        Release();
+
+        Set           = rhs.Set;
+        ParentPool    = rhs.ParentPool;
+        ParentPoolMgr = rhs.ParentPoolMgr;
+
+        rhs.Set           = VK_NULL_HANDLE;
+        rhs.ParentPool    = nullptr;
+        rhs.ParentPoolMgr = nullptr;
+        
+        return *this;
+    }
+
+    void Release();
 
     ~DescriptorPoolAllocation()
     {
-        VERIFY(Set == VK_NULL_HANDLE, "Allocation must be explicitly disposed through DescriptorPoolManager::DisposeAllocation");
+        Release();
     }
     
     VkDescriptorSet GetVkDescriptorSet()const {return Set;}
 
 private:
-    friend class DescriptorPoolManager;
-    VkDescriptorSet Set;
-    VulkanUtilities::VulkanDescriptorPool& ParentPool;
+    VkDescriptorSet Set = VK_NULL_HANDLE;
+    VulkanUtilities::VulkanDescriptorPool* ParentPool = nullptr;
+    DescriptorPoolManager* ParentPoolMgr = nullptr;
 };
 
 class DescriptorPoolManager
@@ -99,11 +124,13 @@ public:
     DescriptorPoolManager& operator = (DescriptorPoolManager&&)      = delete;
 
     DescriptorPoolAllocation Allocate(VkDescriptorSetLayout SetLayout);
-    void FreeAllocation(DescriptorPoolAllocation&& Allocation);
     void DisposeAllocations(uint64_t FenceValue);
     void ReleaseStaleAllocations(uint64_t LastCompletedFence);
 
 private:
+    friend class DescriptorPoolAllocation;
+    void FreeAllocation(VkDescriptorSet Set, VulkanUtilities::VulkanDescriptorPool& Pool);
+
     void CreateNewPool();
 
     const std::vector<VkDescriptorPoolSize> m_PoolSizes;
@@ -112,8 +139,8 @@ private:
 
     std::mutex m_Mutex;
     std::shared_ptr<const VulkanUtilities::VulkanLogicalDevice> m_LogicalDevice;
-    std::deque<VulkanUtilities::VulkanDescriptorPool> m_DescriptorPools;
-    std::vector<DescriptorPoolAllocation> m_ReleasedAllocations;
+    std::deque< std::unique_ptr<VulkanUtilities::VulkanDescriptorPool> > m_DescriptorPools;
+    std::vector< std::pair<VkDescriptorSet, VulkanUtilities::VulkanDescriptorPool*> > m_ReleasedAllocations;
 };
 
 }

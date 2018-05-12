@@ -56,23 +56,11 @@
 //
 // Dynamic resources are not VkDescriptorSet 
 
-#include "DescriptorHeap.h"
+#include "DescriptorPoolManager.h"
 
 namespace Diligent
 {
-#if 0
-enum class CachedResourceType : Int32
-{
-    Unknown = -1,
-    CBV = 0,
-    TexSRV,
-    BufSRV,
-    TexUAV,
-    BufUAV,
-    Sampler,
-    NumTypes
-};
-#endif
+
 class ShaderResourceCacheVk
 {
 public:
@@ -117,14 +105,20 @@ public:
 
         VkDescriptorSet GetVkDescriptorSet()const
         {
-            UNSUPPORTED("Not yet implemented");
-            return VK_NULL_HANDLE;
+            return m_DescriptorSetAllocation.GetVkDescriptorSet();
+        }
+
+        void AssignDescriptorSetAllocation(DescriptorPoolAllocation&& Allocation)
+        {
+            VERIFY(m_NumResources > 0, "Descriptor set is empty");
+            m_DescriptorSetAllocation = std::move(Allocation);
         }
 
         const Uint32 m_NumResources = 0;
     private:
         
         Resource* const m_pResources = nullptr;
+        DescriptorPoolAllocation m_DescriptorSetAllocation;
     };
 
     inline DescriptorSet& GetDescriptorSet(Uint32 Index)
@@ -134,101 +128,7 @@ public:
     }
 
     inline Uint32 GetNumDescriptorSets()const{return m_NumSets; }
-#if 0
-    void SetDescriptorHeapSpace(DescriptorHeapAllocation &&CbcSrvUavHeapSpace, DescriptorHeapAllocation &&SamplerHeapSpace)
-    {
-        VERIFY(m_SamplerHeapSpace.GetCpuHandle().ptr == 0 && m_CbvSrvUavHeapSpace.GetCpuHandle().ptr == 0, "Space has already been allocated in GPU descriptor heaps");
-#ifdef _DEBUG
-        Uint32 NumSamplerDescriptors = 0, NumSrvCbvUavDescriptors = 0;
-        for (Uint32 rt = 0; rt < m_NumTables; ++rt)
-        {
-            auto &Tbl = GetDescriptorSet(rt);
-            if(Tbl.m_TableStartOffset != InvalidDescriptorOffset)
-            {
-                if(Tbl.DbgGetHeapType() == Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
-                {
-                    VERIFY(Tbl.m_TableStartOffset == NumSrvCbvUavDescriptors, "Descriptor space allocation is not continuous");
-                    NumSrvCbvUavDescriptors = std::max(NumSrvCbvUavDescriptors, Tbl.m_TableStartOffset + Tbl.GetSize());
-                }
-                else
-                {
-                    VERIFY(Tbl.m_TableStartOffset == NumSamplerDescriptors, "Descriptor space allocation is not continuous");
-                    NumSamplerDescriptors = std::max(NumSamplerDescriptors, Tbl.m_TableStartOffset + Tbl.GetSize());
-                }
-            }
-        }
-        VERIFY(NumSrvCbvUavDescriptors == CbcSrvUavHeapSpace.GetNumHandles() || NumSrvCbvUavDescriptors == 0 && CbcSrvUavHeapSpace.GetCpuHandle(0).ptr == 0, "Unexpected descriptor heap allocation size" );
-        VERIFY(NumSamplerDescriptors == SamplerHeapSpace.GetNumHandles() || NumSamplerDescriptors == 0 && SamplerHeapSpace.GetCpuHandle(0).ptr == 0, "Unexpected descriptor heap allocation size" );
-#endif
 
-        m_CbvSrvUavHeapSpace = std::move(CbcSrvUavHeapSpace);
-        m_SamplerHeapSpace = std::move(SamplerHeapSpace);
-    }
-
-    IVkDescriptorHeap* GetSrvCbvUavDescriptorHeap(){return m_CbvSrvUavHeapSpace.GetDescriptorHeap();}
-    IVkDescriptorHeap* GetSamplerDescriptorHeap()  {return m_SamplerHeapSpace.GetDescriptorHeap();}
-
-    // Returns CPU descriptor handle of a shader visible descriptor heap allocation
-    template<Vk_DESCRIPTOR_HEAP_TYPE HeapType>
-    Vk_CPU_DESCRIPTOR_HANDLE GetShaderVisibleTableCPUDescriptorHandle(Uint32 RootParamInd, Uint32 OffsetFromTableStart = 0)
-    {
-        auto &RootParam = GetDescriptorSet(RootParamInd);
-        VERIFY(HeapType == RootParam.DbgGetHeapType(), "Invalid descriptor heap type");
-
-        Vk_CPU_DESCRIPTOR_HANDLE CPUDescriptorHandle = {0};
-        // Descriptor heap allocation is not assigned for dynamic resources or 
-        // in a special case when resource cache is used to store static 
-        // variable assignments for a shader. It is also not assigned to root views
-        if( RootParam.m_TableStartOffset != InvalidDescriptorOffset )
-        {
-            VERIFY(OffsetFromTableStart < RootParam.m_NumResources, "Offset is out of range");
-            if( HeapType == Vk_DESCRIPTOR_HEAP_TYPE_SAMPLER  )
-            {
-                VERIFY_EXPR(!m_SamplerHeapSpace.IsNull());
-                CPUDescriptorHandle = m_SamplerHeapSpace.GetCpuHandle(RootParam.m_TableStartOffset + OffsetFromTableStart);
-            }
-            else if( HeapType == Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV )
-            {
-                VERIFY_EXPR(!m_CbvSrvUavHeapSpace.IsNull());
-                CPUDescriptorHandle = m_CbvSrvUavHeapSpace.GetCpuHandle(RootParam.m_TableStartOffset + OffsetFromTableStart);
-            }
-            else
-            {
-                UNEXPECTED("Unexpected descriptor heap type");
-            }
-        }
-
-        return CPUDescriptorHandle;
-    }
-
-    // Returns GPU descriptor handle of a shader visible descriptor table
-    template<Vk_DESCRIPTOR_HEAP_TYPE HeapType>
-    Vk_GPU_DESCRIPTOR_HANDLE GetShaderVisibleTableGPUDescriptorHandle(Uint32 RootParamInd, Uint32 OffsetFromTableStart = 0)
-    {
-        auto &RootParam = GetDescriptorSet(RootParamInd);
-        VERIFY(RootParam.m_TableStartOffset != InvalidDescriptorOffset, "GPU descriptor handle must never be requested for dynamic resources");
-        VERIFY(OffsetFromTableStart < RootParam.m_NumResources, "Offset is out of range");
-
-        Vk_GPU_DESCRIPTOR_HANDLE GPUDescriptorHandle = {0};
-        VERIFY( HeapType == RootParam.DbgGetHeapType(), "Invalid descriptor heap type");
-        if( HeapType == Vk_DESCRIPTOR_HEAP_TYPE_SAMPLER )
-        {
-            VERIFY_EXPR(!m_SamplerHeapSpace.IsNull());
-            GPUDescriptorHandle = m_SamplerHeapSpace.GetGpuHandle(RootParam.m_TableStartOffset + OffsetFromTableStart);
-        }
-        else if( HeapType == Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV )
-        {
-            VERIFY_EXPR(!m_CbvSrvUavHeapSpace.IsNull());
-            GPUDescriptorHandle = m_CbvSrvUavHeapSpace.GetGpuHandle(RootParam.m_TableStartOffset + OffsetFromTableStart);
-        }
-        else
-        {
-            UNEXPECTED("Unexpected descriptor heap type");
-        }
-
-        return GPUDescriptorHandle;
-    }
-#endif
 #ifdef _DEBUG
     // Only for debug purposes: indicates what types of resources are stored in the cache
     DbgCacheContentType DbgGetContentType()const{return m_DbgContentType;}
@@ -239,14 +139,6 @@ private:
     ShaderResourceCacheVk(ShaderResourceCacheVk&&) = delete;
     ShaderResourceCacheVk& operator = (const ShaderResourceCacheVk&) = delete;
     ShaderResourceCacheVk& operator = (ShaderResourceCacheVk&&) = delete;
-
-#if 0
-    // Allocation in a GPU-visible sampler descriptor heap
-    DescriptorHeapAllocation m_SamplerHeapSpace;
-    
-    // Allocation in a GPU-visible CBV/SRV/UAV descriptor heap
-    DescriptorHeapAllocation m_CbvSrvUavHeapSpace;
-#endif
     
     IMemoryAllocator *m_pAllocator=nullptr; 
     void *m_pMemory = nullptr;

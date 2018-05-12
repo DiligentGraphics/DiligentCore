@@ -525,6 +525,31 @@ void PipelineLayout::Finalize(const VulkanUtilities::VulkanLogicalDevice& Logica
 //http://diligentgraphics.com/diligent-engine/architecture/Vk/shader-resource-cache#Initializing-the-Cache-for-Shader-Resource-Binding-Object
 void PipelineLayout::InitResourceCache(RenderDeviceVkImpl *pDeviceVkImpl, ShaderResourceCacheVk& ResourceCache, IMemoryAllocator &CacheMemAllocator)const
 {
+    Uint32 NumSets = 0;
+    std::array<Uint32, 2> SetSizes = {};
+
+    DescriptorPoolAllocation SetAllocation;
+    const auto &StaticAndMutSet = m_LayoutMgr.GetDescriptorSet(SHADER_VARIABLE_TYPE_STATIC);
+    if(StaticAndMutSet.SetIndex >= 0)
+    {
+        NumSets = std::max(NumSets, static_cast<Uint32>(StaticAndMutSet.SetIndex + 1));
+        SetSizes[StaticAndMutSet.SetIndex] = StaticAndMutSet.TotalDescriptors;
+        SetAllocation = pDeviceVkImpl->AllocateDescriptorSet(StaticAndMutSet.VkLayout);
+    }
+
+    const auto &DynamicSet = m_LayoutMgr.GetDescriptorSet(SHADER_VARIABLE_TYPE_DYNAMIC);
+    if(DynamicSet.SetIndex >= 0)
+    {
+        NumSets = std::max(NumSets, static_cast<Uint32>(DynamicSet.SetIndex + 1));
+        SetSizes[DynamicSet.SetIndex] = DynamicSet.TotalDescriptors;
+    }
+  
+    ResourceCache.Initialize(CacheMemAllocator, NumSets, SetSizes.data());
+    if (StaticAndMutSet.SetIndex >= 0)
+    {
+        ResourceCache.GetDescriptorSet(StaticAndMutSet.SetIndex).AssignDescriptorSetAllocation(std::move(SetAllocation));
+    }
+
 #if 0
     // Get root table size for every root index
     // m_RootParams keeps root tables sorted by the array index, not the root index

@@ -81,10 +81,6 @@ public:
 
     //virtual void CreateBufferFromD3DResource(IVkResource *pVkBuffer, const BufferDesc& BuffDesc, IBuffer **ppBuffer)override final;
 
-/*
-    DescriptorHeapAllocation AllocateDescriptor( Vk_DESCRIPTOR_HEAP_TYPE Type, UINT Count = 1 );
-    DescriptorHeapAllocation AllocateGPUDescriptors( Vk_DESCRIPTOR_HEAP_TYPE Type, UINT Count = 1 );
-*/
     Uint64 GetCompletedFenceValue();
 	virtual Uint64 GetNextFenceValue() override final
     {
@@ -113,6 +109,16 @@ public:
     DynamicUploadHeap* RequestUploadHeap();
     void ReleaseUploadHeap(DynamicUploadHeap* pUploadHeap);
     */
+
+    DescriptorPoolAllocation AllocateDescriptorSet(VkDescriptorSetLayout SetLayout)
+    {
+        return m_DescriptorPools[0].Allocate(SetLayout);
+    }
+    DescriptorPoolAllocation AllocateDynamicDescriptorSet(VkDescriptorSetLayout SetLayout, Uint32 CtxId)
+    {
+        return m_DescriptorPools[1 + CtxId].Allocate(SetLayout);
+    }
+
     
     std::shared_ptr<const VulkanUtilities::VulkanInstance> GetVulkanInstance()const{return m_VulkanInstance;}
     const VulkanUtilities::VulkanPhysicalDevice &GetPhysicalDevice(){return *m_PhysicalDevice;}

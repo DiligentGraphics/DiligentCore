@@ -28,6 +28,19 @@
 namespace Diligent
 {
 
+void DescriptorPoolAllocation::Release()
+{
+    if (Set != VK_NULL_HANDLE)
+    {
+        VERIFY_EXPR(ParentPoolMgr != nullptr && ParentPool != nullptr);
+        ParentPoolMgr->FreeAllocation(Set, *ParentPool);
+
+        Set = VK_NULL_HANDLE;
+        ParentPoolMgr = nullptr;
+        ParentPool = nullptr;
+    }
+}
+
 void DescriptorPoolManager::CreateNewPool()
 {
     VkDescriptorPoolCreateInfo PoolCI = {};
@@ -40,7 +53,7 @@ void DescriptorPoolManager::CreateNewPool()
     PoolCI.maxSets = m_MaxSets;
     PoolCI.poolSizeCount = static_cast<uint32_t>(m_PoolSizes.size());
     PoolCI.pPoolSizes = m_PoolSizes.data();
-    m_DescriptorPools.emplace_front(m_LogicalDevice, PoolCI);
+    m_DescriptorPools.emplace_front( new VulkanUtilities::VulkanDescriptorPool(m_LogicalDevice, PoolCI) );
 }
 
 DescriptorPoolAllocation DescriptorPoolManager::Allocate(VkDescriptorSetLayout SetLayout)
@@ -52,7 +65,8 @@ DescriptorPoolAllocation DescriptorPoolManager::Allocate(VkDescriptorSetLayout S
     // Try all pools starting from the frontmost
     for(auto it = m_DescriptorPools.begin(); it != m_DescriptorPools.end(); ++it)
     {
-        auto Set = it->AllocateDescriptorSet(SetLayout);
+        auto& Pool = *(*it);
+        auto Set = Pool.AllocateDescriptorSet(SetLayout);
         if(Set != VK_NULL_HANDLE)
         {
             // Move the pool to the front
@@ -60,7 +74,7 @@ DescriptorPoolAllocation DescriptorPoolManager::Allocate(VkDescriptorSetLayout S
             {
                 std::swap(*it, m_DescriptorPools.front());
             }
-            return {Set, *it};
+            return {Set, Pool, *this};
         }
     }
 
@@ -68,19 +82,20 @@ DescriptorPoolAllocation DescriptorPoolManager::Allocate(VkDescriptorSetLayout S
     CreateNewPool();
     LOG_INFO_MESSAGE("Allocated new descriptor pool");
 
-    auto Set = m_DescriptorPools.front().AllocateDescriptorSet(SetLayout);
+    auto &NewPool = *m_DescriptorPools.front();
+    auto Set = NewPool.AllocateDescriptorSet(SetLayout);
     VERIFY(Set != VK_NULL_HANDLE, "Failed to allocate descriptor set");
 
-    return {Set, m_DescriptorPools.front() };
+    return {Set, NewPool, *this };
 }
 
-void DescriptorPoolManager::FreeAllocation(DescriptorPoolAllocation&& Allocation)
+void DescriptorPoolManager::FreeAllocation(VkDescriptorSet Set, VulkanUtilities::VulkanDescriptorPool& Pool)
 {
     std::unique_lock<std::mutex> Lock(m_Mutex, std::defer_lock);
     if (m_IsThreadSafe)
         Lock.lock();
 
-    m_ReleasedAllocations.emplace_back(std::move(Allocation));
+    m_ReleasedAllocations.emplace_back(std::make_pair(Set, &Pool));
 }
 
 void DescriptorPoolManager::DisposeAllocations(uint64_t FenceValue)
@@ -91,8 +106,7 @@ void DescriptorPoolManager::DisposeAllocations(uint64_t FenceValue)
 
     for(auto &Allocation : m_ReleasedAllocations)
     {
-        Allocation.ParentPool.DisposeDescriptorSet(Allocation.Set, FenceValue);
-        Allocation.Set = VK_NULL_HANDLE;
+        Allocation.second->DisposeDescriptorSet(Allocation.first, FenceValue);
     }
     m_ReleasedAllocations.clear();
 }
@@ -104,7 +118,7 @@ void DescriptorPoolManager::ReleaseStaleAllocations(uint64_t LastCompletedFence)
         Lock.lock();
 
     for(auto &Pool : m_DescriptorPools)
-        Pool.ReleaseDiscardedSets(LastCompletedFence);
+        Pool->ReleaseDiscardedSets(LastCompletedFence);
 }
 
 }
