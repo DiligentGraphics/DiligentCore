@@ -1291,6 +1291,7 @@ namespace Diligent
         /// or when backbuffer is presented.
         Uint32 NumCommandsToFlushCmdBuffer = 256;
 
+        /// Descriptor pool size
         struct DescriptorPoolSize
         {
             Uint32 MaxDescriptorSets = 0;
@@ -1302,8 +1303,41 @@ namespace Diligent
             Uint32 NumStorageBufferDescriptors = 0;
             Uint32 NumUniformTexelBufferDescriptors = 0;
             Uint32 NumStorageTexelBufferDescriptors = 0;
+
+            DescriptorPoolSize() {}
+
+            DescriptorPoolSize( Uint32 _MaxDescriptorSets,
+                                Uint32 _NumSeparateSamplerDescriptors,
+                                Uint32 _NumCombinedSamplerDescriptors,
+                                Uint32 _NumSampledImageDescriptors,
+                                Uint32 _NumStorageImageDescriptors,
+                                Uint32 _NumUniformBufferDescriptors,
+                                Uint32 _NumStorageBufferDescriptors,
+                                Uint32 _NumUniformTexelBufferDescriptors,
+                                Uint32 _NumStorageTexelBufferDescriptors) :
+                MaxDescriptorSets               (_MaxDescriptorSets               ),
+                NumSeparateSamplerDescriptors   (_NumSeparateSamplerDescriptors   ),
+                NumCombinedSamplerDescriptors   (_NumCombinedSamplerDescriptors   ),
+                NumSampledImageDescriptors      (_NumSampledImageDescriptors      ),
+                NumStorageImageDescriptors      (_NumStorageImageDescriptors      ),
+                NumUniformBufferDescriptors     (_NumUniformBufferDescriptors     ),
+                NumStorageBufferDescriptors     (_NumStorageBufferDescriptors     ),
+                NumUniformTexelBufferDescriptors(_NumUniformTexelBufferDescriptors),
+                NumStorageTexelBufferDescriptors(_NumStorageTexelBufferDescriptors)
+            {
+                // On clang aggregate initialization fails to compile if 
+                // structure members have default initializers
+            }
         };
+        
+        /// Size of the main descriptor pool that is used to allocate descriptor sets
+        /// for static and mutable variables. If allocation from the current pool fails,
+        /// the engine creates another one.
         DescriptorPoolSize MainDescriptorPoolSize    {1024, 1024, 8192, 8192, 1024, 4096, 4096, 1024, 1024};
+
+        /// Size of the dynamic descriptor pool that is used to allocate descriptor sets
+        /// for dynamic variables. Every device context has its own dynamic descriptor pool.
+        /// If allocation from the current pool fails, the engine creates another one.
         DescriptorPoolSize DynamicDescriptorPoolSize { 256,  256, 2048, 2048,  256, 1024, 1024,  256,  256};
     };
 
