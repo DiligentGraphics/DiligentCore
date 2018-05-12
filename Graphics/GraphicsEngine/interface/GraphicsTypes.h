@@ -1303,8 +1303,8 @@ namespace Diligent
             Uint32 NumUniformTexelBufferDescriptors = 0;
             Uint32 NumStorageTexelBufferDescriptors = 0;
         };
-        DescriptorPoolSize MainDescriptorPoolSize    = {1024, 1024, 8192, 8192, 1024, 4096, 4096, 1024, 1024};
-        DescriptorPoolSize DynamicDescriptorPoolSize = { 256,  256, 2048, 2048,  256, 1024, 1024,  256,  256};
+        DescriptorPoolSize MainDescriptorPoolSize    {1024, 1024, 8192, 8192, 1024, 4096, 4096, 1024, 1024};
+        DescriptorPoolSize DynamicDescriptorPoolSize { 256,  256, 2048, 2048,  256, 1024, 1024,  256,  256};
     };
 
     /// Box
