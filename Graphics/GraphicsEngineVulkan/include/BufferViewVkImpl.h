@@ -29,7 +29,6 @@
 #include "BufferViewVk.h"
 #include "RenderDeviceVk.h"
 #include "BufferViewBase.h"
-#include "DescriptorHeap.h"
 #include "VulkanUtilities/VulkanObjectWrappers.h"
 
 namespace Diligent

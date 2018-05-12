@@ -53,29 +53,12 @@ RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters *pRefCounters,
 	m_FrameNumber(0),
     m_NextCmdListNumber(0),
     /*m_CmdListManager(this),
-    m_CPUDescriptorHeaps
-    {
-        {RawMemAllocator, this, CreationAttribs.CPUDescriptorHeapAllocationSize[0], Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, Vk_DESCRIPTOR_HEAP_FLAG_NONE},
-        {RawMemAllocator, this, CreationAttribs.CPUDescriptorHeapAllocationSize[1], Vk_DESCRIPTOR_HEAP_TYPE_SAMPLER,     Vk_DESCRIPTOR_HEAP_FLAG_NONE},
-        {RawMemAllocator, this, CreationAttribs.CPUDescriptorHeapAllocationSize[2], Vk_DESCRIPTOR_HEAP_TYPE_RTV,         Vk_DESCRIPTOR_HEAP_FLAG_NONE},
-        {RawMemAllocator, this, CreationAttribs.CPUDescriptorHeapAllocationSize[3], Vk_DESCRIPTOR_HEAP_TYPE_DSV,         Vk_DESCRIPTOR_HEAP_FLAG_NONE}
-    },
-    m_GPUDescriptorHeaps
-    {
-        {RawMemAllocator, this, CreationAttribs.GPUDescriptorHeapSize[0], CreationAttribs.GPUDescriptorHeapDynamicSize[0], Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, Vk_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE},
-        {RawMemAllocator, this, CreationAttribs.GPUDescriptorHeapSize[1], CreationAttribs.GPUDescriptorHeapDynamicSize[1], Vk_DESCRIPTOR_HEAP_TYPE_SAMPLER,     Vk_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE}
-    },
-	m_DynamicDescriptorAllocationChunkSize
-	{
-		CreationAttribs.DynamicDescriptorAllocationChunkSize[0], // Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
-		CreationAttribs.DynamicDescriptorAllocationChunkSize[1]  // Vk_DESCRIPTOR_HEAP_TYPE_SAMPLER
-	},
     m_ContextPool(STD_ALLOCATOR_RAW_MEM(ContextPoolElemType, GetRawAllocator(), "Allocator for vector<unique_ptr<CommandContext>>")),
     m_AvailableContexts(STD_ALLOCATOR_RAW_MEM(CommandContext*, GetRawAllocator(), "Allocator for vector<CommandContext*>")),*/
     m_VkObjReleaseQueue(STD_ALLOCATOR_RAW_MEM(ReleaseQueueElemType, GetRawAllocator(), "Allocator for queue<ReleaseQueueElemType>")),
-    m_StaleVkObjects(STD_ALLOCATOR_RAW_MEM(ReleaseQueueElemType, GetRawAllocator(), "Allocator for queue<ReleaseQueueElemType>")),/*,
-    m_UploadHeaps(STD_ALLOCATOR_RAW_MEM(UploadHeapPoolElemType, GetRawAllocator(), "Allocator for vector<unique_ptr<DynamicUploadHeap>>"))
-    */
+    m_StaleVkObjects(STD_ALLOCATOR_RAW_MEM(ReleaseQueueElemType, GetRawAllocator(), "Allocator for queue<ReleaseQueueElemType>")),
+    m_DescriptorPools(STD_ALLOCATOR_RAW_MEM(DescriptorPoolManager, GetRawAllocator(), "Allocator for vector<DescriptorPoolManager>")),
+    //m_UploadHeaps(STD_ALLOCATOR_RAW_MEM(UploadHeapPoolElemType, GetRawAllocator(), "Allocator for vector<unique_ptr<DynamicUploadHeap>>")),
     m_CmdBufferPool(m_LogicalVkDevice->GetSharedPtr(), pCmdQueue->GetQueueFamilyIndex(), VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT),
     m_FramebufferCache(*this)
 {
@@ -86,6 +69,46 @@ RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters *pRefCounters,
     m_DeviceCaps.bMultithreadedResourceCreationSupported = True;
     for(int fmt = 1; fmt < m_TextureFormatsInfo.size(); ++fmt)
         m_TextureFormatsInfo[fmt].Supported = true; // We will test every format on a specific hardware device
+
+    m_DescriptorPools.reserve(2 + NumDeferredContexts);
+    m_DescriptorPools.emplace_back(
+        LogicalDevice, 
+        std::vector<VkDescriptorPoolSize>{
+            {VK_DESCRIPTOR_TYPE_SAMPLER,                CreationAttribs.MainDescriptorPoolSize.NumSeparateSamplerDescriptors},
+            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, CreationAttribs.MainDescriptorPoolSize.NumCombinedSamplerDescriptors},
+            {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,          CreationAttribs.MainDescriptorPoolSize.NumSampledImageDescriptors},
+            {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,          CreationAttribs.MainDescriptorPoolSize.NumStorageImageDescriptors},
+            {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,   CreationAttribs.MainDescriptorPoolSize.NumUniformTexelBufferDescriptors},
+            {VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,   CreationAttribs.MainDescriptorPoolSize.NumStorageTexelBufferDescriptors},
+            {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         CreationAttribs.MainDescriptorPoolSize.NumUniformBufferDescriptors },
+            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,         CreationAttribs.MainDescriptorPoolSize.NumStorageBufferDescriptors },
+            //{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, CreationAttribs.MainDescriptorPoolSize.NumUniformBufferDescriptors },
+            //{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, CreationAttribs.MainDescriptorPoolSize.NumStorageBufferDescriptors },
+        },
+        CreationAttribs.MainDescriptorPoolSize.MaxDescriptorSets,
+        true // Thread-safe
+    );
+
+    for(Uint32 ctx = 0; ctx < 1 + NumDeferredContexts; ++ctx)
+    {
+        m_DescriptorPools.emplace_back(
+            LogicalDevice, 
+            std::vector<VkDescriptorPoolSize>{
+                {VK_DESCRIPTOR_TYPE_SAMPLER,                CreationAttribs.DynamicDescriptorPoolSize.NumSeparateSamplerDescriptors},
+                {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, CreationAttribs.DynamicDescriptorPoolSize.NumCombinedSamplerDescriptors},
+                {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,          CreationAttribs.DynamicDescriptorPoolSize.NumSampledImageDescriptors},
+                {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,          CreationAttribs.DynamicDescriptorPoolSize.NumStorageImageDescriptors},
+                {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,   CreationAttribs.DynamicDescriptorPoolSize.NumUniformTexelBufferDescriptors},
+                {VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,   CreationAttribs.DynamicDescriptorPoolSize.NumStorageTexelBufferDescriptors},
+                {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         CreationAttribs.DynamicDescriptorPoolSize.NumUniformBufferDescriptors },
+                {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,         CreationAttribs.DynamicDescriptorPoolSize.NumStorageBufferDescriptors },
+                //{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, CreationAttribs.DynamicDescriptorPoolSize.NumUniformBufferDescriptors },
+                //{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, CreationAttribs.DynamicDescriptorPoolSize.NumStorageBufferDescriptors },
+            },
+            CreationAttribs.DynamicDescriptorPoolSize.MaxDescriptorSets,
+            false // Dynamic descriptor pools need not to be thread-safe
+        );
+    }
 }
 
 RenderDeviceVkImpl::~RenderDeviceVkImpl()
@@ -313,18 +336,15 @@ void RenderDeviceVkImpl::FinishFrame(bool ReleaseAllResources)
         }
     }
 
-    for(Uint32 CPUHeap=0; CPUHeap < _countof(m_CPUDescriptorHeaps); ++CPUHeap)
+#endif
+
     {
         // This is OK if other thread disposes descriptor heap allocation at this time
         // The allocation will be registered as part of the current frame
-        m_CPUDescriptorHeaps[CPUHeap].ReleaseStaleAllocations(CompletedFenceValue);
+        for(auto &Pool : m_DescriptorPools)
+            Pool.DisposeAllocations(NextFenceValue);
     }
-        
-    for(Uint32 GPUHeap=0; GPUHeap < _countof(m_GPUDescriptorHeaps); ++GPUHeap)
-    {
-        m_GPUDescriptorHeaps[GPUHeap].ReleaseStaleAllocations(CompletedFenceValue);
-    }
-#endif
+
     // Discard all remaining objects. This is important to do if there were 
     // no command lists submitted during the frame
     DiscardStaleVkObjects(CmdListNumber, NextFenceValue);
@@ -430,17 +450,25 @@ void RenderDeviceVkImpl::DiscardStaleVkObjects(Uint64 CmdListNumber, Uint64 Fenc
 
 void RenderDeviceVkImpl::ProcessReleaseQueue(Uint64 CompletedFenceValue)
 {
-    std::lock_guard<std::mutex> LockGuard(m_ReleaseQueueMutex);
-
-    // Release all objects whose associated fence value is at most CompletedFenceValue
-    // See http://diligentgraphics.com/diligent-engine/architecture/Vk/managing-resource-lifetimes/
-    while (!m_VkObjReleaseQueue.empty())
     {
-        auto &FirstObj = m_VkObjReleaseQueue.front();
-        if (FirstObj.first <= CompletedFenceValue)
-            m_VkObjReleaseQueue.pop_front();
-        else
-            break;
+        std::lock_guard<std::mutex> LockGuard(m_ReleaseQueueMutex);
+
+        // Release all objects whose associated fence value is at most CompletedFenceValue
+        while (!m_VkObjReleaseQueue.empty())
+        {
+            auto &FirstObj = m_VkObjReleaseQueue.front();
+            if (FirstObj.first <= CompletedFenceValue)
+                m_VkObjReleaseQueue.pop_front();
+            else
+                break;
+        }
+    }
+
+    {
+        // This is OK if other thread disposes descriptor heap allocation at this time
+        // The allocation will be registered as part of the current frame
+        for(auto &Pool : m_DescriptorPools)
+            Pool.ReleaseStaleAllocations(CompletedFenceValue);
     }
 }
 

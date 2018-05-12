@@ -26,6 +26,7 @@
 #include "TextureVkImpl.h"
 #include "BufferVkImpl.h"
 
+#if 0
 namespace Diligent
 {
 
@@ -318,3 +319,4 @@ DescriptorHeapAllocation CommandContext::AllocateDynamicGPUVisibleDescriptor( Vk
 #endif
 
 }
+#endif

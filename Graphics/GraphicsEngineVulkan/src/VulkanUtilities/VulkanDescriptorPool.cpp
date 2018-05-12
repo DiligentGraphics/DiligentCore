@@ -31,7 +31,7 @@
 namespace VulkanUtilities
 {
     VulkanDescriptorPool::VulkanDescriptorPool(std::shared_ptr<const VulkanUtilities::VulkanLogicalDevice> LogicalDevice,
-                                               const VkDescriptorPoolCreateInfo &DescriptorPoolCI) :
+                                               const VkDescriptorPoolCreateInfo &DescriptorPoolCI)noexcept :
         m_LogicalDevice(LogicalDevice)
     {
         VERIFY_EXPR(DescriptorPoolCI.sType == VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO);

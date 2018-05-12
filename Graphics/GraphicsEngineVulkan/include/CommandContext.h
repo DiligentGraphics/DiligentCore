@@ -26,11 +26,11 @@
 
 #include <vector>
 
+#if 0
 //#include "D3D12ResourceBase.h"
 #include "TextureViewVk.h"
 #include "TextureVk.h"
 #include "BufferVk.h"
-#include "DescriptorHeap.h"
 
 namespace Diligent
 {
@@ -58,14 +58,14 @@ namespace Diligent
 class CommandContext
 {
 public:
-
+    /*
 	CommandContext( IMemoryAllocator &MemAllocator,
                     class CommandListManager& CmdListManager, 
                     GPUDescriptorHeap GPUDescriptorHeaps[],
                     const Uint32 DynamicDescriptorAllocationChunkSize[]);
 
     ~CommandContext(void);
-/*
+
 	// Submit the command buffer and reset it.  This is encouraged to keep the GPU busy and reduce latency.
 	// Taking too long to build command lists and submit them can idle the GPU.
 	ID3D12GraphicsCommandList* Close(ID3D12CommandAllocator **ppAllocator);
@@ -370,3 +370,4 @@ inline void CommandContext::SetDescriptorHeaps( ShaderDescriptorHeaps& Heaps )
 }
 */
 }
+#endif

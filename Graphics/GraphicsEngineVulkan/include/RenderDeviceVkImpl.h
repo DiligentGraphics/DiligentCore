@@ -29,7 +29,7 @@
 
 #include "RenderDeviceVk.h"
 #include "RenderDeviceBase.h"
-#include "DescriptorHeap.h"
+#include "DescriptorPoolManager.h"
 #include "CommandContext.h"
 #include "DynamicUploadHeap.h"
 #include "Atomics.h"
@@ -128,17 +128,10 @@ private:
     std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice> m_PhysicalDevice;
     std::shared_ptr<VulkanUtilities::VulkanLogicalDevice> m_LogicalVkDevice;
     
+    std::mutex m_CmdQueueMutex;
     RefCntAutoPtr<ICommandQueueVk> m_pCommandQueue;
 
     EngineVkAttribs m_EngineAttribs;
-#if 0
-    CPUDescriptorHeap m_CPUDescriptorHeaps[Vk_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
-    GPUDescriptorHeap m_GPUDescriptorHeaps[2]; // Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV == 0
-                                               // Vk_DESCRIPTOR_HEAP_TYPE_SAMPLER	 == 1
-	
-	const Uint32 m_DynamicDescriptorAllocationChunkSize[2];
-#endif
-	std::mutex m_CmdQueueMutex;
 
 	Atomics::AtomicInt64 m_FrameNumber;
     Atomics::AtomicInt64 m_NextCmdListNumber;
@@ -197,6 +190,13 @@ private:
     std::mutex m_StaleObjectsMutex;
     std::deque< ReleaseQueueElemType, STDAllocatorRawMem<ReleaseQueueElemType> > m_StaleVkObjects;
     FramebufferCache m_FramebufferCache;
+
+    // [0] - Main descriptor pool
+    // [1] - Immediate context dynamic descriptor pool
+    // [2+] - Deferred context dynamic descriptor pool
+    std::vector<DescriptorPoolManager, STDAllocatorRawMem<DescriptorPoolManager> > m_DescriptorPools;
+
+
 #if 0
     std::mutex m_UploadHeapMutex;
     typedef std::unique_ptr<DynamicUploadHeap, STDDeleterRawMem<DynamicUploadHeap> > UploadHeapPoolElemType;

@@ -1290,6 +1290,21 @@ namespace Diligent
         /// towards the limit. Command buffers are only flushed when pipeline state is changed
         /// or when backbuffer is presented.
         Uint32 NumCommandsToFlushCmdBuffer = 256;
+
+        struct DescriptorPoolSize
+        {
+            Uint32 MaxDescriptorSets = 0;
+            Uint32 NumSeparateSamplerDescriptors = 0;
+            Uint32 NumCombinedSamplerDescriptors = 0;
+            Uint32 NumSampledImageDescriptors = 0;
+            Uint32 NumStorageImageDescriptors = 0;
+            Uint32 NumUniformBufferDescriptors = 0;
+            Uint32 NumStorageBufferDescriptors = 0;
+            Uint32 NumUniformTexelBufferDescriptors = 0;
+            Uint32 NumStorageTexelBufferDescriptors = 0;
+        };
+        DescriptorPoolSize MainDescriptorPoolSize    = {1024, 1024, 8192, 8192, 1024, 4096, 4096, 1024, 1024};
+        DescriptorPoolSize DynamicDescriptorPoolSize = { 256,  256, 2048, 2048,  256, 1024, 1024,  256,  256};
     };
 
     /// Box

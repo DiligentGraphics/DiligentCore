@@ -10,7 +10,7 @@ set(INCLUDE
     include/CommandQueueVkImpl.h
     include/VulkanResourceBase.h
     include/VulkanTypeConversions.h
-    include/DescriptorHeap.h
+    include/DescriptorPoolManager.h
     include/DeviceContextVkImpl.h
     include/DynamicUploadHeap.h
     include/FramebufferCache.h
@@ -67,7 +67,7 @@ set(SRC
     src/CommandQueueVkImpl.cpp
     src/VulkanResourceBase.cpp
     src/VulkanTypeConversions.cpp
-    src/DescriptorHeap.cpp
+    src/DescriptorPoolManager.cpp
     src/DeviceContextVkImpl.cpp
     src/DynamicUploadHeap.cpp
     src/FramebufferCache.cpp
