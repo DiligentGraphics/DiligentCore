@@ -34,7 +34,13 @@ Type GetResourceArraySize(const spirv_cross::Compiler &Compiler,
                           const spirv_cross::Resource &Res)
 {
     const auto& type = Compiler.get_type(Res.type_id);
-    uint32_t arrSize = !type.array.empty() ? type.array[0] : 1;
+    uint32_t arrSize = 1;
+    if(!type.array.empty())
+    {
+        // https://github.com/KhronosGroup/SPIRV-Cross/wiki/Reflection-API-user-guide#querying-array-types
+        VERIFY(type.array.size() == 1, "Only one-dimensional arrays are currently supported");
+        arrSize = type.array[0];
+    }
     VERIFY(arrSize <= std::numeric_limits<Type>::max(), "Array size exceeds maximum representable value ", std::numeric_limits<Type>::max());
     return static_cast<Type>(arrSize);
 }
@@ -69,7 +75,7 @@ SPIRVShaderResourceAttribs::SPIRVShaderResourceAttribs(const spirv_cross::Compil
 
 Int32 FindStaticSampler(const ShaderDesc& shaderDesc, const char* SamplerName)
 {
-    for(Int32 s=0; s < shaderDesc.NumStaticSamplers; ++s)
+    for(Uint32 s=0; s < shaderDesc.NumStaticSamplers; ++s)
     {
         const auto& StSam = shaderDesc.StaticSamplers[s];
         if(strcmp(SamplerName, StSam.TextureName) == 0)
@@ -86,7 +92,8 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&         Allocator,
     m_MemoryBuffer(nullptr, STDDeleterRawMem<void>(Allocator)),
     m_ShaderType(shaderDesc.ShaderType)
 {
-    spirv_cross::Compiler Compiler(spirv_binary);
+    // https://github.com/KhronosGroup/SPIRV-Cross/wiki/Reflection-API-user-guide
+    spirv_cross::Compiler Compiler(std::move(spirv_binary));
 
     // The SPIR-V is now parsed, and we can perform reflection on it.
     spirv_cross::ShaderResources resources = Compiler.get_shader_resources();
@@ -127,7 +134,11 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&         Allocator,
         {
             auto VarType = GetShaderVariableType(SmplImg.name.c_str(), shaderDesc.DefaultVariableType, shaderDesc.VariableDesc, shaderDesc.NumVariables);
             auto StaticSamplerInd = FindStaticSampler(shaderDesc, SmplImg.name.c_str());
-            new (&GetSmplImg(CurrSmplImg++)) SPIRVShaderResourceAttribs(Compiler, SmplImg, SPIRVShaderResourceAttribs::ResourceType::SampledImage, VarType, StaticSamplerInd);
+            const auto& type = Compiler.get_type(SmplImg.type_id);
+            auto ResType = type.image.dim == spv::DimBuffer ?
+                SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer :
+                SPIRVShaderResourceAttribs::ResourceType::SampledImage;
+            new (&GetSmplImg(CurrSmplImg++)) SPIRVShaderResourceAttribs(Compiler, SmplImg, ResType, VarType, StaticSamplerInd);
         }
         VERIFY_EXPR(CurrSmplImg == GetNumSmplImgs()); 
     }
@@ -137,7 +148,11 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&         Allocator,
         for (const auto &Img : resources.storage_images)
         {
             auto VarType = GetShaderVariableType(Img.name.c_str(), shaderDesc.DefaultVariableType, shaderDesc.VariableDesc, shaderDesc.NumVariables);
-            new (&GetImg(CurrImg++)) SPIRVShaderResourceAttribs(Compiler, Img, SPIRVShaderResourceAttribs::ResourceType::StorageImage, VarType, false);
+            const auto& type = Compiler.get_type(Img.type_id);
+            auto ResType = type.image.dim == spv::DimBuffer ?
+                SPIRVShaderResourceAttribs::ResourceType::StorageTexelBuffer :
+                SPIRVShaderResourceAttribs::ResourceType::StorageImage;
+            new (&GetImg(CurrImg++)) SPIRVShaderResourceAttribs(Compiler, Img, ResType, VarType, false);
         }
         VERIFY_EXPR(CurrImg == GetNumImgs());
     }
@@ -227,7 +242,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&         Allocator,
 
             for (Uint32 i = 0; i < GetNumSepSmpls(); ++i)
             {
-                const auto &SepSmpl = GetSmplImg(i);
+                const auto &SepSmpl = GetSepSmpl(i);
                 if (SepSmpl.Name.compare(SamName) == 0)
                 {
                     SamplerFound = true;

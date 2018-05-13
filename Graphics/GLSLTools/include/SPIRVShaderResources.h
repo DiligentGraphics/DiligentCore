@@ -74,6 +74,8 @@ struct SPIRVShaderResourceAttribs
     {
         UniformBuffer = 0,
         StorageBuffer,
+        UniformTexelBuffer,
+        StorageTexelBuffer,
         StorageImage,
         SampledImage,
         AtomicCounter,
@@ -253,7 +255,7 @@ public:
         {
             const auto& Res = GetResource(n);
             if( IsAllowedType(Res.VarType, AllowedTypeBits) )
-                Handler(UB, n);
+                Handler(Res, n);
         }
     }
 

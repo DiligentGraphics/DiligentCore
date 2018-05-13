@@ -399,8 +399,8 @@ void ShaderResourceLayoutVk::VkResource::CacheTexelBuffer(IDeviceObject*        
                                                           VkDescriptorSet                    vkDescrSet,
                                                           Uint32                             ArrayInd)
 {
-    VERIFY(SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::UniformBuffer || 
-           SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::StorageBuffer,
+    VERIFY(SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer || 
+           SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::StorageTexelBuffer,
            "Uniform or storage buffer resource is expected");
 
     if (UpdateCachedResource(DstRes, ArrayInd, pBufferView, IID_BufferViewVk, "buffer view"))
@@ -534,7 +534,12 @@ void ShaderResourceLayoutVk::VkResource::BindResource(IDeviceObject *pObj, Uint3
             case SPIRVShaderResourceAttribs::ResourceType::StorageBuffer:
                 CacheBuffer(pObj, DstRes, vkDescrSet, ArrayIndex);
             break;
-            
+
+            case SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer:
+            case SPIRVShaderResourceAttribs::ResourceType::StorageTexelBuffer:
+                CacheTexelBuffer(pObj, DstRes, vkDescrSet, ArrayIndex);
+                break;
+
             case SPIRVShaderResourceAttribs::ResourceType::StorageImage:
             case SPIRVShaderResourceAttribs::ResourceType::SeparateImage:
             case SPIRVShaderResourceAttribs::ResourceType::SampledImage:
