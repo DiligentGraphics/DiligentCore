@@ -23,6 +23,7 @@ set(INTERFACE
     interface/STDAllocator.h
     interface/StringDataBlobImpl.h
     interface/StringTools.h
+    interface/StringPool.h
     interface/Timer.h
     interface/UniqueIdentifier.h
     interface/ValidatedCast.h

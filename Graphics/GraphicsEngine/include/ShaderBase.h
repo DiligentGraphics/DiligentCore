@@ -92,6 +92,26 @@ inline SHADER_VARIABLE_TYPE GetShaderVariableType(const Char* Name, SHADER_VARIA
     );
 }
 
+inline SHADER_VARIABLE_TYPE GetShaderVariableType(const Char* Name, const ShaderDesc& ShdrDesc)
+{
+    return GetShaderVariableType(Name, ShdrDesc.DefaultVariableType, ShdrDesc.VariableDesc, ShdrDesc.NumVariables);
+}
+
+inline SHADER_VARIABLE_TYPE GetShaderVariableType(const String& Name, SHADER_VARIABLE_TYPE DefaultVariableType, const ShaderVariableDesc *VariableDesc, Uint32 NumVars)
+{
+    return GetShaderVariableType(DefaultVariableType, VariableDesc, NumVars, 
+        [&](const char *VarName)
+        {
+            return Name.compare(VarName) == 0;
+        }
+    );
+}
+
+inline SHADER_VARIABLE_TYPE GetShaderVariableType(const String& Name, const ShaderDesc& ShdrDesc)
+{
+    return GetShaderVariableType(Name, ShdrDesc.DefaultVariableType, ShdrDesc.VariableDesc, ShdrDesc.NumVariables);
+}
+
 
 /// Base implementation of a shader variable
 

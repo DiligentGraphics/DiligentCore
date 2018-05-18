@@ -614,10 +614,10 @@ void ShaderResourceLayoutVk::BindResources( IResourceMapping* pResourceMapping, 
             if( (Flags & BIND_SHADER_RESOURCES_UPDATE_UNRESOLVED) && Res.IsBound(ArrInd) )
                 return;
 
-            const auto& VarName = Res.SpirvAttribs.Name;
+            const auto* VarName = Res.SpirvAttribs.Name;
             RefCntAutoPtr<IDeviceObject> pObj;
             VERIFY_EXPR(pResourceMapping != nullptr);
-            pResourceMapping->GetResource( VarName.c_str(), &pObj, ArrInd );
+            pResourceMapping->GetResource( VarName, &pObj, ArrInd );
             if( pObj )
             {
                 //  Call non-virtual function
@@ -645,7 +645,7 @@ IShaderVariable* ShaderResourceLayoutVk::GetShaderVariable(const Char* Name)
     for(Uint32 r=0; r < TotalResources; ++r)
     {
         auto &Res = GetResource(r);
-        if(Res.SpirvAttribs.Name.compare(Name) == 0)
+        if(strcmp(Res.SpirvAttribs.Name, Name) == 0)
         {
             pVar = &Res;
             break;
