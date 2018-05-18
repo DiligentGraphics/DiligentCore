@@ -101,7 +101,7 @@ struct SPIRVShaderResourceAttribs
                                const char*                  _Name,
                                ResourceType                 _Type, 
                                SHADER_VARIABLE_TYPE         _VarType,
-                               Int32                        _StaticSamplerInd);
+                               Int32                        _StaticSamplerInd)noexcept;
 
     String GetPrintName(Uint32 ArrayInd)const
     {

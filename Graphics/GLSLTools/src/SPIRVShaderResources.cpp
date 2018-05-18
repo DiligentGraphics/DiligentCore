@@ -31,8 +31,8 @@ namespace Diligent
 {
 
 template<typename Type>
-Type GetResourceArraySize(const spirv_cross::Compiler &Compiler,
-                          const spirv_cross::Resource &Res)
+Type GetResourceArraySize(const spirv_cross::Compiler& Compiler,
+                          const spirv_cross::Resource& Res)
 {
     const auto& type = Compiler.get_type(Res.type_id);
     uint32_t arrSize = 1;
@@ -46,8 +46,8 @@ Type GetResourceArraySize(const spirv_cross::Compiler &Compiler,
     return static_cast<Type>(arrSize);
 }
 
-static uint32_t GetDecorationOffset(const spirv_cross::Compiler &Compiler,
-                                    const spirv_cross::Resource &Res,
+static uint32_t GetDecorationOffset(const spirv_cross::Compiler& Compiler,
+                                    const spirv_cross::Resource& Res,
                                     spv::Decoration Decoration)
 {
     VERIFY(Compiler.has_decoration(Res.id, Decoration), "Res \'", Res.name, "\' has no requested decoration");
@@ -62,7 +62,7 @@ SPIRVShaderResourceAttribs::SPIRVShaderResourceAttribs(const spirv_cross::Compil
                                                        const char*                   _Name,
                                                        ResourceType                  _Type, 
                                                        SHADER_VARIABLE_TYPE          _VarType,
-                                                       Int32                         _StaticSamplerInd) :
+                                                       Int32                         _StaticSamplerInd)noexcept :
     Name(_Name),
     ArraySize(GetResourceArraySize<decltype(ArraySize)>(Compiler, Res)),
     Type(_Type),
@@ -75,7 +75,7 @@ SPIRVShaderResourceAttribs::SPIRVShaderResourceAttribs(const spirv_cross::Compil
            _StaticSamplerInd <= std::numeric_limits<decltype(StaticSamplerInd)>::max(), "Static sampler index is out of representable range" );
 }
 
-Int32 FindStaticSampler(const ShaderDesc& shaderDesc, const std::string& SamplerName)
+static Int32 FindStaticSampler(const ShaderDesc& shaderDesc, const std::string& SamplerName)
 {
     for(Uint32 s=0; s < shaderDesc.NumStaticSamplers; ++s)
     {
@@ -472,43 +472,83 @@ void SPIRVShaderResources::CountResources(const SHADER_VARIABLE_TYPE *AllowedVar
 std::string SPIRVShaderResources::DumpResources()
 {
     std::stringstream ss;
-    ss << "Resource counters:" << std::endl << "UBs: " << GetNumUBs() << "; SBs: " << GetNumSBs() << "; Imgs: " << GetNumImgs() 
-       << "; Smpl Imgs: " << GetNumSmplImgs() << "; ACs: " << GetNumACs() << "; Sep Imgs: " << GetNumSepImgs()
-       << "; Sep Smpls: " << GetNumSepSmpls() << "; Static Samplers: " << GetNumStaticSamplers() << std::endl << "Resources:";
+    ss << "Resource counters (" << GetTotalResources() << " total):" << std::endl << "UBs: " << GetNumUBs() << "; SBs: " 
+        << GetNumSBs() << "; Imgs: " << GetNumImgs() << "; Smpl Imgs: " << GetNumSmplImgs() << "; ACs: " << GetNumACs() 
+        << "; Sep Imgs: " << GetNumSepImgs() << "; Sep Smpls: " << GetNumSepSmpls() << '.' << std::endl
+        << "Num Static Samplers: " << GetNumStaticSamplers() << std::endl << "Resources:";
     
-    ProcessResources(nullptr, 0, 
-        [&](const SPIRVShaderResourceAttribs& Res, Uint32)
-        {
-            ss << std::endl;
-            switch(Res.Type)
-            {
-                case SPIRVShaderResourceAttribs::ResourceType::UniformBuffer:      ss << "Uniform Buffer  "; break;
-                case SPIRVShaderResourceAttribs::ResourceType::StorageBuffer:      ss << "Storage Buffer  "; break;
-                case SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer: ss << "Uniform Txl Buff"; break;
-                case SPIRVShaderResourceAttribs::ResourceType::StorageTexelBuffer: ss << "Storage Txl Buff"; break;
-                case SPIRVShaderResourceAttribs::ResourceType::StorageImage:       ss << "Storage Image   "; break;
-                case SPIRVShaderResourceAttribs::ResourceType::SampledImage:       ss << "Sampled Image   "; break;
-                case SPIRVShaderResourceAttribs::ResourceType::AtomicCounter:      ss << "Atomic Cntr     "; break;
-                case SPIRVShaderResourceAttribs::ResourceType::SeparateImage:      ss << "Separate Img    "; break;
-                case SPIRVShaderResourceAttribs::ResourceType::SeparateSampler:    ss << "Separate Smpl   "; break;
-                default: UNEXPECTED("Unknown resource type");
-            }
-            
-            std::stringstream FullResNameSS;
-            FullResNameSS << '\'' << Res.Name;
-            if(Res.ArraySize > 1)
-                FullResNameSS << '[' << Res.ArraySize << ']';
-            FullResNameSS << '\'';
-            ss << std::setw(32) << FullResNameSS.str();
-            ss << " (" << GetShaderVariableTypeLiteralName(Res.VarType) << ")";
+    Uint32 ResNum = 0;
+    auto DumpResource = [&ss, &ResNum](const SPIRVShaderResourceAttribs& Res)
+    {
+        std::stringstream FullResNameSS;
+        FullResNameSS << '\'' << Res.Name;
+        if (Res.ArraySize > 1)
+            FullResNameSS << '[' << Res.ArraySize << ']';
+        FullResNameSS << '\'';
+        ss << std::setw(32) << FullResNameSS.str();
+        ss << " (" << GetShaderVariableTypeLiteralName(Res.VarType) << ")";
 
-            if(Res.StaticSamplerInd >= 0)
-            {
-                ss << " Static sampler: " << Int32{Res.StaticSamplerInd};
-            }
+        if (Res.StaticSamplerInd >= 0)
+        {
+            ss << " Static sampler: " << Int32{ Res.StaticSamplerInd };
+        }
+        ++ResNum;
+    };
+
+    ProcessResources(nullptr, 0,
+        [&](const SPIRVShaderResourceAttribs &UB, Uint32)
+        {
+            VERIFY(UB.Type == SPIRVShaderResourceAttribs::ResourceType::UniformBuffer, "Unexpected resource type");
+            ss << std::endl << std::setw(3) << ResNum << " Uniform Buffer  ";
+            DumpResource(UB);
+        },
+        [&](const SPIRVShaderResourceAttribs& SB, Uint32)
+        {
+            VERIFY(SB.Type == SPIRVShaderResourceAttribs::ResourceType::StorageBuffer, "Unexpected resource type");
+            ss << std::endl << std::setw(3) << ResNum << " Storage Buffer  ";
+            DumpResource(SB);
+        },
+        [&](const SPIRVShaderResourceAttribs &Img, Uint32)
+        {
+            if(Img.Type == SPIRVShaderResourceAttribs::ResourceType::StorageImage)
+                ss << std::endl << std::setw(3) << ResNum << " Storage Image   ";
+            else if(Img.Type == SPIRVShaderResourceAttribs::ResourceType::StorageTexelBuffer)
+                ss << std::endl << std::setw(3) << ResNum << " Storage Txl Buff";
+            else
+                UNEXPECTED("Unexpected resource type");
+            DumpResource(Img);
+        },
+        [&](const SPIRVShaderResourceAttribs &SmplImg, Uint32)
+        {
+            if (SmplImg.Type == SPIRVShaderResourceAttribs::ResourceType::SampledImage)
+                ss << std::endl << std::setw(3) << ResNum << " Sampled Image   ";
+            else if (SmplImg.Type == SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer)
+                ss << std::endl << std::setw(3) << ResNum << " Uniform Txl Buff";
+            else
+                UNEXPECTED("Unexpected resource type");
+            DumpResource(SmplImg);
+        },
+        [&](const SPIRVShaderResourceAttribs &AC, Uint32)
+        {
+            VERIFY(AC.Type == SPIRVShaderResourceAttribs::ResourceType::AtomicCounter, "Unexpected resource type");
+            ss << std::endl << std::setw(3) << ResNum << " Atomic Cntr     ";
+            DumpResource(AC);
+        },
+        [&](const SPIRVShaderResourceAttribs &SepImg, Uint32)
+        {
+            VERIFY(SepImg.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateImage, "Unexpected resource type");
+            ss << std::endl << std::setw(3) << ResNum << " Separate Img    ";
+            DumpResource(SepImg);
+        },
+        [&](const SPIRVShaderResourceAttribs &SepSmpl, Uint32)
+        {
+            VERIFY(SepSmpl.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler, "Unexpected resource type");
+            ss << std::endl << std::setw(3) << ResNum << " Separate Smpl   ";
+            DumpResource(SepSmpl);
         }
     );
-
+    VERIFY_EXPR(ResNum == GetTotalResources());
+    
     return ss.str();
 }
 
