@@ -258,7 +258,8 @@ void PipelineLayout::DescriptorSetLayoutManager::Finalize(const VulkanUtilities:
         }
     }
     VERIFY_EXPR(BindingOffset == TotalBindings);
-    VERIFY_EXPR(m_ActiveSets == 0 || m_ActiveSets == 1 && ActiveDescrSetLayouts[0] != VK_NULL_HANDLE || 
+    VERIFY_EXPR(m_ActiveSets == 0 && ActiveDescrSetLayouts[0] == VK_NULL_HANDLE && ActiveDescrSetLayouts[1] == VK_NULL_HANDLE ||
+                m_ActiveSets == 1 && ActiveDescrSetLayouts[0] != VK_NULL_HANDLE && ActiveDescrSetLayouts[1] == VK_NULL_HANDLE ||
                 m_ActiveSets == 2 && ActiveDescrSetLayouts[0] != VK_NULL_HANDLE && ActiveDescrSetLayouts[1] != VK_NULL_HANDLE);
 
     VkPipelineLayoutCreateInfo PipelineLayoutCI = {};
