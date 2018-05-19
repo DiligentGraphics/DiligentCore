@@ -108,7 +108,6 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&         Allocator,
             &resources.storage_images,
             &resources.sampled_images,
             &resources.atomic_counters,
-            &resources.push_constant_buffers,
             &resources.separate_images,
             &resources.separate_samplers
         })

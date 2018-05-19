@@ -59,13 +59,16 @@ class ResourceTypeToVkDescriptorType
 public:
     ResourceTypeToVkDescriptorType()
     {
-        m_Map[SPIRVShaderResourceAttribs::ResourceType::UniformBuffer]   = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        m_Map[SPIRVShaderResourceAttribs::ResourceType::StorageBuffer]   = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-        m_Map[SPIRVShaderResourceAttribs::ResourceType::StorageImage]    = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-        m_Map[SPIRVShaderResourceAttribs::ResourceType::SampledImage]    = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        m_Map[SPIRVShaderResourceAttribs::ResourceType::AtomicCounter]   = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-        m_Map[SPIRVShaderResourceAttribs::ResourceType::SeparateImage]   = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-        m_Map[SPIRVShaderResourceAttribs::ResourceType::SeparateSampler] = VK_DESCRIPTOR_TYPE_SAMPLER;
+        static_assert(SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes == 9, "Please add corresponding decriptor type");
+        m_Map[SPIRVShaderResourceAttribs::ResourceType::UniformBuffer]      = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        m_Map[SPIRVShaderResourceAttribs::ResourceType::StorageBuffer]      = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        m_Map[SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer] = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
+        m_Map[SPIRVShaderResourceAttribs::ResourceType::StorageTexelBuffer] = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
+        m_Map[SPIRVShaderResourceAttribs::ResourceType::StorageImage]       = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+        m_Map[SPIRVShaderResourceAttribs::ResourceType::SampledImage]       = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        m_Map[SPIRVShaderResourceAttribs::ResourceType::AtomicCounter]      = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        m_Map[SPIRVShaderResourceAttribs::ResourceType::SeparateImage]      = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        m_Map[SPIRVShaderResourceAttribs::ResourceType::SeparateSampler]    = VK_DESCRIPTOR_TYPE_SAMPLER;
     }
 
     VkDescriptorType operator[](SPIRVShaderResourceAttribs::ResourceType ResType)const
@@ -243,20 +246,20 @@ void PipelineLayout::DescriptorSetLayoutManager::Finalize(const VulkanUtilities:
     }
     m_LayoutBindings.resize(TotalBindings);
     size_t BindingOffset = 0;
-    std::array<VkDescriptorSetLayout, 2> ActiveDescrSetLayouts;
-    int CurrActiveSet = 0;
-    for(size_t i=0; i < m_DescriptorSetLayouts.size(); ++i)
+    std::array<VkDescriptorSetLayout, 2> ActiveDescrSetLayouts = {};
+    for(auto &Layout : m_DescriptorSetLayouts)
     {
-        auto &Layout = m_DescriptorSetLayouts[i];
         if(Layout.SetIndex >= 0)
         {
             std::copy(Layout.pBindings, Layout.pBindings + Layout.NumLayoutBindings, m_LayoutBindings.begin() + BindingOffset);
             Layout.Finalize(LogicalDevice, m_MemAllocator, &m_LayoutBindings[BindingOffset]);
             BindingOffset += Layout.NumLayoutBindings;
-            ActiveDescrSetLayouts[CurrActiveSet++] = Layout.VkLayout;
+            ActiveDescrSetLayouts[Layout.SetIndex] = Layout.VkLayout;
         }
     }
-    VERIFY_EXPR(CurrActiveSet == m_ActiveSets);
+    VERIFY_EXPR(BindingOffset == TotalBindings);
+    VERIFY_EXPR(m_ActiveSets == 0 || m_ActiveSets == 1 && ActiveDescrSetLayouts[0] != VK_NULL_HANDLE || 
+                m_ActiveSets == 2 && ActiveDescrSetLayouts[0] != VK_NULL_HANDLE && ActiveDescrSetLayouts[1] != VK_NULL_HANDLE);
 
     VkPipelineLayoutCreateInfo PipelineLayoutCI = {};
     PipelineLayoutCI.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;

@@ -290,8 +290,8 @@ private:
     VkResource& GetResource(SHADER_VARIABLE_TYPE VarType, Uint32 r)
     {
         VERIFY_EXPR( r < m_NumResources[VarType] );
-        auto* Resoruces = reinterpret_cast<VkResource*>(m_ResourceBuffer.get());
-        return Resoruces[GetResourceOffset(VarType,r)];
+        auto* Resources = reinterpret_cast<VkResource*>(m_ResourceBuffer.get());
+        return Resources[GetResourceOffset(VarType,r)];
     }
     const VkResource& GetResource(SHADER_VARIABLE_TYPE VarType, Uint32 r)const
     {
