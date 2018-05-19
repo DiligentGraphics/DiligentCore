@@ -46,16 +46,14 @@
 //
 //
 //   Every VkResource structure holds a reference to SPIRVShaderResourceAttribs structure from ShaderResources.
-//   ShaderResourceLayoutVk holds shared pointer to ShaderResourcesVk instance. Note that ShaderResources::SamplerId 
-//   references a sampler in ShaderResources, while VkResource::SamplerId references a sampler in ShaderResourceLayoutVk, 
-//   and the two are not the same
+//   ShaderResourceLayoutVk holds shared pointer to ShaderResourcesVk instance.
 //
 //    ______________________                  ________________________________________________________________________
 //   |                      |  unique_ptr    |        |         |          |          |       |         |             |
 //   | SPIRVShaderResources |--------------->|   UBs  |   SBs   | StrgImgs | SmplImgs |  ACs  | SepImgs | SepSamplers |
 //   |______________________|                |________|_________|__________|__________|_______|_________|_____________|
-//            A                                         A                       A
-//            |                                          \                      |
+//            A                                           A                     A
+//            |                                           |                     |
 //            |shared_ptr                                Ref                   Ref                     
 //    ________|__________________                  ________\____________________|_____________________________________________
 //   |                           |   unique_ptr   |                   |                 |               |                     |
@@ -63,7 +61,7 @@
 //   |___________________________|                |___________________|_________________|_______________|_____________________|
 //            |                                          |                                                            |              
 //            | Raw ptr                                  |                                                            |     
-//            |                                          |                                                           /     
+//            |                                          | (DescriptorSet, CacheOffset)                              / (DescriptorSet, CacheOffset)      
 //            |                                           \                                                         /     
 //    ________V_________________                   ________V_______________________________________________________V_______                     
 //   |                          |                 |                                                                        |                   
@@ -113,7 +111,7 @@ namespace Diligent
 {
 
 /// Diligent::ShaderResourceLayoutVk class
-// sizeof(ShaderResourceLayoutVk)==?? (MS compiler, x64)
+// sizeof(ShaderResourceLayoutVk)==72 (MS compiler, x64)
 class ShaderResourceLayoutVk
 {
 public:
@@ -128,10 +126,10 @@ public:
                            Uint32 NumAllowedTypes, 
                            ShaderResourceCacheVk &ResourceCache);
 
-    ShaderResourceLayoutVk(const ShaderResourceLayoutVk&) = delete;
-    ShaderResourceLayoutVk(ShaderResourceLayoutVk&&) = delete;
-    ShaderResourceLayoutVk& operator =(const ShaderResourceLayoutVk&) = delete;
-    ShaderResourceLayoutVk& operator =(ShaderResourceLayoutVk&&) = delete;
+    ShaderResourceLayoutVk              (const ShaderResourceLayoutVk&) = delete;
+    ShaderResourceLayoutVk              (ShaderResourceLayoutVk&&)      = delete;
+    ShaderResourceLayoutVk& operator =  (const ShaderResourceLayoutVk&) = delete;
+    ShaderResourceLayoutVk& operator =  (ShaderResourceLayoutVk&&)      = delete;
     
     ~ShaderResourceLayoutVk();
 
@@ -150,7 +148,7 @@ public:
                     std::vector<uint32_t>*                              pSPIRV,
                     class PipelineLayout*                               pPipelineLayout);
 
-    // sizeof(VkResource) == ?? (x64)
+    // sizeof(VkResource) == 32 (x64)
     struct VkResource : IShaderVariable
     {
         VkResource(const VkResource&)              = delete;
@@ -168,7 +166,7 @@ public:
                    const SPIRVShaderResourceAttribs&    _SpirvAttribs,
                    uint32_t                             _Binding,
                    uint32_t                             _DescriptorSet,
-                   Uint32                               _CacheOffset) :
+                   Uint32                               _CacheOffset)noexcept :
             Binding         (static_cast<decltype(Binding)>(_Binding)),
             DescriptorSet   (static_cast<decltype(DescriptorSet)>(_DescriptorSet)),
             CacheOffset     (_CacheOffset),
@@ -180,7 +178,7 @@ public:
         }
 
         VkResource(ShaderResourceLayoutVk&  _ParentLayout,
-                   const VkResource&        _SrcRes) :
+                   const VkResource&        _SrcRes)noexcept :
             Binding         (_SrcRes.Binding),
             DescriptorSet   (_SrcRes.DescriptorSet),
             CacheOffset     (_SrcRes.CacheOffset),
@@ -280,13 +278,6 @@ private:
 
     const Char* GetShaderName()const;
 
-    // There is no need to use shared ptr as referenced resource cache is either part of the
-    // parent ShaderVkImpl object or ShaderResourceBindingVkImpl object
-    ShaderResourceCacheVk *m_pResourceCache;
-
-    std::unique_ptr<void, STDDeleterRawMem<void> > m_ResourceBuffer;
-    std::array<Uint16, SHADER_VARIABLE_TYPE_NUM_TYPES> m_NumResources = {};
-
     Uint32 GetResourceOffset(SHADER_VARIABLE_TYPE VarType, Uint32 r)const
     {
         VERIFY_EXPR( r < m_NumResources[VarType] );
@@ -322,6 +313,14 @@ private:
     }
 
     void AllocateMemory(IMemoryAllocator &Allocator);
+
+    
+    // There is no need to use shared ptr as referenced resource cache is either part of the
+    // parent ShaderVkImpl object or ShaderResourceBindingVkImpl object
+    ShaderResourceCacheVk *m_pResourceCache;
+
+    std::unique_ptr<void, STDDeleterRawMem<void> > m_ResourceBuffer;
+    std::array<Uint16, SHADER_VARIABLE_TYPE_NUM_TYPES> m_NumResources = {};
 
 #if USE_VARIABLE_HASH_MAP
     // Hash map to look up shader variables by name.

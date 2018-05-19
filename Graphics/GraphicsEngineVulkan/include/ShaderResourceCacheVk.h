@@ -135,14 +135,14 @@ public:
 #endif
 
 private:
-    ShaderResourceCacheVk(const ShaderResourceCacheVk&) = delete;
-    ShaderResourceCacheVk(ShaderResourceCacheVk&&) = delete;
+    ShaderResourceCacheVk             (const ShaderResourceCacheVk&) = delete;
+    ShaderResourceCacheVk             (ShaderResourceCacheVk&&)      = delete;
     ShaderResourceCacheVk& operator = (const ShaderResourceCacheVk&) = delete;
-    ShaderResourceCacheVk& operator = (ShaderResourceCacheVk&&) = delete;
+    ShaderResourceCacheVk& operator = (ShaderResourceCacheVk&&)      = delete;
     
-    IMemoryAllocator *m_pAllocator=nullptr; 
-    void *m_pMemory = nullptr;
-    Uint32 m_NumSets = 0;
+    IMemoryAllocator*   m_pAllocator = nullptr; 
+    void*               m_pMemory    = nullptr;
+    Uint32              m_NumSets    = 0;
 
 #ifdef _DEBUG
     // Only for debug purposes: indicates what types of resources are stored in the cache

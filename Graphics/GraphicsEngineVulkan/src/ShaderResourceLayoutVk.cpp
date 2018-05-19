@@ -197,13 +197,15 @@ void ShaderResourceLayoutVk::Initialize(const VulkanUtilities::VulkanLogicalDevi
         {
             // If pipeline layout is not provided - use artifial layout to store
             // static shader resources:
-            // Uniform buffers   at index SPIRVShaderResourceAttribs::ResourceType::UniformBuffer  (0)
-            // Storage buffers   at index SPIRVShaderResourceAttribs::ResourceType::StorageBuffer  (1)
-            // Storage images    at index SPIRVShaderResourceAttribs::ResourceType::StorageImage   (2)
-            // Sampled images    at index SPIRVShaderResourceAttribs::ResourceType::SampledImage   (3)
-            // Atomic counters   at index SPIRVShaderResourceAttribs::ResourceType::AtomicCounter  (4)
-            // Separate images   at index SPIRVShaderResourceAttribs::ResourceType::SeparateImage  (5)
-            // Separate samplers at index SPIRVShaderResourceAttribs::ResourceType::SeparateSampler(6)
+            // Uniform buffers   at index SPIRVShaderResourceAttribs::ResourceType::UniformBuffer      (0)
+            // Storage buffers   at index SPIRVShaderResourceAttribs::ResourceType::StorageBuffer      (1)
+            // Unifrom txl buffs at index SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer (2)
+            // Storage txl buffs at index SPIRVShaderResourceAttribs::ResourceType::StorageTexelBuffer (3)
+            // Storage images    at index SPIRVShaderResourceAttribs::ResourceType::StorageImage       (4)
+            // Sampled images    at index SPIRVShaderResourceAttribs::ResourceType::SampledImage       (5)
+            // Atomic counters   at index SPIRVShaderResourceAttribs::ResourceType::AtomicCounter      (6)
+            // Separate images   at index SPIRVShaderResourceAttribs::ResourceType::SeparateImage      (7)
+            // Separate samplers at index SPIRVShaderResourceAttribs::ResourceType::SeparateSampler    (8)
             VERIFY_EXPR(m_pResourceCache != nullptr);
 
             DescriptorSet = Attribs.Type;
@@ -410,8 +412,8 @@ void ShaderResourceLayoutVk::VkResource::CacheTexelBuffer(IDeviceObject*        
 #ifdef VERIFY_SHADER_BINDINGS
         const auto& ViewDesc = pBuffViewVk->GetDesc();
         const auto ViewType = ViewDesc.ViewType;
-        const bool IsStorageBuffer = SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::StorageBuffer;
-        const auto dbgExpectedViewType = IsStorageBuffer ? TEXTURE_VIEW_UNORDERED_ACCESS : TEXTURE_VIEW_SHADER_RESOURCE;
+        const bool IsStorageBuffer = SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::StorageTexelBuffer;
+        const auto dbgExpectedViewType = IsStorageBuffer ? BUFFER_VIEW_UNORDERED_ACCESS : BUFFER_VIEW_SHADER_RESOURCE;
         if (ViewType != dbgExpectedViewType)
         {
             const auto *ExpectedViewTypeName = GetViewTypeLiteralName(dbgExpectedViewType);
@@ -430,10 +432,11 @@ void ShaderResourceLayoutVk::VkResource::CacheTexelBuffer(IDeviceObject*        
         }
     }
 }
-void ShaderResourceLayoutVk::VkResource::CacheImage(IDeviceObject *pTexView,
+
+void ShaderResourceLayoutVk::VkResource::CacheImage(IDeviceObject*                   pTexView,
                                                     ShaderResourceCacheVk::Resource& DstRes,
-                                                    VkDescriptorSet vkDescrSet,
-                                                    Uint32 ArrayInd)
+                                                    VkDescriptorSet                  vkDescrSet,
+                                                    Uint32                           ArrayInd)
 {
     VERIFY(SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::StorageImage || 
            SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateImage ||
@@ -443,11 +446,11 @@ void ShaderResourceLayoutVk::VkResource::CacheImage(IDeviceObject *pTexView,
     if (UpdateCachedResource(DstRes, ArrayInd, pTexView, IID_TextureViewVk, "texture view") )
     {
         auto* pTexViewVk = DstRes.pObject.RawPtr<TextureViewVkImpl>();
+        const bool IsStorageImage = SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::StorageImage;
 
 #ifdef VERIFY_SHADER_BINDINGS
         const auto& ViewDesc = pTexViewVk->GetDesc();
         const auto ViewType = ViewDesc.ViewType;
-        const bool IsStorageImage = SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::StorageImage;
         const auto dbgExpectedViewType = IsStorageImage ? TEXTURE_VIEW_UNORDERED_ACCESS : TEXTURE_VIEW_SHADER_RESOURCE;
         if (ViewType != dbgExpectedViewType)
         {
@@ -483,14 +486,14 @@ void ShaderResourceLayoutVk::VkResource::CacheImage(IDeviceObject *pTexView,
     }
 }
 
-void ShaderResourceLayoutVk::VkResource::CacheSeparateSampler(IDeviceObject *pSampler,
-                                                              ShaderResourceCacheVk::Resource& DstRes,
-                                                              VkDescriptorSet vkDescrSet,
-                                                              Uint32 ArrayInd)
+void ShaderResourceLayoutVk::VkResource::CacheSeparateSampler(IDeviceObject*                    pSampler,
+                                                              ShaderResourceCacheVk::Resource&  DstRes,
+                                                              VkDescriptorSet                   vkDescrSet,
+                                                              Uint32                            ArrayInd)
 {
     VERIFY(SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler, "Separate sampler resource is expected");
 
-    if (UpdateCachedResource(DstRes, ArrayInd, pSampler, IID_TextureViewVk, "sampler"))
+    if (UpdateCachedResource(DstRes, ArrayInd, pSampler, IID_Sampler, "sampler"))
     {
         auto* pSamplerVk = DstRes.pObject.RawPtr<SamplerVkImpl>();
         if (vkDescrSet != VK_NULL_HANDLE)
@@ -501,10 +504,6 @@ void ShaderResourceLayoutVk::VkResource::CacheSeparateSampler(IDeviceObject *pSa
             DescrImgInfo.imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
             UpdateDescriptorHandle(vkDescrSet, ArrayInd, &DescrImgInfo, nullptr, nullptr);
         }
-    }
-    else
-    {
-        LOG_RESOURCE_BINDING_ERROR("Sampler", pSampler, SpirvAttribs.GetPrintName(ArrayInd), ParentResLayout.GetShaderName(), "Incorrect resource type: sampler is expected.")
     }
 }
 
@@ -518,12 +517,18 @@ void ShaderResourceLayoutVk::VkResource::BindResource(IDeviceObject *pObj, Uint3
 
     auto &DstDescrSet = pResourceCache->GetDescriptorSet(DescriptorSet);
     auto vkDescrSet = DstDescrSet.GetVkDescriptorSet();
+#ifdef _DEBUG
     if (pResourceCache->DbgGetContentType() == ShaderResourceCacheVk::DbgCacheContentType::SRBResources)
     {
         VERIFY(SpirvAttribs.VarType == SHADER_VARIABLE_TYPE_DYNAMIC && vkDescrSet == VK_NULL_HANDLE ||
                SpirvAttribs.VarType != SHADER_VARIABLE_TYPE_DYNAMIC && vkDescrSet != VK_NULL_HANDLE,
                "Static and mutable variables and only them are expected to have valid descriptor set assigned");
     }
+    else if (pResourceCache->DbgGetContentType() == ShaderResourceCacheVk::DbgCacheContentType::StaticShaderResources)
+    {
+        VERIFY(vkDescrSet == VK_NULL_HANDLE, "Static shader resource cache should not have vulkan descriptor set allocation");
+    }
+#endif
     auto &DstRes = DstDescrSet.GetResource(CacheOffset + ArrayIndex);
 
     if( pObj )
@@ -553,7 +558,7 @@ void ShaderResourceLayoutVk::VkResource::BindResource(IDeviceObject *pObj, Uint3
                 }
                 else
                 {
-                    LOG_ERROR_MESSAGE("Attempting to assign sampler to static sampler '", SpirvAttribs.Name, '\'');
+                    LOG_ERROR_MESSAGE("Attempting to assign a sampler to a static sampler '", SpirvAttribs.Name, '\'');
                 }
             break;
 
@@ -679,13 +684,15 @@ void ShaderResourceLayoutVk::InitializeStaticResources(const ShaderResourceLayou
     VERIFY(SrcLayout.m_pResources->GetShaderType() == m_pResources->GetShaderType(), "Incosistent shader types");
 
     // Static shader resources are stored as follows:
-    // Uniform buffers   at index SPIRVShaderResourceAttribs::ResourceType::UniformBuffer  (0)
-    // Storage buffers   at index SPIRVShaderResourceAttribs::ResourceType::StorageBuffer  (1)
-    // Storage images    at index SPIRVShaderResourceAttribs::ResourceType::StorageImage   (2)
-    // Sampled images    at index SPIRVShaderResourceAttribs::ResourceType::SampledImage   (3)
-    // Atomic counters   at index SPIRVShaderResourceAttribs::ResourceType::AtomicCounter  (4)
-    // Separate images   at index SPIRVShaderResourceAttribs::ResourceType::SeparateImage  (5)
-    // Separate samplers at index SPIRVShaderResourceAttribs::ResourceType::SeparateSampler(6)
+    // Uniform buffers   at index SPIRVShaderResourceAttribs::ResourceType::UniformBuffer      (0)
+    // Storage buffers   at index SPIRVShaderResourceAttribs::ResourceType::StorageBuffer      (1)
+    // Unifrom txl buffs at index SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer (2)
+    // Storage txl buffs at index SPIRVShaderResourceAttribs::ResourceType::StorageTexelBuffer (3)
+    // Storage images    at index SPIRVShaderResourceAttribs::ResourceType::StorageImage       (4)
+    // Sampled images    at index SPIRVShaderResourceAttribs::ResourceType::SampledImage       (5)
+    // Atomic counters   at index SPIRVShaderResourceAttribs::ResourceType::AtomicCounter      (6)
+    // Separate images   at index SPIRVShaderResourceAttribs::ResourceType::SeparateImage      (7)
+    // Separate samplers at index SPIRVShaderResourceAttribs::ResourceType::SeparateSampler    (8)
 
     for(Uint32 r=0; r < m_NumResources[SHADER_VARIABLE_TYPE_STATIC]; ++r)
     {
@@ -746,8 +753,8 @@ void ShaderResourceLayoutVk::dbgVerifyBindings()const
             }
         }
     }
-#endif
 }
+#endif
 
 
 const Char* ShaderResourceLayoutVk::GetShaderName()const
