@@ -372,9 +372,26 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters *pRefCounters, Ren
     if(PipelineDesc.SRBAllocationGranularity > 1)
         m_ResLayoutDataAllocators.Init(m_NumShaders, PipelineDesc.SRBAllocationGranularity);
 
-    auto &SRBAllocator = pDeviceVk->GetSRBAllocator();
-    // Default shader resource binding must be initialized after resource layouts are parsed!
-    m_pDefaultShaderResBinding.reset( NEW_RC_OBJ(SRBAllocator, "ShaderResourceBindingVkImpl instance", ShaderResourceBindingVkImpl, this)(this, true) );
+    bool HasStaticResources = false;
+    bool HasNonStaticResources = false;
+    for (auto *pLayout : m_pShaderResourceLayouts)
+    {
+        if (pLayout != nullptr)
+        {
+            HasStaticResources = pLayout->GetResourceCount(SHADER_VARIABLE_TYPE_STATIC) != 0;
+            HasNonStaticResources = pLayout->GetResourceCount(SHADER_VARIABLE_TYPE_MUTABLE) != 0 ||
+                                    pLayout->GetResourceCount(SHADER_VARIABLE_TYPE_DYNAMIC) != 0;
+        }
+    }
+
+    // If there are only static resources, create default shader resource binding
+    if(HasStaticResources && !HasNonStaticResources)
+    {
+        auto &SRBAllocator = pDeviceVk->GetSRBAllocator();
+        // Default shader resource binding must be initialized after resource layouts are parsed!
+        m_pDefaultShaderResBinding.reset( NEW_RC_OBJ(SRBAllocator, "ShaderResourceBindingVkImpl instance", ShaderResourceBindingVkImpl, this)(this, true) );
+    }
+
 #if 0
     m_ShaderResourceLayoutHash = m_RootSig.GetHash();
 #endif
@@ -397,12 +414,12 @@ PipelineStateVkImpl::~PipelineStateVkImpl()
     }
 
     auto &ShaderResLayoutAllocator = GetRawAllocator();
-    for(Int32 l = 0; l < _countof(m_pShaderResourceLayouts); ++l)
+    for (auto *pLayout : m_pShaderResourceLayouts)
     {
-        if (m_pShaderResourceLayouts[l] != nullptr)
+        if (pLayout != nullptr)
         {
-            m_pShaderResourceLayouts[l]->~ShaderResourceLayoutVk();
-            ShaderResLayoutAllocator.Free(m_pShaderResourceLayouts[l]);
+            pLayout->~ShaderResourceLayoutVk();
+            ShaderResLayoutAllocator.Free(pLayout);
         }
     }
 }

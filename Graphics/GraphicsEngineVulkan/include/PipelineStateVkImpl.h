@@ -123,7 +123,7 @@ private:
         AdaptiveFixedBlockAllocator *m_pAllocators[5] = {};
     }m_ResLayoutDataAllocators; // Allocators must be defined before default SRB
 
-    ShaderResourceLayoutVk* m_pShaderResourceLayouts[6] = {};
+    std::array<ShaderResourceLayoutVk*, 6> m_pShaderResourceLayouts = {};
     AdaptiveFixedBlockAllocator m_ResourceCacheDataAllocator; // Use separate allocator for every shader stage
     std::array<VulkanUtilities::ShaderModuleWrapper, 6> m_ShaderModules;
 

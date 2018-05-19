@@ -273,6 +273,11 @@ public:
 
     IObject& GetOwner(){return m_Owner;}
 
+    Uint32 GetResourceCount(SHADER_VARIABLE_TYPE VarType)const
+    {
+        return m_NumResources[VarType];
+    }
+
 private:
     void InitVariablesHashMap();
 
