@@ -221,7 +221,7 @@ bool PipelineLayout::DescriptorSetLayoutManager::DescriptorSetLayout::operator =
 
 size_t PipelineLayout::DescriptorSetLayoutManager::DescriptorSetLayout::GetHash()const
 {
-    size_t Hash = ComputeHash(NumLayoutBindings, TotalDescriptors);
+    size_t Hash = ComputeHash(SetIndex, NumLayoutBindings, TotalDescriptors);
     for (uint32_t b = 0; b < NumLayoutBindings; ++b)
     {
         const auto &B = pBindings[b];

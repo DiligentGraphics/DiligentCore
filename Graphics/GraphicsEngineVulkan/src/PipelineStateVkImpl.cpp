@@ -392,9 +392,7 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters *pRefCounters, Ren
         m_pDefaultShaderResBinding.reset( NEW_RC_OBJ(SRBAllocator, "ShaderResourceBindingVkImpl instance", ShaderResourceBindingVkImpl, this)(this, true) );
     }
 
-#if 0
-    m_ShaderResourceLayoutHash = m_RootSig.GetHash();
-#endif
+    m_ShaderResourceLayoutHash = m_PipelineLayout.GetHash();
 }
 
 PipelineStateVkImpl::~PipelineStateVkImpl()
