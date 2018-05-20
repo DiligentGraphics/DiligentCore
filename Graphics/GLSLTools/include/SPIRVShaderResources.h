@@ -118,8 +118,10 @@ struct SPIRVShaderResourceAttribs
 
     bool IsCompatibleWith(const SPIRVShaderResourceAttribs& Attibs)const
     {
-        return ArraySize     == Attibs.ArraySize && 
-               Type          == Attibs.Type;
+        return ArraySize == Attibs.ArraySize && 
+               Type      == Attibs.Type      &&
+               VarType   == Attibs.VarType && 
+               (StaticSamplerInd < 0 && Attibs.StaticSamplerInd < 0 || StaticSamplerInd >= 0 && Attibs.StaticSamplerInd >= 0);
     }
 };
 static_assert(sizeof(SPIRVShaderResourceAttribs) % sizeof(void*) == 0, "Size of SPIRVShaderResourceAttribs struct must be multiple of sizeof(void*)" );
@@ -253,9 +255,9 @@ public:
     }
 
     template<typename THandler>
-    void ProcessResources(const SHADER_VARIABLE_TYPE *AllowedVarTypes, 
-                          Uint32 NumAllowedTypes,
-                          THandler Handler)const
+    void ProcessResources(const SHADER_VARIABLE_TYPE* AllowedVarTypes, 
+                          Uint32                      NumAllowedTypes,
+                          THandler                    Handler)const
     {
         Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
 
@@ -269,7 +271,7 @@ public:
 
     std::string DumpResources();
 
-    //bool IsCompatibleWith(const ShaderResources &Resources)const;
+    bool IsCompatibleWith(const SPIRVShaderResources& Resources)const;
     
     //size_t GetHash()const;
 

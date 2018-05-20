@@ -456,12 +456,12 @@ bool PipelineStateVkImpl::IsCompatibleWith(const IPipelineState *pPSO)const
 
     if (pPSO == this)
         return true;
-#if 0
+
     const PipelineStateVkImpl *pPSOVk = ValidatedCast<const PipelineStateVkImpl>(pPSO);
     if (m_ShaderResourceLayoutHash != pPSOVk->m_ShaderResourceLayoutHash)
         return false;
 
-    auto IsSameRootSignature = m_RootSig.IsSameAs(pPSOVk->m_RootSig);
+    auto IsSamePipelineLayout = m_PipelineLayout.IsSameAs(pPSOVk->m_PipelineLayout);
 
 #ifdef _DEBUG
     {
@@ -480,8 +480,8 @@ bool PipelineStateVkImpl::IsCompatibleWith(const IPipelineState *pPSO)const
                     IsCompatibleShaders = false;
                     break;
                 }
-                const ShaderResourcesVk *pRes0 = pShader0->GetShaderResources().get();
-                const ShaderResourcesVk *pRes1 = pShader1->GetShaderResources().get();
+                const auto *pRes0 = pShader0->GetShaderResources().get();
+                const auto *pRes1 = pShader1->GetShaderResources().get();
                 if (!pRes0->IsCompatibleWith(*pRes1))
                 {
                     IsCompatibleShaders = false;
@@ -491,22 +491,20 @@ bool PipelineStateVkImpl::IsCompatibleWith(const IPipelineState *pPSO)const
         }
 
         if(IsCompatibleShaders)
-            VERIFY(IsSameRootSignature, "Compatible shaders must have same root signatures");
+            VERIFY(IsSamePipelineLayout, "Compatible shaders must have same pipeline layouts");
     }
 #endif
-    
-    return IsSameRootSignature;
-#endif
-    return true;
+
+    return IsSamePipelineLayout;
 }
 
 
-#if 0
-ShaderResourceCacheVk* PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBinding *pShaderResourceBinding, 
-                                                                                     CommandContext &Ctx,
-                                                                                     bool CommitResources,
-                                                                                     bool TransitionResources)const
+ShaderResourceCacheVk* PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBinding*               pShaderResourceBinding, 
+                                                                               VulkanUtilities::VulkanCommandBuffer& CmdBuff,
+                                                                               bool                                  CommitResources,
+                                                                               bool                                  TransitionResources)const
 {
+#if 0
 #ifdef VERIFY_SHADER_BINDINGS
     if (pShaderResourceBinding == nullptr &&
         (m_RootSig.GetTotalSrvCbvUavSlots(SHADER_VARIABLE_TYPE_MUTABLE) != 0 ||
@@ -559,9 +557,11 @@ ShaderResourceCacheVk* PipelineStateVkImpl::CommitAndTransitionShaderResources(I
         m_RootSig.TransitionResources(ResourceCache, Ctx);
     }
     return &ResourceCache;
+#endif
+    return nullptr;
 }
 
-
+#if 0
 bool PipelineStateVkImpl::dbgContainsShaderResources()const
 {
     return m_RootSig.GetTotalSrvCbvUavSlots(SHADER_VARIABLE_TYPE_STATIC) != 0 ||

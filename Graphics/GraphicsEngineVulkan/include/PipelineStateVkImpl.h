@@ -35,6 +35,7 @@
 #include "ShaderResourceLayoutVk.h"
 #include "AdaptiveFixedBlockAllocator.h"
 #include "VulkanUtilities/VulkanObjectWrappers.h"
+#include "VulkanUtilities/VulkanCommandBuffer.h"
 #include "PipelineLayout.h"
 
 /// Namespace for the Direct3D11 implementation of the graphics engine
@@ -63,10 +64,10 @@ public:
 
     virtual VkPipeline GetVkPipeline()const override final { return m_Pipeline; }
 
-    //ShaderResourceCacheVk* CommitAndTransitionShaderResources(IShaderResourceBinding *pShaderResourceBinding, 
-    //                                                             class CommandContext &Ctx,
-    //                                                             bool CommitResources,
-    //                                                             bool TransitionResources)const;
+    ShaderResourceCacheVk* CommitAndTransitionShaderResources(IShaderResourceBinding*               pShaderResourceBinding, 
+                                                              VulkanUtilities::VulkanCommandBuffer& CmdBuff,
+                                                              bool                                  CommitResources,
+                                                              bool                                  TransitionResources)const;
     
     const PipelineLayout& GetPipelineLayout()const{return m_PipelineLayout;}
     

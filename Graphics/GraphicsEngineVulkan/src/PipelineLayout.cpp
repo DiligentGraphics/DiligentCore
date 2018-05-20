@@ -196,8 +196,9 @@ PipelineLayout::DescriptorSetLayoutManager::DescriptorSetLayout::~DescriptorSetL
 
 bool PipelineLayout::DescriptorSetLayoutManager::DescriptorSetLayout::operator == (const DescriptorSetLayout& rhs)const
 {
-    if(NumLayoutBindings != rhs.NumLayoutBindings || 
-       TotalDescriptors  != rhs.TotalDescriptors)
+    if(TotalDescriptors  != rhs.TotalDescriptors ||
+       SetIndex          != rhs.SetIndex         ||
+       NumLayoutBindings != rhs.NumLayoutBindings)
         return false;
 
     for(uint32_t b=0; b < NumLayoutBindings; ++b)
@@ -213,14 +214,7 @@ bool PipelineLayout::DescriptorSetLayoutManager::DescriptorSetLayout::operator =
         if( B0.pImmutableSamplers != nullptr && B1.pImmutableSamplers == nullptr || 
             B0.pImmutableSamplers == nullptr && B1.pImmutableSamplers != nullptr)
             return false;
-        if(B0.pImmutableSamplers != nullptr && B1.pImmutableSamplers != nullptr)
-        {
-            // If descriptorType is VK_DESCRIPTOR_TYPE_SAMPLER or VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 
-            // and descriptorCount is not 0 and pImmutableSamplers is not NULL, pImmutableSamplers must be a 
-            // valid pointer to an array of descriptorCount valid VkSampler handles (13.2.1)
-            if(memcmp(B0.pImmutableSamplers, B1.pImmutableSamplers, sizeof(VkSampler) * B0.descriptorCount) != 0)
-                return false;
-        }
+        // Static samplers themselves should not affect compatibility
     }
     return true;
 }
@@ -290,7 +284,7 @@ PipelineLayout::DescriptorSetLayoutManager::~DescriptorSetLayoutManager()
 
 bool PipelineLayout::DescriptorSetLayoutManager::operator == (const DescriptorSetLayoutManager& rhs)const
 {
-    if(m_DescriptorSetLayouts.size() != rhs.m_DescriptorSetLayouts.size())
+    if(m_ActiveSets != rhs.m_ActiveSets)
         return false;
 
     for(size_t i=0; i < m_DescriptorSetLayouts.size(); ++i)

@@ -551,4 +551,31 @@ std::string SPIRVShaderResources::DumpResources()
     return ss.str();
 }
 
+
+
+bool SPIRVShaderResources::IsCompatibleWith(const SPIRVShaderResources& Resources)const
+{
+    if( GetNumUBs()            != Resources.GetNumUBs()            ||
+        GetNumSBs()            != Resources.GetNumSBs()            ||
+        GetNumImgs()           != Resources.GetNumImgs()           ||
+        GetNumSmplImgs()       != Resources.GetNumSmplImgs()       ||
+        GetNumACs()            != Resources.GetNumACs()            ||
+        GetNumSepImgs()        != Resources.GetNumSepImgs()        ||
+        GetNumSepSmpls()       != Resources.GetNumSepSmpls()       ||
+        GetNumStaticSamplers() != Resources.GetNumStaticSamplers() )
+        return false;
+    VERIFY_EXPR(GetTotalResources() == Resources.GetTotalResources());
+
+    bool IsCompatible = true;
+    ProcessResources(nullptr, 0,
+        [&](const SPIRVShaderResourceAttribs &Res, Uint32 n)
+        {
+            const auto &Res2 = Resources.GetResource(n);
+            if(!Res.IsCompatibleWith(Res2))
+                IsCompatible = false;
+        });
+
+    return IsCompatible;
+}
+
 }
