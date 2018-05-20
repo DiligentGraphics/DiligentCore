@@ -162,9 +162,9 @@ private:
     
     GenerateMipsHelper m_MipsGenerator;
     class DynamicUploadHeap* m_pUploadHeap = nullptr;
-    
+#endif
     class ShaderResourceCacheVk *m_pCommittedResourceCache = nullptr;
-
+#if 0
     FixedBlockMemoryAllocator m_CmdListAllocator;
     const Uint32 m_ContextId;
 #endif

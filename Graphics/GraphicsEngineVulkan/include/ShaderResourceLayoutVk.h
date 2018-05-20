@@ -265,7 +265,7 @@ public:
     // dbgResourceCache is only used for sanity check and as a remainder that the resource cache must be alive
     // while Layout is alive
     void BindResources( IResourceMapping* pResourceMapping, Uint32 Flags, const ShaderResourceCacheVk *dbgResourceCache );
-    IShaderVariable* GetShaderVariable( const Char* Name );
+    VkResource* GetShaderVariable( const Char* Name );
 
 #ifdef VERIFY_SHADER_BINDINGS
     void dbgVerifyBindings()const;

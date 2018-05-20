@@ -636,9 +636,9 @@ void ShaderResourceLayoutVk::BindResources( IResourceMapping* pResourceMapping, 
     }
 }
 
-IShaderVariable* ShaderResourceLayoutVk::GetShaderVariable(const Char* Name)
+ShaderResourceLayoutVk::VkResource* ShaderResourceLayoutVk::GetShaderVariable(const Char* Name)
 {
-    IShaderVariable* pVar = nullptr;
+    ShaderResourceLayoutVk::VkResource* pVar = nullptr;
 #if USE_VARIABLE_HASH_MAP
     // Name will be implicitly converted to HashMapStringKey without making a copy
     auto it = m_VariableHash.find( Name );
@@ -679,7 +679,8 @@ void ShaderResourceLayoutVk::InitializeStaticResources(const ShaderResourceLayou
         return;
     }
 
-    VERIFY(m_NumResources[SHADER_VARIABLE_TYPE_STATIC] == SrcLayout.m_NumResources[SHADER_VARIABLE_TYPE_STATIC], "Inconsistent number of static resources");
+    auto NumStaticResources = m_NumResources[SHADER_VARIABLE_TYPE_STATIC];
+    VERIFY(NumStaticResources == SrcLayout.m_NumResources[SHADER_VARIABLE_TYPE_STATIC], "Inconsistent number of static resources");
     VERIFY(SrcLayout.m_pResources->GetShaderType() == m_pResources->GetShaderType(), "Incosistent shader types");
 
     // Static shader resources are stored as follows:
@@ -693,13 +694,17 @@ void ShaderResourceLayoutVk::InitializeStaticResources(const ShaderResourceLayou
     // Separate images   at index SPIRVShaderResourceAttribs::ResourceType::SeparateImage      (7)
     // Separate samplers at index SPIRVShaderResourceAttribs::ResourceType::SeparateSampler    (8)
 
-    for(Uint32 r=0; r < m_NumResources[SHADER_VARIABLE_TYPE_STATIC]; ++r)
+    for(Uint32 r=0; r < NumStaticResources; ++r)
     {
         // Get resource attributes
         auto &DstRes = GetResource(SHADER_VARIABLE_TYPE_STATIC, r);
         const auto &SrcRes = SrcLayout.GetResource(SHADER_VARIABLE_TYPE_STATIC, r);
         VERIFY(SrcRes.Binding == r, "Unexpected binding");
         VERIFY(SrcRes.SpirvAttribs.ArraySize == DstRes.SpirvAttribs.ArraySize, "Inconsistent array size");
+
+        if(DstRes.SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler && 
+           DstRes.SpirvAttribs.StaticSamplerInd >= 0)
+            continue; // Skip static samplers
 
         for(Uint32 ArrInd = 0; ArrInd < DstRes.SpirvAttribs.ArraySize; ++ArrInd)
         {
@@ -712,7 +717,7 @@ void ShaderResourceLayoutVk::InitializeStaticResources(const ShaderResourceLayou
             IDeviceObject *pCachedResource = m_pResourceCache->GetDescriptorSet(DstRes.DescriptorSet).GetResource(DstOffset).pObject;
             if(pCachedResource != pObject)
             {
-                VERIFY(pObject == nullptr, "Static resource has already been initialized, and the resource to be assigned from the shader does not match previously assigned resource");
+                VERIFY(pCachedResource == nullptr, "Static resource has already been initialized, and the resource to be assigned from the shader does not match previously assigned resource");
                 DstRes.SetArray(&pObject, ArrInd, 1);
             }
         }
@@ -735,20 +740,23 @@ void ShaderResourceLayoutVk::dbgVerifyBindings()const
             {
                 auto &CachedDescrSet = m_pResourceCache->GetDescriptorSet(Res.DescriptorSet);
                 const auto &CachedRes = CachedDescrSet.GetResource(Res.CacheOffset + ArrInd);
-                if(CachedRes.pObject == nullptr)
+                if(CachedRes.pObject == nullptr && 
+                   !(Res.SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler && Res.SpirvAttribs.StaticSamplerInd >= 0))
                 {
                     LOG_ERROR_MESSAGE("No resource is bound to ", GetShaderVariableTypeLiteralName(Res.SpirvAttribs.VarType), " variable \"", Res.SpirvAttribs.GetPrintName(ArrInd), "\" in shader \"", GetShaderName(), "\"");
                 }
-                if(VarType == SHADER_VARIABLE_TYPE_DYNAMIC )
-                {
-                    if (CachedDescrSet.GetVkDescriptorSet() == VK_NULL_HANDLE)
-                        LOG_ERROR_MESSAGE("Dynamic resources should not have Vulkan descriptor set in the cache");
-                }
+#ifdef _DEBUG
+                auto vkDescSet = CachedDescrSet.GetVkDescriptorSet();
+                auto dbgCacheContentType = m_pResourceCache->DbgGetContentType();
+                if(dbgCacheContentType == ShaderResourceCacheVk::DbgCacheContentType::StaticShaderResources)
+                    VERIFY(vkDescSet == VK_NULL_HANDLE, "Static resource cache should never have vulkan descriptor set");
+                else if (dbgCacheContentType == ShaderResourceCacheVk::DbgCacheContentType::SRBResources)
+                    VERIFY(VarType == SHADER_VARIABLE_TYPE_DYNAMIC && vkDescSet == VK_NULL_HANDLE ||
+                           VarType != SHADER_VARIABLE_TYPE_DYNAMIC && vkDescSet != VK_NULL_HANDLE,
+                           "Static and mutable resources (and only them) must have non-null vulkan descriptor set assigned");
                 else
-                {
-                    if(CachedDescrSet.GetVkDescriptorSet() != VK_NULL_HANDLE)
-                        LOG_ERROR_MESSAGE("Static and mutable resources must have non-null vulkan descriptor set assigned"); 
-                }
+                    UNEXPECTED("Unexpected cache content type");
+#endif
             }
         }
     }

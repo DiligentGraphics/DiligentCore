@@ -74,10 +74,8 @@ void ShaderVkImpl::BindResources(IResourceMapping* pResourceMapping, Uint32 Flag
     
 IShaderVariable* ShaderVkImpl::GetShaderVariable(const Char* Name)
 {
-    auto *pVar = m_StaticResLayout.GetShaderVariable(Name);
-    if(pVar == nullptr)
-        pVar = &m_DummyShaderVar;
-    return pVar;
+    IShaderVariable *pVar = m_StaticResLayout.GetShaderVariable(Name);
+    return (pVar != nullptr) ? pVar : &m_DummyShaderVar;
 }
 
 #ifdef VERIFY_SHADER_BINDINGS

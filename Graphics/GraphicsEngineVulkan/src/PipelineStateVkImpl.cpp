@@ -502,11 +502,8 @@ ShaderResourceCacheVk* PipelineStateVkImpl::CommitAndTransitionShaderResources(I
                                                                                bool                                  CommitResources,
                                                                                bool                                  TransitionResources)const
 {
-#if 0
 #ifdef VERIFY_SHADER_BINDINGS
-    if (pShaderResourceBinding == nullptr &&
-        (m_RootSig.GetTotalSrvCbvUavSlots(SHADER_VARIABLE_TYPE_MUTABLE) != 0 ||
-         m_RootSig.GetTotalSrvCbvUavSlots(SHADER_VARIABLE_TYPE_DYNAMIC) != 0))
+    if (pShaderResourceBinding == nullptr && !m_pDefaultShaderResBinding)
     {
         LOG_ERROR_MESSAGE("Pipeline state \"", m_Desc.Name, "\" contains mutable/dynamic shader variables and requires shader resource binding to commit all resources, but none is provided.");
     }
@@ -537,6 +534,7 @@ ShaderResourceCacheVk* PipelineStateVkImpl::CommitAndTransitionShaderResources(I
 
     auto *pDeviceVkImpl = ValidatedCast<RenderDeviceVkImpl>( GetDevice() );
     auto &ResourceCache = pResBindingVkImpl->GetResourceCache();
+#if 0
     if(CommitResources)
     {
         if(m_Desc.IsComputePipeline)
@@ -554,9 +552,8 @@ ShaderResourceCacheVk* PipelineStateVkImpl::CommitAndTransitionShaderResources(I
         VERIFY(TransitionResources, "Resources should be transitioned or committed or both");
         m_RootSig.TransitionResources(ResourceCache, Ctx);
     }
-    return &ResourceCache;
 #endif
-    return nullptr;
+    return &ResourceCache;
 }
 
 #if 0

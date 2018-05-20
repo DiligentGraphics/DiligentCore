@@ -202,12 +202,11 @@ namespace Diligent
     {
         if (!DeviceContextBase::CommitShaderResources<PipelineStateVkImpl>(pShaderResourceBinding, Flags, 0 /*Dummy*/))
             return;
-#if 0
-        auto *pCtx = RequestCmdContext();
+
+        EnsureVkCmdBuffer();
         auto *pPipelineStateVk = m_pPipelineState.RawPtr<PipelineStateVkImpl>();
 
-        m_pCommittedResourceCache = pPipelineStateVk->CommitAndTransitionShaderResources(pShaderResourceBinding, *pCtx, true, (Flags & COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES)!=0);
-#endif
+        m_pCommittedResourceCache = pPipelineStateVk->CommitAndTransitionShaderResources(pShaderResourceBinding, m_CommandBuffer, true, (Flags & COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES)!=0);
     }
 
     void DeviceContextVkImpl::SetStencilRef(Uint32 StencilRef)

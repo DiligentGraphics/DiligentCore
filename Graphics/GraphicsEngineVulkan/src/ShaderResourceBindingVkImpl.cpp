@@ -95,10 +95,16 @@ IShaderVariable *ShaderResourceBindingVkImpl::GetVariable(SHADER_TYPE ShaderType
         return ValidatedCast<PipelineStateVkImpl>(GetPipelineState())->GetDummyShaderVar();
     }
     auto *pVar = m_pResourceLayouts[ResLayoutInd].GetShaderVariable(Name);
-    if(pVar == nullptr)
-        pVar = ValidatedCast<PipelineStateVkImpl>(GetPipelineState())->GetDummyShaderVar();
+    if(pVar->SpirvAttribs.VarType == SHADER_VARIABLE_TYPE_STATIC)
+    {
+        LOG_ERROR_MESSAGE("Static shader variable \"", Name, "\" must not be accessed through shader resource binding object. Static variable should be set through shader objects.");
+        pVar = nullptr;
+    }
 
-    return pVar;
+    if(pVar == nullptr)
+        return ValidatedCast<PipelineStateVkImpl>(GetPipelineState())->GetDummyShaderVar();
+    else
+        return pVar;
 }
 
 #ifdef VERIFY_SHADER_BINDINGS
