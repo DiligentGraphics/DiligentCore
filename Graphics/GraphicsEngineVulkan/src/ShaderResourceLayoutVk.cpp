@@ -325,7 +325,6 @@ void ShaderResourceLayoutVk::VkResource::UpdateDescriptorHandle(VkDescriptorSet 
     WriteDescrSet.pTexelBufferView = pTexelBufferView;
 
     ParentResLayout.m_pLogicalDevice->UpdateDescriptorSets(1, &WriteDescrSet, 0, nullptr);
-
 }
 
 bool ShaderResourceLayoutVk::VkResource::UpdateCachedResource(ShaderResourceCacheVk::Resource&   DstRes,

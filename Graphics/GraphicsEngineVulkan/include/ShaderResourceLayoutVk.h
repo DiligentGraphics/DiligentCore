@@ -322,7 +322,7 @@ private:
     
     // There is no need to use shared ptr as referenced resource cache is either part of the
     // parent ShaderVkImpl object or ShaderResourceBindingVkImpl object
-    ShaderResourceCacheVk *m_pResourceCache;
+    ShaderResourceCacheVk *m_pResourceCache = nullptr;
 
     std::unique_ptr<void, STDDeleterRawMem<void> > m_ResourceBuffer;
     std::array<Uint16, SHADER_VARIABLE_TYPE_NUM_TYPES> m_NumResources = {};
