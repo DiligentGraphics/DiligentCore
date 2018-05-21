@@ -284,6 +284,31 @@ namespace VulkanUtilities
             TransitionImageLayout(m_VkCmdBuffer, Image, OldLayout, NewLayout, SubresRange, SrcStages, DestStages);
         }
 
+
+        static void BufferMemoryBarrier(VkCommandBuffer      CmdBuffer,
+                                        VkBuffer             Buffer, 
+                                        VkAccessFlags        srcAccessMask,
+                                        VkAccessFlags        dstAccessMask,
+                                        VkPipelineStageFlags SrcStages,
+                                        VkPipelineStageFlags DestStages);
+
+        void BufferMemoryBarrier(VkBuffer             Buffer, 
+                                 VkAccessFlags        srcAccessMask,
+                                 VkAccessFlags        dstAccessMask,
+                                 VkPipelineStageFlags SrcStages = 0,
+                                 VkPipelineStageFlags DestStages = 0)
+        {
+            VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
+            if(m_State.RenderPass  != VK_NULL_HANDLE)
+            {
+                // Image layout transitions within a render pass execute
+                // dependencies between attachments
+                EndRenderPass();
+            }
+            BufferMemoryBarrier(m_VkCmdBuffer, Buffer, srcAccessMask, dstAccessMask, SrcStages, DestStages);
+        }
+
+
         void FlushBarriers();
 
         void SetVkCmdBuffer(VkCommandBuffer VkCmdBuffer)

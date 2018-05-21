@@ -542,7 +542,9 @@ void PipelineLayout::InitResourceCache(RenderDeviceVkImpl *pDeviceVkImpl, Shader
         SetSizes[DynamicSet.SetIndex] = DynamicSet.TotalDescriptors;
     }
   
-    ResourceCache.Initialize(CacheMemAllocator, NumSets, SetSizes.data());
+    // This call only initializes descriptor sets (ShaderResourceCacheVk::DescriptorSet) in the resource cache
+    // Resources are initialized when shader resource layout objects are created and attached to the cache
+    ResourceCache.InitializeSets(CacheMemAllocator, NumSets, SetSizes.data());
     if (StaticAndMutSet.SetIndex >= 0)
     {
         ResourceCache.GetDescriptorSet(StaticAndMutSet.SetIndex).AssignDescriptorSetAllocation(std::move(SetAllocation));
@@ -654,149 +656,7 @@ void PipelineLayout::InitResourceCache(RenderDeviceVkImpl *pDeviceVkImpl, Shader
 }
 
 #if 0
-const Vk_RESOURCE_STATES Vk_RESOURCE_STATE_SHADER_RESOURCE  = Vk_RESOURCE_STATE_PIXEL_SHADER_RESOURCE | Vk_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
 
-__forceinline
-void TransitionResource(CommandContext &Ctx, 
-                        ShaderResourceCacheVk::Resource &Res,
-                        Vk_DESCRIPTOR_RANGE_TYPE RangeType)
-{
-    switch (Res.Type)
-    {
-        case CachedResourceType::CBV:
-        {
-            VERIFY(RangeType == Vk_DESCRIPTOR_RANGE_TYPE_CBV, "Unexpected descriptor range type");
-            // Not using QueryInterface() for the sake of efficiency
-            auto *pBuffToTransition = Res.pObject.RawPtr<BufferVkImpl>();
-            if( !pBuffToTransition->CheckAllStates(Vk_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER) )
-                Ctx.TransitionResource(pBuffToTransition, Vk_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER );
-        }
-        break;
-
-        case CachedResourceType::BufSRV:
-        {
-            VERIFY(RangeType == Vk_DESCRIPTOR_RANGE_TYPE_SRV, "Unexpected descriptor range type");
-            auto *pBuffViewVk = Res.pObject.RawPtr<BufferViewVkImpl>();
-            auto *pBuffToTransition = ValidatedCast<BufferVkImpl>(pBuffViewVk->GetBuffer());
-            if( !pBuffToTransition->CheckAllStates(Vk_RESOURCE_STATE_SHADER_RESOURCE) )
-                Ctx.TransitionResource(pBuffToTransition, Vk_RESOURCE_STATE_SHADER_RESOURCE );
-        }
-        break;
-
-        case CachedResourceType::BufUAV:
-        {
-            VERIFY(RangeType == Vk_DESCRIPTOR_RANGE_TYPE_UAV, "Unexpected descriptor range type");
-            auto *pBuffViewVk = Res.pObject.RawPtr<BufferViewVkImpl>();
-            auto *pBuffToTransition = ValidatedCast<BufferVkImpl>(pBuffViewVk->GetBuffer());
-            if( !pBuffToTransition->CheckAllStates(Vk_RESOURCE_STATE_UNORDERED_ACCESS) )
-                Ctx.TransitionResource(pBuffToTransition, Vk_RESOURCE_STATE_UNORDERED_ACCESS );
-        }
-        break;
-
-        case CachedResourceType::TexSRV:
-        {
-            VERIFY(RangeType == Vk_DESCRIPTOR_RANGE_TYPE_SRV, "Unexpected descriptor range type");
-            auto *pTexViewVk = Res.pObject.RawPtr<TextureViewVkImpl>();
-            auto *pTexToTransition = ValidatedCast<TextureVkImpl>(pTexViewVk->GetTexture());
-            if( !pTexToTransition->CheckAllStates(Vk_RESOURCE_STATE_SHADER_RESOURCE) )
-                Ctx.TransitionResource(pTexToTransition, Vk_RESOURCE_STATE_SHADER_RESOURCE );
-        }
-        break;
-
-        case CachedResourceType::TexUAV:
-        {
-            VERIFY(RangeType == Vk_DESCRIPTOR_RANGE_TYPE_UAV, "Unexpected descriptor range type");
-            auto *pTexViewVk = Res.pObject.RawPtr<TextureViewVkImpl>();
-            auto *pTexToTransition = ValidatedCast<TextureVkImpl>(pTexViewVk->GetTexture());
-            if( !pTexToTransition->CheckAllStates(Vk_RESOURCE_STATE_UNORDERED_ACCESS) )
-                Ctx.TransitionResource(pTexToTransition, Vk_RESOURCE_STATE_UNORDERED_ACCESS );
-        }
-        break;
-
-        case CachedResourceType::Sampler:
-            VERIFY(RangeType == Vk_DESCRIPTOR_RANGE_TYPE_SAMPLER, "Unexpected descriptor range type");
-        break;
-
-        default:
-            // Resource not bound
-            VERIFY(Res.Type == CachedResourceType::Unknown, "Unexpected resource type");
-            VERIFY(Res.pObject == nullptr && Res.CPUDescriptorHandle.ptr == 0, "Bound resource is unexpected");
-    }
-}
-
-
-#ifdef _DEBUG
-void DbgVerifyResourceState(ShaderResourceCacheVk::Resource &Res,
-                            Vk_DESCRIPTOR_RANGE_TYPE RangeType)
-{
-    switch (Res.Type)
-    {
-        case CachedResourceType::CBV:
-        {
-            VERIFY(RangeType == Vk_DESCRIPTOR_RANGE_TYPE_CBV, "Unexpected descriptor range type");
-            // Not using QueryInterface() for the sake of efficiency
-            auto *pBuffToTransition = Res.pObject.RawPtr<BufferVkImpl>();
-            auto State = pBuffToTransition->GetState();
-            if( (State & Vk_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER) != Vk_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER )
-                LOG_ERROR_MESSAGE("Resource \"", pBuffToTransition->GetDesc().Name, "\" is not in Vk_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER state. Did you forget to call TransitionShaderResources() or specify COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag in a call to CommitShaderResources()?" );
-        }
-        break;
-
-        case CachedResourceType::BufSRV:
-        {
-            VERIFY(RangeType == Vk_DESCRIPTOR_RANGE_TYPE_SRV, "Unexpected descriptor range type");
-            auto *pBuffViewVk = Res.pObject.RawPtr<BufferViewVkImpl>();
-            auto *pBuffToTransition = ValidatedCast<BufferVkImpl>(pBuffViewVk->GetBuffer());
-            auto State = pBuffToTransition->GetState();
-            if( (State & Vk_RESOURCE_STATE_SHADER_RESOURCE) != Vk_RESOURCE_STATE_SHADER_RESOURCE )
-                LOG_ERROR_MESSAGE("Resource \"", pBuffToTransition->GetDesc().Name, "\" is not in correct state. Did you forget to call TransitionShaderResources() or specify COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag in a call to CommitShaderResources()?" );
-        }
-        break;
-
-        case CachedResourceType::BufUAV:
-        {
-            VERIFY(RangeType == Vk_DESCRIPTOR_RANGE_TYPE_UAV, "Unexpected descriptor range type");
-            auto *pBuffViewVk = Res.pObject.RawPtr<BufferViewVkImpl>();
-            auto *pBuffToTransition = ValidatedCast<BufferVkImpl>(pBuffViewVk->GetBuffer());
-            auto State = pBuffToTransition->GetState();
-            if( (State & Vk_RESOURCE_STATE_UNORDERED_ACCESS) != Vk_RESOURCE_STATE_UNORDERED_ACCESS )
-                LOG_ERROR_MESSAGE("Resource \"", pBuffToTransition->GetDesc().Name, "\" is not in Vk_RESOURCE_STATE_UNORDERED_ACCESS state. Did you forget to call TransitionShaderResources() or specify COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag in a call to CommitShaderResources()?" );
-        }
-        break;
-
-        case CachedResourceType::TexSRV:
-        {
-            VERIFY(RangeType == Vk_DESCRIPTOR_RANGE_TYPE_SRV, "Unexpected descriptor range type");
-            auto *pTexViewVk = Res.pObject.RawPtr<TextureViewVkImpl>();
-            auto *pTexToTransition = ValidatedCast<TextureVkImpl>(pTexViewVk->GetTexture());
-            auto State = pTexToTransition->GetState();
-            if( (State & Vk_RESOURCE_STATE_SHADER_RESOURCE) != Vk_RESOURCE_STATE_SHADER_RESOURCE )
-                LOG_ERROR_MESSAGE("Resource \"", pTexToTransition->GetDesc().Name, "\" is not in correct state. Did you forget to call TransitionShaderResources() or specify COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag in a call to CommitShaderResources()?" );
-        }
-        break;
-
-        case CachedResourceType::TexUAV:
-        {
-            VERIFY(RangeType == Vk_DESCRIPTOR_RANGE_TYPE_UAV, "Unexpected descriptor range type");
-            auto *pTexViewVk = Res.pObject.RawPtr<TextureViewVkImpl>();
-            auto *pTexToTransition = ValidatedCast<TextureVkImpl>(pTexViewVk->GetTexture());
-            auto State = pTexToTransition->GetState();
-            if( (State & Vk_RESOURCE_STATE_UNORDERED_ACCESS) != Vk_RESOURCE_STATE_UNORDERED_ACCESS )
-                LOG_ERROR_MESSAGE("Resource \"", pTexToTransition->GetDesc().Name, "\" is not in Vk_RESOURCE_STATE_UNORDERED_ACCESS state. Did you forget to call TransitionShaderResources() or specify COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag in a call to CommitShaderResources()?" );
-        }
-        break;
-
-        case CachedResourceType::Sampler:
-            VERIFY(RangeType == Vk_DESCRIPTOR_RANGE_TYPE_SAMPLER, "Unexpected descriptor range type");
-        break;
-
-        default:
-            // Resource not bound
-            VERIFY(Res.Type == CachedResourceType::Unknown, "Unexpected resource type");
-            VERIFY(Res.pObject == nullptr && Res.CPUDescriptorHandle.ptr == 0, "Bound resource is unexpected");
-    }
-}
-#endif
 
 template<class TOperation>
 __forceinline void PipelineLayout::DescriptorSetLayoutManager::ProcessRootTables(TOperation Operation)const

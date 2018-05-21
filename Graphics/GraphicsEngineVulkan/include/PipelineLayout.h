@@ -31,6 +31,7 @@
 #include "ShaderResourceLayoutVk.h"
 #include "VulkanUtilities/VulkanObjectWrappers.h"
 #include "VulkanUtilities/VulkanLogicalDevice.h"
+#include "VulkanUtilities/VulkanCommandBuffer.h"
 
 namespace Diligent
 {
@@ -59,6 +60,8 @@ public:
                               Uint32&                           OffsetInCache,
                               std::vector<uint32_t>&            SPIRV);
 
+    // This method should be thread-safe as it does not modify any object state
+
 #if 0
     // This method should be thread-safe as it does not modify any object state
     void (PipelineLayout::*CommitDescriptorHandles)(RenderDeviceVkImpl *pRenderDeviceVk, 
@@ -70,15 +73,8 @@ public:
                                                                 ShaderResourceCacheVk& ResourceCache, 
                                                                 class CommandContext &Ctx, 
                                                                 bool IsCompute)const = nullptr;
-
-    void TransitionResources(ShaderResourceCacheVk& ResourceCache, 
-                             class CommandContext &Ctx)const;
-
-    void CommitRootViews(ShaderResourceCacheVk& ResourceCache, 
-                         class CommandContext &Ctx, 
-                         bool IsCompute,
-                         Uint32 ContextId)const;
 #endif
+
     Uint32 GetTotalDescriptors(SHADER_VARIABLE_TYPE VarType)const
     {
         VERIFY_EXPR(VarType >= 0 && VarType < SHADER_VARIABLE_TYPE_NUM_TYPES);
@@ -162,21 +158,6 @@ private:
 
     IMemoryAllocator &m_MemAllocator;
     DescriptorSetLayoutManager m_LayoutMgr;
-
-#if 0
-    // Commits descriptor handles for static and mutable variables
-    template<bool PerformResourceTransitions>
-    void CommitDescriptorHandlesInternal_SM(RenderDeviceVkImpl *pRenderDeviceVk, 
-                                            ShaderResourceCacheVk& ResourceCache, 
-                                            class CommandContext &Ctx, 
-                                            bool IsCompute)const;
-    template<bool PerformResourceTransitions>
-    // Commits descriptor handles for static, mutable, and dynamic variables
-    void CommitDescriptorHandlesInternal_SMD(RenderDeviceVkImpl *pRenderDeviceVk, 
-                                            ShaderResourceCacheVk& ResourceCache, 
-                                            class CommandContext &Ctx, 
-                                            bool IsCompute)const;
-#endif
 };
 
 }

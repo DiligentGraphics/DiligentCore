@@ -57,9 +57,12 @@
 // Dynamic resources are not VkDescriptorSet 
 
 #include "DescriptorPoolManager.h"
+#include "SPIRVShaderResources.h"
 
 namespace Diligent
 {
+
+class DeviceContextVkImpl;
 
 class ShaderResourceCacheVk
 {
@@ -80,10 +83,12 @@ public:
 
     ~ShaderResourceCacheVk();
 
-    void Initialize(IMemoryAllocator &MemAllocator, Uint32 NumSets, Uint32 SetSizes[]);
+    void InitializeSets(IMemoryAllocator &MemAllocator, Uint32 NumSets, Uint32 SetSizes[]);
+    void InitializeResources(Uint32 Set, Uint32 Offset, Uint32 ArraySize, SPIRVShaderResourceAttribs::ResourceType Type);
 
     struct Resource
     {
+        const SPIRVShaderResourceAttribs::ResourceType Type;
         RefCntAutoPtr<IDeviceObject> pObject;
     };
 
@@ -134,15 +139,19 @@ public:
     DbgCacheContentType DbgGetContentType()const{return m_DbgContentType;}
 #endif
 
+    template<bool VerifyOnly>
+    void TransitionResources(DeviceContextVkImpl *pCtxVkImpl);
+    
 private:
     ShaderResourceCacheVk             (const ShaderResourceCacheVk&) = delete;
     ShaderResourceCacheVk             (ShaderResourceCacheVk&&)      = delete;
     ShaderResourceCacheVk& operator = (const ShaderResourceCacheVk&) = delete;
     ShaderResourceCacheVk& operator = (ShaderResourceCacheVk&&)      = delete;
     
-    IMemoryAllocator*   m_pAllocator = nullptr; 
-    void*               m_pMemory    = nullptr;
-    Uint32              m_NumSets    = 0;
+    IMemoryAllocator*   m_pAllocator     = nullptr; 
+    void*               m_pMemory        = nullptr;
+    Uint32              m_NumSets        = 0;
+    Uint32              m_TotalResources = 0;
 
 #ifdef _DEBUG
     // Only for debug purposes: indicates what types of resources are stored in the cache

@@ -270,7 +270,8 @@ void ShaderResourceLayoutVk::Initialize(const VulkanUtilities::VulkanLogicalDevi
     {
         // Initialize resource cache to store static resources
         VERIFY_EXPR(pPipelineLayout == nullptr && pSPIRV == nullptr);
-        m_pResourceCache->Initialize(GetRawAllocator(), static_cast<Uint32>(StaticResCacheSetSizes.size()), StaticResCacheSetSizes.data());
+        m_pResourceCache->InitializeSets(GetRawAllocator(), static_cast<Uint32>(StaticResCacheSetSizes.size()), StaticResCacheSetSizes.data());
+        InitializeResourcesInCache();
 #ifdef _DEBUG
         for(SPIRVShaderResourceAttribs::ResourceType ResType = SPIRVShaderResourceAttribs::ResourceType::UniformBuffer; 
             ResType < SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes;
@@ -479,6 +480,9 @@ void ShaderResourceLayoutVk::VkResource::CacheImage(IDeviceObject*              
                 }
             }
             DescrImgInfo.imageView = pTexViewVk->GetVulkanImageView();
+            // If descriptorType is VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, for each descriptor that will be accessed 
+            // via load or store operations the imageLayout member for corresponding elements of pImageInfo 
+            // must be VK_IMAGE_LAYOUT_GENERAL (13.2.4)
             DescrImgInfo.imageLayout = IsStorageImage ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
             UpdateDescriptorHandle(vkDescrSet, ArrayInd, &DescrImgInfo, nullptr, nullptr);
         }
@@ -529,6 +533,7 @@ void ShaderResourceLayoutVk::VkResource::BindResource(IDeviceObject *pObj, Uint3
     }
 #endif
     auto &DstRes = DstDescrSet.GetResource(CacheOffset + ArrayIndex);
+    VERIFY(DstRes.Type == SpirvAttribs.Type, "Inconsistent types");
 
     if( pObj )
     {
@@ -571,7 +576,7 @@ void ShaderResourceLayoutVk::VkResource::BindResource(IDeviceObject *pObj, Uint3
             LOG_ERROR_MESSAGE( "Shader variable \"", SpirvAttribs.Name, "\" in shader \"", ParentResLayout.GetShaderName(), "\" is not dynamic but being unbound. This is an error and may cause unpredicted behavior. Use another shader resource binding instance or label shader variable as dynamic if you need to bind another resource." );
         }
 
-        DstRes = ShaderResourceCacheVk::Resource();
+        DstRes.pObject.Release();
     }
 }
 
@@ -740,6 +745,7 @@ void ShaderResourceLayoutVk::dbgVerifyBindings()const
             {
                 auto &CachedDescrSet = m_pResourceCache->GetDescriptorSet(Res.DescriptorSet);
                 const auto &CachedRes = CachedDescrSet.GetResource(Res.CacheOffset + ArrInd);
+                VERIFY(CachedRes.Type == Res.SpirvAttribs.Type, "Inconsistent types");
                 if(CachedRes.pObject == nullptr && 
                    !(Res.SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler && Res.SpirvAttribs.StaticSamplerInd >= 0))
                 {
@@ -794,6 +800,16 @@ const Char* ShaderResourceLayoutVk::GetShaderName()const
         }
     }
     return "";
+}
+
+void ShaderResourceLayoutVk::InitializeResourcesInCache()
+{
+    VERIFY_EXPR(m_pResourceCache);
+    for(Uint32 r = 0; r < GetTotalResourceCount(); ++r)
+    {
+        const auto& Res = GetResource(r);
+        m_pResourceCache->InitializeResources(Res.DescriptorSet, Res.CacheOffset, Res.SpirvAttribs.ArraySize, Res.SpirvAttribs.Type);
+    }
 }
 
 }

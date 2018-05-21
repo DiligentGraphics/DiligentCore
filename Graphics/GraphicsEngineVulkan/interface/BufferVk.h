@@ -44,10 +44,10 @@ public:
     /// Returns a vulkan buffer handle
     virtual VkBuffer GetVkBuffer() = 0;
 
-    /// Sets the buffer usage state
+    /// Sets vulkan access flags
 
-    /// \param [in] state - D3D12 resource state to be set for this buffer
-    //virtual void SetD3D12ResourceState(D3D12_RESOURCE_STATES state) = 0;
+    /// \param [in] AccessFlags - Vulkan access flags to be set for this buffer
+    virtual void SetAccessFlags(VkAccessFlags AccessFlags) = 0;
 };
 
 }

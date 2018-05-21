@@ -86,7 +86,11 @@ public:
 
     virtual void ExecuteCommandList(class ICommandList *pCommandList)override final;
 
+    void TransitionImageLayout(class TextureVkImpl &TextureVk, VkImageLayout NewLayout);
     virtual void TransitionImageLayout(ITexture *pTexture, VkImageLayout NewLayout)override final;
+
+    void BufferMemoryBarrier(class BufferVkImpl &BufferVk, VkAccessFlags NewAccessFlags);
+    virtual void BufferMemoryBarrier(IBuffer *pBuffer, VkAccessFlags NewAccessFlags)override final;
 
     void AddWaitSemaphore(VkSemaphore Semaphore, VkPipelineStageFlags WaitDstStageMask)
     {

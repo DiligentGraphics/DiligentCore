@@ -154,9 +154,11 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters *pRefCounters,
         bool bInitializeBuffer = (BuffData.pData != nullptr && BuffData.DataSize > 0);
         //if(bInitializeBuffer)
         //    m_UsageState = Vk_RESOURCE_STATE_COPY_DEST;
-
-	    if( bInitializeBuffer )
+        
+        if( bInitializeBuffer )
         {
+            m_AccessFlags = VK_ACCESS_TRANSFER_WRITE_BIT;
+
             VkBufferCreateInfo VkStaginBuffCI = VkBuffCI;
             VkStaginBuffCI.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 
@@ -247,6 +249,10 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters *pRefCounters,
             // submitting command list for execution!
             pRenderDeviceVk->SafeReleaseVkObject(std::move(StagingBuffer));
             pRenderDeviceVk->SafeReleaseVkObject(std::move(StagingBufferMemory));
+        }
+        else
+        {
+            m_AccessFlags = 0;
         }
 
         //if (m_Desc.BindFlags & BIND_UNIFORM_BUFFER)

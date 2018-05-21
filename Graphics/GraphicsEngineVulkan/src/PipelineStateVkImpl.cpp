@@ -497,10 +497,10 @@ bool PipelineStateVkImpl::IsCompatibleWith(const IPipelineState *pPSO)const
 }
 
 
-ShaderResourceCacheVk* PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBinding*               pShaderResourceBinding, 
-                                                                               VulkanUtilities::VulkanCommandBuffer& CmdBuff,
-                                                                               bool                                  CommitResources,
-                                                                               bool                                  TransitionResources)const
+ShaderResourceCacheVk* PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBinding*   pShaderResourceBinding, 
+                                                                               DeviceContextVkImpl*      pCtxVkImpl,
+                                                                               bool                      CommitResources,
+                                                                               bool                      TransitionResources)const
 {
 #ifdef VERIFY_SHADER_BINDINGS
     if (pShaderResourceBinding == nullptr && !m_pDefaultShaderResBinding)
@@ -532,36 +532,32 @@ ShaderResourceCacheVk* PipelineStateVkImpl::CommitAndTransitionShaderResources(I
     pResBindingVkImpl->dbgVerifyResourceBindings(this);
 #endif
 
-    auto *pDeviceVkImpl = ValidatedCast<RenderDeviceVkImpl>( GetDevice() );
+    //auto *pDeviceVkImpl = ValidatedCast<RenderDeviceVkImpl>( GetDevice() );
     auto &ResourceCache = pResBindingVkImpl->GetResourceCache();
-#if 0
+
     if(CommitResources)
     {
-        if(m_Desc.IsComputePipeline)
-            Ctx.AsComputeContext().SetRootSignature( GetVkRootSignature() );
-        else
-            Ctx.AsGraphicsContext().SetRootSignature( GetVkRootSignature() );
-
         if(TransitionResources)
-            (m_RootSig.*m_RootSig.TransitionAndCommitDescriptorHandles)(pDeviceVkImpl, ResourceCache, Ctx, m_Desc.IsComputePipeline);
+            ResourceCache.TransitionResources<false>(pCtxVkImpl);
         else
-            (m_RootSig.*m_RootSig.CommitDescriptorHandles)(pDeviceVkImpl, ResourceCache, Ctx, m_Desc.IsComputePipeline);
+        {
+#ifdef VERIFY_SHADER_BINDINGS
+            ResourceCache.TransitionResources<true>(pCtxVkImpl);
+#endif
+        }
+
+        //if(m_Desc.IsComputePipeline)
+        //    Ctx.AsComputeContext().SetRootSignature( GetVkRootSignature() );
+        //else
+        //    Ctx.AsGraphicsContext().SetRootSignature( GetVkRootSignature() );
     }
     else
     {
         VERIFY(TransitionResources, "Resources should be transitioned or committed or both");
-        m_RootSig.TransitionResources(ResourceCache, Ctx);
+        ResourceCache.TransitionResources<false>(pCtxVkImpl);
     }
-#endif
+
     return &ResourceCache;
 }
 
-#if 0
-bool PipelineStateVkImpl::dbgContainsShaderResources()const
-{
-    return m_RootSig.GetTotalSrvCbvUavSlots(SHADER_VARIABLE_TYPE_STATIC) != 0 ||
-           m_RootSig.GetTotalSrvCbvUavSlots(SHADER_VARIABLE_TYPE_MUTABLE) != 0 ||
-           m_RootSig.GetTotalSrvCbvUavSlots(SHADER_VARIABLE_TYPE_DYNAMIC) != 0;
-}
-#endif
 }

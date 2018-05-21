@@ -64,10 +64,10 @@ public:
 
     virtual VkPipeline GetVkPipeline()const override final { return m_Pipeline; }
 
-    ShaderResourceCacheVk* CommitAndTransitionShaderResources(IShaderResourceBinding*               pShaderResourceBinding, 
-                                                              VulkanUtilities::VulkanCommandBuffer& CmdBuff,
-                                                              bool                                  CommitResources,
-                                                              bool                                  TransitionResources)const;
+    ShaderResourceCacheVk* CommitAndTransitionShaderResources(IShaderResourceBinding*   pShaderResourceBinding, 
+                                                              DeviceContextVkImpl*      pCtxVkImpl,
+                                                              bool                      CommitResources,
+                                                              bool                      TransitionResources)const;
     
     const PipelineLayout& GetPipelineLayout()const{return m_PipelineLayout;}
     
@@ -77,8 +77,6 @@ public:
         VERIFY_EXPR(m_pShaderResourceLayouts[ShaderInd] != nullptr);
         return *m_pShaderResourceLayouts[ShaderInd];
     }
-
-    //bool dbgContainsShaderResources()const;
 
     IMemoryAllocator& GetResourceCacheDataAllocator(){return m_ResourceCacheDataAllocator;}
     IMemoryAllocator& GetShaderResourceLayoutDataAllocator(Uint32 ActiveShaderInd)

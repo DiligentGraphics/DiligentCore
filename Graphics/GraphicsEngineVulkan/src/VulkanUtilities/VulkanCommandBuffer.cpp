@@ -175,7 +175,8 @@ void VulkanCommandBuffer::TransitionImageLayout(VkCommandBuffer CmdBuffer,
 
         // supports all types of device access
         case VK_IMAGE_LAYOUT_GENERAL:
-            UNEXPECTED("General layout is not recommended");
+            // VK_IMAGE_LAYOUT_GENERAL must be used for image load/store operations (13.2.4)
+            ImgBarrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
         break;
 
         // must only be used as a color or resolve attachment in a VkFramebuffer (11.4)
@@ -243,7 +244,8 @@ void VulkanCommandBuffer::TransitionImageLayout(VkCommandBuffer CmdBuffer,
         break;
 
         case VK_IMAGE_LAYOUT_GENERAL:
-            UNEXPECTED("General layout is not recommended due to inefficiency");
+            // VK_IMAGE_LAYOUT_GENERAL must be used for image load/store operations (13.2.4)
+            ImgBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
         break;
 
         case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
@@ -353,6 +355,54 @@ void VulkanCommandBuffer::TransitionImageLayout(VkCommandBuffer CmdBuffer,
     // Each element of pMemoryBarriers, pBufferMemoryBarriers and pImageMemoryBarriers must not 
     // have any access flag included in its dstAccessMask member if that bit is not supported by any 
     // of the pipeline stages in dstStageMask (6.6)
+}
+
+
+void VulkanCommandBuffer::BufferMemoryBarrier(VkCommandBuffer      CmdBuffer,
+                                              VkBuffer             Buffer, 
+                                              VkAccessFlags        srcAccessMask,
+                                              VkAccessFlags        dstAccessMask,
+                                              VkPipelineStageFlags SrcStages, 
+                                              VkPipelineStageFlags DestStages)
+{
+    VkBufferMemoryBarrier BuffBarrier = {};
+    BuffBarrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+    BuffBarrier.pNext = nullptr;
+    BuffBarrier.srcAccessMask = srcAccessMask;
+    BuffBarrier.dstAccessMask = dstAccessMask;
+    BuffBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    BuffBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    BuffBarrier.buffer = Buffer;
+    BuffBarrier.offset = 0;
+    BuffBarrier.size   = VK_WHOLE_SIZE;
+    if (SrcStages == 0)
+    {
+        if(BuffBarrier.srcAccessMask != 0)
+            SrcStages = PipelineStageFromAccessFlags(BuffBarrier.srcAccessMask);
+        else
+        {
+            // An execution dependency with only VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT in the source stage 
+            // mask will effectively not wait for any prior commands to complete. (6.1.2)
+            SrcStages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        }
+    }
+
+    if (DestStages == 0)
+    {
+        VERIFY(BuffBarrier.dstAccessMask != 0, "Dst access mask must not be zero");
+        DestStages = PipelineStageFromAccessFlags(BuffBarrier.dstAccessMask);
+    }
+
+    vkCmdPipelineBarrier(CmdBuffer,
+        SrcStages,    // must not be 0
+        DestStages,   // must not be 0
+        0,            // a bitmask specifying how execution and memory dependencies are formed
+        0,            // memoryBarrierCount
+        nullptr,      // pMemoryBarriers
+        1,            // bufferMemoryBarrierCount
+        &BuffBarrier, // pBufferMemoryBarriers
+        0,
+        nullptr);
 }
 
 void VulkanCommandBuffer::FlushBarriers()

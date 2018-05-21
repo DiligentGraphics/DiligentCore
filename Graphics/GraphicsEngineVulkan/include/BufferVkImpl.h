@@ -102,9 +102,11 @@ public:
         //VERIFY(DataStartByteOffset == 0, "0 offset expected");
         return VkBuffer;
     }
-/*
-    virtual void SetVkResourceState(Vk_RESOURCE_STATES state)override final{ SetState(state); }
 
+    virtual void SetAccessFlags(VkAccessFlags AccessFlags )override final{ m_AccessFlags = AccessFlags; }
+    VkAccessFlags GetAccessFlags()const{return m_AccessFlags;}
+
+/*
     Vk_GPU_VIRTUAL_ADDRESS GetGPUAddress(Uint32 ContextId)
     {
         if(m_Desc.Usage == USAGE_DYNAMIC)
@@ -126,8 +128,9 @@ private:
     virtual void CreateViewInternal( const struct BufferViewDesc &ViewDesc, IBufferView **ppView, bool bIsDefaultView )override;
 
     VulkanUtilities::BufferViewWrapper CreateView(struct BufferViewDesc &ViewDesc);
-    /*    DescriptorHeapAllocation m_CBVDescriptorAllocation;
+    VkAccessFlags m_AccessFlags = 0;
 
+    /*   
 #ifdef _DEBUG
     std::vector< std::pair<MAP_TYPE, Uint32>, STDAllocatorRawMem<std::pair<MAP_TYPE, Uint32>> > m_DbgMapType;
 #endif

@@ -24,10 +24,15 @@
 #include "pch.h"
 
 #include "ShaderResourceCacheVk.h"
+#include "DeviceContextVkImpl.h"
+#include "BufferVkImpl.h"
+#include "BufferViewVkImpl.h"
+#include "TextureViewVkImpl.h"
+#include "TextureVkImpl.h"
 
 namespace Diligent
 {
-    void ShaderResourceCacheVk::Initialize(IMemoryAllocator &MemAllocator, Uint32 NumSets, Uint32 SetSizes[])
+    void ShaderResourceCacheVk::InitializeSets(IMemoryAllocator &MemAllocator, Uint32 NumSets, Uint32 SetSizes[])
     {
         // Memory layout:
         //                                              ______________________________________________________________
@@ -47,18 +52,15 @@ namespace Diligent
         VERIFY(m_pAllocator == nullptr && m_pMemory == nullptr, "Cache already initialized");
         m_pAllocator = &MemAllocator;
         m_NumSets = NumSets;
-        Uint32 TotalResources = 0;
+        m_TotalResources = 0;
         for(Uint32 t=0; t < NumSets; ++t)
-            TotalResources += SetSizes[t];
-        auto MemorySize = NumSets * sizeof(DescriptorSet) + TotalResources * sizeof(Resource);
+            m_TotalResources += SetSizes[t];
+        auto MemorySize = NumSets * sizeof(DescriptorSet) + m_TotalResources * sizeof(Resource);
         if(MemorySize > 0)
         {
             m_pMemory = ALLOCATE( *m_pAllocator, "Memory for shader resource cache data", MemorySize);
             auto *pSets = reinterpret_cast<DescriptorSet*>(m_pMemory);
             auto *pCurrResPtr = reinterpret_cast<Resource*>(pSets + m_NumSets);
-            for(Uint32 res=0; res < TotalResources; ++res)
-                new(pCurrResPtr + res) Resource();
-
             for (Uint32 t = 0; t < NumSets; ++t)
             {
                 new(&GetDescriptorSet(t)) DescriptorSet(SetSizes[t], SetSizes[t] > 0 ? pCurrResPtr : nullptr);
@@ -68,15 +70,19 @@ namespace Diligent
         }
     }
 
+    void ShaderResourceCacheVk::InitializeResources(Uint32 Set, Uint32 Offset, Uint32 ArraySize, SPIRVShaderResourceAttribs::ResourceType Type)
+    {
+        auto &DescrSet = GetDescriptorSet(Set);
+        for (Uint32 res = 0; res < ArraySize; ++res)
+            new(&DescrSet.GetResource(Offset + res)) Resource{Type};
+    }
+
     ShaderResourceCacheVk::~ShaderResourceCacheVk()
     {
         if (m_pMemory)
         {
-            Uint32 TotalResources = 0;
-            for (Uint32 t = 0; t < m_NumSets; ++t)
-                TotalResources += GetDescriptorSet(t).GetSize();
             auto *pResources = reinterpret_cast<Resource*>( reinterpret_cast<DescriptorSet*>(m_pMemory) + m_NumSets);
-            for(Uint32 res=0; res < TotalResources; ++res)
+            for(Uint32 res=0; res < m_TotalResources; ++res)
                 pResources[res].~Resource();
             for (Uint32 t = 0; t < m_NumSets; ++t)
                 GetDescriptorSet(t).~DescriptorSet();
@@ -84,4 +90,89 @@ namespace Diligent
             m_pAllocator->Free(m_pMemory);
         }
     }
+
+    template<bool VerifyOnly>
+    void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl *pCtxVkImpl)
+    {
+        auto *pResources = reinterpret_cast<Resource*>(reinterpret_cast<DescriptorSet*>(m_pMemory) + m_NumSets);
+        for (Uint32 res = 0; res < m_TotalResources; ++res)
+        {
+            auto &Res = pResources[res];
+            switch (Res.Type)
+            {
+                case SPIRVShaderResourceAttribs::ResourceType::UniformBuffer:
+                case SPIRVShaderResourceAttribs::ResourceType::StorageBuffer:
+                {
+                    auto *pBufferVk = Res.pObject.RawPtr<BufferVkImpl>();
+                    VkAccessFlags RequiredAccessFlags = 
+                        Res.Type == SPIRVShaderResourceAttribs::ResourceType::UniformBuffer ? 
+                            VK_ACCESS_UNIFORM_READ_BIT : 
+                            (VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
+                    if(pBufferVk->GetAccessFlags() != RequiredAccessFlags)
+                    {
+                        if(VerifyOnly)
+                            LOG_ERROR_MESSAGE("Buffer \"", pBufferVk->GetDesc().Name, "\" is not in correct state. Did you forget to call TransitionShaderResources() or specify COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag in a call to CommitShaderResources()?");
+                        else
+                            pCtxVkImpl->BufferMemoryBarrier(*pBufferVk, RequiredAccessFlags);
+                    }
+                }
+                break;
+
+                case SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer:
+                case SPIRVShaderResourceAttribs::ResourceType::StorageTexelBuffer:
+                {
+                    auto *pBuffViewVk = Res.pObject.RawPtr<BufferViewVkImpl>();
+                    auto *pBufferVk = ValidatedCast<BufferVkImpl>(pBuffViewVk->GetBuffer());
+                    VkAccessFlags RequiredAccessFlags =
+                        Res.Type == SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer ?
+                        VK_ACCESS_SHADER_READ_BIT :
+                        (VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
+                    if (pBufferVk->GetAccessFlags() != RequiredAccessFlags)
+                    {
+                        if (VerifyOnly)
+                            LOG_ERROR_MESSAGE("Buffer \"", pBufferVk->GetDesc().Name, "\" is not in correct state. Did you forget to call TransitionShaderResources() or specify COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag in a call to CommitShaderResources()?");
+                        else
+                            pCtxVkImpl->BufferMemoryBarrier(*pBufferVk, RequiredAccessFlags);
+                    }
+                }
+                break;
+
+                case SPIRVShaderResourceAttribs::ResourceType::SeparateImage:
+                case SPIRVShaderResourceAttribs::ResourceType::SampledImage:
+                case SPIRVShaderResourceAttribs::ResourceType::StorageImage:
+                {
+                    auto *pTextureViewVk = Res.pObject.RawPtr<TextureViewVkImpl>();
+                    auto *pTextureVk = ValidatedCast<TextureVkImpl>(pTextureViewVk->GetTexture());
+                    VkImageLayout RequiredLayout = 
+                        Res.Type == SPIRVShaderResourceAttribs::ResourceType::StorageImage ? 
+                            VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                    if(pTextureVk->GetLayout() != RequiredLayout)
+                    {
+                        if (VerifyOnly)
+                            LOG_ERROR_MESSAGE("Texture \"", pTextureVk->GetDesc().Name, "\" is not in correct state. Did you forget to call TransitionShaderResources() or specify COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag in a call to CommitShaderResources()?");
+                        else
+                            pCtxVkImpl->TransitionImageLayout(*pTextureVk, RequiredLayout);
+                    }
+                }
+                break;
+
+                case SPIRVShaderResourceAttribs::ResourceType::AtomicCounter:
+                {
+                    // Nothing to do with atomic counters
+                }
+                break;
+
+                case SPIRVShaderResourceAttribs::ResourceType::SeparateSampler:
+                {
+                    // Nothing to do with samplers
+                }
+                break;
+
+                default: UNEXPECTED("Unexpected resource type");
+            }
+        }
+    }
+
+    template void ShaderResourceCacheVk::TransitionResources<false>(DeviceContextVkImpl *pCtxVkImpl);
+    template void ShaderResourceCacheVk::TransitionResources<true>(DeviceContextVkImpl *pCtxVkImpl);
 }

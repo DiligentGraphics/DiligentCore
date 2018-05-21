@@ -38,6 +38,8 @@ ShaderResourceBindingVkImpl::ShaderResourceBindingVkImpl( IReferenceCounters *pR
     m_NumShaders = pPSO->GetNumShaders();
 
     auto *pRenderDeviceVkImpl = ValidatedCast<RenderDeviceVkImpl>(pPSO->GetDevice());
+    // This only allocate memory and initialize descriptor sets in the resource cache
+    // Resources will be initialized by InitializeResourcesInCache()
     pPSO->GetPipelineLayout().InitResourceCache(pRenderDeviceVkImpl, m_ShaderResourceCache, pPSO->GetResourceCacheDataAllocator());
     
     auto *pResLayoutRawMem = ALLOCATE(GetRawAllocator(), "Raw memory for ShaderResourceLayoutVk", m_NumShaders * sizeof(ShaderResourceLayoutVk));
@@ -51,10 +53,9 @@ ShaderResourceBindingVkImpl::ShaderResourceBindingVkImpl( IReferenceCounters *pR
         
         auto &ShaderResLayoutDataAllocator = pPSO->GetShaderResourceLayoutDataAllocator(s);
 
-        // http://diligentgraphics.com/diligent-engine/architecture/Vk/shader-resource-layout#Initializing-Resource-Layouts-in-a-Shader-Resource-Binding-Object
-        SHADER_VARIABLE_TYPE Types[] = {SHADER_VARIABLE_TYPE_STATIC, SHADER_VARIABLE_TYPE_MUTABLE, SHADER_VARIABLE_TYPE_DYNAMIC};
         const auto &SrcLayout = pPSO->GetShaderResLayout(ShaderType);
-        new (m_pResourceLayouts + s) ShaderResourceLayoutVk(*this, SrcLayout, ShaderResLayoutDataAllocator, Types, _countof(Types), m_ShaderResourceCache);
+        new (m_pResourceLayouts + s) ShaderResourceLayoutVk(*this, SrcLayout, ShaderResLayoutDataAllocator, nullptr, 0, m_ShaderResourceCache);
+        m_pResourceLayouts[s].InitializeResourcesInCache();
 
         m_ResourceLayoutIndex[ShaderInd] = static_cast<Int8>(s);
     }

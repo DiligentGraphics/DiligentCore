@@ -203,10 +203,8 @@ namespace Diligent
         if (!DeviceContextBase::CommitShaderResources<PipelineStateVkImpl>(pShaderResourceBinding, Flags, 0 /*Dummy*/))
             return;
 
-        EnsureVkCmdBuffer();
         auto *pPipelineStateVk = m_pPipelineState.RawPtr<PipelineStateVkImpl>();
-
-        m_pCommittedResourceCache = pPipelineStateVk->CommitAndTransitionShaderResources(pShaderResourceBinding, m_CommandBuffer, true, (Flags & COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES)!=0);
+        m_pCommittedResourceCache = pPipelineStateVk->CommitAndTransitionShaderResources(pShaderResourceBinding, this, true, (Flags & COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES)!=0);
     }
 
     void DeviceContextVkImpl::SetStencilRef(Uint32 StencilRef)
@@ -1142,46 +1140,62 @@ namespace Diligent
 #endif
     }
 
-
     void DeviceContextVkImpl::TransitionImageLayout(ITexture *pTexture, VkImageLayout NewLayout)
     {
         VERIFY_EXPR(pTexture != nullptr);
         auto pTextureVk = ValidatedCast<TextureVkImpl>(pTexture);
-        if(pTextureVk->GetLayout() != NewLayout)
+        if (pTextureVk->GetLayout() != NewLayout)
         {
-            EnsureVkCmdBuffer();
-        
-            auto vkImg = pTextureVk->GetVkImage();
-            const auto& TexDesc = pTextureVk->GetDesc();
-            auto Fmt = TexDesc.Format;
-            const auto& FmtAttribs = GetTextureFormatAttribs(Fmt);
-            VkImageSubresourceRange SubresRange;
-            if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH)
-                SubresRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-            else if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
-            {
-                // If image has a depth / stencil format with both depth and stencil components, then the 
-                // aspectMask member of subresourceRange must include both VK_IMAGE_ASPECT_DEPTH_BIT and 
-                // VK_IMAGE_ASPECT_STENCIL_BIT (6.7.3)
-                SubresRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-            }
-            else
-                SubresRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            SubresRange.baseArrayLayer = 0;
-            SubresRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
-            SubresRange.baseMipLevel = 0;
-            SubresRange.levelCount = VK_REMAINING_MIP_LEVELS;
-            m_CommandBuffer.TransitionImageLayout(vkImg, pTextureVk->GetLayout(), NewLayout, SubresRange);
-            pTextureVk->SetLayout(NewLayout);
+            TransitionImageLayout(*pTextureVk, NewLayout);
         }
     }
 
-#if 0
-    void DeviceContextVkImpl::TransitionBufferState(IBuffer *pBuffer, Vk_RESOURCE_STATES State)
+    void DeviceContextVkImpl::TransitionImageLayout(TextureVkImpl &TextureVk, VkImageLayout NewLayout)
+    {
+        VERIFY(TextureVk.GetLayout() != NewLayout, "The texture is already transitioned to correct layout");
+        EnsureVkCmdBuffer();
+        
+        auto vkImg = TextureVk.GetVkImage();
+        const auto& TexDesc = TextureVk.GetDesc();
+        auto Fmt = TexDesc.Format;
+        const auto& FmtAttribs = GetTextureFormatAttribs(Fmt);
+        VkImageSubresourceRange SubresRange;
+        if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH)
+            SubresRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+        else if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
+        {
+            // If image has a depth / stencil format with both depth and stencil components, then the 
+            // aspectMask member of subresourceRange must include both VK_IMAGE_ASPECT_DEPTH_BIT and 
+            // VK_IMAGE_ASPECT_STENCIL_BIT (6.7.3)
+            SubresRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+        }
+        else
+            SubresRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        SubresRange.baseArrayLayer = 0;
+        SubresRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+        SubresRange.baseMipLevel = 0;
+        SubresRange.levelCount = VK_REMAINING_MIP_LEVELS;
+        m_CommandBuffer.TransitionImageLayout(vkImg, TextureVk.GetLayout(), NewLayout, SubresRange);
+        TextureVk.SetLayout(NewLayout);
+    }
+
+    void DeviceContextVkImpl::BufferMemoryBarrier(IBuffer *pBuffer, VkAccessFlags NewAccessFlags)
     {
         VERIFY_EXPR(pBuffer != nullptr);
-        auto *pCmdCtx = RequestCmdContext();
-        pCmdCtx->TransitionResource(ValidatedCast<IBufferVk>(pBuffer), State);
+        auto pBuffVk = ValidatedCast<BufferVkImpl>(pBuffer);
+        if (pBuffVk->GetAccessFlags() != NewAccessFlags)
+        {
+            BufferMemoryBarrier(*pBuffVk, NewAccessFlags);
+        }
     }
-#endif
+
+    void DeviceContextVkImpl::BufferMemoryBarrier(BufferVkImpl &BufferVk, VkAccessFlags NewAccessFlags)
+    {
+        VERIFY(BufferVk.GetAccessFlags() != NewAccessFlags, "The buffer already has requested access flags");
+        EnsureVkCmdBuffer();
+
+        auto vkBuff = BufferVk.GetVkBuffer();
+        m_CommandBuffer.BufferMemoryBarrier(vkBuff, BufferVk.GetAccessFlags(), NewAccessFlags);
+        BufferVk.SetAccessFlags(NewAccessFlags);
+    }
 }

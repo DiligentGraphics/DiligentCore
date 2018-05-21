@@ -278,6 +278,8 @@ public:
         return m_NumResources[VarType];
     }
 
+    void InitializeResourcesInCache();
+
 private:
     void InitVariablesHashMap();
 

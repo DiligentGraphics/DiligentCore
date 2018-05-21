@@ -46,11 +46,11 @@ public:
     /// \param [in] NewLayout - Vulkan image layout this texture to transition to
     virtual void TransitionImageLayout(ITexture *pTexture, VkImageLayout NewLayout) = 0;
 
-    /// Transitions internal D3D12 buffer object to a specified state
+    /// Transitions internal vulkan buffer object to a specified state
 
     /// \param [in] pBuffer - Buffer to transition
-    /// \param [in] State - D3D12 resource state this buffer to transition to
-    //virtual void TransitionBufferState(IBuffer *pBuffer, D3D12_RESOURCE_STATES State) = 0;
+    /// \param [in] NewAccessFlags - Access flags to set for the buffer
+    virtual void BufferMemoryBarrier(IBuffer *pBuffer, VkAccessFlags NewAccessFlags) = 0;
 };
 
 }
