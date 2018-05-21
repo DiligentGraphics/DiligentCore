@@ -8,7 +8,6 @@ set(INCLUDE
     include/CommandContext.h
     include/CommandListVkImpl.h
     include/CommandQueueVkImpl.h
-    include/VulkanResourceBase.h
     include/VulkanTypeConversions.h
     include/DescriptorPoolManager.h
     include/DeviceContextVkImpl.h
@@ -65,7 +64,6 @@ set(SRC
     src/BufferViewVkImpl.cpp
     src/CommandContext.cpp
     src/CommandQueueVkImpl.cpp
-    src/VulkanResourceBase.cpp
     src/VulkanTypeConversions.cpp
     src/DescriptorPoolManager.cpp
     src/DeviceContextVkImpl.cpp

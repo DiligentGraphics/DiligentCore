@@ -30,7 +30,6 @@
 #include "RenderDeviceVk.h"
 #include "BufferBase.h"
 #include "BufferViewVkImpl.h"
-#include "VulkanResourceBase.h"
 #include "DynamicUploadHeap.h"
 #include "VulkanUtilities/VulkanObjectWrappers.h"
 
@@ -40,7 +39,7 @@ namespace Diligent
 class FixedBlockMemoryAllocator;
 
 /// Implementation of the Diligent::IBufferVk interface
-class BufferVkImpl : public BufferBase<IBufferVk, BufferViewVkImpl, FixedBlockMemoryAllocator>, public VulkanResourceBase
+class BufferVkImpl : public BufferBase<IBufferVk, BufferViewVkImpl, FixedBlockMemoryAllocator>
 {
 public:
     typedef BufferBase<IBufferVk, BufferViewVkImpl, FixedBlockMemoryAllocator> TBufferBase;
