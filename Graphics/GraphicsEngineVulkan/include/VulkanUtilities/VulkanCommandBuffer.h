@@ -308,6 +308,17 @@ namespace VulkanUtilities
             BufferMemoryBarrier(m_VkCmdBuffer, Buffer, srcAccessMask, dstAccessMask, SrcStages, DestStages);
         }
 
+        void BindDescriptorSets(VkPipelineBindPoint     pipelineBindPoint,
+                                VkPipelineLayout        layout,
+                                uint32_t                firstSet,
+                                uint32_t                descriptorSetCount,
+                                const VkDescriptorSet*  pDescriptorSets,
+                                uint32_t                dynamicOffsetCount = 0,
+                                const uint32_t*         pDynamicOffsets    = nullptr)
+        {
+            VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
+            vkCmdBindDescriptorSets(m_VkCmdBuffer, pipelineBindPoint, layout, firstSet, descriptorSetCount, pDescriptorSets, dynamicOffsetCount, pDynamicOffsets);
+        }
 
         void FlushBarriers();
 

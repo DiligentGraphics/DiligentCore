@@ -68,6 +68,10 @@ public:
     bool StaticResourcesInitialized()const{return m_bStaticResourcesInitialized;}
     void InitializeStaticResources(const PipelineStateVkImpl *pPSO);
 
+    // Updates dynamic resource descriptors in the descriptor set, for every layout.
+    // The set is assigned to the resource cache by PipelineLayout::AllocateDynamicDescriptorSet().
+    void CommitDynamicResources();
+
 private:
 
     ShaderResourceCacheVk m_ShaderResourceCache;

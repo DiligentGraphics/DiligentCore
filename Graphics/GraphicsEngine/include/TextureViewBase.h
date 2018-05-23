@@ -81,6 +81,11 @@ public:
         return m_pSampler; 
     }
     
+    const ISampler* GetSampler()const
+    {
+        return m_pSampler;
+    }
+
     /// Implementation of ITextureView::GetTexture()
     virtual ITexture* GetTexture()override final
     {

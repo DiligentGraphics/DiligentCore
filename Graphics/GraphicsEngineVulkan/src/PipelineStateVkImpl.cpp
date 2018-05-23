@@ -27,6 +27,7 @@
 #include "ShaderVkImpl.h"
 #include "VulkanTypeConversions.h"
 #include "RenderDeviceVkImpl.h"
+#include "DeviceContextVkImpl.h"
 #include "ShaderResourceBindingVkImpl.h"
 #include "CommandContext.h"
 #include "EngineMemory.h"
@@ -532,7 +533,6 @@ ShaderResourceCacheVk* PipelineStateVkImpl::CommitAndTransitionShaderResources(I
     pResBindingVkImpl->dbgVerifyResourceBindings(this);
 #endif
 
-    //auto *pDeviceVkImpl = ValidatedCast<RenderDeviceVkImpl>( GetDevice() );
     auto &ResourceCache = pResBindingVkImpl->GetResourceCache();
 
     if(CommitResources)
@@ -545,11 +545,14 @@ ShaderResourceCacheVk* PipelineStateVkImpl::CommitAndTransitionShaderResources(I
             ResourceCache.TransitionResources<true>(pCtxVkImpl);
 #endif
         }
-
-        //if(m_Desc.IsComputePipeline)
-        //    Ctx.AsComputeContext().SetRootSignature( GetVkRootSignature() );
-        //else
-        //    Ctx.AsGraphicsContext().SetRootSignature( GetVkRootSignature() );
+    
+        auto *pDeviceVkImpl = ValidatedCast<RenderDeviceVkImpl>(GetDevice());
+        // Allocate vulkan descriptor set for dynamic resources
+        m_PipelineLayout.AllocateDynamicDescriptorSet(pDeviceVkImpl, pCtxVkImpl, ResourceCache);
+        // Commit all dynamic resource descriptors
+        pResBindingVkImpl->CommitDynamicResources();
+        // Bind descriptor sets
+        m_PipelineLayout.BindDescriptorSets(pCtxVkImpl, m_Desc.IsComputePipeline, ResourceCache);
     }
     else
     {

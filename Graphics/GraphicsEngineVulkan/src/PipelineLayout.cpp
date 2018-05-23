@@ -28,6 +28,7 @@
 #include "ShaderVkImpl.h"
 #include "CommandContext.h"
 #include "RenderDeviceVkImpl.h"
+#include "DeviceContextVkImpl.h"
 #include "TextureVkImpl.h"
 #include "BufferVkImpl.h"
 #include "VulkanTypeConversions.h"
@@ -549,369 +550,57 @@ void PipelineLayout::InitResourceCache(RenderDeviceVkImpl *pDeviceVkImpl, Shader
     {
         ResourceCache.GetDescriptorSet(StaticAndMutSet.SetIndex).AssignDescriptorSetAllocation(std::move(SetAllocation));
     }
+}
 
-#if 0
-    // Get root table size for every root index
-    // m_RootParams keeps root tables sorted by the array index, not the root index
-    // Root views are treated as one-descriptor tables
-    std::vector<Uint32, STDAllocatorRawMem<Uint32> > CacheTableSizes(m_RootParams.GetNumRootTables() + m_RootParams.GetNumRootViews(), 0, STD_ALLOCATOR_RAW_MEM(Uint32, GetRawAllocator(), "Allocator for vector<Uint32>") );
-    for(Uint32 rt = 0; rt < m_RootParams.GetNumRootTables(); ++rt)
+void PipelineLayout::AllocateDynamicDescriptorSet(RenderDeviceVkImpl*     pDevicVkImpl,
+                                                  DeviceContextVkImpl*    pCtxVkImpl,
+                                                  ShaderResourceCacheVk&  ResourceCache)const
+{
+    const auto &DynSet = m_LayoutMgr.GetDescriptorSet(SHADER_VARIABLE_TYPE_DYNAMIC);
+    if (DynSet.SetIndex >= 0)
     {
-        auto &RootParam = m_RootParams.GetRootTable(rt);
-        CacheTableSizes[RootParam.GetRootIndex()] = RootParam.GetDescriptorTableSize();
+        auto DynamicSetAllocation = pDevicVkImpl->AllocateDynamicDescriptorSet(DynSet.VkLayout, pCtxVkImpl->GetContextId());
+        auto &DynamicSetCache = ResourceCache.GetDescriptorSet(DynSet.SetIndex);
+        DynamicSetCache.AssignDescriptorSetAllocation(std::move(DynamicSetAllocation));
     }
+}
 
-    for(Uint32 rv = 0; rv < m_RootParams.GetNumRootViews(); ++rv)
+void PipelineLayout::BindDescriptorSets(DeviceContextVkImpl*    pCtxVkImpl,
+                                        bool                    IsCompute,
+                                        ShaderResourceCacheVk&  ResourceCache)const
+{
+    uint32_t SetCount = 0;
+    std::array<VkDescriptorSet, 2> vkSets = {};
+
+    VERIFY(m_LayoutMgr.GetDescriptorSet(SHADER_VARIABLE_TYPE_STATIC).SetIndex == m_LayoutMgr.GetDescriptorSet(SHADER_VARIABLE_TYPE_MUTABLE).SetIndex, 
+           "Static and mutable variables are expected to share the same descriptor set");
+    for(SHADER_VARIABLE_TYPE VarType = SHADER_VARIABLE_TYPE_MUTABLE; VarType <= SHADER_VARIABLE_TYPE_DYNAMIC; VarType = static_cast<SHADER_VARIABLE_TYPE>(VarType+1))
     {
-        auto &RootParam = m_RootParams.GetRootView(rv);
-        CacheTableSizes[RootParam.GetRootIndex()] = 1;
-    }
-    // Initialize resource cache to hold root tables 
-    ResourceCache.Initialize(CacheMemAllocator, static_cast<Uint32>(CacheTableSizes.size()), CacheTableSizes.data());
-
-    // Allocate space in GPU-visible descriptor heap for static and mutable variables only
-    Uint32 TotalSrvCbvUavDescriptors =
-                m_TotalSrvCbvUavSlots[SHADER_VARIABLE_TYPE_STATIC] + 
-                m_TotalSrvCbvUavSlots[SHADER_VARIABLE_TYPE_MUTABLE];
-    Uint32 TotalSamplerDescriptors =
-                m_TotalSamplerSlots[SHADER_VARIABLE_TYPE_STATIC] +
-                m_TotalSamplerSlots[SHADER_VARIABLE_TYPE_MUTABLE];
-
-    DescriptorHeapAllocation CbcSrvUavHeapSpace, SamplerHeapSpace;
-    if(TotalSrvCbvUavDescriptors)
-        CbcSrvUavHeapSpace = pDeviceVkImpl->AllocateGPUDescriptors(Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, TotalSrvCbvUavDescriptors);
-    VERIFY_EXPR(TotalSrvCbvUavDescriptors == 0 && CbcSrvUavHeapSpace.IsNull() || CbcSrvUavHeapSpace.GetNumHandles() == TotalSrvCbvUavDescriptors);
-
-    if(TotalSamplerDescriptors)
-        SamplerHeapSpace = pDeviceVkImpl->AllocateGPUDescriptors(Vk_DESCRIPTOR_HEAP_TYPE_SAMPLER, TotalSamplerDescriptors);
-    VERIFY_EXPR(TotalSamplerDescriptors == 0 && SamplerHeapSpace.IsNull() || SamplerHeapSpace.GetNumHandles() == TotalSamplerDescriptors);
-
-    // Iterate through all root static/mutable tables and assign start offsets. The tables are tightly packed, so
-    // start offset of table N+1 is start offset of table N plus the size of table N.
-    // Root tables with dynamic resources as well as root views are not assigned space in GPU-visible allocation
-    // (root views are simply not processed)
-    Uint32 SrvCbvUavTblStartOffset = 0;
-    Uint32 SamplerTblStartOffset = 0;
-    for(Uint32 rt = 0; rt < m_RootParams.GetNumRootTables(); ++rt)
-    {
-        auto &RootParam = m_RootParams.GetRootTable(rt);
-        const auto& VkRootParam = static_cast<const Vk_ROOT_PARAMETER&>(RootParam);
-        auto &RootTableCache = ResourceCache.GetRootTable(RootParam.GetRootIndex());
-        
-        SHADER_TYPE dbgShaderType = SHADER_TYPE_UNKNOWN;
-#ifdef _DEBUG
-        dbgShaderType = ShaderTypeFromShaderVisibility(VkRootParam.ShaderVisibility);
-#endif
-        VERIFY_EXPR( VkRootParam.ParameterType == Vk_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE );
-        
-        auto TableSize = RootParam.GetDescriptorTableSize();
-        VERIFY(TableSize > 0, "Unexpected empty descriptor table");
-
-        auto HeapType = HeapTypeFromRangeType(VkRootParam.DescriptorTable.pDescriptorRanges[0].RangeType);
-
-#ifdef _DEBUG
-        RootTableCache.SetDebugAttribs( TableSize, HeapType, dbgShaderType );
-#endif
-
-        // Space for dynamic variables is allocated at every draw call
-        if( RootParam.GetShaderVariableType() != SHADER_VARIABLE_TYPE_DYNAMIC )
+        const auto &Set = m_LayoutMgr.GetDescriptorSet(VarType);
+        if(Set.SetIndex >= 0)
         {
-            if( HeapType == Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV )
-            {
-                RootTableCache.m_TableStartOffset = SrvCbvUavTblStartOffset;
-                SrvCbvUavTblStartOffset += TableSize;
-            }
-            else
-            {
-                RootTableCache.m_TableStartOffset = SamplerTblStartOffset;
-                SamplerTblStartOffset += TableSize;
-            }
-        }
-        else
-        {
-            VERIFY_EXPR(RootTableCache.m_TableStartOffset == ShaderResourceCacheVk::InvalidDescriptorOffset);
+            SetCount = std::max(SetCount, static_cast<uint32_t>(Set.SetIndex+1));
+            VERIFY_EXPR(vkSets[Set.SetIndex] == VK_NULL_HANDLE);
+            vkSets[Set.SetIndex] = ResourceCache.GetDescriptorSet(Set.SetIndex).GetVkDescriptorSet();
+            VERIFY(vkSets[Set.SetIndex] != VK_NULL_HANDLE, "Descriptor set must not be null");
         }
     }
 
 #ifdef _DEBUG
-    for(Uint32 rv = 0; rv < m_RootParams.GetNumRootViews(); ++rv)
-    {
-        auto &RootParam = m_RootParams.GetRootView(rv);
-        const auto& VkRootParam = static_cast<const Vk_ROOT_PARAMETER&>(RootParam);
-        auto &RootTableCache = ResourceCache.GetRootTable(RootParam.GetRootIndex());
-        // Root views are not assigned valid table start offset
-        VERIFY_EXPR(RootTableCache.m_TableStartOffset == ShaderResourceCacheVk::InvalidDescriptorOffset);
-        
-        SHADER_TYPE dbgShaderType = ShaderTypeFromShaderVisibility(VkRootParam.ShaderVisibility);
-        VERIFY_EXPR(VkRootParam.ParameterType == Vk_ROOT_PARAMETER_TYPE_CBV);
-        RootTableCache.SetDebugAttribs( 1, Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, dbgShaderType );
-    }
+    for (uint32_t i = 0; i < SetCount; ++i)
+        VERIFY(vkSets[i] != VK_NULL_HANDLE, "Descriptor set must not be null");
 #endif
-    
-    VERIFY_EXPR(SrvCbvUavTblStartOffset == TotalSrvCbvUavDescriptors);
-    VERIFY_EXPR(SamplerTblStartOffset == TotalSamplerDescriptors);
 
-    ResourceCache.SetDescriptorHeapSpace(std::move(CbcSrvUavHeapSpace), std::move(SamplerHeapSpace));'
-#endif
+    auto& CmdBuffer = pCtxVkImpl->GetCommandBuffer();
+    // vkCmdBindDescriptorSets causes the sets numbered [firstSet .. firstSet+descriptorSetCount-1] to use the 
+    // bindings stored in pDescriptorSets[0 .. descriptorSetCount-1] for subsequent rendering commands 
+    // (either compute or graphics, according to the pipelineBindPoint). Any bindings that were previously 
+    // applied via these sets are no longer valid (13.2.5)
+    CmdBuffer.BindDescriptorSets(IsCompute ? VK_PIPELINE_BIND_POINT_COMPUTE : VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                 m_LayoutMgr.GetVkPipelineLayout(), 
+                                 0, // First set
+                                 SetCount,
+                                 vkSets.data());
 }
 
-#if 0
-
-
-template<class TOperation>
-__forceinline void PipelineLayout::DescriptorSetLayoutManager::ProcessRootTables(TOperation Operation)const
-{
-    for(Uint32 rt = 0; rt < m_NumRootTables; ++rt)
-    {
-        auto &RootTable = GetRootTable(rt);
-        auto RootInd = RootTable.GetRootIndex();
-        const Vk_ROOT_PARAMETER& VkParam = RootTable;
-
-        VERIFY_EXPR(VkParam.ParameterType == Vk_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE);
-
-        auto &VkTable = VkParam.DescriptorTable;
-        VERIFY(VkTable.NumDescriptorRanges > 0 && RootTable.GetDescriptorTableSize() > 0, "Unexepected empty descriptor table");
-        bool IsResourceTable = VkTable.pDescriptorRanges[0].RangeType != Vk_DESCRIPTOR_RANGE_TYPE_SAMPLER;
-        Vk_DESCRIPTOR_HEAP_TYPE dbgHeapType = Vk_DESCRIPTOR_HEAP_TYPE_NUM_TYPES;
-#ifdef _DEBUG
-            dbgHeapType = IsResourceTable ? Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV : Vk_DESCRIPTOR_HEAP_TYPE_SAMPLER;
-#endif
-        Operation(RootInd, RootTable, VkParam, IsResourceTable, dbgHeapType);
-    }
-}
-
-template<class TOperation>
-__forceinline void ProcessCachedTableResources(Uint32 RootInd, 
-                                               const Vk_ROOT_PARAMETER& VkParam, 
-                                               ShaderResourceCacheVk& ResourceCache, 
-                                               Vk_DESCRIPTOR_HEAP_TYPE dbgHeapType, 
-                                               TOperation Operation)
-{
-    for (UINT r = 0; r < VkParam.DescriptorTable.NumDescriptorRanges; ++r)
-    {
-        const auto &range = VkParam.DescriptorTable.pDescriptorRanges[r];
-        for (UINT d = 0; d < range.NumDescriptors; ++d)
-        {
-            SHADER_TYPE dbgShaderType = SHADER_TYPE_UNKNOWN;
-#ifdef _DEBUG
-            dbgShaderType = ShaderTypeFromShaderVisibility(VkParam.ShaderVisibility);
-            VERIFY(dbgHeapType == HeapTypeFromRangeType(range.RangeType), "Mistmatch between descriptor heap type and descriptor range type");
-#endif
-            auto OffsetInCache = range.OffsetInDescriptorsFromTableStart + d;
-            auto& Res = ResourceCache.GetRootTable(RootInd).GetResource(OffsetInCache, dbgHeapType, dbgShaderType);
-
-            Operation(OffsetInCache, range, Res);
-        }
-    }
-}
-
-
-template<bool PerformResourceTransitions>
-void PipelineLayout::CommitDescriptorHandlesInternal_SMD(RenderDeviceVkImpl *pRenderDeviceVk, 
-                                                        ShaderResourceCacheVk& ResourceCache, 
-                                                        CommandContext &Ctx, 
-                                                        bool IsCompute)const
-{
-    auto *pVkDevice = pRenderDeviceVk->GetVkDevice();
-
-    Uint32 NumDynamicCbvSrvUavDescriptors = m_TotalSrvCbvUavSlots[SHADER_VARIABLE_TYPE_DYNAMIC];
-    Uint32 NumDynamicSamplerDescriptors = m_TotalSamplerSlots[SHADER_VARIABLE_TYPE_DYNAMIC];
-    VERIFY_EXPR(NumDynamicCbvSrvUavDescriptors > 0 || NumDynamicSamplerDescriptors > 0);
-
-    DescriptorHeapAllocation DynamicCbvSrvUavDescriptors, DynamicSamplerDescriptors;
-    if(NumDynamicCbvSrvUavDescriptors)
-        DynamicCbvSrvUavDescriptors = Ctx.AllocateDynamicGPUVisibleDescriptor(Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, NumDynamicCbvSrvUavDescriptors);
-    if(NumDynamicSamplerDescriptors)
-        DynamicSamplerDescriptors = Ctx.AllocateDynamicGPUVisibleDescriptor(Vk_DESCRIPTOR_HEAP_TYPE_SAMPLER, NumDynamicSamplerDescriptors);
-
-    CommandContext::ShaderDescriptorHeaps Heaps(ResourceCache.GetSrvCbvUavDescriptorHeap(), ResourceCache.GetSamplerDescriptorHeap());
-    if(Heaps.pSamplerHeap == nullptr)
-        Heaps.pSamplerHeap = DynamicSamplerDescriptors.GetDescriptorHeap();
-
-    if(Heaps.pSrvCbvUavHeap == nullptr)
-        Heaps.pSrvCbvUavHeap = DynamicCbvSrvUavDescriptors.GetDescriptorHeap();
-
-    if(NumDynamicCbvSrvUavDescriptors)
-        VERIFY(DynamicCbvSrvUavDescriptors.GetDescriptorHeap() == Heaps.pSrvCbvUavHeap, "Inconsistent CbvSrvUav descriptor heaps" );
-    if(NumDynamicSamplerDescriptors)
-        VERIFY(DynamicSamplerDescriptors.GetDescriptorHeap() == Heaps.pSamplerHeap, "Inconsistent Sampler descriptor heaps" );
-
-    if(Heaps)
-        Ctx.SetDescriptorHeaps(Heaps);
-
-    // Offset to the beginning of the current dynamic CBV_SRV_UAV/SAMPLER table from 
-    // the start of the allocation
-    Uint32 DynamicCbvSrvUavTblOffset = 0;
-    Uint32 DynamicSamplerTblOffset = 0;
-
-    m_RootParams.ProcessRootTables(
-        [&](Uint32 RootInd, const RootParameter &RootTable, const Vk_ROOT_PARAMETER& VkParam, bool IsResourceTable, Vk_DESCRIPTOR_HEAP_TYPE dbgHeapType )
-        {
-            Vk_GPU_DESCRIPTOR_HANDLE RootTableGPUDescriptorHandle;
-            bool IsDynamicTable = RootTable.GetShaderVariableType() == SHADER_VARIABLE_TYPE_DYNAMIC;
-            if (IsDynamicTable)
-            {
-                if( IsResourceTable )
-                    RootTableGPUDescriptorHandle = DynamicCbvSrvUavDescriptors.GetGpuHandle(DynamicCbvSrvUavTblOffset);
-                else
-                    RootTableGPUDescriptorHandle = DynamicSamplerDescriptors.GetGpuHandle(DynamicSamplerTblOffset);
-            }
-            else
-            {
-                RootTableGPUDescriptorHandle = IsResourceTable ? 
-                    ResourceCache.GetShaderVisibleTableGPUDescriptorHandle<Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV>(RootInd) : 
-                    ResourceCache.GetShaderVisibleTableGPUDescriptorHandle<Vk_DESCRIPTOR_HEAP_TYPE_SAMPLER>(RootInd);
-                VERIFY(RootTableGPUDescriptorHandle.ptr != 0, "Unexpected null GPU descriptor handle");
-            }
-
-            if(IsCompute)
-                Ctx.GetCommandList()->SetComputeRootDescriptorTable(RootInd, RootTableGPUDescriptorHandle);
-            else
-                Ctx.GetCommandList()->SetGraphicsRootDescriptorTable(RootInd, RootTableGPUDescriptorHandle);
-
-            ProcessCachedTableResources(RootInd, VkParam, ResourceCache, dbgHeapType, 
-                [&](UINT OffsetInCache, const Vk_DESCRIPTOR_RANGE &range, ShaderResourceCacheVk::Resource &Res)
-                {
-                    if(PerformResourceTransitions)
-                    {
-                        TransitionResource(Ctx, Res, range.RangeType);
-                    }
-#ifdef _DEBUG
-                    else
-                    {
-                        DbgVerifyResourceState(Res, range.RangeType);
-                    }
-#endif
-
-                    if(IsDynamicTable)
-                    {
-                        if (IsResourceTable)
-                        {
-                            if( Res.CPUDescriptorHandle.ptr == 0 )
-                                LOG_ERROR_MESSAGE("No valid CbvSrvUav descriptor handle found for root parameter ", RootInd, ", descriptor slot ", OffsetInCache);
-
-                            VERIFY( DynamicCbvSrvUavTblOffset < NumDynamicCbvSrvUavDescriptors, "Not enough space in the descriptor heap allocation");
-                            
-                            pVkDevice->CopyDescriptorsSimple(1, DynamicCbvSrvUavDescriptors.GetCpuHandle(DynamicCbvSrvUavTblOffset), Res.CPUDescriptorHandle, Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-                            ++DynamicCbvSrvUavTblOffset;
-                        }
-                        else
-                        {
-                            if( Res.CPUDescriptorHandle.ptr == 0 )
-                                LOG_ERROR_MESSAGE("No valid sampler descriptor handle found for root parameter ", RootInd, ", descriptor slot ", OffsetInCache);
-
-                            VERIFY( DynamicSamplerTblOffset < NumDynamicSamplerDescriptors, "Not enough space in the descriptor heap allocation");
-                            
-                            pVkDevice->CopyDescriptorsSimple(1, DynamicSamplerDescriptors.GetCpuHandle(DynamicSamplerTblOffset), Res.CPUDescriptorHandle, Vk_DESCRIPTOR_HEAP_TYPE_SAMPLER);
-                            ++DynamicSamplerTblOffset;
-                        }
-                    }
-                }
-            );
-        }
-    );
-    
-    VERIFY_EXPR( DynamicCbvSrvUavTblOffset == NumDynamicCbvSrvUavDescriptors );
-    VERIFY_EXPR( DynamicSamplerTblOffset == NumDynamicSamplerDescriptors );
-}
-
-template<bool PerformResourceTransitions>
-void PipelineLayout::CommitDescriptorHandlesInternal_SM(RenderDeviceVkImpl *pRenderDeviceVk, 
-                                                       ShaderResourceCacheVk& ResourceCache, 
-                                                       CommandContext &Ctx, 
-                                                       bool IsCompute)const
-{
-    VERIFY_EXPR(m_TotalSrvCbvUavSlots[SHADER_VARIABLE_TYPE_DYNAMIC] == 0 && m_TotalSamplerSlots[SHADER_VARIABLE_TYPE_DYNAMIC] == 0);
-
-    CommandContext::ShaderDescriptorHeaps Heaps(ResourceCache.GetSrvCbvUavDescriptorHeap(), ResourceCache.GetSamplerDescriptorHeap());
-    if(Heaps)
-        Ctx.SetDescriptorHeaps(Heaps);
-
-    m_RootParams.ProcessRootTables(
-        [&](Uint32 RootInd, const RootParameter &RootTable, const Vk_ROOT_PARAMETER& VkParam, bool IsResourceTable, Vk_DESCRIPTOR_HEAP_TYPE dbgHeapType )
-        {
-            VERIFY(RootTable.GetShaderVariableType() != SHADER_VARIABLE_TYPE_DYNAMIC, "Unexpected dynamic resource");
-
-            Vk_GPU_DESCRIPTOR_HANDLE RootTableGPUDescriptorHandle = IsResourceTable ? 
-                ResourceCache.GetShaderVisibleTableGPUDescriptorHandle<Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV>(RootInd) : 
-                ResourceCache.GetShaderVisibleTableGPUDescriptorHandle<Vk_DESCRIPTOR_HEAP_TYPE_SAMPLER>(RootInd);
-            VERIFY(RootTableGPUDescriptorHandle.ptr != 0, "Unexpected null GPU descriptor handle");
-
-            if(IsCompute)
-                Ctx.GetCommandList()->SetComputeRootDescriptorTable(RootInd, RootTableGPUDescriptorHandle);
-            else
-                Ctx.GetCommandList()->SetGraphicsRootDescriptorTable(RootInd, RootTableGPUDescriptorHandle);
-
-            if(PerformResourceTransitions)
-            {
-                ProcessCachedTableResources(RootInd, VkParam, ResourceCache, dbgHeapType, 
-                    [&](UINT OffsetInCache, const Vk_DESCRIPTOR_RANGE &range, ShaderResourceCacheVk::Resource &Res)
-                    {
-                        TransitionResource(Ctx, Res, range.RangeType);
-                    }
-                );
-            }
-#ifdef _DEBUG
-            else
-            {
-                ProcessCachedTableResources(RootInd, VkParam, ResourceCache, dbgHeapType, 
-                    [&](UINT OffsetInCache, const Vk_DESCRIPTOR_RANGE &range, ShaderResourceCacheVk::Resource &Res)
-                    {
-                        DbgVerifyResourceState(Res, range.RangeType);
-                    }
-                );
-            }
-#endif
-        }
-    );
-}
-
-
-void PipelineLayout::TransitionResources(ShaderResourceCacheVk& ResourceCache, 
-                                        class CommandContext &Ctx)const
-{
-    m_RootParams.ProcessRootTables(
-        [&](Uint32 RootInd, const RootParameter &RootTable, const Vk_ROOT_PARAMETER& VkParam, bool IsResourceTable, Vk_DESCRIPTOR_HEAP_TYPE dbgHeapType )
-        {
-            ProcessCachedTableResources(RootInd, VkParam, ResourceCache, dbgHeapType, 
-                [&](UINT OffsetInCache, const Vk_DESCRIPTOR_RANGE &range, ShaderResourceCacheVk::Resource &Res)
-                {
-                    TransitionResource(Ctx, Res, range.RangeType);
-                }
-            );
-        }
-    );
-}
-
-
-void PipelineLayout::CommitRootViews(ShaderResourceCacheVk& ResourceCache, 
-                                    CommandContext &Ctx, 
-                                    bool IsCompute,
-                                    Uint32 ContextId)const
-{
-    for(Uint32 rv = 0; rv < m_RootParams.GetNumRootViews(); ++rv)
-    {
-        auto &RootView = m_RootParams.GetRootView(rv);
-        auto RootInd = RootView.GetRootIndex();
-       
-        SHADER_TYPE dbgShaderType = SHADER_TYPE_UNKNOWN;
-#ifdef _DEBUG
-        auto &Param = static_cast<const Vk_ROOT_PARAMETER&>( RootView );
-        VERIFY_EXPR(Param.ParameterType == Vk_ROOT_PARAMETER_TYPE_CBV);
-        dbgShaderType = ShaderTypeFromShaderVisibility(Param.ShaderVisibility);
-#endif
-
-        auto& Res = ResourceCache.GetRootTable(RootInd).GetResource(0, Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, dbgShaderType);
-        auto *pBuffToTransition = Res.pObject.RawPtr<BufferVkImpl>();
-        if( !pBuffToTransition->CheckAllStates(Vk_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER) )
-            Ctx.TransitionResource(pBuffToTransition, Vk_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
-
-        Vk_GPU_VIRTUAL_ADDRESS CBVAddress = pBuffToTransition->GetGPUAddress(ContextId);
-        if(IsCompute)
-            Ctx.GetCommandList()->SetComputeRootConstantBufferView(RootInd, CBVAddress);
-        else
-            Ctx.GetCommandList()->SetGraphicsRootConstantBufferView(RootInd, CBVAddress);
-    }
-}
-#endif
 }

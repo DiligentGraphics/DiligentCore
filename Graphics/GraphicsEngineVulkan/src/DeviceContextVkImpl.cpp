@@ -41,8 +41,8 @@ namespace Diligent
         //m_pUploadHeap(pDeviceVkImpl->RequestUploadHeap() ),
         m_NumCommandsToFlush(bIsDeferred ? std::numeric_limits<decltype(m_NumCommandsToFlush)>::max() : Attribs.NumCommandsToFlushCmdBuffer),
         /*m_MipsGenerator(pDeviceVkImpl->GetVkDevice()),
-        m_CmdListAllocator(GetRawAllocator(), sizeof(CommandListVkImpl), 64 ),
-        m_ContextId(ContextId),*/
+        m_CmdListAllocator(GetRawAllocator(), sizeof(CommandListVkImpl), 64 ),*/
+        m_ContextId(ContextId),
         m_CmdPool(pDeviceVkImpl->GetLogicalDevice().GetSharedPtr(), pDeviceVkImpl->GetCmdQueue()->GetQueueFamilyIndex(), VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT)
     {
 #if 0
@@ -189,13 +189,10 @@ namespace Diligent
 
     void DeviceContextVkImpl::TransitionShaderResources(IPipelineState *pPipelineState, IShaderResourceBinding *pShaderResourceBinding)
     {
-#if 0
         VERIFY_EXPR(pPipelineState != nullptr);
 
-        auto *pCtx = RequestCmdContext();
         auto *pPipelineStateVk = ValidatedCast<PipelineStateVkImpl>(pPipelineState);
-        pPipelineStateVk->CommitAndTransitionShaderResources(pShaderResourceBinding, *pCtx, false, true);
-#endif
+        pPipelineStateVk->CommitAndTransitionShaderResources(pShaderResourceBinding, this, false, true);
     }
 
     void DeviceContextVkImpl::CommitShaderResources(IShaderResourceBinding *pShaderResourceBinding, Uint32 Flags)

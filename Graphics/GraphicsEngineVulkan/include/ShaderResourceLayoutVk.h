@@ -226,6 +226,14 @@ public:
                 BindResource(ppObjects[Elem], FirstElement+Elem, nullptr);
         }
 
+        // Updates dynamic resource descriptors in the descriptor set. The set is assigned 
+        // to the resource cache by PipelineLayout::AllocateDynamicDescriptorSet().
+        inline void UpdateDescriptorHandle(VkDescriptorSet                  vkDescrSet,
+                                           uint32_t                         ArrayElement,
+                                           const VkDescriptorImageInfo*     pImageInfo,
+                                           const VkDescriptorBufferInfo*    pBufferInfo,
+                                           const VkBufferView*              pTexelBufferView)const;
+
     private:
         void CacheBuffer(IDeviceObject*                     pBuffer, 
                          ShaderResourceCacheVk::Resource&   DstRes, 
@@ -246,12 +254,6 @@ public:
                                   ShaderResourceCacheVk::Resource& DstRes,
                                   VkDescriptorSet                  vkDescrSet,
                                   Uint32                           ArrayInd);
-
-        inline void UpdateDescriptorHandle(VkDescriptorSet                  vkDescrSet,
-                                           uint32_t                         ArrayElement,
-                                           const VkDescriptorImageInfo*     pImageInfo,
-                                           const VkDescriptorBufferInfo*    pBufferInfo,
-                                           const VkBufferView*              pTexelBufferView);
 
         bool UpdateCachedResource(ShaderResourceCacheVk::Resource&   DstRes,
                                   Uint32                             ArrayInd,
@@ -279,6 +281,8 @@ public:
     }
 
     void InitializeResourcesInCache();
+    
+    void CommitDynamicResources();
 
 private:
     void InitVariablesHashMap();

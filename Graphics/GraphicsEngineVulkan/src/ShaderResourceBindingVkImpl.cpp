@@ -143,4 +143,12 @@ void ShaderResourceBindingVkImpl::InitializeStaticResources(const PipelineStateV
     m_bStaticResourcesInitialized = true;
 }
 
+void ShaderResourceBindingVkImpl::CommitDynamicResources()
+{
+    for (Uint32 s=0; s < m_NumShaders; ++s)
+    {
+        m_pResourceLayouts[s].CommitDynamicResources();
+    }
+}
+
 }

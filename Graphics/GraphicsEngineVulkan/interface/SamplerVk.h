@@ -41,7 +41,7 @@ class ISamplerVk : public ISampler
 public:
 
     /// Returns a vulkan sampler object handle
-    virtual VkSampler GetVkSampler() = 0;
+    virtual VkSampler GetVkSampler()const = 0;
 };
 
 }

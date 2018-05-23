@@ -309,9 +309,9 @@ void ShaderResourceLayoutVk::VkResource::UpdateDescriptorHandle(VkDescriptorSet 
                                                                 uint32_t                       ArrayElement,
                                                                 const VkDescriptorImageInfo*   pImageInfo,
                                                                 const VkDescriptorBufferInfo*  pBufferInfo,
-                                                                const VkBufferView*            pTexelBufferView)
+                                                                const VkBufferView*            pTexelBufferView)const
 {
-    VERIFY(SpirvAttribs.VarType != SHADER_VARIABLE_TYPE_DYNAMIC, "Dynamic resource descriptors must be updated by CommitShaderResources()");
+    VERIFY_EXPR(vkDescrSet != VK_NULL_HANDLE);
 
     VkWriteDescriptorSet WriteDescrSet;
     WriteDescrSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -344,7 +344,7 @@ bool ShaderResourceLayoutVk::VkResource::UpdateCachedResource(ShaderResourceCach
             if (DstRes.pObject != pResource)
             {
                 auto VarTypeStr = GetShaderVariableTypeLiteralName(SpirvAttribs.VarType);
-                LOG_ERROR_MESSAGE("Non-null resource is already bound to ", VarTypeStr, " shader variable \"", SpirvAttribs.GetPrintName(ArrayInd), "\" in shader \"", ParentResLayout.GetShaderName(), "\". Attempring to bind another resource is an error and will be ignored. Use another shader resource binding instance or label shader variable as dynamic.");
+                LOG_ERROR_MESSAGE("Non-null resource is already bound to ", VarTypeStr, " shader variable \"", SpirvAttribs.GetPrintName(ArrayInd), "\" in shader \"", ParentResLayout.GetShaderName(), "\". Attempring to bind another resource is an error and will be ignored. Use another shader resource binding instance or label the variable as dynamic.");
             }
 
             // Do not update resource if one is already bound unless it is dynamic. This may be 
@@ -373,24 +373,24 @@ void ShaderResourceLayoutVk::VkResource::CacheBuffer(IDeviceObject*             
 
     if( UpdateCachedResource(DstRes, ArrayInd, pBuffer, IID_BufferVk, "buffer") )
     {
+#ifdef VERIFY_SHADER_BINDINGS
         auto* pBuffVk = DstRes.pObject.RawPtr<BufferVkImpl>(); // Use final type
         const auto IsUniformBuffer = SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::UniformBuffer;
         const auto ExpectedBindFlag = IsUniformBuffer ? BIND_UNIFORM_BUFFER : BIND_UNORDERED_ACCESS;
-        if( pBuffVk->GetDesc().BindFlags & ExpectedBindFlag)
+        if( (pBuffVk->GetDesc().BindFlags & ExpectedBindFlag) == 0)
         {
-            if(vkDescrSet != VK_NULL_HANDLE)
-            {
-                VkDescriptorBufferInfo DescrBuffInfo;
-                DescrBuffInfo.buffer = pBuffVk->GetVkBuffer();
-                DescrBuffInfo.offset = 0;
-                DescrBuffInfo.range = pBuffVk->GetDesc().uiSizeInBytes;
-                UpdateDescriptorHandle(vkDescrSet, ArrayInd, nullptr, &DescrBuffInfo, nullptr);
-            }
-        }
-        else
-        {
-            LOG_RESOURCE_BINDING_ERROR("buffer", pBuffer, SpirvAttribs.GetPrintName(ArrayInd), ParentResLayout.GetShaderName(), "Buffer was not created with BIND_UNIFORM_BUFFER flag.")
+            LOG_RESOURCE_BINDING_ERROR("buffer", pBuffer, SpirvAttribs.GetPrintName(ArrayInd), ParentResLayout.GetShaderName(), "Buffer was not created with ", (IsUniformBuffer ? "BIND_UNIFORM_BUFFER" : "BIND_UNORDERED_ACCESS"), " flag.")
             DstRes.pObject.Release();
+            return;
+        }
+#endif
+
+        // Do not update descriptor for a dynamic uniform/storage buffer. All dynamic resource 
+        // descriptors are updated at once by CommitDynamicResources() when SRB is committed.
+        if(vkDescrSet != VK_NULL_HANDLE && SpirvAttribs.VarType != SHADER_VARIABLE_TYPE_DYNAMIC)
+        {
+            VkDescriptorBufferInfo DescrBuffInfo = DstRes.GetBufferDescriptorWriteInfo();
+            UpdateDescriptorHandle(vkDescrSet, ArrayInd, nullptr, &DescrBuffInfo, nullptr);
         }
     }
 }
@@ -425,7 +425,9 @@ void ShaderResourceLayoutVk::VkResource::CacheTexelBuffer(IDeviceObject*        
         }
 #endif
 
-        if (vkDescrSet != VK_NULL_HANDLE)
+        // Do not update descriptor for a dynamic texel buffer. All dynamic resource descriptors 
+        // are updated at once by CommitDynamicResources() when SRB is committed.
+        if (vkDescrSet != VK_NULL_HANDLE && SpirvAttribs.VarType != SHADER_VARIABLE_TYPE_DYNAMIC)
         {
             VkBufferView BuffView = pBuffViewVk->GetVkBufferView();
             UpdateDescriptorHandle(vkDescrSet, ArrayInd, nullptr, nullptr, &BuffView);
@@ -445,10 +447,9 @@ void ShaderResourceLayoutVk::VkResource::CacheImage(IDeviceObject*              
 
     if (UpdateCachedResource(DstRes, ArrayInd, pTexView, IID_TextureViewVk, "texture view") )
     {
+#ifdef VERIFY_SHADER_BINDINGS
         auto* pTexViewVk = DstRes.pObject.RawPtr<TextureViewVkImpl>();
         const bool IsStorageImage = SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::StorageImage;
-
-#ifdef VERIFY_SHADER_BINDINGS
         const auto& ViewDesc = pTexViewVk->GetDesc();
         const auto ViewType = ViewDesc.ViewType;
         const auto dbgExpectedViewType = IsStorageImage ? TEXTURE_VIEW_UNORDERED_ACCESS : TEXTURE_VIEW_SHADER_RESOURCE;
@@ -461,29 +462,21 @@ void ShaderResourceLayoutVk::VkResource::CacheImage(IDeviceObject*              
             DstRes.pObject.Release();
             return;
         }
+
+        if (SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SampledImage && SpirvAttribs.StaticSamplerInd < 0)
+        {
+            if(pTexViewVk->GetSampler() == nullptr)
+            {
+                LOG_RESOURCE_BINDING_ERROR("resource", pTexView, SpirvAttribs.GetPrintName(ArrayInd), ParentResLayout.GetShaderName(), "No sampler assigned to texture view.");
+            }
+        }
 #endif
 
-        if (vkDescrSet != VK_NULL_HANDLE)
+        // Do not update descriptor for a dynamic image. All dynamic resource descriptors 
+        // are updated at once by CommitDynamicResources() when SRB is committed.
+        if (vkDescrSet != VK_NULL_HANDLE && SpirvAttribs.VarType != SHADER_VARIABLE_TYPE_DYNAMIC)
         {
-            VkDescriptorImageInfo DescrImgInfo;
-            DescrImgInfo.sampler = VK_NULL_HANDLE;
-            if(SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SampledImage && SpirvAttribs.StaticSamplerInd < 0)
-            {
-                auto *pSamplerVk = ValidatedCast<ISamplerVk>(pTexViewVk->GetSampler());
-                if(pSamplerVk != nullptr)
-                {
-                    DescrImgInfo.sampler = pSamplerVk->GetVkSampler();
-                }
-                else
-                {
-                    LOG_RESOURCE_BINDING_ERROR("resource", pTexView, SpirvAttribs.GetPrintName(ArrayInd), ParentResLayout.GetShaderName(), "No sampler assigned to texture view.")
-                }
-            }
-            DescrImgInfo.imageView = pTexViewVk->GetVulkanImageView();
-            // If descriptorType is VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, for each descriptor that will be accessed 
-            // via load or store operations the imageLayout member for corresponding elements of pImageInfo 
-            // must be VK_IMAGE_LAYOUT_GENERAL (13.2.4)
-            DescrImgInfo.imageLayout = IsStorageImage ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            VkDescriptorImageInfo DescrImgInfo = DstRes.GetImageDescriptorWriteInfo(SpirvAttribs.StaticSamplerInd >= 0);
             UpdateDescriptorHandle(vkDescrSet, ArrayInd, &DescrImgInfo, nullptr, nullptr);
         }
     }
@@ -498,13 +491,11 @@ void ShaderResourceLayoutVk::VkResource::CacheSeparateSampler(IDeviceObject*    
 
     if (UpdateCachedResource(DstRes, ArrayInd, pSampler, IID_Sampler, "sampler"))
     {
-        auto* pSamplerVk = DstRes.pObject.RawPtr<SamplerVkImpl>();
-        if (vkDescrSet != VK_NULL_HANDLE)
+        // Do not update descriptor for a dynamic sampler. All dynamic resource descriptors 
+        // are updated at once by CommitDynamicResources() when SRB is committed.
+        if (vkDescrSet != VK_NULL_HANDLE && SpirvAttribs.VarType != SHADER_VARIABLE_TYPE_DYNAMIC)
         {
-            VkDescriptorImageInfo DescrImgInfo;
-            DescrImgInfo.sampler = pSamplerVk->GetVkSampler();
-            DescrImgInfo.imageView = VK_NULL_HANDLE;
-            DescrImgInfo.imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            VkDescriptorImageInfo DescrImgInfo = DstRes.GetSamplerDescriptorWriteInfo();
             UpdateDescriptorHandle(vkDescrSet, ArrayInd, &DescrImgInfo, nullptr, nullptr);
         }
     }
@@ -523,9 +514,11 @@ void ShaderResourceLayoutVk::VkResource::BindResource(IDeviceObject *pObj, Uint3
 #ifdef _DEBUG
     if (pResourceCache->DbgGetContentType() == ShaderResourceCacheVk::DbgCacheContentType::SRBResources)
     {
-        VERIFY(SpirvAttribs.VarType == SHADER_VARIABLE_TYPE_DYNAMIC && vkDescrSet == VK_NULL_HANDLE ||
-               SpirvAttribs.VarType != SHADER_VARIABLE_TYPE_DYNAMIC && vkDescrSet != VK_NULL_HANDLE,
-               "Static and mutable variables and only them are expected to have valid descriptor set assigned");
+        if(SpirvAttribs.VarType == SHADER_VARIABLE_TYPE_STATIC || SpirvAttribs.VarType == SHADER_VARIABLE_TYPE_MUTABLE)
+        {
+            VERIFY(vkDescrSet != VK_NULL_HANDLE, "Static and mutable variables must have valid vulkan descriptor set assigned");
+            // Dynamic variables do not have vulkan descriptor set only until they are assigned one the first time
+        }
     }
     else if (pResourceCache->DbgGetContentType() == ShaderResourceCacheVk::DbgCacheContentType::StaticShaderResources)
     {
@@ -757,9 +750,13 @@ void ShaderResourceLayoutVk::dbgVerifyBindings()const
                 if(dbgCacheContentType == ShaderResourceCacheVk::DbgCacheContentType::StaticShaderResources)
                     VERIFY(vkDescSet == VK_NULL_HANDLE, "Static resource cache should never have vulkan descriptor set");
                 else if (dbgCacheContentType == ShaderResourceCacheVk::DbgCacheContentType::SRBResources)
-                    VERIFY(VarType == SHADER_VARIABLE_TYPE_DYNAMIC && vkDescSet == VK_NULL_HANDLE ||
-                           VarType != SHADER_VARIABLE_TYPE_DYNAMIC && vkDescSet != VK_NULL_HANDLE,
-                           "Static and mutable resources (and only them) must have non-null vulkan descriptor set assigned");
+                {
+                    if (VarType == SHADER_VARIABLE_TYPE_STATIC || VarType == SHADER_VARIABLE_TYPE_MUTABLE)
+                    {
+                        VERIFY(vkDescSet != VK_NULL_HANDLE, "Static and mutable variables must have valid vulkan descriptor set assigned");
+                        // Dynamic variables do not have vulkan descriptor set only until they are assigned one the first time
+                    }
+                }
                 else
                     UNEXPECTED("Unexpected cache content type");
 #endif
@@ -809,6 +806,92 @@ void ShaderResourceLayoutVk::InitializeResourcesInCache()
     {
         const auto& Res = GetResource(r);
         m_pResourceCache->InitializeResources(Res.DescriptorSet, Res.CacheOffset, Res.SpirvAttribs.ArraySize, Res.SpirvAttribs.Type);
+    }
+}
+
+void ShaderResourceLayoutVk::CommitDynamicResources()
+{
+    VERIFY_EXPR(m_pResourceCache);
+    Uint32 NumDynamicResources = m_NumResources[SHADER_VARIABLE_TYPE_DYNAMIC];
+    if(NumDynamicResources == 0)
+        return;
+
+#if 0
+#ifdef _DEBUG
+    static constexpr size_t ImgUpdateBatchSize = 4;
+    static constexpr size_t BuffUpdateBatchSize = 2;
+    static constexpr size_t TexelBuffUpdateBatchSize = 2;
+#else
+    static constexpr size_t ImgUpdateBatchSize = 128;
+    static constexpr size_t BuffUpdateBatchSize = 64;
+    static constexpr size_t TexelBuffUpdateBatchSize = 32;
+#endif
+
+    std::array<VkDescriptorImageInfo, ImgUpdateBatchSize>  ImgInfo;
+    std::array<VkDescriptorBufferInfo, BuffUpdateBatchSize> BuffInfo;
+    std::array<VkBufferView, BuffUpdateBatchSize> TexelBuffInfo;
+#endif
+
+    for(Uint32 r=0; r < NumDynamicResources; ++r)
+    {
+        const auto& Res = GetResource(SHADER_VARIABLE_TYPE_DYNAMIC, r);
+        VERIFY_EXPR(Res.SpirvAttribs.VarType == SHADER_VARIABLE_TYPE_DYNAMIC);
+        auto& SetResources = m_pResourceCache->GetDescriptorSet(Res.DescriptorSet);
+        auto vkSet = SetResources.GetVkDescriptorSet();
+        VERIFY(vkSet != VK_NULL_HANDLE, "Vulkan descriptor set must not be null");
+        switch(Res.SpirvAttribs.Type)
+        {
+            case SPIRVShaderResourceAttribs::ResourceType::UniformBuffer:
+            case SPIRVShaderResourceAttribs::ResourceType::StorageBuffer:
+                for (Uint32 i = 0; i < Res.SpirvAttribs.ArraySize; ++i)
+                {
+                    auto CachedRes = SetResources.GetResource(Res.CacheOffset + i);
+                    VkDescriptorBufferInfo DescrBuffInfo = CachedRes.GetBufferDescriptorWriteInfo();
+                    Res.UpdateDescriptorHandle(vkSet, i, nullptr, &DescrBuffInfo, nullptr);
+                }
+            break;
+
+            case SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer:
+            case SPIRVShaderResourceAttribs::ResourceType::StorageTexelBuffer:
+                for (Uint32 i = 0; i < Res.SpirvAttribs.ArraySize; ++i)
+                {
+                    auto CachedRes = SetResources.GetResource(Res.CacheOffset + i);
+                    VkBufferView BuffView = CachedRes.GetBufferViewWriteInfo();
+                    Res.UpdateDescriptorHandle(vkSet, i, nullptr, nullptr, &BuffView);
+                }
+            break;
+
+            case SPIRVShaderResourceAttribs::ResourceType::SeparateImage:
+            case SPIRVShaderResourceAttribs::ResourceType::StorageImage:
+            case SPIRVShaderResourceAttribs::ResourceType::SampledImage:
+                for (Uint32 i = 0; i < Res.SpirvAttribs.ArraySize; ++i)
+                {
+                    auto CachedRes = SetResources.GetResource(Res.CacheOffset + i);
+                    VkDescriptorImageInfo DescrImgInfo = CachedRes.GetImageDescriptorWriteInfo(Res.SpirvAttribs.StaticSamplerInd >= 0);
+                    Res.UpdateDescriptorHandle(vkSet, i, &DescrImgInfo, nullptr, nullptr);
+                }
+            break;
+
+            case SPIRVShaderResourceAttribs::ResourceType::AtomicCounter:
+                // Do nothing
+            break;
+           
+
+            case SPIRVShaderResourceAttribs::ResourceType::SeparateSampler:
+                for (Uint32 i = 0; i < Res.SpirvAttribs.ArraySize; ++i)
+                {
+                    if(Res.SpirvAttribs.StaticSamplerInd < 0)
+                    {
+                        auto CachedRes = SetResources.GetResource(Res.CacheOffset + i);
+                        VkDescriptorImageInfo DescrImgInfo = CachedRes.GetSamplerDescriptorWriteInfo();
+                        Res.UpdateDescriptorHandle(vkSet, i, &DescrImgInfo, nullptr, nullptr);
+                    }
+                }
+            break;
+
+            default:
+                UNEXPECTED("Unexpected resource type");
+        }
     }
 }
 

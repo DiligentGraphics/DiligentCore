@@ -51,7 +51,7 @@ public:
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface );
 
-    virtual VkBufferView GetVkBufferView()override final{return m_BuffView;}
+    virtual VkBufferView GetVkBufferView()const override final{return m_BuffView;}
    
 protected:
     

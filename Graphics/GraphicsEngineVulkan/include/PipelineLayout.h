@@ -37,6 +37,7 @@ namespace Diligent
 {
 
 class RenderDeviceVkImpl;
+class DeviceContextVkImpl;
 
 
 /// Implementation of the Diligent::PipelineLayout class
@@ -60,21 +61,6 @@ public:
                               Uint32&                           OffsetInCache,
                               std::vector<uint32_t>&            SPIRV);
 
-    // This method should be thread-safe as it does not modify any object state
-
-#if 0
-    // This method should be thread-safe as it does not modify any object state
-    void (PipelineLayout::*CommitDescriptorHandles)(RenderDeviceVkImpl *pRenderDeviceVk, 
-                                                   ShaderResourceCacheVk& ResourceCache, 
-                                                   class CommandContext &Ctx, 
-                                                   bool IsCompute)const = nullptr;
-
-    void (PipelineLayout::*TransitionAndCommitDescriptorHandles)(RenderDeviceVkImpl *pRenderDeviceVk, 
-                                                                ShaderResourceCacheVk& ResourceCache, 
-                                                                class CommandContext &Ctx, 
-                                                                bool IsCompute)const = nullptr;
-#endif
-
     Uint32 GetTotalDescriptors(SHADER_VARIABLE_TYPE VarType)const
     {
         VERIFY_EXPR(VarType >= 0 && VarType < SHADER_VARIABLE_TYPE_NUM_TYPES);
@@ -89,6 +75,17 @@ public:
     {
         return m_LayoutMgr.GetHash();
     }
+
+    // Allocates Vulkan descriptor set for dynamic resources and assigns the
+    // set to the resource cache
+    void AllocateDynamicDescriptorSet(RenderDeviceVkImpl*     pDevicVkImpl,
+                                      DeviceContextVkImpl*    pCtxVkImpl,
+                                      ShaderResourceCacheVk&  ResourceCache)const;
+
+    // Binds Vulkan descriptor sets to the command buffer in the cmd context
+    void BindDescriptorSets(DeviceContextVkImpl*    pCtxVkImpl,
+                            bool                    IsCompute,
+                            ShaderResourceCacheVk&  ResourceCache)const;
 
 private:
 

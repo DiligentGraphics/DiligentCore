@@ -124,10 +124,16 @@ public:
 
 #if 0
     struct DynamicAllocation AllocateDynamicSpace(size_t NumBytes);
-    
+#endif    
     Uint32 GetContextId()const{return m_ContextId;}
-#endif
+
     size_t GetNumCommandsInCtx()const { return m_State.NumCommands; }
+
+    VulkanUtilities::VulkanCommandBuffer& GetCommandBuffer()
+    {
+        EnsureVkCmdBuffer();
+        return m_CommandBuffer;
+    }
 
 private:
     void CommitRenderPassAndFramebuffer(class PipelineStateVkImpl *pPipelineStateVk);
@@ -170,8 +176,8 @@ private:
     class ShaderResourceCacheVk *m_pCommittedResourceCache = nullptr;
 #if 0
     FixedBlockMemoryAllocator m_CmdListAllocator;
-    const Uint32 m_ContextId;
 #endif
+    const Uint32 m_ContextId;
 
     VulkanUtilities::VulkanCommandBufferPool m_CmdPool;
 

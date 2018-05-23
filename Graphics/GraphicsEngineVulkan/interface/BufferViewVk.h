@@ -41,7 +41,7 @@ class IBufferViewVk : public IBufferView
 public:
 
     /// Returns Vulkan buffer view object.
-    virtual VkBufferView GetVkBufferView() = 0;
+    virtual VkBufferView GetVkBufferView()const = 0;
 };
 
 }

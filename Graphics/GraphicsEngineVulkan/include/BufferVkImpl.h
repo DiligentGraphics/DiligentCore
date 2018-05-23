@@ -88,7 +88,7 @@ public:
     }
     */
 
-    VkBuffer GetVkBuffer()override final
+    VkBuffer GetVkBuffer()const override final
     {
         return m_VulkanBuffer;
     }

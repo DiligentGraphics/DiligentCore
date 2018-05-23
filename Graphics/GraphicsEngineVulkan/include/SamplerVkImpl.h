@@ -45,7 +45,7 @@ public:
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
 
-    virtual VkSampler GetVkSampler()override final{return m_VkSampler;}
+    virtual VkSampler GetVkSampler()const override final{return m_VkSampler;}
 
 private:
     friend class ShaderVkImpl;

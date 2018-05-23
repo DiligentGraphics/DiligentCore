@@ -42,7 +42,7 @@ class IBufferVk : public IBuffer
 public:
 
     /// Returns a vulkan buffer handle
-    virtual VkBuffer GetVkBuffer() = 0;
+    virtual VkBuffer GetVkBuffer()const = 0;
 
     /// Sets vulkan access flags
 

@@ -88,8 +88,14 @@ public:
 
     struct Resource
     {
-        const SPIRVShaderResourceAttribs::ResourceType Type;
-        RefCntAutoPtr<IDeviceObject> pObject;
+        const SPIRVShaderResourceAttribs::ResourceType  Type;
+        RefCntAutoPtr<IDeviceObject>                    pObject;
+        void*                                           vkDescriptor = nullptr;
+
+        VkDescriptorBufferInfo GetBufferDescriptorWriteInfo ()                       const;
+        VkDescriptorImageInfo  GetImageDescriptorWriteInfo  (bool IsImmutableSampler)const;
+        VkBufferView           GetBufferViewWriteInfo       ()                       const;
+        VkDescriptorImageInfo  GetSamplerDescriptorWriteInfo()                       const;
     };
 
     class DescriptorSet
@@ -141,7 +147,7 @@ public:
 
     template<bool VerifyOnly>
     void TransitionResources(DeviceContextVkImpl *pCtxVkImpl);
-    
+
 private:
     ShaderResourceCacheVk             (const ShaderResourceCacheVk&) = delete;
     ShaderResourceCacheVk             (ShaderResourceCacheVk&&)      = delete;
