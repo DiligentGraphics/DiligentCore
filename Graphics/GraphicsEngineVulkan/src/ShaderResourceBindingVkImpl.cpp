@@ -21,6 +21,7 @@
  *  of the possibility of such damages.
  */
 
+#include <array>
 #include "pch.h"
 #include "ShaderResourceBindingVkImpl.h"
 #include "PipelineStateVkImpl.h"
@@ -39,11 +40,11 @@ ShaderResourceBindingVkImpl::ShaderResourceBindingVkImpl( IReferenceCounters *pR
 
     auto *pRenderDeviceVkImpl = ValidatedCast<RenderDeviceVkImpl>(pPSO->GetDevice());
     // This only allocate memory and initialize descriptor sets in the resource cache
-    // Resources will be initialized by InitializeResourcesInCache()
+    // Resources will be initialized by InitializeResourceMemoryInCache()
     pPSO->GetPipelineLayout().InitResourceCache(pRenderDeviceVkImpl, m_ShaderResourceCache, pPSO->GetResourceCacheDataAllocator());
     
-    auto *pResLayoutRawMem = ALLOCATE(GetRawAllocator(), "Raw memory for ShaderResourceLayoutVk", m_NumShaders * sizeof(ShaderResourceLayoutVk));
-    m_pResourceLayouts = reinterpret_cast<ShaderResourceLayoutVk*>(pResLayoutRawMem);
+    auto *pVarMgrsRawMem = ALLOCATE(GetRawAllocator(), "Raw memory for ShaderVariableManagerVk", m_NumShaders * sizeof(ShaderVariableManagerVk));
+    m_pShaderVarMgrs = reinterpret_cast<ShaderVariableManagerVk*>(pVarMgrsRawMem);
 
     for (Uint32 s = 0; s < m_NumShaders; ++s)
     {
@@ -51,11 +52,13 @@ ShaderResourceBindingVkImpl::ShaderResourceBindingVkImpl( IReferenceCounters *pR
         auto ShaderType = pShader->GetDesc().ShaderType;
         auto ShaderInd = GetShaderTypeIndex(ShaderType);
         
-        auto &ShaderResLayoutDataAllocator = pPSO->GetShaderResourceLayoutDataAllocator(s);
+        auto &VarDataAllocator = pPSO->GetShaderVariableDataAllocator(s);
 
-        const auto &SrcLayout = pPSO->GetShaderResLayout(ShaderType);
-        new (m_pResourceLayouts + s) ShaderResourceLayoutVk(*this, SrcLayout, ShaderResLayoutDataAllocator, nullptr, 0, m_ShaderResourceCache);
-        m_pResourceLayouts[s].InitializeResourcesInCache();
+        const auto &SrcLayout = pPSO->GetShaderResLayout(s);
+        new (m_pShaderVarMgrs + s) ShaderVariableManagerVk(*this);
+        std::array<SHADER_VARIABLE_TYPE, 2> VarTypes = {SHADER_VARIABLE_TYPE_MUTABLE, SHADER_VARIABLE_TYPE_DYNAMIC};
+        m_pShaderVarMgrs[s].Initialize(SrcLayout, VarDataAllocator, VarTypes.data(), static_cast<Uint32>(VarTypes.size()), m_ShaderResourceCache);
+        SrcLayout.InitializeResourceMemoryInCache(m_ShaderResourceCache);
 
         m_ResourceLayoutIndex[ShaderInd] = static_cast<Int8>(s);
     }
@@ -63,10 +66,15 @@ ShaderResourceBindingVkImpl::ShaderResourceBindingVkImpl( IReferenceCounters *pR
 
 ShaderResourceBindingVkImpl::~ShaderResourceBindingVkImpl()
 {
-    for(Uint32 l = 0; l < m_NumShaders; ++l)
-        m_pResourceLayouts[l].~ShaderResourceLayoutVk();
+    PipelineStateVkImpl* pPSO = ValidatedCast<PipelineStateVkImpl>(m_pPSO);
+    for(Uint32 s = 0; s < m_NumShaders; ++s)
+    {
+        auto &VarDataAllocator = pPSO->GetShaderVariableDataAllocator(s);
+        m_pShaderVarMgrs[s].Destroy(VarDataAllocator);
+        m_pShaderVarMgrs[s].~ShaderVariableManagerVk();
+    }
 
-    GetRawAllocator().Free(m_pResourceLayouts);
+    GetRawAllocator().Free(m_pShaderVarMgrs);
 }
 
 IMPLEMENT_QUERY_INTERFACE( ShaderResourceBindingVkImpl, IID_ShaderResourceBindingVk, TBase )
@@ -80,7 +88,7 @@ void ShaderResourceBindingVkImpl::BindResources(Uint32 ShaderFlags, IResourceMap
             auto ResLayoutInd = m_ResourceLayoutIndex[ShaderInd];
             if(ResLayoutInd >= 0)
             {
-                m_pResourceLayouts[ResLayoutInd].BindResources(pResMapping, Flags, &m_ShaderResourceCache);
+                m_pShaderVarMgrs[ResLayoutInd].BindResources(pResMapping, Flags);
             }
         }
     }
@@ -95,8 +103,8 @@ IShaderVariable *ShaderResourceBindingVkImpl::GetVariable(SHADER_TYPE ShaderType
         LOG_ERROR_MESSAGE("Failed to find shader variable \"", Name,"\" in shader resource binding: shader type ", GetShaderTypeLiteralName(ShaderType), " is not initialized");
         return ValidatedCast<PipelineStateVkImpl>(GetPipelineState())->GetDummyShaderVar();
     }
-    auto *pVar = m_pResourceLayouts[ResLayoutInd].GetShaderVariable(Name);
-    if(pVar->SpirvAttribs.VarType == SHADER_VARIABLE_TYPE_STATIC)
+    auto *pVar = m_pShaderVarMgrs[ResLayoutInd].GetVariable(Name);
+    if(pVar->GetResource().SpirvAttribs.VarType == SHADER_VARIABLE_TYPE_STATIC)
     {
         LOG_ERROR_MESSAGE("Static shader variable \"", Name, "\" must not be accessed through shader resource binding object. Static variable should be set through shader objects.");
         pVar = nullptr;
@@ -106,49 +114,6 @@ IShaderVariable *ShaderResourceBindingVkImpl::GetVariable(SHADER_TYPE ShaderType
         return ValidatedCast<PipelineStateVkImpl>(GetPipelineState())->GetDummyShaderVar();
     else
         return pVar;
-}
-
-#ifdef VERIFY_SHADER_BINDINGS
-void ShaderResourceBindingVkImpl::dbgVerifyResourceBindings(const PipelineStateVkImpl *pPSO)
-{
-    auto *pRefPSO = GetPipelineState();
-    if (pPSO->IsIncompatibleWith(pRefPSO))
-    {
-        LOG_ERROR("Shader resource binding is incompatible with the pipeline state \"", pPSO->GetDesc().Name, '\"');
-        return;
-    }
-    for(Uint32 l = 0; l < m_NumShaders; ++l)
-        m_pResourceLayouts[l].dbgVerifyBindings();
-}
-#endif
-
-void ShaderResourceBindingVkImpl::InitializeStaticResources(const PipelineStateVkImpl *pPSO)
-{
-    VERIFY(!StaticResourcesInitialized(), "Static resources have already been initialized");
-    VERIFY(pPSO == GetPipelineState(), "Invalid pipeline state provided");
-
-    auto NumShaders = pPSO->GetNumShaders();
-    auto ppShaders = pPSO->GetShaders();
-    // Copy static resources
-    for (Uint32 s = 0; s < NumShaders; ++s)
-    {
-        auto *pShader = ValidatedCast<ShaderVkImpl>( ppShaders[s] );
-#ifdef VERIFY_SHADER_BINDINGS
-        pShader->DbgVerifyStaticResourceBindings();
-#endif
-        auto &ConstResLayout = pShader->GetConstResLayout();
-        GetResourceLayout(pShader->GetDesc().ShaderType).InitializeStaticResources(ConstResLayout);
-    }
-
-    m_bStaticResourcesInitialized = true;
-}
-
-void ShaderResourceBindingVkImpl::CommitDynamicResources()
-{
-    for (Uint32 s=0; s < m_NumShaders; ++s)
-    {
-        m_pResourceLayouts[s].CommitDynamicResources();
-    }
 }
 
 }

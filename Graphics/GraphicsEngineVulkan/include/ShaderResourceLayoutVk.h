@@ -90,12 +90,6 @@
 
 #include <array>
 #include <memory>
-#include <unordered_map>
-
-// Set this define to 1 to use unordered_map to store shader variables. 
-// Note that sizeof(m_VariableHash)==128 (release mode, MS compiler, x64).
-#define USE_VARIABLE_HASH_MAP 0
-
 
 #include "ShaderBase.h"
 #include "HashUtils.h"
@@ -111,20 +105,13 @@ namespace Diligent
 {
 
 /// Diligent::ShaderResourceLayoutVk class
-// sizeof(ShaderResourceLayoutVk)==72 (MS compiler, x64)
+// sizeof(ShaderResourceLayoutVk)==56    (MS compiler, x64)
 class ShaderResourceLayoutVk
 {
 public:
-    ShaderResourceLayoutVk(IObject &Owner, IMemoryAllocator &ResourceLayoutDataAllocator);
-
-    // This constructor is used by ShaderResourceBindingVkImpl to clone layout from the reference layout in PipelineStateVkImpl. 
-    // Descriptor sets and bindings must be correct. Resource cache is assigned, but not initialized.
-    ShaderResourceLayoutVk(IObject &Owner, 
-                           const ShaderResourceLayoutVk& SrcLayout, 
-                           IMemoryAllocator &ResourceLayoutDataAllocator,
-                           const SHADER_VARIABLE_TYPE *AllowedVarTypes, 
-                           Uint32 NumAllowedTypes, 
-                           ShaderResourceCacheVk &ResourceCache);
+    ShaderResourceLayoutVk(IObject&                                    Owner, 
+                           const VulkanUtilities::VulkanLogicalDevice& LogicalDevice, 
+                           IMemoryAllocator&                           ResourceLayoutDataAllocator);
 
     ShaderResourceLayoutVk              (const ShaderResourceLayoutVk&) = delete;
     ShaderResourceLayoutVk              (ShaderResourceLayoutVk&&)      = delete;
@@ -139,17 +126,16 @@ public:
     //  - PipelineStateVkImpl class instance to reference all types of resources (static, mutable, dynamic). 
     //    Root indices and descriptor table offsets are assigned during the initialization; 
     //    no shader resource cache is provided
-    void Initialize(const VulkanUtilities::VulkanLogicalDevice&         LogicalDevice,
-                    const std::shared_ptr<const SPIRVShaderResources>&  pSrcResources,
+    void Initialize(const std::shared_ptr<const SPIRVShaderResources>&  pSrcResources,
                     IMemoryAllocator&                                   LayoutDataAllocator,
                     const SHADER_VARIABLE_TYPE*                         AllowedVarTypes,
                     Uint32                                              NumAllowedTypes, 
-                    ShaderResourceCacheVk*                              pResourceCache,
+                    ShaderResourceCacheVk*                              pStaticResourceCache,
                     std::vector<uint32_t>*                              pSPIRV,
                     class PipelineLayout*                               pPipelineLayout);
 
-    // sizeof(VkResource) == 32 (x64)
-    struct VkResource : IShaderVariable
+    // sizeof(VkResource) == 24 (x64)
+    struct VkResource
     {
         VkResource(const VkResource&)              = delete;
         VkResource(VkResource&&)                   = delete;
@@ -160,9 +146,9 @@ public:
         const Uint16 DescriptorSet;
         const Uint32 CacheOffset; // Offset from the beginning of the cached descriptor set
         const SPIRVShaderResourceAttribs &SpirvAttribs;
-        ShaderResourceLayoutVk &ParentResLayout;
+        const ShaderResourceLayoutVk &ParentResLayout;
 
-        VkResource(ShaderResourceLayoutVk&              _ParentLayout,
+        VkResource(const ShaderResourceLayoutVk&        _ParentLayout,
                    const SPIRVShaderResourceAttribs&    _SpirvAttribs,
                    uint32_t                             _Binding,
                    uint32_t                             _DescriptorSet,
@@ -187,47 +173,13 @@ public:
         {
         }
 
-        virtual IReferenceCounters* GetReferenceCounters()const override final
-        {
-            return ParentResLayout.GetOwner().GetReferenceCounters();
-        }
+        // Checks if a resource is bound in ResourceCache at the given ArrayIndex
+        bool IsBound(Uint32 ArrayIndex, const ShaderResourceCacheVk& ResourceCache)const;
+        
+        // Binds a resource pObject in the ResourceCache
+        void BindResource(IDeviceObject *pObject, Uint32 ArrayIndex, ShaderResourceCacheVk& ResourceCache)const;
 
-        virtual Atomics::Long AddRef()override final
-        {
-            return ParentResLayout.GetOwner().AddRef();
-        }
-
-        virtual Atomics::Long Release()override final
-        {
-            return ParentResLayout.GetOwner().Release();
-        }
-
-        void QueryInterface(const INTERFACE_ID &IID, IObject **ppInterface)override final
-        {
-            if (ppInterface == nullptr)
-                return;
-
-            *ppInterface = nullptr;
-            if (IID == IID_ShaderVariable || IID == IID_Unknown)
-            {
-                *ppInterface = this;
-                (*ppInterface)->AddRef();
-            }
-        }
-
-        bool IsBound(Uint32 ArrayIndex);
-        // Non-virtual function
-        void BindResource(IDeviceObject *pObject, Uint32 ArrayIndex, const ShaderResourceLayoutVk *dbgResLayout);
-        virtual void Set(IDeviceObject *pObject)override final{ BindResource(pObject, 0, nullptr); }
-
-        virtual void SetArray(IDeviceObject* const* ppObjects, Uint32 FirstElement, Uint32 NumElements)override final
-        {
-            for(Uint32 Elem = 0; Elem < NumElements; ++Elem)
-                BindResource(ppObjects[Elem], FirstElement+Elem, nullptr);
-        }
-
-        // Updates dynamic resource descriptors in the descriptor set. The set is assigned 
-        // to the resource cache by PipelineLayout::AllocateDynamicDescriptorSet().
+        // Updates resource descriptor in the descriptor set
         inline void UpdateDescriptorHandle(VkDescriptorSet                  vkDescrSet,
                                            uint32_t                         ArrayElement,
                                            const VkDescriptorImageInfo*     pImageInfo,
@@ -238,57 +190,62 @@ public:
         void CacheBuffer(IDeviceObject*                     pBuffer, 
                          ShaderResourceCacheVk::Resource&   DstRes, 
                          VkDescriptorSet                    vkDescrSet,
-                         Uint32                             ArrayInd);
+                         Uint32                             ArrayInd)const;
 
         void CacheTexelBuffer(IDeviceObject*                     pBufferView, 
                               ShaderResourceCacheVk::Resource&   DstRes, 
                               VkDescriptorSet                    vkDescrSet,
-                              Uint32                             ArrayInd);
+                              Uint32                             ArrayInd)const;
 
         void CacheImage(IDeviceObject*                   pTexView,
                         ShaderResourceCacheVk::Resource& DstRes,
                         VkDescriptorSet                  vkDescrSet,
-                        Uint32                           ArrayInd);
+                        Uint32                           ArrayInd)const;
 
         void CacheSeparateSampler(IDeviceObject*                   pSampler,
                                   ShaderResourceCacheVk::Resource& DstRes,
                                   VkDescriptorSet                  vkDescrSet,
-                                  Uint32                           ArrayInd);
+                                  Uint32                           ArrayInd)const;
 
         bool UpdateCachedResource(ShaderResourceCacheVk::Resource&   DstRes,
                                   Uint32                             ArrayInd,
                                   IDeviceObject*                     pObject, 
                                   INTERFACE_ID                       InterfaceId,
-                                  const char*                        ResourceName);
+                                  const char*                        ResourceName)const;
     };
 
-    void InitializeStaticResources(const ShaderResourceLayoutVk &SrcLayout);
-
-    // dbgResourceCache is only used for sanity check and as a remainder that the resource cache must be alive
-    // while Layout is alive
-    void BindResources( IResourceMapping* pResourceMapping, Uint32 Flags, const ShaderResourceCacheVk *dbgResourceCache );
-    VkResource* GetShaderVariable( const Char* Name );
+    // Copies static resources from SrcResourceCache defined by SrcLayout
+    // to DstResourceCache defined by this layout
+    void InitializeStaticResources(const ShaderResourceLayoutVk& SrcLayout, 
+                                   ShaderResourceCacheVk&        SrcResourceCache,
+                                   ShaderResourceCacheVk&        DstResourceCache)const;
 
 #ifdef VERIFY_SHADER_BINDINGS
-    void dbgVerifyBindings()const;
+    void dbgVerifyBindings(const ShaderResourceCacheVk& ResourceCache)const;
 #endif
-
-    IObject& GetOwner(){return m_Owner;}
 
     Uint32 GetResourceCount(SHADER_VARIABLE_TYPE VarType)const
     {
         return m_NumResources[VarType];
     }
 
-    void InitializeResourcesInCache();
+    // Initializes resource slots in the ResourceCache
+    void InitializeResourceMemoryInCache(ShaderResourceCacheVk& ResourceCache)const;
     
-    void CommitDynamicResources();
-
-private:
-    void InitVariablesHashMap();
+    // Updates dynamic resource descriptors in the ResourceCache. The descriptor set is assigned 
+    // to the resource cache by PipelineLayout::AllocateDynamicDescriptorSet().
+    void CommitDynamicResources(const ShaderResourceCacheVk& ResourceCache)const;
 
     const Char* GetShaderName()const;
 
+    const VkResource& GetResource(SHADER_VARIABLE_TYPE VarType, Uint32 r)const
+    {
+        VERIFY_EXPR( r < m_NumResources[VarType] );
+        auto* Resources = reinterpret_cast<const VkResource*>(m_ResourceBuffer.get());
+        return Resources[GetResourceOffset(VarType,r)];
+    }
+
+private:
     Uint32 GetResourceOffset(SHADER_VARIABLE_TYPE VarType, Uint32 r)const
     {
         VERIFY_EXPR( r < m_NumResources[VarType] );
@@ -304,16 +261,11 @@ private:
         auto* Resources = reinterpret_cast<VkResource*>(m_ResourceBuffer.get());
         return Resources[GetResourceOffset(VarType,r)];
     }
-    const VkResource& GetResource(SHADER_VARIABLE_TYPE VarType, Uint32 r)const
+
+    const VkResource& GetResource(Uint32 r)const
     {
-        VERIFY_EXPR( r < m_NumResources[VarType] );
+        VERIFY_EXPR(r < GetTotalResourceCount());
         auto* Resources = reinterpret_cast<const VkResource*>(m_ResourceBuffer.get());
-        return Resources[GetResourceOffset(VarType,r)];
-    }
-    VkResource& GetResource(Uint32 r)
-    {
-        VERIFY_EXPR( r < GetTotalResourceCount() );
-        auto* Resources = reinterpret_cast<VkResource*>(m_ResourceBuffer.get());
         return Resources[r];
     }
 
@@ -325,28 +277,16 @@ private:
 
     void AllocateMemory(IMemoryAllocator &Allocator);
 
-    
-    // There is no need to use shared ptr as referenced resource cache is either part of the
-    // parent ShaderVkImpl object or ShaderResourceBindingVkImpl object
-    ShaderResourceCacheVk *m_pResourceCache = nullptr;
 
-    std::unique_ptr<void, STDDeleterRawMem<void> > m_ResourceBuffer;
-    std::array<Uint16, SHADER_VARIABLE_TYPE_NUM_TYPES> m_NumResources = {};
+    IObject&                                            m_Owner;
+    const VulkanUtilities::VulkanLogicalDevice&         m_LogicalDevice;
+    std::unique_ptr<void, STDDeleterRawMem<void> >      m_ResourceBuffer;
 
-#if USE_VARIABLE_HASH_MAP
-    // Hash map to look up shader variables by name.
-    // Note that sizeof(m_VariableHash)==128 (release mode, MS compiler, x64).
-    typedef std::pair<HashMapStringKey, IShaderVariable*> VariableHashElemType;
-    std::unordered_map<HashMapStringKey, IShaderVariable*, std::hash<HashMapStringKey>, std::equal_to<HashMapStringKey>, STDAllocatorRawMem<VariableHashElemType> > m_VariableHash;
-#endif
-
-    std::shared_ptr<const VulkanUtilities::VulkanLogicalDevice> m_pLogicalDevice;
-
-    IObject &m_Owner;
     // We must use shared_ptr to reference ShaderResources instance, because
     // there may be multiple objects referencing the same set of resources
-    std::shared_ptr<const SPIRVShaderResources> m_pResources;
+    std::shared_ptr<const SPIRVShaderResources>         m_pResources;
 
+    std::array<Uint16, SHADER_VARIABLE_TYPE_NUM_TYPES>  m_NumResources = {};
 };
 
 }

@@ -36,24 +36,17 @@
 namespace Diligent
 {
 
-void PipelineStateVkImpl::ParseResourceLayoutAndCreateShader(IShader *pShader)
+void PipelineStateVkImpl::ParseResourceLayoutAndCreateShader(IShader *pShader, Uint32 LayoutInd)
 {
     VERIFY_EXPR(pShader);
 
-    auto ShaderType = pShader->GetDesc().ShaderType;
-    auto ShaderInd = GetShaderTypeIndex(ShaderType);
     auto *pShaderVk = ValidatedCast<ShaderVkImpl>(pShader);
     
-    VERIFY(m_pShaderResourceLayouts[ShaderInd] == nullptr, "Shader resource layout has already been initialized");
-
     auto pDeviceVkImpl = ValidatedCast<RenderDeviceVkImpl>(pShaderVk->GetDevice());
     const auto &LogicalDevice = pDeviceVkImpl->GetLogicalDevice();
-    auto &ShaderResLayoutAllocator = GetRawAllocator();
-
-    auto *pRawMem = ALLOCATE(ShaderResLayoutAllocator, "Raw memory for ShaderResourceLayoutVk", sizeof(ShaderResourceLayoutVk));
-    m_pShaderResourceLayouts[ShaderInd] = new (pRawMem) ShaderResourceLayoutVk(*this, GetRawAllocator());
+    
     std::vector<uint32_t> SPIRV = pShaderVk->GetSPIRV();
-    m_pShaderResourceLayouts[ShaderInd]->Initialize(LogicalDevice, pShaderVk->GetShaderResources(), GetRawAllocator(), nullptr, 0, nullptr, &SPIRV, &m_PipelineLayout);
+    m_ShaderResourceLayouts[LayoutInd].Initialize(pShaderVk->GetShaderResources(), GetRawAllocator(), nullptr, 0, nullptr, &SPIRV, &m_PipelineLayout);
 
     VkShaderModuleCreateInfo ShaderModuleCI = {};
     ShaderModuleCI.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -61,7 +54,7 @@ void PipelineStateVkImpl::ParseResourceLayoutAndCreateShader(IShader *pShader)
     ShaderModuleCI.flags = 0;
     ShaderModuleCI.codeSize = SPIRV.size() * sizeof(uint32_t);
     ShaderModuleCI.pCode = SPIRV.data();
-    m_ShaderModules[ShaderInd] = LogicalDevice.CreateShaderModule(ShaderModuleCI, m_Desc.Name);
+    m_ShaderModules[LayoutInd] = LogicalDevice.CreateShaderModule(ShaderModuleCI, m_Desc.Name);
 }
 
 
@@ -160,6 +153,12 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters *pRefCounters, Ren
     m_pDefaultShaderResBinding(nullptr, STDDeleter<ShaderResourceBindingVkImpl, FixedBlockMemoryAllocator>(pDeviceVk->GetSRBAllocator()) )
 {
     const auto &LogicalDevice = pDeviceVk->GetLogicalDevice();
+    auto &ShaderResLayoutAllocator = GetRawAllocator();
+    auto *pRawMem = ALLOCATE(ShaderResLayoutAllocator, "Raw memory for ShaderResourceLayoutVk", sizeof(ShaderResourceLayoutVk) * m_NumShaders);
+    m_ShaderResourceLayouts = reinterpret_cast<ShaderResourceLayoutVk*>(pRawMem);
+    for(Uint32 s=0; s < m_NumShaders; ++s)
+        new (m_ShaderResourceLayouts + s) ShaderResourceLayoutVk(*this, LogicalDevice, GetRawAllocator());
+
     if (PipelineDesc.IsComputePipeline)
     {
         auto &ComputePipeline = PipelineDesc.ComputePipeline;
@@ -182,7 +181,7 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters *pRefCounters, Ren
         CSStage.flags = 0; // reserved for future use
         CSStage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
 
-        ParseResourceLayoutAndCreateShader(ComputePipeline.pCS);
+        ParseResourceLayoutAndCreateShader(ComputePipeline.pCS, 0);
         CSStage.module = m_ShaderModules[CSInd];
 
         m_PipelineLayout.Finalize(LogicalDevice);
@@ -233,7 +232,7 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters *pRefCounters, Ren
                 default: UNEXPECTED("Unknown shader type");
             }
             
-            ParseResourceLayoutAndCreateShader(pShader);
+            ParseResourceLayoutAndCreateShader(pShader, s);
 
             StageCI.module = m_ShaderModules[GetShaderTypeIndex(ShaderType)];
             StageCI.pName = "main"; // entry point
@@ -371,18 +370,16 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters *pRefCounters, Ren
     }
 
     if(PipelineDesc.SRBAllocationGranularity > 1)
-        m_ResLayoutDataAllocators.Init(m_NumShaders, PipelineDesc.SRBAllocationGranularity);
+        m_VariableDataAllocators.Init(m_NumShaders, PipelineDesc.SRBAllocationGranularity);
 
     bool HasStaticResources = false;
     bool HasNonStaticResources = false;
-    for (auto *pLayout : m_pShaderResourceLayouts)
+    for (Uint32 s=0; s < m_NumShaders; ++s)
     {
-        if (pLayout != nullptr)
-        {
-            HasStaticResources = pLayout->GetResourceCount(SHADER_VARIABLE_TYPE_STATIC) != 0;
-            HasNonStaticResources = pLayout->GetResourceCount(SHADER_VARIABLE_TYPE_MUTABLE) != 0 ||
-                                    pLayout->GetResourceCount(SHADER_VARIABLE_TYPE_DYNAMIC) != 0;
-        }
+        const auto &Layout = m_ShaderResourceLayouts[s];
+        HasStaticResources = Layout.GetResourceCount(SHADER_VARIABLE_TYPE_STATIC) != 0;
+        HasNonStaticResources = Layout.GetResourceCount(SHADER_VARIABLE_TYPE_MUTABLE) != 0 ||
+                                Layout.GetResourceCount(SHADER_VARIABLE_TYPE_DYNAMIC) != 0;
     }
 
     // If there are only static resources, create default shader resource binding
@@ -412,15 +409,12 @@ PipelineStateVkImpl::~PipelineStateVkImpl()
         }
     }
 
-    auto &ShaderResLayoutAllocator = GetRawAllocator();
-    for (auto *pLayout : m_pShaderResourceLayouts)
+    for (Uint32 s=0; s < m_NumShaders; ++s)
     {
-        if (pLayout != nullptr)
-        {
-            pLayout->~ShaderResourceLayoutVk();
-            ShaderResLayoutAllocator.Free(pLayout);
-        }
+        m_ShaderResourceLayouts[s].~ShaderResourceLayoutVk();
     }
+    auto &ShaderResLayoutAllocator = GetRawAllocator();
+    ShaderResLayoutAllocator.Free(m_ShaderResourceLayouts);
 }
 
 IMPLEMENT_QUERY_INTERFACE( PipelineStateVkImpl, IID_PipelineStateVk, TPipelineStateBase )
@@ -525,15 +519,30 @@ ShaderResourceCacheVk* PipelineStateVkImpl::CommitAndTransitionShaderResources(I
     }
 #endif
 
+    auto &ResourceCache = pResBindingVkImpl->GetResourceCache();
+
     // First time only, copy static shader resources to the cache
     if(!pResBindingVkImpl->StaticResourcesInitialized())
-        pResBindingVkImpl->InitializeStaticResources(this);
+    {
+        for (Uint32 s = 0; s < m_NumShaders; ++s)
+        {
+            auto *pShaderVk = ValidatedCast<ShaderVkImpl>( m_ppShaders[s] );
+#ifdef VERIFY_SHADER_BINDINGS
+            pShaderVk->DbgVerifyStaticResourceBindings();
+#endif
+            auto &StaticResLayout = pShaderVk->GetStaticResLayout();
+            auto &StaticResCache = pShaderVk->GetStaticResCache();
+            m_ShaderResourceLayouts[s].InitializeStaticResources(StaticResLayout, StaticResCache, ResourceCache);
+        }
+        pResBindingVkImpl->SetStaticResourcesInitialized();
+    }
 
 #ifdef VERIFY_SHADER_BINDINGS
-    pResBindingVkImpl->dbgVerifyResourceBindings(this);
+    for (Uint32 s = 0; s < m_NumShaders; ++s)
+    {
+        m_ShaderResourceLayouts[s].dbgVerifyBindings(ResourceCache);
+    }
 #endif
-
-    auto &ResourceCache = pResBindingVkImpl->GetResourceCache();
 
     if(CommitResources)
     {
@@ -550,7 +559,10 @@ ShaderResourceCacheVk* PipelineStateVkImpl::CommitAndTransitionShaderResources(I
         // Allocate vulkan descriptor set for dynamic resources
         m_PipelineLayout.AllocateDynamicDescriptorSet(pDeviceVkImpl, pCtxVkImpl, ResourceCache);
         // Commit all dynamic resource descriptors
-        pResBindingVkImpl->CommitDynamicResources();
+        for(Uint32 s=0; s < m_NumShaders; ++s)
+        {
+            m_ShaderResourceLayouts[s].CommitDynamicResources(ResourceCache);
+        }
         // Bind descriptor sets
         m_PipelineLayout.BindDescriptorSets(pCtxVkImpl, m_Desc.IsComputePipeline, ResourceCache);
     }

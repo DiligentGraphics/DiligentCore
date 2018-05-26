@@ -21,6 +21,7 @@
  *  of the possibility of such damages.
  */
 
+#include <array>
 #include "pch.h"
 
 #include "ShaderVkImpl.h"
@@ -37,9 +38,10 @@ namespace Diligent
 
 ShaderVkImpl::ShaderVkImpl(IReferenceCounters *pRefCounters, RenderDeviceVkImpl *pRenderDeviceVk, const ShaderCreationAttribs &CreationAttribs) : 
     TShaderBase(pRefCounters, pRenderDeviceVk, CreationAttribs.Desc),
-    m_StaticResLayout(*this, GetRawAllocator()),
+    m_StaticResLayout(*this, pRenderDeviceVk->GetLogicalDevice(), GetRawAllocator()),
     m_DummyShaderVar(*this),
-    m_ConstResCache(ShaderResourceCacheVk::DbgCacheContentType::StaticShaderResources)
+    m_StaticResCache(ShaderResourceCacheVk::DbgCacheContentType::StaticShaderResources),
+    m_StaticVarsMgr(*this)
 {
     auto GLSLSource = BuildGLSLSourceString(CreationAttribs, TargetGLSLCompiler::glslang);
     m_SPIRV = GLSLtoSPIRV(m_Desc.ShaderType, GLSLSource.c_str());
@@ -59,29 +61,32 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters *pRefCounters, RenderDeviceVkImpl 
 
     // Clone only static resources that will be set directly in the shader
     // http://diligentgraphics.com/diligent-engine/architecture/Vk/shader-resource-layout#Initializing-Special-Resource-Layout-for-Managing-Static-Shader-Resources
-    SHADER_VARIABLE_TYPE VarTypes[] = {SHADER_VARIABLE_TYPE_STATIC};
-    m_StaticResLayout.Initialize(pRenderDeviceVk->GetLogicalDevice(), m_pShaderResources, GetRawAllocator(), VarTypes, _countof(VarTypes), &m_ConstResCache, nullptr, nullptr);
+    std::array<SHADER_VARIABLE_TYPE, 1> VarTypes = {SHADER_VARIABLE_TYPE_STATIC};
+    m_StaticResLayout.Initialize(m_pShaderResources, GetRawAllocator(), 
+        VarTypes.data(), static_cast<Uint32>(VarTypes.size()), &m_StaticResCache, nullptr, nullptr);
+    m_StaticVarsMgr.Initialize(m_StaticResLayout, GetRawAllocator(), nullptr, 0, m_StaticResCache);
 }
 
 ShaderVkImpl::~ShaderVkImpl()
 {
+    m_StaticVarsMgr.Destroy(GetRawAllocator());
 }
 
 void ShaderVkImpl::BindResources(IResourceMapping* pResourceMapping, Uint32 Flags)
 {
-   m_StaticResLayout.BindResources(pResourceMapping, Flags, &m_ConstResCache);
+   m_StaticVarsMgr.BindResources(pResourceMapping, Flags);
 }
     
 IShaderVariable* ShaderVkImpl::GetShaderVariable(const Char* Name)
 {
-    IShaderVariable *pVar = m_StaticResLayout.GetShaderVariable(Name);
+    IShaderVariable *pVar = m_StaticVarsMgr.GetVariable(Name);
     return (pVar != nullptr) ? pVar : &m_DummyShaderVar;
 }
 
 #ifdef VERIFY_SHADER_BINDINGS
 void ShaderVkImpl::DbgVerifyStaticResourceBindings()
 {
-    m_StaticResLayout.dbgVerifyBindings();
+    m_StaticResLayout.dbgVerifyBindings(m_StaticResCache);
 }
 #endif
 

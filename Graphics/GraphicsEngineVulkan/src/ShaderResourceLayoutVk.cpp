@@ -37,9 +37,11 @@
 namespace Diligent
 {
  
-ShaderResourceLayoutVk::ShaderResourceLayoutVk(IObject &Owner,
-                                               IMemoryAllocator &ResourceLayoutDataAllocator) : 
+ShaderResourceLayoutVk::ShaderResourceLayoutVk(IObject&                                    Owner, 
+                                               const VulkanUtilities::VulkanLogicalDevice& LogicalDevice,
+                                               IMemoryAllocator&                           ResourceLayoutDataAllocator) :
     m_Owner(Owner),
+    m_LogicalDevice(LogicalDevice),
 #if USE_VARIABLE_HASH_MAP
     m_VariableHash(STD_ALLOCATOR_RAW_MEM(VariableHashElemType, GetRawAllocator(), "Allocator for unordered_map<HashMapStringKey, IShaderVariable*>")),
 #endif
@@ -66,67 +68,17 @@ void ShaderResourceLayoutVk::AllocateMemory(IMemoryAllocator &Allocator)
     m_ResourceBuffer.reset(pRawMem);
 }
 
-// Clones layout from the reference layout maintained by the pipeline state
-// Descriptor sets and bindings must be correct
-// Resource cache is not initialized.
-ShaderResourceLayoutVk::ShaderResourceLayoutVk(IObject &Owner,
-                                               const ShaderResourceLayoutVk& SrcLayout, 
-                                               IMemoryAllocator &ResourceLayoutDataAllocator,
-                                               const SHADER_VARIABLE_TYPE *AllowedVarTypes, 
-                                               Uint32 NumAllowedTypes, 
-                                               ShaderResourceCacheVk &ResourceCache) :
-    ShaderResourceLayoutVk(Owner, ResourceLayoutDataAllocator)
-{
-    m_pLogicalDevice = SrcLayout.m_pLogicalDevice;
-    m_pResources = SrcLayout.m_pResources;
-    m_pResourceCache = &ResourceCache;
-    
-    Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
-    for(SHADER_VARIABLE_TYPE VarType = SHADER_VARIABLE_TYPE_STATIC; VarType < SHADER_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_VARIABLE_TYPE>(VarType+1))
-    {
-        m_NumResources[VarType] = IsAllowedType(VarType, AllowedTypeBits) ? SrcLayout.m_NumResources[VarType] : 0;
-    }
-    
-    AllocateMemory(ResourceLayoutDataAllocator);
-
-    Uint32 CurrResInd[SHADER_VARIABLE_TYPE_NUM_TYPES] = {};
-    for(SHADER_VARIABLE_TYPE VarType = SHADER_VARIABLE_TYPE_STATIC; VarType < SHADER_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_VARIABLE_TYPE>(VarType+1))
-    {
-        if( !IsAllowedType(VarType, AllowedTypeBits))
-            continue;
-
-        Uint32 NumResources = SrcLayout.m_NumResources[VarType];
-        VERIFY_EXPR(NumResources == m_NumResources[VarType]);
-        for( Uint32 r=0; r < NumResources; ++r )
-        {
-            const auto &SrcRes = SrcLayout.GetResource(VarType, r);
-            ::new (&GetResource(VarType, CurrResInd[VarType]++)) VkResource( *this, SrcRes );
-        }
-    }
-
-#ifdef _DEBUG
-    for(SHADER_VARIABLE_TYPE VarType = SHADER_VARIABLE_TYPE_STATIC; VarType < SHADER_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_VARIABLE_TYPE>(VarType+1))
-    {
-        VERIFY_EXPR(CurrResInd[VarType] == m_NumResources[VarType] );
-    }
-#endif
-}
-
-
-void ShaderResourceLayoutVk::Initialize(const VulkanUtilities::VulkanLogicalDevice&         LogicalDevice,
-                                        const std::shared_ptr<const SPIRVShaderResources>&  pSrcResources,
+void ShaderResourceLayoutVk::Initialize(const std::shared_ptr<const SPIRVShaderResources>&  pSrcResources,
                                         IMemoryAllocator&                                   LayoutDataAllocator,
                                         const SHADER_VARIABLE_TYPE*                         AllowedVarTypes,
                                         Uint32                                              NumAllowedTypes,
-                                        ShaderResourceCacheVk*                              pResourceCache,
+                                        ShaderResourceCacheVk*                              pStaticResourceCache,
                                         std::vector<uint32_t>*                              pSPIRV,
                                         PipelineLayout*                                     pPipelineLayout)
 {
     m_pResources = pSrcResources;
-    m_pResourceCache = pResourceCache;
-    m_pLogicalDevice = LogicalDevice.GetSharedPtr();
 
-    VERIFY_EXPR( (pResourceCache != nullptr) ^ (pPipelineLayout != nullptr && pSPIRV != nullptr) );
+    VERIFY_EXPR( (pStaticResourceCache != nullptr) ^ (pPipelineLayout != nullptr && pSPIRV != nullptr) );
 
     Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
 
@@ -206,7 +158,7 @@ void ShaderResourceLayoutVk::Initialize(const VulkanUtilities::VulkanLogicalDevi
             // Atomic counters   at index SPIRVShaderResourceAttribs::ResourceType::AtomicCounter      (6)
             // Separate images   at index SPIRVShaderResourceAttribs::ResourceType::SeparateImage      (7)
             // Separate samplers at index SPIRVShaderResourceAttribs::ResourceType::SeparateSampler    (8)
-            VERIFY_EXPR(m_pResourceCache != nullptr);
+            VERIFY_EXPR(pStaticResourceCache != nullptr);
 
             DescriptorSet = Attribs.Type;
             CacheOffset = StaticResCacheSetSizes[DescriptorSet];
@@ -266,37 +218,23 @@ void ShaderResourceLayoutVk::Initialize(const VulkanUtilities::VulkanLogicalDevi
     }
 #endif
 
-    if(m_pResourceCache)
+    if(pStaticResourceCache)
     {
         // Initialize resource cache to store static resources
         VERIFY_EXPR(pPipelineLayout == nullptr && pSPIRV == nullptr);
-        m_pResourceCache->InitializeSets(GetRawAllocator(), static_cast<Uint32>(StaticResCacheSetSizes.size()), StaticResCacheSetSizes.data());
-        InitializeResourcesInCache();
+        pStaticResourceCache->InitializeSets(GetRawAllocator(), static_cast<Uint32>(StaticResCacheSetSizes.size()), StaticResCacheSetSizes.data());
+        InitializeResourceMemoryInCache(*pStaticResourceCache);
 #ifdef _DEBUG
         for(SPIRVShaderResourceAttribs::ResourceType ResType = SPIRVShaderResourceAttribs::ResourceType::UniformBuffer; 
             ResType < SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes;
             ResType = static_cast<SPIRVShaderResourceAttribs::ResourceType>(ResType +1))
         {
-            VERIFY_EXPR(m_pResourceCache->GetDescriptorSet(ResType).GetSize() == StaticResCacheSetSizes[ResType]);
+            VERIFY_EXPR(pStaticResourceCache->GetDescriptorSet(ResType).GetSize() == StaticResCacheSetSizes[ResType]);
         }
 #endif
     }
-
-    InitVariablesHashMap();
 }
 
-void ShaderResourceLayoutVk::InitVariablesHashMap()
-{
-#if USE_VARIABLE_HASH_MAP
-    Uint32 TotalResources = GetTotalResourceCount();
-    for(Uint32 r=0; r < TotalResources; ++r)
-    {
-        auto &Res = GetResource(r);
-        /* HashMapStringKey will make a copy of the string*/
-        m_VariableHash.insert( std::make_pair( Diligent::HashMapStringKey(Res.Name), &Res ) );
-    }
-#endif
-}
 
 #define LOG_RESOURCE_BINDING_ERROR(ResType, pResource, VarName, ShaderName, ...)\
 {                                                                                                   \
@@ -325,14 +263,14 @@ void ShaderResourceLayoutVk::VkResource::UpdateDescriptorHandle(VkDescriptorSet 
     WriteDescrSet.pBufferInfo = pBufferInfo;
     WriteDescrSet.pTexelBufferView = pTexelBufferView;
 
-    ParentResLayout.m_pLogicalDevice->UpdateDescriptorSets(1, &WriteDescrSet, 0, nullptr);
+    ParentResLayout.m_LogicalDevice.UpdateDescriptorSets(1, &WriteDescrSet, 0, nullptr);
 }
 
 bool ShaderResourceLayoutVk::VkResource::UpdateCachedResource(ShaderResourceCacheVk::Resource&   DstRes,
                                                               Uint32                             ArrayInd,
                                                               IDeviceObject*                     pObject, 
                                                               INTERFACE_ID                       InterfaceId,
-                                                              const char*                        ResourceName)
+                                                              const char*                        ResourceName)const
 {
     // We cannot use ValidatedCast<> here as the resource retrieved from the
     // resource mapping can be of wrong type
@@ -365,7 +303,7 @@ bool ShaderResourceLayoutVk::VkResource::UpdateCachedResource(ShaderResourceCach
 void ShaderResourceLayoutVk::VkResource::CacheBuffer(IDeviceObject*                     pBuffer,
                                                      ShaderResourceCacheVk::Resource&   DstRes, 
                                                      VkDescriptorSet                    vkDescrSet, 
-                                                     Uint32                             ArrayInd)
+                                                     Uint32                             ArrayInd)const
 {
     VERIFY(SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::UniformBuffer || 
            SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::StorageBuffer,
@@ -399,7 +337,7 @@ void ShaderResourceLayoutVk::VkResource::CacheBuffer(IDeviceObject*             
 void ShaderResourceLayoutVk::VkResource::CacheTexelBuffer(IDeviceObject*                     pBufferView,
                                                           ShaderResourceCacheVk::Resource&   DstRes, 
                                                           VkDescriptorSet                    vkDescrSet,
-                                                          Uint32                             ArrayInd)
+                                                          Uint32                             ArrayInd)const
 {
     VERIFY(SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer || 
            SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::StorageTexelBuffer,
@@ -438,7 +376,7 @@ void ShaderResourceLayoutVk::VkResource::CacheTexelBuffer(IDeviceObject*        
 void ShaderResourceLayoutVk::VkResource::CacheImage(IDeviceObject*                   pTexView,
                                                     ShaderResourceCacheVk::Resource& DstRes,
                                                     VkDescriptorSet                  vkDescrSet,
-                                                    Uint32                           ArrayInd)
+                                                    Uint32                           ArrayInd)const
 {
     VERIFY(SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::StorageImage || 
            SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateImage ||
@@ -485,7 +423,7 @@ void ShaderResourceLayoutVk::VkResource::CacheImage(IDeviceObject*              
 void ShaderResourceLayoutVk::VkResource::CacheSeparateSampler(IDeviceObject*                    pSampler,
                                                               ShaderResourceCacheVk::Resource&  DstRes,
                                                               VkDescriptorSet                   vkDescrSet,
-                                                              Uint32                            ArrayInd)
+                                                              Uint32                            ArrayInd)const
 {
     VERIFY(SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler, "Separate sampler resource is expected");
 
@@ -502,17 +440,14 @@ void ShaderResourceLayoutVk::VkResource::CacheSeparateSampler(IDeviceObject*    
 }
 
 
-void ShaderResourceLayoutVk::VkResource::BindResource(IDeviceObject *pObj, Uint32 ArrayIndex, const ShaderResourceLayoutVk *dbgResLayout)
+void ShaderResourceLayoutVk::VkResource::BindResource(IDeviceObject *pObj, Uint32 ArrayIndex, ShaderResourceCacheVk& ResourceCache)const
 {
-    auto *pResourceCache = ParentResLayout.m_pResourceCache;
-    VERIFY(pResourceCache, "Resource cache is null");
-    VERIFY(dbgResLayout == nullptr || pResourceCache == dbgResLayout->m_pResourceCache, "Invalid resource cache");
     VERIFY_EXPR(ArrayIndex < SpirvAttribs.ArraySize);
 
-    auto &DstDescrSet = pResourceCache->GetDescriptorSet(DescriptorSet);
+    auto &DstDescrSet = ResourceCache.GetDescriptorSet(DescriptorSet);
     auto vkDescrSet = DstDescrSet.GetVkDescriptorSet();
 #ifdef _DEBUG
-    if (pResourceCache->DbgGetContentType() == ShaderResourceCacheVk::DbgCacheContentType::SRBResources)
+    if (ResourceCache.DbgGetContentType() == ShaderResourceCacheVk::DbgCacheContentType::SRBResources)
     {
         if(SpirvAttribs.VarType == SHADER_VARIABLE_TYPE_STATIC || SpirvAttribs.VarType == SHADER_VARIABLE_TYPE_MUTABLE)
         {
@@ -520,7 +455,7 @@ void ShaderResourceLayoutVk::VkResource::BindResource(IDeviceObject *pObj, Uint3
             // Dynamic variables do not have vulkan descriptor set only until they are assigned one the first time
         }
     }
-    else if (pResourceCache->DbgGetContentType() == ShaderResourceCacheVk::DbgCacheContentType::StaticShaderResources)
+    else if (ResourceCache.DbgGetContentType() == ShaderResourceCacheVk::DbgCacheContentType::StaticShaderResources)
     {
         VERIFY(vkDescrSet == VK_NULL_HANDLE, "Static shader resource cache should not have vulkan descriptor set allocation");
     }
@@ -573,15 +508,13 @@ void ShaderResourceLayoutVk::VkResource::BindResource(IDeviceObject *pObj, Uint3
     }
 }
 
-bool ShaderResourceLayoutVk::VkResource::IsBound(Uint32 ArrayIndex)
+bool ShaderResourceLayoutVk::VkResource::IsBound(Uint32 ArrayIndex, const ShaderResourceCacheVk& ResourceCache)const
 {
-    auto *pResourceCache = ParentResLayout.m_pResourceCache;
-    VERIFY(pResourceCache, "Resource cache is null");
     VERIFY_EXPR(ArrayIndex < SpirvAttribs.ArraySize);
 
-    if( DescriptorSet < pResourceCache->GetNumDescriptorSets() )
+    if( DescriptorSet < ResourceCache.GetNumDescriptorSets() )
     {
-        auto &Set = pResourceCache->GetDescriptorSet(DescriptorSet);
+        auto &Set = ResourceCache.GetDescriptorSet(DescriptorSet);
         if(CacheOffset + ArrayIndex < Set.GetSize())
         {
             auto &CachedRes = Set.GetResource(CacheOffset + ArrayIndex);
@@ -593,90 +526,10 @@ bool ShaderResourceLayoutVk::VkResource::IsBound(Uint32 ArrayIndex)
 }
 
 
-
-void ShaderResourceLayoutVk::BindResources( IResourceMapping* pResourceMapping, Uint32 Flags, const ShaderResourceCacheVk *dbgResourceCache )
+void ShaderResourceLayoutVk::InitializeStaticResources(const ShaderResourceLayoutVk& SrcLayout,
+                                                       ShaderResourceCacheVk&        SrcResourceCache,
+                                                       ShaderResourceCacheVk&        DstResourceCache)const
 {
-    VERIFY(dbgResourceCache == m_pResourceCache, "Resource cache does not match the cache provided at initialization");
-
-    if( !pResourceMapping )
-    {
-        LOG_ERROR_MESSAGE( "Failed to bind resources in shader \"", GetShaderName(), "\": resource mapping is null" );
-        return;
-    }
-
-    Uint32 TotalResources = GetTotalResourceCount();
-    for(Uint32 r=0; r < TotalResources; ++r)
-    {
-        auto &Res = GetResource(r);
-        for(Uint32 ArrInd = 0; ArrInd < Res.SpirvAttribs.ArraySize; ++ArrInd)
-        {
-            if( Flags & BIND_SHADER_RESOURCES_RESET_BINDINGS )
-                Res.BindResource(nullptr, ArrInd, this);
-
-            if( (Flags & BIND_SHADER_RESOURCES_UPDATE_UNRESOLVED) && Res.IsBound(ArrInd) )
-                return;
-
-            const auto* VarName = Res.SpirvAttribs.Name;
-            RefCntAutoPtr<IDeviceObject> pObj;
-            VERIFY_EXPR(pResourceMapping != nullptr);
-            pResourceMapping->GetResource( VarName, &pObj, ArrInd );
-            if( pObj )
-            {
-                //  Call non-virtual function
-                Res.BindResource(pObj, ArrInd, this);
-            }
-            else
-            {
-                if( (Flags & BIND_SHADER_RESOURCES_ALL_RESOLVED) && !Res.IsBound(ArrInd) )
-                    LOG_ERROR_MESSAGE( "Cannot bind resource to shader variable \"", Res.SpirvAttribs.GetPrintName(ArrInd), "\": resource view not found in the resource mapping" );
-            }
-        }
-    }
-}
-
-ShaderResourceLayoutVk::VkResource* ShaderResourceLayoutVk::GetShaderVariable(const Char* Name)
-{
-    ShaderResourceLayoutVk::VkResource* pVar = nullptr;
-#if USE_VARIABLE_HASH_MAP
-    // Name will be implicitly converted to HashMapStringKey without making a copy
-    auto it = m_VariableHash.find( Name );
-    if( it != m_VariableHash.end() )
-        pVar = it->second;
-#else
-    Uint32 TotalResources = GetTotalResourceCount();
-    for(Uint32 r=0; r < TotalResources; ++r)
-    {
-        auto &Res = GetResource(r);
-        if(strcmp(Res.SpirvAttribs.Name, Name) == 0)
-        {
-            pVar = &Res;
-            break;
-        }
-    }
-#endif
-
-    if(pVar == nullptr)
-    {
-        LOG_ERROR_MESSAGE( "Shader variable \"", Name, "\" is not found in shader \"", GetShaderName(), "\" (", GetShaderTypeLiteralName(m_pResources->GetShaderType()), "). Attempts to set the variable will be silently ignored." );
-    }
-    return pVar;
-}
-
-
-void ShaderResourceLayoutVk::InitializeStaticResources(const ShaderResourceLayoutVk &SrcLayout)
-{
-    if (!m_pResourceCache)
-    {
-        LOG_ERROR("Resource layout has no resource cache");
-        return;
-    }
-
-    if (!SrcLayout.m_pResourceCache)
-    {
-        LOG_ERROR("Src layout has no resource cache");
-        return;
-    }
-
     auto NumStaticResources = m_NumResources[SHADER_VARIABLE_TYPE_STATIC];
     VERIFY(NumStaticResources == SrcLayout.m_NumResources[SHADER_VARIABLE_TYPE_STATIC], "Inconsistent number of static resources");
     VERIFY(SrcLayout.m_pResources->GetShaderType() == m_pResources->GetShaderType(), "Incosistent shader types");
@@ -707,16 +560,16 @@ void ShaderResourceLayoutVk::InitializeStaticResources(const ShaderResourceLayou
         for(Uint32 ArrInd = 0; ArrInd < DstRes.SpirvAttribs.ArraySize; ++ArrInd)
         {
             auto SrcOffset = SrcRes.CacheOffset + ArrInd;
-            IDeviceObject *pObject = SrcLayout.m_pResourceCache->GetDescriptorSet(SrcRes.DescriptorSet).GetResource(SrcOffset).pObject;
+            IDeviceObject* pObject = SrcResourceCache.GetDescriptorSet(SrcRes.DescriptorSet).GetResource(SrcOffset).pObject;
             if (!pObject)
                 LOG_ERROR_MESSAGE("No resource assigned to static shader variable \"", SrcRes.SpirvAttribs.GetPrintName(ArrInd), "\" in shader \"", GetShaderName(), "\".");
             
             auto DstOffset = DstRes.CacheOffset + ArrInd;
-            IDeviceObject *pCachedResource = m_pResourceCache->GetDescriptorSet(DstRes.DescriptorSet).GetResource(DstOffset).pObject;
+            IDeviceObject* pCachedResource = DstResourceCache.GetDescriptorSet(DstRes.DescriptorSet).GetResource(DstOffset).pObject;
             if(pCachedResource != pObject)
             {
                 VERIFY(pCachedResource == nullptr, "Static resource has already been initialized, and the resource to be assigned from the shader does not match previously assigned resource");
-                DstRes.SetArray(&pObject, ArrInd, 1);
+                DstRes.BindResource(pObject, ArrInd, DstResourceCache);
             }
         }
     }
@@ -724,10 +577,8 @@ void ShaderResourceLayoutVk::InitializeStaticResources(const ShaderResourceLayou
 
 
 #ifdef VERIFY_SHADER_BINDINGS
-void ShaderResourceLayoutVk::dbgVerifyBindings()const
+void ShaderResourceLayoutVk::dbgVerifyBindings(const ShaderResourceCacheVk& ResourceCache)const
 {
-    VERIFY(m_pResourceCache, "Resource cache is null");
-
     for(SHADER_VARIABLE_TYPE VarType = SHADER_VARIABLE_TYPE_STATIC; VarType < SHADER_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_VARIABLE_TYPE>(VarType+1))
     {
         for(Uint32 r=0; r < m_NumResources[VarType]; ++r)
@@ -736,7 +587,7 @@ void ShaderResourceLayoutVk::dbgVerifyBindings()const
             VERIFY(Res.SpirvAttribs.VarType == VarType, "Unexpected variable type");
             for(Uint32 ArrInd = 0; ArrInd < Res.SpirvAttribs.ArraySize; ++ArrInd)
             {
-                auto &CachedDescrSet = m_pResourceCache->GetDescriptorSet(Res.DescriptorSet);
+                auto &CachedDescrSet = ResourceCache.GetDescriptorSet(Res.DescriptorSet);
                 const auto &CachedRes = CachedDescrSet.GetResource(Res.CacheOffset + ArrInd);
                 VERIFY(CachedRes.Type == Res.SpirvAttribs.Type, "Inconsistent types");
                 if(CachedRes.pObject == nullptr && 
@@ -746,7 +597,7 @@ void ShaderResourceLayoutVk::dbgVerifyBindings()const
                 }
 #ifdef _DEBUG
                 auto vkDescSet = CachedDescrSet.GetVkDescriptorSet();
-                auto dbgCacheContentType = m_pResourceCache->DbgGetContentType();
+                auto dbgCacheContentType = ResourceCache.DbgGetContentType();
                 if(dbgCacheContentType == ShaderResourceCacheVk::DbgCacheContentType::StaticShaderResources)
                     VERIFY(vkDescSet == VK_NULL_HANDLE, "Static resource cache should never have vulkan descriptor set");
                 else if (dbgCacheContentType == ShaderResourceCacheVk::DbgCacheContentType::SRBResources)
@@ -776,11 +627,10 @@ const Char* ShaderResourceLayoutVk::GetShaderName()const
     }
     else
     {
-        RefCntAutoPtr<IShaderResourceBinding> pSRB(&m_Owner, IID_ShaderResourceBinding);
-        if(pSRB)
+        RefCntAutoPtr<IPipelineState> pPSO(&m_Owner, IID_PipelineState);
+        if(pPSO)
         {
-            auto *pPSO = pSRB->GetPipelineState();
-            auto *pPSOVk = ValidatedCast<PipelineStateVkImpl>(pPSO);
+            auto *pPSOVk = pPSO.RawPtr<PipelineStateVkImpl>();
             auto *ppShaders = pPSOVk->GetShaders();
             auto NumShaders = pPSOVk->GetNumShaders();
             for (Uint32 s = 0; s < NumShaders; ++s)
@@ -793,25 +643,23 @@ const Char* ShaderResourceLayoutVk::GetShaderName()const
         }
         else
         {
-            UNEXPECTED("Owner is expected to be a shader or a shader resource binding");
+            UNEXPECTED("Shader resource layout owner must be a shader or a pipeline state");
         }
     }
     return "";
 }
 
-void ShaderResourceLayoutVk::InitializeResourcesInCache()
+void ShaderResourceLayoutVk::InitializeResourceMemoryInCache(ShaderResourceCacheVk& ResourceCache)const
 {
-    VERIFY_EXPR(m_pResourceCache);
     for(Uint32 r = 0; r < GetTotalResourceCount(); ++r)
     {
         const auto& Res = GetResource(r);
-        m_pResourceCache->InitializeResources(Res.DescriptorSet, Res.CacheOffset, Res.SpirvAttribs.ArraySize, Res.SpirvAttribs.Type);
+        ResourceCache.InitializeResources(Res.DescriptorSet, Res.CacheOffset, Res.SpirvAttribs.ArraySize, Res.SpirvAttribs.Type);
     }
 }
 
-void ShaderResourceLayoutVk::CommitDynamicResources()
+void ShaderResourceLayoutVk::CommitDynamicResources(const ShaderResourceCacheVk& ResourceCache)const
 {
-    VERIFY_EXPR(m_pResourceCache);
     Uint32 NumDynamicResources = m_NumResources[SHADER_VARIABLE_TYPE_DYNAMIC];
     if(NumDynamicResources == 0)
         return;
@@ -836,7 +684,7 @@ void ShaderResourceLayoutVk::CommitDynamicResources()
     {
         const auto& Res = GetResource(SHADER_VARIABLE_TYPE_DYNAMIC, r);
         VERIFY_EXPR(Res.SpirvAttribs.VarType == SHADER_VARIABLE_TYPE_DYNAMIC);
-        auto& SetResources = m_pResourceCache->GetDescriptorSet(Res.DescriptorSet);
+        auto& SetResources = ResourceCache.GetDescriptorSet(Res.DescriptorSet);
         auto vkSet = SetResources.GetVkDescriptorSet();
         VERIFY(vkSet != VK_NULL_HANDLE, "Vulkan descriptor set must not be null");
         switch(Res.SpirvAttribs.Type)
@@ -845,7 +693,7 @@ void ShaderResourceLayoutVk::CommitDynamicResources()
             case SPIRVShaderResourceAttribs::ResourceType::StorageBuffer:
                 for (Uint32 i = 0; i < Res.SpirvAttribs.ArraySize; ++i)
                 {
-                    auto CachedRes = SetResources.GetResource(Res.CacheOffset + i);
+                    const auto& CachedRes = SetResources.GetResource(Res.CacheOffset + i);
                     VkDescriptorBufferInfo DescrBuffInfo = CachedRes.GetBufferDescriptorWriteInfo();
                     Res.UpdateDescriptorHandle(vkSet, i, nullptr, &DescrBuffInfo, nullptr);
                 }
@@ -855,7 +703,7 @@ void ShaderResourceLayoutVk::CommitDynamicResources()
             case SPIRVShaderResourceAttribs::ResourceType::StorageTexelBuffer:
                 for (Uint32 i = 0; i < Res.SpirvAttribs.ArraySize; ++i)
                 {
-                    auto CachedRes = SetResources.GetResource(Res.CacheOffset + i);
+                    const auto& CachedRes = SetResources.GetResource(Res.CacheOffset + i);
                     VkBufferView BuffView = CachedRes.GetBufferViewWriteInfo();
                     Res.UpdateDescriptorHandle(vkSet, i, nullptr, nullptr, &BuffView);
                 }
@@ -866,7 +714,7 @@ void ShaderResourceLayoutVk::CommitDynamicResources()
             case SPIRVShaderResourceAttribs::ResourceType::SampledImage:
                 for (Uint32 i = 0; i < Res.SpirvAttribs.ArraySize; ++i)
                 {
-                    auto CachedRes = SetResources.GetResource(Res.CacheOffset + i);
+                    const auto& CachedRes = SetResources.GetResource(Res.CacheOffset + i);
                     VkDescriptorImageInfo DescrImgInfo = CachedRes.GetImageDescriptorWriteInfo(Res.SpirvAttribs.StaticSamplerInd >= 0);
                     Res.UpdateDescriptorHandle(vkSet, i, &DescrImgInfo, nullptr, nullptr);
                 }
@@ -882,7 +730,7 @@ void ShaderResourceLayoutVk::CommitDynamicResources()
                 {
                     if(Res.SpirvAttribs.StaticSamplerInd < 0)
                     {
-                        auto CachedRes = SetResources.GetResource(Res.CacheOffset + i);
+                        const auto& CachedRes = SetResources.GetResource(Res.CacheOffset + i);
                         VkDescriptorImageInfo DescrImgInfo = CachedRes.GetSamplerDescriptorWriteInfo();
                         Res.UpdateDescriptorHandle(vkSet, i, &DescrImgInfo, nullptr, nullptr);
                     }

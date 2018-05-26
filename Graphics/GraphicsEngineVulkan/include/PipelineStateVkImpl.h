@@ -71,18 +71,17 @@ public:
     
     const PipelineLayout& GetPipelineLayout()const{return m_PipelineLayout;}
     
-    const ShaderResourceLayoutVk& GetShaderResLayout(SHADER_TYPE ShaderType)const
+    const ShaderResourceLayoutVk& GetShaderResLayout(Uint32 ShaderInd)const
     {
-        auto ShaderInd = GetShaderTypeIndex(ShaderType);
-        VERIFY_EXPR(m_pShaderResourceLayouts[ShaderInd] != nullptr);
-        return *m_pShaderResourceLayouts[ShaderInd];
+        VERIFY_EXPR(ShaderInd < m_NumShaders);
+        return m_ShaderResourceLayouts[ShaderInd];
     }
 
     IMemoryAllocator& GetResourceCacheDataAllocator(){return m_ResourceCacheDataAllocator;}
-    IMemoryAllocator& GetShaderResourceLayoutDataAllocator(Uint32 ActiveShaderInd)
+    IMemoryAllocator& GetShaderVariableDataAllocator(Uint32 ActiveShaderInd)
     {
         VERIFY_EXPR(ActiveShaderInd < m_NumShaders);
-        auto *pAllocator = m_ResLayoutDataAllocators.GetAllocator(ActiveShaderInd);
+        auto *pAllocator = m_VariableDataAllocators.GetAllocator(ActiveShaderInd);
         return pAllocator != nullptr ? *pAllocator : GetRawAllocator();
     }
 
@@ -92,16 +91,16 @@ private:
 
     void CreateRenderPass(const VulkanUtilities::VulkanLogicalDevice &LogicalDevice);
 
-    void ParseResourceLayoutAndCreateShader(IShader *pShader);
+    void ParseResourceLayoutAndCreateShader(IShader *pShader, Uint32 LayoutInd);
 
     DummyShaderVariable m_DummyVar;
     
     // Looks like there may be a bug in msvc: when allocators are declared as 
     // an array and if an exception is thrown from constructor, the app crashes
-    class ResLayoutDataAllocators
+    class VariableDataAllocators
     {
     public:
-        ~ResLayoutDataAllocators()
+        ~VariableDataAllocators()
         {
             for(size_t i=0; i < _countof(m_pAllocators); ++i)
                 if(m_pAllocators[i] != nullptr)
@@ -111,7 +110,7 @@ private:
         {
             VERIFY_EXPR(NumActiveShaders <= _countof(m_pAllocators) );
             for(Uint32 i=0; i < NumActiveShaders; ++i)
-                m_pAllocators[i] = NEW_POOL_OBJECT(AdaptiveFixedBlockAllocator, "Shader resource layout data allocator", GetRawAllocator(), SRBAllocationGranularity);
+                m_pAllocators[i] = NEW_POOL_OBJECT(AdaptiveFixedBlockAllocator, "Shader variable data allocator", GetRawAllocator(), SRBAllocationGranularity);
         }
         AdaptiveFixedBlockAllocator *GetAllocator(Uint32 ActiveShaderInd)
         {
@@ -120,9 +119,10 @@ private:
         }
     private:
         AdaptiveFixedBlockAllocator *m_pAllocators[5] = {};
-    }m_ResLayoutDataAllocators; // Allocators must be defined before default SRB
+    }m_VariableDataAllocators; // Allocators must be defined before default SRB
 
-    std::array<ShaderResourceLayoutVk*, 6> m_pShaderResourceLayouts = {};
+    ShaderResourceLayoutVk* m_ShaderResourceLayouts = nullptr;
+
     AdaptiveFixedBlockAllocator m_ResourceCacheDataAllocator; // Use separate allocator for every shader stage
     std::array<VulkanUtilities::ShaderModuleWrapper, 6> m_ShaderModules;
 

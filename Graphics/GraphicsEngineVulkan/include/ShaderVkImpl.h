@@ -31,6 +31,7 @@
 #include "ShaderBase.h"
 #include "ShaderResourceLayoutVk.h"
 #include "SPIRVShaderResources.h"
+#include "ShaderVariableVk.h"
 
 #ifdef _DEBUG
 #   define VERIFY_SHADER_BINDINGS
@@ -63,8 +64,9 @@ public:
     }
 
     const std::shared_ptr<const SPIRVShaderResources>& GetShaderResources()const{return m_pShaderResources;}
-    const ShaderResourceLayoutVk& GetConstResLayout()const{return m_StaticResLayout;}
-    
+    const ShaderResourceLayoutVk& GetStaticResLayout()const{return m_StaticResLayout;}
+    ShaderResourceCacheVk& GetStaticResCache(){return m_StaticResCache;}
+
 #ifdef VERIFY_SHADER_BINDINGS
     void DbgVerifyStaticResourceBindings();
 #endif
@@ -77,7 +79,8 @@ private:
     // it is referenced by ShaderResourceLayoutVk class instances
     std::shared_ptr<const SPIRVShaderResources> m_pShaderResources;
     ShaderResourceLayoutVk m_StaticResLayout;
-    ShaderResourceCacheVk m_ConstResCache;
+    ShaderResourceCacheVk m_StaticResCache;
+    ShaderVariableManagerVk m_StaticVarsMgr;
 
     std::vector<uint32_t> m_SPIRV;
 };

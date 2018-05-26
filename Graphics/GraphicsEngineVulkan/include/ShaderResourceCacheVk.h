@@ -88,6 +88,11 @@ public:
 
     struct Resource
     {
+        Resource(const Resource&)              = delete;
+        Resource(Resource&&)                   = delete;
+        Resource& operator = (const Resource&) = delete;
+        Resource& operator = (Resource&&)      = delete;
+
         const SPIRVShaderResourceAttribs::ResourceType  Type;
         RefCntAutoPtr<IDeviceObject>                    pObject;
         void*                                           vkDescriptor = nullptr;
@@ -106,10 +111,15 @@ public:
             m_pResources(pResources)
         {}
 
-        inline Resource& GetResource(Uint32 OffsetFromTableStart)
+        inline Resource& GetResource(Uint32 CacheOffset)
         {
-            VERIFY(OffsetFromTableStart < m_NumResources, "Root table at index is not large enough to store descriptor at offset ", OffsetFromTableStart );
-            return m_pResources[OffsetFromTableStart];
+            VERIFY(CacheOffset < m_NumResources, "Offset ", CacheOffset, " is out of range" );
+            return m_pResources[CacheOffset];
+        }
+        inline const Resource& GetResource(Uint32 CacheOffset)const
+        {
+            VERIFY(CacheOffset < m_NumResources, "Offset ", CacheOffset, " is out of range" );
+            return m_pResources[CacheOffset];
         }
 
         inline Uint32 GetSize()const{return m_NumResources; }
@@ -136,6 +146,11 @@ public:
     {
         VERIFY_EXPR(Index < m_NumSets);
         return reinterpret_cast<DescriptorSet*>(m_pMemory)[Index];
+    }
+    inline const DescriptorSet& GetDescriptorSet(Uint32 Index)const
+    {
+        VERIFY_EXPR(Index < m_NumSets);
+        return reinterpret_cast<const DescriptorSet*>(m_pMemory)[Index];
     }
 
     inline Uint32 GetNumDescriptorSets()const{return m_NumSets; }

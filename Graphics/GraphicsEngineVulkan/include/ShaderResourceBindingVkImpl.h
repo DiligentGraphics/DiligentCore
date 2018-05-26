@@ -31,7 +31,7 @@
 #include "ShaderResourceBindingBase.h"
 #include "ShaderBase.h"
 #include "ShaderResourceCacheVk.h"
-#include "ShaderResourceLayoutVk.h"
+#include "ShaderVariableVk.h"
 
 namespace Diligent
 {
@@ -51,32 +51,16 @@ public:
 
     virtual IShaderVariable *GetVariable(SHADER_TYPE ShaderType, const char *Name)override;
 
-    ShaderResourceLayoutVk& GetResourceLayout(SHADER_TYPE ResType)
-    {
-        auto ShaderInd = GetShaderTypeIndex(ResType);
-        auto ResLayoutInd = m_ResourceLayoutIndex[ShaderInd];
-        VERIFY(ResLayoutInd >= 0, "Shader resource layout is not initialized");
-        VERIFY_EXPR(ResLayoutInd < (Int32)m_NumShaders);
-        return m_pResourceLayouts[ResLayoutInd];
-    }
     ShaderResourceCacheVk& GetResourceCache(){return m_ShaderResourceCache;}
 
-#ifdef VERIFY_SHADER_BINDINGS
-    void dbgVerifyResourceBindings(const PipelineStateVkImpl *pPSO);
-#endif
-
     bool StaticResourcesInitialized()const{return m_bStaticResourcesInitialized;}
-    void InitializeStaticResources(const PipelineStateVkImpl *pPSO);
-
-    // Updates dynamic resource descriptors in the descriptor set, for every layout.
-    // The set is assigned to the resource cache by PipelineLayout::AllocateDynamicDescriptorSet().
-    void CommitDynamicResources();
+    void SetStaticResourcesInitialized(){m_bStaticResourcesInitialized = true;}
 
 private:
 
     ShaderResourceCacheVk m_ShaderResourceCache;
-    ShaderResourceLayoutVk* m_pResourceLayouts = nullptr;
-    // Resource layout index in m_ResourceLayouts[] array for every shader stage
+    ShaderVariableManagerVk* m_pShaderVarMgrs = nullptr;
+    // Shader variable manager index in m_pShaderVarMgrs[] array for every shader stage
     Int8 m_ResourceLayoutIndex[6] = {-1, -1, -1, -1, -1, -1};
     bool m_bStaticResourcesInitialized = false;
     Uint32 m_NumShaders = 0;
