@@ -42,9 +42,6 @@ ShaderResourceLayoutVk::ShaderResourceLayoutVk(IObject&                         
                                                IMemoryAllocator&                           ResourceLayoutDataAllocator) :
     m_Owner(Owner),
     m_LogicalDevice(LogicalDevice),
-#if USE_VARIABLE_HASH_MAP
-    m_VariableHash(STD_ALLOCATOR_RAW_MEM(VariableHashElemType, GetRawAllocator(), "Allocator for unordered_map<HashMapStringKey, IShaderVariable*>")),
-#endif
     m_ResourceBuffer(nullptr, STDDeleterRawMem<void>(ResourceLayoutDataAllocator))
 {
 }
@@ -214,7 +211,7 @@ void ShaderResourceLayoutVk::Initialize(const std::shared_ptr<const SPIRVShaderR
 #ifdef _DEBUG
     for(SHADER_VARIABLE_TYPE VarType = SHADER_VARIABLE_TYPE_STATIC; VarType < SHADER_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_VARIABLE_TYPE>(VarType+1))
     {
-        VERIFY( CurrResInd[VarType] == m_NumResources[VarType], "Not all resources are initialized, which result in a crash when dtor is called" );
+        VERIFY( CurrResInd[VarType] == m_NumResources[VarType], "Not all resources are initialized, which will cause a crash when dtor is called" );
     }
 #endif
 

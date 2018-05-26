@@ -30,23 +30,21 @@
 //
 //   m_ResourceBuffer                                                                                                                             
 //      |                                                                                                                                         
-//      |   VkResource[0]  ...  VkResource[s-1]   |   VkResource[s]  ...  VkResource[s+m-1]   |   VkResource[s+m]  ...  VkResource[s+m+d-1]   ||
-//      |                                         |                                           |                                               ||
-//      |        SHADER_VARIABLE_TYPE_STATIC      |          SHADER_VARIABLE_TYPE_MUTABLE     |            SHADER_VARIABLE_TYPE_DYNAMIC       ||
-//      |                                         |                                           |                                               ||
+//     ||   VkResource[0]  ...  VkResource[s-1]   |   VkResource[s]  ...  VkResource[s+m-1]   |   VkResource[s+m]  ...  VkResource[s+m+d-1]   ||
+//     ||                                         |                                           |                                               ||
+//     ||        SHADER_VARIABLE_TYPE_STATIC      |          SHADER_VARIABLE_TYPE_MUTABLE     |            SHADER_VARIABLE_TYPE_DYNAMIC       ||
+//     ||                                         |                                           |                                               ||
 //
 //      s == m_NumResources[SHADER_VARIABLE_TYPE_STATIC]
 //      m == m_NumResources[SHADER_VARIABLE_TYPE_MUTABLE]
 //      d == m_NumResources[SHADER_VARIABLE_TYPE_DYNAMIC]
 //
 //
-//   Memory buffer is allocated through the allocator provided by the pipeline state. If allocation granularity > 1, fixed block
-//   memory allocator is used. This ensures that all resources from different shader resource bindings reside in
-//   continuous memory. If allocation granularity == 1, raw allocator is used.
 //
-//
-//   Every VkResource structure holds a reference to SPIRVShaderResourceAttribs structure from ShaderResources.
-//   ShaderResourceLayoutVk holds shared pointer to ShaderResourcesVk instance.
+//   * Every VkResource structure holds a reference to SPIRVShaderResourceAttribs structure from SPIRVShaderResources.
+//   * ShaderResourceLayoutVk keeps a shared pointer to SPIRVShaderResources instance.
+//   * Every ShaderVariableVkImpl variable managed by ShaderVariableManagerVk keeps a reference to corresponding VkResource.
+//   
 //
 //    ______________________                  ________________________________________________________________________
 //   |                      |  unique_ptr    |        |         |          |          |       |         |             |
@@ -59,34 +57,42 @@
 //   |                           |   unique_ptr   |                   |                 |               |                     |
 //   | ShaderResourceLayoutVk    |--------------->|   VkResource[0]   |  VkResource[1]  |       ...     | VkResource[s+m+d-1] |
 //   |___________________________|                |___________________|_________________|_______________|_____________________|
-//            |                                          |                                                            |              
-//            | Raw ptr                                  |                                                            |     
-//            |                                          | (DescriptorSet, CacheOffset)                              / (DescriptorSet, CacheOffset)      
-//            |                                           \                                                         /     
-//    ________V_________________                   ________V_______________________________________________________V_______                     
+//                                                          A                   A                                                      
+//                                                          |                   |                                             
+//                                                         Ref                 Ref                                                                          
+//                                                          |                    \                                         
+//    __________________________                   _________|_____________________\__________________________________________                    
+//   |                          |                 |                           |                            |                 |                   
+//   |  ShaderVariableManagerVk |---------------->|  ShaderVariableVkImpl[0]  |   ShaderVariableVkImpl[1]  |     ...         |
+//   |__________________________|                 |___________________________|____________________________|_________________|                   
+//
+//
+//
+//
+//   Resources in the resource cache are identified by the descriptor set index and the offset from the set start
+//
+//    ___________________________                  ___________________________________________________________________________
+//   |                           |   unique_ptr   |                   |                 |               |                     |
+//   | ShaderResourceLayoutVk    |--------------->|   VkResource[0]   |  VkResource[1]  |       ...     | VkResource[s+m+d-1] |
+//   |___________________________|                |___________________|_________________|_______________|_____________________|
+//                                                       |                                                            |              
+//                                                       |                                                            |     
+//                                                       | (DescriptorSet, CacheOffset)                              / (DescriptorSet, CacheOffset)      
+//                                                        \                                                         /     
+//    __________________________                   ________V_______________________________________________________V_______                     
 //   |                          |                 |                                                                        |                   
 //   |   ShaderResourceCacheVk  |---------------->|                                   Resources                            | 
 //   |__________________________|                 |________________________________________________________________________|                   
 //
-//   Resources in the resource cache are identified by the descriptor set index and the offset in from the set start
 //
-//                                
+//
 //    ShaderResourceLayoutVk is used as follows:
+//    * Every shader object (ShaderVkImpl) contains shader resource layout that facilitates management of static shader resources
+//      ** The resource layout defines artificial layout where resource binding matches the 
+//         resource type (SPIRVShaderResourceAttribs::ResourceType) 
 //    * Every pipeline state object (PipelineStateVkImpl) maintains shader resource layout for every active shader stage
-//      ** These resource layouts are not bound to a resource cache and are used as reference layouts for shader resource binding objects
 //      ** All variable types are preserved
 //      ** Bindings, descriptor sets and offsets are assigned during the initialization
-//      ** Resource cache is not assigned
-//    * Every shader object (ShaderVkImpl) contains shader resource layout that facilitates management of static shader resources
-//      ** The resource layout defines artificial layout and is bound to a resource cache that actually holds references to resources
-//      ** Resource cache is assigned and initialized
-//    * Every shader resource binding object (ShaderResourceBindingVkImpl) encompasses shader resource layout for every active shader 
-//      stage in the parent pipeline state
-//      ** Resource layouts are initialized by clonning reference layouts from the pipeline state object and are bound to the resource 
-//         cache that holds references to resources set by the application
-//      ** All shader variable types are clonned
-//      ** Resource cache is assigned, but not initialized; Initialization is performed by the pipeline layout object
-//
 
 #include <array>
 #include <memory>
@@ -105,7 +111,7 @@ namespace Diligent
 {
 
 /// Diligent::ShaderResourceLayoutVk class
-// sizeof(ShaderResourceLayoutVk)==56    (MS compiler, x64)
+// sizeof(ShaderResourceLayoutVk)==56 (MS compiler, x64)
 class ShaderResourceLayoutVk
 {
 public:
@@ -124,8 +130,8 @@ public:
     //  - ShaderVkImpl class instance to initialize static resource layout and initialize shader resource cache
     //    to hold static resources
     //  - PipelineStateVkImpl class instance to reference all types of resources (static, mutable, dynamic). 
-    //    Root indices and descriptor table offsets are assigned during the initialization; 
-    //    no shader resource cache is provided
+    //    Descriptor sets, bindings and cache offsets are assigned during the initialization; 
+    //    no shader resource cache must be provided
     void Initialize(const std::shared_ptr<const SPIRVShaderResources>&  pSrcResources,
                     IMemoryAllocator&                                   LayoutDataAllocator,
                     const SHADER_VARIABLE_TYPE*                         AllowedVarTypes,
@@ -145,8 +151,8 @@ public:
         const Uint16 Binding;
         const Uint16 DescriptorSet;
         const Uint32 CacheOffset; // Offset from the beginning of the cached descriptor set
-        const SPIRVShaderResourceAttribs &SpirvAttribs;
-        const ShaderResourceLayoutVk &ParentResLayout;
+        const SPIRVShaderResourceAttribs&   SpirvAttribs;
+        const ShaderResourceLayoutVk&       ParentResLayout;
 
         VkResource(const ShaderResourceLayoutVk&        _ParentLayout,
                    const SPIRVShaderResourceAttribs&    _SpirvAttribs,
@@ -161,16 +167,6 @@ public:
         {
             VERIFY(_Binding <= std::numeric_limits<decltype(Binding)>::max(), "Binding (", _Binding, ") exceeds representable max value", std::numeric_limits<decltype(Binding)>::max() );
             VERIFY(_DescriptorSet <= std::numeric_limits<decltype(DescriptorSet)>::max(), "Descriptor set (", _DescriptorSet, ") exceeds representable max value", std::numeric_limits<decltype(DescriptorSet)>::max());
-        }
-
-        VkResource(ShaderResourceLayoutVk&  _ParentLayout,
-                   const VkResource&        _SrcRes)noexcept :
-            Binding         (_SrcRes.Binding),
-            DescriptorSet   (_SrcRes.DescriptorSet),
-            CacheOffset     (_SrcRes.CacheOffset),
-            SpirvAttribs    (_SrcRes.SpirvAttribs),
-            ParentResLayout (_ParentLayout)
-        {
         }
 
         // Checks if a resource is bound in ResourceCache at the given ArrayIndex
