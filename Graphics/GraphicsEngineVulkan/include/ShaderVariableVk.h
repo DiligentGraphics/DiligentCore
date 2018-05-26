@@ -23,12 +23,40 @@
 
 #pragma once
 
+/// \file
+/// Declaration of Diligent::ShaderVariableManagerVk and Diligent::ShaderVariableVkImpl classes
+
+// 
+//  * ShaderVariableManagerVk keeps list of variables of a specific type. 
+//  * Every ShaderVariableVkImpl references VkResource from ShaderResourceLayoutVk
+//  * ShaderVariableManagerVk keeps pointer to ShaderResourceCacheVk
+//  * ShaderVariableManagerVk is used by ShaderVkImpl to manage static resources and by
+//    ShaderResourceBindingVkImpl to manage mutable and dynamic resources
+//
+//          __________________________                   __________________________________________________________________________
+//         |                          |                 |                           |                            |                 |
+//     ----|  ShaderVariableManagerVk |---------------->|  ShaderVariableVkImpl[0]  |   ShaderVariableVkImpl[1]  |     ...         |
+//    |    |__________________________|                 |___________________________|____________________________|_________________|
+//    |                |                                                    \                          |
+//    |                |                                                    Ref                       Ref
+//    |                |                                                      \                        |
+//    |     ___________V_______________                  ______________________V_______________________V____________________________
+//    |    |                           |   unique_ptr   |                   |                 |               |                     |
+//    |    | ShaderResourceLayoutVk    |--------------->|   VkResource[0]   |  VkResource[1]  |       ...     | VkResource[s+m+d-1] |
+//    |    |___________________________|                |___________________|_________________|_______________|_____________________|
+//    |                                                        |                                                            |
+//    |                                                        |                                                            |
+//    |                                                        | (DescriptorSet, CacheOffset)                              / (DescriptorSet, CacheOffset)
+//    |                                                         \                                                         /
+//    |     __________________________                   ________V_______________________________________________________V_______
+//    |    |                          |                 |                                                                        |
+//     --->|   ShaderResourceCacheVk  |---------------->|                                   Resources                            |
+//         |__________________________|                 |________________________________________________________________________|
+//
+//
+
 #include <memory>
 #include <unordered_map>
-
-// Set this define to 1 to use unordered_map to store shader variables. 
-// Note that sizeof(m_VariableHash)==128 (release mode, MS compiler, x64).
-#define USE_VARIABLE_HASH_MAP 0
 
 #include "ShaderResourceLayoutVk.h"
 
@@ -37,6 +65,7 @@ namespace Diligent
 
 class ShaderVariableVkImpl;
 
+// sizeof(ShaderVariableManagerVk) == 40 (x64, msvc, Release)
 class ShaderVariableManagerVk
 {
 public:
@@ -59,20 +88,16 @@ public:
 private:
     friend ShaderVariableVkImpl;
 
-#if USE_VARIABLE_HASH_MAP
-    void InitVariablesHashMap();
-
-    // Hash map to look up shader variables by name.
-    // Note that sizeof(m_VariableHash)==128 (release mode, MS compiler, x64).
-    typedef std::pair<HashMapStringKey, IShaderVariable*> VariableHashElemType;
-    std::unordered_map<HashMapStringKey, IShaderVariable*, std::hash<HashMapStringKey>, std::equal_to<HashMapStringKey>, STDAllocatorRawMem<VariableHashElemType> > m_VariableHash;
-#endif
-
     IObject&                      m_Owner;
     const ShaderResourceLayoutVk* m_pResourceLayout= nullptr;
     ShaderResourceCacheVk*        m_pResourceCache = nullptr;
+
+    // Memory is allocated through the allocator provided by the pipeline state. If allocation granularity > 1, fixed block
+    // memory allocator is used. This ensures that all resources from different shader resource bindings reside in
+    // continuous memory. If allocation granularity == 1, raw allocator is used.
     ShaderVariableVkImpl*         m_pVariables     = nullptr;
     Uint32                        m_NumVariables = 0;
+
 #ifdef _DEBUG
     IMemoryAllocator*             m_pDbgAllocator = nullptr;
 #endif

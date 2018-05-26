@@ -71,10 +71,6 @@ void ShaderVariableManagerVk::Initialize(const ShaderResourceLayoutVk& SrcLayout
         }
     }
     VERIFY_EXPR(VarInd == m_NumVariables);
-
-#if USE_VARIABLE_HASH_MAP
-    InitVariablesHashMap();
-#endif
 }
 
 ShaderVariableManagerVk::~ShaderVariableManagerVk()
@@ -95,12 +91,6 @@ void ShaderVariableManagerVk::Destroy(IMemoryAllocator &Allocator)
 ShaderVariableVkImpl* ShaderVariableManagerVk::GetVariable(const Char* Name)
 {
     ShaderVariableVkImpl* pVar = nullptr;
-#if USE_VARIABLE_HASH_MAP
-    // Name will be implicitly converted to HashMapStringKey without making a copy
-    auto it = m_VariableHash.find(Name);
-    if (it != m_VariableHash.end())
-        pVar = it->second;
-#else
     for (Uint32 v = 0; v < m_NumVariables; ++v)
     {
         auto &Var = m_pVariables[v];
@@ -111,7 +101,6 @@ ShaderVariableVkImpl* ShaderVariableManagerVk::GetVariable(const Char* Name)
             break;
         }
     }
-#endif
 
     if (pVar == nullptr)
     {
@@ -159,18 +148,5 @@ void ShaderVariableManagerVk::BindResources( IResourceMapping* pResourceMapping,
         }
     }
 }
-
-#if USE_VARIABLE_HASH_MAP
-void ShaderVariableManagerVk::InitVariablesHashMap()
-{
-    Uint32 TotalResources = GetTotalResourceCount();
-    for (Uint32 r = 0; r < TotalResources; ++r)
-    {
-        auto &Res = GetResource(r);
-        /* HashMapStringKey will make a copy of the string*/
-        m_VariableHash.insert(std::make_pair(Diligent::HashMapStringKey(Res.Name), &Res));
-    }
-}
-#endif
 
 }
