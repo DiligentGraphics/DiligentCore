@@ -28,33 +28,26 @@
 
 // Shader resource cache stores Vk resources in a continuous chunk of memory:
 //   
-//
-//                                              ______________________________________________________________
-//  m_pMemory                                  |                 m_pResources, m_NumResources == m            |
-//  |                                          |                                                              |
-//  V                                          |                                                              V
+//                                 |Vulkan Descriptor Set|
+//                                           A    ____________________________________________________________
+//  m_pMemory                                |   |              m_pResources, m_NumResources == m            |
+//  |               m_DescriptorSetAllocation|   |                                                           |
+//  V                                        |   |                                                           V
 //  |  DescriptorSet[0]  |   ....    |  DescriptorSet[Ns-1]  |  Res[0]  |  ... |  Res[n-1]  |    ....     | Res[0]  |  ... |  Res[m-1]  |
-//            |                                                  A \
-//            |                                                  |  \
-//            |__________________________________________________|   \RefCntAutoPtr
-//                       m_pResources, m_NumResources == n            \_________     
-//                                                                    |  Object |
-//                                                                     --------- 
+//         |    |                                                A \
+//         |    |                                                |  \
+//         |    |________________________________________________|   \RefCntAutoPtr
+//         |             m_pResources, m_NumResources == n            \_________     
+//         |                                                          |  Object |
+//         | m_DescriptorSetAllocation                                 --------- 
+//         V
+//  |Vulkan Descriptor Set|
 //                                                                    
 //  Ns = m_NumSets
 //
 //
-// For static and mutable variable types, the cache is also assigned decriptor set
-//
-//   
-//  |  VkDescriptorSet  |
-//          A 
-//          | 
-//          |
-//   |    DescriptorSet[0]    |    DescriptorSet[1]    |
-//
-//
-// Dynamic resources are not VkDescriptorSet 
+// Descriptor set for static and mutable resources is assigned during cache initialization
+// Descriptor set for dynamic resources is assigned at every draw call
 
 #include "DescriptorPoolManager.h"
 #include "SPIRVShaderResources.h"
@@ -64,6 +57,7 @@ namespace Diligent
 
 class DeviceContextVkImpl;
 
+// sizeof(ShaderResourceCacheVk) == 24 (x64, msvc, Release)
 class ShaderResourceCacheVk
 {
 public:
@@ -81,11 +75,17 @@ public:
     {
     }
 
+    ShaderResourceCacheVk             (const ShaderResourceCacheVk&) = delete;
+    ShaderResourceCacheVk             (ShaderResourceCacheVk&&)      = delete;
+    ShaderResourceCacheVk& operator = (const ShaderResourceCacheVk&) = delete;
+    ShaderResourceCacheVk& operator = (ShaderResourceCacheVk&&)      = delete;
+
     ~ShaderResourceCacheVk();
 
     void InitializeSets(IMemoryAllocator &MemAllocator, Uint32 NumSets, Uint32 SetSizes[]);
     void InitializeResources(Uint32 Set, Uint32 Offset, Uint32 ArraySize, SPIRVShaderResourceAttribs::ResourceType Type);
 
+    // sizeof(Resource) == 24 (x64, msvc, Release)
     struct Resource
     {
         Resource(const Resource&)              = delete;
@@ -103,12 +103,13 @@ public:
         VkDescriptorImageInfo  GetSamplerDescriptorWriteInfo()                       const;
     };
 
+    // sizeof(DescriptorSet) == 40 (x64, msvc, Release)
     class DescriptorSet
     {
     public:
         DescriptorSet(Uint32 NumResources, Resource *pResources) :
-            m_NumResources(NumResources),
-            m_pResources(pResources)
+            m_NumResources  (NumResources),
+            m_pResources    (pResources)
         {}
 
         inline Resource& GetResource(Uint32 CacheOffset)
@@ -136,8 +137,8 @@ public:
         }
 
         const Uint32 m_NumResources = 0;
+
     private:
-        
         Resource* const m_pResources = nullptr;
         DescriptorPoolAllocation m_DescriptorSetAllocation;
     };
@@ -164,11 +165,7 @@ public:
     void TransitionResources(DeviceContextVkImpl *pCtxVkImpl);
 
 private:
-    ShaderResourceCacheVk             (const ShaderResourceCacheVk&) = delete;
-    ShaderResourceCacheVk             (ShaderResourceCacheVk&&)      = delete;
-    ShaderResourceCacheVk& operator = (const ShaderResourceCacheVk&) = delete;
-    ShaderResourceCacheVk& operator = (ShaderResourceCacheVk&&)      = delete;
-    
+
     IMemoryAllocator*   m_pAllocator     = nullptr; 
     void*               m_pMemory        = nullptr;
     Uint32              m_NumSets        = 0;

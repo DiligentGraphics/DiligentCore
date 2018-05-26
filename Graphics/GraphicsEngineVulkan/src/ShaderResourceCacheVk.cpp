@@ -37,18 +37,13 @@ namespace Diligent
 void ShaderResourceCacheVk::InitializeSets(IMemoryAllocator &MemAllocator, Uint32 NumSets, Uint32 SetSizes[])
 {
     // Memory layout:
-    //                                              ______________________________________________________________
-    //  m_pMemory                                  |                 m_pResources, m_NumResources == m            |
-    //  |                                          |                                                              |
-    //  V                                          |                                                              V
-    //  |  DescriptorSet[0]  |   ....    |  DescriptorSet[Ns-1]  |  Res[0]  |  ... |  Res[n-1]  |    ....     | Res[0]  |  ... |  Res[m-1]  |
-    //            |                                                  A \
-    //            |                                                  |  \
-    //            |__________________________________________________|   \RefCntAutoPtr
-    //                       m_pResources, m_NumResources == n            \_________     
-    //                                                                    |  Object |
-    //                                                                     --------- 
-    //                                                                    
+    //
+    //  m_pMemory
+    //  |
+    //  V
+    // ||  DescriptorSet[0]  |   ....    |  DescriptorSet[Ns-1]  |  Res[0]  |  ... |  Res[n-1]  |    ....     | Res[0]  |  ... |  Res[m-1]  ||
+    //
+    //
     //  Ns = m_NumSets
 
     VERIFY(m_pAllocator == nullptr && m_pMemory == nullptr, "Cache already initialized");
