@@ -58,6 +58,8 @@ void DescriptorPoolManager::CreateNewPool()
 
 DescriptorPoolAllocation DescriptorPoolManager::Allocate(VkDescriptorSetLayout SetLayout)
 {
+    // Descriptor pools are externally synchronized, meaning that the application must not allocate 
+    // and/or free descriptor sets from the same pool in multiple threads simultaneously (13.2.3)
     std::unique_lock<std::mutex> Lock(m_Mutex, std::defer_lock);
     if (m_IsThreadSafe)
         Lock.lock();

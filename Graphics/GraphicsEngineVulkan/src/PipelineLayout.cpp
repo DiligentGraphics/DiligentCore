@@ -285,6 +285,10 @@ PipelineLayout::DescriptorSetLayoutManager::~DescriptorSetLayoutManager()
 
 bool PipelineLayout::DescriptorSetLayoutManager::operator == (const DescriptorSetLayoutManager& rhs)const
 {
+    // Two pipeline layouts are defined to be “compatible for set N” if they were created with identically 
+    // defined descriptor set layouts for sets zero through N, and if they were created with identical push 
+    // constant ranges (13.2.2)
+
     if(m_ActiveSets != rhs.m_ActiveSets)
         return false;
 
@@ -323,6 +327,7 @@ void PipelineLayout::DescriptorSetLayoutManager::AllocateResourceSlot(const SPIR
     VkBinding.binding = Binding;
     VkBinding.descriptorType = GetVkDescriptorType(ResAttribs);
     VkBinding.descriptorCount = ResAttribs.ArraySize;
+    // There are no limitations on what combinations of stages can use a descriptor binding (13.2.1)
     VkBinding.stageFlags = ShaderTypeToVkShaderStageFlagBit(ShaderType);
     if (ResAttribs.StaticSamplerInd >= 0)
     {

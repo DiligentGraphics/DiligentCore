@@ -175,7 +175,7 @@ void VulkanCommandBuffer::TransitionImageLayout(VkCommandBuffer CmdBuffer,
 
         // supports all types of device access
         case VK_IMAGE_LAYOUT_GENERAL:
-            // VK_IMAGE_LAYOUT_GENERAL must be used for image load/store operations (13.2.4)
+            // VK_IMAGE_LAYOUT_GENERAL must be used for image load/store operations (13.1.1, 13.2.4)
             ImgBarrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
         break;
 
@@ -244,7 +244,7 @@ void VulkanCommandBuffer::TransitionImageLayout(VkCommandBuffer CmdBuffer,
         break;
 
         case VK_IMAGE_LAYOUT_GENERAL:
-            // VK_IMAGE_LAYOUT_GENERAL must be used for image load/store operations (13.2.4)
+            // VK_IMAGE_LAYOUT_GENERAL must be used for image load/store operations (13.1.1, 13.2.4)
             ImgBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
         break;
 

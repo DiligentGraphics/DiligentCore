@@ -255,6 +255,8 @@ void ShaderResourceLayoutVk::VkResource::UpdateDescriptorHandle(VkDescriptorSet 
     WriteDescrSet.dstBinding = Binding;
     WriteDescrSet.dstArrayElement = ArrayElement;
     WriteDescrSet.descriptorCount = 1;
+    // descriptorType must be the same type as that specified in VkDescriptorSetLayoutBinding for dstSet at dstBinding. 
+    // The type of the descriptor also controls which array the descriptors are taken from. (13.2.4)
     WriteDescrSet.descriptorType = PipelineLayout::GetVkDescriptorType(SpirvAttribs);
     WriteDescrSet.pImageInfo = pImageInfo;
     WriteDescrSet.pBufferInfo = pBufferInfo;
@@ -309,6 +311,11 @@ void ShaderResourceLayoutVk::VkResource::CacheBuffer(IDeviceObject*             
     if( UpdateCachedResource(DstRes, ArrayInd, pBuffer, IID_BufferVk, "buffer") )
     {
 #ifdef VERIFY_SHADER_BINDINGS
+        // The buffer must be created with the following flags so that it can be bound to the specified descriptor (13.2.4):
+        //  * VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER or VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC -> VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT
+        //  * VK_DESCRIPTOR_TYPE_STORAGE_BUFFER or VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC -> VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
+        //  * VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER -> VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT
+        //  * VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER -> VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT
         auto* pBuffVk = DstRes.pObject.RawPtr<BufferVkImpl>(); // Use final type
         const auto IsUniformBuffer = SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::UniformBuffer;
         const auto ExpectedBindFlag = IsUniformBuffer ? BIND_UNIFORM_BUFFER : BIND_UNORDERED_ACCESS;
@@ -487,6 +494,8 @@ void ShaderResourceLayoutVk::VkResource::BindResource(IDeviceObject *pObj, Uint3
                 }
                 else
                 {
+                    // Immutable samplers are permanently bound into the set layout; later binding a sampler 
+                    // into an immutable sampler slot in a descriptor set is not allowed (13.2.1)
                     LOG_ERROR_MESSAGE("Attempting to assign a sampler to a static sampler '", SpirvAttribs.Name, '\'');
                 }
             break;
@@ -727,6 +736,8 @@ void ShaderResourceLayoutVk::CommitDynamicResources(const ShaderResourceCacheVk&
                 {
                     if(Res.SpirvAttribs.StaticSamplerInd < 0)
                     {
+                        // Immutable samplers are permanently bound into the set layout; later binding a sampler 
+                        // into an immutable sampler slot in a descriptor set is not allowed (13.2.1)
                         const auto& CachedRes = SetResources.GetResource(Res.CacheOffset + i);
                         VkDescriptorImageInfo DescrImgInfo = CachedRes.GetSamplerDescriptorWriteInfo();
                         Res.UpdateDescriptorHandle(vkSet, i, &DescrImgInfo, nullptr, nullptr);

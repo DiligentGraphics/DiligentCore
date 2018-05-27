@@ -140,6 +140,12 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl *pCtxVkImpl)
             {
                 auto *pTextureViewVk = Res.pObject.RawPtr<TextureViewVkImpl>();
                 auto *pTextureVk = ValidatedCast<TextureVkImpl>(pTextureViewVk->GetTexture());
+
+                // The image subresources for a storage image must be in the VK_IMAGE_LAYOUT_GENERAL layout in 
+                // order to access its data in a shader (13.1.1)
+                // The image subresources for a sampled image or a combined image sampler must be in the 
+                // VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 
+                // or VK_IMAGE_LAYOUT_GENERAL layout in order to access its data in a shader (13.1.3, 13.1.4).
                 VkImageLayout RequiredLayout = 
                     Res.Type == SPIRVShaderResourceAttribs::ResourceType::StorageImage ? 
                         VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -182,8 +188,19 @@ VkDescriptorBufferInfo ShaderResourceCacheVk::Resource::GetBufferDescriptorWrite
 
     auto* pBuffVk = pObject.RawPtr<const BufferVkImpl>();
 
+    // The buffer must be created with the following flags so that it can be bound to the specified descriptor (13.2.4):
+    //  * VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER or VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC -> VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT
+    //  * VK_DESCRIPTOR_TYPE_STORAGE_BUFFER or VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC -> VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
+    //  * VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER -> VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT
+    //  * VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER -> VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT
+
     VkDescriptorBufferInfo DescrBuffInfo;
     DescrBuffInfo.buffer = pBuffVk->GetVkBuffer();
+    // If descriptorType is VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER or VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, the offset 
+    // member of each element of pBufferInfo must be a multiple of VkPhysicalDeviceLimits::minUniformBufferOffsetAlignment
+    // If descriptorType is VK_DESCRIPTOR_TYPE_STORAGE_BUFFER or VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, the offset 
+    // member of each element of pBufferInfo must be a multiple of VkPhysicalDeviceLimits::minStorageBufferOffsetAlignment
+    // (13.2.4)
     DescrBuffInfo.offset = 0;
     DescrBuffInfo.range = pBuffVk->GetDesc().uiSizeInBytes;
     return DescrBuffInfo;
@@ -202,9 +219,15 @@ VkDescriptorImageInfo ShaderResourceCacheVk::Resource::GetImageDescriptorWriteIn
     DescrImgInfo.sampler = VK_NULL_HANDLE;
     if (Type == SPIRVShaderResourceAttribs::ResourceType::SampledImage && !IsImmutableSampler)
     {
+        // Immutable samplers are permanently bound into the set layout; later binding a sampler 
+        // into an immutable sampler slot in a descriptor set is not allowed (13.2.1)
         auto *pSamplerVk = ValidatedCast<const SamplerVkImpl>(pTexViewVk->GetSampler());
         if (pSamplerVk != nullptr)
         {
+            // If descriptorType is VK_DESCRIPTOR_TYPE_SAMPLER or VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 
+            // and dstSet was not allocated with a layout that included immutable samplers for dstBinding with 
+            // descriptorType, the sampler member of each element of pImageInfo must be a valid VkSampler 
+            // object (13.2.4)
             DescrImgInfo.sampler = pSamplerVk->GetVkSampler();
         }
         else
@@ -216,7 +239,7 @@ VkDescriptorImageInfo ShaderResourceCacheVk::Resource::GetImageDescriptorWriteIn
     
     // If descriptorType is VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, for each descriptor that will be accessed 
     // via load or store operations the imageLayout member for corresponding elements of pImageInfo 
-    // must be VK_IMAGE_LAYOUT_GENERAL (13.2.4)
+    // MUST be VK_IMAGE_LAYOUT_GENERAL (13.2.4)
     DescrImgInfo.imageLayout = 
         (Type == SPIRVShaderResourceAttribs::ResourceType::StorageImage) ? 
             VK_IMAGE_LAYOUT_GENERAL : 
@@ -241,6 +264,7 @@ VkDescriptorImageInfo ShaderResourceCacheVk::Resource::GetSamplerDescriptorWrite
 
     auto* pSamplerVk = pObject.RawPtr<const SamplerVkImpl>();
     VkDescriptorImageInfo DescrImgInfo;
+    // For VK_DESCRIPTOR_TYPE_SAMPLER, only the sample member of each element of VkWriteDescriptorSet::pImageInfo is accessed (13.2.4)
     DescrImgInfo.sampler = pSamplerVk->GetVkSampler();
     DescrImgInfo.imageView = VK_NULL_HANDLE;
     DescrImgInfo.imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;

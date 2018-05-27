@@ -116,6 +116,8 @@ public:
     }
     DescriptorPoolAllocation AllocateDynamicDescriptorSet(VkDescriptorSetLayout SetLayout, Uint32 CtxId)
     {
+        // Descriptor pools are externally synchronized, meaning that the application must not allocate 
+        // and/or free descriptor sets from the same pool in multiple threads simultaneously (13.2.3)
         return m_DescriptorPools[1 + CtxId].Allocate(SetLayout);
     }
 
