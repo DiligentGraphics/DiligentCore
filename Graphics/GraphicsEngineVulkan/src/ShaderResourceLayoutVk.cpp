@@ -799,7 +799,8 @@ void ShaderResourceLayoutVk::CommitDynamicResources(const ShaderResourceCacheVk&
            WriteDescrSetIt == WriteDescrSetArr.end())
         {
             auto DescrWriteCount = static_cast<Uint32>(std::distance(WriteDescrSetArr.begin(), WriteDescrSetIt));
-            m_LogicalDevice.UpdateDescriptorSets(DescrWriteCount, WriteDescrSetArr.data(), 0, nullptr);
+            if(DescrWriteCount > 0)
+                m_LogicalDevice.UpdateDescriptorSets(DescrWriteCount, WriteDescrSetArr.data(), 0, nullptr);
 
             DescrImgIt  = DescrImgInfoArr.begin();
             DescrBuffIt = DescrBuffInfoArr.begin();
