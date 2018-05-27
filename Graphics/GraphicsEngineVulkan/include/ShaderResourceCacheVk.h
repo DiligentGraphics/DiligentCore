@@ -85,7 +85,7 @@ public:
     void InitializeSets(IMemoryAllocator &MemAllocator, Uint32 NumSets, Uint32 SetSizes[]);
     void InitializeResources(Uint32 Set, Uint32 Offset, Uint32 ArraySize, SPIRVShaderResourceAttribs::ResourceType Type);
 
-    // sizeof(Resource) == 24 (x64, msvc, Release)
+    // sizeof(Resource) == 16 (x64, msvc, Release)
     struct Resource
     {
         Resource(const Resource&)              = delete;
@@ -95,7 +95,6 @@ public:
 
         const SPIRVShaderResourceAttribs::ResourceType  Type;
         RefCntAutoPtr<IDeviceObject>                    pObject;
-        void*                                           vkDescriptor = nullptr;
 
         VkDescriptorBufferInfo GetBufferDescriptorWriteInfo ()                       const;
         VkDescriptorImageInfo  GetImageDescriptorWriteInfo  (bool IsImmutableSampler)const;

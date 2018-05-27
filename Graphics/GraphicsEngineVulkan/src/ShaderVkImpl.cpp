@@ -79,7 +79,13 @@ void ShaderVkImpl::BindResources(IResourceMapping* pResourceMapping, Uint32 Flag
 IShaderVariable* ShaderVkImpl::GetShaderVariable(const Char* Name)
 {
     IShaderVariable *pVar = m_StaticVarsMgr.GetVariable(Name);
-    return (pVar != nullptr) ? pVar : &m_DummyShaderVar;
+    if(pVar == nullptr)
+    {
+        LOG_ERROR_MESSAGE("Shader variable \"", Name, "\" is not found in shader \"", m_Desc.Name, "\". Note that only static variables can be accessed through shader object.");
+        return &m_DummyShaderVar;
+    }
+    else 
+        return pVar;
 }
 
 #ifdef VERIFY_SHADER_BINDINGS

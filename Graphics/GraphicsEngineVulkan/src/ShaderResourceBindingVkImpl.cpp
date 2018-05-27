@@ -39,7 +39,7 @@ ShaderResourceBindingVkImpl::ShaderResourceBindingVkImpl( IReferenceCounters *pR
     m_NumShaders = pPSO->GetNumShaders();
 
     auto *pRenderDeviceVkImpl = ValidatedCast<RenderDeviceVkImpl>(pPSO->GetDevice());
-    // This only allocate memory and initialize descriptor sets in the resource cache
+    // This will only allocate memory and initialize descriptor sets in the resource cache
     // Resources will be initialized by InitializeResourceMemoryInCache()
     pPSO->GetPipelineLayout().InitResourceCache(pRenderDeviceVkImpl, m_ShaderResourceCache, pPSO->GetResourceCacheDataAllocator());
     
@@ -106,16 +106,20 @@ IShaderVariable *ShaderResourceBindingVkImpl::GetVariable(SHADER_TYPE ShaderType
     auto ResLayoutInd = m_ResourceLayoutIndex[ShaderInd];
     if (ResLayoutInd < 0)
     {
-        LOG_ERROR_MESSAGE("Failed to find shader variable \"", Name,"\" in shader resource binding: shader type ", GetShaderTypeLiteralName(ShaderType), " is not initialized");
+        LOG_ERROR_MESSAGE("Failed to find variable \"", Name,"\" in shader resource binding: shader type ", GetShaderTypeLiteralName(ShaderType), " is not initialized");
         return ValidatedCast<PipelineStateVkImpl>(GetPipelineState())->GetDummyShaderVar();
     }
     auto *pVar = m_pShaderVarMgrs[ResLayoutInd].GetVariable(Name);
-    VERIFY(pVar->GetResource().SpirvAttribs.VarType != SHADER_VARIABLE_TYPE_STATIC, "Static variables cannot be accessed through shader resource binding");
-
     if(pVar == nullptr)
+    {
+        LOG_ERROR_MESSAGE("Failed to find variable \"", Name,"\" in shader resource binding. Note that only dynamic and mutable variables can be accessed through SRB object.");
         return ValidatedCast<PipelineStateVkImpl>(GetPipelineState())->GetDummyShaderVar();
+    }
     else
+    {
+        VERIFY(pVar->GetResource().SpirvAttribs.VarType != SHADER_VARIABLE_TYPE_STATIC, "Static variables cannot be accessed through shader resource binding");
         return pVar;
+    }
 }
 
 }

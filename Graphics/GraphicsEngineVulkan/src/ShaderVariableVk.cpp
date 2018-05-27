@@ -97,11 +97,6 @@ ShaderVariableVkImpl* ShaderVariableManagerVk::GetVariable(const Char* Name)
             break;
         }
     }
-
-    if (pVar == nullptr)
-    {
-        LOG_ERROR_MESSAGE("Shader variable \"", Name, "\" is not found in shader \"", m_pResourceLayout->GetShaderName(), "\". Attempts to set the variable will be silently ignored.");
-    }
     return pVar;
 }
 
