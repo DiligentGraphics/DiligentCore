@@ -670,59 +670,83 @@ void ShaderResourceLayoutVk::CommitDynamicResources(const ShaderResourceCacheVk&
     if(NumDynamicResources == 0)
         return;
 
-#if 0
 #ifdef _DEBUG
     static constexpr size_t ImgUpdateBatchSize = 4;
     static constexpr size_t BuffUpdateBatchSize = 2;
     static constexpr size_t TexelBuffUpdateBatchSize = 2;
+    static constexpr size_t WriteDescriptorSetBatchSize = 2;
 #else
     static constexpr size_t ImgUpdateBatchSize = 128;
     static constexpr size_t BuffUpdateBatchSize = 64;
     static constexpr size_t TexelBuffUpdateBatchSize = 32;
+    static constexpr size_t WriteDescriptorSetBatchSize = 32;
 #endif
 
-    std::array<VkDescriptorImageInfo, ImgUpdateBatchSize>  ImgInfo;
-    std::array<VkDescriptorBufferInfo, BuffUpdateBatchSize> BuffInfo;
-    std::array<VkBufferView, BuffUpdateBatchSize> TexelBuffInfo;
-#endif
+    // Do not zero-initiaize arrays!
+    std::array<VkDescriptorImageInfo,  ImgUpdateBatchSize>       DescrImgInfoArr;
+    std::array<VkDescriptorBufferInfo, BuffUpdateBatchSize>      DescrBuffInfoArr;
+    std::array<VkBufferView,           TexelBuffUpdateBatchSize> DescrBuffViewArr;
+    std::array<VkWriteDescriptorSet,   WriteDescriptorSetBatchSize> WriteDescrSetArr;
 
-    for(Uint32 r=0; r < NumDynamicResources; ++r)
+    Uint32 ResNum = 0, ArrElem = 0;
+    auto DescrImgIt  = DescrImgInfoArr.begin();
+    auto DescrBuffIt = DescrBuffInfoArr.begin();
+    auto BuffViewIt  = DescrBuffViewArr.begin();
+    auto WriteDescrSetIt = WriteDescrSetArr.begin();
+
+    while(ResNum < NumDynamicResources)
     {
-        const auto& Res = GetResource(SHADER_VARIABLE_TYPE_DYNAMIC, r);
+        const auto& Res = GetResource(SHADER_VARIABLE_TYPE_DYNAMIC, ResNum);
         VERIFY_EXPR(Res.SpirvAttribs.VarType == SHADER_VARIABLE_TYPE_DYNAMIC);
         auto& SetResources = ResourceCache.GetDescriptorSet(Res.DescriptorSet);
-        auto vkSet = SetResources.GetVkDescriptorSet();
-        VERIFY(vkSet != VK_NULL_HANDLE, "Vulkan descriptor set must not be null");
+
+        WriteDescrSetIt->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        WriteDescrSetIt->pNext = nullptr;
+        WriteDescrSetIt->dstSet = SetResources.GetVkDescriptorSet();
+        VERIFY(WriteDescrSetIt->dstSet != VK_NULL_HANDLE, "Vulkan descriptor set must not be null");
+        WriteDescrSetIt->dstBinding = Res.Binding;
+        WriteDescrSetIt->dstArrayElement = ArrElem;
+        // descriptorType must be the same type as that specified in VkDescriptorSetLayoutBinding for dstSet at dstBinding. 
+        // The type of the descriptor also controls which array the descriptors are taken from. (13.2.4)
+        WriteDescrSetIt->descriptorType = PipelineLayout::GetVkDescriptorType(Res.SpirvAttribs);
+        
+        // For every resource type, try to batch as many descriptor updates as we can
         switch(Res.SpirvAttribs.Type)
         {
             case SPIRVShaderResourceAttribs::ResourceType::UniformBuffer:
             case SPIRVShaderResourceAttribs::ResourceType::StorageBuffer:
-                for (Uint32 i = 0; i < Res.SpirvAttribs.ArraySize; ++i)
+                WriteDescrSetIt->pBufferInfo = &(*DescrBuffIt);
+                while(ArrElem < Res.SpirvAttribs.ArraySize && DescrBuffIt != DescrBuffInfoArr.end())
                 {
-                    const auto& CachedRes = SetResources.GetResource(Res.CacheOffset + i);
-                    VkDescriptorBufferInfo DescrBuffInfo = CachedRes.GetBufferDescriptorWriteInfo();
-                    Res.UpdateDescriptorHandle(vkSet, i, nullptr, &DescrBuffInfo, nullptr);
+                    const auto& CachedRes = SetResources.GetResource(Res.CacheOffset + ArrElem);
+                    *DescrBuffIt = CachedRes.GetBufferDescriptorWriteInfo();
+                    ++DescrBuffIt;
+                    ++ArrElem;
                 }
             break;
 
             case SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer:
             case SPIRVShaderResourceAttribs::ResourceType::StorageTexelBuffer:
-                for (Uint32 i = 0; i < Res.SpirvAttribs.ArraySize; ++i)
+                WriteDescrSetIt->pTexelBufferView = &(*BuffViewIt);
+                while(ArrElem < Res.SpirvAttribs.ArraySize && BuffViewIt != DescrBuffViewArr.end())
                 {
-                    const auto& CachedRes = SetResources.GetResource(Res.CacheOffset + i);
-                    VkBufferView BuffView = CachedRes.GetBufferViewWriteInfo();
-                    Res.UpdateDescriptorHandle(vkSet, i, nullptr, nullptr, &BuffView);
+                    const auto& CachedRes = SetResources.GetResource(Res.CacheOffset + ArrElem);
+                    *BuffViewIt = CachedRes.GetBufferViewWriteInfo();
+                    ++BuffViewIt;
+                    ++ArrElem;
                 }
             break;
 
             case SPIRVShaderResourceAttribs::ResourceType::SeparateImage:
             case SPIRVShaderResourceAttribs::ResourceType::StorageImage:
             case SPIRVShaderResourceAttribs::ResourceType::SampledImage:
-                for (Uint32 i = 0; i < Res.SpirvAttribs.ArraySize; ++i)
+                WriteDescrSetIt->pImageInfo = &(*DescrImgIt);
+                while(ArrElem < Res.SpirvAttribs.ArraySize && DescrImgIt != DescrImgInfoArr.end())
                 {
-                    const auto& CachedRes = SetResources.GetResource(Res.CacheOffset + i);
-                    VkDescriptorImageInfo DescrImgInfo = CachedRes.GetImageDescriptorWriteInfo(Res.SpirvAttribs.StaticSamplerInd >= 0);
-                    Res.UpdateDescriptorHandle(vkSet, i, &DescrImgInfo, nullptr, nullptr);
+                    const auto& CachedRes = SetResources.GetResource(Res.CacheOffset + ArrElem);
+                    *DescrImgIt = CachedRes.GetImageDescriptorWriteInfo(Res.SpirvAttribs.StaticSamplerInd >= 0);
+                    ++DescrImgIt;
+                    ++ArrElem;
                 }
             break;
 
@@ -732,21 +756,55 @@ void ShaderResourceLayoutVk::CommitDynamicResources(const ShaderResourceCacheVk&
            
 
             case SPIRVShaderResourceAttribs::ResourceType::SeparateSampler:
-                for (Uint32 i = 0; i < Res.SpirvAttribs.ArraySize; ++i)
+                // Immutable samplers are permanently bound into the set layout; later binding a sampler 
+                // into an immutable sampler slot in a descriptor set is not allowed (13.2.1)
+                if(Res.SpirvAttribs.StaticSamplerInd < 0)
                 {
-                    if(Res.SpirvAttribs.StaticSamplerInd < 0)
+                    WriteDescrSetIt->pImageInfo = &(*DescrImgIt);
+                    while(ArrElem < Res.SpirvAttribs.ArraySize && DescrImgIt != DescrImgInfoArr.end())
                     {
-                        // Immutable samplers are permanently bound into the set layout; later binding a sampler 
-                        // into an immutable sampler slot in a descriptor set is not allowed (13.2.1)
-                        const auto& CachedRes = SetResources.GetResource(Res.CacheOffset + i);
-                        VkDescriptorImageInfo DescrImgInfo = CachedRes.GetSamplerDescriptorWriteInfo();
-                        Res.UpdateDescriptorHandle(vkSet, i, &DescrImgInfo, nullptr, nullptr);
+                        const auto& CachedRes = SetResources.GetResource(Res.CacheOffset + ArrElem);
+                        *DescrImgIt = CachedRes.GetSamplerDescriptorWriteInfo();
+                        ++DescrImgIt;
+                        ++ArrElem;
                     }
+                }
+                else
+                {
+                    ArrElem = Res.SpirvAttribs.ArraySize;
+                    WriteDescrSetIt->dstArrayElement = Res.SpirvAttribs.ArraySize;
                 }
             break;
 
             default:
                 UNEXPECTED("Unexpected resource type");
+        }
+
+        WriteDescrSetIt->descriptorCount = ArrElem - WriteDescrSetIt->dstArrayElement;
+        if(ArrElem == Res.SpirvAttribs.ArraySize)
+        {
+            ArrElem = 0;
+            ++ResNum;
+        }
+        // descriptorCount == 0 for immutable separate samplers
+        if(WriteDescrSetIt->descriptorCount > 0)
+            ++WriteDescrSetIt;
+
+        // If we ran out of space in any of the arrays or if we processed all resources,
+        // flush pending updates and reset iterators
+        if(ResNum == NumDynamicResources || 
+           DescrImgIt      == DescrImgInfoArr.end() || 
+           DescrBuffIt     == DescrBuffInfoArr.end() ||
+           BuffViewIt      == DescrBuffViewArr.end() ||
+           WriteDescrSetIt == WriteDescrSetArr.end())
+        {
+            auto DescrWriteCount = static_cast<Uint32>(std::distance(WriteDescrSetArr.begin(), WriteDescrSetIt));
+            m_LogicalDevice.UpdateDescriptorSets(DescrWriteCount, WriteDescrSetArr.data(), 0, nullptr);
+
+            DescrImgIt  = DescrImgInfoArr.begin();
+            DescrBuffIt = DescrBuffInfoArr.begin();
+            BuffViewIt  = DescrBuffViewArr.begin();
+            WriteDescrSetIt = WriteDescrSetArr.begin();
         }
     }
 }
