@@ -364,176 +364,24 @@ void PipelineLayout::AllocateResourceSlot(const SPIRVShaderResourceAttribs& ResA
     m_LayoutMgr.AllocateResourceSlot(ResAttribs, vkStaticSampler, ShaderType, DescriptorSet, Binding, OffsetInCache);
     SPIRV[ResAttribs.BindingDecorationOffset] = Binding;
     SPIRV[ResAttribs.DescriptorSetDecorationOffset] = DescriptorSet;
-
-#if 0
-    auto ShaderInd = GetShaderTypeIndex(ShaderType);
-    auto ShaderVisibility = GetShaderVisibility(ShaderType);
-    if (RangeType == Vk_DESCRIPTOR_RANGE_TYPE_CBV && ShaderResAttribs.BindCount == 1)
-    {
-        // Allocate single CBV directly in the root signature
-
-        // Get the next available root index past all allocated tables and root views
-        RootIndex = m_RootParams.GetNumRootTables() + m_RootParams.GetNumRootViews();
-        OffsetInCache = 0;
-
-        // Add new root view to existing root parameters
-        m_RootParams.AddRootView(Vk_ROOT_PARAMETER_TYPE_CBV, RootIndex, ShaderResAttribs.BindPoint, ShaderVisibility, ShaderResAttribs.GetVariableType());
-    }
-    else
-    {
-        // Use the same table for static and mutable resources. Treat both as static
-        auto RootTableType = (ShaderResAttribs.GetVariableType() == SHADER_VARIABLE_TYPE_DYNAMIC) ? SHADER_VARIABLE_TYPE_DYNAMIC : SHADER_VARIABLE_TYPE_STATIC;
-        auto TableIndKey = ShaderInd * SHADER_VARIABLE_TYPE_NUM_TYPES + RootTableType;
-        // Get the table array index (this is not the root index!)
-        auto &RootTableArrayInd = (( RangeType == Vk_DESCRIPTOR_RANGE_TYPE_SAMPLER ) ? m_SamplerRootTablesMap : m_SrvCbvUavRootTablesMap)[ TableIndKey ];
-        if (RootTableArrayInd == InvalidRootTableIndex)
-        {
-            // Root table has not been assigned to this combination yet
-
-            // Get the next available root index past all allocated tables and root views
-            RootIndex = m_RootParams.GetNumRootTables() +  m_RootParams.GetNumRootViews();
-            VERIFY_EXPR(m_RootParams.GetNumRootTables() < 255);
-            RootTableArrayInd = static_cast<Uint8>( m_RootParams.GetNumRootTables() );
-            // Add root table with one single-descriptor range
-            m_RootParams.AddRootTable(RootIndex, ShaderVisibility, RootTableType, 1);
-        }
-        else
-        {
-            // Add a new single-descriptor range to the existing table at index RootTableArrayInd
-            m_RootParams.AddDescriptorRanges(RootTableArrayInd, 1);
-        }
-        
-        // Reference to either existing or just added table
-        auto &CurrParam = m_RootParams.GetRootTable(RootTableArrayInd);
-        RootIndex = CurrParam.GetRootIndex();
-
-        const auto& VkRootParam = static_cast<const Vk_ROOT_PARAMETER&>(CurrParam);
-
-        VERIFY( VkRootParam.ShaderVisibility == ShaderVisibility, "Shader visibility is not correct" );
-        
-        // Descriptors are tightly packed, so the next descriptor offset is the
-        // current size of the table
-        OffsetInCache = CurrParam.GetDescriptorTableSize();
-
-        // New just added range is the last range in the descriptor table
-        Uint32 NewDescriptorRangeIndex = VkRootParam.DescriptorTable.NumDescriptorRanges-1;
-        CurrParam.SetDescriptorRange(NewDescriptorRangeIndex, 
-                                     RangeType, // Range type (CBV, SRV, UAV or SAMPLER)
-                                     ShaderResAttribs.BindPoint, // Shader register
-                                     ShaderResAttribs.BindCount, // Number of registers used (1 for non-array resources)
-                                     0, // Register space. Always 0 for now
-                                     OffsetInCache // Offset in descriptors from the table start
-                                     );
-    }
-#endif
 }
 
 void PipelineLayout::Finalize(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice)
 {
     m_LayoutMgr.Finalize(LogicalDevice);
-
-#if 0
-    Vk_ROOT_SIGNATURE_DESC PipelineLayoutDesc;
-    PipelineLayoutDesc.Flags = Vk_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
-    
-    auto TotalParams = m_RootParams.GetNumRootTables() + m_RootParams.GetNumRootViews();
-    std::vector<Vk_ROOT_PARAMETER, STDAllocatorRawMem<Vk_ROOT_PARAMETER> > VkParameters( TotalParams, Vk_ROOT_PARAMETER(), STD_ALLOCATOR_RAW_MEM(Vk_ROOT_PARAMETER, GetRawAllocator(), "Allocator for vector<Vk_ROOT_PARAMETER>") );
-    for(Uint32 rt = 0; rt < m_RootParams.GetNumRootTables(); ++rt)
-    {
-        auto &RootTable = m_RootParams.GetRootTable(rt);
-        const Vk_ROOT_PARAMETER &SrcParam = RootTable;
-        VERIFY( SrcParam.ParameterType == Vk_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE && SrcParam.DescriptorTable.NumDescriptorRanges > 0, "Non-empty descriptor table is expected" );
-        VkParameters[RootTable.GetRootIndex()] = SrcParam;
-    }
-    for(Uint32 rv = 0; rv < m_RootParams.GetNumRootViews(); ++rv)
-    {
-        auto &RootView = m_RootParams.GetRootView(rv);
-        const Vk_ROOT_PARAMETER &SrcParam = RootView;
-        VERIFY( SrcParam.ParameterType == Vk_ROOT_PARAMETER_TYPE_CBV, "Root CBV is expected" );
-        VkParameters[RootView.GetRootIndex()] = SrcParam;
-    }
-
-
-    PipelineLayoutDesc.NumParameters = static_cast<UINT>(VkParameters.size());
-    PipelineLayoutDesc.pParameters = VkParameters.size() ? VkParameters.data() : nullptr;
-
-    UINT TotalVkStaticSamplers = 0;
-    for(const auto &StSam : m_StaticSamplers)
-        TotalVkStaticSamplers += StSam.ArraySize;
-    PipelineLayoutDesc.NumStaticSamplers = TotalVkStaticSamplers;
-    PipelineLayoutDesc.pStaticSamplers = nullptr;
-    std::vector<Vk_STATIC_SAMPLER_DESC, STDAllocatorRawMem<Vk_STATIC_SAMPLER_DESC> > VkStaticSamplers( STD_ALLOCATOR_RAW_MEM(Vk_STATIC_SAMPLER_DESC, GetRawAllocator(), "Allocator for vector<Vk_STATIC_SAMPLER_DESC>") );
-    VkStaticSamplers.reserve(TotalVkStaticSamplers);
-    if ( !m_StaticSamplers.empty() )
-    {
-        for(size_t s=0; s < m_StaticSamplers.size(); ++s)
-        {
-            const auto &StSmplrDesc = m_StaticSamplers[s];
-            const auto &SamDesc = StSmplrDesc.SamplerDesc.Desc;
-            for(UINT ArrInd = 0; ArrInd < StSmplrDesc.ArraySize; ++ArrInd)
-            {
-                VkStaticSamplers.emplace_back(
-                    Vk_STATIC_SAMPLER_DESC{
-                        FilterTypeToVkFilter(SamDesc.MinFilter, SamDesc.MagFilter, SamDesc.MipFilter),
-                        TexAddressModeToVkAddressMode(SamDesc.AddressU),
-                        TexAddressModeToVkAddressMode(SamDesc.AddressV),
-                        TexAddressModeToVkAddressMode(SamDesc.AddressW),
-                        SamDesc.MipLODBias,
-                        SamDesc.MaxAnisotropy,
-                        ComparisonFuncToVkComparisonFunc(SamDesc.ComparisonFunc),
-                        BorderColorToVkStaticBorderColor(SamDesc.BorderColor),
-                        SamDesc.MinLOD,
-                        SamDesc.MaxLOD,
-                        StSmplrDesc.ShaderRegister + ArrInd,
-                        StSmplrDesc.RegisterSpace,
-                        StSmplrDesc.ShaderVisibility
-                    }
-                );
-            }
-        }
-        PipelineLayoutDesc.pStaticSamplers = VkStaticSamplers.data();
-        
-        // Release static samplers array, we no longer need it
-        std::vector<StaticSamplerAttribs, STDAllocatorRawMem<StaticSamplerAttribs> > EmptySamplers( STD_ALLOCATOR_RAW_MEM(StaticSamplerAttribs, GetRawAllocator(), "Allocator for vector<StaticSamplerAttribs>") );
-        m_StaticSamplers.swap( EmptySamplers );
-
-        VERIFY_EXPR(VkStaticSamplers.size() == TotalVkStaticSamplers);
-    }
-    
-
-	CComPtr<ID3DBlob> signature;
-	CComPtr<ID3DBlob> error;
-    HRESULT hr = VkSerializePipelineLayout(&PipelineLayoutDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error);
-    hr = pVkDevice->CreatePipelineLayout(0, signature->GetBufferPointer(), signature->GetBufferSize(), __uuidof(m_pVkPipelineLayout), reinterpret_cast<void**>( static_cast<IVkPipelineLayout**>(&m_pVkPipelineLayout)));
-    CHECK_D3D_RESULT_THROW(hr, "Failed to create root signature");
-
-    bool bHasDynamicResources = m_TotalSrvCbvUavSlots[SHADER_VARIABLE_TYPE_DYNAMIC]!=0 || m_TotalSamplerSlots[SHADER_VARIABLE_TYPE_DYNAMIC]!=0;
-    if(bHasDynamicResources)
-    {
-        CommitDescriptorHandles = &PipelineLayout::CommitDescriptorHandlesInternal_SMD<false>;
-        TransitionAndCommitDescriptorHandles = &PipelineLayout::CommitDescriptorHandlesInternal_SMD<true>;
-    }
-    else
-    {
-        CommitDescriptorHandles = &PipelineLayout::CommitDescriptorHandlesInternal_SM<false>;
-        TransitionAndCommitDescriptorHandles = &PipelineLayout::CommitDescriptorHandlesInternal_SM<true>;
-    }
-#endif
 }
 
-//http://diligentgraphics.com/diligent-engine/architecture/Vk/shader-resource-cache#Initializing-the-Cache-for-Shader-Resource-Binding-Object
+
 void PipelineLayout::InitResourceCache(RenderDeviceVkImpl *pDeviceVkImpl, ShaderResourceCacheVk& ResourceCache, IMemoryAllocator &CacheMemAllocator)const
 {
     Uint32 NumSets = 0;
     std::array<Uint32, 2> SetSizes = {};
 
-    DescriptorPoolAllocation SetAllocation;
     const auto &StaticAndMutSet = m_LayoutMgr.GetDescriptorSet(SHADER_VARIABLE_TYPE_STATIC);
     if(StaticAndMutSet.SetIndex >= 0)
     {
         NumSets = std::max(NumSets, static_cast<Uint32>(StaticAndMutSet.SetIndex + 1));
         SetSizes[StaticAndMutSet.SetIndex] = StaticAndMutSet.TotalDescriptors;
-        SetAllocation = pDeviceVkImpl->AllocateDescriptorSet(StaticAndMutSet.VkLayout);
     }
 
     const auto &DynamicSet = m_LayoutMgr.GetDescriptorSet(SHADER_VARIABLE_TYPE_DYNAMIC);
@@ -544,10 +392,11 @@ void PipelineLayout::InitResourceCache(RenderDeviceVkImpl *pDeviceVkImpl, Shader
     }
   
     // This call only initializes descriptor sets (ShaderResourceCacheVk::DescriptorSet) in the resource cache
-    // Resources are initialized when shader resource layout objects are created and attached to the cache
+    // Resources are initialized by source layout when shader resource binding objects are created
     ResourceCache.InitializeSets(CacheMemAllocator, NumSets, SetSizes.data());
     if (StaticAndMutSet.SetIndex >= 0)
     {
+        DescriptorPoolAllocation SetAllocation = pDeviceVkImpl->AllocateDescriptorSet(StaticAndMutSet.VkLayout);
         ResourceCache.GetDescriptorSet(StaticAndMutSet.SetIndex).AssignDescriptorSetAllocation(std::move(SetAllocation));
     }
 }

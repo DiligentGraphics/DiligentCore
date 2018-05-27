@@ -37,7 +37,9 @@ namespace Diligent
 {
 
 class FixedBlockMemoryAllocator;
+
 /// Implementation of the Diligent::IShaderResourceBindingVk interface
+// sizeof(ShaderResourceBindingVkImpl) == 80 (x64, msvc, Release)
 class ShaderResourceBindingVkImpl : public ShaderResourceBindingBase<IShaderResourceBindingVk>
 {
 public:

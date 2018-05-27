@@ -28,11 +28,7 @@
 namespace Diligent
 {
 
-
-
-// Clones layout from the reference layout maintained by the pipeline state
-// Descriptor sets and bindings must be correct
-// Resource cache is not initialized.
+// Creates shader variable for every resource from SrcLayout whose type is one AllowedVarTypes
 void ShaderVariableManagerVk::Initialize(const ShaderResourceLayoutVk& SrcLayout, 
                                          IMemoryAllocator&             Allocator,
                                          const SHADER_VARIABLE_TYPE*   AllowedVarTypes, 
@@ -125,13 +121,18 @@ void ShaderVariableManagerVk::BindResources( IResourceMapping* pResourceMapping,
     {
         auto &Var = m_pVariables[v];
         const auto& Res = Var.m_Resource;
+        
+        // Skip immutable separate samplers
+        if(Res.SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler && Res.SpirvAttribs.StaticSamplerInd >= 0)
+            continue;
+
         for(Uint32 ArrInd = 0; ArrInd < Res.SpirvAttribs.ArraySize; ++ArrInd)
         {
             if( Flags & BIND_SHADER_RESOURCES_RESET_BINDINGS )
                 Res.BindResource(nullptr, ArrInd, *m_pResourceCache);
 
             if( (Flags & BIND_SHADER_RESOURCES_UPDATE_UNRESOLVED) && Res.IsBound(ArrInd, *m_pResourceCache) )
-                return;
+                continue;
 
             const auto* VarName = Res.SpirvAttribs.Name;
             RefCntAutoPtr<IDeviceObject> pObj;

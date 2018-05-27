@@ -247,5 +247,4 @@ VkDescriptorImageInfo ShaderResourceCacheVk::Resource::GetSamplerDescriptorWrite
     return DescrImgInfo;
 }
 
-
 }

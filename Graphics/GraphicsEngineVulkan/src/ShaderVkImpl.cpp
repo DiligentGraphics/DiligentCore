@@ -60,7 +60,6 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters *pRefCounters, RenderDeviceVkImpl 
     m_pShaderResources.reset(pResources, STDDeleterRawMem<SPIRVShaderResources>(Allocator));
 
     // Clone only static resources that will be set directly in the shader
-    // http://diligentgraphics.com/diligent-engine/architecture/Vk/shader-resource-layout#Initializing-Special-Resource-Layout-for-Managing-Static-Shader-Resources
     std::array<SHADER_VARIABLE_TYPE, 1> VarTypes = {SHADER_VARIABLE_TYPE_STATIC};
     m_StaticResLayout.Initialize(m_pShaderResources, GetRawAllocator(), 
         VarTypes.data(), static_cast<Uint32>(VarTypes.size()), &m_StaticResCache, nullptr, nullptr);

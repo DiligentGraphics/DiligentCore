@@ -55,11 +55,17 @@ ShaderResourceBindingVkImpl::ShaderResourceBindingVkImpl( IReferenceCounters *pR
         auto &VarDataAllocator = pPSO->GetShaderVariableDataAllocator(s);
 
         const auto &SrcLayout = pPSO->GetShaderResLayout(s);
-        new (m_pShaderVarMgrs + s) ShaderVariableManagerVk(*this);
-        std::array<SHADER_VARIABLE_TYPE, 2> VarTypes = {SHADER_VARIABLE_TYPE_MUTABLE, SHADER_VARIABLE_TYPE_DYNAMIC};
-        m_pShaderVarMgrs[s].Initialize(SrcLayout, VarDataAllocator, VarTypes.data(), static_cast<Uint32>(VarTypes.size()), m_ShaderResourceCache);
+        // Use source layout to initialize resource memory in the cache
         SrcLayout.InitializeResourceMemoryInCache(m_ShaderResourceCache);
 
+        // Create shader variable manager in place
+        new (m_pShaderVarMgrs + s) ShaderVariableManagerVk(*this);
+        
+        // Initialize vars manager to reference mutable and dynamic variables
+        // Note that the cache has space for all variable types
+        std::array<SHADER_VARIABLE_TYPE, 2> VarTypes = {SHADER_VARIABLE_TYPE_MUTABLE, SHADER_VARIABLE_TYPE_DYNAMIC};
+        m_pShaderVarMgrs[s].Initialize(SrcLayout, VarDataAllocator, VarTypes.data(), static_cast<Uint32>(VarTypes.size()), m_ShaderResourceCache);
+        
         m_ResourceLayoutIndex[ShaderInd] = static_cast<Int8>(s);
     }
 }
@@ -104,11 +110,7 @@ IShaderVariable *ShaderResourceBindingVkImpl::GetVariable(SHADER_TYPE ShaderType
         return ValidatedCast<PipelineStateVkImpl>(GetPipelineState())->GetDummyShaderVar();
     }
     auto *pVar = m_pShaderVarMgrs[ResLayoutInd].GetVariable(Name);
-    if(pVar->GetResource().SpirvAttribs.VarType == SHADER_VARIABLE_TYPE_STATIC)
-    {
-        LOG_ERROR_MESSAGE("Static shader variable \"", Name, "\" must not be accessed through shader resource binding object. Static variable should be set through shader objects.");
-        pVar = nullptr;
-    }
+    VERIFY(pVar->GetResource().SpirvAttribs.VarType != SHADER_VARIABLE_TYPE_STATIC, "Static variables cannot be accessed through shader resource binding");
 
     if(pVar == nullptr)
         return ValidatedCast<PipelineStateVkImpl>(GetPipelineState())->GetDummyShaderVar();
