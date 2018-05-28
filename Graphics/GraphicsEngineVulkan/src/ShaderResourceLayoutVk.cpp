@@ -163,7 +163,6 @@ void ShaderResourceLayoutVk::Initialize(const std::shared_ptr<const SPIRVShaderR
             StaticResCacheSetSizes[DescriptorSet] += Attribs.ArraySize;
         }
 
-        // Static samplers are never copied, and SamplerId == InvalidSamplerId
         ::new (&GetResource(Attribs.VarType, CurrResInd[Attribs.VarType]++)) VkResource( *this, Attribs, Binding, DescriptorSet, CacheOffset);
     };
 
