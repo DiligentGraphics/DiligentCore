@@ -463,6 +463,10 @@ void ShaderResourceLayoutVk::VkResource::BindResource(IDeviceObject *pObj, Uint3
     {
         VERIFY(vkDescrSet == VK_NULL_HANDLE, "Static shader resource cache should not have vulkan descriptor set allocation");
     }
+    else
+    {
+        UNEXPECTED("Unexpected shader resource cache content type");
+    }
 #endif
     auto &DstRes = DstDescrSet.GetResource(CacheOffset + ArrayIndex);
     VERIFY(DstRes.Type == SpirvAttribs.Type, "Inconsistent types");
@@ -657,7 +661,8 @@ const Char* ShaderResourceLayoutVk::GetShaderName()const
 
 void ShaderResourceLayoutVk::InitializeResourceMemoryInCache(ShaderResourceCacheVk& ResourceCache)const
 {
-    for(Uint32 r = 0; r < GetTotalResourceCount(); ++r)
+    auto TotalResources = GetTotalResourceCount();
+    for(Uint32 r = 0; r < TotalResources; ++r)
     {
         const auto& Res = GetResource(r);
         ResourceCache.InitializeResources(Res.DescriptorSet, Res.CacheOffset, Res.SpirvAttribs.ArraySize, Res.SpirvAttribs.Type);

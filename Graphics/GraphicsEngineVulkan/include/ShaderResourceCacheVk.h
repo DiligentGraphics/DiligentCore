@@ -88,6 +88,10 @@ public:
     // sizeof(Resource) == 16 (x64, msvc, Release)
     struct Resource
     {
+        Resource(SPIRVShaderResourceAttribs::ResourceType _Type) :
+            Type(_Type)
+        {}
+
         Resource(const Resource&)              = delete;
         Resource(Resource&&)                   = delete;
         Resource& operator = (const Resource&) = delete;
@@ -110,6 +114,11 @@ public:
             m_NumResources  (NumResources),
             m_pResources    (pResources)
         {}
+
+        DescriptorSet(const DescriptorSet&)              = delete;
+        DescriptorSet(DescriptorSet&&)                   = delete;
+        DescriptorSet& operator = (const DescriptorSet&) = delete;
+        DescriptorSet& operator = (DescriptorSet&&)      = delete;
 
         inline Resource& GetResource(Uint32 CacheOffset)
         {

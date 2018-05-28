@@ -117,10 +117,10 @@ public:
         m_Resource(Resource)
     {}
 
-    ShaderVariableVkImpl(const ShaderVariableVkImpl&) = delete;
-    ShaderVariableVkImpl(ShaderVariableVkImpl&&) = delete;
+    ShaderVariableVkImpl            (const ShaderVariableVkImpl&) = delete;
+    ShaderVariableVkImpl            (ShaderVariableVkImpl&&)      = delete;
     ShaderVariableVkImpl& operator= (const ShaderVariableVkImpl&) = delete;
-    ShaderVariableVkImpl& operator= (ShaderVariableVkImpl&&) = delete;
+    ShaderVariableVkImpl& operator= (ShaderVariableVkImpl&&)      = delete;
 
 
     virtual IReferenceCounters* GetReferenceCounters()const override final
