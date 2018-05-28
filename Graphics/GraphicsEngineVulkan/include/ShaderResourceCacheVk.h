@@ -29,7 +29,7 @@
 // Shader resource cache stores Vk resources in a continuous chunk of memory:
 //   
 //                                 |Vulkan Descriptor Set|
-//                                           A    ____________________________________________________________
+//                                           A    ___________________________________________________________
 //  m_pMemory                                |   |              m_pResources, m_NumResources == m            |
 //  |               m_DescriptorSetAllocation|   |                                                           |
 //  V                                        |   |                                                           V

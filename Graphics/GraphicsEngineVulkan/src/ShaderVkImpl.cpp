@@ -38,8 +38,8 @@ namespace Diligent
 
 ShaderVkImpl::ShaderVkImpl(IReferenceCounters *pRefCounters, RenderDeviceVkImpl *pRenderDeviceVk, const ShaderCreationAttribs &CreationAttribs) : 
     TShaderBase(pRefCounters, pRenderDeviceVk, CreationAttribs.Desc),
-    m_StaticResLayout(*this, pRenderDeviceVk->GetLogicalDevice(), GetRawAllocator()),
     m_DummyShaderVar(*this),
+    m_StaticResLayout(*this, pRenderDeviceVk->GetLogicalDevice(), GetRawAllocator()),
     m_StaticResCache(ShaderResourceCacheVk::DbgCacheContentType::StaticShaderResources),
     m_StaticVarsMgr(*this)
 {
@@ -59,7 +59,7 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters *pRefCounters, RenderDeviceVkImpl 
     auto *pResources = new (pRawMem) SPIRVShaderResources(Allocator, pRenderDeviceVk, m_SPIRV, m_Desc);
     m_pShaderResources.reset(pResources, STDDeleterRawMem<SPIRVShaderResources>(Allocator));
 
-    // Clone only static resources that will be set directly in the shader
+    // Clone only static resources that will be set directly through the shader object
     std::array<SHADER_VARIABLE_TYPE, 1> VarTypes = {SHADER_VARIABLE_TYPE_STATIC};
     m_StaticResLayout.Initialize(m_pShaderResources, GetRawAllocator(), 
         VarTypes.data(), static_cast<Uint32>(VarTypes.size()), &m_StaticResCache, nullptr, nullptr);

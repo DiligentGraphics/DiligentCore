@@ -27,7 +27,7 @@
 /// Declaration of Diligent::ShaderVariableManagerVk and Diligent::ShaderVariableVkImpl classes
 
 // 
-//  * ShaderVariableManagerVk keeps list of variables of a specific type. 
+//  * ShaderVariableManagerVk keeps list of variables of specific types
 //  * Every ShaderVariableVkImpl references VkResource from ShaderResourceLayoutVk
 //  * ShaderVariableManagerVk keeps pointer to ShaderResourceCacheVk
 //  * ShaderVariableManagerVk is used by ShaderVkImpl to manage static resources and by
@@ -89,6 +89,10 @@ private:
     friend ShaderVariableVkImpl;
 
     IObject&                      m_Owner;
+    // Variable mgr is owned by either Shader object (in which case m_pResourceLayout points to
+    // static resource layout owned by the same shader object), or by SRB object (in which case 
+    // m_pResourceLayout point to corresponding layout in pipeline state). Since SRB keeps strong 
+    // reference to PSO, the layout is guaranteed be alive while SRB is alive
     const ShaderResourceLayoutVk* m_pResourceLayout= nullptr;
     ShaderResourceCacheVk*        m_pResourceCache = nullptr;
 
