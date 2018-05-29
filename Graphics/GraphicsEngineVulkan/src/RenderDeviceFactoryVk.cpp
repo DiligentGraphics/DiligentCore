@@ -158,6 +158,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk( const EngineVkAttribs& Crea
         DeviceFeatures.geometryShader    = VK_TRUE;
         DeviceFeatures.tessellationShader= VK_TRUE;
         DeviceFeatures.dualSrcBlend      = VK_TRUE;
+        DeviceFeatures.multiViewport     = VK_TRUE;
         DeviceCreateInfo.pEnabledFeatures = &DeviceFeatures; // NULL or a pointer to a VkPhysicalDeviceFeatures structure that contains 
                                                              // boolean indicators of all the features to be enabled.
 

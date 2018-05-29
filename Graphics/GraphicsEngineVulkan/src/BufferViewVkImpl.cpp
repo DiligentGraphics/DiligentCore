@@ -24,6 +24,7 @@
 #include "pch.h"
 #include "BufferViewVkImpl.h"
 #include "RenderDeviceVkImpl.h"
+#include "BufferVkImpl.h"
 
 namespace Diligent
 {
@@ -46,5 +47,15 @@ BufferViewVkImpl::~BufferViewVkImpl()
 }
 
 IMPLEMENT_QUERY_INTERFACE( BufferViewVkImpl, IID_BufferViewVk, TBufferViewBase )
+
+const BufferVkImpl* BufferViewVkImpl::GetBufferVk()const
+{
+    return ValidatedCast<const BufferVkImpl>(m_pBuffer);
+}
+
+BufferVkImpl* BufferViewVkImpl::GetBufferVk()
+{
+    return ValidatedCast<BufferVkImpl>(m_pBuffer);
+}
 
 }

@@ -48,6 +48,9 @@ void ShaderVariableManagerVk::Initialize(const ShaderResourceLayoutVk& SrcLayout
     {
         m_NumVariables += IsAllowedType(VarType, AllowedTypeBits) ? SrcLayout.GetResourceCount(VarType) : 0;
     }
+    
+    if(m_NumVariables == 0)
+        return;
 
     auto *pRawMem = ALLOCATE(Allocator, "Raw memory buffer for shader variables", m_NumVariables*sizeof(ShaderVariableVkImpl));
     m_pVariables = reinterpret_cast<ShaderVariableVkImpl*>(pRawMem);
@@ -78,10 +81,13 @@ void ShaderVariableManagerVk::Destroy(IMemoryAllocator &Allocator)
 {
     VERIFY(m_pDbgAllocator == &Allocator, "Incosistent alloctor");
 
-    for(Uint32 v=0; v < m_NumVariables; ++v)
-        m_pVariables[v].~ShaderVariableVkImpl();
-    Allocator.Free(m_pVariables);
-    m_pVariables = nullptr;
+    if(m_pVariables != nullptr)
+    {
+        for(Uint32 v=0; v < m_NumVariables; ++v)
+            m_pVariables[v].~ShaderVariableVkImpl();
+        Allocator.Free(m_pVariables);
+        m_pVariables = nullptr;
+    }
 }
 
 ShaderVariableVkImpl* ShaderVariableManagerVk::GetVariable(const Char* Name)

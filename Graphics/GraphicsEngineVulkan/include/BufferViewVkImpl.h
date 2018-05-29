@@ -35,6 +35,8 @@ namespace Diligent
 {
 
 class FixedBlockMemoryAllocator;
+class BufferVkImpl;
+
 /// Implementation of the Diligent::IBufferViewVk interface
 class BufferViewVkImpl : public BufferViewBase<IBufferViewVk>
 {
@@ -52,7 +54,9 @@ public:
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface );
 
     virtual VkBufferView GetVkBufferView()const override final{return m_BuffView;}
-   
+    const BufferVkImpl* GetBufferVk()const;
+    BufferVkImpl* GetBufferVk();
+
 protected:
     
     VulkanUtilities::BufferViewWrapper m_BuffView;

@@ -100,7 +100,8 @@ public:
         const SPIRVShaderResourceAttribs::ResourceType  Type;
         RefCntAutoPtr<IDeviceObject>                    pObject;
 
-        VkDescriptorBufferInfo GetBufferDescriptorWriteInfo ()                       const;
+        VkDescriptorBufferInfo GetUniformBufferDescriptorWriteInfo ()                const;
+        VkDescriptorBufferInfo GetStorageBufferDescriptorWriteInfo ()                const;
         VkDescriptorImageInfo  GetImageDescriptorWriteInfo  (bool IsImmutableSampler)const;
         VkBufferView           GetBufferViewWriteInfo       ()                       const;
         VkDescriptorImageInfo  GetSamplerDescriptorWriteInfo()                       const;

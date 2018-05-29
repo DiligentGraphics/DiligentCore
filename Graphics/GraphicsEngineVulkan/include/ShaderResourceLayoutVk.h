@@ -183,10 +183,15 @@ public:
                                            const VkBufferView*              pTexelBufferView)const;
 
     private:
-        void CacheBuffer(IDeviceObject*                     pBuffer, 
-                         ShaderResourceCacheVk::Resource&   DstRes, 
-                         VkDescriptorSet                    vkDescrSet,
-                         Uint32                             ArrayInd)const;
+        void CacheUniformBuffer(IDeviceObject*                     pBuffer, 
+                                ShaderResourceCacheVk::Resource&   DstRes, 
+                                VkDescriptorSet                    vkDescrSet,
+                                Uint32                             ArrayInd)const;
+
+        void CacheStorageBuffer(IDeviceObject*                     pBufferView, 
+                                ShaderResourceCacheVk::Resource&   DstRes, 
+                                VkDescriptorSet                    vkDescrSet,
+                                Uint32                             ArrayInd)const;
 
         void CacheTexelBuffer(IDeviceObject*                     pBufferView, 
                               ShaderResourceCacheVk::Resource&   DstRes, 

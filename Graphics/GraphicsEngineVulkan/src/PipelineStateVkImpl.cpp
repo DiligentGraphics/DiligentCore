@@ -182,7 +182,7 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters *pRefCounters, Ren
         CSStage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
 
         ParseResourceLayoutAndCreateShader(ComputePipeline.pCS, 0);
-        CSStage.module = m_ShaderModules[CSInd];
+        CSStage.module = m_ShaderModules[0];
 
         m_PipelineLayout.Finalize(LogicalDevice);
         PipelineCI.layout = m_PipelineLayout.GetVkPipelineLayout();
@@ -234,7 +234,7 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters *pRefCounters, Ren
             
             ParseResourceLayoutAndCreateShader(pShader, s);
 
-            StageCI.module = m_ShaderModules[GetShaderTypeIndex(ShaderType)];
+            StageCI.module = m_ShaderModules[s];
             StageCI.pName = "main"; // entry point
             StageCI.pSpecializationInfo = nullptr;
         }

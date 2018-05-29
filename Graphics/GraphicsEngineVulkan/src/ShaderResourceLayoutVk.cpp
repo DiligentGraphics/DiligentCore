@@ -298,44 +298,68 @@ bool ShaderResourceLayoutVk::VkResource::UpdateCachedResource(ShaderResourceCach
     }
 }
 
-void ShaderResourceLayoutVk::VkResource::CacheBuffer(IDeviceObject*                     pBuffer,
-                                                     ShaderResourceCacheVk::Resource&   DstRes, 
-                                                     VkDescriptorSet                    vkDescrSet, 
-                                                     Uint32                             ArrayInd)const
+void ShaderResourceLayoutVk::VkResource::CacheUniformBuffer(IDeviceObject*                     pBuffer,
+                                                            ShaderResourceCacheVk::Resource&   DstRes, 
+                                                            VkDescriptorSet                    vkDescrSet, 
+                                                            Uint32                             ArrayInd)const
 {
-    VERIFY(SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::UniformBuffer || 
-           SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::StorageBuffer,
-           "Uniform or storage buffer resource is expected");
+    VERIFY(SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::UniformBuffer, "Uniform buffer resource is expected");
 
     if( UpdateCachedResource(DstRes, ArrayInd, pBuffer, IID_BufferVk, "buffer") )
     {
 #ifdef VERIFY_SHADER_BINDINGS
-        // The buffer must be created with the following flags so that it can be bound to the specified descriptor (13.2.4):
-        //  * VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER or VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC -> VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT
-        //  * VK_DESCRIPTOR_TYPE_STORAGE_BUFFER or VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC -> VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
-        //  * VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER -> VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT
-        //  * VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER -> VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT
+        // VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER or VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC descriptor type require
+        // buffer to be created with VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT
         auto* pBuffVk = DstRes.pObject.RawPtr<BufferVkImpl>(); // Use final type
-        const auto IsUniformBuffer = SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::UniformBuffer;
-        const auto ExpectedBindFlag = IsUniformBuffer ? BIND_UNIFORM_BUFFER : BIND_UNORDERED_ACCESS;
-        if( (pBuffVk->GetDesc().BindFlags & ExpectedBindFlag) == 0)
+        if( (pBuffVk->GetDesc().BindFlags & BIND_UNIFORM_BUFFER) == 0)
         {
-            LOG_RESOURCE_BINDING_ERROR("buffer", pBuffer, SpirvAttribs.GetPrintName(ArrayInd), ParentResLayout.GetShaderName(), "Buffer was not created with ", (IsUniformBuffer ? "BIND_UNIFORM_BUFFER" : "BIND_UNORDERED_ACCESS"), " flag.")
+            LOG_RESOURCE_BINDING_ERROR("buffer", pBuffer, SpirvAttribs.GetPrintName(ArrayInd), ParentResLayout.GetShaderName(), "Buffer was not created with BIND_UNIFORM_BUFFER flag.")
             DstRes.pObject.Release();
             return;
         }
 #endif
 
-        // Do not update descriptor for a dynamic uniform/storage buffer. All dynamic resource 
+        // Do not update descriptor for a dynamic uniform buffer. All dynamic resource 
         // descriptors are updated at once by CommitDynamicResources() when SRB is committed.
         if(vkDescrSet != VK_NULL_HANDLE && SpirvAttribs.VarType != SHADER_VARIABLE_TYPE_DYNAMIC)
         {
-            VkDescriptorBufferInfo DescrBuffInfo = DstRes.GetBufferDescriptorWriteInfo();
+            VkDescriptorBufferInfo DescrBuffInfo = DstRes.GetUniformBufferDescriptorWriteInfo();
             UpdateDescriptorHandle(vkDescrSet, ArrayInd, nullptr, &DescrBuffInfo, nullptr);
         }
     }
 }
 
+void ShaderResourceLayoutVk::VkResource::CacheStorageBuffer(IDeviceObject*                     pBuffer,
+                                                            ShaderResourceCacheVk::Resource&   DstRes, 
+                                                            VkDescriptorSet                    vkDescrSet, 
+                                                            Uint32                             ArrayInd)const
+{
+    VERIFY(SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::StorageBuffer, "Storage buffer resource is expected");
+
+    if( UpdateCachedResource(DstRes, ArrayInd, pBuffer, IID_BufferViewVk, "buffer view") )
+    {
+#ifdef VERIFY_SHADER_BINDINGS
+        // VK_DESCRIPTOR_TYPE_STORAGE_BUFFER or VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC descriptor type 
+        // require buffer to be created with VK_BUFFER_USAGE_STORAGE_BUFFER_BIT (13.2.4)
+        auto* pBuffViewVk = DstRes.pObject.RawPtr<BufferViewVkImpl>();
+        auto* pBuffVk = pBuffViewVk->GetBufferVk(); // Use final type
+        if( (pBuffVk->GetDesc().BindFlags & BIND_UNORDERED_ACCESS) == 0)
+        {
+            LOG_RESOURCE_BINDING_ERROR("buffer", pBuffer, SpirvAttribs.GetPrintName(ArrayInd), ParentResLayout.GetShaderName(), "Buffer was not created with BIND_UNORDERED_ACCESS flag.")
+            DstRes.pObject.Release();
+            return;
+        }
+#endif
+
+        // Do not update descriptor for a dynamic storage buffer. All dynamic resource 
+        // descriptors are updated at once by CommitDynamicResources() when SRB is committed.
+        if(vkDescrSet != VK_NULL_HANDLE && SpirvAttribs.VarType != SHADER_VARIABLE_TYPE_DYNAMIC)
+        {
+            VkDescriptorBufferInfo DescrBuffInfo = DstRes.GetStorageBufferDescriptorWriteInfo();
+            UpdateDescriptorHandle(vkDescrSet, ArrayInd, nullptr, &DescrBuffInfo, nullptr);
+        }
+    }
+}
 
 void ShaderResourceLayoutVk::VkResource::CacheTexelBuffer(IDeviceObject*                     pBufferView,
                                                           ShaderResourceCacheVk::Resource&   DstRes, 
@@ -351,8 +375,10 @@ void ShaderResourceLayoutVk::VkResource::CacheTexelBuffer(IDeviceObject*        
         auto* pBuffViewVk = DstRes.pObject.RawPtr<BufferViewVkImpl>();
 
 #ifdef VERIFY_SHADER_BINDINGS
-        const auto& ViewDesc = pBuffViewVk->GetDesc();
-        const auto ViewType = ViewDesc.ViewType;
+        // The following bits must have been set at buffer creation time:
+        //  * VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER  ->  VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT
+        //  * VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER  ->  VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT
+        const auto ViewType = pBuffViewVk->GetDesc().ViewType;
         const bool IsStorageBuffer = SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::StorageTexelBuffer;
         const auto dbgExpectedViewType = IsStorageBuffer ? BUFFER_VIEW_UNORDERED_ACCESS : BUFFER_VIEW_SHADER_RESOURCE;
         if (ViewType != dbgExpectedViewType)
@@ -390,9 +416,8 @@ void ShaderResourceLayoutVk::VkResource::CacheImage(IDeviceObject*              
     {
 #ifdef VERIFY_SHADER_BINDINGS
         auto* pTexViewVk = DstRes.pObject.RawPtr<TextureViewVkImpl>();
+        const auto ViewType = pTexViewVk->GetDesc().ViewType;
         const bool IsStorageImage = SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::StorageImage;
-        const auto& ViewDesc = pTexViewVk->GetDesc();
-        const auto ViewType = ViewDesc.ViewType;
         const auto dbgExpectedViewType = IsStorageImage ? TEXTURE_VIEW_UNORDERED_ACCESS : TEXTURE_VIEW_SHADER_RESOURCE;
         if (ViewType != dbgExpectedViewType)
         {
@@ -475,8 +500,11 @@ void ShaderResourceLayoutVk::VkResource::BindResource(IDeviceObject *pObj, Uint3
         switch (SpirvAttribs.Type)
         {
             case SPIRVShaderResourceAttribs::ResourceType::UniformBuffer:
+                CacheUniformBuffer(pObj, DstRes, vkDescrSet, ArrayIndex);
+            break;
+
             case SPIRVShaderResourceAttribs::ResourceType::StorageBuffer:
-                CacheBuffer(pObj, DstRes, vkDescrSet, ArrayIndex);
+                CacheStorageBuffer(pObj, DstRes, vkDescrSet, ArrayIndex);
             break;
 
             case SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer:
@@ -718,12 +746,22 @@ void ShaderResourceLayoutVk::CommitDynamicResources(const ShaderResourceCacheVk&
         switch(Res.SpirvAttribs.Type)
         {
             case SPIRVShaderResourceAttribs::ResourceType::UniformBuffer:
+                WriteDescrSetIt->pBufferInfo = &(*DescrBuffIt);
+                while(ArrElem < Res.SpirvAttribs.ArraySize && DescrBuffIt != DescrBuffInfoArr.end())
+                {
+                    const auto& CachedRes = SetResources.GetResource(Res.CacheOffset + ArrElem);
+                    *DescrBuffIt = CachedRes.GetUniformBufferDescriptorWriteInfo();
+                    ++DescrBuffIt;
+                    ++ArrElem;
+                }
+            break;
+            
             case SPIRVShaderResourceAttribs::ResourceType::StorageBuffer:
                 WriteDescrSetIt->pBufferInfo = &(*DescrBuffIt);
                 while(ArrElem < Res.SpirvAttribs.ArraySize && DescrBuffIt != DescrBuffInfoArr.end())
                 {
                     const auto& CachedRes = SetResources.GetResource(Res.CacheOffset + ArrElem);
-                    *DescrBuffIt = CachedRes.GetBufferDescriptorWriteInfo();
+                    *DescrBuffIt = CachedRes.GetStorageBufferDescriptorWriteInfo();
                     ++DescrBuffIt;
                     ++ArrElem;
                 }
