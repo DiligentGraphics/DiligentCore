@@ -616,14 +616,14 @@ namespace Diligent
 
         bool BindVBs = m_NumVertexStreams != m_NumCommittedD3D11VBs;
 
-        const auto *TightStrides = pPipelineStateD3D11->GetTightStrides();
+        const auto *Strides = pPipelineStateD3D11->GetBufferStrides();
         for( UINT Slot = 0; Slot < m_NumVertexStreams; ++Slot )
         {
             auto &CurrStream = m_VertexStreams[Slot];
             VERIFY( CurrStream.pBuffer, "Attempting to bind a null buffer for rendering" );
             auto *pBuffD3D11Impl = CurrStream.pBuffer.RawPtr<BufferD3D11Impl>();
             ID3D11Buffer *pd3d11Buffer = pBuffD3D11Impl->m_pd3d11Buffer;
-            auto Stride = CurrStream.Stride ? CurrStream.Stride : TightStrides[Slot];
+            auto Stride = Strides[Slot];
             auto Offset = CurrStream.Offset;
 
             if(pBuffD3D11Impl->CheckState( D3D11BufferState::UnorderedAccess ))
@@ -688,6 +688,7 @@ namespace Diligent
         auto *pd3d11InputLayout = pPipelineStateD3D11->GetD3D11InputLayout();
         if( pd3d11InputLayout != nullptr && !m_bCommittedD3D11VBsUpToDate )
         {
+            VERIFY( m_NumVertexStreams >= pPipelineStateD3D11->GetNumBufferSlotsUsed(), "Currently bound pipeline state \"", pPipelineStateD3D11->GetDesc().Name, "\" expects ", pPipelineStateD3D11->GetNumBufferSlotsUsed(), " input buffer slots, but only ", m_NumVertexStreams, " is bound");
             CommitD3D11VertexBuffers(pPipelineStateD3D11);
         }
 
@@ -851,9 +852,9 @@ namespace Diligent
         m_pd3d11DeviceContext->Flush();
     }
 
-    void DeviceContextD3D11Impl::SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer **ppBuffers, Uint32 *pStrides, Uint32 *pOffsets, Uint32 Flags )
+    void DeviceContextD3D11Impl::SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer **ppBuffers, Uint32 *pOffsets, Uint32 Flags )
     {
-        TDeviceContextBase::SetVertexBuffers( StartSlot, NumBuffersSet, ppBuffers, pStrides, pOffsets, Flags );
+        TDeviceContextBase::SetVertexBuffers( StartSlot, NumBuffersSet, ppBuffers, pOffsets, Flags );
         m_bCommittedD3D11VBsUpToDate = false;
     }
 

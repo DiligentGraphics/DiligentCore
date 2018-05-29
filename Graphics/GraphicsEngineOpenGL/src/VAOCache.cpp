@@ -90,7 +90,7 @@ const GLObjectWrappers::GLVertexArrayObj& VAOCache::GetVAO( IPipelineState *pPSO
     const auto &InputLayout = pPSOGL->GetDesc().GraphicsPipeline.InputLayout;
     const LayoutElement *LayoutElems =  InputLayout.LayoutElements;
     Uint32 NumElems = InputLayout.NumElements;
-    const Uint32 *TightStrides = pPSOGL->GetTightStrides();
+    const Uint32 *Strides = pPSOGL->GetBufferStrides();
     // Construct the key
     VAOCacheKey Key(pPSO, pIndexBuffer);
     
@@ -115,7 +115,7 @@ const GLObjectWrappers::GLVertexArrayObj& VAOCache::GetVAO( IPipelineState *pPSO
             Key.NumUsedSlots = MaxUsedSlot;
 
             auto &CurrStream = VertexStreams[BuffSlot];
-            auto Stride = CurrStream.Stride ? CurrStream.Stride : TightStrides[BuffSlot];
+            auto Stride = Strides[BuffSlot];
             auto &pCurrBuf = VertexBuffers[BuffSlot];
             auto &CurrStreamKey = Key.Streams[BuffSlot];
             if (pCurrBuf == nullptr)
@@ -179,7 +179,7 @@ const GLObjectWrappers::GLVertexArrayObj& VAOCache::GetVAO( IPipelineState *pPSO
             // Get buffer through the strong reference. Note that we are not
             // using pointers stored in the key for safety
             auto &CurrStream = VertexStreams[BuffSlot];
-            auto Stride = CurrStream.Stride ? CurrStream.Stride : TightStrides[BuffSlot];
+            auto Stride = Strides[BuffSlot];
             auto *pBuff = VertexBuffers[BuffSlot];
             VERIFY( pBuff != nullptr, "Vertex buffer is null" );
             const BufferGLImpl *pBufferOGL = static_cast<const BufferGLImpl*>( pBuff );

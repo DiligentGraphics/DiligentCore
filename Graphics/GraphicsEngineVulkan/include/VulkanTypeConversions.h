@@ -44,6 +44,7 @@ void BlendStateDesc_To_VkBlendStateCI(const BlendStateDesc &BSDesc,
                                       std::vector<VkPipelineColorBlendAttachmentState> &ColorBlendAttachments);
 
 void InputLayoutDesc_To_VkVertexInputStateCI(const InputLayoutDesc& LayoutDesc, 
+                                             const std::array<Uint32, MaxBufferSlots>& Strides,
                                              VkPipelineVertexInputStateCreateInfo &VertexInputStateCI,
                                              std::array<VkVertexInputBindingDescription, iMaxLayoutElements>& BindingDescriptions,
                                              std::array<VkVertexInputAttributeDescription, iMaxLayoutElements>& AttributeDescription);

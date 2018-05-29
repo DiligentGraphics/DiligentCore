@@ -262,7 +262,8 @@ namespace Diligent
         // Do not initialize array with zeroes for performance reasons
         D3D12_VERTEX_BUFFER_VIEW VBViews[MaxBufferSlots];// = {}
         VERIFY( m_NumVertexStreams <= MaxBufferSlots, "Too many buffers are being set" );
-        const auto *TightStrides = pPipelineStateD3D12->GetTightStrides();
+        const auto *Strides = pPipelineStateD3D12->GetBufferStrides();
+        VERIFY( m_NumVertexStreams >= pPipelineStateD3D12->GetNumBufferSlotsUsed(), "Currently bound pipeline state \"", pPipelineStateD3D12->GetDesc().Name, "\" expects ", pPipelineStateD3D12->GetNumBufferSlotsUsed(), " input buffer slots, but only ", m_NumVertexStreams, " is bound");
         bool DynamicBufferPresent = false;
         for( UINT Buff = 0; Buff < m_NumVertexStreams; ++Buff )
         {
@@ -287,7 +288,7 @@ namespace Diligent
             //GraphicsCtx.AddReferencedObject(pd3d12Resource);
 
             VBView.BufferLocation = pBufferD3D12->GetGPUAddress(m_ContextId) + CurrStream.Offset;
-            VBView.StrideInBytes = CurrStream.Stride ? CurrStream.Stride : TightStrides[Buff];
+            VBView.StrideInBytes = Strides[Buff];
             // Note that for a dynamic buffer, what we use here is the size of the buffer itself, not the upload heap buffer!
             VBView.SizeInBytes = pBufferD3D12->GetDesc().uiSizeInBytes - CurrStream.Offset;
         }
@@ -537,9 +538,9 @@ namespace Diligent
         Flush(true);
     }
 
-    void DeviceContextD3D12Impl::SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer **ppBuffers, Uint32 *pStrides, Uint32 *pOffsets, Uint32 Flags )
+    void DeviceContextD3D12Impl::SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer **ppBuffers, Uint32 *pOffsets, Uint32 Flags )
     {
-        TDeviceContextBase::SetVertexBuffers( StartSlot, NumBuffersSet, ppBuffers, pStrides, pOffsets, Flags );
+        TDeviceContextBase::SetVertexBuffers( StartSlot, NumBuffersSet, ppBuffers, pOffsets, Flags );
         m_bCommittedD3D12VBsUpToDate = false;
     }
 

@@ -26,6 +26,7 @@
 /// \file
 /// Implementation of the Diligent::PipelineStateBase template class
 
+#include <array>
 #include "PipelineState.h"
 #include "DeviceObjectBase.h"
 #include "STDAllocator.h"
@@ -110,19 +111,21 @@ public:
         this->m_Desc.GraphicsPipeline.InputLayout.LayoutElements = m_LayoutElements.data();
         
         // Correct description and compute offsets and tight strides
+        decltype(m_Strides) TightStrides = {};
         for( auto It = m_LayoutElements.begin(); It != m_LayoutElements.end(); ++It )
         {
             if( It->ValueType == VT_FLOAT32 || It->ValueType == VT_FLOAT16 )
                 It->IsNormalized = false; // Floating point values cannot be normalized
 
             auto BuffSlot = It->BufferSlot;
-            if( BuffSlot >= _countof(m_TightStrides) )
+            if( BuffSlot >= m_Strides.size() )
             {
-                UNEXPECTED("Buffer slot (", BuffSlot, ") exceeds the limit (", _countof(m_TightStrides), ")");
+                UNEXPECTED("Buffer slot (", BuffSlot, ") exceeds the limit (", m_Strides.size(), ")");
                 continue;
             }
+            m_BufferSlotsUsed = std::max(m_BufferSlotsUsed, BuffSlot + 1);
 
-            auto &CurrStride = m_TightStrides[BuffSlot];
+            auto &CurrStride = TightStrides[BuffSlot];
             if( It->RelativeOffset < CurrStride )
             {
                 if( It->RelativeOffset == 0 )
@@ -131,7 +134,30 @@ public:
                     UNEXPECTED( "Overlapping layout elements" );
             }
 
+            if(It->Stride != 0)
+            {
+                if(m_Strides[BuffSlot] != 0)
+                {
+                    VERIFY(m_Strides[BuffSlot] == It->Stride, "Inconsistent strides specified for buffer slot ", BuffSlot,
+                                                              ". Current value: ", m_Strides[BuffSlot], ". New value: ", It->Stride);
+                }
+                m_Strides[BuffSlot] = It->Stride;
+            }
+
             CurrStride += It->NumComponents * GetValueSize( It->ValueType );
+        }
+
+        for( auto It = m_LayoutElements.begin(); It != m_LayoutElements.end(); ++It )
+        {
+            auto BuffSlot = It->BufferSlot;
+            if(m_Strides[BuffSlot] == 0)
+            {
+                m_Strides[BuffSlot] = TightStrides[BuffSlot];
+            }
+            else
+            {
+                VERIFY(m_Strides[BuffSlot] >= TightStrides[BuffSlot], "Stride (", m_Strides[BuffSlot], ") explicitly specified for slot ", BuffSlot, " is smaller than the total element size (", TightStrides[BuffSlot], ")");
+            }
         }
     }
 
@@ -158,9 +184,14 @@ public:
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE( IID_PipelineState, TDeviceObjectBase )
 
-    virtual const Uint32* GetTightStrides()const
+    virtual const Uint32* GetBufferStrides()const
     { 
-        return m_TightStrides;
+        return m_Strides.data();
+    }
+
+    Uint32 GetNumBufferSlotsUsed()const
+    {
+        return m_BufferSlotsUsed;
     }
 
     IShader* GetVS(){return m_pVS;}
@@ -183,10 +214,11 @@ public:
 protected:
     std::vector<LayoutElement, STDAllocatorRawMem<LayoutElement> > m_LayoutElements;
 
+    Uint32 m_BufferSlotsUsed = 0;
     // The size of this array must be equal to the
     // maximum number of buffer slots, because a layout 
     // element can refer to any input slot
-    Uint32 m_TightStrides[MaxBufferSlots] = {};
+    std::array<Uint32, MaxBufferSlots> m_Strides = {};
 
     RefCntAutoPtr<IShader> m_pVS; ///< Strong reference to the vertex shader
     RefCntAutoPtr<IShader> m_pPS; ///< Strong reference to the pixel shader

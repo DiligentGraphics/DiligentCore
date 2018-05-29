@@ -56,10 +56,17 @@ struct LayoutElement
     Bool IsNormalized;
 
     /// Relative offset, in bytes, to the element bits.
-    /// If this value is zero, the offset will be computed automatically
-    /// assuming that all previous elements in the same buffer slot a tightly packed.
+    /// If this value is zero, the offset will be computed automatically assuming 
+    /// that all previous elements in the same buffer slot are tightly packed.
     /// Overlapping elements are not allowed.
     Uint32 RelativeOffset;
+
+    /// Stride, in bytes, between two elements, for this buffer slot.
+    /// If this value is zero, stride will be computed automatically assuming
+    /// that all elements in the same buffer slot are tightly packed.
+    /// If buffer slot contains multiple layout elements, they all must use
+    /// the same stride or zero.
+    Uint32 Stride;
 
     /// Input frequency
     enum FREQUENCY : Int32
@@ -82,20 +89,22 @@ struct LayoutElement
     Uint32 InstanceDataStepRate;
 
     /// Initializes the structure
-    LayoutElement(Uint32 _InputIndex = 0, 
-                   Uint32 _BufferSlot = 0, 
-                   Uint32 _NumComponents = 0, 
-                   VALUE_TYPE _ValueType = VT_FLOAT32,
-                   Bool _IsNormalized = True, 
-                   Uint32 _RelativeOffset = 0, 
-                   FREQUENCY _Frequency = FREQUENCY_PER_VERTEX,
-                   Uint32 _InstanceDataStepRate = 1) : 
+    LayoutElement(Uint32     _InputIndex           = 0, 
+                  Uint32     _BufferSlot           = 0, 
+                  Uint32     _NumComponents        = 0, 
+                  VALUE_TYPE _ValueType            = VT_FLOAT32,
+                  Bool       _IsNormalized         = True, 
+                  Uint32     _RelativeOffset       = 0,
+                  Uint32     _Stride               = 0,
+                  FREQUENCY  _Frequency            = FREQUENCY_PER_VERTEX,
+                  Uint32     _InstanceDataStepRate = 1) : 
         InputIndex(_InputIndex),
         BufferSlot(_BufferSlot),
         NumComponents(_NumComponents),
         ValueType(_ValueType),
         IsNormalized(_IsNormalized),
         RelativeOffset(_RelativeOffset),
+        Stride(_Stride),
         Frequency(_Frequency),
         InstanceDataStepRate(_InstanceDataStepRate)
     {}

@@ -49,12 +49,7 @@ struct VertexStreamInfo
 {
     /// Strong reference to the buffer object
     RefCntAutoPtr<IBuffer> pBuffer;
-    Uint32 Stride; ///< Stride in bytes
-    Uint32 Offset; ///< Offset in bytes
-    VertexStreamInfo() :
-        Stride( 0 ),
-        Offset( 0 )
-    {}
+    Uint32 Offset = 0; ///< Offset in bytes
 };
 
 /// Base implementation of the device context.
@@ -89,7 +84,7 @@ public:
 
     /// Base implementation of IDeviceContext::SetVertexBuffers(); validates parameters and 
     /// caches references to the buffers.
-    inline virtual void SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer **ppBuffers, Uint32 *pStrides, Uint32 *pOffsets, Uint32 Flags )override = 0;
+    inline virtual void SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer **ppBuffers, Uint32 *pOffsets, Uint32 Flags )override = 0;
 
     inline virtual void InvalidateState()override = 0;
 
@@ -204,7 +199,7 @@ protected:
 
 
 template<typename BaseInterface>
-inline void DeviceContextBase<BaseInterface> :: SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer **ppBuffers, Uint32 *pStrides, Uint32 *pOffsets, Uint32 Flags  )
+inline void DeviceContextBase<BaseInterface> :: SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer **ppBuffers, Uint32 *pOffsets, Uint32 Flags  )
 {
     if( StartSlot >= MaxBufferSlots )
     {
@@ -230,7 +225,6 @@ inline void DeviceContextBase<BaseInterface> :: SetVertexBuffers( Uint32 StartSl
     {
         auto &CurrStream = m_VertexStreams[StartSlot + Buff];
         CurrStream.pBuffer = RefCntAutoPtr<IBuffer>( ppBuffers ? ppBuffers[Buff] : nullptr );
-        CurrStream.Stride = pStrides ? pStrides[Buff] : 0;
         CurrStream.Offset = pOffsets ? pOffsets[Buff] : 0;
 #ifdef DEBUG_CHECKS
         if( CurrStream.pBuffer )
@@ -558,7 +552,6 @@ inline void DeviceContextBase<BaseInterface> :: ClearStateCache()
     {
         VERIFY(m_VertexStreams[stream].pBuffer == nullptr, "Unexpected non-null buffer");
         VERIFY(m_VertexStreams[stream].Offset == 0, "Unexpected non-zero offset");
-        VERIFY(m_VertexStreams[stream].Stride == 0, "Unexpected non-zero stride");
     }
 #endif
     m_NumVertexStreams = 0;

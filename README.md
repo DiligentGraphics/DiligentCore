@@ -611,6 +611,8 @@ objects. Refer to the following pages for more information:
   * Added `NumViewports` member to `GraphicsPipelineDesc` struct
   * Removed `PRIMITIVE_TOPOLOGY_TYPE` type; replaced `PRIMITIVE_TOPOLOGY_TYPE GraphicsPipelineDesc::PrimitiveTopologyType` 
     with `PRIMITIVE_TOPOLOGY GraphicsPipelineDesc::PrimitiveTopology`; removed `DrawAttribs::Topology`
+  * Removed `pStrides` prarameter from `IDeviceContext::SetVertexBuffers()`. Strides are now defined
+    through vertex layout.
 
 ## v2.2
 

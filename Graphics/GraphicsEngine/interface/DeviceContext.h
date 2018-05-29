@@ -341,11 +341,6 @@ public:
     /// \param [in] NumBuffersSet - The number of vertex buffers in the array.
     /// \param [in] ppBuffers - A pointer to an array of vertex buffers. 
     //                          The vertex buffers must have been created with the Diligent::BIND_VERTEX_BUFFER flag.
-    /// \param [in] pStrides  - Pointer to an array of stride values; one stride value for each buffer 
-    ///                         in the vertex-buffer array. Each stride is the size (in bytes) of the 
-    ///                         elements that are to be used from that vertex buffer.
-    ///                         If this parameter is nullptr, tight strides from the input layout
-    ///                         will be used for each buffer. See IPipelineState::GetTightStrides().
     /// \param [in] pOffsets  - Pointer to an array of offset values; one offset value for each buffer 
     ///                         in the vertex-buffer array. Each offset is the number of bytes between 
     ///                         the first element of a vertex buffer and the first element that will be 
@@ -360,7 +355,6 @@ public:
     virtual void SetVertexBuffers(Uint32 StartSlot, 
                                   Uint32 NumBuffersSet, 
                                   IBuffer **ppBuffers, 
-                                  Uint32 *pStrides, 
                                   Uint32 *pOffsets,
                                   Uint32 Flags) = 0;
 

@@ -927,6 +927,7 @@ VkVertexInputRate LayoutElemFrequencyToVkInputRate(LayoutElement::FREQUENCY freq
 }
 
 void InputLayoutDesc_To_VkVertexInputStateCI(const InputLayoutDesc& LayoutDesc,
+                                             const std::array<Uint32, MaxBufferSlots>& Strides,
                                              VkPipelineVertexInputStateCreateInfo &VertexInputStateCI,
                                              std::array<VkVertexInputBindingDescription, iMaxLayoutElements>& BindingDescriptions,
                                              std::array<VkVertexInputAttributeDescription, iMaxLayoutElements>& AttributeDescription)
@@ -950,7 +951,7 @@ void InputLayoutDesc_To_VkVertexInputStateCI(const InputLayoutDesc& LayoutDesc,
             BindingDescInd = VertexInputStateCI.vertexBindingDescriptionCount++;
             auto &BindingDesc = BindingDescriptions[BindingDescInd];
             BindingDesc.binding = LayoutElem.BufferSlot;
-            BindingDesc.stride = 4*3;//LayoutElem.
+            BindingDesc.stride = Strides[LayoutElem.BufferSlot];
             BindingDesc.inputRate = LayoutElemFrequencyToVkInputRate(LayoutElem.Frequency);
         }
 
@@ -964,7 +965,6 @@ void InputLayoutDesc_To_VkVertexInputStateCI(const InputLayoutDesc& LayoutDesc,
         AttribDesc.format = TypeToVkFormat(LayoutElem.ValueType, LayoutElem.NumComponents, LayoutElem.IsNormalized);
         AttribDesc.offset = LayoutElem.RelativeOffset;
     }
-
 }
 
 void PrimitiveTopology_To_VkPrimitiveTopologyAndPatchCPCount(PRIMITIVE_TOPOLOGY PrimTopology, 

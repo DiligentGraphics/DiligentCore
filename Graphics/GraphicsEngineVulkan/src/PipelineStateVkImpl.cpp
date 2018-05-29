@@ -247,7 +247,7 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters *pRefCounters, Ren
         VkPipelineVertexInputStateCreateInfo VertexInputStateCI = {};
         std::array<VkVertexInputBindingDescription, iMaxLayoutElements> BindingDescriptions;
         std::array<VkVertexInputAttributeDescription, iMaxLayoutElements> AttributeDescription;
-        InputLayoutDesc_To_VkVertexInputStateCI(GraphicsPipeline.InputLayout, VertexInputStateCI, BindingDescriptions, AttributeDescription);
+        InputLayoutDesc_To_VkVertexInputStateCI(GraphicsPipeline.InputLayout, m_Strides, VertexInputStateCI, BindingDescriptions, AttributeDescription);
         PipelineCI.pVertexInputState = &VertexInputStateCI;
 
 

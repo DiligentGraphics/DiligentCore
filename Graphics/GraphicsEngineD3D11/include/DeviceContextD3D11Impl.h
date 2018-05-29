@@ -56,7 +56,7 @@ public:
 
     virtual void SetBlendFactors(const float* pBlendFactors = nullptr)override final;
 
-    virtual void SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer **ppBuffers, Uint32 *pStrides, Uint32 *pOffsets, Uint32 Flags )override final;
+    virtual void SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer **ppBuffers, Uint32 *pOffsets, Uint32 Flags )override final;
     
     virtual void InvalidateState()override final;
 
