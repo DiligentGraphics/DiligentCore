@@ -149,7 +149,7 @@ private:
     
     VulkanUtilities::VulkanCommandBuffer m_CommandBuffer;
 
-    const Uint32  m_NumCommandsToFlush = 192;
+    const Uint32 m_NumCommandsToFlush = 192;
     struct ContextState
     {
         /// Flag indicating if currently committed vertex buffers are up to date
@@ -158,14 +158,20 @@ private:
         /// Flag indicating if currently committed index buffer is up to date
         bool CommittedIBUpToDate = false;
 
+        /// Format of the currently committed index buffer
+        VALUE_TYPE CommittedIBFormat = VT_UNDEFINED;
+        /// Offset in the currently committed index buffer
+        Uint32 CommittedVkIndexDataStartOffset = 0;
+        /// Currently committed index buffer
+        VkBuffer CommittedVkIndexBuffer = VK_NULL_HANDLE;
+
         Uint32 NumCommands = 0;
     }m_State;
 
-#if 0
-    CComPtr<IVkResource> m_CommittedVkIndexBuffer;
-    VALUE_TYPE m_CommittedIBFormat = VT_UNDEFINED;
-    Uint32 m_CommittedVkIndexDataStartOffset = 0;
 
+    
+    
+#if 0
     CComPtr<IVkCommandSignature> m_pDrawIndirectSignature;
     CComPtr<IVkCommandSignature> m_pDrawIndexedIndirectSignature;
     CComPtr<IVkCommandSignature> m_pDispatchIndirectSignature;

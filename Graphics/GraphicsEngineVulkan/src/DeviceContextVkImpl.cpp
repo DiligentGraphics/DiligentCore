@@ -302,56 +302,43 @@ namespace Diligent
 
     void DeviceContextVkImpl::CommitVkIndexBuffer(VALUE_TYPE IndexType)
     {
-        VERIFY( m_pIndexBuffer != nullptr, "Index buffer is not set up for indexed draw command" );
-#if 0
-        Vk_INDEX_BUFFER_VIEW IBView;
-        BufferVkImpl *pBuffVk = static_cast<BufferVkImpl *>(m_pIndexBuffer.RawPtr());
-        IBView.BufferLocation = pBuffVk->GetGPUAddress(m_ContextId) + m_IndexDataStartOffset;
-        if( IndexType == VT_UINT32 )
-            IBView.Format = DXGI_FORMAT_R32_UINT;
-        else if( IndexType == VT_UINT16 )
-            IBView.Format = DXGI_FORMAT_R16_UINT;
-        else
-        {
-            UNEXPECTED( "Unsupported index format. Only R16_UINT and R32_UINT are allowed." );
-        }
-        // Note that for a dynamic buffer, what we use here is the size of the buffer itself, not the upload heap buffer!
-        IBView.SizeInBytes = pBuffVk->GetDesc().uiSizeInBytes - m_IndexDataStartOffset;
+        BufferVkImpl *pBuffVk = m_pIndexBuffer.RawPtr<BufferVkImpl>();
 
         // Device context keeps strong reference to bound index buffer.
         // When the buffer is unbound, the reference to the Vk resource
         // is added to the context. There is no need to add reference here
-        //auto &GraphicsCtx = RequestCmdContext()->AsGraphicsContext();
-        //auto *pVkResource = pBuffVk->GetVkBuffer();
-        //GraphicsCtx.AddReferencedObject(pVkResource);
 
-        bool IsDynamic = pBuffVk->GetDesc().Usage == USAGE_DYNAMIC;
-#ifdef _DEBUG
-        if(IsDynamic)
-            pBuffVk->DbgVerifyDynamicAllocation(m_ContextId);
-#endif
-        auto &GraphicsCtx = RequestCmdContext()->AsGraphicsContext();
-        // Resource transitioning must always be performed!
-        GraphicsCtx.TransitionResource(pBuffVk, Vk_RESOURCE_STATE_INDEX_BUFFER, true);
+//        bool IsDynamic = pBuffVk->GetDesc().Usage == USAGE_DYNAMIC;
+//#ifdef _DEBUG
+//        if(IsDynamic)
+//            pBuffVk->DbgVerifyDynamicAllocation(m_ContextId);
+//#endif
 
-        size_t BuffDataStartByteOffset;
-        auto *pVkBuff = pBuffVk->GetVkBuffer(BuffDataStartByteOffset, m_ContextId);
+        size_t BuffDataStartByteOffset = 0;
+        auto *vkBuffer = pBuffVk->GetVkBuffer();
 
-        if( IsDynamic || 
-            m_CommittedVkIndexBuffer != pVkBuff ||
-            m_CommittedIBFormat != IndexType ||
-            m_CommittedVkIndexDataStartOffset != m_IndexDataStartOffset + BuffDataStartByteOffset)
+        if( //IsDynamic || 
+            m_State.CommittedVkIndexBuffer          != vkBuffer ||
+            m_State.CommittedIBFormat               != IndexType ||
+            m_State.CommittedVkIndexDataStartOffset != m_IndexDataStartOffset + BuffDataStartByteOffset)
         {
-            m_CommittedVkIndexBuffer = pVkBuff;
-            m_CommittedIBFormat = IndexType;
-            m_CommittedVkIndexDataStartOffset = m_IndexDataStartOffset + static_cast<Uint32>(BuffDataStartByteOffset);
-            GraphicsCtx.SetIndexBuffer( IBView );
+            m_State.CommittedVkIndexBuffer          = vkBuffer;
+            m_State.CommittedIBFormat               = IndexType;
+            m_State.CommittedVkIndexDataStartOffset = m_IndexDataStartOffset + static_cast<Uint32>(BuffDataStartByteOffset);
+            VkIndexType vkIndexType;
+            if( IndexType == VT_UINT32 )
+                vkIndexType = VK_INDEX_TYPE_UINT32;
+            else
+            {
+                VERIFY(IndexType == VT_UINT16, "Unsupported index format. Only R16_UINT and R32_UINT are allowed.");
+                vkIndexType = VK_INDEX_TYPE_UINT16;
+            }
+            m_CommandBuffer.BindIndexBuffer(m_State.CommittedVkIndexBuffer, m_State.CommittedVkIndexDataStartOffset, vkIndexType);
         }
         
         // GPU virtual address of a dynamic index buffer can change every time
         // a draw command is invoked
-        m_bCommittedVkIBUpToDate = !IsDynamic;
-#endif
+        m_State.CommittedIBUpToDate = true;//!IsDynamic;
     }
 
     void DeviceContextVkImpl::TransitionVkVertexBuffers(GraphicsContext &GraphCtx)
@@ -436,24 +423,22 @@ namespace Diligent
         if(m_CommandBuffer.GetState().RenderPass == VK_NULL_HANDLE)
             CommitRenderPassAndFramebuffer(pPipelineStateVk);
 
-#if 0
-        auto &GraphCtx = RequestCmdContext()->AsGraphicsContext();
         if( DrawAttribs.IsIndexed )
         {
-            if( m_CommittedIBFormat != DrawAttribs.IndexType )
-                m_bCommittedVkIBUpToDate = false;
+            VERIFY( m_pIndexBuffer != nullptr, "Index buffer is not set up for indexed draw command" );
 
-            if(m_bCommittedVkIBUpToDate)
-            {
-                BufferVkImpl *pBuffVk = static_cast<BufferVkImpl *>(m_pIndexBuffer.RawPtr());
-                if(!pBuffVk->CheckAllStates(Vk_RESOURCE_STATE_INDEX_BUFFER))
-                    GraphCtx.TransitionResource(pBuffVk, Vk_RESOURCE_STATE_INDEX_BUFFER, true);
-            }
-            else
+            if( m_State.CommittedIBFormat != DrawAttribs.IndexType )
+                m_State.CommittedIBUpToDate = false;
+
+            BufferVkImpl *pBuffVk = m_pIndexBuffer.RawPtr<BufferVkImpl>();
+            if(pBuffVk->GetAccessFlags() != VK_ACCESS_INDEX_READ_BIT)
+                BufferMemoryBarrier(*pBuffVk, VK_ACCESS_INDEX_READ_BIT);
+
+            if(!m_State.CommittedIBUpToDate)
                 CommitVkIndexBuffer(DrawAttribs.IndexType);
         }
 
-        
+#if 0        
         
         auto VkTopology = TopologyToVkTopology( DrawAttribs.Topology );
         GraphCtx.SetPrimitiveTopology(VkTopology);

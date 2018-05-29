@@ -199,11 +199,10 @@ namespace Diligent
         IBView.BufferLocation = pBuffD3D12->GetGPUAddress(m_ContextId) + m_IndexDataStartOffset;
         if( IndexType == VT_UINT32 )
             IBView.Format = DXGI_FORMAT_R32_UINT;
-        else if( IndexType == VT_UINT16 )
-            IBView.Format = DXGI_FORMAT_R16_UINT;
         else
         {
-            UNEXPECTED( "Unsupported index format. Only R16_UINT and R32_UINT are allowed." );
+            VERIFY( IndexType == VT_UINT16, "Unsupported index format. Only R16_UINT and R32_UINT are allowed.");
+            IBView.Format = DXGI_FORMAT_R16_UINT;
         }
         // Note that for a dynamic buffer, what we use here is the size of the buffer itself, not the upload heap buffer!
         IBView.SizeInBytes = pBuffD3D12->GetDesc().uiSizeInBytes - m_IndexDataStartOffset;
