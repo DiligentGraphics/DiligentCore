@@ -341,64 +341,63 @@ namespace Diligent
         m_State.CommittedIBUpToDate = true;//!IsDynamic;
     }
 
-    void DeviceContextVkImpl::TransitionVkVertexBuffers(GraphicsContext &GraphCtx)
+    void DeviceContextVkImpl::TransitionVkVertexBuffers()
     {
-#if 0
         for( UINT Buff = 0; Buff < m_NumVertexStreams; ++Buff )
         {
             auto &CurrStream = m_VertexStreams[Buff];
             VERIFY( CurrStream.pBuffer, "Attempting to bind a null buffer for rendering" );
-            auto *pBufferVk = static_cast<BufferVkImpl*>(CurrStream.pBuffer.RawPtr());
-            if(!pBufferVk->CheckAllStates(Vk_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER))
-                GraphCtx.TransitionResource(pBufferVk, Vk_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+            auto *pBufferVk = CurrStream.pBuffer.RawPtr<BufferVkImpl>();
+            if(pBufferVk->GetAccessFlags() != VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT)
+                BufferMemoryBarrier(*pBufferVk, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT);
         }
-#endif
     }
 
-    void DeviceContextVkImpl::CommitVkVertexBuffers(GraphicsContext &GraphCtx)
+    void DeviceContextVkImpl::CommitVkVertexBuffers()
     {
+#ifdef _DEBUG
         auto *pPipelineStateVk = m_pPipelineState.RawPtr<PipelineStateVkImpl>();
-#if 0
+        VERIFY( m_NumVertexStreams >= pPipelineStateVk->GetNumBufferSlotsUsed(), "Currently bound pipeline state \"", pPipelineStateVk->GetDesc().Name, "\" expects ", pPipelineStateVk->GetNumBufferSlotsUsed(), " input buffer slots, but only ", m_NumVertexStreams, " is bound");
+#endif
         // Do not initialize array with zeroes for performance reasons
-        Vk_VERTEX_BUFFER_VIEW VBViews[MaxBufferSlots];// = {}
+        VkBuffer vkVertexBuffers[MaxBufferSlots];// = {}
+        VkDeviceSize Offsets[MaxBufferSlots];
         VERIFY( m_NumVertexStreams <= MaxBufferSlots, "Too many buffers are being set" );
-        const auto *TightStrides = pPipelineStateVk->GetTightStrides();
-        bool DynamicBufferPresent = false;
-        for( UINT Buff = 0; Buff < m_NumVertexStreams; ++Buff )
+        //bool DynamicBufferPresent = false;
+        for( UINT slot = 0; slot < m_NumVertexStreams; ++slot )
         {
-            auto &CurrStream = m_VertexStreams[Buff];
-            auto &VBView = VBViews[Buff];
+            auto &CurrStream = m_VertexStreams[slot];
+            //auto &VBView = VBViews[Buff];
             VERIFY( CurrStream.pBuffer, "Attempting to bind a null buffer for rendering" );
             
-            auto *pBufferVk = static_cast<BufferVkImpl*>(CurrStream.pBuffer.RawPtr());
-            if (pBufferVk->GetDesc().Usage == USAGE_DYNAMIC)
-            {
-                DynamicBufferPresent = true;
-#ifdef _DEBUG
-                pBufferVk->DbgVerifyDynamicAllocation(m_ContextId);
-#endif
-            }
-
-            GraphCtx.TransitionResource(pBufferVk, Vk_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+            auto *pBufferVk = CurrStream.pBuffer.RawPtr<BufferVkImpl>();
+//            if (pBufferVk->GetDesc().Usage == USAGE_DYNAMIC)
+//            {
+//                DynamicBufferPresent = true;
+//#ifdef _DEBUG
+//                pBufferVk->DbgVerifyDynamicAllocation(m_ContextId);
+//#endif
+//            }
+            if(pBufferVk->GetAccessFlags() != VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT)
+                BufferMemoryBarrier(*pBufferVk, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT);
             
             // Device context keeps strong references to all vertex buffers.
             // When a buffer is unbound, a reference to Vk resource is added to the context,
             // so there is no need to reference the resource here
             //GraphicsCtx.AddReferencedObject(pVkResource);
 
-            VBView.BufferLocation = pBufferVk->GetGPUAddress(m_ContextId) + CurrStream.Offset;
-            VBView.StrideInBytes = CurrStream.Stride ? CurrStream.Stride : TightStrides[Buff];
-            // Note that for a dynamic buffer, what we use here is the size of the buffer itself, not the upload heap buffer!
-            VBView.SizeInBytes = pBufferVk->GetDesc().uiSizeInBytes - CurrStream.Offset;
+            vkVertexBuffers[slot] = pBufferVk->GetVkBuffer();
+            Offsets[slot] = CurrStream.Offset;
+
+            ///VBView.BufferLocation = pBufferVk->GetGPUAddress(m_ContextId) + CurrStream.Offset;
         }
 
-        GraphCtx.FlushResourceBarriers();
-        GraphCtx.SetVertexBuffers( 0, m_NumVertexStreams, VBViews );
+        //GraphCtx.FlushResourceBarriers();
+        m_CommandBuffer.BindVertexBuffers( 0, m_NumVertexStreams, vkVertexBuffers, Offsets );
 
         // GPU virtual address of a dynamic vertex buffer can change every time
         // a draw command is invoked
-        m_bCommittedVkVBsUpToDate = !DynamicBufferPresent;
-#endif
+        m_State.CommittedVBsUpToDate = true;//!DynamicBufferPresent;
     }
 
 
@@ -438,16 +437,12 @@ namespace Diligent
                 CommitVkIndexBuffer(DrawAttribs.IndexType);
         }
 
-#if 0        
-        
-        auto VkTopology = TopologyToVkTopology( DrawAttribs.Topology );
-        GraphCtx.SetPrimitiveTopology(VkTopology);
-
-        if(m_bCommittedVkVBsUpToDate)
-            TransitionVkVertexBuffers(GraphCtx);
+        if(m_State.CommittedVBsUpToDate)
+            TransitionVkVertexBuffers();
         else
-            CommitVkVertexBuffers(GraphCtx);
+            CommitVkVertexBuffers();
 
+#if 0
         GraphCtx.SetRootSignature( pPipelineStateVk->GetVkRootSignature() );
 
         if(m_pCommittedResourceCache != nullptr)
@@ -462,7 +457,6 @@ namespace Diligent
         }
 #endif
 #endif
-
         if( DrawAttribs.IsIndirect )
         {
 #if 0

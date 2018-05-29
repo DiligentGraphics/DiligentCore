@@ -138,8 +138,8 @@ public:
 private:
     void CommitRenderPassAndFramebuffer(class PipelineStateVkImpl *pPipelineStateVk);
     void CommitVkIndexBuffer(VALUE_TYPE IndexType);
-    void CommitVkVertexBuffers(class GraphicsContext &GraphCtx);
-    void TransitionVkVertexBuffers(class GraphicsContext &GraphCtx);
+    void CommitVkVertexBuffers();
+    void TransitionVkVertexBuffers();
     void CommitRenderTargets();
     void CommitViewports();
     void CommitScissorRects();

@@ -259,6 +259,12 @@ namespace VulkanUtilities
             m_State.IndexType = IndexType;
         }
 
+        void BindVertexBuffers(uint32_t firstBinding, uint32_t bindingCount, const VkBuffer* pBuffers, const VkDeviceSize* pOffsets)
+        {
+            VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
+            vkCmdBindVertexBuffers(m_VkCmdBuffer, firstBinding, bindingCount, pBuffers, pOffsets);
+        }
+
         static void TransitionImageLayout(VkCommandBuffer CmdBuffer,
                                           VkImage Image, 
                                           VkImageLayout OldLayout,
