@@ -305,7 +305,7 @@ namespace Diligent
             auto &CurrStream = m_VertexStreams[Buff];
             VERIFY( CurrStream.pBuffer, "Attempting to bind a null buffer for rendering" );
             auto *pBufferVk = CurrStream.pBuffer.RawPtr<BufferVkImpl>();
-            if(pBufferVk->GetAccessFlags() != VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT)
+            if(!pBufferVk->CheckAccessFlags(VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT))
                 BufferMemoryBarrier(*pBufferVk, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT);
         }
     }
@@ -335,7 +335,7 @@ namespace Diligent
 //                pBufferVk->DbgVerifyDynamicAllocation(m_ContextId);
 //#endif
 //            }
-            if(pBufferVk->GetAccessFlags() != VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT)
+            if(!pBufferVk->CheckAccessFlags(VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT))
                 BufferMemoryBarrier(*pBufferVk, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT);
             
             // Device context keeps strong references to all vertex buffers.
@@ -382,7 +382,7 @@ namespace Diligent
             VERIFY( m_pIndexBuffer != nullptr, "Index buffer is not set up for indexed draw command" );
 
             BufferVkImpl *pBuffVk = m_pIndexBuffer.RawPtr<BufferVkImpl>();
-            if(pBuffVk->GetAccessFlags() != VK_ACCESS_INDEX_READ_BIT)
+            if(!pBuffVk->CheckAccessFlags(VK_ACCESS_INDEX_READ_BIT))
                 BufferMemoryBarrier(*pBuffVk, VK_ACCESS_INDEX_READ_BIT);
 
             VERIFY(DrawAttribs.IndexType == VT_UINT16 || DrawAttribs.IndexType == VT_UINT32, "Unsupported index format. Only R16_UINT and R32_UINT are allowed.");
@@ -760,7 +760,7 @@ namespace Diligent
             DisposeVkCmdBuffer();
         }
 
-        m_State.NumCommands = 0;
+        m_State = ContextState{};
         m_CommandBuffer.Reset();
         m_pPipelineState.Release(); 
     }
@@ -1116,7 +1116,7 @@ namespace Diligent
     {
         VERIFY_EXPR(pBuffer != nullptr);
         auto pBuffVk = ValidatedCast<BufferVkImpl>(pBuffer);
-        if (pBuffVk->GetAccessFlags() != NewAccessFlags)
+        if (!pBuffVk->CheckAccessFlags(NewAccessFlags))
         {
             BufferMemoryBarrier(*pBuffVk, NewAccessFlags);
         }
@@ -1124,11 +1124,11 @@ namespace Diligent
 
     void DeviceContextVkImpl::BufferMemoryBarrier(BufferVkImpl &BufferVk, VkAccessFlags NewAccessFlags)
     {
-        VERIFY(BufferVk.GetAccessFlags() != NewAccessFlags, "The buffer already has requested access flags");
+        VERIFY(!BufferVk.CheckAccessFlags(NewAccessFlags), "The buffer already has requested access flags");
         EnsureVkCmdBuffer();
 
         auto vkBuff = BufferVk.GetVkBuffer();
-        m_CommandBuffer.BufferMemoryBarrier(vkBuff, BufferVk.GetAccessFlags(), NewAccessFlags);
+        m_CommandBuffer.BufferMemoryBarrier(vkBuff, BufferVk.m_AccessFlags, NewAccessFlags);
         BufferVk.SetAccessFlags(NewAccessFlags);
     }
 
@@ -1152,7 +1152,7 @@ namespace Diligent
             VERIFY(it->second.FrameNum == CurrentFrame, "Dynamic allocation is out-of-date. Dynamic buffer \"", pBuffer->GetDesc().Name, "\" must be unmapped in the same frame it is used.");
 #endif
             EnsureVkCmdBuffer();
-            if(pBuffer->GetAccessFlags() != VK_ACCESS_TRANSFER_WRITE_BIT)
+            if(!pBuffer->CheckAccessFlags(VK_ACCESS_TRANSFER_WRITE_BIT))
             {
                 BufferMemoryBarrier(*pBuffer, VK_ACCESS_TRANSFER_WRITE_BIT);
             }

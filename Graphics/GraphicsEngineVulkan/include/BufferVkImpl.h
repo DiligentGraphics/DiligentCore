@@ -78,10 +78,12 @@ public:
         return VkBuffer;
     }
 
-    virtual void SetAccessFlags(VkAccessFlags AccessFlags )override final{ m_AccessFlags = AccessFlags; }
-    VkAccessFlags GetAccessFlags()const{return m_AccessFlags;}
+    virtual void SetAccessFlags(VkAccessFlags AccessFlags)override final{ m_AccessFlags = AccessFlags; }
+    bool CheckAccessFlags(VkAccessFlags Flags)const{return (m_AccessFlags & Flags) == Flags;}
 
 private:
+    friend class DeviceContextVkImpl;
+
     virtual void CreateViewInternal( const struct BufferViewDesc &ViewDesc, IBufferView **ppView, bool bIsDefaultView )override;
 
     VulkanUtilities::BufferViewWrapper CreateView(struct BufferViewDesc &ViewDesc);

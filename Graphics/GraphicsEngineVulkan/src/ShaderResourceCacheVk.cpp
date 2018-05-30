@@ -101,7 +101,7 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl *pCtxVkImpl)
             {
                 auto *pBufferVk = Res.pObject.RawPtr<BufferVkImpl>();
                 VkAccessFlags RequiredAccessFlags = VK_ACCESS_UNIFORM_READ_BIT;
-                if(pBufferVk->GetAccessFlags() != RequiredAccessFlags)
+                if(!pBufferVk->CheckAccessFlags(RequiredAccessFlags))
                 {
                     if(VerifyOnly)
                         LOG_ERROR_MESSAGE("Buffer \"", pBufferVk->GetDesc().Name, "\" is not in correct state. Did you forget to call TransitionShaderResources() or specify COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag in a call to CommitShaderResources()?");
@@ -121,7 +121,7 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl *pCtxVkImpl)
                     Res.Type == SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer ?
                     VK_ACCESS_SHADER_READ_BIT :
                     (VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
-                if (pBufferVk->GetAccessFlags() != RequiredAccessFlags)
+                if (!pBufferVk->CheckAccessFlags(RequiredAccessFlags))
                 {
                     if (VerifyOnly)
                         LOG_ERROR_MESSAGE("Buffer \"", pBufferVk->GetDesc().Name, "\" is not in correct state. Did you forget to call TransitionShaderResources() or specify COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag in a call to CommitShaderResources()?");
