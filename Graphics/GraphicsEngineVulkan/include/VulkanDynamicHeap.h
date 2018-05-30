@@ -56,10 +56,11 @@ public:
     VulkanRingBuffer(size_t MaxSize, IMemoryAllocator &Allocator, RenderDeviceVkImpl* pDeviceVk);
     
     VulkanRingBuffer(VulkanRingBuffer&& rhs)noexcept : 
-        RingBuffer(std::move(rhs)),
-        m_pDeviceVk(rhs.m_pDeviceVk),
-        m_VkBuffer(std::move(rhs.m_VkBuffer)),
-        m_CPUAddress(rhs.m_CPUAddress)
+        RingBuffer    (std::move(rhs)),
+        m_pDeviceVk   (rhs.m_pDeviceVk),
+        m_VkBuffer    (std::move(rhs.m_VkBuffer)),
+        m_BufferMemory(std::move(rhs.m_BufferMemory)),
+        m_CPUAddress  (rhs.m_CPUAddress)
     {
         rhs.m_CPUAddress = nullptr;
     }
@@ -71,9 +72,10 @@ public:
         Destroy();
 
         static_cast<RingBuffer&>(*this) = std::move(rhs);
-        m_pDeviceVk = rhs.m_pDeviceVk;
-        m_VkBuffer = std::move(rhs.m_VkBuffer);
-        m_CPUAddress = rhs.m_CPUAddress;
+        m_pDeviceVk     = rhs.m_pDeviceVk;
+        m_VkBuffer      = std::move(rhs.m_VkBuffer);
+        m_BufferMemory  = std::move(rhs.m_BufferMemory);
+        m_CPUAddress    = rhs.m_CPUAddress;
         rhs.m_CPUAddress = nullptr;
         
         return *this;
