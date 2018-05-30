@@ -58,7 +58,7 @@ RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters *pRefCounters,
     m_VkObjReleaseQueue(STD_ALLOCATOR_RAW_MEM(ReleaseQueueElemType, GetRawAllocator(), "Allocator for queue<ReleaseQueueElemType>")),
     m_StaleVkObjects(STD_ALLOCATOR_RAW_MEM(ReleaseQueueElemType, GetRawAllocator(), "Allocator for queue<ReleaseQueueElemType>")),
     m_DescriptorPools(STD_ALLOCATOR_RAW_MEM(DescriptorPoolManager, GetRawAllocator(), "Allocator for vector<DescriptorPoolManager>")),
-    //m_UploadHeaps(STD_ALLOCATOR_RAW_MEM(UploadHeapPoolElemType, GetRawAllocator(), "Allocator for vector<unique_ptr<DynamicUploadHeap>>")),
+    m_UploadHeaps(STD_ALLOCATOR_RAW_MEM(UploadHeapPoolElemType, GetRawAllocator(), "Allocator for vector<unique_ptr<VulkanDynamicHeap>>")),
     m_CmdBufferPool(m_LogicalVkDevice->GetSharedPtr(), pCmdQueue->GetQueueFamilyIndex(), VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT),
     m_FramebufferCache(*this)
 {
@@ -89,6 +89,7 @@ RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters *pRefCounters,
         true // Thread-safe
     );
 
+    m_UploadHeaps.reserve(1 + NumDeferredContexts);
     for(Uint32 ctx = 0; ctx < 1 + NumDeferredContexts; ++ctx)
     {
         m_DescriptorPools.emplace_back(
@@ -108,6 +109,18 @@ RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters *pRefCounters,
             CreationAttribs.DynamicDescriptorPoolSize.MaxDescriptorSets,
             false // Dynamic descriptor pools need not to be thread-safe
         );
+
+        {
+#ifdef _DEBUG
+            size_t InitialSize = 1024+64;
+#else
+            size_t InitialSize = 64<<10;//16<<20;
+#endif
+            auto &UploadHeapAllocator = GetRawAllocator();
+            auto *pRawMem = ALLOCATE(UploadHeapAllocator, "DynamicUploadHeap instance", sizeof(VulkanDynamicHeap));
+            auto *pNewHeap = new (pRawMem) VulkanDynamicHeap(GetRawAllocator(), this, InitialSize);
+            m_UploadHeaps.emplace_back( pNewHeap, STDDeleterRawMem<VulkanDynamicHeap>(UploadHeapAllocator) );
+        }
     }
 }
 
@@ -306,7 +319,6 @@ void RenderDeviceVkImpl::FinishFrame(bool ReleaseAllResources)
         Atomics::AtomicIncrement(m_NextCmdListNumber);
     }
 
-#if 0
     {
         // There is no need to lock as new heaps are only created during initialization
         // time for every context
@@ -336,7 +348,6 @@ void RenderDeviceVkImpl::FinishFrame(bool ReleaseAllResources)
         }
     }
 
-#endif
 
     {
         // This is OK if other thread disposes descriptor heap allocation at this time
@@ -352,30 +363,6 @@ void RenderDeviceVkImpl::FinishFrame(bool ReleaseAllResources)
 
     Atomics::AtomicIncrement(m_FrameNumber);
 }
-
-#if 0
-DynamicUploadHeap* RenderDeviceVkImpl::RequestUploadHeap()
-{
-    std::lock_guard<std::mutex> LockGuard(m_UploadHeapMutex);
-
-#ifdef _DEBUG
-    size_t InitialSize = 1024+64;
-#else
-    size_t InitialSize = 64<<10;//16<<20;
-#endif
-
-    auto &UploadHeapAllocator = GetRawAllocator();
-    auto *pRawMem = ALLOCATE(UploadHeapAllocator, "DynamicUploadHeap instance", sizeof(DynamicUploadHeap));
-    auto *pNewHeap = new (pRawMem) DynamicUploadHeap(GetRawAllocator(), true, this, InitialSize);
-    m_UploadHeaps.emplace_back( pNewHeap, STDDeleterRawMem<DynamicUploadHeap>(UploadHeapAllocator) );
-    return pNewHeap;
-}
-
-void RenderDeviceVkImpl::ReleaseUploadHeap(DynamicUploadHeap* pUploadHeap)
-{
-
-}
-#endif
 
 VkCommandBuffer RenderDeviceVkImpl::AllocateCommandBuffer(const Char *DebugName)
 {

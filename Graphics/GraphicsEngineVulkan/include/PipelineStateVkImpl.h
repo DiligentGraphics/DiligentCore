@@ -133,6 +133,8 @@ private:
     VulkanUtilities::RenderPassWrapper m_RenderPass;
     VulkanUtilities::PipelineWrapper m_Pipeline;
     PipelineLayout m_PipelineLayout;
+    bool m_HasStaticResources = false;
+    bool m_HasNonStaticResources = false;
 };
 
 }

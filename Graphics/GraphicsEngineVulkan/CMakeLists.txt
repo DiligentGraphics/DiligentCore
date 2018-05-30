@@ -11,7 +11,7 @@ set(INCLUDE
     include/VulkanTypeConversions.h
     include/DescriptorPoolManager.h
     include/DeviceContextVkImpl.h
-    include/DynamicUploadHeap.h
+    include/VulkanDynamicHeap.h
     include/FramebufferCache.h
     include/GenerateMips.h
     include/pch.h
@@ -68,7 +68,7 @@ set(SRC
     src/VulkanTypeConversions.cpp
     src/DescriptorPoolManager.cpp
     src/DeviceContextVkImpl.cpp
-    src/DynamicUploadHeap.cpp
+    src/VulkanDynamicHeap.cpp
     src/FramebufferCache.cpp
     src/GenerateMips.cpp
     src/PipelineLayout.cpp

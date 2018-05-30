@@ -927,7 +927,6 @@ VkVertexInputRate LayoutElemFrequencyToVkInputRate(LayoutElement::FREQUENCY freq
 }
 
 void InputLayoutDesc_To_VkVertexInputStateCI(const InputLayoutDesc& LayoutDesc,
-                                             const std::array<Uint32, MaxBufferSlots>& Strides,
                                              VkPipelineVertexInputStateCreateInfo &VertexInputStateCI,
                                              std::array<VkVertexInputBindingDescription, iMaxLayoutElements>& BindingDescriptions,
                                              std::array<VkVertexInputAttributeDescription, iMaxLayoutElements>& AttributeDescription)
@@ -951,12 +950,13 @@ void InputLayoutDesc_To_VkVertexInputStateCI(const InputLayoutDesc& LayoutDesc,
             BindingDescInd = VertexInputStateCI.vertexBindingDescriptionCount++;
             auto &BindingDesc = BindingDescriptions[BindingDescInd];
             BindingDesc.binding = LayoutElem.BufferSlot;
-            BindingDesc.stride = Strides[LayoutElem.BufferSlot];
+            BindingDesc.stride = LayoutElem.Stride;
             BindingDesc.inputRate = LayoutElemFrequencyToVkInputRate(LayoutElem.Frequency);
         }
 
         const auto &BindingDesc = BindingDescriptions[BindingDescInd];
         VERIFY(BindingDesc.binding == LayoutElem.BufferSlot, "Inconsistent buffer slot");
+        VERIFY(BindingDesc.stride == LayoutElem.Stride, "Inconsistent strides");
         VERIFY(BindingDesc.inputRate == LayoutElemFrequencyToVkInputRate(LayoutElem.Frequency), "Incosistent layout element frequency");
 
         auto &AttribDesc = AttributeDescription[elem];

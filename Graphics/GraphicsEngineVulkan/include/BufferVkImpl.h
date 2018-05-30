@@ -30,7 +30,7 @@
 #include "RenderDeviceVk.h"
 #include "BufferBase.h"
 #include "BufferViewVkImpl.h"
-#include "DynamicUploadHeap.h"
+#include "VulkanDynamicHeap.h"
 #include "VulkanUtilities/VulkanObjectWrappers.h"
 
 namespace Diligent
@@ -66,27 +66,6 @@ public:
     void DbgVerifyDynamicAllocation(Uint32 ContextId);
 #endif
 
-    /*virtual IVkResource *GetVkBuffer(size_t &DataStartByteOffset, Uint32 ContextId)override final
-    { 
-        auto *pVkResource = GetVkResource();
-        if(pVkResource != nullptr)
-        {
-            VERIFY(m_Desc.Usage != USAGE_DYNAMIC || (m_Desc.BindFlags | (BIND_SHADER_RESOURCE|BIND_UNORDERED_ACCESS)) != 0, "Expected non-dynamic buffer or a buffer with SRV or UAV bind flags");
-            DataStartByteOffset = 0;
-            return pVkResource; 
-        }
-        else
-        {
-            VERIFY(m_Desc.Usage == USAGE_DYNAMIC, "Dynamic buffer is expected");
-
-#ifdef _DEBUG
-            DbgVerifyDynamicAllocation(ContextId);
-#endif
-            DataStartByteOffset = m_DynamicData[ContextId].Offset;
-            return m_DynamicData[ContextId].pBuffer;
-        }
-    }
-    */
 
     VkBuffer GetVkBuffer()const override final
     {
@@ -95,47 +74,22 @@ public:
 
     virtual void* GetNativeHandle()override final
     { 
-        //VERIFY(GetVkResource() != nullptr, "The buffer is dynamic and has no pointer to Vk resource");
-        //size_t DataStartByteOffset = 0;
         auto VkBuffer = GetVkBuffer(); 
-        //VERIFY(DataStartByteOffset == 0, "0 offset expected");
         return VkBuffer;
     }
 
     virtual void SetAccessFlags(VkAccessFlags AccessFlags )override final{ m_AccessFlags = AccessFlags; }
     VkAccessFlags GetAccessFlags()const{return m_AccessFlags;}
 
-/*
-    Vk_GPU_VIRTUAL_ADDRESS GetGPUAddress(Uint32 ContextId)
-    {
-        if(m_Desc.Usage == USAGE_DYNAMIC)
-        {
-#ifdef _DEBUG
-            DbgVerifyDynamicAllocation(ContextId);
-#endif
-            return m_DynamicData[ContextId].GPUAddress;
-        }
-        else
-        {
-            return GetVkResource()->GetGPUVirtualAddress();
-        }
-    }
-
-    */
 private:
     virtual void CreateViewInternal( const struct BufferViewDesc &ViewDesc, IBufferView **ppView, bool bIsDefaultView )override;
 
     VulkanUtilities::BufferViewWrapper CreateView(struct BufferViewDesc &ViewDesc);
     VkAccessFlags m_AccessFlags = 0;
 
-    /*   
 #ifdef _DEBUG
-    std::vector< std::pair<MAP_TYPE, Uint32>, STDAllocatorRawMem<std::pair<MAP_TYPE, Uint32>> > m_DbgMapType;
+    std::vector< std::pair<MAP_TYPE, Uint32> > m_DbgMapType;
 #endif
-
-    friend class DeviceContextVkImpl;
-    // Array of dynamic allocations for every device context
-    std::vector<DynamicAllocation,  STDAllocatorRawMem<DynamicAllocation> > m_DynamicData;*/
     
     VulkanUtilities::BufferWrapper m_VulkanBuffer;
     VulkanUtilities::DeviceMemoryWrapper m_BufferMemory;

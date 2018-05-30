@@ -30,7 +30,6 @@
 #include "TextureVkImpl.h"
 #include "BufferVkImpl.h"
 #include "VulkanTypeConversions.h"
-#include "DynamicUploadHeap.h"
 #include "CommandListVkImpl.h"
 
 namespace Diligent
@@ -38,7 +37,6 @@ namespace Diligent
 
     DeviceContextVkImpl::DeviceContextVkImpl( IReferenceCounters *pRefCounters, RenderDeviceVkImpl *pDeviceVkImpl, bool bIsDeferred, const EngineVkAttribs &Attribs, Uint32 ContextId) :
         TDeviceContextBase(pRefCounters, pDeviceVkImpl, bIsDeferred),
-        //m_pUploadHeap(pDeviceVkImpl->RequestUploadHeap() ),
         m_NumCommandsToFlush(bIsDeferred ? std::numeric_limits<decltype(m_NumCommandsToFlush)>::max() : Attribs.NumCommandsToFlushCmdBuffer),
         /*m_MipsGenerator(pDeviceVkImpl->GetVkDevice()),
         m_CmdListAllocator(GetRawAllocator(), sizeof(CommandListVkImpl), 64 ),*/
@@ -300,47 +298,6 @@ namespace Diligent
         m_CommandBuffer.BeginRenderPass(Key.Pass, vkFramebuffer, m_FramebufferWidth, m_FramebufferHeight);
     }
 
-    void DeviceContextVkImpl::CommitVkIndexBuffer(VALUE_TYPE IndexType)
-    {
-        BufferVkImpl *pBuffVk = m_pIndexBuffer.RawPtr<BufferVkImpl>();
-
-        // Device context keeps strong reference to bound index buffer.
-        // When the buffer is unbound, the reference to the Vk resource
-        // is added to the context. There is no need to add reference here
-
-//        bool IsDynamic = pBuffVk->GetDesc().Usage == USAGE_DYNAMIC;
-//#ifdef _DEBUG
-//        if(IsDynamic)
-//            pBuffVk->DbgVerifyDynamicAllocation(m_ContextId);
-//#endif
-
-        size_t BuffDataStartByteOffset = 0;
-        auto *vkBuffer = pBuffVk->GetVkBuffer();
-
-        if( //IsDynamic || 
-            m_State.CommittedVkIndexBuffer          != vkBuffer ||
-            m_State.CommittedIBFormat               != IndexType ||
-            m_State.CommittedVkIndexDataStartOffset != m_IndexDataStartOffset + BuffDataStartByteOffset)
-        {
-            m_State.CommittedVkIndexBuffer          = vkBuffer;
-            m_State.CommittedIBFormat               = IndexType;
-            m_State.CommittedVkIndexDataStartOffset = m_IndexDataStartOffset + static_cast<Uint32>(BuffDataStartByteOffset);
-            VkIndexType vkIndexType;
-            if( IndexType == VT_UINT32 )
-                vkIndexType = VK_INDEX_TYPE_UINT32;
-            else
-            {
-                VERIFY(IndexType == VT_UINT16, "Unsupported index format. Only R16_UINT and R32_UINT are allowed.");
-                vkIndexType = VK_INDEX_TYPE_UINT16;
-            }
-            m_CommandBuffer.BindIndexBuffer(m_State.CommittedVkIndexBuffer, m_State.CommittedVkIndexDataStartOffset, vkIndexType);
-        }
-        
-        // GPU virtual address of a dynamic index buffer can change every time
-        // a draw command is invoked
-        m_State.CommittedIBUpToDate = true;//!IsDynamic;
-    }
-
     void DeviceContextVkImpl::TransitionVkVertexBuffers()
     {
         for( UINT Buff = 0; Buff < m_NumVertexStreams; ++Buff )
@@ -419,22 +376,18 @@ namespace Diligent
         auto *pPipelineStateVk = m_pPipelineState.RawPtr<PipelineStateVkImpl>();
 
         EnsureVkCmdBuffer();
-        if(m_CommandBuffer.GetState().RenderPass == VK_NULL_HANDLE)
-            CommitRenderPassAndFramebuffer(pPipelineStateVk);
 
         if( DrawAttribs.IsIndexed )
         {
             VERIFY( m_pIndexBuffer != nullptr, "Index buffer is not set up for indexed draw command" );
 
-            if( m_State.CommittedIBFormat != DrawAttribs.IndexType )
-                m_State.CommittedIBUpToDate = false;
-
             BufferVkImpl *pBuffVk = m_pIndexBuffer.RawPtr<BufferVkImpl>();
             if(pBuffVk->GetAccessFlags() != VK_ACCESS_INDEX_READ_BIT)
                 BufferMemoryBarrier(*pBuffVk, VK_ACCESS_INDEX_READ_BIT);
 
-            if(!m_State.CommittedIBUpToDate)
-                CommitVkIndexBuffer(DrawAttribs.IndexType);
+            VERIFY(DrawAttribs.IndexType == VT_UINT16 || DrawAttribs.IndexType == VT_UINT32, "Unsupported index format. Only R16_UINT and R32_UINT are allowed.");
+            VkIndexType vkIndexType = DrawAttribs.IndexType == VT_UINT16 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32;
+            m_CommandBuffer.BindIndexBuffer(pBuffVk->GetVkBuffer(), m_IndexDataStartOffset, vkIndexType);
         }
 
         if(m_State.CommittedVBsUpToDate)
@@ -457,6 +410,10 @@ namespace Diligent
         }
 #endif
 #endif
+
+        if(m_CommandBuffer.GetState().RenderPass == VK_NULL_HANDLE)
+            CommitRenderPassAndFramebuffer(pPipelineStateVk);
+
         if( DrawAttribs.IsIndirect )
         {
 #if 0
@@ -1173,5 +1130,43 @@ namespace Diligent
         auto vkBuff = BufferVk.GetVkBuffer();
         m_CommandBuffer.BufferMemoryBarrier(vkBuff, BufferVk.GetAccessFlags(), NewAccessFlags);
         BufferVk.SetAccessFlags(NewAccessFlags);
+    }
+
+    void* DeviceContextVkImpl::AllocateDynamicUploadSpace(BufferVkImpl* pBuffer, size_t NumBytes, size_t Alignment)
+    {
+        VERIFY(m_UploadAllocations.find(pBuffer) == m_UploadAllocations.end(), "Upload space has already been allocated for this buffer");
+        auto UploadAllocation = m_pDevice.RawPtr<RenderDeviceVkImpl>()->AllocateDynamicUploadSpace(m_ContextId, NumBytes, Alignment);
+        auto *CPUAddress = UploadAllocation.CPUAddress;
+        m_UploadAllocations.emplace(pBuffer, std::move(UploadAllocation));
+        return CPUAddress;
+    }
+    
+    void DeviceContextVkImpl::CopyAndFreeDynamicUploadData(BufferVkImpl* pBuffer)
+    {
+        auto it = m_UploadAllocations.find(pBuffer);
+        if(it != m_UploadAllocations.end())
+        {
+
+#ifdef _DEBUG
+	        auto CurrentFrame = m_pDevice.RawPtr<RenderDeviceVkImpl>()->GetCurrentFrameNumber();
+            VERIFY(it->second.FrameNum == CurrentFrame, "Dynamic allocation is out-of-date. Dynamic buffer \"", pBuffer->GetDesc().Name, "\" must be unmapped in the same frame it is used.");
+#endif
+            EnsureVkCmdBuffer();
+            if(pBuffer->GetAccessFlags() != VK_ACCESS_TRANSFER_WRITE_BIT)
+            {
+                BufferMemoryBarrier(*pBuffer, VK_ACCESS_TRANSFER_WRITE_BIT);
+            }
+            VkBufferCopy CopyRegion;
+            CopyRegion.srcOffset = it->second.Offset;
+            CopyRegion.dstOffset = 0;
+            CopyRegion.size = it->second.Size;
+            m_CommandBuffer.CopyBuffer(it->second.vkBuffer, pBuffer->GetVkBuffer(), 1, &CopyRegion);
+
+            m_UploadAllocations.erase(it);
+        }
+        else
+        {
+            UNEXPECTED("Unable to find dynamic allocation for this buffer");
+        }
     }
 }

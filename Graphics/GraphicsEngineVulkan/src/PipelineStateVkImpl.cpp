@@ -159,9 +159,9 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters *pRefCounters, Ren
     for(Uint32 s=0; s < m_NumShaders; ++s)
         new (m_ShaderResourceLayouts + s) ShaderResourceLayoutVk(*this, LogicalDevice, GetRawAllocator());
 
-    if (PipelineDesc.IsComputePipeline)
+    if (m_Desc.IsComputePipeline)
     {
-        auto &ComputePipeline = PipelineDesc.ComputePipeline;
+        auto &ComputePipeline = m_Desc.ComputePipeline;
 
         if( ComputePipeline.pCS == nullptr )
             LOG_ERROR_AND_THROW("Compute shader is not set in the pipeline desc");
@@ -196,7 +196,7 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters *pRefCounters, Ren
     {
         const auto &PhysicalDevice = pDeviceVk->GetPhysicalDevice();
         
-        auto &GraphicsPipeline = PipelineDesc.GraphicsPipeline;
+        auto &GraphicsPipeline = m_Desc.GraphicsPipeline;
 
         CreateRenderPass(LogicalDevice);
 
@@ -206,10 +206,6 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters *pRefCounters, Ren
 #ifdef _DEBUG
         PipelineCI.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
 #endif  
-
-#if 0
-        m_PipelineLayout.AllocateStaticSamplers(GetShaders(), GetNumShaders());
-#endif
 
         PipelineCI.stageCount = m_NumShaders;
         std::vector<VkPipelineShaderStageCreateInfo> Stages(PipelineCI.stageCount);
@@ -247,7 +243,7 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters *pRefCounters, Ren
         VkPipelineVertexInputStateCreateInfo VertexInputStateCI = {};
         std::array<VkVertexInputBindingDescription, iMaxLayoutElements> BindingDescriptions;
         std::array<VkVertexInputAttributeDescription, iMaxLayoutElements> AttributeDescription;
-        InputLayoutDesc_To_VkVertexInputStateCI(GraphicsPipeline.InputLayout, m_Strides, VertexInputStateCI, BindingDescriptions, AttributeDescription);
+        InputLayoutDesc_To_VkVertexInputStateCI(GraphicsPipeline.InputLayout, VertexInputStateCI, BindingDescriptions, AttributeDescription);
         PipelineCI.pVertexInputState = &VertexInputStateCI;
 
 
@@ -372,18 +368,21 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters *pRefCounters, Ren
     if(PipelineDesc.SRBAllocationGranularity > 1)
         m_VariableDataAllocators.Init(m_NumShaders, PipelineDesc.SRBAllocationGranularity);
 
-    bool HasStaticResources = false;
-    bool HasNonStaticResources = false;
+    m_HasStaticResources = false;
+    m_HasNonStaticResources = false;
     for (Uint32 s=0; s < m_NumShaders; ++s)
     {
         const auto &Layout = m_ShaderResourceLayouts[s];
-        HasStaticResources = Layout.GetResourceCount(SHADER_VARIABLE_TYPE_STATIC) != 0;
-        HasNonStaticResources = Layout.GetResourceCount(SHADER_VARIABLE_TYPE_MUTABLE) != 0 ||
-                                Layout.GetResourceCount(SHADER_VARIABLE_TYPE_DYNAMIC) != 0;
+        if(Layout.GetResourceCount(SHADER_VARIABLE_TYPE_STATIC) != 0)
+            m_HasStaticResources = true;
+
+        if(Layout.GetResourceCount(SHADER_VARIABLE_TYPE_MUTABLE) != 0 ||
+           Layout.GetResourceCount(SHADER_VARIABLE_TYPE_DYNAMIC) != 0)
+            m_HasNonStaticResources = true;
     }
 
     // If there are only static resources, create default shader resource binding
-    if(HasStaticResources && !HasNonStaticResources)
+    if(m_HasStaticResources && !m_HasNonStaticResources)
     {
         auto &SRBAllocator = pDeviceVk->GetSRBAllocator();
         // Default shader resource binding must be initialized after resource layouts are parsed!
@@ -497,8 +496,11 @@ ShaderResourceCacheVk* PipelineStateVkImpl::CommitAndTransitionShaderResources(I
                                                                                bool                      CommitResources,
                                                                                bool                      TransitionResources)const
 {
+    if(!m_HasStaticResources && !m_HasNonStaticResources)
+        return nullptr;
+
 #ifdef VERIFY_SHADER_BINDINGS
-    if (pShaderResourceBinding == nullptr && !m_pDefaultShaderResBinding)
+    if (pShaderResourceBinding == nullptr && m_HasNonStaticResources)
     {
         LOG_ERROR_MESSAGE("Pipeline state \"", m_Desc.Name, "\" contains mutable/dynamic shader variables and requires shader resource binding to commit all resources, but none is provided.");
     }

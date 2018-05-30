@@ -158,6 +158,10 @@ public:
             {
                 VERIFY(m_Strides[BuffSlot] >= TightStrides[BuffSlot], "Stride (", m_Strides[BuffSlot], ") explicitly specified for slot ", BuffSlot, " is smaller than the total element size (", TightStrides[BuffSlot], ")");
             }
+            if(It->Stride == 0)
+                It->Stride = m_Strides[BuffSlot];
+            else
+                VERIFY(m_Strides[BuffSlot] == It->Stride, "Incosistent stride");
         }
     }
 

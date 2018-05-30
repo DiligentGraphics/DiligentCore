@@ -253,10 +253,15 @@ namespace VulkanUtilities
         void BindIndexBuffer(VkBuffer Buffer, VkDeviceSize Offset, VkIndexType IndexType)
         {
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-            vkCmdBindIndexBuffer(m_VkCmdBuffer, Buffer, Offset, IndexType);
-            m_State.IndexBuffer = Buffer;
-            m_State.IndexBufferOffset = Offset;
-            m_State.IndexType = IndexType;
+            if(m_State.IndexBuffer       != Buffer ||
+               m_State.IndexBufferOffset != Offset ||
+               m_State.IndexType         != IndexType)
+            {
+                vkCmdBindIndexBuffer(m_VkCmdBuffer, Buffer, Offset, IndexType);
+                m_State.IndexBuffer = Buffer;
+                m_State.IndexBufferOffset = Offset;
+                m_State.IndexType = IndexType;
+            }
         }
 
         void BindVertexBuffers(uint32_t firstBinding, uint32_t bindingCount, const VkBuffer* pBuffers, const VkDeviceSize* pOffsets)
@@ -326,6 +331,20 @@ namespace VulkanUtilities
             vkCmdBindDescriptorSets(m_VkCmdBuffer, pipelineBindPoint, layout, firstSet, descriptorSetCount, pDescriptorSets, dynamicOffsetCount, pDynamicOffsets);
         }
 
+        void CopyBuffer(VkBuffer            srcBuffer,
+                        VkBuffer            dstBuffer,
+                        uint32_t            regionCount,
+                        const VkBufferCopy* pRegions)
+        {
+            VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
+            if(m_State.RenderPass  != VK_NULL_HANDLE)
+            {
+                // Copy buffer operation must be performed outside of render pass.
+                EndRenderPass();
+            }
+            vkCmdCopyBuffer(m_VkCmdBuffer, srcBuffer, dstBuffer, regionCount, pRegions);
+        }
+
         void FlushBarriers();
 
         void SetVkCmdBuffer(VkCommandBuffer VkCmdBuffer)
@@ -342,9 +361,9 @@ namespace VulkanUtilities
             VkPipeline ComputePipeline = VK_NULL_HANDLE;
             VkBuffer IndexBuffer = VK_NULL_HANDLE;
             VkDeviceSize IndexBufferOffset = 0;
+            VkIndexType IndexType = VK_INDEX_TYPE_MAX_ENUM;
             uint32_t FramebufferWidth = 0;
             uint32_t FramebufferHeight = 0;
-            VkIndexType IndexType = VK_INDEX_TYPE_MAX_ENUM;
         };
 
         const StateCache& GetState()const{return m_State;}

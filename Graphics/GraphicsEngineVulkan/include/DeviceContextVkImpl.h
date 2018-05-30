@@ -25,12 +25,14 @@
 
 /// \file
 /// Declaration of Diligent::DeviceContextVkImpl class
+#include <unordered_map>
 
 #include "DeviceContextVk.h"
 #include "DeviceContextBase.h"
 #include "GenerateMips.h"
 #include "VulkanUtilities/VulkanCommandBufferPool.h"
 #include "VulkanUtilities/VulkanCommandBuffer.h"
+#include "VulkanDynamicHeap.h"
 
 #ifdef _DEBUG
 #   define VERIFY_CONTEXT_BINDINGS
@@ -103,8 +105,6 @@ public:
     }
 
 #if 0
-    virtual void TransitionBufferState(IBuffer *pBuffer, Vk_RESOURCE_STATES State)override final;
-
     ///// Clears the state caches. This function is called once per frame
     ///// (before present) to release all outstanding objects
     ///// that are only kept alive by references in the cache
@@ -122,9 +122,9 @@ public:
 #endif
     void GenerateMips(class TextureViewVkImpl *pTexView);
 
-#if 0
-    struct DynamicAllocation AllocateDynamicSpace(size_t NumBytes);
-#endif    
+    void* AllocateDynamicUploadSpace(BufferVkImpl* pBuffer, size_t NumBytes, size_t Alignment);
+    void CopyAndFreeDynamicUploadData(BufferVkImpl* pBuffer);
+
     Uint32 GetContextId()const{return m_ContextId;}
 
     size_t GetNumCommandsInCtx()const { return m_State.NumCommands; }
@@ -137,7 +137,6 @@ public:
 
 private:
     void CommitRenderPassAndFramebuffer(class PipelineStateVkImpl *pPipelineStateVk);
-    void CommitVkIndexBuffer(VALUE_TYPE IndexType);
     void CommitVkVertexBuffers();
     void TransitionVkVertexBuffers();
     void CommitRenderTargets();
@@ -158,17 +157,8 @@ private:
         /// Flag indicating if currently committed index buffer is up to date
         bool CommittedIBUpToDate = false;
 
-        /// Format of the currently committed index buffer
-        VALUE_TYPE CommittedIBFormat = VT_UNDEFINED;
-        /// Offset in the currently committed index buffer
-        Uint32 CommittedVkIndexDataStartOffset = 0;
-        /// Currently committed index buffer
-        VkBuffer CommittedVkIndexBuffer = VK_NULL_HANDLE;
-
         Uint32 NumCommands = 0;
     }m_State;
-
-
     
     
 #if 0
@@ -177,7 +167,6 @@ private:
     CComPtr<IVkCommandSignature> m_pDispatchIndirectSignature;
     
     GenerateMipsHelper m_MipsGenerator;
-    class DynamicUploadHeap* m_pUploadHeap = nullptr;
 #endif
     class ShaderResourceCacheVk *m_pCommittedResourceCache = nullptr;
 #if 0
@@ -191,6 +180,8 @@ private:
     std::vector<VkSemaphore> m_WaitSemaphores;
     std::vector<VkPipelineStageFlags> m_WaitDstStageMasks;
     std::vector<VkSemaphore> m_SignalSemaphores;
+
+    std::unordered_map<BufferVkImpl*, VulkanDynamicAllocation> m_UploadAllocations;
 };
 
 }

@@ -31,7 +31,7 @@
 #include "RenderDeviceBase.h"
 #include "DescriptorPoolManager.h"
 #include "CommandContext.h"
-#include "DynamicUploadHeap.h"
+#include "VulkanDynamicHeap.h"
 #include "Atomics.h"
 #include "CommandQueueVk.h"
 #include "VulkanUtilities/VulkanInstance.h"
@@ -105,10 +105,6 @@ public:
 
     void FinishFrame(bool ReleaseAllResources);
     virtual void FinishFrame()override final { FinishFrame(false); }
-    /*
-    DynamicUploadHeap* RequestUploadHeap();
-    void ReleaseUploadHeap(DynamicUploadHeap* pUploadHeap);
-    */
 
     DescriptorPoolAllocation AllocateDescriptorSet(VkDescriptorSetLayout SetLayout)
     {
@@ -121,6 +117,10 @@ public:
         return m_DescriptorPools[1 + CtxId].Allocate(SetLayout);
     }
 
+    VulkanDynamicAllocation AllocateDynamicUploadSpace(Uint32 CtxId, size_t Size, size_t Alignment)
+    {
+        return m_UploadHeaps[CtxId]->Allocate(Size, Alignment);
+    }
     
     std::shared_ptr<const VulkanUtilities::VulkanInstance> GetVulkanInstance()const{return m_VulkanInstance;}
     const VulkanUtilities::VulkanPhysicalDevice &GetPhysicalDevice(){return *m_PhysicalDevice;}
@@ -205,11 +205,8 @@ private:
     std::vector<DescriptorPoolManager, STDAllocatorRawMem<DescriptorPoolManager> > m_DescriptorPools;
 
 
-#if 0
-    std::mutex m_UploadHeapMutex;
-    typedef std::unique_ptr<DynamicUploadHeap, STDDeleterRawMem<DynamicUploadHeap> > UploadHeapPoolElemType;
+    typedef std::unique_ptr<VulkanDynamicHeap, STDDeleterRawMem<VulkanDynamicHeap> > UploadHeapPoolElemType;
     std::vector< UploadHeapPoolElemType, STDAllocatorRawMem<UploadHeapPoolElemType> > m_UploadHeaps;
-#endif
 };
 
 }
