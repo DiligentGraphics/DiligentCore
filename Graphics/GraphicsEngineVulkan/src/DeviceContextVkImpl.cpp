@@ -350,7 +350,8 @@ namespace Diligent
         }
 
         //GraphCtx.FlushResourceBarriers();
-        m_CommandBuffer.BindVertexBuffers( 0, m_NumVertexStreams, vkVertexBuffers, Offsets );
+        if(m_NumVertexStreams > 0)
+            m_CommandBuffer.BindVertexBuffers( 0, m_NumVertexStreams, vkVertexBuffers, Offsets );
 
         // GPU virtual address of a dynamic vertex buffer can change every time
         // a draw command is invoked
@@ -898,24 +899,21 @@ namespace Diligent
             SetViewports(1, nullptr, 0, 0);
         }
     }
-   
-#if 0
-    DynamicAllocation DeviceContextVkImpl::AllocateDynamicSpace(size_t NumBytes)
-    {
-        return m_pUploadHeap->Allocate(NumBytes);
-    }
-#endif
 
-#if 0
-    void DeviceContextVkImpl::UpdateBufferRegion(class BufferVkImpl *pBuffVk, DynamicAllocation& Allocation, Uint64 DstOffset, Uint64 NumBytes)
+    void DeviceContextVkImpl::UpdateBufferRegion(BufferVkImpl *pBuffVk, VulkanDynamicAllocation& Allocation, Uint64 DstOffset, Uint64 NumBytes)
     {
-        auto pCmdCtx = RequestCmdContext();
-        VERIFY_EXPR( static_cast<size_t>(NumBytes) == NumBytes );
-        pCmdCtx->TransitionResource(pBuffVk, Vk_RESOURCE_STATE_COPY_DEST, true);
-        size_t DstBuffDataStartByteOffset;
-        auto *pVkBuff = pBuffVk->GetVkBuffer(DstBuffDataStartByteOffset, m_ContextId);
-        VERIFY(DstBuffDataStartByteOffset == 0, "Dst buffer must not be suballocated");
-        pCmdCtx->GetCommandList()->CopyBufferRegion( pVkBuff, DstOffset + DstBuffDataStartByteOffset, Allocation.pBuffer, Allocation.Offset, NumBytes);
+        VERIFY(DstOffset + NumBytes <= pBuffVk->GetDesc().uiSizeInBytes, "Update region is out of buffer");
+        VERIFY_EXPR(NumBytes <= Allocation.Size);
+        EnsureVkCmdBuffer();
+        if(!pBuffVk->CheckAccessFlags(VK_ACCESS_TRANSFER_WRITE_BIT))
+        {
+            BufferMemoryBarrier(*pBuffVk, VK_ACCESS_TRANSFER_WRITE_BIT);
+        }
+        VkBufferCopy CopyRegion;
+        CopyRegion.srcOffset = Allocation.Offset;
+        CopyRegion.dstOffset = DstOffset;
+        CopyRegion.size = NumBytes;
+        m_CommandBuffer.CopyBuffer(Allocation.vkBuffer, pBuffVk->GetVkBuffer(), 1, &CopyRegion);
         ++m_State.NumCommands;
     }
 
@@ -923,11 +921,10 @@ namespace Diligent
     {
         VERIFY(pBuffVk->GetDesc().Usage != USAGE_DYNAMIC, "Dynamic buffers must be updated via Map()");
         VERIFY_EXPR( static_cast<size_t>(NumBytes) == NumBytes );
-        auto TmpSpace = m_pUploadHeap->Allocate(static_cast<size_t>(NumBytes));
+        auto TmpSpace = m_pDevice.RawPtr<RenderDeviceVkImpl>()->AllocateDynamicUploadSpace(m_ContextId, NumBytes, 0);
 	    memcpy(TmpSpace.CPUAddress, pData, static_cast<size_t>(NumBytes));
         UpdateBufferRegion(pBuffVk, TmpSpace, DstOffset, NumBytes);
     }
-#endif
 
 #if 0
     void DeviceContextVkImpl::CopyBufferRegion(BufferVkImpl *pSrcBuffVk, BufferVkImpl *pDstBuffVk, Uint64 SrcOffset, Uint64 DstOffset, Uint64 NumBytes)
@@ -1151,17 +1148,7 @@ namespace Diligent
 	        auto CurrentFrame = m_pDevice.RawPtr<RenderDeviceVkImpl>()->GetCurrentFrameNumber();
             VERIFY(it->second.FrameNum == CurrentFrame, "Dynamic allocation is out-of-date. Dynamic buffer \"", pBuffer->GetDesc().Name, "\" must be unmapped in the same frame it is used.");
 #endif
-            EnsureVkCmdBuffer();
-            if(!pBuffer->CheckAccessFlags(VK_ACCESS_TRANSFER_WRITE_BIT))
-            {
-                BufferMemoryBarrier(*pBuffer, VK_ACCESS_TRANSFER_WRITE_BIT);
-            }
-            VkBufferCopy CopyRegion;
-            CopyRegion.srcOffset = it->second.Offset;
-            CopyRegion.dstOffset = 0;
-            CopyRegion.size = it->second.Size;
-            m_CommandBuffer.CopyBuffer(it->second.vkBuffer, pBuffer->GetVkBuffer(), 1, &CopyRegion);
-
+            UpdateBufferRegion(pBuffer, it->second, 0, pBuffer->GetDesc().uiSizeInBytes);
             m_UploadAllocations.erase(it);
         }
         else

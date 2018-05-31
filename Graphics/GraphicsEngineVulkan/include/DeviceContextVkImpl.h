@@ -104,7 +104,6 @@ public:
         m_SignalSemaphores.push_back(Semaphore);
     }
 
-#if 0
     ///// Clears the state caches. This function is called once per frame
     ///// (before present) to release all outstanding objects
     ///// that are only kept alive by references in the cache
@@ -113,8 +112,9 @@ public:
     ///// Number of different shader types (Vertex, Pixel, Geometry, Domain, Hull, Compute)
     //static constexpr int NumShaderTypes = 6;
 
-    void UpdateBufferRegion(class BufferVkImpl *pBuffVk, struct DynamicAllocation& Allocation, Uint64 DstOffset, Uint64 NumBytes);
+    void UpdateBufferRegion(class BufferVkImpl *pBuffVk, struct VulkanDynamicAllocation& Allocation, Uint64 DstOffset, Uint64 NumBytes);
     void UpdateBufferRegion(class BufferVkImpl *pBuffVk, const void *pData, Uint64 DstOffset, Uint64 NumBytes);
+#if 0
     void CopyBufferRegion(class BufferVkImpl *pSrcBuffVk, class BufferVkImpl *pDstBuffVk, Uint64 SrcOffset, Uint64 DstOffset, Uint64 NumBytes);
     void CopyTextureRegion(class TextureVkImpl *pSrcTexture, Uint32 SrcSubResIndex, const Vk_BOX *pVkSrcBox,
                            class TextureVkImpl *pDstTexture, Uint32 DstSubResIndex, Uint32 DstX, Uint32 DstY, Uint32 DstZ);

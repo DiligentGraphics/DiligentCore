@@ -321,12 +321,10 @@ void BufferVkImpl::UpdateData( IDeviceContext *pContext, Uint32 Offset, Uint32 S
 {
     TBufferBase::UpdateData( pContext, Offset, Size, pData );
 
-#if 0
     // We must use cmd context from the device context provided, otherwise there will
     // be resource barrier issues in the cmd list in the device context
     auto *pDeviceContextVk = ValidatedCast<DeviceContextVkImpl>(pContext);
     pDeviceContextVk->UpdateBufferRegion(this, pData, Offset, Size);
-#endif
 }
 
 void BufferVkImpl :: CopyData(IDeviceContext *pContext, IBuffer *pSrcBuffer, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size)
