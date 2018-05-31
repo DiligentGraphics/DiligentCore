@@ -31,6 +31,7 @@
 #include "EngineMemory.h"
 #include "StringTools.h"
 #include "VulkanUtilities/VulkanDebug.h"
+#include "VulkanUtilities/VulkanCommandBuffer.h"
 
 namespace Diligent
 {
@@ -144,8 +145,6 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters *pRefCounters,
         
     if( bInitializeBuffer )
     {
-        m_AccessFlags = VK_ACCESS_TRANSFER_WRITE_BIT;
-
         VkBufferCreateInfo VkStaginBuffCI = VkBuffCI;
         VkStaginBuffCI.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 
@@ -194,13 +193,9 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters *pRefCounters,
 
         auto vkCmdBuff = pRenderDeviceVk->AllocateCommandBuffer("Transient cmd buff to copy staging data to a device buffer");
 
-#if 0
-	    // copy data to the intermediate upload heap and then schedule a copy from the upload heap to the default buffer
-        VERIFY_EXPR(m_UsageState == Vk_RESOURCE_STATE_COPY_DEST);
-#endif
-        // We MUST NOT call TransitionResource() from here, because
-        // it will call AddRef() and potentially Release(), while 
-        // the object is not constructed yet
+        VulkanUtilities::VulkanCommandBuffer::BufferMemoryBarrier(vkCmdBuff, StagingBuffer, 0, VK_ACCESS_TRANSFER_READ_BIT);
+        m_AccessFlags = VK_ACCESS_TRANSFER_WRITE_BIT;
+        VulkanUtilities::VulkanCommandBuffer::BufferMemoryBarrier(vkCmdBuff, m_VulkanBuffer, 0, m_AccessFlags);
 
         // Copy commands MUST be recorded outside of a render pass instance. This is OK here
         // as copy will be the only command in the cmd buffer

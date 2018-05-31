@@ -300,13 +300,13 @@ namespace VulkanUtilities
                                         VkBuffer             Buffer, 
                                         VkAccessFlags        srcAccessMask,
                                         VkAccessFlags        dstAccessMask,
-                                        VkPipelineStageFlags SrcStages,
-                                        VkPipelineStageFlags DestStages);
+                                        VkPipelineStageFlags SrcStages  = 0,
+                                        VkPipelineStageFlags DestStages = 0);
 
         void BufferMemoryBarrier(VkBuffer             Buffer, 
                                  VkAccessFlags        srcAccessMask,
                                  VkAccessFlags        dstAccessMask,
-                                 VkPipelineStageFlags SrcStages = 0,
+                                 VkPipelineStageFlags SrcStages  = 0,
                                  VkPipelineStageFlags DestStages = 0)
         {
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
