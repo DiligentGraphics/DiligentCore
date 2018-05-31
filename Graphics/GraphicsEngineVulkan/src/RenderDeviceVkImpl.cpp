@@ -111,11 +111,7 @@ RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters *pRefCounters,
         );
 
         {
-#ifdef _DEBUG
-            size_t InitialSize = 1024+64;
-#else
-            size_t InitialSize = 64<<10;//16<<20;
-#endif
+            auto InitialSize = ctx == 0 ? CreationAttribs.ImmediateCtxDynamicHeapInitialSize : CreationAttribs.DeferredCtxDynamicHeapInitialSize;
             auto &UploadHeapAllocator = GetRawAllocator();
             auto *pRawMem = ALLOCATE(UploadHeapAllocator, "DynamicUploadHeap instance", sizeof(VulkanDynamicHeap));
             auto *pNewHeap = new (pRawMem) VulkanDynamicHeap(GetRawAllocator(), this, InitialSize);

@@ -1339,6 +1339,16 @@ namespace Diligent
         /// for dynamic variables. Every device context has its own dynamic descriptor pool.
         /// If allocation from the current pool fails, the engine creates another one.
         DescriptorPoolSize DynamicDescriptorPoolSize { 256,  256, 2048, 2048,  256, 1024, 1024,  256,  256};
+
+        /// Initial size of the dynamic upload heap for immediate context.
+        /// This heap is used when dynamic buffers are mapped, and also to update resources.
+        /// If the space runs out, the engine doubles the heap size.
+        Uint32 ImmediateCtxDynamicHeapInitialSize = 256 * 1024;
+
+        /// Initial size of the dynamic upload heap for deferred contexts.
+        /// This heap is used when dynamic buffers are mapped, and also to update resources.
+        /// If the space runs out, the engine doubles the heap size.
+        Uint32 DeferredCtxDynamicHeapInitialSize = 32 * 1024;
     };
 
     /// Box
