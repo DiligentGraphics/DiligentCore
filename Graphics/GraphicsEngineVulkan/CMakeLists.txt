@@ -7,6 +7,7 @@ set(INCLUDE
     include/BufferViewVkImpl.h
     include/CommandContext.h
     include/CommandListVkImpl.h
+    include/CommandPoolManager.h
     include/CommandQueueVkImpl.h
     include/VulkanTypeConversions.h
     include/DescriptorPoolManager.h
@@ -64,6 +65,7 @@ set(SRC
     src/BufferVkImpl.cpp
     src/BufferViewVkImpl.cpp
     src/CommandContext.cpp
+    src/CommandPoolManager.cpp
     src/CommandQueueVkImpl.cpp
     src/VulkanTypeConversions.cpp
     src/DescriptorPoolManager.cpp

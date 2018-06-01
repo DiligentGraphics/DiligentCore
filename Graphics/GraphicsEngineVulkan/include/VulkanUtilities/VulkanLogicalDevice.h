@@ -118,6 +118,9 @@ namespace VulkanUtilities
                                   const VkWriteDescriptorSet*   pDescriptorWrites,
                                   uint32_t                      descriptorCopyCount,
                                   const VkCopyDescriptorSet*    pDescriptorCopies)const;
+        
+        VkResult ResetCommandPool(VkCommandPool             vkCmdPool,
+                                  VkCommandPoolResetFlags   flags = 0)const;
 
     private:
         VulkanLogicalDevice(VkPhysicalDevice vkPhysicalDevice, 

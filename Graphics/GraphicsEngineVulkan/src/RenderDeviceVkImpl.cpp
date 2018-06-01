@@ -59,8 +59,8 @@ RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters *pRefCounters,
     m_StaleVkObjects(STD_ALLOCATOR_RAW_MEM(ReleaseQueueElemType, GetRawAllocator(), "Allocator for queue<ReleaseQueueElemType>")),
     m_DescriptorPools(STD_ALLOCATOR_RAW_MEM(DescriptorPoolManager, GetRawAllocator(), "Allocator for vector<DescriptorPoolManager>")),
     m_UploadHeaps(STD_ALLOCATOR_RAW_MEM(UploadHeapPoolElemType, GetRawAllocator(), "Allocator for vector<unique_ptr<VulkanDynamicHeap>>")),
-    m_CmdBufferPool(m_LogicalVkDevice->GetSharedPtr(), pCmdQueue->GetQueueFamilyIndex(), VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT),
-    m_FramebufferCache(*this)
+    m_FramebufferCache(*this),
+    m_TransientCmdPoolMgr(*LogicalDevice, pCmdQueue->GetQueueFamilyIndex(), VK_COMMAND_POOL_CREATE_TRANSIENT_BIT)
 {
     m_DeviceCaps.DevType = DeviceType::Vulkan;
     m_DeviceCaps.MajorVersion = 1;
@@ -139,6 +139,8 @@ RenderDeviceVkImpl::~RenderDeviceVkImpl()
     VERIFY(m_StaleVkObjects.empty(), "Not all stale objects were destroyed");
     VERIFY(m_VkObjReleaseQueue.empty(), "Release queue is not empty");
     
+    m_TransientCmdPoolMgr.DestroyPools(m_pCommandQueue->GetCompletedFenceValue());
+
     //if(m_PhysicalDevice)
     //{
     //    // If m_PhysicalDevice is empty, the device does not own vulkan logical device and must not
@@ -147,12 +149,6 @@ RenderDeviceVkImpl::~RenderDeviceVkImpl()
     //}
 }
 
-
-void RenderDeviceVkImpl::DisposeCommandBuffer(VkCommandBuffer CmdBuff)
-{
-	std::lock_guard<std::mutex> LockGuard(m_CmdPoolMutex);
-    m_CmdBufferPool.DisposeCommandBuffer(CmdBuff, GetNextFenceValue());
-}
 
 
 void RenderDeviceVkImpl::ExecuteCommandBuffer(VkCommandBuffer CmdBuff, bool DiscardStaleObjects)
@@ -360,12 +356,40 @@ void RenderDeviceVkImpl::FinishFrame(bool ReleaseAllResources)
     Atomics::AtomicIncrement(m_FrameNumber);
 }
 
-VkCommandBuffer RenderDeviceVkImpl::AllocateCommandBuffer(const Char *DebugName)
+void RenderDeviceVkImpl::AllocateTransientCmdPool(VulkanUtilities::CommandPoolWrapper& CmdPool, VkCommandBuffer& vkCmdBuff, const Char *DebugPoolName)
 {
-	std::lock_guard<std::mutex> LockGuard(m_CmdPoolMutex);
-    auto CmdBuffer = m_CmdBufferPool.GetCommandBuffer(GetCompletedFenceValue(), DebugName);
-    return CmdBuffer;
+    auto CompletedFenceValue = GetCompletedFenceValue();
+    CmdPool = m_TransientCmdPoolMgr.AllocateCommandPool(CompletedFenceValue, DebugPoolName);
+
+    // Allocate command buffer from the cmd pool
+    VkCommandBufferAllocateInfo BuffAllocInfo = {};
+    BuffAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    BuffAllocInfo.pNext = nullptr;
+    BuffAllocInfo.commandPool = CmdPool;
+    BuffAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    BuffAllocInfo.commandBufferCount = 1;
+    vkCmdBuff = m_LogicalVkDevice->AllocateVkCommandBuffer(BuffAllocInfo);
+    VERIFY_EXPR(vkCmdBuff != VK_NULL_HANDLE);
+        
+    VkCommandBufferBeginInfo CmdBuffBeginInfo = {};
+    CmdBuffBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    CmdBuffBeginInfo.pNext = nullptr;
+    CmdBuffBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT; // Each recording of the command buffer will only be 
+                                                                            // submitted once, and the command buffer will be reset 
+                                                                            // and recorded again between each submission.
+    CmdBuffBeginInfo.pInheritanceInfo = nullptr; // Ignored for a primary command buffer
+    vkBeginCommandBuffer(vkCmdBuff, &CmdBuffBeginInfo);
 }
+
+void RenderDeviceVkImpl::DisposeTransientCmdPool(VulkanUtilities::CommandPoolWrapper&& CmdPool)
+{
+    // Command pools must be disposed after the corresponding command buffer has been submitted to the queue.
+    // At this point the fence value has already been incremented, so the pool can be added to the queue.
+    // There is no need to go through stale objects queue as GetNextFenceValue() will be at least
+    // one greater than the fence value when the cmd buffer was submitted
+    m_TransientCmdPoolMgr.DisposeCommandPool(std::move(CmdPool), m_pCommandQueue->GetNextFenceValue());
+}
+
 
 
 template<typename VulkanObjectType>

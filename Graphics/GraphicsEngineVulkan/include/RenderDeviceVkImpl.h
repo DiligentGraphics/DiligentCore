@@ -40,6 +40,7 @@
 #include "VulkanUtilities/VulkanLogicalDevice.h"
 #include "VulkanUtilities/VulkanObjectWrappers.h"
 #include "FramebufferCache.h"
+#include "CommandPoolManager.h"
 
 /// Namespace for the Direct3D11 implementation of the graphics engine
 namespace Diligent
@@ -93,10 +94,11 @@ public:
     ICommandQueueVk *GetCmdQueue(){return m_pCommandQueue;}
     
 	void IdleGPU(bool ReleaseStaleObjects);
-    VkCommandBuffer AllocateCommandBuffer(const Char *DebugName = nullptr);
     void ExecuteCommandBuffer(const VkSubmitInfo &SubmitInfo, bool DiscardStaleObjects);
     void ExecuteCommandBuffer(VkCommandBuffer CmdBuff, bool DiscardStaleObjects);
-    void DisposeCommandBuffer(VkCommandBuffer CmdBuff);
+    
+    void AllocateTransientCmdPool(VulkanUtilities::CommandPoolWrapper& CmdPool, VkCommandBuffer& vkCmdBuff, const Char* DebugPoolName = nullptr);
+    void DisposeTransientCmdPool(VulkanUtilities::CommandPoolWrapper&& CmdPool);
 
 
     template<typename VulkanObjectType>
@@ -179,9 +181,6 @@ private:
     std::deque<CommandContext*, STDAllocatorRawMem<CommandContext*> > m_AvailableContexts;
 #endif
 	
-    VulkanUtilities::VulkanCommandBufferPool m_CmdBufferPool;
-	std::mutex m_CmdPoolMutex;
-
     std::mutex m_ReleaseQueueMutex;
 
     class StaleVulkanObjectBase
@@ -204,9 +203,13 @@ private:
     // [2+] - Deferred context dynamic descriptor pool
     std::vector<DescriptorPoolManager, STDAllocatorRawMem<DescriptorPoolManager> > m_DescriptorPools;
 
-
     typedef std::unique_ptr<VulkanDynamicHeap, STDDeleterRawMem<VulkanDynamicHeap> > UploadHeapPoolElemType;
     std::vector< UploadHeapPoolElemType, STDAllocatorRawMem<UploadHeapPoolElemType> > m_UploadHeaps;
+
+    // These one-time command pools are used by buffer and texture constructors to
+    // issue copy commands. Vulkan requires that every command pool is used by one thread 
+    // at a time, so every constructor must allocate command buffer from its own pool.
+    CommandPoolManager m_TransientCmdPoolMgr;
 };
 
 }

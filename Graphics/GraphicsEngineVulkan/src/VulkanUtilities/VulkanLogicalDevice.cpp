@@ -434,4 +434,12 @@ namespace VulkanUtilities
     {
         vkUpdateDescriptorSets(m_VkDevice, descriptorWriteCount, pDescriptorWrites, descriptorCopyCount, pDescriptorCopies);
     }
+
+    VkResult VulkanLogicalDevice::ResetCommandPool(VkCommandPool            vkCmdPool,
+                                                   VkCommandPoolResetFlags  flags)const
+    {
+        auto err = vkResetCommandPool(m_VkDevice, vkCmdPool, flags);
+        VERIFY(err == VK_SUCCESS, "Failed to reset command pool");
+        return err;
+    }
 }

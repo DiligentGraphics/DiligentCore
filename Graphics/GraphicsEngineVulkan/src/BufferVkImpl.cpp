@@ -191,7 +191,9 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters *pRefCounters,
         err = LogicalDevice.BindBufferMemory(StagingBuffer, StagingBufferMemory, 0 /*offset*/);
         CHECK_VK_ERROR_AND_THROW(err, "Failed to bind staging bufer memory");
 
-        auto vkCmdBuff = pRenderDeviceVk->AllocateCommandBuffer("Transient cmd buff to copy staging data to a device buffer");
+        VulkanUtilities::CommandPoolWrapper CmdPool;
+        VkCommandBuffer vkCmdBuff;
+        pRenderDeviceVk->AllocateTransientCmdPool(CmdPool, vkCmdBuff, "Transient command pool to copy staging data to a device buffer");
 
         VulkanUtilities::VulkanCommandBuffer::BufferMemoryBarrier(vkCmdBuff, StagingBuffer, 0, VK_ACCESS_TRANSFER_READ_BIT);
         m_AccessFlags = VK_ACCESS_TRANSFER_WRITE_BIT;
@@ -224,7 +226,9 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters *pRefCounters,
         //                  |     was added to the delete queue      |                                   |
         //                  |     with value N                       |                                   |
 	    pRenderDeviceVk->ExecuteCommandBuffer(vkCmdBuff, false);
-        pRenderDeviceVk->DisposeCommandBuffer(vkCmdBuff);
+        // Dispose command pool. No need to dispose cmd buffer as the 
+        // pool will be reset and all buffer resources will be reclaimed
+        pRenderDeviceVk->DisposeTransientCmdPool(std::move(CmdPool));
 
         // Add reference to the object to the release queue to keep it alive
         // until copy operation is complete. This must be done after
