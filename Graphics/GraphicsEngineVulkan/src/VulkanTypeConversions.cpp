@@ -998,7 +998,7 @@ void PrimitiveTopology_To_VkPrimitiveTopologyAndPatchCPCount(PRIMITIVE_TOPOLOGY 
 
     VERIFY_EXPR(PrimTopology >= PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST && PrimTopology < PRIMITIVE_TOPOLOGY_NUM_TOPOLOGIES);
     VkPrimTopology = VK_PRIMITIVE_TOPOLOGY_PATCH_LIST;
-    PatchControlPoints = static_cast<uint32_t>(VkPrimTopology) - static_cast<uint32_t>(PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST) + 1;
+    PatchControlPoints = static_cast<uint32_t>(PrimTopology) - static_cast<uint32_t>(PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST) + 1;
 }
 
 VkFilter FilterTypeToVkFilter(FILTER_TYPE FilterType)
