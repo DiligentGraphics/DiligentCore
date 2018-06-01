@@ -355,22 +355,18 @@ namespace Diligent
 
         if( DrawAttribs.IsIndirect )
         {
-            if( auto *pBufferD3D12 = ValidatedCast<BufferD3D12Impl>(DrawAttribs.pIndirectDrawAttribs) )
-            {
+            VERIFY(DrawAttribs.pIndirectDrawAttribs != nullptr, "Valid pIndirectDrawAttribs must be provided for indirect draw command");
+            auto *pBufferD3D12 = ValidatedCast<BufferD3D12Impl>(DrawAttribs.pIndirectDrawAttribs);
+            
 #ifdef _DEBUG
-                if(pBufferD3D12->GetDesc().Usage == USAGE_DYNAMIC)
-                    pBufferD3D12->DbgVerifyDynamicAllocation(m_ContextId);
+            if(pBufferD3D12->GetDesc().Usage == USAGE_DYNAMIC)
+                pBufferD3D12->DbgVerifyDynamicAllocation(m_ContextId);
 #endif
 
-                GraphCtx.TransitionResource(pBufferD3D12, D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT);
-                size_t BuffDataStartByteOffset;
-                ID3D12Resource *pd3d12ArgsBuff = pBufferD3D12->GetD3D12Buffer(BuffDataStartByteOffset, m_ContextId);
-                GraphCtx.ExecuteIndirect(DrawAttribs.IsIndexed ? m_pDrawIndexedIndirectSignature : m_pDrawIndirectSignature, pd3d12ArgsBuff, DrawAttribs.IndirectDrawArgsOffset + BuffDataStartByteOffset);
-            }
-            else
-            {
-                LOG_ERROR_MESSAGE("Valid pIndirectDrawAttribs must be provided for indirect draw command");
-            }
+            GraphCtx.TransitionResource(pBufferD3D12, D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT);
+            size_t BuffDataStartByteOffset;
+            ID3D12Resource *pd3d12ArgsBuff = pBufferD3D12->GetD3D12Buffer(BuffDataStartByteOffset, m_ContextId);
+            GraphCtx.ExecuteIndirect(DrawAttribs.IsIndexed ? m_pDrawIndexedIndirectSignature : m_pDrawIndirectSignature, pd3d12ArgsBuff, DrawAttribs.IndirectDrawArgsOffset + BuffDataStartByteOffset);
         }
         else
         {

@@ -397,8 +397,6 @@ namespace Diligent
             CommitVkVertexBuffers();
 
 #if 0
-        GraphCtx.SetRootSignature( pPipelineStateVk->GetVkRootSignature() );
-
         if(m_pCommittedResourceCache != nullptr)
         {
             pPipelineStateVk->GetRootSignature().CommitRootViews(*m_pCommittedResourceCache, GraphCtx, false, m_ContextId);
@@ -411,30 +409,36 @@ namespace Diligent
         }
 #endif
 #endif
+        if( DrawAttribs.IsIndirect )
+        {
+            VERIFY(DrawAttribs.pIndirectDrawAttribs != nullptr, "Valid pIndirectDrawAttribs must be provided for indirect draw command");
+
+            auto *pBufferVk = ValidatedCast<BufferVkImpl>(DrawAttribs.pIndirectDrawAttribs);
+            
+            // Buffer memory barries must be executed outside of render pass
+            if(!pBufferVk->CheckAccessFlags(VK_ACCESS_INDIRECT_COMMAND_READ_BIT))
+                BufferMemoryBarrier(*pBufferVk, VK_ACCESS_INDIRECT_COMMAND_READ_BIT);
+        }
 
         if(m_CommandBuffer.GetState().RenderPass == VK_NULL_HANDLE)
             CommitRenderPassAndFramebuffer(pPipelineStateVk);
 
         if( DrawAttribs.IsIndirect )
         {
-#if 0
             if( auto *pBufferVk = ValidatedCast<BufferVkImpl>(DrawAttribs.pIndirectDrawAttribs) )
             {
-#ifdef _DEBUG
-                if(pBufferVk->GetDesc().Usage == USAGE_DYNAMIC)
-                    pBufferVk->DbgVerifyDynamicAllocation(m_ContextId);
-#endif
+//#ifdef _DEBUG
+//                if(pBufferVk->GetDesc().Usage == USAGE_DYNAMIC)
+//                    pBufferVk->DbgVerifyDynamicAllocation(m_ContextId);
+//#endif
+                if(!pBufferVk->CheckAccessFlags(VK_ACCESS_INDIRECT_COMMAND_READ_BIT))
+                    BufferMemoryBarrier(*pBufferVk, VK_ACCESS_INDIRECT_COMMAND_READ_BIT);
 
-                GraphCtx.TransitionResource(pBufferVk, Vk_RESOURCE_STATE_INDIRECT_ARGUMENT);
-                size_t BuffDataStartByteOffset;
-                IVkResource *pVkArgsBuff = pBufferVk->GetVkBuffer(BuffDataStartByteOffset, m_ContextId);
-                GraphCtx.ExecuteIndirect(DrawAttribs.IsIndexed ? m_pDrawIndexedIndirectSignature : m_pDrawIndirectSignature, pVkArgsBuff, DrawAttribs.IndirectDrawArgsOffset + BuffDataStartByteOffset);
+                if( DrawAttribs.IsIndexed )
+                    m_CommandBuffer.DrawIndexedIndirect(pBufferVk->GetVkBuffer(), DrawAttribs.IndirectDrawArgsOffset, 1, 0);
+                else
+                    m_CommandBuffer.DrawIndirect(pBufferVk->GetVkBuffer(), DrawAttribs.IndirectDrawArgsOffset, 1, 0);
             }
-            else
-            {
-                LOG_ERROR_MESSAGE("Valid pIndirectDrawAttribs must be provided for indirect draw command");
-            }
-#endif
         }
         else
         {
