@@ -114,8 +114,9 @@ public:
 
     void UpdateBufferRegion(class BufferVkImpl *pBuffVk, struct VulkanDynamicAllocation& Allocation, Uint64 DstOffset, Uint64 NumBytes);
     void UpdateBufferRegion(class BufferVkImpl *pBuffVk, const void *pData, Uint64 DstOffset, Uint64 NumBytes);
-#if 0
+
     void CopyBufferRegion(class BufferVkImpl *pSrcBuffVk, class BufferVkImpl *pDstBuffVk, Uint64 SrcOffset, Uint64 DstOffset, Uint64 NumBytes);
+#if 0
     void CopyTextureRegion(class TextureVkImpl *pSrcTexture, Uint32 SrcSubResIndex, const Vk_BOX *pVkSrcBox,
                            class TextureVkImpl *pDstTexture, Uint32 DstSubResIndex, Uint32 DstX, Uint32 DstY, Uint32 DstZ);
     void CopyTextureRegion(IBuffer *pSrcBuffer, Uint32 SrcStride, Uint32 SrcDepthStride, class TextureVkImpl *pTextureVk, Uint32 DstSubResIndex, const Box &DstBox);

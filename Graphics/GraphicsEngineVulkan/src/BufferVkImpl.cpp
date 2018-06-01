@@ -328,11 +328,9 @@ void BufferVkImpl::UpdateData( IDeviceContext *pContext, Uint32 Offset, Uint32 S
 
 void BufferVkImpl :: CopyData(IDeviceContext *pContext, IBuffer *pSrcBuffer, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size)
 {
-#if 0
     TBufferBase::CopyData( pContext, pSrcBuffer, SrcOffset, DstOffset, Size );
     auto *pDeviceContextVk = ValidatedCast<DeviceContextVkImpl>(pContext);
     pDeviceContextVk->CopyBufferRegion(ValidatedCast<BufferVkImpl>(pSrcBuffer), this, SrcOffset, DstOffset, Size);
-#endif
 }
 
 void BufferVkImpl :: Map(IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid &pMappedData)

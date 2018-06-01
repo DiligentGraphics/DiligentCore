@@ -62,9 +62,9 @@ public:
     virtual void Map( IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid &pMappedData )override;
     virtual void Unmap( IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags )override;
 
-#ifdef _DEBUG
-    void DbgVerifyDynamicAllocation(Uint32 ContextId);
-#endif
+//#ifdef _DEBUG
+//    void DbgVerifyDynamicAllocation(Uint32 ContextId);
+//#endif
 
 
     VkBuffer GetVkBuffer()const override final

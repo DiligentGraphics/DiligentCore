@@ -930,24 +930,30 @@ namespace Diligent
         UpdateBufferRegion(pBuffVk, TmpSpace, DstOffset, NumBytes);
     }
 
-#if 0
     void DeviceContextVkImpl::CopyBufferRegion(BufferVkImpl *pSrcBuffVk, BufferVkImpl *pDstBuffVk, Uint64 SrcOffset, Uint64 DstOffset, Uint64 NumBytes)
     {
         VERIFY(pDstBuffVk->GetDesc().Usage != USAGE_DYNAMIC, "Dynamic buffers cannot be copy destinations");
 
-        auto pCmdCtx = RequestCmdContext();
-        pCmdCtx->TransitionResource(pSrcBuffVk, Vk_RESOURCE_STATE_COPY_SOURCE);
-        pCmdCtx->TransitionResource(pDstBuffVk, Vk_RESOURCE_STATE_COPY_DEST, true);
-        size_t DstDataStartByteOffset;
-        auto *pVkDstBuff = pDstBuffVk->GetVkBuffer(DstDataStartByteOffset, m_ContextId);
-        VERIFY(DstDataStartByteOffset == 0, "Dst buffer must not be suballocated");
+        EnsureVkCmdBuffer();
+        if(!pSrcBuffVk->CheckAccessFlags(VK_ACCESS_TRANSFER_READ_BIT))
+            BufferMemoryBarrier(*pSrcBuffVk, VK_ACCESS_TRANSFER_READ_BIT);
+        if(!pDstBuffVk->CheckAccessFlags(VK_ACCESS_TRANSFER_WRITE_BIT))
+            BufferMemoryBarrier(*pDstBuffVk, VK_ACCESS_TRANSFER_WRITE_BIT);
+        VkBufferCopy CopyRegion;
+        CopyRegion.srcOffset = SrcOffset;
+        CopyRegion.dstOffset = DstOffset;
+        CopyRegion.size = NumBytes;
+        //size_t DstDataStartByteOffset;
+        //auto *pVkDstBuff = pDstBuffVk->GetVkBuffer(DstDataStartByteOffset, m_ContextId);
+        //VERIFY(DstDataStartByteOffset == 0, "Dst buffer must not be suballocated");
 
-        size_t SrcDataStartByteOffset;
-        auto *pVkSrcBuff = pSrcBuffVk->GetVkBuffer(SrcDataStartByteOffset, m_ContextId);
-        pCmdCtx->GetCommandList()->CopyBufferRegion( pVkDstBuff, DstOffset + DstDataStartByteOffset, pVkSrcBuff, SrcOffset+SrcDataStartByteOffset, NumBytes);
+        //size_t SrcDataStartByteOffset;
+        //auto *pVkSrcBuff = pSrcBuffVk->GetVkBuffer(SrcDataStartByteOffset, m_ContextId);
+        m_CommandBuffer.CopyBuffer(pSrcBuffVk->GetVkBuffer(), pDstBuffVk->GetVkBuffer(), 1, &CopyRegion);
         ++m_State.NumCommands;
     }
 
+#if 0
     void DeviceContextVkImpl::CopyTextureRegion(TextureVkImpl *pSrcTexture, Uint32 SrcSubResIndex, const Vk_BOX *pVkSrcBox,
                                                    TextureVkImpl *pDstTexture, Uint32 DstSubResIndex, Uint32 DstX, Uint32 DstY, Uint32 DstZ)
     {
