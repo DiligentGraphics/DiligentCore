@@ -26,6 +26,7 @@
 /// \file
 /// Declaration of Diligent::CommandListVkImpl class
 
+#include "vulkan.h"
 #include "CommandListBase.h"
 
 namespace Diligent
@@ -36,26 +37,28 @@ class CommandListVkImpl : public CommandListBase<ICommandList>
 {
 public:
     typedef CommandListBase<ICommandList> TCommandListBase;
-    CommandListVkImpl(IReferenceCounters *pRefCounters, IRenderDevice *pDevice, class CommandContext* pCmdContext) :
+    CommandListVkImpl(IReferenceCounters *pRefCounters, IRenderDevice *pDevice, IDeviceContext *pDeferredCtx, VkCommandBuffer vkCmdBuff) :
         TCommandListBase(pRefCounters, pDevice),
-        m_pCmdContext(pCmdContext)
+        m_pDeferredCtx(pDeferredCtx),
+        m_vkCmdBuff(vkCmdBuff)
     {
     }
     
     ~CommandListVkImpl()
     {
-        VERIFY(m_pCmdContext == nullptr, "Destroying command list that was never executed");
+        VERIFY(m_vkCmdBuff == VK_NULL_HANDLE && !m_pDeferredCtx, "Destroying command list that was never executed");
     }
 
-    CommandContext* Close()
+    void Close(VkCommandBuffer& CmdBuff, RefCntAutoPtr<IDeviceContext>& pDeferredCtx)
     {
-        CommandContext* pCmdContext = m_pCmdContext;
-        m_pCmdContext = nullptr;
-        return pCmdContext;
+        CmdBuff = m_vkCmdBuff;
+        m_vkCmdBuff = VK_NULL_HANDLE;
+        pDeferredCtx = std::move(m_pDeferredCtx);
     }
 
 private:
-    CommandContext* m_pCmdContext = nullptr;
+    RefCntAutoPtr<IDeviceContext> m_pDeferredCtx;
+    VkCommandBuffer m_vkCmdBuff;
 };
 
 }

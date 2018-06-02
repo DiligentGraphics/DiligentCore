@@ -144,7 +144,8 @@ private:
     void CommitScissorRects();
 
     inline void EnsureVkCmdBuffer();
-    inline void DisposeVkCmdBuffer();
+    inline void DisposeVkCmdBuffer(VkCommandBuffer vkCmdBuff);
+    inline void DisposeCurrentCmdBuffer();
     
     VulkanUtilities::VulkanCommandBuffer m_CommandBuffer;
 
@@ -162,16 +163,12 @@ private:
     
     
 #if 0
-    CComPtr<IVkCommandSignature> m_pDrawIndirectSignature;
-    CComPtr<IVkCommandSignature> m_pDrawIndexedIndirectSignature;
-    CComPtr<IVkCommandSignature> m_pDispatchIndirectSignature;
-    
     GenerateMipsHelper m_MipsGenerator;
 #endif
     class ShaderResourceCacheVk *m_pCommittedResourceCache = nullptr;
-#if 0
+
     FixedBlockMemoryAllocator m_CmdListAllocator;
-#endif
+
     const Uint32 m_ContextId;
 
     VulkanUtilities::VulkanCommandBufferPool m_CmdPool;

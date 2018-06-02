@@ -38,10 +38,11 @@ namespace Diligent
     DeviceContextVkImpl::DeviceContextVkImpl( IReferenceCounters *pRefCounters, RenderDeviceVkImpl *pDeviceVkImpl, bool bIsDeferred, const EngineVkAttribs &Attribs, Uint32 ContextId) :
         TDeviceContextBase(pRefCounters, pDeviceVkImpl, bIsDeferred),
         m_NumCommandsToFlush(bIsDeferred ? std::numeric_limits<decltype(m_NumCommandsToFlush)>::max() : Attribs.NumCommandsToFlushCmdBuffer),
-        /*m_MipsGenerator(pDeviceVkImpl->GetVkDevice()),
-        m_CmdListAllocator(GetRawAllocator(), sizeof(CommandListVkImpl), 64 ),*/
+        /*m_MipsGenerator(pDeviceVkImpl->GetVkDevice()),*/
+        m_CmdListAllocator(GetRawAllocator(), sizeof(CommandListVkImpl), 64 ),
         m_ContextId(ContextId),
-        m_CmdPool(pDeviceVkImpl->GetLogicalDevice().GetSharedPtr(), pDeviceVkImpl->GetCmdQueue()->GetQueueFamilyIndex(), VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT)
+        // Command pools for deferred contexts must be thread safe because finished command buffers are executed and released from another thread
+        m_CmdPool(pDeviceVkImpl->GetLogicalDevice().GetSharedPtr(), pDeviceVkImpl->GetCmdQueue()->GetQueueFamilyIndex(), VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, bIsDeferred)
     {
 #if 0
         auto *pVkDevice = pDeviceVkImpl->GetVkDevice();
@@ -73,7 +74,7 @@ namespace Diligent
     {
         if(m_bIsDeferred)
         {
-            DisposeVkCmdBuffer();
+            DisposeCurrentCmdBuffer();
         }
         else
         {
@@ -102,14 +103,20 @@ namespace Diligent
         }
     }
 
-    inline void DeviceContextVkImpl::DisposeVkCmdBuffer()
+    void DeviceContextVkImpl::DisposeVkCmdBuffer(VkCommandBuffer vkCmdBuff)
+    {
+        VERIFY_EXPR(vkCmdBuff != VK_NULL_HANDLE);
+        auto pDeviceVkImpl = m_pDevice.RawPtr<RenderDeviceVkImpl>();
+        m_CmdPool.DisposeCommandBuffer(vkCmdBuff, pDeviceVkImpl->GetNextFenceValue());
+    }
+
+    inline void DeviceContextVkImpl::DisposeCurrentCmdBuffer()
     {
         VERIFY(m_CommandBuffer.GetState().RenderPass == VK_NULL_HANDLE, "Disposing command buffer with unifinished render pass");
         auto vkCmdBuff = m_CommandBuffer.GetVkCmdBuffer();
         if(vkCmdBuff != VK_NULL_HANDLE)
         {
-            auto pDeviceVkImpl = m_pDevice.RawPtr<RenderDeviceVkImpl>();
-            m_CmdPool.DisposeCommandBuffer(vkCmdBuff, pDeviceVkImpl->GetNextFenceValue());
+            DisposeVkCmdBuffer(vkCmdBuff);
             m_CommandBuffer.Reset();
         }
     }
@@ -762,7 +769,7 @@ namespace Diligent
 
         if (vkCmdBuff != VK_NULL_HANDLE)
         {
-            DisposeVkCmdBuffer();
+            DisposeCurrentCmdBuffer();
         }
 
         m_State = ContextState{};
@@ -1044,19 +1051,19 @@ namespace Diligent
 
     void DeviceContextVkImpl::FinishCommandList(class ICommandList **ppCommandList)
     {
-#if 0
+        auto vkCmdBuff = m_CommandBuffer.GetVkCmdBuffer();
         CommandListVkImpl *pCmdListVk( NEW_RC_OBJ(m_CmdListAllocator, "CommandListVkImpl instance", CommandListVkImpl)
-                                                       (m_pDevice, m_pCurrCmdCtx) );
+                                                 (m_pDevice, this, vkCmdBuff) );
         pCmdListVk->QueryInterface( IID_CommandList, reinterpret_cast<IObject**>(ppCommandList) );
-        m_pCurrCmdCtx = nullptr;
-        //Flush(); 
+        
+        m_CommandBuffer.SetVkCmdBuffer(VK_NULL_HANDLE);
+        //Flush();
 
         m_CommandBuffer.Reset();
         m_State = ContextState{};
         m_pPipelineState.Release();
 
         InvalidateState();
-#endif
     }
 
     void DeviceContextVkImpl::ExecuteCommandList(class ICommandList *pCommandList)
@@ -1066,15 +1073,22 @@ namespace Diligent
             LOG_ERROR("Only immediate context can execute command list");
             return;
         }
-#if 0
+
         // First execute commands in this context
         Flush();
 
         InvalidateState();
 
         CommandListVkImpl* pCmdListVk = ValidatedCast<CommandListVkImpl>(pCommandList);
-        m_pDevice.RawPtr<RenderDeviceVkImpl>()->CloseAndExecuteCommandContext(pCmdListVk->Close(), true);
-#endif
+        VkCommandBuffer vkCmdBuff = VK_NULL_HANDLE;
+        RefCntAutoPtr<IDeviceContext> pDeferredCtx;
+        pCmdListVk->Close(vkCmdBuff, pDeferredCtx);
+        VERIFY(vkCmdBuff != VK_NULL_HANDLE, "Trying to execute empty command buffer");
+        VERIFY_EXPR(pDeferredCtx);
+        m_pDevice.RawPtr<RenderDeviceVkImpl>()->ExecuteCommandBuffer(vkCmdBuff, true);
+        // It is OK to dispose command buffer from another thread. We are not going to
+        // record any commands and only need to add the buffer to the queue
+        pDeferredCtx.RawPtr<DeviceContextVkImpl>()->DisposeVkCmdBuffer(vkCmdBuff);
     }
 
     void DeviceContextVkImpl::TransitionImageLayout(ITexture *pTexture, VkImageLayout NewLayout)

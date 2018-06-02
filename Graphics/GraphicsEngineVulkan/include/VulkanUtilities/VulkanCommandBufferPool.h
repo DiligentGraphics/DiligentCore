@@ -25,6 +25,7 @@
 
 #include <deque>
 #include <memory>
+#include <mutex>
 #include "vulkan.h"
 #include "VulkanLogicalDevice.h"
 #include "VulkanObjectWrappers.h"
@@ -36,7 +37,8 @@ namespace VulkanUtilities
     public:
         VulkanCommandBufferPool(std::shared_ptr<const VulkanUtilities::VulkanLogicalDevice> LogicalDevice, 
                                 uint32_t queueFamilyIndex, 
-                                VkCommandPoolCreateFlags flags);
+                                VkCommandPoolCreateFlags flags,
+                                bool IsThreadSafe);
         VulkanCommandBufferPool(const VulkanCommandBufferPool&) = delete;
         VulkanCommandBufferPool(VulkanCommandBufferPool&&) = delete;
         VulkanCommandBufferPool& operator = (const VulkanCommandBufferPool&) = delete;
@@ -52,7 +54,10 @@ namespace VulkanUtilities
         // Shared point to logical device must be defined before the command pool
         std::shared_ptr<const VulkanUtilities::VulkanLogicalDevice> m_LogicalDevice;
         CommandPoolWrapper m_CmdPool;
+        
+        const bool m_IsThreadSafe;
 
+        std::mutex m_Mutex;
         // fist    - the fence value associated with the command buffer when it was executed
         // second  - the command buffer
         typedef std::pair<uint64_t, VkCommandBuffer > QueueElemType;

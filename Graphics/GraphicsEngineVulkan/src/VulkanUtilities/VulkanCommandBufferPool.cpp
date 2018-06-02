@@ -32,8 +32,10 @@ namespace VulkanUtilities
 {
     VulkanCommandBufferPool::VulkanCommandBufferPool(std::shared_ptr<const VulkanUtilities::VulkanLogicalDevice> LogicalDevice,
                                                      uint32_t queueFamilyIndex, 
-                                                     VkCommandPoolCreateFlags flags) :
-        m_LogicalDevice(LogicalDevice)
+                                                     VkCommandPoolCreateFlags flags,
+                                                     bool IsThreadSafe) :
+        m_LogicalDevice(LogicalDevice),
+        m_IsThreadSafe(IsThreadSafe)
     {
         VkCommandPoolCreateInfo CmdPoolCI = {};
         CmdPoolCI.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -53,30 +55,36 @@ namespace VulkanUtilities
     {
         VkCommandBuffer CmdBuffer = VK_NULL_HANDLE;
 
-        if (!m_DiscardedCmdBuffers.empty())
         {
-            // Pick the oldest cmd buffer at the front of the deque
-            // If this buffer is not yet available, there is no point in
-            // looking at other buffers since they were released even
-            // later
-            auto& OldestBuff = m_DiscardedCmdBuffers.front();
+            std::unique_lock<std::mutex> Lock(m_Mutex, std::defer_lock);
+            if (m_IsThreadSafe)
+                Lock.lock();
 
-            // Note that LastCompletedFence only grows. So if after we queried
-            // the value, the actual value is increased in other thread, this will not
-            // be an issue as the only consequence is that potentially available  
-            // cmd buffer may not be used.
-
-            // OldestBuff.first is the fence value that was signaled AFTER the
-            // command buffer has been submitted. If LastCompletedFence is at least
-            // this value, the buffer can be safely reused
-            if (LastCompletedFence >= OldestBuff.first)
+            if (!m_DiscardedCmdBuffers.empty())
             {
-                CmdBuffer = OldestBuff.second;
-                auto err = vkResetCommandBuffer(CmdBuffer, 
-                    0 // VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT -  specifies that most or all memory resources currently owned by the command buffer should be returned to the parent command pool.
-                );
-                VERIFY(err == VK_SUCCESS, "Failed to reset command buffer");
-                m_DiscardedCmdBuffers.pop_front();
+                // Pick the oldest cmd buffer at the front of the deque
+                // If this buffer is not yet available, there is no point in
+                // looking at other buffers since they were released even
+                // later
+                auto& OldestBuff = m_DiscardedCmdBuffers.front();
+
+                // Note that LastCompletedFence only grows. So if after we queried
+                // the value, the actual value is increased in other thread, this will not
+                // be an issue as the only consequence is that potentially available  
+                // cmd buffer may not be used.
+
+                // OldestBuff.first is the fence value that was signaled AFTER the
+                // command buffer has been submitted. If LastCompletedFence is at least
+                // this value, the buffer can be safely reused
+                if (LastCompletedFence >= OldestBuff.first)
+                {
+                    CmdBuffer = OldestBuff.second;
+                    auto err = vkResetCommandBuffer(CmdBuffer, 
+                        0 // VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT -  specifies that most or all memory resources currently owned by the command buffer should be returned to the parent command pool.
+                    );
+                    VERIFY(err == VK_SUCCESS, "Failed to reset command buffer");
+                    m_DiscardedCmdBuffers.pop_front();
+                }
             }
         }
 
@@ -108,6 +116,10 @@ namespace VulkanUtilities
 
     void VulkanCommandBufferPool::DisposeCommandBuffer(VkCommandBuffer CmdBuffer, uint64_t FenceValue)
     {
+        std::unique_lock<std::mutex> Lock(m_Mutex, std::defer_lock);
+        if (m_IsThreadSafe)
+            Lock.lock();
+
         // FenceValue is the value that was signaled by the command queue after it 
         // executed the command buffer
         m_DiscardedCmdBuffers.emplace_back(FenceValue, CmdBuffer);
