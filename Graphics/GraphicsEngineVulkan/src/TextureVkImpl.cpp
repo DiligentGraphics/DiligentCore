@@ -245,12 +245,7 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters *pRefCounters,
         if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH)
             aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
         else if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
-        {
-            // If image has a depth / stencil format with both depth and stencil components, then the 
-            // aspectMask member of subresourceRange must include both VK_IMAGE_ASPECT_DEPTH_BIT and 
-            // VK_IMAGE_ASPECT_STENCIL_BIT (6.7.3)
             aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-        }
         else
             aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
@@ -266,7 +261,7 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters *pRefCounters,
 
                 auto MipWidth  = std::max(m_Desc.Width  >> mip, 1u);
                 auto MipHeight = std::max(m_Desc.Height >> mip, 1u);
-                auto MipDepth  = std::max(m_Desc.Depth  >> mip, 1u);
+                auto MipDepth  = (m_Desc.Type == RESOURCE_DIM_TEX_3D) ? std::max(m_Desc.Depth >> mip, 1u) : 1u;
                 
                 CopyRegion.bufferOffset = uploadBufferSize; // offset in bytes from the start of the buffer object
                 // bufferRowLength and bufferImageHeight specify the data in buffer memory as a subregion 
@@ -551,7 +546,7 @@ void TextureVkImpl::UpdateData( IDeviceContext *pContext, Uint32 MipLevel, Uint3
         return;
     }
 
-    VERIFY( m_Desc.Usage == USAGE_DEFAULT, "Only default usage resiurces can be updated with UpdateData()" );
+    VERIFY( m_Desc.Usage == USAGE_DEFAULT, "Only default usage resources can be updated with UpdateData()" );
 
 #if 0
     auto *pCtxVk = ValidatedCast<DeviceContextVkImpl>(pContext);
@@ -563,40 +558,67 @@ void TextureVkImpl::UpdateData( IDeviceContext *pContext, Uint32 MipLevel, Uint3
 }
 
 void TextureVkImpl ::  CopyData(IDeviceContext *pContext, 
-                                    ITexture *pSrcTexture, 
-                                    Uint32 SrcMipLevel,
-                                    Uint32 SrcSlice,
-                                    const Box *pSrcBox,
-                                    Uint32 DstMipLevel,
-                                    Uint32 DstSlice,
-                                    Uint32 DstX,
-                                    Uint32 DstY,
-                                    Uint32 DstZ)
+                                ITexture *pSrcTexture, 
+                                Uint32 SrcMipLevel,
+                                Uint32 SrcSlice,
+                                const Box *pSrcBox,
+                                Uint32 DstMipLevel,
+                                Uint32 DstSlice,
+                                Uint32 DstX,
+                                Uint32 DstY,
+                                Uint32 DstZ)
 {
     TTextureBase::CopyData( pContext, pSrcTexture, SrcMipLevel, SrcSlice, pSrcBox,
                             DstMipLevel, DstSlice, DstX, DstY, DstZ );
 
-#if 0
-    auto *pCtxVk = ValidatedCast<DeviceContextVkImpl>(pContext);
     auto *pSrcTexVk = ValidatedCast<TextureVkImpl>( pSrcTexture );
 
-
-    Vk_BOX VkSrcBox, *pVkSrcBox = nullptr;
+    VkImageCopy CopyRegion = {};
     if( pSrcBox )
     {
-        VkSrcBox.left    = pSrcBox->MinX;
-        VkSrcBox.right   = pSrcBox->MaxX;
-        VkSrcBox.top     = pSrcBox->MinY;
-        VkSrcBox.bottom  = pSrcBox->MaxY;
-        VkSrcBox.front   = pSrcBox->MinZ;
-        VkSrcBox.back    = pSrcBox->MaxZ;
-        pVkSrcBox = &VkSrcBox;
+        CopyRegion.srcOffset.x = pSrcBox->MinX;
+        CopyRegion.srcOffset.y = pSrcBox->MinY;
+        CopyRegion.srcOffset.z = pSrcBox->MinZ;
+        CopyRegion.extent.width  = pSrcBox->MaxX - pSrcBox->MinX;
+        CopyRegion.extent.height = std::max(pSrcBox->MaxY - pSrcBox->MinY, 1u);
+        CopyRegion.extent.depth  = std::max(pSrcBox->MaxZ - pSrcBox->MinZ, 1u);
+    }
+    else
+    {
+        CopyRegion.srcOffset = VkOffset3D{0,0,0};
+        CopyRegion.extent.width  = std::max(m_Desc.Width  >> SrcMipLevel, 1u);
+        CopyRegion.extent.height = std::max(m_Desc.Height >> SrcMipLevel, 1u);
+        if(m_Desc.Type == RESOURCE_DIM_TEX_3D)
+            CopyRegion.extent.depth = std::max(m_Desc.Depth >> SrcMipLevel, 1u);
+        else
+            CopyRegion.extent.depth = 1;
     }
 
-    auto DstSubResIndex = VkCalcSubresource(DstMipLevel, DstSlice, 0, m_Desc.MipLevels, m_Desc.ArraySize);
-    auto SrcSubResIndex = VkCalcSubresource(SrcMipLevel, SrcSlice, 0, pSrcTexVk->m_Desc.MipLevels, pSrcTexVk->m_Desc.ArraySize);
-    pCtxVk->CopyTextureRegion(pSrcTexVk, SrcSubResIndex, pVkSrcBox, this, DstSubResIndex, DstX, DstY, DstZ);
-#endif
+    const auto& FmtAttribs = GetDevice()->GetTextureFormatInfo(m_Desc.Format);
+    VkImageAspectFlags aspectMask = 0;
+    if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH)
+        aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    else if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
+        aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+    else
+        aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+    CopyRegion.srcSubresource.baseArrayLayer = SrcSlice;
+    CopyRegion.srcSubresource.layerCount = 1;
+    CopyRegion.srcSubresource.mipLevel = SrcMipLevel;
+    CopyRegion.srcSubresource.aspectMask = aspectMask;
+    
+    CopyRegion.dstSubresource.baseArrayLayer = DstSlice;
+    CopyRegion.dstSubresource.layerCount = 1;
+    CopyRegion.dstSubresource.mipLevel = DstMipLevel;
+    CopyRegion.dstSubresource.aspectMask = aspectMask;
+
+    CopyRegion.dstOffset.x = DstX;
+    CopyRegion.dstOffset.y = DstY;
+    CopyRegion.dstOffset.z = DstZ;
+
+    auto *pCtxVk = ValidatedCast<DeviceContextVkImpl>(pContext);
+    pCtxVk->CopyTextureRegion(pSrcTexVk, this, CopyRegion);
 }
 
 void TextureVkImpl :: Map(IDeviceContext *pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags, MappedTextureSubresource &MappedData)

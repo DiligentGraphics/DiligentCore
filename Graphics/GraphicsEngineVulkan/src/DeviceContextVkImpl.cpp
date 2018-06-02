@@ -953,28 +953,24 @@ namespace Diligent
         ++m_State.NumCommands;
     }
 
-#if 0
-    void DeviceContextVkImpl::CopyTextureRegion(TextureVkImpl *pSrcTexture, Uint32 SrcSubResIndex, const Vk_BOX *pVkSrcBox,
-                                                   TextureVkImpl *pDstTexture, Uint32 DstSubResIndex, Uint32 DstX, Uint32 DstY, Uint32 DstZ)
+    void DeviceContextVkImpl::CopyTextureRegion(TextureVkImpl *pSrcTexture, TextureVkImpl *pDstTexture, const VkImageCopy &CopyRegion)
     {
-        auto pCmdCtx = RequestCmdContext();
-        pCmdCtx->TransitionResource(pSrcTexture, Vk_RESOURCE_STATE_COPY_SOURCE);
-        pCmdCtx->TransitionResource(pDstTexture, Vk_RESOURCE_STATE_COPY_DEST, true);
-
-        Vk_TEXTURE_COPY_LOCATION DstLocation = {}, SrcLocation = {};
-
-        DstLocation.Type = Vk_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-        DstLocation.pResource = pDstTexture->GetVkResource();
-        DstLocation.SubresourceIndex = DstSubResIndex;
-
-        SrcLocation.Type = Vk_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-        SrcLocation.pResource = pSrcTexture->GetVkResource();
-        SrcLocation.SubresourceIndex = SrcSubResIndex;
-
-        pCmdCtx->GetCommandList()->CopyTextureRegion( &DstLocation, DstX, DstY, DstZ, &SrcLocation, pVkSrcBox);
+        EnsureVkCmdBuffer();
+        if(pSrcTexture->GetLayout() != VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
+        {
+            TransitionImageLayout(*pSrcTexture, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+        }
+        if(pDstTexture->GetLayout() != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+        {
+            TransitionImageLayout(*pDstTexture, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+        }
+        // srcImageLayout must be VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL or VK_IMAGE_LAYOUT_GENERAL
+        // dstImageLayout must be VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL or VK_IMAGE_LAYOUT_GENERAL (18.3)
+        m_CommandBuffer.CopyImage(pSrcTexture->GetVkImage(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, pDstTexture->GetVkImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &CopyRegion);
         ++m_State.NumCommands;
     }
 
+#if 0
     void DeviceContextVkImpl::CopyTextureRegion(IBuffer *pSrcBuffer, Uint32 SrcStride, Uint32 SrcDepthStride, class TextureVkImpl *pTextureVk, Uint32 DstSubResIndex, const Box &DstBox)
     {
         auto *pBufferVk = ValidatedCast<BufferVkImpl>(pSrcBuffer);
@@ -1036,6 +1032,7 @@ namespace Diligent
         }
     }
 #endif
+
     void DeviceContextVkImpl::GenerateMips(TextureViewVkImpl *pTexView)
     {
 #if 0
