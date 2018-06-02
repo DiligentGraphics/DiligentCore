@@ -1373,7 +1373,7 @@ namespace Diligent
 
 
     /// Describes texture format component type
-    enum COMPONENT_TYPE : Int32
+    enum COMPONENT_TYPE : Int8
     {
         /// Undefined component type
         COMPONENT_TYPE_UNDEFINED,
@@ -1414,19 +1414,19 @@ namespace Diligent
     /// format support.
     struct TextureFormatAttribs
     {
-        /// Texture format, see Diligent::TEXTURE_FORMAT for a list of supported texture formats
-        TEXTURE_FORMAT Format;
-
         /// Literal texture format name (for instance, for TEX_FORMAT_RGBA8_UNORM format, this
         /// will be "TEX_FORMAT_RGBA8_UNORM")
         const Char *Name;
 
+        /// Texture format, see Diligent::TEXTURE_FORMAT for a list of supported texture formats
+        TEXTURE_FORMAT Format;
+
         /// Size of one component in bytes (for instance, for TEX_FORMAT_RGBA8_UNORM format, this will be 1)
         /// For compressed formats, this is the block size in bytes (for TEX_FORMAT_BC1_UNORM format, this will be 8)
-        Uint32 ComponentSize;
+        Uint8 ComponentSize;
 
         /// Number of components
-        Uint32 NumComponents;
+        Uint8 NumComponents;
 
         /// Component type, see Diligent::COMPONENT_TYPE for details.
         COMPONENT_TYPE ComponentType;    
@@ -1434,20 +1434,31 @@ namespace Diligent
         /// Bool flag indicating if the format is a typeless format
         bool IsTypeless;
 
+        /// For block-compressed formats, compression block width
+        Uint8 BlockWidth;
+
+        /// For block-compressed formats, compression block height
+        Uint8 BlockHeight;
+
         /// Initializes the structure
-        explicit TextureFormatAttribs( TEXTURE_FORMAT _Format, 
-                                       const Char *_Name,
-                                       Uint32 _ComponentSize,
-                                       Uint32 _NumComponents,
+        explicit TextureFormatAttribs( const Char *_Name,
+                                       TEXTURE_FORMAT _Format, 
+                                       Uint8 _ComponentSize,
+                                       Uint8 _NumComponents,
                                        COMPONENT_TYPE _ComponentType,
-                                       bool _IsTypeless) : 
-            Format(_Format),
+                                       bool _IsTypeless,
+                                       Uint8 _BlockWidth,
+                                       Uint8 _BlockHeight) : 
             Name(_Name),
+            Format(_Format),
             ComponentSize(_ComponentSize),
             NumComponents(_NumComponents),
             ComponentType(_ComponentType),
-            IsTypeless(_IsTypeless)
-        {}
+            IsTypeless(_IsTypeless),
+            BlockWidth(_BlockWidth),
+            BlockHeight(_BlockHeight)
+        {
+        }
 
         TextureFormatAttribs() : 
             Format(TEX_FORMAT_UNKNOWN),

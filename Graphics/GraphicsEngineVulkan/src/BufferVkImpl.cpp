@@ -210,7 +210,6 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters *pRefCounters,
         // Command list fence should only be signaled when submitting cmd list
         // from the immediate context, otherwise the basic requirement will be violated
         // as in the scenario below
-        // See http://diligentgraphics.com/diligent-engine/architecture/Vk/managing-resource-lifetimes/
         //                                                           
         //  Signaled Fence  |        Immediate Context               |            InitContext            |
         //                  |                                        |                                   |

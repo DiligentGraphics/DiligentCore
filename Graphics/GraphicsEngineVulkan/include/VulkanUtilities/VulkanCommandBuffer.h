@@ -275,8 +275,8 @@ namespace VulkanUtilities
                                           VkImageLayout OldLayout,
                                           VkImageLayout NewLayout,
                                           const VkImageSubresourceRange& SubresRange, 
-                                          VkPipelineStageFlags SrcStages, 
-                                          VkPipelineStageFlags DestStages);
+                                          VkPipelineStageFlags SrcStages  = 0, 
+                                          VkPipelineStageFlags DestStages = 0);
 
         void TransitionImageLayout(VkImage Image, 
                                    VkImageLayout OldLayout,
