@@ -86,7 +86,10 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters *pRefCounters,
     else if (m_Desc.Type == RESOURCE_DIM_TEX_2D || m_Desc.Type == RESOURCE_DIM_TEX_2D_ARRAY || m_Desc.Type == RESOURCE_DIM_TEX_CUBE || m_Desc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY)
         ImageCI.imageType = VK_IMAGE_TYPE_2D;
     else if (m_Desc.Type == RESOURCE_DIM_TEX_3D)
+    {
         ImageCI.imageType = VK_IMAGE_TYPE_3D;
+        ImageCI.flags |= VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT;
+    }
     else
     {
         LOG_ERROR_AND_THROW("Unknown texture type");
@@ -690,6 +693,19 @@ VulkanUtilities::ImageViewWrapper TextureVkImpl::CreateImageView(TextureViewDesc
     ImageViewCI.subresourceRange.baseArrayLayer = ViewDesc.FirstArraySlice;
     ImageViewCI.subresourceRange.layerCount = ViewDesc.NumArraySlices;
 
+    if(ImageViewCI.viewType == VK_IMAGE_VIEW_TYPE_3D)
+    {
+        if(ImageViewCI.subresourceRange.baseArrayLayer == 0 && ImageViewCI.subresourceRange.layerCount == m_Desc.Depth )
+        {
+            // If viewType is VK_IMAGE_VIEW_TYPE_3D, then baseArrayLayer must be 0, and layerCount must be 1 (11.5)
+            ImageViewCI.subresourceRange.layerCount = 1;
+        }
+        else
+        {
+            // Create a 2D texture array view
+            ImageViewCI.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+        }
+    }
     const auto &FmtAttribs = GetTextureFormatAttribs(ViewDesc.Format);
 
     if(ViewDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL)
