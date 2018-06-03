@@ -143,7 +143,7 @@ namespace Diligent
                 if( pObject )
                 {
                     *ppObject = pObject.Detach();
-                    LOG_INFO_MESSAGE( "Equivalent of the requested state object named \"", Desc.Name ? Desc.Name : "", "\" found in the ", m_RegistryName, " registry. Reusing existing object.");
+                    //LOG_INFO_MESSAGE( "Equivalent of the requested state object named \"", Desc.Name ? Desc.Name : "", "\" found in the ", m_RegistryName, " registry. Reusing existing object.");
                 }
                 else
                 {
