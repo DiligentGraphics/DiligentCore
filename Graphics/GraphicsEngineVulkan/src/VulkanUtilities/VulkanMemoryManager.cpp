@@ -149,9 +149,9 @@ VulkanMemoryAllocation VulkanMemoryManager::Allocate(const VkMemoryRequirements&
         m_PeakAllocatedSize[stat_ind] = std::max(m_PeakAllocatedSize[stat_ind], m_CurrAllocatedSize[stat_ind]);
 
         auto it = m_Pages.emplace(MemoryTypeIndex, VulkanMemoryPage{*this, PageSize, MemoryTypeIndex, HostVisible});
-        LOG_INFO_MESSAGE("VulkanMemoryManager '", m_MgrName, "': created new ", (HostVisible ? "host-visible" : "device-local"), " page. Size: ", 
-                         std::fixed, std::setprecision(2), PageSize / double{1 << 20}, " MB. Memory type: ", MemoryTypeIndex, 
-                         ". Current allocated size: ", std::fixed, std::setprecision(2), m_CurrAllocatedSize[stat_ind] / double{1 << 20});
+        LOG_INFO_MESSAGE("VulkanMemoryManager '", m_MgrName, "': created new ", (HostVisible ? "host-visible" : "device-local"), " page. (", 
+                         std::fixed, std::setprecision(2), PageSize / double{1 << 20}, " MB, type idx: ", MemoryTypeIndex, 
+                         "). Current allocated size: ", std::fixed, std::setprecision(2), m_CurrAllocatedSize[stat_ind] / double{1 << 20}, " MB");
         Allocation = it->second.Allocate(Size);
         VERIFY(Allocation.Page != nullptr, "Failed to allocate new memory page");
     }
@@ -180,9 +180,9 @@ void VulkanMemoryManager::ShrinkMemory()
         {
             auto PageSize = Page.GetPageSize();
             m_CurrAllocatedSize[IsHostVisible ? 1 : 0] -= PageSize;
-            LOG_INFO_MESSAGE("VulkanMemoryManager '", m_MgrName, "': destroying ", (IsHostVisible ? "host-visible" : "device-local"), " page. Size: ", 
+            LOG_INFO_MESSAGE("VulkanMemoryManager '", m_MgrName, "': destroying ", (IsHostVisible ? "host-visible" : "device-local"), " page (", 
                              std::fixed, std::setprecision(2), PageSize / double{1 << 20}, 
-                             ". Current allocated size: ", std::fixed, std::setprecision(2), m_CurrAllocatedSize[IsHostVisible ? 1 : 0] / double{1 << 20});
+                             " MB). Current allocated size: ", std::fixed, std::setprecision(2), m_CurrAllocatedSize[IsHostVisible ? 1 : 0] / double{1 << 20}, " MB");
             m_Pages.erase(curr_it);
         }
     }
