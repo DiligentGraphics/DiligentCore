@@ -758,7 +758,8 @@ namespace Diligent
         SubmitInfo.signalSemaphoreCount = static_cast<uint32_t>(m_SignalSemaphores.size());
         SubmitInfo.pSignalSemaphores = SubmitInfo.signalSemaphoreCount != 0 ? m_SignalSemaphores.data() : nullptr;
 
-        if(SubmitInfo.commandBufferCount != 0 || SubmitInfo.waitSemaphoreCount !=0 || SubmitInfo.signalSemaphoreCount != 0)
+        // Submit command buffer even if there are no commands to release stale resources.
+        //if(SubmitInfo.commandBufferCount != 0 || SubmitInfo.waitSemaphoreCount !=0 || SubmitInfo.signalSemaphoreCount != 0)
         {
             pDeviceVkImpl->ExecuteCommandBuffer(SubmitInfo, true);
         }

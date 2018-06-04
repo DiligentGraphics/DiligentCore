@@ -9,7 +9,6 @@ set(INCLUDE
     include/CommandListVkImpl.h
     include/CommandPoolManager.h
     include/CommandQueueVkImpl.h
-    include/VulkanTypeConversions.h
     include/DescriptorPoolManager.h
     include/DeviceContextVkImpl.h
     include/VulkanDynamicHeap.h
@@ -28,6 +27,7 @@ set(INCLUDE
     include/SwapChainVkImpl.h
     include/TextureVkImpl.h
     include/TextureViewVkImpl.h
+    include/VulkanTypeConversions.h
     include/VulkanErrors.h
 )
 
@@ -39,6 +39,7 @@ set(VULKAN_UTILS_INCLUDE
     include/VulkanUtilities/VulkanFencePool.h
     include/VulkanUtilities/VulkanInstance.h
     include/VulkanUtilities/VulkanLogicalDevice.h
+    include/VulkanUtilities/VulkanMemoryManager.h
     include/VulkanUtilities/VulkanObjectWrappers.h
     include/VulkanUtilities/VulkanPhysicalDevice.h
 )
@@ -67,7 +68,6 @@ set(SRC
     src/CommandContext.cpp
     src/CommandPoolManager.cpp
     src/CommandQueueVkImpl.cpp
-    src/VulkanTypeConversions.cpp
     src/DescriptorPoolManager.cpp
     src/DeviceContextVkImpl.cpp
     src/VulkanDynamicHeap.cpp
@@ -86,6 +86,7 @@ set(SRC
     src/SwapChainVkImpl.cpp
     src/TextureVkImpl.cpp
     src/TextureViewVkImpl.cpp
+    src/VulkanTypeConversions.cpp
 )
 
 set(VULKAN_UTILS_SRC
@@ -96,6 +97,7 @@ set(VULKAN_UTILS_SRC
     src/VulkanUtilities/VulkanFencePool.cpp
     src/VulkanUtilities/VulkanInstance.cpp
     src/VulkanUtilities/VulkanLogicalDevice.cpp
+    src/VulkanUtilities/VulkanMemoryManager.cpp
     src/VulkanUtilities/VulkanPhysicalDevice.cpp
 )
 

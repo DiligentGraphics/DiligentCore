@@ -1349,6 +1349,12 @@ namespace Diligent
         /// This heap is used when dynamic buffers are mapped, and also to update resources.
         /// If the space runs out, the engine doubles the heap size.
         Uint32 DeferredCtxDynamicHeapInitialSize = 32 * 1024;
+
+        /// Allocation granularity for device-local memory
+        Uint32 DeviceLocalMemoryPageSize = 16 << 20;
+
+        /// Allocation granularity for host-visible memory
+        Uint32 HostVisibleMemoryPageSize = 16 << 20;
     };
 
     /// Box

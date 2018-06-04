@@ -39,6 +39,7 @@
 #include "VulkanUtilities/VulkanCommandBufferPool.h"
 #include "VulkanUtilities/VulkanLogicalDevice.h"
 #include "VulkanUtilities/VulkanObjectWrappers.h"
+#include "VulkanUtilities/VulkanMemoryManager.h"
 #include "FramebufferCache.h"
 #include "CommandPoolManager.h"
 
@@ -103,6 +104,7 @@ public:
 
     template<typename VulkanObjectType>
     void SafeReleaseVkObject(VulkanUtilities::VulkanObjectWrapper<VulkanObjectType>&& vkObject);
+    void SafeReleaseMemoryAllocation(VulkanUtilities::VulkanMemoryAllocation&& Allocation);
 
 
     void FinishFrame(bool ReleaseAllResources);
@@ -128,6 +130,11 @@ public:
     const VulkanUtilities::VulkanPhysicalDevice &GetPhysicalDevice(){return *m_PhysicalDevice;}
     const auto &GetLogicalDevice(){return *m_LogicalVkDevice;}
     FramebufferCache& GetFramebufferCache(){return m_FramebufferCache;}
+
+    VulkanUtilities::VulkanMemoryAllocation AllocateMemory(const VkMemoryRequirements& MemReqs, VkMemoryPropertyFlags MemoryProperties)
+    {
+        return m_MemoryMgr.Allocate(MemReqs, MemoryProperties);
+    }
 
 private:
     virtual void TestTextureFormat( TEXTURE_FORMAT TexFormat )override final;
@@ -188,8 +195,6 @@ private:
     public:
         virtual ~StaleVulkanObjectBase() = 0 {}
     };
-    template<typename VulkanObjectType>
-    class StaleVulkanObject;
 
     using ReleaseQueueElemType = std::pair<Uint64, std::unique_ptr<StaleVulkanObjectBase> >;
     std::deque< ReleaseQueueElemType, STDAllocatorRawMem<ReleaseQueueElemType> > m_VkObjReleaseQueue;
@@ -210,6 +215,8 @@ private:
     // issue copy commands. Vulkan requires that every command pool is used by one thread 
     // at a time, so every constructor must allocate command buffer from its own pool.
     CommandPoolManager m_TransientCmdPoolMgr;
+
+    VulkanUtilities::VulkanMemoryManager m_MemoryMgr;
 };
 
 }

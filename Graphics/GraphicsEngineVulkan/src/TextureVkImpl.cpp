@@ -68,7 +68,6 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters *pRefCounters,
         LOG_ERROR_AND_THROW("Static Texture must be initialized with data at creation time");
     
     const auto& LogicalDevice = pRenderDeviceVk->GetLogicalDevice();
-    const auto& PhysicalDevice = pRenderDeviceVk->GetPhysicalDevice();
 
     VkImageCreateInfo ImageCI = {};
     ImageCI.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -199,41 +198,17 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters *pRefCounters,
     m_VulkanImage = LogicalDevice.CreateImage(ImageCI, m_Desc.Name);
 
     VkMemoryRequirements MemReqs = LogicalDevice.GetImageMemoryRequirements(m_VulkanImage);
-
-    VkMemoryAllocateInfo MemAlloc = {};
-    MemAlloc.pNext = nullptr;
-    MemAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    MemAlloc.allocationSize = MemReqs.size;
-
+    
     VkMemoryPropertyFlags ImageMemoryFlags = 0;
     if (m_Desc.Usage == USAGE_CPU_ACCESSIBLE)
         ImageMemoryFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
     else
         ImageMemoryFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
-    // memoryTypeBits is a bitmask and contains one bit set for every supported memory type for the resource. 
-    // Bit i is set if and only if the memory type i in the VkPhysicalDeviceMemoryProperties structure for the 
-    // physical device is supported for the resource.
-    MemAlloc.memoryTypeIndex = PhysicalDevice.GetMemoryTypeIndex(MemReqs.memoryTypeBits, ImageMemoryFlags);
-    if (ImageMemoryFlags == VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
-    {
-        // There must be at least one memory type with the DEVICE_LOCAL_BIT bit set
-        VERIFY(MemAlloc.memoryTypeIndex != VulkanUtilities::VulkanPhysicalDevice::InvalidMemoryTypeIndex,
-               "Vulkan spec requires that memoryTypeBits member always contains "
-               "at least one bit set corresponding to a VkMemoryType with a propertyFlags that has the "
-               "VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT bit set (11.6)");
-    }          
-    else if (MemAlloc.memoryTypeIndex != VulkanUtilities::VulkanPhysicalDevice::InvalidMemoryTypeIndex)
-    {
-        LOG_ERROR_AND_THROW("Failed to find suitable device memory type for an image");
-    }
-
-    std::string MemoryName = "Device memory for \'";
-    MemoryName += m_Desc.Name;
-    MemoryName += '\'';
-    m_ImageMemory = LogicalDevice.AllocateDeviceMemory(MemAlloc, MemoryName.c_str());
-
-    auto err = LogicalDevice.BindImageMemory(m_VulkanImage, m_ImageMemory, 0 /*offset*/);
+    m_MemoryAllocation = pRenderDeviceVk->AllocateMemory(MemReqs, ImageMemoryFlags);
+    auto AlignedOffset = (m_MemoryAllocation.UnalignedOffset + (MemReqs.alignment-1)) & ~(MemReqs.alignment-1);
+    auto Memory = m_MemoryAllocation.Page->GetVkMemory();
+    auto err = LogicalDevice.BindImageMemory(m_VulkanImage, Memory, AlignedOffset);
     CHECK_VK_ERROR_AND_THROW(err, "Failed to bind image memory");
 
     if(bInitializeTexture)
@@ -248,7 +223,11 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters *pRefCounters,
         if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH)
             aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
         else if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
-            aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+        {
+            UNSUPPORTED("Initializing depth-stencil texture is not currently supported");
+            // Only single aspect bit must be specified
+            aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;// | VK_IMAGE_ASPECT_STENCIL_BIT;
+        }
         else
             aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
@@ -318,35 +297,16 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters *pRefCounters,
         VulkanUtilities::BufferWrapper StagingBuffer = LogicalDevice.CreateBuffer(VkStaginBuffCI, StagingBufferName.c_str());
 
         VkMemoryRequirements StagingBufferMemReqs = LogicalDevice.GetBufferMemoryRequirements(StagingBuffer);
-
-        VkMemoryAllocateInfo StagingMemAlloc = {};
-        StagingMemAlloc.pNext = nullptr;
-        StagingMemAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        StagingMemAlloc.allocationSize = StagingBufferMemReqs.size;
-            
         // VK_MEMORY_PROPERTY_HOST_COHERENT_BIT bit specifies that the host cache management commands vkFlushMappedMemoryRanges 
         // and vkInvalidateMappedMemoryRanges are NOT needed to flush host writes to the device or make device writes visible
         // to the host (10.2)
-        StagingMemAlloc.memoryTypeIndex = PhysicalDevice.GetMemoryTypeIndex(StagingBufferMemReqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        auto StagingMemoryAllocation = pRenderDeviceVk->AllocateMemory(StagingBufferMemReqs, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        auto StagingBufferMemory = StagingMemoryAllocation.Page->GetVkMemory();
+        auto AlignedStagingMemOffset = (StagingMemoryAllocation.UnalignedOffset + (StagingBufferMemReqs.alignment-1)) & ~(StagingBufferMemReqs.alignment-1);
 
-        VERIFY(StagingMemAlloc.memoryTypeIndex != VulkanUtilities::VulkanPhysicalDevice::InvalidMemoryTypeIndex,
-                "Vulkan spec requires that for a VkBuffer not created with the "
-                "VK_BUFFER_CREATE_SPARSE_BINDING_BIT bit set, the memoryTypeBits member always contains at least one bit set "
-                "corresponding to a VkMemoryType with a propertyFlags that has both the VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT bit "
-                "and the VK_MEMORY_PROPERTY_HOST_COHERENT_BIT bit set(11.6)");
-
-        std::string StagingMemoryName("Staging memory for buffer '");
-        StagingMemoryName += m_Desc.Name;
-        StagingMemoryName += '\'';
-        VulkanUtilities::DeviceMemoryWrapper StagingBufferMemory = LogicalDevice.AllocateDeviceMemory(StagingMemAlloc, StagingMemoryName.c_str());
-
-        uint8_t *StagingData = nullptr;
-        err = LogicalDevice.MapMemory(StagingBufferMemory, 
-            0, // offset
-            StagingMemAlloc.allocationSize,
-            0, // flags, reserved for future use
-            reinterpret_cast<void**>(&StagingData));
-        CHECK_VK_ERROR_AND_THROW(err, "Failed to map staging memory");
+        auto *StagingData = reinterpret_cast<uint8_t*>(StagingMemoryAllocation.Page->GetCPUMemory());
+        VERIFY_EXPR(StagingData != nullptr);
+        StagingData += AlignedStagingMemOffset;
 
         subres = 0;
         for(Uint32 layer = 0; layer < ImageCI.arrayLayers; ++layer)
@@ -383,9 +343,7 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters *pRefCounters,
         }
         VERIFY_EXPR(subres == InitData.NumSubresources);
 
-        LogicalDevice.UnmapMemory(StagingBufferMemory);
-            
-        err = LogicalDevice.BindBufferMemory(StagingBuffer, StagingBufferMemory, 0 /*offset*/);
+        err = LogicalDevice.BindBufferMemory(StagingBuffer, StagingBufferMemory, AlignedStagingMemOffset);
         CHECK_VK_ERROR_AND_THROW(err, "Failed to bind staging bufer memory");
 
         VulkanUtilities::CommandPoolWrapper CmdPool;
@@ -436,7 +394,7 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters *pRefCounters,
         // until copy operation is complete. This must be done after
         // submitting command list for execution!
         pRenderDeviceVk->SafeReleaseVkObject(std::move(StagingBuffer));
-        pRenderDeviceVk->SafeReleaseVkObject(std::move(StagingBufferMemory));
+        pRenderDeviceVk->SafeReleaseMemoryAllocation(std::move(StagingMemoryAllocation));
     }
 
 #if 0
@@ -537,7 +495,7 @@ TextureVkImpl :: ~TextureVkImpl()
     // Vk object can only be destroyed when it is no longer used by the GPU
     // Wrappers for external texture will not be destroyed as they are created with null device pointer
     pDeviceVkImpl->SafeReleaseVkObject(std::move(m_VulkanImage));
-    pDeviceVkImpl->SafeReleaseVkObject(std::move(m_ImageMemory));
+    pDeviceVkImpl->SafeReleaseMemoryAllocation(std::move(m_MemoryAllocation));
 }
 
 void TextureVkImpl::UpdateData( IDeviceContext *pContext, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData )
@@ -602,7 +560,9 @@ void TextureVkImpl ::  CopyData(IDeviceContext *pContext,
     if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH)
         aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
     else if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
+    {
         aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+    }
     else
         aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 

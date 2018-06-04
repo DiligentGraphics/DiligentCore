@@ -129,7 +129,7 @@ namespace Diligent
             m_MaxSize(rhs.m_MaxSize),
             m_FreeSize(rhs.m_FreeSize)
         {
-            //rhs.m_MaxSize = 0; - const
+            rhs.m_MaxSize = 0;
             rhs.m_FreeSize = 0;
         }
 
@@ -269,10 +269,11 @@ namespace Diligent
 #endif
         }
 
-        OffsetType GetMaxSize()const{return m_MaxSize;}
-        bool IsFull()const{ return m_FreeSize==0; };
+        bool IsFull() const{ return m_FreeSize==0; };
         bool IsEmpty()const{ return m_FreeSize==m_MaxSize; };
+        OffsetType GetMaxSize() const{return m_MaxSize;}
         OffsetType GetFreeSize()const{return m_FreeSize;}
+        OffsetType GetUsedSize()const{return m_MaxSize - m_FreeSize;}
 
 #ifdef _DEBUG
         size_t DbgGetNumFreeBlocks()const{return m_FreeBlocksByOffset.size();}
@@ -326,7 +327,7 @@ namespace Diligent
         TFreeBlocksByOffsetMap m_FreeBlocksByOffset;
         TFreeBlocksBySizeMap   m_FreeBlocksBySize;
         
-        const OffsetType m_MaxSize = 0;
-              OffsetType m_FreeSize = 0;
+        OffsetType m_MaxSize = 0;
+        OffsetType m_FreeSize = 0;
     };
 }

@@ -32,6 +32,7 @@
 #include "BufferViewVkImpl.h"
 #include "VulkanDynamicHeap.h"
 #include "VulkanUtilities/VulkanObjectWrappers.h"
+#include "VulkanUtilities/VulkanMemoryManager.h"
 
 namespace Diligent
 {
@@ -94,7 +95,7 @@ private:
 #endif
     
     VulkanUtilities::BufferWrapper m_VulkanBuffer;
-    VulkanUtilities::DeviceMemoryWrapper m_BufferMemory;
+    VulkanUtilities::VulkanMemoryAllocation m_MemoryAllocation;
 };
 
 }

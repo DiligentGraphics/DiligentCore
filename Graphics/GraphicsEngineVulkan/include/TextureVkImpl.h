@@ -30,6 +30,7 @@
 #include "RenderDeviceVk.h"
 #include "TextureBase.h"
 #include "TextureViewVkImpl.h"
+#include "VulkanUtilities/VulkanMemoryManager.h"
 
 namespace Diligent
 {
@@ -112,8 +113,9 @@ protected:
 
     friend class RenderDeviceVkImpl;
 */
+
     VulkanUtilities::ImageWrapper m_VulkanImage;
-    VulkanUtilities::DeviceMemoryWrapper m_ImageMemory;
+    VulkanUtilities::VulkanMemoryAllocation m_MemoryAllocation;
     VkImageLayout m_CurrentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 };
 

@@ -99,50 +99,21 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters *pRefCounters,
 
     VkMemoryRequirements MemReqs = LogicalDevice.GetBufferMemoryRequirements(m_VulkanBuffer);
 
-    VkMemoryAllocateInfo MemAlloc = {};
-    MemAlloc.pNext = nullptr;
-    MemAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    MemAlloc.allocationSize = MemReqs.size;
-        
-    auto& PhysicalDevice = pRenderDeviceVk->GetPhysicalDevice();
-       
     VkMemoryPropertyFlags BufferMemoryFlags = 0;
     if (m_Desc.Usage == USAGE_CPU_ACCESSIBLE)
         BufferMemoryFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
     else
         BufferMemoryFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
-    // memoryTypeBits is a bitmask and contains one bit set for every supported memory type for the resource. 
-    // Bit i is set if and only if the memory type i in the VkPhysicalDeviceMemoryProperties structure for the 
-    // physical device is supported for the resource.
-    MemAlloc.memoryTypeIndex = PhysicalDevice.GetMemoryTypeIndex(MemReqs.memoryTypeBits, BufferMemoryFlags);
-    if(BufferMemoryFlags == VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
-    {
-        // There must be at least one memory type with the DEVICE_LOCAL_BIT bit set
-        VERIFY(MemAlloc.memoryTypeIndex != VulkanUtilities::VulkanPhysicalDevice::InvalidMemoryTypeIndex,
-                "Vulkan spec requires that memoryTypeBits member always contains "
-                "at least one bit set corresponding to a VkMemoryType with a propertyFlags that has the "
-                "VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT bit set (11.6)");
-    }
-    else if(MemAlloc.memoryTypeIndex == VulkanUtilities::VulkanPhysicalDevice::InvalidMemoryTypeIndex)
-    {
-        LOG_ERROR_AND_THROW("Failed to find suitable device memory type for a buffer");
-    }
+    m_MemoryAllocation = pRenderDeviceVk->AllocateMemory(MemReqs, BufferMemoryFlags);
 
-    {
-        std::string MemoryName("Device local memory for buffer '");
-        MemoryName += m_Desc.Name;
-        MemoryName += '\'';
-        m_BufferMemory = LogicalDevice.AllocateDeviceMemory(MemAlloc, MemoryName.c_str());
-    }
-
-    auto err = LogicalDevice.BindBufferMemory(m_VulkanBuffer, m_BufferMemory, 0 /*offset*/);
+    VERIFY( (MemReqs.alignment & (MemReqs.alignment-1)) == 0, "Alignment is not power of 2!");
+    auto AlignedOffset = (m_MemoryAllocation.UnalignedOffset + (MemReqs.alignment-1)) & ~(MemReqs.alignment-1);
+    auto Memory = m_MemoryAllocation.Page->GetVkMemory();
+    auto err = LogicalDevice.BindBufferMemory(m_VulkanBuffer, Memory, AlignedOffset);
     CHECK_VK_ERROR_AND_THROW(err, "Failed to bind buffer memory");
 
     bool bInitializeBuffer = (BuffData.pData != nullptr && BuffData.DataSize > 0);
-    //if(bInitializeBuffer)
-    //    m_UsageState = Vk_RESOURCE_STATE_COPY_DEST;
-        
     if( bInitializeBuffer )
     {
         VkBufferCreateInfo VkStaginBuffCI = VkBuffCI;
@@ -155,40 +126,18 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters *pRefCounters,
 
         VkMemoryRequirements StagingBufferMemReqs = LogicalDevice.GetBufferMemoryRequirements(StagingBuffer);
 
-        VkMemoryAllocateInfo StagingMemAlloc = {};
-        StagingMemAlloc.pNext = nullptr;
-        StagingMemAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        StagingMemAlloc.allocationSize = StagingBufferMemReqs.size;
-            
         // VK_MEMORY_PROPERTY_HOST_COHERENT_BIT bit specifies that the host cache management commands vkFlushMappedMemoryRanges 
         // and vkInvalidateMappedMemoryRanges are NOT needed to flush host writes to the device or make device writes visible
         // to the host (10.2)
-        StagingMemAlloc.memoryTypeIndex = PhysicalDevice.GetMemoryTypeIndex(StagingBufferMemReqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        auto StagingMemoryAllocation = pRenderDeviceVk->AllocateMemory(StagingBufferMemReqs, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        auto StagingBufferMemory = StagingMemoryAllocation.Page->GetVkMemory();
+        auto AlignedStagingMemOffset = (StagingMemoryAllocation.UnalignedOffset + (StagingBufferMemReqs.alignment-1)) & ~(StagingBufferMemReqs.alignment-1);
 
-        VERIFY(StagingMemAlloc.memoryTypeIndex != VulkanUtilities::VulkanPhysicalDevice::InvalidMemoryTypeIndex,
-                "Vulkan spec requires that for a VkBuffer not created with the "
-                "VK_BUFFER_CREATE_SPARSE_BINDING_BIT bit set, the memoryTypeBits member always contains at least one bit set "
-                "corresponding to a VkMemoryType with a propertyFlags that has both the VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT bit "
-                "and the VK_MEMORY_PROPERTY_HOST_COHERENT_BIT bit set(11.6)");
-
-        std::string StagingMemoryName("Staging memory for buffer '");
-        StagingMemoryName += m_Desc.Name;
-        StagingMemoryName += '\'';
-        VulkanUtilities::DeviceMemoryWrapper StagingBufferMemory = LogicalDevice.AllocateDeviceMemory(StagingMemAlloc, StagingMemoryName.c_str());
-
-        {
-            void *StagingData = nullptr;
-            err = LogicalDevice.MapMemory(StagingBufferMemory, 
-                0, // offset
-                StagingMemAlloc.allocationSize,
-                0, // flags, reserved for future use
-                &StagingData);
-            CHECK_VK_ERROR_AND_THROW(err, "Failed to map staging memory");
-            memcpy(StagingData, BuffData.pData, BuffData.DataSize);
-            LogicalDevice.UnmapMemory(StagingBufferMemory);
-        }
+        auto *StagingData = reinterpret_cast<uint8_t*>(StagingMemoryAllocation.Page->GetCPUMemory());
+        VERIFY_EXPR(StagingData != nullptr);
+        memcpy(StagingData + AlignedStagingMemOffset, BuffData.pData, BuffData.DataSize);
             
-        err = LogicalDevice.BindBufferMemory(StagingBuffer, StagingBufferMemory, 0 /*offset*/);
+        err = LogicalDevice.BindBufferMemory(StagingBuffer, StagingBufferMemory, AlignedStagingMemOffset);
         CHECK_VK_ERROR_AND_THROW(err, "Failed to bind staging bufer memory");
 
         VulkanUtilities::CommandPoolWrapper CmdPool;
@@ -233,7 +182,7 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters *pRefCounters,
         // until copy operation is complete. This must be done after
         // submitting command list for execution!
         pRenderDeviceVk->SafeReleaseVkObject(std::move(StagingBuffer));
-        pRenderDeviceVk->SafeReleaseVkObject(std::move(StagingBufferMemory));
+        pRenderDeviceVk->SafeReleaseMemoryAllocation(std::move(StagingMemoryAllocation));
     }
     else
     {
@@ -310,7 +259,7 @@ BufferVkImpl :: ~BufferVkImpl()
     auto *pDeviceVkImpl = ValidatedCast<RenderDeviceVkImpl>(GetDevice());
     // Vk object can only be destroyed when it is no longer used by the GPU
     pDeviceVkImpl->SafeReleaseVkObject(std::move(m_VulkanBuffer));
-    pDeviceVkImpl->SafeReleaseVkObject(std::move(m_BufferMemory));
+    pDeviceVkImpl->SafeReleaseMemoryAllocation(std::move(m_MemoryAllocation));
 }
 
 IMPLEMENT_QUERY_INTERFACE( BufferVkImpl, IID_BufferVk, TBufferBase )

@@ -47,7 +47,7 @@ RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters *pRefCounters,
     TRenderDeviceBase(pRefCounters, RawMemAllocator, NumDeferredContexts, sizeof(TextureVkImpl), sizeof(TextureViewVkImpl), sizeof(BufferVkImpl), sizeof(BufferViewVkImpl), sizeof(ShaderVkImpl), sizeof(SamplerVkImpl), sizeof(PipelineStateVkImpl), sizeof(ShaderResourceBindingVkImpl)),
     m_VulkanInstance(Instance),
     m_PhysicalDevice(std::move(PhysicalDevice)),
-    m_LogicalVkDevice(LogicalDevice),
+    m_LogicalVkDevice(std::move(LogicalDevice)),
     m_pCommandQueue(pCmdQueue),
     m_EngineAttribs(CreationAttribs),
 	m_FrameNumber(0),
@@ -60,7 +60,8 @@ RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters *pRefCounters,
     m_DescriptorPools(STD_ALLOCATOR_RAW_MEM(DescriptorPoolManager, GetRawAllocator(), "Allocator for vector<DescriptorPoolManager>")),
     m_UploadHeaps(STD_ALLOCATOR_RAW_MEM(UploadHeapPoolElemType, GetRawAllocator(), "Allocator for vector<unique_ptr<VulkanDynamicHeap>>")),
     m_FramebufferCache(*this),
-    m_TransientCmdPoolMgr(*LogicalDevice, pCmdQueue->GetQueueFamilyIndex(), VK_COMMAND_POOL_CREATE_TRANSIENT_BIT)
+    m_TransientCmdPoolMgr(*m_LogicalVkDevice, pCmdQueue->GetQueueFamilyIndex(), VK_COMMAND_POOL_CREATE_TRANSIENT_BIT),
+    m_MemoryMgr("Global resource memory manager", *m_LogicalVkDevice, *m_PhysicalDevice, GetRawAllocator(), CreationAttribs.DeviceLocalMemoryPageSize, CreationAttribs.HostVisibleMemoryPageSize )
 {
     m_DeviceCaps.DevType = DeviceType::Vulkan;
     m_DeviceCaps.MajorVersion = 1;
@@ -72,7 +73,7 @@ RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters *pRefCounters,
 
     m_DescriptorPools.reserve(2 + NumDeferredContexts);
     m_DescriptorPools.emplace_back(
-        LogicalDevice, 
+        m_LogicalVkDevice, 
         std::vector<VkDescriptorPoolSize>{
             {VK_DESCRIPTOR_TYPE_SAMPLER,                CreationAttribs.MainDescriptorPoolSize.NumSeparateSamplerDescriptors},
             {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, CreationAttribs.MainDescriptorPoolSize.NumCombinedSamplerDescriptors},
@@ -93,7 +94,7 @@ RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters *pRefCounters,
     for(Uint32 ctx = 0; ctx < 1 + NumDeferredContexts; ++ctx)
     {
         m_DescriptorPools.emplace_back(
-            LogicalDevice, 
+            m_LogicalVkDevice, 
             std::vector<VkDescriptorPoolSize>{
                 {VK_DESCRIPTOR_TYPE_SAMPLER,                CreationAttribs.DynamicDescriptorPoolSize.NumSeparateSamplerDescriptors},
                 {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, CreationAttribs.DynamicDescriptorPoolSize.NumCombinedSamplerDescriptors},
@@ -213,6 +214,9 @@ void RenderDeviceVkImpl::ExecuteCommandBuffer(const VkSubmitInfo &SubmitInfo, bo
         // is met even when the fence value is not incremented while executing 
         // the command list (as is the case with Unity command queue).
         DiscardStaleVkObjects(CmdListNumber, FenceValue);
+        auto CompletedFenceValue = GetCompletedFenceValue();
+        ProcessReleaseQueue(CompletedFenceValue);
+        m_MemoryMgr.ShrinkMemory();
     }
 #if 0
     // DiscardAllocator() is thread-safe
@@ -255,7 +259,9 @@ void RenderDeviceVkImpl::IdleGPU(bool ReleaseStaleObjects)
         // swap chain buffers when it is resized in the middle of the frame.
         // Since GPU has been idled, it it is safe to do so
         DiscardStaleVkObjects(CmdListNumber, FenceValue);
+        // FenceValue has now been signaled by the GPU since we waited for it
         ProcessReleaseQueue(FenceValue);
+        m_MemoryMgr.ShrinkMemory();
     }
 }
 
@@ -352,6 +358,7 @@ void RenderDeviceVkImpl::FinishFrame(bool ReleaseAllResources)
     // no command lists submitted during the frame
     DiscardStaleVkObjects(CmdListNumber, NextFenceValue);
     ProcessReleaseQueue(CompletedFenceValue);
+    m_MemoryMgr.ShrinkMemory();
 
     Atomics::AtomicIncrement(m_FrameNumber);
 }
@@ -393,30 +400,29 @@ void RenderDeviceVkImpl::DisposeTransientCmdPool(VulkanUtilities::CommandPoolWra
 
 
 template<typename VulkanObjectType>
-class RenderDeviceVkImpl::StaleVulkanObject : public StaleVulkanObjectBase
-{
-public:
-    StaleVulkanObject(VulkanUtilities::VulkanObjectWrapper<VulkanObjectType> &&Object) :
-        m_VkObject(std::move(Object))
-    {}
-
-    ~StaleVulkanObject()
-    {
-        m_VkObject.Release();
-    }
-
-private:
-    VulkanUtilities::VulkanObjectWrapper<VulkanObjectType> m_VkObject;
-};
-
-template<typename VulkanObjectType>
 void RenderDeviceVkImpl::SafeReleaseVkObject(VulkanUtilities::VulkanObjectWrapper<VulkanObjectType>&& vkObject)
 {
+    class StaleVulkanObject : public RenderDeviceVkImpl::StaleVulkanObjectBase
+    {
+    public:
+        StaleVulkanObject(VulkanUtilities::VulkanObjectWrapper<VulkanObjectType>&& Object) :
+            m_VkObject(std::move(Object))
+        {}
+
+        ~StaleVulkanObject()
+        {
+            m_VkObject.Release();
+        }
+
+    private:
+        VulkanUtilities::VulkanObjectWrapper<VulkanObjectType> m_VkObject;
+    };
+
     // When Vk object is released, it is first moved into the
     // stale objects list. The list is moved into a release queue
-    // when the next command list is executed. 
+    // after the next command list is executed. 
     std::lock_guard<std::mutex> LockGuard(m_StaleObjectsMutex);
-    m_StaleVkObjects.emplace_back(m_NextCmdListNumber, new StaleVulkanObject<VulkanObjectType>(std::move(vkObject)) );
+    m_StaleVkObjects.emplace_back(m_NextCmdListNumber, new StaleVulkanObject(std::move(vkObject)) );
 }
 
 template void RenderDeviceVkImpl::SafeReleaseVkObject<VkBuffer>       (VulkanUtilities::BufferWrapper       &&Object);
@@ -434,6 +440,24 @@ template void RenderDeviceVkImpl::SafeReleaseVkObject<VkDescriptorPool> (VulkanU
 template void RenderDeviceVkImpl::SafeReleaseVkObject<VkDescriptorSetLayout>(VulkanUtilities::DescriptorSetLayoutWrapper &&Object);
 template void RenderDeviceVkImpl::SafeReleaseVkObject<VkSemaphore>      (VulkanUtilities::SemaphoreWrapper &&Object);
 template void RenderDeviceVkImpl::SafeReleaseVkObject<VkCommandPool>    (VulkanUtilities::CommandPoolWrapper &&Object);
+
+
+void RenderDeviceVkImpl::SafeReleaseMemoryAllocation(VulkanUtilities::VulkanMemoryAllocation&& Allocation)
+{
+    class StaleVulkanMemoryAllocation : public StaleVulkanObjectBase
+    {
+    public:
+        StaleVulkanMemoryAllocation(VulkanUtilities::VulkanMemoryAllocation &&Allocation) :
+            m_Allocation(std::move(Allocation))
+        {}
+
+    private:
+        VulkanUtilities::VulkanMemoryAllocation m_Allocation;
+    };
+
+    std::lock_guard<std::mutex> LockGuard(m_StaleObjectsMutex);
+    m_StaleVkObjects.emplace_back(m_NextCmdListNumber, new StaleVulkanMemoryAllocation(std::move(Allocation)) );
+}
 
 
 void RenderDeviceVkImpl::DiscardStaleVkObjects(Uint64 CmdListNumber, Uint64 FenceValue)
