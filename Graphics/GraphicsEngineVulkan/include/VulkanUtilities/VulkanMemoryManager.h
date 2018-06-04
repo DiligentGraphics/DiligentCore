@@ -138,13 +138,17 @@ public:
                         const VulkanPhysicalDevice&  PhysicalDevice, 
                         Diligent::IMemoryAllocator&  Allocator, 
                         VkDeviceSize                 DeviceLocalPageSize,
-                        VkDeviceSize                 HostVisiblePageSize) : 
+                        VkDeviceSize                 HostVisiblePageSize,
+                        VkDeviceSize                 DeviceLocalReserveSize,
+                        VkDeviceSize                 HostVisibleReserveSize) : 
         m_MgrName            (std::move(MgrName)),
         m_LogicalDevice      (LogicalDevice),
         m_PhysicalDevice     (PhysicalDevice),
         m_Allocator          (Allocator),
         m_DeviceLocalPageSize(DeviceLocalPageSize),
-        m_HostVisiblePageSize(HostVisiblePageSize)
+        m_HostVisiblePageSize(HostVisiblePageSize),
+        m_DeviceLocalReserveSize(DeviceLocalReserveSize),
+        m_HostVisibleReserveSize(HostVisibleReserveSize)
     {}
     
     ~VulkanMemoryManager();
@@ -171,6 +175,8 @@ private:
     std::mutex m_Mutex;
     const VkDeviceSize m_DeviceLocalPageSize;
     const VkDeviceSize m_HostVisiblePageSize;
+    const VkDeviceSize m_DeviceLocalReserveSize;
+    const VkDeviceSize m_HostVisibleReserveSize;
     
     void OnFreeAllocation(VkDeviceSize Size, bool IsHostVisble);
 

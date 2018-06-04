@@ -1355,6 +1355,16 @@ namespace Diligent
 
         /// Allocation granularity for host-visible memory
         Uint32 HostVisibleMemoryPageSize = 16 << 20;
+
+        /// Amount of device-local memory reserved by the engine. 
+        /// The engine does not pre-allocate the memory, but rather keeps free
+        /// pages when resources are released
+        Uint32 DeviceLocalMemoryReserveSize = 256 << 20;
+
+        /// Amount of host-visible memory reserved by the engine.
+        /// The engine does not pre-allocate the memory, but rather keeps free
+        /// pages when resources are released
+        Uint32 HostVisibleMemoryReserveSize = 256 << 20;
     };
 
     /// Box

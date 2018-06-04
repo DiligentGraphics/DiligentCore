@@ -165,16 +165,20 @@ VulkanMemoryAllocation VulkanMemoryManager::Allocate(const VkMemoryRequirements&
 void VulkanMemoryManager::ShrinkMemory()
 {
     std::lock_guard<std::mutex> Lock(m_Mutex);
+    if(m_CurrAllocatedSize[0] <= m_DeviceLocalReserveSize && m_CurrAllocatedSize[1] <= m_HostVisibleReserveSize)
+        return;
+
     auto it = m_Pages.begin();
     while(it != m_Pages.end())
     {
         auto curr_it = it;
         ++it;
         auto& Page = curr_it->second;
-        if(Page.IsEmpty())
+        bool IsHostVisible = Page.GetCPUMemory() != nullptr;
+        auto ReserveSize = IsHostVisible ? m_HostVisibleReserveSize : m_DeviceLocalReserveSize;
+        if(Page.IsEmpty() && m_CurrAllocatedSize[IsHostVisible ? 1 : 0] > ReserveSize)
         {
             auto PageSize = Page.GetPageSize();
-            bool IsHostVisible = Page.GetCPUMemory() != nullptr;
             m_CurrAllocatedSize[IsHostVisible ? 1 : 0] -= PageSize;
             LOG_INFO_MESSAGE("VulkanMemoryManager '", m_MgrName, "': destroying ", (IsHostVisible ? "host-visible" : "device-local"), " page. Size: ", 
                              std::fixed, std::setprecision(2), PageSize / double{1 << 20}, 
@@ -198,8 +202,10 @@ VulkanMemoryManager::~VulkanMemoryManager()
                      "\n    Peak used/peak allocated host-visible memory size: ", 
                      std::fixed, std::setprecision(2), m_PeakUsedSize[1] / double{1 << 20}, "/",
                      std::fixed, std::setprecision(2), m_PeakAllocatedSize[1] / double{1 << 20}, " MB.");
-    VERIFY(m_Pages.empty(), "Not all pages have been released");
-    VERIFY_EXPR(m_CurrAllocatedSize[0] == 0 && m_CurrAllocatedSize[1] == 0 && m_CurrUsedSize[0] == 0 && m_CurrUsedSize[1] == 0);
+    
+    for(auto it=m_Pages.begin(); it != m_Pages.end(); ++it )
+        VERIFY(it->second.IsEmpty(), "The page contains outstanding allocations");
+    VERIFY(m_CurrUsedSize[0] == 0 && m_CurrUsedSize[1] == 0, "Not all allocations have been released");
 }
 
 }
