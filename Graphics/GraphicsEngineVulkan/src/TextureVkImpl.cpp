@@ -394,7 +394,7 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters *pRefCounters,
         // until copy operation is complete. This must be done after
         // submitting command list for execution!
         pRenderDeviceVk->SafeReleaseVkObject(std::move(StagingBuffer));
-        pRenderDeviceVk->SafeReleaseMemoryAllocation(std::move(StagingMemoryAllocation));
+        pRenderDeviceVk->SafeReleaseVkObject(std::move(StagingMemoryAllocation));
     }
 
 #if 0
@@ -495,7 +495,7 @@ TextureVkImpl :: ~TextureVkImpl()
     // Vk object can only be destroyed when it is no longer used by the GPU
     // Wrappers for external texture will not be destroyed as they are created with null device pointer
     pDeviceVkImpl->SafeReleaseVkObject(std::move(m_VulkanImage));
-    pDeviceVkImpl->SafeReleaseMemoryAllocation(std::move(m_MemoryAllocation));
+    pDeviceVkImpl->SafeReleaseVkObject(std::move(m_MemoryAllocation));
 }
 
 void TextureVkImpl::UpdateData( IDeviceContext *pContext, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData )

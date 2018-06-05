@@ -32,6 +32,7 @@
 #include "GenerateMips.h"
 #include "VulkanUtilities/VulkanCommandBufferPool.h"
 #include "VulkanUtilities/VulkanCommandBuffer.h"
+#include "VulkanUtilities/VulkanUploadHeap.h"
 #include "VulkanDynamicHeap.h"
 
 #ifdef _DEBUG
@@ -112,8 +113,8 @@ public:
     ///// Number of different shader types (Vertex, Pixel, Geometry, Domain, Hull, Compute)
     //static constexpr int NumShaderTypes = 6;
 
-    void UpdateBufferRegion(class BufferVkImpl *pBuffVk, struct VulkanDynamicAllocation& Allocation, Uint64 DstOffset, Uint64 NumBytes);
-    void UpdateBufferRegion(class BufferVkImpl *pBuffVk, const void *pData, Uint64 DstOffset, Uint64 NumBytes);
+    void UpdateBufferRegion(class BufferVkImpl* pBuffVk, VulkanUtilities::VulkanUploadAllocation& Allocation, Uint64 DstOffset, Uint64 NumBytes);
+    void UpdateBufferRegion(class BufferVkImpl* pBuffVk, const void *pData, Uint64 DstOffset, Uint64 NumBytes);
 
     void CopyBufferRegion(class BufferVkImpl *pSrcBuffVk, class BufferVkImpl *pDstBuffVk, Uint64 SrcOffset, Uint64 DstOffset, Uint64 NumBytes);
     void CopyTextureRegion(class TextureVkImpl *pSrcTexture, class TextureVkImpl *pDstTexture, const VkImageCopy &CopyRegion);
@@ -122,7 +123,7 @@ public:
 #endif
     void GenerateMips(class TextureViewVkImpl *pTexView);
 
-    void* AllocateDynamicUploadSpace(BufferVkImpl* pBuffer, size_t NumBytes, size_t Alignment);
+    void* AllocateUploadSpace(BufferVkImpl* pBuffer, size_t NumBytes);
     void CopyAndFreeDynamicUploadData(BufferVkImpl* pBuffer);
 
     Uint32 GetContextId()const{return m_ContextId;}
@@ -178,7 +179,7 @@ private:
     std::vector<VkPipelineStageFlags> m_WaitDstStageMasks;
     std::vector<VkSemaphore> m_SignalSemaphores;
 
-    std::unordered_map<BufferVkImpl*, VulkanDynamicAllocation> m_UploadAllocations;
+    std::unordered_map<BufferVkImpl*, VulkanUtilities::VulkanUploadAllocation> m_UploadAllocations;
 };
 
 }

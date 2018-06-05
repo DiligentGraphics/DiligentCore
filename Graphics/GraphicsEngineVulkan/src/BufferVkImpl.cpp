@@ -182,7 +182,7 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters *pRefCounters,
         // until copy operation is complete. This must be done after
         // submitting command list for execution!
         pRenderDeviceVk->SafeReleaseVkObject(std::move(StagingBuffer));
-        pRenderDeviceVk->SafeReleaseMemoryAllocation(std::move(StagingMemoryAllocation));
+        pRenderDeviceVk->SafeReleaseVkObject(std::move(StagingMemoryAllocation));
     }
     else
     {
@@ -259,7 +259,7 @@ BufferVkImpl :: ~BufferVkImpl()
     auto *pDeviceVkImpl = ValidatedCast<RenderDeviceVkImpl>(GetDevice());
     // Vk object can only be destroyed when it is no longer used by the GPU
     pDeviceVkImpl->SafeReleaseVkObject(std::move(m_VulkanBuffer));
-    pDeviceVkImpl->SafeReleaseMemoryAllocation(std::move(m_MemoryAllocation));
+    pDeviceVkImpl->SafeReleaseVkObject(std::move(m_MemoryAllocation));
 }
 
 IMPLEMENT_QUERY_INTERFACE( BufferVkImpl, IID_BufferVk, TBufferBase )
@@ -323,7 +323,7 @@ void BufferVkImpl :: Map(IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapF
         else if (m_Desc.Usage == USAGE_DYNAMIC)
         {
             VERIFY(MapFlags & MAP_FLAG_DISCARD, "Vk buffer must be mapped for writing with MAP_FLAG_DISCARD flag");
-            pMappedData = pDeviceContextVk->AllocateDynamicUploadSpace(this, m_Desc.uiSizeInBytes, 0);
+            pMappedData = pDeviceContextVk->AllocateUploadSpace(this, m_Desc.uiSizeInBytes);
         }
         else
         {

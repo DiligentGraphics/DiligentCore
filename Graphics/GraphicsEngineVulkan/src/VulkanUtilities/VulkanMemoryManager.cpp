@@ -40,7 +40,7 @@ VulkanMemoryAllocation::~VulkanMemoryAllocation()
 VulkanMemoryPage::VulkanMemoryPage(VulkanMemoryManager& ParentMemoryMgr,
                                    VkDeviceSize         PageSize, 
                                    uint32_t             MemoryTypeIndex,
-                                   bool                 MapMemory)noexcept : 
+                                   bool                 IsHostVisible)noexcept : 
     m_ParentMemoryMgr(ParentMemoryMgr),
     m_AllocationMgr(PageSize, ParentMemoryMgr.m_Allocator)
 {
@@ -54,7 +54,7 @@ VulkanMemoryPage::VulkanMemoryPage(VulkanMemoryManager& ParentMemoryMgr,
     ss << "Device memory page. Size: " << (PageSize >> 10) << " Kb, type: " << MemoryTypeIndex;
     m_VkMemory = ParentMemoryMgr.m_LogicalDevice.AllocateDeviceMemory(MemAlloc, ss.str().c_str());
 
-    if(MapMemory)
+    if(IsHostVisible)
     {
         auto err = ParentMemoryMgr.m_LogicalDevice.MapMemory(m_VkMemory, 
             0, // offset
@@ -125,10 +125,16 @@ VulkanMemoryAllocation VulkanMemoryManager::Allocate(const VkMemoryRequirements&
         LOG_ERROR_AND_THROW("Failed to find suitable device memory type for a buffer");
     }
 
-    auto Size = MemReqs.size + MemReqs.alignment;
+    bool HostVisible = (MemoryProps & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) != 0;
+    return Allocate(MemReqs.size, MemReqs.alignment, MemoryTypeIndex, HostVisible);
+}
+
+VulkanMemoryAllocation VulkanMemoryManager::Allocate(VkDeviceSize Size, VkDeviceSize Alignment, uint32_t MemoryTypeIndex, bool HostVisible)
+{
+    Size += Alignment;
     VulkanMemoryAllocation Allocation;
 
-    std::lock_guard<std::mutex> Lock(m_Mutex);
+    std::lock_guard<std::mutex> Lock(m_PagesMtx);
     auto range = m_Pages.equal_range(MemoryTypeIndex);
     for(auto page_it = range.first; page_it != range.second; ++page_it)
     {
@@ -137,7 +143,6 @@ VulkanMemoryAllocation VulkanMemoryManager::Allocate(const VkMemoryRequirements&
             break;
     }
 
-    bool HostVisible = (MemoryProps & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) != 0;
     size_t stat_ind = HostVisible ? 1 : 0;
     if(Allocation.Page == nullptr)
     {
@@ -152,6 +157,7 @@ VulkanMemoryAllocation VulkanMemoryManager::Allocate(const VkMemoryRequirements&
         LOG_INFO_MESSAGE("VulkanMemoryManager '", m_MgrName, "': created new ", (HostVisible ? "host-visible" : "device-local"), " page. (", 
                          std::fixed, std::setprecision(2), PageSize / double{1 << 20}, " MB, type idx: ", MemoryTypeIndex, 
                          "). Current allocated size: ", std::fixed, std::setprecision(2), m_CurrAllocatedSize[stat_ind] / double{1 << 20}, " MB");
+        OnNewPageCreated(it->second);
         Allocation = it->second.Allocate(Size);
         VERIFY(Allocation.Page != nullptr, "Failed to allocate new memory page");
     }
@@ -164,7 +170,7 @@ VulkanMemoryAllocation VulkanMemoryManager::Allocate(const VkMemoryRequirements&
 
 void VulkanMemoryManager::ShrinkMemory()
 {
-    std::lock_guard<std::mutex> Lock(m_Mutex);
+    std::lock_guard<std::mutex> Lock(m_PagesMtx);
     if(m_CurrAllocatedSize[0] <= m_DeviceLocalReserveSize && m_CurrAllocatedSize[1] <= m_HostVisibleReserveSize)
         return;
 
@@ -183,6 +189,7 @@ void VulkanMemoryManager::ShrinkMemory()
             LOG_INFO_MESSAGE("VulkanMemoryManager '", m_MgrName, "': destroying ", (IsHostVisible ? "host-visible" : "device-local"), " page (", 
                              std::fixed, std::setprecision(2), PageSize / double{1 << 20}, 
                              " MB). Current allocated size: ", std::fixed, std::setprecision(2), m_CurrAllocatedSize[IsHostVisible ? 1 : 0] / double{1 << 20}, " MB");
+            OnPageDestroy(Page);
             m_Pages.erase(curr_it);
         }
     }

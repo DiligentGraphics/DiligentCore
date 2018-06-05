@@ -40,6 +40,7 @@
 #include "VulkanUtilities/VulkanLogicalDevice.h"
 #include "VulkanUtilities/VulkanObjectWrappers.h"
 #include "VulkanUtilities/VulkanMemoryManager.h"
+#include "VulkanUtilities/VulkanUploadHeap.h"
 #include "FramebufferCache.h"
 #include "CommandPoolManager.h"
 
@@ -102,11 +103,9 @@ public:
     void DisposeTransientCmdPool(VulkanUtilities::CommandPoolWrapper&& CmdPool);
 
 
-    template<typename VulkanObjectType>
-    void SafeReleaseVkObject(VulkanUtilities::VulkanObjectWrapper<VulkanObjectType>&& vkObject);
-    void SafeReleaseMemoryAllocation(VulkanUtilities::VulkanMemoryAllocation&& Allocation);
-
-
+    template<typename ObjectType>
+    void SafeReleaseVkObject(ObjectType&& Object);
+    
     void FinishFrame(bool ReleaseAllResources);
     virtual void FinishFrame()override final { FinishFrame(false); }
 
@@ -121,9 +120,9 @@ public:
         return m_DescriptorPools[1 + CtxId].Allocate(SetLayout);
     }
 
-    VulkanDynamicAllocation AllocateDynamicUploadSpace(Uint32 CtxId, size_t Size, size_t Alignment)
+    VulkanUtilities::VulkanUploadAllocation AllocateUploadSpace(Uint32 CtxId, size_t Size)
     {
-        return m_UploadHeaps[CtxId]->Allocate(Size, Alignment);
+        return m_UploadHeaps[CtxId].Allocate(Size);
     }
     
     std::shared_ptr<const VulkanUtilities::VulkanInstance> GetVulkanInstance()const{return m_VulkanInstance;}
@@ -208,8 +207,7 @@ private:
     // [2+] - Deferred context dynamic descriptor pool
     std::vector<DescriptorPoolManager, STDAllocatorRawMem<DescriptorPoolManager> > m_DescriptorPools;
 
-    typedef std::unique_ptr<VulkanDynamicHeap, STDDeleterRawMem<VulkanDynamicHeap> > UploadHeapPoolElemType;
-    std::vector< UploadHeapPoolElemType, STDAllocatorRawMem<UploadHeapPoolElemType> > m_UploadHeaps;
+    std::vector<VulkanUtilities::VulkanUploadHeap, STDAllocatorRawMem<VulkanUtilities::VulkanUploadHeap>> m_UploadHeaps;
 
     // These one-time command pools are used by buffer and texture constructors to
     // issue copy commands. Vulkan requires that every command pool is used by one thread 

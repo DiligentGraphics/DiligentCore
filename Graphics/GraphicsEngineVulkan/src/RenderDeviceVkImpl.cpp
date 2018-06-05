@@ -22,6 +22,7 @@
  */
 
 #include "pch.h"
+#include <sstream>
 #include "RenderDeviceVkImpl.h"
 #include "PipelineStateVkImpl.h"
 #include "ShaderVkImpl.h"
@@ -58,7 +59,7 @@ RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters *pRefCounters,
     m_VkObjReleaseQueue(STD_ALLOCATOR_RAW_MEM(ReleaseQueueElemType, GetRawAllocator(), "Allocator for queue<ReleaseQueueElemType>")),
     m_StaleVkObjects(STD_ALLOCATOR_RAW_MEM(ReleaseQueueElemType, GetRawAllocator(), "Allocator for queue<ReleaseQueueElemType>")),
     m_DescriptorPools(STD_ALLOCATOR_RAW_MEM(DescriptorPoolManager, GetRawAllocator(), "Allocator for vector<DescriptorPoolManager>")),
-    m_UploadHeaps(STD_ALLOCATOR_RAW_MEM(UploadHeapPoolElemType, GetRawAllocator(), "Allocator for vector<unique_ptr<VulkanDynamicHeap>>")),
+    m_UploadHeaps(STD_ALLOCATOR_RAW_MEM(VulkanUtilities::VulkanUploadHeap, GetRawAllocator(), "Allocator for vector<VulkanUploadHeap>")),
     m_FramebufferCache(*this),
     m_TransientCmdPoolMgr(*m_LogicalVkDevice, pCmdQueue->GetQueueFamilyIndex(), VK_COMMAND_POOL_CREATE_TRANSIENT_BIT),
     m_MemoryMgr("Global resource memory manager", *m_LogicalVkDevice, *m_PhysicalDevice, GetRawAllocator(), CreationAttribs.DeviceLocalMemoryPageSize, CreationAttribs.HostVisibleMemoryPageSize, CreationAttribs.DeviceLocalMemoryReserveSize, CreationAttribs.HostVisibleMemoryReserveSize)
@@ -112,11 +113,15 @@ RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters *pRefCounters,
         );
 
         {
-            auto InitialSize = ctx == 0 ? CreationAttribs.ImmediateCtxDynamicHeapInitialSize : CreationAttribs.DeferredCtxDynamicHeapInitialSize;
-            auto &UploadHeapAllocator = GetRawAllocator();
-            auto *pRawMem = ALLOCATE(UploadHeapAllocator, "DynamicUploadHeap instance", sizeof(VulkanDynamicHeap));
-            auto *pNewHeap = new (pRawMem) VulkanDynamicHeap(GetRawAllocator(), this, InitialSize);
-            m_UploadHeaps.emplace_back( pNewHeap, STDDeleterRawMem<VulkanDynamicHeap>(UploadHeapAllocator) );
+            auto PageSize = ctx == 0 ? CreationAttribs.ImmediateCtxUploadHeapPageSize : CreationAttribs.DeferredCtxUploadHeapPageSize;
+            auto ReserveSize = ctx == 0 ? CreationAttribs.ImmediateCtxUploadHeapReserveSize : CreationAttribs.DeferredCtxUploadHeapReserveSize;
+            std::stringstream ss;
+            if(ctx == 0)
+                ss << "Immediate context";
+            else
+                ss << "Deferred context " << ctx-1;
+            ss << " upload heap";
+            m_UploadHeaps.emplace_back( ss.str(), *m_LogicalVkDevice, *m_PhysicalDevice, RawMemAllocator, PageSize, ReserveSize );
         }
     }
 }
@@ -208,7 +213,7 @@ void RenderDeviceVkImpl::ExecuteCommandBuffer(const VkSubmitInfo &SubmitInfo, bo
         //                  |     was added to the delete queue      |                                   |
         //                  |     with number N                      |                                   |
 
-        // Move stale objects into a release queue.
+        // Move stale objects into the release queue.
         // Note that objects are moved from stale list to release queue based on the
         // cmd list number, not the fence value. This makes sure that basic requirement
         // is met even when the fence value is not incremented while executing 
@@ -322,8 +327,7 @@ void RenderDeviceVkImpl::FinishFrame(bool ReleaseAllResources)
         // time for every context
         //std::lock_guard<std::mutex> LockGuard(m_UploadHeapMutex);
         
-        // Upload heaps are used to update resource contents as well as to allocate
-        // space for dynamic resources.
+        // Upload heaps are used to update resource contents
         // Initial resource data is uploaded using temporary one-time upload buffers, 
         // so can be performed in parallel across frame boundaries
         for (auto &UploadHeap : m_UploadHeaps)
@@ -342,7 +346,7 @@ void RenderDeviceVkImpl::FinishFrame(bool ReleaseAllResources)
             //
             //
             
-            UploadHeap->FinishFrame(NextFenceValue, CompletedFenceValue);
+            UploadHeap.ShrinkMemory();
         }
     }
 
@@ -399,66 +403,53 @@ void RenderDeviceVkImpl::DisposeTransientCmdPool(VulkanUtilities::CommandPoolWra
 
 
 
-template<typename VulkanObjectType>
-void RenderDeviceVkImpl::SafeReleaseVkObject(VulkanUtilities::VulkanObjectWrapper<VulkanObjectType>&& vkObject)
+template<typename ObjectType>
+void RenderDeviceVkImpl::SafeReleaseVkObject(ObjectType&& vkObject)
 {
     class StaleVulkanObject : public RenderDeviceVkImpl::StaleVulkanObjectBase
     {
     public:
-        StaleVulkanObject(VulkanUtilities::VulkanObjectWrapper<VulkanObjectType>&& Object) :
+        StaleVulkanObject(ObjectType&& Object) :
             m_VkObject(std::move(Object))
         {}
 
-        ~StaleVulkanObject()
-        {
-            m_VkObject.Release();
-        }
+        StaleVulkanObject             (const StaleVulkanObject&) = delete;
+        StaleVulkanObject             (StaleVulkanObject&&)      = delete;
+        StaleVulkanObject& operator = (const StaleVulkanObject&) = delete;
+        StaleVulkanObject& operator = (StaleVulkanObject&&)      = delete;
 
     private:
-        VulkanUtilities::VulkanObjectWrapper<VulkanObjectType> m_VkObject;
+        ObjectType m_VkObject;
     };
 
     // When Vk object is released, it is first moved into the
     // stale objects list. The list is moved into a release queue
     // after the next command list is executed. 
     std::lock_guard<std::mutex> LockGuard(m_StaleObjectsMutex);
-    m_StaleVkObjects.emplace_back(m_NextCmdListNumber, new StaleVulkanObject(std::move(vkObject)) );
+    m_StaleVkObjects.emplace_back(m_NextCmdListNumber, new StaleVulkanObject{std::move(vkObject)} );
 }
 
-template void RenderDeviceVkImpl::SafeReleaseVkObject<VkBuffer>       (VulkanUtilities::BufferWrapper       &&Object);
-template void RenderDeviceVkImpl::SafeReleaseVkObject<VkBufferView>   (VulkanUtilities::BufferViewWrapper   &&Object);
-template void RenderDeviceVkImpl::SafeReleaseVkObject<VkImage>        (VulkanUtilities::ImageWrapper        &&Object);
-template void RenderDeviceVkImpl::SafeReleaseVkObject<VkImageView>    (VulkanUtilities::ImageViewWrapper    &&Object);
-template void RenderDeviceVkImpl::SafeReleaseVkObject<VkSampler>      (VulkanUtilities::SamplerWrapper      &&Object);
-template void RenderDeviceVkImpl::SafeReleaseVkObject<VkDeviceMemory> (VulkanUtilities::DeviceMemoryWrapper &&Object);
-template void RenderDeviceVkImpl::SafeReleaseVkObject<VkRenderPass>   (VulkanUtilities::RenderPassWrapper   &&Object);
-template void RenderDeviceVkImpl::SafeReleaseVkObject<VkPipeline>     (VulkanUtilities::PipelineWrapper     &&Object);
-template void RenderDeviceVkImpl::SafeReleaseVkObject<VkShaderModule> (VulkanUtilities::ShaderModuleWrapper &&Object);
-template void RenderDeviceVkImpl::SafeReleaseVkObject<VkPipelineLayout>(VulkanUtilities::PipelineLayoutWrapper &&Object);
-template void RenderDeviceVkImpl::SafeReleaseVkObject<VkFramebuffer>   (VulkanUtilities::FramebufferWrapper    &&Object);
-template void RenderDeviceVkImpl::SafeReleaseVkObject<VkDescriptorPool> (VulkanUtilities::DescriptorPoolWrapper &&Object);
-template void RenderDeviceVkImpl::SafeReleaseVkObject<VkDescriptorSetLayout>(VulkanUtilities::DescriptorSetLayoutWrapper &&Object);
-template void RenderDeviceVkImpl::SafeReleaseVkObject<VkSemaphore>      (VulkanUtilities::SemaphoreWrapper &&Object);
-template void RenderDeviceVkImpl::SafeReleaseVkObject<VkCommandPool>    (VulkanUtilities::CommandPoolWrapper &&Object);
+#define INSTANTIATE_SAFE_RELEASE_VK_OBJECT(Type) template void RenderDeviceVkImpl::SafeReleaseVkObject<Type>(Type &&Object)
 
+INSTANTIATE_SAFE_RELEASE_VK_OBJECT(VulkanUtilities::BufferWrapper);
+INSTANTIATE_SAFE_RELEASE_VK_OBJECT(VulkanUtilities::BufferViewWrapper);
+INSTANTIATE_SAFE_RELEASE_VK_OBJECT(VulkanUtilities::ImageWrapper);
+INSTANTIATE_SAFE_RELEASE_VK_OBJECT(VulkanUtilities::ImageViewWrapper);
+INSTANTIATE_SAFE_RELEASE_VK_OBJECT(VulkanUtilities::SamplerWrapper);
+INSTANTIATE_SAFE_RELEASE_VK_OBJECT(VulkanUtilities::DeviceMemoryWrapper);
+INSTANTIATE_SAFE_RELEASE_VK_OBJECT(VulkanUtilities::RenderPassWrapper);
+INSTANTIATE_SAFE_RELEASE_VK_OBJECT(VulkanUtilities::PipelineWrapper);
+INSTANTIATE_SAFE_RELEASE_VK_OBJECT(VulkanUtilities::ShaderModuleWrapper);
+INSTANTIATE_SAFE_RELEASE_VK_OBJECT(VulkanUtilities::PipelineLayoutWrapper);
+INSTANTIATE_SAFE_RELEASE_VK_OBJECT(VulkanUtilities::FramebufferWrapper);
+INSTANTIATE_SAFE_RELEASE_VK_OBJECT(VulkanUtilities::DescriptorPoolWrapper);
+INSTANTIATE_SAFE_RELEASE_VK_OBJECT(VulkanUtilities::DescriptorSetLayoutWrapper);
+INSTANTIATE_SAFE_RELEASE_VK_OBJECT(VulkanUtilities::SemaphoreWrapper);
+INSTANTIATE_SAFE_RELEASE_VK_OBJECT(VulkanUtilities::CommandPoolWrapper);
+INSTANTIATE_SAFE_RELEASE_VK_OBJECT(VulkanUtilities::VulkanMemoryAllocation);
+INSTANTIATE_SAFE_RELEASE_VK_OBJECT(VulkanUtilities::VulkanUploadAllocation);
 
-void RenderDeviceVkImpl::SafeReleaseMemoryAllocation(VulkanUtilities::VulkanMemoryAllocation&& Allocation)
-{
-    class StaleVulkanMemoryAllocation : public StaleVulkanObjectBase
-    {
-    public:
-        StaleVulkanMemoryAllocation(VulkanUtilities::VulkanMemoryAllocation &&Allocation) :
-            m_Allocation(std::move(Allocation))
-        {}
-
-    private:
-        VulkanUtilities::VulkanMemoryAllocation m_Allocation;
-    };
-
-    std::lock_guard<std::mutex> LockGuard(m_StaleObjectsMutex);
-    m_StaleVkObjects.emplace_back(m_NextCmdListNumber, new StaleVulkanMemoryAllocation(std::move(Allocation)) );
-}
-
+#undef INSTANTIATE_SAFE_RELEASE_VK_OBJECT
 
 void RenderDeviceVkImpl::DiscardStaleVkObjects(Uint64 CmdListNumber, Uint64 FenceValue)
 {

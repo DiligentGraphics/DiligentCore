@@ -91,7 +91,7 @@ public:
     VulkanMemoryPage(VulkanMemoryManager& ParentMemoryMgr,
                      VkDeviceSize         PageSize, 
                      uint32_t             MemoryTypeIndex,
-                     bool                 MapMemory)noexcept;
+                     bool                 IsHostVisible)noexcept;
     ~VulkanMemoryPage();
 
     VulkanMemoryPage(VulkanMemoryPage&& rhs)noexcept :
@@ -150,29 +150,57 @@ public:
         m_DeviceLocalReserveSize(DeviceLocalReserveSize),
         m_HostVisibleReserveSize(HostVisibleReserveSize)
     {}
+
+    // We have to write this constructor because on msvc default
+    // constructor is not labeled with noexcept, which makes all
+    // std containers use copy instead of move
+    VulkanMemoryManager(VulkanMemoryManager&& rhs)noexcept : 
+        m_MgrName         (std::move(rhs.m_MgrName)),
+        m_LogicalDevice   (rhs.m_LogicalDevice),
+        m_PhysicalDevice  (rhs.m_PhysicalDevice),
+        m_Allocator       (rhs.m_Allocator),
+        m_Pages           (std::move(rhs.m_Pages)),
     
+        m_DeviceLocalPageSize    (rhs.m_DeviceLocalPageSize),
+        m_HostVisiblePageSize    (rhs.m_HostVisiblePageSize),
+        m_DeviceLocalReserveSize (rhs.m_DeviceLocalReserveSize),
+        m_HostVisibleReserveSize (rhs.m_HostVisibleReserveSize),
+    
+        //m_CurrUsedSize      (rhs.m_CurrUsedSize),
+        m_PeakUsedSize      (rhs.m_PeakUsedSize),
+        m_CurrAllocatedSize (rhs.m_CurrAllocatedSize),
+        m_PeakAllocatedSize (rhs.m_PeakAllocatedSize)
+    {
+        for(int i=0; i < m_CurrUsedSize.size(); ++i)
+            m_CurrUsedSize[i].store(rhs.m_CurrUsedSize[i].load());
+    }
+
     ~VulkanMemoryManager();
 
     VulkanMemoryManager            (const VulkanMemoryManager&) = delete;
-    VulkanMemoryManager            (VulkanMemoryManager&&)      = delete;
     VulkanMemoryManager& operator= (const VulkanMemoryManager&) = delete;
     VulkanMemoryManager& operator= (VulkanMemoryManager&&)      = delete;
     
+    VulkanMemoryAllocation Allocate(VkDeviceSize Size, VkDeviceSize Alignment, uint32_t MemoryTypeIndex, bool HostVisible);
 	VulkanMemoryAllocation Allocate(const VkMemoryRequirements& MemReqs, VkMemoryPropertyFlags MemoryProps);
     void ShrinkMemory();
 
-private:
+protected:
     friend class VulkanMemoryPage;
 
-    const std::string m_MgrName;
+    virtual void OnNewPageCreated(VulkanMemoryPage& NewPage){}
+    virtual void OnPageDestroy(VulkanMemoryPage& Page){}
+
+    std::string m_MgrName;
 
     const VulkanLogicalDevice&  m_LogicalDevice;
     const VulkanPhysicalDevice& m_PhysicalDevice;
 
     Diligent::IMemoryAllocator& m_Allocator;
 
+    std::mutex m_PagesMtx;
     std::unordered_multimap<uint32_t, VulkanMemoryPage> m_Pages;
-    std::mutex m_Mutex;
+    
     const VkDeviceSize m_DeviceLocalPageSize;
     const VkDeviceSize m_HostVisiblePageSize;
     const VkDeviceSize m_DeviceLocalReserveSize;
@@ -185,6 +213,8 @@ private:
     std::array<VkDeviceSize, 2> m_PeakUsedSize = {};
     std::array<VkDeviceSize, 2> m_CurrAllocatedSize = {};
     std::array<VkDeviceSize, 2> m_PeakAllocatedSize = {};
+
+    // If adding new member, do not forget to update move ctor
 };
 
 }

@@ -912,17 +912,17 @@ namespace Diligent
         }
     }
 
-    void DeviceContextVkImpl::UpdateBufferRegion(BufferVkImpl *pBuffVk, VulkanDynamicAllocation& Allocation, Uint64 DstOffset, Uint64 NumBytes)
+    void DeviceContextVkImpl::UpdateBufferRegion(BufferVkImpl *pBuffVk, VulkanUtilities::VulkanUploadAllocation& Allocation, Uint64 DstOffset, Uint64 NumBytes)
     {
         VERIFY(DstOffset + NumBytes <= pBuffVk->GetDesc().uiSizeInBytes, "Update region is out of buffer");
-        VERIFY_EXPR(NumBytes <= Allocation.Size);
+        VERIFY_EXPR(NumBytes <= Allocation.MemAllocation.Size);
         EnsureVkCmdBuffer();
         if(!pBuffVk->CheckAccessFlags(VK_ACCESS_TRANSFER_WRITE_BIT))
         {
             BufferMemoryBarrier(*pBuffVk, VK_ACCESS_TRANSFER_WRITE_BIT);
         }
         VkBufferCopy CopyRegion;
-        CopyRegion.srcOffset = Allocation.Offset;
+        CopyRegion.srcOffset = Allocation.MemAllocation.UnalignedOffset;
         CopyRegion.dstOffset = DstOffset;
         CopyRegion.size = NumBytes;
         m_CommandBuffer.CopyBuffer(Allocation.vkBuffer, pBuffVk->GetVkBuffer(), 1, &CopyRegion);
@@ -933,9 +933,12 @@ namespace Diligent
     {
         VERIFY(pBuffVk->GetDesc().Usage != USAGE_DYNAMIC, "Dynamic buffers must be updated via Map()");
         VERIFY_EXPR( static_cast<size_t>(NumBytes) == NumBytes );
-        auto TmpSpace = m_pDevice.RawPtr<RenderDeviceVkImpl>()->AllocateDynamicUploadSpace(m_ContextId, NumBytes, 0);
-	    memcpy(TmpSpace.CPUAddress, pData, static_cast<size_t>(NumBytes));
+        auto *pDeviceVkImpl = m_pDevice.RawPtr<RenderDeviceVkImpl>();
+        auto TmpSpace = pDeviceVkImpl->AllocateUploadSpace(m_ContextId, NumBytes);
+        auto CPUAddress = TmpSpace.MemAllocation.Page->GetCPUMemory();
+	    memcpy(reinterpret_cast<Uint8*>(CPUAddress) + TmpSpace.MemAllocation.UnalignedOffset, pData, static_cast<size_t>(NumBytes));
         UpdateBufferRegion(pBuffVk, TmpSpace, DstOffset, NumBytes);
+        pDeviceVkImpl->SafeReleaseVkObject(std::move(TmpSpace));
     }
 
     void DeviceContextVkImpl::CopyBufferRegion(BufferVkImpl *pSrcBuffVk, BufferVkImpl *pDstBuffVk, Uint64 SrcOffset, Uint64 DstOffset, Uint64 NumBytes)
@@ -1151,11 +1154,11 @@ namespace Diligent
         BufferVk.SetAccessFlags(NewAccessFlags);
     }
 
-    void* DeviceContextVkImpl::AllocateDynamicUploadSpace(BufferVkImpl* pBuffer, size_t NumBytes, size_t Alignment)
+    void* DeviceContextVkImpl::AllocateUploadSpace(BufferVkImpl* pBuffer, size_t NumBytes)
     {
         VERIFY(m_UploadAllocations.find(pBuffer) == m_UploadAllocations.end(), "Upload space has already been allocated for this buffer");
-        auto UploadAllocation = m_pDevice.RawPtr<RenderDeviceVkImpl>()->AllocateDynamicUploadSpace(m_ContextId, NumBytes, Alignment);
-        auto *CPUAddress = UploadAllocation.CPUAddress;
+        auto UploadAllocation = m_pDevice.RawPtr<RenderDeviceVkImpl>()->AllocateUploadSpace(m_ContextId, NumBytes);
+        auto *CPUAddress = reinterpret_cast<Uint8*>(UploadAllocation.MemAllocation.Page->GetCPUMemory()) + UploadAllocation.MemAllocation.UnalignedOffset;
         m_UploadAllocations.emplace(pBuffer, std::move(UploadAllocation));
         return CPUAddress;
     }
@@ -1167,10 +1170,11 @@ namespace Diligent
         {
 
 #ifdef _DEBUG
-	        auto CurrentFrame = m_pDevice.RawPtr<RenderDeviceVkImpl>()->GetCurrentFrameNumber();
-            VERIFY(it->second.FrameNum == CurrentFrame, "Dynamic allocation is out-of-date. Dynamic buffer \"", pBuffer->GetDesc().Name, "\" must be unmapped in the same frame it is used.");
+	        //auto CurrentFrame = m_pDevice.RawPtr<RenderDeviceVkImpl>()->GetCurrentFrameNumber();
+            //VERIFY(it->second.FrameNum == CurrentFrame, "Dynamic allocation is out-of-date. Dynamic buffer \"", pBuffer->GetDesc().Name, "\" must be unmapped in the same frame it is used.");
 #endif
             UpdateBufferRegion(pBuffer, it->second, 0, pBuffer->GetDesc().uiSizeInBytes);
+            m_pDevice.RawPtr<RenderDeviceVkImpl>()->SafeReleaseVkObject(std::move(it->second));
             m_UploadAllocations.erase(it);
         }
         else

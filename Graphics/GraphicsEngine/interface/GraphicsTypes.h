@@ -1340,16 +1340,6 @@ namespace Diligent
         /// If allocation from the current pool fails, the engine creates another one.
         DescriptorPoolSize DynamicDescriptorPoolSize { 256,  256, 2048, 2048,  256, 1024, 1024,  256,  256};
 
-        /// Initial size of the dynamic upload heap for immediate context.
-        /// This heap is used when dynamic buffers are mapped, and also to update resources.
-        /// If the space runs out, the engine doubles the heap size.
-        Uint32 ImmediateCtxDynamicHeapInitialSize = 256 * 1024;
-
-        /// Initial size of the dynamic upload heap for deferred contexts.
-        /// This heap is used when dynamic buffers are mapped, and also to update resources.
-        /// If the space runs out, the engine doubles the heap size.
-        Uint32 DeferredCtxDynamicHeapInitialSize = 32 * 1024;
-
         /// Allocation granularity for device-local memory
         Uint32 DeviceLocalMemoryPageSize = 16 << 20;
 
@@ -1365,6 +1355,24 @@ namespace Diligent
         /// The engine does not pre-allocate the memory, but rather keeps free
         /// pages when resources are released
         Uint32 HostVisibleMemoryReserveSize = 256 << 20;
+
+        /// Page size for the upload heap used by the immediate context.
+        /// Upload heap is used to update resources with UpdateData()
+        Uint32 ImmediateCtxUploadHeapPageSize = 1 << 20;
+
+        /// Page size for the upload heap used by the deferred contexts.
+        /// Upload heap is used to update resources with UpdateData()
+        Uint32 DeferredCtxUploadHeapPageSize = 1 << 20;
+
+        /// Reserve size for the upload heap used by the immediate context.
+        /// If the heap size exceeds this value, it will be shrunk when
+        /// resources are no longer required
+        Uint32 ImmediateCtxUploadHeapReserveSize = 4 << 20;
+
+        /// Reserve size for the upload heap used by the deferred contexts.
+        /// If the heap size exceeds this value, it will be shrunk when
+        /// resources are no longer required
+        Uint32 DeferredCtxUploadHeapReserveSize = 2 << 20;
     };
 
     /// Box

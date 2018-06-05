@@ -27,8 +27,8 @@ set(INCLUDE
     include/SwapChainVkImpl.h
     include/TextureVkImpl.h
     include/TextureViewVkImpl.h
-    include/VulkanTypeConversions.h
     include/VulkanErrors.h
+    include/VulkanTypeConversions.h
 )
 
 set(VULKAN_UTILS_INCLUDE 
@@ -42,6 +42,7 @@ set(VULKAN_UTILS_INCLUDE
     include/VulkanUtilities/VulkanMemoryManager.h
     include/VulkanUtilities/VulkanObjectWrappers.h
     include/VulkanUtilities/VulkanPhysicalDevice.h
+    include/VulkanUtilities/VulkanUploadHeap.h
 )
 
 
@@ -99,6 +100,7 @@ set(VULKAN_UTILS_SRC
     src/VulkanUtilities/VulkanLogicalDevice.cpp
     src/VulkanUtilities/VulkanMemoryManager.cpp
     src/VulkanUtilities/VulkanPhysicalDevice.cpp
+    src/VulkanUtilities/VulkanUploadHeap.cpp
 )
 
 #set(SHADERS
