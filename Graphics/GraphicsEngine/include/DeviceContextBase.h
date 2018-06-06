@@ -131,6 +131,8 @@ public:
 
     inline void ResetRenderTargets();
 
+    bool IsDeferred()const{return m_bIsDeferred;}
+
 protected:
     inline bool SetBlendFactors(const float *BlendFactors, int Dummy);
 

@@ -143,7 +143,7 @@ private:
     void CommitRenderTargets();
     void CommitViewports();
     void CommitScissorRects();
-
+    
     inline void EnsureVkCmdBuffer();
     inline void DisposeVkCmdBuffer(VkCommandBuffer vkCmdBuff);
     inline void DisposeCurrentCmdBuffer();

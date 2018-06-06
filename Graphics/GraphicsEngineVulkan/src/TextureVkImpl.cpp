@@ -367,32 +367,11 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters *pRefCounters,
             m_CurrentLayout, // dstImageLayout must be VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL or VK_IMAGE_LAYOUT_GENERAL (18.4)
             static_cast<uint32_t>(Regions.size()), Regions.data());
 
+	    pRenderDeviceVk->ExecuteAndDisposeTransientCmdBuff(vkCmdBuff, std::move(CmdPool));
 
-        // Command list fence should only be signaled when submitting cmd list
-        // from the immediate context, otherwise the basic requirement will be violated
-        // as in the scenario below
-        //                                                           
-        //  Signaled Fence  |        Immediate Context               |            InitContext            |
-        //                  |                                        |                                   |
-        //    N             |  Draw(ResourceX)                       |                                   |
-        //                  |  Release(ResourceX)                    |                                   |
-        //                  |   - (ResourceX, N) -> Release Queue    |                                   |
-        //                  |                                        | CopyResource()                    |
-        //   N+1            |                                        | CloseAndExecuteCommandContext()   |
-        //                  |                                        |                                   |
-        //   N+2            |  CloseAndExecuteCommandContext()       |                                   |
-        //                  |   - Cmd list is submitted with number  |                                   |
-        //                  |     N+1, but resource it references    |                                   |
-        //                  |     was added to the delete queue      |                                   |
-        //                  |     with value N                       |                                   |
-	    pRenderDeviceVk->ExecuteCommandBuffer(vkCmdBuff, false);
-        // Dispose command pool. No need to dispose cmd buffer as the 
-        // pool will be reset and all buffer resources will be reclaimed
-        pRenderDeviceVk->DisposeTransientCmdPool(std::move(CmdPool));
-
-        // Add reference to the object to the release queue to keep it alive
-        // until copy operation is complete. This must be done after
-        // submitting command list for execution!
+        // After command buffer is submitted, safe-release resources. This strategy
+        // is little overconservative as the resources will be released after the first
+        // command buffer submitted through the immediate context will be completed
         pRenderDeviceVk->SafeReleaseVkObject(std::move(StagingBuffer));
         pRenderDeviceVk->SafeReleaseVkObject(std::move(StagingMemoryAllocation));
     }

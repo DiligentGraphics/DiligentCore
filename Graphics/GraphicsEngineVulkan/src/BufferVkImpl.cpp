@@ -156,31 +156,33 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters *pRefCounters,
         BuffCopy.size = VkBuffCI.size;
         vkCmdCopyBuffer(vkCmdBuff, StagingBuffer, m_VulkanBuffer, 1, &BuffCopy);
 
-        // Command list fence should only be signaled when submitting cmd list
-        // from the immediate context, otherwise the basic requirement will be violated
-        // as in the scenario below
-        //                                                           
-        //  Signaled Fence  |        Immediate Context               |            InitContext            |
-        //                  |                                        |                                   |
-        //    N             |  Draw(ResourceX)                       |                                   |
-        //                  |  Release(ResourceX)                    |                                   |
-        //                  |   - (ResourceX, N) -> Release Queue    |                                   |
-        //                  |                                        | CopyResource()                    |
-        //   N+1            |                                        | CloseAndExecuteCommandContext()   |
-        //                  |                                        |                                   |
-        //   N+2            |  CloseAndExecuteCommandContext()       |                                   |
-        //                  |   - Cmd list is submitted with number  |                                   |
-        //                  |     N+1, but resource it references    |                                   |
-        //                  |     was added to the delete queue      |                                   |
-        //                  |     with value N                       |                                   |
-	    pRenderDeviceVk->ExecuteCommandBuffer(vkCmdBuff, false);
-        // Dispose command pool. No need to dispose cmd buffer as the 
-        // pool will be reset and all buffer resources will be reclaimed
-        pRenderDeviceVk->DisposeTransientCmdPool(std::move(CmdPool));
+	    pRenderDeviceVk->ExecuteAndDisposeTransientCmdBuff(vkCmdBuff, std::move(CmdPool));
 
-        // Add reference to the object to the release queue to keep it alive
-        // until copy operation is complete. This must be done after
-        // submitting command list for execution!
+
+        // After command buffer is submitted, safe-release staging resources. This strategy
+        // is little overconservative as the resources will only be released after the 
+        // first command buffer submitted through the immediate context is complete
+
+        // Next Cmd Buff| Next Fence |               This Thread                      |           Immediate Context
+        //              |            |                                                |
+        //      N       |     F      |                                                |
+        //              |            |                                                |
+        //              |            |  ExecuteAndDisposeTransientCmdBuff(vkCmdBuff)  |
+        //              |            |  - SubmittedCmdBuffNumber = N                  |
+        //              |            |  - SubmittedFenceValue = F                     |
+        //     N+1 -  - | -  F+1  -  |                                                |  
+        //              |            |  Release(StagingBuffer)                        |
+        //              |            |  - {N+1, StagingBuffer} -> Stale Objects       |
+        //              |            |                                                |
+        //              |            |                                                |
+        //              |            |                                                | ExecuteCommandBuffer()                                      
+        //              |            |                                                | - SubmittedCmdBuffNumber = N+1
+        //              |            |                                                | - SubmittedFenceValue = F+1
+        //     N+2 -  - | -  F+2  -  |  -   -   -   -   -   -   -   -   -   -   -   - | 
+        //              |            |                                                | - DiscardStaleVkObjects(N+1, F+1)  
+        //              |            |                                                |   - {F+1, StagingBuffer} -> Release Queue 
+        //              |            |                                                | 
+
         pRenderDeviceVk->SafeReleaseVkObject(std::move(StagingBuffer));
         pRenderDeviceVk->SafeReleaseVkObject(std::move(StagingMemoryAllocation));
     }
@@ -254,6 +256,7 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters *pRefCounters,
     }
 #endif
 }
+
 BufferVkImpl :: ~BufferVkImpl()
 {
     auto *pDeviceVkImpl = ValidatedCast<RenderDeviceVkImpl>(GetDevice());

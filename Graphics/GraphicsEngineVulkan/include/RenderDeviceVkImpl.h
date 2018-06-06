@@ -96,12 +96,11 @@ public:
     ICommandQueueVk *GetCmdQueue(){return m_pCommandQueue;}
     
 	void IdleGPU(bool ReleaseStaleObjects);
-    void ExecuteCommandBuffer(const VkSubmitInfo &SubmitInfo, bool DiscardStaleObjects);
-    void ExecuteCommandBuffer(VkCommandBuffer CmdBuff, bool DiscardStaleObjects);
-    
-    void AllocateTransientCmdPool(VulkanUtilities::CommandPoolWrapper& CmdPool, VkCommandBuffer& vkCmdBuff, const Char* DebugPoolName = nullptr);
-    void DisposeTransientCmdPool(VulkanUtilities::CommandPoolWrapper&& CmdPool);
+    // pImmediateCtx parameter is only used to make sure the command buffer is submitted from the immediate context
+    void ExecuteCommandBuffer(const VkSubmitInfo &SubmitInfo, class DeviceContextVkImpl* pImmediateCtx);
 
+    void AllocateTransientCmdPool(VulkanUtilities::CommandPoolWrapper& CmdPool, VkCommandBuffer& vkCmdBuff, const Char* DebugPoolName = nullptr);
+    void ExecuteAndDisposeTransientCmdBuff(VkCommandBuffer vkCmdBuff, VulkanUtilities::CommandPoolWrapper&& CmdPool);
 
     template<typename ObjectType>
     void SafeReleaseVkObject(ObjectType&& Object);
@@ -138,7 +137,14 @@ public:
 private:
     virtual void TestTextureFormat( TEXTURE_FORMAT TexFormat )override final;
     void ProcessReleaseQueue(Uint64 CompletedFenceValue);
-    void DiscardStaleVkObjects(Uint64 CmdListNumber, Uint64 FenceValue);
+    void DiscardStaleVkObjects(Uint64 CmdBuffNumber, Uint64 FenceValue);
+
+    // Submits command buffer for execution to the command queue
+    // Returns the submitted command buffer number and the fence value that has been set to signal by GPU
+    // Parameters:
+    //      * SubmittedCmdBuffNumber - submitted command buffer number
+    //      * SubmittedFenceValue    - fence value associated with the submitted command buffer
+    void SubmitCommandBuffer(const VkSubmitInfo& SubmitInfo, Uint64& SubmittedCmdBuffNumber, Uint64& SubmittedFenceValue);
 
     std::shared_ptr<VulkanUtilities::VulkanInstance> m_VulkanInstance;
     std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice> m_PhysicalDevice;
@@ -150,13 +156,12 @@ private:
     EngineVkAttribs m_EngineAttribs;
 
 	Atomics::AtomicInt64 m_FrameNumber;
-    Atomics::AtomicInt64 m_NextCmdListNumber;
-#if 0
+    Atomics::AtomicInt64 m_NextCmdBuffNumber;
+    
     // The following basic requirement guarantees correctness of resource deallocation:
     //
     //        A resource is never released before the last draw command referencing it is invoked on the immediate context
     //
-    // See http://diligentgraphics.com/diligent-engine/architecture/Vk/managing-resource-lifetimes/
 
     //
     // CPU
@@ -180,12 +185,6 @@ private:
     //                                                                          Resource X can
     //                                                                           be released
 
-    CommandListManager m_CmdListManager;
-
-    typedef std::unique_ptr<CommandContext, STDDeleterRawMem<CommandContext> > ContextPoolElemType;
-	std::vector< ContextPoolElemType, STDAllocatorRawMem<ContextPoolElemType> > m_ContextPool;
-    std::deque<CommandContext*, STDAllocatorRawMem<CommandContext*> > m_AvailableContexts;
-#endif
 	
     std::mutex m_ReleaseQueueMutex;
 

@@ -761,7 +761,7 @@ namespace Diligent
         // Submit command buffer even if there are no commands to release stale resources.
         //if(SubmitInfo.commandBufferCount != 0 || SubmitInfo.waitSemaphoreCount !=0 || SubmitInfo.signalSemaphoreCount != 0)
         {
-            pDeviceVkImpl->ExecuteCommandBuffer(SubmitInfo, true);
+            pDeviceVkImpl->ExecuteCommandBuffer(SubmitInfo, this);
         }
 
         m_WaitSemaphores.clear();
@@ -1056,6 +1056,9 @@ namespace Diligent
     void DeviceContextVkImpl::FinishCommandList(class ICommandList **ppCommandList)
     {
         auto vkCmdBuff = m_CommandBuffer.GetVkCmdBuffer();
+        auto err = vkEndCommandBuffer(vkCmdBuff);
+        VERIFY(err == VK_SUCCESS, "Failed to end command buffer");
+
         CommandListVkImpl *pCmdListVk( NEW_RC_OBJ(m_CmdListAllocator, "CommandListVkImpl instance", CommandListVkImpl)
                                                  (m_pDevice, this, vkCmdBuff) );
         pCmdListVk->QueryInterface( IID_CommandList, reinterpret_cast<IObject**>(ppCommandList) );
@@ -1079,8 +1082,27 @@ namespace Diligent
         }
 
         // First execute commands in this context
+        
+        // Note that not discarding resources when flushing the context does not help in case of multiple 
+        // deferred contexts, and resources must not be released until the command list is executed via 
+        // immediate context.
+        
+        // Next Cmd Buff| Next Fence |       Deferred Context  1      |       Deferred Contex 2        |   Immediate Context
+        //              |            |                                |                                |
+        //      N       |     F      |                                |                                |
+        //              |            | Draw(ResourceX)                |                                |
+        //              |            | Release(ResourceX)             | Draw(ResourceY)                |
+        //              |            | - {N, ResourceX} -> Stale Objs | Release(ResourceY)             |
+        //              |            |                                | - {N, ResourceY} -> Stale Objs |
+        //              |            |                                |                                |  ExecuteCmdList(CmdList1)
+        //              |            |                                |                                |  {F, ResourceX}-> Release queue
+        //              |            |                                |                                |  {F, ResourceY}-> Release queue
+        //     N+1      |    F+1     |                                |                                |
+        //              |            |                                |                                |  ExecuteCmdList(CmdList2)
+        //              |            |                                |                                |  - ResourceY is in release queue
+        //              |            |                                |                                |
         Flush();
-
+        
         InvalidateState();
 
         CommandListVkImpl* pCmdListVk = ValidatedCast<CommandListVkImpl>(pCommandList);
@@ -1089,7 +1111,11 @@ namespace Diligent
         pCmdListVk->Close(vkCmdBuff, pDeferredCtx);
         VERIFY(vkCmdBuff != VK_NULL_HANDLE, "Trying to execute empty command buffer");
         VERIFY_EXPR(pDeferredCtx);
-        m_pDevice.RawPtr<RenderDeviceVkImpl>()->ExecuteCommandBuffer(vkCmdBuff, true);
+        VkSubmitInfo SubmitInfo = {};
+        SubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        SubmitInfo.commandBufferCount = 1;
+        SubmitInfo.pCommandBuffers = &vkCmdBuff;
+        m_pDevice.RawPtr<RenderDeviceVkImpl>()->ExecuteCommandBuffer(SubmitInfo, this);
         // It is OK to dispose command buffer from another thread. We are not going to
         // record any commands and only need to add the buffer to the queue
         pDeferredCtx.RawPtr<DeviceContextVkImpl>()->DisposeVkCmdBuffer(vkCmdBuff);
