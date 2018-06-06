@@ -32,8 +32,8 @@
 #include "BufferVkImpl.h"
 #include "ShaderResourceBindingVkImpl.h"
 #include "DeviceContextVkImpl.h"
-
 #include "EngineMemory.h"
+
 namespace Diligent
 {
 
@@ -56,13 +56,12 @@ RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters *pRefCounters,
     /*m_CmdListManager(this),
     m_ContextPool(STD_ALLOCATOR_RAW_MEM(ContextPoolElemType, GetRawAllocator(), "Allocator for vector<unique_ptr<CommandContext>>")),
     m_AvailableContexts(STD_ALLOCATOR_RAW_MEM(CommandContext*, GetRawAllocator(), "Allocator for vector<CommandContext*>")),*/
-    m_VkObjReleaseQueue(STD_ALLOCATOR_RAW_MEM(ReleaseQueueElemType, GetRawAllocator(), "Allocator for queue<ReleaseQueueElemType>")),
-    m_StaleVkObjects(STD_ALLOCATOR_RAW_MEM(ReleaseQueueElemType, GetRawAllocator(), "Allocator for queue<ReleaseQueueElemType>")),
     m_DescriptorPools(STD_ALLOCATOR_RAW_MEM(DescriptorPoolManager, GetRawAllocator(), "Allocator for vector<DescriptorPoolManager>")),
     m_UploadHeaps(STD_ALLOCATOR_RAW_MEM(VulkanUtilities::VulkanUploadHeap, GetRawAllocator(), "Allocator for vector<VulkanUploadHeap>")),
     m_FramebufferCache(*this),
     m_TransientCmdPoolMgr(*m_LogicalVkDevice, pCmdQueue->GetQueueFamilyIndex(), VK_COMMAND_POOL_CREATE_TRANSIENT_BIT),
-    m_MemoryMgr("Global resource memory manager", *m_LogicalVkDevice, *m_PhysicalDevice, GetRawAllocator(), CreationAttribs.DeviceLocalMemoryPageSize, CreationAttribs.HostVisibleMemoryPageSize, CreationAttribs.DeviceLocalMemoryReserveSize, CreationAttribs.HostVisibleMemoryReserveSize)
+    m_MemoryMgr("Global resource memory manager", *m_LogicalVkDevice, *m_PhysicalDevice, GetRawAllocator(), CreationAttribs.DeviceLocalMemoryPageSize, CreationAttribs.HostVisibleMemoryPageSize, CreationAttribs.DeviceLocalMemoryReserveSize, CreationAttribs.HostVisibleMemoryReserveSize),
+    m_ReleaseQueue(GetRawAllocator())
 {
     m_DeviceCaps.DevType = DeviceType::Vulkan;
     m_DeviceCaps.MajorVersion = 1;
@@ -142,9 +141,6 @@ RenderDeviceVkImpl::~RenderDeviceVkImpl()
 	m_ContextPool.clear();
 #endif
 
-    VERIFY(m_StaleVkObjects.empty(), "Not all stale objects were destroyed");
-    VERIFY(m_VkObjReleaseQueue.empty(), "Release queue is not empty");
-    
     m_TransientCmdPoolMgr.DestroyPools(m_pCommandQueue->GetCompletedFenceValue());
 
     //if(m_PhysicalDevice)
@@ -265,7 +261,7 @@ void RenderDeviceVkImpl::ExecuteCommandBuffer(const VkSubmitInfo &SubmitInfo, De
     // As long as resources used by deferred contexts are not released until the command list
     // is executed through immediate context, this stategy always works.
 
-    DiscardStaleVkObjects(SubmittedCmdBuffNumber, SubmittedFenceValue);
+    m_ReleaseQueue.DiscardStaleResources(SubmittedCmdBuffNumber, SubmittedFenceValue);
     auto CompletedFenceValue = GetCompletedFenceValue();
     ProcessReleaseQueue(CompletedFenceValue);
     m_MemoryMgr.ShrinkMemory();
@@ -310,7 +306,7 @@ void RenderDeviceVkImpl::IdleGPU(bool ReleaseStaleObjects)
         // This is necessary to release outstanding references to the
         // swap chain buffers when it is resized in the middle of the frame.
         // Since GPU has been idled, it it is safe to do so
-        DiscardStaleVkObjects(CmdBuffNumber, FenceValue);
+        m_ReleaseQueue.DiscardStaleResources(CmdBuffNumber, FenceValue);
         // FenceValue has now been signaled by the GPU since we waited for it
         auto CompletedFenceValue = FenceValue;
         ProcessReleaseQueue(CompletedFenceValue);
@@ -408,95 +404,17 @@ void RenderDeviceVkImpl::FinishFrame(bool ReleaseAllResources)
 
     // Discard all remaining objects. This is important to do if there were 
     // no command lists submitted during the frame
-    DiscardStaleVkObjects(CmdBuffNumber, NextFenceValue);
+    m_ReleaseQueue.DiscardStaleResources(CmdBuffNumber, NextFenceValue);
     ProcessReleaseQueue(CompletedFenceValue);
     m_MemoryMgr.ShrinkMemory();
 
     Atomics::AtomicIncrement(m_FrameNumber);
 }
 
-template<typename ObjectType>
-void RenderDeviceVkImpl::SafeReleaseVkObject(ObjectType&& vkObject)
-{
-    class StaleVulkanObject : public RenderDeviceVkImpl::StaleVulkanObjectBase
-    {
-    public:
-        StaleVulkanObject(ObjectType&& Object) :
-            m_VkObject(std::move(Object))
-        {}
-
-        StaleVulkanObject             (const StaleVulkanObject&) = delete;
-        StaleVulkanObject             (StaleVulkanObject&&)      = delete;
-        StaleVulkanObject& operator = (const StaleVulkanObject&) = delete;
-        StaleVulkanObject& operator = (StaleVulkanObject&&)      = delete;
-
-    private:
-        ObjectType m_VkObject;
-    };
-
-    // When Vk object is released, it is first moved into the
-    // stale objects list. The list is moved into a release queue
-    // after the next command list is executed. 
-    std::lock_guard<std::mutex> LockGuard(m_StaleObjectsMutex);
-    m_StaleVkObjects.emplace_back(m_NextCmdBuffNumber, new StaleVulkanObject{std::move(vkObject)} );
-}
-
-#define INSTANTIATE_SAFE_RELEASE_VK_OBJECT(Type) template void RenderDeviceVkImpl::SafeReleaseVkObject<Type>(Type &&Object)
-
-INSTANTIATE_SAFE_RELEASE_VK_OBJECT(VulkanUtilities::BufferWrapper);
-INSTANTIATE_SAFE_RELEASE_VK_OBJECT(VulkanUtilities::BufferViewWrapper);
-INSTANTIATE_SAFE_RELEASE_VK_OBJECT(VulkanUtilities::ImageWrapper);
-INSTANTIATE_SAFE_RELEASE_VK_OBJECT(VulkanUtilities::ImageViewWrapper);
-INSTANTIATE_SAFE_RELEASE_VK_OBJECT(VulkanUtilities::SamplerWrapper);
-INSTANTIATE_SAFE_RELEASE_VK_OBJECT(VulkanUtilities::DeviceMemoryWrapper);
-INSTANTIATE_SAFE_RELEASE_VK_OBJECT(VulkanUtilities::RenderPassWrapper);
-INSTANTIATE_SAFE_RELEASE_VK_OBJECT(VulkanUtilities::PipelineWrapper);
-INSTANTIATE_SAFE_RELEASE_VK_OBJECT(VulkanUtilities::ShaderModuleWrapper);
-INSTANTIATE_SAFE_RELEASE_VK_OBJECT(VulkanUtilities::PipelineLayoutWrapper);
-INSTANTIATE_SAFE_RELEASE_VK_OBJECT(VulkanUtilities::FramebufferWrapper);
-INSTANTIATE_SAFE_RELEASE_VK_OBJECT(VulkanUtilities::DescriptorPoolWrapper);
-INSTANTIATE_SAFE_RELEASE_VK_OBJECT(VulkanUtilities::DescriptorSetLayoutWrapper);
-INSTANTIATE_SAFE_RELEASE_VK_OBJECT(VulkanUtilities::SemaphoreWrapper);
-INSTANTIATE_SAFE_RELEASE_VK_OBJECT(VulkanUtilities::CommandPoolWrapper);
-INSTANTIATE_SAFE_RELEASE_VK_OBJECT(VulkanUtilities::VulkanMemoryAllocation);
-INSTANTIATE_SAFE_RELEASE_VK_OBJECT(VulkanUtilities::VulkanUploadAllocation);
-
-#undef INSTANTIATE_SAFE_RELEASE_VK_OBJECT
-
-void RenderDeviceVkImpl::DiscardStaleVkObjects(Uint64 CmdBuffNumber, Uint64 FenceValue)
-{
-    // Only discard these stale objects that were released before CmdBuffNumber
-    // was executed
-    std::lock_guard<std::mutex> StaleObjectsLock(m_StaleObjectsMutex);
-    std::lock_guard<std::mutex> ReleaseQueueLock(m_ReleaseQueueMutex);
-    while (!m_StaleVkObjects.empty() )
-    {
-        auto &FirstStaleObj = m_StaleVkObjects.front();
-        if (FirstStaleObj.first <= CmdBuffNumber)
-        {
-            m_VkObjReleaseQueue.emplace_back(FenceValue, std::move(FirstStaleObj.second));
-            m_StaleVkObjects.pop_front();
-        }
-        else 
-            break;
-    }
-}
 
 void RenderDeviceVkImpl::ProcessReleaseQueue(Uint64 CompletedFenceValue)
 {
-    {
-        std::lock_guard<std::mutex> LockGuard(m_ReleaseQueueMutex);
-
-        // Release all objects whose associated fence value is at most CompletedFenceValue
-        while (!m_VkObjReleaseQueue.empty())
-        {
-            auto &FirstObj = m_VkObjReleaseQueue.front();
-            if (FirstObj.first <= CompletedFenceValue)
-                m_VkObjReleaseQueue.pop_front();
-            else
-                break;
-        }
-    }
+    m_ReleaseQueue.Purge(CompletedFenceValue);
 
     {
         // This is OK if other thread disposes descriptor heap allocation at this time

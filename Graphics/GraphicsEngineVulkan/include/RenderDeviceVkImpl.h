@@ -43,6 +43,7 @@
 #include "VulkanUtilities/VulkanUploadHeap.h"
 #include "FramebufferCache.h"
 #include "CommandPoolManager.h"
+#include "ResourceReleaseQueue.h"
 
 /// Namespace for the Direct3D11 implementation of the graphics engine
 namespace Diligent
@@ -103,7 +104,10 @@ public:
     void ExecuteAndDisposeTransientCmdBuff(VkCommandBuffer vkCmdBuff, VulkanUtilities::CommandPoolWrapper&& CmdPool);
 
     template<typename ObjectType>
-    void SafeReleaseVkObject(ObjectType&& Object);
+    void SafeReleaseVkObject(ObjectType&& Object)
+    {
+        m_ReleaseQueue.SafeReleaseResource(std::move(Object), m_NextCmdBuffNumber);
+    }
     
     void FinishFrame(bool ReleaseAllResources);
     virtual void FinishFrame()override final { FinishFrame(false); }
@@ -137,7 +141,6 @@ public:
 private:
     virtual void TestTextureFormat( TEXTURE_FORMAT TexFormat )override final;
     void ProcessReleaseQueue(Uint64 CompletedFenceValue);
-    void DiscardStaleVkObjects(Uint64 CmdBuffNumber, Uint64 FenceValue);
 
     // Submits command buffer for execution to the command queue
     // Returns the submitted command buffer number and the fence value that has been set to signal by GPU
@@ -185,20 +188,6 @@ private:
     //                                                                          Resource X can
     //                                                                           be released
 
-	
-    std::mutex m_ReleaseQueueMutex;
-
-    class StaleVulkanObjectBase
-    {
-    public:
-        virtual ~StaleVulkanObjectBase() = 0 {}
-    };
-
-    using ReleaseQueueElemType = std::pair<Uint64, std::unique_ptr<StaleVulkanObjectBase> >;
-    std::deque< ReleaseQueueElemType, STDAllocatorRawMem<ReleaseQueueElemType> > m_VkObjReleaseQueue;
-
-    std::mutex m_StaleObjectsMutex;
-    std::deque< ReleaseQueueElemType, STDAllocatorRawMem<ReleaseQueueElemType> > m_StaleVkObjects;
     FramebufferCache m_FramebufferCache;
 
     // [0] - Main descriptor pool
@@ -214,6 +203,7 @@ private:
     CommandPoolManager m_TransientCmdPoolMgr;
 
     VulkanUtilities::VulkanMemoryManager m_MemoryMgr;
+    ResourceReleaseQueue<> m_ReleaseQueue;
 };
 
 }

@@ -3,10 +3,11 @@ cmake_minimum_required (VERSION 3.6)
 project(GraphicsAccessories CXX)
 
 set(INTERFACE 
+    interface/GraphicsAccessories.h
+    interface/ResourceReleaseQueue.h
     interface/RingBuffer.h
     interface/VariableSizeAllocationsManager.h
     interface/VariableSizeGPUAllocationsManager.h
-    interface/GraphicsAccessories.h
 )
 
 set(SOURCE 
