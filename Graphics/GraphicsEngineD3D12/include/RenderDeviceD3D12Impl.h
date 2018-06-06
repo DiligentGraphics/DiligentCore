@@ -34,6 +34,7 @@
 #include "DynamicUploadHeap.h"
 #include "Atomics.h"
 #include "CommandQueueD3D12.h"
+#include "ResourceReleaseQueue.h"
 
 /// Namespace for the Direct3D11 implementation of the graphics engine
 namespace Diligent
@@ -96,8 +97,6 @@ public:
 
 private:
     virtual void TestTextureFormat( TEXTURE_FORMAT TexFormat )override final;
-    void ProcessReleaseQueue(Uint64 CompletedFenceValue);
-    void DiscardStaleD3D12Objects(Uint64 CmdListNumber, Uint64 FenceValue);
 
     /// D3D12 device
     CComPtr<ID3D12Device> m_pd3d12Device;
@@ -152,16 +151,11 @@ private:
 	std::deque<CommandContext*, STDAllocatorRawMem<CommandContext*> > m_AvailableContexts;
 	std::mutex m_ContextAllocationMutex;
 
-    std::mutex m_ReleaseQueueMutex;
-    typedef std::pair<Uint64, CComPtr<ID3D12Object> > ReleaseQueueElemType;
-    std::deque< ReleaseQueueElemType, STDAllocatorRawMem<ReleaseQueueElemType> > m_D3D12ObjReleaseQueue;
-
-    std::mutex m_StaleObjectsMutex;
-    std::deque< ReleaseQueueElemType, STDAllocatorRawMem<ReleaseQueueElemType> > m_StaleD3D12Objects;
-
     std::mutex m_UploadHeapMutex;
     typedef std::unique_ptr<DynamicUploadHeap, STDDeleterRawMem<DynamicUploadHeap> > UploadHeapPoolElemType;
     std::vector< UploadHeapPoolElemType, STDAllocatorRawMem<UploadHeapPoolElemType> > m_UploadHeaps;
+
+    ResourceReleaseQueue<StaticStaleResourceWrapper<CComPtr<ID3D12Object>>> m_ReleaseQueue;
 };
 
 }

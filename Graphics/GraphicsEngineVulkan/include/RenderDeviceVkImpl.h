@@ -203,7 +203,7 @@ private:
     CommandPoolManager m_TransientCmdPoolMgr;
 
     VulkanUtilities::VulkanMemoryManager m_MemoryMgr;
-    ResourceReleaseQueue<> m_ReleaseQueue;
+    ResourceReleaseQueue<DynamicStaleResourceWrapper> m_ReleaseQueue;
 };
 
 }

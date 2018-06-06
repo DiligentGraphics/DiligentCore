@@ -87,6 +87,7 @@ public:
     DynamicStaleResourceWrapper& operator = (DynamicStaleResourceWrapper&& rhs)noexcept
     {
         m_pStaleResource = std::move(rhs.m_pStaleResource);
+        return *this;
     }
 
     DynamicStaleResourceWrapper             (const DynamicStaleResourceWrapper&) = delete;
@@ -106,6 +107,38 @@ private:
     std::unique_ptr<StaleResourceBase> m_pStaleResource;
 };
 
+/// Helper class that wraps stale resources of the same type
+template<typename ResourceType>
+class StaticStaleResourceWrapper
+{
+public:
+    static StaticStaleResourceWrapper Create(ResourceType&& Resource)
+    {
+        return StaticStaleResourceWrapper{std::move(Resource)};
+    }
+
+    StaticStaleResourceWrapper(StaticStaleResourceWrapper&& rhs)noexcept :
+        m_StaleResource(std::move(rhs.m_StaleResource))
+    {}
+
+    StaticStaleResourceWrapper& operator = (StaticStaleResourceWrapper&& rhs)noexcept
+    {
+        m_StaleResource = std::move(rhs.m_StaleResource);
+        return *this;
+    }
+
+    StaticStaleResourceWrapper             (const StaticStaleResourceWrapper&) = delete;
+    StaticStaleResourceWrapper& operator = (const StaticStaleResourceWrapper&) = delete;
+
+
+private:
+    StaticStaleResourceWrapper(ResourceType&& StaleResource) : 
+        m_StaleResource(std::move(StaleResource))
+    {}
+
+    ResourceType m_StaleResource;
+};
+
 /// Facilitates safe resource destruction in D3D12 and Vulkan
 
 /// Resource destruction is a two-stage process:
@@ -116,7 +149,7 @@ private:
 /// * Resources are removed and actually destroyed from the queue when fence is signaled and the queue is Purged
 ///
 /// \tparam ResourceWrapperType -  Type of the resource wrapper used by the release queue.
-template<typename ResourceWrapperType = DynamicStaleResourceWrapper>
+template<typename ResourceWrapperType>
 class ResourceReleaseQueue
 {
 public:
@@ -170,6 +203,7 @@ public:
         std::lock_guard<std::mutex> LockGuard(m_ReleaseQueueMutex);
 
         // Release all objects whose associated fence value is at most CompletedFenceValue
+        // See http://diligentgraphics.com/diligent-engine/architecture/d3d12/managing-resource-lifetimes/
         while (!m_ReleaseQueue.empty())
         {
             auto &FirstObj = m_ReleaseQueue.front();

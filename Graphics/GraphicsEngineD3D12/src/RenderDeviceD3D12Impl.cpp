@@ -63,9 +63,8 @@ RenderDeviceD3D12Impl :: RenderDeviceD3D12Impl(IReferenceCounters *pRefCounters,
 	},
     m_ContextPool(STD_ALLOCATOR_RAW_MEM(ContextPoolElemType, GetRawAllocator(), "Allocator for vector<unique_ptr<CommandContext>>")),
     m_AvailableContexts(STD_ALLOCATOR_RAW_MEM(CommandContext*, GetRawAllocator(), "Allocator for vector<CommandContext*>")),
-    m_D3D12ObjReleaseQueue(STD_ALLOCATOR_RAW_MEM(ReleaseQueueElemType, GetRawAllocator(), "Allocator for queue<ReleaseQueueElemType>")),
-    m_StaleD3D12Objects(STD_ALLOCATOR_RAW_MEM(ReleaseQueueElemType, GetRawAllocator(), "Allocator for queue<ReleaseQueueElemType>")),
-    m_UploadHeaps(STD_ALLOCATOR_RAW_MEM(UploadHeapPoolElemType, GetRawAllocator(), "Allocator for vector<unique_ptr<DynamicUploadHeap>>"))
+    m_UploadHeaps(STD_ALLOCATOR_RAW_MEM(UploadHeapPoolElemType, GetRawAllocator(), "Allocator for vector<unique_ptr<DynamicUploadHeap>>")),
+    m_ReleaseQueue(GetRawAllocator())
 {
     m_DeviceCaps.DevType = DeviceType::D3D12;
     m_DeviceCaps.MajorVersion = 12;
@@ -145,7 +144,7 @@ void RenderDeviceD3D12Impl::CloseAndExecuteCommandContext(CommandContext *pCtx, 
         // cmd list number, not the fence value. This makes sure that basic requirement
         // is met even when the fence value is not incremented while executing 
         // the command list (as is the case with Unity command queue).
-        DiscardStaleD3D12Objects(CmdListNumber, FenceValue);
+        m_ReleaseQueue.DiscardStaleResources(CmdListNumber, FenceValue);
     }
 
     // DiscardAllocator() is thread-safe
@@ -182,8 +181,8 @@ void RenderDeviceD3D12Impl::IdleGPU(bool ReleaseStaleObjects)
         // This is necessary to release outstanding references to the
         // swap chain buffers when it is resized in the middle of the frame.
         // Since GPU has been idled, it it is safe to do so
-        DiscardStaleD3D12Objects(CmdListNumber, FenceValue);
-        ProcessReleaseQueue(FenceValue);
+        m_ReleaseQueue.DiscardStaleResources(CmdListNumber, FenceValue);
+        m_ReleaseQueue.Purge(FenceValue);
     }
 }
 
@@ -280,8 +279,8 @@ void RenderDeviceD3D12Impl::FinishFrame(bool ReleaseAllResources)
 
     // Discard all remaining objects. This is important to do if there were 
     // no command lists submitted during the frame
-    DiscardStaleD3D12Objects(CmdListNumber, NextFenceValue);
-    ProcessReleaseQueue(CompletedFenceValue);
+    m_ReleaseQueue.DiscardStaleResources(CmdListNumber, NextFenceValue);
+    m_ReleaseQueue.Purge(CompletedFenceValue);
 
     Atomics::AtomicIncrement(m_FrameNumber);
 }
@@ -339,43 +338,7 @@ void RenderDeviceD3D12Impl::SafeReleaseD3D12Object(ID3D12Object* pObj)
     // When D3D12 object is released, it is first moved into the
     // stale objects list. The list is moved into a release queue
     // when the next command list is executed. 
-    std::lock_guard<std::mutex> LockGuard(m_StaleObjectsMutex);
-    m_StaleD3D12Objects.emplace_back( m_NextCmdListNumber, CComPtr<ID3D12Object>(pObj) );
-}
-
-void RenderDeviceD3D12Impl::DiscardStaleD3D12Objects(Uint64 CmdListNumber, Uint64 FenceValue)
-{
-    // Only discard these stale objects that were released before CmdListNumber
-    // was executed
-    std::lock_guard<std::mutex> StaleObjectsLock(m_StaleObjectsMutex);
-    std::lock_guard<std::mutex> ReleaseQueueLock(m_ReleaseQueueMutex);
-    while (!m_StaleD3D12Objects.empty() )
-    {
-        auto &FirstStaleObj = m_StaleD3D12Objects.front();
-        if (FirstStaleObj.first <= CmdListNumber)
-        {
-            m_D3D12ObjReleaseQueue.emplace_back(FenceValue, std::move(FirstStaleObj.second));
-            m_StaleD3D12Objects.pop_front();
-        }
-        else 
-            break;
-    }
-}
-
-void RenderDeviceD3D12Impl::ProcessReleaseQueue(Uint64 CompletedFenceValue)
-{
-    std::lock_guard<std::mutex> LockGuard(m_ReleaseQueueMutex);
-
-    // Release all objects whose associated fence value is at most CompletedFenceValue
-    // See http://diligentgraphics.com/diligent-engine/architecture/d3d12/managing-resource-lifetimes/
-    while (!m_D3D12ObjReleaseQueue.empty())
-    {
-        auto &FirstObj = m_D3D12ObjReleaseQueue.front();
-        if (FirstObj.first <= CompletedFenceValue)
-            m_D3D12ObjReleaseQueue.pop_front();
-        else
-            break;
-    }
+    m_ReleaseQueue.SafeReleaseResource(CComPtr<ID3D12Object>(pObj), m_NextCmdListNumber);
 }
 
 bool CreateTestResource(ID3D12Device *pDevice, const D3D12_RESOURCE_DESC &ResDesc)
