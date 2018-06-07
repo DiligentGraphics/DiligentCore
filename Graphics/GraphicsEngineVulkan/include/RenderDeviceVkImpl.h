@@ -98,7 +98,8 @@ public:
     
 	void IdleGPU(bool ReleaseStaleObjects);
     // pImmediateCtx parameter is only used to make sure the command buffer is submitted from the immediate context
-    void ExecuteCommandBuffer(const VkSubmitInfo &SubmitInfo, class DeviceContextVkImpl* pImmediateCtx);
+    // The method returns fence value associated with the submitted command buffer
+    Uint64 ExecuteCommandBuffer(const VkSubmitInfo &SubmitInfo, class DeviceContextVkImpl* pImmediateCtx);
 
     void AllocateTransientCmdPool(VulkanUtilities::CommandPoolWrapper& CmdPool, VkCommandBuffer& vkCmdBuff, const Char* DebugPoolName = nullptr);
     void ExecuteAndDisposeTransientCmdBuff(VkCommandBuffer vkCmdBuff, VulkanUtilities::CommandPoolWrapper&& CmdPool);
@@ -123,11 +124,6 @@ public:
         return m_DescriptorPools[1 + CtxId].Allocate(SetLayout);
     }
 
-    VulkanUtilities::VulkanUploadAllocation AllocateUploadSpace(Uint32 CtxId, size_t Size)
-    {
-        return m_UploadHeaps[CtxId].Allocate(Size);
-    }
-    
     std::shared_ptr<const VulkanUtilities::VulkanInstance> GetVulkanInstance()const{return m_VulkanInstance;}
     const VulkanUtilities::VulkanPhysicalDevice &GetPhysicalDevice(){return *m_PhysicalDevice;}
     const auto &GetLogicalDevice(){return *m_LogicalVkDevice;}
@@ -194,8 +190,6 @@ private:
     // [1] - Immediate context dynamic descriptor pool
     // [2+] - Deferred context dynamic descriptor pool
     std::vector<DescriptorPoolManager, STDAllocatorRawMem<DescriptorPoolManager> > m_DescriptorPools;
-
-    std::vector<VulkanUtilities::VulkanUploadHeap, STDAllocatorRawMem<VulkanUtilities::VulkanUploadHeap>> m_UploadHeaps;
 
     // These one-time command pools are used by buffer and texture constructors to
     // issue copy commands. Vulkan requires that every command pool is used by one thread 

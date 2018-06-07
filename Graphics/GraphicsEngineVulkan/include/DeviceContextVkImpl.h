@@ -34,6 +34,7 @@
 #include "VulkanUtilities/VulkanCommandBuffer.h"
 #include "VulkanUtilities/VulkanUploadHeap.h"
 #include "VulkanDynamicHeap.h"
+#include "ResourceReleaseQueue.h"
 
 #ifdef _DEBUG
 #   define VERIFY_CONTEXT_BINDINGS
@@ -136,6 +137,8 @@ public:
         return m_CommandBuffer;
     }
 
+    void FinishFrame(Uint64 CompletedFenceValue);
+
 private:
     void CommitRenderPassAndFramebuffer(class PipelineStateVkImpl *pPipelineStateVk);
     void CommitVkVertexBuffers();
@@ -145,9 +148,10 @@ private:
     void CommitScissorRects();
     
     inline void EnsureVkCmdBuffer();
-    inline void DisposeVkCmdBuffer(VkCommandBuffer vkCmdBuff);
-    inline void DisposeCurrentCmdBuffer();
-    
+    inline void DisposeVkCmdBuffer(VkCommandBuffer vkCmdBuff, Uint64 FenceValue);
+    inline void DisposeCurrentCmdBuffer(Uint64 FenceValue);
+    void ReleaseStaleContextResources(Uint64 SubmittedCmdBufferNumber, Uint64 SubmittedFenceValue, Uint64 CompletedFenceValue);
+
     VulkanUtilities::VulkanCommandBuffer m_CommandBuffer;
 
     const Uint32 m_NumCommandsToFlush = 192;
@@ -161,7 +165,6 @@ private:
 
         Uint32 NumCommands = 0;
     }m_State;
-    
     
 #if 0
     GenerateMipsHelper m_MipsGenerator;
@@ -180,6 +183,13 @@ private:
     std::vector<VkSemaphore> m_SignalSemaphores;
 
     std::unordered_map<BufferVkImpl*, VulkanUtilities::VulkanUploadAllocation> m_UploadAllocations;
+    ResourceReleaseQueue<DynamicStaleResourceWrapper> m_ReleaseQueue;
+
+    VulkanUtilities::VulkanUploadHeap m_UploadHeap;
+
+    // Number of the command buffer currently being recorded by the context and that will
+    // be submitted next
+    Atomics::AtomicInt64 m_NextCmdBuffNumber;
 };
 
 }

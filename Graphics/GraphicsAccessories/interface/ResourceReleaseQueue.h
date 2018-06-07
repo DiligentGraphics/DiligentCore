@@ -175,7 +175,14 @@ public:
     }
 
 
-    void DiscardStaleResources(Uint64 CmdBuffNumber, Uint64 FenceValue)
+    /// Moves stale objects to the release queue
+    /// \param [in] SubmittedCmdBuffNumber - number of the last submitted command list. 
+    ///                                      All resources in the stale object list whose command list number is
+    ///                                      less than or equal to this value are moved to the release queue.
+    /// \param [in] FenceValue             - Fence value associated with the resources moved to the release queue.
+    ///                                      A resource will be destroyed by Purge() method when completed fence value
+    ///                                      is greater or equal to the fence value associated with the resource
+    void DiscardStaleResources(Uint64 SubmittedCmdBuffNumber, Uint64 FenceValue)
     {
         // Only discard these stale objects that were released before CmdBuffNumber
         // was executed
@@ -184,7 +191,7 @@ public:
         while (!m_StaleResources.empty() )
         {
             auto &FirstStaleObj = m_StaleResources.front();
-            if (FirstStaleObj.first <= CmdBuffNumber)
+            if (FirstStaleObj.first <= SubmittedCmdBuffNumber)
             {
                 m_ReleaseQueue.emplace_back(FenceValue, std::move(FirstStaleObj.second));
                 m_StaleResources.pop_front();

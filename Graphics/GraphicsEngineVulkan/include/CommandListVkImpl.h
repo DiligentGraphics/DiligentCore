@@ -37,10 +37,15 @@ class CommandListVkImpl : public CommandListBase<ICommandList>
 {
 public:
     typedef CommandListBase<ICommandList> TCommandListBase;
-    CommandListVkImpl(IReferenceCounters *pRefCounters, IRenderDevice *pDevice, IDeviceContext *pDeferredCtx, VkCommandBuffer vkCmdBuff) :
-        TCommandListBase(pRefCounters, pDevice),
-        m_pDeferredCtx(pDeferredCtx),
-        m_vkCmdBuff(vkCmdBuff)
+    CommandListVkImpl(IReferenceCounters*  pRefCounters, 
+                      IRenderDevice*       pDevice, 
+                      IDeviceContext*      pDeferredCtx, 
+                      VkCommandBuffer      vkCmdBuff,
+                      Uint64               CommandListNumber) :
+        TCommandListBase     (pRefCounters, pDevice),
+        m_pDeferredCtx       (pDeferredCtx),
+        m_vkCmdBuff          (vkCmdBuff),
+        m_CommandBufferNumber(CommandListNumber)
     {
     }
     
@@ -49,16 +54,21 @@ public:
         VERIFY(m_vkCmdBuff == VK_NULL_HANDLE && !m_pDeferredCtx, "Destroying command list that was never executed");
     }
 
-    void Close(VkCommandBuffer& CmdBuff, RefCntAutoPtr<IDeviceContext>& pDeferredCtx)
+    void Close(VkCommandBuffer&                CmdBuff,
+                RefCntAutoPtr<IDeviceContext>& pDeferredCtx,
+                Uint64&                        CommandBufferNumber)
     {
         CmdBuff = m_vkCmdBuff;
         m_vkCmdBuff = VK_NULL_HANDLE;
         pDeferredCtx = std::move(m_pDeferredCtx);
+        CommandBufferNumber = m_CommandBufferNumber;
+        m_CommandBufferNumber = 0;
     }
 
 private:
     RefCntAutoPtr<IDeviceContext> m_pDeferredCtx;
     VkCommandBuffer m_vkCmdBuff;
+    Uint64 m_CommandBufferNumber; // Command buffer number in the deferred context that recorded this command list
 };
 
 }

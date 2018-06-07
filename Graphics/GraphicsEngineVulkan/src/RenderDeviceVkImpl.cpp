@@ -37,15 +37,28 @@
 namespace Diligent
 {
 
-RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters *pRefCounters, 
-                                         IMemoryAllocator &RawMemAllocator, 
-                                         const EngineVkAttribs &CreationAttribs, 
-                                         ICommandQueueVk *pCmdQueue,
-                                         std::shared_ptr<VulkanUtilities::VulkanInstance> Instance,
-                                         std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice> PhysicalDevice,
-                                         std::shared_ptr<VulkanUtilities::VulkanLogicalDevice> LogicalDevice,
-                                         Uint32 NumDeferredContexts) : 
-    TRenderDeviceBase(pRefCounters, RawMemAllocator, NumDeferredContexts, sizeof(TextureVkImpl), sizeof(TextureViewVkImpl), sizeof(BufferVkImpl), sizeof(BufferViewVkImpl), sizeof(ShaderVkImpl), sizeof(SamplerVkImpl), sizeof(PipelineStateVkImpl), sizeof(ShaderResourceBindingVkImpl)),
+RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters*                                     pRefCounters, 
+                                         IMemoryAllocator&                                       RawMemAllocator, 
+                                         const EngineVkAttribs&                                  CreationAttribs, 
+                                         ICommandQueueVk*                                        pCmdQueue,
+                                         std::shared_ptr<VulkanUtilities::VulkanInstance>        Instance,
+                                         std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice>  PhysicalDevice,
+                                         std::shared_ptr<VulkanUtilities::VulkanLogicalDevice>   LogicalDevice,
+                                         Uint32                                                  NumDeferredContexts) : 
+    TRenderDeviceBase
+    {
+        pRefCounters,
+        RawMemAllocator,
+        NumDeferredContexts,
+        sizeof(TextureVkImpl),
+        sizeof(TextureViewVkImpl),
+        sizeof(BufferVkImpl),
+        sizeof(BufferViewVkImpl),
+        sizeof(ShaderVkImpl),
+        sizeof(SamplerVkImpl),
+        sizeof(PipelineStateVkImpl),
+        sizeof(ShaderResourceBindingVkImpl)
+    },
     m_VulkanInstance(Instance),
     m_PhysicalDevice(std::move(PhysicalDevice)),
     m_LogicalVkDevice(std::move(LogicalDevice)),
@@ -57,7 +70,6 @@ RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters *pRefCounters,
     m_ContextPool(STD_ALLOCATOR_RAW_MEM(ContextPoolElemType, GetRawAllocator(), "Allocator for vector<unique_ptr<CommandContext>>")),
     m_AvailableContexts(STD_ALLOCATOR_RAW_MEM(CommandContext*, GetRawAllocator(), "Allocator for vector<CommandContext*>")),*/
     m_DescriptorPools(STD_ALLOCATOR_RAW_MEM(DescriptorPoolManager, GetRawAllocator(), "Allocator for vector<DescriptorPoolManager>")),
-    m_UploadHeaps(STD_ALLOCATOR_RAW_MEM(VulkanUtilities::VulkanUploadHeap, GetRawAllocator(), "Allocator for vector<VulkanUploadHeap>")),
     m_FramebufferCache(*this),
     m_TransientCmdPoolMgr(*m_LogicalVkDevice, pCmdQueue->GetQueueFamilyIndex(), VK_COMMAND_POOL_CREATE_TRANSIENT_BIT),
     m_MemoryMgr("Global resource memory manager", *m_LogicalVkDevice, *m_PhysicalDevice, GetRawAllocator(), CreationAttribs.DeviceLocalMemoryPageSize, CreationAttribs.HostVisibleMemoryPageSize, CreationAttribs.DeviceLocalMemoryReserveSize, CreationAttribs.HostVisibleMemoryReserveSize),
@@ -90,7 +102,6 @@ RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters *pRefCounters,
         true // Thread-safe
     );
 
-    m_UploadHeaps.reserve(1 + NumDeferredContexts);
     for(Uint32 ctx = 0; ctx < 1 + NumDeferredContexts; ++ctx)
     {
         m_DescriptorPools.emplace_back(
@@ -110,18 +121,6 @@ RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters *pRefCounters,
             CreationAttribs.DynamicDescriptorPoolSize.MaxDescriptorSets,
             false // Dynamic descriptor pools need not to be thread-safe
         );
-
-        {
-            auto PageSize = ctx == 0 ? CreationAttribs.ImmediateCtxUploadHeapPageSize : CreationAttribs.DeferredCtxUploadHeapPageSize;
-            auto ReserveSize = ctx == 0 ? CreationAttribs.ImmediateCtxUploadHeapReserveSize : CreationAttribs.DeferredCtxUploadHeapReserveSize;
-            std::stringstream ss;
-            if(ctx == 0)
-                ss << "Immediate context";
-            else
-                ss << "Deferred context " << ctx-1;
-            ss << " upload heap";
-            m_UploadHeaps.emplace_back( ss.str(), *m_LogicalVkDevice, *m_PhysicalDevice, RawMemAllocator, PageSize, ReserveSize );
-        }
     }
 }
 
@@ -238,7 +237,7 @@ void RenderDeviceVkImpl::SubmitCommandBuffer(const VkSubmitInfo& SubmitInfo,
     Atomics::AtomicIncrement(m_NextCmdBuffNumber);
 }
 
-void RenderDeviceVkImpl::ExecuteCommandBuffer(const VkSubmitInfo &SubmitInfo, DeviceContextVkImpl* pImmediateCtx)
+Uint64 RenderDeviceVkImpl::ExecuteCommandBuffer(const VkSubmitInfo &SubmitInfo, DeviceContextVkImpl* pImmediateCtx)
 {
     // pImmediateCtx parameter is only used to make sure the command buffer is submitted from the immediate context
     // Stale objects MUST only be discarded when submitting cmd list from the immediate context
@@ -277,6 +276,7 @@ void RenderDeviceVkImpl::ExecuteCommandBuffer(const VkSubmitInfo &SubmitInfo, De
     	m_AvailableContexts.push_back(pCtx);
     }
 #endif
+    return SubmittedFenceValue;
 }
 
 
@@ -328,12 +328,15 @@ Uint64 RenderDeviceVkImpl::GetCompletedFenceValue()
 
 void RenderDeviceVkImpl::FinishFrame(bool ReleaseAllResources)
 {
+    auto CompletedFenceValue = ReleaseAllResources ? std::numeric_limits<Uint64>::max() : GetCompletedFenceValue();
+
     {
         if (auto pImmediateCtx = m_wpImmediateContext.Lock())
         {
             auto pImmediateCtxVk = pImmediateCtx.RawPtr<DeviceContextVkImpl>();
             if(pImmediateCtxVk->GetNumCommandsInCtx() != 0)
                 LOG_ERROR_MESSAGE("There are outstanding commands in the immediate device context when finishing the frame. This is an error and may cause unpredicted behaviour. Call Flush() to submit all commands for execution before finishing the frame");
+            pImmediateCtxVk->FinishFrame(ReleaseAllResources);
         }
 
         for (auto wpDeferredCtx : m_wpDeferredContexts)
@@ -343,18 +346,17 @@ void RenderDeviceVkImpl::FinishFrame(bool ReleaseAllResources)
                 auto pDeferredCtxVk = pDeferredCtx.RawPtr<DeviceContextVkImpl>();
                 if(pDeferredCtxVk->GetNumCommandsInCtx() != 0)
                     LOG_ERROR_MESSAGE("There are outstanding commands in the deferred device context when finishing the frame. This is an error and may cause unpredicted behaviour. Close all deferred contexts and execute them before finishing the frame");
+                pDeferredCtxVk->FinishFrame(CompletedFenceValue);
             }
         }
     }
-
-    auto CompletedFenceValue = ReleaseAllResources ? std::numeric_limits<Uint64>::max() : GetCompletedFenceValue();
 
     // We must use NextFenceValue here, NOT current value, because the 
     // fence value may or may not have been incremented when the last 
     // command list was submitted for execution (Unity only
     // increments fence value once per frame)
     Uint64 NextFenceValue = 0;
-    Uint64 CmdBuffNumber = 0;
+    Uint64 SubmittedCmdBuffNumber = 0;
     {
         // Lock the command queue to avoid other threads interfering with the GPU
         std::lock_guard<std::mutex> LockGuard(m_CmdQueueMutex);
@@ -362,39 +364,10 @@ void RenderDeviceVkImpl::FinishFrame(bool ReleaseAllResources)
         // Increment cmd list number while keeping queue locked. 
         // This guarantees that any Vk object released after the lock
         // is released, will be associated with the incremented cmd list number
-        CmdBuffNumber = m_NextCmdBuffNumber;
+        SubmittedCmdBuffNumber = m_NextCmdBuffNumber;
         Atomics::AtomicIncrement(m_NextCmdBuffNumber);
     }
-
-    {
-        // There is no need to lock as new heaps are only created during initialization
-        // time for every context
-        //std::lock_guard<std::mutex> LockGuard(m_UploadHeapMutex);
-        
-        // Upload heaps are used to update resource contents
-        // Initial resource data is uploaded using temporary one-time upload buffers, 
-        // so can be performed in parallel across frame boundaries
-        for (auto &UploadHeap : m_UploadHeaps)
-        {
-            // Currently upload heaps are free-threaded, so other threads must not allocate
-            // resources at the same time. This means that all dynamic buffers must be unmaped 
-            // in the same frame and all resources must be updated within boundaries of a single frame.
-            //
-            //    worker thread 3    | pDevice->CrateTexture(InitData) |    | pDevice->CrateBuffer(InitData) |    | pDevice->CrateTexture(InitData) |
-            //                                                                                               
-            //    worker thread 2     | pDfrdCtx2->UpdateResource()  |                                              ||
-            //                                                                                                      ||
-            //    worker thread 1       |  pDfrdCtx1->Map(WRITE_DISCARD) |    | pDfrdCtx1->UpdateResource()  |      ||
-            //                                                                                                      ||
-            //    main thread        |  pCtx->Map(WRITE_DISCARD )|  | pCtx->UpdateResource()  |                     ||   | Present() |
-            //
-            //
-            
-            UploadHeap.ShrinkMemory();
-        }
-    }
-
-
+    
     {
         // This is OK if other thread disposes descriptor heap allocation at this time
         // The allocation will be registered as part of the current frame
@@ -404,7 +377,7 @@ void RenderDeviceVkImpl::FinishFrame(bool ReleaseAllResources)
 
     // Discard all remaining objects. This is important to do if there were 
     // no command lists submitted during the frame
-    m_ReleaseQueue.DiscardStaleResources(CmdBuffNumber, NextFenceValue);
+    m_ReleaseQueue.DiscardStaleResources(SubmittedCmdBuffNumber, NextFenceValue);
     ProcessReleaseQueue(CompletedFenceValue);
     m_MemoryMgr.ShrinkMemory();
 
