@@ -124,7 +124,7 @@ void ShaderResourceLayoutVk::Initialize(const std::shared_ptr<const SPIRVShaderR
     AllocateMemory(LayoutDataAllocator);
 
     std::array<Uint32, SHADER_VARIABLE_TYPE_NUM_TYPES> CurrResInd = {};
-    std::array<Uint32, SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes > StaticResCacheSetSizes = {};
+    Uint32 StaticResCacheSize = 0;
 
     auto AddResource = [&](const SPIRVShaderResourceAttribs &Attribs)
     {
@@ -145,22 +145,13 @@ void ShaderResourceLayoutVk::Initialize(const std::shared_ptr<const SPIRVShaderR
         else
         {
             // If pipeline layout is not provided - use artifial layout to store
-            // static shader resources:
-            // Uniform buffers   at index SPIRVShaderResourceAttribs::ResourceType::UniformBuffer      (0)
-            // Storage buffers   at index SPIRVShaderResourceAttribs::ResourceType::StorageBuffer      (1)
-            // Unifrom txl buffs at index SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer (2)
-            // Storage txl buffs at index SPIRVShaderResourceAttribs::ResourceType::StorageTexelBuffer (3)
-            // Storage images    at index SPIRVShaderResourceAttribs::ResourceType::StorageImage       (4)
-            // Sampled images    at index SPIRVShaderResourceAttribs::ResourceType::SampledImage       (5)
-            // Atomic counters   at index SPIRVShaderResourceAttribs::ResourceType::AtomicCounter      (6)
-            // Separate images   at index SPIRVShaderResourceAttribs::ResourceType::SeparateImage      (7)
-            // Separate samplers at index SPIRVShaderResourceAttribs::ResourceType::SeparateSampler    (8)
+            // static shader resources in one large continuous descriptor set
             VERIFY_EXPR(pStaticResourceCache != nullptr);
 
-            DescriptorSet = Attribs.Type;
-            CacheOffset = StaticResCacheSetSizes[DescriptorSet];
-            Binding = CurrResInd[Attribs.VarType];
-            StaticResCacheSetSizes[DescriptorSet] += Attribs.ArraySize;
+            DescriptorSet = 0;
+            CacheOffset = StaticResCacheSize;
+            Binding = Attribs.Type;
+            StaticResCacheSize += Attribs.ArraySize;
         }
 
         ::new (&GetResource(Attribs.VarType, CurrResInd[Attribs.VarType]++)) VkResource( *this, Attribs, Binding, DescriptorSet, CacheOffset);
@@ -218,16 +209,8 @@ void ShaderResourceLayoutVk::Initialize(const std::shared_ptr<const SPIRVShaderR
     {
         // Initialize resource cache to store static resources
         VERIFY_EXPR(pPipelineLayout == nullptr && pSPIRV == nullptr);
-        pStaticResourceCache->InitializeSets(GetRawAllocator(), static_cast<Uint32>(StaticResCacheSetSizes.size()), StaticResCacheSetSizes.data());
+        pStaticResourceCache->InitializeSets(GetRawAllocator(), 1, &StaticResCacheSize);
         InitializeResourceMemoryInCache(*pStaticResourceCache);
-#ifdef _DEBUG
-        for(SPIRVShaderResourceAttribs::ResourceType ResType = SPIRVShaderResourceAttribs::ResourceType::UniformBuffer; 
-            ResType < SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes;
-            ResType = static_cast<SPIRVShaderResourceAttribs::ResourceType>(ResType +1))
-        {
-            VERIFY_EXPR(pStaticResourceCache->GetDescriptorSet(ResType).GetSize() == StaticResCacheSetSizes[ResType]);
-        }
-#endif
     }
 }
 
@@ -571,23 +554,13 @@ void ShaderResourceLayoutVk::InitializeStaticResources(const ShaderResourceLayou
     VERIFY(NumStaticResources == SrcLayout.m_NumResources[SHADER_VARIABLE_TYPE_STATIC], "Inconsistent number of static resources");
     VERIFY(SrcLayout.m_pResources->GetShaderType() == m_pResources->GetShaderType(), "Incosistent shader types");
 
-    // Static shader resources are stored as follows:
-    // Uniform buffers   at index SPIRVShaderResourceAttribs::ResourceType::UniformBuffer      (0)
-    // Storage buffers   at index SPIRVShaderResourceAttribs::ResourceType::StorageBuffer      (1)
-    // Unifrom txl buffs at index SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer (2)
-    // Storage txl buffs at index SPIRVShaderResourceAttribs::ResourceType::StorageTexelBuffer (3)
-    // Storage images    at index SPIRVShaderResourceAttribs::ResourceType::StorageImage       (4)
-    // Sampled images    at index SPIRVShaderResourceAttribs::ResourceType::SampledImage       (5)
-    // Atomic counters   at index SPIRVShaderResourceAttribs::ResourceType::AtomicCounter      (6)
-    // Separate images   at index SPIRVShaderResourceAttribs::ResourceType::SeparateImage      (7)
-    // Separate samplers at index SPIRVShaderResourceAttribs::ResourceType::SeparateSampler    (8)
-
+    // Static shader resources are stored in one large continuous descriptor set
     for(Uint32 r=0; r < NumStaticResources; ++r)
     {
         // Get resource attributes
         auto &DstRes = GetResource(SHADER_VARIABLE_TYPE_STATIC, r);
         const auto &SrcRes = SrcLayout.GetResource(SHADER_VARIABLE_TYPE_STATIC, r);
-        VERIFY(SrcRes.Binding == r, "Unexpected binding");
+        VERIFY(SrcRes.Binding == SrcRes.SpirvAttribs.Type, "Unexpected binding");
         VERIFY(SrcRes.SpirvAttribs.ArraySize == DstRes.SpirvAttribs.ArraySize, "Inconsistent array size");
 
         if(DstRes.SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler && 
