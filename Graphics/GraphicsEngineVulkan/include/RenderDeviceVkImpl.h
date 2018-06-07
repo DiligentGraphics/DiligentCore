@@ -115,18 +115,12 @@ public:
 
     DescriptorPoolAllocation AllocateDescriptorSet(VkDescriptorSetLayout SetLayout)
     {
-        return m_DescriptorPools[0].Allocate(SetLayout);
-    }
-    DescriptorPoolAllocation AllocateDynamicDescriptorSet(VkDescriptorSetLayout SetLayout, Uint32 CtxId)
-    {
-        // Descriptor pools are externally synchronized, meaning that the application must not allocate 
-        // and/or free descriptor sets from the same pool in multiple threads simultaneously (13.2.3)
-        return m_DescriptorPools[1 + CtxId].Allocate(SetLayout);
+        return m_MainDescriptorPool.Allocate(SetLayout);
     }
 
     std::shared_ptr<const VulkanUtilities::VulkanInstance> GetVulkanInstance()const{return m_VulkanInstance;}
-    const VulkanUtilities::VulkanPhysicalDevice &GetPhysicalDevice(){return *m_PhysicalDevice;}
-    const auto &GetLogicalDevice(){return *m_LogicalVkDevice;}
+    const VulkanUtilities::VulkanPhysicalDevice& GetPhysicalDevice(){return *m_PhysicalDevice;}
+    const VulkanUtilities::VulkanLogicalDevice& GetLogicalDevice(){return *m_LogicalVkDevice;}
     FramebufferCache& GetFramebufferCache(){return m_FramebufferCache;}
 
     VulkanUtilities::VulkanMemoryAllocation AllocateMemory(const VkMemoryRequirements& MemReqs, VkMemoryPropertyFlags MemoryProperties)
@@ -136,7 +130,7 @@ public:
 
 private:
     virtual void TestTextureFormat( TEXTURE_FORMAT TexFormat )override final;
-    void ProcessReleaseQueue(Uint64 CompletedFenceValue);
+    void ProcessStaleResources(Uint64 SubmittedCmdBufferNumber, Uint64 SubmittedFenceValue, Uint64 CompletedFenceValue);
 
     // Submits command buffer for execution to the command queue
     // Returns the submitted command buffer number and the fence value that has been set to signal by GPU
@@ -186,10 +180,7 @@ private:
 
     FramebufferCache m_FramebufferCache;
 
-    // [0] - Main descriptor pool
-    // [1] - Immediate context dynamic descriptor pool
-    // [2+] - Deferred context dynamic descriptor pool
-    std::vector<DescriptorPoolManager, STDAllocatorRawMem<DescriptorPoolManager> > m_DescriptorPools;
+    DescriptorPoolManager m_MainDescriptorPool;
 
     // These one-time command pools are used by buffer and texture constructors to
     // issue copy commands. Vulkan requires that every command pool is used by one thread 

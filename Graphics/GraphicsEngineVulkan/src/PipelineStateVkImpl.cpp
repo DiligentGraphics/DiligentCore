@@ -557,9 +557,8 @@ ShaderResourceCacheVk* PipelineStateVkImpl::CommitAndTransitionShaderResources(I
 #endif
         }
     
-        auto *pDeviceVkImpl = ValidatedCast<RenderDeviceVkImpl>(GetDevice());
         // Allocate vulkan descriptor set for dynamic resources
-        m_PipelineLayout.AllocateDynamicDescriptorSet(pDeviceVkImpl, pCtxVkImpl, ResourceCache);
+        m_PipelineLayout.AllocateDynamicDescriptorSet(pCtxVkImpl, ResourceCache);
         // Commit all dynamic resource descriptors
         for(Uint32 s=0; s < m_NumShaders; ++s)
         {

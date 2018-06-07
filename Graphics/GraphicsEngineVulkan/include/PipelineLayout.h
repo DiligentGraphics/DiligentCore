@@ -78,8 +78,7 @@ public:
 
     // Allocates Vulkan descriptor set for dynamic resources and assigns the
     // set to the resource cache
-    void AllocateDynamicDescriptorSet(RenderDeviceVkImpl*     pDevicVkImpl,
-                                      DeviceContextVkImpl*    pCtxVkImpl,
+    void AllocateDynamicDescriptorSet(DeviceContextVkImpl*    pCtxVkImpl,
                                       ShaderResourceCacheVk&  ResourceCache)const;
 
     // Binds Vulkan descriptor sets to the command buffer in the cmd context

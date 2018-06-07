@@ -66,27 +66,12 @@ RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters*                    
     m_EngineAttribs(CreationAttribs),
 	m_FrameNumber(0),
     m_NextCmdBuffNumber(0),
-    /*m_CmdListManager(this),
-    m_ContextPool(STD_ALLOCATOR_RAW_MEM(ContextPoolElemType, GetRawAllocator(), "Allocator for vector<unique_ptr<CommandContext>>")),
-    m_AvailableContexts(STD_ALLOCATOR_RAW_MEM(CommandContext*, GetRawAllocator(), "Allocator for vector<CommandContext*>")),*/
-    m_DescriptorPools(STD_ALLOCATOR_RAW_MEM(DescriptorPoolManager, GetRawAllocator(), "Allocator for vector<DescriptorPoolManager>")),
     m_FramebufferCache(*this),
-    m_TransientCmdPoolMgr(*m_LogicalVkDevice, pCmdQueue->GetQueueFamilyIndex(), VK_COMMAND_POOL_CREATE_TRANSIENT_BIT),
-    m_MemoryMgr("Global resource memory manager", *m_LogicalVkDevice, *m_PhysicalDevice, GetRawAllocator(), CreationAttribs.DeviceLocalMemoryPageSize, CreationAttribs.HostVisibleMemoryPageSize, CreationAttribs.DeviceLocalMemoryReserveSize, CreationAttribs.HostVisibleMemoryReserveSize),
-    m_ReleaseQueue(GetRawAllocator())
-{
-    m_DeviceCaps.DevType = DeviceType::Vulkan;
-    m_DeviceCaps.MajorVersion = 1;
-    m_DeviceCaps.MinorVersion = 0;
-    m_DeviceCaps.bSeparableProgramSupported = True;
-    m_DeviceCaps.bMultithreadedResourceCreationSupported = True;
-    for(int fmt = 1; fmt < m_TextureFormatsInfo.size(); ++fmt)
-        m_TextureFormatsInfo[fmt].Supported = true; // We will test every format on a specific hardware device
-
-    m_DescriptorPools.reserve(2 + NumDeferredContexts);
-    m_DescriptorPools.emplace_back(
+    m_MainDescriptorPool
+    {
         m_LogicalVkDevice, 
-        std::vector<VkDescriptorPoolSize>{
+        std::vector<VkDescriptorPoolSize>
+        {
             {VK_DESCRIPTOR_TYPE_SAMPLER,                CreationAttribs.MainDescriptorPoolSize.NumSeparateSamplerDescriptors},
             {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, CreationAttribs.MainDescriptorPoolSize.NumCombinedSamplerDescriptors},
             {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,          CreationAttribs.MainDescriptorPoolSize.NumSampledImageDescriptors},
@@ -98,30 +83,19 @@ RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters*                    
             //{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, CreationAttribs.MainDescriptorPoolSize.NumUniformBufferDescriptors },
             //{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, CreationAttribs.MainDescriptorPoolSize.NumStorageBufferDescriptors },
         },
-        CreationAttribs.MainDescriptorPoolSize.MaxDescriptorSets,
-        true // Thread-safe
-    );
-
-    for(Uint32 ctx = 0; ctx < 1 + NumDeferredContexts; ++ctx)
-    {
-        m_DescriptorPools.emplace_back(
-            m_LogicalVkDevice, 
-            std::vector<VkDescriptorPoolSize>{
-                {VK_DESCRIPTOR_TYPE_SAMPLER,                CreationAttribs.DynamicDescriptorPoolSize.NumSeparateSamplerDescriptors},
-                {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, CreationAttribs.DynamicDescriptorPoolSize.NumCombinedSamplerDescriptors},
-                {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,          CreationAttribs.DynamicDescriptorPoolSize.NumSampledImageDescriptors},
-                {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,          CreationAttribs.DynamicDescriptorPoolSize.NumStorageImageDescriptors},
-                {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,   CreationAttribs.DynamicDescriptorPoolSize.NumUniformTexelBufferDescriptors},
-                {VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,   CreationAttribs.DynamicDescriptorPoolSize.NumStorageTexelBufferDescriptors},
-                {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         CreationAttribs.DynamicDescriptorPoolSize.NumUniformBufferDescriptors },
-                {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,         CreationAttribs.DynamicDescriptorPoolSize.NumStorageBufferDescriptors },
-                //{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, CreationAttribs.DynamicDescriptorPoolSize.NumUniformBufferDescriptors },
-                //{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, CreationAttribs.DynamicDescriptorPoolSize.NumStorageBufferDescriptors },
-            },
-            CreationAttribs.DynamicDescriptorPoolSize.MaxDescriptorSets,
-            false // Dynamic descriptor pools need not to be thread-safe
-        );
-    }
+        CreationAttribs.MainDescriptorPoolSize.MaxDescriptorSets
+    },
+    m_TransientCmdPoolMgr(*m_LogicalVkDevice, pCmdQueue->GetQueueFamilyIndex(), VK_COMMAND_POOL_CREATE_TRANSIENT_BIT),
+    m_MemoryMgr("Global resource memory manager", *m_LogicalVkDevice, *m_PhysicalDevice, GetRawAllocator(), CreationAttribs.DeviceLocalMemoryPageSize, CreationAttribs.HostVisibleMemoryPageSize, CreationAttribs.DeviceLocalMemoryReserveSize, CreationAttribs.HostVisibleMemoryReserveSize),
+    m_ReleaseQueue(GetRawAllocator())
+{
+    m_DeviceCaps.DevType = DeviceType::Vulkan;
+    m_DeviceCaps.MajorVersion = 1;
+    m_DeviceCaps.MinorVersion = 0;
+    m_DeviceCaps.bSeparableProgramSupported = True;
+    m_DeviceCaps.bMultithreadedResourceCreationSupported = True;
+    for(int fmt = 1; fmt < m_TextureFormatsInfo.size(); ++fmt)
+        m_TextureFormatsInfo[fmt].Supported = true; // We will test every format on a specific hardware device
 }
 
 RenderDeviceVkImpl::~RenderDeviceVkImpl()
@@ -135,10 +109,6 @@ RenderDeviceVkImpl::~RenderDeviceVkImpl()
     // Call FinishFrame() again to destroy resources in
     // release queues
     FinishFrame(true);
-
-#if 0
-	m_ContextPool.clear();
-#endif
 
     m_TransientCmdPoolMgr.DestroyPools(m_pCommandQueue->GetCompletedFenceValue());
 
@@ -260,35 +230,22 @@ Uint64 RenderDeviceVkImpl::ExecuteCommandBuffer(const VkSubmitInfo &SubmitInfo, 
     // As long as resources used by deferred contexts are not released until the command list
     // is executed through immediate context, this stategy always works.
 
-    m_ReleaseQueue.DiscardStaleResources(SubmittedCmdBuffNumber, SubmittedFenceValue);
     auto CompletedFenceValue = GetCompletedFenceValue();
-    ProcessReleaseQueue(CompletedFenceValue);
-    m_MemoryMgr.ShrinkMemory();
+    ProcessStaleResources(SubmittedCmdBuffNumber, SubmittedFenceValue, CompletedFenceValue);
 
-#if 0
-    // DiscardAllocator() is thread-safe
-	m_CmdListManager.DiscardAllocator(FenceValue, pAllocator);
-    
-    pCtx->DiscardDynamicDescriptors(FenceValue);
-
-    {
-	    std::lock_guard<std::mutex> LockGuard(m_ContextAllocationMutex);
-    	m_AvailableContexts.push_back(pCtx);
-    }
-#endif
     return SubmittedFenceValue;
 }
 
 
 void RenderDeviceVkImpl::IdleGPU(bool ReleaseStaleObjects) 
 { 
-    Uint64 FenceValue = 0;
-    Uint64 CmdBuffNumber = 0;
+    Uint64 SubmittedFenceValue = 0;
+    Uint64 SubmittedCmdBuffNumber = 0;
 
     {
         // Lock the command queue to avoid other threads interfering with the GPU
         std::lock_guard<std::mutex> LockGuard(m_CmdQueueMutex);
-        FenceValue = m_pCommandQueue->GetNextFenceValue();
+        SubmittedFenceValue = m_pCommandQueue->GetNextFenceValue();
         m_pCommandQueue->IdleGPU();
 
         m_LogicalVkDevice->WaitIdle();
@@ -296,7 +253,7 @@ void RenderDeviceVkImpl::IdleGPU(bool ReleaseStaleObjects)
         // Increment cmd list number while keeping queue locked. 
         // This guarantees that any Vk object released after the lock
         // is released, will be associated with the incremented cmd list number
-        CmdBuffNumber = m_NextCmdBuffNumber;
+        SubmittedCmdBuffNumber = m_NextCmdBuffNumber;
         Atomics::AtomicIncrement(m_NextCmdBuffNumber);
     }
 
@@ -306,11 +263,10 @@ void RenderDeviceVkImpl::IdleGPU(bool ReleaseStaleObjects)
         // This is necessary to release outstanding references to the
         // swap chain buffers when it is resized in the middle of the frame.
         // Since GPU has been idled, it it is safe to do so
-        m_ReleaseQueue.DiscardStaleResources(CmdBuffNumber, FenceValue);
-        // FenceValue has now been signaled by the GPU since we waited for it
-        auto CompletedFenceValue = FenceValue;
-        ProcessReleaseQueue(CompletedFenceValue);
-        m_MemoryMgr.ShrinkMemory();
+
+        // SubmittedFenceValue has now been signaled by the GPU since we waited for it
+        auto CompletedFenceValue = SubmittedFenceValue;
+        ProcessStaleResources(SubmittedCmdBuffNumber, SubmittedFenceValue, CompletedFenceValue);
     }
 }
 
@@ -368,33 +324,23 @@ void RenderDeviceVkImpl::FinishFrame(bool ReleaseAllResources)
         Atomics::AtomicIncrement(m_NextCmdBuffNumber);
     }
     
-    {
-        // This is OK if other thread disposes descriptor heap allocation at this time
-        // The allocation will be registered as part of the current frame
-        for(auto &Pool : m_DescriptorPools)
-            Pool.DisposeAllocations(NextFenceValue);
-    }
-
     // Discard all remaining objects. This is important to do if there were 
-    // no command lists submitted during the frame
-    m_ReleaseQueue.DiscardStaleResources(SubmittedCmdBuffNumber, NextFenceValue);
-    ProcessReleaseQueue(CompletedFenceValue);
-    m_MemoryMgr.ShrinkMemory();
+    // no command lists submitted during the frame. All stale resources will
+    // be associated with the next fence value and thus will not be released
+    // until the next command list is finished by the GPU
+    ProcessStaleResources(SubmittedCmdBuffNumber, NextFenceValue, CompletedFenceValue);
+    
 
     Atomics::AtomicIncrement(m_FrameNumber);
 }
 
 
-void RenderDeviceVkImpl::ProcessReleaseQueue(Uint64 CompletedFenceValue)
+void RenderDeviceVkImpl::ProcessStaleResources(Uint64 SubmittedCmdBufferNumber, Uint64 SubmittedFenceValue, Uint64 CompletedFenceValue)
 {
+    m_ReleaseQueue.DiscardStaleResources(SubmittedCmdBufferNumber, SubmittedFenceValue);
     m_ReleaseQueue.Purge(CompletedFenceValue);
-
-    {
-        // This is OK if other thread disposes descriptor heap allocation at this time
-        // The allocation will be registered as part of the current frame
-        for(auto &Pool : m_DescriptorPools)
-            Pool.ReleaseStaleAllocations(CompletedFenceValue);
-    }
+    m_MainDescriptorPool.ReleaseStaleAllocations(CompletedFenceValue);
+    m_MemoryMgr.ShrinkMemory();
 }
 
 

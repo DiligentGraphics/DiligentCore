@@ -406,14 +406,13 @@ void PipelineLayout::InitResourceCache(RenderDeviceVkImpl *pDeviceVkImpl, Shader
     }
 }
 
-void PipelineLayout::AllocateDynamicDescriptorSet(RenderDeviceVkImpl*     pDevicVkImpl,
-                                                  DeviceContextVkImpl*    pCtxVkImpl,
+void PipelineLayout::AllocateDynamicDescriptorSet(DeviceContextVkImpl*    pCtxVkImpl,
                                                   ShaderResourceCacheVk&  ResourceCache)const
 {
     const auto &DynSet = m_LayoutMgr.GetDescriptorSet(SHADER_VARIABLE_TYPE_DYNAMIC);
     if (DynSet.SetIndex >= 0)
     {
-        auto DynamicSetAllocation = pDevicVkImpl->AllocateDynamicDescriptorSet(DynSet.VkLayout, pCtxVkImpl->GetContextId());
+        auto DynamicSetAllocation = pCtxVkImpl->AllocateDynamicDescriptorSet(DynSet.VkLayout);
         auto &DynamicSetCache = ResourceCache.GetDescriptorSet(DynSet.SetIndex);
         DynamicSetCache.AssignDescriptorSetAllocation(std::move(DynamicSetAllocation));
     }

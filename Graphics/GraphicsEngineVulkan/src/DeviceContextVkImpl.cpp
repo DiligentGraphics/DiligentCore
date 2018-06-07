@@ -64,6 +64,25 @@ namespace Diligent
             bIsDeferred ? Attribs.DeferredCtxUploadHeapPageSize    : Attribs.ImmediateCtxUploadHeapPageSize,
             bIsDeferred ? Attribs.DeferredCtxUploadHeapReserveSize : Attribs.ImmediateCtxUploadHeapReserveSize
         },
+        // Descriptor pools must always be thread-safe as for a deferred context, Finish() may be called from another thread
+        m_DynamicDescriptorPool
+        {
+            pDeviceVkImpl->GetLogicalDevice().GetSharedPtr(),
+            std::vector<VkDescriptorPoolSize>
+            {
+                {VK_DESCRIPTOR_TYPE_SAMPLER,                Attribs.DynamicDescriptorPoolSize.NumSeparateSamplerDescriptors},
+                {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, Attribs.DynamicDescriptorPoolSize.NumCombinedSamplerDescriptors},
+                {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,          Attribs.DynamicDescriptorPoolSize.NumSampledImageDescriptors},
+                {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,          Attribs.DynamicDescriptorPoolSize.NumStorageImageDescriptors},
+                {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,   Attribs.DynamicDescriptorPoolSize.NumUniformTexelBufferDescriptors},
+                {VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,   Attribs.DynamicDescriptorPoolSize.NumStorageTexelBufferDescriptors},
+                {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         Attribs.DynamicDescriptorPoolSize.NumUniformBufferDescriptors },
+                {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,         Attribs.DynamicDescriptorPoolSize.NumStorageBufferDescriptors },
+                //{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, Attribs.DynamicDescriptorPoolSize.NumUniformBufferDescriptors },
+                //{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, Attribs.DynamicDescriptorPoolSize.NumStorageBufferDescriptors },
+            },
+            Attribs.DynamicDescriptorPoolSize.MaxDescriptorSets,
+        },
         m_NextCmdBuffNumber(0)
     {
 #if 0
@@ -752,6 +771,7 @@ namespace Diligent
     {
         m_ReleaseQueue.Purge(CompletedFenceValue);
         m_UploadHeap.ShrinkMemory();
+        m_DynamicDescriptorPool.ReleaseStaleAllocations(CompletedFenceValue);
     }
 
     void DeviceContextVkImpl::ReleaseStaleContextResources(Uint64 SubmittedCmdBufferNumber, Uint64 SubmittedFenceValue, Uint64 CompletedFenceValue)
@@ -759,6 +779,8 @@ namespace Diligent
         m_ReleaseQueue.DiscardStaleResources(SubmittedCmdBufferNumber, SubmittedFenceValue);
         m_ReleaseQueue.Purge(CompletedFenceValue);
         m_UploadHeap.ShrinkMemory();
+        m_DynamicDescriptorPool.DisposeAllocations(SubmittedFenceValue);
+        m_DynamicDescriptorPool.ReleaseStaleAllocations(CompletedFenceValue);
     }
 
     void DeviceContextVkImpl::Flush()

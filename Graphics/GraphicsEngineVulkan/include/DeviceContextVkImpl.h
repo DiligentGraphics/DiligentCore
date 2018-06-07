@@ -35,6 +35,7 @@
 #include "VulkanUtilities/VulkanUploadHeap.h"
 #include "VulkanDynamicHeap.h"
 #include "ResourceReleaseQueue.h"
+#include "DescriptorPoolManager.h"
 
 #ifdef _DEBUG
 #   define VERIFY_CONTEXT_BINDINGS
@@ -139,6 +140,13 @@ public:
 
     void FinishFrame(Uint64 CompletedFenceValue);
 
+    DescriptorPoolAllocation AllocateDynamicDescriptorSet(VkDescriptorSetLayout SetLayout)
+    {
+        // Descriptor pools are externally synchronized, meaning that the application must not allocate 
+        // and/or free descriptor sets from the same pool in multiple threads simultaneously (13.2.3)
+        return m_DynamicDescriptorPool.Allocate(SetLayout);
+    }
+
 private:
     void CommitRenderPassAndFramebuffer(class PipelineStateVkImpl *pPipelineStateVk);
     void CommitVkVertexBuffers();
@@ -186,6 +194,7 @@ private:
     ResourceReleaseQueue<DynamicStaleResourceWrapper> m_ReleaseQueue;
 
     VulkanUtilities::VulkanUploadHeap m_UploadHeap;
+    DescriptorPoolManager m_DynamicDescriptorPool;
 
     // Number of the command buffer currently being recorded by the context and that will
     // be submitted next

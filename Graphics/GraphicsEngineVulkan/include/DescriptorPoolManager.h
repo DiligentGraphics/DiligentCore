@@ -96,12 +96,10 @@ class DescriptorPoolManager
 public:
     DescriptorPoolManager(std::shared_ptr<const VulkanUtilities::VulkanLogicalDevice> LogicalDevice,
                           std::vector<VkDescriptorPoolSize> PoolSizes,
-                          uint32_t MaxSets,
-                          bool IsThreadSafe)noexcept:
+                          uint32_t MaxSets)noexcept:
         m_LogicalDevice(std::move(LogicalDevice)),
         m_PoolSizes(std::move(PoolSizes)),
-        m_MaxSets(MaxSets),
-        m_IsThreadSafe(IsThreadSafe)
+        m_MaxSets(MaxSets)
     {
         CreateNewPool();
     }
@@ -111,7 +109,6 @@ public:
     DescriptorPoolManager(DescriptorPoolManager&& rhs)noexcept : 
         m_PoolSizes(std::move(rhs.m_PoolSizes)),
         m_MaxSets(std::move(rhs.m_MaxSets)),
-        m_IsThreadSafe(std::move(rhs.m_IsThreadSafe)),
         //m_Mutex(std::move(rhs.m_Mutex)), mutex is not movable
         m_LogicalDevice(std::move(rhs.m_LogicalDevice)),
         m_DescriptorPools(std::move(rhs.m_DescriptorPools)),
@@ -119,7 +116,7 @@ public:
     {
     }
 
-    DescriptorPoolManager(const DescriptorPoolManager&)              = delete;
+    DescriptorPoolManager             (const DescriptorPoolManager&) = delete;
     DescriptorPoolManager& operator = (const DescriptorPoolManager&) = delete;
     DescriptorPoolManager& operator = (DescriptorPoolManager&&)      = delete;
 
@@ -135,12 +132,13 @@ private:
 
     const std::vector<VkDescriptorPoolSize> m_PoolSizes;
     const uint32_t m_MaxSets;
-    const bool m_IsThreadSafe;
 
     std::mutex m_Mutex;
     std::shared_ptr<const VulkanUtilities::VulkanLogicalDevice> m_LogicalDevice;
     std::deque< std::unique_ptr<VulkanUtilities::VulkanDescriptorPool> > m_DescriptorPools;
     std::vector< std::pair<VkDescriptorSet, VulkanUtilities::VulkanDescriptorPool*> > m_ReleasedAllocations;
+
+    // When adding new members, do not forget to update move ctor!
 };
 
 }
