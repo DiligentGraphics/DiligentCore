@@ -173,7 +173,14 @@ public:
     template<bool VerifyOnly>
     void TransitionResources(DeviceContextVkImpl *pCtxVkImpl);
 
+    void GetDynamicBufferOffset(Uint32 CtxId, std::vector<uint32_t>& Offsets)const;
+
 private:
+
+    Resource* GetFirstResourcePtr()
+    {
+        return reinterpret_cast<Resource*>(reinterpret_cast<DescriptorSet*>(m_pMemory) + m_NumSets);
+    }
 
     IMemoryAllocator*   m_pAllocator     = nullptr; 
     void*               m_pMemory        = nullptr;

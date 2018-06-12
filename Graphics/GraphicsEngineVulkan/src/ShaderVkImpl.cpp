@@ -59,13 +59,9 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters *pRefCounters, RenderDeviceVkImpl 
     auto *pResources = new (pRawMem) SPIRVShaderResources(Allocator, pRenderDeviceVk, m_SPIRV, m_Desc);
     m_pShaderResources.reset(pResources, STDDeleterRawMem<SPIRVShaderResources>(Allocator));
 
-    // Clone only static resources that will be set directly through the shader object
-    std::array<SHADER_VARIABLE_TYPE, 1> VarTypes = {SHADER_VARIABLE_TYPE_STATIC};
-    m_StaticResLayout.Initialize(m_pShaderResources, GetRawAllocator(), 
-                                 VarTypes.data(), static_cast<Uint32>(VarTypes.size()),
-                                 &m_StaticResCache, nullptr, nullptr);
-    m_StaticVarsMgr.Initialize(m_StaticResLayout, GetRawAllocator(), VarTypes.data(), 
-                               static_cast<Uint32>(VarTypes.size()), m_StaticResCache);
+    m_StaticResLayout.InitializeStaticResourceLayout(m_pShaderResources, GetRawAllocator(), m_StaticResCache);
+    // m_StaticResLayout only contains static resources, so reference all of them
+    m_StaticVarsMgr.Initialize(m_StaticResLayout, GetRawAllocator(), nullptr,  0, m_StaticResCache);
 }
 
 ShaderVkImpl::~ShaderVkImpl()

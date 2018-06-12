@@ -36,28 +36,6 @@
 namespace Diligent
 {
 
-void PipelineStateVkImpl::ParseResourceLayoutAndCreateShader(IShader *pShader, Uint32 LayoutInd)
-{
-    VERIFY_EXPR(pShader);
-
-    auto *pShaderVk = ValidatedCast<ShaderVkImpl>(pShader);
-    
-    auto pDeviceVkImpl = ValidatedCast<RenderDeviceVkImpl>(pShaderVk->GetDevice());
-    const auto &LogicalDevice = pDeviceVkImpl->GetLogicalDevice();
-    
-    std::vector<uint32_t> SPIRV = pShaderVk->GetSPIRV();
-    m_ShaderResourceLayouts[LayoutInd].Initialize(pShaderVk->GetShaderResources(), GetRawAllocator(), nullptr, 0, nullptr, &SPIRV, &m_PipelineLayout);
-
-    VkShaderModuleCreateInfo ShaderModuleCI = {};
-    ShaderModuleCI.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    ShaderModuleCI.pNext = NULL;
-    ShaderModuleCI.flags = 0;
-    ShaderModuleCI.codeSize = SPIRV.size() * sizeof(uint32_t);
-    ShaderModuleCI.pCode = SPIRV.data();
-    m_ShaderModules[LayoutInd] = LogicalDevice.CreateShaderModule(ShaderModuleCI, m_Desc.Name);
-}
-
-
 void PipelineStateVkImpl::CreateRenderPass(const VulkanUtilities::VulkanLogicalDevice &LogicalDevice)
 {
     // NOTE: framebuffer cache and clear commands assume that depth buffer
@@ -153,12 +131,61 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters *pRefCounters, Ren
     m_pDefaultShaderResBinding(nullptr, STDDeleter<ShaderResourceBindingVkImpl, FixedBlockMemoryAllocator>(pDeviceVk->GetSRBAllocator()) )
 {
     const auto &LogicalDevice = pDeviceVk->GetLogicalDevice();
+
+    // Initialize shader resource layouts
     auto &ShaderResLayoutAllocator = GetRawAllocator();
+    std::array<std::shared_ptr<const SPIRVShaderResources>, MaxShadersInPipeline> ShaderResources;
+    std::array<std::vector<uint32_t>,                       MaxShadersInPipeline> ShaderSPIRVs;
     auto *pRawMem = ALLOCATE(ShaderResLayoutAllocator, "Raw memory for ShaderResourceLayoutVk", sizeof(ShaderResourceLayoutVk) * m_NumShaders);
     m_ShaderResourceLayouts = reinterpret_cast<ShaderResourceLayoutVk*>(pRawMem);
     for(Uint32 s=0; s < m_NumShaders; ++s)
+    {
         new (m_ShaderResourceLayouts + s) ShaderResourceLayoutVk(*this, LogicalDevice, GetRawAllocator());
+        auto *pShaderVk = ValidatedCast<ShaderVkImpl>(m_ppShaders[s]);
+        ShaderResources[s] = pShaderVk->GetShaderResources();
+        ShaderSPIRVs[s] = pShaderVk->GetSPIRV();
+    }
+    ShaderResourceLayoutVk::Initialize(m_NumShaders, m_ShaderResourceLayouts, ShaderResources.data(), GetRawAllocator(), ShaderSPIRVs.data(), m_PipelineLayout);
+    m_PipelineLayout.Finalize(LogicalDevice);
 
+
+    // Create shader modules and initialize shader stages
+    std::array<VkPipelineShaderStageCreateInfo, MaxShadersInPipeline> ShaderStages = {};
+    for (Uint32 s = 0; s < m_NumShaders; ++s)
+    {
+        auto *pShader = m_ppShaders[s];
+        auto ShaderType = pShader->GetDesc().ShaderType;
+
+        auto &StageCI = ShaderStages[s];
+        StageCI.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        StageCI.pNext = nullptr;
+        StageCI.flags = 0; //  reserved for future use
+        switch (ShaderType)
+        {
+            case SHADER_TYPE_VERTEX:   StageCI.stage = VK_SHADER_STAGE_VERTEX_BIT;                  break;
+            case SHADER_TYPE_HULL:     StageCI.stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;    break;
+            case SHADER_TYPE_DOMAIN:   StageCI.stage = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT; break;
+            case SHADER_TYPE_GEOMETRY: StageCI.stage = VK_SHADER_STAGE_GEOMETRY_BIT;                break;
+            case SHADER_TYPE_PIXEL:    StageCI.stage = VK_SHADER_STAGE_FRAGMENT_BIT;                break;
+            case SHADER_TYPE_COMPUTE:  StageCI.stage = VK_SHADER_STAGE_COMPUTE_BIT;                 break;
+            default: UNEXPECTED("Unknown shader type");
+        }
+
+        VkShaderModuleCreateInfo ShaderModuleCI = {};
+        ShaderModuleCI.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+        ShaderModuleCI.pNext = nullptr;
+        ShaderModuleCI.flags = 0;
+        const auto& SPIRV = ShaderSPIRVs[s];
+        ShaderModuleCI.codeSize = SPIRV.size() * sizeof(uint32_t);
+        ShaderModuleCI.pCode = SPIRV.data();
+        m_ShaderModules[s] = LogicalDevice.CreateShaderModule(ShaderModuleCI, m_Desc.Name);
+
+        StageCI.module = m_ShaderModules[s];
+        StageCI.pName = "main"; // entry point
+        StageCI.pSpecializationInfo = nullptr;
+    }
+
+    // Create pipeline
     if (m_Desc.IsComputePipeline)
     {
         auto &ComputePipeline = m_Desc.ComputePipeline;
@@ -175,21 +202,9 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters *pRefCounters, Ren
         PipelineCI.basePipelineHandle = VK_NULL_HANDLE; // a pipeline to derive from
         PipelineCI.basePipelineIndex = 0; // an index into the pCreateInfos parameter to use as a pipeline to derive from
 
-        auto &CSStage = PipelineCI.stage;
-        CSStage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-        CSStage.pNext = nullptr;
-        CSStage.flags = 0; // reserved for future use
-        CSStage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
-
-        ParseResourceLayoutAndCreateShader(ComputePipeline.pCS, 0);
-        CSStage.module = m_ShaderModules[0];
-
-        m_PipelineLayout.Finalize(LogicalDevice);
+        PipelineCI.stage = ShaderStages[0];
         PipelineCI.layout = m_PipelineLayout.GetVkPipelineLayout();
         
-        CSStage.pName = "main";
-        CSStage.pSpecializationInfo = nullptr;
-
         m_Pipeline = LogicalDevice.CreateComputePipeline(PipelineCI, VK_NULL_HANDLE, m_Desc.Name);
     }
     else
@@ -208,37 +223,8 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters *pRefCounters, Ren
 #endif  
 
         PipelineCI.stageCount = m_NumShaders;
-        std::vector<VkPipelineShaderStageCreateInfo> Stages(PipelineCI.stageCount);
-        for (Uint32 s = 0; s < m_NumShaders; ++s)
-        {
-            auto *pShader = m_ppShaders[s];
-            auto ShaderType = pShader->GetDesc().ShaderType;
-
-            auto &StageCI = Stages[s];
-            StageCI.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-            StageCI.pNext = nullptr;
-            StageCI.flags = 0; //  reserved for future use
-            switch(ShaderType)
-            {
-                case SHADER_TYPE_VERTEX:   StageCI.stage = VK_SHADER_STAGE_VERTEX_BIT;   break;
-                case SHADER_TYPE_HULL:     StageCI.stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT; break;
-                case SHADER_TYPE_DOMAIN:   StageCI.stage = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT; break;
-                case SHADER_TYPE_GEOMETRY: StageCI.stage = VK_SHADER_STAGE_GEOMETRY_BIT; break;
-                case SHADER_TYPE_PIXEL:    StageCI.stage = VK_SHADER_STAGE_FRAGMENT_BIT; break;
-                default: UNEXPECTED("Unknown shader type");
-            }
-            
-            ParseResourceLayoutAndCreateShader(pShader, s);
-
-            StageCI.module = m_ShaderModules[s];
-            StageCI.pName = "main"; // entry point
-            StageCI.pSpecializationInfo = nullptr;
-        }
-
-        m_PipelineLayout.Finalize(LogicalDevice);
+        PipelineCI.pStages = ShaderStages.data();
         PipelineCI.layout = m_PipelineLayout.GetVkPipelineLayout();
-
-        PipelineCI.pStages = Stages.data();
         
         VkPipelineVertexInputStateCreateInfo VertexInputStateCI = {};
         std::array<VkVertexInputBindingDescription, iMaxLayoutElements> BindingDescriptions;

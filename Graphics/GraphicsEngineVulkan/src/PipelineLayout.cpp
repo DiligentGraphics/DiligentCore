@@ -61,8 +61,8 @@ public:
     ResourceTypeToVkDescriptorType()
     {
         static_assert(SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes == 9, "Please add corresponding decriptor type");
-        m_Map[SPIRVShaderResourceAttribs::ResourceType::UniformBuffer]      = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        m_Map[SPIRVShaderResourceAttribs::ResourceType::StorageBuffer]      = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        m_Map[SPIRVShaderResourceAttribs::ResourceType::UniformBuffer]      = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+        m_Map[SPIRVShaderResourceAttribs::ResourceType::StorageBuffer]      = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
         m_Map[SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer] = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
         m_Map[SPIRVShaderResourceAttribs::ResourceType::StorageTexelBuffer] = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
         m_Map[SPIRVShaderResourceAttribs::ResourceType::StorageImage]       = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
@@ -99,6 +99,12 @@ void PipelineLayout::DescriptorSetLayoutManager::DescriptorSetLayout::AddBinding
     ReserveMemory(NumLayoutBindings + 1, MemAllocator);
     pBindings[NumLayoutBindings++] = Binding;
     TotalDescriptors += Binding.descriptorCount;
+    if(Binding.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC || 
+       Binding.descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC)
+    {
+        VERIFY(NumDynamicDescriptors + Binding.descriptorCount <= std::numeric_limits<decltype(NumDynamicDescriptors)>::max(), "Number of dynamic descriptors exceeds max representable value");
+        NumDynamicDescriptors += static_cast<decltype(NumDynamicDescriptors)>(Binding.descriptorCount);
+    }
 }
 
 size_t PipelineLayout::DescriptorSetLayoutManager::DescriptorSetLayout::GetMemorySize(Uint32 NumBindings)
@@ -197,9 +203,10 @@ PipelineLayout::DescriptorSetLayoutManager::DescriptorSetLayout::~DescriptorSetL
 
 bool PipelineLayout::DescriptorSetLayoutManager::DescriptorSetLayout::operator == (const DescriptorSetLayout& rhs)const
 {
-    if(TotalDescriptors  != rhs.TotalDescriptors ||
-       SetIndex          != rhs.SetIndex         ||
-       NumLayoutBindings != rhs.NumLayoutBindings)
+    if(TotalDescriptors      != rhs.TotalDescriptors      ||
+       SetIndex              != rhs.SetIndex              ||
+       NumDynamicDescriptors != rhs.NumDynamicDescriptors ||
+       NumLayoutBindings     != rhs.NumLayoutBindings)
         return false;
 
     for(uint32_t b=0; b < NumLayoutBindings; ++b)
@@ -222,7 +229,7 @@ bool PipelineLayout::DescriptorSetLayoutManager::DescriptorSetLayout::operator =
 
 size_t PipelineLayout::DescriptorSetLayoutManager::DescriptorSetLayout::GetHash()const
 {
-    size_t Hash = ComputeHash(SetIndex, NumLayoutBindings, TotalDescriptors);
+    size_t Hash = ComputeHash(SetIndex, NumLayoutBindings, TotalDescriptors, NumDynamicDescriptors);
     for (uint32_t b = 0; b < NumLayoutBindings; ++b)
     {
         const auto &B = pBindings[b];
@@ -308,12 +315,12 @@ size_t PipelineLayout::DescriptorSetLayoutManager::GetHash()const
     return Hash;
 }
 
-void PipelineLayout::DescriptorSetLayoutManager::AllocateResourceSlot(const SPIRVShaderResourceAttribs &ResAttribs,
-                                                                      VkSampler vkStaticSampler,
-                                                                      SHADER_TYPE ShaderType,
-                                                                      Uint32 &DescriptorSet,
-                                                                      Uint32 &Binding,
-                                                                      Uint32 &OffsetInCache)
+void PipelineLayout::DescriptorSetLayoutManager::AllocateResourceSlot(const SPIRVShaderResourceAttribs& ResAttribs,
+                                                                      VkSampler                         vkStaticSampler,
+                                                                      SHADER_TYPE                       ShaderType,
+                                                                      Uint32&                           DescriptorSet,
+                                                                      Uint32&                           Binding,
+                                                                      Uint32&                           OffsetInCache)
 {
     auto& DescrSet = GetDescriptorSet(ResAttribs.VarType);
     if (DescrSet.SetIndex < 0)
@@ -427,6 +434,9 @@ void PipelineLayout::BindDescriptorSets(DeviceContextVkImpl*    pCtxVkImpl,
 
     VERIFY(m_LayoutMgr.GetDescriptorSet(SHADER_VARIABLE_TYPE_STATIC).SetIndex == m_LayoutMgr.GetDescriptorSet(SHADER_VARIABLE_TYPE_MUTABLE).SetIndex, 
            "Static and mutable variables are expected to share the same descriptor set");
+#ifdef _DEBUG
+    Uint32 TotalDynamicDescriptors = 0;
+#endif
     for(SHADER_VARIABLE_TYPE VarType = SHADER_VARIABLE_TYPE_MUTABLE; VarType <= SHADER_VARIABLE_TYPE_DYNAMIC; VarType = static_cast<SHADER_VARIABLE_TYPE>(VarType+1))
     {
         const auto &Set = m_LayoutMgr.GetDescriptorSet(VarType);
@@ -437,12 +447,19 @@ void PipelineLayout::BindDescriptorSets(DeviceContextVkImpl*    pCtxVkImpl,
             vkSets[Set.SetIndex] = ResourceCache.GetDescriptorSet(Set.SetIndex).GetVkDescriptorSet();
             VERIFY(vkSets[Set.SetIndex] != VK_NULL_HANDLE, "Descriptor set must not be null");
         }
+#ifdef _DEBUG
+        TotalDynamicDescriptors += Set.NumDynamicDescriptors;
+#endif
     }
 
 #ifdef _DEBUG
     for (uint32_t i = 0; i < SetCount; ++i)
         VERIFY(vkSets[i] != VK_NULL_HANDLE, "Descriptor set must not be null");
 #endif
+
+    std::vector<uint32_t> DynamicOffsets;
+    ResourceCache.GetDynamicBufferOffset(pCtxVkImpl->GetContextId(), DynamicOffsets);
+    VERIFY(DynamicOffsets.size() == TotalDynamicDescriptors, "Incorrect size of dynamic descriptor array");
 
     auto& CmdBuffer = pCtxVkImpl->GetCommandBuffer();
     // vkCmdBindDescriptorSets causes the sets numbered [firstSet .. firstSet+descriptorSetCount-1] to use the 
@@ -453,7 +470,10 @@ void PipelineLayout::BindDescriptorSets(DeviceContextVkImpl*    pCtxVkImpl,
                                  m_LayoutMgr.GetVkPipelineLayout(), 
                                  0, // First set
                                  SetCount,
-                                 vkSets.data());
+                                 vkSets.data(),
+                                 // dynamicOffsetCount must equal the total number of dynamic descriptors in the sets being bound (13.2.5)
+                                 static_cast<uint32_t>(DynamicOffsets.size()),
+                                 DynamicOffsets.data());
 }
 
 }

@@ -33,6 +33,7 @@
 #include "VulkanDynamicHeap.h"
 #include "VulkanUtilities/VulkanObjectWrappers.h"
 #include "VulkanUtilities/VulkanMemoryManager.h"
+#include "VulkanDynamicHeap.h"
 
 namespace Diligent
 {
@@ -67,6 +68,7 @@ public:
 //    void DbgVerifyDynamicAllocation(Uint32 ContextId);
 //#endif
 
+    Uint32 GetDynamicOffset(Uint32 CtxId)const{return 0;}
 
     VkBuffer GetVkBuffer()const override final
     {

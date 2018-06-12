@@ -39,4 +39,7 @@ namespace Diligent
 
     /// Maximum number of viewports.
     static constexpr Uint32 MaxViewports = 16;
+
+    /// Maximum number of shader stages in a pipeline.
+    static constexpr Uint32 MaxShadersInPipeline = 5;
 }

@@ -91,8 +91,6 @@ private:
 
     void CreateRenderPass(const VulkanUtilities::VulkanLogicalDevice &LogicalDevice);
 
-    void ParseResourceLayoutAndCreateShader(IShader *pShader, Uint32 LayoutInd);
-
     DummyShaderVariable m_DummyVar;
     
     // Looks like there may be a bug in msvc: when allocators are declared as 

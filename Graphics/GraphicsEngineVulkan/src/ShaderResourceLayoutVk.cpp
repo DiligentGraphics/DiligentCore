@@ -53,11 +53,41 @@ ShaderResourceLayoutVk::~ShaderResourceLayoutVk()
         Resources[r].~VkResource();
 }
 
-void ShaderResourceLayoutVk::AllocateMemory(IMemoryAllocator &Allocator)
+void ShaderResourceLayoutVk::AllocateMemory(std::shared_ptr<const SPIRVShaderResources>  pSrcResources, 
+                                            IMemoryAllocator&                            Allocator,
+                                            const SHADER_VARIABLE_TYPE*                  AllowedVarTypes,
+                                            Uint32                                       NumAllowedTypes)
 {
+    VERIFY(!m_ResourceBuffer, "Memory has already been initialized");
+    VERIFY_EXPR(!m_pResources);
+    VERIFY_EXPR(pSrcResources);
+    
+    m_pResources = std::move(pSrcResources);
+
+    Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
+    
+    // Count number of resources to allocate all needed memory
+    m_pResources->ProcessResources(
+        AllowedVarTypes, NumAllowedTypes,
+
+        [&](const SPIRVShaderResourceAttribs &ResAttribs, Uint32)
+        {
+            VERIFY_EXPR(IsAllowedType(ResAttribs.VarType, AllowedTypeBits));
+            VERIFY( Uint32{m_NumResources[ResAttribs.VarType]} + 1 <= Uint32{std::numeric_limits<Uint16>::max()}, "Number of resources exceeds max representable value");
+            ++m_NumResources[ResAttribs.VarType];
+        }
+    );
+
+    Uint32 TotalResources = 0;
+    for(SHADER_VARIABLE_TYPE VarType = SHADER_VARIABLE_TYPE_STATIC; VarType < SHADER_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_VARIABLE_TYPE>(VarType+1))
+    {
+        TotalResources += m_NumResources[VarType];
+    }
+    VERIFY(TotalResources <= Uint32{std::numeric_limits<Uint16>::max()}, "Total number of resources exceeds Uint16 max representable value" );
+    m_NumResources[SHADER_VARIABLE_TYPE_NUM_TYPES] = static_cast<Uint16>(TotalResources);
+
     VERIFY( &m_ResourceBuffer.get_deleter().m_Allocator == &Allocator, "Inconsistent memory allocators" );
-    Uint32 TotalResource = GetTotalResourceCount();
-    size_t MemSize = TotalResource * sizeof(VkResource);
+    size_t MemSize = TotalResources * sizeof(VkResource);
     if(MemSize == 0)
         return;
 
@@ -65,155 +95,184 @@ void ShaderResourceLayoutVk::AllocateMemory(IMemoryAllocator &Allocator)
     m_ResourceBuffer.reset(pRawMem);
 }
 
-void ShaderResourceLayoutVk::Initialize(const std::shared_ptr<const SPIRVShaderResources>&  pSrcResources,
-                                        IMemoryAllocator&                                   LayoutDataAllocator,
-                                        const SHADER_VARIABLE_TYPE*                         AllowedVarTypes,
-                                        Uint32                                              NumAllowedTypes,
-                                        ShaderResourceCacheVk*                              pStaticResourceCache,
-                                        std::vector<uint32_t>*                              pSPIRV,
-                                        PipelineLayout*                                     pPipelineLayout)
+void ShaderResourceLayoutVk::InitializeStaticResourceLayout(std::shared_ptr<const SPIRVShaderResources> pSrcResources,
+                                                            IMemoryAllocator&                           LayoutDataAllocator,
+                                                            ShaderResourceCacheVk&                      StaticResourceCache)
 {
-    m_pResources = pSrcResources;
-
-    VERIFY_EXPR( (pStaticResourceCache != nullptr) ^ (pPipelineLayout != nullptr && pSPIRV != nullptr) );
-
-    Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
-
-    // Count number of resources to allocate all needed memory
-    m_pResources->ProcessResources(
-        AllowedVarTypes, NumAllowedTypes,
-
-        [&](const SPIRVShaderResourceAttribs &UB, Uint32)
-        {
-            VERIFY_EXPR(IsAllowedType(UB.VarType, AllowedTypeBits));
-            ++m_NumResources[UB.VarType];
-        },
-        [&](const SPIRVShaderResourceAttribs& SB, Uint32)
-        {
-            VERIFY_EXPR(IsAllowedType(SB.VarType, AllowedTypeBits));
-            ++m_NumResources[SB.VarType];
-        },
-        [&](const SPIRVShaderResourceAttribs &Img, Uint32)
-        {
-            VERIFY_EXPR(IsAllowedType(Img.VarType, AllowedTypeBits));
-            ++m_NumResources[Img.VarType];
-        },
-        [&](const SPIRVShaderResourceAttribs &SmplImg, Uint32)
-        {
-            VERIFY_EXPR(IsAllowedType(SmplImg.VarType, AllowedTypeBits));
-            ++m_NumResources[SmplImg.VarType];
-        },
-        [&](const SPIRVShaderResourceAttribs &AC, Uint32)
-        {
-            VERIFY_EXPR(IsAllowedType(AC.VarType, AllowedTypeBits));
-            ++m_NumResources[AC.VarType];
-        },
-        [&](const SPIRVShaderResourceAttribs &SepImg, Uint32)
-        {
-            VERIFY_EXPR(IsAllowedType(SepImg.VarType, AllowedTypeBits));
-            ++m_NumResources[SepImg.VarType];
-        },
-        [&](const SPIRVShaderResourceAttribs &SepSmpl, Uint32)
-        {
-            VERIFY_EXPR(IsAllowedType(SepSmpl.VarType, AllowedTypeBits));
-            ++m_NumResources[SepSmpl.VarType];
-        }
-    );
-
-
-    AllocateMemory(LayoutDataAllocator);
+    auto AllowedVarType = SHADER_VARIABLE_TYPE_STATIC;
+    AllocateMemory(std::move(pSrcResources), LayoutDataAllocator, &AllowedVarType, 1);
 
     std::array<Uint32, SHADER_VARIABLE_TYPE_NUM_TYPES> CurrResInd = {};
     Uint32 StaticResCacheSize = 0;
 
-    auto AddResource = [&](const SPIRVShaderResourceAttribs &Attribs)
-    {
-        Uint32 Binding = 0;
-        Uint32 DescriptorSet = 0;
-        Uint32 CacheOffset = 0;
-        if (pPipelineLayout)
-        {
-            VERIFY_EXPR(pSPIRV != nullptr);
-            auto *pStaticSampler = m_pResources->GetStaticSampler(Attribs);
-            VkSampler vkStaticSampler = VK_NULL_HANDLE;
-            if(pStaticSampler != nullptr)
-                vkStaticSampler = ValidatedCast<SamplerVkImpl>(pStaticSampler)->GetVkSampler();
-            pPipelineLayout->AllocateResourceSlot(Attribs, vkStaticSampler, m_pResources->GetShaderType(), DescriptorSet, Binding, CacheOffset, *pSPIRV);
-            VERIFY(DescriptorSet <= std::numeric_limits<decltype(VkResource::DescriptorSet)>::max(), "Descriptor set (", DescriptorSet, ") excceeds representable max value");
-            VERIFY(Binding <= std::numeric_limits<decltype(VkResource::Binding)>::max(), "Binding (", Binding, ") excceeds representable max value");
-        }
-        else
-        {
-            // If pipeline layout is not provided - use artifial layout to store
-            // static shader resources in one large continuous descriptor set
-            VERIFY_EXPR(pStaticResourceCache != nullptr);
-
-            DescriptorSet = 0;
-            CacheOffset = StaticResCacheSize;
-            Binding = Attribs.Type;
-            StaticResCacheSize += Attribs.ArraySize;
-        }
-
-        ::new (&GetResource(Attribs.VarType, CurrResInd[Attribs.VarType]++)) VkResource( *this, Attribs, Binding, DescriptorSet, CacheOffset);
-    };
-
     m_pResources->ProcessResources(
-        AllowedVarTypes, NumAllowedTypes,
-
-        [&](const SPIRVShaderResourceAttribs &UB, Uint32)
+        &AllowedVarType, 1,
+        [&](const SPIRVShaderResourceAttribs &Attribs, Uint32)
         {
-            VERIFY_EXPR(IsAllowedType(UB.VarType, AllowedTypeBits));
-            AddResource(UB);
-        },
-        [&](const SPIRVShaderResourceAttribs& SB, Uint32)
-        {
-            VERIFY_EXPR(IsAllowedType(SB.VarType, AllowedTypeBits));
-            AddResource(SB);
-        },
-        [&](const SPIRVShaderResourceAttribs &Img, Uint32)
-        {
-            VERIFY_EXPR(IsAllowedType(Img.VarType, AllowedTypeBits));
-            AddResource(Img);
-        },
-        [&](const SPIRVShaderResourceAttribs &SmplImg, Uint32)
-        {
-            VERIFY_EXPR(IsAllowedType(SmplImg.VarType, AllowedTypeBits));
-            AddResource(SmplImg);
-        },
-        [&](const SPIRVShaderResourceAttribs &AC, Uint32)
-        {
-            VERIFY_EXPR(IsAllowedType(AC.VarType, AllowedTypeBits));
-            AddResource(AC);
-        },
-        [&](const SPIRVShaderResourceAttribs &SepImg, Uint32)
-        {
-            VERIFY_EXPR(IsAllowedType(SepImg.VarType, AllowedTypeBits));
-            AddResource(SepImg);
-        },
-
-        [&](const SPIRVShaderResourceAttribs &SepSmpl, Uint32)
-        {
-            VERIFY_EXPR(IsAllowedType(SepSmpl.VarType, AllowedTypeBits));
-            AddResource(SepSmpl);
+            Uint32 Binding       = Attribs.Type;
+            Uint32 DescriptorSet = 0;
+            Uint32 CacheOffset   = StaticResCacheSize;
+            StaticResCacheSize += Attribs.ArraySize;
+            ::new (&GetResource(Attribs.VarType, CurrResInd[Attribs.VarType]++)) VkResource(*this, Attribs, Binding, DescriptorSet, CacheOffset);
         }
     );
 
 #ifdef _DEBUG
-    for(SHADER_VARIABLE_TYPE VarType = SHADER_VARIABLE_TYPE_STATIC; VarType < SHADER_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_VARIABLE_TYPE>(VarType+1))
+    for (SHADER_VARIABLE_TYPE VarType = SHADER_VARIABLE_TYPE_STATIC; VarType < SHADER_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_VARIABLE_TYPE>(VarType + 1))
     {
-        VERIFY( CurrResInd[VarType] == m_NumResources[VarType], "Not all resources are initialized, which will cause a crash when dtor is called" );
+        VERIFY(CurrResInd[VarType] == m_NumResources[VarType], "Not all resources are initialized, which will cause a crash when dtor is called");
     }
 #endif
 
-    if(pStaticResourceCache)
-    {
-        // Initialize resource cache to store static resources
-        VERIFY_EXPR(pPipelineLayout == nullptr && pSPIRV == nullptr);
-        pStaticResourceCache->InitializeSets(GetRawAllocator(), 1, &StaticResCacheSize);
-        InitializeResourceMemoryInCache(*pStaticResourceCache);
-    }
+    StaticResourceCache.InitializeSets(GetRawAllocator(), 1, &StaticResCacheSize);
+    InitializeResourceMemoryInCache(StaticResourceCache);
 }
 
+
+void ShaderResourceLayoutVk::Initialize(Uint32 NumShaders,
+                                        ShaderResourceLayoutVk                       Layouts[],
+                                        std::shared_ptr<const SPIRVShaderResources>  pShaderResources[],
+                                        IMemoryAllocator&                            LayoutDataAllocator,
+                                        std::vector<uint32_t>                        SPIRVs[],
+                                        class PipelineLayout&                        PipelineLayout)
+{
+    SHADER_VARIABLE_TYPE* AllowedVarTypes = nullptr;
+    Uint32                NumAllowedTypes = 0;
+    Uint32                AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
+
+    for(Uint32 s=0; s < NumShaders; ++s)
+    {
+        Layouts[s].AllocateMemory(std::move(pShaderResources[s]), LayoutDataAllocator, AllowedVarTypes, NumAllowedTypes);
+    }
+    
+    VERIFY_EXPR(NumShaders <= MaxShadersInPipeline);
+    std::array<std::array<Uint32, SHADER_VARIABLE_TYPE_NUM_TYPES>, MaxShadersInPipeline> CurrResInd = {};
+#ifdef _DEBUG
+    std::unordered_map<Uint32, std::pair<Uint32, Uint32>> dbgBindings_CacheOffsets;
+#endif
+
+    auto AddResource = [&](Uint32                               ShaderInd,
+                           ShaderResourceLayoutVk&              ResLayout,
+                           const SPIRVShaderResources&          Resources, 
+                           const SPIRVShaderResourceAttribs&    Attribs)
+    {
+        Uint32 Binding = 0;
+        Uint32 DescriptorSet = 0;
+        Uint32 CacheOffset = 0;
+
+        auto* pStaticSampler = Resources.GetStaticSampler(Attribs);
+        VkSampler vkStaticSampler = VK_NULL_HANDLE;
+        if (pStaticSampler != nullptr)
+            vkStaticSampler = ValidatedCast<SamplerVkImpl>(pStaticSampler)->GetVkSampler();
+
+        auto& ShaderSPIRV = SPIRVs[ShaderInd];
+        PipelineLayout.AllocateResourceSlot(Attribs, vkStaticSampler, Resources.GetShaderType(), DescriptorSet, Binding, CacheOffset, ShaderSPIRV);
+        VERIFY(DescriptorSet <= std::numeric_limits<decltype(VkResource::DescriptorSet)>::max(), "Descriptor set (", DescriptorSet, ") excceeds max representable value");
+        VERIFY(Binding <= std::numeric_limits<decltype(VkResource::Binding)>::max(), "Binding (", Binding, ") excceeds max representable value");
+
+#ifdef _DEBUG
+        // Verify that bindings and cache offsets monotonically increase in every descriptor set
+        auto Binding_OffsetIt = dbgBindings_CacheOffsets.find(DescriptorSet);
+        if(Binding_OffsetIt != dbgBindings_CacheOffsets.end())
+        {
+            VERIFY(Binding     > Binding_OffsetIt->second.first,  "Binding for descriptor set ", DescriptorSet, " is not strictly monotonic");
+            VERIFY(CacheOffset > Binding_OffsetIt->second.second, "Cache offset for descriptor set ", DescriptorSet, " is not strictly monotonic");
+        }
+        dbgBindings_CacheOffsets[DescriptorSet] = std::make_pair(Binding, CacheOffset);
+#endif
+
+        auto& ResInd = CurrResInd[ShaderInd][Attribs.VarType];
+        ::new (&ResLayout.GetResource(Attribs.VarType, ResInd++)) VkResource(ResLayout, Attribs, Binding, DescriptorSet, CacheOffset);
+    };
+
+    // First process uniform buffers for all shader stages to make sure all UBs go first in every descriptor set
+    for (Uint32 s = 0; s < NumShaders; ++s)
+    {
+        auto& Layout = Layouts[s];
+        const auto& Resources = *Layout.m_pResources;
+        for (Uint32 n = 0; n < Resources.GetNumUBs(); ++n)
+        {
+            const auto& UB = Resources.GetUB(n);
+            if (IsAllowedType(UB.VarType, AllowedTypeBits))
+            {
+                AddResource(s, Layout, Resources, UB);
+            }
+        }
+    }
+
+    // Second, process all storage buffers
+    for (Uint32 s = 0; s < NumShaders; ++s)
+    {
+        auto& Layout = Layouts[s];
+        const auto& Resources = *Layout.m_pResources;
+        for (Uint32 n = 0; n < Resources.GetNumSBs(); ++n)
+        {
+            const auto& SB = Resources.GetSB(n);
+            if (IsAllowedType(SB.VarType, AllowedTypeBits))
+            {
+                AddResource(s, Layout, Resources, SB);
+            }
+        }
+    }
+
+    // Finally, process all other resource types
+    for (Uint32 s = 0; s < NumShaders; ++s)
+    {
+        auto& Layout = Layouts[s];
+        const auto& Resources = *Layout.m_pResources;
+        Resources.ProcessResources(
+            AllowedVarTypes, NumAllowedTypes,
+
+            [&](const SPIRVShaderResourceAttribs &UB, Uint32)
+            {
+                VERIFY_EXPR(IsAllowedType(UB.VarType, AllowedTypeBits));
+                // Skip
+            },
+            [&](const SPIRVShaderResourceAttribs& SB, Uint32)
+            {
+                VERIFY_EXPR(IsAllowedType(SB.VarType, AllowedTypeBits));
+                // Skip
+            },
+            [&](const SPIRVShaderResourceAttribs &Img, Uint32)
+            {
+                VERIFY_EXPR(IsAllowedType(Img.VarType, AllowedTypeBits));
+                AddResource(s, Layout, Resources, Img);
+            },
+            [&](const SPIRVShaderResourceAttribs &SmplImg, Uint32)
+            {
+                VERIFY_EXPR(IsAllowedType(SmplImg.VarType, AllowedTypeBits));
+                AddResource(s, Layout, Resources, SmplImg);
+            },
+            [&](const SPIRVShaderResourceAttribs &AC, Uint32)
+            {
+                VERIFY_EXPR(IsAllowedType(AC.VarType, AllowedTypeBits));
+                AddResource(s, Layout, Resources, AC);
+            },
+            [&](const SPIRVShaderResourceAttribs &SepImg, Uint32)
+            {
+                VERIFY_EXPR(IsAllowedType(SepImg.VarType, AllowedTypeBits));
+                AddResource(s, Layout, Resources, SepImg);
+            },
+
+            [&](const SPIRVShaderResourceAttribs &SepSmpl, Uint32)
+            {
+                VERIFY_EXPR(IsAllowedType(SepSmpl.VarType, AllowedTypeBits));
+                AddResource(s, Layout, Resources, SepSmpl);
+            }
+        );
+    }
+
+#ifdef _DEBUG
+    for (Uint32 s = 0; s < NumShaders; ++s)
+    {
+        auto& Layout = Layouts[s];
+        for (SHADER_VARIABLE_TYPE VarType = SHADER_VARIABLE_TYPE_STATIC; VarType < SHADER_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_VARIABLE_TYPE>(VarType + 1))
+        {
+            VERIFY(CurrResInd[s][VarType] == Layout.m_NumResources[VarType], "Not all resources are initialized, which will cause a crash when dtor is called");
+        }
+    }
+#endif
+}
 
 #define LOG_RESOURCE_BINDING_ERROR(ResType, pResource, VarName, ShaderName, ...)\
 {                                                                                                   \

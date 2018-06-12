@@ -126,19 +126,20 @@ public:
     
     ~ShaderResourceLayoutVk();
 
-    //  The method is called by
-    //  - ShaderVkImpl class instance to initialize static resource layout and initialize shader resource cache
-    //    to hold static resources
-    //  - PipelineStateVkImpl class instance to reference all types of resources (static, mutable, dynamic). 
-    //    Descriptor sets, bindings and cache offsets are assigned during the initialization; 
-    //    no shader resource cache must be provided
-    void Initialize(const std::shared_ptr<const SPIRVShaderResources>&  pSrcResources,
-                    IMemoryAllocator&                                   LayoutDataAllocator,
-                    const SHADER_VARIABLE_TYPE*                         AllowedVarTypes,
-                    Uint32                                              NumAllowedTypes, 
-                    ShaderResourceCacheVk*                              pStaticResourceCache,
-                    std::vector<uint32_t>*                              pSPIRV,
-                    class PipelineLayout*                               pPipelineLayout);
+    // This method is called by ShaderVkImpl class instance to initialize static 
+    // shader resource layout and cache
+    void InitializeStaticResourceLayout(std::shared_ptr<const SPIRVShaderResources> pSrcResources, 
+                                        IMemoryAllocator&                           LayoutDataAllocator,
+                                        ShaderResourceCacheVk&                      StaticResourceCache);
+
+    // This method is called by PipelineStateVkImpl class instance to initialize resource
+    // layouts for all shader stages in a pipeline.
+    static void Initialize(Uint32 NumShaders,
+                           ShaderResourceLayoutVk                       Layouts[],
+                           std::shared_ptr<const SPIRVShaderResources>  pShaderResources[],
+                           IMemoryAllocator&                            LayoutDataAllocator,
+                           std::vector<uint32_t>                        SPIRVs[],
+                           class PipelineLayout&                        PipelineLayout);
 
     // sizeof(VkResource) == 24 (x64)
     struct VkResource
@@ -272,11 +273,13 @@ private:
 
     Uint32 GetTotalResourceCount()const
     {
-        static_assert(SHADER_VARIABLE_TYPE_NUM_TYPES == 3, "Did you add new variable type?");
-        return m_NumResources[SHADER_VARIABLE_TYPE_STATIC] + m_NumResources[SHADER_VARIABLE_TYPE_MUTABLE] + m_NumResources[SHADER_VARIABLE_TYPE_DYNAMIC];
+        return m_NumResources[SHADER_VARIABLE_TYPE_NUM_TYPES];
     }
 
-    void AllocateMemory(IMemoryAllocator &Allocator);
+    void AllocateMemory(std::shared_ptr<const SPIRVShaderResources> pSrcResources, 
+                        IMemoryAllocator&                           Allocator,
+                        const SHADER_VARIABLE_TYPE*                 AllowedVarTypes,
+                        Uint32                                      NumAllowedTypes);
 
 
     IObject&                                            m_Owner;
@@ -287,7 +290,7 @@ private:
     // there may be multiple objects referencing the same set of resources
     std::shared_ptr<const SPIRVShaderResources>         m_pResources;
 
-    std::array<Uint16, SHADER_VARIABLE_TYPE_NUM_TYPES>  m_NumResources = {};
+    std::array<Uint16, SHADER_VARIABLE_TYPE_NUM_TYPES+1>  m_NumResources = {};
 };
 
 }

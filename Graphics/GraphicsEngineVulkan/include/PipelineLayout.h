@@ -99,10 +99,11 @@ private:
             DescriptorSetLayout& operator = (const DescriptorSetLayout&) = delete;
             DescriptorSetLayout& operator = (DescriptorSetLayout&&) = delete;
             
-            uint32_t TotalDescriptors = 0;
-            int8_t SetIndex = -1;
-            uint16_t NumLayoutBindings = 0;
-            VkDescriptorSetLayoutBinding* pBindings = nullptr;
+            uint32_t                                    TotalDescriptors      = 0;
+            int8_t                                      SetIndex              = -1;
+            uint8_t                                     NumDynamicDescriptors = 0; // Total number of uniform and storage buffers, counting all array elements
+            uint16_t                                    NumLayoutBindings     = 0;
+            VkDescriptorSetLayoutBinding*               pBindings             = nullptr;
             VulkanUtilities::DescriptorSetLayoutWrapper VkLayout;
             
             ~DescriptorSetLayout();
@@ -138,12 +139,13 @@ private:
         size_t GetHash()const;
         VkPipelineLayout GetVkPipelineLayout()const{return m_VkPipelineLayout;}
 
-        void AllocateResourceSlot(const SPIRVShaderResourceAttribs &ResAttribs,
-                                  VkSampler vkStaticSampler,
-                                  SHADER_TYPE ShaderType,
-                                  Uint32 &DescriptorSet,
-                                  Uint32 &Binding, 
-                                  Uint32 &OffsetInCache);
+        void AllocateResourceSlot(const SPIRVShaderResourceAttribs& ResAttribs,
+                                  VkSampler                         vkStaticSampler,
+                                  SHADER_TYPE                       ShaderType,
+                                  Uint32&                           DescriptorSet,
+                                  Uint32&                           Binding, 
+                                  Uint32&                           OffsetInCache);
+
     private:
         IMemoryAllocator &m_MemAllocator;
         VulkanUtilities::PipelineLayoutWrapper m_VkPipelineLayout;

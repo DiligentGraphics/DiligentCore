@@ -78,7 +78,7 @@ ShaderResourceCacheVk::~ShaderResourceCacheVk()
 {
     if (m_pMemory)
     {
-        auto *pResources = reinterpret_cast<Resource*>( reinterpret_cast<DescriptorSet*>(m_pMemory) + m_NumSets);
+        auto *pResources = GetFirstResourcePtr();
         for(Uint32 res=0; res < m_TotalResources; ++res)
             pResources[res].~Resource();
         for (Uint32 t = 0; t < m_NumSets; ++t)
@@ -91,7 +91,7 @@ ShaderResourceCacheVk::~ShaderResourceCacheVk()
 template<bool VerifyOnly>
 void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl *pCtxVkImpl)
 {
-    auto *pResources = reinterpret_cast<Resource*>(reinterpret_cast<DescriptorSet*>(m_pMemory) + m_NumSets);
+    auto *pResources = GetFirstResourcePtr();
     for (Uint32 res = 0; res < m_TotalResources; ++res)
     {
         auto &Res = pResources[res];
@@ -282,6 +282,62 @@ VkDescriptorImageInfo ShaderResourceCacheVk::Resource::GetSamplerDescriptorWrite
     DescrImgInfo.imageView = VK_NULL_HANDLE;
     DescrImgInfo.imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     return DescrImgInfo;
+}
+
+void ShaderResourceCacheVk::GetDynamicBufferOffset(Uint32 CtxId, std::vector<uint32_t>& Offsets)const
+{
+    Offsets.clear();
+
+    // If any of the sets being bound include dynamic uniform or storage buffers, then 
+    // pDynamicOffsets includes one element for each array element in each dynamic descriptor 
+    // type binding in each set. Values are taken from pDynamicOffsets in an order such that 
+    // all entries for set N come before set N+1; within a set, entries are ordered by the binding 
+    // numbers (unclear if this is SPIRV binding or VkDescriptorSetLayoutBinding number) in the 
+    // descriptor set layouts; and within a binding array, elements are in order. (13.2.5)
+
+    // In each descriptor set, all uniform buffers for every shader stage come first,
+    // followed by all storage buffers for every shader stage, followed by all other resources
+    for(Uint32 set=0; set < m_NumSets; ++set)
+    {
+        const auto& DescrSet = GetDescriptorSet(set);
+        Uint32 res = 0;
+        while(res < DescrSet.GetSize())
+        {
+            const auto& Res = DescrSet.GetResource(res);
+            if(Res.Type != SPIRVShaderResourceAttribs::ResourceType::UniformBuffer)
+                break;
+
+            const auto* pBufferVk = Res.pObject.RawPtr<const BufferVkImpl>();
+            auto Offset = pBufferVk->GetDynamicOffset(CtxId);
+            Offsets.emplace_back(Offset);
+
+            ++res;
+        }
+
+        while (res < DescrSet.GetSize())
+        {
+            const auto& Res = DescrSet.GetResource(res);
+            if (Res.Type != SPIRVShaderResourceAttribs::ResourceType::StorageBuffer)
+                break;
+
+            const auto* pBufferVkView = Res.pObject.RawPtr<const BufferViewVkImpl>();
+            const auto* pBufferVk = pBufferVkView->GetBufferVk();
+            auto Offset = pBufferVk->GetDynamicOffset(CtxId);
+            Offsets.emplace_back(Offset);
+
+            ++res;
+        }
+
+#ifdef _DEBUG
+        for(; res < DescrSet.GetSize(); ++res)
+        {
+            const auto& Res = DescrSet.GetResource(res);
+            VERIFY(Res.Type != SPIRVShaderResourceAttribs::ResourceType::UniformBuffer && 
+                   Res.Type != SPIRVShaderResourceAttribs::ResourceType::StorageBuffer, 
+                   "All uniform and storage buffers are expected to go first in the beginning of each descriptor set");
+        }
+#endif
+    }
 }
 
 }
