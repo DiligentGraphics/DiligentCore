@@ -434,9 +434,7 @@ void PipelineLayout::BindDescriptorSets(DeviceContextVkImpl*    pCtxVkImpl,
 
     VERIFY(m_LayoutMgr.GetDescriptorSet(SHADER_VARIABLE_TYPE_STATIC).SetIndex == m_LayoutMgr.GetDescriptorSet(SHADER_VARIABLE_TYPE_MUTABLE).SetIndex, 
            "Static and mutable variables are expected to share the same descriptor set");
-#ifdef _DEBUG
     Uint32 TotalDynamicDescriptors = 0;
-#endif
     for(SHADER_VARIABLE_TYPE VarType = SHADER_VARIABLE_TYPE_MUTABLE; VarType <= SHADER_VARIABLE_TYPE_DYNAMIC; VarType = static_cast<SHADER_VARIABLE_TYPE>(VarType+1))
     {
         const auto &Set = m_LayoutMgr.GetDescriptorSet(VarType);
@@ -447,9 +445,7 @@ void PipelineLayout::BindDescriptorSets(DeviceContextVkImpl*    pCtxVkImpl,
             vkSets[Set.SetIndex] = ResourceCache.GetDescriptorSet(Set.SetIndex).GetVkDescriptorSet();
             VERIFY(vkSets[Set.SetIndex] != VK_NULL_HANDLE, "Descriptor set must not be null");
         }
-#ifdef _DEBUG
         TotalDynamicDescriptors += Set.NumDynamicDescriptors;
-#endif
     }
 
 #ifdef _DEBUG
@@ -457,9 +453,9 @@ void PipelineLayout::BindDescriptorSets(DeviceContextVkImpl*    pCtxVkImpl,
         VERIFY(vkSets[i] != VK_NULL_HANDLE, "Descriptor set must not be null");
 #endif
 
-    std::vector<uint32_t> DynamicOffsets;
+    auto& DynamicOffsets = pCtxVkImpl->GetDynamicBufferOffsets();
+    DynamicOffsets.resize(TotalDynamicDescriptors);
     ResourceCache.GetDynamicBufferOffset(pCtxVkImpl->GetContextId(), DynamicOffsets);
-    VERIFY(DynamicOffsets.size() == TotalDynamicDescriptors, "Incorrect size of dynamic descriptor array");
 
     auto& CmdBuffer = pCtxVkImpl->GetCommandBuffer();
     // vkCmdBindDescriptorSets causes the sets numbered [firstSet .. firstSet+descriptorSetCount-1] to use the 

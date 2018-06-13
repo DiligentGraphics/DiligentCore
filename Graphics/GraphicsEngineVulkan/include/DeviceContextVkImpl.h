@@ -147,6 +147,8 @@ public:
         return m_DynamicDescriptorPool.Allocate(SetLayout);
     }
 
+    std::vector<uint32_t>& GetDynamicBufferOffsets(){return m_DynamicBufferOffsets;}
+
 private:
     void CommitRenderPassAndFramebuffer(class PipelineStateVkImpl *pPipelineStateVk);
     void CommitVkVertexBuffers();
@@ -199,6 +201,8 @@ private:
     // Number of the command buffer currently being recorded by the context and that will
     // be submitted next
     Atomics::AtomicInt64 m_NextCmdBuffNumber;
+
+    std::vector<uint32_t> m_DynamicBufferOffsets;
 };
 
 }
