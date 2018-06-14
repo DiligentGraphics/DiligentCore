@@ -76,39 +76,16 @@ namespace Diligent
                 {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,          Attribs.DynamicDescriptorPoolSize.NumStorageImageDescriptors},
                 {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,   Attribs.DynamicDescriptorPoolSize.NumUniformTexelBufferDescriptors},
                 {VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,   Attribs.DynamicDescriptorPoolSize.NumStorageTexelBufferDescriptors},
-                {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         Attribs.DynamicDescriptorPoolSize.NumUniformBufferDescriptors },
-                {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,         Attribs.DynamicDescriptorPoolSize.NumStorageBufferDescriptors },
-                //{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, Attribs.DynamicDescriptorPoolSize.NumUniformBufferDescriptors },
-                //{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, Attribs.DynamicDescriptorPoolSize.NumStorageBufferDescriptors },
+                //{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         Attribs.DynamicDescriptorPoolSize.NumUniformBufferDescriptors},
+                //{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,         Attribs.DynamicDescriptorPoolSize.NumStorageBufferDescriptors},
+                {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, Attribs.DynamicDescriptorPoolSize.NumUniformBufferDescriptors},
+                {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, Attribs.DynamicDescriptorPoolSize.NumStorageBufferDescriptors},
             },
             Attribs.DynamicDescriptorPoolSize.MaxDescriptorSets,
         },
         m_NextCmdBuffNumber(0)
     {
-#if 0
-        auto *pVkDevice = pDeviceVkImpl->GetVkDevice();
-
-        Vk_COMMAND_SIGNATURE_DESC CmdSignatureDesc = {};
-        Vk_INDIRECT_ARGUMENT_DESC IndirectArg = {};
-        CmdSignatureDesc.NodeMask = 0;
-        CmdSignatureDesc.NumArgumentDescs = 1;
-        CmdSignatureDesc.pArgumentDescs = &IndirectArg;
-
-        CmdSignatureDesc.ByteStride = sizeof(UINT)*4;
-        IndirectArg.Type = Vk_INDIRECT_ARGUMENT_TYPE_DRAW;
-        auto hr = pVkDevice->CreateCommandSignature(&CmdSignatureDesc, nullptr, __uuidof(m_pDrawIndirectSignature), reinterpret_cast<void**>(static_cast<IVkCommandSignature**>(&m_pDrawIndirectSignature)) );
-        CHECK_D3D_RESULT_THROW(hr, "Failed to create indirect draw command signature")
-
-        CmdSignatureDesc.ByteStride = sizeof(UINT)*5;
-        IndirectArg.Type = Vk_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED;
-        hr = pVkDevice->CreateCommandSignature(&CmdSignatureDesc, nullptr, __uuidof(m_pDrawIndexedIndirectSignature), reinterpret_cast<void**>(static_cast<IVkCommandSignature**>(&m_pDrawIndexedIndirectSignature)) );
-        CHECK_D3D_RESULT_THROW(hr, "Failed to create draw indexed indirect command signature")
-
-        CmdSignatureDesc.ByteStride = sizeof(UINT)*3;
-        IndirectArg.Type = Vk_INDIRECT_ARGUMENT_TYPE_DISPATCH;
-        hr = pVkDevice->CreateCommandSignature(&CmdSignatureDesc, nullptr, __uuidof(m_pDispatchIndirectSignature), reinterpret_cast<void**>(static_cast<IVkCommandSignature**>(&m_pDispatchIndirectSignature)) );
-        CHECK_D3D_RESULT_THROW(hr, "Failed to create dispatch indirect command signature")
-#endif
+        m_DynamicBufferOffsets.reserve(64);
     }
 
     DeviceContextVkImpl::~DeviceContextVkImpl()
@@ -371,42 +348,35 @@ namespace Diligent
         VkBuffer vkVertexBuffers[MaxBufferSlots];// = {}
         VkDeviceSize Offsets[MaxBufferSlots];
         VERIFY( m_NumVertexStreams <= MaxBufferSlots, "Too many buffers are being set" );
-        //bool DynamicBufferPresent = false;
+        bool DynamicBufferPresent = false;
         for( UINT slot = 0; slot < m_NumVertexStreams; ++slot )
         {
             auto &CurrStream = m_VertexStreams[slot];
-            //auto &VBView = VBViews[Buff];
             VERIFY( CurrStream.pBuffer, "Attempting to bind a null buffer for rendering" );
             
             auto *pBufferVk = CurrStream.pBuffer.RawPtr<BufferVkImpl>();
-//            if (pBufferVk->GetDesc().Usage == USAGE_DYNAMIC)
-//            {
-//                DynamicBufferPresent = true;
-//#ifdef _DEBUG
-//                pBufferVk->DbgVerifyDynamicAllocation(m_ContextId);
-//#endif
-//            }
+            if (pBufferVk->GetDesc().Usage == USAGE_DYNAMIC)
+            {
+                DynamicBufferPresent = true;
+#ifdef _DEBUG
+                pBufferVk->DbgVerifyDynamicAllocation(m_ContextId);
+#endif
+            }
             if(!pBufferVk->CheckAccessFlags(VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT))
                 BufferMemoryBarrier(*pBufferVk, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT);
             
             // Device context keeps strong references to all vertex buffers.
-            // When a buffer is unbound, a reference to Vk resource is added to the context,
-            // so there is no need to reference the resource here
-            //GraphicsCtx.AddReferencedObject(pVkResource);
 
             vkVertexBuffers[slot] = pBufferVk->GetVkBuffer();
-            Offsets[slot] = CurrStream.Offset;
-
-            ///VBView.BufferLocation = pBufferVk->GetGPUAddress(m_ContextId) + CurrStream.Offset;
+            Offsets[slot] = CurrStream.Offset + pBufferVk->GetDynamicOffset(m_ContextId);
         }
 
         //GraphCtx.FlushResourceBarriers();
         if(m_NumVertexStreams > 0)
             m_CommandBuffer.BindVertexBuffers( 0, m_NumVertexStreams, vkVertexBuffers, Offsets );
 
-        // GPU virtual address of a dynamic vertex buffer can change every time
-        // a draw command is invoked
-        m_State.CommittedVBsUpToDate = true;//!DynamicBufferPresent;
+        // GPU offset for a dynamic vertex buffer can change every time a draw command is invoked
+        m_State.CommittedVBsUpToDate = !DynamicBufferPresent;
     }
 
 
@@ -439,7 +409,7 @@ namespace Diligent
 
             VERIFY(DrawAttribs.IndexType == VT_UINT16 || DrawAttribs.IndexType == VT_UINT32, "Unsupported index format. Only R16_UINT and R32_UINT are allowed.");
             VkIndexType vkIndexType = DrawAttribs.IndexType == VT_UINT16 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32;
-            m_CommandBuffer.BindIndexBuffer(pBuffVk->GetVkBuffer(), m_IndexDataStartOffset, vkIndexType);
+            m_CommandBuffer.BindIndexBuffer(pBuffVk->GetVkBuffer(), m_IndexDataStartOffset + pBuffVk->GetDynamicOffset(m_ContextId), vkIndexType);
         }
 
         if(m_State.CommittedVBsUpToDate)
@@ -486,9 +456,9 @@ namespace Diligent
                     BufferMemoryBarrier(*pBufferVk, VK_ACCESS_INDIRECT_COMMAND_READ_BIT);
 
                 if( DrawAttribs.IsIndexed )
-                    m_CommandBuffer.DrawIndexedIndirect(pBufferVk->GetVkBuffer(), DrawAttribs.IndirectDrawArgsOffset, 1, 0);
+                    m_CommandBuffer.DrawIndexedIndirect(pBufferVk->GetVkBuffer(), pBufferVk->GetDynamicOffset(m_ContextId) + DrawAttribs.IndirectDrawArgsOffset, 1, 0);
                 else
-                    m_CommandBuffer.DrawIndirect(pBufferVk->GetVkBuffer(), DrawAttribs.IndirectDrawArgsOffset, 1, 0);
+                    m_CommandBuffer.DrawIndirect(pBufferVk->GetVkBuffer(), pBufferVk->GetDynamicOffset(m_ContextId) + DrawAttribs.IndirectDrawArgsOffset, 1, 0);
             }
         }
         else
@@ -989,6 +959,7 @@ namespace Diligent
         CopyRegion.srcOffset = Allocation.MemAllocation.UnalignedOffset;
         CopyRegion.dstOffset = DstOffset;
         CopyRegion.size = NumBytes;
+        VERIFY(pBuffVk->m_VulkanBuffer != VK_NULL_HANDLE, "Copy destination buffer must not be suballocated");
         m_CommandBuffer.CopyBuffer(Allocation.vkBuffer, pBuffVk->GetVkBuffer(), 1, &CopyRegion);
         ++m_State.NumCommands;
     }
@@ -1017,15 +988,11 @@ namespace Diligent
         if(!pDstBuffVk->CheckAccessFlags(VK_ACCESS_TRANSFER_WRITE_BIT))
             BufferMemoryBarrier(*pDstBuffVk, VK_ACCESS_TRANSFER_WRITE_BIT);
         VkBufferCopy CopyRegion;
-        CopyRegion.srcOffset = SrcOffset;
+        CopyRegion.srcOffset = SrcOffset + pSrcBuffVk->GetDynamicOffset(m_ContextId);
         CopyRegion.dstOffset = DstOffset;
         CopyRegion.size = NumBytes;
-        //size_t DstDataStartByteOffset;
-        //auto *pVkDstBuff = pDstBuffVk->GetVkBuffer(DstDataStartByteOffset, m_ContextId);
-        //VERIFY(DstDataStartByteOffset == 0, "Dst buffer must not be suballocated");
-
-        //size_t SrcDataStartByteOffset;
-        //auto *pVkSrcBuff = pSrcBuffVk->GetVkBuffer(SrcDataStartByteOffset, m_ContextId);
+        VERIFY(pDstBuffVk->m_VulkanBuffer != VK_NULL_HANDLE, "Copy destination buffer must not be suballocated");
+        VERIFY_EXPR(pDstBuffVk->GetDynamicOffset(m_ContextId) == 0);
         m_CommandBuffer.CopyBuffer(pSrcBuffVk->GetVkBuffer(), pDstBuffVk->GetVkBuffer(), 1, &CopyRegion);
         ++m_State.NumCommands;
     }
@@ -1121,6 +1088,11 @@ namespace Diligent
 
     void DeviceContextVkImpl::FinishCommandList(class ICommandList **ppCommandList)
     {
+        if (m_CommandBuffer.GetState().RenderPass != VK_NULL_HANDLE)
+        {
+            m_CommandBuffer.EndRenderPass();
+        }
+
         auto vkCmdBuff = m_CommandBuffer.GetVkCmdBuffer();
         auto err = vkEndCommandBuffer(vkCmdBuff);
         VERIFY(err == VK_SUCCESS, "Failed to end command buffer");
@@ -1252,6 +1224,8 @@ namespace Diligent
         VERIFY(!BufferVk.CheckAccessFlags(NewAccessFlags), "The buffer already has requested access flags");
         EnsureVkCmdBuffer();
 
+        VERIFY(BufferVk.m_VulkanBuffer != VK_NULL_HANDLE, "Cannot transition suballocated buffer");
+        VERIFY_EXPR(BufferVk.GetDynamicOffset(m_ContextId) == 0);
         auto vkBuff = BufferVk.GetVkBuffer();
         m_CommandBuffer.BufferMemoryBarrier(vkBuff, BufferVk.m_AccessFlags, NewAccessFlags);
         BufferVk.SetAccessFlags(NewAccessFlags);
@@ -1282,5 +1256,11 @@ namespace Diligent
         {
             UNEXPECTED("Unable to find dynamic allocation for this buffer");
         }
+    }
+
+    VulkanDynamicAllocation DeviceContextVkImpl::AllocateDynamicSpace(Uint32 SizeInBytes)
+    {
+        auto *pDeviceVkImpl = m_pDevice.RawPtr<RenderDeviceVkImpl>();
+        return pDeviceVkImpl->AllocateDynamicSpace(m_ContextId, SizeInBytes);
     }
 }

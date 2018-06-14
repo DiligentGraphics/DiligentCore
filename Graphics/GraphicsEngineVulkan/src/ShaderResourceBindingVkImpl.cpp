@@ -38,7 +38,7 @@ ShaderResourceBindingVkImpl::ShaderResourceBindingVkImpl( IReferenceCounters *pR
     auto *ppShaders = pPSO->GetShaders();
     m_NumShaders = pPSO->GetNumShaders();
 
-    auto *pRenderDeviceVkImpl = ValidatedCast<RenderDeviceVkImpl>(pPSO->GetDevice());
+    auto *pRenderDeviceVkImpl = pPSO->GetDevice<RenderDeviceVkImpl>();
     // This will only allocate memory and initialize descriptor sets in the resource cache
     // Resources will be initialized by InitializeResourceMemoryInCache()
     pPSO->GetPipelineLayout().InitResourceCache(pRenderDeviceVkImpl, m_ShaderResourceCache, pPSO->GetResourceCacheDataAllocator());

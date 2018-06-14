@@ -78,16 +78,24 @@ RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters*                    
             {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,          CreationAttribs.MainDescriptorPoolSize.NumStorageImageDescriptors},
             {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,   CreationAttribs.MainDescriptorPoolSize.NumUniformTexelBufferDescriptors},
             {VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,   CreationAttribs.MainDescriptorPoolSize.NumStorageTexelBufferDescriptors},
-            {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         CreationAttribs.MainDescriptorPoolSize.NumUniformBufferDescriptors },
-            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,         CreationAttribs.MainDescriptorPoolSize.NumStorageBufferDescriptors },
-            //{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, CreationAttribs.MainDescriptorPoolSize.NumUniformBufferDescriptors },
-            //{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, CreationAttribs.MainDescriptorPoolSize.NumStorageBufferDescriptors },
+            //{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         CreationAttribs.MainDescriptorPoolSize.NumUniformBufferDescriptors},
+            //{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,         CreationAttribs.MainDescriptorPoolSize.NumStorageBufferDescriptors},
+            {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, CreationAttribs.MainDescriptorPoolSize.NumUniformBufferDescriptors},
+            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, CreationAttribs.MainDescriptorPoolSize.NumStorageBufferDescriptors},
         },
         CreationAttribs.MainDescriptorPoolSize.MaxDescriptorSets
     },
     m_TransientCmdPoolMgr(*m_LogicalVkDevice, pCmdQueue->GetQueueFamilyIndex(), VK_COMMAND_POOL_CREATE_TRANSIENT_BIT),
     m_MemoryMgr("Global resource memory manager", *m_LogicalVkDevice, *m_PhysicalDevice, GetRawAllocator(), CreationAttribs.DeviceLocalMemoryPageSize, CreationAttribs.HostVisibleMemoryPageSize, CreationAttribs.DeviceLocalMemoryReserveSize, CreationAttribs.HostVisibleMemoryReserveSize),
-    m_ReleaseQueue(GetRawAllocator())
+    m_ReleaseQueue(GetRawAllocator()),
+    m_DynamicHeap
+    {
+        GetRawAllocator(),
+        this,
+        CreationAttribs.ImmediateCtxDynamicHeapSize,
+        CreationAttribs.DeferredCtxDynamicHeapSize,
+        NumDeferredContexts
+    }
 {
     m_DeviceCaps.DevType = DeviceType::Vulkan;
     m_DeviceCaps.MajorVersion = 1;
@@ -100,9 +108,11 @@ RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters*                    
 
 RenderDeviceVkImpl::~RenderDeviceVkImpl()
 {
+    // Explicitly destroy dynamic heap
+    m_DynamicHeap.Destroy();
 	// Finish current frame. This will release resources taken by previous frames, and
     // will move all stale resources to the release queues. The resources will not be
-    // release until next call to FinishFrame()
+    // release until the next call to FinishFrame()
     FinishFrame(false);
     // Wait for the GPU to complete all its operations
     IdleGPU(true);
@@ -140,8 +150,8 @@ void RenderDeviceVkImpl::AllocateTransientCmdPool(VulkanUtilities::CommandPoolWr
     CmdBuffBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     CmdBuffBeginInfo.pNext = nullptr;
     CmdBuffBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT; // Each recording of the command buffer will only be 
-                                                                            // submitted once, and the command buffer will be reset 
-                                                                            // and recorded again between each submission.
+                                                                          // submitted once, and the command buffer will be reset 
+                                                                          // and recorded again between each submission.
     CmdBuffBeginInfo.pInheritanceInfo = nullptr; // Ignored for a primary command buffer
     vkBeginCommandBuffer(vkCmdBuff, &CmdBuffBeginInfo);
 }
@@ -237,7 +247,7 @@ Uint64 RenderDeviceVkImpl::ExecuteCommandBuffer(const VkSubmitInfo &SubmitInfo, 
 }
 
 
-void RenderDeviceVkImpl::IdleGPU(bool ReleaseStaleObjects) 
+Uint64 RenderDeviceVkImpl::IdleGPU(bool ReleaseStaleObjects) 
 { 
     Uint64 SubmittedFenceValue = 0;
     Uint64 SubmittedCmdBuffNumber = 0;
@@ -246,6 +256,7 @@ void RenderDeviceVkImpl::IdleGPU(bool ReleaseStaleObjects)
         // Lock the command queue to avoid other threads interfering with the GPU
         std::lock_guard<std::mutex> LockGuard(m_CmdQueueMutex);
         SubmittedFenceValue = m_pCommandQueue->GetNextFenceValue();
+        // CommandQueueVkImpl::IdleGPU increments next fence value
         m_pCommandQueue->IdleGPU();
 
         m_LogicalVkDevice->WaitIdle();
@@ -268,6 +279,8 @@ void RenderDeviceVkImpl::IdleGPU(bool ReleaseStaleObjects)
         auto CompletedFenceValue = SubmittedFenceValue;
         ProcessStaleResources(SubmittedCmdBuffNumber, SubmittedFenceValue, CompletedFenceValue);
     }
+
+    return SubmittedFenceValue;
 }
 
 
@@ -317,7 +330,7 @@ void RenderDeviceVkImpl::FinishFrame(bool ReleaseAllResources)
         // Lock the command queue to avoid other threads interfering with the GPU
         std::lock_guard<std::mutex> LockGuard(m_CmdQueueMutex);
         NextFenceValue = m_pCommandQueue->GetNextFenceValue();
-        // Increment cmd list number while keeping queue locked. 
+        // Increment cmd buffer number while keeping queue locked. 
         // This guarantees that any Vk object released after the lock
         // is released, will be associated with the incremented cmd list number
         SubmittedCmdBuffNumber = m_NextCmdBuffNumber;
@@ -327,9 +340,10 @@ void RenderDeviceVkImpl::FinishFrame(bool ReleaseAllResources)
     // Discard all remaining objects. This is important to do if there were 
     // no command lists submitted during the frame. All stale resources will
     // be associated with the next fence value and thus will not be released
-    // until the next command list is finished by the GPU
+    // until the next command buffer is finished by the GPU
     ProcessStaleResources(SubmittedCmdBuffNumber, NextFenceValue, CompletedFenceValue);
-    
+
+    m_DynamicHeap.FinishFrame(NextFenceValue, CompletedFenceValue);
 
     Atomics::AtomicIncrement(m_FrameNumber);
 }
@@ -343,6 +357,19 @@ void RenderDeviceVkImpl::ProcessStaleResources(Uint64 SubmittedCmdBufferNumber, 
     m_MemoryMgr.ShrinkMemory();
 }
 
+
+VulkanDynamicAllocation RenderDeviceVkImpl::AllocateDynamicSpace(Uint32 CtxId, Uint32 SizeInBytes)
+{
+    auto DynAlloc = m_DynamicHeap.Allocate(CtxId, SizeInBytes);
+    if (DynAlloc.pParentDynamicHeap == nullptr)
+    {
+        UNSUPPORTED("Failed to allocate dynamic memory");
+    }
+#ifdef _DEBUG
+    DynAlloc.dbgFrameNumber = m_FrameNumber;
+#endif
+    return DynAlloc;
+}
 
 void RenderDeviceVkImpl::TestTextureFormat( TEXTURE_FORMAT TexFormat )
 {
@@ -550,19 +577,5 @@ void RenderDeviceVkImpl :: CreateSampler(const SamplerDesc& SamplerDesc, ISample
         }
     );
 }
-
-#if 0
-DescriptorHeapAllocation RenderDeviceVkImpl :: AllocateDescriptor(Vk_DESCRIPTOR_HEAP_TYPE Type, UINT Count /*= 1*/)
-{
-    VERIFY(Type >= Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV && Type < Vk_DESCRIPTOR_HEAP_TYPE_NUM_TYPES, "Invalid heap type");
-    return m_CPUDescriptorHeaps[Type].Allocate(Count);
-}
-
-DescriptorHeapAllocation RenderDeviceVkImpl :: AllocateGPUDescriptors(Vk_DESCRIPTOR_HEAP_TYPE Type, UINT Count /*= 1*/)
-{
-    VERIFY(Type >= Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV && Type <= Vk_DESCRIPTOR_HEAP_TYPE_SAMPLER, "Invalid heap type");
-    return m_GPUDescriptorHeaps[Type].Allocate(Count);
-}
-#endif
 
 }

@@ -44,6 +44,7 @@
 #include "FramebufferCache.h"
 #include "CommandPoolManager.h"
 #include "ResourceReleaseQueue.h"
+#include "VulkanDynamicHeap.h"
 
 /// Namespace for the Direct3D11 implementation of the graphics engine
 namespace Diligent
@@ -96,7 +97,8 @@ public:
 
     ICommandQueueVk *GetCmdQueue(){return m_pCommandQueue;}
     
-	void IdleGPU(bool ReleaseStaleObjects);
+    // Idles GPU and returns fence value that was signaled
+	Uint64 IdleGPU(bool ReleaseStaleObjects);
     // pImmediateCtx parameter is only used to make sure the command buffer is submitted from the immediate context
     // The method returns fence value associated with the submitted command buffer
     Uint64 ExecuteCommandBuffer(const VkSubmitInfo &SubmitInfo, class DeviceContextVkImpl* pImmediateCtx);
@@ -128,23 +130,26 @@ public:
         return m_MemoryMgr.Allocate(MemReqs, MemoryProperties);
     }
 
+    VulkanDynamicAllocation AllocateDynamicSpace(Uint32 CtxId, Uint32 SizeInBytes);
+    const VulkanDynamicHeap& GetDynamicHeap()const{return m_DynamicHeap;}
+
 private:
     virtual void TestTextureFormat( TEXTURE_FORMAT TexFormat )override final;
     void ProcessStaleResources(Uint64 SubmittedCmdBufferNumber, Uint64 SubmittedFenceValue, Uint64 CompletedFenceValue);
 
     // Submits command buffer for execution to the command queue
-    // Returns the submitted command buffer number and the fence value that has been set to signal by GPU
+    // Returns the submitted command buffer number and the fence value
     // Parameters:
     //      * SubmittedCmdBuffNumber - submitted command buffer number
     //      * SubmittedFenceValue    - fence value associated with the submitted command buffer
     void SubmitCommandBuffer(const VkSubmitInfo& SubmitInfo, Uint64& SubmittedCmdBuffNumber, Uint64& SubmittedFenceValue);
 
-    std::shared_ptr<VulkanUtilities::VulkanInstance> m_VulkanInstance;
-    std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice> m_PhysicalDevice;
-    std::shared_ptr<VulkanUtilities::VulkanLogicalDevice> m_LogicalVkDevice;
+    std::shared_ptr<VulkanUtilities::VulkanInstance>        m_VulkanInstance;
+    std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice>  m_PhysicalDevice;
+    std::shared_ptr<VulkanUtilities::VulkanLogicalDevice>   m_LogicalVkDevice;
     
-    std::mutex m_CmdQueueMutex;
-    RefCntAutoPtr<ICommandQueueVk> m_pCommandQueue;
+    std::mutex                      m_CmdQueueMutex;
+    RefCntAutoPtr<ICommandQueueVk>  m_pCommandQueue;
 
     EngineVkAttribs m_EngineAttribs;
 
@@ -189,6 +194,8 @@ private:
 
     VulkanUtilities::VulkanMemoryManager m_MemoryMgr;
     ResourceReleaseQueue<DynamicStaleResourceWrapper> m_ReleaseQueue;
+
+    VulkanDynamicHeap m_DynamicHeap;
 };
 
 }

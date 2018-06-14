@@ -147,6 +147,8 @@ public:
         return m_DynamicDescriptorPool.Allocate(SetLayout);
     }
 
+    VulkanDynamicAllocation AllocateDynamicSpace(Uint32 SizeInBytes);
+
     std::vector<uint32_t>& GetDynamicBufferOffsets(){return m_DynamicBufferOffsets;}
 
 private:

@@ -63,7 +63,7 @@ public:
     virtual void Unmap( IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags )override;
 
 #ifdef _DEBUG
-    void DbgVerifyDynamicAllocation(Uint32 ContextId);
+    void DbgVerifyDynamicAllocation(Uint32 ContextId)const;
 #endif
 
     virtual ID3D12Resource *GetD3D12Buffer(size_t &DataStartByteOffset, Uint32 ContextId)override final

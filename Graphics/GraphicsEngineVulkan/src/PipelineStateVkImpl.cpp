@@ -380,7 +380,7 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters *pRefCounters, Ren
 
 PipelineStateVkImpl::~PipelineStateVkImpl()
 {
-    auto pDeviceVkImpl = ValidatedCast<RenderDeviceVkImpl>(GetDevice());
+    auto pDeviceVkImpl = GetDevice<RenderDeviceVkImpl>();
     pDeviceVkImpl->GetFramebufferCache().OnDestroyRenderPass(m_RenderPass);
     pDeviceVkImpl->SafeReleaseVkObject(std::move(m_RenderPass));
     pDeviceVkImpl->SafeReleaseVkObject(std::move(m_Pipeline));
@@ -422,7 +422,7 @@ void PipelineStateVkImpl::BindShaderResources(IResourceMapping *pResourceMapping
 
 void PipelineStateVkImpl::CreateShaderResourceBinding(IShaderResourceBinding **ppShaderResourceBinding)
 {
-    auto *pRenderDeviceVk = ValidatedCast<RenderDeviceVkImpl>( GetDevice() );
+    auto *pRenderDeviceVk = GetDevice<RenderDeviceVkImpl>();
     auto &SRBAllocator = pRenderDeviceVk->GetSRBAllocator();
     auto pResBindingVk = NEW_RC_OBJ(SRBAllocator, "ShaderResourceBindingVkImpl instance", ShaderResourceBindingVkImpl)(this, false);
     pResBindingVk->QueryInterface(IID_ShaderResourceBinding, reinterpret_cast<IObject**>(ppShaderResourceBinding));

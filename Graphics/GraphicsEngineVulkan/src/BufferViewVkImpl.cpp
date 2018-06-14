@@ -42,7 +42,7 @@ BufferViewVkImpl::BufferViewVkImpl( IReferenceCounters *pRefCounters,
 
 BufferViewVkImpl::~BufferViewVkImpl()
 {
-    auto *pDeviceVkImpl = ValidatedCast<RenderDeviceVkImpl>(GetDevice());
+    auto *pDeviceVkImpl = GetDevice<RenderDeviceVkImpl>();
     pDeviceVkImpl->SafeReleaseVkObject(std::move(m_BuffView));
 }
 

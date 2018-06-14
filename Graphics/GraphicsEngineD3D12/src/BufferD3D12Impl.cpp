@@ -459,7 +459,7 @@ void BufferD3D12Impl::CreateCBV(D3D12_CPU_DESCRIPTOR_HANDLE CBVDescriptor)
 }
 
 #ifdef _DEBUG
-void BufferD3D12Impl::DbgVerifyDynamicAllocation(Uint32 ContextId)
+void BufferD3D12Impl::DbgVerifyDynamicAllocation(Uint32 ContextId)const
 {
     VERIFY(m_DynamicData[ContextId].GPUAddress != 0, "Dynamic buffer must be mapped before the first use");
 	auto CurrentFrame = ValidatedCast<RenderDeviceD3D12Impl>(GetDevice())->GetCurrentFrameNumber();

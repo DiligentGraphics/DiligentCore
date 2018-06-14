@@ -27,46 +27,59 @@
 
 namespace Diligent
 {
-VulkanRingBuffer::VulkanRingBuffer(size_t MaxSize, IMemoryAllocator &Allocator, RenderDeviceVkImpl* pDeviceVk) :
-    RingBuffer(MaxSize, Allocator),
-    m_pDeviceVk(pDeviceVk)
+
+static uint32_t GetDefaultAlignment(const VulkanUtilities::VulkanPhysicalDevice& PhysicalDevice)
 {
+    const auto& Props = PhysicalDevice.GetProperties();
+    const auto& Limits = Props.limits;
+    return std::max(std::max(Limits.minUniformBufferOffsetAlignment, Limits.minTexelBufferOffsetAlignment), Limits.minStorageBufferOffsetAlignment);
+}
+
+VulkanDynamicHeap::VulkanDynamicHeap(IMemoryAllocator&      Allocator,
+                                     RenderDeviceVkImpl*    pDeviceVk,
+                                     Uint32                 ImmediateCtxHeapSize,
+                                     Uint32                 DeferredCtxHeapSize,
+                                     Uint32                 DeferredCtxCount) :
+    m_pDeviceVk(pDeviceVk),
+    m_DefaultAlignment(GetDefaultAlignment(pDeviceVk->GetPhysicalDevice()))
+{
+    Uint32 BufferSize = ImmediateCtxHeapSize + DeferredCtxHeapSize * DeferredCtxCount;
     VkBufferCreateInfo VkBuffCI = {};
     VkBuffCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     VkBuffCI.pNext = nullptr;
     VkBuffCI.flags = 0; // VK_BUFFER_CREATE_SPARSE_BINDING_BIT, VK_BUFFER_CREATE_SPARSE_RESIDENCY_BIT, VK_BUFFER_CREATE_SPARSE_ALIASED_BIT
-    VkBuffCI.size = MaxSize;
-    VkBuffCI.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    VkBuffCI.size = BufferSize;
+    VkBuffCI.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
     VkBuffCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     VkBuffCI.queueFamilyIndexCount = 0;
     VkBuffCI.pQueueFamilyIndices = nullptr;
 
     const auto& LogicalDevice = pDeviceVk->GetLogicalDevice();
-    m_VkBuffer = LogicalDevice.CreateBuffer(VkBuffCI, "Upload buffer");
+    m_VkBuffer = LogicalDevice.CreateBuffer(VkBuffCI, "Dynamic heap buffer");
     VkMemoryRequirements MemReqs = LogicalDevice.GetBufferMemoryRequirements(m_VkBuffer);
 
     const auto& PhysicalDevice = pDeviceVk->GetPhysicalDevice();
-       
+
     VkMemoryAllocateInfo MemAlloc = {};
     MemAlloc.pNext = nullptr;
     MemAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     MemAlloc.allocationSize = MemReqs.size;
-            
+
     // VK_MEMORY_PROPERTY_HOST_COHERENT_BIT bit specifies that the host cache management commands vkFlushMappedMemoryRanges 
     // and vkInvalidateMappedMemoryRanges are NOT needed to flush host writes to the device or make device writes visible
     // to the host (10.2)
     MemAlloc.memoryTypeIndex = PhysicalDevice.GetMemoryTypeIndex(MemReqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
     VERIFY(MemAlloc.memoryTypeIndex != VulkanUtilities::VulkanPhysicalDevice::InvalidMemoryTypeIndex,
-            "Vulkan spec requires that for a VkBuffer not created with the "
-            "VK_BUFFER_CREATE_SPARSE_BINDING_BIT bit set, the memoryTypeBits member always contains at least one bit set "
-            "corresponding to a VkMemoryType with a propertyFlags that has both the VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT bit "
-            "and the VK_MEMORY_PROPERTY_HOST_COHERENT_BIT bit set(11.6)");
+           "Vulkan spec requires that for a VkBuffer not created with the "
+           "VK_BUFFER_CREATE_SPARSE_BINDING_BIT bit set, the memoryTypeBits member always contains at least one bit set "
+           "corresponding to a VkMemoryType with a propertyFlags that has both the VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT bit "
+           "and the VK_MEMORY_PROPERTY_HOST_COHERENT_BIT bit set(11.6)");
 
     m_BufferMemory = LogicalDevice.AllocateDeviceMemory(MemAlloc, "Host-visible memory for upload buffer");
-        
+
     void *Data = nullptr;
-    auto err = LogicalDevice.MapMemory(m_BufferMemory, 
+    auto err = LogicalDevice.MapMemory(m_BufferMemory,
         0, // offset
         MemAlloc.allocationSize,
         0, // flags, reserved for future use
@@ -77,14 +90,21 @@ VulkanRingBuffer::VulkanRingBuffer(size_t MaxSize, IMemoryAllocator &Allocator, 
     err = LogicalDevice.BindBufferMemory(m_VkBuffer, m_BufferMemory, 0 /*offset*/);
     CHECK_VK_ERROR_AND_THROW(err, "Failed to bind  bufer memory");
 
-    LOG_INFO_MESSAGE("GPU ring buffer created. Size: ", MaxSize);
+    LOG_INFO_MESSAGE("GPU dynamic heap created. Total buffer size: ", BufferSize);
+
+    m_RingBuffers.reserve(1 + DeferredCtxCount);
+    Uint32 BaseOffset = 0;
+    for(Uint32 ctx = 0; ctx < 1 + DeferredCtxCount; ++ctx)
+    {
+        Uint32 HeapSize = ctx == 0 ? ImmediateCtxHeapSize : DeferredCtxHeapSize;
+        m_RingBuffers.emplace_back( HeapSize, Allocator, BaseOffset );
+    }
 }
 
-void VulkanRingBuffer::Destroy()
+void VulkanDynamicHeap::Destroy()
 {
-    if(m_VkBuffer)
+    if (m_VkBuffer)
     {
-        LOG_INFO_MESSAGE("Destroying GPU ring buffer. Size: ", GetMaxSize());
         m_pDeviceVk->GetLogicalDevice().UnmapMemory(m_BufferMemory);
         m_pDeviceVk->SafeReleaseVkObject(std::move(m_VkBuffer));
         m_pDeviceVk->SafeReleaseVkObject(std::move(m_BufferMemory));
@@ -92,27 +112,27 @@ void VulkanRingBuffer::Destroy()
     m_CPUAddress = nullptr;
 }
 
-VulkanRingBuffer::~VulkanRingBuffer()
+VulkanDynamicHeap::~VulkanDynamicHeap()
 {
-    Destroy();
+    VERIFY(m_BufferMemory == VK_NULL_HANDLE && m_VkBuffer == VK_NULL_HANDLE, "Vulkan resources must be explcitly released with Destroy()");
 }
 
 
-VulkanDynamicHeap::VulkanDynamicHeap(IMemoryAllocator &Allocator, RenderDeviceVkImpl* pDevice, size_t InitialSize) :
-    m_Allocator(Allocator),
-    m_pDeviceVk(pDevice),
-    m_RingBuffers(STD_ALLOCATOR_RAW_MEM(VulkanRingBuffer, GetRawAllocator(), "Allocator for vector<VulkanRingBuffer>"))
+VulkanDynamicAllocation VulkanDynamicHeap::Allocate(Uint32 CtxId, size_t SizeInBytes, size_t Alignment /*= 0*/)
 {
-    m_RingBuffers.emplace_back(InitialSize, Allocator, pDevice);
-}
+    VERIFY_EXPR(CtxId < m_RingBuffers.size());
 
-
-VulkanDynamicAllocation VulkanDynamicHeap::Allocate(size_t SizeInBytes, size_t Alignment /*= DEFAULT_ALIGN*/)
-{
     if(Alignment == 0)
-        Alignment = DEFAULT_ALIGN;
-    // Every device context has its own upload heap, so there is no need to lock
+        Alignment = m_DefaultAlignment;
+    
+    auto& RingBuff = m_RingBuffers[CtxId].RingBuff;
+    if (SizeInBytes > RingBuff.GetMaxSize())
+    {
+        LOG_ERROR("Requested dynamic allocation size ", SizeInBytes, " exceeds maximum ring buffer size ", RingBuff.GetMaxSize(), ". The app should increase dynamic heap size.");
+        return VulkanDynamicAllocation{};
+    }
 
+    // Every device context uses its own upload heap, so there is no need to lock
     //std::lock_guard<std::mutex> Lock(m_Mutex);
 
     //
@@ -125,18 +145,13 @@ VulkanDynamicAllocation VulkanDynamicHeap::Allocate(size_t SizeInBytes, size_t A
 	VERIFY_EXPR((AlignmentMask & Alignment) == 0);
 	// Align the allocation
 	const size_t AlignedSize = (SizeInBytes + AlignmentMask) & ~AlignmentMask;
-    auto DynAlloc = m_RingBuffers.back().Allocate(AlignedSize);
-    if (DynAlloc.vkBuffer == VK_NULL_HANDLE)
+    auto Offset = RingBuff.Allocate(AlignedSize);
+    while(Offset == RingBuffer::InvalidOffset)
     {
-        auto NewMaxSize = m_RingBuffers.back().GetMaxSize() * 2;
-        while(NewMaxSize < AlignedSize)NewMaxSize*=2;
-        m_RingBuffers.emplace_back(NewMaxSize, m_Allocator, m_pDeviceVk);
-        DynAlloc = m_RingBuffers.back().Allocate(AlignedSize);
+        VulkanDynamicAllocation{};
     }
-#ifdef _DEBUG
-	DynAlloc.FrameNum = m_pDeviceVk->GetCurrentFrameNumber();
-#endif
-    return DynAlloc;
+
+    return VulkanDynamicAllocation{ *this, m_RingBuffers[CtxId].BaseOffset + Offset, SizeInBytes };
 }
 
 void VulkanDynamicHeap::FinishFrame(Uint64 FenceValue, Uint64 LastCompletedFenceValue)
@@ -149,20 +164,11 @@ void VulkanDynamicHeap::FinishFrame(Uint64 FenceValue, Uint64 LastCompletedFence
     //      across several frames!
     //
 
-    size_t NumBuffsToDelete = 0;
-    for(size_t Ind = 0; Ind < m_RingBuffers.size(); ++Ind)
+    for (auto& RingBuff : m_RingBuffers)
     {
-        auto &RingBuff = m_RingBuffers[Ind];
-        RingBuff.FinishCurrentFrame(FenceValue);
-        RingBuff.ReleaseCompletedFrames(LastCompletedFenceValue);
-        if ( NumBuffsToDelete == Ind && Ind < m_RingBuffers.size()-1 && RingBuff.IsEmpty())
-        {
-            ++NumBuffsToDelete;
-        }
+        RingBuff.RingBuff.FinishCurrentFrame(FenceValue);
+        RingBuff.RingBuff.ReleaseCompletedFrames(LastCompletedFenceValue);
     }
-        
-    if(NumBuffsToDelete)
-        m_RingBuffers.erase(m_RingBuffers.begin(), m_RingBuffers.begin()+NumBuffsToDelete);
 }
 
 }

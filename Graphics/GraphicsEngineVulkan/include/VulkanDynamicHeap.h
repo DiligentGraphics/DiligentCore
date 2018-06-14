@@ -23,6 +23,7 @@
 
 #pragma once
 
+#include "Vulkan.h"
 #include "RingBuffer.h"
 #include "VulkanUtilities/VulkanLogicalDevice.h"
 #include "VulkanUtilities/VulkanObjectWrappers.h"
@@ -30,103 +31,100 @@
 namespace Diligent
 {
 
-// Constant blocks must be multiples of 16 constants @ 16 bytes each
-#define DEFAULT_ALIGN 256
-
 class RenderDeviceVkImpl;
+class VulkanDynamicHeap;
 
 struct VulkanDynamicAllocation
 {
-	VulkanDynamicAllocation(VkBuffer _Buff, size_t _Offset, size_t _Size, void *_CPUAddress)
-		: vkBuffer(_Buff), Offset(_Offset), Size(_Size), CPUAddress(_CPUAddress)
+    VulkanDynamicAllocation(){}
+
+    VulkanDynamicAllocation(VulkanDynamicHeap& _ParentHeap, size_t _Offset, size_t _Size) :
+        pParentDynamicHeap(&_ParentHeap),
+        Offset           (_Offset), 
+        Size             (_Size)
     {}
 
-    VkBuffer vkBuffer = VK_NULL_HANDLE;	    // Vulkan buffer associated with this memory.
-	size_t Offset = 0;			            // Offset from the start of the buffer resource
-	size_t Size = 0;			            // Reserved size of this allocation
-    void *CPUAddress = nullptr;
+    VulkanDynamicAllocation             (const VulkanDynamicAllocation&) = delete;
+    VulkanDynamicAllocation& operator = (const VulkanDynamicAllocation&) = delete;
+    VulkanDynamicAllocation             (VulkanDynamicAllocation&& rhs)noexcept :
+        pParentDynamicHeap(rhs.pParentDynamicHeap),
+        Offset            (rhs.Offset),
+        Size              (rhs.Size)
 #ifdef _DEBUG
-    Uint64 FrameNum = static_cast<Uint64>(-1);
+        , dbgFrameNumber(rhs.dbgFrameNumber)
 #endif
-};
-
-class VulkanRingBuffer : public RingBuffer
-{
-public:
-    VulkanRingBuffer(size_t MaxSize, IMemoryAllocator &Allocator, RenderDeviceVkImpl* pDeviceVk);
-    
-    VulkanRingBuffer(VulkanRingBuffer&& rhs)noexcept : 
-        RingBuffer    (std::move(rhs)),
-        m_pDeviceVk   (rhs.m_pDeviceVk),
-        m_VkBuffer    (std::move(rhs.m_VkBuffer)),
-        m_BufferMemory(std::move(rhs.m_BufferMemory)),
-        m_CPUAddress  (rhs.m_CPUAddress)
     {
-        rhs.m_CPUAddress = nullptr;
+        rhs.pParentDynamicHeap = nullptr;
+        rhs.Offset = 0;
+        rhs.Size = 0;
+#ifdef _DEBUG
+        rhs.dbgFrameNumber = 0;
+#endif
     }
 
-    VulkanRingBuffer            (const VulkanRingBuffer&) = delete;
-    VulkanRingBuffer& operator= (VulkanRingBuffer&)       = delete;
-    VulkanRingBuffer& operator= (VulkanRingBuffer&& rhs)
+    VulkanDynamicAllocation& operator = (VulkanDynamicAllocation&& rhs)noexcept // Must be noexcept on MSVC, so can't use = default
     {
-        Destroy();
-
-        static_cast<RingBuffer&>(*this) = std::move(rhs);
-        m_pDeviceVk     = rhs.m_pDeviceVk;
-        m_VkBuffer      = std::move(rhs.m_VkBuffer);
-        m_BufferMemory  = std::move(rhs.m_BufferMemory);
-        m_CPUAddress    = rhs.m_CPUAddress;
-        rhs.m_CPUAddress = nullptr;
-        
+        pParentDynamicHeap = rhs.pParentDynamicHeap;
+        Offset             = rhs.Offset;
+        Size               = rhs.Size;
+        rhs.pParentDynamicHeap = nullptr;
+        rhs.Offset             = 0;
+        rhs.Size               = 0;
+#ifdef _DEBUG
+        dbgFrameNumber = rhs.dbgFrameNumber;
+        rhs.dbgFrameNumber = 0;
+#endif
         return *this;
     }
 
-    ~VulkanRingBuffer();
-
-    VulkanDynamicAllocation Allocate(size_t SizeInBytes)
-    {
-        auto Offset = RingBuffer::Allocate(SizeInBytes);
-        if (Offset != RingBuffer::InvalidOffset)
-        {
-            return VulkanDynamicAllocation {m_VkBuffer, Offset, SizeInBytes, m_CPUAddress + Offset};
-        }
-        else
-        {
-            return VulkanDynamicAllocation {nullptr, 0, 0, nullptr};
-        }
-    }
-
-private:
-    void Destroy();
-
-    RenderDeviceVkImpl* m_pDeviceVk;
-    VulkanUtilities::BufferWrapper m_VkBuffer;
-    VulkanUtilities::DeviceMemoryWrapper m_BufferMemory;
-    Uint8* m_CPUAddress;
+    VulkanDynamicHeap* pParentDynamicHeap = nullptr;
+    size_t             Offset             = 0;		// Offset from the start of the buffer resource
+    size_t             Size               = 0;	    // Reserved size of this allocation
+#ifdef _DEBUG
+    Uint64             dbgFrameNumber     = 0;
+#endif
 };
 
 class VulkanDynamicHeap
 {
 public:
-	VulkanDynamicHeap(IMemoryAllocator &Allocator, class RenderDeviceVkImpl* pDeviceVk, size_t InitialSize);
-    
+    VulkanDynamicHeap(IMemoryAllocator&         Allocator, 
+                      class RenderDeviceVkImpl* pDeviceVk, 
+                      Uint32                    ImmediateCtxHeapSize, 
+                      Uint32                    DeferredCtxHeapSize,
+                      Uint32                    DeferredCtxCount);
+    ~VulkanDynamicHeap();
+
     VulkanDynamicHeap            (const VulkanDynamicHeap&) = delete;
     VulkanDynamicHeap            (VulkanDynamicHeap&&)      = delete;
     VulkanDynamicHeap& operator= (const VulkanDynamicHeap&) = delete;
     VulkanDynamicHeap& operator= (VulkanDynamicHeap&&)      = delete;
 
-	VulkanDynamicAllocation Allocate( size_t SizeInBytes, size_t Alignment = DEFAULT_ALIGN );
+    VulkanDynamicAllocation Allocate( Uint32 CtxId, size_t SizeInBytes, size_t Alignment = 0);
 
     void FinishFrame(Uint64 FenceValue, Uint64 LastCompletedFenceValue);
+    void Destroy();
+
+    VkBuffer GetVkBuffer()  const{return m_VkBuffer;}
+    Uint8*   GetCPUAddress()const{return m_CPUAddress;}
 
 private:
-    // When a chunk of dynamic memory is requested, the heap first tries to allocate the memory in the largest GPU buffer. 
-    // If allocation fails, a new ring buffer is created that provides enough space and requests memory from that buffer.
-    // Only the largest buffer is used for allocation and all other buffers are released when GPU is done with corresponding frames
-    std::vector<VulkanRingBuffer, STDAllocatorRawMem<VulkanRingBuffer> > m_RingBuffers;
-    IMemoryAllocator &m_Allocator;
-    RenderDeviceVkImpl* m_pDeviceVk = nullptr;
-    //std::mutex m_Mutex;
+    struct VulkanRingBuffer
+    {
+        VulkanRingBuffer(Uint32 Size, IMemoryAllocator &Allocator, Uint32 _BaseOffset) :
+            RingBuff(Size, Allocator),
+            BaseOffset(_BaseOffset)
+        {}
+        RingBuffer   RingBuff;
+        const Uint32 BaseOffset;
+    };
+    std::vector<VulkanRingBuffer>   m_RingBuffers;
+    RenderDeviceVkImpl* const       m_pDeviceVk;
+
+    VulkanUtilities::BufferWrapper       m_VkBuffer;
+    VulkanUtilities::DeviceMemoryWrapper m_BufferMemory;
+    Uint8*                               m_CPUAddress;
+    const uint32_t                       m_DefaultAlignment;
 };
 
 }

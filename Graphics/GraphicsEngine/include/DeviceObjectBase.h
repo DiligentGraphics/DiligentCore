@@ -119,6 +119,9 @@ public:
     }
 
 	IRenderDevice *GetDevice()const{return m_pDevice;}
+    
+    template<typename Type>
+    Type* GetDevice()const{return ValidatedCast<Type>(m_pDevice);}
 
 private:
 	/// Strong reference to the device

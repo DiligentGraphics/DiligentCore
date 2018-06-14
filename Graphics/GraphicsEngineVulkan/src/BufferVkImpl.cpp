@@ -36,16 +36,17 @@
 namespace Diligent
 {
 
-BufferVkImpl :: BufferVkImpl(IReferenceCounters *pRefCounters, 
-                             FixedBlockMemoryAllocator &BuffViewObjMemAllocator, 
-                             RenderDeviceVkImpl *pRenderDeviceVk, 
-                             const BufferDesc& BuffDesc, 
-                             const BufferData &BuffData /*= BufferData()*/) : 
+BufferVkImpl :: BufferVkImpl(IReferenceCounters*        pRefCounters, 
+                             FixedBlockMemoryAllocator& BuffViewObjMemAllocator, 
+                             RenderDeviceVkImpl*        pRenderDeviceVk, 
+                             const BufferDesc&          BuffDesc, 
+                             const BufferData&          BuffData /*= BufferData()*/) : 
     TBufferBase(pRefCounters, BuffViewObjMemAllocator, pRenderDeviceVk, BuffDesc, false),
+    m_AccessFlags(0),
 #ifdef _DEBUG
     m_DbgMapType(1 + pRenderDeviceVk->GetNumDeferredContexts()),
 #endif
-    m_AccessFlags(0)
+    m_DynamicAllocations(STD_ALLOCATOR_RAW_MEM(VulkanDynamicAllocation, GetRawAllocator(), "Allocator for vector<VulkanDynamicAllocation>"))
 {
 #define LOG_BUFFER_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Buffer \"", BuffDesc.Name ? BuffDesc.Name : "", "\": ", ##__VA_ARGS__);
 
@@ -90,105 +91,127 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters *pRefCounters,
     if (m_Desc.BindFlags & BIND_UNIFORM_BUFFER)
         VkBuffCI.usage |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
 
-    VkBuffCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // sharing mode of the buffer when it will be accessed by multiple queue families.
-    VkBuffCI.queueFamilyIndexCount = 0; // number of entries in the pQueueFamilyIndices array
-    VkBuffCI.pQueueFamilyIndices = nullptr; // list of queue families that will access this buffer 
-                                            // (ignored if sharingMode is not VK_SHARING_MODE_CONCURRENT).
-
-    m_VulkanBuffer = LogicalDevice.CreateBuffer(VkBuffCI, m_Desc.Name);
-
-    VkMemoryRequirements MemReqs = LogicalDevice.GetBufferMemoryRequirements(m_VulkanBuffer);
-
-    VkMemoryPropertyFlags BufferMemoryFlags = 0;
-    if (m_Desc.Usage == USAGE_CPU_ACCESSIBLE)
-        BufferMemoryFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-    else
-        BufferMemoryFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-
-    m_MemoryAllocation = pRenderDeviceVk->AllocateMemory(MemReqs, BufferMemoryFlags);
-
-    VERIFY( (MemReqs.alignment & (MemReqs.alignment-1)) == 0, "Alignment is not power of 2!");
-    auto AlignedOffset = (m_MemoryAllocation.UnalignedOffset + (MemReqs.alignment-1)) & ~(MemReqs.alignment-1);
-    auto Memory = m_MemoryAllocation.Page->GetVkMemory();
-    auto err = LogicalDevice.BindBufferMemory(m_VulkanBuffer, Memory, AlignedOffset);
-    CHECK_VK_ERROR_AND_THROW(err, "Failed to bind buffer memory");
-
-    bool bInitializeBuffer = (BuffData.pData != nullptr && BuffData.DataSize > 0);
-    if( bInitializeBuffer )
+    if(m_Desc.Usage == USAGE_DYNAMIC)
     {
-        VkBufferCreateInfo VkStaginBuffCI = VkBuffCI;
-        VkStaginBuffCI.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+        auto CtxCount = 1 + pRenderDeviceVk->GetNumDeferredContexts();
+        m_DynamicAllocations.reserve(CtxCount);
+        for(Uint32 ctx=0; ctx < CtxCount; ++ctx)
+            m_DynamicAllocations.emplace_back();
+    }
 
-        std::string StagingBufferName = "Staging buffer for '";
-        StagingBufferName += m_Desc.Name;
-        StagingBufferName += '\'';
-        VulkanUtilities::BufferWrapper StagingBuffer = LogicalDevice.CreateBuffer(VkStaginBuffCI, StagingBufferName.c_str());
-
-        VkMemoryRequirements StagingBufferMemReqs = LogicalDevice.GetBufferMemoryRequirements(StagingBuffer);
-
-        // VK_MEMORY_PROPERTY_HOST_COHERENT_BIT bit specifies that the host cache management commands vkFlushMappedMemoryRanges 
-        // and vkInvalidateMappedMemoryRanges are NOT needed to flush host writes to the device or make device writes visible
-        // to the host (10.2)
-        auto StagingMemoryAllocation = pRenderDeviceVk->AllocateMemory(StagingBufferMemReqs, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-        auto StagingBufferMemory = StagingMemoryAllocation.Page->GetVkMemory();
-        auto AlignedStagingMemOffset = (StagingMemoryAllocation.UnalignedOffset + (StagingBufferMemReqs.alignment-1)) & ~(StagingBufferMemReqs.alignment-1);
-
-        auto *StagingData = reinterpret_cast<uint8_t*>(StagingMemoryAllocation.Page->GetCPUMemory());
-        VERIFY_EXPR(StagingData != nullptr);
-        memcpy(StagingData + AlignedStagingMemOffset, BuffData.pData, BuffData.DataSize);
-            
-        err = LogicalDevice.BindBufferMemory(StagingBuffer, StagingBufferMemory, AlignedStagingMemOffset);
-        CHECK_VK_ERROR_AND_THROW(err, "Failed to bind staging bufer memory");
-
-        VulkanUtilities::CommandPoolWrapper CmdPool;
-        VkCommandBuffer vkCmdBuff;
-        pRenderDeviceVk->AllocateTransientCmdPool(CmdPool, vkCmdBuff, "Transient command pool to copy staging data to a device buffer");
-
-        VulkanUtilities::VulkanCommandBuffer::BufferMemoryBarrier(vkCmdBuff, StagingBuffer, 0, VK_ACCESS_TRANSFER_READ_BIT);
-        m_AccessFlags = VK_ACCESS_TRANSFER_WRITE_BIT;
-        VulkanUtilities::VulkanCommandBuffer::BufferMemoryBarrier(vkCmdBuff, m_VulkanBuffer, 0, m_AccessFlags);
-
-        // Copy commands MUST be recorded outside of a render pass instance. This is OK here
-        // as copy will be the only command in the cmd buffer
-        VkBufferCopy BuffCopy = {};
-        BuffCopy.srcOffset = 0;
-        BuffCopy.dstOffset = 0;
-        BuffCopy.size = VkBuffCI.size;
-        vkCmdCopyBuffer(vkCmdBuff, StagingBuffer, m_VulkanBuffer, 1, &BuffCopy);
-
-	    pRenderDeviceVk->ExecuteAndDisposeTransientCmdBuff(vkCmdBuff, std::move(CmdPool));
-
-
-        // After command buffer is submitted, safe-release staging resources. This strategy
-        // is little overconservative as the resources will only be released after the 
-        // first command buffer submitted through the immediate context is complete
-
-        // Next Cmd Buff| Next Fence |               This Thread                      |           Immediate Context
-        //              |            |                                                |
-        //      N       |     F      |                                                |
-        //              |            |                                                |
-        //              |            |  ExecuteAndDisposeTransientCmdBuff(vkCmdBuff)  |
-        //              |            |  - SubmittedCmdBuffNumber = N                  |
-        //              |            |  - SubmittedFenceValue = F                     |
-        //     N+1 -  - | -  F+1  -  |                                                |  
-        //              |            |  Release(StagingBuffer)                        |
-        //              |            |  - {N+1, StagingBuffer} -> Stale Objects       |
-        //              |            |                                                |
-        //              |            |                                                |
-        //              |            |                                                | ExecuteCommandBuffer()                                      
-        //              |            |                                                | - SubmittedCmdBuffNumber = N+1
-        //              |            |                                                | - SubmittedFenceValue = F+1
-        //     N+2 -  - | -  F+2  -  |  -   -   -   -   -   -   -   -   -   -   -   - | 
-        //              |            |                                                | - DiscardStaleVkObjects(N+1, F+1)  
-        //              |            |                                                |   - {F+1, StagingBuffer} -> Release Queue 
-        //              |            |                                                | 
-
-        pRenderDeviceVk->SafeReleaseVkObject(std::move(StagingBuffer));
-        pRenderDeviceVk->SafeReleaseVkObject(std::move(StagingMemoryAllocation));
+    if (m_Desc.Usage == USAGE_DYNAMIC && (VkBuffCI.usage & (VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)) == 0)
+    {
+        // Dynamic constant/vertex/index buffers are suballocated in the upload heap when Map() is called.
+        // Dynamic buffers with SRV or UAV flags need to be allocated in GPU-only memory
+        m_AccessFlags = VK_ACCESS_INDIRECT_COMMAND_READ_BIT | 
+                        VK_ACCESS_INDEX_READ_BIT            | 
+                        VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT | 
+                        VK_ACCESS_UNIFORM_READ_BIT          | 
+                        VK_ACCESS_SHADER_READ_BIT           |
+                        VK_ACCESS_TRANSFER_READ_BIT;
     }
     else
     {
-        m_AccessFlags = 0;
+        VkBuffCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // sharing mode of the buffer when it will be accessed by multiple queue families.
+        VkBuffCI.queueFamilyIndexCount = 0; // number of entries in the pQueueFamilyIndices array
+        VkBuffCI.pQueueFamilyIndices = nullptr; // list of queue families that will access this buffer 
+                                                // (ignored if sharingMode is not VK_SHARING_MODE_CONCURRENT).
+
+        m_VulkanBuffer = LogicalDevice.CreateBuffer(VkBuffCI, m_Desc.Name);
+
+        VkMemoryRequirements MemReqs = LogicalDevice.GetBufferMemoryRequirements(m_VulkanBuffer);
+
+        VkMemoryPropertyFlags BufferMemoryFlags = 0;
+        if (m_Desc.Usage == USAGE_CPU_ACCESSIBLE)
+            BufferMemoryFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+        else
+            BufferMemoryFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+
+        m_MemoryAllocation = pRenderDeviceVk->AllocateMemory(MemReqs, BufferMemoryFlags);
+
+        VERIFY( (MemReqs.alignment & (MemReqs.alignment-1)) == 0, "Alignment is not power of 2!");
+        auto AlignedOffset = (m_MemoryAllocation.UnalignedOffset + (MemReqs.alignment-1)) & ~(MemReqs.alignment-1);
+        auto Memory = m_MemoryAllocation.Page->GetVkMemory();
+        auto err = LogicalDevice.BindBufferMemory(m_VulkanBuffer, Memory, AlignedOffset);
+        CHECK_VK_ERROR_AND_THROW(err, "Failed to bind buffer memory");
+
+        bool bInitializeBuffer = (BuffData.pData != nullptr && BuffData.DataSize > 0);
+        if( bInitializeBuffer )
+        {
+            VkBufferCreateInfo VkStaginBuffCI = VkBuffCI;
+            VkStaginBuffCI.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+
+            std::string StagingBufferName = "Staging buffer for '";
+            StagingBufferName += m_Desc.Name;
+            StagingBufferName += '\'';
+            VulkanUtilities::BufferWrapper StagingBuffer = LogicalDevice.CreateBuffer(VkStaginBuffCI, StagingBufferName.c_str());
+
+            VkMemoryRequirements StagingBufferMemReqs = LogicalDevice.GetBufferMemoryRequirements(StagingBuffer);
+
+            // VK_MEMORY_PROPERTY_HOST_COHERENT_BIT bit specifies that the host cache management commands vkFlushMappedMemoryRanges 
+            // and vkInvalidateMappedMemoryRanges are NOT needed to flush host writes to the device or make device writes visible
+            // to the host (10.2)
+            auto StagingMemoryAllocation = pRenderDeviceVk->AllocateMemory(StagingBufferMemReqs, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+            auto StagingBufferMemory = StagingMemoryAllocation.Page->GetVkMemory();
+            auto AlignedStagingMemOffset = (StagingMemoryAllocation.UnalignedOffset + (StagingBufferMemReqs.alignment-1)) & ~(StagingBufferMemReqs.alignment-1);
+
+            auto *StagingData = reinterpret_cast<uint8_t*>(StagingMemoryAllocation.Page->GetCPUMemory());
+            VERIFY_EXPR(StagingData != nullptr);
+            memcpy(StagingData + AlignedStagingMemOffset, BuffData.pData, BuffData.DataSize);
+            
+            err = LogicalDevice.BindBufferMemory(StagingBuffer, StagingBufferMemory, AlignedStagingMemOffset);
+            CHECK_VK_ERROR_AND_THROW(err, "Failed to bind staging bufer memory");
+
+            VulkanUtilities::CommandPoolWrapper CmdPool;
+            VkCommandBuffer vkCmdBuff;
+            pRenderDeviceVk->AllocateTransientCmdPool(CmdPool, vkCmdBuff, "Transient command pool to copy staging data to a device buffer");
+
+            VulkanUtilities::VulkanCommandBuffer::BufferMemoryBarrier(vkCmdBuff, StagingBuffer, 0, VK_ACCESS_TRANSFER_READ_BIT);
+            m_AccessFlags = VK_ACCESS_TRANSFER_WRITE_BIT;
+            VulkanUtilities::VulkanCommandBuffer::BufferMemoryBarrier(vkCmdBuff, m_VulkanBuffer, 0, m_AccessFlags);
+
+            // Copy commands MUST be recorded outside of a render pass instance. This is OK here
+            // as copy will be the only command in the cmd buffer
+            VkBufferCopy BuffCopy = {};
+            BuffCopy.srcOffset = 0;
+            BuffCopy.dstOffset = 0;
+            BuffCopy.size = VkBuffCI.size;
+            vkCmdCopyBuffer(vkCmdBuff, StagingBuffer, m_VulkanBuffer, 1, &BuffCopy);
+
+	        pRenderDeviceVk->ExecuteAndDisposeTransientCmdBuff(vkCmdBuff, std::move(CmdPool));
+
+
+            // After command buffer is submitted, safe-release staging resources. This strategy
+            // is little overconservative as the resources will only be released after the 
+            // first command buffer submitted through the immediate context is complete
+
+            // Next Cmd Buff| Next Fence |               This Thread                      |           Immediate Context
+            //              |            |                                                |
+            //      N       |     F      |                                                |
+            //              |            |                                                |
+            //              |            |  ExecuteAndDisposeTransientCmdBuff(vkCmdBuff)  |
+            //              |            |  - SubmittedCmdBuffNumber = N                  |
+            //              |            |  - SubmittedFenceValue = F                     |
+            //     N+1 -  - | -  F+1  -  |                                                |  
+            //              |            |  Release(StagingBuffer)                        |
+            //              |            |  - {N+1, StagingBuffer} -> Stale Objects       |
+            //              |            |                                                |
+            //              |            |                                                |
+            //              |            |                                                | ExecuteCommandBuffer()                                      
+            //              |            |                                                | - SubmittedCmdBuffNumber = N+1
+            //              |            |                                                | - SubmittedFenceValue = F+1
+            //     N+2 -  - | -  F+2  -  |  -   -   -   -   -   -   -   -   -   -   -   - | 
+            //              |            |                                                | - DiscardStaleVkObjects(N+1, F+1)  
+            //              |            |                                                |   - {F+1, StagingBuffer} -> Release Queue 
+            //              |            |                                                | 
+
+            pRenderDeviceVk->SafeReleaseVkObject(std::move(StagingBuffer));
+            pRenderDeviceVk->SafeReleaseVkObject(std::move(StagingMemoryAllocation));
+        }
+        else
+        {
+            m_AccessFlags = 0;
+        }
     }
 }
 
@@ -241,10 +264,11 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters *pRefCounters,
                              const BufferDesc& BuffDesc,
                              void *pVkBuffer) : 
     TBufferBase(pRefCounters, BuffViewObjMemAllocator, pRenderDeviceVk, BufferDescFromVkResource(BuffDesc, pVkBuffer), false),
+    m_AccessFlags(0),
 #ifdef _DEBUG
     m_DbgMapType(1 + pRenderDeviceVk->GetNumDeferredContexts()),
 #endif
-    m_AccessFlags(0)
+    m_DynamicAllocations(STD_ALLOCATOR_RAW_MEM(VulkanDynamicAllocation, GetRawAllocator(), "Allocator for vector<VulkanDynamicAllocation>"))
 {
 #if 0
     m_pVkResource = pVkBuffer;
@@ -259,10 +283,13 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters *pRefCounters,
 
 BufferVkImpl :: ~BufferVkImpl()
 {
-    auto *pDeviceVkImpl = ValidatedCast<RenderDeviceVkImpl>(GetDevice());
-    // Vk object can only be destroyed when it is no longer used by the GPU
-    pDeviceVkImpl->SafeReleaseVkObject(std::move(m_VulkanBuffer));
-    pDeviceVkImpl->SafeReleaseVkObject(std::move(m_MemoryAllocation));
+    auto *pDeviceVkImpl = GetDevice<RenderDeviceVkImpl>();
+    if(m_VulkanBuffer != VK_NULL_HANDLE)
+    {
+        // Vk object can only be destroyed when it is no longer used by the GPU
+        pDeviceVkImpl->SafeReleaseVkObject(std::move(m_VulkanBuffer));
+        pDeviceVkImpl->SafeReleaseVkObject(std::move(m_MemoryAllocation));
+    }
 }
 
 IMPLEMENT_QUERY_INTERFACE( BufferVkImpl, IID_BufferVk, TBufferBase )
@@ -288,7 +315,8 @@ void BufferVkImpl :: Map(IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapF
 {
     TBufferBase::Map( pContext, MapType, MapFlags, pMappedData );
 
-    auto *pDeviceContextVk = ValidatedCast<DeviceContextVkImpl>(pContext);
+    auto* pDeviceContextVk = ValidatedCast<DeviceContextVkImpl>(pContext);
+    auto* pDeviceVk = GetDevice<RenderDeviceVkImpl>();
 #ifdef _DEBUG
     if(pDeviceContextVk != nullptr)
         m_DbgMapType[pDeviceContextVk->GetContextId()] = std::make_pair(MapType, MapFlags);
@@ -299,7 +327,6 @@ void BufferVkImpl :: Map(IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapF
 #if 0
         LOG_WARNING_MESSAGE_ONCE("Mapping CPU buffer for reading on Vk currently requires flushing context and idling GPU");
         pDeviceContextVk->Flush();
-        auto *pDeviceVk = ValidatedCast<RenderDeviceVkImpl>(GetDevice());
         pDeviceVk->IdleGPU(false);
 
         VERIFY(m_Desc.Usage == USAGE_CPU_ACCESSIBLE, "Buffer must be created as USAGE_CPU_ACCESSIBLE to be mapped for reading");
@@ -326,7 +353,11 @@ void BufferVkImpl :: Map(IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapF
         else if (m_Desc.Usage == USAGE_DYNAMIC)
         {
             VERIFY(MapFlags & MAP_FLAG_DISCARD, "Vk buffer must be mapped for writing with MAP_FLAG_DISCARD flag");
-            pMappedData = pDeviceContextVk->AllocateUploadSpace(this, m_Desc.uiSizeInBytes);
+            auto DynAlloc = pDeviceContextVk->AllocateDynamicSpace(m_Desc.uiSizeInBytes);
+            const auto& DynamicHeap = pDeviceVk->GetDynamicHeap();
+            auto* CPUAddress = DynamicHeap.GetCPUAddress();
+            pMappedData = CPUAddress + DynAlloc.Offset;
+            m_DynamicAllocations[pDeviceContextVk->GetContextId()] = std::move(DynAlloc);
         }
         else
         {
@@ -381,7 +412,7 @@ void BufferVkImpl::Unmap( IDeviceContext *pContext, MAP_TYPE MapType, Uint32 Map
         else if (m_Desc.Usage == USAGE_DYNAMIC)
         {
             VERIFY(MapFlags & MAP_FLAG_DISCARD, "Vk buffer must be mapped for writing with MAP_FLAG_DISCARD flag");
-            pDeviceContextVk->CopyAndFreeDynamicUploadData(this);
+            //pDeviceContextVk->CopyAndFreeDynamicUploadData(this);
         }
     }
 
@@ -401,7 +432,7 @@ void BufferVkImpl::CreateViewInternal( const BufferViewDesc &OrigViewDesc, IBuff
 
     try
     {
-        auto *pDeviceVkImpl = ValidatedCast<RenderDeviceVkImpl>(GetDevice());
+        auto *pDeviceVkImpl = GetDevice<RenderDeviceVkImpl>();
         auto &BuffViewAllocator = pDeviceVkImpl->GetBuffViewObjAllocator();
         VERIFY( &BuffViewAllocator == &m_dbgBuffViewAllocator, "Buff view allocator does not match allocator provided at buffer initialization" );
 
@@ -440,11 +471,32 @@ VulkanUtilities::BufferViewWrapper BufferVkImpl::CreateView(struct BufferViewDes
         ViewCI.offset = ViewDesc.ByteOffset;
         ViewCI.range = ViewDesc.ByteWidth; // size in bytes of the buffer view
 
-        auto *pDeviceVkImpl = static_cast<RenderDeviceVkImpl*>(GetDevice());
+        auto *pDeviceVkImpl = GetDevice<RenderDeviceVkImpl>();
         const auto& LogicalDevice = pDeviceVkImpl->GetLogicalDevice();
         BuffView = LogicalDevice.CreateBufferView(ViewCI, ViewDesc.Name);
     }
     return BuffView;
 }
+
+VkBuffer BufferVkImpl::GetVkBuffer()const
+{
+    if (m_VulkanBuffer != VK_NULL_HANDLE)
+        return m_VulkanBuffer;
+    else
+    {
+        VERIFY(m_Desc.Usage == USAGE_DYNAMIC, "Dynamic buffer expected");
+        return GetDevice<RenderDeviceVkImpl>()->GetDynamicHeap().GetVkBuffer();
+    }
+}
+
+#ifdef _DEBUG
+void BufferVkImpl::DbgVerifyDynamicAllocation(Uint32 ContextId)const
+{
+    const auto& DynAlloc = m_DynamicAllocations[ContextId];
+    VERIFY(DynAlloc.pParentDynamicHeap != nullptr, "Dynamic buffer must be mapped before the first use");
+    auto CurrentFrame = GetDevice<RenderDeviceVkImpl>()->GetCurrentFrameNumber();
+    VERIFY(DynAlloc.dbgFrameNumber == CurrentFrame, "Dynamic allocation is out-of-date. Dynamic buffer \"", m_Desc.Name, "\" must be mapped in the same frame it is used.");
+}
+#endif
 
 }

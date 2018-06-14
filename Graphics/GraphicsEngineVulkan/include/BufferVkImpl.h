@@ -34,6 +34,7 @@
 #include "VulkanUtilities/VulkanObjectWrappers.h"
 #include "VulkanUtilities/VulkanMemoryManager.h"
 #include "VulkanDynamicHeap.h"
+#include "STDAllocator.h"
 
 namespace Diligent
 {
@@ -64,16 +65,28 @@ public:
     virtual void Map( IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid &pMappedData )override;
     virtual void Unmap( IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags )override;
 
-//#ifdef _DEBUG
-//    void DbgVerifyDynamicAllocation(Uint32 ContextId);
-//#endif
+#ifdef _DEBUG
+    void DbgVerifyDynamicAllocation(Uint32 ContextId)const;
+#endif
 
-    Uint32 GetDynamicOffset(Uint32 CtxId)const{return 0;}
-
-    VkBuffer GetVkBuffer()const override final
+    Uint32 GetDynamicOffset(Uint32 CtxId)const
     {
-        return m_VulkanBuffer;
+        if(m_VulkanBuffer != VK_NULL_HANDLE)
+        {
+            return 0;
+        }
+        else
+        {
+            VERIFY(m_Desc.Usage == USAGE_DYNAMIC, "Dynamic buffer is expected");
+            VERIFY_EXPR(!m_DynamicAllocations.empty());
+#ifdef _DEBUG
+            DbgVerifyDynamicAllocation(CtxId);
+#endif
+            auto& DynAlloc = m_DynamicAllocations[CtxId];
+            return static_cast<Uint32>(DynAlloc.Offset);
+        }
     }
+    VkBuffer GetVkBuffer()const override final;
 
     virtual void* GetNativeHandle()override final
     { 
@@ -95,7 +108,9 @@ private:
 #ifdef _DEBUG
     std::vector< std::pair<MAP_TYPE, Uint32> > m_DbgMapType;
 #endif
-    
+
+    std::vector<VulkanDynamicAllocation, STDAllocatorRawMem<VulkanDynamicAllocation> > m_DynamicAllocations;
+
     VulkanUtilities::BufferWrapper m_VulkanBuffer;
     VulkanUtilities::VulkanMemoryAllocation m_MemoryAllocation;
 };

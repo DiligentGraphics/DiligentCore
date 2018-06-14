@@ -67,7 +67,7 @@ SamplerVkImpl::SamplerVkImpl(IReferenceCounters *pRefCounters, RenderDeviceVkImp
 
 SamplerVkImpl::~SamplerVkImpl()
 {
-    auto pDeviceVkImpl = ValidatedCast<RenderDeviceVkImpl>(GetDevice());
+    auto pDeviceVkImpl = GetDevice<RenderDeviceVkImpl>();
     pDeviceVkImpl->SafeReleaseVkObject(std::move(m_VkSampler));
 }
 
