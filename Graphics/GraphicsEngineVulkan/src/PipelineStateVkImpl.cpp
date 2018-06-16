@@ -477,13 +477,14 @@ bool PipelineStateVkImpl::IsCompatibleWith(const IPipelineState *pPSO)const
 }
 
 
-ShaderResourceCacheVk* PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBinding*   pShaderResourceBinding, 
-                                                                               DeviceContextVkImpl*      pCtxVkImpl,
-                                                                               bool                      CommitResources,
-                                                                               bool                      TransitionResources)const
+void PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBinding*                pShaderResourceBinding, 
+                                                             DeviceContextVkImpl*                   pCtxVkImpl,
+                                                             bool                                   CommitResources,
+                                                             bool                                   TransitionResources,
+                                                            PipelineLayout::DescriptorSetBindInfo*  pDescrSetBindInfo)const
 {
     if(!m_HasStaticResources && !m_HasNonStaticResources)
-        return nullptr;
+        return;
 
 #ifdef VERIFY_SHADER_BINDINGS
     if (pShaderResourceBinding == nullptr && m_HasNonStaticResources)
@@ -502,7 +503,7 @@ ShaderResourceCacheVk* PipelineStateVkImpl::CommitAndTransitionShaderResources(I
         if ( IsIncompatibleWith(pRefPSO) )
         {
             LOG_ERROR_MESSAGE("Shader resource binding is incompatible with the pipeline state \"", m_Desc.Name, "\". Operation will be ignored.");
-            return nullptr;
+            return;
         }
     }
 #endif
@@ -550,16 +551,15 @@ ShaderResourceCacheVk* PipelineStateVkImpl::CommitAndTransitionShaderResources(I
         {
             m_ShaderResourceLayouts[s].CommitDynamicResources(ResourceCache);
         }
-        // Bind descriptor sets
-        m_PipelineLayout.BindDescriptorSets(pCtxVkImpl, m_Desc.IsComputePipeline, ResourceCache);
+        // Prepare descriptor sets, and also bind them if there are no dynamic descriptors
+        VERIFY_EXPR(pDescrSetBindInfo != nullptr);
+        m_PipelineLayout.PrepareDescriptorSets(pCtxVkImpl, m_Desc.IsComputePipeline, ResourceCache, *pDescrSetBindInfo);
     }
     else
     {
         VERIFY(TransitionResources, "Resources should be transitioned or committed or both");
         ResourceCache.TransitionResources<false>(pCtxVkImpl);
     }
-
-    return &ResourceCache;
 }
 
 }

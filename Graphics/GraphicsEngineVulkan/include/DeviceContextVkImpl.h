@@ -36,6 +36,7 @@
 #include "VulkanDynamicHeap.h"
 #include "ResourceReleaseQueue.h"
 #include "DescriptorPoolManager.h"
+#include "PipelineLayout.h"
 
 #ifdef _DEBUG
 #   define VERIFY_CONTEXT_BINDINGS
@@ -149,8 +150,6 @@ public:
 
     VulkanDynamicAllocation AllocateDynamicSpace(Uint32 SizeInBytes);
 
-    std::vector<uint32_t>& GetDynamicBufferOffsets(){return m_DynamicBufferOffsets;}
-
 private:
     void CommitRenderPassAndFramebuffer(class PipelineStateVkImpl *pPipelineStateVk);
     void CommitVkVertexBuffers();
@@ -181,7 +180,6 @@ private:
 #if 0
     GenerateMipsHelper m_MipsGenerator;
 #endif
-    class ShaderResourceCacheVk *m_pCommittedResourceCache = nullptr;
 
     FixedBlockMemoryAllocator m_CmdListAllocator;
 
@@ -204,7 +202,7 @@ private:
     // be submitted next
     Atomics::AtomicInt64 m_NextCmdBuffNumber;
 
-    std::vector<uint32_t> m_DynamicBufferOffsets;
+    PipelineLayout::DescriptorSetBindInfo m_DesrSetBindInfo;
     VulkanDynamicHeap m_DynamicHeap;
 };
 

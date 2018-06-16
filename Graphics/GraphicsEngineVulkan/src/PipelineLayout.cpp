@@ -425,12 +425,12 @@ void PipelineLayout::AllocateDynamicDescriptorSet(DeviceContextVkImpl*    pCtxVk
     }
 }
 
-void PipelineLayout::BindDescriptorSets(DeviceContextVkImpl*    pCtxVkImpl,
-                                        bool                    IsCompute,
-                                        ShaderResourceCacheVk&  ResourceCache)const
+void PipelineLayout::PrepareDescriptorSets(DeviceContextVkImpl*    pCtxVkImpl,
+                                           bool                    IsCompute,
+                                           ShaderResourceCacheVk&  ResourceCache,
+                                           DescriptorSetBindInfo&  BindInfo)const
 {
-    uint32_t SetCount = 0;
-    std::array<VkDescriptorSet, 2> vkSets = {};
+    BindInfo.vkSets.clear();
 
     VERIFY(m_LayoutMgr.GetDescriptorSet(SHADER_VARIABLE_TYPE_STATIC).SetIndex == m_LayoutMgr.GetDescriptorSet(SHADER_VARIABLE_TYPE_MUTABLE).SetIndex, 
            "Static and mutable variables are expected to share the same descriptor set");
@@ -440,36 +440,74 @@ void PipelineLayout::BindDescriptorSets(DeviceContextVkImpl*    pCtxVkImpl,
         const auto &Set = m_LayoutMgr.GetDescriptorSet(VarType);
         if(Set.SetIndex >= 0)
         {
-            SetCount = std::max(SetCount, static_cast<uint32_t>(Set.SetIndex+1));
-            VERIFY_EXPR(vkSets[Set.SetIndex] == VK_NULL_HANDLE);
-            vkSets[Set.SetIndex] = ResourceCache.GetDescriptorSet(Set.SetIndex).GetVkDescriptorSet();
-            VERIFY(vkSets[Set.SetIndex] != VK_NULL_HANDLE, "Descriptor set must not be null");
+            if(Set.SetIndex >= BindInfo.vkSets.size())
+                BindInfo.vkSets.resize(Set.SetIndex + 1);
+            VERIFY_EXPR(BindInfo.vkSets[Set.SetIndex] == VK_NULL_HANDLE);
+            BindInfo.vkSets[Set.SetIndex] = ResourceCache.GetDescriptorSet(Set.SetIndex).GetVkDescriptorSet();
+            VERIFY(BindInfo.vkSets[Set.SetIndex] != VK_NULL_HANDLE, "Descriptor set must not be null");
         }
         TotalDynamicDescriptors += Set.NumDynamicDescriptors;
     }
 
 #ifdef _DEBUG
-    for (uint32_t i = 0; i < SetCount; ++i)
-        VERIFY(vkSets[i] != VK_NULL_HANDLE, "Descriptor set must not be null");
+    for (const auto& set : BindInfo.vkSets)
+        VERIFY(set != VK_NULL_HANDLE, "Descriptor set must not be null");
 #endif
 
-    auto& DynamicOffsets = pCtxVkImpl->GetDynamicBufferOffsets();
-    DynamicOffsets.resize(TotalDynamicDescriptors);
-    ResourceCache.GetDynamicBufferOffsets(pCtxVkImpl->GetContextId(), DynamicOffsets);
+    BindInfo.DynamicOffsets.resize(TotalDynamicDescriptors);
+    BindInfo.BindPoint = IsCompute ? VK_PIPELINE_BIND_POINT_COMPUTE : VK_PIPELINE_BIND_POINT_GRAPHICS;
+    BindInfo.pResourceCache = &ResourceCache;
+#ifdef _DEBUG
+    BindInfo.pDbgPipelineLayout = this;
+#endif
+
+    if(TotalDynamicDescriptors == 0)
+    {
+        // There are no dynamic descriptors, so we can bind descriptor sets right now
+        auto& CmdBuffer = pCtxVkImpl->GetCommandBuffer();
+        CmdBuffer.BindDescriptorSets(BindInfo.BindPoint,
+                                     m_LayoutMgr.GetVkPipelineLayout(), 
+                                     0, // First set
+                                     static_cast<uint32_t>(BindInfo.vkSets.size()),
+                                     !BindInfo.vkSets.empty() ? BindInfo.vkSets.data() : nullptr,
+                                     0, 
+                                     nullptr);
+    }
+}
+
+void PipelineLayout::BindDescriptorSetsWithDynamicOffsets(DeviceContextVkImpl*    pCtxVkImpl,
+                                                          DescriptorSetBindInfo&  BindInfo)const
+{
+    VERIFY(BindInfo.pDbgPipelineLayout != nullptr, "Pipeline layout is not initialized, which most likely means that CommitShaderResources() has never been called");
+    VERIFY(BindInfo.pDbgPipelineLayout->IsSameAs(*this), "Inconsistent pipeline layout");
+    VERIFY(!BindInfo.DynamicOffsets.empty(), "This function should only be called for pipelines that contain dynamic descriptors");
+
+    VERIFY_EXPR(BindInfo.pResourceCache != nullptr);
+#ifdef _DEBUG
+    Uint32 TotalDynamicDescriptors = 0;
+    for (SHADER_VARIABLE_TYPE VarType = SHADER_VARIABLE_TYPE_MUTABLE; VarType <= SHADER_VARIABLE_TYPE_DYNAMIC; VarType = static_cast<SHADER_VARIABLE_TYPE>(VarType + 1))
+    {
+        const auto &Set = m_LayoutMgr.GetDescriptorSet(VarType);
+        TotalDynamicDescriptors += Set.NumDynamicDescriptors;
+    }
+    VERIFY(BindInfo.DynamicOffsets.size() == TotalDynamicDescriptors, "Incosistent dynamic buffer size");
+#endif
+
+    BindInfo.pResourceCache->GetDynamicBufferOffsets(pCtxVkImpl->GetContextId(), BindInfo.DynamicOffsets);
 
     auto& CmdBuffer = pCtxVkImpl->GetCommandBuffer();
     // vkCmdBindDescriptorSets causes the sets numbered [firstSet .. firstSet+descriptorSetCount-1] to use the 
     // bindings stored in pDescriptorSets[0 .. descriptorSetCount-1] for subsequent rendering commands 
     // (either compute or graphics, according to the pipelineBindPoint). Any bindings that were previously 
     // applied via these sets are no longer valid (13.2.5)
-    CmdBuffer.BindDescriptorSets(IsCompute ? VK_PIPELINE_BIND_POINT_COMPUTE : VK_PIPELINE_BIND_POINT_GRAPHICS,
+    CmdBuffer.BindDescriptorSets(BindInfo.BindPoint,
                                  m_LayoutMgr.GetVkPipelineLayout(), 
                                  0, // First set
-                                 SetCount,
-                                 vkSets.data(),
+                                 static_cast<uint32_t>(BindInfo.vkSets.size()),
+                                 !BindInfo.vkSets.empty() ? BindInfo.vkSets.data() : nullptr,
                                  // dynamicOffsetCount must equal the total number of dynamic descriptors in the sets being bound (13.2.5)
-                                 static_cast<uint32_t>(DynamicOffsets.size()),
-                                 DynamicOffsets.data());
+                                 static_cast<uint32_t>(BindInfo.DynamicOffsets.size()),
+                                 !BindInfo.DynamicOffsets.empty() ? BindInfo.DynamicOffsets.data() : nullptr);
 }
 
 }

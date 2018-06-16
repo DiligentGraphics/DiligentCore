@@ -64,11 +64,18 @@ public:
 
     virtual VkPipeline GetVkPipeline()const override final { return m_Pipeline; }
 
-    ShaderResourceCacheVk* CommitAndTransitionShaderResources(IShaderResourceBinding*   pShaderResourceBinding, 
-                                                              DeviceContextVkImpl*      pCtxVkImpl,
-                                                              bool                      CommitResources,
-                                                              bool                      TransitionResources)const;
-    
+    void CommitAndTransitionShaderResources(IShaderResourceBinding*                 pShaderResourceBinding, 
+                                            DeviceContextVkImpl*                    pCtxVkImpl,
+                                            bool                                    CommitResources,
+                                            bool                                    TransitionResources,
+                                            PipelineLayout::DescriptorSetBindInfo*  pDescrSetBindInfo)const;
+
+    void BindDescriptorSetsWithDynamicOffsets(DeviceContextVkImpl*                   pCtxVkImpl,
+                                              PipelineLayout::DescriptorSetBindInfo& BindInfo)
+    {
+        m_PipelineLayout.BindDescriptorSetsWithDynamicOffsets(pCtxVkImpl, BindInfo);
+    }
+
     const PipelineLayout& GetPipelineLayout()const{return m_PipelineLayout;}
     
     const ShaderResourceLayoutVk& GetShaderResLayout(Uint32 ShaderInd)const

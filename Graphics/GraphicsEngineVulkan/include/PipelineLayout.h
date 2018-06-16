@@ -81,10 +81,46 @@ public:
     void AllocateDynamicDescriptorSet(DeviceContextVkImpl*    pCtxVkImpl,
                                       ShaderResourceCacheVk&  ResourceCache)const;
 
-    // Binds Vulkan descriptor sets to the command buffer in the cmd context
-    void BindDescriptorSets(DeviceContextVkImpl*    pCtxVkImpl,
-                            bool                    IsCompute,
-                            ShaderResourceCacheVk&  ResourceCache)const;
+    struct DescriptorSetBindInfo
+    {
+        std::vector<VkDescriptorSet> vkSets;
+        std::vector<uint32_t>        DynamicOffsets;
+        ShaderResourceCacheVk*       pResourceCache = nullptr;
+        VkPipelineBindPoint          BindPoint      = VK_PIPELINE_BIND_POINT_MAX_ENUM;
+
+#ifdef _DEBUG
+        const PipelineLayout *pDbgPipelineLayout = nullptr;
+#endif
+        DescriptorSetBindInfo()
+        {
+            vkSets.reserve(2);
+            DynamicOffsets.reserve(64);
+        }
+
+        void Reset()
+        {
+            vkSets.clear();
+            DynamicOffsets.clear();
+            pResourceCache = nullptr;
+            BindPoint = VK_PIPELINE_BIND_POINT_MAX_ENUM;
+#ifdef _DEBUG
+            pDbgPipelineLayout = nullptr;
+#endif
+        }
+    };
+
+    // Prepares Vulkan descriptor sets for binding. Actual binding 
+    // may not be possible until draw command time because dynamic offsets are 
+    // set by the same Vulkan command. If there are no dynamic descriptors, this
+    // function also binds descriptor sets rightaway.
+    void PrepareDescriptorSets(DeviceContextVkImpl*    pCtxVkImpl,
+                               bool                    IsCompute,
+                               ShaderResourceCacheVk&  ResourceCache,
+                               DescriptorSetBindInfo&  BindInfo)const;
+
+    // Computes dynamic offsets and binds descriptor sets
+    void BindDescriptorSetsWithDynamicOffsets(DeviceContextVkImpl*    pCtxVkImpl,
+                                              DescriptorSetBindInfo&  BindInfo)const;
 
 private:
 

@@ -91,7 +91,6 @@ namespace Diligent
             bIsDeferred ? Attribs.DeferredCtxDynamicHeapPageSize : Attribs.ImmediateCtxDynamicHeapPageSize
         }
     {
-        m_DynamicBufferOffsets.reserve(64);
     }
 
     DeviceContextVkImpl::~DeviceContextVkImpl()
@@ -213,10 +212,8 @@ namespace Diligent
                 CommitScissorRects();
             }
         }
-        
-#if 0
-        m_pCommittedResourceCache = nullptr;
-#endif
+
+        m_DesrSetBindInfo.Reset();
     }
 
     void DeviceContextVkImpl::TransitionShaderResources(IPipelineState *pPipelineState, IShaderResourceBinding *pShaderResourceBinding)
@@ -224,7 +221,7 @@ namespace Diligent
         VERIFY_EXPR(pPipelineState != nullptr);
 
         auto *pPipelineStateVk = ValidatedCast<PipelineStateVkImpl>(pPipelineState);
-        pPipelineStateVk->CommitAndTransitionShaderResources(pShaderResourceBinding, this, false, true);
+        pPipelineStateVk->CommitAndTransitionShaderResources(pShaderResourceBinding, this, false, true, nullptr);
     }
 
     void DeviceContextVkImpl::CommitShaderResources(IShaderResourceBinding *pShaderResourceBinding, Uint32 Flags)
@@ -233,7 +230,7 @@ namespace Diligent
             return;
 
         auto *pPipelineStateVk = m_pPipelineState.RawPtr<PipelineStateVkImpl>();
-        m_pCommittedResourceCache = pPipelineStateVk->CommitAndTransitionShaderResources(pShaderResourceBinding, this, true, (Flags & COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES)!=0);
+        pPipelineStateVk->CommitAndTransitionShaderResources(pShaderResourceBinding, this, true, (Flags & COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES) != 0, &m_DesrSetBindInfo);
     }
 
     void DeviceContextVkImpl::SetStencilRef(Uint32 StencilRef)
@@ -423,11 +420,9 @@ namespace Diligent
         else
             CommitVkVertexBuffers();
 
+        if(!m_DesrSetBindInfo.DynamicOffsets.empty())
+            pPipelineStateVk->BindDescriptorSetsWithDynamicOffsets(this, m_DesrSetBindInfo);
 #if 0
-        if(m_pCommittedResourceCache != nullptr)
-        {
-            pPipelineStateVk->GetRootSignature().CommitRootViews(*m_pCommittedResourceCache, GraphCtx, false, m_ContextId);
-        }
 #ifdef _DEBUG
         else
         {
@@ -454,10 +449,10 @@ namespace Diligent
         {
             if( auto *pBufferVk = ValidatedCast<BufferVkImpl>(DrawAttribs.pIndirectDrawAttribs) )
             {
-//#ifdef _DEBUG
-//                if(pBufferVk->GetDesc().Usage == USAGE_DYNAMIC)
-//                    pBufferVk->DbgVerifyDynamicAllocation(m_ContextId);
-//#endif
+#ifdef _DEBUG
+                if(pBufferVk->GetDesc().Usage == USAGE_DYNAMIC)
+                    pBufferVk->DbgVerifyDynamicAllocation(m_ContextId);
+#endif
                 if(!pBufferVk->CheckAccessFlags(VK_ACCESS_INDIRECT_COMMAND_READ_BIT))
                     BufferMemoryBarrier(*pBufferVk, VK_ACCESS_INDIRECT_COMMAND_READ_BIT);
 
@@ -815,6 +810,7 @@ namespace Diligent
         ReleaseStaleContextResources(SubmittedCmdBuffNumber, SubmittedFenceValue, CompletedFenceValue);
 
         m_State = ContextState{};
+        m_DesrSetBindInfo.Reset();
         m_CommandBuffer.Reset();
         m_pPipelineState.Release(); 
     }
@@ -832,6 +828,7 @@ namespace Diligent
 
         TDeviceContextBase::InvalidateState();
         m_State = ContextState{};
+        m_DesrSetBindInfo.Reset();
         VERIFY(m_CommandBuffer.GetState().RenderPass == VK_NULL_HANDLE, "Invalidating context with unifinished render pass");
         m_CommandBuffer.Reset();
     }
@@ -1115,6 +1112,7 @@ namespace Diligent
 
         m_CommandBuffer.Reset();
         m_State = ContextState{};
+        m_DesrSetBindInfo.Reset();
         m_pPipelineState.Release();
 
         InvalidateState();
