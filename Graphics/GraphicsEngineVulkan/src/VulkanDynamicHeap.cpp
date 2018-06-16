@@ -114,7 +114,7 @@ VulkanRingBuffer::~VulkanRingBuffer()
     VERIFY(m_BufferMemory == VK_NULL_HANDLE && m_VkBuffer == VK_NULL_HANDLE, "Vulkan resources must be explcitly released with Destroy()");
     LOG_INFO_MESSAGE("Dynamic heap ring buffer usage stats:\n"
                      "    Total size: ", SizeFormatter{ m_RingBuffer.GetMaxSize(), 2 },
-                     ". Peak buffer size: ", SizeFormatter{ m_TotalPeakSize, 2, m_RingBuffer.GetMaxSize() },
+                     ". Peak allocated size: ", SizeFormatter{ m_TotalPeakSize, 2, m_RingBuffer.GetMaxSize() },
                      ". Peak frame size: ", SizeFormatter{ m_FramePeakSize, 2, m_RingBuffer.GetMaxSize() },
                      ". Peak utilization: ", std::fixed, std::setprecision(1), static_cast<double>(m_TotalPeakSize) / static_cast<double>(std::max(m_RingBuffer.GetMaxSize(), size_t{1})) * 100.0, '%' );
 }
@@ -206,8 +206,7 @@ VulkanDynamicAllocation VulkanDynamicHeap::Allocate(Uint32 SizeInBytes, Uint32 A
 VulkanDynamicHeap::~VulkanDynamicHeap()
 {
     LOG_INFO_MESSAGE(m_HeapName, " usage stats:\n"
-        "    Peak allocated size: ", SizeFormatter{ m_PeakAllocatedSize, 2, m_PeakAllocatedSize },
-        ". Peak used size: ", SizeFormatter{ m_PeakUsedSize, 2, m_PeakAllocatedSize },
+        "    Peak used/peak allocated size: ", SizeFormatter{ m_PeakUsedSize, 2, m_PeakAllocatedSize }, '/', SizeFormatter{ m_PeakAllocatedSize, 2, m_PeakAllocatedSize },
         ". Peak utilization: ", std::fixed, std::setprecision(1), static_cast<double>(m_PeakUsedSize) / static_cast<double>(std::max(m_PeakAllocatedSize, 1U)) * 100.0, '%');
 }
 

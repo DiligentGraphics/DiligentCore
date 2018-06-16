@@ -22,6 +22,7 @@
  */
 
 #include "pch.h"
+#include <sstream>
 #include "RenderDeviceVkImpl.h"
 #include "DeviceContextVkImpl.h"
 #include "SwapChainVk.h"
@@ -34,6 +35,29 @@
 
 namespace Diligent
 {
+    static std::string GetUploadHeapName(bool bIsDeferred, Uint32 ContextId)
+    {
+        if(bIsDeferred)
+        {
+            std::stringstream ss;
+            ss <<  "Upload heap of deferred context #" << ContextId;
+            return ss.str();
+        }
+        else
+            return "Upload heap of immediate context";
+    }
+
+    static std::string GetDynamicHeapName(bool bIsDeferred, Uint32 ContextId)
+    {
+        if (bIsDeferred)
+        {
+            std::stringstream ss;
+            ss << "Dynamic heap of deferred context #" << ContextId;
+            return ss.str();
+        }
+        else
+            return "Dynamic heap of immediate context";
+    }
 
     DeviceContextVkImpl::DeviceContextVkImpl( IReferenceCounters*     pRefCounters, 
                                               RenderDeviceVkImpl*     pDeviceVkImpl, 
@@ -57,7 +81,7 @@ namespace Diligent
         // Upload heap must always be thread-safe as Finish() may be called from another thread
         m_UploadHeap
         {
-            bIsDeferred ? "Upload heap for deferred context" : "Upload heap for immediate context",
+            GetUploadHeapName(bIsDeferred, ContextId),
             pDeviceVkImpl->GetLogicalDevice(),
             pDeviceVkImpl->GetPhysicalDevice(),
             GetRawAllocator(),
@@ -87,7 +111,7 @@ namespace Diligent
         m_DynamicHeap
         {
             pDeviceVkImpl->GetDynamicHeapRingBuffer(),
-            bIsDeferred ? "Dynamic heap for immediate context" : "Dynamic heap for deferred context",
+            GetDynamicHeapName(bIsDeferred, ContextId),
             bIsDeferred ? Attribs.DeferredCtxDynamicHeapPageSize : Attribs.ImmediateCtxDynamicHeapPageSize
         }
     {
