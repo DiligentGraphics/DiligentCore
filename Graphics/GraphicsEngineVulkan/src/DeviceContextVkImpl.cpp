@@ -83,7 +83,13 @@ namespace Diligent
             },
             Attribs.DynamicDescriptorPoolSize.MaxDescriptorSets,
         },
-        m_NextCmdBuffNumber(0)
+        m_NextCmdBuffNumber(0),
+        m_DynamicHeap
+        {
+            pDeviceVkImpl->GetDynamicHeapRingBuffer(),
+            bIsDeferred ? "Dynamic heap for immediate context" : "Dynamic heap for deferred context",
+            bIsDeferred ? Attribs.DeferredCtxDynamicHeapPageSize : Attribs.ImmediateCtxDynamicHeapPageSize
+        }
     {
         m_DynamicBufferOffsets.reserve(64);
     }
@@ -742,6 +748,7 @@ namespace Diligent
         m_ReleaseQueue.Purge(CompletedFenceValue);
         m_UploadHeap.ShrinkMemory();
         m_DynamicDescriptorPool.ReleaseStaleAllocations(CompletedFenceValue);
+        m_DynamicHeap.Reset();
     }
 
     void DeviceContextVkImpl::ReleaseStaleContextResources(Uint64 SubmittedCmdBufferNumber, Uint64 SubmittedFenceValue, Uint64 CompletedFenceValue)
@@ -1261,6 +1268,15 @@ namespace Diligent
     VulkanDynamicAllocation DeviceContextVkImpl::AllocateDynamicSpace(Uint32 SizeInBytes)
     {
         auto *pDeviceVkImpl = m_pDevice.RawPtr<RenderDeviceVkImpl>();
-        return pDeviceVkImpl->AllocateDynamicSpace(m_ContextId, SizeInBytes);
+
+        auto DynAlloc = m_DynamicHeap.Allocate(SizeInBytes, 0);
+        if (DynAlloc.pParentDynamicHeap == nullptr)
+        {
+            UNSUPPORTED("Failed to allocate dynamic memory");
+        }
+#ifdef _DEBUG
+        DynAlloc.dbgFrameNumber = pDeviceVkImpl->GetCurrentFrameNumber();
+#endif
+        return DynAlloc;
     }
 }

@@ -354,7 +354,7 @@ void BufferVkImpl :: Map(IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapF
         {
             VERIFY(MapFlags & MAP_FLAG_DISCARD, "Vk buffer must be mapped for writing with MAP_FLAG_DISCARD flag");
             auto DynAlloc = pDeviceContextVk->AllocateDynamicSpace(m_Desc.uiSizeInBytes);
-            const auto& DynamicHeap = pDeviceVk->GetDynamicHeap();
+            const auto& DynamicHeap = pDeviceVk->GetDynamicHeapRingBuffer();
             auto* CPUAddress = DynamicHeap.GetCPUAddress();
             pMappedData = CPUAddress + DynAlloc.Offset;
             m_DynamicAllocations[pDeviceContextVk->GetContextId()] = std::move(DynAlloc);
@@ -485,7 +485,7 @@ VkBuffer BufferVkImpl::GetVkBuffer()const
     else
     {
         VERIFY(m_Desc.Usage == USAGE_DYNAMIC, "Dynamic buffer expected");
-        return GetDevice<RenderDeviceVkImpl>()->GetDynamicHeap().GetVkBuffer();
+        return GetDevice<RenderDeviceVkImpl>()->GetDynamicHeapRingBuffer().GetVkBuffer();
     }
 }
 

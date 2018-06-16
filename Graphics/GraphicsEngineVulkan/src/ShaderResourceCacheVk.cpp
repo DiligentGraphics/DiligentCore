@@ -284,7 +284,7 @@ VkDescriptorImageInfo ShaderResourceCacheVk::Resource::GetSamplerDescriptorWrite
     return DescrImgInfo;
 }
 
-void ShaderResourceCacheVk::GetDynamicBufferOffset(Uint32 CtxId, std::vector<uint32_t>& Offsets)const
+void ShaderResourceCacheVk::GetDynamicBufferOffsets(Uint32 CtxId, std::vector<uint32_t>& Offsets)const
 {
     // If any of the sets being bound include dynamic uniform or storage buffers, then 
     // pDynamicOffsets includes one element for each array element in each dynamic descriptor 

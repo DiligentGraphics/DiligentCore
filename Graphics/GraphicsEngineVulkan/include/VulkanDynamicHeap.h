@@ -23,6 +23,7 @@
 
 #pragma once
 
+#include <mutex>
 #include "Vulkan.h"
 #include "RingBuffer.h"
 #include "VulkanUtilities/VulkanLogicalDevice.h"
@@ -31,14 +32,23 @@
 namespace Diligent
 {
 
-class RenderDeviceVkImpl;
-class VulkanDynamicHeap;
+// Vulkand dynamic heap implementation consists of a single ring buffer and a number of dynamic heaps,
+// one per context. Every dynamic heap suballocates chunk of memory from the global ring buffer. Within
+// every chunk, memory is allocated in simple lock-free linear fashion:
+//   
+//  | <----------------------frame 0---------------------------->|<-----------------frame 1-------------->
+//  | Ctx0-f0-Chunk0  |  Ctx1-f0-Chunk0 | Ctx0-f0-Chunk1 |  ...  |  Ctx0-f1-Chunk0 | Ctx1-f1-Chunk0 |....
+//
 
+class RenderDeviceVkImpl;
+class VulkanRingBuffer;
+
+// sizeof(VulkanDynamicAllocation) must be at least 16 to avoid false cache line sharing problems
 struct VulkanDynamicAllocation
 {
     VulkanDynamicAllocation(){}
 
-    VulkanDynamicAllocation(VulkanDynamicHeap& _ParentHeap, size_t _Offset, size_t _Size) :
+    VulkanDynamicAllocation(VulkanRingBuffer& _ParentHeap, size_t _Offset, size_t _Size) :
         pParentDynamicHeap(&_ParentHeap),
         Offset           (_Offset), 
         Size             (_Size)
@@ -77,7 +87,7 @@ struct VulkanDynamicAllocation
         return *this;
     }
 
-    VulkanDynamicHeap* pParentDynamicHeap = nullptr;
+    VulkanRingBuffer* pParentDynamicHeap = nullptr;
     size_t             Offset             = 0;		// Offset from the start of the buffer resource
     size_t             Size               = 0;	    // Reserved size of this allocation
 #ifdef _DEBUG
@@ -85,22 +95,18 @@ struct VulkanDynamicAllocation
 #endif
 };
 
-class VulkanDynamicHeap
+class VulkanRingBuffer
 {
 public:
-    VulkanDynamicHeap(IMemoryAllocator&         Allocator, 
-                      class RenderDeviceVkImpl* pDeviceVk, 
-                      Uint32                    ImmediateCtxHeapSize, 
-                      Uint32                    DeferredCtxHeapSize,
-                      Uint32                    DeferredCtxCount);
-    ~VulkanDynamicHeap();
+    VulkanRingBuffer(IMemoryAllocator&         Allocator, 
+                     class RenderDeviceVkImpl* pDeviceVk, 
+                     Uint32                    Size);
+    ~VulkanRingBuffer();
 
-    VulkanDynamicHeap            (const VulkanDynamicHeap&) = delete;
-    VulkanDynamicHeap            (VulkanDynamicHeap&&)      = delete;
-    VulkanDynamicHeap& operator= (const VulkanDynamicHeap&) = delete;
-    VulkanDynamicHeap& operator= (VulkanDynamicHeap&&)      = delete;
-
-    VulkanDynamicAllocation Allocate( Uint32 CtxId, size_t SizeInBytes, size_t Alignment = 0);
+    VulkanRingBuffer            (const VulkanRingBuffer&) = delete;
+    VulkanRingBuffer            (VulkanRingBuffer&&)      = delete;
+    VulkanRingBuffer& operator= (const VulkanRingBuffer&) = delete;
+    VulkanRingBuffer& operator= (VulkanRingBuffer&&)      = delete;
 
     void FinishFrame(Uint64 FenceValue, Uint64 LastCompletedFenceValue);
     void Destroy();
@@ -109,22 +115,64 @@ public:
     Uint8*   GetCPUAddress()const{return m_CPUAddress;}
 
 private:
-    struct VulkanRingBuffer
-    {
-        VulkanRingBuffer(Uint32 Size, IMemoryAllocator &Allocator, Uint32 _BaseOffset) :
-            RingBuff(Size, Allocator),
-            BaseOffset(_BaseOffset)
-        {}
-        RingBuffer   RingBuff;
-        const Uint32 BaseOffset;
-    };
-    std::vector<VulkanRingBuffer>   m_RingBuffers;
-    RenderDeviceVkImpl* const       m_pDeviceVk;
+    friend class VulkanDynamicHeap;
+
+    static constexpr const Uint32 MinAlignment = 1024;
+    RingBuffer::OffsetType Allocate(size_t SizeInBytes);
+
+    std::mutex                  m_RingBuffMtx;
+    RingBuffer                  m_RingBuffer;
+    RenderDeviceVkImpl* const   m_pDeviceVk;
 
     VulkanUtilities::BufferWrapper       m_VkBuffer;
     VulkanUtilities::DeviceMemoryWrapper m_BufferMemory;
     Uint8*                               m_CPUAddress;
-    const uint32_t                       m_DefaultAlignment;
+    const VkDeviceSize                   m_DefaultAlignment;
+    RingBuffer::OffsetType               m_TotalPeakSize    = 0;
+    RingBuffer::OffsetType               m_CurrentFrameSize = 0;
+    RingBuffer::OffsetType               m_FramePeakSize    = 0;
+};
+
+
+class VulkanDynamicHeap
+{
+public:
+    VulkanDynamicHeap(VulkanRingBuffer& ParentRingBuffer, std::string HeapName, Uint32 PageSize) :
+        m_ParentRingBuffer(ParentRingBuffer),
+        m_HeapName(std::move(HeapName)),
+        m_PagSize(PageSize)
+    {}
+
+    VulkanDynamicHeap            (const VulkanDynamicHeap&) = delete;
+    VulkanDynamicHeap            (VulkanDynamicHeap&&)      = delete;
+    VulkanDynamicHeap& operator= (const VulkanDynamicHeap&) = delete;
+    VulkanDynamicHeap& operator= (VulkanDynamicHeap&&)      = delete;
+    
+    ~VulkanDynamicHeap();
+
+    VulkanDynamicAllocation Allocate(Uint32 SizeInBytes, Uint32 Alignment);
+
+    void Reset()
+    {
+        m_CurrOffset = RingBuffer::InvalidOffset;
+        m_AvailableSize     = 0;
+
+        m_CurrAllocatedSize = 0;
+        m_CurrUsedSize      = 0;
+    }
+
+private:
+    VulkanRingBuffer& m_ParentRingBuffer;
+    const std::string m_HeapName;
+
+    RingBuffer::OffsetType m_CurrOffset = RingBuffer::InvalidOffset;
+    const Uint32 m_PagSize;
+    Uint32 m_AvailableSize     = 0;
+
+    Uint32 m_CurrAllocatedSize = 0;
+    Uint32 m_CurrUsedSize      = 0;
+    Uint32 m_PeakAllocatedSize = 0;
+    Uint32 m_PeakUsedSize      = 0;
 };
 
 }

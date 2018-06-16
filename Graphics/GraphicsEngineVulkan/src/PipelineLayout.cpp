@@ -455,7 +455,7 @@ void PipelineLayout::BindDescriptorSets(DeviceContextVkImpl*    pCtxVkImpl,
 
     auto& DynamicOffsets = pCtxVkImpl->GetDynamicBufferOffsets();
     DynamicOffsets.resize(TotalDynamicDescriptors);
-    ResourceCache.GetDynamicBufferOffset(pCtxVkImpl->GetContextId(), DynamicOffsets);
+    ResourceCache.GetDynamicBufferOffsets(pCtxVkImpl->GetContextId(), DynamicOffsets);
 
     auto& CmdBuffer = pCtxVkImpl->GetCommandBuffer();
     // vkCmdBindDescriptorSets causes the sets numbered [firstSet .. firstSet+descriptorSetCount-1] to use the 

@@ -28,28 +28,33 @@
 namespace Diligent
 {
 
-static uint32_t GetDefaultAlignment(const VulkanUtilities::VulkanPhysicalDevice& PhysicalDevice)
+static VkDeviceSize GetDefaultAlignment(const VulkanUtilities::VulkanPhysicalDevice& PhysicalDevice)
 {
     const auto& Props = PhysicalDevice.GetProperties();
     const auto& Limits = Props.limits;
     return std::max(std::max(Limits.minUniformBufferOffsetAlignment, Limits.minTexelBufferOffsetAlignment), Limits.minStorageBufferOffsetAlignment);
 }
 
-VulkanDynamicHeap::VulkanDynamicHeap(IMemoryAllocator&      Allocator,
+VulkanRingBuffer::VulkanRingBuffer(IMemoryAllocator&      Allocator,
                                      RenderDeviceVkImpl*    pDeviceVk,
-                                     Uint32                 ImmediateCtxHeapSize,
-                                     Uint32                 DeferredCtxHeapSize,
-                                     Uint32                 DeferredCtxCount) :
+                                     Uint32                 Size) :
+    m_RingBuffer(Size, Allocator),
     m_pDeviceVk(pDeviceVk),
     m_DefaultAlignment(GetDefaultAlignment(pDeviceVk->GetPhysicalDevice()))
 {
-    Uint32 BufferSize = ImmediateCtxHeapSize + DeferredCtxHeapSize * DeferredCtxCount;
+    VERIFY( (Size & (MinAlignment-1)) == 0, "Heap size is not min aligned");
     VkBufferCreateInfo VkBuffCI = {};
     VkBuffCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     VkBuffCI.pNext = nullptr;
     VkBuffCI.flags = 0; // VK_BUFFER_CREATE_SPARSE_BINDING_BIT, VK_BUFFER_CREATE_SPARSE_RESIDENCY_BIT, VK_BUFFER_CREATE_SPARSE_ALIASED_BIT
-    VkBuffCI.size = BufferSize;
-    VkBuffCI.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
+    VkBuffCI.size = Size;
+    VkBuffCI.usage = 
+        VK_BUFFER_USAGE_TRANSFER_SRC_BIT    | 
+        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT  | 
+        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT  | 
+        VK_BUFFER_USAGE_INDEX_BUFFER_BIT    | 
+        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT   | 
+        VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
     VkBuffCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     VkBuffCI.queueFamilyIndexCount = 0;
     VkBuffCI.pQueueFamilyIndices = nullptr;
@@ -90,18 +95,10 @@ VulkanDynamicHeap::VulkanDynamicHeap(IMemoryAllocator&      Allocator,
     err = LogicalDevice.BindBufferMemory(m_VkBuffer, m_BufferMemory, 0 /*offset*/);
     CHECK_VK_ERROR_AND_THROW(err, "Failed to bind  bufer memory");
 
-    LOG_INFO_MESSAGE("GPU dynamic heap created. Total buffer size: ", BufferSize);
-
-    m_RingBuffers.reserve(1 + DeferredCtxCount);
-    Uint32 BaseOffset = 0;
-    for(Uint32 ctx = 0; ctx < 1 + DeferredCtxCount; ++ctx)
-    {
-        Uint32 HeapSize = ctx == 0 ? ImmediateCtxHeapSize : DeferredCtxHeapSize;
-        m_RingBuffers.emplace_back( HeapSize, Allocator, BaseOffset );
-    }
+    LOG_INFO_MESSAGE("GPU dynamic heap created. Total buffer size: ", HeapSize);
 }
 
-void VulkanDynamicHeap::Destroy()
+void VulkanRingBuffer::Destroy()
 {
     if (m_VkBuffer)
     {
@@ -112,63 +109,106 @@ void VulkanDynamicHeap::Destroy()
     m_CPUAddress = nullptr;
 }
 
-VulkanDynamicHeap::~VulkanDynamicHeap()
+VulkanRingBuffer::~VulkanRingBuffer()
 {
     VERIFY(m_BufferMemory == VK_NULL_HANDLE && m_VkBuffer == VK_NULL_HANDLE, "Vulkan resources must be explcitly released with Destroy()");
+    LOG_INFO_MESSAGE("Dynamic heap ring buffer usage stats:\n"
+                     "    Total size: ", SizeFormatter{ m_RingBuffer.GetMaxSize(), 2 },
+                     ". Peak buffer size: ", SizeFormatter{ m_TotalPeakSize, 2, m_RingBuffer.GetMaxSize() },
+                     ". Peak frame size: ", SizeFormatter{ m_FramePeakSize, 2, m_RingBuffer.GetMaxSize() },
+                     ". Peak utilization: ", std::fixed, std::setprecision(1), static_cast<double>(m_TotalPeakSize) / static_cast<double>(std::max(m_RingBuffer.GetMaxSize(), size_t{1})) * 100.0, '%' );
 }
 
-
-VulkanDynamicAllocation VulkanDynamicHeap::Allocate(Uint32 CtxId, size_t SizeInBytes, size_t Alignment /*= 0*/)
+RingBuffer::OffsetType VulkanRingBuffer::Allocate(size_t SizeInBytes)
 {
-    VERIFY_EXPR(CtxId < m_RingBuffers.size());
-
-    if(Alignment == 0)
-        Alignment = m_DefaultAlignment;
+    VERIFY( (SizeInBytes & (MinAlignment-1)) == 0, "Allocation size is not minimally aligned" );
     
-    auto& RingBuff = m_RingBuffers[CtxId].RingBuff;
-    if (SizeInBytes > RingBuff.GetMaxSize())
+    if (SizeInBytes > m_RingBuffer.GetMaxSize())
     {
-        LOG_ERROR("Requested dynamic allocation size ", SizeInBytes, " exceeds maximum ring buffer size ", RingBuff.GetMaxSize(), ". The app should increase dynamic heap size.");
-        return VulkanDynamicAllocation{};
+        LOG_ERROR("Requested dynamic allocation size ", SizeInBytes, " exceeds maximum ring buffer size ", m_RingBuffer.GetMaxSize(), ". The app should increase dynamic heap size.");
+        return RingBuffer::InvalidOffset;
     }
-
-    // Every device context uses its own upload heap, so there is no need to lock
-    //std::lock_guard<std::mutex> Lock(m_Mutex);
-
-    //
-    //      Deferred contexts must not update resources or map dynamic buffers
-    //      across several frames!
-    //
-
-	const size_t AlignmentMask = Alignment - 1;
-	// Assert that it's a power of two.
-	VERIFY_EXPR((AlignmentMask & Alignment) == 0);
-	// Align the allocation
-	const size_t AlignedSize = (SizeInBytes + AlignmentMask) & ~AlignmentMask;
-    auto Offset = RingBuff.Allocate(AlignedSize);
-    while(Offset == RingBuffer::InvalidOffset)
+    
+    std::lock_guard<std::mutex> Lock(m_RingBuffMtx);
+    auto Offset = m_RingBuffer.Allocate(SizeInBytes);
+    if(Offset == RingBuffer::InvalidOffset)
     {
-        VulkanDynamicAllocation{};
+        UNEXPECTED("Allocation failed");
     }
-
-    return VulkanDynamicAllocation{ *this, m_RingBuffers[CtxId].BaseOffset + Offset, SizeInBytes };
+    m_CurrentFrameSize += SizeInBytes;
+    m_FramePeakSize = std::max(m_FramePeakSize, m_CurrentFrameSize);
+    m_TotalPeakSize = std::max(m_TotalPeakSize, m_RingBuffer.GetUsedSize());
+    return Offset;
 }
 
-void VulkanDynamicHeap::FinishFrame(Uint64 FenceValue, Uint64 LastCompletedFenceValue)
+void VulkanRingBuffer::FinishFrame(Uint64 FenceValue, Uint64 LastCompletedFenceValue)
 {
-    // Every device context has its own upload heap, so there is no need to lock
-    //std::lock_guard<std::mutex> Lock(m_Mutex);
-
     //
-    //      Deferred contexts must not update resources or map dynamic buffers
-    //      across several frames!
+    //      Deferred contexts must not map dynamic buffers across several frames!
     //
 
-    for (auto& RingBuff : m_RingBuffers)
+    std::lock_guard<std::mutex> Lock(m_RingBuffMtx);
+    m_RingBuffer.FinishCurrentFrame(FenceValue);
+    m_RingBuffer.ReleaseCompletedFrames(LastCompletedFenceValue);
+    m_CurrentFrameSize = 0;
+}
+
+VulkanDynamicAllocation VulkanDynamicHeap::Allocate(Uint32 SizeInBytes, Uint32 Alignment)
+{
+    if (Alignment == 0)
+        Alignment = static_cast<Uint32>(m_ParentRingBuffer.m_DefaultAlignment);
+
+    const Uint32 AlignmentMask = Alignment - 1;
+    // Assert that it's a power of two.
+    VERIFY_EXPR((AlignmentMask & Alignment) == 0);
+
+    // Align the allocation
+    Uint32 AlignedSize = (SizeInBytes + AlignmentMask) & ~AlignmentMask;
+
+    //
+    //      Deferred contexts must not map dynamic buffers across several frames!
+    //
+    auto Offset = RingBuffer::InvalidOffset;
+    if(AlignedSize > m_PagSize)
     {
-        RingBuff.RingBuff.FinishCurrentFrame(FenceValue);
-        RingBuff.RingBuff.ReleaseCompletedFrames(LastCompletedFenceValue);
+        // Allocate directly from the ring buffer
+        Offset = m_ParentRingBuffer.Allocate(AlignedSize);
     }
+    else
+    {
+        if(m_CurrOffset == RingBuffer::InvalidOffset || AlignedSize > m_AvailableSize)
+        {
+            m_CurrOffset = m_ParentRingBuffer.Allocate(m_PagSize);
+            m_AvailableSize = m_PagSize;
+        }
+        if(m_CurrOffset != RingBuffer::InvalidOffset)
+        {
+            Offset = m_CurrOffset;
+            m_AvailableSize -= AlignedSize;
+            m_CurrOffset += AlignedSize;
+        }
+    }
+
+    // Every device context uses its own dynamic heap, so there is no need to lock
+    if(Offset != RingBuffer::InvalidOffset)
+    {
+        m_CurrAllocatedSize += AlignedSize;
+        m_CurrUsedSize      += SizeInBytes;
+        m_PeakAllocatedSize = std::max(m_PeakAllocatedSize, m_CurrAllocatedSize);
+        m_PeakUsedSize      = std::max(m_PeakUsedSize,      m_CurrUsedSize);
+
+        return VulkanDynamicAllocation{ m_ParentRingBuffer, Offset, SizeInBytes };
+    }
+    else
+        return VulkanDynamicAllocation{};
+}
+
+VulkanDynamicHeap::~VulkanDynamicHeap()
+{
+    LOG_INFO_MESSAGE(m_HeapName, " usage stats:\n"
+        "    Peak allocated size: ", SizeFormatter{ m_PeakAllocatedSize, 2, m_PeakAllocatedSize },
+        ". Peak used size: ", SizeFormatter{ m_PeakUsedSize, 2, m_PeakAllocatedSize },
+        ". Peak utilization: ", std::fixed, std::setprecision(1), static_cast<double>(m_PeakUsedSize) / static_cast<double>(std::max(m_PeakAllocatedSize, 1U)) * 100.0, '%');
 }
 
 }

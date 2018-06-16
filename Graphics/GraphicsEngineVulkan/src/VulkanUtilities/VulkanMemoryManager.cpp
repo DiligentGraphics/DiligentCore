@@ -23,7 +23,6 @@
 
 #include "pch.h"
 #include <sstream>
-#include <iomanip>
 #include "VulkanUtilities/VulkanMemoryManager.h"
 
 namespace VulkanUtilities
@@ -154,9 +153,9 @@ VulkanMemoryAllocation VulkanMemoryManager::Allocate(VkDeviceSize Size, VkDevice
         m_PeakAllocatedSize[stat_ind] = std::max(m_PeakAllocatedSize[stat_ind], m_CurrAllocatedSize[stat_ind]);
 
         auto it = m_Pages.emplace(MemoryTypeIndex, VulkanMemoryPage{*this, PageSize, MemoryTypeIndex, HostVisible});
-        LOG_INFO_MESSAGE("VulkanMemoryManager '", m_MgrName, "': created new ", (HostVisible ? "host-visible" : "device-local"), " page. (", 
-                         std::fixed, std::setprecision(2), PageSize / double{1 << 20}, " MB, type idx: ", MemoryTypeIndex, 
-                         "). Current allocated size: ", std::fixed, std::setprecision(2), m_CurrAllocatedSize[stat_ind] / double{1 << 20}, " MB");
+        LOG_INFO_MESSAGE("VulkanMemoryManager '", m_MgrName, "': created new ", (HostVisible ? "host-visible" : "device-local"), 
+                         " page. (", Diligent::SizeFormatter{ PageSize, 2}, ", type idx: ", MemoryTypeIndex, 
+                         "). Current allocated size: ", Diligent::SizeFormatter{ m_CurrAllocatedSize[stat_ind], 2});
         OnNewPageCreated(it->second);
         Allocation = it->second.Allocate(Size);
         VERIFY(Allocation.Page != nullptr, "Failed to allocate new memory page");
@@ -186,9 +185,9 @@ void VulkanMemoryManager::ShrinkMemory()
         {
             auto PageSize = Page.GetPageSize();
             m_CurrAllocatedSize[IsHostVisible ? 1 : 0] -= PageSize;
-            LOG_INFO_MESSAGE("VulkanMemoryManager '", m_MgrName, "': destroying ", (IsHostVisible ? "host-visible" : "device-local"), " page (", 
-                             std::fixed, std::setprecision(2), PageSize / double{1 << 20}, 
-                             " MB). Current allocated size: ", std::fixed, std::setprecision(2), m_CurrAllocatedSize[IsHostVisible ? 1 : 0] / double{1 << 20}, " MB");
+            LOG_INFO_MESSAGE("VulkanMemoryManager '", m_MgrName, "': destroying ", (IsHostVisible ? "host-visible" : "device-local"), 
+                             " page (", Diligent::SizeFormatter{ PageSize, 2 }, ")."
+                             " Current allocated size: ", Diligent::SizeFormatter{ m_CurrAllocatedSize[IsHostVisible ? 1 : 0], 2 });
             OnPageDestroy(Page);
             m_Pages.erase(curr_it);
         }
@@ -204,11 +203,11 @@ VulkanMemoryManager::~VulkanMemoryManager()
 {
     LOG_INFO_MESSAGE("VulkanMemoryManager '", m_MgrName, "' stats:\n"
                      "    Peak used/peak allocated device-local memory size: ", 
-                     std::fixed, std::setprecision(2), m_PeakUsedSize[0] / double{1 << 20}, "/",
-                     std::fixed, std::setprecision(2), m_PeakAllocatedSize[0] / double{1 << 20}, " MB. "
+                     Diligent::SizeFormatter{ m_PeakUsedSize[0],      2, m_PeakAllocatedSize[0] }, "/",
+                     Diligent::SizeFormatter{ m_PeakAllocatedSize[0], 2, m_PeakAllocatedSize[0] },
                      "\n    Peak used/peak allocated host-visible memory size: ", 
-                     std::fixed, std::setprecision(2), m_PeakUsedSize[1] / double{1 << 20}, "/",
-                     std::fixed, std::setprecision(2), m_PeakAllocatedSize[1] / double{1 << 20}, " MB.");
+                     Diligent::SizeFormatter{ m_PeakUsedSize[1],      2, m_PeakAllocatedSize[1]}, "/",
+                     Diligent::SizeFormatter{ m_PeakAllocatedSize[1], 2, m_PeakAllocatedSize[1]});
     
     for(auto it=m_Pages.begin(); it != m_Pages.end(); ++it )
         VERIFY(it->second.IsEmpty(), "The page contains outstanding allocations");

@@ -1374,15 +1374,19 @@ namespace Diligent
         /// resources are no longer required
         Uint32 DeferredCtxUploadHeapReserveSize = 2 << 20;
         
-        /// Size of the dynamic heap (ring buffer that is used to suballocate 
-        /// memory for dynamic resources) of the immediate context.
-        /// If ring buffer is not large enough to provide enough space,
-        /// sever performance penalties occur.
-        Uint32 ImmediateCtxDynamicHeapSize = 4 << 20;
+        /// Size of the dynamic heap (the ring buffer that is used to suballocate 
+        /// memory for dynamic resources) shared by all contexts.
+        Uint32 DynamicHeapSize = 8 << 20;
 
-        /// Size of the dynamic heap (ring buffer that is used to suballocate 
-        /// memory for dynamic resources) of deferred contexts
-        Uint32 DeferredCtxDynamicHeapSize = 4 << 20;
+        /// Size of the memory chunk suballocated by immediate context from
+        /// the global dynamic heap ring buffer to perform lock-free dynamic 
+        /// allocations from
+        Uint32 ImmediateCtxDynamicHeapPageSize = 256 << 10;
+
+        /// Size of the memory chunk suballocated by deferred contexts from
+        /// the global dynamic heap ring buffer to perform lock-free dynamic 
+        /// allocations from
+        Uint32 DeferredCtxDynamicHeapPageSize = 64 << 10;
     };
 
     /// Box

@@ -24,6 +24,7 @@
 #pragma once
 
 #include <sstream>
+#include <iomanip>
 
 namespace Diligent
 {
@@ -40,5 +41,35 @@ namespace Diligent
     {
         FormatMsg( ss, FirstArg );
         FormatMsg( ss, RestArgs... ); // recursive call using pack expansion syntax
+    }
+
+
+    struct SizeFormatter
+    {
+        size_t size      = 0;
+        size_t precision = 0;
+        size_t ref_size  = 0;
+    };
+
+    template<typename SSType>
+    void FormatMsg(SSType &ss, const SizeFormatter& Arg)
+    {
+        auto ref_size = Arg.ref_size != 0 ? Arg.ref_size : Arg.size;
+        if (ref_size >= (1 << 30))
+        {
+            ss << std::fixed << std::setprecision(Arg.precision) << Arg.size / double{ 1 << 30 } << " GB";
+        }
+        else if(ref_size >= (1 << 20))
+        {
+            ss << std::fixed << std::setprecision(Arg.precision) << Arg.size / double{ 1 << 20 } << " MB";
+        }
+        else if (ref_size >= (1 << 10))
+        {
+            ss << std::fixed << std::setprecision(Arg.precision) << Arg.size / double{ 1 << 10 } << " KB";
+        }
+        else
+        {
+            ss << Arg.size << (Arg.size > 1 ? " Byte" : " Bytes" );
+        }
     }
 }

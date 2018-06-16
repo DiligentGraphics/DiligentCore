@@ -205,6 +205,7 @@ private:
     Atomics::AtomicInt64 m_NextCmdBuffNumber;
 
     std::vector<uint32_t> m_DynamicBufferOffsets;
+    VulkanDynamicHeap m_DynamicHeap;
 };
 
 }

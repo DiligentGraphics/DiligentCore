@@ -88,13 +88,11 @@ RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters*                    
     m_TransientCmdPoolMgr(*m_LogicalVkDevice, pCmdQueue->GetQueueFamilyIndex(), VK_COMMAND_POOL_CREATE_TRANSIENT_BIT),
     m_MemoryMgr("Global resource memory manager", *m_LogicalVkDevice, *m_PhysicalDevice, GetRawAllocator(), CreationAttribs.DeviceLocalMemoryPageSize, CreationAttribs.HostVisibleMemoryPageSize, CreationAttribs.DeviceLocalMemoryReserveSize, CreationAttribs.HostVisibleMemoryReserveSize),
     m_ReleaseQueue(GetRawAllocator()),
-    m_DynamicHeap
+    m_DynamicHeapRingBuffer
     {
         GetRawAllocator(),
         this,
-        CreationAttribs.ImmediateCtxDynamicHeapSize,
-        CreationAttribs.DeferredCtxDynamicHeapSize,
-        NumDeferredContexts
+        CreationAttribs.DynamicHeapSize
     }
 {
     m_DeviceCaps.DevType = DeviceType::Vulkan;
@@ -109,7 +107,7 @@ RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters*                    
 RenderDeviceVkImpl::~RenderDeviceVkImpl()
 {
     // Explicitly destroy dynamic heap
-    m_DynamicHeap.Destroy();
+    m_DynamicHeapRingBuffer.Destroy();
 	// Finish current frame. This will release resources taken by previous frames, and
     // will move all stale resources to the release queues. The resources will not be
     // release until the next call to FinishFrame()
@@ -343,7 +341,7 @@ void RenderDeviceVkImpl::FinishFrame(bool ReleaseAllResources)
     // until the next command buffer is finished by the GPU
     ProcessStaleResources(SubmittedCmdBuffNumber, NextFenceValue, CompletedFenceValue);
 
-    m_DynamicHeap.FinishFrame(NextFenceValue, CompletedFenceValue);
+    m_DynamicHeapRingBuffer.FinishFrame(NextFenceValue, CompletedFenceValue);
 
     Atomics::AtomicIncrement(m_FrameNumber);
 }
@@ -357,19 +355,6 @@ void RenderDeviceVkImpl::ProcessStaleResources(Uint64 SubmittedCmdBufferNumber, 
     m_MemoryMgr.ShrinkMemory();
 }
 
-
-VulkanDynamicAllocation RenderDeviceVkImpl::AllocateDynamicSpace(Uint32 CtxId, Uint32 SizeInBytes)
-{
-    auto DynAlloc = m_DynamicHeap.Allocate(CtxId, SizeInBytes);
-    if (DynAlloc.pParentDynamicHeap == nullptr)
-    {
-        UNSUPPORTED("Failed to allocate dynamic memory");
-    }
-#ifdef _DEBUG
-    DynAlloc.dbgFrameNumber = m_FrameNumber;
-#endif
-    return DynAlloc;
-}
 
 void RenderDeviceVkImpl::TestTextureFormat( TEXTURE_FORMAT TexFormat )
 {

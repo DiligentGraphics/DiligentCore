@@ -130,8 +130,7 @@ public:
         return m_MemoryMgr.Allocate(MemReqs, MemoryProperties);
     }
 
-    VulkanDynamicAllocation AllocateDynamicSpace(Uint32 CtxId, Uint32 SizeInBytes);
-    const VulkanDynamicHeap& GetDynamicHeap()const{return m_DynamicHeap;}
+    VulkanRingBuffer& GetDynamicHeapRingBuffer(){return m_DynamicHeapRingBuffer;}
 
 private:
     virtual void TestTextureFormat( TEXTURE_FORMAT TexFormat )override final;
@@ -195,7 +194,7 @@ private:
     VulkanUtilities::VulkanMemoryManager m_MemoryMgr;
     ResourceReleaseQueue<DynamicStaleResourceWrapper> m_ReleaseQueue;
 
-    VulkanDynamicHeap m_DynamicHeap;
+    VulkanRingBuffer m_DynamicHeapRingBuffer;
 };
 
 }
