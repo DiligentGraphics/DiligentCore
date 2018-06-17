@@ -87,20 +87,26 @@ public:
         std::vector<uint32_t>        DynamicOffsets;
         ShaderResourceCacheVk*       pResourceCache = nullptr;
         VkPipelineBindPoint          BindPoint      = VK_PIPELINE_BIND_POINT_MAX_ENUM;
-
+        Uint32                       SetCout            = 0;
+        Uint32                       DynamicOffsetCount = 0;
 #ifdef _DEBUG
         const PipelineLayout *pDbgPipelineLayout = nullptr;
 #endif
-        DescriptorSetBindInfo()
+        DescriptorSetBindInfo() : 
+            vkSets(2),
+            DynamicOffsets(64)
         {
-            vkSets.reserve(2);
-            DynamicOffsets.reserve(64);
         }
 
         void Reset()
         {
+            SetCout            = 0;
+            DynamicOffsetCount = 0;
+#ifdef _DEBUG
+            // In release mode, do not clear vectors as this causes unnecessary work
             vkSets.clear();
             DynamicOffsets.clear();
+#endif
             pResourceCache = nullptr;
             BindPoint = VK_PIPELINE_BIND_POINT_MAX_ENUM;
 #ifdef _DEBUG

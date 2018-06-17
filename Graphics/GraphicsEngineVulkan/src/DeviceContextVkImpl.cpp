@@ -444,7 +444,7 @@ namespace Diligent
         else
             CommitVkVertexBuffers();
 
-        if(!m_DesrSetBindInfo.DynamicOffsets.empty())
+        if(m_DesrSetBindInfo.DynamicOffsetCount != 0)
             pPipelineStateVk->BindDescriptorSetsWithDynamicOffsets(this, m_DesrSetBindInfo);
 #if 0
 #ifdef _DEBUG
