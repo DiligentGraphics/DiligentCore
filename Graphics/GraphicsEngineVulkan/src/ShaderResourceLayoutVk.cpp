@@ -674,7 +674,10 @@ void ShaderResourceLayoutVk::dbgVerifyBindings(const ShaderResourceCacheVk& Reso
                     if (VarType == SHADER_VARIABLE_TYPE_STATIC || VarType == SHADER_VARIABLE_TYPE_MUTABLE)
                     {
                         VERIFY(vkDescSet != VK_NULL_HANDLE, "Static and mutable variables must have valid vulkan descriptor set assigned");
-                        // Dynamic variables do not have vulkan descriptor set only until they are assigned one the first time
+                    }
+                    else if (VarType == SHADER_VARIABLE_TYPE_DYNAMIC )
+                    {
+                        VERIFY(vkDescSet == VK_NULL_HANDLE, "Dynamic variables must not be assigned a vulkan descriptor set");
                     }
                 }
                 else
@@ -728,11 +731,12 @@ void ShaderResourceLayoutVk::InitializeResourceMemoryInCache(ShaderResourceCache
     }
 }
 
-void ShaderResourceLayoutVk::CommitDynamicResources(const ShaderResourceCacheVk& ResourceCache)const
+void ShaderResourceLayoutVk::CommitDynamicResources(const ShaderResourceCacheVk& ResourceCache, 
+                                                    VkDescriptorSet              vkDynamicDescriptorSet)const
 {
     Uint32 NumDynamicResources = m_NumResources[SHADER_VARIABLE_TYPE_DYNAMIC];
-    if(NumDynamicResources == 0)
-        return;
+    VERIFY(NumDynamicResources != 0, "This shader resource layout does not contain dynamic resources");
+    VERIFY_EXPR(vkDynamicDescriptorSet != VK_NULL_HANDLE);
 
 #ifdef _DEBUG
     static constexpr size_t ImgUpdateBatchSize = 4;
@@ -758,15 +762,25 @@ void ShaderResourceLayoutVk::CommitDynamicResources(const ShaderResourceCacheVk&
     auto BuffViewIt  = DescrBuffViewArr.begin();
     auto WriteDescrSetIt = WriteDescrSetArr.begin();
 
+#ifdef _DEBUG
+    Int32 DynamicDescrSetIndex = -1;
+#endif
+
     while(ResNum < NumDynamicResources)
     {
         const auto& Res = GetResource(SHADER_VARIABLE_TYPE_DYNAMIC, ResNum);
         VERIFY_EXPR(Res.SpirvAttribs.VarType == SHADER_VARIABLE_TYPE_DYNAMIC);
+#ifdef _DEBUG
+        if(DynamicDescrSetIndex < 0)
+            DynamicDescrSetIndex = Res.DescriptorSet;
+        else
+            VERIFY(DynamicDescrSetIndex == Res.DescriptorSet, "Inconsistent dynamic resource desriptor set index");
+#endif
         auto& SetResources = ResourceCache.GetDescriptorSet(Res.DescriptorSet);
-
         WriteDescrSetIt->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         WriteDescrSetIt->pNext = nullptr;
-        WriteDescrSetIt->dstSet = SetResources.GetVkDescriptorSet();
+        VERIFY(SetResources.GetVkDescriptorSet() == VK_NULL_HANDLE, "Dynamic descriptor set must not be assigned to the resource cache");
+        WriteDescrSetIt->dstSet = vkDynamicDescriptorSet;
         VERIFY(WriteDescrSetIt->dstSet != VK_NULL_HANDLE, "Vulkan descriptor set must not be null");
         WriteDescrSetIt->dstBinding = Res.Binding;
         WriteDescrSetIt->dstArrayElement = ArrElem;

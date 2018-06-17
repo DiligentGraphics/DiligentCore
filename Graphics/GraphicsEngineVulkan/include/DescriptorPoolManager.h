@@ -76,6 +76,11 @@ public:
         return *this;
     }
 
+    operator bool()const
+    {
+        return Set != VK_NULL_HANDLE;
+    }
+
     void Release();
 
     ~DescriptorPoolAllocation()

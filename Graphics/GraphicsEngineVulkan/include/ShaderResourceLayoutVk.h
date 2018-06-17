@@ -234,9 +234,9 @@ public:
     // Initializes resource slots in the ResourceCache
     void InitializeResourceMemoryInCache(ShaderResourceCacheVk& ResourceCache)const;
     
-    // Updates dynamic resource descriptors in the ResourceCache. The descriptor set is assigned 
-    // to the resource cache by PipelineLayout::AllocateDynamicDescriptorSet().
-    void CommitDynamicResources(const ShaderResourceCacheVk& ResourceCache)const;
+    // Writes dynamic resource descriptors from ResourceCache to vkDynamicDescriptorSet
+    void CommitDynamicResources(const ShaderResourceCacheVk& ResourceCache,
+                                VkDescriptorSet              vkDynamicDescriptorSet)const;
 
     const Char* GetShaderName()const;
 

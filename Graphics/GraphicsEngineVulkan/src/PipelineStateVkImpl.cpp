@@ -481,7 +481,7 @@ void PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBind
                                                              DeviceContextVkImpl*                   pCtxVkImpl,
                                                              bool                                   CommitResources,
                                                              bool                                   TransitionResources,
-                                                            PipelineLayout::DescriptorSetBindInfo*  pDescrSetBindInfo)const
+                                                             PipelineLayout::DescriptorSetBindInfo* pDescrSetBindInfo)const
 {
     if(!m_HasStaticResources && !m_HasNonStaticResources)
         return;
@@ -543,17 +543,27 @@ void PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBind
             ResourceCache.TransitionResources<true>(pCtxVkImpl);
 #endif
         }
-    
-        // Allocate vulkan descriptor set for dynamic resources
-        m_PipelineLayout.AllocateDynamicDescriptorSet(pCtxVkImpl, ResourceCache);
-        // Commit all dynamic resource descriptors
-        for(Uint32 s=0; s < m_NumShaders; ++s)
+
+        DescriptorPoolAllocation DynamicDescrSetAllocation;
+        auto DynamicDescriptorSetVkLayout = m_PipelineLayout.GetDynamicDescriptorSetVkLayout();
+        if(DynamicDescriptorSetVkLayout != VK_NULL_HANDLE)
         {
-            m_ShaderResourceLayouts[s].CommitDynamicResources(ResourceCache);
+            // Allocate vulkan descriptor set for dynamic resources
+            DynamicDescrSetAllocation = pCtxVkImpl->AllocateDynamicDescriptorSet(DynamicDescriptorSetVkLayout);
+            // Commit all dynamic resource descriptors
+            for(Uint32 s=0; s < m_NumShaders; ++s)
+            {
+                const auto &Layout = m_ShaderResourceLayouts[s];
+                if(Layout.GetResourceCount(SHADER_VARIABLE_TYPE_DYNAMIC) != 0)
+                    Layout.CommitDynamicResources(ResourceCache, DynamicDescrSetAllocation.GetVkDescriptorSet());
+            }
         }
         // Prepare descriptor sets, and also bind them if there are no dynamic descriptors
         VERIFY_EXPR(pDescrSetBindInfo != nullptr);
-        m_PipelineLayout.PrepareDescriptorSets(pCtxVkImpl, m_Desc.IsComputePipeline, ResourceCache, *pDescrSetBindInfo);
+        m_PipelineLayout.PrepareDescriptorSets(pCtxVkImpl, m_Desc.IsComputePipeline, ResourceCache, *pDescrSetBindInfo, DynamicDescrSetAllocation.GetVkDescriptorSet());
+        // Dynamic descriptor set allocation automatically goes back to the context's dynamic descriptor pool. 
+        // release queue. It will stay there until the next command list is executed, at which point it will be discarded
+        // and actually released later
     }
     else
     {

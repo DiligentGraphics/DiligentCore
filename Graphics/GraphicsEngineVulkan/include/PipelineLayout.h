@@ -76,10 +76,10 @@ public:
         return m_LayoutMgr.GetHash();
     }
 
-    // Allocates Vulkan descriptor set for dynamic resources and assigns the
-    // set to the resource cache
-    void AllocateDynamicDescriptorSet(DeviceContextVkImpl*    pCtxVkImpl,
-                                      ShaderResourceCacheVk&  ResourceCache)const;
+    VkDescriptorSetLayout GetDynamicDescriptorSetVkLayout()const
+    {
+        return m_LayoutMgr.GetDescriptorSet(SHADER_VARIABLE_TYPE_DYNAMIC).VkLayout;
+    }
 
     struct DescriptorSetBindInfo
     {
@@ -122,7 +122,8 @@ public:
     void PrepareDescriptorSets(DeviceContextVkImpl*    pCtxVkImpl,
                                bool                    IsCompute,
                                ShaderResourceCacheVk&  ResourceCache,
-                               DescriptorSetBindInfo&  BindInfo)const;
+                               DescriptorSetBindInfo&  BindInfo,
+                               VkDescriptorSet         VkDynamicDescrSet)const;
 
     // Computes dynamic offsets and binds descriptor sets
     void BindDescriptorSetsWithDynamicOffsets(DeviceContextVkImpl*    pCtxVkImpl,
@@ -196,7 +197,7 @@ private:
         uint8_t m_ActiveSets = 0;
     };
 
-    IMemoryAllocator &m_MemAllocator;
+    IMemoryAllocator&          m_MemAllocator;
     DescriptorSetLayoutManager m_LayoutMgr;
 };
 

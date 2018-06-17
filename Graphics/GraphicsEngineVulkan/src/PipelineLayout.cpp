@@ -413,22 +413,11 @@ void PipelineLayout::InitResourceCache(RenderDeviceVkImpl *pDeviceVkImpl, Shader
     }
 }
 
-void PipelineLayout::AllocateDynamicDescriptorSet(DeviceContextVkImpl*    pCtxVkImpl,
-                                                  ShaderResourceCacheVk&  ResourceCache)const
-{
-    const auto &DynSet = m_LayoutMgr.GetDescriptorSet(SHADER_VARIABLE_TYPE_DYNAMIC);
-    if (DynSet.SetIndex >= 0)
-    {
-        auto DynamicSetAllocation = pCtxVkImpl->AllocateDynamicDescriptorSet(DynSet.VkLayout);
-        auto &DynamicSetCache = ResourceCache.GetDescriptorSet(DynSet.SetIndex);
-        DynamicSetCache.AssignDescriptorSetAllocation(std::move(DynamicSetAllocation));
-    }
-}
-
 void PipelineLayout::PrepareDescriptorSets(DeviceContextVkImpl*    pCtxVkImpl,
                                            bool                    IsCompute,
                                            ShaderResourceCacheVk&  ResourceCache,
-                                           DescriptorSetBindInfo&  BindInfo)const
+                                           DescriptorSetBindInfo&  BindInfo,
+                                           VkDescriptorSet         VkDynamicDescrSet)const
 {
 #ifdef _DEBUG
     BindInfo.vkSets.clear();
@@ -450,7 +439,13 @@ void PipelineLayout::PrepareDescriptorSets(DeviceContextVkImpl*    pCtxVkImpl,
             if(BindInfo.SetCout > BindInfo.vkSets.size())
                 BindInfo.vkSets.resize(BindInfo.SetCout);
             VERIFY_EXPR(BindInfo.vkSets[Set.SetIndex] == VK_NULL_HANDLE);
-            BindInfo.vkSets[Set.SetIndex] = ResourceCache.GetDescriptorSet(Set.SetIndex).GetVkDescriptorSet();
+            if(VarType == SHADER_VARIABLE_TYPE_MUTABLE)
+                BindInfo.vkSets[Set.SetIndex] = ResourceCache.GetDescriptorSet(Set.SetIndex).GetVkDescriptorSet();
+            else
+            {
+                VERIFY_EXPR(ResourceCache.GetDescriptorSet(Set.SetIndex).GetVkDescriptorSet() == VK_NULL_HANDLE);
+                BindInfo.vkSets[Set.SetIndex] = VkDynamicDescrSet;
+            }
             VERIFY(BindInfo.vkSets[Set.SetIndex] != VK_NULL_HANDLE, "Descriptor set must not be null");
         }
         TotalDynamicDescriptors += Set.NumDynamicDescriptors;
