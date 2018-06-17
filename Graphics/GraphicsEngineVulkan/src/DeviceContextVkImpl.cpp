@@ -512,22 +512,24 @@ namespace Diligent
         }
 #endif
 
-#if 0
         auto *pPipelineStateVk = m_pPipelineState.RawPtr<PipelineStateVkImpl>();
 
-        auto &ComputeCtx = RequestCmdContext()->AsComputeContext();
-        ComputeCtx.SetRootSignature( pPipelineStateVk->GetVkRootSignature() );
-      
-        if(m_pCommittedResourceCache != nullptr)
-        {
-            pPipelineStateVk->GetRootSignature().CommitRootViews(*m_pCommittedResourceCache, ComputeCtx, true, m_ContextId);
-        }
+        EnsureVkCmdBuffer();
+
+        // Dispatch commands must be executed outside of render pass
+        if (m_CommandBuffer.GetState().RenderPass != VK_NULL_HANDLE)
+            m_CommandBuffer.EndRenderPass();
+
+        if (m_DesrSetBindInfo.DynamicOffsetCount != 0)
+            pPipelineStateVk->BindDescriptorSetsWithDynamicOffsets(this, m_DesrSetBindInfo);
+#if 0
 #ifdef _DEBUG
         else
         {
             if( pPipelineStateVk->dbgContainsShaderResources() )
                 LOG_ERROR_MESSAGE("Pipeline state \"", pPipelineStateVk->GetDesc().Name, "\" contains shader resources, but IDeviceContext::CommitShaderResources() was not called" );
         }
+#endif
 #endif
 
         if( DispatchAttrs.pIndirectDispatchAttribs )
@@ -539,10 +541,11 @@ namespace Diligent
                     pBufferVk->DbgVerifyDynamicAllocation(m_ContextId);
 #endif
 
-                ComputeCtx.TransitionResource(pBufferVk, Vk_RESOURCE_STATE_INDIRECT_ARGUMENT);
-                size_t BuffDataStartByteOffset;
-                IVkResource *pVkArgsBuff = pBufferVk->GetVkBuffer(BuffDataStartByteOffset, m_ContextId);
-                ComputeCtx.ExecuteIndirect(m_pDispatchIndirectSignature, pVkArgsBuff, DispatchAttrs.DispatchArgsByteOffset + BuffDataStartByteOffset);
+                // Buffer memory barries must be executed outside of render pass
+                if (!pBufferVk->CheckAccessFlags(VK_ACCESS_INDIRECT_COMMAND_READ_BIT))
+                    BufferMemoryBarrier(*pBufferVk, VK_ACCESS_INDIRECT_COMMAND_READ_BIT);
+
+                m_CommandBuffer.DispatchIndirect(pBufferVk->GetVkBuffer(), pBufferVk->GetDynamicOffset(m_ContextId) + DispatchAttrs.DispatchArgsByteOffset);
             }
             else
             {
@@ -550,8 +553,8 @@ namespace Diligent
             }
         }
         else
-            ComputeCtx.Dispatch(DispatchAttrs.ThreadGroupCountX, DispatchAttrs.ThreadGroupCountY, DispatchAttrs.ThreadGroupCountZ);
-#endif
+            m_CommandBuffer.Dispatch(DispatchAttrs.ThreadGroupCountX, DispatchAttrs.ThreadGroupCountY, DispatchAttrs.ThreadGroupCountZ);
+
         ++m_State.NumCommands;
     }
 
@@ -870,11 +873,17 @@ namespace Diligent
         for( Uint32 vp = 0; vp < m_NumViewports; ++vp )
         {
             VkViewports[vp].x        = m_Viewports[vp].TopLeftX;
-            VkViewports[vp].y        = m_FramebufferHeight - m_Viewports[vp].TopLeftY;
+            VkViewports[vp].y        = m_Viewports[vp].TopLeftY;
             VkViewports[vp].width    = m_Viewports[vp].Width;
-            VkViewports[vp].height   = -m_Viewports[vp].Height;
+            VkViewports[vp].height   = m_Viewports[vp].Height;
             VkViewports[vp].minDepth = m_Viewports[vp].MinDepth;
             VkViewports[vp].maxDepth = m_Viewports[vp].MaxDepth;
+            if(m_IsDefaultFramebufferBound)
+            {
+                // Default framebuffer is upside-down in Vulkan
+                VkViewports[vp].y = m_FramebufferHeight - VkViewports[vp].y;
+                VkViewports[vp].height = -VkViewports[vp].height;
+            }
         }
         EnsureVkCmdBuffer();
         // TODO: reinterpret_cast m_Viewports to VkViewports?
@@ -1107,6 +1116,7 @@ namespace Diligent
 
     void DeviceContextVkImpl::GenerateMips(TextureViewVkImpl *pTexView)
     {
+        UNSUPPORTED("Not yet implemented");
 #if 0
         auto *pCtx = RequestCmdContext();
         m_MipsGenerator.GenerateMips(m_pDevice.RawPtr<RenderDeviceVkImpl>(), pTexView, *pCtx);

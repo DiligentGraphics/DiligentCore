@@ -79,9 +79,30 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters*        pRefCounters,
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT | // The buffer can be used as the source of a transfer command 
         VK_BUFFER_USAGE_TRANSFER_DST_BIT;  // The buffer can be used as the destination of a transfer command
     if (m_Desc.BindFlags & BIND_UNORDERED_ACCESS)
-        VkBuffCI.usage |= m_Desc.Mode == BUFFER_MODE_FORMATTED ? VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT : VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+    {
+        // VkBuffCI.usage |= m_Desc.Mode == BUFFER_MODE_FORMATTED ? VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT : VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+        // HLSL formatted buffers are mapped to GLSL storage buffers:
+        //
+        //     RWBuffer<uint4> RWBuff
+        //     
+        //                 |
+        //                 V
+        //     
+        //     layout(std140, binding = 3) buffer RWBuff
+        //     {
+        //         uvec4 data[];
+        //     }g_RWBuff;
+        // 
+        // So we have to set both VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT and VK_BUFFER_USAGE_STORAGE_BUFFER_BIT bits
+        VkBuffCI.usage |= VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+    }
     if (m_Desc.BindFlags & BIND_SHADER_RESOURCE)
-        VkBuffCI.usage |= m_Desc.Mode == BUFFER_MODE_FORMATTED ? VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER : VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+    {
+        // VkBuffCI.usage |= m_Desc.Mode == BUFFER_MODE_FORMATTED ? VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER : VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+        // HLSL buffer SRV are mapped to storge buffers in GLSL, so we need to set both 
+        // VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER and VK_BUFFER_USAGE_STORAGE_BUFFER_BIT flags
+        VkBuffCI.usage |= VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+    }
     if (m_Desc.BindFlags & BIND_VERTEX_BUFFER)
         VkBuffCI.usage |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
     if (m_Desc.BindFlags & BIND_INDEX_BUFFER)
