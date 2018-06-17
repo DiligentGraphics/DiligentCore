@@ -116,7 +116,7 @@ public:
     ///// Number of different shader types (Vertex, Pixel, Geometry, Domain, Hull, Compute)
     //static constexpr int NumShaderTypes = 6;
 
-    void UpdateBufferRegion(class BufferVkImpl* pBuffVk, VulkanUtilities::VulkanUploadAllocation& Allocation, Uint64 DstOffset, Uint64 NumBytes);
+    void UpdateBufferRegion(class BufferVkImpl* pBuffVk, Uint64 DstOffset, Uint64 NumBytes, VkBuffer vkSrcBuffer, Uint64 SrcOffset);
     void UpdateBufferRegion(class BufferVkImpl* pBuffVk, const void *pData, Uint64 DstOffset, Uint64 NumBytes);
 
     void CopyBufferRegion(class BufferVkImpl *pSrcBuffVk, class BufferVkImpl *pDstBuffVk, Uint64 SrcOffset, Uint64 DstOffset, Uint64 NumBytes);

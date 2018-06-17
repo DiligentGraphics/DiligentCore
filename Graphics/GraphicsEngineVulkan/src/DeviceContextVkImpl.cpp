@@ -983,21 +983,20 @@ namespace Diligent
         }
     }
 
-    void DeviceContextVkImpl::UpdateBufferRegion(BufferVkImpl *pBuffVk, VulkanUtilities::VulkanUploadAllocation& Allocation, Uint64 DstOffset, Uint64 NumBytes)
+    void DeviceContextVkImpl::UpdateBufferRegion(BufferVkImpl* pBuffVk, Uint64 DstOffset, Uint64 NumBytes, VkBuffer vkSrcBuffer, Uint64 SrcOffset)
     {
         VERIFY(DstOffset + NumBytes <= pBuffVk->GetDesc().uiSizeInBytes, "Update region is out of buffer");
-        VERIFY_EXPR(NumBytes <= Allocation.MemAllocation.Size);
         EnsureVkCmdBuffer();
-        if(!pBuffVk->CheckAccessFlags(VK_ACCESS_TRANSFER_WRITE_BIT))
+        if (!pBuffVk->CheckAccessFlags(VK_ACCESS_TRANSFER_WRITE_BIT))
         {
             BufferMemoryBarrier(*pBuffVk, VK_ACCESS_TRANSFER_WRITE_BIT);
         }
         VkBufferCopy CopyRegion;
-        CopyRegion.srcOffset = Allocation.MemAllocation.UnalignedOffset;
+        CopyRegion.srcOffset = SrcOffset;
         CopyRegion.dstOffset = DstOffset;
         CopyRegion.size = NumBytes;
         VERIFY(pBuffVk->m_VulkanBuffer != VK_NULL_HANDLE, "Copy destination buffer must not be suballocated");
-        m_CommandBuffer.CopyBuffer(Allocation.vkBuffer, pBuffVk->GetVkBuffer(), 1, &CopyRegion);
+        m_CommandBuffer.CopyBuffer(vkSrcBuffer, pBuffVk->GetVkBuffer(), 1, &CopyRegion);
         ++m_State.NumCommands;
     }
 
@@ -1008,7 +1007,7 @@ namespace Diligent
         auto TmpSpace = m_UploadHeap.Allocate(NumBytes);
         auto CPUAddress = TmpSpace.MemAllocation.Page->GetCPUMemory();
 	    memcpy(reinterpret_cast<Uint8*>(CPUAddress) + TmpSpace.MemAllocation.UnalignedOffset, pData, static_cast<size_t>(NumBytes));
-        UpdateBufferRegion(pBuffVk, TmpSpace, DstOffset, NumBytes);
+        UpdateBufferRegion(pBuffVk, DstOffset, NumBytes, TmpSpace.vkBuffer, TmpSpace.MemAllocation.UnalignedOffset);
         // The allocation will stay in the queue until the command buffer from this context is submitted
         // to the queue. We cannot use the device's release queue as other contexts may interfer with
         // the release order
@@ -1284,7 +1283,8 @@ namespace Diligent
         auto it = m_UploadAllocations.find(pBuffer);
         if(it != m_UploadAllocations.end())
         {
-            UpdateBufferRegion(pBuffer, it->second, 0, pBuffer->GetDesc().uiSizeInBytes);
+            VERIFY_EXPR(pBuffer->GetDesc().uiSizeInBytes <= it->second.MemAllocation.Size);
+            UpdateBufferRegion(pBuffer, 0, pBuffer->GetDesc().uiSizeInBytes, it->second.vkBuffer, it->second.MemAllocation.UnalignedOffset);
             // The allocation will stay in the queue until the command buffer from this context is submitted
             // to the queue. We cannot use the device's release queue as other contexts may interfer with
             // the release order
