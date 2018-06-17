@@ -114,12 +114,14 @@ public:
         auto &BuffDesc = pBuffer->GetDesc();
         VERIFY(sizeof(DataType) <= BuffDesc.uiSizeInBytes, "Data type size exceeds buffer size");
 #endif
-        m_pContext = pContext;
-        m_pBuffer = pBuffer;
-        m_MapType = MapType;
-        m_MapFlags = MapFlags;
-        m_pBuffer->Map(m_pContext, MapType, MapFlags, (PVoid&)m_pMappedData);
-        VERIFY( m_pMappedData, "Map failed" );
+        pBuffer->Map(pContext, MapType, MapFlags, (PVoid&)m_pMappedData);
+        if(m_pMappedData != nullptr)
+        {
+            m_pContext = pContext;
+            m_pBuffer = pBuffer;
+            m_MapType = MapType;
+            m_MapFlags = MapFlags;
+        }
     }
 
     /// Unamps the resource and resets the object state to default.

@@ -1292,10 +1292,6 @@ namespace Diligent
         auto *pDeviceVkImpl = m_pDevice.RawPtr<RenderDeviceVkImpl>();
 
         auto DynAlloc = m_DynamicHeap.Allocate(SizeInBytes, 0);
-        if (DynAlloc.pParentDynamicHeap == nullptr)
-        {
-            UNSUPPORTED("Failed to allocate dynamic memory");
-        }
 #ifdef _DEBUG
         DynAlloc.dbgFrameNumber = pDeviceVkImpl->GetCurrentFrameNumber();
 #endif

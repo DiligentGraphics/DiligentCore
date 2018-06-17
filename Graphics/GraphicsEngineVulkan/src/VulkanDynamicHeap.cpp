@@ -22,6 +22,8 @@
  */
 
 #include "pch.h"
+#include <chrono>
+#include <thread>
 #include "VulkanDynamicHeap.h"
 #include "RenderDeviceVkImpl.h"
 
@@ -36,11 +38,11 @@ static VkDeviceSize GetDefaultAlignment(const VulkanUtilities::VulkanPhysicalDev
 }
 
 VulkanRingBuffer::VulkanRingBuffer(IMemoryAllocator&      Allocator,
-                                     RenderDeviceVkImpl*    pDeviceVk,
-                                     Uint32                 Size) :
+                                     RenderDeviceVkImpl&  DeviceVk,
+                                     Uint32               Size) :
     m_RingBuffer(Size, Allocator),
-    m_pDeviceVk(pDeviceVk),
-    m_DefaultAlignment(GetDefaultAlignment(pDeviceVk->GetPhysicalDevice()))
+    m_DeviceVk(DeviceVk),
+    m_DefaultAlignment(GetDefaultAlignment(DeviceVk.GetPhysicalDevice()))
 {
     VERIFY( (Size & (MinAlignment-1)) == 0, "Heap size is not min aligned");
     VkBufferCreateInfo VkBuffCI = {};
@@ -59,11 +61,11 @@ VulkanRingBuffer::VulkanRingBuffer(IMemoryAllocator&      Allocator,
     VkBuffCI.queueFamilyIndexCount = 0;
     VkBuffCI.pQueueFamilyIndices = nullptr;
 
-    const auto& LogicalDevice = pDeviceVk->GetLogicalDevice();
+    const auto& LogicalDevice = DeviceVk.GetLogicalDevice();
     m_VkBuffer = LogicalDevice.CreateBuffer(VkBuffCI, "Dynamic heap buffer");
     VkMemoryRequirements MemReqs = LogicalDevice.GetBufferMemoryRequirements(m_VkBuffer);
 
-    const auto& PhysicalDevice = pDeviceVk->GetPhysicalDevice();
+    const auto& PhysicalDevice = DeviceVk.GetPhysicalDevice();
 
     VkMemoryAllocateInfo MemAlloc = {};
     MemAlloc.pNext = nullptr;
@@ -102,9 +104,9 @@ void VulkanRingBuffer::Destroy()
 {
     if (m_VkBuffer)
     {
-        m_pDeviceVk->GetLogicalDevice().UnmapMemory(m_BufferMemory);
-        m_pDeviceVk->SafeReleaseVkObject(std::move(m_VkBuffer));
-        m_pDeviceVk->SafeReleaseVkObject(std::move(m_BufferMemory));
+        m_DeviceVk.GetLogicalDevice().UnmapMemory(m_BufferMemory);
+        m_DeviceVk.SafeReleaseVkObject(std::move(m_VkBuffer));
+        m_DeviceVk.SafeReleaseVkObject(std::move(m_BufferMemory));
     }
     m_CPUAddress = nullptr;
 }
@@ -130,14 +132,55 @@ RingBuffer::OffsetType VulkanRingBuffer::Allocate(size_t SizeInBytes)
     }
     
     std::lock_guard<std::mutex> Lock(m_RingBuffMtx);
-    auto Offset = m_RingBuffer.Allocate(SizeInBytes);
+    RingBuffer::OffsetType Offset = m_RingBuffer.Allocate(SizeInBytes);
     if(Offset == RingBuffer::InvalidOffset)
     {
-        UNEXPECTED("Allocation failed");
+        // Failed to allocate space in the ring buffer. Try to wait for GPU to finish pening frames
+        // to release some space
+        auto StartIdleTime = std::chrono::high_resolution_clock::now();
+        static constexpr const auto SleepPeriod = std::chrono::milliseconds(1);
+        static constexpr const auto MaxIdleDuration = std::chrono::duration<double>{60.0 / 1000.0}; // 60 ms
+        std::chrono::duration<double> IdleDuration;
+        Uint32 SleepIterations = 0;
+        while(Offset == RingBuffer::InvalidOffset && IdleDuration < MaxIdleDuration)
+        {
+            auto LastCompletedFenceValue = m_DeviceVk.GetCompletedFenceValue();
+            m_RingBuffer.ReleaseCompletedFrames(LastCompletedFenceValue);
+
+            Offset = m_RingBuffer.Allocate(SizeInBytes);
+            if (Offset == RingBuffer::InvalidOffset)
+            {
+                std::this_thread::sleep_for(SleepPeriod);
+                ++SleepIterations;
+            }
+
+            auto CurrTime = std::chrono::high_resolution_clock::now();
+            IdleDuration = std::chrono::duration_cast<std::chrono::duration<double>>(CurrTime - StartIdleTime);
+        }
+
+        if(Offset == RingBuffer::InvalidOffset)
+        {
+            LOG_ERROR_MESSAGE("Space in dynamic heap is exausted! After idling for ", std::fixed, std::setprecision(1), IdleDuration.count()*1000.0, " ms still no space is available. Increase the size of the ring buffer by setting EngineVkAttribs::DynamicHeapSize to a greater value or optimize dynamic resource usage");
+        }
+        else
+        {
+            if(SleepIterations == 0)
+            {
+                LOG_WARNING_MESSAGE("Space in dynamic heap is almost exausted forcing mid-frame ring buffer shrinkage. Increase the size of the ring buffer by setting EngineVkAttribs::DynamicHeapSize to a greater value or optimize dynamic resource usage");
+            }
+            else
+            {
+                LOG_WARNING_MESSAGE("Space in dynamic heap is almost exausted. Allocation from the ring buffer forced idle time of ", std::fixed, std::setprecision(1), IdleDuration.count()*1000.0, " ms. Increase the size of the ring buffer by setting EngineVkAttribs::DynamicHeapSize to a greater value or optimize dynamic resource usage");
+            }
+        }
     }
-    m_CurrentFrameSize += SizeInBytes;
-    m_FramePeakSize = std::max(m_FramePeakSize, m_CurrentFrameSize);
-    m_TotalPeakSize = std::max(m_TotalPeakSize, m_RingBuffer.GetUsedSize());
+
+    if (Offset != RingBuffer::InvalidOffset)
+    {
+        m_CurrentFrameSize += SizeInBytes;
+        m_FramePeakSize = std::max(m_FramePeakSize, m_CurrentFrameSize);
+        m_TotalPeakSize = std::max(m_TotalPeakSize, m_RingBuffer.GetUsedSize());
+    }
     return Offset;
 }
 

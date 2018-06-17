@@ -60,7 +60,12 @@ Uint64 CommandQueueVkImpl::ExecuteCommandBuffer(const VkSubmitInfo& SubmitInfo)
 {
     std::lock_guard<std::mutex> Lock(m_QueueMutex);
     auto Fence = m_FencePool.GetFence();
-    auto err = vkQueueSubmit(m_VkQueue, 1, &SubmitInfo, Fence);
+    bool SubmitCount = 
+        (SubmitInfo.waitSemaphoreCount   != 0 || 
+         SubmitInfo.commandBufferCount   != 0 || 
+         SubmitInfo.signalSemaphoreCount != 0) ? 
+        1 : 0;
+    auto err = vkQueueSubmit(m_VkQueue, SubmitCount, &SubmitInfo, Fence);
     VERIFY(err == VK_SUCCESS, "Failed to submit command buffer to the command queue");
 
     // We must atomically place the (value, fence) pair into the deque
@@ -76,7 +81,7 @@ Uint64 CommandQueueVkImpl::ExecuteCommandBuffer(VkCommandBuffer cmdBuffer)
 {
     VkSubmitInfo SubmitInfo = {};
     SubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    SubmitInfo.commandBufferCount = 1;
+    SubmitInfo.commandBufferCount = cmdBuffer != VK_NULL_HANDLE ? 1 : 0;
     SubmitInfo.pCommandBuffers = &cmdBuffer;
     SubmitInfo.waitSemaphoreCount = 0; // the number of semaphores upon which to wait before executing the command buffers
     SubmitInfo.pWaitSemaphores = nullptr; // a pointer to an array of semaphores upon which to wait before the command 

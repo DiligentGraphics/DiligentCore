@@ -99,7 +99,7 @@ class VulkanRingBuffer
 {
 public:
     VulkanRingBuffer(IMemoryAllocator&         Allocator, 
-                     class RenderDeviceVkImpl* pDeviceVk, 
+                     class RenderDeviceVkImpl& DeviceVk, 
                      Uint32                    Size);
     ~VulkanRingBuffer();
 
@@ -120,9 +120,9 @@ private:
     static constexpr const Uint32 MinAlignment = 1024;
     RingBuffer::OffsetType Allocate(size_t SizeInBytes);
 
-    std::mutex                  m_RingBuffMtx;
-    RingBuffer                  m_RingBuffer;
-    RenderDeviceVkImpl* const   m_pDeviceVk;
+    std::mutex          m_RingBuffMtx;
+    RingBuffer          m_RingBuffer;
+    RenderDeviceVkImpl& m_DeviceVk;
 
     VulkanUtilities::BufferWrapper       m_VkBuffer;
     VulkanUtilities::DeviceMemoryWrapper m_BufferMemory;

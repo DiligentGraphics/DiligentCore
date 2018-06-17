@@ -91,7 +91,7 @@ RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters*                    
     m_DynamicHeapRingBuffer
     {
         GetRawAllocator(),
-        this,
+        *this,
         CreationAttribs.DynamicHeapSize
     }
 {
@@ -318,30 +318,19 @@ void RenderDeviceVkImpl::FinishFrame(bool ReleaseAllResources)
         }
     }
 
-    // We must use NextFenceValue here, NOT current value, because the 
-    // fence value may or may not have been incremented when the last 
-    // command list was submitted for execution (Unity only
-    // increments fence value once per frame)
-    Uint64 NextFenceValue = 0;
+    Uint64 SubmittedFenceValue = 0;
     Uint64 SubmittedCmdBuffNumber = 0;
-    {
-        // Lock the command queue to avoid other threads interfering with the GPU
-        std::lock_guard<std::mutex> LockGuard(m_CmdQueueMutex);
-        NextFenceValue = m_pCommandQueue->GetNextFenceValue();
-        // Increment cmd buffer number while keeping queue locked. 
-        // This guarantees that any Vk object released after the lock
-        // is released, will be associated with the incremented cmd list number
-        SubmittedCmdBuffNumber = m_NextCmdBuffNumber;
-        Atomics::AtomicIncrement(m_NextCmdBuffNumber);
-    }
-    
+    VkSubmitInfo DummySubmitInfo = {};
+    // Submit empty command buffer to set a fence on the GPU
+    SubmitCommandBuffer(DummySubmitInfo, SubmittedCmdBuffNumber, SubmittedFenceValue);
+        
     // Discard all remaining objects. This is important to do if there were 
     // no command lists submitted during the frame. All stale resources will
-    // be associated with the next fence value and thus will not be released
-    // until the next command buffer is finished by the GPU
-    ProcessStaleResources(SubmittedCmdBuffNumber, NextFenceValue, CompletedFenceValue);
+    // be associated with the submitted fence value and thus will not be released
+    // until the GPU is finished with the current frame
+    ProcessStaleResources(SubmittedCmdBuffNumber, SubmittedFenceValue, CompletedFenceValue);
 
-    m_DynamicHeapRingBuffer.FinishFrame(NextFenceValue, CompletedFenceValue);
+    m_DynamicHeapRingBuffer.FinishFrame(SubmittedFenceValue, CompletedFenceValue);
 
     Atomics::AtomicIncrement(m_FrameNumber);
 }
