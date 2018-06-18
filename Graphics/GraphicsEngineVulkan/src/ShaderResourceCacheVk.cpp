@@ -143,9 +143,22 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl *pCtxVkImpl)
                 // The image subresources for a sampled image or a combined image sampler must be in the 
                 // VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 
                 // or VK_IMAGE_LAYOUT_GENERAL layout in order to access its data in a shader (13.1.3, 13.1.4).
-                VkImageLayout RequiredLayout = 
-                    Res.Type == SPIRVShaderResourceAttribs::ResourceType::StorageImage ? 
-                        VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                VkImageLayout RequiredLayout;
+                if(Res.Type == SPIRVShaderResourceAttribs::ResourceType::StorageImage)
+                    RequiredLayout = VK_IMAGE_LAYOUT_GENERAL;
+                else
+                {
+                    if(pTextureVk->GetDesc().BindFlags & BIND_DEPTH_STENCIL)
+                    {
+                        // VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL must only be used as a read - only depth / stencil attachment 
+                        // in a VkFramebuffer and/or as a read - only image in a shader (which can be read as a sampled image, combined 
+                        // image / sampler and /or input attachment). This layout is valid only for image subresources of images created 
+                        // with the VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT usage bit enabled.
+                        RequiredLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+                    }
+                    else
+                        RequiredLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                }
                 if(pTextureVk->GetLayout() != RequiredLayout)
                 {
                     if (VerifyOnly)

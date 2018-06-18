@@ -96,9 +96,15 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters *pRefCounters,
 
     if (FmtAttribs.IsTypeless)
     {
-        // Use SRV format to create the texture
-        auto SRVFormat = GetDefaultTextureViewFormat(m_Desc, TEXTURE_VIEW_SHADER_RESOURCE);
-        ImageCI.format = TexFormatToVkFormat(SRVFormat);
+        TEXTURE_VIEW_TYPE DefaultTexView;
+        if(m_Desc.BindFlags & BIND_DEPTH_STENCIL)
+            DefaultTexView = TEXTURE_VIEW_DEPTH_STENCIL;
+        else if (m_Desc.BindFlags & BIND_RENDER_TARGET)
+            DefaultTexView = TEXTURE_VIEW_RENDER_TARGET;
+        else
+            DefaultTexView = TEXTURE_VIEW_SHADER_RESOURCE;
+        auto DefaultViewFormat = GetDefaultTextureViewFormat(m_Desc, DefaultTexView);
+        ImageCI.format = TexFormatToVkFormat(DefaultViewFormat);
     }
     else
     {
@@ -625,14 +631,17 @@ VulkanUtilities::ImageViewWrapper TextureVkImpl::CreateImageView(TextureViewDesc
         default: UNEXPECTED("Unexpcted view dimension");
     }
     
-    ImageViewCI.format = TexFormatToVkFormat(ViewDesc.Format);
+    TEXTURE_FORMAT CorrectedViewFormat = ViewDesc.Format;
+    if(m_Desc.BindFlags & BIND_DEPTH_STENCIL)
+        CorrectedViewFormat = GetDefaultTextureViewFormat(CorrectedViewFormat, TEXTURE_VIEW_DEPTH_STENCIL, m_Desc.BindFlags);
+    ImageViewCI.format = TexFormatToVkFormat(CorrectedViewFormat);
     ImageViewCI.components = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
     ImageViewCI.subresourceRange.baseMipLevel = ViewDesc.MostDetailedMip;
     ImageViewCI.subresourceRange.levelCount = ViewDesc.NumMipLevels;
     ImageViewCI.subresourceRange.baseArrayLayer = ViewDesc.FirstArraySlice;
     ImageViewCI.subresourceRange.layerCount = ViewDesc.NumArraySlices;
 
-    if(ImageViewCI.viewType == VK_IMAGE_VIEW_TYPE_3D)
+        if(ImageViewCI.viewType == VK_IMAGE_VIEW_TYPE_3D)
     {
         if(ImageViewCI.subresourceRange.baseArrayLayer == 0 && ImageViewCI.subresourceRange.layerCount == m_Desc.Depth )
         {
@@ -645,7 +654,7 @@ VulkanUtilities::ImageViewWrapper TextureVkImpl::CreateImageView(TextureViewDesc
             ImageViewCI.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
         }
     }
-    const auto &FmtAttribs = GetTextureFormatAttribs(ViewDesc.Format);
+    const auto &FmtAttribs = GetTextureFormatAttribs(CorrectedViewFormat);
 
     if(ViewDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL)
     {
@@ -663,7 +672,9 @@ VulkanUtilities::ImageViewWrapper TextureVkImpl::CreateImageView(TextureViewDesc
         // aspectMask must be only VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_ASPECT_DEPTH_BIT or VK_IMAGE_ASPECT_STENCIL_BIT 
         // if format is a color, depth-only or stencil-only format, respectively.  (11.5)
         if(FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH )
+        {
             ImageViewCI.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+        }
         else if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
         {
             if(ViewDesc.Format == TEX_FORMAT_D32_FLOAT_S8X24_UINT || 
@@ -687,7 +698,7 @@ VulkanUtilities::ImageViewWrapper TextureVkImpl::CreateImageView(TextureViewDesc
         else
             ImageViewCI.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     }
-
+    
     auto *pRenderDeviceVk = GetDevice<RenderDeviceVkImpl>();
     const auto& LogicalDevice = pRenderDeviceVk->GetLogicalDevice();
 
