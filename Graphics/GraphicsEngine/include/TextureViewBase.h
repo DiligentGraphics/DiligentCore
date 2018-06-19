@@ -92,6 +92,11 @@ public:
         return m_pTexture;
     }
 
+    const ITexture* GetTexture()const
+    {
+        return m_pTexture;
+    }
+
 protected:
     /// Strong reference to the sampler
     Diligent::RefCntAutoPtr<ISampler> m_pSampler;

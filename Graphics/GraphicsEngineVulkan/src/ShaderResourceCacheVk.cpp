@@ -266,7 +266,15 @@ VkDescriptorImageInfo ShaderResourceCacheVk::Resource::GetImageDescriptorWriteIn
     // If descriptorType is VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, for each descriptor that will be accessed 
     // via load or store operations the imageLayout member for corresponding elements of pImageInfo 
     // MUST be VK_IMAGE_LAYOUT_GENERAL (13.2.4)
-    DescrImgInfo.imageLayout = IsStorageImage ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    if(IsStorageImage)
+        DescrImgInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+    else
+    {
+        if(ValidatedCast<const TextureVkImpl>(pTexViewVk->GetTexture())->GetDesc().BindFlags & BIND_DEPTH_STENCIL)
+            DescrImgInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+        else
+            DescrImgInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    }
 
     return DescrImgInfo;
 }
