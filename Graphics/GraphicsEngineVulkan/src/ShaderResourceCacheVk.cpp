@@ -153,7 +153,7 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl *pCtxVkImpl)
                         // VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL must only be used as a read - only depth / stencil attachment 
                         // in a VkFramebuffer and/or as a read - only image in a shader (which can be read as a sampled image, combined 
                         // image / sampler and /or input attachment). This layout is valid only for image subresources of images created 
-                        // with the VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT usage bit enabled.
+                        // with the VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT usage bit enabled. (11.4)
                         RequiredLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
                     }
                     else

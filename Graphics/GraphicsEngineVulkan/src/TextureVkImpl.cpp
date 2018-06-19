@@ -641,7 +641,7 @@ VulkanUtilities::ImageViewWrapper TextureVkImpl::CreateImageView(TextureViewDesc
     ImageViewCI.subresourceRange.baseArrayLayer = ViewDesc.FirstArraySlice;
     ImageViewCI.subresourceRange.layerCount = ViewDesc.NumArraySlices;
 
-        if(ImageViewCI.viewType == VK_IMAGE_VIEW_TYPE_3D)
+    if(ImageViewCI.viewType == VK_IMAGE_VIEW_TYPE_3D)
     {
         if(ImageViewCI.subresourceRange.baseArrayLayer == 0 && ImageViewCI.subresourceRange.layerCount == m_Desc.Depth )
         {

@@ -753,8 +753,18 @@ namespace Diligent
             auto ClearValue = ClearValueToVkClearValue(RGBA, ViewDesc.Format);
             VkImageSubresourceRange Subresource;
             Subresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            Subresource.baseArrayLayer = ViewDesc.FirstArraySlice;
-            Subresource.layerCount = ViewDesc.NumArraySlices;
+            if(ViewDesc.TextureDim == RESOURCE_DIM_TEX_3D)
+            {
+                if(ViewDesc.NumDepthSlices != pTextureVk->GetDesc().Depth || ViewDesc.FirstDepthSlice != 0)
+                    LOG_ERROR_MESSAGE("Partial clears of 3D textures are not supported in Vulkan. Texture '", pTextureVk->GetDesc().Name,"' will be cleared entirely.");
+                Subresource.baseArrayLayer = 0;
+                Subresource.layerCount = 1;
+            }
+            else
+            {
+                Subresource.baseArrayLayer = ViewDesc.FirstArraySlice;
+                Subresource.layerCount = ViewDesc.NumArraySlices;
+            }
             Subresource.baseMipLevel = ViewDesc.MostDetailedMip;
             Subresource.levelCount = ViewDesc.NumMipLevels;
             VERIFY(ViewDesc.NumMipLevels, "RTV must contain single mip level");
