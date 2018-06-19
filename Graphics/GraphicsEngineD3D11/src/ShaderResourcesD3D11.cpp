@@ -43,53 +43,53 @@ ShaderResourcesD3D11::ShaderResourcesD3D11(RenderDeviceD3D11Impl *pDeviceD3D11Im
     LoadD3DShaderResources<D3D11_SHADER_DESC, D3D11_SHADER_INPUT_BIND_DESC, ID3D11ShaderReflection>(
         pShaderBytecode,
 
-        [&](Uint32 NumCBs, Uint32 NumTexSRVs, Uint32 NumTexUAVs, Uint32 NumBufSRVs, Uint32 NumBufUAVs, Uint32 NumSamplers)
+        [&](Uint32 NumCBs, Uint32 NumTexSRVs, Uint32 NumTexUAVs, Uint32 NumBufSRVs, Uint32 NumBufUAVs, Uint32 NumSamplers, size_t ResourceNamesPoolSize)
         {
-            Initialize(GetRawAllocator(), NumCBs, NumTexSRVs, NumTexUAVs, NumBufSRVs, NumBufUAVs, NumSamplers);
+            Initialize(GetRawAllocator(), NumCBs, NumTexSRVs, NumTexUAVs, NumBufSRVs, NumBufUAVs, NumSamplers, ResourceNamesPoolSize);
         },
 
-        [&](D3DShaderResourceAttribs&& CBAttribs)
+        [&](const D3DShaderResourceAttribs& CBAttribs)
         {
             VERIFY( CBAttribs.BindPoint + CBAttribs.BindCount-1 <= MaxAllowedBindPoint, "CB bind point exceeds supported range" );
             m_MaxCBBindPoint = std::max(m_MaxCBBindPoint, static_cast<MaxBindPointType>(CBAttribs.BindPoint + CBAttribs.BindCount-1));
 
-            new (&GetCB(CurrCB++)) D3DShaderResourceAttribs(std::move(CBAttribs));
+            new (&GetCB(CurrCB++)) D3DShaderResourceAttribs(m_ResourceNames, CBAttribs);
         },
 
-        [&](D3DShaderResourceAttribs &&TexUAV)
+        [&](const D3DShaderResourceAttribs& TexUAV)
         {
             VERIFY( TexUAV.BindPoint + TexUAV.BindCount-1 <= MaxAllowedBindPoint, "Tex UAV bind point exceeds supported range" );
             m_MaxUAVBindPoint = std::max(m_MaxUAVBindPoint, static_cast<MaxBindPointType>(TexUAV.BindPoint + TexUAV.BindCount-1));
 
-            new (&GetTexUAV(CurrTexUAV++)) D3DShaderResourceAttribs( std::move(TexUAV) );
+            new (&GetTexUAV(CurrTexUAV++)) D3DShaderResourceAttribs(m_ResourceNames, TexUAV);
         },
 
-        [&](D3DShaderResourceAttribs &&BuffUAV)
+        [&](const D3DShaderResourceAttribs& BuffUAV)
         {
             VERIFY( BuffUAV.BindPoint + BuffUAV.BindCount-1 <= MaxAllowedBindPoint, "Buff UAV bind point exceeds supported range" );
             m_MaxUAVBindPoint = std::max(m_MaxUAVBindPoint, static_cast<MaxBindPointType>(BuffUAV.BindPoint + BuffUAV.BindCount-1));
 
-            new (&GetBufUAV(CurrBufUAV++)) D3DShaderResourceAttribs( std::move(BuffUAV) );
+            new (&GetBufUAV(CurrBufUAV++)) D3DShaderResourceAttribs(m_ResourceNames, BuffUAV);
         },
 
-        [&](D3DShaderResourceAttribs &&BuffSRV)
+        [&](const D3DShaderResourceAttribs& BuffSRV)
         {
             VERIFY( BuffSRV.BindPoint + BuffSRV.BindCount-1 <= MaxAllowedBindPoint, "Buff SRV bind point exceeds supported range" );
             m_MaxSRVBindPoint = std::max(m_MaxSRVBindPoint, static_cast<MaxBindPointType>(BuffSRV.BindPoint + BuffSRV.BindCount-1));
 
-            new (&GetBufSRV(CurrBufSRV++)) D3DShaderResourceAttribs( std::move(BuffSRV) );
+            new (&GetBufSRV(CurrBufSRV++)) D3DShaderResourceAttribs(m_ResourceNames, BuffSRV);
         },
 
-        [&](D3DShaderResourceAttribs &&SamplerAttribs)
+        [&](const D3DShaderResourceAttribs& SamplerAttribs)
         {
             VERIFY( SamplerAttribs.BindPoint + SamplerAttribs.BindCount-1 <= MaxAllowedBindPoint, "Sampler bind point exceeds supported range" );
             m_MaxSamplerBindPoint = std::max(m_MaxSamplerBindPoint, static_cast<MaxBindPointType>(SamplerAttribs.BindPoint + SamplerAttribs.BindCount-1));
-            m_NumStaticSamplers += SamplerAttribs.GetIsStaticSampler() ? 1 : 0;
+            m_NumStaticSamplers += SamplerAttribs.IsStaticSampler() ? 1 : 0;
 
-            new (&GetSampler(CurrSampler++)) D3DShaderResourceAttribs( std::move(SamplerAttribs) );
+            new (&GetSampler(CurrSampler++)) D3DShaderResourceAttribs(m_ResourceNames, SamplerAttribs);
         },
 
-        [&](D3DShaderResourceAttribs &&TexAttribs)
+        [&](const D3DShaderResourceAttribs& TexAttribs)
         {
             VERIFY(CurrSampler == GetNumSamplers(), "All samplers must be initialized before texture SRVs" );
 
@@ -97,12 +97,13 @@ ShaderResourcesD3D11::ShaderResourcesD3D11(RenderDeviceD3D11Impl *pDeviceD3D11Im
             m_MaxSRVBindPoint = std::max(m_MaxSRVBindPoint, static_cast<MaxBindPointType>(TexAttribs.BindPoint + TexAttribs.BindCount-1));
 
             auto SamplerId = FindAssignedSamplerId(TexAttribs);
-            new (&GetTexSRV(CurrTexSRV++)) D3DShaderResourceAttribs( std::move(TexAttribs), SamplerId);
+            new (&GetTexSRV(CurrTexSRV++)) D3DShaderResourceAttribs(m_ResourceNames, TexAttribs, SamplerId);
         },
 
         ShdrDesc,
         D3DSamplerSuffix);
 
+    VERIFY_EXPR(m_ResourceNames.GetRemainingSize() == 0);
     VERIFY(CurrCB == GetNumCBs(), "Not all CBs are initialized, which will result in a crash when ~D3DShaderResourceAttribs() is called");
     VERIFY(CurrTexSRV == GetNumTexSRV(), "Not all Tex SRVs are initialized, which will result in a crash when ~D3DShaderResourceAttribs() is called" );
     VERIFY(CurrTexUAV == GetNumTexUAV(), "Not all Tex UAVs are initialized, which will result in a crash when ~D3DShaderResourceAttribs() is called" );
@@ -124,13 +125,13 @@ ShaderResourcesD3D11::ShaderResourcesD3D11(RenderDeviceD3D11Impl *pDeviceD3D11Im
         for (Uint32 s = 0; s < GetNumSamplers(); ++s)
         {
             const auto &Sam = GetSampler(s);
-            if (Sam.GetIsStaticSampler())
+            if (Sam.IsStaticSampler())
             {
                 Uint32 ssd = 0;
                 for (; ssd < ShdrDesc.NumStaticSamplers; ++ssd)
                 {
                     const auto& StaticSamplerDesc = ShdrDesc.StaticSamplers[ssd];
-                    if ( StrCmpSuff(Sam.Name.c_str(), StaticSamplerDesc.TextureName, D3DSamplerSuffix))
+                    if (StrCmpSuff(Sam.Name, StaticSamplerDesc.TextureName, D3DSamplerSuffix))
                     {
                         auto &StaticSamplerAttrs = GetStaticSampler(CurrStaticSam++);
                         StaticSamplerAttrs.first = &Sam;

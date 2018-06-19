@@ -77,7 +77,7 @@ ShaderResourceLayoutD3D11::~ShaderResourceLayoutD3D11()
     );
 }
 
-const D3DShaderResourceAttribs ShaderResourceLayoutD3D11::TexAndSamplerBindInfo::InvalidSamplerAttribs(String("Invalid sampler"), D3DShaderResourceAttribs::InvalidBindPoint, 0, D3D_SIT_SAMPLER,  SHADER_VARIABLE_TYPE_NUM_TYPES, D3D_SRV_DIMENSION_UNKNOWN, D3DShaderResourceAttribs::InvalidSamplerId, false);
+const D3DShaderResourceAttribs ShaderResourceLayoutD3D11::TexAndSamplerBindInfo::InvalidSamplerAttribs("Invalid sampler", D3DShaderResourceAttribs::InvalidBindPoint, 0, D3D_SIT_SAMPLER,  SHADER_VARIABLE_TYPE_NUM_TYPES, D3D_SRV_DIMENSION_UNKNOWN, D3DShaderResourceAttribs::InvalidSamplerId, false);
 
 void ShaderResourceLayoutD3D11::Initialize(const std::shared_ptr<const ShaderResourcesD3D11>& pSrcResources,
                                            const SHADER_VARIABLE_TYPE *VarTypes, 
@@ -264,7 +264,7 @@ void ShaderResourceLayoutD3D11::CopyResources(ShaderResourceCacheD3D11 &DstCache
                 {
                     VERIFY_EXPR(ts.SamplerAttribs.BindCount == ts.Attribs.BindCount || ts.SamplerAttribs.BindCount == 1);
                     Uint32 SamplerSlot = ts.SamplerAttribs.BindPoint + (ts.SamplerAttribs.BindCount == 1 ? 0 : (SRVSlot - ts.Attribs.BindPoint));
-                    if( !ts.SamplerAttribs.GetIsStaticSampler() )
+                    if( !ts.SamplerAttribs.IsStaticSampler() )
                     {
                         VERIFY_EXPR( SamplerSlot < m_pResourceCache->GetSamplerCount() && SamplerSlot < DstCache.GetSamplerCount() );
                         DstSamplers[SamplerSlot] = CachedSamplers[SamplerSlot];
@@ -318,27 +318,27 @@ void ShaderResourceLayoutD3D11::InitVariablesHashMap()
     HandleResources(
         [&](ConstBuffBindInfo&cb)
         {
-            m_VariableHash.insert( std::make_pair( Diligent::HashMapStringKey(cb.Attribs.Name), &cb ) );
+            m_VariableHash.insert( std::make_pair( Diligent::HashMapStringKey(cb.Attribs.Name, true), &cb ) );
         },
 
         [&](TexAndSamplerBindInfo& ts)
         {
-            m_VariableHash.insert( std::make_pair( Diligent::HashMapStringKey(ts.Attribs.Name), &ts ) );
+            m_VariableHash.insert( std::make_pair( Diligent::HashMapStringKey(ts.Attribs.Name, true), &ts ) );
         },
 
         [&](TexUAVBindInfo& uav)
         {
-            m_VariableHash.insert( std::make_pair( Diligent::HashMapStringKey(uav.Attribs.Name), &uav ) );
+            m_VariableHash.insert( std::make_pair( Diligent::HashMapStringKey(uav.Attribs.Name, true), &uav ) );
         },
 
         [&](BuffSRVBindInfo& srv)
         {
-            m_VariableHash.insert( std::make_pair( Diligent::HashMapStringKey(srv.Attribs.Name), &srv ) );
+            m_VariableHash.insert( std::make_pair( Diligent::HashMapStringKey(srv.Attribs.Name, true), &srv ) );
         },
 
         [&](BuffUAVBindInfo& uav)
         {
-            m_VariableHash.insert( std::make_pair( Diligent::HashMapStringKey(uav.Attribs.Name), &uav ) );
+            m_VariableHash.insert( std::make_pair( Diligent::HashMapStringKey(uav.Attribs.Name, true), &uav ) );
         }
     );
 #endif
@@ -346,7 +346,7 @@ void ShaderResourceLayoutD3D11::InitVariablesHashMap()
 
 #define LOG_RESOURCE_BINDING_ERROR(ResType, pResource, Attribs, ArrayInd, ShaderName, ...)\
 do{                                                                                       \
-    const auto &ResName = pResource->GetDesc().Name;                                      \
+    const auto* ResName = pResource->GetDesc().Name;                                      \
     if(Attribs.BindCount>1)                                                               \
         LOG_ERROR_MESSAGE( "Failed to bind ", ResType, " \"", ResName, "\" to variable \"", Attribs.Name,\
                            "[", ArrayInd, "]\" in shader \"", ShaderName, "\". ", __VA_ARGS__ );         \
@@ -469,7 +469,7 @@ void ShaderResourceLayoutD3D11::TexAndSamplerBindInfo::BindResource( IDeviceObje
     {
         VERIFY_EXPR(SamplerAttribs.BindCount == Attribs.BindCount || SamplerAttribs.BindCount == 1);
         auto SamplerBindPoint = SamplerAttribs.BindPoint + (SamplerAttribs.BindCount != 1 ? ArrayIndex : 0);
-        if( !SamplerAttribs.GetIsStaticSampler() )
+        if( !SamplerAttribs.IsStaticSampler() )
         {
             SamplerD3D11Impl *pSamplerD3D11Impl = nullptr;
             if( pViewD3D11 )
@@ -655,10 +655,10 @@ public:
             if( (Flags & BIND_SHADER_RESOURCES_UPDATE_UNRESOLVED) && Res.IsBound(elem) )
                 return;
 
-            const auto& VarName = Res.Attribs.Name;
+            const auto* VarName = Res.Attribs.Name;
             RefCntAutoPtr<IDeviceObject> pRes;
             VERIFY_EXPR(pResourceMapping != nullptr);
-            pResourceMapping->GetResource( VarName.c_str(), &pRes, elem );
+            pResourceMapping->GetResource( VarName, &pRes, elem );
             if( pRes )
             {
                 //  Call non-virtual function
@@ -728,19 +728,19 @@ IShaderVariable* ShaderResourceLayoutD3D11::GetShaderVariable(const Char* Name)
         pVar = it->second;
 #else
     for (Uint32 cb = 0; cb < m_NumCBs; ++cb)
-        if(GetCB(cb).Attribs.Name.compare(Name) == 0)
+        if (strcmp(GetCB(cb).Attribs.Name, Name) == 0)
             return &GetCB(cb);
     for (Uint32 t = 0; t < m_NumTexSRVs; ++t)
-        if(GetTexSRV(t).Attribs.Name.compare(Name) == 0 )
+        if (strcmp(GetTexSRV(t).Attribs.Name, Name) == 0 )
             return &GetTexSRV(t);
     for (Uint32 u = 0; u < m_NumTexUAVs; ++u)
-        if(GetTexUAV(u).Attribs.Name.compare(Name) == 0 )
+        if (strcmp(GetTexUAV(u).Attribs.Name, Name) == 0 )
             return &GetTexUAV(u);
     for (Uint32 s = 0; s < m_NumBufSRVs; ++s)
-        if(GetBufSRV(s).Attribs.Name.compare(Name) == 0 )
+        if (strcmp(GetBufSRV(s).Attribs.Name, Name) == 0 )
             return &GetBufSRV(s);
     for (Uint32 u = 0; u < m_NumBufUAVs; ++u)
-        if(GetBufUAV(u).Attribs.Name.compare(Name) == 0 )
+        if (strcmp(GetBufUAV(u).Attribs.Name, Name) == 0 )
             return &GetBufUAV(u);
 #endif
     if(pVar == nullptr)

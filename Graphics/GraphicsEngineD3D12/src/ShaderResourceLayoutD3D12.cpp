@@ -143,7 +143,7 @@ ShaderResourceLayoutD3D12::ShaderResourceLayoutD3D12(IObject &Owner,
             if (SrcRes.IsValidSampler())
             {
                 const auto &SrcSamplerAttribs = SrcLayout.GetSampler(VarType, SrcRes.GetSamplerId());
-                VERIFY(!SrcSamplerAttribs.Attribs.GetIsStaticSampler(), "Only non-static samplers can be assigned space in shader cache");
+                VERIFY(!SrcSamplerAttribs.Attribs.IsStaticSampler(), "Only non-static samplers can be assigned space in shader cache");
                 VERIFY(SrcSamplerAttribs.Attribs.VariableType == SrcRes.Attribs.VariableType, "Inconsistent texture and sampler variable types" );
                 VERIFY(SrcSamplerAttribs.IsValidRootIndex(), "Root index must be valid");
                 VERIFY(SrcSamplerAttribs.IsValidOffset(), "Offset must be valid");
@@ -207,7 +207,7 @@ void ShaderResourceLayoutD3D12::Initialize(ID3D12Device *pd3d12Device,
                 auto SamplerId = TexSRV.GetSamplerId();
                 const auto &SamplerAttribs = m_pResources->GetSampler(SamplerId);
                 VERIFY(SamplerAttribs.VariableType == VarType, "Texture and sampler variable types are not conistent");
-                if(!SamplerAttribs.GetIsStaticSampler())
+                if(!SamplerAttribs.IsStaticSampler())
                 {
                     ++m_NumSamplers[VarType];
                 }
@@ -293,7 +293,7 @@ void ShaderResourceLayoutD3D12::Initialize(ID3D12Device *pd3d12Device,
                 const auto &SrcSamplerAttribs = m_pResources->GetSampler(TexSRV.GetSamplerId());
                 VERIFY(SrcSamplerAttribs.VariableType == VarType, "Inconsistent texture and sampler variable types" );
 
-                if (SrcSamplerAttribs.GetIsStaticSampler())
+                if (SrcSamplerAttribs.IsStaticSampler())
                 {
                     if(pRootSig != nullptr)
                         pRootSig->InitStaticSampler(m_pResources->GetShaderType(), TexSRV.Name, SrcSamplerAttribs);
@@ -387,7 +387,7 @@ void ShaderResourceLayoutD3D12::InitVariablesHashMap()
     {
         auto &Res = GetSrvCbvUav(r);
         /* HashMapStringKey will make a copy of the string*/
-        m_VariableHash.insert( std::make_pair( Diligent::HashMapStringKey(Res.Name), &Res ) );
+        m_VariableHash.insert( std::make_pair( Diligent::HashMapStringKey(Res.Name, true), &Res ) );
     }
 #endif
 }
@@ -621,7 +621,7 @@ ShaderResourceLayoutD3D12::Sampler &ShaderResourceLayoutD3D12::GetAssignedSample
     VERIFY(TexSrv.IsValidSampler(), "Texture SRV has no associated sampler");
     auto &SamInfo = GetSampler(TexSrv.Attribs.VariableType, TexSrv.GetSamplerId());
     VERIFY(SamInfo.Attribs.VariableType == TexSrv.Attribs.VariableType, "Inconsistent texture and sampler variable types");
-    VERIFY(SamInfo.Attribs.Name == TexSrv.Attribs.Name + D3DSamplerSuffix, "Sampler name \"", SamInfo.Attribs.Name, "\" does not match texture name \"", TexSrv.Attribs.Name, '\"');
+    VERIFY(StrCmpSuff(SamInfo.Attribs.Name, TexSrv.Attribs.Name, D3DSamplerSuffix), "Sampler name \"", SamInfo.Attribs.Name, "\" does not match texture name \"", TexSrv.Attribs.Name, '\"');
     return SamInfo;
 }
 
@@ -677,7 +677,7 @@ void ShaderResourceLayoutD3D12::SRV_CBV_UAV::BindResource(IDeviceObject *pObj, U
                     if(IsValidSampler())
                     {
                         auto &Sam = m_ParentResLayout.GetAssignedSampler(*this);
-                        VERIFY( !Sam.Attribs.GetIsStaticSampler(), "Static samplers should never be assigned space in the cache" );
+                        VERIFY( !Sam.Attribs.IsStaticSampler(), "Static samplers should never be assigned space in the cache" );
                         VERIFY_EXPR(Attribs.BindCount == Sam.Attribs.BindCount || Sam.Attribs.BindCount == 1);
                         auto SamplerArrInd = Sam.Attribs.BindCount > 1 ? ArrayIndex : 0;
                         auto ShdrVisibleSamplerHeapCPUDescriptorHandle = pResourceCache->GetShaderVisibleTableCPUDescriptorHandle<D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER>(Sam.RootIndex, Sam.OffsetFromTableStart + SamplerArrInd);
@@ -767,10 +767,9 @@ void ShaderResourceLayoutD3D12::BindResources( IResourceMapping* pResourceMappin
             if( (Flags & BIND_SHADER_RESOURCES_UPDATE_UNRESOLVED) && Res.IsBound(ArrInd) )
                 return;
 
-            const auto& VarName = Res.Attribs.Name;
             RefCntAutoPtr<IDeviceObject> pObj;
             VERIFY_EXPR(pResourceMapping != nullptr);
-            pResourceMapping->GetResource( VarName.c_str(), &pObj, ArrInd );
+            pResourceMapping->GetResource( Res.Attribs.Name, &pObj, ArrInd );
             if( pObj )
             {
                 //  Call non-virtual function
@@ -799,7 +798,7 @@ IShaderVariable* ShaderResourceLayoutD3D12::GetShaderVariable(const Char* Name)
     for(Uint32 r=0; r < TotalResources; ++r)
     {
         auto &Res = GetSrvCbvUav(r);
-        if(Res.Attribs.Name.compare(Name) == 0)
+        if (strcmp(Res.Attribs.Name, Name) == 0)
         {
             pVar = &Res;
             break;
@@ -885,7 +884,7 @@ void ShaderResourceLayoutD3D12::CopyStaticResourceDesriptorHandles(const ShaderR
         {
             auto &SamInfo = GetAssignedSampler(res);
 
-            VERIFY(!SamInfo.Attribs.GetIsStaticSampler(), "Static samplers should never be assigned space in the cache");
+            VERIFY(!SamInfo.Attribs.IsStaticSampler(), "Static samplers should never be assigned space in the cache");
             
             VERIFY(SamInfo.Attribs.IsValidBindPoint(), "Sampler bind point must be valid");
             VERIFY_EXPR(SamInfo.Attribs.BindCount == res.Attribs.BindCount || SamInfo.Attribs.BindCount == 1);
@@ -1001,7 +1000,7 @@ void ShaderResourceLayoutD3D12::dbgVerifyBindings()const
             {
                 VERIFY(res.GetResType() == CachedResourceType::TexSRV, "Sampler can only be assigned to a texture SRV" );
                 const auto &SamInfo = const_cast<ShaderResourceLayoutD3D12*>(this)->GetAssignedSampler(res);
-                VERIFY( !SamInfo.Attribs.GetIsStaticSampler(), "Static samplers should never be assigned space in the cache" );
+                VERIFY(!SamInfo.Attribs.IsStaticSampler(), "Static samplers should never be assigned space in the cache" );
                 VERIFY(SamInfo.Attribs.IsValidBindPoint(), "Sampler bind point must be valid");
                 
                 for(Uint32 ArrInd = 0; ArrInd < SamInfo.Attribs.BindCount; ++ArrInd)

@@ -51,7 +51,14 @@ ShaderResources::~ShaderResources()
         GetSampler(n).~D3DShaderResourceAttribs();
 }
 
-void ShaderResources::Initialize(IMemoryAllocator &Allocator, Uint32 NumCBs, Uint32 NumTexSRVs, Uint32 NumTexUAVs, Uint32 NumBufSRVs, Uint32 NumBufUAVs, Uint32 NumSamplers)
+void ShaderResources::Initialize(IMemoryAllocator& Allocator, 
+                                 Uint32            NumCBs, 
+                                 Uint32            NumTexSRVs, 
+                                 Uint32            NumTexUAVs, 
+                                 Uint32            NumBufSRVs, 
+                                 Uint32            NumBufUAVs, 
+                                 Uint32            NumSamplers,
+                                 size_t            ResourceNamesPoolSize)
 {
     VERIFY( &m_MemoryBuffer.get_deleter().m_Allocator == &Allocator, "Incosistent allocators provided");
 
@@ -74,7 +81,7 @@ void ShaderResources::Initialize(IMemoryAllocator &Allocator, Uint32 NumCBs, Uin
     VERIFY(m_SamplersOffset + NumSamplers<= MaxOffset, "Max offset exceeded");
     m_TotalResources = m_SamplersOffset + static_cast<OffsetType>(NumSamplers);
 
-    auto MemorySize = m_TotalResources * sizeof(D3DShaderResourceAttribs);
+    auto MemorySize = m_TotalResources * sizeof(D3DShaderResourceAttribs) + ResourceNamesPoolSize * sizeof(char);
 
     VERIFY_EXPR(GetNumCBs()     == NumCBs);
     VERIFY_EXPR(GetNumTexSRV()  == NumTexSRVs);
@@ -87,6 +94,8 @@ void ShaderResources::Initialize(IMemoryAllocator &Allocator, Uint32 NumCBs, Uin
     {
         auto *pRawMem = ALLOCATE(Allocator, "Allocator for shader resources", MemorySize );
         m_MemoryBuffer.reset(pRawMem);
+        char* NamesPool = reinterpret_cast<char*>(reinterpret_cast<D3DShaderResourceAttribs*>(pRawMem) + m_TotalResources);
+        m_ResourceNames.AssignMemory(NamesPool, ResourceNamesPoolSize);
     }    
 }
 
@@ -154,7 +163,7 @@ Uint32 ShaderResources::FindAssignedSamplerId(const D3DShaderResourceAttribs& Te
     for (Uint32 s = 0; s < NumSamplers; ++s)
     {
         const auto &Sampler = GetSampler(s);
-        if( StrCmpSuff(Sampler.Name.c_str(), TexSRV.Name.c_str(), D3DSamplerSuffix) )
+        if( StrCmpSuff(Sampler.Name, TexSRV.Name, D3DSamplerSuffix) )
         {
             VERIFY(Sampler.VariableType == TexSRV.VariableType, "Inconsistent texture and sampler variable types");
             VERIFY(Sampler.BindCount == TexSRV.BindCount || Sampler.BindCount == 1, "Sampler assigned to array \"", TexSRV.Name, "\" is expected to be scalar or have the same dimension (",TexSRV.BindCount,"). Actual sampler array dimension : ",  Sampler.BindCount);

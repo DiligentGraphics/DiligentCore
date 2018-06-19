@@ -91,6 +91,21 @@ public:
         return str;
     }
 
+    Char* CopyString(const char* Str)
+    {
+        auto* Ptr = m_pCurrPtr;
+        while(*Str != 0 && m_pCurrPtr < m_pBuffer + m_ReservedSize)
+        {
+            *(m_pCurrPtr++) = *(Str++);
+        }
+        if(m_pCurrPtr < m_pBuffer + m_ReservedSize)
+            *(m_pCurrPtr++) = 0;
+        else
+            UNEXPECTED("Not enough space reserved in the string pool");
+        return Ptr;
+    }
+
+
     size_t GetRemainingSize()const
     {
         VERIFY(m_pCurrPtr <= m_pBuffer + m_ReservedSize, "Buffer overflow");
@@ -103,7 +118,7 @@ public:
     }
 
 private:
-    Char*               m_pBuffer = nullptr;
+    Char*               m_pBuffer       = nullptr;
     Char*               m_pCurrPtr      = nullptr;
     size_t              m_ReservedSize  = 0;
     IMemoryAllocator*   m_pAllocator    = nullptr;

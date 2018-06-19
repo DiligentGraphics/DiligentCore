@@ -23,6 +23,10 @@
 
 #pragma once
 
+#include <string>
+#include <vector>
+#include <unordered_set>
+
 #include "Shader.h"
 #include "StringTools.h"
 
@@ -42,30 +46,32 @@ namespace Diligent
              typename TOnNewBuffSRV,
              typename TOnNewSampler,
              typename TOnNewTexSRV>
-    void LoadD3DShaderResources(ID3DBlob *pShaderByteCode, 
+    void LoadD3DShaderResources(ID3DBlob*           pShaderByteCode, 
 
                                 TOnResourcesCounted OnResourcesCounted, 
-                                TOnNewCB OnNewCB, 
-                                TOnNewTexUAV OnNewTexUAV, 
-                                TOnNewBuffUAV OnNewBuffUAV, 
-                                TOnNewBuffSRV OnNewBuffSRV,
-                                TOnNewSampler OnNewSampler,
-                                TOnNewTexSRV OnNewTexSRV, 
+                                TOnNewCB            OnNewCB, 
+                                TOnNewTexUAV        OnNewTexUAV, 
+                                TOnNewBuffUAV       OnNewBuffUAV, 
+                                TOnNewBuffSRV       OnNewBuffSRV,
+                                TOnNewSampler       OnNewSampler,
+                                TOnNewTexSRV        OnNewTexSRV, 
 
-                                const ShaderDesc &ShdrDesc,
-                                const Char *SamplerSuffix)
+                                const ShaderDesc&   ShdrDesc,
+                                const Char*         SamplerSuffix)
     {
         CComPtr<TShaderReflection> pShaderReflection;
-        CHECK_D3D_RESULT_THROW( D3DReflect( pShaderByteCode->GetBufferPointer(), pShaderByteCode->GetBufferSize(), __uuidof(pShaderReflection), reinterpret_cast<void**>(static_cast<TShaderReflection**>(&pShaderReflection)) ),
-                                "Failed to get the shader reflection" );
+        auto hr = D3DReflect( pShaderByteCode->GetBufferPointer(), pShaderByteCode->GetBufferSize(), __uuidof(pShaderReflection), reinterpret_cast<void**>(static_cast<TShaderReflection**>(&pShaderReflection)));
+        CHECK_D3D_RESULT_THROW(hr, "Failed to get the shader reflection" );
 
         D3D_SHADER_DESC shaderDesc = {};
         pShaderReflection->GetDesc( &shaderDesc );
 
         std::vector<D3DShaderResourceAttribs, STDAllocatorRawMem<D3DShaderResourceAttribs> > Resources( STD_ALLOCATOR_RAW_MEM(D3DShaderResourceAttribs, GetRawAllocator(), "Allocator for vector<D3DShaderResourceAttribs>") );
         Resources.reserve(shaderDesc.BoundResources);
-
+        std::unordered_set<std::string> ResourceNamesTmpPool;
+        
         Uint32 NumCBs = 0, NumTexSRVs = 0, NumTexUAVs = 0, NumBufSRVs = 0, NumBufUAVs = 0, NumSamplers = 0;
+        size_t ResourceNamesPoolSize = 0;
         // Number of resources to skip (used for array resources)
         UINT SkipCount = 1;
         for( UINT Res = 0; Res < shaderDesc.BoundResources; Res += SkipCount )
@@ -73,7 +79,7 @@ namespace Diligent
             D3D_SHADER_INPUT_BIND_DESC BindingDesc = {};
             pShaderReflection->GetResourceBindingDesc( Res, &BindingDesc );
 
-            String Name(BindingDesc.Name);
+            std::string Name(BindingDesc.Name);
             
             SkipCount = 1;
             
@@ -107,7 +113,7 @@ namespace Diligent
 #ifdef _DEBUG
                 for (const auto &ExistingRes : Resources)
                 {
-                    VERIFY(ExistingRes.Name != Name, "Resource with the same name has already been enumerated. All array elements are expected to be enumerated one after another");
+                    VERIFY(Name.compare(ExistingRes.Name) != 0, "Resource with the same name has already been enumerated. All array elements are expected to be enumerated one after another");
                 }
 #endif
                 for( UINT ArrElem = Res+1; ArrElem < shaderDesc.BoundResources; ++ArrElem)
@@ -153,15 +159,14 @@ namespace Diligent
                 }
                 // Use texture name to derive sampler type
                 VarType = GetShaderVariableType(ShdrDesc.DefaultVariableType, ShdrDesc.VariableDesc, ShdrDesc.NumVariables,
-                        [&](const char *TexName)
-                        {
-                            return StrCmpSuff(Name.c_str(), TexName, SamplerSuffix);
-                        }
-                    );
+                                                [&](const char *TexName)
+                                                {
+                                                    return StrCmpSuff(Name.c_str(), TexName, SamplerSuffix);
+                                                });
             }
             else
             {
-                VarType = GetShaderVariableType(Name.c_str(), ShdrDesc.DefaultVariableType, ShdrDesc.VariableDesc, ShdrDesc.NumVariables);
+                VarType = GetShaderVariableType(Name, ShdrDesc.DefaultVariableType, ShdrDesc.VariableDesc, ShdrDesc.NumVariables);
             }
 
 
@@ -181,7 +186,18 @@ namespace Diligent
                 case D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER: UNSUPPORTED( "RW structured buffers with counter are not supported" );           break;
                 default: UNEXPECTED("Unexpected resource type");
             }
-            Resources.emplace_back(std::move(Name), BindingDesc.BindPoint, BindCount, BindingDesc.Type, VarType, BindingDesc.Dimension, D3DShaderResourceAttribs::InvalidSamplerId, IsStaticSampler);
+            ResourceNamesPoolSize += Name.length() + 1;
+            auto it = ResourceNamesTmpPool.emplace(std::move(Name));
+            Resources.emplace_back(
+                it.first->c_str(), 
+                BindingDesc.BindPoint, 
+                BindCount, 
+                BindingDesc.Type, 
+                VarType, 
+                BindingDesc.Dimension, 
+                D3DShaderResourceAttribs::InvalidSamplerId, 
+                IsStaticSampler
+            );
         }
 
 
@@ -191,12 +207,12 @@ namespace Diligent
             for (Uint32 v = 0; v < ShdrDesc.NumVariables; ++v)
             {
                 bool VariableFound = false;
-                const auto *VarName = ShdrDesc.VariableDesc[v].Name;
+                const auto* VarName = ShdrDesc.VariableDesc[v].Name;
 
                 for (const auto& Res : Resources)
                 {
                     // Skip samplers as they are not handled as independent variables
-                    if (Res.InputType != D3D_SIT_SAMPLER && Res.Name.compare(VarName) == 0)
+                    if (Res.InputType != D3D_SIT_SAMPLER && strcmp(Res.Name, VarName) == 0)
                     {
                         VariableFound = true;   
                         break;
@@ -215,7 +231,7 @@ namespace Diligent
 
                 for (const auto& Res : Resources)
                 {
-                    if ( Res.InputType == D3D_SIT_TEXTURE && Res.SRVDimension != D3D_SRV_DIMENSION_BUFFER && Res.Name.compare(TexName) == 0)
+                    if ( Res.InputType == D3D_SIT_TEXTURE && Res.SRVDimension != D3D_SRV_DIMENSION_BUFFER && strcmp(Res.Name, TexName) == 0)
                     {
                         TextureFound = true;
                         break;
@@ -229,18 +245,19 @@ namespace Diligent
         }
 #endif
 
-        OnResourcesCounted(NumCBs, NumTexSRVs, NumTexUAVs, NumBufSRVs, NumBufUAVs, NumSamplers);
+        OnResourcesCounted(NumCBs, NumTexSRVs, NumTexUAVs, NumBufSRVs, NumBufUAVs, NumSamplers, ResourceNamesPoolSize);
 
-        std::vector<D3DShaderResourceAttribs, STDAllocatorRawMem<D3DShaderResourceAttribs> > TextureSRVs( STD_ALLOCATOR_RAW_MEM(D3DShaderResourceAttribs, GetRawAllocator(), "Allocator for vector<D3DShaderResourceAttribs>") );
-        TextureSRVs.reserve(NumTexSRVs);
+        std::vector<size_t, STDAllocatorRawMem<size_t> > TexSRVInds( STD_ALLOCATOR_RAW_MEM(size_t, GetRawAllocator(), "Allocator for vector<size_t>") );
+        TexSRVInds.reserve(NumTexSRVs);
 
-        for(auto &Res : Resources)
+        for(size_t ResInd = 0; ResInd < Resources.size(); ++ResInd)
         {
+            const auto& Res = Resources[ResInd];
             switch( Res.InputType )
             {
                 case D3D_SIT_CBUFFER:
                 {
-                    OnNewCB( std::move(Res) );
+                    OnNewCB( Res );
                     break;
                 }
             
@@ -254,18 +271,19 @@ namespace Diligent
                 {
                     if( Res.SRVDimension == D3D_SRV_DIMENSION_BUFFER )
                     {
-                        OnNewBuffSRV( std::move(Res) );
+                        OnNewBuffSRV( Res );
                     }
                     else
                     {
-                        TextureSRVs.emplace_back( std::move(Res) );
+                        // Texture SRVs must be processed all samplers are initialized
+                        TexSRVInds.push_back(ResInd);
                     }
                     break;
                 }
 
                 case D3D_SIT_SAMPLER:
                 {
-                    OnNewSampler( std::move(Res) );
+                    OnNewSampler( Res );
                     break;
                 }
 
@@ -273,24 +291,24 @@ namespace Diligent
                 {
                     if( Res.SRVDimension == D3D_SRV_DIMENSION_BUFFER )
                     {
-                        OnNewBuffUAV( std::move(Res) );
+                        OnNewBuffUAV( Res );
                     }
                     else
                     {
-                        OnNewTexUAV( std::move(Res) );
+                        OnNewTexUAV( Res );
                     }
                     break;
                 }
 
                 case D3D_SIT_STRUCTURED:
                 {
-                    OnNewBuffSRV( std::move(Res) );
+                    OnNewBuffSRV( Res );
                     break;
                 }
 
                 case D3D_SIT_UAV_RWSTRUCTURED:
                 {
-                    OnNewBuffUAV( std::move(Res) );
+                    OnNewBuffUAV( Res );
                     break;
                 }
 
@@ -302,7 +320,7 @@ namespace Diligent
 
                 case D3D_SIT_UAV_RWBYTEADDRESS:
                 {
-                    OnNewBuffUAV( std::move(Res) );
+                    OnNewBuffUAV( Res );
                     break;
                 }
 
@@ -327,9 +345,9 @@ namespace Diligent
         }
 
         // Process texture SRVs. We need to do this after all samplers are initialized
-        for( auto &Tex : TextureSRVs )
+        for( auto TexSRVInd : TexSRVInds )
         {
-            OnNewTexSRV( std::move(Tex) );
+            OnNewTexSRV( Resources[TexSRVInd] );
         }
     }
 }

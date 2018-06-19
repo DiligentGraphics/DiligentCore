@@ -59,6 +59,7 @@
 #include "Shader.h"
 #include "STDAllocator.h"
 #include "HashUtils.h"
+#include "StringPool.h"
 
 namespace Diligent
 {
@@ -84,7 +85,7 @@ inline Uint32 GetAllowedTypeBits(const SHADER_VARIABLE_TYPE *AllowedVarTypes, Ui
 
 struct D3DShaderResourceAttribs 
 {
-    String Name; // Move ctor will not work if it is const
+    const char* const Name;
 
     const Uint16 BindPoint;
     const Uint16 BindCount;
@@ -93,18 +94,19 @@ struct D3DShaderResourceAttribs
     // bit | 0  1  2  3   |  4   5   6   |  7  8  9  10 | 11  12 ...  30 |        31         |   
     //     |              |              |              |                |                   |
     //     |  InputType   | VariableType |   SRV Dim    |    SamplerId   | StaticSamplerFlag |
-    static constexpr const Uint32 ShaderInputTypeBits     = 4;
-    static constexpr const Uint32 VariableTypeBits        = 3;
-    static constexpr const Uint32 SRVDimBits              = 4;
-    static constexpr const Uint32 SamplerIdBits           = 20;
-    static constexpr const Uint32 IsStaticSamplerFlagBits = 1;
-    static_assert(ShaderInputTypeBits + VariableTypeBits + SRVDimBits + SamplerIdBits + IsStaticSamplerFlagBits == 32, "Attributes are better be packed into 32 bits");
+    static constexpr const Uint32 ShaderInputTypeBits    = 4;
+    static constexpr const Uint32 VariableTypeBits       = 3;
+    static constexpr const Uint32 SRVDimBits             = 4;
+    static constexpr const Uint32 SamplerIdBits          = 20;
+    static constexpr const Uint32 StaticSamplerFlagBits  = 1;
+    static_assert(ShaderInputTypeBits + VariableTypeBits + SRVDimBits + SamplerIdBits + StaticSamplerFlagBits == 32, "Attributes are better be packed into 32 bits");
 
     const D3D_SHADER_INPUT_TYPE InputType       : ShaderInputTypeBits;      // Max value: D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER == 11
     const SHADER_VARIABLE_TYPE  VariableType    : VariableTypeBits;         // Max value: SHADER_VARIABLE_TYPE_DYNAMIC == 2
     const D3D_SRV_DIMENSION     SRVDimension    : SRVDimBits;               // Max value: D3D_SRV_DIMENSION_BUFFEREX == 11
     const Uint32                SamplerId       : SamplerIdBits;            // Max value: 1048575
-    const bool                  IsStaticSampler : IsStaticSamplerFlagBits;
+    const Uint32                StaticSamplerFlag : StaticSamplerFlagBits;  // Needs to be Uint32, otherwise sizeof(D3DShaderResourceAttribs)==24
+                                                                            // (https://stackoverflow.com/questions/308364/c-bitfield-packing-with-bools)
 
     static constexpr const Uint32 InvalidSamplerId = (1 << SamplerIdBits) - 1;
     static constexpr const Uint16 InvalidBindPoint = std::numeric_limits<Uint16>::max();
@@ -115,7 +117,7 @@ struct D3DShaderResourceAttribs
     static_assert(SHADER_VARIABLE_TYPE_NUM_TYPES        < (1 << VariableTypeBits),    "Not enough bits to represent SHADER_VARIABLE_TYPE");
     static_assert(D3D_SRV_DIMENSION_BUFFEREX            < (1 << SRVDimBits),          "Not enough bits to represent D3D_SRV_DIMENSION");
 
-    D3DShaderResourceAttribs(String                 _Name, 
+    D3DShaderResourceAttribs(const char*            _Name, 
                              UINT                   _BindPoint, 
                              UINT                   _BindCount, 
                              D3D_SHADER_INPUT_TYPE  _InputType, 
@@ -123,14 +125,14 @@ struct D3DShaderResourceAttribs
                              D3D_SRV_DIMENSION      _SRVDimension,
                              Uint32                 _SamplerId, 
                              bool                   _IsStaticSampler)noexcept :
-        Name(std::move(_Name)),
-        BindPoint(static_cast<decltype(BindPoint)>(_BindPoint)),
-        BindCount(static_cast<decltype(BindCount)>(_BindCount)),
-        InputType      (_InputType),
-        VariableType   (_VariableType),
-        SRVDimension   (_SRVDimension),
-        SamplerId      (_SamplerId),
-        IsStaticSampler(_IsStaticSampler)
+        Name             (_Name),
+        BindPoint        (static_cast<decltype(BindPoint)>(_BindPoint)),
+        BindCount        (static_cast<decltype(BindCount)>(_BindCount)),
+        InputType        (_InputType),
+        VariableType     (_VariableType),
+        SRVDimension     (_SRVDimension),
+        SamplerId        (_SamplerId),
+        StaticSamplerFlag(_IsStaticSampler ? 1 : 0)
     {
         VERIFY(_BindPoint <= MaxBindPoint || _BindPoint == InvalidBindPoint, "Bind Point is out of allowed range");
         VERIFY(_BindCount <= MaxBindCount, "Bind Count is out of allowed range");
@@ -140,7 +142,7 @@ struct D3DShaderResourceAttribs
         VERIFY(_SamplerId     < (1 << SamplerIdBits),       "SamplerId is out of representable range");
 #ifdef _DEBUG
         if(_InputType==D3D_SIT_SAMPLER)
-            VERIFY_EXPR(IsStaticSampler == _IsStaticSampler);
+            VERIFY_EXPR(IsStaticSampler() == _IsStaticSampler);
         else
             VERIFY(!_IsStaticSampler, "Only samplers can be marked as static");
 
@@ -154,13 +156,10 @@ struct D3DShaderResourceAttribs
 #endif
     }
 
-    D3DShaderResourceAttribs(D3DShaderResourceAttribs&& rhs) = default;
-    D3DShaderResourceAttribs(const D3DShaderResourceAttribs& rhs) = delete;
-
-    D3DShaderResourceAttribs(const D3DShaderResourceAttribs& rhs, Uint32 SamplerId)noexcept : 
+    D3DShaderResourceAttribs(StringPool& NamesPool, const D3DShaderResourceAttribs& rhs, Uint32 SamplerId)noexcept : 
         D3DShaderResourceAttribs
         {
-            rhs.Name, 
+            NamesPool.CopyString(rhs.Name),
             rhs.BindPoint,
             rhs.BindCount,
             rhs.InputType,
@@ -173,24 +172,36 @@ struct D3DShaderResourceAttribs
         VERIFY(InputType == D3D_SIT_TEXTURE, "Only textures can be assigned a texture sampler");
     }
 
-    //D3DShaderResourceAttribs(D3DShaderResourceAttribs&& rhs)noexcept : 
-    //    Name(std::move(rhs.Name)),
-    //    BindPoint(rhs.BindPoint),
-    //    BindCount(rhs.BindCount),
-    //    PackedAttribs( rhs.PackedAttribs )
-    //{
-    //}
+    D3DShaderResourceAttribs(StringPool& NamesPool, const D3DShaderResourceAttribs& rhs)noexcept : 
+        D3DShaderResourceAttribs
+        {
+            NamesPool.CopyString(rhs.Name),
+            rhs.BindPoint,
+            rhs.BindCount,
+            rhs.InputType,
+            rhs.VariableType,
+            rhs.SRVDimension,
+            rhs.SamplerId,
+            rhs.StaticSamplerFlag !=0 ? true : false
+        }
+    {
+    }
 
+    D3DShaderResourceAttribs             (const D3DShaderResourceAttribs&  rhs) = delete;
+    D3DShaderResourceAttribs             (      D3DShaderResourceAttribs&& rhs) = default; // Required for vector<D3DShaderResourceAttribs>
+    D3DShaderResourceAttribs& operator = (const D3DShaderResourceAttribs&  rhs) = delete;
+    D3DShaderResourceAttribs& operator = (      D3DShaderResourceAttribs&& rhs) = delete;
+    
     Uint32 GetSamplerId()const
     {
         VERIFY( InputType == D3D_SIT_TEXTURE, "Invalid input type: D3D_SIT_TEXTURE is expected" );
         return SamplerId;
     }
 
-    bool GetIsStaticSampler()const
+    bool IsStaticSampler()const
     {
         VERIFY( InputType == D3D_SIT_SAMPLER, "Invalid input type: D3D_SIT_SAMPLER is expected" );
-        return IsStaticSampler;
+        return StaticSamplerFlag != 0;
     }
 
     bool IsValidSampler()const
@@ -214,20 +225,21 @@ struct D3DShaderResourceAttribs
 
     bool IsCompatibleWith(const D3DShaderResourceAttribs& Attribs)const
     {
-        return BindPoint       == Attribs.BindPoint       &&
-               BindCount       == Attribs.BindCount       &&
-               InputType       == Attribs.InputType       &&
-               VariableType    == Attribs.VariableType    &&
-               SRVDimension    == Attribs.SRVDimension    &&
-               SamplerId       == Attribs.SamplerId       &&
-               IsStaticSampler == Attribs.IsStaticSampler;
+        return BindPoint         == Attribs.BindPoint       &&
+               BindCount         == Attribs.BindCount       &&
+               InputType         == Attribs.InputType       &&
+               VariableType      == Attribs.VariableType    &&
+               SRVDimension      == Attribs.SRVDimension    &&
+               SamplerId         == Attribs.SamplerId       &&
+               StaticSamplerFlag == Attribs.StaticSamplerFlag;
     }
 
     size_t GetHash()const
     {
-        return ComputeHash(BindPoint, BindCount, InputType, VariableType, SRVDimension, SamplerId, IsStaticSampler);
+        return ComputeHash(BindPoint, BindCount, InputType, VariableType, SRVDimension, SamplerId, StaticSamplerFlag);
     }
 };
+static_assert(sizeof(D3DShaderResourceAttribs) == sizeof(void*) + sizeof(Uint32)*2, "Unexpected sizeof(D3DShaderResourceAttribs)");
 
 
 /// Diligent::ShaderResources class
@@ -321,7 +333,14 @@ public:
     size_t GetHash()const;
 
 protected:
-    void Initialize(IMemoryAllocator &Allocator, Uint32 NumCBs, Uint32 NumTexSRVs, Uint32 NumTexUAVs, Uint32 NumBufSRVs, Uint32 NumBufUAVs, Uint32 NumSamplers);
+    void Initialize(IMemoryAllocator& Allocator, 
+                    Uint32            NumCBs, 
+                    Uint32            NumTexSRVs, 
+                    Uint32            NumTexUAVs, 
+                    Uint32            NumBufSRVs, 
+                    Uint32            NumBufUAVs, 
+                    Uint32            NumSamplers,
+                    size_t            ResourceNamesPoolSize);
 
     __forceinline D3DShaderResourceAttribs& GetResAttribs(Uint32 n, Uint32 NumResources, Uint32 Offset)noexcept
     {
@@ -351,6 +370,10 @@ private:
     // | CBs | TexSRVs | TexUAVs | BufSRVs | BufUAVs | Samplers |  Resource Names  |
     std::unique_ptr< void, STDDeleterRawMem<void> > m_MemoryBuffer;
 
+protected:
+    StringPool m_ResourceNames;
+
+private:    
     // Offsets in elements of D3DShaderResourceAttribs
     typedef Uint16 OffsetType;
     OffsetType m_TexSRVOffset = 0;
