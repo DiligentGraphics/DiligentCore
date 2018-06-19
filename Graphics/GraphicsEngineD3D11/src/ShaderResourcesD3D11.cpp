@@ -84,7 +84,7 @@ ShaderResourcesD3D11::ShaderResourcesD3D11(RenderDeviceD3D11Impl *pDeviceD3D11Im
         {
             VERIFY( SamplerAttribs.BindPoint + SamplerAttribs.BindCount-1 <= MaxAllowedBindPoint, "Sampler bind point exceeds supported range" );
             m_MaxSamplerBindPoint = std::max(m_MaxSamplerBindPoint, static_cast<MaxBindPointType>(SamplerAttribs.BindPoint + SamplerAttribs.BindCount-1));
-            m_NumStaticSamplers += SamplerAttribs.IsStaticSampler() ? 1 : 0;
+            m_NumStaticSamplers += SamplerAttribs.GetIsStaticSampler() ? 1 : 0;
 
             new (&GetSampler(CurrSampler++)) D3DShaderResourceAttribs( std::move(SamplerAttribs) );
         },
@@ -124,7 +124,7 @@ ShaderResourcesD3D11::ShaderResourcesD3D11(RenderDeviceD3D11Impl *pDeviceD3D11Im
         for (Uint32 s = 0; s < GetNumSamplers(); ++s)
         {
             const auto &Sam = GetSampler(s);
-            if (Sam.IsStaticSampler())
+            if (Sam.GetIsStaticSampler())
             {
                 Uint32 ssd = 0;
                 for (; ssd < ShdrDesc.NumStaticSamplers; ++ssd)

@@ -196,7 +196,7 @@ namespace Diligent
                 for (const auto& Res : Resources)
                 {
                     // Skip samplers as they are not handled as independent variables
-                    if (Res.GetInputType() != D3D_SIT_SAMPLER && Res.Name.compare(VarName) == 0)
+                    if (Res.InputType != D3D_SIT_SAMPLER && Res.Name.compare(VarName) == 0)
                     {
                         VariableFound = true;   
                         break;
@@ -215,7 +215,7 @@ namespace Diligent
 
                 for (const auto& Res : Resources)
                 {
-                    if ( Res.GetInputType() == D3D_SIT_TEXTURE && Res.GetSRVDimension() != D3D_SRV_DIMENSION_BUFFER && Res.Name.compare(TexName) == 0)
+                    if ( Res.InputType == D3D_SIT_TEXTURE && Res.SRVDimension != D3D_SRV_DIMENSION_BUFFER && Res.Name.compare(TexName) == 0)
                     {
                         TextureFound = true;
                         break;
@@ -236,7 +236,7 @@ namespace Diligent
 
         for(auto &Res : Resources)
         {
-            switch( Res.GetInputType() )
+            switch( Res.InputType )
             {
                 case D3D_SIT_CBUFFER:
                 {
@@ -252,7 +252,7 @@ namespace Diligent
 
                 case D3D_SIT_TEXTURE:
                 {
-                    if( Res.GetSRVDimension() == D3D_SRV_DIMENSION_BUFFER )
+                    if( Res.SRVDimension == D3D_SRV_DIMENSION_BUFFER )
                     {
                         OnNewBuffSRV( std::move(Res) );
                     }
@@ -271,7 +271,7 @@ namespace Diligent
 
                 case D3D_SIT_UAV_RWTYPED:
                 {
-                    if( Res.GetSRVDimension() == D3D_SRV_DIMENSION_BUFFER )
+                    if( Res.SRVDimension == D3D_SRV_DIMENSION_BUFFER )
                     {
                         OnNewBuffUAV( std::move(Res) );
                     }

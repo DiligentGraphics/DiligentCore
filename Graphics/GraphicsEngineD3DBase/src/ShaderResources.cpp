@@ -119,28 +119,28 @@ void ShaderResources::CountResources(const SHADER_VARIABLE_TYPE *AllowedVarTypes
 
         [&](const D3DShaderResourceAttribs &CB, Uint32)
         {
-            VERIFY_EXPR(IsAllowedType(CB.GetVariableType(), AllowedTypeBits));
+            VERIFY_EXPR(IsAllowedType(CB.VariableType, AllowedTypeBits));
             ++NumCBs;
         },
         [&](const D3DShaderResourceAttribs& TexSRV, Uint32)
         {
-            VERIFY_EXPR(IsAllowedType(TexSRV.GetVariableType(), AllowedTypeBits));
+            VERIFY_EXPR(IsAllowedType(TexSRV.VariableType, AllowedTypeBits));
             ++NumTexSRVs;
             NumSamplers += TexSRV.IsValidSampler() ? 1 : 0;
         },
         [&](const D3DShaderResourceAttribs &TexUAV, Uint32)
         {
-            VERIFY_EXPR(IsAllowedType(TexUAV.GetVariableType(), AllowedTypeBits));
+            VERIFY_EXPR(IsAllowedType(TexUAV.VariableType, AllowedTypeBits));
             ++NumTexUAVs;
         },
         [&](const D3DShaderResourceAttribs &BufSRV, Uint32)
         {
-            VERIFY_EXPR(IsAllowedType(BufSRV.GetVariableType(), AllowedTypeBits));
+            VERIFY_EXPR(IsAllowedType(BufSRV.VariableType, AllowedTypeBits));
             ++NumBufSRVs;
         },
         [&](const D3DShaderResourceAttribs &BufUAV, Uint32)
         {
-            VERIFY_EXPR(IsAllowedType(BufUAV.GetVariableType(), AllowedTypeBits));
+            VERIFY_EXPR(IsAllowedType(BufUAV.VariableType, AllowedTypeBits));
             ++NumBufUAVs;
         }
     );
@@ -149,14 +149,14 @@ void ShaderResources::CountResources(const SHADER_VARIABLE_TYPE *AllowedVarTypes
 
 Uint32 ShaderResources::FindAssignedSamplerId(const D3DShaderResourceAttribs& TexSRV)const
 {
-    VERIFY_EXPR(TexSRV.GetInputType() == D3D_SIT_TEXTURE);
+    VERIFY_EXPR(TexSRV.InputType == D3D_SIT_TEXTURE);
     auto NumSamplers = GetNumSamplers();
     for (Uint32 s = 0; s < NumSamplers; ++s)
     {
         const auto &Sampler = GetSampler(s);
         if( StrCmpSuff(Sampler.Name.c_str(), TexSRV.Name.c_str(), D3DSamplerSuffix) )
         {
-            VERIFY(Sampler.GetVariableType() == TexSRV.GetVariableType(), "Inconsistent texture and sampler variable types");
+            VERIFY(Sampler.VariableType == TexSRV.VariableType, "Inconsistent texture and sampler variable types");
             VERIFY(Sampler.BindCount == TexSRV.BindCount || Sampler.BindCount == 1, "Sampler assigned to array \"", TexSRV.Name, "\" is expected to be scalar or have the same dimension (",TexSRV.BindCount,"). Actual sampler array dimension : ",  Sampler.BindCount);
             return s;
         }
