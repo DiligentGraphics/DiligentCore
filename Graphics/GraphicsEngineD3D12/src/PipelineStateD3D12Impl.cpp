@@ -59,7 +59,7 @@ private:
     std::array<D3D12_PRIMITIVE_TOPOLOGY_TYPE, PRIMITIVE_TOPOLOGY_NUM_TOPOLOGIES> m_Map;
 };
 
-void PipelineStateD3D12Impl::ParseShaderResourceLayout(IShader *pShader)
+void PipelineStateD3D12Impl::ParseShaderResourceLayout(IShader* pShader)
 {
     VERIFY_EXPR(pShader);
 
@@ -77,7 +77,9 @@ void PipelineStateD3D12Impl::ParseShaderResourceLayout(IShader *pShader)
     m_pShaderResourceLayouts[ShaderInd]->Initialize(pDeviceD3D12Impl->GetD3D12Device(), pShaderD3D12->GetShaderResources(), GetRawAllocator(), nullptr, 0, nullptr, &m_RootSig);
 }
 
-PipelineStateD3D12Impl :: PipelineStateD3D12Impl(IReferenceCounters *pRefCounters, RenderDeviceD3D12Impl *pDeviceD3D12, const PipelineStateDesc &PipelineDesc) : 
+PipelineStateD3D12Impl :: PipelineStateD3D12Impl(IReferenceCounters*      pRefCounters,
+                                                 RenderDeviceD3D12Impl*   pDeviceD3D12,
+                                                 const PipelineStateDesc& PipelineDesc) : 
     TPipelineStateBase(pRefCounters, pDeviceD3D12, PipelineDesc),
     m_DummyVar(*this),
     m_ResourceCacheDataAllocator(GetRawAllocator(), PipelineDesc.SRBAllocationGranularity),
@@ -241,7 +243,7 @@ PipelineStateD3D12Impl::~PipelineStateD3D12Impl()
 
 IMPLEMENT_QUERY_INTERFACE( PipelineStateD3D12Impl, IID_PipelineStateD3D12, TPipelineStateBase )
 
-void PipelineStateD3D12Impl::BindShaderResources(IResourceMapping *pResourceMapping, Uint32 Flags)
+void PipelineStateD3D12Impl::BindShaderResources(IResourceMapping* pResourceMapping, Uint32 Flags)
 {
     if( m_Desc.IsComputePipeline )
     { 
@@ -257,7 +259,7 @@ void PipelineStateD3D12Impl::BindShaderResources(IResourceMapping *pResourceMapp
     }
 }
 
-void PipelineStateD3D12Impl::CreateShaderResourceBinding(IShaderResourceBinding **ppShaderResourceBinding)
+void PipelineStateD3D12Impl::CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding)
 {
     auto *pRenderDeviceD3D12 = ValidatedCast<RenderDeviceD3D12Impl>( GetDevice() );
     auto &SRBAllocator = pRenderDeviceD3D12->GetSRBAllocator();
@@ -265,7 +267,7 @@ void PipelineStateD3D12Impl::CreateShaderResourceBinding(IShaderResourceBinding 
     pResBindingD3D12->QueryInterface(IID_ShaderResourceBinding, reinterpret_cast<IObject**>(ppShaderResourceBinding));
 }
 
-bool PipelineStateD3D12Impl::IsCompatibleWith(const IPipelineState *pPSO)const
+bool PipelineStateD3D12Impl::IsCompatibleWith(const IPipelineState* pPSO)const
 {
     VERIFY_EXPR(pPSO != nullptr);
 
@@ -320,10 +322,10 @@ const ShaderResourceLayoutD3D12& PipelineStateD3D12Impl::GetShaderResLayout(SHAD
     return *m_pShaderResourceLayouts[ShaderInd];
 }
 
-ShaderResourceCacheD3D12* PipelineStateD3D12Impl::CommitAndTransitionShaderResources(IShaderResourceBinding *pShaderResourceBinding, 
-                                                                                     CommandContext &Ctx,
-                                                                                     bool CommitResources,
-                                                                                     bool TransitionResources)const
+ShaderResourceCacheD3D12* PipelineStateD3D12Impl::CommitAndTransitionShaderResources(IShaderResourceBinding* pShaderResourceBinding, 
+                                                                                     CommandContext&         Ctx,
+                                                                                     bool                    CommitResources,
+                                                                                     bool                    TransitionResources)const
 {
 #ifdef VERIFY_SHADER_BINDINGS
     if (pShaderResourceBinding == nullptr &&

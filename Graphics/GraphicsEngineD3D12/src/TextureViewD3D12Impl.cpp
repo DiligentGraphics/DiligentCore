@@ -28,12 +28,12 @@
 namespace Diligent
 {
 
-TextureViewD3D12Impl::TextureViewD3D12Impl( IReferenceCounters *pRefCounters,
-                                            IRenderDevice *pDevice, 
-                                            const TextureViewDesc& ViewDesc, 
-                                            ITexture *pTexture,
-                                            DescriptorHeapAllocation &&HandleAlloc,
-                                            bool bIsDefaultView ) :
+TextureViewD3D12Impl::TextureViewD3D12Impl( IReferenceCounters*        pRefCounters,
+                                            IRenderDevice*             pDevice, 
+                                            const TextureViewDesc&     ViewDesc, 
+                                            ITexture*                  pTexture,
+                                            DescriptorHeapAllocation&& HandleAlloc,
+                                            bool                       bIsDefaultView ) :
     TTextureViewBase( pRefCounters, pDevice, ViewDesc, pTexture, bIsDefaultView ),
     m_Descriptor(std::move(HandleAlloc))
 {

@@ -103,7 +103,7 @@ namespace Diligent
 	    CreatePSO(m_pGenerateMipsGammaPSO[3], g_pGenerateMipsGammaOddCS);
     }
 
-    void GenerateMipsHelper::GenerateMips(RenderDeviceD3D12Impl *pRenderDeviceD3D12, TextureViewD3D12Impl *pTexView, CommandContext& Ctx)
+    void GenerateMipsHelper::GenerateMips(RenderDeviceD3D12Impl* pRenderDeviceD3D12, TextureViewD3D12Impl* pTexView, CommandContext& Ctx)
     {
         auto &ComputeCtx = Ctx.AsComputeContext();
         ComputeCtx.SetRootSignature(m_pGenerateMipsRS);

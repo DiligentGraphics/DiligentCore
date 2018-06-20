@@ -47,12 +47,12 @@ D3D12_TEXTURE_ADDRESS_MODE TexAddressModeToD3D12AddressMode(TEXTURE_ADDRESS_MODE
     return TexAddressModeToD3DAddressMode<D3D12_TEXTURE_ADDRESS_MODE>(Mode);
 }
 
-void DepthStencilStateDesc_To_D3D12_DEPTH_STENCIL_DESC(const DepthStencilStateDesc &DepthStencilDesc, D3D12_DEPTH_STENCIL_DESC &d3d12DSSDesc)
+void DepthStencilStateDesc_To_D3D12_DEPTH_STENCIL_DESC(const DepthStencilStateDesc& DepthStencilDesc, D3D12_DEPTH_STENCIL_DESC& d3d12DSSDesc)
 {
     DepthStencilStateDesc_To_D3D_DEPTH_STENCIL_DESC<D3D12_DEPTH_STENCIL_DESC, D3D12_DEPTH_STENCILOP_DESC, D3D12_STENCIL_OP, D3D12_COMPARISON_FUNC>(DepthStencilDesc, d3d12DSSDesc);
 }
 
-void RasterizerStateDesc_To_D3D12_RASTERIZER_DESC(const RasterizerStateDesc &RasterizerDesc, D3D12_RASTERIZER_DESC &d3d12RSDesc)
+void RasterizerStateDesc_To_D3D12_RASTERIZER_DESC(const RasterizerStateDesc& RasterizerDesc, D3D12_RASTERIZER_DESC& d3d12RSDesc)
 {
     RasterizerStateDesc_To_D3D_RASTERIZER_DESC<D3D12_RASTERIZER_DESC, D3D12_FILL_MODE, D3D12_CULL_MODE>(RasterizerDesc, d3d12RSDesc);
 
@@ -109,7 +109,7 @@ D3D12_LOGIC_OP LogicOperationToD3D12LogicOp( LOGIC_OPERATION lo )
 }
 
 
-void BlendStateDesc_To_D3D12_BLEND_DESC(const BlendStateDesc &BSDesc, D3D12_BLEND_DESC &d3d12BlendDesc)
+void BlendStateDesc_To_D3D12_BLEND_DESC(const BlendStateDesc& BSDesc, D3D12_BLEND_DESC& d3d12BlendDesc)
 {
     BlendStateDescToD3DBlendDesc<D3D12_BLEND_DESC, D3D12_BLEND, D3D12_BLEND_OP>(BSDesc, d3d12BlendDesc);
 
@@ -190,7 +190,7 @@ void TextureViewDesc_to_D3D12_SRV_DESC(const TextureViewDesc& SRVDesc, D3D12_SHA
     }
 }
 
-void TextureViewDesc_to_D3D12_RTV_DESC(const TextureViewDesc& RTVDesc, D3D12_RENDER_TARGET_VIEW_DESC &D3D12RTVDesc, Uint32 SampleCount)
+void TextureViewDesc_to_D3D12_RTV_DESC(const TextureViewDesc& RTVDesc, D3D12_RENDER_TARGET_VIEW_DESC& D3D12RTVDesc, Uint32 SampleCount)
 {
     TextureViewDesc_to_D3D_RTV_DESC(RTVDesc, D3D12RTVDesc, SampleCount);
     switch (RTVDesc.TextureDim)
@@ -229,13 +229,13 @@ void TextureViewDesc_to_D3D12_RTV_DESC(const TextureViewDesc& RTVDesc, D3D12_REN
     }
 }
 
-void TextureViewDesc_to_D3D12_DSV_DESC(const TextureViewDesc& DSVDesc, D3D12_DEPTH_STENCIL_VIEW_DESC &D3D12DSVDesc, Uint32 SampleCount)
+void TextureViewDesc_to_D3D12_DSV_DESC(const TextureViewDesc& DSVDesc, D3D12_DEPTH_STENCIL_VIEW_DESC& D3D12DSVDesc, Uint32 SampleCount)
 {
     TextureViewDesc_to_D3D_DSV_DESC(DSVDesc, D3D12DSVDesc, SampleCount);
     D3D12DSVDesc.Flags = D3D12_DSV_FLAG_NONE;
 }
 
-void TextureViewDesc_to_D3D12_UAV_DESC(const TextureViewDesc& UAVDesc, D3D12_UNORDERED_ACCESS_VIEW_DESC &D3D12UAVDesc)
+void TextureViewDesc_to_D3D12_UAV_DESC(const TextureViewDesc& UAVDesc, D3D12_UNORDERED_ACCESS_VIEW_DESC& D3D12UAVDesc)
 {
     TextureViewDesc_to_D3D_UAV_DESC(UAVDesc, D3D12UAVDesc);
     switch (UAVDesc.TextureDim)
@@ -263,7 +263,7 @@ void TextureViewDesc_to_D3D12_UAV_DESC(const TextureViewDesc& UAVDesc, D3D12_UNO
 }
 
 
-void BufferViewDesc_to_D3D12_SRV_DESC(const BufferDesc &BuffDesc, const BufferViewDesc& SRVDesc, D3D12_SHADER_RESOURCE_VIEW_DESC &D3D12SRVDesc)
+void BufferViewDesc_to_D3D12_SRV_DESC(const BufferDesc &BuffDesc, const BufferViewDesc& SRVDesc, D3D12_SHADER_RESOURCE_VIEW_DESC& D3D12SRVDesc)
 {
     BufferViewDesc_to_D3D_SRV_DESC(BuffDesc, SRVDesc, D3D12SRVDesc);
     D3D12SRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
@@ -273,7 +273,7 @@ void BufferViewDesc_to_D3D12_SRV_DESC(const BufferDesc &BuffDesc, const BufferVi
         D3D12SRVDesc.Buffer.StructureByteStride = BuffDesc.ElementByteStride; 
 }
 
-void BufferViewDesc_to_D3D12_UAV_DESC(const BufferDesc &BuffDesc, const BufferViewDesc& UAVDesc, D3D12_UNORDERED_ACCESS_VIEW_DESC &D3D12UAVDesc)
+void BufferViewDesc_to_D3D12_UAV_DESC(const BufferDesc& BuffDesc, const BufferViewDesc& UAVDesc, D3D12_UNORDERED_ACCESS_VIEW_DESC& D3D12UAVDesc)
 {
     BufferViewDesc_to_D3D_UAV_DESC(BuffDesc, UAVDesc, D3D12UAVDesc);
     D3D12UAVDesc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;

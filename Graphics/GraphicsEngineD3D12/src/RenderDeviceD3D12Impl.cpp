@@ -36,12 +36,30 @@
 namespace Diligent
 {
 
-RenderDeviceD3D12Impl :: RenderDeviceD3D12Impl(IReferenceCounters *pRefCounters, IMemoryAllocator &RawMemAllocator, const EngineD3D12Attribs &CreationAttribs, ID3D12Device *pd3d12Device, ICommandQueueD3D12 *pCmdQueue, Uint32 NumDeferredContexts) : 
-    TRenderDeviceBase(pRefCounters, RawMemAllocator, NumDeferredContexts, sizeof(TextureD3D12Impl), sizeof(TextureViewD3D12Impl), sizeof(BufferD3D12Impl), sizeof(BufferViewD3D12Impl), sizeof(ShaderD3D12Impl), sizeof(SamplerD3D12Impl), sizeof(PipelineStateD3D12Impl), sizeof(ShaderResourceBindingD3D12Impl)),
-    m_pd3d12Device(pd3d12Device),
-    m_pCommandQueue(pCmdQueue),
-    m_EngineAttribs(CreationAttribs),
-	m_FrameNumber(0),
+RenderDeviceD3D12Impl :: RenderDeviceD3D12Impl(IReferenceCounters*          pRefCounters,
+                                               IMemoryAllocator&            RawMemAllocator,
+                                               const EngineD3D12Attribs&    CreationAttribs,
+                                               ID3D12Device*                pd3d12Device,
+                                               ICommandQueueD3D12*          pCmdQueue,
+                                               Uint32                       NumDeferredContexts) : 
+    TRenderDeviceBase
+    {
+        pRefCounters,
+        RawMemAllocator,
+        NumDeferredContexts,
+        sizeof(TextureD3D12Impl),
+        sizeof(TextureViewD3D12Impl),
+        sizeof(BufferD3D12Impl),
+        sizeof(BufferViewD3D12Impl),
+        sizeof(ShaderD3D12Impl),
+        sizeof(SamplerD3D12Impl),
+        sizeof(PipelineStateD3D12Impl),
+        sizeof(ShaderResourceBindingD3D12Impl)
+    },
+    m_pd3d12Device  (pd3d12Device),
+    m_pCommandQueue (pCmdQueue),
+    m_EngineAttribs (CreationAttribs),
+	m_FrameNumber      (0),
     m_NextCmdListNumber(0),
     m_CmdListManager(this),
     m_CPUDescriptorHeaps
@@ -94,7 +112,7 @@ void RenderDeviceD3D12Impl::DisposeCommandContext(CommandContext* pCtx)
     m_AvailableContexts.push_back(pCtx);
 }
 
-void RenderDeviceD3D12Impl::CloseAndExecuteCommandContext(CommandContext *pCtx, bool DiscardStaleObjects)
+void RenderDeviceD3D12Impl::CloseAndExecuteCommandContext(CommandContext* pCtx, bool DiscardStaleObjects)
 {
     CComPtr<ID3D12CommandAllocator> pAllocator;
 	auto *pCmdList = pCtx->Close(&pAllocator);
@@ -307,7 +325,7 @@ void RenderDeviceD3D12Impl::ReleaseUploadHeap(DynamicUploadHeap* pUploadHeap)
 
 }
 
-CommandContext* RenderDeviceD3D12Impl::AllocateCommandContext(const Char *ID)
+CommandContext* RenderDeviceD3D12Impl::AllocateCommandContext(const Char* ID)
 {
 	std::lock_guard<std::mutex> LockGuard(m_ContextAllocationMutex);
 
@@ -341,7 +359,7 @@ void RenderDeviceD3D12Impl::SafeReleaseD3D12Object(ID3D12Object* pObj)
     m_ReleaseQueue.SafeReleaseResource(CComPtr<ID3D12Object>(pObj), m_NextCmdListNumber);
 }
 
-bool CreateTestResource(ID3D12Device *pDevice, const D3D12_RESOURCE_DESC &ResDesc)
+bool CreateTestResource(ID3D12Device* pDevice, const D3D12_RESOURCE_DESC& ResDesc)
 {
     // Set the texture pointer address to nullptr to validate input parameters
     // without creating the texture
@@ -459,7 +477,7 @@ void RenderDeviceD3D12Impl::TestTextureFormat( TEXTURE_FORMAT TexFormat )
 
 IMPLEMENT_QUERY_INTERFACE( RenderDeviceD3D12Impl, IID_RenderDeviceD3D12, TRenderDeviceBase )
 
-void RenderDeviceD3D12Impl::CreatePipelineState(const PipelineStateDesc &PipelineDesc, IPipelineState **ppPipelineState)
+void RenderDeviceD3D12Impl::CreatePipelineState(const PipelineStateDesc& PipelineDesc, IPipelineState** ppPipelineState)
 {
     CreateDeviceObject("Pipeline State", PipelineDesc, ppPipelineState, 
         [&]()
@@ -471,7 +489,7 @@ void RenderDeviceD3D12Impl::CreatePipelineState(const PipelineStateDesc &Pipelin
     );
 }
 
-void RenderDeviceD3D12Impl :: CreateBufferFromD3DResource(ID3D12Resource *pd3d12Buffer, const BufferDesc& BuffDesc, IBuffer **ppBuffer)
+void RenderDeviceD3D12Impl :: CreateBufferFromD3DResource(ID3D12Resource* pd3d12Buffer, const BufferDesc& BuffDesc, IBuffer** ppBuffer)
 {
     CreateDeviceObject("buffer", BuffDesc, ppBuffer, 
         [&]()
@@ -484,7 +502,7 @@ void RenderDeviceD3D12Impl :: CreateBufferFromD3DResource(ID3D12Resource *pd3d12
     );
 }
 
-void RenderDeviceD3D12Impl :: CreateBuffer(const BufferDesc& BuffDesc, const BufferData &BuffData, IBuffer **ppBuffer)
+void RenderDeviceD3D12Impl :: CreateBuffer(const BufferDesc& BuffDesc, const BufferData& BuffData, IBuffer** ppBuffer)
 {
     CreateDeviceObject("buffer", BuffDesc, ppBuffer, 
         [&]()
@@ -498,7 +516,7 @@ void RenderDeviceD3D12Impl :: CreateBuffer(const BufferDesc& BuffDesc, const Buf
 }
 
 
-void RenderDeviceD3D12Impl :: CreateShader(const ShaderCreationAttribs &ShaderCreationAttribs, IShader **ppShader)
+void RenderDeviceD3D12Impl :: CreateShader(const ShaderCreationAttribs& ShaderCreationAttribs, IShader** ppShader)
 {
     CreateDeviceObject( "shader", ShaderCreationAttribs.Desc, ppShader, 
         [&]()
@@ -511,7 +529,7 @@ void RenderDeviceD3D12Impl :: CreateShader(const ShaderCreationAttribs &ShaderCr
     );
 }
 
-void RenderDeviceD3D12Impl::CreateTextureFromD3DResource(ID3D12Resource *pd3d12Texture, ITexture **ppTexture)
+void RenderDeviceD3D12Impl::CreateTextureFromD3DResource(ID3D12Resource* pd3d12Texture, ITexture** ppTexture)
 {
     TextureDesc TexDesc;
     TexDesc.Name = "Texture from d3d12 resource";
@@ -527,7 +545,7 @@ void RenderDeviceD3D12Impl::CreateTextureFromD3DResource(ID3D12Resource *pd3d12T
     );
 }
 
-void RenderDeviceD3D12Impl::CreateTexture(const TextureDesc& TexDesc, ID3D12Resource *pd3d12Texture, class TextureD3D12Impl **ppTexture)
+void RenderDeviceD3D12Impl::CreateTexture(const TextureDesc& TexDesc, ID3D12Resource* pd3d12Texture, TextureD3D12Impl** ppTexture)
 {
     CreateDeviceObject( "texture", TexDesc, ppTexture, 
         [&]()
@@ -538,7 +556,7 @@ void RenderDeviceD3D12Impl::CreateTexture(const TextureDesc& TexDesc, ID3D12Reso
     );
 }
 
-void RenderDeviceD3D12Impl :: CreateTexture(const TextureDesc& TexDesc, const TextureData &Data, ITexture **ppTexture)
+void RenderDeviceD3D12Impl :: CreateTexture(const TextureDesc& TexDesc, const TextureData& Data, ITexture** ppTexture)
 {
     CreateDeviceObject( "texture", TexDesc, ppTexture, 
         [&]()
@@ -552,7 +570,7 @@ void RenderDeviceD3D12Impl :: CreateTexture(const TextureDesc& TexDesc, const Te
     );
 }
 
-void RenderDeviceD3D12Impl :: CreateSampler(const SamplerDesc& SamplerDesc, ISampler **ppSampler)
+void RenderDeviceD3D12Impl :: CreateSampler(const SamplerDesc& SamplerDesc, ISampler** ppSampler)
 {
     CreateDeviceObject( "sampler", SamplerDesc, ppSampler, 
         [&]()

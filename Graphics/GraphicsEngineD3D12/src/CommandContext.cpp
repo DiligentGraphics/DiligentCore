@@ -30,13 +30,13 @@
 namespace Diligent
 {
 
-CommandContext::CommandContext( IMemoryAllocator &MemAllocator,
-                                CommandListManager &CmdListManager, 
-                                GPUDescriptorHeap GPUDescriptorHeaps[],
-                                const Uint32 DynamicDescriptorAllocationChunkSize[]) :
-	m_pCurGraphicsRootSignature( nullptr),
-	m_pCurPipelineState( nullptr),
-	m_pCurComputeRootSignature( nullptr),
+CommandContext::CommandContext( IMemoryAllocator&    MemAllocator,
+                                CommandListManager&  CmdListManager, 
+                                GPUDescriptorHeap    GPUDescriptorHeaps[],
+                                const Uint32         DynamicDescriptorAllocationChunkSize[]) :
+	m_pCurGraphicsRootSignature (nullptr),
+	m_pCurPipelineState         (nullptr),
+	m_pCurComputeRootSignature  (nullptr),
     m_DynamicGPUDescriptorAllocator
     {
         {MemAllocator, GPUDescriptorHeaps[0], DynamicDescriptorAllocationChunkSize[0]},
@@ -82,7 +82,7 @@ void CommandContext::Reset( CommandListManager& CmdListManager )
 #endif
 }
 
-ID3D12GraphicsCommandList* CommandContext::Close(ID3D12CommandAllocator **ppAllocator)
+ID3D12GraphicsCommandList* CommandContext::Close(ID3D12CommandAllocator** ppAllocator)
 {
 	FlushResourceBarriers();
 
@@ -138,7 +138,7 @@ void GraphicsContext::SetRenderTargets( UINT NumRTVs, ITextureViewD3D12** ppRTVs
 	}
 }
 
-void CommandContext::ClearUAVFloat( ITextureViewD3D12 *pTexView, const float* Color )
+void CommandContext::ClearUAVFloat( ITextureViewD3D12* pTexView, const float* Color )
 {
     auto *pTexture = ValidatedCast<TextureD3D12Impl>( pTexView->GetTexture() );
 	TransitionResource(pTexture, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, true);
@@ -150,7 +150,7 @@ void CommandContext::ClearUAVFloat( ITextureViewD3D12 *pTexView, const float* Co
 	m_pCommandList->ClearUnorderedAccessViewFloat(GpuVisibleHandle, pTexView->GetCPUDescriptorHandle(), pTexture->GetD3D12Resource(), Color, 0, nullptr);
 }
 
-void CommandContext::ClearUAVUint( ITextureViewD3D12 *pTexView, const UINT *Color  )
+void CommandContext::ClearUAVUint( ITextureViewD3D12* pTexView, const UINT* Color  )
 {
     auto *pTexture = ValidatedCast<TextureD3D12Impl>( pTexView->GetTexture() );
 	TransitionResource(pTexture, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, true);
@@ -166,14 +166,14 @@ void CommandContext::ClearUAVUint( ITextureViewD3D12 *pTexView, const UINT *Colo
 }
 
 
-void GraphicsContext::ClearRenderTarget( ITextureViewD3D12 *pRTV, const float *Color )
+void GraphicsContext::ClearRenderTarget( ITextureViewD3D12* pRTV, const float* Color )
 {
     auto *pTexture = ValidatedCast<TextureD3D12Impl>( pRTV->GetTexture() );
 	TransitionResource(pTexture, D3D12_RESOURCE_STATE_RENDER_TARGET, true);
 	m_pCommandList->ClearRenderTargetView(pRTV->GetCPUDescriptorHandle(), Color, 0, nullptr);
 }
 
-void GraphicsContext::ClearDepthStencil( ITextureViewD3D12 *pDSV, D3D12_CLEAR_FLAGS ClearFlags, float Depth, UINT8 Stencil )
+void GraphicsContext::ClearDepthStencil( ITextureViewD3D12* pDSV, D3D12_CLEAR_FLAGS ClearFlags, float Depth, UINT8 Stencil )
 {
     auto *pTexture = ValidatedCast<TextureD3D12Impl>( pDSV->GetTexture() );
 	TransitionResource( pTexture, D3D12_RESOURCE_STATE_DEPTH_WRITE, true);
@@ -181,14 +181,14 @@ void GraphicsContext::ClearDepthStencil( ITextureViewD3D12 *pDSV, D3D12_CLEAR_FL
 }
 
 
-void CommandContext::TransitionResource(ITextureD3D12 *pTexture, D3D12_RESOURCE_STATES NewState, bool FlushImmediate)
+void CommandContext::TransitionResource(ITextureD3D12* pTexture, D3D12_RESOURCE_STATES NewState, bool FlushImmediate)
 {
     VERIFY_EXPR( pTexture != nullptr );
     auto *pTexD3D12 = ValidatedCast<TextureD3D12Impl>(pTexture);
     TransitionResource(*pTexD3D12, *pTexD3D12, NewState, FlushImmediate);
 }
 
-void CommandContext::TransitionResource(IBufferD3D12 *pBuffer, D3D12_RESOURCE_STATES NewState, bool FlushImmediate)
+void CommandContext::TransitionResource(IBufferD3D12* pBuffer, D3D12_RESOURCE_STATES NewState, bool FlushImmediate)
 {
     VERIFY_EXPR( pBuffer != nullptr );
     auto *pBuffD3D12 = ValidatedCast<BufferD3D12Impl>(pBuffer);
@@ -212,7 +212,7 @@ void CommandContext::TransitionResource(IBufferD3D12 *pBuffer, D3D12_RESOURCE_ST
 #endif
 }
 
-void CommandContext::TransitionResource(D3D12ResourceBase& Resource, IDeviceObject &Object, D3D12_RESOURCE_STATES NewState, bool FlushImmediate)
+void CommandContext::TransitionResource(D3D12ResourceBase& Resource, IDeviceObject& Object, D3D12_RESOURCE_STATES NewState, bool FlushImmediate)
 {
 	D3D12_RESOURCE_STATES OldState = Resource.GetState();
 
@@ -268,7 +268,7 @@ void CommandContext::FlushResourceBarriers()
 }
 
 
-void CommandContext::InsertUAVBarrier(D3D12ResourceBase& Resource, IDeviceObject &Object, bool FlushImmediate)
+void CommandContext::InsertUAVBarrier(D3D12ResourceBase& Resource, IDeviceObject& Object, bool FlushImmediate)
 {
     m_PendingResourceBarriers.emplace_back();
     m_PendingBarrierObjects.emplace_back(&Object);
@@ -282,7 +282,7 @@ void CommandContext::InsertUAVBarrier(D3D12ResourceBase& Resource, IDeviceObject
         FlushResourceBarriers();
 }
 
-void CommandContext::InsertAliasBarrier(D3D12ResourceBase& Before, D3D12ResourceBase& After, IDeviceObject &BeforeObj, IDeviceObject &AfterObj, bool FlushImmediate)
+void CommandContext::InsertAliasBarrier(D3D12ResourceBase& Before, D3D12ResourceBase& After, IDeviceObject& BeforeObj, IDeviceObject& AfterObj, bool FlushImmediate)
 {
     m_PendingResourceBarriers.emplace_back();
     m_PendingBarrierObjects.emplace_back(&BeforeObj);

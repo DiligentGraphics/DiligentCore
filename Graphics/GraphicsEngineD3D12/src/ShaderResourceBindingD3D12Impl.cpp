@@ -30,7 +30,9 @@
 namespace Diligent
 {
 
-ShaderResourceBindingD3D12Impl::ShaderResourceBindingD3D12Impl( IReferenceCounters *pRefCounters, PipelineStateD3D12Impl *pPSO, bool IsPSOInternal) :
+ShaderResourceBindingD3D12Impl::ShaderResourceBindingD3D12Impl( IReferenceCounters*     pRefCounters,
+                                                                PipelineStateD3D12Impl* pPSO,
+                                                                bool                    IsPSOInternal) :
     TBase( pRefCounters, pPSO, IsPSOInternal ),
     m_ShaderResourceCache(ShaderResourceCacheD3D12::DbgCacheContentType::SRBResources)
 {

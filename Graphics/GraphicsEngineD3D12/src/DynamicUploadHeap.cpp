@@ -27,16 +27,19 @@
 
 namespace Diligent
 {
-    GPURingBuffer::GPURingBuffer(size_t MaxSize, IMemoryAllocator &Allocator, ID3D12Device *pd3d12Device, bool AllowCPUAccess) :
+    GPURingBuffer::GPURingBuffer(size_t             MaxSize, 
+                                 IMemoryAllocator&  Allocator,
+                                 ID3D12Device*      pd3d12Device,
+                                 bool               AllowCPUAccess) :
         RingBuffer(MaxSize, Allocator),
 	    m_CpuVirtualAddress(nullptr),
 	    m_GpuVirtualAddress(0)
     {
 	    D3D12_HEAP_PROPERTIES HeapProps;
-	    HeapProps.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+	    HeapProps.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
 	    HeapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-	    HeapProps.CreationNodeMask = 1;
-	    HeapProps.VisibleNodeMask = 1;
+	    HeapProps.CreationNodeMask     = 1;
+	    HeapProps.VisibleNodeMask      = 1;
 
 	    D3D12_RESOURCE_DESC ResourceDesc;
 	    ResourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
@@ -102,7 +105,10 @@ namespace Diligent
         Destroy();
     }
 
-    DynamicUploadHeap::DynamicUploadHeap(IMemoryAllocator &Allocator, bool bIsCPUAccessible, class RenderDeviceD3D12Impl* pDevice, size_t InitialSize) :
+    DynamicUploadHeap::DynamicUploadHeap(IMemoryAllocator&      Allocator,
+                                         bool                   bIsCPUAccessible,
+                                         RenderDeviceD3D12Impl* pDevice,
+                                         size_t                 InitialSize) :
         m_Allocator(Allocator),
         m_pDeviceD3D12(pDevice),
         m_bIsCPUAccessible(bIsCPUAccessible),

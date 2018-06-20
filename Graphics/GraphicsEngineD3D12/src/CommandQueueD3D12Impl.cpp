@@ -27,7 +27,9 @@
 namespace Diligent
 {
 
-CommandQueueD3D12Impl::CommandQueueD3D12Impl(IReferenceCounters *pRefCounters, ID3D12CommandQueue *pd3d12NativeCmdQueue, ID3D12Fence *pd3d12Fence) :
+CommandQueueD3D12Impl::CommandQueueD3D12Impl(IReferenceCounters*    pRefCounters,
+                                             ID3D12CommandQueue*    pd3d12NativeCmdQueue,
+                                             ID3D12Fence*           pd3d12Fence) :
         TBase(pRefCounters),
         m_pd3d12CmdQueue(pd3d12NativeCmdQueue), 
         m_d3d12Fence(pd3d12Fence),

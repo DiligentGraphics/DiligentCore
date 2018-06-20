@@ -38,7 +38,11 @@
 namespace Diligent
 {
 
-    DeviceContextD3D12Impl::DeviceContextD3D12Impl( IReferenceCounters *pRefCounters, RenderDeviceD3D12Impl *pDeviceD3D12Impl, bool bIsDeferred, const EngineD3D12Attribs &Attribs, Uint32 ContextId) :
+    DeviceContextD3D12Impl::DeviceContextD3D12Impl( IReferenceCounters*       pRefCounters,
+                                                    RenderDeviceD3D12Impl*    pDeviceD3D12Impl,
+                                                    bool                      bIsDeferred,
+                                                    const EngineD3D12Attribs& Attribs,
+                                                    Uint32                    ContextId) :
         TDeviceContextBase(pRefCounters, pDeviceD3D12Impl, bIsDeferred),
         m_pUploadHeap(pDeviceD3D12Impl->RequestUploadHeap() ),
         m_NumCommandsInCurCtx(0),
@@ -89,7 +93,7 @@ namespace Diligent
 
     IMPLEMENT_QUERY_INTERFACE( DeviceContextD3D12Impl, IID_DeviceContextD3D12, TDeviceContextBase )
     
-    void DeviceContextD3D12Impl::SetPipelineState(IPipelineState *pPipelineState)
+    void DeviceContextD3D12Impl::SetPipelineState(IPipelineState* pPipelineState)
     {
         // Never flush deferred context!
         if (!m_bIsDeferred && m_NumCommandsInCurCtx >= m_NumCommandsToFlush)
@@ -154,7 +158,7 @@ namespace Diligent
         m_pCommittedResourceCache = nullptr;
     }
 
-    void DeviceContextD3D12Impl::TransitionShaderResources(IPipelineState *pPipelineState, IShaderResourceBinding *pShaderResourceBinding)
+    void DeviceContextD3D12Impl::TransitionShaderResources(IPipelineState* pPipelineState, IShaderResourceBinding* pShaderResourceBinding)
     {
         VERIFY_EXPR(pPipelineState != nullptr);
 
@@ -163,7 +167,7 @@ namespace Diligent
         pPipelineStateD3D12->CommitAndTransitionShaderResources(pShaderResourceBinding, *pCtx, false, true);
     }
 
-    void DeviceContextD3D12Impl::CommitShaderResources(IShaderResourceBinding *pShaderResourceBinding, Uint32 Flags)
+    void DeviceContextD3D12Impl::CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, Uint32 Flags)
     {
         if (!DeviceContextBase::CommitShaderResources<PipelineStateD3D12Impl>(pShaderResourceBinding, Flags, 0 /*Dummy*/))
             return;
@@ -242,7 +246,7 @@ namespace Diligent
         m_bCommittedD3D12IBUpToDate = !IsDynamic;
     }
 
-    void DeviceContextD3D12Impl::TransitionD3D12VertexBuffers(GraphicsContext &GraphCtx)
+    void DeviceContextD3D12Impl::TransitionD3D12VertexBuffers(GraphicsContext& GraphCtx)
     {
         for( UINT Buff = 0; Buff < m_NumVertexStreams; ++Buff )
         {
@@ -254,7 +258,7 @@ namespace Diligent
         }
     }
 
-    void DeviceContextD3D12Impl::CommitD3D12VertexBuffers(GraphicsContext &GraphCtx)
+    void DeviceContextD3D12Impl::CommitD3D12VertexBuffers(GraphicsContext& GraphCtx)
     {
         auto *pPipelineStateD3D12 = m_pPipelineState.RawPtr<PipelineStateD3D12Impl>();
 
@@ -300,7 +304,7 @@ namespace Diligent
         m_bCommittedD3D12VBsUpToDate = !DynamicBufferPresent;
     }
 
-    void DeviceContextD3D12Impl::Draw( DrawAttribs &DrawAttribs )
+    void DeviceContextD3D12Impl::Draw( DrawAttribs& DrawAttribs )
     {
 #ifdef _DEBUG
         if (!m_pPipelineState)
@@ -378,7 +382,7 @@ namespace Diligent
         ++m_NumCommandsInCurCtx;
     }
 
-    void DeviceContextD3D12Impl::DispatchCompute( const DispatchComputeAttribs &DispatchAttrs )
+    void DeviceContextD3D12Impl::DispatchCompute( const DispatchComputeAttribs& DispatchAttrs )
     {
 #ifdef _DEBUG
         if (!m_pPipelineState)
@@ -434,7 +438,7 @@ namespace Diligent
         ++m_NumCommandsInCurCtx;
     }
 
-    void DeviceContextD3D12Impl::ClearDepthStencil( ITextureView *pView, Uint32 ClearFlags, float fDepth, Uint8 Stencil )
+    void DeviceContextD3D12Impl::ClearDepthStencil( ITextureView* pView, Uint32 ClearFlags, float fDepth, Uint8 Stencil )
     {
         ITextureViewD3D12 *pDSVD3D12 = nullptr;
         if( pView != nullptr )
@@ -466,7 +470,7 @@ namespace Diligent
         ++m_NumCommandsInCurCtx;
     }
 
-    void DeviceContextD3D12Impl::ClearRenderTarget( ITextureView *pView, const float *RGBA )
+    void DeviceContextD3D12Impl::ClearRenderTarget( ITextureView* pView, const float* RGBA )
     {
         ITextureViewD3D12 *pd3d12RTV = nullptr;
         if( pView != nullptr )
@@ -533,7 +537,7 @@ namespace Diligent
         Flush(true);
     }
 
-    void DeviceContextD3D12Impl::SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer **ppBuffers, Uint32 *pOffsets, Uint32 Flags )
+    void DeviceContextD3D12Impl::SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer** ppBuffers, Uint32* pOffsets, Uint32 Flags )
     {
         TDeviceContextBase::SetVertexBuffers( StartSlot, NumBuffersSet, ppBuffers, pOffsets, Flags );
         m_bCommittedD3D12VBsUpToDate = false;
@@ -552,7 +556,7 @@ namespace Diligent
         m_bCommittedD3D12IBUpToDate = false;
     }
 
-    void DeviceContextD3D12Impl::SetIndexBuffer( IBuffer *pIndexBuffer, Uint32 ByteOffset )
+    void DeviceContextD3D12Impl::SetIndexBuffer( IBuffer* pIndexBuffer, Uint32 ByteOffset )
     {
         TDeviceContextBase::SetIndexBuffer( pIndexBuffer, ByteOffset );
         m_bCommittedD3D12IBUpToDate = false;
@@ -577,7 +581,7 @@ namespace Diligent
         RequestCmdContext()->AsGraphicsContext().SetViewports( m_NumViewports, d3d12Viewports );
     }
 
-    void DeviceContextD3D12Impl::SetViewports( Uint32 NumViewports, const Viewport *pViewports, Uint32 RTWidth, Uint32 RTHeight  )
+    void DeviceContextD3D12Impl::SetViewports( Uint32 NumViewports, const Viewport* pViewports, Uint32 RTWidth, Uint32 RTHeight  )
     {
         static_assert(MaxViewports >= D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE, "MaxViewports constant must be greater than D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE");
         TDeviceContextBase::SetViewports( NumViewports, pViewports, RTWidth, RTHeight );
@@ -612,8 +616,8 @@ namespace Diligent
         { 0,0, MaxD3D12TexDim,MaxD3D12TexDim }
     };
 
-    void DeviceContextD3D12Impl::CommitScissorRects(GraphicsContext &GraphCtx, bool ScissorEnable)
-    {
+    void DeviceContextD3D12Impl::CommitScissorRects(GraphicsContext& GraphCtx, bool ScissorEnable)
+    { 
         if (ScissorEnable)
         {
             // Commit currently set scissor rectangles
@@ -635,7 +639,7 @@ namespace Diligent
         }
     }
 
-    void DeviceContextD3D12Impl::SetScissorRects( Uint32 NumRects, const Rect *pRects, Uint32 RTWidth, Uint32 RTHeight  )
+    void DeviceContextD3D12Impl::SetScissorRects( Uint32 NumRects, const Rect* pRects, Uint32 RTWidth, Uint32 RTHeight  )
     {
         const Uint32 MaxScissorRects = D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE;
         VERIFY( NumRects < MaxScissorRects, "Too many scissor rects are being set" );
@@ -708,7 +712,7 @@ namespace Diligent
         return m_pUploadHeap->Allocate(NumBytes);
     }
 
-    void DeviceContextD3D12Impl::UpdateBufferRegion(class BufferD3D12Impl *pBuffD3D12, DynamicAllocation& Allocation, Uint64 DstOffset, Uint64 NumBytes)
+    void DeviceContextD3D12Impl::UpdateBufferRegion(class BufferD3D12Impl* pBuffD3D12, DynamicAllocation& Allocation, Uint64 DstOffset, Uint64 NumBytes)
     {
         auto pCmdCtx = RequestCmdContext();
         VERIFY_EXPR( static_cast<size_t>(NumBytes) == NumBytes );
@@ -720,7 +724,7 @@ namespace Diligent
         ++m_NumCommandsInCurCtx;
     }
 
-    void DeviceContextD3D12Impl::UpdateBufferRegion(BufferD3D12Impl *pBuffD3D12, const void *pData, Uint64 DstOffset, Uint64 NumBytes)
+    void DeviceContextD3D12Impl::UpdateBufferRegion(BufferD3D12Impl* pBuffD3D12, const void* pData, Uint64 DstOffset, Uint64 NumBytes)
     {
         VERIFY(pBuffD3D12->GetDesc().Usage != USAGE_DYNAMIC, "Dynamic buffers must be updated via Map()");
         VERIFY_EXPR( static_cast<size_t>(NumBytes) == NumBytes );
@@ -729,7 +733,7 @@ namespace Diligent
         UpdateBufferRegion(pBuffD3D12, TmpSpace, DstOffset, NumBytes);
     }
 
-    void DeviceContextD3D12Impl::CopyBufferRegion(BufferD3D12Impl *pSrcBuffD3D12, BufferD3D12Impl *pDstBuffD3D12, Uint64 SrcOffset, Uint64 DstOffset, Uint64 NumBytes)
+    void DeviceContextD3D12Impl::CopyBufferRegion(BufferD3D12Impl* pSrcBuffD3D12, BufferD3D12Impl* pDstBuffD3D12, Uint64 SrcOffset, Uint64 DstOffset, Uint64 NumBytes)
     {
         VERIFY(pDstBuffD3D12->GetDesc().Usage != USAGE_DYNAMIC, "Dynamic buffers cannot be copy destinations");
 
@@ -746,8 +750,8 @@ namespace Diligent
         ++m_NumCommandsInCurCtx;
     }
 
-    void DeviceContextD3D12Impl::CopyTextureRegion(TextureD3D12Impl *pSrcTexture, Uint32 SrcSubResIndex, const D3D12_BOX *pD3D12SrcBox,
-                                                   TextureD3D12Impl *pDstTexture, Uint32 DstSubResIndex, Uint32 DstX, Uint32 DstY, Uint32 DstZ)
+    void DeviceContextD3D12Impl::CopyTextureRegion(TextureD3D12Impl* pSrcTexture, Uint32 SrcSubResIndex, const D3D12_BOX* pD3D12SrcBox,
+                                                   TextureD3D12Impl* pDstTexture, Uint32 DstSubResIndex, Uint32 DstX, Uint32 DstY, Uint32 DstZ)
     {
         auto pCmdCtx = RequestCmdContext();
         pCmdCtx->TransitionResource(pSrcTexture, D3D12_RESOURCE_STATE_COPY_SOURCE);
@@ -767,7 +771,7 @@ namespace Diligent
         ++m_NumCommandsInCurCtx;
     }
 
-    void DeviceContextD3D12Impl::CopyTextureRegion(IBuffer *pSrcBuffer, Uint32 SrcStride, Uint32 SrcDepthStride, class TextureD3D12Impl *pTextureD3D12, Uint32 DstSubResIndex, const Box &DstBox)
+    void DeviceContextD3D12Impl::CopyTextureRegion(IBuffer* pSrcBuffer, Uint32 SrcStride, Uint32 SrcDepthStride, class TextureD3D12Impl* pTextureD3D12, Uint32 DstSubResIndex, const Box& DstBox)
     {
         auto *pBufferD3D12 = ValidatedCast<BufferD3D12Impl>(pSrcBuffer);
         const auto& TexDesc = pTextureD3D12->GetDesc();
@@ -828,14 +832,14 @@ namespace Diligent
         }
     }
 
-    void DeviceContextD3D12Impl::GenerateMips(TextureViewD3D12Impl *pTexView)
+    void DeviceContextD3D12Impl::GenerateMips(TextureViewD3D12Impl* pTexView)
     {
         auto *pCtx = RequestCmdContext();
         m_MipsGenerator.GenerateMips(m_pDevice.RawPtr<RenderDeviceD3D12Impl>(), pTexView, *pCtx);
         ++m_NumCommandsInCurCtx;
     }
 
-    void DeviceContextD3D12Impl::FinishCommandList(class ICommandList **ppCommandList)
+    void DeviceContextD3D12Impl::FinishCommandList(ICommandList** ppCommandList)
     {
         CommandListD3D12Impl *pCmdListD3D12( NEW_RC_OBJ(m_CmdListAllocator, "CommandListD3D12Impl instance", CommandListD3D12Impl)
                                                        (m_pDevice, m_pCurrCmdCtx) );
@@ -846,7 +850,7 @@ namespace Diligent
         InvalidateState();
     }
 
-    void DeviceContextD3D12Impl::ExecuteCommandList(class ICommandList *pCommandList)
+    void DeviceContextD3D12Impl::ExecuteCommandList(ICommandList* pCommandList)
     {
         if (m_bIsDeferred)
         {

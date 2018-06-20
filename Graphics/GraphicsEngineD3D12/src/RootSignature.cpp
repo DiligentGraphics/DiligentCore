@@ -42,12 +42,17 @@ RootSignature::RootParamsManager::RootParamsManager(IMemoryAllocator &MemAllocat
     m_pMemory(nullptr, STDDeleter<void, IMemoryAllocator>(MemAllocator))
 {}
 
-size_t RootSignature::RootParamsManager::GetRequiredMemorySize(Uint32 NumExtraRootTables, Uint32 NumExtraRootViews, Uint32 NumExtraDescriptorRanges)const
+size_t RootSignature::RootParamsManager::GetRequiredMemorySize(Uint32 NumExtraRootTables,
+                                                               Uint32 NumExtraRootViews,
+                                                               Uint32 NumExtraDescriptorRanges)const
 {
     return sizeof(RootParameter) * (m_NumRootTables + NumExtraRootTables + m_NumRootViews + NumExtraRootViews) +  sizeof(D3D12_DESCRIPTOR_RANGE) * (m_TotalDescriptorRanges + NumExtraDescriptorRanges);
 }
 
-D3D12_DESCRIPTOR_RANGE* RootSignature::RootParamsManager::Extend(Uint32 NumExtraRootTables, Uint32 NumExtraRootViews, Uint32 NumExtraDescriptorRanges, Uint32 RootTableToAddRanges)
+D3D12_DESCRIPTOR_RANGE* RootSignature::RootParamsManager::Extend(Uint32 NumExtraRootTables,
+                                                                 Uint32 NumExtraRootViews,
+                                                                 Uint32 NumExtraDescriptorRanges,
+                                                                 Uint32 RootTableToAddRanges)
 {
     VERIFY(NumExtraRootTables > 0 || NumExtraRootViews > 0 || NumExtraDescriptorRanges > 0, "At least one root table, root view or descriptor range must be added" );
     auto MemorySize = GetRequiredMemorySize(NumExtraRootTables, NumExtraRootViews, NumExtraDescriptorRanges);
@@ -92,14 +97,21 @@ D3D12_DESCRIPTOR_RANGE* RootSignature::RootParamsManager::Extend(Uint32 NumExtra
     return pCurrDescriptorRangePtr;
 }
 
-void RootSignature::RootParamsManager::AddRootView(D3D12_ROOT_PARAMETER_TYPE ParameterType, Uint32 RootIndex, UINT Register, D3D12_SHADER_VISIBILITY Visibility, SHADER_VARIABLE_TYPE VarType)
+void RootSignature::RootParamsManager::AddRootView(D3D12_ROOT_PARAMETER_TYPE ParameterType,
+                                                   Uint32                    RootIndex,
+                                                   UINT                      Register,
+                                                   D3D12_SHADER_VISIBILITY   Visibility,
+                                                   SHADER_VARIABLE_TYPE      VarType)
 {
     auto *pRangePtr = Extend(0, 1, 0);
     VERIFY_EXPR((char*)pRangePtr == (char*)m_pMemory.get() + GetRequiredMemorySize(0, 0, 0));
     new(m_pRootViews + m_NumRootViews-1) RootParameter(ParameterType, RootIndex, Register, 0u, Visibility, VarType);
 }
 
-void RootSignature::RootParamsManager::AddRootTable(Uint32 RootIndex, D3D12_SHADER_VISIBILITY Visibility, SHADER_VARIABLE_TYPE VarType, Uint32 NumRangesInNewTable)
+void RootSignature::RootParamsManager::AddRootTable(Uint32                  RootIndex,
+                                                    D3D12_SHADER_VISIBILITY Visibility,
+                                                    SHADER_VARIABLE_TYPE    VarType,
+                                                    Uint32                  NumRangesInNewTable)
 {
     auto *pRangePtr = Extend(1, 0, NumRangesInNewTable);
     VERIFY_EXPR( (char*)(pRangePtr + NumRangesInNewTable) == (char*)m_pMemory.get() + GetRequiredMemorySize(0, 0, 0));
@@ -250,7 +262,7 @@ D3D12_DESCRIPTOR_HEAP_TYPE HeapTypeFromRangeType(D3D12_DESCRIPTOR_RANGE_TYPE Ran
 }
 
 
-void RootSignature::InitStaticSampler(SHADER_TYPE ShaderType, const String &TextureName, const D3DShaderResourceAttribs &SamplerAttribs)
+void RootSignature::InitStaticSampler(SHADER_TYPE ShaderType, const String& TextureName, const D3DShaderResourceAttribs& SamplerAttribs)
 {
     auto ShaderVisibility = GetShaderVisibility(ShaderType);
     auto SamplerFound = false;
@@ -274,11 +286,11 @@ void RootSignature::InitStaticSampler(SHADER_TYPE ShaderType, const String &Text
 }
 
 // http://diligentgraphics.com/diligent-engine/architecture/d3d12/shader-resource-layout#Initializing-Shader-Resource-Layouts-and-Root-Signature-in-a-Pipeline-State-Object
-void RootSignature::AllocateResourceSlot(SHADER_TYPE ShaderType, 
-                                         const D3DShaderResourceAttribs &ShaderResAttribs, 
-                                         D3D12_DESCRIPTOR_RANGE_TYPE RangeType, 
-                                         Uint32 &RootIndex, // Output parameter
-                                         Uint32 &OffsetFromTableStart // Output parameter
+void RootSignature::AllocateResourceSlot(SHADER_TYPE                     ShaderType, 
+                                         const D3DShaderResourceAttribs& ShaderResAttribs, 
+                                         D3D12_DESCRIPTOR_RANGE_TYPE     RangeType, 
+                                         Uint32&                         RootIndex, // Output parameter
+                                         Uint32&                         OffsetFromTableStart // Output parameter
                                         )
 {
     auto ShaderInd = GetShaderTypeIndex(ShaderType);
@@ -398,7 +410,7 @@ void RootSignature::dbgVerifyRootParameters()const
 }
 #endif
 
-void RootSignature::AllocateStaticSamplers(IShader* const*ppShaders, Uint32 NumShaders)
+void RootSignature::AllocateStaticSamplers(IShader* const* ppShaders, Uint32 NumShaders)
 {
     Uint32 TotalSamplers = 0;
     for(Uint32 s=0;s < NumShaders; ++s)
@@ -418,7 +430,7 @@ void RootSignature::AllocateStaticSamplers(IShader* const*ppShaders, Uint32 NumS
     }
 }
 
-void RootSignature::Finalize(ID3D12Device *pd3d12Device)
+void RootSignature::Finalize(ID3D12Device* pd3d12Device)
 {
     for(Uint32 rt = 0; rt < m_RootParams.GetNumRootTables(); ++rt)
     {
@@ -525,7 +537,9 @@ void RootSignature::Finalize(ID3D12Device *pd3d12Device)
 }
 
 //http://diligentgraphics.com/diligent-engine/architecture/d3d12/shader-resource-cache#Initializing-the-Cache-for-Shader-Resource-Binding-Object
-void RootSignature::InitResourceCache(RenderDeviceD3D12Impl *pDeviceD3D12Impl, ShaderResourceCacheD3D12& ResourceCache, IMemoryAllocator &CacheMemAllocator)const
+void RootSignature::InitResourceCache(RenderDeviceD3D12Impl*    pDeviceD3D12Impl,
+                                      ShaderResourceCacheD3D12& ResourceCache,
+                                      IMemoryAllocator&         CacheMemAllocator)const
 {
     // Get root table size for every root index
     // m_RootParams keeps root tables sorted by the array index, not the root index
@@ -633,9 +647,9 @@ void RootSignature::InitResourceCache(RenderDeviceD3D12Impl *pDeviceD3D12Impl, S
 const D3D12_RESOURCE_STATES D3D12_RESOURCE_STATE_SHADER_RESOURCE  = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
 
 __forceinline
-void TransitionResource(CommandContext &Ctx, 
-                        ShaderResourceCacheD3D12::Resource &Res,
-                        D3D12_DESCRIPTOR_RANGE_TYPE RangeType)
+void TransitionResource(CommandContext&                     Ctx, 
+                        ShaderResourceCacheD3D12::Resource& Res,
+                        D3D12_DESCRIPTOR_RANGE_TYPE         RangeType)
 {
     switch (Res.Type)
     {
@@ -702,8 +716,8 @@ void TransitionResource(CommandContext &Ctx,
 
 
 #ifdef _DEBUG
-void DbgVerifyResourceState(ShaderResourceCacheD3D12::Resource &Res,
-                            D3D12_DESCRIPTOR_RANGE_TYPE RangeType)
+void DbgVerifyResourceState(ShaderResourceCacheD3D12::Resource& Res,
+                            D3D12_DESCRIPTOR_RANGE_TYPE         RangeType)
 {
     switch (Res.Type)
     {
@@ -797,11 +811,11 @@ __forceinline void RootSignature::RootParamsManager::ProcessRootTables(TOperatio
 }
 
 template<class TOperation>
-__forceinline void ProcessCachedTableResources(Uint32 RootInd, 
+__forceinline void ProcessCachedTableResources(Uint32                      RootInd, 
                                                const D3D12_ROOT_PARAMETER& D3D12Param, 
-                                               ShaderResourceCacheD3D12& ResourceCache, 
-                                               D3D12_DESCRIPTOR_HEAP_TYPE dbgHeapType, 
-                                               TOperation Operation)
+                                               ShaderResourceCacheD3D12&   ResourceCache, 
+                                               D3D12_DESCRIPTOR_HEAP_TYPE  dbgHeapType, 
+                                               TOperation                  Operation)
 {
     for (UINT r = 0; r < D3D12Param.DescriptorTable.NumDescriptorRanges; ++r)
     {
@@ -823,10 +837,10 @@ __forceinline void ProcessCachedTableResources(Uint32 RootInd,
 
 
 template<bool PerformResourceTransitions>
-void RootSignature::CommitDescriptorHandlesInternal_SMD(RenderDeviceD3D12Impl *pRenderDeviceD3D12, 
+void RootSignature::CommitDescriptorHandlesInternal_SMD(RenderDeviceD3D12Impl*    pRenderDeviceD3D12, 
                                                         ShaderResourceCacheD3D12& ResourceCache, 
-                                                        CommandContext &Ctx, 
-                                                        bool IsCompute)const
+                                                        CommandContext&           Ctx, 
+                                                        bool                      IsCompute)const
 {
     auto *pd3d12Device = pRenderDeviceD3D12->GetD3D12Device();
 
@@ -932,10 +946,10 @@ void RootSignature::CommitDescriptorHandlesInternal_SMD(RenderDeviceD3D12Impl *p
 }
 
 template<bool PerformResourceTransitions>
-void RootSignature::CommitDescriptorHandlesInternal_SM(RenderDeviceD3D12Impl *pRenderDeviceD3D12, 
+void RootSignature::CommitDescriptorHandlesInternal_SM(RenderDeviceD3D12Impl*    pRenderDeviceD3D12, 
                                                        ShaderResourceCacheD3D12& ResourceCache, 
-                                                       CommandContext &Ctx, 
-                                                       bool IsCompute)const
+                                                       CommandContext&           Ctx, 
+                                                       bool                      IsCompute)const
 {
     VERIFY_EXPR(m_TotalSrvCbvUavSlots[SHADER_VARIABLE_TYPE_DYNAMIC] == 0 && m_TotalSamplerSlots[SHADER_VARIABLE_TYPE_DYNAMIC] == 0);
 
@@ -984,7 +998,7 @@ void RootSignature::CommitDescriptorHandlesInternal_SM(RenderDeviceD3D12Impl *pR
 
 
 void RootSignature::TransitionResources(ShaderResourceCacheD3D12& ResourceCache, 
-                                        class CommandContext &Ctx)const
+                                        CommandContext&           Ctx)const
 {
     m_RootParams.ProcessRootTables(
         [&](Uint32 RootInd, const RootParameter &RootTable, const D3D12_ROOT_PARAMETER& D3D12Param, bool IsResourceTable, D3D12_DESCRIPTOR_HEAP_TYPE dbgHeapType )
@@ -1001,9 +1015,9 @@ void RootSignature::TransitionResources(ShaderResourceCacheD3D12& ResourceCache,
 
 
 void RootSignature::CommitRootViews(ShaderResourceCacheD3D12& ResourceCache, 
-                                    CommandContext &Ctx, 
-                                    bool IsCompute,
-                                    Uint32 ContextId)const
+                                    CommandContext&           Ctx, 
+                                    bool                      IsCompute,
+                                    Uint32                    ContextId)const
 {
     for(Uint32 rv = 0; rv < m_RootParams.GetNumRootViews(); ++rv)
     {

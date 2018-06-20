@@ -56,11 +56,11 @@ DXGI_FORMAT GetClearFormat(DXGI_FORMAT Fmt, D3D12_RESOURCE_FLAGS Flags)
     return Fmt;
 }
 
-TextureD3D12Impl :: TextureD3D12Impl(IReferenceCounters *pRefCounters, 
-                                     FixedBlockMemoryAllocator &TexViewObjAllocator,
-                                     RenderDeviceD3D12Impl *pRenderDeviceD3D12, 
-                                     const TextureDesc& TexDesc, 
-                                     const TextureData &InitData /*= TextureData()*/) : 
+TextureD3D12Impl :: TextureD3D12Impl(IReferenceCounters*        pRefCounters, 
+                                     FixedBlockMemoryAllocator& TexViewObjAllocator,
+                                     RenderDeviceD3D12Impl*     pRenderDeviceD3D12, 
+                                     const TextureDesc&         TexDesc, 
+                                     const TextureData&         InitData /*= TextureData()*/) : 
     TTextureBase(pRefCounters, TexViewObjAllocator, pRenderDeviceD3D12, TexDesc)
 {
     if( m_Desc.Usage == USAGE_STATIC && InitData.pSubResources == nullptr )
@@ -267,7 +267,7 @@ TextureD3D12Impl :: TextureD3D12Impl(IReferenceCounters *pRefCounters,
 }
 
 
-static TextureDesc InitTexDescFromD3D12Resource(ID3D12Resource *pTexture, const TextureDesc& SrcTexDesc)
+static TextureDesc InitTexDescFromD3D12Resource(ID3D12Resource* pTexture, const TextureDesc& SrcTexDesc)
 {
     auto ResourceDesc = pTexture->GetDesc();
 
@@ -312,11 +312,11 @@ static TextureDesc InitTexDescFromD3D12Resource(ID3D12Resource *pTexture, const 
     return TexDesc;
 }
 
-TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters *pRefCounters,
-                                   FixedBlockMemoryAllocator &TexViewObjAllocator,
-                                   RenderDeviceD3D12Impl *pDeviceD3D12, 
-                                   const TextureDesc& TexDesc, 
-                                   ID3D12Resource *pTexture) : 
+TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
+                                   FixedBlockMemoryAllocator& TexViewObjAllocator,
+                                   RenderDeviceD3D12Impl*     pDeviceD3D12, 
+                                   const TextureDesc&         TexDesc, 
+                                   ID3D12Resource*            pTexture) : 
     TTextureBase(pRefCounters, TexViewObjAllocator, pDeviceD3D12, InitTexDescFromD3D12Resource(pTexture, TexDesc))
 {
     m_pd3d12Resource = pTexture;
@@ -401,7 +401,11 @@ TextureD3D12Impl :: ~TextureD3D12Impl()
     pDeviceD3D12Impl->SafeReleaseD3D12Object(m_pd3d12Resource);
 }
 
-void TextureD3D12Impl::UpdateData( IDeviceContext *pContext, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData )
+void TextureD3D12Impl::UpdateData( IDeviceContext*          pContext,
+                                   Uint32                   MipLevel,
+                                   Uint32                   Slice,
+                                   const Box&               DstBox,
+                                   const TextureSubResData& SubresData )
 {
     TTextureBase::UpdateData( pContext, MipLevel, Slice, DstBox, SubresData );
     if (SubresData.pSrcBuffer == nullptr)
@@ -419,16 +423,16 @@ void TextureD3D12Impl::UpdateData( IDeviceContext *pContext, Uint32 MipLevel, Ui
     pCtxD3D12->CopyTextureRegion(SubresData.pSrcBuffer, SubresData.Stride, SubresData.DepthStride, this, DstSubResIndex, DstBox);
 }
 
-void TextureD3D12Impl ::  CopyData(IDeviceContext *pContext, 
-                                    ITexture *pSrcTexture, 
-                                    Uint32 SrcMipLevel,
-                                    Uint32 SrcSlice,
-                                    const Box *pSrcBox,
-                                    Uint32 DstMipLevel,
-                                    Uint32 DstSlice,
-                                    Uint32 DstX,
-                                    Uint32 DstY,
-                                    Uint32 DstZ)
+void TextureD3D12Impl ::  CopyData(IDeviceContext* pContext, 
+                                    ITexture*      pSrcTexture, 
+                                    Uint32         SrcMipLevel,
+                                    Uint32         SrcSlice,
+                                    const Box*     pSrcBox,
+                                    Uint32         DstMipLevel,
+                                    Uint32         DstSlice,
+                                    Uint32         DstX,
+                                    Uint32         DstY,
+                                    Uint32         DstZ)
 {
     TTextureBase::CopyData( pContext, pSrcTexture, SrcMipLevel, SrcSlice, pSrcBox,
                             DstMipLevel, DstSlice, DstX, DstY, DstZ );
@@ -453,7 +457,7 @@ void TextureD3D12Impl ::  CopyData(IDeviceContext *pContext,
     pCtxD3D12->CopyTextureRegion(pSrcTexD3D12, SrcSubResIndex, pD3D12SrcBox, this, DstSubResIndex, DstX, DstY, DstZ);
 }
 
-void TextureD3D12Impl :: Map(IDeviceContext *pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags, MappedTextureSubresource &MappedData)
+void TextureD3D12Impl :: Map(IDeviceContext* pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags, MappedTextureSubresource &MappedData)
 {
     TTextureBase::Map( pContext, Subresource, MapType, MapFlags, MappedData );
     UNSUPPORTED("TextureD3D12Impl::Map() is not implemented");
@@ -462,14 +466,14 @@ void TextureD3D12Impl :: Map(IDeviceContext *pContext, Uint32 Subresource, MAP_T
     MappedData.pData = nullptr;//TmpDummyBuffer;
 }
 
-void TextureD3D12Impl::Unmap( IDeviceContext *pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags )
+void TextureD3D12Impl::Unmap( IDeviceContext* pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags )
 {
     TTextureBase::Unmap( pContext, Subresource, MapType, MapFlags );
     UNSUPPORTED("TextureD3D12Impl::Unmap() is not implemented");
 }
 
 
-void TextureD3D12Impl::CreateSRV( TextureViewDesc &SRVDesc, D3D12_CPU_DESCRIPTOR_HANDLE SRVHandle )
+void TextureD3D12Impl::CreateSRV( TextureViewDesc& SRVDesc, D3D12_CPU_DESCRIPTOR_HANDLE SRVHandle )
 {
     VERIFY( SRVDesc.ViewType == TEXTURE_VIEW_SHADER_RESOURCE, "Incorrect view type: shader resource is expected" );
     
@@ -484,7 +488,7 @@ void TextureD3D12Impl::CreateSRV( TextureViewDesc &SRVDesc, D3D12_CPU_DESCRIPTOR
     pDeviceD3D12->CreateShaderResourceView(m_pd3d12Resource, &D3D12_SRVDesc, SRVHandle);
 }
 
-void TextureD3D12Impl::CreateRTV( TextureViewDesc &RTVDesc, D3D12_CPU_DESCRIPTOR_HANDLE RTVHandle )
+void TextureD3D12Impl::CreateRTV( TextureViewDesc& RTVDesc, D3D12_CPU_DESCRIPTOR_HANDLE RTVHandle )
 {
     VERIFY( RTVDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET, "Incorrect view type: render target is expected" );
 
@@ -500,7 +504,7 @@ void TextureD3D12Impl::CreateRTV( TextureViewDesc &RTVDesc, D3D12_CPU_DESCRIPTOR
     pDeviceD3D12->CreateRenderTargetView( m_pd3d12Resource, &D3D12_RTVDesc, RTVHandle );
 }
 
-void TextureD3D12Impl::CreateDSV( TextureViewDesc &DSVDesc, D3D12_CPU_DESCRIPTOR_HANDLE DSVHandle )
+void TextureD3D12Impl::CreateDSV( TextureViewDesc& DSVDesc, D3D12_CPU_DESCRIPTOR_HANDLE DSVHandle )
 {
     VERIFY( DSVDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL, "Incorrect view type: depth stencil is expected" );
 
@@ -516,7 +520,7 @@ void TextureD3D12Impl::CreateDSV( TextureViewDesc &DSVDesc, D3D12_CPU_DESCRIPTOR
     pDeviceD3D12->CreateDepthStencilView( m_pd3d12Resource, &D3D12_DSVDesc, DSVHandle );
 }
 
-void TextureD3D12Impl::CreateUAV( TextureViewDesc &UAVDesc, D3D12_CPU_DESCRIPTOR_HANDLE UAVHandle )
+void TextureD3D12Impl::CreateUAV( TextureViewDesc& UAVDesc, D3D12_CPU_DESCRIPTOR_HANDLE UAVHandle )
 {
     VERIFY( UAVDesc.ViewType == TEXTURE_VIEW_UNORDERED_ACCESS, "Incorrect view type: unordered access is expected" );
     

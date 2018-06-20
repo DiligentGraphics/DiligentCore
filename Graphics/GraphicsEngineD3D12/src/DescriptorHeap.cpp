@@ -30,17 +30,17 @@ namespace Diligent
 {
 
 // Creates a new descriptor heap and reference the entire heap
-DescriptorHeapAllocationManager::DescriptorHeapAllocationManager(IMemoryAllocator &Allocator, 
-                                                                 RenderDeviceD3D12Impl *pDeviceD3D12Impl,
-                                                                 IDescriptorAllocator *pParentAllocator,
-                                                                 size_t ThisManagerId,
-                                                                 const D3D12_DESCRIPTOR_HEAP_DESC &HeapDesc) : 
-    m_FreeBlockManager(HeapDesc.NumDescriptors, Allocator),
-    m_NumDescriptorsInAllocation(HeapDesc.NumDescriptors),
-    m_HeapDesc(HeapDesc),
-    m_pDeviceD3D12Impl(pDeviceD3D12Impl),
-    m_pParentAllocator(pParentAllocator),
-    m_ThisManagerId(ThisManagerId)
+DescriptorHeapAllocationManager::DescriptorHeapAllocationManager(IMemoryAllocator&                 Allocator, 
+                                                                 RenderDeviceD3D12Impl*            pDeviceD3D12Impl,
+                                                                 IDescriptorAllocator*             pParentAllocator,
+                                                                 size_t                            ThisManagerId,
+                                                                 const D3D12_DESCRIPTOR_HEAP_DESC& HeapDesc) : 
+    m_FreeBlockManager           (HeapDesc.NumDescriptors, Allocator),
+    m_NumDescriptorsInAllocation (HeapDesc.NumDescriptors),
+    m_HeapDesc                   (HeapDesc),
+    m_pDeviceD3D12Impl           (pDeviceD3D12Impl),
+    m_pParentAllocator           (pParentAllocator),
+    m_ThisManagerId              (ThisManagerId)
 {
     auto pDevice = pDeviceD3D12Impl->GetD3D12Device();
 
@@ -48,32 +48,32 @@ DescriptorHeapAllocationManager::DescriptorHeapAllocationManager(IMemoryAllocato
     m_FirstGPUHandle.ptr = 0;
     m_DescriptorSize  = pDevice->GetDescriptorHandleIncrementSize(HeapDesc.Type);
 
-	pDevice->CreateDescriptorHeap(&m_HeapDesc, __uuidof(m_pd3d12DescriptorHeap), reinterpret_cast<void**>(static_cast<ID3D12DescriptorHeap**>(&m_pd3d12DescriptorHeap)));
-	m_FirstCPUHandle = m_pd3d12DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+    pDevice->CreateDescriptorHeap(&m_HeapDesc, __uuidof(m_pd3d12DescriptorHeap), reinterpret_cast<void**>(static_cast<ID3D12DescriptorHeap**>(&m_pd3d12DescriptorHeap)));
+    m_FirstCPUHandle = m_pd3d12DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
     if(m_HeapDesc.Flags & D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE)
         m_FirstGPUHandle = m_pd3d12DescriptorHeap->GetGPUDescriptorHandleForHeapStart();
 }
 
 // Uses subrange of descriptors in the existing D3D12 descriptor heap
 // that starts at offset FirstDescriptor and uses NumDescriptors descriptors
-DescriptorHeapAllocationManager::DescriptorHeapAllocationManager(IMemoryAllocator &Allocator, 
-                                                                 RenderDeviceD3D12Impl *pDeviceD3D12Impl,
-                                                                 IDescriptorAllocator *pParentAllocator,
-                                                                 size_t ThisManagerId,
-                                                                 ID3D12DescriptorHeap *pd3d12DescriptorHeap,
-                                                                 Uint32 FirstDescriptor,
-                                                                 Uint32 NumDescriptors): 
-    m_FreeBlockManager(NumDescriptors, Allocator),
-    m_NumDescriptorsInAllocation(NumDescriptors),
-    m_pDeviceD3D12Impl(pDeviceD3D12Impl),
-    m_pParentAllocator(pParentAllocator),
-    m_ThisManagerId(ThisManagerId),
-    m_pd3d12DescriptorHeap(pd3d12DescriptorHeap)
+DescriptorHeapAllocationManager::DescriptorHeapAllocationManager(IMemoryAllocator&      Allocator, 
+                                                                 RenderDeviceD3D12Impl* pDeviceD3D12Impl,
+                                                                 IDescriptorAllocator*  pParentAllocator,
+                                                                 size_t                 ThisManagerId,
+                                                                 ID3D12DescriptorHeap*  pd3d12DescriptorHeap,
+                                                                 Uint32                 FirstDescriptor,
+                                                                 Uint32                 NumDescriptors): 
+    m_FreeBlockManager           (NumDescriptors, Allocator),
+    m_NumDescriptorsInAllocation (NumDescriptors),
+    m_pDeviceD3D12Impl           (pDeviceD3D12Impl),
+    m_pParentAllocator           (pParentAllocator),
+    m_ThisManagerId              (ThisManagerId),
+    m_pd3d12DescriptorHeap       (pd3d12DescriptorHeap)
 {
     m_HeapDesc = m_pd3d12DescriptorHeap->GetDesc();
     m_DescriptorSize = pDeviceD3D12Impl->GetD3D12Device()->GetDescriptorHandleIncrementSize(m_HeapDesc.Type);
         
-	m_FirstCPUHandle = pd3d12DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+    m_FirstCPUHandle = pd3d12DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
     m_FirstCPUHandle.ptr += m_DescriptorSize * FirstDescriptor;
 
     if (m_HeapDesc.Flags & D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE)
@@ -111,7 +111,7 @@ DescriptorHeapAllocation DescriptorHeapAllocationManager::Allocate(uint32_t Coun
         GPUHandle.ptr += DescriptorHandleOffset * m_DescriptorSize;
 
     VERIFY(m_ThisManagerId < std::numeric_limits<Uint16>::max(), "ManagerID exceeds 16-bit range");
-	return DescriptorHeapAllocation( m_pParentAllocator, m_pd3d12DescriptorHeap, CPUHandle, GPUHandle, Count, static_cast<Uint16>(m_ThisManagerId));
+    return DescriptorHeapAllocation( m_pParentAllocator, m_pd3d12DescriptorHeap, CPUHandle, GPUHandle, Count, static_cast<Uint16>(m_ThisManagerId));
 }
 
 void DescriptorHeapAllocationManager::Free(DescriptorHeapAllocation&& Allocation)
@@ -123,8 +123,8 @@ void DescriptorHeapAllocationManager::Free(DescriptorHeapAllocation&& Allocation
 
     auto DescriptorOffset = (Allocation.GetCpuHandle().ptr - m_FirstCPUHandle.ptr) / m_DescriptorSize;
     
-	// Note that the allocation is not released immediately, but added to the release queue in the allocations manager
-	
+    // Note that the allocation is not released immediately, but added to the release queue in the allocations manager
+    
     // The following basic requirement guarantees correctness of resource deallocation:
     //
     //        A resource is never released before the last draw command referencing it is invoked on the immediate context
@@ -135,7 +135,7 @@ void DescriptorHeapAllocationManager::Free(DescriptorHeapAllocation&& Allocation
     // associated with the last command list that references descriptors from the allocation
     m_FreeBlockManager.Free(DescriptorOffset, Allocation.GetNumHandles(), m_pDeviceD3D12Impl->GetNextFenceValue());
     
-	// Clear the allocation
+    // Clear the allocation
     Allocation = DescriptorHeapAllocation();
 }
 
@@ -153,16 +153,20 @@ void DescriptorHeapAllocationManager::ReleaseStaleAllocations(Uint64 LastComplet
 //
 // CPUDescriptorHeap implementation
 //
-CPUDescriptorHeap::CPUDescriptorHeap(IMemoryAllocator &Allocator, RenderDeviceD3D12Impl *pDeviceD3D12Impl, Uint32 NumDescriptorsInHeap, D3D12_DESCRIPTOR_HEAP_TYPE Type, D3D12_DESCRIPTOR_HEAP_FLAGS Flags) : 
+CPUDescriptorHeap::CPUDescriptorHeap(IMemoryAllocator&           Allocator,
+                                     RenderDeviceD3D12Impl*      pDeviceD3D12Impl,
+                                     Uint32                      NumDescriptorsInHeap,
+                                     D3D12_DESCRIPTOR_HEAP_TYPE  Type,
+                                     D3D12_DESCRIPTOR_HEAP_FLAGS Flags) : 
     m_pDeviceD3D12Impl(pDeviceD3D12Impl), 
-    m_MemAllocator(Allocator),
+    m_MemAllocator    (Allocator),
     m_HeapPool(STD_ALLOCATOR_RAW_MEM(DescriptorHeapAllocationManager, GetRawAllocator(), "Allocator for vector<DescriptorHeapAllocationManager>")),
     m_AvailableHeaps(STD_ALLOCATOR_RAW_MEM(size_t, GetRawAllocator(), "Allocator for set<size_t>"))
 {
-    m_HeapDesc.Type = Type;
-    m_HeapDesc.NodeMask = 1;
+    m_HeapDesc.Type           = Type;
+    m_HeapDesc.NodeMask       = 1;
     m_HeapDesc.NumDescriptors = NumDescriptorsInHeap;
-    m_HeapDesc.Flags = Flags;
+    m_HeapDesc.Flags          = Flags;
 
     m_DescriptorSize  = m_pDeviceD3D12Impl->GetD3D12Device()->GetDescriptorHandleIncrementSize(Type);
 }
@@ -172,16 +176,16 @@ CPUDescriptorHeap::~CPUDescriptorHeap()
     VERIFY(m_CurrentSize == 0, "Not all allocations released" );
     
     VERIFY(m_AvailableHeaps.size() == m_HeapPool.size(), "Not all descriptor heap pools are released");
-	Uint32 TotalDescriptors = 0;
+    Uint32 TotalDescriptors = 0;
     for (auto HeapPoolIt = m_HeapPool.begin(); HeapPoolIt != m_HeapPool.end(); ++HeapPoolIt)
     {
         VERIFY(HeapPoolIt->GetNumAvailableDescriptors() == HeapPoolIt->GetMaxDescriptors(), "Not all descriptors in the descriptor pool are released");
-		TotalDescriptors += HeapPoolIt->GetMaxDescriptors();
-	}
+        TotalDescriptors += HeapPoolIt->GetMaxDescriptors();
+    }
     TotalDescriptors = std::max(TotalDescriptors, 1u);
 
     LOG_INFO_MESSAGE(GetD3D12DescriptorHeapTypeLiteralName(m_HeapDesc.Type), " CPU heap max size: ", m_MaxHeapSize, " (", m_MaxHeapSize*100/ TotalDescriptors, "%) "
-					 ". Max stale size: ", m_MaxStaleSize, " (", m_MaxStaleSize * 100 / TotalDescriptors, "%)");
+                     ". Max stale size: ", m_MaxStaleSize, " (", m_MaxStaleSize * 100 / TotalDescriptors, "%)");
 }
 
 DescriptorHeapAllocation CPUDescriptorHeap::Allocate( uint32_t Count )
@@ -247,28 +251,28 @@ void CPUDescriptorHeap::Free(DescriptorHeapAllocation&& Allocation)
 void CPUDescriptorHeap::ReleaseStaleAllocations(Uint64 LastCompletedFenceValue)
 {
     std::lock_guard<std::mutex> LockGuard(m_AllocationMutex);
-	size_t StaleSize = 0;
+    size_t StaleSize = 0;
     for (size_t HeapManagerInd = 0; HeapManagerInd < m_HeapPool.size(); ++HeapManagerInd)
     {
-		// Update size before releasing stale allocations	
-		StaleSize += m_HeapPool[HeapManagerInd].GetNumStaleDescriptors();
+        // Update size before releasing stale allocations	
+        StaleSize += m_HeapPool[HeapManagerInd].GetNumStaleDescriptors();
 
         m_HeapPool[HeapManagerInd].ReleaseStaleAllocations(LastCompletedFenceValue);
         // Return the manager to the pool of available managers if it has available descriptors
         if(m_HeapPool[HeapManagerInd].GetNumAvailableDescriptors() > 0)
             m_AvailableHeaps.insert(HeapManagerInd);
     }
-	m_MaxStaleSize = std::max(m_MaxStaleSize, static_cast<Uint32>(StaleSize));
+    m_MaxStaleSize = std::max(m_MaxStaleSize, static_cast<Uint32>(StaleSize));
 }
 
 
 
 
-GPUDescriptorHeap::GPUDescriptorHeap(IMemoryAllocator &Allocator, 
-                                     RenderDeviceD3D12Impl *pDevice, 
-                                     Uint32 NumDescriptorsInHeap, 
-                                     Uint32 NumDynamicDescriptors,
-                                     D3D12_DESCRIPTOR_HEAP_TYPE Type, 
+GPUDescriptorHeap::GPUDescriptorHeap(IMemoryAllocator&           Allocator, 
+                                     RenderDeviceD3D12Impl*      pDevice, 
+                                     Uint32                      NumDescriptorsInHeap, 
+                                     Uint32                      NumDynamicDescriptors,
+                                     D3D12_DESCRIPTOR_HEAP_TYPE  Type, 
                                      D3D12_DESCRIPTOR_HEAP_FLAGS Flags) :
     m_pDeviceD3D12(pDevice),
     m_HeapDesc
@@ -291,13 +295,13 @@ GPUDescriptorHeap::GPUDescriptorHeap(IMemoryAllocator &Allocator,
 
 GPUDescriptorHeap::~GPUDescriptorHeap()
 {
-	auto StaticSize = m_HeapAllocationManager.GetMaxDescriptors();
-	auto DynamicSize = m_DynamicAllocationsManager.GetMaxDescriptors();
+    auto StaticSize = m_HeapAllocationManager.GetMaxDescriptors();
+    auto DynamicSize = m_DynamicAllocationsManager.GetMaxDescriptors();
     LOG_INFO_MESSAGE(GetD3D12DescriptorHeapTypeLiteralName(m_HeapDesc.Type), " GPU heap max allocated size (static|dynamic): ", 
-		            m_MaxHeapSize, " (", m_MaxHeapSize * 100 / StaticSize,"%) | ",
-					m_MaxDynamicSize, " (", m_MaxDynamicSize * 100 / DynamicSize, "%). Max stale size (static|dynamic): ", 
-		            m_MaxStaleSize, " (", m_MaxStaleSize * 100 / StaticSize, "%) | ", 
-					m_MaxDynamicStaleSize, " (", m_MaxDynamicStaleSize * 100 / DynamicSize, "%)");
+                     m_MaxHeapSize, " (", m_MaxHeapSize * 100 / StaticSize,"%) | ",
+                     m_MaxDynamicSize, " (", m_MaxDynamicSize * 100 / DynamicSize, "%). Max stale size (static|dynamic): ", 
+                     m_MaxStaleSize, " (", m_MaxStaleSize * 100 / StaticSize, "%) | ", 
+                     m_MaxDynamicStaleSize, " (", m_MaxDynamicStaleSize * 100 / DynamicSize, "%)");
 }
 
 DescriptorHeapAllocation GPUDescriptorHeap::Allocate(uint32_t Count)
@@ -352,13 +356,13 @@ void GPUDescriptorHeap::ReleaseStaleAllocations(Uint64 LastCompletedFenceValue)
 {
     {
         std::lock_guard<std::mutex> LockGuard(m_AllocMutex);
-		m_MaxStaleSize = std::max(m_MaxStaleSize, static_cast<Uint32>(m_HeapAllocationManager.GetNumStaleDescriptors()));
+        m_MaxStaleSize = std::max(m_MaxStaleSize, static_cast<Uint32>(m_HeapAllocationManager.GetNumStaleDescriptors()));
         m_HeapAllocationManager.ReleaseStaleAllocations(LastCompletedFenceValue);
     }
 
     {
         std::lock_guard<std::mutex> LockGuard(m_DynAllocMutex);
-		m_MaxDynamicStaleSize = std::max(m_MaxDynamicStaleSize, static_cast<Uint32>(m_DynamicAllocationsManager.GetNumStaleDescriptors()));
+        m_MaxDynamicStaleSize = std::max(m_MaxDynamicStaleSize, static_cast<Uint32>(m_DynamicAllocationsManager.GetNumStaleDescriptors()));
         m_DynamicAllocationsManager.ReleaseStaleAllocations(LastCompletedFenceValue);
     }
 }
@@ -413,7 +417,7 @@ DescriptorHeapAllocation DynamicSuballocationsManager::Allocate(Uint32 Count)
                                          CurrentSuballocation.GetGpuHandle(m_CurrentSuballocationOffset), 
                                          Count, 
                                          static_cast<Uint16>(ManagerId) );
-	m_CurrentSuballocationOffset += Count;
+    m_CurrentSuballocationOffset += Count;
 
     return Allocation;
 }

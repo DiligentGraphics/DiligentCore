@@ -35,16 +35,33 @@
 namespace Diligent
 {
 
-BufferD3D12Impl :: BufferD3D12Impl(IReferenceCounters *pRefCounters, 
-                                   FixedBlockMemoryAllocator &BuffViewObjMemAllocator, 
-                                   RenderDeviceD3D12Impl *pRenderDeviceD3D12, 
-                                   const BufferDesc& BuffDesc, 
-                                   const BufferData &BuffData /*= BufferData()*/) : 
-    TBufferBase(pRefCounters, BuffViewObjMemAllocator, pRenderDeviceD3D12, BuffDesc, false),
+BufferD3D12Impl :: BufferD3D12Impl(IReferenceCounters*          pRefCounters, 
+                                   FixedBlockMemoryAllocator&   BuffViewObjMemAllocator, 
+                                   RenderDeviceD3D12Impl*       pRenderDeviceD3D12, 
+                                   const BufferDesc&            BuffDesc, 
+                                   const BufferData&            BuffData /*= BufferData()*/) : 
+    TBufferBase
+    {
+        pRefCounters,
+        BuffViewObjMemAllocator,
+        pRenderDeviceD3D12,
+        BuffDesc,
+        false
+    },
 #ifdef _DEBUG
-    m_DbgMapType(1 + pRenderDeviceD3D12->GetNumDeferredContexts(), std::make_pair(static_cast<MAP_TYPE>(-1), static_cast<Uint32>(-1)), STD_ALLOCATOR_RAW_MEM(DynamicAllocation, GetRawAllocator(), "Allocator for vector<pair<MAP_TYPE,Uint32>>")),
+    m_DbgMapType
+    {
+        1 + pRenderDeviceD3D12->GetNumDeferredContexts(),
+        std::make_pair(static_cast<MAP_TYPE>(-1), static_cast<Uint32>(-1)),
+        STD_ALLOCATOR_RAW_MEM(DynamicAllocation, GetRawAllocator(), "Allocator for vector<pair<MAP_TYPE,Uint32>>")
+    },
 #endif
-    m_DynamicData(BuffDesc.Usage == USAGE_DYNAMIC ? (1 + pRenderDeviceD3D12->GetNumDeferredContexts()) : 0, DynamicAllocation(), STD_ALLOCATOR_RAW_MEM(DynamicAllocation, GetRawAllocator(), "Allocator for vector<DynamicAllocation>"))
+    m_DynamicData
+    {
+        BuffDesc.Usage == USAGE_DYNAMIC ? (1 + pRenderDeviceD3D12->GetNumDeferredContexts()) : 0,
+        DynamicAllocation(),
+        STD_ALLOCATOR_RAW_MEM(DynamicAllocation, GetRawAllocator(), "Allocator for vector<DynamicAllocation>")
+    }
 {
 #define LOG_BUFFER_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Buffer \"", BuffDesc.Name ? BuffDesc.Name : "", "\": ", ##__VA_ARGS__);
 
@@ -87,14 +104,14 @@ BufferD3D12Impl :: BufferD3D12Impl(IReferenceCounters *pRefCounters,
     else
     {
         D3D12_RESOURCE_DESC D3D12BuffDesc = {};
-        D3D12BuffDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-        D3D12BuffDesc.Alignment = 0;
-        D3D12BuffDesc.Width = m_Desc.uiSizeInBytes;
-        D3D12BuffDesc.Height = 1;
-        D3D12BuffDesc.DepthOrArraySize = 1;
-        D3D12BuffDesc.MipLevels = 1;
-        D3D12BuffDesc.Format = DXGI_FORMAT_UNKNOWN;
-        D3D12BuffDesc.SampleDesc.Count = 1;
+        D3D12BuffDesc.Dimension          = D3D12_RESOURCE_DIMENSION_BUFFER;
+        D3D12BuffDesc.Alignment          = 0;
+        D3D12BuffDesc.Width              = m_Desc.uiSizeInBytes;
+        D3D12BuffDesc.Height             = 1;
+        D3D12BuffDesc.DepthOrArraySize   = 1;
+        D3D12BuffDesc.MipLevels          = 1;
+        D3D12BuffDesc.Format             = DXGI_FORMAT_UNKNOWN;
+        D3D12BuffDesc.SampleDesc.Count   = 1;
         D3D12BuffDesc.SampleDesc.Quality = 0;
         // Layout must be D3D12_TEXTURE_LAYOUT_ROW_MAJOR, as buffer memory layouts are 
         // understood by applications and row-major texture data is commonly marshaled through buffers.
@@ -120,7 +137,7 @@ BufferD3D12Impl :: BufferD3D12Impl(IReferenceCounters *pRefCounters,
 	    HeapProps.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
 	    HeapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
 	    HeapProps.CreationNodeMask = 1;
-	    HeapProps.VisibleNodeMask = 1;
+	    HeapProps.VisibleNodeMask  = 1;
 
         bool bInitializeBuffer = (BuffData.pData != nullptr && BuffData.DataSize > 0);
         if(bInitializeBuffer)
@@ -137,11 +154,11 @@ BufferD3D12Impl :: BufferD3D12Impl(IReferenceCounters *pRefCounters,
 	    if( bInitializeBuffer )
         {
             D3D12_HEAP_PROPERTIES UploadHeapProps;
-	        UploadHeapProps.Type = D3D12_HEAP_TYPE_UPLOAD;
-	        UploadHeapProps.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+	        UploadHeapProps.Type                 = D3D12_HEAP_TYPE_UPLOAD;
+	        UploadHeapProps.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
 	        UploadHeapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-	        UploadHeapProps.CreationNodeMask = 1;
-	        UploadHeapProps.VisibleNodeMask = 1;
+	        UploadHeapProps.CreationNodeMask     = 1;
+	        UploadHeapProps.VisibleNodeMask         = 1;
 
             D3D12BuffDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
             CComPtr<ID3D12Resource> UploadBuffer;
@@ -200,7 +217,7 @@ BufferD3D12Impl :: BufferD3D12Impl(IReferenceCounters *pRefCounters,
     }
 }
 
-static BufferDesc BufferDescFromD3D12Resource(BufferDesc BuffDesc, ID3D12Resource *pd3d12Buffer)
+static BufferDesc BufferDescFromD3D12Resource(BufferDesc BuffDesc, ID3D12Resource* pd3d12Buffer)
 {
     VERIFY(BuffDesc.Usage != USAGE_DYNAMIC, "Dynamic buffers cannot be attached to native d3d12 resource");
 
@@ -241,16 +258,28 @@ static BufferDesc BufferDescFromD3D12Resource(BufferDesc BuffDesc, ID3D12Resourc
     return BuffDesc;
 }
 
-BufferD3D12Impl :: BufferD3D12Impl(IReferenceCounters *pRefCounters, 
-                                   FixedBlockMemoryAllocator &BuffViewObjMemAllocator, 
-                                   RenderDeviceD3D12Impl *pRenderDeviceD3D12, 
-                                   const BufferDesc& BuffDesc,
-                                   ID3D12Resource *pd3d12Buffer) : 
-    TBufferBase(pRefCounters, BuffViewObjMemAllocator, pRenderDeviceD3D12, BufferDescFromD3D12Resource(BuffDesc, pd3d12Buffer), false),
+BufferD3D12Impl :: BufferD3D12Impl(IReferenceCounters*        pRefCounters, 
+                                   FixedBlockMemoryAllocator& BuffViewObjMemAllocator, 
+                                   RenderDeviceD3D12Impl*     pRenderDeviceD3D12, 
+                                   const BufferDesc&          BuffDesc,
+                                   ID3D12Resource*            pd3d12Buffer) : 
+    TBufferBase
+    {
+        pRefCounters,
+        BuffViewObjMemAllocator,
+        pRenderDeviceD3D12,
+        BufferDescFromD3D12Resource(BuffDesc, pd3d12Buffer),
+        false
+    },
 #ifdef _DEBUG
     m_DbgMapType(1 + pRenderDeviceD3D12->GetNumDeferredContexts(), std::make_pair(static_cast<MAP_TYPE>(-1), static_cast<Uint32>(-1)), STD_ALLOCATOR_RAW_MEM(DynamicAllocation, GetRawAllocator(), "Allocator for vector<pair<MAP_TYPE,Uint32>>")),
 #endif
-    m_DynamicData(BuffDesc.Usage == USAGE_DYNAMIC ? (1 + pRenderDeviceD3D12->GetNumDeferredContexts()) : 0, DynamicAllocation(), STD_ALLOCATOR_RAW_MEM(DynamicAllocation, GetRawAllocator(), "Allocator for vector<DynamicAllocation>"))
+    m_DynamicData
+    {
+        BuffDesc.Usage == USAGE_DYNAMIC ? (1 + pRenderDeviceD3D12->GetNumDeferredContexts()) : 0,
+        DynamicAllocation(),
+        STD_ALLOCATOR_RAW_MEM(DynamicAllocation, GetRawAllocator(), "Allocator for vector<DynamicAllocation>")
+    }
 {
     m_pd3d12Resource = pd3d12Buffer;
 
@@ -269,7 +298,7 @@ BufferD3D12Impl :: ~BufferD3D12Impl()
 
 IMPLEMENT_QUERY_INTERFACE( BufferD3D12Impl, IID_BufferD3D12, TBufferBase )
 
-void BufferD3D12Impl::UpdateData( IDeviceContext *pContext, Uint32 Offset, Uint32 Size, const PVoid pData )
+void BufferD3D12Impl::UpdateData( IDeviceContext* pContext, Uint32 Offset, Uint32 Size, const PVoid pData )
 {
     TBufferBase::UpdateData( pContext, Offset, Size, pData );
 
@@ -279,14 +308,14 @@ void BufferD3D12Impl::UpdateData( IDeviceContext *pContext, Uint32 Offset, Uint3
     pDeviceContextD3D12->UpdateBufferRegion(this, pData, Offset, Size);
 }
 
-void BufferD3D12Impl :: CopyData(IDeviceContext *pContext, IBuffer *pSrcBuffer, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size)
+void BufferD3D12Impl :: CopyData(IDeviceContext* pContext, IBuffer *pSrcBuffer, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size)
 {
     TBufferBase::CopyData( pContext, pSrcBuffer, SrcOffset, DstOffset, Size );
     auto *pDeviceContextD3D12 = ValidatedCast<DeviceContextD3D12Impl>(pContext);
     pDeviceContextD3D12->CopyBufferRegion(ValidatedCast<BufferD3D12Impl>(pSrcBuffer), this, SrcOffset, DstOffset, Size);
 }
 
-void BufferD3D12Impl :: Map(IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid &pMappedData)
+void BufferD3D12Impl :: Map(IDeviceContext* pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid &pMappedData)
 {
     TBufferBase::Map( pContext, MapType, MapFlags, pMappedData );
     auto *pDeviceContextD3D12 = ValidatedCast<DeviceContextD3D12Impl>(pContext);
@@ -341,7 +370,7 @@ void BufferD3D12Impl :: Map(IDeviceContext *pContext, MAP_TYPE MapType, Uint32 M
     }
 }
 
-void BufferD3D12Impl::Unmap( IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags )
+void BufferD3D12Impl::Unmap( IDeviceContext* pContext, MAP_TYPE MapType, Uint32 MapFlags )
 {
     TBufferBase::Unmap( pContext, MapType, MapFlags );
     auto *pDeviceContextD3D12 = ValidatedCast<DeviceContextD3D12Impl>(pContext);
@@ -386,7 +415,7 @@ void BufferD3D12Impl::Unmap( IDeviceContext *pContext, MAP_TYPE MapType, Uint32 
 #endif
 }
 
-void BufferD3D12Impl::CreateViewInternal( const BufferViewDesc &OrigViewDesc, IBufferView **ppView, bool bIsDefaultView )
+void BufferD3D12Impl::CreateViewInternal( const BufferViewDesc& OrigViewDesc, IBufferView** ppView, bool bIsDefaultView )
 {
     VERIFY( ppView != nullptr, "Null pointer provided" );
     if( !ppView )return;
@@ -426,7 +455,7 @@ void BufferD3D12Impl::CreateViewInternal( const BufferViewDesc &OrigViewDesc, IB
     }
 }
 
-void BufferD3D12Impl::CreateUAV( BufferViewDesc &UAVDesc, D3D12_CPU_DESCRIPTOR_HANDLE UAVDescriptor )
+void BufferD3D12Impl::CreateUAV( BufferViewDesc& UAVDesc, D3D12_CPU_DESCRIPTOR_HANDLE UAVDescriptor )
 {
     CorrectBufferViewDesc( UAVDesc );
 
@@ -437,7 +466,7 @@ void BufferD3D12Impl::CreateUAV( BufferViewDesc &UAVDesc, D3D12_CPU_DESCRIPTOR_H
     pDeviceD3D12->CreateUnorderedAccessView( m_pd3d12Resource, nullptr, &D3D12_UAVDesc, UAVDescriptor );
 }
 
-void BufferD3D12Impl::CreateSRV( struct BufferViewDesc &SRVDesc, D3D12_CPU_DESCRIPTOR_HANDLE SRVDescriptor )
+void BufferD3D12Impl::CreateSRV( struct BufferViewDesc& SRVDesc, D3D12_CPU_DESCRIPTOR_HANDLE SRVDescriptor )
 {
     CorrectBufferViewDesc( SRVDesc );
 
@@ -467,6 +496,5 @@ void BufferD3D12Impl::DbgVerifyDynamicAllocation(Uint32 ContextId)const
     VERIFY(GetState() == D3D12_RESOURCE_STATE_GENERIC_READ, "Dynamic buffers are expected to always be in D3D12_RESOURCE_STATE_GENERIC_READ state");
 }
 #endif
-
 
 }

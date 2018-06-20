@@ -36,7 +36,9 @@ namespace Diligent
 {
 
 
-ShaderD3D12Impl::ShaderD3D12Impl(IReferenceCounters *pRefCounters, RenderDeviceD3D12Impl *pRenderDeviceD3D12, const ShaderCreationAttribs &ShaderCreationAttribs) : 
+ShaderD3D12Impl::ShaderD3D12Impl(IReferenceCounters*          pRefCounters,
+                                 RenderDeviceD3D12Impl*       pRenderDeviceD3D12,
+                                 const ShaderCreationAttribs& ShaderCreationAttribs) : 
     TShaderBase(pRefCounters, pRenderDeviceD3D12, ShaderCreationAttribs.Desc),
     ShaderD3DBase(ShaderCreationAttribs),
     m_StaticResLayout(*this, GetRawAllocator()),
