@@ -52,16 +52,16 @@ class TextureBaseD3D11 : public TextureBase<ITextureD3D11, TextureViewD3D11Impl,
 public:
     typedef TextureBase<ITextureD3D11, TextureViewD3D11Impl, FixedBlockMemoryAllocator> TTextureBase;
 
-    TextureBaseD3D11(IReferenceCounters *pRefCounters,
-                     FixedBlockMemoryAllocator &TexViewObjAllocator, 
-                     class RenderDeviceD3D11Impl *pDeviceD3D11, 
-                     const TextureDesc& TexDesc, 
-                     const TextureData &InitData = TextureData());
+    TextureBaseD3D11(IReferenceCounters*          pRefCounters,
+                     FixedBlockMemoryAllocator&   TexViewObjAllocator, 
+                     class RenderDeviceD3D11Impl* pDeviceD3D11, 
+                     const TextureDesc&           TexDesc, 
+                     const TextureData&           InitData = TextureData());
     ~TextureBaseD3D11();
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
 
-    virtual void UpdateData( IDeviceContext *pContext, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData )override final;
+    virtual void UpdateData( IDeviceContext *pContext, Uint32 MipLevel, Uint32 Slice, const Box& DstBox, const TextureSubResData& SubresData )override final;
 
     //virtual void CopyData(CTexture *pSrcTexture, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size);
     virtual void Map( IDeviceContext *pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags, MappedTextureSubresource &MappedData )override final;
@@ -71,19 +71,19 @@ public:
 
     virtual void* GetNativeHandle()override final { return GetD3D11Texture(); }
 
-    void CopyData(IDeviceContext *pContext, 
-                          ITexture *pSrcTexture, 
-                          Uint32 SrcMipLevel,
-                          Uint32 SrcSlice,
-                          const Box *pSrcBox,
-                          Uint32 DstMipLevel,
-                          Uint32 DstSlice,
-                          Uint32 DstX,
-                          Uint32 DstY,
-                          Uint32 DstZ);
+    void CopyData(IDeviceContext* pContext, 
+                  ITexture*       pSrcTexture, 
+                  Uint32          SrcMipLevel,
+                  Uint32          SrcSlice,
+                  const Box*      pSrcBox,
+                  Uint32          DstMipLevel,
+                  Uint32          DstSlice,
+                  Uint32          DstX,
+                  Uint32          DstY,
+                  Uint32          DstZ);
 
     void ResetState(D3D11TextureState State){m_State = static_cast<Uint32>(State);}
-    void AddState(D3D11TextureState State){m_State |= static_cast<Uint32>(State);}
+    void AddState(D3D11TextureState State)  {m_State |= static_cast<Uint32>(State);}
     void ClearState(D3D11TextureState State){m_State &= ~static_cast<Uint32>(State);}
     bool CheckState(D3D11TextureState State){return (m_State & static_cast<Uint32>(State)) ? true : false;}
 
@@ -92,10 +92,10 @@ protected:
     void PrepareD3D11InitData(const TextureData &InitData, Uint32 NumSubresources, 
                               std::vector<D3D11_SUBRESOURCE_DATA, STDAllocatorRawMem<D3D11_SUBRESOURCE_DATA> > &D3D11InitData);
 
-    virtual void CreateSRV( TextureViewDesc &SRVDesc, ID3D11ShaderResourceView  **ppD3D11SRV ) = 0;
-    virtual void CreateRTV( TextureViewDesc &RTVDesc, ID3D11RenderTargetView    **ppD3D11RTV ) = 0;
-    virtual void CreateDSV( TextureViewDesc &DSVDesc, ID3D11DepthStencilView    **ppD3D11DSV ) = 0;
-    virtual void CreateUAV( TextureViewDesc &UAVDesc, ID3D11UnorderedAccessView **ppD3D11UAV ) = 0;
+    virtual void CreateSRV( TextureViewDesc& SRVDesc, ID3D11ShaderResourceView**  ppD3D11SRV ) = 0;
+    virtual void CreateRTV( TextureViewDesc& RTVDesc, ID3D11RenderTargetView**    ppD3D11RTV ) = 0;
+    virtual void CreateDSV( TextureViewDesc& DSVDesc, ID3D11DepthStencilView**    ppD3D11DSV ) = 0;
+    virtual void CreateUAV( TextureViewDesc& UAVDesc, ID3D11UnorderedAccessView** ppD3D11UAV ) = 0;
 
     friend class RenderDeviceD3D11Impl;
     /// D3D11 texture

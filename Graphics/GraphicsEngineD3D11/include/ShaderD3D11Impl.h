@@ -47,10 +47,12 @@ class ShaderD3D11Impl : public ShaderBase<IShaderD3D11, IRenderDeviceD3D11>, pub
 public:
     typedef ShaderBase<IShaderD3D11, IRenderDeviceD3D11> TShaderBase;
 
-    ShaderD3D11Impl(IReferenceCounters *pRefCounters, class RenderDeviceD3D11Impl *pRenderDeviceD3D11, const ShaderCreationAttribs &CreationAttribs);
+    ShaderD3D11Impl(IReferenceCounters*          pRefCounters,
+                    class RenderDeviceD3D11Impl* pRenderDeviceD3D11,
+                    const ShaderCreationAttribs& CreationAttribs);
     ~ShaderD3D11Impl();
     
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
+    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject** ppInterface )override final;
 
     virtual void BindResources( IResourceMapping* pResourceMapping, Uint32 Flags  )override final;
     

@@ -45,32 +45,32 @@ class IEngineFactoryD3D11
 {
 public:
     virtual void CreateDeviceAndContextsD3D11( const EngineD3D11Attribs& EngineAttribs, 
-                                               IRenderDevice **ppDevice, 
-                                               IDeviceContext **ppContexts,
-                                               Uint32 NumDeferredContexts ) = 0;
+                                               IRenderDevice**           ppDevice, 
+                                               IDeviceContext**          ppContexts,
+                                               Uint32                    NumDeferredContexts ) = 0;
 
-   virtual void CreateSwapChainD3D11( IRenderDevice *pDevice, 
-                                      IDeviceContext *pImmediateContext, 
-                                      const SwapChainDesc& SCDesc, 
+   virtual void CreateSwapChainD3D11( IRenderDevice*            pDevice, 
+                                      IDeviceContext*           pImmediateContext, 
+                                      const SwapChainDesc&      SCDesc, 
                                       const FullScreenModeDesc& FSDesc,
-                                      void* pNativeWndHandle, 
-                                      ISwapChain **ppSwapChain ) = 0;
+                                      void*                     pNativeWndHandle, 
+                                      ISwapChain**              ppSwapChain ) = 0;
 
-   virtual void AttachToD3D11Device(void *pd3d11NativeDevice, 
-                                    void *pd3d11ImmediateContext,
+   virtual void AttachToD3D11Device(void*                     pd3d11NativeDevice, 
+                                    void*                     pd3d11ImmediateContext,
                                     const EngineD3D11Attribs& EngineAttribs, 
-                                    IRenderDevice **ppDevice, 
-                                    IDeviceContext **ppContexts,
-                                    Uint32 NumDeferredContexts) = 0;
+                                    IRenderDevice**           ppDevice, 
+                                    IDeviceContext**          ppContexts,
+                                    Uint32                    NumDeferredContexts) = 0;
 
-   virtual void EnumerateHardwareAdapters(Uint32 &NumAdapters, 
-                                          HardwareAdapterAttribs *Adapters) = 0;
+   virtual void EnumerateHardwareAdapters(Uint32&                 NumAdapters, 
+                                          HardwareAdapterAttribs* Adapters) = 0;
 
-   virtual void EnumerateDisplayModes(Uint32 AdapterId, 
-                                      Uint32 OutputId, 
-                                      TEXTURE_FORMAT Format, 
-                                      Uint32 &NumDisplayModes, 
-                                      DisplayModeAttribs *DisplayModes) = 0;
+   virtual void EnumerateDisplayModes(Uint32              AdapterId, 
+                                      Uint32              OutputId, 
+                                      TEXTURE_FORMAT      Format, 
+                                      Uint32&             NumDisplayModes, 
+                                      DisplayModeAttribs* DisplayModes) = 0;
 };
 
 #if ENGINE_DLL

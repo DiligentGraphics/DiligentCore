@@ -35,22 +35,23 @@ namespace Diligent
 class Texture1D_D3D11 : public TextureBaseD3D11
 {
 public:
-    Texture1D_D3D11(IReferenceCounters *pRefCounters, 
-                    FixedBlockMemoryAllocator &TexViewObjAllocator, 
-                    class RenderDeviceD3D11Impl *pDeviceD3D11, 
-                    const TextureDesc& TexDesc, 
-                    const TextureData &InitData = TextureData());
-    Texture1D_D3D11(IReferenceCounters *pRefCounters, 
-                    FixedBlockMemoryAllocator &TexViewObjAllocator, 
-                    class RenderDeviceD3D11Impl *pDeviceD3D11, 
-                    ID3D11Texture1D *pd3d11Texture);
+    Texture1D_D3D11(IReferenceCounters*          pRefCounters, 
+                    FixedBlockMemoryAllocator&   TexViewObjAllocator, 
+                    class RenderDeviceD3D11Impl* pDeviceD3D11, 
+                    const TextureDesc&           TexDesc, 
+                    const TextureData&           InitData = TextureData());
+
+    Texture1D_D3D11(IReferenceCounters*          pRefCounters, 
+                    FixedBlockMemoryAllocator&   TexViewObjAllocator, 
+                    class RenderDeviceD3D11Impl* pDeviceD3D11, 
+                    ID3D11Texture1D*             pd3d11Texture);
     ~Texture1D_D3D11();
 
 protected:
-    virtual void CreateSRV( TextureViewDesc &SRVDesc, ID3D11ShaderResourceView   **ppD3D11SRV )override final;
-    virtual void CreateRTV( TextureViewDesc &RTVDesc, ID3D11RenderTargetView     **ppD3D11RTV )override final;
-    virtual void CreateDSV( TextureViewDesc &DSVDesc, ID3D11DepthStencilView     **ppD3D11DSV )override final;
-    virtual void CreateUAV( TextureViewDesc &UAVDesc, ID3D11UnorderedAccessView  **ppD3D11UAV )override final;
+    virtual void CreateSRV( TextureViewDesc& SRVDesc, ID3D11ShaderResourceView**  ppD3D11SRV )override final;
+    virtual void CreateRTV( TextureViewDesc& RTVDesc, ID3D11RenderTargetView**    ppD3D11RTV )override final;
+    virtual void CreateDSV( TextureViewDesc& DSVDesc, ID3D11DepthStencilView**    ppD3D11DSV )override final;
+    virtual void CreateUAV( TextureViewDesc& UAVDesc, ID3D11UnorderedAccessView** ppD3D11UAV )override final;
 };
 
 }

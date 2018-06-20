@@ -30,14 +30,16 @@
 namespace Diligent
 {
 
-PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters *pRefCounters, RenderDeviceD3D11Impl *pRenderDeviceD3D11, const PipelineStateDesc& PipelineDesc) : 
+PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*      pRefCounters,
+                                               RenderDeviceD3D11Impl*   pRenderDeviceD3D11,
+                                               const PipelineStateDesc& PipelineDesc) : 
     TPipelineStateBase(pRefCounters, pRenderDeviceD3D11, PipelineDesc),
     m_pDefaultShaderResBinding( nullptr, STDDeleter<ShaderResourceBindingD3D11Impl, FixedBlockMemoryAllocator>(pRenderDeviceD3D11->GetSRBAllocator()) ),
     m_DummyShaderVar(*this)
 {
     if (PipelineDesc.IsComputePipeline)
     {
-        auto *pCS = ValidatedCast<ShaderD3D11Impl>(PipelineDesc.ComputePipeline.pCS);
+        auto* pCS = ValidatedCast<ShaderD3D11Impl>(PipelineDesc.ComputePipeline.pCS);
         m_pCS = pCS;
         if (m_pCS == nullptr)
         {
@@ -55,7 +57,7 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters *pRefCounters,
 
 #define INIT_SHADER(ShortName, ExpectedType)\
         {                                   \
-            auto *pShader = ValidatedCast<ShaderD3D11Impl>(PipelineDesc.GraphicsPipeline.p##ShortName); \
+            auto* pShader = ValidatedCast<ShaderD3D11Impl>(PipelineDesc.GraphicsPipeline.p##ShortName); \
             m_p##ShortName = pShader;  \
             if (m_p##ShortName && m_p##ShortName->GetDesc().ShaderType != ExpectedType)   \
             {   \
@@ -77,7 +79,7 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters *pRefCounters,
             LOG_ERROR_AND_THROW("Vertex shader is null");
         }
 
-        auto *pDeviceD3D11 = pRenderDeviceD3D11->GetD3D11Device();
+        auto* pDeviceD3D11 = pRenderDeviceD3D11->GetD3D11Device();
         D3D11_BLEND_DESC D3D11BSDesc = {};
         BlendStateDesc_To_D3D11_BLEND_DESC(PipelineDesc.GraphicsPipeline.BlendDesc, D3D11BSDesc);
         CHECK_D3D_RESULT_THROW( pDeviceD3D11->CreateBlendState( &D3D11BSDesc, &m_pd3d11BlendState ), 
@@ -100,7 +102,7 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters *pRefCounters,
             std::vector<D3D11_INPUT_ELEMENT_DESC, STDAllocatorRawMem<D3D11_INPUT_ELEMENT_DESC> > d311InputElements(STD_ALLOCATOR_RAW_MEM(D3D11_INPUT_ELEMENT_DESC, GetRawAllocator(), "Allocator for vector<D3D11_INPUT_ELEMENT_DESC>") );
             LayoutElements_To_D3D11_INPUT_ELEMENT_DESCs(m_LayoutElements, d311InputElements);
 
-            ID3DBlob *pVSByteCode = m_pVS.RawPtr<ShaderD3D11Impl>()->GetBytecode();
+            ID3DBlob* pVSByteCode = m_pVS.RawPtr<ShaderD3D11Impl>()->GetBytecode();
             if( !pVSByteCode )
                 LOG_ERROR_AND_THROW( "Vertex Shader byte code does not exist" );
 
@@ -167,7 +169,7 @@ ID3D11InputLayout* PipelineStateD3D11Impl::GetD3D11InputLayout()
     return m_pd3d11InputLayout;
 }
 
-void PipelineStateD3D11Impl::BindShaderResources(IResourceMapping *pResourceMapping, Uint32 Flags)
+void PipelineStateD3D11Impl::BindShaderResources(IResourceMapping* pResourceMapping, Uint32 Flags)
 {
     if( m_Desc.IsComputePipeline )
     { 
@@ -183,22 +185,22 @@ void PipelineStateD3D11Impl::BindShaderResources(IResourceMapping *pResourceMapp
     }
 }
 
-void PipelineStateD3D11Impl::CreateShaderResourceBinding(IShaderResourceBinding **ppShaderResourceBinding)
+void PipelineStateD3D11Impl::CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding)
 {
-    auto *pRenderDeviceD3D11 = ValidatedCast<RenderDeviceD3D11Impl>( GetDevice() );
+    auto* pRenderDeviceD3D11 = ValidatedCast<RenderDeviceD3D11Impl>( GetDevice() );
     auto &SRBAllocator = pRenderDeviceD3D11->GetSRBAllocator();
     auto pShaderResBinding = NEW_RC_OBJ(SRBAllocator, "ShaderResourceBindingD3D11Impl instance", ShaderResourceBindingD3D11Impl)(this, false);
     pShaderResBinding->QueryInterface(IID_ShaderResourceBinding, reinterpret_cast<IObject**>(static_cast<IShaderResourceBinding**>(ppShaderResourceBinding)));
 }
 
-bool PipelineStateD3D11Impl::IsCompatibleWith(const IPipelineState *pPSO)const
+bool PipelineStateD3D11Impl::IsCompatibleWith(const IPipelineState* pPSO)const
 {
     VERIFY_EXPR(pPSO != nullptr);
 
     if (pPSO == this)
         return true;
     
-    const PipelineStateD3D11Impl *pPSOD3D11 = ValidatedCast<const PipelineStateD3D11Impl>(pPSO);
+    const PipelineStateD3D11Impl* pPSOD3D11 = ValidatedCast<const PipelineStateD3D11Impl>(pPSO);
     if (m_ShaderResourceLayoutHash != pPSOD3D11->m_ShaderResourceLayoutHash)
         return false;
 
@@ -207,12 +209,12 @@ bool PipelineStateD3D11Impl::IsCompatibleWith(const IPipelineState *pPSO)const
 
     for (Uint32 s = 0; s < m_NumShaders; ++s)
     {
-        auto *pShader0 = ValidatedCast<ShaderD3D11Impl>(m_ppShaders[s]);
-        auto *pShader1 = ValidatedCast<ShaderD3D11Impl>(pPSOD3D11->m_ppShaders[s]);
+        auto* pShader0 = ValidatedCast<ShaderD3D11Impl>(m_ppShaders[s]);
+        auto* pShader1 = ValidatedCast<ShaderD3D11Impl>(pPSOD3D11->m_ppShaders[s]);
         if (pShader0->GetShaderTypeIndex() != pShader1->GetShaderTypeIndex())
             return false;
-        const ShaderResourcesD3D11 *pRes0 = pShader0->GetResources().get();
-        const ShaderResourcesD3D11 *pRes1 = pShader1->GetResources().get();
+        const ShaderResourcesD3D11* pRes0 = pShader0->GetResources().get();
+        const ShaderResourcesD3D11* pRes1 = pShader1->GetResources().get();
         if (!pRes0->IsCompatibleWith(*pRes1))
             return false;
     }
@@ -223,42 +225,42 @@ bool PipelineStateD3D11Impl::IsCompatibleWith(const IPipelineState *pPSO)const
 ID3D11VertexShader* PipelineStateD3D11Impl::GetD3D11VertexShader()
 {
     if(!m_pVS)return nullptr;
-    auto *pVSD3D11 = m_pVS.RawPtr<ShaderD3D11Impl>();
+    auto* pVSD3D11 = m_pVS.RawPtr<ShaderD3D11Impl>();
     return static_cast<ID3D11VertexShader*>(pVSD3D11->GetD3D11Shader());
 }
 
 ID3D11PixelShader* PipelineStateD3D11Impl::GetD3D11PixelShader()
 {
     if(!m_pPS)return nullptr;
-    auto *pPSD3D11 = m_pPS.RawPtr<ShaderD3D11Impl>();
+    auto* pPSD3D11 = m_pPS.RawPtr<ShaderD3D11Impl>();
     return static_cast<ID3D11PixelShader*>(pPSD3D11->GetD3D11Shader());
 }
 
 ID3D11GeometryShader* PipelineStateD3D11Impl::GetD3D11GeometryShader()
 {
     if(!m_pGS)return nullptr;
-    auto *pGSD3D11 = m_pGS.RawPtr<ShaderD3D11Impl>();
+    auto* pGSD3D11 = m_pGS.RawPtr<ShaderD3D11Impl>();
     return static_cast<ID3D11GeometryShader*>(pGSD3D11->GetD3D11Shader());
 }
 
 ID3D11DomainShader* PipelineStateD3D11Impl::GetD3D11DomainShader()
 {
     if(!m_pDS)return nullptr;
-    auto *pDSD3D11 = m_pDS.RawPtr<ShaderD3D11Impl>();
+    auto* pDSD3D11 = m_pDS.RawPtr<ShaderD3D11Impl>();
     return static_cast<ID3D11DomainShader*>(pDSD3D11->GetD3D11Shader());
 }
 
 ID3D11HullShader* PipelineStateD3D11Impl::GetD3D11HullShader()
 {
     if(!m_pHS)return nullptr;
-    auto *pHSD3D11 = m_pHS.RawPtr<ShaderD3D11Impl>();
+    auto* pHSD3D11 = m_pHS.RawPtr<ShaderD3D11Impl>();
     return static_cast<ID3D11HullShader*>(pHSD3D11->GetD3D11Shader());
 }
 
 ID3D11ComputeShader* PipelineStateD3D11Impl::GetD3D11ComputeShader()
 {
     if(!m_pCS)return nullptr;
-    auto *pCSD3D11 = m_pCS.RawPtr<ShaderD3D11Impl>();
+    auto* pCSD3D11 = m_pCS.RawPtr<ShaderD3D11Impl>();
     return static_cast<ID3D11ComputeShader*>(pCSD3D11->GetD3D11Shader());
 }
 

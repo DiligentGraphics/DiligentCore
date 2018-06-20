@@ -84,7 +84,7 @@ class ShaderResourcesD3D11 : public ShaderResources
 {
 public:
     // Loads shader resources from the compiled shader bytecode
-    ShaderResourcesD3D11(class RenderDeviceD3D11Impl *pDeviceD3D11Impl, ID3DBlob *pShaderBytecode, const ShaderDesc &ShdrDesc);
+    ShaderResourcesD3D11(class RenderDeviceD3D11Impl* pDeviceD3D11Impl, ID3DBlob* pShaderBytecode, const ShaderDesc& ShdrDesc);
     ~ShaderResourcesD3D11();
 
     __forceinline Int32 GetMaxCBBindPoint()     const{return m_MaxCBBindPoint;      }
@@ -99,12 +99,12 @@ public:
                                      ID3D11SamplerState*        CommittedD3D11Samplers[],
                                      ID3D11UnorderedAccessView* CommittedD3D11UAVs[],
                                      ID3D11Resource*            CommittedD3D11UAVResources[],
-                                     class ShaderResourceCacheD3D11 &ResourceCache)const;
+                                     class ShaderResourceCacheD3D11& ResourceCache)const;
 #endif
 
     const Char *GetShaderName()const{return m_ShaderName;}
     
-    void InitStaticSamplers(class ShaderResourceCacheD3D11 &ResourceCache)const;
+    void InitStaticSamplers(class ShaderResourceCacheD3D11& ResourceCache)const;
 
 private:
     typedef Int8 MaxBindPointType;

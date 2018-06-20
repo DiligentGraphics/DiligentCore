@@ -39,9 +39,9 @@ class CommandListD3D11Impl : public CommandListBase<ICommandList>
 {
 public:
     typedef CommandListBase<ICommandList> TCommandListBase;
-    CommandListD3D11Impl(IReferenceCounters *pRefCounters,
-                         IRenderDevice *pDevice, 
-                         ID3D11CommandList *pd3d11CommandList);
+    CommandListD3D11Impl(IReferenceCounters* pRefCounters,
+                         IRenderDevice*      pDevice, 
+                         ID3D11CommandList*  pd3d11CommandList);
     ~CommandListD3D11Impl();
 
     ID3D11CommandList *GetD3D11CommandList(){ return m_pd3d11CommandList; }

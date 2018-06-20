@@ -42,7 +42,9 @@ class PipelineStateD3D11Impl : public PipelineStateBase<IPipelineStateD3D11, IRe
 public:
     typedef PipelineStateBase<IPipelineStateD3D11, IRenderDeviceD3D11> TPipelineStateBase;
 
-    PipelineStateD3D11Impl(IReferenceCounters *pRefCounters, class RenderDeviceD3D11Impl *pDeviceD3D11, const PipelineStateDesc& PipelineDesc);
+    PipelineStateD3D11Impl(IReferenceCounters*          pRefCounters,
+                           class RenderDeviceD3D11Impl* pDeviceD3D11,
+                           const PipelineStateDesc&     PipelineDesc);
     ~PipelineStateD3D11Impl();
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
@@ -87,10 +89,10 @@ public:
     IShaderVariable* GetDummyShaderVariable(){return &m_DummyShaderVar;}
 
 private:
-    CComPtr<ID3D11BlendState> m_pd3d11BlendState;
-    CComPtr<ID3D11RasterizerState> m_pd3d11RasterizerState;
+    CComPtr<ID3D11BlendState>        m_pd3d11BlendState;
+    CComPtr<ID3D11RasterizerState>   m_pd3d11RasterizerState;
     CComPtr<ID3D11DepthStencilState> m_pd3d11DepthStencilState;
-    CComPtr<ID3D11InputLayout> m_pd3d11InputLayout;
+    CComPtr<ID3D11InputLayout>       m_pd3d11InputLayout;
 
     class DataAllocators
     {

@@ -31,7 +31,9 @@ namespace Diligent
 {
 
 
-ShaderResourceBindingD3D11Impl::ShaderResourceBindingD3D11Impl( IReferenceCounters *pRefCounters, PipelineStateD3D11Impl *pPSO, bool IsInternal) :
+ShaderResourceBindingD3D11Impl::ShaderResourceBindingD3D11Impl( IReferenceCounters*     pRefCounters,
+                                                                PipelineStateD3D11Impl* pPSO,
+                                                                bool                    IsInternal) :
     TBase( pRefCounters, pPSO, IsInternal ),
     m_bIsStaticResourcesBound(false)
 {
@@ -143,7 +145,7 @@ void ShaderResourceBindingD3D11Impl::BindStaticShaderResources()
     m_bIsStaticResourcesBound = true;
 }
 
-IShaderVariable *ShaderResourceBindingD3D11Impl::GetVariable(SHADER_TYPE ShaderType, const char *Name)
+IShaderVariable *ShaderResourceBindingD3D11Impl::GetVariable(SHADER_TYPE ShaderType, const char* Name)
 {
     auto Ind = GetShaderTypeIndex(ShaderType);
     VERIFY_EXPR(Ind >= 0 && Ind < _countof(m_ResourceLayoutIndex));

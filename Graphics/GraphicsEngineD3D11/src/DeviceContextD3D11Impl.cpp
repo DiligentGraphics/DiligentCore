@@ -43,7 +43,12 @@ using namespace Diligent;
 
 namespace Diligent
 {
-    DeviceContextD3D11Impl::DeviceContextD3D11Impl( IReferenceCounters *pRefCounters, IMemoryAllocator &Allocator, IRenderDevice *pDevice, ID3D11DeviceContext *pd3d11DeviceContext, const struct EngineD3D11Attribs &EngineAttribs, bool bIsDeferred ) :
+    DeviceContextD3D11Impl::DeviceContextD3D11Impl( IReferenceCounters*              pRefCounters,
+                                                    IMemoryAllocator&                Allocator,
+                                                    IRenderDevice*                   pDevice,
+                                                    ID3D11DeviceContext*             pd3d11DeviceContext,
+                                                    const struct EngineD3D11Attribs& EngineAttribs,
+                                                    bool                             bIsDeferred ) :
         TDeviceContextBase(pRefCounters, pDevice, bIsDeferred),
         m_pd3d11DeviceContext( pd3d11DeviceContext ),
         m_CommittedIBFormat(VT_UNDEFINED),
@@ -70,14 +75,14 @@ namespace Diligent
 
     IMPLEMENT_QUERY_INTERFACE( DeviceContextD3D11Impl, IID_DeviceContextD3D11, TDeviceContextBase )
 
-    void DeviceContextD3D11Impl::SetPipelineState(IPipelineState *pPipelineState)
+    void DeviceContextD3D11Impl::SetPipelineState(IPipelineState* pPipelineState)
     {
         TDeviceContextBase::SetPipelineState( pPipelineState );
-        auto *pPipelineStateD3D11 = ValidatedCast<PipelineStateD3D11Impl>(pPipelineState);
+        auto* pPipelineStateD3D11 = ValidatedCast<PipelineStateD3D11Impl>(pPipelineState);
         auto &Desc = pPipelineStateD3D11->GetDesc();
         if (Desc.IsComputePipeline)
         {
-            auto *pd3d11CS = pPipelineStateD3D11->GetD3D11ComputeShader();
+            auto* pd3d11CS = pPipelineStateD3D11->GetD3D11ComputeShader();
             if (pd3d11CS == nullptr)
             {
                 LOG_ERROR("Compute shader is not set in the pipeline");
@@ -86,7 +91,7 @@ namespace Diligent
 
 #define     COMMIT_SHADER(SN, ShaderName)\
             {                                                                           \
-                auto *pd3d11Shader = pPipelineStateD3D11->GetD3D11##ShaderName();       \
+                auto* pd3d11Shader = pPipelineStateD3D11->GetD3D11##ShaderName();       \
                 if (m_CommittedD3DShaders[SN##Ind] != pd3d11Shader)                     \
                 {                                                                       \
                     m_CommittedD3DShaders[SN##Ind] = pd3d11Shader;                      \
@@ -109,7 +114,7 @@ namespace Diligent
             m_pd3d11DeviceContext->RSSetState( pPipelineStateD3D11->GetD3D11RasterizerState() );
             m_pd3d11DeviceContext->OMSetDepthStencilState( pPipelineStateD3D11->GetD3D11DepthStencilState(), m_StencilRef );
 
-            auto *pd3d11InputLayout = pPipelineStateD3D11->GetD3D11InputLayout();
+            auto* pd3d11InputLayout = pPipelineStateD3D11->GetD3D11InputLayout();
             // It is safe to perform raw pointer comparison as the device context
             // keeps bound input layout alive
             if( m_CommittedD3D11InputLayout != pd3d11InputLayout )
@@ -160,7 +165,7 @@ namespace Diligent
     // http://diligentgraphics.com/diligent-engine/architecture/d3d11/committing-shader-resources-to-the-gpu-pipeline/
     template<bool TransitionResources,
              bool CommitResources>
-    void DeviceContextD3D11Impl::TransitionAndCommitShaderResources(IPipelineState *pPSO, IShaderResourceBinding *pShaderResourceBinding)
+    void DeviceContextD3D11Impl::TransitionAndCommitShaderResources(IPipelineState* pPSO, IShaderResourceBinding* pShaderResourceBinding)
     {
         static_assert(TransitionResources || CommitResources, "At least one of TransitionResources or CommitResources flags is expected to be true");
 
@@ -196,7 +201,7 @@ namespace Diligent
         {
             auto ShaderTypeInd = pShaderResBindingD3D11->GetActiveShaderTypeIndex(s);
 #ifdef _DEBUG
-            auto *pShaderD3D11 = ValidatedCast<ShaderD3D11Impl>(ppdbgShaders[s]);
+            auto* pShaderD3D11 = ValidatedCast<ShaderD3D11Impl>(ppdbgShaders[s]);
             VERIFY_EXPR( ShaderTypeInd == static_cast<Int32>(pShaderD3D11->GetShaderTypeIndex()) );
 #endif
             
@@ -234,7 +239,7 @@ namespace Diligent
                     if(TransitionResources)
                     {
                         auto &CB = CachedCBs[cb];
-                        if( auto *pBuff = const_cast<BufferD3D11Impl*>(CB.pBuff.RawPtr()) )
+                        if( auto* pBuff = const_cast<BufferD3D11Impl*>(CB.pBuff.RawPtr()) )
                         {
                             // WARNING! This code is not thread-safe. If several threads change
                             // the buffer state, the results will be undefined.
@@ -256,7 +261,7 @@ namespace Diligent
                     {
                         VERIFY_EXPR(CommitResources);
                         auto &CB = CachedCBs[cb];
-                        if( auto *pBuff = const_cast<BufferD3D11Impl*>(CB.pBuff.RawPtr()) )
+                        if( auto* pBuff = const_cast<BufferD3D11Impl*>(CB.pBuff.RawPtr()) )
                         {
                             if (!pBuff->CheckState(D3D11BufferState::ConstantBuffer))
                             {
@@ -312,7 +317,7 @@ namespace Diligent
                     // individually, or not rely on the state and check current context bindings
                     if( TransitionResources )
                     {
-                        if (auto *pTexture = const_cast<TextureBaseD3D11*>(SRVRes.pTexture))
+                        if (auto* pTexture = const_cast<TextureBaseD3D11*>(SRVRes.pTexture))
                         {
                             if( !pTexture->CheckState(D3D11TextureState::ShaderResource) )
                             {
@@ -328,7 +333,7 @@ namespace Diligent
                                 pTexture->ResetState(D3D11TextureState::ShaderResource);
                             }
                         }
-                        else if(auto *pBuffer = const_cast<BufferD3D11Impl*>(SRVRes.pBuffer))
+                        else if(auto* pBuffer = const_cast<BufferD3D11Impl*>(SRVRes.pBuffer))
                         {
                             if( !pBuffer->CheckState(D3D11BufferState::ShaderResource) )
                             {
@@ -345,14 +350,14 @@ namespace Diligent
                     else
                     {
                         VERIFY_EXPR(CommitResources);
-                        if (auto *pTexture = const_cast<TextureBaseD3D11*>(SRVRes.pTexture))
+                        if (auto* pTexture = const_cast<TextureBaseD3D11*>(SRVRes.pTexture))
                         {
                             if( !pTexture->CheckState(D3D11TextureState::ShaderResource) )
                             {
                                 LOG_ERROR_MESSAGE("Texture \"", pTexture->GetDesc().Name, "\" has not been transitioned to Shader Resource state. Did you forget to call TransitionResources()?");
                             }
                         }
-                        else if(auto *pBuffer = const_cast<BufferD3D11Impl*>(SRVRes.pBuffer))
+                        else if(auto* pBuffer = const_cast<BufferD3D11Impl*>(SRVRes.pBuffer))
                         {
                             if( !pBuffer->CheckState(D3D11BufferState::ShaderResource) )
                             {
@@ -454,7 +459,7 @@ namespace Diligent
                                 pTexture->ResetState(D3D11TextureState::UnorderedAccess);
                             }
                         }
-                        else if( auto *pBuffer = const_cast<BufferD3D11Impl*>(UAVRes.pBuffer) )
+                        else if( auto* pBuffer = const_cast<BufferD3D11Impl*>(UAVRes.pBuffer) )
                         {
                             if( !pBuffer->CheckState(D3D11BufferState::UnorderedAccess) )
                             {
@@ -474,7 +479,7 @@ namespace Diligent
                                 LOG_ERROR_MESSAGE("Texture \"", pTexture->GetDesc().Name, "\" has not been transitioned to Unordered Access state. Did you forget to call TransitionResources()?");
                             }
                         }
-                        else if( auto *pBuffer = const_cast<BufferD3D11Impl*>(UAVRes.pBuffer) )
+                        else if( auto* pBuffer = const_cast<BufferD3D11Impl*>(UAVRes.pBuffer) )
                         {
                             if( !pBuffer->CheckState(D3D11BufferState::UnorderedAccess) )
                             {
@@ -527,12 +532,12 @@ namespace Diligent
         }
     }
 
-    void DeviceContextD3D11Impl::TransitionShaderResources(IPipelineState *pPipelineState, IShaderResourceBinding *pShaderResourceBinding)
+    void DeviceContextD3D11Impl::TransitionShaderResources(IPipelineState* pPipelineState, IShaderResourceBinding* pShaderResourceBinding)
     {
         TransitionAndCommitShaderResources<true, false>(pPipelineState, pShaderResourceBinding);
     }
 
-    void DeviceContextD3D11Impl::CommitShaderResources(IShaderResourceBinding *pShaderResourceBinding, Uint32 Flags)
+    void DeviceContextD3D11Impl::CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, Uint32 Flags)
     {
         if( !DeviceContextBase::CommitShaderResources<PipelineStateD3D11Impl>(pShaderResourceBinding, Flags, 0 /*Dummy*/) )
             return;
@@ -547,7 +552,7 @@ namespace Diligent
     {
         if (TDeviceContextBase::SetStencilRef(StencilRef, 0))
         {
-            ID3D11DepthStencilState *pd3d11DSS = 
+            ID3D11DepthStencilState* pd3d11DSS = 
                 m_pPipelineState ? m_pPipelineState.RawPtr<PipelineStateD3D11Impl>()->GetD3D11DepthStencilState() : nullptr;
             m_pd3d11DeviceContext->OMSetDepthStencilState( pd3d11DSS, m_StencilRef );
         }
@@ -559,7 +564,7 @@ namespace Diligent
         if (TDeviceContextBase::SetBlendFactors(pBlendFactors, 0))
         {
             Uint32 SampleMask = 0xFFFFFFFF;
-            ID3D11BlendState *pd3d11BS = nullptr;
+            ID3D11BlendState* pd3d11BS = nullptr;
             if(m_pPipelineState)
             {
                 SampleMask = m_pPipelineState->GetDesc().GraphicsPipeline.SampleMask;
@@ -577,7 +582,7 @@ namespace Diligent
             return;
         }
 
-        BufferD3D11Impl *pBuffD3D11 = m_pIndexBuffer.RawPtr<BufferD3D11Impl>();
+        BufferD3D11Impl* pBuffD3D11 = m_pIndexBuffer.RawPtr<BufferD3D11Impl>();
         if( pBuffD3D11->CheckState( D3D11BufferState::UnorderedAccess ) )
         {
             UnbindResourceFromUAV(pBuffD3D11, pBuffD3D11->m_pd3d11Buffer);
@@ -609,7 +614,7 @@ namespace Diligent
         m_bCommittedD3D11IBUpToDate = true;
     }
 
-    void DeviceContextD3D11Impl::CommitD3D11VertexBuffers(PipelineStateD3D11Impl *pPipelineStateD3D11)
+    void DeviceContextD3D11Impl::CommitD3D11VertexBuffers(PipelineStateD3D11Impl* pPipelineStateD3D11)
     {
         VERIFY( m_NumVertexStreams <= MaxBufferSlots, "Too many buffers are being set" );
         UINT NumBuffersToSet = std::max(m_NumVertexStreams, m_NumCommittedD3D11VBs );
@@ -621,8 +626,8 @@ namespace Diligent
         {
             auto &CurrStream = m_VertexStreams[Slot];
             VERIFY( CurrStream.pBuffer, "Attempting to bind a null buffer for rendering" );
-            auto *pBuffD3D11Impl = CurrStream.pBuffer.RawPtr<BufferD3D11Impl>();
-            ID3D11Buffer *pd3d11Buffer = pBuffD3D11Impl->m_pd3d11Buffer;
+            auto* pBuffD3D11Impl = CurrStream.pBuffer.RawPtr<BufferD3D11Impl>();
+            ID3D11Buffer* pd3d11Buffer = pBuffD3D11Impl->m_pd3d11Buffer;
             auto Stride = Strides[Slot];
             auto Offset = CurrStream.Offset;
 
@@ -676,7 +681,7 @@ namespace Diligent
         }
 #endif
 
-        auto *pPipelineStateD3D11 = m_pPipelineState.RawPtr<PipelineStateD3D11Impl>();
+        auto* pPipelineStateD3D11 = m_pPipelineState.RawPtr<PipelineStateD3D11Impl>();
 #ifdef _DEBUG
         if (pPipelineStateD3D11->GetDesc().IsComputePipeline)
         {
@@ -685,7 +690,7 @@ namespace Diligent
         }
 #endif
 
-        auto *pd3d11InputLayout = pPipelineStateD3D11->GetD3D11InputLayout();
+        auto* pd3d11InputLayout = pPipelineStateD3D11->GetD3D11InputLayout();
         if( pd3d11InputLayout != nullptr && !m_bCommittedD3D11VBsUpToDate )
         {
             VERIFY( m_NumVertexStreams >= pPipelineStateD3D11->GetNumBufferSlotsUsed(), "Currently bound pipeline state \"", pPipelineStateD3D11->GetDesc().Name, "\" expects ", pPipelineStateD3D11->GetNumBufferSlotsUsed(), " input buffer slots, but only ", m_NumVertexStreams, " is bound");
@@ -720,8 +725,8 @@ namespace Diligent
         if( DrawAttribs.IsIndirect )
         {
             VERIFY( DrawAttribs.pIndirectDrawAttribs, "Indirect draw command attributes buffer is not set" );
-            auto *pBufferD3D11 = static_cast<BufferD3D11Impl*>(DrawAttribs.pIndirectDrawAttribs);
-            ID3D11Buffer *pd3d11ArgsBuff = pBufferD3D11 ? pBufferD3D11->m_pd3d11Buffer : nullptr;
+            auto* pBufferD3D11 = static_cast<BufferD3D11Impl*>(DrawAttribs.pIndirectDrawAttribs);
+            ID3D11Buffer* pd3d11ArgsBuff = pBufferD3D11 ? pBufferD3D11->m_pd3d11Buffer : nullptr;
             if( DrawAttribs.IsIndexed )
                 m_pd3d11DeviceContext->DrawIndexedInstancedIndirect( pd3d11ArgsBuff, DrawAttribs.IndirectDrawArgsOffset );
             else
@@ -772,23 +777,23 @@ namespace Diligent
         if( DispatchAttrs.pIndirectDispatchAttribs )
         {
             CHECK_DYNAMIC_TYPE( BufferD3D11Impl, DispatchAttrs.pIndirectDispatchAttribs );
-            auto *pd3d11Buff = static_cast<BufferD3D11Impl*>(DispatchAttrs.pIndirectDispatchAttribs)->GetD3D11Buffer();
+            auto* pd3d11Buff = static_cast<BufferD3D11Impl*>(DispatchAttrs.pIndirectDispatchAttribs)->GetD3D11Buffer();
             m_pd3d11DeviceContext->DispatchIndirect( pd3d11Buff, DispatchAttrs.DispatchArgsByteOffset );
         }
         else
             m_pd3d11DeviceContext->Dispatch( DispatchAttrs.ThreadGroupCountX, DispatchAttrs.ThreadGroupCountY, DispatchAttrs.ThreadGroupCountZ );
     }
 
-    void DeviceContextD3D11Impl::ClearDepthStencil( ITextureView *pView, Uint32 ClearFlags, float fDepth, Uint8 Stencil )
+    void DeviceContextD3D11Impl::ClearDepthStencil( ITextureView* pView, Uint32 ClearFlags, float fDepth, Uint8 Stencil )
     {
-        ID3D11DepthStencilView *pd3d11DSV = nullptr;
+        ID3D11DepthStencilView* pd3d11DSV = nullptr;
         if( pView != nullptr )
         {
 #ifdef _DEBUG
             const auto& ViewDesc = pView->GetDesc();
             VERIFY( ViewDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL, "Incorrect view type: depth stencil is expected" );
 #endif
-            auto *pViewD3D11 = ValidatedCast<TextureViewD3D11Impl>(pView);
+            auto* pViewD3D11 = ValidatedCast<TextureViewD3D11Impl>(pView);
             pd3d11DSV = static_cast<ID3D11DepthStencilView *>(pViewD3D11->GetD3D11View());
         }
         else
@@ -812,16 +817,16 @@ namespace Diligent
         m_pd3d11DeviceContext->ClearDepthStencilView( pd3d11DSV, d3d11ClearFlags, fDepth, Stencil );
     }
 
-    void DeviceContextD3D11Impl::ClearRenderTarget( ITextureView *pView, const float *RGBA )
+    void DeviceContextD3D11Impl::ClearRenderTarget( ITextureView* pView, const float *RGBA )
     {
-        ID3D11RenderTargetView *pd3d11RTV = nullptr;
+        ID3D11RenderTargetView* pd3d11RTV = nullptr;
         if( pView != nullptr )
         {
 #ifdef _DEBUG
             const auto& ViewDesc = pView->GetDesc();
             VERIFY( ViewDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET, "Incorrect view type: render target is expected" );
 #endif
-            auto *pViewD3D11 = ValidatedCast<TextureViewD3D11Impl>(pView);
+            auto* pViewD3D11 = ValidatedCast<TextureViewD3D11Impl>(pView);
             pd3d11RTV = static_cast<ID3D11RenderTargetView*>(pViewD3D11->GetD3D11View());
         }
         else
@@ -852,19 +857,19 @@ namespace Diligent
         m_pd3d11DeviceContext->Flush();
     }
 
-    void DeviceContextD3D11Impl::SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer **ppBuffers, Uint32 *pOffsets, Uint32 Flags )
+    void DeviceContextD3D11Impl::SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer **ppBuffers, Uint32* pOffsets, Uint32 Flags )
     {
         TDeviceContextBase::SetVertexBuffers( StartSlot, NumBuffersSet, ppBuffers, pOffsets, Flags );
         m_bCommittedD3D11VBsUpToDate = false;
     }
 
-    void DeviceContextD3D11Impl::SetIndexBuffer( IBuffer *pIndexBuffer, Uint32 ByteOffset )
+    void DeviceContextD3D11Impl::SetIndexBuffer( IBuffer* pIndexBuffer, Uint32 ByteOffset )
     {
         TDeviceContextBase::SetIndexBuffer( pIndexBuffer, ByteOffset );
         m_bCommittedD3D11IBUpToDate = false;
     }
 
-    void DeviceContextD3D11Impl::SetViewports( Uint32 NumViewports, const Viewport *pViewports, Uint32 RTWidth, Uint32 RTHeight  )
+    void DeviceContextD3D11Impl::SetViewports( Uint32 NumViewports, const Viewport* pViewports, Uint32 RTWidth, Uint32 RTHeight  )
     {
         static_assert(MaxViewports >= D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE, "MaxViewports constant must be greater than D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE");
         TDeviceContextBase::SetViewports( NumViewports, pViewports, RTWidth, RTHeight );
@@ -885,7 +890,7 @@ namespace Diligent
         m_pd3d11DeviceContext->RSSetViewports( NumViewports, d3d11Viewports );
     }
 
-    void DeviceContextD3D11Impl::SetScissorRects( Uint32 NumRects, const Rect *pRects, Uint32 RTWidth, Uint32 RTHeight  )
+    void DeviceContextD3D11Impl::SetScissorRects( Uint32 NumRects, const Rect* pRects, Uint32 RTWidth, Uint32 RTHeight  )
     {
         static_assert(MaxViewports >= D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE, "MaxViewports constant must be greater than D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE");
         TDeviceContextBase::SetScissorRects(NumRects, pRects, RTWidth, RTHeight);
@@ -913,15 +918,15 @@ namespace Diligent
         NumRenderTargets = std::min( MaxD3D11RTs, NumRenderTargets );
 
         // Do not waste time setting RTVs to null
-        ID3D11RenderTargetView *pd3d11RTs[MaxD3D11RTs];
-        ID3D11DepthStencilView *pd3d11DSV = nullptr;
+        ID3D11RenderTargetView* pd3d11RTs[MaxD3D11RTs];
+        ID3D11DepthStencilView* pd3d11DSV = nullptr;
 
         if( m_IsDefaultFramebufferBound )
         {
             if (m_pSwapChain)
             {
                 NumRenderTargets = 1;
-                auto *pSwapChainD3D11 = m_pSwapChain.RawPtr<ISwapChainD3D11>();
+                auto* pSwapChainD3D11 = m_pSwapChain.RawPtr<ISwapChainD3D11>();
                 pd3d11RTs[0] = pSwapChainD3D11->GetRTV();
                 pd3d11DSV = pSwapChainD3D11->GetDSV();
                 VERIFY_EXPR(pd3d11RTs[0] != nullptr && pd3d11DSV != nullptr);
@@ -936,20 +941,20 @@ namespace Diligent
         {
             for( Uint32 rt = 0; rt < NumRenderTargets; ++rt )
             {
-                auto *pView = m_pBoundRenderTargets[rt].RawPtr();
+                auto* pView = m_pBoundRenderTargets[rt].RawPtr();
                 if( pView )
                 {
-                    auto *pViewD3D11 = static_cast<TextureViewD3D11Impl*>(pView);
+                    auto* pViewD3D11 = static_cast<TextureViewD3D11Impl*>(pView);
                     pd3d11RTs[rt] = static_cast<ID3D11RenderTargetView*>(pViewD3D11->GetD3D11View());
                 }
                 else
                     pd3d11RTs[rt] = nullptr;
             }
 
-            auto *pDepthStencil = m_pBoundDepthStencil.RawPtr();
+            auto* pDepthStencil = m_pBoundDepthStencil.RawPtr();
             if( pDepthStencil != nullptr )
             {
-                auto *pViewD3D11 = static_cast<TextureViewD3D11Impl*>(pDepthStencil);
+                auto* pViewD3D11 = static_cast<TextureViewD3D11Impl*>(pDepthStencil);
                 pd3d11DSV = static_cast<ID3D11DepthStencilView*>(pViewD3D11->GetD3D11View());
             }
         }
@@ -958,15 +963,15 @@ namespace Diligent
     }
 
 
-    void UnbindView( ID3D11DeviceContext *pContext, TSetShaderResourcesType SetSRVMethod, UINT Slot )
+    void UnbindView( ID3D11DeviceContext* pContext, TSetShaderResourcesType SetSRVMethod, UINT Slot )
     {
-        ID3D11ShaderResourceView *ppNullView[] = { nullptr };
+        ID3D11ShaderResourceView* ppNullView[] = { nullptr };
         (pContext->*SetSRVMethod)(Slot, 1, ppNullView);
     }
 
-    void UnbindView( ID3D11DeviceContext *pContext, TSetUnorderedAccessViewsType SetUAVMethod, UINT Slot )
+    void UnbindView( ID3D11DeviceContext* pContext, TSetUnorderedAccessViewsType SetUAVMethod, UINT Slot )
     {
-        ID3D11UnorderedAccessView *ppNullView[] = { nullptr };
+        ID3D11UnorderedAccessView* ppNullView[] = { nullptr };
         (pContext->*SetUAVMethod)(Slot, 1, ppNullView, nullptr);
     }
 
@@ -985,8 +990,8 @@ namespace Diligent
     void DeviceContextD3D11Impl::UnbindResourceView( TD3D11ResourceViewType CommittedD3D11ViewsArr[][NumSlots], 
                                                      ID3D11Resource* CommittedD3D11ResourcesArr[][NumSlots], 
                                                      Uint8 NumCommittedResourcesArr[],
-                                                     IDeviceObject *pResToUnbind,
-                                                     ID3D11Resource *pd3d11ResToUndind,
+                                                     IDeviceObject* pResToUnbind,
+                                                     ID3D11Resource* pd3d11ResToUndind,
                                                      TSetD3D11View SetD3D11ViewMethods[])
     {
         for( Int32 ShaderTypeInd = 0; ShaderTypeInd < NumShaderTypes; ++ShaderTypeInd )
@@ -1016,7 +1021,7 @@ namespace Diligent
         }
     }
 
-    void DeviceContextD3D11Impl::UnbindTextureFromInput( TextureBaseD3D11 *pTexture, ID3D11Resource *pd3d11Resource )
+    void DeviceContextD3D11Impl::UnbindTextureFromInput( TextureBaseD3D11* pTexture, ID3D11Resource* pd3d11Resource )
     {
         VERIFY( pTexture, "Null texture provided" );
         if( !pTexture )return;
@@ -1025,7 +1030,7 @@ namespace Diligent
         pTexture->ClearState(D3D11TextureState::ShaderResource);
     }
 
-    void DeviceContextD3D11Impl::UnbindBufferFromInput( BufferD3D11Impl *pBuffer, ID3D11Resource *pd3d11Buffer )
+    void DeviceContextD3D11Impl::UnbindBufferFromInput( BufferD3D11Impl* pBuffer, ID3D11Resource* pd3d11Buffer )
     {
         VERIFY( pBuffer, "Null buffer provided" );
         if( !pBuffer )return;
@@ -1066,7 +1071,7 @@ namespace Diligent
                 {
                     // Unbind only D3D11 buffer
                     //*VertStream = VertexStreamInfo();
-                    ID3D11Buffer *ppNullBuffer[] = { nullptr };
+                    ID3D11Buffer* ppNullBuffer[] = { nullptr };
                     const UINT Zero[] = { 0 };
                     m_CommittedD3D11VertexBuffers[Slot] = nullptr;
                     m_CommittedD3D11VBStrides[Slot] = 0;
@@ -1094,7 +1099,7 @@ namespace Diligent
                     {
                         CommittedD3D11CBs[Slot] = nullptr;
                         auto SetCBMethod = SetCBMethods[ShaderTypeInd];
-                        ID3D11Buffer *ppNullBuffer[] = { nullptr };
+                        ID3D11Buffer* ppNullBuffer[] = { nullptr };
                         (m_pd3d11DeviceContext->*SetCBMethod)(Slot, 1, ppNullBuffer);
                     }
                 }
@@ -1107,7 +1112,7 @@ namespace Diligent
         }
     }
 
-    void DeviceContextD3D11Impl::UnbindResourceFromUAV( IDeviceObject *pResource, ID3D11Resource *pd3d11Resource )
+    void DeviceContextD3D11Impl::UnbindResourceFromUAV( IDeviceObject* pResource, ID3D11Resource* pd3d11Resource )
     {
         VERIFY( pResource, "Null resource provided" );
         if( !pResource )return;
@@ -1115,7 +1120,7 @@ namespace Diligent
         UnbindResourceView( m_CommittedD3D11UAVs, m_CommittedD3D11UAVResources, m_NumCommittedUAVs, pResource, pd3d11Resource, SetUAVMethods );
     }
 
-    void DeviceContextD3D11Impl::UnbindTextureFromRenderTarget( TextureBaseD3D11 *pTexture )
+    void DeviceContextD3D11Impl::UnbindTextureFromRenderTarget( TextureBaseD3D11* pTexture )
     {
         VERIFY( pTexture, "Null resource provided" );
         if( !pTexture )return;
@@ -1139,7 +1144,7 @@ namespace Diligent
         pTexture->ClearState(D3D11TextureState::RenderTarget);
     }
 
-    void DeviceContextD3D11Impl::UnbindTextureFromDepthStencil(TextureBaseD3D11 *pTexD3D11)
+    void DeviceContextD3D11Impl::UnbindTextureFromDepthStencil(TextureBaseD3D11* pTexD3D11)
     {
         VERIFY( pTexD3D11, "Null resource provided" );
         if( !pTexD3D11 )return;
@@ -1152,20 +1157,20 @@ namespace Diligent
         pTexD3D11->ClearState(D3D11TextureState::DepthStencil);
     }
 
-    void DeviceContextD3D11Impl::SetRenderTargets( Uint32 NumRenderTargets, ITextureView *ppRenderTargets[], ITextureView *pDepthStencil )
+    void DeviceContextD3D11Impl::SetRenderTargets( Uint32 NumRenderTargets, ITextureView* ppRenderTargets[], ITextureView* pDepthStencil )
     {
         if( TDeviceContextBase::SetRenderTargets( NumRenderTargets, ppRenderTargets, pDepthStencil ) )
         {
             for( Uint32 RT = 0; RT < NumRenderTargets; ++RT )
                 if( ppRenderTargets[RT] )
                 {
-                    auto *pTex = ValidatedCast<TextureBaseD3D11>(ppRenderTargets[RT]->GetTexture());
+                    auto* pTex = ValidatedCast<TextureBaseD3D11>(ppRenderTargets[RT]->GetTexture());
                     UnbindTextureFromInput( pTex, pTex->GetD3D11Texture() );
                     pTex->ResetState(D3D11TextureState::RenderTarget);
                 }
             if( pDepthStencil )
             {
-                auto *pTex = ValidatedCast<TextureBaseD3D11>(pDepthStencil->GetTexture());
+                auto* pTex = ValidatedCast<TextureBaseD3D11>(pDepthStencil->GetTexture());
                 UnbindTextureFromInput( pTex, pTex->GetD3D11Texture() );
                 pTex->ResetState(D3D11TextureState::DepthStencil);
             }
@@ -1178,7 +1183,7 @@ namespace Diligent
     }
 
     template<typename TD3D11ResourceType, typename TSetD3D11ResMethodType>
-    void SetD3D11ResourcesHelper(ID3D11DeviceContext *pDeviceCtx, 
+    void SetD3D11ResourcesHelper(ID3D11DeviceContext* pDeviceCtx, 
                                  TSetD3D11ResMethodType SetD3D11ResMethod, 
                                  UINT StartSlot, UINT NumSlots, 
                                  TD3D11ResourceType **ppResources)
@@ -1187,7 +1192,7 @@ namespace Diligent
     }
 
     template<>
-    void SetD3D11ResourcesHelper(ID3D11DeviceContext *pDeviceCtx, 
+    void SetD3D11ResourcesHelper(ID3D11DeviceContext* pDeviceCtx, 
                                  TSetUnorderedAccessViewsType SetD3D11UAVMethod, 
                                  UINT StartSlot, UINT NumSlots, 
                                  ID3D11UnorderedAccessView **ppUAVs)
@@ -1199,7 +1204,7 @@ namespace Diligent
     void ReleaseCommittedShaderResourcesHelper(TD3D11ResourceType CommittedD3D11Res[],
                                                Uint8 NumCommittedResources,
                                                TSetD3D11ResMethodType SetD3D11ResMethod,
-                                               ID3D11DeviceContext *pDeviceCtx)
+                                               ID3D11DeviceContext* pDeviceCtx)
     {
         if( NumCommittedResources > 0)
         {
@@ -1250,7 +1255,7 @@ namespace Diligent
                    //   ID3D11DeviceContext::ClearState() was called. 
             &pd3d11CmdList);
 
-        CommandListD3D11Impl *pCmdListD3D11( NEW_RC_OBJ(m_CmdListAllocator, "CommandListD3D11Impl instance", CommandListD3D11Impl)(m_pDevice, pd3d11CmdList) );
+        CommandListD3D11Impl* pCmdListD3D11( NEW_RC_OBJ(m_CmdListAllocator, "CommandListD3D11Impl instance", CommandListD3D11Impl)(m_pDevice, pd3d11CmdList) );
         pCmdListD3D11->QueryInterface( IID_CommandList, reinterpret_cast<IObject**>(ppCommandList) );
 
         // Device context is now in default state
@@ -1269,7 +1274,7 @@ namespace Diligent
         }
     }
 
-    void DeviceContextD3D11Impl::ExecuteCommandList(ICommandList *pCommandList)
+    void DeviceContextD3D11Impl::ExecuteCommandList(ICommandList* pCommandList)
     {
         if (m_bIsDeferred)
         {
@@ -1278,7 +1283,7 @@ namespace Diligent
         }
 
         CommandListD3D11Impl* pCmdListD3D11 = ValidatedCast<CommandListD3D11Impl>(pCommandList);
-        auto *pd3d11CmdList = pCmdListD3D11->GetD3D11CommandList();
+        auto* pd3d11CmdList = pCmdListD3D11->GetD3D11CommandList();
         m_pd3d11DeviceContext->ExecuteCommandList(pd3d11CmdList, 
             FALSE // A Boolean flag that determines whether the target context state is 
                   // saved prior to and restored after the execution of a command list. 
@@ -1615,7 +1620,7 @@ namespace Diligent
         VERIFY( pInputLayout == m_CommittedD3D11InputLayout, "Inconsistent input layout" );
 
         const Uint32 MaxVBs = D3D11_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT;
-        ID3D11Buffer *pVBs[MaxVBs];
+        ID3D11Buffer* pVBs[MaxVBs];
         UINT Strides[MaxVBs];
         UINT Offsets[MaxVBs];
         m_pd3d11DeviceContext->IAGetVertexBuffers( 0, MaxVBs, pVBs, Strides, Offsets );
@@ -1651,7 +1656,7 @@ namespace Diligent
     template<typename TD3D11ShaderType, typename TGetShaderMethodType>
     void dbgVerifyCommittedShadersHelper(SHADER_TYPE ShaderType,
                                 const CComPtr<ID3D11DeviceChild> BoundD3DShaders[], 
-                                ID3D11DeviceContext *pCtx,
+                                ID3D11DeviceContext* pCtx,
                                 TGetShaderMethodType GetShaderMethod)
     {
         RefCntAutoPtr<TD3D11ShaderType> pctxShader;

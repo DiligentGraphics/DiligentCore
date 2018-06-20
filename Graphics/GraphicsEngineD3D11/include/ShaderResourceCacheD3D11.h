@@ -52,10 +52,10 @@ public:
     ~ShaderResourceCacheD3D11();
 
 
-    ShaderResourceCacheD3D11(const ShaderResourceCacheD3D11&) = delete;
+    ShaderResourceCacheD3D11             (const ShaderResourceCacheD3D11&) = delete;
     ShaderResourceCacheD3D11& operator = (const ShaderResourceCacheD3D11&) = delete;
-    ShaderResourceCacheD3D11(ShaderResourceCacheD3D11&&) = delete;
-    ShaderResourceCacheD3D11& operator = (ShaderResourceCacheD3D11&&) = delete;
+    ShaderResourceCacheD3D11             (ShaderResourceCacheD3D11&&)      = delete;
+    ShaderResourceCacheD3D11& operator = (ShaderResourceCacheD3D11&&)      = delete;
 
     /// Describes resources associated with the cached constant buffer
     struct CachedCB
@@ -93,7 +93,7 @@ public:
         // There is no need to keep strong reference to D3D11 resource as
         // it is already kept by either pTexture or pBuffer
         ID3D11Resource *pd3d11Resource;
-        CachedResource() : pTexture(nullptr), pBuffer(nullptr), pd3d11Resource(nullptr)
+        CachedResource()noexcept : pTexture(nullptr), pBuffer(nullptr), pd3d11Resource(nullptr)
         {}
 
         __forceinline void Set(RefCntAutoPtr<TextureViewD3D11Impl>&& pTexView)
@@ -116,10 +116,10 @@ public:
     };
 
     void Initialize(Int32 CBCount, Int32 SRVCount, Int32 SamplerCount, Int32 UAVCount, class IMemoryAllocator &MemAllocator);
-    void Destroy(class IMemoryAllocator &MemAllocator);
+    void Destroy(class IMemoryAllocator& MemAllocator);
 
 
-    __forceinline void SetCB(Uint32 Slot, RefCntAutoPtr<BufferD3D11Impl> &&pBuffD3D11Impl)
+    __forceinline void SetCB(Uint32 Slot, RefCntAutoPtr<BufferD3D11Impl>&& pBuffD3D11Impl)
     {
         auto *pd3d11Buff = pBuffD3D11Impl ? pBuffD3D11Impl->BufferD3D11Impl::GetD3D11Buffer() : nullptr;
         SetD3D11ResourceInternal<CachedCB>(Slot, GetCBCount(), &ShaderResourceCacheD3D11::GetCBArrays, std::move(pBuffD3D11Impl), pd3d11Buff);
@@ -131,7 +131,7 @@ public:
         SetD3D11ResourceInternal<CachedResource>(Slot, GetSRVCount(), &ShaderResourceCacheD3D11::GetSRVArrays, std::move(pTexView), pd3d11SRV);
     }
 
-    __forceinline void SetBufSRV(Uint32 Slot, RefCntAutoPtr<BufferViewD3D11Impl> &&pBuffView)
+    __forceinline void SetBufSRV(Uint32 Slot, RefCntAutoPtr<BufferViewD3D11Impl>&& pBuffView)
     {
         auto pd3d11SRV = pBuffView ? static_cast<ID3D11ShaderResourceView*>(pBuffView->BufferViewD3D11Impl::GetD3D11View()) : nullptr;
         SetD3D11ResourceInternal<CachedResource>(Slot, GetSRVCount(), &ShaderResourceCacheD3D11::GetSRVArrays, std::move(pBuffView), pd3d11SRV);
@@ -143,7 +143,7 @@ public:
         SetD3D11ResourceInternal<CachedResource>(Slot, GetUAVCount(), &ShaderResourceCacheD3D11::GetUAVArrays, std::move(pTexView), pd3d11UAV);
     }
 
-    __forceinline void SetBufUAV(Uint32 Slot, RefCntAutoPtr<BufferViewD3D11Impl> &&pBuffView)
+    __forceinline void SetBufUAV(Uint32 Slot, RefCntAutoPtr<BufferViewD3D11Impl>&& pBuffView)
     {
         auto pd3d11UAV = pBuffView ? static_cast<ID3D11UnorderedAccessView*>(pBuffView->BufferViewD3D11Impl::GetD3D11View()) : nullptr;
         SetD3D11ResourceInternal<CachedResource>(Slot, GetUAVCount(), &ShaderResourceCacheD3D11::GetUAVArrays, std::move(pBuffView), pd3d11UAV);

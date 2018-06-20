@@ -34,7 +34,7 @@ namespace Diligent
 {
 
 
-ShaderResourcesD3D11::ShaderResourcesD3D11(RenderDeviceD3D11Impl *pDeviceD3D11Impl, ID3DBlob *pShaderBytecode, const ShaderDesc &ShdrDesc) :
+ShaderResourcesD3D11::ShaderResourcesD3D11(RenderDeviceD3D11Impl* pDeviceD3D11Impl, ID3DBlob* pShaderBytecode, const ShaderDesc& ShdrDesc) :
     ShaderResources(GetRawAllocator(), ShdrDesc.ShaderType),
     m_ShaderName(ShdrDesc.Name),
     m_StaticSamplers(nullptr, STDDeleterRawMem< void >(GetRawAllocator()))

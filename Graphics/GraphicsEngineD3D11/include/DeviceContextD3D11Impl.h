@@ -43,44 +43,49 @@ class DeviceContextD3D11Impl : public DeviceContextBase<IDeviceContextD3D11>
 public:
     typedef DeviceContextBase<IDeviceContextD3D11> TDeviceContextBase;
 
-    DeviceContextD3D11Impl(IReferenceCounters *pRefCounters, IMemoryAllocator &Allocator, IRenderDevice *pDevice, ID3D11DeviceContext *pd3d11DeviceContext, const struct EngineD3D11Attribs &EngineAttribs, bool bIsDeferred);
+    DeviceContextD3D11Impl(IReferenceCounters*              pRefCounters,
+                           IMemoryAllocator&                Allocator,
+                           IRenderDevice*                   pDevice,
+                           ID3D11DeviceContext*             pd3d11DeviceContext,
+                           const struct EngineD3D11Attribs& EngineAttribs,
+                           bool                             bIsDeferred);
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
 
-    virtual void SetPipelineState(IPipelineState *pPipelineState)override final;
+    virtual void SetPipelineState(IPipelineState* pPipelineState)override final;
 
-    virtual void TransitionShaderResources(IPipelineState *pPipelineState, IShaderResourceBinding *pShaderResourceBinding)override final;
+    virtual void TransitionShaderResources(IPipelineState* pPipelineState, IShaderResourceBinding* pShaderResourceBinding)override final;
 
-    virtual void CommitShaderResources(IShaderResourceBinding *pShaderResourceBinding, Uint32 Flags)override final;
+    virtual void CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, Uint32 Flags)override final;
 
     virtual void SetStencilRef(Uint32 StencilRef)override final;
 
     virtual void SetBlendFactors(const float* pBlendFactors = nullptr)override final;
 
-    virtual void SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer **ppBuffers, Uint32 *pOffsets, Uint32 Flags )override final;
+    virtual void SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer **ppBuffers, Uint32* pOffsets, Uint32 Flags )override final;
     
     virtual void InvalidateState()override final;
 
-    virtual void SetIndexBuffer( IBuffer *pIndexBuffer, Uint32 ByteOffset )override final;
+    virtual void SetIndexBuffer( IBuffer* pIndexBuffer, Uint32 ByteOffset )override final;
 
-    virtual void SetViewports( Uint32 NumViewports, const Viewport *pViewports, Uint32 RTWidth, Uint32 RTHeight )override final;
+    virtual void SetViewports( Uint32 NumViewports, const Viewport* pViewports, Uint32 RTWidth, Uint32 RTHeight )override final;
 
-    virtual void SetScissorRects( Uint32 NumRects, const Rect *pRects, Uint32 RTWidth, Uint32 RTHeight )override final;
+    virtual void SetScissorRects( Uint32 NumRects, const Rect* pRects, Uint32 RTWidth, Uint32 RTHeight )override final;
 
-    virtual void SetRenderTargets( Uint32 NumRenderTargets, ITextureView *ppRenderTargets[], ITextureView *pDepthStencil )override final;
+    virtual void SetRenderTargets( Uint32 NumRenderTargets, ITextureView* ppRenderTargets[], ITextureView* pDepthStencil )override final;
 
     virtual void Draw( DrawAttribs &DrawAttribs )override final;
 
     virtual void DispatchCompute( const DispatchComputeAttribs &DispatchAttrs )override final;
 
-    virtual void ClearDepthStencil( ITextureView *pView, Uint32 ClearFlags, float fDepth, Uint8 Stencil)override final;
+    virtual void ClearDepthStencil( ITextureView* pView, Uint32 ClearFlags, float fDepth, Uint8 Stencil)override final;
 
-    virtual void ClearRenderTarget( ITextureView *pView, const float *RGBA )override final;
+    virtual void ClearRenderTarget( ITextureView* pView, const float *RGBA )override final;
 
     virtual void Flush()override final;
     
     void FinishCommandList(class ICommandList **ppCommandList)override final;
 
-    virtual void ExecuteCommandList(class ICommandList *pCommandList)override final;
+    virtual void ExecuteCommandList(class ICommandList* pCommandList)override final;
 
     ID3D11DeviceContext* GetD3D11DeviceContext(){ return m_pd3d11DeviceContext; }
     
@@ -103,44 +108,44 @@ private:
     void CommitD3D11IndexBuffer(VALUE_TYPE IndexType);
 
     /// Commits d3d11 vertex buffers to the d3d11 device context.
-    void CommitD3D11VertexBuffers(class PipelineStateD3D11Impl *pPipelineStateD3D11);
+    void CommitD3D11VertexBuffers(class PipelineStateD3D11Impl* pPipelineStateD3D11);
 
     /// Helper template function used to facilitate resource unbinding
     template<typename TD3D11ResourceViewType,
              typename TSetD3D11View,
              size_t NumSlots>
     void UnbindResourceView(TD3D11ResourceViewType CommittedD3D11ViewsArr[][NumSlots], 
-                            ID3D11Resource* CommittedD3D11ResourcesArr[][NumSlots], 
-                            Uint8 NumCommittedResourcesArr[],
-                            IDeviceObject *pResToUnbind,
-                            ID3D11Resource *pd3d11ResToUndind,
-                            TSetD3D11View SetD3D11ViewMethods[]);
+                            ID3D11Resource*        CommittedD3D11ResourcesArr[][NumSlots], 
+                            Uint8                  NumCommittedResourcesArr[],
+                            IDeviceObject*         pResToUnbind,
+                            ID3D11Resource*        pd3d11ResToUndind,
+                            TSetD3D11View          SetD3D11ViewMethods[]);
 
     /// Unbinds a texture from the shader resource view slots.
     /// \note The function only unbinds the texture from d3d11 device
     ///       context. All shader bindings are retained.
-    void UnbindTextureFromInput(TextureBaseD3D11 *pTexture, ID3D11Resource *pd3d11Resource);
+    void UnbindTextureFromInput(TextureBaseD3D11* pTexture, ID3D11Resource* pd3d11Resource);
 
     /// Unbinds a buffer from the input (shader resource views slots, index 
     /// and vertex buffer slots).
     /// \note The function only unbinds the buffer from d3d11 device
     ///       context. All shader bindings are retained.
-    void UnbindBufferFromInput(BufferD3D11Impl *pBuffer, ID3D11Resource *pd3d11Buffer);
+    void UnbindBufferFromInput(BufferD3D11Impl* pBuffer, ID3D11Resource* pd3d11Buffer);
 
     /// Unbinds a resource from the UAV slots.
     /// \note The function only unbinds the texture from the device
     ///       context. All shader bindings are retained.
-    void UnbindResourceFromUAV(IDeviceObject *pResource, ID3D11Resource *pd3d11Resource);
+    void UnbindResourceFromUAV(IDeviceObject* pResource, ID3D11Resource* pd3d11Resource);
 
     /// Unbinds a texture from render target slots.
-    void UnbindTextureFromRenderTarget(TextureBaseD3D11 *pResource);
+    void UnbindTextureFromRenderTarget(TextureBaseD3D11* pResource);
 
     /// Unbinds a texture from depth-stencil.
-    void UnbindTextureFromDepthStencil(TextureBaseD3D11 *pTexD3D11);
+    void UnbindTextureFromDepthStencil(TextureBaseD3D11* pTexD3D11);
 
     template<bool TransitionResources,
              bool CommitResources>
-    void TransitionAndCommitShaderResources(IPipelineState *pPSO, IShaderResourceBinding *pShaderResourceBinding);
+    void TransitionAndCommitShaderResources(IPipelineState* pPSO, IShaderResourceBinding* pShaderResourceBinding);
 
     void ClearStateCache();
 
@@ -226,19 +231,19 @@ private:
 
     /// Helper template function used to facilitate context verification
     template<UINT MaxResources, typename TD3D11ResourceType, typename TGetD3D11ResourcesType>
-    void dbgVerifyCommittedResources(TD3D11ResourceType CommittedD3D11ResourcesArr[][MaxResources],
-                                     Uint8 NumCommittedResourcesArr[],
+    void dbgVerifyCommittedResources(TD3D11ResourceType     CommittedD3D11ResourcesArr[][MaxResources],
+                                     Uint8                  NumCommittedResourcesArr[],
                                      TGetD3D11ResourcesType GetD3D11ResMethods[],
-                                     const Char *ResourceName,
-                                     SHADER_TYPE ShaderType);
+                                     const Char*            ResourceName,
+                                     SHADER_TYPE            ShaderType);
 
     /// Helper template function used to facilitate validation of SRV and UAV consistency with D3D11 resources
     template<UINT MaxResources, typename TD3D11ViewType>
-    void dbgVerifyViewConsistency(TD3D11ViewType CommittedD3D11ViewArr[][MaxResources],
+    void dbgVerifyViewConsistency(TD3D11ViewType  CommittedD3D11ViewArr[][MaxResources],
                                   ID3D11Resource* CommittedD3D11ResourcesArr[][MaxResources],
-                                  Uint8 NumCommittedResourcesArr[],
-                                  const Char *ResourceName,
-                                  SHADER_TYPE ShaderType);
+                                  Uint8           NumCommittedResourcesArr[],
+                                  const Char*     ResourceName,
+                                  SHADER_TYPE     ShaderType);
 
     /// Debug function that verifies that SRVs cached in m_CommittedD3D11SRVs 
     /// array comply with resources actually committed to the D3D11 device context

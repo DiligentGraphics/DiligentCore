@@ -46,19 +46,19 @@ D3D11_COMPARISON_FUNC ComparisonFuncToD3D11ComparisonFunc(COMPARISON_FUNCTION Fu
     return ComparisonFuncToD3DComparisonFunc<D3D11_COMPARISON_FUNC>(Func);
 }
 
-void DepthStencilStateDesc_To_D3D11_DEPTH_STENCIL_DESC(const DepthStencilStateDesc &DepthStencilDesc, D3D11_DEPTH_STENCIL_DESC &d3d11DSSDesc)
+void DepthStencilStateDesc_To_D3D11_DEPTH_STENCIL_DESC(const DepthStencilStateDesc& DepthStencilDesc, D3D11_DEPTH_STENCIL_DESC& d3d11DSSDesc)
 {
     DepthStencilStateDesc_To_D3D_DEPTH_STENCIL_DESC<D3D11_DEPTH_STENCIL_DESC, D3D11_DEPTH_STENCILOP_DESC, D3D11_STENCIL_OP, D3D11_COMPARISON_FUNC>(DepthStencilDesc, d3d11DSSDesc);
 }
 
-void RasterizerStateDesc_To_D3D11_RASTERIZER_DESC(const RasterizerStateDesc &RasterizerDesc, D3D11_RASTERIZER_DESC &d3d11RSDesc)
+void RasterizerStateDesc_To_D3D11_RASTERIZER_DESC(const RasterizerStateDesc& RasterizerDesc, D3D11_RASTERIZER_DESC& d3d11RSDesc)
 {
     RasterizerStateDesc_To_D3D_RASTERIZER_DESC<D3D11_RASTERIZER_DESC, D3D11_FILL_MODE, D3D11_CULL_MODE>(RasterizerDesc, d3d11RSDesc);
     d3d11RSDesc.ScissorEnable         = RasterizerDesc.ScissorEnable         ? TRUE : FALSE;    
 }
 
 
-void BlendStateDesc_To_D3D11_BLEND_DESC(const BlendStateDesc &BSDesc, D3D11_BLEND_DESC &d3d11BSDesc)
+void BlendStateDesc_To_D3D11_BLEND_DESC(const BlendStateDesc& BSDesc, D3D11_BLEND_DESC& d3d11BSDesc)
 {
     BlendStateDescToD3DBlendDesc<D3D11_BLEND_DESC, D3D11_BLEND, D3D11_BLEND_OP>(BSDesc, d3d11BSDesc);
 
@@ -72,8 +72,8 @@ void BlendStateDesc_To_D3D11_BLEND_DESC(const BlendStateDesc &BSDesc, D3D11_BLEN
     }
 }
 
-void LayoutElements_To_D3D11_INPUT_ELEMENT_DESCs(const std::vector<LayoutElement, STDAllocatorRawMem<LayoutElement> > &LayoutElements, 
-                                                 std::vector<D3D11_INPUT_ELEMENT_DESC, STDAllocatorRawMem<D3D11_INPUT_ELEMENT_DESC> > &D3D11InputElements)
+void LayoutElements_To_D3D11_INPUT_ELEMENT_DESCs(const std::vector<LayoutElement, STDAllocatorRawMem<LayoutElement> >& LayoutElements, 
+                                                 std::vector<D3D11_INPUT_ELEMENT_DESC, STDAllocatorRawMem<D3D11_INPUT_ELEMENT_DESC> >& D3D11InputElements)
 {
     LayoutElements_To_D3D_INPUT_ELEMENT_DESCs<D3D11_INPUT_ELEMENT_DESC>(LayoutElements, D3D11InputElements);
 }
@@ -85,34 +85,34 @@ D3D11_PRIMITIVE_TOPOLOGY TopologyToD3D11Topology(PRIMITIVE_TOPOLOGY Topology)
 
 
 
-void TextureViewDesc_to_D3D11_SRV_DESC(const TextureViewDesc& TexViewDesc, D3D11_SHADER_RESOURCE_VIEW_DESC &D3D11SRVDesc, Uint32 SampleCount)
+void TextureViewDesc_to_D3D11_SRV_DESC(const TextureViewDesc& TexViewDesc, D3D11_SHADER_RESOURCE_VIEW_DESC& D3D11SRVDesc, Uint32 SampleCount)
 {
     TextureViewDesc_to_D3D_SRV_DESC(TexViewDesc, D3D11SRVDesc, SampleCount);
 }
 
-void TextureViewDesc_to_D3D11_RTV_DESC(const TextureViewDesc& TexViewDesc, D3D11_RENDER_TARGET_VIEW_DESC &D3D11RTVDesc, Uint32 SampleCount)
+void TextureViewDesc_to_D3D11_RTV_DESC(const TextureViewDesc& TexViewDesc, D3D11_RENDER_TARGET_VIEW_DESC& D3D11RTVDesc, Uint32 SampleCount)
 {
     TextureViewDesc_to_D3D_RTV_DESC(TexViewDesc, D3D11RTVDesc, SampleCount);
 }
 
-void TextureViewDesc_to_D3D11_DSV_DESC(const TextureViewDesc& TexViewDesc, D3D11_DEPTH_STENCIL_VIEW_DESC &D3D11DSVDesc, Uint32 SampleCount)
+void TextureViewDesc_to_D3D11_DSV_DESC(const TextureViewDesc& TexViewDesc, D3D11_DEPTH_STENCIL_VIEW_DESC& D3D11DSVDesc, Uint32 SampleCount)
 {
     TextureViewDesc_to_D3D_DSV_DESC(TexViewDesc, D3D11DSVDesc, SampleCount);
 }
 
-void TextureViewDesc_to_D3D11_UAV_DESC(const TextureViewDesc& TexViewDesc, D3D11_UNORDERED_ACCESS_VIEW_DESC &D3D11UAVDesc)
+void TextureViewDesc_to_D3D11_UAV_DESC(const TextureViewDesc& TexViewDesc, D3D11_UNORDERED_ACCESS_VIEW_DESC& D3D11UAVDesc)
 {
     TextureViewDesc_to_D3D_UAV_DESC(TexViewDesc, D3D11UAVDesc);
 }
 
 
 
-void BufferViewDesc_to_D3D11_SRV_DESC(const BufferDesc &BuffDesc, const BufferViewDesc& SRVDesc, D3D11_SHADER_RESOURCE_VIEW_DESC &D3D11SRVDesc)
+void BufferViewDesc_to_D3D11_SRV_DESC(const BufferDesc& BuffDesc, const BufferViewDesc& SRVDesc, D3D11_SHADER_RESOURCE_VIEW_DESC& D3D11SRVDesc)
 {
     BufferViewDesc_to_D3D_SRV_DESC(BuffDesc, SRVDesc, D3D11SRVDesc);
 }
 
-void BufferViewDesc_to_D3D11_UAV_DESC(const BufferDesc &BuffDesc, const BufferViewDesc& UAVDesc, D3D11_UNORDERED_ACCESS_VIEW_DESC &D3D11UAVDesc)
+void BufferViewDesc_to_D3D11_UAV_DESC(const BufferDesc& BuffDesc, const BufferViewDesc& UAVDesc, D3D11_UNORDERED_ACCESS_VIEW_DESC& D3D11UAVDesc)
 {
     BufferViewDesc_to_D3D_UAV_DESC(BuffDesc, UAVDesc, D3D11UAVDesc);
     D3D11UAVDesc.Buffer.Flags = 0; // D3D11_BUFFER_UAV_FLAG_RAW, D3D11_BUFFER_UAV_FLAG_APPEND, D3D11_BUFFER_UAV_FLAG_COUNTER

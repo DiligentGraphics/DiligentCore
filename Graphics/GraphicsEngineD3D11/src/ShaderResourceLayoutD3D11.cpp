@@ -38,7 +38,7 @@
 namespace Diligent
 {
 
-ShaderResourceLayoutD3D11::ShaderResourceLayoutD3D11(IObject &Owner, IMemoryAllocator& ResLayoutDataAllocator) : 
+ShaderResourceLayoutD3D11::ShaderResourceLayoutD3D11(IObject& Owner, IMemoryAllocator& ResLayoutDataAllocator) : 
     m_Owner(Owner),
 #if USE_VARIABLE_HASH_MAP
     m_VariableHash(STD_ALLOCATOR_RAW_MEM(VariableHashData, GetRawAllocator(), "Allocator for vector<BuffSRVBindInfo>")),
@@ -80,11 +80,11 @@ ShaderResourceLayoutD3D11::~ShaderResourceLayoutD3D11()
 const D3DShaderResourceAttribs ShaderResourceLayoutD3D11::TexAndSamplerBindInfo::InvalidSamplerAttribs("Invalid sampler", D3DShaderResourceAttribs::InvalidBindPoint, 0, D3D_SIT_SAMPLER,  SHADER_VARIABLE_TYPE_NUM_TYPES, D3D_SRV_DIMENSION_UNKNOWN, D3DShaderResourceAttribs::InvalidSamplerId, false);
 
 void ShaderResourceLayoutD3D11::Initialize(const std::shared_ptr<const ShaderResourcesD3D11>& pSrcResources,
-                                           const SHADER_VARIABLE_TYPE *VarTypes, 
-                                           Uint32 NumVarTypes, 
-                                           ShaderResourceCacheD3D11& ResourceCache,
-                                           IMemoryAllocator& ResCacheDataAllocator,
-                                           IMemoryAllocator& ResLayoutDataAllocator)
+                                           const SHADER_VARIABLE_TYPE*                        VarTypes, 
+                                           Uint32                                             NumVarTypes, 
+                                           ShaderResourceCacheD3D11&                          ResourceCache,
+                                           IMemoryAllocator&                                  ResCacheDataAllocator,
+                                           IMemoryAllocator&                                  ResLayoutDataAllocator)
 {
     // http://diligentgraphics.com/diligent-engine/architecture/d3d11/shader-resource-layout#Shader-Resource-Layout-Initialization
 
@@ -212,7 +212,7 @@ void ShaderResourceLayoutD3D11::Initialize(const std::shared_ptr<const ShaderRes
     InitVariablesHashMap();
 }
 
-void ShaderResourceLayoutD3D11::CopyResources(ShaderResourceCacheD3D11 &DstCache)
+void ShaderResourceLayoutD3D11::CopyResources(ShaderResourceCacheD3D11& DstCache)
 {
     VERIFY(m_pResourceCache, "Resource cache must not be null");
 
@@ -355,7 +355,9 @@ do{                                                                             
                            "\" in shader \"", ShaderName, "\". ", __VA_ARGS__ );                         \
 }while(false)
 
-void ShaderResourceLayoutD3D11::ConstBuffBindInfo::BindResource(IDeviceObject *pBuffer, Uint32 ArrayIndex, const ShaderResourceLayoutD3D11 *dbgResLayout)
+void ShaderResourceLayoutD3D11::ConstBuffBindInfo::BindResource(IDeviceObject*                   pBuffer,
+                                                                Uint32                           ArrayIndex,
+                                                                const ShaderResourceLayoutD3D11* dbgResLayout)
 {
     auto &pResourceCache = m_ParentResLayout.m_pResourceCache;
     VERIFY(pResourceCache, "Resource cache is null");
@@ -438,7 +440,9 @@ bool dbgVerifyViewType( const char *ViewTypeName,
 }
 #endif
 
-void ShaderResourceLayoutD3D11::TexAndSamplerBindInfo::BindResource( IDeviceObject *pView, Uint32 ArrayIndex, const ShaderResourceLayoutD3D11 *dbgResLayout )
+void ShaderResourceLayoutD3D11::TexAndSamplerBindInfo::BindResource( IDeviceObject*                   pView,
+                                                                     Uint32                           ArrayIndex,
+                                                                     const ShaderResourceLayoutD3D11* dbgResLayout )
 {
     auto &pResourceCache = m_ParentResLayout.m_pResourceCache;
     VERIFY(pResourceCache, "Resource cache is null");
@@ -499,7 +503,9 @@ void ShaderResourceLayoutD3D11::TexAndSamplerBindInfo::BindResource( IDeviceObje
 }
 
 
-void ShaderResourceLayoutD3D11::BuffSRVBindInfo::BindResource( IDeviceObject *pView, Uint32 ArrayIndex, const ShaderResourceLayoutD3D11 *dbgResLayout )
+void ShaderResourceLayoutD3D11::BuffSRVBindInfo::BindResource( IDeviceObject*                   pView,
+                                                               Uint32                           ArrayIndex,
+                                                               const ShaderResourceLayoutD3D11* dbgResLayout )
 {
     auto &pResourceCache = m_ParentResLayout.m_pResourceCache;
     VERIFY(pResourceCache, "Resource cache is null");
@@ -530,7 +536,9 @@ void ShaderResourceLayoutD3D11::BuffSRVBindInfo::BindResource( IDeviceObject *pV
 }
 
 
-void ShaderResourceLayoutD3D11::TexUAVBindInfo::BindResource( IDeviceObject *pView, Uint32 ArrayIndex, const ShaderResourceLayoutD3D11 *dbgResLayout )
+void ShaderResourceLayoutD3D11::TexUAVBindInfo::BindResource( IDeviceObject*                   pView,
+                                                              Uint32                           ArrayIndex,
+                                                              const ShaderResourceLayoutD3D11* dbgResLayout )
 {
     auto &pResourceCache = m_ParentResLayout.m_pResourceCache;
     VERIFY(pResourceCache, "Resource cache is null");
@@ -561,7 +569,9 @@ void ShaderResourceLayoutD3D11::TexUAVBindInfo::BindResource( IDeviceObject *pVi
 }
 
 
-void ShaderResourceLayoutD3D11::BuffUAVBindInfo::BindResource( IDeviceObject *pView, Uint32 ArrayIndex, const ShaderResourceLayoutD3D11 *dbgResLayout )
+void ShaderResourceLayoutD3D11::BuffUAVBindInfo::BindResource( IDeviceObject*                   pView,
+                                                               Uint32                           ArrayIndex,
+                                                               const ShaderResourceLayoutD3D11* dbgResLayout )
 {
     auto &pResourceCache = m_ParentResLayout.m_pResourceCache;
     VERIFY(pResourceCache, "Resource cache is null");
@@ -635,7 +645,7 @@ bool ShaderResourceLayoutD3D11::BuffUAVBindInfo::IsBound(Uint32 ArrayIndex)
 class BindResourceHelper
 {
 public:
-    BindResourceHelper(IResourceMapping *pRM, Uint32 Fl, const ShaderResourceLayoutD3D11 *pSRL) :
+    BindResourceHelper(IResourceMapping* pRM, Uint32 Fl, const ShaderResourceLayoutD3D11* pSRL) :
         pResourceMapping(pRM),
         Flags(Fl),
         pShaderResLayout(pSRL)
@@ -678,7 +688,7 @@ private:
     const ShaderResourceLayoutD3D11 *pShaderResLayout;
 };
 
-void ShaderResourceLayoutD3D11::BindResources( IResourceMapping* pResourceMapping, Uint32 Flags, const ShaderResourceCacheD3D11 &dbgResourceCache )
+void ShaderResourceLayoutD3D11::BindResources( IResourceMapping* pResourceMapping, Uint32 Flags, const ShaderResourceCacheD3D11& dbgResourceCache )
 {
     VERIFY(&dbgResourceCache == m_pResourceCache, "Resource cache does not match the cache provided at initialization");
 

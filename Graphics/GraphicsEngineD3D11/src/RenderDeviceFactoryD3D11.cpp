@@ -49,23 +49,23 @@ public:
     }
 
     void CreateDeviceAndContextsD3D11( const EngineD3D11Attribs& EngineAttribs, 
-                                       IRenderDevice **ppDevice, 
-                                       IDeviceContext **ppContexts,
-                                       Uint32 NumDeferredContexts )override final;
+                                       IRenderDevice**           ppDevice, 
+                                       IDeviceContext**          ppContexts,
+                                       Uint32                    NumDeferredContexts )override final;
 
-   void CreateSwapChainD3D11( IRenderDevice *pDevice, 
-                              IDeviceContext *pImmediateContext, 
-                              const SwapChainDesc& SCDesc, 
+   void CreateSwapChainD3D11( IRenderDevice*            pDevice, 
+                              IDeviceContext*           pImmediateContext, 
+                              const SwapChainDesc&      SCDesc, 
                               const FullScreenModeDesc& FSDesc,
-                              void* pNativeWndHandle, 
-                              ISwapChain **ppSwapChain )override final;
+                              void*                     pNativeWndHandle, 
+                              ISwapChain**              ppSwapChain )override final;
 
-   void AttachToD3D11Device(void *pd3d11NativeDevice, 
-                            void *pd3d11ImmediateContext,
+   void AttachToD3D11Device(void*                     pd3d11NativeDevice, 
+                            void*                     pd3d11ImmediateContext,
                             const EngineD3D11Attribs& EngineAttribs, 
-                            IRenderDevice **ppDevice, 
-                            IDeviceContext **ppContexts,
-                            Uint32 NumDeferredContexts)override final;
+                            IRenderDevice**           ppDevice, 
+                            IDeviceContext**          ppContexts,
+                            Uint32                    NumDeferredContexts)override final;
 };
 
 
@@ -104,9 +104,9 @@ inline bool SdkLayersAvailable()
 ///                                   contexts are written to ppContexts array starting 
 ///                                   at position 1
 void EngineFactoryD3D11Impl::CreateDeviceAndContextsD3D11( const EngineD3D11Attribs& EngineAttribs, 
-                                                           IRenderDevice **ppDevice, 
-                                                           IDeviceContext **ppContexts, 
-                                                           Uint32 NumDeferredContexts )
+                                                           IRenderDevice**           ppDevice, 
+                                                           IDeviceContext**          ppContexts, 
+                                                           Uint32                    NumDeferredContexts )
 {
     if (EngineAttribs.DebugMessageCallback != nullptr)
         SetDebugMessageCallback(EngineAttribs.DebugMessageCallback);
@@ -218,12 +218,12 @@ void EngineFactoryD3D11Impl::CreateDeviceAndContextsD3D11( const EngineD3D11Attr
 ///                                   of deferred contexts is requested, pointers to the
 ///                                   contexts are written to ppContexts array starting 
 ///                                   at position 1
-void EngineFactoryD3D11Impl::AttachToD3D11Device(void *pd3d11NativeDevice, 
-                                                 void *pd3d11ImmediateContext,
+void EngineFactoryD3D11Impl::AttachToD3D11Device(void*                     pd3d11NativeDevice, 
+                                                 void*                     pd3d11ImmediateContext,
                                                  const EngineD3D11Attribs& EngineAttribs, 
-                                                 IRenderDevice **ppDevice, 
-                                                 IDeviceContext **ppContexts,
-                                                 Uint32 NumDeferredContexts)
+                                                 IRenderDevice**           ppDevice, 
+                                                 IDeviceContext**          ppContexts,
+                                                 Uint32                    NumDeferredContexts)
 {
     if (EngineAttribs.DebugMessageCallback != nullptr)
         SetDebugMessageCallback(EngineAttribs.DebugMessageCallback);
@@ -299,12 +299,12 @@ void EngineFactoryD3D11Impl::AttachToD3D11Device(void *pd3d11NativeDevice,
 ///                                
 /// \param [out] ppSwapChain    - Address of the memory location where pointer to the new 
 ///                               swap chain will be written
-void EngineFactoryD3D11Impl::CreateSwapChainD3D11( IRenderDevice *pDevice, 
-                                                   IDeviceContext *pImmediateContext, 
-                                                   const SwapChainDesc& SCDesc, 
+void EngineFactoryD3D11Impl::CreateSwapChainD3D11( IRenderDevice*            pDevice, 
+                                                   IDeviceContext*           pImmediateContext, 
+                                                   const SwapChainDesc&      SCDesc, 
                                                    const FullScreenModeDesc& FSDesc,
-                                                   void* pNativeWndHandle, 
-                                                   ISwapChain **ppSwapChain )
+                                                   void*                     pNativeWndHandle, 
+                                                   ISwapChain**              ppSwapChain )
 {
     VERIFY( ppSwapChain, "Null pointer provided" );
     if( !ppSwapChain )

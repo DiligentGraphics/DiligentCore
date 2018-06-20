@@ -32,7 +32,11 @@
 namespace Diligent
 {
 
-TextureBaseD3D11 :: TextureBaseD3D11(IReferenceCounters *pRefCounters, FixedBlockMemoryAllocator &TexViewObjAllocator, RenderDeviceD3D11Impl *pRenderDeviceD3D11, const TextureDesc& TexDesc, const TextureData &InitData /*= TextureData()*/) : 
+TextureBaseD3D11 :: TextureBaseD3D11(IReferenceCounters*        pRefCounters,
+                                     FixedBlockMemoryAllocator& TexViewObjAllocator,
+                                     RenderDeviceD3D11Impl*     pRenderDeviceD3D11,
+                                     const TextureDesc&         TexDesc,
+                                     const TextureData&         InitData /*= TextureData()*/) : 
     TTextureBase(pRefCounters, TexViewObjAllocator, pRenderDeviceD3D11, TexDesc)
 {
     if( TexDesc.Usage == USAGE_STATIC && InitData.pSubResources == nullptr )
@@ -45,9 +49,9 @@ void TextureBaseD3D11::CreateViewInternal( const struct TextureViewDesc &ViewDes
 {
     VERIFY( ppView != nullptr, "View pointer address is null" );
     if( !ppView )return;
-    VERIFY( *ppView == nullptr, "Overwriting reference to existing object may cause memory leaks" );
+    VERIFY(* ppView == nullptr, "Overwriting reference to existing object may cause memory leaks" );
     
-    *ppView = nullptr;
+   * ppView = nullptr;
 
     try
     {
@@ -60,7 +64,7 @@ void TextureBaseD3D11::CreateViewInternal( const struct TextureViewDesc &ViewDes
             case TEXTURE_VIEW_SHADER_RESOURCE:
             {
                 VERIFY( m_Desc.BindFlags & BIND_SHADER_RESOURCE, "BIND_SHADER_RESOURCE flag is not set" );
-                ID3D11ShaderResourceView *pSRV = nullptr;
+                ID3D11ShaderResourceView* pSRV = nullptr;
                 CreateSRV( UpdatedViewDesc, &pSRV );
                 pD3D11View.Attach( pSRV );
             }
@@ -69,7 +73,7 @@ void TextureBaseD3D11::CreateViewInternal( const struct TextureViewDesc &ViewDes
             case TEXTURE_VIEW_RENDER_TARGET:
             {
                 VERIFY( m_Desc.BindFlags & BIND_RENDER_TARGET, "BIND_RENDER_TARGET flag is not set" );
-                ID3D11RenderTargetView *pRTV = nullptr;
+                ID3D11RenderTargetView* pRTV = nullptr;
                 CreateRTV( UpdatedViewDesc, &pRTV );
                 pD3D11View.Attach( pRTV );
             }
@@ -78,7 +82,7 @@ void TextureBaseD3D11::CreateViewInternal( const struct TextureViewDesc &ViewDes
             case TEXTURE_VIEW_DEPTH_STENCIL:
             {
                 VERIFY( m_Desc.BindFlags & BIND_DEPTH_STENCIL, "BIND_DEPTH_STENCIL is not set" );
-                ID3D11DepthStencilView *pDSV = nullptr;
+                ID3D11DepthStencilView* pDSV = nullptr;
                 CreateDSV( UpdatedViewDesc, &pDSV );
                 pD3D11View.Attach( pDSV );
             }
@@ -87,7 +91,7 @@ void TextureBaseD3D11::CreateViewInternal( const struct TextureViewDesc &ViewDes
             case TEXTURE_VIEW_UNORDERED_ACCESS:
             {
                 VERIFY( m_Desc.BindFlags & BIND_UNORDERED_ACCESS, "BIND_UNORDERED_ACCESS flag is not set" );
-                ID3D11UnorderedAccessView *pUAV = nullptr;
+                ID3D11UnorderedAccessView* pUAV = nullptr;
                 CreateUAV( UpdatedViewDesc, &pUAV );
                 pD3D11View.Attach( pUAV );
             }
@@ -96,7 +100,7 @@ void TextureBaseD3D11::CreateViewInternal( const struct TextureViewDesc &ViewDes
             default: UNEXPECTED( "Unknown view type" ); break;
         }
 
-        auto *pDeviceD3D11Impl = ValidatedCast<RenderDeviceD3D11Impl>(GetDevice());
+        auto* pDeviceD3D11Impl = ValidatedCast<RenderDeviceD3D11Impl>(GetDevice());
         auto &TexViewAllocator = pDeviceD3D11Impl->GetTexViewObjAllocator();
         VERIFY( &TexViewAllocator == &m_dbgTexViewObjAllocator, "Texture view allocator does not match allocator provided during texture initialization" );
 
@@ -105,7 +109,7 @@ void TextureBaseD3D11::CreateViewInternal( const struct TextureViewDesc &ViewDes
         VERIFY( pViewD3D11->GetDesc().ViewType == ViewDesc.ViewType, "Incorrect view type" );
 
         if( bIsDefaultView )
-            *ppView = pViewD3D11;
+           * ppView = pViewD3D11;
         else
             pViewD3D11->QueryInterface(IID_TextureView, reinterpret_cast<IObject**>(ppView) );
     }
@@ -116,7 +120,7 @@ void TextureBaseD3D11::CreateViewInternal( const struct TextureViewDesc &ViewDes
     }
 }
 
-void TextureBaseD3D11 :: PrepareD3D11InitData(const TextureData &InitData, Uint32 NumSubresources, 
+void TextureBaseD3D11 :: PrepareD3D11InitData(const TextureData& InitData, Uint32 NumSubresources, 
                                               std::vector<D3D11_SUBRESOURCE_DATA, STDAllocatorRawMem<D3D11_SUBRESOURCE_DATA> >  &D3D11InitData)
 {
     if( InitData.pSubResources )
@@ -142,7 +146,7 @@ TextureBaseD3D11 :: ~TextureBaseD3D11()
 {
 }
 
-void TextureBaseD3D11::UpdateData( IDeviceContext *pContext, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData )
+void TextureBaseD3D11::UpdateData( IDeviceContext* pContext, Uint32 MipLevel, Uint32 Slice, const Box& DstBox, const TextureSubResData& SubresData )
 {
     TTextureBase::UpdateData( pContext, MipLevel, Slice, DstBox, SubresData );
     if (SubresData.pSrcBuffer != nullptr)
@@ -153,7 +157,7 @@ void TextureBaseD3D11::UpdateData( IDeviceContext *pContext, Uint32 MipLevel, Ui
 
     VERIFY( m_Desc.Usage == USAGE_DEFAULT, "Only default usage resiurces can be updated with UpdateData()" );
     
-    auto *pd3d11DeviceContext = static_cast<DeviceContextD3D11Impl*>(pContext)->GetD3D11DeviceContext();
+    auto* pd3d11DeviceContext = static_cast<DeviceContextD3D11Impl*>(pContext)->GetD3D11DeviceContext();
 
     D3D11_BOX D3D11Box;
     D3D11Box.left = DstBox.MinX;
@@ -166,24 +170,24 @@ void TextureBaseD3D11::UpdateData( IDeviceContext *pContext, Uint32 MipLevel, Ui
     pd3d11DeviceContext->UpdateSubresource(m_pd3d11Texture, SubresIndex, &D3D11Box, SubresData.pData, SubresData.Stride, SubresData.DepthStride);
 }
 
-void TextureBaseD3D11 ::  CopyData(IDeviceContext *pContext, 
-                                    ITexture *pSrcTexture, 
-                                    Uint32 SrcMipLevel,
-                                    Uint32 SrcSlice,
-                                    const Box *pSrcBox,
-                                    Uint32 DstMipLevel,
-                                    Uint32 DstSlice,
-                                    Uint32 DstX,
-                                    Uint32 DstY,
-                                    Uint32 DstZ)
+void TextureBaseD3D11 ::  CopyData(IDeviceContext* pContext, 
+                                    ITexture*      pSrcTexture, 
+                                    Uint32         SrcMipLevel,
+                                    Uint32         SrcSlice,
+                                    const Box*     pSrcBox,
+                                    Uint32         DstMipLevel,
+                                    Uint32         DstSlice,
+                                    Uint32         DstX,
+                                    Uint32         DstY,
+                                    Uint32         DstZ)
 {
     TTextureBase::CopyData( pContext, pSrcTexture, SrcMipLevel, SrcSlice, pSrcBox,
                             DstMipLevel, DstSlice, DstX, DstY, DstZ );
 
-    auto *pd3d11DeviceContext = ValidatedCast<DeviceContextD3D11Impl>(pContext )->GetD3D11DeviceContext();
-    auto *pSrTextureBaseD3D11 = ValidatedCast<TextureBaseD3D11>( pSrcTexture );
+    auto* pd3d11DeviceContext = ValidatedCast<DeviceContextD3D11Impl>(pContext )->GetD3D11DeviceContext();
+    auto* pSrTextureBaseD3D11 = ValidatedCast<TextureBaseD3D11>( pSrcTexture );
     
-    D3D11_BOX D3D11SrcBox, *pD3D11SrcBox = nullptr;
+    D3D11_BOX D3D11SrcBox,* pD3D11SrcBox = nullptr;
     if( pSrcBox )
     {
         D3D11SrcBox.left    = pSrcBox->MinX;
@@ -199,11 +203,11 @@ void TextureBaseD3D11 ::  CopyData(IDeviceContext *pContext,
     pd3d11DeviceContext->CopySubresourceRegion(m_pd3d11Texture, DstSubRes, DstX, DstY, DstZ, pSrTextureBaseD3D11->GetD3D11Texture(), SrcSubRes, pD3D11SrcBox);
 }
 
-void TextureBaseD3D11 :: Map( IDeviceContext *pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags, MappedTextureSubresource &MappedData )
+void TextureBaseD3D11 :: Map( IDeviceContext* pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags, MappedTextureSubresource& MappedData )
 {
     TTextureBase::Map( pContext, Subresource, MapType, MapFlags, MappedData );
 
-    auto *pd3d11DeviceContext = static_cast<DeviceContextD3D11Impl*>(pContext)->GetD3D11DeviceContext();
+    auto* pd3d11DeviceContext = static_cast<DeviceContextD3D11Impl*>(pContext)->GetD3D11DeviceContext();
     D3D11_MAP d3d11MapType = static_cast<D3D11_MAP>(0);
     UINT d3d11MapFlags = 0;
     MapParamsToD3D11MapParams(MapType, MapFlags, d3d11MapType, d3d11MapFlags);
@@ -223,11 +227,11 @@ void TextureBaseD3D11 :: Map( IDeviceContext *pContext, Uint32 Subresource, MAP_
     }
 }
 
-void TextureBaseD3D11::Unmap( IDeviceContext *pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags )
+void TextureBaseD3D11::Unmap( IDeviceContext* pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags )
 {
     TTextureBase::Unmap( pContext, Subresource, MapType, MapFlags );
 
-    auto *pd3d11DeviceContext = static_cast<DeviceContextD3D11Impl*>(pContext)->GetD3D11DeviceContext();
+    auto* pd3d11DeviceContext = static_cast<DeviceContextD3D11Impl*>(pContext)->GetD3D11DeviceContext();
     pd3d11DeviceContext->Unmap(m_pd3d11Texture, Subresource);
 }
 

@@ -53,19 +53,19 @@ public:
     ~ShaderResourceLayoutD3D11();
 
     // No copies or moves
-    ShaderResourceLayoutD3D11(const ShaderResourceLayoutD3D11&) = delete;
+    ShaderResourceLayoutD3D11             (const ShaderResourceLayoutD3D11&) = delete;
     ShaderResourceLayoutD3D11& operator = (const ShaderResourceLayoutD3D11&) = delete;
-    ShaderResourceLayoutD3D11(ShaderResourceLayoutD3D11&&) = default;
-    ShaderResourceLayoutD3D11& operator = (ShaderResourceLayoutD3D11&&) = delete;
+    ShaderResourceLayoutD3D11             (ShaderResourceLayoutD3D11&&)      = default;
+    ShaderResourceLayoutD3D11& operator = (ShaderResourceLayoutD3D11&&)      = delete;
 
     void Initialize(const std::shared_ptr<const ShaderResourcesD3D11>& pSrcResources,
-                    const SHADER_VARIABLE_TYPE *VarTypes, 
-                    Uint32 NumVarTypes, 
-                    ShaderResourceCacheD3D11& ResourceCache,
-                    IMemoryAllocator& ResCacheDataAllocator,
-                    IMemoryAllocator& ResLayoutDataAllocator);
+                    const SHADER_VARIABLE_TYPE*                        VarTypes, 
+                    Uint32                                             NumVarTypes, 
+                    ShaderResourceCacheD3D11&                          ResourceCache,
+                    IMemoryAllocator&                                  ResCacheDataAllocator,
+                    IMemoryAllocator&                                  ResLayoutDataAllocator);
 
-    void CopyResources(ShaderResourceCacheD3D11 &DstCache);
+    void CopyResources(ShaderResourceCacheD3D11& DstCache);
 
     using ShaderVariableD3D11Base = ShaderVariableD3DBase<ShaderResourceLayoutD3D11>;
 
@@ -76,8 +76,8 @@ public:
             ShaderVariableD3D11Base(ParentResLayout, ResourceAttribs)
         {}
         // Non-virtual function
-        __forceinline void BindResource(IDeviceObject *pObject, Uint32 ArrayIndex, const ShaderResourceLayoutD3D11 *dbgResLayout);
-        virtual void Set(IDeviceObject *pObject)override final{ BindResource(pObject, 0, nullptr); }
+        __forceinline void BindResource(IDeviceObject* pObject, Uint32 ArrayIndex, const ShaderResourceLayoutD3D11* dbgResLayout);
+        virtual void Set(IDeviceObject* pObject)override final{ BindResource(pObject, 0, nullptr); }
 
         virtual void SetArray(IDeviceObject* const* ppObjects, Uint32 FirstElement, Uint32 NumElements)override final
         {
@@ -92,14 +92,14 @@ public:
     {
         TexAndSamplerBindInfo( const D3DShaderResourceAttribs& _TextureAttribs, 
                                const D3DShaderResourceAttribs& _SamplerAttribs,
-                               ShaderResourceLayoutD3D11 &ParentResLayout) :
+                               ShaderResourceLayoutD3D11&      ParentResLayout) :
             ShaderVariableD3D11Base(ParentResLayout, _TextureAttribs),
             SamplerAttribs(_SamplerAttribs)
         {}
 
         // Non-virtual function
-        __forceinline void BindResource(IDeviceObject *pObject, Uint32 ArrayIndex, const ShaderResourceLayoutD3D11 *dbgResLayout);
-        virtual void Set(IDeviceObject *pObject)override final{ BindResource(pObject, 0, nullptr); }
+        __forceinline void BindResource(IDeviceObject* pObject, Uint32 ArrayIndex, const ShaderResourceLayoutD3D11* dbgResLayout);
+        virtual void Set(IDeviceObject* pObject)override final{ BindResource(pObject, 0, nullptr); }
 
         virtual void SetArray(IDeviceObject* const* ppObjects, Uint32 FirstElement, Uint32 NumElements)override final
         {
@@ -117,13 +117,13 @@ public:
     struct TexUAVBindInfo : ShaderVariableD3D11Base
     {
         TexUAVBindInfo( const D3DShaderResourceAttribs& ResourceAttribs,
-                        ShaderResourceLayoutD3D11 &ParentResLayout ) :
+                        ShaderResourceLayoutD3D11&      ParentResLayout ) :
             ShaderVariableD3D11Base(ParentResLayout, ResourceAttribs)
         {}
 
         // Provide non-virtual function
-        __forceinline void BindResource(IDeviceObject *pObject, Uint32 ArrayIndex, const ShaderResourceLayoutD3D11 *dbgResLayout);
-        virtual void Set(IDeviceObject *pObject)override final{ BindResource(pObject, 0, nullptr); }
+        __forceinline void BindResource(IDeviceObject* pObject, Uint32 ArrayIndex, const ShaderResourceLayoutD3D11* dbgResLayout);
+        virtual void Set(IDeviceObject* pObject)override final{ BindResource(pObject, 0, nullptr); }
 
         virtual void SetArray(IDeviceObject* const* ppObjects, Uint32 FirstElement, Uint32 NumElements)override final
         {
@@ -137,13 +137,13 @@ public:
     struct BuffUAVBindInfo : ShaderVariableD3D11Base
     {
         BuffUAVBindInfo( const D3DShaderResourceAttribs& ResourceAttribs,
-                         ShaderResourceLayoutD3D11 &ParentResLayout ) :
+                         ShaderResourceLayoutD3D11&      ParentResLayout ) :
             ShaderVariableD3D11Base(ParentResLayout, ResourceAttribs)
         {}
 
         // Non-virtual function
-        __forceinline void BindResource(IDeviceObject *pObject, Uint32 ArrayIndex, const ShaderResourceLayoutD3D11 *dbgResLayout);
-        virtual void Set(IDeviceObject *pObject)override final{ BindResource(pObject, 0, nullptr); }
+        __forceinline void BindResource(IDeviceObject* pObject, Uint32 ArrayIndex, const ShaderResourceLayoutD3D11* dbgResLayout);
+        virtual void Set(IDeviceObject* pObject)override final{ BindResource(pObject, 0, nullptr); }
 
         virtual void SetArray(IDeviceObject* const* ppObjects, Uint32 FirstElement, Uint32 NumElements)override final
         {
@@ -157,13 +157,13 @@ public:
     struct BuffSRVBindInfo : ShaderVariableD3D11Base
     {
         BuffSRVBindInfo( const D3DShaderResourceAttribs& ResourceAttribs,
-                         ShaderResourceLayoutD3D11 &ParentResLayout ) :
+                         ShaderResourceLayoutD3D11&      ParentResLayout ) :
             ShaderVariableD3D11Base(ParentResLayout, ResourceAttribs)
         {}
 
         // Non-virtual function
-        __forceinline void BindResource(IDeviceObject *pObject, Uint32 ArrayIndex, const ShaderResourceLayoutD3D11 *dbgResLayout);
-        virtual void Set(IDeviceObject *pObject)override final{ BindResource(pObject, 0, nullptr); }
+        __forceinline void BindResource(IDeviceObject* pObject, Uint32 ArrayIndex, const ShaderResourceLayoutD3D11* dbgResLayout);
+        virtual void Set(IDeviceObject* pObject)override final{ BindResource(pObject, 0, nullptr); }
 
         virtual void SetArray(IDeviceObject* const* ppObjects, Uint32 FirstElement, Uint32 NumElements)override final
         {
@@ -176,7 +176,7 @@ public:
 
     // dbgResourceCache is only used for sanity check and as a remainder that the resource cache must be alive
     // while Layout is alive
-    void BindResources( IResourceMapping* pResourceMapping, Uint32 Flags, const ShaderResourceCacheD3D11 &dbgResourceCache );
+    void BindResources( IResourceMapping* pResourceMapping, Uint32 Flags, const ShaderResourceCacheD3D11& dbgResourceCache );
 
 #ifdef VERIFY_SHADER_BINDINGS
     void dbgVerifyBindings()const;
@@ -270,7 +270,7 @@ private:
              typename THandleTexUAV,
              typename THandleBufSRV,
              typename THandleBufUAV>
-    void HandleResources(THandleCB HandleCB,
+    void HandleResources(THandleCB     HandleCB,
                          THandleTexSRV HandleTexSRV,
                          THandleTexUAV HandleTexUAV,
                          THandleBufSRV HandleBufSRV,

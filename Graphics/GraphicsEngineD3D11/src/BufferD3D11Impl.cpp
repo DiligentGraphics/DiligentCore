@@ -35,11 +35,11 @@
 namespace Diligent
 {
 
-BufferD3D11Impl :: BufferD3D11Impl(IReferenceCounters *pRefCounters, 
-                                   FixedBlockMemoryAllocator &BuffViewObjMemAllocator,
-                                   RenderDeviceD3D11Impl *pRenderDeviceD3D11, 
-                                   const BufferDesc& BuffDesc, 
-                                   const BufferData &BuffData /*= BufferData()*/) : 
+BufferD3D11Impl :: BufferD3D11Impl(IReferenceCounters*        pRefCounters, 
+                                   FixedBlockMemoryAllocator& BuffViewObjMemAllocator,
+                                   RenderDeviceD3D11Impl*     pRenderDeviceD3D11, 
+                                   const BufferDesc&          BuffDesc, 
+                                   const BufferData&          BuffData /*= BufferData()*/) : 
     TBufferBase(pRefCounters, BuffViewObjMemAllocator, pRenderDeviceD3D11, BuffDesc, false)
 {
 #define LOG_BUFFER_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Buffer \"", m_Desc.Name ? m_Desc.Name : "", "\": ", ##__VA_ARGS__);
@@ -139,11 +139,11 @@ static BufferDesc BuffDescFromD3D11Buffer(ID3D11Buffer *pd3d11Buffer, BufferDesc
 
     return BuffDesc;
 }
-BufferD3D11Impl :: BufferD3D11Impl(IReferenceCounters *pRefCounters,
-                                   FixedBlockMemoryAllocator &BuffViewObjMemAllocator,
-                                   class RenderDeviceD3D11Impl *pDeviceD3D11, 
-                                   const BufferDesc& BuffDesc, 
-                                   ID3D11Buffer *pd3d11Buffer) : 
+BufferD3D11Impl :: BufferD3D11Impl(IReferenceCounters*          pRefCounters,
+                                   FixedBlockMemoryAllocator&   BuffViewObjMemAllocator,
+                                   class RenderDeviceD3D11Impl* pDeviceD3D11, 
+                                   const BufferDesc&            BuffDesc, 
+                                   ID3D11Buffer*                pd3d11Buffer) : 
     TBufferBase(pRefCounters, BuffViewObjMemAllocator, pDeviceD3D11, BuffDescFromD3D11Buffer(pd3d11Buffer, BuffDesc), false)
 {
     m_pd3d11Buffer = pd3d11Buffer;
@@ -189,7 +189,7 @@ void BufferD3D11Impl :: CopyData(IDeviceContext *pContext, IBuffer *pSrcBuffer, 
     pd3d11DeviceContext->CopySubresourceRegion(m_pd3d11Buffer, 0, DstOffset, 0, 0, pSrBufferD3D11Impl->m_pd3d11Buffer, 0, &SrcBox);
 }
 
-void BufferD3D11Impl :: Map(IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid &pMappedData)
+void BufferD3D11Impl :: Map(IDeviceContext* pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid& pMappedData)
 {
     TBufferBase::Map( pContext, MapType, MapFlags, pMappedData );
 
@@ -206,7 +206,7 @@ void BufferD3D11Impl :: Map(IDeviceContext *pContext, MAP_TYPE MapType, Uint32 M
     VERIFY( pMappedData || (MapFlags & MAP_FLAG_DO_NOT_WAIT) && (hr == DXGI_ERROR_WAS_STILL_DRAWING), "Map failed" );
 }
 
-void BufferD3D11Impl::Unmap( IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags )
+void BufferD3D11Impl::Unmap( IDeviceContext* pContext, MAP_TYPE MapType, Uint32 MapFlags )
 {
     TBufferBase::Unmap( pContext, MapType, MapFlags );
 
@@ -214,7 +214,7 @@ void BufferD3D11Impl::Unmap( IDeviceContext *pContext, MAP_TYPE MapType, Uint32 
     pd3d11DeviceContext->Unmap(m_pd3d11Buffer, 0);
 }
 
-void BufferD3D11Impl::CreateViewInternal( const BufferViewDesc &OrigViewDesc, IBufferView **ppView, bool bIsDefaultView )
+void BufferD3D11Impl::CreateViewInternal( const BufferViewDesc& OrigViewDesc, IBufferView** ppView, bool bIsDefaultView )
 {
     VERIFY( ppView != nullptr, "Null pointer provided" );
     if( !ppView )return;
@@ -254,7 +254,7 @@ void BufferD3D11Impl::CreateViewInternal( const BufferViewDesc &OrigViewDesc, IB
     }
 }
 
-void BufferD3D11Impl::CreateUAV( BufferViewDesc &UAVDesc, ID3D11UnorderedAccessView **ppD3D11UAV )
+void BufferD3D11Impl::CreateUAV( BufferViewDesc& UAVDesc, ID3D11UnorderedAccessView** ppD3D11UAV )
 {
     CorrectBufferViewDesc( UAVDesc );
 
@@ -266,7 +266,7 @@ void BufferD3D11Impl::CreateUAV( BufferViewDesc &UAVDesc, ID3D11UnorderedAccessV
                             "Failed to create D3D11 unordered access view" );
 }
 
-void BufferD3D11Impl::CreateSRV( struct BufferViewDesc &SRVDesc, ID3D11ShaderResourceView **ppD3D11SRV )
+void BufferD3D11Impl::CreateSRV( struct BufferViewDesc& SRVDesc, ID3D11ShaderResourceView** ppD3D11SRV )
 {
     CorrectBufferViewDesc( SRVDesc );
 

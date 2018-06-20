@@ -42,12 +42,14 @@ class ShaderResourceBindingD3D11Impl : public ShaderResourceBindingBase<IShaderR
 {
 public:
     typedef ShaderResourceBindingBase<IShaderResourceBindingD3D11> TBase;
-    ShaderResourceBindingD3D11Impl(IReferenceCounters *pRefCounters, class PipelineStateD3D11Impl *pPSO, bool IsInternal);
+    ShaderResourceBindingD3D11Impl(IReferenceCounters*           pRefCounters,
+                                   class PipelineStateD3D11Impl* pPSO,
+                                   bool                          IsInternal);
     ~ShaderResourceBindingD3D11Impl();
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
+    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject** ppInterface )override final;
 
-    virtual void BindResources(Uint32 ShaderFlags, IResourceMapping *pResMapping, Uint32 Flags)override final;
+    virtual void BindResources(Uint32 ShaderFlags, IResourceMapping* pResMapping, Uint32 Flags)override final;
 
     virtual IShaderVariable *GetVariable(SHADER_TYPE ShaderType, const char *Name)override final;
 
@@ -67,7 +69,7 @@ public:
 private:
     // The caches are indexed by the shader order in the PSO, not shader index
     ShaderResourceCacheD3D11* m_pBoundResourceCaches = nullptr;
-    ShaderResourceLayoutD3D11* m_pResourceLayouts = nullptr;
+    ShaderResourceLayoutD3D11* m_pResourceLayouts    = nullptr;
     
     Int8 m_ShaderTypeIndex[6] = {};
 

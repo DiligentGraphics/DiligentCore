@@ -44,19 +44,19 @@ public:
 
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
-    virtual IDXGISwapChain *GetDXGISwapChain() = 0;
+    virtual IDXGISwapChain* GetDXGISwapChain() = 0;
 
     /// Returns d3d11 render target view of the swap chain's back buffer
 
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
-    virtual ID3D11RenderTargetView *GetRTV() = 0;
+    virtual ID3D11RenderTargetView* GetRTV() = 0;
 
     /// Returns d3d11 depth stencil view of the internal depth buffer object
 
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
-    virtual ID3D11DepthStencilView *GetDSV() = 0;
+    virtual ID3D11DepthStencilView* GetDSV() = 0;
 };
 
 }

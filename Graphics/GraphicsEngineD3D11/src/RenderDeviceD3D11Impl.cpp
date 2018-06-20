@@ -39,8 +39,25 @@
 namespace Diligent
 {
 
-RenderDeviceD3D11Impl :: RenderDeviceD3D11Impl(IReferenceCounters *pRefCounters, IMemoryAllocator &RawMemAllocator, const EngineD3D11Attribs& EngineAttribs, ID3D11Device *pd3d11Device, Uint32 NumDeferredContexts) : 
-    TRenderDeviceBase(pRefCounters, RawMemAllocator, NumDeferredContexts, sizeof(TextureBaseD3D11), sizeof(TextureViewD3D11Impl), sizeof(BufferD3D11Impl), sizeof(BufferViewD3D11Impl), sizeof(ShaderD3D11Impl), sizeof(SamplerD3D11Impl), sizeof(PipelineStateD3D11Impl), sizeof(ShaderResourceBindingD3D11Impl)),
+RenderDeviceD3D11Impl :: RenderDeviceD3D11Impl(IReferenceCounters*       pRefCounters,
+                                               IMemoryAllocator&         RawMemAllocator,
+                                               const EngineD3D11Attribs& EngineAttribs,
+                                               ID3D11Device*             pd3d11Device,
+                                               Uint32                    NumDeferredContexts) : 
+    TRenderDeviceBase
+    {
+        pRefCounters,
+        RawMemAllocator,
+        NumDeferredContexts,
+        sizeof(TextureBaseD3D11),
+        sizeof(TextureViewD3D11Impl),
+        sizeof(BufferD3D11Impl),
+        sizeof(BufferViewD3D11Impl),
+        sizeof(ShaderD3D11Impl),
+        sizeof(SamplerD3D11Impl),
+        sizeof(PipelineStateD3D11Impl),
+        sizeof(ShaderResourceBindingD3D11Impl)
+    },
     m_EngineAttribs(EngineAttribs),
     m_pd3d11Device(pd3d11Device)
 {
@@ -52,7 +69,7 @@ RenderDeviceD3D11Impl :: RenderDeviceD3D11Impl(IReferenceCounters *pRefCounters,
 }
 
 
-bool CreateTestTexture1D(ID3D11Device *pDevice, const D3D11_TEXTURE1D_DESC &TexDesc)
+bool CreateTestTexture1D(ID3D11Device* pDevice, const D3D11_TEXTURE1D_DESC& TexDesc)
 {
     // Set the texture pointer address to nullptr to validate input parameters
     // without creating the texture
@@ -61,7 +78,7 @@ bool CreateTestTexture1D(ID3D11Device *pDevice, const D3D11_TEXTURE1D_DESC &TexD
     return hr == S_FALSE; // S_FALSE means that input parameters passed validation
 }
 
-bool CreateTestTexture2D(ID3D11Device *pDevice, const D3D11_TEXTURE2D_DESC &TexDesc)
+bool CreateTestTexture2D(ID3D11Device* pDevice, const D3D11_TEXTURE2D_DESC &TexDesc)
 {
     // Set the texture pointer address to nullptr to validate input parameters
     // without creating the texture
@@ -70,7 +87,7 @@ bool CreateTestTexture2D(ID3D11Device *pDevice, const D3D11_TEXTURE2D_DESC &TexD
     return hr == S_FALSE; // S_FALSE means that input parameters passed validation
 }
 
-bool CreateTestTexture3D(ID3D11Device *pDevice, const D3D11_TEXTURE3D_DESC &TexDesc)
+bool CreateTestTexture3D(ID3D11Device* pDevice, const D3D11_TEXTURE3D_DESC& TexDesc)
 {
     // Set the texture pointer address to nullptr to validate input parameters
     // without creating the texture
@@ -194,12 +211,12 @@ void RenderDeviceD3D11Impl::TestTextureFormat( TEXTURE_FORMAT TexFormat )
 
 IMPLEMENT_QUERY_INTERFACE( RenderDeviceD3D11Impl, IID_RenderDeviceD3D11, TRenderDeviceBase )
 
-void RenderDeviceD3D11Impl :: CreateBufferFromD3DResource(ID3D11Buffer *pd3d11Buffer, const BufferDesc& BuffDesc, IBuffer **ppBuffer)
+void RenderDeviceD3D11Impl :: CreateBufferFromD3DResource(ID3D11Buffer* pd3d11Buffer, const BufferDesc& BuffDesc, IBuffer** ppBuffer)
 {
     CreateDeviceObject("buffer", BuffDesc, ppBuffer, 
         [&]()
         {
-            BufferD3D11Impl *pBufferD3D11( NEW_RC_OBJ(m_BufObjAllocator, "BufferD3D11Impl instance", BufferD3D11Impl)
+            BufferD3D11Impl* pBufferD3D11( NEW_RC_OBJ(m_BufObjAllocator, "BufferD3D11Impl instance", BufferD3D11Impl)
                                                      (m_BuffViewObjAllocator, this, BuffDesc, pd3d11Buffer ) );
             pBufferD3D11->QueryInterface( IID_Buffer, reinterpret_cast<IObject**>(ppBuffer) );
             pBufferD3D11->CreateDefaultViews();
@@ -208,12 +225,12 @@ void RenderDeviceD3D11Impl :: CreateBufferFromD3DResource(ID3D11Buffer *pd3d11Bu
     );
 }
 
-void RenderDeviceD3D11Impl :: CreateBuffer(const BufferDesc& BuffDesc, const BufferData &BuffData, IBuffer **ppBuffer)
+void RenderDeviceD3D11Impl :: CreateBuffer(const BufferDesc& BuffDesc, const BufferData& BuffData, IBuffer** ppBuffer)
 {
     CreateDeviceObject("buffer", BuffDesc, ppBuffer, 
         [&]()
         {
-            BufferD3D11Impl *pBufferD3D11( NEW_RC_OBJ(m_BufObjAllocator, "BufferD3D11Impl instance", BufferD3D11Impl)
+            BufferD3D11Impl* pBufferD3D11( NEW_RC_OBJ(m_BufObjAllocator, "BufferD3D11Impl instance", BufferD3D11Impl)
                                                      (m_BuffViewObjAllocator, this, BuffDesc, BuffData ) );
             pBufferD3D11->QueryInterface( IID_Buffer, reinterpret_cast<IObject**>(ppBuffer) );
             pBufferD3D11->CreateDefaultViews();
@@ -222,12 +239,12 @@ void RenderDeviceD3D11Impl :: CreateBuffer(const BufferDesc& BuffDesc, const Buf
     );
 }
 
-void RenderDeviceD3D11Impl :: CreateShader(const ShaderCreationAttribs &ShaderCreationAttribs, IShader **ppShader)
+void RenderDeviceD3D11Impl :: CreateShader(const ShaderCreationAttribs& ShaderCreationAttribs, IShader** ppShader)
 {
     CreateDeviceObject( "shader", ShaderCreationAttribs.Desc, ppShader, 
         [&]()
         {
-            ShaderD3D11Impl *pShaderD3D11( NEW_RC_OBJ(m_ShaderObjAllocator, "ShaderD3D11Impl instance", ShaderD3D11Impl)
+            ShaderD3D11Impl* pShaderD3D11( NEW_RC_OBJ(m_ShaderObjAllocator, "ShaderD3D11Impl instance", ShaderD3D11Impl)
                                                      (this, ShaderCreationAttribs ) );
             pShaderD3D11->QueryInterface( IID_Shader, reinterpret_cast<IObject**>(ppShader) );
 
@@ -236,7 +253,7 @@ void RenderDeviceD3D11Impl :: CreateShader(const ShaderCreationAttribs &ShaderCr
     );
 }
 
-void RenderDeviceD3D11Impl::CreateTextureFromD3DResource(ID3D11Texture1D *pd3d11Texture, ITexture **ppTexture)
+void RenderDeviceD3D11Impl::CreateTextureFromD3DResource(ID3D11Texture1D* pd3d11Texture, ITexture** ppTexture)
 {
     if (pd3d11Texture == nullptr)
         return;
@@ -246,7 +263,7 @@ void RenderDeviceD3D11Impl::CreateTextureFromD3DResource(ID3D11Texture1D *pd3d11
     CreateDeviceObject( "texture", TexDesc, ppTexture, 
         [&]()
         {
-            TextureBaseD3D11 *pTextureD3D11 = NEW_RC_OBJ(m_TexObjAllocator, "Texture1D_D3D11 instance", Texture1D_D3D11)
+            TextureBaseD3D11* pTextureD3D11 = NEW_RC_OBJ(m_TexObjAllocator, "Texture1D_D3D11 instance", Texture1D_D3D11)
                                                         (m_TexViewObjAllocator, this, pd3d11Texture);
             pTextureD3D11->QueryInterface( IID_Texture, reinterpret_cast<IObject**>(ppTexture) );
             pTextureD3D11->CreateDefaultViews();
@@ -255,7 +272,7 @@ void RenderDeviceD3D11Impl::CreateTextureFromD3DResource(ID3D11Texture1D *pd3d11
     );
 }
 
-void RenderDeviceD3D11Impl::CreateTextureFromD3DResource(ID3D11Texture2D *pd3d11Texture, ITexture **ppTexture)
+void RenderDeviceD3D11Impl::CreateTextureFromD3DResource(ID3D11Texture2D* pd3d11Texture, ITexture** ppTexture)
 {
     if (pd3d11Texture == nullptr)
         return;
@@ -265,7 +282,7 @@ void RenderDeviceD3D11Impl::CreateTextureFromD3DResource(ID3D11Texture2D *pd3d11
     CreateDeviceObject( "texture", TexDesc, ppTexture, 
         [&]()
         {
-            TextureBaseD3D11 *pTextureD3D11 = NEW_RC_OBJ(m_TexObjAllocator, "Texture2D_D3D11 instance", Texture2D_D3D11)
+            TextureBaseD3D11* pTextureD3D11 = NEW_RC_OBJ(m_TexObjAllocator, "Texture2D_D3D11 instance", Texture2D_D3D11)
                                                         (m_TexViewObjAllocator, this, pd3d11Texture);
             pTextureD3D11->QueryInterface( IID_Texture, reinterpret_cast<IObject**>(ppTexture) );
             pTextureD3D11->CreateDefaultViews();
@@ -274,7 +291,7 @@ void RenderDeviceD3D11Impl::CreateTextureFromD3DResource(ID3D11Texture2D *pd3d11
     );
 }
 
-void RenderDeviceD3D11Impl::CreateTextureFromD3DResource(ID3D11Texture3D *pd3d11Texture, ITexture **ppTexture)
+void RenderDeviceD3D11Impl::CreateTextureFromD3DResource(ID3D11Texture3D* pd3d11Texture, ITexture** ppTexture)
 {
     if (pd3d11Texture == nullptr)
         return;
@@ -284,7 +301,7 @@ void RenderDeviceD3D11Impl::CreateTextureFromD3DResource(ID3D11Texture3D *pd3d11
     CreateDeviceObject( "texture", TexDesc, ppTexture, 
         [&]()
         {
-            TextureBaseD3D11 *pTextureD3D11 = NEW_RC_OBJ(m_TexObjAllocator, "Texture3D_D3D11 instance", Texture3D_D3D11)
+            TextureBaseD3D11* pTextureD3D11 = NEW_RC_OBJ(m_TexObjAllocator, "Texture3D_D3D11 instance", Texture3D_D3D11)
                                                         (m_TexViewObjAllocator, this, pd3d11Texture);
             pTextureD3D11->QueryInterface( IID_Texture, reinterpret_cast<IObject**>(ppTexture) );
             pTextureD3D11->CreateDefaultViews();
@@ -294,12 +311,12 @@ void RenderDeviceD3D11Impl::CreateTextureFromD3DResource(ID3D11Texture3D *pd3d11
 }
 
 
-void RenderDeviceD3D11Impl :: CreateTexture(const TextureDesc& TexDesc, const TextureData &Data, ITexture **ppTexture)
+void RenderDeviceD3D11Impl :: CreateTexture(const TextureDesc& TexDesc, const TextureData& Data, ITexture** ppTexture)
 {
     CreateDeviceObject( "texture", TexDesc, ppTexture, 
         [&]()
         {
-            TextureBaseD3D11 *pTextureD3D11 = nullptr;
+            TextureBaseD3D11* pTextureD3D11 = nullptr;
             switch( TexDesc.Type )
             {
                 case RESOURCE_DIM_TEX_1D:
@@ -330,30 +347,30 @@ void RenderDeviceD3D11Impl :: CreateTexture(const TextureDesc& TexDesc, const Te
     );
 }
 
-void RenderDeviceD3D11Impl :: CreateSampler(const SamplerDesc& SamplerDesc, ISampler **ppSampler)
+void RenderDeviceD3D11Impl :: CreateSampler(const SamplerDesc& SamplerDesc, ISampler** ppSampler)
 {
     CreateDeviceObject( "sampler", SamplerDesc, ppSampler, 
         [&]()
         {
             m_SamplersRegistry.Find( SamplerDesc, reinterpret_cast<IDeviceObject**>(ppSampler) );
-            if( *ppSampler == nullptr )
+            if(* ppSampler == nullptr )
             {
-                SamplerD3D11Impl *pSamplerD3D11( NEW_RC_OBJ(m_SamplerObjAllocator, "SamplerD3D11Impl instance",  SamplerD3D11Impl)
+                SamplerD3D11Impl* pSamplerD3D11( NEW_RC_OBJ(m_SamplerObjAllocator, "SamplerD3D11Impl instance",  SamplerD3D11Impl)
                                                            (this, SamplerDesc ) );
                 pSamplerD3D11->QueryInterface( IID_Sampler, reinterpret_cast<IObject**>(ppSampler) );
                 OnCreateDeviceObject( pSamplerD3D11 );
-                m_SamplersRegistry.Add( SamplerDesc, *ppSampler );
+                m_SamplersRegistry.Add( SamplerDesc,* ppSampler );
             }
         }
     );
 }
 
-void RenderDeviceD3D11Impl::CreatePipelineState(const PipelineStateDesc &PipelineDesc, IPipelineState **ppPipelineState)
+void RenderDeviceD3D11Impl::CreatePipelineState(const PipelineStateDesc& PipelineDesc, IPipelineState** ppPipelineState)
 {
     CreateDeviceObject( "Pipeline state", PipelineDesc, ppPipelineState, 
         [&]()
         {
-            PipelineStateD3D11Impl *pPipelineStateD3D11( NEW_RC_OBJ(m_PSOAllocator, "PipelineStateD3D11Impl instance", PipelineStateD3D11Impl)
+            PipelineStateD3D11Impl* pPipelineStateD3D11( NEW_RC_OBJ(m_PSOAllocator, "PipelineStateD3D11Impl instance", PipelineStateD3D11Impl)
                                                                    (this, PipelineDesc ) );
             pPipelineStateD3D11->QueryInterface( IID_PipelineState, reinterpret_cast<IObject**>(ppPipelineState) );
             OnCreateDeviceObject( pPipelineStateD3D11 );

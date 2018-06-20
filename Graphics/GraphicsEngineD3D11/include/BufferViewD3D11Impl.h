@@ -40,12 +40,12 @@ class BufferViewD3D11Impl : public BufferViewBase<IBufferViewD3D11>
 public:
     typedef BufferViewBase<IBufferViewD3D11> TBufferViewBase;
 
-    BufferViewD3D11Impl( IReferenceCounters *pRefCounters,
-                         IRenderDevice *pDevice, 
-                         const BufferViewDesc& ViewDesc, 
-                         class IBuffer *pBuffer,
-                         ID3D11View* pD3D11View,
-                         bool bIsDefaultView);
+    BufferViewD3D11Impl( IReferenceCounters*    pRefCounters,
+                         IRenderDevice*         pDevice, 
+                         const BufferViewDesc&  ViewDesc, 
+                         class IBuffer*         pBuffer,
+                         ID3D11View*            pD3D11View,
+                         bool                   bIsDefaultView);
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface ) final;
 

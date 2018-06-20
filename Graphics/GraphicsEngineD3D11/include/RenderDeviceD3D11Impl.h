@@ -40,25 +40,29 @@ class RenderDeviceD3D11Impl : public RenderDeviceD3DBase<IRenderDeviceD3D11>
 public:
     typedef RenderDeviceD3DBase<IRenderDeviceD3D11> TRenderDeviceBase;
 
-    RenderDeviceD3D11Impl( IReferenceCounters *pRefCounters, IMemoryAllocator &RawMemAllocator, const EngineD3D11Attribs& EngineAttribs, ID3D11Device *pd3d11Device, Uint32 NumDeferredContexts );
+    RenderDeviceD3D11Impl( IReferenceCounters*       pRefCounters,
+                           IMemoryAllocator&         RawMemAllocator,
+                           const EngineD3D11Attribs& EngineAttribs,
+                           ID3D11Device*             pd3d11Device,
+                           Uint32                    NumDeferredContexts );
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
 
-    virtual void CreateBuffer(const BufferDesc& BuffDesc, const BufferData &BuffData, IBuffer **ppBuffer)override final;
+    virtual void CreateBuffer(const BufferDesc& BuffDesc, const BufferData& BuffData, IBuffer** ppBuffer)override final;
 
-    virtual void CreateShader(const ShaderCreationAttribs &ShaderCreationAttribs, IShader **ppShader)override final;
+    virtual void CreateShader(const ShaderCreationAttribs& ShaderCreationAttribs, IShader** ppShader)override final;
 
-    virtual void CreateTexture(const TextureDesc& TexDesc, const TextureData &Data, ITexture **ppTexture)override final;
+    virtual void CreateTexture(const TextureDesc& TexDesc, const TextureData& Data, ITexture** ppTexture)override final;
     
-    virtual void CreateSampler(const SamplerDesc& SamplerDesc, ISampler **ppSampler)override final;
+    virtual void CreateSampler(const SamplerDesc& SamplerDesc, ISampler** ppSampler)override final;
 
     virtual void CreatePipelineState( const PipelineStateDesc &PipelineDesc, IPipelineState **ppPipelineState )override final;
 
     ID3D11Device* GetD3D11Device()override final{return m_pd3d11Device;}
 
-    virtual void CreateBufferFromD3DResource(ID3D11Buffer *pd3d11Buffer, const BufferDesc& BuffDesc, IBuffer **ppBuffer)override final;
-    virtual void CreateTextureFromD3DResource(ID3D11Texture1D *pd3d11Texture, ITexture **ppTexture)override final;
-    virtual void CreateTextureFromD3DResource(ID3D11Texture2D *pd3d11Texture, ITexture **ppTexture)override final;
-    virtual void CreateTextureFromD3DResource(ID3D11Texture3D *pd3d11Texture, ITexture **ppTexture)override final;
+    virtual void CreateBufferFromD3DResource(ID3D11Buffer* pd3d11Buffer, const BufferDesc& BuffDesc, IBuffer** ppBuffer)override final;
+    virtual void CreateTextureFromD3DResource(ID3D11Texture1D* pd3d11Texture, ITexture** ppTexture)override final;
+    virtual void CreateTextureFromD3DResource(ID3D11Texture2D* pd3d11Texture, ITexture** ppTexture)override final;
+    virtual void CreateTextureFromD3DResource(ID3D11Texture3D* pd3d11Texture, ITexture** ppTexture)override final;
 
 private:
     virtual void TestTextureFormat( TEXTURE_FORMAT TexFormat )override final;

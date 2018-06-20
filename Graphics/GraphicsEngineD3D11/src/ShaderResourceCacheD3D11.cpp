@@ -32,7 +32,7 @@
 
 namespace Diligent
 {
-    void ShaderResourceCacheD3D11::Initialize(Int32 CBCount, Int32 SRVCount, Int32 SamplerCount, Int32 UAVCount, IMemoryAllocator &MemAllocator)
+    void ShaderResourceCacheD3D11::Initialize(Int32 CBCount, Int32 SRVCount, Int32 SamplerCount, Int32 UAVCount, IMemoryAllocator& MemAllocator)
     {
         // http://diligentgraphics.com/diligent-engine/architecture/d3d11/shader-resource-cache/
         if (IsInitialized())
@@ -125,7 +125,7 @@ namespace Diligent
             new(UAVResources+uav)CachedResource;
     }
 
-    void ShaderResourceCacheD3D11::Destroy(IMemoryAllocator &MemAllocator)
+    void ShaderResourceCacheD3D11::Destroy(IMemoryAllocator& MemAllocator)
     {
         VERIFY( IsInitialized(), "Resource cache is not initialized");
         VERIFY( m_pdbgMemoryAllocator == &MemAllocator, "The allocator does not match the one used to create resources");
@@ -167,7 +167,7 @@ namespace Diligent
         VERIFY( !IsInitialized(), "Shader resource cache memory must be released with ShaderResourceCacheD3D11::Destroy()" );
     }
 
-    void dbgVerifyResource(ShaderResourceCacheD3D11::CachedResource &Res, ID3D11View *pd3d11View, const char *ViewType)
+    void dbgVerifyResource(ShaderResourceCacheD3D11::CachedResource& Res, ID3D11View* pd3d11View, const char* ViewType)
     {
         if (pd3d11View != nullptr)
         {

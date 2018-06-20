@@ -29,11 +29,11 @@
 namespace Diligent
 {
 
-Texture3D_D3D11 :: Texture3D_D3D11(IReferenceCounters *pRefCounters, 
-                                   FixedBlockMemoryAllocator &TexViewObjAllocator, 
-                                   RenderDeviceD3D11Impl *pRenderDeviceD3D11, 
-                                   const TextureDesc& TexDesc, 
-                                   const TextureData &InitData /*= TextureData()*/) : 
+Texture3D_D3D11 :: Texture3D_D3D11(IReferenceCounters*        pRefCounters, 
+                                   FixedBlockMemoryAllocator& TexViewObjAllocator, 
+                                   RenderDeviceD3D11Impl*     pRenderDeviceD3D11, 
+                                   const TextureDesc&         TexDesc, 
+                                   const TextureData&         InitData /*= TextureData()*/) : 
     TextureBaseD3D11(pRefCounters, TexViewObjAllocator, pRenderDeviceD3D11, TexDesc, InitData)
 {
     auto D3D11TexFormat = TexFormatToDXGI_Format(m_Desc.Format, m_Desc.BindFlags);
@@ -65,7 +65,7 @@ Texture3D_D3D11 :: Texture3D_D3D11(IReferenceCounters *pRefCounters,
     CHECK_D3D_RESULT_THROW( hr, "Failed to create the Direct3D11 Texture3D" );
 }
 
-static TextureDesc TexDescFromD3D11Texture3D(ID3D11Texture3D *pd3d11Texture)
+static TextureDesc TexDescFromD3D11Texture3D(ID3D11Texture3D* pd3d11Texture)
 {
     D3D11_TEXTURE3D_DESC D3D11TexDesc;
     pd3d11Texture->GetDesc(&D3D11TexDesc);
@@ -87,16 +87,16 @@ static TextureDesc TexDescFromD3D11Texture3D(ID3D11Texture3D *pd3d11Texture)
     return TexDesc;
 }
 
-Texture3D_D3D11 :: Texture3D_D3D11(IReferenceCounters *pRefCounters, 
-                                   FixedBlockMemoryAllocator &TexViewObjAllocator, 
-                                   RenderDeviceD3D11Impl *pDeviceD3D11, 
-                                   ID3D11Texture3D *pd3d11Texture) : 
+Texture3D_D3D11 :: Texture3D_D3D11(IReferenceCounters*        pRefCounters, 
+                                   FixedBlockMemoryAllocator& TexViewObjAllocator, 
+                                   RenderDeviceD3D11Impl*     pDeviceD3D11, 
+                                   ID3D11Texture3D*           pd3d11Texture) : 
     TextureBaseD3D11(pRefCounters, TexViewObjAllocator, pDeviceD3D11, TexDescFromD3D11Texture3D(pd3d11Texture), TextureData())
 {
     m_pd3d11Texture = pd3d11Texture;
 }
 
-void Texture3D_D3D11::CreateSRV( TextureViewDesc &SRVDesc, ID3D11ShaderResourceView **ppD3D11SRV )
+void Texture3D_D3D11::CreateSRV( TextureViewDesc& SRVDesc, ID3D11ShaderResourceView** ppD3D11SRV )
 {
     VERIFY( ppD3D11SRV && *ppD3D11SRV == nullptr, "SRV pointer address is null or contains non-null pointer to an existing object"  );
     
@@ -117,7 +117,7 @@ void Texture3D_D3D11::CreateSRV( TextureViewDesc &SRVDesc, ID3D11ShaderResourceV
                             "Failed to create D3D11 shader resource view");
 }
 
-void Texture3D_D3D11::CreateRTV( TextureViewDesc &RTVDesc, ID3D11RenderTargetView **ppD3D11RTV )
+void Texture3D_D3D11::CreateRTV( TextureViewDesc& RTVDesc, ID3D11RenderTargetView** ppD3D11RTV )
 {
     VERIFY( ppD3D11RTV && *ppD3D11RTV == nullptr, "RTV pointer address is null or contains non-null pointer to an existing object"  );
 
@@ -138,12 +138,12 @@ void Texture3D_D3D11::CreateRTV( TextureViewDesc &RTVDesc, ID3D11RenderTargetVie
                             "Failed to create D3D11 render target view");
 }
 
-void Texture3D_D3D11::CreateDSV( TextureViewDesc &pDSVDesc, ID3D11DepthStencilView **ppD3D11DSV )
+void Texture3D_D3D11::CreateDSV( TextureViewDesc& DSVDesc, ID3D11DepthStencilView** ppD3D11DSV )
 {
     LOG_ERROR_AND_THROW("Depth stencil views are not supported for 3D textures");
 }
 
-void Texture3D_D3D11::CreateUAV( TextureViewDesc &UAVDesc, ID3D11UnorderedAccessView **ppD3D11UAV )
+void Texture3D_D3D11::CreateUAV( TextureViewDesc& UAVDesc, ID3D11UnorderedAccessView** ppD3D11UAV )
 {
     VERIFY( ppD3D11UAV && *ppD3D11UAV == nullptr, "UAV pointer address is null or contains non-null pointer to an existing object"  );
 

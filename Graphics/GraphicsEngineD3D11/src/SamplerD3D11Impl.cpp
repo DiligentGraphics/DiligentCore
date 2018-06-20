@@ -29,7 +29,9 @@
 namespace Diligent
 {
 
-SamplerD3D11Impl::SamplerD3D11Impl(IReferenceCounters *pRefCounters, class RenderDeviceD3D11Impl *pRenderDeviceD3D11, const SamplerDesc& SamplerDesc) : 
+SamplerD3D11Impl::SamplerD3D11Impl(IReferenceCounters*    pRefCounters, 
+                                   RenderDeviceD3D11Impl* pRenderDeviceD3D11,
+                                   const SamplerDesc&     SamplerDesc) : 
     TSamplerBase(pRefCounters, pRenderDeviceD3D11, SamplerDesc)
 {
     auto *pd3d11Device = pRenderDeviceD3D11->GetD3D11Device();

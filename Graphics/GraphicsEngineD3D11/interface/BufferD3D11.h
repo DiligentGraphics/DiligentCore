@@ -44,7 +44,7 @@ public:
 
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
-    virtual ID3D11Buffer *GetD3D11Buffer() = 0;
+    virtual ID3D11Buffer* GetD3D11Buffer() = 0;
 };
 
 }

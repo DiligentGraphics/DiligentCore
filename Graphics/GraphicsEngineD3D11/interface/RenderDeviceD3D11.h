@@ -57,7 +57,7 @@ public:
     ///                         buffer interface will be stored. 
     ///                         The function calls AddRef(), so that the new object will contain 
     ///                         one reference.
-    virtual void CreateBufferFromD3DResource(ID3D11Buffer *pd3d11Buffer, const BufferDesc& BuffDesc, IBuffer **ppBuffer) = 0;
+    virtual void CreateBufferFromD3DResource(ID3D11Buffer* pd3d11Buffer, const BufferDesc& BuffDesc, IBuffer** ppBuffer) = 0;
 
     /// Creates a texture object from native d3d11 1D texture
 
@@ -66,7 +66,7 @@ public:
     ///                          texture interface will be stored. 
     ///                          The function calls AddRef(), so that the new object will contain 
     ///                          one reference.
-    virtual void CreateTextureFromD3DResource(ID3D11Texture1D *pd3d11Texture, ITexture **ppTexture) = 0;
+    virtual void CreateTextureFromD3DResource(ID3D11Texture1D* pd3d11Texture, ITexture** ppTexture) = 0;
 
     /// Creates a texture object from native d3d11 2D texture
 
@@ -75,7 +75,7 @@ public:
     ///                          texture interface will be stored. 
     ///                          The function calls AddRef(), so that the new object will contain 
     ///                          one reference.
-    virtual void CreateTextureFromD3DResource(ID3D11Texture2D *pd3d11Texture, ITexture **ppTexture) = 0;
+    virtual void CreateTextureFromD3DResource(ID3D11Texture2D* pd3d11Texture, ITexture** ppTexture) = 0;
 
     /// Creates a texture object from native d3d11 3D texture
 
@@ -84,7 +84,7 @@ public:
     ///                          texture interface will be stored. 
     ///                          The function calls AddRef(), so that the new object will contain 
     ///                          one reference.
-    virtual void CreateTextureFromD3DResource(ID3D11Texture3D *pd3d11Texture, ITexture **ppTexture) = 0;
+    virtual void CreateTextureFromD3DResource(ID3D11Texture3D* pd3d11Texture, ITexture** ppTexture) = 0;
 
 };
 
