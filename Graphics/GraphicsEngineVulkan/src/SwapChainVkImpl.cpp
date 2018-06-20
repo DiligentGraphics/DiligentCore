@@ -32,11 +32,11 @@
 namespace Diligent
 {
 
-SwapChainVkImpl::SwapChainVkImpl(IReferenceCounters *pRefCounters,
-                                 const SwapChainDesc& SCDesc, 
-                                 RenderDeviceVkImpl* pRenderDeviceVk, 
-                                 DeviceContextVkImpl* pDeviceContextVk, 
-                                 void* pNativeWndHandle) : 
+SwapChainVkImpl::SwapChainVkImpl(IReferenceCounters*    pRefCounters,
+                                 const SwapChainDesc&   SCDesc, 
+                                 RenderDeviceVkImpl*    pRenderDeviceVk, 
+                                 DeviceContextVkImpl*   pDeviceContextVk, 
+                                 void*                  pNativeWndHandle) : 
     TSwapChainBase(pRefCounters, pRenderDeviceVk, pDeviceContextVk, SCDesc),
     m_VulkanInstance(pRenderDeviceVk->GetVulkanInstance()),
     m_pBackBufferRTV(STD_ALLOCATOR_RAW_MEM(RefCntAutoPtr<ITextureView>, GetRawAllocator(), "Allocator for vector<RefCntAutoPtr<ITextureView>>"))
@@ -421,7 +421,8 @@ void SwapChainVkImpl::Present(Uint32 SyncInterval)
 
     // TransitionImageLayout() never triggers flush
     pImmediateCtxVk->TransitionImageLayout(GetCurrentBackBufferRTV()->GetTexture(), VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-    VERIFY(pImmediateCtxVk->GetNumCommandsInCtx() != 0, "The context must not be flushed");
+    // The context can be empty if no render commands were issued by the app
+    //VERIFY(pImmediateCtxVk->GetNumCommandsInCtx() != 0, "The context must not be flushed");
     pImmediateCtxVk->AddSignalSemaphore(m_DrawCompleteSemaphores[m_SemaphoreIndex]);
     pImmediateCtxVk->Flush();
 

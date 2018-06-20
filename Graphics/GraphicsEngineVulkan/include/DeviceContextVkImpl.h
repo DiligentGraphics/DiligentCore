@@ -51,52 +51,56 @@ class DeviceContextVkImpl : public DeviceContextBase<IDeviceContextVk>
 public:
     typedef DeviceContextBase<IDeviceContextVk> TDeviceContextBase;
 
-    DeviceContextVkImpl(IReferenceCounters *pRefCounters, class RenderDeviceVkImpl *pDevice, bool bIsDeferred, const EngineVkAttribs &Attribs, Uint32 ContextId);
+    DeviceContextVkImpl(IReferenceCounters*       pRefCounters,
+                        class RenderDeviceVkImpl* pDevice,
+                        bool                      bIsDeferred,
+                        const EngineVkAttribs&    Attribs,
+                        Uint32                    ContextId);
     ~DeviceContextVkImpl();
     
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
+    virtual void QueryInterface( const Diligent::INTERFACE_ID& IID, IObject** ppInterface )override final;
 
-    virtual void SetPipelineState(IPipelineState *pPipelineState)override final;
+    virtual void SetPipelineState(IPipelineState* pPipelineState)override final;
 
-    virtual void TransitionShaderResources(IPipelineState *pPipelineState, IShaderResourceBinding *pShaderResourceBinding)override final;
+    virtual void TransitionShaderResources(IPipelineState* pPipelineState, IShaderResourceBinding* pShaderResourceBinding)override final;
 
-    virtual void CommitShaderResources(IShaderResourceBinding *pShaderResourceBinding, Uint32 Flags)override final;
+    virtual void CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, Uint32 Flags)override final;
 
     virtual void SetStencilRef(Uint32 StencilRef)override final;
 
     virtual void SetBlendFactors(const float* pBlendFactors = nullptr)override final;
 
-    virtual void SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer **ppBuffers, Uint32 *pOffsets, Uint32 Flags )override final;
+    virtual void SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer **ppBuffers, Uint32* pOffsets, Uint32 Flags )override final;
     
     virtual void InvalidateState()override final;
 
-    virtual void SetIndexBuffer( IBuffer *pIndexBuffer, Uint32 ByteOffset )override final;
+    virtual void SetIndexBuffer( IBuffer* pIndexBuffer, Uint32 ByteOffset )override final;
 
-    virtual void SetViewports( Uint32 NumViewports, const Viewport *pViewports, Uint32 RTWidth, Uint32 RTHeight )override final;
+    virtual void SetViewports( Uint32 NumViewports, const Viewport* pViewports, Uint32 RTWidth, Uint32 RTHeight )override final;
 
-    virtual void SetScissorRects( Uint32 NumRects, const Rect *pRects, Uint32 RTWidth, Uint32 RTHeight )override final;
+    virtual void SetScissorRects( Uint32 NumRects, const Rect* pRects, Uint32 RTWidth, Uint32 RTHeight )override final;
 
-    virtual void SetRenderTargets( Uint32 NumRenderTargets, ITextureView *ppRenderTargets[], ITextureView *pDepthStencil )override final;
+    virtual void SetRenderTargets( Uint32 NumRenderTargets, ITextureView* ppRenderTargets[], ITextureView* pDepthStencil )override final;
 
     virtual void Draw( DrawAttribs &DrawAttribs )override final;
 
     virtual void DispatchCompute( const DispatchComputeAttribs &DispatchAttrs )override final;
 
-    virtual void ClearDepthStencil( ITextureView *pView, Uint32 ClearFlags, float fDepth, Uint8 Stencil)override final;
+    virtual void ClearDepthStencil( ITextureView* pView, Uint32 ClearFlags, float fDepth, Uint8 Stencil)override final;
 
-    virtual void ClearRenderTarget( ITextureView *pView, const float *RGBA )override final;
+    virtual void ClearRenderTarget( ITextureView* pView, const float *RGBA )override final;
 
     virtual void Flush()override final;
     
     virtual void FinishCommandList(class ICommandList **ppCommandList)override final;
 
-    virtual void ExecuteCommandList(class ICommandList *pCommandList)override final;
+    virtual void ExecuteCommandList(class ICommandList* pCommandList)override final;
 
     void TransitionImageLayout(class TextureVkImpl &TextureVk, VkImageLayout NewLayout);
-    virtual void TransitionImageLayout(ITexture *pTexture, VkImageLayout NewLayout)override final;
+    virtual void TransitionImageLayout(ITexture* pTexture, VkImageLayout NewLayout)override final;
 
     void BufferMemoryBarrier(class BufferVkImpl &BufferVk, VkAccessFlags NewAccessFlags);
-    virtual void BufferMemoryBarrier(IBuffer *pBuffer, VkAccessFlags NewAccessFlags)override final;
+    virtual void BufferMemoryBarrier(IBuffer* pBuffer, VkAccessFlags NewAccessFlags)override final;
 
     void AddWaitSemaphore(VkSemaphore Semaphore, VkPipelineStageFlags WaitDstStageMask)
     {
@@ -117,14 +121,14 @@ public:
     //static constexpr int NumShaderTypes = 6;
 
     void UpdateBufferRegion(class BufferVkImpl* pBuffVk, Uint64 DstOffset, Uint64 NumBytes, VkBuffer vkSrcBuffer, Uint64 SrcOffset);
-    void UpdateBufferRegion(class BufferVkImpl* pBuffVk, const void *pData, Uint64 DstOffset, Uint64 NumBytes);
+    void UpdateBufferRegion(class BufferVkImpl* pBuffVk, const void* pData, Uint64 DstOffset, Uint64 NumBytes);
 
-    void CopyBufferRegion(class BufferVkImpl *pSrcBuffVk, class BufferVkImpl *pDstBuffVk, Uint64 SrcOffset, Uint64 DstOffset, Uint64 NumBytes);
-    void CopyTextureRegion(class TextureVkImpl *pSrcTexture, class TextureVkImpl *pDstTexture, const VkImageCopy &CopyRegion);
+    void CopyBufferRegion(class BufferVkImpl* pSrcBuffVk, class BufferVkImpl* pDstBuffVk, Uint64 SrcOffset, Uint64 DstOffset, Uint64 NumBytes);
+    void CopyTextureRegion(class TextureVkImpl* pSrcTexture, class TextureVkImpl* pDstTexture, const VkImageCopy &CopyRegion);
 #if 0
-    void CopyTextureRegion(IBuffer *pSrcBuffer, Uint32 SrcStride, Uint32 SrcDepthStride, class TextureVkImpl *pTextureVk, Uint32 DstSubResIndex, const Box &DstBox);
+    void CopyTextureRegion(IBuffer* pSrcBuffer, Uint32 SrcStride, Uint32 SrcDepthStride, class TextureVkImpl* pTextureVk, Uint32 DstSubResIndex, const Box &DstBox);
 #endif
-    void GenerateMips(class TextureViewVkImpl *pTexView);
+    void GenerateMips(class TextureViewVkImpl* pTexView);
 
     void* AllocateUploadSpace(BufferVkImpl* pBuffer, size_t NumBytes);
     void CopyAndFreeDynamicUploadData(BufferVkImpl* pBuffer);
@@ -151,7 +155,7 @@ public:
     VulkanDynamicAllocation AllocateDynamicSpace(Uint32 SizeInBytes);
 
 private:
-    void CommitRenderPassAndFramebuffer(class PipelineStateVkImpl *pPipelineStateVk);
+    void CommitRenderPassAndFramebuffer(class PipelineStateVkImpl* pPipelineStateVk);
     void CommitVkVertexBuffers();
     void TransitionVkVertexBuffers();
     void CommitRenderTargets();

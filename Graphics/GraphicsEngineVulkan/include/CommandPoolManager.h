@@ -38,8 +38,8 @@ public:
                        uint32_t                                    queueFamilyIndex, 
                        VkCommandPoolCreateFlags                    flags)noexcept;
     
-    CommandPoolManager             (CommandPoolManager&& )     = delete;
     CommandPoolManager             (const CommandPoolManager&) = delete;
+    CommandPoolManager             (CommandPoolManager&&)      = delete;
     CommandPoolManager& operator = (const CommandPoolManager&) = delete;
     CommandPoolManager& operator = (CommandPoolManager&&)      = delete;
 

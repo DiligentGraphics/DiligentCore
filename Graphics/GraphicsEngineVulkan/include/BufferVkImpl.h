@@ -46,24 +46,25 @@ class BufferVkImpl : public BufferBase<IBufferVk, BufferViewVkImpl, FixedBlockMe
 {
 public:
     typedef BufferBase<IBufferVk, BufferViewVkImpl, FixedBlockMemoryAllocator> TBufferBase;
-    BufferVkImpl(IReferenceCounters *pRefCounters, 
-                 FixedBlockMemoryAllocator &BuffViewObjMemAllocator, 
-                 class RenderDeviceVkImpl *pDeviceVk, 
-                 const BufferDesc& BuffDesc, 
-                 const BufferData &BuffData = BufferData());
-    BufferVkImpl(IReferenceCounters *pRefCounters, 
-                 FixedBlockMemoryAllocator &BuffViewObjMemAllocator, 
-                 class RenderDeviceVkImpl *pDeviceVk, 
-                 const BufferDesc& BuffDesc, 
-                 void *pVkBuffer);
+    BufferVkImpl(IReferenceCounters*        pRefCounters, 
+                 FixedBlockMemoryAllocator& BuffViewObjMemAllocator, 
+                 class RenderDeviceVkImpl*  pDeviceVk, 
+                 const BufferDesc&          BuffDesc, 
+                 const BufferData&          BuffData = BufferData());
+
+    BufferVkImpl(IReferenceCounters*        pRefCounters, 
+                 FixedBlockMemoryAllocator& BuffViewObjMemAllocator, 
+                 class RenderDeviceVkImpl*  pDeviceVk, 
+                 const BufferDesc&          BuffDesc, 
+                 void*                      pVkBuffer);
     ~BufferVkImpl();
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
+    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject** ppInterface )override;
 
-    virtual void UpdateData( IDeviceContext *pContext, Uint32 Offset, Uint32 Size, const PVoid pData )override;
-    virtual void CopyData( IDeviceContext *pContext, IBuffer *pSrcBuffer, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size )override;
-    virtual void Map( IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid &pMappedData )override;
-    virtual void Unmap( IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags )override;
+    virtual void UpdateData( IDeviceContext* pContext, Uint32 Offset, Uint32 Size, const PVoid pData )override;
+    virtual void CopyData( IDeviceContext* pContext, IBuffer* pSrcBuffer, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size )override;
+    virtual void Map( IDeviceContext* pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid& pMappedData )override;
+    virtual void Unmap( IDeviceContext* pContext, MAP_TYPE MapType, Uint32 MapFlags )override;
 
 #ifdef _DEBUG
     void DbgVerifyDynamicAllocation(Uint32 ContextId)const;
@@ -100,7 +101,7 @@ public:
 private:
     friend class DeviceContextVkImpl;
 
-    virtual void CreateViewInternal( const struct BufferViewDesc &ViewDesc, IBufferView **ppView, bool bIsDefaultView )override;
+    virtual void CreateViewInternal( const struct BufferViewDesc& ViewDesc, IBufferView** ppView, bool bIsDefaultView )override;
 
     VulkanUtilities::BufferViewWrapper CreateView(struct BufferViewDesc &ViewDesc);
     VkAccessFlags m_AccessFlags = 0;

@@ -29,11 +29,11 @@
 namespace Diligent
 {
 
-TextureViewVkImpl::TextureViewVkImpl( IReferenceCounters *pRefCounters,
-                                      IRenderDevice *pDevice, 
-                                      const TextureViewDesc& ViewDesc, 
-                                      ITexture *pTexture,
-                                      VulkanUtilities::ImageViewWrapper &&ImgView,
+TextureViewVkImpl::TextureViewVkImpl( IReferenceCounters*                 pRefCounters,
+                                      IRenderDevice*                      pDevice, 
+                                      const TextureViewDesc&              ViewDesc, 
+                                      ITexture*                           pTexture,
+                                      VulkanUtilities::ImageViewWrapper&& ImgView,
                                       bool bIsDefaultView ) :
     TTextureViewBase( pRefCounters, pDevice, ViewDesc, pTexture, bIsDefaultView ),
     m_ImageView(std::move(ImgView))

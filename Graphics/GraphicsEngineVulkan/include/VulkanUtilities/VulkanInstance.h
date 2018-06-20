@@ -32,14 +32,14 @@ namespace VulkanUtilities
     class VulkanInstance : public std::enable_shared_from_this<VulkanInstance>
     {
     public:
-        VulkanInstance(const VulkanInstance&) = delete;
-        VulkanInstance(VulkanInstance&&) = delete;
+        VulkanInstance             (const VulkanInstance&) = delete;
+        VulkanInstance             (VulkanInstance&&)      = delete;
         VulkanInstance& operator = (const VulkanInstance&) = delete;
-        VulkanInstance& operator = (VulkanInstance&&) = delete;
+        VulkanInstance& operator = (VulkanInstance&&)      = delete;
 
-        static std::shared_ptr<VulkanInstance> Create(bool EnableValidation, 
-                                                      uint32_t GlobalExtensionCount, 
-                                                      const char* const* ppGlobalExtensionNames,
+        static std::shared_ptr<VulkanInstance> Create(bool                   EnableValidation, 
+                                                      uint32_t               GlobalExtensionCount, 
+                                                      const char* const*     ppGlobalExtensionNames,
                                                       VkAllocationCallbacks* pVkAllocator);
         ~VulkanInstance();
 

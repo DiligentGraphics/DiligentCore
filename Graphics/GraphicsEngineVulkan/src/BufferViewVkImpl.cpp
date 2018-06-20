@@ -29,12 +29,12 @@
 namespace Diligent
 {
 
-BufferViewVkImpl::BufferViewVkImpl( IReferenceCounters *pRefCounters,
-                                    IRenderDevice *pDevice, 
-                                    const BufferViewDesc& ViewDesc, 
-                                    IBuffer *pBuffer,
-                                    VulkanUtilities::BufferViewWrapper &&BuffView,
-                                    bool bIsDefaultView ) :
+BufferViewVkImpl::BufferViewVkImpl( IReferenceCounters*                  pRefCounters,
+                                    IRenderDevice*                       pDevice, 
+                                    const BufferViewDesc&                ViewDesc, 
+                                    IBuffer*                             pBuffer,
+                                    VulkanUtilities::BufferViewWrapper&& BuffView,
+                                    bool                                 bIsDefaultView ) :
     TBufferViewBase( pRefCounters, pDevice, ViewDesc, pBuffer, bIsDefaultView ),
     m_BuffView(std::move(BuffView))
 {

@@ -36,7 +36,7 @@ namespace Diligent
 {
 
 
-ShaderVkImpl::ShaderVkImpl(IReferenceCounters *pRefCounters, RenderDeviceVkImpl *pRenderDeviceVk, const ShaderCreationAttribs &CreationAttribs) : 
+ShaderVkImpl::ShaderVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl* pRenderDeviceVk, const ShaderCreationAttribs& CreationAttribs) : 
     TShaderBase(pRefCounters, pRenderDeviceVk, CreationAttribs.Desc),
     m_DummyShaderVar(*this),
     m_StaticResLayout(*this, pRenderDeviceVk->GetLogicalDevice(), GetRawAllocator()),

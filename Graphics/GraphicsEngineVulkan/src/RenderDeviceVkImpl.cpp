@@ -215,7 +215,7 @@ void RenderDeviceVkImpl::SubmitCommandBuffer(const VkSubmitInfo& SubmitInfo,
     Atomics::AtomicIncrement(m_NextCmdBuffNumber);
 }
 
-Uint64 RenderDeviceVkImpl::ExecuteCommandBuffer(const VkSubmitInfo &SubmitInfo, DeviceContextVkImpl* pImmediateCtx)
+Uint64 RenderDeviceVkImpl::ExecuteCommandBuffer(const VkSubmitInfo& SubmitInfo, DeviceContextVkImpl* pImmediateCtx)
 {
     // pImmediateCtx parameter is only used to make sure the command buffer is submitted from the immediate context
     // Stale objects MUST only be discarded when submitting cmd list from the immediate context

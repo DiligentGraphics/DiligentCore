@@ -34,7 +34,7 @@
 namespace Diligent
 {
 
-void ShaderResourceCacheVk::InitializeSets(IMemoryAllocator &MemAllocator, Uint32 NumSets, Uint32 SetSizes[])
+void ShaderResourceCacheVk::InitializeSets(IMemoryAllocator& MemAllocator, Uint32 NumSets, Uint32 SetSizes[])
 {
     // Memory layout:
     //
@@ -186,8 +186,8 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl *pCtxVkImpl)
     }
 }
 
-template void ShaderResourceCacheVk::TransitionResources<false>(DeviceContextVkImpl *pCtxVkImpl);
-template void ShaderResourceCacheVk::TransitionResources<true>(DeviceContextVkImpl *pCtxVkImpl);
+template void ShaderResourceCacheVk::TransitionResources<false>(DeviceContextVkImpl* pCtxVkImpl);
+template void ShaderResourceCacheVk::TransitionResources<true>(DeviceContextVkImpl* pCtxVkImpl);
 
 
 VkDescriptorBufferInfo ShaderResourceCacheVk::Resource::GetUniformBufferDescriptorWriteInfo()const

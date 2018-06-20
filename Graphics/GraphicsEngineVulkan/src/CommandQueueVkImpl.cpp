@@ -28,9 +28,9 @@
 namespace Diligent
 {
 
-CommandQueueVkImpl::CommandQueueVkImpl(IReferenceCounters *pRefCounters, 
+CommandQueueVkImpl::CommandQueueVkImpl(IReferenceCounters*                                   pRefCounters, 
                                        std::shared_ptr<VulkanUtilities::VulkanLogicalDevice> LogicalDevice,
-                                       uint32_t QueueFamilyIndex) :
+                                       uint32_t                                              QueueFamilyIndex) :
     TBase(pRefCounters),
     m_LogicalDevice(LogicalDevice),
     m_VkQueue(LogicalDevice->GetQueue(QueueFamilyIndex, 0)),

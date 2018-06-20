@@ -279,11 +279,11 @@ static BufferDesc BufferDescFromVkResource(BufferDesc BuffDesc, void *pVkBuffer)
     return BuffDesc;
 }
 
-BufferVkImpl :: BufferVkImpl(IReferenceCounters *pRefCounters, 
-                             FixedBlockMemoryAllocator &BuffViewObjMemAllocator, 
-                             RenderDeviceVkImpl *pRenderDeviceVk, 
-                             const BufferDesc& BuffDesc,
-                             void *pVkBuffer) : 
+BufferVkImpl :: BufferVkImpl(IReferenceCounters*        pRefCounters, 
+                             FixedBlockMemoryAllocator& BuffViewObjMemAllocator, 
+                             RenderDeviceVkImpl*        pRenderDeviceVk, 
+                             const BufferDesc&          BuffDesc,
+                             void*                      pVkBuffer) : 
     TBufferBase(pRefCounters, BuffViewObjMemAllocator, pRenderDeviceVk, BufferDescFromVkResource(BuffDesc, pVkBuffer), false),
     m_AccessFlags(0),
 #ifdef _DEBUG
@@ -325,14 +325,14 @@ void BufferVkImpl::UpdateData( IDeviceContext *pContext, Uint32 Offset, Uint32 S
     pDeviceContextVk->UpdateBufferRegion(this, pData, Offset, Size);
 }
 
-void BufferVkImpl :: CopyData(IDeviceContext *pContext, IBuffer *pSrcBuffer, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size)
+void BufferVkImpl :: CopyData(IDeviceContext* pContext, IBuffer* pSrcBuffer, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size)
 {
     TBufferBase::CopyData( pContext, pSrcBuffer, SrcOffset, DstOffset, Size );
     auto *pDeviceContextVk = ValidatedCast<DeviceContextVkImpl>(pContext);
     pDeviceContextVk->CopyBufferRegion(ValidatedCast<BufferVkImpl>(pSrcBuffer), this, SrcOffset, DstOffset, Size);
 }
 
-void BufferVkImpl :: Map(IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid &pMappedData)
+void BufferVkImpl :: Map(IDeviceContext* pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid &pMappedData)
 {
     TBufferBase::Map( pContext, MapType, MapFlags, pMappedData );
 
@@ -402,7 +402,7 @@ void BufferVkImpl :: Map(IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapF
     }
 }
 
-void BufferVkImpl::Unmap( IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags )
+void BufferVkImpl::Unmap( IDeviceContext* pContext, MAP_TYPE MapType, Uint32 MapFlags )
 {
     TBufferBase::Unmap( pContext, MapType, MapFlags );
 
@@ -455,7 +455,7 @@ void BufferVkImpl::Unmap( IDeviceContext *pContext, MAP_TYPE MapType, Uint32 Map
 #endif
 }
 
-void BufferVkImpl::CreateViewInternal( const BufferViewDesc &OrigViewDesc, IBufferView **ppView, bool bIsDefaultView )
+void BufferVkImpl::CreateViewInternal( const BufferViewDesc& OrigViewDesc, IBufferView** ppView, bool bIsDefaultView )
 {
     VERIFY( ppView != nullptr, "Null pointer provided" );
     if( !ppView )return;
@@ -488,7 +488,7 @@ void BufferVkImpl::CreateViewInternal( const BufferViewDesc &OrigViewDesc, IBuff
 }
 
 
-VulkanUtilities::BufferViewWrapper BufferVkImpl::CreateView(struct BufferViewDesc &ViewDesc)
+VulkanUtilities::BufferViewWrapper BufferVkImpl::CreateView(struct BufferViewDesc& ViewDesc)
 {
     VulkanUtilities::BufferViewWrapper BuffView;
     CorrectBufferViewDesc(ViewDesc);

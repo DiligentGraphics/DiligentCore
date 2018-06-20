@@ -43,12 +43,12 @@ class CommandQueueVkImpl : public ObjectBase<ICommandQueueVk>
 public:
     typedef ObjectBase<ICommandQueueVk> TBase;
 
-    CommandQueueVkImpl(IReferenceCounters *pRefCounters, 
+    CommandQueueVkImpl(IReferenceCounters*                                   pRefCounters, 
                        std::shared_ptr<VulkanUtilities::VulkanLogicalDevice> LogicalDevice, 
-                       uint32_t QueueFamilyIndex);
+                       uint32_t                                              QueueFamilyIndex);
     ~CommandQueueVkImpl();
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
+    virtual void QueryInterface( const Diligent::INTERFACE_ID& IID, IObject** ppInterface )override;
 
 	// Returns the fence value that will be signaled next time
     virtual UINT64 GetNextFenceValue()override final { return m_NextFenceValue; }

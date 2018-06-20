@@ -57,11 +57,11 @@ DXGI_FORMAT GetClearFormat(DXGI_FORMAT Fmt, Vk_RESOURCE_FLAGS Flags)
 }
 #endif
 
-TextureVkImpl :: TextureVkImpl(IReferenceCounters *pRefCounters, 
-                               FixedBlockMemoryAllocator &TexViewObjAllocator,
-                               RenderDeviceVkImpl *pRenderDeviceVk, 
-                               const TextureDesc& TexDesc, 
-                               const TextureData &InitData /*= TextureData()*/) : 
+TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters, 
+                               FixedBlockMemoryAllocator&   TexViewObjAllocator,
+                               RenderDeviceVkImpl*          pRenderDeviceVk, 
+                               const TextureDesc&           TexDesc, 
+                               const TextureData&           InitData /*= TextureData()*/) : 
     TTextureBase(pRefCounters, TexViewObjAllocator, pRenderDeviceVk, TexDesc)
 {
     if( m_Desc.Usage == USAGE_STATIC && InitData.pSubResources == nullptr )
@@ -428,11 +428,11 @@ static TextureDesc InitTexDescFromVkImage(VkImage vkImg, const TextureDesc& SrcT
 }
 
 
-TextureVkImpl::TextureVkImpl(IReferenceCounters *pRefCounters,
-                             FixedBlockMemoryAllocator &TexViewObjAllocator,
-                             RenderDeviceVkImpl *pDeviceVk, 
-                             const TextureDesc& TexDesc,
-                             VkImage&& VkImageHandle) :
+TextureVkImpl::TextureVkImpl(IReferenceCounters*         pRefCounters,
+                             FixedBlockMemoryAllocator&  TexViewObjAllocator,
+                             RenderDeviceVkImpl*         pDeviceVk, 
+                             const TextureDesc&          TexDesc,
+                             VkImage&&                   VkImageHandle) :
     TTextureBase(pRefCounters, TexViewObjAllocator, pDeviceVk, InitTexDescFromVkImage(VkImageHandle, TexDesc)),
     m_VulkanImage(nullptr, std::move(VkImageHandle))
 {
@@ -503,16 +503,16 @@ void TextureVkImpl::UpdateData( IDeviceContext *pContext, Uint32 MipLevel, Uint3
 #endif
 }
 
-void TextureVkImpl ::  CopyData(IDeviceContext *pContext, 
-                                ITexture *pSrcTexture, 
-                                Uint32 SrcMipLevel,
-                                Uint32 SrcSlice,
-                                const Box *pSrcBox,
-                                Uint32 DstMipLevel,
-                                Uint32 DstSlice,
-                                Uint32 DstX,
-                                Uint32 DstY,
-                                Uint32 DstZ)
+void TextureVkImpl ::  CopyData(IDeviceContext* pContext, 
+                                ITexture*       pSrcTexture, 
+                                Uint32          SrcMipLevel,
+                                Uint32          SrcSlice,
+                                const Box*      pSrcBox,
+                                Uint32          DstMipLevel,
+                                Uint32          DstSlice,
+                                Uint32          DstX,
+                                Uint32          DstY,
+                                Uint32          DstZ)
 {
     TTextureBase::CopyData( pContext, pSrcTexture, SrcMipLevel, SrcSlice, pSrcBox,
                             DstMipLevel, DstSlice, DstX, DstY, DstZ );

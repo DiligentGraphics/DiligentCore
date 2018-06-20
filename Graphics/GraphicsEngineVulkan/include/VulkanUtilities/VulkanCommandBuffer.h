@@ -31,13 +31,13 @@ namespace VulkanUtilities
     class VulkanCommandBuffer
     {
     public:
-        VulkanCommandBuffer(){}
-        VulkanCommandBuffer(const VulkanCommandBuffer&) = delete;
-        VulkanCommandBuffer(VulkanCommandBuffer&&) = delete;
+        VulkanCommandBuffer()noexcept{}
+        VulkanCommandBuffer             (const VulkanCommandBuffer&) = delete;
+        VulkanCommandBuffer             (VulkanCommandBuffer&&)      = delete;
         VulkanCommandBuffer& operator = (const VulkanCommandBuffer&) = delete;
-        VulkanCommandBuffer& operator = (VulkanCommandBuffer&&) = delete;
+        VulkanCommandBuffer& operator = (VulkanCommandBuffer&&)      = delete;
 
-        void ClearColorImage(VkImage Image, const VkClearColorValue &Color, const VkImageSubresourceRange& Subresource)
+        void ClearColorImage(VkImage Image, const VkClearColorValue& Color, const VkImageSubresourceRange& Subresource)
         {
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
             VERIFY(m_State.RenderPass == VK_NULL_HANDLE, "vkCmdClearColorImage() must be called outside of render pass (17.1)");
@@ -53,7 +53,7 @@ namespace VulkanUtilities
             );
         }
 
-        void ClearDepthStencilImage(VkImage Image, const VkClearDepthStencilValue &DepthStencil, const VkImageSubresourceRange& Subresource)
+        void ClearDepthStencilImage(VkImage Image, const VkClearDepthStencilValue& DepthStencil, const VkImageSubresourceRange& Subresource)
         {
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
             VERIFY(m_State.RenderPass == VK_NULL_HANDLE, "vkCmdClearDepthStencilImage() must be called outside of render pass (17.1)");
@@ -69,7 +69,7 @@ namespace VulkanUtilities
             );
         }
 
-        void ClearAttachment(const VkClearAttachment& Attachment, const VkClearRect &ClearRect)
+        void ClearAttachment(const VkClearAttachment& Attachment, const VkClearRect& ClearRect)
         {
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
             VERIFY(m_State.RenderPass != VK_NULL_HANDLE, "vkCmdClearAttachments() must be called inside render pass (17.2)");

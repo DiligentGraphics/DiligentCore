@@ -44,28 +44,28 @@ public:
     typedef TextureBase<ITextureVk, TextureViewVkImpl, FixedBlockMemoryAllocator> TTextureBase;
 
     // Creates a new Vk resource
-    TextureVkImpl(IReferenceCounters *pRefCounters,
-                  FixedBlockMemoryAllocator &TexViewObjAllocator,
-                  class RenderDeviceVkImpl *pDeviceVk, 
-                  const TextureDesc& TexDesc, 
-                  const TextureData &InitData = TextureData());
+    TextureVkImpl(IReferenceCounters*        pRefCounters,
+                  FixedBlockMemoryAllocator& TexViewObjAllocator,
+                  class RenderDeviceVkImpl*  pDeviceVk, 
+                  const TextureDesc&         TexDesc, 
+                  const TextureData&         InitData = TextureData());
     
     // Attaches to an existing Vk resource
-    TextureVkImpl(IReferenceCounters *pRefCounters,
-                  FixedBlockMemoryAllocator &TexViewObjAllocator,
-                  class RenderDeviceVkImpl *pDeviceVk, 
-                  const TextureDesc& TexDesc, 
-                  VkImage&& VkImageHandle);
+    TextureVkImpl(IReferenceCounters*         pRefCounters,
+                  FixedBlockMemoryAllocator&  TexViewObjAllocator,
+                  class RenderDeviceVkImpl*   pDeviceVk, 
+                  const TextureDesc&          TexDesc, 
+                  VkImage&&                   VkImageHandle);
 
     ~TextureVkImpl();
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
+    virtual void QueryInterface( const Diligent::INTERFACE_ID& IID, IObject** ppInterface )override;
 
-    virtual void UpdateData( IDeviceContext *pContext, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData )override;
+    virtual void UpdateData( IDeviceContext* pContext, Uint32 MipLevel, Uint32 Slice, const Box& DstBox, const TextureSubResData& SubresData )override;
 
-    //virtual void CopyData(CTexture *pSrcTexture, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size);
-    virtual void Map( IDeviceContext *pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags, MappedTextureSubresource &MappedData )override;
-    virtual void Unmap( IDeviceContext *pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags )override;
+    //virtual void CopyData(CTexture* pSrcTexture, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size);
+    virtual void Map( IDeviceContext* pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags, MappedTextureSubresource& MappedData )override;
+    virtual void Unmap( IDeviceContext* pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags )override;
 
     virtual VkImage GetVkImage(){ return m_VulkanImage; }
     virtual void* GetNativeHandle()override final { return GetVkImage(); }
@@ -73,11 +73,11 @@ public:
     virtual void SetVkResourceState(Vk_RESOURCE_STATES state)override final{ SetState(state); }
     */
 
-    void CopyData(IDeviceContext *pContext, 
-                  ITexture *pSrcTexture, 
+    void CopyData(IDeviceContext* pContext, 
+                  ITexture* pSrcTexture, 
                   Uint32 SrcMipLevel,
                   Uint32 SrcSlice,
-                  const Box *pSrcBox,
+                  const Box* pSrcBox,
                   Uint32 DstMipLevel,
                   Uint32 DstSlice,
                   Uint32 DstX,
@@ -100,7 +100,7 @@ public:
 
 protected:
 
-    void CreateViewInternal( const struct TextureViewDesc &ViewDesc, ITextureView **ppView, bool bIsDefaultView )override;
+    void CreateViewInternal( const struct TextureViewDesc& ViewDesc, ITextureView** ppView, bool bIsDefaultView )override;
     //void PrepareVkInitData(const TextureData &InitData, Uint32 NumSubresources, std::vector<Vk_SUBRESOURCE_DATA> &VkInitData);
     
     VulkanUtilities::ImageViewWrapper CreateImageView(TextureViewDesc &ViewDesc);

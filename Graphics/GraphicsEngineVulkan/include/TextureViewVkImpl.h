@@ -41,17 +41,17 @@ class TextureViewVkImpl : public TextureViewBase<ITextureViewVk>
 public:
     typedef TextureViewBase<ITextureViewVk> TTextureViewBase;
 
-    TextureViewVkImpl( IReferenceCounters *pRefCounters,
-                       IRenderDevice *pDevice, 
-                       const TextureViewDesc& ViewDesc, 
-                       class ITexture *pTexture,
-                       VulkanUtilities::ImageViewWrapper &&ImgView,
-                       bool bIsDefaultView);
+    TextureViewVkImpl( IReferenceCounters*                 pRefCounters,
+                       IRenderDevice*                      pDevice, 
+                       const TextureViewDesc&              ViewDesc, 
+                       class ITexture*                     pTexture,
+                       VulkanUtilities::ImageViewWrapper&& ImgView,
+                       bool                                bIsDefaultView);
     ~TextureViewVkImpl();
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
+    virtual void QueryInterface( const Diligent::INTERFACE_ID& IID, IObject** ppInterface )override;
 
-    void GenerateMips( IDeviceContext *pContext )override;
+    void GenerateMips( IDeviceContext* pContext )override;
     
     VkImageView GetVulkanImageView()const override final{return m_ImageView;}
 

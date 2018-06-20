@@ -41,10 +41,10 @@ public:
         m_DeviceVk(DeviceVKImpl)
     {}
 
-    FramebufferCache(const FramebufferCache&) = delete;
-    FramebufferCache(FramebufferCache&&) = delete;
+    FramebufferCache             (const FramebufferCache&) = delete;
+    FramebufferCache             (FramebufferCache&&)      = delete;
     FramebufferCache& operator = (const FramebufferCache&) = delete;
-    FramebufferCache& operator = (FramebufferCache&&) = delete;
+    FramebufferCache& operator = (FramebufferCache&&)      = delete;
 
     ~FramebufferCache();
 
@@ -53,9 +53,10 @@ public:
     {
         // Default memeber initialization is intentionally omitted
         VkRenderPass Pass;
-        Uint32 NumRenderTargets;
-        VkImageView DSV;
-        VkImageView RTVs[MaxRenderTargets];
+        Uint32       NumRenderTargets;
+        VkImageView  DSV;
+        VkImageView  RTVs[MaxRenderTargets];
+
         bool operator == (const FramebufferCacheKey &rhs)const;
         size_t GetHash()const;
 

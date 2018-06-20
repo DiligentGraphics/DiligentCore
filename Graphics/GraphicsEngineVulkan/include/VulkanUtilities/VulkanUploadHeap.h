@@ -34,7 +34,7 @@ struct VulkanUploadAllocation
     VulkanUploadAllocation(){}
     VulkanUploadAllocation(VulkanMemoryAllocation&& _MemAllocation, VkBuffer _vkBuffer) :
         MemAllocation(std::move(_MemAllocation)),
-        vkBuffer(_vkBuffer)
+        vkBuffer     (_vkBuffer)
     {}
     VulkanUploadAllocation             (const VulkanUploadAllocation&) = delete;
     VulkanUploadAllocation& operator = (const VulkanUploadAllocation&) = delete;

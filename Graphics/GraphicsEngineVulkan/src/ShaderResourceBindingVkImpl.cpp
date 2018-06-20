@@ -31,7 +31,7 @@
 namespace Diligent
 {
 
-ShaderResourceBindingVkImpl::ShaderResourceBindingVkImpl( IReferenceCounters *pRefCounters, PipelineStateVkImpl *pPSO, bool IsPSOInternal) :
+ShaderResourceBindingVkImpl::ShaderResourceBindingVkImpl( IReferenceCounters* pRefCounters, PipelineStateVkImpl* pPSO, bool IsPSOInternal) :
     TBase( pRefCounters, pPSO, IsPSOInternal ),
     m_ShaderResourceCache(ShaderResourceCacheVk::DbgCacheContentType::SRBResources)
 {

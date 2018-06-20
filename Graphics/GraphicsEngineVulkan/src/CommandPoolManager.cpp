@@ -37,7 +37,7 @@ CommandPoolManager ::CommandPoolManager(const VulkanUtilities::VulkanLogicalDevi
 {
 }
 
-VulkanUtilities::CommandPoolWrapper CommandPoolManager::AllocateCommandPool(uint64_t CompletedFenceValue, const char *DebugName)
+VulkanUtilities::CommandPoolWrapper CommandPoolManager::AllocateCommandPool(uint64_t CompletedFenceValue, const char* DebugName)
 {
     std::lock_guard<std::mutex> LockGuard(m_Mutex);
 

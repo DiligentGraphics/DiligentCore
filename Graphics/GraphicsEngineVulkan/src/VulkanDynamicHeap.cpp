@@ -37,9 +37,9 @@ static VkDeviceSize GetDefaultAlignment(const VulkanUtilities::VulkanPhysicalDev
     return std::max(std::max(Limits.minUniformBufferOffsetAlignment, Limits.minTexelBufferOffsetAlignment), Limits.minStorageBufferOffsetAlignment);
 }
 
-VulkanRingBuffer::VulkanRingBuffer(IMemoryAllocator&      Allocator,
-                                     RenderDeviceVkImpl&  DeviceVk,
-                                     Uint32               Size) :
+VulkanRingBuffer::VulkanRingBuffer(IMemoryAllocator&    Allocator,
+                                   RenderDeviceVkImpl&  DeviceVk,
+                                   Uint32               Size) :
     m_RingBuffer(Size, Allocator),
     m_DeviceVk(DeviceVk),
     m_DefaultAlignment(GetDefaultAlignment(DeviceVk.GetPhysicalDevice()))

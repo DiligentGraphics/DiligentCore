@@ -49,7 +49,7 @@ class ShaderVkImpl : public ShaderBase<IShaderVk, IRenderDeviceVk>
 public:
     typedef ShaderBase<IShaderVk, IRenderDeviceVk> TShaderBase;
 
-    ShaderVkImpl(IReferenceCounters *pRefCounters, class RenderDeviceVkImpl *pRenderDeviceVk, const ShaderCreationAttribs &CreationAttribs);
+    ShaderVkImpl(IReferenceCounters* pRefCounters, class RenderDeviceVkImpl* pRenderDeviceVk, const ShaderCreationAttribs &CreationAttribs);
     ~ShaderVkImpl();
     
     //virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
@@ -78,8 +78,8 @@ private:
     // ShaderResources class instance must be referenced through the shared pointer, because 
     // it is referenced by ShaderResourceLayoutVk class instances
     std::shared_ptr<const SPIRVShaderResources> m_pShaderResources;
-    ShaderResourceLayoutVk m_StaticResLayout;
-    ShaderResourceCacheVk m_StaticResCache;
+    ShaderResourceLayoutVk  m_StaticResLayout;
+    ShaderResourceCacheVk   m_StaticResCache;
     ShaderVariableManagerVk m_StaticVarsMgr;
 
     std::vector<uint32_t> m_SPIRV;

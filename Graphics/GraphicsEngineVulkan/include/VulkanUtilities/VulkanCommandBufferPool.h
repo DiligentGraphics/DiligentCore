@@ -36,13 +36,15 @@ namespace VulkanUtilities
     {
     public:
         VulkanCommandBufferPool(std::shared_ptr<const VulkanUtilities::VulkanLogicalDevice> LogicalDevice, 
-                                uint32_t queueFamilyIndex, 
+                                uint32_t                 queueFamilyIndex, 
                                 VkCommandPoolCreateFlags flags,
-                                bool IsThreadSafe);
-        VulkanCommandBufferPool(const VulkanCommandBufferPool&) = delete;
-        VulkanCommandBufferPool(VulkanCommandBufferPool&&) = delete;
+                                bool                     IsThreadSafe);
+
+        VulkanCommandBufferPool             (const VulkanCommandBufferPool&) = delete;
+        VulkanCommandBufferPool             (VulkanCommandBufferPool&&)      = delete;
         VulkanCommandBufferPool& operator = (const VulkanCommandBufferPool&) = delete;
-        VulkanCommandBufferPool& operator = (VulkanCommandBufferPool&&) = delete;
+        VulkanCommandBufferPool& operator = (VulkanCommandBufferPool&&)      = delete;
+
         ~VulkanCommandBufferPool();
 
         VkCommandBuffer GetCommandBuffer(uint64_t LastCompletedFence, const char* DebugName = "");

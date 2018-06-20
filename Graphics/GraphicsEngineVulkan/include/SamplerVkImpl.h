@@ -40,7 +40,7 @@ class SamplerVkImpl : public SamplerBase<ISamplerVk, IRenderDeviceVk>
 public:
     typedef SamplerBase<ISamplerVk, IRenderDeviceVk> TSamplerBase;
 
-    SamplerVkImpl(IReferenceCounters *pRefCounters, class RenderDeviceVkImpl *pRenderDeviceVk, const SamplerDesc& SamplerDesc);
+    SamplerVkImpl(IReferenceCounters* pRefCounters, class RenderDeviceVkImpl* pRenderDeviceVk, const SamplerDesc& SamplerDesc);
     ~SamplerVkImpl();
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;

@@ -56,35 +56,35 @@ class RenderDeviceVkImpl : public RenderDeviceBase<IRenderDeviceVk>
 public:
     typedef RenderDeviceBase<IRenderDeviceVk> TRenderDeviceBase;
 
-    RenderDeviceVkImpl( IReferenceCounters *pRefCounters, 
-                        IMemoryAllocator &RawMemAllocator, 
-                        const EngineVkAttribs &CreationAttribs, 
-                        ICommandQueueVk *pCmdQueue, 
-                        std::shared_ptr<VulkanUtilities::VulkanInstance> Instance,
-                        std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice> PhysicalDevice,
-                        std::shared_ptr<VulkanUtilities::VulkanLogicalDevice> LogicalDevice,
-                        Uint32 NumDeferredContexts );
+    RenderDeviceVkImpl( IReferenceCounters*     pRefCounters, 
+                        IMemoryAllocator&       RawMemAllocator, 
+                        const EngineVkAttribs&  CreationAttribs, 
+                        ICommandQueueVk*        pCmdQueue, 
+                        std::shared_ptr<VulkanUtilities::VulkanInstance>        Instance,
+                        std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice>  PhysicalDevice,
+                        std::shared_ptr<VulkanUtilities::VulkanLogicalDevice>   LogicalDevice,
+                        Uint32                  NumDeferredContexts );
     ~RenderDeviceVkImpl();
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
+    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject** ppInterface )override final;
 
-    virtual void CreatePipelineState( const PipelineStateDesc &PipelineDesc, IPipelineState **ppPipelineState )override final;
+    virtual void CreatePipelineState( const PipelineStateDesc &PipelineDesc, IPipelineState** ppPipelineState )override final;
 
-    virtual void CreateBuffer(const BufferDesc& BuffDesc, const BufferData &BuffData, IBuffer **ppBuffer)override final;
+    virtual void CreateBuffer(const BufferDesc& BuffDesc, const BufferData& BuffData, IBuffer** ppBuffer)override final;
 
-    virtual void CreateShader(const ShaderCreationAttribs &ShaderCreationAttribs, IShader **ppShader)override final;
+    virtual void CreateShader(const ShaderCreationAttribs& ShaderCreationAttribs, IShader** ppShader)override final;
 
-    virtual void CreateTexture(const TextureDesc& TexDesc, const TextureData &Data, ITexture **ppTexture)override final;
+    virtual void CreateTexture(const TextureDesc& TexDesc, const TextureData& Data, ITexture** ppTexture)override final;
     
-    void CreateTexture(const TextureDesc& TexDesc, VkImage vkImgHandle, class TextureVkImpl **ppTexture);
+    void CreateTexture(const TextureDesc& TexDesc, VkImage vkImgHandle, class TextureVkImpl** ppTexture);
     
-    virtual void CreateSampler(const SamplerDesc& SamplerDesc, ISampler **ppSampler)override final;
+    virtual void CreateSampler(const SamplerDesc& SamplerDesc, ISampler** ppSampler)override final;
 
     virtual VkDevice GetVkDevice()override final{ return m_LogicalVkDevice->GetVkDevice();}
     
-    //virtual void CreateTextureFromD3DResource(IVkResource *pVkTexture, ITexture **ppTexture)override final;
+    //virtual void CreateTextureFromD3DResource(IVkResource* pVkTexture, ITexture** ppTexture)override final;
 
-    //virtual void CreateBufferFromD3DResource(IVkResource *pVkBuffer, const BufferDesc& BuffDesc, IBuffer **ppBuffer)override final;
+    //virtual void CreateBufferFromD3DResource(IVkResource* pVkBuffer, const BufferDesc& BuffDesc, IBuffer** ppBuffer)override final;
 
     Uint64 GetCompletedFenceValue();
 	virtual Uint64 GetNextFenceValue() override final
@@ -122,7 +122,7 @@ public:
 
     std::shared_ptr<const VulkanUtilities::VulkanInstance> GetVulkanInstance()const{return m_VulkanInstance;}
     const VulkanUtilities::VulkanPhysicalDevice& GetPhysicalDevice(){return *m_PhysicalDevice;}
-    const VulkanUtilities::VulkanLogicalDevice& GetLogicalDevice(){return *m_LogicalVkDevice;}
+    const VulkanUtilities::VulkanLogicalDevice&  GetLogicalDevice() {return *m_LogicalVkDevice;}
     FramebufferCache& GetFramebufferCache(){return m_FramebufferCache;}
 
     VulkanUtilities::VulkanMemoryAllocation AllocateMemory(const VkMemoryRequirements& MemReqs, VkMemoryPropertyFlags MemoryProperties)

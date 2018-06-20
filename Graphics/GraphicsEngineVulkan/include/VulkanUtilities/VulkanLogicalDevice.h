@@ -32,14 +32,15 @@ namespace VulkanUtilities
     class VulkanLogicalDevice : public std::enable_shared_from_this<VulkanLogicalDevice>
     {
     public:
-        static std::shared_ptr<VulkanLogicalDevice> Create(VkPhysicalDevice vkPhysicalDevice, 
-                                                           const VkDeviceCreateInfo &DeviceCI, 
+        static std::shared_ptr<VulkanLogicalDevice> Create(VkPhysicalDevice             vkPhysicalDevice, 
+                                                           const VkDeviceCreateInfo&    DeviceCI, 
                                                            const VkAllocationCallbacks* vkAllocator,
-                                                           bool EnableDebugMarkers);
-        VulkanLogicalDevice(const VulkanLogicalDevice&) = delete;
-        VulkanLogicalDevice(VulkanLogicalDevice&&) = delete;
+                                                           bool                         EnableDebugMarkers);
+
+        VulkanLogicalDevice             (const VulkanLogicalDevice&) = delete;
+        VulkanLogicalDevice             (VulkanLogicalDevice&&)      = delete;
         VulkanLogicalDevice& operator = (const VulkanLogicalDevice&) = delete;
-        VulkanLogicalDevice& operator = (VulkanLogicalDevice&&) = delete;
+        VulkanLogicalDevice& operator = (VulkanLogicalDevice&&)      = delete;
 
         ~VulkanLogicalDevice();
 
@@ -129,10 +130,10 @@ namespace VulkanUtilities
                             bool EnableDebugMarkers);
 
         template<typename VkObjectType, typename VkCreateObjectFuncType, typename VkObjectCreateInfoType>
-        VulkanObjectWrapper<VkObjectType> CreateVulkanObject(VkCreateObjectFuncType VkCreateObject,
+        VulkanObjectWrapper<VkObjectType> CreateVulkanObject(VkCreateObjectFuncType        VkCreateObject,
                                                              const VkObjectCreateInfoType& CreateInfo,
-                                                             const char *DebugName,
-                                                             const char *ObjectType)const;
+                                                             const char*                   DebugName,
+                                                             const char*                   ObjectType)const;
 
         VkDevice m_VkDevice = VK_NULL_HANDLE;
         const VkAllocationCallbacks* const m_VkAllocator; 

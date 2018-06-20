@@ -39,19 +39,19 @@ class DescriptorPoolManager;
 class DescriptorPoolAllocation
 {
 public:
-    DescriptorPoolAllocation(VkDescriptorSet _Set,
+    DescriptorPoolAllocation(VkDescriptorSet                        _Set,
                              VulkanUtilities::VulkanDescriptorPool& _ParentPool,
-                             DescriptorPoolManager& _ParentPoolMgr) :
-        Set(_Set),
-        ParentPool(&_ParentPool),
+                             DescriptorPoolManager&                 _ParentPoolMgr)noexcept :
+        Set          (_Set),
+        ParentPool   (&_ParentPool),
         ParentPoolMgr(&_ParentPoolMgr)
     {}
-    DescriptorPoolAllocation(){}
+    DescriptorPoolAllocation()noexcept{}
 
-    DescriptorPoolAllocation(const DescriptorPoolAllocation&) = delete;
+    DescriptorPoolAllocation             (const DescriptorPoolAllocation&) = delete;
     DescriptorPoolAllocation& operator = (const DescriptorPoolAllocation&) = delete;
 
-    DescriptorPoolAllocation(DescriptorPoolAllocation&& rhs) : 
+    DescriptorPoolAllocation(DescriptorPoolAllocation&& rhs)noexcept : 
         Set          (rhs.Set),
         ParentPool   (rhs.ParentPool),
         ParentPoolMgr(rhs.ParentPoolMgr)
@@ -61,7 +61,7 @@ public:
         rhs.ParentPoolMgr = nullptr;
     }
     
-    DescriptorPoolAllocation& operator = (DescriptorPoolAllocation&& rhs)
+    DescriptorPoolAllocation& operator = (DescriptorPoolAllocation&& rhs)noexcept
     {
         Release();
 
@@ -91,20 +91,20 @@ public:
     VkDescriptorSet GetVkDescriptorSet()const {return Set;}
 
 private:
-    VkDescriptorSet Set = VK_NULL_HANDLE;
-    VulkanUtilities::VulkanDescriptorPool* ParentPool = nullptr;
-    DescriptorPoolManager* ParentPoolMgr = nullptr;
+    VkDescriptorSet                        Set           = VK_NULL_HANDLE;
+    VulkanUtilities::VulkanDescriptorPool* ParentPool    = nullptr;
+    DescriptorPoolManager*                 ParentPoolMgr = nullptr;
 };
 
 class DescriptorPoolManager
 {
 public:
     DescriptorPoolManager(std::shared_ptr<const VulkanUtilities::VulkanLogicalDevice> LogicalDevice,
-                          std::vector<VkDescriptorPoolSize> PoolSizes,
-                          uint32_t MaxSets)noexcept:
+                          std::vector<VkDescriptorPoolSize>                           PoolSizes,
+                          uint32_t                                                    MaxSets) noexcept:
         m_LogicalDevice(std::move(LogicalDevice)),
-        m_PoolSizes(std::move(PoolSizes)),
-        m_MaxSets(MaxSets)
+        m_PoolSizes    (std::move(PoolSizes)),
+        m_MaxSets      (MaxSets)
     {
         CreateNewPool();
     }
@@ -112,11 +112,11 @@ public:
     // Move constructor must be noexcept, otherwise vector<DescriptorPoolManager> will fail to compile on MSVC
     // So we have to implement it manually. = default also does not work
     DescriptorPoolManager(DescriptorPoolManager&& rhs)noexcept : 
-        m_PoolSizes(std::move(rhs.m_PoolSizes)),
-        m_MaxSets(std::move(rhs.m_MaxSets)),
+        m_PoolSizes          (std::move(rhs.m_PoolSizes)),
+        m_MaxSets            (std::move(rhs.m_MaxSets)),
         //m_Mutex(std::move(rhs.m_Mutex)), mutex is not movable
-        m_LogicalDevice(std::move(rhs.m_LogicalDevice)),
-        m_DescriptorPools(std::move(rhs.m_DescriptorPools)),
+        m_LogicalDevice      (std::move(rhs.m_LogicalDevice)),
+        m_DescriptorPools    (std::move(rhs.m_DescriptorPools)),
         m_ReleasedAllocations(std::move(rhs.m_ReleasedAllocations))
     {
     }

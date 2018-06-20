@@ -124,7 +124,9 @@ void PipelineStateVkImpl::CreateRenderPass(const VulkanUtilities::VulkanLogicalD
     m_RenderPass = LogicalDevice.CreateRenderPass(RenderPassCI, RenderPassName.c_str());
 }
 
-PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters *pRefCounters, RenderDeviceVkImpl *pDeviceVk, const PipelineStateDesc &PipelineDesc) : 
+PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters*      pRefCounters,
+                                           RenderDeviceVkImpl*      pDeviceVk,
+                                           const PipelineStateDesc& PipelineDesc) : 
     TPipelineStateBase(pRefCounters, pDeviceVk, PipelineDesc),
     m_DummyVar(*this),
     m_ResourceCacheDataAllocator(GetRawAllocator(), PipelineDesc.SRBAllocationGranularity),

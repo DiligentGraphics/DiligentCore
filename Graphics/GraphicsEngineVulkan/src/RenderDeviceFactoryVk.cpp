@@ -48,24 +48,24 @@ public:
     }
 
     void CreateDeviceAndContextsVk( const EngineVkAttribs& CreationAttribs, 
-                                       IRenderDevice **ppDevice, 
-                                       IDeviceContext **ppContexts,
-                                       Uint32 NumDeferredContexts)override final;
+                                    IRenderDevice**        ppDevice, 
+                                    IDeviceContext**       ppContexts,
+                                    Uint32                 NumDeferredContexts)override final;
 
-    void AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::VulkanInstance>,
+    void AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::VulkanInstance>       Instance,
                               std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice> PhysicalDevice,
-                              std::shared_ptr<VulkanUtilities::VulkanLogicalDevice> LogicalDevice,
-                              ICommandQueueVk *pCommandQueue,
+                              std::shared_ptr<VulkanUtilities::VulkanLogicalDevice>  LogicalDevice,
+                              ICommandQueueVk*       pCommandQueue,
                               const EngineVkAttribs& EngineAttribs, 
-                              IRenderDevice **ppDevice, 
-                              IDeviceContext **ppContexts,
-                              Uint32 NumDeferredContexts);//override final;
+                              IRenderDevice**        ppDevice, 
+                              IDeviceContext**       ppContexts,
+                              Uint32                 NumDeferredContexts);//override final;
 
-    void CreateSwapChainVk( IRenderDevice *pDevice, 
-                            IDeviceContext *pImmediateContext, 
+    void CreateSwapChainVk( IRenderDevice*       pDevice, 
+                            IDeviceContext*      pImmediateContext, 
                             const SwapChainDesc& SwapChainDesc, 
-                            void* pNativeWndHandle, 
-                            ISwapChain **ppSwapChain )override final;
+                            void*                pNativeWndHandle, 
+                            ISwapChain**         ppSwapChain )override final;
 };
 
 /// Creates render device and device contexts for Vulkan backend
@@ -82,9 +82,9 @@ public:
 ///                                   contexts are written to ppContexts array starting 
 ///                                   at position 1
 void EngineFactoryVkImpl::CreateDeviceAndContextsVk( const EngineVkAttribs& CreationAttribs, 
-                                                     IRenderDevice **ppDevice, 
-                                                     IDeviceContext **ppContexts,
-                                                     Uint32 NumDeferredContexts)
+                                                     IRenderDevice**        ppDevice, 
+                                                     IDeviceContext**       ppContexts,
+                                                     Uint32                 NumDeferredContexts)
 {
     VERIFY( ppDevice && ppContexts, "Null pointer provided" );
     if( !ppDevice || !ppContexts )
@@ -216,14 +216,14 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk( const EngineVkAttribs& Crea
 ///                                   of deferred contexts is requested, pointers to the
 ///                                   contexts are written to ppContexts array starting 
 ///                                   at position 1
-void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::VulkanInstance> Instance,
+void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::VulkanInstance>       Instance,
                                                std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice> PhysicalDevice,
-                                               std::shared_ptr<VulkanUtilities::VulkanLogicalDevice> LogicalDevice,
-                                               ICommandQueueVk *pCommandQueue,
+                                               std::shared_ptr<VulkanUtilities::VulkanLogicalDevice>  LogicalDevice,
+                                               ICommandQueueVk*       pCommandQueue,
                                                const EngineVkAttribs& EngineAttribs, 
-                                               IRenderDevice **ppDevice, 
-                                               IDeviceContext **ppContexts,
-                                               Uint32 NumDeferredContexts)
+                                               IRenderDevice**        ppDevice, 
+                                               IDeviceContext**       ppContexts,
+                                               Uint32                 NumDeferredContexts)
 {
     VERIFY( pCommandQueue && ppDevice && ppContexts, "Null pointer provided" );
     if(!LogicalDevice || !pCommandQueue || !ppDevice || !ppContexts )
@@ -287,11 +287,11 @@ void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::
 ///                                
 /// \param [out] ppSwapChain    - Address of the memory location where pointer to the new 
 ///                               swap chain will be written
-void EngineFactoryVkImpl::CreateSwapChainVk( IRenderDevice *pDevice, 
-                                                   IDeviceContext *pImmediateContext, 
-                                                   const SwapChainDesc& SCDesc, 
-                                                   void* pNativeWndHandle, 
-                                                   ISwapChain **ppSwapChain )
+void EngineFactoryVkImpl::CreateSwapChainVk( IRenderDevice*       pDevice, 
+                                             IDeviceContext*      pImmediateContext, 
+                                             const SwapChainDesc& SCDesc, 
+                                             void*                pNativeWndHandle, 
+                                             ISwapChain**         ppSwapChain )
 {
     VERIFY( ppSwapChain, "Null pointer provided" );
     if( !ppSwapChain )

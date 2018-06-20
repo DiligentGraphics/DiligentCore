@@ -49,16 +49,16 @@ class PipelineStateVkImpl : public PipelineStateBase<IPipelineStateVk, IRenderDe
 public:
     typedef PipelineStateBase<IPipelineStateVk, IRenderDeviceVk> TPipelineStateBase;
 
-    PipelineStateVkImpl( IReferenceCounters *pRefCounters, class RenderDeviceVkImpl *pDeviceVk, const PipelineStateDesc &PipelineDesc );
+    PipelineStateVkImpl( IReferenceCounters* pRefCounters, class RenderDeviceVkImpl* pDeviceVk, const PipelineStateDesc &PipelineDesc );
     ~PipelineStateVkImpl();
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface );
+    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject** ppInterface );
    
-    virtual void BindShaderResources( IResourceMapping *pResourceMapping, Uint32 Flags )override;
+    virtual void BindShaderResources( IResourceMapping* pResourceMapping, Uint32 Flags )override;
 
     virtual void CreateShaderResourceBinding( IShaderResourceBinding **ppShaderResourceBinding )override;
 
-    virtual bool IsCompatibleWith(const IPipelineState *pPSO)const override final;
+    virtual bool IsCompatibleWith(const IPipelineState* pPSO)const override final;
 
     virtual VkRenderPass GetVkRenderPass()const override final{return m_RenderPass;}
 
@@ -88,8 +88,8 @@ public:
     IMemoryAllocator& GetShaderVariableDataAllocator(Uint32 ActiveShaderInd)
     {
         VERIFY_EXPR(ActiveShaderInd < m_NumShaders);
-        auto *pAllocator = m_VariableDataAllocators.GetAllocator(ActiveShaderInd);
-        return pAllocator != nullptr ? *pAllocator : GetRawAllocator();
+        auto* pAllocator = m_VariableDataAllocators.GetAllocator(ActiveShaderInd);
+        return pAllocator != nullptr ?* pAllocator : GetRawAllocator();
     }
 
     IShaderVariable *GetDummyShaderVar(){return &m_DummyVar;}

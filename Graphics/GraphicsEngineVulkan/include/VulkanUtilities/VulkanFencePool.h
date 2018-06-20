@@ -35,10 +35,12 @@ namespace VulkanUtilities
     {
     public:
         VulkanFencePool(std::shared_ptr<const VulkanLogicalDevice> LogicalDevice);
-        VulkanFencePool(const VulkanFencePool&) = delete;
-        VulkanFencePool(VulkanFencePool&&) = delete;
+
+        VulkanFencePool             (const VulkanFencePool&) = delete;
+        VulkanFencePool             (VulkanFencePool&&)      = delete;
         VulkanFencePool& operator = (const VulkanFencePool&) = delete;
-        VulkanFencePool& operator = (VulkanFencePool&&) = delete;
+        VulkanFencePool& operator = (VulkanFencePool&&)      = delete;
+
         ~VulkanFencePool();
 
         VulkanUtilities::FenceWrapper GetFence();

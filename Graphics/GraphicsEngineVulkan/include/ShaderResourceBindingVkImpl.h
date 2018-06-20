@@ -44,12 +44,12 @@ class ShaderResourceBindingVkImpl : public ShaderResourceBindingBase<IShaderReso
 {
 public:
     typedef ShaderResourceBindingBase<IShaderResourceBindingVk> TBase;
-    ShaderResourceBindingVkImpl(IReferenceCounters *pRefCounters, class PipelineStateVkImpl *pPSO, bool IsPSOInternal);
+    ShaderResourceBindingVkImpl(IReferenceCounters* pRefCounters, class PipelineStateVkImpl* pPSO, bool IsPSOInternal);
     ~ShaderResourceBindingVkImpl();
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
 
-    virtual void BindResources(Uint32 ShaderFlags, IResourceMapping *pResMapping, Uint32 Flags)override;
+    virtual void BindResources(Uint32 ShaderFlags, IResourceMapping* pResMapping, Uint32 Flags)override;
 
     virtual IShaderVariable *GetVariable(SHADER_TYPE ShaderType, const char *Name)override;
 

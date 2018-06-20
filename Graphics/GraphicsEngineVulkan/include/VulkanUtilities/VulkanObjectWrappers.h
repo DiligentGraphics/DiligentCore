@@ -38,23 +38,25 @@ namespace VulkanUtilities
 
         VulkanObjectWrapper() : 
             m_pLogicalDevice(nullptr),
-            m_VkObject(VK_NULL_HANDLE)
+            m_VkObject      (VK_NULL_HANDLE)
         {}
         VulkanObjectWrapper(std::shared_ptr<const VulkanLogicalDevice> pLogicalDevice, VulkanObjectType&& vkObject) :
             m_pLogicalDevice(pLogicalDevice),
-            m_VkObject(vkObject)
+            m_VkObject      (vkObject)
         {
             vkObject = VK_NULL_HANDLE;
         }
-        VulkanObjectWrapper(const VulkanObjectWrapper&) = delete;
+
+        VulkanObjectWrapper             (const VulkanObjectWrapper&) = delete;
         VulkanObjectWrapper& operator = (const VulkanObjectWrapper&) = delete;
-        VulkanObjectWrapper(VulkanObjectWrapper&& rhs) : 
+
+        VulkanObjectWrapper(VulkanObjectWrapper&& rhs)noexcept : 
             m_pLogicalDevice(std::move(rhs.m_pLogicalDevice)),
-            m_VkObject(rhs.m_VkObject)
+            m_VkObject      (rhs.m_VkObject)
         {
             rhs.m_VkObject = VK_NULL_HANDLE;
         }
-        VulkanObjectWrapper& operator = (VulkanObjectWrapper&& rhs) 
+        VulkanObjectWrapper& operator = (VulkanObjectWrapper&& rhs)noexcept
         {
             Release();
             m_pLogicalDevice = std::move(rhs.m_pLogicalDevice);

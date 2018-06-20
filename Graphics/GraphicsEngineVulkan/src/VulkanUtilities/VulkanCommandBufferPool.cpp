@@ -31,9 +31,9 @@
 namespace VulkanUtilities
 {
     VulkanCommandBufferPool::VulkanCommandBufferPool(std::shared_ptr<const VulkanUtilities::VulkanLogicalDevice> LogicalDevice,
-                                                     uint32_t queueFamilyIndex, 
-                                                     VkCommandPoolCreateFlags flags,
-                                                     bool IsThreadSafe) :
+                                                     uint32_t                                                    queueFamilyIndex, 
+                                                     VkCommandPoolCreateFlags                                    flags,
+                                                     bool                                                        IsThreadSafe) :
         m_LogicalDevice(LogicalDevice),
         m_IsThreadSafe(IsThreadSafe)
     {

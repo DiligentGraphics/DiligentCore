@@ -43,15 +43,15 @@ class BufferViewVkImpl : public BufferViewBase<IBufferViewVk>
 public:
     typedef BufferViewBase<IBufferViewVk> TBufferViewBase;
 
-    BufferViewVkImpl( IReferenceCounters *pRefCounters,
-                      IRenderDevice *pDevice, 
-                      const BufferViewDesc& ViewDesc, 
-                      class IBuffer *pBuffer,
-                      VulkanUtilities::BufferViewWrapper &&BuffView,
-                      bool bIsDefaultView);
+    BufferViewVkImpl( IReferenceCounters*                  pRefCounters,
+                      IRenderDevice*                       pDevice, 
+                      const BufferViewDesc&                ViewDesc, 
+                      class IBuffer*                       pBuffer,
+                      VulkanUtilities::BufferViewWrapper&& BuffView,
+                      bool                                 bIsDefaultView);
     ~BufferViewVkImpl();
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface );
+    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject** ppInterface );
 
     virtual VkBufferView GetVkBufferView()const override final{return m_BuffView;}
     const BufferVkImpl* GetBufferVk()const;

@@ -30,7 +30,7 @@
 
 namespace VulkanUtilities
 {
-    bool VulkanInstance::IsLayerAvailable(const char *LayerName)const
+    bool VulkanInstance::IsLayerAvailable(const char* LayerName)const
     {
         for(const auto& Layer : m_Layers)
             if(strcmp(Layer.layerName, LayerName) == 0)
@@ -39,7 +39,7 @@ namespace VulkanUtilities
         return false;
     }
 
-    bool VulkanInstance::IsExtensionAvailable(const char *ExtensionName)const
+    bool VulkanInstance::IsExtensionAvailable(const char* ExtensionName)const
     {
         for (const auto& Extension : m_Extensions)
             if (strcmp(Extension.extensionName, ExtensionName) == 0)
@@ -48,18 +48,18 @@ namespace VulkanUtilities
         return false;
     }
 
-    std::shared_ptr<VulkanInstance> VulkanInstance::Create(bool EnableValidation,
-                                                           uint32_t GlobalExtensionCount, 
-                                                           const char* const* ppGlobalExtensionNames,
+    std::shared_ptr<VulkanInstance> VulkanInstance::Create(bool                   EnableValidation,
+                                                           uint32_t               GlobalExtensionCount, 
+                                                           const char* const*     ppGlobalExtensionNames,
                                                            VkAllocationCallbacks* pVkAllocator)
     {
         auto Instance = new VulkanInstance(EnableValidation, GlobalExtensionCount, ppGlobalExtensionNames, pVkAllocator);
         return std::shared_ptr<VulkanInstance>(Instance);
     }
 
-    VulkanInstance::VulkanInstance(bool EnableValidation, 
-                                   uint32_t GlobalExtensionCount, 
-                                   const char* const* ppGlobalExtensionNames,
+    VulkanInstance::VulkanInstance(bool                   EnableValidation, 
+                                   uint32_t               GlobalExtensionCount, 
+                                   const char* const*     ppGlobalExtensionNames,
                                    VkAllocationCallbacks* pVkAllocator) : 
         m_pVkAllocator(pVkAllocator)
     {

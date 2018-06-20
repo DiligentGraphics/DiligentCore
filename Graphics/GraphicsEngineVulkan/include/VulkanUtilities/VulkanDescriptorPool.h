@@ -36,10 +36,11 @@ namespace VulkanUtilities
     public:
         VulkanDescriptorPool(std::shared_ptr<const VulkanUtilities::VulkanLogicalDevice> LogicalDevice,
                              const VkDescriptorPoolCreateInfo &DescriptorPoolCI)noexcept;
+
         VulkanDescriptorPool             (const VulkanDescriptorPool&) = delete;
         VulkanDescriptorPool& operator = (const VulkanDescriptorPool&) = delete;
-        VulkanDescriptorPool             (VulkanDescriptorPool&&) = default;
-        VulkanDescriptorPool& operator = (VulkanDescriptorPool&&) = default;
+        VulkanDescriptorPool             (VulkanDescriptorPool&&)      = default;
+        VulkanDescriptorPool& operator = (VulkanDescriptorPool&&)      = default;
         ~VulkanDescriptorPool();
 
         VkDescriptorSet AllocateDescriptorSet(VkDescriptorSetLayout SetLayout, const char* DebugName = "");

@@ -41,14 +41,14 @@ class SwapChainVkImpl : public SwapChainBase<ISwapChainVk>
 {
 public:
     typedef SwapChainBase<ISwapChainVk> TSwapChainBase;
-    SwapChainVkImpl(IReferenceCounters *pRefCounters,
-                       const SwapChainDesc& SwapChainDesc, 
-                       class RenderDeviceVkImpl* pRenderDeviceVk,
-                       class DeviceContextVkImpl* pDeviceContextVk,
-                       void* pNativeWndHandle);
+    SwapChainVkImpl(IReferenceCounters*        pRefCounters,
+                    const SwapChainDesc&       SwapChainDesc, 
+                    class RenderDeviceVkImpl*  pRenderDeviceVk,
+                    class DeviceContextVkImpl* pDeviceContextVk,
+                    void*                      pNativeWndHandle);
     ~SwapChainVkImpl();
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface );
+    virtual void QueryInterface( const Diligent::INTERFACE_ID& IID, IObject** ppInterface );
 
     virtual void Present(Uint32 SyncInterval)override final;
     virtual void Resize( Uint32 NewWidth, Uint32 NewHeight )override final;
@@ -64,7 +64,7 @@ public:
 private:
     void CreateVulkanSwapChain();
     void InitBuffersAndViews();
-    void AcquireNextImage(DeviceContextVkImpl *pDeviceCtxVk);
+    void AcquireNextImage(DeviceContextVkImpl* pDeviceCtxVk);
 
     std::shared_ptr<const VulkanUtilities::VulkanInstance> m_VulkanInstance;
     VkSurfaceKHR m_VkSurface = VK_NULL_HANDLE;

@@ -47,11 +47,11 @@ public:
     static VkDescriptorType GetVkDescriptorType(const SPIRVShaderResourceAttribs &Res);
 
     PipelineLayout();
-    void Release(RenderDeviceVkImpl *pDeviceVkImpl);
+    void Release(RenderDeviceVkImpl* pDeviceVkImpl);
     void Finalize(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice);
 
     VkPipelineLayout GetVkPipelineLayout()const{return m_LayoutMgr.GetVkPipelineLayout();}
-    void InitResourceCache(RenderDeviceVkImpl *pDeviceVkImpl, class ShaderResourceCacheVk& ResourceCache, IMemoryAllocator &CacheMemAllocator)const;
+    void InitResourceCache(RenderDeviceVkImpl* pDeviceVkImpl, class ShaderResourceCacheVk& ResourceCache, IMemoryAllocator& CacheMemAllocator)const;
 
     void AllocateResourceSlot(const SPIRVShaderResourceAttribs& ResAttribs, 
                               VkSampler                         vkStaticSampler,
@@ -90,7 +90,7 @@ public:
         Uint32                       SetCout            = 0;
         Uint32                       DynamicOffsetCount = 0;
 #ifdef _DEBUG
-        const PipelineLayout *pDbgPipelineLayout = nullptr;
+        const PipelineLayout* pDbgPipelineLayout = nullptr;
 #endif
         DescriptorSetBindInfo() : 
             vkSets(2),
@@ -136,11 +136,11 @@ private:
     public:
         struct DescriptorSetLayout
         {
-            DescriptorSetLayout() = default;
-            DescriptorSetLayout(DescriptorSetLayout&&) = default;
-            DescriptorSetLayout(const DescriptorSetLayout&) = delete;
+            DescriptorSetLayout() noexcept {}
+            DescriptorSetLayout             (DescriptorSetLayout&&)      = default;
+            DescriptorSetLayout             (const DescriptorSetLayout&) = delete;
             DescriptorSetLayout& operator = (const DescriptorSetLayout&) = delete;
-            DescriptorSetLayout& operator = (DescriptorSetLayout&&) = delete;
+            DescriptorSetLayout& operator = (DescriptorSetLayout&&)      = delete;
             
             uint32_t                                    TotalDescriptors      = 0;
             int8_t                                      SetIndex              = -1;
@@ -150,9 +150,9 @@ private:
             VulkanUtilities::DescriptorSetLayoutWrapper VkLayout;
             
             ~DescriptorSetLayout();
-            void AddBinding(const VkDescriptorSetLayoutBinding &Binding, IMemoryAllocator &MemAllocator);
-            void Finalize(const VulkanUtilities::VulkanLogicalDevice &LogicalDevice, IMemoryAllocator &MemAllocator, VkDescriptorSetLayoutBinding* pNewBindings);
-            void Release(RenderDeviceVkImpl *pRenderDeviceVk, IMemoryAllocator &MemAllocator);
+            void AddBinding(const VkDescriptorSetLayoutBinding& Binding, IMemoryAllocator& MemAllocator);
+            void Finalize(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice, IMemoryAllocator& MemAllocator, VkDescriptorSetLayoutBinding* pNewBindings);
+            void Release(RenderDeviceVkImpl* pRenderDeviceVk, IMemoryAllocator& MemAllocator);
 
             bool operator == (const DescriptorSetLayout& rhs)const;
             bool operator != (const DescriptorSetLayout& rhs)const{return !(*this == rhs);}
@@ -166,15 +166,15 @@ private:
         DescriptorSetLayoutManager(IMemoryAllocator &MemAllocator);
         ~DescriptorSetLayoutManager();
 
-        DescriptorSetLayoutManager(const DescriptorSetLayoutManager&) = delete;
+        DescriptorSetLayoutManager            (const DescriptorSetLayoutManager&) = delete;
         DescriptorSetLayoutManager& operator= (const DescriptorSetLayoutManager&) = delete;
-        DescriptorSetLayoutManager(DescriptorSetLayoutManager&&) = delete;
-        DescriptorSetLayoutManager& operator= (DescriptorSetLayoutManager&&) = delete;
+        DescriptorSetLayoutManager            (DescriptorSetLayoutManager&&)      = delete;
+        DescriptorSetLayoutManager& operator= (DescriptorSetLayoutManager&&)      = delete;
         
         void Finalize(const VulkanUtilities::VulkanLogicalDevice &LogicalDevice);
-        void Release(RenderDeviceVkImpl *pRenderDeviceVk);
+        void Release(RenderDeviceVkImpl* pRenderDeviceVk);
 
-        DescriptorSetLayout& GetDescriptorSet(SHADER_VARIABLE_TYPE VarType){return m_DescriptorSetLayouts[VarType == SHADER_VARIABLE_TYPE_DYNAMIC ? 1 : 0];}
+              DescriptorSetLayout& GetDescriptorSet(SHADER_VARIABLE_TYPE VarType)      { return m_DescriptorSetLayouts[VarType == SHADER_VARIABLE_TYPE_DYNAMIC ? 1 : 0]; }
         const DescriptorSetLayout& GetDescriptorSet(SHADER_VARIABLE_TYPE VarType)const { return m_DescriptorSetLayouts[VarType == SHADER_VARIABLE_TYPE_DYNAMIC ? 1 : 0]; }
 
         bool operator == (const DescriptorSetLayoutManager& rhs)const;
