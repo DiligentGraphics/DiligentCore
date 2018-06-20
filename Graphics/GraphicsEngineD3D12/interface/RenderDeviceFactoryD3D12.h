@@ -43,32 +43,32 @@ class IEngineFactoryD3D12
 {
 public:
     virtual void CreateDeviceAndContextsD3D12( const EngineD3D12Attribs& CreationAttribs, 
-                                               IRenderDevice **ppDevice, 
-                                               IDeviceContext **ppContexts,
-                                               Uint32 NumDeferredContexts) = 0;
+                                               IRenderDevice**           ppDevice, 
+                                               IDeviceContext**          ppContexts,
+                                               Uint32                    NumDeferredContexts) = 0;
 
-    virtual void AttachToD3D12Device(void *pd3d12NativeDevice, 
-                                     class ICommandQueueD3D12 *pCommandQueue,
-                                     const EngineD3D12Attribs& EngineAttribs, 
-                                     IRenderDevice **ppDevice, 
-                                     IDeviceContext **ppContexts,
-                                     Uint32 NumDeferredContexts) = 0;
+    virtual void AttachToD3D12Device(void*                      pd3d12NativeDevice, 
+                                     class ICommandQueueD3D12*  pCommandQueue,
+                                     const EngineD3D12Attribs&  EngineAttribs, 
+                                     IRenderDevice**            ppDevice, 
+                                     IDeviceContext**           ppContexts,
+                                     Uint32                     NumDeferredContexts) = 0;
 
-    virtual void CreateSwapChainD3D12( IRenderDevice *pDevice, 
-                                       IDeviceContext *pImmediateContext, 
-                                       const SwapChainDesc& SwapChainDesc, 
+    virtual void CreateSwapChainD3D12( IRenderDevice*            pDevice, 
+                                       IDeviceContext*           pImmediateContext, 
+                                       const SwapChainDesc&      SwapChainDesc, 
                                        const FullScreenModeDesc& FSDesc,
-                                       void* pNativeWndHandle, 
-                                       ISwapChain **ppSwapChain ) = 0;
+                                       void*                     pNativeWndHandle, 
+                                       ISwapChain**              ppSwapChain ) = 0;
 
-   virtual void EnumerateHardwareAdapters(Uint32 &NumAdapters, 
-                                          HardwareAdapterAttribs *Adapters) = 0;
+   virtual void EnumerateHardwareAdapters(Uint32&                   NumAdapters, 
+                                          HardwareAdapterAttribs*   Adapters) = 0;
 
-   virtual void EnumerateDisplayModes(Uint32 AdapterId, 
-                                      Uint32 OutputId, 
-                                      TEXTURE_FORMAT Format, 
-                                      Uint32 &NumDisplayModes, 
-                                      DisplayModeAttribs *DisplayModes) = 0;
+   virtual void EnumerateDisplayModes(Uint32                AdapterId, 
+                                      Uint32                OutputId, 
+                                      TEXTURE_FORMAT        Format, 
+                                      Uint32&               NumDisplayModes, 
+                                      DisplayModeAttribs*   DisplayModes) = 0;
 
 };
 

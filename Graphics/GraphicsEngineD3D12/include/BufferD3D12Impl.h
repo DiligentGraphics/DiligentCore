@@ -43,16 +43,16 @@ class BufferD3D12Impl : public BufferBase<IBufferD3D12, BufferViewD3D12Impl, Fix
 {
 public:
     typedef BufferBase<IBufferD3D12, BufferViewD3D12Impl, FixedBlockMemoryAllocator> TBufferBase;
-    BufferD3D12Impl(IReferenceCounters *pRefCounters, 
-                    FixedBlockMemoryAllocator &BuffViewObjMemAllocator, 
-                    class RenderDeviceD3D12Impl *pDeviceD3D12, 
-                    const BufferDesc& BuffDesc, 
-                    const BufferData &BuffData = BufferData());
-    BufferD3D12Impl(IReferenceCounters *pRefCounters, 
-                    FixedBlockMemoryAllocator &BuffViewObjMemAllocator, 
-                    class RenderDeviceD3D12Impl *pDeviceD3D12, 
-                    const BufferDesc& BuffDesc, 
-                    ID3D12Resource *pd3d12Buffer);
+    BufferD3D12Impl(IReferenceCounters*           pRefCounters, 
+                    FixedBlockMemoryAllocator&    BuffViewObjMemAllocator, 
+                    class RenderDeviceD3D12Impl*  pDeviceD3D12, 
+                    const BufferDesc&             BuffDesc, 
+                    const BufferData&             BuffData = BufferData());
+    BufferD3D12Impl(IReferenceCounters*          pRefCounters, 
+                    FixedBlockMemoryAllocator&   BuffViewObjMemAllocator, 
+                    class RenderDeviceD3D12Impl* pDeviceD3D12, 
+                    const BufferDesc&            BuffDesc, 
+                    ID3D12Resource*              pd3d12Buffer);
     ~BufferD3D12Impl();
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;

@@ -43,7 +43,11 @@ class DeviceContextD3D12Impl : public DeviceContextBase<IDeviceContextD3D12>
 public:
     typedef DeviceContextBase<IDeviceContextD3D12> TDeviceContextBase;
 
-    DeviceContextD3D12Impl(IReferenceCounters *pRefCounters, class RenderDeviceD3D12Impl *pDevice, bool bIsDeferred, const EngineD3D12Attribs &Attribs, Uint32 ContextId);
+    DeviceContextD3D12Impl(IReferenceCounters*          pRefCounters, 
+                           class RenderDeviceD3D12Impl* pDevice, 
+                           bool                         bIsDeferred, 
+                           const EngineD3D12Attribs&    Attribs, 
+                           Uint32                       ContextId);
     ~DeviceContextD3D12Impl();
     
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
@@ -129,7 +133,7 @@ private:
         return m_pCurrCmdCtx;
     }
     size_t m_NumCommandsInCurCtx = 0;
-    const Uint32  m_NumCommandsToFlush = 192;
+    const Uint32 m_NumCommandsToFlush = 192;
     CommandContext* m_pCurrCmdCtx = nullptr;
 
     CComPtr<ID3D12Resource> m_CommittedD3D12IndexBuffer;

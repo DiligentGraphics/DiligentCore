@@ -39,65 +39,83 @@ class RootParameter
 {
 public:
 
-	RootParameter(D3D12_ROOT_PARAMETER_TYPE ParameterType, Uint32 RootIndex, UINT Register, UINT RegisterSpace, D3D12_SHADER_VISIBILITY Visibility, SHADER_VARIABLE_TYPE VarType)  : 
-        m_RootIndex(RootIndex),
+	RootParameter(D3D12_ROOT_PARAMETER_TYPE ParameterType, 
+                  Uint32                    RootIndex, 
+                  UINT                      Register, 
+                  UINT                      RegisterSpace, 
+                  D3D12_SHADER_VISIBILITY   Visibility, 
+                  SHADER_VARIABLE_TYPE      VarType)noexcept  : 
+        m_RootIndex    (RootIndex),
         m_ShaderVarType(VarType)
 	{
         VERIFY(ParameterType == D3D12_ROOT_PARAMETER_TYPE_CBV || ParameterType == D3D12_ROOT_PARAMETER_TYPE_SRV || ParameterType == D3D12_ROOT_PARAMETER_TYPE_UAV, "Unexpected parameter type - verify argument list");
-		m_RootParam.ParameterType = ParameterType;
-		m_RootParam.ShaderVisibility = Visibility;
+		m_RootParam.ParameterType             = ParameterType;
+		m_RootParam.ShaderVisibility          = Visibility;
 		m_RootParam.Descriptor.ShaderRegister = Register;
-		m_RootParam.Descriptor.RegisterSpace = RegisterSpace;
+		m_RootParam.Descriptor.RegisterSpace  = RegisterSpace;
 	}
 
-	RootParameter( D3D12_ROOT_PARAMETER_TYPE ParameterType, Uint32 RootIndex, UINT Register, UINT RegisterSpace, UINT NumDwords, D3D12_SHADER_VISIBILITY Visibility, SHADER_VARIABLE_TYPE VarType) : 
-        m_RootIndex(RootIndex),
+	RootParameter(D3D12_ROOT_PARAMETER_TYPE ParameterType, 
+                  Uint32                    RootIndex, 
+                  UINT                      Register, 
+                  UINT                      RegisterSpace, 
+                  UINT                      NumDwords, 
+                  D3D12_SHADER_VISIBILITY   Visibility, 
+                  SHADER_VARIABLE_TYPE       VarType)noexcept : 
+        m_RootIndex    (RootIndex),
         m_ShaderVarType(VarType)
 	{
         VERIFY(ParameterType == D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS, "Unexpected parameter type - verify argument list");
-		m_RootParam.ParameterType = ParameterType;
-		m_RootParam.ShaderVisibility = Visibility;
+		m_RootParam.ParameterType            = ParameterType;
+		m_RootParam.ShaderVisibility         = Visibility;
 		m_RootParam.Constants.Num32BitValues = NumDwords;
 		m_RootParam.Constants.ShaderRegister = Register;
-		m_RootParam.Constants.RegisterSpace = RegisterSpace;
+		m_RootParam.Constants.RegisterSpace  = RegisterSpace;
 	}
 
-	RootParameter( D3D12_ROOT_PARAMETER_TYPE ParameterType, Uint32 RootIndex, UINT NumRanges, D3D12_DESCRIPTOR_RANGE *pRanges, D3D12_SHADER_VISIBILITY Visibility, SHADER_VARIABLE_TYPE VarType) : 
-        m_RootIndex(RootIndex),
+	RootParameter(D3D12_ROOT_PARAMETER_TYPE ParameterType, 
+                  Uint32                    RootIndex, 
+                  UINT                      NumRanges, 
+                  D3D12_DESCRIPTOR_RANGE*   pRanges,
+                  D3D12_SHADER_VISIBILITY   Visibility, 
+                  SHADER_VARIABLE_TYPE      VarType)noexcept : 
+        m_RootIndex    (RootIndex),
         m_ShaderVarType(VarType)
 	{
         VERIFY(ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, "Unexpected parameter type - verify argument list");
         VERIFY_EXPR(pRanges != nullptr);
-		m_RootParam.ParameterType = ParameterType;
+		m_RootParam.ParameterType    = ParameterType;
 		m_RootParam.ShaderVisibility = Visibility;
 		m_RootParam.DescriptorTable.NumDescriptorRanges = NumRanges;
-		m_RootParam.DescriptorTable.pDescriptorRanges = pRanges;
+		m_RootParam.DescriptorTable.pDescriptorRanges   = pRanges;
 #ifdef _DEBUG
         for(Uint32 r=0; r < NumRanges; ++r)
             pRanges[r].RangeType = static_cast<D3D12_DESCRIPTOR_RANGE_TYPE>(-1);
 #endif
 	}
 
-    RootParameter(const RootParameter &RP):
-        m_RootParam( RP.m_RootParam),
+    RootParameter(const RootParameter& RP)noexcept :
+        m_RootParam          (RP.m_RootParam),
         m_DescriptorTableSize(RP.m_DescriptorTableSize),
-        m_ShaderVarType(RP.m_ShaderVarType),
-        m_RootIndex(RP.m_RootIndex)
+        m_ShaderVarType      (RP.m_ShaderVarType),
+        m_RootIndex          (RP.m_RootIndex)
     {
         VERIFY(m_RootParam.ParameterType != D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, "Use another constructor to copy descriptor table");
     }
 
-    RootParameter(const RootParameter &RP, UINT NumRanges, D3D12_DESCRIPTOR_RANGE *pRanges):
-        m_RootParam( RP.m_RootParam),
+    RootParameter(const RootParameter&    RP, 
+                  UINT                    NumRanges, 
+                  D3D12_DESCRIPTOR_RANGE* pRanges)noexcept :
+        m_RootParam          (RP.m_RootParam),
         m_DescriptorTableSize(RP.m_DescriptorTableSize),
-        m_ShaderVarType(RP.m_ShaderVarType),
-        m_RootIndex(RP.m_RootIndex)
+        m_ShaderVarType      (RP.m_ShaderVarType),
+        m_RootIndex          (RP.m_RootIndex)
     {
         VERIFY(m_RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, "Root parameter is expected to be a descriptor table");
         VERIFY(NumRanges >= m_RootParam.DescriptorTable.NumDescriptorRanges, "New table must be larger than source one");
         auto &DstTbl = m_RootParam.DescriptorTable;
         DstTbl.NumDescriptorRanges = NumRanges;
-        DstTbl.pDescriptorRanges = pRanges;
+        DstTbl.pDescriptorRanges   = pRanges;
         const auto &SrcTbl = RP.m_RootParam.DescriptorTable;
         memcpy(pRanges, SrcTbl.pDescriptorRanges, SrcTbl.NumDescriptorRanges * sizeof(D3D12_DESCRIPTOR_RANGE));
 #ifdef _DEBUG
@@ -116,20 +134,25 @@ public:
 #endif
     }
 
-    RootParameter& operator = (const RootParameter &RP) = delete;
-    RootParameter& operator = (RootParameter &&RP) = delete;
+    RootParameter& operator = (const RootParameter&) = delete;
+    RootParameter& operator = (RootParameter&&)      = delete;
 
-    void SetDescriptorRange( UINT RangeIndex, D3D12_DESCRIPTOR_RANGE_TYPE Type, UINT Register, UINT Count, UINT Space = 0, UINT OffsetFromTableStart =  D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND)
+    void SetDescriptorRange(UINT                        RangeIndex, 
+                            D3D12_DESCRIPTOR_RANGE_TYPE Type, 
+                            UINT                        Register, 
+                            UINT                        Count, 
+                            UINT                        Space = 0,
+                            UINT                        OffsetFromTableStart =  D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND)
 	{
         VERIFY(m_RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, "Incorrect parameter table: descriptor table is expected");
         auto &Tbl = m_RootParam.DescriptorTable;
         VERIFY(RangeIndex < Tbl.NumDescriptorRanges, "Invalid descriptor range index");
 		D3D12_DESCRIPTOR_RANGE &range = const_cast<D3D12_DESCRIPTOR_RANGE &>(Tbl.pDescriptorRanges[RangeIndex]);
         VERIFY(range.RangeType == static_cast<D3D12_DESCRIPTOR_RANGE_TYPE>(-1), "Descriptor range has already been initialized. m_DescriptorTableSize may be updated incorrectly");
-		range.RangeType = Type;
-		range.NumDescriptors = Count;
+		range.RangeType          = Type;
+		range.NumDescriptors     = Count;
 		range.BaseShaderRegister = Register;
-		range.RegisterSpace = Space;
+		range.RegisterSpace      = Space;
 		range.OffsetInDescriptorsFromTableStart = OffsetFromTableStart;
         m_DescriptorTableSize = std::max(m_DescriptorTableSize, OffsetFromTableStart + Count);
 	}
@@ -140,12 +163,12 @@ public:
         VERIFY(m_RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, "Incorrect parameter table: descriptor table is expected");
         return m_DescriptorTableSize;
     }
-    D3D12_SHADER_VISIBILITY GetShaderVisibility()const{return m_RootParam.ShaderVisibility;}
-    D3D12_ROOT_PARAMETER_TYPE GetParameterType()const{return m_RootParam.ParameterType;}
+    D3D12_SHADER_VISIBILITY   GetShaderVisibility()const { return m_RootParam.ShaderVisibility; }
+    D3D12_ROOT_PARAMETER_TYPE GetParameterType()   const { return m_RootParam.ParameterType;    }
 
-    Uint32 GetRootIndex()const{return m_RootIndex;}
+    Uint32 GetRootIndex()const { return m_RootIndex; }
 
-	operator const D3D12_ROOT_PARAMETER&()const{return m_RootParam;}
+	operator const D3D12_ROOT_PARAMETER&()const { return m_RootParam; }
     
     bool operator == (const RootParameter&rhs)const
     {
@@ -271,28 +294,34 @@ public:
     ID3D12RootSignature* GetD3D12RootSignature()const{return m_pd3d12RootSignature;}
     void InitResourceCache(class RenderDeviceD3D12Impl *pDeviceD3D12Impl, class ShaderResourceCacheD3D12& ResourceCache, IMemoryAllocator &CacheMemAllocator)const;
     
-    void InitStaticSampler(SHADER_TYPE ShaderType, const String &TextureName, const D3DShaderResourceAttribs &ShaderResAttribs);
+    void InitStaticSampler(SHADER_TYPE                    ShaderType,
+                          const String&                   TextureName,
+                          const D3DShaderResourceAttribs& ShaderResAttribs);
 
-    void AllocateResourceSlot(SHADER_TYPE ShaderType, const D3DShaderResourceAttribs &ShaderResAttribs, D3D12_DESCRIPTOR_RANGE_TYPE RangeType, Uint32 &RootIndex, Uint32 &OffsetFromTableStart);
+    void AllocateResourceSlot(SHADER_TYPE                      ShaderType, 
+                              const D3DShaderResourceAttribs&  ShaderResAttribs, 
+                              D3D12_DESCRIPTOR_RANGE_TYPE      RangeType, 
+                              Uint32&                          RootIndex,
+                              Uint32&                          OffsetFromTableStart);
 
     // This method should be thread-safe as it does not modify any object state
-    void (RootSignature::*CommitDescriptorHandles)(class RenderDeviceD3D12Impl *pRenderDeviceD3D12, 
-                                                   ShaderResourceCacheD3D12& ResourceCache, 
-                                                   class CommandContext &Ctx, 
-                                                   bool IsCompute)const = nullptr;
+    void (RootSignature::*CommitDescriptorHandles)(class RenderDeviceD3D12Impl*  pRenderDeviceD3D12, 
+                                                   ShaderResourceCacheD3D12&     ResourceCache, 
+                                                   class CommandContext&         Ctx, 
+                                                   bool                          IsCompute)const = nullptr;
 
-    void (RootSignature::*TransitionAndCommitDescriptorHandles)(class RenderDeviceD3D12Impl *pRenderDeviceD3D12, 
-                                                                ShaderResourceCacheD3D12& ResourceCache, 
-                                                                class CommandContext &Ctx, 
-                                                                bool IsCompute)const = nullptr;
+    void (RootSignature::*TransitionAndCommitDescriptorHandles)(class RenderDeviceD3D12Impl* pRenderDeviceD3D12, 
+                                                                ShaderResourceCacheD3D12&    ResourceCache, 
+                                                                class CommandContext&        Ctx, 
+                                                                bool                         IsCompute)const = nullptr;
 
-    void TransitionResources(ShaderResourceCacheD3D12& ResourceCache, 
-                             class CommandContext &Ctx)const;
+    void TransitionResources(ShaderResourceCacheD3D12&  ResourceCache, 
+                             class CommandContext&      Ctx)const;
 
-    void CommitRootViews(ShaderResourceCacheD3D12& ResourceCache, 
-                         class CommandContext &Ctx, 
-                         bool IsCompute,
-                         Uint32 ContextId)const;
+    void CommitRootViews(ShaderResourceCacheD3D12&  ResourceCache, 
+                         class CommandContext&      Ctx, 
+                         bool                       IsCompute,
+                         Uint32                     ContextId)const;
 
     Uint32 GetTotalSrvCbvUavSlots(SHADER_VARIABLE_TYPE VarType)const
     {
@@ -329,13 +358,13 @@ private:
     public:
         RootParamsManager(IMemoryAllocator &MemAllocator);
 
-        RootParamsManager(const RootParamsManager&) = delete;
+        RootParamsManager            (const RootParamsManager&) = delete;
         RootParamsManager& operator= (const RootParamsManager&) = delete;
-        RootParamsManager(RootParamsManager&&) = delete;
-        RootParamsManager& operator= (RootParamsManager&&) = delete;
+        RootParamsManager            (RootParamsManager&&)      = delete;
+        RootParamsManager& operator= (RootParamsManager&&)      = delete;
         
-        Uint32 GetNumRootTables()const{return m_NumRootTables;}
-        Uint32 GetNumRootViews()const{return m_NumRootViews;}
+        Uint32 GetNumRootTables()const { return m_NumRootTables; }
+        Uint32 GetNumRootViews() const { return m_NumRootViews;  }
         
         const RootParameter& GetRootTable(Uint32 TableInd)const
         {
@@ -361,8 +390,17 @@ private:
             return m_pRootViews[ViewInd];
         }
 
-        void AddRootView(D3D12_ROOT_PARAMETER_TYPE ParameterType, Uint32 RootIndex, UINT Register, D3D12_SHADER_VISIBILITY Visibility, SHADER_VARIABLE_TYPE VarType);
-        void AddRootTable(Uint32 RootIndex, D3D12_SHADER_VISIBILITY Visibility, SHADER_VARIABLE_TYPE VarType, Uint32 NumRangesInNewTable = 1);
+        void AddRootView(D3D12_ROOT_PARAMETER_TYPE ParameterType,
+                         Uint32                    RootIndex,
+                         UINT                      Register,
+                         D3D12_SHADER_VISIBILITY   Visibility,
+                         SHADER_VARIABLE_TYPE      VarType);
+
+        void AddRootTable(Uint32                  RootIndex,
+                          D3D12_SHADER_VISIBILITY Visibility,
+                          SHADER_VARIABLE_TYPE    VarType,
+                          Uint32                  NumRangesInNewTable = 1);
+
         void AddDescriptorRanges(Uint32 RootTableInd, Uint32 NumExtraRanges = 1);
 
         template<class TOperation>
@@ -372,16 +410,22 @@ private:
         size_t GetHash()const;
 
     private:
-        size_t GetRequiredMemorySize(Uint32 NumExtraRootTables, Uint32 NumExtraRootViews, Uint32 NumExtraDescriptorRanges)const;
-        D3D12_DESCRIPTOR_RANGE* Extend(Uint32 NumExtraRootTables, Uint32 NumExtraRootViews, Uint32 NumExtraDescriptorRanges, Uint32 RootTableToAddRanges = static_cast<Uint32>(-1));
+        size_t GetRequiredMemorySize(Uint32 NumExtraRootTables,
+                                     Uint32 NumExtraRootViews,
+                                     Uint32 NumExtraDescriptorRanges)const;
+
+        D3D12_DESCRIPTOR_RANGE* Extend(Uint32 NumExtraRootTables,
+                                       Uint32 NumExtraRootViews,
+                                       Uint32 NumExtraDescriptorRanges,
+                                       Uint32 RootTableToAddRanges = static_cast<Uint32>(-1));
 
         IMemoryAllocator &m_MemAllocator;
         std::unique_ptr<void, STDDeleter<void, IMemoryAllocator>> m_pMemory;
-        Uint32 m_NumRootTables = 0;
-        Uint32 m_NumRootViews = 0;
+        Uint32 m_NumRootTables         = 0;
+        Uint32 m_NumRootViews          = 0;
         Uint32 m_TotalDescriptorRanges = 0;
-        RootParameter *m_pRootTables = nullptr;
-        RootParameter *m_pRootViews = nullptr;
+        RootParameter* m_pRootTables = nullptr;
+        RootParameter* m_pRootViews  = nullptr;
     };
 
     static constexpr Uint8 InvalidRootTableIndex = static_cast<Uint8>(-1);
@@ -400,13 +444,13 @@ private:
     {
         StaticSamplerDesc SamplerDesc;
         UINT ShaderRegister = static_cast<UINT>(-1);
-        UINT ArraySize = 0;
-        UINT RegisterSpace = 0;
+        UINT ArraySize      = 0;
+        UINT RegisterSpace  = 0;
         D3D12_SHADER_VISIBILITY ShaderVisibility = static_cast<D3D12_SHADER_VISIBILITY>(-1);
         
-        StaticSamplerAttribs(){}
-        StaticSamplerAttribs(const StaticSamplerDesc& SamDesc, D3D12_SHADER_VISIBILITY Visibility) : 
-            SamplerDesc(SamDesc),
+        StaticSamplerAttribs()noexcept{}
+        StaticSamplerAttribs(const StaticSamplerDesc& SamDesc, D3D12_SHADER_VISIBILITY Visibility)noexcept : 
+            SamplerDesc     (SamDesc),
             ShaderVisibility(Visibility)
         {}
     };
@@ -417,16 +461,16 @@ private:
 
     // Commits descriptor handles for static and mutable variables
     template<bool PerformResourceTransitions>
-    void CommitDescriptorHandlesInternal_SM(class RenderDeviceD3D12Impl *pRenderDeviceD3D12, 
-                                            ShaderResourceCacheD3D12& ResourceCache, 
-                                            class CommandContext &Ctx, 
-                                            bool IsCompute)const;
+    void CommitDescriptorHandlesInternal_SM(class RenderDeviceD3D12Impl* pRenderDeviceD3D12, 
+                                            ShaderResourceCacheD3D12&    ResourceCache, 
+                                            class CommandContext&        Ctx, 
+                                            bool                         IsCompute)const;
     template<bool PerformResourceTransitions>
     // Commits descriptor handles for static, mutable, and dynamic variables
-    void CommitDescriptorHandlesInternal_SMD(class RenderDeviceD3D12Impl *pRenderDeviceD3D12, 
-                                            ShaderResourceCacheD3D12& ResourceCache, 
-                                            class CommandContext &Ctx, 
-                                            bool IsCompute)const;
+    void CommitDescriptorHandlesInternal_SMD(class RenderDeviceD3D12Impl*  pRenderDeviceD3D12, 
+                                             ShaderResourceCacheD3D12&     ResourceCache, 
+                                             class CommandContext&         Ctx, 
+                                             bool                          IsCompute)const;
 };
 
 }

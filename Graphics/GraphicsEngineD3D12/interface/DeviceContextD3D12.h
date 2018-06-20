@@ -44,13 +44,13 @@ public:
 
     /// \param [in] pTexture - texture to transition
     /// \param [in] State - D3D12 resource state this texture to transition to
-    virtual void TransitionTextureState(ITexture *pTexture, D3D12_RESOURCE_STATES State) = 0;
+    virtual void TransitionTextureState(ITexture* pTexture, D3D12_RESOURCE_STATES State) = 0;
 
     /// Transitions internal D3D12 buffer object to a specified state
 
     /// \param [in] pBuffer - Buffer to transition
     /// \param [in] State - D3D12 resource state this buffer to transition to
-    virtual void TransitionBufferState(IBuffer *pBuffer, D3D12_RESOURCE_STATES State) = 0;
+    virtual void TransitionBufferState(IBuffer* pBuffer, D3D12_RESOURCE_STATES State) = 0;
 };
 
 }

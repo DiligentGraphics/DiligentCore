@@ -59,10 +59,10 @@ public:
 
     virtual ID3D12RootSignature *GetD3D12RootSignature()const override final{return m_RootSig.GetD3D12RootSignature(); }
 
-    ShaderResourceCacheD3D12* CommitAndTransitionShaderResources(IShaderResourceBinding *pShaderResourceBinding, 
-                                                                 class CommandContext &Ctx,
-                                                                 bool CommitResources,
-                                                                 bool TransitionResources)const;
+    ShaderResourceCacheD3D12* CommitAndTransitionShaderResources(IShaderResourceBinding* pShaderResourceBinding, 
+                                                                 class CommandContext&   Ctx,
+                                                                 bool                    CommitResources,
+                                                                 bool                    TransitionResources)const;
     
     const RootSignature& GetRootSignature()const{return m_RootSig;}
     
@@ -70,8 +70,8 @@ public:
     
     bool dbgContainsShaderResources()const;
 
-    IMemoryAllocator &GetResourceCacheDataAllocator(){return m_ResourceCacheDataAllocator;}
-    IMemoryAllocator &GetShaderResourceLayoutDataAllocator(Uint32 ActiveShaderInd)
+    IMemoryAllocator& GetResourceCacheDataAllocator(){return m_ResourceCacheDataAllocator;}
+    IMemoryAllocator& GetShaderResourceLayoutDataAllocator(Uint32 ActiveShaderInd)
     {
         VERIFY_EXPR(ActiveShaderInd < m_NumShaders);
         auto *pAllocator = m_ResLayoutDataAllocators.GetAllocator(ActiveShaderInd);

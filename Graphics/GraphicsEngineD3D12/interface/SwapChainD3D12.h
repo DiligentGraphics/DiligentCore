@@ -47,7 +47,7 @@ public:
 
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
-    virtual IDXGISwapChain *GetDXGISwapChain() = 0;
+    virtual IDXGISwapChain* GetDXGISwapChain() = 0;
 
     /// Returns a pointer to the render target view of the current back buffer in the swap chain
 

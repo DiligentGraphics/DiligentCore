@@ -45,17 +45,17 @@ public:
     typedef TextureBase<ITextureD3D12, TextureViewD3D12Impl, FixedBlockMemoryAllocator> TTextureBase;
 
     // Creates a new D3D12 resource
-    TextureD3D12Impl(IReferenceCounters *pRefCounters,
-                     FixedBlockMemoryAllocator &TexViewObjAllocator,
-                     class RenderDeviceD3D12Impl *pDeviceD3D12, 
-                     const TextureDesc& TexDesc, 
-                     const TextureData &InitData = TextureData());
+    TextureD3D12Impl(IReferenceCounters*            pRefCounters,
+                     FixedBlockMemoryAllocator&     TexViewObjAllocator,
+                     class RenderDeviceD3D12Impl*   pDeviceD3D12, 
+                     const TextureDesc&             TexDesc, 
+                     const TextureData&             InitData = TextureData());
     // Attaches to an existing D3D12 resource
-    TextureD3D12Impl(IReferenceCounters *pRefCounters,
-                     FixedBlockMemoryAllocator &TexViewObjAllocator,
-                     class RenderDeviceD3D12Impl *pDeviceD3D12, 
-                     const TextureDesc& TexDesc, 
-                     ID3D12Resource *pTexture);
+    TextureD3D12Impl(IReferenceCounters*            pRefCounters,
+                     FixedBlockMemoryAllocator&     TexViewObjAllocator,
+                     class RenderDeviceD3D12Impl*   pDeviceD3D12, 
+                     const TextureDesc&             TexDesc, 
+                     ID3D12Resource*                pTexture);
     ~TextureD3D12Impl();
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
@@ -72,16 +72,16 @@ public:
 
     virtual void SetD3D12ResourceState(D3D12_RESOURCE_STATES state)override final{ SetState(state); }
 
-    void CopyData(IDeviceContext *pContext, 
-                          ITexture *pSrcTexture, 
-                          Uint32 SrcMipLevel,
-                          Uint32 SrcSlice,
-                          const Box *pSrcBox,
-                          Uint32 DstMipLevel,
-                          Uint32 DstSlice,
-                          Uint32 DstX,
-                          Uint32 DstY,
-                          Uint32 DstZ);
+    void CopyData(IDeviceContext* pContext, 
+                  ITexture*       pSrcTexture, 
+                  Uint32          SrcMipLevel,
+                  Uint32          SrcSlice,
+                  const Box*      pSrcBox,
+                  Uint32          DstMipLevel,
+                  Uint32          DstSlice,
+                  Uint32          DstX,
+                  Uint32          DstY,
+                  Uint32          DstZ);
     
     D3D12_CPU_DESCRIPTOR_HANDLE GetMipLevelUAV(Uint32 Mip)
     {

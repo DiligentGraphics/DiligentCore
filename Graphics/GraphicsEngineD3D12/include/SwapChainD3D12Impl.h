@@ -40,10 +40,10 @@ class SwapChainD3D12Impl : public SwapChainD3DBase<ISwapChainD3D12, IDXGISwapCha
 {
 public:
     using TSwapChainBase = SwapChainD3DBase<ISwapChainD3D12, IDXGISwapChain3>;
-    SwapChainD3D12Impl(IReferenceCounters *pRefCounters,
-                       const SwapChainDesc& SwapChainDesc, 
-                       const FullScreenModeDesc& FSDesc,
-                       class RenderDeviceD3D12Impl* pRenderDeviceD3D12,
+    SwapChainD3D12Impl(IReferenceCounters*           pRefCounters,
+                       const SwapChainDesc&          SwapChainDesc, 
+                       const FullScreenModeDesc&     FSDesc,
+                       class RenderDeviceD3D12Impl*  pRenderDeviceD3D12,
                        class DeviceContextD3D12Impl* pDeviceContextD3D12,
                        void* pNativeWndHandle);
     ~SwapChainD3D12Impl();

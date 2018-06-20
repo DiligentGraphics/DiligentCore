@@ -41,11 +41,11 @@ class BufferViewD3D12Impl : public BufferViewBase<IBufferViewD3D12>
 public:
     typedef BufferViewBase<IBufferViewD3D12> TBufferViewBase;
 
-    BufferViewD3D12Impl( IReferenceCounters *pRefCounters,
-                         IRenderDevice *pDevice, 
-                         const BufferViewDesc& ViewDesc, 
-                         class IBuffer *pBuffer,
-                         DescriptorHeapAllocation &&HandleAlloc,
+    BufferViewD3D12Impl( IReferenceCounters*        pRefCounters,
+                         IRenderDevice*             pDevice, 
+                         const BufferViewDesc&      ViewDesc, 
+                         class IBuffer*             pBuffer,
+                         DescriptorHeapAllocation&& HandleAlloc,
                          bool bIsDefaultView);
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface );

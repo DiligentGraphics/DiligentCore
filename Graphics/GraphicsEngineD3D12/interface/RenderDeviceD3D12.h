@@ -63,7 +63,7 @@ public:
     ///                          texture interface will be stored. 
     ///                          The function calls AddRef(), so that the new object will contain 
     ///                          one refernce.
-    virtual void CreateTextureFromD3DResource(ID3D12Resource *pd3d12Texture, ITexture **ppTexture) = 0;
+    virtual void CreateTextureFromD3DResource(ID3D12Resource* pd3d12Texture, ITexture** ppTexture) = 0;
 
     /// Creates a buffer object from native d3d12 resoruce
 
@@ -75,7 +75,7 @@ public:
     ///                         buffer interface will be stored. 
     ///                         The function calls AddRef(), so that the new object will contain 
     ///                         one reference.
-    virtual void CreateBufferFromD3DResource(ID3D12Resource *pd3d12Buffer, const BufferDesc& BuffDesc, IBuffer **ppBuffer) = 0;
+    virtual void CreateBufferFromD3DResource(ID3D12Resource* pd3d12Buffer, const BufferDesc& BuffDesc, IBuffer** ppBuffer) = 0;
 };
 
 }

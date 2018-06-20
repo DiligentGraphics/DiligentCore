@@ -125,21 +125,21 @@ namespace Diligent
 class ShaderResourceLayoutD3D12
 {
 public:
-    ShaderResourceLayoutD3D12(IObject &Owner, IMemoryAllocator &ResourceLayoutDataAllocator);
+    ShaderResourceLayoutD3D12(IObject& Owner, IMemoryAllocator& ResourceLayoutDataAllocator);
 
     // This constructor is used by ShaderResourceBindingD3D12Impl to clone layout from the reference layout in PipelineStateD3D12Impl. 
     // Root indices and descriptor table offsets must be correct. Resource cache is assigned, but not initialized.
-    ShaderResourceLayoutD3D12(IObject &Owner, 
+    ShaderResourceLayoutD3D12(IObject&                         Owner, 
                               const ShaderResourceLayoutD3D12& SrcLayout, 
-                              IMemoryAllocator &ResourceLayoutDataAllocator,
-                              const SHADER_VARIABLE_TYPE *AllowedVarTypes, 
-                              Uint32 NumAllowedTypes, 
-                              ShaderResourceCacheD3D12 &ResourceCache);
+                              IMemoryAllocator&                ResourceLayoutDataAllocator,
+                              const SHADER_VARIABLE_TYPE*      AllowedVarTypes, 
+                              Uint32                           NumAllowedTypes, 
+                              ShaderResourceCacheD3D12&        ResourceCache);
 
-    ShaderResourceLayoutD3D12(const ShaderResourceLayoutD3D12&) = delete;
-    ShaderResourceLayoutD3D12(ShaderResourceLayoutD3D12&&) = delete;
+    ShaderResourceLayoutD3D12            (const ShaderResourceLayoutD3D12&) = delete;
+    ShaderResourceLayoutD3D12            (ShaderResourceLayoutD3D12&&)      = delete;
     ShaderResourceLayoutD3D12& operator =(const ShaderResourceLayoutD3D12&) = delete;
-    ShaderResourceLayoutD3D12& operator =(ShaderResourceLayoutD3D12&&) = delete;
+    ShaderResourceLayoutD3D12& operator =(ShaderResourceLayoutD3D12&&)      = delete;
     
     ~ShaderResourceLayoutD3D12();
 
@@ -149,19 +149,19 @@ public:
     //  - PipelineStateD3D12Impl class instance to reference all types of resources (static, mutable, dynamic). 
     //    Root indices and descriptor table offsets are assigned during the initialization; 
     //    no shader resource cache is provided
-    void Initialize(ID3D12Device *pd3d12Device,
+    void Initialize(ID3D12Device*                                      pd3d12Device,
                     const std::shared_ptr<const ShaderResourcesD3D12>& pSrcResources, 
-                    IMemoryAllocator &LayoutDataAllocator,
-                    const SHADER_VARIABLE_TYPE *VarTypes, 
-                    Uint32 NumAllowedTypes, 
-                    ShaderResourceCacheD3D12 *pResourceCache,
-                    class RootSignature *pRootSig);
+                    IMemoryAllocator&                                  LayoutDataAllocator,
+                    const SHADER_VARIABLE_TYPE*                        VarTypes, 
+                    Uint32                                             NumAllowedTypes, 
+                    ShaderResourceCacheD3D12*                          pResourceCache,
+                    class RootSignature*                               pRootSig);
 
     // sizeof(SRV_CBV_UAV) == 32 (x64)
     struct SRV_CBV_UAV : ShaderVariableD3DBase<ShaderResourceLayoutD3D12>
     {
-        SRV_CBV_UAV(const SRV_CBV_UAV&)              = delete;
-        SRV_CBV_UAV(SRV_CBV_UAV&&)                   = delete;
+        SRV_CBV_UAV             (const SRV_CBV_UAV&) = delete;
+        SRV_CBV_UAV             (SRV_CBV_UAV&&)      = delete;
         SRV_CBV_UAV& operator = (const SRV_CBV_UAV&) = delete;
         SRV_CBV_UAV& operator = (SRV_CBV_UAV&&)      = delete;
 
@@ -183,11 +183,13 @@ public:
 
         // Special copy constructor. Note that sampler ID refers to the ID of the sampler
         // within THIS layout, and may not be the same as in original layout
-        SRV_CBV_UAV(ShaderResourceLayoutD3D12 &ParentLayout, const SRV_CBV_UAV &rhs, Uint32 SamId ) :
-            ResType_RootIndex(rhs.ResType_RootIndex),
-            SamplerId(static_cast<Uint16>(SamId)),
-            OffsetFromTableStart(rhs.OffsetFromTableStart),
-            ShaderVariableD3DBase<ShaderResourceLayoutD3D12>(ParentLayout, rhs.Attribs)
+        SRV_CBV_UAV(ShaderResourceLayoutD3D12&  ParentLayout, 
+                    const SRV_CBV_UAV&          rhs, 
+                    Uint32                      SamId)noexcept :
+            ShaderVariableD3DBase<ShaderResourceLayoutD3D12>(ParentLayout, rhs.Attribs),
+            ResType_RootIndex   (rhs.ResType_RootIndex),
+            SamplerId           (static_cast<Uint16>(SamId)),
+            OffsetFromTableStart(rhs.OffsetFromTableStart)
         {
             VERIFY(SamId == InvalidSamplerId || SamId <= MaxSamplerId, "Sampler id exceeds max allowed value (", MaxSamplerId, ")" );
             VERIFY(rhs.m_ParentResLayout.m_pResources == m_ParentResLayout.m_pResources, "Incosistent resource references");
@@ -195,23 +197,23 @@ public:
             VERIFY(IsValidRootIndex(), "Root index must be valid" );
         }
 
-        SRV_CBV_UAV(ShaderResourceLayoutD3D12 &ParentLayout, 
-                    const D3DShaderResourceAttribs &_Attribs, 
-                    CachedResourceType ResType, 
-                    Uint32 RootIndex, 
-                    Uint32 _OffsetFromTableStart, 
-                    Uint32 _SamplerId) :
-            ResType_RootIndex( (static_cast<Uint16>(ResType) << RootIndBits) | (RootIndex & RootIndMask)),
-            SamplerId( static_cast<Uint16>(_SamplerId) ),
-            OffsetFromTableStart(_OffsetFromTableStart),
-            ShaderVariableD3DBase<ShaderResourceLayoutD3D12>(ParentLayout, _Attribs)
+        SRV_CBV_UAV(ShaderResourceLayoutD3D12&      ParentLayout, 
+                    const D3DShaderResourceAttribs& _Attribs, 
+                    CachedResourceType              ResType, 
+                    Uint32                          RootIndex, 
+                    Uint32                          _OffsetFromTableStart, 
+                    Uint32                          _SamplerId)noexcept :
+            ShaderVariableD3DBase<ShaderResourceLayoutD3D12>(ParentLayout, _Attribs),
+            ResType_RootIndex   ( (static_cast<Uint16>(ResType) << RootIndBits) | (RootIndex & RootIndMask)),
+            SamplerId           ( static_cast<Uint16>(_SamplerId) ),
+            OffsetFromTableStart( _OffsetFromTableStart )
         {
             VERIFY(RootIndex == InvalidRootIndex || RootIndex <= MaxRootIndex, "Root index exceeds max allowed value (", MaxRootIndex, ")" );
             VERIFY(IsValidOffset(), "Offset must be valid" );
             VERIFY(SamplerId == InvalidSamplerId || SamplerId <= MaxSamplerId, "Sampler id exceeds max allowed value (", MaxSamplerId, ")" );
         }
 
-        bool IsBound(Uint32 ArrayIndex);
+        bool IsBound(Uint32 ArrayIndex)const;
 
         // Non-virtual function
         void BindResource(IDeviceObject *pObject, Uint32 ArrayIndex, const ShaderResourceLayoutD3D12 *dbgResLayout);
@@ -223,9 +225,9 @@ public:
                 BindResource(ppObjects[Elem], FirstElement+Elem, nullptr);
         }
 
-        bool IsValidSampler()  const{return GetSamplerId()       != InvalidSamplerId;}
-        bool IsValidRootIndex()const{return GetRootIndex()       != InvalidRootIndex;}
-        bool IsValidOffset()   const{return OffsetFromTableStart != InvalidOffset;   }
+        bool IsValidSampler()  const { return GetSamplerId()       != InvalidSamplerId; }
+        bool IsValidRootIndex()const { return GetRootIndex()       != InvalidRootIndex; }
+        bool IsValidOffset()   const { return OffsetFromTableStart != InvalidOffset;    }
 
         CachedResourceType GetResType()const
         {
@@ -248,32 +250,32 @@ public:
                                         // |  Root index  |   ResType   |
         const Uint16 SamplerId;
 
-        void CacheCB(IDeviceObject *pBuffer, 
+        void CacheCB(IDeviceObject*                      pBuffer, 
                      ShaderResourceCacheD3D12::Resource& DstRes, 
-                     Uint32 ArrayInd, 
-                     D3D12_CPU_DESCRIPTOR_HANDLE ShdrVisibleHeapCPUDescriptorHandle);
+                     Uint32                              ArrayInd, 
+                     D3D12_CPU_DESCRIPTOR_HANDLE         ShdrVisibleHeapCPUDescriptorHandle);
 
         template<typename TResourceViewType, 
                  typename TViewTypeEnum,
                  typename TBindSamplerProcType>
-        void CacheResourceView(IDeviceObject *pView, 
+        void CacheResourceView(IDeviceObject*                      pView, 
                                ShaderResourceCacheD3D12::Resource& DstRes, 
-                               Uint32 ArrayIndex,
-                               D3D12_CPU_DESCRIPTOR_HANDLE ShdrVisibleHeapCPUDescriptorHandle, 
-                               TViewTypeEnum dbgExpectedViewType, 
-                               TBindSamplerProcType BindSamplerProc);
+                               Uint32                              ArrayIndex,
+                               D3D12_CPU_DESCRIPTOR_HANDLE         ShdrVisibleHeapCPUDescriptorHandle, 
+                               TViewTypeEnum                       dbgExpectedViewType, 
+                               TBindSamplerProcType                BindSamplerProc);
     };
 
     // sizeof(Sampler) == 24 (x64)
     struct Sampler
     {
-        Sampler(const Sampler&)              = delete;
-        Sampler(Sampler&&)                   = delete;
+        Sampler             (const Sampler&) = delete;
+        Sampler             (Sampler&&)      = delete;
         Sampler& operator = (const Sampler&) = delete;
         Sampler& operator = (Sampler&&)      = delete;
 
-        const D3DShaderResourceAttribs &Attribs;
-        ShaderResourceLayoutD3D12 &m_ParentResLayout;
+        const D3DShaderResourceAttribs& Attribs;
+        ShaderResourceLayoutD3D12&      m_ParentResLayout;
 
         static constexpr Uint32 InvalidRootIndex = static_cast<Uint32>(-1);
         static constexpr Uint32 InvalidOffset    = static_cast<Uint32>(-1);
@@ -281,10 +283,10 @@ public:
         const Uint32 RootIndex;
         const Uint32 OffsetFromTableStart;
 
-        Sampler(ShaderResourceLayoutD3D12 &ParentLayout, const Sampler& Sam):
-            Attribs(Sam.Attribs),
-            m_ParentResLayout(ParentLayout),
-            RootIndex(Sam.RootIndex),
+        Sampler(ShaderResourceLayoutD3D12 &ParentLayout, const Sampler& Sam)noexcept :
+            Attribs             (Sam.Attribs),
+            m_ParentResLayout   (ParentLayout),
+            RootIndex           (Sam.RootIndex),
             OffsetFromTableStart(Sam.OffsetFromTableStart)
         {
             VERIFY(Sam.m_ParentResLayout.m_pResources == m_ParentResLayout.m_pResources, "Incosistent resource references");
@@ -292,18 +294,21 @@ public:
             VERIFY(IsValidOffset(), "Offset must be valid" );
         }
 
-        Sampler(ShaderResourceLayoutD3D12 &ParentResLayout, const D3DShaderResourceAttribs &_Attribs, Uint32 _RootIndex, Uint32 _OffsetFromTableStart) :
-            RootIndex(_RootIndex),
+        Sampler(ShaderResourceLayoutD3D12&       ParentResLayout, 
+                const D3DShaderResourceAttribs&  _Attribs, 
+                Uint32                           _RootIndex,
+                Uint32                           _OffsetFromTableStart)noexcept :
+            RootIndex           (_RootIndex),
             OffsetFromTableStart(_OffsetFromTableStart),
-            Attribs(_Attribs),
-            m_ParentResLayout(ParentResLayout)
+            Attribs             (_Attribs),
+            m_ParentResLayout   (ParentResLayout)
         {
             VERIFY(IsValidRootIndex(), "Root index must be valid" );
             VERIFY(IsValidOffset(), "Offset must be valid" );
         }
 
-        bool IsValidRootIndex()const{return RootIndex            != InvalidRootIndex;}
-        bool IsValidOffset()   const{return OffsetFromTableStart != InvalidOffset;   }
+        bool IsValidRootIndex()const { return RootIndex            != InvalidRootIndex; }
+        bool IsValidOffset()   const { return OffsetFromTableStart != InvalidOffset;    }
 
         void CacheSampler(class ITextureViewD3D12 *pTexViewD3D12, Uint32 ArrayIndex, D3D12_CPU_DESCRIPTOR_HANDLE ShdrVisibleHeapCPUDescriptorHandle);
     };

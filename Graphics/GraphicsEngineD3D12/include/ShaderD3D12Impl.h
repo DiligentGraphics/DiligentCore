@@ -48,7 +48,9 @@ class ShaderD3D12Impl : public ShaderBase<IShaderD3D12, IRenderDeviceD3D12>, pub
 public:
     typedef ShaderBase<IShaderD3D12, IRenderDeviceD3D12> TShaderBase;
 
-    ShaderD3D12Impl(IReferenceCounters *pRefCounters, class RenderDeviceD3D12Impl *pRenderDeviceD3D12, const ShaderCreationAttribs &ShaderCreationAttribs);
+    ShaderD3D12Impl(IReferenceCounters*           pRefCounters, 
+                    class RenderDeviceD3D12Impl*  pRenderDeviceD3D12, 
+                    const ShaderCreationAttribs&  ShaderCreationAttribs);
     ~ShaderD3D12Impl();
     
     //virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
@@ -73,7 +75,7 @@ private:
     // it is referenced by ShaderResourceLayoutD3D12 class instances
     std::shared_ptr<const ShaderResourcesD3D12> m_pShaderResources;
     ShaderResourceLayoutD3D12 m_StaticResLayout;
-    ShaderResourceCacheD3D12 m_ConstResCache;
+    ShaderResourceCacheD3D12  m_ConstResCache;
 };
 
 }

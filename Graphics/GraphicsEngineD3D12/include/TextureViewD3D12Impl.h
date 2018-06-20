@@ -41,12 +41,12 @@ class TextureViewD3D12Impl : public TextureViewBase<ITextureViewD3D12>
 public:
     typedef TextureViewBase<ITextureViewD3D12> TTextureViewBase;
 
-    TextureViewD3D12Impl( IReferenceCounters *pRefCounters,
-                          IRenderDevice *pDevice, 
-                          const TextureViewDesc& ViewDesc, 
-                          class ITexture *pTexture,
-                          DescriptorHeapAllocation &&HandleAlloc,
-                          bool bIsDefaultView);
+    TextureViewD3D12Impl( IReferenceCounters*        pRefCounters,
+                          IRenderDevice*             pDevice, 
+                          const TextureViewDesc&     ViewDesc, 
+                          class ITexture*            pTexture,
+                          DescriptorHeapAllocation&& HandleAlloc,
+                          bool                       bIsDefaultView);
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
 

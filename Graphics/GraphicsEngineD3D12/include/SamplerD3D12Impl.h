@@ -41,7 +41,9 @@ class SamplerD3D12Impl : public SamplerBase<ISamplerD3D12, IRenderDeviceD3D12>
 public:
     typedef SamplerBase<ISamplerD3D12, IRenderDeviceD3D12> TSamplerBase;
 
-    SamplerD3D12Impl(IReferenceCounters *pRefCounters, class RenderDeviceD3D12Impl *pRenderDeviceD3D12, const SamplerDesc& SamplerDesc);
+    SamplerD3D12Impl(IReferenceCounters*           pRefCounters, 
+                     class RenderDeviceD3D12Impl*  pRenderDeviceD3D12, 
+                     const SamplerDesc&            SamplerDesc);
     ~SamplerD3D12Impl();
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;

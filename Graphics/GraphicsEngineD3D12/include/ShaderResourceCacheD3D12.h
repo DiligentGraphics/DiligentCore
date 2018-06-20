@@ -115,7 +115,9 @@ public:
 
     ~ShaderResourceCacheD3D12();
 
-    void Initialize(IMemoryAllocator &MemAllocator, Uint32 NumTables, Uint32 TableSizes[]);
+    void Initialize(IMemoryAllocator& MemAllocator,
+                    Uint32            NumTables,
+                    Uint32            TableSizes[]);
 
     static constexpr Uint32 InvalidDescriptorOffset = static_cast<Uint32>(-1);
 
@@ -132,17 +134,17 @@ public:
     class RootTable
     {
     public:
-        RootTable(Uint32 NumResources, Resource *pResources) : 
+        RootTable(Uint32 NumResources, Resource *pResources)noexcept : 
             m_NumResources(NumResources),
-            m_pResources(pResources)
+            m_pResources  (pResources)
         {}
 
-        inline Resource& GetResource(Uint32 OffsetFromTableStart, 
+        inline Resource& GetResource(Uint32                           OffsetFromTableStart, 
                                      const D3D12_DESCRIPTOR_HEAP_TYPE dbgDescriptorHeapType, 
-                                     const SHADER_TYPE dbgRefShaderType)
+                                     const SHADER_TYPE                dbgRefShaderType)
         {
-            VERIFY(m_dbgHeapType == dbgDescriptorHeapType, "Incosistent descriptor heap type" );
-            VERIFY(m_dbgShaderType == dbgRefShaderType, "Incosistent shader type" );
+            VERIFY(m_dbgHeapType   == dbgDescriptorHeapType, "Incosistent descriptor heap type" );
+            VERIFY(m_dbgShaderType == dbgRefShaderType,      "Incosistent shader type" );
 
             VERIFY(OffsetFromTableStart < m_NumResources, "Root table at index is not large enough to store descriptor at offset ", OffsetFromTableStart );
             return m_pResources[OffsetFromTableStart];
@@ -154,12 +156,12 @@ public:
         Uint32 m_TableStartOffset = InvalidDescriptorOffset;
 
 #ifdef _DEBUG
-        void SetDebugAttribs(Uint32 MaxOffset, 
+        void SetDebugAttribs(Uint32                           MaxOffset, 
                              const D3D12_DESCRIPTOR_HEAP_TYPE dbgDescriptorHeapType, 
-                             const SHADER_TYPE dbgRefShaderType)
+                             const SHADER_TYPE                dbgRefShaderType)
         { 
             VERIFY_EXPR(m_NumResources == MaxOffset);
-            m_dbgHeapType = dbgDescriptorHeapType;
+            m_dbgHeapType   = dbgDescriptorHeapType;
             m_dbgShaderType = dbgRefShaderType;
         }
 
@@ -170,8 +172,8 @@ public:
     private:
         
 #ifdef _DEBUG
-        D3D12_DESCRIPTOR_HEAP_TYPE m_dbgHeapType = D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES;
-        SHADER_TYPE m_dbgShaderType = SHADER_TYPE_UNKNOWN;
+        D3D12_DESCRIPTOR_HEAP_TYPE m_dbgHeapType   = D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES;
+        SHADER_TYPE                m_dbgShaderType = SHADER_TYPE_UNKNOWN;
 #endif
 
         Resource* const m_pResources = nullptr;
@@ -185,7 +187,7 @@ public:
 
     inline Uint32 GetNumRootTables()const{return m_NumTables; }
 
-    void SetDescriptorHeapSpace(DescriptorHeapAllocation &&CbcSrvUavHeapSpace, DescriptorHeapAllocation &&SamplerHeapSpace)
+    void SetDescriptorHeapSpace(DescriptorHeapAllocation&& CbcSrvUavHeapSpace, DescriptorHeapAllocation&& SamplerHeapSpace)
     {
         VERIFY(m_SamplerHeapSpace.GetCpuHandle().ptr == 0 && m_CbvSrvUavHeapSpace.GetCpuHandle().ptr == 0, "Space has already been allocated in GPU descriptor heaps");
 #ifdef _DEBUG
@@ -215,8 +217,8 @@ public:
         m_SamplerHeapSpace = std::move(SamplerHeapSpace);
     }
 
-    ID3D12DescriptorHeap* GetSrvCbvUavDescriptorHeap(){return m_CbvSrvUavHeapSpace.GetDescriptorHeap();}
-    ID3D12DescriptorHeap* GetSamplerDescriptorHeap()  {return m_SamplerHeapSpace.GetDescriptorHeap();}
+    ID3D12DescriptorHeap* GetSrvCbvUavDescriptorHeap() { return m_CbvSrvUavHeapSpace.GetDescriptorHeap(); }
+    ID3D12DescriptorHeap* GetSamplerDescriptorHeap()   { return m_SamplerHeapSpace.GetDescriptorHeap();   }
 
     // Returns CPU descriptor handle of a shader visible descriptor heap allocation
     template<D3D12_DESCRIPTOR_HEAP_TYPE HeapType>
@@ -285,10 +287,10 @@ public:
 #endif
 
 private:
-    ShaderResourceCacheD3D12(const ShaderResourceCacheD3D12&) = delete;
-    ShaderResourceCacheD3D12(ShaderResourceCacheD3D12&&) = delete;
+    ShaderResourceCacheD3D12             (const ShaderResourceCacheD3D12&) = delete;
+    ShaderResourceCacheD3D12             (ShaderResourceCacheD3D12&&)      = delete;
     ShaderResourceCacheD3D12& operator = (const ShaderResourceCacheD3D12&) = delete;
-    ShaderResourceCacheD3D12& operator = (ShaderResourceCacheD3D12&&) = delete;
+    ShaderResourceCacheD3D12& operator = (ShaderResourceCacheD3D12&&)      = delete;
 
     // Allocation in a GPU-visible sampler descriptor heap
     DescriptorHeapAllocation m_SamplerHeapSpace;

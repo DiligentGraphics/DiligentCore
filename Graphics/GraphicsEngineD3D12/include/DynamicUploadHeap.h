@@ -33,15 +33,21 @@ namespace Diligent
 
 struct DynamicAllocation
 {
-	DynamicAllocation(ID3D12Resource *pBuff = nullptr, size_t ThisOffset = 0, size_t ThisSize = 0)
-		: pBuffer(pBuff), Offset(ThisOffset), Size(ThisSize) {}
+    DynamicAllocation()noexcept{}
+    DynamicAllocation(ID3D12Resource* pBuff, 
+                      size_t          _Offset, 
+                      size_t          _Size)noexcept :
+        pBuffer(pBuff), 
+        Offset (_Offset),
+        Size   (_Size) 
+    {}
 
-	//CComPtr<ID3D12Resource> pBuffer;	    // The D3D buffer associated with this memory.
-    ID3D12Resource *pBuffer = nullptr;	    // The D3D buffer associated with this memory.
-	size_t Offset = 0;			                // Offset from start of buffer resource
-	size_t Size = 0;			                // Reserved size of this allocation
-	void* CPUAddress = 0;			            // The CPU-writeable address
-	D3D12_GPU_VIRTUAL_ADDRESS GPUAddress = 0;	// The GPU-visible address
+    //CComPtr<ID3D12Resource> pBuffer;	    // The D3D buffer associated with this memory.
+    ID3D12Resource* pBuffer    = nullptr;	// The D3D buffer associated with this memory.
+    size_t          Offset     = 0;			// Offset from start of buffer resource
+    size_t          Size       = 0;			// Reserved size of this allocation
+    void*           CPUAddress = nullptr;   // The CPU-writeable address
+    D3D12_GPU_VIRTUAL_ADDRESS GPUAddress = 0;	// The GPU-visible address
 #ifdef _DEBUG
     Uint64 FrameNum = static_cast<Uint64>(-1);
 #endif
@@ -52,25 +58,26 @@ class GPURingBuffer : public RingBuffer
 public:
     GPURingBuffer(size_t MaxSize, IMemoryAllocator &Allocator, ID3D12Device *pd3d12Device, bool AllowCPUAccess);
     
-    GPURingBuffer(GPURingBuffer&& rhs) : 
-        RingBuffer(std::move(rhs)),
-        m_CpuVirtualAddress(rhs.m_CpuVirtualAddress),
-        m_GpuVirtualAddress(rhs.m_GpuVirtualAddress),
-        m_pBuffer(std::move(rhs.m_pBuffer))
+    GPURingBuffer(GPURingBuffer&& rhs)noexcept : 
+        RingBuffer          (std::move(rhs)),
+        m_CpuVirtualAddress (rhs.m_CpuVirtualAddress),
+        m_GpuVirtualAddress (rhs.m_GpuVirtualAddress),
+        m_pBuffer           (std::move(rhs.m_pBuffer))
     {
         rhs.m_CpuVirtualAddress = nullptr;
         rhs.m_GpuVirtualAddress = 0;
         rhs.m_pBuffer.Release();
     }
 
-    GPURingBuffer& operator =(GPURingBuffer&& rhs)
+    GPURingBuffer& operator =(GPURingBuffer&& rhs)noexcept
     {
         Destroy();
 
         static_cast<RingBuffer&>(*this) = std::move(rhs);
-        m_CpuVirtualAddress = rhs.m_CpuVirtualAddress;
-        m_GpuVirtualAddress = rhs.m_GpuVirtualAddress;
-        m_pBuffer = std::move(rhs.m_pBuffer);
+        m_CpuVirtualAddress             = rhs.m_CpuVirtualAddress;
+        m_GpuVirtualAddress             = rhs.m_GpuVirtualAddress;
+        m_pBuffer                       = std::move(rhs.m_pBuffer);
+
         rhs.m_CpuVirtualAddress = 0;
         rhs.m_GpuVirtualAddress = 0;
         
@@ -103,8 +110,8 @@ public:
 private:
     void Destroy();
 
-	void* m_CpuVirtualAddress;
-	D3D12_GPU_VIRTUAL_ADDRESS m_GpuVirtualAddress;
+    void* m_CpuVirtualAddress;
+    D3D12_GPU_VIRTUAL_ADDRESS m_GpuVirtualAddress;
     CComPtr<ID3D12Resource> m_pBuffer;
 };
 
@@ -112,14 +119,14 @@ class DynamicUploadHeap
 {
 public:
 
-	DynamicUploadHeap(IMemoryAllocator &Allocator, bool bIsCPUAccessible, class RenderDeviceD3D12Impl* pDevice, size_t InitialSize);
+    DynamicUploadHeap(IMemoryAllocator &Allocator, bool bIsCPUAccessible, class RenderDeviceD3D12Impl* pDevice, size_t InitialSize);
     
-    DynamicUploadHeap(const DynamicUploadHeap&)=delete;
-    DynamicUploadHeap(DynamicUploadHeap&&)=delete;
-    DynamicUploadHeap& operator=(const DynamicUploadHeap&)=delete;
-    DynamicUploadHeap& operator=(DynamicUploadHeap&&)=delete;
+    DynamicUploadHeap           (const DynamicUploadHeap&)= delete;
+    DynamicUploadHeap           (DynamicUploadHeap&&)     = delete;
+    DynamicUploadHeap& operator=(const DynamicUploadHeap&)= delete;
+    DynamicUploadHeap& operator=(DynamicUploadHeap&&)     = delete;
 
-	DynamicAllocation Allocate( size_t SizeInBytes, size_t Alignment = DEFAULT_ALIGN );
+    DynamicAllocation Allocate( size_t SizeInBytes, size_t Alignment = DEFAULT_ALIGN );
 
     void FinishFrame(Uint64 FenceValue, Uint64 LastCompletedFenceValue);
 

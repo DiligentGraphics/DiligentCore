@@ -59,6 +59,4 @@ namespace Diligent
 	    CComPtr<ID3D12PipelineState> m_pGenerateMipsLinearPSO[4];
 	    CComPtr<ID3D12PipelineState> m_pGenerateMipsGammaPSO[4];
     };
-
-
 }

@@ -46,7 +46,12 @@ class RenderDeviceD3D12Impl : public RenderDeviceD3DBase<IRenderDeviceD3D12>
 public:
     typedef RenderDeviceD3DBase<IRenderDeviceD3D12> TRenderDeviceBase;
 
-    RenderDeviceD3D12Impl( IReferenceCounters *pRefCounters, IMemoryAllocator &RawMemAllocator, const EngineD3D12Attribs &CreationAttribs, ID3D12Device *pD3D12Device, ICommandQueueD3D12 *pCmdQueue, Uint32 NumDeferredContexts );
+    RenderDeviceD3D12Impl( IReferenceCounters*       pRefCounters, 
+                           IMemoryAllocator&         RawMemAllocator, 
+                           const EngineD3D12Attribs& CreationAttribs, 
+                           ID3D12Device*             pD3D12Device, 
+                           ICommandQueueD3D12*       pCmdQueue, 
+                           Uint32                    NumDeferredContexts );
     ~RenderDeviceD3D12Impl();
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;

@@ -36,7 +36,9 @@ class CommandListD3D12Impl : public CommandListBase<ICommandList>
 {
 public:
     typedef CommandListBase<ICommandList> TCommandListBase;
-    CommandListD3D12Impl(IReferenceCounters *pRefCounters, IRenderDevice *pDevice, class CommandContext* pCmdContext) :
+    CommandListD3D12Impl(IReferenceCounters*   pRefCounters, 
+                         IRenderDevice*        pDevice, 
+                         class CommandContext* pCmdContext) :
         TCommandListBase(pRefCounters, pDevice),
         m_pCmdContext(pCmdContext)
     {

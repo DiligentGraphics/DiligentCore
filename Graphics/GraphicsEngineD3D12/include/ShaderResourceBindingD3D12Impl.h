@@ -42,7 +42,9 @@ class ShaderResourceBindingD3D12Impl : public ShaderResourceBindingBase<IShaderR
 {
 public:
     typedef ShaderResourceBindingBase<IShaderResourceBindingD3D12> TBase;
-    ShaderResourceBindingD3D12Impl(IReferenceCounters *pRefCounters, class PipelineStateD3D12Impl *pPSO, bool IsPSOInternal);
+    ShaderResourceBindingD3D12Impl(IReferenceCounters*            pRefCounters,
+                                   class PipelineStateD3D12Impl*  pPSO,
+                                   bool                           IsPSOInternal);
     ~ShaderResourceBindingD3D12Impl();
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
