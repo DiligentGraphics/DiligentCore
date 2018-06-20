@@ -38,8 +38,8 @@
 namespace Diligent
 {
  
-ShaderResourceLayoutD3D12::ShaderResourceLayoutD3D12(IObject &Owner,
-                                                     IMemoryAllocator &ResourceLayoutDataAllocator) : 
+ShaderResourceLayoutD3D12::ShaderResourceLayoutD3D12(IObject&          Owner,
+                                                     IMemoryAllocator& ResourceLayoutDataAllocator) : 
     m_Owner(Owner),
 #if USE_VARIABLE_HASH_MAP
     m_VariableHash(STD_ALLOCATOR_RAW_MEM(VariableHashElemType, GetRawAllocator(), "Allocator for unordered_map<HashMapStringKey, IShaderVariable*>")),
@@ -65,28 +65,56 @@ ShaderResourceLayoutD3D12::~ShaderResourceLayoutD3D12()
 
 D3D12_DESCRIPTOR_RANGE_TYPE GetDescriptorRangeType(CachedResourceType ResType)
 {
-    static D3D12_DESCRIPTOR_RANGE_TYPE RangeTypes[(size_t)CachedResourceType::NumTypes] = {};
-    static bool Initialized = false;
-    if (!Initialized)
+    class ResTypeToD3D12DescrRangeType
     {
-        RangeTypes[(size_t)CachedResourceType::CBV]    = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
-        RangeTypes[(size_t)CachedResourceType::TexSRV] = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-        RangeTypes[(size_t)CachedResourceType::BufSRV] = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-        RangeTypes[(size_t)CachedResourceType::TexUAV] = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
-        RangeTypes[(size_t)CachedResourceType::BufUAV] = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
-        RangeTypes[(size_t)CachedResourceType::Sampler] = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
-        Initialized = true;
-    }
-    auto Ind = static_cast<size_t>(ResType);
-    VERIFY(Ind >= 0 && Ind < (size_t)CachedResourceType::NumTypes, "Unexpected resource type");
-    return RangeTypes[Ind];
+    public:
+        ResTypeToD3D12DescrRangeType()
+        {
+            m_Map[(size_t)CachedResourceType::CBV]     = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
+            m_Map[(size_t)CachedResourceType::TexSRV]  = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+            m_Map[(size_t)CachedResourceType::BufSRV]  = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+            m_Map[(size_t)CachedResourceType::TexUAV]  = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+            m_Map[(size_t)CachedResourceType::BufUAV]  = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+            m_Map[(size_t)CachedResourceType::Sampler] = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
+        }
+
+        D3D12_DESCRIPTOR_RANGE_TYPE operator[](CachedResourceType ResType)const
+        {
+            auto Ind = static_cast<size_t>(ResType);
+            VERIFY(Ind >= 0 && Ind < (size_t)CachedResourceType::NumTypes, "Unexpected resource type");
+            return m_Map[Ind];
+        }
+
+    private:
+        std::array<D3D12_DESCRIPTOR_RANGE_TYPE, static_cast<size_t>(CachedResourceType::NumTypes)> m_Map;
+    };
+
+    static const ResTypeToD3D12DescrRangeType ResTypeToDescrRangeTypeMap;
+    return ResTypeToDescrRangeTypeMap[ResType];
 }
 
-void ShaderResourceLayoutD3D12::AllocateMemory(IMemoryAllocator &Allocator)
+void ShaderResourceLayoutD3D12::AllocateMemory(IMemoryAllocator&                                         Allocator,
+                                               const std::array<Uint32, SHADER_VARIABLE_TYPE_NUM_TYPES>& CbvSrvUavCount,
+                                               const std::array<Uint32, SHADER_VARIABLE_TYPE_NUM_TYPES>& SamplerCount)
 {
     VERIFY( &m_ResourceBuffer.get_deleter().m_Allocator == &Allocator, "Inconsistent memory allocators" );
+
+    m_CbvSrvUavOffsets[0] = 0;
+    m_SamplersOffsets [0] = 0;
+    for(SHADER_VARIABLE_TYPE VarType = SHADER_VARIABLE_TYPE_STATIC; 
+        VarType < SHADER_VARIABLE_TYPE_NUM_TYPES; 
+        VarType = static_cast<SHADER_VARIABLE_TYPE>(VarType+1))
+    {
+        VERIFY(m_CbvSrvUavOffsets[VarType] + CbvSrvUavCount[VarType] <= std::numeric_limits<Uint16>::max(), "Offset is not representable in 16 bits" );
+        VERIFY(m_SamplersOffsets [VarType] + SamplerCount  [VarType] <= std::numeric_limits<Uint16>::max(), "Offset is not representable in 16 bits" );
+        m_CbvSrvUavOffsets[VarType+1] = static_cast<Uint16>(m_CbvSrvUavOffsets[VarType] + CbvSrvUavCount[VarType]);
+        m_SamplersOffsets [VarType+1] = static_cast<Uint16>(m_SamplersOffsets [VarType] + SamplerCount  [VarType]);
+        VERIFY_EXPR(GetCbvSrvUavCount(VarType) == CbvSrvUavCount[VarType]);
+        VERIFY_EXPR(GetSamplerCount  (VarType) == SamplerCount  [VarType]);
+    }
+
     Uint32 TotalSrvCbvUav = GetTotalSrvCbvUavCount();
-    Uint32 TotalSamplers = GetTotalSamplerCount();
+    Uint32 TotalSamplers  = GetTotalSamplerCount();
     size_t MemSize = TotalSrvCbvUav * sizeof(SRV_CBV_UAV) + TotalSamplers * sizeof(Sampler);
     if(MemSize == 0)
         return;
@@ -101,12 +129,12 @@ void ShaderResourceLayoutD3D12::AllocateMemory(IMemoryAllocator &Allocator)
 // Root indices and descriptor table offsets must be correct
 // Resource cache is not initialized.
 // http://diligentgraphics.com/diligent-engine/architecture/d3d12/shader-resource-layout#Initializing-Resource-Layouts-in-a-Shader-Resource-Binding-Object
-ShaderResourceLayoutD3D12::ShaderResourceLayoutD3D12(IObject &Owner,
-                                                     const ShaderResourceLayoutD3D12& SrcLayout, 
-                                                     IMemoryAllocator &ResourceLayoutDataAllocator,
-                                                     const SHADER_VARIABLE_TYPE *AllowedVarTypes, 
-                                                     Uint32 NumAllowedTypes, 
-                                                     ShaderResourceCacheD3D12 &ResourceCache) :
+ShaderResourceLayoutD3D12::ShaderResourceLayoutD3D12(IObject&                          Owner,
+                                                     const ShaderResourceLayoutD3D12&  SrcLayout, 
+                                                     IMemoryAllocator&                 ResourceLayoutDataAllocator,
+                                                     const SHADER_VARIABLE_TYPE*       AllowedVarTypes, 
+                                                     Uint32                            NumAllowedTypes, 
+                                                     ShaderResourceCacheD3D12&         ResourceCache) :
     ShaderResourceLayoutD3D12(Owner, ResourceLayoutDataAllocator)
 {
     m_pd3d12Device = SrcLayout.m_pd3d12Device;
@@ -115,27 +143,30 @@ ShaderResourceLayoutD3D12::ShaderResourceLayoutD3D12(IObject &Owner,
     
     Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
     
+    std::array<Uint32, SHADER_VARIABLE_TYPE_NUM_TYPES> CbvSrvUavCount = {};
+    std::array<Uint32, SHADER_VARIABLE_TYPE_NUM_TYPES> SamplerCount   = {};
+
     for(SHADER_VARIABLE_TYPE VarType = SHADER_VARIABLE_TYPE_STATIC; VarType < SHADER_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_VARIABLE_TYPE>(VarType+1))
     {
         if( !IsAllowedType(VarType, AllowedTypeBits))
             continue;
 
-        m_NumCbvSrvUav[VarType] = SrcLayout.m_NumCbvSrvUav[VarType];
-        m_NumSamplers[VarType] = SrcLayout.m_NumSamplers[VarType];
+        CbvSrvUavCount[VarType] = SrcLayout.GetCbvSrvUavCount(VarType);
+        SamplerCount  [VarType] = SrcLayout.GetSamplerCount(VarType);
     }
     
-    AllocateMemory(ResourceLayoutDataAllocator);
+    AllocateMemory(ResourceLayoutDataAllocator, CbvSrvUavCount, SamplerCount);
 
-    Uint32 CurrCbvSrvUav[SHADER_VARIABLE_TYPE_NUM_TYPES] = {0,0,0};
-    Uint32 CurrSampler[SHADER_VARIABLE_TYPE_NUM_TYPES] = {0,0,0};
+    std::array<Uint32, SHADER_VARIABLE_TYPE_NUM_TYPES> CurrCbvSrvUav = {};
+    std::array<Uint32, SHADER_VARIABLE_TYPE_NUM_TYPES> CurrSampler   = {};
 
     for(SHADER_VARIABLE_TYPE VarType = SHADER_VARIABLE_TYPE_STATIC; VarType < SHADER_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_VARIABLE_TYPE>(VarType+1))
     {
         if( !IsAllowedType(VarType, AllowedTypeBits))
             continue;
 
-        Uint32 NumSrcCbvSrvUav = SrcLayout.m_NumCbvSrvUav[VarType];
-        VERIFY_EXPR(NumSrcCbvSrvUav == m_NumCbvSrvUav[VarType]);
+        Uint32 NumSrcCbvSrvUav = SrcLayout.GetCbvSrvUavCount(VarType);
+        VERIFY_EXPR(NumSrcCbvSrvUav == GetCbvSrvUavCount(VarType));
         for( Uint32 r=0; r < NumSrcCbvSrvUav; ++r )
         {
             const auto &SrcRes = SrcLayout.GetSrvCbvUav(VarType, r);
@@ -164,21 +195,21 @@ ShaderResourceLayoutD3D12::ShaderResourceLayoutD3D12(IObject &Owner,
 #ifdef _DEBUG
     for(SHADER_VARIABLE_TYPE VarType = SHADER_VARIABLE_TYPE_STATIC; VarType < SHADER_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_VARIABLE_TYPE>(VarType+1))
     {
-        VERIFY_EXPR( CurrCbvSrvUav[VarType] == m_NumCbvSrvUav[VarType] );
-        VERIFY_EXPR( CurrSampler[VarType] == m_NumSamplers[VarType] );
+        VERIFY_EXPR( CurrCbvSrvUav[VarType] == CbvSrvUavCount[VarType] );
+        VERIFY_EXPR( CurrSampler[VarType]   == SamplerCount[VarType] );
     }
 #endif
 }
 
 // http://diligentgraphics.com/diligent-engine/architecture/d3d12/shader-resource-layout#Initializing-Shader-Resource-Layouts-and-Root-Signature-in-a-Pipeline-State-Object
 // http://diligentgraphics.com/diligent-engine/architecture/d3d12/shader-resource-cache#Initializing-Shader-Resource-Layouts-in-a-Pipeline-State
-void ShaderResourceLayoutD3D12::Initialize(ID3D12Device *pd3d12Device,
+void ShaderResourceLayoutD3D12::Initialize(ID3D12Device*                                      pd3d12Device,
                                            const std::shared_ptr<const ShaderResourcesD3D12>& pSrcResources, 
-                                           IMemoryAllocator &LayoutDataAllocator,
-                                           const SHADER_VARIABLE_TYPE *AllowedVarTypes, 
-                                           Uint32 NumAllowedTypes, 
-                                           ShaderResourceCacheD3D12* pResourceCache,
-                                           RootSignature *pRootSig)
+                                           IMemoryAllocator&                                  LayoutDataAllocator,
+                                           const SHADER_VARIABLE_TYPE*                        AllowedVarTypes, 
+                                           Uint32                                             NumAllowedTypes, 
+                                           ShaderResourceCacheD3D12*                          pResourceCache,
+                                           RootSignature*                                     pRootSig)
 {
     m_pResources = pSrcResources;
     m_pResourceCache = pResourceCache;
@@ -188,6 +219,9 @@ void ShaderResourceLayoutD3D12::Initialize(ID3D12Device *pd3d12Device,
 
     Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
 
+    std::array<Uint32, SHADER_VARIABLE_TYPE_NUM_TYPES> CbvSrvUavCount = {};
+    std::array<Uint32, SHADER_VARIABLE_TYPE_NUM_TYPES> SamplerCount   = {};
+
     // Count number of resources to allocate all needed memory
     m_pResources->ProcessResources(
         AllowedVarTypes, NumAllowedTypes,
@@ -195,13 +229,13 @@ void ShaderResourceLayoutD3D12::Initialize(ID3D12Device *pd3d12Device,
         [&](const D3DShaderResourceAttribs &CB, Uint32)
         {
             VERIFY_EXPR(IsAllowedType(CB.VariableType, AllowedTypeBits));
-            ++m_NumCbvSrvUav[CB.VariableType];
+            ++CbvSrvUavCount[CB.VariableType];
         },
         [&](const D3DShaderResourceAttribs& TexSRV, Uint32)
         {
             auto VarType = TexSRV.VariableType;
             VERIFY_EXPR(IsAllowedType(VarType, AllowedTypeBits));
-            ++m_NumCbvSrvUav[VarType];
+            ++CbvSrvUavCount[VarType];
             if(TexSRV.IsValidSampler())
             {
                 auto SamplerId = TexSRV.GetSamplerId();
@@ -209,38 +243,37 @@ void ShaderResourceLayoutD3D12::Initialize(ID3D12Device *pd3d12Device,
                 VERIFY(SamplerAttribs.VariableType == VarType, "Texture and sampler variable types are not conistent");
                 if(!SamplerAttribs.IsStaticSampler())
                 {
-                    ++m_NumSamplers[VarType];
+                    ++SamplerCount[VarType];
                 }
             }
         },
         [&](const D3DShaderResourceAttribs &TexUAV, Uint32)
         {
             VERIFY_EXPR(IsAllowedType(TexUAV.VariableType, AllowedTypeBits));
-            ++m_NumCbvSrvUav[TexUAV.VariableType];
+            ++CbvSrvUavCount[TexUAV.VariableType];
         },
         [&](const D3DShaderResourceAttribs &BufSRV, Uint32)
         {
             VERIFY_EXPR(IsAllowedType(BufSRV.VariableType, AllowedTypeBits));
-            ++m_NumCbvSrvUav[BufSRV.VariableType];
+            ++CbvSrvUavCount[BufSRV.VariableType];
         },
         [&](const D3DShaderResourceAttribs &BufUAV, Uint32)
         {
             VERIFY_EXPR(IsAllowedType(BufUAV.VariableType, AllowedTypeBits));
-            ++m_NumCbvSrvUav[BufUAV.VariableType];
+            ++CbvSrvUavCount[BufUAV.VariableType];
         }
     );
+    
+    AllocateMemory(LayoutDataAllocator, CbvSrvUavCount, SamplerCount);
 
-
-    AllocateMemory(LayoutDataAllocator);
-
-    Uint32 CurrCbvSrvUav[SHADER_VARIABLE_TYPE_NUM_TYPES] = {0,0,0};
-    Uint32 CurrSampler[SHADER_VARIABLE_TYPE_NUM_TYPES] = {0,0,0};
+    std::array<Uint32, SHADER_VARIABLE_TYPE_NUM_TYPES> CurrCbvSrvUav = {};
+    std::array<Uint32, SHADER_VARIABLE_TYPE_NUM_TYPES> CurrSampler   = {};
     Uint32 StaticResCacheTblSizes[4] = {0, 0, 0, 0};
 
     auto AddResource = [&](const D3DShaderResourceAttribs &Attribs, CachedResourceType ResType, Uint32 SamplerId = SRV_CBV_UAV::InvalidSamplerId)
     {
         Uint32 RootIndex = SRV_CBV_UAV::InvalidRootIndex;
-        Uint32 Offset = SRV_CBV_UAV::InvalidOffset;
+        Uint32 Offset    = SRV_CBV_UAV::InvalidOffset;
         D3D12_DESCRIPTOR_RANGE_TYPE DescriptorRangeType = GetDescriptorRangeType(ResType);
         if (pRootSig)
         {
@@ -355,8 +388,8 @@ void ShaderResourceLayoutD3D12::Initialize(ID3D12Device *pd3d12Device,
 #ifdef _DEBUG
     for(SHADER_VARIABLE_TYPE VarType = SHADER_VARIABLE_TYPE_STATIC; VarType < SHADER_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_VARIABLE_TYPE>(VarType+1))
     {
-        VERIFY( CurrCbvSrvUav[VarType] == m_NumCbvSrvUav[VarType], "Not all Srv/Cbv/Uavs are initialized, which result in a crash when dtor is called" );
-        VERIFY( CurrSampler[VarType] == m_NumSamplers[VarType], "Not all Samplers are initialized, which result in a crash when dtor is called" );
+        VERIFY( CurrCbvSrvUav[VarType] == CbvSrvUavCount[VarType], "Not all Srv/Cbv/Uavs are initialized, which result in a crash when dtor is called" );
+        VERIFY( CurrSampler[VarType]   == SamplerCount  [VarType], "Not all Samplers are initialized, which result in a crash when dtor is called" );
     }
 #endif
 
@@ -402,7 +435,10 @@ void ShaderResourceLayoutD3D12::InitVariablesHashMap()
 
 
 
-void ShaderResourceLayoutD3D12::SRV_CBV_UAV::CacheCB(IDeviceObject *pBuffer, ShaderResourceCacheD3D12::Resource& DstRes, Uint32 ArrayInd, D3D12_CPU_DESCRIPTOR_HANDLE ShdrVisibleHeapCPUDescriptorHandle)
+void ShaderResourceLayoutD3D12::SRV_CBV_UAV::CacheCB(IDeviceObject*                      pBuffer,
+                                                     ShaderResourceCacheD3D12::Resource& DstRes,
+                                                     Uint32                              ArrayInd,
+                                                     D3D12_CPU_DESCRIPTOR_HANDLE         ShdrVisibleHeapCPUDescriptorHandle)
 {
     // http://diligentgraphics.com/diligent-engine/architecture/d3d12/shader-resource-cache#Binding-Objects-to-Shader-Variables
 
@@ -478,12 +514,12 @@ const INTERFACE_ID& ResourceViewTraits<IBufferViewD3D12>::IID = IID_BufferViewD3
 template<typename TResourceViewType,        ///< ResType of the view (ITextureViewD3D12 or IBufferViewD3D12)
          typename TViewTypeEnum,            ///< ResType of the expected view type enum (TEXTURE_VIEW_TYPE or BUFFER_VIEW_TYPE)
          typename TBindSamplerProcType>     ///< ResType of the procedure to set sampler
-void ShaderResourceLayoutD3D12::SRV_CBV_UAV::CacheResourceView(IDeviceObject *pView, 
+void ShaderResourceLayoutD3D12::SRV_CBV_UAV::CacheResourceView(IDeviceObject*                      pView, 
                                                                ShaderResourceCacheD3D12::Resource& DstRes, 
-                                                               Uint32 ArrayIndex,
-                                                               D3D12_CPU_DESCRIPTOR_HANDLE ShdrVisibleHeapCPUDescriptorHandle, 
-                                                               TViewTypeEnum dbgExpectedViewType,
-                                                               TBindSamplerProcType BindSamplerProc)
+                                                               Uint32                              ArrayIndex,
+                                                               D3D12_CPU_DESCRIPTOR_HANDLE         ShdrVisibleHeapCPUDescriptorHandle, 
+                                                               TViewTypeEnum                       dbgExpectedViewType,
+                                                               TBindSamplerProcType                BindSamplerProc)
 {
     // We cannot use ValidatedCast<> here as the resource retrieved from the
     // resource mapping can be of wrong type
@@ -538,7 +574,9 @@ void ShaderResourceLayoutD3D12::SRV_CBV_UAV::CacheResourceView(IDeviceObject *pV
     }   
 }
 
-void ShaderResourceLayoutD3D12::Sampler::CacheSampler(ITextureViewD3D12 *pTexViewD3D12, Uint32 ArrayIndex, D3D12_CPU_DESCRIPTOR_HANDLE ShdrVisibleHeapCPUDescriptorHandle)
+void ShaderResourceLayoutD3D12::Sampler::CacheSampler(ITextureViewD3D12*           pTexViewD3D12,
+                                                      Uint32                       ArrayIndex,
+                                                      D3D12_CPU_DESCRIPTOR_HANDLE  ShdrVisibleHeapCPUDescriptorHandle)
 {
     auto *pResourceCache = m_ParentResLayout.m_pResourceCache;
     VERIFY(pResourceCache, "Resource cache is null");
@@ -615,7 +653,7 @@ void ShaderResourceLayoutD3D12::Sampler::CacheSampler(ITextureViewD3D12 *pTexVie
 } 
 
 
-ShaderResourceLayoutD3D12::Sampler &ShaderResourceLayoutD3D12::GetAssignedSampler(const SRV_CBV_UAV &TexSrv)
+ShaderResourceLayoutD3D12::Sampler &ShaderResourceLayoutD3D12::GetAssignedSampler(const SRV_CBV_UAV& TexSrv)
 {
     VERIFY(TexSrv.GetResType() == CachedResourceType::TexSRV, "Unexpected resource type: texture SRV is expected");
     VERIFY(TexSrv.IsValidSampler(), "Texture SRV has no associated sampler");
@@ -626,7 +664,9 @@ ShaderResourceLayoutD3D12::Sampler &ShaderResourceLayoutD3D12::GetAssignedSample
 }
 
 
-void ShaderResourceLayoutD3D12::SRV_CBV_UAV::BindResource(IDeviceObject *pObj, Uint32 ArrayIndex, const ShaderResourceLayoutD3D12 *dbgResLayout)
+void ShaderResourceLayoutD3D12::SRV_CBV_UAV::BindResource(IDeviceObject*                    pObj,
+                                                          Uint32                            ArrayIndex,
+                                                          const ShaderResourceLayoutD3D12*  dbgResLayout)
 {
     auto *pResourceCache = m_ParentResLayout.m_pResourceCache;
     VERIFY(pResourceCache, "Resource cache is null");
@@ -695,7 +735,7 @@ void ShaderResourceLayoutD3D12::SRV_CBV_UAV::BindResource(IDeviceObject *pObj, U
             break;
 
             case CachedResourceType::BufUAV: 
-                CacheResourceView<IBufferViewD3D12>( pObj, DstRes, ArrayIndex, ShdrVisibleHeapCPUDescriptorHandle, BUFFER_VIEW_UNORDERED_ACCESS, [](IBufferViewD3D12*){});
+                CacheResourceView<IBufferViewD3D12>(pObj, DstRes, ArrayIndex, ShdrVisibleHeapCPUDescriptorHandle, BUFFER_VIEW_UNORDERED_ACCESS, [](IBufferViewD3D12*){});
             break;
 
             default: UNEXPECTED("Unknown resource type ", static_cast<Int32>(GetResType()));
@@ -719,7 +759,7 @@ void ShaderResourceLayoutD3D12::SRV_CBV_UAV::BindResource(IDeviceObject *pObj, U
     }
 }
 
-bool ShaderResourceLayoutD3D12::SRV_CBV_UAV::IsBound(Uint32 ArrayIndex)
+bool ShaderResourceLayoutD3D12::SRV_CBV_UAV::IsBound(Uint32 ArrayIndex)const
 {
     auto *pResourceCache = m_ParentResLayout.m_pResourceCache;
     VERIFY(pResourceCache, "Resource cache is null");
@@ -745,7 +785,9 @@ bool ShaderResourceLayoutD3D12::SRV_CBV_UAV::IsBound(Uint32 ArrayIndex)
 
 
 
-void ShaderResourceLayoutD3D12::BindResources( IResourceMapping* pResourceMapping, Uint32 Flags, const ShaderResourceCacheD3D12 *dbgResourceCache )
+void ShaderResourceLayoutD3D12::BindResources(IResourceMapping*               pResourceMapping,
+                                              Uint32                          Flags,
+                                              const ShaderResourceCacheD3D12* dbgResourceCache )
 {
     VERIFY(dbgResourceCache == m_pResourceCache, "Resource cache does not match the cache provided at initialization");
 
@@ -815,7 +857,7 @@ IShaderVariable* ShaderResourceLayoutD3D12::GetShaderVariable(const Char* Name)
 
 
 
-void ShaderResourceLayoutD3D12::CopyStaticResourceDesriptorHandles(const ShaderResourceLayoutD3D12 &SrcLayout)
+void ShaderResourceLayoutD3D12::CopyStaticResourceDesriptorHandles(const ShaderResourceLayoutD3D12& SrcLayout)
 {
     if (!m_pResourceCache)
     {
@@ -838,7 +880,7 @@ void ShaderResourceLayoutD3D12::CopyStaticResourceDesriptorHandles(const ShaderR
     // Samplers at root index D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER
     // Every resource is stored at offset that equals resource bind point
 
-    for(Uint32 r=0; r < m_NumCbvSrvUav[SHADER_VARIABLE_TYPE_STATIC]; ++r)
+    for(Uint32 r=0; r < GetCbvSrvUavCount(SHADER_VARIABLE_TYPE_STATIC); ++r)
     {
         // Get resource attributes
         const auto &res = GetSrvCbvUav(SHADER_VARIABLE_TYPE_STATIC, r);
@@ -933,7 +975,7 @@ void ShaderResourceLayoutD3D12::dbgVerifyBindings()const
 
     for(SHADER_VARIABLE_TYPE VarType = SHADER_VARIABLE_TYPE_STATIC; VarType < SHADER_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_VARIABLE_TYPE>(VarType+1))
     {
-        for(Uint32 r=0; r < m_NumCbvSrvUav[VarType]; ++r)
+        for(Uint32 r=0; r < GetCbvSrvUavCount(VarType); ++r)
         {
             const auto &res = GetSrvCbvUav(VarType, r);
             VERIFY(res.Attribs.VariableType == VarType, "Unexpected variable type");
@@ -1037,7 +1079,7 @@ void ShaderResourceLayoutD3D12::dbgVerifyBindings()const
             }
         }
 
-        for(Uint32 s=0; s < m_NumSamplers[VarType]; ++s)
+        for(Uint32 s=0; s < GetSamplerCount(VarType); ++s)
         {
             const auto &sam = GetSampler(VarType, s);
             VERIFY(sam.Attribs.VariableType == VarType, "Unexpected sampler variable type");
@@ -1066,11 +1108,29 @@ const Char* ShaderResourceLayoutD3D12::GetShaderName()const
     }
     else
     {
-        RefCntAutoPtr<IShaderResourceBinding> pSRB(&m_Owner, IID_ShaderResourceBinding);
-        if(pSRB)
+        PipelineStateD3D12Impl* pPSOD3D12 = nullptr;
+
+        RefCntAutoPtr<IPipelineState> pPSO(&m_Owner, IID_PipelineState);
+        if(pPSO)
         {
-            auto *pPSO = pSRB->GetPipelineState();
-            auto *pPSOD3D12 = ValidatedCast<PipelineStateD3D12Impl>(pPSO);
+            pPSOD3D12 = pPSO.RawPtr<PipelineStateD3D12Impl>();
+        }
+        else
+        {
+            RefCntAutoPtr<IShaderResourceBinding> pSRB(&m_Owner, IID_ShaderResourceBinding);
+            if(pSRB)
+            {
+                pPSOD3D12 = ValidatedCast<PipelineStateD3D12Impl>(pSRB->GetPipelineState());
+            }
+            else
+            {
+                UNEXPECTED("Owner is expected to be a shader, a pipeline state, or a shader resource binding");
+            }
+        }
+
+        
+        if(pPSOD3D12 != nullptr)
+        {
             auto *ppShaders = pPSOD3D12->GetShaders();
             auto NumShaders = pPSOD3D12->GetNumShaders();
             for (Uint32 s = 0; s < NumShaders; ++s)
@@ -1080,10 +1140,6 @@ const Char* ShaderResourceLayoutD3D12::GetShaderName()const
                     return ShaderDesc.Name;
             }
             UNEXPECTED("Shader not found");
-        }
-        else
-        {
-            UNEXPECTED("Owner is expected to be a shader or a shader resource binding");
         }
     }
     return "";

@@ -104,7 +104,8 @@
 // Note that sizeof(m_VariableHash)==128 (release mode, MS compiler, x64).
 #define USE_VARIABLE_HASH_MAP 0
 
-#include "unordered_map"
+#include <unordered_map>
+#include <array>
 
 #include "ShaderD3DBase.h"
 #include "ShaderBase.h"
@@ -337,31 +338,45 @@ private:
 
     // There is no need to use shared ptr as referenced resource cache is either part of the
     // parent ShaderD3D12Impl object or ShaderResourceBindingD3D12Impl object
-    ShaderResourceCacheD3D12 *m_pResourceCache;
+    ShaderResourceCacheD3D12* m_pResourceCache;
 
     std::unique_ptr<void, STDDeleterRawMem<void> > m_ResourceBuffer;
     Sampler* m_Samplers = nullptr;
-    Uint16 m_NumCbvSrvUav[SHADER_VARIABLE_TYPE_NUM_TYPES] = {0,0,0};
-    Uint16 m_NumSamplers [SHADER_VARIABLE_TYPE_NUM_TYPES] = {0,0,0};
+    std::array<Uint16, SHADER_VARIABLE_TYPE_NUM_TYPES + 1> m_CbvSrvUavOffsets = {};
+    std::array<Uint16, SHADER_VARIABLE_TYPE_NUM_TYPES + 1> m_SamplersOffsets  = {};
+    
+    Uint32 GetCbvSrvUavCount(SHADER_VARIABLE_TYPE VarType)const
+    {
+        return m_CbvSrvUavOffsets[VarType + 1] - m_CbvSrvUavOffsets[VarType];
+    }
+    Uint32 GetSamplerCount(SHADER_VARIABLE_TYPE VarType)const
+    {
+        return m_SamplersOffsets[VarType + 1] - m_SamplersOffsets[VarType];
+    }
+    Uint32 GetTotalSrvCbvUavCount()const
+    {
+        return m_CbvSrvUavOffsets[SHADER_VARIABLE_TYPE_NUM_TYPES];
+    }
+    Uint32 GetTotalSamplerCount()const
+    {
+        return m_SamplersOffsets[SHADER_VARIABLE_TYPE_NUM_TYPES];
+    }
 
     Uint32 GetSrvCbvUavOffset(SHADER_VARIABLE_TYPE VarType, Uint32 r)const
     {
-        VERIFY_EXPR( r < m_NumCbvSrvUav[VarType] );
-        static_assert(SHADER_VARIABLE_TYPE_STATIC == 0, "SHADER_VARIABLE_TYPE_STATIC == 0 expected");
-        r += (VarType > SHADER_VARIABLE_TYPE_STATIC) ? m_NumCbvSrvUav[SHADER_VARIABLE_TYPE_STATIC] : 0;
-        static_assert(SHADER_VARIABLE_TYPE_MUTABLE == 1, "SHADER_VARIABLE_TYPE_MUTABLE == 1 expected");
-        r += (VarType > SHADER_VARIABLE_TYPE_MUTABLE) ? m_NumCbvSrvUav[SHADER_VARIABLE_TYPE_MUTABLE] : 0;
-        return r;
+        Uint32 Offset = m_CbvSrvUavOffsets[VarType] + r;
+        VERIFY_EXPR( Offset < m_CbvSrvUavOffsets[VarType+1] );
+        return Offset;
     }
     SRV_CBV_UAV& GetSrvCbvUav(SHADER_VARIABLE_TYPE VarType, Uint32 r)
     {
-        VERIFY_EXPR( r < m_NumCbvSrvUav[VarType] );
+        VERIFY_EXPR( r < GetCbvSrvUavCount(VarType) );
         auto* CbvSrvUav = reinterpret_cast<SRV_CBV_UAV*>(m_ResourceBuffer.get());
-        return CbvSrvUav[GetSrvCbvUavOffset(VarType,r)];
+        return CbvSrvUav[ GetSrvCbvUavOffset(VarType,r) ];
     }
     const SRV_CBV_UAV& GetSrvCbvUav(SHADER_VARIABLE_TYPE VarType, Uint32 r)const
     {
-        VERIFY_EXPR( r < m_NumCbvSrvUav[VarType] );
+        VERIFY_EXPR( r < GetCbvSrvUavCount(VarType) );
         auto* CbvSrvUav = reinterpret_cast<SRV_CBV_UAV*>(m_ResourceBuffer.get());
         return CbvSrvUav[GetSrvCbvUavOffset(VarType,r)];
     }
@@ -374,35 +389,24 @@ private:
 
     Uint32 GetSamplerOffset(SHADER_VARIABLE_TYPE VarType, Uint32 s)const
     {
-        VERIFY_EXPR( s < m_NumSamplers[VarType] );
-        static_assert(SHADER_VARIABLE_TYPE_STATIC == 0, "SHADER_VARIABLE_TYPE_STATIC == 0 expected");
-        s += (VarType > SHADER_VARIABLE_TYPE_STATIC) ? m_NumSamplers[SHADER_VARIABLE_TYPE_STATIC] : 0;
-        static_assert(SHADER_VARIABLE_TYPE_MUTABLE == 1, "SHADER_VARIABLE_TYPE_MUTABLE == 1 expected");
-        s += (VarType > SHADER_VARIABLE_TYPE_MUTABLE) ? m_NumSamplers[SHADER_VARIABLE_TYPE_MUTABLE] : 0;
-        return s;
+        auto Offset = m_SamplersOffsets[VarType] + s;
+        VERIFY_EXPR( Offset < m_SamplersOffsets[VarType+1] );
+        return Offset;
     }
     Sampler& GetSampler(SHADER_VARIABLE_TYPE VarType, Uint32 s)
     {
-        VERIFY_EXPR( s < m_NumSamplers[VarType] );
+        VERIFY_EXPR( s < GetSamplerCount(VarType) );
         return m_Samplers[GetSamplerOffset(VarType,s)];
     }
     const Sampler& GetSampler(SHADER_VARIABLE_TYPE VarType, Uint32 s)const
     {
-        VERIFY_EXPR( s < m_NumSamplers[VarType] );
+        VERIFY_EXPR( s < GetSamplerCount(VarType) );
         return m_Samplers[GetSamplerOffset(VarType,s)];
     }
-    Uint32 GetTotalSrvCbvUavCount()const
-    {
-        static_assert(SHADER_VARIABLE_TYPE_NUM_TYPES == 3, "Did you add new variable type?");
-        return m_NumCbvSrvUav[SHADER_VARIABLE_TYPE_STATIC] + m_NumCbvSrvUav[SHADER_VARIABLE_TYPE_MUTABLE] + m_NumCbvSrvUav[SHADER_VARIABLE_TYPE_DYNAMIC];
-    }
-    Uint32 GetTotalSamplerCount()const
-    {
-        static_assert(SHADER_VARIABLE_TYPE_NUM_TYPES == 3, "Did you add new variable type?");
-        return m_NumSamplers[SHADER_VARIABLE_TYPE_STATIC] + m_NumSamplers[SHADER_VARIABLE_TYPE_MUTABLE] + m_NumSamplers[SHADER_VARIABLE_TYPE_DYNAMIC];
-    }
 
-    void AllocateMemory(IMemoryAllocator &Allocator);
+    void AllocateMemory(IMemoryAllocator&                                         Allocator,
+                        const std::array<Uint32, SHADER_VARIABLE_TYPE_NUM_TYPES>& CbvSrvUavCount,
+                        const std::array<Uint32, SHADER_VARIABLE_TYPE_NUM_TYPES>& SamplerCount);
 
 #if USE_VARIABLE_HASH_MAP
     // Hash map to look up shader variables by name.
