@@ -79,6 +79,20 @@ ShaderResourceLayoutD3D11::~ShaderResourceLayoutD3D11()
 
 const D3DShaderResourceAttribs ShaderResourceLayoutD3D11::TexAndSamplerBindInfo::InvalidSamplerAttribs("Invalid sampler", D3DShaderResourceAttribs::InvalidBindPoint, 0, D3D_SIT_SAMPLER,  SHADER_VARIABLE_TYPE_NUM_TYPES, D3D_SRV_DIMENSION_UNKNOWN, D3DShaderResourceAttribs::InvalidSamplerId, false);
 
+size_t ShaderResourceLayoutD3D11::GetRequiredMemorySize(const ShaderResourcesD3D11& SrcResources, 
+                                                        const SHADER_VARIABLE_TYPE* VarTypes, 
+                                                        Uint32                      NumVarTypes)
+{
+    Uint32 NumCBs, NumTexSRVs, NumTexUAVs, NumBufSRVs, NumBufUAVs, NumSamplers;
+    SrcResources.CountResources(VarTypes, NumVarTypes, NumCBs, NumTexSRVs, NumTexUAVs, NumBufSRVs, NumBufUAVs, NumSamplers);
+    auto MemSize = NumCBs     * sizeof(ConstBuffBindInfo)     +
+                   NumTexSRVs * sizeof(TexAndSamplerBindInfo) +
+                   NumTexUAVs * sizeof(TexUAVBindInfo)        +
+                   NumBufUAVs * sizeof(BuffUAVBindInfo)       +
+                   NumBufSRVs * sizeof(BuffSRVBindInfo);
+    return MemSize;
+}
+
 void ShaderResourceLayoutD3D11::Initialize(const std::shared_ptr<const ShaderResourcesD3D11>& pSrcResources,
                                            const SHADER_VARIABLE_TYPE*                        VarTypes, 
                                            Uint32                                             NumVarTypes, 
@@ -111,7 +125,9 @@ void ShaderResourceLayoutD3D11::Initialize(const std::shared_ptr<const ShaderRes
     m_BuffUAVsOffset       = m_TexUAVsOffset        + static_cast<Uint16>( NumTexUAVs * sizeof(TexUAVBindInfo)        );
     m_BuffSRVsOffset       = m_BuffUAVsOffset       + static_cast<Uint16>( NumBufUAVs * sizeof(BuffUAVBindInfo)       );
     auto MemorySize        = m_BuffSRVsOffset       +                      NumBufSRVs * sizeof(BuffSRVBindInfo);
-        
+
+    VERIFY_EXPR(MemorySize == GetRequiredMemorySize(*pSrcResources, VarTypes, NumVarTypes));
+
     if( MemorySize )
     {
         auto *pRawMem = ALLOCATE(ResLayoutDataAllocator, "Raw memory buffer for shader resource layout resources", MemorySize);

@@ -58,6 +58,10 @@ public:
     ShaderResourceLayoutD3D11             (ShaderResourceLayoutD3D11&&)      = default;
     ShaderResourceLayoutD3D11& operator = (ShaderResourceLayoutD3D11&&)      = delete;
 
+    static size_t GetRequiredMemorySize(const ShaderResourcesD3D11& SrcResources, 
+                                        const SHADER_VARIABLE_TYPE* VarTypes, 
+                                        Uint32                      NumVarTypes);
+
     void Initialize(const std::shared_ptr<const ShaderResourcesD3D11>& pSrcResources,
                     const SHADER_VARIABLE_TYPE*                        VarTypes, 
                     Uint32                                             NumVarTypes, 

@@ -36,8 +36,11 @@ namespace Diligent
         m_BlockSize         (BlockSize),
         m_NumBlocksInPage   (NumBlocksInPage)
     {
-        // Allocate one page
-        CreateNewPage();
+        if (BlockSize > 0)
+        {
+            // Allocate one page
+            CreateNewPage();
+        }
     }
 
     FixedBlockMemoryAllocator::~FixedBlockMemoryAllocator()

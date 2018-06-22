@@ -9,7 +9,6 @@ set(INCLUDE
 set(INTERFACE 
     interface/AdvancedMath.h
     interface/BasicMath.h
-    interface/AdaptiveFixedBlockAllocator.h
     interface/BasicFileStream.h
     interface/DataBlobImpl.h
     interface/DefaultRawMemoryAllocator.h

@@ -22,6 +22,7 @@
  */
 
 #include "pch.h"
+#include <array>
 #include "PipelineStateD3D11Impl.h"
 #include "RenderDeviceD3D11Impl.h"
 #include "ShaderResourceBindingD3D11Impl.h"
@@ -34,6 +35,7 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*      pRefCoun
                                                RenderDeviceD3D11Impl*   pRenderDeviceD3D11,
                                                const PipelineStateDesc& PipelineDesc) : 
     TPipelineStateBase(pRefCounters, pRenderDeviceD3D11, PipelineDesc),
+    m_SRBMemAllocator(GetRawAllocator()),
     m_pDefaultShaderResBinding( nullptr, STDDeleter<ShaderResourceBindingD3D11Impl, FixedBlockMemoryAllocator>(pRenderDeviceD3D11->GetSRBAllocator()) ),
     m_DummyShaderVar(*this)
 {
@@ -112,35 +114,25 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*      pRefCoun
     }
 
     if(PipelineDesc.SRBAllocationGranularity > 1)
-        m_Allocators.Init(m_NumShaders, PipelineDesc.SRBAllocationGranularity);
+    {
+        std::array<size_t, MaxShadersInPipeline> ShaderResLayoutDataSizes = {};
+        std::array<size_t, MaxShadersInPipeline> ShaderResCacheDataSizes  = {};
+        for (Uint32 s = 0; s < m_NumShaders; ++s)
+        {
+            auto* pShader = ValidatedCast<ShaderD3D11Impl>(m_ppShaders[s]);
+            const auto& ShaderResources = *pShader->GetResources();
+            std::array<SHADER_VARIABLE_TYPE, 2> AllowedVarTypes = { SHADER_VARIABLE_TYPE_MUTABLE, SHADER_VARIABLE_TYPE_DYNAMIC };
+            ShaderResLayoutDataSizes[s] = ShaderResourceLayoutD3D11::GetRequiredMemorySize(ShaderResources, AllowedVarTypes.data(), static_cast<Uint32>(AllowedVarTypes.size()));
+            ShaderResCacheDataSizes[s] = ShaderResourceCacheD3D11::GetRequriedMemorySize(ShaderResources);
+        }
+
+        m_SRBMemAllocator.Initialize(PipelineDesc.SRBAllocationGranularity, m_NumShaders, ShaderResLayoutDataSizes.data(), m_NumShaders, ShaderResCacheDataSizes.data());
+    }
 
     auto &SRBAllocator = pRenderDeviceD3D11->GetSRBAllocator();
     m_pDefaultShaderResBinding.reset( NEW_RC_OBJ(SRBAllocator, "ShaderResourceBindingD3D11Impl instance", ShaderResourceBindingD3D11Impl, this)(this, true) );
 }
 
-void PipelineStateD3D11Impl::DataAllocators::Init(size_t NumActiveShaders, Uint32 SRBAllocationGranularity)
-{
-    VERIFY_EXPR(NumActiveShaders <= _countof(m_pShaderResLayoutDataAllocators) );
-    // Since this is not constructor, there is no need to 
-    // handle exceptions. If exception is thrown, ~DataAllocators()
-    // will destroy all allocators that have been initialized
-    for(size_t stage = 0; stage < NumActiveShaders; ++stage)
-    {
-        m_pShaderResLayoutDataAllocators[stage] = NEW_POOL_OBJECT(AdaptiveFixedBlockAllocator, "Shader resource layout data allocator", GetRawAllocator(), SRBAllocationGranularity);
-        m_pResourceCacheDataAllocators[stage] = NEW_POOL_OBJECT(AdaptiveFixedBlockAllocator, "Shader resource cache data allocator", GetRawAllocator(), SRBAllocationGranularity);
-    }
-}
-
-PipelineStateD3D11Impl::DataAllocators::~DataAllocators()
-{
-    for(size_t i=0; i < _countof(m_pShaderResLayoutDataAllocators); ++i)
-        if(m_pShaderResLayoutDataAllocators[i] != nullptr)
-            DESTROY_POOL_OBJECT(m_pShaderResLayoutDataAllocators[i]);
-
-    for(size_t i=0; i < _countof(m_pResourceCacheDataAllocators); ++i)
-        if(m_pResourceCacheDataAllocators[i] != nullptr)
-            DESTROY_POOL_OBJECT(m_pResourceCacheDataAllocators[i]);
-}
 
 PipelineStateD3D11Impl::~PipelineStateD3D11Impl()
 {

@@ -30,7 +30,7 @@
 #include "RenderDeviceD3D11.h"
 #include "PipelineStateBase.h"
 #include "ShaderD3D11Impl.h"
-#include "AdaptiveFixedBlockAllocator.h"
+#include "SRBMemoryAllocator.h"
 
 namespace Diligent
 {
@@ -74,18 +74,12 @@ public:
     virtual bool IsCompatibleWith(const IPipelineState *pPSO)const override final;
 
     class ShaderResourceBindingD3D11Impl* GetDefaultResourceBinding(){return m_pDefaultShaderResBinding.get();}
-    IMemoryAllocator &GetResourceCacheDataAllocator(Uint32 ActiveShaderInd)
+    
+    SRBMemoryAllocator& GetSRBMemoryAllocator()
     {
-        VERIFY_EXPR(ActiveShaderInd < m_NumShaders);
-        auto *pAllocator = m_Allocators.GetResourceCacheDataAllocator(ActiveShaderInd);
-        return pAllocator != nullptr ? *pAllocator : GetRawAllocator();
+        return m_SRBMemAllocator;
     }
-    IMemoryAllocator &GetShaderResLayoutDataAllocators(Uint32 ActiveShaderInd)
-    {
-        VERIFY_EXPR(ActiveShaderInd < m_NumShaders);
-        auto *pAllocator = m_Allocators.GetShaderResLayoutDataAllocator(ActiveShaderInd);
-        return pAllocator != nullptr ? *pAllocator : GetRawAllocator();
-    }
+
     IShaderVariable* GetDummyShaderVariable(){return &m_DummyShaderVar;}
 
 private:
@@ -94,25 +88,8 @@ private:
     CComPtr<ID3D11DepthStencilState> m_pd3d11DepthStencilState;
     CComPtr<ID3D11InputLayout>       m_pd3d11InputLayout;
 
-    class DataAllocators
-    {
-    public:
-        ~DataAllocators();
-        void Init(size_t NumActiveShaders, Uint32 SRBAllocationGranularity);
-        AdaptiveFixedBlockAllocator* GetShaderResLayoutDataAllocator(Uint32 Ind)
-        {
-            VERIFY_EXPR(Ind < _countof(m_pShaderResLayoutDataAllocators));
-            return m_pShaderResLayoutDataAllocators[Ind];
-        }
-        AdaptiveFixedBlockAllocator* GetResourceCacheDataAllocator(Uint32 Ind)
-        {
-            VERIFY_EXPR(Ind < _countof(m_pResourceCacheDataAllocators));
-            return m_pResourceCacheDataAllocators[Ind];
-        }
-    private:
-        AdaptiveFixedBlockAllocator* m_pShaderResLayoutDataAllocators[5] = {}; // Use separate allocator for every shader stage
-        AdaptiveFixedBlockAllocator* m_pResourceCacheDataAllocators[5] = {}; // Use separate allocator for every shader stage
-    }m_Allocators; // Allocators must be defined before the default shader res binding
+    // SRB memory allocator must be defined before the default shader res binding
+    SRBMemoryAllocator m_SRBMemAllocator;
 
     // Do not use strong reference to avoid cyclic references
     // Must be declared after the data allocators

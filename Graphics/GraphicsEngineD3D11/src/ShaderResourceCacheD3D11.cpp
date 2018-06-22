@@ -32,6 +32,29 @@
 
 namespace Diligent
 {
+    size_t ShaderResourceCacheD3D11::GetRequriedMemorySize(const ShaderResourcesD3D11& Resources)
+    {
+        auto CBCount      = Resources.GetMaxCBBindPoint()     + 1;
+        auto SRVCount     = Resources.GetMaxSRVBindPoint()    + 1;
+        auto SamplerCount = Resources.GetMaxSamplerBindPoint()+ 1;
+        auto UAVCount     = Resources.GetMaxUAVBindPoint()    + 1;
+        auto MemSize = 
+                    (sizeof(CachedCB)       + sizeof(ID3D11Buffer*))              * CBCount + 
+                    (sizeof(CachedResource) + sizeof(ID3D11ShaderResourceView*))  * SRVCount + 
+                    (sizeof(CachedSampler)  + sizeof(ID3D11SamplerState*))        * SamplerCount + 
+                    (sizeof(CachedResource) + sizeof(ID3D11UnorderedAccessView*)) * UAVCount;
+        return MemSize;
+    }
+
+    void ShaderResourceCacheD3D11::Initialize(const ShaderResourcesD3D11& Resources, IMemoryAllocator& MemAllocator)
+    {
+        auto CBCount      = Resources.GetMaxCBBindPoint()     + 1;
+        auto SRVCount     = Resources.GetMaxSRVBindPoint()    + 1;
+        auto SamplerCount = Resources.GetMaxSamplerBindPoint()+ 1;
+        auto UAVCount     = Resources.GetMaxUAVBindPoint()    + 1;
+        Initialize(CBCount, SRVCount, SamplerCount, UAVCount, MemAllocator);
+    }
+
     void ShaderResourceCacheD3D11::Initialize(Int32 CBCount, Int32 SRVCount, Int32 SamplerCount, Int32 UAVCount, IMemoryAllocator& MemAllocator)
     {
         // http://diligentgraphics.com/diligent-engine/architecture/d3d11/shader-resource-cache/
