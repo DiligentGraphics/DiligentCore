@@ -383,10 +383,9 @@ void PipelineLayout::Finalize(const VulkanUtilities::VulkanLogicalDevice& Logica
     m_LayoutMgr.Finalize(LogicalDevice);
 }
 
-
-void PipelineLayout::InitResourceCache(RenderDeviceVkImpl *pDeviceVkImpl, ShaderResourceCacheVk& ResourceCache, IMemoryAllocator &CacheMemAllocator)const
+std::array<Uint32, 2> PipelineLayout::GetDescriptorSetSizes(Uint32& NumSets)const
 {
-    Uint32 NumSets = 0;
+    NumSets = 0;
     std::array<Uint32, 2> SetSizes = {};
 
     const auto &StaticAndMutSet = m_LayoutMgr.GetDescriptorSet(SHADER_VARIABLE_TYPE_STATIC);
@@ -402,10 +401,20 @@ void PipelineLayout::InitResourceCache(RenderDeviceVkImpl *pDeviceVkImpl, Shader
         NumSets = std::max(NumSets, static_cast<Uint32>(DynamicSet.SetIndex + 1));
         SetSizes[DynamicSet.SetIndex] = DynamicSet.TotalDescriptors;
     }
+
+    return SetSizes;
+}
+
+void PipelineLayout::InitResourceCache(RenderDeviceVkImpl* pDeviceVkImpl, ShaderResourceCacheVk& ResourceCache, IMemoryAllocator& CacheMemAllocator)const
+{
+    Uint32 NumSets = 0;
+    auto SetSizes = GetDescriptorSetSizes(NumSets);
   
     // This call only initializes descriptor sets (ShaderResourceCacheVk::DescriptorSet) in the resource cache
     // Resources are initialized by source layout when shader resource binding objects are created
     ResourceCache.InitializeSets(CacheMemAllocator, NumSets, SetSizes.data());
+
+    const auto &StaticAndMutSet = m_LayoutMgr.GetDescriptorSet(SHADER_VARIABLE_TYPE_STATIC);
     if (StaticAndMutSet.SetIndex >= 0)
     {
         DescriptorPoolAllocation SetAllocation = pDeviceVkImpl->AllocateDescriptorSet(StaticAndMutSet.VkLayout);

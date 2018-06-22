@@ -33,16 +33,16 @@
 #include "PipelineStateBase.h"
 #include "PipelineLayout.h"
 #include "ShaderResourceLayoutVk.h"
-#include "AdaptiveFixedBlockAllocator.h"
+#include "FixedBlockMemoryAllocator.h"
 #include "VulkanUtilities/VulkanObjectWrappers.h"
 #include "VulkanUtilities/VulkanCommandBuffer.h"
 #include "PipelineLayout.h"
 
-/// Namespace for the Direct3D11 implementation of the graphics engine
 namespace Diligent
 {
 
 class FixedBlockMemoryAllocator;
+
 /// Implementation of the Diligent::IRenderDeviceVk interface
 class PipelineStateVkImpl : public PipelineStateBase<IPipelineStateVk, IRenderDeviceVk>
 {
@@ -84,12 +84,14 @@ public:
         return m_ShaderResourceLayouts[ShaderInd];
     }
 
-    IMemoryAllocator& GetResourceCacheDataAllocator(){return m_ResourceCacheDataAllocator;}
+    IMemoryAllocator& GetResourceCacheDataAllocator()
+    {
+        return m_ResourceCacheDataAllocator != nullptr ? *m_ResourceCacheDataAllocator : GetRawAllocator();
+    }
     IMemoryAllocator& GetShaderVariableDataAllocator(Uint32 ActiveShaderInd)
     {
         VERIFY_EXPR(ActiveShaderInd < m_NumShaders);
-        auto* pAllocator = m_VariableDataAllocators.GetAllocator(ActiveShaderInd);
-        return pAllocator != nullptr ?* pAllocator : GetRawAllocator();
+        return m_VariableDataAllocators != nullptr ? m_VariableDataAllocators[ActiveShaderInd] : GetRawAllocator();
     }
 
     IShaderVariable *GetDummyShaderVar(){return &m_DummyVar;}
@@ -99,46 +101,23 @@ private:
     void CreateRenderPass(const VulkanUtilities::VulkanLogicalDevice &LogicalDevice);
 
     DummyShaderVariable m_DummyVar;
+  
+    ShaderResourceLayoutVk*    m_ShaderResourceLayouts  = nullptr;
     
-    // Looks like there may be a bug in msvc: when allocators are declared as 
-    // an array and if an exception is thrown from constructor, the app crashes
-    class VariableDataAllocators
-    {
-    public:
-        ~VariableDataAllocators()
-        {
-            for(size_t i=0; i < _countof(m_pAllocators); ++i)
-                if(m_pAllocators[i] != nullptr)
-                    DESTROY_POOL_OBJECT(m_pAllocators[i]);
-        }
-        void Init(Uint32 NumActiveShaders, Uint32 SRBAllocationGranularity)
-        {
-            VERIFY_EXPR(NumActiveShaders <= _countof(m_pAllocators) );
-            for(Uint32 i=0; i < NumActiveShaders; ++i)
-                m_pAllocators[i] = NEW_POOL_OBJECT(AdaptiveFixedBlockAllocator, "Shader variable data allocator", GetRawAllocator(), SRBAllocationGranularity);
-        }
-        AdaptiveFixedBlockAllocator *GetAllocator(Uint32 ActiveShaderInd)
-        {
-            VERIFY_EXPR(ActiveShaderInd < _countof(m_pAllocators) );
-            return m_pAllocators[ActiveShaderInd];
-        }
-    private:
-        AdaptiveFixedBlockAllocator *m_pAllocators[5] = {};
-    }m_VariableDataAllocators; // Allocators must be defined before default SRB
-
-    ShaderResourceLayoutVk* m_ShaderResourceLayouts = nullptr;
-
-    AdaptiveFixedBlockAllocator m_ResourceCacheDataAllocator; // Use separate allocator for every shader stage
-    std::array<VulkanUtilities::ShaderModuleWrapper, 6> m_ShaderModules;
+    // Use separate fixed-block allocator allocator for every shader stage
+    FixedBlockMemoryAllocator* m_VariableDataAllocators     = nullptr;
+    FixedBlockMemoryAllocator* m_ResourceCacheDataAllocator = nullptr;
+    
+    std::array<VulkanUtilities::ShaderModuleWrapper, MaxShadersInPipeline> m_ShaderModules;
 
     // Do not use strong reference to avoid cyclic references
     // Default SRB must be defined after allocators
     std::unique_ptr<class ShaderResourceBindingVkImpl, STDDeleter<ShaderResourceBindingVkImpl, FixedBlockMemoryAllocator> > m_pDefaultShaderResBinding;
 
     VulkanUtilities::RenderPassWrapper m_RenderPass;
-    VulkanUtilities::PipelineWrapper m_Pipeline;
+    VulkanUtilities::PipelineWrapper   m_Pipeline;
     PipelineLayout m_PipelineLayout;
-    bool m_HasStaticResources = false;
+    bool m_HasStaticResources    = false;
     bool m_HasNonStaticResources = false;
 };
 

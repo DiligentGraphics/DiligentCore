@@ -51,6 +51,7 @@ public:
     void Finalize(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice);
 
     VkPipelineLayout GetVkPipelineLayout()const{return m_LayoutMgr.GetVkPipelineLayout();}
+    std::array<Uint32, 2> GetDescriptorSetSizes(Uint32& NumSets)const;
     void InitResourceCache(RenderDeviceVkImpl* pDeviceVkImpl, class ShaderResourceCacheVk& ResourceCache, IMemoryAllocator& CacheMemAllocator)const;
 
     void AllocateResourceSlot(const SPIRVShaderResourceAttribs& ResAttribs, 

@@ -52,7 +52,7 @@ namespace Diligent
 class FixedBlockMemoryAllocator : public IMemoryAllocator
 {
 public:
-    FixedBlockMemoryAllocator(IMemoryAllocator &RawMemoryAllocator, size_t BlockSize, Uint32 NumBlocksInPage);
+    FixedBlockMemoryAllocator(IMemoryAllocator& RawMemoryAllocator, size_t BlockSize, Uint32 NumBlocksInPage);
     ~FixedBlockMemoryAllocator();
 
     /// Allocates block of memory
@@ -62,10 +62,10 @@ public:
     virtual void Free(void *Ptr)override final;
     
 private:
-    FixedBlockMemoryAllocator(const FixedBlockMemoryAllocator&) = delete;
-    FixedBlockMemoryAllocator(FixedBlockMemoryAllocator&&) = delete;
+    FixedBlockMemoryAllocator             (const FixedBlockMemoryAllocator&) = delete;
+    FixedBlockMemoryAllocator             (FixedBlockMemoryAllocator&&)      = delete;
     FixedBlockMemoryAllocator& operator = (const FixedBlockMemoryAllocator&) = delete;
-    FixedBlockMemoryAllocator& operator = (FixedBlockMemoryAllocator&&) = delete;
+    FixedBlockMemoryAllocator& operator = (FixedBlockMemoryAllocator&&)      = delete;
 
     void CreateNewPage();
 
@@ -74,15 +74,15 @@ private:
     class MemoryPage
     { 
     public:
-        static constexpr Uint8 NewPageMemPattern = 0xAA;
-        static constexpr Uint8 AllocatedBlockMemPattern = 0xAB;
+        static constexpr Uint8 NewPageMemPattern          = 0xAA;
+        static constexpr Uint8 AllocatedBlockMemPattern   = 0xAB;
         static constexpr Uint8 DeallocatedBlockMemPattern = 0xDE;
         static constexpr Uint8 InitializedBlockMemPattern = 0xCF;
 
-        MemoryPage(FixedBlockMemoryAllocator &OwnerAllocator):
-            m_NumFreeBlocks(OwnerAllocator.m_NumBlocksInPage),
+        MemoryPage(FixedBlockMemoryAllocator& OwnerAllocator):
+            m_NumFreeBlocks       (OwnerAllocator.m_NumBlocksInPage),
             m_NumInitializedBlocks(0),
-            m_pOwnerAllocator(&OwnerAllocator)
+            m_pOwnerAllocator     (&OwnerAllocator)
         {
             auto PageSize = OwnerAllocator.m_BlockSize * OwnerAllocator.m_NumBlocksInPage;
             m_pPageStart = reinterpret_cast<Uint8*>(

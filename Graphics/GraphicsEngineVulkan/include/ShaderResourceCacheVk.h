@@ -82,6 +82,7 @@ public:
 
     ~ShaderResourceCacheVk();
 
+    static size_t GetRequiredMemorySize(Uint32 NumSets, Uint32 SetSizes[]);
     void InitializeSets(IMemoryAllocator &MemAllocator, Uint32 NumSets, Uint32 SetSizes[]);
     void InitializeResources(Uint32 Set, Uint32 Offset, Uint32 ArraySize, SPIRVShaderResourceAttribs::ResourceType Type);
 

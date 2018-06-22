@@ -26,25 +26,22 @@
 
 namespace Diligent
 {
-    FixedBlockMemoryAllocator::FixedBlockMemoryAllocator(IMemoryAllocator &RawMemoryAllocator, size_t BlockSize, Uint32 NumBlocksInPage) :
-        m_PagePool(STD_ALLOCATOR_RAW_MEM(MemoryPage, RawMemoryAllocator, "Allocator for vector<MemoryPage>")),
-        m_AvailablePages(STD_ALLOCATOR_RAW_MEM(size_t, RawMemoryAllocator, "Allocator for unordered_set<size_t>")),
-        m_AddrToPageId(STD_ALLOCATOR_RAW_MEM(AddrToPageIdMapElem, RawMemoryAllocator, "Allocator for unordered_map<void*, size_t>")),
+    FixedBlockMemoryAllocator::FixedBlockMemoryAllocator(IMemoryAllocator& RawMemoryAllocator,
+                                                         size_t            BlockSize,
+                                                         Uint32            NumBlocksInPage) :
+        m_PagePool          (STD_ALLOCATOR_RAW_MEM(MemoryPage, RawMemoryAllocator, "Allocator for vector<MemoryPage>")),
+        m_AvailablePages    (STD_ALLOCATOR_RAW_MEM(size_t, RawMemoryAllocator, "Allocator for unordered_set<size_t>")),
+        m_AddrToPageId      (STD_ALLOCATOR_RAW_MEM(AddrToPageIdMapElem, RawMemoryAllocator, "Allocator for unordered_map<void*, size_t>")),
         m_RawMemoryAllocator(RawMemoryAllocator),
-        m_BlockSize(BlockSize),
-        m_NumBlocksInPage(NumBlocksInPage)
+        m_BlockSize         (BlockSize),
+        m_NumBlocksInPage   (NumBlocksInPage)
     {
-        //tmpLargeBuffer = new Uint8[100 << 20];
-        //tmpCurrPtr = tmpLargeBuffer;
-        
         // Allocate one page
         CreateNewPage();
     }
 
     FixedBlockMemoryAllocator::~FixedBlockMemoryAllocator()
     {
-        //delete[] tmpLargeBuffer;
-
 #ifdef _DEBUG
         for (size_t p = 0; p < m_PagePool.size(); ++p)
         {
@@ -63,10 +60,6 @@ namespace Diligent
 
     void* FixedBlockMemoryAllocator::Allocate( size_t Size, const Char* dbgDescription, const char* dbgFileName, const  Int32 dbgLineNumber)
     {
-        //auto *ptr = tmpCurrPtr;
-        //tmpCurrPtr += Size;
-        //return ptr;
-
         VERIFY(m_BlockSize == Size, "Requested size (", Size, ") does not match the block size (", m_BlockSize, ")");
         
         std::lock_guard<std::mutex> LockGuard(m_Mutex);

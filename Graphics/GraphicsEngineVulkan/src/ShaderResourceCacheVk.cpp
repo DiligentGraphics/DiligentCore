@@ -34,6 +34,15 @@
 namespace Diligent
 {
 
+size_t ShaderResourceCacheVk::GetRequiredMemorySize(Uint32 NumSets, Uint32 SetSizes[])
+{
+    Uint32 TotalResources = 0;
+    for(Uint32 t=0; t < NumSets; ++t)
+        TotalResources += SetSizes[t];
+    auto MemorySize = NumSets * sizeof(DescriptorSet) + TotalResources * sizeof(Resource);
+    return MemorySize;
+}
+
 void ShaderResourceCacheVk::InitializeSets(IMemoryAllocator& MemAllocator, Uint32 NumSets, Uint32 SetSizes[])
 {
     // Memory layout:
@@ -53,6 +62,7 @@ void ShaderResourceCacheVk::InitializeSets(IMemoryAllocator& MemAllocator, Uint3
     for(Uint32 t=0; t < NumSets; ++t)
         m_TotalResources += SetSizes[t];
     auto MemorySize = NumSets * sizeof(DescriptorSet) + m_TotalResources * sizeof(Resource);
+    VERIFY_EXPR(MemorySize == GetRequiredMemorySize(NumSets, SetSizes));
     if(MemorySize > 0)
     {
         m_pMemory = ALLOCATE( *m_pAllocator, "Memory for shader resource cache data", MemorySize);

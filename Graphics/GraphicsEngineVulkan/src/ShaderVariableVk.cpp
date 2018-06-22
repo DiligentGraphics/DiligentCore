@@ -28,6 +28,21 @@
 namespace Diligent
 {
 
+size_t ShaderVariableManagerVk::GetRequiredMemorySize(const ShaderResourceLayoutVk& Layout, 
+                                                      const SHADER_VARIABLE_TYPE*   AllowedVarTypes, 
+                                                      Uint32                        NumAllowedTypes,
+                                                      Uint32&                       NumVariables)
+{
+    NumVariables = 0;
+    Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
+    for(SHADER_VARIABLE_TYPE VarType = SHADER_VARIABLE_TYPE_STATIC; VarType < SHADER_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_VARIABLE_TYPE>(VarType+1))
+    {
+        NumVariables += IsAllowedType(VarType, AllowedTypeBits) ? Layout.GetResourceCount(VarType) : 0;
+    }
+    
+    return NumVariables*sizeof(ShaderVariableVkImpl);
+}
+
 // Creates shader variable for every resource from SrcLayout whose type is one AllowedVarTypes
 void ShaderVariableManagerVk::Initialize(const ShaderResourceLayoutVk& SrcLayout, 
                                          IMemoryAllocator&             Allocator,
@@ -36,29 +51,25 @@ void ShaderVariableManagerVk::Initialize(const ShaderResourceLayoutVk& SrcLayout
                                          ShaderResourceCacheVk&        ResourceCache)
 {
     m_pResourceLayout = &SrcLayout;
-    m_pResourceCache = &ResourceCache;
+    m_pResourceCache  = &ResourceCache;
 #ifdef _DEBUG
     m_pDbgAllocator = &Allocator;
 #endif
 
+    const Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
     VERIFY_EXPR(m_NumVariables == 0);
-    m_NumVariables = 0;
-    Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
-    for(SHADER_VARIABLE_TYPE VarType = SHADER_VARIABLE_TYPE_STATIC; VarType < SHADER_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_VARIABLE_TYPE>(VarType+1))
-    {
-        m_NumVariables += IsAllowedType(VarType, AllowedTypeBits) ? SrcLayout.GetResourceCount(VarType) : 0;
-    }
+    auto MemSize = GetRequiredMemorySize(SrcLayout, AllowedVarTypes, NumAllowedTypes, m_NumVariables);
     
     if(m_NumVariables == 0)
         return;
-
-    auto *pRawMem = ALLOCATE(Allocator, "Raw memory buffer for shader variables", m_NumVariables*sizeof(ShaderVariableVkImpl));
+    
+    auto *pRawMem = ALLOCATE(Allocator, "Raw memory buffer for shader variables", MemSize);
     m_pVariables = reinterpret_cast<ShaderVariableVkImpl*>(pRawMem);
 
     Uint32 VarInd = 0;
     for(SHADER_VARIABLE_TYPE VarType = SHADER_VARIABLE_TYPE_STATIC; VarType < SHADER_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_VARIABLE_TYPE>(VarType+1))
     {
-        if( !IsAllowedType(VarType, AllowedTypeBits))
+        if (!IsAllowedType(VarType, AllowedTypeBits))
             continue;
 
         Uint32 NumResources = SrcLayout.GetResourceCount(VarType);

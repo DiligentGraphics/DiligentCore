@@ -85,6 +85,11 @@ public:
 
     void BindResources( IResourceMapping* pResourceMapping, Uint32 Flags);
 
+    static size_t GetRequiredMemorySize(const ShaderResourceLayoutVk& Layout, 
+                                        const SHADER_VARIABLE_TYPE*   AllowedVarTypes, 
+                                        Uint32                        NumAllowedTypes,
+                                        Uint32&                       NumVariables);
+
 private:
     friend ShaderVariableVkImpl;
 
