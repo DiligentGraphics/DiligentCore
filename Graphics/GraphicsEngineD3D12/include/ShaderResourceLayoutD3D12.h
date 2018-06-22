@@ -144,6 +144,10 @@ public:
     
     ~ShaderResourceLayoutD3D12();
 
+    static size_t GetRequiredMemorySize(const ShaderResourceLayoutD3D12& SrcLayout,
+                                        const SHADER_VARIABLE_TYPE*      AllowedVarTypes,
+                                        Uint32                           NumAllowedTypes);
+
     //  The method is called by
     //  - ShaderD3D12Impl class instance to initialize static resource layout and initialize shader resource cache
     //    to hold static resources
@@ -151,10 +155,10 @@ public:
     //    Root indices and descriptor table offsets are assigned during the initialization; 
     //    no shader resource cache is provided
     void Initialize(ID3D12Device*                                      pd3d12Device,
-                    const std::shared_ptr<const ShaderResourcesD3D12>& pSrcResources, 
+                    const std::shared_ptr<const ShaderResourcesD3D12>& pSrcResources,
                     IMemoryAllocator&                                  LayoutDataAllocator,
-                    const SHADER_VARIABLE_TYPE*                        VarTypes, 
-                    Uint32                                             NumAllowedTypes, 
+                    const SHADER_VARIABLE_TYPE*                        VarTypes,
+                    Uint32                                             NumAllowedTypes,
                     ShaderResourceCacheD3D12*                          pResourceCache,
                     class RootSignature*                               pRootSig);
 

@@ -82,7 +82,7 @@ PipelineStateD3D12Impl :: PipelineStateD3D12Impl(IReferenceCounters*      pRefCo
                                                  const PipelineStateDesc& PipelineDesc) : 
     TPipelineStateBase(pRefCounters, pDeviceD3D12, PipelineDesc),
     m_DummyVar(*this),
-    m_ResourceCacheDataAllocator(GetRawAllocator(), PipelineDesc.SRBAllocationGranularity),
+    m_SRBMemAllocator(GetRawAllocator()),
     m_pDefaultShaderResBinding(nullptr, STDDeleter<ShaderResourceBindingD3D12Impl, FixedBlockMemoryAllocator>(pDeviceD3D12->GetSRBAllocator()) )
 {
     auto pd3d12Device = pDeviceD3D12->GetD3D12Device();
@@ -215,7 +215,17 @@ PipelineStateD3D12Impl :: PipelineStateD3D12Impl(IReferenceCounters*      pRefCo
     }
 
     if(PipelineDesc.SRBAllocationGranularity > 1)
-        m_ResLayoutDataAllocators.Init(m_NumShaders, PipelineDesc.SRBAllocationGranularity);
+    {
+        std::array<size_t, MaxShadersInPipeline> ShaderResLayoutDataSizes = {};
+        for (Uint32 s = 0; s < m_NumShaders; ++s)
+        {
+            std::array<SHADER_VARIABLE_TYPE, 3> AllowedVarTypes = { SHADER_VARIABLE_TYPE_STATIC, SHADER_VARIABLE_TYPE_MUTABLE, SHADER_VARIABLE_TYPE_DYNAMIC };
+            ShaderResLayoutDataSizes[s] = ShaderResourceLayoutD3D12::GetRequiredMemorySize(*m_pShaderResourceLayouts[s], AllowedVarTypes.data(), static_cast<Uint32>(AllowedVarTypes.size()));
+        }
+
+        auto CacheMemorySize = m_RootSig.GetResourceCacheRequiredMemSize();
+        m_SRBMemAllocator.Initialize(PipelineDesc.SRBAllocationGranularity, m_NumShaders, ShaderResLayoutDataSizes.data(), 1, &CacheMemorySize);
+    }
 
     auto &SRBAllocator = pDeviceD3D12->GetSRBAllocator();
     // Default shader resource binding must be initialized after resource layouts are parsed!

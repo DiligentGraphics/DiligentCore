@@ -125,6 +125,27 @@ void ShaderResourceLayoutD3D12::AllocateMemory(IMemoryAllocator&                
         m_Samplers = reinterpret_cast<Sampler*>(reinterpret_cast<SRV_CBV_UAV*>(pRawMem) + TotalSrvCbvUav);
 }
 
+
+size_t ShaderResourceLayoutD3D12::GetRequiredMemorySize(const ShaderResourceLayoutD3D12& SrcLayout,
+                                                        const SHADER_VARIABLE_TYPE*      AllowedVarTypes,
+                                                        Uint32                           NumAllowedTypes)
+{
+    
+    Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
+    
+    size_t MemSize = 0;
+    for(SHADER_VARIABLE_TYPE VarType = SHADER_VARIABLE_TYPE_STATIC; VarType < SHADER_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_VARIABLE_TYPE>(VarType+1))
+    {
+        if( !IsAllowedType(VarType, AllowedTypeBits))
+            continue;
+        
+        MemSize += SrcLayout.GetCbvSrvUavCount(VarType) * sizeof(SRV_CBV_UAV);
+        MemSize += SrcLayout.GetSamplerCount(VarType)   * sizeof(Sampler);
+    }
+    return MemSize;
+}
+
+
 // Clones layout from the reference layout maintained by the pipeline state
 // Root indices and descriptor table offsets must be correct
 // Resource cache is not initialized.
@@ -200,6 +221,7 @@ ShaderResourceLayoutD3D12::ShaderResourceLayoutD3D12(IObject&                   
     }
 #endif
 }
+
 
 // http://diligentgraphics.com/diligent-engine/architecture/d3d12/shader-resource-layout#Initializing-Shader-Resource-Layouts-and-Root-Signature-in-a-Pipeline-State-Object
 // http://diligentgraphics.com/diligent-engine/architecture/d3d12/shader-resource-cache#Initializing-Shader-Resource-Layouts-in-a-Pipeline-State

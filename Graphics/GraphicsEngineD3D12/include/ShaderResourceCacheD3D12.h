@@ -115,6 +115,9 @@ public:
 
     ~ShaderResourceCacheD3D12();
 
+    static size_t GetRequiredMemorySize(Uint32            NumTables,
+                                        Uint32            TableSizes[]);
+
     void Initialize(IMemoryAllocator& MemAllocator,
                     Uint32            NumTables,
                     Uint32            TableSizes[]);

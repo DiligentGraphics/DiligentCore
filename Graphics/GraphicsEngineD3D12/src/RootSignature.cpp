@@ -536,10 +536,13 @@ void RootSignature::Finalize(ID3D12Device* pd3d12Device)
     }
 }
 
-//http://diligentgraphics.com/diligent-engine/architecture/d3d12/shader-resource-cache#Initializing-the-Cache-for-Shader-Resource-Binding-Object
-void RootSignature::InitResourceCache(RenderDeviceD3D12Impl*    pDeviceD3D12Impl,
-                                      ShaderResourceCacheD3D12& ResourceCache,
-                                      IMemoryAllocator&         CacheMemAllocator)const
+size_t RootSignature::GetResourceCacheRequiredMemSize()const
+{
+    auto CacheTableSizes = GetCacheTableSizes();
+    return ShaderResourceCacheD3D12::GetRequiredMemorySize(static_cast<Uint32>(CacheTableSizes.size()), CacheTableSizes.data());
+}
+
+std::vector<Uint32, STDAllocatorRawMem<Uint32> > RootSignature::GetCacheTableSizes()const
 {
     // Get root table size for every root index
     // m_RootParams keeps root tables sorted by the array index, not the root index
@@ -556,6 +559,16 @@ void RootSignature::InitResourceCache(RenderDeviceD3D12Impl*    pDeviceD3D12Impl
         auto &RootParam = m_RootParams.GetRootView(rv);
         CacheTableSizes[RootParam.GetRootIndex()] = 1;
     }
+
+    return CacheTableSizes;
+}
+
+//http://diligentgraphics.com/diligent-engine/architecture/d3d12/shader-resource-cache#Initializing-the-Cache-for-Shader-Resource-Binding-Object
+void RootSignature::InitResourceCache(RenderDeviceD3D12Impl*    pDeviceD3D12Impl,
+                                      ShaderResourceCacheD3D12& ResourceCache,
+                                      IMemoryAllocator&         CacheMemAllocator)const
+{
+    auto CacheTableSizes = GetCacheTableSizes();
     // Initialize resource cache to hold root tables 
     ResourceCache.Initialize(CacheMemAllocator, static_cast<Uint32>(CacheTableSizes.size()), CacheTableSizes.data());
 

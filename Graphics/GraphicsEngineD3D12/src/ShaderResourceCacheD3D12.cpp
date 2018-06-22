@@ -27,8 +27,17 @@
 
 namespace Diligent
 {
+    size_t ShaderResourceCacheD3D12::GetRequiredMemorySize(Uint32 NumTables,
+                                                           Uint32 TableSizes[])
+    {
+        size_t MemorySize = NumTables * sizeof(RootTable);
+        for(Uint32 t=0; t < NumTables; ++t)
+            MemorySize += TableSizes[t] * sizeof(Resource);
+        return MemorySize;
+    }
+
     // http://diligentgraphics.com/diligent-engine/architecture/d3d12/shader-resource-cache#Cache-Structure
-    void ShaderResourceCacheD3D12::Initialize(IMemoryAllocator &MemAllocator, Uint32 NumTables, Uint32 TableSizes[])
+    void ShaderResourceCacheD3D12::Initialize(IMemoryAllocator& MemAllocator, Uint32 NumTables, Uint32 TableSizes[])
     {
         // Memory layout:
         //                                         __________________________________________________________
@@ -49,6 +58,7 @@ namespace Diligent
         for(Uint32 t=0; t < NumTables; ++t)
             TotalResources += TableSizes[t];
         auto MemorySize = NumTables * sizeof(RootTable) + TotalResources * sizeof(Resource);
+        VERIFY_EXPR(MemorySize == GetRequiredMemorySize(NumTables, TableSizes));
         if(MemorySize > 0)
         {
             m_pMemory = ALLOCATE( *m_pAllocator, "Memory for shader resource cache data", MemorySize);

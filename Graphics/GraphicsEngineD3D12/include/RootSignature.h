@@ -292,7 +292,10 @@ public:
     void Finalize(ID3D12Device *pd3d12Device);
 
     ID3D12RootSignature* GetD3D12RootSignature()const{return m_pd3d12RootSignature;}
-    void InitResourceCache(class RenderDeviceD3D12Impl *pDeviceD3D12Impl, class ShaderResourceCacheD3D12& ResourceCache, IMemoryAllocator &CacheMemAllocator)const;
+
+    size_t GetResourceCacheRequiredMemSize()const;
+
+    void InitResourceCache(class RenderDeviceD3D12Impl* pDeviceD3D12Impl, class ShaderResourceCacheD3D12& ResourceCache, IMemoryAllocator& CacheMemAllocator)const;
     
     void InitStaticSampler(SHADER_TYPE                    ShaderType,
                           const String&                   TextureName,
@@ -347,6 +350,8 @@ private:
 #ifdef _DEBUG
     void dbgVerifyRootParameters()const;
 #endif
+    
+    std::vector<Uint32, STDAllocatorRawMem<Uint32> > GetCacheTableSizes()const;
 
     Uint32 m_TotalSrvCbvUavSlots[SHADER_VARIABLE_TYPE_NUM_TYPES];
     Uint32 m_TotalSamplerSlots[SHADER_VARIABLE_TYPE_NUM_TYPES];
