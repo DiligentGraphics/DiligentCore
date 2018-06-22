@@ -6,12 +6,14 @@ set(INTERFACE
     interface/GraphicsAccessories.h
     interface/ResourceReleaseQueue.h
     interface/RingBuffer.h
+    interface/SRBMemoryAllocator.h
     interface/VariableSizeAllocationsManager.h
     interface/VariableSizeGPUAllocationsManager.h
 )
 
 set(SOURCE 
     src/test.cpp
+    src/SRBMemoryAllocator.cpp
     src/GraphicsAccessories.cpp
 )
 

@@ -129,6 +129,7 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters*      pRefCounters
                                            const PipelineStateDesc& PipelineDesc) : 
     TPipelineStateBase(pRefCounters, pDeviceVk, PipelineDesc),
     m_DummyVar(*this),
+    m_SRBMemAllocator(GetRawAllocator()),
     m_pDefaultShaderResBinding(nullptr, STDDeleter<ShaderResourceBindingVkImpl, FixedBlockMemoryAllocator>(pDeviceVk->GetSRBAllocator()) )
 {
     const auto& LogicalDevice = pDeviceVk->GetLogicalDevice();
@@ -151,25 +152,19 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters*      pRefCounters
 
     if (PipelineDesc.SRBAllocationGranularity > 1)
     {
+        std::array<size_t, MaxShadersInPipeline> ShaderVariableDataSizes = {};
+        for (Uint32 s = 0; s < m_NumShaders; ++s)
         {
-            auto* pVarAllocatorsRawMem = ALLOCATE(ShaderResLayoutAllocator, "Raw memory for m_VariableDataAllocators", sizeof(FixedBlockMemoryAllocator) * m_NumShaders);
-            m_VariableDataAllocators = reinterpret_cast<FixedBlockMemoryAllocator*>(pVarAllocatorsRawMem);
-            for (Uint32 s = 0; s < m_NumShaders; ++s)
-            {
-                std::array<SHADER_VARIABLE_TYPE, 2> AllowedVarTypes = { SHADER_VARIABLE_TYPE_STATIC, SHADER_VARIABLE_TYPE_MUTABLE };
-                Uint32 UnusedNumVars = 0;
-                auto RequiredMemSize = ShaderVariableManagerVk::GetRequiredMemorySize(m_ShaderResourceLayouts[s], AllowedVarTypes.data(), static_cast<Uint32>(AllowedVarTypes.size()), UnusedNumVars);
-                new(m_VariableDataAllocators + s)FixedBlockMemoryAllocator(GetRawAllocator(), RequiredMemSize, PipelineDesc.SRBAllocationGranularity);
-            }
+            std::array<SHADER_VARIABLE_TYPE, 2> AllowedVarTypes = { SHADER_VARIABLE_TYPE_STATIC, SHADER_VARIABLE_TYPE_MUTABLE };
+            Uint32 UnusedNumVars = 0;
+            ShaderVariableDataSizes[s] = ShaderVariableManagerVk::GetRequiredMemorySize(m_ShaderResourceLayouts[s], AllowedVarTypes.data(), static_cast<Uint32>(AllowedVarTypes.size()), UnusedNumVars);
         }
 
-        {
-            Uint32 NumSets = 0;
-            auto DescriptorSetSizes = m_PipelineLayout.GetDescriptorSetSizes(NumSets);
-            m_ResourceCacheDataAllocator = reinterpret_cast<FixedBlockMemoryAllocator*>(ALLOCATE(ShaderResLayoutAllocator, "Raw memory for m_ResourceCacheDataAllocator", sizeof(FixedBlockMemoryAllocator)));
-            auto CacheMemorySize = ShaderResourceCacheVk::GetRequiredMemorySize(NumSets, DescriptorSetSizes.data());
-            new(m_ResourceCacheDataAllocator) FixedBlockMemoryAllocator(GetRawAllocator(), CacheMemorySize, PipelineDesc.SRBAllocationGranularity); 
-        }
+        Uint32 NumSets = 0;
+        auto DescriptorSetSizes = m_PipelineLayout.GetDescriptorSetSizes(NumSets);
+        auto CacheMemorySize = ShaderResourceCacheVk::GetRequiredMemorySize(NumSets, DescriptorSetSizes.data());
+
+        m_SRBMemAllocator.Initialize(PipelineDesc.SRBAllocationGranularity, m_NumShaders, ShaderVariableDataSizes.data(), 1, &CacheMemorySize);
     }
 
     // Create shader modules and initialize shader stages
@@ -414,26 +409,10 @@ PipelineStateVkImpl::~PipelineStateVkImpl()
         }
     }
 
-    // Default SRB must be destroyed before shader variable and
-    // shader resource cache memory allocators
+    // Default SRB must be destroyed before SRB allocators
     m_pDefaultShaderResBinding.reset();
 
     auto& RawAllocator = GetRawAllocator();
-
-    if (m_ResourceCacheDataAllocator != nullptr)
-    {
-        m_ResourceCacheDataAllocator->~FixedBlockMemoryAllocator();
-        RawAllocator.Free(m_ResourceCacheDataAllocator);
-    }
-
-    if (m_VariableDataAllocators != nullptr)
-    {
-        for (Uint32 s=0; s < m_NumShaders; ++s)
-        {
-            m_VariableDataAllocators[s].~FixedBlockMemoryAllocator();
-        }
-        RawAllocator.Free(m_VariableDataAllocators);
-    }
 
     for (Uint32 s=0; s < m_NumShaders; ++s)
     {

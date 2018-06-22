@@ -41,7 +41,8 @@ ShaderResourceBindingVkImpl::ShaderResourceBindingVkImpl( IReferenceCounters* pR
     auto *pRenderDeviceVkImpl = pPSO->GetDevice<RenderDeviceVkImpl>();
     // This will only allocate memory and initialize descriptor sets in the resource cache
     // Resources will be initialized by InitializeResourceMemoryInCache()
-    pPSO->GetPipelineLayout().InitResourceCache(pRenderDeviceVkImpl, m_ShaderResourceCache, pPSO->GetResourceCacheDataAllocator());
+    auto& ResourceCacheDataAllocator = pPSO->GetSRBMemoryAllocator().GetResourceCacheDataAllocator(0);
+    pPSO->GetPipelineLayout().InitResourceCache(pRenderDeviceVkImpl, m_ShaderResourceCache, ResourceCacheDataAllocator);
     
     auto *pVarMgrsRawMem = ALLOCATE(GetRawAllocator(), "Raw memory for ShaderVariableManagerVk", m_NumShaders * sizeof(ShaderVariableManagerVk));
     m_pShaderVarMgrs = reinterpret_cast<ShaderVariableManagerVk*>(pVarMgrsRawMem);
@@ -52,7 +53,7 @@ ShaderResourceBindingVkImpl::ShaderResourceBindingVkImpl( IReferenceCounters* pR
         auto ShaderType = pShader->GetDesc().ShaderType;
         auto ShaderInd = GetShaderTypeIndex(ShaderType);
         
-        auto &VarDataAllocator = pPSO->GetShaderVariableDataAllocator(s);
+        auto &VarDataAllocator = pPSO->GetSRBMemoryAllocator().GetShaderVariableDataAllocator(s);
 
         const auto &SrcLayout = pPSO->GetShaderResLayout(s);
         // Use source layout to initialize resource memory in the cache
@@ -75,7 +76,7 @@ ShaderResourceBindingVkImpl::~ShaderResourceBindingVkImpl()
     PipelineStateVkImpl* pPSO = ValidatedCast<PipelineStateVkImpl>(m_pPSO);
     for(Uint32 s = 0; s < m_NumShaders; ++s)
     {
-        auto &VarDataAllocator = pPSO->GetShaderVariableDataAllocator(s);
+        auto &VarDataAllocator = pPSO->GetSRBMemoryAllocator().GetShaderVariableDataAllocator(s);
         m_pShaderVarMgrs[s].Destroy(VarDataAllocator);
         m_pShaderVarMgrs[s].~ShaderVariableManagerVk();
     }

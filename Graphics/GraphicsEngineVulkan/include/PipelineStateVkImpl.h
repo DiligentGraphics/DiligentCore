@@ -34,6 +34,7 @@
 #include "PipelineLayout.h"
 #include "ShaderResourceLayoutVk.h"
 #include "FixedBlockMemoryAllocator.h"
+#include "SRBMemoryAllocator.h"
 #include "VulkanUtilities/VulkanObjectWrappers.h"
 #include "VulkanUtilities/VulkanCommandBuffer.h"
 #include "PipelineLayout.h"
@@ -84,14 +85,9 @@ public:
         return m_ShaderResourceLayouts[ShaderInd];
     }
 
-    IMemoryAllocator& GetResourceCacheDataAllocator()
+    SRBMemoryAllocator& GetSRBMemoryAllocator()
     {
-        return m_ResourceCacheDataAllocator != nullptr ? *m_ResourceCacheDataAllocator : GetRawAllocator();
-    }
-    IMemoryAllocator& GetShaderVariableDataAllocator(Uint32 ActiveShaderInd)
-    {
-        VERIFY_EXPR(ActiveShaderInd < m_NumShaders);
-        return m_VariableDataAllocators != nullptr ? m_VariableDataAllocators[ActiveShaderInd] : GetRawAllocator();
+        return m_SRBMemAllocator;
     }
 
     IShaderVariable *GetDummyShaderVar(){return &m_DummyVar;}
@@ -104,9 +100,8 @@ private:
   
     ShaderResourceLayoutVk*    m_ShaderResourceLayouts  = nullptr;
     
-    // Use separate fixed-block allocator allocator for every shader stage
-    FixedBlockMemoryAllocator* m_VariableDataAllocators     = nullptr;
-    FixedBlockMemoryAllocator* m_ResourceCacheDataAllocator = nullptr;
+    // SRB memory allocator must be declared before m_pDefaultShaderResBinding
+    SRBMemoryAllocator m_SRBMemAllocator;
     
     std::array<VulkanUtilities::ShaderModuleWrapper, MaxShadersInPipeline> m_ShaderModules;
 
