@@ -119,7 +119,7 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*      pRefCoun
         std::array<size_t, MaxShadersInPipeline> ShaderResCacheDataSizes  = {};
         for (Uint32 s = 0; s < m_NumShaders; ++s)
         {
-            auto* pShader = ValidatedCast<ShaderD3D11Impl>(m_ppShaders[s]);
+            auto* pShader = GetShader<const ShaderD3D11Impl>(s);
             const auto& ShaderResources = *pShader->GetResources();
             std::array<SHADER_VARIABLE_TYPE, 2> AllowedVarTypes = { SHADER_VARIABLE_TYPE_MUTABLE, SHADER_VARIABLE_TYPE_DYNAMIC };
             ShaderResLayoutDataSizes[s] = ShaderResourceLayoutD3D11::GetRequiredMemorySize(ShaderResources, AllowedVarTypes.data(), static_cast<Uint32>(AllowedVarTypes.size()));
@@ -201,8 +201,8 @@ bool PipelineStateD3D11Impl::IsCompatibleWith(const IPipelineState* pPSO)const
 
     for (Uint32 s = 0; s < m_NumShaders; ++s)
     {
-        auto* pShader0 = ValidatedCast<ShaderD3D11Impl>(m_ppShaders[s]);
-        auto* pShader1 = ValidatedCast<ShaderD3D11Impl>(pPSOD3D11->m_ppShaders[s]);
+        auto* pShader0 = GetShader<const ShaderD3D11Impl>(s);
+        auto* pShader1 = pPSOD3D11->GetShader<const ShaderD3D11Impl>(s);
         if (pShader0->GetShaderTypeIndex() != pShader1->GetShaderTypeIndex())
             return false;
         const ShaderResourcesD3D11* pRes0 = pShader0->GetResources().get();

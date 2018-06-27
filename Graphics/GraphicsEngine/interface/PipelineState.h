@@ -62,19 +62,19 @@ struct SampleDesc
 struct GraphicsPipelineDesc
 {
     /// Vertex shader to be used with the pipeline
-    IShader *pVS = nullptr;
+    IShader* pVS = nullptr;
 
     /// Pixel shader to be used with the pipeline
-    IShader *pPS = nullptr;
+    IShader* pPS = nullptr;
 
     /// Domain shader to be used with the pipeline
-    IShader *pDS = nullptr;
+    IShader* pDS = nullptr;
 
     /// Hull shader to be used with the pipeline
-    IShader *pHS = nullptr;
+    IShader* pHS = nullptr;
 
     /// Geometry shader to be used with the pipeline
-    IShader *pGS = nullptr;
+    IShader* pGS = nullptr;
     
     //D3D12_STREAM_OUTPUT_DESC StreamOutput;
     
@@ -136,10 +136,7 @@ struct GraphicsPipelineDesc
 struct ComputePipelineDesc
 {
     /// Compute shader to be used with the pipeline
-    IShader *pCS;
-    ComputePipelineDesc() : 
-        pCS(nullptr)
-    {}
+    IShader* pCS = nullptr;
 };
 
 /// Pipeline state description

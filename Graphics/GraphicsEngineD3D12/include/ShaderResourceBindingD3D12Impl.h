@@ -47,28 +47,25 @@ public:
                                    bool                           IsPSOInternal);
     ~ShaderResourceBindingD3D12Impl();
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
+    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject** ppInterface )override;
 
-    virtual void BindResources(Uint32 ShaderFlags, IResourceMapping *pResMapping, Uint32 Flags)override;
+    virtual void BindResources(Uint32 ShaderFlags, IResourceMapping* pResMapping, Uint32 Flags)override;
 
-    virtual IShaderVariable *GetVariable(SHADER_TYPE ShaderType, const char *Name)override;
+    virtual IShaderVariable* GetVariable(SHADER_TYPE ShaderType, const char* Name)override;
 
-    ShaderResourceLayoutD3D12& GetResourceLayout(SHADER_TYPE ResType)
+    ShaderResourceLayoutD3D12& GetResourceLayout(Uint32 ResLayoutInd)
     {
-        auto ShaderInd = GetShaderTypeIndex(ResType);
-        auto ResLayoutInd = m_ResourceLayoutIndex[ShaderInd];
-        VERIFY(ResLayoutInd >= 0, "Shader resource layout is not initialized");
-        VERIFY_EXPR(ResLayoutInd < (Int32)m_NumShaders);
+        VERIFY_EXPR(ResLayoutInd < m_NumShaders);
         return m_pResourceLayouts[ResLayoutInd];
     }
     ShaderResourceCacheD3D12& GetResourceCache(){return m_ShaderResourceCache;}
 
 #ifdef VERIFY_SHADER_BINDINGS
-    void dbgVerifyResourceBindings(const PipelineStateD3D12Impl *pPSO);
+    void dbgVerifyResourceBindings(const PipelineStateD3D12Impl* pPSO);
 #endif
 
     bool StaticResourcesInitialized()const{return m_bStaticResourcesInitialized;}
-    void InitializeStaticResources(const PipelineStateD3D12Impl *pPSO);
+    void InitializeStaticResources(const PipelineStateD3D12Impl* pPSO);
 
 private:
 
@@ -77,7 +74,7 @@ private:
     // Resource layout index in m_ResourceLayouts[] array for every shader stage
     Int8 m_ResourceLayoutIndex[6] = {-1, -1, -1, -1, -1, -1};
     bool m_bStaticResourcesInitialized = false;
-    Uint32 m_NumShaders = 0;
+    const Uint32 m_NumShaders = 0;
 };
 
 }

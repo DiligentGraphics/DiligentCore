@@ -143,7 +143,7 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters*      pRefCounters
     for (Uint32 s=0; s < m_NumShaders; ++s)
     {
         new (m_ShaderResourceLayouts + s) ShaderResourceLayoutVk(*this, LogicalDevice, GetRawAllocator());
-        auto *pShaderVk = ValidatedCast<ShaderVkImpl>(m_ppShaders[s]);
+        auto* pShaderVk = GetShader<const ShaderVkImpl>(s);
         ShaderResources[s] = pShaderVk->GetShaderResources();
         ShaderSPIRVs[s] = pShaderVk->GetSPIRV();
     }
@@ -171,7 +171,7 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters*      pRefCounters
     std::array<VkPipelineShaderStageCreateInfo, MaxShadersInPipeline> ShaderStages = {};
     for (Uint32 s = 0; s < m_NumShaders; ++s)
     {
-        auto *pShader = m_ppShaders[s];
+        auto* pShader = m_ppShaders[s];
         auto ShaderType = pShader->GetDesc().ShaderType;
 
         auto& StageCI = ShaderStages[s];
@@ -441,7 +441,7 @@ void PipelineStateVkImpl::BindShaderResources(IResourceMapping *pResourceMapping
 
 void PipelineStateVkImpl::CreateShaderResourceBinding(IShaderResourceBinding **ppShaderResourceBinding)
 {
-    auto *pRenderDeviceVk = GetDevice<RenderDeviceVkImpl>();
+    auto* pRenderDeviceVk = GetDevice<RenderDeviceVkImpl>();
     auto& SRBAllocator = pRenderDeviceVk->GetSRBAllocator();
     auto pResBindingVk = NEW_RC_OBJ(SRBAllocator, "ShaderResourceBindingVkImpl instance", ShaderResourceBindingVkImpl)(this, false);
     pResBindingVk->QueryInterface(IID_ShaderResourceBinding, reinterpret_cast<IObject**>(ppShaderResourceBinding));
@@ -470,15 +470,15 @@ bool PipelineStateVkImpl::IsCompatibleWith(const IPipelineState *pPSO)const
         {
             for (Uint32 s = 0; s < m_NumShaders; ++s)
             {
-                auto *pShader0 = ValidatedCast<ShaderVkImpl>(m_ppShaders[s]);
-                auto *pShader1 = ValidatedCast<ShaderVkImpl>(pPSOVk->m_ppShaders[s]);
+                auto* pShader0 = GetShader<const ShaderVkImpl>(s);
+                auto* pShader1 = pPSOVk->GetShader<const ShaderVkImpl>(s);
                 if (pShader0->GetDesc().ShaderType != pShader1->GetDesc().ShaderType)
                 {
                     IsCompatibleShaders = false;
                     break;
                 }
-                const auto *pRes0 = pShader0->GetShaderResources().get();
-                const auto *pRes1 = pShader1->GetShaderResources().get();
+                const auto* pRes0 = pShader0->GetShaderResources().get();
+                const auto* pRes1 = pShader1->GetShaderResources().get();
                 if (!pRes0->IsCompatibleWith(*pRes1))
                 {
                     IsCompatibleShaders = false;
@@ -514,11 +514,11 @@ void PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBind
 
     // If the shaders contain no resources or static resources only, shader resource binding may be null. 
     // In this case use special internal SRB object
-    auto *pResBindingVkImpl = pShaderResourceBinding ? ValidatedCast<ShaderResourceBindingVkImpl>(pShaderResourceBinding) : m_pDefaultShaderResBinding.get();
+    auto* pResBindingVkImpl = pShaderResourceBinding ? ValidatedCast<ShaderResourceBindingVkImpl>(pShaderResourceBinding) : m_pDefaultShaderResBinding.get();
     
 #ifdef VERIFY_SHADER_BINDINGS
     {
-        auto *pRefPSO = pResBindingVkImpl->GetPipelineState();
+        auto* pRefPSO = pResBindingVkImpl->GetPipelineState();
         if ( IsIncompatibleWith(pRefPSO) )
         {
             LOG_ERROR_MESSAGE("Shader resource binding is incompatible with the pipeline state \"", m_Desc.Name, "\". Operation will be ignored.");
@@ -534,7 +534,7 @@ void PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBind
     {
         for (Uint32 s = 0; s < m_NumShaders; ++s)
         {
-            auto *pShaderVk = ValidatedCast<ShaderVkImpl>( m_ppShaders[s] );
+            auto* pShaderVk = GetShader<ShaderVkImpl>(s);
 #ifdef VERIFY_SHADER_BINDINGS
             pShaderVk->DbgVerifyStaticResourceBindings();
 #endif

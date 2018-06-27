@@ -66,7 +66,11 @@ public:
     
     const RootSignature& GetRootSignature()const{return m_RootSig;}
     
-    const ShaderResourceLayoutD3D12& GetShaderResLayout(SHADER_TYPE ShaderType)const;
+    const ShaderResourceLayoutD3D12& GetShaderResLayout(Uint32 ShaderInd)const
+    {
+        VERIFY_EXPR(ShaderInd < m_NumShaders);
+        return m_pShaderResourceLayouts[ShaderInd];
+    }
     
     bool dbgContainsShaderResources()const;
 
@@ -79,8 +83,6 @@ public:
 
 private:
 
-    void ParseShaderResourceLayout(IShader *pShader);
-
     /// D3D12 device
     CComPtr<ID3D12PipelineState> m_pd3d12PSO;
     RootSignature m_RootSig;
@@ -89,7 +91,7 @@ private:
     // Must be defined before default SRB
     SRBMemoryAllocator m_SRBMemAllocator;
 
-    ShaderResourceLayoutD3D12* m_pShaderResourceLayouts[6] = {};
+    ShaderResourceLayoutD3D12* m_pShaderResourceLayouts;
 
     // Do not use strong reference to avoid cyclic references
     // Default SRB must be defined after m_SRBMemAllocator

@@ -63,8 +63,8 @@ public:
     ID3DBlob* GetBytecode(){return m_pShaderByteCode;}
 
     ShaderResourceLayoutD3D11& GetStaticResourceLayout(){return m_StaticResLayout;}
-    const std::shared_ptr<const ShaderResourcesD3D11>& GetResources(){return m_pShaderResources;}
-    Uint32 GetShaderTypeIndex(){return m_ShaderTypeIndex;}
+    const std::shared_ptr<const ShaderResourcesD3D11>& GetResources()const{return m_pShaderResources;}
+    Uint32 GetShaderTypeIndex()const{return m_ShaderTypeIndex;}
 
 private:
 

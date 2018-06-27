@@ -52,7 +52,7 @@ void PipelineStateGLImpl::LinkGLProgram(bool bIsProgramPipelineSupported)
         m_ShaderResourceLayoutHash = 0;
         for (Uint32 Shader = 0; Shader < m_NumShaders; ++Shader)
         {
-            auto *pShaderGL = static_cast<ShaderGLImpl*>(m_ppShaders[Shader]);
+            auto *pShaderGL = GetShader<ShaderGLImpl>(Shader);
             HashCombine(m_ShaderResourceLayoutHash, pShaderGL->m_GlProgObj.GetAllResources().GetHash());
         }
     }
@@ -62,7 +62,7 @@ void PipelineStateGLImpl::LinkGLProgram(bool bIsProgramPipelineSupported)
         m_GLProgram.Create();
         for( Uint32 Shader = 0; Shader < m_NumShaders; ++Shader )
         {
-            auto *pCurrShader = static_cast<ShaderGLImpl*>(m_ppShaders[Shader]);
+            auto *pCurrShader = GetShader<ShaderGLImpl>(Shader);
             glAttachShader( m_GLProgram, pCurrShader->m_GLShaderObj );
             CHECK_GL_ERROR( "glAttachShader() failed" );
         }
@@ -91,7 +91,7 @@ void PipelineStateGLImpl::LinkGLProgram(bool bIsProgramPipelineSupported)
         // Detach shaders from the program object
         for( Uint32 Shader = 0; Shader < m_NumShaders; ++Shader )
         {
-            auto *pCurrShader = static_cast<ShaderGLImpl*>(m_ppShaders[Shader]);
+            auto *pCurrShader = GetShader<ShaderGLImpl>(Shader);
             glDetachShader( m_GLProgram, pCurrShader->m_GLShaderObj );
             CHECK_GL_ERROR( "glDetachShader() failed" );
         }
@@ -101,7 +101,7 @@ void PipelineStateGLImpl::LinkGLProgram(bool bIsProgramPipelineSupported)
         SHADER_VARIABLE_TYPE DefaultVarType = SHADER_VARIABLE_TYPE_STATIC;
         for( Uint32 Shader = 0; Shader < m_NumShaders; ++Shader )
         {
-            auto *pCurrShader = static_cast<ShaderGLImpl*>(m_ppShaders[Shader]);
+            auto *pCurrShader = GetShader<ShaderGLImpl>(Shader);
             const auto& Desc = pCurrShader->GetDesc();
             if (Shader == 0)
             {
@@ -190,7 +190,7 @@ GLObjectWrappers::GLPipelineObj &PipelineStateGLImpl::GetGLProgramPipeline(GLCon
         GLuint Pipeline = it->second;
         for (Uint32 Shader = 0; Shader < m_NumShaders; ++Shader)
         {
-            auto *pCurrShader = static_cast<ShaderGLImpl*>(m_ppShaders[Shader]);
+            auto *pCurrShader = GetShader<ShaderGLImpl>(Shader);
             auto GLShaderBit = ShaderTypeToGLShaderBit(pCurrShader->GetDesc().ShaderType);
             // If the program has an active code for each stage mentioned in set flags,
             // then that code will be used by the pipeline. If program is 0, then the given

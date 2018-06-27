@@ -333,6 +333,8 @@ public:
 
     IObject& GetOwner(){return m_Owner;}
 
+    const ShaderResourcesD3D12& GetShaderResources(){return *m_pResources;}
+
 private:
     void InitVariablesHashMap();
 

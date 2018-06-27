@@ -60,8 +60,6 @@ public:
         m_LayoutElements( PSODesc.GraphicsPipeline.InputLayout.NumElements, LayoutElement(), STD_ALLOCATOR_RAW_MEM(LayoutElement, GetRawAllocator(), "Allocator for vector<LayoutElement>" ) ),
         m_NumShaders(0)
     {
-        memset(m_ppShaders, 0, sizeof(m_ppShaders));
-
         if (this->m_Desc.IsComputePipeline)
         {
             const auto &ComputePipeline = PSODesc.ComputePipeline;
@@ -73,7 +71,7 @@ public:
 #define VALIDATE_SHADER_TYPE(Shader, ExpectedType, ShaderName)\
             if (Shader && Shader->GetDesc().ShaderType != ExpectedType)   \
             {                                                   \
-                LOG_ERROR_AND_THROW( GetShaderTypeLiteralName(Shader->GetDesc().ShaderType), " is not valid type for ", ShaderName, " shader" );\
+                LOG_ERROR_AND_THROW( GetShaderTypeLiteralName(Shader->GetDesc().ShaderType), " is not a valid type for ", ShaderName, " shader" );\
             }
             VALIDATE_SHADER_TYPE(ComputePipeline.pCS, SHADER_TYPE_COMPUTE, "compute")
 
@@ -208,6 +206,19 @@ public:
     IShader* const* GetShaders()const{return m_ppShaders;}
     Uint32 GetNumShaders()const{return m_NumShaders;}
 
+    template<typename ShaderType>
+    ShaderType* GetShader(Uint32 ShaderInd)
+    {
+        VERIFY_EXPR(ShaderInd < m_NumShaders);
+        return ValidatedCast<ShaderType>(m_ppShaders[ShaderInd]);
+    }
+    template<typename ShaderType>
+    ShaderType* GetShader(Uint32 ShaderInd)const
+    {
+        VERIFY_EXPR(ShaderInd < m_NumShaders);
+        return ValidatedCast<ShaderType>(m_ppShaders[ShaderInd]);
+    }
+
     // This function only compares shader resource layout hashes, so
     // it can potentially give false negatives
     bool IsIncompatibleWith(IPipelineState *pPSO)const
@@ -230,8 +241,8 @@ protected:
     RefCntAutoPtr<IShader> m_pDS; ///< Strong reference to the domain shader
     RefCntAutoPtr<IShader> m_pHS; ///< Strong reference to the hull shader
     RefCntAutoPtr<IShader> m_pCS; ///< Strong reference to the compute shader
-    IShader *m_ppShaders[5];  ///< Array of pointers to shaders that this PSO uses
-    Uint32 m_NumShaders; ///< Number of shaders that this PSO uses
+    IShader* m_ppShaders[5] = {}; ///< Array of pointers to the shaders used by this PSO
+    Uint32 m_NumShaders = 0;      ///< Number of shaders that this PSO uses
     size_t m_ShaderResourceLayoutHash = 0;///< Hash computed from the shader resource layout
 };
 
