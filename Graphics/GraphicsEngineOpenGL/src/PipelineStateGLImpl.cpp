@@ -143,10 +143,7 @@ void PipelineStateGLImpl::BindShaderResources(IResourceMapping *pResourceMapping
 {
     if( GetDevice()->GetDeviceCaps().bSeparableProgramSupported )
     {
-        for( Uint32 s = 0; s < m_NumShaders; ++s )
-        {
-            m_ppShaders[s]->BindResources( pResourceMapping, Flags );
-        }
+        TPipelineStateBase::BindShaderResources(pResourceMapping, Flags);
     }
     else
     {

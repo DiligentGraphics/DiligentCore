@@ -67,8 +67,6 @@ public:
     virtual ID3D11HullShader*     GetD3D11HullShader()override final;
     virtual ID3D11ComputeShader*  GetD3D11ComputeShader()override final;
 
-    virtual void BindShaderResources( IResourceMapping *pResourceMapping, Uint32 Flags )override final;
-
     virtual void CreateShaderResourceBinding( IShaderResourceBinding **ppShaderResourceBinding )override final;
 
     virtual bool IsCompatibleWith(const IPipelineState *pPSO)const override final;

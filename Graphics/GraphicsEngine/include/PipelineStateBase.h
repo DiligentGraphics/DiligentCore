@@ -226,6 +226,12 @@ public:
         return m_ShaderResourceLayoutHash != ValidatedCast<PipelineStateBase>(pPSO)->m_ShaderResourceLayoutHash;
     }
 
+    virtual void BindShaderResources( IResourceMapping *pResourceMapping, Uint32 Flags )override
+    {
+        for(Uint32 s=0; s < m_NumShaders; ++s)
+            m_ppShaders[s]->BindResources(pResourceMapping, Flags);
+    }
+
 protected:
     std::vector<LayoutElement, STDAllocatorRawMem<LayoutElement> > m_LayoutElements;
 

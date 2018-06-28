@@ -47,9 +47,9 @@ public:
     /// Queries the specific interface, see IObject::QueryInterface() for details
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
 
-    virtual void BindShaderResources( IResourceMapping *pResourceMapping, Uint32 Flags )override;
+    virtual void BindShaderResources( IResourceMapping *pResourceMapping, Uint32 Flags )override final;
     
-    virtual void CreateShaderResourceBinding( IShaderResourceBinding **ppShaderResourceBinding )override;
+    virtual void CreateShaderResourceBinding( IShaderResourceBinding **ppShaderResourceBinding )override final;
 
     virtual bool IsCompatibleWith(const IPipelineState *pPSO)const override final;
 

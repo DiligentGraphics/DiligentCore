@@ -51,9 +51,7 @@ public:
    
     virtual ID3D12PipelineState *GetD3D12PipelineState()const override final{return m_pd3d12PSO;}
     
-    virtual void BindShaderResources( IResourceMapping *pResourceMapping, Uint32 Flags )override;
-
-    virtual void CreateShaderResourceBinding( IShaderResourceBinding **ppShaderResourceBinding )override;
+    virtual void CreateShaderResourceBinding( IShaderResourceBinding **ppShaderResourceBinding )override final;
 
     virtual bool IsCompatibleWith(const IPipelineState *pPSO)const override final;
 

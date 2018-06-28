@@ -161,22 +161,6 @@ ID3D11InputLayout* PipelineStateD3D11Impl::GetD3D11InputLayout()
     return m_pd3d11InputLayout;
 }
 
-void PipelineStateD3D11Impl::BindShaderResources(IResourceMapping* pResourceMapping, Uint32 Flags)
-{
-    if( m_Desc.IsComputePipeline )
-    { 
-        if(m_pCS)m_pCS->BindResources(pResourceMapping, Flags);
-    }
-    else
-    {
-        if(m_pVS)m_pVS->BindResources(pResourceMapping, Flags);
-        if(m_pPS)m_pPS->BindResources(pResourceMapping, Flags);
-        if(m_pGS)m_pGS->BindResources(pResourceMapping, Flags);
-        if(m_pDS)m_pDS->BindResources(pResourceMapping, Flags);
-        if(m_pHS)m_pHS->BindResources(pResourceMapping, Flags);
-    }
-}
-
 void PipelineStateD3D11Impl::CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding)
 {
     auto* pRenderDeviceD3D11 = ValidatedCast<RenderDeviceD3D11Impl>( GetDevice() );

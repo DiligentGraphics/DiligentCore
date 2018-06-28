@@ -378,7 +378,7 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters*      pRefCounters
             m_HasStaticResources = true;
 
         if (Layout.GetResourceCount(SHADER_VARIABLE_TYPE_MUTABLE) != 0 ||
-           Layout.GetResourceCount(SHADER_VARIABLE_TYPE_DYNAMIC) != 0)
+            Layout.GetResourceCount(SHADER_VARIABLE_TYPE_DYNAMIC) != 0)
             m_HasNonStaticResources = true;
     }
 
@@ -423,21 +423,6 @@ PipelineStateVkImpl::~PipelineStateVkImpl()
 
 IMPLEMENT_QUERY_INTERFACE( PipelineStateVkImpl, IID_PipelineStateVk, TPipelineStateBase )
 
-void PipelineStateVkImpl::BindShaderResources(IResourceMapping *pResourceMapping, Uint32 Flags)
-{
-    if ( m_Desc.IsComputePipeline )
-    { 
-        if (m_pCS)m_pCS->BindResources(pResourceMapping, Flags);
-    }
-    else
-    {
-        if (m_pVS)m_pVS->BindResources(pResourceMapping, Flags);
-        if (m_pPS)m_pPS->BindResources(pResourceMapping, Flags);
-        if (m_pGS)m_pGS->BindResources(pResourceMapping, Flags);
-        if (m_pDS)m_pDS->BindResources(pResourceMapping, Flags);
-        if (m_pHS)m_pHS->BindResources(pResourceMapping, Flags);
-    }
-}
 
 void PipelineStateVkImpl::CreateShaderResourceBinding(IShaderResourceBinding **ppShaderResourceBinding)
 {
