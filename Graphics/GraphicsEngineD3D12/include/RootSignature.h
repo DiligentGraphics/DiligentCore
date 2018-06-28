@@ -25,6 +25,7 @@
 
 /// \file
 /// Declaration of Diligent::RootSignature class
+#include <array>
 #include "ShaderD3DBase.h"
 #include "ShaderResourceLayoutD3D12.h"
 
@@ -328,13 +329,15 @@ public:
 
     Uint32 GetTotalSrvCbvUavSlots(SHADER_VARIABLE_TYPE VarType)const
     {
-        VERIFY_EXPR(VarType >= 0 && VarType < SHADER_VARIABLE_TYPE_NUM_TYPES);
         return m_TotalSrvCbvUavSlots[VarType];
     }
     Uint32 GetTotalSamplerSlots(SHADER_VARIABLE_TYPE VarType)const
     {
-        VERIFY_EXPR(VarType >= 0 && VarType < SHADER_VARIABLE_TYPE_NUM_TYPES);
         return m_TotalSamplerSlots[VarType];
+    }
+    Uint32 GetTotalRootViews(SHADER_VARIABLE_TYPE VarType)const
+    {
+        return m_TotalRootViews[VarType];
     }
 
     bool IsSameAs(const RootSignature& RS)const
@@ -353,8 +356,9 @@ private:
     
     std::vector<Uint32, STDAllocatorRawMem<Uint32> > GetCacheTableSizes()const;
 
-    Uint32 m_TotalSrvCbvUavSlots[SHADER_VARIABLE_TYPE_NUM_TYPES];
-    Uint32 m_TotalSamplerSlots[SHADER_VARIABLE_TYPE_NUM_TYPES];
+    std::array<Uint32, SHADER_VARIABLE_TYPE_NUM_TYPES> m_TotalSrvCbvUavSlots = {};
+    std::array<Uint32, SHADER_VARIABLE_TYPE_NUM_TYPES> m_TotalSamplerSlots   = {};
+    std::array<Uint32, SHADER_VARIABLE_TYPE_NUM_TYPES> m_TotalRootViews      = {};
     
     CComPtr<ID3D12RootSignature> m_pd3d12RootSignature;
 
@@ -439,9 +443,9 @@ private:
     // in m_RootParams (NOT the Root Index!), for every variable type 
     // (static, mutable, dynamic) and every shader type,
     // or -1, if the table is not yet assigned to the combination
-    Uint8 m_SrvCbvUavRootTablesMap[SHADER_VARIABLE_TYPE_NUM_TYPES * 6];
+    std::array<Uint8, SHADER_VARIABLE_TYPE_NUM_TYPES * 6> m_SrvCbvUavRootTablesMap;
     // This array contains the same data for Sampler root table
-    Uint8 m_SamplerRootTablesMap[SHADER_VARIABLE_TYPE_NUM_TYPES * 6];
+    std::array<Uint8, SHADER_VARIABLE_TYPE_NUM_TYPES * 6> m_SamplerRootTablesMap;
 
     RootParamsManager m_RootParams;
     

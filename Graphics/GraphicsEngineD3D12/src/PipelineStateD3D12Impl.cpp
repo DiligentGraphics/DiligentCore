@@ -92,7 +92,7 @@ PipelineStateD3D12Impl :: PipelineStateD3D12Impl(IReferenceCounters*      pRefCo
         D3D12_COMPUTE_PIPELINE_STATE_DESC d3d12PSODesc = {};
         d3d12PSODesc.pRootSignature = nullptr;
         
-        auto *pByteCode = ValidatedCast<ShaderD3D12Impl>(ComputePipeline.pCS)->GetShaderByteCode();
+        auto* pByteCode = ValidatedCast<ShaderD3D12Impl>(ComputePipeline.pCS)->GetShaderByteCode();
         d3d12PSODesc.CS.pShaderBytecode = pByteCode->GetBufferPointer();
         d3d12PSODesc.CS.BytecodeLength = pByteCode->GetBufferSize();
 
@@ -132,7 +132,7 @@ PipelineStateD3D12Impl :: PipelineStateD3D12Impl(IReferenceCounters*      pRefCo
                 case SHADER_TYPE_DOMAIN:   pd3d12ShaderBytecode = &d3d12PSODesc.DS; break;
                 default: UNEXPECTED("Unexpected shader type");
             }
-            auto *pByteCode = pShaderD3D12->GetShaderByteCode();
+            auto* pByteCode = pShaderD3D12->GetShaderByteCode();
             pd3d12ShaderBytecode->pShaderBytecode = pByteCode->GetBufferPointer();
             pd3d12ShaderBytecode->BytecodeLength  = pByteCode->GetBufferSize();
         }
@@ -213,9 +213,17 @@ PipelineStateD3D12Impl :: PipelineStateD3D12Impl(IReferenceCounters*      pRefCo
         m_SRBMemAllocator.Initialize(PipelineDesc.SRBAllocationGranularity, m_NumShaders, ShaderResLayoutDataSizes.data(), 1, &CacheMemorySize);
     }
 
-    auto& SRBAllocator = pDeviceD3D12->GetSRBAllocator();
-    // Default shader resource binding must be initialized after resource layouts are parsed!
-    m_pDefaultShaderResBinding.reset( NEW_RC_OBJ(SRBAllocator, "ShaderResourceBindingD3D12Impl instance", ShaderResourceBindingD3D12Impl, this)(this, true) );
+    // If pipeline state contains only static resources, create default SRB
+    if( (m_RootSig.GetTotalSrvCbvUavSlots(SHADER_VARIABLE_TYPE_STATIC) != 0 || m_RootSig.GetTotalRootViews(SHADER_VARIABLE_TYPE_STATIC) != 0 ) &&
+        m_RootSig.GetTotalSrvCbvUavSlots(SHADER_VARIABLE_TYPE_MUTABLE) == 0 &&
+        m_RootSig.GetTotalSrvCbvUavSlots(SHADER_VARIABLE_TYPE_DYNAMIC) == 0 &&
+        m_RootSig.GetTotalRootViews(SHADER_VARIABLE_TYPE_MUTABLE) == 0 &&
+        m_RootSig.GetTotalRootViews(SHADER_VARIABLE_TYPE_DYNAMIC) == 0)
+    {
+        auto& SRBAllocator = pDeviceD3D12->GetSRBAllocator();
+        // Default shader resource binding must be initialized after resource layouts are parsed!
+        m_pDefaultShaderResBinding.reset( NEW_RC_OBJ(SRBAllocator, "ShaderResourceBindingD3D12Impl instance", ShaderResourceBindingD3D12Impl, this)(this, true) );
+    }
 
     m_ShaderResourceLayoutHash = m_RootSig.GetHash();
 }
@@ -230,7 +238,7 @@ PipelineStateD3D12Impl::~PipelineStateD3D12Impl()
     ShaderResLayoutAllocator.Free(m_pShaderResourceLayouts);
 
     // D3D12 object can only be destroyed when it is no longer used by the GPU
-    auto *pDeviceD3D12Impl = ValidatedCast<RenderDeviceD3D12Impl>(GetDevice());
+    auto* pDeviceD3D12Impl = GetDevice<RenderDeviceD3D12Impl>();
     pDeviceD3D12Impl->SafeReleaseD3D12Object(m_pd3d12PSO);
 }
 
@@ -254,7 +262,7 @@ void PipelineStateD3D12Impl::BindShaderResources(IResourceMapping* pResourceMapp
 
 void PipelineStateD3D12Impl::CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding)
 {
-    auto *pRenderDeviceD3D12 = ValidatedCast<RenderDeviceD3D12Impl>( GetDevice() );
+    auto* pRenderDeviceD3D12 = GetDevice<RenderDeviceD3D12Impl>();
     auto& SRBAllocator = pRenderDeviceD3D12->GetSRBAllocator();
     auto pResBindingD3D12 = NEW_RC_OBJ(SRBAllocator, "ShaderResourceBindingD3D12Impl instance", ShaderResourceBindingD3D12Impl)(this, false);
     pResBindingD3D12->QueryInterface(IID_ShaderResourceBinding, reinterpret_cast<IObject**>(ppShaderResourceBinding));
@@ -316,7 +324,9 @@ ShaderResourceCacheD3D12* PipelineStateD3D12Impl::CommitAndTransitionShaderResou
 #ifdef VERIFY_SHADER_BINDINGS
     if (pShaderResourceBinding == nullptr &&
         (m_RootSig.GetTotalSrvCbvUavSlots(SHADER_VARIABLE_TYPE_MUTABLE) != 0 ||
-         m_RootSig.GetTotalSrvCbvUavSlots(SHADER_VARIABLE_TYPE_DYNAMIC) != 0))
+         m_RootSig.GetTotalSrvCbvUavSlots(SHADER_VARIABLE_TYPE_DYNAMIC) != 0 ||
+         m_RootSig.GetTotalRootViews(SHADER_VARIABLE_TYPE_MUTABLE) != 0 ||
+         m_RootSig.GetTotalRootViews(SHADER_VARIABLE_TYPE_DYNAMIC) != 0) )
     {
         LOG_ERROR_MESSAGE("Pipeline state \"", m_Desc.Name, "\" contains mutable/dynamic shader variables and requires shader resource binding to commit all resources, but none is provided.");
     }
@@ -324,11 +334,23 @@ ShaderResourceCacheD3D12* PipelineStateD3D12Impl::CommitAndTransitionShaderResou
 
     // If the shaders contain no resources or static resources only, shader resource binding may be null. 
     // In this case use special internal SRB object
-    auto *pResBindingD3D12Impl = pShaderResourceBinding ? ValidatedCast<ShaderResourceBindingD3D12Impl>(pShaderResourceBinding) : m_pDefaultShaderResBinding.get();
-    
+    auto* pResBindingD3D12Impl = pShaderResourceBinding ? ValidatedCast<ShaderResourceBindingD3D12Impl>(pShaderResourceBinding) : m_pDefaultShaderResBinding.get();
+    if (pResBindingD3D12Impl == nullptr)
+    {
+        VERIFY_EXPR(!dbgContainsShaderResources());
+        if(CommitResources)
+        {
+            if(m_Desc.IsComputePipeline)
+                Ctx.AsComputeContext().SetRootSignature( GetD3D12RootSignature() );
+            else
+                Ctx.AsGraphicsContext().SetRootSignature( GetD3D12RootSignature() );
+        }
+        return nullptr;
+    }
+
 #ifdef VERIFY_SHADER_BINDINGS
     {
-        auto *pRefPSO = pResBindingD3D12Impl->GetPipelineState();
+        auto* pRefPSO = pResBindingD3D12Impl->GetPipelineState();
         if ( IsIncompatibleWith(pRefPSO) )
         {
             LOG_ERROR_MESSAGE("Shader resource binding is incompatible with the pipeline state \"", m_Desc.Name, "\". Operation will be ignored.");
@@ -345,7 +367,7 @@ ShaderResourceCacheD3D12* PipelineStateD3D12Impl::CommitAndTransitionShaderResou
     pResBindingD3D12Impl->dbgVerifyResourceBindings(this);
 #endif
 
-    auto *pDeviceD3D12Impl = ValidatedCast<RenderDeviceD3D12Impl>( GetDevice() );
+    auto* pDeviceD3D12Impl = GetDevice<RenderDeviceD3D12Impl>();
     auto& ResourceCache = pResBindingD3D12Impl->GetResourceCache();
     if(CommitResources)
     {
@@ -370,9 +392,13 @@ ShaderResourceCacheD3D12* PipelineStateD3D12Impl::CommitAndTransitionShaderResou
 
 bool PipelineStateD3D12Impl::dbgContainsShaderResources()const
 {
-    return m_RootSig.GetTotalSrvCbvUavSlots(SHADER_VARIABLE_TYPE_STATIC) != 0 ||
-           m_RootSig.GetTotalSrvCbvUavSlots(SHADER_VARIABLE_TYPE_MUTABLE) != 0 ||
-           m_RootSig.GetTotalSrvCbvUavSlots(SHADER_VARIABLE_TYPE_DYNAMIC) != 0;
+    for(auto VarType = SHADER_VARIABLE_TYPE_STATIC; VarType < SHADER_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_VARIABLE_TYPE>(VarType+1))
+    {
+        if (m_RootSig.GetTotalSrvCbvUavSlots(VarType) != 0 || 
+            m_RootSig.GetTotalRootViews     (VarType) != 0)
+            return true;
+    }
+    return false;
 }
 
 }
