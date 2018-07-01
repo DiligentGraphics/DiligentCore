@@ -179,16 +179,9 @@ namespace VulkanUtilities
             VERIFY(m_State.RenderPass != VK_NULL_HANDLE, "Render pass has not been started");
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
             vkCmdEndRenderPass(m_VkCmdBuffer);
-            m_State.RenderPass = VK_NULL_HANDLE;
-            // Do not set framebuffer to null. We will reuse cached framebuffer handle
-            // if the render pass is restarted without changing render targets
-            //m_State.Framebuffer = VK_NULL_HANDLE;
-        }
-
-        void ResetFramebuffer()
-        {
+            m_State.RenderPass  = VK_NULL_HANDLE;
             m_State.Framebuffer = VK_NULL_HANDLE;
-            m_State.FramebufferWidth = 0;
+            m_State.FramebufferWidth  = 0;
             m_State.FramebufferHeight = 0;
         }
 

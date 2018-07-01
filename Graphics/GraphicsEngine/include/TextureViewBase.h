@@ -97,6 +97,18 @@ public:
         return m_pTexture;
     }
 
+    template<typename TextureType>
+    TextureType* GetTexture()
+    {
+        return ValidatedCast<TextureType>(m_pTexture);
+    }
+
+    template<typename TextureType>
+    TextureType* GetTexture()const
+    {
+        return ValidatedCast<TextureType>(m_pTexture);
+    }
+
 protected:
     /// Strong reference to the sampler
     Diligent::RefCntAutoPtr<ISampler> m_pSampler;

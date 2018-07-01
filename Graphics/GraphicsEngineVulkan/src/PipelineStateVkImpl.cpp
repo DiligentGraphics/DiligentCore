@@ -36,30 +36,32 @@
 namespace Diligent
 {
 
-void PipelineStateVkImpl::CreateRenderPass(const VulkanUtilities::VulkanLogicalDevice &LogicalDevice)
+VkRenderPassCreateInfo PipelineStateVkImpl::GetRenderPassCreateInfo(
+        Uint32                                                   NumRenderTargets, 
+        const TEXTURE_FORMAT                                     RTVFormats[], 
+        TEXTURE_FORMAT                                           DSVFormat,
+        Uint32                                                   SampleCount,
+        std::array<VkAttachmentDescription, MaxRenderTargets+1>& Attachments,
+        std::array<VkAttachmentReference,   MaxRenderTargets+1>& AttachmentReferences,
+        VkSubpassDescription&                                    SubpassDesc)
 {
-    // NOTE: framebuffer cache and clear commands assume that depth buffer
-    // attachment always goes first followed by all color attachments
+    VERIFY_EXPR(NumRenderTargets <= MaxRenderTargets);
 
-    const auto& GraphicsPipeline = m_Desc.GraphicsPipeline;
-    // Create render pass (7.1)
+    // Prepare render pass create info (7.1)
     VkRenderPassCreateInfo RenderPassCI = {};
     RenderPassCI.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     RenderPassCI.pNext = nullptr;
     RenderPassCI.flags = 0; // reserved for future use
-    RenderPassCI.attachmentCount = (GraphicsPipeline.DSVFormat != TEX_FORMAT_UNKNOWN ? 1 : 0) + GraphicsPipeline.NumRenderTargets;
-    std::vector<VkAttachmentDescription> Attachments(RenderPassCI.attachmentCount);
+    RenderPassCI.attachmentCount = (DSVFormat != TEX_FORMAT_UNKNOWN ? 1 : 0) + NumRenderTargets;
     uint32_t AttachmentInd = 0;
-    VkSampleCountFlagBits SampleCountFlags = static_cast<VkSampleCountFlagBits>(1 << (GraphicsPipeline.SmplDesc.Count - 1));
-    VkAttachmentReference DepthAttachmentReference = {};
-    if (GraphicsPipeline.DSVFormat != TEX_FORMAT_UNKNOWN)
+    VkSampleCountFlagBits SampleCountFlags = static_cast<VkSampleCountFlagBits>(1 << (SampleCount - 1));
+    VkAttachmentReference* pDepthAttachmentReference = nullptr;
+    if (DSVFormat != TEX_FORMAT_UNKNOWN)
     {
         auto& DepthAttachment = Attachments[AttachmentInd];
-        DepthAttachmentReference.attachment = AttachmentInd;
-        DepthAttachmentReference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
         DepthAttachment.flags = 0; // Allowed value VK_ATTACHMENT_DESCRIPTION_MAY_ALIAS_BIT
-        DepthAttachment.format = TexFormatToVkFormat(GraphicsPipeline.DSVFormat);
+        DepthAttachment.format = TexFormatToVkFormat(DSVFormat);
         DepthAttachment.samples = SampleCountFlags;
         DepthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD; // previous contents of the image within the render area 
                                                              // will be preserved. For attachments with a depth/stencil format, 
@@ -72,18 +74,20 @@ void PipelineStateVkImpl::CreateRenderPass(const VulkanUtilities::VulkanLogicalD
         DepthAttachment.initialLayout  = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         DepthAttachment.finalLayout    = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
+        pDepthAttachmentReference = &AttachmentReferences[AttachmentInd];
+        pDepthAttachmentReference->attachment = AttachmentInd;
+        pDepthAttachmentReference->layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
         ++AttachmentInd;
     }
-    std::vector<VkAttachmentReference> ColorAttachmentReferences(GraphicsPipeline.NumRenderTargets);
-    for (Uint32 rt = 0; rt < GraphicsPipeline.NumRenderTargets; ++rt, ++AttachmentInd)
+
+    VkAttachmentReference* pColorAttachmentsReference = NumRenderTargets > 0 ? &AttachmentReferences[AttachmentInd] : nullptr;
+    for (Uint32 rt = 0; rt < NumRenderTargets; ++rt, ++AttachmentInd)
     {
         auto& ColorAttachment = Attachments[AttachmentInd];
-        auto& ColorAttachmentRef = ColorAttachmentReferences[rt];
-        ColorAttachmentRef.attachment = AttachmentInd;
-        ColorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
         ColorAttachment.flags = 0; // Allowed value VK_ATTACHMENT_DESCRIPTION_MAY_ALIAS_BIT
-        ColorAttachment.format = TexFormatToVkFormat(GraphicsPipeline.RTVFormats[rt]);
+        ColorAttachment.format = TexFormatToVkFormat(RTVFormats[rt]);
         ColorAttachment.samples = SampleCountFlags;
         ColorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD; // previous contents of the image within the render area 
                                                              // will be preserved. For attachments with a depth/stencil format, 
@@ -95,11 +99,13 @@ void PipelineStateVkImpl::CreateRenderPass(const VulkanUtilities::VulkanLogicalD
         ColorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         ColorAttachment.initialLayout  = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         ColorAttachment.finalLayout    = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+        auto& ColorAttachmentRef = AttachmentReferences[AttachmentInd];
+        ColorAttachmentRef.attachment = AttachmentInd;
+        ColorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     }
 
     RenderPassCI.pAttachments = Attachments.data();
-
-    VkSubpassDescription SubpassDesc = {};
     RenderPassCI.subpassCount = 1;
     RenderPassCI.pSubpasses = &SubpassDesc;
     RenderPassCI.dependencyCount = 0; // the number of dependencies between pairs of subpasses, or zero indicating no dependencies.
@@ -111,17 +117,14 @@ void PipelineStateVkImpl::CreateRenderPass(const VulkanUtilities::VulkanLogicalD
     SubpassDesc.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS; // Currently, only graphics subpasses are supported.
     SubpassDesc.inputAttachmentCount = 0;
     SubpassDesc.pInputAttachments    = nullptr;
-    SubpassDesc.colorAttachmentCount = GraphicsPipeline.NumRenderTargets;
-    SubpassDesc.pColorAttachments    = ColorAttachmentReferences.data();
+    SubpassDesc.colorAttachmentCount = NumRenderTargets;
+    SubpassDesc.pColorAttachments    = pColorAttachmentsReference;
     SubpassDesc.pResolveAttachments     = nullptr;
-    SubpassDesc.pDepthStencilAttachment = GraphicsPipeline.DSVFormat != TEX_FORMAT_UNKNOWN ? &DepthAttachmentReference : nullptr;
+    SubpassDesc.pDepthStencilAttachment = pDepthAttachmentReference;
     SubpassDesc.preserveAttachmentCount = 0;
     SubpassDesc.pPreserveAttachments    = nullptr;
 
-    std::string RenderPassName = "Render pass for '";
-    RenderPassName += m_Desc.Name;
-    RenderPassName += '\'';
-    m_RenderPass = LogicalDevice.CreateRenderPass(RenderPassCI, RenderPassName.c_str());
+    return RenderPassCI;
 }
 
 PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters*      pRefCounters,
@@ -231,7 +234,13 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters*      pRefCounters
         
         auto& GraphicsPipeline = m_Desc.GraphicsPipeline;
 
-        CreateRenderPass(LogicalDevice);
+        auto& RPCache = pDeviceVk->GetRenderPassCache();
+        RenderPassCache::RenderPassCacheKey Key(
+            GraphicsPipeline.NumRenderTargets,
+            GraphicsPipeline.SmplDesc.Count,
+            GraphicsPipeline.RTVFormats,
+            GraphicsPipeline.DSVFormat);
+        m_RenderPass = RPCache.GetRenderPass(Key);
 
         VkGraphicsPipelineCreateInfo PipelineCI = {};
         PipelineCI.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -396,8 +405,6 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters*      pRefCounters
 PipelineStateVkImpl::~PipelineStateVkImpl()
 {
     auto pDeviceVkImpl = GetDevice<RenderDeviceVkImpl>();
-    pDeviceVkImpl->GetFramebufferCache().OnDestroyRenderPass(m_RenderPass);
-    pDeviceVkImpl->SafeReleaseVkObject(std::move(m_RenderPass));
     pDeviceVkImpl->SafeReleaseVkObject(std::move(m_Pipeline));
     m_PipelineLayout.Release(pDeviceVkImpl);
 

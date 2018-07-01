@@ -67,6 +67,7 @@ RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters*                    
 	m_FrameNumber(0),
     m_NextCmdBuffNumber(0),
     m_FramebufferCache(*this),
+    m_RenderPassCache(*this),
     m_MainDescriptorPool
     {
         m_LogicalVkDevice, 

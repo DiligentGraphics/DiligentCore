@@ -154,11 +154,12 @@ public:
 
     VulkanDynamicAllocation AllocateDynamicSpace(Uint32 SizeInBytes);
 
+    void ResetRenderTargets();
+
 private:
-    void CommitRenderPassAndFramebuffer(class PipelineStateVkImpl* pPipelineStateVk);
+    void CommitRenderPassAndFramebuffer();
     void CommitVkVertexBuffers();
     void TransitionVkVertexBuffers();
-    void CommitRenderTargets();
     void CommitViewports();
     void CommitScissorRects();
     
@@ -180,7 +181,16 @@ private:
 
         Uint32 NumCommands = 0;
     }m_State;
-    
+
+
+    /// Render pass that matches currently bound render targets.
+    /// This render pass may or may not be currently set in the command buffer
+    VkRenderPass m_RenderPass = VK_NULL_HANDLE;
+
+    /// Framebuffer that matches currently bound render targets.
+    /// This framebuffer may or may not be currently set in the command buffer
+    VkFramebuffer m_Framebuffer = VK_NULL_HANDLE;
+
 #if 0
     GenerateMipsHelper m_MipsGenerator;
 #endif

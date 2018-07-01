@@ -42,6 +42,7 @@
 #include "VulkanUtilities/VulkanMemoryManager.h"
 #include "VulkanUtilities/VulkanUploadHeap.h"
 #include "FramebufferCache.h"
+#include "RenderPassCache.h"
 #include "CommandPoolManager.h"
 #include "ResourceReleaseQueue.h"
 #include "VulkanDynamicHeap.h"
@@ -124,6 +125,7 @@ public:
     const VulkanUtilities::VulkanPhysicalDevice& GetPhysicalDevice(){return *m_PhysicalDevice;}
     const VulkanUtilities::VulkanLogicalDevice&  GetLogicalDevice() {return *m_LogicalVkDevice;}
     FramebufferCache& GetFramebufferCache(){return m_FramebufferCache;}
+    RenderPassCache&  GetRenderPassCache(){return m_RenderPassCache;}
 
     VulkanUtilities::VulkanMemoryAllocation AllocateMemory(const VkMemoryRequirements& MemReqs, VkMemoryPropertyFlags MemoryProperties)
     {
@@ -183,6 +185,7 @@ private:
     //                                                                           be released
 
     FramebufferCache m_FramebufferCache;
+    RenderPassCache  m_RenderPassCache;
 
     DescriptorPoolManager m_MainDescriptorPool;
 

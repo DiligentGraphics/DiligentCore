@@ -27,9 +27,9 @@
 namespace Diligent
 {
 
-CommandPoolManager ::CommandPoolManager(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice, 
-                                        uint32_t                                    queueFamilyIndex, 
-                                        VkCommandPoolCreateFlags                    flags)noexcept:
+CommandPoolManager::CommandPoolManager(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice, 
+                                       uint32_t                                    queueFamilyIndex, 
+                                       VkCommandPoolCreateFlags                    flags)noexcept:
     m_LogicalDevice   (LogicalDevice),
     m_QueueFamilyIndex(queueFamilyIndex),
     m_CmdPoolFlags    (flags),

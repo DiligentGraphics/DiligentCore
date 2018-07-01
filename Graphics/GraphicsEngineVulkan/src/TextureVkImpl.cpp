@@ -36,27 +36,6 @@ using namespace Diligent;
 namespace Diligent
 {
 
-#if 0
-DXGI_FORMAT GetClearFormat(DXGI_FORMAT Fmt, Vk_RESOURCE_FLAGS Flags)
-{
-    if( Flags & Vk_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL )
-    {
-        switch (Fmt)
-        {
-            case DXGI_FORMAT_R32_TYPELESS: return DXGI_FORMAT_D32_FLOAT;
-            case DXGI_FORMAT_R16_TYPELESS: return DXGI_FORMAT_D16_UNORM;
-            case DXGI_FORMAT_R24G8_TYPELESS: return DXGI_FORMAT_D24_UNORM_S8_UINT;
-            case DXGI_FORMAT_R32G8X24_TYPELESS: return DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
-        }
-    }
-    else if (Flags & Vk_RESOURCE_FLAG_ALLOW_RENDER_TARGET)
-    {
-
-    }
-    return Fmt;
-}
-#endif
-
 TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters, 
                                FixedBlockMemoryAllocator&   TexViewObjAllocator,
                                RenderDeviceVkImpl*          pRenderDeviceVk, 
@@ -158,46 +137,6 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters,
     // and the transition away from this layout is not guaranteed to preserve that data.
     m_CurrentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     ImageCI.initialLayout = m_CurrentLayout;
-
-#if 0
-    Desc.Flags = Vk_RESOURCE_FLAG_NONE;
-
-    auto Format = TexFormatToDXGI_Format(m_Desc.Format, m_Desc.BindFlags);
-    if (Format == DXGI_FORMAT_R8G8B8A8_UNORM_SRGB && (Desc.Flags & Vk_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS))
-        Desc.Format = DXGI_FORMAT_R8G8B8A8_TYPELESS;
-    else
-        Desc.Format = Format;
-
-	Vk_HEAP_PROPERTIES HeapProps;
-	HeapProps.Type = Vk_HEAP_TYPE_DEFAULT;
-	HeapProps.CPUPageProperty = Vk_CPU_PAGE_PROPERTY_UNKNOWN;
-	HeapProps.MemoryPoolPreference = Vk_MEMORY_POOL_UNKNOWN;
-	HeapProps.CreationNodeMask = 1;
-	HeapProps.VisibleNodeMask = 1;
-
-    auto *pVkDevice = pRenderDeviceVk->GetVkDevice();
-    Vk_CLEAR_VALUE ClearValue;
-    Vk_CLEAR_VALUE *pClearValue = nullptr;
-    if( Desc.Flags & (Vk_RESOURCE_FLAG_ALLOW_RENDER_TARGET | Vk_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL) )
-    {
-        if(m_Desc.ClearValue.Format != TEX_FORMAT_UNKNOWN)
-            ClearValue.Format = TexFormatToDXGI_Format(m_Desc.ClearValue.Format);
-        else
-            ClearValue.Format = GetClearFormat(Format, Desc.Flags);
-
-        if (Desc.Flags & Vk_RESOURCE_FLAG_ALLOW_RENDER_TARGET)
-        {
-            for(int i=0; i < 4; ++i)
-                ClearValue.Color[i] = m_Desc.ClearValue.Color[i];
-        }
-        else if(Desc.Flags & Vk_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)
-        {
-            ClearValue.DepthStencil.Depth = m_Desc.ClearValue.DepthStencil.Depth;
-            ClearValue.DepthStencil.Stencil = m_Desc.ClearValue.DepthStencil.Stencil;
-        }
-        pClearValue = &ClearValue;
-    }
-#endif
 
     bool bInitializeTexture = (InitData.pSubResources != nullptr && InitData.NumSubresources > 0);
 

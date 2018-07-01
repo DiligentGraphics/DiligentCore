@@ -89,10 +89,17 @@ public:
     }
 
     IShaderVariable *GetDummyShaderVar(){return &m_DummyVar;}
+    
+    static VkRenderPassCreateInfo GetRenderPassCreateInfo(Uint32                                                   NumRenderTargets, 
+                                                          const TEXTURE_FORMAT                                     RTVFormats[], 
+                                                          TEXTURE_FORMAT                                           DSVFormat,
+                                                          Uint32                                                   SampleCount,
+                                                          std::array<VkAttachmentDescription, MaxRenderTargets+1>& Attachments,
+                                                          std::array<VkAttachmentReference,   MaxRenderTargets+1>& AttachmentReferences,
+                                                          VkSubpassDescription&                                    SubpassDesc);
+
 
 private:
-
-    void CreateRenderPass(const VulkanUtilities::VulkanLogicalDevice &LogicalDevice);
 
     DummyShaderVariable m_DummyVar;
   
@@ -107,7 +114,7 @@ private:
     // Default SRB must be defined after allocators
     std::unique_ptr<class ShaderResourceBindingVkImpl, STDDeleter<ShaderResourceBindingVkImpl, FixedBlockMemoryAllocator> > m_pDefaultShaderResBinding;
 
-    VulkanUtilities::RenderPassWrapper m_RenderPass;
+    VkRenderPass m_RenderPass = VK_NULL_HANDLE; // Render passes are managed by the render device
     VulkanUtilities::PipelineWrapper   m_Pipeline;
     PipelineLayout m_PipelineLayout;
     bool m_HasStaticResources    = false;

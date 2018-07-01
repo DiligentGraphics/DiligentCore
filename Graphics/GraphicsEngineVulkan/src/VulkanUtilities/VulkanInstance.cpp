@@ -130,7 +130,7 @@ namespace VulkanUtilities
 
         VkInstanceCreateInfo InstanceCreateInfo = {};
         InstanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-        InstanceCreateInfo.pNext = NULL; // Pointer to an extension-specific structure.
+        InstanceCreateInfo.pNext = nullptr; // Pointer to an extension-specific structure.
         InstanceCreateInfo.flags = 0; // Reserved for future use.
         InstanceCreateInfo.pApplicationInfo = &appInfo;
         InstanceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(GlobalExtensions.size());

@@ -425,6 +425,7 @@ void SwapChainVkImpl::Present(Uint32 SyncInterval)
     //VERIFY(pImmediateCtxVk->GetNumCommandsInCtx() != 0, "The context must not be flushed");
     pImmediateCtxVk->AddSignalSemaphore(m_DrawCompleteSemaphores[m_SemaphoreIndex]);
     pImmediateCtxVk->Flush();
+    pImmediateCtxVk->ResetRenderTargets();
 
     VkPresentInfoKHR PresentInfo = {};
     PresentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;

@@ -407,8 +407,8 @@ void BufferVkImpl::Unmap( IDeviceContext* pContext, MAP_TYPE MapType, Uint32 Map
     TBufferBase::Unmap( pContext, MapType, MapFlags );
 
     auto *pDeviceContextVk = ValidatedCast<DeviceContextVkImpl>(pContext);
-#ifdef _DEBUG
     Uint32 CtxId = pDeviceContextVk != nullptr ? pDeviceContextVk->GetContextId() : static_cast<Uint32>(-1);
+#ifdef _DEBUG
     if (pDeviceContextVk != nullptr)
     {
         VERIFY(m_DbgMapType[CtxId].first == MapType, "Map type does not match the type provided to Map()");

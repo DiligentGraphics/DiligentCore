@@ -18,6 +18,7 @@ set(INCLUDE
     include/PipelineLayout.h
     include/PipelineStateVkImpl.h
     include/RenderDeviceVkImpl.h
+    include/RenderPassCache.h
     include/SamplerVkImpl.h
     include/ShaderVkImpl.h
     include/ShaderResourceBindingVkImpl.h
@@ -77,6 +78,7 @@ set(SRC
     src/PipelineLayout.cpp
     src/PipelineStateVkImpl.cpp
     src/RenderDeviceVkImpl.cpp
+    src/RenderPassCache.cpp
     src/RenderDeviceFactoryVk.cpp
     src/SamplerVkImpl.cpp
     src/ShaderVkImpl.cpp

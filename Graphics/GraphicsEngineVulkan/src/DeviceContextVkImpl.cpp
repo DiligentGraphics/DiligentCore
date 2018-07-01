@@ -178,7 +178,6 @@ namespace Diligent
         {
             m_CommandBuffer.EndRenderPass();
         }
-        m_CommandBuffer.ResetFramebuffer();
 
         // Never flush deferred context!
         if (!m_bIsDeferred && m_State.NumCommands >= m_NumCommandsToFlush)
@@ -227,7 +226,7 @@ namespace Diligent
             {
                 m_CommandBuffer.SetStencilReference(m_StencilRef);
                 m_CommandBuffer.SetBlendConstants(m_BlendFactors);
-                CommitRenderTargets();
+                CommitRenderPassAndFramebuffer();
                 CommitViewports();
             }
 
@@ -273,84 +272,6 @@ namespace Diligent
             EnsureVkCmdBuffer();
             m_CommandBuffer.SetBlendConstants(m_BlendFactors);
         }
-    }
-
-    void DeviceContextVkImpl::CommitRenderPassAndFramebuffer(PipelineStateVkImpl *pPipelineStateVk)
-    {
-        auto *pRenderDeviceVk = m_pDevice.RawPtr<RenderDeviceVkImpl>();        
-        auto &FBCache = pRenderDeviceVk->GetFramebufferCache();
-        auto RenderPass = pPipelineStateVk->GetVkRenderPass();
-        const auto& CmdBufferState = m_CommandBuffer.GetState();
-        if(CmdBufferState.Framebuffer != VK_NULL_HANDLE)
-        {
-            // Render targets have not changed since the last time, so we can reuse 
-            // previously bound framebuffer
-            VERIFY_EXPR(m_FramebufferWidth == CmdBufferState.FramebufferWidth && m_FramebufferHeight == CmdBufferState.FramebufferHeight);
-            m_CommandBuffer.BeginRenderPass(RenderPass, CmdBufferState.Framebuffer, CmdBufferState.FramebufferWidth, CmdBufferState.FramebufferHeight);
-            return;
-        }
-
-        const auto &GrPipelineDesc = pPipelineStateVk->GetDesc().GraphicsPipeline;
-        FramebufferCache::FramebufferCacheKey Key;
-        Key.Pass = RenderPass;
-        if(m_NumBoundRenderTargets == 0 && !m_pBoundDepthStencil)
-        {
-            auto *pSwapChainVk = m_pSwapChain.RawPtr<ISwapChainVk>();
-            if(GrPipelineDesc.DSVFormat != TEX_FORMAT_UNKNOWN)
-            {
-                auto *pDSV = pSwapChainVk->GetDepthBufferDSV();
-                TransitionImageLayout(pDSV->GetTexture(), VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
-                Key.DSV = pDSV->GetVulkanImageView();
-            }
-            else 
-                Key.DSV = VK_NULL_HANDLE;
-
-            VERIFY(GrPipelineDesc.NumRenderTargets <= 1, "Pipeline state expects ", GrPipelineDesc.NumRenderTargets, " render targets, but default framebuffer has only one");
-            if(GrPipelineDesc.RTVFormats[0] != TEX_FORMAT_UNKNOWN)
-            {
-                auto *pRTV = pSwapChainVk->GetCurrentBackBufferRTV();
-                TransitionImageLayout(pRTV->GetTexture(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-                Key.NumRenderTargets = 1;
-                Key.RTVs[0] = pRTV->GetVulkanImageView();
-            }
-            else
-                Key.NumRenderTargets = 0;
-        }
-        else
-        {
-            if (GrPipelineDesc.DSVFormat != TEX_FORMAT_UNKNOWN)
-            {
-                if(m_pBoundDepthStencil)
-                {
-                    auto *pDSVVk = m_pBoundDepthStencil.RawPtr<TextureViewVkImpl>();
-                    TransitionImageLayout(pDSVVk->GetTexture(), VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
-                    Key.DSV = pDSVVk->GetVulkanImageView();
-                }
-                else
-                {
-                    LOG_ERROR("Currently bound graphics pipeline state expects depth-stencil buffer, but none is currently bound. This is an error and will result in undefined behavior");
-                    Key.DSV = VK_NULL_HANDLE;
-                }
-            }
-            else
-                Key.DSV = nullptr;
-
-            VERIFY(m_NumBoundRenderTargets >= GrPipelineDesc.NumRenderTargets, "Pipeline state expects ", GrPipelineDesc.NumRenderTargets, " render targets, but only ", m_NumBoundRenderTargets, " is bound");
-            Key.NumRenderTargets = GrPipelineDesc.NumRenderTargets;
-            for(Uint32 rt=0; rt < Key.NumRenderTargets; ++rt)
-            {
-                if(ITextureView *pRTV = m_pBoundRenderTargets[rt])
-                {
-                    auto *pRTVVk = ValidatedCast<TextureViewVkImpl>(pRTV);
-                    TransitionImageLayout(pRTV->GetTexture(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-                    Key.RTVs[rt] = pRTVVk->GetVulkanImageView();
-                }
-                else
-                    Key.RTVs[rt] = nullptr;
-            }
-        }
-        auto vkFramebuffer = FBCache.GetFramebuffer(Key, m_FramebufferWidth, m_FramebufferHeight, m_FramebufferSlices);
-        m_CommandBuffer.BeginRenderPass(Key.Pass, vkFramebuffer, m_FramebufferWidth, m_FramebufferHeight);
     }
 
     void DeviceContextVkImpl::TransitionVkVertexBuffers()
@@ -466,8 +387,16 @@ namespace Diligent
                 BufferMemoryBarrier(*pBufferVk, VK_ACCESS_INDIRECT_COMMAND_READ_BIT);
         }
 
-        if(m_CommandBuffer.GetState().RenderPass == VK_NULL_HANDLE)
-            CommitRenderPassAndFramebuffer(pPipelineStateVk);
+#ifdef _DEBUG
+        if(pPipelineStateVk->GetVkRenderPass() != m_RenderPass)
+        {
+            LOG_ERROR_MESSAGE("Committed render pass does not match render pass from the Pipeline State object. "
+                              "This indicates the mismatch between the number and/or format of bound render targets and depth stencil buffer "
+                              "and information used to initialize the PSO.");
+        }
+#endif
+
+        CommitRenderPassAndFramebuffer();
 
         if( DrawAttribs.IsIndirect )
         {
@@ -558,9 +487,9 @@ namespace Diligent
         ++m_State.NumCommands;
     }
 
-    void DeviceContextVkImpl::ClearDepthStencil( ITextureView *pView, Uint32 ClearFlags, float fDepth, Uint8 Stencil )
+    void DeviceContextVkImpl::ClearDepthStencil( ITextureView* pView, Uint32 ClearFlags, float fDepth, Uint8 Stencil )
     {
-        ITextureViewVk *pVkDSV = nullptr;
+        ITextureViewVk* pVkDSV = nullptr;
         if( pView != nullptr )
         {
             pVkDSV = ValidatedCast<ITextureViewVk>(pView);
@@ -587,12 +516,12 @@ namespace Diligent
         const auto &ViewDesc = pVkDSV->GetDesc();
         EnsureVkCmdBuffer();
         bool ClearedAsAttachment = false;
-        if(m_CommandBuffer.GetState().RenderPass != VK_NULL_HANDLE)
+        if(m_RenderPass != VK_NULL_HANDLE)
         {
-            if(m_pPipelineState && 
-               m_pPipelineState->GetDesc().GraphicsPipeline.DSVFormat != TEX_FORMAT_UNKNOWN && 
-               (pView == nullptr || pView == m_pBoundDepthStencil))
+            if(m_IsDefaultFramebufferBound && pView == nullptr || pView == m_pBoundDepthStencil)
             {
+                CommitRenderPassAndFramebuffer();
+
                 VkClearAttachment ClearAttachment = {};
                 ClearAttachment.aspectMask = 0;
                 if (ClearFlags & CLEAR_DEPTH_FLAG)   ClearAttachment.aspectMask |= VK_IMAGE_ASPECT_DEPTH_BIT;
@@ -613,7 +542,8 @@ namespace Diligent
             else
             {
                 // End render pass to clear the buffer with vkCmdClearDepthStencilImage
-                m_CommandBuffer.EndRenderPass();
+                if(m_CommandBuffer.GetState().RenderPass != VK_NULL_HANDLE)
+                    m_CommandBuffer.EndRenderPass();
             }
         }
 
@@ -702,15 +632,12 @@ namespace Diligent
             Uint32 attachmentIndex = InvalidAttachmentIndex;
             if(pView == nullptr)
             {
-                attachmentIndex = 0;
+                if(m_IsDefaultFramebufferBound)
+                    attachmentIndex = 0;
             }
             else
             {
-                VERIFY(m_pPipelineState, "Valid pipeline state must be bound inside active render pass");
-                const auto &GrPipelineDesc = m_pPipelineState->GetDesc().GraphicsPipeline;
-                VERIFY(m_NumBoundRenderTargets >= GrPipelineDesc.NumRenderTargets, "Pipeline state expects ", GrPipelineDesc.NumRenderTargets, " render targets, but only ", m_NumBoundRenderTargets, " is bound");
-                Uint32 MaxRTIndex = std::min(Uint32{GrPipelineDesc.NumRenderTargets}, m_NumBoundRenderTargets);
-                for(Uint32 rt = 0; rt < MaxRTIndex; ++rt)
+                for(Uint32 rt = 0; rt < m_NumBoundRenderTargets; ++rt)
                 {
                     if(m_pBoundRenderTargets[rt] == pView)
                     {
@@ -742,7 +669,8 @@ namespace Diligent
             else
             {
                 // End current render pass and clear the image with vkCmdClearColorImage
-                m_CommandBuffer.EndRenderPass();
+                if(m_CommandBuffer.GetState().RenderPass != VK_NULL_HANDLE)
+                    m_CommandBuffer.EndRenderPass();
             }
         }
 
@@ -865,6 +793,8 @@ namespace Diligent
 
         TDeviceContextBase::InvalidateState();
         m_State = ContextState{};
+        m_RenderPass = VK_NULL_HANDLE;
+        m_Framebuffer = VK_NULL_HANDLE;
         m_DesrSetBindInfo.Reset();
         VERIFY(m_CommandBuffer.GetState().RenderPass == VK_NULL_HANDLE, "Invalidating context with unifinished render pass");
         m_CommandBuffer.Reset();
@@ -945,52 +875,136 @@ namespace Diligent
     }
 
 
-    void DeviceContextVkImpl::CommitRenderTargets()
+    void DeviceContextVkImpl::CommitRenderPassAndFramebuffer()
     {
-#if 0
-        const Uint32 MaxVkRTs = Vk_SIMULTANEOUS_RENDER_TARGET_COUNT;
-        Uint32 NumRenderTargets = m_NumBoundRenderTargets;
-        VERIFY( NumRenderTargets <= MaxVkRTs, "Vk only allows 8 simultaneous render targets" );
-        NumRenderTargets = std::min( MaxVkRTs, NumRenderTargets );
+        const auto& CmdBufferState = m_CommandBuffer.GetState();
+        if(CmdBufferState.RenderPass != m_RenderPass)
+        {
+            if(CmdBufferState.RenderPass != VK_NULL_HANDLE)
+                m_CommandBuffer.EndRenderPass();
+        
+            if(m_RenderPass != VK_NULL_HANDLE)
+            {
+                VERIFY_EXPR(m_Framebuffer != VK_NULL_HANDLE);
+                if(m_IsDefaultFramebufferBound)
+                {
+                    auto* pSwapChainVk = m_pSwapChain.RawPtr<ISwapChainVk>();
+                    auto* pDefaultDSV = pSwapChainVk->GetDepthBufferDSV();
+                    auto* pDefaultDepthImage = pDefaultDSV->GetTexture();
+                    TransitionImageLayout(pDefaultDepthImage, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
-        ITextureViewVk *ppRTVs[MaxVkRTs]; // Do not initialize with zeroes!
-        ITextureViewVk *pDSV = nullptr;
-        if( m_IsDefaultFramebufferBound )
-        {
-            if (m_pSwapChain)
-            {
-                NumRenderTargets = 1;
-                auto *pSwapChainVk = m_pSwapChain.RawPtr<ISwapChainVk>();
-                ppRTVs[0] = pSwapChainVk->GetCurrentBackBufferRTV();
-                pDSV = pSwapChainVk->GetDepthBufferDSV();
-            }
-            else
-            {
-                LOG_WARNING_MESSAGE("Failed to bind default render targets and depth-stencil buffer: swap chain is not initialized in the device context");
-                return;
+                    auto* pDefaultRTV = pSwapChainVk->GetCurrentBackBufferRTV();
+                    auto* pDefaultBackBuffer = pDefaultRTV->GetTexture();
+                    TransitionImageLayout(pDefaultBackBuffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+                }
+                else
+                {
+                    if(m_pBoundDepthStencil)
+                    {
+                        auto* pDSVVk = m_pBoundDepthStencil.RawPtr<TextureViewVkImpl>();
+                        auto* pDepthBuffer = pDSVVk->GetTexture();
+                        TransitionImageLayout(pDepthBuffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+                    }
+
+                    for(Uint32 rt=0; rt < m_NumBoundRenderTargets; ++rt)
+                    {
+                        if(ITextureView* pRTV = m_pBoundRenderTargets[rt])
+                        {
+                            auto* pRTVVk = ValidatedCast<TextureViewVkImpl>(pRTV);
+                            auto* pRenderTarget = pRTVVk->GetTexture();
+                            TransitionImageLayout(pRenderTarget, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+                        }
+                    }
+                }
+                m_CommandBuffer.BeginRenderPass(m_RenderPass, m_Framebuffer, m_FramebufferWidth, m_FramebufferHeight);
             }
         }
-        else
-        {
-            for( Uint32 rt = 0; rt < NumRenderTargets; ++rt )
-                ppRTVs[rt] = m_pBoundRenderTargets[rt].RawPtr<ITextureViewVk>();
-            pDSV = m_pBoundDepthStencil.RawPtr<ITextureViewVk>();
-        }
-        RequestCmdContext()->AsGraphicsContext().SetRenderTargets(NumRenderTargets, ppRTVs, pDSV);
-#endif
     }
 
     void DeviceContextVkImpl::SetRenderTargets( Uint32 NumRenderTargets, ITextureView *ppRenderTargets[], ITextureView *pDepthStencil )
     {
         if( TDeviceContextBase::SetRenderTargets( NumRenderTargets, ppRenderTargets, pDepthStencil ) )
         {
-            if(m_CommandBuffer.GetState().RenderPass != VK_NULL_HANDLE)
-                m_CommandBuffer.EndRenderPass();
-            m_CommandBuffer.ResetFramebuffer();
+            FramebufferCache::FramebufferCacheKey FBKey;
+            RenderPassCache::RenderPassCacheKey RenderPassKey;
+            if(m_IsDefaultFramebufferBound)
+            {
+                auto* pSwapChainVk = m_pSwapChain.RawPtr<ISwapChainVk>();
+                auto* pDefaultDSV = pSwapChainVk->GetDepthBufferDSV();
+                auto* pDefaultDepthImage = pDefaultDSV->GetTexture();
+                FBKey.DSV = pDefaultDSV->GetVulkanImageView();
+                RenderPassKey.DSVFormat = pDefaultDSV->GetDesc().Format;
+
+
+                auto* pDefaultRTV = pSwapChainVk->GetCurrentBackBufferRTV();
+                auto* pDefaultBackBuffer = pDefaultRTV->GetTexture();
+                FBKey.NumRenderTargets = 1;
+                FBKey.RTVs[0] = pDefaultRTV->GetVulkanImageView();
+                RenderPassKey.NumRenderTargets = 1;
+                RenderPassKey.RTVFormats[0] = pDefaultRTV->GetDesc().Format;
+                RenderPassKey.SampleCount = static_cast<Uint8>(pDefaultBackBuffer->GetDesc().SampleCount);
+                VERIFY_EXPR(RenderPassKey.SampleCount == pDefaultDepthImage->GetDesc().SampleCount);
+            }
+            else
+            {
+                if(m_pBoundDepthStencil)
+                {
+                    auto* pDSVVk = m_pBoundDepthStencil.RawPtr<TextureViewVkImpl>();
+                    auto* pDepthBuffer = pDSVVk->GetTexture();
+                    FBKey.DSV = pDSVVk->GetVulkanImageView();
+                    RenderPassKey.DSVFormat = pDSVVk->GetDesc().Format;
+                    RenderPassKey.SampleCount = static_cast<Uint8>(pDepthBuffer->GetDesc().SampleCount);
+                }
+                else
+                {
+                    FBKey.DSV = nullptr;
+                    RenderPassKey.DSVFormat = TEX_FORMAT_UNKNOWN;
+                }
+
+                FBKey.NumRenderTargets = m_NumBoundRenderTargets;
+                RenderPassKey.NumRenderTargets = static_cast<Uint8>(m_NumBoundRenderTargets);
+
+                for(Uint32 rt=0; rt < m_NumBoundRenderTargets; ++rt)
+                {
+                    if(ITextureView* pRTV = m_pBoundRenderTargets[rt])
+                    {
+                        auto* pRTVVk = ValidatedCast<TextureViewVkImpl>(pRTV);
+                        auto* pRenderTarget = pRTVVk->GetTexture();
+                        FBKey.RTVs[rt] = pRTVVk->GetVulkanImageView();
+                        RenderPassKey.RTVFormats[rt] = pRenderTarget->GetDesc().Format;
+                        if(RenderPassKey.SampleCount == 0)
+                            RenderPassKey.SampleCount = static_cast<Uint8>(pRenderTarget->GetDesc().SampleCount);
+                        else
+                            VERIFY(RenderPassKey.SampleCount == pRenderTarget->GetDesc().SampleCount, "Inconsistent sample count");
+                    }
+                    else
+                    {
+                        FBKey.RTVs[rt] = nullptr;
+                        RenderPassKey.RTVFormats[rt] = TEX_FORMAT_UNKNOWN;
+                    }
+                }
+            }
+
+            auto pDeviceVkImpl = m_pDevice.RawPtr<RenderDeviceVkImpl>();
+            auto& FBCache = pDeviceVkImpl->GetFramebufferCache();
+            auto& RPCache = pDeviceVkImpl->GetRenderPassCache();
+
+            m_RenderPass = RPCache.GetRenderPass(RenderPassKey);
+            FBKey.Pass = m_RenderPass;
+            m_Framebuffer = FBCache.GetFramebuffer(FBKey, m_FramebufferWidth, m_FramebufferHeight, m_FramebufferSlices);
 
             // Set the viewport to match the render target size
             SetViewports(1, nullptr, 0, 0);
         }
+        EnsureVkCmdBuffer();
+        CommitRenderPassAndFramebuffer();
+    }
+
+    void DeviceContextVkImpl::ResetRenderTargets()
+    {
+        TDeviceContextBase::ResetRenderTargets();
+        m_RenderPass = VK_NULL_HANDLE;
+        m_Framebuffer = VK_NULL_HANDLE;
     }
 
     void DeviceContextVkImpl::UpdateBufferRegion(BufferVkImpl* pBuffVk, Uint64 DstOffset, Uint64 NumBytes, VkBuffer vkSrcBuffer, Uint64 SrcOffset)
