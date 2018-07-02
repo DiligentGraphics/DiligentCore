@@ -56,6 +56,9 @@ public:
     virtual void SetWindowedMode()override final;
 
     virtual GLuint GetDefaultFBO()const override final;
+
+    virtual ITextureView* GetCurrentBackBufferRTV()override final{return nullptr;}
+    virtual ITextureView* GetDepthBufferDSV()override final{return nullptr;}
     
 private:
     void InitRenderBuffers(bool InitFromDrawable, Uint32 &Width, Uint32 &Height);
