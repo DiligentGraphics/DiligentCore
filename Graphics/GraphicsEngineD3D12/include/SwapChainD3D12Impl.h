@@ -54,7 +54,14 @@ public:
     virtual void Resize( Uint32 NewWidth, Uint32 NewHeight )override final;
 
     virtual IDXGISwapChain* GetDXGISwapChain()override final{ return m_pSwapChain; }
-    virtual ITextureViewD3D12* GetCurrentBackBufferRTV()override final;
+
+    virtual ITextureViewD3D12* GetCurrentBackBufferRTV()override final
+    {
+        auto CurrentBackBufferIndex = m_pSwapChain->GetCurrentBackBufferIndex();
+        VERIFY_EXPR(CurrentBackBufferIndex >= 0 && CurrentBackBufferIndex < m_SwapChainDesc.BufferCount);
+        return m_pBackBufferRTV[CurrentBackBufferIndex];
+    }
+
     virtual ITextureViewD3D12* GetDepthBufferDSV()override final{return m_pDepthBufferDSV;}
 
 private:

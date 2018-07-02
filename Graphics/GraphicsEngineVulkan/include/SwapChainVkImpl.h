@@ -58,7 +58,13 @@ public:
     virtual void SetWindowedMode()override final;
 
     virtual VkSwapchainKHR GetVkSwapChain()override final{ return m_VkSwapChain; }
-    virtual ITextureViewVk* GetCurrentBackBufferRTV()override final;
+
+    virtual ITextureViewVk* GetCurrentBackBufferRTV()override final
+    {
+        VERIFY_EXPR(m_BackBufferIndex >= 0 && m_BackBufferIndex < m_SwapChainDesc.BufferCount);
+        return m_pBackBufferRTV[m_BackBufferIndex];
+    }
+
     virtual ITextureViewVk* GetDepthBufferDSV()override final{return m_pDepthBufferDSV;}
     
 private:
@@ -67,13 +73,15 @@ private:
     void AcquireNextImage(DeviceContextVkImpl* pDeviceCtxVk);
 
     std::shared_ptr<const VulkanUtilities::VulkanInstance> m_VulkanInstance;
-    VkSurfaceKHR m_VkSurface = VK_NULL_HANDLE;
-    VkSwapchainKHR m_VkSwapChain = VK_NULL_HANDLE;
-    VkFormat m_VkColorFormat = VK_FORMAT_UNDEFINED;
+    VkSurfaceKHR   m_VkSurface     = VK_NULL_HANDLE;
+    VkSwapchainKHR m_VkSwapChain   = VK_NULL_HANDLE;
+    VkFormat       m_VkColorFormat = VK_FORMAT_UNDEFINED;
 
     std::vector<VulkanUtilities::SemaphoreWrapper> m_ImageAcquiredSemaphores;
     std::vector<VulkanUtilities::SemaphoreWrapper> m_DrawCompleteSemaphores;
     std::vector< RefCntAutoPtr<ITextureViewVk>, STDAllocatorRawMem<RefCntAutoPtr<ITextureViewVk>> > m_pBackBufferRTV;
+    std::vector<bool, STDAllocatorRawMem<bool> > m_SwapChainImagesInitialized;
+
     RefCntAutoPtr<ITextureViewVk> m_pDepthBufferDSV;
     Uint32 m_SemaphoreIndex = 0;
     uint32_t m_BackBufferIndex = 0;

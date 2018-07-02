@@ -45,15 +45,6 @@ public:
 
     /// Returns a handle to the Vulkan swap chain object.
     virtual VkSwapchainKHR GetVkSwapChain() = 0;
-
-    /// Returns a pointer to the render target view of the current back buffer in the swap chain
-    virtual ITextureViewVk* GetCurrentBackBufferRTV() = 0;
-
-    /// Returns a pointer to the depth-stencil view of the depth buffer
-
-    /// The method does *NOT* call AddRef() on the returned interface,
-    /// so Release() must not be called.
-    virtual ITextureViewVk* GetDepthBufferDSV() = 0;
 };
 
 }

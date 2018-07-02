@@ -156,6 +156,39 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters,
     auto err = LogicalDevice.BindImageMemory(m_VulkanImage, Memory, AlignedOffset);
     CHECK_VK_ERROR_AND_THROW(err, "Failed to bind image memory");
 
+    
+    // Vulkan validation layers do not like uninitialized memory, so if no initial data
+    // is provided, we will clear the memory
+
+    VulkanUtilities::CommandPoolWrapper CmdPool;
+    VkCommandBuffer vkCmdBuff;
+    pRenderDeviceVk->AllocateTransientCmdPool(CmdPool, vkCmdBuff, "Transient command pool to copy staging data to a device buffer");
+
+    VkImageAspectFlags aspectMask = 0;
+    if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH)
+        aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    else if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
+    {
+        if(bInitializeTexture)
+        {
+            UNSUPPORTED("Initializing depth-stencil texture is not currently supported");
+            // Only single aspect bit must be specified when copying texture data
+        }
+        aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+    }
+    else
+        aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+    // For either clear or copy command, dst layout must be VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
+    VkImageSubresourceRange SubresRange;
+    SubresRange.aspectMask = aspectMask;
+    SubresRange.baseArrayLayer = 0;
+    SubresRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+    SubresRange.baseMipLevel = 0;
+    SubresRange.levelCount = VK_REMAINING_MIP_LEVELS;
+    VulkanUtilities::VulkanCommandBuffer::TransitionImageLayout(vkCmdBuff, m_VulkanImage, m_CurrentLayout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, SubresRange);
+    m_CurrentLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+
     if(bInitializeTexture)
     {
         Uint32 ExpectedNumSubresources = ImageCI.mipLevels * ImageCI.arrayLayers;
@@ -163,18 +196,6 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters,
             LOG_ERROR_AND_THROW("Incorrect number of subresources in init data. ", ExpectedNumSubresources, " expected, while ", InitData.NumSubresources, " provided");
 
         std::vector<VkBufferImageCopy> Regions(InitData.NumSubresources);
-       
-        VkImageAspectFlags aspectMask = 0;
-        if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH)
-            aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-        else if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
-        {
-            UNSUPPORTED("Initializing depth-stencil texture is not currently supported");
-            // Only single aspect bit must be specified
-            aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;// | VK_IMAGE_ASPECT_STENCIL_BIT;
-        }
-        else
-            aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
         UINT64 uploadBufferSize = 0;
         auto TexelSize = FmtAttribs.ComponentSize * FmtAttribs.NumComponents;
@@ -291,20 +312,7 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters,
         err = LogicalDevice.BindBufferMemory(StagingBuffer, StagingBufferMemory, AlignedStagingMemOffset);
         CHECK_VK_ERROR_AND_THROW(err, "Failed to bind staging bufer memory");
 
-        VulkanUtilities::CommandPoolWrapper CmdPool;
-        VkCommandBuffer vkCmdBuff;
-        pRenderDeviceVk->AllocateTransientCmdPool(CmdPool, vkCmdBuff, "Transient command pool to copy staging data to a device buffer");
-
         VulkanUtilities::VulkanCommandBuffer::BufferMemoryBarrier(vkCmdBuff, StagingBuffer, 0, VK_ACCESS_TRANSFER_READ_BIT);
-
-        VkImageSubresourceRange SubresRange;
-        SubresRange.aspectMask = aspectMask;
-        SubresRange.baseArrayLayer = 0;
-        SubresRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
-        SubresRange.baseMipLevel = 0;
-        SubresRange.levelCount = VK_REMAINING_MIP_LEVELS;
-        VulkanUtilities::VulkanCommandBuffer::TransitionImageLayout(vkCmdBuff, m_VulkanImage, m_CurrentLayout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, SubresRange);
-        m_CurrentLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 
         // Copy commands MUST be recorded outside of a render pass instance. This is OK here
         // as copy will be the only command in the cmd buffer
@@ -319,6 +327,35 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters,
         // command buffer submitted through the immediate context will be completed
         pRenderDeviceVk->SafeReleaseVkObject(std::move(StagingBuffer));
         pRenderDeviceVk->SafeReleaseVkObject(std::move(StagingMemoryAllocation));
+    }
+    else
+    {
+        VkImageSubresourceRange Subresource;
+        Subresource.aspectMask     = aspectMask;
+        Subresource.baseMipLevel   = 0;
+        Subresource.levelCount     = VK_REMAINING_MIP_LEVELS;
+        Subresource.baseArrayLayer = 0;
+        Subresource.layerCount     = VK_REMAINING_ARRAY_LAYERS;
+        if(aspectMask == VK_IMAGE_ASPECT_COLOR_BIT)
+        {
+            VkClearColorValue ClearColor = {};
+            vkCmdClearColorImage(vkCmdBuff, m_VulkanImage,
+                            m_CurrentLayout, // must be VK_IMAGE_LAYOUT_GENERAL or VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
+                            &ClearColor, 1, &Subresource);
+        }
+        else if(aspectMask == VK_IMAGE_ASPECT_DEPTH_BIT || 
+                aspectMask == (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT) )
+        {
+            VkClearDepthStencilValue ClearValue = {};
+            vkCmdClearDepthStencilImage(vkCmdBuff, m_VulkanImage,
+                            m_CurrentLayout, // must be VK_IMAGE_LAYOUT_GENERAL or VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
+                            &ClearValue, 1, &Subresource);
+        }
+        else
+        {
+            UNEXPECTED("Unexpected aspect mask");
+        }
+        pRenderDeviceVk->ExecuteAndDisposeTransientCmdBuff(vkCmdBuff, std::move(CmdPool));
     }
 
 #if 0

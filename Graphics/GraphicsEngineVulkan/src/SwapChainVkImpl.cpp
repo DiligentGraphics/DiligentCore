@@ -39,7 +39,8 @@ SwapChainVkImpl::SwapChainVkImpl(IReferenceCounters*    pRefCounters,
                                  void*                  pNativeWndHandle) : 
     TSwapChainBase(pRefCounters, pRenderDeviceVk, pDeviceContextVk, SCDesc),
     m_VulkanInstance(pRenderDeviceVk->GetVulkanInstance()),
-    m_pBackBufferRTV(STD_ALLOCATOR_RAW_MEM(RefCntAutoPtr<ITextureView>, GetRawAllocator(), "Allocator for vector<RefCntAutoPtr<ITextureView>>"))
+    m_pBackBufferRTV(STD_ALLOCATOR_RAW_MEM(RefCntAutoPtr<ITextureView>, GetRawAllocator(), "Allocator for vector<RefCntAutoPtr<ITextureView>>")),
+    m_SwapChainImagesInitialized(STD_ALLOCATOR_RAW_MEM(bool, GetRawAllocator(), "Allocator for vector<bool>"))
 {
     // Create OS-specific surface
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
@@ -341,6 +342,7 @@ void SwapChainVkImpl::InitBuffersAndViews()
 #endif
 
     m_pBackBufferRTV.resize(m_SwapChainDesc.BufferCount);
+    m_SwapChainImagesInitialized.resize(m_pBackBufferRTV.size(), false);
 
     uint32_t swapchainImageCount = m_SwapChainDesc.BufferCount;
     std::vector<VkImage> swapchainImages(swapchainImageCount);
@@ -392,9 +394,9 @@ void SwapChainVkImpl::InitBuffersAndViews()
     m_pDepthBufferDSV = RefCntAutoPtr<ITextureViewVk>(pDSV, IID_TextureViewVk);
 }
 
-void SwapChainVkImpl::AcquireNextImage(DeviceContextVkImpl *pDeviceCtxVk)
+void SwapChainVkImpl::AcquireNextImage(DeviceContextVkImpl* pDeviceCtxVk)
 {
-    auto *pDeviceVk = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
+    auto* pDeviceVk = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
     const auto& LogicalDevice = pDeviceVk->GetLogicalDevice();
 
     auto res = vkAcquireNextImageKHR(LogicalDevice.GetVkDevice(), m_VkSwapChain, UINT64_MAX, m_ImageAcquiredSemaphores[m_SemaphoreIndex], (VkFence)nullptr, &m_BackBufferIndex);
@@ -403,6 +405,13 @@ void SwapChainVkImpl::AcquireNextImage(DeviceContextVkImpl *pDeviceCtxVk)
     // Next command in the device context must wait for the next image to be acquired
     // Unlike fences or events, the act of waiting for a semaphore also unsignals that semaphore (6.4.2)
     pDeviceCtxVk->AddWaitSemaphore(m_ImageAcquiredSemaphores[m_SemaphoreIndex], VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+    if (!m_SwapChainImagesInitialized[m_BackBufferIndex])
+    {
+        // Vulkan validation layers do not like uninitialized memory.
+        // Clear back buffer first time we acquire it. This will use vkCmdClearColorImage()
+        pDeviceCtxVk->ClearRenderTarget(GetCurrentBackBufferRTV(), nullptr);
+        m_SwapChainImagesInitialized[m_BackBufferIndex] = true;
+    }
 }
 
 IMPLEMENT_QUERY_INTERFACE( SwapChainVkImpl, IID_SwapChainVk, TSwapChainBase )
@@ -425,7 +434,6 @@ void SwapChainVkImpl::Present(Uint32 SyncInterval)
     //VERIFY(pImmediateCtxVk->GetNumCommandsInCtx() != 0, "The context must not be flushed");
     pImmediateCtxVk->AddSignalSemaphore(m_DrawCompleteSemaphores[m_SemaphoreIndex]);
     pImmediateCtxVk->Flush();
-    pImmediateCtxVk->ResetRenderTargets();
 
     VkPresentInfoKHR PresentInfo = {};
     PresentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -461,6 +469,13 @@ void SwapChainVkImpl::Present(Uint32 SyncInterval)
         m_SemaphoreIndex = 0;
 
     AcquireNextImage(pImmediateCtxVk);
+
+    if(pImmediateCtxVk->IsDefaultFBBound())
+    {
+        // If default framebuffer is bound, we need to call SetRenderTargets()
+        // to bind new back buffer RTV
+        pImmediateCtxVk->SetRenderTargets(0, nullptr, nullptr);
+    }
 }
 
 void SwapChainVkImpl::Resize( Uint32 NewWidth, Uint32 NewHeight )
@@ -483,6 +498,7 @@ void SwapChainVkImpl::Resize( Uint32 NewWidth, Uint32 NewHeight )
 
                 // All references to the swap chain must be released before it can be resized
                 m_pBackBufferRTV.clear();
+                m_SwapChainImagesInitialized.clear();
                 m_pDepthBufferDSV.Release();
 
                 // This will release references to Vk swap chain buffers hold by
@@ -512,12 +528,6 @@ void SwapChainVkImpl::Resize( Uint32 NewWidth, Uint32 NewHeight )
             }
         }
     }
-}
-
-ITextureViewVk *SwapChainVkImpl::GetCurrentBackBufferRTV()
-{
-    VERIFY_EXPR(m_BackBufferIndex >= 0 && m_BackBufferIndex < m_SwapChainDesc.BufferCount);
-    return m_pBackBufferRTV[m_BackBufferIndex];
 }
 
 

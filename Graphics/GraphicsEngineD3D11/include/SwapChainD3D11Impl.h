@@ -51,10 +51,13 @@ public:
     virtual void Present(Uint32 SyncInterval)override final;
     virtual void Resize( Uint32 NewWidth, Uint32 NewHeight )override final;
 
-    virtual IDXGISwapChain *GetDXGISwapChain()override final{ return m_pSwapChain; }
+    virtual IDXGISwapChain* GetDXGISwapChain()override final{ return m_pSwapChain; }
 
     virtual ID3D11RenderTargetView* GetRTV()override final{ return m_pRenderTargetView; }
     virtual ID3D11DepthStencilView* GetDSV()override final{ return m_pDepthStencilView; }
+
+    virtual ITextureView* GetCurrentBackBufferRTV()override final{return nullptr;}
+    virtual ITextureView* GetDepthBufferDSV()override final{return nullptr;}
 
 private:
     virtual void UpdateSwapChain(bool CreateNew)override final;

@@ -399,12 +399,36 @@ inline void DeviceContextBase<BaseInterface> :: SetScissorRects( Uint32 NumRects
 }
 
 template<typename BaseInterface>
-inline bool DeviceContextBase<BaseInterface> :: SetRenderTargets( Uint32 NumRenderTargets, ITextureView *ppRenderTargets[], ITextureView *pDepthStencil, Uint32 Dummy )
+inline bool DeviceContextBase<BaseInterface> :: SetRenderTargets( Uint32 NumRenderTargets, ITextureView* ppRenderTargets[], ITextureView* pDepthStencil, Uint32 Dummy )
 {
     bool bBindRenderTargets = false;
     m_FramebufferWidth  = 0;
     m_FramebufferHeight = 0;
     m_FramebufferSlices = 0;
+
+    ITextureView* pDefaultRTV = nullptr;
+    if (NumRenderTargets == 0 && pDepthStencil == nullptr)
+    {
+        VERIFY(m_pSwapChain, "Swap chain is not initialized in the device context");
+
+        NumRenderTargets = 1;
+        pDefaultRTV = m_pSwapChain->GetCurrentBackBufferRTV();
+        ppRenderTargets = &pDefaultRTV;
+        pDepthStencil = m_pSwapChain->GetDepthBufferDSV();
+
+        const auto &SwapChainDesc = m_pSwapChain->GetDesc();
+        m_FramebufferWidth  = SwapChainDesc.Width;
+        m_FramebufferHeight = SwapChainDesc.Height;
+        m_FramebufferSlices = 1;
+
+        if (!m_IsDefaultFramebufferBound)
+            bBindRenderTargets = true;
+        m_IsDefaultFramebufferBound = true;
+    }
+    else
+        m_IsDefaultFramebufferBound = false;
+
+
     if( NumRenderTargets != m_NumBoundRenderTargets )
     {
         bBindRenderTargets = true;
@@ -442,7 +466,7 @@ inline bool DeviceContextBase<BaseInterface> :: SetRenderTargets( Uint32 NumRend
             }
         }
 
-        // Here both views a certainly live object, since we store
+        // Here both views are certainly live objects, since we store
         // strong references to all bound render targets. So we
         // can safely compare pointers.
         if( m_pBoundRenderTargets[rt] != pRTView )
@@ -483,28 +507,6 @@ inline bool DeviceContextBase<BaseInterface> :: SetRenderTargets( Uint32 NumRend
         bBindRenderTargets = true;
     }
 
-    if (NumRenderTargets == 0 && pDepthStencil == nullptr)
-    {
-        if (!m_IsDefaultFramebufferBound)
-        {
-            m_IsDefaultFramebufferBound = true;
-            bBindRenderTargets = true;
-        }
-
-        if (m_pSwapChain)
-        {
-            const auto &SwapChainDesc = m_pSwapChain->GetDesc();
-            m_FramebufferWidth = SwapChainDesc.Width;
-            m_FramebufferHeight = SwapChainDesc.Height;
-            m_FramebufferSlices = 1;
-        }
-        else
-        {
-            UNEXPECTED("Swap chain is not initialized in the device context");
-        }
-    }
-    else
-        m_IsDefaultFramebufferBound = false;
 
     VERIFY_EXPR(m_FramebufferWidth > 0 && m_FramebufferHeight > 0 && m_FramebufferSlices > 0);
 

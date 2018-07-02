@@ -27,6 +27,7 @@
 /// Definition of the Diligent::ISwapChain interface and related data structures
 
 #include "../../../Primitives/interface/Object.h"
+#include "TextureView.h"
 #include "GraphicsTypes.h"
 
 namespace Diligent
@@ -60,6 +61,24 @@ public:
 
     /// Sets windowed mode (only supported on Win32 platform)
     virtual void SetWindowedMode() = 0;
+
+    /// Returns render target view of the current back buffer in the swap chain
+
+    /// \note For Direct3D12 and Vulkan backends, the function returns 
+    /// different pointer for every offscreen buffer in the swap chain
+    /// (flipped by every call to ISwapChain::Present()). For Direct3D11 
+    /// backend it always returns the same pointer. For OpenGL/GLES backends
+    /// the method returns null.
+    ///
+    /// The method does *NOT* call AddRef() on the returned interface,
+    /// so Release() must not be called.
+    virtual ITextureView* GetCurrentBackBufferRTV() = 0;
+
+    /// Returns depth-stencil view of the depth buffer
+
+    /// The method does *NOT* call AddRef() on the returned interface,
+    /// so Release() must not be called.
+    virtual ITextureView* GetDepthBufferDSV() = 0;
 };
 
 }

@@ -502,7 +502,7 @@ namespace Diligent
         {
             if (m_pSwapChain)
             {
-                pVkDSV = m_pSwapChain.RawPtr<ISwapChainVk>()->GetDepthBufferDSV();
+                pVkDSV = ValidatedCast<ITextureViewVk>(m_pSwapChain->GetDepthBufferDSV());
             }
             else
             {
@@ -511,44 +511,41 @@ namespace Diligent
             }
         }
 
-        auto *pTexture = pVkDSV->GetTexture();
-        auto *pTextureVk = ValidatedCast<TextureVkImpl>(pTexture);
-        const auto &ViewDesc = pVkDSV->GetDesc();
         EnsureVkCmdBuffer();
-        bool ClearedAsAttachment = false;
-        if(m_RenderPass != VK_NULL_HANDLE)
-        {
-            if(m_IsDefaultFramebufferBound && pView == nullptr || pView == m_pBoundDepthStencil)
-            {
-                CommitRenderPassAndFramebuffer();
 
-                VkClearAttachment ClearAttachment = {};
-                ClearAttachment.aspectMask = 0;
-                if (ClearFlags & CLEAR_DEPTH_FLAG)   ClearAttachment.aspectMask |= VK_IMAGE_ASPECT_DEPTH_BIT;
-                if (ClearFlags & CLEAR_STENCIL_FLAG) ClearAttachment.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
-                // colorAttachment is only meaningful if VK_IMAGE_ASPECT_COLOR_BIT is set in aspectMask
-                ClearAttachment.colorAttachment = VK_ATTACHMENT_UNUSED;
-                ClearAttachment.clearValue.depthStencil.depth = fDepth;
-                ClearAttachment.clearValue.depthStencil.stencil = Stencil;
-                VkClearRect ClearRect;
-                ClearRect.rect = { { 0,0 },{ m_FramebufferWidth, m_FramebufferHeight } };
-                ClearRect.baseArrayLayer = ViewDesc.FirstArraySlice;
-                ClearRect.layerCount = ViewDesc.NumArraySlices;
-                // No memory barriers are needed between vkCmdClearAttachments and preceding or 
-                // subsequent draw or attachment clear commands in the same subpass (17.2)
-                m_CommandBuffer.ClearAttachment(ClearAttachment, ClearRect);
-                ClearedAsAttachment = true;
-            }
-            else
-            {
-                // End render pass to clear the buffer with vkCmdClearDepthStencilImage
-                if(m_CommandBuffer.GetState().RenderPass != VK_NULL_HANDLE)
-                    m_CommandBuffer.EndRenderPass();
-            }
+        const auto& ViewDesc = pVkDSV->GetDesc();
+        
+        if(pVkDSV == m_pBoundDepthStencil)
+        {
+            // Render pass may not be currently committed
+            VERIFY_EXPR(m_RenderPass != VK_NULL_HANDLE);
+            CommitRenderPassAndFramebuffer();
+
+            VkClearAttachment ClearAttachment = {};
+            ClearAttachment.aspectMask = 0;
+            if (ClearFlags & CLEAR_DEPTH_FLAG)   ClearAttachment.aspectMask |= VK_IMAGE_ASPECT_DEPTH_BIT;
+            if (ClearFlags & CLEAR_STENCIL_FLAG) ClearAttachment.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+            // colorAttachment is only meaningful if VK_IMAGE_ASPECT_COLOR_BIT is set in aspectMask
+            ClearAttachment.colorAttachment = VK_ATTACHMENT_UNUSED;
+            ClearAttachment.clearValue.depthStencil.depth = fDepth;
+            ClearAttachment.clearValue.depthStencil.stencil = Stencil;
+            VkClearRect ClearRect;
+            ClearRect.rect = { { 0,0 },{ m_FramebufferWidth, m_FramebufferHeight } };
+            ClearRect.baseArrayLayer = ViewDesc.FirstArraySlice;
+            ClearRect.layerCount = ViewDesc.NumArraySlices;
+            // No memory barriers are needed between vkCmdClearAttachments and preceding or 
+            // subsequent draw or attachment clear commands in the same subpass (17.2)
+            m_CommandBuffer.ClearAttachment(ClearAttachment, ClearRect);
         }
-
-        if(!ClearedAsAttachment)
+        else
         {
+            // End render pass to clear the buffer with vkCmdClearDepthStencilImage
+            if(m_CommandBuffer.GetState().RenderPass != VK_NULL_HANDLE)
+                m_CommandBuffer.EndRenderPass();
+
+            auto* pTexture = pVkDSV->GetTexture();
+            auto* pTextureVk = ValidatedCast<TextureVkImpl>(pTexture);
+
             // Image layout must be VK_IMAGE_LAYOUT_GENERAL or VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL (17.1)
             TransitionImageLayout(pTexture, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
             VkClearDepthStencilValue ClearValue;
@@ -594,7 +591,7 @@ namespace Diligent
 
     void DeviceContextVkImpl::ClearRenderTarget( ITextureView *pView, const float *RGBA )
     {
-        ITextureViewVk *pVkRTV = nullptr;
+        ITextureViewVk* pVkRTV = nullptr;
         if( pView != nullptr )
         {
 #ifdef _DEBUG
@@ -607,7 +604,7 @@ namespace Diligent
         {
             if (m_pSwapChain)
             {
-                pVkRTV = m_pSwapChain.RawPtr<ISwapChainVk>()->GetCurrentBackBufferRTV();
+                pVkRTV = ValidatedCast<ITextureViewVk>(m_pSwapChain->GetCurrentBackBufferRTV());
             }
             else
             {
@@ -620,62 +617,53 @@ namespace Diligent
         if( RGBA == nullptr )
             RGBA = Zero;
         
-        auto *pTexture = pVkRTV->GetTexture();
-        auto *pTextureVk = ValidatedCast<TextureVkImpl>(pTexture);
-        const auto &ViewDesc = pVkRTV->GetDesc();
         EnsureVkCmdBuffer();
 
-        bool ClearedAsAttachment = false;
-        if(m_CommandBuffer.GetState().RenderPass != VK_NULL_HANDLE)
+        const auto& ViewDesc = pVkRTV->GetDesc();
+        
+        // Check if the texture is one of the currently bound render targets
+        static constexpr const Uint32 InvalidAttachmentIndex = static_cast<Uint32>(-1);
+        Uint32 attachmentIndex = InvalidAttachmentIndex;
+        for(Uint32 rt = 0; rt < m_NumBoundRenderTargets; ++rt)
         {
-            static constexpr Uint32 InvalidAttachmentIndex = static_cast<Uint32>(-1);
-            Uint32 attachmentIndex = InvalidAttachmentIndex;
-            if(pView == nullptr)
+            if(m_pBoundRenderTargets[rt] == pVkRTV)
             {
-                if(m_IsDefaultFramebufferBound)
-                    attachmentIndex = 0;
-            }
-            else
-            {
-                for(Uint32 rt = 0; rt < m_NumBoundRenderTargets; ++rt)
-                {
-                    if(m_pBoundRenderTargets[rt] == pView)
-                    {
-                        attachmentIndex = rt;
-                        break;
-                    }
-                }
-            }
-
-            if(attachmentIndex != InvalidAttachmentIndex)
-            {
-                VkClearAttachment ClearAttachment = {};
-                ClearAttachment.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-                // colorAttachment is only meaningful if VK_IMAGE_ASPECT_COLOR_BIT is set in aspectMask, 
-                // in which case it is an index to the pColorAttachments array in the VkSubpassDescription 
-                // structure of the current subpass which selects the color attachment to clear (17.2)
-                // It is NOT the render pass attachment index
-                ClearAttachment.colorAttachment = attachmentIndex;
-                ClearAttachment.clearValue.color = ClearValueToVkClearValue(RGBA, ViewDesc.Format);
-                VkClearRect ClearRect;
-                ClearRect.rect = {{0,0}, {m_FramebufferWidth, m_FramebufferHeight}};
-                ClearRect.baseArrayLayer = ViewDesc.FirstArraySlice;
-                ClearRect.layerCount = ViewDesc.NumArraySlices;
-                // No memory barriers are needed between vkCmdClearAttachments and preceding or 
-                // subsequent draw or attachment clear commands in the same subpass (17.2)
-                m_CommandBuffer.ClearAttachment(ClearAttachment, ClearRect);
-                ClearedAsAttachment = true;
-            }
-            else
-            {
-                // End current render pass and clear the image with vkCmdClearColorImage
-                if(m_CommandBuffer.GetState().RenderPass != VK_NULL_HANDLE)
-                    m_CommandBuffer.EndRenderPass();
+                attachmentIndex = rt;
+                break;
             }
         }
-
-        if(!ClearedAsAttachment)
+        
+        if(attachmentIndex != InvalidAttachmentIndex)
         {
+            // Render pass may not be currently committed
+            VERIFY_EXPR(m_RenderPass != VK_NULL_HANDLE);
+            CommitRenderPassAndFramebuffer();
+
+            VkClearAttachment ClearAttachment = {};
+            ClearAttachment.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            // colorAttachment is only meaningful if VK_IMAGE_ASPECT_COLOR_BIT is set in aspectMask, 
+            // in which case it is an index to the pColorAttachments array in the VkSubpassDescription 
+            // structure of the current subpass which selects the color attachment to clear (17.2)
+            // It is NOT the render pass attachment index
+            ClearAttachment.colorAttachment = attachmentIndex;
+            ClearAttachment.clearValue.color = ClearValueToVkClearValue(RGBA, ViewDesc.Format);
+            VkClearRect ClearRect;
+            ClearRect.rect = {{0,0}, {m_FramebufferWidth, m_FramebufferHeight}};
+            ClearRect.baseArrayLayer = ViewDesc.FirstArraySlice;
+            ClearRect.layerCount = ViewDesc.NumArraySlices;
+            // No memory barriers are needed between vkCmdClearAttachments and preceding or 
+            // subsequent draw or attachment clear commands in the same subpass (17.2)
+            m_CommandBuffer.ClearAttachment(ClearAttachment, ClearRect);
+        }
+        else
+        {
+            // End current render pass and clear the image with vkCmdClearColorImage
+            if(m_CommandBuffer.GetState().RenderPass != VK_NULL_HANDLE)
+                m_CommandBuffer.EndRenderPass();
+
+            auto* pTexture = pVkRTV->GetTexture();
+            auto* pTextureVk = ValidatedCast<TextureVkImpl>(pTexture);
+
             // Image layout must be VK_IMAGE_LAYOUT_GENERAL or VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL (17.1)
             TransitionImageLayout(pTexture, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
             auto ClearValue = ClearValueToVkClearValue(RGBA, ViewDesc.Format);
@@ -886,34 +874,20 @@ namespace Diligent
             if(m_RenderPass != VK_NULL_HANDLE)
             {
                 VERIFY_EXPR(m_Framebuffer != VK_NULL_HANDLE);
-                if(m_IsDefaultFramebufferBound)
+                if(m_pBoundDepthStencil)
                 {
-                    auto* pSwapChainVk = m_pSwapChain.RawPtr<ISwapChainVk>();
-                    auto* pDefaultDSV = pSwapChainVk->GetDepthBufferDSV();
-                    auto* pDefaultDepthImage = pDefaultDSV->GetTexture();
-                    TransitionImageLayout(pDefaultDepthImage, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
-
-                    auto* pDefaultRTV = pSwapChainVk->GetCurrentBackBufferRTV();
-                    auto* pDefaultBackBuffer = pDefaultRTV->GetTexture();
-                    TransitionImageLayout(pDefaultBackBuffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+                    auto* pDSVVk = m_pBoundDepthStencil.RawPtr<TextureViewVkImpl>();
+                    auto* pDepthBuffer = pDSVVk->GetTexture();
+                    TransitionImageLayout(pDepthBuffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
                 }
-                else
-                {
-                    if(m_pBoundDepthStencil)
-                    {
-                        auto* pDSVVk = m_pBoundDepthStencil.RawPtr<TextureViewVkImpl>();
-                        auto* pDepthBuffer = pDSVVk->GetTexture();
-                        TransitionImageLayout(pDepthBuffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
-                    }
 
-                    for(Uint32 rt=0; rt < m_NumBoundRenderTargets; ++rt)
+                for(Uint32 rt=0; rt < m_NumBoundRenderTargets; ++rt)
+                {
+                    if(ITextureView* pRTV = m_pBoundRenderTargets[rt])
                     {
-                        if(ITextureView* pRTV = m_pBoundRenderTargets[rt])
-                        {
-                            auto* pRTVVk = ValidatedCast<TextureViewVkImpl>(pRTV);
-                            auto* pRenderTarget = pRTVVk->GetTexture();
-                            TransitionImageLayout(pRenderTarget, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-                        }
+                        auto* pRTVVk = ValidatedCast<TextureViewVkImpl>(pRTV);
+                        auto* pRenderTarget = pRTVVk->GetTexture();
+                        TransitionImageLayout(pRenderTarget, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
                     }
                 }
                 m_CommandBuffer.BeginRenderPass(m_RenderPass, m_Framebuffer, m_FramebufferWidth, m_FramebufferHeight);
@@ -927,61 +901,40 @@ namespace Diligent
         {
             FramebufferCache::FramebufferCacheKey FBKey;
             RenderPassCache::RenderPassCacheKey RenderPassKey;
-            if(m_IsDefaultFramebufferBound)
+            if(m_pBoundDepthStencil)
             {
-                auto* pSwapChainVk = m_pSwapChain.RawPtr<ISwapChainVk>();
-                auto* pDefaultDSV = pSwapChainVk->GetDepthBufferDSV();
-                auto* pDefaultDepthImage = pDefaultDSV->GetTexture();
-                FBKey.DSV = pDefaultDSV->GetVulkanImageView();
-                RenderPassKey.DSVFormat = pDefaultDSV->GetDesc().Format;
-
-
-                auto* pDefaultRTV = pSwapChainVk->GetCurrentBackBufferRTV();
-                auto* pDefaultBackBuffer = pDefaultRTV->GetTexture();
-                FBKey.NumRenderTargets = 1;
-                FBKey.RTVs[0] = pDefaultRTV->GetVulkanImageView();
-                RenderPassKey.NumRenderTargets = 1;
-                RenderPassKey.RTVFormats[0] = pDefaultRTV->GetDesc().Format;
-                RenderPassKey.SampleCount = static_cast<Uint8>(pDefaultBackBuffer->GetDesc().SampleCount);
-                VERIFY_EXPR(RenderPassKey.SampleCount == pDefaultDepthImage->GetDesc().SampleCount);
+                auto* pDSVVk = m_pBoundDepthStencil.RawPtr<TextureViewVkImpl>();
+                auto* pDepthBuffer = pDSVVk->GetTexture();
+                FBKey.DSV = pDSVVk->GetVulkanImageView();
+                RenderPassKey.DSVFormat = pDSVVk->GetDesc().Format;
+                RenderPassKey.SampleCount = static_cast<Uint8>(pDepthBuffer->GetDesc().SampleCount);
             }
             else
             {
-                if(m_pBoundDepthStencil)
+                FBKey.DSV = nullptr;
+                RenderPassKey.DSVFormat = TEX_FORMAT_UNKNOWN;
+            }
+
+            FBKey.NumRenderTargets = m_NumBoundRenderTargets;
+            RenderPassKey.NumRenderTargets = static_cast<Uint8>(m_NumBoundRenderTargets);
+
+            for(Uint32 rt=0; rt < m_NumBoundRenderTargets; ++rt)
+            {
+                if(ITextureView* pRTV = m_pBoundRenderTargets[rt])
                 {
-                    auto* pDSVVk = m_pBoundDepthStencil.RawPtr<TextureViewVkImpl>();
-                    auto* pDepthBuffer = pDSVVk->GetTexture();
-                    FBKey.DSV = pDSVVk->GetVulkanImageView();
-                    RenderPassKey.DSVFormat = pDSVVk->GetDesc().Format;
-                    RenderPassKey.SampleCount = static_cast<Uint8>(pDepthBuffer->GetDesc().SampleCount);
+                    auto* pRTVVk = ValidatedCast<TextureViewVkImpl>(pRTV);
+                    auto* pRenderTarget = pRTVVk->GetTexture();
+                    FBKey.RTVs[rt] = pRTVVk->GetVulkanImageView();
+                    RenderPassKey.RTVFormats[rt] = pRenderTarget->GetDesc().Format;
+                    if(RenderPassKey.SampleCount == 0)
+                        RenderPassKey.SampleCount = static_cast<Uint8>(pRenderTarget->GetDesc().SampleCount);
+                    else
+                        VERIFY(RenderPassKey.SampleCount == pRenderTarget->GetDesc().SampleCount, "Inconsistent sample count");
                 }
                 else
                 {
-                    FBKey.DSV = nullptr;
-                    RenderPassKey.DSVFormat = TEX_FORMAT_UNKNOWN;
-                }
-
-                FBKey.NumRenderTargets = m_NumBoundRenderTargets;
-                RenderPassKey.NumRenderTargets = static_cast<Uint8>(m_NumBoundRenderTargets);
-
-                for(Uint32 rt=0; rt < m_NumBoundRenderTargets; ++rt)
-                {
-                    if(ITextureView* pRTV = m_pBoundRenderTargets[rt])
-                    {
-                        auto* pRTVVk = ValidatedCast<TextureViewVkImpl>(pRTV);
-                        auto* pRenderTarget = pRTVVk->GetTexture();
-                        FBKey.RTVs[rt] = pRTVVk->GetVulkanImageView();
-                        RenderPassKey.RTVFormats[rt] = pRenderTarget->GetDesc().Format;
-                        if(RenderPassKey.SampleCount == 0)
-                            RenderPassKey.SampleCount = static_cast<Uint8>(pRenderTarget->GetDesc().SampleCount);
-                        else
-                            VERIFY(RenderPassKey.SampleCount == pRenderTarget->GetDesc().SampleCount, "Inconsistent sample count");
-                    }
-                    else
-                    {
-                        FBKey.RTVs[rt] = nullptr;
-                        RenderPassKey.RTVFormats[rt] = TEX_FORMAT_UNKNOWN;
-                    }
+                    FBKey.RTVs[rt] = nullptr;
+                    RenderPassKey.RTVFormats[rt] = TEX_FORMAT_UNKNOWN;
                 }
             }
 

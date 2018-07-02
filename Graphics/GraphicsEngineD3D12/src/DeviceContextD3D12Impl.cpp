@@ -453,7 +453,7 @@ namespace Diligent
         {
             if (m_pSwapChain)
             {
-                pDSVD3D12 = m_pSwapChain.RawPtr<ISwapChainD3D12>()->GetDepthBufferDSV();
+                pDSVD3D12 = ValidatedCast<ITextureViewD3D12>(m_pSwapChain.RawPtr<ISwapChainD3D12>()->GetDepthBufferDSV());
             }
             else
             {
@@ -485,7 +485,7 @@ namespace Diligent
         {
             if (m_pSwapChain)
             {
-                pd3d12RTV = m_pSwapChain.RawPtr<ISwapChainD3D12>()->GetCurrentBackBufferRTV();
+                pd3d12RTV = ValidatedCast<ITextureViewD3D12>(m_pSwapChain.RawPtr<ISwapChainD3D12>()->GetCurrentBackBufferRTV());
             }
             else
             {
@@ -678,8 +678,8 @@ namespace Diligent
             {
                 NumRenderTargets = 1;
                 auto *pSwapChainD3D12 = m_pSwapChain.RawPtr<ISwapChainD3D12>();
-                ppRTVs[0] = pSwapChainD3D12->GetCurrentBackBufferRTV();
-                pDSV = pSwapChainD3D12->GetDepthBufferDSV();
+                ppRTVs[0] = ValidatedCast<ITextureViewD3D12>(pSwapChainD3D12->GetCurrentBackBufferRTV());
+                pDSV = ValidatedCast<ITextureViewD3D12>(pSwapChainD3D12->GetDepthBufferDSV());
             }
             else
             {

@@ -210,11 +210,4 @@ void SwapChainD3D12Impl::Resize( Uint32 NewWidth, Uint32 NewHeight )
     }
 }
 
-ITextureViewD3D12 *SwapChainD3D12Impl::GetCurrentBackBufferRTV()
-{
-    auto CurrentBackBufferIndex = m_pSwapChain->GetCurrentBackBufferIndex();
-    VERIFY_EXPR(CurrentBackBufferIndex >= 0 && CurrentBackBufferIndex < m_SwapChainDesc.BufferCount);
-    return m_pBackBufferRTV[CurrentBackBufferIndex];
-}
-
 }
