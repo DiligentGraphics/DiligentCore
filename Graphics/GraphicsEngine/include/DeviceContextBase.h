@@ -407,7 +407,10 @@ inline bool DeviceContextBase<BaseInterface> :: SetRenderTargets( Uint32 NumRend
     m_FramebufferSlices = 0;
 
     ITextureView* pDefaultRTV = nullptr;
-    if (NumRenderTargets == 0 && pDepthStencil == nullptr)
+    bool IsDefaultFrambuffer = NumRenderTargets == 0 && pDepthStencil == nullptr;
+    bBindRenderTargets = (m_IsDefaultFramebufferBound != IsDefaultFrambuffer);
+    m_IsDefaultFramebufferBound = IsDefaultFrambuffer;
+    if (m_IsDefaultFramebufferBound)
     {
         VERIFY(m_pSwapChain, "Swap chain is not initialized in the device context");
 
@@ -420,14 +423,7 @@ inline bool DeviceContextBase<BaseInterface> :: SetRenderTargets( Uint32 NumRend
         m_FramebufferWidth  = SwapChainDesc.Width;
         m_FramebufferHeight = SwapChainDesc.Height;
         m_FramebufferSlices = 1;
-
-        if (!m_IsDefaultFramebufferBound)
-            bBindRenderTargets = true;
-        m_IsDefaultFramebufferBound = true;
     }
-    else
-        m_IsDefaultFramebufferBound = false;
-
 
     if( NumRenderTargets != m_NumBoundRenderTargets )
     {
