@@ -168,6 +168,8 @@ private:
     inline void DisposeCurrentCmdBuffer(Uint64 FenceValue);
     void ReleaseStaleContextResources(Uint64 SubmittedCmdBufferNumber, Uint64 SubmittedFenceValue, Uint64 CompletedFenceValue);
 
+    void DbgLogRenderPass_PSOMismatch();
+
     VulkanUtilities::VulkanCommandBuffer m_CommandBuffer;
 
     const Uint32 m_NumCommandsToFlush = 192;

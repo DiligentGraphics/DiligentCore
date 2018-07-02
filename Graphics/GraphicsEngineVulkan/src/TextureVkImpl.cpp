@@ -338,10 +338,13 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters,
         Subresource.layerCount     = VK_REMAINING_ARRAY_LAYERS;
         if(aspectMask == VK_IMAGE_ASPECT_COLOR_BIT)
         {
-            VkClearColorValue ClearColor = {};
-            vkCmdClearColorImage(vkCmdBuff, m_VulkanImage,
-                            m_CurrentLayout, // must be VK_IMAGE_LAYOUT_GENERAL or VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
-                            &ClearColor, 1, &Subresource);
+            if(FmtAttribs.ComponentType != COMPONENT_TYPE_COMPRESSED)
+            {
+                VkClearColorValue ClearColor = {};
+                vkCmdClearColorImage(vkCmdBuff, m_VulkanImage,
+                                m_CurrentLayout, // must be VK_IMAGE_LAYOUT_GENERAL or VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
+                                &ClearColor, 1, &Subresource);
+            }
         }
         else if(aspectMask == VK_IMAGE_ASPECT_DEPTH_BIT || 
                 aspectMask == (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT) )

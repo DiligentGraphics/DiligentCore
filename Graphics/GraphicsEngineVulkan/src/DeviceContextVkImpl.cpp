@@ -327,6 +327,46 @@ namespace Diligent
         m_State.CommittedVBsUpToDate = !DynamicBufferPresent;
     }
 
+    void DeviceContextVkImpl::DbgLogRenderPass_PSOMismatch()
+    {
+        std::stringstream ss;
+        ss << "Active render pass is incomaptible with PSO '" << m_pPipelineState->GetDesc().Name << "'. "
+                "This indicates the mismatch between the number and/or format of bound render targets and/or depth stencil buffer "
+                "and the PSO. Vulkand requires exact match.\n"
+                "    Bound render targets (" << m_NumBoundRenderTargets << "):";
+        Uint32 SampleCount = 0;
+        for(Uint32 rt = 0; rt < m_NumBoundRenderTargets; ++rt)
+        {
+            ss << ' ';
+            if(auto* pRTV = m_pBoundRenderTargets[rt].RawPtr())
+            {
+                VERIFY_EXPR(SampleCount == 0 || SampleCount == pRTV->GetTexture()->GetDesc().SampleCount);
+                SampleCount = pRTV->GetTexture()->GetDesc().SampleCount;
+                ss << GetTextureFormatAttribs(pRTV->GetDesc().Format).Name;
+            }
+            else
+                ss << "<Not set>";
+        }
+        ss << "; DSV: ";
+        if(m_pBoundDepthStencil)
+        {
+            VERIFY_EXPR(SampleCount == 0 || SampleCount == m_pBoundDepthStencil->GetTexture()->GetDesc().SampleCount);
+            SampleCount = m_pBoundDepthStencil->GetTexture()->GetDesc().SampleCount;
+            ss << GetTextureFormatAttribs(m_pBoundDepthStencil->GetDesc().Format).Name;
+        }
+        else
+            ss << "<Not set>";
+        ss << "; Sample count: " << SampleCount;
+
+        const auto& GrPipeline = m_pPipelineState->GetDesc().GraphicsPipeline;
+        ss << "\n    PSO: render targets (" << Uint32{GrPipeline.NumRenderTargets} << "): ";
+        for(Uint32 rt = 0; rt < GrPipeline.NumRenderTargets; ++rt)
+            ss << ' ' << GetTextureFormatAttribs(GrPipeline.RTVFormats[rt]).Name;
+        ss << "; DSV: " << GetTextureFormatAttribs(GrPipeline.DSVFormat).Name;
+        ss << "; Sample count: " << Uint32{GrPipeline.SmplDesc.Count};
+
+        LOG_ERROR_MESSAGE(ss.str());
+    }
 
     void DeviceContextVkImpl::Draw( DrawAttribs &DrawAttribs )
     {
@@ -390,9 +430,7 @@ namespace Diligent
 #ifdef _DEBUG
         if(pPipelineStateVk->GetVkRenderPass() != m_RenderPass)
         {
-            LOG_ERROR_MESSAGE("Committed render pass does not match render pass from the Pipeline State object. "
-                              "This indicates the mismatch between the number and/or format of bound render targets and depth stencil buffer "
-                              "and information used to initialize the PSO.");
+            DbgLogRenderPass_PSOMismatch();
         }
 #endif
 
@@ -949,6 +987,7 @@ namespace Diligent
             // Set the viewport to match the render target size
             SetViewports(1, nullptr, 0, 0);
         }
+
         EnsureVkCmdBuffer();
         CommitRenderPassAndFramebuffer();
     }
