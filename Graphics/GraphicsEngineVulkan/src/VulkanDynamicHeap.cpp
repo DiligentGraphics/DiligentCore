@@ -97,7 +97,7 @@ VulkanRingBuffer::VulkanRingBuffer(IMemoryAllocator&    Allocator,
     err = LogicalDevice.BindBufferMemory(m_VkBuffer, m_BufferMemory, 0 /*offset*/);
     CHECK_VK_ERROR_AND_THROW(err, "Failed to bind  bufer memory");
 
-    LOG_INFO_MESSAGE("GPU dynamic heap created. Total buffer size: ", HeapSize);
+    LOG_INFO_MESSAGE("GPU dynamic heap created. Total buffer size: ", SizeFormatter{Size,2} );
 }
 
 void VulkanRingBuffer::Destroy()
