@@ -1442,14 +1442,14 @@ namespace Diligent
 
         const auto &PSODesc = m_pPipelineState->GetDesc();
         const auto &GraphicsPipeline = PSODesc.GraphicsPipeline;
-        if (/*GraphicsPipeline.NumRenderTargets != 0 && */GraphicsPipeline.NumRenderTargets != NumBoundRTVs)
+        if (GraphicsPipeline.NumRenderTargets != NumBoundRTVs)
         {
-            LOG_WARNING_MESSAGE("Number of currently bound render targets (", NumBoundRTVs, ") does not match the number of outputs specified by the PSO \"", PSODesc.Name, "\" (", GraphicsPipeline.NumRenderTargets, "). This is OK on D3D11 device, but will most likely be an issue on D3D12." );
+            LOG_WARNING_MESSAGE("Number of currently bound render targets (", NumBoundRTVs, ") does not match the number of outputs specified by the PSO \"", PSODesc.Name, "\" (", GraphicsPipeline.NumRenderTargets, "). This is OK on D3D11 device, but will be an issue on Vulkan and D3D12." );
         }
 
-        if (GraphicsPipeline.DepthStencilDesc.DepthEnable && BoundDSVFormat != GraphicsPipeline.DSVFormat)
+        if (BoundDSVFormat != GraphicsPipeline.DSVFormat)
         {
-            LOG_WARNING_MESSAGE("Currently bound depth-stencil buffer format (", GetTextureFormatAttribs(BoundDSVFormat).Name, ") does not match the DSV format specified by the PSO \"", PSODesc.Name, "\" (", GetTextureFormatAttribs(GraphicsPipeline.DSVFormat).Name, "). This is OK on D3D11 device, but will most likely be an issue on D3D12." );
+            LOG_WARNING_MESSAGE("Currently bound depth-stencil buffer format (", GetTextureFormatAttribs(BoundDSVFormat).Name, ") does not match the DSV format specified by the PSO \"", PSODesc.Name, "\" (", GetTextureFormatAttribs(GraphicsPipeline.DSVFormat).Name, "). This is OK on D3D11 device, but will be an issue on Vulkan and D3D12." );
         }
         
         for (Uint32 rt = 0; rt < NumBoundRTVs; ++rt)
@@ -1458,7 +1458,7 @@ namespace Diligent
             auto PSOFmt = GraphicsPipeline.RTVFormats[rt];
             if (BoundFmt != PSOFmt)
             {
-                LOG_WARNING_MESSAGE("Render target bound to slot ", rt, " (", GetTextureFormatAttribs(BoundFmt).Name, ") does not match the RTV format specified by the PSO \"", PSODesc.Name, "\" (", GetTextureFormatAttribs(PSOFmt).Name, "). This is OK on D3D11 device, but will most likely be an issue on D3D12." );
+                LOG_WARNING_MESSAGE("Render target bound to slot ", rt, " (", GetTextureFormatAttribs(BoundFmt).Name, ") does not match the RTV format specified by the PSO \"", PSODesc.Name, "\" (", GetTextureFormatAttribs(PSOFmt).Name, "). This is OK on D3D11 device, but will be an issue on Vulkan and D3D12." );
             }
         }
     }
