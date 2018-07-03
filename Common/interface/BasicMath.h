@@ -1122,15 +1122,9 @@ inline float4x4 ViewMatrixFromBasis( const float3 &f3X, const float3 &f3Y, const
                          0,     0,     0, 1);
 }
 
-inline void SetNearFarClipPlanes( float4x4 &ProjMatrix, float zNear, float zFar, bool bIsDirectX )
+inline void SetNearFarClipPlanes( float4x4 &ProjMatrix, float zNear, float zFar, bool bIsGL )
 {
-    if( bIsDirectX )
-    {
-        ProjMatrix._33 = zFar / (zFar - zNear);
-        ProjMatrix._43 = -zNear * zFar / (zFar - zNear);
-        ProjMatrix._34 = 1;
-    }
-    else
+    if( bIsGL )
     {
         // https://www.opengl.org/sdk/docs/man2/xhtml/gluPerspective.xml
         // http://www.terathon.com/gdc07_lengyel.pdf
@@ -1151,23 +1145,29 @@ inline void SetNearFarClipPlanes( float4x4 &ProjMatrix, float zNear, float zFar,
         ProjMatrix._43 = -2.0f * zNear * zFar / (zFar - zNear);
         ProjMatrix._34 = -(-1);
     }
+    else
+    {
+        ProjMatrix._33 = zFar / (zFar - zNear);
+        ProjMatrix._43 = -zNear * zFar / (zFar - zNear);
+        ProjMatrix._34 = 1;
+    }
 }
 
-inline void GetNearFarPlaneFromProjMatrix( const float4x4 &ProjMatrix, float &zNear, float &zFar, bool bIsDirectX )
+inline void GetNearFarPlaneFromProjMatrix( const float4x4 &ProjMatrix, float &zNear, float &zFar, bool bIsGL )
 {
-    if( bIsDirectX )
-    {
-        zNear = -ProjMatrix._43 / ProjMatrix._33;
-        zFar = ProjMatrix._33 / (ProjMatrix._33 - 1) * zNear;
-    }
-    else
+    if( bIsGL )
     {
         zNear = ProjMatrix._43 / (-1.f - ProjMatrix._33);
         zFar  = ProjMatrix._43 / (+1.f - ProjMatrix._33);
     }
+    else
+    {
+        zNear = -ProjMatrix._43 / ProjMatrix._33;
+        zFar = ProjMatrix._33 / (ProjMatrix._33 - 1) * zNear;
+    }
 }
 
-inline float4x4 Projection(float fov, float aspectRatio, float zNear, float zFar, bool bIsDirectX) // Left-handed projection
+inline float4x4 Projection(float fov, float aspectRatio, float zNear, float zFar, bool bIsGL ) // Left-handed projection
 {
     float4x4 mOut;
     float yScale = 1.0f / tan(fov / 2.0f);
@@ -1175,15 +1175,15 @@ inline float4x4 Projection(float fov, float aspectRatio, float zNear, float zFar
     mOut._11 = xScale;
     mOut._22 = yScale;
 
-    SetNearFarClipPlanes( mOut, zNear, zFar, bIsDirectX );
+    SetNearFarClipPlanes( mOut, zNear, zFar, bIsGL );
   
     return mOut;
 }
 
-inline float4x4 OrthoOffCenter(float left, float right, float bottom, float top, float zNear, float zFar, bool bIsDirectX) // Left-handed ortho projection
+inline float4x4 OrthoOffCenter(float left, float right, float bottom, float top, float zNear, float zFar, bool bIsGL ) // Left-handed ortho projection
 {
-    float _22 = (bIsDirectX ? 1.f : 2.f) / (zFar - zNear);
-    float _32 = (bIsDirectX ? zNear : zNear + zFar) / (zNear - zFar);
+    float _22 = (bIsGL ? 2.f          : 1.f   ) / (zFar - zNear);
+    float _32 = (bIsGL ? zNear + zFar : zNear ) / (zNear - zFar);
     return float4x4 (
                  2.f / (right - left),                             0.f,  0.f, 0.f,
                                   0.f,              2.f/(top - bottom),  0.f, 0.f,
@@ -1192,9 +1192,9 @@ inline float4x4 OrthoOffCenter(float left, float right, float bottom, float top,
     );
 }
 
-inline float4x4 Ortho(float width, float height, float zNear, float zFar, bool bIsDirectX) // Left-handed ortho projection
+inline float4x4 Ortho(float width, float height, float zNear, float zFar, bool bIsGL ) // Left-handed ortho projection
 {
-    return OrthoOffCenter(-width * 0.5f, +width * 0.5f, -height * 0.5f, +height * 0.5f, zNear, zFar, bIsDirectX);
+    return OrthoOffCenter(-width * 0.5f, +width * 0.5f, -height * 0.5f, +height * 0.5f, zNear, zFar, bIsGL);
 }
 
 struct Quaternion

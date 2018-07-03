@@ -116,5 +116,18 @@ namespace Diligent
 
         /// Texture capabilities. See Diligent::TextureCaps.
         TextureCaps TexCaps;
+
+        bool IsGLDevice()const
+        {
+            return DevType == DeviceType::OpenGL || DevType == DeviceType::OpenGLES;
+        }
+        bool IsD3DDevice()const
+        {
+            return DevType == DeviceType::D3D11 || DevType == DeviceType::D3D12;
+        }
+        bool IsVulkanDevice()const
+        {
+            return DevType == DeviceType::Vulkan;
+        }
     };
 }
