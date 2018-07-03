@@ -552,7 +552,8 @@ namespace Diligent
         EnsureVkCmdBuffer();
 
         const auto& ViewDesc = pVkDSV->GetDesc();
-        
+        VERIFY(ViewDesc.TextureDim != RESOURCE_DIM_TEX_3D, "Depth-stencil view of a 3D texture should've been created as 2D texture array view");
+
         if(pVkDSV == m_pBoundDepthStencil)
         {
             // Render pass may not be currently committed
@@ -568,9 +569,12 @@ namespace Diligent
             ClearAttachment.clearValue.depthStencil.depth = fDepth;
             ClearAttachment.clearValue.depthStencil.stencil = Stencil;
             VkClearRect ClearRect;
-            ClearRect.rect = { { 0,0 },{ m_FramebufferWidth, m_FramebufferHeight } };
-            ClearRect.baseArrayLayer = ViewDesc.FirstArraySlice;
-            ClearRect.layerCount = ViewDesc.NumArraySlices;
+            // m_FramebufferWidth, m_FramebufferHeight are scaled to the proper mip level
+            ClearRect.rect = { {0, 0}, {m_FramebufferWidth, m_FramebufferHeight} };
+            // The layers [baseArrayLayer, baseArrayLayer + layerCount) count from the base layer of 
+            // the attachment image view (17.2), so baseArrayLayer is 0, not ViewDesc.FirstArraySlice
+            ClearRect.baseArrayLayer = 0;
+            ClearRect.layerCount     = ViewDesc.NumArraySlices;
             // No memory barriers are needed between vkCmdClearAttachments and preceding or 
             // subsequent draw or attachment clear commands in the same subpass (17.2)
             m_CommandBuffer.ClearAttachment(ClearAttachment, ClearRect);
@@ -593,10 +597,11 @@ namespace Diligent
             Subresource.aspectMask = 0;
             if (ClearFlags & CLEAR_DEPTH_FLAG)   Subresource.aspectMask |= VK_IMAGE_ASPECT_DEPTH_BIT;
             if (ClearFlags & CLEAR_STENCIL_FLAG) Subresource.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+            // We are clearing the image, not image view with vkCmdClearDepthStencilImage
             Subresource.baseArrayLayer = ViewDesc.FirstArraySlice;
-            Subresource.layerCount = ViewDesc.NumArraySlices;
-            Subresource.baseMipLevel = ViewDesc.MostDetailedMip;
-            Subresource.levelCount = ViewDesc.NumMipLevels;
+            Subresource.layerCount     = ViewDesc.NumArraySlices;
+            Subresource.baseMipLevel   = ViewDesc.MostDetailedMip;
+            Subresource.levelCount     = ViewDesc.NumMipLevels;
 
             m_CommandBuffer.ClearDepthStencilImage(pTextureVk->GetVkImage(), ClearValue, Subresource);
         }
@@ -658,7 +663,8 @@ namespace Diligent
         EnsureVkCmdBuffer();
 
         const auto& ViewDesc = pVkRTV->GetDesc();
-        
+        VERIFY(ViewDesc.TextureDim != RESOURCE_DIM_TEX_3D, "Render target view of a 3D texture should've been created as 2D texture array view");
+
         // Check if the texture is one of the currently bound render targets
         static constexpr const Uint32 InvalidAttachmentIndex = static_cast<Uint32>(-1);
         Uint32 attachmentIndex = InvalidAttachmentIndex;
@@ -686,9 +692,12 @@ namespace Diligent
             ClearAttachment.colorAttachment = attachmentIndex;
             ClearAttachment.clearValue.color = ClearValueToVkClearValue(RGBA, ViewDesc.Format);
             VkClearRect ClearRect;
-            ClearRect.rect = {{0,0}, {m_FramebufferWidth, m_FramebufferHeight}};
-            ClearRect.baseArrayLayer = ViewDesc.FirstArraySlice;
-            ClearRect.layerCount = ViewDesc.NumArraySlices;
+            // m_FramebufferWidth, m_FramebufferHeight are scaled to the proper mip level
+            ClearRect.rect = { {0, 0}, {m_FramebufferWidth, m_FramebufferHeight} };
+            // The layers [baseArrayLayer, baseArrayLayer + layerCount) count from the base layer of 
+            // the attachment image view (17.2), so baseArrayLayer is 0, not ViewDesc.FirstArraySlice
+            ClearRect.baseArrayLayer = 0;
+            ClearRect.layerCount     = ViewDesc.NumArraySlices; 
             // No memory barriers are needed between vkCmdClearAttachments and preceding or 
             // subsequent draw or attachment clear commands in the same subpass (17.2)
             m_CommandBuffer.ClearAttachment(ClearAttachment, ClearRect);
@@ -706,21 +715,12 @@ namespace Diligent
             TransitionImageLayout(pTexture, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
             auto ClearValue = ClearValueToVkClearValue(RGBA, ViewDesc.Format);
             VkImageSubresourceRange Subresource;
-            Subresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            if(ViewDesc.TextureDim == RESOURCE_DIM_TEX_3D)
-            {
-                if(ViewDesc.NumDepthSlices != pTextureVk->GetDesc().Depth || ViewDesc.FirstDepthSlice != 0)
-                    LOG_ERROR_MESSAGE("Partial clears of 3D textures are not supported in Vulkan. Texture '", pTextureVk->GetDesc().Name,"' will be cleared entirely.");
-                Subresource.baseArrayLayer = 0;
-                Subresource.layerCount = 1;
-            }
-            else
-            {
-                Subresource.baseArrayLayer = ViewDesc.FirstArraySlice;
-                Subresource.layerCount = ViewDesc.NumArraySlices;
-            }
-            Subresource.baseMipLevel = ViewDesc.MostDetailedMip;
-            Subresource.levelCount = ViewDesc.NumMipLevels;
+            Subresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+            // We are clearing the image, not image view with vkCmdClearColorImage
+            Subresource.baseArrayLayer = ViewDesc.FirstArraySlice;
+            Subresource.layerCount     = ViewDesc.NumArraySlices;
+            Subresource.baseMipLevel   = ViewDesc.MostDetailedMip;
+            Subresource.levelCount     = ViewDesc.NumMipLevels;
             VERIFY(ViewDesc.NumMipLevels, "RTV must contain single mip level");
 
             m_CommandBuffer.ClearColorImage(pTextureVk->GetVkImage(), ClearValue, Subresource);

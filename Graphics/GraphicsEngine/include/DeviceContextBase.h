@@ -447,16 +447,16 @@ inline bool DeviceContextBase<BaseInterface> :: SetRenderTargets( Uint32 NumRend
             {
                 auto *pTex = pRTView->GetTexture();
                 const auto &TexDesc = pTex->GetDesc();
-                m_FramebufferWidth  = TexDesc.Width  >> RTVDesc.MostDetailedMip;
-                m_FramebufferHeight = TexDesc.Height >> RTVDesc.MostDetailedMip;
+                m_FramebufferWidth  = std::max(TexDesc.Width  >> RTVDesc.MostDetailedMip, 1U);
+                m_FramebufferHeight = std::max(TexDesc.Height >> RTVDesc.MostDetailedMip, 1U);
                 m_FramebufferSlices = RTVDesc.NumArraySlices;
             }
             else
             {
 #ifdef _DEBUG
                 const auto &TexDesc = pRTView->GetTexture()->GetDesc();
-                VERIFY(m_FramebufferWidth  == TexDesc.Width  >> RTVDesc.MostDetailedMip, "Inconsitent render target sizes");
-                VERIFY(m_FramebufferHeight == TexDesc.Height >> RTVDesc.MostDetailedMip, "Inconsitent render target sizes");
+                VERIFY(m_FramebufferWidth  == std::max(TexDesc.Width  >> RTVDesc.MostDetailedMip, 1U), "Inconsitent render target sizes");
+                VERIFY(m_FramebufferHeight == std::max(TexDesc.Height >> RTVDesc.MostDetailedMip, 1U), "Inconsitent render target sizes");
                 VERIFY(m_FramebufferSlices == RTVDesc.NumArraySlices, "Inconsitent number of layers in bound render targets");
 #endif
             }
@@ -482,16 +482,16 @@ inline bool DeviceContextBase<BaseInterface> :: SetRenderTargets( Uint32 NumRend
         {
             auto *pTex = pDepthStencil->GetTexture();
             const auto &TexDesc = pTex->GetDesc();
-            m_FramebufferWidth  = TexDesc.Width  >> DSVDesc.MostDetailedMip;
-            m_FramebufferHeight = TexDesc.Height >> DSVDesc.MostDetailedMip;
+            m_FramebufferWidth  = std::max(TexDesc.Width  >> DSVDesc.MostDetailedMip, 1U);
+            m_FramebufferHeight = std::max(TexDesc.Height >> DSVDesc.MostDetailedMip, 1U);
             m_FramebufferSlices = DSVDesc.NumArraySlices;
         }
         else
         {
 #ifdef _DEBUG
             const auto &TexDesc = pDepthStencil->GetTexture()->GetDesc();
-            VERIFY(m_FramebufferWidth  == TexDesc.Width  >> DSVDesc.MostDetailedMip, "Inconsitent render target sizes");
-            VERIFY(m_FramebufferHeight == TexDesc.Height >> DSVDesc.MostDetailedMip, "Inconsitent render target sizes");
+            VERIFY(m_FramebufferWidth  == std::max(TexDesc.Width  >> DSVDesc.MostDetailedMip, 1U), "Inconsitent render target sizes");
+            VERIFY(m_FramebufferHeight == std::max(TexDesc.Height >> DSVDesc.MostDetailedMip, 1U), "Inconsitent render target sizes");
             VERIFY(m_FramebufferSlices == DSVDesc.NumArraySlices, "Inconsitent number of layers in bound render targets");
 #endif
         }

@@ -560,7 +560,7 @@ void TextureVkImpl::Unmap( IDeviceContext *pContext, Uint32 Subresource, MAP_TYP
     UNEXPECTED("TextureVkImpl::Unmap() is not implemented");
 }
 
-VulkanUtilities::ImageViewWrapper TextureVkImpl::CreateImageView(TextureViewDesc &ViewDesc)
+VulkanUtilities::ImageViewWrapper TextureVkImpl::CreateImageView(TextureViewDesc& ViewDesc)
 {
     VERIFY(ViewDesc.ViewType == TEXTURE_VIEW_SHADER_RESOURCE ||
            ViewDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET ||
@@ -596,7 +596,21 @@ VulkanUtilities::ImageViewWrapper TextureVkImpl::CreateImageView(TextureViewDesc
         break;
 
         case RESOURCE_DIM_TEX_3D:
-            ImageViewCI.viewType = VK_IMAGE_VIEW_TYPE_3D;
+            if (ViewDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET || ViewDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL)
+            {
+                ViewDesc.TextureDim = RESOURCE_DIM_TEX_2D_ARRAY;
+                ImageViewCI.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+            }
+            else
+            {
+                ImageViewCI.viewType = VK_IMAGE_VIEW_TYPE_3D;
+                if (ViewDesc.FirstDepthSlice != 0 && ViewDesc.NumDepthSlices == m_Desc.Depth)
+                {
+                    LOG_ERROR_MESSAGE("In Vulkan SRVs and UAVs of a 3D texture must reference all depth slices.");
+                    ViewDesc.FirstDepthSlice = 0;
+                    ViewDesc.NumDepthSlices  = m_Desc.Depth;
+                }
+            }
         break;
 
         case RESOURCE_DIM_TEX_CUBE:
@@ -615,24 +629,22 @@ VulkanUtilities::ImageViewWrapper TextureVkImpl::CreateImageView(TextureViewDesc
         CorrectedViewFormat = GetDefaultTextureViewFormat(CorrectedViewFormat, TEXTURE_VIEW_DEPTH_STENCIL, m_Desc.BindFlags);
     ImageViewCI.format = TexFormatToVkFormat(CorrectedViewFormat);
     ImageViewCI.components = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
-    ImageViewCI.subresourceRange.baseMipLevel = ViewDesc.MostDetailedMip;
-    ImageViewCI.subresourceRange.levelCount = ViewDesc.NumMipLevels;
-    ImageViewCI.subresourceRange.baseArrayLayer = ViewDesc.FirstArraySlice;
-    ImageViewCI.subresourceRange.layerCount = ViewDesc.NumArraySlices;
-
-    if(ImageViewCI.viewType == VK_IMAGE_VIEW_TYPE_3D)
+    ImageViewCI.subresourceRange.baseMipLevel   = ViewDesc.MostDetailedMip;
+    ImageViewCI.subresourceRange.levelCount     = ViewDesc.NumMipLevels;
+    if (ViewDesc.TextureDim == RESOURCE_DIM_TEX_1D_ARRAY || 
+        ViewDesc.TextureDim == RESOURCE_DIM_TEX_2D_ARRAY ||
+        ViewDesc.TextureDim == RESOURCE_DIM_TEX_CUBE     || 
+        ViewDesc.TextureDim == RESOURCE_DIM_TEX_CUBE_ARRAY )
     {
-        if(ImageViewCI.subresourceRange.baseArrayLayer == 0 && ImageViewCI.subresourceRange.layerCount == m_Desc.Depth )
-        {
-            // If viewType is VK_IMAGE_VIEW_TYPE_3D, then baseArrayLayer must be 0, and layerCount must be 1 (11.5)
-            ImageViewCI.subresourceRange.layerCount = 1;
-        }
-        else
-        {
-            // Create a 2D texture array view
-            ImageViewCI.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
-        }
+        ImageViewCI.subresourceRange.baseArrayLayer = ViewDesc.FirstArraySlice;
+        ImageViewCI.subresourceRange.layerCount     = ViewDesc.NumArraySlices;
     }
+    else
+    {
+        ImageViewCI.subresourceRange.baseArrayLayer = 0;
+        ImageViewCI.subresourceRange.layerCount     = 1;
+    }
+
     const auto &FmtAttribs = GetTextureFormatAttribs(CorrectedViewFormat);
 
     if(ViewDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL)
