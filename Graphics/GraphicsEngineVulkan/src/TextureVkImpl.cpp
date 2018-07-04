@@ -604,7 +604,7 @@ VulkanUtilities::ImageViewWrapper TextureVkImpl::CreateImageView(TextureViewDesc
             else
             {
                 ImageViewCI.viewType = VK_IMAGE_VIEW_TYPE_3D;
-                if (ViewDesc.FirstDepthSlice != 0 && ViewDesc.NumDepthSlices == m_Desc.Depth)
+                if (ViewDesc.FirstDepthSlice != 0 || ViewDesc.NumDepthSlices != m_Desc.Depth)
                 {
                     LOG_ERROR_MESSAGE("In Vulkan SRVs and UAVs of a 3D texture must reference all depth slices.");
                     ViewDesc.FirstDepthSlice = 0;

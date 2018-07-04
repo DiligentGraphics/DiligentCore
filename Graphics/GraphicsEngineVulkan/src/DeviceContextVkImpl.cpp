@@ -557,7 +557,7 @@ namespace Diligent
         if(pVkDSV == m_pBoundDepthStencil)
         {
             // Render pass may not be currently committed
-            VERIFY_EXPR(m_RenderPass != VK_NULL_HANDLE);
+            VERIFY_EXPR(m_RenderPass != VK_NULL_HANDLE && m_Framebuffer != VK_NULL_HANDLE);
             CommitRenderPassAndFramebuffer();
 
             VkClearAttachment ClearAttachment = {};
@@ -680,7 +680,7 @@ namespace Diligent
         if(attachmentIndex != InvalidAttachmentIndex)
         {
             // Render pass may not be currently committed
-            VERIFY_EXPR(m_RenderPass != VK_NULL_HANDLE);
+            VERIFY_EXPR(m_RenderPass != VK_NULL_HANDLE && m_Framebuffer != VK_NULL_HANDLE);
             CommitRenderPassAndFramebuffer();
 
             VkClearAttachment ClearAttachment = {};
@@ -904,15 +904,15 @@ namespace Diligent
     void DeviceContextVkImpl::CommitRenderPassAndFramebuffer()
     {
         const auto& CmdBufferState = m_CommandBuffer.GetState();
-        if(CmdBufferState.RenderPass != m_RenderPass)
+        if (CmdBufferState.Framebuffer != m_Framebuffer)
         {
-            if(CmdBufferState.RenderPass != VK_NULL_HANDLE)
+            if (CmdBufferState.RenderPass != VK_NULL_HANDLE)
                 m_CommandBuffer.EndRenderPass();
         
-            if(m_RenderPass != VK_NULL_HANDLE)
+            if (m_Framebuffer != VK_NULL_HANDLE)
             {
-                VERIFY_EXPR(m_Framebuffer != VK_NULL_HANDLE);
-                if(m_pBoundDepthStencil)
+                VERIFY_EXPR(m_RenderPass != VK_NULL_HANDLE);
+                if (m_pBoundDepthStencil)
                 {
                     auto* pDSVVk = m_pBoundDepthStencil.RawPtr<TextureViewVkImpl>();
                     auto* pDepthBuffer = pDSVVk->GetTexture();

@@ -596,6 +596,9 @@ objects. Refer to the following pages for more information:
 * Implemented initialization in fullscreen mode as well as toggling between fullscreen and windowed modes in run time
 * Added sync interval parameter to ISwapChain::Present()
 * Fixed issues with relative paths in headers
+* API Changes:
+  * Math library functions `SetNearFarClipPlanes()`, `GetNearFarPlaneFromProjMatrix()`, `Projection()`,
+    `OrthoOffCenter()`, and `Ortho()` take `bIsGL` flag instead of `bIsDirectX`
 
 ## v2.2.a
 
