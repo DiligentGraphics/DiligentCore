@@ -129,5 +129,44 @@ namespace Diligent
         {
             return DevType == DeviceType::Vulkan;
         }
+
+        struct NDCAttribs
+        {
+            const float MinZ;          // Minimum z value of normalized device coordinate space
+            const float ZtoDepthScale; // NDC z to depth scale
+            const float YtoVScale;     // Scale to transform NDC y coordinate to texture V coordinate
+
+            float GetZtoDepthBias() const
+            {
+                // Returns ZtoDepthBias such that given NDC z coordinate, depth value can be
+                // computed as follows:
+                // d = z * ZtoDepthScale + ZtoDepthBias
+                return -MinZ * ZtoDepthScale;
+            }
+        };
+
+        const NDCAttribs& GetNDCAttribs()const
+        {
+            if (IsVulkanDevice())
+            {
+                static constexpr const NDCAttribs NDCAttribsVk {0.0f, 1.0f, 0.5f};
+                return NDCAttribsVk;
+            }
+            else if (IsD3DDevice())
+            {
+                static constexpr const NDCAttribs NDCAttribsD3D {0.0f, 1.0f, -0.5f};
+                return NDCAttribsD3D;
+            }
+            else if (IsGLDevice())
+            {
+                static constexpr const NDCAttribs NDCAttribsGL {-1.0f, 0.5f, 0.5f};
+                return NDCAttribsGL;
+            }
+            else
+            {
+                static constexpr const NDCAttribs NDCAttribsDefault {0.0f, 1.0f, 0.5f};
+                return NDCAttribsDefault;
+            }
+        }
     };
 }
