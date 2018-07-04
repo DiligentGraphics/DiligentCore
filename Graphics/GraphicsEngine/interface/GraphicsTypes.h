@@ -1291,6 +1291,25 @@ namespace Diligent
         /// or when backbuffer is presented.
         Uint32 NumCommandsToFlushCmdBuffer = 256;
 
+        /// List of device features to be enabled
+        /// see https://www.khronos.org/registry/vulkan/specs/1.0/html/vkspec.html#VkPhysicalDeviceFeatures
+        struct DeviceFeatures
+        {
+            bool depthBiasClamp                 = false;
+            bool fillModeNonSolid               = false;
+            bool depthClamp                     = false;
+            bool independentBlend               = false;
+            bool samplerAnisotropy              = true;
+            bool geometryShader                 = false;
+            bool tessellationShader             = false;
+            bool dualSrcBlend                   = false;
+            bool multiViewport                  = false;
+            bool imageCubeArray                 = false;
+            bool textureCompressionBC           = false;
+            bool vertexPipelineStoresAndAtomics = false;
+            bool fragmentStoresAndAtomics       = false;
+        }EnabledFeatures;
+
         /// Descriptor pool size
         struct DescriptorPoolSize
         {

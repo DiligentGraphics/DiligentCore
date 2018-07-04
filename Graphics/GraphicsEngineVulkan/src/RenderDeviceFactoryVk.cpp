@@ -150,19 +150,19 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk( const EngineVkAttribs& Crea
         DeviceCreateInfo.queueCreateInfoCount = 1;
         DeviceCreateInfo.pQueueCreateInfos = &QueueInfo;
         VkPhysicalDeviceFeatures DeviceFeatures = {};
-        DeviceFeatures.depthBiasClamp       = VK_TRUE;
-        DeviceFeatures.fillModeNonSolid     = VK_TRUE;
-        DeviceFeatures.depthClamp           = VK_TRUE;
-        DeviceFeatures.independentBlend     = VK_TRUE;
-        DeviceFeatures.samplerAnisotropy    = VK_TRUE;
-        DeviceFeatures.geometryShader       = VK_TRUE;
-        DeviceFeatures.tessellationShader   = VK_TRUE;
-        DeviceFeatures.dualSrcBlend         = VK_TRUE;
-        DeviceFeatures.multiViewport        = VK_TRUE;
-        DeviceFeatures.imageCubeArray       = VK_TRUE;
-        DeviceFeatures.textureCompressionBC = VK_TRUE;
-        DeviceFeatures.vertexPipelineStoresAndAtomics = VK_TRUE;
-        DeviceFeatures.fragmentStoresAndAtomics       = VK_TRUE;
+        DeviceFeatures.depthBiasClamp                 = CreationAttribs.EnabledFeatures.depthBiasClamp                 ? VK_TRUE : VK_FALSE;
+        DeviceFeatures.fillModeNonSolid               = CreationAttribs.EnabledFeatures.fillModeNonSolid               ? VK_TRUE : VK_FALSE;
+        DeviceFeatures.depthClamp                     = CreationAttribs.EnabledFeatures.depthClamp                     ? VK_TRUE : VK_FALSE;
+        DeviceFeatures.independentBlend               = CreationAttribs.EnabledFeatures.independentBlend               ? VK_TRUE : VK_FALSE;
+        DeviceFeatures.samplerAnisotropy              = CreationAttribs.EnabledFeatures.samplerAnisotropy              ? VK_TRUE : VK_FALSE;
+        DeviceFeatures.geometryShader                 = CreationAttribs.EnabledFeatures.geometryShader                 ? VK_TRUE : VK_FALSE;
+        DeviceFeatures.tessellationShader             = CreationAttribs.EnabledFeatures.tessellationShader             ? VK_TRUE : VK_FALSE;
+        DeviceFeatures.dualSrcBlend                   = CreationAttribs.EnabledFeatures.dualSrcBlend                   ? VK_TRUE : VK_FALSE;
+        DeviceFeatures.multiViewport                  = CreationAttribs.EnabledFeatures.multiViewport                  ? VK_TRUE : VK_FALSE;
+        DeviceFeatures.imageCubeArray                 = CreationAttribs.EnabledFeatures.imageCubeArray                 ? VK_TRUE : VK_FALSE;
+        DeviceFeatures.textureCompressionBC           = CreationAttribs.EnabledFeatures.textureCompressionBC           ? VK_TRUE : VK_FALSE;
+        DeviceFeatures.vertexPipelineStoresAndAtomics = CreationAttribs.EnabledFeatures.vertexPipelineStoresAndAtomics ? VK_TRUE : VK_FALSE;
+        DeviceFeatures.fragmentStoresAndAtomics       = CreationAttribs.EnabledFeatures.fragmentStoresAndAtomics       ? VK_TRUE : VK_FALSE;
         DeviceCreateInfo.pEnabledFeatures = &DeviceFeatures; // NULL or a pointer to a VkPhysicalDeviceFeatures structure that contains 
                                                              // boolean indicators of all the features to be enabled.
 
