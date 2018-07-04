@@ -1300,8 +1300,8 @@ namespace Diligent
             bool depthClamp                     = false;
             bool independentBlend               = false;
             bool samplerAnisotropy              = true;
-            bool geometryShader                 = false;
-            bool tessellationShader             = false;
+            bool geometryShader                 = true;
+            bool tessellationShader             = true;
             bool dualSrcBlend                   = false;
             bool multiViewport                  = false;
             bool imageCubeArray                 = false;
