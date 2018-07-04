@@ -43,7 +43,7 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl*
     m_StaticResCache(ShaderResourceCacheVk::DbgCacheContentType::StaticShaderResources),
     m_StaticVarsMgr(*this)
 {
-    auto GLSLSource = BuildGLSLSourceString(CreationAttribs, TargetGLSLCompiler::glslang);
+    auto GLSLSource = BuildGLSLSourceString(CreationAttribs, TargetGLSLCompiler::glslang, "#define TARGET_API_VULKAN 1\n");
     m_SPIRV = GLSLtoSPIRV(m_Desc.ShaderType, GLSLSource.c_str());
     if(m_SPIRV.empty())
     {

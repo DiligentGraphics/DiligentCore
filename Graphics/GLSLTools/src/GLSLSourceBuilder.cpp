@@ -32,7 +32,7 @@
 namespace Diligent
 {
 
-String BuildGLSLSourceString(const ShaderCreationAttribs &CreationAttribs, TargetGLSLCompiler TargetCompiler)
+String BuildGLSLSourceString(const ShaderCreationAttribs& CreationAttribs, TargetGLSLCompiler TargetCompiler, const char* ExtraDefinitions)
 {
     String GLSLSource;
 
@@ -188,6 +188,11 @@ String BuildGLSLSourceString(const ShaderCreationAttribs &CreationAttribs, Targe
         default: UNEXPECTED("Shader type is not specified");
     }
     GLSLSource += ShaderTypeDefine;
+
+    if(ExtraDefinitions != nullptr)
+    {
+        GLSLSource.append(ExtraDefinitions);
+    }
 
     if (CreationAttribs.Macros != nullptr)
     {

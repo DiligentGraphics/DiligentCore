@@ -35,6 +35,6 @@ enum TargetGLSLCompiler
     driver
 };
 
-String BuildGLSLSourceString(const ShaderCreationAttribs &CreationAttribs, TargetGLSLCompiler TargetCompiler);
+String BuildGLSLSourceString(const ShaderCreationAttribs& CreationAttribs, TargetGLSLCompiler TargetCompiler, const char* ExtraDefinitions = nullptr);
 
 }

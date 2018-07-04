@@ -981,24 +981,31 @@ uvec4  _ToUvec( vec4  f4 ){ return _ToUvec4( f4.x, f4.y, f4.z, f4.w ); }
 
 // Helper functions
 
+#ifdef TARGET_API_VULKAN
+
+#define NDC_MIN_Z 0.0 // Minimal z in the normalized device space
+#define F3NDC_XYZ_TO_UVD_SCALE float3(0.5, 0.5, 1.0)
+
+#else
+
+#define NDC_MIN_Z -1.0 // Minimal z in the normalized device space
+#define F3NDC_XYZ_TO_UVD_SCALE float3(0.5, 0.5, 0.5)
+
+#endif
+
 float2 NormalizedDeviceXYToTexUV( float2 f2ProjSpaceXY )
 {
-    return float2(0.5,0.5) + float2(0.5,0.5) * f2ProjSpaceXY.xy;
+    return float2(0.5,0.5) + F3NDC_XYZ_TO_UVD_SCALE.xy * f2ProjSpaceXY.xy;
 }
 
 float NormalizedDeviceZToDepth(float fNDC_Z)
 {
-    return fNDC_Z * 0.5 + 0.5; // [-1, +1] -> [0, 1]
+    return (fNDC_Z - NDC_MIN_Z) * F3NDC_XYZ_TO_UVD_SCALE.z;
 }
-
 float DepthToNormalizedDeviceZ(float fDepth)
 {
-    return fDepth * 2.0 - 1.0; // [0, 1] -> [-1, +1]
+    return fDepth / F3NDC_XYZ_TO_UVD_SCALE.z + NDC_MIN_Z;
 }
-
-#define F3NDC_XYZ_TO_UVD_SCALE float3(0.5, 0.5, 0.5)
-
-#define NDC_MIN_Z -1.0 // Minimal z in the normalized device space
 
 #define MATRIX_ELEMENT(mat, row, col) mat[col][row]
 
