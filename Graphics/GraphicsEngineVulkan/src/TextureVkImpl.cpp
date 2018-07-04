@@ -604,11 +604,15 @@ VulkanUtilities::ImageViewWrapper TextureVkImpl::CreateImageView(TextureViewDesc
             else
             {
                 ImageViewCI.viewType = VK_IMAGE_VIEW_TYPE_3D;
-                if (ViewDesc.FirstDepthSlice != 0 || ViewDesc.NumDepthSlices != m_Desc.Depth)
+                Uint32 MipDepth = std::max(m_Desc.Depth >> ViewDesc.MostDetailedMip, 1U);
+                if (ViewDesc.FirstDepthSlice != 0 || ViewDesc.NumDepthSlices != MipDepth)
                 {
-                    LOG_ERROR_MESSAGE("3D texture views in Vulkan must address all depth slices.");
+                    LOG_ERROR("3D texture view '", (ViewDesc.Name ? ViewDesc.Name : ""), "' (most detailed mip: ", ViewDesc.MostDetailedMip,
+                              "; mip levels: ", ViewDesc.NumMipLevels, "; first slice: ", ViewDesc.FirstDepthSlice,
+                              "; num depth slices: ", ViewDesc.NumDepthSlices, ") of texture '", m_Desc.Name, "' does not references"
+                              " all depth slices (", MipDepth, ") in the mip level. 3D texture views in Vulkan must address all depth slices." );
                     ViewDesc.FirstDepthSlice = 0;
-                    ViewDesc.NumDepthSlices  = m_Desc.Depth;
+                    ViewDesc.NumDepthSlices  = MipDepth;
                 }
             }
         break;

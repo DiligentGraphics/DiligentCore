@@ -236,11 +236,12 @@ void TextureBaseGL::CreateViewInternal( const struct TextureViewDesc &OrigViewDe
             if( !bIsFullTextureView )
             {
                 GLenum GLViewTarget = 0;
+                GLuint NumLayers = ViewDesc.NumArraySlices;
                 switch(ViewDesc.TextureDim)
                 {
                     case RESOURCE_DIM_TEX_1D:
                         GLViewTarget = GL_TEXTURE_1D;
-                        ViewDesc.NumArraySlices = 1;
+                        ViewDesc.NumArraySlices = NumLayers = 1;
                         break;
         
                     case RESOURCE_DIM_TEX_1D_ARRAY:
@@ -249,7 +250,7 @@ void TextureBaseGL::CreateViewInternal( const struct TextureViewDesc &OrigViewDe
 
                     case RESOURCE_DIM_TEX_2D:
                         GLViewTarget = m_Desc.SampleCount > 1 ? GL_TEXTURE_2D_MULTISAMPLE : GL_TEXTURE_2D;
-                        ViewDesc.NumArraySlices = 1;
+                        ViewDesc.NumArraySlices = NumLayers = 1;
                         break;
         
                     case RESOURCE_DIM_TEX_2D_ARRAY:
@@ -257,8 +258,22 @@ void TextureBaseGL::CreateViewInternal( const struct TextureViewDesc &OrigViewDe
                         break;
 
                     case RESOURCE_DIM_TEX_3D:
+                    {
                         GLViewTarget = GL_TEXTURE_3D;
+                        // If target is GL_TEXTURE_3D, NumLayers must equal 1.
+                        Uint32 MipDepth = std::max(m_Desc.Depth >> ViewDesc.MostDetailedMip, 1U);
+                        if(ViewDesc.FirstDepthSlice != 0 || ViewDesc.NumDepthSlices != MipDepth)
+                        {
+                            LOG_ERROR("3D texture view '", (ViewDesc.Name ? ViewDesc.Name : ""), "' (most detailed mip: ", ViewDesc.MostDetailedMip,
+                                      "; mip levels: ", ViewDesc.NumMipLevels, "; first slice: ", ViewDesc.FirstDepthSlice,
+                                      "; num depth slices: ", ViewDesc.NumDepthSlices, ") of texture '", m_Desc.Name, "' does not references"
+                                      " all depth slices. 3D texture views in OpenGL must address all depth slices.");
+                            ViewDesc.NumDepthSlices = MipDepth;
+                            ViewDesc.FirstDepthSlice = 0;
+                        }
+                        NumLayers = 1;
                         break;
+                    }
 
                     case RESOURCE_DIM_TEX_CUBE:
                         GLViewTarget = GL_TEXTURE_CUBE_MAP;
@@ -271,15 +286,17 @@ void TextureBaseGL::CreateViewInternal( const struct TextureViewDesc &OrigViewDe
                     default: UNEXPECTED("Unsupported texture view type");
                 }
 
-                glTextureView( pViewOGL->GetHandle(), GLViewTarget, m_GlTexture, GLViewFormat, ViewDesc.MostDetailedMip, ViewDesc.NumMipLevels, ViewDesc.FirstArraySlice, ViewDesc.NumArraySlices );
+                glTextureView( pViewOGL->GetHandle(), GLViewTarget, m_GlTexture, GLViewFormat, ViewDesc.MostDetailedMip, ViewDesc.NumMipLevels, ViewDesc.FirstArraySlice, NumLayers );
                 CHECK_GL_ERROR_AND_THROW( "Failed to create texture view" );
                 pViewOGL->SetBindTarget(GLViewTarget);
             }
         }
         else if( ViewDesc.ViewType == TEXTURE_VIEW_UNORDERED_ACCESS )
         {
-            VERIFY( ViewDesc.NumArraySlices == 1 || ViewDesc.NumArraySlices == m_Desc.ArraySize,
-                    "Only single array/depth slice or the whole texture can be bound as UAV in OpenGL");
+            VERIFY( ViewDesc.NumArraySlices == 1 || 
+                    m_Desc.Type == RESOURCE_DIM_TEX_3D && ViewDesc.NumDepthSlices == std::max(m_Desc.Depth >> ViewDesc.MostDetailedMip, 1U) ||
+                    ViewDesc.NumArraySlices == m_Desc.ArraySize,
+                    "Only single array/depth slice or the whole texture can be bound as UAV in OpenGL.");
             VERIFY( ViewDesc.AccessFlags != 0, "At least one access flag must be specified" );
             pViewOGL = NEW_RC_OBJ(TexViewAllocator, "TextureViewGLImpl instance", TextureViewGLImpl, bIsDefaultView ? this : nullptr)(
                                                pDeviceGLImpl, ViewDesc, this, 
