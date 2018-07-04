@@ -161,6 +161,8 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk( const EngineVkAttribs& Crea
         DeviceFeatures.multiViewport        = VK_TRUE;
         DeviceFeatures.imageCubeArray       = VK_TRUE;
         DeviceFeatures.textureCompressionBC = VK_TRUE;
+        DeviceFeatures.vertexPipelineStoresAndAtomics = VK_TRUE;
+        DeviceFeatures.fragmentStoresAndAtomics       = VK_TRUE;
         DeviceCreateInfo.pEnabledFeatures = &DeviceFeatures; // NULL or a pointer to a VkPhysicalDeviceFeatures structure that contains 
                                                              // boolean indicators of all the features to be enabled.
 
