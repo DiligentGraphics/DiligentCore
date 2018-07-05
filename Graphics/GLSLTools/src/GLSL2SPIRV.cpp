@@ -38,6 +38,7 @@
 
 #include "GLSL2SPIRV.h"
 #include "DebugUtilities.h"
+#include "DataBlobImpl.h"
 
 namespace Diligent
 {
@@ -267,7 +268,18 @@ public:
     }
 };
 
-std::vector<unsigned int> GLSLtoSPIRV(const SHADER_TYPE ShaderType, const char *ShaderSource) 
+static void InitializeCompilerOutputBlob(const char* ShaderSource, const std::string& ErrorLog, IDataBlob** ppCompilerOutput)
+{
+    VERIFY_EXPR(ppCompilerOutput != nullptr);
+    auto SourceLen = strlen(ShaderSource);
+    auto* pOutputDataBlob = MakeNewRCObj<DataBlobImpl>()(SourceLen + 1 + ErrorLog.length() + 1);
+    char* DataPtr = reinterpret_cast<char*>(pOutputDataBlob->GetDataPtr());
+    memcpy(DataPtr, ErrorLog.data(), ErrorLog.length() + 1);
+    memcpy(DataPtr + ErrorLog.length() + 1, ShaderSource, SourceLen + 1);
+    pOutputDataBlob->QueryInterface(IID_DataBlob, reinterpret_cast<IObject**>(ppCompilerOutput));
+}
+
+std::vector<unsigned int> GLSLtoSPIRV(const SHADER_TYPE ShaderType, const char* ShaderSource, IDataBlob** ppCompilerOutput) 
 {
 #if PLATFORM_ANDROID
 
@@ -291,13 +303,22 @@ std::vector<unsigned int> GLSLtoSPIRV(const SHADER_TYPE ShaderType, const char *
     // Enable SPIR-V and Vulkan rules when parsing GLSL
     EShMessages messages = (EShMessages)(EShMsgSpvRules | EShMsgVulkanRules);
 
-    const char *ShaderStrings[] = { ShaderSource };
+    const char* ShaderStrings[] = { ShaderSource };
     Shader.setStrings(ShaderStrings, 1);
     
     Shader.setAutoMapBindings(true);
     if (!Shader.parse(&Resources, 100, false, messages))
     {
-        LOG_ERROR_MESSAGE("Failed to parse shader source: \n", Shader.getInfoLog(), '\n', Shader.getInfoDebugLog());
+        std::string Log(Shader.getInfoLog());
+        if(*Shader.getInfoDebugLog() != '\0')
+        {
+            Log.push_back('\n');
+            Log.append(Shader.getInfoDebugLog());
+        }
+        LOG_ERROR_MESSAGE("Failed to parse shader source: \n", Log);
+        if(ppCompilerOutput != nullptr)
+            InitializeCompilerOutputBlob(ShaderSource, Log, ppCompilerOutput);
+
         return {};
     }
 
@@ -305,7 +326,16 @@ std::vector<unsigned int> GLSLtoSPIRV(const SHADER_TYPE ShaderType, const char *
     Program.addShader(&Shader);
     if (!Program.link(messages))
     {
-        LOG_ERROR_MESSAGE("Failed to link program: \n", Shader.getInfoLog(), '\n', Shader.getInfoDebugLog());
+        std::string Log(Shader.getInfoLog());
+        if(*Shader.getInfoDebugLog() != '\0')
+        {
+            Log.push_back('\n');
+            Log.append(Shader.getInfoDebugLog());
+        }
+        LOG_ERROR_MESSAGE("Failed to link program: \n", Log);
+        if(ppCompilerOutput != nullptr)
+            InitializeCompilerOutputBlob(ShaderSource, Log, ppCompilerOutput);
+
         return {};
     }
 

@@ -25,12 +25,13 @@
 
 #include <vector>
 #include "Shader.h"
+#include "DataBlob.h"
 
 namespace Diligent
 {
 
 void InitializeGlslang();
 void FinalizeGlslang();
-std::vector<unsigned int> GLSLtoSPIRV(const SHADER_TYPE ShaderType, const char *ShaderSource);
+std::vector<unsigned int> GLSLtoSPIRV(const SHADER_TYPE ShaderType, const char* ShaderSource, IDataBlob** ppCompilerOutput);
 
 }

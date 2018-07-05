@@ -44,7 +44,7 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl*
     m_StaticVarsMgr(*this)
 {
     auto GLSLSource = BuildGLSLSourceString(CreationAttribs, TargetGLSLCompiler::glslang, "#define TARGET_API_VULKAN 1\n");
-    m_SPIRV = GLSLtoSPIRV(m_Desc.ShaderType, GLSLSource.c_str());
+    m_SPIRV = GLSLtoSPIRV(m_Desc.ShaderType, GLSLSource.c_str(), CreationAttribs.ppCompilerOutput);
     if(m_SPIRV.empty())
     {
         LOG_ERROR_AND_THROW("Failed to compile shader");

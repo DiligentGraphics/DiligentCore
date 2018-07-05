@@ -31,9 +31,10 @@ namespace VulkanUtilities
     {
         std::stringstream debugMessage;
 
-        // Ignore warning about using RenderPass LOAD_OP_CLEAR:
-        //    vkCmdClearAttachments() issued on command buffer object 0x... prior to any Draw Cmds. It is recommended you use RenderPass LOAD_OP_CLEAR on Attachments prior to any Draw.
-        if ( (flags & VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT) && msgCode == 64)
+        // Ignore the following warnings:
+        // 26: Vertex buffers are bound to command buffer (0x...) but no vertex buffers are attached to this Pipeline State Object
+        // 64: vkCmdClearAttachments() issued on command buffer object 0x... prior to any Draw Cmds. It is recommended you use RenderPass LOAD_OP_CLEAR on Attachments prior to any Draw.
+        if ( (flags & VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT) && (msgCode == 64 || msgCode == 26) )
             return VK_FALSE;
             
         debugMessage << "Vulkan debug message";

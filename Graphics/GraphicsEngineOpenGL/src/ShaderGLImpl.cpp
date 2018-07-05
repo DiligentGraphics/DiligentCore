@@ -93,6 +93,7 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters *pRefCounters, RenderDeviceGLImpl 
 
         if (CreationAttribs.ppCompilerOutput != nullptr)
         {
+            // infoLogLen accounts for null terminator
             auto *pOutputDataBlob = MakeNewRCObj<DataBlobImpl>()(infoLogLen + FullSource.length() + 1);
             char* DataPtr = reinterpret_cast<char*>(pOutputDataBlob->GetDataPtr());
             memcpy(DataPtr, !infoLog.empty() ? infoLog.data() : nullptr, infoLogLen);

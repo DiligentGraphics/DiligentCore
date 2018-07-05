@@ -447,23 +447,14 @@ void SwapChainVkImpl::Present(Uint32 SyncInterval)
     PresentInfo.pImageIndices = &m_BackBufferIndex;
     VkResult Result = VK_SUCCESS;
     PresentInfo.pResults = &Result;
-    VERIFY(Result == VK_SUCCESS, "Present failed");
-
+    
     auto *pDeviceVk = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
     auto vkCmdQueue = pDeviceVk->GetCmdQueue()->GetVkQueue();
     vkQueuePresentKHR(vkCmdQueue, &PresentInfo);
+    VERIFY(Result == VK_SUCCESS, "Present failed");
 
     pDeviceVk->FinishFrame();
 
-#if 0
-#if PLATFORM_UNIVERSAL_WINDOWS
-    // A successful Present call for DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL SwapChains unbinds 
-    // backbuffer 0 from all GPU writeable bind points.
-    // We need to rebind all render targets to make sure that
-    // the back buffer is not unbound
-    pImmediateCtxVk->CommitRenderTargets();
-#endif
-#endif
     ++m_SemaphoreIndex;
     if (m_SemaphoreIndex >= m_SwapChainDesc.BufferCount)
         m_SemaphoreIndex = 0;
