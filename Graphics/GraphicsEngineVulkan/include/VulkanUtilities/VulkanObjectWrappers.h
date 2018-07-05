@@ -46,6 +46,11 @@ namespace VulkanUtilities
         {
             vkObject = VK_NULL_HANDLE;
         }
+        // This constructor does not take ownership of the vulkan object
+        explicit VulkanObjectWrapper(VulkanObjectType vkObject) :
+            m_VkObject      (vkObject)
+        {
+        }
 
         VulkanObjectWrapper             (const VulkanObjectWrapper&) = delete;
         VulkanObjectWrapper& operator = (const VulkanObjectWrapper&) = delete;

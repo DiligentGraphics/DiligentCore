@@ -55,7 +55,7 @@ public:
                   FixedBlockMemoryAllocator&  TexViewObjAllocator,
                   class RenderDeviceVkImpl*   pDeviceVk, 
                   const TextureDesc&          TexDesc, 
-                  VkImage&&                   VkImageHandle);
+                  VkImage                     VkImageHandle);
 
     ~TextureVkImpl();
 
@@ -67,7 +67,7 @@ public:
     virtual void Map( IDeviceContext* pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags, MappedTextureSubresource& MappedData )override;
     virtual void Unmap( IDeviceContext* pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags )override;
 
-    virtual VkImage GetVkImage(){ return m_VulkanImage; }
+    virtual VkImage GetVkImage()const override final{ return m_VulkanImage; }
     virtual void* GetNativeHandle()override final { return GetVkImage(); }
 /*
     virtual void SetVkResourceState(Vk_RESOURCE_STATES state)override final{ SetState(state); }

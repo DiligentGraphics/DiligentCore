@@ -400,20 +400,13 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters,
 #endif
 }
 
-static TextureDesc InitTexDescFromVkImage(VkImage vkImg, const TextureDesc& SrcTexDesc)
-{
-    // There is no way to query any image attribute in Vulkan
-    return SrcTexDesc;
-}
-
-
 TextureVkImpl::TextureVkImpl(IReferenceCounters*         pRefCounters,
                              FixedBlockMemoryAllocator&  TexViewObjAllocator,
                              RenderDeviceVkImpl*         pDeviceVk, 
                              const TextureDesc&          TexDesc,
-                             VkImage&&                   VkImageHandle) :
-    TTextureBase(pRefCounters, TexViewObjAllocator, pDeviceVk, InitTexDescFromVkImage(VkImageHandle, TexDesc)),
-    m_VulkanImage(nullptr, std::move(VkImageHandle))
+                             VkImage                     VkImageHandle) :
+    TTextureBase(pRefCounters, TexViewObjAllocator, pDeviceVk, TexDesc),
+    m_VulkanImage(VkImageHandle)
 {
 }
 IMPLEMENT_QUERY_INTERFACE( TextureVkImpl, IID_TextureVk, TTextureBase )

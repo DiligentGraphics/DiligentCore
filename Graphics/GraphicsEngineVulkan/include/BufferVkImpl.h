@@ -56,7 +56,7 @@ public:
                  FixedBlockMemoryAllocator& BuffViewObjMemAllocator, 
                  class RenderDeviceVkImpl*  pDeviceVk, 
                  const BufferDesc&          BuffDesc, 
-                 void*                      pVkBuffer);
+                 VkBuffer                   vkBuffer);
     ~BufferVkImpl();
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject** ppInterface )override;

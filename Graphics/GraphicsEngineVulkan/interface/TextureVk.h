@@ -41,11 +41,10 @@ class ITextureVk : public ITexture
 {
 public:
 
-    /// Returns a pointer to the ID3D12Resource interface of the internal Direct3D12 object.
-
-    /// The method does *NOT* call AddRef() on the returned interface,
-    /// so Release() must not be called.
-    //virtual ID3D12Resource* GetD3D12Texture() = 0;
+    /// Returns Vulkan image handle.
+    
+    /// The application must not release the returned image
+    virtual VkImage GetVkImage()const = 0;
 
     /// Sets the texture usage state
 

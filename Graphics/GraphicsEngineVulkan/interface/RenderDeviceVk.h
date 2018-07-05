@@ -54,26 +54,35 @@ public:
     /// Otherwise the method is automatically called before present
     virtual void FinishFrame() = 0;
 
-    /// Creates a texture object from native d3d12 resource
+    /// Creates a texture object from native Vulkan image
 
-    /// \param [in] pd3d12Texture - pointer to the native D3D12 texture
+    /// \param [in]  vkImage - Vulkan image handle
+    /// \param [in]  TexDesc - Texture description. Vulkan provides no means to retrieve any 
+    ///                        image properties from the image handle, so complete texture
+    ///                        description must be provided
     /// \param [out] ppTexture - Address of the memory location where the pointer to the
     ///                          texture interface will be stored. 
     ///                          The function calls AddRef(), so that the new object will contain 
     ///                          one refernce.
-    //virtual void CreateTextureFromD3DResource(ID3D12Resource *pd3d12Texture, ITexture **ppTexture) = 0;
+    /// \note  Created texture object does not take ownership of the Vulkan image and will not
+    ///        destroy it once released. The application must not destroy the image while it is 
+    ///        in use by the engine.
+    virtual void CreateTextureFromVulkanImage(VkImage vkImage, const TextureDesc& TexDesc, ITexture** ppTexture) = 0;
 
-    /// Creates a buffer object from native d3d12 resoruce
+    /// Creates a buffer object from native Vulkan resource
 
-    /// \param [in] pd3d12Buffer - Pointer to the native d3d12 buffer resource
-    /// \param [in] BuffDesc - Buffer description. The system can recover buffer size, but
-    ///                        the rest of the fields need to be populated by the client 
-    ///                        as they cannot be recovered from d3d12 resource description
+    /// \param [in] vkBuffer - Vulkan buffer handle
+    /// \param [in] BuffDesc - Buffer description. Vulkan provides no means to retrieve any 
+    ///                        buffer properties from the buffer handle, so complete buffer
+    ///                        description must be provided
     /// \param [out] ppBuffer - Address of the memory location where the pointer to the
     ///                         buffer interface will be stored. 
     ///                         The function calls AddRef(), so that the new object will contain 
     ///                         one reference.
-    //virtual void CreateBufferFromD3DResource(ID3D12Resource *pd3d12Buffer, const BufferDesc& BuffDesc, IBuffer **ppBuffer) = 0;
+    /// \note  Created buffer object does not take ownership of the Vulkan buffer and will not
+    ///        destroy it once released. The application must not destroy Vulkan buffer while it is 
+    ///        in use by the engine.
+    virtual void CreateBufferFromVulkanResource(VkBuffer vkBuffer, const BufferDesc& BuffDesc, IBuffer** ppBuffer) = 0;
 };
 
 }

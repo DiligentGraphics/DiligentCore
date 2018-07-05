@@ -237,80 +237,29 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters*        pRefCounters,
 }
 
 
-static BufferDesc BufferDescFromVkResource(BufferDesc BuffDesc, void *pVkBuffer)
-{
-#if 0
-    VERIFY(BuffDesc.Usage != USAGE_DYNAMIC, "Dynamic buffers cannot be attached to native Vk resource");
-
-    auto VkBuffDesc = pVkBuffer->GetDesc();
-    VERIFY(VkBuffDesc.Dimension == Vk_RESOURCE_DIMENSION_BUFFER, "Vk resource is not a buffer");
-
-    VERIFY(BuffDesc.uiSizeInBytes == 0 || BuffDesc.uiSizeInBytes == VkBuffDesc.Width, "Buffer size specified by the BufferDesc (", BuffDesc.uiSizeInBytes,") does not match Vk resource size (", VkBuffDesc.Width, ")" );
-    BuffDesc.uiSizeInBytes = static_cast<Uint32>( VkBuffDesc.Width );
-
-    if (VkBuffDesc.Flags & Vk_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)
-    {
-        VERIFY(BuffDesc.BindFlags == 0 || (BuffDesc.BindFlags & BIND_UNORDERED_ACCESS), "BIND_UNORDERED_ACCESS flag is not specified by the BufferDesc, while Vk resource was created with Vk_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS flag");
-        BuffDesc.BindFlags |= BIND_UNORDERED_ACCESS;
-    }
-    if (VkBuffDesc.Flags & Vk_RESOURCE_FLAG_DENY_SHADER_RESOURCE)
-    {
-        VERIFY( !(BuffDesc.BindFlags & BIND_SHADER_RESOURCE), "BIND_SHADER_RESOURCE flag is specified by the BufferDesc, while Vk resource was created with Vk_RESOURCE_FLAG_DENY_SHADER_RESOURCE flag");
-        BuffDesc.BindFlags &= ~BIND_SHADER_RESOURCE;
-    }
-
-    if( (BuffDesc.BindFlags & BIND_UNORDERED_ACCESS) || (BuffDesc.BindFlags & BIND_SHADER_RESOURCE) )
-    {
-        if(BuffDesc.Mode == BUFFER_MODE_STRUCTURED)
-        {
-            VERIFY(BuffDesc.ElementByteStride != 0, "Element byte stride cannot be 0 for a structured buffer");
-        }
-        else if(BuffDesc.Mode == BUFFER_MODE_FORMATTED)
-        {
-            VERIFY( BuffDesc.Format.ValueType != VT_UNDEFINED, "Value type is not specified for a formatted buffer" );
-            VERIFY( BuffDesc.Format.NumComponents != 0, "Num components cannot be zero in a formated buffer" );
-        }
-        else
-        {
-            UNEXPECTED("Buffer mode must be structured or formatted");
-        }
-    }
-#endif
-    return BuffDesc;
-}
-
 BufferVkImpl :: BufferVkImpl(IReferenceCounters*        pRefCounters, 
                              FixedBlockMemoryAllocator& BuffViewObjMemAllocator, 
                              RenderDeviceVkImpl*        pRenderDeviceVk, 
-                             const BufferDesc&          BuffDesc,
-                             void*                      pVkBuffer) : 
-    TBufferBase(pRefCounters, BuffViewObjMemAllocator, pRenderDeviceVk, BufferDescFromVkResource(BuffDesc, pVkBuffer), false),
+                             const BufferDesc&          BuffDesc, 
+                             VkBuffer                   vkBuffer) : 
+    TBufferBase(pRefCounters, BuffViewObjMemAllocator, pRenderDeviceVk, BuffDesc, false),
     m_AccessFlags(0),
 #ifdef _DEBUG
     m_DbgMapType(1 + pRenderDeviceVk->GetNumDeferredContexts()),
 #endif
-    m_DynamicAllocations(STD_ALLOCATOR_RAW_MEM(VulkanDynamicAllocation, GetRawAllocator(), "Allocator for vector<VulkanDynamicAllocation>"))
+    m_DynamicAllocations(STD_ALLOCATOR_RAW_MEM(VulkanDynamicAllocation, GetRawAllocator(), "Allocator for vector<VulkanDynamicAllocation>")),
+    m_VulkanBuffer(vkBuffer)
 {
-#if 0
-    m_pVkResource = pVkBuffer;
-
-    if (m_Desc.BindFlags & BIND_UNIFORM_BUFFER)
-    {
-        m_CBVDescriptorAllocation = pRenderDeviceVk->AllocateDescriptor(Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-        CreateCBV(m_CBVDescriptorAllocation.GetCpuHandle());
-    }
-#endif
 }
 
 BufferVkImpl :: ~BufferVkImpl()
 {
     auto *pDeviceVkImpl = GetDevice<RenderDeviceVkImpl>();
+    // Vk object can only be destroyed when it is no longer used by the GPU
     if(m_VulkanBuffer != VK_NULL_HANDLE)
-    {
-        // Vk object can only be destroyed when it is no longer used by the GPU
         pDeviceVkImpl->SafeReleaseVkObject(std::move(m_VulkanBuffer));
+    if(m_MemoryAllocation.Page != nullptr)
         pDeviceVkImpl->SafeReleaseVkObject(std::move(m_MemoryAllocation));
-    }
 }
 
 IMPLEMENT_QUERY_INTERFACE( BufferVkImpl, IID_BufferVk, TBufferBase )

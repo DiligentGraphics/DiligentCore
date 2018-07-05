@@ -450,27 +450,27 @@ void RenderDeviceVkImpl::CreatePipelineState(const PipelineStateDesc &PipelineDe
     );
 }
 
-#if 0
-void RenderDeviceVkImpl :: CreateBufferFromD3DResource(IVkResource *pVkBuffer, const BufferDesc& BuffDesc, IBuffer **ppBuffer)
+
+void RenderDeviceVkImpl :: CreateBufferFromVulkanResource(VkBuffer vkBuffer, const BufferDesc& BuffDesc, IBuffer** ppBuffer)
 {
     CreateDeviceObject("buffer", BuffDesc, ppBuffer, 
         [&]()
         {
-            BufferVkImpl *pBufferVk( NEW_RC_OBJ(m_BufObjAllocator, "BufferVkImpl instance", BufferVkImpl)(m_BuffViewObjAllocator, this, BuffDesc, pVkBuffer ) );
+            BufferVkImpl* pBufferVk( NEW_RC_OBJ(m_BufObjAllocator, "BufferVkImpl instance", BufferVkImpl)(m_BuffViewObjAllocator, this, BuffDesc, vkBuffer ) );
             pBufferVk->QueryInterface( IID_Buffer, reinterpret_cast<IObject**>(ppBuffer) );
             pBufferVk->CreateDefaultViews();
             OnCreateDeviceObject( pBufferVk );
         } 
     );
 }
-#endif
+
 
 void RenderDeviceVkImpl :: CreateBuffer(const BufferDesc& BuffDesc, const BufferData &BuffData, IBuffer **ppBuffer)
 {
     CreateDeviceObject("buffer", BuffDesc, ppBuffer, 
         [&]()
         {
-            BufferVkImpl *pBufferVk( NEW_RC_OBJ(m_BufObjAllocator, "BufferVkImpl instance", BufferVkImpl)(m_BuffViewObjAllocator, this, BuffDesc, BuffData ) );
+            BufferVkImpl* pBufferVk( NEW_RC_OBJ(m_BufObjAllocator, "BufferVkImpl instance", BufferVkImpl)(m_BuffViewObjAllocator, this, BuffDesc, BuffData ) );
             pBufferVk->QueryInterface( IID_Buffer, reinterpret_cast<IObject**>(ppBuffer) );
             pBufferVk->CreateDefaultViews();
             OnCreateDeviceObject( pBufferVk );
@@ -492,15 +492,13 @@ void RenderDeviceVkImpl :: CreateShader(const ShaderCreationAttribs &ShaderCreat
     );
 }
 
-#if 0
-void RenderDeviceVkImpl::CreateTextureFromD3DResource(IVkResource *pVkTexture, ITexture **ppTexture)
+
+void RenderDeviceVkImpl::CreateTextureFromVulkanImage(VkImage vkImage, const TextureDesc& TexDesc, ITexture** ppTexture)
 {
-    TextureDesc TexDesc;
-    TexDesc.Name = "Texture from Vk resource";
     CreateDeviceObject( "texture", TexDesc, ppTexture, 
         [&]()
         {
-            TextureVkImpl *pTextureVk = NEW_RC_OBJ(m_TexObjAllocator, "TextureVkImpl instance", TextureVkImpl)(m_TexViewObjAllocator, this, TexDesc, pVkTexture );
+            TextureVkImpl* pTextureVk = NEW_RC_OBJ(m_TexObjAllocator, "TextureVkImpl instance", TextureVkImpl)(m_TexViewObjAllocator, this, TexDesc, vkImage );
 
             pTextureVk->QueryInterface( IID_Texture, reinterpret_cast<IObject**>(ppTexture) );
             pTextureVk->CreateDefaultViews();
@@ -508,14 +506,14 @@ void RenderDeviceVkImpl::CreateTextureFromD3DResource(IVkResource *pVkTexture, I
         } 
     );
 }
-#endif
+
 
 void RenderDeviceVkImpl::CreateTexture(const TextureDesc& TexDesc, VkImage vkImgHandle, class TextureVkImpl **ppTexture)
 {
     CreateDeviceObject( "texture", TexDesc, ppTexture, 
         [&]()
         {
-            TextureVkImpl *pTextureVk = NEW_RC_OBJ(m_TexObjAllocator, "TextureVkImpl instance", TextureVkImpl)(m_TexViewObjAllocator, this, TexDesc, std::move(vkImgHandle));
+            TextureVkImpl* pTextureVk = NEW_RC_OBJ(m_TexObjAllocator, "TextureVkImpl instance", TextureVkImpl)(m_TexViewObjAllocator, this, TexDesc, std::move(vkImgHandle));
             pTextureVk->QueryInterface( IID_TextureVk, reinterpret_cast<IObject**>(ppTexture) );
         }
     );
@@ -527,7 +525,7 @@ void RenderDeviceVkImpl :: CreateTexture(const TextureDesc& TexDesc, const Textu
     CreateDeviceObject( "texture", TexDesc, ppTexture, 
         [&]()
         {
-            TextureVkImpl *pTextureVk = NEW_RC_OBJ(m_TexObjAllocator, "TextureVkImpl instance", TextureVkImpl)(m_TexViewObjAllocator, this, TexDesc, Data );
+            TextureVkImpl* pTextureVk = NEW_RC_OBJ(m_TexObjAllocator, "TextureVkImpl instance", TextureVkImpl)(m_TexViewObjAllocator, this, TexDesc, Data );
 
             pTextureVk->QueryInterface( IID_Texture, reinterpret_cast<IObject**>(ppTexture) );
             pTextureVk->CreateDefaultViews();
@@ -544,7 +542,7 @@ void RenderDeviceVkImpl :: CreateSampler(const SamplerDesc& SamplerDesc, ISample
             m_SamplersRegistry.Find( SamplerDesc, reinterpret_cast<IDeviceObject**>(ppSampler) );
             if( *ppSampler == nullptr )
             {
-                SamplerVkImpl *pSamplerVk( NEW_RC_OBJ(m_SamplerObjAllocator, "SamplerVkImpl instance", SamplerVkImpl)(this, SamplerDesc ) );
+                SamplerVkImpl* pSamplerVk( NEW_RC_OBJ(m_SamplerObjAllocator, "SamplerVkImpl instance", SamplerVkImpl)(this, SamplerDesc ) );
                 pSamplerVk->QueryInterface( IID_Sampler, reinterpret_cast<IObject**>(ppSampler) );
                 OnCreateDeviceObject( pSamplerVk );
                 m_SamplersRegistry.Add( SamplerDesc, *ppSampler );

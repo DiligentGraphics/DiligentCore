@@ -83,9 +83,9 @@ public:
 
     virtual VkDevice GetVkDevice()override final{ return m_LogicalVkDevice->GetVkDevice();}
     
-    //virtual void CreateTextureFromD3DResource(IVkResource* pVkTexture, ITexture** ppTexture)override final;
+    virtual void CreateTextureFromVulkanImage(VkImage vkImage, const TextureDesc& TexDesc, ITexture** ppTexture)override final;
 
-    //virtual void CreateBufferFromD3DResource(IVkResource* pVkBuffer, const BufferDesc& BuffDesc, IBuffer** ppBuffer)override final;
+    virtual void CreateBufferFromVulkanResource(VkBuffer vkBuffer, const BufferDesc& BuffDesc, IBuffer** ppBuffer)override final;
 
     Uint64 GetCompletedFenceValue();
 	virtual Uint64 GetNextFenceValue() override final
