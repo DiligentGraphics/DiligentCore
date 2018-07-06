@@ -758,6 +758,9 @@ String GetBufferDescString( const BufferDesc &Desc )
 
 Uint32 ComputeMipLevelsCount( Uint32 Width )
 {
+    if (Width == 0)
+        return 0;
+
     Uint32 MipLevels = 0;
     while( (Width >> MipLevels) > 0 )
         ++MipLevels;

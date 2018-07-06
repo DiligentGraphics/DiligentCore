@@ -37,11 +37,31 @@ void ValidateTextureDesc( const TextureDesc& Desc )
         LOG_TEXTURE_ERROR_AND_THROW("Resource dimension is undefined");
     }
 
+    if ( !(Desc.Type >= RESOURCE_DIM_TEX_1D && Desc.Type <= RESOURCE_DIM_TEX_CUBE_ARRAY) )
+    {
+        LOG_TEXTURE_ERROR_AND_THROW("Unexpected resource dimension");
+    }
+
+    if (Desc.Width == 0)
+    {
+        LOG_TEXTURE_ERROR_AND_THROW("Texture width cannot be zero");
+    }
+
     // Perform some parameter correctness check
     if( Desc.Type == RESOURCE_DIM_TEX_1D || Desc.Type == RESOURCE_DIM_TEX_1D_ARRAY )
     {
         if( Desc.Height != 1 )
             LOG_TEXTURE_ERROR_AND_THROW("Height (", Desc.Height,") of Texture 1D/Texture 1D Array must be 1");
+    }
+    else
+    {
+        if (Desc.Height == 0)
+            LOG_TEXTURE_ERROR_AND_THROW("Texture height cannot be zero");
+    }
+
+    if( Desc.Type == RESOURCE_DIM_TEX_3D && Desc.Depth == 0 )
+    {
+        LOG_TEXTURE_ERROR_AND_THROW("3D texture depth cannot be zero");
     }
 
     if(  Desc.Type == RESOURCE_DIM_TEX_1D || Desc.Type == RESOURCE_DIM_TEX_2D )

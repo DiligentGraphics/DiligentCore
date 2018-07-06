@@ -426,46 +426,56 @@ void SwapChainVkImpl::Present(Uint32 SyncInterval)
         return;
     }
 
-    auto *pImmediateCtxVk = pDeviceContext.RawPtr<DeviceContextVkImpl>();
+    auto* pImmediateCtxVk = pDeviceContext.RawPtr<DeviceContextVkImpl>();
+    auto* pDeviceVk = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
 
-    // TransitionImageLayout() never triggers flush
-    pImmediateCtxVk->TransitionImageLayout(GetCurrentBackBufferRTV()->GetTexture(), VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-    // The context can be empty if no render commands were issued by the app
-    //VERIFY(pImmediateCtxVk->GetNumCommandsInCtx() != 0, "The context must not be flushed");
-    pImmediateCtxVk->AddSignalSemaphore(m_DrawCompleteSemaphores[m_SemaphoreIndex]);
+    if (!m_IsMinimized)
+    {
+        // TransitionImageLayout() never triggers flush
+        pImmediateCtxVk->TransitionImageLayout(GetCurrentBackBufferRTV()->GetTexture(), VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+        // The context can be empty if no render commands were issued by the app
+        //VERIFY(pImmediateCtxVk->GetNumCommandsInCtx() != 0, "The context must not be flushed");
+        pImmediateCtxVk->AddSignalSemaphore(m_DrawCompleteSemaphores[m_SemaphoreIndex]);
+    }
+
     pImmediateCtxVk->Flush();
-
-    VkPresentInfoKHR PresentInfo = {};
-    PresentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-    PresentInfo.pNext = nullptr;
-    PresentInfo.waitSemaphoreCount = 1;
-    // Unlike fences or events, the act of waiting for a semaphore also unsignals that semaphore (6.4.2)
-    VkSemaphore WaitSemaphore[] = { m_DrawCompleteSemaphores[m_SemaphoreIndex] };
-    PresentInfo.pWaitSemaphores = WaitSemaphore;
-    PresentInfo.swapchainCount = 1;
-    PresentInfo.pSwapchains = &m_VkSwapChain;
-    PresentInfo.pImageIndices = &m_BackBufferIndex;
-    VkResult Result = VK_SUCCESS;
-    PresentInfo.pResults = &Result;
     
-    auto *pDeviceVk = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
-    auto vkCmdQueue = pDeviceVk->GetCmdQueue()->GetVkQueue();
-    vkQueuePresentKHR(vkCmdQueue, &PresentInfo);
-    VERIFY(Result == VK_SUCCESS, "Present failed");
+    if (!m_IsMinimized)
+    {
+        VkPresentInfoKHR PresentInfo = {};
+        PresentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+        PresentInfo.pNext = nullptr;
+        PresentInfo.waitSemaphoreCount = 1;
+        // Unlike fences or events, the act of waiting for a semaphore also unsignals that semaphore (6.4.2)
+        VkSemaphore WaitSemaphore[] = { m_DrawCompleteSemaphores[m_SemaphoreIndex] };
+        PresentInfo.pWaitSemaphores = WaitSemaphore;
+        PresentInfo.swapchainCount = 1;
+        PresentInfo.pSwapchains = &m_VkSwapChain;
+        PresentInfo.pImageIndices = &m_BackBufferIndex;
+        VkResult Result = VK_SUCCESS;
+        PresentInfo.pResults = &Result;
+    
+        auto vkCmdQueue = pDeviceVk->GetCmdQueue()->GetVkQueue();
+        vkQueuePresentKHR(vkCmdQueue, &PresentInfo);
+        VERIFY(Result == VK_SUCCESS, "Present failed");
+    }
 
     pDeviceVk->FinishFrame();
 
-    ++m_SemaphoreIndex;
-    if (m_SemaphoreIndex >= m_SwapChainDesc.BufferCount)
-        m_SemaphoreIndex = 0;
-
-    AcquireNextImage(pImmediateCtxVk);
-
-    if(pImmediateCtxVk->IsDefaultFBBound())
+    if (!m_IsMinimized)
     {
-        // If default framebuffer is bound, we need to call SetRenderTargets()
-        // to bind new back buffer RTV
-        pImmediateCtxVk->SetRenderTargets(0, nullptr, nullptr);
+        ++m_SemaphoreIndex;
+        if (m_SemaphoreIndex >= m_SwapChainDesc.BufferCount)
+            m_SemaphoreIndex = 0;
+
+        AcquireNextImage(pImmediateCtxVk);
+
+        if(pImmediateCtxVk->IsDefaultFBBound())
+        {
+            // If default framebuffer is bound, we need to call SetRenderTargets()
+            // to bind new back buffer RTV
+            pImmediateCtxVk->SetRenderTargets(0, nullptr, nullptr);
+        }
     }
 }
 
@@ -519,6 +529,8 @@ void SwapChainVkImpl::Resize( Uint32 NewWidth, Uint32 NewHeight )
             }
         }
     }
+
+    m_IsMinimized = (NewWidth == 0 && NewHeight == 0);
 }
 
 

@@ -85,6 +85,7 @@ private:
     RefCntAutoPtr<ITextureViewVk> m_pDepthBufferDSV;
     Uint32 m_SemaphoreIndex = 0;
     uint32_t m_BackBufferIndex = 0;
+    bool m_IsMinimized = false;
 };
 
 }
