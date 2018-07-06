@@ -844,12 +844,33 @@ namespace Diligent
             VkViewports[vp].height   = m_Viewports[vp].Height;
             VkViewports[vp].minDepth = m_Viewports[vp].MinDepth;
             VkViewports[vp].maxDepth = m_Viewports[vp].MaxDepth;
-            if(m_IsDefaultFramebufferBound)
-            {
-                // Default framebuffer is upside-down in Vulkan
-                VkViewports[vp].y = m_FramebufferHeight - VkViewports[vp].y;
-                VkViewports[vp].height = -VkViewports[vp].height;
-            }
+
+            // Turn the viewport upside down to be consistent with Direct3D. Note that in both APIs,
+            // the viewport covers the same texture rows. The difference is that Direct3D invertes 
+            // normalized device Y coordinate when transforming NDC to window coordinates. In Vulkan
+            // we achieve the same effect by using negative viewport height. Therefore we need to
+            // invert normalized device Y coordinate when transforming to texture V
+            // 
+            //             
+            //       Image                Direct3D                                       Image               Vulkan
+            //        row                                                                 row   
+            //         0 _   (0,0)_______________________(1,0)                  Tex Height _   (0,1)_______________________(1,1)              
+            //         1 _       |                       |      |             VP Top + Hght _ _ _ _|   __________          |      A           
+            //         2 _       |                       |      |                          .       |  |   .--> +x|         |      |           
+            //           .       |                       |      |                          .       |  |   |      |         |      |           
+            //           .       |                       |      | V Coord                          |  |   V +y   |         |      | V Coord   
+            //     VP Top _ _ _ _|   __________          |      |                    VP Top _ _ _ _|  |__________|         |      |           
+            //           .       |  |    A +y  |         |      |                          .       |                       |      |           
+            //           .       |  |    |     |         |      |                          .       |                       |      |           
+            //           .       |  |    '-->+x|         |      |                        2 _       |                       |      |           
+            //           .       |  |__________|         |      |                        1 _       |                       |      |           
+            //Tex Height _       |_______________________|      V                        0 _       |_______________________|      |           
+            //               (0,1)                       (1,1)                                 (0,0)                       (1,0)              
+            //                                                                                
+            //
+
+            VkViewports[vp].y = VkViewports[vp].y + VkViewports[vp].height;
+            VkViewports[vp].height = -VkViewports[vp].height;
         }
         EnsureVkCmdBuffer();
         // TODO: reinterpret_cast m_Viewports to VkViewports?

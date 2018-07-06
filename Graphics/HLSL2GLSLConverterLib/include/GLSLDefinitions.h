@@ -984,7 +984,12 @@ uvec4  _ToUvec( vec4  f4 ){ return _ToUvec4( f4.x, f4.y, f4.z, f4.w ); }
 #ifdef TARGET_API_VULKAN
 
 #define NDC_MIN_Z 0.0 // Minimal z in the normalized device space
-#define F3NDC_XYZ_TO_UVD_SCALE float3(0.5, 0.5, 1.0)
+
+// Note that Vulkan itself does not invert Y coordinate when transforming
+// normalized device Y to window space. However, we use negative viewport
+// height which achieves the same effect as in D3D, thererfore we need to
+// invert y (see comments in DeviceContextVkImpl::CommitViewports() for details)
+#define F3NDC_XYZ_TO_UVD_SCALE float3(0.5, -0.5, 1.0)
 
 #else
 

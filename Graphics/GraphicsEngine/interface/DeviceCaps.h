@@ -149,7 +149,11 @@ namespace Diligent
         {
             if (IsVulkanDevice())
             {
-                static constexpr const NDCAttribs NDCAttribsVk {0.0f, 1.0f, 0.5f};
+                // Note that Vulkan itself does not invert Y coordinate when transforming
+                // normalized device Y to window space. However, we use negative viewport
+                // height which achieves the same effect as in D3D, thererfore we need to
+                // invert y (see comments in DeviceContextVkImpl::CommitViewports() for details)
+                static constexpr const NDCAttribs NDCAttribsVk {0.0f, 1.0f, -0.5f};
                 return NDCAttribsVk;
             }
             else if (IsD3DDevice())

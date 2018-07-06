@@ -214,10 +214,14 @@ namespace Diligent
                 static_cast<float>(w) == vp.Width &&
                 static_cast<float>(h) == vp.Height )
             {
+                // GL_INVALID_VALUE is generated if either width or height is negative
+                // https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/glViewport.xml
                 glViewport( x, y, w, h );
             }
             else
             {
+                // GL_INVALID_VALUE is generated if either width or height is negative
+                // https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glViewportIndexed.xhtml
                 glViewportIndexedf( 0, BottomLeftX, BottomLeftY, vp.Width, vp.Height );
             }
             CHECK_GL_ERROR( "Failed to set viewport" );
