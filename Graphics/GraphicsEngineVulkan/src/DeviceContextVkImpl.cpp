@@ -59,14 +59,14 @@ namespace Diligent
             return "Dynamic heap of immediate context";
     }
 
-    DeviceContextVkImpl::DeviceContextVkImpl( IReferenceCounters*     pRefCounters, 
-                                              RenderDeviceVkImpl*     pDeviceVkImpl, 
-                                              bool                    bIsDeferred, 
-                                              const EngineVkAttribs&  Attribs, 
-                                              Uint32                  ContextId) :
+    DeviceContextVkImpl::DeviceContextVkImpl( IReferenceCounters*                   pRefCounters, 
+                                              RenderDeviceVkImpl*                   pDeviceVkImpl, 
+                                              bool                                  bIsDeferred, 
+                                              const EngineVkAttribs&                Attribs, 
+                                              Uint32                                ContextId,
+                                              std::shared_ptr<GenerateMipsVkHelper> GenerateMipsHelper) :
         TDeviceContextBase{pRefCounters, pDeviceVkImpl, bIsDeferred},
         m_NumCommandsToFlush{bIsDeferred ? std::numeric_limits<decltype(m_NumCommandsToFlush)>::max() : Attribs.NumCommandsToFlushCmdBuffer},
-        /*m_MipsGenerator(pDeviceVkImpl->GetVkDevice()),*/
         m_CmdListAllocator{ GetRawAllocator(), sizeof(CommandListVkImpl), 64 },
         m_ContextId{ContextId},
         // Command pools for deferred contexts must be thread safe because finished command buffers are executed and released from another thread
@@ -113,8 +113,10 @@ namespace Diligent
             pDeviceVkImpl->GetDynamicHeapRingBuffer(),
             GetDynamicHeapName(bIsDeferred, ContextId),
             bIsDeferred ? Attribs.DeferredCtxDynamicHeapPageSize : Attribs.ImmediateCtxDynamicHeapPageSize
-        }
+        },
+        m_GenerateMipsHelper(std::move(GenerateMipsHelper))
     {
+        m_GenerateMipsHelper->CreateSRB(&m_GenerateMipsSRB);
     }
 
     DeviceContextVkImpl::~DeviceContextVkImpl()
@@ -244,7 +246,7 @@ namespace Diligent
         VERIFY_EXPR(pPipelineState != nullptr);
 
         auto *pPipelineStateVk = ValidatedCast<PipelineStateVkImpl>(pPipelineState);
-        pPipelineStateVk->CommitAndTransitionShaderResources(pShaderResourceBinding, this, false, true, nullptr);
+        pPipelineStateVk->CommitAndTransitionShaderResources(pShaderResourceBinding, this, false, COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES, nullptr);
     }
 
     void DeviceContextVkImpl::CommitShaderResources(IShaderResourceBinding *pShaderResourceBinding, Uint32 Flags)
@@ -253,7 +255,7 @@ namespace Diligent
             return;
 
         auto *pPipelineStateVk = m_pPipelineState.RawPtr<PipelineStateVkImpl>();
-        pPipelineStateVk->CommitAndTransitionShaderResources(pShaderResourceBinding, this, true, (Flags & COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES) != 0, &m_DesrSetBindInfo);
+        pPipelineStateVk->CommitAndTransitionShaderResources(pShaderResourceBinding, this, true, Flags, &m_DesrSetBindInfo);
     }
 
     void DeviceContextVkImpl::SetStencilRef(Uint32 StencilRef)
@@ -1150,16 +1152,6 @@ namespace Diligent
     }
 #endif
 
-    void DeviceContextVkImpl::GenerateMips(TextureViewVkImpl *pTexView)
-    {
-        UNSUPPORTED("Not yet implemented");
-#if 0
-        auto *pCtx = RequestCmdContext();
-        m_MipsGenerator.GenerateMips(m_pDevice.RawPtr<RenderDeviceVkImpl>(), pTexView, *pCtx);
-        ++m_State.NumCommands;
-#endif
-    }
-
     void DeviceContextVkImpl::FinishCommandList(class ICommandList **ppCommandList)
     {
         if (m_CommandBuffer.GetState().RenderPass != VK_NULL_HANDLE)
@@ -1255,15 +1247,14 @@ namespace Diligent
         }
     }
 
-    void DeviceContextVkImpl::TransitionImageLayout(TextureVkImpl &TextureVk, VkImageLayout NewLayout)
+    void DeviceContextVkImpl::TransitionImageLayout(TextureVkImpl& TextureVk, VkImageLayout NewLayout)
     {
         VERIFY(TextureVk.GetLayout() != NewLayout, "The texture is already transitioned to correct layout");
         EnsureVkCmdBuffer();
         
         auto vkImg = TextureVk.GetVkImage();
         const auto& TexDesc = TextureVk.GetDesc();
-        auto Fmt = TexDesc.Format;
-        const auto& FmtAttribs = GetTextureFormatAttribs(Fmt);
+        const auto& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
         VkImageSubresourceRange SubresRange;
         if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH)
             SubresRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
@@ -1282,6 +1273,14 @@ namespace Diligent
         SubresRange.levelCount = VK_REMAINING_MIP_LEVELS;
         m_CommandBuffer.TransitionImageLayout(vkImg, TextureVk.GetLayout(), NewLayout, SubresRange);
         TextureVk.SetLayout(NewLayout);
+    }
+
+    void DeviceContextVkImpl::TransitionImageLayout(TextureVkImpl &TextureVk, VkImageLayout OldLayout, VkImageLayout NewLayout, const VkImageSubresourceRange& SubresRange)
+    {
+        VERIFY(TextureVk.GetLayout() != NewLayout, "The texture is already transitioned to correct layout");
+        EnsureVkCmdBuffer();
+        auto vkImg = TextureVk.GetVkImage();
+        m_CommandBuffer.TransitionImageLayout(vkImg, OldLayout, NewLayout, SubresRange);
     }
 
     void DeviceContextVkImpl::BufferMemoryBarrier(IBuffer *pBuffer, VkAccessFlags NewAccessFlags)

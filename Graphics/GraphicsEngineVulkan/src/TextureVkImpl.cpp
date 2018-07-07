@@ -361,7 +361,7 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters,
         pRenderDeviceVk->ExecuteAndDisposeTransientCmdBuff(vkCmdBuff, std::move(CmdPool));
     }
 
-#if 0
+
     if(m_Desc.MiscFlags & MISC_TEXTURE_FLAG_GENERATE_MIPS)
     {
         if (m_Desc.Type != RESOURCE_DIM_TEX_2D && m_Desc.Type != RESOURCE_DIM_TEX_2D_ARRAY)
@@ -369,10 +369,15 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters,
             LOG_ERROR_AND_THROW("Mipmap generation is only supported for 2D textures and texture arrays");
         }
 
-        m_MipUAVs = pRenderDeviceVk->AllocateDescriptor(Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, m_Desc.MipLevels);
+        m_MipLevelUAV.reserve(m_Desc.MipLevels);
         for(Uint32 MipLevel = 0; MipLevel < m_Desc.MipLevels; ++MipLevel)
         {
+            // Create mip level UAV
             TextureViewDesc UAVDesc;
+            std::stringstream name_ss;
+            name_ss << "Mip " << MipLevel << " UAV for texture '" << m_Desc.Name << "'";
+            auto name = name_ss.str();
+            UAVDesc.Name = name.c_str();
             // Always create texture array UAV
             UAVDesc.TextureDim = RESOURCE_DIM_TEX_2D_ARRAY;
             UAVDesc.ViewType = TEXTURE_VIEW_UNORDERED_ACCESS;
@@ -381,23 +386,34 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters,
             UAVDesc.MostDetailedMip = MipLevel;
             if (m_Desc.Format == TEX_FORMAT_RGBA8_UNORM_SRGB)
                 UAVDesc.Format = TEX_FORMAT_RGBA8_UNORM;
-            CreateUAV( UAVDesc, m_MipUAVs.GetCpuHandle(MipLevel) );
+            ITextureView* pMipUAV = nullptr;
+            CreateViewInternal( UAVDesc, &pMipUAV, true );
+            m_MipLevelUAV.emplace_back(ValidatedCast<TextureViewVkImpl>(pMipUAV), STDDeleter<TextureViewVkImpl, FixedBlockMemoryAllocator>(TexViewObjAllocator));
         }
+        VERIFY_EXPR(m_MipLevelUAV.size() == m_Desc.MipLevels);
 
+        m_MipLevelSRV.reserve(m_Desc.MipLevels);
+        for(Uint32 MipLevel = 0; MipLevel < m_Desc.MipLevels; ++MipLevel)
         {
-            m_TexArraySRV = pRenderDeviceVk->AllocateDescriptor(Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1);
+            // Create mip level SRV
             TextureViewDesc TexArraySRVDesc;
-            // Create texture array SRV
+            std::stringstream name_ss;
+            name_ss << "Mip " << MipLevel << " SRV for texture '" << m_Desc.Name << "'";
+            auto name = name_ss.str();
+            TexArraySRVDesc.Name = name.c_str();
+            // Alaways create texture array view
             TexArraySRVDesc.TextureDim = RESOURCE_DIM_TEX_2D_ARRAY;
             TexArraySRVDesc.ViewType = TEXTURE_VIEW_SHADER_RESOURCE;
             TexArraySRVDesc.FirstArraySlice = 0;
             TexArraySRVDesc.NumArraySlices = m_Desc.ArraySize;
-            TexArraySRVDesc.MostDetailedMip = 0;
-            TexArraySRVDesc.NumMipLevels = m_Desc.MipLevels;
-            CreateSRV( TexArraySRVDesc, m_TexArraySRV.GetCpuHandle() );
+            TexArraySRVDesc.MostDetailedMip = MipLevel;
+            TexArraySRVDesc.NumMipLevels = 1;
+            ITextureView* pMipLevelSRV = nullptr;
+            CreateViewInternal( TexArraySRVDesc, &pMipLevelSRV, true );
+            m_MipLevelSRV.emplace_back(ValidatedCast<TextureViewVkImpl>(pMipLevelSRV), STDDeleter<TextureViewVkImpl, FixedBlockMemoryAllocator>(TexViewObjAllocator));
         }
+        VERIFY_EXPR(m_MipLevelSRV.size() == m_Desc.MipLevels);
     }
-#endif
 }
 
 TextureVkImpl::TextureVkImpl(IReferenceCounters*         pRefCounters,

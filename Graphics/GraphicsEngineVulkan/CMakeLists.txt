@@ -13,7 +13,7 @@ set(INCLUDE
     include/DeviceContextVkImpl.h
     include/VulkanDynamicHeap.h
     include/FramebufferCache.h
-    include/GenerateMips.h
+    include/GenerateMipsVkHelper.h
     include/pch.h
     include/PipelineLayout.h
     include/PipelineStateVkImpl.h
@@ -74,7 +74,7 @@ set(SRC
     src/DeviceContextVkImpl.cpp
     src/VulkanDynamicHeap.cpp
     src/FramebufferCache.cpp
-    src/GenerateMips.cpp
+    src/GenerateMipsVkHelper.cpp
     src/PipelineLayout.cpp
     src/PipelineStateVkImpl.cpp
     src/RenderDeviceVkImpl.cpp
@@ -105,25 +105,34 @@ set(VULKAN_UTILS_SRC
     src/VulkanUtilities/VulkanUploadHeap.cpp
 )
 
-#set(SHADERS
-#    shaders/GenerateMips/GenerateMipsGammaCS.hlsl
-#    shaders/GenerateMips/GenerateMipsGammaOddCS.hlsl
-#    shaders/GenerateMips/GenerateMipsGammaOddXCS.hlsl
-#    shaders/GenerateMips/GenerateMipsGammaOddYCS.hlsl
-#    shaders/GenerateMips/GenerateMipsLinearCS.hlsl
-#    shaders/GenerateMips/GenerateMipsLinearOddCS.hlsl
-#    shaders/GenerateMips/GenerateMipsLinearOddXCS.hlsl
-#    shaders/GenerateMips/GenerateMipsLinearOddYCS.hlsl
-#)
-#
-#set_source_files_properties(${SHADERS} PROPERTIES 
-#    VS_SHADER_TYPE Compute
-#    VS_SHADER_ENTRYPOINT main
-#    VS_SHADER_MODEL 5.0
-#    VS_SHADER_VARIABLE_NAME "g_p%(Filename)"
-#    VS_SHADER_OUTPUT_HEADER_FILE "${CMAKE_CURRENT_BINARY_DIR}/CompiledShaders/GenerateMips/%(Filename).h"
-#    #VS_SHADER_FLAGS "/O3"
-#)
+set(GENERATE_MIPS_SHADER
+    shaders/GenerateMipsCS.csh
+)
+set(GENERATE_MIPS_SHADER_INC
+    shaders/GenerateMipsCS_inc.h
+)
+
+set_source_files_properties(
+    ${CMAKE_CURRENT_SOURCE_DIR}/${GENERATE_MIPS_SHADER_INC}
+    PROPERTIES GENERATED TRUE
+)
+
+# Create custom target to convert GenerateMipsCS.csh to GenerateMipsCS_inc.h
+add_custom_target(ProcessGenerateMipsVkShader
+SOURCES
+    ${GENERATE_MIPS_SHADER}
+)
+
+add_custom_command(TARGET ProcessGenerateMipsVkShader 
+                   # Unfortunately it is not possible to set TARGET directly to GraphicsEngineVk-*
+                   # because PRE_BUILD is only supported on Visual Studio 8 or later. For all other generators 
+                   # PRE_BUILD is treated as PRE_LINK.
+                   COMMAND ${FILE2STRING_PATH} ${GENERATE_MIPS_SHADER} ${GENERATE_MIPS_SHADER_INC}
+                   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                   COMMENT "Processing GenerateMipsCS.csh"
+                   VERBATIM
+)
+
 
 add_library(GraphicsEngineVkInterface INTERFACE)
 target_include_directories(GraphicsEngineVkInterface
@@ -136,29 +145,28 @@ INTERFACE
 )
 
 add_library(GraphicsEngineVk-static STATIC 
-    ${SRC} ${VULKAN_UTILS_SRC} ${INTERFACE} ${INCLUDE} ${VULKAN_UTILS_INCLUDE} ${SHADERS}
+    ${SRC} ${VULKAN_UTILS_SRC} ${INTERFACE} ${INCLUDE} ${VULKAN_UTILS_INCLUDE} ${GENERATE_MIPS_SHADER} ${GENERATE_MIPS_SHADER_INC}
     readme.md
-    #shaders/GenerateMips/GenerateMipsCS.hlsli
 )
 
 add_library(GraphicsEngineVk-shared SHARED 
-    ${SRC} ${VULKAN_UTILS_SRC} ${INTERFACE} ${INCLUDE} ${VULKAN_UTILS_INCLUDE} ${SHADERS}
+    ${SRC} ${VULKAN_UTILS_SRC} ${INTERFACE} ${INCLUDE} ${VULKAN_UTILS_INCLUDE} ${GENERATE_MIPS_SHADER} ${GENERATE_MIPS_SHADER_INC}
     src/DLLMain.cpp
     src/GraphicsEngineVk.def
     readme.md
-    #shaders/GenerateMips/GenerateMipsCS.hlsli
 )
+
+add_dependencies(GraphicsEngineVk-static ProcessGenerateMipsVkShader)
+add_dependencies(GraphicsEngineVk-shared ProcessGenerateMipsVkShader)
 
 target_include_directories(GraphicsEngineVk-static 
 PRIVATE
-    #${CMAKE_CURRENT_BINARY_DIR}/CompiledShaders
     include
     ../../External/vulkan
 )
 
 target_include_directories(GraphicsEngineVk-shared 
 PRIVATE
-    #${CMAKE_CURRENT_BINARY_DIR}/CompiledShaders
     include
     ../../External/vulkan
 )
@@ -209,10 +217,12 @@ source_group("dll" FILES
 source_group("include" FILES ${INCLUDE})
 source_group("interface" FILES ${INTERFACE})
 source_group("include\\Vulkan Utilities" FILES ${VULKAN_UTILS_INCLUDE})
-#source_group("shaders" FILES 
-#    ${SHADERS}
-#    shaders/GenerateMips/GenerateMipsCS.hlsli
-#)
+source_group("shaders" FILES
+    ${GENERATE_MIPS_SHADER}
+)
+source_group("shaders\\generated" FILES
+    ${GENERATE_MIPS_SHADER_INC}
+)
 
 set_target_properties(GraphicsEngineVk-static PROPERTIES
     FOLDER Core/Graphics
@@ -223,4 +233,8 @@ set_target_properties(GraphicsEngineVk-shared PROPERTIES
 
 set_source_files_properties(
     readme.md PROPERTIES HEADER_FILE_ONLY TRUE
+)
+
+set_target_properties(ProcessGenerateMipsVkShader PROPERTIES
+    FOLDER Core/Graphics/Helper
 )

@@ -83,17 +83,16 @@ public:
                   Uint32 DstX,
                   Uint32 DstY,
                   Uint32 DstZ);
-/*    
-    Vk_CPU_DESCRIPTOR_HANDLE GetMipLevelUAV(Uint32 Mip)
+
+    ITextureView* GetMipLevelSRV(Uint32 MipLevel)
     {
-        return m_MipUAVs.GetCpuHandle(Mip);
+        return m_MipLevelSRV[MipLevel].get();
     }
 
-    Vk_CPU_DESCRIPTOR_HANDLE GetTexArraySRV()
+    ITextureView* GetMipLevelUAV(Uint32 MipLevel)
     {
-        return m_TexArraySRV.GetCpuHandle();
+        return m_MipLevelUAV[MipLevel].get();
     }
-*/
 
     void SetLayout(VkImageLayout NewLayout){ m_CurrentLayout = NewLayout;}
     VkImageLayout GetLayout()const{return m_CurrentLayout;}
@@ -105,18 +104,13 @@ protected:
     
     VulkanUtilities::ImageViewWrapper CreateImageView(TextureViewDesc &ViewDesc);
 
-/*
-    // UAVs for every mip level to facilitate mipmap generation
-    DescriptorHeapAllocation m_MipUAVs;
-    // SRV as texture array (even for a non-array texture) required for mipmap generation
-    DescriptorHeapAllocation m_TexArraySRV;
-
-    friend class RenderDeviceVkImpl;
-*/
-
     VulkanUtilities::ImageWrapper m_VulkanImage;
     VulkanUtilities::VulkanMemoryAllocation m_MemoryAllocation;
     VkImageLayout m_CurrentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+    // Texture views needed for mipmap generation
+    std::vector<std::unique_ptr<TextureViewVkImpl, STDDeleter<TextureViewVkImpl, FixedBlockMemoryAllocator> > > m_MipLevelSRV;
+    std::vector<std::unique_ptr<TextureViewVkImpl, STDDeleter<TextureViewVkImpl, FixedBlockMemoryAllocator> > > m_MipLevelUAV;
 };
 
 }

@@ -150,19 +150,20 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk( const EngineVkAttribs& Crea
         DeviceCreateInfo.queueCreateInfoCount = 1;
         DeviceCreateInfo.pQueueCreateInfos = &QueueInfo;
         VkPhysicalDeviceFeatures DeviceFeatures = {};
-        DeviceFeatures.depthBiasClamp                 = CreationAttribs.EnabledFeatures.depthBiasClamp                 ? VK_TRUE : VK_FALSE;
-        DeviceFeatures.fillModeNonSolid               = CreationAttribs.EnabledFeatures.fillModeNonSolid               ? VK_TRUE : VK_FALSE;
-        DeviceFeatures.depthClamp                     = CreationAttribs.EnabledFeatures.depthClamp                     ? VK_TRUE : VK_FALSE;
-        DeviceFeatures.independentBlend               = CreationAttribs.EnabledFeatures.independentBlend               ? VK_TRUE : VK_FALSE;
-        DeviceFeatures.samplerAnisotropy              = CreationAttribs.EnabledFeatures.samplerAnisotropy              ? VK_TRUE : VK_FALSE;
-        DeviceFeatures.geometryShader                 = CreationAttribs.EnabledFeatures.geometryShader                 ? VK_TRUE : VK_FALSE;
-        DeviceFeatures.tessellationShader             = CreationAttribs.EnabledFeatures.tessellationShader             ? VK_TRUE : VK_FALSE;
-        DeviceFeatures.dualSrcBlend                   = CreationAttribs.EnabledFeatures.dualSrcBlend                   ? VK_TRUE : VK_FALSE;
-        DeviceFeatures.multiViewport                  = CreationAttribs.EnabledFeatures.multiViewport                  ? VK_TRUE : VK_FALSE;
-        DeviceFeatures.imageCubeArray                 = CreationAttribs.EnabledFeatures.imageCubeArray                 ? VK_TRUE : VK_FALSE;
-        DeviceFeatures.textureCompressionBC           = CreationAttribs.EnabledFeatures.textureCompressionBC           ? VK_TRUE : VK_FALSE;
-        DeviceFeatures.vertexPipelineStoresAndAtomics = CreationAttribs.EnabledFeatures.vertexPipelineStoresAndAtomics ? VK_TRUE : VK_FALSE;
-        DeviceFeatures.fragmentStoresAndAtomics       = CreationAttribs.EnabledFeatures.fragmentStoresAndAtomics       ? VK_TRUE : VK_FALSE;
+        DeviceFeatures.depthBiasClamp                    = CreationAttribs.EnabledFeatures.depthBiasClamp                    ? VK_TRUE : VK_FALSE;
+        DeviceFeatures.fillModeNonSolid                  = CreationAttribs.EnabledFeatures.fillModeNonSolid                  ? VK_TRUE : VK_FALSE;
+        DeviceFeatures.depthClamp                        = CreationAttribs.EnabledFeatures.depthClamp                        ? VK_TRUE : VK_FALSE;
+        DeviceFeatures.independentBlend                  = CreationAttribs.EnabledFeatures.independentBlend                  ? VK_TRUE : VK_FALSE;
+        DeviceFeatures.samplerAnisotropy                 = CreationAttribs.EnabledFeatures.samplerAnisotropy                 ? VK_TRUE : VK_FALSE;
+        DeviceFeatures.geometryShader                    = CreationAttribs.EnabledFeatures.geometryShader                    ? VK_TRUE : VK_FALSE;
+        DeviceFeatures.tessellationShader                = CreationAttribs.EnabledFeatures.tessellationShader                ? VK_TRUE : VK_FALSE;
+        DeviceFeatures.dualSrcBlend                      = CreationAttribs.EnabledFeatures.dualSrcBlend                      ? VK_TRUE : VK_FALSE;
+        DeviceFeatures.multiViewport                     = CreationAttribs.EnabledFeatures.multiViewport                     ? VK_TRUE : VK_FALSE;
+        DeviceFeatures.imageCubeArray                    = CreationAttribs.EnabledFeatures.imageCubeArray                    ? VK_TRUE : VK_FALSE;
+        DeviceFeatures.textureCompressionBC              = CreationAttribs.EnabledFeatures.textureCompressionBC              ? VK_TRUE : VK_FALSE;
+        DeviceFeatures.vertexPipelineStoresAndAtomics    = CreationAttribs.EnabledFeatures.vertexPipelineStoresAndAtomics    ? VK_TRUE : VK_FALSE;
+        DeviceFeatures.fragmentStoresAndAtomics          = CreationAttribs.EnabledFeatures.fragmentStoresAndAtomics          ? VK_TRUE : VK_FALSE;
+        DeviceFeatures.shaderStorageImageExtendedFormats = CreationAttribs.EnabledFeatures.shaderStorageImageExtendedFormats ? VK_TRUE : VK_FALSE;
         DeviceCreateInfo.pEnabledFeatures = &DeviceFeatures; // NULL or a pointer to a VkPhysicalDeviceFeatures structure that contains 
                                                              // boolean indicators of all the features to be enabled.
 
@@ -240,7 +241,9 @@ void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::
         RenderDeviceVkImpl *pRenderDeviceVk( NEW_RC_OBJ(RawMemAllocator, "RenderDeviceVkImpl instance", RenderDeviceVkImpl)(RawMemAllocator, EngineAttribs, pCommandQueue, Instance, std::move(PhysicalDevice), LogicalDevice, NumDeferredContexts ) );
         pRenderDeviceVk->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice) );
 
-        RefCntAutoPtr<DeviceContextVkImpl> pImmediateCtxVk( NEW_RC_OBJ(RawMemAllocator, "DeviceContextVkImpl instance", DeviceContextVkImpl)(pRenderDeviceVk, false, EngineAttribs, 0) );
+        std::shared_ptr<GenerateMipsVkHelper> GenerateMipsHelper(new GenerateMipsVkHelper(*pRenderDeviceVk));
+
+        RefCntAutoPtr<DeviceContextVkImpl> pImmediateCtxVk( NEW_RC_OBJ(RawMemAllocator, "DeviceContextVkImpl instance", DeviceContextVkImpl)(pRenderDeviceVk, false, EngineAttribs, 0, GenerateMipsHelper) );
         // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceVk will
         // keep a weak reference to the context
         pImmediateCtxVk->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppContexts) );
@@ -248,7 +251,7 @@ void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::
 
         for (Uint32 DeferredCtx = 0; DeferredCtx < NumDeferredContexts; ++DeferredCtx)
         {
-            RefCntAutoPtr<DeviceContextVkImpl> pDeferredCtxVk( NEW_RC_OBJ(RawMemAllocator, "DeviceContextVkImpl instance", DeviceContextVkImpl)(pRenderDeviceVk, true, EngineAttribs, 1+DeferredCtx) );
+            RefCntAutoPtr<DeviceContextVkImpl> pDeferredCtxVk( NEW_RC_OBJ(RawMemAllocator, "DeviceContextVkImpl instance", DeviceContextVkImpl)(pRenderDeviceVk, true, EngineAttribs, 1+DeferredCtx, GenerateMipsHelper) );
             // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceVk will
             // keep a weak reference to the context
             pDeferredCtxVk->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppContexts + 1 + DeferredCtx) );

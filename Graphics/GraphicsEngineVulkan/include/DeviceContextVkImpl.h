@@ -29,7 +29,6 @@
 
 #include "DeviceContextVk.h"
 #include "DeviceContextBase.h"
-#include "GenerateMips.h"
 #include "VulkanUtilities/VulkanCommandBufferPool.h"
 #include "VulkanUtilities/VulkanCommandBuffer.h"
 #include "VulkanUtilities/VulkanUploadHeap.h"
@@ -37,6 +36,7 @@
 #include "ResourceReleaseQueue.h"
 #include "DescriptorPoolManager.h"
 #include "PipelineLayout.h"
+#include "GenerateMipsVkHelper.h"
 
 #ifdef _DEBUG
 #   define VERIFY_CONTEXT_BINDINGS
@@ -51,11 +51,12 @@ class DeviceContextVkImpl : public DeviceContextBase<IDeviceContextVk>
 public:
     typedef DeviceContextBase<IDeviceContextVk> TDeviceContextBase;
 
-    DeviceContextVkImpl(IReferenceCounters*       pRefCounters,
-                        class RenderDeviceVkImpl* pDevice,
-                        bool                      bIsDeferred,
-                        const EngineVkAttribs&    Attribs,
-                        Uint32                    ContextId);
+    DeviceContextVkImpl(IReferenceCounters*                   pRefCounters,
+                        class RenderDeviceVkImpl*             pDevice,
+                        bool                                  bIsDeferred,
+                        const EngineVkAttribs&                Attribs,
+                        Uint32                                ContextId,
+                        std::shared_ptr<GenerateMipsVkHelper> GenerateMipsHelper);
     ~DeviceContextVkImpl();
     
     virtual void QueryInterface( const Diligent::INTERFACE_ID& IID, IObject** ppInterface )override final;
@@ -97,6 +98,7 @@ public:
     virtual void ExecuteCommandList(class ICommandList* pCommandList)override final;
 
     void TransitionImageLayout(class TextureVkImpl &TextureVk, VkImageLayout NewLayout);
+    void TransitionImageLayout(class TextureVkImpl &TextureVk, VkImageLayout OldLayout, VkImageLayout NewLayout, const VkImageSubresourceRange& SubresRange);
     virtual void TransitionImageLayout(ITexture* pTexture, VkImageLayout NewLayout)override final;
 
     void BufferMemoryBarrier(class BufferVkImpl &BufferVk, VkAccessFlags NewAccessFlags);
@@ -117,9 +119,6 @@ public:
     ///// that are only kept alive by references in the cache
     //void ClearShaderStateCache();
 
-    ///// Number of different shader types (Vertex, Pixel, Geometry, Domain, Hull, Compute)
-    //static constexpr int NumShaderTypes = 6;
-
     void UpdateBufferRegion(class BufferVkImpl* pBuffVk, Uint64 DstOffset, Uint64 NumBytes, VkBuffer vkSrcBuffer, Uint64 SrcOffset);
     void UpdateBufferRegion(class BufferVkImpl* pBuffVk, const void* pData, Uint64 DstOffset, Uint64 NumBytes);
 
@@ -128,7 +127,11 @@ public:
 #if 0
     void CopyTextureRegion(IBuffer* pSrcBuffer, Uint32 SrcStride, Uint32 SrcDepthStride, class TextureVkImpl* pTextureVk, Uint32 DstSubResIndex, const Box &DstBox);
 #endif
-    void GenerateMips(class TextureViewVkImpl* pTexView);
+    void GenerateMips(class TextureViewVkImpl& TexView)
+    {
+        m_GenerateMipsHelper->GenerateMips(TexView, *this, *m_GenerateMipsSRB);
+    }
+
 
     void* AllocateUploadSpace(BufferVkImpl* pBuffer, size_t NumBytes);
     void CopyAndFreeDynamicUploadData(BufferVkImpl* pBuffer);
@@ -193,10 +196,6 @@ private:
     /// This framebuffer may or may not be currently set in the command buffer
     VkFramebuffer m_Framebuffer = VK_NULL_HANDLE;
 
-#if 0
-    GenerateMipsHelper m_MipsGenerator;
-#endif
-
     FixedBlockMemoryAllocator m_CmdListAllocator;
 
     const Uint32 m_ContextId;
@@ -220,6 +219,8 @@ private:
 
     PipelineLayout::DescriptorSetBindInfo m_DesrSetBindInfo;
     VulkanDynamicHeap m_DynamicHeap;
+    std::shared_ptr<GenerateMipsVkHelper> m_GenerateMipsHelper;
+    RefCntAutoPtr<IShaderResourceBinding> m_GenerateMipsSRB;
 };
 
 }

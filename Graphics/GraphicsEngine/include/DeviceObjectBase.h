@@ -26,6 +26,7 @@
 /// \file
 /// Implementation of the Diligent::DeviceObjectBase template class
 
+#include <sstream>
 #include "RefCntAutoPtr.h"
 #include "ObjectBase.h"
 #include "UniqueIdentifier.h"
@@ -59,7 +60,7 @@ public:
 		// Do not keep strong reference to the device if the object is an internal device object
 		m_spDevice( bIsDeviceInternal ? nullptr : pDevice ),
         m_pDevice( pDevice ),
-        m_ObjectNameCopy(ObjDesc.Name ? ObjDesc.Name : ""),
+        m_ObjectNameCopy(ObjDesc.Name ? ObjDesc.Name : ThisToString()),
         m_Desc( ObjDesc )
     {
         m_Desc.Name = m_ObjectNameCopy.c_str();
@@ -145,6 +146,14 @@ protected:
     // Template argument is only used to separate counters for 
     // different groups of objects
     UniqueIdHelper<BaseInterface> m_UniqueID;
+    
+private:
+    String ThisToString()const
+    {
+        std::stringstream ss;
+        ss << this;
+        return ss.str();
+    }
 };
 
 }

@@ -95,8 +95,18 @@ public:
         return VkBuffer;
     }
 
-    virtual void SetAccessFlags(VkAccessFlags AccessFlags)override final{ m_AccessFlags = AccessFlags; }
-    bool CheckAccessFlags(VkAccessFlags Flags)const{return (m_AccessFlags & Flags) == Flags;}
+    virtual void SetAccessFlags(VkAccessFlags AccessFlags)override final
+    {
+        m_AccessFlags = AccessFlags;
+    }
+    bool CheckAccessFlags(VkAccessFlags Flags)const
+    {
+        return (m_AccessFlags & Flags) == Flags;
+    }
+    VkAccessFlags GetAccessFlags()const
+    {
+        return m_AccessFlags;
+    }
 
 private:
     friend class DeviceContextVkImpl;

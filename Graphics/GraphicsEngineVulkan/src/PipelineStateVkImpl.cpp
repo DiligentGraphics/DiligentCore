@@ -491,7 +491,7 @@ bool PipelineStateVkImpl::IsCompatibleWith(const IPipelineState *pPSO)const
 void PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBinding*                pShaderResourceBinding, 
                                                              DeviceContextVkImpl*                   pCtxVkImpl,
                                                              bool                                   CommitResources,
-                                                             bool                                   TransitionResources,
+                                                             Uint32                                 Flags,
                                                              PipelineLayout::DescriptorSetBindInfo* pDescrSetBindInfo)const
 {
     if (!m_HasStaticResources && !m_HasNonStaticResources)
@@ -546,9 +546,9 @@ void PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBind
 
     if (CommitResources)
     {
-        if (TransitionResources)
+        if (Flags & COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES)
             ResourceCache.TransitionResources<false>(pCtxVkImpl);
-        else
+        else if (Flags & COMMIT_SHADER_RESOURCES_FLAG_VERIFY_STATES)
         {
 #ifdef VERIFY_SHADER_BINDINGS
             ResourceCache.TransitionResources<true>(pCtxVkImpl);
@@ -578,7 +578,7 @@ void PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBind
     }
     else
     {
-        VERIFY(TransitionResources, "Resources should be transitioned or committed or both");
+        VERIFY( (Flags & COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES) != 0 , "Resources should be transitioned or committed or both");
         ResourceCache.TransitionResources<false>(pCtxVkImpl);
     }
 }

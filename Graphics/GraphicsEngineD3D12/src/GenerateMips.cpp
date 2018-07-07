@@ -103,7 +103,7 @@ namespace Diligent
 	    CreatePSO(m_pGenerateMipsGammaPSO[3], g_pGenerateMipsGammaOddCS);
     }
 
-    void GenerateMipsHelper::GenerateMips(RenderDeviceD3D12Impl* pRenderDeviceD3D12, TextureViewD3D12Impl* pTexView, CommandContext& Ctx)
+    void GenerateMipsHelper::GenerateMips(RenderDeviceD3D12Impl* pRenderDeviceD3D12, TextureViewD3D12Impl* pTexView, CommandContext& Ctx)const
     {
         auto &ComputeCtx = Ctx.AsComputeContext();
         ComputeCtx.SetRootSignature(m_pGenerateMipsRS);
@@ -116,80 +116,77 @@ namespace Diligent
         auto *pd3d12Device = pRenderDeviceD3D12->GetD3D12Device();
 
         const auto &ViewDesc = pTexView->GetDesc();
-        for (Uint32 ArrSlice = ViewDesc.FirstArraySlice; ArrSlice < ViewDesc.FirstArraySlice + ViewDesc.NumArraySlices; ++ArrSlice)
+        for (uint32_t TopMip = 0; TopMip < TexDesc.MipLevels - 1; )
         {
-            for (uint32_t TopMip = 0; TopMip < TexDesc.MipLevels - 1; )
+            uint32_t SrcWidth  = std::max(TexDesc.Width  >> TopMip, 1u);
+            uint32_t SrcHeight = std::max(TexDesc.Height >> TopMip, 1u);
+            uint32_t DstWidth  = std::max(SrcWidth  >> 1, 1u);
+            uint32_t DstHeight = std::max(SrcHeight >> 1, 1u);
+
+            // Determine if the first downsample is more than 2:1.  This happens whenever
+            // the source width or height is odd.
+            uint32_t NonPowerOfTwo = (SrcWidth & 1) | (SrcHeight & 1) << 1;
+            if (TexDesc.Format == TEX_FORMAT_RGBA8_UNORM_SRGB)
+                ComputeCtx.SetPipelineState(m_pGenerateMipsGammaPSO[NonPowerOfTwo]);
+            else
+                ComputeCtx.SetPipelineState(m_pGenerateMipsLinearPSO[NonPowerOfTwo]);
+
+            // We can downsample up to four times, but if the ratio between levels is not
+            // exactly 2:1, we have to shift our blend weights, which gets complicated or
+            // expensive.  Maybe we can update the code later to compute sample weights for
+            // each successive downsample.  We use _BitScanForward to count number of zeros
+            // in the low bits.  Zeros indicate we can divide by two without truncating.
+            uint32_t AdditionalMips;
+            _BitScanForward((unsigned long*)&AdditionalMips, DstWidth | DstHeight);
+            uint32_t NumMips = 1 + (AdditionalMips > 3 ? 3 : AdditionalMips);
+            if (TopMip + NumMips > TexDesc.MipLevels - 1)
+                NumMips = TexDesc.MipLevels - 1 - TopMip;
+
+            // These are clamped to 1 after computing additional mips because clamped
+            // dimensions should not limit us from downsampling multiple times.  (E.g.
+            // 16x1 -> 8x1 -> 4x1 -> 2x1 -> 1x1.)
+            if (DstWidth == 0)
+                DstWidth = 1;
+            if (DstHeight == 0)
+                DstHeight = 1;
+
+            D3D12_DESCRIPTOR_HEAP_TYPE HeapType = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+            auto DescriptorAlloc = Ctx.AllocateDynamicGPUVisibleDescriptor(HeapType, 5);
+            CommandContext::ShaderDescriptorHeaps Heaps(DescriptorAlloc.GetDescriptorHeap());
+            ComputeCtx.SetDescriptorHeaps(Heaps);
+            Ctx.GetCommandList()->SetComputeRootDescriptorTable(1, DescriptorAlloc.GetGpuHandle(0));
+            Ctx.GetCommandList()->SetComputeRootDescriptorTable(2, DescriptorAlloc.GetGpuHandle(1));
+            struct RootCBData
             {
-                uint32_t SrcWidth = TexDesc.Width >> TopMip;
-                uint32_t SrcHeight = TexDesc.Height >> TopMip;
-                uint32_t DstWidth = SrcWidth >> 1;
-                uint32_t DstHeight = SrcHeight >> 1;
+                Uint32 SrcMipLevel;	    // Texture level of source mip
+                Uint32 NumMipLevels;	// Number of OutMips to write: [1, 4]
+                Uint32 FirstArraySlice;
+                Uint32 Dummy;
+                float TexelSize[2];	    // 1.0 / OutMip1.Dimensions
+            }CBData = { TopMip, NumMips, ViewDesc.FirstArraySlice, 0, 1.0f / static_cast<float>(DstWidth), 1.0f / static_cast<float>(DstHeight) };
+            Ctx.GetCommandList()->SetComputeRoot32BitConstants(0, 6, &CBData, 0);
 
-                // Determine if the first downsample is more than 2:1.  This happens whenever
-                // the source width or height is odd.
-                uint32_t NonPowerOfTwo = (SrcWidth & 1) | (SrcHeight & 1) << 1;
-                if (TexDesc.Format == TEX_FORMAT_RGBA8_UNORM_SRGB)
-                    ComputeCtx.SetPipelineState(m_pGenerateMipsGammaPSO[NonPowerOfTwo]);
-                else
-                    ComputeCtx.SetPipelineState(m_pGenerateMipsLinearPSO[NonPowerOfTwo]);
+            // TODO: Shouldn't we transition top mip to shader resource state?
+            D3D12_CPU_DESCRIPTOR_HANDLE DstDescriptorRange = DescriptorAlloc.GetCpuHandle();
+            const Uint32 MaxMipsHandledByCS = 4; // Max number of mip levels processed by one CS shader invocation
+            UINT DstRangeSize = 1 + MaxMipsHandledByCS;
+            D3D12_CPU_DESCRIPTOR_HANDLE SrcDescriptorRanges[5] = {};
+            SrcDescriptorRanges[0] = SRVDescriptorHandle;
+            UINT SrcRangeSizes[5] = { 1,1,1,1,1 };
+            // On Resource Binding Tier 2 hardware, all descriptor tables of type CBV and UAV declared in the set 
+            // Root Signature must be populated and initialized, even if the shaders do not need the descriptor.
+            // So we must populate all 4 slots even though we may actually process less than 4 mip levels
+            // Copy top mip level UAV descriptor handle to all unused slots
+            for (Uint32 u = 0; u < MaxMipsHandledByCS; ++u)
+                SrcDescriptorRanges[1 + u] = pTexD3D12->GetMipLevelUAV(std::min(TopMip + u + 1, TexDesc.MipLevels - 1));
 
-                // We can downsample up to four times, but if the ratio between levels is not
-                // exactly 2:1, we have to shift our blend weights, which gets complicated or
-                // expensive.  Maybe we can update the code later to compute sample weights for
-                // each successive downsample.  We use _BitScanForward to count number of zeros
-                // in the low bits.  Zeros indicate we can divide by two without truncating.
-                uint32_t AdditionalMips;
-                _BitScanForward((unsigned long*)&AdditionalMips, DstWidth | DstHeight);
-                uint32_t NumMips = 1 + (AdditionalMips > 3 ? 3 : AdditionalMips);
-                if (TopMip + NumMips > TexDesc.MipLevels - 1)
-                    NumMips = TexDesc.MipLevels - 1 - TopMip;
+            pd3d12Device->CopyDescriptors(1, &DstDescriptorRange, &DstRangeSize, 1 + MaxMipsHandledByCS, SrcDescriptorRanges, SrcRangeSizes, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-                // These are clamped to 1 after computing additional mips because clamped
-                // dimensions should not limit us from downsampling multiple times.  (E.g.
-                // 16x1 -> 8x1 -> 4x1 -> 2x1 -> 1x1.)
-                if (DstWidth == 0)
-                    DstWidth = 1;
-                if (DstHeight == 0)
-                    DstHeight = 1;
+            ComputeCtx.Dispatch((DstWidth + 7) / 8, (DstHeight + 7) / 8, ViewDesc.NumArraySlices);
 
-                D3D12_DESCRIPTOR_HEAP_TYPE HeapType = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-                auto DescriptorAlloc = Ctx.AllocateDynamicGPUVisibleDescriptor(HeapType, 5);
-                CommandContext::ShaderDescriptorHeaps Heaps(DescriptorAlloc.GetDescriptorHeap());
-                ComputeCtx.SetDescriptorHeaps(Heaps);
-                Ctx.GetCommandList()->SetComputeRootDescriptorTable(1, DescriptorAlloc.GetGpuHandle(0));
-                Ctx.GetCommandList()->SetComputeRootDescriptorTable(2, DescriptorAlloc.GetGpuHandle(1));
-                struct RootCBData
-                {
-                    Uint32 SrcMipLevel;	    // Texture level of source mip
-                    Uint32 NumMipLevels;	// Number of OutMips to write: [1, 4]
-                    Uint32 ArraySlice;
-                    Uint32 Dummy;
-                    float TexelSize[2];	    // 1.0 / OutMip1.Dimensions
-                }CBData = { TopMip, NumMips, ArrSlice, 0, 1.0f / static_cast<float>(DstWidth), 1.0f / static_cast<float>(DstHeight) };
-                Ctx.GetCommandList()->SetComputeRoot32BitConstants(0, 6, &CBData, 0);
+            Ctx.InsertUAVBarrier(*pTexD3D12, *pTexD3D12);
 
-                // TODO: Shouldn't we transition top mip to shader resource state?
-                D3D12_CPU_DESCRIPTOR_HANDLE DstDescriptorRange = DescriptorAlloc.GetCpuHandle();
-                const Uint32 MaxMipsHandledByCS = 4; // Max number of mip levels processed by one CS shader invocation
-                UINT DstRangeSize = 1 + MaxMipsHandledByCS;
-                D3D12_CPU_DESCRIPTOR_HANDLE SrcDescriptorRanges[5] = {};
-                SrcDescriptorRanges[0] = SRVDescriptorHandle;
-                UINT SrcRangeSizes[5] = { 1,1,1,1,1 };
-                // On Resource Binding Tier 2 hardware, all descriptor tables of type CBV and UAV declared in the set 
-                // Root Signature must be populated and initialized, even if the shaders do not need the descriptor.
-                // So we must populate all 4 slots even though we may actually process less than 4 mip levels
-                // Copy top mip level UAV descriptor handle to all unused slots
-                for (Uint32 u = 0; u < MaxMipsHandledByCS; ++u)
-                    SrcDescriptorRanges[1 + u] = pTexD3D12->GetMipLevelUAV(std::min(TopMip + u + 1, TexDesc.MipLevels - 1));
-
-                pd3d12Device->CopyDescriptors(1, &DstDescriptorRange, &DstRangeSize, 1 + MaxMipsHandledByCS, SrcDescriptorRanges, SrcRangeSizes, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-
-                ComputeCtx.Dispatch((DstWidth + 7) / 8, (DstHeight + 7) / 8);
-
-                Ctx.InsertUAVBarrier(*pTexD3D12, *pTexD3D12);
-
-                TopMip += NumMips;
-            }
+            TopMip += NumMips;
         }
     }
 }

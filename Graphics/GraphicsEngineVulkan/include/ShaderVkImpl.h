@@ -33,7 +33,7 @@
 #include "SPIRVShaderResources.h"
 #include "ShaderVariableVk.h"
 
-#ifdef _DEBUG
+#ifdef DEVELOPMENT
 #   define VERIFY_SHADER_BINDINGS
 #endif
 

@@ -35,9 +35,9 @@ SamplerState BilinearClamp : register(s0);
 
 cbuffer CB : register(b0)
 {
-	uint SrcMipLevel;	// Texture level of source mip
-	uint NumMipLevels;	// Number of OutMips to write: [1, 4]
-    uint ArraySlice;	// Texture array slice
+	uint SrcMipLevel;	    // Texture level of source mip
+	uint NumMipLevels;	    // Number of OutMips to write: [1, 4]
+    uint FirstArraySlice;
     uint Dummy;
 	float2 TexelSize;	// 1.0 / OutMip1.Dimensions
 }
@@ -90,7 +90,8 @@ void main( uint GI : SV_GroupIndex, uint3 DTid : SV_DispatchThreadID )
     SrcTex.GetDimensions(DstMipSize.x, DstMipSize.y, Elements);
     DstMipSize >>= SrcMipLevel;
     bool IsValidThread = all(DTid.xy < DstMipSize);
-    
+    uint ArraySlice = FirstArraySlice + DTid.z;
+
     float4 Src1 = 0;
     if( IsValidThread )
     {

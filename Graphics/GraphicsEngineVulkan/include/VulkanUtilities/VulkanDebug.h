@@ -1,5 +1,6 @@
 #pragma once
 
+#include <string>
 #include "vulkan.h"
 
 namespace VulkanUtilities
@@ -103,5 +104,8 @@ namespace VulkanUtilities
     void SetVulkanObjectName(VkDevice device, VkFence               fence,               const char * name);
     void SetVulkanObjectName(VkDevice device, VkEvent               _event,              const char * name);
 
-    const char* VkResultToString(VkResult errorCode);
+    const char* VkResultToString       (VkResult         errorCode);
+    const char* VkAccessFlagBitToString(VkAccessFlagBits Bit);
+    const char* VkImageLayoutToString  (VkImageLayout    Layout);
+    std::string VkAccessFlagsToString  (VkAccessFlags    Flags);
 }

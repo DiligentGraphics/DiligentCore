@@ -114,7 +114,12 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl *pCtxVkImpl)
                 if(!pBufferVk->CheckAccessFlags(RequiredAccessFlags))
                 {
                     if(VerifyOnly)
-                        LOG_ERROR_MESSAGE("Buffer \"", pBufferVk->GetDesc().Name, "\" is not in correct state. Did you forget to call TransitionShaderResources() or specify COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag in a call to CommitShaderResources()?");
+                    {
+                        LOG_ERROR_MESSAGE("State of buffer \"", pBufferVk->GetDesc().Name, "\" is incorrect. Required access flags: ",
+                                           VulkanUtilities::VkAccessFlagsToString(RequiredAccessFlags),  ". Actual access flags: ", 
+                                           VulkanUtilities::VkAccessFlagsToString(pBufferVk->GetAccessFlags()), 
+                                           ". Call TransitionShaderResources() or provide COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag to CommitShaderResources()");
+                    }
                     else
                         pCtxVkImpl->BufferMemoryBarrier(*pBufferVk, RequiredAccessFlags);
                 }
@@ -134,7 +139,12 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl *pCtxVkImpl)
                 if (!pBufferVk->CheckAccessFlags(RequiredAccessFlags))
                 {
                     if (VerifyOnly)
-                        LOG_ERROR_MESSAGE("Buffer \"", pBufferVk->GetDesc().Name, "\" is not in correct state. Did you forget to call TransitionShaderResources() or specify COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag in a call to CommitShaderResources()?");
+                    {
+                        LOG_ERROR_MESSAGE("State of buffer \"", pBufferVk->GetDesc().Name, "\" is incorrect. Required access flags: ",
+                                           VulkanUtilities::VkAccessFlagsToString(RequiredAccessFlags),  ". Actual access flags: ", 
+                                           VulkanUtilities::VkAccessFlagsToString(pBufferVk->GetAccessFlags()), 
+                                           ". Call TransitionShaderResources() or provide COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag to CommitShaderResources()");
+                    }
                     else
                         pCtxVkImpl->BufferMemoryBarrier(*pBufferVk, RequiredAccessFlags);
                 }
@@ -172,7 +182,12 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl *pCtxVkImpl)
                 if(pTextureVk->GetLayout() != RequiredLayout)
                 {
                     if (VerifyOnly)
-                        LOG_ERROR_MESSAGE("Texture \"", pTextureVk->GetDesc().Name, "\" is not in correct state. Did you forget to call TransitionShaderResources() or specify COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag in a call to CommitShaderResources()?");
+                    {
+                        LOG_ERROR_MESSAGE("State of texture \"", pTextureVk->GetDesc().Name, "\" is incorrect. Required layout: ",
+                                          VulkanUtilities::VkImageLayoutToString(RequiredLayout), ". Actual layout: ", 
+                                          VulkanUtilities::VkImageLayoutToString(pTextureVk->GetLayout()), 
+                                          ". Call TransitionShaderResources() or specify COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag in a call to CommitShaderResources()");
+                    }
                     else
                         pCtxVkImpl->TransitionImageLayout(*pTextureVk, RequiredLayout);
                 }

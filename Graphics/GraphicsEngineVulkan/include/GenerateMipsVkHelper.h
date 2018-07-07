@@ -21,44 +21,44 @@
  *  of the possibility of such damages.
  */
 
-
-// The source code in this file is derived from ColorBuffer.h and GraphicsCore.h developed by Minigraph
-// Original source files header:
-
-//
-// Copyright (c) Microsoft. All rights reserved.
-// This code is licensed under the MIT License (MIT).
-// THIS CODE IS PROVIDED *AS IS* WITHOUT WARRANTY OF
-// ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING ANY
-// IMPLIED WARRANTIES OF FITNESS FOR A PARTICULAR
-// PURPOSE, MERCHANTABILITY, OR NON-INFRINGEMENT.
-//
-// Developed by Minigraph
-//
-// Author:  James Stanard 
-//
-
-
 #pragma once
 
-/// \file
+ /// \file
 /// Implementation of mipmap generation routines
 
+#include <array>
+#include <unordered_map>
+#include "VulkanUtilities/VulkanLogicalDevice.h"
+#include "VulkanUtilities/VulkanCommandBuffer.h"
 
 namespace Diligent
 {
-    class GenerateMipsHelper
-    {
-#if 0
-    public:
-        GenerateMipsHelper(ID3D12Device *pd3d12Device);
+    class RenderDeviceVkImpl;
+    class TextureViewVkImpl;
+    class DeviceContextVkImpl;
 
-        void GenerateMips(class RenderDeviceD3D12Impl *pRenderDeviceD3D12, class TextureViewD3D12Impl *pTexView, class CommandContext &Ctx);
+    class GenerateMipsVkHelper
+    {
+    public:
+        GenerateMipsVkHelper(RenderDeviceVkImpl& DeviceVkImpl);
+        
+        GenerateMipsVkHelper             (const GenerateMipsVkHelper&)  = delete;
+        GenerateMipsVkHelper             (      GenerateMipsVkHelper&&) = delete;
+        GenerateMipsVkHelper& operator = (const GenerateMipsVkHelper&)  = delete;
+        GenerateMipsVkHelper& operator = (      GenerateMipsVkHelper&&) = delete;
+
+        void GenerateMips(TextureViewVkImpl& TexView, DeviceContextVkImpl& Ctx, IShaderResourceBinding& SRB);
+        void CreateSRB(IShaderResourceBinding** ppSRB);
 
     private:
-        CComPtr<ID3D12RootSignature> m_pGenerateMipsRS;
-	    CComPtr<ID3D12PipelineState> m_pGenerateMipsLinearPSO[4];
-	    CComPtr<ID3D12PipelineState> m_pGenerateMipsGammaPSO[4];
-#endif
+        std::array<RefCntAutoPtr<IPipelineState>, 4>  CreatePSOs(TEXTURE_FORMAT Fmt);
+        std::array<RefCntAutoPtr<IPipelineState>, 4>& FindPSOs  (TEXTURE_FORMAT Fmt);
+
+        RenderDeviceVkImpl& m_DeviceVkImpl;
+
+        std::mutex m_PSOMutex;
+	    std::unordered_map< TEXTURE_FORMAT, std::array<RefCntAutoPtr<IPipelineState>, 4> > m_PSOHash;
+        static void GetGlImageFormat(const TextureFormatAttribs& FmtAttribs, std::array<char, 16>& GlFmt);
+        RefCntAutoPtr<IBuffer> m_ConstantsCB;
     };
 }

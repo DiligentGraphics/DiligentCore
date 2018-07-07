@@ -133,9 +133,12 @@ if(MSVC)
     # For instance, this way
     # target_compile_options(BuildSettings INTERFACE "$<$<CONFIG:RELEASE>:/Ot>")
     # does not work as expected
+
+    set(DEBUG_MACROS DEVELOPMENT)
+    target_compile_definitions(BuildSettings INTERFACE "$<$<CONFIG:DEBUG>:${DEBUG_MACROS}>")
 else()
 
-    set(DEBUG_MACROS _DEBUG DEBUG)
+    set(DEBUG_MACROS _DEBUG DEBUG DEVELOPMENT)
     set(RELEASE_MACROS NDEBUG)
 
     foreach(DBG_CONFIG ${DEBUG_CONFIGURATIONS})

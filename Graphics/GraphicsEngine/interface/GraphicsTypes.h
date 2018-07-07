@@ -1295,19 +1295,20 @@ namespace Diligent
         /// see https://www.khronos.org/registry/vulkan/specs/1.0/html/vkspec.html#VkPhysicalDeviceFeatures
         struct DeviceFeatures
         {
-            bool depthBiasClamp                 = false;
-            bool fillModeNonSolid               = false;
-            bool depthClamp                     = false;
-            bool independentBlend               = false;
-            bool samplerAnisotropy              = true;
-            bool geometryShader                 = true;
-            bool tessellationShader             = true;
-            bool dualSrcBlend                   = false;
-            bool multiViewport                  = false;
-            bool imageCubeArray                 = false;
-            bool textureCompressionBC           = false;
-            bool vertexPipelineStoresAndAtomics = false;
-            bool fragmentStoresAndAtomics       = false;
+            bool depthBiasClamp                    = false;
+            bool fillModeNonSolid                  = false;
+            bool depthClamp                        = false;
+            bool independentBlend                  = false;
+            bool samplerAnisotropy                 = true;
+            bool geometryShader                    = true;
+            bool tessellationShader                = true;
+            bool dualSrcBlend                      = false;
+            bool multiViewport                     = false;
+            bool imageCubeArray                    = false;
+            bool textureCompressionBC              = false;
+            bool vertexPipelineStoresAndAtomics    = false;
+            bool fragmentStoresAndAtomics          = false;
+            bool shaderStorageImageExtendedFormats = false;
         }EnabledFeatures;
 
         /// Descriptor pool size

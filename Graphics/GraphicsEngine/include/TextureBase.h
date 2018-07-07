@@ -237,9 +237,10 @@ void TextureBase<BaseInterface, TTextureViewImpl, TTexViewObjAllocator> :: Corre
         break;
 
         case RESOURCE_DIM_TEX_2D:
-            if(ViewDesc.TextureDim != RESOURCE_DIM_TEX_2D )
+            if(ViewDesc.TextureDim != RESOURCE_DIM_TEX_2D_ARRAY && 
+               ViewDesc.TextureDim != RESOURCE_DIM_TEX_2D )
             {
-                TEX_VIEW_VALIDATION_ERROR( "Incorrect texture type for Texture 2D view: only Texture 2D is allowed" );
+                TEX_VIEW_VALIDATION_ERROR( "Incorrect texture type for Texture 2D view: only Texture 2D or Texture 2D Array are allowed" );
             }
         break;
 

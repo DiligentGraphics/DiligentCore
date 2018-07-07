@@ -206,7 +206,16 @@ enum COMMIT_SHADER_RESOURCES_FLAG
 
     /// If this flag is specified when IDeviceContext::CommitShaderResources() is called,
     /// the engine will transition all shader resources to the correct state.
-    COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES = 0x01
+    COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES = 0x01,
+
+
+    /// Verify resource states
+
+    /// The flag is used in debug and development builds to verify 
+    /// that all resources are transitioned to correct states when
+    /// COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag is not set.
+    /// No resource state validation is performed in release build.
+    COMMIT_SHADER_RESOURCES_FLAG_VERIFY_STATES = 0x02
 };
 
 

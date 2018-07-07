@@ -66,7 +66,7 @@ public:
     void CommitAndTransitionShaderResources(IShaderResourceBinding*                 pShaderResourceBinding, 
                                             DeviceContextVkImpl*                    pCtxVkImpl,
                                             bool                                    CommitResources,
-                                            bool                                    TransitionResources,
+                                            Uint32                                  Flags,
                                             PipelineLayout::DescriptorSetBindInfo*  pDescrSetBindInfo)const;
 
     void BindDescriptorSetsWithDynamicOffsets(DeviceContextVkImpl*                   pCtxVkImpl,
