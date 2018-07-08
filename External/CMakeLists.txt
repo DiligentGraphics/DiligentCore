@@ -9,8 +9,8 @@ if(PLATFORM_ANDROID)
 endif()
 
 if(PLATFORM_WIN32)
-    set(ENABLE_GLSLANG_BINARIES FALSE)
-    set(SKIP_GLSLANG_INSTALL TRUE)
+    set(ENABLE_GLSLANG_BINARIES OFF)
+    set(SKIP_GLSLANG_INSTALL ON)
     add_subdirectory(glslang)
     set_target_properties(glslang OGLCompiler OSDependent SPIRV SPVRemapper HLSL PROPERTIES
         FOLDER Core/External/glslang
