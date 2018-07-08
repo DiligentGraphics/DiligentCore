@@ -12,7 +12,6 @@ set(INTERFACE
 )
 
 set(SOURCE 
-    src/test.cpp
     src/SRBMemoryAllocator.cpp
     src/GraphicsAccessories.cpp
 )
