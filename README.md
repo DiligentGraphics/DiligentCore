@@ -1,7 +1,7 @@
 # DiligentCore
 
 This module implements [Diligent Engine](https://github.com/DiligentGraphics/DiligentEngine)'s core functionality: Direct3D11, Direct3D12,
-OpenGL, and OpenGLES rendering backends as well as basic platform-specific utilities. It is self-contained and can be built by its own.
+OpenGL, OpenGLES, and Vulkan rendering backends as well as basic platform-specific utilities. It is self-contained and can be built by its own.
 The module's cmake script defines a number of variables that are required to generate build files for other modules,
 so it must always be handled first.
 
@@ -31,6 +31,7 @@ in the master repository.
  | [Graphics/GraphicsEngineD3D11](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngineD3D11)     | Implementation of Direct3D11 rendering backend |
  | [Graphics/GraphicsEngineD3D12](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngineD3D12)     | Implementation of Direct3D12 rendering backend |
  | [Graphics/GraphicsEngineOpenGL](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngineOpenGL)   | Implementation of OpenGL/GLES rendering backend |
+ | [Graphics/GraphicsEngineVulkan](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngineVulkan)   | Implementation of Vulkan rendering backend |
  | [Graphics/GraphicsTools](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsTools)                 | Graphics utilities build on top of core interfaces (definitions of commonly used states, texture uploaders, etc.) |
  | [Graphics/HLSL2GLSLConverterLib](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/HLSL2GLSLConverterLib) | HLSL to GLSL source code converter library |
  | [Platforms/Basic](https://github.com/DiligentGraphics/DiligentCore/tree/master/Platforms/Basic)      | Interface for platform-specific routines and implementation of some common functionality |
@@ -49,7 +50,7 @@ in the master repository.
 Before you can use any functionality provided by the engine, you need to create a render device, an immediate context and a swap chain.
 
 ### Win32
-On Win32 platform, you can create OpenGL, Direct3D11 or Direct3D12 device as shown below:
+On Win32 platform, you can create OpenGL, Direct3D11, Direct3D12 or Vulkan device as shown below:
 
 ```cpp
 void InitializeDiligentEngine(HWND NativeWindowHandle)
@@ -68,8 +69,10 @@ void InitializeDiligentEngine(HWND NativeWindowHandle)
             LoadGraphicsEngineD3D11(GetEngineFactoryD3D11);
 #endif
             auto *pFactoryD3D11 = GetEngineFactoryD3D11();
-            pFactoryD3D11->CreateDeviceAndContextsD3D11(DeviceAttribs, &m_pDevice, &m_pImmediateContext, NumDeferredCtx);
-            pFactoryD3D11->CreateSwapChainD3D11(m_pDevice, m_pImmediateContext, SCDesc, NativeWindowHandle, &m_pSwapChain);
+            pFactoryD3D11->CreateDeviceAndContextsD3D11(DeviceAttribs, &m_pDevice,
+			                                            &m_pImmediateContext, NumDeferredCtx);
+            pFactoryD3D11->CreateSwapChainD3D11(m_pDevice, m_pImmediateContext,
+			                                    SCDesc, NativeWindowHandle, &m_pSwapChain);
         }
         break;
 
@@ -82,8 +85,10 @@ void InitializeDiligentEngine(HWND NativeWindowHandle)
 #endif
             EngineD3D12Attribs EngD3D12Attribs;
             auto *pFactoryD3D12 = GetEngineFactoryD3D12();
-            pFactoryD3D12->CreateDeviceAndContextsD3D12(EngD3D12Attribs, &m_pDevice, &m_pImmediateContext, NumDeferredCtx);
-            pFactoryD3D12->CreateSwapChainD3D12(m_pDevice, m_pImmediateContext, SCDesc, NativeWindowHandle, &m_pSwapChain);
+            pFactoryD3D12->CreateDeviceAndContextsD3D12(EngD3D12Attribs, &m_pDevice,
+			                                            &m_pImmediateContext, NumDeferredCtx);
+            pFactoryD3D12->CreateSwapChainD3D12(m_pDevice, m_pImmediateContext,
+			                                    SCDesc, NativeWindowHandle, &m_pSwapChain);
         }
         break;
 
@@ -104,6 +109,22 @@ void InitializeDiligentEngine(HWND NativeWindowHandle)
     }
     break;
 
+    case DeviceType::Vulkan:
+    {
+#if ENGINE_DLL
+        GetEngineFactoryVkType GetEngineFactoryVk = nullptr;
+        // Load the dll and import GetEngineFactoryVk() function
+        LoadGraphicsEngineVk(GetEngineFactoryVk);
+#endif
+        EngineVkAttribs EngVkAttribs;
+        auto *pFactoryVk = GetEngineFactoryVk();
+        pFactoryVk->CreateDeviceAndContextsVk(EngVkAttribs, &m_pDevice,
+                                              &m_pImmediateContext, NumDeferredCtx);
+        pFactoryVk->CreateSwapChainVk(m_pDevice, m_pImmediateContext,
+                                      SCDesc, NativeWindowHandle, &m_pSwapChain);
+    }
+    break;
+
     default:
         std::cerr << "Unknown device type";
     }
@@ -111,15 +132,16 @@ void InitializeDiligentEngine(HWND NativeWindowHandle)
 ```
 
 On Windows, the engine can be statically linked to the application or built as a separate DLL. In the former case,
-factory functions `GetEngineFactoryOpenGL()`, `GetEngineFactoryD3D11()`, and `GetEngineFactoryD3D12()` can be called directly.
-In the latter case, you need to load the DLL into the process's address space using `LoadGraphicsEngineOpenGL()`,
-`LoadGraphicsEngineD3D11()` or `LoadGraphicsEngineD3D12()` function. Each function loads appropriate dynamic library and
-imports the functions required to initialize the engine. You need to include the following headers:
+factory functions `GetEngineFactoryOpenGL()`, `GetEngineFactoryD3D11()`, `GetEngineFactoryD3D12()`, and `GetEngineFactoryVk()`
+can be called directly. In the latter case, you need to load the DLL into the process's address space using `LoadGraphicsEngineOpenGL()`,
+`LoadGraphicsEngineD3D11()`, `LoadGraphicsEngineD3D12()`, or `LoadGraphicsEngineVk()` function. Each function loads appropriate
+dynamic library and imports the functions required to initialize the engine. You need to include the following headers:
 
 ```cpp
 #include "RenderDeviceFactoryD3D11.h"
 #include "RenderDeviceFactoryD3D12.h"
 #include "RenderDeviceFactoryOpenGL.h"
+#include "RenderDeviceFactoryVk.h"
 
 ```
 You also need to add the following directories to the include search paths:
@@ -127,6 +149,7 @@ You also need to add the following directories to the include search paths:
 * diligentcore/Graphics/GraphicsEngineD3D11/interface
 * diligentcore/Graphics/GraphicsEngineD3D12/interface
 * diligentcore/Graphics/GraphicsEngineOpenGL/interface
+* diligentcore/Graphics/GraphicsEngineVulkan/interface
 
 Also, enable Diligent namespace:
 
@@ -134,8 +157,8 @@ Also, enable Diligent namespace:
 using namespace Diligent;
 ```
 
-`IEngineFactoryD3D11::CreateDeviceAndContextsD3D11()` and `IEngineFactoryD3D12::CreateDeviceAndContextsD3D12()` functions can
-also create a specified number of deferred contexts, which can be used for multi-threaded command recording.
+`IEngineFactoryD3D11::CreateDeviceAndContextsD3D11()`, `IEngineFactoryD3D12::CreateDeviceAndContextsD3D12()`, and functions can
+`IEngineFactoryVk::CreateDeviceAndContextsVk()` also create a specified number of deferred contexts, which can be used for multi-threaded command recording.
 Deferred contexts can only be created during the initialization of the engine. The function populates an array of pointers
 to the contexts, where the immediate context goes at position 0, followed by all deferred contexts.
 
@@ -272,7 +295,7 @@ supported platform that should be sufficient in most cases. You can however defi
 
 An important member is `ShaderCreationAttribs::SourceLanguage`. The following are valid values for this member:
 
-* `SHADER_SOURCE_LANGUAGE_DEFAULT` - The shader source format matches the underlying graphics API: HLSL for D3D11 or D3D12 mode, and GLSL for OpenGL and OpenGLES modes.
+* `SHADER_SOURCE_LANGUAGE_DEFAULT` - The shader source format matches the underlying graphics API: HLSL for D3D11 or D3D12 mode, and GLSL for OpenGL, OpenGLES, and Vulkan modes.
 * `SHADER_SOURCE_LANGUAGE_HLSL`    - The shader source is in HLSL. For OpenGL and OpenGLES modes, the source code will be converted to GLSL. See shader converter for details.
 * `SHADER_SOURCE_LANGUAGE_GLSL`    - The shader source is in GLSL. There is currently no GLSL to HLSL converter.
 
@@ -390,7 +413,6 @@ RasterizerDesc.FillMode = FILL_MODE_SOLID;
 RasterizerDesc.CullMode = CULL_MODE_NONE;
 RasterizerDesc.FrontCounterClockwise = True;
 RasterizerDesc.ScissorEnable = True;
-//RSDesc.MultisampleEnable = false; // do not allow msaa (fonts would be degraded)
 RasterizerDesc.AntialiasedLineEnable = False;
 ```
 
@@ -509,8 +531,7 @@ m_pContext->ClearRenderTarget(nullptr, zero);
 // Set vertex and index buffers
 IBuffer *buffer[] = {m_pVertexBuffer};
 Uint32 offsets[] = {0};
-Uint32 strides[] = {sizeof(MyVertex)};
-m_pContext->SetVertexBuffers(0, 1, buffer, strides, offsets, SET_VERTEX_BUFFERS_FLAG_RESET);
+m_pContext->SetVertexBuffers(0, 1, buffer, offsets, SET_VERTEX_BUFFERS_FLAG_RESET);
 m_pContext->SetIndexBuffer(m_pIndexBuffer, 0);
 
 m_pContext->SetPipelineState(m_pPSO);
@@ -525,8 +546,8 @@ m_pContext->CommitShaderResources(m_pSRB, COMMIT_SHADER_RESOURCES_FLAG_TRANSITIO
 
 If the method is not called, the engine will detect that resources are not committed and output
 debug message. Note that `CommitShaderResources()` must be called after the right pipeline state has been
-bound to the context. Note that the last parameter tells the system to transition resources to the correct states.
-If this flag is not specified, the resources must be explicitly transitioned to the right states by a call to
+bound to the context. Note that the last parameter tells the system to transition resources to correct states.
+If this flag is not specified, the resources must be explicitly transitioned to right states by a call to
 `IDeviceContext::TransitionShaderResources()`:
 
 ```cpp
@@ -590,8 +611,9 @@ objects. Refer to the following pages for more information:
 
 # Version History
 
-## Current progress
+## v2.3
 
+* Implemented Vulkan backend
 * Implemented hardware adapter & display mode enumeration in D3D11 and D3D12 modes
 * Implemented initialization in fullscreen mode as well as toggling between fullscreen and windowed modes in run time
 * Added sync interval parameter to ISwapChain::Present()
@@ -599,6 +621,9 @@ objects. Refer to the following pages for more information:
 * API Changes:
   * Math library functions `SetNearFarClipPlanes()`, `GetNearFarPlaneFromProjMatrix()`, `Projection()`,
     `OrthoOffCenter()`, and `Ortho()` take `bIsGL` flag instead of `bIsDirectX`
+  * Vertex buffer strides are now defined by the pipeline state as part of the input layout description (`LayoutElement::Stride`)
+  * Added `COMMIT_SHADER_RESOURCES_FLAG_VERIFY_STATES` flag
+  * Added `NumViewports` member to `GraphicsPipelineDesc` structure
 
 ## v2.2.a
 
