@@ -91,8 +91,8 @@ public:
 
     virtual void* GetNativeHandle()override final
     { 
-        auto VkBuffer = GetVkBuffer(); 
-        return VkBuffer;
+        auto vkBuffer = GetVkBuffer(); 
+        return vkBuffer;
     }
 
     virtual void SetAccessFlags(VkAccessFlags AccessFlags)override final

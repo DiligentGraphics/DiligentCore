@@ -68,7 +68,11 @@ public:
     virtual void Unmap( IDeviceContext* pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags )override;
 
     virtual VkImage GetVkImage()const override final{ return m_VulkanImage; }
-    virtual void* GetNativeHandle()override final { return GetVkImage(); }
+    virtual void* GetNativeHandle()override final
+    {
+        auto vkImage = GetVkImage();
+        return vkImage;
+    }
 /*
     virtual void SetVkResourceState(Vk_RESOURCE_STATES state)override final{ SetState(state); }
     */

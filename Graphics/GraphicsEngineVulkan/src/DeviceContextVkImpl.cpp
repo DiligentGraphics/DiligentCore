@@ -972,7 +972,7 @@ namespace Diligent
             }
             else
             {
-                FBKey.DSV = nullptr;
+                FBKey.DSV = VK_NULL_HANDLE;
                 RenderPassKey.DSVFormat = TEX_FORMAT_UNKNOWN;
             }
 
@@ -994,7 +994,7 @@ namespace Diligent
                 }
                 else
                 {
-                    FBKey.RTVs[rt] = nullptr;
+                    FBKey.RTVs[rt] = VK_NULL_HANDLE;
                     RenderPassKey.RTVFormats[rt] = TEX_FORMAT_UNKNOWN;
                 }
             }
@@ -1043,7 +1043,7 @@ namespace Diligent
     {
         VERIFY(pBuffVk->GetDesc().Usage != USAGE_DYNAMIC, "Dynamic buffers must be updated via Map()");
         VERIFY_EXPR( static_cast<size_t>(NumBytes) == NumBytes );
-        auto TmpSpace = m_UploadHeap.Allocate(NumBytes);
+        auto TmpSpace = m_UploadHeap.Allocate(static_cast<size_t>(NumBytes));
         auto CPUAddress = TmpSpace.MemAllocation.Page->GetCPUMemory();
 	    memcpy(reinterpret_cast<Uint8*>(CPUAddress) + TmpSpace.MemAllocation.UnalignedOffset, pData, static_cast<size_t>(NumBytes));
         UpdateBufferRegion(pBuffVk, DstOffset, NumBytes, TmpSpace.vkBuffer, TmpSpace.MemAllocation.UnalignedOffset);
