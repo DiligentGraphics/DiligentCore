@@ -629,7 +629,7 @@ objects. Refer to the following pages for more information:
 
 ### New Features
 
-* Implemented vulkan backend
+* **Implemented Vulkan backend**
 * Implemented PSO compatibility: if two pipeline states share the same shader resource layout,
   they can use SRB objects interchangeably.
 * Added `IPipelineState::IsCompatibleWith(const IPipelineState *pPSO)` method that returns true if two 
@@ -637,8 +637,10 @@ objects. Refer to the following pages for more information:
 * Added sync interval parameter to ISwapChain::Present()
 * API Changes
   * Added `NumViewports` member to `GraphicsPipelineDesc` struct
-  * Removed `PRIMITIVE_TOPOLOGY_TYPE` type; replaced `PRIMITIVE_TOPOLOGY_TYPE GraphicsPipelineDesc::PrimitiveTopologyType` 
-    with `PRIMITIVE_TOPOLOGY GraphicsPipelineDesc::PrimitiveTopology`; removed `DrawAttribs::Topology`
+  * Removed `PRIMITIVE_TOPOLOGY_TYPE` type
+  * Replaced `PRIMITIVE_TOPOLOGY_TYPE GraphicsPipelineDesc::PrimitiveTopologyType` 
+    with `PRIMITIVE_TOPOLOGY GraphicsPipelineDesc::PrimitiveTopology`
+  * Removed `DrawAttribs::Topology`
   * Removed `pStrides` prarameter from `IDeviceContext::SetVertexBuffers()`. Strides are now defined
     through vertex layout.
 
