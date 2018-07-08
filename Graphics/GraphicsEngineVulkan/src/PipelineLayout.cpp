@@ -26,7 +26,6 @@
 #include "PipelineLayout.h"
 #include "ShaderResourceLayoutVk.h"
 #include "ShaderVkImpl.h"
-#include "CommandContext.h"
 #include "RenderDeviceVkImpl.h"
 #include "DeviceContextVkImpl.h"
 #include "TextureVkImpl.h"
