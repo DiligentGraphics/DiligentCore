@@ -5,7 +5,6 @@ project(GraphicsEngineVk CXX)
 set(INCLUDE 
     include/BufferVkImpl.h
     include/BufferViewVkImpl.h
-    include/CommandContext.h
     include/CommandListVkImpl.h
     include/CommandPoolManager.h
     include/CommandQueueVkImpl.h
@@ -67,7 +66,6 @@ set(INTERFACE
 set(SRC 
     src/BufferVkImpl.cpp
     src/BufferViewVkImpl.cpp
-    src/CommandContext.cpp
     src/CommandPoolManager.cpp
     src/CommandQueueVkImpl.cpp
     src/DescriptorPoolManager.cpp

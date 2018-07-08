@@ -27,7 +27,6 @@
 #include "DeviceContextVkImpl.h"
 #include "SwapChainVk.h"
 #include "PipelineStateVkImpl.h"
-#include "CommandContext.h"
 #include "TextureVkImpl.h"
 #include "BufferVkImpl.h"
 #include "VulkanTypeConversions.h"

@@ -29,7 +29,6 @@
 #include "RenderDeviceVkImpl.h"
 #include "DeviceContextVkImpl.h"
 #include "ShaderResourceBindingVkImpl.h"
-#include "CommandContext.h"
 #include "EngineMemory.h"
 #include "StringTools.h"
 

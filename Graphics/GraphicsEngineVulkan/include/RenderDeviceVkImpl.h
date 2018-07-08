@@ -30,7 +30,6 @@
 #include "RenderDeviceVk.h"
 #include "RenderDeviceBase.h"
 #include "DescriptorPoolManager.h"
-#include "CommandContext.h"
 #include "VulkanDynamicHeap.h"
 #include "Atomics.h"
 #include "CommandQueueVk.h"
