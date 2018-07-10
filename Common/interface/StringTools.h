@@ -35,7 +35,7 @@
 namespace Diligent
 {
 
-inline std::string NarrowString(const std::wstring &WideStr)
+inline std::string NarrowString(const std::wstring& WideStr)
 {
     std::string NarrowStr;
     const std::ctype<wchar_t>& ctfacet = std::use_facet< std::ctype<wchar_t> >( std::wstringstream().getloc() ) ;
@@ -47,7 +47,17 @@ inline std::string NarrowString(const std::wstring &WideStr)
 	return NarrowStr;
 }
 
-inline std::wstring WidenString(const char *Str)
+inline std::string NarrowString(const wchar_t* WideStr)
+{
+    std::string NarrowStr;
+    const std::ctype<wchar_t>& ctfacet = std::use_facet< std::ctype<wchar_t> >( std::wstringstream().getloc() ) ;
+    for( auto CurrWChar = WideStr; *CurrWChar != 0; ++CurrWChar )
+         NarrowStr.push_back( ctfacet.narrow( *CurrWChar, 0 ) );
+         
+	return NarrowStr;
+}
+
+inline std::wstring WidenString(const char* Str)
 {
 	std::wstring WideStr;
     const std::ctype<wchar_t>& ctfacet = std::use_facet< std::ctype<wchar_t> >( std::wstringstream().getloc() ) ;
@@ -57,7 +67,7 @@ inline std::wstring WidenString(const char *Str)
 	return WideStr;
 }
 
-inline std::wstring WidenString(const std::string &Str)
+inline std::wstring WidenString(const std::string& Str)
 {
 	std::wstring WideStr;
     const std::ctype<wchar_t>& ctfacet = std::use_facet< std::ctype<wchar_t> >( std::wstringstream().getloc() ) ;
