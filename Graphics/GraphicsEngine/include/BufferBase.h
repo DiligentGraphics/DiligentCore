@@ -67,9 +67,13 @@ public:
         m_pDefaultUAV(nullptr, STDDeleter<BufferViewImplType, TBuffViewObjAllocator>(BuffViewObjAllocator) ),
         m_pDefaultSRV(nullptr, STDDeleter<BufferViewImplType, TBuffViewObjAllocator>(BuffViewObjAllocator) )
     {
-#define VERIFY_BUFFER(Expr, ...) VERIFY(Expr, "Buffer \"",  this->m_Desc.Name ? this->m_Desc.Name : "", "\": ", ##__VA_ARGS__)
+#ifdef DEVELOPMENT
+#   define VERIFY_BUFFER(Expr, ...) if (!(Expr)) LOG_ERROR("Buffer \"",  this->m_Desc.Name ? this->m_Desc.Name : "", "\": ", ##__VA_ARGS__)
+#else
+#   define VERIFY_BUFFER(...)do{}while(false)
+#endif
 
-#ifdef _DEBUG
+#ifdef DEVELOPMENT
         Uint32 AllowedBindFlags =
             BIND_VERTEX_BUFFER | BIND_INDEX_BUFFER | BIND_UNIFORM_BUFFER |
             BIND_SHADER_RESOURCE | BIND_STREAM_OUTPUT | BIND_UNORDERED_ACCESS |
@@ -194,7 +198,7 @@ void BufferBase<BaseInterface, BufferViewImplType, TBuffViewObjAllocator> :: Map
     
     if (this->m_Desc.Usage == USAGE_DYNAMIC)
     {
-        VERIFY((MapFlags & MAP_FLAG_DISCARD) != 0 && MapType == MAP_WRITE, "Dynamic buffers can only be mapped for writing with discard flag");
+        VERIFY_BUFFER((MapFlags & MAP_FLAG_DISCARD) != 0 && MapType == MAP_WRITE, "Dynamic buffers can only be mapped for writing with discard flag");
     }
 
     if ( (MapFlags & MAP_FLAG_DISCARD) != 0 )

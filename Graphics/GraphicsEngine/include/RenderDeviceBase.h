@@ -316,7 +316,7 @@ public:
     {
     }
 
-    StateObjectsRegistry<SamplerDesc>           &GetSamplerRegistry(){ return m_SamplersRegistry; }
+    StateObjectsRegistry<SamplerDesc>& GetSamplerRegistry(){ return m_SamplersRegistry; }
     
     /// Set weak reference to the immediate context
     void SetImmediateContext(IDeviceContext *pImmediateContext)

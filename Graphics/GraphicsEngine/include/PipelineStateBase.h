@@ -136,8 +136,9 @@ public:
             {
                 if(m_Strides[BuffSlot] != 0)
                 {
-                    VERIFY(m_Strides[BuffSlot] == It->Stride, "Inconsistent strides specified for buffer slot ", BuffSlot,
-                                                              ". Current value: ", m_Strides[BuffSlot], ". New value: ", It->Stride);
+                    if (m_Strides[BuffSlot] != It->Stride)
+                        LOG_ERROR_AND_THROW("Inconsistent strides specified for buffer slot ", BuffSlot,
+                                            ". Current value: ", m_Strides[BuffSlot], ". New value: ", It->Stride);
                 }
                 m_Strides[BuffSlot] = It->Stride;
             }

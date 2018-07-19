@@ -307,7 +307,8 @@ void TextureBase<BaseInterface, TTextureViewImpl, TTexViewObjAllocator> :: Corre
 
     if ( ViewDesc.TextureDim == RESOURCE_DIM_TEX_CUBE )
     {
-        VERIFY(ViewDesc.ViewType == TEXTURE_VIEW_SHADER_RESOURCE, "Unexpected view type: SRV is expected");
+        if(ViewDesc.ViewType != TEXTURE_VIEW_SHADER_RESOURCE)
+            TEX_VIEW_VALIDATION_ERROR( "Unexpected view type: SRV is expected");
         if(ViewDesc.NumArraySlices != 6 && ViewDesc.NumArraySlices != 0)
             TEX_VIEW_VALIDATION_ERROR( "Texture cube SRV is expected to have 6 array slices, while ", ViewDesc.NumArraySlices, " is provided" );
         if(ViewDesc.FirstArraySlice != 0)
@@ -315,7 +316,8 @@ void TextureBase<BaseInterface, TTextureViewImpl, TTexViewObjAllocator> :: Corre
     }
     if ( ViewDesc.TextureDim == RESOURCE_DIM_TEX_CUBE_ARRAY )
     {
-        VERIFY(ViewDesc.ViewType == TEXTURE_VIEW_SHADER_RESOURCE, "Unexpected view type: SRV is expected");
+        if(ViewDesc.ViewType != TEXTURE_VIEW_SHADER_RESOURCE )
+            TEX_VIEW_VALIDATION_ERROR( "Unexpected view type: SRV is expected");
         if((ViewDesc.NumArraySlices % 6) != 0)
             TEX_VIEW_VALIDATION_ERROR( "Number of slices in texture cube array SRV is expected to be multiple of 6. ", ViewDesc.NumArraySlices, " slices provided." );
     }

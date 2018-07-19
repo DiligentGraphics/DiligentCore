@@ -114,8 +114,8 @@ void ValidateTextureDesc( const TextureDesc& Desc )
 
 void ValidateTextureRegion(const TextureDesc &TexDesc, Uint32 MipLevel, Uint32 Slice, const Box &Box)
 {
-#define VERIFY_TEX_PARAMS(Expr, ...) VERIFY(Expr, "Texture \"", TexDesc.Name ? TexDesc.Name : "", "\": ", ##__VA_ARGS__)
-#ifdef _DEBUG
+#define VERIFY_TEX_PARAMS(Expr, ...) if(!(Expr))LOG_ERROR("Texture \"", TexDesc.Name ? TexDesc.Name : "", "\": ", ##__VA_ARGS__)
+#ifdef DEVELOPMENT
     VERIFY_TEX_PARAMS( MipLevel < TexDesc.MipLevels, "Mip level (", MipLevel, ") is out of allowed range [0, ", TexDesc.MipLevels-1, "]" );
     VERIFY_TEX_PARAMS( Box.MinX < Box.MaxX, "Incorrect X range [",Box.MinX, ", ", Box.MaxX, ")" );
     VERIFY_TEX_PARAMS( Box.MinY < Box.MaxY, "Incorrect Y range [",Box.MinY, ", ", Box.MaxY, ")" );
@@ -156,8 +156,10 @@ void ValidateUpdateDataParams( const TextureDesc &TexDesc, Uint32 MipLevel, Uint
     VERIFY((SubresData.pData != nullptr) ^ (SubresData.pSrcBuffer != nullptr), "Either CPU memory pointer or GPU buffer must be provided, exclusively");
     ValidateTextureRegion(TexDesc, MipLevel, Slice, DstBox);
 
+#ifdef DEVELOPMENT
     VERIFY_TEX_PARAMS( (SubresData.Stride & 0x03) == 0, "Texture data stride (", SubresData.Stride, ") must be at least 32-bit aligned" );
     VERIFY_TEX_PARAMS( (SubresData.DepthStride & 0x03) == 0, "Texture data depth stride (", SubresData.DepthStride, ") must be at least 32-bit aligned" );
+#endif
 }
 
 void VliadateCopyTextureDataParams( const TextureDesc &SrcTexDesc, Uint32 SrcMipLevel, Uint32 SrcSlice, const Box *pSrcBox,

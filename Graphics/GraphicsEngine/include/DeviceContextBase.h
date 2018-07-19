@@ -37,10 +37,6 @@
 #include "ValidatedCast.h"
 #include "GraphicsAccessories.h"
 
-#ifdef _DEBUG
-#   define DEBUG_CHECKS
-#endif
-
 namespace Diligent
 {
 
@@ -203,19 +199,21 @@ protected:
 template<typename BaseInterface>
 inline void DeviceContextBase<BaseInterface> :: SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer **ppBuffers, Uint32 *pOffsets, Uint32 Flags  )
 {
-    if( StartSlot >= MaxBufferSlots )
+#ifdef DEVELOPMENT
+    if ( StartSlot >= MaxBufferSlots )
     {
         LOG_ERROR_MESSAGE( "Start vertex buffer slot ", StartSlot, " is out of allowed range [0, ", MaxBufferSlots-1, "]." );
         return;
     }
 
-    if( StartSlot + NumBuffersSet > MaxBufferSlots )
+    if ( StartSlot + NumBuffersSet > MaxBufferSlots )
     {
         LOG_ERROR_MESSAGE( "The range of vertex buffer slots being set [", StartSlot, ", ", StartSlot + NumBuffersSet - 1, "] is out of allowed range  [0, ", MaxBufferSlots - 1, "]." );
         NumBuffersSet = MaxBufferSlots - StartSlot;
     }
+#endif
 
-    if( Flags & SET_VERTEX_BUFFERS_FLAG_RESET )
+    if ( Flags & SET_VERTEX_BUFFERS_FLAG_RESET )
     {
         for(Uint32 s=0; s < m_NumVertexStreams; ++s)
             m_VertexStreams[s] = VertexStreamInfo();
@@ -228,11 +226,11 @@ inline void DeviceContextBase<BaseInterface> :: SetVertexBuffers( Uint32 StartSl
         auto &CurrStream = m_VertexStreams[StartSlot + Buff];
         CurrStream.pBuffer = RefCntAutoPtr<IBuffer>( ppBuffers ? ppBuffers[Buff] : nullptr );
         CurrStream.Offset = pOffsets ? pOffsets[Buff] : 0;
-#ifdef DEBUG_CHECKS
-        if( CurrStream.pBuffer )
+#ifdef DEVELOPMENT
+        if ( CurrStream.pBuffer )
         {
             const auto &BuffDesc = CurrStream.pBuffer->GetDesc();
-            if( !(BuffDesc.BindFlags & BIND_VERTEX_BUFFER) )
+            if ( !(BuffDesc.BindFlags & BIND_VERTEX_BUFFER) )
             {
                 LOG_ERROR_MESSAGE( "Buffer \"", BuffDesc.Name ? BuffDesc.Name : "", "\" being bound as vertex buffer to slot ", Buff," was not created with BIND_VERTEX_BUFFER flag" );
             }
@@ -254,7 +252,7 @@ template<typename BaseInterface>
 template<typename PSOImplType>
 inline bool DeviceContextBase<BaseInterface> :: CommitShaderResources(IShaderResourceBinding *pShaderResourceBinding, Uint32 Flags, int)
 {
-#ifdef _DEBUG
+#ifdef DEVELOPMENT
     if (!m_pPipelineState)
     {
         LOG_ERROR_MESSAGE("No pipeline state is bound to the pipeline");
@@ -286,9 +284,9 @@ inline void DeviceContextBase<BaseInterface> :: SetIndexBuffer( IBuffer *pIndexB
 {
     m_pIndexBuffer = pIndexBuffer;
     m_IndexDataStartOffset = ByteOffset;
-#ifdef DEBUG_CHECKS
+#ifdef DEVELOPMENT
     const auto &BuffDesc = m_pIndexBuffer->GetDesc();
-    if( !(BuffDesc.BindFlags & BIND_INDEX_BUFFER) )
+    if ( !(BuffDesc.BindFlags & BIND_INDEX_BUFFER) )
     {
         LOG_ERROR_MESSAGE( "Buffer \"", BuffDesc.Name ? BuffDesc.Name : "", "\" being bound as index buffer was not created with BIND_INDEX_BUFFER flag" );
     }
@@ -301,7 +299,7 @@ inline void DeviceContextBase<BaseInterface> :: GetPipelineState(IPipelineState 
 { 
     VERIFY( ppPSO != nullptr, "Null pointer provided null" );
     VERIFY( *ppPSO == nullptr, "Memory address contains a pointer to a non-null blend state" );
-    if(m_pPipelineState)
+    if (m_pPipelineState)
     {
         m_pPipelineState->QueryInterface( IID_PipelineState, reinterpret_cast<IObject**>( ppPSO ) );
     }
@@ -321,7 +319,7 @@ inline bool DeviceContextBase<BaseInterface> ::SetBlendFactors(const float *Blen
     bool FactorsDiffer = false;
     for( Uint32 f = 0; f < 4; ++f )
     {
-        if( m_BlendFactors[f] != BlendFactors[f] )
+        if ( m_BlendFactors[f] != BlendFactors[f] )
             FactorsDiffer = true;
         m_BlendFactors[f] = BlendFactors[f];
     }
@@ -342,7 +340,7 @@ inline bool DeviceContextBase<BaseInterface> :: SetStencilRef(Uint32 StencilRef,
 template<typename BaseInterface>
 inline void DeviceContextBase<BaseInterface> :: SetViewports( Uint32 NumViewports, const Viewport *pViewports, Uint32 &RTWidth, Uint32 &RTHeight )
 {
-    if( RTWidth == 0 || RTHeight == 0 )
+    if ( RTWidth == 0 || RTHeight == 0 )
     {
         RTWidth = m_FramebufferWidth;
         RTHeight = m_FramebufferHeight;
@@ -353,7 +351,7 @@ inline void DeviceContextBase<BaseInterface> :: SetViewports( Uint32 NumViewport
     
     Viewport DefaultVP( 0, 0, static_cast<float>(RTWidth), static_cast<float>(RTHeight) );
     // If no viewports are specified, use default viewport
-    if( m_NumViewports == 1 && pViewports == nullptr )
+    if ( m_NumViewports == 1 && pViewports == nullptr )
     {
         pViewports = &DefaultVP;
     }
@@ -371,7 +369,7 @@ template<typename BaseInterface>
 inline void DeviceContextBase<BaseInterface> :: GetViewports( Uint32 &NumViewports, Viewport *pViewports )
 {
     NumViewports = m_NumViewports;
-    if( pViewports )
+    if ( pViewports )
     {
         for( Uint32 vp = 0; vp < m_NumViewports; ++vp )
             pViewports[vp] = m_Viewports[vp];
@@ -381,7 +379,7 @@ inline void DeviceContextBase<BaseInterface> :: GetViewports( Uint32 &NumViewpor
 template<typename BaseInterface>
 inline void DeviceContextBase<BaseInterface> :: SetScissorRects( Uint32 NumRects, const Rect *pRects, Uint32 &RTWidth, Uint32 &RTHeight )
 {
-    if( RTWidth == 0 || RTHeight == 0 )
+    if ( RTWidth == 0 || RTHeight == 0 )
     {
         RTWidth = m_FramebufferWidth;
         RTHeight = m_FramebufferHeight;
@@ -425,7 +423,7 @@ inline bool DeviceContextBase<BaseInterface> :: SetRenderTargets( Uint32 NumRend
         m_FramebufferSlices = 1;
     }
 
-    if( NumRenderTargets != m_NumBoundRenderTargets )
+    if ( NumRenderTargets != m_NumBoundRenderTargets )
     {
         bBindRenderTargets = true;
         for(Uint32 rt = NumRenderTargets; rt < m_NumBoundRenderTargets; ++rt )
@@ -437,13 +435,15 @@ inline bool DeviceContextBase<BaseInterface> :: SetRenderTargets( Uint32 NumRend
     for( Uint32 rt = 0; rt < NumRenderTargets; ++rt )
     {
         auto *pRTView = ppRenderTargets[rt];
-        if( pRTView )
+        if ( pRTView )
         {
             const auto &RTVDesc = pRTView->GetDesc();
-            VERIFY(RTVDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET, "Texture view object named \"", RTVDesc.Name ? RTVDesc.Name : "", "\" has incorrect view type (", GetTexViewTypeLiteralName(RTVDesc.ViewType), "). Render target view is expected" );
-
+#ifdef DEVELOPMENT
+            if (RTVDesc.ViewType != TEXTURE_VIEW_RENDER_TARGET)
+                LOG_ERROR("Texture view object named \"", RTVDesc.Name ? RTVDesc.Name : "", "\" has incorrect view type (", GetTexViewTypeLiteralName(RTVDesc.ViewType), "). Render target view is expected" );
+#endif
             // Use this RTV to set the render target size
-            if(m_FramebufferWidth == 0)
+            if (m_FramebufferWidth == 0)
             {
                 auto *pTex = pRTView->GetTexture();
                 const auto &TexDesc = pTex->GetDesc();
@@ -453,11 +453,14 @@ inline bool DeviceContextBase<BaseInterface> :: SetRenderTargets( Uint32 NumRend
             }
             else
             {
-#ifdef _DEBUG
+#ifdef DEVELOPMENT
                 const auto &TexDesc = pRTView->GetTexture()->GetDesc();
-                VERIFY(m_FramebufferWidth  == std::max(TexDesc.Width  >> RTVDesc.MostDetailedMip, 1U), "Inconsitent render target sizes");
-                VERIFY(m_FramebufferHeight == std::max(TexDesc.Height >> RTVDesc.MostDetailedMip, 1U), "Inconsitent render target sizes");
-                VERIFY(m_FramebufferSlices == RTVDesc.NumArraySlices, "Inconsitent number of layers in bound render targets");
+                if (m_FramebufferWidth != std::max(TexDesc.Width  >> RTVDesc.MostDetailedMip, 1U))
+                    LOG_ERROR("Render target width (", std::max(TexDesc.Width  >> RTVDesc.MostDetailedMip, 1U), ") specified by RTV '", RTVDesc.Name, "' is inconsistent with the width of previously bound render targets (", m_FramebufferWidth, ")");
+                if (m_FramebufferHeight != std::max(TexDesc.Height >> RTVDesc.MostDetailedMip, 1U))
+                    LOG_ERROR("Render target height (", std::max(TexDesc.Height >> RTVDesc.MostDetailedMip, 1U), ") specified by RTV '", RTVDesc.Name, "' is inconsistent with the height of previously bound render targets (", m_FramebufferHeight, ")");
+                if (m_FramebufferSlices != RTVDesc.NumArraySlices)
+                    LOG_ERROR("Number of slices (", RTVDesc.NumArraySlices, ") specified by RTV '", RTVDesc.Name, "' is inconsistent with the number of slices in previously bound render targets (", m_FramebufferSlices, ")");
 #endif
             }
         }
@@ -465,18 +468,21 @@ inline bool DeviceContextBase<BaseInterface> :: SetRenderTargets( Uint32 NumRend
         // Here both views are certainly live objects, since we store
         // strong references to all bound render targets. So we
         // can safely compare pointers.
-        if( m_pBoundRenderTargets[rt] != pRTView )
+        if ( m_pBoundRenderTargets[rt] != pRTView )
         {
             m_pBoundRenderTargets[rt] = pRTView;
             bBindRenderTargets = true;
         }
     }
 
-    if( pDepthStencil )
+    if ( pDepthStencil )
     {
         const auto &DSVDesc = pDepthStencil->GetDesc();
-        VERIFY(DSVDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL, "Texture view object named \"", DSVDesc.Name ? DSVDesc.Name : "", "\" has incorrect view type (", GetTexViewTypeLiteralName(DSVDesc.ViewType), "). Depth stencil view is expected" );
-        
+#ifdef DEVELOPMENT
+        if (DSVDesc.ViewType != TEXTURE_VIEW_DEPTH_STENCIL)
+            LOG_ERROR("Texture view object named \"", DSVDesc.Name ? DSVDesc.Name : "", "\" has incorrect view type (", GetTexViewTypeLiteralName(DSVDesc.ViewType), "). Depth stencil view is expected" );
+#endif
+
         // Use depth stencil size to set render target size
         if (m_FramebufferWidth == 0)
         {
@@ -488,16 +494,19 @@ inline bool DeviceContextBase<BaseInterface> :: SetRenderTargets( Uint32 NumRend
         }
         else
         {
-#ifdef _DEBUG
+#ifdef DEVELOPMENT
             const auto &TexDesc = pDepthStencil->GetTexture()->GetDesc();
-            VERIFY(m_FramebufferWidth  == std::max(TexDesc.Width  >> DSVDesc.MostDetailedMip, 1U), "Inconsitent render target sizes");
-            VERIFY(m_FramebufferHeight == std::max(TexDesc.Height >> DSVDesc.MostDetailedMip, 1U), "Inconsitent render target sizes");
-            VERIFY(m_FramebufferSlices == DSVDesc.NumArraySlices, "Inconsitent number of layers in bound render targets");
+            if (m_FramebufferWidth  != std::max(TexDesc.Width  >> DSVDesc.MostDetailedMip, 1U))
+                LOG_ERROR("Depth-stencil target width (", std::max(TexDesc.Width >> DSVDesc.MostDetailedMip, 1U), ") specified by DSV '", DSVDesc.Name, "' is inconsistent with the width of previously bound render targets (", m_FramebufferWidth, ")");
+            if (m_FramebufferHeight != std::max(TexDesc.Height >> DSVDesc.MostDetailedMip, 1U))
+                LOG_ERROR("Depth-stencil target height (", std::max(TexDesc.Height >> DSVDesc.MostDetailedMip, 1U), ") specified by DSV '", DSVDesc.Name, "' is inconsistent with the height of previously bound render targets (", m_FramebufferHeight, ")");
+            if (m_FramebufferSlices != DSVDesc.NumArraySlices)
+                LOG_ERROR("Number of slices (", DSVDesc.NumArraySlices, ") specified by DSV '", DSVDesc.Name, "' is inconsistent with the number of slices in previously bound render targets (", m_FramebufferSlices, ")");
 #endif
         }
     }
 
-    if( m_pBoundDepthStencil != pDepthStencil)
+    if ( m_pBoundDepthStencil != pDepthStencil)
     {
         m_pBoundDepthStencil = pDepthStencil;
         bBindRenderTargets = true;
@@ -514,13 +523,13 @@ inline void DeviceContextBase<BaseInterface> :: GetRenderTargets( Uint32 &NumRen
 {
     NumRenderTargets = m_NumBoundRenderTargets;
 
-    if( ppRTVs )
+    if ( ppRTVs )
     {
         for( Uint32 rt = 0; rt < NumRenderTargets; ++rt )
         {
             VERIFY( ppRTVs[rt] == nullptr, "Non-null pointer found in RTV array element #", rt );
             auto pBoundRTV = m_pBoundRenderTargets[rt];
-            if( pBoundRTV )
+            if ( pBoundRTV )
                 pBoundRTV->QueryInterface( IID_TextureView, reinterpret_cast<IObject**>(ppRTVs + rt) );
             else
                 ppRTVs[rt] = nullptr;
@@ -532,10 +541,10 @@ inline void DeviceContextBase<BaseInterface> :: GetRenderTargets( Uint32 &NumRen
         }
     }
 
-    if( ppDSV )
+    if ( ppDSV )
     {
         VERIFY( *ppDSV == nullptr, "Non-null DSV pointer found" );
-        if( m_pBoundDepthStencil )
+        if ( m_pBoundDepthStencil )
             m_pBoundDepthStencil->QueryInterface( IID_TextureView, reinterpret_cast<IObject**>(ppDSV) );
         else
             *ppDSV = nullptr;
