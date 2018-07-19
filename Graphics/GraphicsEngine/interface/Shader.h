@@ -235,7 +235,10 @@ struct ShaderCreationAttribs
     /// Compiled shader bytecode. 
     
     /// If shader byte code is provided, FilePath and Source members must be null
-    /// \note. This option is currently only supported for D3D11 and D3D12
+    /// \note. This option is currently only supported for D3D11 and D3D12. 
+    ///        The bytecode must contain reflection information. If shaders were compiled 
+    ///        using fxc, make sure that /Qstrip_reflect option is *not* specified.
+    ///        Also, shaders need to be compiled against 4.0 profile or higher.
     const void *ByteCode = nullptr;
 
     /// Size of the compiled shader bytecode
