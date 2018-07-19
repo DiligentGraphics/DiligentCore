@@ -43,8 +43,8 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters*        pRefCounters,
                              const BufferData&          BuffData /*= BufferData()*/) : 
     TBufferBase(pRefCounters, BuffViewObjMemAllocator, pRenderDeviceVk, BuffDesc, false),
     m_AccessFlags(0),
-#ifdef _DEBUG
-    m_DbgMapType(1 + pRenderDeviceVk->GetNumDeferredContexts()),
+#ifdef DEVELOPMENT
+    m_DvpMapType(1 + pRenderDeviceVk->GetNumDeferredContexts()),
 #endif
     m_DynamicAllocations(STD_ALLOCATOR_RAW_MEM(VulkanDynamicAllocation, GetRawAllocator(), "Allocator for vector<VulkanDynamicAllocation>"))
 {
@@ -177,7 +177,8 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters*        pRefCounters,
             auto AlignedStagingMemOffset = (StagingMemoryAllocation.UnalignedOffset + (StagingBufferMemReqs.alignment-1)) & ~(StagingBufferMemReqs.alignment-1);
 
             auto *StagingData = reinterpret_cast<uint8_t*>(StagingMemoryAllocation.Page->GetCPUMemory());
-            VERIFY_EXPR(StagingData != nullptr);
+            if (StagingData == nullptr)
+                LOG_BUFFER_ERROR_AND_THROW("Failed to allocate staging data");
             memcpy(StagingData + AlignedStagingMemOffset, BuffData.pData, BuffData.DataSize);
             
             err = LogicalDevice.BindBufferMemory(StagingBuffer, StagingBufferMemory, AlignedStagingMemOffset);
@@ -244,8 +245,8 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters*        pRefCounters,
                              VkBuffer                   vkBuffer) : 
     TBufferBase(pRefCounters, BuffViewObjMemAllocator, pRenderDeviceVk, BuffDesc, false),
     m_AccessFlags(0),
-#ifdef _DEBUG
-    m_DbgMapType(1 + pRenderDeviceVk->GetNumDeferredContexts()),
+#ifdef DEVELOPMENT
+    m_DvpMapType(1 + pRenderDeviceVk->GetNumDeferredContexts()),
 #endif
     m_DynamicAllocations(STD_ALLOCATOR_RAW_MEM(VulkanDynamicAllocation, GetRawAllocator(), "Allocator for vector<VulkanDynamicAllocation>")),
     m_VulkanBuffer(vkBuffer)
@@ -287,12 +288,13 @@ void BufferVkImpl :: Map(IDeviceContext* pContext, MAP_TYPE MapType, Uint32 MapF
 
     auto* pDeviceContextVk = ValidatedCast<DeviceContextVkImpl>(pContext);
     auto* pDeviceVk = GetDevice<RenderDeviceVkImpl>();
-#ifdef _DEBUG
+#ifdef DEVELOPMENT
     if(pDeviceContextVk != nullptr)
-        m_DbgMapType[pDeviceContextVk->GetContextId()] = std::make_pair(MapType, MapFlags);
+        m_DvpMapType[pDeviceContextVk->GetContextId()] = std::make_pair(MapType, MapFlags);
 #endif
     if (MapType == MAP_READ )
     {
+        LOG_ERROR("Mapping buffer for reading is not yet imlemented");
         UNSUPPORTED("Mapping buffer for reading is not yet imlemented");
 #if 0
         LOG_WARNING_MESSAGE_ONCE("Mapping CPU buffer for reading on Vk currently requires flushing context and idling GPU");
@@ -310,6 +312,7 @@ void BufferVkImpl :: Map(IDeviceContext* pContext, MAP_TYPE MapType, Uint32 MapF
     {
         if (m_Desc.Usage == USAGE_CPU_ACCESSIBLE)
         {
+            LOG_ERROR("Not implemented");
             UNSUPPORTED("Not implemented");
 #if 0
             VERIFY(m_pVkResource != nullptr, "USAGE_CPU_ACCESSIBLE buffer mapped for writing must intialize Vk resource");
@@ -322,7 +325,14 @@ void BufferVkImpl :: Map(IDeviceContext* pContext, MAP_TYPE MapType, Uint32 MapF
         }
         else if (m_Desc.Usage == USAGE_DYNAMIC)
         {
-            VERIFY(MapFlags & MAP_FLAG_DISCARD, "Vk buffer must be mapped for writing with MAP_FLAG_DISCARD flag");
+#ifdef DEVELOPMENT
+            if( (MapFlags & MAP_FLAG_DISCARD) == 0 )
+            {
+                LOG_ERROR_MESSAGE("Failed to map buffer '", m_Desc.Name, "': Vk buffer must be mapped for writing with MAP_FLAG_DISCARD flag. Context Id: ", pDeviceContextVk->GetContextId());
+                return;
+            }
+#endif
+
             auto DynAlloc = pDeviceContextVk->AllocateDynamicSpace(m_Desc.uiSizeInBytes);
             if(DynAlloc.pParentDynamicHeap != nullptr)
             {
@@ -357,16 +367,25 @@ void BufferVkImpl::Unmap( IDeviceContext* pContext, MAP_TYPE MapType, Uint32 Map
 
     auto *pDeviceContextVk = ValidatedCast<DeviceContextVkImpl>(pContext);
     Uint32 CtxId = pDeviceContextVk != nullptr ? pDeviceContextVk->GetContextId() : static_cast<Uint32>(-1);
-#ifdef _DEBUG
+#ifdef DEVELOPMENT
     if (pDeviceContextVk != nullptr)
     {
-        VERIFY(m_DbgMapType[CtxId].first == MapType, "Map type does not match the type provided to Map()");
-        VERIFY(m_DbgMapType[CtxId].second == MapFlags, "Map flags do not match the flags provided to Map()");
+        if (m_DvpMapType[CtxId].first != MapType)
+        {
+            LOG_ERROR_MESSAGE("Failed to unmap buffer '", m_Desc.Name, "': Map type (", GetMapTypeString(MapType), ") does not match the type provided to Map() (", GetMapTypeString(m_DvpMapType[CtxId].first), "). Context Id: ", CtxId);
+            return;
+        }
+        if (m_DvpMapType[CtxId].second != MapFlags)
+        {
+            LOG_ERROR_MESSAGE("Failed to unmap buffer '", m_Desc.Name, "': Map flags (", MapFlags, ") do not match the flags provided to Map() (", m_DvpMapType[CtxId].second, "). Context Id: ", CtxId);
+            return;
+        }
     }
 #endif
 
     if (MapType == MAP_READ )
     {
+        LOG_ERROR("This map type is not yet supported");
         UNSUPPORTED("This map type is not yet supported");
 #if 0
         Vk_RANGE MapRange;
@@ -380,6 +399,7 @@ void BufferVkImpl::Unmap( IDeviceContext* pContext, MAP_TYPE MapType, Uint32 Map
     {
         if (m_Desc.Usage == USAGE_CPU_ACCESSIBLE)
         {
+            LOG_ERROR("This map type is not yet supported");
             UNSUPPORTED("This map type is not yet supported");
 #if 0
             VERIFY(m_pVkResource != nullptr, "USAGE_CPU_ACCESSIBLE buffer mapped for writing must intialize Vk resource");
@@ -398,9 +418,9 @@ void BufferVkImpl::Unmap( IDeviceContext* pContext, MAP_TYPE MapType, Uint32 Map
         }
     }
 
-#ifdef _DEBUG
+#ifdef DEVELOPMENT
     if(pDeviceContextVk != nullptr)
-        m_DbgMapType[CtxId] = std::make_pair(static_cast<MAP_TYPE>(-1), static_cast<Uint32>(-1));
+        m_DvpMapType[CtxId] = std::make_pair(static_cast<MAP_TYPE>(-1), static_cast<Uint32>(-1));
 #endif
 }
 
@@ -471,13 +491,15 @@ VkBuffer BufferVkImpl::GetVkBuffer()const
     }
 }
 
-#ifdef _DEBUG
-void BufferVkImpl::DbgVerifyDynamicAllocation(Uint32 ContextId)const
+#ifdef DEVELOPMENT
+void BufferVkImpl::DvpVerifyDynamicAllocation(Uint32 ContextId)const
 {
     const auto& DynAlloc = m_DynamicAllocations[ContextId];
-    VERIFY(DynAlloc.pParentDynamicHeap != nullptr, "Dynamic buffer must be mapped before the first use");
+    if (DynAlloc.pParentDynamicHeap == nullptr)
+        LOG_ERROR_MESSAGE("Dynamic buffer '", m_Desc.Name, "' was not mapped before its first use. Context Id: ", ContextId);
     auto CurrentFrame = GetDevice<RenderDeviceVkImpl>()->GetCurrentFrameNumber();
-    VERIFY(DynAlloc.dbgFrameNumber == CurrentFrame, "Dynamic allocation is out-of-date. Dynamic buffer \"", m_Desc.Name, "\" must be mapped in the same frame it is used.");
+    if (DynAlloc.dbgFrameNumber != CurrentFrame)
+        LOG_ERROR_MESSAGE("Dynamic allocation is out-of-date. Dynamic buffer '", m_Desc.Name, "' must be mapped in the same frame it is used.");
 }
 #endif
 

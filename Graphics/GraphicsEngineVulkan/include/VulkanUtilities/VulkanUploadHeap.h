@@ -56,9 +56,9 @@ public:
                      VkDeviceSize                 HostVisibleReserveSize);
     
     VulkanUploadHeap(VulkanUploadHeap&& rhs)noexcept :
-        VulkanMemoryManager(std::move(rhs)),
+        VulkanMemoryManager           (std::move(rhs)),
         m_StagingBufferMemoryTypeIndex(rhs.m_StagingBufferMemoryTypeIndex),
-        m_Buffers(std::move(rhs.m_Buffers))
+        m_Buffers                     (std::move(rhs.m_Buffers))
     {
     }
     VulkanUploadHeap            (const VulkanUploadHeap&) = delete;

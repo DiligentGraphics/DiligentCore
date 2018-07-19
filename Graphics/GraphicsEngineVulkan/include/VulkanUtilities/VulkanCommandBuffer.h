@@ -57,7 +57,9 @@ namespace VulkanUtilities
         {
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
             VERIFY(m_State.RenderPass == VK_NULL_HANDLE, "vkCmdClearDepthStencilImage() must be called outside of render pass (17.1)");
-            VERIFY( (Subresource.aspectMask & ~(VK_IMAGE_ASPECT_DEPTH_BIT|VK_IMAGE_ASPECT_STENCIL_BIT)) == 0, "The aspectMask of all image subresource ranges must only include VK_IMAGE_ASPECT_DEPTH_BIT or VK_IMAGE_ASPECT_STENCIL_BIT(17.1)");
+            VERIFY( (Subresource.aspectMask &  (VK_IMAGE_ASPECT_DEPTH_BIT|VK_IMAGE_ASPECT_STENCIL_BIT)) != 0 && 
+                    (Subresource.aspectMask & ~(VK_IMAGE_ASPECT_DEPTH_BIT|VK_IMAGE_ASPECT_STENCIL_BIT)) == 0,
+                   "The aspectMask of all image subresource ranges must only include VK_IMAGE_ASPECT_DEPTH_BIT or VK_IMAGE_ASPECT_STENCIL_BIT(17.1)");
 
             vkCmdClearDepthStencilImage(
                 m_VkCmdBuffer,
@@ -145,7 +147,7 @@ namespace VulkanUtilities
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
             VERIFY(m_State.RenderPass == VK_NULL_HANDLE, "Current pass has not been ended");
 
-            if(m_State.RenderPass != RenderPass || m_State.Framebuffer != Framebuffer)
+            if (m_State.RenderPass != RenderPass || m_State.Framebuffer != Framebuffer)
             {
                 VkRenderPassBeginInfo BeginInfo;
                 BeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -201,7 +203,7 @@ namespace VulkanUtilities
         {
             // 9.8
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-            if(m_State.ComputePipeline != ComputePipeline)
+            if (m_State.ComputePipeline != ComputePipeline)
             {
                 vkCmdBindPipeline(m_VkCmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, ComputePipeline);
                 m_State.ComputePipeline = ComputePipeline;
@@ -212,7 +214,7 @@ namespace VulkanUtilities
         {
             // 9.8
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-            if(m_State.GraphicsPipeline != GraphicsPipeline)
+            if (m_State.GraphicsPipeline != GraphicsPipeline)
             {
                 vkCmdBindPipeline(m_VkCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, GraphicsPipeline);
                 m_State.GraphicsPipeline = GraphicsPipeline;
@@ -246,9 +248,9 @@ namespace VulkanUtilities
         void BindIndexBuffer(VkBuffer Buffer, VkDeviceSize Offset, VkIndexType IndexType)
         {
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-            if(m_State.IndexBuffer       != Buffer ||
-               m_State.IndexBufferOffset != Offset ||
-               m_State.IndexType         != IndexType)
+            if (m_State.IndexBuffer       != Buffer ||
+                m_State.IndexBufferOffset != Offset ||
+                m_State.IndexType         != IndexType)
             {
                 vkCmdBindIndexBuffer(m_VkCmdBuffer, Buffer, Offset, IndexType);
                 m_State.IndexBuffer = Buffer;
@@ -263,23 +265,23 @@ namespace VulkanUtilities
             vkCmdBindVertexBuffers(m_VkCmdBuffer, firstBinding, bindingCount, pBuffers, pOffsets);
         }
 
-        static void TransitionImageLayout(VkCommandBuffer CmdBuffer,
-                                          VkImage Image, 
-                                          VkImageLayout OldLayout,
-                                          VkImageLayout NewLayout,
+        static void TransitionImageLayout(VkCommandBuffer                CmdBuffer,
+                                          VkImage                        Image, 
+                                          VkImageLayout                  OldLayout,
+                                          VkImageLayout                  NewLayout,
                                           const VkImageSubresourceRange& SubresRange, 
-                                          VkPipelineStageFlags SrcStages  = 0, 
-                                          VkPipelineStageFlags DestStages = 0);
+                                          VkPipelineStageFlags           SrcStages  = 0, 
+                                          VkPipelineStageFlags           DestStages = 0);
 
-        void TransitionImageLayout(VkImage Image, 
-                                   VkImageLayout OldLayout,
-                                   VkImageLayout NewLayout,
+        void TransitionImageLayout(VkImage                        Image, 
+                                   VkImageLayout                  OldLayout,
+                                   VkImageLayout                  NewLayout,
                                    const VkImageSubresourceRange& SubresRange,
-                                   VkPipelineStageFlags SrcStages = 0, 
-                                   VkPipelineStageFlags DestStages = 0)
+                                   VkPipelineStageFlags           SrcStages  = 0, 
+                                   VkPipelineStageFlags           DestStages = 0)
         {
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-            if(m_State.RenderPass  != VK_NULL_HANDLE)
+            if (m_State.RenderPass  != VK_NULL_HANDLE)
             {
                 // Image layout transitions within a render pass execute
                 // dependencies between attachments
@@ -303,7 +305,7 @@ namespace VulkanUtilities
                                  VkPipelineStageFlags DestStages = 0)
         {
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-            if(m_State.RenderPass  != VK_NULL_HANDLE)
+            if (m_State.RenderPass  != VK_NULL_HANDLE)
             {
                 // Image layout transitions within a render pass execute
                 // dependencies between attachments
@@ -330,7 +332,7 @@ namespace VulkanUtilities
                         const VkBufferCopy* pRegions)
         {
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-            if(m_State.RenderPass  != VK_NULL_HANDLE)
+            if (m_State.RenderPass  != VK_NULL_HANDLE)
             {
                 // Copy buffer operation must be performed outside of render pass.
                 EndRenderPass();
@@ -346,7 +348,7 @@ namespace VulkanUtilities
                        const VkImageCopy* pRegions)
         {
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-            if(m_State.RenderPass  != VK_NULL_HANDLE)
+            if (m_State.RenderPass  != VK_NULL_HANDLE)
             {
                 // Copy operations must be performed outside of render pass.
                 EndRenderPass();
@@ -365,15 +367,15 @@ namespace VulkanUtilities
 
         struct StateCache
         {
-            VkRenderPass RenderPass = VK_NULL_HANDLE;
-            VkFramebuffer Framebuffer = VK_NULL_HANDLE;
-            VkPipeline GraphicsPipeline = VK_NULL_HANDLE;
-            VkPipeline ComputePipeline = VK_NULL_HANDLE;
-            VkBuffer IndexBuffer = VK_NULL_HANDLE;
-            VkDeviceSize IndexBufferOffset = 0;
-            VkIndexType IndexType = VK_INDEX_TYPE_MAX_ENUM;
-            uint32_t FramebufferWidth = 0;
-            uint32_t FramebufferHeight = 0;
+            VkRenderPass    RenderPass          = VK_NULL_HANDLE;
+            VkFramebuffer   Framebuffer         = VK_NULL_HANDLE;
+            VkPipeline      GraphicsPipeline    = VK_NULL_HANDLE;
+            VkPipeline      ComputePipeline     = VK_NULL_HANDLE;
+            VkBuffer        IndexBuffer         = VK_NULL_HANDLE;
+            VkDeviceSize    IndexBufferOffset   = 0;
+            VkIndexType     IndexType           = VK_INDEX_TYPE_MAX_ENUM;
+            uint32_t        FramebufferWidth    = 0;
+            uint32_t        FramebufferHeight   = 0;
         };
 
         const StateCache& GetState()const{return m_State;}

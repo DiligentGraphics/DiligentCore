@@ -29,12 +29,12 @@
 namespace VulkanUtilities
 {
     VulkanFencePool::VulkanFencePool(std::shared_ptr<const VulkanLogicalDevice> LogicalDevice) :
-        m_LogicalDevice(LogicalDevice)
+        m_LogicalDevice(std::move(LogicalDevice))
     {}
 
     VulkanFencePool::~VulkanFencePool()
     {
-        for(const auto &fence : m_Fences)
+        for (const auto& fence : m_Fences)
         {
             VERIFY(m_LogicalDevice->GetFenceStatus(fence) == VK_SUCCESS, "Destroying a fence that has not been signaled");
         }

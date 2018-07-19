@@ -207,6 +207,9 @@ inline const Char* GetViewTypeLiteralName(BUFFER_VIEW_TYPE BuffViewType)
     return GetBufferViewTypeLiteralName( BuffViewType );
 }
 
+/// Returns the string containing the map type
+const Char* GetMapTypeString(MAP_TYPE MapType);
+
 /// Returns the string containing the usage
 const Char* GetUsageString(USAGE Usage);
 

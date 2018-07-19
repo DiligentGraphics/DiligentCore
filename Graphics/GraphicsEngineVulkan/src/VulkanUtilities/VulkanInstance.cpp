@@ -32,8 +32,8 @@ namespace VulkanUtilities
 {
     bool VulkanInstance::IsLayerAvailable(const char* LayerName)const
     {
-        for(const auto& Layer : m_Layers)
-            if(strcmp(Layer.layerName, LayerName) == 0)
+        for (const auto& Layer : m_Layers)
+            if (strcmp(Layer.layerName, LayerName) == 0)
                 return true;
 
         return false;
@@ -66,7 +66,7 @@ namespace VulkanUtilities
         {
             // Enumerate available layers
             uint32_t LayerCount = 0;
-            auto res = vkEnumerateInstanceLayerProperties(&LayerCount, NULL);
+            auto res = vkEnumerateInstanceLayerProperties(&LayerCount, nullptr);
             CHECK_VK_ERROR_AND_THROW(res, "Failed to query layer count");
             m_Layers.resize(LayerCount);
             vkEnumerateInstanceLayerProperties(&LayerCount, m_Layers.data());
@@ -77,10 +77,10 @@ namespace VulkanUtilities
         {
             // Enumerate available extensions
             uint32_t ExtensionCount = 0;
-            auto res = vkEnumerateInstanceExtensionProperties(NULL, &ExtensionCount, NULL);
+            auto res = vkEnumerateInstanceExtensionProperties(nullptr, &ExtensionCount, nullptr);
             CHECK_VK_ERROR_AND_THROW(res, "Failed to query extension count");
             m_Extensions.resize(ExtensionCount);
-            vkEnumerateInstanceExtensionProperties(NULL, &ExtensionCount, m_Extensions.data());
+            vkEnumerateInstanceExtensionProperties(nullptr, &ExtensionCount, m_Extensions.data());
             CHECK_VK_ERROR_AND_THROW(res, "Failed to enumerate extensions");
             VERIFY_EXPR(ExtensionCount == m_Extensions.size());
         }
@@ -115,7 +115,7 @@ namespace VulkanUtilities
 
         for(const auto* ExtName : GlobalExtensions)
         {
-            if(!IsExtensionAvailable(ExtName))
+            if (!IsExtensionAvailable(ExtName))
                 LOG_ERROR_AND_THROW("Requested extension ", ExtName, " is not available");
         }
 
@@ -141,7 +141,7 @@ namespace VulkanUtilities
             bool ValidationLayersPresent = true;
             for (size_t l = 0; l < _countof(VulkanUtilities::ValidationLayerNames); ++l)
             {
-                auto *pLayerName = VulkanUtilities::ValidationLayerNames[l];
+                auto* pLayerName = VulkanUtilities::ValidationLayerNames[l];
                 if (!IsLayerAvailable(pLayerName))
                 {
                     ValidationLayersPresent = false;
@@ -193,7 +193,7 @@ namespace VulkanUtilities
 
     VulkanInstance::~VulkanInstance()
     {
-        if(m_ValidationEnabled)
+        if (m_ValidationEnabled)
         {
             VulkanUtilities::FreeDebugCallback(m_VkInstance);
         }
@@ -202,7 +202,7 @@ namespace VulkanUtilities
         Diligent::FinalizeGlslang();
     }
 
-    VkPhysicalDevice VulkanInstance::SelectPhysicalDevice()
+    VkPhysicalDevice VulkanInstance::SelectPhysicalDevice()const
     {
         VkPhysicalDevice SelectedPhysicalDevice = VK_NULL_HANDLE;
 
@@ -215,7 +215,7 @@ namespace VulkanUtilities
             
             uint32_t QueueFamilyCount = 0;
             vkGetPhysicalDeviceQueueFamilyProperties(Device, &QueueFamilyCount, nullptr);
-            VERIFY_EXPR(QueueFamilyCount> 0);
+            VERIFY_EXPR(QueueFamilyCount > 0);
             std::vector<VkQueueFamilyProperties> QueueFamilyProperties(QueueFamilyCount);
             vkGetPhysicalDeviceQueueFamilyProperties(Device, &QueueFamilyCount, QueueFamilyProperties.data());
             VERIFY_EXPR(QueueFamilyCount == QueueFamilyProperties.size());
@@ -226,14 +226,14 @@ namespace VulkanUtilities
             bool GraphicsAndComputeQueueSupported = false;
             for(const auto &QueueFamilyProps : QueueFamilyProperties)
             {
-                if( (QueueFamilyProps.queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0 &&
-                    (QueueFamilyProps.queueFlags & VK_QUEUE_COMPUTE_BIT) != 0)
+                if ((QueueFamilyProps.queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0 &&
+                    (QueueFamilyProps.queueFlags & VK_QUEUE_COMPUTE_BIT)  != 0)
                 {
                     GraphicsAndComputeQueueSupported = true;
                     break;
                 }
             }
-            if(GraphicsAndComputeQueueSupported)
+            if (GraphicsAndComputeQueueSupported)
             {
                 SelectedPhysicalDevice = Device;
                 if (DeviceProps.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
@@ -241,7 +241,7 @@ namespace VulkanUtilities
             }
         }
 
-        if(SelectedPhysicalDevice != VK_NULL_HANDLE)
+        if (SelectedPhysicalDevice != VK_NULL_HANDLE)
         {
             VkPhysicalDeviceProperties SelectedDeviceProps;
             vkGetPhysicalDeviceProperties(SelectedPhysicalDevice, &SelectedDeviceProps);

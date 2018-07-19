@@ -35,7 +35,7 @@ namespace VulkanUtilities
     {
     public:
         VulkanDescriptorPool(std::shared_ptr<const VulkanUtilities::VulkanLogicalDevice> LogicalDevice,
-                             const VkDescriptorPoolCreateInfo &DescriptorPoolCI)noexcept;
+                             const VkDescriptorPoolCreateInfo&                           DescriptorPoolCI);
 
         VulkanDescriptorPool             (const VulkanDescriptorPool&) = delete;
         VulkanDescriptorPool& operator = (const VulkanDescriptorPool&) = delete;

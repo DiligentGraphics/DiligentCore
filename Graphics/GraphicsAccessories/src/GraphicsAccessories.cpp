@@ -502,6 +502,20 @@ const Char *GetShaderVariableTypeLiteralName(SHADER_VARIABLE_TYPE VarType, bool 
     }
 }
 
+const Char* GetMapTypeString(MAP_TYPE MapType)
+{
+    switch(MapType)
+    {
+        case MAP_READ:       return "MAP_READ";
+        case MAP_WRITE:      return "MAP_WRITE";
+        case MAP_READ_WRITE: return "MAP_READ_WRITE";
+        
+        default:
+            UNEXPECTED("Unexpected map type");
+            return "Unknown map type";
+    }
+}
+
 /// Returns the string containing the usage
 const Char* GetUsageString( USAGE Usage )
 {

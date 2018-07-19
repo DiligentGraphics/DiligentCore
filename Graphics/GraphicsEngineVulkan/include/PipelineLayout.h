@@ -91,7 +91,7 @@ public:
         Uint32                       SetCout            = 0;
         Uint32                       DynamicOffsetCount = 0;
 #ifdef _DEBUG
-        const PipelineLayout* pDbgPipelineLayout = nullptr;
+        const PipelineLayout*        pDbgPipelineLayout = nullptr;
 #endif
         DescriptorSetBindInfo() : 
             vkSets(2),

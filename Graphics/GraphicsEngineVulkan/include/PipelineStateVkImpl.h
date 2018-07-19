@@ -115,8 +115,8 @@ private:
     std::unique_ptr<class ShaderResourceBindingVkImpl, STDDeleter<ShaderResourceBindingVkImpl, FixedBlockMemoryAllocator> > m_pDefaultShaderResBinding;
 
     VkRenderPass m_RenderPass = VK_NULL_HANDLE; // Render passes are managed by the render device
-    VulkanUtilities::PipelineWrapper   m_Pipeline;
-    PipelineLayout m_PipelineLayout;
+    VulkanUtilities::PipelineWrapper m_Pipeline;
+    PipelineLayout                   m_PipelineLayout;
     bool m_HasStaticResources    = false;
     bool m_HasNonStaticResources = false;
 };

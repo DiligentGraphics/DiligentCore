@@ -32,11 +32,11 @@ CommandQueueVkImpl::CommandQueueVkImpl(IReferenceCounters*                      
                                        std::shared_ptr<VulkanUtilities::VulkanLogicalDevice> LogicalDevice,
                                        uint32_t                                              QueueFamilyIndex) :
     TBase(pRefCounters),
-    m_LogicalDevice(LogicalDevice),
-    m_VkQueue(LogicalDevice->GetQueue(QueueFamilyIndex, 0)),
-    m_QueueFamilyIndex(QueueFamilyIndex),
-    m_NextFenceValue(1),
-    m_FencePool(LogicalDevice)
+    m_LogicalDevice    (LogicalDevice),
+    m_VkQueue          (LogicalDevice->GetQueue(QueueFamilyIndex, 0)),
+    m_QueueFamilyIndex (QueueFamilyIndex),
+    m_NextFenceValue   (1),
+    m_FencePool        (LogicalDevice)
 {
 }
 
@@ -46,7 +46,7 @@ CommandQueueVkImpl::~CommandQueueVkImpl()
     // All queues associated with a logical device are destroyed when vkDestroyDevice 
     // is called on that device.
 
-    while(!m_PendingFences.empty())
+    while (!m_PendingFences.empty())
     {
         m_FencePool.DisposeFence(std::move(m_PendingFences.front().second));
         m_PendingFences.pop_front();
@@ -105,12 +105,12 @@ void CommandQueueVkImpl::IdleGPU()
     // Increment fence before idling the queue
     Atomics::AtomicIncrement(m_NextFenceValue);
     vkQueueWaitIdle(m_VkQueue);
-    if(LastCompletedFenceValue > m_LastCompletedFenceValue)
+    if (LastCompletedFenceValue > m_LastCompletedFenceValue)
         m_LastCompletedFenceValue = LastCompletedFenceValue;
-    for(auto& val_fence : m_PendingFences)
+    for (auto& val_fence : m_PendingFences)
     {
         // For some reason after idling the queue not all fences are signaled
-        while(m_LogicalDevice->GetFenceStatus(val_fence.second) != VK_SUCCESS)
+        while (m_LogicalDevice->GetFenceStatus(val_fence.second) != VK_SUCCESS)
         {
             VkFence FenceToWait = val_fence.second;
             auto res = vkWaitForFences(m_LogicalDevice->GetVkDevice(), 1, &FenceToWait, VK_TRUE, UINT64_MAX);
@@ -128,13 +128,13 @@ Uint64 CommandQueueVkImpl::GetCompletedFenceValue()
 {
     std::lock_guard<std::mutex> Lock(m_QueueMutex);
 
-    while(!m_PendingFences.empty())
+    while (!m_PendingFences.empty())
     {
         auto &Value_Fence = m_PendingFences.front();
         auto status = m_LogicalDevice->GetFenceStatus(Value_Fence.second);
         if(status == VK_SUCCESS)
         {
-            if(Value_Fence.first > m_LastCompletedFenceValue)
+            if (Value_Fence.first > m_LastCompletedFenceValue)
                 m_LastCompletedFenceValue = Value_Fence.first;
             m_FencePool.DisposeFence(std::move(Value_Fence.second));
             m_PendingFences.pop_front();

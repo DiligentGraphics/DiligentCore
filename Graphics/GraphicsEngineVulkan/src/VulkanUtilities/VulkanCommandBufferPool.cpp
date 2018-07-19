@@ -80,7 +80,8 @@ namespace VulkanUtilities
                 {
                     CmdBuffer = OldestBuff.second;
                     auto err = vkResetCommandBuffer(CmdBuffer, 
-                        0 // VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT -  specifies that most or all memory resources currently owned by the command buffer should be returned to the parent command pool.
+                        0 // VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT -  specifies that most or all memory resources currently 
+                          // owned by the command buffer should be returned to the parent command pool.
                     );
                     VERIFY(err == VK_SUCCESS, "Failed to reset command buffer");
                     m_DiscardedCmdBuffers.pop_front();
@@ -88,7 +89,7 @@ namespace VulkanUtilities
             }
         }
 
-        // If no allocators were ready to be reused, create a new one
+        // If no cmd buffers were ready to be reused, create a new one
         if (CmdBuffer == VK_NULL_HANDLE)
         {
             VkCommandBufferAllocateInfo BuffAllocInfo = {};

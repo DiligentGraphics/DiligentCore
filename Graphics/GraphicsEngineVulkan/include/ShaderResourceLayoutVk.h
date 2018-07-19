@@ -103,10 +103,6 @@
 #include "SPIRVShaderResources.h"
 #include "VulkanUtilities/VulkanLogicalDevice.h"
 
-#ifdef _DEBUG
-#   define VERIFY_SHADER_BINDINGS
-#endif
-
 namespace Diligent
 {
 
@@ -222,8 +218,8 @@ public:
                                    ShaderResourceCacheVk&        SrcResourceCache,
                                    ShaderResourceCacheVk&        DstResourceCache)const;
 
-#ifdef VERIFY_SHADER_BINDINGS
-    void dbgVerifyBindings(const ShaderResourceCacheVk& ResourceCache)const;
+#ifdef DEVELOPMENT
+    void dvpVerifyBindings(const ShaderResourceCacheVk& ResourceCache)const;
 #endif
 
     Uint32 GetResourceCount(SHADER_VARIABLE_TYPE VarType)const

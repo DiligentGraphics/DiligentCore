@@ -63,26 +63,26 @@ namespace VulkanUtilities
 
         void WaitIdle()const;
 
-        CommandPoolWrapper  CreateCommandPool   (const VkCommandPoolCreateInfo &CmdPoolCI,   const char *DebugName = "")const;
-        BufferWrapper       CreateBuffer        (const VkBufferCreateInfo      &BufferCI,    const char *DebugName = "")const;
-        BufferViewWrapper   CreateBufferView    (const VkBufferViewCreateInfo  &BuffViewCI,  const char *DebugName = "")const;
-        ImageWrapper        CreateImage         (const VkImageCreateInfo       &ImageCI,     const char *DebugName = "")const;
-        ImageViewWrapper    CreateImageView     (const VkImageViewCreateInfo   &ImageViewCI, const char *DebugName = "")const;
-        SamplerWrapper      CreateSampler       (const VkSamplerCreateInfo     &SamplerCI,   const char *DebugName = "")const;
-        FenceWrapper        CreateFence         (const VkFenceCreateInfo       &FenceCI,     const char *DebugName = "")const;
-        RenderPassWrapper   CreateRenderPass    (const VkRenderPassCreateInfo  &RenderPassCI,const char *DebugName = "")const;
-        DeviceMemoryWrapper AllocateDeviceMemory(const VkMemoryAllocateInfo    &AllocInfo,   const char *DebugName = "")const;
-        PipelineWrapper     CreateComputePipeline (const VkComputePipelineCreateInfo  &PipelineCI, VkPipelineCache cache, const char *DebugName = "")const;
-        PipelineWrapper     CreateGraphicsPipeline(const VkGraphicsPipelineCreateInfo &PipelineCI, VkPipelineCache cache, const char *DebugName = "")const;
-        ShaderModuleWrapper CreateShaderModule    (const VkShaderModuleCreateInfo &ShaderModuleCI,  const char *DebugName = "")const;
-        PipelineLayoutWrapper CreatePipelineLayout(const VkPipelineLayoutCreateInfo &LayoutCI,      const char *DebugName = "")const;
-        FramebufferWrapper    CreateFramebuffer   (const VkFramebufferCreateInfo    &FramebufferCI, const char *DebugName = "")const;
-        DescriptorPoolWrapper CreateDescriptorPool(const VkDescriptorPoolCreateInfo &DescrPoolCI,   const char *DebugName = "")const;
-        DescriptorSetLayoutWrapper CreateDescriptorSetLayout(const VkDescriptorSetLayoutCreateInfo &LayoutCI, const char *DebugName = "")const;
-        SemaphoreWrapper    CreateSemaphore(const VkSemaphoreCreateInfo &SemaphoreCI, const char *DebugName = "")const;
+        CommandPoolWrapper  CreateCommandPool   (const VkCommandPoolCreateInfo &CmdPoolCI,   const char* DebugName = "")const;
+        BufferWrapper       CreateBuffer        (const VkBufferCreateInfo      &BufferCI,    const char* DebugName = "")const;
+        BufferViewWrapper   CreateBufferView    (const VkBufferViewCreateInfo  &BuffViewCI,  const char* DebugName = "")const;
+        ImageWrapper        CreateImage         (const VkImageCreateInfo       &ImageCI,     const char* DebugName = "")const;
+        ImageViewWrapper    CreateImageView     (const VkImageViewCreateInfo   &ImageViewCI, const char* DebugName = "")const;
+        SamplerWrapper      CreateSampler       (const VkSamplerCreateInfo     &SamplerCI,   const char* DebugName = "")const;
+        FenceWrapper        CreateFence         (const VkFenceCreateInfo       &FenceCI,     const char* DebugName = "")const;
+        RenderPassWrapper   CreateRenderPass    (const VkRenderPassCreateInfo  &RenderPassCI,const char* DebugName = "")const;
+        DeviceMemoryWrapper AllocateDeviceMemory(const VkMemoryAllocateInfo    &AllocInfo,   const char* DebugName = "")const;
+        PipelineWrapper     CreateComputePipeline (const VkComputePipelineCreateInfo  &PipelineCI, VkPipelineCache cache, const char* DebugName = "")const;
+        PipelineWrapper     CreateGraphicsPipeline(const VkGraphicsPipelineCreateInfo &PipelineCI, VkPipelineCache cache, const char* DebugName = "")const;
+        ShaderModuleWrapper CreateShaderModule    (const VkShaderModuleCreateInfo &ShaderModuleCI,  const char* DebugName = "")const;
+        PipelineLayoutWrapper CreatePipelineLayout(const VkPipelineLayoutCreateInfo &LayoutCI,      const char* DebugName = "")const;
+        FramebufferWrapper    CreateFramebuffer   (const VkFramebufferCreateInfo    &FramebufferCI, const char* DebugName = "")const;
+        DescriptorPoolWrapper CreateDescriptorPool(const VkDescriptorPoolCreateInfo &DescrPoolCI,   const char* DebugName = "")const;
+        DescriptorSetLayoutWrapper CreateDescriptorSetLayout(const VkDescriptorSetLayoutCreateInfo &LayoutCI, const char* DebugName = "")const;
+        SemaphoreWrapper    CreateSemaphore(const VkSemaphoreCreateInfo &SemaphoreCI, const char* DebugName = "")const;
         
-        VkCommandBuffer     AllocateVkCommandBuffer(const VkCommandBufferAllocateInfo &AllocInfo, const char *DebugName = "")const;
-        VkDescriptorSet     AllocateVkDescriptorSet(const VkDescriptorSetAllocateInfo &AllocInfo, const char *DebugName = "")const;
+        VkCommandBuffer     AllocateVkCommandBuffer(const VkCommandBufferAllocateInfo &AllocInfo, const char* DebugName = "")const;
+        VkDescriptorSet     AllocateVkDescriptorSet(const VkDescriptorSetAllocateInfo &AllocInfo, const char* DebugName = "")const;
 
         void ReleaseVulkanObject(CommandPoolWrapper&&  CmdPool)const;
         void ReleaseVulkanObject(BufferWrapper&&       Buffer)const;

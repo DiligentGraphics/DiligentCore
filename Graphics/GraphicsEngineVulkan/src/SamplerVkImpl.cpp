@@ -46,15 +46,23 @@ SamplerVkImpl::SamplerVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImp
     SamplerCI.addressModeW = AddressModeToVkAddressMode(m_Desc.AddressW);
     SamplerCI.mipLodBias = m_Desc.MipLODBias;
     SamplerCI.anisotropyEnable = IsAnisotropicFilter(m_Desc.MinFilter);
-    VERIFY(SamplerCI.anisotropyEnable && IsAnisotropicFilter(m_Desc.MagFilter) ||
-           !SamplerCI.anisotropyEnable && !IsAnisotropicFilter(m_Desc.MagFilter),
-           "Min and mag fiters must both be either anisotropic filters or non-anisotropic ones");
+#ifdef DEVELOPMENT
+    if( !( SamplerCI.anisotropyEnable &&  IsAnisotropicFilter(m_Desc.MagFilter) ||
+          !SamplerCI.anisotropyEnable && !IsAnisotropicFilter(m_Desc.MagFilter)) )
+    {
+        LOG_ERROR("Min and mag fiters must both be either anisotropic filters or non-anisotropic ones");
+    }
+#endif
 
     SamplerCI.maxAnisotropy = static_cast<float>(m_Desc.MaxAnisotropy);
     SamplerCI.compareEnable = IsComparisonFilter(m_Desc.MinFilter);
-    VERIFY( SamplerCI.compareEnable && IsComparisonFilter(m_Desc.MagFilter) || 
-            !SamplerCI.compareEnable && !IsComparisonFilter(m_Desc.MagFilter), 
-            "Min and mag fiters must both be either comparison filters or non-comparison ones");
+#ifdef DEVELOPMENT
+    if( !( SamplerCI.compareEnable &&  IsComparisonFilter(m_Desc.MagFilter) || 
+          !SamplerCI.compareEnable && !IsComparisonFilter(m_Desc.MagFilter)) )
+    {
+        LOG_ERROR("Min and mag fiters must both be either comparison filters or non-comparison ones");
+    }
+#endif
 
     SamplerCI.compareOp = ComparisonFuncToVkCompareOp(m_Desc.ComparisonFunc);
     SamplerCI.minLod = m_Desc.MinLOD;

@@ -32,7 +32,7 @@ static VkPipelineStageFlags PipelineStageFromAccessFlags(VkAccessFlags AccessFla
     // 6.1.3
     VkPipelineStageFlags Stages = 0;
 
-    while(AccessFlags != 0)
+    while (AccessFlags != 0)
     {
         VkAccessFlagBits AccessFlag = static_cast<VkAccessFlagBits>( AccessFlags & (~(AccessFlags-1)));
         VERIFY_EXPR( AccessFlag != 0 && (AccessFlag & (AccessFlag-1)) == 0 );
@@ -48,7 +48,7 @@ static VkPipelineStageFlags PipelineStageFromAccessFlags(VkAccessFlags AccessFla
         // An application MUST NOT specify an access flag in a synchronization command if it does not include a 
         // pipeline stage in the corresponding stage mask that is able to perform accesses of that type.
         // A table that lists, for each access flag, which pipeline stages can perform that type of access is given in 6.1.3.
-        switch(AccessFlag)
+        switch (AccessFlag)
         {
             // Read access to an indirect command structure read as part of an indirect drawing or dispatch command
             case VK_ACCESS_INDIRECT_COMMAND_READ_BIT:
@@ -143,13 +143,13 @@ static VkPipelineStageFlags PipelineStageFromAccessFlags(VkAccessFlags AccessFla
     return Stages;
 }
 
-void VulkanCommandBuffer::TransitionImageLayout(VkCommandBuffer CmdBuffer,
-                                                VkImage Image,
-                                                VkImageLayout OldLayout,
-                                                VkImageLayout NewLayout,
+void VulkanCommandBuffer::TransitionImageLayout(VkCommandBuffer                CmdBuffer,
+                                                VkImage                        Image,
+                                                VkImageLayout                  OldLayout,
+                                                VkImageLayout                  NewLayout,
                                                 const VkImageSubresourceRange& SubresRange,
-                                                VkPipelineStageFlags SrcStages, 
-                                                VkPipelineStageFlags DestStages)
+                                                VkPipelineStageFlags           SrcStages, 
+                                                VkPipelineStageFlags           DestStages)
 {
     VERIFY_EXPR(CmdBuffer != VK_NULL_HANDLE);
 
@@ -295,13 +295,13 @@ void VulkanCommandBuffer::TransitionImageLayout(VkCommandBuffer CmdBuffer,
         break;
     }
 
-    if(SrcStages == 0)
+    if (SrcStages == 0)
     {
-        if(OldLayout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
+        if (OldLayout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
         {
             SrcStages = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
         }
-        else if(ImgBarrier.srcAccessMask != 0)
+        else if (ImgBarrier.srcAccessMask != 0)
         {
             SrcStages = PipelineStageFromAccessFlags(ImgBarrier.srcAccessMask); 
         }
@@ -315,11 +315,11 @@ void VulkanCommandBuffer::TransitionImageLayout(VkCommandBuffer CmdBuffer,
 
     if (DestStages == 0)
     {
-        if(NewLayout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
+        if (NewLayout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
         {
             DestStages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
         }
-        else if(ImgBarrier.dstAccessMask != 0)
+        else if (ImgBarrier.dstAccessMask != 0)
         {
             DestStages = PipelineStageFromAccessFlags(ImgBarrier.dstAccessMask);
         }
@@ -377,7 +377,7 @@ void VulkanCommandBuffer::BufferMemoryBarrier(VkCommandBuffer      CmdBuffer,
     BuffBarrier.size   = VK_WHOLE_SIZE;
     if (SrcStages == 0)
     {
-        if(BuffBarrier.srcAccessMask != 0)
+        if (BuffBarrier.srcAccessMask != 0)
             SrcStages = PipelineStageFromAccessFlags(BuffBarrier.srcAccessMask);
         else
         {

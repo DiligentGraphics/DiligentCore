@@ -38,10 +38,6 @@
 #include "PipelineLayout.h"
 #include "GenerateMipsVkHelper.h"
 
-#ifdef _DEBUG
-#   define VERIFY_CONTEXT_BINDINGS
-#endif
-
 namespace Diligent
 {
 
@@ -171,7 +167,7 @@ private:
     inline void DisposeCurrentCmdBuffer(Uint64 FenceValue);
     void ReleaseStaleContextResources(Uint64 SubmittedCmdBufferNumber, Uint64 SubmittedFenceValue, Uint64 CompletedFenceValue);
 
-    void DbgLogRenderPass_PSOMismatch();
+    void DvpLogRenderPass_PSOMismatch();
 
     VulkanUtilities::VulkanCommandBuffer m_CommandBuffer;
 
@@ -203,9 +199,9 @@ private:
     VulkanUtilities::VulkanCommandBufferPool m_CmdPool;
 
     // Semaphores are not owned by the command context
-    std::vector<VkSemaphore> m_WaitSemaphores;
+    std::vector<VkSemaphore>          m_WaitSemaphores;
     std::vector<VkPipelineStageFlags> m_WaitDstStageMasks;
-    std::vector<VkSemaphore> m_SignalSemaphores;
+    std::vector<VkSemaphore>          m_SignalSemaphores;
 
     std::unordered_map<BufferVkImpl*, VulkanUtilities::VulkanUploadAllocation> m_UploadAllocations;
     ResourceReleaseQueue<DynamicStaleResourceWrapper> m_ReleaseQueue;

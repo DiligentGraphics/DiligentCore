@@ -66,8 +66,8 @@ public:
     virtual void Map( IDeviceContext* pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid& pMappedData )override;
     virtual void Unmap( IDeviceContext* pContext, MAP_TYPE MapType, Uint32 MapFlags )override;
 
-#ifdef _DEBUG
-    void DbgVerifyDynamicAllocation(Uint32 ContextId)const;
+#ifdef DEVELOPMENT
+    void DvpVerifyDynamicAllocation(Uint32 ContextId)const;
 #endif
 
     Uint32 GetDynamicOffset(Uint32 CtxId)const
@@ -80,8 +80,8 @@ public:
         {
             VERIFY(m_Desc.Usage == USAGE_DYNAMIC, "Dynamic buffer is expected");
             VERIFY_EXPR(!m_DynamicAllocations.empty());
-#ifdef _DEBUG
-            DbgVerifyDynamicAllocation(CtxId);
+#ifdef DEVELOPMENT
+            DvpVerifyDynamicAllocation(CtxId);
 #endif
             auto& DynAlloc = m_DynamicAllocations[CtxId];
             return static_cast<Uint32>(DynAlloc.Offset);
@@ -116,8 +116,8 @@ private:
     VulkanUtilities::BufferViewWrapper CreateView(struct BufferViewDesc &ViewDesc);
     VkAccessFlags m_AccessFlags = 0;
 
-#ifdef _DEBUG
-    std::vector< std::pair<MAP_TYPE, Uint32> > m_DbgMapType;
+#ifdef DEVELOPMENT
+    std::vector< std::pair<MAP_TYPE, Uint32> > m_DvpMapType;
 #endif
 
     std::vector<VulkanDynamicAllocation, STDAllocatorRawMem<VulkanDynamicAllocation> > m_DynamicAllocations;

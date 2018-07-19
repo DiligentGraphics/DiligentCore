@@ -496,7 +496,7 @@ void PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBind
     if (!m_HasStaticResources && !m_HasNonStaticResources)
         return;
 
-#ifdef VERIFY_SHADER_BINDINGS
+#ifdef DEVELOPMENT
     if (pShaderResourceBinding == nullptr && m_HasNonStaticResources)
     {
         LOG_ERROR_MESSAGE("Pipeline state \"", m_Desc.Name, "\" contains mutable/dynamic shader variables and requires shader resource binding to commit all resources, but none is provided.");
@@ -507,7 +507,7 @@ void PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBind
     // In this case use special internal SRB object
     auto* pResBindingVkImpl = pShaderResourceBinding ? ValidatedCast<ShaderResourceBindingVkImpl>(pShaderResourceBinding) : m_pDefaultShaderResBinding.get();
     
-#ifdef VERIFY_SHADER_BINDINGS
+#ifdef DEVELOPMENT
     {
         auto* pRefPSO = pResBindingVkImpl->GetPipelineState();
         if ( IsIncompatibleWith(pRefPSO) )
@@ -526,8 +526,8 @@ void PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBind
         for (Uint32 s = 0; s < m_NumShaders; ++s)
         {
             auto* pShaderVk = GetShader<ShaderVkImpl>(s);
-#ifdef VERIFY_SHADER_BINDINGS
-            pShaderVk->DbgVerifyStaticResourceBindings();
+#ifdef DEVELOPMENT
+            pShaderVk->DvpVerifyStaticResourceBindings();
 #endif
             auto& StaticResLayout = pShaderVk->GetStaticResLayout();
             auto& StaticResCache = pShaderVk->GetStaticResCache();
@@ -536,10 +536,10 @@ void PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBind
         pResBindingVkImpl->SetStaticResourcesInitialized();
     }
 
-#ifdef VERIFY_SHADER_BINDINGS
+#ifdef DEVELOPMENT
     for (Uint32 s = 0; s < m_NumShaders; ++s)
     {
-        m_ShaderResourceLayouts[s].dbgVerifyBindings(ResourceCache);
+        m_ShaderResourceLayouts[s].dvpVerifyBindings(ResourceCache);
     }
 #endif
 
@@ -549,7 +549,7 @@ void PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBind
             ResourceCache.TransitionResources<false>(pCtxVkImpl);
         else if (Flags & COMMIT_SHADER_RESOURCES_FLAG_VERIFY_STATES)
         {
-#ifdef VERIFY_SHADER_BINDINGS
+#ifdef DEVELOPMENT
             ResourceCache.TransitionResources<true>(pCtxVkImpl);
 #endif
         }

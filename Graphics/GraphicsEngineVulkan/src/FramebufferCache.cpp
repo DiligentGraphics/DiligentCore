@@ -49,7 +49,7 @@ bool FramebufferCache::FramebufferCacheKey::operator == (const FramebufferCacheK
 
 size_t FramebufferCache::FramebufferCacheKey::GetHash()const
 {
-    if(Hash == 0)
+    if (Hash == 0)
     {
         Hash = ComputeHash(Pass, NumRenderTargets, DSV);
         for(Uint32 rt = 0; rt < NumRenderTargets; ++rt)
@@ -62,7 +62,7 @@ VkFramebuffer FramebufferCache::GetFramebuffer(const FramebufferCacheKey& Key, u
 {
     std::lock_guard<std::mutex> Lock(m_Mutex);
     auto it = m_Cache.find(Key);
-    if(it != m_Cache.end())
+    if (it != m_Cache.end())
     {
         return it->second;
     }
@@ -76,9 +76,9 @@ VkFramebuffer FramebufferCache::GetFramebuffer(const FramebufferCacheKey& Key, u
         FramebufferCI.attachmentCount = (Key.DSV != VK_NULL_HANDLE ? 1 : 0) + Key.NumRenderTargets;
         VkImageView Attachments[1 + MaxRenderTargets];
         uint32_t attachment = 0;
-        if(Key.DSV != VK_NULL_HANDLE)
+        if (Key.DSV != VK_NULL_HANDLE)
             Attachments[attachment++] = Key.DSV;
-        for(Uint32 rt=0; rt < Key.NumRenderTargets; ++rt)
+        for (Uint32 rt=0; rt < Key.NumRenderTargets; ++rt)
             Attachments[attachment++] = Key.RTVs[rt];
         VERIFY_EXPR(attachment == FramebufferCI.attachmentCount);
         FramebufferCI.pAttachments = Attachments;
@@ -92,10 +92,10 @@ VkFramebuffer FramebufferCache::GetFramebuffer(const FramebufferCacheKey& Key, u
         VERIFY(new_it.second, "New framebuffer must be inserted into the map");
 
         m_RenderPassToKeyMap.emplace(Key.Pass, Key);
-        if(Key.DSV != VK_NULL_HANDLE)
+        if (Key.DSV != VK_NULL_HANDLE)
             m_ViewToKeyMap.emplace(Key.DSV, Key);
-        for(Uint32 rt=0; rt < Key.NumRenderTargets; ++rt)
-            if(Key.RTVs[rt] != VK_NULL_HANDLE)
+        for (Uint32 rt=0; rt < Key.NumRenderTargets; ++rt)
+            if (Key.RTVs[rt] != VK_NULL_HANDLE)
                 m_ViewToKeyMap.emplace(Key.RTVs[rt], Key);
 
         return fb;
@@ -117,12 +117,12 @@ void FramebufferCache::OnDestroyImageView(VkImageView ImgView)
 
     std::lock_guard<std::mutex> Lock(m_Mutex);
     auto equal_range = m_ViewToKeyMap.equal_range(ImgView);
-    for(auto it = equal_range.first; it != equal_range.second; ++it)
+    for (auto it = equal_range.first; it != equal_range.second; ++it)
     {
         auto fb_it = m_Cache.find(it->second);
         // Multiple image views may be associated with the same key.
         // The framebuffer is deleted whenever any of the image views is deleted
-        if(fb_it != m_Cache.end())
+        if (fb_it != m_Cache.end())
         {
             m_DeviceVk.SafeReleaseVkObject(std::move(fb_it->second));
             m_Cache.erase(fb_it);

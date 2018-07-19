@@ -51,11 +51,11 @@ namespace VulkanUtilities
     private:
         VulkanPhysicalDevice(VkPhysicalDevice vkDevice);
 
-        const VkPhysicalDevice m_VkDevice;
-        VkPhysicalDeviceProperties m_Properties = {};
-        VkPhysicalDeviceFeatures m_Features = {};
-        VkPhysicalDeviceMemoryProperties m_MemoryProperties = {};
+        const VkPhysicalDevice               m_VkDevice;
+        VkPhysicalDeviceProperties           m_Properties           = {};
+        VkPhysicalDeviceFeatures             m_Features             = {};
+        VkPhysicalDeviceMemoryProperties     m_MemoryProperties     = {};
         std::vector<VkQueueFamilyProperties> m_QueueFamilyProperties;
-        std::vector<VkExtensionProperties> m_SupportedExtensions;
+        std::vector<VkExtensionProperties>   m_SupportedExtensions;
     };
 }

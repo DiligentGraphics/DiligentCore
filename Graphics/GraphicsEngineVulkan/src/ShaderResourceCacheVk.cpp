@@ -63,7 +63,7 @@ void ShaderResourceCacheVk::InitializeSets(IMemoryAllocator& MemAllocator, Uint3
         m_TotalResources += SetSizes[t];
     auto MemorySize = NumSets * sizeof(DescriptorSet) + m_TotalResources * sizeof(Resource);
     VERIFY_EXPR(MemorySize == GetRequiredMemorySize(NumSets, SetSizes));
-    if(MemorySize > 0)
+    if (MemorySize > 0)
     {
         m_pMemory = ALLOCATE( *m_pAllocator, "Memory for shader resource cache data", MemorySize);
         auto *pSets = reinterpret_cast<DescriptorSet*>(m_pMemory);
@@ -111,9 +111,9 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl *pCtxVkImpl)
             {
                 auto *pBufferVk = Res.pObject.RawPtr<BufferVkImpl>();
                 VkAccessFlags RequiredAccessFlags = VK_ACCESS_UNIFORM_READ_BIT;
-                if(!pBufferVk->CheckAccessFlags(RequiredAccessFlags))
+                if (!pBufferVk->CheckAccessFlags(RequiredAccessFlags))
                 {
-                    if(VerifyOnly)
+                    if (VerifyOnly)
                     {
                         LOG_ERROR_MESSAGE("State of buffer \"", pBufferVk->GetDesc().Name, "\" is incorrect. Required access flags: ",
                                            VulkanUtilities::VkAccessFlagsToString(RequiredAccessFlags),  ". Actual access flags: ", 
@@ -164,11 +164,11 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl *pCtxVkImpl)
                 // VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 
                 // or VK_IMAGE_LAYOUT_GENERAL layout in order to access its data in a shader (13.1.3, 13.1.4).
                 VkImageLayout RequiredLayout;
-                if(Res.Type == SPIRVShaderResourceAttribs::ResourceType::StorageImage)
+                if (Res.Type == SPIRVShaderResourceAttribs::ResourceType::StorageImage)
                     RequiredLayout = VK_IMAGE_LAYOUT_GENERAL;
                 else
                 {
-                    if(pTextureVk->GetDesc().BindFlags & BIND_DEPTH_STENCIL)
+                    if (pTextureVk->GetDesc().BindFlags & BIND_DEPTH_STENCIL)
                     {
                         // VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL must only be used as a read - only depth / stencil attachment 
                         // in a VkFramebuffer and/or as a read - only image in a shader (which can be read as a sampled image, combined 
@@ -179,7 +179,7 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl *pCtxVkImpl)
                     else
                         RequiredLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
                 }
-                if(pTextureVk->GetLayout() != RequiredLayout)
+                if (pTextureVk->GetLayout() != RequiredLayout)
                 {
                     if (VerifyOnly)
                     {
@@ -291,11 +291,11 @@ VkDescriptorImageInfo ShaderResourceCacheVk::Resource::GetImageDescriptorWriteIn
     // If descriptorType is VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, for each descriptor that will be accessed 
     // via load or store operations the imageLayout member for corresponding elements of pImageInfo 
     // MUST be VK_IMAGE_LAYOUT_GENERAL (13.2.4)
-    if(IsStorageImage)
+    if (IsStorageImage)
         DescrImgInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
     else
     {
-        if(ValidatedCast<const TextureVkImpl>(pTexViewVk->GetTexture())->GetDesc().BindFlags & BIND_DEPTH_STENCIL)
+        if (ValidatedCast<const TextureVkImpl>(pTexViewVk->GetTexture())->GetDesc().BindFlags & BIND_DEPTH_STENCIL)
             DescrImgInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
         else
             DescrImgInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -349,7 +349,7 @@ Uint32 ShaderResourceCacheVk::GetDynamicBufferOffsets(Uint32 CtxId, std::vector<
         while(res < DescrSet.GetSize())
         {
             const auto& Res = DescrSet.GetResource(res);
-            if(Res.Type != SPIRVShaderResourceAttribs::ResourceType::UniformBuffer)
+            if (Res.Type != SPIRVShaderResourceAttribs::ResourceType::UniformBuffer)
                 break;
 
             const auto* pBufferVk = Res.pObject.RawPtr<const BufferVkImpl>();
@@ -374,7 +374,7 @@ Uint32 ShaderResourceCacheVk::GetDynamicBufferOffsets(Uint32 CtxId, std::vector<
         }
 
 #ifdef _DEBUG
-        for(; res < DescrSet.GetSize(); ++res)
+        for (; res < DescrSet.GetSize(); ++res)
         {
             const auto& Res = DescrSet.GetResource(res);
             VERIFY(Res.Type != SPIRVShaderResourceAttribs::ResourceType::UniformBuffer && 

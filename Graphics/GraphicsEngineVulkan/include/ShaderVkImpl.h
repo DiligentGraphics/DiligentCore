@@ -33,10 +33,6 @@
 #include "SPIRVShaderResources.h"
 #include "ShaderVariableVk.h"
 
-#ifdef DEVELOPMENT
-#   define VERIFY_SHADER_BINDINGS
-#endif
-
 namespace Diligent
 {
 
@@ -67,8 +63,8 @@ public:
     const ShaderResourceLayoutVk& GetStaticResLayout()const{return m_StaticResLayout;}
     ShaderResourceCacheVk& GetStaticResCache(){return m_StaticResCache;}
 
-#ifdef VERIFY_SHADER_BINDINGS
-    void DbgVerifyStaticResourceBindings();
+#ifdef DEVELOPMENT
+    void DvpVerifyStaticResourceBindings();
 #endif
     
 private:

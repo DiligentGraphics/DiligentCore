@@ -36,7 +36,7 @@ namespace Diligent
 {
     static std::string GetUploadHeapName(bool bIsDeferred, Uint32 ContextId)
     {
-        if(bIsDeferred)
+        if (bIsDeferred)
         {
             std::stringstream ss;
             ss <<  "Upload heap of deferred context #" << ContextId;
@@ -121,7 +121,7 @@ namespace Diligent
     DeviceContextVkImpl::~DeviceContextVkImpl()
     {
         auto *pDeviceVkImpl = m_pDevice.RawPtr<RenderDeviceVkImpl>();
-        if(m_bIsDeferred)
+        if (m_bIsDeferred)
         {
             DisposeCurrentCmdBuffer(pDeviceVkImpl->GetNextFenceValue());
             // There must be no resources in the stale resource list. All outstanding resources (if any) must be in the
@@ -165,7 +165,7 @@ namespace Diligent
     {
         VERIFY(m_CommandBuffer.GetState().RenderPass == VK_NULL_HANDLE, "Disposing command buffer with unifinished render pass");
         auto vkCmdBuff = m_CommandBuffer.GetVkCmdBuffer();
-        if(vkCmdBuff != VK_NULL_HANDLE)
+        if (vkCmdBuff != VK_NULL_HANDLE)
         {
             DisposeVkCmdBuffer(vkCmdBuff, FenceValue);
             m_CommandBuffer.Reset();
@@ -191,7 +191,7 @@ namespace Diligent
 
         bool CommitStates = false;
         bool CommitScissor = false;
-        if(!m_pPipelineState)
+        if (!m_pPipelineState)
         {
             // If no pipeline state is bound, we are working with the fresh command
             // list. We have to commit the states set in the context that are not
@@ -223,7 +223,7 @@ namespace Diligent
             auto vkPipeline = pPipelineStateVk->GetVkPipeline();
             m_CommandBuffer.BindGraphicsPipeline(vkPipeline);
 
-            if(CommitStates)
+            if (CommitStates)
             {
                 m_CommandBuffer.SetStencilReference(m_StencilRef);
                 m_CommandBuffer.SetBlendConstants(m_BlendFactors);
@@ -231,7 +231,7 @@ namespace Diligent
                 CommitViewports();
             }
 
-            if(PSODesc.GraphicsPipeline.RasterizerDesc.ScissorEnable && (CommitStates || CommitScissor))
+            if (PSODesc.GraphicsPipeline.RasterizerDesc.ScissorEnable && (CommitStates || CommitScissor))
             {
                 CommitScissorRects();
             }
@@ -277,28 +277,29 @@ namespace Diligent
 
     void DeviceContextVkImpl::TransitionVkVertexBuffers()
     {
-        for( UINT Buff = 0; Buff < m_NumVertexStreams; ++Buff )
+        for ( UINT Buff = 0; Buff < m_NumVertexStreams; ++Buff )
         {
             auto &CurrStream = m_VertexStreams[Buff];
             VERIFY( CurrStream.pBuffer, "Attempting to bind a null buffer for rendering" );
             auto *pBufferVk = CurrStream.pBuffer.RawPtr<BufferVkImpl>();
-            if(!pBufferVk->CheckAccessFlags(VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT))
+            if (!pBufferVk->CheckAccessFlags(VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT))
                 BufferMemoryBarrier(*pBufferVk, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT);
         }
     }
 
     void DeviceContextVkImpl::CommitVkVertexBuffers()
     {
-#ifdef _DEBUG
+#ifdef DEVELOPMENT
         auto *pPipelineStateVk = m_pPipelineState.RawPtr<PipelineStateVkImpl>();
-        VERIFY( m_NumVertexStreams >= pPipelineStateVk->GetNumBufferSlotsUsed(), "Currently bound pipeline state \"", pPipelineStateVk->GetDesc().Name, "\" expects ", pPipelineStateVk->GetNumBufferSlotsUsed(), " input buffer slots, but only ", m_NumVertexStreams, " is bound");
+        if (m_NumVertexStreams < pPipelineStateVk->GetNumBufferSlotsUsed())
+            LOG_ERROR("Currently bound pipeline state \"", pPipelineStateVk->GetDesc().Name, "\" expects ", pPipelineStateVk->GetNumBufferSlotsUsed(), " input buffer slots, but only ", m_NumVertexStreams, " is bound");
 #endif
         // Do not initialize array with zeroes for performance reasons
         VkBuffer vkVertexBuffers[MaxBufferSlots];// = {}
         VkDeviceSize Offsets[MaxBufferSlots];
         VERIFY( m_NumVertexStreams <= MaxBufferSlots, "Too many buffers are being set" );
         bool DynamicBufferPresent = false;
-        for( UINT slot = 0; slot < m_NumVertexStreams; ++slot )
+        for ( UINT slot = 0; slot < m_NumVertexStreams; ++slot )
         {
             auto &CurrStream = m_VertexStreams[slot];
             VERIFY( CurrStream.pBuffer, "Attempting to bind a null buffer for rendering" );
@@ -307,11 +308,11 @@ namespace Diligent
             if (pBufferVk->GetDesc().Usage == USAGE_DYNAMIC)
             {
                 DynamicBufferPresent = true;
-#ifdef _DEBUG
-                pBufferVk->DbgVerifyDynamicAllocation(m_ContextId);
+#ifdef DEVELOPMENT
+                pBufferVk->DvpVerifyDynamicAllocation(m_ContextId);
 #endif
             }
-            if(!pBufferVk->CheckAccessFlags(VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT))
+            if (!pBufferVk->CheckAccessFlags(VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT))
                 BufferMemoryBarrier(*pBufferVk, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT);
             
             // Device context keeps strong references to all vertex buffers.
@@ -321,14 +322,14 @@ namespace Diligent
         }
 
         //GraphCtx.FlushResourceBarriers();
-        if(m_NumVertexStreams > 0)
+        if (m_NumVertexStreams > 0)
             m_CommandBuffer.BindVertexBuffers( 0, m_NumVertexStreams, vkVertexBuffers, Offsets );
 
         // GPU offset for a dynamic vertex buffer can change every time a draw command is invoked
         m_State.CommittedVBsUpToDate = !DynamicBufferPresent;
     }
 
-    void DeviceContextVkImpl::DbgLogRenderPass_PSOMismatch()
+    void DeviceContextVkImpl::DvpLogRenderPass_PSOMismatch()
     {
         std::stringstream ss;
         ss << "Active render pass is incomaptible with PSO '" << m_pPipelineState->GetDesc().Name << "'. "
@@ -336,10 +337,10 @@ namespace Diligent
                 "and the PSO. Vulkand requires exact match.\n"
                 "    Bound render targets (" << m_NumBoundRenderTargets << "):";
         Uint32 SampleCount = 0;
-        for(Uint32 rt = 0; rt < m_NumBoundRenderTargets; ++rt)
+        for (Uint32 rt = 0; rt < m_NumBoundRenderTargets; ++rt)
         {
             ss << ' ';
-            if(auto* pRTV = m_pBoundRenderTargets[rt].RawPtr())
+            if (auto* pRTV = m_pBoundRenderTargets[rt].RawPtr())
             {
                 VERIFY_EXPR(SampleCount == 0 || SampleCount == pRTV->GetTexture()->GetDesc().SampleCount);
                 SampleCount = pRTV->GetTexture()->GetDesc().SampleCount;
@@ -349,7 +350,7 @@ namespace Diligent
                 ss << "<Not set>";
         }
         ss << "; DSV: ";
-        if(m_pBoundDepthStencil)
+        if (m_pBoundDepthStencil)
         {
             VERIFY_EXPR(SampleCount == 0 || SampleCount == m_pBoundDepthStencil->GetTexture()->GetDesc().SampleCount);
             SampleCount = m_pBoundDepthStencil->GetTexture()->GetDesc().SampleCount;
@@ -361,7 +362,7 @@ namespace Diligent
 
         const auto& GrPipeline = m_pPipelineState->GetDesc().GraphicsPipeline;
         ss << "\n    PSO: render targets (" << Uint32{GrPipeline.NumRenderTargets} << "): ";
-        for(Uint32 rt = 0; rt < GrPipeline.NumRenderTargets; ++rt)
+        for (Uint32 rt = 0; rt < GrPipeline.NumRenderTargets; ++rt)
             ss << ' ' << GetTextureFormatAttribs(GrPipeline.RTVFormats[rt]).Name;
         ss << "; DSV: " << GetTextureFormatAttribs(GrPipeline.DSVFormat).Name;
         ss << "; Sample count: " << Uint32{GrPipeline.SmplDesc.Count};
@@ -371,7 +372,7 @@ namespace Diligent
 
     void DeviceContextVkImpl::Draw( DrawAttribs &DrawAttribs )
     {
-#ifdef _DEBUG
+#ifdef DEVELOPMENT
         if (!m_pPipelineState)
         {
             LOG_ERROR("No pipeline state is bound");
@@ -388,12 +389,18 @@ namespace Diligent
 
         EnsureVkCmdBuffer();
 
-        if( DrawAttribs.IsIndexed )
+        if ( DrawAttribs.IsIndexed )
         {
-            VERIFY( m_pIndexBuffer != nullptr, "Index buffer is not set up for indexed draw command" );
+#ifdef DEVELOPMENT
+            if (m_pIndexBuffer == nullptr)
+            {
+                LOG_ERROR("Index buffer is not set up for indexed draw command");
+                return;
+            }
+#endif
 
             BufferVkImpl *pBuffVk = m_pIndexBuffer.RawPtr<BufferVkImpl>();
-            if(!pBuffVk->CheckAccessFlags(VK_ACCESS_INDEX_READ_BIT))
+            if (!pBuffVk->CheckAccessFlags(VK_ACCESS_INDEX_READ_BIT))
                 BufferMemoryBarrier(*pBuffVk, VK_ACCESS_INDEX_READ_BIT);
 
             VERIFY(DrawAttribs.IndexType == VT_UINT16 || DrawAttribs.IndexType == VT_UINT32, "Unsupported index format. Only R16_UINT and R32_UINT are allowed.");
@@ -401,54 +408,60 @@ namespace Diligent
             m_CommandBuffer.BindIndexBuffer(pBuffVk->GetVkBuffer(), m_IndexDataStartOffset + pBuffVk->GetDynamicOffset(m_ContextId), vkIndexType);
         }
 
-        if(m_State.CommittedVBsUpToDate)
+        if (m_State.CommittedVBsUpToDate)
             TransitionVkVertexBuffers();
         else
             CommitVkVertexBuffers();
 
-        if(m_DesrSetBindInfo.DynamicOffsetCount != 0)
+        if (m_DesrSetBindInfo.DynamicOffsetCount != 0)
             pPipelineStateVk->BindDescriptorSetsWithDynamicOffsets(this, m_DesrSetBindInfo);
 #if 0
 #ifdef _DEBUG
         else
         {
-            if( pPipelineStateVk->dbgContainsShaderResources() )
+            if ( pPipelineStateVk->dbgContainsShaderResources() )
                 LOG_ERROR_MESSAGE("Pipeline state \"", pPipelineStateVk->GetDesc().Name, "\" contains shader resources, but IDeviceContext::CommitShaderResources() was not called" );
         }
 #endif
 #endif
-        if( DrawAttribs.IsIndirect )
+        if ( DrawAttribs.IsIndirect )
         {
-            VERIFY(DrawAttribs.pIndirectDrawAttribs != nullptr, "Valid pIndirectDrawAttribs must be provided for indirect draw command");
+#ifdef DEVELOPMENT
+            if (DrawAttribs.pIndirectDrawAttribs == nullptr)
+            {
+                LOG_ERROR("Valid pIndirectDrawAttribs must be provided for indirect draw command");
+                return;
+            }
+#endif
 
             auto *pBufferVk = ValidatedCast<BufferVkImpl>(DrawAttribs.pIndirectDrawAttribs);
             
             // Buffer memory barries must be executed outside of render pass
-            if(!pBufferVk->CheckAccessFlags(VK_ACCESS_INDIRECT_COMMAND_READ_BIT))
+            if (!pBufferVk->CheckAccessFlags(VK_ACCESS_INDIRECT_COMMAND_READ_BIT))
                 BufferMemoryBarrier(*pBufferVk, VK_ACCESS_INDIRECT_COMMAND_READ_BIT);
         }
 
-#ifdef _DEBUG
-        if(pPipelineStateVk->GetVkRenderPass() != m_RenderPass)
+#ifdef DEVELOPMENT
+        if (pPipelineStateVk->GetVkRenderPass() != m_RenderPass)
         {
-            DbgLogRenderPass_PSOMismatch();
+            DvpLogRenderPass_PSOMismatch();
         }
 #endif
 
         CommitRenderPassAndFramebuffer();
 
-        if( DrawAttribs.IsIndirect )
+        if ( DrawAttribs.IsIndirect )
         {
-            if( auto *pBufferVk = ValidatedCast<BufferVkImpl>(DrawAttribs.pIndirectDrawAttribs) )
+            if ( auto *pBufferVk = ValidatedCast<BufferVkImpl>(DrawAttribs.pIndirectDrawAttribs) )
             {
-#ifdef _DEBUG
-                if(pBufferVk->GetDesc().Usage == USAGE_DYNAMIC)
-                    pBufferVk->DbgVerifyDynamicAllocation(m_ContextId);
+#ifdef DEVELOPMENT
+                if (pBufferVk->GetDesc().Usage == USAGE_DYNAMIC)
+                    pBufferVk->DvpVerifyDynamicAllocation(m_ContextId);
 #endif
-                if(!pBufferVk->CheckAccessFlags(VK_ACCESS_INDIRECT_COMMAND_READ_BIT))
+                if (!pBufferVk->CheckAccessFlags(VK_ACCESS_INDIRECT_COMMAND_READ_BIT))
                     BufferMemoryBarrier(*pBufferVk, VK_ACCESS_INDIRECT_COMMAND_READ_BIT);
 
-                if( DrawAttribs.IsIndexed )
+                if ( DrawAttribs.IsIndexed )
                     m_CommandBuffer.DrawIndexedIndirect(pBufferVk->GetVkBuffer(), pBufferVk->GetDynamicOffset(m_ContextId) + DrawAttribs.IndirectDrawArgsOffset, 1, 0);
                 else
                     m_CommandBuffer.DrawIndirect(pBufferVk->GetVkBuffer(), pBufferVk->GetDynamicOffset(m_ContextId) + DrawAttribs.IndirectDrawArgsOffset, 1, 0);
@@ -456,7 +469,7 @@ namespace Diligent
         }
         else
         {
-            if( DrawAttribs.IsIndexed )
+            if ( DrawAttribs.IsIndexed )
                 m_CommandBuffer.DrawIndexed(DrawAttribs.NumIndices, DrawAttribs.NumInstances, DrawAttribs.FirstIndexLocation, DrawAttribs.BaseVertex, DrawAttribs.FirstInstanceLocation);
             else
                 m_CommandBuffer.Draw(DrawAttribs.NumVertices, DrawAttribs.NumInstances, DrawAttribs.StartVertexLocation, DrawAttribs.FirstInstanceLocation );
@@ -467,7 +480,7 @@ namespace Diligent
 
     void DeviceContextVkImpl::DispatchCompute( const DispatchComputeAttribs &DispatchAttrs )
     {
-#ifdef _DEBUG
+#ifdef DEVELOPMENT
         if (!m_pPipelineState)
         {
             LOG_ERROR("No pipeline state is bound");
@@ -494,19 +507,19 @@ namespace Diligent
 #ifdef _DEBUG
         else
         {
-            if( pPipelineStateVk->dbgContainsShaderResources() )
+            if ( pPipelineStateVk->dbgContainsShaderResources() )
                 LOG_ERROR_MESSAGE("Pipeline state \"", pPipelineStateVk->GetDesc().Name, "\" contains shader resources, but IDeviceContext::CommitShaderResources() was not called" );
         }
 #endif
 #endif
 
-        if( DispatchAttrs.pIndirectDispatchAttribs )
+        if ( DispatchAttrs.pIndirectDispatchAttribs )
         {
-            if( auto *pBufferVk = ValidatedCast<BufferVkImpl>(DispatchAttrs.pIndirectDispatchAttribs) )
+            if ( auto *pBufferVk = ValidatedCast<BufferVkImpl>(DispatchAttrs.pIndirectDispatchAttribs) )
             {
-#ifdef _DEBUG
-                if(pBufferVk->GetDesc().Usage == USAGE_DYNAMIC)
-                    pBufferVk->DbgVerifyDynamicAllocation(m_ContextId);
+#ifdef DEVELOPMENT
+                if (pBufferVk->GetDesc().Usage == USAGE_DYNAMIC)
+                    pBufferVk->DvpVerifyDynamicAllocation(m_ContextId);
 #endif
 
                 // Buffer memory barries must be executed outside of render pass
@@ -529,12 +542,16 @@ namespace Diligent
     void DeviceContextVkImpl::ClearDepthStencil( ITextureView* pView, Uint32 ClearFlags, float fDepth, Uint8 Stencil )
     {
         ITextureViewVk* pVkDSV = nullptr;
-        if( pView != nullptr )
+        if ( pView != nullptr )
         {
             pVkDSV = ValidatedCast<ITextureViewVk>(pView);
-#ifdef _DEBUG
+#ifdef DEVELOPMENT
             const auto& ViewDesc = pVkDSV->GetDesc();
-            VERIFY( ViewDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL, "Incorrect view type: depth stencil is expected" );
+            if ( ViewDesc.ViewType != TEXTURE_VIEW_DEPTH_STENCIL)
+            {
+                LOG_ERROR("The type (", GetTexViewTypeLiteralName(ViewDesc.ViewType), ") of texture view '", pView->GetDesc().Name, "' is incorrect for ClearDepthStencil operation. Depth-stencil view (TEXTURE_VIEW_DEPTH_STENCIL) must be provided." );
+                return;
+            }
 #endif
         }
         else
@@ -555,7 +572,7 @@ namespace Diligent
         const auto& ViewDesc = pVkDSV->GetDesc();
         VERIFY(ViewDesc.TextureDim != RESOURCE_DIM_TEX_3D, "Depth-stencil view of a 3D texture should've been created as 2D texture array view");
 
-        if(pVkDSV == m_pBoundDepthStencil)
+        if (pVkDSV == m_pBoundDepthStencil)
         {
             // Render pass may not be currently committed
             VERIFY_EXPR(m_RenderPass != VK_NULL_HANDLE && m_Framebuffer != VK_NULL_HANDLE);
@@ -583,7 +600,7 @@ namespace Diligent
         else
         {
             // End render pass to clear the buffer with vkCmdClearDepthStencilImage
-            if(m_CommandBuffer.GetState().RenderPass != VK_NULL_HANDLE)
+            if (m_CommandBuffer.GetState().RenderPass != VK_NULL_HANDLE)
                 m_CommandBuffer.EndRenderPass();
 
             auto* pTexture = pVkDSV->GetTexture();
@@ -614,9 +631,9 @@ namespace Diligent
     {
         VkClearColorValue ClearValue;
         const auto& FmtAttribs = GetTextureFormatAttribs(TexFmt);
-        if(FmtAttribs.ComponentType == COMPONENT_TYPE_SINT)
+        if (FmtAttribs.ComponentType == COMPONENT_TYPE_SINT)
         {
-            for(int i=0; i < 4; ++i)
+            for (int i=0; i < 4; ++i)
                 ClearValue.int32[i] = static_cast<int32_t>(RGBA[i]);
         }
         else if (FmtAttribs.ComponentType == COMPONENT_TYPE_UINT)
@@ -636,11 +653,15 @@ namespace Diligent
     void DeviceContextVkImpl::ClearRenderTarget( ITextureView *pView, const float *RGBA )
     {
         ITextureViewVk* pVkRTV = nullptr;
-        if( pView != nullptr )
+        if ( pView != nullptr )
         {
-#ifdef _DEBUG
+#ifdef DEVELOPMENT
             const auto& ViewDesc = pView->GetDesc();
-            VERIFY( ViewDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET, "Incorrect view type: render target is expected" );
+            if ( ViewDesc.ViewType != TEXTURE_VIEW_RENDER_TARGET)
+            {
+                LOG_ERROR("The type (", GetTexViewTypeLiteralName(ViewDesc.ViewType), ") of texture view '", pView->GetDesc().Name, "' is incorrect for ClearRenderTarget operation. Render target view (TEXTURE_VIEW_RENDER_TARGET) must be provided." );
+                return;
+            }
 #endif
             pVkRTV = ValidatedCast<ITextureViewVk>(pView);
         }
@@ -658,7 +679,7 @@ namespace Diligent
         }
 
         static constexpr float Zero[4] = { 0.f, 0.f, 0.f, 0.f };
-        if( RGBA == nullptr )
+        if ( RGBA == nullptr )
             RGBA = Zero;
         
         EnsureVkCmdBuffer();
@@ -669,16 +690,16 @@ namespace Diligent
         // Check if the texture is one of the currently bound render targets
         static constexpr const Uint32 InvalidAttachmentIndex = static_cast<Uint32>(-1);
         Uint32 attachmentIndex = InvalidAttachmentIndex;
-        for(Uint32 rt = 0; rt < m_NumBoundRenderTargets; ++rt)
+        for (Uint32 rt = 0; rt < m_NumBoundRenderTargets; ++rt)
         {
-            if(m_pBoundRenderTargets[rt] == pVkRTV)
+            if (m_pBoundRenderTargets[rt] == pVkRTV)
             {
                 attachmentIndex = rt;
                 break;
             }
         }
         
-        if(attachmentIndex != InvalidAttachmentIndex)
+        if (attachmentIndex != InvalidAttachmentIndex)
         {
             // Render pass may not be currently committed
             VERIFY_EXPR(m_RenderPass != VK_NULL_HANDLE && m_Framebuffer != VK_NULL_HANDLE);
@@ -706,7 +727,7 @@ namespace Diligent
         else
         {
             // End current render pass and clear the image with vkCmdClearColorImage
-            if(m_CommandBuffer.GetState().RenderPass != VK_NULL_HANDLE)
+            if (m_CommandBuffer.GetState().RenderPass != VK_NULL_HANDLE)
                 m_CommandBuffer.EndRenderPass();
 
             auto* pTexture = pVkRTV->GetTexture();
@@ -749,7 +770,13 @@ namespace Diligent
 
     void DeviceContextVkImpl::Flush()
     {
-        VERIFY(!m_bIsDeferred, "Flush() should only be called for immediate contexts");
+#ifdef DEVELOPMENT
+        if (m_bIsDeferred)
+        {
+            LOG_ERROR("Flush() should only be called for immediate contexts");
+            return;
+        }
+#endif
 
         VkSubmitInfo SubmitInfo = {};
         SubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -757,7 +784,7 @@ namespace Diligent
 
         auto pDeviceVkImpl = m_pDevice.RawPtr<RenderDeviceVkImpl>();
         auto vkCmdBuff = m_CommandBuffer.GetVkCmdBuffer();
-        if(vkCmdBuff != VK_NULL_HANDLE )
+        if (vkCmdBuff != VK_NULL_HANDLE )
         {
             VERIFY(!m_bIsDeferred, "Deferred contexts cannot execute command lists directly");
             if (m_State.NumCommands != 0)
@@ -783,7 +810,7 @@ namespace Diligent
         SubmitInfo.pSignalSemaphores = SubmitInfo.signalSemaphoreCount != 0 ? m_SignalSemaphores.data() : nullptr;
 
         // Submit command buffer even if there are no commands to release stale resources.
-        //if(SubmitInfo.commandBufferCount != 0 || SubmitInfo.waitSemaphoreCount !=0 || SubmitInfo.signalSemaphoreCount != 0)
+        //if (SubmitInfo.commandBufferCount != 0 || SubmitInfo.waitSemaphoreCount !=0 || SubmitInfo.signalSemaphoreCount != 0)
         auto SubmittedFenceValue = pDeviceVkImpl->ExecuteCommandBuffer(SubmitInfo, this);
         
         m_WaitSemaphores.clear();
@@ -837,7 +864,7 @@ namespace Diligent
     void DeviceContextVkImpl::CommitViewports()
     {
         VkViewport VkViewports[MaxViewports]; // Do not waste time initializing array to zero
-        for( Uint32 vp = 0; vp < m_NumViewports; ++vp )
+        for ( Uint32 vp = 0; vp < m_NumViewports; ++vp )
         {
             VkViewports[vp].x        = m_Viewports[vp].TopLeftX;
             VkViewports[vp].y        = m_Viewports[vp].TopLeftY;
@@ -911,10 +938,10 @@ namespace Diligent
         // Only commit scissor rects if scissor test is enabled in the rasterizer state. 
         // If scissor is currently disabled, or no PSO is bound, scissor rects will be committed by 
         // the SetPipelineState() when a PSO with enabled scissor test is set.
-        if( m_pPipelineState )
+        if ( m_pPipelineState )
         {
             const auto &PSODesc = m_pPipelineState->GetDesc();
-            if(!PSODesc.IsComputePipeline && PSODesc.GraphicsPipeline.RasterizerDesc.ScissorEnable)
+            if (!PSODesc.IsComputePipeline && PSODesc.GraphicsPipeline.RasterizerDesc.ScissorEnable)
             {
                 VERIFY(NumRects == m_NumScissorRects, "Unexpected number of scissor rects");
                 CommitScissorRects();
@@ -941,9 +968,9 @@ namespace Diligent
                     TransitionImageLayout(pDepthBuffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
                 }
 
-                for(Uint32 rt=0; rt < m_NumBoundRenderTargets; ++rt)
+                for (Uint32 rt=0; rt < m_NumBoundRenderTargets; ++rt)
                 {
-                    if(ITextureView* pRTV = m_pBoundRenderTargets[rt])
+                    if (ITextureView* pRTV = m_pBoundRenderTargets[rt])
                     {
                         auto* pRTVVk = ValidatedCast<TextureViewVkImpl>(pRTV);
                         auto* pRenderTarget = pRTVVk->GetTexture();
@@ -957,11 +984,11 @@ namespace Diligent
 
     void DeviceContextVkImpl::SetRenderTargets( Uint32 NumRenderTargets, ITextureView *ppRenderTargets[], ITextureView *pDepthStencil )
     {
-        if( TDeviceContextBase::SetRenderTargets( NumRenderTargets, ppRenderTargets, pDepthStencil ) )
+        if ( TDeviceContextBase::SetRenderTargets( NumRenderTargets, ppRenderTargets, pDepthStencil ) )
         {
             FramebufferCache::FramebufferCacheKey FBKey;
             RenderPassCache::RenderPassCacheKey RenderPassKey;
-            if(m_pBoundDepthStencil)
+            if (m_pBoundDepthStencil)
             {
                 auto* pDSVVk = m_pBoundDepthStencil.RawPtr<TextureViewVkImpl>();
                 auto* pDepthBuffer = pDSVVk->GetTexture();
@@ -978,15 +1005,15 @@ namespace Diligent
             FBKey.NumRenderTargets = m_NumBoundRenderTargets;
             RenderPassKey.NumRenderTargets = static_cast<Uint8>(m_NumBoundRenderTargets);
 
-            for(Uint32 rt=0; rt < m_NumBoundRenderTargets; ++rt)
+            for (Uint32 rt=0; rt < m_NumBoundRenderTargets; ++rt)
             {
-                if(ITextureView* pRTV = m_pBoundRenderTargets[rt])
+                if (ITextureView* pRTV = m_pBoundRenderTargets[rt])
                 {
                     auto* pRTVVk = ValidatedCast<TextureViewVkImpl>(pRTV);
                     auto* pRenderTarget = pRTVVk->GetTexture();
                     FBKey.RTVs[rt] = pRTVVk->GetVulkanImageView();
                     RenderPassKey.RTVFormats[rt] = pRenderTarget->GetDesc().Format;
-                    if(RenderPassKey.SampleCount == 0)
+                    if (RenderPassKey.SampleCount == 0)
                         RenderPassKey.SampleCount = static_cast<Uint8>(pRenderTarget->GetDesc().SampleCount);
                     else
                         VERIFY(RenderPassKey.SampleCount == pRenderTarget->GetDesc().SampleCount, "Inconsistent sample count");
@@ -1017,13 +1044,19 @@ namespace Diligent
     void DeviceContextVkImpl::ResetRenderTargets()
     {
         TDeviceContextBase::ResetRenderTargets();
-        m_RenderPass = VK_NULL_HANDLE;
+        m_RenderPass  = VK_NULL_HANDLE;
         m_Framebuffer = VK_NULL_HANDLE;
     }
 
     void DeviceContextVkImpl::UpdateBufferRegion(BufferVkImpl* pBuffVk, Uint64 DstOffset, Uint64 NumBytes, VkBuffer vkSrcBuffer, Uint64 SrcOffset)
     {
-        VERIFY(DstOffset + NumBytes <= pBuffVk->GetDesc().uiSizeInBytes, "Update region is out of buffer");
+#ifdef DEVELOPMENT
+        if (DstOffset + NumBytes > pBuffVk->GetDesc().uiSizeInBytes)
+        {
+            LOG_ERROR("Update region is out of buffer bounds which will result in an undefined behavior");
+        }
+#endif
+
         EnsureVkCmdBuffer();
         if (!pBuffVk->CheckAccessFlags(VK_ACCESS_TRANSFER_WRITE_BIT))
         {
@@ -1040,7 +1073,14 @@ namespace Diligent
 
     void DeviceContextVkImpl::UpdateBufferRegion(BufferVkImpl *pBuffVk, const void *pData, Uint64 DstOffset, Uint64 NumBytes)
     {
-        VERIFY(pBuffVk->GetDesc().Usage != USAGE_DYNAMIC, "Dynamic buffers must be updated via Map()");
+#ifdef DEVELOPMENT
+        if (pBuffVk->GetDesc().Usage == USAGE_DYNAMIC)
+        {
+            LOG_ERROR("Dynamic buffers must be updated via Map()");
+            return;
+        }
+#endif
+
         VERIFY_EXPR( static_cast<size_t>(NumBytes) == NumBytes );
         auto TmpSpace = m_UploadHeap.Allocate(static_cast<size_t>(NumBytes));
         auto CPUAddress = TmpSpace.MemAllocation.Page->GetCPUMemory();
@@ -1054,12 +1094,18 @@ namespace Diligent
 
     void DeviceContextVkImpl::CopyBufferRegion(BufferVkImpl *pSrcBuffVk, BufferVkImpl *pDstBuffVk, Uint64 SrcOffset, Uint64 DstOffset, Uint64 NumBytes)
     {
-        VERIFY(pDstBuffVk->GetDesc().Usage != USAGE_DYNAMIC, "Dynamic buffers cannot be copy destinations");
+#ifdef DEVELOPMENT
+        if (pDstBuffVk->GetDesc().Usage == USAGE_DYNAMIC)
+        {
+            LOG_ERROR("Dynamic buffers cannot be copy destinations");
+            return;
+        }
+#endif
 
         EnsureVkCmdBuffer();
-        if(!pSrcBuffVk->CheckAccessFlags(VK_ACCESS_TRANSFER_READ_BIT))
+        if (!pSrcBuffVk->CheckAccessFlags(VK_ACCESS_TRANSFER_READ_BIT))
             BufferMemoryBarrier(*pSrcBuffVk, VK_ACCESS_TRANSFER_READ_BIT);
-        if(!pDstBuffVk->CheckAccessFlags(VK_ACCESS_TRANSFER_WRITE_BIT))
+        if (!pDstBuffVk->CheckAccessFlags(VK_ACCESS_TRANSFER_WRITE_BIT))
             BufferMemoryBarrier(*pDstBuffVk, VK_ACCESS_TRANSFER_WRITE_BIT);
         VkBufferCopy CopyRegion;
         CopyRegion.srcOffset = SrcOffset + pSrcBuffVk->GetDynamicOffset(m_ContextId);
@@ -1074,11 +1120,11 @@ namespace Diligent
     void DeviceContextVkImpl::CopyTextureRegion(TextureVkImpl *pSrcTexture, TextureVkImpl *pDstTexture, const VkImageCopy &CopyRegion)
     {
         EnsureVkCmdBuffer();
-        if(pSrcTexture->GetLayout() != VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
+        if (pSrcTexture->GetLayout() != VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
         {
             TransitionImageLayout(*pSrcTexture, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
         }
-        if(pDstTexture->GetLayout() != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+        if (pDstTexture->GetLayout() != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
         {
             TransitionImageLayout(*pDstTexture, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
         }
@@ -1316,7 +1362,7 @@ namespace Diligent
     void DeviceContextVkImpl::CopyAndFreeDynamicUploadData(BufferVkImpl* pBuffer)
     {
         auto it = m_UploadAllocations.find(pBuffer);
-        if(it != m_UploadAllocations.end())
+        if (it != m_UploadAllocations.end())
         {
             VERIFY_EXPR(pBuffer->GetDesc().uiSizeInBytes <= it->second.MemAllocation.Size);
             UpdateBufferRegion(pBuffer, 0, pBuffer->GetDesc().uiSizeInBytes, it->second.vkBuffer, it->second.MemAllocation.UnalignedOffset);

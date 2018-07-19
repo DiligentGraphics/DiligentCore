@@ -45,7 +45,7 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl*
 {
     auto GLSLSource = BuildGLSLSourceString(CreationAttribs, TargetGLSLCompiler::glslang, "#define TARGET_API_VULKAN 1\n");
     m_SPIRV = GLSLtoSPIRV(m_Desc.ShaderType, GLSLSource.c_str(), CreationAttribs.ppCompilerOutput);
-    if(m_SPIRV.empty())
+    if (m_SPIRV.empty())
     {
         LOG_ERROR_AND_THROW("Failed to compile shader");
     }
@@ -77,7 +77,7 @@ void ShaderVkImpl::BindResources(IResourceMapping* pResourceMapping, Uint32 Flag
 IShaderVariable* ShaderVkImpl::GetShaderVariable(const Char* Name)
 {
     IShaderVariable *pVar = m_StaticVarsMgr.GetVariable(Name);
-    if(pVar == nullptr)
+    if (pVar == nullptr)
     {
         LOG_ERROR_MESSAGE("Shader variable \"", Name, "\" is not found in shader \"", m_Desc.Name, "\". Note that only static variables can be accessed through shader object.");
         return &m_DummyShaderVar;
@@ -86,10 +86,10 @@ IShaderVariable* ShaderVkImpl::GetShaderVariable(const Char* Name)
         return pVar;
 }
 
-#ifdef VERIFY_SHADER_BINDINGS
-void ShaderVkImpl::DbgVerifyStaticResourceBindings()
+#ifdef DEVELOPMENT
+void ShaderVkImpl::DvpVerifyStaticResourceBindings()
 {
-    m_StaticResLayout.dbgVerifyBindings(m_StaticResCache);
+    m_StaticResLayout.dvpVerifyBindings(m_StaticResCache);
 }
 #endif
 

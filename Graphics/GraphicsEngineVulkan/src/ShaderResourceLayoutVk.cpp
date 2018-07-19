@@ -349,7 +349,7 @@ void ShaderResourceLayoutVk::VkResource::CacheUniformBuffer(IDeviceObject*      
 
     if( UpdateCachedResource(DstRes, ArrayInd, pBuffer, IID_BufferVk, "buffer") )
     {
-#ifdef VERIFY_SHADER_BINDINGS
+#ifdef DEVELOPMENT
         // VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER or VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC descriptor type require
         // buffer to be created with VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT
         auto* pBuffVk = DstRes.pObject.RawPtr<BufferVkImpl>(); // Use final type
@@ -380,7 +380,7 @@ void ShaderResourceLayoutVk::VkResource::CacheStorageBuffer(IDeviceObject*      
 
     if( UpdateCachedResource(DstRes, ArrayInd, pBuffer, IID_BufferViewVk, "buffer view") )
     {
-#ifdef VERIFY_SHADER_BINDINGS
+#ifdef DEVELOPMENT
         // VK_DESCRIPTOR_TYPE_STORAGE_BUFFER or VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC descriptor type 
         // require buffer to be created with VK_BUFFER_USAGE_STORAGE_BUFFER_BIT (13.2.4)
         auto* pBuffViewVk = DstRes.pObject.RawPtr<BufferViewVkImpl>();
@@ -416,7 +416,7 @@ void ShaderResourceLayoutVk::VkResource::CacheTexelBuffer(IDeviceObject*        
     {
         auto* pBuffViewVk = DstRes.pObject.RawPtr<BufferViewVkImpl>();
 
-#ifdef VERIFY_SHADER_BINDINGS
+#ifdef DEVELOPMENT
         // The following bits must have been set at buffer creation time:
         //  * VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER  ->  VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT
         //  * VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER  ->  VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT
@@ -456,7 +456,7 @@ void ShaderResourceLayoutVk::VkResource::CacheImage(IDeviceObject*              
 
     if (UpdateCachedResource(DstRes, ArrayInd, pTexView, IID_TextureViewVk, "texture view") )
     {
-#ifdef VERIFY_SHADER_BINDINGS
+#ifdef DEVELOPMENT
         auto* pTexViewVk = DstRes.pObject.RawPtr<TextureViewVkImpl>();
         const auto ViewType = pTexViewVk->GetDesc().ViewType;
         const bool IsStorageImage = SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::StorageImage;
@@ -645,8 +645,8 @@ void ShaderResourceLayoutVk::InitializeStaticResources(const ShaderResourceLayou
 }
 
 
-#ifdef VERIFY_SHADER_BINDINGS
-void ShaderResourceLayoutVk::dbgVerifyBindings(const ShaderResourceCacheVk& ResourceCache)const
+#ifdef DEVELOPMENT
+void ShaderResourceLayoutVk::dvpVerifyBindings(const ShaderResourceCacheVk& ResourceCache)const
 {
     for(SHADER_VARIABLE_TYPE VarType = SHADER_VARIABLE_TYPE_STATIC; VarType < SHADER_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_VARIABLE_TYPE>(VarType+1))
     {

@@ -53,23 +53,24 @@ namespace VulkanUtilities
             return shared_from_this();
         }
 
-        bool IsLayerAvailable(const char *LayerName)const;
-        bool IsExtensionAvailable(const char *ExtensionName)const;
-        VkPhysicalDevice SelectPhysicalDevice();
+        bool IsLayerAvailable    (const char* LayerName)    const;
+        bool IsExtensionAvailable(const char* ExtensionName)const;
+        VkPhysicalDevice SelectPhysicalDevice()const;
         VkAllocationCallbacks* GetVkAllocator()const{return m_pVkAllocator;}
-        VkInstance GetVkInstance()const{return m_VkInstance;}
+        VkInstance             GetVkInstance() const{return m_VkInstance;}
 
     private:
-        VulkanInstance(bool EnableValidation, 
-                       uint32_t GlobalExtensionCount, 
-                       const char* const* ppGlobalExtensionNames,
+        VulkanInstance(bool                   EnableValidation, 
+                       uint32_t               GlobalExtensionCount, 
+                       const char* const*     ppGlobalExtensionNames,
                        VkAllocationCallbacks* pVkAllocator);
 
         bool m_ValidationEnabled = false;
         VkAllocationCallbacks* const m_pVkAllocator;
         VkInstance m_VkInstance = VK_NULL_HANDLE;
-        std::vector<VkLayerProperties> m_Layers;
+
+        std::vector<VkLayerProperties>     m_Layers;
         std::vector<VkExtensionProperties> m_Extensions;
-        std::vector<VkPhysicalDevice> m_PhysicalDevices;
+        std::vector<VkPhysicalDevice>      m_PhysicalDevices;
     };
 }
