@@ -38,17 +38,26 @@
 #include <vector>
 #include <exception>
 #include <algorithm>
+
 #if PLATFORM_WIN32
-#   if _WIN32_WINNT >= 0x0A00 // _WIN32_WINNT_WIN10
-#       include <d3d11_3.h>
-#   else
-#       include <d3d11.h>
-#   endif
+#   define D3D11_VERSION 0
 #elif PLATFORM_UNIVERSAL_WINDOWS
-    #include <d3d11_3.h>
+#   define D3D11_VERSION 2
 #endif
 
-#if _WIN32_WINNT >= 0x0A00 // _WIN32_WINNT_WIN10
+#if D3D11_VERSION == 0
+#   include <d3d11.h>
+#elif D3D11_VERSION == 1
+#   include <d3d11_1.h>
+#elif D3D11_VERSION == 2
+#   include <d3d11_2.h>
+#elif D3D11_VERSION == 3
+#   include <d3d11_3.h>
+#elif D3D11_VERSION == 4
+#   include <d3d11_4.h>
+#endif
+
+#if D3D11_VERSION >=4
 #   define D3D11_FENCES_SUPPORTED 1
 #else
 #   define D3D11_FENCES_SUPPORTED 0
