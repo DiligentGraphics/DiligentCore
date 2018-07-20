@@ -10,6 +10,7 @@ set(INCLUDE
     include/CommandQueueVkImpl.h
     include/DescriptorPoolManager.h
     include/DeviceContextVkImpl.h
+    include/FenceVkImpl.h
     include/VulkanDynamicHeap.h
     include/FramebufferCache.h
     include/GenerateMipsVkHelper.h
@@ -51,6 +52,7 @@ set(INTERFACE
     interface/BufferViewVk.h
     interface/CommandQueueVk.h
     interface/DeviceContextVk.h
+    interface/FenceVk.h
     interface/PipelineStateVk.h
     interface/RenderDeviceVk.h
     interface/RenderDeviceFactoryVk.h
@@ -70,6 +72,7 @@ set(SRC
     src/CommandQueueVkImpl.cpp
     src/DescriptorPoolManager.cpp
     src/DeviceContextVkImpl.cpp
+    src/FenceVkImpl.cpp
     src/VulkanDynamicHeap.cpp
     src/FramebufferCache.cpp
     src/GenerateMipsVkHelper.cpp

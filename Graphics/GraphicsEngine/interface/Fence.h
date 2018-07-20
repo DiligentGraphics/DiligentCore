@@ -24,42 +24,40 @@
 #pragma once
 
 /// \file
-/// Implementation of the Diligent::CommandListBase template class
+/// Defines Diligent::IFence interface and related data structures
 
-#include "CommandList.h"
-#include "DeviceObjectBase.h"
-#include "RenderDeviceBase.h"
+#include "DeviceObject.h"
 
 namespace Diligent
 {
 
-struct CommandListDesc : public DeviceObjectAttribs
+// {3B19184D-32AB-4701-84F4-9A0C03AE1672}
+static constexpr INTERFACE_ID IID_Fence =
+{ 0x3b19184d, 0x32ab, 0x4701, { 0x84, 0xf4, 0x9a, 0xc, 0x3, 0xae, 0x16, 0x72 } };
+
+/// Buffer description
+struct FenceDesc : DeviceObjectAttribs
 {
+
 };
 
-/// Template class implementing base functionality for a command list object.
+/// Fence interface
 
-/// \tparam BaseInterface - base interface that this class will inheret 
-///                         (Diligent::ICommandListD3D11 or Diligent::ICommandListD3D12).
-template<class BaseInterface>
-class CommandListBase : public DeviceObjectBase<BaseInterface, CommandListDesc>
+/// Fence the methods to manipulate a fence object
+class IFence : public IDeviceObject
 {
 public:
-    typedef DeviceObjectBase<BaseInterface, CommandListDesc> TDeviceObjectBase;
+    /// Queries the specific interface, see IObject::QueryInterface() for details
+    virtual void QueryInterface( const Diligent::INTERFACE_ID& IID, IObject** ppInterface ) = 0;
 
-    /// \param pRefCounters - reference counters object that controls the lifetime of this command list.
-	/// \param pDevice - pointer to the device.
-	/// \param bIsDeviceInternal - flag indicating if the CommandList is an internal device object and 
-	///							   must not keep a strong reference to the device.
-    CommandListBase( IReferenceCounters* pRefCounters, IRenderDevice* pDevice, bool bIsDeviceInternal = false ) :
-        TDeviceObjectBase( pRefCounters, pDevice, CommandListDesc(), bIsDeviceInternal )
-    {}
+    /// Returns the fence description used to create the object
+    virtual const FenceDesc& GetDesc()const = 0;
 
-    ~CommandListBase()
-    {
-    }
+    /// Returns the last completed value signaled by the GPU
+    virtual Uint64 GetCompletedValue() = 0;
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE( IID_CommandList, TDeviceObjectBase )
+    /// Resets the fence to the specified value. 
+    virtual void Reset(Uint64 Value) = 0;
 };
 
 }

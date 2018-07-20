@@ -13,6 +13,7 @@ set(INCLUDE
     include/DeviceContextD3D11Impl.h
     include/EngineD3D11Defines.h
     include/pch.h
+	include/FenceD3D11Impl.h
     include/PipelineStateD3D11Impl.h
     include/RenderDeviceD3D11Impl.h
     include/SamplerD3D11Impl.h
@@ -35,6 +36,7 @@ set(INTERFACE
     interface/BufferViewD3D11.h
     interface/DeviceContextD3D11.h
     interface/EngineD3D11Attribs.h
+    interface/FenceD3D11.h
     interface/PipelineStateD3D11.h
     interface/RenderDeviceD3D11.h
     interface/RenderDeviceFactoryD3D11.h
@@ -54,6 +56,7 @@ set(SRC
     src/D3D11DebugUtilities.cpp
     src/D3D11TypeConversions.cpp
     src/DeviceContextD3D11Impl.cpp
+    src/FenceD3D11Impl.cpp
     src/PipelineStateD3D11Impl.cpp
     src/RenderDeviceD3D11Impl.cpp
     src/RenderDeviceFactoryD3D11.cpp

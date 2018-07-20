@@ -61,7 +61,7 @@ namespace Diligent
         /// Number of outstanding deleted objects to purge the registry.
         static constexpr int DeletedObjectsToPurge = 32;
 
-        StateObjectsRegistry(IMemoryAllocator &RawAllocator, const Char* RegistryName) :
+        StateObjectsRegistry(IMemoryAllocator& RawAllocator, const Char* RegistryName) :
             m_DescToObjHashMap(STD_ALLOCATOR_RAW_MEM(HashMapElem, RawAllocator, "Allocator for unordered_map<ResourceDescType, RefCntWeakPtr<IDeviceObject> >") ),
             m_RegistryName( RegistryName )
         {}
@@ -88,7 +88,7 @@ namespace Diligent
         /// assumed to be an expensive operation and should be performed during
         /// the initialization. Occasional purge operations should not add significant
         /// cost to it.
-        void Add( const ResourceDescType& ObjectDesc, IDeviceObject *pObject )
+        void Add( const ResourceDescType& ObjectDesc, IDeviceObject* pObject )
         {
             ThreadingTools::LockHelper Lock( m_LockFlag );
 
@@ -126,7 +126,7 @@ namespace Diligent
         }
 
         /// Finds the object in the registry
-        void Find( const ResourceDescType &Desc, IDeviceObject **ppObject )
+        void Find( const ResourceDescType& Desc, IDeviceObject** ppObject )
         {
             VERIFY( *ppObject == nullptr, "Overwriting reference to existing object may cause memory leaks" );
             *ppObject = nullptr;

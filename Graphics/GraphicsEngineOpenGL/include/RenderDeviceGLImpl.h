@@ -73,6 +73,8 @@ public:
     void CreatePipelineState( const PipelineStateDesc &PipelineDesc, IPipelineState **ppPipelineState, bool bIsDeviceInternal);
     virtual void CreatePipelineState( const PipelineStateDesc &PipelineDesc, IPipelineState **ppPipelineState )override final;
     
+    virtual void CreateFence(const FenceDesc& Desc, IFence** ppFence)override final;
+
     virtual void CreateTextureFromGLHandle(Uint32 GLHandle, const TextureDesc &TexDesc, ITexture **ppTexture)override final;
 
     virtual void CreateBufferFromGLHandle(Uint32 GLHandle, const BufferDesc &BuffDesc, IBuffer **ppBuffer)override final;

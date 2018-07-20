@@ -24,42 +24,24 @@
 #pragma once
 
 /// \file
-/// Implementation of the Diligent::CommandListBase template class
+/// Definition of the Diligent::IFenceVk interface
 
-#include "CommandList.h"
-#include "DeviceObjectBase.h"
-#include "RenderDeviceBase.h"
+#include "../../GraphicsEngine/interface/Fence.h"
 
 namespace Diligent
 {
 
-struct CommandListDesc : public DeviceObjectAttribs
-{
-};
+// {7610B4CD-EDEA-4951-82CF-52F97FAFED2D}
+static constexpr INTERFACE_ID IID_FenceVk =
+{ 0x7610b4cd, 0xedea, 0x4951, { 0x82, 0xcf, 0x52, 0xf9, 0x7f, 0xaf, 0xed, 0x2d } };
 
-/// Template class implementing base functionality for a command list object.
 
-/// \tparam BaseInterface - base interface that this class will inheret 
-///                         (Diligent::ICommandListD3D11 or Diligent::ICommandListD3D12).
-template<class BaseInterface>
-class CommandListBase : public DeviceObjectBase<BaseInterface, CommandListDesc>
+/// Interface to the fence object implemented in GL
+class IFenceVk : public IFence
 {
 public:
-    typedef DeviceObjectBase<BaseInterface, CommandListDesc> TDeviceObjectBase;
-
-    /// \param pRefCounters - reference counters object that controls the lifetime of this command list.
-	/// \param pDevice - pointer to the device.
-	/// \param bIsDeviceInternal - flag indicating if the CommandList is an internal device object and 
-	///							   must not keep a strong reference to the device.
-    CommandListBase( IReferenceCounters* pRefCounters, IRenderDevice* pDevice, bool bIsDeviceInternal = false ) :
-        TDeviceObjectBase( pRefCounters, pDevice, CommandListDesc(), bIsDeviceInternal )
-    {}
-
-    ~CommandListBase()
-    {
-    }
-
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE( IID_CommandList, TDeviceObjectBase )
+    /// Returns OpenGL sync object
+    //virtual IGLFence* GetGLFence() = 0;
 };
 
 }

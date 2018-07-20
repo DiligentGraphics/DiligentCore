@@ -35,10 +35,12 @@ namespace Diligent
 
 /// Template class implementing base functionality for a sampler object.
 
-/// \tparam BaseInterface - base interface that this class will inheret 
-///                         (Diligent::ISamplerD3D11, Diligent::ISamplerD3D12 or Diligent::ISamplerGL).
+/// \tparam BaseInterface - base interface that this class will inheret
+///                          (Diligent::ISamplerD3D11, Diligent::ISamplerD3D12,
+///                           Diligent::ISamplerGL or Diligent::ISamplerVk).
 /// \tparam RenderDeviceBaseInterface - base interface for the render device
-///                                     (Diligent::IRenderDeviceD3D11, Diligent::IRenderDeviceD3D12, Diligent::IRenderDeviceGL, or Diligent::IRenderDeviceGLES).
+///                                     (Diligent::IRenderDeviceD3D11, Diligent::IRenderDeviceD3D12, Diligent::IRenderDeviceGL, 
+///                                      Diligent::IRenderDeviceGLES or Diligent::IRenderDeviceVk).
 template<class BaseInterface, class RenderDeviceBaseInterface>
 class SamplerBase : public DeviceObjectBase<BaseInterface, SamplerDesc>
 {
@@ -51,7 +53,7 @@ public:
 	/// \param SamDesc - sampler description.
 	/// \param bIsDeviceInternal - flag indicating if the sampler is an internal device object and 
 	///							   must not keep a strong reference to the device.
-    SamplerBase( IReferenceCounters *pRefCounters, IRenderDevice *pDevice, const SamplerDesc& SamDesc, bool bIsDeviceInternal = false ) :
+    SamplerBase( IReferenceCounters* pRefCounters, IRenderDevice* pDevice, const SamplerDesc& SamDesc, bool bIsDeviceInternal = false ) :
         TDeviceObjectBase( pRefCounters, pDevice, SamDesc, bIsDeviceInternal )
     {}
 
@@ -59,7 +61,7 @@ public:
     {
         /// \note Destructor cannot directly remove the object from the registry as this may cause a 
         ///       deadlock.
-        auto &SamplerRegistry = static_cast<TRenderDeviceBase *>(this->GetDevice())->GetSamplerRegistry();
+        auto &SamplerRegistry = static_cast<TRenderDeviceBase*>(this->GetDevice())->GetSamplerRegistry();
         SamplerRegistry.ReportDeletedObject();
     }
 

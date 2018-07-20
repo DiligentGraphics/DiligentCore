@@ -24,42 +24,28 @@
 #pragma once
 
 /// \file
-/// Implementation of the Diligent::CommandListBase template class
+/// Definition of the Diligent::IFenceD3D12 interface
 
-#include "CommandList.h"
-#include "DeviceObjectBase.h"
-#include "RenderDeviceBase.h"
+#include "../../GraphicsEngine/interface/Fence.h"
 
 namespace Diligent
 {
 
-struct CommandListDesc : public DeviceObjectAttribs
-{
-};
+// {053C0D8C-3757-4220-A9CC-4749EC4794AD}
+static constexpr INTERFACE_ID IID_FenceD3D12 =
+{ 0x53c0d8c, 0x3757, 0x4220, { 0xa9, 0xcc, 0x47, 0x49, 0xec, 0x47, 0x94, 0xad } };
 
-/// Template class implementing base functionality for a command list object.
 
-/// \tparam BaseInterface - base interface that this class will inheret 
-///                         (Diligent::ICommandListD3D11 or Diligent::ICommandListD3D12).
-template<class BaseInterface>
-class CommandListBase : public DeviceObjectBase<BaseInterface, CommandListDesc>
+/// Interface to the fence object implemented in D3D12
+class IFenceD3D12 : public IFence
 {
 public:
-    typedef DeviceObjectBase<BaseInterface, CommandListDesc> TDeviceObjectBase;
 
-    /// \param pRefCounters - reference counters object that controls the lifetime of this command list.
-	/// \param pDevice - pointer to the device.
-	/// \param bIsDeviceInternal - flag indicating if the CommandList is an internal device object and 
-	///							   must not keep a strong reference to the device.
-    CommandListBase( IReferenceCounters* pRefCounters, IRenderDevice* pDevice, bool bIsDeviceInternal = false ) :
-        TDeviceObjectBase( pRefCounters, pDevice, CommandListDesc(), bIsDeviceInternal )
-    {}
+    /// Returns a pointer to the ID3D12Fence interface of the internal Direct3D12 object.
 
-    ~CommandListBase()
-    {
-    }
-
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE( IID_CommandList, TDeviceObjectBase )
+    /// The method does *NOT* call AddRef() on the returned interface,
+    /// so Release() must not be called.
+    virtual ID3D12Fence* GetD3D12Fence() = 0;
 };
 
 }

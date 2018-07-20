@@ -37,7 +37,8 @@ namespace Diligent
 /// Template class implementing base functionality for a shader resource binding
 
 /// \tparam BaseInterface - base interface that this class will inheret 
-///                         (Diligent::IShaderResourceBindingGL, Diligent::IShaderResourceBindingD3D11, or Diligent::IShaderResourceBindingD3D12).
+///                         (Diligent::IShaderResourceBindingGL, Diligent::IShaderResourceBindingD3D11,
+///                          Diligent::IShaderResourceBindingD3D12 or Diligent::IShaderResourceBindingVk).
 template<class BaseInterface>
 class ShaderResourceBindingBase : public ObjectBase<BaseInterface>
 {
@@ -48,7 +49,7 @@ public:
 	/// \param pPSO - pipeline state that this SRB belongs to.
 	/// \param IsInternal - flag indicating if the shader resource binding is an internal PSO object and 
 	///						must not keep a strong reference to the PSO.
-    ShaderResourceBindingBase( IReferenceCounters *pRefCounters, IPipelineState *pPSO, bool IsInternal = false ) :
+    ShaderResourceBindingBase( IReferenceCounters* pRefCounters, IPipelineState* pPSO, bool IsInternal = false ) :
         TObjectBase( pRefCounters ),
         m_spPSO( IsInternal ? nullptr : pPSO ),
         m_pPSO( pPSO )
@@ -68,7 +69,7 @@ protected:
     /// shader resource binding uses PSO's memory allocator to allocate
     /// memory for shader resource cache.
     RefCntAutoPtr<IPipelineState> m_spPSO;
-    IPipelineState *m_pPSO;
+    IPipelineState* const m_pPSO;
 };
 
 }

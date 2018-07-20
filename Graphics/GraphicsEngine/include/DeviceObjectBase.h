@@ -52,10 +52,10 @@ public:
 	/// \param ObjDesc - object description.
 	/// \param bIsDeviceInternal - flag indicating if the object is an internal device object
 	///							   and must not keep a strong reference to the device.
-    DeviceObjectBase( IReferenceCounters *pRefCounters,
-                      IRenderDevice *pDevice,
-					  const ObjectDescType &ObjDesc,
-				      bool bIsDeviceInternal = false) :
+    DeviceObjectBase( IReferenceCounters*   pRefCounters,
+                      IRenderDevice*        pDevice,
+					  const ObjectDescType& ObjDesc,
+				      bool                  bIsDeviceInternal = false) :
         TBase(pRefCounters),
 		// Do not keep strong reference to the device if the object is an internal device object
 		m_spDevice( bIsDeviceInternal ? nullptr : pDevice ),
@@ -119,7 +119,7 @@ public:
         return m_UniqueID.GetID();
     }
 
-	IRenderDevice *GetDevice()const{return m_pDevice;}
+	IRenderDevice* GetDevice()const{return m_pDevice;}
     
     template<typename Type>
     Type* GetDevice()const{return ValidatedCast<Type>(m_pDevice);}
@@ -129,7 +129,7 @@ private:
 	RefCntAutoPtr<IRenderDevice> m_spDevice;
 
     /// Pointer to the device
-    IRenderDevice *m_pDevice;
+    IRenderDevice* m_pDevice;
 
 protected:
 	

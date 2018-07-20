@@ -24,42 +24,43 @@
 #pragma once
 
 /// \file
-/// Implementation of the Diligent::CommandListBase template class
+/// Implementation of the Diligent::FenceBase template class
 
-#include "CommandList.h"
 #include "DeviceObjectBase.h"
-#include "RenderDeviceBase.h"
+#include "GraphicsTypes.h"
+#include "RefCntAutoPtr.h"
 
 namespace Diligent
 {
 
-struct CommandListDesc : public DeviceObjectAttribs
-{
-};
+class IRenderDevice;
+class IFence;
 
-/// Template class implementing base functionality for a command list object.
+/// Template class implementing base functionality for a Fence object
 
-/// \tparam BaseInterface - base interface that this class will inheret 
-///                         (Diligent::ICommandListD3D11 or Diligent::ICommandListD3D12).
+/// \tparam BaseInterface - base interface that this class will inheret
+///                         (Diligent::IFenceD3D11, Diligent::IFenceD3D12,
+///                          Diligent::IFenceGL or Diligent::IFenceVk).
 template<class BaseInterface>
-class CommandListBase : public DeviceObjectBase<BaseInterface, CommandListDesc>
+class FenceBase : public DeviceObjectBase<BaseInterface, FenceDesc>
 {
 public:
-    typedef DeviceObjectBase<BaseInterface, CommandListDesc> TDeviceObjectBase;
+    typedef DeviceObjectBase<BaseInterface, FenceDesc> TDeviceObjectBase;
 
-    /// \param pRefCounters - reference counters object that controls the lifetime of this command list.
-	/// \param pDevice - pointer to the device.
-	/// \param bIsDeviceInternal - flag indicating if the CommandList is an internal device object and 
+    /// \param pRefCounters      - reference counters object that controls the lifetime of this command list.
+    /// \param Desc              - fence description
+	/// \param pDevice           - pointer to the device.
+	/// \param bIsDeviceInternal - flag indicating if the Fence is an internal device object and 
 	///							   must not keep a strong reference to the device.
-    CommandListBase( IReferenceCounters* pRefCounters, IRenderDevice* pDevice, bool bIsDeviceInternal = false ) :
-        TDeviceObjectBase( pRefCounters, pDevice, CommandListDesc(), bIsDeviceInternal )
+    FenceBase( IReferenceCounters* pRefCounters, IRenderDevice* pDevice, const FenceDesc& Desc, bool bIsDeviceInternal = false ) :
+        TDeviceObjectBase( pRefCounters, pDevice, Desc, bIsDeviceInternal )
     {}
 
-    ~CommandListBase()
+    ~FenceBase()
     {
     }
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE( IID_CommandList, TDeviceObjectBase )
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE( IID_Fence, TDeviceObjectBase )
 };
 
 }

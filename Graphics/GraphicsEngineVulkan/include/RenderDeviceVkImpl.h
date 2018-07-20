@@ -80,6 +80,8 @@ public:
     
     virtual void CreateSampler(const SamplerDesc& SamplerDesc, ISampler** ppSampler)override final;
 
+    virtual void CreateFence(const FenceDesc& Desc, IFence** ppFence)override final;
+
     virtual VkDevice GetVkDevice()override final{ return m_LogicalVkDevice->GetVkDevice();}
     
     virtual void CreateTextureFromVulkanImage(VkImage vkImage, const TextureDesc& TexDesc, ITexture** ppTexture)override final;

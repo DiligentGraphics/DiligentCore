@@ -42,7 +42,7 @@ namespace Diligent
         {
         }
 
-        ResMappingHashKey(ResMappingHashKey &&rhs) : 
+        ResMappingHashKey(ResMappingHashKey&& rhs) : 
             StrKey(std::move(rhs.StrKey)),
             ArrayIndex(rhs.ArrayIndex)
         {}
@@ -63,7 +63,7 @@ namespace Diligent
         }
 
 
-        ResMappingHashKey( const ResMappingHashKey& )              = delete;
+        ResMappingHashKey             ( const ResMappingHashKey& ) = delete;
         ResMappingHashKey& operator = ( const ResMappingHashKey& ) = delete;
         ResMappingHashKey& operator = ( ResMappingHashKey&& )      = delete;
 
@@ -78,7 +78,7 @@ namespace std
     template<>
     struct hash<Diligent::ResMappingHashKey>
     {
-        size_t operator()( const Diligent::ResMappingHashKey &Key ) const
+        size_t operator()( const Diligent::ResMappingHashKey& Key ) const
         {
             return Key.GetHash();
         }                  
@@ -97,26 +97,26 @@ namespace Diligent
 
         /// \param pRefCounters - reference counters object that controls the lifetime of this resource mapping
         /// \param RawMemAllocator - raw memory allocator that is used by the m_HashTable member
-        ResourceMappingImpl(IReferenceCounters *pRefCounters, IMemoryAllocator &RawMemAllocator) : 
+        ResourceMappingImpl(IReferenceCounters* pRefCounters, IMemoryAllocator& RawMemAllocator) : 
             TObjectBase(pRefCounters),
             m_HashTable(STD_ALLOCATOR_RAW_MEM(HashTableElem, RawMemAllocator, "Allocator for unordered_map< ResMappingHashKey, RefCntAutoPtr<IDeviceObject> >") )
         {}
 
         ~ResourceMappingImpl();
 
-        virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
+        virtual void QueryInterface( const Diligent::INTERFACE_ID& IID, IObject** ppInterface )override final;
 
         /// Implementation of IResourceMapping::AddResource()
-        virtual void AddResource( const Char *Name, IDeviceObject *pObject, bool bIsUnique )override final;
+        virtual void AddResource( const Char* Name, IDeviceObject* pObject, bool bIsUnique )override final;
 
         /// Implementation of IResourceMapping::AddResourceArray()
-        virtual void AddResourceArray( const Char *Name, Uint32 StartIndex, IDeviceObject * const* ppObjects, Uint32 NumElements, bool bIsUnique )override final;
+        virtual void AddResourceArray( const Char* Name, Uint32 StartIndex, IDeviceObject* const* ppObjects, Uint32 NumElements, bool bIsUnique )override final;
 
         /// Implementation of IResourceMapping::RemoveResourceByName()
-        virtual void RemoveResourceByName( const Char *Name, Uint32 ArrayIndex )override final;
+        virtual void RemoveResourceByName( const Char* Name, Uint32 ArrayIndex )override final;
         
         /// Implementation of IResourceMapping::GetResource()
-        virtual void GetResource( const Char *Name, IDeviceObject **ppResource, Uint32 ArrayIndex )override final;
+        virtual void GetResource( const Char* Name, IDeviceObject** ppResource, Uint32 ArrayIndex )override final;
 
         /// Returns number of resources in the resource mapping.
         virtual size_t GetSize()override final;

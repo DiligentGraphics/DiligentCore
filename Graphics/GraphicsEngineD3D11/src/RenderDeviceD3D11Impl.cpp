@@ -34,6 +34,7 @@
 #include "TextureViewD3D11Impl.h"
 #include "PipelineStateD3D11Impl.h"
 #include "ShaderResourceBindingD3D11Impl.h"
+#include "FenceD3D11Impl.h"
 #include "EngineMemory.h"
 
 namespace Diligent
@@ -56,7 +57,8 @@ RenderDeviceD3D11Impl :: RenderDeviceD3D11Impl(IReferenceCounters*       pRefCou
         sizeof(ShaderD3D11Impl),
         sizeof(SamplerD3D11Impl),
         sizeof(PipelineStateD3D11Impl),
-        sizeof(ShaderResourceBindingD3D11Impl)
+        sizeof(ShaderResourceBindingD3D11Impl),
+        sizeof(FenceD3D11Impl)
     },
     m_EngineAttribs(EngineAttribs),
     m_pd3d11Device(pd3d11Device)
@@ -375,6 +377,19 @@ void RenderDeviceD3D11Impl::CreatePipelineState(const PipelineStateDesc& Pipelin
             pPipelineStateD3D11->QueryInterface( IID_PipelineState, reinterpret_cast<IObject**>(ppPipelineState) );
             OnCreateDeviceObject( pPipelineStateD3D11 );
         } 
+    );
+}
+
+void RenderDeviceD3D11Impl::CreateFence(const FenceDesc& Desc, IFence** ppFence)
+{
+    CreateDeviceObject( "Fence", Desc, ppFence, 
+        [&]()
+        {
+            FenceD3D11Impl* pFenceD3D11( NEW_RC_OBJ(m_FenceAllocator, "FenceD3D11Impl instance", FenceD3D11Impl)
+                                                   (this, Desc) );
+            pFenceD3D11->QueryInterface( IID_Fence, reinterpret_cast<IObject**>(ppFence) );
+            OnCreateDeviceObject( pFenceD3D11 );
+        }
     );
 }
 

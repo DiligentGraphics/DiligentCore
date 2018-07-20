@@ -24,42 +24,37 @@
 #pragma once
 
 /// \file
-/// Implementation of the Diligent::CommandListBase template class
+/// Declaration of Diligent::FenceD3D12Impl class
 
-#include "CommandList.h"
-#include "DeviceObjectBase.h"
-#include "RenderDeviceBase.h"
+#include "FenceD3D12.h"
+#include "RenderDeviceD3D12.h"
+#include "FenceBase.h"
 
 namespace Diligent
 {
 
-struct CommandListDesc : public DeviceObjectAttribs
-{
-};
+class FixedBlockMemoryAllocator;
 
-/// Template class implementing base functionality for a command list object.
-
-/// \tparam BaseInterface - base interface that this class will inheret 
-///                         (Diligent::ICommandListD3D11 or Diligent::ICommandListD3D12).
-template<class BaseInterface>
-class CommandListBase : public DeviceObjectBase<BaseInterface, CommandListDesc>
+/// Implementation of the Diligent::IFenceD3D12 interface
+class FenceD3D12Impl : public FenceBase<IFenceD3D12>
 {
 public:
-    typedef DeviceObjectBase<BaseInterface, CommandListDesc> TDeviceObjectBase;
+    using TFenceBase = FenceBase<IFenceD3D12>;
 
-    /// \param pRefCounters - reference counters object that controls the lifetime of this command list.
-	/// \param pDevice - pointer to the device.
-	/// \param bIsDeviceInternal - flag indicating if the CommandList is an internal device object and 
-	///							   must not keep a strong reference to the device.
-    CommandListBase( IReferenceCounters* pRefCounters, IRenderDevice* pDevice, bool bIsDeviceInternal = false ) :
-        TDeviceObjectBase( pRefCounters, pDevice, CommandListDesc(), bIsDeviceInternal )
-    {}
+    FenceD3D12Impl(IReferenceCounters* pRefCounters,
+                   IRenderDevice*      pDevice,
+                   const FenceDesc&    Desc);
+    ~FenceD3D12Impl();
 
-    ~CommandListBase()
-    {
-    }
+    virtual Uint64 GetCompletedValue()override final;
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE( IID_CommandList, TDeviceObjectBase )
+    /// Resets the fence to the specified value. 
+    virtual void Reset(Uint64 Value)override final;
+
+    ID3D12Fence* GetD3D12Fence()override final{ return m_pD3D12Fence; }
+
+private:
+    CComPtr<ID3D12Fence> m_pD3D12Fence; ///< D3D12 Fence object
 };
 
 }

@@ -65,7 +65,7 @@ public:
     /// \param pRefCounters - reference counters object that controls the lifetime of this device context.
     /// \param pRenderDevice - render device.
     /// \param bIsDeferred - flag indicating if this instance is a deferred context
-    DeviceContextBase(IReferenceCounters *pRefCounters, IRenderDevice *pRenderDevice, bool bIsDeferred) :
+    DeviceContextBase(IReferenceCounters* pRefCounters, IRenderDevice* pRenderDevice, bool bIsDeferred) :
         TObjectBase(pRefCounters),
         m_pDevice(pRenderDevice),
         m_bIsDeferred(bIsDeferred)
@@ -80,32 +80,32 @@ public:
 
     /// Base implementation of IDeviceContext::SetVertexBuffers(); validates parameters and 
     /// caches references to the buffers.
-    inline virtual void SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer **ppBuffers, Uint32 *pOffsets, Uint32 Flags )override = 0;
+    inline virtual void SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer** ppBuffers, Uint32* pOffsets, Uint32 Flags )override = 0;
 
     inline virtual void InvalidateState()override = 0;
 
     /// Base implementation of IDeviceContext::SetPipelineState(); caches references to the pipeline state object.
-    inline virtual void SetPipelineState(IPipelineState *pPipelineState)override = 0;
+    inline virtual void SetPipelineState(IPipelineState* pPipelineState)override = 0;
 
     /// Base implementation of IDeviceContext::CommitShaderResources(); validates parameters.
     template<typename PSOImplType>
-    inline bool CommitShaderResources(IShaderResourceBinding *pShaderResourceBinding, Uint32 Flags, int);
+    inline bool CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, Uint32 Flags, int);
 
     /// Base implementation of IDeviceContext::SetIndexBuffer(); caches the strong reference to the index buffer
-    inline virtual void SetIndexBuffer( IBuffer *pIndexBuffer, Uint32 ByteOffset )override = 0;
+    inline virtual void SetIndexBuffer( IBuffer* pIndexBuffer, Uint32 ByteOffset )override = 0;
 
     /// Caches the viewports
-    inline void SetViewports( Uint32 NumViewports, const Viewport *pViewports, Uint32 &RTWidth, Uint32 &RTHeight );
+    inline void SetViewports( Uint32 NumViewports, const Viewport* pViewports, Uint32& RTWidth, Uint32& RTHeight );
 
     /// Caches the scissor rects
-    inline void SetScissorRects( Uint32 NumRects, const Rect *pRects, Uint32 &RTWidth, Uint32 &RTHeight );
+    inline void SetScissorRects( Uint32 NumRects, const Rect* pRects, Uint32& RTWidth, Uint32& RTHeight );
 
     /// Caches the render target and depth stencil views. Returns true if any view is different
     /// from the cached value and false otherwise.
-    inline bool SetRenderTargets( Uint32 NumRenderTargets, ITextureView *ppRenderTargets[], ITextureView *pDepthStencil, Uint32 Dummy = 0 );
+    inline bool SetRenderTargets( Uint32 NumRenderTargets, ITextureView* ppRenderTargets[], ITextureView* pDepthStencil, Uint32 Dummy = 0 );
 
     /// Sets the strong pointer to the swap chain
-    virtual void SetSwapChain( ISwapChain *pSwapChain )override final { m_pSwapChain = pSwapChain; }
+    virtual void SetSwapChain( ISwapChain* pSwapChain )override final { m_pSwapChain = pSwapChain; }
 
     /// Returns the swap chain
     ISwapChain *GetSwapChain() { return m_pSwapChain; }
@@ -114,13 +114,13 @@ public:
     inline bool IsDefaultFBBound(){ return m_IsDefaultFramebufferBound; }
 
     /// Returns currently bound pipeline state and blend factors
-    inline void GetPipelineState(IPipelineState **ppPSO, float* BlendFactors, Uint32 &StencilRef);
+    inline void GetPipelineState(IPipelineState** ppPSO, float* BlendFactors, Uint32& StencilRef);
 
     /// Returns currently bound render targets
-    inline void GetRenderTargets(Uint32 &NumRenderTargets, ITextureView **ppRTVs, ITextureView **ppDSV);
+    inline void GetRenderTargets(Uint32& NumRenderTargets, ITextureView** ppRTVs, ITextureView** ppDSV);
 
     /// Returns currently set viewports
-    inline void GetViewports( Uint32 &NumViewports, Viewport *pViewports );
+    inline void GetViewports( Uint32& NumViewports, Viewport* pViewports );
 
     /// Returns the render device
     IRenderDevice *GetDevice(){return m_pDevice;}
@@ -130,7 +130,7 @@ public:
     bool IsDeferred()const{return m_bIsDeferred;}
 
 protected:
-    inline bool SetBlendFactors(const float *BlendFactors, int Dummy);
+    inline bool SetBlendFactors(const float* BlendFactors, int Dummy);
 
     inline bool SetStencilRef(Uint32 StencilRef, int Dummy);
 
@@ -197,7 +197,7 @@ protected:
 
 
 template<typename BaseInterface>
-inline void DeviceContextBase<BaseInterface> :: SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer **ppBuffers, Uint32 *pOffsets, Uint32 Flags  )
+inline void DeviceContextBase<BaseInterface> :: SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer** ppBuffers, Uint32* pOffsets, Uint32 Flags  )
 {
 #ifdef DEVELOPMENT
     if ( StartSlot >= MaxBufferSlots )
@@ -243,14 +243,14 @@ inline void DeviceContextBase<BaseInterface> :: SetVertexBuffers( Uint32 StartSl
 }
 
 template<typename BaseInterface>
-inline void DeviceContextBase<BaseInterface> :: SetPipelineState(IPipelineState *pPipelineState)
+inline void DeviceContextBase<BaseInterface> :: SetPipelineState(IPipelineState* pPipelineState)
 {
     m_pPipelineState = pPipelineState;
 }
 
 template<typename BaseInterface>
 template<typename PSOImplType>
-inline bool DeviceContextBase<BaseInterface> :: CommitShaderResources(IShaderResourceBinding *pShaderResourceBinding, Uint32 Flags, int)
+inline bool DeviceContextBase<BaseInterface> :: CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, Uint32 Flags, int)
 {
 #ifdef DEVELOPMENT
     if (!m_pPipelineState)
@@ -261,7 +261,7 @@ inline bool DeviceContextBase<BaseInterface> :: CommitShaderResources(IShaderRes
 
     if (pShaderResourceBinding)
     {
-        auto *pPSOImpl = m_pPipelineState.RawPtr<PSOImplType>();
+        auto* pPSOImpl = m_pPipelineState.RawPtr<PSOImplType>();
         if (pPSOImpl->IsIncompatibleWith(pShaderResourceBinding->GetPipelineState()))
         {
             LOG_ERROR_MESSAGE("Shader resource binding object is not compatible with the currently bound pipeline state");
@@ -280,7 +280,7 @@ inline void DeviceContextBase<BaseInterface> :: InvalidateState()
 }
 
 template<typename BaseInterface>
-inline void DeviceContextBase<BaseInterface> :: SetIndexBuffer( IBuffer *pIndexBuffer, Uint32 ByteOffset )
+inline void DeviceContextBase<BaseInterface> :: SetIndexBuffer( IBuffer* pIndexBuffer, Uint32 ByteOffset )
 {
     m_pIndexBuffer = pIndexBuffer;
     m_IndexDataStartOffset = ByteOffset;
@@ -295,17 +295,17 @@ inline void DeviceContextBase<BaseInterface> :: SetIndexBuffer( IBuffer *pIndexB
 
 
 template<typename BaseInterface>
-inline void DeviceContextBase<BaseInterface> :: GetPipelineState(IPipelineState **ppPSO, float* BlendFactors, Uint32 &StencilRef)
+inline void DeviceContextBase<BaseInterface> :: GetPipelineState(IPipelineState** ppPSO, float* BlendFactors, Uint32& StencilRef)
 { 
     VERIFY( ppPSO != nullptr, "Null pointer provided null" );
-    VERIFY( *ppPSO == nullptr, "Memory address contains a pointer to a non-null blend state" );
+    VERIFY(* ppPSO == nullptr, "Memory address contains a pointer to a non-null blend state" );
     if (m_pPipelineState)
     {
         m_pPipelineState->QueryInterface( IID_PipelineState, reinterpret_cast<IObject**>( ppPSO ) );
     }
     else
     {
-        *ppPSO = nullptr;
+       * ppPSO = nullptr;
     }
 
     for( Uint32 f = 0; f < 4; ++f )
@@ -314,7 +314,7 @@ inline void DeviceContextBase<BaseInterface> :: GetPipelineState(IPipelineState 
 };
 
 template<typename BaseInterface>
-inline bool DeviceContextBase<BaseInterface> ::SetBlendFactors(const float *BlendFactors, int)
+inline bool DeviceContextBase<BaseInterface> ::SetBlendFactors(const float* BlendFactors, int)
 {
     bool FactorsDiffer = false;
     for( Uint32 f = 0; f < 4; ++f )
@@ -338,7 +338,7 @@ inline bool DeviceContextBase<BaseInterface> :: SetStencilRef(Uint32 StencilRef,
 }
 
 template<typename BaseInterface>
-inline void DeviceContextBase<BaseInterface> :: SetViewports( Uint32 NumViewports, const Viewport *pViewports, Uint32 &RTWidth, Uint32 &RTHeight )
+inline void DeviceContextBase<BaseInterface> :: SetViewports( Uint32 NumViewports, const Viewport* pViewports, Uint32& RTWidth, Uint32& RTHeight )
 {
     if ( RTWidth == 0 || RTHeight == 0 )
     {
@@ -366,7 +366,7 @@ inline void DeviceContextBase<BaseInterface> :: SetViewports( Uint32 NumViewport
 }
 
 template<typename BaseInterface>
-inline void DeviceContextBase<BaseInterface> :: GetViewports( Uint32 &NumViewports, Viewport *pViewports )
+inline void DeviceContextBase<BaseInterface> :: GetViewports( Uint32 &NumViewports, Viewport* pViewports )
 {
     NumViewports = m_NumViewports;
     if ( pViewports )
@@ -377,7 +377,7 @@ inline void DeviceContextBase<BaseInterface> :: GetViewports( Uint32 &NumViewpor
 }
 
 template<typename BaseInterface>
-inline void DeviceContextBase<BaseInterface> :: SetScissorRects( Uint32 NumRects, const Rect *pRects, Uint32 &RTWidth, Uint32 &RTHeight )
+inline void DeviceContextBase<BaseInterface> :: SetScissorRects( Uint32 NumRects, const Rect* pRects, Uint32& RTWidth, Uint32& RTHeight )
 {
     if ( RTWidth == 0 || RTHeight == 0 )
     {
@@ -434,7 +434,7 @@ inline bool DeviceContextBase<BaseInterface> :: SetRenderTargets( Uint32 NumRend
 
     for( Uint32 rt = 0; rt < NumRenderTargets; ++rt )
     {
-        auto *pRTView = ppRenderTargets[rt];
+        auto* pRTView = ppRenderTargets[rt];
         if ( pRTView )
         {
             const auto &RTVDesc = pRTView->GetDesc();
@@ -445,7 +445,7 @@ inline bool DeviceContextBase<BaseInterface> :: SetRenderTargets( Uint32 NumRend
             // Use this RTV to set the render target size
             if (m_FramebufferWidth == 0)
             {
-                auto *pTex = pRTView->GetTexture();
+                auto* pTex = pRTView->GetTexture();
                 const auto &TexDesc = pTex->GetDesc();
                 m_FramebufferWidth  = std::max(TexDesc.Width  >> RTVDesc.MostDetailedMip, 1U);
                 m_FramebufferHeight = std::max(TexDesc.Height >> RTVDesc.MostDetailedMip, 1U);
@@ -486,7 +486,7 @@ inline bool DeviceContextBase<BaseInterface> :: SetRenderTargets( Uint32 NumRend
         // Use depth stencil size to set render target size
         if (m_FramebufferWidth == 0)
         {
-            auto *pTex = pDepthStencil->GetTexture();
+            auto* pTex = pDepthStencil->GetTexture();
             const auto &TexDesc = pTex->GetDesc();
             m_FramebufferWidth  = std::max(TexDesc.Width  >> DSVDesc.MostDetailedMip, 1U);
             m_FramebufferHeight = std::max(TexDesc.Height >> DSVDesc.MostDetailedMip, 1U);
@@ -519,7 +519,7 @@ inline bool DeviceContextBase<BaseInterface> :: SetRenderTargets( Uint32 NumRend
 }
 
 template<typename BaseInterface>
-inline void DeviceContextBase<BaseInterface> :: GetRenderTargets( Uint32 &NumRenderTargets, ITextureView **ppRTVs, ITextureView **ppDSV )
+inline void DeviceContextBase<BaseInterface> :: GetRenderTargets( Uint32 &NumRenderTargets, ITextureView** ppRTVs, ITextureView** ppDSV )
 {
     NumRenderTargets = m_NumBoundRenderTargets;
 
@@ -543,11 +543,11 @@ inline void DeviceContextBase<BaseInterface> :: GetRenderTargets( Uint32 &NumRen
 
     if ( ppDSV )
     {
-        VERIFY( *ppDSV == nullptr, "Non-null DSV pointer found" );
+        VERIFY(* ppDSV == nullptr, "Non-null DSV pointer found" );
         if ( m_pBoundDepthStencil )
             m_pBoundDepthStencil->QueryInterface( IID_TextureView, reinterpret_cast<IObject**>(ppDSV) );
         else
-            *ppDSV = nullptr;
+           * ppDSV = nullptr;
     }
 }
 

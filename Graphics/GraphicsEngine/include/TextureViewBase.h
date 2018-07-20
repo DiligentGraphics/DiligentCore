@@ -37,7 +37,8 @@ namespace Diligent
 /// Template class implementing base functionality for a texture view interface
 
 /// \tparam BaseInterface - base interface that this class will inheret 
-///                         (Diligent::ITextureViewD3D11, Diligent::ITextureViewD3D12 or Diligent::ITextureViewGL).
+///                         (Diligent::ITextureViewD3D11, Diligent::ITextureViewD3D12,
+///                          Diligent::ITextureViewGL or Diligent::ITextureViewVk).
 template<class BaseInterface>
 class TextureViewBase : public DeviceObjectBase<BaseInterface, TextureViewDesc>
 {
@@ -52,11 +53,11 @@ public:
 	/// \param bIsDefaultView - flag indicating if the view is default view, and is thus
 	///						    part of the texture object. In this case the view will attach 
 	///							to the texture's reference counters.
-    TextureViewBase( IReferenceCounters *pRefCounters,
-                     IRenderDevice *pDevice,
+    TextureViewBase( IReferenceCounters*    pRefCounters,
+                     IRenderDevice*         pDevice,
                      const TextureViewDesc& ViewDesc, 
-                     class ITexture *pTexture,
-                     bool bIsDefaultView ) :
+                     class ITexture*        pTexture,
+                     bool                   bIsDefaultView ) :
         // Default views are created as part of the texture, so we cannot not keep strong 
         // reference to the texture to avoid cyclic links. Instead, we will attach to the 
         // reference counters of the texture.
@@ -117,7 +118,7 @@ protected:
     Diligent::RefCntAutoPtr<ISampler> m_pSampler;
 
     /// Raw pointer to the texture
-    ITexture *m_pTexture;
+    ITexture* const m_pTexture;
 
     /// Strong reference to the texture. Used for non-default views
     /// to keep the texture alive

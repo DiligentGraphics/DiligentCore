@@ -68,6 +68,8 @@ public:
     
     virtual void CreateSampler(const SamplerDesc& SamplerDesc, ISampler **ppSampler)override final;
 
+    virtual void CreateFence(const FenceDesc& Desc, IFence** ppFence)override final;
+
     virtual ID3D12Device* GetD3D12Device()override final{return m_pd3d12Device;}
     
     virtual void CreateTextureFromD3DResource(ID3D12Resource *pd3d12Texture, ITexture **ppTexture)override final;

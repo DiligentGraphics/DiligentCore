@@ -39,9 +39,9 @@ class IBuffer;
 
 /// Template class implementing base functionality for a buffer view object
 
-/// \tparam BaseInterface - base interface that this class will inheret 
-///                         (Diligent::IBufferViewD3D11, Diligent::IBufferViewD3D12 or Diligent::IBufferViewGL).
-/// \tparam BuffViewObjAllocator - type of the allocator that is used to allocate memory for the buffer view object instances 
+/// \tparam BaseInterface - base interface that this class will inheret
+///                         (Diligent::IBufferViewD3D11, Diligent::IBufferViewD3D12,
+///                          Diligent::IBufferViewGL or Diligent::IBufferViewVk).
 template<class BaseInterface>
 class BufferViewBase : public DeviceObjectBase<BaseInterface, BufferViewDesc>
 {
@@ -55,11 +55,11 @@ public:
 	/// \param bIsDefaultView - flag indicating if the view is default view, and is thus
 	///						    part of the buffer object. In this case the view will attach 
 	///							to the buffer's reference counters.
-    BufferViewBase( IReferenceCounters *pRefCounters,
-                    IRenderDevice *pDevice,
+    BufferViewBase( IReferenceCounters*   pRefCounters,
+                    IRenderDevice*        pDevice,
                     const BufferViewDesc& ViewDesc, 
-                    IBuffer *pBuffer,
-                    bool bIsDefaultView ) :
+                    IBuffer*              pBuffer,
+                    bool                  bIsDefaultView ) :
         // Default views are created as part of the buffer, so we cannot not keep strong 
         // reference to the buffer to avoid cyclic links. Instead, we will attach to the 
         // reference counters of the buffer.

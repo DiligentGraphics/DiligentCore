@@ -69,7 +69,7 @@ static const int DSInd = GetShaderTypeIndex(SHADER_TYPE_DOMAIN);
 static const int CSInd = GetShaderTypeIndex(SHADER_TYPE_COMPUTE);
 
 template<typename TNameCompare>
-SHADER_VARIABLE_TYPE GetShaderVariableType(SHADER_VARIABLE_TYPE DefaultVariableType, const ShaderVariableDesc *VariableDesc, Uint32 NumVars, TNameCompare NameCompare)
+SHADER_VARIABLE_TYPE GetShaderVariableType(SHADER_VARIABLE_TYPE DefaultVariableType, const ShaderVariableDesc* VariableDesc, Uint32 NumVars, TNameCompare NameCompare)
 {
     for (Uint32 v = 0; v < NumVars; ++v)
     {
@@ -82,7 +82,7 @@ SHADER_VARIABLE_TYPE GetShaderVariableType(SHADER_VARIABLE_TYPE DefaultVariableT
     return DefaultVariableType;
 }
 
-inline SHADER_VARIABLE_TYPE GetShaderVariableType(const Char* Name, SHADER_VARIABLE_TYPE DefaultVariableType, const ShaderVariableDesc *VariableDesc, Uint32 NumVars)
+inline SHADER_VARIABLE_TYPE GetShaderVariableType(const Char* Name, SHADER_VARIABLE_TYPE DefaultVariableType, const ShaderVariableDesc* VariableDesc, Uint32 NumVars)
 {
     return GetShaderVariableType(DefaultVariableType, VariableDesc, NumVars, 
         [&](const char *VarName)
@@ -117,7 +117,7 @@ inline SHADER_VARIABLE_TYPE GetShaderVariableType(const String& Name, const Shad
 
 struct ShaderVariableBase : public IShaderVariable
 {
-    ShaderVariableBase(IObject &Owner) : 
+    ShaderVariableBase(IObject& Owner) : 
         // Shader variables are always created as part of the shader, or 
         // shader resource binding, so we must provide owner pointer to 
         // the base class constructor
@@ -145,7 +145,7 @@ struct ShaderVariableBase : public IShaderVariable
         return m_Owner.Release();
     }
 
-    virtual void QueryInterface( const INTERFACE_ID &IID, IObject **ppInterface )override final
+    virtual void QueryInterface( const INTERFACE_ID& IID, IObject** ppInterface )override final
     {
         if( ppInterface == nullptr )
             return;
@@ -165,7 +165,7 @@ protected:
 /// Implementation of a dummy shader variable that silently ignores all operations
 struct DummyShaderVariable : ShaderVariableBase
 {
-    DummyShaderVariable(IObject &Owner) :
+    DummyShaderVariable(IObject& Owner) :
         ShaderVariableBase(Owner)
     {}
 
@@ -184,10 +184,12 @@ struct DummyShaderVariable : ShaderVariableBase
 
 /// Template class implementing base functionality for a shader object
 
-/// \tparam BaseInterface - base interface that this class will inheret 
-///                         (Diligent::IShaderD3D11, Diligent::IShaderD3D12 or Diligent::IShaderGL).
+/// \tparam BaseInterface - base interface that this class will inheret
+///                         (Diligent::IShaderD3D11, Diligent::IShaderD3D12,
+///                          Diligent::IShaderGL or Diligent::IShaderVk).
 /// \tparam RenderDeviceBaseInterface - base interface for the render device
-///                                     (Diligent::IRenderDeviceD3D11, Diligent::IRenderDeviceD3D12, Diligent::IRenderDeviceGL, or Diligent::IRenderDeviceGLES).
+///                                     (Diligent::IRenderDeviceD3D11, Diligent::IRenderDeviceD3D12,
+///                                      Diligent::IRenderDeviceGL, Diligent::IRenderDeviceGLES or Diligent::IRenderDeviceVk).
 template<class BaseInterface, class RenderDeviceBaseInterface>
 class ShaderBase : public DeviceObjectBase<BaseInterface, ShaderDesc>
 {
@@ -199,11 +201,11 @@ public:
 	/// \param ShdrDesc - shader description.
 	/// \param bIsDeviceInternal - flag indicating if the shader is an internal device object and 
 	///							   must not keep a strong reference to the device.
-    ShaderBase( IReferenceCounters *pRefCounters, IRenderDevice *pDevice, const ShaderDesc& ShdrDesc, bool bIsDeviceInternal = false ) :
+    ShaderBase( IReferenceCounters* pRefCounters, IRenderDevice* pDevice, const ShaderDesc& ShdrDesc, bool bIsDeviceInternal = false ) :
         TDeviceObjectBase( pRefCounters, pDevice, ShdrDesc, bIsDeviceInternal ),
         m_DummyShaderVar(*this),
-        m_VariablesDesc(ShdrDesc.NumVariables, ShaderVariableDesc(), STD_ALLOCATOR_RAW_MEM(ShaderVariableDesc, GetRawAllocator(), "Allocator for vector<ShaderVariableDesc>") ),
-        m_StringPool(ShdrDesc.NumVariables + ShdrDesc.NumStaticSamplers, String(), STD_ALLOCATOR_RAW_MEM(String, GetRawAllocator(), "Allocator for vector<String>")),
+        m_VariablesDesc (ShdrDesc.NumVariables, ShaderVariableDesc(), STD_ALLOCATOR_RAW_MEM(ShaderVariableDesc, GetRawAllocator(), "Allocator for vector<ShaderVariableDesc>") ),
+        m_StringPool    (ShdrDesc.NumVariables + ShdrDesc.NumStaticSamplers, String(), STD_ALLOCATOR_RAW_MEM(String, GetRawAllocator(), "Allocator for vector<String>")),
         m_StaticSamplers(ShdrDesc.NumStaticSamplers, StaticSamplerDesc(), STD_ALLOCATOR_RAW_MEM(StaticSamplerDesc, GetRawAllocator(), "Allocator for vector<StaticSamplerDesc>") )
     {
         auto Str = m_StringPool.begin();

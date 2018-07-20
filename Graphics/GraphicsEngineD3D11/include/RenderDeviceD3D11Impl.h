@@ -55,7 +55,9 @@ public:
     
     virtual void CreateSampler(const SamplerDesc& SamplerDesc, ISampler** ppSampler)override final;
 
-    virtual void CreatePipelineState( const PipelineStateDesc &PipelineDesc, IPipelineState **ppPipelineState )override final;
+    virtual void CreatePipelineState(const PipelineStateDesc &PipelineDesc, IPipelineState **ppPipelineState)override final;
+
+    virtual void CreateFence(const FenceDesc& Desc, IFence** ppFence)override final;
 
     ID3D11Device* GetD3D11Device()override final{return m_pd3d11Device;}
 

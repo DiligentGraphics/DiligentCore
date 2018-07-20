@@ -36,17 +36,19 @@ namespace Diligent
 {
 
 void ValidateTextureDesc(const TextureDesc& TexDesc);
-void ValidateUpdateDataParams( const TextureDesc &TexDesc, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData );
-void VliadateCopyTextureDataParams( const TextureDesc &SrcTexDesc, Uint32 SrcMipLevel, Uint32 SrcSlice, const Box *pSrcBox,
-                                    const TextureDesc &DstTexDesc, Uint32 DstMipLevel, Uint32 DstSlice,
+void ValidateUpdateDataParams( const TextureDesc &TexDesc, Uint32 MipLevel, Uint32 Slice, const Box& DstBox, const TextureSubResData& SubresData );
+void VliadateCopyTextureDataParams( const TextureDesc& SrcTexDesc, Uint32 SrcMipLevel, Uint32 SrcSlice, const Box* pSrcBox,
+                                    const TextureDesc& DstTexDesc, Uint32 DstMipLevel, Uint32 DstSlice,
                                     Uint32 DstX, Uint32 DstY, Uint32 DstZ );
 
 /// Base implementation of the ITexture interface
 
-/// \tparam BaseInterface - base interface that this class will inheret 
-///                         (Diligent::ITextureD3D11, Diligent::ITextureD3D12 or Diligent::ITextureGL).
-/// \tparam TTextureViewImpl - type of the texture view implementation 
-///                            (Diligent::TextureViewD3D11Impl, Diligent::TextureViewD3D12Impl or Diligent::TextureViewGLImpl).
+/// \tparam BaseInterface - base interface that this class will inheret
+///                         (Diligent::ITextureD3D11, Diligent::ITextureD3D12,
+///                          Diligent::ITextureGL or Diligent::ITextureVk).
+/// \tparam TTextureViewImpl - type of the texture view implementation
+///                            (Diligent::TextureViewD3D11Impl, Diligent::TextureViewD3D12Impl,
+///                             Diligent::TextureViewGLImpl or Diligent::TextureViewVkImpl).
 /// \tparam TTexViewObjAllocator - type of the allocator that is used to allocate memory for the texture view object instances
 template<class BaseInterface, class TTextureViewImpl, class TTexViewObjAllocator>
 class TextureBase : public DeviceObjectBase<BaseInterface, TextureDesc>
@@ -61,11 +63,11 @@ public:
 	/// \param Desc - texture description
 	/// \param bIsDeviceInternal - flag indicating if the texture is an internal device object and 
 	///							   must not keep a strong reference to the device
-    TextureBase( IReferenceCounters *pRefCounters, 
-                 TTexViewObjAllocator &TexViewObjAllocator,
-                 IRenderDevice *pDevice, 
-                 const TextureDesc& Desc, 
-                 bool bIsDeviceInternal = false ) :
+    TextureBase( IReferenceCounters*    pRefCounters, 
+                 TTexViewObjAllocator&  TexViewObjAllocator,
+                 IRenderDevice*         pDevice, 
+                 const TextureDesc&     Desc, 
+                 bool                   bIsDeviceInternal = false ) :
         TDeviceObjectBase( pRefCounters, pDevice, Desc, bIsDeviceInternal ),
 #ifdef _DEBUG
         m_dbgTexViewObjAllocator(TexViewObjAllocator),
@@ -108,17 +110,17 @@ public:
    
     /// Implementaiton of ITexture::CreateView(); calls CreateViewInternal() virtual function that
     /// creates texture view for the specific engine implementation.
-    virtual void CreateView( const struct TextureViewDesc &ViewDesc, ITextureView **ppView )override
+    virtual void CreateView( const struct TextureViewDesc& ViewDesc, ITextureView** ppView )override
     {
         CreateViewInternal( ViewDesc, ppView, false );
     }
 
     /// Base implementaiton of ITexture::UpdateData(); validates input parameters
-    virtual void UpdateData( IDeviceContext *pContext, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData )override = 0;
+    virtual void UpdateData( IDeviceContext* pContext, Uint32 MipLevel, Uint32 Slice, const Box& DstBox, const TextureSubResData& SubresData )override = 0;
 
     /// Base implementaiton of ITexture::CopyData(); validates input parameters
-    virtual void CopyData( IDeviceContext *pContext,
-                           ITexture *pSrcTexture,
+    virtual void CopyData( IDeviceContext* pContext,
+                           ITexture* pSrcTexture,
                            Uint32 SrcMipLevel,
                            Uint32 SrcSlice,
                            const Box *pSrcBox,
@@ -129,10 +131,10 @@ public:
                            Uint32 DstZ )override = 0;
 
     /// Base implementaiton of ITexture::Map()
-    virtual void Map( IDeviceContext *pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags, MappedTextureSubresource &MappedData )override = 0;
+    virtual void Map( IDeviceContext* pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags, MappedTextureSubresource& MappedData )override = 0;
 
     /// Base implementaiton of ITexture::Unmap()
-    virtual void Unmap( IDeviceContext *pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags )override = 0;
+    virtual void Unmap( IDeviceContext* pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags )override = 0;
 
     /// Creates default texture views.
 
@@ -148,7 +150,7 @@ public:
 protected:
     
     /// Pure virtual function that creates texture view for the specific engine implementation.
-    virtual void CreateViewInternal( const struct TextureViewDesc &ViewDesc, ITextureView **ppView, bool bIsDefaultView ) = 0;
+    virtual void CreateViewInternal( const struct TextureViewDesc& ViewDesc, ITextureView** ppView, bool bIsDefaultView ) = 0;
 
 #ifdef _DEBUG
     TTexViewObjAllocator &m_dbgTexViewObjAllocator;
@@ -176,12 +178,12 @@ protected:
         }
     }
 
-    void CorrectTextureViewDesc( struct TextureViewDesc &ViewDesc );
+    void CorrectTextureViewDesc( struct TextureViewDesc& ViewDesc );
 };
 
 
 template<class BaseInterface, class TTextureViewImpl, class TTexViewObjAllocator>
-void TextureBase<BaseInterface, TTextureViewImpl, TTexViewObjAllocator> :: CorrectTextureViewDesc(struct TextureViewDesc &ViewDesc)
+void TextureBase<BaseInterface, TTextureViewImpl, TTexViewObjAllocator> :: CorrectTextureViewDesc(struct TextureViewDesc& ViewDesc)
 {
 #define TEX_VIEW_VALIDATION_ERROR(...) LOG_ERROR_AND_THROW( "Texture view \"", ViewDesc.Name ? ViewDesc.Name : "", "\": ", ##__VA_ARGS__ )
 
@@ -441,14 +443,15 @@ void TextureBase<BaseInterface, TTextureViewImpl, TTexViewObjAllocator> :: Creat
 
 
 template<class BaseInterface, class TTextureViewImpl, class TTexViewObjAllocator>
-void TextureBase<BaseInterface, TTextureViewImpl, TTexViewObjAllocator> :: UpdateData( IDeviceContext *pContext, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData )
+void TextureBase<BaseInterface, TTextureViewImpl, TTexViewObjAllocator> :: UpdateData( IDeviceContext* pContext, Uint32 MipLevel, Uint32 Slice, const Box& DstBox, const TextureSubResData& SubresData )
 {
     ValidateUpdateDataParams( this->m_Desc, MipLevel, Slice, DstBox, SubresData );
 }
 
 template<class BaseInterface, class TTextureViewImpl, class TTexViewObjAllocator>
-void TextureBase<BaseInterface, TTextureViewImpl, TTexViewObjAllocator> :: CopyData( IDeviceContext *pContext,
-                                                                ITexture *pSrcTexture,
+void TextureBase<BaseInterface, TTextureViewImpl, TTexViewObjAllocator> :: CopyData(
+                                                                IDeviceContext* pContext,
+                                                                ITexture* pSrcTexture,
                                                                 Uint32 SrcMipLevel,
                                                                 Uint32 SrcSlice,
                                                                 const Box *pSrcBox,
@@ -465,12 +468,12 @@ void TextureBase<BaseInterface, TTextureViewImpl, TTexViewObjAllocator> :: CopyD
 }
 
 template<class BaseInterface, class TTextureViewImpl, class TTexViewObjAllocator>
-void TextureBase<BaseInterface, TTextureViewImpl, TTexViewObjAllocator> :: Map( IDeviceContext *pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags, MappedTextureSubresource &MappedData )
+void TextureBase<BaseInterface, TTextureViewImpl, TTexViewObjAllocator> :: Map( IDeviceContext* pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags, MappedTextureSubresource &MappedData )
 {
 }
 
 template<class BaseInterface, class TTextureViewImpl, class TTexViewObjAllocator>
-void TextureBase<BaseInterface, TTextureViewImpl, TTexViewObjAllocator> :: Unmap( IDeviceContext *pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags )
+void TextureBase<BaseInterface, TTextureViewImpl, TTexViewObjAllocator> :: Unmap( IDeviceContext* pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags )
 {
 }
 

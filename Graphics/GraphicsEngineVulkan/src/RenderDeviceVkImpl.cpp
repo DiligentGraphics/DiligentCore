@@ -32,6 +32,7 @@
 #include "BufferVkImpl.h"
 #include "ShaderResourceBindingVkImpl.h"
 #include "DeviceContextVkImpl.h"
+#include "FenceVkImpl.h"
 #include "EngineMemory.h"
 
 namespace Diligent
@@ -57,7 +58,8 @@ RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters*                    
         sizeof(ShaderVkImpl),
         sizeof(SamplerVkImpl),
         sizeof(PipelineStateVkImpl),
-        sizeof(ShaderResourceBindingVkImpl)
+        sizeof(ShaderResourceBindingVkImpl),
+        sizeof(FenceVkImpl)
     },
     m_VulkanInstance(Instance),
     m_PhysicalDevice(std::move(PhysicalDevice)),
@@ -547,6 +549,19 @@ void RenderDeviceVkImpl :: CreateSampler(const SamplerDesc& SamplerDesc, ISample
                 OnCreateDeviceObject( pSamplerVk );
                 m_SamplersRegistry.Add( SamplerDesc, *ppSampler );
             }
+        }
+    );
+}
+
+void RenderDeviceVkImpl::CreateFence(const FenceDesc& Desc, IFence** ppFence)
+{
+    CreateDeviceObject( "Fence", Desc, ppFence, 
+        [&]()
+        {
+            FenceVkImpl* pFenceVk( NEW_RC_OBJ(m_FenceAllocator, "FenceVkImpl instance", FenceVkImpl)
+                                             (this, Desc) );
+            pFenceVk->QueryInterface( IID_Fence, reinterpret_cast<IObject**>(ppFence) );
+            OnCreateDeviceObject( pFenceVk );
         }
     );
 }

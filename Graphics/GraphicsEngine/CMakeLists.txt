@@ -10,6 +10,7 @@ set(INCLUDE
     include/DeviceContextBase.h
     include/DeviceObjectBase.h
     include/EngineMemory.h
+    include/FenceBase.h
     include/pch.h
     include/PipelineStateBase.h
     include/RenderDeviceBase.h
@@ -33,6 +34,7 @@ set(INTERFACE
     interface/DeviceCaps.h
     interface/DeviceContext.h
     interface/DeviceObject.h
+    interface/Fence.h
     interface/GraphicsTypes.h
     interface/InputLayout.h
     interface/MapHelper.h

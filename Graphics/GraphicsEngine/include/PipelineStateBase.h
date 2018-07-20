@@ -38,11 +38,12 @@ namespace Diligent
 
 /// Template class implementing base functionality for a pipeline state object.
 
-/// \tparam BaseInterface - base interface that this class will inheret 
-///                         (Diligent::IPipelineStateD3D11, Diligent::IPipelineStateD3D12 or Diligent::IPipelineStateGL).
+/// \tparam BaseInterface - base interface that this class will inheret
+///                         (Diligent::IPipelineStateD3D11, Diligent::IPipelineStateD3D12,
+///                          Diligent::IPipelineStateGL or Diligent::IPipelineStateVk).
 /// \tparam RenderDeviceBaseInterface - base interface for the render device
-///                                     (Diligent::IRenderDeviceD3D11, Diligent::IRenderDeviceD3D12, Diligent::IRenderDeviceGL,
-///                                      or Diligent::IRenderDeviceGLES).
+///                                     (Diligent::IRenderDeviceD3D11, Diligent::IRenderDeviceD3D12,
+///                                      Diligent::IRenderDeviceGL, Diligent::IRenderDeviceGLES or Diligent::IRenderDeviceVk).
 template<class BaseInterface, class RenderDeviceBaseInterface>
 class PipelineStateBase : public DeviceObjectBase<BaseInterface, PipelineStateDesc>
 {
@@ -55,7 +56,10 @@ public:
 	/// \param PSODesc - pipeline state description.
 	/// \param bIsDeviceInternal - flag indicating if the blend state is an internal device object and 
 	///							   must not keep a strong reference to the device.
-    PipelineStateBase( IReferenceCounters *pRefCounters, IRenderDevice *pDevice, const PipelineStateDesc& PSODesc, bool bIsDeviceInternal = false ) :
+    PipelineStateBase( IReferenceCounters*      pRefCounters, 
+                       IRenderDevice*           pDevice,
+                       const PipelineStateDesc& PSODesc,
+                       bool                     bIsDeviceInternal = false ) :
         TDeviceObjectBase( pRefCounters, pDevice, PSODesc, bIsDeviceInternal ),
         m_LayoutElements( PSODesc.GraphicsPipeline.InputLayout.NumElements, LayoutElement(), STD_ALLOCATOR_RAW_MEM(LayoutElement, GetRawAllocator(), "Allocator for vector<LayoutElement>" ) ),
         m_NumShaders(0)
@@ -222,12 +226,12 @@ public:
 
     // This function only compares shader resource layout hashes, so
     // it can potentially give false negatives
-    bool IsIncompatibleWith(IPipelineState *pPSO)const
+    bool IsIncompatibleWith(IPipelineState* pPSO)const
     {
         return m_ShaderResourceLayoutHash != ValidatedCast<PipelineStateBase>(pPSO)->m_ShaderResourceLayoutHash;
     }
 
-    virtual void BindShaderResources( IResourceMapping *pResourceMapping, Uint32 Flags )override
+    virtual void BindShaderResources( IResourceMapping* pResourceMapping, Uint32 Flags )override
     {
         for(Uint32 s=0; s < m_NumShaders; ++s)
             m_ppShaders[s]->BindResources(pResourceMapping, Flags);

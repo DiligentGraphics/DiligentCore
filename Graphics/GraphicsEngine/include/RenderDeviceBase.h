@@ -46,7 +46,7 @@ namespace std
     template<>
     struct hash<Diligent::SamplerDesc>
     {
-        size_t operator()( const Diligent::SamplerDesc &SamDesc ) const
+        size_t operator()( const Diligent::SamplerDesc& SamDesc ) const
         {
                                           // Sampler name is ignored in comparison operator
                                           // and should not be hashed
@@ -72,7 +72,7 @@ namespace std
     template<>
     struct hash<Diligent::StencilOpDesc>
     {
-        size_t operator()( const Diligent::StencilOpDesc &StOpDesc ) const
+        size_t operator()( const Diligent::StencilOpDesc& StOpDesc ) const
         {
             return Diligent::ComputeHash( static_cast<int>( StOpDesc.StencilFailOp ),
                                           static_cast<int>( StOpDesc.StencilDepthFailOp ),
@@ -85,7 +85,7 @@ namespace std
     template<>
     struct hash<Diligent::DepthStencilStateDesc>
     {
-        size_t operator()( const Diligent::DepthStencilStateDesc &DepthStencilDesc ) const
+        size_t operator()( const Diligent::DepthStencilStateDesc& DepthStencilDesc ) const
         {
             return Diligent::ComputeHash( DepthStencilDesc.DepthEnable,
                                           DepthStencilDesc.DepthWriteEnable,
@@ -102,7 +102,7 @@ namespace std
     template<>
     struct hash<Diligent::RasterizerStateDesc>
     {
-        size_t operator()( const Diligent::RasterizerStateDesc &RasterizerDesc ) const
+        size_t operator()( const Diligent::RasterizerStateDesc& RasterizerDesc ) const
         {
             return Diligent::ComputeHash( static_cast<int>( RasterizerDesc.FillMode ),
                                           static_cast<int>( RasterizerDesc.CullMode ),
@@ -120,7 +120,7 @@ namespace std
     template<>
     struct hash<Diligent::BlendStateDesc>
     {
-        size_t operator()( const Diligent::BlendStateDesc &BSDesc ) const
+        size_t operator()( const Diligent::BlendStateDesc& BSDesc ) const
         {
             std::size_t Seed = 0;
             for( int i = 0; i < Diligent::BlendStateDesc::MaxRenderTargets; ++i )
@@ -148,7 +148,7 @@ namespace std
     template<>
     struct hash<Diligent::TextureViewDesc>
     {
-        size_t operator()( const Diligent::TextureViewDesc &TexViewDesc ) const
+        size_t operator()( const Diligent::TextureViewDesc& TexViewDesc ) const
         {
             std::size_t Seed = 0;
             Diligent::HashCombine( Seed,
@@ -187,18 +187,19 @@ public:
     /// \param pRefCounters - reference counters object that controls the lifetime of this render device
     /// \param RawMemAllocator - allocator that will be used to allocate memory for all device objects (including render device itself)
     /// \param NumDeferredContexts - number of deferred device contexts 
-    /// \param TextureObjSize - size of the texture object, in bytes
-    /// \param TexViewObjSize - size of the texture view object, in bytes
-    /// \param BufferObjSize - size of the buffer object, in bytes
-    /// \param BuffViewObjSize - size of the buffer view object, in bytes
-    /// \param ShaderObjSize - size of the shader object, in bytes
-    /// \param SamplerObjSize - size of the sampler object, in bytes
-    /// \param PSOSize - size of the pipeline state object, in bytes
-    /// \param SRBSize - size of the shader resource binding object, in bytes
+    /// \param TextureObjSize   - size of the texture object, in bytes
+    /// \param TexViewObjSize   - size of the texture view object, in bytes
+    /// \param BufferObjSize    - size of the buffer object, in bytes
+    /// \param BuffViewObjSize  - size of the buffer view object, in bytes
+    /// \param ShaderObjSize    - size of the shader object, in bytes
+    /// \param SamplerObjSize   - size of the sampler object, in bytes
+    /// \param PSOSize          - size of the pipeline state object, in bytes
+    /// \param SRBSize          - size of the shader resource binding object, in bytes
+    /// \param FenceSize        - size of the fence object, in bytes
     /// \remarks Render device uses fixed block allocators (see FixedBlockMemoryAllocator) to allocate memory for
     ///          device objects. The object sizes provided to constructor are used to initialize the allocators.
-    RenderDeviceBase(IReferenceCounters *pRefCounters,
-                     IMemoryAllocator &RawMemAllocator, 
+    RenderDeviceBase(IReferenceCounters* pRefCounters,
+                     IMemoryAllocator&   RawMemAllocator, 
                      Uint32 NumDeferredContexts,
                      size_t TextureObjSize, 
                      size_t TexViewObjSize,
@@ -207,21 +208,23 @@ public:
                      size_t ShaderObjSize, 
                      size_t SamplerObjSize,
                      size_t PSOSize,
-                     size_t SRBSize) :
-        TObjectBase(pRefCounters),
-        m_SamplersRegistry(RawMemAllocator, "sampler"),
-        m_TextureFormatsInfo( TEX_FORMAT_NUM_FORMATS, TextureFormatInfoExt(), STD_ALLOCATOR_RAW_MEM(TextureFormatInfoExt, RawMemAllocator, "Allocator for vector<TextureFormatInfoExt>") ),
-        m_TexFmtInfoInitFlags( TEX_FORMAT_NUM_FORMATS, false, STD_ALLOCATOR_RAW_MEM(bool, RawMemAllocator, "Allocator for vector<bool>") ),
-        m_wpDeferredContexts(NumDeferredContexts, RefCntWeakPtr<IDeviceContext>(), STD_ALLOCATOR_RAW_MEM(RefCntWeakPtr<IDeviceContext>, RawMemAllocator, "Allocator for vector< RefCntWeakPtr<IDeviceContext> >")),
-        m_TexObjAllocator(RawMemAllocator, TextureObjSize, 64),
-        m_TexViewObjAllocator(RawMemAllocator, TexViewObjSize, 64),
-        m_BufObjAllocator(RawMemAllocator, BufferObjSize, 128),
-        m_BuffViewObjAllocator(RawMemAllocator, BuffViewObjSize, 128),
-        m_ShaderObjAllocator(RawMemAllocator, ShaderObjSize, 32),
-        m_SamplerObjAllocator(RawMemAllocator, SamplerObjSize, 32),
-        m_PSOAllocator(RawMemAllocator, PSOSize, 128),
-        m_SRBAllocator(RawMemAllocator, SRBSize, 1024),
-        m_ResMappingAllocator(RawMemAllocator, sizeof(ResourceMappingImpl), 16)
+                     size_t SRBSize,
+                     size_t FenceSize) :
+        TObjectBase             (pRefCounters),
+        m_SamplersRegistry      (RawMemAllocator, "sampler"),
+        m_TextureFormatsInfo    (TEX_FORMAT_NUM_FORMATS, TextureFormatInfoExt(), STD_ALLOCATOR_RAW_MEM(TextureFormatInfoExt, RawMemAllocator, "Allocator for vector<TextureFormatInfoExt>") ),
+        m_TexFmtInfoInitFlags   (TEX_FORMAT_NUM_FORMATS, false, STD_ALLOCATOR_RAW_MEM(bool, RawMemAllocator, "Allocator for vector<bool>") ),
+        m_wpDeferredContexts    (NumDeferredContexts, RefCntWeakPtr<IDeviceContext>(), STD_ALLOCATOR_RAW_MEM(RefCntWeakPtr<IDeviceContext>, RawMemAllocator, "Allocator for vector< RefCntWeakPtr<IDeviceContext> >")),
+        m_TexObjAllocator       (RawMemAllocator, TextureObjSize, 64),
+        m_TexViewObjAllocator   (RawMemAllocator, TexViewObjSize, 64),
+        m_BufObjAllocator       (RawMemAllocator, BufferObjSize, 128),
+        m_BuffViewObjAllocator  (RawMemAllocator, BuffViewObjSize, 128),
+        m_ShaderObjAllocator    (RawMemAllocator, ShaderObjSize, 32),
+        m_SamplerObjAllocator   (RawMemAllocator, SamplerObjSize, 32),
+        m_PSOAllocator          (RawMemAllocator, PSOSize, 128),
+        m_SRBAllocator          (RawMemAllocator, SRBSize, 1024),
+        m_FenceAllocator        (RawMemAllocator, FenceSize, 16),
+        m_ResMappingAllocator   (RawMemAllocator, sizeof(ResourceMappingImpl), 16)
     {
         // Initialize texture format info
         for( Uint32 Fmt = TEX_FORMAT_UNKNOWN; Fmt < TEX_FORMAT_NUM_FORMATS; ++Fmt )
@@ -289,7 +292,7 @@ public:
     }
 
     /// Implementation of IRenderDevice::GetTextureFormatInfo().
-    virtual const TextureFormatInfo &GetTextureFormatInfo(TEXTURE_FORMAT TexFormat)override final
+    virtual const TextureFormatInfo& GetTextureFormatInfo(TEXTURE_FORMAT TexFormat)override final
     {
         VERIFY( TexFormat >= TEX_FORMAT_UNKNOWN && TexFormat < TEX_FORMAT_NUM_FORMATS, "Texture format out of range" );
         const auto& TexFmtInfo = m_TextureFormatsInfo[TexFormat];
@@ -298,7 +301,7 @@ public:
     }
 
     /// Implementation of IRenderDevice::GetTextureFormatInfoExt().
-    virtual const TextureFormatInfoExt &GetTextureFormatInfoExt( TEXTURE_FORMAT TexFormat )override final
+    virtual const TextureFormatInfoExt& GetTextureFormatInfoExt( TEXTURE_FORMAT TexFormat )override final
     {
         VERIFY( TexFormat >= TEX_FORMAT_UNKNOWN && TexFormat < TEX_FORMAT_NUM_FORMATS, "Texture format out of range" );
         const auto& TexFmtInfo = m_TextureFormatsInfo[TexFormat];
@@ -312,21 +315,21 @@ public:
         return TexFmtInfo;
     }
 
-    void OnCreateDeviceObject( IDeviceObject *pNewObject )
+    void OnCreateDeviceObject( IDeviceObject* pNewObject )
     {
     }
 
     StateObjectsRegistry<SamplerDesc>& GetSamplerRegistry(){ return m_SamplersRegistry; }
     
     /// Set weak reference to the immediate context
-    void SetImmediateContext(IDeviceContext *pImmediateContext)
+    void SetImmediateContext(IDeviceContext* pImmediateContext)
     {
         VERIFY( m_wpImmediateContext.Lock() == nullptr, "Immediate context has already been set" );
         m_wpImmediateContext = pImmediateContext;
     }
 
     /// Set weak reference to the deferred context
-    void SetDeferredContext(size_t Ctx, IDeviceContext *pDeferredCtx)
+    void SetDeferredContext(size_t Ctx, IDeviceContext* pDeferredCtx)
     {
         VERIFY( m_wpDeferredContexts[Ctx].Lock() == nullptr, "Deferred context has already been set" );
         m_wpDeferredContexts[Ctx] = pDeferredCtx;
@@ -378,6 +381,7 @@ protected:
     FixedBlockMemoryAllocator m_PSOAllocator;            ///< Allocator for pipeline state objects
     FixedBlockMemoryAllocator m_SRBAllocator;            ///< Allocator for shader resource binding objects
     FixedBlockMemoryAllocator m_ResMappingAllocator;     ///< Allocator for resource mapping objects
+    FixedBlockMemoryAllocator m_FenceAllocator;          ///< Allocator for fence objects
 };
 
 
@@ -389,11 +393,11 @@ void RenderDeviceBase<BaseInterface>::CreateResourceMapping( const ResourceMappi
         return;
     VERIFY( *ppMapping == nullptr, "Overwriting reference to existing object may cause memory leaks" );
 
-    auto *pResourceMapping( NEW_RC_OBJ(m_ResMappingAllocator, "ResourceMappingImpl instance",  ResourceMappingImpl)(GetRawAllocator()) );
+    auto* pResourceMapping( NEW_RC_OBJ(m_ResMappingAllocator, "ResourceMappingImpl instance",  ResourceMappingImpl)(GetRawAllocator()) );
     pResourceMapping->QueryInterface( IID_ResourceMapping, reinterpret_cast<IObject**>(ppMapping) );
     if( MappingDesc.pEntries )
     {
-        for( auto *pEntry = MappingDesc.pEntries; pEntry->Name && pEntry->pObject; ++pEntry )
+        for( auto* pEntry = MappingDesc.pEntries; pEntry->Name && pEntry->pObject; ++pEntry )
         {
             (*ppMapping)->AddResourceArray( pEntry->Name, pEntry->ArrayIndex, &pEntry->pObject, 1, true );
         }
@@ -416,7 +420,7 @@ void RenderDeviceBase<BaseInterface> :: CreateDeviceObject( const Char *ObjectTy
     if(!ppObject)
         return;
 
-    VERIFY( *ppObject == nullptr, "Overwriting reference to existing object may cause memory leaks" );
+    VERIFY(*ppObject == nullptr, "Overwriting reference to existing object may cause memory leaks" );
     // Do not release *ppObject here!
     // Should this happen, RefCntAutoPtr<> will take care of this!
     //if( *ppObject )

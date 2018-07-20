@@ -31,6 +31,7 @@
 #include "BufferD3D12Impl.h"
 #include "ShaderResourceBindingD3D12Impl.h"
 #include "DeviceContextD3D12Impl.h"
+#include "FenceD3D12Impl.h"
 
 #include "EngineMemory.h"
 namespace Diligent
@@ -54,7 +55,8 @@ RenderDeviceD3D12Impl :: RenderDeviceD3D12Impl(IReferenceCounters*          pRef
         sizeof(ShaderD3D12Impl),
         sizeof(SamplerD3D12Impl),
         sizeof(PipelineStateD3D12Impl),
-        sizeof(ShaderResourceBindingD3D12Impl)
+        sizeof(ShaderResourceBindingD3D12Impl),
+        sizeof(FenceD3D12Impl)
     },
     m_pd3d12Device  (pd3d12Device),
     m_pCommandQueue (pCmdQueue),
@@ -583,6 +585,19 @@ void RenderDeviceD3D12Impl :: CreateSampler(const SamplerDesc& SamplerDesc, ISam
                 OnCreateDeviceObject( pSamplerD3D12 );
                 m_SamplersRegistry.Add( SamplerDesc, *ppSampler );
             }
+        }
+    );
+}
+
+void RenderDeviceD3D12Impl::CreateFence(const FenceDesc& Desc, IFence** ppFence)
+{
+    CreateDeviceObject( "Fence", Desc, ppFence, 
+        [&]()
+        {
+            FenceD3D12Impl* pFenceD3D12( NEW_RC_OBJ(m_FenceAllocator, "FenceD3D12Impl instance", FenceD3D12Impl)
+                                                   (this, Desc) );
+            pFenceD3D12->QueryInterface( IID_Fence, reinterpret_cast<IObject**>(ppFence) );
+            OnCreateDeviceObject( pFenceD3D12 );
         }
     );
 }

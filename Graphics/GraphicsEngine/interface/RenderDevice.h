@@ -39,6 +39,7 @@
 #include "TextureView.h"
 #include "BufferView.h"
 #include "PipelineState.h"
+#include "Fence.h"
 
 #include "DepthStencilState.h"
 #include "RasterizerState.h"
@@ -56,7 +57,7 @@ class IRenderDevice : public IObject
 {
 public:
     /// Queries the specific interface, see IObject::QueryInterface() for details
-    virtual void QueryInterface( const INTERFACE_ID &IID, IObject **ppInterface ) = 0;
+    virtual void QueryInterface( const INTERFACE_ID& IID, IObject** ppInterface ) = 0;
 
     /// Creates a new buffer object
 
@@ -76,7 +77,7 @@ public:
     /// ElementByteStride member of buffer description is set to default value (0).
     virtual void CreateBuffer(const BufferDesc& BuffDesc, 
                               const BufferData& BuffData, 
-                              IBuffer **ppBuffer) = 0;
+                              IBuffer**         ppBuffer) = 0;
 
     /// Creates a new shader object
 
@@ -86,8 +87,8 @@ public:
     ///                         shader interface will be stored. 
     ///                         The function calls AddRef(), so that the new object will contain 
     ///                         one refernce.
-    virtual void CreateShader(const ShaderCreationAttribs &CreationAttribs, 
-                              IShader **ppShader) = 0;
+    virtual void CreateShader(const ShaderCreationAttribs& CreationAttribs, 
+                              IShader**                    ppShader) = 0;
     
     /// Creates a new texture object
 
@@ -112,12 +113,12 @@ public:
     /// For a 15 x 6 x 4 3D texture, the following array of subresources should be provided:\n
     /// 15x6x4, 7x3x2, 3x1x1, 1x1x1
     virtual void CreateTexture(const TextureDesc& TexDesc, 
-                               const TextureData &Data, 
-                               ITexture **ppTexture) = 0;
+                               const TextureData& Data, 
+                               ITexture**         ppTexture) = 0;
 
     /// Creates a new sampler object
 
-    /// \param [in] SamDesc - Sampler description, see Diligent::SamplerDesc for details.
+    /// \param [in]  SamDesc   - Sampler description, see Diligent::SamplerDesc for details.
     /// \param [out] ppSampler - Address of the memory location where the pointer to the
     ///                          sampler interface will be stored. 
     ///                          The function calls AddRef(), so that the new object will contain 
@@ -126,27 +127,38 @@ public:
     ///         as an existing interface, the same interface will be returned.
     /// \note   In D3D11, 4096 unique sampler state objects can be created on a device at a time.        
     virtual void CreateSampler(const SamplerDesc& SamDesc, 
-                               ISampler **ppSampler) = 0;
+                               ISampler**         ppSampler) = 0;
 
     /// Creates a new resource mapping
 
-    /// \param [in] MappingDesc - Resource mapping description, see Diligent::ResourceMappingDesc for details.
-    /// \param [out] ppMapping - Address of the memory location where the pointer to the
-    ///                          resource mapping interface will be stored. 
-    ///                          The function calls AddRef(), so that the new object will contain 
-    ///                          one refernce.
-    virtual void CreateResourceMapping( const ResourceMappingDesc &MappingDesc, 
-                                        IResourceMapping **ppMapping ) = 0;
+    /// \param [in]  MappingDesc - Resource mapping description, see Diligent::ResourceMappingDesc for details.
+    /// \param [out] ppMapping   - Address of the memory location where the pointer to the
+    ///                            resource mapping interface will be stored. 
+    ///                            The function calls AddRef(), so that the new object will contain 
+    ///                            one refernce.
+    virtual void CreateResourceMapping( const ResourceMappingDesc& MappingDesc, 
+                                        IResourceMapping**         ppMapping ) = 0;
 
     /// Creates a new pipeline state object
 
-    /// \param [in] PipelineDesc - Pipeline state description, see Diligent::PipelineStateDesc for details.
+    /// \param [in]  PipelineDesc    - Pipeline state description, see Diligent::PipelineStateDesc for details.
     /// \param [out] ppPipelineState - Address of the memory location where the pointer to the
     ///                                pipeline state interface will be stored. 
     ///                                The function calls AddRef(), so that the new object will contain 
     ///                                one refernce.
-    virtual void CreatePipelineState( const PipelineStateDesc &PipelineDesc, 
-                                      IPipelineState **ppPipelineState ) = 0;
+    virtual void CreatePipelineState( const PipelineStateDesc& PipelineDesc, 
+                                      IPipelineState**         ppPipelineState ) = 0;
+
+    
+    /// Creates a new pipeline state object
+
+    /// \param [in]  Desc    - Fence description, see Diligent::FenceDesc for details.
+    /// \param [out] ppFence - Address of the memory location where the pointer to the
+    ///                        fence interface will be stored. 
+    ///                        The function calls AddRef(), so that the new object will contain 
+    ///                        one refernce.
+    virtual void CreateFence( const FenceDesc& Desc, 
+                              IFence**         ppFence) = 0;
 
 
     /// Gets the device capabilities, see Diligent::DeviceCaps for details
@@ -158,7 +170,7 @@ public:
     /// \param [in] TexFormat - Texture format for which to provide the information
     /// \return Const reference to the TextureFormatInfo structure containing the
     ///         texture format description.
-    virtual const TextureFormatInfo &GetTextureFormatInfo( TEXTURE_FORMAT TexFormat ) = 0;
+    virtual const TextureFormatInfo& GetTextureFormatInfo( TEXTURE_FORMAT TexFormat ) = 0;
 
 
     /// Returns the extended texture format information.
@@ -170,7 +182,7 @@ public:
     /// \remark The first time this method is called for a particular format, it may be
     ///         considerably slower than GetTextureFormatInfo(). If you do not require
     ///         extended information, call GetTextureFormatInfo() instead.
-    virtual const TextureFormatInfoExt &GetTextureFormatInfoExt( TEXTURE_FORMAT TexFormat ) = 0;
+    virtual const TextureFormatInfoExt& GetTextureFormatInfoExt( TEXTURE_FORMAT TexFormat ) = 0;
 };
 
 }

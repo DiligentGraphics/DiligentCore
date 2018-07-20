@@ -17,6 +17,7 @@ set(INCLUDE
     include/DescriptorHeap.h
     include/DeviceContextD3D12Impl.h
     include/DynamicUploadHeap.h
+    include/FenceD3D12Impl.h
     include/GenerateMips.h
     include/pch.h
     include/PipelineStateD3D12Impl.h
@@ -38,6 +39,7 @@ set(INTERFACE
     interface/BufferViewD3D12.h
     interface/CommandQueueD3D12.h
     interface/DeviceContextD3D12.h
+    interface/FenceD3D12.h
     interface/PipelineStateD3D12.h
     interface/RenderDeviceD3D12.h
     interface/RenderDeviceFactoryD3D12.h
@@ -62,6 +64,7 @@ set(SRC
     src/DescriptorHeap.cpp
     src/DeviceContextD3D12Impl.cpp
     src/DynamicUploadHeap.cpp
+    src/FenceD3D12Impl.cpp
     src/GenerateMips.cpp
     src/PipelineStateD3D12Impl.cpp
     src/RenderDeviceD3D12Impl.cpp

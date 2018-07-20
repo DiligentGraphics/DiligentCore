@@ -40,20 +40,35 @@
 #include "GLTypeConversions.h"
 #include "PipelineStateGLImpl.h"
 #include "ShaderResourceBindingGLImpl.h"
+#include "FenceGLImpl.h"
 #include "EngineMemory.h"
 #include "StringTools.h"
 
 namespace Diligent
 {
 
-RenderDeviceGLImpl :: RenderDeviceGLImpl(IReferenceCounters *pRefCounters, IMemoryAllocator &RawMemAllocator, const EngineGLAttribs &InitAttribs):
-    TRenderDeviceBase(pRefCounters, RawMemAllocator, 0, sizeof(TextureBaseGL), sizeof(TextureViewGLImpl), sizeof(BufferGLImpl), sizeof(BufferViewGLImpl), sizeof(ShaderGLImpl), sizeof(SamplerGLImpl), sizeof(PipelineStateGLImpl), sizeof(ShaderResourceBindingGLImpl)),
+RenderDeviceGLImpl :: RenderDeviceGLImpl(IReferenceCounters *pRefCounters, IMemoryAllocator& RawMemAllocator, const EngineGLAttribs& InitAttribs):
+    TRenderDeviceBase
+    {
+        pRefCounters,
+        RawMemAllocator,
+        0,
+        sizeof(TextureBaseGL),
+        sizeof(TextureViewGLImpl),
+        sizeof(BufferGLImpl),
+        sizeof(BufferViewGLImpl),
+        sizeof(ShaderGLImpl),
+        sizeof(SamplerGLImpl),
+        sizeof(PipelineStateGLImpl),
+        sizeof(ShaderResourceBindingGLImpl),
+        sizeof(FenceGLImpl)
+    },
     // Device caps must be filled in before the constructor of Pipeline Cache is called!
     m_GLContext(InitAttribs, m_DeviceCaps),
     m_TexRegionRender(this)
 {
     GLint NumExtensions = 0;
-    glGetIntegerv( GL_NUM_EXTENSIONS, &NumExtensions );
+    glGetIntegerv( GL_NUM_EXTENSIONS,& NumExtensions );
     CHECK_GL_ERROR( "Failed to get the number of extensions" );
     m_ExtensionStrings.reserve(NumExtensions);
     for( int Ext = 0; Ext < NumExtensions; ++Ext )
@@ -87,7 +102,7 @@ RenderDeviceGLImpl :: ~RenderDeviceGLImpl()
 
 IMPLEMENT_QUERY_INTERFACE( RenderDeviceGLImpl, IID_RenderDeviceGL, TRenderDeviceBase )
 
-void RenderDeviceGLImpl :: CreateBuffer(const BufferDesc& BuffDesc, const BufferData &BuffData, IBuffer **ppBuffer, bool bIsDeviceInternal)
+void RenderDeviceGLImpl :: CreateBuffer(const BufferDesc& BuffDesc, const BufferData& BuffData, IBuffer **ppBuffer, bool bIsDeviceInternal)
 {
     CreateDeviceObject( "buffer", BuffDesc, ppBuffer, 
         [&]()
@@ -101,12 +116,12 @@ void RenderDeviceGLImpl :: CreateBuffer(const BufferDesc& BuffDesc, const Buffer
     );
 }
 
-void RenderDeviceGLImpl :: CreateBuffer(const BufferDesc& BuffDesc, const BufferData &BuffData, IBuffer **ppBuffer)
+void RenderDeviceGLImpl :: CreateBuffer(const BufferDesc& BuffDesc, const BufferData& BuffData, IBuffer **ppBuffer)
 {
 	CreateBuffer(BuffDesc, BuffData, ppBuffer, false);
 }
 
-void RenderDeviceGLImpl :: CreateBufferFromGLHandle(Uint32 GLHandle, const BufferDesc &BuffDesc, IBuffer **ppBuffer)
+void RenderDeviceGLImpl :: CreateBufferFromGLHandle(Uint32 GLHandle, const BufferDesc& BuffDesc, IBuffer **ppBuffer)
 {
     VERIFY(GLHandle, "GL buffer handle must not be null");
     CreateDeviceObject( "buffer", BuffDesc, ppBuffer, 
@@ -121,7 +136,7 @@ void RenderDeviceGLImpl :: CreateBufferFromGLHandle(Uint32 GLHandle, const Buffe
     );
 }
 
-void RenderDeviceGLImpl :: CreateShader(const ShaderCreationAttribs &ShaderCreationAttribs, IShader **ppShader, bool bIsDeviceInternal)
+void RenderDeviceGLImpl :: CreateShader(const ShaderCreationAttribs& ShaderCreationAttribs, IShader **ppShader, bool bIsDeviceInternal)
 {
     CreateDeviceObject( "shader", ShaderCreationAttribs.Desc, ppShader, 
         [&]()
@@ -135,12 +150,12 @@ void RenderDeviceGLImpl :: CreateShader(const ShaderCreationAttribs &ShaderCreat
     );
 }
 
-void RenderDeviceGLImpl :: CreateShader(const ShaderCreationAttribs &ShaderCreationAttribs, IShader **ppShader)
+void RenderDeviceGLImpl :: CreateShader(const ShaderCreationAttribs& ShaderCreationAttribs, IShader **ppShader)
 {
 	CreateShader(ShaderCreationAttribs, ppShader, false);
 }
 
-void RenderDeviceGLImpl :: CreateTexture(const TextureDesc& TexDesc, const TextureData &Data, ITexture **ppTexture, bool bIsDeviceInternal)
+void RenderDeviceGLImpl :: CreateTexture(const TextureDesc& TexDesc, const TextureData& Data, ITexture **ppTexture, bool bIsDeviceInternal)
 {
     CreateDeviceObject( "texture", TexDesc, ppTexture, 
         [&]()
@@ -148,7 +163,7 @@ void RenderDeviceGLImpl :: CreateTexture(const TextureDesc& TexDesc, const Textu
             auto spDeviceContext = GetImmediateContext();
             VERIFY(spDeviceContext, "Immediate device context has been destroyed");
             auto pDeviceContext = spDeviceContext.RawPtr<DeviceContextGLImpl>();
-            const auto &FmtInfo = GetTextureFormatInfo( TexDesc.Format );
+            const auto& FmtInfo = GetTextureFormatInfo( TexDesc.Format );
             if( !FmtInfo.Supported )
             {
                 LOG_ERROR_AND_THROW( FmtInfo.Name, " is not supported texture format" );
@@ -202,12 +217,12 @@ void RenderDeviceGLImpl :: CreateTexture(const TextureDesc& TexDesc, const Textu
     );
 }
 
-void RenderDeviceGLImpl::CreateTexture(const TextureDesc& TexDesc, const TextureData &Data, ITexture **ppTexture)
+void RenderDeviceGLImpl::CreateTexture(const TextureDesc& TexDesc, const TextureData& Data, ITexture **ppTexture)
 {
 	CreateTexture(TexDesc, Data, ppTexture, false);
 }
 
-void RenderDeviceGLImpl::CreateTextureFromGLHandle(Uint32 GLHandle, const TextureDesc &TexDesc, ITexture **ppTexture)
+void RenderDeviceGLImpl::CreateTextureFromGLHandle(Uint32 GLHandle, const TextureDesc& TexDesc, ITexture **ppTexture)
 {
     VERIFY(GLHandle, "GL texture handle must not be null");
     CreateDeviceObject( "texture", TexDesc, ppTexture,
@@ -288,12 +303,12 @@ void RenderDeviceGLImpl::CreateSampler(const SamplerDesc& SamplerDesc, ISampler 
 }
 
 
-void RenderDeviceGLImpl::CreatePipelineState( const PipelineStateDesc &PipelineDesc, IPipelineState **ppPipelineState)
+void RenderDeviceGLImpl::CreatePipelineState( const PipelineStateDesc& PipelineDesc, IPipelineState **ppPipelineState)
 {
     CreatePipelineState(PipelineDesc, ppPipelineState, false);
 }
 
-void RenderDeviceGLImpl::CreatePipelineState(const PipelineStateDesc &PipelineDesc, IPipelineState **ppPipelineState, bool bIsDeviceInternal)
+void RenderDeviceGLImpl::CreatePipelineState(const PipelineStateDesc& PipelineDesc, IPipelineState **ppPipelineState, bool bIsDeviceInternal)
 {
     CreateDeviceObject( "Pipeline state", PipelineDesc, ppPipelineState, 
         [&]()
@@ -306,6 +321,18 @@ void RenderDeviceGLImpl::CreatePipelineState(const PipelineStateDesc &PipelineDe
     );
 }
 
+void RenderDeviceGLImpl::CreateFence(const FenceDesc& Desc, IFence** ppFence)
+{
+    CreateDeviceObject( "Fence", Desc, ppFence, 
+        [&]()
+        {
+            FenceGLImpl* pFenceOGL( NEW_RC_OBJ(m_FenceAllocator, "FenceGLImpl instance", FenceGLImpl)
+                                              (this, Desc) );
+            pFenceOGL->QueryInterface( IID_Fence, reinterpret_cast<IObject**>(ppFence) );
+            OnCreateDeviceObject( pFenceOGL );
+        }
+    );
+}
 
 bool RenderDeviceGLImpl::CheckExtension( const Char *ExtensionString )
 {
@@ -314,9 +341,9 @@ bool RenderDeviceGLImpl::CheckExtension( const Char *ExtensionString )
 
 void RenderDeviceGLImpl::FlagSupportedTexFormats()
 {
-    const auto &DeviceCaps = GetDeviceCaps();
-    bool bGL33OrAbove = DeviceCaps.DevType == DeviceType::OpenGL && 
-                        (DeviceCaps.MajorVersion >= 4 || (DeviceCaps.MajorVersion == 3 && DeviceCaps.MinorVersion >= 3) );
+    const auto& DeviceCaps = GetDeviceCaps();
+    bool bGL33OrAbove = DeviceCaps.DevType == DeviceType::OpenGL&&  
+                        (DeviceCaps.MajorVersion >= 4 || (DeviceCaps.MajorVersion == 3&&  DeviceCaps.MinorVersion >= 3) );
 
     bool bRGTC = CheckExtension( "GL_ARB_texture_compression_rgtc" );
     bool bBPTC = CheckExtension( "GL_ARB_texture_compression_bptc" );
@@ -434,7 +461,7 @@ void RenderDeviceGLImpl::FlagSupportedTexFormats()
     FLAG_FORMAT(TEX_FORMAT_BC7_UNORM_SRGB,             bBPTC );
 
 #ifdef _DEBUG
-    bool bGL43OrAbove = DeviceCaps.DevType == DeviceType::OpenGL && 
+    bool bGL43OrAbove = DeviceCaps.DevType == DeviceType::OpenGL &&  
                         (DeviceCaps.MajorVersion >= 5 || (DeviceCaps.MajorVersion == 4 && DeviceCaps.MinorVersion >= 3) );
 
     const int TestTextureDim = 32;
@@ -479,7 +506,7 @@ void RenderDeviceGLImpl::FlagSupportedTexFormats()
             // For some reason glTexStorage2D() may succeed, but upload operation
             // will later fail. So we need to additionally try to upload some
             // data to the texture
-            const auto &TransferAttribs = GetNativePixelTransferAttribs( FmtInfo->Format );
+            const auto& TransferAttribs = GetNativePixelTransferAttribs( FmtInfo->Format );
             if( FmtInfo->ComponentType != COMPONENT_TYPE_COMPRESSED )
             {
                 glTexSubImage2D( GL_TEXTURE_2D, 0,  // mip level
@@ -495,7 +522,7 @@ void RenderDeviceGLImpl::FlagSupportedTexFormats()
 }
 
 template<typename CreateFuncType>
-bool CreateTestGLTexture(GLContextState &GlCtxState, GLenum BindTarget, const GLObjectWrappers::GLTextureObj &GLTexObj, CreateFuncType CreateFunc)
+bool CreateTestGLTexture(GLContextState& GlCtxState, GLenum BindTarget, const GLObjectWrappers::GLTextureObj& GLTexObj, CreateFuncType CreateFunc)
 {
     GlCtxState.BindTexture(-1, BindTarget, GLTexObj);
     CreateFunc();
@@ -506,7 +533,7 @@ bool CreateTestGLTexture(GLContextState &GlCtxState, GLenum BindTarget, const GL
 
 void RenderDeviceGLImpl::TestTextureFormat( TEXTURE_FORMAT TexFormat )
 {
-    auto &TexFormatInfo = m_TextureFormatsInfo[TexFormat];
+    auto& TexFormatInfo = m_TextureFormatsInfo[TexFormat];
     VERIFY( TexFormatInfo.Supported, "Texture format is not supported" );
 
     auto GLFmt = TexFormatToGLInternalTexFormat(TexFormat);
@@ -515,14 +542,14 @@ void RenderDeviceGLImpl::TestTextureFormat( TEXTURE_FORMAT TexFormat )
     auto spDeviceContext = GetImmediateContext();
     VERIFY(spDeviceContext, "Immediate device context has been destroyed");
     auto *pContextGL = spDeviceContext.RawPtr<DeviceContextGLImpl>();
-    auto &ContextState = pContextGL->GetContextState();
+    auto& ContextState = pContextGL->GetContextState();
 
     const int TestTextureDim = 32;
     const int TestTextureDepth = 8;
 
     // Create test texture 1D
     TexFormatInfo.Tex1DFmt = false;
-    if( m_DeviceCaps.TexCaps.bTexture1DSupported &&
+    if( m_DeviceCaps.TexCaps.bTexture1DSupported && 
         TexFormatInfo.ComponentType != COMPONENT_TYPE_COMPRESSED )
     {
         GLObjectWrappers::GLTextureObj TestGLTex( true );
@@ -620,7 +647,7 @@ void RenderDeviceGLImpl::TestTextureFormat( TEXTURE_FORMAT TexFormat )
     }
 
     TexFormatInfo.SupportsMS = false;
-    if( TexFormatInfo.ComponentType != COMPONENT_TYPE_COMPRESSED && 
+    if( TexFormatInfo.ComponentType != COMPONENT_TYPE_COMPRESSED &&  
         m_DeviceCaps.TexCaps.bTexture2DMSSupported )
     {
 #if GL_ARB_texture_storage_multisample

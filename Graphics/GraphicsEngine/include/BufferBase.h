@@ -37,10 +37,12 @@ namespace Diligent
 
 /// Template class implementing base functionality for a buffer object
 
-/// \tparam BaseInterface - base interface that this class will inheret 
-///                         (Diligent::IBufferD3D11, Diligent::IBufferD3D12 or Diligent::IBufferGL).
+/// \tparam BaseInterface - base interface that this class will inheret
+///                         (Diligent::IBufferD3D11, Diligent::IBufferD3D12,
+///                          Diligent::IBufferGL or Diligent::IBufferVk).
 /// \tparam BufferViewImplType - type of the buffer view implementation
-///                              (Diligent::BufferViewD3D11Impl, Diligent::BufferViewD3D12Impl or Diligent::BufferViewGLImpl)
+///                              (Diligent::BufferViewD3D11Impl, Diligent::BufferViewD3D12Impl,
+///                               Diligent::BufferViewGLImpl or Diligent::BufferViewVkImpl)
 /// \tparam TBuffViewObjAllocator - type of the allocator that is used to allocate memory for the buffer view object instances
 template<class BaseInterface, class BufferViewImplType, class TBuffViewObjAllocator>
 class BufferBase : public DeviceObjectBase < BaseInterface, BufferDesc>
@@ -55,11 +57,11 @@ public:
 	/// \param BuffDesc - buffer description.
 	/// \param bIsDeviceInternal - flag indicating if the buffer is an internal device object and 
 	///							   must not keep a strong reference to the device.
-    BufferBase( IReferenceCounters *pRefCounters,
-                TBuffViewObjAllocator &BuffViewObjAllocator, 
-                IRenderDevice *pDevice, 
-                const BufferDesc& BuffDesc,
-                bool bIsDeviceInternal) :
+    BufferBase( IReferenceCounters*    pRefCounters,
+                TBuffViewObjAllocator& BuffViewObjAllocator, 
+                IRenderDevice*         pDevice, 
+                const BufferDesc&      BuffDesc,
+                bool                   bIsDeviceInternal) :
         TDeviceObjectBase( pRefCounters, pDevice, BuffDesc, bIsDeviceInternal),
 #ifdef _DEBUG
         m_dbgBuffViewAllocator(BuffViewObjAllocator),
@@ -108,20 +110,20 @@ public:
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE( IID_Buffer, TDeviceObjectBase )
 
     /// Base implementation of IBuffer::UpdateData(); validates input parameters.
-    virtual void UpdateData( IDeviceContext *pContext, Uint32 Offset, Uint32 Size, const PVoid pData )override = 0;
+    virtual void UpdateData( IDeviceContext* pContext, Uint32 Offset, Uint32 Size, const PVoid pData )override = 0;
 
     /// Base implementation of IBuffer::CopyData(); validates input parameters.
-    virtual void CopyData( IDeviceContext *pContext, IBuffer *pSrcBuffer, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size )override = 0;
+    virtual void CopyData( IDeviceContext* pContext, IBuffer* pSrcBuffer, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size )override = 0;
 
     /// Base implementation of IBuffer::Map(); validates input parameters.
-    virtual void Map( IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid &pMappedData )override;
+    virtual void Map( IDeviceContext* pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid& pMappedData )override;
 
     /// Base implementation of IBuffer::Unmap()
-    virtual void Unmap( IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags  )override = 0;
+    virtual void Unmap( IDeviceContext* pContext, MAP_TYPE MapType, Uint32 MapFlags  )override = 0;
 
     /// Implementation of IBuffer::CreateView(); calls CreateViewInternal() virtual function
     /// that creates buffer view for the specific engine implementation.
-    virtual void CreateView( const struct BufferViewDesc &ViewDesc, IBufferView **ppView )override;
+    virtual void CreateView( const struct BufferViewDesc& ViewDesc, IBufferView** ppView )override;
 
     /// Implementation of IBuffer::GetDefaultView().
     virtual IBufferView* GetDefaultView( BUFFER_VIEW_TYPE ViewType )override;
@@ -138,13 +140,13 @@ public:
 protected:
 
     /// Pure virtual function that creates buffer view for the specific engine implementation.
-    virtual void CreateViewInternal( const struct BufferViewDesc &ViewDesc, IBufferView **ppView, bool bIsDefaultView ) = 0;
+    virtual void CreateViewInternal( const struct BufferViewDesc& ViewDesc, IBufferView **ppView, bool bIsDefaultView ) = 0;
 
     /// Corrects buffer view description and validates view parameters.
-    void CorrectBufferViewDesc( struct BufferViewDesc &ViewDesc );
+    void CorrectBufferViewDesc( struct BufferViewDesc& ViewDesc );
 
 #ifdef _DEBUG
-    TBuffViewObjAllocator &m_dbgBuffViewAllocator;
+    TBuffViewObjAllocator& m_dbgBuffViewAllocator;
 #endif
 
     /// Default UAV addressing the entire buffer
@@ -155,7 +157,7 @@ protected:
 };
 
 template<class BaseInterface, class BufferViewImplType, class TBuffViewObjAllocator>
-void BufferBase<BaseInterface, BufferViewImplType, TBuffViewObjAllocator> :: UpdateData( IDeviceContext *pContext, Uint32 Offset, Uint32 Size, const PVoid pData )
+void BufferBase<BaseInterface, BufferViewImplType, TBuffViewObjAllocator> :: UpdateData( IDeviceContext* pContext, Uint32 Offset, Uint32 Size, const PVoid pData )
 {
     VERIFY_BUFFER( this->m_Desc.Usage == USAGE_DEFAULT, "Only default usage buffers can be updated with UpdateData()" );
     VERIFY_BUFFER( Offset < this->m_Desc.uiSizeInBytes, "Offset (", Offset, ") exceeds the buffer size (", this->m_Desc.uiSizeInBytes, ")" );
@@ -163,7 +165,7 @@ void BufferBase<BaseInterface, BufferViewImplType, TBuffViewObjAllocator> :: Upd
 }
 
 template<class BaseInterface, class BufferViewImplType, class TBuffViewObjAllocator>
-void BufferBase<BaseInterface, BufferViewImplType, TBuffViewObjAllocator> :: CopyData( IDeviceContext *pContext, IBuffer *pSrcBuffer, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size )
+void BufferBase<BaseInterface, BufferViewImplType, TBuffViewObjAllocator> :: CopyData( IDeviceContext* pContext, IBuffer* pSrcBuffer, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size )
 {
     VERIFY_BUFFER( DstOffset + Size <= this->m_Desc.uiSizeInBytes, "Destination range [", DstOffset, ",", DstOffset + Size, ") is out of buffer bounds [0,",this->m_Desc.uiSizeInBytes,")" );
     VERIFY_BUFFER( SrcOffset + Size <= pSrcBuffer->GetDesc().uiSizeInBytes, "Source range [", SrcOffset, ",", SrcOffset + Size, ") is out of buffer bounds [0,",this->m_Desc.uiSizeInBytes,")" );
@@ -171,7 +173,7 @@ void BufferBase<BaseInterface, BufferViewImplType, TBuffViewObjAllocator> :: Cop
 
 
 template<class BaseInterface, class BufferViewImplType, class TBuffViewObjAllocator>
-void BufferBase<BaseInterface, BufferViewImplType, TBuffViewObjAllocator> :: Map( IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid &pMappedData )
+void BufferBase<BaseInterface, BufferViewImplType, TBuffViewObjAllocator> :: Map( IDeviceContext* pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid &pMappedData )
 {
     switch( MapType )
     {
@@ -209,7 +211,7 @@ void BufferBase<BaseInterface, BufferViewImplType, TBuffViewObjAllocator> :: Map
 }
 
 template<class BaseInterface, class BufferViewImplType, class TBuffViewObjAllocator>
-void BufferBase<BaseInterface, BufferViewImplType, TBuffViewObjAllocator> :: Unmap( IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags  )
+void BufferBase<BaseInterface, BufferViewImplType, TBuffViewObjAllocator> :: Unmap( IDeviceContext* pContext, MAP_TYPE MapType, Uint32 MapFlags  )
 {
 
 }
@@ -258,7 +260,7 @@ void BufferBase<BaseInterface, BufferViewImplType, TBuffViewObjAllocator> :: Cre
     {
         BufferViewDesc ViewDesc;
         ViewDesc.ViewType = BUFFER_VIEW_UNORDERED_ACCESS;
-        IBufferView *pUAV = nullptr;
+        IBufferView* pUAV = nullptr;
         CreateViewInternal( ViewDesc, &pUAV, true );
         m_pDefaultUAV.reset( static_cast<BufferViewImplType*>(pUAV) );
         VERIFY( m_pDefaultUAV->GetDesc().ViewType == BUFFER_VIEW_UNORDERED_ACCESS, "Unexpected view type" );
