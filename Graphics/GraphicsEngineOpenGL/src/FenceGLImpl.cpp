@@ -22,7 +22,6 @@
  */
 
 #include "pch.h"
-#include <atlbase.h>
 
 #include "FenceGLImpl.h"
 #include "EngineMemory.h"

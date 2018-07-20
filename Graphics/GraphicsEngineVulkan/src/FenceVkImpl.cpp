@@ -22,7 +22,6 @@
  */
 
 #include "pch.h"
-#include <atlbase.h>
 
 #include "FenceVkImpl.h"
 #include "EngineMemory.h"
