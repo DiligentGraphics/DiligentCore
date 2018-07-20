@@ -35,6 +35,11 @@ FenceD3D11Impl :: FenceD3D11Impl(IReferenceCounters* pRefCounters,
                                  const FenceDesc&    Desc) : 
     TFenceBase(pRefCounters, pDevice, Desc)
 {
+#if D3D11_FENCES_SUPPORTED
+
+#else
+    LOG_ERROR("D3D11 fences are not supported in this Windows SDK version");
+#endif
 }
 
 FenceD3D11Impl :: ~FenceD3D11Impl()
@@ -43,7 +48,12 @@ FenceD3D11Impl :: ~FenceD3D11Impl()
 
 Uint64 FenceD3D11Impl :: GetCompletedValue()
 {
+#if D3D11_FENCES_SUPPORTED
     return m_pd3d11Fence->GetCompletedValue();
+#else
+    LOG_ERROR("D3D11 fences are not supported in this Windows SDK version");
+    return 0;
+#endif
 }
 
 void FenceD3D11Impl :: Reset(Uint64 Value)

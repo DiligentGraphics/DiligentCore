@@ -39,9 +39,20 @@
 #include <exception>
 #include <algorithm>
 #if PLATFORM_WIN32
-    #include <d3d11.h>
+#   if _WIN32_WINNT >= 0x0A00 // _WIN32_WINNT_WIN10
+#       include <d3d11_3.h>
+#   else
+#       include <d3d11.h>
+#   endif
 #elif PLATFORM_UNIVERSAL_WINDOWS
-    #include <d3d11_2.h>
+    #include <d3d11_3.h>
+#endif
+
+#if _WIN32_WINNT >= 0x0A00 // _WIN32_WINNT_WIN10
+#   define D3D11_FENCES_SUPPORTED 1
+#else
+#   define D3D11_FENCES_SUPPORTED 0
+    using ID3D11Fence = IUnknown;
 #endif
 
 #include "EngineD3D11Defines.h"
