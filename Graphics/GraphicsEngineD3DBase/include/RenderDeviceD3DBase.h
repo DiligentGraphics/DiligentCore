@@ -47,8 +47,9 @@ public:
                         size_t ShaderObjSize, 
                         size_t SamplerObjSize,
                         size_t PSOSize,
-                        size_t SRBSize) : 
-        RenderDeviceBase<BaseInterface>(pRefCounters, RawMemAllocator, NumDeferredContexts, TextureObjSize, TexViewObjSize, BufferObjSize, BuffViewObjSize, ShaderObjSize, SamplerObjSize, PSOSize, SRBSize)
+                        size_t SRBSize,
+                        size_t FenceSize) : 
+        RenderDeviceBase<BaseInterface>(pRefCounters, RawMemAllocator, NumDeferredContexts, TextureObjSize, TexViewObjSize, BufferObjSize, BuffViewObjSize, ShaderObjSize, SamplerObjSize, PSOSize, SRBSize, FenceSize)
     {
         // Flag texture formats always supported in D3D11 and D3D12
 
