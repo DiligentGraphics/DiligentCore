@@ -173,8 +173,9 @@ void BufferBase<BaseInterface, BufferViewImplType, TBuffViewObjAllocator> :: Cop
 
 
 template<class BaseInterface, class BufferViewImplType, class TBuffViewObjAllocator>
-void BufferBase<BaseInterface, BufferViewImplType, TBuffViewObjAllocator> :: Map( IDeviceContext* pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid &pMappedData )
+void BufferBase<BaseInterface, BufferViewImplType, TBuffViewObjAllocator> :: Map( IDeviceContext* pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid& pMappedData )
 {
+    pMappedData = nullptr;
     switch( MapType )
     {
     case MAP_READ:
@@ -200,7 +201,8 @@ void BufferBase<BaseInterface, BufferViewImplType, TBuffViewObjAllocator> :: Map
     
     if (this->m_Desc.Usage == USAGE_DYNAMIC)
     {
-        VERIFY_BUFFER((MapFlags & MAP_FLAG_DISCARD) != 0 && MapType == MAP_WRITE, "Dynamic buffers can only be mapped for writing with discard flag");
+        VERIFY_BUFFER((MapFlags & (MAP_FLAG_DISCARD | MAP_FLAG_DO_NOT_SYNCHRONIZE)) != 0 && MapType == MAP_WRITE, "Dynamic buffers can only be mapped for writing with MAP_FLAG_DISCARD or MAP_FLAG_DO_NOT_SYNCHRONIZE flag");
+        VERIFY_BUFFER((MapFlags & (MAP_FLAG_DISCARD | MAP_FLAG_DO_NOT_SYNCHRONIZE)) != (MAP_FLAG_DISCARD | MAP_FLAG_DO_NOT_SYNCHRONIZE), "When mapping dynamic buffer, only one of MAP_FLAG_DISCARD or MAP_FLAG_DO_NOT_SYNCHRONIZE flags must be specified");
     }
 
     if ( (MapFlags & MAP_FLAG_DISCARD) != 0 )

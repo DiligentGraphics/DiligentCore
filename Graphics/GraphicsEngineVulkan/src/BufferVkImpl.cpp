@@ -282,7 +282,7 @@ void BufferVkImpl :: CopyData(IDeviceContext* pContext, IBuffer* pSrcBuffer, Uin
     pDeviceContextVk->CopyBufferRegion(ValidatedCast<BufferVkImpl>(pSrcBuffer), this, SrcOffset, DstOffset, Size);
 }
 
-void BufferVkImpl :: Map(IDeviceContext* pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid &pMappedData)
+void BufferVkImpl :: Map(IDeviceContext* pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid& pMappedData)
 {
     TBufferBase::Map( pContext, MapType, MapFlags, pMappedData );
 
@@ -326,20 +326,29 @@ void BufferVkImpl :: Map(IDeviceContext* pContext, MAP_TYPE MapType, Uint32 MapF
         else if (m_Desc.Usage == USAGE_DYNAMIC)
         {
 #ifdef DEVELOPMENT
-            if( (MapFlags & MAP_FLAG_DISCARD) == 0 )
+            if( (MapFlags & (MAP_FLAG_DISCARD | MAP_FLAG_DO_NOT_SYNCHRONIZE)) == 0 )
             {
-                LOG_ERROR_MESSAGE("Failed to map buffer '", m_Desc.Name, "': Vk buffer must be mapped for writing with MAP_FLAG_DISCARD flag. Context Id: ", pDeviceContextVk->GetContextId());
+                LOG_ERROR_MESSAGE("Failed to map buffer '", m_Desc.Name, "': Vk buffer must be mapped for writing with MAP_FLAG_DISCARD or MAP_FLAG_DO_NOT_SYNCHRONIZE flag. Context Id: ", pDeviceContextVk->GetContextId());
                 return;
             }
 #endif
 
-            auto DynAlloc = pDeviceContextVk->AllocateDynamicSpace(m_Desc.uiSizeInBytes);
-            if(DynAlloc.pParentDynamicHeap != nullptr)
+            auto& DynAllocation = m_DynamicAllocations[pDeviceContextVk->GetContextId()];
+            if ( (MapFlags & MAP_FLAG_DISCARD) != 0 || DynAllocation.pParentDynamicHeap == nullptr )
+            {
+                DynAllocation = pDeviceContextVk->AllocateDynamicSpace(m_Desc.uiSizeInBytes);
+            }
+            else
+            {
+                VERIFY_EXPR(MapFlags & MAP_FLAG_DO_NOT_SYNCHRONIZE);
+                // Reuse the same allocation
+            }
+
+            if (DynAllocation.pParentDynamicHeap != nullptr)
             {
                 const auto& DynamicHeap = pDeviceVk->GetDynamicHeapRingBuffer();
                 auto* CPUAddress = DynamicHeap.GetCPUAddress();
-                pMappedData = CPUAddress + DynAlloc.Offset;
-                m_DynamicAllocations[pDeviceContextVk->GetContextId()] = std::move(DynAlloc);
+                pMappedData = CPUAddress + DynAllocation.Offset;
             }
             else
             {

@@ -349,10 +349,19 @@ void BufferD3D12Impl :: Map(IDeviceContext* pContext, MAP_TYPE MapType, Uint32 M
         }
         else if (m_Desc.Usage == USAGE_DYNAMIC)
         {
-            VERIFY(MapFlags & MAP_FLAG_DISCARD, "D3D12 buffer must be mapped for writing with MAP_FLAG_DISCARD flag");
+            VERIFY( (MapFlags & (MAP_FLAG_DISCARD | MAP_FLAG_DO_NOT_SYNCHRONIZE)) != 0, "D3D12 buffer must be mapped for writing with MAP_FLAG_DISCARD or MAP_FLAG_DO_NOT_SYNCHRONIZE flag");
+            
             auto *pCtxD3D12 = ValidatedCast<DeviceContextD3D12Impl>(pContext);
             auto ContextId = pDeviceContextD3D12->GetContextId();
-            m_DynamicData[ContextId] = pCtxD3D12->AllocateDynamicSpace(m_Desc.uiSizeInBytes);
+            if ((MapFlags & MAP_FLAG_DISCARD) != 0 || m_DynamicData[ContextId].CPUAddress == nullptr) 
+            {
+                m_DynamicData[ContextId] = pCtxD3D12->AllocateDynamicSpace(m_Desc.uiSizeInBytes);
+            }
+            else
+            {
+                VERIFY_EXPR(MapFlags & MAP_FLAG_DO_NOT_SYNCHRONIZE);
+                // Reuse previously mapped region
+            }
             pMappedData = m_DynamicData[ContextId].CPUAddress;
         }
         else

@@ -149,7 +149,7 @@ do{                               \
 
 #else
 
-#define DEV_CHECK_ERR(Expr, ...) do{}while(false)
+#define DEV_CHECK_ERR(Expr, ...)  do{}while(false)
 #define DEV_CHECK_WARN(Expr, ...) do{}while(false)
 #define DEV_CHECK_INFO(Expr, ...) do{}while(false)
 
