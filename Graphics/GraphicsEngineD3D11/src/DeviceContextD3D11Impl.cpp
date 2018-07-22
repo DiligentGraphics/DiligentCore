@@ -38,6 +38,8 @@
 #include "EngineD3D11Attribs.h"
 #include "EngineD3D11Defines.h"
 #include "CommandListD3D11Impl.h"
+#include "RenderDeviceD3D11Impl.h"
+#include "FenceD3D11Impl.h"
 
 using namespace Diligent;
 
@@ -1309,6 +1311,25 @@ namespace Diligent
         }
     }
        
+    void DeviceContextD3D11Impl::SignalFence(IFence* pFence, Uint64 Value)
+    {
+        VERIFY(!m_bIsDeferred, "Fence can only be signalled from immediate context");
+        auto* pd3d11Device = m_pDevice.RawPtr<RenderDeviceD3D11Impl>()->GetD3D11Device();
+        D3D11_QUERY_DESC QueryDesc = {};
+        QueryDesc.Query = D3D11_QUERY_EVENT; // Determines whether or not the GPU is finished processing commands.
+                                             // When the GPU is finished processing commands ID3D11DeviceContext::GetData will
+                                             // return S_OK, and pData will point to a BOOL with a value of TRUE. When using this
+                                             // type of query, ID3D11DeviceContext::Begin is disabled.
+        QueryDesc.MiscFlags = 0;
+        CComPtr<ID3D11Query> pd3d11Query;
+        auto hr = pd3d11Device->CreateQuery(&QueryDesc, &pd3d11Query);
+        DEV_CHECK_ERR(SUCCEEDED(hr), "Failed to create D3D11 query");
+        VERIFY_EXPR(pd3d11Query);
+        m_pd3d11DeviceContext->End(pd3d11Query);
+        auto* pFenceD3D11Impl = ValidatedCast<FenceD3D11Impl>(pFence);
+        pFenceD3D11Impl->AddPendingQuery(m_pd3d11DeviceContext, std::move(pd3d11Query), Value);
+    };
+
     void DeviceContextD3D11Impl::ClearStateCache()
     {
         TDeviceContextBase::ClearStateCache();

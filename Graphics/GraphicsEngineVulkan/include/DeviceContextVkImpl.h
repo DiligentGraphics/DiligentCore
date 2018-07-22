@@ -93,6 +93,8 @@ public:
 
     virtual void ExecuteCommandList(class ICommandList* pCommandList)override final;
 
+    virtual void SignalFence(IFence* pFence, Uint64 Value)override final;
+
     void TransitionImageLayout(class TextureVkImpl &TextureVk, VkImageLayout NewLayout);
     void TransitionImageLayout(class TextureVkImpl &TextureVk, VkImageLayout OldLayout, VkImageLayout NewLayout, const VkImageSubresourceRange& SubresRange);
     virtual void TransitionImageLayout(ITexture* pTexture, VkImageLayout NewLayout)override final;
@@ -199,9 +201,12 @@ private:
     VulkanUtilities::VulkanCommandBufferPool m_CmdPool;
 
     // Semaphores are not owned by the command context
-    std::vector<VkSemaphore>          m_WaitSemaphores;
-    std::vector<VkPipelineStageFlags> m_WaitDstStageMasks;
-    std::vector<VkSemaphore>          m_SignalSemaphores;
+    std::vector<VkSemaphore>                m_WaitSemaphores;
+    std::vector<VkPipelineStageFlags>       m_WaitDstStageMasks;
+    std::vector<VkSemaphore>                m_SignalSemaphores;
+
+    // List of fences to signal next time the command context is flushed
+    std::vector<std::pair<Uint64, RefCntAutoPtr<IFence> > > m_PendingFences;
 
     std::unordered_map<BufferVkImpl*, VulkanUtilities::VulkanUploadAllocation> m_UploadAllocations;
     ResourceReleaseQueue<DynamicStaleResourceWrapper> m_ReleaseQueue;

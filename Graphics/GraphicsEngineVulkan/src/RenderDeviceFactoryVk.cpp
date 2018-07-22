@@ -195,6 +195,14 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk( const EngineVkAttribs& Crea
         pCmdQueueVk = NEW_RC_OBJ(RawMemAllocator, "CommandQueueVk instance", CommandQueueVkImpl)(LogicalDevice, QueueInfo.queueFamilyIndex);
 
         AttachToVulkanDevice(Instance, std::move(PhysicalDevice), LogicalDevice, pCmdQueueVk, CreationAttribs, ppDevice, ppContexts, NumDeferredContexts);
+
+        FenceDesc Desc;
+        Desc.Name = "Command queue fence";
+        // Render device owns command queue that in turn owns the fence, so it is an internal device object
+        bool IsDeviceInternal = true;
+        auto* pRenderDeviceVk = ValidatedCast<RenderDeviceVkImpl>(*ppDevice);
+        RefCntAutoPtr<FenceVkImpl> pFenceVk( NEW_RC_OBJ(RawMemAllocator, "FenceVkImpl instance", FenceVkImpl)(pRenderDeviceVk, Desc, IsDeviceInternal) );
+        pCmdQueueVk->SetFence(std::move(pFenceVk));
     }
     catch(std::runtime_error& )
     {

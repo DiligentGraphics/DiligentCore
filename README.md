@@ -611,6 +611,10 @@ objects. Refer to the following pages for more information:
 
 # Version History
 
+## Current Progress
+
+* Added `IFence` interface and `IDeviceContext::SignalFence()` method to enable CPU-GPU synchronization
+
 ## v2.3
 
 * Implemented Vulkan backend

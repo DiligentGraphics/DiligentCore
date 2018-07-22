@@ -218,7 +218,7 @@ TextureD3D12Impl :: TextureD3D12Impl(IReferenceCounters*        pRefCounters,
         //                  |     N+1, but resource it references    |                                   |
         //                  |     was added to the delete queue      |                                   |
         //                  |     with value N                       |                                   |
-	    pRenderDeviceD3D12->CloseAndExecuteCommandContext(pInitContext, false);
+	    pRenderDeviceD3D12->CloseAndExecuteCommandContext(pInitContext, false, nullptr);
 
         // We MUST NOT call TransitionResource() from here, because
         // it will call AddRef() and potentially Release(), while 

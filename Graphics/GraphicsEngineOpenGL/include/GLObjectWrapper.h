@@ -261,4 +261,44 @@ public:
 };
 typedef GLObjWrapper<GLRBOCreateReleaseHelper> GLRenderBufferObj;
     
+struct GLSyncObj
+{
+    GLSyncObj() {}
+    GLSyncObj(GLsync _SyncHandle) : SyncHandle(_SyncHandle) {}
+
+    GLSyncObj             (const GLSyncObj&) = delete;
+    GLSyncObj& operator = (const GLSyncObj&) = delete;
+    
+    GLSyncObj(GLSyncObj&& rhs)
+    {
+        SyncHandle     = rhs.SyncHandle;
+        rhs.SyncHandle = GLsync{};
+    }
+
+    GLSyncObj& operator = (GLSyncObj&& rhs)
+    {
+        Release();
+        SyncHandle     = rhs.SyncHandle;
+        rhs.SyncHandle = GLsync{};
+        return *this;
+    }
+
+    void Release()
+    {
+        if (SyncHandle != GLsync{})
+            glDeleteSync(SyncHandle);
+        SyncHandle = GLsync{};
+    }
+
+    ~GLSyncObj()
+    {
+        Release();
+    }
+
+    operator GLsync()const{return SyncHandle;}
+
+private:
+    GLsync SyncHandle = {};
+};
+
 }

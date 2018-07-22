@@ -25,30 +25,79 @@
 
 #include "FenceVkImpl.h"
 #include "EngineMemory.h"
+#include "RenderDeviceVkImpl.h"
 
 namespace Diligent
 {
     
 FenceVkImpl :: FenceVkImpl(IReferenceCounters* pRefCounters,
-                           IRenderDevice*      pDevice,
-                           const FenceDesc&    Desc) : 
-    TFenceBase(pRefCounters, pDevice, Desc)
+                           RenderDeviceVkImpl* pRendeDeviceVkImpl,
+                           const FenceDesc&    Desc,
+                           bool                IsDeviceInternal) : 
+    TFenceBase(pRefCounters, pRendeDeviceVkImpl, Desc, IsDeviceInternal),
+    m_FencePool(pRendeDeviceVkImpl->GetLogicalDevice().GetSharedPtr())
 {
 }
 
 FenceVkImpl :: ~FenceVkImpl()
 {
+    while (!m_PendingFences.empty())
+    {
+        m_FencePool.DisposeFence(std::move(m_PendingFences.front().second));
+        m_PendingFences.pop_front();
+    }
 }
 
 Uint64 FenceVkImpl :: GetCompletedValue()
 {
-    UNSUPPORTED("Not yet implemented");
-    return 0;
+    const auto& LogicalDevice = GetDevice<RenderDeviceVkImpl>()->GetLogicalDevice();
+    while (!m_PendingFences.empty())
+    {
+        auto& Value_Fence = m_PendingFences.front();
+        auto status = LogicalDevice.GetFenceStatus(Value_Fence.second);
+        if(status == VK_SUCCESS)
+        {
+            if (Value_Fence.first > m_LastCompletedFenceValue)
+                m_LastCompletedFenceValue = Value_Fence.first;
+            m_FencePool.DisposeFence(std::move(Value_Fence.second));
+            m_PendingFences.pop_front();
+        }
+        else
+        {
+            break;
+        }
+    }
+
+    return m_LastCompletedFenceValue;
 }
 
 void FenceVkImpl :: Reset(Uint64 Value)
 {
-    UNSUPPORTED("Not yet implemented");
+    DEV_CHECK_ERR(Value >= m_LastCompletedFenceValue, "Resetting fence '", m_Desc.Name, "' to the value (", Value, ") that is smaller than the last completed value (", m_LastCompletedFenceValue, ")");
+    if (Value > m_LastCompletedFenceValue)
+        m_LastCompletedFenceValue = Value;
+}
+
+
+void FenceVkImpl :: Wait()
+{
+    const auto& LogicalDevice = GetDevice<RenderDeviceVkImpl>()->GetLogicalDevice();
+    for (auto& val_fence : m_PendingFences)
+    {
+        while (LogicalDevice.GetFenceStatus(val_fence.second) != VK_SUCCESS)
+        {
+            VkFence FenceToWait = val_fence.second;
+            auto res = vkWaitForFences(LogicalDevice.GetVkDevice(), 1, &FenceToWait, VK_TRUE, UINT64_MAX);
+            VERIFY_EXPR(res == VK_SUCCESS);
+        }
+
+        auto status = LogicalDevice.GetFenceStatus(val_fence.second);
+        VERIFY(status == VK_SUCCESS, "All pending fences must now be complete!");
+        if (val_fence.first > m_LastCompletedFenceValue)
+            m_LastCompletedFenceValue = val_fence.first;
+        m_FencePool.DisposeFence(std::move(val_fence.second));
+    }
+    m_PendingFences.clear();
 }
 
 }

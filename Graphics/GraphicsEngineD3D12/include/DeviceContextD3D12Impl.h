@@ -88,6 +88,8 @@ public:
 
     virtual void ExecuteCommandList(class ICommandList *pCommandList)override final;
 
+    virtual void SignalFence(IFence* pFence, Uint64 Value)override final;
+
     virtual void TransitionTextureState(ITexture *pTexture, D3D12_RESOURCE_STATES State)override final;
 
     virtual void TransitionBufferState(IBuffer *pBuffer, D3D12_RESOURCE_STATES State)override final;
@@ -157,6 +159,8 @@ private:
 
     FixedBlockMemoryAllocator m_CmdListAllocator;
     const Uint32 m_ContextId;
+
+    std::vector<std::pair<Uint64, RefCntAutoPtr<IFence> > > m_PendingFences;
 };
 
 }

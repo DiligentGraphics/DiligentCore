@@ -42,13 +42,33 @@ FenceGLImpl :: ~FenceGLImpl()
 
 Uint64 FenceGLImpl :: GetCompletedValue()
 {
-    UNSUPPORTED("Not yet implemented");
-    return 0;
+    while (!m_PendingFences.empty())
+    {
+        auto& val_fence = m_PendingFences.front();
+        auto res = glClientWaitSync(val_fence.second, 
+            0, // Can be SYNC_FLUSH_COMMANDS_BIT
+            0  // Timeout in nanoseconds
+        );
+        if(res == GL_ALREADY_SIGNALED)
+        {
+            if (val_fence.first > m_LastCompletedFenceValue)
+                m_LastCompletedFenceValue = val_fence.first;
+            m_PendingFences.pop_front();
+        }
+        else
+        {
+            break;
+        }
+    }
+
+    return m_LastCompletedFenceValue;
 }
 
 void FenceGLImpl :: Reset(Uint64 Value)
 {
-    UNSUPPORTED("Not yet implemented");
+    DEV_CHECK_ERR(Value >= m_LastCompletedFenceValue, "Resetting fence '", m_Desc.Name, "' to the value (", Value, ") that is smaller than the last completed value (", m_LastCompletedFenceValue, ")");
+    if (Value > m_LastCompletedFenceValue)
+        m_LastCompletedFenceValue = Value;
 }
 
 }

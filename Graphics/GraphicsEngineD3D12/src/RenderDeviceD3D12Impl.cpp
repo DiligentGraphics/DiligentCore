@@ -114,7 +114,7 @@ void RenderDeviceD3D12Impl::DisposeCommandContext(CommandContext* pCtx)
     m_AvailableContexts.push_back(pCtx);
 }
 
-void RenderDeviceD3D12Impl::CloseAndExecuteCommandContext(CommandContext* pCtx, bool DiscardStaleObjects)
+void RenderDeviceD3D12Impl::CloseAndExecuteCommandContext(CommandContext* pCtx, bool DiscardStaleObjects, std::vector<std::pair<Uint64, RefCntAutoPtr<IFence> > >* pSignalFences)
 {
     CComPtr<ID3D12CommandAllocator> pAllocator;
 	auto *pCmdList = pCtx->Close(&pAllocator);
@@ -130,6 +130,15 @@ void RenderDeviceD3D12Impl::CloseAndExecuteCommandContext(CommandContext* pCtx, 
         FenceValue = std::max(FenceValue, NextFenceValue);
         CmdListNumber = m_NextCmdListNumber;
         Atomics::AtomicIncrement(m_NextCmdListNumber);
+        if (pSignalFences != nullptr)
+        {
+            for (auto& val_fence : *pSignalFences)
+            {
+                auto* pFenceD3D12Impl = val_fence.second.RawPtr<FenceD3D12Impl>();
+                auto* pd3d12Fence = pFenceD3D12Impl->GetD3D12Fence();
+                m_pCommandQueue->SignalFence(pd3d12Fence, val_fence.first);
+            }
+        }
     }
 
     if (DiscardStaleObjects)

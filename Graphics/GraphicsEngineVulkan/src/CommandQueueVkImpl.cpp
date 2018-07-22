@@ -35,8 +35,7 @@ CommandQueueVkImpl::CommandQueueVkImpl(IReferenceCounters*                      
     m_LogicalDevice    (LogicalDevice),
     m_VkQueue          (LogicalDevice->GetQueue(QueueFamilyIndex, 0)),
     m_QueueFamilyIndex (QueueFamilyIndex),
-    m_NextFenceValue   (1),
-    m_FencePool        (LogicalDevice)
+    m_NextFenceValue   (1)
 {
 }
 
@@ -46,11 +45,6 @@ CommandQueueVkImpl::~CommandQueueVkImpl()
     // All queues associated with a logical device are destroyed when vkDestroyDevice 
     // is called on that device.
 
-    while (!m_PendingFences.empty())
-    {
-        m_FencePool.DisposeFence(std::move(m_PendingFences.front().second));
-        m_PendingFences.pop_front();
-    }
 }
 
 IMPLEMENT_QUERY_INTERFACE( CommandQueueVkImpl, IID_CommandQueueVk, TBase )
@@ -59,18 +53,18 @@ IMPLEMENT_QUERY_INTERFACE( CommandQueueVkImpl, IID_CommandQueueVk, TBase )
 Uint64 CommandQueueVkImpl::ExecuteCommandBuffer(const VkSubmitInfo& SubmitInfo)
 {
     std::lock_guard<std::mutex> Lock(m_QueueMutex);
-    auto Fence = m_FencePool.GetFence();
+    auto vkFence = m_pFence->GetVkFence();
     bool SubmitCount = 
         (SubmitInfo.waitSemaphoreCount   != 0 || 
          SubmitInfo.commandBufferCount   != 0 || 
          SubmitInfo.signalSemaphoreCount != 0) ? 
         1 : 0;
-    auto err = vkQueueSubmit(m_VkQueue, SubmitCount, &SubmitInfo, Fence);
+    auto err = vkQueueSubmit(m_VkQueue, SubmitCount, &SubmitInfo, vkFence);
     VERIFY(err == VK_SUCCESS, "Failed to submit command buffer to the command queue");
 
     // We must atomically place the (value, fence) pair into the deque
     auto FenceValue = m_NextFenceValue;
-    m_PendingFences.emplace_back(FenceValue, std::move(Fence));
+    m_pFence->AddPendingFence(std::move(vkFence), FenceValue);
 
     // Increment the value
     Atomics::AtomicIncrement(m_NextFenceValue);
@@ -105,47 +99,21 @@ void CommandQueueVkImpl::IdleGPU()
     // Increment fence before idling the queue
     Atomics::AtomicIncrement(m_NextFenceValue);
     vkQueueWaitIdle(m_VkQueue);
-    if (LastCompletedFenceValue > m_LastCompletedFenceValue)
-        m_LastCompletedFenceValue = LastCompletedFenceValue;
-    for (auto& val_fence : m_PendingFences)
-    {
-        // For some reason after idling the queue not all fences are signaled
-        while (m_LogicalDevice->GetFenceStatus(val_fence.second) != VK_SUCCESS)
-        {
-            VkFence FenceToWait = val_fence.second;
-            auto res = vkWaitForFences(m_LogicalDevice->GetVkDevice(), 1, &FenceToWait, VK_TRUE, UINT64_MAX);
-            VERIFY_EXPR(res == VK_SUCCESS);
-        }
-
-        auto status = m_LogicalDevice->GetFenceStatus(val_fence.second);
-        VERIFY(status == VK_SUCCESS, "All pending fences must now be complete!");
-        m_FencePool.DisposeFence(std::move(val_fence.second));
-    }
-    m_PendingFences.clear();
+    // For some reason after idling the queue not all fences are signaled
+    m_pFence->Wait();
+    m_pFence->Reset(LastCompletedFenceValue);
 }
 
 Uint64 CommandQueueVkImpl::GetCompletedFenceValue()
 {
     std::lock_guard<std::mutex> Lock(m_QueueMutex);
+    return m_pFence->GetCompletedValue();
+}
 
-    while (!m_PendingFences.empty())
-    {
-        auto &Value_Fence = m_PendingFences.front();
-        auto status = m_LogicalDevice->GetFenceStatus(Value_Fence.second);
-        if(status == VK_SUCCESS)
-        {
-            if (Value_Fence.first > m_LastCompletedFenceValue)
-                m_LastCompletedFenceValue = Value_Fence.first;
-            m_FencePool.DisposeFence(std::move(Value_Fence.second));
-            m_PendingFences.pop_front();
-        }
-        else
-        {
-            break;
-        }
-    }
-
-    return m_LastCompletedFenceValue;
+void CommandQueueVkImpl::SignalFence(VkFence vkFence)
+{
+    auto err = vkQueueSubmit(m_VkQueue, 0, nullptr, vkFence);
+    VERIFY(err == VK_SUCCESS, "Failed to submit command buffer to the command queue");
 }
 
 }

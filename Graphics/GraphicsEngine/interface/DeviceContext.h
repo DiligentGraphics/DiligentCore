@@ -40,6 +40,7 @@
 #include "DepthStencilState.h"
 #include "BlendState.h"
 #include "PipelineState.h"
+#include "Fence.h"
 #include "CommandList.h"
 #include "SwapChain.h"
 
@@ -103,7 +104,7 @@ struct DrawAttribs
 
     /// For indirect rendering, pointer to the buffer, from which
     /// draw attributes will be read. Ignored if DrawAttribs::IsIndirect is False.
-    IBuffer *pIndirectDrawAttribs;
+    IBuffer* pIndirectDrawAttribs;
 
 
     /// Initializes the structure members with default values
@@ -158,7 +159,7 @@ struct DispatchComputeAttribs
     /// Pointer to the buffer containing dispatch arguments.
     /// If not nullptr, then indirect dispatch command is executed, and
     /// ThreadGroupCountX, ThreadGroupCountY, and ThreadGroupCountZ are ignored
-    IBuffer *pIndirectDispatchAttribs;
+    IBuffer* pIndirectDispatchAttribs;
     
     /// If pIndirectDispatchAttribs is not nullptr, indicates offset from the beginning
     /// of the buffer to the dispatch command arguments. Ignored otherwise
@@ -182,7 +183,7 @@ struct DispatchComputeAttribs
     /// \param [in] pDispatchAttribs - Pointer to the buffer containing dispatch arguments.
     /// \param [in] Offset - Offset from the beginning of the buffer to the dispatch command 
     ///                 arguments. Default value is 0.
-    DispatchComputeAttribs( IBuffer *pDispatchAttribs, Uint32 Offset = 0 ) :
+    DispatchComputeAttribs( IBuffer* pDispatchAttribs, Uint32 Offset = 0 ) :
         ThreadGroupCountX( 0 ),
         ThreadGroupCountY( 0 ),
         ThreadGroupCountZ( 0 ),
@@ -293,12 +294,12 @@ class IDeviceContext : public IObject
 {
 public:
     /// Queries the specific interface, see IObject::QueryInterface() for details
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface ) = 0;
+    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject** ppInterface ) = 0;
 
     /// Sets the pipeline state
 
     /// \param [in] pPipelineState - Pointer to IPipelineState interface to bind to the context.
-    virtual void SetPipelineState(IPipelineState *pPipelineState) = 0;
+    virtual void SetPipelineState(IPipelineState* pPipelineState) = 0;
 
 
     /// Transitions shader resources to the require states.
@@ -307,7 +308,7 @@ public:
     /// \remarks This method explicitly transitiones all resources to the correct states.
     ///          If this method was called, there is no need to specify Diligent::COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES
     ///          when calling IDeviceContext::CommitShaderResources()
-    virtual void TransitionShaderResources(IPipelineState *pPipelineState, IShaderResourceBinding *pShaderResourceBinding) = 0;
+    virtual void TransitionShaderResources(IPipelineState* pPipelineState, IShaderResourceBinding* pShaderResourceBinding) = 0;
 
     /// Commits shader resources to the device context
 
@@ -325,7 +326,7 @@ public:
     ///          is not specified, it is assumed that all resources are already in correct states.\n
     ///          Resources can be explicitly transitioned to the required states by calling 
     ///          IDeviceContext::TransitionShaderResources()
-    virtual void CommitShaderResources(IShaderResourceBinding *pShaderResourceBinding, Uint32 Flags) = 0;
+    virtual void CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, Uint32 Flags) = 0;
 
     /// Sets the stencil reference value
 
@@ -361,11 +362,11 @@ public:
     ///          It is suggested to specify Diligent::SET_VERTEX_BUFFERS_FLAG_RESET flag
     ///          whenever possible. This will assure that no buffers from previous draw calls are
     ///          are bound to the pipeline.
-    virtual void SetVertexBuffers(Uint32 StartSlot, 
-                                  Uint32 NumBuffersSet, 
-                                  IBuffer **ppBuffers, 
-                                  Uint32 *pOffsets,
-                                  Uint32 Flags) = 0;
+    virtual void SetVertexBuffers(Uint32    StartSlot, 
+                                  Uint32    NumBuffersSet, 
+                                  IBuffer** ppBuffers, 
+                                  Uint32*   pOffsets,
+                                  Uint32    Flags) = 0;
 
     /// Invalidates the cached context state.
 
@@ -383,7 +384,7 @@ public:
     /// \remarks The device context keeps strong reference to the index buffer.
     ///          Thus an index buffer object cannot be released until it is unbound 
     ///          from the context.
-    virtual void SetIndexBuffer(IBuffer *pIndexBuffer, Uint32 ByteOffset) = 0;
+    virtual void SetIndexBuffer(IBuffer* pIndexBuffer, Uint32 ByteOffset) = 0;
 
 
     /// Sets an array of viewports
@@ -403,7 +404,7 @@ public:
     /// following call:
     ///
     ///     pContext->SetViewports(1, nullptr, 0, 0);
-    virtual void SetViewports( Uint32 NumViewports, const Viewport *pViewports, Uint32 RTWidth, Uint32 RTHeight ) = 0;
+    virtual void SetViewports( Uint32 NumViewports, const Viewport* pViewports, Uint32 RTWidth, Uint32 RTHeight ) = 0;
 
     /// Sets active scissor rects
 
@@ -418,7 +419,7 @@ public:
     /// required to convert viewport from DirectX to OpenGL coordinate system if OpenGL device is used.\n\n
     /// All scissor rects must be set atomically as one operation. Any rects not 
     /// defined by the call are disabled.
-    virtual void SetScissorRects( Uint32 NumRects, const Rect *pRects, Uint32 RTWidth, Uint32 RTHeight ) = 0;
+    virtual void SetScissorRects( Uint32 NumRects, const Rect* pRects, Uint32 RTWidth, Uint32 RTHeight ) = 0;
 
     /// Binds one or more render targets and the depth-stencil buffer to the pipeline. It also
     /// sets the viewport to match the first non-null render target or depth-stencil buffer.
@@ -439,7 +440,7 @@ public:
     /// following call:
     ///
     ///     pContext->SetRenderTargets(0, nullptr, nullptr);
-    virtual void SetRenderTargets( Uint32 NumRenderTargets, ITextureView *ppRenderTargets[], ITextureView *pDepthStencil ) = 0;
+    virtual void SetRenderTargets( Uint32 NumRenderTargets, ITextureView* ppRenderTargets[], ITextureView* pDepthStencil ) = 0;
 
     /// Executes a draw command
 
@@ -461,7 +462,7 @@ public:
     /// \param [in] Stencil - Value to clear stencil part of the view with.
     /// \remarks The full extent of the view is always cleared. Viewport and scissor settings are not applied.
     /// \note The depth-stencil view must be bound to the pipeline for clear operation to be performed.
-    virtual void ClearDepthStencil( ITextureView *pView, Uint32 ClearFlags = CLEAR_DEPTH_FLAG, float fDepth = 1.f, Uint8 Stencil = 0 ) = 0;
+    virtual void ClearDepthStencil( ITextureView* pView, Uint32 ClearFlags = CLEAR_DEPTH_FLAG, float fDepth = 1.f, Uint8 Stencil = 0 ) = 0;
 
     /// Clears a render target view
 
@@ -471,7 +472,7 @@ public:
     ///                    If nullptr is provided, the default array {0,0,0,0} will be used.
     /// \remarks The full extent of the view is always cleared. Viewport and scissor settings are not applied.
     /// \note The render target view must be bound to the pipeline for clear operation to be performed.
-    virtual void ClearRenderTarget( ITextureView *pView, const float *RGBA = nullptr ) = 0;
+    virtual void ClearRenderTarget( ITextureView* pView, const float* RGBA = nullptr ) = 0;
 
     /// Finishes recording commands and generates a command list
     
@@ -482,7 +483,18 @@ public:
 
     /// \param [in] pCommandList - Pointer to the command list to executre.
     /// \remarks After command list is executed, it is no longer valid and should be released.
-    virtual void ExecuteCommandList( ICommandList *pCommandList) = 0;
+    virtual void ExecuteCommandList( ICommandList* pCommandList) = 0;
+
+    /// Tells the GPU to set a fence to a specified value after all previous work has completed
+
+    /// \note The method does not flush the context (an application can do this explcitly if needed)
+    ///       and the fence will be signalled only when the command context is flushed next time.
+    ///       If an application needs to wait for the fence in a loop, it must flush the context
+    ///       after signalling the fence.
+    /// \param [in] pFence - The fence to signal
+    /// \param [in] Value  - The value to set the fence to. This value must be greater than the
+    ///                      previously signalled value on the same fence.
+    virtual void SignalFence(IFence* pFence, Uint64 Value) = 0;
 
     /// Flushes the command buffer
     virtual void Flush() = 0;
@@ -502,7 +514,7 @@ public:
     /// However, when the engine is initialized by attaching to existing d3d11/d3d12 device or OpenGL/GLES context, the
     /// swap chain needs to be set manually if the device context will be using any of the commands above.\n
     /// Device context keeps strong reference to the swap chain.
-    virtual void SetSwapChain( ISwapChain *pSwapChain) = 0;
+    virtual void SetSwapChain( ISwapChain* pSwapChain) = 0;
 };
 
 }

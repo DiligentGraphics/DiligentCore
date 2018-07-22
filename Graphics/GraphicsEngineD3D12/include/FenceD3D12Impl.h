@@ -51,10 +51,10 @@ public:
     /// Resets the fence to the specified value. 
     virtual void Reset(Uint64 Value)override final;
 
-    ID3D12Fence* GetD3D12Fence()override final{ return m_pD3D12Fence; }
+    ID3D12Fence* GetD3D12Fence()override final{ return m_pd3d12Fence; }
 
 private:
-    CComPtr<ID3D12Fence> m_pD3D12Fence; ///< D3D12 Fence object
+    CComPtr<ID3D12Fence> m_pd3d12Fence; ///< D3D12 Fence object
 };
 
 }

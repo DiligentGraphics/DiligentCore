@@ -79,6 +79,8 @@ public:
 
     virtual void ExecuteCommandList(class ICommandList *pCommandList)override final;
 
+    virtual void SignalFence(IFence* pFence, Uint64 Value)override final;
+
     virtual bool UpdateCurrentGLContext()override final;
 
     void BindProgramResources( Uint32 &NewMemoryBarriers, IShaderResourceBinding *pResBinding );

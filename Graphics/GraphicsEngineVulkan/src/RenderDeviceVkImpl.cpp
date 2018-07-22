@@ -172,7 +172,7 @@ void RenderDeviceVkImpl::ExecuteAndDisposeTransientCmdBuff(VkCommandBuffer vkCmd
 
     Uint64 SubmittedFenceValue = 0;
     Uint64 SubmittedCmdBuffNumber = 0;
-    SubmitCommandBuffer(SubmitInfo, SubmittedCmdBuffNumber, SubmittedFenceValue);
+    SubmitCommandBuffer(SubmitInfo, SubmittedCmdBuffNumber, SubmittedFenceValue, nullptr);
 
 
     // We MUST NOT discard stale objects when executing transient command buffer,
@@ -204,8 +204,9 @@ void RenderDeviceVkImpl::ExecuteAndDisposeTransientCmdBuff(VkCommandBuffer vkCmd
 }
 
 void RenderDeviceVkImpl::SubmitCommandBuffer(const VkSubmitInfo& SubmitInfo, 
-                                             Uint64& SubmittedCmdBuffNumber, // Number of the submitted command buffer 
-                                             Uint64& SubmittedFenceValue     // Fence value associated with the submitted command buffer
+                                             Uint64&             SubmittedCmdBuffNumber,                      // Number of the submitted command buffer 
+                                             Uint64&             SubmittedFenceValue,                         // Fence value associated with the submitted command buffer
+                                             std::vector<std::pair<Uint64, RefCntAutoPtr<IFence> > >* pFences // List of fences to signal
                                              )
 {
 	std::lock_guard<std::mutex> LockGuard(m_CmdQueueMutex);
@@ -216,9 +217,19 @@ void RenderDeviceVkImpl::SubmitCommandBuffer(const VkSubmitInfo& SubmitInfo,
     SubmittedFenceValue = std::max(SubmittedFenceValue, NextFenceValue);
     SubmittedCmdBuffNumber = m_NextCmdBuffNumber;
     Atomics::AtomicIncrement(m_NextCmdBuffNumber);
+    if (pFences != nullptr)
+    {
+        for (auto& val_fence : *pFences)
+        {
+            auto* pFenceVkImpl = val_fence.second.RawPtr<FenceVkImpl>();
+            auto vkFence = pFenceVkImpl->GetVkFence();
+            m_pCommandQueue->SignalFence(vkFence);
+            pFenceVkImpl->AddPendingFence(std::move(vkFence), val_fence.first);
+        }
+    }
 }
 
-Uint64 RenderDeviceVkImpl::ExecuteCommandBuffer(const VkSubmitInfo& SubmitInfo, DeviceContextVkImpl* pImmediateCtx)
+Uint64 RenderDeviceVkImpl::ExecuteCommandBuffer(const VkSubmitInfo& SubmitInfo, DeviceContextVkImpl* pImmediateCtx, std::vector<std::pair<Uint64, RefCntAutoPtr<IFence> > >* pSignalFences)
 {
     // pImmediateCtx parameter is only used to make sure the command buffer is submitted from the immediate context
     // Stale objects MUST only be discarded when submitting cmd list from the immediate context
@@ -226,7 +237,7 @@ Uint64 RenderDeviceVkImpl::ExecuteCommandBuffer(const VkSubmitInfo& SubmitInfo, 
 
     Uint64 SubmittedFenceValue = 0;
     Uint64 SubmittedCmdBuffNumber = 0;
-    SubmitCommandBuffer(SubmitInfo, SubmittedCmdBuffNumber, SubmittedFenceValue);
+    SubmitCommandBuffer(SubmitInfo, SubmittedCmdBuffNumber, SubmittedFenceValue, pSignalFences);
 
     // The following basic requirement guarantees correctness of resource deallocation:
     //
@@ -325,7 +336,7 @@ void RenderDeviceVkImpl::FinishFrame(bool ReleaseAllResources)
     Uint64 SubmittedCmdBuffNumber = 0;
     VkSubmitInfo DummySubmitInfo = {};
     // Submit empty command buffer to set a fence on the GPU
-    SubmitCommandBuffer(DummySubmitInfo, SubmittedCmdBuffNumber, SubmittedFenceValue);
+    SubmitCommandBuffer(DummySubmitInfo, SubmittedCmdBuffNumber, SubmittedFenceValue, nullptr);
         
     // Discard all remaining objects. This is important to do if there were 
     // no command lists submitted during the frame. All stale resources will

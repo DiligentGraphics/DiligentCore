@@ -26,9 +26,11 @@
 /// \file
 /// Declaration of Diligent::FenceGLImpl class
 
+#include <deque>
 #include "FenceGL.h"
 #include "RenderDeviceGL.h"
 #include "FenceBase.h"
+#include "GLObjectWrapper.h"
 
 namespace Diligent
 {
@@ -51,8 +53,15 @@ public:
     /// Resets the fence to the specified value. 
     virtual void Reset(Uint64 Value)override final;
 
-private:
+    void AddPendingFence(GLObjectWrappers::GLSyncObj&& Fence, Uint64 Value)
+    {
+        m_PendingFences.emplace_back(Value, std::move(Fence));
+    }
 
+private:
+    std::deque<std::pair<Uint64, GLObjectWrappers::GLSyncObj> > m_PendingFences;
+    volatile Uint64 m_LastCompletedFenceValue = 0;
 };
 
 }
+

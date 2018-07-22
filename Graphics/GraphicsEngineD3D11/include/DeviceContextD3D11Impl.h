@@ -87,6 +87,8 @@ public:
 
     virtual void ExecuteCommandList(class ICommandList* pCommandList)override final;
 
+    virtual void SignalFence(IFence* pFence, Uint64 Value)override final;
+
     ID3D11DeviceContext* GetD3D11DeviceContext(){ return m_pd3d11DeviceContext; }
     
     void CommitRenderTargets();

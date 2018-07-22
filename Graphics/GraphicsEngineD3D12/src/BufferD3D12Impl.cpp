@@ -201,7 +201,7 @@ BufferD3D12Impl :: BufferD3D12Impl(IReferenceCounters*          pRefCounters,
             //                  |     N+1, but resource it references    |                                   |
             //                  |     was added to the delete queue      |                                   |
             //                  |     with value N                       |                                   |
-	        pRenderDeviceD3D12->CloseAndExecuteCommandContext(pInitContext, false);
+	        pRenderDeviceD3D12->CloseAndExecuteCommandContext(pInitContext, false, nullptr);
 
             // Add reference to the object to the release queue to keep it alive
             // until copy operation is complete. This must be done after

@@ -92,7 +92,7 @@ public:
 
 	void IdleGPU(bool ReleaseStaleObjects);
     CommandContext* AllocateCommandContext(const Char *ID = "");
-    void CloseAndExecuteCommandContext(CommandContext *pCtx, bool DiscardStaleObjects);
+    void CloseAndExecuteCommandContext(CommandContext *pCtx, bool DiscardStaleObjects, std::vector<std::pair<Uint64, RefCntAutoPtr<IFence> > >* pSignalFences);
     void DisposeCommandContext(CommandContext*);
 
     void SafeReleaseD3D12Object(ID3D12Object* pObj);

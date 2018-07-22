@@ -80,4 +80,9 @@ Uint64 CommandQueueD3D12Impl::GetCompletedFenceValue()
     return m_LastCompletedFenceValue;
 }
 
+void CommandQueueD3D12Impl::SignalFence(ID3D12Fence* pFence, Uint64 Value)
+{
+    m_pd3d12CmdQueue->Signal(pFence, Value);
+}
+
 }

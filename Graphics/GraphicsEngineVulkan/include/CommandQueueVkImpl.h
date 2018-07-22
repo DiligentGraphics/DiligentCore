@@ -32,7 +32,7 @@
 #include "CommandQueueVk.h"
 #include "ObjectBase.h"
 #include "VulkanUtilities/VulkanLogicalDevice.h"
-#include "VulkanUtilities/VulkanFencePool.h"
+#include "FenceVkImpl.h"
 
 namespace Diligent
 {
@@ -65,23 +65,25 @@ public:
     virtual void IdleGPU()override final;
 
     virtual Uint64 GetCompletedFenceValue()override final;
+
+    virtual void SignalFence(VkFence vkFence)override final;
+
+    void SetFence(RefCntAutoPtr<FenceVkImpl> pFence){m_pFence = std::move(pFence);}
+
 private:
     // A value that will be signaled by the command queue next
     Atomics::AtomicInt64 m_NextFenceValue;
-
-    // Last fence value that is known to be completed by the GPU
-    volatile Uint64 m_LastCompletedFenceValue = 0;
 
     std::shared_ptr<VulkanUtilities::VulkanLogicalDevice> m_LogicalDevice;
    
     const VkQueue m_VkQueue;
     const uint32_t m_QueueFamilyIndex;
-    VulkanUtilities::VulkanFencePool m_FencePool;
-    // Queue of fences signaled right after a command buffer has been 
+    // Fence is signaled right after a command buffer has been 
     // submitted to the command queue for execution.
-    // All command buffers with fence value less or equal to the signaled value
+    // All command buffers with fence value less than or equal to the signaled value
     // are guaranteed to be finished by the GPU
-    std::deque<std::pair<Uint64, VulkanUtilities::FenceWrapper>> m_PendingFences;
+    RefCntAutoPtr<FenceVkImpl> m_pFence;
+
     std::mutex m_QueueMutex;
 };
 

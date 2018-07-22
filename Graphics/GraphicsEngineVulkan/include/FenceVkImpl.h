@@ -26,14 +26,16 @@
 /// \file
 /// Declaration of Diligent::FenceVkImpl class
 
+#include <deque>
 #include "FenceVk.h"
-#include "RenderDeviceVk.h"
 #include "FenceBase.h"
+#include "VulkanUtilities/VulkanFencePool.h"
 
 namespace Diligent
 {
 
 class FixedBlockMemoryAllocator;
+class RenderDeviceVkImpl;
 
 /// Implementation of the Diligent::IFenceVk interface
 class FenceVkImpl : public FenceBase<IFenceVk>
@@ -42,17 +44,28 @@ public:
     using TFenceBase = FenceBase<IFenceVk>;
 
     FenceVkImpl(IReferenceCounters* pRefCounters,
-                IRenderDevice*      pDevice,
-                const FenceDesc&    Desc);
+                RenderDeviceVkImpl* pRendeDeviceVkImpl,
+                const FenceDesc&    Desc,
+                bool                IsDeviceInternal = false);
     ~FenceVkImpl();
 
     virtual Uint64 GetCompletedValue()override final;
 
     /// Resets the fence to the specified value. 
     virtual void Reset(Uint64 Value)override final;
+    
+    VulkanUtilities::FenceWrapper GetVkFence() { return m_FencePool.GetFence(); }
+    void AddPendingFence(VulkanUtilities::FenceWrapper&& vkFence, Uint64 FenceValue)
+    {
+        m_PendingFences.emplace_back(FenceValue, std::move(vkFence));
+    }
+
+    void Wait();
 
 private:
-
+    VulkanUtilities::VulkanFencePool m_FencePool;
+    std::deque<std::pair<Uint64, VulkanUtilities::FenceWrapper>> m_PendingFences;
+    volatile Uint64 m_LastCompletedFenceValue = 0;
 };
 
 }

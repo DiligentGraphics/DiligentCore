@@ -53,6 +53,9 @@ public:
 
     /// Blocks execution until all pending GPU commands are complete
     virtual void IdleGPU() = 0;
+
+    /// Signals the given fence
+    virtual void SignalFence(ID3D12Fence* pFence, Uint64 Value) = 0;
 };
 
 }

@@ -26,7 +26,7 @@
 
 #include "FenceD3D12Impl.h"
 #include "EngineMemory.h"
-
+#include "RenderDeviceD3D12Impl.h"
 namespace Diligent
 {
     
@@ -35,6 +35,9 @@ FenceD3D12Impl :: FenceD3D12Impl(IReferenceCounters* pRefCounters,
                                  const FenceDesc&    Desc) : 
     TFenceBase(pRefCounters, pDevice, Desc)
 {
+    auto* pd3d12Device = ValidatedCast<RenderDeviceD3D12Impl>(pDevice)->GetD3D12Device();
+    auto hr = pd3d12Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, __uuidof(m_pd3d12Fence), reinterpret_cast<void**>(static_cast<ID3D12Fence**>(&m_pd3d12Fence)));
+    CHECK_D3D_RESULT_THROW(hr, "Failed to create D3D12 fence");
 }
 
 FenceD3D12Impl :: ~FenceD3D12Impl()
@@ -43,12 +46,12 @@ FenceD3D12Impl :: ~FenceD3D12Impl()
 
 Uint64 FenceD3D12Impl :: GetCompletedValue()
 {
-    return m_pD3D12Fence->GetCompletedValue();
+    return m_pd3d12Fence->GetCompletedValue();
 }
 
 void FenceD3D12Impl :: Reset(Uint64 Value)
 {
-    m_pD3D12Fence->Signal(Value);
+    m_pd3d12Fence->Signal(Value);
 }
 
 }

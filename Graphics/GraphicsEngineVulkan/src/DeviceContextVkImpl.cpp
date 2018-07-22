@@ -811,11 +811,12 @@ namespace Diligent
 
         // Submit command buffer even if there are no commands to release stale resources.
         //if (SubmitInfo.commandBufferCount != 0 || SubmitInfo.waitSemaphoreCount !=0 || SubmitInfo.signalSemaphoreCount != 0)
-        auto SubmittedFenceValue = pDeviceVkImpl->ExecuteCommandBuffer(SubmitInfo, this);
+        auto SubmittedFenceValue = pDeviceVkImpl->ExecuteCommandBuffer(SubmitInfo, this, &m_PendingFences);
         
         m_WaitSemaphores.clear();
         m_WaitDstStageMasks.clear();
         m_SignalSemaphores.clear();
+        m_PendingFences.clear();
 
         if (vkCmdBuff != VK_NULL_HANDLE)
         {
@@ -1269,8 +1270,9 @@ namespace Diligent
         SubmitInfo.commandBufferCount = 1;
         SubmitInfo.pCommandBuffers = &vkCmdBuff;
         auto pDeviceVkImpl = m_pDevice.RawPtr<RenderDeviceVkImpl>();
-        auto SubmittedFenceValue = pDeviceVkImpl->ExecuteCommandBuffer(SubmitInfo, this);
-        
+        VERIFY_EXPR(m_PendingFences.empty());
+        auto SubmittedFenceValue = pDeviceVkImpl->ExecuteCommandBuffer(SubmitInfo, this, nullptr);
+
         auto pDeferredCtxVkImpl = pDeferredCtx.RawPtr<DeviceContextVkImpl>();
         // It is OK to dispose command buffer from another thread. We are not going to
         // record any commands and only need to add the buffer to the queue
@@ -1281,6 +1283,12 @@ namespace Diligent
         
         m_ReleaseQueue.Purge(CompletedFenceValue);
     }
+
+    void DeviceContextVkImpl::SignalFence(IFence* pFence, Uint64 Value)
+    {
+        VERIFY(!m_bIsDeferred, "Fence can only be signalled from immediate context");
+        m_PendingFences.emplace_back( std::make_pair(Value, pFence) );
+    };
 
     void DeviceContextVkImpl::TransitionImageLayout(ITexture *pTexture, VkImageLayout NewLayout)
     {

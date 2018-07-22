@@ -40,8 +40,7 @@ static constexpr INTERFACE_ID IID_FenceVk =
 class IFenceVk : public IFence
 {
 public:
-    /// Returns OpenGL sync object
-    //virtual IGLFence* GetGLFence() = 0;
+
 };
 
 }

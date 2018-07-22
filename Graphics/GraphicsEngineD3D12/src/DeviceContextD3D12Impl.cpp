@@ -29,6 +29,7 @@
 #include "CommandContext.h"
 #include "TextureD3D12Impl.h"
 #include "BufferD3D12Impl.h"
+#include "FenceD3D12Impl.h"
 #include "D3D12TypeConversions.h"
 #include "d3dx12_win.h"
 #include "DynamicUploadHeap.h"
@@ -513,7 +514,8 @@ namespace Diligent
             if (m_NumCommandsInCurCtx != 0)
             {
                 m_pCurrCmdCtx->FlushResourceBarriers();
-                pDeviceD3D12Impl->CloseAndExecuteCommandContext(m_pCurrCmdCtx, true);
+                pDeviceD3D12Impl->CloseAndExecuteCommandContext(m_pCurrCmdCtx, true, &m_PendingFences);
+                m_PendingFences.clear();
             }
             else
                 pDeviceD3D12Impl->DisposeCommandContext(m_pCurrCmdCtx);
@@ -863,8 +865,15 @@ namespace Diligent
         InvalidateState();
 
         CommandListD3D12Impl* pCmdListD3D12 = ValidatedCast<CommandListD3D12Impl>(pCommandList);
-        m_pDevice.RawPtr<RenderDeviceD3D12Impl>()->CloseAndExecuteCommandContext(pCmdListD3D12->Close(), true);
+        VERIFY_EXPR(m_PendingFences.empty());
+        m_pDevice.RawPtr<RenderDeviceD3D12Impl>()->CloseAndExecuteCommandContext(pCmdListD3D12->Close(), true, nullptr);
     }
+
+    void DeviceContextD3D12Impl::SignalFence(IFence* pFence, Uint64 Value)
+    {
+        VERIFY(!m_bIsDeferred, "Fence can only be signalled from immediate context");
+        m_PendingFences.emplace_back(Value, pFence);
+    };
 
     void DeviceContextD3D12Impl::TransitionTextureState(ITexture *pTexture, D3D12_RESOURCE_STATES State)
     {

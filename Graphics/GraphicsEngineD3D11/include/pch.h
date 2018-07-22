@@ -40,9 +40,13 @@
 #include <algorithm>
 
 #if PLATFORM_WIN32
-#   define D3D11_VERSION 0
+#   ifndef D3D11_VERSION
+#       define D3D11_VERSION 0
+#   endif
 #elif PLATFORM_UNIVERSAL_WINDOWS
-#   define D3D11_VERSION 2
+#   ifndef D3D11_VERSION
+#       define D3D11_VERSION 2
+#   endif
 #endif
 
 #if D3D11_VERSION == 0
@@ -55,13 +59,6 @@
 #   include <d3d11_3.h>
 #elif D3D11_VERSION == 4
 #   include <d3d11_4.h>
-#endif
-
-#if D3D11_VERSION >=4
-#   define D3D11_FENCES_SUPPORTED 1
-#else
-#   define D3D11_FENCES_SUPPORTED 0
-    using ID3D11Fence = IUnknown;
 #endif
 
 #include "EngineD3D11Defines.h"

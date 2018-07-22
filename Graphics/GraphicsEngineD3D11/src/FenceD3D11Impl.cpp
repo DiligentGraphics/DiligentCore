@@ -30,16 +30,11 @@
 namespace Diligent
 {
     
-FenceD3D11Impl :: FenceD3D11Impl(IReferenceCounters* pRefCounters,
-                                 IRenderDevice*      pDevice,
-                                 const FenceDesc&    Desc) : 
+FenceD3D11Impl :: FenceD3D11Impl(IReferenceCounters*  pRefCounters,
+                                 IRenderDevice*       pDevice,
+                                 const FenceDesc&     Desc) : 
     TFenceBase(pRefCounters, pDevice, Desc)
 {
-#if D3D11_FENCES_SUPPORTED
-
-#else
-    LOG_ERROR("D3D11 fences are not supported in this Windows SDK version");
-#endif
 }
 
 FenceD3D11Impl :: ~FenceD3D11Impl()
@@ -48,17 +43,32 @@ FenceD3D11Impl :: ~FenceD3D11Impl()
 
 Uint64 FenceD3D11Impl :: GetCompletedValue()
 {
-#if D3D11_FENCES_SUPPORTED
-    return m_pd3d11Fence->GetCompletedValue();
-#else
-    LOG_ERROR("D3D11 fences are not supported in this Windows SDK version");
-    return 0;
-#endif
+    while (!m_PendingQueries.empty())
+    {
+        auto& QueryData = m_PendingQueries.front();
+        BOOL Data;
+        auto res = QueryData.pd3d11Ctx->GetData(QueryData.pd3d11Query, &Data, sizeof(Data), D3D11_ASYNC_GETDATA_DONOTFLUSH);
+        if(res == S_OK)
+        {
+            VERIFY_EXPR(Data == TRUE);
+            if (QueryData.Value > m_LastCompletedFenceValue)
+                m_LastCompletedFenceValue = QueryData.Value;
+            m_PendingQueries.pop_front();
+        }
+        else
+        {
+            break;
+        }
+    }
+
+    return m_LastCompletedFenceValue;
 }
 
 void FenceD3D11Impl :: Reset(Uint64 Value)
 {
-    LOG_ERROR("Resetting D3D11 fence is not supported");
+    DEV_CHECK_ERR(Value >= m_LastCompletedFenceValue, "Resetting fence '", m_Desc.Name, "' to the value (", Value, ") that is smaller than the last completed value (", m_LastCompletedFenceValue, ")");
+    if (Value > m_LastCompletedFenceValue)
+        m_LastCompletedFenceValue = Value;
 }
 
 }

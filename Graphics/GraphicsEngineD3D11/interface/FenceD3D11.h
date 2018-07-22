@@ -41,11 +41,6 @@ class IFenceD3D11 : public IFence
 {
 public:
 
-    /// Returns a pointer to the ID3D11Fence interface of the internal Direct3D11 object.
-
-    /// The method does *NOT* call AddRef() on the returned interface,
-    /// so Release() must not be called.
-    virtual ID3D11Fence* GetD3D11Fence() = 0;
 };
 
 }

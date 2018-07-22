@@ -118,3 +118,39 @@ do{                                                \
 #define LOG_ERROR_MESSAGE_ONCE(...)    LOG_DEBUG_MESSAGE_ONCE(Diligent::DebugMessageSeverity::Error,   ##__VA_ARGS__)
 #define LOG_WARNING_MESSAGE_ONCE(...)  LOG_DEBUG_MESSAGE_ONCE(Diligent::DebugMessageSeverity::Warning, ##__VA_ARGS__)
 #define LOG_INFO_MESSAGE_ONCE(...)     LOG_DEBUG_MESSAGE_ONCE(Diligent::DebugMessageSeverity::Info,    ##__VA_ARGS__)
+
+
+#define CHECK(Expr, Severity, ...)\
+do{                               \
+    if( !(Expr) )                 \
+    {                             \
+        LOG_DEBUG_MESSAGE(Severity, ##__VA_ARGS__);\
+    }                             \
+}while(false)
+
+#define CHECK_ERR(Expr, ...)  CHECK(Expr, Diligent::DebugMessageSeverity::Error,   ##__VA_ARGS__)
+#define CHECK_WARN(Expr, ...) CHECK(Expr, Diligent::DebugMessageSeverity::Warning, ##__VA_ARGS__)
+#define CHECK_INFO(Expr, ...) CHECK(Expr, Diligent::DebugMessageSeverity::Info,    ##__VA_ARGS__)
+
+#define CHECK_THROW(Expr, ...)\
+do{                               \
+    if( !(Expr) )                 \
+    {                             \
+        LOG_ERROR_AND_THROW(##__VA_ARGS__);\
+    }                             \
+}while(false)
+
+
+#ifdef DEVELOPMENT
+
+#define DEV_CHECK_ERR(Expr, ...)  CHECK_ERR (Expr, ##__VA_ARGS__)
+#define DEV_CHECK_WARN(Expr, ...) CHECK_WARN(Expr, ##__VA_ARGS__)
+#define DEV_CHECK_INFO(Expr, ...) CHECK_INFO(Expr, ##__VA_ARGS__)
+
+#else
+
+#define DEV_CHECK_ERR (Expr, ...) do{}while(false)
+#define DEV_CHECK_WARN(Expr, ...) do{}while(false)
+#define DEV_CHECK_INFO(Expr, ...) do{}while(false)
+
+#endif
