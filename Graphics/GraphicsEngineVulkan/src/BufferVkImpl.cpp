@@ -417,7 +417,7 @@ void BufferVkImpl::Unmap( IDeviceContext* pContext, MAP_TYPE MapType, Uint32 Map
         }
         else if (m_Desc.Usage == USAGE_DYNAMIC)
         {
-            VERIFY(MapFlags & MAP_FLAG_DISCARD, "Vk buffer must be mapped for writing with MAP_FLAG_DISCARD flag");
+            VERIFY( MapFlags & (MAP_FLAG_DISCARD | MAP_FLAG_DO_NOT_SYNCHRONIZE), "Vk buffer must be mapped for writing with MAP_FLAG_DISCARD or MAP_FLAG_DO_NOT_SYNCHRONIZE flag");
             if(m_VulkanBuffer != VK_NULL_HANDLE)
             {
                 auto &DynAlloc = m_DynamicAllocations[CtxId];

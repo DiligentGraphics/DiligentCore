@@ -403,7 +403,7 @@ namespace Diligent
             if (!pBuffVk->CheckAccessFlags(VK_ACCESS_INDEX_READ_BIT))
                 BufferMemoryBarrier(*pBuffVk, VK_ACCESS_INDEX_READ_BIT);
 
-            VERIFY(DrawAttribs.IndexType == VT_UINT16 || DrawAttribs.IndexType == VT_UINT32, "Unsupported index format. Only R16_UINT and R32_UINT are allowed.");
+            DEV_CHECK_ERR(DrawAttribs.IndexType == VT_UINT16 || DrawAttribs.IndexType == VT_UINT32, "Unsupported index format. Only R16_UINT and R32_UINT are allowed.");
             VkIndexType vkIndexType = DrawAttribs.IndexType == VT_UINT16 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32;
             m_CommandBuffer.BindIndexBuffer(pBuffVk->GetVkBuffer(), m_IndexDataStartOffset + pBuffVk->GetDynamicOffset(m_ContextId), vkIndexType);
         }

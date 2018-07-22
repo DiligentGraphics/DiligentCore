@@ -409,7 +409,7 @@ void BufferD3D12Impl::Unmap( IDeviceContext* pContext, MAP_TYPE MapType, Uint32 
         }
         else if (m_Desc.Usage == USAGE_DYNAMIC)
         {
-            VERIFY(MapFlags & MAP_FLAG_DISCARD, "D3D12 buffer must be mapped for writing with MAP_FLAG_DISCARD flag");
+            VERIFY(MapFlags & (MAP_FLAG_DISCARD | MAP_FLAG_DO_NOT_SYNCHRONIZE), "D3D12 buffer must be mapped for writing with MAP_FLAG_DISCARD or MAP_FLAG_DO_NOT_SYNCHRONIZE flag");
             // Copy data into the resource
             if (m_pd3d12Resource)
             {

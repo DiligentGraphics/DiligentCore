@@ -206,7 +206,7 @@ namespace Diligent
             IBView.Format = DXGI_FORMAT_R32_UINT;
         else
         {
-            VERIFY( IndexType == VT_UINT16, "Unsupported index format. Only R16_UINT and R32_UINT are allowed.");
+            DEV_CHECK_ERR( IndexType == VT_UINT16, "Unsupported index format. Only R16_UINT and R32_UINT are allowed.");
             IBView.Format = DXGI_FORMAT_R16_UINT;
         }
         // Note that for a dynamic buffer, what we use here is the size of the buffer itself, not the upload heap buffer!
@@ -267,7 +267,7 @@ namespace Diligent
         D3D12_VERTEX_BUFFER_VIEW VBViews[MaxBufferSlots];// = {}
         VERIFY( m_NumVertexStreams <= MaxBufferSlots, "Too many buffers are being set" );
         const auto *Strides = pPipelineStateD3D12->GetBufferStrides();
-        VERIFY( m_NumVertexStreams >= pPipelineStateD3D12->GetNumBufferSlotsUsed(), "Currently bound pipeline state \"", pPipelineStateD3D12->GetDesc().Name, "\" expects ", pPipelineStateD3D12->GetNumBufferSlotsUsed(), " input buffer slots, but only ", m_NumVertexStreams, " is bound");
+        DEV_CHECK_ERR( m_NumVertexStreams >= pPipelineStateD3D12->GetNumBufferSlotsUsed(), "Currently bound pipeline state \"", pPipelineStateD3D12->GetDesc().Name, "\" expects ", pPipelineStateD3D12->GetNumBufferSlotsUsed(), " input buffer slots, but only ", m_NumVertexStreams, " is bound");
         bool DynamicBufferPresent = false;
         for( UINT Buff = 0; Buff < m_NumVertexStreams; ++Buff )
         {
