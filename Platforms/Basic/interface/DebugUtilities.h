@@ -31,18 +31,18 @@
 
 #include <typeinfo>
 
-#define ASSERTION_FAILED(...)\
+#define ASSERTION_FAILED(Message, ...)\
 do{                                         \
     Diligent::MsgStream ms;                 \
-    Diligent::FormatMsg( ms, ##__VA_ARGS__);\
+    Diligent::FormatMsg( ms, Message, ##__VA_ARGS__);\
     DebugAssertionFailed( ms.str().c_str(), __FUNCTION__, __FILE__, __LINE__); \
 }while(false)
 
-#   define VERIFY(Expr, ...)\
+#   define VERIFY(Expr, Message, ...)\
     do{                              \
         if( !(Expr) )                \
         {                            \
-            ASSERTION_FAILED(##__VA_ARGS__);\
+            ASSERTION_FAILED(Message, ##__VA_ARGS__);\
         }                            \
     }while(false)
 
@@ -71,21 +71,21 @@ void CheckDynamicType( SrcType *pSrcPtr )
 #endif
 
 #if defined(_DEBUG)
-#   define DEV_CHECK_ERR(Expr, ...) VERIFY(Expr, ##__VA_ARGS__)
+#   define DEV_CHECK_ERR VERIFY
 #elif defined(DEVELOPMENT)
-#   define DEV_CHECK_ERR(Expr, ...) CHECK_ERR(Expr, ##__VA_ARGS__)
+#   define DEV_CHECK_ERR CHECK_ERR
 #else
-#   define DEV_CHECK_ERR(Expr, ...) do{}while(false)
+#   define DEV_CHECK_ERR(...) do{}while(false)
 #endif
 
 #ifdef DEVELOPMENT
 
-#define DEV_CHECK_WARN(Expr, ...) CHECK_WARN(Expr, ##__VA_ARGS__)
-#define DEV_CHECK_INFO(Expr, ...) CHECK_INFO(Expr, ##__VA_ARGS__)
+#define DEV_CHECK_WARN CHECK_WARN
+#define DEV_CHECK_INFO CHECK_INFO
 
 #else
 
-#define DEV_CHECK_WARN(Expr, ...) do{}while(false)
-#define DEV_CHECK_INFO(Expr, ...) do{}while(false)
+#define DEV_CHECK_WARN(...) do{}while(false)
+#define DEV_CHECK_INFO(...) do{}while(false)
 
 #endif
