@@ -24,30 +24,25 @@
 #pragma once
 
 #include "../../../Primitives/interface/FormatMessage.h"
+#include "../../../Primitives/interface/Errors.h"
 #include "BasicPlatformDebug.h"
 
 #ifdef _DEBUG
 
 #include <typeinfo>
 
-// This function is only requried to ensure that Message argument passed to the macro
-// is actually string and not something else
-inline void EnsureStr( const char* ){}
-
-#define ASSERTION_FAILED(Message, ...)\
+#define ASSERTION_FAILED(...)\
 do{                                         \
-    EnsureStr(Message);                     \
     Diligent::MsgStream ms;                 \
-    Diligent::FormatMsg( ms, Message, ##__VA_ARGS__);\
+    Diligent::FormatMsg( ms, ##__VA_ARGS__);\
     DebugAssertionFailed( ms.str().c_str(), __FUNCTION__, __FILE__, __LINE__); \
 }while(false)
 
-#   define VERIFY(Expr, Message, ...)\
+#   define VERIFY(Expr, ...)\
     do{                              \
-        EnsureStr(Message);          \
         if( !(Expr) )                \
         {                            \
-            ASSERTION_FAILED(Message, ##__VA_ARGS__);\
+            ASSERTION_FAILED(##__VA_ARGS__);\
         }                            \
     }while(false)
 
@@ -72,5 +67,25 @@ void CheckDynamicType( SrcType *pSrcPtr )
 #   define UNEXPECTED(...)do{}while(false)
 #   define UNSUPPORTED(...)do{}while(false)
 #   define VERIFY_EXPR(...)do{}while(false)
+
+#endif
+
+#if defined(_DEBUG)
+#   define DEV_CHECK_ERR(Expr, ...) VERIFY(Expr, ##__VA_ARGS__)
+#elif defined(DEVELOPMENT)
+#   define DEV_CHECK_ERR(Expr, ...) CHECK_ERR(Expr, ##__VA_ARGS__)
+#else
+#   define DEV_CHECK_ERR(Expr, ...) do{}while(false)
+#endif
+
+#ifdef DEVELOPMENT
+
+#define DEV_CHECK_WARN(Expr, ...) CHECK_WARN(Expr, ##__VA_ARGS__)
+#define DEV_CHECK_INFO(Expr, ...) CHECK_INFO(Expr, ##__VA_ARGS__)
+
+#else
+
+#define DEV_CHECK_WARN(Expr, ...) do{}while(false)
+#define DEV_CHECK_INFO(Expr, ...) do{}while(false)
 
 #endif

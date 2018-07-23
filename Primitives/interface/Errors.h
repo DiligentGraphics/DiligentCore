@@ -140,17 +140,3 @@ do{                               \
     }                             \
 }while(false)
 
-
-#ifdef DEVELOPMENT
-
-#define DEV_CHECK_ERR(Expr, ...)  CHECK_ERR (Expr, ##__VA_ARGS__)
-#define DEV_CHECK_WARN(Expr, ...) CHECK_WARN(Expr, ##__VA_ARGS__)
-#define DEV_CHECK_INFO(Expr, ...) CHECK_INFO(Expr, ##__VA_ARGS__)
-
-#else
-
-#define DEV_CHECK_ERR(Expr, ...)  do{}while(false)
-#define DEV_CHECK_WARN(Expr, ...) do{}while(false)
-#define DEV_CHECK_INFO(Expr, ...) do{}while(false)
-
-#endif
