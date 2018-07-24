@@ -48,6 +48,11 @@ namespace VulkanUtilities
         void ReleaseDiscardedSets(uint64_t LastCompletedFence);
 
         DescriptorPoolWrapper&& Release();
+        
+        size_t GetDiscardedSetCount()const
+        {
+            return m_DiscardedSets.size();
+        }
 
     private:
         // Shared point to logical device must be defined before the command pool

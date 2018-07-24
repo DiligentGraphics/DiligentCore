@@ -142,9 +142,11 @@ namespace Diligent
         // moved to the release queue by Flush(). For deferred contexts, this should have happened in the last FinishCommandList()
         // call.
         VERIFY(m_ReleaseQueue.GetStaleResourceCount() == 0, "All stale resources must have been discarded at this point");
+        VERIFY(m_DynamicDescriptorPool.GetStaleAllocationCount() == 0, "All stale dynamic descriptor set allocations must have been discarded at this point");
         ReleaseStaleContextResources(m_NextCmdBuffNumber, pDeviceVkImpl->GetNextFenceValue(), pDeviceVkImpl->GetCompletedFenceValue());
         // Since we idled the GPU, all stale resources must have been destroyed now
         VERIFY(m_ReleaseQueue.GetPendingReleaseResourceCount() == 0, "All stale resources must have been destroyed at this point");
+        VERIFY(m_DynamicDescriptorPool.GetPendingReleaseAllocationCount() == 0, "All stale descriptor set allocations must have been destroyed at this point");
 
         auto VkCmdPool = m_CmdPool.Release();
         pDeviceVkImpl->SafeReleaseVkObject(std::move(VkCmdPool));

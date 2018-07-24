@@ -128,6 +128,12 @@ public:
     DescriptorPoolAllocation Allocate(VkDescriptorSetLayout SetLayout);
     void DisposeAllocations(uint64_t FenceValue);
     void ReleaseStaleAllocations(uint64_t LastCompletedFence);
+    
+    size_t GetStaleAllocationCount()const
+    {
+        return m_ReleasedAllocations.size();
+    }
+    size_t GetPendingReleaseAllocationCount();
 
 private:
     friend class DescriptorPoolAllocation;

@@ -112,4 +112,14 @@ void DescriptorPoolManager::ReleaseStaleAllocations(uint64_t LastCompletedFence)
         Pool->ReleaseDiscardedSets(LastCompletedFence);
 }
 
+size_t DescriptorPoolManager::GetPendingReleaseAllocationCount()
+{
+    size_t count = 0;
+    std::lock_guard<std::mutex> Lock(m_Mutex);
+    for(auto &Pool : m_DescriptorPools)
+        count += Pool->GetDiscardedSetCount();
+    return count;
+}
+
+
 }
