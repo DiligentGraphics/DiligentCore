@@ -120,21 +120,31 @@ namespace Diligent
 
     DeviceContextVkImpl::~DeviceContextVkImpl()
     {
-        auto *pDeviceVkImpl = m_pDevice.RawPtr<RenderDeviceVkImpl>();
-        if (m_bIsDeferred)
-        {
-            DisposeCurrentCmdBuffer(pDeviceVkImpl->GetNextFenceValue());
-            // There must be no resources in the stale resource list. All outstanding resources (if any) must be in the
-            // release queue and must be now released
-            ReleaseStaleContextResources(m_NextCmdBuffNumber, pDeviceVkImpl->GetNextFenceValue(), pDeviceVkImpl->GetCompletedFenceValue());
-        }
-        else
-        {
-            if (m_State.NumCommands != 0)
-                LOG_WARNING_MESSAGE("Flusing outstanding commands from the device context being destroyed. This may result in synchronization errors");
+        auto* pDeviceVkImpl = m_pDevice.RawPtr<RenderDeviceVkImpl>();
+        if (m_State.NumCommands != 0)
+            LOG_ERROR_MESSAGE(m_bIsDeferred ? 
+                                "There are outstanding commands in the deferred context being destroyed, which indicates that FinishCommandList() has not been called." :
+                                "There are outstanding commands in the immediate context being destroyed, which indicates the context has not been Flush()'ed.",
+                              " This is unexpected and may result in synchronization errors");
 
+        if (!m_bIsDeferred)
+        {
+            // There should be no outstanding commands, but we need to call Flush to discard all stale
+            // context resources to actually destroy them in the next call to ReleaseStaleContextResources()
             Flush();
+            // We must now wait for GPU to finish so that we can safely destroy all context resources
+            pDeviceVkImpl->IdleGPU(true);
         }
+
+        DisposeCurrentCmdBuffer(pDeviceVkImpl->GetNextFenceValue());
+
+        // There must be no resources in the stale resource list. For immediate context, all stale resources must have been
+        // moved to the release queue by Flush(). For deferred contexts, this should have happened in the last FinishCommandList()
+        // call.
+        VERIFY(m_ReleaseQueue.GetStaleResourceCount() == 0, "All stale resources must have been discarded at this point");
+        ReleaseStaleContextResources(m_NextCmdBuffNumber, pDeviceVkImpl->GetNextFenceValue(), pDeviceVkImpl->GetCompletedFenceValue());
+        // Since we idled the GPU, all stale resources must have been destroyed now
+        VERIFY(m_ReleaseQueue.GetPendingReleaseResourceCount() == 0, "All stale resources must have been destroyed at this point");
 
         auto VkCmdPool = m_CmdPool.Release();
         pDeviceVkImpl->SafeReleaseVkObject(std::move(VkCmdPool));

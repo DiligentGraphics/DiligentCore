@@ -220,6 +220,18 @@ public:
                 break;
         }
     }
+    
+    /// Returns the number of stale resources
+    size_t GetStaleResourceCount()const
+    {
+        return m_StaleResources.size();
+    }
+
+    /// Returns the number of resources pending release
+    size_t GetPendingReleaseResourceCount()const
+    {
+        return m_ReleaseQueue.size();
+    }
 
 private:
 

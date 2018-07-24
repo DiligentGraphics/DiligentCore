@@ -139,8 +139,8 @@ private:
     const uint32_t m_MaxSets;
 
     std::mutex m_Mutex;
-    std::shared_ptr<const VulkanUtilities::VulkanLogicalDevice> m_LogicalDevice;
-    std::deque< std::unique_ptr<VulkanUtilities::VulkanDescriptorPool> > m_DescriptorPools;
+    std::shared_ptr<const VulkanUtilities::VulkanLogicalDevice>                       m_LogicalDevice;
+    std::deque< std::unique_ptr<VulkanUtilities::VulkanDescriptorPool> >              m_DescriptorPools;
     std::vector< std::pair<VkDescriptorSet, VulkanUtilities::VulkanDescriptorPool*> > m_ReleasedAllocations;
 
     // When adding new members, do not forget to update move ctor!

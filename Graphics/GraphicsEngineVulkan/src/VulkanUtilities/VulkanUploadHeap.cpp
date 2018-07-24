@@ -90,6 +90,7 @@ void VulkanUploadHeap::OnNewPageCreated(VulkanMemoryPage& NewPage)
     VERIFY(MemoryTypeIndex == m_StagingBufferMemoryTypeIndex, "Incosistent memory type");
     auto err = m_LogicalDevice.BindBufferMemory(NewBuffer, NewPage.GetVkMemory(), 0);
     CHECK_VK_ERROR_AND_THROW(err, "Failed to bind buffer memory");
+    VERIFY(m_Buffers.find(&NewPage) == m_Buffers.end(), "Buffer corresponding to this page already exists");
     m_Buffers.emplace(&NewPage, std::move(NewBuffer));
 }
 
