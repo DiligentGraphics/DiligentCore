@@ -132,9 +132,11 @@ namespace Diligent
             // There should be no outstanding commands, but we need to call Flush to discard all stale
             // context resources to actually destroy them in the next call to ReleaseStaleContextResources()
             Flush();
-            // We must now wait for GPU to finish so that we can safely destroy all context resources
-            pDeviceVkImpl->IdleGPU(true);
         }
+
+        // We must now wait for GPU to finish so that we can safely destroy all context resources.
+        // We need to idle when destroying deferred contexts as well since some resources may still be in use.
+        pDeviceVkImpl->IdleGPU(true);
 
         DisposeCurrentCmdBuffer(pDeviceVkImpl->GetNextFenceValue());
 
