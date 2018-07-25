@@ -31,6 +31,7 @@
 #include "HashUtils.h"
 #include "DeviceContextBase.h"
 #include "BaseInterfacesGL.h"
+#include "BufferGLImpl.h"
 
 namespace Diligent
 {
@@ -50,7 +51,7 @@ public:
 
     const GLObjectWrappers::GLVertexArrayObj& GetVAO( IPipelineState *pPSO,
                                                       IBuffer *pIndexBuffer,
-                                                      VertexStreamInfo VertexStreams[],
+                                                      VertexStreamInfo<BufferGLImpl> VertexStreams[],
                                                       Uint32 NumVertexStreams,
                                                       class GLContextState &GLContextState);
     const GLObjectWrappers::GLVertexArrayObj& GetEmptyVAO();

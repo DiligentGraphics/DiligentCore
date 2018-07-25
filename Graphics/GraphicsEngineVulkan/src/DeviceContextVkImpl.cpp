@@ -292,9 +292,9 @@ namespace Diligent
     {
         for ( UINT Buff = 0; Buff < m_NumVertexStreams; ++Buff )
         {
-            auto &CurrStream = m_VertexStreams[Buff];
+            auto& CurrStream = m_VertexStreams[Buff];
             VERIFY( CurrStream.pBuffer, "Attempting to bind a null buffer for rendering" );
-            auto *pBufferVk = CurrStream.pBuffer.RawPtr<BufferVkImpl>();
+            auto* pBufferVk = CurrStream.pBuffer.RawPtr();
             if (!pBufferVk->CheckAccessFlags(VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT))
                 BufferMemoryBarrier(*pBufferVk, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT);
         }
@@ -313,10 +313,10 @@ namespace Diligent
         bool DynamicBufferPresent = false;
         for ( UINT slot = 0; slot < m_NumVertexStreams; ++slot )
         {
-            auto &CurrStream = m_VertexStreams[slot];
+            auto& CurrStream = m_VertexStreams[slot];
             VERIFY( CurrStream.pBuffer, "Attempting to bind a null buffer for rendering" );
             
-            auto *pBufferVk = CurrStream.pBuffer.RawPtr<BufferVkImpl>();
+            auto* pBufferVk = CurrStream.pBuffer.RawPtr();
             if (pBufferVk->GetDesc().Usage == USAGE_DYNAMIC)
             {
                 DynamicBufferPresent = true;

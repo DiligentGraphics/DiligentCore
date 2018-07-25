@@ -73,7 +73,7 @@ void VAOCache::OnDestroyPSO(IPipelineState *pPSO)
 
 const GLObjectWrappers::GLVertexArrayObj& VAOCache::GetVAO( IPipelineState *pPSO,
                                                             IBuffer *pIndexBuffer,
-                                                            VertexStreamInfo VertexStreams[],
+                                                            VertexStreamInfo<BufferGLImpl> VertexStreams[],
                                                             Uint32 NumVertexStreams,
                                                             GLContextState &GLContextState )
 {

@@ -41,10 +41,11 @@ namespace Diligent
 {
 
 /// Describes input vertex stream
+template<typename BufferImplType>
 struct VertexStreamInfo
 {
     /// Strong reference to the buffer object
-    RefCntAutoPtr<IBuffer> pBuffer;
+    RefCntAutoPtr<BufferImplType> pBuffer;
     Uint32 Offset = 0; ///< Offset in bytes
 };
 
@@ -149,7 +150,7 @@ protected:
     RefCntAutoPtr<ISwapChain> m_pSwapChain;
 
     /// Vertex streams. Every stream holds strong reference to the buffer
-    VertexStreamInfo m_VertexStreams[MaxBufferSlots];
+    VertexStreamInfo<BufferImplType> m_VertexStreams[MaxBufferSlots];
     
     /// Number of bound vertex streams
     Uint32 m_NumVertexStreams = 0;
@@ -227,9 +228,9 @@ inline void DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType
         // It is very important to not reset buffers that stay unchanged
         // as AddRef()/Release() are not free
         for (Uint32 s = 0; s < StartSlot; ++s)
-            m_VertexStreams[s] = VertexStreamInfo{};
+            m_VertexStreams[s] = VertexStreamInfo<BufferImplType>{};
         for (Uint32 s = StartSlot + NumBuffersSet; s < m_NumVertexStreams; ++s)
-            m_VertexStreams[s] = VertexStreamInfo{};
+            m_VertexStreams[s] = VertexStreamInfo<BufferImplType>{};
         m_NumVertexStreams = 0;
     }
     m_NumVertexStreams = std::max(m_NumVertexStreams, StartSlot + NumBuffersSet );
@@ -237,7 +238,7 @@ inline void DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType
     for( Uint32 Buff = 0; Buff < NumBuffersSet; ++Buff )
     {
         auto &CurrStream = m_VertexStreams[StartSlot + Buff];
-        CurrStream.pBuffer = ppBuffers ? ppBuffers[Buff] : nullptr;
+        CurrStream.pBuffer = ppBuffers ? ValidatedCast<BufferImplType>(ppBuffers[Buff]) : nullptr;
         CurrStream.Offset = pOffsets ? pOffsets[Buff] : 0;
 #ifdef DEVELOPMENT
         if ( CurrStream.pBuffer )
@@ -252,7 +253,7 @@ inline void DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType
     }
     // Remove null buffers from the end of the array
     while(m_NumVertexStreams > 0 && !m_VertexStreams[m_NumVertexStreams-1].pBuffer)
-        m_VertexStreams[m_NumVertexStreams--] = VertexStreamInfo{};
+        m_VertexStreams[m_NumVertexStreams--] = VertexStreamInfo<BufferImplType>{};
 }
 
 template<typename BaseInterface, typename BufferImplType, typename TextureViewImplType, typename PipelineStateImplType>
@@ -566,7 +567,7 @@ template<typename BaseInterface, typename BufferImplType, typename TextureViewIm
 inline void DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType, PipelineStateImplType> :: ClearStateCache()
 {
     for(Uint32 stream=0; stream < m_NumVertexStreams; ++stream)
-        m_VertexStreams[stream] = VertexStreamInfo();
+        m_VertexStreams[stream] = VertexStreamInfo<BufferImplType>{};
 #ifdef _DEBUG
     for(Uint32 stream=m_NumVertexStreams; stream < _countof(m_VertexStreams); ++stream)
     {

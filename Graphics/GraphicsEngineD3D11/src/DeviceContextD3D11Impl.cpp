@@ -623,12 +623,12 @@ namespace Diligent
 
         bool BindVBs = m_NumVertexStreams != m_NumCommittedD3D11VBs;
 
-        const auto *Strides = pPipelineStateD3D11->GetBufferStrides();
+        const auto* Strides = pPipelineStateD3D11->GetBufferStrides();
         for( UINT Slot = 0; Slot < m_NumVertexStreams; ++Slot )
         {
-            auto &CurrStream = m_VertexStreams[Slot];
+            auto& CurrStream = m_VertexStreams[Slot];
             VERIFY( CurrStream.pBuffer, "Attempting to bind a null buffer for rendering" );
-            auto* pBuffD3D11Impl = CurrStream.pBuffer.RawPtr<BufferD3D11Impl>();
+            auto* pBuffD3D11Impl = CurrStream.pBuffer.RawPtr();
             ID3D11Buffer* pd3d11Buffer = pBuffD3D11Impl->m_pd3d11Buffer;
             auto Stride = Strides[Slot];
             auto Offset = CurrStream.Offset;

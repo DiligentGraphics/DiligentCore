@@ -249,9 +249,9 @@ namespace Diligent
     {
         for( UINT Buff = 0; Buff < m_NumVertexStreams; ++Buff )
         {
-            auto &CurrStream = m_VertexStreams[Buff];
+            auto& CurrStream = m_VertexStreams[Buff];
             VERIFY( CurrStream.pBuffer, "Attempting to bind a null buffer for rendering" );
-            auto *pBufferD3D12 = static_cast<BufferD3D12Impl*>(CurrStream.pBuffer.RawPtr());
+            auto* pBufferD3D12 = CurrStream.pBuffer.RawPtr();
             if(!pBufferD3D12->CheckAllStates(D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER))
                 GraphCtx.TransitionResource(pBufferD3D12, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
         }
@@ -269,11 +269,11 @@ namespace Diligent
         bool DynamicBufferPresent = false;
         for( UINT Buff = 0; Buff < m_NumVertexStreams; ++Buff )
         {
-            auto &CurrStream = m_VertexStreams[Buff];
-            auto &VBView = VBViews[Buff];
+            auto& CurrStream = m_VertexStreams[Buff];
+            auto& VBView = VBViews[Buff];
             VERIFY( CurrStream.pBuffer, "Attempting to bind a null buffer for rendering" );
             
-            auto *pBufferD3D12 = static_cast<BufferD3D12Impl*>(CurrStream.pBuffer.RawPtr());
+            auto *pBufferD3D12 = CurrStream.pBuffer.RawPtr();
             if (pBufferD3D12->GetDesc().Usage == USAGE_DYNAMIC)
             {
                 DynamicBufferPresent = true;
