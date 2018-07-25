@@ -27,19 +27,20 @@
 /// Declaration of Diligent::CommandListD3D12Impl class
 
 #include "CommandListBase.h"
+#include "RenderDeviceD3D12Impl.h"
 
 namespace Diligent
 {
 
 /// Implementation of the Diligent::ICommandList interface
-class CommandListD3D12Impl : public CommandListBase<ICommandList>
+class CommandListD3D12Impl : public CommandListBase<ICommandList, RenderDeviceD3D12Impl>
 {
 public:
-    using TCommandListBase = CommandListBase<ICommandList>;
+    using TCommandListBase = CommandListBase<ICommandList, RenderDeviceD3D12Impl>;
 
-    CommandListD3D12Impl(IReferenceCounters*   pRefCounters, 
-                         IRenderDevice*        pDevice, 
-                         class CommandContext* pCmdContext) :
+    CommandListD3D12Impl(IReferenceCounters*    pRefCounters, 
+                         RenderDeviceD3D12Impl* pDevice, 
+                         class CommandContext*  pCmdContext) :
         TCommandListBase(pRefCounters, pDevice),
         m_pCmdContext(pCmdContext)
     {

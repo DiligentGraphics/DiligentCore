@@ -28,6 +28,7 @@
 
 #include "RenderDeviceD3D11.h"
 #include "CommandListBase.h"
+#include "RenderDeviceD3D11Impl.h"
 
 namespace Diligent
 {
@@ -35,14 +36,14 @@ namespace Diligent
 class FixedBlockMemoryAllocator;
 
 /// Implementation of the Diligent::ICommandListD3D11 interface
-class CommandListD3D11Impl : public CommandListBase<ICommandList>
+class CommandListD3D11Impl : public CommandListBase<ICommandList, RenderDeviceD3D11Impl>
 {
 public:
-    using TCommandListBase = CommandListBase<ICommandList>;
+    using TCommandListBase = CommandListBase<ICommandList, RenderDeviceD3D11Impl>;
 
-    CommandListD3D11Impl(IReferenceCounters* pRefCounters,
-                         IRenderDevice*      pDevice, 
-                         ID3D11CommandList*  pd3d11CommandList);
+    CommandListD3D11Impl(IReferenceCounters*    pRefCounters,
+                         RenderDeviceD3D11Impl* pDevice, 
+                         ID3D11CommandList*     pd3d11CommandList);
     ~CommandListD3D11Impl();
 
     ID3D11CommandList *GetD3D11CommandList(){ return m_pd3d11CommandList; }

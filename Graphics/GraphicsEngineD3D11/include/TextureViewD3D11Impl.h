@@ -29,6 +29,7 @@
 #include "TextureViewD3D11.h"
 #include "RenderDeviceD3D11.h"
 #include "TextureViewBase.h"
+#include "RenderDeviceD3D11Impl.h"
 
 namespace Diligent
 {
@@ -36,13 +37,13 @@ namespace Diligent
 class FixedBlockMemoryAllocator;
 
 /// Implementation of the Diligent::ITextureViewD3D11 interface
-class TextureViewD3D11Impl : public TextureViewBase<ITextureViewD3D11>
+class TextureViewD3D11Impl : public TextureViewBase<ITextureViewD3D11, RenderDeviceD3D11Impl>
 {
 public:
-    using TTextureViewBase = TextureViewBase<ITextureViewD3D11>;
+    using TTextureViewBase = TextureViewBase<ITextureViewD3D11, RenderDeviceD3D11Impl>;
 
     TextureViewD3D11Impl( IReferenceCounters*    pRefCounters,
-                          IRenderDevice*         pDevice, 
+                          RenderDeviceD3D11Impl* pDevice, 
                           const TextureViewDesc& ViewDesc, 
                           class ITexture*        pTexture,
                           ID3D11View*            pD3D11View,

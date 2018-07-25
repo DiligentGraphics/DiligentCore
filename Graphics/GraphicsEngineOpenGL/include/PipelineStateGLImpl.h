@@ -29,6 +29,7 @@
 #include "GLProgram.h"
 #include "GLObjectWrapper.h"
 #include "GLContext.h"
+#include "RenderDeviceGLImpl.h"
 
 namespace Diligent
 {
@@ -36,12 +37,12 @@ namespace Diligent
 class FixedBlockMemoryAllocator;
 
 /// Implementation of the Diligent::IPipelineStateGL interface
-class PipelineStateGLImpl : public PipelineStateBase<IPipelineStateGL, IGLDeviceBaseInterface>
+class PipelineStateGLImpl : public PipelineStateBase<IPipelineStateGL, RenderDeviceGLImpl>
 {
 public:
-    using TPipelineStateBase = PipelineStateBase<IPipelineStateGL, IGLDeviceBaseInterface>;
+    using TPipelineStateBase = PipelineStateBase<IPipelineStateGL, RenderDeviceGLImpl>;
 
-    PipelineStateGLImpl(IReferenceCounters *pRefCounters, class RenderDeviceGLImpl *pDeviceGL, const PipelineStateDesc& PipelineDesc, bool IsDeviceInternal = false);
+    PipelineStateGLImpl(IReferenceCounters *pRefCounters, RenderDeviceGLImpl *pDeviceGL, const PipelineStateDesc& PipelineDesc, bool IsDeviceInternal = false);
     ~PipelineStateGLImpl();
     
     /// Queries the specific interface, see IObject::QueryInterface() for details

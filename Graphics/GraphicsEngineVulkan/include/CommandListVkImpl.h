@@ -28,18 +28,19 @@
 
 #include "vulkan.h"
 #include "CommandListBase.h"
+#include "RenderDeviceVkImpl.h"
 
 namespace Diligent
 {
 
 /// Implementation of the Diligent::ICommandList interface
-class CommandListVkImpl : public CommandListBase<ICommandList>
+class CommandListVkImpl : public CommandListBase<ICommandList, RenderDeviceVkImpl>
 {
 public:
-    using TCommandListBase = CommandListBase<ICommandList>;
+    using TCommandListBase = CommandListBase<ICommandList, RenderDeviceVkImpl>;
 
     CommandListVkImpl(IReferenceCounters*  pRefCounters, 
-                      IRenderDevice*       pDevice, 
+                      RenderDeviceVkImpl*  pDevice, 
                       IDeviceContext*      pDeferredCtx, 
                       VkCommandBuffer      vkCmdBuff,
                       Uint64               CommandListNumber) :

@@ -28,7 +28,7 @@ namespace Diligent
 {
 
 BufferViewD3D12Impl::BufferViewD3D12Impl( IReferenceCounters*        pRefCounters,
-                                          IRenderDevice*             pDevice, 
+                                          RenderDeviceD3D12Impl*     pDevice, 
                                           const BufferViewDesc&      ViewDesc, 
                                           IBuffer*                   pBuffer,
                                           DescriptorHeapAllocation&& HandleAlloc,

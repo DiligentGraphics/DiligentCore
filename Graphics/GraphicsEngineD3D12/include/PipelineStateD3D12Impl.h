@@ -32,6 +32,7 @@
 #include "RootSignature.h"
 #include "ShaderResourceLayoutD3D12.h"
 #include "SRBMemoryAllocator.h"
+#include "RenderDeviceD3D12Impl.h"
 
 /// Namespace for the Direct3D11 implementation of the graphics engine
 namespace Diligent
@@ -39,12 +40,12 @@ namespace Diligent
 
 class FixedBlockMemoryAllocator;
 /// Implementation of the Diligent::IRenderDeviceD3D12 interface
-class PipelineStateD3D12Impl : public PipelineStateBase<IPipelineStateD3D12, IRenderDeviceD3D12>
+class PipelineStateD3D12Impl : public PipelineStateBase<IPipelineStateD3D12, RenderDeviceD3D12Impl>
 {
 public:
-    using TPipelineStateBase = PipelineStateBase<IPipelineStateD3D12, IRenderDeviceD3D12>;
+    using TPipelineStateBase = PipelineStateBase<IPipelineStateD3D12, RenderDeviceD3D12Impl>;
 
-    PipelineStateD3D12Impl( IReferenceCounters *pRefCounters, class RenderDeviceD3D12Impl *pDeviceD3D12, const PipelineStateDesc &PipelineDesc );
+    PipelineStateD3D12Impl( IReferenceCounters *pRefCounters, RenderDeviceD3D12Impl *pDeviceD3D12, const PipelineStateDesc &PipelineDesc );
     ~PipelineStateD3D12Impl();
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface );

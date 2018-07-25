@@ -437,8 +437,7 @@ void TextureVkImpl::CreateViewInternal( const struct TextureViewDesc &ViewDesc, 
 
     try
     {
-        auto *pDeviceVkImpl = GetDevice<RenderDeviceVkImpl>();
-        auto &TexViewAllocator = pDeviceVkImpl->GetTexViewObjAllocator();
+        auto &TexViewAllocator = m_pDevice->GetTexViewObjAllocator();
         VERIFY( &TexViewAllocator == &m_dbgTexViewObjAllocator, "Texture view allocator does not match allocator provided during texture initialization" );
 
         auto UpdatedViewDesc = ViewDesc;
@@ -464,11 +463,10 @@ void TextureVkImpl::CreateViewInternal( const struct TextureViewDesc &ViewDesc, 
 
 TextureVkImpl :: ~TextureVkImpl()
 {
-    auto *pDeviceVkImpl = GetDevice<RenderDeviceVkImpl>();
     // Vk object can only be destroyed when it is no longer used by the GPU
     // Wrappers for external texture will not be destroyed as they are created with null device pointer
-    pDeviceVkImpl->SafeReleaseVkObject(std::move(m_VulkanImage));
-    pDeviceVkImpl->SafeReleaseVkObject(std::move(m_MemoryAllocation));
+    m_pDevice->SafeReleaseVkObject(std::move(m_VulkanImage));
+    m_pDevice->SafeReleaseVkObject(std::move(m_MemoryAllocation));
 }
 
 void TextureVkImpl::UpdateData( IDeviceContext *pContext, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData )
@@ -703,8 +701,7 @@ VulkanUtilities::ImageViewWrapper TextureVkImpl::CreateImageView(TextureViewDesc
             ImageViewCI.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     }
     
-    auto *pRenderDeviceVk = GetDevice<RenderDeviceVkImpl>();
-    const auto& LogicalDevice = pRenderDeviceVk->GetLogicalDevice();
+    const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
 
     std::string ViewName = "Image view for \'";
     ViewName += m_Desc.Name;

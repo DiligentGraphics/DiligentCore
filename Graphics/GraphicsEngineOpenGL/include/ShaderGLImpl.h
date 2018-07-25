@@ -29,6 +29,7 @@
 #include "RenderDevice.h"
 #include "GLObjectWrapper.h"
 #include "GLProgram.h"
+#include "RenderDeviceGLImpl.h"
 
 namespace Diligent
 {
@@ -64,12 +65,12 @@ inline GLenum ShaderTypeToGLShaderBit(SHADER_TYPE ShaderType)
 }
 
 /// Implementation of the Diligent::IShaderGL interface
-class ShaderGLImpl : public ShaderBase<IShaderGL, IGLDeviceBaseInterface>
+class ShaderGLImpl : public ShaderBase<IShaderGL, RenderDeviceGLImpl>
 {
 public:
-    using TShaderBase = ShaderBase<IShaderGL, IGLDeviceBaseInterface>;
+    using TShaderBase = ShaderBase<IShaderGL, RenderDeviceGLImpl>;
 
-    ShaderGLImpl( IReferenceCounters *pRefCounters, class RenderDeviceGLImpl *pDeviceGL, const ShaderCreationAttribs &ShaderCreationAttribs, bool bIsDeviceInternal = false );
+    ShaderGLImpl( IReferenceCounters *pRefCounters, RenderDeviceGLImpl *pDeviceGL, const ShaderCreationAttribs &ShaderCreationAttribs, bool bIsDeviceInternal = false );
     ~ShaderGLImpl();
 
     virtual void BindResources( IResourceMapping* pResourceMapping, Uint32 Flags  )override;

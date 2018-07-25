@@ -30,7 +30,7 @@ namespace Diligent
 {
     
 FenceGLImpl :: FenceGLImpl(IReferenceCounters* pRefCounters,
-                           IRenderDevice*      pDevice,
+                           RenderDeviceGLImpl* pDevice,
                            const FenceDesc&    Desc) : 
     TFenceBase(pRefCounters, pDevice, Desc)
 {

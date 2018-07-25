@@ -30,9 +30,9 @@
 namespace Diligent
 {
 
-CommandListD3D11Impl :: CommandListD3D11Impl(IReferenceCounters* pRefCounters,
-                                             IRenderDevice*      pDevice,
-                                             ID3D11CommandList*  pd3d11CommandList) : 
+CommandListD3D11Impl :: CommandListD3D11Impl(IReferenceCounters*    pRefCounters,
+                                             RenderDeviceD3D11Impl* pDevice,
+                                             ID3D11CommandList*     pd3d11CommandList) : 
     TCommandListBase(pRefCounters, pDevice),
     m_pd3d11CommandList(pd3d11CommandList)
 {

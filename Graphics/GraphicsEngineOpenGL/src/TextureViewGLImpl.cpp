@@ -31,7 +31,7 @@
 namespace Diligent
 {
     TextureViewGLImpl::TextureViewGLImpl( IReferenceCounters *pRefCounters,
-                                          IRenderDevice *pDevice, 
+                                          RenderDeviceGLImpl *pDevice, 
                                           const TextureViewDesc& ViewDesc, 
                                           TextureBaseGL* pTexture,
                                           bool bCreateGLViewTex,

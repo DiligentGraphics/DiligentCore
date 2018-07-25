@@ -30,17 +30,19 @@
 #include "RenderDeviceVk.h"
 #include "SamplerBase.h"
 #include "VulkanUtilities/VulkanObjectWrappers.h"
+#include "RenderDeviceVkImpl.h"
+
 namespace Diligent
 {
 
 class FixedBlockMemoryAllocator;
 /// Implementation of the Diligent::ISamplerVk interface
-class SamplerVkImpl : public SamplerBase<ISamplerVk, IRenderDeviceVk>
+class SamplerVkImpl : public SamplerBase<ISamplerVk, RenderDeviceVkImpl>
 {
 public:
-    using TSamplerBase = SamplerBase<ISamplerVk, IRenderDeviceVk>;
+    using TSamplerBase = SamplerBase<ISamplerVk, RenderDeviceVkImpl>;
 
-    SamplerVkImpl(IReferenceCounters* pRefCounters, class RenderDeviceVkImpl* pRenderDeviceVk, const SamplerDesc& SamplerDesc);
+    SamplerVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl* pRenderDeviceVk, const SamplerDesc& SamplerDesc);
     ~SamplerVkImpl();
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;

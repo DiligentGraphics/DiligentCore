@@ -30,6 +30,7 @@
 #include "RenderDeviceD3D11.h"
 #include "TextureBase.h"
 #include "TextureViewD3D11Impl.h"
+#include "RenderDeviceD3D11Impl.h"
 
 namespace Diligent
 {
@@ -47,10 +48,10 @@ enum class D3D11TextureState
 };
 
 /// Base implementation of the Diligent::ITextureD3D11 interface
-class TextureBaseD3D11 : public TextureBase<ITextureD3D11, TextureViewD3D11Impl, FixedBlockMemoryAllocator>
+class TextureBaseD3D11 : public TextureBase<ITextureD3D11, RenderDeviceD3D11Impl, TextureViewD3D11Impl, FixedBlockMemoryAllocator>
 {
 public:
-    typedef TextureBase<ITextureD3D11, TextureViewD3D11Impl, FixedBlockMemoryAllocator> TTextureBase;
+    typedef TextureBase<ITextureD3D11, RenderDeviceD3D11Impl, TextureViewD3D11Impl, FixedBlockMemoryAllocator> TTextureBase;
 
     TextureBaseD3D11(IReferenceCounters*          pRefCounters,
                      FixedBlockMemoryAllocator&   TexViewObjAllocator, 

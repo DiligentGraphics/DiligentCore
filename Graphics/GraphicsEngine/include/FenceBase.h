@@ -41,18 +41,19 @@ class IFence;
 /// \tparam BaseInterface - base interface that this class will inheret
 ///                         (Diligent::IFenceD3D11, Diligent::IFenceD3D12,
 ///                          Diligent::IFenceGL or Diligent::IFenceVk).
-template<class BaseInterface>
-class FenceBase : public DeviceObjectBase<BaseInterface, FenceDesc>
+/// \tparam RenderDeviceImplType - type of the render device implementation
+template<class BaseInterface, class RenderDeviceImplType>
+class FenceBase : public DeviceObjectBase<BaseInterface, RenderDeviceImplType, FenceDesc>
 {
 public:
-    typedef DeviceObjectBase<BaseInterface, FenceDesc> TDeviceObjectBase;
+    typedef DeviceObjectBase<BaseInterface, RenderDeviceImplType, FenceDesc> TDeviceObjectBase;
 
     /// \param pRefCounters      - reference counters object that controls the lifetime of this command list.
     /// \param Desc              - fence description
 	/// \param pDevice           - pointer to the device.
 	/// \param bIsDeviceInternal - flag indicating if the Fence is an internal device object and 
 	///							   must not keep a strong reference to the device.
-    FenceBase( IReferenceCounters* pRefCounters, IRenderDevice* pDevice, const FenceDesc& Desc, bool bIsDeviceInternal = false ) :
+    FenceBase( IReferenceCounters* pRefCounters, RenderDeviceImplType* pDevice, const FenceDesc& Desc, bool bIsDeviceInternal = false ) :
         TDeviceObjectBase( pRefCounters, pDevice, Desc, bIsDeviceInternal )
     {}
 

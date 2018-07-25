@@ -31,6 +31,7 @@
 #include "TextureBase.h"
 #include "TextureViewVkImpl.h"
 #include "VulkanUtilities/VulkanMemoryManager.h"
+#include "RenderDeviceVkImpl.h"
 
 namespace Diligent
 {
@@ -38,15 +39,15 @@ namespace Diligent
 class FixedBlockMemoryAllocator;
 
 /// Base implementation of the Diligent::ITextureVk interface
-class TextureVkImpl : public TextureBase<ITextureVk, TextureViewVkImpl, FixedBlockMemoryAllocator>
+class TextureVkImpl : public TextureBase<ITextureVk, RenderDeviceVkImpl, TextureViewVkImpl, FixedBlockMemoryAllocator>
 {
 public:
-    using TTextureBase = TextureBase<ITextureVk, TextureViewVkImpl, FixedBlockMemoryAllocator>;
+    using TTextureBase = TextureBase<ITextureVk, RenderDeviceVkImpl, TextureViewVkImpl, FixedBlockMemoryAllocator>;
 
     // Creates a new Vk resource
     TextureVkImpl(IReferenceCounters*        pRefCounters,
                   FixedBlockMemoryAllocator& TexViewObjAllocator,
-                  class RenderDeviceVkImpl*  pDeviceVk, 
+                  RenderDeviceVkImpl*        pDeviceVk, 
                   const TextureDesc&         TexDesc, 
                   const TextureData&         InitData = TextureData());
     

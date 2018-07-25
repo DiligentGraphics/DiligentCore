@@ -75,8 +75,7 @@ SamplerVkImpl::SamplerVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImp
 
 SamplerVkImpl::~SamplerVkImpl()
 {
-    auto pDeviceVkImpl = GetDevice<RenderDeviceVkImpl>();
-    pDeviceVkImpl->SafeReleaseVkObject(std::move(m_VkSampler));
+    m_pDevice->SafeReleaseVkObject(std::move(m_VkSampler));
 }
 
 IMPLEMENT_QUERY_INTERFACE( SamplerVkImpl, IID_SamplerVk, TSamplerBase )

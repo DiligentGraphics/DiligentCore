@@ -32,6 +32,7 @@
 #include "BufferViewD3D12Impl.h"
 #include "D3D12ResourceBase.h"
 #include "DynamicUploadHeap.h"
+#include "RenderDeviceD3D12Impl.h"
 
 namespace Diligent
 {
@@ -39,10 +40,10 @@ namespace Diligent
 class FixedBlockMemoryAllocator;
 
 /// Implementation of the Diligent::IBufferD3D12 interface
-class BufferD3D12Impl : public BufferBase<IBufferD3D12, BufferViewD3D12Impl, FixedBlockMemoryAllocator>, public D3D12ResourceBase
+class BufferD3D12Impl : public BufferBase<IBufferD3D12, RenderDeviceD3D12Impl, BufferViewD3D12Impl, FixedBlockMemoryAllocator>, public D3D12ResourceBase
 {
 public:
-    using TBufferBase = BufferBase<IBufferD3D12, BufferViewD3D12Impl, FixedBlockMemoryAllocator>;
+    using TBufferBase = BufferBase<IBufferD3D12, RenderDeviceD3D12Impl, BufferViewD3D12Impl, FixedBlockMemoryAllocator>;
 
     BufferD3D12Impl(IReferenceCounters*           pRefCounters, 
                     FixedBlockMemoryAllocator&    BuffViewObjMemAllocator, 

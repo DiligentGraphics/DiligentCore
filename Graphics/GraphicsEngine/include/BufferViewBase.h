@@ -42,11 +42,14 @@ class IBuffer;
 /// \tparam BaseInterface - base interface that this class will inheret
 ///                         (Diligent::IBufferViewD3D11, Diligent::IBufferViewD3D12,
 ///                          Diligent::IBufferViewGL or Diligent::IBufferViewVk).
-template<class BaseInterface>
-class BufferViewBase : public DeviceObjectBase<BaseInterface, BufferViewDesc>
+/// \tparam RenderDeviceImplType - type of the render device implementation
+///                                (Diligent::RenderDeviceD3D11Impl, Diligent::RenderDeviceD3D12Impl,
+///                                 Diligent::RenderDeviceGLImpl, or Diligent::RenderDeviceVkImpl)
+template<class BaseInterface, class RenderDeviceImplType>
+class BufferViewBase : public DeviceObjectBase<BaseInterface, RenderDeviceImplType, BufferViewDesc>
 {
 public:
-    typedef DeviceObjectBase<BaseInterface, BufferViewDesc> TDeviceObjectBase;
+    using TDeviceObjectBase = DeviceObjectBase<BaseInterface, RenderDeviceImplType, BufferViewDesc>;
 
     /// \param pRefCounters - reference counters object that controls the lifetime of this buffer view.
 	/// \param pDevice - pointer to the render device.
@@ -56,7 +59,7 @@ public:
 	///						    part of the buffer object. In this case the view will attach 
 	///							to the buffer's reference counters.
     BufferViewBase( IReferenceCounters*   pRefCounters,
-                    IRenderDevice*        pDevice,
+                    RenderDeviceImplType* pDevice,
                     const BufferViewDesc& ViewDesc, 
                     IBuffer*              pBuffer,
                     bool                  bIsDefaultView ) :

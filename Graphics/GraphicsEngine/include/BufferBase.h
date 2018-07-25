@@ -40,15 +40,18 @@ namespace Diligent
 /// \tparam BaseInterface - base interface that this class will inheret
 ///                         (Diligent::IBufferD3D11, Diligent::IBufferD3D12,
 ///                          Diligent::IBufferGL or Diligent::IBufferVk).
+/// \tparam RenderDeviceImplType - type of the render device implementation
+///                                (Diligent::RenderDeviceD3D11Impl, Diligent::RenderDeviceD3D12Impl,
+///                                 Diligent::RenderDeviceGLImpl, or Diligent::RenderDeviceVkImpl)
 /// \tparam BufferViewImplType - type of the buffer view implementation
 ///                              (Diligent::BufferViewD3D11Impl, Diligent::BufferViewD3D12Impl,
 ///                               Diligent::BufferViewGLImpl or Diligent::BufferViewVkImpl)
 /// \tparam TBuffViewObjAllocator - type of the allocator that is used to allocate memory for the buffer view object instances
-template<class BaseInterface, class BufferViewImplType, class TBuffViewObjAllocator>
-class BufferBase : public DeviceObjectBase < BaseInterface, BufferDesc>
+template<class BaseInterface, class RenderDeviceImplType, class BufferViewImplType, class TBuffViewObjAllocator>
+class BufferBase : public DeviceObjectBase <BaseInterface, RenderDeviceImplType, BufferDesc>
 {
 public:
-    typedef DeviceObjectBase<BaseInterface, BufferDesc> TDeviceObjectBase;
+    using TDeviceObjectBase = DeviceObjectBase<BaseInterface, RenderDeviceImplType, BufferDesc>;
 
     /// \param pRefCounters - reference counters object that controls the lifetime of this buffer.
     /// \param BuffViewObjAllocator - allocator that is used to allocate memory for the buffer view instances.
@@ -59,7 +62,7 @@ public:
 	///							   must not keep a strong reference to the device.
     BufferBase( IReferenceCounters*    pRefCounters,
                 TBuffViewObjAllocator& BuffViewObjAllocator, 
-                IRenderDevice*         pDevice, 
+                RenderDeviceImplType*  pDevice, 
                 const BufferDesc&      BuffDesc,
                 bool                   bIsDeviceInternal) :
         TDeviceObjectBase( pRefCounters, pDevice, BuffDesc, bIsDeviceInternal),
@@ -156,24 +159,24 @@ protected:
     std::unique_ptr<BufferViewImplType, STDDeleter<BufferViewImplType, TBuffViewObjAllocator> > m_pDefaultSRV;
 };
 
-template<class BaseInterface, class BufferViewImplType, class TBuffViewObjAllocator>
-void BufferBase<BaseInterface, BufferViewImplType, TBuffViewObjAllocator> :: UpdateData( IDeviceContext* pContext, Uint32 Offset, Uint32 Size, const PVoid pData )
+template<class BaseInterface, class RenderDeviceImplType, class BufferViewImplType, class TBuffViewObjAllocator>
+void BufferBase<BaseInterface, RenderDeviceImplType, BufferViewImplType, TBuffViewObjAllocator> :: UpdateData( IDeviceContext* pContext, Uint32 Offset, Uint32 Size, const PVoid pData )
 {
     VERIFY_BUFFER( this->m_Desc.Usage == USAGE_DEFAULT, "Only default usage buffers can be updated with UpdateData()" );
     VERIFY_BUFFER( Offset < this->m_Desc.uiSizeInBytes, "Offset (", Offset, ") exceeds the buffer size (", this->m_Desc.uiSizeInBytes, ")" );
     VERIFY_BUFFER( Size + Offset <= this->m_Desc.uiSizeInBytes, "Update region [", Offset, ",", Size + Offset, ") is out of buffer bounds [0,",this->m_Desc.uiSizeInBytes,")" );
 }
 
-template<class BaseInterface, class BufferViewImplType, class TBuffViewObjAllocator>
-void BufferBase<BaseInterface, BufferViewImplType, TBuffViewObjAllocator> :: CopyData( IDeviceContext* pContext, IBuffer* pSrcBuffer, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size )
+template<class BaseInterface, class RenderDeviceImplType, class BufferViewImplType, class TBuffViewObjAllocator>
+void BufferBase<BaseInterface, RenderDeviceImplType, BufferViewImplType, TBuffViewObjAllocator> :: CopyData( IDeviceContext* pContext, IBuffer* pSrcBuffer, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size )
 {
     VERIFY_BUFFER( DstOffset + Size <= this->m_Desc.uiSizeInBytes, "Destination range [", DstOffset, ",", DstOffset + Size, ") is out of buffer bounds [0,",this->m_Desc.uiSizeInBytes,")" );
     VERIFY_BUFFER( SrcOffset + Size <= pSrcBuffer->GetDesc().uiSizeInBytes, "Source range [", SrcOffset, ",", SrcOffset + Size, ") is out of buffer bounds [0,",this->m_Desc.uiSizeInBytes,")" );
 }
 
 
-template<class BaseInterface, class BufferViewImplType, class TBuffViewObjAllocator>
-void BufferBase<BaseInterface, BufferViewImplType, TBuffViewObjAllocator> :: Map( IDeviceContext* pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid& pMappedData )
+template<class BaseInterface, class RenderDeviceImplType, class BufferViewImplType, class TBuffViewObjAllocator>
+void BufferBase<BaseInterface, RenderDeviceImplType, BufferViewImplType, TBuffViewObjAllocator> :: Map( IDeviceContext* pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid& pMappedData )
 {
     pMappedData = nullptr;
     switch( MapType )
@@ -212,22 +215,22 @@ void BufferBase<BaseInterface, BufferViewImplType, TBuffViewObjAllocator> :: Map
     }
 }
 
-template<class BaseInterface, class BufferViewImplType, class TBuffViewObjAllocator>
-void BufferBase<BaseInterface, BufferViewImplType, TBuffViewObjAllocator> :: Unmap( IDeviceContext* pContext, MAP_TYPE MapType, Uint32 MapFlags  )
+template<class BaseInterface, class RenderDeviceImplType, class BufferViewImplType, class TBuffViewObjAllocator>
+void BufferBase<BaseInterface, RenderDeviceImplType, BufferViewImplType, TBuffViewObjAllocator> :: Unmap( IDeviceContext* pContext, MAP_TYPE MapType, Uint32 MapFlags  )
 {
 
 }
 
 
-template<class BaseInterface, class BufferViewImplType, class TBuffViewObjAllocator>
-void BufferBase<BaseInterface, BufferViewImplType, TBuffViewObjAllocator> :: CreateView( const struct BufferViewDesc &ViewDesc, IBufferView **ppView )
+template<class BaseInterface, class RenderDeviceImplType, class BufferViewImplType, class TBuffViewObjAllocator>
+void BufferBase<BaseInterface, RenderDeviceImplType, BufferViewImplType, TBuffViewObjAllocator> :: CreateView( const struct BufferViewDesc &ViewDesc, IBufferView **ppView )
 {
     CreateViewInternal( ViewDesc, ppView, false );
 }
 
 
-template<class BaseInterface, class BufferViewImplType, class TBuffViewObjAllocator>
-void BufferBase<BaseInterface, BufferViewImplType, TBuffViewObjAllocator> :: CorrectBufferViewDesc( struct BufferViewDesc &ViewDesc )
+template<class BaseInterface, class RenderDeviceImplType, class BufferViewImplType, class TBuffViewObjAllocator>
+void BufferBase<BaseInterface, RenderDeviceImplType, BufferViewImplType, TBuffViewObjAllocator> :: CorrectBufferViewDesc( struct BufferViewDesc &ViewDesc )
 {
     if( ViewDesc.ByteWidth == 0 )
         ViewDesc.ByteWidth = this->m_Desc.uiSizeInBytes;
@@ -244,8 +247,8 @@ void BufferBase<BaseInterface, BufferViewImplType, TBuffViewObjAllocator> :: Cor
     }
 }
 
-template<class BaseInterface, class BufferViewImplType, class TBuffViewObjAllocator>
-IBufferView* BufferBase<BaseInterface, BufferViewImplType, TBuffViewObjAllocator> ::GetDefaultView( BUFFER_VIEW_TYPE ViewType )
+template<class BaseInterface, class RenderDeviceImplType, class BufferViewImplType, class TBuffViewObjAllocator>
+IBufferView* BufferBase<BaseInterface, RenderDeviceImplType, BufferViewImplType, TBuffViewObjAllocator> ::GetDefaultView( BUFFER_VIEW_TYPE ViewType )
 {
     switch( ViewType )
     {
@@ -255,8 +258,8 @@ IBufferView* BufferBase<BaseInterface, BufferViewImplType, TBuffViewObjAllocator
     }
 }
 
-template<class BaseInterface, class BufferViewImplType, class TBuffViewObjAllocator>
-void BufferBase<BaseInterface, BufferViewImplType, TBuffViewObjAllocator> :: CreateDefaultViews()
+template<class BaseInterface, class RenderDeviceImplType, class BufferViewImplType, class TBuffViewObjAllocator>
+void BufferBase<BaseInterface, RenderDeviceImplType, BufferViewImplType, TBuffViewObjAllocator> :: CreateDefaultViews()
 {
     if( this->m_Desc.BindFlags & BIND_UNORDERED_ACCESS )
     {

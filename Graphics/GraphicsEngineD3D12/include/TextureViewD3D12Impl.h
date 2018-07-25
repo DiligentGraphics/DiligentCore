@@ -30,19 +30,20 @@
 #include "RenderDeviceD3D12.h"
 #include "TextureViewBase.h"
 #include "DescriptorHeap.h"
+#include "RenderDeviceD3D12Impl.h"
 
 namespace Diligent
 {
 
 class FixedBlockMemoryAllocator;
 /// Implementation of the Diligent::ITextureViewD3D12 interface
-class TextureViewD3D12Impl : public TextureViewBase<ITextureViewD3D12>
+class TextureViewD3D12Impl : public TextureViewBase<ITextureViewD3D12, RenderDeviceD3D12Impl>
 {
 public:
-    using TTextureViewBase = TextureViewBase<ITextureViewD3D12>;
+    using TTextureViewBase = TextureViewBase<ITextureViewD3D12, RenderDeviceD3D12Impl>;
 
     TextureViewD3D12Impl( IReferenceCounters*        pRefCounters,
-                          IRenderDevice*             pDevice, 
+                          RenderDeviceD3D12Impl*     pDevice, 
                           const TextureViewDesc&     ViewDesc, 
                           class ITexture*            pTexture,
                           DescriptorHeapAllocation&& HandleAlloc,

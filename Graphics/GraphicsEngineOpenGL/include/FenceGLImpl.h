@@ -31,6 +31,7 @@
 #include "RenderDeviceGL.h"
 #include "FenceBase.h"
 #include "GLObjectWrapper.h"
+#include "RenderDeviceGLImpl.h"
 
 namespace Diligent
 {
@@ -38,13 +39,13 @@ namespace Diligent
 class FixedBlockMemoryAllocator;
 
 /// Implementation of the Diligent::IFenceGL interface
-class FenceGLImpl : public FenceBase<IFenceGL>
+class FenceGLImpl : public FenceBase<IFenceGL, RenderDeviceGLImpl>
 {
 public:
-    using TFenceBase = FenceBase<IFenceGL>;
+    using TFenceBase = FenceBase<IFenceGL, RenderDeviceGLImpl>;
 
     FenceGLImpl(IReferenceCounters* pRefCounters,
-                IRenderDevice*      pDevice, 
+                RenderDeviceGLImpl* pDevice, 
                 const FenceDesc&    Desc);
     ~FenceGLImpl();
 

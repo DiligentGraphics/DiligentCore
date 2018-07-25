@@ -29,19 +29,20 @@
 #include "BufferViewD3D11.h"
 #include "RenderDeviceD3D11.h"
 #include "BufferViewBase.h"
+#include "RenderDeviceD3D11Impl.h"
 
 namespace Diligent
 {
 
 class FixedBlockMemoryAllocator;
 /// Implementation of the Diligent::IBufferViewD3D11 interface
-class BufferViewD3D11Impl : public BufferViewBase<IBufferViewD3D11>
+class BufferViewD3D11Impl : public BufferViewBase<IBufferViewD3D11, RenderDeviceD3D11Impl>
 {
 public:
-    using TBufferViewBase = BufferViewBase<IBufferViewD3D11>;
+    using TBufferViewBase = BufferViewBase<IBufferViewD3D11, RenderDeviceD3D11Impl>;
 
     BufferViewD3D11Impl( IReferenceCounters*    pRefCounters,
-                         IRenderDevice*         pDevice, 
+                         RenderDeviceD3D11Impl* pDevice, 
                          const BufferViewDesc&  ViewDesc, 
                          class IBuffer*         pBuffer,
                          ID3D11View*            pD3D11View,

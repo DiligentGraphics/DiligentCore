@@ -28,6 +28,7 @@
 #include "BufferViewBase.h"
 #include "RenderDevice.h"
 #include "GLObjectWrapper.h"
+#include "RenderDeviceGLImpl.h"
 
 namespace Diligent
 {
@@ -39,13 +40,13 @@ class BufferGLImpl;
 struct BufferViewDesc;
 
 /// Implementation of the Diligent::IBufferViewGL interface
-class BufferViewGLImpl : public BufferViewBase<IBufferViewGL>
+class BufferViewGLImpl : public BufferViewBase<IBufferViewGL, RenderDeviceGLImpl>
 {
 public:
-    using TBuffViewBase = BufferViewBase<IBufferViewGL>;
+    using TBuffViewBase = BufferViewBase<IBufferViewGL, RenderDeviceGLImpl>;
 
     BufferViewGLImpl( IReferenceCounters *pRefCounters,
-                      IRenderDevice *pDevice, 
+                      RenderDeviceGLImpl *pDevice, 
                       IDeviceContext *pContext,
                       const BufferViewDesc& ViewDesc, 
                       BufferGLImpl *pBuffer,

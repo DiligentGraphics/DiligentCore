@@ -47,7 +47,8 @@ public:
         return Atomics::AtomicIncrement(m_lNumStrongReferences);
     }
 
-    inline virtual CounterValueType ReleaseStrongRef()override final
+    template<class TPreObjectDestroy>
+    inline CounterValueType ReleaseStrongRef(TPreObjectDestroy PreObjectDestroy)
     {
         VERIFY( m_ObjectState == ObjectState::Alive, "Attempting to decrement strong reference counter for an object that is not alive" );
         VERIFY( m_ObjectWrapperBuffer[0] != 0 && m_ObjectWrapperBuffer[1] != 0, "Object wrapper is not initialized");
@@ -57,181 +58,16 @@ public:
         VERIFY( RefCount >= 0, "Inconsistent call to ReleaseStrongRef()" );
         if( RefCount == 0 )
         {
-            // Since RefCount==0, there are no more strong references and the only place 
-            // where strong ref counter can be incremented is from GetObject().
-
-            // If several threads were allowed to get to this point, there would 
-            // be serious risk that <this> had already been destroyed and m_LockFlag expired. 
-            // Consider the following scenario:
-            //                                      |
-            //             This thread              |             Another thread
-            //                                      |
-            //                      m_lNumStrongReferences == 1
-            //                      m_lNumWeakReferences == 1
-            //                                      |  
-            // 1. Decrement m_lNumStrongReferences  |   
-            //    Read RefCount==0, no lock acquired|      
-            //                                      |   1. Run GetObject()
-            //                                      |      - acquire the lock
-            //                                      |      - increment m_lNumStrongReferences
-            //                                      |      - release the lock
-            //                                      |   
-            //                                      |   2. Run ReleaseWeakRef()
-            //                                      |      - decrement m_lNumWeakReferences
-            //                                      |  
-            //                                      |   3. Run ReleaseStrongRef()
-            //                                      |      - decrement m_lNumStrongReferences
-            //                                      |      - read RefCount==0
-            //
-            //         Both threads will get to this point. The first one will destroy <this>
-            //         The second one will read expired m_LockFlag
-
-            //  IT IS CRUCIALLY IMPORTANT TO ASSURE THAT ONLY ONE THREAD WILL EVER
-            //  EXECUTE THIS CODE
-
-            // The sloution is to atomically increment strong ref counter in GetObject().
-            // There are two possible scenarios depending on who first increments the counter:
-
-
-            //                                                     Scenario I
-            //
-            //             This thread              |      Another thread - GetObject()         |   One more thread - GetObject()
-            //                                      |                                           |
-            //                       m_lNumStrongReferences == 1                                |
-            //                                      |                                           |
-            //                                      |   1. Acquire the lock                     |
-            // 1. Decrement m_lNumStrongReferences  |                                           |   1. Wait for the lock
-            // 2. Read RefCount==0                  |   2. Increment m_lNumStrongReferences     |
-            // 3. Start destroying the object       |   3. Read StrongRefCnt == 1               |
-            // 4. Wait for the lock                 |   4. DO NOT return the reference          |
-            //                                      |      to the object                        |
-            //                                      |   5. Decrement m_lNumStrongReferences     |
-            // _  _  _  _  _  _  _  _  _  _  _  _  _|   6. Release the lock _  _  _  _  _  _  _ |_  _  _  _  _  _  _  _  _  _  _  _  _  _
-            //                                      |                                           |   2. Acquire the lock  
-            //                                      |                                           |   3. Increment m_lNumStrongReferences
-            //                                      |                                           |   4. Read StrongRefCnt == 1
-            //                                      |                                           |   5. DO NOT return the reference 
-            //                                      |                                           |      to the object
-            //                                      |                                           |   6. Decrement m_lNumStrongReferences         
-            //  _  _  _  _  _  _  _  _  _  _  _  _  | _  _  _  _  _  _  _  _  _  _  _  _  _  _  | _ 7. Release the lock _  _  _  _  _  _
-            // 5. Acquire the lock                  |                                           |
-            //   - m_lNumStrongReferences==0        |                                           |
-            // 6. DESTROY the object                |                                           |
-            //                                      |                                           |
-
-            //  GetObject() MUST BE SERIALIZED for this to work properly!
-
-
-            //                                   Scenario II
-            //
-            //             This thread              |      Another thread - GetObject()
-            //                                      |
-            //                       m_lNumStrongReferences == 1
-            //                                      |
-            //                                      |   1. Acquire the lock  
-            //                                      |   2. Increment m_lNumStrongReferences
-            // 1. Decrement m_lNumStrongReferences  |
-            // 2. Read RefCount>0                   |   
-            // 3. DO NOT destroy the object         |   3. Read StrongRefCnt > 1 (while m_lNumStrongReferences == 1)
-            //                                      |   4. Return the reference to the object
-            //                                      |       - Increment m_lNumStrongReferences
-            //                                      |   5. Decrement m_lNumStrongReferences
-
-#ifdef _DEBUG
-            Atomics::Long NumStrongRefs = m_lNumStrongReferences;
-            VERIFY( NumStrongRefs == 0 || NumStrongRefs == 1, "Num strong references (", NumStrongRefs, ") is expected to be 0 or 1" );
-#endif
-
-            // Acquire the lock.
-            ThreadingTools::LockHelper Lock(m_LockFlag);
-
-            // GetObject() first acquires the lock, and only then increments and 
-            // decrements the ref counter. If it reads 1 after incremeting the counter,
-            // it does not return the reference to the object and decrements the counter.
-            // If we acquired the lock, GetObject() will not start until we are done
-            VERIFY_EXPR( m_lNumStrongReferences == 0 && m_ObjectState == ObjectState::Alive );
-                
-            // Extra caution
-            if(m_lNumStrongReferences == 0 && m_ObjectState == ObjectState::Alive)
-            {
-                VERIFY(m_ObjectWrapperBuffer[0] != 0 && m_ObjectWrapperBuffer[1] != 0, "Object wrapper is not initialized");
-                // We cannot destroy the object while reference counters are locked as this will  
-                // cause a deadlock in cases like this:
-                //
-                //    A ==sp==> B ---wp---> A
-                //    
-                //    RefCounters_A.Lock();
-                //    delete A{
-                //      A.~dtor(){
-                //          B.~dtor(){
-                //              wpA.ReleaseWeakRef(){
-                //                  RefCounters_A.Lock(); // Deadlock
-                //
-
-                // So we copy the object wrapper and destroy the object after unlocking the
-                // reference counters
-                size_t ObjectWrapperBufferCopy[ObjectWrapperBufferSize];
-                for(size_t i=0; i < ObjectWrapperBufferSize; ++i)
-                    ObjectWrapperBufferCopy[i] = m_ObjectWrapperBuffer[i];
-#ifdef _DEBUG
-                memset(m_ObjectWrapperBuffer, 0, sizeof(m_ObjectWrapperBuffer));
-#endif
-                auto *pWrapper = reinterpret_cast<ObjectWrapperBase*>(ObjectWrapperBufferCopy);
-
-                // In a multithreaded environment, reference counters object may 
-                // be destroyed at any time while m_pObject->~dtor() is running.
-                // NOTE: m_pObject may not be the only object referencing m_pRefCounters.
-                //       All objects that are owned by m_pObject will point to the same 
-                //       reference counters object.
-
-                // Note that this is the only place where m_ObjectState is
-                // modified after the ref counters object has been created
-                m_ObjectState = ObjectState::Destroyed;
-                // The object is now detached from the reference counters and it is if
-                // it was destroyed since no one can obtain access to it.
-
-
-                // It is essentially important to check the number of weak references
-                // while the object is locked. Otherwise reference counters object
-                // may be destroyed twice if ReleaseWeakRef() is executed by other thread:
-                //
-                //             This thread             |    Another thread - ReleaseWeakRef()
-                //                                     |           
-                // 1. Decrement m_lNumStrongReferences,|   
-                //    m_lNumStrongReferences==0,       |   
-                //    acquire the lock, destroy        |
-                //    the obj, release the lock        |
-                //    m_lNumWeakReferences == 1        | 
-                //                                     |   1. Aacquire the lock, 
-                //                                     |      decrement m_lNumWeakReferences,
-                //                                     |      m_lNumWeakReferences == 0, 
-                //                                     |      m_ObjectState == ObjectState::Destroyed
-                //                                     |
-                // 2. Read m_lNumWeakReferences == 0   |
-                // 3. Destroy the ref counters obj     |   2. Destroy the ref counters obj
-                //
-                bool bDestroyThis = m_lNumWeakReferences == 0;
-                // ReleaseWeakRef() decrements m_lNumWeakReferences, and checks it for
-                // zero only after acquiring the lock. So if m_lNumWeakReferences==0, no 
-                // weak reference-related code may be running
-
-
-                // We must explicitly unlock the object now to avoid deadlocks. Also, 
-                // if this is deleted, this->m_LockFlag will expire, which will cause 
-                // Lock.~LockHelper() to crash
-                Lock.Unlock();
-
-                // Destroy referenced object
-                pWrapper->DestroyObject();
-
-                // Note that <this> may be destroyed here already, 
-                // see comments in ~ControlledObjectType()
-                if( bDestroyThis )
-                    SelfDestroy();
-            }
+            PreObjectDestroy();
+            TryDestroyObject();
         }
 
         return RefCount;
+    }
+
+    inline virtual CounterValueType ReleaseStrongRef()override final
+    {
+        return ReleaseStrongRef([](){});
     }
 
     inline virtual CounterValueType AddWeakRef()override final
@@ -431,6 +267,182 @@ private:
         static_assert(sizeof(ObjectWrapper<ObjectType, AllocatorType>) == sizeof(m_ObjectWrapperBuffer), "Unexpected object wrapper size");
         new(m_ObjectWrapperBuffer) ObjectWrapper<ObjectType, AllocatorType>(pObject, pAllocator);
         m_ObjectState = ObjectState::Alive;
+    }
+
+    void TryDestroyObject()
+    {
+        // Since RefCount==0, there are no more strong references and the only place 
+        // where strong ref counter can be incremented is from GetObject().
+
+        // If several threads were allowed to get to this point, there would 
+        // be serious risk that <this> had already been destroyed and m_LockFlag expired. 
+        // Consider the following scenario:
+        //                                      |
+        //             This thread              |             Another thread
+        //                                      |
+        //                      m_lNumStrongReferences == 1
+        //                      m_lNumWeakReferences == 1
+        //                                      |  
+        // 1. Decrement m_lNumStrongReferences  |   
+        //    Read RefCount==0, no lock acquired|      
+        //                                      |   1. Run GetObject()
+        //                                      |      - acquire the lock
+        //                                      |      - increment m_lNumStrongReferences
+        //                                      |      - release the lock
+        //                                      |   
+        //                                      |   2. Run ReleaseWeakRef()
+        //                                      |      - decrement m_lNumWeakReferences
+        //                                      |  
+        //                                      |   3. Run ReleaseStrongRef()
+        //                                      |      - decrement m_lNumStrongReferences
+        //                                      |      - read RefCount==0
+        //
+        //         Both threads will get to this point. The first one will destroy <this>
+        //         The second one will read expired m_LockFlag
+
+        //  IT IS CRUCIALLY IMPORTANT TO ASSURE THAT ONLY ONE THREAD WILL EVER
+        //  EXECUTE THIS CODE
+
+        // The sloution is to atomically increment strong ref counter in GetObject().
+        // There are two possible scenarios depending on who first increments the counter:
+
+
+        //                                                     Scenario I
+        //
+        //             This thread              |      Another thread - GetObject()         |   One more thread - GetObject()
+        //                                      |                                           |
+        //                       m_lNumStrongReferences == 1                                |
+        //                                      |                                           |
+        //                                      |   1. Acquire the lock                     |
+        // 1. Decrement m_lNumStrongReferences  |                                           |   1. Wait for the lock
+        // 2. Read RefCount==0                  |   2. Increment m_lNumStrongReferences     |
+        // 3. Start destroying the object       |   3. Read StrongRefCnt == 1               |
+        // 4. Wait for the lock                 |   4. DO NOT return the reference          |
+        //                                      |      to the object                        |
+        //                                      |   5. Decrement m_lNumStrongReferences     |
+        // _  _  _  _  _  _  _  _  _  _  _  _  _|   6. Release the lock _  _  _  _  _  _  _ |_  _  _  _  _  _  _  _  _  _  _  _  _  _
+        //                                      |                                           |   2. Acquire the lock  
+        //                                      |                                           |   3. Increment m_lNumStrongReferences
+        //                                      |                                           |   4. Read StrongRefCnt == 1
+        //                                      |                                           |   5. DO NOT return the reference 
+        //                                      |                                           |      to the object
+        //                                      |                                           |   6. Decrement m_lNumStrongReferences         
+        //  _  _  _  _  _  _  _  _  _  _  _  _  | _  _  _  _  _  _  _  _  _  _  _  _  _  _  | _ 7. Release the lock _  _  _  _  _  _
+        // 5. Acquire the lock                  |                                           |
+        //   - m_lNumStrongReferences==0        |                                           |
+        // 6. DESTROY the object                |                                           |
+        //                                      |                                           |
+
+        //  GetObject() MUST BE SERIALIZED for this to work properly!
+
+
+        //                                   Scenario II
+        //
+        //             This thread              |      Another thread - GetObject()
+        //                                      |
+        //                       m_lNumStrongReferences == 1
+        //                                      |
+        //                                      |   1. Acquire the lock  
+        //                                      |   2. Increment m_lNumStrongReferences
+        // 1. Decrement m_lNumStrongReferences  |
+        // 2. Read RefCount>0                   |   
+        // 3. DO NOT destroy the object         |   3. Read StrongRefCnt > 1 (while m_lNumStrongReferences == 1)
+        //                                      |   4. Return the reference to the object
+        //                                      |       - Increment m_lNumStrongReferences
+        //                                      |   5. Decrement m_lNumStrongReferences
+
+#ifdef _DEBUG
+        Atomics::Long NumStrongRefs = m_lNumStrongReferences;
+        VERIFY( NumStrongRefs == 0 || NumStrongRefs == 1, "Num strong references (", NumStrongRefs, ") is expected to be 0 or 1" );
+#endif
+
+        // Acquire the lock.
+        ThreadingTools::LockHelper Lock(m_LockFlag);
+
+        // GetObject() first acquires the lock, and only then increments and 
+        // decrements the ref counter. If it reads 1 after incremeting the counter,
+        // it does not return the reference to the object and decrements the counter.
+        // If we acquired the lock, GetObject() will not start until we are done
+        VERIFY_EXPR( m_lNumStrongReferences == 0 && m_ObjectState == ObjectState::Alive );
+                
+        // Extra caution
+        if(m_lNumStrongReferences == 0 && m_ObjectState == ObjectState::Alive)
+        {
+            VERIFY(m_ObjectWrapperBuffer[0] != 0 && m_ObjectWrapperBuffer[1] != 0, "Object wrapper is not initialized");
+            // We cannot destroy the object while reference counters are locked as this will  
+            // cause a deadlock in cases like this:
+            //
+            //    A ==sp==> B ---wp---> A
+            //    
+            //    RefCounters_A.Lock();
+            //    delete A{
+            //      A.~dtor(){
+            //          B.~dtor(){
+            //              wpA.ReleaseWeakRef(){
+            //                  RefCounters_A.Lock(); // Deadlock
+            //
+
+            // So we copy the object wrapper and destroy the object after unlocking the
+            // reference counters
+            size_t ObjectWrapperBufferCopy[ObjectWrapperBufferSize];
+            for(size_t i=0; i < ObjectWrapperBufferSize; ++i)
+                ObjectWrapperBufferCopy[i] = m_ObjectWrapperBuffer[i];
+#ifdef _DEBUG
+            memset(m_ObjectWrapperBuffer, 0, sizeof(m_ObjectWrapperBuffer));
+#endif
+            auto *pWrapper = reinterpret_cast<ObjectWrapperBase*>(ObjectWrapperBufferCopy);
+
+            // In a multithreaded environment, reference counters object may 
+            // be destroyed at any time while m_pObject->~dtor() is running.
+            // NOTE: m_pObject may not be the only object referencing m_pRefCounters.
+            //       All objects that are owned by m_pObject will point to the same 
+            //       reference counters object.
+
+            // Note that this is the only place where m_ObjectState is
+            // modified after the ref counters object has been created
+            m_ObjectState = ObjectState::Destroyed;
+            // The object is now detached from the reference counters and it is if
+            // it was destroyed since no one can obtain access to it.
+
+
+            // It is essentially important to check the number of weak references
+            // while the object is locked. Otherwise reference counters object
+            // may be destroyed twice if ReleaseWeakRef() is executed by other thread:
+            //
+            //             This thread             |    Another thread - ReleaseWeakRef()
+            //                                     |           
+            // 1. Decrement m_lNumStrongReferences,|   
+            //    m_lNumStrongReferences==0,       |   
+            //    acquire the lock, destroy        |
+            //    the obj, release the lock        |
+            //    m_lNumWeakReferences == 1        | 
+            //                                     |   1. Aacquire the lock, 
+            //                                     |      decrement m_lNumWeakReferences,
+            //                                     |      m_lNumWeakReferences == 0, 
+            //                                     |      m_ObjectState == ObjectState::Destroyed
+            //                                     |
+            // 2. Read m_lNumWeakReferences == 0   |
+            // 3. Destroy the ref counters obj     |   2. Destroy the ref counters obj
+            //
+            bool bDestroyThis = m_lNumWeakReferences == 0;
+            // ReleaseWeakRef() decrements m_lNumWeakReferences, and checks it for
+            // zero only after acquiring the lock. So if m_lNumWeakReferences==0, no 
+            // weak reference-related code may be running
+
+
+            // We must explicitly unlock the object now to avoid deadlocks. Also, 
+            // if this is deleted, this->m_LockFlag will expire, which will cause 
+            // Lock.~LockHelper() to crash
+            Lock.Unlock();
+
+            // Destroy referenced object
+            pWrapper->DestroyObject();
+
+            // Note that <this> may be destroyed here already, 
+            // see comments in ~ControlledObjectType()
+            if( bDestroyThis )
+                SelfDestroy();
+        }
     }
 
     void SelfDestroy()

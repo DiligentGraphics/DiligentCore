@@ -41,15 +41,14 @@ namespace Diligent
 /// \tparam BaseInterface - base interface that this class will inheret
 ///                         (Diligent::IPipelineStateD3D11, Diligent::IPipelineStateD3D12,
 ///                          Diligent::IPipelineStateGL or Diligent::IPipelineStateVk).
-/// \tparam RenderDeviceBaseInterface - base interface for the render device
-///                                     (Diligent::IRenderDeviceD3D11, Diligent::IRenderDeviceD3D12,
-///                                      Diligent::IRenderDeviceGL, Diligent::IRenderDeviceGLES or Diligent::IRenderDeviceVk).
-template<class BaseInterface, class RenderDeviceBaseInterface>
-class PipelineStateBase : public DeviceObjectBase<BaseInterface, PipelineStateDesc>
+/// \tparam RenderDeviceImplType - type of the render device implementation
+///                                (Diligent::RenderDeviceD3D11Impl, Diligent::RenderDeviceD3D12Impl,
+///                                 Diligent::RenderDeviceGLImpl, or Diligent::RenderDeviceVkImpl)
+template<class BaseInterface, class RenderDeviceImplType>
+class PipelineStateBase : public DeviceObjectBase<BaseInterface, RenderDeviceImplType, PipelineStateDesc>
 {
 public:
-    typedef DeviceObjectBase<BaseInterface, PipelineStateDesc> TDeviceObjectBase;
-    typedef RenderDeviceBase < RenderDeviceBaseInterface > TRenderDeviceBase;
+    using TDeviceObjectBase = DeviceObjectBase<BaseInterface, RenderDeviceImplType, PipelineStateDesc>;
 
     /// \param pRefCounters - reference counters object that controls the lifetime of this PSO
 	/// \param pDevice - pointer to the device.
@@ -57,7 +56,7 @@ public:
 	/// \param bIsDeviceInternal - flag indicating if the blend state is an internal device object and 
 	///							   must not keep a strong reference to the device.
     PipelineStateBase( IReferenceCounters*      pRefCounters, 
-                       IRenderDevice*           pDevice,
+                       RenderDeviceImplType*    pDevice,
                        const PipelineStateDesc& PSODesc,
                        bool                     bIsDeviceInternal = false ) :
         TDeviceObjectBase( pRefCounters, pDevice, PSODesc, bIsDeviceInternal ),

@@ -1256,7 +1256,8 @@ namespace Diligent
                    //   ID3D11DeviceContext::ClearState() was called. 
             &pd3d11CmdList);
 
-        CommandListD3D11Impl* pCmdListD3D11( NEW_RC_OBJ(m_CmdListAllocator, "CommandListD3D11Impl instance", CommandListD3D11Impl)(m_pDevice, pd3d11CmdList) );
+        auto* pDeviceD3D11Impl = m_pDevice.RawPtr<RenderDeviceD3D11Impl>();
+        CommandListD3D11Impl* pCmdListD3D11( NEW_RC_OBJ(m_CmdListAllocator, "CommandListD3D11Impl instance", CommandListD3D11Impl)(pDeviceD3D11Impl, pd3d11CmdList) );
         pCmdListD3D11->QueryInterface( IID_CommandList, reinterpret_cast<IObject**>(ppCommandList) );
 
         // Device context is now in default state

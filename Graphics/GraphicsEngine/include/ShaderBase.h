@@ -187,21 +187,21 @@ struct DummyShaderVariable : ShaderVariableBase
 /// \tparam BaseInterface - base interface that this class will inheret
 ///                         (Diligent::IShaderD3D11, Diligent::IShaderD3D12,
 ///                          Diligent::IShaderGL or Diligent::IShaderVk).
-/// \tparam RenderDeviceBaseInterface - base interface for the render device
-///                                     (Diligent::IRenderDeviceD3D11, Diligent::IRenderDeviceD3D12,
-///                                      Diligent::IRenderDeviceGL, Diligent::IRenderDeviceGLES or Diligent::IRenderDeviceVk).
-template<class BaseInterface, class RenderDeviceBaseInterface>
-class ShaderBase : public DeviceObjectBase<BaseInterface, ShaderDesc>
+/// \tparam RenderDeviceImplType - type of the render device implementation
+///                                (Diligent::RenderDeviceD3D11Impl, Diligent::RenderDeviceD3D12Impl,
+///                                 Diligent::RenderDeviceGLImpl, or Diligent::RenderDeviceVkImpl)
+template<class BaseInterface, class RenderDeviceImplType>
+class ShaderBase : public DeviceObjectBase<BaseInterface, RenderDeviceImplType, ShaderDesc>
 {
 public:
-    typedef DeviceObjectBase<BaseInterface, ShaderDesc> TDeviceObjectBase;
+    using TDeviceObjectBase = DeviceObjectBase<BaseInterface, RenderDeviceImplType, ShaderDesc>;
 
     /// \param pRefCounters - reference counters object that controls the lifetime of this shader.
 	/// \param pDevice - pointer to the device.
 	/// \param ShdrDesc - shader description.
 	/// \param bIsDeviceInternal - flag indicating if the shader is an internal device object and 
 	///							   must not keep a strong reference to the device.
-    ShaderBase( IReferenceCounters* pRefCounters, IRenderDevice* pDevice, const ShaderDesc& ShdrDesc, bool bIsDeviceInternal = false ) :
+    ShaderBase( IReferenceCounters* pRefCounters, RenderDeviceImplType* pDevice, const ShaderDesc& ShdrDesc, bool bIsDeviceInternal = false ) :
         TDeviceObjectBase( pRefCounters, pDevice, ShdrDesc, bIsDeviceInternal ),
         m_DummyShaderVar(*this),
         m_VariablesDesc (ShdrDesc.NumVariables, ShaderVariableDesc(), STD_ALLOCATOR_RAW_MEM(ShaderVariableDesc, GetRawAllocator(), "Allocator for vector<ShaderVariableDesc>") ),

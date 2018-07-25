@@ -30,20 +30,21 @@
 #include "RenderDeviceD3D12.h"
 #include "SamplerBase.h"
 #include "DescriptorHeap.h"
+#include "RenderDeviceD3D12Impl.h"
 
 namespace Diligent
 {
 
 class FixedBlockMemoryAllocator;
 /// Implementation of the Diligent::ISamplerD3D12 interface
-class SamplerD3D12Impl : public SamplerBase<ISamplerD3D12, IRenderDeviceD3D12>
+class SamplerD3D12Impl : public SamplerBase<ISamplerD3D12, RenderDeviceD3D12Impl>
 {
 public:
-    using TSamplerBase = SamplerBase<ISamplerD3D12, IRenderDeviceD3D12>;
+    using TSamplerBase = SamplerBase<ISamplerD3D12, RenderDeviceD3D12Impl>;
 
-    SamplerD3D12Impl(IReferenceCounters*           pRefCounters, 
-                     class RenderDeviceD3D12Impl*  pRenderDeviceD3D12, 
-                     const SamplerDesc&            SamplerDesc);
+    SamplerD3D12Impl(IReferenceCounters*     pRefCounters, 
+                     RenderDeviceD3D12Impl*  pRenderDeviceD3D12, 
+                     const SamplerDesc&      SamplerDesc);
     ~SamplerD3D12Impl();
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;

@@ -31,7 +31,7 @@
 #include "TextureBase.h"
 #include "TextureViewD3D12Impl.h"
 #include "D3D12ResourceBase.h"
-
+#include "RenderDeviceD3D12Impl.h"
 
 namespace Diligent
 {
@@ -39,15 +39,15 @@ namespace Diligent
 class FixedBlockMemoryAllocator;
 
 /// Base implementation of the Diligent::ITextureD3D12 interface
-class TextureD3D12Impl : public TextureBase<ITextureD3D12, TextureViewD3D12Impl, FixedBlockMemoryAllocator>, public D3D12ResourceBase
+class TextureD3D12Impl : public TextureBase<ITextureD3D12, RenderDeviceD3D12Impl, TextureViewD3D12Impl, FixedBlockMemoryAllocator>, public D3D12ResourceBase
 {
 public:
-    using TTextureBase = TextureBase<ITextureD3D12, TextureViewD3D12Impl, FixedBlockMemoryAllocator>;
+    using TTextureBase = TextureBase<ITextureD3D12, RenderDeviceD3D12Impl, TextureViewD3D12Impl, FixedBlockMemoryAllocator>;
 
     // Creates a new D3D12 resource
     TextureD3D12Impl(IReferenceCounters*            pRefCounters,
                      FixedBlockMemoryAllocator&     TexViewObjAllocator,
-                     class RenderDeviceD3D12Impl*   pDeviceD3D12, 
+                     RenderDeviceD3D12Impl*         pDeviceD3D12, 
                      const TextureDesc&             TexDesc, 
                      const TextureData&             InitData = TextureData());
     // Attaches to an existing D3D12 resource

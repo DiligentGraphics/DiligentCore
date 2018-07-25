@@ -30,18 +30,18 @@
 #include "FenceVk.h"
 #include "FenceBase.h"
 #include "VulkanUtilities/VulkanFencePool.h"
+#include "RenderDeviceVkImpl.h"
 
 namespace Diligent
 {
 
 class FixedBlockMemoryAllocator;
-class RenderDeviceVkImpl;
 
 /// Implementation of the Diligent::IFenceVk interface
-class FenceVkImpl : public FenceBase<IFenceVk>
+class FenceVkImpl : public FenceBase<IFenceVk, RenderDeviceVkImpl>
 {
 public:
-    using TFenceBase = FenceBase<IFenceVk>;
+    using TFenceBase = FenceBase<IFenceVk, RenderDeviceVkImpl>;
 
     FenceVkImpl(IReferenceCounters* pRefCounters,
                 RenderDeviceVkImpl* pRendeDeviceVkImpl,

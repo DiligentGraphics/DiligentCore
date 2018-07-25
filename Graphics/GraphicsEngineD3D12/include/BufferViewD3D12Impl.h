@@ -30,19 +30,20 @@
 #include "RenderDeviceD3D12.h"
 #include "BufferViewBase.h"
 #include "DescriptorHeap.h"
+#include "RenderDeviceD3D12Impl.h"
 
 namespace Diligent
 {
 
 class FixedBlockMemoryAllocator;
 /// Implementation of the Diligent::IBufferViewD3D12 interface
-class BufferViewD3D12Impl : public BufferViewBase<IBufferViewD3D12>
+class BufferViewD3D12Impl : public BufferViewBase<IBufferViewD3D12, RenderDeviceD3D12Impl>
 {
 public:
-    using TBufferViewBase = BufferViewBase<IBufferViewD3D12>;
+    using TBufferViewBase = BufferViewBase<IBufferViewD3D12, RenderDeviceD3D12Impl>;
 
     BufferViewD3D12Impl( IReferenceCounters*        pRefCounters,
-                         IRenderDevice*             pDevice, 
+                         RenderDeviceD3D12Impl*     pDevice, 
                          const BufferViewDesc&      ViewDesc, 
                          class IBuffer*             pBuffer,
                          DescriptorHeapAllocation&& HandleAlloc,

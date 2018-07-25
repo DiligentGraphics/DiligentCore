@@ -31,16 +31,17 @@
 #include "PipelineStateBase.h"
 #include "ShaderD3D11Impl.h"
 #include "SRBMemoryAllocator.h"
+#include "RenderDeviceD3D11Impl.h"
 
 namespace Diligent
 {
 
 class FixedBlockMemoryAllocator;
 /// Implementation of the Diligent::IPipelineStateD3D11 interface
-class PipelineStateD3D11Impl : public PipelineStateBase<IPipelineStateD3D11, IRenderDeviceD3D11>
+class PipelineStateD3D11Impl : public PipelineStateBase<IPipelineStateD3D11, RenderDeviceD3D11Impl>
 {
 public:
-    using TPipelineStateBase = PipelineStateBase<IPipelineStateD3D11, IRenderDeviceD3D11>;
+    using TPipelineStateBase = PipelineStateBase<IPipelineStateD3D11, RenderDeviceD3D11Impl>;
 
     PipelineStateD3D11Impl(IReferenceCounters*          pRefCounters,
                            class RenderDeviceD3D11Impl* pDeviceD3D11,

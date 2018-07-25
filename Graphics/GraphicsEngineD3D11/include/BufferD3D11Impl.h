@@ -30,6 +30,7 @@
 #include "RenderDeviceD3D11.h"
 #include "BufferBase.h"
 #include "BufferViewD3D11Impl.h"
+#include "RenderDeviceD3D11Impl.h"
 
 namespace Diligent
 {
@@ -48,10 +49,10 @@ enum class D3D11BufferState
 };
 
 /// Implementation of the Diligent::IBufferD3D11 interface
-class BufferD3D11Impl : public BufferBase<IBufferD3D11, BufferViewD3D11Impl, FixedBlockMemoryAllocator>
+class BufferD3D11Impl : public BufferBase<IBufferD3D11, RenderDeviceD3D11Impl, BufferViewD3D11Impl, FixedBlockMemoryAllocator>
 {
 public:
-    using TBufferBase = BufferBase<IBufferD3D11, BufferViewD3D11Impl, FixedBlockMemoryAllocator>;
+    using TBufferBase = BufferBase<IBufferD3D11, RenderDeviceD3D11Impl, BufferViewD3D11Impl, FixedBlockMemoryAllocator>;
 
     BufferD3D11Impl(IReferenceCounters*          pRefCounters,
                     FixedBlockMemoryAllocator&   BuffViewObjMemAllocator,

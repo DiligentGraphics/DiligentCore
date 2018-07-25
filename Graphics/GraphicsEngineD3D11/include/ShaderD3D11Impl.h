@@ -34,6 +34,7 @@
 #include "ShaderResourceCacheD3D11.h"
 #include "EngineD3D11Defines.h"
 #include "ShaderResourcesD3D11.h"
+#include "RenderDeviceD3D11Impl.h"
 
 namespace Diligent
 {
@@ -42,10 +43,10 @@ class FixedBlockMemoryAllocator;
 class ResourceMapping;
 
 /// Implementation of the Diligent::IShaderD3D11 interface
-class ShaderD3D11Impl : public ShaderBase<IShaderD3D11, IRenderDeviceD3D11>, public ShaderD3DBase
+class ShaderD3D11Impl : public ShaderBase<IShaderD3D11, RenderDeviceD3D11Impl>, public ShaderD3DBase
 {
 public:
-    using TShaderBase = ShaderBase<IShaderD3D11, IRenderDeviceD3D11>;
+    using TShaderBase = ShaderBase<IShaderD3D11, RenderDeviceD3D11Impl>;
 
     ShaderD3D11Impl(IReferenceCounters*          pRefCounters,
                     class RenderDeviceD3D11Impl* pRenderDeviceD3D11,

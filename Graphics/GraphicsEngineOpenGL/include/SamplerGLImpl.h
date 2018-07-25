@@ -28,18 +28,19 @@
 #include "SamplerBase.h"
 #include "RenderDevice.h"
 #include "GLObjectWrapper.h"
+#include "RenderDeviceGLImpl.h"
 
 namespace Diligent
 {
 
 class FixedBlockMemoryAllocator;
 /// Implementation of the Diligent::ISamplerGL interface
-class SamplerGLImpl : public SamplerBase<ISamplerGL, IGLDeviceBaseInterface>
+class SamplerGLImpl : public SamplerBase<ISamplerGL, RenderDeviceGLImpl>
 {
 public:
-    using TSamplerBase = SamplerBase<ISamplerGL, IGLDeviceBaseInterface>;
+    using TSamplerBase = SamplerBase<ISamplerGL, RenderDeviceGLImpl>;
 
-    SamplerGLImpl( IReferenceCounters *pRefCounters, class RenderDeviceGLImpl *pDeviceGL, const SamplerDesc& SamplerDesc, bool bIsDeviceInternal = false );
+    SamplerGLImpl( IReferenceCounters *pRefCounters, RenderDeviceGLImpl *pDeviceGL, const SamplerDesc& SamplerDesc, bool bIsDeviceInternal = false );
     ~SamplerGLImpl();
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface );

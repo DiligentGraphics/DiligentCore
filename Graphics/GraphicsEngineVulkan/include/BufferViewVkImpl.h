@@ -30,6 +30,7 @@
 #include "RenderDeviceVk.h"
 #include "BufferViewBase.h"
 #include "VulkanUtilities/VulkanObjectWrappers.h"
+#include "RenderDeviceVkImpl.h"
 
 namespace Diligent
 {
@@ -38,13 +39,13 @@ class FixedBlockMemoryAllocator;
 class BufferVkImpl;
 
 /// Implementation of the Diligent::IBufferViewVk interface
-class BufferViewVkImpl : public BufferViewBase<IBufferViewVk>
+class BufferViewVkImpl : public BufferViewBase<IBufferViewVk, RenderDeviceVkImpl>
 {
 public:
-    using TBufferViewBase = BufferViewBase<IBufferViewVk>;
+    using TBufferViewBase = BufferViewBase<IBufferViewVk, RenderDeviceVkImpl>;
 
     BufferViewVkImpl( IReferenceCounters*                  pRefCounters,
-                      IRenderDevice*                       pDevice, 
+                      RenderDeviceVkImpl*                  pDevice, 
                       const BufferViewDesc&                ViewDesc, 
                       class IBuffer*                       pBuffer,
                       VulkanUtilities::BufferViewWrapper&& BuffView,

@@ -46,15 +46,18 @@ void VliadateCopyTextureDataParams( const TextureDesc& SrcTexDesc, Uint32 SrcMip
 /// \tparam BaseInterface - base interface that this class will inheret
 ///                         (Diligent::ITextureD3D11, Diligent::ITextureD3D12,
 ///                          Diligent::ITextureGL or Diligent::ITextureVk).
+/// \tparam TRenderDeviceImpl - type of the render device implementation
+///                             (Diligent::RenderDeviceD3D11Impl, Diligent::RenderDeviceD3D12Impl,
+///                              Diligent::RenderDeviceGLImpl, or Diligent::RenderDeviceVkImpl)
 /// \tparam TTextureViewImpl - type of the texture view implementation
 ///                            (Diligent::TextureViewD3D11Impl, Diligent::TextureViewD3D12Impl,
 ///                             Diligent::TextureViewGLImpl or Diligent::TextureViewVkImpl).
 /// \tparam TTexViewObjAllocator - type of the allocator that is used to allocate memory for the texture view object instances
-template<class BaseInterface, class TTextureViewImpl, class TTexViewObjAllocator>
-class TextureBase : public DeviceObjectBase<BaseInterface, TextureDesc>
+template<class BaseInterface, class TRenderDeviceImpl,class TTextureViewImpl, class TTexViewObjAllocator>
+class TextureBase : public DeviceObjectBase<BaseInterface, TRenderDeviceImpl, TextureDesc>
 {
 public:
-    typedef DeviceObjectBase<BaseInterface, TextureDesc> TDeviceObjectBase;
+    using TDeviceObjectBase = DeviceObjectBase<BaseInterface, TRenderDeviceImpl, TextureDesc>;
 
     /// \param pRefCounters - reference counters object that controls the lifetime of this texture.
     /// \param TexViewObjAllocator - allocator that is used to allocate memory for the instances of the texture view object.
@@ -65,7 +68,7 @@ public:
 	///							   must not keep a strong reference to the device
     TextureBase( IReferenceCounters*    pRefCounters, 
                  TTexViewObjAllocator&  TexViewObjAllocator,
-                 IRenderDevice*         pDevice, 
+                 TRenderDeviceImpl*  pDevice, 
                  const TextureDesc&     Desc, 
                  bool                   bIsDeviceInternal = false ) :
         TDeviceObjectBase( pRefCounters, pDevice, Desc, bIsDeviceInternal ),
@@ -182,8 +185,8 @@ protected:
 };
 
 
-template<class BaseInterface, class TTextureViewImpl, class TTexViewObjAllocator>
-void TextureBase<BaseInterface, TTextureViewImpl, TTexViewObjAllocator> :: CorrectTextureViewDesc(struct TextureViewDesc& ViewDesc)
+template<class BaseInterface, class TRenderDeviceImpl,class TTextureViewImpl, class TTexViewObjAllocator>
+void TextureBase<BaseInterface, TRenderDeviceImpl, TTextureViewImpl, TTexViewObjAllocator> :: CorrectTextureViewDesc(struct TextureViewDesc& ViewDesc)
 {
 #define TEX_VIEW_VALIDATION_ERROR(...) LOG_ERROR_AND_THROW( "Texture view \"", ViewDesc.Name ? ViewDesc.Name : "", "\": ", ##__VA_ARGS__ )
 
@@ -389,8 +392,8 @@ void TextureBase<BaseInterface, TTextureViewImpl, TTexViewObjAllocator> :: Corre
     }
 }
 
-template<class BaseInterface, class TTextureViewImpl,  class TTexViewObjAllocator>
-void TextureBase<BaseInterface, TTextureViewImpl, TTexViewObjAllocator> :: CreateDefaultViews()
+template<class BaseInterface, class TRenderDeviceImpl,class TTextureViewImpl, class TTexViewObjAllocator>
+void TextureBase<BaseInterface, TRenderDeviceImpl, TTextureViewImpl, TTexViewObjAllocator> :: CreateDefaultViews()
 {
     const auto& TexFmtAttribs = GetTextureFormatAttribs(this->m_Desc.Format);
     if (TexFmtAttribs.ComponentType == COMPONENT_TYPE_UNDEFINED)
@@ -442,14 +445,14 @@ void TextureBase<BaseInterface, TTextureViewImpl, TTexViewObjAllocator> :: Creat
 }
 
 
-template<class BaseInterface, class TTextureViewImpl, class TTexViewObjAllocator>
-void TextureBase<BaseInterface, TTextureViewImpl, TTexViewObjAllocator> :: UpdateData( IDeviceContext* pContext, Uint32 MipLevel, Uint32 Slice, const Box& DstBox, const TextureSubResData& SubresData )
+template<class BaseInterface, class TRenderDeviceImpl,class TTextureViewImpl, class TTexViewObjAllocator>
+void TextureBase<BaseInterface, TRenderDeviceImpl, TTextureViewImpl, TTexViewObjAllocator> :: UpdateData( IDeviceContext* pContext, Uint32 MipLevel, Uint32 Slice, const Box& DstBox, const TextureSubResData& SubresData )
 {
     ValidateUpdateDataParams( this->m_Desc, MipLevel, Slice, DstBox, SubresData );
 }
 
-template<class BaseInterface, class TTextureViewImpl, class TTexViewObjAllocator>
-void TextureBase<BaseInterface, TTextureViewImpl, TTexViewObjAllocator> :: CopyData(
+template<class BaseInterface, class TRenderDeviceImpl,class TTextureViewImpl, class TTexViewObjAllocator>
+void TextureBase<BaseInterface, TRenderDeviceImpl, TTextureViewImpl, TTexViewObjAllocator> :: CopyData(
                                                                 IDeviceContext* pContext,
                                                                 ITexture* pSrcTexture,
                                                                 Uint32 SrcMipLevel,
@@ -467,13 +470,13 @@ void TextureBase<BaseInterface, TTextureViewImpl, TTexViewObjAllocator> :: CopyD
                                    this->GetDesc(), DstMipLevel, DstSlice, DstX, DstY, DstZ );
 }
 
-template<class BaseInterface, class TTextureViewImpl, class TTexViewObjAllocator>
-void TextureBase<BaseInterface, TTextureViewImpl, TTexViewObjAllocator> :: Map( IDeviceContext* pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags, MappedTextureSubresource &MappedData )
+template<class BaseInterface, class TRenderDeviceImpl,class TTextureViewImpl, class TTexViewObjAllocator>
+void TextureBase<BaseInterface, TRenderDeviceImpl, TTextureViewImpl, TTexViewObjAllocator> :: Map( IDeviceContext* pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags, MappedTextureSubresource &MappedData )
 {
 }
 
-template<class BaseInterface, class TTextureViewImpl, class TTexViewObjAllocator>
-void TextureBase<BaseInterface, TTextureViewImpl, TTexViewObjAllocator> :: Unmap( IDeviceContext* pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags )
+template<class BaseInterface, class TRenderDeviceImpl,class TTextureViewImpl, class TTexViewObjAllocator>
+void TextureBase<BaseInterface, TRenderDeviceImpl, TTextureViewImpl, TTexViewObjAllocator> :: Unmap( IDeviceContext* pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags )
 {
 }
 

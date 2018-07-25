@@ -30,7 +30,7 @@ namespace Diligent
 {
 
 BufferViewVkImpl::BufferViewVkImpl( IReferenceCounters*                  pRefCounters,
-                                    IRenderDevice*                       pDevice, 
+                                    RenderDeviceVkImpl*                  pDevice, 
                                     const BufferViewDesc&                ViewDesc, 
                                     IBuffer*                             pBuffer,
                                     VulkanUtilities::BufferViewWrapper&& BuffView,
@@ -42,8 +42,7 @@ BufferViewVkImpl::BufferViewVkImpl( IReferenceCounters*                  pRefCou
 
 BufferViewVkImpl::~BufferViewVkImpl()
 {
-    auto *pDeviceVkImpl = GetDevice<RenderDeviceVkImpl>();
-    pDeviceVkImpl->SafeReleaseVkObject(std::move(m_BuffView));
+    m_pDevice->SafeReleaseVkObject(std::move(m_BuffView));
 }
 
 IMPLEMENT_QUERY_INTERFACE( BufferViewVkImpl, IID_BufferViewVk, TBufferViewBase )

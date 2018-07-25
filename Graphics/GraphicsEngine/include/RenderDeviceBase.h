@@ -182,7 +182,7 @@ class RenderDeviceBase : public ObjectBase<BaseInterface>
 {
 public:
     
-    typedef ObjectBase<BaseInterface> TObjectBase;
+    using TObjectBase = ObjectBase<BaseInterface>;
 
     /// \param pRefCounters - reference counters object that controls the lifetime of this render device
     /// \param RawMemAllocator - allocator that will be used to allocate memory for all device objects (including render device itself)
@@ -281,6 +281,13 @@ public:
     }
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE( IID_RenderDevice, ObjectBase<BaseInterface> )
+
+    // It is important to have final implementation of Release() method to avoid
+    // virtual calls
+    inline virtual IReferenceCounters::CounterValueType Release()override final
+    {
+        return TObjectBase::Release();
+    }
 
     /// Implementation of IRenderDevice::CreateResourceMapping().
     virtual void CreateResourceMapping( const ResourceMappingDesc &MappingDesc, IResourceMapping **ppMapping )override final;

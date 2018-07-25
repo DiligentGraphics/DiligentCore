@@ -29,7 +29,7 @@ namespace Diligent
 {
 
 TextureViewD3D12Impl::TextureViewD3D12Impl( IReferenceCounters*        pRefCounters,
-                                            IRenderDevice*             pDevice, 
+                                            RenderDeviceD3D12Impl*     pDevice, 
                                             const TextureViewDesc&     ViewDesc, 
                                             ITexture*                  pTexture,
                                             DescriptorHeapAllocation&& HandleAlloc,

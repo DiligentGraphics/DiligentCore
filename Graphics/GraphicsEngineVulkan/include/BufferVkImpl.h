@@ -35,6 +35,7 @@
 #include "VulkanUtilities/VulkanMemoryManager.h"
 #include "VulkanDynamicHeap.h"
 #include "STDAllocator.h"
+#include "RenderDeviceVkImpl.h"
 
 namespace Diligent
 {
@@ -42,14 +43,14 @@ namespace Diligent
 class FixedBlockMemoryAllocator;
 
 /// Implementation of the Diligent::IBufferVk interface
-class BufferVkImpl : public BufferBase<IBufferVk, BufferViewVkImpl, FixedBlockMemoryAllocator>
+class BufferVkImpl : public BufferBase<IBufferVk, RenderDeviceVkImpl, BufferViewVkImpl, FixedBlockMemoryAllocator>
 {
 public:
-    using TBufferBase = BufferBase<IBufferVk, BufferViewVkImpl, FixedBlockMemoryAllocator>;
+    using TBufferBase = BufferBase<IBufferVk, RenderDeviceVkImpl, BufferViewVkImpl, FixedBlockMemoryAllocator>;
 
     BufferVkImpl(IReferenceCounters*        pRefCounters, 
                  FixedBlockMemoryAllocator& BuffViewObjMemAllocator, 
-                 class RenderDeviceVkImpl*  pDeviceVk, 
+                 RenderDeviceVkImpl*        pDeviceVk, 
                  const BufferDesc&          BuffDesc, 
                  const BufferData&          BuffData = BufferData());
 

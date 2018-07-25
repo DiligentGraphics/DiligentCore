@@ -39,11 +39,14 @@ namespace Diligent
 /// \tparam BaseInterface - base interface that this class will inheret 
 ///                         (Diligent::ITextureViewD3D11, Diligent::ITextureViewD3D12,
 ///                          Diligent::ITextureViewGL or Diligent::ITextureViewVk).
-template<class BaseInterface>
-class TextureViewBase : public DeviceObjectBase<BaseInterface, TextureViewDesc>
+/// \tparam RenderDeviceImplType - type of the render device implementation
+///                                (Diligent::RenderDeviceD3D11Impl, Diligent::RenderDeviceD3D12Impl,
+///                                 Diligent::RenderDeviceGLImpl, or Diligent::RenderDeviceVkImpl)
+template<class BaseInterface, class RenderDeviceImplType>
+class TextureViewBase : public DeviceObjectBase<BaseInterface, RenderDeviceImplType, TextureViewDesc>
 {
 public:
-    typedef DeviceObjectBase<BaseInterface, TextureViewDesc> TDeviceObjectBase;
+    using TDeviceObjectBase = DeviceObjectBase<BaseInterface, RenderDeviceImplType, TextureViewDesc>;
 
 
     /// \param pRefCounters - reference counters object that controls the lifetime of this texture view.
@@ -54,7 +57,7 @@ public:
 	///						    part of the texture object. In this case the view will attach 
 	///							to the texture's reference counters.
     TextureViewBase( IReferenceCounters*    pRefCounters,
-                     IRenderDevice*         pDevice,
+                     RenderDeviceImplType*  pDevice,
                      const TextureViewDesc& ViewDesc, 
                      class ITexture*        pTexture,
                      bool                   bIsDefaultView ) :

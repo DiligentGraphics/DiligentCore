@@ -28,23 +28,24 @@
 #include "TextureViewBase.h"
 #include "RenderDevice.h"
 #include "GLObjectWrapper.h"
+#include "RenderDeviceGLImpl.h"
 
 namespace Diligent
 {
 
 class FixedBlockMemoryAllocator;
 /// Implementation of the Diligent::ITextureViewGL interface
-class TextureViewGLImpl : public TextureViewBase<ITextureViewGL>
+class TextureViewGLImpl : public TextureViewBase<ITextureViewGL, RenderDeviceGLImpl>
 {
 public:
-    using TTextureViewBase = TextureViewBase<ITextureViewGL>;
+    using TTextureViewBase = TextureViewBase<ITextureViewGL, RenderDeviceGLImpl>;
 
     TextureViewGLImpl(IReferenceCounters *pRefCounters,
-                     class IRenderDevice *pDevice, 
-                     const struct TextureViewDesc& ViewDesc, 
-                     class TextureBaseGL *pTexture,
-                     bool bCreateGLViewTex,
-                     bool bIsDefaultView );
+                      RenderDeviceGLImpl *pDevice, 
+                      const struct TextureViewDesc& ViewDesc, 
+                      class TextureBaseGL *pTexture,
+                      bool bCreateGLViewTex,
+                      bool bIsDefaultView );
     ~TextureViewGLImpl();
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;

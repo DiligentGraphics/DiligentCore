@@ -35,13 +35,8 @@
 namespace Diligent
 {
    
-template<typename BaseInterface>
-class RenderDeviceBase;
-
-class IRenderDevice;
-
 /// Template class implementing base functionality for a device object
-template<class BaseInterface, typename ObjectDescType>
+template<class BaseInterface, typename RenderDeviceImplType, typename ObjectDescType>
 class DeviceObjectBase : public ObjectBase<BaseInterface>
 {
 public:
@@ -53,15 +48,15 @@ public:
 	/// \param bIsDeviceInternal - flag indicating if the object is an internal device object
 	///							   and must not keep a strong reference to the device.
     DeviceObjectBase( IReferenceCounters*   pRefCounters,
-                      IRenderDevice*        pDevice,
+                      RenderDeviceImplType* pDevice,
 					  const ObjectDescType& ObjDesc,
 				      bool                  bIsDeviceInternal = false) :
         TBase(pRefCounters),
 		// Do not keep strong reference to the device if the object is an internal device object
-		m_spDevice( bIsDeviceInternal ? nullptr : pDevice ),
-        m_pDevice( pDevice ),
+		m_spDevice      (bIsDeviceInternal ? nullptr : pDevice),
+        m_pDevice       (pDevice),
         m_ObjectNameCopy(ObjDesc.Name ? ObjDesc.Name : ThisToString()),
-        m_Desc( ObjDesc )
+        m_Desc          (ObjDesc)
     {
         m_Desc.Name = m_ObjectNameCopy.c_str();
 
@@ -95,10 +90,16 @@ public:
         // 4. RefCountersImpl::ObjectWrapperBase::DestroyObject() calls 
         //    m_pAllocator->Free(m_pObject) - crash!
          
-        // We must keep the device alive while the object is being destroyed
-        RefCntAutoPtr<IRenderDevice> pDevice(m_spDevice);
-        // Note that internal device object do not keep strong reference to the device
-        return TBase::Release();
+        RefCntAutoPtr<RenderDeviceImplType> pDevice;
+        return ValidatedCast<RefCountersImpl>(this->GetReferenceCounters())->
+                ReleaseStrongRef(
+                    [&]()
+                    {
+                        // We must keep the device alive while the object is being destroyed
+                        // Note that internal device objects do not keep strong reference to the device
+                        pDevice = m_spDevice;
+                    }
+                );
     }
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE( IID_DeviceObject, TBase )
@@ -119,20 +120,16 @@ public:
         return m_UniqueID.GetID();
     }
 
-	IRenderDevice* GetDevice()const{return m_pDevice;}
+	RenderDeviceImplType* GetDevice()const{return m_pDevice;}
     
-    template<typename Type>
-    Type* GetDevice()const{return ValidatedCast<Type>(m_pDevice);}
-
 private:
 	/// Strong reference to the device
-	RefCntAutoPtr<IRenderDevice> m_spDevice;
-
-    /// Pointer to the device
-    IRenderDevice* m_pDevice;
+	RefCntAutoPtr<RenderDeviceImplType> m_spDevice;
 
 protected:
-	
+    /// Pointer to the device
+    RenderDeviceImplType* const m_pDevice;
+
     /// Copy of a device object name.
 
     /// When new object is created, its description structure is copied

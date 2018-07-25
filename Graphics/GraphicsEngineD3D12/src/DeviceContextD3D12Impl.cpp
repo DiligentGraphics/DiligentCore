@@ -835,8 +835,9 @@ namespace Diligent
 
     void DeviceContextD3D12Impl::FinishCommandList(ICommandList** ppCommandList)
     {
-        CommandListD3D12Impl *pCmdListD3D12( NEW_RC_OBJ(m_CmdListAllocator, "CommandListD3D12Impl instance", CommandListD3D12Impl)
-                                                       (m_pDevice, m_pCurrCmdCtx) );
+        auto* pDeviceD3D12Impl = m_pDevice.RawPtr<RenderDeviceD3D12Impl>();
+        CommandListD3D12Impl* pCmdListD3D12( NEW_RC_OBJ(m_CmdListAllocator, "CommandListD3D12Impl instance", CommandListD3D12Impl)
+                                                       (pDeviceD3D12Impl, m_pCurrCmdCtx) );
         pCmdListD3D12->QueryInterface( IID_CommandList, reinterpret_cast<IObject**>(ppCommandList) );
         m_pCurrCmdCtx = nullptr;
         Flush(true);

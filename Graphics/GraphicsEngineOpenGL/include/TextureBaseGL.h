@@ -30,7 +30,7 @@
 #include "GLObjectWrapper.h"
 #include "TextureViewGLImpl.h"
 #include "AsyncWritableResource.h"
-
+#include "RenderDeviceGLImpl.h"
 
 namespace Diligent
 {
@@ -38,14 +38,14 @@ namespace Diligent
 class FixedBlockMemoryAllocator;
 
 /// Base implementation of the Diligent::ITextureGL interface
-class TextureBaseGL : public TextureBase<ITextureGL, TextureViewGLImpl, FixedBlockMemoryAllocator>, public AsyncWritableResource
+class TextureBaseGL : public TextureBase<ITextureGL, RenderDeviceGLImpl, TextureViewGLImpl, FixedBlockMemoryAllocator>, public AsyncWritableResource
 {
 public:
-    using TTextureBase = TextureBase<ITextureGL, TextureViewGLImpl, FixedBlockMemoryAllocator>;
+    using TTextureBase = TextureBase<ITextureGL, RenderDeviceGLImpl, TextureViewGLImpl, FixedBlockMemoryAllocator>;
 
     TextureBaseGL(IReferenceCounters *pRefCounters, 
                   FixedBlockMemoryAllocator& TexViewObjAllocator, 
-                  class RenderDeviceGLImpl *pDeviceGL, 
+                  RenderDeviceGLImpl *pDeviceGL, 
                   const TextureDesc &TexDesc, 
                   GLenum BindTarget,
                   const TextureData &InitData = TextureData(), 

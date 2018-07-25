@@ -238,8 +238,7 @@ PipelineStateD3D12Impl::~PipelineStateD3D12Impl()
     ShaderResLayoutAllocator.Free(m_pShaderResourceLayouts);
 
     // D3D12 object can only be destroyed when it is no longer used by the GPU
-    auto* pDeviceD3D12Impl = GetDevice<RenderDeviceD3D12Impl>();
-    pDeviceD3D12Impl->SafeReleaseD3D12Object(m_pd3d12PSO);
+    m_pDevice->SafeReleaseD3D12Object(m_pd3d12PSO);
 }
 
 IMPLEMENT_QUERY_INTERFACE( PipelineStateD3D12Impl, IID_PipelineStateD3D12, TPipelineStateBase )
@@ -247,8 +246,7 @@ IMPLEMENT_QUERY_INTERFACE( PipelineStateD3D12Impl, IID_PipelineStateD3D12, TPipe
 
 void PipelineStateD3D12Impl::CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding)
 {
-    auto* pRenderDeviceD3D12 = GetDevice<RenderDeviceD3D12Impl>();
-    auto& SRBAllocator = pRenderDeviceD3D12->GetSRBAllocator();
+    auto& SRBAllocator = m_pDevice->GetSRBAllocator();
     auto pResBindingD3D12 = NEW_RC_OBJ(SRBAllocator, "ShaderResourceBindingD3D12Impl instance", ShaderResourceBindingD3D12Impl)(this, false);
     pResBindingD3D12->QueryInterface(IID_ShaderResourceBinding, reinterpret_cast<IObject**>(ppShaderResourceBinding));
 }
@@ -352,7 +350,6 @@ ShaderResourceCacheD3D12* PipelineStateD3D12Impl::CommitAndTransitionShaderResou
     pResBindingD3D12Impl->dbgVerifyResourceBindings(this);
 #endif
 
-    auto* pDeviceD3D12Impl = GetDevice<RenderDeviceD3D12Impl>();
     auto& ResourceCache = pResBindingD3D12Impl->GetResourceCache();
     if(CommitResources)
     {
@@ -362,9 +359,9 @@ ShaderResourceCacheD3D12* PipelineStateD3D12Impl::CommitAndTransitionShaderResou
             Ctx.AsGraphicsContext().SetRootSignature( GetD3D12RootSignature() );
 
         if(TransitionResources)
-            (m_RootSig.*m_RootSig.TransitionAndCommitDescriptorHandles)(pDeviceD3D12Impl, ResourceCache, Ctx, m_Desc.IsComputePipeline);
+            (m_RootSig.*m_RootSig.TransitionAndCommitDescriptorHandles)(m_pDevice, ResourceCache, Ctx, m_Desc.IsComputePipeline);
         else
-            (m_RootSig.*m_RootSig.CommitDescriptorHandles)(pDeviceD3D12Impl, ResourceCache, Ctx, m_Desc.IsComputePipeline);
+            (m_RootSig.*m_RootSig.CommitDescriptorHandles)(m_pDevice, ResourceCache, Ctx, m_Desc.IsComputePipeline);
     }
     else
     {

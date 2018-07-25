@@ -30,7 +30,7 @@ namespace Diligent
 {
 
 TextureViewVkImpl::TextureViewVkImpl( IReferenceCounters*                 pRefCounters,
-                                      IRenderDevice*                      pDevice, 
+                                      RenderDeviceVkImpl*                 pDevice, 
                                       const TextureViewDesc&              ViewDesc, 
                                       ITexture*                           pTexture,
                                       VulkanUtilities::ImageViewWrapper&& ImgView,
@@ -42,10 +42,9 @@ TextureViewVkImpl::TextureViewVkImpl( IReferenceCounters*                 pRefCo
 
 TextureViewVkImpl::~TextureViewVkImpl()
 {
-    auto *pDeviceVkImpl = GetDevice<RenderDeviceVkImpl>();
     if(m_Desc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL || m_Desc.ViewType == TEXTURE_VIEW_RENDER_TARGET)
-        pDeviceVkImpl->GetFramebufferCache().OnDestroyImageView(m_ImageView);
-    pDeviceVkImpl->SafeReleaseVkObject(std::move(m_ImageView));
+        m_pDevice->GetFramebufferCache().OnDestroyImageView(m_ImageView);
+    m_pDevice->SafeReleaseVkObject(std::move(m_ImageView));
 }
 
 IMPLEMENT_QUERY_INTERFACE( TextureViewVkImpl, IID_TextureViewVk, TTextureViewBase )

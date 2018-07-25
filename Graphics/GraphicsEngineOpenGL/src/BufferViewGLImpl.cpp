@@ -32,7 +32,7 @@
 namespace Diligent
 {
     BufferViewGLImpl::BufferViewGLImpl( IReferenceCounters *pRefCounters,
-                                        IRenderDevice *pDevice, 
+                                        RenderDeviceGLImpl *pDevice, 
                                         IDeviceContext *pContext,
                                         const BufferViewDesc& ViewDesc, 
                                         BufferGLImpl* pBuffer,

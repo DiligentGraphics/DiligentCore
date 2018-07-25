@@ -255,12 +255,11 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters*        pRefCounters,
 
 BufferVkImpl :: ~BufferVkImpl()
 {
-    auto *pDeviceVkImpl = GetDevice<RenderDeviceVkImpl>();
     // Vk object can only be destroyed when it is no longer used by the GPU
     if(m_VulkanBuffer != VK_NULL_HANDLE)
-        pDeviceVkImpl->SafeReleaseVkObject(std::move(m_VulkanBuffer));
+        m_pDevice->SafeReleaseVkObject(std::move(m_VulkanBuffer));
     if(m_MemoryAllocation.Page != nullptr)
-        pDeviceVkImpl->SafeReleaseVkObject(std::move(m_MemoryAllocation));
+        m_pDevice->SafeReleaseVkObject(std::move(m_MemoryAllocation));
 }
 
 IMPLEMENT_QUERY_INTERFACE( BufferVkImpl, IID_BufferVk, TBufferBase )
@@ -287,7 +286,6 @@ void BufferVkImpl :: Map(IDeviceContext* pContext, MAP_TYPE MapType, Uint32 MapF
     TBufferBase::Map( pContext, MapType, MapFlags, pMappedData );
 
     auto* pDeviceContextVk = ValidatedCast<DeviceContextVkImpl>(pContext);
-    auto* pDeviceVk = GetDevice<RenderDeviceVkImpl>();
 #ifdef DEVELOPMENT
     if(pDeviceContextVk != nullptr)
         m_DvpMapType[pDeviceContextVk->GetContextId()] = std::make_pair(MapType, MapFlags);
@@ -299,7 +297,7 @@ void BufferVkImpl :: Map(IDeviceContext* pContext, MAP_TYPE MapType, Uint32 MapF
 #if 0
         LOG_WARNING_MESSAGE_ONCE("Mapping CPU buffer for reading on Vk currently requires flushing context and idling GPU");
         pDeviceContextVk->Flush();
-        pDeviceVk->IdleGPU(false);
+        m_pDevice->IdleGPU(false);
 
         VERIFY(m_Desc.Usage == USAGE_CPU_ACCESSIBLE, "Buffer must be created as USAGE_CPU_ACCESSIBLE to be mapped for reading");
         Vk_RANGE MapRange;
@@ -346,7 +344,7 @@ void BufferVkImpl :: Map(IDeviceContext* pContext, MAP_TYPE MapType, Uint32 MapF
 
             if (DynAllocation.pParentDynamicHeap != nullptr)
             {
-                const auto& DynamicHeap = pDeviceVk->GetDynamicHeapRingBuffer();
+                const auto& DynamicHeap = m_pDevice->GetDynamicHeapRingBuffer();
                 auto* CPUAddress = DynamicHeap.GetCPUAddress();
                 pMappedData = CPUAddress + DynAllocation.Offset;
             }
@@ -443,8 +441,7 @@ void BufferVkImpl::CreateViewInternal( const BufferViewDesc& OrigViewDesc, IBuff
 
     try
     {
-        auto *pDeviceVkImpl = GetDevice<RenderDeviceVkImpl>();
-        auto &BuffViewAllocator = pDeviceVkImpl->GetBuffViewObjAllocator();
+        auto& BuffViewAllocator = m_pDevice->GetBuffViewObjAllocator();
         VERIFY( &BuffViewAllocator == &m_dbgBuffViewAllocator, "Buff view allocator does not match allocator provided at buffer initialization" );
 
         BufferViewDesc ViewDesc = OrigViewDesc;
@@ -482,8 +479,7 @@ VulkanUtilities::BufferViewWrapper BufferVkImpl::CreateView(struct BufferViewDes
         ViewCI.offset = ViewDesc.ByteOffset;
         ViewCI.range = ViewDesc.ByteWidth; // size in bytes of the buffer view
 
-        auto *pDeviceVkImpl = GetDevice<RenderDeviceVkImpl>();
-        const auto& LogicalDevice = pDeviceVkImpl->GetLogicalDevice();
+        const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
         BuffView = LogicalDevice.CreateBufferView(ViewCI, ViewDesc.Name);
     }
     return BuffView;
@@ -496,7 +492,7 @@ VkBuffer BufferVkImpl::GetVkBuffer()const
     else
     {
         VERIFY(m_Desc.Usage == USAGE_DYNAMIC, "Dynamic buffer expected");
-        return GetDevice<RenderDeviceVkImpl>()->GetDynamicHeapRingBuffer().GetVkBuffer();
+        return m_pDevice->GetDynamicHeapRingBuffer().GetVkBuffer();
     }
 }
 
@@ -506,7 +502,7 @@ void BufferVkImpl::DvpVerifyDynamicAllocation(Uint32 ContextId)const
     const auto& DynAlloc = m_DynamicAllocations[ContextId];
     if (DynAlloc.pParentDynamicHeap == nullptr)
         LOG_ERROR_MESSAGE("Dynamic buffer '", m_Desc.Name, "' was not mapped before its first use. Context Id: ", ContextId);
-    auto CurrentFrame = GetDevice<RenderDeviceVkImpl>()->GetCurrentFrameNumber();
+    auto CurrentFrame = m_pDevice->GetCurrentFrameNumber();
     if (DynAlloc.dbgFrameNumber != CurrentFrame)
         LOG_ERROR_MESSAGE("Dynamic allocation is out-of-date. Dynamic buffer '", m_Desc.Name, "' must be mapped in the same frame it is used.");
 }

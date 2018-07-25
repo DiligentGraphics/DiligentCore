@@ -32,6 +32,7 @@
 #include "ShaderResourceLayoutVk.h"
 #include "SPIRVShaderResources.h"
 #include "ShaderVariableVk.h"
+#include "RenderDeviceVkImpl.h"
 
 namespace Diligent
 {
@@ -40,12 +41,12 @@ class ResourceMapping;
 class FixedBlockMemoryAllocator;
 
 /// Implementation of the Diligent::IShaderVk interface
-class ShaderVkImpl : public ShaderBase<IShaderVk, IRenderDeviceVk>
+class ShaderVkImpl : public ShaderBase<IShaderVk, RenderDeviceVkImpl>
 {
 public:
-    using TShaderBase = ShaderBase<IShaderVk, IRenderDeviceVk>;
+    using TShaderBase = ShaderBase<IShaderVk, RenderDeviceVkImpl>;
 
-    ShaderVkImpl(IReferenceCounters* pRefCounters, class RenderDeviceVkImpl* pRenderDeviceVk, const ShaderCreationAttribs &CreationAttribs);
+    ShaderVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl* pRenderDeviceVk, const ShaderCreationAttribs &CreationAttribs);
     ~ShaderVkImpl();
     
     //virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;

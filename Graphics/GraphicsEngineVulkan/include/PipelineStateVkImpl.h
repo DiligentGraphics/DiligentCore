@@ -38,6 +38,7 @@
 #include "VulkanUtilities/VulkanObjectWrappers.h"
 #include "VulkanUtilities/VulkanCommandBuffer.h"
 #include "PipelineLayout.h"
+#include "RenderDeviceVkImpl.h"
 
 namespace Diligent
 {
@@ -45,12 +46,12 @@ namespace Diligent
 class FixedBlockMemoryAllocator;
 
 /// Implementation of the Diligent::IRenderDeviceVk interface
-class PipelineStateVkImpl : public PipelineStateBase<IPipelineStateVk, IRenderDeviceVk>
+class PipelineStateVkImpl : public PipelineStateBase<IPipelineStateVk, RenderDeviceVkImpl>
 {
 public:
-    using TPipelineStateBase = PipelineStateBase<IPipelineStateVk, IRenderDeviceVk>;
+    using TPipelineStateBase = PipelineStateBase<IPipelineStateVk, RenderDeviceVkImpl>;
 
-    PipelineStateVkImpl( IReferenceCounters* pRefCounters, class RenderDeviceVkImpl* pDeviceVk, const PipelineStateDesc &PipelineDesc );
+    PipelineStateVkImpl( IReferenceCounters* pRefCounters, RenderDeviceVkImpl* pDeviceVk, const PipelineStateDesc &PipelineDesc );
     ~PipelineStateVkImpl();
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject** ppInterface );

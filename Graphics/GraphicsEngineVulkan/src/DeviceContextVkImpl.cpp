@@ -1217,8 +1217,9 @@ namespace Diligent
         auto err = vkEndCommandBuffer(vkCmdBuff);
         VERIFY(err == VK_SUCCESS, "Failed to end command buffer");
 
+        auto* pDeviceVkImpl = m_pDevice.RawPtr<RenderDeviceVkImpl>();
         CommandListVkImpl *pCmdListVk( NEW_RC_OBJ(m_CmdListAllocator, "CommandListVkImpl instance", CommandListVkImpl)
-                                                 (m_pDevice, this, vkCmdBuff, m_NextCmdBuffNumber) );
+                                                 (pDeviceVkImpl, this, vkCmdBuff, m_NextCmdBuffNumber) );
         pCmdListVk->QueryInterface( IID_CommandList, reinterpret_cast<IObject**>(ppCommandList) );
         
         m_CommandBuffer.SetVkCmdBuffer(VK_NULL_HANDLE);

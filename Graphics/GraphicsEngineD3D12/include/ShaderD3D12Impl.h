@@ -31,6 +31,7 @@
 #include "ShaderBase.h"
 #include "ShaderD3DBase.h"
 #include "ShaderResourceLayoutD3D12.h"
+#include "RenderDeviceD3D12Impl.h"
 
 #ifdef _DEBUG
 #   define VERIFY_SHADER_BINDINGS
@@ -43,13 +44,13 @@ class ResourceMapping;
 class FixedBlockMemoryAllocator;
 
 /// Implementation of the Diligent::IShaderD3D12 interface
-class ShaderD3D12Impl : public ShaderBase<IShaderD3D12, IRenderDeviceD3D12>, public ShaderD3DBase
+class ShaderD3D12Impl : public ShaderBase<IShaderD3D12, RenderDeviceD3D12Impl>, public ShaderD3DBase
 {
 public:
-    using TShaderBase = ShaderBase<IShaderD3D12, IRenderDeviceD3D12>;
+    using TShaderBase = ShaderBase<IShaderD3D12, RenderDeviceD3D12Impl>;
 
     ShaderD3D12Impl(IReferenceCounters*           pRefCounters, 
-                    class RenderDeviceD3D12Impl*  pRenderDeviceD3D12, 
+                    RenderDeviceD3D12Impl*        pRenderDeviceD3D12, 
                     const ShaderCreationAttribs&  ShaderCreationAttribs);
     ~ShaderD3D12Impl();
     

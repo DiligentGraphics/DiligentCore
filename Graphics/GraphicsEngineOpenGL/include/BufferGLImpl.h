@@ -29,7 +29,7 @@
 #include "AsyncWritableResource.h"
 #include "BaseInterfacesGL.h"
 #include "BufferViewGLImpl.h"
-
+#include "RenderDeviceGLImpl.h"
 
 namespace Diligent
 {
@@ -37,14 +37,14 @@ namespace Diligent
 class FixedBlockMemoryAllocator;
 
 /// Implementation of the Diligent::IBufferGL interface
-class BufferGLImpl : public BufferBase<IBufferGL, BufferViewGLImpl, FixedBlockMemoryAllocator>, public AsyncWritableResource
+class BufferGLImpl : public BufferBase<IBufferGL, RenderDeviceGLImpl, BufferViewGLImpl, FixedBlockMemoryAllocator>, public AsyncWritableResource
 {
 public:
-    using TBufferBase = BufferBase<IBufferGL, BufferViewGLImpl, FixedBlockMemoryAllocator>;
+    using TBufferBase = BufferBase<IBufferGL, RenderDeviceGLImpl, BufferViewGLImpl, FixedBlockMemoryAllocator>;
 
     BufferGLImpl(IReferenceCounters *pRefCounters, 
                  FixedBlockMemoryAllocator &BuffViewObjMemAllocator, 
-                 class RenderDeviceGLImpl *pDeviceGL, 
+                 RenderDeviceGLImpl *pDeviceGL, 
                  const BufferDesc& BuffDesc, 
                  const BufferData& BuffData,
                  bool bIsDeviceInternal);

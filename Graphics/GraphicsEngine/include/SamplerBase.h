@@ -38,22 +38,21 @@ namespace Diligent
 /// \tparam BaseInterface - base interface that this class will inheret
 ///                          (Diligent::ISamplerD3D11, Diligent::ISamplerD3D12,
 ///                           Diligent::ISamplerGL or Diligent::ISamplerVk).
-/// \tparam RenderDeviceBaseInterface - base interface for the render device
-///                                     (Diligent::IRenderDeviceD3D11, Diligent::IRenderDeviceD3D12, Diligent::IRenderDeviceGL, 
-///                                      Diligent::IRenderDeviceGLES or Diligent::IRenderDeviceVk).
-template<class BaseInterface, class RenderDeviceBaseInterface>
-class SamplerBase : public DeviceObjectBase<BaseInterface, SamplerDesc>
+/// \tparam RenderDeviceImplType - type of the render device implementation
+///                                (Diligent::RenderDeviceD3D11Impl, Diligent::RenderDeviceD3D12Impl,
+///                                 Diligent::RenderDeviceGLImpl, or Diligent::RenderDeviceVkImpl)
+template<class BaseInterface, class RenderDeviceImplType>
+class SamplerBase : public DeviceObjectBase<BaseInterface, RenderDeviceImplType, SamplerDesc>
 {
 public:
-    typedef DeviceObjectBase<BaseInterface, SamplerDesc> TDeviceObjectBase;
-    typedef RenderDeviceBase<RenderDeviceBaseInterface> TRenderDeviceBase;
+    using TDeviceObjectBase = DeviceObjectBase<BaseInterface, RenderDeviceImplType, SamplerDesc>;
 
     /// \param pRefCounters - reference counters object that controls the lifetime of this sampler.
 	/// \param pDevice - pointer to the device.
 	/// \param SamDesc - sampler description.
 	/// \param bIsDeviceInternal - flag indicating if the sampler is an internal device object and 
 	///							   must not keep a strong reference to the device.
-    SamplerBase( IReferenceCounters* pRefCounters, IRenderDevice* pDevice, const SamplerDesc& SamDesc, bool bIsDeviceInternal = false ) :
+    SamplerBase( IReferenceCounters* pRefCounters, RenderDeviceImplType* pDevice, const SamplerDesc& SamDesc, bool bIsDeviceInternal = false ) :
         TDeviceObjectBase( pRefCounters, pDevice, SamDesc, bIsDeviceInternal )
     {}
 
@@ -61,7 +60,7 @@ public:
     {
         /// \note Destructor cannot directly remove the object from the registry as this may cause a 
         ///       deadlock.
-        auto &SamplerRegistry = static_cast<TRenderDeviceBase*>(this->GetDevice())->GetSamplerRegistry();
+        auto &SamplerRegistry = this->GetDevice()->GetSamplerRegistry();
         SamplerRegistry.ReportDeletedObject();
     }
 

@@ -29,16 +29,17 @@
 #include "SamplerD3D11.h"
 #include "RenderDeviceD3D11.h"
 #include "SamplerBase.h"
+#include "RenderDeviceD3D11Impl.h"
 
 namespace Diligent
 {
 
 class FixedBlockMemoryAllocator;
 /// Implementation of the Diligent::ISamplerD3D11 interface
-class SamplerD3D11Impl : public SamplerBase<ISamplerD3D11, IRenderDeviceD3D11>
+class SamplerD3D11Impl : public SamplerBase<ISamplerD3D11, RenderDeviceD3D11Impl>
 {
 public:
-    using TSamplerBase = SamplerBase<ISamplerD3D11, IRenderDeviceD3D11>;
+    using TSamplerBase = SamplerBase<ISamplerD3D11, RenderDeviceD3D11Impl>;
 
     SamplerD3D11Impl(IReferenceCounters*          pRefCounters,
                      class RenderDeviceD3D11Impl* pRenderDeviceD3D11,

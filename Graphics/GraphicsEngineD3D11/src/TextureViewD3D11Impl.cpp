@@ -29,7 +29,7 @@ namespace Diligent
 {
 
 TextureViewD3D11Impl::TextureViewD3D11Impl( IReferenceCounters*    pRefCounters,
-                                            IRenderDevice*         pDevice, 
+                                            RenderDeviceD3D11Impl* pDevice, 
                                             const TextureViewDesc& ViewDesc, 
                                             ITexture*              pTexture,
                                             ID3D11View*            pD3D11View,

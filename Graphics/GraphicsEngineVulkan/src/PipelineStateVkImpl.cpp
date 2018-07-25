@@ -403,15 +403,14 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters*      pRefCounters
 
 PipelineStateVkImpl::~PipelineStateVkImpl()
 {
-    auto pDeviceVkImpl = GetDevice<RenderDeviceVkImpl>();
-    pDeviceVkImpl->SafeReleaseVkObject(std::move(m_Pipeline));
-    m_PipelineLayout.Release(pDeviceVkImpl);
+    m_pDevice->SafeReleaseVkObject(std::move(m_Pipeline));
+    m_PipelineLayout.Release(m_pDevice);
 
     for (auto& ShaderModule : m_ShaderModules)
     {
         if (ShaderModule != VK_NULL_HANDLE)
         {
-            pDeviceVkImpl->SafeReleaseVkObject(std::move(ShaderModule));
+            m_pDevice->SafeReleaseVkObject(std::move(ShaderModule));
         }
     }
 
@@ -432,8 +431,7 @@ IMPLEMENT_QUERY_INTERFACE( PipelineStateVkImpl, IID_PipelineStateVk, TPipelineSt
 
 void PipelineStateVkImpl::CreateShaderResourceBinding(IShaderResourceBinding **ppShaderResourceBinding)
 {
-    auto* pRenderDeviceVk = GetDevice<RenderDeviceVkImpl>();
-    auto& SRBAllocator = pRenderDeviceVk->GetSRBAllocator();
+    auto& SRBAllocator = m_pDevice->GetSRBAllocator();
     auto pResBindingVk = NEW_RC_OBJ(SRBAllocator, "ShaderResourceBindingVkImpl instance", ShaderResourceBindingVkImpl)(this, false);
     pResBindingVk->QueryInterface(IID_ShaderResourceBinding, reinterpret_cast<IObject**>(ppShaderResourceBinding));
 }

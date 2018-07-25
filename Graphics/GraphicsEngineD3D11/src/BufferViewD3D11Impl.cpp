@@ -27,12 +27,12 @@
 namespace Diligent
 {
 
-BufferViewD3D11Impl::BufferViewD3D11Impl( IReferenceCounters*   pRefCounters,
-                                          IRenderDevice*        pDevice, 
-                                          const BufferViewDesc& ViewDesc, 
-                                          IBuffer*              pBuffer,
-                                          ID3D11View*           pD3D11View,
-                                          bool                  bIsDefaultView ) :
+BufferViewD3D11Impl::BufferViewD3D11Impl( IReferenceCounters*    pRefCounters,
+                                          RenderDeviceD3D11Impl* pDevice, 
+                                          const BufferViewDesc&  ViewDesc, 
+                                          IBuffer*               pBuffer,
+                                          ID3D11View*            pD3D11View,
+                                          bool                   bIsDefaultView ) :
     TBufferViewBase( pRefCounters, pDevice, ViewDesc, pBuffer, bIsDefaultView ),
     m_pD3D11View( pD3D11View )
 {

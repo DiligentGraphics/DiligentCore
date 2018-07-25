@@ -40,18 +40,21 @@ struct CommandListDesc : public DeviceObjectAttribs
 /// Template class implementing base functionality for a command list object.
 
 /// \tparam BaseInterface - base interface that this class will inheret 
-///                         (Diligent::ICommandListD3D11 or Diligent::ICommandListD3D12).
-template<class BaseInterface>
-class CommandListBase : public DeviceObjectBase<BaseInterface, CommandListDesc>
+///                         (Diligent::ICommandListD3D11, Diligent::ICommandListD3D12 or Diligent::ICommandListVk).
+/// \tparam RenderDeviceImplType - type of the render device implementation
+///                                (Diligent::RenderDeviceD3D11Impl, Diligent::RenderDeviceD3D12Impl,
+///                                 Diligent::RenderDeviceGLImpl, or Diligent::RenderDeviceVkImpl)
+template<class BaseInterface, class RenderDeviceImplType>
+class CommandListBase : public DeviceObjectBase<BaseInterface, RenderDeviceImplType, CommandListDesc>
 {
 public:
-    typedef DeviceObjectBase<BaseInterface, CommandListDesc> TDeviceObjectBase;
+    using TDeviceObjectBase = DeviceObjectBase<BaseInterface, RenderDeviceImplType, CommandListDesc>;
 
     /// \param pRefCounters - reference counters object that controls the lifetime of this command list.
 	/// \param pDevice - pointer to the device.
 	/// \param bIsDeviceInternal - flag indicating if the CommandList is an internal device object and 
 	///							   must not keep a strong reference to the device.
-    CommandListBase( IReferenceCounters* pRefCounters, IRenderDevice* pDevice, bool bIsDeviceInternal = false ) :
+    CommandListBase( IReferenceCounters* pRefCounters, RenderDeviceImplType* pDevice, bool bIsDeviceInternal = false ) :
         TDeviceObjectBase( pRefCounters, pDevice, CommandListDesc(), bIsDeviceInternal )
     {}
 

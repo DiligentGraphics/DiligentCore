@@ -30,6 +30,7 @@
 #include "FenceD3D11.h"
 #include "RenderDeviceD3D11.h"
 #include "FenceBase.h"
+#include "RenderDeviceD3D11Impl.h"
 
 namespace Diligent
 {
@@ -37,14 +38,14 @@ namespace Diligent
 class FixedBlockMemoryAllocator;
 
 /// Implementation of the Diligent::IFenceD3D11 interface
-class FenceD3D11Impl : public FenceBase<IFenceD3D11>
+class FenceD3D11Impl : public FenceBase<IFenceD3D11, RenderDeviceD3D11Impl>
 {
 public:
-    using TFenceBase = FenceBase<IFenceD3D11>;
+    using TFenceBase = FenceBase<IFenceD3D11, RenderDeviceD3D11Impl>;
 
-    FenceD3D11Impl(IReferenceCounters*  pRefCounters,
-                   IRenderDevice*       pDevice,
-                   const FenceDesc&     Desc);
+    FenceD3D11Impl(IReferenceCounters*    pRefCounters,
+                   RenderDeviceD3D11Impl* pDevice,
+                   const FenceDesc&       Desc);
     ~FenceD3D11Impl();
 
     virtual Uint64 GetCompletedValue()override final;

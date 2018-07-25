@@ -30,9 +30,9 @@
 namespace Diligent
 {
     
-FenceD3D12Impl :: FenceD3D12Impl(IReferenceCounters* pRefCounters,
-                                 IRenderDevice*      pDevice,
-                                 const FenceDesc&    Desc) : 
+FenceD3D12Impl :: FenceD3D12Impl(IReferenceCounters*    pRefCounters,
+                                 RenderDeviceD3D12Impl* pDevice,
+                                 const FenceDesc&       Desc) : 
     TFenceBase(pRefCounters, pDevice, Desc)
 {
     auto* pd3d12Device = ValidatedCast<RenderDeviceD3D12Impl>(pDevice)->GetD3D12Device();

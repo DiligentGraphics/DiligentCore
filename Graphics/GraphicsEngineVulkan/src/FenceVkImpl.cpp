@@ -50,7 +50,7 @@ FenceVkImpl :: ~FenceVkImpl()
 
 Uint64 FenceVkImpl :: GetCompletedValue()
 {
-    const auto& LogicalDevice = GetDevice<RenderDeviceVkImpl>()->GetLogicalDevice();
+    const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
     while (!m_PendingFences.empty())
     {
         auto& Value_Fence = m_PendingFences.front();
@@ -81,7 +81,7 @@ void FenceVkImpl :: Reset(Uint64 Value)
 
 void FenceVkImpl :: Wait()
 {
-    const auto& LogicalDevice = GetDevice<RenderDeviceVkImpl>()->GetLogicalDevice();
+    const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
     for (auto& val_fence : m_PendingFences)
     {
         while (LogicalDevice.GetFenceStatus(val_fence.second) != VK_SUCCESS)
