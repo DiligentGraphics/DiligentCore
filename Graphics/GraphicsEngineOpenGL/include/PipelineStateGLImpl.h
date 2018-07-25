@@ -39,7 +39,7 @@ class FixedBlockMemoryAllocator;
 class PipelineStateGLImpl : public PipelineStateBase<IPipelineStateGL, IGLDeviceBaseInterface>
 {
 public:
-    typedef PipelineStateBase<IPipelineStateGL, IGLDeviceBaseInterface> TPipelineStateBase;
+    using TPipelineStateBase = PipelineStateBase<IPipelineStateGL, IGLDeviceBaseInterface>;
 
     PipelineStateGLImpl(IReferenceCounters *pRefCounters, class RenderDeviceGLImpl *pDeviceGL, const PipelineStateDesc& PipelineDesc, bool IsDeviceInternal = false);
     ~PipelineStateGLImpl();

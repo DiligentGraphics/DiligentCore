@@ -38,7 +38,8 @@ class FixedBlockMemoryAllocator;
 class CommandListD3D11Impl : public CommandListBase<ICommandList>
 {
 public:
-    typedef CommandListBase<ICommandList> TCommandListBase;
+    using TCommandListBase = CommandListBase<ICommandList>;
+
     CommandListD3D11Impl(IReferenceCounters* pRefCounters,
                          IRenderDevice*      pDevice, 
                          ID3D11CommandList*  pd3d11CommandList);

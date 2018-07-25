@@ -45,7 +45,8 @@ class FixedBlockMemoryAllocator;
 class BufferVkImpl : public BufferBase<IBufferVk, BufferViewVkImpl, FixedBlockMemoryAllocator>
 {
 public:
-    typedef BufferBase<IBufferVk, BufferViewVkImpl, FixedBlockMemoryAllocator> TBufferBase;
+    using TBufferBase = BufferBase<IBufferVk, BufferViewVkImpl, FixedBlockMemoryAllocator>;
+
     BufferVkImpl(IReferenceCounters*        pRefCounters, 
                  FixedBlockMemoryAllocator& BuffViewObjMemAllocator, 
                  class RenderDeviceVkImpl*  pDeviceVk, 

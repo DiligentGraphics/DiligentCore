@@ -41,7 +41,7 @@ namespace Diligent
 class CommandQueueVkImpl : public ObjectBase<ICommandQueueVk>
 {
 public:
-    typedef ObjectBase<ICommandQueueVk> TBase;
+    using TBase = ObjectBase<ICommandQueueVk>;
 
     CommandQueueVkImpl(IReferenceCounters*                                   pRefCounters, 
                        std::shared_ptr<VulkanUtilities::VulkanLogicalDevice> LogicalDevice, 

@@ -29,7 +29,9 @@
 #include "DeviceContextD3D12.h"
 #include "DeviceContextBase.h"
 #include "GenerateMips.h"
-
+#include "BufferD3D12Impl.h"
+#include "TextureViewD3D12Impl.h"
+#include "PipelineStateD3D12Impl.h"
 #ifdef _DEBUG
 #   define VERIFY_CONTEXT_BINDINGS
 #endif
@@ -38,10 +40,10 @@ namespace Diligent
 {
 
 /// Implementation of the Diligent::IDeviceContext interface
-class DeviceContextD3D12Impl : public DeviceContextBase<IDeviceContextD3D12>
+class DeviceContextD3D12Impl : public DeviceContextBase<IDeviceContextD3D12, BufferD3D12Impl, TextureViewD3D12Impl, PipelineStateD3D12Impl>
 {
 public:
-    typedef DeviceContextBase<IDeviceContextD3D12> TDeviceContextBase;
+    using TDeviceContextBase = DeviceContextBase<IDeviceContextD3D12, BufferD3D12Impl, TextureViewD3D12Impl, PipelineStateD3D12Impl>;
 
     DeviceContextD3D12Impl(IReferenceCounters*          pRefCounters, 
                            class RenderDeviceD3D12Impl* pDevice, 

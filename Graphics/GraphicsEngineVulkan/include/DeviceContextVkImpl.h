@@ -37,15 +37,18 @@
 #include "DescriptorPoolManager.h"
 #include "PipelineLayout.h"
 #include "GenerateMipsVkHelper.h"
+#include "BufferVKImpl.h"
+#include "TextureViewVKImpl.h"
+#include "PipelineStateVKImpl.h"
 
 namespace Diligent
 {
 
 /// Implementation of the Diligent::IDeviceContext interface
-class DeviceContextVkImpl : public DeviceContextBase<IDeviceContextVk>
+class DeviceContextVkImpl : public DeviceContextBase<IDeviceContextVk, BufferVkImpl, TextureViewVkImpl, PipelineStateVkImpl>
 {
 public:
-    typedef DeviceContextBase<IDeviceContextVk> TDeviceContextBase;
+    using TDeviceContextBase = DeviceContextBase<IDeviceContextVk, BufferVkImpl, TextureViewVkImpl, PipelineStateVkImpl>;
 
     DeviceContextVkImpl(IReferenceCounters*                   pRefCounters,
                         class RenderDeviceVkImpl*             pDevice,

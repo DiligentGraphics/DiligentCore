@@ -35,7 +35,8 @@ namespace Diligent
 class CommandListD3D12Impl : public CommandListBase<ICommandList>
 {
 public:
-    typedef CommandListBase<ICommandList> TCommandListBase;
+    using TCommandListBase = CommandListBase<ICommandList>;
+
     CommandListD3D12Impl(IReferenceCounters*   pRefCounters, 
                          IRenderDevice*        pDevice, 
                          class CommandContext* pCmdContext) :

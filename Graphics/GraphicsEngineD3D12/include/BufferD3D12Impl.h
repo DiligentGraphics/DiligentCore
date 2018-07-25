@@ -42,7 +42,8 @@ class FixedBlockMemoryAllocator;
 class BufferD3D12Impl : public BufferBase<IBufferD3D12, BufferViewD3D12Impl, FixedBlockMemoryAllocator>, public D3D12ResourceBase
 {
 public:
-    typedef BufferBase<IBufferD3D12, BufferViewD3D12Impl, FixedBlockMemoryAllocator> TBufferBase;
+    using TBufferBase = BufferBase<IBufferD3D12, BufferViewD3D12Impl, FixedBlockMemoryAllocator>;
+
     BufferD3D12Impl(IReferenceCounters*           pRefCounters, 
                     FixedBlockMemoryAllocator&    BuffViewObjMemAllocator, 
                     class RenderDeviceD3D12Impl*  pDeviceD3D12, 

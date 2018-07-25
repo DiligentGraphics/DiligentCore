@@ -38,7 +38,7 @@ class FixedBlockMemoryAllocator;
 class BufferViewD3D11Impl : public BufferViewBase<IBufferViewD3D11>
 {
 public:
-    typedef BufferViewBase<IBufferViewD3D11> TBufferViewBase;
+    using TBufferViewBase = BufferViewBase<IBufferViewD3D11>;
 
     BufferViewD3D11Impl( IReferenceCounters*    pRefCounters,
                          IRenderDevice*         pDevice, 

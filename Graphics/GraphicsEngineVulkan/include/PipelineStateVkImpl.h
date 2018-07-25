@@ -48,7 +48,7 @@ class FixedBlockMemoryAllocator;
 class PipelineStateVkImpl : public PipelineStateBase<IPipelineStateVk, IRenderDeviceVk>
 {
 public:
-    typedef PipelineStateBase<IPipelineStateVk, IRenderDeviceVk> TPipelineStateBase;
+    using TPipelineStateBase = PipelineStateBase<IPipelineStateVk, IRenderDeviceVk>;
 
     PipelineStateVkImpl( IReferenceCounters* pRefCounters, class RenderDeviceVkImpl* pDeviceVk, const PipelineStateDesc &PipelineDesc );
     ~PipelineStateVkImpl();

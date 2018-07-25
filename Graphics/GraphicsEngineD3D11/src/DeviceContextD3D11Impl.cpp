@@ -541,7 +541,7 @@ namespace Diligent
 
     void DeviceContextD3D11Impl::CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, Uint32 Flags)
     {
-        if( !DeviceContextBase::CommitShaderResources<PipelineStateD3D11Impl>(pShaderResourceBinding, Flags, 0 /*Dummy*/) )
+        if( !DeviceContextBase::CommitShaderResources(pShaderResourceBinding, Flags, 0 /*Dummy*/) )
             return;
 
         if(Flags & COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES)
@@ -555,7 +555,7 @@ namespace Diligent
         if (TDeviceContextBase::SetStencilRef(StencilRef, 0))
         {
             ID3D11DepthStencilState* pd3d11DSS = 
-                m_pPipelineState ? m_pPipelineState.RawPtr<PipelineStateD3D11Impl>()->GetD3D11DepthStencilState() : nullptr;
+                m_pPipelineState ? m_pPipelineState->GetD3D11DepthStencilState() : nullptr;
             m_pd3d11DeviceContext->OMSetDepthStencilState( pd3d11DSS, m_StencilRef );
         }
     }
@@ -570,7 +570,7 @@ namespace Diligent
             if(m_pPipelineState)
             {
                 SampleMask = m_pPipelineState->GetDesc().GraphicsPipeline.SampleMask;
-                pd3d11BS = m_pPipelineState.RawPtr<PipelineStateD3D11Impl>()->GetD3D11BlendState();
+                pd3d11BS = m_pPipelineState->GetD3D11BlendState();
             }
             m_pd3d11DeviceContext->OMSetBlendState(pd3d11BS, m_BlendFactors, SampleMask);
         }
@@ -683,7 +683,7 @@ namespace Diligent
         }
 #endif
 
-        auto* pPipelineStateD3D11 = m_pPipelineState.RawPtr<PipelineStateD3D11Impl>();
+        auto* pPipelineStateD3D11 = m_pPipelineState.RawPtr();
 #ifdef _DEBUG
         if (pPipelineStateD3D11->GetDesc().IsComputePipeline)
         {

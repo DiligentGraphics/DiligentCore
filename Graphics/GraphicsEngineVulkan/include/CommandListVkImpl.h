@@ -36,7 +36,8 @@ namespace Diligent
 class CommandListVkImpl : public CommandListBase<ICommandList>
 {
 public:
-    typedef CommandListBase<ICommandList> TCommandListBase;
+    using TCommandListBase = CommandListBase<ICommandList>;
+
     CommandListVkImpl(IReferenceCounters*  pRefCounters, 
                       IRenderDevice*       pDevice, 
                       IDeviceContext*      pDeferredCtx, 

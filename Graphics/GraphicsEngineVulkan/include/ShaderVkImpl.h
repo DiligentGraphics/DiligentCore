@@ -43,7 +43,7 @@ class FixedBlockMemoryAllocator;
 class ShaderVkImpl : public ShaderBase<IShaderVk, IRenderDeviceVk>
 {
 public:
-    typedef ShaderBase<IShaderVk, IRenderDeviceVk> TShaderBase;
+    using TShaderBase = ShaderBase<IShaderVk, IRenderDeviceVk>;
 
     ShaderVkImpl(IReferenceCounters* pRefCounters, class RenderDeviceVkImpl* pRenderDeviceVk, const ShaderCreationAttribs &CreationAttribs);
     ~ShaderVkImpl();

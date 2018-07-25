@@ -38,7 +38,7 @@ class FixedBlockMemoryAllocator;
 class SamplerVkImpl : public SamplerBase<ISamplerVk, IRenderDeviceVk>
 {
 public:
-    typedef SamplerBase<ISamplerVk, IRenderDeviceVk> TSamplerBase;
+    using TSamplerBase = SamplerBase<ISamplerVk, IRenderDeviceVk>;
 
     SamplerVkImpl(IReferenceCounters* pRefCounters, class RenderDeviceVkImpl* pRenderDeviceVk, const SamplerDesc& SamplerDesc);
     ~SamplerVkImpl();

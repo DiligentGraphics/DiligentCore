@@ -42,7 +42,7 @@ class FixedBlockMemoryAllocator;
 class TextureD3D12Impl : public TextureBase<ITextureD3D12, TextureViewD3D12Impl, FixedBlockMemoryAllocator>, public D3D12ResourceBase
 {
 public:
-    typedef TextureBase<ITextureD3D12, TextureViewD3D12Impl, FixedBlockMemoryAllocator> TTextureBase;
+    using TTextureBase = TextureBase<ITextureD3D12, TextureViewD3D12Impl, FixedBlockMemoryAllocator>;
 
     // Creates a new D3D12 resource
     TextureD3D12Impl(IReferenceCounters*            pRefCounters,

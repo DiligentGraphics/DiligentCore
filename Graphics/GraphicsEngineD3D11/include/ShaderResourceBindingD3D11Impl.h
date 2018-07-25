@@ -41,7 +41,8 @@ class FixedBlockMemoryAllocator;
 class ShaderResourceBindingD3D11Impl : public ShaderResourceBindingBase<IShaderResourceBindingD3D11>
 {
 public:
-    typedef ShaderResourceBindingBase<IShaderResourceBindingD3D11> TBase;
+    using TBase = ShaderResourceBindingBase<IShaderResourceBindingD3D11>;
+
     ShaderResourceBindingD3D11Impl(IReferenceCounters*           pRefCounters,
                                    class PipelineStateD3D11Impl* pPSO,
                                    bool                          IsInternal);

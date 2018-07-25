@@ -42,7 +42,7 @@ class FixedBlockMemoryAllocator;
 class PipelineStateD3D12Impl : public PipelineStateBase<IPipelineStateD3D12, IRenderDeviceD3D12>
 {
 public:
-    typedef PipelineStateBase<IPipelineStateD3D12, IRenderDeviceD3D12> TPipelineStateBase;
+    using TPipelineStateBase = PipelineStateBase<IPipelineStateD3D12, IRenderDeviceD3D12>;
 
     PipelineStateD3D12Impl( IReferenceCounters *pRefCounters, class RenderDeviceD3D12Impl *pDeviceD3D12, const PipelineStateDesc &PipelineDesc );
     ~PipelineStateD3D12Impl();

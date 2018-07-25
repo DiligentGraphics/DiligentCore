@@ -40,7 +40,7 @@ class FixedBlockMemoryAllocator;
 class PipelineStateD3D11Impl : public PipelineStateBase<IPipelineStateD3D11, IRenderDeviceD3D11>
 {
 public:
-    typedef PipelineStateBase<IPipelineStateD3D11, IRenderDeviceD3D11> TPipelineStateBase;
+    using TPipelineStateBase = PipelineStateBase<IPipelineStateD3D11, IRenderDeviceD3D11>;
 
     PipelineStateD3D11Impl(IReferenceCounters*          pRefCounters,
                            class RenderDeviceD3D11Impl* pDeviceD3D11,

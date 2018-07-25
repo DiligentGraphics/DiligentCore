@@ -44,7 +44,7 @@ namespace Diligent
 class RenderDeviceD3D12Impl : public RenderDeviceD3DBase<IRenderDeviceD3D12>
 {
 public:
-    typedef RenderDeviceD3DBase<IRenderDeviceD3D12> TRenderDeviceBase;
+    using TRenderDeviceBase = RenderDeviceD3DBase<IRenderDeviceD3D12>;
 
     RenderDeviceD3D12Impl( IReferenceCounters*       pRefCounters, 
                            IMemoryAllocator&         RawMemAllocator, 

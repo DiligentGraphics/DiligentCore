@@ -52,7 +52,7 @@ namespace Diligent
 class RenderDeviceGLImpl : public RenderDeviceBase<IGLDeviceBaseInterface>
 {
 public:
-    typedef RenderDeviceBase<IGLDeviceBaseInterface> TRenderDeviceBase;
+    using TRenderDeviceBase = RenderDeviceBase<IGLDeviceBaseInterface>;
 
     RenderDeviceGLImpl( IReferenceCounters *pRefCounters, IMemoryAllocator &RawMemAllocator, const EngineGLAttribs &InitAttribs );
     ~RenderDeviceGLImpl();

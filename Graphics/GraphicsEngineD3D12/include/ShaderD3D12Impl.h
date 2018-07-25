@@ -46,7 +46,7 @@ class FixedBlockMemoryAllocator;
 class ShaderD3D12Impl : public ShaderBase<IShaderD3D12, IRenderDeviceD3D12>, public ShaderD3DBase
 {
 public:
-    typedef ShaderBase<IShaderD3D12, IRenderDeviceD3D12> TShaderBase;
+    using TShaderBase = ShaderBase<IShaderD3D12, IRenderDeviceD3D12>;
 
     ShaderD3D12Impl(IReferenceCounters*           pRefCounters, 
                     class RenderDeviceD3D12Impl*  pRenderDeviceD3D12, 

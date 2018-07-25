@@ -38,7 +38,7 @@ class FixedBlockMemoryAllocator;
 class SamplerD3D11Impl : public SamplerBase<ISamplerD3D11, IRenderDeviceD3D11>
 {
 public:
-    typedef SamplerBase<ISamplerD3D11, IRenderDeviceD3D11> TSamplerBase;
+    using TSamplerBase = SamplerBase<ISamplerD3D11, IRenderDeviceD3D11>;
 
     SamplerD3D11Impl(IReferenceCounters*          pRefCounters,
                      class RenderDeviceD3D11Impl* pRenderDeviceD3D11,

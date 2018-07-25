@@ -43,7 +43,8 @@ class FixedBlockMemoryAllocator;
 class ShaderResourceBindingVkImpl : public ShaderResourceBindingBase<IShaderResourceBindingVk>
 {
 public:
-    typedef ShaderResourceBindingBase<IShaderResourceBindingVk> TBase;
+    using TBase = ShaderResourceBindingBase<IShaderResourceBindingVk>;
+
     ShaderResourceBindingVkImpl(IReferenceCounters* pRefCounters, class PipelineStateVkImpl* pPSO, bool IsPSOInternal);
     ~ShaderResourceBindingVkImpl();
 

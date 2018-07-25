@@ -45,7 +45,7 @@ class ResourceMapping;
 class ShaderD3D11Impl : public ShaderBase<IShaderD3D11, IRenderDeviceD3D11>, public ShaderD3DBase
 {
 public:
-    typedef ShaderBase<IShaderD3D11, IRenderDeviceD3D11> TShaderBase;
+    using TShaderBase = ShaderBase<IShaderD3D11, IRenderDeviceD3D11>;
 
     ShaderD3D11Impl(IReferenceCounters*          pRefCounters,
                     class RenderDeviceD3D11Impl* pRenderDeviceD3D11,

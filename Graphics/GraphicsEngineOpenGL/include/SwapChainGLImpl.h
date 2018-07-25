@@ -36,7 +36,7 @@ class IMemoryAllocator;
 class SwapChainGLImpl final : public SwapChainBase<ISwapChainGL>
 {
 public:
-    typedef SwapChainBase<ISwapChainGL> TSwapChainBase;
+    using TSwapChainBase = SwapChainBase<ISwapChainGL>;
 
     SwapChainGLImpl(IReferenceCounters *pRefCounters,
                     const EngineGLAttribs &InitAttribs,

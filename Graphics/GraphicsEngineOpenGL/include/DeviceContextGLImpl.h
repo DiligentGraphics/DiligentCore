@@ -28,15 +28,18 @@
 #include "BaseInterfacesGL.h"
 #include "GLContextState.h"
 #include "GLObjectWrapper.h"
+#include "BufferGLImpl.h"
+#include "TextureViewGLImpl.h"
+#include "PipelineStateGLImpl.h"
 
 namespace Diligent
 {
 
 /// Implementation of the Diligent::IDeviceContextGL interface
-class DeviceContextGLImpl : public DeviceContextBase<IDeviceContextGL>
+class DeviceContextGLImpl : public DeviceContextBase<IDeviceContextGL, BufferGLImpl, TextureViewGLImpl, PipelineStateGLImpl>
 {
 public:
-    typedef DeviceContextBase<IDeviceContextGL> TDeviceContextBase;
+    using TDeviceContextBase = DeviceContextBase<IDeviceContextGL, BufferGLImpl, TextureViewGLImpl, PipelineStateGLImpl>;
 
     DeviceContextGLImpl( IReferenceCounters *pRefCounters, class RenderDeviceGLImpl *pDeviceGL, bool bIsDeferred );
 

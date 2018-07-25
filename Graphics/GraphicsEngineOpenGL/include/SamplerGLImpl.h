@@ -37,7 +37,7 @@ class FixedBlockMemoryAllocator;
 class SamplerGLImpl : public SamplerBase<ISamplerGL, IGLDeviceBaseInterface>
 {
 public:
-    typedef SamplerBase<ISamplerGL, IGLDeviceBaseInterface> TSamplerBase;
+    using TSamplerBase = SamplerBase<ISamplerGL, IGLDeviceBaseInterface>;
 
     SamplerGLImpl( IReferenceCounters *pRefCounters, class RenderDeviceGLImpl *pDeviceGL, const SamplerDesc& SamplerDesc, bool bIsDeviceInternal = false );
     ~SamplerGLImpl();

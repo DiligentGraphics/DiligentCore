@@ -41,7 +41,7 @@ class FixedBlockMemoryAllocator;
 class TextureVkImpl : public TextureBase<ITextureVk, TextureViewVkImpl, FixedBlockMemoryAllocator>
 {
 public:
-    typedef TextureBase<ITextureVk, TextureViewVkImpl, FixedBlockMemoryAllocator> TTextureBase;
+    using TTextureBase = TextureBase<ITextureVk, TextureViewVkImpl, FixedBlockMemoryAllocator>;
 
     // Creates a new Vk resource
     TextureVkImpl(IReferenceCounters*        pRefCounters,

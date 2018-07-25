@@ -51,7 +51,7 @@ enum class D3D11BufferState
 class BufferD3D11Impl : public BufferBase<IBufferD3D11, BufferViewD3D11Impl, FixedBlockMemoryAllocator>
 {
 public:
-    typedef BufferBase<IBufferD3D11, BufferViewD3D11Impl, FixedBlockMemoryAllocator> TBufferBase;
+    using TBufferBase = BufferBase<IBufferD3D11, BufferViewD3D11Impl, FixedBlockMemoryAllocator>;
 
     BufferD3D11Impl(IReferenceCounters*          pRefCounters,
                     FixedBlockMemoryAllocator&   BuffViewObjMemAllocator,

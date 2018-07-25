@@ -40,7 +40,8 @@ class FixedBlockMemoryAllocator;
 class ShaderResourceBindingGLImpl : public ShaderResourceBindingBase<IShaderResourceBindingGL>
 {
 public:
-    typedef ShaderResourceBindingBase<IShaderResourceBindingGL> TBase;
+    using TBase = ShaderResourceBindingBase<IShaderResourceBindingGL>;
+
     ShaderResourceBindingGLImpl(IReferenceCounters *pRefCounters, class PipelineStateGLImpl *pPSO);
     ~ShaderResourceBindingGLImpl();
 

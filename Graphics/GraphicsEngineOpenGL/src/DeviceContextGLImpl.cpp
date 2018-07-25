@@ -131,7 +131,7 @@ namespace Diligent
 
     void DeviceContextGLImpl::CommitShaderResources(IShaderResourceBinding *pShaderResourceBinding, Uint32 Flags)
     {
-        if(!DeviceContextBase::CommitShaderResources<PipelineStateGLImpl>(pShaderResourceBinding, Flags, 0))
+        if(!DeviceContextBase::CommitShaderResources(pShaderResourceBinding, Flags, 0))
             return;
 
         if(m_CommitedResourcesTentativeBarriers != 0)
@@ -342,8 +342,8 @@ namespace Diligent
             LOG_ERROR("No pipeline state is bound");
             return;
         }
-        auto *pPipelineStateGL = m_pPipelineState.RawPtr<PipelineStateGLImpl>();
-        auto *pShaderResBindingGL = ValidatedCast<ShaderResourceBindingGLImpl>(pResBinding);
+        auto* pPipelineStateGL = m_pPipelineState.RawPtr();
+        auto* pShaderResBindingGL = ValidatedCast<ShaderResourceBindingGLImpl>(pResBinding);
 
         const auto &DeviceCaps = pRenderDeviceGL->GetDeviceCaps();
         auto &Prog = pPipelineStateGL->GetGLProgram();

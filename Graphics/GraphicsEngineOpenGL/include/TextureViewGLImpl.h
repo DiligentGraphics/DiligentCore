@@ -37,7 +37,7 @@ class FixedBlockMemoryAllocator;
 class TextureViewGLImpl : public TextureViewBase<ITextureViewGL>
 {
 public:
-    typedef TextureViewBase<ITextureViewGL> TTextureViewBase;
+    using TTextureViewBase = TextureViewBase<ITextureViewGL>;
 
     TextureViewGLImpl(IReferenceCounters *pRefCounters,
                      class IRenderDevice *pDevice, 

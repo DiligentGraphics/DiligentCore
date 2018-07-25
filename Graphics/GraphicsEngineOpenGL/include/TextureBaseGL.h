@@ -41,7 +41,7 @@ class FixedBlockMemoryAllocator;
 class TextureBaseGL : public TextureBase<ITextureGL, TextureViewGLImpl, FixedBlockMemoryAllocator>, public AsyncWritableResource
 {
 public:
-    typedef TextureBase<ITextureGL, TextureViewGLImpl, FixedBlockMemoryAllocator> TTextureBase;
+    using TTextureBase = TextureBase<ITextureGL, TextureViewGLImpl, FixedBlockMemoryAllocator>;
 
     TextureBaseGL(IReferenceCounters *pRefCounters, 
                   FixedBlockMemoryAllocator& TexViewObjAllocator, 

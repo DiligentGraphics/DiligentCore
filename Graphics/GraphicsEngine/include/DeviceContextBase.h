@@ -50,17 +50,22 @@ struct VertexStreamInfo
 
 /// Base implementation of the device context.
 
-/// \tparam BaseInterface - base interface that this class will inheret.
+/// \tparam BaseInterface         - base interface that this class will inheret.
+/// \tparam BufferImplType        - buffer implemenation type (BufferD3D11Impl, BufferD3D12Impl, etc.)
+/// \tparam TextureViewImplType   - texture view implemenation type (TextureViewD3D11Impl, TextureViewD3D12Impl, etc.)
+/// \tparam PipelineStateImplType - pipeline state implementation type (PipelineStateD3D11Impl, PipelineStateD3D12Impl, etc.)
 /// \remarks Device context keeps strong references to all objects currently bound to 
 ///          the pipeline: buffers, states, samplers, shaders, etc.
 ///          The context also keeps strong references to the device and
 ///          the swap chain.
-template<typename BaseInterface>
+template<typename BaseInterface, 
+         typename BufferImplType,
+         typename TextureViewImplType,
+         typename PipelineStateImplType>
 class DeviceContextBase : public ObjectBase<BaseInterface>
 {
 public:
-
-    typedef ObjectBase<BaseInterface> TObjectBase;
+    using TObjectBase = ObjectBase<BaseInterface>;
 
     /// \param pRefCounters - reference counters object that controls the lifetime of this device context.
     /// \param pRenderDevice - render device.
@@ -88,7 +93,6 @@ public:
     inline virtual void SetPipelineState(IPipelineState* pPipelineState)override = 0;
 
     /// Base implementation of IDeviceContext::CommitShaderResources(); validates parameters.
-    template<typename PSOImplType>
     inline bool CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, Uint32 Flags, int);
 
     /// Base implementation of IDeviceContext::SetIndexBuffer(); caches the strong reference to the index buffer
@@ -150,11 +154,13 @@ protected:
     /// Number of bound vertex streams
     Uint32 m_NumVertexStreams = 0;
 
-    /// Strong reference to the bound pipeline state object
-    RefCntAutoPtr<IPipelineState> m_pPipelineState;
+    /// Strong reference to the bound pipeline state object.
+    /// Use final PSO implementation type to avoid virtual calls to AddRef()/Release()
+    RefCntAutoPtr<PipelineStateImplType> m_pPipelineState;
 
-    /// Strong reference to the bound index buffer
-    RefCntAutoPtr<IBuffer> m_pIndexBuffer;
+    /// Strong reference to the bound index buffer.
+    /// Use final buffer implementation type to avoid virtual calls to AddRef()/Release()
+    RefCntAutoPtr<BufferImplType> m_pIndexBuffer;
 
     /// Offset from the beginning of the index buffer to the start of the index data, in bytes.
     Uint32 m_IndexDataStartOffset = 0;
@@ -175,8 +181,9 @@ protected:
     /// Number of current scissor rects
     Uint32 m_NumScissorRects = 0;
 
-    /// Vector of strong references to the bound render targets
-    RefCntAutoPtr<ITextureView> m_pBoundRenderTargets[MaxRenderTargets];
+    /// Vector of strong references to the bound render targets.
+    /// Use final texture view implementation type to avoid virtual calls to AddRef()/Release()
+    RefCntAutoPtr<TextureViewImplType> m_pBoundRenderTargets[MaxRenderTargets];
     /// Number of bound render targets
     Uint32 m_NumBoundRenderTargets = 0;
     /// Width of the currently bound framebuffer
@@ -189,15 +196,16 @@ protected:
     /// buffer are currently bound
     bool m_IsDefaultFramebufferBound = false;
 
-    /// Strong references to the bound depth stencil view
-    RefCntAutoPtr<ITextureView> m_pBoundDepthStencil;
+    /// Strong references to the bound depth stencil view.
+    /// Use final texture view implementation type to avoid virtual calls to AddRef()/Release()
+    RefCntAutoPtr<TextureViewImplType> m_pBoundDepthStencil;
 
     const bool m_bIsDeferred = false;
 };
 
 
-template<typename BaseInterface>
-inline void DeviceContextBase<BaseInterface> :: SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer** ppBuffers, Uint32* pOffsets, Uint32 Flags  )
+template<typename BaseInterface, typename BufferImplType, typename TextureViewImplType, typename PipelineStateImplType>
+inline void DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType, PipelineStateImplType> :: SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer** ppBuffers, Uint32* pOffsets, Uint32 Flags  )
 {
 #ifdef DEVELOPMENT
     if ( StartSlot >= MaxBufferSlots )
@@ -247,15 +255,14 @@ inline void DeviceContextBase<BaseInterface> :: SetVertexBuffers( Uint32 StartSl
         m_VertexStreams[m_NumVertexStreams--] = VertexStreamInfo{};
 }
 
-template<typename BaseInterface>
-inline void DeviceContextBase<BaseInterface> :: SetPipelineState(IPipelineState* pPipelineState)
+template<typename BaseInterface, typename BufferImplType, typename TextureViewImplType, typename PipelineStateImplType>
+inline void DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType, PipelineStateImplType> :: SetPipelineState(IPipelineState* pPipelineState)
 {
-    m_pPipelineState = pPipelineState;
+    m_pPipelineState = ValidatedCast<PipelineStateImplType>(pPipelineState);
 }
 
-template<typename BaseInterface>
-template<typename PSOImplType>
-inline bool DeviceContextBase<BaseInterface> :: CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, Uint32 Flags, int)
+template<typename BaseInterface, typename BufferImplType, typename TextureViewImplType, typename PipelineStateImplType>
+inline bool DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType, PipelineStateImplType> :: CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, Uint32 Flags, int)
 {
 #ifdef DEVELOPMENT
     if (!m_pPipelineState)
@@ -266,8 +273,7 @@ inline bool DeviceContextBase<BaseInterface> :: CommitShaderResources(IShaderRes
 
     if (pShaderResourceBinding)
     {
-        auto* pPSOImpl = m_pPipelineState.RawPtr<PSOImplType>();
-        if (pPSOImpl->IsIncompatibleWith(pShaderResourceBinding->GetPipelineState()))
+        if (m_pPipelineState->IsIncompatibleWith(pShaderResourceBinding->GetPipelineState()))
         {
             LOG_ERROR_MESSAGE("Shader resource binding object is not compatible with the currently bound pipeline state");
             return false;
@@ -277,20 +283,20 @@ inline bool DeviceContextBase<BaseInterface> :: CommitShaderResources(IShaderRes
     return true;
 }
 
-template<typename BaseInterface>
-inline void DeviceContextBase<BaseInterface> :: InvalidateState()
+template<typename BaseInterface, typename BufferImplType, typename TextureViewImplType, typename PipelineStateImplType>
+inline void DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType, PipelineStateImplType> :: InvalidateState()
 {
-    DeviceContextBase<BaseInterface> :: ClearStateCache();
+    DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType, PipelineStateImplType> :: ClearStateCache();
     m_IsDefaultFramebufferBound = false;
 }
 
-template<typename BaseInterface>
-inline void DeviceContextBase<BaseInterface> :: SetIndexBuffer( IBuffer* pIndexBuffer, Uint32 ByteOffset )
+template<typename BaseInterface, typename BufferImplType, typename TextureViewImplType, typename PipelineStateImplType>
+inline void DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType, PipelineStateImplType> :: SetIndexBuffer( IBuffer* pIndexBuffer, Uint32 ByteOffset )
 {
-    m_pIndexBuffer = pIndexBuffer;
+    m_pIndexBuffer = ValidatedCast<BufferImplType>(pIndexBuffer);
     m_IndexDataStartOffset = ByteOffset;
 #ifdef DEVELOPMENT
-    const auto &BuffDesc = m_pIndexBuffer->GetDesc();
+    const auto& BuffDesc = m_pIndexBuffer->GetDesc();
     if ( !(BuffDesc.BindFlags & BIND_INDEX_BUFFER) )
     {
         LOG_ERROR_MESSAGE( "Buffer \"", BuffDesc.Name ? BuffDesc.Name : "", "\" being bound as index buffer was not created with BIND_INDEX_BUFFER flag" );
@@ -299,8 +305,8 @@ inline void DeviceContextBase<BaseInterface> :: SetIndexBuffer( IBuffer* pIndexB
 }
 
 
-template<typename BaseInterface>
-inline void DeviceContextBase<BaseInterface> :: GetPipelineState(IPipelineState** ppPSO, float* BlendFactors, Uint32& StencilRef)
+template<typename BaseInterface, typename BufferImplType, typename TextureViewImplType, typename PipelineStateImplType>
+inline void DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType, PipelineStateImplType> :: GetPipelineState(IPipelineState** ppPSO, float* BlendFactors, Uint32& StencilRef)
 { 
     VERIFY( ppPSO != nullptr, "Null pointer provided null" );
     VERIFY(* ppPSO == nullptr, "Memory address contains a pointer to a non-null blend state" );
@@ -318,8 +324,8 @@ inline void DeviceContextBase<BaseInterface> :: GetPipelineState(IPipelineState*
     StencilRef = m_StencilRef;
 };
 
-template<typename BaseInterface>
-inline bool DeviceContextBase<BaseInterface> ::SetBlendFactors(const float* BlendFactors, int)
+template<typename BaseInterface, typename BufferImplType, typename TextureViewImplType, typename PipelineStateImplType>
+inline bool DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType, PipelineStateImplType> ::SetBlendFactors(const float* BlendFactors, int)
 {
     bool FactorsDiffer = false;
     for( Uint32 f = 0; f < 4; ++f )
@@ -331,8 +337,8 @@ inline bool DeviceContextBase<BaseInterface> ::SetBlendFactors(const float* Blen
     return FactorsDiffer;
 }
 
-template<typename BaseInterface>
-inline bool DeviceContextBase<BaseInterface> :: SetStencilRef(Uint32 StencilRef, int)
+template<typename BaseInterface, typename BufferImplType, typename TextureViewImplType, typename PipelineStateImplType>
+inline bool DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType, PipelineStateImplType> :: SetStencilRef(Uint32 StencilRef, int)
 {
     if (m_StencilRef != StencilRef)
     {
@@ -342,8 +348,8 @@ inline bool DeviceContextBase<BaseInterface> :: SetStencilRef(Uint32 StencilRef,
     return false;
 }
 
-template<typename BaseInterface>
-inline void DeviceContextBase<BaseInterface> :: SetViewports( Uint32 NumViewports, const Viewport* pViewports, Uint32& RTWidth, Uint32& RTHeight )
+template<typename BaseInterface, typename BufferImplType, typename TextureViewImplType, typename PipelineStateImplType>
+inline void DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType, PipelineStateImplType> :: SetViewports( Uint32 NumViewports, const Viewport* pViewports, Uint32& RTWidth, Uint32& RTHeight )
 {
     if ( RTWidth == 0 || RTHeight == 0 )
     {
@@ -370,8 +376,8 @@ inline void DeviceContextBase<BaseInterface> :: SetViewports( Uint32 NumViewport
     }
 }
 
-template<typename BaseInterface>
-inline void DeviceContextBase<BaseInterface> :: GetViewports( Uint32 &NumViewports, Viewport* pViewports )
+template<typename BaseInterface, typename BufferImplType, typename TextureViewImplType, typename PipelineStateImplType>
+inline void DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType, PipelineStateImplType> :: GetViewports( Uint32 &NumViewports, Viewport* pViewports )
 {
     NumViewports = m_NumViewports;
     if ( pViewports )
@@ -381,8 +387,8 @@ inline void DeviceContextBase<BaseInterface> :: GetViewports( Uint32 &NumViewpor
     }
 }
 
-template<typename BaseInterface>
-inline void DeviceContextBase<BaseInterface> :: SetScissorRects( Uint32 NumRects, const Rect* pRects, Uint32& RTWidth, Uint32& RTHeight )
+template<typename BaseInterface, typename BufferImplType, typename TextureViewImplType, typename PipelineStateImplType>
+inline void DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType, PipelineStateImplType> :: SetScissorRects( Uint32 NumRects, const Rect* pRects, Uint32& RTWidth, Uint32& RTHeight )
 {
     if ( RTWidth == 0 || RTHeight == 0 )
     {
@@ -401,8 +407,8 @@ inline void DeviceContextBase<BaseInterface> :: SetScissorRects( Uint32 NumRects
     }
 }
 
-template<typename BaseInterface>
-inline bool DeviceContextBase<BaseInterface> :: SetRenderTargets( Uint32 NumRenderTargets, ITextureView* ppRenderTargets[], ITextureView* pDepthStencil, Uint32 Dummy )
+template<typename BaseInterface, typename BufferImplType, typename TextureViewImplType, typename PipelineStateImplType>
+inline bool DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType, PipelineStateImplType> :: SetRenderTargets( Uint32 NumRenderTargets, ITextureView* ppRenderTargets[], ITextureView* pDepthStencil, Uint32 Dummy )
 {
     bool bBindRenderTargets = false;
     m_FramebufferWidth  = 0;
@@ -475,7 +481,7 @@ inline bool DeviceContextBase<BaseInterface> :: SetRenderTargets( Uint32 NumRend
         // can safely compare pointers.
         if ( m_pBoundRenderTargets[rt] != pRTView )
         {
-            m_pBoundRenderTargets[rt] = pRTView;
+            m_pBoundRenderTargets[rt] = ValidatedCast<TextureViewImplType>(pRTView);
             bBindRenderTargets = true;
         }
     }
@@ -513,7 +519,7 @@ inline bool DeviceContextBase<BaseInterface> :: SetRenderTargets( Uint32 NumRend
 
     if ( m_pBoundDepthStencil != pDepthStencil)
     {
-        m_pBoundDepthStencil = pDepthStencil;
+        m_pBoundDepthStencil = ValidatedCast<TextureViewImplType>(pDepthStencil);
         bBindRenderTargets = true;
     }
 
@@ -523,8 +529,8 @@ inline bool DeviceContextBase<BaseInterface> :: SetRenderTargets( Uint32 NumRend
     return bBindRenderTargets;
 }
 
-template<typename BaseInterface>
-inline void DeviceContextBase<BaseInterface> :: GetRenderTargets( Uint32 &NumRenderTargets, ITextureView** ppRTVs, ITextureView** ppDSV )
+template<typename BaseInterface, typename BufferImplType, typename TextureViewImplType, typename PipelineStateImplType>
+inline void DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType, PipelineStateImplType> :: GetRenderTargets( Uint32 &NumRenderTargets, ITextureView** ppRTVs, ITextureView** ppDSV )
 {
     NumRenderTargets = m_NumBoundRenderTargets;
 
@@ -556,8 +562,8 @@ inline void DeviceContextBase<BaseInterface> :: GetRenderTargets( Uint32 &NumRen
     }
 }
 
-template<typename BaseInterface>
-inline void DeviceContextBase<BaseInterface> :: ClearStateCache()
+template<typename BaseInterface, typename BufferImplType, typename TextureViewImplType, typename PipelineStateImplType>
+inline void DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType, PipelineStateImplType> :: ClearStateCache()
 {
     for(Uint32 stream=0; stream < m_NumVertexStreams; ++stream)
         m_VertexStreams[stream] = VertexStreamInfo();
@@ -591,8 +597,8 @@ inline void DeviceContextBase<BaseInterface> :: ClearStateCache()
     ResetRenderTargets();
 }
 
-template<typename BaseInterface>
-inline void DeviceContextBase<BaseInterface> :: ResetRenderTargets()
+template<typename BaseInterface, typename BufferImplType, typename TextureViewImplType, typename PipelineStateImplType>
+inline void DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType, PipelineStateImplType> :: ResetRenderTargets()
 {
     for (Uint32 rt = 0; rt < m_NumBoundRenderTargets; ++rt)
         m_pBoundRenderTargets[rt].Release();

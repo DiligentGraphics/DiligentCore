@@ -67,7 +67,7 @@ inline GLenum ShaderTypeToGLShaderBit(SHADER_TYPE ShaderType)
 class ShaderGLImpl : public ShaderBase<IShaderGL, IGLDeviceBaseInterface>
 {
 public:
-    typedef ShaderBase<IShaderGL, IGLDeviceBaseInterface> TShaderBase;
+    using TShaderBase = ShaderBase<IShaderGL, IGLDeviceBaseInterface>;
 
     ShaderGLImpl( IReferenceCounters *pRefCounters, class RenderDeviceGLImpl *pDeviceGL, const ShaderCreationAttribs &ShaderCreationAttribs, bool bIsDeviceInternal = false );
     ~ShaderGLImpl();

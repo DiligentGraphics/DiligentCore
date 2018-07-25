@@ -38,6 +38,7 @@ class SwapChainD3D11Impl : public SwapChainD3DBase<ISwapChainD3D11, IDXGISwapCha
 {
 public:
     using TSwapChainBase = SwapChainD3DBase<ISwapChainD3D11, IDXGISwapChain>;
+
     SwapChainD3D11Impl(IReferenceCounters*           pRefCounters,
                        const SwapChainDesc&          SCDesc, 
                        const FullScreenModeDesc&     FSDesc,

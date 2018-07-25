@@ -264,11 +264,10 @@ namespace Diligent
 
     void DeviceContextVkImpl::CommitShaderResources(IShaderResourceBinding *pShaderResourceBinding, Uint32 Flags)
     {
-        if (!DeviceContextBase::CommitShaderResources<PipelineStateVkImpl>(pShaderResourceBinding, Flags, 0 /*Dummy*/))
+        if (!DeviceContextBase::CommitShaderResources(pShaderResourceBinding, Flags, 0 /*Dummy*/))
             return;
 
-        auto *pPipelineStateVk = m_pPipelineState.RawPtr<PipelineStateVkImpl>();
-        pPipelineStateVk->CommitAndTransitionShaderResources(pShaderResourceBinding, this, true, Flags, &m_DesrSetBindInfo);
+        m_pPipelineState->CommitAndTransitionShaderResources(pShaderResourceBinding, this, true, Flags, &m_DesrSetBindInfo);
     }
 
     void DeviceContextVkImpl::SetStencilRef(Uint32 StencilRef)
@@ -304,9 +303,8 @@ namespace Diligent
     void DeviceContextVkImpl::CommitVkVertexBuffers()
     {
 #ifdef DEVELOPMENT
-        auto *pPipelineStateVk = m_pPipelineState.RawPtr<PipelineStateVkImpl>();
-        if (m_NumVertexStreams < pPipelineStateVk->GetNumBufferSlotsUsed())
-            LOG_ERROR("Currently bound pipeline state \"", pPipelineStateVk->GetDesc().Name, "\" expects ", pPipelineStateVk->GetNumBufferSlotsUsed(), " input buffer slots, but only ", m_NumVertexStreams, " is bound");
+        if (m_NumVertexStreams < m_pPipelineState->GetNumBufferSlotsUsed())
+            LOG_ERROR("Currently bound pipeline state \"", m_pPipelineState->GetDesc().Name, "\" expects ", m_pPipelineState->GetNumBufferSlotsUsed(), " input buffer slots, but only ", m_NumVertexStreams, " is bound");
 #endif
         // Do not initialize array with zeroes for performance reasons
         VkBuffer vkVertexBuffers[MaxBufferSlots];// = {}
@@ -399,7 +397,7 @@ namespace Diligent
         }
 #endif
 
-        auto *pPipelineStateVk = m_pPipelineState.RawPtr<PipelineStateVkImpl>();
+        auto *pPipelineStateVk = m_pPipelineState.RawPtr();
 
         EnsureVkCmdBuffer();
 
@@ -507,7 +505,7 @@ namespace Diligent
         }
 #endif
 
-        auto *pPipelineStateVk = m_pPipelineState.RawPtr<PipelineStateVkImpl>();
+        auto *pPipelineStateVk = m_pPipelineState.RawPtr();
 
         EnsureVkCmdBuffer();
 

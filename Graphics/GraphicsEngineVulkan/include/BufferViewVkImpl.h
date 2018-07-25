@@ -41,7 +41,7 @@ class BufferVkImpl;
 class BufferViewVkImpl : public BufferViewBase<IBufferViewVk>
 {
 public:
-    typedef BufferViewBase<IBufferViewVk> TBufferViewBase;
+    using TBufferViewBase = BufferViewBase<IBufferViewVk>;
 
     BufferViewVkImpl( IReferenceCounters*                  pRefCounters,
                       IRenderDevice*                       pDevice, 

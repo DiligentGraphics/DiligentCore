@@ -39,7 +39,7 @@ class FixedBlockMemoryAllocator;
 class TextureViewVkImpl : public TextureViewBase<ITextureViewVk>
 {
 public:
-    typedef TextureViewBase<ITextureViewVk> TTextureViewBase;
+    using TTextureViewBase = TextureViewBase<ITextureViewVk>;
 
     TextureViewVkImpl( IReferenceCounters*                 pRefCounters,
                        IRenderDevice*                      pDevice, 

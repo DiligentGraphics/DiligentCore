@@ -54,7 +54,7 @@ namespace Diligent
 class RenderDeviceVkImpl : public RenderDeviceBase<IRenderDeviceVk>
 {
 public:
-    typedef RenderDeviceBase<IRenderDeviceVk> TRenderDeviceBase;
+    using TRenderDeviceBase = RenderDeviceBase<IRenderDeviceVk>;
 
     RenderDeviceVkImpl( IReferenceCounters*     pRefCounters, 
                         IMemoryAllocator&       RawMemAllocator, 

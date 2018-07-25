@@ -40,7 +40,8 @@ class IMemoryAllocator;
 class SwapChainVkImpl : public SwapChainBase<ISwapChainVk>
 {
 public:
-    typedef SwapChainBase<ISwapChainVk> TSwapChainBase;
+    using TSwapChainBase = SwapChainBase<ISwapChainVk>;
+
     SwapChainVkImpl(IReferenceCounters*        pRefCounters,
                     const SwapChainDesc&       SwapChainDesc, 
                     class RenderDeviceVkImpl*  pRenderDeviceVk,

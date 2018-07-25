@@ -40,7 +40,7 @@ class FixedBlockMemoryAllocator;
 class BufferGLImpl : public BufferBase<IBufferGL, BufferViewGLImpl, FixedBlockMemoryAllocator>, public AsyncWritableResource
 {
 public:
-    typedef BufferBase<IBufferGL, BufferViewGLImpl, FixedBlockMemoryAllocator> TBufferBase;
+    using TBufferBase = BufferBase<IBufferGL, BufferViewGLImpl, FixedBlockMemoryAllocator>;
 
     BufferGLImpl(IReferenceCounters *pRefCounters, 
                  FixedBlockMemoryAllocator &BuffViewObjMemAllocator, 

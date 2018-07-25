@@ -170,13 +170,11 @@ namespace Diligent
 
     void DeviceContextD3D12Impl::CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, Uint32 Flags)
     {
-        if (!DeviceContextBase::CommitShaderResources<PipelineStateD3D12Impl>(pShaderResourceBinding, Flags, 0 /*Dummy*/))
+        if (!DeviceContextBase::CommitShaderResources(pShaderResourceBinding, Flags, 0 /*Dummy*/))
             return;
 
         auto *pCtx = RequestCmdContext();
-        auto *pPipelineStateD3D12 = m_pPipelineState.RawPtr<PipelineStateD3D12Impl>();
-
-        m_pCommittedResourceCache = pPipelineStateD3D12->CommitAndTransitionShaderResources(pShaderResourceBinding, *pCtx, true, (Flags & COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES)!=0);
+        m_pCommittedResourceCache = m_pPipelineState->CommitAndTransitionShaderResources(pShaderResourceBinding, *pCtx, true, (Flags & COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES)!=0);
     }
 
     void DeviceContextD3D12Impl::SetStencilRef(Uint32 StencilRef)
@@ -261,7 +259,7 @@ namespace Diligent
 
     void DeviceContextD3D12Impl::CommitD3D12VertexBuffers(GraphicsContext& GraphCtx)
     {
-        auto *pPipelineStateD3D12 = m_pPipelineState.RawPtr<PipelineStateD3D12Impl>();
+        auto *pPipelineStateD3D12 = m_pPipelineState.RawPtr();
 
         // Do not initialize array with zeroes for performance reasons
         D3D12_VERTEX_BUFFER_VIEW VBViews[MaxBufferSlots];// = {}
@@ -336,7 +334,7 @@ namespace Diligent
                 CommitD3D12IndexBuffer(DrawAttribs.IndexType);
         }
 
-        auto *pPipelineStateD3D12 = m_pPipelineState.RawPtr<PipelineStateD3D12Impl>();
+        auto *pPipelineStateD3D12 = m_pPipelineState.RawPtr();
         
         if(m_bCommittedD3D12VBsUpToDate)
             TransitionD3D12VertexBuffers(GraphCtx);
@@ -398,7 +396,7 @@ namespace Diligent
         }
 #endif
 
-        auto *pPipelineStateD3D12 = m_pPipelineState.RawPtr<PipelineStateD3D12Impl>();
+        auto *pPipelineStateD3D12 = m_pPipelineState.RawPtr();
 
         auto &ComputeCtx = RequestCmdContext()->AsComputeContext();
         ComputeCtx.SetRootSignature( pPipelineStateD3D12->GetD3D12RootSignature() );

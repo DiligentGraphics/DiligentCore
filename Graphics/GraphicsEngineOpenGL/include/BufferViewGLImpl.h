@@ -42,7 +42,7 @@ struct BufferViewDesc;
 class BufferViewGLImpl : public BufferViewBase<IBufferViewGL>
 {
 public:
-    typedef BufferViewBase<IBufferViewGL> TBuffViewBase;
+    using TBuffViewBase = BufferViewBase<IBufferViewGL>;
 
     BufferViewGLImpl( IReferenceCounters *pRefCounters,
                       IRenderDevice *pDevice, 

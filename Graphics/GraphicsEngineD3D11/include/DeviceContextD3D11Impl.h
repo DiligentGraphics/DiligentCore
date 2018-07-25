@@ -29,6 +29,9 @@
 #include "DeviceContextD3D11.h"
 #include "DeviceContextBase.h"
 #include "ShaderD3D11Impl.h"
+#include "BufferD3D11Impl.h"
+#include "TextureViewD3D11Impl.h"
+#include "PipelineStateD3D11Impl.h"
 
 #ifdef _DEBUG
 #   define VERIFY_CONTEXT_BINDINGS
@@ -38,10 +41,10 @@ namespace Diligent
 {
 
 /// Implementation of the Diligent::IDeviceContextD3D11 interface
-class DeviceContextD3D11Impl : public DeviceContextBase<IDeviceContextD3D11>
+class DeviceContextD3D11Impl : public DeviceContextBase<IDeviceContextD3D11, BufferD3D11Impl, TextureViewD3D11Impl, PipelineStateD3D11Impl>
 {
 public:
-    typedef DeviceContextBase<IDeviceContextD3D11> TDeviceContextBase;
+    using TDeviceContextBase = DeviceContextBase<IDeviceContextD3D11, BufferD3D11Impl, TextureViewD3D11Impl, PipelineStateD3D11Impl>;
 
     DeviceContextD3D11Impl(IReferenceCounters*              pRefCounters,
                            IMemoryAllocator&                Allocator,
