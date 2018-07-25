@@ -683,20 +683,19 @@ namespace Diligent
         }
 #endif
 
-        auto* pPipelineStateD3D11 = m_pPipelineState.RawPtr();
 #ifdef _DEBUG
-        if (pPipelineStateD3D11->GetDesc().IsComputePipeline)
+        if (m_pPipelineState->GetDesc().IsComputePipeline)
         {
             LOG_ERROR("No graphics pipeline state is bound");
             return;
         }
 #endif
 
-        auto* pd3d11InputLayout = pPipelineStateD3D11->GetD3D11InputLayout();
+        auto* pd3d11InputLayout = m_pPipelineState->GetD3D11InputLayout();
         if( pd3d11InputLayout != nullptr && !m_bCommittedD3D11VBsUpToDate )
         {
-            VERIFY( m_NumVertexStreams >= pPipelineStateD3D11->GetNumBufferSlotsUsed(), "Currently bound pipeline state \"", pPipelineStateD3D11->GetDesc().Name, "\" expects ", pPipelineStateD3D11->GetNumBufferSlotsUsed(), " input buffer slots, but only ", m_NumVertexStreams, " is bound");
-            CommitD3D11VertexBuffers(pPipelineStateD3D11);
+            VERIFY( m_NumVertexStreams >= m_pPipelineState->GetNumBufferSlotsUsed(), "Currently bound pipeline state \"", m_pPipelineState->GetDesc().Name, "\" expects ", m_pPipelineState->GetNumBufferSlotsUsed(), " input buffer slots, but only ", m_NumVertexStreams, " is bound");
+            CommitD3D11VertexBuffers(m_pPipelineState);
         }
 
         if( DrawAttribs.IsIndexed )

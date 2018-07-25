@@ -342,12 +342,11 @@ namespace Diligent
             LOG_ERROR("No pipeline state is bound");
             return;
         }
-        auto* pPipelineStateGL = m_pPipelineState.RawPtr();
         auto* pShaderResBindingGL = ValidatedCast<ShaderResourceBindingGLImpl>(pResBinding);
 
         const auto &DeviceCaps = pRenderDeviceGL->GetDeviceCaps();
-        auto &Prog = pPipelineStateGL->GetGLProgram();
-        auto &Pipeline = pPipelineStateGL->GetGLProgramPipeline( m_ContextState.GetCurrentGLContext() );
+        auto &Prog = m_pPipelineState->GetGLProgram();
+        auto &Pipeline = m_pPipelineState->GetGLProgramPipeline( m_ContextState.GetCurrentGLContext() );
         VERIFY( Prog ^ Pipeline, "Only one of program or pipeline can be specified" );
         if( !(Prog || Pipeline) )
         {
@@ -363,19 +362,19 @@ namespace Diligent
         if( ProgramPipelineSupported )
             m_ContextState.SetPipeline( Pipeline );
 
-        size_t NumPrograms = ProgramPipelineSupported ? pPipelineStateGL->GetNumShaders() : 1;
+        size_t NumPrograms = ProgramPipelineSupported ? m_pPipelineState->GetNumShaders() : 1;
         GLuint UniformBuffBindPoint = 0;
         GLuint TextureIndex = 0;
         m_BoundWritableTextures.clear();
         m_BoundWritableBuffers.clear();
         for( size_t ProgNum = 0; ProgNum < NumPrograms; ++ProgNum )
         {
-            auto *pShaderGL = static_cast<ShaderGLImpl*>(pPipelineStateGL->GetShaders()[ProgNum]);
+            auto *pShaderGL = static_cast<ShaderGLImpl*>(m_pPipelineState->GetShaders()[ProgNum]);
             auto &GLProgramObj = ProgramPipelineSupported ? pShaderGL->m_GlProgObj : Prog;
 
-            GLProgramResources *pDynamicResources = pShaderResBindingGL ? &pShaderResBindingGL->GetProgramResources(pShaderGL->GetDesc().ShaderType, pPipelineStateGL) : nullptr;
+            GLProgramResources *pDynamicResources = pShaderResBindingGL ? &pShaderResBindingGL->GetProgramResources(pShaderGL->GetDesc().ShaderType, m_pPipelineState) : nullptr;
 #ifdef VERIFY_RESOURCE_BINDINGS
-            GLProgramObj.dbgVerifyBindingCompleteness(pDynamicResources, pPipelineStateGL);
+            GLProgramObj.dbgVerifyBindingCompleteness(pDynamicResources, m_pPipelineState);
 #endif
 
             for(int BindDynamicResources = 0; BindDynamicResources < (pShaderResBindingGL ? 2 : 1); ++BindDynamicResources)

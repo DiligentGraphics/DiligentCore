@@ -397,8 +397,6 @@ namespace Diligent
         }
 #endif
 
-        auto *pPipelineStateVk = m_pPipelineState.RawPtr();
-
         EnsureVkCmdBuffer();
 
         if ( DrawAttribs.IsIndexed )
@@ -426,13 +424,13 @@ namespace Diligent
             CommitVkVertexBuffers();
 
         if (m_DesrSetBindInfo.DynamicOffsetCount != 0)
-            pPipelineStateVk->BindDescriptorSetsWithDynamicOffsets(this, m_DesrSetBindInfo);
+            m_pPipelineState->BindDescriptorSetsWithDynamicOffsets(this, m_DesrSetBindInfo);
 #if 0
 #ifdef _DEBUG
         else
         {
-            if ( pPipelineStateVk->dbgContainsShaderResources() )
-                LOG_ERROR_MESSAGE("Pipeline state \"", pPipelineStateVk->GetDesc().Name, "\" contains shader resources, but IDeviceContext::CommitShaderResources() was not called" );
+            if ( m_pPipelineState->dbgContainsShaderResources() )
+                LOG_ERROR_MESSAGE("Pipeline state \"", m_pPipelineState->GetDesc().Name, "\" contains shader resources, but IDeviceContext::CommitShaderResources() was not called" );
         }
 #endif
 #endif
@@ -454,7 +452,7 @@ namespace Diligent
         }
 
 #ifdef DEVELOPMENT
-        if (pPipelineStateVk->GetVkRenderPass() != m_RenderPass)
+        if (m_pPipelineState->GetVkRenderPass() != m_RenderPass)
         {
             DvpLogRenderPass_PSOMismatch();
         }
@@ -505,8 +503,6 @@ namespace Diligent
         }
 #endif
 
-        auto *pPipelineStateVk = m_pPipelineState.RawPtr();
-
         EnsureVkCmdBuffer();
 
         // Dispatch commands must be executed outside of render pass
@@ -514,13 +510,13 @@ namespace Diligent
             m_CommandBuffer.EndRenderPass();
 
         if (m_DesrSetBindInfo.DynamicOffsetCount != 0)
-            pPipelineStateVk->BindDescriptorSetsWithDynamicOffsets(this, m_DesrSetBindInfo);
+            m_pPipelineState->BindDescriptorSetsWithDynamicOffsets(this, m_DesrSetBindInfo);
 #if 0
 #ifdef _DEBUG
         else
         {
-            if ( pPipelineStateVk->dbgContainsShaderResources() )
-                LOG_ERROR_MESSAGE("Pipeline state \"", pPipelineStateVk->GetDesc().Name, "\" contains shader resources, but IDeviceContext::CommitShaderResources() was not called" );
+            if ( m_pPipelineState->dbgContainsShaderResources() )
+                LOG_ERROR_MESSAGE("Pipeline state \"", m_pPipelineState->GetDesc().Name, "\" contains shader resources, but IDeviceContext::CommitShaderResources() was not called" );
         }
 #endif
 #endif
@@ -844,7 +840,7 @@ namespace Diligent
         m_State = ContextState{};
         m_DesrSetBindInfo.Reset();
         m_CommandBuffer.Reset();
-        m_pPipelineState.Release(); 
+        m_pPipelineState = nullptr;
     }
 
     void DeviceContextVkImpl::SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer **ppBuffers, Uint32 *pOffsets, Uint32 Flags )
@@ -1233,7 +1229,7 @@ namespace Diligent
         m_CommandBuffer.Reset();
         m_State = ContextState{};
         m_DesrSetBindInfo.Reset();
-        m_pPipelineState.Release();
+        m_pPipelineState = nullptr;
 
         InvalidateState();
     }

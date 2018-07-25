@@ -259,13 +259,11 @@ namespace Diligent
 
     void DeviceContextD3D12Impl::CommitD3D12VertexBuffers(GraphicsContext& GraphCtx)
     {
-        auto *pPipelineStateD3D12 = m_pPipelineState.RawPtr();
-
         // Do not initialize array with zeroes for performance reasons
         D3D12_VERTEX_BUFFER_VIEW VBViews[MaxBufferSlots];// = {}
         VERIFY( m_NumVertexStreams <= MaxBufferSlots, "Too many buffers are being set" );
-        const auto *Strides = pPipelineStateD3D12->GetBufferStrides();
-        DEV_CHECK_ERR( m_NumVertexStreams >= pPipelineStateD3D12->GetNumBufferSlotsUsed(), "Currently bound pipeline state \"", pPipelineStateD3D12->GetDesc().Name, "\" expects ", pPipelineStateD3D12->GetNumBufferSlotsUsed(), " input buffer slots, but only ", m_NumVertexStreams, " is bound");
+        const auto *Strides = m_pPipelineState->GetBufferStrides();
+        DEV_CHECK_ERR( m_NumVertexStreams >= m_pPipelineState->GetNumBufferSlotsUsed(), "Currently bound pipeline state \"", m_pPipelineState->GetDesc().Name, "\" expects ", m_pPipelineState->GetNumBufferSlotsUsed(), " input buffer slots, but only ", m_NumVertexStreams, " is bound");
         bool DynamicBufferPresent = false;
         for( UINT Buff = 0; Buff < m_NumVertexStreams; ++Buff )
         {
@@ -334,24 +332,22 @@ namespace Diligent
                 CommitD3D12IndexBuffer(DrawAttribs.IndexType);
         }
 
-        auto *pPipelineStateD3D12 = m_pPipelineState.RawPtr();
-        
         if(m_bCommittedD3D12VBsUpToDate)
             TransitionD3D12VertexBuffers(GraphCtx);
         else
             CommitD3D12VertexBuffers(GraphCtx);
 
-        GraphCtx.SetRootSignature( pPipelineStateD3D12->GetD3D12RootSignature() );
+        GraphCtx.SetRootSignature( m_pPipelineState->GetD3D12RootSignature() );
 
         if(m_pCommittedResourceCache != nullptr)
         {
-            pPipelineStateD3D12->GetRootSignature().CommitRootViews(*m_pCommittedResourceCache, GraphCtx, false, m_ContextId);
+            m_pPipelineState->GetRootSignature().CommitRootViews(*m_pCommittedResourceCache, GraphCtx, false, m_ContextId);
         }
 #ifdef _DEBUG
         else
         {
-            if( pPipelineStateD3D12->dbgContainsShaderResources() )
-                LOG_ERROR_MESSAGE("Pipeline state \"", pPipelineStateD3D12->GetDesc().Name, "\" contains shader resources, but IDeviceContext::CommitShaderResources() was not called" );
+            if( m_pPipelineState->dbgContainsShaderResources() )
+                LOG_ERROR_MESSAGE("Pipeline state \"", m_pPipelineState->GetDesc().Name, "\" contains shader resources, but IDeviceContext::CommitShaderResources() was not called" );
         }
 #endif
         
@@ -396,20 +392,18 @@ namespace Diligent
         }
 #endif
 
-        auto *pPipelineStateD3D12 = m_pPipelineState.RawPtr();
-
-        auto &ComputeCtx = RequestCmdContext()->AsComputeContext();
-        ComputeCtx.SetRootSignature( pPipelineStateD3D12->GetD3D12RootSignature() );
+        auto& ComputeCtx = RequestCmdContext()->AsComputeContext();
+        ComputeCtx.SetRootSignature( m_pPipelineState->GetD3D12RootSignature() );
       
         if(m_pCommittedResourceCache != nullptr)
         {
-            pPipelineStateD3D12->GetRootSignature().CommitRootViews(*m_pCommittedResourceCache, ComputeCtx, true, m_ContextId);
+            m_pPipelineState->GetRootSignature().CommitRootViews(*m_pCommittedResourceCache, ComputeCtx, true, m_ContextId);
         }
 #ifdef _DEBUG
         else
         {
-            if( pPipelineStateD3D12->dbgContainsShaderResources() )
-                LOG_ERROR_MESSAGE("Pipeline state \"", pPipelineStateD3D12->GetDesc().Name, "\" contains shader resources, but IDeviceContext::CommitShaderResources() was not called" );
+            if( m_pPipelineState->dbgContainsShaderResources() )
+                LOG_ERROR_MESSAGE("Pipeline state \"", m_pPipelineState->GetDesc().Name, "\" contains shader resources, but IDeviceContext::CommitShaderResources() was not called" );
         }
 #endif
 
@@ -526,9 +520,9 @@ namespace Diligent
         m_CommittedD3D12IndexDataStartOffset = 0;
         m_CommittedIBFormat = VT_UNDEFINED;
         m_bCommittedD3D12VBsUpToDate = false;
-        m_bCommittedD3D12IBUpToDate = false;
+        m_bCommittedD3D12IBUpToDate  = false;
 
-        m_pPipelineState.Release(); 
+        m_pPipelineState = nullptr; 
     }
 
     void DeviceContextD3D12Impl::Flush()
