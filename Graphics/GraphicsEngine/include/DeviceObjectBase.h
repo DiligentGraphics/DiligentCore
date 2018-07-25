@@ -91,15 +91,14 @@ public:
         //    m_pAllocator->Free(m_pObject) - crash!
          
         RefCntAutoPtr<RenderDeviceImplType> pDevice;
-        return ValidatedCast<RefCountersImpl>(this->GetReferenceCounters())->
-                ReleaseStrongRef(
-                    [&]()
-                    {
-                        // We must keep the device alive while the object is being destroyed
-                        // Note that internal device objects do not keep strong reference to the device
-                        pDevice = m_spDevice;
-                    }
-                );
+        return TBase::Release(
+                        [&]()
+                        {
+                            // We must keep the device alive while the object is being destroyed
+                            // Note that internal device objects do not keep strong reference to the device
+                            pDevice = m_spDevice;
+                        }
+                      );
     }
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE( IID_DeviceObject, TBase )

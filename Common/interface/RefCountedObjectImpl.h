@@ -537,6 +537,13 @@ public:
         // this call will not be virtual and should be inlined
         return m_pRefCounters->ReleaseStrongRef();
     }
+    
+    template<class TPreObjectDestroy>
+    inline CounterValueType Release(TPreObjectDestroy PreObjectDestroy)
+    {
+        VERIFY_EXPR(m_pRefCounters != nullptr);
+        return m_pRefCounters->ReleaseStrongRef(PreObjectDestroy);
+    }
 
 protected:
     template<typename AllocatorType, typename ObjectType>
