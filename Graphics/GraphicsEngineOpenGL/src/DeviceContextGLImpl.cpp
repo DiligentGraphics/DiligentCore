@@ -65,9 +65,10 @@ namespace Diligent
 
     void DeviceContextGLImpl::SetPipelineState(IPipelineState *pPipelineState)
     {
-        TDeviceContextBase::SetPipelineState(pPipelineState);
+        auto* pPipelineStateGLImpl = ValidatedCast<PipelineStateGLImpl>(pPipelineState);
+        TDeviceContextBase::SetPipelineState(pPipelineStateGLImpl, 0 /*Dummy*/);
 
-        const auto &Desc = pPipelineState->GetDesc();
+        const auto& Desc = pPipelineStateGLImpl->GetDesc();
         if (Desc.IsComputePipeline)
         {
         }

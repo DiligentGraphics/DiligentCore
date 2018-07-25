@@ -90,9 +90,6 @@ public:
 
     inline virtual void InvalidateState()override = 0;
 
-    /// Base implementation of IDeviceContext::SetPipelineState(); caches references to the pipeline state object.
-    inline virtual void SetPipelineState(IPipelineState* pPipelineState)override = 0;
-
     /// Base implementation of IDeviceContext::CommitShaderResources(); validates parameters.
     inline bool CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, Uint32 Flags, int);
 
@@ -138,6 +135,8 @@ protected:
     inline bool SetBlendFactors(const float* BlendFactors, int Dummy);
 
     inline bool SetStencilRef(Uint32 StencilRef, int Dummy);
+
+    inline void SetPipelineState(PipelineStateImplType* pPipelineState, int /*Dummy*/);
 
     /// Clears all cached resources
     inline void ClearStateCache();
@@ -257,9 +256,9 @@ inline void DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType
 }
 
 template<typename BaseInterface, typename BufferImplType, typename TextureViewImplType, typename PipelineStateImplType>
-inline void DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType, PipelineStateImplType> :: SetPipelineState(IPipelineState* pPipelineState)
+inline void DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType, PipelineStateImplType> :: SetPipelineState(PipelineStateImplType* pPipelineState, int /*Dummy*/)
 {
-    m_pPipelineState = ValidatedCast<PipelineStateImplType>(pPipelineState);
+    m_pPipelineState = pPipelineState;
 }
 
 template<typename BaseInterface, typename BufferImplType, typename TextureViewImplType, typename PipelineStateImplType>

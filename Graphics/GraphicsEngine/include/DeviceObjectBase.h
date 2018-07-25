@@ -85,7 +85,7 @@ public:
     {
         // Render device owns allocators for all types of device objects,
         // so it must be destroyed after all device objects are released. 
-        // Consider the following scenario: an object A ownes last strong 
+        // Consider the following scenario: an object A owns the last strong 
         // reference to the device:
         // 
         // 1. A::~A() completes

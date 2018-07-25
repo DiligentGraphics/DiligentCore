@@ -102,7 +102,7 @@ namespace Diligent
             Flush(true);
         }
 
-        auto *pPipelineStateD3D12 = ValidatedCast<PipelineStateD3D12Impl>(pPipelineState);
+        auto* pPipelineStateD3D12 = ValidatedCast<PipelineStateD3D12Impl>(pPipelineState);
         const auto &PSODesc = pPipelineStateD3D12->GetDesc();
 
         bool CommitStates = false;
@@ -126,7 +126,7 @@ namespace Diligent
             CommitScissor = OldPSODesc.GraphicsPipeline.RasterizerDesc.ScissorEnable != PSODesc.GraphicsPipeline.RasterizerDesc.ScissorEnable;
         }
 
-        TDeviceContextBase::SetPipelineState( pPipelineState );
+        TDeviceContextBase::SetPipelineState( pPipelineStateD3D12, 0 /*Dummy*/ );
 
         auto *pCmdCtx = RequestCmdContext();
         

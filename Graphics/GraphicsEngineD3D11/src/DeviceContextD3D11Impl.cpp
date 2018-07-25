@@ -79,9 +79,9 @@ namespace Diligent
 
     void DeviceContextD3D11Impl::SetPipelineState(IPipelineState* pPipelineState)
     {
-        TDeviceContextBase::SetPipelineState( pPipelineState );
         auto* pPipelineStateD3D11 = ValidatedCast<PipelineStateD3D11Impl>(pPipelineState);
-        auto &Desc = pPipelineStateD3D11->GetDesc();
+        TDeviceContextBase::SetPipelineState( pPipelineStateD3D11, 0 /*Dummy*/ );
+        auto& Desc = pPipelineStateD3D11->GetDesc();
         if (Desc.IsComputePipeline)
         {
             auto* pd3d11CS = pPipelineStateD3D11->GetD3D11ComputeShader();

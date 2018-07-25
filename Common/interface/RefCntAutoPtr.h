@@ -72,28 +72,28 @@ template <typename T>
 class RefCntAutoPtr
 {
 public:
-    explicit RefCntAutoPtr(T *pObj = nullptr) : 
+    explicit RefCntAutoPtr(T* pObj = nullptr) : 
         m_pObject(pObj)
     {
         if( m_pObject )
             m_pObject->AddRef();
     }
 
-    RefCntAutoPtr(IObject *pObj, const INTERFACE_ID &IID) :
+    RefCntAutoPtr(IObject* pObj, const INTERFACE_ID& IID) :
         m_pObject(nullptr)
     {
         if(pObj)
             pObj->QueryInterface( IID, reinterpret_cast<IObject**>(&m_pObject) );
     }
 
-    RefCntAutoPtr(const RefCntAutoPtr &AutoPtr) : 
+    RefCntAutoPtr(const RefCntAutoPtr& AutoPtr) : 
         m_pObject(AutoPtr.m_pObject)
     {
         if(m_pObject)
             m_pObject->AddRef();
     }
 
-    RefCntAutoPtr(RefCntAutoPtr &&AutoPtr) : 
+    RefCntAutoPtr(RefCntAutoPtr&& AutoPtr) : 
         m_pObject(std::move(AutoPtr.m_pObject))
     {
         //Make sure original pointer has no references to the object
@@ -105,12 +105,12 @@ public:
         Release();
     }
 
-    void swap(RefCntAutoPtr &AutoPtr)
+    void swap(RefCntAutoPtr& AutoPtr)
     {
         std::swap(m_pObject, AutoPtr.m_pObject);
     }
 
-    void Attach(T *pObj)
+    void Attach(T* pObj)
     {
         Release();
         m_pObject = pObj;
@@ -132,44 +132,42 @@ public:
         }
     }
 
-    RefCntAutoPtr& operator = (T *pObj)
+    RefCntAutoPtr& operator = (T* pObj)
     {
-        if( static_cast<T*>(*this) == pObj )
-            return *this;
-
-        return operator= (RefCntAutoPtr(pObj));
-    }
-
-    RefCntAutoPtr& operator = (const RefCntAutoPtr &AutoPtr)
-    {
-        if( *this == AutoPtr )
-            return *this;
-
-        Release();
-        m_pObject = AutoPtr.m_pObject;
-        if(m_pObject)
-            m_pObject->AddRef();
-
+        if (m_pObject != pObj)
+        {
+            if (m_pObject)
+                m_pObject->Release();
+            m_pObject = pObj;
+            if (m_pObject)
+                m_pObject->AddRef();
+        }
         return *this;
     }
 
-    RefCntAutoPtr& operator = (RefCntAutoPtr &&AutoPtr)
+    RefCntAutoPtr& operator = (const RefCntAutoPtr& AutoPtr)
     {
-        if( *this == AutoPtr )
-            return *this;
+        return *this = AutoPtr.m_pObject;
+    }
 
-        Release();
-        m_pObject = std::move( AutoPtr.m_pObject );
-        //Make sure original pointer has no references to the object
-        AutoPtr.m_pObject = nullptr;
+    RefCntAutoPtr& operator = (RefCntAutoPtr&& AutoPtr)
+    {
+        if (m_pObject != AutoPtr.m_pObject)
+        {
+            if (m_pObject)
+                m_pObject->Release();
+            m_pObject = std::move(AutoPtr.m_pObject);
+            //Make sure original pointer has no references to the object
+            AutoPtr.m_pObject = nullptr;
+        }
         return *this;
      }
 
     // All the access functions do not require locking reference counters pointer because if it is valid,
     // the smart pointer holds strong reference to the object and it thus cannot be released by 
     // ohter thread
-    bool operator    ! ()                       const{return m_pObject == nullptr;}
-         operator bool ()                       const{return m_pObject != nullptr;} 
+    bool operator    ! ()                      const{return m_pObject == nullptr;}
+         operator bool ()                      const{return m_pObject != nullptr;} 
     bool operator == (const RefCntAutoPtr& Ptr)const{return m_pObject == Ptr.m_pObject;}
     bool operator != (const RefCntAutoPtr& Ptr)const{return m_pObject != Ptr.m_pObject;}
     bool operator <  (const RefCntAutoPtr& Ptr)const{return static_cast<const T*>(*this) < static_cast<const T*>(Ptr);}
@@ -198,7 +196,7 @@ private:
     class DoublePtrHelper
     {
     public:
-        DoublePtrHelper(RefCntAutoPtr &AutoPtr) : 
+        DoublePtrHelper(RefCntAutoPtr& AutoPtr) : 
             NewRawPtr( static_cast<T*>(AutoPtr) ),
             m_pAutoPtr( std::addressof(AutoPtr) )
         {
@@ -226,8 +224,8 @@ private:
         operator T**(){return &NewRawPtr;}
         operator const T**()const{return &NewRawPtr;}
     private:
-        T *NewRawPtr;
-        RefCntAutoPtr *m_pAutoPtr;
+        T* NewRawPtr;
+        RefCntAutoPtr* m_pAutoPtr;
         DoublePtrHelper(const DoublePtrHelper&);
         DoublePtrHelper& operator = (const DoublePtrHelper&);
         DoublePtrHelper& operator = (DoublePtrHelper&&);
@@ -248,7 +246,7 @@ public:
     const T** GetRawDblPtr()const{return &m_pObject;}
 
 private:
-    T *m_pObject;
+    T* m_pObject;
 };
 
 /// Implementation of weak pointers
@@ -256,7 +254,7 @@ template <typename T>
 class RefCntWeakPtr
 {
 public:
-    explicit RefCntWeakPtr(T *pObj = nullptr) : 
+    explicit RefCntWeakPtr(T* pObj = nullptr) : 
         m_pRefCounters(nullptr),
         m_pObject(pObj)
     {
@@ -309,7 +307,7 @@ public:
         return *this;
     }
 
-    RefCntWeakPtr& operator = (T *pObj)
+    RefCntWeakPtr& operator = (T* pObj)
     {
         return operator= (RefCntWeakPtr(pObj));
     }
@@ -385,12 +383,12 @@ public:
     bool operator != (const RefCntWeakPtr& Ptr)const{return m_pRefCounters != Ptr.m_pRefCounters;}
 
 protected:
-    RefCountersImpl *m_pRefCounters;
+    RefCountersImpl* m_pRefCounters;
     // We need to store raw pointer to object itself,
     // because if the object is owned by another object,
     // m_pRefCounters->GetObject( &pObj ) will return
     // pointer to owner, which is not what we need.
-    T *m_pObject;
+    T* m_pObject;
 };
 
 }

@@ -200,8 +200,8 @@ namespace Diligent
             Flush();
         }
 
-        auto *pPipelineStateVk = ValidatedCast<PipelineStateVkImpl>(pPipelineState);
-        const auto &PSODesc = pPipelineStateVk->GetDesc();
+        auto* pPipelineStateVk = ValidatedCast<PipelineStateVkImpl>(pPipelineState);
+        const auto& PSODesc = pPipelineStateVk->GetDesc();
 
         bool CommitStates = false;
         bool CommitScissor = false;
@@ -224,7 +224,7 @@ namespace Diligent
             CommitScissor = !OldPSODesc.GraphicsPipeline.RasterizerDesc.ScissorEnable;
         }
 
-        TDeviceContextBase::SetPipelineState( pPipelineState );
+        TDeviceContextBase::SetPipelineState( pPipelineStateVk, 0 /*Dummy*/ );
         EnsureVkCmdBuffer();
 
         if (PSODesc.IsComputePipeline)
