@@ -215,8 +215,13 @@ inline void DeviceContextBase<BaseInterface> :: SetVertexBuffers( Uint32 StartSl
 
     if ( Flags & SET_VERTEX_BUFFERS_FLAG_RESET )
     {
-        for(Uint32 s=0; s < m_NumVertexStreams; ++s)
-            m_VertexStreams[s] = VertexStreamInfo();
+        // Reset only these buffer slots that are not being set.
+        // It is very important to not reset buffers that stay unchanged
+        // as AddRef()/Release() are not free
+        for (Uint32 s = 0; s < StartSlot; ++s)
+            m_VertexStreams[s] = VertexStreamInfo{};
+        for (Uint32 s = StartSlot + NumBuffersSet; s < m_NumVertexStreams; ++s)
+            m_VertexStreams[s] = VertexStreamInfo{};
         m_NumVertexStreams = 0;
     }
     m_NumVertexStreams = std::max(m_NumVertexStreams, StartSlot + NumBuffersSet );
@@ -224,7 +229,7 @@ inline void DeviceContextBase<BaseInterface> :: SetVertexBuffers( Uint32 StartSl
     for( Uint32 Buff = 0; Buff < NumBuffersSet; ++Buff )
     {
         auto &CurrStream = m_VertexStreams[StartSlot + Buff];
-        CurrStream.pBuffer = RefCntAutoPtr<IBuffer>( ppBuffers ? ppBuffers[Buff] : nullptr );
+        CurrStream.pBuffer = ppBuffers ? ppBuffers[Buff] : nullptr;
         CurrStream.Offset = pOffsets ? pOffsets[Buff] : 0;
 #ifdef DEVELOPMENT
         if ( CurrStream.pBuffer )
@@ -239,7 +244,7 @@ inline void DeviceContextBase<BaseInterface> :: SetVertexBuffers( Uint32 StartSl
     }
     // Remove null buffers from the end of the array
     while(m_NumVertexStreams > 0 && !m_VertexStreams[m_NumVertexStreams-1].pBuffer)
-        m_VertexStreams[m_NumVertexStreams--] = VertexStreamInfo();
+        m_VertexStreams[m_NumVertexStreams--] = VertexStreamInfo{};
 }
 
 template<typename BaseInterface>
