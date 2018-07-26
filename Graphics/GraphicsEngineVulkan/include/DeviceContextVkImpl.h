@@ -221,7 +221,7 @@ private:
     // be submitted next
     Atomics::AtomicInt64 m_NextCmdBuffNumber;
 
-    PipelineLayout::DescriptorSetBindInfo m_DesrSetBindInfo;
+    PipelineLayout::DescriptorSetBindInfo m_DescrSetBindInfo;
     VulkanDynamicHeap m_DynamicHeap;
     std::shared_ptr<GenerateMipsVkHelper> m_GenerateMipsHelper;
     RefCntAutoPtr<IShaderResourceBinding> m_GenerateMipsSRB;

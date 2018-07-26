@@ -189,11 +189,6 @@ namespace Diligent
 
     void DeviceContextVkImpl::SetPipelineState(IPipelineState *pPipelineState)
     {
-        if (m_CommandBuffer.GetState().RenderPass != VK_NULL_HANDLE)
-        {
-            m_CommandBuffer.EndRenderPass();
-        }
-
         // Never flush deferred context!
         if (!m_bIsDeferred && m_State.NumCommands >= m_NumCommandsToFlush)
         {
@@ -251,7 +246,7 @@ namespace Diligent
             }
         }
 
-        m_DesrSetBindInfo.Reset();
+        m_DescrSetBindInfo.Reset();
     }
 
     void DeviceContextVkImpl::TransitionShaderResources(IPipelineState *pPipelineState, IShaderResourceBinding *pShaderResourceBinding)
@@ -267,7 +262,7 @@ namespace Diligent
         if (!DeviceContextBase::CommitShaderResources(pShaderResourceBinding, Flags, 0 /*Dummy*/))
             return;
 
-        m_pPipelineState->CommitAndTransitionShaderResources(pShaderResourceBinding, this, true, Flags, &m_DesrSetBindInfo);
+        m_pPipelineState->CommitAndTransitionShaderResources(pShaderResourceBinding, this, true, Flags, &m_DescrSetBindInfo);
     }
 
     void DeviceContextVkImpl::SetStencilRef(Uint32 StencilRef)
@@ -423,8 +418,8 @@ namespace Diligent
         else
             CommitVkVertexBuffers();
 
-        if (m_DesrSetBindInfo.DynamicOffsetCount != 0)
-            m_pPipelineState->BindDescriptorSetsWithDynamicOffsets(this, m_DesrSetBindInfo);
+        if (m_DescrSetBindInfo.DynamicOffsetCount != 0)
+            m_pPipelineState->BindDescriptorSetsWithDynamicOffsets(this, m_DescrSetBindInfo);
 #if 0
 #ifdef _DEBUG
         else
@@ -509,8 +504,8 @@ namespace Diligent
         if (m_CommandBuffer.GetState().RenderPass != VK_NULL_HANDLE)
             m_CommandBuffer.EndRenderPass();
 
-        if (m_DesrSetBindInfo.DynamicOffsetCount != 0)
-            m_pPipelineState->BindDescriptorSetsWithDynamicOffsets(this, m_DesrSetBindInfo);
+        if (m_DescrSetBindInfo.DynamicOffsetCount != 0)
+            m_pPipelineState->BindDescriptorSetsWithDynamicOffsets(this, m_DescrSetBindInfo);
 #if 0
 #ifdef _DEBUG
         else
@@ -838,7 +833,7 @@ namespace Diligent
         ReleaseStaleContextResources(SubmittedCmdBuffNumber, SubmittedFenceValue, CompletedFenceValue);
 
         m_State = ContextState{};
-        m_DesrSetBindInfo.Reset();
+        m_DescrSetBindInfo.Reset();
         m_CommandBuffer.Reset();
         m_pPipelineState = nullptr;
     }
@@ -858,7 +853,7 @@ namespace Diligent
         m_State = ContextState{};
         m_RenderPass = VK_NULL_HANDLE;
         m_Framebuffer = VK_NULL_HANDLE;
-        m_DesrSetBindInfo.Reset();
+        m_DescrSetBindInfo.Reset();
         VERIFY(m_CommandBuffer.GetState().RenderPass == VK_NULL_HANDLE, "Invalidating context with unifinished render pass");
         m_CommandBuffer.Reset();
     }
@@ -1229,7 +1224,7 @@ namespace Diligent
 
         m_CommandBuffer.Reset();
         m_State = ContextState{};
-        m_DesrSetBindInfo.Reset();
+        m_DescrSetBindInfo.Reset();
         m_pPipelineState = nullptr;
 
         InvalidateState();
