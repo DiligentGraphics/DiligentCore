@@ -79,16 +79,7 @@ void DebugAssertionFailed(const Diligent::Char* Message, const char* Function, c
     WindowsStoreDebug :: AssertionFailed( Message, Function, File, Line );
 }
 
-namespace
+namespace Diligent
 {
-
-class SetDefaultDebugMessageCallback
-{
-public:
-    SetDefaultDebugMessageCallback()
-    {
-        SetDebugMessageCallback(WindowsStoreDebug::OutputDebugMessage);
-    }
-}static _SetDefaultDebugMessageCallback;
-
+DebugMessageCallbackType DebugMessageCallback = WindowsStoreDebug::OutputDebugMessage;
 }

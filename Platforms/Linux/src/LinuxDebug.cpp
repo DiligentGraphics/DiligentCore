@@ -49,16 +49,7 @@ void DebugAssertionFailed(const Diligent::Char* Message, const char* Function, c
     LinuxDebug :: AssertionFailed( Message, Function, File, Line );
 }
 
-namespace
+namespace Diligent
 {
-
-class SetDefaultDebugMessageCallback
-{
-public:
-    SetDefaultDebugMessageCallback()
-    {
-        SetDebugMessageCallback(LinuxDebug::OutputDebugMessage);
-    }
-}static _SetDefaultDebugMessageCallback;
-
+DebugMessageCallbackType DebugMessageCallback = LinuxDebug::OutputDebugMessage;
 }

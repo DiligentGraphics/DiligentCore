@@ -49,16 +49,8 @@ void DebugAssertionFailed(const Char* Message, const char* Function, const char*
     AndroidDebug :: AssertionFailed( Message, Function, File, Line );
 }
 
-namespace
+namespace Diligent
 {
-
-class SetDefaultDebugMessageCallback
-{
-public:
-    SetDefaultDebugMessageCallback()
-    {
-        SetDebugMessageCallback(AndroidDebug::OutputDebugMessage);
-    }
-}static _SetDefaultDebugMessageCallback;
-
+DebugMessageCallbackType DebugMessageCallback = AndroidDebug::OutputDebugMessage;
 }
+

@@ -53,16 +53,7 @@ void DebugAssertionFailed(const Diligent::Char* Message, const char* Function, c
     AppleDebug :: AssertionFailed( Message, Function, File, Line );
 }
 
-namespace
+namespace Diligent
 {
-
-class SetDefaultDebugMessageCallback
-{
-public:
-    SetDefaultDebugMessageCallback()
-    {
-        SetDebugMessageCallback(AppleDebug::OutputDebugMessage);
-    }
-}static _SetDefaultDebugMessageCallback;
-
+DebugMessageCallbackType DebugMessageCallback = AppleDebug::OutputDebugMessage;
 }

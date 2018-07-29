@@ -26,10 +26,10 @@
 namespace Diligent
 {
 
-DebugMessageCallbackType DebugMessageCallback = nullptr;
-
 void SetDebugMessageCallback(DebugMessageCallbackType DbgMessageCallback)
 {
+    // DebugMessageCallback variable is defined in every platform-specific implementation file
+    // and initialized with the platform-specific callback
     DebugMessageCallback = DbgMessageCallback;
 }
 
