@@ -85,6 +85,8 @@ public:
     virtual void ClearRenderTarget( ITextureView* pView, const float *RGBA )override final;
 
     virtual void Flush()override final;
+
+    virtual void FinishFrame(bool ForceRelease)override final;
     
     void FinishCommandList(class ICommandList **ppCommandList)override final;
 

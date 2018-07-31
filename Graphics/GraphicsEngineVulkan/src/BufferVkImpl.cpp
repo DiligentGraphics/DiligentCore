@@ -332,7 +332,7 @@ void BufferVkImpl :: Map(IDeviceContext* pContext, MAP_TYPE MapType, Uint32 MapF
 #endif
 
             auto& DynAllocation = m_DynamicAllocations[pDeviceContextVk->GetContextId()];
-            if ( (MapFlags & MAP_FLAG_DISCARD) != 0 || DynAllocation.pParentDynamicHeap == nullptr )
+            if ( (MapFlags & MAP_FLAG_DISCARD) != 0 || DynAllocation.pDynamicMemMgr == nullptr )
             {
                 DynAllocation = pDeviceContextVk->AllocateDynamicSpace(m_Desc.uiSizeInBytes);
             }
@@ -342,10 +342,9 @@ void BufferVkImpl :: Map(IDeviceContext* pContext, MAP_TYPE MapType, Uint32 MapF
                 // Reuse the same allocation
             }
 
-            if (DynAllocation.pParentDynamicHeap != nullptr)
+            if (DynAllocation.pDynamicMemMgr != nullptr)
             {
-                const auto& DynamicHeap = m_pDevice->GetDynamicHeapRingBuffer();
-                auto* CPUAddress = DynamicHeap.GetCPUAddress();
+                auto* CPUAddress = DynAllocation.pDynamicMemMgr->GetCPUAddress();
                 pMappedData = CPUAddress + DynAllocation.Offset;
             }
             else
@@ -419,7 +418,7 @@ void BufferVkImpl::Unmap( IDeviceContext* pContext, MAP_TYPE MapType, Uint32 Map
             if(m_VulkanBuffer != VK_NULL_HANDLE)
             {
                 auto &DynAlloc = m_DynamicAllocations[CtxId];
-                auto vkSrcBuff = DynAlloc.pParentDynamicHeap->GetVkBuffer();
+                auto vkSrcBuff = DynAlloc.pDynamicMemMgr->GetVkBuffer();
                 pDeviceContextVk->UpdateBufferRegion(this, 0, m_Desc.uiSizeInBytes, vkSrcBuff, DynAlloc.Offset);
             }
         }
@@ -492,19 +491,18 @@ VkBuffer BufferVkImpl::GetVkBuffer()const
     else
     {
         VERIFY(m_Desc.Usage == USAGE_DYNAMIC, "Dynamic buffer expected");
-        return m_pDevice->GetDynamicHeapRingBuffer().GetVkBuffer();
+        return m_pDevice->GetDynamicMemoryManager().GetVkBuffer();
     }
 }
 
 #ifdef DEVELOPMENT
-void BufferVkImpl::DvpVerifyDynamicAllocation(Uint32 ContextId)const
+void BufferVkImpl::DvpVerifyDynamicAllocation(DeviceContextVkImpl* pCtx)const
 {
+    auto ContextId = pCtx->GetContextId();
     const auto& DynAlloc = m_DynamicAllocations[ContextId];
-    if (DynAlloc.pParentDynamicHeap == nullptr)
-        LOG_ERROR_MESSAGE("Dynamic buffer '", m_Desc.Name, "' was not mapped before its first use. Context Id: ", ContextId);
-    auto CurrentFrame = m_pDevice->GetCurrentFrameNumber();
-    if (DynAlloc.dbgFrameNumber != CurrentFrame)
-        LOG_ERROR_MESSAGE("Dynamic allocation is out-of-date. Dynamic buffer '", m_Desc.Name, "' must be mapped in the same frame it is used.");
+    DEV_CHECK_ERR(DynAlloc.pDynamicMemMgr != nullptr, "Dynamic buffer '", m_Desc.Name, "' was not mapped before its first use. Context Id: ", ContextId);
+    auto CurrentFrame = pCtx->GetContextFrameNumber();
+    DEV_CHECK_ERR(DynAlloc.dvpFrameNumber == CurrentFrame, "Dynamic allocation is out-of-date. Dynamic buffer '", m_Desc.Name, "' must be mapped in the same frame it is used.");
 }
 #endif
 

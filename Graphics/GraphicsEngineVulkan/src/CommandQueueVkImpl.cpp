@@ -90,7 +90,7 @@ Uint64 CommandQueueVkImpl::ExecuteCommandBuffer(VkCommandBuffer cmdBuffer)
     return ExecuteCommandBuffer(SubmitInfo);
 }
 
-void CommandQueueVkImpl::IdleGPU()
+Uint64 CommandQueueVkImpl::IdleGPU()
 {
     std::lock_guard<std::mutex> Lock(m_QueueMutex);
 
@@ -102,6 +102,7 @@ void CommandQueueVkImpl::IdleGPU()
     // For some reason after idling the queue not all fences are signaled
     m_pFence->Wait();
     m_pFence->Reset(LastCompletedFenceValue);
+    return LastCompletedFenceValue;
 }
 
 Uint64 CommandQueueVkImpl::GetCompletedFenceValue()

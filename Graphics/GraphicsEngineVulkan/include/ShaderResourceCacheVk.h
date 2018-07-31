@@ -174,7 +174,7 @@ public:
     template<bool VerifyOnly>
     void TransitionResources(DeviceContextVkImpl *pCtxVkImpl);
 
-    Uint32 GetDynamicBufferOffsets(Uint32 CtxId, std::vector<uint32_t>& Offsets)const;
+    Uint32 GetDynamicBufferOffsets(DeviceContextVkImpl *pCtxVkImpl, std::vector<uint32_t>& Offsets)const;
 
 private:
 

@@ -59,40 +59,40 @@ struct DrawAttribs
     union
     {
         /// For a non-indexed draw call, number of vertices to draw
-        Uint32 NumVertices;
+        Uint32 NumVertices = 0;
         
         /// For an indexed draw call, number of indices to draw
         Uint32 NumIndices;
     };
     /// For an indexed draw call, type of elements in the index buffer.
     /// Allowed values: VT_UINT16 and VT_UINT32. Ignored if DrawAttribs::IsIndexed is False.
-    VALUE_TYPE IndexType;
+    VALUE_TYPE IndexType = VT_UNDEFINED;
 
     /// Indicates if index buffer will be used to index input vertices
-    Bool IsIndexed;
+    Bool IsIndexed = False;
 
     /// Number of instances to draw. If more than one instance is specified,
     /// instanced draw call will be performed.
-    Uint32 NumInstances;
+    Uint32 NumInstances = 1;
 
     /// Indicates if indirect draw call will be performed. If set to True, 
     /// pIndirectDrawAttribs must contain valid pointer to the buffer, from which
     /// draw attributes will be read.
-    Bool IsIndirect;
+    Bool IsIndirect = False;
 
     /// For indexed rendering, a constant which is added to each index before 
     /// accessing the vertex buffer.
-    Uint32 BaseVertex; 
+    Uint32 BaseVertex = 0; 
 
     /// For indirect rendering, offset from the beginning of the buffer to the
     /// location of draw command attributes. Ignored if DrawAttribs::IsIndirect is False.
-    Uint32 IndirectDrawArgsOffset;
+    Uint32 IndirectDrawArgsOffset = 0;
 
     union
     {
         /// For non-indexed rendering, LOCATION (or INDEX, but NOT the byte offset) of the 
         /// first vertex in the vertex buffer to start reading vertices from
-        Uint32 StartVertexLocation;  
+        Uint32 StartVertexLocation = 0;  
 
         /// For indexed rendering, LOCATION (NOT the byte offset) of the first index in 
         /// the index buffer to start reading indices from
@@ -100,11 +100,11 @@ struct DrawAttribs
     };
     /// For instanced rendering, LOCATION (or INDEX, but NOT the byte offset) in the vertex 
     /// buffer to start reading instance data from
-    Uint32 FirstInstanceLocation;  
+    Uint32 FirstInstanceLocation = 0;
 
     /// For indirect rendering, pointer to the buffer, from which
     /// draw attributes will be read. Ignored if DrawAttribs::IsIndirect is False.
-    IBuffer* pIndirectDrawAttribs;
+    IBuffer* pIndirectDrawAttribs = nullptr;
 
 
     /// Initializes the structure members with default values
@@ -122,18 +122,7 @@ struct DrawAttribs
     /// StartVertexLocation     | 0
     /// FirstInstanceLocation   | 0
     /// pIndirectDrawAttribs    | nullptr
-    DrawAttribs() : 
-        NumVertices(0),
-        IndexType(VT_UNDEFINED),
-        IsIndexed(False),
-        NumInstances(1),
-        IsIndirect(False),
-        BaseVertex(0),
-        IndirectDrawArgsOffset(0),
-        StartVertexLocation(0),
-        FirstInstanceLocation(0),
-        pIndirectDrawAttribs(nullptr)
-    {}
+    DrawAttribs()noexcept{}
 };
 
 /// Defines which parts of the depth-stencil buffer to clear.
@@ -141,7 +130,7 @@ struct DrawAttribs
 /// These flags are used by IDeviceContext::ClearDepthStencil().
 enum CLEAR_DEPTH_STENCIL_FLAGS : Int32
 {
-    CLEAR_DEPTH_FLAG = 0x01,    ///< Clear depth part of the buffer
+    CLEAR_DEPTH_FLAG   = 0x01,  ///< Clear depth part of the buffer
     CLEAR_STENCIL_FLAG = 0x02   ///< Clear stencil part of the buffer
 };
 
@@ -170,12 +159,13 @@ struct DispatchComputeAttribs
     /// \param [in] GroupsX - Number of groups dispatched in X direction. Default value is 1.
     /// \param [in] GroupsY - Number of groups dispatched in Y direction. Default value is 1.
     /// \param [in] GroupsZ - Number of groups dispatched in Z direction. Default value is 1.
-    DispatchComputeAttribs( Uint32 GroupsX = 1, Uint32 GroupsY = 1, Uint32 GroupsZ = 1 ) : 
-        ThreadGroupCountX( GroupsX ),
-        ThreadGroupCountY( GroupsY ),
-        ThreadGroupCountZ( GroupsZ ),
+    explicit
+    DispatchComputeAttribs(Uint32 GroupsX = 1, Uint32 GroupsY = 1, Uint32 GroupsZ = 1) :
+        ThreadGroupCountX       (GroupsX),
+        ThreadGroupCountY       (GroupsY),
+        ThreadGroupCountZ       (GroupsZ),
         pIndirectDispatchAttribs(nullptr),
-        DispatchArgsByteOffset(0)
+        DispatchArgsByteOffset  (0)
     {}
 
     /// Initializes the structure to perform indirect dispatch command
@@ -183,12 +173,13 @@ struct DispatchComputeAttribs
     /// \param [in] pDispatchAttribs - Pointer to the buffer containing dispatch arguments.
     /// \param [in] Offset - Offset from the beginning of the buffer to the dispatch command 
     ///                 arguments. Default value is 0.
-    DispatchComputeAttribs( IBuffer* pDispatchAttribs, Uint32 Offset = 0 ) :
-        ThreadGroupCountX( 0 ),
-        ThreadGroupCountY( 0 ),
-        ThreadGroupCountZ( 0 ),
-        pIndirectDispatchAttribs( pDispatchAttribs ),
-        DispatchArgsByteOffset( Offset )
+    explicit
+    DispatchComputeAttribs(IBuffer* pDispatchAttribs, Uint32 Offset = 0) :
+        ThreadGroupCountX        (0),
+        ThreadGroupCountY        (0),
+        ThreadGroupCountZ        (0),
+        pIndirectDispatchAttribs (pDispatchAttribs),
+        DispatchArgsByteOffset   (Offset)
     {}
 };
 
@@ -226,38 +217,39 @@ enum COMMIT_SHADER_RESOURCES_FLAG
 struct Viewport
 {
     /// X coordinate of the left boundary of the viewport.
-    Float32 TopLeftX;
+    Float32 TopLeftX = 0.f;
 
     /// Y coordinate of the top boundary of the viewport.
     /// When defining a viewport, DirectX convention is used:
     /// window coordinate systems originates in the LEFT TOP corner
     /// of the screen with Y axis pointing down.
-    Float32 TopLeftY;
+    Float32 TopLeftY = 0.f;
 
     /// Viewport width
-    Float32 Width;
+    Float32 Width  = 0.f;
 
     /// Viewport Height
-    Float32 Height;
+    Float32 Height = 0.f;
 
     /// Minimum depth of the viewport. Ranges between 0 and 1.
-    Float32 MinDepth;
+    Float32 MinDepth = 0.f;
 
     /// Maximum depth of the viewport. Ranges between 0 and 1.
-    Float32 MaxDepth;
+    Float32 MaxDepth = 1.f;
 
     /// Initializes the structure
-    Viewport(Float32 _TopLeftX = 0, Float32 _TopLeftY = 0,
-              Float32 _Width = 0, Float32 _Height = 0,
-              Float32 _MinDepth = 0, Float32 _MaxDepth = 1 )
-              :
-        TopLeftX( _TopLeftX ),
-        TopLeftY( _TopLeftY ),
-        Width   ( _Width    ),
-        Height  ( _Height   ),
-        MinDepth( _MinDepth ),
-        MaxDepth( _MaxDepth )
+    Viewport(Float32 _TopLeftX,     Float32 _TopLeftY,
+             Float32 _Width,        Float32 _Height,
+             Float32 _MinDepth = 0, Float32 _MaxDepth = 1)noexcept :
+        TopLeftX (_TopLeftX),
+        TopLeftY (_TopLeftY),
+        Width    (_Width   ),
+        Height   (_Height  ),
+        MinDepth (_MinDepth),
+        MaxDepth (_MaxDepth)
     {}
+
+    Viewport()noexcept{}
 };
 
 /// Describes the rectangle.
@@ -269,18 +261,20 @@ struct Viewport
 ///         of the screen with Y axis pointing down.
 struct Rect
 {
-    Int32 left;  ///< X coordinate of the left boundary of the viewport.
-    Int32 top;   ///< Y coordinate of the top boundary of the viewport.
-    Int32 right; ///< X coordinate of the right boundary of the viewport.
-    Int32 bottom;///< Y coordinate of the bottom boundary of the viewport.
+    Int32 left   = 0;  ///< X coordinate of the left boundary of the viewport.
+    Int32 top    = 0;  ///< Y coordinate of the top boundary of the viewport.
+    Int32 right  = 0;  ///< X coordinate of the right boundary of the viewport.
+    Int32 bottom = 0;  ///< Y coordinate of the bottom boundary of the viewport.
 
     /// Initializes the structure
-    Rect( Int32 _left = 0, Int32 _top = 0, Int32 _right = 0, Int32 _bottom = 0 ) : 
+    Rect(Int32 _left, Int32 _top, Int32 _right, Int32 _bottom) : 
         left  ( _left   ),
         top   ( _top    ),
         right ( _right  ),
         bottom( _bottom )
     {}
+
+    Rect(){}
 };
 
 
@@ -294,7 +288,7 @@ class IDeviceContext : public IObject
 {
 public:
     /// Queries the specific interface, see IObject::QueryInterface() for details
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject** ppInterface ) = 0;
+    virtual void QueryInterface(const Diligent::INTERFACE_ID &IID, IObject** ppInterface) = 0;
 
     /// Sets the pipeline state
 
@@ -404,7 +398,7 @@ public:
     /// following call:
     ///
     ///     pContext->SetViewports(1, nullptr, 0, 0);
-    virtual void SetViewports( Uint32 NumViewports, const Viewport* pViewports, Uint32 RTWidth, Uint32 RTHeight ) = 0;
+    virtual void SetViewports(Uint32 NumViewports, const Viewport* pViewports, Uint32 RTWidth, Uint32 RTHeight) = 0;
 
     /// Sets active scissor rects
 
@@ -419,7 +413,7 @@ public:
     /// required to convert viewport from DirectX to OpenGL coordinate system if OpenGL device is used.\n\n
     /// All scissor rects must be set atomically as one operation. Any rects not 
     /// defined by the call are disabled.
-    virtual void SetScissorRects( Uint32 NumRects, const Rect* pRects, Uint32 RTWidth, Uint32 RTHeight ) = 0;
+    virtual void SetScissorRects(Uint32 NumRects, const Rect* pRects, Uint32 RTWidth, Uint32 RTHeight) = 0;
 
     /// Binds one or more render targets and the depth-stencil buffer to the pipeline. It also
     /// sets the viewport to match the first non-null render target or depth-stencil buffer.
@@ -440,7 +434,7 @@ public:
     /// following call:
     ///
     ///     pContext->SetRenderTargets(0, nullptr, nullptr);
-    virtual void SetRenderTargets( Uint32 NumRenderTargets, ITextureView* ppRenderTargets[], ITextureView* pDepthStencil ) = 0;
+    virtual void SetRenderTargets(Uint32 NumRenderTargets, ITextureView* ppRenderTargets[], ITextureView* pDepthStencil) = 0;
 
     /// Executes a draw command
 
@@ -451,7 +445,7 @@ public:
     
     /// \param [in] DispatchAttrs - Structure describing dispatch command attributes, 
     ///                             see DispatchComputeAttribs for details.
-    virtual void DispatchCompute( const DispatchComputeAttribs &DispatchAttrs ) = 0;
+    virtual void DispatchCompute(const DispatchComputeAttribs &DispatchAttrs) = 0;
 
     /// Clears a depth-stencil view
     
@@ -462,7 +456,7 @@ public:
     /// \param [in] Stencil - Value to clear stencil part of the view with.
     /// \remarks The full extent of the view is always cleared. Viewport and scissor settings are not applied.
     /// \note The depth-stencil view must be bound to the pipeline for clear operation to be performed.
-    virtual void ClearDepthStencil( ITextureView* pView, Uint32 ClearFlags = CLEAR_DEPTH_FLAG, float fDepth = 1.f, Uint8 Stencil = 0 ) = 0;
+    virtual void ClearDepthStencil(ITextureView* pView, Uint32 ClearFlags = CLEAR_DEPTH_FLAG, float fDepth = 1.f, Uint8 Stencil = 0) = 0;
 
     /// Clears a render target view
 
@@ -472,18 +466,18 @@ public:
     ///                    If nullptr is provided, the default array {0,0,0,0} will be used.
     /// \remarks The full extent of the view is always cleared. Viewport and scissor settings are not applied.
     /// \note The render target view must be bound to the pipeline for clear operation to be performed.
-    virtual void ClearRenderTarget( ITextureView* pView, const float* RGBA = nullptr ) = 0;
+    virtual void ClearRenderTarget(ITextureView* pView, const float* RGBA = nullptr) = 0;
 
     /// Finishes recording commands and generates a command list
     
     /// \param [out] ppCommandList - Memory location where pointer to the recorded command list will be written.
-    virtual void FinishCommandList( ICommandList **ppCommandList) = 0;
+    virtual void FinishCommandList(ICommandList **ppCommandList) = 0;
 
     /// Executes recorded commands in a command list
 
     /// \param [in] pCommandList - Pointer to the command list to executre.
     /// \remarks After command list is executed, it is no longer valid and should be released.
-    virtual void ExecuteCommandList( ICommandList* pCommandList) = 0;
+    virtual void ExecuteCommandList(ICommandList* pCommandList) = 0;
 
     /// Tells the GPU to set a fence to a specified value after all previous work has completed
 
@@ -514,7 +508,23 @@ public:
     /// However, when the engine is initialized by attaching to existing d3d11/d3d12 device or OpenGL/GLES context, the
     /// swap chain needs to be set manually if the device context will be using any of the commands above.\n
     /// Device context keeps strong reference to the swap chain.
-    virtual void SetSwapChain( ISwapChain* pSwapChain) = 0;
+    virtual void SetSwapChain(ISwapChain* pSwapChain) = 0;
+
+
+    /// Finishes the current frame and releases dynamic resources allocated by the context
+
+    /// For immediate context, this method is called automatically by Present(), but can
+    /// also be called explicitly. For deferred context, the method must be called by the application to
+    /// release dynamic resources. The method has some overhead, so it is better to call it once
+    /// per frame, though it can be called with different frequency. Note that unless the GPU is idled,
+    /// the resources may actually be released several frames after the one they were used in last time.
+    /// \param ForceRelease - force release all stale resources. Use this option only if you are sure
+    ///                       the resources are not in use by the GPU (the GPU has been idled or a 
+    ///                       fence indicates all commands are finished).
+    /// \note After the call all dynamic resources become invalid and must be written again before the next use. 
+    ///       For deferred contexts, this method must be called after all command lists referencing dynamic resources
+    ///       have been executed through immediate context.
+    virtual void FinishFrame(bool ForceRelease = false) = 0;
 };
 
 }

@@ -63,7 +63,9 @@ public:
     virtual Uint64 GetCompletedFenceValue() = 0;
 
     /// Blocks execution until all pending GPU commands are complete
-    virtual void IdleGPU() = 0;
+
+    /// \return Last completed fence value
+    virtual UINT64 IdleGPU() = 0;
 
     /// Signals the given fence
     virtual void SignalFence(VkFence vkFence) = 0;

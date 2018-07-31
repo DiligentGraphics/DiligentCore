@@ -133,8 +133,8 @@ public:
         return m_MemoryMgr.Allocate(MemReqs, MemoryProperties);
     }
 
-    VulkanRingBuffer& GetDynamicHeapRingBuffer(){return m_DynamicHeapRingBuffer;}
-
+    VulkanDynamicMemoryManager& GetDynamicMemoryManager(){return m_DynamicMemoryManager;}
+     
 private:
     virtual void TestTextureFormat( TEXTURE_FORMAT TexFormat )override final;
     void ProcessStaleResources(Uint64 SubmittedCmdBufferNumber, Uint64 SubmittedFenceValue, Uint64 CompletedFenceValue);
@@ -150,7 +150,7 @@ private:
     std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice>  m_PhysicalDevice;
     std::shared_ptr<VulkanUtilities::VulkanLogicalDevice>   m_LogicalVkDevice;
     
-    std::mutex                      m_CmdQueueMutex;
+    std::mutex                      m_SubmitCmdBufferMutex;
     RefCntAutoPtr<ICommandQueueVk>  m_pCommandQueue;
 
     EngineVkAttribs m_EngineAttribs;
@@ -198,7 +198,7 @@ private:
     VulkanUtilities::VulkanMemoryManager m_MemoryMgr;
     ResourceReleaseQueue<DynamicStaleResourceWrapper> m_ReleaseQueue;
 
-    VulkanRingBuffer m_DynamicHeapRingBuffer;
+    VulkanDynamicMemoryManager m_DynamicMemoryManager;
 };
 
 }

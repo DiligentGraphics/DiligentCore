@@ -62,7 +62,7 @@ public:
 
     virtual uint32_t GetQueueFamilyIndex()override final { return m_QueueFamilyIndex; }
     
-    virtual void IdleGPU()override final;
+    virtual Uint64 IdleGPU()override final;
 
     virtual Uint64 GetCompletedFenceValue()override final;
 

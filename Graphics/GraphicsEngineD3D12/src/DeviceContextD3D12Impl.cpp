@@ -531,6 +531,10 @@ namespace Diligent
         Flush(true);
     }
 
+    void DeviceContextD3D12Impl::FinishFrame(bool ForceRelease)
+    {
+    }
+
     void DeviceContextD3D12Impl::SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer** ppBuffers, Uint32* pOffsets, Uint32 Flags )
     {
         TDeviceContextBase::SetVertexBuffers( StartSlot, NumBuffersSet, ppBuffers, pOffsets, Flags );

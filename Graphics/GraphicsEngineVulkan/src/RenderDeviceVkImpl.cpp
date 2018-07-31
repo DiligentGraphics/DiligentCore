@@ -91,7 +91,7 @@ RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters*                    
     m_TransientCmdPoolMgr(*m_LogicalVkDevice, pCmdQueue->GetQueueFamilyIndex(), VK_COMMAND_POOL_CREATE_TRANSIENT_BIT),
     m_MemoryMgr("Global resource memory manager", *m_LogicalVkDevice, *m_PhysicalDevice, GetRawAllocator(), CreationAttribs.DeviceLocalMemoryPageSize, CreationAttribs.HostVisibleMemoryPageSize, CreationAttribs.DeviceLocalMemoryReserveSize, CreationAttribs.HostVisibleMemoryReserveSize),
     m_ReleaseQueue(GetRawAllocator()),
-    m_DynamicHeapRingBuffer
+    m_DynamicMemoryManager
     {
         GetRawAllocator(),
         *this,
@@ -110,7 +110,7 @@ RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters*                    
 RenderDeviceVkImpl::~RenderDeviceVkImpl()
 {
     // Explicitly destroy dynamic heap
-    m_DynamicHeapRingBuffer.Destroy();
+    m_DynamicMemoryManager.Destroy();
 	// Finish current frame. This will release resources taken by previous frames, and
     // will move all stale resources to the release queues. The resources will not be
     // release until the next call to FinishFrame()
@@ -209,7 +209,8 @@ void RenderDeviceVkImpl::SubmitCommandBuffer(const VkSubmitInfo& SubmitInfo,
                                              std::vector<std::pair<Uint64, RefCntAutoPtr<IFence> > >* pFences // List of fences to signal
                                              )
 {
-	std::lock_guard<std::mutex> LockGuard(m_CmdQueueMutex);
+    // The lock is required to atomically update m_NextCmdBuffNumber
+	std::lock_guard<std::mutex> LockGuard(m_SubmitCmdBufferMutex);
     auto NextFenceValue = m_pCommandQueue->GetNextFenceValue();
 	// Submit the command list to the queue
     SubmittedFenceValue = m_pCommandQueue->ExecuteCommandBuffer(SubmitInfo);
@@ -265,11 +266,9 @@ Uint64 RenderDeviceVkImpl::IdleGPU(bool ReleaseStaleObjects)
     Uint64 SubmittedCmdBuffNumber = 0;
 
     {
-        // Lock the command queue to avoid other threads interfering with the GPU
-        std::lock_guard<std::mutex> LockGuard(m_CmdQueueMutex);
-        SubmittedFenceValue = m_pCommandQueue->GetNextFenceValue();
-        // CommandQueueVkImpl::IdleGPU increments next fence value
-        m_pCommandQueue->IdleGPU();
+        // CommandQueueVkImpl::IdleGPU increments next fence value and returns
+        // the previous value
+        SubmittedFenceValue = m_pCommandQueue->IdleGPU();
 
         m_LogicalVkDevice->WaitIdle();
 
@@ -311,26 +310,6 @@ void RenderDeviceVkImpl::FinishFrame(bool ReleaseAllResources)
 {
     auto CompletedFenceValue = ReleaseAllResources ? std::numeric_limits<Uint64>::max() : GetCompletedFenceValue();
 
-    {
-        if (auto pImmediateCtx = m_wpImmediateContext.Lock())
-        {
-            auto pImmediateCtxVk = pImmediateCtx.RawPtr<DeviceContextVkImpl>();
-            if(pImmediateCtxVk->GetNumCommandsInCtx() != 0)
-                LOG_ERROR_MESSAGE("There are outstanding commands in the immediate device context when finishing the frame. This is an error and may cause unpredicted behaviour. Call Flush() to submit all commands for execution before finishing the frame");
-            pImmediateCtxVk->FinishFrame(ReleaseAllResources);
-        }
-
-        for (auto wpDeferredCtx : m_wpDeferredContexts)
-        {
-            if (auto pDeferredCtx = wpDeferredCtx.Lock())
-            {
-                auto pDeferredCtxVk = pDeferredCtx.RawPtr<DeviceContextVkImpl>();
-                if(pDeferredCtxVk->GetNumCommandsInCtx() != 0)
-                    LOG_ERROR_MESSAGE("There are outstanding commands in the deferred device context when finishing the frame. This is an error and may cause unpredicted behaviour. Close all deferred contexts and execute them before finishing the frame");
-                pDeferredCtxVk->FinishFrame(CompletedFenceValue);
-            }
-        }
-    }
 
     Uint64 SubmittedFenceValue = 0;
     Uint64 SubmittedCmdBuffNumber = 0;
@@ -344,7 +323,7 @@ void RenderDeviceVkImpl::FinishFrame(bool ReleaseAllResources)
     // until the GPU is finished with the current frame
     ProcessStaleResources(SubmittedCmdBuffNumber, SubmittedFenceValue, CompletedFenceValue);
 
-    m_DynamicHeapRingBuffer.FinishFrame(SubmittedFenceValue, CompletedFenceValue);
+    m_DynamicMemoryManager.ReleaseStaleAllocations(CompletedFenceValue);
 
     Atomics::AtomicIncrement(m_FrameNumber);
 }

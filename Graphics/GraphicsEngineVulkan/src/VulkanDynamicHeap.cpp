@@ -37,12 +37,12 @@ static VkDeviceSize GetDefaultAlignment(const VulkanUtilities::VulkanPhysicalDev
     return std::max(std::max(Limits.minUniformBufferOffsetAlignment, Limits.minTexelBufferOffsetAlignment), Limits.minStorageBufferOffsetAlignment);
 }
 
-VulkanRingBuffer::VulkanRingBuffer(IMemoryAllocator&    Allocator,
-                                   RenderDeviceVkImpl&  DeviceVk,
-                                   Uint32               Size) :
-    m_RingBuffer(Size, Allocator),
+VulkanDynamicMemoryManager::VulkanDynamicMemoryManager(IMemoryAllocator&   Allocator, 
+                                                       RenderDeviceVkImpl& DeviceVk, 
+                                                       Uint32              Size) :
     m_DeviceVk(DeviceVk),
-    m_DefaultAlignment(GetDefaultAlignment(DeviceVk.GetPhysicalDevice()))
+    m_DefaultAlignment(GetDefaultAlignment(DeviceVk.GetPhysicalDevice())),
+    m_AllocationStrategy(Allocator, Size)
 {
     VERIFY( (Size & (MinAlignment-1)) == 0, "Heap size is not min aligned");
     VkBufferCreateInfo VkBuffCI = {};
@@ -100,7 +100,7 @@ VulkanRingBuffer::VulkanRingBuffer(IMemoryAllocator&    Allocator,
     LOG_INFO_MESSAGE("GPU dynamic heap created. Total buffer size: ", FormatMemorySize(Size, 2) );
 }
 
-void VulkanRingBuffer::Destroy()
+void VulkanDynamicMemoryManager::Destroy()
 {
     if (m_VkBuffer)
     {
@@ -111,44 +111,40 @@ void VulkanRingBuffer::Destroy()
     m_CPUAddress = nullptr;
 }
 
-VulkanRingBuffer::~VulkanRingBuffer()
+VulkanDynamicMemoryManager::~VulkanDynamicMemoryManager()
 {
     VERIFY(m_BufferMemory == VK_NULL_HANDLE && m_VkBuffer == VK_NULL_HANDLE, "Vulkan resources must be explcitly released with Destroy()");
-    LOG_INFO_MESSAGE("Dynamic heap ring buffer usage stats:\n"
-                     "    Total size: ", FormatMemorySize(m_RingBuffer.GetMaxSize(), 2),
-                     ". Peak allocated size: ", FormatMemorySize(m_TotalPeakSize, 2, m_RingBuffer.GetMaxSize()),
-                     ". Peak frame size: ", FormatMemorySize(m_FramePeakSize, 2, m_RingBuffer.GetMaxSize()),
-                     ". Peak utilization: ", std::fixed, std::setprecision(1), static_cast<double>(m_TotalPeakSize) / static_cast<double>(std::max(m_RingBuffer.GetMaxSize(), size_t{1})) * 100.0, '%' );
+    auto Size = m_AllocationStrategy.GetSize();
+    LOG_INFO_MESSAGE("Dynamic memory manager usage stats:\n"
+                     "                       Total size: ", FormatMemorySize(Size, 2),
+                     ". Peak allocated size: ", FormatMemorySize(m_TotalPeakSize, 2, Size),
+                     ". Peak utilization: ", std::fixed, std::setprecision(1), static_cast<double>(m_TotalPeakSize) / static_cast<double>(std::max(Size, size_t{1})) * 100.0, '%' );
 }
 
-RingBuffer::OffsetType VulkanRingBuffer::Allocate(size_t SizeInBytes)
+VulkanDynamicMemoryManager::OffsetType VulkanDynamicMemoryManager::Allocate(OffsetType SizeInBytes)
 {
     VERIFY( (SizeInBytes & (MinAlignment-1)) == 0, "Allocation size is not minimally aligned" );
     
-    if (SizeInBytes > m_RingBuffer.GetMaxSize())
+    if (SizeInBytes > m_AllocationStrategy.GetSize())
     {
-        LOG_ERROR("Requested dynamic allocation size ", SizeInBytes, " exceeds maximum ring buffer size ", m_RingBuffer.GetMaxSize(), ". The app should increase dynamic heap size.");
-        return RingBuffer::InvalidOffset;
+        LOG_ERROR("Requested dynamic allocation size ", SizeInBytes, " exceeds maximum dynamic memory size ", m_AllocationStrategy.GetSize(), ". The app should increase dynamic heap size.");
+        return AllocationStategy::InvalidOffset;
     }
-    
-    std::lock_guard<std::mutex> Lock(m_RingBuffMtx);
-    RingBuffer::OffsetType Offset = m_RingBuffer.Allocate(SizeInBytes);
-    if(Offset == RingBuffer::InvalidOffset)
+    auto Offset = m_AllocationStrategy.Allocate(SizeInBytes);
+    if(Offset == AllocationStategy::InvalidOffset)
     {
-        // Failed to allocate space in the ring buffer. Try to wait for GPU to finish pening frames
-        // to release some space
+        // Allocation failed. Try to wait for GPU to finish pending frames to release some space
         auto StartIdleTime = std::chrono::high_resolution_clock::now();
         static constexpr const auto SleepPeriod = std::chrono::milliseconds(1);
         static constexpr const auto MaxIdleDuration = std::chrono::duration<double>{60.0 / 1000.0}; // 60 ms
         std::chrono::duration<double> IdleDuration;
         Uint32 SleepIterations = 0;
-        while(Offset == RingBuffer::InvalidOffset && IdleDuration < MaxIdleDuration)
+        while(Offset == AllocationStategy::InvalidOffset && IdleDuration < MaxIdleDuration)
         {
             auto LastCompletedFenceValue = m_DeviceVk.GetCompletedFenceValue();
-            m_RingBuffer.ReleaseCompletedFrames(LastCompletedFenceValue);
-
-            Offset = m_RingBuffer.Allocate(SizeInBytes);
-            if (Offset == RingBuffer::InvalidOffset)
+            m_AllocationStrategy.ReleaseStaleAllocations(LastCompletedFenceValue);
+            Offset = m_AllocationStrategy.Allocate(SizeInBytes);
+            if (Offset == AllocationStategy::InvalidOffset)
             {
                 std::this_thread::sleep_for(SleepPeriod);
                 ++SleepIterations;
@@ -158,48 +154,47 @@ RingBuffer::OffsetType VulkanRingBuffer::Allocate(size_t SizeInBytes)
             IdleDuration = std::chrono::duration_cast<std::chrono::duration<double>>(CurrTime - StartIdleTime);
         }
 
-        if(Offset == RingBuffer::InvalidOffset)
+        if(Offset == AllocationStategy::InvalidOffset)
         {
-            LOG_ERROR_MESSAGE("Space in dynamic heap is exausted! After idling for ", std::fixed, std::setprecision(1), IdleDuration.count()*1000.0, " ms still no space is available. Increase the size of the ring buffer by setting EngineVkAttribs::DynamicHeapSize to a greater value or optimize dynamic resource usage");
+            // Last resort - idle GPU (there seems to be a driver bug: vkQueueWaitIdle() deadlocks and never returns)
+            //m_DeviceVk.IdleGPU(true);
+            //auto LastCompletedFenceValue = m_DeviceVk.GetCompletedFenceValue();
+            //m_AllocationStrategy.ReleaseStaleAllocations(LastCompletedFenceValue);
+            //Offset = m_AllocationStrategy.Allocate(SizeInBytes);
+            if (Offset == AllocationStategy::InvalidOffset)
+            {
+                LOG_ERROR_MESSAGE("Space in dynamic heap is exausted! After idling for ", std::fixed, std::setprecision(1), IdleDuration.count()*1000.0, " ms still no space is available. Increase the size of the heap by setting EngineVkAttribs::DynamicHeapSize to a greater value or optimize dynamic resource usage");
+            }
+            //else
+            //{
+            //    LOG_WARNING_MESSAGE("Space in dynamic heap is almost exausted. Allocation forced idling the GPU. Increase the size of the heap by setting EngineVkAttribs::DynamicHeapSize to a greater value or optimize dynamic resource usage");
+            //}
         }
         else
         {
             if(SleepIterations == 0)
             {
-                LOG_WARNING_MESSAGE("Space in dynamic heap is almost exausted forcing mid-frame ring buffer shrinkage. Increase the size of the ring buffer by setting EngineVkAttribs::DynamicHeapSize to a greater value or optimize dynamic resource usage");
+                LOG_WARNING_MESSAGE("Space in dynamic heap is almost exausted forcing mid-frame shrinkage. Increase the size of the heap buffer by setting EngineVkAttribs::DynamicHeapSize to a greater value or optimize dynamic resource usage");
             }
             else
             {
-                LOG_WARNING_MESSAGE("Space in dynamic heap is almost exausted. Allocation from the ring buffer forced idle time of ", std::fixed, std::setprecision(1), IdleDuration.count()*1000.0, " ms. Increase the size of the ring buffer by setting EngineVkAttribs::DynamicHeapSize to a greater value or optimize dynamic resource usage");
+                LOG_WARNING_MESSAGE("Space in dynamic heap is almost exausted. Allocation forced wait time of ", std::fixed, std::setprecision(1), IdleDuration.count()*1000.0, " ms. Increase the size of the heap by setting EngineVkAttribs::DynamicHeapSize to a greater value or optimize dynamic resource usage");
             }
         }
     }
 
-    if (Offset != RingBuffer::InvalidOffset)
+    if (Offset != AllocationStategy::InvalidOffset)
     {
-        m_CurrentFrameSize += SizeInBytes;
-        m_FramePeakSize = std::max(m_FramePeakSize, m_CurrentFrameSize);
-        m_TotalPeakSize = std::max(m_TotalPeakSize, m_RingBuffer.GetUsedSize());
+        m_TotalPeakSize = std::max(m_TotalPeakSize, m_AllocationStrategy.GetUsedSize());
     }
     return Offset;
 }
 
-void VulkanRingBuffer::FinishFrame(Uint64 FenceValue, Uint64 LastCompletedFenceValue)
-{
-    //
-    //      Deferred contexts must not map dynamic buffers across several frames!
-    //
-
-    std::lock_guard<std::mutex> Lock(m_RingBuffMtx);
-    m_RingBuffer.FinishCurrentFrame(FenceValue);
-    m_RingBuffer.ReleaseCompletedFrames(LastCompletedFenceValue);
-    m_CurrentFrameSize = 0;
-}
 
 VulkanDynamicAllocation VulkanDynamicHeap::Allocate(Uint32 SizeInBytes, Uint32 Alignment)
 {
     if (Alignment == 0)
-        Alignment = static_cast<Uint32>(m_ParentRingBuffer.m_DefaultAlignment);
+        Alignment = static_cast<Uint32>(m_DynamicMemMgr.m_DefaultAlignment);
 
     const Uint32 AlignmentMask = Alignment - 1;
     // Assert that it's a power of two.
@@ -208,23 +203,23 @@ VulkanDynamicAllocation VulkanDynamicHeap::Allocate(Uint32 SizeInBytes, Uint32 A
     // Align the allocation
     Uint32 AlignedSize = (SizeInBytes + AlignmentMask) & ~AlignmentMask;
 
-    //
-    //      Deferred contexts must not map dynamic buffers across several frames!
-    //
-    auto Offset = RingBuffer::InvalidOffset;
-    if(AlignedSize > m_PagSize)
+    auto Offset = InvalidOffset;
+    if(AlignedSize > m_PagSize/2)
     {
-        // Allocate directly from the ring buffer
-        Offset = m_ParentRingBuffer.Allocate(AlignedSize);
+        AlignedSize = (SizeInBytes + VulkanDynamicMemoryManager::MinAlignment) & ~(VulkanDynamicMemoryManager::MinAlignment-1);
+        // Allocate directly from the memory manager
+        Offset = m_DynamicMemMgr.Allocate(AlignedSize);
+        m_Allocations.emplace_back(Offset, AlignedSize);
     }
     else
     {
-        if(m_CurrOffset == RingBuffer::InvalidOffset || AlignedSize > m_AvailableSize)
+        if(m_CurrOffset == InvalidOffset || AlignedSize > m_AvailableSize)
         {
-            m_CurrOffset = m_ParentRingBuffer.Allocate(m_PagSize);
+            m_CurrOffset = m_DynamicMemMgr.Allocate(m_PagSize);
+            m_Allocations.emplace_back(m_CurrOffset, m_PagSize);
             m_AvailableSize = m_PagSize;
         }
-        if(m_CurrOffset != RingBuffer::InvalidOffset)
+        if(m_CurrOffset != InvalidOffset)
         {
             Offset = m_CurrOffset;
             m_AvailableSize -= AlignedSize;
@@ -233,23 +228,35 @@ VulkanDynamicAllocation VulkanDynamicHeap::Allocate(Uint32 SizeInBytes, Uint32 A
     }
 
     // Every device context uses its own dynamic heap, so there is no need to lock
-    if(Offset != RingBuffer::InvalidOffset)
+    if(Offset != InvalidOffset)
     {
         m_CurrAllocatedSize += AlignedSize;
         m_CurrUsedSize      += SizeInBytes;
         m_PeakAllocatedSize = std::max(m_PeakAllocatedSize, m_CurrAllocatedSize);
         m_PeakUsedSize      = std::max(m_PeakUsedSize,      m_CurrUsedSize);
 
-        return VulkanDynamicAllocation{ m_ParentRingBuffer, Offset, SizeInBytes };
+        return VulkanDynamicAllocation{ m_DynamicMemMgr, Offset, SizeInBytes };
     }
     else
         return VulkanDynamicAllocation{};
 }
 
+void VulkanDynamicHeap::FinishFrame(Uint64 FenceValue)
+{
+    m_DynamicMemMgr.DiscardAllocations(m_Allocations, FenceValue);
+    m_Allocations.clear();
+
+    m_CurrOffset        = InvalidOffset;
+    m_AvailableSize     = 0;
+
+    m_CurrAllocatedSize = 0;
+    m_CurrUsedSize      = 0;
+}
+
 VulkanDynamicHeap::~VulkanDynamicHeap()
 {
     LOG_INFO_MESSAGE(m_HeapName, " usage stats:\n"
-        "    Peak used/peak allocated size: ", FormatMemorySize(m_PeakUsedSize, 2, m_PeakAllocatedSize), '/', FormatMemorySize(m_PeakAllocatedSize, 2, m_PeakAllocatedSize),
+        "                       Peak used/peak allocated size: ", FormatMemorySize(m_PeakUsedSize, 2, m_PeakAllocatedSize), '/', FormatMemorySize(m_PeakAllocatedSize, 2, m_PeakAllocatedSize),
         ". Peak utilization: ", std::fixed, std::setprecision(1), static_cast<double>(m_PeakUsedSize) / static_cast<double>(std::max(m_PeakAllocatedSize, 1U)) * 100.0, '%');
 }
 

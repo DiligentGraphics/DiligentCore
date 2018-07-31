@@ -460,6 +460,7 @@ void SwapChainVkImpl::Present(Uint32 SyncInterval)
         VERIFY(Result == VK_SUCCESS, "Present failed");
     }
 
+    pImmediateCtxVk->FinishFrame(false);
     pDeviceVk->FinishFrame();
 
     if (!m_IsMinimized)

@@ -147,6 +147,7 @@ public:
         return m_CommandBuffer;
     }
 
+    virtual void FinishFrame(bool ForceRelease)override final;
     void FinishFrame(Uint64 CompletedFenceValue);
 
     DescriptorPoolAllocation AllocateDynamicDescriptorSet(VkDescriptorSetLayout SetLayout)
@@ -159,6 +160,7 @@ public:
     VulkanDynamicAllocation AllocateDynamicSpace(Uint32 SizeInBytes);
 
     void ResetRenderTargets();
+    Int64 GetContextFrameNumber()const{return m_ContextFrameNumber;}
 
 private:
     void CommitRenderPassAndFramebuffer();
@@ -220,6 +222,8 @@ private:
     // Number of the command buffer currently being recorded by the context and that will
     // be submitted next
     Atomics::AtomicInt64 m_NextCmdBuffNumber;
+    Atomics::AtomicInt64 m_ContextFrameNumber;
+    Uint64 m_LastSubmittedFenceValue = 0;
 
     PipelineLayout::DescriptorSetBindInfo m_DescrSetBindInfo;
     VulkanDynamicHeap m_DynamicHeap;

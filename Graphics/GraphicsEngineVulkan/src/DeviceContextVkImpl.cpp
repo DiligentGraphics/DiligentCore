@@ -107,9 +107,10 @@ namespace Diligent
             Attribs.DynamicDescriptorPoolSize.MaxDescriptorSets,
         },
         m_NextCmdBuffNumber(0),
+        m_ContextFrameNumber(0),
         m_DynamicHeap
         {
-            pDeviceVkImpl->GetDynamicHeapRingBuffer(),
+            pDeviceVkImpl->GetDynamicMemoryManager(),
             GetDynamicHeapName(bIsDeferred, ContextId),
             bIsDeferred ? Attribs.DeferredCtxDynamicHeapPageSize : Attribs.ImmediateCtxDynamicHeapPageSize
         },
@@ -138,14 +139,14 @@ namespace Diligent
         // We need to idle when destroying deferred contexts as well since some resources may still be in use.
         pDeviceVkImpl->IdleGPU(true);
 
-        DisposeCurrentCmdBuffer(pDeviceVkImpl->GetNextFenceValue());
+        DisposeCurrentCmdBuffer(m_LastSubmittedFenceValue);
 
         // There must be no resources in the stale resource list. For immediate context, all stale resources must have been
         // moved to the release queue by Flush(). For deferred contexts, this should have happened in the last FinishCommandList()
         // call.
         VERIFY(m_ReleaseQueue.GetStaleResourceCount() == 0, "All stale resources must have been discarded at this point");
         VERIFY(m_DynamicDescriptorPool.GetStaleAllocationCount() == 0, "All stale dynamic descriptor set allocations must have been discarded at this point");
-        ReleaseStaleContextResources(m_NextCmdBuffNumber, pDeviceVkImpl->GetNextFenceValue(), pDeviceVkImpl->GetCompletedFenceValue());
+        ReleaseStaleContextResources(m_NextCmdBuffNumber, m_LastSubmittedFenceValue, pDeviceVkImpl->GetCompletedFenceValue());
         // Since we idled the GPU, all stale resources must have been destroyed now
         VERIFY(m_ReleaseQueue.GetPendingReleaseResourceCount() == 0, "All stale resources must have been destroyed at this point");
         VERIFY(m_DynamicDescriptorPool.GetPendingReleaseAllocationCount() == 0, "All stale descriptor set allocations must have been destroyed at this point");
@@ -316,7 +317,7 @@ namespace Diligent
             {
                 DynamicBufferPresent = true;
 #ifdef DEVELOPMENT
-                pBufferVk->DvpVerifyDynamicAllocation(m_ContextId);
+                pBufferVk->DvpVerifyDynamicAllocation(this);
 #endif
             }
             if (!pBufferVk->CheckAccessFlags(VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT))
@@ -325,7 +326,7 @@ namespace Diligent
             // Device context keeps strong references to all vertex buffers.
 
             vkVertexBuffers[slot] = pBufferVk->GetVkBuffer();
-            Offsets[slot] = CurrStream.Offset + pBufferVk->GetDynamicOffset(m_ContextId);
+            Offsets[slot] = CurrStream.Offset + pBufferVk->GetDynamicOffset(m_ContextId, this);
         }
 
         //GraphCtx.FlushResourceBarriers();
@@ -410,7 +411,7 @@ namespace Diligent
 
             DEV_CHECK_ERR(DrawAttribs.IndexType == VT_UINT16 || DrawAttribs.IndexType == VT_UINT32, "Unsupported index format. Only R16_UINT and R32_UINT are allowed.");
             VkIndexType vkIndexType = DrawAttribs.IndexType == VT_UINT16 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32;
-            m_CommandBuffer.BindIndexBuffer(pBuffVk->GetVkBuffer(), m_IndexDataStartOffset + pBuffVk->GetDynamicOffset(m_ContextId), vkIndexType);
+            m_CommandBuffer.BindIndexBuffer(pBuffVk->GetVkBuffer(), m_IndexDataStartOffset + pBuffVk->GetDynamicOffset(m_ContextId, this), vkIndexType);
         }
 
         if (m_State.CommittedVBsUpToDate)
@@ -461,15 +462,15 @@ namespace Diligent
             {
 #ifdef DEVELOPMENT
                 if (pBufferVk->GetDesc().Usage == USAGE_DYNAMIC)
-                    pBufferVk->DvpVerifyDynamicAllocation(m_ContextId);
+                    pBufferVk->DvpVerifyDynamicAllocation(this);
 #endif
                 if (!pBufferVk->CheckAccessFlags(VK_ACCESS_INDIRECT_COMMAND_READ_BIT))
                     BufferMemoryBarrier(*pBufferVk, VK_ACCESS_INDIRECT_COMMAND_READ_BIT);
 
                 if ( DrawAttribs.IsIndexed )
-                    m_CommandBuffer.DrawIndexedIndirect(pBufferVk->GetVkBuffer(), pBufferVk->GetDynamicOffset(m_ContextId) + DrawAttribs.IndirectDrawArgsOffset, 1, 0);
+                    m_CommandBuffer.DrawIndexedIndirect(pBufferVk->GetVkBuffer(), pBufferVk->GetDynamicOffset(m_ContextId, this) + DrawAttribs.IndirectDrawArgsOffset, 1, 0);
                 else
-                    m_CommandBuffer.DrawIndirect(pBufferVk->GetVkBuffer(), pBufferVk->GetDynamicOffset(m_ContextId) + DrawAttribs.IndirectDrawArgsOffset, 1, 0);
+                    m_CommandBuffer.DrawIndirect(pBufferVk->GetVkBuffer(), pBufferVk->GetDynamicOffset(m_ContextId, this) + DrawAttribs.IndirectDrawArgsOffset, 1, 0);
             }
         }
         else
@@ -522,14 +523,14 @@ namespace Diligent
             {
 #ifdef DEVELOPMENT
                 if (pBufferVk->GetDesc().Usage == USAGE_DYNAMIC)
-                    pBufferVk->DvpVerifyDynamicAllocation(m_ContextId);
+                    pBufferVk->DvpVerifyDynamicAllocation(this);
 #endif
 
                 // Buffer memory barries must be executed outside of render pass
                 if (!pBufferVk->CheckAccessFlags(VK_ACCESS_INDIRECT_COMMAND_READ_BIT))
                     BufferMemoryBarrier(*pBufferVk, VK_ACCESS_INDIRECT_COMMAND_READ_BIT);
 
-                m_CommandBuffer.DispatchIndirect(pBufferVk->GetVkBuffer(), pBufferVk->GetDynamicOffset(m_ContextId) + DispatchAttrs.DispatchArgsByteOffset);
+                m_CommandBuffer.DispatchIndirect(pBufferVk->GetVkBuffer(), pBufferVk->GetDynamicOffset(m_ContextId, this) + DispatchAttrs.DispatchArgsByteOffset);
             }
             else
             {
@@ -754,12 +755,23 @@ namespace Diligent
         ++m_State.NumCommands;
     }
 
+    void DeviceContextVkImpl::FinishFrame(bool ForceRelease)
+    {
+        FinishFrame(ForceRelease ? std::numeric_limits<Uint64>::max() : m_pDevice.RawPtr<RenderDeviceVkImpl>()->GetCompletedFenceValue());
+    }
+
     void DeviceContextVkImpl::FinishFrame(Uint64 CompletedFenceValue)
     {
+        if(GetNumCommandsInCtx() != 0)
+            LOG_ERROR_MESSAGE(m_bIsDeferred ? 
+                "There are outstanding commands in the deferred device context when finishing the frame. This is an error and may cause unpredicted behaviour. Close all deferred contexts and execute them before finishing the frame" :
+                "There are outstanding commands in the immediate device context when finishing the frame. This is an error and may cause unpredicted behaviour. Call Flush() to submit all commands for execution before finishing the frame");
+
         m_ReleaseQueue.Purge(CompletedFenceValue);
         m_UploadHeap.ShrinkMemory();
         m_DynamicDescriptorPool.ReleaseStaleAllocations(CompletedFenceValue);
-        m_DynamicHeap.Reset();
+        m_DynamicHeap.FinishFrame(m_LastSubmittedFenceValue);
+        Atomics::AtomicIncrement(m_ContextFrameNumber);
     }
 
     void DeviceContextVkImpl::ReleaseStaleContextResources(Uint64 SubmittedCmdBufferNumber, Uint64 SubmittedFenceValue, Uint64 CompletedFenceValue)
@@ -814,7 +826,7 @@ namespace Diligent
 
         // Submit command buffer even if there are no commands to release stale resources.
         //if (SubmitInfo.commandBufferCount != 0 || SubmitInfo.waitSemaphoreCount !=0 || SubmitInfo.signalSemaphoreCount != 0)
-        auto SubmittedFenceValue = pDeviceVkImpl->ExecuteCommandBuffer(SubmitInfo, this, &m_PendingFences);
+        m_LastSubmittedFenceValue = pDeviceVkImpl->ExecuteCommandBuffer(SubmitInfo, this, &m_PendingFences);
         
         m_WaitSemaphores.clear();
         m_WaitDstStageMasks.clear();
@@ -823,14 +835,14 @@ namespace Diligent
 
         if (vkCmdBuff != VK_NULL_HANDLE)
         {
-            DisposeCurrentCmdBuffer(SubmittedFenceValue);
+            DisposeCurrentCmdBuffer(m_LastSubmittedFenceValue);
         }
 
         // Release temporary resources that were used by this context while recording the last command buffer
         auto SubmittedCmdBuffNumber = m_NextCmdBuffNumber;
         Atomics::AtomicIncrement(m_NextCmdBuffNumber);
         auto CompletedFenceValue = pDeviceVkImpl->GetCompletedFenceValue();
-        ReleaseStaleContextResources(SubmittedCmdBuffNumber, SubmittedFenceValue, CompletedFenceValue);
+        ReleaseStaleContextResources(SubmittedCmdBuffNumber, m_LastSubmittedFenceValue, CompletedFenceValue);
 
         m_State = ContextState{};
         m_DescrSetBindInfo.Reset();
@@ -1112,11 +1124,11 @@ namespace Diligent
         if (!pDstBuffVk->CheckAccessFlags(VK_ACCESS_TRANSFER_WRITE_BIT))
             BufferMemoryBarrier(*pDstBuffVk, VK_ACCESS_TRANSFER_WRITE_BIT);
         VkBufferCopy CopyRegion;
-        CopyRegion.srcOffset = SrcOffset + pSrcBuffVk->GetDynamicOffset(m_ContextId);
+        CopyRegion.srcOffset = SrcOffset + pSrcBuffVk->GetDynamicOffset(m_ContextId, this);
         CopyRegion.dstOffset = DstOffset;
         CopyRegion.size = NumBytes;
         VERIFY(pDstBuffVk->m_VulkanBuffer != VK_NULL_HANDLE, "Copy destination buffer must not be suballocated");
-        VERIFY_EXPR(pDstBuffVk->GetDynamicOffset(m_ContextId) == 0);
+        VERIFY_EXPR(pDstBuffVk->GetDynamicOffset(m_ContextId, this) == 0);
         m_CommandBuffer.CopyBuffer(pSrcBuffVk->GetVkBuffer(), pDstBuffVk->GetVkBuffer(), 1, &CopyRegion);
         ++m_State.NumCommands;
     }
@@ -1275,9 +1287,10 @@ namespace Diligent
         SubmitInfo.pCommandBuffers = &vkCmdBuff;
         auto pDeviceVkImpl = m_pDevice.RawPtr<RenderDeviceVkImpl>();
         VERIFY_EXPR(m_PendingFences.empty());
-        auto SubmittedFenceValue = pDeviceVkImpl->ExecuteCommandBuffer(SubmitInfo, this, nullptr);
-
         auto pDeferredCtxVkImpl = pDeferredCtx.RawPtr<DeviceContextVkImpl>();
+        auto SubmittedFenceValue = pDeviceVkImpl->ExecuteCommandBuffer(SubmitInfo, this, nullptr);
+        pDeferredCtxVkImpl->m_LastSubmittedFenceValue = SubmittedFenceValue;
+        
         // It is OK to dispose command buffer from another thread. We are not going to
         // record any commands and only need to add the buffer to the queue
         pDeferredCtxVkImpl->DisposeVkCmdBuffer(vkCmdBuff, SubmittedFenceValue);
@@ -1356,7 +1369,7 @@ namespace Diligent
         EnsureVkCmdBuffer();
 
         VERIFY(BufferVk.m_VulkanBuffer != VK_NULL_HANDLE, "Cannot transition suballocated buffer");
-        VERIFY_EXPR(BufferVk.GetDynamicOffset(m_ContextId) == 0);
+        VERIFY_EXPR(BufferVk.GetDynamicOffset(m_ContextId, this) == 0);
         auto vkBuff = BufferVk.GetVkBuffer();
         m_CommandBuffer.BufferMemoryBarrier(vkBuff, BufferVk.m_AccessFlags, NewAccessFlags);
         BufferVk.SetAccessFlags(NewAccessFlags);
@@ -1392,11 +1405,9 @@ namespace Diligent
 
     VulkanDynamicAllocation DeviceContextVkImpl::AllocateDynamicSpace(Uint32 SizeInBytes)
     {
-        auto *pDeviceVkImpl = m_pDevice.RawPtr<RenderDeviceVkImpl>();
-
         auto DynAlloc = m_DynamicHeap.Allocate(SizeInBytes, 0);
-#ifdef _DEBUG
-        DynAlloc.dbgFrameNumber = pDeviceVkImpl->GetCurrentFrameNumber();
+#ifdef DEVELOPMENT
+        DynAlloc.dvpFrameNumber = m_ContextFrameNumber;
 #endif
         return DynAlloc;
     }

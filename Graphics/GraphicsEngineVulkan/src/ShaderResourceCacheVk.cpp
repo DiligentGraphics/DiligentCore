@@ -330,8 +330,10 @@ VkDescriptorImageInfo ShaderResourceCacheVk::Resource::GetSamplerDescriptorWrite
     return DescrImgInfo;
 }
 
-Uint32 ShaderResourceCacheVk::GetDynamicBufferOffsets(Uint32 CtxId, std::vector<uint32_t>& Offsets)const
+Uint32 ShaderResourceCacheVk::GetDynamicBufferOffsets(DeviceContextVkImpl *pCtxVkImpl, std::vector<uint32_t>& Offsets)const
 {
+    auto CtxId = pCtxVkImpl->GetContextId();
+
     // If any of the sets being bound include dynamic uniform or storage buffers, then 
     // pDynamicOffsets includes one element for each array element in each dynamic descriptor 
     // type binding in each set. Values are taken from pDynamicOffsets in an order such that 
@@ -353,7 +355,7 @@ Uint32 ShaderResourceCacheVk::GetDynamicBufferOffsets(Uint32 CtxId, std::vector<
                 break;
 
             const auto* pBufferVk = Res.pObject.RawPtr<const BufferVkImpl>();
-            auto Offset = pBufferVk->GetDynamicOffset(CtxId);
+            auto Offset = pBufferVk->GetDynamicOffset(CtxId, pCtxVkImpl);
             Offsets[OffsetInd++] = Offset;
 
             ++res;
@@ -367,7 +369,7 @@ Uint32 ShaderResourceCacheVk::GetDynamicBufferOffsets(Uint32 CtxId, std::vector<
 
             const auto* pBufferVkView = Res.pObject.RawPtr<const BufferViewVkImpl>();
             const auto* pBufferVk = pBufferVkView->GetBufferVk();
-            auto Offset = pBufferVk->GetDynamicOffset(CtxId);
+            auto Offset = pBufferVk->GetDynamicOffset(CtxId, pCtxVkImpl);
             Offsets[OffsetInd++] = Offset;
 
             ++res;

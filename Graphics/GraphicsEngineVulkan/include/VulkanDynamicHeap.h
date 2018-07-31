@@ -26,119 +26,246 @@
 #include <mutex>
 #include "Vulkan.h"
 #include "RingBuffer.h"
+#include "VulkanUtilities/VulkanMemoryManager.h"
 #include "VulkanUtilities/VulkanLogicalDevice.h"
 #include "VulkanUtilities/VulkanObjectWrappers.h"
 
 namespace Diligent
 {
 
-// Vulkand dynamic heap implementation consists of a single ring buffer and a number of dynamic heaps,
-// one per context. Every dynamic heap suballocates chunk of memory from the global ring buffer. Within
-// every chunk, memory is allocated in simple lock-free linear fashion:
-//   
-//  | <----------------------frame 0---------------------------->|<-----------------frame 1-------------->
-//  | Ctx0-f0-Chunk0  |  Ctx1-f0-Chunk0 | Ctx0-f0-Chunk1 |  ...  |  Ctx0-f1-Chunk0 | Ctx1-f1-Chunk0 |....
-//
+// Vulkand dynamic heap implementation consists of a number of dynamic heaps, one per context.
+// Every dynamic heap suballocates chunk of memory from the global memory manager. Within
+// every chunk, memory is allocated in a simple lock-free linear fashion. All used allocations are discarded
+// when FinishFrame() is called
 
 class RenderDeviceVkImpl;
 class VulkanRingBuffer;
+class VulkanDynamicMemoryManager;
 
 // sizeof(VulkanDynamicAllocation) must be at least 16 to avoid false cache line sharing problems
 struct VulkanDynamicAllocation
 {
-    VulkanDynamicAllocation(){}
+    VulkanDynamicAllocation()noexcept{}
 
-    VulkanDynamicAllocation(VulkanRingBuffer& _ParentHeap, size_t _Offset, size_t _Size) :
-        pParentDynamicHeap(&_ParentHeap),
-        Offset           (_Offset), 
-        Size             (_Size)
+    VulkanDynamicAllocation(VulkanDynamicMemoryManager& _DynamicMemMgr, size_t _Offset, size_t _Size)noexcept :
+        pDynamicMemMgr(&_DynamicMemMgr),
+        Offset        (_Offset), 
+        Size          (_Size)
     {}
 
     VulkanDynamicAllocation             (const VulkanDynamicAllocation&) = delete;
     VulkanDynamicAllocation& operator = (const VulkanDynamicAllocation&) = delete;
     VulkanDynamicAllocation             (VulkanDynamicAllocation&& rhs)noexcept :
-        pParentDynamicHeap(rhs.pParentDynamicHeap),
-        Offset            (rhs.Offset),
-        Size              (rhs.Size)
-#ifdef _DEBUG
-        , dbgFrameNumber(rhs.dbgFrameNumber)
+        pDynamicMemMgr(rhs.pDynamicMemMgr),
+        Offset        (rhs.Offset),
+        Size          (rhs.Size)
+#ifdef DEVELOPMENT
+        , dvpFrameNumber(rhs.dvpFrameNumber)
 #endif
     {
-        rhs.pParentDynamicHeap = nullptr;
+        rhs.pDynamicMemMgr = nullptr;
         rhs.Offset = 0;
         rhs.Size = 0;
-#ifdef _DEBUG
-        rhs.dbgFrameNumber = 0;
+#ifdef DEVELOPMENT
+        rhs.dvpFrameNumber = 0;
 #endif
     }
 
     VulkanDynamicAllocation& operator = (VulkanDynamicAllocation&& rhs)noexcept // Must be noexcept on MSVC, so can't use = default
     {
-        pParentDynamicHeap = rhs.pParentDynamicHeap;
-        Offset             = rhs.Offset;
-        Size               = rhs.Size;
-        rhs.pParentDynamicHeap = nullptr;
-        rhs.Offset             = 0;
-        rhs.Size               = 0;
-#ifdef _DEBUG
-        dbgFrameNumber = rhs.dbgFrameNumber;
-        rhs.dbgFrameNumber = 0;
+        pDynamicMemMgr = rhs.pDynamicMemMgr;
+        Offset         = rhs.Offset;
+        Size           = rhs.Size;
+        rhs.pDynamicMemMgr = nullptr;
+        rhs.Offset         = 0;
+        rhs.Size           = 0;
+#ifdef DEVELOPMENT
+        dvpFrameNumber = rhs.dvpFrameNumber;
+        rhs.dvpFrameNumber = 0;
 #endif
         return *this;
     }
 
-    VulkanRingBuffer* pParentDynamicHeap = nullptr;
-    size_t             Offset             = 0;		// Offset from the start of the buffer resource
-    size_t             Size               = 0;	    // Reserved size of this allocation
-#ifdef _DEBUG
-    Uint64             dbgFrameNumber     = 0;
+    VulkanDynamicMemoryManager* pDynamicMemMgr = nullptr;
+    size_t                      Offset         = 0;		// Offset from the start of the buffer resource
+    size_t                      Size           = 0;	    // Reserved size of this allocation
+#ifdef DEVELOPMENT
+    Int64                       dvpFrameNumber = 0;
 #endif
 };
 
-class VulkanRingBuffer
+
+// Having global ring buffer shared between all contexts is inconvinient because all contexts
+// must share the same frame. Having individual ring bufer per context may result in a lot of unused
+// memory. As a result, ring buffer is not currently used for dynamic memory management.
+// Instead, every dynamic heap allocates pages from the global dynamic memory manager.
+class RingBufferAllocationStrategy
 {
 public:
-    VulkanRingBuffer(IMemoryAllocator&         Allocator, 
-                     class RenderDeviceVkImpl& DeviceVk, 
-                     Uint32                    Size);
-    ~VulkanRingBuffer();
+    using OffsetType    = RingBuffer::OffsetType;
+    static constexpr const OffsetType InvalidOffset = RingBuffer::InvalidOffset;
 
-    VulkanRingBuffer            (const VulkanRingBuffer&) = delete;
-    VulkanRingBuffer            (VulkanRingBuffer&&)      = delete;
-    VulkanRingBuffer& operator= (const VulkanRingBuffer&) = delete;
-    VulkanRingBuffer& operator= (VulkanRingBuffer&&)      = delete;
+    RingBufferAllocationStrategy(IMemoryAllocator& Allocator, 
+                                 Uint32            Size) : 
+        m_RingBuffer(Size, Allocator)
+    {}
 
-    void FinishFrame(Uint64 FenceValue, Uint64 LastCompletedFenceValue);
-    void Destroy();
+    RingBufferAllocationStrategy            (const RingBufferAllocationStrategy&) = delete;
+    RingBufferAllocationStrategy            (RingBufferAllocationStrategy&&)      = delete;
+    RingBufferAllocationStrategy& operator= (const RingBufferAllocationStrategy&) = delete;
+    RingBufferAllocationStrategy& operator= (RingBufferAllocationStrategy&&)      = delete;
+
+    void DiscardAllocations(const std::vector<std::pair<OffsetType, OffsetType>>& Allocations, Uint64 FenceValue)
+    {
+        std::lock_guard<std::mutex> Lock(m_RingBufferMtx);
+        m_RingBuffer.FinishCurrentFrame(FenceValue);
+    }
+
+    void ReleaseStaleAllocations(Uint64 LastCompletedFenceValue)
+    {
+        std::lock_guard<std::mutex> Lock(m_RingBufferMtx);
+        m_RingBuffer.ReleaseCompletedFrames(LastCompletedFenceValue);
+    }
+
+    OffsetType Allocate(OffsetType SizeInBytes)
+    {
+        std::lock_guard<std::mutex> Lock(m_RingBufferMtx);
+        return m_RingBuffer.Allocate(SizeInBytes);
+    }
+
+    OffsetType GetSize()    const{return m_RingBuffer.GetMaxSize();}
+    OffsetType GetUsedSize()const{return m_RingBuffer.GetUsedSize();}
+private:
+    std::mutex m_RingBufferMtx;
+    RingBuffer m_RingBuffer;
+};
+
+
+class ListBasedAllocationStrategy
+{
+public:
+    using OffsetType    = VariableSizeAllocationsManager::OffsetType;
+    static constexpr const OffsetType InvalidOffset = VariableSizeAllocationsManager::InvalidOffset;
+
+    ListBasedAllocationStrategy(IMemoryAllocator& Allocator, 
+                                Uint32            Size) : 
+        m_AllocationsMgr(Size, Allocator)
+    {}
+
+    ListBasedAllocationStrategy            (const ListBasedAllocationStrategy&) = delete;
+    ListBasedAllocationStrategy            (ListBasedAllocationStrategy&&)      = delete;
+    ListBasedAllocationStrategy& operator= (const ListBasedAllocationStrategy&) = delete;
+    ListBasedAllocationStrategy& operator= (ListBasedAllocationStrategy&&)      = delete;
+
+    void DiscardAllocations(const std::vector<std::pair<OffsetType, OffsetType>>& Allocations, Uint64 FenceValue)
+    {
+        std::lock_guard<std::mutex> Lock(m_ReleaseQueueMtx);
+        for(const auto& Allocation : Allocations)
+            m_ReleaseQueue.emplace_back(Allocation.first, Allocation.second, FenceValue);
+    }
+
+    void ReleaseStaleAllocations(Uint64 LastCompletedFenceValue)
+    {
+        std::lock_guard<std::mutex> MgrLock(m_AllocationsMgrMtx);
+        std::lock_guard<std::mutex> QueueLock(m_ReleaseQueueMtx);
+        while (!m_ReleaseQueue.empty())
+        {
+            auto &FirstAllocation = m_ReleaseQueue.front();
+            if (FirstAllocation.FenceValue <= LastCompletedFenceValue)
+            {
+                m_AllocationsMgr.Free(FirstAllocation.Offset, FirstAllocation.Size);
+                m_ReleaseQueue.pop_front();
+            }
+            else
+                break;
+        }
+    }
+
+    OffsetType Allocate(OffsetType SizeInBytes)
+    {
+        std::lock_guard<std::mutex> Lock(m_AllocationsMgrMtx);
+        return m_AllocationsMgr.Allocate(SizeInBytes);
+    }
+    OffsetType GetSize()    const{return m_AllocationsMgr.GetMaxSize();}
+    OffsetType GetUsedSize()const{return m_AllocationsMgr.GetUsedSize();}
+
+private:
+    std::mutex                      m_AllocationsMgrMtx;
+    VariableSizeAllocationsManager  m_AllocationsMgr;
+
+    struct StaleAllocationInfo
+    {
+        const OffsetType Offset;
+        const OffsetType Size;
+        const Uint64     FenceValue;
+        StaleAllocationInfo(OffsetType _Offset,
+                            OffsetType _Size,
+                            Uint64     _FenceValue) :
+            Offset    (_Offset),
+            Size      (_Size),
+            FenceValue(_FenceValue)
+        {}
+    };
+    std::deque< StaleAllocationInfo > m_ReleaseQueue;
+    std::mutex                        m_ReleaseQueueMtx;
+};
+
+// We cannot use global memory manager for dynamic resources because they
+// need to use the same Vulkan buffer
+class VulkanDynamicMemoryManager
+{
+public:
+    using AllocationStategy = ListBasedAllocationStrategy; // or RingBufferAllocationStrategy
+    using OffsetType = AllocationStategy::OffsetType;
+
+    VulkanDynamicMemoryManager(IMemoryAllocator&         Allocator, 
+                               class RenderDeviceVkImpl& DeviceVk, 
+                               Uint32                    Size);
+    ~VulkanDynamicMemoryManager();
+
+    VulkanDynamicMemoryManager            (const VulkanDynamicMemoryManager&) = delete;
+    VulkanDynamicMemoryManager            (VulkanDynamicMemoryManager&&)      = delete;
+    VulkanDynamicMemoryManager& operator= (const VulkanDynamicMemoryManager&) = delete;
+    VulkanDynamicMemoryManager& operator= (VulkanDynamicMemoryManager&&)      = delete;
+
+    void ReleaseStaleAllocations(Uint64 LastCompletedFenceValue)
+    {
+        m_AllocationStrategy.ReleaseStaleAllocations(LastCompletedFenceValue);
+    }
+
+    void DiscardAllocations(const std::vector<std::pair<OffsetType, OffsetType>>& Allocations, Uint64 FenceValue)
+    {
+        m_AllocationStrategy.DiscardAllocations(Allocations, FenceValue);
+    }
 
     VkBuffer GetVkBuffer()  const{return m_VkBuffer;}
     Uint8*   GetCPUAddress()const{return m_CPUAddress;}
 
-private:
-    friend class VulkanDynamicHeap;
+    void Destroy();
 
     static constexpr const Uint32 MinAlignment = 1024;
-    RingBuffer::OffsetType Allocate(size_t SizeInBytes);
 
-    std::mutex          m_RingBuffMtx;
-    RingBuffer          m_RingBuffer;
-    RenderDeviceVkImpl& m_DeviceVk;
+private:
+    friend class VulkanDynamicHeap;
+    OffsetType Allocate(OffsetType SizeInBytes);
 
+    RenderDeviceVkImpl&                  m_DeviceVk;
     VulkanUtilities::BufferWrapper       m_VkBuffer;
     VulkanUtilities::DeviceMemoryWrapper m_BufferMemory;
     Uint8*                               m_CPUAddress;
     const VkDeviceSize                   m_DefaultAlignment;
-    RingBuffer::OffsetType               m_TotalPeakSize    = 0;
-    RingBuffer::OffsetType               m_CurrentFrameSize = 0;
-    RingBuffer::OffsetType               m_FramePeakSize    = 0;
+
+    AllocationStategy                    m_AllocationStrategy;
+
+    OffsetType  m_TotalPeakSize    = 0;
 };
 
 
 class VulkanDynamicHeap
 {
 public:
-    VulkanDynamicHeap(VulkanRingBuffer& ParentRingBuffer, std::string HeapName, Uint32 PageSize) :
-        m_ParentRingBuffer(ParentRingBuffer),
+    VulkanDynamicHeap(VulkanDynamicMemoryManager& DynamicMemMgr, std::string HeapName, Uint32 PageSize) :
+        m_DynamicMemMgr(DynamicMemMgr),
         m_HeapName(std::move(HeapName)),
         m_PagSize(PageSize)
     {}
@@ -151,21 +278,18 @@ public:
     ~VulkanDynamicHeap();
 
     VulkanDynamicAllocation Allocate(Uint32 SizeInBytes, Uint32 Alignment);
+    void FinishFrame(Uint64 FenceValue);
 
-    void Reset()
-    {
-        m_CurrOffset = RingBuffer::InvalidOffset;
-        m_AvailableSize     = 0;
-
-        m_CurrAllocatedSize = 0;
-        m_CurrUsedSize      = 0;
-    }
+    using OffsetType = VulkanDynamicMemoryManager::AllocationStategy::OffsetType;
+    static constexpr OffsetType InvalidOffset = VulkanDynamicMemoryManager::AllocationStategy::InvalidOffset;
 
 private:
-    VulkanRingBuffer& m_ParentRingBuffer;
+    VulkanDynamicMemoryManager& m_DynamicMemMgr;
     const std::string m_HeapName;
 
-    RingBuffer::OffsetType m_CurrOffset = RingBuffer::InvalidOffset;
+    std::vector<std::pair<OffsetType, OffsetType>> m_Allocations;
+
+    OffsetType m_CurrOffset = InvalidOffset;
     const Uint32 m_PagSize;
     Uint32 m_AvailableSize     = 0;
 

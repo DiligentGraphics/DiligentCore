@@ -506,7 +506,7 @@ void PipelineLayout::BindDescriptorSetsWithDynamicOffsets(DeviceContextVkImpl*  
     VERIFY_EXPR(BindInfo.DynamicOffsets.size() >= BindInfo.DynamicOffsetCount);
 #endif
 
-    auto NumOffsetsWritten = BindInfo.pResourceCache->GetDynamicBufferOffsets(pCtxVkImpl->GetContextId(), BindInfo.DynamicOffsets);
+    auto NumOffsetsWritten = BindInfo.pResourceCache->GetDynamicBufferOffsets(pCtxVkImpl, BindInfo.DynamicOffsets);
     VERIFY_EXPR(NumOffsetsWritten == BindInfo.DynamicOffsetCount);
 
     auto& CmdBuffer = pCtxVkImpl->GetCommandBuffer();

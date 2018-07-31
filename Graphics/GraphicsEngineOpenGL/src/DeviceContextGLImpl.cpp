@@ -976,6 +976,10 @@ namespace Diligent
         glFlush();
     }
 
+    void DeviceContextGLImpl::FinishFrame(bool ForceRelease)
+    {
+    }
+
     void DeviceContextGLImpl::FinishCommandList(class ICommandList **ppCommandList)
     {
         LOG_ERROR("Deferred contexts are not supported in OpenGL mode");

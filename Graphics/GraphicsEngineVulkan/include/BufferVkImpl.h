@@ -41,6 +41,7 @@ namespace Diligent
 {
 
 class FixedBlockMemoryAllocator;
+class DeviceContextVkImpl;
 
 /// Implementation of the Diligent::IBufferVk interface
 class BufferVkImpl : public BufferBase<IBufferVk, RenderDeviceVkImpl, BufferViewVkImpl, FixedBlockMemoryAllocator>
@@ -69,10 +70,10 @@ public:
     virtual void Unmap( IDeviceContext* pContext, MAP_TYPE MapType, Uint32 MapFlags )override;
 
 #ifdef DEVELOPMENT
-    void DvpVerifyDynamicAllocation(Uint32 ContextId)const;
+    void DvpVerifyDynamicAllocation(DeviceContextVkImpl* pCtx)const;
 #endif
 
-    Uint32 GetDynamicOffset(Uint32 CtxId)const
+    Uint32 GetDynamicOffset(Uint32 CtxId, DeviceContextVkImpl* pCtx)const
     {
         if(m_VulkanBuffer != VK_NULL_HANDLE)
         {
@@ -83,7 +84,7 @@ public:
             VERIFY(m_Desc.Usage == USAGE_DYNAMIC, "Dynamic buffer is expected");
             VERIFY_EXPR(!m_DynamicAllocations.empty());
 #ifdef DEVELOPMENT
-            DvpVerifyDynamicAllocation(CtxId);
+            DvpVerifyDynamicAllocation(pCtx);
 #endif
             auto& DynAlloc = m_DynamicAllocations[CtxId];
             return static_cast<Uint32>(DynAlloc.Offset);

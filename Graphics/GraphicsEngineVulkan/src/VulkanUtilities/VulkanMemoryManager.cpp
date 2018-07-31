@@ -202,10 +202,10 @@ void VulkanMemoryManager::OnFreeAllocation(VkDeviceSize Size, bool IsHostVisble)
 VulkanMemoryManager::~VulkanMemoryManager()
 {
     LOG_INFO_MESSAGE("VulkanMemoryManager '", m_MgrName, "' stats:\n"
-                     "    Peak used/peak allocated device-local memory size: ", 
+                     "                       Peak used/peak allocated device-local memory size: ", 
                      Diligent::FormatMemorySize(m_PeakUsedSize[0],      2, m_PeakAllocatedSize[0]), "/",
                      Diligent::FormatMemorySize( m_PeakAllocatedSize[0], 2, m_PeakAllocatedSize[0]),
-                     "\n    Peak used/peak allocated host-visible memory size: ", 
+                     "\n                       Peak used/peak allocated host-visible memory size: ", 
                      Diligent::FormatMemorySize(m_PeakUsedSize[1],      2, m_PeakAllocatedSize[1]), "/",
                      Diligent::FormatMemorySize(m_PeakAllocatedSize[1], 2, m_PeakAllocatedSize[1]));
     
