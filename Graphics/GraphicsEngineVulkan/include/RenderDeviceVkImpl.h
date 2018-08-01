@@ -39,7 +39,7 @@
 #include "VulkanUtilities/VulkanLogicalDevice.h"
 #include "VulkanUtilities/VulkanObjectWrappers.h"
 #include "VulkanUtilities/VulkanMemoryManager.h"
-#include "VulkanUtilities/VulkanUploadHeap.h"
+#include "VulkanUploadHeap.h"
 #include "FramebufferCache.h"
 #include "RenderPassCache.h"
 #include "CommandPoolManager.h"
@@ -113,6 +113,8 @@ public:
     {
         m_ReleaseQueue.SafeReleaseResource(std::move(Object), m_NextCmdBuffNumber);
     }
+
+    ResourceReleaseQueue<DynamicStaleResourceWrapper>& GetReleaseQueue(){return m_ReleaseQueue;}
     
     void FinishFrame(bool ReleaseAllResources);
     virtual void FinishFrame()override final { FinishFrame(false); }
@@ -132,8 +134,9 @@ public:
     {
         return m_MemoryMgr.Allocate(MemReqs, MemoryProperties);
     }
+    VulkanUtilities::VulkanMemoryManager& GetGlobalMemoryManager() { return m_MemoryMgr; }
 
-    VulkanDynamicMemoryManager& GetDynamicMemoryManager(){return m_DynamicMemoryManager;}
+    VulkanDynamicMemoryManager& GetDynamicMemoryManager() { return m_DynamicMemoryManager; }
      
 private:
     virtual void TestTextureFormat( TEXTURE_FORMAT TexFormat )override final;

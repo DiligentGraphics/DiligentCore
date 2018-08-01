@@ -30,6 +30,7 @@ set(INCLUDE
     include/TextureViewVkImpl.h
     include/VulkanErrors.h
     include/VulkanTypeConversions.h
+    include/VulkanUploadHeap.h
 )
 
 set(VULKAN_UTILS_INCLUDE 
@@ -43,7 +44,6 @@ set(VULKAN_UTILS_INCLUDE
     include/VulkanUtilities/VulkanMemoryManager.h
     include/VulkanUtilities/VulkanObjectWrappers.h
     include/VulkanUtilities/VulkanPhysicalDevice.h
-    include/VulkanUtilities/VulkanUploadHeap.h
 )
 
 
@@ -91,6 +91,7 @@ set(SRC
     src/TextureVkImpl.cpp
     src/TextureViewVkImpl.cpp
     src/VulkanTypeConversions.cpp
+    src/VulkanUploadHeap.cpp
 )
 
 set(VULKAN_UTILS_SRC
@@ -103,7 +104,6 @@ set(VULKAN_UTILS_SRC
     src/VulkanUtilities/VulkanLogicalDevice.cpp
     src/VulkanUtilities/VulkanMemoryManager.cpp
     src/VulkanUtilities/VulkanPhysicalDevice.cpp
-    src/VulkanUtilities/VulkanUploadHeap.cpp
 )
 
 set(GENERATE_MIPS_SHADER

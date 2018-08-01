@@ -164,7 +164,7 @@ public:
         VERIFY(m_ReleaseQueue.empty(), "Release queue is not empty");
     }
 
-    /// Moves resource to the release queue
+    /// Moves resource to the stale resources queue
     /// \param [in] Resource              - Resource to be released
     /// \param [in] NextCommandListNumber - Number of the command list that will be submitted to the queue next
     template<typename ResourceType>
@@ -174,6 +174,29 @@ public:
         m_StaleResources.emplace_back(NextCommandListNumber, ResourceWrapperType::Create(std::move(Resource)) );
     }
 
+    /// Adds resource directly to the release queue
+    /// \param [in] Resource    - Resource to be released.
+    /// \param [in] FenceValue  - Fence value indicating when the resource was used last time.
+    template<typename ResourceType>
+    void DiscardResource(ResourceType&& Resource, Uint64 FenceValue)
+    {
+        std::lock_guard<std::mutex> ReleaseQueueLock(m_ReleaseQueueMutex);
+        m_ReleaseQueue.emplace_back(FenceValue, ResourceWrapperType::Create(std::move(Resource)) );
+    }
+
+    /// Adds multiple resources directly to the release queue
+    /// \param [in] FenceValue  - Fence value indicating when the resource was used last time.
+    /// \param [in] Iterator    - Iterator that returns resources to be relased.
+    template<typename ResourceType, typename IteratorType>
+    void DiscardResources(Uint64 FenceValue, IteratorType Iterator)
+    {
+        std::lock_guard<std::mutex> ReleaseQueueLock(m_ReleaseQueueMutex);
+        ResourceType Resource;
+        while(Iterator(Resource))
+        {
+            m_ReleaseQueue.emplace_back(FenceValue, ResourceWrapperType::Create(std::move(Resource)) );
+        }
+    }
 
     /// Moves stale objects to the release queue
     /// \param [in] SubmittedCmdBuffNumber - number of the last submitted command list. 

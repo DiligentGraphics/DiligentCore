@@ -31,7 +31,7 @@
 #include "DeviceContextBase.h"
 #include "VulkanUtilities/VulkanCommandBufferPool.h"
 #include "VulkanUtilities/VulkanCommandBuffer.h"
-#include "VulkanUtilities/VulkanUploadHeap.h"
+#include "VulkanUploadHeap.h"
 #include "VulkanDynamicHeap.h"
 #include "ResourceReleaseQueue.h"
 #include "DescriptorPoolManager.h"
@@ -213,10 +213,9 @@ private:
     // List of fences to signal next time the command context is flushed
     std::vector<std::pair<Uint64, RefCntAutoPtr<IFence> > > m_PendingFences;
 
-    std::unordered_map<BufferVkImpl*, VulkanUtilities::VulkanUploadAllocation> m_UploadAllocations;
-    ResourceReleaseQueue<DynamicStaleResourceWrapper> m_ReleaseQueue;
+    std::unordered_map<BufferVkImpl*, VulkanUploadAllocation> m_UploadAllocations;
 
-    VulkanUtilities::VulkanUploadHeap m_UploadHeap;
+    VulkanUploadHeap m_UploadHeap;
     DescriptorPoolManager m_DynamicDescriptorPool;
 
     // Number of the command buffer currently being recorded by the context and that will

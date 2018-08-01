@@ -1376,37 +1376,19 @@ namespace Diligent
         /// pages when resources are released
         Uint32 HostVisibleMemoryReserveSize = 256 << 20;
 
-        /// Page size for the upload heap used by the immediate context.
+        /// Page size of the upload heap that is allocated by immediate/deferred
+        /// contexts from the global memory manager to perform lock-free dynamic
+        /// suballocations.
         /// Upload heap is used to update resources with UpdateData()
-        Uint32 ImmediateCtxUploadHeapPageSize = 1 << 20;
+        Uint32 UploadHeapPageSize = 1 << 20;
 
-        /// Page size for the upload heap used by the deferred contexts.
-        /// Upload heap is used to update resources with UpdateData()
-        Uint32 DeferredCtxUploadHeapPageSize = 1 << 20;
-
-        /// Reserve size for the upload heap used by the immediate context.
-        /// If the heap size exceeds this value, it will be shrunk when
-        /// resources are no longer required
-        Uint32 ImmediateCtxUploadHeapReserveSize = 4 << 20;
-
-        /// Reserve size for the upload heap used by the deferred contexts.
-        /// If the heap size exceeds this value, it will be shrunk when
-        /// resources are no longer required
-        Uint32 DeferredCtxUploadHeapReserveSize = 2 << 20;
-        
-        /// Size of the dynamic heap (the ring buffer that is used to suballocate 
+        /// Size of the dynamic heap (the buffer that is used to suballocate 
         /// memory for dynamic resources) shared by all contexts.
         Uint32 DynamicHeapSize = 8 << 20;
 
-        /// Size of the memory chunk suballocated by immediate context from
-        /// the global dynamic heap ring buffer to perform lock-free dynamic 
-        /// allocations from
-        Uint32 ImmediateCtxDynamicHeapPageSize = 256 << 10;
-
-        /// Size of the memory chunk suballocated by deferred contexts from
-        /// the global dynamic heap ring buffer to perform lock-free dynamic 
-        /// allocations from
-        Uint32 DeferredCtxDynamicHeapPageSize = 64 << 10;
+        /// Size of the memory chunk suballocated by immediate/deferred context from
+        /// the global dynamic heap to perform lock-free dynamic suballocations
+        Uint32 DynamicHeapPageSize = 256 << 10;
     };
 
     /// Box

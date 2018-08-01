@@ -76,16 +76,12 @@ namespace Diligent
             VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, 
             bIsDeferred
         },
-        m_ReleaseQueue{GetRawAllocator()},
         // Upload heap must always be thread-safe as Finish() may be called from another thread
         m_UploadHeap
         {
+            *pDeviceVkImpl,
             GetUploadHeapName(bIsDeferred, ContextId),
-            pDeviceVkImpl->GetLogicalDevice(),
-            pDeviceVkImpl->GetPhysicalDevice(),
-            GetRawAllocator(),
-            bIsDeferred ? Attribs.DeferredCtxUploadHeapPageSize    : Attribs.ImmediateCtxUploadHeapPageSize,
-            bIsDeferred ? Attribs.DeferredCtxUploadHeapReserveSize : Attribs.ImmediateCtxUploadHeapReserveSize
+            Attribs.UploadHeapPageSize
         },
         // Descriptor pools must always be thread-safe as for a deferred context, Finish() may be called from another thread
         m_DynamicDescriptorPool
@@ -112,7 +108,7 @@ namespace Diligent
         {
             pDeviceVkImpl->GetDynamicMemoryManager(),
             GetDynamicHeapName(bIsDeferred, ContextId),
-            bIsDeferred ? Attribs.DeferredCtxDynamicHeapPageSize : Attribs.ImmediateCtxDynamicHeapPageSize
+            Attribs.DynamicHeapPageSize
         },
         m_GenerateMipsHelper(std::move(GenerateMipsHelper))
     {
@@ -144,11 +140,10 @@ namespace Diligent
         // There must be no resources in the stale resource list. For immediate context, all stale resources must have been
         // moved to the release queue by Flush(). For deferred contexts, this should have happened in the last FinishCommandList()
         // call.
-        VERIFY(m_ReleaseQueue.GetStaleResourceCount() == 0, "All stale resources must have been discarded at this point");
+        VERIFY(m_UploadHeap.GetStaleAllocationsCount() == 0, "All stale allocations must have been discarded at this point");
         VERIFY(m_DynamicDescriptorPool.GetStaleAllocationCount() == 0, "All stale dynamic descriptor set allocations must have been discarded at this point");
         ReleaseStaleContextResources(m_NextCmdBuffNumber, m_LastSubmittedFenceValue, pDeviceVkImpl->GetCompletedFenceValue());
         // Since we idled the GPU, all stale resources must have been destroyed now
-        VERIFY(m_ReleaseQueue.GetPendingReleaseResourceCount() == 0, "All stale resources must have been destroyed at this point");
         VERIFY(m_DynamicDescriptorPool.GetPendingReleaseAllocationCount() == 0, "All stale descriptor set allocations must have been destroyed at this point");
 
         auto VkCmdPool = m_CmdPool.Release();
@@ -767,8 +762,7 @@ namespace Diligent
                 "There are outstanding commands in the deferred device context when finishing the frame. This is an error and may cause unpredicted behaviour. Close all deferred contexts and execute them before finishing the frame" :
                 "There are outstanding commands in the immediate device context when finishing the frame. This is an error and may cause unpredicted behaviour. Call Flush() to submit all commands for execution before finishing the frame");
 
-        m_ReleaseQueue.Purge(CompletedFenceValue);
-        m_UploadHeap.ShrinkMemory();
+        m_UploadHeap.DiscardAllocations(m_LastSubmittedFenceValue);
         m_DynamicDescriptorPool.ReleaseStaleAllocations(CompletedFenceValue);
         m_DynamicHeap.FinishFrame(m_LastSubmittedFenceValue);
         Atomics::AtomicIncrement(m_ContextFrameNumber);
@@ -776,9 +770,6 @@ namespace Diligent
 
     void DeviceContextVkImpl::ReleaseStaleContextResources(Uint64 SubmittedCmdBufferNumber, Uint64 SubmittedFenceValue, Uint64 CompletedFenceValue)
     {
-        m_ReleaseQueue.DiscardStaleResources(SubmittedCmdBufferNumber, SubmittedFenceValue);
-        m_ReleaseQueue.Purge(CompletedFenceValue);
-        m_UploadHeap.ShrinkMemory();
         m_DynamicDescriptorPool.DisposeAllocations(SubmittedFenceValue);
         m_DynamicDescriptorPool.ReleaseStaleAllocations(CompletedFenceValue);
     }
@@ -1099,13 +1090,10 @@ namespace Diligent
 
         VERIFY_EXPR( static_cast<size_t>(NumBytes) == NumBytes );
         auto TmpSpace = m_UploadHeap.Allocate(static_cast<size_t>(NumBytes));
-        auto CPUAddress = TmpSpace.MemAllocation.Page->GetCPUMemory();
-	    memcpy(reinterpret_cast<Uint8*>(CPUAddress) + TmpSpace.MemAllocation.UnalignedOffset, pData, static_cast<size_t>(NumBytes));
-        UpdateBufferRegion(pBuffVk, DstOffset, NumBytes, TmpSpace.vkBuffer, TmpSpace.MemAllocation.UnalignedOffset);
-        // The allocation will stay in the queue until the command buffer from this context is submitted
-        // to the queue. We cannot use the device's release queue as other contexts may interfer with
-        // the release order
-        m_ReleaseQueue.SafeReleaseResource(std::move(TmpSpace), m_NextCmdBuffNumber);
+	    memcpy(TmpSpace.CPUAddress, pData, static_cast<size_t>(NumBytes));
+        UpdateBufferRegion(pBuffVk, DstOffset, NumBytes, TmpSpace.vkBuffer, TmpSpace.Offset);
+        // The allocation will stay in the upload heap until the end of the frame at which point all upload
+        // pages will be discarded
     }
 
     void DeviceContextVkImpl::CopyBufferRegion(BufferVkImpl *pSrcBuffVk, BufferVkImpl *pDstBuffVk, Uint64 SrcOffset, Uint64 DstOffset, Uint64 NumBytes)
@@ -1297,8 +1285,6 @@ namespace Diligent
         // We can now release all temporary resources in the deferred context associated with the submitted command list
         auto CompletedFenceValue = pDeviceVkImpl->GetCompletedFenceValue();
         pDeferredCtxVkImpl->ReleaseStaleContextResources(DeferredCtxCmdBuffNumber, SubmittedFenceValue, CompletedFenceValue);
-        
-        m_ReleaseQueue.Purge(CompletedFenceValue);
     }
 
     void DeviceContextVkImpl::SignalFence(IFence* pFence, Uint64 Value)
@@ -1379,7 +1365,7 @@ namespace Diligent
     {
         VERIFY(m_UploadAllocations.find(pBuffer) == m_UploadAllocations.end(), "Upload space has already been allocated for this buffer");
         auto UploadAllocation = m_UploadHeap.Allocate(NumBytes);
-        auto *CPUAddress = reinterpret_cast<Uint8*>(UploadAllocation.MemAllocation.Page->GetCPUMemory()) + UploadAllocation.MemAllocation.UnalignedOffset;
+        auto *CPUAddress = UploadAllocation.CPUAddress;
         m_UploadAllocations.emplace(pBuffer, std::move(UploadAllocation));
         return CPUAddress;
     }
@@ -1389,12 +1375,10 @@ namespace Diligent
         auto it = m_UploadAllocations.find(pBuffer);
         if (it != m_UploadAllocations.end())
         {
-            VERIFY_EXPR(pBuffer->GetDesc().uiSizeInBytes <= it->second.MemAllocation.Size);
-            UpdateBufferRegion(pBuffer, 0, pBuffer->GetDesc().uiSizeInBytes, it->second.vkBuffer, it->second.MemAllocation.UnalignedOffset);
-            // The allocation will stay in the queue until the command buffer from this context is submitted
-            // to the queue. We cannot use the device's release queue as other contexts may interfer with
-            // the release order
-            m_ReleaseQueue.SafeReleaseResource(std::move(it->second), m_NextCmdBuffNumber);
+            VERIFY_EXPR(pBuffer->GetDesc().uiSizeInBytes <= it->second.Size);
+            UpdateBufferRegion(pBuffer, 0, pBuffer->GetDesc().uiSizeInBytes, it->second.vkBuffer, it->second.Offset);
+            // The allocation will stay in the upload heap until the end of the frame at which point all upload
+            // pages will be discarded
             m_UploadAllocations.erase(it);
         }
         else

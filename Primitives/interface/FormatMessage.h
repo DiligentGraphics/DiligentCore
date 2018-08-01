@@ -75,7 +75,7 @@ namespace Diligent
         }
         else
         {
-            ss << Arg.size << (Arg.size > 1 ? " Byte" : " Bytes" );
+            ss << Arg.size << ( ((Arg.size & 0x01) == 0x01) ? " Byte" : " Bytes" );
         }
     }
 }
