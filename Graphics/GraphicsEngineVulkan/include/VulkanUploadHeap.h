@@ -90,12 +90,12 @@ private:
         Uint8*   CPUAddress     = nullptr;
         size_t   CurrOffset     = 0;
         size_t   AvailableSize  = 0;
-        void Reset(UploadPageInfo& NewPage)
+        void Reset(UploadPageInfo& NewPage, size_t PageSize)
         {
             vkBuffer       = NewPage.Buffer;
             CPUAddress     = NewPage.CPUAddress;
             CurrOffset     = 0;
-            AvailableSize  = NewPage.MemAllocation.Size;
+            AvailableSize  = PageSize;
         }
         void Advance(size_t SizeInBytes)
         {

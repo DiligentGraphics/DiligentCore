@@ -98,8 +98,7 @@ VulkanUploadAllocation VulkanUploadHeap::Allocate(size_t SizeInBytes)
         if(m_CurrPage.AvailableSize < SizeInBytes)
         {
             auto NewPage = CreateNewPage(m_PageSize);
-            m_CurrPage.Reset(NewPage);
-            VERIFY_EXPR(m_CurrPage.AvailableSize == m_PageSize);
+            m_CurrPage.Reset(NewPage, m_PageSize);
             m_CurrAllocatedSize += NewPage.MemAllocation.Size;
             m_Pages.emplace_back(std::move(NewPage));
         }
