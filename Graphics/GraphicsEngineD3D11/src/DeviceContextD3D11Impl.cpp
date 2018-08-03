@@ -435,7 +435,7 @@ namespace Diligent
             auto NumUAVs = Cache.GetUAVCount();
             if(NumUAVs)
             {
-                auto *CommittedD3D11UAVs = m_CommittedD3D11UAVs[ShaderTypeInd];
+                auto *CommittedD3D11UAVs   = m_CommittedD3D11UAVs        [ShaderTypeInd];
                 auto *CommittedD3D11UAVRes = m_CommittedD3D11UAVResources[ShaderTypeInd];
 
                 UINT MinSlot = UINT_MAX;
@@ -504,21 +504,31 @@ namespace Diligent
                 {
                     if(MinSlot != UINT_MAX)
                     {
+                        // Something has changed
                         if(ShaderTypeInd == PSInd)
                         {
-                            auto StartUAVSlot = m_NumBoundRenderTargets;
-                            // UAVs cannot be set independently; they all need to be set at the same time.
+                            // Pixel shader UAVs cannot be set independently; they all need to be set at the same time.
                             // https://docs.microsoft.com/en-us/windows/desktop/api/d3d11/nf-d3d11-id3d11devicecontext-omsetrendertargetsandunorderedaccessviews#remarks
+                            auto StartUAVSlot = m_NumBoundRenderTargets;
+                            VERIFY(NumUAVs > StartUAVSlot, "Number of UAVs must be greater than the render target count");
                             m_pd3d11DeviceContext->OMSetRenderTargetsAndUnorderedAccessViews(
                                 D3D11_KEEP_RENDER_TARGETS_AND_DEPTH_STENCIL, nullptr, nullptr,
                                 StartUAVSlot, NumUAVs - StartUAVSlot, CommittedD3D11UAVs + StartUAVSlot, nullptr);
+                            // Clear previously bound UAVs, but do not clear lower slots as if
+                            // render target count will reduce, we will bind these UAVs in CommitRenderTargets()
+                            for(Uint32 uav = NumUAVs; uav < m_NumCommittedUAVs[ShaderTypeInd]; ++uav)
+                            {
+                                CommittedD3D11UAVRes[uav] = nullptr;
+                                CommittedD3D11UAVs  [uav] = nullptr;
+                            }
+                            m_NumCommittedUAVs[ShaderTypeInd] = static_cast<Uint8>(NumUAVs);
                         }
                         else
                         {
                             auto SetUAVMethod = SetUAVMethods[ShaderTypeInd];
                             (m_pd3d11DeviceContext->*SetUAVMethod)(MinSlot, MaxSlot-MinSlot+1, CommittedD3D11UAVs+MinSlot, nullptr);
+                            m_NumCommittedUAVs[ShaderTypeInd] = std::max(m_NumCommittedUAVs[ShaderTypeInd], static_cast<Uint8>(NumUAVs));
                         }
-                        m_NumCommittedUAVs[ShaderTypeInd] = std::max(m_NumCommittedUAVs[ShaderTypeInd], static_cast<Uint8>(NumUAVs));
                     }
 
                     if(m_DebugFlags & (Uint32)EngineD3D11DebugFlags::VerifyCommittedResourceRelevance)
@@ -526,6 +536,24 @@ namespace Diligent
                         dbgVerifyCommittedUAVs(pShaderD3D11->GetDesc().ShaderType);
                     }
                 }
+            }
+            else if(ShaderTypeInd == PSInd && m_NumCommittedUAVs[ShaderTypeInd] > 0)
+            {
+                // For pixel shader, unbind all UAVs if current PSO does use them.
+                // This is important as UnbindPixelShaderUAV<> function may need to rebind
+                // existing UAVs and the UAVs pointed to by CommittedD3D11UAVRes must be alive
+                // (we do not keep strong references to d3d11 UAVs)
+                auto* CommittedD3D11UAVs   = m_CommittedD3D11UAVs        [ShaderTypeInd];
+                auto* CommittedD3D11UAVRes = m_CommittedD3D11UAVResources[ShaderTypeInd];
+                auto  NumPixelShaderUAVs   = m_NumCommittedUAVs          [ShaderTypeInd];
+                for(Uint32 uav = 0; uav < NumPixelShaderUAVs; ++uav)
+                {
+                    CommittedD3D11UAVRes[uav] = nullptr;
+                    CommittedD3D11UAVs  [uav] = nullptr;
+                }
+                m_pd3d11DeviceContext->OMSetRenderTargetsAndUnorderedAccessViews(
+                    D3D11_KEEP_RENDER_TARGETS_AND_DEPTH_STENCIL, nullptr, nullptr,
+                    0, 0, nullptr, nullptr);
             }
 
 #ifdef VERIFY_SHADER_BINDINGS
@@ -975,21 +1003,21 @@ namespace Diligent
             }
         }
 
-        auto& NumCommittedPSUAVs = m_NumCommittedUAVs[PSInd];
-        if ( NumCommittedPSUAVs > 0)
+        auto& NumCommittedPixelShaderUAVs = m_NumCommittedUAVs[PSInd];
+        if ( NumCommittedPixelShaderUAVs > 0)
         {
             m_pd3d11DeviceContext->OMSetRenderTargetsAndUnorderedAccessViews(NumRenderTargets, pd3d11RTs, pd3d11DSV,
                 0, D3D11_KEEP_UNORDERED_ACCESS_VIEWS, nullptr, nullptr);
 
-            auto CommittedD3D11UAVs   = m_CommittedD3D11UAVs[PSInd];
+            auto CommittedD3D11UAVs   = m_CommittedD3D11UAVs        [PSInd];
             auto CommittedD3D11UAVRes = m_CommittedD3D11UAVResources[PSInd];
             for(Uint32 slot = 0; slot < NumRenderTargets; ++slot)
             {
-                CommittedD3D11UAVs[slot] = nullptr;
+                CommittedD3D11UAVs  [slot] = nullptr;
                 CommittedD3D11UAVRes[slot] = nullptr;
             }
-            if (NumRenderTargets >= NumCommittedPSUAVs)
-                NumCommittedPSUAVs = 0;
+            if (NumRenderTargets >= NumCommittedPixelShaderUAVs)
+                NumCommittedPixelShaderUAVs = 0;
         }
         else
         {
@@ -1218,7 +1246,12 @@ namespace Diligent
         }
 
         if( bCommitRenderTargets )
+        {
+            while(m_NumBoundRenderTargets > 0 && !m_pBoundRenderTargets[m_NumBoundRenderTargets-1])
+                --m_NumBoundRenderTargets;
+
             CommitRenderTargets();
+        }
 
         pTexture->ClearState(D3D11TextureState::RenderTarget);
     }
