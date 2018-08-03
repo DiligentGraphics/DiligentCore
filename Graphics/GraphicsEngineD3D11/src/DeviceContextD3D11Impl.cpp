@@ -531,7 +531,7 @@ namespace Diligent
                         }
                     }
 
-                    if(m_DebugFlags & (Uint32)EngineD3D11DebugFlags::VerifyCommittedResourceRelevance)
+                    if( (m_DebugFlags & (Uint32)EngineD3D11DebugFlags::VerifyCommittedResourceRelevance) != 0 && ShaderTypeInd == CSInd)
                     {
                         dbgVerifyCommittedUAVs(pShaderD3D11->GetDesc().ShaderType);
                     }
@@ -753,7 +753,7 @@ namespace Diligent
             // Verify bindings after all resources are set
             dbgVerifyRenderTargetFormats();
             dbgVerifyCommittedSRVs();
-            dbgVerifyCommittedUAVs();
+            dbgVerifyCommittedUAVs(SHADER_TYPE_COMPUTE);
             dbgVerifyCommittedSamplers();
             dbgVerifyCommittedCBs();
             dbgVerifyCommittedVertexBuffers();
@@ -808,7 +808,7 @@ namespace Diligent
         {
             // Verify bindings
             dbgVerifyCommittedSRVs();
-            dbgVerifyCommittedUAVs();
+            dbgVerifyCommittedUAVs(SHADER_TYPE_COMPUTE);
             dbgVerifyCommittedSamplers();
             dbgVerifyCommittedCBs();
             dbgVerifyCommittedShaders();
@@ -1360,7 +1360,7 @@ namespace Diligent
         if(m_DebugFlags & (Uint32)EngineD3D11DebugFlags::VerifyCommittedResourceRelevance)
         {
             dbgVerifyCommittedSRVs();
-            dbgVerifyCommittedUAVs();
+            dbgVerifyCommittedUAVs(SHADER_TYPE_COMPUTE);
             dbgVerifyCommittedSamplers();
             dbgVerifyCommittedCBs();
         }
@@ -1394,7 +1394,7 @@ namespace Diligent
         {
             // Verify bindings
             dbgVerifyCommittedSRVs();
-            dbgVerifyCommittedUAVs();
+            dbgVerifyCommittedUAVs(SHADER_TYPE_COMPUTE);
             dbgVerifyCommittedSamplers();
             dbgVerifyCommittedCBs();
             dbgVerifyCommittedVertexBuffers();
@@ -1429,7 +1429,7 @@ namespace Diligent
         {
             // Verify bindings
             dbgVerifyCommittedSRVs();
-            dbgVerifyCommittedUAVs();
+            dbgVerifyCommittedUAVs(SHADER_TYPE_COMPUTE);
             dbgVerifyCommittedSamplers();
             dbgVerifyCommittedCBs();
             dbgVerifyCommittedVertexBuffers();
