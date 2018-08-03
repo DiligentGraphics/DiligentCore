@@ -44,7 +44,7 @@ class ResourceMapping;
 class FixedBlockMemoryAllocator;
 
 /// Implementation of the Diligent::IShaderD3D12 interface
-class ShaderD3D12Impl : public ShaderBase<IShaderD3D12, RenderDeviceD3D12Impl>, public ShaderD3DBase
+class ShaderD3D12Impl final : public ShaderBase<IShaderD3D12, RenderDeviceD3D12Impl>, public ShaderD3DBase
 {
 public:
     using TShaderBase = ShaderBase<IShaderD3D12, RenderDeviceD3D12Impl>;
@@ -58,11 +58,15 @@ public:
 
     virtual void BindResources( IResourceMapping* pResourceMapping, Uint32 Flags )override;
     
-    virtual IShaderVariable* GetShaderVariable(const Char* Name)override;
+    virtual IShaderVariable* GetShaderVariable(const Char* Name)override final;
+
+    virtual Uint32 GetVariableCount() const override final;
+
+    virtual IShaderVariable* GetShaderVariable(Uint32 Index)override final;
 
     ID3DBlob* GetShaderByteCode(){return m_pShaderByteCode;}
     const std::shared_ptr<const ShaderResourcesD3D12>& GetShaderResources()const{return m_pShaderResources;}
-    const ShaderResourceLayoutD3D12& GetConstResLayout()const{return m_StaticResLayout;}
+    const ShaderResourceLayoutD3D12& GetStaticResLayout()const{return m_StaticResLayout;}
 
 #ifdef VERIFY_SHADER_BINDINGS
     void DbgVerifyStaticResourceBindings();
@@ -76,7 +80,7 @@ private:
     // it is referenced by ShaderResourceLayoutD3D12 class instances
     std::shared_ptr<const ShaderResourcesD3D12> m_pShaderResources;
     ShaderResourceLayoutD3D12 m_StaticResLayout;
-    ShaderResourceCacheD3D12  m_ConstResCache;
+    ShaderResourceCacheD3D12  m_StaticResCache;
 };
 
 }

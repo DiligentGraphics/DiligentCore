@@ -203,4 +203,16 @@ IShaderVariable* ShaderGLImpl::GetShaderVariable( const Char* Name )
     return pShaderVar;
 }
 
+Uint32 ShaderGLImpl::GetVariableCount() const
+{
+    UNSUPPORTED("Not yet implemented");
+    return 0;
+}
+
+IShaderVariable* ShaderGLImpl::GetShaderVariable(Uint32 Index)
+{
+    UNSUPPORTED("Not yet implemented");
+    return nullptr;
+}
+
 }

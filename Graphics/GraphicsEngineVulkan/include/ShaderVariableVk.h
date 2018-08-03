@@ -82,6 +82,7 @@ public:
     void Destroy(IMemoryAllocator& Allocator);
 
     ShaderVariableVkImpl* GetVariable(const Char* Name);
+    ShaderVariableVkImpl* GetVariable(Uint32 Index);
 
     void BindResources( IResourceMapping* pResourceMapping, Uint32 Flags);
 
@@ -90,8 +91,12 @@ public:
                                         Uint32                        NumAllowedTypes,
                                         Uint32&                       NumVariables);
 
+    Uint32 GetVariableCount()const { return m_NumVariables; }
+
 private:
     friend ShaderVariableVkImpl;
+
+    Uint32 GetVariableIndex(const ShaderVariableVkImpl& Variable);
 
     IObject&                      m_Owner;
     // Variable mgr is owned by either Shader object (in which case m_pResourceLayout points to
@@ -113,7 +118,7 @@ private:
 };
 
 // sizeof(ShaderVariableVkImpl) == 24 (x64)
-class ShaderVariableVkImpl : public IShaderVariable
+class ShaderVariableVkImpl final : public IShaderVariable
 {
 public:
     ShaderVariableVkImpl(ShaderVariableManagerVk& ParentManager,
@@ -156,6 +161,11 @@ public:
         }
     }
 
+    virtual SHADER_VARIABLE_TYPE GetType()const override final
+    {
+        return m_Resource.SpirvAttribs.VarType;
+    }
+
     virtual void Set(IDeviceObject *pObject)override final 
     {
         VERIFY_EXPR(m_ParentManager.m_pResourceCache != nullptr);
@@ -167,6 +177,21 @@ public:
         VERIFY_EXPR(m_ParentManager.m_pResourceCache != nullptr);
         for (Uint32 Elem = 0; Elem < NumElements; ++Elem)
             m_Resource.BindResource(ppObjects[Elem], FirstElement + Elem, *m_ParentManager.m_pResourceCache);
+    }
+
+    virtual Uint32 GetArraySize()const override final
+    {
+        return m_Resource.SpirvAttribs.ArraySize;
+    }
+
+    virtual const Char* GetName()const override final
+    {
+        return m_Resource.SpirvAttribs.Name;
+    }
+
+    virtual Uint32 GetIndex()const override final
+    {
+        return m_ParentManager.GetVariableIndex(*this);
     }
 
     const ShaderResourceLayoutVk::VkResource& GetResource()const

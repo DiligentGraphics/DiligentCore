@@ -162,8 +162,10 @@ public:
                     ShaderResourceCacheD3D12*                          pResourceCache,
                     class RootSignature*                               pRootSig);
 
+    using ShaderVariableD3D12Base = ShaderVariableD3DBase<ShaderResourceLayoutD3D12>;
+
     // sizeof(SRV_CBV_UAV) == 32 (x64)
-    struct SRV_CBV_UAV : ShaderVariableD3DBase<ShaderResourceLayoutD3D12>
+    struct SRV_CBV_UAV : ShaderVariableD3D12Base
     {
         SRV_CBV_UAV             (const SRV_CBV_UAV&) = delete;
         SRV_CBV_UAV             (SRV_CBV_UAV&&)      = delete;
@@ -319,26 +321,35 @@ public:
     };
 
 
-    void CopyStaticResourceDesriptorHandles(const ShaderResourceLayoutD3D12 &SrcLayout);
+    void CopyStaticResourceDesriptorHandles(const ShaderResourceLayoutD3D12 &DstLayout, ShaderResourceCacheD3D12& DstCache)const;
 
     // dbgResourceCache is only used for sanity check and as a remainder that the resource cache must be alive
     // while Layout is alive
     void BindResources( IResourceMapping* pResourceMapping, Uint32 Flags, const ShaderResourceCacheD3D12 *dbgResourceCache );
 
     IShaderVariable* GetShaderVariable( const Char* Name );
+    IShaderVariable* GetShaderVariable( Uint32 Index );
 
 #ifdef VERIFY_SHADER_BINDINGS
-    void dbgVerifyBindings()const;
+    void dbgVerifyBindings(ShaderResourceCacheD3D12& ResourceCache)const;
 #endif
 
     IObject& GetOwner(){return m_Owner;}
 
     const ShaderResourcesD3D12& GetShaderResources(){return *m_pResources;}
 
+    Uint32 GetVariableIndex(const ShaderVariableD3D12Base& Variable)const;
+
+    Uint32 GetVariableCount()const
+    {
+        return GetTotalSrvCbvUavCount();
+    }
+
 private:
     void InitVariablesHashMap();
 
-    Sampler &GetAssignedSampler(const SRV_CBV_UAV &TexSrv);
+    const Sampler& GetAssignedSampler(const SRV_CBV_UAV &TexSrv)const;
+    Sampler& GetAssignedSampler(const SRV_CBV_UAV &TexSrv);
 
     const Char* GetShaderName()const;
 

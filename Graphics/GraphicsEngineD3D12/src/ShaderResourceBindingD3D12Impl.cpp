@@ -55,7 +55,7 @@ ShaderResourceBindingD3D12Impl::ShaderResourceBindingD3D12Impl(IReferenceCounter
         auto& ShaderResLayoutDataAllocator = pPSO->GetSRBMemoryAllocator().GetShaderVariableDataAllocator(s);
 
         // http://diligentgraphics.com/diligent-engine/architecture/d3d12/shader-resource-layout#Initializing-Resource-Layouts-in-a-Shader-Resource-Binding-Object
-        std::array<SHADER_VARIABLE_TYPE, 3> AllowedVarTypes = { SHADER_VARIABLE_TYPE_STATIC, SHADER_VARIABLE_TYPE_MUTABLE, SHADER_VARIABLE_TYPE_DYNAMIC };
+        std::array<SHADER_VARIABLE_TYPE, 2> AllowedVarTypes = { SHADER_VARIABLE_TYPE_MUTABLE, SHADER_VARIABLE_TYPE_DYNAMIC };
         const auto& SrcLayout = pPSO->GetShaderResLayout(s);
         new (m_pResourceLayouts + s) ShaderResourceLayoutD3D12(*this, SrcLayout, ShaderResLayoutDataAllocator, AllowedVarTypes.data(), static_cast<Uint32>(AllowedVarTypes.size()), m_ShaderResourceCache);
 
@@ -91,7 +91,7 @@ IShaderVariable *ShaderResourceBindingD3D12Impl::GetVariable(SHADER_TYPE ShaderT
     auto ResLayoutInd = m_ResourceLayoutIndex[ShaderInd];
     if (ResLayoutInd < 0)
     {
-        LOG_ERROR_MESSAGE("Failed to find shader variable \"", Name,"\" in shader resource binding: shader type ", GetShaderTypeLiteralName(ShaderType), " is not initialized");
+        LOG_ERROR("Failed to find shader variable \"", Name,"\" in shader resource binding: shader type ", GetShaderTypeLiteralName(ShaderType), " is not initialized");
         return ValidatedCast<PipelineStateD3D12Impl>(GetPipelineState())->GetDummyShaderVar();
     }
     auto* pVar = m_pResourceLayouts[ResLayoutInd].GetShaderVariable(Name);
@@ -101,17 +101,48 @@ IShaderVariable *ShaderResourceBindingD3D12Impl::GetVariable(SHADER_TYPE ShaderT
     return pVar;
 }
 
+Uint32 ShaderResourceBindingD3D12Impl::GetVariableCount(SHADER_TYPE ShaderType) const 
+{
+    auto ShaderInd = GetShaderTypeIndex(ShaderType);
+    auto ResLayoutInd = m_ResourceLayoutIndex[ShaderInd];
+    if (ResLayoutInd < 0)
+    {
+        LOG_ERROR("Shader type ", GetShaderTypeLiteralName(ShaderType), " is not initialized");
+        return 0;
+    }
+
+    return m_pResourceLayouts[ResLayoutInd].GetVariableCount();
+}
+
+IShaderVariable* ShaderResourceBindingD3D12Impl::GetVariable(SHADER_TYPE ShaderType, Uint32 Index)
+{
+    auto ShaderInd = GetShaderTypeIndex(ShaderType);
+    auto ResLayoutInd = m_ResourceLayoutIndex[ShaderInd];
+    if (ResLayoutInd < 0)
+    {
+        LOG_ERROR("Failed to find shader variable at index ", Index, " in shader resource binding: shader type ", GetShaderTypeLiteralName(ShaderType), " is not initialized");
+        return ValidatedCast<PipelineStateD3D12Impl>(GetPipelineState())->GetDummyShaderVar();
+    }
+
+    return m_pResourceLayouts[ResLayoutInd].GetShaderVariable(Index);
+}
+
+
 #ifdef VERIFY_SHADER_BINDINGS
 void ShaderResourceBindingD3D12Impl::dbgVerifyResourceBindings(const PipelineStateD3D12Impl* pPSO)
 {
-    auto* pRefPSO = GetPipelineState();
+    auto* pRefPSO = ValidatedCast<PipelineStateD3D12Impl>(GetPipelineState());
     if (pPSO->IsIncompatibleWith(pRefPSO))
     {
         LOG_ERROR("Shader resource binding is incompatible with the pipeline state \"", pPSO->GetDesc().Name, '\"');
         return;
     }
     for(Uint32 l = 0; l < m_NumShaders; ++l)
-        m_pResourceLayouts[l].dbgVerifyBindings();
+    {
+        // Use reference layout from pipeline state that contains all shader resource types
+        const auto& ShaderResLayout = pRefPSO->GetShaderResLayout(l);
+        ShaderResLayout.dbgVerifyBindings(m_ShaderResourceCache);
+    }
 }
 #endif
 
@@ -130,8 +161,9 @@ void ShaderResourceBindingD3D12Impl::InitializeStaticResources(const PipelineSta
 #ifdef VERIFY_SHADER_BINDINGS
         pShader->DbgVerifyStaticResourceBindings();
 #endif
-        auto& ConstResLayout = pShader->GetConstResLayout();
-        GetResourceLayout(s).CopyStaticResourceDesriptorHandles(ConstResLayout);
+        const auto& ShaderResLayout = pPSO->GetShaderResLayout(s);
+        auto& StaticResLayout = pShader->GetStaticResLayout();
+        StaticResLayout.CopyStaticResourceDesriptorHandles(ShaderResLayout, m_ShaderResourceCache);
     }
 
     m_bStaticResourcesInitialized = true;

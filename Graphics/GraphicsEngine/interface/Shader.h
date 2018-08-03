@@ -292,6 +292,19 @@ public:
     ///         For instance, shader resource view cannot
     ///         be assigned to a constant buffer variable.
     virtual void SetArray(IDeviceObject* const* ppObjects, Uint32 FirstElement, Uint32 NumElements) = 0;
+
+    /// Returns shader variable type
+    virtual SHADER_VARIABLE_TYPE GetType()const = 0;
+
+    /// Returns array size. For non-array variables returns one.
+    virtual Uint32 GetArraySize()const = 0;
+
+    /// Returns the variable name
+    virtual const Char* GetName()const = 0;
+
+    /// Returns variable index that can be used to access the variable through
+    /// shader or shader resource binding object
+    virtual Uint32 GetIndex()const = 0;
 };
 
 /// Shader interface
@@ -319,6 +332,22 @@ public:
     /// \remark The method does not increment the reference counter
     ///         of the returned interface.
     virtual IShaderVariable* GetShaderVariable(const Char* Name) = 0;
+
+    /// Returns the number of shader variables.
+
+    /// \remark Only static variables (that can be accessed directly through the shader) are counted.
+    ///         Mutable and dynamic variables are accessed through Shader Resource Binding object.
+    virtual Uint32 GetVariableCount() const = 0;
+
+    /// Returns shader variable by its index.
+
+    /// \param [in] Index - Shader variable index. The index must be between
+    ///                     0 and the total number of variables returned by 
+    ///                     GetVariableCount().
+    /// \remark Only static shader variables can be accessed through this method.
+    ///         Mutable and dynamic variables are accessed through Shader Resource 
+    ///         Binding object
+    virtual IShaderVariable* GetShaderVariable(Uint32 Index) = 0;
 };
 
 }

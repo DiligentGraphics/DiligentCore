@@ -187,9 +187,17 @@ public:
 #endif
 
     IShaderVariable* GetShaderVariable( const Char* Name );
+    IShaderVariable* GetShaderVariable( Uint32 Index );
     __forceinline SHADER_TYPE GetShaderType()const{return m_pResources->GetShaderType();}
 
     IObject& GetOwner(){return m_Owner;}
+
+    Uint32 GetVariableIndex(const ShaderVariableD3D11Base& Variable)const;
+    Uint32 GetTotalResourceCount()const
+    {
+        return m_NumCBs + m_NumTexSRVs + m_NumTexUAVs + m_NumBufUAVs + m_NumBufSRVs;
+    }
+
 private:
 
     void InitVariablesHashMap();
@@ -300,7 +308,7 @@ private:
 #endif
 
     std::shared_ptr<const ShaderResourcesD3D11> m_pResources;
-    IObject &m_Owner;
+    IObject& m_Owner;
 };
 
 }

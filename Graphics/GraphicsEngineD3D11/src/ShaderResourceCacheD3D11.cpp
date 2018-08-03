@@ -70,7 +70,10 @@ namespace Diligent
         VERIFY(SamplerCount <= D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT, "Sampler count ", SamplerCount, " exceeds D3D11 limit ", D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT );
         VERIFY(UAVCount <= D3D11_PS_CS_UAV_REGISTER_COUNT, "UAV count ", UAVCount, " exceeds D3D11 limit ", D3D11_PS_CS_UAV_REGISTER_COUNT );
 
-        m_ResourceCounts = PackResourceCounts(CBCount, SRVCount, SamplerCount, UAVCount);
+        m_CBCount      = CBCount;
+        m_SRVCount     = SRVCount;
+        m_SamplerCount = SamplerCount;
+        m_UAVCount     = UAVCount;
         VERIFY_EXPR(GetCBCount()      == static_cast<Uint32>(CBCount));
         VERIFY_EXPR(GetSRVCount()     == static_cast<Uint32>(SRVCount));
         VERIFY_EXPR(GetSamplerCount() == static_cast<Uint32>(SamplerCount));
@@ -178,7 +181,11 @@ namespace Diligent
             auto UAVCount = GetUAVCount();
             for (size_t uav = 0; uav < UAVCount; ++uav)
                 UAVResources[uav].~CachedResource();
-            m_ResourceCounts = InvalidResourceCounts;
+
+            m_CBCount      = InvalidResourceCount;
+            m_SRVCount     = InvalidResourceCount;
+            m_SamplerCount = InvalidResourceCount;
+            m_UAVCount     = InvalidResourceCount;
 
             if(m_pResourceData != nullptr)
                 MemAllocator.Free(m_pResourceData);

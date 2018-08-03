@@ -94,6 +94,18 @@ IShaderVariable *ShaderResourceBindingGLImpl::GetVariable(SHADER_TYPE ShaderType
     return pVar;
 }
 
+Uint32 ShaderResourceBindingGLImpl::GetVariableCount(SHADER_TYPE ShaderType) const
+{
+    UNSUPPORTED("Not yet implemented");
+    return 0;
+}
+
+IShaderVariable* ShaderResourceBindingGLImpl::GetVariable(SHADER_TYPE ShaderType, Uint32 Index)
+{
+    UNSUPPORTED("Not yet implemented");
+    return 0;
+}
+
 static GLProgramResources NullProgramResources;
 GLProgramResources &ShaderResourceBindingGLImpl::GetProgramResources(SHADER_TYPE ShaderType, PipelineStateGLImpl *pdbgPSO)
 {

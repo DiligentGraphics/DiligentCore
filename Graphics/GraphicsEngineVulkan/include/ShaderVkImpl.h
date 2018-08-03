@@ -41,7 +41,7 @@ class ResourceMapping;
 class FixedBlockMemoryAllocator;
 
 /// Implementation of the Diligent::IShaderVk interface
-class ShaderVkImpl : public ShaderBase<IShaderVk, RenderDeviceVkImpl>
+class ShaderVkImpl final : public ShaderBase<IShaderVk, RenderDeviceVkImpl>
 {
 public:
     using TShaderBase = ShaderBase<IShaderVk, RenderDeviceVkImpl>;
@@ -54,6 +54,10 @@ public:
     virtual void BindResources( IResourceMapping* pResourceMapping, Uint32 Flags )override;
     
     virtual IShaderVariable* GetShaderVariable(const Char* Name)override;
+
+    virtual Uint32 GetVariableCount() const override final;
+
+    virtual IShaderVariable* GetShaderVariable(Uint32 Index)override final;
 
     virtual const std::vector<uint32_t>& GetSPIRV()const override final
     {

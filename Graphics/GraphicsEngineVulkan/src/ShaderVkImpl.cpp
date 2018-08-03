@@ -86,6 +86,17 @@ IShaderVariable* ShaderVkImpl::GetShaderVariable(const Char* Name)
         return pVar;
 }
 
+Uint32 ShaderVkImpl::GetVariableCount()const
+{
+    return m_StaticVarsMgr.GetVariableCount();
+}
+
+IShaderVariable* ShaderVkImpl::GetShaderVariable(Uint32 Index)
+{
+    return m_StaticVarsMgr.GetVariable(Index);
+}
+
+
 #ifdef DEVELOPMENT
 void ShaderVkImpl::DvpVerifyStaticResourceBindings()
 {

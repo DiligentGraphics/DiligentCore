@@ -33,7 +33,7 @@ namespace Diligent
     template<typename TShaderResourceLayout>
     struct ShaderVariableD3DBase : public IShaderVariable
     {
-        ShaderVariableD3DBase(TShaderResourceLayout &ParentResLayout, const D3DShaderResourceAttribs &ResourcesAttribs) : 
+        ShaderVariableD3DBase(TShaderResourceLayout& ParentResLayout, const D3DShaderResourceAttribs& ResourcesAttribs) : 
             m_ParentResLayout(ParentResLayout),
             Attribs(ResourcesAttribs)
         {
@@ -67,9 +67,29 @@ namespace Diligent
             }
         }        
 
-        const D3DShaderResourceAttribs &Attribs;
+        virtual SHADER_VARIABLE_TYPE GetType()const override final
+        {
+            return Attribs.VariableType;
+        }
+
+        virtual Uint32 GetArraySize()const override final
+        {
+            return Attribs.BindCount;
+        }
+
+        virtual const Char* GetName()const override final
+        {
+            return Attribs.Name;
+        }
+
+        virtual Uint32 GetIndex()const override final
+        {
+            return m_ParentResLayout.GetVariableIndex(*this);
+        }
+
+        const D3DShaderResourceAttribs& Attribs;
 
     protected:
-        TShaderResourceLayout &m_ParentResLayout;
+        TShaderResourceLayout& m_ParentResLayout;
     };
 }

@@ -142,13 +142,13 @@ void ShaderResourceBindingD3D11Impl::BindStaticShaderResources()
     m_bIsStaticResourcesBound = true;
 }
 
-IShaderVariable *ShaderResourceBindingD3D11Impl::GetVariable(SHADER_TYPE ShaderType, const char* Name)
+IShaderVariable* ShaderResourceBindingD3D11Impl::GetVariable(SHADER_TYPE ShaderType, const char* Name)
 {
     auto Ind = GetShaderTypeIndex(ShaderType);
     VERIFY_EXPR(Ind >= 0 && Ind < _countof(m_ResourceLayoutIndex));
-    auto ResLayoutIndex = m_ResourceLayoutIndex[Ind];
     if( Ind >= 0 )
     {
+        auto ResLayoutIndex = m_ResourceLayoutIndex[Ind];
         auto *pVar = m_pResourceLayouts[ResLayoutIndex].GetShaderVariable(Name);
         if(pVar != nullptr)
             return pVar;
@@ -160,7 +160,39 @@ IShaderVariable *ShaderResourceBindingD3D11Impl::GetVariable(SHADER_TYPE ShaderT
     }
     else
     {
-        LOG_ERROR_MESSAGE("Shader type ", GetShaderTypeLiteralName(ShaderType)," is not active in the resource binding");
+        LOG_ERROR("Shader type ", GetShaderTypeLiteralName(ShaderType)," is not active in the resource binding");
+        return nullptr;
+    }
+}
+
+Uint32 ShaderResourceBindingD3D11Impl::GetVariableCount(SHADER_TYPE ShaderType) const
+{
+    auto Ind = GetShaderTypeIndex(ShaderType);
+    VERIFY_EXPR(Ind >= 0 && Ind < _countof(m_ResourceLayoutIndex));
+    if( Ind >= 0 )
+    {
+        auto ResLayoutIndex = m_ResourceLayoutIndex[Ind];
+        return m_pResourceLayouts[ResLayoutIndex].GetTotalResourceCount();
+    }
+    else
+    {
+        LOG_ERROR("Shader type ", GetShaderTypeLiteralName(ShaderType)," is not active in the resource binding");
+        return 0;
+    }
+}
+
+IShaderVariable* ShaderResourceBindingD3D11Impl::GetVariable(SHADER_TYPE ShaderType, Uint32 Index)
+{
+    auto Ind = GetShaderTypeIndex(ShaderType);
+    VERIFY_EXPR(Ind >= 0 && Ind < _countof(m_ResourceLayoutIndex));
+    if( Ind >= 0 )
+    {
+        auto ResLayoutIndex = m_ResourceLayoutIndex[Ind];
+        return m_pResourceLayouts[ResLayoutIndex].GetShaderVariable(Index);
+    }
+    else
+    {
+        LOG_ERROR("Shader type ", GetShaderTypeLiteralName(ShaderType)," is not active in the resource binding");
         return nullptr;
     }
 }

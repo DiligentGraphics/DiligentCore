@@ -38,7 +38,7 @@ namespace Diligent
 
 class FixedBlockMemoryAllocator;
 /// Implementation of the Diligent::IShaderResourceBindingD3D11 interface
-class ShaderResourceBindingD3D11Impl : public ShaderResourceBindingBase<IShaderResourceBindingD3D11>
+class ShaderResourceBindingD3D11Impl final : public ShaderResourceBindingBase<IShaderResourceBindingD3D11>
 {
 public:
     using TBase = ShaderResourceBindingBase<IShaderResourceBindingD3D11>;
@@ -53,6 +53,10 @@ public:
     virtual void BindResources(Uint32 ShaderFlags, IResourceMapping* pResMapping, Uint32 Flags)override final;
 
     virtual IShaderVariable *GetVariable(SHADER_TYPE ShaderType, const char *Name)override final;
+
+    virtual Uint32 GetVariableCount(SHADER_TYPE ShaderType) const override final;
+
+    virtual IShaderVariable* GetVariable(SHADER_TYPE ShaderType, Uint32 Index)override final;
 
     ShaderResourceCacheD3D11 &GetResourceCache(Uint32 Ind){VERIFY_EXPR(Ind < m_NumActiveShaders); return m_pBoundResourceCaches[Ind];}
     ShaderResourceLayoutD3D11 &GetResourceLayout(Uint32 Ind){VERIFY_EXPR(Ind < m_NumActiveShaders); return m_pResourceLayouts[Ind];}

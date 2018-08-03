@@ -118,6 +118,36 @@ ShaderVariableVkImpl* ShaderVariableManagerVk::GetVariable(const Char* Name)
 }
 
 
+ShaderVariableVkImpl* ShaderVariableManagerVk::GetVariable(Uint32 Index)
+{
+    if (Index >= m_NumVariables)
+    {
+        LOG_ERROR("Index ", Index, " is out of range");
+        return nullptr;
+    }
+
+    return m_pVariables + Index;
+}
+
+Uint32 ShaderVariableManagerVk::GetVariableIndex(const ShaderVariableVkImpl& Variable)
+{
+    if (m_pVariables == nullptr)
+    {
+        LOG_ERROR("This shader variable manager has no variables");
+        return static_cast<Uint32>(-1);
+    }
+
+    auto Offset = reinterpret_cast<const Uint8*>(&Variable) - reinterpret_cast<Uint8*>(m_pVariables);
+    VERIFY(Offset % sizeof(ShaderVariableVkImpl) == 0, "Offset is not multiple of ShaderVariableVkImpl class size");
+    auto Index = static_cast<Uint32>(Offset / sizeof(ShaderVariableVkImpl));
+    if (Index < m_NumVariables)
+        return Index;
+    else
+    {
+        LOG_ERROR("Failed to get variable index. The variable ", &Variable, " does not belong to this shader variable manager");
+        return static_cast<Uint32>(-1);
+    }
+}
 
 void ShaderVariableManagerVk::BindResources( IResourceMapping* pResourceMapping, Uint32 Flags)
 {

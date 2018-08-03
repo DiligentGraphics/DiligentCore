@@ -163,7 +163,7 @@ protected:
 };
 
 /// Implementation of a dummy shader variable that silently ignores all operations
-struct DummyShaderVariable : ShaderVariableBase
+struct DummyShaderVariable final : ShaderVariableBase
 {
     DummyShaderVariable(IObject& Owner) :
         ShaderVariableBase(Owner)
@@ -179,6 +179,26 @@ struct DummyShaderVariable : ShaderVariableBase
     {
         // Ignore operation
         // Probably output warning
+    }
+
+    virtual SHADER_VARIABLE_TYPE GetType()const override final
+    {
+        return SHADER_VARIABLE_TYPE_NUM_TYPES;
+    }
+
+    virtual Uint32 GetArraySize()const override final
+    {
+        return 0;
+    }
+
+    virtual const Char* GetName()const override final
+    {
+        return "<Not a valid variable>";
+    }
+
+    virtual Uint32 GetIndex()const override final
+    {
+        return static_cast<Uint32>(-1);
     }
 };
 

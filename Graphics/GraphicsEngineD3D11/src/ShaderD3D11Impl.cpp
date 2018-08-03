@@ -104,6 +104,17 @@ IShaderVariable* ShaderD3D11Impl::GetShaderVariable( const Char* Name )
     return pVar;
 }
 
+Uint32 ShaderD3D11Impl::GetVariableCount() const
+{
+    return m_StaticResLayout.GetTotalResourceCount();
+}
+
+IShaderVariable* ShaderD3D11Impl::GetShaderVariable(Uint32 Index)
+{
+    return m_StaticResLayout.GetShaderVariable(Index);
+}
+
+
 void ShaderD3D11Impl::BindResources(IResourceMapping* pResourceMapping, Uint32 Flags)
 {
     m_StaticResLayout.BindResources(pResourceMapping, Flags, m_StaticResCache);

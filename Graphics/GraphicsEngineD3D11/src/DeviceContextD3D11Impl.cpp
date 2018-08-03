@@ -156,12 +156,12 @@ namespace Diligent
     typedef decltype (&ID3D11DeviceContext::CSSetUnorderedAccessViews) TSetUnorderedAccessViewsType;
     static const TSetUnorderedAccessViewsType SetUAVMethods[] =
     {
-        nullptr, 
-        nullptr, 
-        nullptr, 
-        nullptr, 
-        nullptr, 
-        &ID3D11DeviceContext::CSSetUnorderedAccessViews
+        nullptr, // VS
+        reinterpret_cast<TSetUnorderedAccessViewsType>(&ID3D11DeviceContext::OMSetRenderTargetsAndUnorderedAccessViews),  // Little hack for PS
+        nullptr, // GS
+        nullptr, // HS
+        nullptr, // DS
+        &ID3D11DeviceContext::CSSetUnorderedAccessViews // CS
     };
 
     // http://diligentgraphics.com/diligent-engine/architecture/d3d11/committing-shader-resources-to-the-gpu-pipeline/
@@ -208,7 +208,6 @@ namespace Diligent
 #endif
             
             auto &Cache = pShaderResBindingD3D11->GetResourceCache(s);
-            auto PackedResCounts = Cache.GetPackedCounts();
 
             ShaderResourceCacheD3D11::CachedCB* CachedCBs;
             ID3D11Buffer** d3d11CBs;
@@ -228,7 +227,7 @@ namespace Diligent
 #endif
 
             // Transition and commit Constant Buffers
-            auto NumCBs = ShaderResourceCacheD3D11::UnpackCBCount(PackedResCounts);
+            auto NumCBs = Cache.GetCBCount();
             if(NumCBs)
             {
                 auto *CommittedD3D11CBs = m_CommittedD3D11CBs[ShaderTypeInd];
@@ -300,7 +299,7 @@ namespace Diligent
 
 
             // Transition and commit Shader Resource Views
-            auto NumSRVs = ShaderResourceCacheD3D11::UnpackSRVCount(PackedResCounts);
+            auto NumSRVs = Cache.GetSRVCount();
             if(NumSRVs)
             {
                 auto *CommittedD3D11SRVs = m_CommittedD3D11SRVs[ShaderTypeInd];
@@ -400,7 +399,7 @@ namespace Diligent
             // Commit samplers (no transitions for samplers)
             if(CommitResources)
             {
-                auto NumSamplers = ShaderResourceCacheD3D11::UnpackSamplerCount(PackedResCounts);
+                auto NumSamplers = Cache.GetSamplerCount();
                 if(NumSamplers)
                 {
                     auto *CommittedD3D11Samplers = m_CommittedD3D11Samplers[ShaderTypeInd];
@@ -433,7 +432,7 @@ namespace Diligent
 
 
             // Commit Unordered Access Views
-            auto NumUAVs = ShaderResourceCacheD3D11::UnpackUAVCount(PackedResCounts);
+            auto NumUAVs = Cache.GetUAVCount();
             if(NumUAVs)
             {
                 auto *CommittedD3D11UAVs = m_CommittedD3D11UAVs[ShaderTypeInd];
@@ -505,8 +504,20 @@ namespace Diligent
                 {
                     if(MinSlot != UINT_MAX)
                     {
-                        auto SetUAVMethod = SetUAVMethods[ShaderTypeInd];
-                        (m_pd3d11DeviceContext->*SetUAVMethod)(MinSlot, MaxSlot-MinSlot+1, CommittedD3D11UAVs+MinSlot, nullptr);
+                        if(ShaderTypeInd == PSInd)
+                        {
+                            auto StartUAVSlot = m_NumBoundRenderTargets;
+                            // UAVs cannot be set independently; they all need to be set at the same time.
+                            // https://docs.microsoft.com/en-us/windows/desktop/api/d3d11/nf-d3d11-id3d11devicecontext-omsetrendertargetsandunorderedaccessviews#remarks
+                            m_pd3d11DeviceContext->OMSetRenderTargetsAndUnorderedAccessViews(
+                                D3D11_KEEP_RENDER_TARGETS_AND_DEPTH_STENCIL, nullptr, nullptr,
+                                StartUAVSlot, NumUAVs - StartUAVSlot, CommittedD3D11UAVs + StartUAVSlot, nullptr);
+                        }
+                        else
+                        {
+                            auto SetUAVMethod = SetUAVMethods[ShaderTypeInd];
+                            (m_pd3d11DeviceContext->*SetUAVMethod)(MinSlot, MaxSlot-MinSlot+1, CommittedD3D11UAVs+MinSlot, nullptr);
+                        }
                         m_NumCommittedUAVs[ShaderTypeInd] = std::max(m_NumCommittedUAVs[ShaderTypeInd], static_cast<Uint8>(NumUAVs));
                     }
 
@@ -964,7 +975,26 @@ namespace Diligent
             }
         }
 
-        m_pd3d11DeviceContext->OMSetRenderTargets(NumRenderTargets, pd3d11RTs, pd3d11DSV);
+        auto& NumCommittedPSUAVs = m_NumCommittedUAVs[PSInd];
+        if ( NumCommittedPSUAVs > 0)
+        {
+            m_pd3d11DeviceContext->OMSetRenderTargetsAndUnorderedAccessViews(NumRenderTargets, pd3d11RTs, pd3d11DSV,
+                0, D3D11_KEEP_UNORDERED_ACCESS_VIEWS, nullptr, nullptr);
+
+            auto CommittedD3D11UAVs   = m_CommittedD3D11UAVs[PSInd];
+            auto CommittedD3D11UAVRes = m_CommittedD3D11UAVResources[PSInd];
+            for(Uint32 slot = 0; slot < NumRenderTargets; ++slot)
+            {
+                CommittedD3D11UAVs[slot] = nullptr;
+                CommittedD3D11UAVRes[slot] = nullptr;
+            }
+            if (NumRenderTargets >= NumCommittedPSUAVs)
+                NumCommittedPSUAVs = 0;
+        }
+        else
+        {
+            m_pd3d11DeviceContext->OMSetRenderTargets(NumRenderTargets, pd3d11RTs, pd3d11DSV);
+        }
     }
 
 
@@ -979,6 +1009,44 @@ namespace Diligent
         ID3D11UnorderedAccessView* ppNullView[] = { nullptr };
         (pContext->*SetUAVMethod)(Slot, 1, ppNullView, nullptr);
     }
+
+    template<typename TD3D11ResourceViewType, typename TSetD3D11View>
+    bool UnbindPixelShaderUAV(ID3D11DeviceContext*     pDeviceCtx,         
+                              TD3D11ResourceViewType*  CommittedD3D11Resources[],
+                              Uint32                   NumCommittedSlots,
+                              Uint32                   NumCommittedRenderTargets,
+                              TSetD3D11View            SetD3D11ViewMethod)
+    {
+        // For other resource view types do nothing
+        return false;
+    }
+
+    template<>
+    bool UnbindPixelShaderUAV<ID3D11UnorderedAccessView, TSetUnorderedAccessViewsType>(
+                        ID3D11DeviceContext*         pDeviceCtx,         
+                        ID3D11UnorderedAccessView*   CommittedD3D11UAVs[],
+                        Uint32                       NumCommittedUAVs,
+                        Uint32                       NumCommittedRenderTargets,
+                        TSetUnorderedAccessViewsType SetD3D11UAVMethod)
+    {
+        if(SetD3D11UAVMethod == reinterpret_cast<TSetUnorderedAccessViewsType>(&ID3D11DeviceContext::OMSetRenderTargetsAndUnorderedAccessViews))
+        {
+            // Pixel shader UAVs are bound in a special way simulatneously with the render targets
+            auto UAVStartSlot = NumCommittedRenderTargets;
+            // UAVs cannot be set independently; they all need to be set at the same time.
+            // https://docs.microsoft.com/en-us/windows/desktop/api/d3d11/nf-d3d11-id3d11devicecontext-omsetrendertargetsandunorderedaccessviews#remarks
+
+            // There is potential problem here: since device context does not keep strong references to
+            // UAVs, there is no guarantee the objects are alive
+            pDeviceCtx->OMSetRenderTargetsAndUnorderedAccessViews( D3D11_KEEP_RENDER_TARGETS_AND_DEPTH_STENCIL, nullptr, nullptr,
+                UAVStartSlot, NumCommittedUAVs - UAVStartSlot, CommittedD3D11UAVs + UAVStartSlot, nullptr);
+            return true;
+        }
+
+        return false;
+    }
+
+
 
     /// \tparam TD3D11ResourceViewType - Type of the D3D11 resource view (ID3D11ShaderResourceView or ID3D11UnorderedAccessView)
     /// \tparam TSetD3D11View - Type of the D3D11 device context method used to set the D3D11 view
@@ -1013,7 +1081,13 @@ namespace Diligent
                     CommittedD3D11Views[Slot] = nullptr;
 
                     auto SetViewMethod = SetD3D11ViewMethods[ShaderTypeInd];
-                    UnbindView( m_pd3d11DeviceContext, SetViewMethod, Slot );
+                    VERIFY(SetViewMethod != nullptr, "No appropriate ID3D11DeviceContext method");
+                    
+                    // Pixel shader UAVs require special handling
+                    if (!UnbindPixelShaderUAV(m_pd3d11DeviceContext, CommittedD3D11Views, NumCommittedSlots, m_NumBoundRenderTargets, SetViewMethod))
+                    {
+                        UnbindView( m_pd3d11DeviceContext, SetViewMethod, Slot );
+                    }
                 }
             }
 
@@ -1218,6 +1292,19 @@ namespace Diligent
         }
     }
 
+    void ReleaseCommittedPSUAVs(ID3D11UnorderedAccessView* CommittedD3D11UAVs[],
+                                Uint8 NumCommittedResources,
+                                ID3D11DeviceContext* pDeviceCtx)
+    {
+        if( NumCommittedResources > 0)
+        {
+            memset( CommittedD3D11UAVs, 0, NumCommittedResources * sizeof( CommittedD3D11UAVs[0] ) );
+            pDeviceCtx->OMSetRenderTargetsAndUnorderedAccessViews(
+                D3D11_KEEP_RENDER_TARGETS_AND_DEPTH_STENCIL, nullptr, nullptr,
+                0, 0, nullptr, nullptr);
+        }
+    }
+
     void DeviceContextD3D11Impl::ReleaseCommittedShaderResources()
     {
         for( int ShaderType = 0; ShaderType < NumShaderTypes; ++ShaderType )
@@ -1225,7 +1312,10 @@ namespace Diligent
             ReleaseCommittedShaderResourcesHelper( m_CommittedD3D11CBs     [ShaderType], m_NumCommittedCBs     [ShaderType], SetCBMethods[ShaderType],      m_pd3d11DeviceContext);
             ReleaseCommittedShaderResourcesHelper( m_CommittedD3D11SRVs    [ShaderType], m_NumCommittedSRVs    [ShaderType], SetSRVMethods[ShaderType],     m_pd3d11DeviceContext);
             ReleaseCommittedShaderResourcesHelper( m_CommittedD3D11Samplers[ShaderType], m_NumCommittedSamplers[ShaderType], SetSamplerMethods[ShaderType], m_pd3d11DeviceContext);
-            ReleaseCommittedShaderResourcesHelper( m_CommittedD3D11UAVs    [ShaderType], m_NumCommittedUAVs    [ShaderType], SetUAVMethods[ShaderType],     m_pd3d11DeviceContext);
+            if (ShaderType == PSInd)
+                ReleaseCommittedPSUAVs( m_CommittedD3D11UAVs[ShaderType], m_NumCommittedUAVs[ShaderType], m_pd3d11DeviceContext);
+            else
+                ReleaseCommittedShaderResourcesHelper( m_CommittedD3D11UAVs    [ShaderType], m_NumCommittedUAVs    [ShaderType], SetUAVMethods[ShaderType],     m_pd3d11DeviceContext);
             memset(m_CommittedD3D11SRVResources[ShaderType], 0, sizeof(m_CommittedD3D11SRVResources[ShaderType][0])*m_NumCommittedSRVs[ShaderType] );
             memset(m_CommittedD3D11UAVResources[ShaderType], 0, sizeof(m_CommittedD3D11UAVResources[ShaderType][0])*m_NumCommittedUAVs[ShaderType] );
             m_NumCommittedCBs[ShaderType] = 0;

@@ -43,10 +43,12 @@ enum BUFFER_MODE : Int32
     /// Undefined mode.
     BUFFER_MODE_UNDEFINED = 0,
 
-    /// Formated buffer. 
+    /// Formated buffer. Access to the buffer will use format conversion operations.
+    /// In this mode, the BufferFormat member of BufferDesc defines the buffer format.
     BUFFER_MODE_FORMATTED,
-
+        
     /// Structured buffer.
+    /// In this mode, ElementByteStride member of BufferDesc defines the structure stride.
     BUFFER_MODE_STRUCTURED,
 
     /// Helper value storing the total number of modes in the enumeration.

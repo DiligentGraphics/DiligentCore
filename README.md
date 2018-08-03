@@ -614,6 +614,9 @@ objects. Refer to the following pages for more information:
 ## Current Progress
 
 * Added `IFence` interface and `IDeviceContext::SignalFence()` method to enable CPU-GPU synchronization
+* Added `GetType`, `GetArraySize`, `GetName`, and `GetIndex` methods to `IShaderVariable` interface;
+  Added `GetVariableCount` and `GetShaderVariable(Uint32 Index)` methods to `IShader` interface; 
+  Addec `GetVariableCount` and `GetVariable(SHADER_TYPE ShaderType, Uint32 Index)` to `IShaderResourceBinding` interface.
 
 ## v2.3
 

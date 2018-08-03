@@ -205,7 +205,7 @@ PipelineStateD3D12Impl :: PipelineStateD3D12Impl(IReferenceCounters*      pRefCo
         std::array<size_t, MaxShadersInPipeline> ShaderResLayoutDataSizes = {};
         for (Uint32 s = 0; s < m_NumShaders; ++s)
         {
-            std::array<SHADER_VARIABLE_TYPE, 3> AllowedVarTypes = { SHADER_VARIABLE_TYPE_STATIC, SHADER_VARIABLE_TYPE_MUTABLE, SHADER_VARIABLE_TYPE_DYNAMIC };
+            std::array<SHADER_VARIABLE_TYPE, 2> AllowedVarTypes = { SHADER_VARIABLE_TYPE_MUTABLE, SHADER_VARIABLE_TYPE_DYNAMIC };
             ShaderResLayoutDataSizes[s] = ShaderResourceLayoutD3D12::GetRequiredMemorySize(m_pShaderResourceLayouts[s], AllowedVarTypes.data(), static_cast<Uint32>(AllowedVarTypes.size()));
         }
 

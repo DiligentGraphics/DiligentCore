@@ -43,7 +43,7 @@ class FixedBlockMemoryAllocator;
 class ResourceMapping;
 
 /// Implementation of the Diligent::IShaderD3D11 interface
-class ShaderD3D11Impl : public ShaderBase<IShaderD3D11, RenderDeviceD3D11Impl>, public ShaderD3DBase
+class ShaderD3D11Impl final : public ShaderBase<IShaderD3D11, RenderDeviceD3D11Impl>, public ShaderD3DBase
 {
 public:
     using TShaderBase = ShaderBase<IShaderD3D11, RenderDeviceD3D11Impl>;
@@ -58,6 +58,10 @@ public:
     virtual void BindResources( IResourceMapping* pResourceMapping, Uint32 Flags  )override final;
     
     virtual IShaderVariable* GetShaderVariable( const Char* Name )override final;
+
+    virtual Uint32 GetVariableCount() const override final;
+
+    virtual IShaderVariable* GetShaderVariable(Uint32 Index)override final;
 
     virtual ID3D11DeviceChild* GetD3D11Shader()override final{ return m_pShader; }
 

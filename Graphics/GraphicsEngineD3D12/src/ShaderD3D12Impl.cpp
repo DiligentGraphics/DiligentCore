@@ -43,7 +43,7 @@ ShaderD3D12Impl::ShaderD3D12Impl(IReferenceCounters*          pRefCounters,
     ShaderD3DBase(ShaderCreationAttribs),
     m_StaticResLayout(*this, GetRawAllocator()),
     m_DummyShaderVar(*this),
-    m_ConstResCache(ShaderResourceCacheD3D12::DbgCacheContentType::StaticShaderResources)
+    m_StaticResCache(ShaderResourceCacheD3D12::DbgCacheContentType::StaticShaderResources)
 {
     // Load shader resources
     auto &Allocator = GetRawAllocator();
@@ -54,7 +54,7 @@ ShaderD3D12Impl::ShaderD3D12Impl(IReferenceCounters*          pRefCounters,
     // Clone only static resources that will be set directly in the shader
     // http://diligentgraphics.com/diligent-engine/architecture/d3d12/shader-resource-layout#Initializing-Special-Resource-Layout-for-Managing-Static-Shader-Resources
     SHADER_VARIABLE_TYPE VarTypes[] = {SHADER_VARIABLE_TYPE_STATIC};
-    m_StaticResLayout.Initialize(pRenderDeviceD3D12->GetD3D12Device(), m_pShaderResources, GetRawAllocator(), VarTypes, _countof(VarTypes), &m_ConstResCache, nullptr);
+    m_StaticResLayout.Initialize(pRenderDeviceD3D12->GetD3D12Device(), m_pShaderResources, GetRawAllocator(), VarTypes, _countof(VarTypes), &m_StaticResCache, nullptr);
 }
 
 ShaderD3D12Impl::~ShaderD3D12Impl()
@@ -63,7 +63,7 @@ ShaderD3D12Impl::~ShaderD3D12Impl()
 
 void ShaderD3D12Impl::BindResources(IResourceMapping* pResourceMapping, Uint32 Flags)
 {
-   m_StaticResLayout.BindResources(pResourceMapping, Flags, &m_ConstResCache);
+   m_StaticResLayout.BindResources(pResourceMapping, Flags, &m_StaticResCache);
 }
     
 IShaderVariable* ShaderD3D12Impl::GetShaderVariable(const Char* Name)
@@ -74,10 +74,21 @@ IShaderVariable* ShaderD3D12Impl::GetShaderVariable(const Char* Name)
     return pVar;
 }
 
+Uint32 ShaderD3D12Impl::GetVariableCount()const
+{
+    return m_StaticResLayout.GetVariableCount();
+}
+
+IShaderVariable* ShaderD3D12Impl::GetShaderVariable(Uint32 Index)
+{
+    return m_StaticResLayout.GetShaderVariable(Index);
+}
+
+
 #ifdef VERIFY_SHADER_BINDINGS
 void ShaderD3D12Impl::DbgVerifyStaticResourceBindings()
 {
-    m_StaticResLayout.dbgVerifyBindings();
+    m_StaticResLayout.dbgVerifyBindings(m_StaticResCache);
 }
 #endif
 

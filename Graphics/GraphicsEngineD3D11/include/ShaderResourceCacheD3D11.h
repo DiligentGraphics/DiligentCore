@@ -263,16 +263,10 @@ public:
         return (CBCount & 0xFF) | ((SRVCount & 0xFF) << 8) | ((SamplerCount & 0xFF) << 16) | ((UAVCount & 0xFF) << 24);
     }
 
-    static __forceinline Uint32 UnpackCBCount       (Uint32 PackedCounts) {return (PackedCounts >>   0) & 0xFF; }
-    static __forceinline Uint32 UnpackSRVCount      (Uint32 PackedCounts) {return (PackedCounts >>   8) & 0xFF; }
-    static __forceinline Uint32 UnpackSamplerCount  (Uint32 PackedCounts) {return (PackedCounts >>  16) & 0xFF; }
-    static __forceinline Uint32 UnpackUAVCount      (Uint32 PackedCounts) {return (PackedCounts >>  24) & 0xFF; }
-
-    __forceinline Uint32 GetCBCount()     const{ return UnpackCBCount     (m_ResourceCounts);}
-    __forceinline Uint32 GetSRVCount()    const{ return UnpackSRVCount    (m_ResourceCounts);}
-    __forceinline Uint32 GetSamplerCount()const{ return UnpackSamplerCount(m_ResourceCounts);}
-    __forceinline Uint32 GetUAVCount()    const{ return UnpackUAVCount    (m_ResourceCounts);}
-    __forceinline Uint32 GetPackedCounts()const{ return m_ResourceCounts;}
+    __forceinline Uint32 GetCBCount()     const{ return m_CBCount;      }
+    __forceinline Uint32 GetSRVCount()    const{ return m_SRVCount;     }
+    __forceinline Uint32 GetSamplerCount()const{ return m_SamplerCount; }
+    __forceinline Uint32 GetUAVCount()    const{ return m_UAVCount;     }
 
     __forceinline void GetResourceArrays(CachedCB*       &CBs,          ID3D11Buffer**              &pd3d11CBs, 
                                          CachedResource* &SRVResources, ID3D11ShaderResourceView**  &d3d11SRVs,
@@ -319,7 +313,13 @@ public:
         pd3d11UAVs = reinterpret_cast<ID3D11UnorderedAccessView**>( UAVResources + GetUAVCount() );
     }
 
-    __forceinline bool IsInitialized()const{return m_ResourceCounts != InvalidResourceCounts;}
+    __forceinline bool IsInitialized()const
+    {
+        return  m_CBCount      != InvalidResourceCount &&
+                m_SRVCount     != InvalidResourceCount &&
+                m_SamplerCount != InvalidResourceCount &&
+                m_UAVCount     != InvalidResourceCount;
+    }
 
 private:
 
@@ -339,16 +339,17 @@ private:
         d3d11ResArr[Slot] = pd3d11Resource;
     }
 
-    static constexpr Uint32 InvalidResourceCounts = 0xFFFFFFFF;
+    static constexpr Uint8 InvalidResourceCount = 0xFF;
     // Resource limits in D3D11:
     // Max CB count:        14
     // Max SRV count:       128
     // Max Sampler count:   16
     // Max UAV count:       8
-    Uint32 m_ResourceCounts = InvalidResourceCounts; // CBCount == (m_ResourceCounts >> 0) & 0xFF
-                                                     // SRVCount == (m_ResourceCounts >> 8) & 0xFF
-                                                     // SamplerCount == (m_ResourceCounts >> 16) & 0xFF
-                                                     // UAVCount == (m_ResourceCounts >> 24) & 0xFF
+    Uint8 m_CBCount      = InvalidResourceCount;
+    Uint8 m_SRVCount     = InvalidResourceCount;
+    Uint8 m_SamplerCount = InvalidResourceCount;
+    Uint8 m_UAVCount     = InvalidResourceCount;
+
     Uint8 *m_pResourceData = nullptr;
 
 #ifdef _DEBUG

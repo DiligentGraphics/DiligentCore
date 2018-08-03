@@ -65,7 +65,25 @@ public:
     /// \param [in] ShaderType - Type of the shader to look up the variable. 
     ///                          Must be one of Diligent::SHADER_TYPE.
     /// \param Name - Variable name
-    virtual IShaderVariable *GetVariable(SHADER_TYPE ShaderType, const char *Name) = 0;
+    virtual IShaderVariable* GetVariable(SHADER_TYPE ShaderType, const char *Name) = 0;
+
+    /// Returns the total variable count for the specific shader stage.
+
+    /// \param [in] ShaderType - Type of the shader.
+    /// \remark The method only counts mutable and dynamic variables that can be accessed through
+    ///         the Shader Resource Binding object. Static variables are accessed through the Shader
+    ///         object.
+    virtual Uint32 GetVariableCount(SHADER_TYPE ShaderType) const = 0;
+
+    /// Returns variable
+
+    /// \param [in] ShaderType - Type of the shader to look up the variable. 
+    ///                          Must be one of Diligent::SHADER_TYPE.
+    /// \param Index - Variable index. The index must be between 0 and the total number
+    ///                of variables in this shader stage as returned by GetVariableCount().
+    /// \remark Only mutable and dynamic variables can be accessed through this method.
+    ///         Static variables are accessed through the Shader object.
+    virtual IShaderVariable* GetVariable(SHADER_TYPE ShaderType, Uint32 Index) = 0;
 };
 
 }

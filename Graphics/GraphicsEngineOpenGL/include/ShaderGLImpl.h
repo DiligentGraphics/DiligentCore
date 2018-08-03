@@ -65,7 +65,7 @@ inline GLenum ShaderTypeToGLShaderBit(SHADER_TYPE ShaderType)
 }
 
 /// Implementation of the Diligent::IShaderGL interface
-class ShaderGLImpl : public ShaderBase<IShaderGL, RenderDeviceGLImpl>
+class ShaderGLImpl final : public ShaderBase<IShaderGL, RenderDeviceGLImpl>
 {
 public:
     using TShaderBase = ShaderBase<IShaderGL, RenderDeviceGLImpl>;
@@ -73,11 +73,15 @@ public:
     ShaderGLImpl( IReferenceCounters *pRefCounters, RenderDeviceGLImpl *pDeviceGL, const ShaderCreationAttribs &ShaderCreationAttribs, bool bIsDeviceInternal = false );
     ~ShaderGLImpl();
 
-    virtual void BindResources( IResourceMapping* pResourceMapping, Uint32 Flags  )override;
+    virtual void BindResources( IResourceMapping* pResourceMapping, Uint32 Flags  )override final;
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
+    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
 
-    virtual IShaderVariable* GetShaderVariable( const Char* Name )override;
+    virtual IShaderVariable* GetShaderVariable( const Char* Name )override final;
+
+    virtual Uint32 GetVariableCount() const override final;
+
+    virtual IShaderVariable* GetShaderVariable(Uint32 Index) override final;
 
     GLProgram& GetGlProgram(){return m_GlProgObj;}
 

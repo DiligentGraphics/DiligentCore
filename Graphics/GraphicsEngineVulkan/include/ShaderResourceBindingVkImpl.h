@@ -40,7 +40,7 @@ class FixedBlockMemoryAllocator;
 
 /// Implementation of the Diligent::IShaderResourceBindingVk interface
 // sizeof(ShaderResourceBindingVkImpl) == 80 (x64, msvc, Release)
-class ShaderResourceBindingVkImpl : public ShaderResourceBindingBase<IShaderResourceBindingVk>
+class ShaderResourceBindingVkImpl final : public ShaderResourceBindingBase<IShaderResourceBindingVk>
 {
 public:
     using TBase = ShaderResourceBindingBase<IShaderResourceBindingVk>;
@@ -48,11 +48,15 @@ public:
     ShaderResourceBindingVkImpl(IReferenceCounters* pRefCounters, class PipelineStateVkImpl* pPSO, bool IsPSOInternal);
     ~ShaderResourceBindingVkImpl();
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
+    virtual void QueryInterface( const Diligent::INTERFACE_ID& IID, IObject** ppInterface )override final;
 
-    virtual void BindResources(Uint32 ShaderFlags, IResourceMapping* pResMapping, Uint32 Flags)override;
+    virtual void BindResources(Uint32 ShaderFlags, IResourceMapping* pResMapping, Uint32 Flags)override final;
 
-    virtual IShaderVariable *GetVariable(SHADER_TYPE ShaderType, const char *Name)override;
+    virtual IShaderVariable* GetVariable(SHADER_TYPE ShaderType, const char* Name)override final;
+
+    virtual Uint32 GetVariableCount(SHADER_TYPE ShaderType) const override final;
+
+    virtual IShaderVariable* GetVariable(SHADER_TYPE ShaderType, Uint32 Index)override final;
 
     ShaderResourceCacheVk& GetResourceCache(){return m_ShaderResourceCache;}
 

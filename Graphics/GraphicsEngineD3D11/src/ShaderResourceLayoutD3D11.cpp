@@ -771,9 +771,101 @@ IShaderVariable* ShaderResourceLayoutD3D11::GetShaderVariable(const Char* Name)
 #endif
     if(pVar == nullptr)
     {
-        LOG_ERROR_MESSAGE( "Shader variable \"", Name, "\" is not found in shader \"", GetShaderName(), "\". Attempts to set the variable will be silently ignored." );
+        LOG_ERROR_MESSAGE( "Unable to find variable \"", Name, "\". Attempts to set the variable will be silently ignored. Note that static variables are accessed through shader objects, while mutable and dynamic variables are accessed through Shader Resource Binding." );
     }
     return pVar;
+}
+
+Uint32 ShaderResourceLayoutD3D11::GetVariableIndex(const ShaderVariableD3D11Base& Variable)const
+{
+    if (!m_ResourceBuffer)
+    {
+        LOG_ERROR("This shader resource layout does not have resources");
+        return static_cast<Uint32>(-1);
+    }
+
+    auto Offset = reinterpret_cast<const Uint8*>(&Variable) - reinterpret_cast<Uint8*>(m_ResourceBuffer.get());
+    Uint32 Index = 0;
+    if (Offset < m_TexAndSamplersOffset)
+    {
+        VERIFY(Offset % sizeof(ConstBuffBindInfo) == 0, "Offset is not multiple of sizeof(ConstBuffBindInfo)");
+        return Index + static_cast<Uint32>(Offset / sizeof(ConstBuffBindInfo));
+    }
+    else
+        Index += m_NumCBs;
+
+    if (Offset < m_TexUAVsOffset)
+    {
+        VERIFY( (Offset - m_TexAndSamplersOffset) % sizeof(TexAndSamplerBindInfo) == 0, "Offset is not multiple of sizeof(TexAndSamplerBindInfo)");
+        return Index + static_cast<Uint32>((Offset - m_TexAndSamplersOffset) / sizeof(TexAndSamplerBindInfo));
+    }
+    else
+        Index += m_NumTexSRVs;
+
+    if (Offset < m_BuffUAVsOffset)
+    {
+        VERIFY( (Offset - m_TexUAVsOffset) % sizeof(TexUAVBindInfo) == 0, "Offset is not multiple of sizeof(TexUAVBindInfo)");
+        return Index + static_cast<Uint32>((Offset - m_TexUAVsOffset) / sizeof(TexUAVBindInfo));
+    }
+    else
+        Index += m_NumTexUAVs;
+
+    if (Offset < m_BuffSRVsOffset)
+    {
+        VERIFY( (Offset - m_BuffUAVsOffset) % sizeof(BuffUAVBindInfo) == 0, "Offset is not multiple of sizeof(BuffUAVBindInfo)" );
+        return Index + static_cast<Uint32>((Offset - m_BuffUAVsOffset) / sizeof(BuffUAVBindInfo));
+    }
+    else
+        Index += m_NumBufUAVs;
+
+    if (Offset < static_cast<std::ptrdiff_t>(m_BuffSRVsOffset + m_NumBufSRVs * sizeof(BuffSRVBindInfo)))
+    {
+        VERIFY( (Offset - m_BuffSRVsOffset) % sizeof(BuffSRVBindInfo) == 0, "Offset is not multiple of sizeof(BuffSRVBindInfo)" );
+        return Index + static_cast<Uint32>((Offset - m_BuffSRVsOffset) / sizeof(BuffSRVBindInfo));
+    }
+    else
+    {
+        LOG_ERROR("Failed to get variable index. The variable ", &Variable, " does not belong to this shader resource layout");
+        return static_cast<Uint32>(-1);
+    }
+}
+
+IShaderVariable* ShaderResourceLayoutD3D11::GetShaderVariable( Uint32 Index )
+{
+    if(Index >= GetTotalResourceCount())
+    {
+        LOG_ERROR("Invalid resource index ", Index);
+        return nullptr;
+    }
+
+    if (Index < m_NumCBs)
+        return &GetCB(Index);
+    else
+        Index -= m_NumCBs;
+
+    if (Index < m_NumTexSRVs)
+        return &GetTexSRV(Index);
+    else
+        Index -= m_NumTexSRVs;
+    
+    if (Index < m_NumTexUAVs)
+        return &GetTexUAV(Index);
+    else
+        Index -= m_NumTexUAVs;
+
+    if (Index < m_NumBufUAVs)
+        return &GetBufUAV(Index);
+    else
+        Index -= m_NumBufUAVs;
+
+    if (Index < m_NumBufSRVs)
+        return &GetBufSRV(Index);
+    else
+    {
+        LOG_ERROR(Index + m_NumCBs + m_NumTexSRVs + m_NumTexUAVs + m_NumBufUAVs," is not a valid variable index");
+    }
+
+    return nullptr;
 }
 
 const Char* ShaderResourceLayoutD3D11::GetShaderName()const

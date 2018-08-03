@@ -37,7 +37,7 @@ namespace Diligent
 
 class FixedBlockMemoryAllocator;
 /// Implementation of the Diligent::IShaderResourceBindingGL interface
-class ShaderResourceBindingGLImpl : public ShaderResourceBindingBase<IShaderResourceBindingGL>
+class ShaderResourceBindingGLImpl final : public ShaderResourceBindingBase<IShaderResourceBindingGL>
 {
 public:
     using TBase = ShaderResourceBindingBase<IShaderResourceBindingGL>;
@@ -45,11 +45,15 @@ public:
     ShaderResourceBindingGLImpl(IReferenceCounters *pRefCounters, class PipelineStateGLImpl *pPSO);
     ~ShaderResourceBindingGLImpl();
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
+    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
 
-    virtual void BindResources(Uint32 ShaderFlags, IResourceMapping *pResMapping, Uint32 Flags)override;
+    virtual void BindResources(Uint32 ShaderFlags, IResourceMapping *pResMapping, Uint32 Flags)override final;
 
-    virtual IShaderVariable *GetVariable(SHADER_TYPE ShaderType, const char *Name)override;
+    virtual IShaderVariable* GetVariable(SHADER_TYPE ShaderType, const char *Name)override final;
+
+    virtual Uint32 GetVariableCount(SHADER_TYPE ShaderType) const override final;
+
+    virtual IShaderVariable* GetVariable(SHADER_TYPE ShaderType, Uint32 Index)override final;
 
     GLProgramResources &GetProgramResources(SHADER_TYPE ShaderType, PipelineStateGLImpl *pdbgPSO);
 

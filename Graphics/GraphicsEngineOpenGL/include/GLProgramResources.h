@@ -194,6 +194,27 @@ namespace Diligent
                     ProgramVar.pResources[FirstElement + i] = ppObjects[i];
             }
 
+            virtual SHADER_VARIABLE_TYPE GetType()const override final
+            {
+                return ProgramVar.VarType;
+            }
+
+            virtual Uint32 GetArraySize()const override final
+            {
+                return static_cast<Uint32>(ProgramVar.pResources.size());
+            }
+
+            virtual const Char* GetName()const override final
+            {
+                return ProgramVar.Name.c_str();
+            }
+
+            virtual Uint32 GetIndex()const override final
+            {
+                UNSUPPORTED("Not yet implemented");
+                return 0;
+            }
+
         private:
             GLProgramVariableBase &ProgramVar;
         };
