@@ -55,7 +55,7 @@ namespace Diligent
         Initialize(CBCount, SRVCount, SamplerCount, UAVCount, MemAllocator);
     }
 
-    void ShaderResourceCacheD3D11::Initialize(Int32 CBCount, Int32 SRVCount, Int32 SamplerCount, Int32 UAVCount, IMemoryAllocator& MemAllocator)
+    void ShaderResourceCacheD3D11::Initialize(Uint32 CBCount, Uint32 SRVCount, Uint32 SamplerCount, Uint32 UAVCount, IMemoryAllocator& MemAllocator)
     {
         // http://diligentgraphics.com/diligent-engine/architecture/d3d11/shader-resource-cache/
         if (IsInitialized())
@@ -64,39 +64,30 @@ namespace Diligent
             return;
         }
 
+        VERIFY(CBCount      <= D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT, "Constant buffer count ", CBCount,      " exceeds D3D11 limit ", D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT );
+        VERIFY(SRVCount     <= D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT,      "SRV count ",             SRVCount,     " exceeds D3D11 limit ", D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT );
+        VERIFY(SamplerCount <= D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT,             "Sampler count ",         SamplerCount, " exceeds D3D11 limit ", D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT );
+        VERIFY(UAVCount     <= D3D11_PS_CS_UAV_REGISTER_COUNT,                    "UAV count ",             UAVCount,     " exceeds D3D11 limit ", D3D11_PS_CS_UAV_REGISTER_COUNT );
 
-        VERIFY(CBCount <= D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT, "Constant buffer count ", CBCount, " exceeds D3D11 limit ", D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT );
-        VERIFY(SRVCount <= D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT, "SRV count ", SRVCount, " exceeds D3D11 limit ", D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT );
-        VERIFY(SamplerCount <= D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT, "Sampler count ", SamplerCount, " exceeds D3D11 limit ", D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT );
-        VERIFY(UAVCount <= D3D11_PS_CS_UAV_REGISTER_COUNT, "UAV count ", UAVCount, " exceeds D3D11 limit ", D3D11_PS_CS_UAV_REGISTER_COUNT );
+        // m_CBOffset  = 0
+        m_SRVOffset       = static_cast<Uint16>(m_CBOffset      + CBCount      * (sizeof(CachedCB)       + sizeof(ID3D11Buffer*)));
+        m_SamplerOffset   = static_cast<Uint16>(m_SRVOffset     + SRVCount     * (sizeof(CachedResource) + sizeof(ID3D11ShaderResourceView*)));
+        m_UAVOffset       = static_cast<Uint16>(m_SamplerOffset + SamplerCount * (sizeof(CachedSampler)  + sizeof(ID3D11SamplerState*)));
+        m_MemoryEndOffset = static_cast<Uint16>(m_UAVOffset     + UAVCount     * (sizeof(CachedResource) + sizeof(ID3D11UnorderedAccessView*)));
 
-        m_CBCount      = CBCount;
-        m_SRVCount     = SRVCount;
-        m_SamplerCount = SamplerCount;
-        m_UAVCount     = UAVCount;
         VERIFY_EXPR(GetCBCount()      == static_cast<Uint32>(CBCount));
         VERIFY_EXPR(GetSRVCount()     == static_cast<Uint32>(SRVCount));
         VERIFY_EXPR(GetSamplerCount() == static_cast<Uint32>(SamplerCount));
         VERIFY_EXPR(GetUAVCount()     == static_cast<Uint32>(UAVCount));
 
-        CachedCB* CBs = nullptr;
-        ID3D11Buffer** d3d11CBs = nullptr; 
-        CachedResource* SRVResources = nullptr;
-        ID3D11ShaderResourceView** d3d11SRVs = nullptr;
-        CachedSampler* Samplers = nullptr;
-        ID3D11SamplerState** d3d11Samplers = nullptr;
-        CachedResource* UAVResources = nullptr;
-        ID3D11UnorderedAccessView** d3d11UAVs = nullptr;
-        GetResourceArrays(CBs, d3d11CBs, SRVResources, d3d11SRVs, Samplers, d3d11Samplers, UAVResources, d3d11UAVs);
-
         VERIFY_EXPR(m_pResourceData == nullptr);
-        size_t BufferSize =  reinterpret_cast<Uint8*>(d3d11UAVs + UAVCount) - m_pResourceData;
+        size_t BufferSize =  m_MemoryEndOffset;
 
         VERIFY_EXPR( BufferSize ==
-                    (sizeof(CBs[0])          + sizeof(d3d11CBs[0]))      * CBCount + 
-                    (sizeof(SRVResources[0]) + sizeof(d3d11SRVs[0]))     * SRVCount + 
-                    (sizeof(Samplers[0])     + sizeof(d3d11Samplers[0])) * SamplerCount + 
-                    (sizeof(UAVResources[0]) + sizeof(d3d11UAVs[0]))     * UAVCount );
+                    (sizeof(CachedCB)       + sizeof(ID3D11Buffer*))              * CBCount + 
+                    (sizeof(CachedResource) + sizeof(ID3D11ShaderResourceView*))  * SRVCount + 
+                    (sizeof(CachedSampler)  + sizeof(ID3D11SamplerState*))        * SamplerCount + 
+                    (sizeof(CachedResource) + sizeof(ID3D11UnorderedAccessView*)) * UAVCount );
 
 #ifdef _DEBUG
         m_pdbgMemoryAllocator = &MemAllocator;
@@ -107,48 +98,42 @@ namespace Diligent
             memset(m_pResourceData, 0, BufferSize);
         }
 
-
-        GetResourceArrays(CBs, d3d11CBs, SRVResources, d3d11SRVs, Samplers, d3d11Samplers, UAVResources, d3d11UAVs);
-#ifdef _DEBUG
-        {
-            CachedCB* dbgCBs = nullptr;
-            ID3D11Buffer** dbgd3d11CBs = nullptr;
-            GetCBArrays(dbgCBs, dbgd3d11CBs);
-            VERIFY_EXPR(dbgCBs == CBs && dbgd3d11CBs == d3d11CBs);
-        }
-        {
-            CachedResource* dbgSRVResources = nullptr;
-            ID3D11ShaderResourceView** dbgd3d11SRVs = nullptr;
-            GetSRVArrays(dbgSRVResources, dbgd3d11SRVs);
-            VERIFY_EXPR(dbgSRVResources == SRVResources && dbgd3d11SRVs == d3d11SRVs);
-        }
-        {
-            CachedSampler* dbgSamplers = nullptr;
-            ID3D11SamplerState** dbgd3d11Samplers = nullptr;
-            GetSamplerArrays(dbgSamplers, dbgd3d11Samplers);
-            VERIFY_EXPR(dbgSamplers == Samplers && dbgd3d11Samplers == d3d11Samplers);
-        }
-
-        {
-            CachedResource* dbgUAVResources = nullptr;
-            ID3D11UnorderedAccessView** dbgd3d11UAVs = nullptr;
-            GetUAVArrays(dbgUAVResources, dbgd3d11UAVs);
-            VERIFY_EXPR(dbgUAVResources == UAVResources && dbgd3d11UAVs == d3d11UAVs);
-        }
-#endif
-
         // Explicitly construct all objects
-        for (Int32 cb = 0; cb < CBCount; ++cb)
-            new(CBs+cb)CachedCB;
+        if (CBCount != 0)
+        {
+            CachedCB*      CBs      = nullptr;
+            ID3D11Buffer** d3d11CBs = nullptr;
+            GetCBArrays(CBs, d3d11CBs);
+            for (Uint32 cb = 0; cb < CBCount; ++cb)
+                new(CBs+cb)CachedCB;
+        }
 
-        for (Int32 srv = 0; srv < SRVCount; ++srv)
-            new(SRVResources+srv)CachedResource;
+        if (SRVCount != 0)
+        {
+            CachedResource*            SRVResources  = nullptr;
+            ID3D11ShaderResourceView** d3d11SRVs     = nullptr;
+            GetSRVArrays(SRVResources, d3d11SRVs);
+            for (Uint32 srv = 0; srv < SRVCount; ++srv)
+                new(SRVResources+srv)CachedResource;
+        }
 
-        for (Int32 sam = 0; sam < SamplerCount; ++sam)
-            new(Samplers+sam)CachedSampler;
+        if (SamplerCount != 0)
+        {
+            CachedSampler*       Samplers      = nullptr;
+            ID3D11SamplerState** d3d11Samplers = nullptr;
+            GetSamplerArrays(Samplers,     d3d11Samplers);
+            for (Uint32 sam = 0; sam < SamplerCount; ++sam)
+                new(Samplers+sam)CachedSampler;
+        }
 
-        for (Int32 uav = 0; uav < UAVCount; ++uav)
-            new(UAVResources+uav)CachedResource;
+        if (UAVCount != 0)
+        {
+            CachedResource*             UAVResources = nullptr;
+            ID3D11UnorderedAccessView** d3d11UAVs    = nullptr;
+            GetUAVArrays    (UAVResources, d3d11UAVs);
+            for (Uint32 uav = 0; uav < UAVCount; ++uav)
+                new(UAVResources+uav)CachedResource;
+        }
     }
 
     void ShaderResourceCacheD3D11::Destroy(IMemoryAllocator& MemAllocator)
@@ -158,36 +143,53 @@ namespace Diligent
 
         if( IsInitialized() ) 
         {
-            CachedCB* CBs = nullptr;
-            ID3D11Buffer** d3d11CBs = nullptr; 
-            CachedResource* SRVResources = nullptr;
-            ID3D11ShaderResourceView** d3d11SRVs = nullptr;
-            CachedSampler* Samplers = nullptr;
-            ID3D11SamplerState** d3d11Samplers = nullptr;
-            CachedResource* UAVResources = nullptr;
-            ID3D11UnorderedAccessView** d3d11UAVs = nullptr;
-            GetResourceArrays(CBs, d3d11CBs, SRVResources, d3d11SRVs, Samplers, d3d11Samplers, UAVResources, d3d11UAVs);
-
             // Explicitly destory all objects
             auto CBCount = GetCBCount();
-            for (size_t cb = 0; cb < CBCount; ++cb)
-                CBs[cb].~CachedCB();
+            if (CBCount != 0)
+            {
+                CachedCB*      CBs      = nullptr;
+                ID3D11Buffer** d3d11CBs = nullptr; 
+                GetCBArrays     (CBs, d3d11CBs);
+                for (size_t cb = 0; cb < CBCount; ++cb)
+                    CBs[cb].~CachedCB();
+            }
+
             auto SRVCount = GetSRVCount();
-            for (size_t srv = 0; srv < SRVCount; ++srv)
-                SRVResources[srv].~CachedResource();
+            if (SRVCount != 0)
+            {
+                CachedResource*            SRVResources = nullptr;
+                ID3D11ShaderResourceView** d3d11SRVs    = nullptr;
+                GetSRVArrays    (SRVResources, d3d11SRVs);
+                for (size_t srv = 0; srv < SRVCount; ++srv)
+                    SRVResources[srv].~CachedResource();
+            }
+
             auto SamplerCount = GetSamplerCount();
-            for (size_t sam = 0; sam < SamplerCount; ++sam)
-                Samplers[sam].~CachedSampler();
+            if (SamplerCount != 0)
+            {
+                CachedSampler*       Samplers      = nullptr;
+                ID3D11SamplerState** d3d11Samplers = nullptr;
+                GetSamplerArrays(Samplers, d3d11Samplers);
+                for (size_t sam = 0; sam < SamplerCount; ++sam)
+                    Samplers[sam].~CachedSampler();
+            }
+
             auto UAVCount = GetUAVCount();
-            for (size_t uav = 0; uav < UAVCount; ++uav)
-                UAVResources[uav].~CachedResource();
+            if (UAVCount != 0)
+            {
+                CachedResource*             UAVResources = nullptr;
+                ID3D11UnorderedAccessView** d3d11UAVs    = nullptr;
+                GetUAVArrays    (UAVResources, d3d11UAVs);
+                for (size_t uav = 0; uav < UAVCount; ++uav)
+                    UAVResources[uav].~CachedResource();
+            }
 
-            m_CBCount      = InvalidResourceCount;
-            m_SRVCount     = InvalidResourceCount;
-            m_SamplerCount = InvalidResourceCount;
-            m_UAVCount     = InvalidResourceCount;
+            m_SRVOffset       = InvalidResourceOffset;
+            m_SamplerOffset   = InvalidResourceOffset;
+            m_UAVOffset       = InvalidResourceOffset;
+            m_MemoryEndOffset = InvalidResourceOffset;
 
-            if(m_pResourceData != nullptr)
+            if (m_pResourceData != nullptr)
                 MemAllocator.Free(m_pResourceData);
         }
     }
@@ -243,15 +245,19 @@ namespace Diligent
     {
         VERIFY(IsInitialized(), "Cache is not initialized");
 
-        CachedCB* CBs = nullptr;
-        ID3D11Buffer** d3d11CBs = nullptr; 
-        CachedResource* SRVResources = nullptr;
-        ID3D11ShaderResourceView** d3d11SRVs = nullptr;
-        CachedSampler* Samplers = nullptr;
-        ID3D11SamplerState** d3d11Samplers = nullptr;
-        CachedResource* UAVResources = nullptr;
-        ID3D11UnorderedAccessView** d3d11UAVs = nullptr;
-        GetResourceArrays(CBs, d3d11CBs, SRVResources, d3d11SRVs, Samplers, d3d11Samplers, UAVResources, d3d11UAVs);
+        CachedCB*                   CBs           = nullptr;
+        ID3D11Buffer**              d3d11CBs      = nullptr; 
+        CachedResource*             SRVResources  = nullptr;
+        ID3D11ShaderResourceView**  d3d11SRVs     = nullptr;
+        CachedSampler*              Samplers      = nullptr;
+        ID3D11SamplerState**        d3d11Samplers = nullptr;
+        CachedResource*             UAVResources  = nullptr;
+        ID3D11UnorderedAccessView** d3d11UAVs     = nullptr;
+
+        GetCBArrays     (CBs,          d3d11CBs);
+        GetSRVArrays    (SRVResources, d3d11SRVs);
+        GetSamplerArrays(Samplers,     d3d11Samplers);
+        GetUAVArrays    (UAVResources, d3d11UAVs);
 
         auto CBCount = GetCBCount();
         for (size_t cb = 0; cb < CBCount; ++cb)

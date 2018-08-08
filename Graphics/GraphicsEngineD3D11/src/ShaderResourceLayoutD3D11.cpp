@@ -237,26 +237,32 @@ void ShaderResourceLayoutD3D11::CopyResources(ShaderResourceCacheD3D11& DstCache
     VERIFY( DstCache.GetSamplerCount() >= m_pResourceCache->GetSamplerCount(), "Dst cache is not large enough to contain all samplers" );
     VERIFY( DstCache.GetUAVCount() >= m_pResourceCache->GetUAVCount(), "Dst cache is not large enough to contain all UAVs" );
 
-    ShaderResourceCacheD3D11::CachedCB* CachedCBs = nullptr;
-    ID3D11Buffer** d3d11CBs = nullptr;
+    ShaderResourceCacheD3D11::CachedCB*       CachedCBs          = nullptr;
+    ID3D11Buffer**                            d3d11CBs           = nullptr;
     ShaderResourceCacheD3D11::CachedResource* CachedSRVResources = nullptr;
-    ID3D11ShaderResourceView** d3d11SRVs = nullptr;
-    ShaderResourceCacheD3D11::CachedSampler* CachedSamplers = nullptr;
-    ID3D11SamplerState** d3d11Samplers = nullptr;
+    ID3D11ShaderResourceView**                d3d11SRVs          = nullptr;
+    ShaderResourceCacheD3D11::CachedSampler* CachedSamplers      = nullptr;
+    ID3D11SamplerState**                     d3d11Samplers       = nullptr;
     ShaderResourceCacheD3D11::CachedResource* CachedUAVResources = nullptr;
-    ID3D11UnorderedAccessView** d3d11UAVs = nullptr;
-    m_pResourceCache->GetResourceArrays(CachedCBs, d3d11CBs, CachedSRVResources, d3d11SRVs, CachedSamplers, d3d11Samplers, CachedUAVResources, d3d11UAVs);
+    ID3D11UnorderedAccessView**               d3d11UAVs          = nullptr;
+    m_pResourceCache->GetCBArrays     (CachedCBs,          d3d11CBs);
+    m_pResourceCache->GetSRVArrays    (CachedSRVResources, d3d11SRVs);
+    m_pResourceCache->GetSamplerArrays(CachedSamplers,     d3d11Samplers);
+    m_pResourceCache->GetUAVArrays    (CachedUAVResources, d3d11UAVs);
 
 
-    ShaderResourceCacheD3D11::CachedCB* DstCBs = nullptr;
-    ID3D11Buffer** DstD3D11CBs = nullptr;
-    ShaderResourceCacheD3D11::CachedResource* DstSRVResources = nullptr;
-    ID3D11ShaderResourceView** DstD3D11SRVs = nullptr;
-    ShaderResourceCacheD3D11::CachedSampler* DstSamplers = nullptr;
-    ID3D11SamplerState** DstD3D11Samplers = nullptr;
-    ShaderResourceCacheD3D11::CachedResource* DstUAVResources = nullptr;
-    ID3D11UnorderedAccessView** DstD3D11UAVs = nullptr;
-    DstCache.GetResourceArrays(DstCBs, DstD3D11CBs, DstSRVResources, DstD3D11SRVs, DstSamplers, DstD3D11Samplers, DstUAVResources, DstD3D11UAVs);
+    ShaderResourceCacheD3D11::CachedCB*       DstCBs           = nullptr;
+    ID3D11Buffer**                            DstD3D11CBs      = nullptr;
+    ShaderResourceCacheD3D11::CachedResource* DstSRVResources  = nullptr;
+    ID3D11ShaderResourceView**                DstD3D11SRVs     = nullptr;
+    ShaderResourceCacheD3D11::CachedSampler*  DstSamplers      = nullptr;
+    ID3D11SamplerState**                      DstD3D11Samplers = nullptr;
+    ShaderResourceCacheD3D11::CachedResource* DstUAVResources  = nullptr;
+    ID3D11UnorderedAccessView**               DstD3D11UAVs     = nullptr;
+    DstCache.GetCBArrays     (DstCBs,          DstD3D11CBs);
+    DstCache.GetSRVArrays    (DstSRVResources, DstD3D11SRVs);
+    DstCache.GetSamplerArrays(DstSamplers,     DstD3D11Samplers);
+    DstCache.GetUAVArrays    (DstUAVResources, DstD3D11UAVs);
 
     HandleResources(
         [&](const ConstBuffBindInfo&cb)

@@ -171,7 +171,7 @@ namespace Diligent
     {
         static_assert(TransitionResources || CommitResources, "At least one of TransitionResources or CommitResources flags is expected to be true");
 
-#ifdef _DEBUG
+#ifdef DEVELOPMENT
         auto pdbgPipelineStateD3D11 = ValidatedCast<PipelineStateD3D11Impl>( pPSO );
         auto ppdbgShaders = pdbgPipelineStateD3D11->GetShaders();
 #endif
@@ -182,7 +182,7 @@ namespace Diligent
             auto pPipelineStateD3D11 = ValidatedCast<PipelineStateD3D11Impl>( pPSO );
             pShaderResBindingD3D11 = pPipelineStateD3D11->GetDefaultResourceBinding();
         }
-#ifdef _DEBUG
+#ifdef DEVELOPMENT
         else
         {
             if (pdbgPipelineStateD3D11->IsIncompatibleWith(pShaderResourceBinding->GetPipelineState()))
@@ -199,37 +199,186 @@ namespace Diligent
         auto NumShaders = pShaderResBindingD3D11->GetNumActiveShaders();
         VERIFY(NumShaders == pdbgPipelineStateD3D11->GetNumShaders(), "Number of active shaders in shader resource binding is not consistent with the number of shaders in the pipeline state");
 
+#ifdef DEVELOPMENT
         for (Uint32 s = 0; s < NumShaders; ++s)
         {
-            auto ShaderTypeInd = pShaderResBindingD3D11->GetActiveShaderTypeIndex(s);
-#ifdef _DEBUG
-            auto* pShaderD3D11 = ValidatedCast<ShaderD3D11Impl>(ppdbgShaders[s]);
-            VERIFY_EXPR( ShaderTypeInd == static_cast<Int32>(pShaderD3D11->GetShaderTypeIndex()) );
-#endif
-            
-            auto &Cache = pShaderResBindingD3D11->GetResourceCache(s);
-
-            ShaderResourceCacheD3D11::CachedCB* CachedCBs;
-            ID3D11Buffer** d3d11CBs;
-            ShaderResourceCacheD3D11::CachedResource* CachedSRVResources;
-            ID3D11ShaderResourceView** d3d11SRVs;
-            ShaderResourceCacheD3D11::CachedSampler* CachedSamplers;
-            ID3D11SamplerState** d3d11Samplers;
-            ShaderResourceCacheD3D11::CachedResource* CachedUAVResources;
-            ID3D11UnorderedAccessView** d3d11UAVs;
-            Cache.GetResourceArrays(CachedCBs, d3d11CBs, CachedSRVResources, d3d11SRVs, CachedSamplers, d3d11Samplers, CachedUAVResources, d3d11UAVs);
-
 #ifdef VERIFY_SHADER_BINDINGS
             {
                 pShaderResBindingD3D11->GetResourceLayout(s).dbgVerifyBindings();
                 // Static resource bindings are verified in BindStaticShaderResources()
             }
 #endif
+        }
+#endif
+
+        bool ClearPixelShaderUAVs = m_NumCommittedUAVs[PSInd] > 0;
+        // First, commit all UAVs for all shader stages. This will unbind them from input
+        for (Uint32 s = 0; s < NumShaders; ++s)
+        {
+            auto ShaderTypeInd = pShaderResBindingD3D11->GetActiveShaderTypeIndex(s);
+
+#ifdef DEVELOPMENT
+            auto* pShaderD3D11 = ValidatedCast<ShaderD3D11Impl>(ppdbgShaders[s]);
+            VERIFY_EXPR( ShaderTypeInd == static_cast<Int32>(pShaderD3D11->GetShaderTypeIndex()) );
+#endif
+
+            auto& Cache = pShaderResBindingD3D11->GetResourceCache(s);
+            auto NumUAVs = Cache.GetUAVCount();
+            if (NumUAVs)
+            {
+                ShaderResourceCacheD3D11::CachedResource* CachedUAVResources;
+                ID3D11UnorderedAccessView** d3d11UAVs;
+                Cache.GetUAVArrays(CachedUAVResources, d3d11UAVs);
+
+                auto* CommittedD3D11UAVs   = m_CommittedD3D11UAVs        [ShaderTypeInd];
+                auto* CommittedD3D11UAVRes = m_CommittedD3D11UAVResources[ShaderTypeInd];
+
+                if (ShaderTypeInd == PSInd)
+                    ClearPixelShaderUAVs = false;
+
+                UINT MinSlot = UINT_MAX;
+                UINT MaxSlot = 0;
+
+                for(Uint32 uav=0; uav < NumUAVs; ++uav)
+                {
+                    VERIFY_EXPR(uav < Cache.GetUAVCount());
+                    auto& UAVRes = CachedUAVResources[uav];
+                    // WARNING! This code is not thread-safe. If several threads change
+                    // the resource state, the results will be undefined.
+                    // The solution may be to keep track of the state for each thread
+                    // individually, or not rely on the state and check current context bindings
+                    if(TransitionResources)
+                    {
+                        if ( auto* pTexture = const_cast<TextureBaseD3D11*>(UAVRes.pTexture) )
+                        {
+                            if( !pTexture->CheckState(D3D11TextureState::UnorderedAccess) )
+                            {
+                                if( pTexture->CheckState(D3D11TextureState::ShaderResource) )
+                                    UnbindTextureFromInput( pTexture, UAVRes.pd3d11Resource );
+                                pTexture->ResetState(D3D11TextureState::UnorderedAccess);
+                            }
+                        }
+                        else if( auto* pBuffer = const_cast<BufferD3D11Impl*>(UAVRes.pBuffer) )
+                        {
+                            if( !pBuffer->CheckState(D3D11BufferState::UnorderedAccess) )
+                            {
+                                if( pBuffer->CheckState(D3D11BufferState::AnyInput) )
+                                    UnbindBufferFromInput( pBuffer, UAVRes.pd3d11Resource );
+                                pBuffer->ResetState(D3D11BufferState::UnorderedAccess);
+                            }
+                        }
+                    }
+#ifdef DEVELOPMENT
+                    else
+                    {
+                        if ( auto* pTexture = const_cast<TextureBaseD3D11*>(UAVRes.pTexture) )
+                        {
+                            if( !pTexture->CheckState(D3D11TextureState::UnorderedAccess) )
+                            {
+                                LOG_ERROR_MESSAGE("Texture \"", pTexture->GetDesc().Name, "\" has not been transitioned to Unordered Access state. Did you forget to call TransitionResources()?");
+                            }
+                        }
+                        else if( auto* pBuffer = const_cast<BufferD3D11Impl*>(UAVRes.pBuffer) )
+                        {
+                            if( !pBuffer->CheckState(D3D11BufferState::UnorderedAccess) )
+                            {
+                                LOG_ERROR_MESSAGE("Buffer \"", pBuffer->GetDesc().Name, "\" has not been transitioned to Unordered Access state. Did you forget to call TransitionResources()?");
+                            }
+                        }
+                    }
+#endif
+                    if(CommitResources)
+                    {
+                        bool IsNewUAV = CommittedD3D11UAVs[uav] != d3d11UAVs[uav];
+                        MinSlot = IsNewUAV ? std::min(MinSlot, uav) : MinSlot;
+                        MaxSlot = IsNewUAV ? uav : MaxSlot;
+
+                        CommittedD3D11UAVRes[uav] = UAVRes.pd3d11Resource;
+                        CommittedD3D11UAVs  [uav] = d3d11UAVs[uav];
+                    }
+                }
+
+                if (CommitResources)
+                {
+                    if (MinSlot != UINT_MAX || ShaderTypeInd == PSInd && m_NumCommittedUAVs[PSInd] != NumUAVs)
+                    {
+                        // Something has changed
+                        if(ShaderTypeInd == PSInd)
+                        {
+                            // Pixel shader UAVs cannot be set independently; they all need to be set at the same time.
+                            // https://docs.microsoft.com/en-us/windows/desktop/api/d3d11/nf-d3d11-id3d11devicecontext-omsetrendertargetsandunorderedaccessviews#remarks
+                            auto StartUAVSlot = m_NumBoundRenderTargets;
+                            VERIFY(NumUAVs > StartUAVSlot, "Number of UAVs must be greater than the render target count");
+                            m_pd3d11DeviceContext->OMSetRenderTargetsAndUnorderedAccessViews(
+                                D3D11_KEEP_RENDER_TARGETS_AND_DEPTH_STENCIL, nullptr, nullptr,
+                                StartUAVSlot, NumUAVs - StartUAVSlot, CommittedD3D11UAVs + StartUAVSlot, nullptr);
+                            // Clear previously bound UAVs, but do not clear lower slots as if
+                            // render target count reduces, we will bind these UAVs in CommitRenderTargets()
+                            for(Uint32 uav = NumUAVs; uav < m_NumCommittedUAVs[ShaderTypeInd]; ++uav)
+                            {
+                                CommittedD3D11UAVRes[uav] = nullptr;
+                                CommittedD3D11UAVs  [uav] = nullptr;
+                            }
+                            m_NumCommittedUAVs[ShaderTypeInd] = static_cast<Uint8>(NumUAVs);
+                        }
+                        else
+                        {
+                            auto SetUAVMethod = SetUAVMethods[ShaderTypeInd];
+                            (m_pd3d11DeviceContext->*SetUAVMethod)(MinSlot, MaxSlot-MinSlot+1, CommittedD3D11UAVs+MinSlot, nullptr);
+                            m_NumCommittedUAVs[ShaderTypeInd] = std::max(m_NumCommittedUAVs[ShaderTypeInd], static_cast<Uint8>(NumUAVs));
+                        }
+                    }
+
+#ifdef DEVELOPMENT
+                    if( (m_DebugFlags & (Uint32)EngineD3D11DebugFlags::VerifyCommittedResourceRelevance) != 0 && ShaderTypeInd == CSInd)
+                    {
+                        dbgVerifyCommittedUAVs(pShaderD3D11->GetDesc().ShaderType);
+                    }
+#endif
+                }
+            }
+        }
+
+        if (ClearPixelShaderUAVs)
+        {
+            // If pixel shader stage is inactive or does not use UAVs, unbind all committed UAVs.
+            // This is important as UnbindPixelShaderUAV<> function may need to rebind
+            // existing UAVs and the UAVs pointed to by CommittedD3D11UAVRes must be alive
+            // (we do not keep strong references to d3d11 UAVs)
+            auto* CommittedD3D11UAVs          = m_CommittedD3D11UAVs        [PSInd];
+            auto* CommittedD3D11UAVRes        = m_CommittedD3D11UAVResources[PSInd];
+            auto& NumCommittedPixelShaderUAVs = m_NumCommittedUAVs          [PSInd];
+            for (Uint32 uav = 0; uav < NumCommittedPixelShaderUAVs; ++uav)
+            {
+                CommittedD3D11UAVRes[uav] = nullptr;
+                CommittedD3D11UAVs  [uav] = nullptr;
+            }
+            m_pd3d11DeviceContext->OMSetRenderTargetsAndUnorderedAccessViews(
+                D3D11_KEEP_RENDER_TARGETS_AND_DEPTH_STENCIL, nullptr, nullptr,
+                0, 0, nullptr, nullptr);
+            NumCommittedPixelShaderUAVs = 0;
+        }
+
+        // Commit input resources (CBs, SRVs and Samplers)
+        for (Uint32 s = 0; s < NumShaders; ++s)
+        {
+            auto ShaderTypeInd = pShaderResBindingD3D11->GetActiveShaderTypeIndex(s); 
+
+#ifdef DEVELOPMENT
+            auto* pShaderD3D11 = ValidatedCast<ShaderD3D11Impl>(ppdbgShaders[s]);
+            VERIFY_EXPR( ShaderTypeInd == static_cast<Int32>(pShaderD3D11->GetShaderTypeIndex()) );
+#endif
+
+            auto &Cache = pShaderResBindingD3D11->GetResourceCache(s);
 
             // Transition and commit Constant Buffers
             auto NumCBs = Cache.GetCBCount();
             if(NumCBs)
             {
+                ShaderResourceCacheD3D11::CachedCB* CachedCBs;
+                ID3D11Buffer** d3d11CBs;
+                Cache.GetCBArrays(CachedCBs, d3d11CBs);
+
                 auto *CommittedD3D11CBs = m_CommittedD3D11CBs[ShaderTypeInd];
                 UINT MinSlot = UINT_MAX;
                 UINT MaxSlot = 0;
@@ -250,6 +399,9 @@ namespace Diligent
                             {
                                 if( pBuff->CheckState(D3D11BufferState::UnorderedAccess) )
                                 {
+                                    // Even though we have unbound resources from UAV, we only checked shader
+                                    // stages active in current PSO, so we still may need to unbind the resource
+                                    // from UAV (for instance, unbind resource from CS UAV when running draw command).
                                     UnbindResourceFromUAV( pBuff, d3d11CBs[cb] );
                                     pBuff->ClearState(D3D11BufferState::UnorderedAccess);
                                 }
@@ -257,7 +409,7 @@ namespace Diligent
                             }
                         }
                     }
-#ifdef _DEBUG
+#ifdef DEVELOPMENT
                     else
                     {
                         VERIFY_EXPR(CommitResources);
@@ -289,11 +441,12 @@ namespace Diligent
                         (m_pd3d11DeviceContext->*SetCBMethod)(MinSlot, MaxSlot-MinSlot+1, CommittedD3D11CBs+MinSlot);
                         m_NumCommittedCBs[ShaderTypeInd] = std::max(m_NumCommittedCBs[ShaderTypeInd], static_cast<Uint8>(NumCBs));
                     }
-
+#ifdef DEVELOPMENT
                     if(m_DebugFlags & (Uint32)EngineD3D11DebugFlags::VerifyCommittedResourceRelevance)
                     {
                         dbgVerifyCommittedCBs(pShaderD3D11->GetDesc().ShaderType);
                     }
+#endif
                 }
             }
 
@@ -302,8 +455,12 @@ namespace Diligent
             auto NumSRVs = Cache.GetSRVCount();
             if(NumSRVs)
             {
-                auto *CommittedD3D11SRVs = m_CommittedD3D11SRVs[ShaderTypeInd];
-                auto *CommittedD3D11SRVRes = m_CommittedD3D11SRVResources[ShaderTypeInd];
+                ShaderResourceCacheD3D11::CachedResource* CachedSRVResources;
+                ID3D11ShaderResourceView** d3d11SRVs;
+                Cache.GetSRVArrays(CachedSRVResources, d3d11SRVs);
+
+                auto* CommittedD3D11SRVs   = m_CommittedD3D11SRVs        [ShaderTypeInd];
+                auto* CommittedD3D11SRVRes = m_CommittedD3D11SRVResources[ShaderTypeInd];
 
                 UINT MinSlot = UINT_MAX;
                 UINT MaxSlot = 0;
@@ -324,6 +481,9 @@ namespace Diligent
                             {
                                 if( pTexture->CheckState(D3D11TextureState::UnorderedAccess) )
                                 {
+                                    // Even though we have unbound resources from UAV, we only checked shader
+                                    // stages active in current PSO, so we still may need to unbind the resource
+                                    // from UAV (for instance, unbind resource from CS UAV when running draw command).
                                     UnbindResourceFromUAV(pTexture, SRVRes.pd3d11Resource);
                                     pTexture->ClearState(D3D11TextureState::UnorderedAccess);
                                 }
@@ -347,7 +507,7 @@ namespace Diligent
                             }
                         }
                     }
-#ifdef _DEBUG
+#ifdef DEVELOPMENT
                     else
                     {
                         VERIFY_EXPR(CommitResources);
@@ -387,11 +547,12 @@ namespace Diligent
                         (m_pd3d11DeviceContext->*SetSRVMethod)(MinSlot, MaxSlot-MinSlot+1, CommittedD3D11SRVs+MinSlot);
                         m_NumCommittedSRVs[ShaderTypeInd] = std::max(m_NumCommittedSRVs[ShaderTypeInd], static_cast<Uint8>(NumSRVs));
                     }
-
+#ifdef DEVELOPMENT
                     if(m_DebugFlags & (Uint32)EngineD3D11DebugFlags::VerifyCommittedResourceRelevance)
                     {
                         dbgVerifyCommittedSRVs(pShaderD3D11->GetDesc().ShaderType);
                     }
+#endif
                 }
             }
 
@@ -402,6 +563,10 @@ namespace Diligent
                 auto NumSamplers = Cache.GetSamplerCount();
                 if(NumSamplers)
                 {
+                    ShaderResourceCacheD3D11::CachedSampler* CachedSamplers;
+                    ID3D11SamplerState** d3d11Samplers;
+                    Cache.GetSamplerArrays(CachedSamplers, d3d11Samplers);
+
                     auto *CommittedD3D11Samplers = m_CommittedD3D11Samplers[ShaderTypeInd];
                     UINT MinSlot = std::numeric_limits<UINT>::max();
                     UINT MaxSlot = 0;
@@ -422,139 +587,16 @@ namespace Diligent
                         (m_pd3d11DeviceContext->*SetSamplerMethod)(MinSlot, MaxSlot-MinSlot+1, CommittedD3D11Samplers+MinSlot);
                         m_NumCommittedSamplers[ShaderTypeInd] = std::max(m_NumCommittedSamplers[ShaderTypeInd], static_cast<Uint8>(NumSamplers));
                     }
-
+#ifdef DEVELOPMENT
                     if(m_DebugFlags & (Uint32)EngineD3D11DebugFlags::VerifyCommittedResourceRelevance)
                     {
                         dbgVerifyCommittedSamplers(pShaderD3D11->GetDesc().ShaderType);
                     }
-                }
-            }
-
-
-            // Commit Unordered Access Views
-            auto NumUAVs = Cache.GetUAVCount();
-            if(NumUAVs)
-            {
-                auto *CommittedD3D11UAVs   = m_CommittedD3D11UAVs        [ShaderTypeInd];
-                auto *CommittedD3D11UAVRes = m_CommittedD3D11UAVResources[ShaderTypeInd];
-
-                UINT MinSlot = UINT_MAX;
-                UINT MaxSlot = 0;
-
-                for(Uint32 uav=0; uav < NumUAVs; ++uav)
-                {
-                    VERIFY_EXPR(uav < Cache.GetUAVCount());
-                    auto &UAVRes = CachedUAVResources[uav];
-                    // WARNING! This code is not thread-safe. If several threads change
-                    // the resource state, the results will be undefined.
-                    // The solution may be to keep track of the state for each thread
-                    // individually, or not rely on the state and check current context bindings
-                    if(TransitionResources)
-                    {
-                        if ( auto* pTexture = const_cast<TextureBaseD3D11*>(UAVRes.pTexture) )
-                        {
-                            if( !pTexture->CheckState(D3D11TextureState::UnorderedAccess) )
-                            {
-                                if( pTexture->CheckState(D3D11TextureState::ShaderResource) )
-                                    UnbindTextureFromInput( pTexture, UAVRes.pd3d11Resource );
-                                pTexture->ResetState(D3D11TextureState::UnorderedAccess);
-                            }
-                        }
-                        else if( auto* pBuffer = const_cast<BufferD3D11Impl*>(UAVRes.pBuffer) )
-                        {
-                            if( !pBuffer->CheckState(D3D11BufferState::UnorderedAccess) )
-                            {
-                                if( pBuffer->CheckState(D3D11BufferState::AnyInput) )
-                                    UnbindBufferFromInput( pBuffer, UAVRes.pd3d11Resource );
-                                pBuffer->ResetState(D3D11BufferState::UnorderedAccess);
-                            }
-                        }
-                    }
-#ifdef _DEBUG
-                    else
-                    {
-                        if ( auto* pTexture = const_cast<TextureBaseD3D11*>(UAVRes.pTexture) )
-                        {
-                            if( !pTexture->CheckState(D3D11TextureState::UnorderedAccess) )
-                            {
-                                LOG_ERROR_MESSAGE("Texture \"", pTexture->GetDesc().Name, "\" has not been transitioned to Unordered Access state. Did you forget to call TransitionResources()?");
-                            }
-                        }
-                        else if( auto* pBuffer = const_cast<BufferD3D11Impl*>(UAVRes.pBuffer) )
-                        {
-                            if( !pBuffer->CheckState(D3D11BufferState::UnorderedAccess) )
-                            {
-                                LOG_ERROR_MESSAGE("Buffer \"", pBuffer->GetDesc().Name, "\" has not been transitioned to Unordered Access state. Did you forget to call TransitionResources()?");
-                            }
-                        }
-                    }
 #endif
-                    if(CommitResources)
-                    {
-                        bool IsNewUAV = CommittedD3D11UAVs[uav] != d3d11UAVs[uav];
-                        MinSlot = IsNewUAV ? std::min(MinSlot, uav) : MinSlot;
-                        MaxSlot = IsNewUAV ? uav : MaxSlot;
-
-                        CommittedD3D11UAVRes[uav] = UAVRes.pd3d11Resource;
-                        CommittedD3D11UAVs[uav] = d3d11UAVs[uav];
-                    }
-                }
-
-                if(CommitResources)
-                {
-                    if(MinSlot != UINT_MAX)
-                    {
-                        // Something has changed
-                        if(ShaderTypeInd == PSInd)
-                        {
-                            // Pixel shader UAVs cannot be set independently; they all need to be set at the same time.
-                            // https://docs.microsoft.com/en-us/windows/desktop/api/d3d11/nf-d3d11-id3d11devicecontext-omsetrendertargetsandunorderedaccessviews#remarks
-                            auto StartUAVSlot = m_NumBoundRenderTargets;
-                            VERIFY(NumUAVs > StartUAVSlot, "Number of UAVs must be greater than the render target count");
-                            m_pd3d11DeviceContext->OMSetRenderTargetsAndUnorderedAccessViews(
-                                D3D11_KEEP_RENDER_TARGETS_AND_DEPTH_STENCIL, nullptr, nullptr,
-                                StartUAVSlot, NumUAVs - StartUAVSlot, CommittedD3D11UAVs + StartUAVSlot, nullptr);
-                            // Clear previously bound UAVs, but do not clear lower slots as if
-                            // render target count will reduce, we will bind these UAVs in CommitRenderTargets()
-                            for(Uint32 uav = NumUAVs; uav < m_NumCommittedUAVs[ShaderTypeInd]; ++uav)
-                            {
-                                CommittedD3D11UAVRes[uav] = nullptr;
-                                CommittedD3D11UAVs  [uav] = nullptr;
-                            }
-                            m_NumCommittedUAVs[ShaderTypeInd] = static_cast<Uint8>(NumUAVs);
-                        }
-                        else
-                        {
-                            auto SetUAVMethod = SetUAVMethods[ShaderTypeInd];
-                            (m_pd3d11DeviceContext->*SetUAVMethod)(MinSlot, MaxSlot-MinSlot+1, CommittedD3D11UAVs+MinSlot, nullptr);
-                            m_NumCommittedUAVs[ShaderTypeInd] = std::max(m_NumCommittedUAVs[ShaderTypeInd], static_cast<Uint8>(NumUAVs));
-                        }
-                    }
-
-                    if( (m_DebugFlags & (Uint32)EngineD3D11DebugFlags::VerifyCommittedResourceRelevance) != 0 && ShaderTypeInd == CSInd)
-                    {
-                        dbgVerifyCommittedUAVs(pShaderD3D11->GetDesc().ShaderType);
-                    }
                 }
             }
-            else if(ShaderTypeInd == PSInd && m_NumCommittedUAVs[ShaderTypeInd] > 0)
-            {
-                // For pixel shader, unbind all UAVs if current PSO does use them.
-                // This is important as UnbindPixelShaderUAV<> function may need to rebind
-                // existing UAVs and the UAVs pointed to by CommittedD3D11UAVRes must be alive
-                // (we do not keep strong references to d3d11 UAVs)
-                auto* CommittedD3D11UAVs   = m_CommittedD3D11UAVs        [ShaderTypeInd];
-                auto* CommittedD3D11UAVRes = m_CommittedD3D11UAVResources[ShaderTypeInd];
-                auto  NumPixelShaderUAVs   = m_NumCommittedUAVs          [ShaderTypeInd];
-                for(Uint32 uav = 0; uav < NumPixelShaderUAVs; ++uav)
-                {
-                    CommittedD3D11UAVRes[uav] = nullptr;
-                    CommittedD3D11UAVs  [uav] = nullptr;
-                }
-                m_pd3d11DeviceContext->OMSetRenderTargetsAndUnorderedAccessViews(
-                    D3D11_KEEP_RENDER_TARGETS_AND_DEPTH_STENCIL, nullptr, nullptr,
-                    0, 0, nullptr, nullptr);
-            }
+
+
 
 #ifdef VERIFY_SHADER_BINDINGS
             if( CommitResources && m_DebugFlags & (Uint32)EngineD3D11DebugFlags::VerifyCommittedShaderResources )
@@ -1057,7 +1099,7 @@ namespace Diligent
                         Uint32                       NumCommittedRenderTargets,
                         TSetUnorderedAccessViewsType SetD3D11UAVMethod)
     {
-        if(SetD3D11UAVMethod == reinterpret_cast<TSetUnorderedAccessViewsType>(&ID3D11DeviceContext::OMSetRenderTargetsAndUnorderedAccessViews))
+        if (SetD3D11UAVMethod == reinterpret_cast<TSetUnorderedAccessViewsType>(&ID3D11DeviceContext::OMSetRenderTargetsAndUnorderedAccessViews))
         {
             // Pixel shader UAVs are bound in a special way simulatneously with the render targets
             auto UAVStartSlot = NumCommittedRenderTargets;
@@ -1082,18 +1124,17 @@ namespace Diligent
     ///                            shader resources, for each shader stage
     /// \param CommittedD3D11ResourcesArr - Pointer to the array of currently bound D3D11
     ///                                 shader resources, for each shader stage
-    /// \param pResToUnbind - Resource to unbind
+    /// \param pd3d11ResToUndind   - D3D11 resource to unbind
     /// \param SetD3D11ViewMethods - Array of pointers to device context methods used to set the view,
     ///                              for every shader stage
     template<typename TD3D11ResourceViewType,
              typename TSetD3D11View,
              size_t NumSlots>
     void DeviceContextD3D11Impl::UnbindResourceView( TD3D11ResourceViewType CommittedD3D11ViewsArr[][NumSlots], 
-                                                     ID3D11Resource* CommittedD3D11ResourcesArr[][NumSlots], 
-                                                     Uint8 NumCommittedResourcesArr[],
-                                                     IDeviceObject* pResToUnbind,
-                                                     ID3D11Resource* pd3d11ResToUndind,
-                                                     TSetD3D11View SetD3D11ViewMethods[])
+                                                     ID3D11Resource*        CommittedD3D11ResourcesArr[][NumSlots], 
+                                                     Uint8                  NumCommittedResourcesArr[],
+                                                     ID3D11Resource*        pd3d11ResToUndind,
+                                                     TSetD3D11View          SetD3D11ViewMethods[])
     {
         for( Int32 ShaderTypeInd = 0; ShaderTypeInd < NumShaderTypes; ++ShaderTypeInd )
         {
@@ -1106,7 +1147,7 @@ namespace Diligent
                 if( CommittedD3D11Resources[Slot] == pd3d11ResToUndind )
                 {
                     CommittedD3D11Resources[Slot] = nullptr;
-                    CommittedD3D11Views[Slot] = nullptr;
+                    CommittedD3D11Views    [Slot] = nullptr;
 
                     auto SetViewMethod = SetD3D11ViewMethods[ShaderTypeInd];
                     VERIFY(SetViewMethod != nullptr, "No appropriate ID3D11DeviceContext method");
@@ -1133,7 +1174,7 @@ namespace Diligent
         VERIFY( pTexture, "Null texture provided" );
         if( !pTexture )return;
 
-        UnbindResourceView( m_CommittedD3D11SRVs, m_CommittedD3D11SRVResources, m_NumCommittedSRVs, pTexture, pd3d11Resource, SetSRVMethods );
+        UnbindResourceView( m_CommittedD3D11SRVs, m_CommittedD3D11SRVResources, m_NumCommittedSRVs, pd3d11Resource, SetSRVMethods );
         pTexture->ClearState(D3D11TextureState::ShaderResource);
     }
 
@@ -1144,7 +1185,7 @@ namespace Diligent
 
         if( pBuffer->CheckState(D3D11BufferState::ShaderResource) )
         {
-            UnbindResourceView( m_CommittedD3D11SRVs, m_CommittedD3D11SRVResources, m_NumCommittedSRVs, pBuffer, pd3d11Buffer, SetSRVMethods );
+            UnbindResourceView( m_CommittedD3D11SRVs, m_CommittedD3D11SRVResources, m_NumCommittedSRVs, pd3d11Buffer, SetSRVMethods );
             pBuffer->ClearState( D3D11BufferState::ShaderResource );
         }
         
@@ -1224,7 +1265,7 @@ namespace Diligent
         VERIFY( pResource, "Null resource provided" );
         if( !pResource )return;
 
-        UnbindResourceView( m_CommittedD3D11UAVs, m_CommittedD3D11UAVResources, m_NumCommittedUAVs, pResource, pd3d11Resource, SetUAVMethods );
+        UnbindResourceView( m_CommittedD3D11UAVs, m_CommittedD3D11UAVResources, m_NumCommittedUAVs, pd3d11Resource, SetUAVMethods );
     }
 
     void DeviceContextD3D11Impl::UnbindTextureFromRenderTarget( TextureBaseD3D11* pTexture )

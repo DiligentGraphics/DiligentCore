@@ -183,15 +183,18 @@ void ShaderResourcesD3D11::dbgVerifyCommittedResources(ID3D11Buffer*            
                                                        ID3D11Resource*            CommittedD3D11UAVResources[],
                                                        ShaderResourceCacheD3D11 &ResourceCache)const
 {
-    ShaderResourceCacheD3D11::CachedCB* CachedCBs = nullptr;
-    ID3D11Buffer** d3d11CBs = nullptr;
+    ShaderResourceCacheD3D11::CachedCB*       CachedCBs          = nullptr;
+    ID3D11Buffer**                            d3d11CBs           = nullptr;
     ShaderResourceCacheD3D11::CachedResource* CachedSRVResources = nullptr;
-    ID3D11ShaderResourceView** d3d11SRVs = nullptr;
-    ShaderResourceCacheD3D11::CachedSampler* CachedSamplers = nullptr;
-    ID3D11SamplerState** d3d11Samplers = nullptr;
+    ID3D11ShaderResourceView**                d3d11SRVs          = nullptr;
+    ShaderResourceCacheD3D11::CachedSampler*  CachedSamplers     = nullptr;
+    ID3D11SamplerState**                      d3d11Samplers      = nullptr;
     ShaderResourceCacheD3D11::CachedResource* CachedUAVResources = nullptr;
-    ID3D11UnorderedAccessView** d3d11UAVs = nullptr;
-    ResourceCache.GetResourceArrays(CachedCBs, d3d11CBs, CachedSRVResources, d3d11SRVs, CachedSamplers, d3d11Samplers, CachedUAVResources, d3d11UAVs);
+    ID3D11UnorderedAccessView**               d3d11UAVs          = nullptr;
+    ResourceCache.GetCBArrays     (CachedCBs,          d3d11CBs);
+    ResourceCache.GetSRVArrays    (CachedSRVResources, d3d11SRVs);
+    ResourceCache.GetSamplerArrays(CachedSamplers,     d3d11Samplers);
+    ResourceCache.GetUAVArrays    (CachedUAVResources, d3d11UAVs);
 
     ProcessResources(
         nullptr, 0,

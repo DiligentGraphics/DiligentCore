@@ -124,7 +124,6 @@ private:
     void UnbindResourceView(TD3D11ResourceViewType CommittedD3D11ViewsArr[][NumSlots], 
                             ID3D11Resource*        CommittedD3D11ResourcesArr[][NumSlots], 
                             Uint8                  NumCommittedResourcesArr[],
-                            IDeviceObject*         pResToUnbind,
                             ID3D11Resource*        pd3d11ResToUndind,
                             TSetD3D11View          SetD3D11ViewMethods[]);
 
