@@ -64,8 +64,8 @@ public:
     virtual void Map( IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid &pMappedData )override;
     virtual void Unmap( IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags )override;
 
-#ifdef _DEBUG
-    void DbgVerifyDynamicAllocation(Uint32 ContextId)const;
+#ifdef DEVELOPMENT
+    void DvpVerifyDynamicAllocation(Uint32 ContextId)const;
 #endif
 
     virtual ID3D12Resource *GetD3D12Buffer(size_t &DataStartByteOffset, Uint32 ContextId)override final
@@ -81,8 +81,8 @@ public:
         {
             VERIFY(m_Desc.Usage == USAGE_DYNAMIC, "Dynamic buffer is expected");
 
-#ifdef _DEBUG
-            DbgVerifyDynamicAllocation(ContextId);
+#ifdef DEVELOPMENT
+            DvpVerifyDynamicAllocation(ContextId);
 #endif
             DataStartByteOffset = m_DynamicData[ContextId].Offset;
             return m_DynamicData[ContextId].pBuffer;
@@ -104,8 +104,8 @@ public:
     {
         if(m_Desc.Usage == USAGE_DYNAMIC)
         {
-#ifdef _DEBUG
-            DbgVerifyDynamicAllocation(ContextId);
+#ifdef DEVELOPMENT
+            DvpVerifyDynamicAllocation(ContextId);
 #endif
             return m_DynamicData[ContextId].GPUAddress;
         }

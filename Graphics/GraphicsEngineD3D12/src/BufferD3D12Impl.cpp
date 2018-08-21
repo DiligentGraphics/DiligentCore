@@ -496,12 +496,12 @@ void BufferD3D12Impl::CreateCBV(D3D12_CPU_DESCRIPTOR_HANDLE CBVDescriptor)
     pDeviceD3D12->CreateConstantBufferView( &D3D12_CBVDesc, CBVDescriptor );
 }
 
-#ifdef _DEBUG
-void BufferD3D12Impl::DbgVerifyDynamicAllocation(Uint32 ContextId)const
+#ifdef DEVELOPMENT
+void BufferD3D12Impl::DvpVerifyDynamicAllocation(Uint32 ContextId)const
 {
-    VERIFY(m_DynamicData[ContextId].GPUAddress != 0, "Dynamic buffer must be mapped before the first use");
 	auto CurrentFrame = ValidatedCast<RenderDeviceD3D12Impl>(GetDevice())->GetCurrentFrameNumber();
-    VERIFY(m_DynamicData[ContextId].FrameNum == CurrentFrame, "Dynamic allocation is out-of-date. Dynamic buffer \"", m_Desc.Name, "\" must be mapped in the same frame it is used.");
+    DEV_CHECK_ERR(m_DynamicData[ContextId].GPUAddress != 0, "Dynamic buffer '", m_Desc.Name, "' has not been mapped before its first use. Context Id: ", ContextId, ". Note: memory for dynamic buffers is allocated when a buffer is mapped.");
+    DEV_CHECK_ERR(m_DynamicData[ContextId].FrameNum == CurrentFrame, "Dynamic allocation of dynamic buffer '", m_Desc.Name, "' in frame ", CurrentFrame, " is out-of-date. Note: contents of all dynamic resources is discarded at the end of every frame. A buffer must be mapped before its first use in any frame.");
     VERIFY(GetState() == D3D12_RESOURCE_STATE_GENERIC_READ, "Dynamic buffers are expected to always be in D3D12_RESOURCE_STATE_GENERIC_READ state");
 }
 #endif

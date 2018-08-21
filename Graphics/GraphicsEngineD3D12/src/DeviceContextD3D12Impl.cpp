@@ -218,9 +218,9 @@ namespace Diligent
         //GraphicsCtx.AddReferencedObject(pd3d12Resource);
 
         bool IsDynamic = pBuffD3D12->GetDesc().Usage == USAGE_DYNAMIC;
-#ifdef _DEBUG
+#ifdef DEVELOPMENT
         if(IsDynamic)
-            pBuffD3D12->DbgVerifyDynamicAllocation(m_ContextId);
+            pBuffD3D12->DvpVerifyDynamicAllocation(m_ContextId);
 #endif
         auto &GraphicsCtx = RequestCmdContext()->AsGraphicsContext();
         // Resource transitioning must always be performed!
@@ -273,8 +273,8 @@ namespace Diligent
                 if (pBufferD3D12->GetDesc().Usage == USAGE_DYNAMIC)
                 {
                     DynamicBufferPresent = true;
-#ifdef _DEBUG
-                    pBufferD3D12->DbgVerifyDynamicAllocation(m_ContextId);
+#ifdef DEVELOPMENT
+                    pBufferD3D12->DvpVerifyDynamicAllocation(m_ContextId);
 #endif
                 }
 
@@ -360,9 +360,9 @@ namespace Diligent
             VERIFY(DrawAttribs.pIndirectDrawAttribs != nullptr, "Valid pIndirectDrawAttribs must be provided for indirect draw command");
             auto *pBufferD3D12 = ValidatedCast<BufferD3D12Impl>(DrawAttribs.pIndirectDrawAttribs);
             
-#ifdef _DEBUG
+#ifdef DEVELOPMENT
             if(pBufferD3D12->GetDesc().Usage == USAGE_DYNAMIC)
-                pBufferD3D12->DbgVerifyDynamicAllocation(m_ContextId);
+                pBufferD3D12->DvpVerifyDynamicAllocation(m_ContextId);
 #endif
 
             GraphCtx.TransitionResource(pBufferD3D12, D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT);
@@ -414,9 +414,9 @@ namespace Diligent
         {
             if( auto *pBufferD3D12 = ValidatedCast<BufferD3D12Impl>(DispatchAttrs.pIndirectDispatchAttribs) )
             {
-#ifdef _DEBUG
+#ifdef DEVELOPMENT
                 if(pBufferD3D12->GetDesc().Usage == USAGE_DYNAMIC)
-                    pBufferD3D12->DbgVerifyDynamicAllocation(m_ContextId);
+                    pBufferD3D12->DvpVerifyDynamicAllocation(m_ContextId);
 #endif
 
                 ComputeCtx.TransitionResource(pBufferD3D12, D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT);

@@ -500,9 +500,9 @@ void BufferVkImpl::DvpVerifyDynamicAllocation(DeviceContextVkImpl* pCtx)const
 {
     auto ContextId = pCtx->GetContextId();
     const auto& DynAlloc = m_DynamicAllocations[ContextId];
-    DEV_CHECK_ERR(DynAlloc.pDynamicMemMgr != nullptr, "Dynamic buffer '", m_Desc.Name, "' was not mapped before its first use. Context Id: ", ContextId);
     auto CurrentFrame = pCtx->GetContextFrameNumber();
-    DEV_CHECK_ERR(DynAlloc.dvpFrameNumber == CurrentFrame, "Dynamic allocation is out-of-date. Dynamic buffer '", m_Desc.Name, "' must be mapped in the same frame it is used.");
+    DEV_CHECK_ERR(DynAlloc.pDynamicMemMgr != nullptr, "Dynamic buffer '", m_Desc.Name, "' has not been mapped before its first use. Context Id: ", ContextId, ". Note: memory for dynamic buffers is allocated when a buffer is mapped.");
+    DEV_CHECK_ERR(DynAlloc.dvpFrameNumber == CurrentFrame, "Dynamic allocation of dynamic buffer '", m_Desc.Name, "' in frame ", CurrentFrame, " is out-of-date. Note: contents of all dynamic resources is discarded at the end of every frame. A buffer must be mapped before its first use in any frame.");
 }
 #endif
 
