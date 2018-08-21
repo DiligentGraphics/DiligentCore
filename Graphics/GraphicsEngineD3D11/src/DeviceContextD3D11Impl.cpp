@@ -708,13 +708,12 @@ namespace Diligent
         for( UINT Slot = 0; Slot < m_NumVertexStreams; ++Slot )
         {
             auto& CurrStream = m_VertexStreams[Slot];
-            VERIFY( CurrStream.pBuffer, "Attempting to bind a null buffer for rendering" );
             auto* pBuffD3D11Impl = CurrStream.pBuffer.RawPtr();
-            ID3D11Buffer* pd3d11Buffer = pBuffD3D11Impl->m_pd3d11Buffer;
+            ID3D11Buffer* pd3d11Buffer = pBuffD3D11Impl ? pBuffD3D11Impl->m_pd3d11Buffer : nullptr;
             auto Stride = Strides[Slot];
             auto Offset = CurrStream.Offset;
 
-            if(pBuffD3D11Impl->CheckState( D3D11BufferState::UnorderedAccess ))
+            if(pBuffD3D11Impl != nullptr && pBuffD3D11Impl->CheckState( D3D11BufferState::UnorderedAccess ))
             {
                 UnbindResourceFromUAV(pBuffD3D11Impl, pd3d11Buffer);
                 pBuffD3D11Impl->ClearState( D3D11BufferState::UnorderedAccess );
@@ -732,7 +731,8 @@ namespace Diligent
                 m_CommittedD3D11VBStrides[Slot] = Stride;
                 m_CommittedD3D11VBOffsets[Slot] = Offset;
 
-                pBuffD3D11Impl->AddState( D3D11BufferState::VertexBuffer );
+                if (pBuffD3D11Impl)
+                    pBuffD3D11Impl->AddState( D3D11BufferState::VertexBuffer );
             }
         }
 

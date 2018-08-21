@@ -113,6 +113,13 @@ namespace Diligent
         m_GenerateMipsHelper(std::move(GenerateMipsHelper))
     {
         m_GenerateMipsHelper->CreateSRB(&m_GenerateMipsSRB);
+
+        BufferDesc DummyVBDesc;
+        DummyVBDesc.Name          = "Dummy vertex buffer";
+        DummyVBDesc.BindFlags     = BIND_VERTEX_BUFFER;
+        DummyVBDesc.Usage         = USAGE_DEFAULT;
+        DummyVBDesc.uiSizeInBytes = 32;
+        m_pDevice->CreateBuffer(DummyVBDesc, BufferData{}, &m_DummyVB);
     }
 
     DeviceContextVkImpl::~DeviceContextVkImpl()
@@ -284,9 +291,8 @@ namespace Diligent
         for ( UINT Buff = 0; Buff < m_NumVertexStreams; ++Buff )
         {
             auto& CurrStream = m_VertexStreams[Buff];
-            VERIFY( CurrStream.pBuffer, "Attempting to bind a null buffer for rendering" );
             auto* pBufferVk = CurrStream.pBuffer.RawPtr();
-            if (!pBufferVk->CheckAccessFlags(VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT))
+            if (pBufferVk != nullptr && !pBufferVk->CheckAccessFlags(VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT))
                 BufferMemoryBarrier(*pBufferVk, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT);
         }
     }
@@ -305,23 +311,29 @@ namespace Diligent
         for ( UINT slot = 0; slot < m_NumVertexStreams; ++slot )
         {
             auto& CurrStream = m_VertexStreams[slot];
-            VERIFY( CurrStream.pBuffer, "Attempting to bind a null buffer for rendering" );
-            
-            auto* pBufferVk = CurrStream.pBuffer.RawPtr();
-            if (pBufferVk->GetDesc().Usage == USAGE_DYNAMIC)
+            if (auto* pBufferVk = CurrStream.pBuffer.RawPtr())
             {
-                DynamicBufferPresent = true;
+                if (pBufferVk->GetDesc().Usage == USAGE_DYNAMIC)
+                {
+                    DynamicBufferPresent = true;
 #ifdef DEVELOPMENT
-                pBufferVk->DvpVerifyDynamicAllocation(this);
+                    pBufferVk->DvpVerifyDynamicAllocation(this);
 #endif
-            }
-            if (!pBufferVk->CheckAccessFlags(VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT))
-                BufferMemoryBarrier(*pBufferVk, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT);
+                }
+                if (!pBufferVk->CheckAccessFlags(VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT))
+                    BufferMemoryBarrier(*pBufferVk, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT);
             
-            // Device context keeps strong references to all vertex buffers.
+                // Device context keeps strong references to all vertex buffers.
 
-            vkVertexBuffers[slot] = pBufferVk->GetVkBuffer();
-            Offsets[slot] = CurrStream.Offset + pBufferVk->GetDynamicOffset(m_ContextId, this);
+                vkVertexBuffers[slot] = pBufferVk->GetVkBuffer();
+                Offsets[slot] = CurrStream.Offset + pBufferVk->GetDynamicOffset(m_ContextId, this);
+            }
+            else
+            {
+                // We can't bind null vertex buffer in Vulkan and have to use a dummy one
+                vkVertexBuffers[slot] = m_DummyVB.RawPtr<BufferVkImpl>()->GetVkBuffer();
+                Offsets[slot] = 0;
+            }
         }
 
         //GraphCtx.FlushResourceBarriers();

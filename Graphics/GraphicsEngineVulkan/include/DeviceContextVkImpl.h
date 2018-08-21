@@ -228,6 +228,9 @@ private:
     VulkanDynamicHeap m_DynamicHeap;
     std::shared_ptr<GenerateMipsVkHelper> m_GenerateMipsHelper;
     RefCntAutoPtr<IShaderResourceBinding> m_GenerateMipsSRB;
+
+    // In Vulkan we can't bind null vertex buffer, so we have to create a dummy VB
+    RefCntAutoPtr<IBuffer> m_DummyVB;
 };
 
 }

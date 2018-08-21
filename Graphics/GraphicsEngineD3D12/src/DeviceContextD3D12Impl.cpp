@@ -250,9 +250,8 @@ namespace Diligent
         for( UINT Buff = 0; Buff < m_NumVertexStreams; ++Buff )
         {
             auto& CurrStream = m_VertexStreams[Buff];
-            VERIFY( CurrStream.pBuffer, "Attempting to bind a null buffer for rendering" );
             auto* pBufferD3D12 = CurrStream.pBuffer.RawPtr();
-            if(!pBufferD3D12->CheckAllStates(D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER))
+            if(pBufferD3D12 != nullptr && !pBufferD3D12->CheckAllStates(D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER))
                 GraphCtx.TransitionResource(pBufferD3D12, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
         }
     }
@@ -269,28 +268,32 @@ namespace Diligent
         {
             auto& CurrStream = m_VertexStreams[Buff];
             auto& VBView = VBViews[Buff];
-            VERIFY( CurrStream.pBuffer, "Attempting to bind a null buffer for rendering" );
-            
-            auto *pBufferD3D12 = CurrStream.pBuffer.RawPtr();
-            if (pBufferD3D12->GetDesc().Usage == USAGE_DYNAMIC)
+            if (auto* pBufferD3D12 = CurrStream.pBuffer.RawPtr())
             {
-                DynamicBufferPresent = true;
+                if (pBufferD3D12->GetDesc().Usage == USAGE_DYNAMIC)
+                {
+                    DynamicBufferPresent = true;
 #ifdef _DEBUG
-                pBufferD3D12->DbgVerifyDynamicAllocation(m_ContextId);
+                    pBufferD3D12->DbgVerifyDynamicAllocation(m_ContextId);
 #endif
-            }
+                }
 
-            GraphCtx.TransitionResource(pBufferD3D12, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+                GraphCtx.TransitionResource(pBufferD3D12, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
             
-            // Device context keeps strong references to all vertex buffers.
-            // When a buffer is unbound, a reference to D3D12 resource is added to the context,
-            // so there is no need to reference the resource here
-            //GraphicsCtx.AddReferencedObject(pd3d12Resource);
+                // Device context keeps strong references to all vertex buffers.
+                // When a buffer is unbound, a reference to D3D12 resource is added to the context,
+                // so there is no need to reference the resource here
+                //GraphicsCtx.AddReferencedObject(pd3d12Resource);
 
-            VBView.BufferLocation = pBufferD3D12->GetGPUAddress(m_ContextId) + CurrStream.Offset;
-            VBView.StrideInBytes = Strides[Buff];
-            // Note that for a dynamic buffer, what we use here is the size of the buffer itself, not the upload heap buffer!
-            VBView.SizeInBytes = pBufferD3D12->GetDesc().uiSizeInBytes - CurrStream.Offset;
+                VBView.BufferLocation = pBufferD3D12->GetGPUAddress(m_ContextId) + CurrStream.Offset;
+                VBView.StrideInBytes = Strides[Buff];
+                // Note that for a dynamic buffer, what we use here is the size of the buffer itself, not the upload heap buffer!
+                VBView.SizeInBytes = pBufferD3D12->GetDesc().uiSizeInBytes - CurrStream.Offset;
+            }
+            else
+            {
+                VBView = D3D12_VERTEX_BUFFER_VIEW{};
+            }
         }
 
         GraphCtx.FlushResourceBarriers();
