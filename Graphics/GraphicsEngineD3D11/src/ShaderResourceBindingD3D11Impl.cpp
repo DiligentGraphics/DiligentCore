@@ -149,14 +149,7 @@ IShaderVariable* ShaderResourceBindingD3D11Impl::GetVariable(SHADER_TYPE ShaderT
     if( Ind >= 0 )
     {
         auto ResLayoutIndex = m_ResourceLayoutIndex[Ind];
-        auto *pVar = m_pResourceLayouts[ResLayoutIndex].GetShaderVariable(Name);
-        if(pVar != nullptr)
-            return pVar;
-        else
-        {
-            auto *pPSOD3D11 = ValidatedCast<PipelineStateD3D11Impl>(GetPipelineState());
-            return pPSOD3D11->GetDummyShaderVariable();
-        }
+        return m_pResourceLayouts[ResLayoutIndex].GetShaderVariable(Name);
     }
     else
     {

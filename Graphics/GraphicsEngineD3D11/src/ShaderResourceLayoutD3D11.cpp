@@ -752,12 +752,11 @@ void ShaderResourceLayoutD3D11::BindResources( IResourceMapping* pResourceMappin
 
 IShaderVariable* ShaderResourceLayoutD3D11::GetShaderVariable(const Char* Name)
 {
-    IShaderVariable *pVar = nullptr;
 #if USE_VARIABLE_HASH_MAP
     // Name will be implicitly converted to HashMapStringKey without making a copy
     auto it = m_VariableHash.find( Name );
     if( it != m_VariableHash.end() )
-        pVar = it->second;
+        return it->second;
 #else
     for (Uint32 cb = 0; cb < m_NumCBs; ++cb)
         if (strcmp(GetCB(cb).Attribs.Name, Name) == 0)
@@ -775,11 +774,8 @@ IShaderVariable* ShaderResourceLayoutD3D11::GetShaderVariable(const Char* Name)
         if (strcmp(GetBufUAV(u).Attribs.Name, Name) == 0 )
             return &GetBufUAV(u);
 #endif
-    if(pVar == nullptr)
-    {
-        LOG_ERROR_MESSAGE( "Unable to find variable \"", Name, "\". Attempts to set the variable will be silently ignored. Note that static variables are accessed through shader objects, while mutable and dynamic variables are accessed through Shader Resource Binding." );
-    }
-    return pVar;
+
+    return nullptr;
 }
 
 Uint32 ShaderResourceLayoutD3D11::GetVariableIndex(const ShaderVariableD3D11Base& Variable)const

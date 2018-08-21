@@ -28,7 +28,7 @@
 namespace Diligent
 {
 
-class Texture1DArray_OGL : public TextureBaseGL
+class Texture1DArray_OGL final : public TextureBaseGL
 {
 public:
     Texture1DArray_OGL( IReferenceCounters *pRefCounters, 

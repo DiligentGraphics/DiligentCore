@@ -36,7 +36,7 @@ namespace Diligent
 
 class FixedBlockMemoryAllocator;
 /// Implementation of the Diligent::ISamplerD3D11 interface
-class SamplerD3D11Impl : public SamplerBase<ISamplerD3D11, RenderDeviceD3D11Impl>
+class SamplerD3D11Impl final : public SamplerBase<ISamplerD3D11, RenderDeviceD3D11Impl>
 {
 public:
     using TSamplerBase = SamplerBase<ISamplerD3D11, RenderDeviceD3D11Impl>;

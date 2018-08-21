@@ -36,7 +36,7 @@ namespace Diligent
 class ITextureViewD3D12;
 class IMemoryAllocator;
 /// Implementation of the Diligent::ISwapChainD3D12 interface
-class SwapChainD3D12Impl : public SwapChainD3DBase<ISwapChainD3D12, IDXGISwapChain3>
+class SwapChainD3D12Impl final : public SwapChainD3DBase<ISwapChainD3D12, IDXGISwapChain3>
 {
 public:
     using TSwapChainBase = SwapChainD3DBase<ISwapChainD3D12, IDXGISwapChain3>;

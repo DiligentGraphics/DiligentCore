@@ -162,45 +162,6 @@ protected:
     IObject &m_Owner;
 };
 
-/// Implementation of a dummy shader variable that silently ignores all operations
-struct DummyShaderVariable final : ShaderVariableBase
-{
-    DummyShaderVariable(IObject& Owner) :
-        ShaderVariableBase(Owner)
-    {}
-
-    virtual void Set( IDeviceObject *pObject )override final
-    {
-        // Ignore operation
-        // Probably output warning
-    }
-
-    virtual void SetArray(IDeviceObject* const* ppObjects, Uint32 FirstElement, Uint32 NumElements)override final
-    {
-        // Ignore operation
-        // Probably output warning
-    }
-
-    virtual SHADER_VARIABLE_TYPE GetType()const override final
-    {
-        return SHADER_VARIABLE_TYPE_NUM_TYPES;
-    }
-
-    virtual Uint32 GetArraySize()const override final
-    {
-        return 0;
-    }
-
-    virtual const Char* GetName()const override final
-    {
-        return "<Not a valid variable>";
-    }
-
-    virtual Uint32 GetIndex()const override final
-    {
-        return static_cast<Uint32>(-1);
-    }
-};
 
 /// Template class implementing base functionality for a shader object
 
@@ -223,7 +184,6 @@ public:
 	///							   must not keep a strong reference to the device.
     ShaderBase( IReferenceCounters* pRefCounters, RenderDeviceImplType* pDevice, const ShaderDesc& ShdrDesc, bool bIsDeviceInternal = false ) :
         TDeviceObjectBase( pRefCounters, pDevice, ShdrDesc, bIsDeviceInternal ),
-        m_DummyShaderVar(*this),
         m_VariablesDesc (ShdrDesc.NumVariables, ShaderVariableDesc(), STD_ALLOCATOR_RAW_MEM(ShaderVariableDesc, GetRawAllocator(), "Allocator for vector<ShaderVariableDesc>") ),
         m_StringPool    (ShdrDesc.NumVariables + ShdrDesc.NumStaticSamplers, String(), STD_ALLOCATOR_RAW_MEM(String, GetRawAllocator(), "Allocator for vector<String>")),
         m_StaticSamplers(ShdrDesc.NumStaticSamplers, StaticSamplerDesc(), STD_ALLOCATOR_RAW_MEM(StaticSamplerDesc, GetRawAllocator(), "Allocator for vector<StaticSamplerDesc>") )
@@ -267,8 +227,6 @@ public:
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE( IID_Shader, TDeviceObjectBase )
     
 protected:
-    DummyShaderVariable m_DummyShaderVar; ///< Dummy shader variable
-
     /// Shader variable descriptions
     std::vector<ShaderVariableDesc, STDAllocatorRawMem<ShaderVariableDesc> > m_VariablesDesc;
     /// String pool that is used to hold copies of variable names and static sampler names

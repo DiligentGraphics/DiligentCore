@@ -855,30 +855,22 @@ void ShaderResourceLayoutD3D12::BindResources(IResourceMapping*               pR
 
 IShaderVariable* ShaderResourceLayoutD3D12::GetShaderVariable(const Char* Name)
 {
-    IShaderVariable* pVar = nullptr;
 #if USE_VARIABLE_HASH_MAP
     // Name will be implicitly converted to HashMapStringKey without making a copy
     auto it = m_VariableHash.find( Name );
     if( it != m_VariableHash.end() )
-        pVar = it->second;
+        return it->second;
 #else
     Uint32 TotalResources = GetTotalSrvCbvUavCount();
-    for(Uint32 r=0; r < TotalResources; ++r)
+    for (Uint32 r=0; r < TotalResources; ++r)
     {
         auto &Res = GetSrvCbvUav(r);
         if (strcmp(Res.Attribs.Name, Name) == 0)
-        {
-            pVar = &Res;
-            break;
-        }
+            return &Res;
     }
 #endif
 
-    if(pVar == nullptr)
-    {
-        LOG_ERROR_MESSAGE( "Shader variable \"", Name, "\" is not found in shader \"", GetShaderName(), "\" (", GetShaderTypeLiteralName(m_pResources->GetShaderType()), "). Attempts to set the variable will be silently ignored." );
-    }
-    return pVar;
+    return nullptr;
 }
 
 IShaderVariable* ShaderResourceLayoutD3D12::GetShaderVariable( Uint32 Index )

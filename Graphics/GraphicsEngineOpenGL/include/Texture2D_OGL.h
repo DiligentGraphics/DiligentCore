@@ -28,7 +28,7 @@
 namespace Diligent
 {
 
-class Texture2D_OGL : public TextureBaseGL
+class Texture2D_OGL final : public TextureBaseGL
 {
 public:
     Texture2D_OGL( IReferenceCounters *pRefCounters, 

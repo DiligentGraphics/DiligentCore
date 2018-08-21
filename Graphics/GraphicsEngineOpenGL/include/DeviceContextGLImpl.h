@@ -36,7 +36,7 @@ namespace Diligent
 {
 
 /// Implementation of the Diligent::IDeviceContextGL interface
-class DeviceContextGLImpl : public DeviceContextBase<IDeviceContextGL, BufferGLImpl, TextureViewGLImpl, PipelineStateGLImpl>
+class DeviceContextGLImpl final : public DeviceContextBase<IDeviceContextGL, BufferGLImpl, TextureViewGLImpl, PipelineStateGLImpl>
 {
 public:
     using TDeviceContextBase = DeviceContextBase<IDeviceContextGL, BufferGLImpl, TextureViewGLImpl, PipelineStateGLImpl>;

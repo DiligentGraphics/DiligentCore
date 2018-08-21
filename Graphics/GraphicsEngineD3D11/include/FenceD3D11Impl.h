@@ -38,7 +38,7 @@ namespace Diligent
 class FixedBlockMemoryAllocator;
 
 /// Implementation of the Diligent::IFenceD3D11 interface
-class FenceD3D11Impl : public FenceBase<IFenceD3D11, RenderDeviceD3D11Impl>
+class FenceD3D11Impl final : public FenceBase<IFenceD3D11, RenderDeviceD3D11Impl>
 {
 public:
     using TFenceBase = FenceBase<IFenceD3D11, RenderDeviceD3D11Impl>;

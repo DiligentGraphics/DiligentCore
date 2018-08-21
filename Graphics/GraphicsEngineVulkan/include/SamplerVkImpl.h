@@ -37,7 +37,7 @@ namespace Diligent
 
 class FixedBlockMemoryAllocator;
 /// Implementation of the Diligent::ISamplerVk interface
-class SamplerVkImpl : public SamplerBase<ISamplerVk, RenderDeviceVkImpl>
+class SamplerVkImpl final : public SamplerBase<ISamplerVk, RenderDeviceVkImpl>
 {
 public:
     using TSamplerBase = SamplerBase<ISamplerVk, RenderDeviceVkImpl>;

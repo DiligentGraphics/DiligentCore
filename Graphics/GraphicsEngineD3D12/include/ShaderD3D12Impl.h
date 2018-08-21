@@ -56,13 +56,25 @@ public:
     
     //virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
 
-    virtual void BindResources( IResourceMapping* pResourceMapping, Uint32 Flags )override;
+    virtual void BindResources( IResourceMapping* pResourceMapping, Uint32 Flags )override
+    {
+       m_StaticResLayout.BindResources(pResourceMapping, Flags, &m_StaticResCache);
+    }
     
-    virtual IShaderVariable* GetShaderVariable(const Char* Name)override final;
+    virtual IShaderVariable* GetShaderVariable(const Char* Name)override final
+    {
+        return m_StaticResLayout.GetShaderVariable(Name);
+    }
 
-    virtual Uint32 GetVariableCount() const override final;
+    virtual Uint32 GetVariableCount() const override final
+    {
+        return m_StaticResLayout.GetVariableCount();
+    }
 
-    virtual IShaderVariable* GetShaderVariable(Uint32 Index)override final;
+    virtual IShaderVariable* GetShaderVariable(Uint32 Index)override final
+    {
+        return m_StaticResLayout.GetShaderVariable(Index);
+    }
 
     ID3DBlob* GetShaderByteCode(){return m_pShaderByteCode;}
     const std::shared_ptr<const ShaderResourcesD3D12>& GetShaderResources()const{return m_pShaderResources;}
@@ -73,9 +85,6 @@ public:
 #endif
 
 private:
-
-    DummyShaderVariable m_DummyShaderVar; ///< Dummy shader variable
-
     // ShaderResources class instance must be referenced through the shared pointer, because 
     // it is referenced by ShaderResourceLayoutD3D12 class instances
     std::shared_ptr<const ShaderResourcesD3D12> m_pShaderResources;

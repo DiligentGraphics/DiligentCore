@@ -40,7 +40,7 @@ namespace Diligent
 class FixedBlockMemoryAllocator;
 
 /// Implementation of the Diligent::IBufferD3D12 interface
-class BufferD3D12Impl : public BufferBase<IBufferD3D12, RenderDeviceD3D12Impl, BufferViewD3D12Impl, FixedBlockMemoryAllocator>, public D3D12ResourceBase
+class BufferD3D12Impl final : public BufferBase<IBufferD3D12, RenderDeviceD3D12Impl, BufferViewD3D12Impl, FixedBlockMemoryAllocator>, public D3D12ResourceBase
 {
 public:
     using TBufferBase = BufferBase<IBufferD3D12, RenderDeviceD3D12Impl, BufferViewD3D12Impl, FixedBlockMemoryAllocator>;

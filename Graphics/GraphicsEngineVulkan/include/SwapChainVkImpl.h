@@ -37,7 +37,7 @@ namespace Diligent
 class ITextureViewVk;
 class IMemoryAllocator;
 /// Implementation of the Diligent::ISwapChainVk interface
-class SwapChainVkImpl : public SwapChainBase<ISwapChainVk>
+class SwapChainVkImpl final : public SwapChainBase<ISwapChainVk>
 {
 public:
     using TSwapChainBase = SwapChainBase<ISwapChainVk>;

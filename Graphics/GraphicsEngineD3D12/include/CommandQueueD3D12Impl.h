@@ -33,7 +33,7 @@ namespace Diligent
 {
 
 /// Implementation of the Diligent::ICommandQueueD3D12 interface
-class CommandQueueD3D12Impl : public ObjectBase<ICommandQueueD3D12>
+class CommandQueueD3D12Impl final : public ObjectBase<ICommandQueueD3D12>
 {
 public:
     using TBase = ObjectBase<ICommandQueueD3D12>;

@@ -49,6 +49,7 @@ namespace Diligent
 {
 
 /// Implementation of the render device interface in OpenGL
+// RenderDeviceGLESImpl is inherited from RenderDeviceGLImpl
 class RenderDeviceGLImpl : public RenderDeviceBase<IGLDeviceBaseInterface>
 {
 public:

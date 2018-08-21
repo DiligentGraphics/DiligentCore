@@ -37,7 +37,7 @@ namespace Diligent
 class FixedBlockMemoryAllocator;
 
 /// Implementation of the Diligent::ITextureViewD3D11 interface
-class TextureViewD3D11Impl : public TextureViewBase<ITextureViewD3D11, RenderDeviceD3D11Impl>
+class TextureViewD3D11Impl final : public TextureViewBase<ITextureViewD3D11, RenderDeviceD3D11Impl>
 {
 public:
     using TTextureViewBase = TextureViewBase<ITextureViewD3D11, RenderDeviceD3D11Impl>;

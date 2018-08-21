@@ -36,8 +36,7 @@ ShaderD3D11Impl::ShaderD3D11Impl(IReferenceCounters*          pRefCounters,
     TShaderBase(pRefCounters, pRenderDeviceD3D11, CreationAttribs.Desc),
     ShaderD3DBase(CreationAttribs),
     m_StaticResLayout(*this, GetRawAllocator()),
-    m_ShaderTypeIndex(Diligent::GetShaderTypeIndex(CreationAttribs.Desc.ShaderType)),
-    m_DummyShaderVar(*this)
+    m_ShaderTypeIndex(Diligent::GetShaderTypeIndex(CreationAttribs.Desc.ShaderType))
 {
     auto *pDeviceD3D11 = pRenderDeviceD3D11->GetD3D11Device();
     switch(CreationAttribs.Desc.ShaderType)
@@ -95,29 +94,5 @@ ShaderD3D11Impl::~ShaderD3D11Impl()
 }
 
 IMPLEMENT_QUERY_INTERFACE( ShaderD3D11Impl, IID_ShaderD3D11, TShaderBase )
-
-IShaderVariable* ShaderD3D11Impl::GetShaderVariable( const Char* Name )
-{
-    auto *pVar = m_StaticResLayout.GetShaderVariable(Name);
-    if(pVar == nullptr)
-        pVar = &m_DummyShaderVar;
-    return pVar;
-}
-
-Uint32 ShaderD3D11Impl::GetVariableCount() const
-{
-    return m_StaticResLayout.GetTotalResourceCount();
-}
-
-IShaderVariable* ShaderD3D11Impl::GetShaderVariable(Uint32 Index)
-{
-    return m_StaticResLayout.GetShaderVariable(Index);
-}
-
-
-void ShaderD3D11Impl::BindResources(IResourceMapping* pResourceMapping, Uint32 Flags)
-{
-    m_StaticResLayout.BindResources(pResourceMapping, Flags, m_StaticResCache);
-}
 
 }

@@ -39,7 +39,7 @@ class FixedBlockMemoryAllocator;
 class BufferVkImpl;
 
 /// Implementation of the Diligent::IBufferViewVk interface
-class BufferViewVkImpl : public BufferViewBase<IBufferViewVk, RenderDeviceVkImpl>
+class BufferViewVkImpl final : public BufferViewBase<IBufferViewVk, RenderDeviceVkImpl>
 {
 public:
     using TBufferViewBase = BufferViewBase<IBufferViewVk, RenderDeviceVkImpl>;

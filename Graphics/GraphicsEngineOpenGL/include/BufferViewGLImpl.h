@@ -40,7 +40,7 @@ class BufferGLImpl;
 struct BufferViewDesc;
 
 /// Implementation of the Diligent::IBufferViewGL interface
-class BufferViewGLImpl : public BufferViewBase<IBufferViewGL, RenderDeviceGLImpl>
+class BufferViewGLImpl final : public BufferViewBase<IBufferViewGL, RenderDeviceGLImpl>
 {
 public:
     using TBuffViewBase = BufferViewBase<IBufferViewGL, RenderDeviceGLImpl>;

@@ -38,7 +38,7 @@ namespace Diligent
 {
 
 /// Implementation of the Diligent::ICommandQueueVk interface
-class CommandQueueVkImpl : public ObjectBase<ICommandQueueVk>
+class CommandQueueVkImpl final : public ObjectBase<ICommandQueueVk>
 {
 public:
     using TBase = ObjectBase<ICommandQueueVk>;

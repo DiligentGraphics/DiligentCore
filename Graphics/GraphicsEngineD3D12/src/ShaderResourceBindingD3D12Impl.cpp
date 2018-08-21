@@ -92,13 +92,9 @@ IShaderVariable *ShaderResourceBindingD3D12Impl::GetVariable(SHADER_TYPE ShaderT
     if (ResLayoutInd < 0)
     {
         LOG_ERROR("Failed to find shader variable \"", Name,"\" in shader resource binding: shader type ", GetShaderTypeLiteralName(ShaderType), " is not initialized");
-        return ValidatedCast<PipelineStateD3D12Impl>(GetPipelineState())->GetDummyShaderVar();
+        return nullptr;
     }
-    auto* pVar = m_pResourceLayouts[ResLayoutInd].GetShaderVariable(Name);
-    if(pVar == nullptr)
-        pVar = ValidatedCast<PipelineStateD3D12Impl>(GetPipelineState())->GetDummyShaderVar();
-
-    return pVar;
+    return m_pResourceLayouts[ResLayoutInd].GetShaderVariable(Name);
 }
 
 Uint32 ShaderResourceBindingD3D12Impl::GetVariableCount(SHADER_TYPE ShaderType) const 
@@ -121,7 +117,7 @@ IShaderVariable* ShaderResourceBindingD3D12Impl::GetVariable(SHADER_TYPE ShaderT
     if (ResLayoutInd < 0)
     {
         LOG_ERROR("Failed to find shader variable at index ", Index, " in shader resource binding: shader type ", GetShaderTypeLiteralName(ShaderType), " is not initialized");
-        return ValidatedCast<PipelineStateD3D12Impl>(GetPipelineState())->GetDummyShaderVar();
+        return nullptr;
     }
 
     return m_pResourceLayouts[ResLayoutInd].GetShaderVariable(Index);

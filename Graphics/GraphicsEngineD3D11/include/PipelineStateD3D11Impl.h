@@ -38,7 +38,7 @@ namespace Diligent
 
 class FixedBlockMemoryAllocator;
 /// Implementation of the Diligent::IPipelineStateD3D11 interface
-class PipelineStateD3D11Impl : public PipelineStateBase<IPipelineStateD3D11, RenderDeviceD3D11Impl>
+class PipelineStateD3D11Impl final : public PipelineStateBase<IPipelineStateD3D11, RenderDeviceD3D11Impl>
 {
 public:
     using TPipelineStateBase = PipelineStateBase<IPipelineStateD3D11, RenderDeviceD3D11Impl>;
@@ -79,8 +79,6 @@ public:
         return m_SRBMemAllocator;
     }
 
-    IShaderVariable* GetDummyShaderVariable(){return &m_DummyShaderVar;}
-
 private:
     CComPtr<ID3D11BlendState>        m_pd3d11BlendState;
     CComPtr<ID3D11RasterizerState>   m_pd3d11RasterizerState;
@@ -93,8 +91,6 @@ private:
     // Do not use strong reference to avoid cyclic references
     // Must be declared after the data allocators
     std::unique_ptr<class ShaderResourceBindingD3D11Impl, STDDeleter<ShaderResourceBindingD3D11Impl, FixedBlockMemoryAllocator> > m_pDefaultShaderResBinding;
-
-    DummyShaderVariable m_DummyShaderVar; ///< Dummy shader variable
 };
 
 }

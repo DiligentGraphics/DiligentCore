@@ -45,7 +45,7 @@ namespace Diligent
 {
 
 /// Implementation of the Diligent::IDeviceContext interface
-class DeviceContextVkImpl : public DeviceContextBase<IDeviceContextVk, BufferVkImpl, TextureViewVkImpl, PipelineStateVkImpl>
+class DeviceContextVkImpl final : public DeviceContextBase<IDeviceContextVk, BufferVkImpl, TextureViewVkImpl, PipelineStateVkImpl>
 {
 public:
     using TDeviceContextBase = DeviceContextBase<IDeviceContextVk, BufferVkImpl, TextureViewVkImpl, PipelineStateVkImpl>;

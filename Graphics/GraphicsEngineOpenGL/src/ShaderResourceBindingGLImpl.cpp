@@ -32,7 +32,6 @@ namespace Diligent
 
 ShaderResourceBindingGLImpl::ShaderResourceBindingGLImpl( IReferenceCounters *pRefCounters, PipelineStateGLImpl *pPSO) :
     TBase( pRefCounters, pPSO ),
-    m_DummyShaderVar(*this),
     m_wpPSO(pPSO)
 {
     SHADER_VARIABLE_TYPE VarTypes[] = {SHADER_VARIABLE_TYPE_MUTABLE, SHADER_VARIABLE_TYPE_DYNAMIC};
@@ -85,13 +84,7 @@ void ShaderResourceBindingGLImpl::BindResources(Uint32 ShaderFlags, IResourceMap
 IShaderVariable *ShaderResourceBindingGLImpl::GetVariable(SHADER_TYPE ShaderType, const char *Name)
 {
     auto ShaderInd = GetShaderTypeIndex(ShaderType);
-    IShaderVariable *pVar = m_DynamicProgResources[ShaderInd].GetShaderVariable(Name);
-    if( !pVar )
-    {
-        LOG_ERROR_MESSAGE( "Shader variable \"", Name, "\" is not found in the shader resource mapping. Attempts to set the variable will be silently ignored." );
-        pVar = &m_DummyShaderVar;
-    }
-    return pVar;
+    return m_DynamicProgResources[ShaderInd].GetShaderVariable(Name);
 }
 
 Uint32 ShaderResourceBindingGLImpl::GetVariableCount(SHADER_TYPE ShaderType) const

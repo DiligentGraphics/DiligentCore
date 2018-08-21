@@ -42,7 +42,6 @@ ShaderD3D12Impl::ShaderD3D12Impl(IReferenceCounters*          pRefCounters,
     TShaderBase(pRefCounters, pRenderDeviceD3D12, ShaderCreationAttribs.Desc),
     ShaderD3DBase(ShaderCreationAttribs),
     m_StaticResLayout(*this, GetRawAllocator()),
-    m_DummyShaderVar(*this),
     m_StaticResCache(ShaderResourceCacheD3D12::DbgCacheContentType::StaticShaderResources)
 {
     // Load shader resources
@@ -59,29 +58,6 @@ ShaderD3D12Impl::ShaderD3D12Impl(IReferenceCounters*          pRefCounters,
 
 ShaderD3D12Impl::~ShaderD3D12Impl()
 {
-}
-
-void ShaderD3D12Impl::BindResources(IResourceMapping* pResourceMapping, Uint32 Flags)
-{
-   m_StaticResLayout.BindResources(pResourceMapping, Flags, &m_StaticResCache);
-}
-    
-IShaderVariable* ShaderD3D12Impl::GetShaderVariable(const Char* Name)
-{
-    auto *pVar = m_StaticResLayout.GetShaderVariable(Name);
-    if(pVar == nullptr)
-        pVar = &m_DummyShaderVar;
-    return pVar;
-}
-
-Uint32 ShaderD3D12Impl::GetVariableCount()const
-{
-    return m_StaticResLayout.GetVariableCount();
-}
-
-IShaderVariable* ShaderD3D12Impl::GetShaderVariable(Uint32 Index)
-{
-    return m_StaticResLayout.GetShaderVariable(Index);
 }
 
 

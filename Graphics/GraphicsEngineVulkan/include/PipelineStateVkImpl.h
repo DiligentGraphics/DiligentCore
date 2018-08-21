@@ -46,7 +46,7 @@ namespace Diligent
 class FixedBlockMemoryAllocator;
 
 /// Implementation of the Diligent::IRenderDeviceVk interface
-class PipelineStateVkImpl : public PipelineStateBase<IPipelineStateVk, RenderDeviceVkImpl>
+class PipelineStateVkImpl final : public PipelineStateBase<IPipelineStateVk, RenderDeviceVkImpl>
 {
 public:
     using TPipelineStateBase = PipelineStateBase<IPipelineStateVk, RenderDeviceVkImpl>;
@@ -88,9 +88,7 @@ public:
     {
         return m_SRBMemAllocator;
     }
-
-    IShaderVariable *GetDummyShaderVar(){return &m_DummyVar;}
-    
+   
     static VkRenderPassCreateInfo GetRenderPassCreateInfo(Uint32                                                   NumRenderTargets, 
                                                           const TEXTURE_FORMAT                                     RTVFormats[], 
                                                           TEXTURE_FORMAT                                           DSVFormat,
@@ -101,9 +99,6 @@ public:
 
 
 private:
-
-    DummyShaderVariable m_DummyVar;
-  
     ShaderResourceLayoutVk*    m_ShaderResourceLayouts  = nullptr;
     
     // SRB memory allocator must be declared before m_pDefaultShaderResBinding

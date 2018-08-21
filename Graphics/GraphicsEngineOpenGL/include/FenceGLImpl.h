@@ -39,7 +39,7 @@ namespace Diligent
 class FixedBlockMemoryAllocator;
 
 /// Implementation of the Diligent::IFenceGL interface
-class FenceGLImpl : public FenceBase<IFenceGL, RenderDeviceGLImpl>
+class FenceGLImpl final : public FenceBase<IFenceGL, RenderDeviceGLImpl>
 {
 public:
     using TFenceBase = FenceBase<IFenceGL, RenderDeviceGLImpl>;

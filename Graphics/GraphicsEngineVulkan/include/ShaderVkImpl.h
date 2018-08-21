@@ -51,13 +51,25 @@ public:
     
     //virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
 
-    virtual void BindResources( IResourceMapping* pResourceMapping, Uint32 Flags )override;
-    
-    virtual IShaderVariable* GetShaderVariable(const Char* Name)override;
+    virtual void BindResources( IResourceMapping* pResourceMapping, Uint32 Flags )override
+    {
+       m_StaticVarsMgr.BindResources(pResourceMapping, Flags);
+    }
 
-    virtual Uint32 GetVariableCount() const override final;
+    virtual IShaderVariable* GetShaderVariable(const Char* Name)override
+    {
+        return m_StaticVarsMgr.GetVariable(Name);
+    }
 
-    virtual IShaderVariable* GetShaderVariable(Uint32 Index)override final;
+    virtual Uint32 GetVariableCount() const override final
+    {
+        return m_StaticVarsMgr.GetVariableCount();
+    }
+
+    virtual IShaderVariable* GetShaderVariable(Uint32 Index)override final
+    {
+        return m_StaticVarsMgr.GetVariable(Index);
+    }
 
     virtual const std::vector<uint32_t>& GetSPIRV()const override final
     {
@@ -73,9 +85,6 @@ public:
 #endif
     
 private:
-
-    DummyShaderVariable m_DummyShaderVar; ///< Dummy shader variable
-    
     // ShaderResources class instance must be referenced through the shared pointer, because 
     // it is referenced by ShaderResourceLayoutVk class instances
     std::shared_ptr<const SPIRVShaderResources> m_pShaderResources;

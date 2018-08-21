@@ -34,7 +34,7 @@ namespace Diligent
 
 class IMemoryAllocator;
 /// Implementation of the Diligent::ISwapChainD3D11 interface
-class SwapChainD3D11Impl : public SwapChainD3DBase<ISwapChainD3D11, IDXGISwapChain>
+class SwapChainD3D11Impl final : public SwapChainD3DBase<ISwapChainD3D11, IDXGISwapChain>
 {
 public:
     using TSwapChainBase = SwapChainD3DBase<ISwapChainD3D11, IDXGISwapChain>;

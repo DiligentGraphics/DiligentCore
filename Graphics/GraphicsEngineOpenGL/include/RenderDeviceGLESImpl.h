@@ -28,7 +28,7 @@
 namespace Diligent
 {
 
-class RenderDeviceGLESImpl : public RenderDeviceGLImpl
+class RenderDeviceGLESImpl final : public RenderDeviceGLImpl
 {
 public:
     RenderDeviceGLESImpl( IReferenceCounters *pRefCounters, IMemoryAllocator &RawMemAllocator, const EngineGLAttribs &InitAttribs );

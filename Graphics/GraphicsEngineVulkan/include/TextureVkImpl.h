@@ -39,7 +39,7 @@ namespace Diligent
 class FixedBlockMemoryAllocator;
 
 /// Base implementation of the Diligent::ITextureVk interface
-class TextureVkImpl : public TextureBase<ITextureVk, RenderDeviceVkImpl, TextureViewVkImpl, FixedBlockMemoryAllocator>
+class TextureVkImpl final : public TextureBase<ITextureVk, RenderDeviceVkImpl, TextureViewVkImpl, FixedBlockMemoryAllocator>
 {
 public:
     using TTextureBase = TextureBase<ITextureVk, RenderDeviceVkImpl, TextureViewVkImpl, FixedBlockMemoryAllocator>;

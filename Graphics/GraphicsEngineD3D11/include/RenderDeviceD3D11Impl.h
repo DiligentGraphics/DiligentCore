@@ -35,7 +35,7 @@ namespace Diligent
 {
 
 /// Implementation of the Diligent::IRenderDeviceD3D11 interface
-class RenderDeviceD3D11Impl : public RenderDeviceD3DBase<IRenderDeviceD3D11>
+class RenderDeviceD3D11Impl final : public RenderDeviceD3DBase<IRenderDeviceD3D11>
 {
 public:
     using TRenderDeviceBase = RenderDeviceD3DBase<IRenderDeviceD3D11>;

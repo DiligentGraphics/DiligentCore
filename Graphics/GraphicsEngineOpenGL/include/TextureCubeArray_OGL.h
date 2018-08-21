@@ -28,7 +28,7 @@
 namespace Diligent
 {
 
-class TextureCubeArray_OGL : public TextureBaseGL
+class TextureCubeArray_OGL final : public TextureBaseGL
 {
 public:
     TextureCubeArray_OGL( IReferenceCounters *pRefCounters, 

@@ -130,7 +130,6 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters*      pRefCounters
                                            RenderDeviceVkImpl*      pDeviceVk,
                                            const PipelineStateDesc& PipelineDesc) : 
     TPipelineStateBase(pRefCounters, pDeviceVk, PipelineDesc),
-    m_DummyVar(*this),
     m_SRBMemAllocator(GetRawAllocator()),
     m_pDefaultShaderResBinding(nullptr, STDDeleter<ShaderResourceBindingVkImpl, FixedBlockMemoryAllocator>(pDeviceVk->GetSRBAllocator()) )
 {

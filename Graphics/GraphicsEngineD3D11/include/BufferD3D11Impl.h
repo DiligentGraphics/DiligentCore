@@ -49,7 +49,7 @@ enum class D3D11BufferState
 };
 
 /// Implementation of the Diligent::IBufferD3D11 interface
-class BufferD3D11Impl : public BufferBase<IBufferD3D11, RenderDeviceD3D11Impl, BufferViewD3D11Impl, FixedBlockMemoryAllocator>
+class BufferD3D11Impl final : public BufferBase<IBufferD3D11, RenderDeviceD3D11Impl, BufferViewD3D11Impl, FixedBlockMemoryAllocator>
 {
 public:
     using TBufferBase = BufferBase<IBufferD3D11, RenderDeviceD3D11Impl, BufferViewD3D11Impl, FixedBlockMemoryAllocator>;

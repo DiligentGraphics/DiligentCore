@@ -41,7 +41,7 @@ namespace Diligent
 {
 
 /// Implementation of the Diligent::IDeviceContextD3D11 interface
-class DeviceContextD3D11Impl : public DeviceContextBase<IDeviceContextD3D11, BufferD3D11Impl, TextureViewD3D11Impl, PipelineStateD3D11Impl>
+class DeviceContextD3D11Impl final : public DeviceContextBase<IDeviceContextD3D11, BufferD3D11Impl, TextureViewD3D11Impl, PipelineStateD3D11Impl>
 {
 public:
     using TDeviceContextBase = DeviceContextBase<IDeviceContextD3D11, BufferD3D11Impl, TextureViewD3D11Impl, PipelineStateD3D11Impl>;

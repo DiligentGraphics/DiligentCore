@@ -36,8 +36,7 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*      pRefCoun
                                                const PipelineStateDesc& PipelineDesc) : 
     TPipelineStateBase(pRefCounters, pRenderDeviceD3D11, PipelineDesc),
     m_SRBMemAllocator(GetRawAllocator()),
-    m_pDefaultShaderResBinding( nullptr, STDDeleter<ShaderResourceBindingD3D11Impl, FixedBlockMemoryAllocator>(pRenderDeviceD3D11->GetSRBAllocator()) ),
-    m_DummyShaderVar(*this)
+    m_pDefaultShaderResBinding( nullptr, STDDeleter<ShaderResourceBindingD3D11Impl, FixedBlockMemoryAllocator>(pRenderDeviceD3D11->GetSRBAllocator()) )
 {
     if (PipelineDesc.IsComputePipeline)
     {

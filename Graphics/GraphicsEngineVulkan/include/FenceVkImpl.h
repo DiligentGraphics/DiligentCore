@@ -38,7 +38,7 @@ namespace Diligent
 class FixedBlockMemoryAllocator;
 
 /// Implementation of the Diligent::IFenceVk interface
-class FenceVkImpl : public FenceBase<IFenceVk, RenderDeviceVkImpl>
+class FenceVkImpl final : public FenceBase<IFenceVk, RenderDeviceVkImpl>
 {
 public:
     using TFenceBase = FenceBase<IFenceVk, RenderDeviceVkImpl>;

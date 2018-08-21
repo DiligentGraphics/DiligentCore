@@ -33,7 +33,7 @@ namespace Diligent
 {
 
 /// Implementation of the Diligent::ICommandList interface
-class CommandListD3D12Impl : public CommandListBase<ICommandList, RenderDeviceD3D12Impl>
+class CommandListD3D12Impl final : public CommandListBase<ICommandList, RenderDeviceD3D12Impl>
 {
 public:
     using TCommandListBase = CommandListBase<ICommandList, RenderDeviceD3D12Impl>;

@@ -38,7 +38,6 @@ namespace Diligent
 
 ShaderVkImpl::ShaderVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl* pRenderDeviceVk, const ShaderCreationAttribs& CreationAttribs) : 
     TShaderBase(pRefCounters, pRenderDeviceVk, CreationAttribs.Desc),
-    m_DummyShaderVar(*this),
     m_StaticResLayout(*this, pRenderDeviceVk->GetLogicalDevice(), GetRawAllocator()),
     m_StaticResCache(ShaderResourceCacheVk::DbgCacheContentType::StaticShaderResources),
     m_StaticVarsMgr(*this)
@@ -68,34 +67,6 @@ ShaderVkImpl::~ShaderVkImpl()
 {
     m_StaticVarsMgr.Destroy(GetRawAllocator());
 }
-
-void ShaderVkImpl::BindResources(IResourceMapping* pResourceMapping, Uint32 Flags)
-{
-   m_StaticVarsMgr.BindResources(pResourceMapping, Flags);
-}
-    
-IShaderVariable* ShaderVkImpl::GetShaderVariable(const Char* Name)
-{
-    IShaderVariable *pVar = m_StaticVarsMgr.GetVariable(Name);
-    if (pVar == nullptr)
-    {
-        LOG_ERROR_MESSAGE("Shader variable \"", Name, "\" is not found in shader \"", m_Desc.Name, "\". Note that only static variables can be accessed through shader object.");
-        return &m_DummyShaderVar;
-    }
-    else 
-        return pVar;
-}
-
-Uint32 ShaderVkImpl::GetVariableCount()const
-{
-    return m_StaticVarsMgr.GetVariableCount();
-}
-
-IShaderVariable* ShaderVkImpl::GetShaderVariable(Uint32 Index)
-{
-    return m_StaticVarsMgr.GetVariable(Index);
-}
-
 
 #ifdef DEVELOPMENT
 void ShaderVkImpl::DvpVerifyStaticResourceBindings()

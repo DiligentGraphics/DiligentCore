@@ -39,7 +39,7 @@ namespace Diligent
 class FixedBlockMemoryAllocator;
 
 /// Base implementation of the Diligent::ITextureD3D12 interface
-class TextureD3D12Impl : public TextureBase<ITextureD3D12, RenderDeviceD3D12Impl, TextureViewD3D12Impl, FixedBlockMemoryAllocator>, public D3D12ResourceBase
+class TextureD3D12Impl final : public TextureBase<ITextureD3D12, RenderDeviceD3D12Impl, TextureViewD3D12Impl, FixedBlockMemoryAllocator>, public D3D12ResourceBase
 {
 public:
     using TTextureBase = TextureBase<ITextureD3D12, RenderDeviceD3D12Impl, TextureViewD3D12Impl, FixedBlockMemoryAllocator>;

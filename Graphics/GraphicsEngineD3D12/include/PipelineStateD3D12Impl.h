@@ -40,7 +40,7 @@ namespace Diligent
 
 class FixedBlockMemoryAllocator;
 /// Implementation of the Diligent::IRenderDeviceD3D12 interface
-class PipelineStateD3D12Impl : public PipelineStateBase<IPipelineStateD3D12, RenderDeviceD3D12Impl>
+class PipelineStateD3D12Impl final : public PipelineStateBase<IPipelineStateD3D12, RenderDeviceD3D12Impl>
 {
 public:
     using TPipelineStateBase = PipelineStateBase<IPipelineStateD3D12, RenderDeviceD3D12Impl>;
@@ -78,14 +78,11 @@ public:
         return m_SRBMemAllocator;
     }
 
-    IShaderVariable *GetDummyShaderVar(){return &m_DummyVar;}
-
 private:
 
     /// D3D12 device
     CComPtr<ID3D12PipelineState> m_pd3d12PSO;
     RootSignature m_RootSig;
-    DummyShaderVariable m_DummyVar;
     
     // Must be defined before default SRB
     SRBMemoryAllocator m_SRBMemAllocator;

@@ -63,7 +63,6 @@ PipelineStateD3D12Impl :: PipelineStateD3D12Impl(IReferenceCounters*      pRefCo
                                                  RenderDeviceD3D12Impl*   pDeviceD3D12,
                                                  const PipelineStateDesc& PipelineDesc) : 
     TPipelineStateBase(pRefCounters, pDeviceD3D12, PipelineDesc),
-    m_DummyVar(*this),
     m_SRBMemAllocator(GetRawAllocator()),
     m_pDefaultShaderResBinding(nullptr, STDDeleter<ShaderResourceBindingD3D12Impl, FixedBlockMemoryAllocator>(pDeviceD3D12->GetSRBAllocator()) )
 {

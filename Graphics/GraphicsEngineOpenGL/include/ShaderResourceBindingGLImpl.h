@@ -59,7 +59,6 @@ public:
 
 private:
     GLProgramResources m_DynamicProgResources[6];
-    DummyShaderVariable m_DummyShaderVar; ///< Dummy shader variable
     RefCntWeakPtr<PipelineStateGLImpl> m_wpPSO;
 };
 

@@ -108,19 +108,9 @@ IShaderVariable* ShaderResourceBindingVkImpl::GetVariable(SHADER_TYPE ShaderType
     if (ResLayoutInd < 0)
     {
         LOG_ERROR("Failed to find variable \"", Name,"\" in shader resource binding: shader type ", GetShaderTypeLiteralName(ShaderType), " is not initialized");
-        return ValidatedCast<PipelineStateVkImpl>(GetPipelineState())->GetDummyShaderVar();
+        return nullptr;
     }
-    auto *pVar = m_pShaderVarMgrs[ResLayoutInd].GetVariable(Name);
-    if(pVar == nullptr)
-    {
-        LOG_ERROR("Failed to find variable \"", Name,"\" in shader resource binding. Note that only dynamic and mutable variables can be accessed through SRB object.");
-        return ValidatedCast<PipelineStateVkImpl>(GetPipelineState())->GetDummyShaderVar();
-    }
-    else
-    {
-        VERIFY(pVar->GetResource().SpirvAttribs.VarType != SHADER_VARIABLE_TYPE_STATIC, "Static variables cannot be accessed through shader resource binding");
-        return pVar;
-    }
+    return m_pShaderVarMgrs[ResLayoutInd].GetVariable(Name);
 }
 
 Uint32 ShaderResourceBindingVkImpl::GetVariableCount(SHADER_TYPE ShaderType) const
@@ -142,7 +132,7 @@ IShaderVariable* ShaderResourceBindingVkImpl::GetVariable(SHADER_TYPE ShaderType
     if (ResLayoutInd < 0)
     {
         LOG_ERROR("Failed to find variable at index \"", Index, "\" in shader resource binding: shader type ", GetShaderTypeLiteralName(ShaderType), " is not initialized");
-        return ValidatedCast<PipelineStateVkImpl>(GetPipelineState())->GetDummyShaderVar();
+        return nullptr;
     }
     return m_pShaderVarMgrs[ResLayoutInd].GetVariable(Index);
 }

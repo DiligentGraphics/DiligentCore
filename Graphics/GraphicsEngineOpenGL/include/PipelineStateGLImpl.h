@@ -37,7 +37,7 @@ namespace Diligent
 class FixedBlockMemoryAllocator;
 
 /// Implementation of the Diligent::IPipelineStateGL interface
-class PipelineStateGLImpl : public PipelineStateBase<IPipelineStateGL, RenderDeviceGLImpl>
+class PipelineStateGLImpl final : public PipelineStateBase<IPipelineStateGL, RenderDeviceGLImpl>
 {
 public:
     using TPipelineStateBase = PipelineStateBase<IPipelineStateGL, RenderDeviceGLImpl>;

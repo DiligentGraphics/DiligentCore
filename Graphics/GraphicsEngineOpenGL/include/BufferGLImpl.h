@@ -37,7 +37,7 @@ namespace Diligent
 class FixedBlockMemoryAllocator;
 
 /// Implementation of the Diligent::IBufferGL interface
-class BufferGLImpl : public BufferBase<IBufferGL, RenderDeviceGLImpl, BufferViewGLImpl, FixedBlockMemoryAllocator>, public AsyncWritableResource
+class BufferGLImpl final : public BufferBase<IBufferGL, RenderDeviceGLImpl, BufferViewGLImpl, FixedBlockMemoryAllocator>, public AsyncWritableResource
 {
 public:
     using TBufferBase = BufferBase<IBufferGL, RenderDeviceGLImpl, BufferViewGLImpl, FixedBlockMemoryAllocator>;

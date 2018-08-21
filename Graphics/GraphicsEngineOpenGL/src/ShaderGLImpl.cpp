@@ -194,13 +194,7 @@ IShaderVariable* ShaderGLImpl::GetShaderVariable( const Char* Name )
         UNSUPPORTED( "Shader variable queries are currently supported for separable programs only" );
     }
 
-    auto *pShaderVar = m_GlProgObj.GetConstantResources().GetShaderVariable(Name);
-    if(!pShaderVar)
-    {
-        LOG_ERROR_MESSAGE( "Static shader variable \"", Name, "\" is not found in shader \"", m_Desc.Name ? m_Desc.Name : "", "\". Attempts to set the variable will be silently ignored." );
-        pShaderVar = &m_DummyShaderVar;
-    }
-    return pShaderVar;
+    return m_GlProgObj.GetConstantResources().GetShaderVariable(Name);
 }
 
 Uint32 ShaderGLImpl::GetVariableCount() const

@@ -51,7 +51,7 @@ namespace Diligent
 {
 
 /// Implementation of the Diligent::IRenderDeviceVk interface
-class RenderDeviceVkImpl : public RenderDeviceBase<IRenderDeviceVk>
+class RenderDeviceVkImpl final : public RenderDeviceBase<IRenderDeviceVk>
 {
 public:
     using TRenderDeviceBase = RenderDeviceBase<IRenderDeviceVk>;

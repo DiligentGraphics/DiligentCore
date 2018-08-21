@@ -34,7 +34,7 @@ namespace Diligent
 {
 
 /// Implementation of the Diligent::ICommandList interface
-class CommandListVkImpl : public CommandListBase<ICommandList, RenderDeviceVkImpl>
+class CommandListVkImpl final : public CommandListBase<ICommandList, RenderDeviceVkImpl>
 {
 public:
     using TCommandListBase = CommandListBase<ICommandList, RenderDeviceVkImpl>;

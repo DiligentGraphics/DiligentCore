@@ -32,7 +32,7 @@ namespace Diligent
 {
 
 /// Implementation of a 3D texture
-class Texture3D_D3D11 : public TextureBaseD3D11
+class Texture3D_D3D11 final : public TextureBaseD3D11
 {
 public:
     Texture3D_D3D11(IReferenceCounters*          pRefCounters,
