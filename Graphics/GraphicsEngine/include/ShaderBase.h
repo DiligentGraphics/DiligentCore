@@ -159,7 +159,7 @@ struct ShaderVariableBase : public IShaderVariable
     }
 
 protected:
-    IObject &m_Owner;
+    IObject& m_Owner;
 };
 
 

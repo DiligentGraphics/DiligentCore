@@ -27,16 +27,13 @@
 
 namespace Diligent
 {
-    GLProgramResources::GLProgramResources()
-    {
-    }
-
-    GLProgramResources::GLProgramResources( GLProgramResources&& Program ):
-        m_UniformBlocks( std::move( Program.m_UniformBlocks ) ),
-        m_Samplers( std::move( Program.m_Samplers ) ),
-        m_Images( std::move( Program.m_Images ) ),
-        m_StorageBlocks( std::move( Program.m_StorageBlocks ) ),
-        m_VariableHash(std::move( Program.m_VariableHash))
+    GLProgramResources::GLProgramResources( GLProgramResources&& Program )noexcept :
+        m_UniformBlocks   (std::move(Program.m_UniformBlocks)),
+        m_Samplers        (std::move(Program.m_Samplers)     ),
+        m_Images          (std::move(Program.m_Images)       ),
+        m_StorageBlocks   (std::move(Program.m_StorageBlocks)),
+        m_VariableHash    (std::move(Program.m_VariableHash) ),
+        m_VariablesByIndex(std::move(Program.m_VariablesByIndex) )
     {
     }
 
@@ -361,32 +358,32 @@ namespace Diligent
     }
 
     void GLProgramResources::Clone(const GLProgramResources& SrcLayout, 
-                                   SHADER_VARIABLE_TYPE *VarTypes, 
-                                   Uint32 NumVarTypes,
-                                   IObject &Owner)
+                                   SHADER_VARIABLE_TYPE*     VarTypes, 
+                                   Uint32                    NumVarTypes,
+                                   IObject&                  Owner)
     {
-        for (auto ub = SrcLayout.m_UniformBlocks.begin(); ub != SrcLayout.m_UniformBlocks.end(); ++ub)
+        for (auto& ub : SrcLayout.m_UniformBlocks)
         {
-            if(CheckType(ub->VarType, VarTypes, NumVarTypes))
-                m_UniformBlocks.emplace_back( ub->Name.c_str(), ub->pResources.size(), ub->VarType, ub->Index );
+            if(CheckType(ub.VarType, VarTypes, NumVarTypes))
+                m_UniformBlocks.emplace_back( ub.Name, ub.pResources.size(), ub.VarType, ub.Index );
         }
 
-        for (auto sam = SrcLayout.m_Samplers.begin(); sam != SrcLayout.m_Samplers.end(); ++sam)
+        for (auto& sam : SrcLayout.m_Samplers)
         {
-            if(CheckType(sam->VarType, VarTypes, NumVarTypes))
-                m_Samplers.emplace_back( sam->Name.c_str(), sam->pResources.size(), sam->VarType, sam->Location, sam->Type, const_cast<SamplerGLImpl*>(sam->pStaticSampler.RawPtr()) );
+            if(CheckType(sam.VarType, VarTypes, NumVarTypes))
+                m_Samplers.emplace_back( sam.Name, sam.pResources.size(), sam.VarType, sam.Location, sam.Type, const_cast<SamplerGLImpl*>(sam.pStaticSampler.RawPtr()) );
         }
 
-        for (auto img = SrcLayout.m_Images.begin(); img != SrcLayout.m_Images.end(); ++img)
+        for (auto& img : SrcLayout.m_Images)
         {
-            if(CheckType(img->VarType, VarTypes, NumVarTypes))
-                m_Images.emplace_back( img->Name.c_str(), img->pResources.size(), img->VarType, img->BindingPoint, img->Type );
+            if(CheckType(img.VarType, VarTypes, NumVarTypes))
+                m_Images.emplace_back( img.Name, img.pResources.size(), img.VarType, img.BindingPoint, img.Type );
         }
 
-        for (auto sb = SrcLayout.m_StorageBlocks.begin(); sb != SrcLayout.m_StorageBlocks.end(); ++sb)
+        for (auto& sb : SrcLayout.m_StorageBlocks)
         {
-            if(CheckType(sb->VarType, VarTypes, NumVarTypes))
-                m_StorageBlocks.emplace_back( sb->Name.c_str(), sb->pResources.size(), sb->VarType, sb->Binding );
+            if(CheckType(sb.VarType, VarTypes, NumVarTypes))
+                m_StorageBlocks.emplace_back( sb.Name, sb.pResources.size(), sb.VarType, sb.Binding );
         }
 
         InitVariables(Owner);
@@ -396,12 +393,18 @@ namespace Diligent
     {
         // After all program resources are loaded, we can populate shader variable hash map.
         // The map contains raw pointers, but none of the arrays will ever change.
+        auto TotalVars = m_UniformBlocks.size() + m_Samplers.size() + m_Images.size() + m_StorageBlocks.size();
+        m_VariablesByIndex.reserve(TotalVars);
+        m_VariableHash.reserve(TotalVars);
 #define STORE_SHADER_VARIABLES(ResArr)\
         {                                                               \
-            auto& Arr = ResArr;                                         \
-            for( auto it = Arr.begin(); it != Arr.end(); ++it )         \
+            for( auto& ProgVar : ResArr)                                \
+            {                                                           \
                 /* HashMapStringKey will make a copy of the string*/    \
-                m_VariableHash.insert( std::make_pair( Diligent::HashMapStringKey(it->Name), CGLShaderVariable(Owner, *it) ) ); \
+                auto it = m_VariableHash.insert( std::make_pair( Diligent::HashMapStringKey(ProgVar.Name), CGLShaderVariable(Owner, ProgVar, static_cast<Uint32>(m_VariablesByIndex.size())) ) ); \
+                VERIFY_EXPR(it.second);                                 \
+                m_VariablesByIndex.push_back(&it.first->second);        \
+            }                                                           \
         }
 
         STORE_SHADER_VARIABLES(m_UniformBlocks)

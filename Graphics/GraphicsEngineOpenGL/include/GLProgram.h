@@ -44,7 +44,8 @@ namespace Diligent
         void BindConstantResources(IResourceMapping *pResourceMapping, Uint32 Flags);
 
         const GLProgramResources& GetAllResources()const{return m_AllResources;}
-        GLProgramResources& GetConstantResources(){return m_ConstantResources;}
+              GLProgramResources& GetConstantResources()     {return m_ConstantResources;}
+        const GLProgramResources& GetConstantResources()const{return m_ConstantResources;}
         
 
 #ifdef VERIFY_RESOURCE_BINDINGS

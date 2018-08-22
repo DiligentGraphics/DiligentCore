@@ -89,14 +89,14 @@ IShaderVariable *ShaderResourceBindingGLImpl::GetVariable(SHADER_TYPE ShaderType
 
 Uint32 ShaderResourceBindingGLImpl::GetVariableCount(SHADER_TYPE ShaderType) const
 {
-    UNSUPPORTED("Not yet implemented");
-    return 0;
+    auto ShaderInd = GetShaderTypeIndex(ShaderType);
+    return m_DynamicProgResources[ShaderInd].GetVariableCount();
 }
 
 IShaderVariable* ShaderResourceBindingGLImpl::GetVariable(SHADER_TYPE ShaderType, Uint32 Index)
 {
-    UNSUPPORTED("Not yet implemented");
-    return 0;
+    auto ShaderInd = GetShaderTypeIndex(ShaderType);
+    return m_DynamicProgResources[ShaderInd].GetShaderVariable(Index);
 }
 
 static GLProgramResources NullProgramResources;

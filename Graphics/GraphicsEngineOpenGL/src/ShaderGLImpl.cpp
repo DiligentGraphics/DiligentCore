@@ -189,24 +189,29 @@ void ShaderGLImpl::BindResources( IResourceMapping* pResourceMapping, Uint32 Fla
 
 IShaderVariable* ShaderGLImpl::GetShaderVariable( const Char* Name )
 {
-    if( !m_GlProgObj )
-    {
-        UNSUPPORTED( "Shader variable queries are currently supported for separable programs only" );
-    }
-
-    return m_GlProgObj.GetConstantResources().GetShaderVariable(Name);
+    DEV_CHECK_ERR(m_GlProgObj, "Shader variable queries are currently supported for separable programs only");
+    if( m_GlProgObj )
+        return m_GlProgObj.GetConstantResources().GetShaderVariable(Name);
+    else
+        return nullptr;
 }
 
 Uint32 ShaderGLImpl::GetVariableCount() const
 {
-    UNSUPPORTED("Not yet implemented");
-    return 0;
+    DEV_CHECK_ERR(m_GlProgObj, "Shader variable queries are currently supported for separable programs only");
+    if( m_GlProgObj )
+        return m_GlProgObj.GetConstantResources().GetVariableCount();
+    else
+        return 0;
 }
 
 IShaderVariable* ShaderGLImpl::GetShaderVariable(Uint32 Index)
 {
-    UNSUPPORTED("Not yet implemented");
-    return nullptr;
+    DEV_CHECK_ERR(m_GlProgObj, "Shader variable queries are currently supported for separable programs only");
+    if( m_GlProgObj )
+        return m_GlProgObj.GetConstantResources().GetShaderVariable(Index);
+    else
+        return 0;
 }
 
 }
