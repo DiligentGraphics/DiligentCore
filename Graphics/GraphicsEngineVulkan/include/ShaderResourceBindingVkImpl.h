@@ -39,7 +39,7 @@ namespace Diligent
 class FixedBlockMemoryAllocator;
 
 /// Implementation of the Diligent::IShaderResourceBindingVk interface
-// sizeof(ShaderResourceBindingVkImpl) == 80 (x64, msvc, Release)
+// sizeof(ShaderResourceBindingVkImpl) == 72 (x64, msvc, Release)
 class ShaderResourceBindingVkImpl final : public ShaderResourceBindingBase<IShaderResourceBindingVk>
 {
 public:
@@ -70,7 +70,7 @@ private:
     // Shader variable manager index in m_pShaderVarMgrs[] array for every shader stage
     Int8 m_ResourceLayoutIndex[6] = {-1, -1, -1, -1, -1, -1};
     bool m_bStaticResourcesInitialized = false;
-    Uint32 m_NumShaders = 0;
+    Uint8 m_NumShaders = 0;
 };
 
 }

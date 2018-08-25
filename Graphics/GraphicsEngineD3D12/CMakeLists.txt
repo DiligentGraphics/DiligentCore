@@ -29,6 +29,7 @@ set(INCLUDE
     include/ShaderResourceCacheD3D12.h
     include/ShaderResourceLayoutD3D12.h
     include/ShaderResourcesD3D12.h
+    include/ShaderVariableD3D12.h
     include/SwapChainD3D12Impl.h
     include/TextureD3D12Impl.h
     include/TextureViewD3D12Impl.h
@@ -76,6 +77,7 @@ set(SRC
     src/ShaderResourceCacheD3D12.cpp
     src/ShaderResourceLayoutD3D12.cpp
     src/ShaderResourcesD3D12.cpp
+    src/ShaderVariableD3D12.cpp
     src/SwapChainD3D12Impl.cpp
     src/TextureD3D12Impl.cpp
     src/TextureViewD3D12Impl.cpp

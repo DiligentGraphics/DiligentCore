@@ -24,113 +24,114 @@
 #pragma once
 
 /// \file
-/// Declaration of Diligent::ShaderVariableManagerVk and Diligent::ShaderVariableVkImpl classes
+/// Declaration of Diligent::ShaderVariableManagerD3D12 and Diligent::ShaderVariableD3D12Impl classes
 
 // 
-//  * ShaderVariableManagerVk keeps list of variables of specific types
-//  * Every ShaderVariableVkImpl references VkResource from ShaderResourceLayoutVk
-//  * ShaderVariableManagerVk keeps pointer to ShaderResourceCacheVk
-//  * ShaderVariableManagerVk is used by ShaderVkImpl to manage static resources and by
-//    ShaderResourceBindingVkImpl to manage mutable and dynamic resources
+//  * ShaderVariableManagerD3D12 keeps list of variables of specific types
+//  * Every ShaderVariableD3D12Impl references D3D12Resource from ShaderResourceLayoutD3D12
+//  * ShaderVariableManagerD3D12 keeps pointer to ShaderResourceCacheD3D12
+//  * ShaderVariableManagerD3D12 is used by ShaderD3D12Impl to manage static resources and by
+//    ShaderResourceBindingD3D12Impl to manage mutable and dynamic resources
 //
-//          __________________________                   __________________________________________________________________________
-//         |                          |                 |                           |                            |                 |
-//    .----|  ShaderVariableManagerVk |---------------->|  ShaderVariableVkImpl[0]  |   ShaderVariableVkImpl[1]  |     ...         |
-//    |    |__________________________|                 |___________________________|____________________________|_________________|
+//          _____________________________                   ________________________________________________________________________________
+//         |                             |                 |                              |                               |                 |
+//    .----|  ShaderVariableManagerD3D12 |---------------->|  ShaderVariableD3D12Impl[0]  |   ShaderVariableD3D12Impl[1]  |     ...         |
+//    |    |_____________________________|                 |______________________________|_______________________________|_________________|
 //    |                |                                                    \                          |
 //    |                |                                                    Ref                       Ref
 //    |                |                                                      \                        |
-//    |     ___________V_______________                  ______________________V_______________________V____________________________
-//    |    |                           |   unique_ptr   |                   |                 |               |                     |
-//    |    | ShaderResourceLayoutVk    |--------------->|   VkResource[0]   |  VkResource[1]  |       ...     | VkResource[s+m+d-1] |
-//    |    |___________________________|                |___________________|_________________|_______________|_____________________|
+//    |     ___________V_______________                  ______________________V_______________________V_____________________________
+//    |    |                           |   unique_ptr   |                  |                  |             |                        |
+//    |    | ShaderResourceLayoutD3D12 |--------------->| D3D12Resource[0] | D3D12Resource[1] |     ...     | D3D12Resource[s+m+d-1] |
+//    |    |___________________________|                |__________________|__________________|_____________|________________________|
 //    |                                                        |                                                            |
 //    |                                                        |                                                            |
-//    |                                                        | (DescriptorSet, CacheOffset)                              / (DescriptorSet, CacheOffset)
+//    |                                                        | (RootTable, Offset)                                       / (RootTable, Offset)
 //    |                                                         \                                                         /
 //    |     __________________________                   ________V_______________________________________________________V_______
 //    |    |                          |                 |                                                                        |
-//    '--->|   ShaderResourceCacheVk  |---------------->|                                   Resources                            |
+//    '--->| ShaderResourceCacheD3D12 |---------------->|                                   Resources                            |
 //         |__________________________|                 |________________________________________________________________________|
 //
-//
+//   Memory buffer is allocated through the allocator provided by the pipeline state. If allocation granularity > 1, fixed block
+//   memory allocator is used. This ensures that all resources from different shader resource bindings reside in
+//   continuous memory. If allocation granularity == 1, raw allocator is used.
 
 #include <memory>
 
-#include "ShaderResourceLayoutVk.h"
+#include "ShaderResourceLayoutD3D12.h"
 
 namespace Diligent
 {
 
-class ShaderVariableVkImpl;
+class ShaderVariableD3D12Impl;
 
-// sizeof(ShaderVariableManagerVk) == 40 (x64, msvc, Release)
-class ShaderVariableManagerVk
+// sizeof(ShaderVariableManagerD3D12) == 40 (x64, msvc, Release)
+class ShaderVariableManagerD3D12
 {
 public:
-    ShaderVariableManagerVk(IObject &Owner) :
+    ShaderVariableManagerD3D12(IObject &Owner) :
         m_Owner(Owner)
     {}
-    ~ShaderVariableManagerVk();
+    ~ShaderVariableManagerD3D12();
 
-    void Initialize(const ShaderResourceLayoutVk& Layout, 
-                    IMemoryAllocator&             Allocator,
-                    const SHADER_VARIABLE_TYPE*   AllowedVarTypes, 
-                    Uint32                        NumAllowedTypes, 
-                    ShaderResourceCacheVk&        ResourceCache);
+    void Initialize(const ShaderResourceLayoutD3D12& Layout, 
+                    IMemoryAllocator&                Allocator,
+                    const SHADER_VARIABLE_TYPE*      AllowedVarTypes, 
+                    Uint32                           NumAllowedTypes, 
+                    ShaderResourceCacheD3D12&        ResourceCache);
     void Destroy(IMemoryAllocator& Allocator);
 
-    ShaderVariableVkImpl* GetVariable(const Char* Name);
-    ShaderVariableVkImpl* GetVariable(Uint32 Index);
+    ShaderVariableD3D12Impl* GetVariable(const Char* Name);
+    ShaderVariableD3D12Impl* GetVariable(Uint32 Index);
 
     void BindResources( IResourceMapping* pResourceMapping, Uint32 Flags);
 
-    static size_t GetRequiredMemorySize(const ShaderResourceLayoutVk& Layout, 
-                                        const SHADER_VARIABLE_TYPE*   AllowedVarTypes, 
-                                        Uint32                        NumAllowedTypes,
-                                        Uint32&                       NumVariables);
+    static size_t GetRequiredMemorySize(const ShaderResourceLayoutD3D12& Layout, 
+                                        const SHADER_VARIABLE_TYPE*      AllowedVarTypes, 
+                                        Uint32                           NumAllowedTypes,
+                                        Uint32&                          NumVariables);
 
     Uint32 GetVariableCount()const { return m_NumVariables; }
 
 private:
-    friend ShaderVariableVkImpl;
+    friend ShaderVariableD3D12Impl;
 
-    Uint32 GetVariableIndex(const ShaderVariableVkImpl& Variable);
+    Uint32 GetVariableIndex(const ShaderVariableD3D12Impl& Variable);
 
     IObject&                      m_Owner;
     // Variable mgr is owned by either Shader object (in which case m_pResourceLayout points to
     // static resource layout owned by the same shader object), or by SRB object (in which case 
     // m_pResourceLayout points to corresponding layout in pipeline state). Since SRB keeps strong 
     // reference to PSO, the layout is guaranteed be alive while SRB is alive
-    const ShaderResourceLayoutVk* m_pResourceLayout= nullptr;
-    ShaderResourceCacheVk*        m_pResourceCache = nullptr;
+    const ShaderResourceLayoutD3D12* m_pResourceLayout= nullptr;
+    ShaderResourceCacheD3D12*        m_pResourceCache = nullptr;
 
     // Memory is allocated through the allocator provided by the pipeline state. If allocation granularity > 1, fixed block
     // memory allocator is used. This ensures that all resources from different shader resource bindings reside in
     // continuous memory. If allocation granularity == 1, raw allocator is used.
-    ShaderVariableVkImpl*         m_pVariables     = nullptr;
-    Uint32                        m_NumVariables = 0;
+    ShaderVariableD3D12Impl*         m_pVariables     = nullptr;
+    Uint32                           m_NumVariables = 0;
 
 #ifdef _DEBUG
-    IMemoryAllocator*             m_pDbgAllocator = nullptr;
+    IMemoryAllocator*                m_pDbgAllocator = nullptr;
 #endif
 };
 
-// sizeof(ShaderVariableVkImpl) == 24 (x64)
-class ShaderVariableVkImpl final : public IShaderVariable
+// sizeof(ShaderVariableD3D12Impl) == 24 (x64)
+class ShaderVariableD3D12Impl final : public IShaderVariable
 {
 public:
-    ShaderVariableVkImpl(ShaderVariableManagerVk& ParentManager,
-                         const ShaderResourceLayoutVk::VkResource& Resource) :
+    ShaderVariableD3D12Impl(ShaderVariableManagerD3D12& ParentManager,
+                         const ShaderResourceLayoutD3D12::D3D12Resource& Resource) :
         m_ParentManager(ParentManager),
         m_Resource(Resource)
     {}
 
-    ShaderVariableVkImpl            (const ShaderVariableVkImpl&) = delete;
-    ShaderVariableVkImpl            (ShaderVariableVkImpl&&)      = delete;
-    ShaderVariableVkImpl& operator= (const ShaderVariableVkImpl&) = delete;
-    ShaderVariableVkImpl& operator= (ShaderVariableVkImpl&&)      = delete;
-
+    ShaderVariableD3D12Impl            (const ShaderVariableD3D12Impl&) = delete;
+    ShaderVariableD3D12Impl            (ShaderVariableD3D12Impl&&)      = delete;
+    ShaderVariableD3D12Impl& operator= (const ShaderVariableD3D12Impl&) = delete;
+    ShaderVariableD3D12Impl& operator= (ShaderVariableD3D12Impl&&)      = delete;
 
     virtual IReferenceCounters* GetReferenceCounters()const override final
     {
@@ -162,7 +163,7 @@ public:
 
     virtual SHADER_VARIABLE_TYPE GetType()const override final
     {
-        return m_Resource.SpirvAttribs.VarType;
+        return m_Resource.Attribs.VariableType;
     }
 
     virtual void Set(IDeviceObject *pObject)override final 
@@ -180,12 +181,12 @@ public:
 
     virtual Uint32 GetArraySize()const override final
     {
-        return m_Resource.SpirvAttribs.ArraySize;
+        return m_Resource.Attribs.BindCount;
     }
 
     virtual const Char* GetName()const override final
     {
-        return m_Resource.SpirvAttribs.Name;
+        return m_Resource.Attribs.Name;
     }
 
     virtual Uint32 GetIndex()const override final
@@ -193,16 +194,16 @@ public:
         return m_ParentManager.GetVariableIndex(*this);
     }
 
-    const ShaderResourceLayoutVk::VkResource& GetResource()const
+    const ShaderResourceLayoutD3D12::D3D12Resource& GetResource()const
     {
         return m_Resource;
     }
 
 private:
-    friend ShaderVariableManagerVk;
+    friend ShaderVariableManagerD3D12;
 
-    ShaderVariableManagerVk&                  m_ParentManager;
-    const ShaderResourceLayoutVk::VkResource& m_Resource;
+    ShaderVariableManagerD3D12&                     m_ParentManager;
+    const ShaderResourceLayoutD3D12::D3D12Resource& m_Resource;
 };
 
 }

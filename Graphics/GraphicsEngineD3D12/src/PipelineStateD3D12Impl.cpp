@@ -32,6 +32,7 @@
 #include "CommandContext.h"
 #include "EngineMemory.h"
 #include "StringTools.h"
+#include "ShaderVariableD3D12.h"
 
 namespace Diligent
 {
@@ -201,15 +202,16 @@ PipelineStateD3D12Impl :: PipelineStateD3D12Impl(IReferenceCounters*      pRefCo
 
     if(PipelineDesc.SRBAllocationGranularity > 1)
     {
-        std::array<size_t, MaxShadersInPipeline> ShaderResLayoutDataSizes = {};
+        std::array<size_t, MaxShadersInPipeline> ShaderVarMgrDataSizes = {};
         for (Uint32 s = 0; s < m_NumShaders; ++s)
         {
             std::array<SHADER_VARIABLE_TYPE, 2> AllowedVarTypes = { SHADER_VARIABLE_TYPE_MUTABLE, SHADER_VARIABLE_TYPE_DYNAMIC };
-            ShaderResLayoutDataSizes[s] = ShaderResourceLayoutD3D12::GetRequiredMemorySize(m_pShaderResourceLayouts[s], AllowedVarTypes.data(), static_cast<Uint32>(AllowedVarTypes.size()));
+            Uint32 NumVariablesUnused = 0;
+            ShaderVarMgrDataSizes[s] = ShaderVariableManagerD3D12::GetRequiredMemorySize(m_pShaderResourceLayouts[s], AllowedVarTypes.data(), static_cast<Uint32>(AllowedVarTypes.size()), NumVariablesUnused);
         }
 
         auto CacheMemorySize = m_RootSig.GetResourceCacheRequiredMemSize();
-        m_SRBMemAllocator.Initialize(PipelineDesc.SRBAllocationGranularity, m_NumShaders, ShaderResLayoutDataSizes.data(), 1, &CacheMemorySize);
+        m_SRBMemAllocator.Initialize(PipelineDesc.SRBAllocationGranularity, m_NumShaders, ShaderVarMgrDataSizes.data(), 1, &CacheMemorySize);
     }
 
     // If pipeline state contains only static resources, create default SRB
@@ -303,7 +305,7 @@ ShaderResourceCacheD3D12* PipelineStateD3D12Impl::CommitAndTransitionShaderResou
                                                                                      bool                    CommitResources,
                                                                                      bool                    TransitionResources)const
 {
-#ifdef VERIFY_SHADER_BINDINGS
+#ifdef DEVELOPMENT
     if (pShaderResourceBinding == nullptr &&
         (m_RootSig.GetTotalSrvCbvUavSlots(SHADER_VARIABLE_TYPE_MUTABLE) != 0 ||
          m_RootSig.GetTotalSrvCbvUavSlots(SHADER_VARIABLE_TYPE_DYNAMIC) != 0 ||
@@ -330,7 +332,7 @@ ShaderResourceCacheD3D12* PipelineStateD3D12Impl::CommitAndTransitionShaderResou
         return nullptr;
     }
 
-#ifdef VERIFY_SHADER_BINDINGS
+#ifdef DEVELOPMENT
     {
         auto* pRefPSO = pResBindingD3D12Impl->GetPipelineState();
         if ( IsIncompatibleWith(pRefPSO) )
@@ -345,8 +347,8 @@ ShaderResourceCacheD3D12* PipelineStateD3D12Impl::CommitAndTransitionShaderResou
     if(!pResBindingD3D12Impl->StaticResourcesInitialized())
         pResBindingD3D12Impl->InitializeStaticResources(this);
 
-#ifdef VERIFY_SHADER_BINDINGS
-    pResBindingD3D12Impl->dbgVerifyResourceBindings(this);
+#ifdef DEVELOPMENT
+    pResBindingD3D12Impl->dvpVerifyResourceBindings(this);
 #endif
 
     auto& ResourceCache = pResBindingD3D12Impl->GetResourceCache();

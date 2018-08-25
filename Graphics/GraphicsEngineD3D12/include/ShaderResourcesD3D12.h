@@ -27,7 +27,7 @@
 /// Declaration of Diligent::ShaderResourcesD3D12 class
 
 //  ShaderResourcesD3D12 are created by ShaderD3D12Impl instances. They are then referenced by ShaderResourceLayoutD3D12 objects, which are in turn
-//  created by instances of PipelineStatesD3D12Impl and ShaderResourceBindingsD3D12Impl (and ShaderD3D12Impl too)
+//  created by instances of PipelineStatesD3D12Impl and ShaderD3D12Impl
 //
 //    _________________
 //   |                 |
@@ -55,28 +55,28 @@
 //   |________________________|
 //
 //
-//  One ShaderResources instance can be referenced by multiple objects
 //
-//
-//    ________________________           _<m_ShaderResourceLayouts>_             ____<m_pResourceLayouts>___        ________________________________ 
-//   |                        |         |                           |           |                           |      |                                |
-//   | PipelineStateD3D12Impl |-------->| ShaderResourceLayoutD3D12 |       ----| ShaderResourceLayoutD3D12 |<-----| ShaderResourceBindingD3D12Impl |
-//   |________________________|         |___________________________|      |    |___________________________|      |________________________________|
-//                                                  |                      |
-//                                                  | shared_ptr           |
-//    _________________                  ___________V__________            |     ____<m_pResourceLayouts>___        ________________________________          
-//   |                 |  shared_ptr    |                      | shared_ptr|    |                           |      |                                |
-//   | ShaderD3D12Impl |--------------->| ShaderResourcesD3D12 |<---------------| ShaderResourceLayoutD3D12 |<-----| ShaderResourceBindingD3D12Impl |
-//   |_________________|                |______________________|           |    |___________________________|      |________________________________|
-//              |                                   A                      |
-//              V                                   |                      |
-//   ____<m_StaticResLayout>____                    |                      |     ____<m_pResourceLayouts>___        ________________________________ 
-//  |                           |   shared_ptr      |                      |    |                           |      |                                |
-//  | ShaderResourceLayoutD3D12 |-------------------                        ----| ShaderResourceLayoutD3D12 |<-----| ShaderResourceBindingD3D12Impl |
-//  |___________________________|                                               |___________________________|      |________________________________|
-//
-//
-
+//  One ShaderResourcesD3D12 instance can be referenced by multiple objects
+//                                                                                                           
+//                                                                                                           
+//             ________________________           _<m_pShaderResourceLayouts>_          _____<m_pShaderVarMgrs>_____       ________________________________  
+//            |                        |         |                            |        |                            |     |                                |      
+//            | PipelineStateD3D12Impl |========>| ShaderResourceLayoutD3D12  |<-------| ShaderVariableManagerD3D12 |<====| ShaderResourceBindingD3D12Impl |
+//            |________________________|         |____________________________|        |____________________________|     |________________________________|      
+//                                                            |            A        
+//                                                            |shared_ptr   \         
+//             _________________                   ___________V__________    \          _____<m_pShaderVarMgrs>_____       ________________________________          
+//            |                 |  shared_ptr     |                      |    \        |                            |     |                                |
+//            | ShaderD3D12Impl |---------------->| ShaderResourcesD3D12 |     '-------| ShaderVariableManagerD3D12 |<====| ShaderResourceBindingD3D12Impl |
+//            |_________________|                 |______________________|             |____________________________|     |________________________________|
+//                    |      |___________________               A
+//                    |                          |              |
+//                    V                          V              |shared_ptr
+//  _______<m_StaticVarsMgr>____         ___<m_StaticResLayout>_|___
+// |                            |       |                           |
+// | ShaderVariableManagerD3D12 |------>| ShaderResourceLayoutD3D12 |
+// |____________________________|       |___________________________|
+//                                      
 
 #include "ShaderResources.h"
 
@@ -84,7 +84,7 @@ namespace Diligent
 {
 
 /// Diligent::ShaderResources class
-class ShaderResourcesD3D12 : public ShaderResources
+class ShaderResourcesD3D12 final : public ShaderResources
 {
 public:
     // Loads shader resources from the compiled shader bytecode

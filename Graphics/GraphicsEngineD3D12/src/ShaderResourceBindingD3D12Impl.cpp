@@ -35,7 +35,7 @@ ShaderResourceBindingD3D12Impl::ShaderResourceBindingD3D12Impl(IReferenceCounter
                                                                bool                    IsPSOInternal) :
     TBase( pRefCounters, pPSO, IsPSOInternal ),
     m_ShaderResourceCache(ShaderResourceCacheD3D12::DbgCacheContentType::SRBResources),
-    m_NumShaders(pPSO->GetNumShaders())
+    m_NumShaders(static_cast<decltype(m_NumShaders)>(pPSO->GetNumShaders()))
 {
     auto* ppShaders = pPSO->GetShaders();
 
@@ -43,8 +43,8 @@ ShaderResourceBindingD3D12Impl::ShaderResourceBindingD3D12Impl(IReferenceCounter
     auto& ResCacheDataAllocator = pPSO->GetSRBMemoryAllocator().GetResourceCacheDataAllocator(0);
     pPSO->GetRootSignature().InitResourceCache(pRenderDeviceD3D12Impl, m_ShaderResourceCache, ResCacheDataAllocator);
     
-    auto* pResLayoutRawMem = ALLOCATE(GetRawAllocator(), "Raw memory for ShaderResourceLayoutD3D12", m_NumShaders * sizeof(ShaderResourceLayoutD3D12));
-    m_pResourceLayouts = reinterpret_cast<ShaderResourceLayoutD3D12*>(pResLayoutRawMem);
+    auto *pVarMgrsRawMem = ALLOCATE(GetRawAllocator(), "Raw memory for ShaderVariableManagerD3D12", m_NumShaders * sizeof(ShaderVariableManagerD3D12));
+    m_pShaderVarMgrs = reinterpret_cast<ShaderVariableManagerD3D12*>(pVarMgrsRawMem);
 
     for (Uint32 s = 0; s < m_NumShaders; ++s)
     {
@@ -52,12 +52,15 @@ ShaderResourceBindingD3D12Impl::ShaderResourceBindingD3D12Impl(IReferenceCounter
         auto ShaderType = pShader->GetDesc().ShaderType;
         auto ShaderInd = GetShaderTypeIndex(ShaderType);
 
-        auto& ShaderResLayoutDataAllocator = pPSO->GetSRBMemoryAllocator().GetShaderVariableDataAllocator(s);
+        // Create shader variable manager in place
+        new (m_pShaderVarMgrs + s) ShaderVariableManagerD3D12(*this);
+
+        auto& VarDataAllocator = pPSO->GetSRBMemoryAllocator().GetShaderVariableDataAllocator(s);
 
         // http://diligentgraphics.com/diligent-engine/architecture/d3d12/shader-resource-layout#Initializing-Resource-Layouts-in-a-Shader-Resource-Binding-Object
         std::array<SHADER_VARIABLE_TYPE, 2> AllowedVarTypes = { SHADER_VARIABLE_TYPE_MUTABLE, SHADER_VARIABLE_TYPE_DYNAMIC };
         const auto& SrcLayout = pPSO->GetShaderResLayout(s);
-        new (m_pResourceLayouts + s) ShaderResourceLayoutD3D12(*this, SrcLayout, ShaderResLayoutDataAllocator, AllowedVarTypes.data(), static_cast<Uint32>(AllowedVarTypes.size()), m_ShaderResourceCache);
+        m_pShaderVarMgrs[s].Initialize(SrcLayout, VarDataAllocator, AllowedVarTypes.data(), static_cast<Uint32>(AllowedVarTypes.size()), m_ShaderResourceCache);
 
         m_ResourceLayoutIndex[ShaderInd] = static_cast<Int8>(s);
     }
@@ -65,22 +68,30 @@ ShaderResourceBindingD3D12Impl::ShaderResourceBindingD3D12Impl(IReferenceCounter
 
 ShaderResourceBindingD3D12Impl::~ShaderResourceBindingD3D12Impl()
 {
-    for(Uint32 l = 0; l < m_NumShaders; ++l)
-        m_pResourceLayouts[l].~ShaderResourceLayoutD3D12();
+    auto* pPSO = ValidatedCast<PipelineStateD3D12Impl>(m_pPSO);
+    for(Uint32 s = 0; s < m_NumShaders; ++s)
+    {
+        auto &VarDataAllocator = pPSO->GetSRBMemoryAllocator().GetShaderVariableDataAllocator(s);
+        m_pShaderVarMgrs[s].Destroy(VarDataAllocator);
+        m_pShaderVarMgrs[s].~ShaderVariableManagerD3D12();
+    }
 
-    GetRawAllocator().Free(m_pResourceLayouts);
+    GetRawAllocator().Free(m_pShaderVarMgrs);
 }
 
 IMPLEMENT_QUERY_INTERFACE( ShaderResourceBindingD3D12Impl, IID_ShaderResourceBindingD3D12, TBase )
 
 void ShaderResourceBindingD3D12Impl::BindResources(Uint32 ShaderFlags, IResourceMapping* pResMapping, Uint32 Flags)
 {
-    for (Uint32 s = 0; s < m_NumShaders; ++s )
+    for (auto ShaderInd = 0; ShaderInd <= CSInd; ++ShaderInd )
     {
-        const auto& ShaderRes = m_pResourceLayouts[s].GetShaderResources();
-        if (ShaderFlags & ShaderRes.GetShaderType())
+        if (ShaderFlags & GetShaderTypeFromIndex(ShaderInd))
         {
-            m_pResourceLayouts[s].BindResources(pResMapping, Flags, &m_ShaderResourceCache);
+            auto ResLayoutInd = m_ResourceLayoutIndex[ShaderInd];
+            if(ResLayoutInd >= 0)
+            {
+                m_pShaderVarMgrs[ResLayoutInd].BindResources(pResMapping, Flags);
+            }
         }
     }
 }
@@ -94,7 +105,7 @@ IShaderVariable *ShaderResourceBindingD3D12Impl::GetVariable(SHADER_TYPE ShaderT
         LOG_ERROR("Failed to find shader variable \"", Name,"\" in shader resource binding: shader type ", GetShaderTypeLiteralName(ShaderType), " is not initialized");
         return nullptr;
     }
-    return m_pResourceLayouts[ResLayoutInd].GetShaderVariable(Name);
+    return m_pShaderVarMgrs[ResLayoutInd].GetVariable(Name);
 }
 
 Uint32 ShaderResourceBindingD3D12Impl::GetVariableCount(SHADER_TYPE ShaderType) const 
@@ -107,7 +118,7 @@ Uint32 ShaderResourceBindingD3D12Impl::GetVariableCount(SHADER_TYPE ShaderType) 
         return 0;
     }
 
-    return m_pResourceLayouts[ResLayoutInd].GetVariableCount();
+    return m_pShaderVarMgrs[ResLayoutInd].GetVariableCount();
 }
 
 IShaderVariable* ShaderResourceBindingD3D12Impl::GetVariable(SHADER_TYPE ShaderType, Uint32 Index)
@@ -120,12 +131,12 @@ IShaderVariable* ShaderResourceBindingD3D12Impl::GetVariable(SHADER_TYPE ShaderT
         return nullptr;
     }
 
-    return m_pResourceLayouts[ResLayoutInd].GetShaderVariable(Index);
+    return m_pShaderVarMgrs[ResLayoutInd].GetVariable(Index);
 }
 
 
-#ifdef VERIFY_SHADER_BINDINGS
-void ShaderResourceBindingD3D12Impl::dbgVerifyResourceBindings(const PipelineStateD3D12Impl* pPSO)
+#ifdef DEVELOPMENT
+void ShaderResourceBindingD3D12Impl::dvpVerifyResourceBindings(const PipelineStateD3D12Impl* pPSO)
 {
     auto* pRefPSO = ValidatedCast<PipelineStateD3D12Impl>(GetPipelineState());
     if (pPSO->IsIncompatibleWith(pRefPSO))
@@ -137,7 +148,7 @@ void ShaderResourceBindingD3D12Impl::dbgVerifyResourceBindings(const PipelineSta
     {
         // Use reference layout from pipeline state that contains all shader resource types
         const auto& ShaderResLayout = pRefPSO->GetShaderResLayout(l);
-        ShaderResLayout.dbgVerifyBindings(m_ShaderResourceCache);
+        ShaderResLayout.dvpVerifyBindings(m_ShaderResourceCache);
     }
 }
 #endif
@@ -154,12 +165,13 @@ void ShaderResourceBindingD3D12Impl::InitializeStaticResources(const PipelineSta
     for (Uint32 s = 0; s < NumShaders; ++s)
     {
         auto* pShader = ValidatedCast<ShaderD3D12Impl>( ppShaders[s] );
-#ifdef VERIFY_SHADER_BINDINGS
-        pShader->DbgVerifyStaticResourceBindings();
+#ifdef DEVELOPMENT
+        pShader->DvpVerifyStaticResourceBindings();
 #endif
         const auto& ShaderResLayout = pPSO->GetShaderResLayout(s);
         auto& StaticResLayout = pShader->GetStaticResLayout();
-        StaticResLayout.CopyStaticResourceDesriptorHandles(ShaderResLayout, m_ShaderResourceCache);
+        auto& StaticResCache = pShader->GetStaticResCache();
+        StaticResLayout.CopyStaticResourceDesriptorHandles(StaticResCache, ShaderResLayout, m_ShaderResourceCache);
     }
 
     m_bStaticResourcesInitialized = true;

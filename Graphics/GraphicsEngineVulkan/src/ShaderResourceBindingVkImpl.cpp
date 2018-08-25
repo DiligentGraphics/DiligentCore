@@ -36,7 +36,7 @@ ShaderResourceBindingVkImpl::ShaderResourceBindingVkImpl( IReferenceCounters* pR
     m_ShaderResourceCache(ShaderResourceCacheVk::DbgCacheContentType::SRBResources)
 {
     auto* ppShaders = pPSO->GetShaders();
-    m_NumShaders = pPSO->GetNumShaders();
+    m_NumShaders = static_cast<decltype(m_NumShaders)>(pPSO->GetNumShaders());
 
     auto* pRenderDeviceVkImpl = pPSO->GetDevice();
     // This will only allocate memory and initialize descriptor sets in the resource cache

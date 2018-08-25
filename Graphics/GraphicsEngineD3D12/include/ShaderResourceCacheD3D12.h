@@ -142,15 +142,21 @@ public:
             m_pResources  (pResources)
         {}
 
-        inline Resource& GetResource(Uint32                           OffsetFromTableStart, 
-                                     const D3D12_DESCRIPTOR_HEAP_TYPE dbgDescriptorHeapType, 
-                                     const SHADER_TYPE                dbgRefShaderType)
+        inline const Resource& GetResource(Uint32                           OffsetFromTableStart, 
+                                           const D3D12_DESCRIPTOR_HEAP_TYPE dbgDescriptorHeapType, 
+                                           const SHADER_TYPE                dbgRefShaderType)const
         {
             VERIFY(m_dbgHeapType   == dbgDescriptorHeapType, "Incosistent descriptor heap type" );
             VERIFY(m_dbgShaderType == dbgRefShaderType,      "Incosistent shader type" );
 
-            VERIFY(OffsetFromTableStart < m_NumResources, "Root table at index is not large enough to store descriptor at offset ", OffsetFromTableStart );
+            VERIFY(OffsetFromTableStart < m_NumResources, "Root table is not large enough to store descriptor at offset ", OffsetFromTableStart );
             return m_pResources[OffsetFromTableStart];
+        }
+        inline Resource& GetResource(Uint32                           OffsetFromTableStart, 
+                                     const D3D12_DESCRIPTOR_HEAP_TYPE dbgDescriptorHeapType, 
+                                     const SHADER_TYPE                dbgRefShaderType)
+        {
+            return const_cast<Resource&>(const_cast<const RootTable*>(this)->GetResource(OffsetFromTableStart, dbgDescriptorHeapType, dbgRefShaderType));
         }
 
         inline Uint32 GetSize()const{return m_NumResources; }
@@ -186,6 +192,11 @@ public:
     {
         VERIFY_EXPR(RootIndex < m_NumTables);
         return reinterpret_cast<RootTable*>(m_pMemory)[RootIndex];
+    }
+    inline const RootTable& GetRootTable(Uint32 RootIndex)const
+    {
+        VERIFY_EXPR(RootIndex < m_NumTables);
+        return reinterpret_cast<const RootTable*>(m_pMemory)[RootIndex];
     }
 
     inline Uint32 GetNumRootTables()const{return m_NumTables; }

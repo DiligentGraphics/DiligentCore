@@ -32,12 +32,13 @@
 #include "ShaderBase.h"
 #include "ShaderResourceCacheD3D12.h"
 #include "ShaderResourceLayoutD3D12.h"
+#include "ShaderVariableD3D12.h"
 
 namespace Diligent
 {
 
-class FixedBlockMemoryAllocator;
 /// Implementation of the Diligent::IShaderResourceBindingD3D12 interface
+// sizeof(ShaderResourceBindingD3D12Impl) == 152 (x64, msvc, Release)
 class ShaderResourceBindingD3D12Impl final : public ShaderResourceBindingBase<IShaderResourceBindingD3D12>
 {
 public:
@@ -58,15 +59,10 @@ public:
 
     virtual IShaderVariable* GetVariable(SHADER_TYPE ShaderType, Uint32 Index)override final;
     
-    ShaderResourceLayoutD3D12& GetResourceLayout(Uint32 ResLayoutInd)
-    {
-        VERIFY_EXPR(ResLayoutInd < m_NumShaders);
-        return m_pResourceLayouts[ResLayoutInd];
-    }
     ShaderResourceCacheD3D12& GetResourceCache(){return m_ShaderResourceCache;}
 
-#ifdef VERIFY_SHADER_BINDINGS
-    void dbgVerifyResourceBindings(const PipelineStateD3D12Impl* pPSO);
+#ifdef DEVELOPMENT
+    void dvpVerifyResourceBindings(const PipelineStateD3D12Impl* pPSO);
 #endif
 
     bool StaticResourcesInitialized()const{return m_bStaticResourcesInitialized;}
@@ -75,11 +71,11 @@ public:
 private:
 
     ShaderResourceCacheD3D12 m_ShaderResourceCache;
-    ShaderResourceLayoutD3D12* m_pResourceLayouts = nullptr;
+    ShaderVariableManagerD3D12* m_pShaderVarMgrs = nullptr;
     // Resource layout index in m_ResourceLayouts[] array for every shader stage
     Int8 m_ResourceLayoutIndex[6] = {-1, -1, -1, -1, -1, -1};
     bool m_bStaticResourcesInitialized = false;
-    const Uint32 m_NumShaders = 0;
+    const Uint8 m_NumShaders = 0;
 };
 
 }
