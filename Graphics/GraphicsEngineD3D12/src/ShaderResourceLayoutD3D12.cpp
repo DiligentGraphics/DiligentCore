@@ -88,26 +88,22 @@ void ShaderResourceLayoutD3D12::AllocateMemory(IMemoryAllocator&                
     VERIFY( &m_ResourceBuffer.get_deleter().m_Allocator == &Allocator, "Inconsistent memory allocators" );
 
     m_CbvSrvUavOffsets[0] = 0;
-    m_SamplersOffsets [0] = 0;
-    for(SHADER_VARIABLE_TYPE VarType = SHADER_VARIABLE_TYPE_STATIC; 
-        VarType < SHADER_VARIABLE_TYPE_NUM_TYPES; 
-        VarType = static_cast<SHADER_VARIABLE_TYPE>(VarType+1))
+    for(SHADER_VARIABLE_TYPE VarType = SHADER_VARIABLE_TYPE_STATIC; VarType < SHADER_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_VARIABLE_TYPE>(VarType+1))
     {
         VERIFY(m_CbvSrvUavOffsets[VarType] + CbvSrvUavCount[VarType] <= std::numeric_limits<Uint16>::max(), "Offset is not representable in 16 bits" );
-        VERIFY(m_SamplersOffsets [VarType] + SamplerCount  [VarType] <= std::numeric_limits<Uint16>::max(), "Offset is not representable in 16 bits" );
         m_CbvSrvUavOffsets[VarType+1] = static_cast<Uint16>(m_CbvSrvUavOffsets[VarType] + CbvSrvUavCount[VarType]);
-        m_SamplersOffsets [VarType+1] = static_cast<Uint16>(m_SamplersOffsets [VarType] + SamplerCount  [VarType]);
         VERIFY_EXPR(GetCbvSrvUavCount(VarType) == CbvSrvUavCount[VarType]);
-        VERIFY_EXPR(GetSamplerCount  (VarType) == SamplerCount  [VarType]);
-    }
-    for(Uint32 VarType=0; VarType <= SHADER_VARIABLE_TYPE_NUM_TYPES; ++VarType)
-    {
-        m_SamplersOffsets[VarType] += m_CbvSrvUavOffsets[SHADER_VARIABLE_TYPE_NUM_TYPES];
     }
 
-    Uint32 TotalSrvCbvUav = GetTotalSrvCbvUavCount();
-    Uint32 TotalSamplers  = GetTotalSamplerCount();
-    size_t MemSize = (TotalSrvCbvUav + TotalSamplers) * sizeof(D3D12Resource);
+    m_SamplersOffsets[0] = m_CbvSrvUavOffsets[SHADER_VARIABLE_TYPE_NUM_TYPES];
+    for(SHADER_VARIABLE_TYPE VarType = SHADER_VARIABLE_TYPE_STATIC; VarType < SHADER_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_VARIABLE_TYPE>(VarType+1))
+    {
+        VERIFY(m_SamplersOffsets[VarType] + SamplerCount[VarType] <= std::numeric_limits<Uint16>::max(), "Offset is not representable in 16 bits" );
+        m_SamplersOffsets[VarType+1] = static_cast<Uint16>(m_SamplersOffsets[VarType] + SamplerCount[VarType]);
+        VERIFY_EXPR(GetSamplerCount(VarType) == SamplerCount[VarType]);
+    }
+
+    size_t MemSize = GetTotalResourceCount() * sizeof(D3D12Resource);
     if(MemSize == 0)
         return;
 
@@ -140,7 +136,7 @@ void ShaderResourceLayoutD3D12::Initialize(ID3D12Device*                        
     m_pResources->ProcessResources(
         AllowedVarTypes, NumAllowedTypes,
 
-        [&](const D3DShaderResourceAttribs &CB, Uint32)
+        [&](const D3DShaderResourceAttribs& CB, Uint32)
         {
             VERIFY_EXPR(IsAllowedType(CB.VariableType, AllowedTypeBits));
             ++CbvSrvUavCount[CB.VariableType];
@@ -153,7 +149,7 @@ void ShaderResourceLayoutD3D12::Initialize(ID3D12Device*                        
             if(TexSRV.IsValidSampler())
             {
                 auto SamplerId = TexSRV.SamplerId;
-                const auto &SamplerAttribs = m_pResources->GetSampler(SamplerId);
+                const auto& SamplerAttribs = m_pResources->GetSampler(SamplerId);
                 VERIFY(SamplerAttribs.VariableType == VarType, "Texture and sampler variable types are not conistent");
                 if(!SamplerAttribs.IsStaticSampler())
                 {
@@ -161,17 +157,17 @@ void ShaderResourceLayoutD3D12::Initialize(ID3D12Device*                        
                 }
             }
         },
-        [&](const D3DShaderResourceAttribs &TexUAV, Uint32)
+        [&](const D3DShaderResourceAttribs& TexUAV, Uint32)
         {
             VERIFY_EXPR(IsAllowedType(TexUAV.VariableType, AllowedTypeBits));
             ++CbvSrvUavCount[TexUAV.VariableType];
         },
-        [&](const D3DShaderResourceAttribs &BufSRV, Uint32)
+        [&](const D3DShaderResourceAttribs& BufSRV, Uint32)
         {
             VERIFY_EXPR(IsAllowedType(BufSRV.VariableType, AllowedTypeBits));
             ++CbvSrvUavCount[BufSRV.VariableType];
         },
-        [&](const D3DShaderResourceAttribs &BufUAV, Uint32)
+        [&](const D3DShaderResourceAttribs& BufUAV, Uint32)
         {
             VERIFY_EXPR(IsAllowedType(BufUAV.VariableType, AllowedTypeBits));
             ++CbvSrvUavCount[BufUAV.VariableType];
@@ -184,7 +180,7 @@ void ShaderResourceLayoutD3D12::Initialize(ID3D12Device*                        
     std::array<Uint32, SHADER_VARIABLE_TYPE_NUM_TYPES> CurrSampler   = {};
     Uint32 StaticResCacheTblSizes[4] = {0, 0, 0, 0};
 
-    auto AddResource = [&](const D3DShaderResourceAttribs &Attribs, CachedResourceType ResType, Uint32 SamplerId = D3D12Resource::InvalidSamplerId)
+    auto AddResource = [&](const D3DShaderResourceAttribs& Attribs, CachedResourceType ResType, Uint32 SamplerId = D3D12Resource::InvalidSamplerId)
     {
         Uint32 RootIndex = D3D12Resource::InvalidRootIndex;
         Uint32 Offset    = D3D12Resource::InvalidOffset;
@@ -223,7 +219,7 @@ void ShaderResourceLayoutD3D12::Initialize(ID3D12Device*                        
     m_pResources->ProcessResources(
         AllowedVarTypes, NumAllowedTypes,
 
-        [&](const D3DShaderResourceAttribs &CB, Uint32)
+        [&](const D3DShaderResourceAttribs& CB, Uint32)
         {
             VERIFY_EXPR( IsAllowedType(CB.VariableType, AllowedTypeBits) );
             AddResource(CB, CachedResourceType::CBV);
@@ -281,17 +277,17 @@ void ShaderResourceLayoutD3D12::Initialize(ID3D12Device*                        
             }
             AddResource(TexSRV, CachedResourceType::TexSRV, SamplerId);
         },
-        [&](const D3DShaderResourceAttribs &TexUAV, Uint32)
+        [&](const D3DShaderResourceAttribs& TexUAV, Uint32)
         {
             VERIFY_EXPR( IsAllowedType(TexUAV.VariableType, AllowedTypeBits) );
             AddResource(TexUAV, CachedResourceType::TexUAV);
         },
-        [&](const D3DShaderResourceAttribs &BufSRV, Uint32)
+        [&](const D3DShaderResourceAttribs& BufSRV, Uint32)
         {
             VERIFY_EXPR( IsAllowedType(BufSRV.VariableType, AllowedTypeBits) );
             AddResource(BufSRV, CachedResourceType::BufSRV);
         },
-        [&](const D3DShaderResourceAttribs &BufUAV, Uint32)
+        [&](const D3DShaderResourceAttribs& BufUAV, Uint32)
         {
             VERIFY_EXPR( IsAllowedType(BufUAV.VariableType, AllowedTypeBits) );
             AddResource(BufUAV, CachedResourceType::BufUAV);
@@ -531,7 +527,7 @@ const ShaderResourceLayoutD3D12::D3D12Resource& ShaderResourceLayoutD3D12::GetAs
 {
     VERIFY(TexSrv.GetResType() == CachedResourceType::TexSRV, "Unexpected resource type: texture SRV is expected");
     VERIFY(TexSrv.IsValidSampler(), "Texture SRV has no associated sampler");
-    auto &SamInfo = GetSampler(TexSrv.Attribs.VariableType, TexSrv.SamplerId);
+    const auto& SamInfo = GetSampler(TexSrv.Attribs.VariableType, TexSrv.SamplerId);
     VERIFY(SamInfo.Attribs.VariableType == TexSrv.Attribs.VariableType, "Inconsistent texture and sampler variable types");
     VERIFY(StrCmpSuff(SamInfo.Attribs.Name, TexSrv.Attribs.Name, D3DSamplerSuffix), "Sampler name \"", SamInfo.Attribs.Name, "\" does not match texture name \"", TexSrv.Attribs.Name, '\"');
     return SamInfo;
@@ -549,7 +545,7 @@ void ShaderResourceLayoutD3D12::D3D12Resource::BindResource(IDeviceObject*      
 {
     VERIFY_EXPR(ArrayIndex < Attribs.BindCount);
 
-    auto &DstRes = ResourceCache.GetRootTable(RootIndex).GetResource(OffsetFromTableStart + ArrayIndex, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, ParentResLayout.m_pResources->GetShaderType());
+    auto& DstRes = ResourceCache.GetRootTable(RootIndex).GetResource(OffsetFromTableStart + ArrayIndex, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, ParentResLayout.m_pResources->GetShaderType());
     auto ShdrVisibleHeapCPUDescriptorHandle = ResourceCache.GetShaderVisibleTableCPUDescriptorHandle<D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV>(RootIndex, OffsetFromTableStart+ArrayIndex);
 
 #ifdef _DEBUG
@@ -662,10 +658,10 @@ bool ShaderResourceLayoutD3D12::D3D12Resource::IsBound(Uint32 ArrayIndex, const 
 
     if( RootIndex < ResourceCache.GetNumRootTables() )
     {
-        auto& RootTable = ResourceCache.GetRootTable(RootIndex);
+        const auto& RootTable = ResourceCache.GetRootTable(RootIndex);
         if(OffsetFromTableStart + ArrayIndex < RootTable.GetSize())
         {
-            auto& CachedRes = RootTable.GetResource(OffsetFromTableStart + ArrayIndex, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, ParentResLayout.m_pResources->GetShaderType());
+            const auto& CachedRes = RootTable.GetResource(OffsetFromTableStart + ArrayIndex, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, ParentResLayout.m_pResources->GetShaderType());
             if( CachedRes.pObject != nullptr )
             {
                 VERIFY(CachedRes.CPUDescriptorHandle.ptr != 0 || CachedRes.pObject.RawPtr<BufferD3D12Impl>()->GetDesc().Usage == USAGE_DYNAMIC, "No relevant descriptor handle");
