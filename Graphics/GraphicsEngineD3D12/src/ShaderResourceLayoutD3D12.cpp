@@ -41,9 +41,6 @@ namespace Diligent
 ShaderResourceLayoutD3D12::ShaderResourceLayoutD3D12(IObject&          Owner,
                                                      IMemoryAllocator& ResourceLayoutDataAllocator) : 
     m_Owner(Owner),
-#if USE_VARIABLE_HASH_MAP
-    m_VariableHash(STD_ALLOCATOR_RAW_MEM(VariableHashElemType, GetRawAllocator(), "Allocator for unordered_map<HashMapStringKey, IShaderVariable*>")),
-#endif
     m_ResourceBuffer(nullptr, STDDeleterRawMem<void>(ResourceLayoutDataAllocator))
 {
 }
