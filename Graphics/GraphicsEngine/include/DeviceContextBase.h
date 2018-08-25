@@ -155,7 +155,9 @@ protected:
     Uint32 m_NumVertexStreams = 0;
 
     /// Strong reference to the bound pipeline state object.
-    /// Use final PSO implementation type to avoid virtual calls to AddRef()/Release()
+    /// Use final PSO implementation type to avoid virtual calls to AddRef()/Release().
+    /// We need to keep strong reference as we examine previous pipeline state in
+    /// SetPipelineState()
     RefCntAutoPtr<PipelineStateImplType> m_pPipelineState;
 
     /// Strong reference to the bound index buffer.
