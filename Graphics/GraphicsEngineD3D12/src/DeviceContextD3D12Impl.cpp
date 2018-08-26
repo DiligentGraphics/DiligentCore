@@ -304,25 +304,17 @@ namespace Diligent
         m_bCommittedD3D12VBsUpToDate = !DynamicBufferPresent;
     }
 
-    void DeviceContextD3D12Impl::Draw( DrawAttribs& DrawAttribs )
+    void DeviceContextD3D12Impl::Draw( DrawAttribs& drawAttribs )
     {
-#ifdef _DEBUG
-        if (!m_pPipelineState)
-        {
-            LOG_ERROR("No pipeline state is bound");
+#ifdef DEVELOPMENT
+        if (!DvpVerifyDrawArguments(drawAttribs))
             return;
-        }
-        if (m_pPipelineState->GetDesc().IsComputePipeline)
-        {
-            LOG_ERROR("No graphics pipeline state is bound");
-            return;
-        }
 #endif
 
         auto &GraphCtx = RequestCmdContext()->AsGraphicsContext();
-        if( DrawAttribs.IsIndexed )
+        if( drawAttribs.IsIndexed )
         {
-            if( m_CommittedIBFormat != DrawAttribs.IndexType )
+            if( m_CommittedIBFormat != drawAttribs.IndexType )
                 m_bCommittedD3D12IBUpToDate = false;
 
             if(m_bCommittedD3D12IBUpToDate)
@@ -332,7 +324,7 @@ namespace Diligent
                     GraphCtx.TransitionResource(pBuffD3D12, D3D12_RESOURCE_STATE_INDEX_BUFFER, true);
             }
             else
-                CommitD3D12IndexBuffer(DrawAttribs.IndexType);
+                CommitD3D12IndexBuffer(drawAttribs.IndexType);
         }
 
         if(m_bCommittedD3D12VBsUpToDate)
@@ -355,44 +347,34 @@ namespace Diligent
 #endif
         
 
-        if( DrawAttribs.IsIndirect )
+        auto *pIndirectDrawAttribsD3D12 = ValidatedCast<BufferD3D12Impl>(drawAttribs.pIndirectDrawAttribs);
+        if (pIndirectDrawAttribsD3D12 != nullptr)
         {
-            VERIFY(DrawAttribs.pIndirectDrawAttribs != nullptr, "Valid pIndirectDrawAttribs must be provided for indirect draw command");
-            auto *pBufferD3D12 = ValidatedCast<BufferD3D12Impl>(DrawAttribs.pIndirectDrawAttribs);
-            
 #ifdef DEVELOPMENT
-            if(pBufferD3D12->GetDesc().Usage == USAGE_DYNAMIC)
-                pBufferD3D12->DvpVerifyDynamicAllocation(m_ContextId);
+            if (pIndirectDrawAttribsD3D12->GetDesc().Usage == USAGE_DYNAMIC)
+                pIndirectDrawAttribsD3D12->DvpVerifyDynamicAllocation(m_ContextId);
 #endif
 
-            GraphCtx.TransitionResource(pBufferD3D12, D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT);
+            GraphCtx.TransitionResource(pIndirectDrawAttribsD3D12, D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT);
             size_t BuffDataStartByteOffset;
-            ID3D12Resource *pd3d12ArgsBuff = pBufferD3D12->GetD3D12Buffer(BuffDataStartByteOffset, m_ContextId);
-            GraphCtx.ExecuteIndirect(DrawAttribs.IsIndexed ? m_pDrawIndexedIndirectSignature : m_pDrawIndirectSignature, pd3d12ArgsBuff, DrawAttribs.IndirectDrawArgsOffset + BuffDataStartByteOffset);
+            ID3D12Resource *pd3d12ArgsBuff = pIndirectDrawAttribsD3D12->GetD3D12Buffer(BuffDataStartByteOffset, m_ContextId);
+            GraphCtx.ExecuteIndirect(drawAttribs.IsIndexed ? m_pDrawIndexedIndirectSignature : m_pDrawIndirectSignature, pd3d12ArgsBuff, drawAttribs.IndirectDrawArgsOffset + BuffDataStartByteOffset);
         }
         else
         {
-            if( DrawAttribs.IsIndexed )
-                GraphCtx.DrawIndexed(DrawAttribs.NumIndices, DrawAttribs.NumInstances, DrawAttribs.FirstIndexLocation, DrawAttribs.BaseVertex, DrawAttribs.FirstInstanceLocation);
+            if( drawAttribs.IsIndexed )
+                GraphCtx.DrawIndexed(drawAttribs.NumIndices, drawAttribs.NumInstances, drawAttribs.FirstIndexLocation, drawAttribs.BaseVertex, drawAttribs.FirstInstanceLocation);
             else
-                GraphCtx.Draw(DrawAttribs.NumVertices, DrawAttribs.NumInstances, DrawAttribs.StartVertexLocation, DrawAttribs.FirstInstanceLocation );
+                GraphCtx.Draw(drawAttribs.NumVertices, drawAttribs.NumInstances, drawAttribs.StartVertexLocation, drawAttribs.FirstInstanceLocation );
         }
         ++m_NumCommandsInCurCtx;
     }
 
     void DeviceContextD3D12Impl::DispatchCompute( const DispatchComputeAttribs& DispatchAttrs )
     {
-#ifdef _DEBUG
-        if (!m_pPipelineState)
-        {
-            LOG_ERROR("No pipeline state is bound");
+#ifdef DEVELOPMENT
+        if (!DvpVerifyDispatchArguments(DispatchAttrs))
             return;
-        }
-        if (!m_pPipelineState->GetDesc().IsComputePipeline)
-        {
-            LOG_ERROR("No compute pipeline state is bound");
-            return;
-        }
 #endif
 
         auto& ComputeCtx = RequestCmdContext()->AsComputeContext();

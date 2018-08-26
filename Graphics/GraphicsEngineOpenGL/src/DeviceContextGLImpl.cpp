@@ -658,13 +658,12 @@ namespace Diligent
 #endif
     }
 
-    void DeviceContextGLImpl::Draw( DrawAttribs &DrawAttribs )
+    void DeviceContextGLImpl::Draw( DrawAttribs &drawAttribs )
     {
-        if (!m_pPipelineState)
-        {
-            LOG_ERROR("No pipeline state is bound.");
+#ifdef DEVELOPMENT
+        if (!DvpVerifyDrawArguments(drawAttribs))
             return;
-        }
+#endif
 
         auto *pRenderDeviceGL = m_pDevice.RawPtr<RenderDeviceGLImpl>();
         auto CurrNativeGLContext = pRenderDeviceGL->m_GLContext.GetCurrentNativeGLContext();
@@ -672,7 +671,7 @@ namespace Diligent
         if(!m_bVAOIsUpToDate)
         {
             auto &VAOCache = pRenderDeviceGL->GetVAOCache(CurrNativeGLContext);
-            IBuffer *pIndexBuffer = DrawAttribs.IsIndexed ? m_pIndexBuffer.RawPtr() : nullptr;
+            IBuffer *pIndexBuffer = drawAttribs.IsIndexed ? m_pIndexBuffer.RawPtr() : nullptr;
             if(PipelineDesc.InputLayout.NumElements > 0 || pIndexBuffer != nullptr)
             {
                 const auto& VAO = VAOCache.GetVAO( m_pPipelineState, pIndexBuffer, m_VertexStreams, m_NumVertexStreams, m_ContextState );
@@ -707,13 +706,13 @@ namespace Diligent
         }
         GLenum IndexType = 0;
         Uint32 FirstIndexByteOffset = 0;
-        if( DrawAttribs.IsIndexed )
+        if( drawAttribs.IsIndexed )
         {
-            IndexType = TypeToGLType( DrawAttribs.IndexType );
+            IndexType = TypeToGLType( drawAttribs.IndexType );
             VERIFY( IndexType == GL_UNSIGNED_BYTE || IndexType == GL_UNSIGNED_SHORT || IndexType == GL_UNSIGNED_INT,
                     "Unsupported index type" );
             VERIFY( m_pIndexBuffer, "Index Buffer is not bound to the pipeline" );
-            FirstIndexByteOffset = static_cast<Uint32>(GetValueSize( DrawAttribs.IndexType )) * DrawAttribs.FirstIndexLocation + m_IndexDataStartOffset;
+            FirstIndexByteOffset = static_cast<Uint32>(GetValueSize( drawAttribs.IndexType )) * drawAttribs.FirstIndexLocation + m_IndexDataStartOffset;
         }
 
         // NOTE: Base Vertex and Base Instance versions are not supported even in OpenGL ES 3.1
@@ -722,29 +721,24 @@ namespace Diligent
         // such cases is left to the application
 
         // http://www.opengl.org/wiki/Vertex_Rendering
-        if( DrawAttribs.IsIndirect )
+        auto *pIndirectDrawAttribsGL = static_cast<BufferGLImpl*>(drawAttribs.pIndirectDrawAttribs);
+        if (pIndirectDrawAttribsGL != nullptr)
         {
 #if GL_ARB_draw_indirect
             // The indirect rendering functions take their data from the buffer currently bound to the 
             // GL_DRAW_INDIRECT_BUFFER binding. Thus, any of indirect draw functions will fail if no buffer is 
             // bound to that binding.
-            VERIFY( DrawAttribs.pIndirectDrawAttribs, "Indirect draw command attributes buffer is not set" );
-            if( DrawAttribs.pIndirectDrawAttribs )
-            {
-                auto *pBufferOGL = static_cast<BufferGLImpl*>(DrawAttribs.pIndirectDrawAttribs);
+            pIndirectDrawAttribsGL->BufferMemoryBarrier(
+                GL_COMMAND_BARRIER_BIT,// Command data sourced from buffer objects by
+                                        // Draw*Indirect and DispatchComputeIndirect commands after the barrier
+                                        // will reflect data written by shaders prior to the barrier.The buffer 
+                                        // objects affected by this bit are derived from the DRAW_INDIRECT_BUFFER 
+                                        // and DISPATCH_INDIRECT_BUFFER bindings.
+                m_ContextState);
 
-                pBufferOGL->BufferMemoryBarrier(
-                    GL_COMMAND_BARRIER_BIT,// Command data sourced from buffer objects by
-                                           // Draw*Indirect and DispatchComputeIndirect commands after the barrier
-                                           // will reflect data written by shaders prior to the barrier.The buffer 
-                                           // objects affected by this bit are derived from the DRAW_INDIRECT_BUFFER 
-                                           // and DISPATCH_INDIRECT_BUFFER bindings.
-                    m_ContextState);
+            glBindBuffer( GL_DRAW_INDIRECT_BUFFER, pIndirectDrawAttribsGL->m_GlBuffer );
 
-                glBindBuffer( GL_DRAW_INDIRECT_BUFFER, pBufferOGL->m_GlBuffer );
-            }
-
-            if( DrawAttribs.IsIndexed )
+            if( drawAttribs.IsIndexed )
             {
                 //typedef  struct {
                 //    GLuint  count;
@@ -753,7 +747,7 @@ namespace Diligent
                 //    GLuint  baseVertex;
                 //    GLuint  baseInstance;
                 //} DrawElementsIndirectCommand;
-                glDrawElementsIndirect( GlTopology, IndexType, reinterpret_cast<const void*>( static_cast<size_t>(DrawAttribs.IndirectDrawArgsOffset) ) );
+                glDrawElementsIndirect( GlTopology, IndexType, reinterpret_cast<const void*>( static_cast<size_t>(drawAttribs.IndirectDrawArgsOffset) ) );
                 // Note that on GLES 3.1, baseInstance is present but reserved and must be zero
                 CHECK_GL_ERROR( "glDrawElementsIndirect() failed" );
             }
@@ -765,7 +759,7 @@ namespace Diligent
                 //   GLuint  first;
                 //   GLuint  baseInstance;
                 //} DrawArraysIndirectCommand;
-                glDrawArraysIndirect( GlTopology, reinterpret_cast<const void*>( static_cast<size_t>(DrawAttribs.IndirectDrawArgsOffset) ) );
+                glDrawArraysIndirect( GlTopology, reinterpret_cast<const void*>( static_cast<size_t>(drawAttribs.IndirectDrawArgsOffset) ) );
                 // Note that on GLES 3.1, baseInstance is present but reserved and must be zero
                 CHECK_GL_ERROR( "glDrawArraysIndirect() failed" );
             }
@@ -777,44 +771,44 @@ namespace Diligent
         }
         else
         {
-            if( DrawAttribs.NumInstances > 1 )
+            if( drawAttribs.NumInstances > 1 )
             {
-                if( DrawAttribs.IsIndexed )
+                if( drawAttribs.IsIndexed )
                 {
-                    if( DrawAttribs.BaseVertex )
+                    if( drawAttribs.BaseVertex )
                     {
-                        if( DrawAttribs.FirstInstanceLocation )
-                            glDrawElementsInstancedBaseVertexBaseInstance( GlTopology, DrawAttribs.NumIndices, IndexType, reinterpret_cast<GLvoid*>( static_cast<size_t>(FirstIndexByteOffset) ), DrawAttribs.NumInstances, DrawAttribs.BaseVertex, DrawAttribs.FirstInstanceLocation );
+                        if( drawAttribs.FirstInstanceLocation )
+                            glDrawElementsInstancedBaseVertexBaseInstance( GlTopology, drawAttribs.NumIndices, IndexType, reinterpret_cast<GLvoid*>( static_cast<size_t>(FirstIndexByteOffset) ), drawAttribs.NumInstances, drawAttribs.BaseVertex, drawAttribs.FirstInstanceLocation );
                         else
-                            glDrawElementsInstancedBaseVertex( GlTopology, DrawAttribs.NumIndices, IndexType, reinterpret_cast<GLvoid*>( static_cast<size_t>(FirstIndexByteOffset) ), DrawAttribs.NumInstances, DrawAttribs.BaseVertex );
+                            glDrawElementsInstancedBaseVertex( GlTopology, drawAttribs.NumIndices, IndexType, reinterpret_cast<GLvoid*>( static_cast<size_t>(FirstIndexByteOffset) ), drawAttribs.NumInstances, drawAttribs.BaseVertex );
                     }
                     else
                     {
-                        if( DrawAttribs.FirstInstanceLocation )
-                            glDrawElementsInstancedBaseInstance( GlTopology, DrawAttribs.NumIndices, IndexType, reinterpret_cast<GLvoid*>( static_cast<size_t>(FirstIndexByteOffset) ), DrawAttribs.NumInstances, DrawAttribs.FirstInstanceLocation );
+                        if( drawAttribs.FirstInstanceLocation )
+                            glDrawElementsInstancedBaseInstance( GlTopology, drawAttribs.NumIndices, IndexType, reinterpret_cast<GLvoid*>( static_cast<size_t>(FirstIndexByteOffset) ), drawAttribs.NumInstances, drawAttribs.FirstInstanceLocation );
                         else
-                            glDrawElementsInstanced( GlTopology, DrawAttribs.NumIndices, IndexType, reinterpret_cast<GLvoid*>( static_cast<size_t>(FirstIndexByteOffset) ), DrawAttribs.NumInstances );
+                            glDrawElementsInstanced( GlTopology, drawAttribs.NumIndices, IndexType, reinterpret_cast<GLvoid*>( static_cast<size_t>(FirstIndexByteOffset) ), drawAttribs.NumInstances );
                     }
                 }
                 else
                 {
-                    if( DrawAttribs.FirstInstanceLocation )
-                        glDrawArraysInstancedBaseInstance( GlTopology, DrawAttribs.StartVertexLocation, DrawAttribs.NumVertices, DrawAttribs.NumInstances, DrawAttribs.FirstInstanceLocation );
+                    if( drawAttribs.FirstInstanceLocation )
+                        glDrawArraysInstancedBaseInstance( GlTopology, drawAttribs.StartVertexLocation, drawAttribs.NumVertices, drawAttribs.NumInstances, drawAttribs.FirstInstanceLocation );
                     else
-                        glDrawArraysInstanced( GlTopology, DrawAttribs.StartVertexLocation, DrawAttribs.NumVertices, DrawAttribs.NumInstances );
+                        glDrawArraysInstanced( GlTopology, drawAttribs.StartVertexLocation, drawAttribs.NumVertices, drawAttribs.NumInstances );
                 }
             }
             else
             {
-                if( DrawAttribs.IsIndexed )
+                if( drawAttribs.IsIndexed )
                 {
-                    if( DrawAttribs.BaseVertex )
-                        glDrawElementsBaseVertex( GlTopology, DrawAttribs.NumIndices, IndexType, reinterpret_cast<GLvoid*>( static_cast<size_t>(FirstIndexByteOffset) ), DrawAttribs.BaseVertex );
+                    if( drawAttribs.BaseVertex )
+                        glDrawElementsBaseVertex( GlTopology, drawAttribs.NumIndices, IndexType, reinterpret_cast<GLvoid*>( static_cast<size_t>(FirstIndexByteOffset) ), drawAttribs.BaseVertex );
                     else
-                        glDrawElements( GlTopology, DrawAttribs.NumIndices, IndexType, reinterpret_cast<GLvoid*>( static_cast<size_t>(FirstIndexByteOffset) ) );
+                        glDrawElements( GlTopology, drawAttribs.NumIndices, IndexType, reinterpret_cast<GLvoid*>( static_cast<size_t>(FirstIndexByteOffset) ) );
                 }
                 else
-                    glDrawArrays( GlTopology, DrawAttribs.StartVertexLocation, DrawAttribs.NumVertices );
+                    glDrawArrays( GlTopology, drawAttribs.StartVertexLocation, drawAttribs.NumVertices );
             }
             CHECK_GL_ERROR( "OpenGL draw command failed" );
         }
@@ -829,6 +823,11 @@ namespace Diligent
 
     void DeviceContextGLImpl::DispatchCompute( const DispatchComputeAttribs &DispatchAttrs )
     {
+#ifdef DEVELOPMENT
+        if (!DvpVerifyDispatchArguments(DispatchAttrs))
+            return;
+#endif
+
 #if GL_ARB_compute_shader
         if( DispatchAttrs.pIndirectDispatchAttribs )
         {

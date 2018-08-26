@@ -613,10 +613,14 @@ objects. Refer to the following pages for more information:
 
 ## Current Progress
 
-* Added `IFence` interface and `IDeviceContext::SignalFence()` method to enable CPU-GPU synchronization
-* Added `GetType`, `GetArraySize`, `GetName`, and `GetIndex` methods to `IShaderVariable` interface;
-  Added `GetVariableCount` and `GetShaderVariable(Uint32 Index)` methods to `IShader` interface; 
-  Addec `GetVariableCount` and `GetVariable(SHADER_TYPE ShaderType, Uint32 Index)` to `IShaderResourceBinding` interface.
+* API Changes:
+  * Added `IFence` interface and `IDeviceContext::SignalFence()` method to enable CPU-GPU synchronization
+  * Added `GetType`, `GetArraySize`, `GetName`, and `GetIndex` methods to `IShaderVariable` interface;
+    Added `GetVariableCount` and `GetShaderVariable(Uint32 Index)` methods to `IShader` interface; 
+    Addec `GetVariableCount` and `GetVariable(SHADER_TYPE ShaderType, Uint32 Index)` to `IShaderResourceBinding` interface.
+  * Added `BUFFER_MODE_RAW` mode allowing raw buffer views in D3D11/D3D12.
+  * Moved `Format` member from `BufferDesc` to `BufferViewDesc`
+  * Removed `IsIndirect` member from `DrawAttrbis` as setting `pIndirectDrawAttribs` to a non-null buffer already indicates indirect rendering
 
 ## v2.3
 
@@ -650,8 +654,6 @@ objects. Refer to the following pages for more information:
   * Removed `DrawAttribs::Topology`
   * Removed `pStrides` prarameter from `IDeviceContext::SetVertexBuffers()`. Strides are now defined
     through vertex layout.
-  * Added `BUFFER_MODE_RAW` mode allowing raw buffer views in D3D11/D3D12.
-  * Moved `Format` member from `BufferDesc` to `BufferViewDesc`
 
 ## v2.2
 

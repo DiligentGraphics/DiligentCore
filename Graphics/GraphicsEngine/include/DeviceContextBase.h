@@ -141,6 +141,11 @@ protected:
     /// Clears all cached resources
     inline void ClearStateCache();
 
+#ifdef DEVELOPMENT
+    bool DvpVerifyDrawArguments(const DrawAttribs& drawAttribs);
+    bool DvpVerifyDispatchArguments(const DispatchComputeAttribs &DispatchAttrs);
+#endif
+
     /// Strong reference to the device.
     RefCntAutoPtr<IRenderDevice> m_pDevice;
     
@@ -618,5 +623,71 @@ inline void DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType
 
     m_pBoundDepthStencil.Release();
 }
+
+#ifdef DEVELOPMENT
+template<typename BaseInterface, typename BufferImplType, typename TextureViewImplType, typename PipelineStateImplType>
+inline bool DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType, PipelineStateImplType> :: DvpVerifyDrawArguments(const DrawAttribs& drawAttribs)
+{
+    if (!m_pPipelineState)
+    {
+        LOG_ERROR("No pipeline state is bound for a draw command");
+        return false;
+    }
+
+    if (m_pPipelineState->GetDesc().IsComputePipeline)
+    {
+        LOG_ERROR("Pipeline state bound for a draw command is a compute pipeline");
+        return false;
+    }
+
+    if (drawAttribs.NumIndices == 0)
+    {
+        LOG_WARNING_MESSAGE(drawAttribs.IsIndexed ? "Number of indices to draw is zero" : "Number of vertices to draw is zero");
+    }
+
+    if (drawAttribs.NumInstances == 0)
+    {
+        LOG_ERROR("Number of instances cannot be 0. Use 1 for a non-instanced draw command.");
+        return false;
+    }
+
+    if (drawAttribs.IsIndexed && drawAttribs.IndexType != VT_UINT16 && drawAttribs.IndexType != VT_UINT32)
+    {
+        LOG_ERROR("For an indexed draw command IndexType must be VT_UINT16 or VT_UINT32");
+        return false;
+    }
+    
+    return true;
+}
+
+template<typename BaseInterface, typename BufferImplType, typename TextureViewImplType, typename PipelineStateImplType>
+inline bool DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType, PipelineStateImplType> :: DvpVerifyDispatchArguments(const DispatchComputeAttribs &DispatchAttrs)
+{
+    if (!m_pPipelineState)
+    {
+        LOG_ERROR("No pipeline state is bound for a dispatch command");
+        return false;
+    }
+
+    if (!m_pPipelineState->GetDesc().IsComputePipeline)
+    {
+        LOG_ERROR("Pipeline state bound for a draw command is a graphics pipeline");
+        return false;
+    }
+
+    if (DispatchAttrs.ThreadGroupCountX == 0)
+        LOG_WARNING_MESSAGE("ThreadGroupCountX is zero");
+
+    if (DispatchAttrs.ThreadGroupCountY == 0)
+        LOG_WARNING_MESSAGE("ThreadGroupCountY is zero");
+
+    if (DispatchAttrs.ThreadGroupCountZ == 0)
+        LOG_WARNING_MESSAGE("ThreadGroupCountZ is zero");
+
+    return true;
+}
+
+#endif
+
 
 }

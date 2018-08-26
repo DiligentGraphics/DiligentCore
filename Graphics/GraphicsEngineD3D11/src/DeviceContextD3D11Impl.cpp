@@ -750,22 +750,11 @@ namespace Diligent
         m_bCommittedD3D11VBsUpToDate = true;
     }
 
-    void DeviceContextD3D11Impl::Draw( DrawAttribs &DrawAttribs )
+    void DeviceContextD3D11Impl::Draw( DrawAttribs &drawAttribs )
     {
-#ifdef _DEBUG
-        if (!m_pPipelineState)
-        {
-            LOG_ERROR("No pipeline state is bound");
+#ifdef DEVELOPMENT
+        if (!DvpVerifyDrawArguments(drawAttribs))
             return;
-        }
-#endif
-
-#ifdef _DEBUG
-        if (m_pPipelineState->GetDesc().IsComputePipeline)
-        {
-            LOG_ERROR("No graphics pipeline state is bound");
-            return;
-        }
 #endif
 
         auto* pd3d11InputLayout = m_pPipelineState->GetD3D11InputLayout();
@@ -775,13 +764,13 @@ namespace Diligent
             CommitD3D11VertexBuffers(m_pPipelineState);
         }
 
-        if( DrawAttribs.IsIndexed )
+        if( drawAttribs.IsIndexed )
         {
-            if( m_CommittedIBFormat != DrawAttribs.IndexType )
+            if( m_CommittedIBFormat != drawAttribs.IndexType )
                 m_bCommittedD3D11IBUpToDate = false;
             if(!m_bCommittedD3D11IBUpToDate)
             {
-                CommitD3D11IndexBuffer(DrawAttribs.IndexType);
+                CommitD3D11IndexBuffer(drawAttribs.IndexType);
             }
         }
         
@@ -800,47 +789,40 @@ namespace Diligent
         }
 #endif
 
-        if( DrawAttribs.IsIndirect )
+        auto* pIndirectDrawAttribsD3D11 = ValidatedCast<BufferD3D11Impl>(drawAttribs.pIndirectDrawAttribs);
+        if (pIndirectDrawAttribsD3D11 != nullptr)
         {
-            VERIFY( DrawAttribs.pIndirectDrawAttribs, "Indirect draw command attributes buffer is not set" );
-            auto* pBufferD3D11 = static_cast<BufferD3D11Impl*>(DrawAttribs.pIndirectDrawAttribs);
-            ID3D11Buffer* pd3d11ArgsBuff = pBufferD3D11 ? pBufferD3D11->m_pd3d11Buffer : nullptr;
-            if( DrawAttribs.IsIndexed )
-                m_pd3d11DeviceContext->DrawIndexedInstancedIndirect( pd3d11ArgsBuff, DrawAttribs.IndirectDrawArgsOffset );
+            ID3D11Buffer* pd3d11ArgsBuff = pIndirectDrawAttribsD3D11->m_pd3d11Buffer;
+            if( drawAttribs.IsIndexed )
+                m_pd3d11DeviceContext->DrawIndexedInstancedIndirect( pd3d11ArgsBuff, drawAttribs.IndirectDrawArgsOffset );
             else
-                m_pd3d11DeviceContext->DrawInstancedIndirect( pd3d11ArgsBuff, DrawAttribs.IndirectDrawArgsOffset );
+                m_pd3d11DeviceContext->DrawInstancedIndirect( pd3d11ArgsBuff, drawAttribs.IndirectDrawArgsOffset );
         }
         else
         {
-            if( DrawAttribs.NumInstances > 1 )
+            if( drawAttribs.NumInstances > 1 )
             {
-                if( DrawAttribs.IsIndexed )
-                    m_pd3d11DeviceContext->DrawIndexedInstanced( DrawAttribs.NumIndices, DrawAttribs.NumInstances, DrawAttribs.FirstIndexLocation, DrawAttribs.BaseVertex, DrawAttribs.FirstInstanceLocation );
+                if( drawAttribs.IsIndexed )
+                    m_pd3d11DeviceContext->DrawIndexedInstanced( drawAttribs.NumIndices, drawAttribs.NumInstances, drawAttribs.FirstIndexLocation, drawAttribs.BaseVertex, drawAttribs.FirstInstanceLocation );
                 else
-                    m_pd3d11DeviceContext->DrawInstanced( DrawAttribs.NumVertices, DrawAttribs.NumInstances, DrawAttribs.StartVertexLocation, DrawAttribs.FirstInstanceLocation );
+                    m_pd3d11DeviceContext->DrawInstanced( drawAttribs.NumVertices, drawAttribs.NumInstances, drawAttribs.StartVertexLocation, drawAttribs.FirstInstanceLocation );
             }
             else
             {
-                if( DrawAttribs.IsIndexed )
-                    m_pd3d11DeviceContext->DrawIndexed( DrawAttribs.NumIndices, DrawAttribs.FirstIndexLocation, DrawAttribs.BaseVertex );
+                if( drawAttribs.IsIndexed )
+                    m_pd3d11DeviceContext->DrawIndexed( drawAttribs.NumIndices, drawAttribs.FirstIndexLocation, drawAttribs.BaseVertex );
                 else
-                    m_pd3d11DeviceContext->Draw( DrawAttribs.NumVertices, DrawAttribs.StartVertexLocation );
+                    m_pd3d11DeviceContext->Draw( drawAttribs.NumVertices, drawAttribs.StartVertexLocation );
             }
         }
     }
 
     void DeviceContextD3D11Impl::DispatchCompute( const DispatchComputeAttribs &DispatchAttrs )
     {
-        if (!m_pPipelineState)
-        {
-            LOG_ERROR("No pipeline state is bound");
+#ifdef DEVELOPMENT
+        if (!DvpVerifyDispatchArguments(DispatchAttrs))
             return;
-        }
-        if (!m_pPipelineState->GetDesc().IsComputePipeline)
-        {
-            LOG_ERROR("No compute pipeline state is bound");
-            return;
-        }
+#endif
 
         if(m_DebugFlags & (Uint32)EngineD3D11DebugFlags::VerifyCommittedResourceRelevance)
         {

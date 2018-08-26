@@ -385,24 +385,16 @@ namespace Diligent
         LOG_ERROR_MESSAGE(ss.str());
     }
 
-    void DeviceContextVkImpl::Draw( DrawAttribs &DrawAttribs )
+    void DeviceContextVkImpl::Draw( DrawAttribs &drawAttribs )
     {
 #ifdef DEVELOPMENT
-        if (!m_pPipelineState)
-        {
-            LOG_ERROR("No pipeline state is bound");
+        if (!DvpVerifyDrawArguments(drawAttribs))
             return;
-        }
-        if (m_pPipelineState->GetDesc().IsComputePipeline)
-        {
-            LOG_ERROR("No graphics pipeline state is bound");
-            return;
-        }
 #endif
 
         EnsureVkCmdBuffer();
 
-        if ( DrawAttribs.IsIndexed )
+        if ( drawAttribs.IsIndexed )
         {
 #ifdef DEVELOPMENT
             if (m_pIndexBuffer == nullptr)
@@ -416,8 +408,8 @@ namespace Diligent
             if (!pBuffVk->CheckAccessFlags(VK_ACCESS_INDEX_READ_BIT))
                 BufferMemoryBarrier(*pBuffVk, VK_ACCESS_INDEX_READ_BIT);
 
-            DEV_CHECK_ERR(DrawAttribs.IndexType == VT_UINT16 || DrawAttribs.IndexType == VT_UINT32, "Unsupported index format. Only R16_UINT and R32_UINT are allowed.");
-            VkIndexType vkIndexType = DrawAttribs.IndexType == VT_UINT16 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32;
+            DEV_CHECK_ERR(drawAttribs.IndexType == VT_UINT16 || drawAttribs.IndexType == VT_UINT32, "Unsupported index format. Only R16_UINT and R32_UINT are allowed.");
+            VkIndexType vkIndexType = drawAttribs.IndexType == VT_UINT16 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32;
             m_CommandBuffer.BindIndexBuffer(pBuffVk->GetVkBuffer(), m_IndexDataStartOffset + pBuffVk->GetDynamicOffset(m_ContextId, this), vkIndexType);
         }
 
@@ -437,21 +429,13 @@ namespace Diligent
         }
 #endif
 #endif
-        if ( DrawAttribs.IsIndirect )
-        {
-#ifdef DEVELOPMENT
-            if (DrawAttribs.pIndirectDrawAttribs == nullptr)
-            {
-                LOG_ERROR("Valid pIndirectDrawAttribs must be provided for indirect draw command");
-                return;
-            }
-#endif
 
-            auto *pBufferVk = ValidatedCast<BufferVkImpl>(DrawAttribs.pIndirectDrawAttribs);
-            
+        auto* pIndirectDrawAttribsVk = ValidatedCast<BufferVkImpl>(drawAttribs.pIndirectDrawAttribs);
+        if (pIndirectDrawAttribsVk != nullptr)
+        {
             // Buffer memory barries must be executed outside of render pass
-            if (!pBufferVk->CheckAccessFlags(VK_ACCESS_INDIRECT_COMMAND_READ_BIT))
-                BufferMemoryBarrier(*pBufferVk, VK_ACCESS_INDIRECT_COMMAND_READ_BIT);
+            if (!pIndirectDrawAttribsVk->CheckAccessFlags(VK_ACCESS_INDIRECT_COMMAND_READ_BIT))
+                BufferMemoryBarrier(*pIndirectDrawAttribsVk, VK_ACCESS_INDIRECT_COMMAND_READ_BIT);
         }
 
 #ifdef DEVELOPMENT
@@ -463,29 +447,26 @@ namespace Diligent
 
         CommitRenderPassAndFramebuffer();
 
-        if ( DrawAttribs.IsIndirect )
+        if (pIndirectDrawAttribsVk != nullptr)
         {
-            if ( auto *pBufferVk = ValidatedCast<BufferVkImpl>(DrawAttribs.pIndirectDrawAttribs) )
-            {
 #ifdef DEVELOPMENT
-                if (pBufferVk->GetDesc().Usage == USAGE_DYNAMIC)
-                    pBufferVk->DvpVerifyDynamicAllocation(this);
+            if (pIndirectDrawAttribsVk->GetDesc().Usage == USAGE_DYNAMIC)
+                pIndirectDrawAttribsVk->DvpVerifyDynamicAllocation(this);
 #endif
-                if (!pBufferVk->CheckAccessFlags(VK_ACCESS_INDIRECT_COMMAND_READ_BIT))
-                    BufferMemoryBarrier(*pBufferVk, VK_ACCESS_INDIRECT_COMMAND_READ_BIT);
+            if (!pIndirectDrawAttribsVk->CheckAccessFlags(VK_ACCESS_INDIRECT_COMMAND_READ_BIT))
+                BufferMemoryBarrier(*pIndirectDrawAttribsVk, VK_ACCESS_INDIRECT_COMMAND_READ_BIT);
 
-                if ( DrawAttribs.IsIndexed )
-                    m_CommandBuffer.DrawIndexedIndirect(pBufferVk->GetVkBuffer(), pBufferVk->GetDynamicOffset(m_ContextId, this) + DrawAttribs.IndirectDrawArgsOffset, 1, 0);
-                else
-                    m_CommandBuffer.DrawIndirect(pBufferVk->GetVkBuffer(), pBufferVk->GetDynamicOffset(m_ContextId, this) + DrawAttribs.IndirectDrawArgsOffset, 1, 0);
-            }
+            if ( drawAttribs.IsIndexed )
+                m_CommandBuffer.DrawIndexedIndirect(pIndirectDrawAttribsVk->GetVkBuffer(), pIndirectDrawAttribsVk->GetDynamicOffset(m_ContextId, this) + drawAttribs.IndirectDrawArgsOffset, 1, 0);
+            else
+                m_CommandBuffer.DrawIndirect(pIndirectDrawAttribsVk->GetVkBuffer(), pIndirectDrawAttribsVk->GetDynamicOffset(m_ContextId, this) + drawAttribs.IndirectDrawArgsOffset, 1, 0);
         }
         else
         {
-            if ( DrawAttribs.IsIndexed )
-                m_CommandBuffer.DrawIndexed(DrawAttribs.NumIndices, DrawAttribs.NumInstances, DrawAttribs.FirstIndexLocation, DrawAttribs.BaseVertex, DrawAttribs.FirstInstanceLocation);
+            if ( drawAttribs.IsIndexed )
+                m_CommandBuffer.DrawIndexed(drawAttribs.NumIndices, drawAttribs.NumInstances, drawAttribs.FirstIndexLocation, drawAttribs.BaseVertex, drawAttribs.FirstInstanceLocation);
             else
-                m_CommandBuffer.Draw(DrawAttribs.NumVertices, DrawAttribs.NumInstances, DrawAttribs.StartVertexLocation, DrawAttribs.FirstInstanceLocation );
+                m_CommandBuffer.Draw(drawAttribs.NumVertices, drawAttribs.NumInstances, drawAttribs.StartVertexLocation, drawAttribs.FirstInstanceLocation );
         }
 
         ++m_State.NumCommands;
@@ -494,16 +475,8 @@ namespace Diligent
     void DeviceContextVkImpl::DispatchCompute( const DispatchComputeAttribs &DispatchAttrs )
     {
 #ifdef DEVELOPMENT
-        if (!m_pPipelineState)
-        {
-            LOG_ERROR("No pipeline state is bound");
+        if (!DvpVerifyDispatchArguments(DispatchAttrs))
             return;
-        }
-        if (!m_pPipelineState->GetDesc().IsComputePipeline)
-        {
-            LOG_ERROR("No compute pipeline state is bound");
-            return;
-        }
 #endif
 
         EnsureVkCmdBuffer();

@@ -64,28 +64,24 @@ struct DrawAttribs
         /// For an indexed draw call, number of indices to draw
         Uint32 NumIndices;
     };
-    /// For an indexed draw call, type of elements in the index buffer.
-    /// Allowed values: VT_UINT16 and VT_UINT32. Ignored if DrawAttribs::IsIndexed is False.
-    VALUE_TYPE IndexType = VT_UNDEFINED;
 
     /// Indicates if index buffer will be used to index input vertices
     Bool IsIndexed = False;
+
+    /// For an indexed draw call, type of elements in the index buffer.
+    /// Allowed values: VT_UINT16 and VT_UINT32. Ignored if DrawAttribs::IsIndexed is False.
+    VALUE_TYPE IndexType = VT_UNDEFINED;
 
     /// Number of instances to draw. If more than one instance is specified,
     /// instanced draw call will be performed.
     Uint32 NumInstances = 1;
 
-    /// Indicates if indirect draw call will be performed. If set to True, 
-    /// pIndirectDrawAttribs must contain valid pointer to the buffer, from which
-    /// draw attributes will be read.
-    Bool IsIndirect = False;
-
     /// For indexed rendering, a constant which is added to each index before 
     /// accessing the vertex buffer.
     Uint32 BaseVertex = 0; 
 
-    /// For indirect rendering, offset from the beginning of the buffer to the
-    /// location of draw command attributes. Ignored if DrawAttribs::IsIndirect is False.
+    /// For indirect rendering, offset from the beginning of the buffer to the location
+    /// of draw command attributes. Ignored if DrawAttribs::pIndirectDrawAttribs is null.
     Uint32 IndirectDrawArgsOffset = 0;
 
     union
@@ -103,7 +99,7 @@ struct DrawAttribs
     Uint32 FirstInstanceLocation = 0;
 
     /// For indirect rendering, pointer to the buffer, from which
-    /// draw attributes will be read. Ignored if DrawAttribs::IsIndirect is False.
+    /// draw attributes will be read.
     IBuffer* pIndirectDrawAttribs = nullptr;
 
 
@@ -113,10 +109,9 @@ struct DrawAttribs
     /// Member                  | Default value
     /// ------------------------|--------------
     /// NumVertices             | 0
-    /// IndexType               | VT_UNDEFINED
     /// IsIndexed               | False
+    /// IndexType               | VT_UNDEFINED
     /// NumInstances            | 1
-    /// IsIndirect              | False
     /// BaseVertex              | 0
     /// IndirectDrawArgsOffset  | 0
     /// StartVertexLocation     | 0
