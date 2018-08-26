@@ -238,7 +238,8 @@ VkDescriptorBufferInfo ShaderResourceCacheVk::Resource::GetStorageBufferDescript
     VERIFY(Type == SPIRVShaderResourceAttribs::ResourceType::StorageBuffer, "Storage buffer resource is expected");
 
     auto* pBuffViewVk = pObject.RawPtr<const BufferViewVkImpl>();
-    VERIFY_EXPR(pBuffViewVk->GetDesc().ViewType == BUFFER_VIEW_UNORDERED_ACCESS);
+    const auto& ViewDesc = pBuffViewVk->GetDesc();
+    VERIFY_EXPR(ViewDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS);
 
     auto* pBuffVk = pBuffViewVk->GetBufferVk();
     // VK_DESCRIPTOR_TYPE_STORAGE_BUFFER or VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC descriptor type 
@@ -249,8 +250,8 @@ VkDescriptorBufferInfo ShaderResourceCacheVk::Resource::GetStorageBufferDescript
     DescrBuffInfo.buffer = pBuffVk->GetVkBuffer();
     // If descriptorType is VK_DESCRIPTOR_TYPE_STORAGE_BUFFER or VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, the offset member
     // of each element of pBufferInfo must be a multiple of VkPhysicalDeviceLimits::minStorageBufferOffsetAlignment (13.2.4)
-    DescrBuffInfo.offset = 0;
-    DescrBuffInfo.range = pBuffVk->GetDesc().uiSizeInBytes;
+    DescrBuffInfo.offset = ViewDesc.ByteOffset;
+    DescrBuffInfo.range  = ViewDesc.ByteWidth;
     return DescrBuffInfo;
 }
 

@@ -483,8 +483,8 @@ VulkanUtilities::BufferViewWrapper BufferVkImpl::CreateView(struct BufferViewDes
             DEV_CHECK_ERR(ViewDesc.Format.ValueType != VT_UNDEFINED, "Undefined format");
             ViewCI.format = TypeToVkFormat(ViewDesc.Format.ValueType, ViewDesc.Format.NumComponents, ViewDesc.Format.IsNormalized);
         }
-        ViewCI.offset = ViewDesc.ByteOffset;
-        ViewCI.range = ViewDesc.ByteWidth; // size in bytes of the buffer view
+        ViewCI.offset = ViewDesc.ByteOffset; // offset in bytes from the base address of the buffer
+        ViewCI.range  = ViewDesc.ByteWidth; // size in bytes of the buffer view
 
         const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
         BuffView = LogicalDevice.CreateBufferView(ViewCI, ViewDesc.Name);
