@@ -650,6 +650,8 @@ objects. Refer to the following pages for more information:
   * Removed `DrawAttribs::Topology`
   * Removed `pStrides` prarameter from `IDeviceContext::SetVertexBuffers()`. Strides are now defined
     through vertex layout.
+  * Added `BUFFER_MODE_RAW` mode allowing raw buffer views in D3D11/D3D12.
+  * Moved `Format` member from `BufferDesc` to `BufferViewDesc`
 
 ## v2.2
 
