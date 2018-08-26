@@ -617,7 +617,7 @@ objects. Refer to the following pages for more information:
   * Added `IFence` interface and `IDeviceContext::SignalFence()` method to enable CPU-GPU synchronization
   * Added `GetType`, `GetArraySize`, `GetName`, and `GetIndex` methods to `IShaderVariable` interface;
     Added `GetVariableCount` and `GetShaderVariable(Uint32 Index)` methods to `IShader` interface; 
-    Addec `GetVariableCount` and `GetVariable(SHADER_TYPE ShaderType, Uint32 Index)` to `IShaderResourceBinding` interface.
+    Added `GetVariableCount` and `GetVariable(SHADER_TYPE ShaderType, Uint32 Index)` to `IShaderResourceBinding` interface.
   * Added `BUFFER_MODE_RAW` mode allowing raw buffer views in D3D11/D3D12.
   * Moved `Format` member from `BufferDesc` to `BufferViewDesc`
   * Removed `IsIndirect` member from `DrawAttrbis` as setting `pIndirectDrawAttribs` to a non-null buffer already indicates indirect rendering
