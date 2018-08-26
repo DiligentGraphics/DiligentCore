@@ -132,9 +132,9 @@ inline UINT CPUAccessFlagsToD3D11CPUAccessFlags(Uint32 Flags)
     return D3D11CPUAccessFlags;
 }
 
-inline Uint32 D3D11CPUAccessFlagsToCPUAccessFlags(UINT D3D11CPUAccessFlags)
+inline Uint8 D3D11CPUAccessFlagsToCPUAccessFlags(UINT D3D11CPUAccessFlags)
 {
-    Uint32 CPUAccessFlags = 0;
+    Uint8 CPUAccessFlags = 0;
     CPUAccessFlags |= (D3D11CPUAccessFlags & D3D11_CPU_ACCESS_READ)  ? CPU_ACCESS_READ  : 0;
     CPUAccessFlags |= (D3D11CPUAccessFlags & D3D11_CPU_ACCESS_WRITE) ? CPU_ACCESS_WRITE : 0;
     VERIFY_EXPR(D3D11CPUAccessFlags == CPUAccessFlagsToD3D11CPUAccessFlags(CPUAccessFlags));

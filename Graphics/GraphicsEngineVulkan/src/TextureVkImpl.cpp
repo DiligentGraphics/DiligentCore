@@ -198,7 +198,7 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters,
         std::vector<VkBufferImageCopy> Regions(InitData.NumSubresources);
 
         UINT64 uploadBufferSize = 0;
-        auto TexelSize = FmtAttribs.ComponentSize * FmtAttribs.NumComponents;
+        auto TexelSize = Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents};
         Uint32 subres = 0;
         for(Uint32 layer = 0; layer < ImageCI.arrayLayers; ++layer)
         {

@@ -225,6 +225,12 @@ String GetCPUAccessFlagsString( Uint32 CpuAccessFlags );
 /// Returns the string containing the texture description
 String GetTextureDescString(const TextureDesc &Desc);
 
+/// Returns the string containing the buffer format description
+String GetBufferFormatString(const BufferFormat& Fmt);
+
+/// Returns the string containing the buffer mode description
+const Char* GetBufferModeString( BUFFER_MODE Mode );
+
 /// Returns the string containing the buffer description
 String GetBufferDescString(const BufferDesc &Desc);
 

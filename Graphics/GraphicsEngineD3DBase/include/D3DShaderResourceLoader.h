@@ -179,7 +179,7 @@ namespace Diligent
                 case D3D_SIT_UAV_RWTYPED:                   ++(BindingDesc.Dimension == D3D_SRV_DIMENSION_BUFFER ? NumBufUAVs : NumTexUAVs); break;
                 case D3D_SIT_STRUCTURED:                    ++NumBufSRVs;                                                                    break;
                 case D3D_SIT_UAV_RWSTRUCTURED:              ++NumBufUAVs;                                                                    break;
-                case D3D_SIT_BYTEADDRESS:                   UNSUPPORTED( "Byte address buffers are not supported" );                         break;
+                case D3D_SIT_BYTEADDRESS:                   ++NumBufSRVs;                                                                    break;
                 case D3D_SIT_UAV_RWBYTEADDRESS:             ++NumBufUAVs;                                                                    break;
                 case D3D_SIT_UAV_APPEND_STRUCTURED:         UNSUPPORTED( "Append structured buffers are not supported" );                    break;
                 case D3D_SIT_UAV_CONSUME_STRUCTURED:        UNSUPPORTED( "Consume structured buffers are not supported" );                   break;
@@ -314,7 +314,7 @@ namespace Diligent
 
                 case D3D_SIT_BYTEADDRESS:
                 {
-                    UNSUPPORTED( "Byte address buffers are not supported" );
+                    OnNewBuffSRV( Res );
                     break;
                 }
 

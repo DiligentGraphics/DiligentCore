@@ -467,14 +467,22 @@ VulkanUtilities::BufferViewWrapper BufferVkImpl::CreateView(struct BufferViewDes
     VulkanUtilities::BufferViewWrapper BuffView;
     CorrectBufferViewDesc(ViewDesc);
     if( (ViewDesc.ViewType == BUFFER_VIEW_SHADER_RESOURCE || ViewDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS) && 
-        m_Desc.Mode == BUFFER_MODE_FORMATTED)
+        (m_Desc.Mode == BUFFER_MODE_FORMATTED || m_Desc.Mode == BUFFER_MODE_RAW))
     {
         VkBufferViewCreateInfo ViewCI = {};
         ViewCI.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
         ViewCI.pNext = nullptr;
         ViewCI.flags = 0; // reserved for future use
         ViewCI.buffer = m_VulkanBuffer;
-        ViewCI.format = TypeToVkFormat(m_Desc.Format.ValueType, m_Desc.Format.NumComponents, m_Desc.Format.IsNormalized);
+        if (m_Desc.Mode == BUFFER_MODE_RAW && ViewDesc.Format.ValueType == VT_UNDEFINED)
+        {
+            ViewCI.format = VK_FORMAT_R32_UINT;
+        }
+        else
+        {
+            DEV_CHECK_ERR(ViewDesc.Format.ValueType != VT_UNDEFINED, "Undefined format");
+            ViewCI.format = TypeToVkFormat(ViewDesc.Format.ValueType, ViewDesc.Format.NumComponents, ViewDesc.Format.IsNormalized);
+        }
         ViewCI.offset = ViewDesc.ByteOffset;
         ViewCI.range = ViewDesc.ByteWidth; // size in bytes of the buffer view
 

@@ -63,25 +63,27 @@ BufferD3D11Impl :: BufferD3D11Impl(IReferenceCounters*        pRefCounters,
     }
     D3D11BuffDesc.Usage = UsageToD3D11Usage(m_Desc.Usage);
     
-    D3D11BuffDesc.StructureByteStride = 0;
+    // Size of each element in the buffer structure (in bytes) when the buffer represents a structured buffer, or
+    // the size of the format that is used for views of the buffer
+    D3D11BuffDesc.StructureByteStride = m_Desc.ElementByteStride;
     if( (m_Desc.BindFlags & BIND_UNORDERED_ACCESS) || (m_Desc.BindFlags & BIND_SHADER_RESOURCE) )
     {
-        if( m_Desc.Mode == BUFFER_MODE_STRUCTURED )
+        if (m_Desc.Mode == BUFFER_MODE_STRUCTURED)
         {
             D3D11BuffDesc.MiscFlags |= D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
-            D3D11BuffDesc.StructureByteStride = m_Desc.ElementByteStride;
+            VERIFY(D3D11BuffDesc.StructureByteStride != 0, "StructureByteStride cannot be zero for a structured buffer");
         }
-        else if( m_Desc.Mode == BUFFER_MODE_FORMATTED )
+        else if (m_Desc.Mode == BUFFER_MODE_FORMATTED)
         {
-            auto ElementStride = GetValueSize( m_Desc.Format.ValueType ) * m_Desc.Format.NumComponents;
-            VERIFY( m_Desc.ElementByteStride == 0 || m_Desc.ElementByteStride == ElementStride, "Element byte stride does not match buffer format" );
-            m_Desc.ElementByteStride = ElementStride;
-            if( m_Desc.Format.ValueType == VT_FLOAT32 || m_Desc.Format.ValueType == VT_FLOAT16 )
-                m_Desc.Format.IsNormalized = false;
+            VERIFY(D3D11BuffDesc.StructureByteStride != 0, "StructureByteStride cannot not be zero for a formatted buffer");
+        }
+        else if( m_Desc.Mode == BUFFER_MODE_RAW)
+        {
+            D3D11BuffDesc.MiscFlags |= D3D11_RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
         }
         else
         {
-            UNEXPECTED( "Buffer UAV type is not correct" );
+            UNEXPECTED("Unexpected buffer mode");
         }
     }
 
@@ -121,19 +123,30 @@ static BufferDesc BuffDescFromD3D11Buffer(ID3D11Buffer *pd3d11Buffer, BufferDesc
 
     if( (BuffDesc.BindFlags & BIND_UNORDERED_ACCESS) || (BuffDesc.BindFlags & BIND_SHADER_RESOURCE) )
     {
+        if (D3D11BuffDesc.StructureByteStride != 0)
+        {
+            VERIFY(BuffDesc.ElementByteStride == 0 || BuffDesc.ElementByteStride == D3D11BuffDesc.StructureByteStride, "Element byte stride specified by the BufferDesc (", BuffDesc.ElementByteStride, ") does not match the structured byte stride recovered from d3d11 buffer desc (", D3D11BuffDesc.StructureByteStride, ")");
+            BuffDesc.ElementByteStride = Uint32{ D3D11BuffDesc.StructureByteStride };
+        }
         if(D3D11BuffDesc.MiscFlags & D3D11_RESOURCE_MISC_BUFFER_STRUCTURED)
         {
-            VERIFY(BuffDesc.Mode == BUFFER_MODE_UNDEFINED || BuffDesc.Mode == BUFFER_MODE_STRUCTURED, "Unexpected buffer mode");
+            VERIFY(BuffDesc.Mode == BUFFER_MODE_UNDEFINED || BuffDesc.Mode == BUFFER_MODE_STRUCTURED, "Inconsistent buffer mode: BUFFER_MODE_STRUCTURED or BUFFER_MODE_UNDEFINED is expected");
             BuffDesc.Mode = BUFFER_MODE_STRUCTURED;
-            VERIFY(BuffDesc.ElementByteStride == 0 || BuffDesc.ElementByteStride == D3D11BuffDesc.StructureByteStride, "Element byte stride specified by the BufferDesc (", BuffDesc.ElementByteStride, ") does not match structured byte stride recovered from d3d11 buffer desc (", D3D11BuffDesc.StructureByteStride, ")");
-            BuffDesc.ElementByteStride = Uint32{ D3D11BuffDesc.StructureByteStride };
+        }
+        else if(D3D11BuffDesc.MiscFlags & D3D11_RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS)
+        {
+            VERIFY(BuffDesc.Mode == BUFFER_MODE_UNDEFINED || BuffDesc.Mode == BUFFER_MODE_RAW, "Inconsistent buffer mode: BUFFER_MODE_RAW or BUFFER_MODE_UNDEFINED is expected");
+            BuffDesc.Mode = BUFFER_MODE_RAW;
         }
         else
         {
-            VERIFY(BuffDesc.Mode == BUFFER_MODE_UNDEFINED || BuffDesc.Mode == BUFFER_MODE_FORMATTED, "Unexpected buffer mode");
-            BuffDesc.Mode = BUFFER_MODE_FORMATTED;
-            VERIFY( BuffDesc.Format.ValueType != VT_UNDEFINED, "Value type is not specified for a formatted buffer" );
-            VERIFY( BuffDesc.Format.NumComponents != 0, "Num components cannot be zero in a formated buffer" );
+            if (BuffDesc.ElementByteStride != 0)
+            {
+                VERIFY(BuffDesc.Mode == BUFFER_MODE_UNDEFINED || BuffDesc.Mode == BUFFER_MODE_FORMATTED, "Inconsistent buffer mode: BUFFER_MODE_FORMATTED or BUFFER_MODE_UNDEFINED is expected");
+                BuffDesc.Mode = BUFFER_MODE_FORMATTED;
+            }
+            else
+                BuffDesc.Mode = BUFFER_MODE_UNDEFINED;
         }
     }
 

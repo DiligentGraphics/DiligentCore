@@ -267,7 +267,13 @@ void BufferViewDesc_to_D3D12_SRV_DESC(const BufferDesc &BuffDesc, const BufferVi
 {
     BufferViewDesc_to_D3D_SRV_DESC(BuffDesc, SRVDesc, D3D12SRVDesc);
     D3D12SRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-    D3D12SRVDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
+    if (BuffDesc.Mode == BUFFER_MODE_RAW && SRVDesc.Format.ValueType == VT_UNDEFINED)
+    {
+        D3D12SRVDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
+        D3D12SRVDesc.Format = DXGI_FORMAT_R32_TYPELESS;
+    }
+    else
+        D3D12SRVDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
     VERIFY_EXPR(BuffDesc.BindFlags & BIND_SHADER_RESOURCE);
     if (BuffDesc.Mode == BUFFER_MODE_STRUCTURED)
         D3D12SRVDesc.Buffer.StructureByteStride = BuffDesc.ElementByteStride; 
@@ -276,7 +282,6 @@ void BufferViewDesc_to_D3D12_SRV_DESC(const BufferDesc &BuffDesc, const BufferVi
 void BufferViewDesc_to_D3D12_UAV_DESC(const BufferDesc& BuffDesc, const BufferViewDesc& UAVDesc, D3D12_UNORDERED_ACCESS_VIEW_DESC& D3D12UAVDesc)
 {
     BufferViewDesc_to_D3D_UAV_DESC(BuffDesc, UAVDesc, D3D12UAVDesc);
-    D3D12UAVDesc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
     VERIFY_EXPR(BuffDesc.BindFlags & BIND_UNORDERED_ACCESS);
     if (BuffDesc.Mode == BUFFER_MODE_STRUCTURED)
         D3D12UAVDesc.Buffer.StructureByteStride = BuffDesc.ElementByteStride; 

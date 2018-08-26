@@ -696,7 +696,7 @@ String GetTextureDescString( const TextureDesc &Desc )
     return Str;
 }
 
-static const Char* GetBufferModeString( BUFFER_MODE Mode )
+const Char* GetBufferModeString( BUFFER_MODE Mode )
 {
     static const Char* BufferModeStrings[BUFFER_MODE_NUM_MODES];
     static bool bBuffModeStringsInit = false;
@@ -706,8 +706,9 @@ static const Char* GetBufferModeString( BUFFER_MODE Mode )
         INIT_BUFF_MODE_STR( BUFFER_MODE_UNDEFINED );
         INIT_BUFF_MODE_STR( BUFFER_MODE_FORMATTED );
         INIT_BUFF_MODE_STR( BUFFER_MODE_STRUCTURED );
+        INIT_BUFF_MODE_STR( BUFFER_MODE_RAW );
 #undef  INIT_BUFF_MODE_STR
-        static_assert(BUFFER_MODE_NUM_MODES == BUFFER_MODE_STRUCTURED + 1, "Not all buffer mode strings initialized.");
+        static_assert(BUFFER_MODE_NUM_MODES == BUFFER_MODE_RAW + 1, "Not all buffer mode strings initialized.");
         bBuffModeStringsInit = true;
     }
     if( Mode >= BUFFER_MODE_UNDEFINED && Mode < BUFFER_MODE_NUM_MODES )
@@ -717,6 +718,17 @@ static const Char* GetBufferModeString( BUFFER_MODE Mode )
         UNEXPECTED( "Unknown buffer mode" );
         return "Unknown buffer mode";
     }
+}
+
+String GetBufferFormatString(const BufferFormat& Fmt)
+{
+    String Str;
+    Str += GetValueTypeString( Fmt.ValueType );
+    if( Fmt.IsNormalized )
+        Str += " norm";
+    Str += " x ";
+    Str += ToString(Uint32{Fmt.NumComponents});
+    return Str;
 }
 
 String GetBufferDescString( const BufferDesc &Desc )
@@ -744,15 +756,6 @@ String GetBufferDescString( const BufferDesc &Desc )
     
     Str += "; Mode: ";
     Str += GetBufferModeString(Desc.Mode);
-    if( Desc.Mode == BUFFER_MODE_FORMATTED )
-    {
-        Str += "; Format: ";
-        Str += GetValueTypeString( Desc.Format.ValueType );
-        if( Desc.Format.IsNormalized )
-            Str += " norm";
-        Str += " x ";
-        Str += ToString(Desc.Format.NumComponents);
-    }
 
     Str += "; Usage: ";
     Str += GetUsageString(Desc.Usage);

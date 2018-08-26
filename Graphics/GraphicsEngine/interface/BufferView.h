@@ -35,33 +35,49 @@ namespace Diligent
 static constexpr INTERFACE_ID IID_BufferView =
 { 0xe2e83490, 0xe9d2, 0x495b, { 0x9a, 0x83, 0xab, 0xb4, 0x13, 0xa3, 0x8b, 0x7 } };
 
+/// Buffer format description
+struct BufferFormat
+{
+    /// Type of components. For a formatted buffer views, this value cannot be VT_UNDEFINED
+    VALUE_TYPE ValueType = VT_UNDEFINED;
+
+    /// Number of components. Allowed values: 1, 2, 3, 4. 
+    /// For a formatted buffer, this value cannot be 0
+    Uint8 NumComponents = 0;
+
+    /// For signed and unsigned integer value types 
+    /// (VT_INT8, VT_INT16, VT_INT32, VT_UINT8, VT_UINT16, VT_UINT32)
+    /// indicates if the value should be normalized to [-1,+1] or 
+    /// [0, 1] range respectively. For floating point types
+    /// (VT_FLOAT16 and VT_FLOAT32), this member is ignored.
+    Bool IsNormalized = False;
+
+    /// Tests if two structures are equivalent
+    bool operator == (const BufferFormat& RHS)const
+    {
+        return ValueType     == RHS.ValueType && 
+               NumComponents == RHS.NumComponents &&
+               IsNormalized  == RHS.IsNormalized;
+    }
+};
+
 /// Buffer view description
 struct BufferViewDesc : DeviceObjectAttribs
 {
     /// View type. See Diligent::BUFFER_VIEW_TYPE for details.
-    BUFFER_VIEW_TYPE ViewType;
+    BUFFER_VIEW_TYPE ViewType = BUFFER_VIEW_UNDEFINED;
+
+    /// Format of the view. This member is only used for formatted and raw buffers.
+    /// To create raw view of a raw buffer, set Format.ValueType member to VT_UNDEFINED
+    /// (default value).
+    BufferFormat Format;
 
     /// Offset in bytes from the beginnig of the buffer to the start of the
     /// buffer region referenced by the view
-    Uint32 ByteOffset;
+    Uint32 ByteOffset = 0;
 
     /// Size in bytes of the referenced buffer region
-    Uint32 ByteWidth;
-
-    /// Initializes the structure members with default values
-
-    /// Default values:
-    /// Member              | Default value
-    /// --------------------|--------------
-    /// ViewType            | Diligent::BUFFER_VIEW_UNDEFINED
-    /// ByteOffset          | 0
-    /// ByteWidth           | 0
-    BufferViewDesc() :
-        ViewType( BUFFER_VIEW_UNDEFINED ),
-        ByteOffset(0),
-        ByteWidth(0)
-    {
-    }
+    Uint32 ByteWidth = 0;
 
     /// Comparison operator tests if two structures are equivalent
 
@@ -76,9 +92,10 @@ struct BufferViewDesc : DeviceObjectAttribs
                // Name is primarily used for debug purposes and does not affect the view.
                // It is ignored in comparison operation.
         return //strcmp(Name, RHS.Name) == 0 &&
-               ViewType  == RHS.ViewType &&
-               ByteOffset== RHS.ByteOffset   &&
-               ByteWidth == RHS.ByteWidth;
+               ViewType  == RHS.ViewType   &&
+               ByteOffset== RHS.ByteOffset &&
+               ByteWidth == RHS.ByteWidth  &&
+               Format    == RHS.Format;
     }
 };
 

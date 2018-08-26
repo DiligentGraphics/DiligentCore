@@ -95,17 +95,13 @@ public:
             (this->m_Desc.BindFlags & BIND_SHADER_RESOURCE) )
         {
             VERIFY_BUFFER( this->m_Desc.Mode > BUFFER_MODE_UNDEFINED && this->m_Desc.Mode < BUFFER_MODE_NUM_MODES, "Buffer mode (", this->m_Desc.Mode, ") is not correct" );
-            if( this->m_Desc.Mode == BUFFER_MODE_STRUCTURED )
+            if (this->m_Desc.Mode == BUFFER_MODE_STRUCTURED || this->m_Desc.Mode == BUFFER_MODE_FORMATTED)
             {
-                VERIFY_BUFFER( this->m_Desc.ElementByteStride != 0, "Element stride cannot be zero for structured buffer" );
+                VERIFY_BUFFER( this->m_Desc.ElementByteStride != 0, "Element stride cannot be zero for structured and formatted buffers" );
             }
-
-            if( this->m_Desc.Mode == BUFFER_MODE_FORMATTED )
+            else if (this->m_Desc.Mode == BUFFER_MODE_RAW)
             {
-                VERIFY_BUFFER( this->m_Desc.Format.ValueType != VT_UNDEFINED, "Value type is not specified for a formatted buffer" );
-                VERIFY_BUFFER( this->m_Desc.Format.NumComponents != 0, "Num components cannot be zero in a formatted buffer" );
-                if( this->m_Desc.ElementByteStride == 0 )
-                    this->m_Desc.ElementByteStride = static_cast<Uint32>(GetValueSize( this->m_Desc.Format.ValueType )) * this->m_Desc.Format.NumComponents;
+
             }
         }
     }
@@ -225,25 +221,61 @@ void BufferBase<BaseInterface, RenderDeviceImplType, BufferViewImplType, TBuffVi
 template<class BaseInterface, class RenderDeviceImplType, class BufferViewImplType, class TBuffViewObjAllocator>
 void BufferBase<BaseInterface, RenderDeviceImplType, BufferViewImplType, TBuffViewObjAllocator> :: CreateView( const struct BufferViewDesc &ViewDesc, IBufferView **ppView )
 {
+    DEV_CHECK_ERR(ViewDesc.ViewType != BUFFER_VIEW_UNDEFINED, "Buffer view type is not specified");
+    if (ViewDesc.ViewType == BUFFER_VIEW_SHADER_RESOURCE)
+        DEV_CHECK_ERR(this->m_Desc.BindFlags & BIND_SHADER_RESOURCE, "Attempting to create SRV for buffer '", this->m_Desc.Name, "' that was not created with BIND_SHADER_RESOURCE flag");
+    else if (ViewDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS)
+        DEV_CHECK_ERR(this->m_Desc.BindFlags & BIND_UNORDERED_ACCESS, "Attempting to create UAV for buffer '", this->m_Desc.Name, "' that was not created with BIND_UNORDERED_ACCESS flag");
+    else
+        UNEXPECTED("Unexpected buffer view type");
+
     CreateViewInternal( ViewDesc, ppView, false );
 }
 
 
 template<class BaseInterface, class RenderDeviceImplType, class BufferViewImplType, class TBuffViewObjAllocator>
-void BufferBase<BaseInterface, RenderDeviceImplType, BufferViewImplType, TBuffViewObjAllocator> :: CorrectBufferViewDesc( struct BufferViewDesc &ViewDesc )
+void BufferBase<BaseInterface, RenderDeviceImplType, BufferViewImplType, TBuffViewObjAllocator> :: CorrectBufferViewDesc(struct BufferViewDesc& ViewDesc)
 {
     if( ViewDesc.ByteWidth == 0 )
-        ViewDesc.ByteWidth = this->m_Desc.uiSizeInBytes;
+    {
+        DEV_CHECK_ERR(this->m_Desc.uiSizeInBytes > ViewDesc.ByteOffset, "Byte offset (", ViewDesc.ByteOffset, ") exceeds buffer size (", this->m_Desc.uiSizeInBytes, ")");
+        ViewDesc.ByteWidth = this->m_Desc.uiSizeInBytes - ViewDesc.ByteOffset;
+    }
     if( ViewDesc.ByteOffset + ViewDesc.ByteWidth > this->m_Desc.uiSizeInBytes )
         LOG_ERROR_AND_THROW( "Buffer view range [", ViewDesc.ByteOffset, ", ", ViewDesc.ByteOffset + ViewDesc.ByteWidth, ") is out of the buffer boundaries [0, ", this->m_Desc.uiSizeInBytes, ")." );
     if( (this->m_Desc.BindFlags & BIND_UNORDERED_ACCESS) ||
         (this->m_Desc.BindFlags & BIND_SHADER_RESOURCE) )
     {
-        VERIFY( this->m_Desc.ElementByteStride != 0, "Element byte stride is zero" );
-        if( (ViewDesc.ByteOffset % this->m_Desc.ElementByteStride) != 0 )
-            LOG_ERROR_AND_THROW( "Buffer view byte offset (", ViewDesc.ByteOffset, ") is not multiple of element byte stride (", this->m_Desc.ElementByteStride, ")." );
-        if( (ViewDesc.ByteWidth % this->m_Desc.ElementByteStride) != 0 )
-            LOG_ERROR_AND_THROW( "Buffer view byte width (", ViewDesc.ByteWidth, ") is not multiple of element byte stride (", this->m_Desc.ElementByteStride, ")." );
+        if (this->m_Desc.Mode == BUFFER_MODE_STRUCTURED || this->m_Desc.Mode == BUFFER_MODE_FORMATTED)
+        {
+            VERIFY( this->m_Desc.ElementByteStride != 0, "Element byte stride is zero" );
+            if( (ViewDesc.ByteOffset % this->m_Desc.ElementByteStride) != 0 )
+                LOG_ERROR_AND_THROW( "Buffer view byte offset (", ViewDesc.ByteOffset, ") is not multiple of element byte stride (", this->m_Desc.ElementByteStride, ")." );
+            if( (ViewDesc.ByteWidth % this->m_Desc.ElementByteStride) != 0 )
+                LOG_ERROR_AND_THROW( "Buffer view byte width (", ViewDesc.ByteWidth, ") is not multiple of element byte stride (", this->m_Desc.ElementByteStride, ")." );
+        }
+
+        if (this->m_Desc.Mode == BUFFER_MODE_FORMATTED && ViewDesc.Format.ValueType == VT_UNDEFINED)
+            LOG_ERROR_AND_THROW("Format must be specified when creating a view of a formatted buffer");
+
+        if (this->m_Desc.Mode == BUFFER_MODE_FORMATTED || this->m_Desc.Mode == BUFFER_MODE_RAW && ViewDesc.Format.ValueType != VT_UNDEFINED)
+        {
+            if (ViewDesc.Format.NumComponents <= 0 || ViewDesc.Format.NumComponents > 4)
+                LOG_ERROR_AND_THROW("Incorrect number of components (", Uint32{ViewDesc.Format.NumComponents}, "). 1, 2, 3, or 4 are allowed values");
+            if (ViewDesc.Format.ValueType == VT_FLOAT32 || ViewDesc.Format.ValueType == VT_FLOAT16)
+                ViewDesc.Format.IsNormalized = false;
+            auto ViewElementStride = GetValueSize( ViewDesc.Format.ValueType ) * Uint32{ViewDesc.Format.NumComponents};
+            if (this->m_Desc.Mode == BUFFER_MODE_RAW && this->m_Desc.ElementByteStride == 0)
+                LOG_ERROR_AND_THROW("To enable formatted views of a raw buffer, element byte must be specified during buffer initialization");
+            if (ViewElementStride != this->m_Desc.ElementByteStride)
+                LOG_ERROR_AND_THROW("Buffer element byte stride (", this->m_Desc.ElementByteStride, ") is not consistent with the size (", ViewElementStride, ") defined by the fromat of the view (", GetBufferFormatString(ViewDesc.Format), ')' );
+        }
+
+        if (this->m_Desc.Mode == BUFFER_MODE_RAW && ViewDesc.Format.ValueType == VT_UNDEFINED)
+        {
+            if ((ViewDesc.ByteOffset % 16) != 0)
+                LOG_ERROR_AND_THROW("When creating a RAW view, the offset of the first element from the start of the buffer (", ViewDesc.ByteOffset, ") must be a multiple of 16 bytes");
+        }
     }
 }
 
@@ -261,7 +293,10 @@ IBufferView* BufferBase<BaseInterface, RenderDeviceImplType, BufferViewImplType,
 template<class BaseInterface, class RenderDeviceImplType, class BufferViewImplType, class TBuffViewObjAllocator>
 void BufferBase<BaseInterface, RenderDeviceImplType, BufferViewImplType, TBuffViewObjAllocator> :: CreateDefaultViews()
 {
-    if( this->m_Desc.BindFlags & BIND_UNORDERED_ACCESS )
+    // Create default views for structured and raw buffers. For formatted buffers we do not know the view format, so
+    // cannot create views.
+
+    if (this->m_Desc.BindFlags & BIND_UNORDERED_ACCESS && (this->m_Desc.Mode == BUFFER_MODE_STRUCTURED || this->m_Desc.Mode == BUFFER_MODE_RAW))
     {
         BufferViewDesc ViewDesc;
         ViewDesc.ViewType = BUFFER_VIEW_UNORDERED_ACCESS;
@@ -271,7 +306,7 @@ void BufferBase<BaseInterface, RenderDeviceImplType, BufferViewImplType, TBuffVi
         VERIFY( m_pDefaultUAV->GetDesc().ViewType == BUFFER_VIEW_UNORDERED_ACCESS, "Unexpected view type" );
     }
 
-    if( this->m_Desc.BindFlags & BIND_SHADER_RESOURCE )
+    if (this->m_Desc.BindFlags & BIND_SHADER_RESOURCE && (this->m_Desc.Mode == BUFFER_MODE_STRUCTURED || this->m_Desc.Mode == BUFFER_MODE_RAW))
     {
         BufferViewDesc ViewDesc;
         ViewDesc.ViewType = BUFFER_VIEW_SHADER_RESOURCE;

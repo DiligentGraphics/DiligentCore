@@ -109,13 +109,27 @@ void TextureViewDesc_to_D3D11_UAV_DESC(const TextureViewDesc& TexViewDesc, D3D11
 
 void BufferViewDesc_to_D3D11_SRV_DESC(const BufferDesc& BuffDesc, const BufferViewDesc& SRVDesc, D3D11_SHADER_RESOURCE_VIEW_DESC& D3D11SRVDesc)
 {
-    BufferViewDesc_to_D3D_SRV_DESC(BuffDesc, SRVDesc, D3D11SRVDesc);
+    if (BuffDesc.Mode == BUFFER_MODE_RAW && SRVDesc.Format.ValueType == VT_UNDEFINED)
+    {
+        // Raw buffer view
+        UINT ElementByteStride = 4;
+        DEV_CHECK_ERR( (SRVDesc.ByteOffset % 16) == 0, "Byte offest (", SRVDesc.ByteOffset, ") is not multiple of 16" );
+        DEV_CHECK_ERR( (SRVDesc.ByteWidth % ElementByteStride)  == 0, "Byte width (", SRVDesc.ByteWidth, ") is not multiple of 4" );
+        D3D11SRVDesc.BufferEx.FirstElement = SRVDesc.ByteOffset / ElementByteStride;
+        D3D11SRVDesc.BufferEx.NumElements  = SRVDesc.ByteWidth  / ElementByteStride;
+        D3D11SRVDesc.BufferEx.Flags        = D3D11_BUFFEREX_SRV_FLAG_RAW;
+        D3D11SRVDesc.Format                = DXGI_FORMAT_R32_TYPELESS;
+        D3D11SRVDesc.ViewDimension         = D3D_SRV_DIMENSION_BUFFEREX;
+    }
+    else
+    {
+        BufferViewDesc_to_D3D_SRV_DESC(BuffDesc, SRVDesc, D3D11SRVDesc);
+    }
 }
 
 void BufferViewDesc_to_D3D11_UAV_DESC(const BufferDesc& BuffDesc, const BufferViewDesc& UAVDesc, D3D11_UNORDERED_ACCESS_VIEW_DESC& D3D11UAVDesc)
 {
     BufferViewDesc_to_D3D_UAV_DESC(BuffDesc, UAVDesc, D3D11UAVDesc);
-    D3D11UAVDesc.Buffer.Flags = 0; // D3D11_BUFFER_UAV_FLAG_RAW, D3D11_BUFFER_UAV_FLAG_APPEND, D3D11_BUFFER_UAV_FLAG_COUNTER
 }
 
 }

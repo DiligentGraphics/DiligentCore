@@ -179,7 +179,7 @@ namespace Diligent
                             BuffDesc.Usage = USAGE_CPU_ACCESSIBLE;
 
                             const auto &TexFmtInfo = m_pDevice->GetTextureFormatInfo(Desc.Format);
-                            RowStride = Desc.Width * TexFmtInfo.ComponentSize * TexFmtInfo.NumComponents;
+                            RowStride = Desc.Width * Uint32{TexFmtInfo.ComponentSize} * Uint32{TexFmtInfo.NumComponents};
                             const Uint32 Alignment = 16;
                             const Uint32 AlignmentMask = Alignment-1;
                             RowStride = (RowStride + AlignmentMask) & (~AlignmentMask);

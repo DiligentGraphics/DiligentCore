@@ -37,7 +37,7 @@ namespace Diligent
     /// This enumeration describes value type. It is used by
     /// - BufferDesc structure to describe value type of a formatted buffer
     /// - DrawAttribs structure to describe index type for an indexed draw call
-    enum VALUE_TYPE : Int32
+    enum VALUE_TYPE : Uint8
     {
         VT_UNDEFINED = 0, ///< Undefined type
         VT_INT8,          ///< Signed 8-bit integer
@@ -59,7 +59,7 @@ namespace Diligent
     /// It generally mirrors [D3D11_BIND_FLAG][] enumeration. It is used by
     /// - BufferDesc to describe bind flags for a buffer
     /// - TextureDesc to describe bind flags for a texture
-    enum BIND_FLAGS : Int32
+    enum BIND_FLAGS : Uint32
     {
         BIND_NONE               = 0x0L, ///< Undefined binding
         BIND_VERTEX_BUFFER	    = 0x1L, ///< A buffer can be bound as a vertex buffer
@@ -82,7 +82,7 @@ namespace Diligent
     /// The enumeration is used by
     /// - BufferDesc to describe usage for a buffer
     /// - TextureDesc to describe usage for a texture
-    enum USAGE : Int32
+    enum USAGE : Uint8
     {
         /// A resource that can only be read by the GPU. It cannot be written by the GPU, 
         /// and cannot be accessed at all by the CPU. This type of resource must be initialized 
@@ -110,7 +110,7 @@ namespace Diligent
     /// - BufferDesc to describe CPU access mode for a buffer
     /// - TextureDesc to describe CPU access mode for a texture
     /// \note Only USAGE_DYNAMIC resources can be mapped
-    enum CPU_ACCESS_FLAG : Int32
+    enum CPU_ACCESS_FLAG : Uint8
     {
         CPU_ACCESS_READ = 0x01, ///< A resource can be mapped for reading
         CPU_ACCESS_WRITE = 0x02 ///< A resource can be mapped for writing
@@ -123,7 +123,7 @@ namespace Diligent
     /// mirrors [D3D11_MAP][] enumeration. It is used by
     /// - IBuffer::Map to describe buffer mapping type
     /// - ITexture::Map to describe texture mapping type
-    enum MAP_TYPE : Int32
+    enum MAP_TYPE : Uint8
     {
         /// Resource is mapped for reading. \n
         /// D3D11 counterpart: D3D11_MAP_READ. OpenGL counterpart: GL_MAP_READ_BIT
@@ -144,7 +144,7 @@ namespace Diligent
     /// This enumeration is used by
     /// - IBuffer::Map to describe buffer mapping flags
     /// - ITexture::Map to describe texture mapping flags
-    enum MAP_FLAGS : Int32
+    enum MAP_FLAGS : Uint8
     {
         /// Specifies that map operation should not wait until previous command that
         /// using the same resource completes. Map returns null pointer if the resource
@@ -170,7 +170,7 @@ namespace Diligent
     /// This enumeration is used by
     /// - TextureDesc to describe texture type
     /// - TextureViewDesc to describe texture view type
-    enum RESOURCE_DIMENSION : Int32
+    enum RESOURCE_DIMENSION : Uint8
     {
         RESOURCE_DIM_UNDEFINED = 0, ///< Texture type undefined
         RESOURCE_DIM_BUFFER,            ///< Buffer
@@ -188,7 +188,7 @@ namespace Diligent
 
     /// This enumeration describes allowed view types for a texture view. It is used by TextureViewDesc
     /// structure.
-    enum TEXTURE_VIEW_TYPE : Int32
+    enum TEXTURE_VIEW_TYPE : Uint8
     {
         /// Undefined view type
         TEXTURE_VIEW_UNDEFINED = 0,     
@@ -217,7 +217,7 @@ namespace Diligent
 
     /// This enumeration describes allowed view types for a buffer view. It is used by BufferViewDesc
     /// structure.
-    enum BUFFER_VIEW_TYPE : Int32
+    enum BUFFER_VIEW_TYPE : Uint8
     {
         /// Undefined view type
         BUFFER_VIEW_UNDEFINED = 0,
@@ -242,7 +242,7 @@ namespace Diligent
     /// \sa <a href = "https://msdn.microsoft.com/en-us/library/windows/desktop/bb173059(v=vs.85).aspx">DXGI_FORMAT enumeration on MSDN</a>, 
     ///     <a href = "https://www.opengl.org/wiki/Image_Format">OpenGL Texture Formats</a>
     ///
-    enum TEXTURE_FORMAT : Int16
+    enum TEXTURE_FORMAT : Uint16
     {
         /// Unknown format
         TEX_FORMAT_UNKNOWN = 0,  
@@ -778,7 +778,7 @@ namespace Diligent
     /// This enumeration defines filter type. It is used by SamplerDesc structure to define min, mag and mip filters.
     /// \note On D3D11, comparison filters only work with textures that have the following formats: 
     /// R32_FLOAT_X8X24_TYPELESS, R32_FLOAT, R24_UNORM_X8_TYPELESS, R16_UNORM.
-    enum FILTER_TYPE : Int32
+    enum FILTER_TYPE : Uint8
     {
         FILTER_TYPE_UNKNOWN  = 0,           ///< Unknown filter type
         FILTER_TYPE_POINT,                  ///< Point filtering
@@ -803,7 +803,7 @@ namespace Diligent
     /// Defines a technique for resolving texture coordinates that are outside of 
     /// the boundaries of a texture. The enumeration generally mirrors [D3D11_TEXTURE_ADDRESS_MODE][]/[D3D12_TEXTURE_ADDRESS_MODE][] enumeration. 
     /// It is used by SamplerDesc structure to define the address mode for U,V and W texture coordinates.
-    enum TEXTURE_ADDRESS_MODE : Int32
+    enum TEXTURE_ADDRESS_MODE : Uint8
     {
         /// Unknown mode
         TEXTURE_ADDRESS_UNKNOWN = 0,
@@ -845,7 +845,7 @@ namespace Diligent
     /// - SamplerDesc to define a comparison function if one of the comparison mode filters is used
     /// - StencilOpDesc to define a stencil function
     /// - DepthStencilStateDesc to define a depth function
-    enum COMPARISON_FUNCTION : Int8
+    enum COMPARISON_FUNCTION : Uint8
     {
         /// Unknown comparison function
         COMPARISON_FUNC_UNKNOWN = 0,
@@ -889,7 +889,7 @@ namespace Diligent
     /// Miscellaneous texture flags
 
     /// The enumeration is used by TextureDesc to describe misc texture flags
-    enum MISC_TEXTURE_FLAG : Int8
+    enum MISC_TEXTURE_FLAG : Uint8
     {
         /// Allow automatic mipmap generation with ITextureView::GenerateMips()
 
@@ -900,7 +900,7 @@ namespace Diligent
     /// Input primitive topology.
 
     /// This enumeration is used by DrawAttribs structure to define input primitive topology.
-    enum PRIMITIVE_TOPOLOGY : Int8
+    enum PRIMITIVE_TOPOLOGY : Uint8
     {
         /// Undefined topology
         PRIMITIVE_TOPOLOGY_UNDEFINED = 0,
@@ -1413,7 +1413,7 @@ namespace Diligent
 
 
     /// Describes texture format component type
-    enum COMPONENT_TYPE : Int8
+    enum COMPONENT_TYPE : Uint8
     {
         /// Undefined component type
         COMPONENT_TYPE_UNDEFINED,
@@ -1530,39 +1530,27 @@ namespace Diligent
     struct TextureFormatInfoExt : TextureFormatInfo
     {
         /// Indicates if the format can be filtered
-        bool Filterable;
+        bool Filterable = false;
 
         /// Indicates if the format can be used as a render target format
-        bool ColorRenderable;
+        bool ColorRenderable = false;
 
         /// Indicates if the format can be used as a depth format
-        bool DepthRenderable;
+        bool DepthRenderable = false;
 
         /// Indicates if the format can be used to create a 1D texture 
-        bool Tex1DFmt;
+        bool Tex1DFmt = false;
 
         /// Indicates if the format can be used to create a 2D texture 
-        bool Tex2DFmt;
+        bool Tex2DFmt = false;
 
         /// Indicates if the format can be used to create a 3D texture 
-        bool Tex3DFmt;
+        bool Tex3DFmt = false;
 
         /// Indicates if the format can be used to create a cube texture 
-        bool TexCubeFmt;
+        bool TexCubeFmt = false;
 
         /// Indicates if the format can be used to create a multisampled 2D texture 
-        bool SupportsMS;
-
-        /// Initializes the structure with default values
-        explicit TextureFormatInfoExt() : 
-            Filterable(false),
-            ColorRenderable(false),
-            DepthRenderable(false),
-            Tex1DFmt(false),
-            Tex2DFmt(false),
-            Tex3DFmt(false),
-            TexCubeFmt(false),
-            SupportsMS(false)
-        {}
+        bool SupportsMS = false;
     };
 }

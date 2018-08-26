@@ -57,7 +57,7 @@ namespace Diligent
             m_GLTexBuffer.Create();
             ContextState.BindTexture(-1, GL_TEXTURE_BUFFER, m_GLTexBuffer );
 
-            const auto &BuffFmt = pBuffer->GetDesc().Format;
+            const auto &BuffFmt = ViewDesc.Format;
             VERIFY_EXPR(BuffFmt.ValueType != VT_UNDEFINED);
             auto GLFormat = TypeToGLTexFormat( BuffFmt.ValueType, BuffFmt.NumComponents, BuffFmt.IsNormalized );
             glTexBuffer( GL_TEXTURE_BUFFER, GLFormat, pBuffer->GetGLHandle() );

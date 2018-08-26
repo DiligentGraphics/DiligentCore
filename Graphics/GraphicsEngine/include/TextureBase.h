@@ -115,6 +115,18 @@ public:
     /// creates texture view for the specific engine implementation.
     virtual void CreateView( const struct TextureViewDesc& ViewDesc, ITextureView** ppView )override
     {
+        DEV_CHECK_ERR(ViewDesc.ViewType != TEXTURE_VIEW_UNDEFINED, "Texture view type is not specified");
+        if (ViewDesc.ViewType == TEXTURE_VIEW_SHADER_RESOURCE)
+            DEV_CHECK_ERR(this->m_Desc.BindFlags & BIND_SHADER_RESOURCE, "Attempting to create SRV for texture '", this->m_Desc.Name, "' that was not created with BIND_SHADER_RESOURCE flag");
+        else if (ViewDesc.ViewType == TEXTURE_VIEW_UNORDERED_ACCESS)
+            DEV_CHECK_ERR(this->m_Desc.BindFlags & BIND_UNORDERED_ACCESS, "Attempting to create UAV for texture '", this->m_Desc.Name, "' that was not created with BIND_UNORDERED_ACCESS flag");
+        else if (ViewDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET)
+            DEV_CHECK_ERR(this->m_Desc.BindFlags & BIND_RENDER_TARGET, "Attempting to create RTV for texture '", this->m_Desc.Name, "' that was not created with BIND_RENDER_TARGET flag");
+        else if (ViewDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL)
+            DEV_CHECK_ERR(this->m_Desc.BindFlags & BIND_DEPTH_STENCIL, "Attempting to create DSV for texture '", this->m_Desc.Name, "' that was not created with BIND_DEPTH_STENCIL flag");
+        else
+            UNEXPECTED("Unexpected texture view type");
+
         CreateViewInternal( ViewDesc, ppView, false );
     }
 

@@ -33,7 +33,7 @@
 namespace Diligent
 {
 
-void CreateUniformBuffer( IRenderDevice *pDevice, Uint32 Size, const Char *Name, IBuffer **ppBuffer, USAGE Usage, Uint32 BindFlag, Uint32 CPUAccessFlags)
+void CreateUniformBuffer( IRenderDevice *pDevice, Uint32 Size, const Char *Name, IBuffer **ppBuffer, USAGE Usage, Uint32 BindFlag, Uint8 CPUAccessFlags)
 {
     BufferDesc CBDesc;
     CBDesc.Name = Name;
@@ -58,8 +58,8 @@ void GenerateCheckerBoardPatternInternal(Uint32 Width, Uint32 Height, TEXTURE_FO
             val = std::max( std::min( val*20.f, +1.f), -1.f );
             val = val * 0.5f + 1.f;
             val = val * 0.5f + 0.25f;
-            Uint8 *pDstTexel = pData + x * FmtAttribs.NumComponents * FmtAttribs.ComponentSize + y * StrideInBytes;
-            Converter(pDstTexel, FmtAttribs.NumComponents, val);
+            Uint8 *pDstTexel = pData + x * Uint32{FmtAttribs.NumComponents} * Uint32{FmtAttribs.ComponentSize} + y * StrideInBytes;
+            Converter(pDstTexel, Uint32{FmtAttribs.NumComponents}, val);
         }
     }
 }

@@ -276,44 +276,63 @@ namespace Diligent
     }
 
     template<typename D3D_UNORDERED_ACCESS_VIEW_DESC>
-    void BufferViewDesc_to_D3D_SRV_DESC(const BufferDesc &BuffDesc, const BufferViewDesc& SRVDesc, D3D_UNORDERED_ACCESS_VIEW_DESC &d3dSRVDesc)
+    void BufferViewDesc_to_D3D_SRV_DESC(const BufferDesc& BuffDesc, const BufferViewDesc& SRVDesc, D3D_UNORDERED_ACCESS_VIEW_DESC& d3dSRVDesc)
     {
-        if( SRVDesc.ByteOffset != 0 )
-        {
-            VERIFY( BuffDesc.Mode == BUFFER_MODE_STRUCTURED, "Non-zero byte offset is only supported for structured buffers" );
-        }
+        VERIFY(SRVDesc.ViewType == BUFFER_VIEW_SHADER_RESOURCE, "Incorrect view type: shader resource is expected" );
 
         memset( &d3dSRVDesc, 0, sizeof( d3dSRVDesc ) );
-        const auto &BuffFmt = BuffDesc.Format;
-        if( BuffDesc.Mode == BUFFER_MODE_FORMATTED )
+        const auto& BuffFmt = SRVDesc.Format;
+        if (BuffDesc.Mode == BUFFER_MODE_FORMATTED || BuffDesc.Mode == BUFFER_MODE_RAW && BuffFmt.ValueType != VT_UNDEFINED)
             d3dSRVDesc.Format = TypeToDXGI_Format( BuffFmt.ValueType, BuffFmt.NumComponents, BuffFmt.IsNormalized );
+        
+        Uint32 ElementByteStride = 0;
+        if (BuffDesc.Mode == BUFFER_MODE_FORMATTED || BuffDesc.Mode == BUFFER_MODE_STRUCTURED || BuffDesc.Mode == BUFFER_MODE_RAW && BuffFmt.ValueType != VT_UNDEFINED)
+            ElementByteStride = BuffDesc.ElementByteStride;
+        else if(BuffDesc.Mode == BUFFER_MODE_RAW && BuffFmt.ValueType == VT_UNDEFINED)
+            ElementByteStride = 4;
 
-        VERIFY( SRVDesc.ViewType == BUFFER_VIEW_SHADER_RESOURCE,          "Incorrect view type: shader resource is expected" );
-        VERIFY( (SRVDesc.ByteOffset % BuffDesc.ElementByteStride) == 0, "Byte offest is not multiple of element byte stride" );
-        VERIFY( (SRVDesc.ByteWidth % BuffDesc.ElementByteStride) == 0,  "Byte width is not multiple of element byte stride" );
-        d3dSRVDesc.Buffer.FirstElement = SRVDesc.ByteOffset / BuffDesc.ElementByteStride;
-        d3dSRVDesc.Buffer.NumElements = SRVDesc.ByteWidth / BuffDesc.ElementByteStride;
+        if (ElementByteStride != 0)
+        {
+            DEV_CHECK_ERR( (SRVDesc.ByteOffset % ElementByteStride) == 0, "Byte offest (", SRVDesc.ByteOffset, ") is not multiple of element byte stride (", ElementByteStride, ")" );
+            DEV_CHECK_ERR( (SRVDesc.ByteWidth % ElementByteStride)  == 0, "Byte width (", SRVDesc.ByteWidth, ")is not multiple of element byte stride (", ElementByteStride, ")" );
+            d3dSRVDesc.Buffer.FirstElement = SRVDesc.ByteOffset / ElementByteStride;
+            d3dSRVDesc.Buffer.NumElements  = SRVDesc.ByteWidth  / ElementByteStride;
+        }
         d3dSRVDesc.ViewDimension = D3D_SRV_DIMENSION_BUFFER;
     }
 
     template<typename D3D_UNORDERED_ACCESS_VIEW_DESC>
-    void BufferViewDesc_to_D3D_UAV_DESC(const BufferDesc &BuffDesc, const BufferViewDesc& UAVDesc, D3D_UNORDERED_ACCESS_VIEW_DESC &d3dUAVDesc)
+    void BufferViewDesc_to_D3D_UAV_DESC(const BufferDesc& BuffDesc, const BufferViewDesc& UAVDesc, D3D_UNORDERED_ACCESS_VIEW_DESC& d3dUAVDesc)
     {
-        if( UAVDesc.ByteOffset != 0 )
-        {
-            VERIFY( BuffDesc.Mode == BUFFER_MODE_STRUCTURED, "Non-zero byte offset is only supported for structured buffers" );
-        }
+        VERIFY(UAVDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS, "Incorrect view type: unordered access is expected");
 
         memset( &d3dUAVDesc, 0, sizeof(d3dUAVDesc) );
-        const auto &BuffFmt = BuffDesc.Format;
-        if( BuffDesc.Mode == BUFFER_MODE_FORMATTED )
+        const auto& BuffFmt = UAVDesc.Format;
+        if (BuffDesc.Mode == BUFFER_MODE_FORMATTED || BuffDesc.Mode == BUFFER_MODE_RAW && BuffFmt.ValueType != VT_UNDEFINED)
             d3dUAVDesc.Format = TypeToDXGI_Format( BuffFmt.ValueType, BuffFmt.NumComponents, BuffFmt.IsNormalized );
-    
-        VERIFY( UAVDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS,         "Incorrect view type: unordered access is expected" );
-        VERIFY( (UAVDesc.ByteOffset % BuffDesc.ElementByteStride) == 0, "Byte offest is not multiple of element byte stride" );
-        VERIFY( (UAVDesc.ByteWidth % BuffDesc.ElementByteStride) == 0,  "Byte width is not multiple of element byte stride" );
-        d3dUAVDesc.Buffer.FirstElement = UAVDesc.ByteOffset / BuffDesc.ElementByteStride;
-        d3dUAVDesc.Buffer.NumElements = UAVDesc.ByteWidth / BuffDesc.ElementByteStride;
+        
+        Uint32 ElementByteStride = 0;
+        if (BuffDesc.Mode == BUFFER_MODE_FORMATTED || BuffDesc.Mode == BUFFER_MODE_STRUCTURED || BuffDesc.Mode == BUFFER_MODE_RAW && BuffFmt.ValueType != VT_UNDEFINED)
+            ElementByteStride = BuffDesc.ElementByteStride;
+        else if(BuffDesc.Mode == BUFFER_MODE_RAW && BuffFmt.ValueType == VT_UNDEFINED)
+            ElementByteStride = 4;
+
+        if (ElementByteStride != 0)
+        {
+            DEV_CHECK_ERR( (UAVDesc.ByteOffset % ElementByteStride) == 0, "Byte offest (", UAVDesc.ByteOffset, ") is not multiple of element byte stride (", ElementByteStride, ")" );
+            DEV_CHECK_ERR( (UAVDesc.ByteWidth % ElementByteStride)  == 0, "Byte width (", UAVDesc.ByteWidth, ")is not multiple of element byte stride (", ElementByteStride, ")" );
+            d3dUAVDesc.Buffer.FirstElement = UAVDesc.ByteOffset / ElementByteStride;
+            d3dUAVDesc.Buffer.NumElements  = UAVDesc.ByteWidth  / ElementByteStride;
+        }
+
+        if (BuffDesc.Mode == BUFFER_MODE_RAW && UAVDesc.Format.ValueType == VT_UNDEFINED)
+        {
+            d3dUAVDesc.Format       = DXGI_FORMAT_R32_TYPELESS;
+            d3dUAVDesc.Buffer.Flags = D3D_BUFFER_UAV_FLAG_RAW;
+        }
+        else
+            d3dUAVDesc.Buffer.Flags = D3D_BUFFER_UAV_FLAG_NONE;
+
         d3dUAVDesc.ViewDimension = D3D_UAV_DIMENSION_BUFFER;
     }
 }

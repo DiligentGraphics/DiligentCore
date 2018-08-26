@@ -226,7 +226,7 @@ namespace Diligent
             BuffDesc.Usage = USAGE_CPU_ACCESSIBLE;
 
             const auto &TexFmtInfo = m_pDevice->GetTextureFormatInfo(Desc.Format);
-            Uint32 RowStride = Desc.Width * TexFmtInfo.ComponentSize * TexFmtInfo.NumComponents;
+            Uint32 RowStride = Desc.Width * Uint32{TexFmtInfo.ComponentSize} * Uint32{TexFmtInfo.NumComponents};
             static_assert((D3D12_TEXTURE_DATA_PITCH_ALIGNMENT & (D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1)) == 0, "Alginment is expected to be power of 2");
             Uint32 AlignmentMask = D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1;
             RowStride = (RowStride + AlignmentMask) & (~AlignmentMask);

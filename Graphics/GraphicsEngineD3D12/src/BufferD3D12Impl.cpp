@@ -240,14 +240,13 @@ static BufferDesc BufferDescFromD3D12Resource(BufferDesc BuffDesc, ID3D12Resourc
 
     if( (BuffDesc.BindFlags & BIND_UNORDERED_ACCESS) || (BuffDesc.BindFlags & BIND_SHADER_RESOURCE) )
     {
-        if(BuffDesc.Mode == BUFFER_MODE_STRUCTURED)
+        if(BuffDesc.Mode == BUFFER_MODE_STRUCTURED || BuffDesc.Mode == BUFFER_MODE_FORMATTED)
         {
-            VERIFY(BuffDesc.ElementByteStride != 0, "Element byte stride cannot be 0 for a structured buffer");
+            VERIFY(BuffDesc.ElementByteStride != 0, "Element byte stride cannot be 0 for a structured or a formatted buffer");
         }
-        else if(BuffDesc.Mode == BUFFER_MODE_FORMATTED)
+        else if(BuffDesc.Mode == BUFFER_MODE_RAW)
         {
-            VERIFY( BuffDesc.Format.ValueType != VT_UNDEFINED, "Value type is not specified for a formatted buffer" );
-            VERIFY( BuffDesc.Format.NumComponents != 0, "Num components cannot be zero in a formated buffer" );
+
         }
         else
         {

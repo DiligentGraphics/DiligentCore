@@ -180,7 +180,7 @@ void TextureCube_OGL::UpdateData( IDeviceContext *pContext, Uint32 MipLevel, Uin
     else
     {
         const auto& TexFmtInfo = GetTextureFormatAttribs(m_Desc.Format);
-        const auto PixelSize = TexFmtInfo.NumComponents * TexFmtInfo.ComponentSize;
+        const auto PixelSize = Uint32{TexFmtInfo.NumComponents} * Uint32{TexFmtInfo.ComponentSize};
         VERIFY( (SubresData.Stride % PixelSize)==0, "Data stride is not multiple of pixel size" );
         glPixelStorei(GL_UNPACK_ROW_LENGTH, SubresData.Stride / PixelSize);
         glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);

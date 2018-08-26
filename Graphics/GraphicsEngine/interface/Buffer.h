@@ -38,18 +38,26 @@ static constexpr INTERFACE_ID IID_Buffer =
 /// Describes the buffer access mode.
 
 /// This enumeration is used by BufferDesc structure.
-enum BUFFER_MODE : Int32
+enum BUFFER_MODE : Uint8
 {
     /// Undefined mode.
     BUFFER_MODE_UNDEFINED = 0,
 
     /// Formated buffer. Access to the buffer will use format conversion operations.
-    /// In this mode, the BufferFormat member of BufferDesc defines the buffer format.
+    /// In this mode, ElementByteStride member of BufferDesc defines the buffer element size.
+    /// Buffer views can use different formats, but the format size must match ElementByteStride.
     BUFFER_MODE_FORMATTED,
         
     /// Structured buffer.
     /// In this mode, ElementByteStride member of BufferDesc defines the structure stride.
     BUFFER_MODE_STRUCTURED,
+
+    /// Raw buffer.
+    /// In this mode, the buffer is accessed as raw bytes. Formatted views of a raw
+    /// buffer can be also created similar to formatted buffer. If formatted views
+    /// are to be created, the ElementByteStride member of BufferDesc must specify the 
+    /// size of the format.
+    BUFFER_MODE_RAW,
 
     /// Helper value storing the total number of modes in the enumeration.
     BUFFER_MODE_NUM_MODES
@@ -59,7 +67,7 @@ enum BUFFER_MODE : Int32
 struct BufferDesc : DeviceObjectAttribs
 {
     /// Size of the buffer, in bytes. For a uniform buffer, this must be multiple of 16.
-    Uint32 uiSizeInBytes;
+    Uint32 uiSizeInBytes = 0;
 
     /// Buffer bind flags, see Diligent::BIND_FLAGS for details
 
@@ -67,92 +75,26 @@ struct BufferDesc : DeviceObjectAttribs
     /// Diligent::BIND_VERTEX_BUFFER, Diligent::BIND_INDEX_BUFFER, Diligent::BIND_UNIFORM_BUFFER,
     /// Diligent::BIND_SHADER_RESOURCE, Diligent::BIND_STREAM_OUTPUT, Diligent::BIND_UNORDERED_ACCESS,
     /// Diligent::BIND_INDIRECT_DRAW_ARGS
-    Uint32 BindFlags;
+    Uint32 BindFlags = 0;
 
     /// Buffer usage, see Diligent::USAGE for details
-    USAGE Usage;
+    USAGE Usage = USAGE_DEFAULT;
 
     /// CPU access flags or 0 if no CPU access is allowed, 
     /// see Diligent::CPU_ACCESS_FLAG for details.
-    Uint32 CPUAccessFlags;
+    Uint8 CPUAccessFlags = 0;
     
-    /// Buffer mode
-    BUFFER_MODE Mode;
+    /// Buffer mode, see Diligent::BUFFER_MODE
+    BUFFER_MODE Mode = BUFFER_MODE_UNDEFINED;
 
-    /// Buffer format description
-    struct BufferFormat
-    {
-        /// Type of components. For a formatted buffer, this value cannot be VT_UNDEFINED
-        VALUE_TYPE ValueType;
+    /// Buffer element stride, in bytes.
 
-        /// Number of components. Allowed values: 1, 2, 3, 4. 
-        /// For a formatted buffer, this value cannot be 0
-        Uint32 NumComponents;
-
-        /// For signed and unsigned integer value types 
-        /// (VT_INT8, VT_INT16, VT_INT32, VT_UINT8, VT_UINT16, VT_UINT32)
-        /// indicates if the value should be normalized to [-1,+1] or 
-        /// [0, 1] range respectively. For floating point types
-        /// (VT_FLOAT16 and VT_FLOAT32), this member is ignored.
-        Bool IsNormalized;
-
-        /// Initializes the structure members with default values
-
-        /// Default values:
-        /// Member              | Default value
-        /// --------------------|--------------
-        /// ValueType           | VT_UNDEFINED
-        /// NumComponents       | 0
-        /// IsNormalized        | True
-        BufferFormat() :
-            ValueType( VT_UNDEFINED ),
-            NumComponents( 0 ),
-            IsNormalized(True)
-        {}
-        
-        /// Tests if two structures are equivalent
-        bool operator == (const BufferFormat& RHS)const
-        {
-            return ValueType     == RHS.ValueType && 
-                   NumComponents == RHS.NumComponents &&
-                   IsNormalized  == RHS.IsNormalized;
-        }
-    };
-
-    /// Buffer format
-
-    /// For a formatted buffer (BufferDesc::Mode equals Diligent::BUFFER_MODE_FORMATTED), this member describes the 
-    /// buffer format, see BufferFormat. Ignored otherwise.
-    BufferFormat Format;
-
-    /// Buffer element stride, in bytes. For a structured buffer (BufferDesc::Mode 
-    /// equals Diligent::BUFFER_MODE_STRUCTURED), this member cannot be zero. For a formatted buffer
-    /// (BufferDesc::Mode equals Diligent::BUFFER_MODE_FORMATTED), this member can either specify the stride, or 
-    /// be 0. In the latter case, the stride is computed automatically based
-    /// on the format size and assuming that elements are densely packed.
-    Uint32 ElementByteStride;
-
-    /// Initializes the structure members with default values
-
-    /// Default values:
-    /// Member              | Default value
-    /// --------------------|--------------
-    /// uiSizeInBytes       | 0
-    /// BindFlags           | 0
-    /// Usage               | Diligent::USAGE_DEFAULT
-    /// CPUAccessFlags      | 0
-    /// Mode                | Diligent::BUFFER_MODE_UNDEFINED
-    /// ElementByteStride   | 0
-    /// Members of BufferDesc::Format are initialized with default values by BufferFormat::BufferFormat()
-    BufferDesc() : 
-        uiSizeInBytes(0),
-        BindFlags(0),
-        Usage(USAGE_DEFAULT),
-        CPUAccessFlags(0),
-        Mode( BUFFER_MODE_UNDEFINED ),
-        ElementByteStride(0)
-    {}
-
+    /// For a structured buffer (BufferDesc::Mode equals Diligent::BUFFER_MODE_STRUCTURED) this member 
+    /// defines the size of each buffer element. For a formatted buffer
+    /// (BufferDesc::Mode equals Diligent::BUFFER_MODE_FORMATTED) and optionally for a raw buffer 
+    /// (Diligent::BUFFER_MODE_RAW), this member defines the size of the format that will be used for views 
+    /// created for this buffer.
+    Uint32 ElementByteStride = 0;
 
     /// Tests if two structures are equivalent
 
@@ -169,7 +111,6 @@ struct BufferDesc : DeviceObjectAttribs
                Usage             == RHS.Usage          &&
                CPUAccessFlags    == RHS.CPUAccessFlags &&
                Mode              == RHS.Mode           &&
-               Format            == RHS.Format         &&
                ElementByteStride == RHS.ElementByteStride;
     }
 };
@@ -259,6 +200,9 @@ public:
     
     /// \param [in] ViewType - Type of the requested view. See Diligent::BUFFER_VIEW_TYPE.
     /// \return Pointer to the interface
+    ///
+    /// \remarks Default views are only created for structured and raw buffers. As for formatted buffers
+    ///          the view format is unknown at buffer initialization time, no default views are created.
     ///
     /// \note The function does not increase the reference counter for the returned interface, so
     ///       Release() must *NOT* be called.
