@@ -640,15 +640,16 @@ inline bool DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType
         return false;
     }
 
-    if (drawAttribs.NumIndices == 0)
+    if(drawAttribs.pIndirectDrawAttribs == nullptr)
     {
-        LOG_WARNING_MESSAGE(drawAttribs.IsIndexed ? "Number of indices to draw is zero" : "Number of vertices to draw is zero");
-    }
+        if (drawAttribs.NumIndices == 0)
+            LOG_WARNING_MESSAGE(drawAttribs.IsIndexed ? "Number of indices to draw is zero" : "Number of vertices to draw is zero");
 
-    if (drawAttribs.NumInstances == 0)
-    {
-        LOG_ERROR("Number of instances cannot be 0. Use 1 for a non-instanced draw command.");
-        return false;
+        if (drawAttribs.NumInstances == 0)
+        {
+            LOG_ERROR("Number of instances cannot be 0. Use 1 for a non-instanced draw command.");
+            return false;
+        }
     }
 
     if (drawAttribs.IsIndexed && drawAttribs.IndexType != VT_UINT16 && drawAttribs.IndexType != VT_UINT32)
@@ -675,14 +676,17 @@ inline bool DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType
         return false;
     }
 
-    if (DispatchAttrs.ThreadGroupCountX == 0)
-        LOG_WARNING_MESSAGE("ThreadGroupCountX is zero");
+    if(DispatchAttrs.pIndirectDispatchAttribs == nullptr)
+    {
+        if (DispatchAttrs.ThreadGroupCountX == 0)
+            LOG_WARNING_MESSAGE("ThreadGroupCountX is zero");
 
-    if (DispatchAttrs.ThreadGroupCountY == 0)
-        LOG_WARNING_MESSAGE("ThreadGroupCountY is zero");
+        if (DispatchAttrs.ThreadGroupCountY == 0)
+            LOG_WARNING_MESSAGE("ThreadGroupCountY is zero");
 
-    if (DispatchAttrs.ThreadGroupCountZ == 0)
-        LOG_WARNING_MESSAGE("ThreadGroupCountZ is zero");
+        if (DispatchAttrs.ThreadGroupCountZ == 0)
+            LOG_WARNING_MESSAGE("ThreadGroupCountZ is zero");
+    }
 
     return true;
 }
