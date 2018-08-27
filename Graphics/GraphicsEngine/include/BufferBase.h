@@ -268,7 +268,7 @@ void BufferBase<BaseInterface, RenderDeviceImplType, BufferViewImplType, TBuffVi
             if (this->m_Desc.Mode == BUFFER_MODE_RAW && this->m_Desc.ElementByteStride == 0)
                 LOG_ERROR_AND_THROW("To enable formatted views of a raw buffer, element byte must be specified during buffer initialization");
             if (ViewElementStride != this->m_Desc.ElementByteStride)
-                LOG_ERROR_AND_THROW("Buffer element byte stride (", this->m_Desc.ElementByteStride, ") is not consistent with the size (", ViewElementStride, ") defined by the fromat of the view (", GetBufferFormatString(ViewDesc.Format), ')' );
+                LOG_ERROR_AND_THROW("Buffer element byte stride (", this->m_Desc.ElementByteStride, ") is not consistent with the size (", ViewElementStride, ") defined by the format of the view (", GetBufferFormatString(ViewDesc.Format), ')' );
         }
 
         if (this->m_Desc.Mode == BUFFER_MODE_RAW && ViewDesc.Format.ValueType == VT_UNDEFINED)

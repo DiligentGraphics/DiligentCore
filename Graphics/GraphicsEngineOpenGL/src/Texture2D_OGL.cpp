@@ -154,7 +154,7 @@ void Texture2D_OGL::UpdateData( IDeviceContext *pContext, Uint32 MipLevel, Uint3
                 ((DstBox.MaxY % 4) == 0 || DstBox.MaxY == std::max(m_Desc.Height>>MipLevel, 1U)), 
                 "Compressed texture update region must be 4 pixel-aligned" );
         const auto &FmtAttribs = GetTextureFormatAttribs(m_Desc.Format);
-        auto BlockBytesInRow = ((DstBox.MaxX - DstBox.MinX + 3)/4) * FmtAttribs.ComponentSize;
+        auto BlockBytesInRow = ((DstBox.MaxX - DstBox.MinX + 3)/4) * Uint32{FmtAttribs.ComponentSize};
         VERIFY( SubresData.Stride == BlockBytesInRow, 
                 "Compressed data stride (", SubresData.Stride, " must match the size of a row of compressed blocks (", BlockBytesInRow, ")" );
         

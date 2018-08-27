@@ -54,7 +54,7 @@ enum BUFFER_MODE : Uint8
 
     /// Raw buffer.
     /// In this mode, the buffer is accessed as raw bytes. Formatted views of a raw
-    /// buffer can be also created similar to formatted buffer. If formatted views
+    /// buffer can also be created similar to formatted buffer. If formatted views
     /// are to be created, the ElementByteStride member of BufferDesc must specify the 
     /// size of the format.
     BUFFER_MODE_RAW,

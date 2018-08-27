@@ -40,7 +40,8 @@ namespace Diligent
         TBuffViewBase(pRefCounters, pDevice, ViewDesc, pBuffer, bIsDefaultView ),
         m_GLTexBuffer(false)
     {
-        if( ViewDesc.ViewType == BUFFER_VIEW_SHADER_RESOURCE && pBuffer->GetDesc().Mode == BUFFER_MODE_FORMATTED )
+        if( ViewDesc.ViewType == BUFFER_VIEW_SHADER_RESOURCE && 
+            (pBuffer->GetDesc().Mode == BUFFER_MODE_FORMATTED || pBuffer->GetDesc().Mode == BUFFER_MODE_RAW) )
         {
 #ifdef _MSC_VER
 #   pragma warning(push)
@@ -58,8 +59,13 @@ namespace Diligent
             ContextState.BindTexture(-1, GL_TEXTURE_BUFFER, m_GLTexBuffer );
 
             const auto &BuffFmt = ViewDesc.Format;
-            VERIFY_EXPR(BuffFmt.ValueType != VT_UNDEFINED);
-            auto GLFormat = TypeToGLTexFormat( BuffFmt.ValueType, BuffFmt.NumComponents, BuffFmt.IsNormalized );
+            GLenum GLFormat = 0;
+            if(pBuffer->GetDesc().Mode == BUFFER_MODE_FORMATTED || BuffFmt.ValueType != VT_UNDEFINED)
+                GLFormat = TypeToGLTexFormat( BuffFmt.ValueType, BuffFmt.NumComponents, BuffFmt.IsNormalized );
+            else
+            {
+                GLFormat = GL_R32UI;
+            }
             glTexBuffer( GL_TEXTURE_BUFFER, GLFormat, pBuffer->GetGLHandle() );
             CHECK_GL_ERROR_AND_THROW( "Failed to create texture buffer" );
 

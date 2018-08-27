@@ -51,7 +51,7 @@ namespace Diligent
         if(FmtAttribs.NumComponents >= 4)
             GlFmt[pos++] = 'a';
         VERIFY_EXPR(FmtAttribs.NumComponents <= 4);
-        auto ComponentSize = FmtAttribs.ComponentSize * 8;
+        auto ComponentSize = Uint32{FmtAttribs.ComponentSize} * 8;
         int pow10 = 1;
         while(ComponentSize / (10*pow10) != 0)
             pow10 *= 10;
