@@ -96,11 +96,19 @@ public:
             return false;
     }
     
+    static constexpr const int SpinCountToYield = 256;
+
     static void UnsafeLock(LockFlag &LockFlag)
     {
+        int SpinCount = 0;
         while( !UnsafeTryLock( LockFlag ) )
         {
-            YieldThread();
+            ++SpinCount;
+            if(SpinCount == SpinCountToYield)
+            {
+                SpinCount = 0;
+                YieldThread();
+            }
         }
     }
 
@@ -108,9 +116,15 @@ public:
     {
         VERIFY( m_pLockFlag == NULL, "Object already locked" );
         // Wait for the flag to become unlocked and lock it
+        int SpinCount = 0;
         while( !TryLock( LockFlag ) )
         {
-            YieldThread();
+            ++SpinCount;
+            if(SpinCount == SpinCountToYield)
+            {
+                SpinCount = 0;
+                YieldThread();
+            }
         }
     }
 
