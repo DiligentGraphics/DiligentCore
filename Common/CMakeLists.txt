@@ -34,6 +34,7 @@ set(SOURCE
     src/DataBlobImpl.cpp
     src/DefaultRawMemoryAllocator.cpp
     src/FixedBlockMemoryAllocator.cpp
+    src/LockHelper.cpp
     src/Timer.cpp
 )
 

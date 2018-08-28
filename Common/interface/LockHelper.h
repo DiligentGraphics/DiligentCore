@@ -23,8 +23,6 @@
 
 #pragma once
 
-#include <thread>
-
 #include "../../Platforms/interface/Atomics.h"
 #include "../../Platforms/Basic/interface/DebugUtilities.h"
 
@@ -101,7 +99,9 @@ public:
     static void UnsafeLock(LockFlag &LockFlag)
     {
         while( !UnsafeTryLock( LockFlag ) )
-            std::this_thread::yield();
+        {
+            YieldThread();
+        }
     }
 
     void Lock(LockFlag &LockFlag)
@@ -109,7 +109,9 @@ public:
         VERIFY( m_pLockFlag == NULL, "Object already locked" );
         // Wait for the flag to become unlocked and lock it
         while( !TryLock( LockFlag ) )
-            std::this_thread::yield();
+        {
+            YieldThread();
+        }
     }
 
     static void UnsafeUnlock(LockFlag &LockFlag)
@@ -125,6 +127,8 @@ public:
     }
 
 private:
+    static void YieldThread();
+
     LockFlag *m_pLockFlag;
     LockHelper( const LockHelper &LockHelper );
     const LockHelper& operator = ( const LockHelper &LockHelper );
