@@ -34,6 +34,7 @@
 #include "RenderDeviceD3D12.h"
 #include "BufferD3D12.h"
 #include "TextureD3D12.h"
+#include "Signal.h"
 
 namespace Diligent
 {

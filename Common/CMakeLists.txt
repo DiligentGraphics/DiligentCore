@@ -19,6 +19,7 @@ set(INTERFACE
     interface/ObjectBase.h
     interface/RefCntAutoPtr.h
     interface/RefCountedObjectImpl.h
+    interface/Signal.h
     interface/STDAllocator.h
     interface/StringDataBlobImpl.h
     interface/StringTools.h
