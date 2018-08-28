@@ -194,18 +194,22 @@ struct TextureSubResData
 {
     /// Pointer to the subresource data in CPU memory.
     /// If provided, pSrcBuffer must be null
-    const void* pData;
+    const void* pData = nullptr;
 
     /// Pointer to the GPU buffer that contains subresource data.
     /// If provided, pData must be null
-    class IBuffer *pSrcBuffer;
+    class IBuffer* pSrcBuffer = nullptr;
+
+    /// When updating data from the buffer (pSrcBuffer is not null),
+    /// offset from the beginning of the buffer to the data start
+    Uint32 SrcOffset = 0;
 
     /// For 2D and 3D textures, row stride in bytes
-    Uint32 Stride;
+    Uint32 Stride = 0;
 
     /// For 3D textures, depth slice stride in bytes
     /// \note On OpenGL, this must be a mutliple of Stride
-    Uint32 DepthStride;
+    Uint32 DepthStride = 0;
 
     /// Initializes the structure members with default values
 
@@ -213,29 +217,27 @@ struct TextureSubResData
     /// Member          | Default value
     /// ----------------|--------------
     /// pData           | nullptr
+    /// SrcOffset       | 0
     /// Stride          | 0
     /// DepthStride     | 0
-    TextureSubResData():
-        pData(nullptr),
-        pSrcBuffer(nullptr),
-        Stride(0),
-        DepthStride(0)
-    {}
+    TextureSubResData(){}
     
     /// Initializes the structure members to perform copy from the CPU memory
-    TextureSubResData(void *_pData, Uint32 _Stride, Uint32 _DepthStride=0) :
-        pData(_pData),
-        pSrcBuffer(nullptr),
-        Stride(_Stride),
-        DepthStride(_DepthStride)
+    TextureSubResData(void *_pData, Uint32 _Stride, Uint32 _DepthStride = 0) :
+        pData       (_pData),
+        pSrcBuffer  (nullptr),
+        SrcOffset   (0),
+        Stride      (_Stride),
+        DepthStride (_DepthStride)
     {}
 
     /// Initializes the structure members to perform copy from the GPU buffer
-    TextureSubResData(IBuffer *_pBuffer, Uint32 _Stride, Uint32 _DepthStride=0) :
-        pData(nullptr),
-        pSrcBuffer(_pBuffer),
-        Stride(_Stride),
-        DepthStride(_DepthStride)
+    TextureSubResData(IBuffer *_pBuffer, Uint32 _SrcOffset, Uint32 _Stride, Uint32 _DepthStride = 0) :
+        pData       (nullptr),
+        pSrcBuffer  (_pBuffer),
+        SrcOffset   (_SrcOffset),
+        Stride      (_Stride),
+        DepthStride (_DepthStride)
     {}
 };
 
@@ -244,13 +246,13 @@ struct TextureData
 {
     /// Pointer to the array of the TextureSubResData elements containing
     /// information about each subresource.
-    TextureSubResData *pSubResources;
+    TextureSubResData* pSubResources = nullptr;
 
     /// Number of elements in pSubResources array.
     /// NumSubresources must exactly match the number
     /// of subresources in the texture. Otherwise an error
     /// occurs.
-    Uint32 NumSubresources;
+    Uint32 NumSubresources = 0;
 
     /// Initializes the structure members with default values
 
@@ -259,16 +261,13 @@ struct TextureData
     /// ----------------|--------------
     /// pSubResources   | nullptr
     /// NumSubresources | 0
-    TextureData() : 
-        pSubResources(nullptr),
-        NumSubresources(0)
-    {}
+    TextureData(){}
 };
 
 struct MappedTextureSubresource
 {
-    PVoid pData = nullptr;
-    Uint32 Stride = 0;
+    PVoid pData        = nullptr;
+    Uint32 Stride      = 0;
     Uint32 DepthStride = 0;
 };
 

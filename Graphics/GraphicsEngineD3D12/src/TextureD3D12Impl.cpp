@@ -408,19 +408,13 @@ void TextureD3D12Impl::UpdateData( IDeviceContext*          pContext,
                                    const TextureSubResData& SubresData )
 {
     TTextureBase::UpdateData( pContext, MipLevel, Slice, DstBox, SubresData );
-    if (SubresData.pSrcBuffer == nullptr)
-    {
-        LOG_ERROR("D3D12 does not allow updating texture subresource from CPU memory");
-        return;
-    }
-
-    VERIFY( m_Desc.Usage == USAGE_DEFAULT, "Only default usage resiurces can be updated with UpdateData()" );
 
     auto *pCtxD3D12 = ValidatedCast<DeviceContextD3D12Impl>(pContext);
-
     auto DstSubResIndex = D3D12CalcSubresource(MipLevel, Slice, 0, m_Desc.MipLevels, m_Desc.ArraySize);
- 
-    pCtxD3D12->CopyTextureRegion(SubresData.pSrcBuffer, SubresData.Stride, SubresData.DepthStride, this, DstSubResIndex, DstBox);
+    if (SubresData.pSrcBuffer == nullptr)
+        pCtxD3D12->UpdateTextureRegion(SubresData.pData, SubresData.Stride, SubresData.DepthStride, this, DstSubResIndex, DstBox);
+    else
+        pCtxD3D12->CopyTextureRegion(SubresData.pSrcBuffer, 0, SubresData.Stride, SubresData.DepthStride, this, DstSubResIndex, DstBox);
 }
 
 void TextureD3D12Impl ::  CopyData(IDeviceContext* pContext, 

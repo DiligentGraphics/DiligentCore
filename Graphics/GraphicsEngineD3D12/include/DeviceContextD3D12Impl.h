@@ -109,13 +109,34 @@ public:
     void UpdateBufferRegion(class BufferD3D12Impl *pBuffD3D12, struct DynamicAllocation& Allocation, Uint64 DstOffset, Uint64 NumBytes);
     void UpdateBufferRegion(class BufferD3D12Impl *pBuffD3D12, const void *pData, Uint64 DstOffset, Uint64 NumBytes);
     void CopyBufferRegion(class BufferD3D12Impl *pSrcBuffD3D12, class BufferD3D12Impl *pDstBuffD3D12, Uint64 SrcOffset, Uint64 DstOffset, Uint64 NumBytes);
-    void CopyTextureRegion(class TextureD3D12Impl *pSrcTexture, Uint32 SrcSubResIndex, const D3D12_BOX *pD3D12SrcBox,
+    void CopyTextureRegion(class TextureD3D12Impl *pSrcTexture, Uint32 SrcSubResIndex, const D3D12_BOX* pD3D12SrcBox,
                            class TextureD3D12Impl *pDstTexture, Uint32 DstSubResIndex, Uint32 DstX, Uint32 DstY, Uint32 DstZ);
-    void CopyTextureRegion(IBuffer *pSrcBuffer, Uint32 SrcStride, Uint32 SrcDepthStride, class TextureD3D12Impl *pTextureD3D12, Uint32 DstSubResIndex, const Box &DstBox);
+    void CopyTextureRegion(IBuffer*                 pSrcBuffer,
+                           Uint32                   SrcOffset,
+                           Uint32                   SrcStride,
+                           Uint32                   SrcDepthStride,
+                           class TextureD3D12Impl*  pTextureD3D12,
+                           Uint32 DstSubResIndex,
+                           const Box& DstBox);
+    void CopyTextureRegion(ID3D12Resource*         pd3d12Buffer,
+                           Uint32                  SrcOffset,
+                           Uint32                  SrcStride,
+                           Uint32                  SrcDepthStride,
+                           Uint32                  BufferSize,
+                           class TextureD3D12Impl* pTextureD3D12,
+                           Uint32                  DstSubResIndex,
+                           const Box&              DstBox);
+
+    void UpdateTextureRegion(const void*             pSrcData,
+                             Uint32                  SrcStride,
+                             Uint32                  SrcDepthStride,
+                             class TextureD3D12Impl* pTextureD3D12,
+                             Uint32                  DstSubResIndex,
+                             const Box&              DstBox);
 
     void GenerateMips(class TextureViewD3D12Impl *pTexView);
 
-    struct DynamicAllocation AllocateDynamicSpace(size_t NumBytes);
+    struct DynamicAllocation AllocateDynamicSpace(size_t NumBytes, size_t Alignment);
     
     Uint32 GetContextId()const{return m_ContextId;}
 

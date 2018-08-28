@@ -690,9 +690,9 @@ namespace Diligent
         }
     }
    
-    DynamicAllocation DeviceContextD3D12Impl::AllocateDynamicSpace(size_t NumBytes)
+    DynamicAllocation DeviceContextD3D12Impl::AllocateDynamicSpace(size_t NumBytes, size_t Alignment)
     {
-        return m_pUploadHeap->Allocate(NumBytes);
+        return m_pUploadHeap->Allocate(NumBytes + Alignment);
     }
 
     void DeviceContextD3D12Impl::UpdateBufferRegion(class BufferD3D12Impl* pBuffD3D12, DynamicAllocation& Allocation, Uint64 DstOffset, Uint64 NumBytes)
@@ -754,12 +754,16 @@ namespace Diligent
         ++m_NumCommandsInCurCtx;
     }
 
-    void DeviceContextD3D12Impl::CopyTextureRegion(IBuffer* pSrcBuffer, Uint32 SrcStride, Uint32 SrcDepthStride, class TextureD3D12Impl* pTextureD3D12, Uint32 DstSubResIndex, const Box& DstBox)
+    void DeviceContextD3D12Impl::CopyTextureRegion(ID3D12Resource*         pd3d12Buffer,
+                                                   Uint32                  SrcOffset, 
+                                                   Uint32                  SrcStride,
+                                                   Uint32                  SrcDepthStride,
+                                                   Uint32                  BufferSize,
+                                                   class TextureD3D12Impl* pTextureD3D12,
+                                                   Uint32                  DstSubResIndex,
+                                                   const Box&              DstBox)
     {
-        auto *pBufferD3D12 = ValidatedCast<BufferD3D12Impl>(pSrcBuffer);
         const auto& TexDesc = pTextureD3D12->GetDesc();
-        VERIFY(pBufferD3D12->GetState() == D3D12_RESOURCE_STATE_GENERIC_READ, "Staging buffer is expected to always be in D3D12_RESOURCE_STATE_GENERIC_READ state");
-
         auto *pCmdCtx = RequestCmdContext();
         auto *pCmdList = pCmdCtx->GetCommandList();
         auto TextureState = pTextureD3D12->GetState();
@@ -781,16 +785,16 @@ namespace Diligent
 
         D3D12_TEXTURE_COPY_LOCATION SrcLocation;
         SrcLocation.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-        SrcLocation.pResource = pBufferD3D12->GetD3D12Resource();
+        SrcLocation.pResource = pd3d12Buffer;
         D3D12_PLACED_SUBRESOURCE_FOOTPRINT &Footpring = SrcLocation.PlacedFootprint;
-        Footpring.Offset = 0;
-        Footpring.Footprint.Width = static_cast<UINT>(DstBox.MaxX - DstBox.MinX);
+        Footpring.Offset           = SrcOffset;
+        Footpring.Footprint.Width  = static_cast<UINT>(DstBox.MaxX - DstBox.MinX);
         Footpring.Footprint.Height = static_cast<UINT>(DstBox.MaxY - DstBox.MinY);
-        Footpring.Footprint.Depth = static_cast<UINT>(DstBox.MaxZ - DstBox.MinZ); // Depth cannot be 0
+        Footpring.Footprint.Depth  = static_cast<UINT>(DstBox.MaxZ - DstBox.MinZ); // Depth cannot be 0
         Footpring.Footprint.Format = TexFormatToDXGI_Format(TexDesc.Format);
 
         Footpring.Footprint.RowPitch = static_cast<UINT>(SrcStride);
-        VERIFY(Footpring.Footprint.RowPitch * Footpring.Footprint.Height * Footpring.Footprint.Depth <= pBufferD3D12->GetDesc().uiSizeInBytes, "Buffer is not large enough");
+        VERIFY(Footpring.Footprint.RowPitch * Footpring.Footprint.Height * Footpring.Footprint.Depth <= BufferSize, "Buffer is not large enough");
         VERIFY(SrcDepthStride == 0 || static_cast<UINT>(SrcDepthStride) == Footpring.Footprint.RowPitch * Footpring.Footprint.Height, "Depth stride must be equal to the size 2D level");
 
         D3D12_BOX D3D12SrcBox;
@@ -813,6 +817,58 @@ namespace Diligent
             std::swap(BarrierDesc.Transition.StateBefore, BarrierDesc.Transition.StateAfter);
             pCmdList->ResourceBarrier(1, &BarrierDesc);
         }
+    }
+
+    void DeviceContextD3D12Impl::CopyTextureRegion(IBuffer*                pSrcBuffer,
+                                                   Uint32                  SrcOffset, 
+                                                   Uint32                  SrcStride,
+                                                   Uint32                  SrcDepthStride,
+                                                   class TextureD3D12Impl* pTextureD3D12,
+                                                   Uint32                  DstSubResIndex,
+                                                   const Box&              DstBox)
+    {
+        auto* pBufferD3D12 = ValidatedCast<BufferD3D12Impl>(pSrcBuffer);
+        VERIFY(pBufferD3D12->GetState() == D3D12_RESOURCE_STATE_GENERIC_READ, "Staging buffer is expected to always be in D3D12_RESOURCE_STATE_GENERIC_READ state");
+        CopyTextureRegion(pBufferD3D12->GetD3D12Resource(), SrcOffset, SrcStride, SrcDepthStride, pBufferD3D12->GetDesc().uiSizeInBytes, pTextureD3D12, DstSubResIndex, DstBox);
+    }
+
+    void DeviceContextD3D12Impl::UpdateTextureRegion(const void*       pSrcData,
+                                                     Uint32            SrcStride,
+                                                     Uint32            SrcDepthStride,
+                                                     TextureD3D12Impl* pTextureD3D12,
+                                                     Uint32            DstSubResIndex,
+                                                     const Box&        DstBox)
+    {
+        const auto& TexDesc = pTextureD3D12->GetDesc();
+        const auto& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
+        VERIFY_EXPR(DstBox.MaxX > DstBox.MinX && DstBox.MaxY > DstBox.MinY && DstBox.MaxZ > DstBox.MinZ);
+        auto UpdateRegionWidth  = DstBox.MaxX - DstBox.MinX;
+        auto UpdateRegionHeight = DstBox.MaxY - DstBox.MinY;
+        auto UpdateRegionDepth  = DstBox.MaxZ - DstBox.MinZ;
+        auto BufferDataStride      = UpdateRegionWidth * FmtAttribs.ComponentSize * FmtAttribs.NumComponents;
+        auto BufferDataDepthStride = UpdateRegionHeight * BufferDataStride;
+        auto MemorySize = UpdateRegionDepth * BufferDataDepthStride;
+        auto UploadSpace = AllocateDynamicSpace(MemorySize, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
+        auto AlignedOffset = (UploadSpace.Offset + (D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT-1)) & ~(D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT-1);
+
+        for(Uint32 slice = 0; slice < UpdateRegionDepth; ++slice)
+        {
+            for(Uint32 row = 0; row < UpdateRegionHeight; ++row)
+            {
+                const auto* pSrcPtr =
+                    reinterpret_cast<const Uint8*>(pSrcData)
+                    + row   * SrcStride
+                    + slice * SrcDepthStride;
+                auto* pDstPtr =
+                    reinterpret_cast<Uint8*>(UploadSpace.CPUAddress)
+                    + (AlignedOffset - UploadSpace.Offset)
+                    + row   * BufferDataStride
+                    + slice * BufferDataDepthStride;
+                
+                memcpy(pDstPtr, pSrcPtr, BufferDataStride);
+            }
+        }
+        CopyTextureRegion(UploadSpace.pBuffer, static_cast<Uint32>(AlignedOffset), BufferDataStride, BufferDataDepthStride, MemorySize, pTextureD3D12, DstSubResIndex, DstBox);
     }
 
     void DeviceContextD3D12Impl::GenerateMips(TextureViewD3D12Impl* pTexView)

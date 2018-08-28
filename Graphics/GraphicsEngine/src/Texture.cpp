@@ -117,9 +117,9 @@ void ValidateTextureRegion(const TextureDesc &TexDesc, Uint32 MipLevel, Uint32 S
 #define VERIFY_TEX_PARAMS(Expr, ...) if(!(Expr))LOG_ERROR("Texture \"", TexDesc.Name ? TexDesc.Name : "", "\": ", ##__VA_ARGS__)
 #ifdef DEVELOPMENT
     VERIFY_TEX_PARAMS( MipLevel < TexDesc.MipLevels, "Mip level (", MipLevel, ") is out of allowed range [0, ", TexDesc.MipLevels-1, "]" );
-    VERIFY_TEX_PARAMS( Box.MinX < Box.MaxX, "X range of the update region is invalid: ", Box.MinX, "..", Box.MaxX);
-    VERIFY_TEX_PARAMS( Box.MinY < Box.MaxY, "Y range of the update region is invalid: ", Box.MinY, "..", Box.MaxY);
-    VERIFY_TEX_PARAMS( Box.MinZ < Box.MaxZ, "Z range of the update region is invalid: ", Box.MinZ, "..", Box.MaxZ);
+    VERIFY_TEX_PARAMS( Box.MinX < Box.MaxX, "Invalid X range: ", Box.MinX, "..", Box.MaxX);
+    VERIFY_TEX_PARAMS( Box.MinY < Box.MaxY, "Invalid Y range: ", Box.MinY, "..", Box.MaxY);
+    VERIFY_TEX_PARAMS( Box.MinZ < Box.MaxZ, "Invalid Z range: ", Box.MinZ, "..", Box.MaxZ);
     
     if( TexDesc.Type == RESOURCE_DIM_TEX_1D_ARRAY ||
         TexDesc.Type == RESOURCE_DIM_TEX_2D_ARRAY ||
