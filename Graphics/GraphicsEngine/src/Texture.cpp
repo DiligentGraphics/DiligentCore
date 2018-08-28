@@ -117,9 +117,9 @@ void ValidateTextureRegion(const TextureDesc &TexDesc, Uint32 MipLevel, Uint32 S
 #define VERIFY_TEX_PARAMS(Expr, ...) if(!(Expr))LOG_ERROR("Texture \"", TexDesc.Name ? TexDesc.Name : "", "\": ", ##__VA_ARGS__)
 #ifdef DEVELOPMENT
     VERIFY_TEX_PARAMS( MipLevel < TexDesc.MipLevels, "Mip level (", MipLevel, ") is out of allowed range [0, ", TexDesc.MipLevels-1, "]" );
-    VERIFY_TEX_PARAMS( Box.MinX < Box.MaxX, "Incorrect X range [",Box.MinX, ", ", Box.MaxX, ")" );
-    VERIFY_TEX_PARAMS( Box.MinY < Box.MaxY, "Incorrect Y range [",Box.MinY, ", ", Box.MaxY, ")" );
-    VERIFY_TEX_PARAMS( Box.MinZ < Box.MaxZ, "Incorrect Z range [",Box.MinZ, ", ", Box.MaxZ, ")" );
+    VERIFY_TEX_PARAMS( Box.MinX < Box.MaxX, "X range of the update region is invalid: ", Box.MinX, "..", Box.MaxX);
+    VERIFY_TEX_PARAMS( Box.MinY < Box.MaxY, "Y range of the update region is invalid: ", Box.MinY, "..", Box.MaxY);
+    VERIFY_TEX_PARAMS( Box.MinZ < Box.MaxZ, "Z range of the update region is invalid: ", Box.MinZ, "..", Box.MaxZ);
     
     if( TexDesc.Type == RESOURCE_DIM_TEX_1D_ARRAY ||
         TexDesc.Type == RESOURCE_DIM_TEX_2D_ARRAY ||
@@ -157,6 +157,8 @@ void ValidateUpdateDataParams( const TextureDesc &TexDesc, Uint32 MipLevel, Uint
     ValidateTextureRegion(TexDesc, MipLevel, Slice, DstBox);
 
 #ifdef DEVELOPMENT
+    VERIFY_TEX_PARAMS( TexDesc.Usage == USAGE_DEFAULT, "Only textures created with USAGE_DEFAULT can be updated with UpdateData()" );
+    VERIFY_TEX_PARAMS( TexDesc.SampleCount == 1, "Only non-multisampled textures can be updated with UpdateData()" );
     VERIFY_TEX_PARAMS( (SubresData.Stride & 0x03) == 0, "Texture data stride (", SubresData.Stride, ") must be at least 32-bit aligned" );
     VERIFY_TEX_PARAMS( (SubresData.DepthStride & 0x03) == 0, "Texture data depth stride (", SubresData.DepthStride, ") must be at least 32-bit aligned" );
 #endif

@@ -155,8 +155,6 @@ void TextureBaseD3D11::UpdateData( IDeviceContext* pContext, Uint32 MipLevel, Ui
         return;
     }
 
-    VERIFY( m_Desc.Usage == USAGE_DEFAULT, "Only default usage resiurces can be updated with UpdateData()" );
-    
     auto* pd3d11DeviceContext = static_cast<DeviceContextD3D11Impl*>(pContext)->GetD3D11DeviceContext();
 
     D3D11_BOX D3D11Box;

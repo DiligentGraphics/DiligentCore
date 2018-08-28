@@ -146,48 +146,42 @@ IShaderVariable* ShaderResourceBindingD3D11Impl::GetVariable(SHADER_TYPE ShaderT
 {
     auto Ind = GetShaderTypeIndex(ShaderType);
     VERIFY_EXPR(Ind >= 0 && Ind < _countof(m_ResourceLayoutIndex));
-    if( Ind >= 0 )
+    auto ResLayoutIndex = m_ResourceLayoutIndex[Ind];
+    if( ResLayoutIndex < 0 )
     {
-        auto ResLayoutIndex = m_ResourceLayoutIndex[Ind];
-        return m_pResourceLayouts[ResLayoutIndex].GetShaderVariable(Name);
-    }
-    else
-    {
-        LOG_ERROR("Shader type ", GetShaderTypeLiteralName(ShaderType)," is not active in the resource binding");
+        LOG_ERROR("Unable to find mutable/dynamic variable '", Name, "': shader stage ", GetShaderTypeLiteralName(ShaderType), " is inactive");
         return nullptr;
     }
+
+    return m_pResourceLayouts[ResLayoutIndex].GetShaderVariable(Name);
 }
 
 Uint32 ShaderResourceBindingD3D11Impl::GetVariableCount(SHADER_TYPE ShaderType) const
 {
     auto Ind = GetShaderTypeIndex(ShaderType);
     VERIFY_EXPR(Ind >= 0 && Ind < _countof(m_ResourceLayoutIndex));
-    if( Ind >= 0 )
+    auto ResLayoutIndex = m_ResourceLayoutIndex[Ind];
+    if( ResLayoutIndex < 0 )
     {
-        auto ResLayoutIndex = m_ResourceLayoutIndex[Ind];
-        return m_pResourceLayouts[ResLayoutIndex].GetTotalResourceCount();
-    }
-    else
-    {
-        LOG_ERROR("Shader type ", GetShaderTypeLiteralName(ShaderType)," is not active in the resource binding");
+        LOG_ERROR("Unable to get the number of mutable/dynamic variables: shader stage ", GetShaderTypeLiteralName(ShaderType), " is inactive");
         return 0;
     }
+
+    return m_pResourceLayouts[ResLayoutIndex].GetTotalResourceCount();
 }
 
 IShaderVariable* ShaderResourceBindingD3D11Impl::GetVariable(SHADER_TYPE ShaderType, Uint32 Index)
 {
     auto Ind = GetShaderTypeIndex(ShaderType);
     VERIFY_EXPR(Ind >= 0 && Ind < _countof(m_ResourceLayoutIndex));
-    if( Ind >= 0 )
+    auto ResLayoutIndex = m_ResourceLayoutIndex[Ind];
+    if( ResLayoutIndex < 0 )
     {
-        auto ResLayoutIndex = m_ResourceLayoutIndex[Ind];
-        return m_pResourceLayouts[ResLayoutIndex].GetShaderVariable(Index);
-    }
-    else
-    {
-        LOG_ERROR("Shader type ", GetShaderTypeLiteralName(ShaderType)," is not active in the resource binding");
+        LOG_ERROR("Unable to get mutable/dynamic variable at index ", Index, ": shader stage ", GetShaderTypeLiteralName(ShaderType), " is inactive");
         return nullptr;
     }
+
+    return m_pResourceLayouts[ResLayoutIndex].GetShaderVariable(Index);
 }
 
 }

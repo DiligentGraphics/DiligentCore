@@ -107,7 +107,7 @@ IShaderVariable* ShaderResourceBindingVkImpl::GetVariable(SHADER_TYPE ShaderType
     auto ResLayoutInd = m_ResourceLayoutIndex[ShaderInd];
     if (ResLayoutInd < 0)
     {
-        LOG_ERROR("Failed to find variable \"", Name,"\" in shader resource binding: shader type ", GetShaderTypeLiteralName(ShaderType), " is not initialized");
+        LOG_ERROR("Unable to find mutable/dynamic variable '", Name, "': shader stage ", GetShaderTypeLiteralName(ShaderType), " is inactive");
         return nullptr;
     }
     return m_pShaderVarMgrs[ResLayoutInd].GetVariable(Name);
@@ -119,7 +119,7 @@ Uint32 ShaderResourceBindingVkImpl::GetVariableCount(SHADER_TYPE ShaderType) con
     auto ResLayoutInd = m_ResourceLayoutIndex[ShaderInd];
     if (ResLayoutInd < 0)
     {
-        LOG_ERROR("Unable to get the number of varibles for shader type ", GetShaderTypeLiteralName(ShaderType), ": shader stage is not initialized");
+        LOG_ERROR("Unable to get the number of mutable/dynamic variables: shader stage ", GetShaderTypeLiteralName(ShaderType), " is inactive");
         return 0;
     }
     return m_pShaderVarMgrs[ResLayoutInd].GetVariableCount();
@@ -131,7 +131,7 @@ IShaderVariable* ShaderResourceBindingVkImpl::GetVariable(SHADER_TYPE ShaderType
     auto ResLayoutInd = m_ResourceLayoutIndex[ShaderInd];
     if (ResLayoutInd < 0)
     {
-        LOG_ERROR("Failed to find variable at index \"", Index, "\" in shader resource binding: shader type ", GetShaderTypeLiteralName(ShaderType), " is not initialized");
+        LOG_ERROR("Unable to get mutable/dynamic variable at index ", Index, ": shader stage ", GetShaderTypeLiteralName(ShaderType), " is inactive");
         return nullptr;
     }
     return m_pShaderVarMgrs[ResLayoutInd].GetVariable(Index);
