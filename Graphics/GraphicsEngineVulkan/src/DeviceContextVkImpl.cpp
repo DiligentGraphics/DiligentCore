@@ -1123,68 +1123,89 @@ namespace Diligent
         ++m_State.NumCommands;
     }
 
-#if 0
-    void DeviceContextVkImpl::CopyTextureRegion(IBuffer *pSrcBuffer, Uint32 SrcStride, Uint32 SrcDepthStride, class TextureVkImpl *pTextureVk, Uint32 DstSubResIndex, const Box &DstBox)
+    void DeviceContextVkImpl::UpdateTextureRegion(const void*    pSrcData,
+                                                  Uint32         SrcStride,
+                                                  Uint32         SrcDepthStride,
+                                                  TextureVkImpl& TextureVk,
+                                                  Uint32         MipLevel,
+                                                  Uint32         Slice,
+                                                  const Box&     DstBox)
     {
-        auto *pBufferVk = ValidatedCast<BufferVkImpl>(pSrcBuffer);
-        const auto& TexDesc = pTextureVk->GetDesc();
-        VERIFY(pBufferVk->GetState() == Vk_RESOURCE_STATE_GENERIC_READ, "Staging buffer is expected to always be in Vk_RESOURCE_STATE_GENERIC_READ state");
-
-        auto *pCmdCtx = RequestCmdContext();
-        auto *pCmdList = pCmdCtx->GetCommandList();
-        auto TextureState = pTextureVk->GetState();
-        Vk_RESOURCE_BARRIER BarrierDesc;
-		BarrierDesc.Type = Vk_RESOURCE_BARRIER_TYPE_TRANSITION;
-		BarrierDesc.Transition.pResource = pTextureVk->GetVkResource();
-		BarrierDesc.Transition.Subresource = DstSubResIndex;
-		BarrierDesc.Transition.StateBefore = TextureState;
-		BarrierDesc.Transition.StateAfter = Vk_RESOURCE_STATE_COPY_DEST;
-        BarrierDesc.Flags = Vk_RESOURCE_BARRIER_FLAG_NONE;
-        bool StateTransitionRequired = (TextureState & Vk_RESOURCE_STATE_COPY_DEST) != Vk_RESOURCE_STATE_COPY_DEST;
-	    if (StateTransitionRequired)
-            pCmdList->ResourceBarrier(1, &BarrierDesc);
-
-        Vk_TEXTURE_COPY_LOCATION DstLocation;
-        DstLocation.Type = Vk_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-        DstLocation.pResource = pTextureVk->GetVkResource();
-        DstLocation.SubresourceIndex = static_cast<UINT>(DstSubResIndex);
-
-        Vk_TEXTURE_COPY_LOCATION SrcLocation;
-        SrcLocation.Type = Vk_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-        SrcLocation.pResource = pBufferVk->GetVkResource();
-        Vk_PLACED_SUBRESOURCE_FOOTPRINT &Footpring = SrcLocation.PlacedFootprint;
-        Footpring.Offset = 0;
-        Footpring.Footprint.Width = static_cast<UINT>(DstBox.MaxX - DstBox.MinX);
-        Footpring.Footprint.Height = static_cast<UINT>(DstBox.MaxY - DstBox.MinY);
-        Footpring.Footprint.Depth = static_cast<UINT>(DstBox.MaxZ - DstBox.MinZ); // Depth cannot be 0
-        Footpring.Footprint.Format = TexFormatToDXGI_Format(TexDesc.Format);
-
-        Footpring.Footprint.RowPitch = static_cast<UINT>(SrcStride);
-        VERIFY(Footpring.Footprint.RowPitch * Footpring.Footprint.Height * Footpring.Footprint.Depth <= pBufferVk->GetDesc().uiSizeInBytes, "Buffer is not large enough");
-        VERIFY(SrcDepthStride == 0 || static_cast<UINT>(SrcDepthStride) == Footpring.Footprint.RowPitch * Footpring.Footprint.Height, "Depth stride must be equal to the size 2D level");
-
-        Vk_BOX VkSrcBox;
-        VkSrcBox.left    = 0;
-        VkSrcBox.right   = Footpring.Footprint.Width;
-        VkSrcBox.top     = 0;
-        VkSrcBox.bottom  = Footpring.Footprint.Height;
-        VkSrcBox.front   = 0;
-        VkSrcBox.back    = Footpring.Footprint.Depth;
-        pCmdCtx->GetCommandList()->CopyTextureRegion( &DstLocation, 
-            static_cast<UINT>( DstBox.MinX ), 
-            static_cast<UINT>( DstBox.MinY ), 
-            static_cast<UINT>( DstBox.MinZ ),
-            &SrcLocation, &VkSrcBox);
-
-        ++m_State.NumCommands;
-
-        if (StateTransitionRequired)
+        const auto& TexDesc = TextureVk.GetDesc();
+        VERIFY(TexDesc.SampleCount == 1, "Only single-sample textures can be updated with vkCmdCopyBufferToImage()");
+        const auto& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
+        VERIFY_EXPR(DstBox.MaxX > DstBox.MinX && DstBox.MaxY > DstBox.MinY && DstBox.MaxZ > DstBox.MinZ);
+        auto UpdateRegionWidth  = DstBox.MaxX - DstBox.MinX;
+        auto UpdateRegionHeight = DstBox.MaxY - DstBox.MinY;
+        auto UpdateRegionDepth  = DstBox.MaxZ - DstBox.MinZ;
+        auto BufferDataStride      = UpdateRegionWidth * Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents};
+        auto BufferDataDepthStride = UpdateRegionHeight * BufferDataStride;
+        auto MemorySize = UpdateRegionDepth * BufferDataDepthStride;
+        size_t Alignment = 4;
+        auto UploadSpace = AllocateDynamicSpace(MemorySize + static_cast<Uint32>(Alignment));
+        auto AlignedOffset = (UploadSpace.Offset + (Alignment-1)) & ~(Alignment-1);
+        for(Uint32 slice = 0; slice < UpdateRegionDepth; ++slice)
         {
-            std::swap(BarrierDesc.Transition.StateBefore, BarrierDesc.Transition.StateAfter);
-            pCmdList->ResourceBarrier(1, &BarrierDesc);
+            for(Uint32 row = 0; row < UpdateRegionHeight; ++row)
+            {
+                const auto* pSrcPtr =
+                    reinterpret_cast<const Uint8*>(pSrcData)
+                    + row   * SrcStride
+                    + slice * SrcDepthStride;
+                auto* pDstPtr =
+                    UploadSpace.pDynamicMemMgr->GetCPUAddress()
+                    + AlignedOffset
+                    + row   * BufferDataStride
+                    + slice * BufferDataDepthStride;
+                
+                memcpy(pDstPtr, pSrcPtr, BufferDataStride);
+            }
         }
+
+
+        EnsureVkCmdBuffer();
+        if (TextureVk.GetLayout() != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+        {
+            TransitionImageLayout(TextureVk, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+        }
+
+        VkBufferImageCopy CopyRegion = {};
+        CopyRegion.bufferOffset = AlignedOffset; // must be a multiple of 4 (18.4)
+
+        // bufferRowLength and bufferImageHeight specify the data in buffer memory as a subregion of a larger two- or
+        // three-dimensional image, and control the addressing calculations of data in buffer memory. If either of these
+        // values is zero, that aspect of the buffer memory is considered to be tightly packed according to the imageExtent (18.4).
+        CopyRegion.bufferRowLength   = 0;
+        CopyRegion.bufferImageHeight = 0;
+
+        // The aspectMask member of imageSubresource must only have a single bit set (18.4)
+        if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH)
+            CopyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+        else if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
+        {
+            UNSUPPORTED("Updating depth-stencil texture is not currently supported");
+            // When copying to or from a depth or stencil aspect, the data in buffer memory uses a layout 
+            // that is a (mostly) tightly packed representation of the depth or stencil data.
+            // To copy both the depth and stencil aspects of a depth/stencil format, two entries in 
+            // pRegions can be used, where one specifies the depth aspect in imageSubresource, and the 
+            // other specifies the stencil aspect (18.4)
+        }
+        else
+            CopyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+        CopyRegion.imageSubresource.baseArrayLayer = Slice;
+        CopyRegion.imageSubresource.layerCount = 1;
+        CopyRegion.imageSubresource.mipLevel = MipLevel;
+        CopyRegion.imageOffset = VkOffset3D{static_cast<int32_t>(DstBox.MinX), static_cast<int32_t>(DstBox.MinY), static_cast<int32_t>(DstBox.MinZ)};
+        CopyRegion.imageExtent = VkExtent3D{UpdateRegionWidth, UpdateRegionHeight, UpdateRegionDepth};
+        
+        m_CommandBuffer.CopyBufferToImage(
+            UploadSpace.pDynamicMemMgr->GetVkBuffer(),
+            TextureVk.GetVkImage(),
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, // must be VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL or VK_IMAGE_LAYOUT_GENERAL (18.4)
+            1,
+            &CopyRegion);
     }
-#endif
 
     void DeviceContextVkImpl::FinishCommandList(class ICommandList **ppCommandList)
     {

@@ -469,24 +469,13 @@ TextureVkImpl :: ~TextureVkImpl()
     m_pDevice->SafeReleaseVkObject(std::move(m_MemoryAllocation));
 }
 
-void TextureVkImpl::UpdateData( IDeviceContext *pContext, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData )
+void TextureVkImpl::UpdateData( IDeviceContext *pContext, Uint32 MipLevel, Uint32 Slice, const Box& DstBox, const TextureSubResData& SubresData )
 {
     TTextureBase::UpdateData( pContext, MipLevel, Slice, DstBox, SubresData );
-    if (SubresData.pSrcBuffer == nullptr)
-    {
-        LOG_ERROR("Vk does not allow updating texture subresource from CPU memory");
-        return;
-    }
 
-    VERIFY( m_Desc.Usage == USAGE_DEFAULT, "Only default usage resources can be updated with UpdateData()" );
-
-#if 0
     auto *pCtxVk = ValidatedCast<DeviceContextVkImpl>(pContext);
-
-    auto DstSubResIndex = VkCalcSubresource(MipLevel, Slice, 0, m_Desc.MipLevels, m_Desc.ArraySize);
- 
-    pCtxVk->CopyTextureRegion(SubresData.pSrcBuffer, SubresData.Stride, SubresData.DepthStride, this, DstSubResIndex, DstBox);
-#endif
+    //pCtxVk->CopyTextureRegion(SubresData.pSrcBuffer, SubresData.Stride, SubresData.DepthStride, this, DstSubResIndex, DstBox);
+    pCtxVk->UpdateTextureRegion(SubresData.pData, SubresData.Stride, SubresData.DepthStride, *this, MipLevel, Slice, DstBox);
 }
 
 void TextureVkImpl ::  CopyData(IDeviceContext* pContext, 

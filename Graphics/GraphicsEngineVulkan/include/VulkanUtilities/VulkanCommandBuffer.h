@@ -357,6 +357,22 @@ namespace VulkanUtilities
             vkCmdCopyImage(m_VkCmdBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, regionCount, pRegions);
         }
 
+        void CopyBufferToImage(VkBuffer                  srcBuffer,
+                               VkImage                   dstImage,
+                               VkImageLayout             dstImageLayout,
+                               uint32_t                  regionCount,
+                               const VkBufferImageCopy*  pRegions)
+        {
+            VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
+            if (m_State.RenderPass  != VK_NULL_HANDLE)
+            {
+                // Copy operations must be performed outside of render pass.
+                EndRenderPass();
+            }
+
+            vkCmdCopyBufferToImage(m_VkCmdBuffer, srcBuffer, dstImage, dstImageLayout, regionCount, pRegions);
+        }
+
         void FlushBarriers();
 
         void SetVkCmdBuffer(VkCommandBuffer VkCmdBuffer)

@@ -125,9 +125,15 @@ public:
 
     void CopyBufferRegion(class BufferVkImpl* pSrcBuffVk, class BufferVkImpl* pDstBuffVk, Uint64 SrcOffset, Uint64 DstOffset, Uint64 NumBytes);
     void CopyTextureRegion(class TextureVkImpl* pSrcTexture, class TextureVkImpl* pDstTexture, const VkImageCopy &CopyRegion);
-#if 0
-    void CopyTextureRegion(IBuffer* pSrcBuffer, Uint32 SrcStride, Uint32 SrcDepthStride, class TextureVkImpl* pTextureVk, Uint32 DstSubResIndex, const Box &DstBox);
-#endif
+
+    void UpdateTextureRegion(const void*          pSrcData,
+                             Uint32               SrcStride,
+                             Uint32               SrcDepthStride,
+                             class TextureVkImpl& TextureVk,
+                             Uint32               MipLevel,
+                             Uint32               Slice,
+                             const Box&           DstBox);
+
     void GenerateMips(class TextureViewVkImpl& TexView)
     {
         m_GenerateMipsHelper->GenerateMips(TexView, *this, *m_GenerateMipsSRB);
