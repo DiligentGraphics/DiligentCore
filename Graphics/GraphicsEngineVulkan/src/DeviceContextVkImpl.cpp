@@ -1141,6 +1141,8 @@ namespace Diligent
         auto PixelSize = Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents};
         auto BufferDataStride      = UpdateRegionWidth * PixelSize;
         auto BufferDataDepthStride = UpdateRegionHeight * BufferDataStride;
+        VERIFY(SrcStride >= UpdateRegionWidth * PixelSize, "Source data stride (", SrcStride, ") is below the image row width (", UpdateRegionWidth * PixelSize, ")");
+        VERIFY(SrcDepthStride == 0 || SrcDepthStride >= SrcStride * UpdateRegionHeight, "Source data depth stride (", SrcDepthStride, ") is below the image plane size (", SrcStride * UpdateRegionHeight, ")");
         auto MemorySize = UpdateRegionDepth * BufferDataDepthStride;
         size_t Alignment = 4;
         auto UploadSpace = AllocateDynamicSpace(MemorySize + static_cast<Uint32>(Alignment));

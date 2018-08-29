@@ -852,6 +852,8 @@ namespace Diligent
         auto UpdateRegionDepth  = DstBox.MaxZ - DstBox.MinZ;
         auto PixelSize = Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents};
         auto BufferDataStride   = UpdateRegionWidth * PixelSize;
+        VERIFY(SrcStride >= UpdateRegionWidth * PixelSize, "Source data stride (", SrcStride, ") is below the image row width (", UpdateRegionWidth * PixelSize, ")");
+        VERIFY(SrcDepthStride == 0 || SrcDepthStride >= SrcStride * UpdateRegionHeight, "Source data depth stride (", SrcDepthStride, ") is below the image plane size (", SrcStride * UpdateRegionHeight, ")");
         // RowPitch must be a multiple of 256 (aka. D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)
         BufferDataStride = (BufferDataStride + D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1) & ~(D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1);
         auto BufferDataDepthStride = UpdateRegionHeight * BufferDataStride;
