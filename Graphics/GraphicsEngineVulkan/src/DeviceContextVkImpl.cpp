@@ -1142,7 +1142,7 @@ namespace Diligent
             UpdateRegionWidth / Uint32{FmtAttribs.BlockWidth} * Uint32{FmtAttribs.ComponentSize} :
             UpdateRegionWidth * Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents};
         VERIFY(SrcStride >= RowSize, "Source data stride (", SrcStride, ") is below the image row size (", RowSize, ")");
-        VERIFY(SrcDepthStride == 0 || SrcDepthStride >= SrcStride * UpdateRegionHeight, "Source data depth stride (", SrcDepthStride, ") is below the image plane size (", SrcStride * UpdateRegionHeight, ")");
+        VERIFY(SrcDepthStride == 0 || SrcDepthStride >= SrcStride * (UpdateRegionHeight / FmtAttribs.BlockHeight), "Source data depth stride (", SrcDepthStride, ") is below the image plane size (", SrcStride * UpdateRegionHeight, ")");
         const auto BufferDataStride      = RowSize;
         const auto BufferDataDepthStride = UpdateRegionHeight * BufferDataStride;
         auto MemorySize = UpdateRegionDepth * BufferDataDepthStride;

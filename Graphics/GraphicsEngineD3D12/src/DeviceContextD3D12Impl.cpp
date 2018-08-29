@@ -854,7 +854,7 @@ namespace Diligent
             UpdateRegionWidth / Uint32{FmtAttribs.BlockWidth} * Uint32{FmtAttribs.ComponentSize} :
             UpdateRegionWidth * Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents};
         VERIFY(SrcStride >= RowSize, "Source data stride (", SrcStride, ") is below the image row size (", RowSize, ")");
-        VERIFY(SrcDepthStride == 0 || SrcDepthStride >= SrcStride * UpdateRegionHeight, "Source data depth stride (", SrcDepthStride, ") is below the image plane size (", SrcStride * UpdateRegionHeight, ")");
+        VERIFY(SrcDepthStride == 0 || SrcDepthStride >= SrcStride * (UpdateRegionHeight / FmtAttribs.BlockHeight), "Source data depth stride (", SrcDepthStride, ") is below the image plane size (", SrcStride * UpdateRegionHeight, ")");
         // RowPitch must be a multiple of 256 (aka. D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)
         const auto BufferDataStride = (RowSize + D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1) & ~(D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1);
         const auto BufferDataDepthStride = UpdateRegionHeight * BufferDataStride;

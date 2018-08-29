@@ -178,7 +178,7 @@ void ValidateUpdateDataParams( const TextureDesc& TexDesc, Uint32 MipLevel, Uint
         UpdateRegionWidth / Uint32{FmtAttribs.BlockWidth} * Uint32{FmtAttribs.ComponentSize} :
         UpdateRegionWidth * Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents};
     DEV_CHECK_ERR(SubresData.Stride >= RowSize, "Source data stride (", SubresData.Stride, ") is below the image row size (", RowSize, ")");
-    DEV_CHECK_ERR(SubresData.DepthStride == 0 || SubresData.DepthStride >= SubresData.Stride * UpdateRegionHeight, "Source data depth stride (", SubresData.DepthStride, ") is below the image plane size (", SubresData.Stride * UpdateRegionHeight, ")");
+    DEV_CHECK_ERR(SubresData.DepthStride == 0 || SubresData.DepthStride >= SubresData.Stride * (UpdateRegionHeight / FmtAttribs.BlockHeight), "Source data depth stride (", SubresData.DepthStride, ") is below the image plane size (", SubresData.Stride * UpdateRegionHeight, ")");
 #endif
 }
 
