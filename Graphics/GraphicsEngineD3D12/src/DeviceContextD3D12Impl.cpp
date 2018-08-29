@@ -828,8 +828,13 @@ namespace Diligent
                                                    const Box&              DstBox)
     {
         auto* pBufferD3D12 = ValidatedCast<BufferD3D12Impl>(pSrcBuffer);
-        VERIFY(pBufferD3D12->GetState() == D3D12_RESOURCE_STATE_GENERIC_READ, "Staging buffer is expected to always be in D3D12_RESOURCE_STATE_GENERIC_READ state");
-        CopyTextureRegion(pBufferD3D12->GetD3D12Resource(), SrcOffset, SrcStride, SrcDepthStride, pBufferD3D12->GetDesc().uiSizeInBytes, pTextureD3D12, DstSubResIndex, DstBox);
+        if(pBufferD3D12->GetDesc().Usage == USAGE_DYNAMIC)
+            VERIFY(pBufferD3D12->GetState() == D3D12_RESOURCE_STATE_GENERIC_READ, "Dynamic buffer is expected to always be in D3D12_RESOURCE_STATE_GENERIC_READ state");
+        else if(pBufferD3D12->GetState() != D3D12_RESOURCE_STATE_GENERIC_READ)
+            RequestCmdContext()->TransitionResource(pBufferD3D12, D3D12_RESOURCE_STATE_GENERIC_READ, true);
+        size_t DataStartByteOffset = 0;
+        auto* pd3d12Buffer = pBufferD3D12->GetD3D12Buffer(DataStartByteOffset, m_ContextId);
+        CopyTextureRegion(pd3d12Buffer, static_cast<Uint32>(DataStartByteOffset) + SrcOffset, SrcStride, SrcDepthStride, pBufferD3D12->GetDesc().uiSizeInBytes, pTextureD3D12, DstSubResIndex, DstBox);
     }
 
     void DeviceContextD3D12Impl::UpdateTextureRegion(const void*       pSrcData,
@@ -845,7 +850,8 @@ namespace Diligent
         auto UpdateRegionWidth  = DstBox.MaxX - DstBox.MinX;
         auto UpdateRegionHeight = DstBox.MaxY - DstBox.MinY;
         auto UpdateRegionDepth  = DstBox.MaxZ - DstBox.MinZ;
-        auto BufferDataStride   = UpdateRegionWidth * Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents};
+        auto PixelSize = Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents};
+        auto BufferDataStride   = UpdateRegionWidth * PixelSize;
         // RowPitch must be a multiple of 256 (aka. D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)
         BufferDataStride = (BufferDataStride + D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1) & ~(D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1);
         auto BufferDataDepthStride = UpdateRegionHeight * BufferDataStride;
@@ -867,7 +873,7 @@ namespace Diligent
                     + row   * BufferDataStride
                     + slice * BufferDataDepthStride;
                 
-                memcpy(pDstPtr, pSrcPtr, BufferDataStride);
+                memcpy(pDstPtr, pSrcPtr, UpdateRegionWidth * PixelSize);
             }
         }
         CopyTextureRegion(UploadSpace.pBuffer, static_cast<Uint32>(AlignedOffset), BufferDataStride, BufferDataDepthStride, MemorySize, pTextureD3D12, DstSubResIndex, DstBox);

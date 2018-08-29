@@ -1138,7 +1138,8 @@ namespace Diligent
         auto UpdateRegionWidth  = DstBox.MaxX - DstBox.MinX;
         auto UpdateRegionHeight = DstBox.MaxY - DstBox.MinY;
         auto UpdateRegionDepth  = DstBox.MaxZ - DstBox.MinZ;
-        auto BufferDataStride      = UpdateRegionWidth * Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents};
+        auto PixelSize = Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents};
+        auto BufferDataStride      = UpdateRegionWidth * PixelSize;
         auto BufferDataDepthStride = UpdateRegionHeight * BufferDataStride;
         auto MemorySize = UpdateRegionDepth * BufferDataDepthStride;
         size_t Alignment = 4;
@@ -1158,7 +1159,7 @@ namespace Diligent
                     + row   * BufferDataStride
                     + slice * BufferDataDepthStride;
                 
-                memcpy(pDstPtr, pSrcPtr, BufferDataStride);
+                memcpy(pDstPtr, pSrcPtr, UpdateRegionWidth * PixelSize);
             }
         }
 
