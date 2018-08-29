@@ -845,7 +845,9 @@ namespace Diligent
         auto UpdateRegionWidth  = DstBox.MaxX - DstBox.MinX;
         auto UpdateRegionHeight = DstBox.MaxY - DstBox.MinY;
         auto UpdateRegionDepth  = DstBox.MaxZ - DstBox.MinZ;
-        auto BufferDataStride      = UpdateRegionWidth * FmtAttribs.ComponentSize * FmtAttribs.NumComponents;
+        auto BufferDataStride   = UpdateRegionWidth * Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents};
+        // RowPitch must be a multiple of 256 (aka. D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)
+        BufferDataStride = (BufferDataStride + D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1) & ~(D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1);
         auto BufferDataDepthStride = UpdateRegionHeight * BufferDataStride;
         auto MemorySize = UpdateRegionDepth * BufferDataDepthStride;
         auto UploadSpace = AllocateDynamicSpace(MemorySize, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
