@@ -112,7 +112,7 @@ void ValidateTextureDesc( const TextureDesc& Desc )
 }
 
 
-void ValidateTextureRegion(const TextureDesc &TexDesc, Uint32 MipLevel, Uint32 Slice, const Box &Box)
+void ValidateTextureRegion(const TextureDesc& TexDesc, Uint32 MipLevel, Uint32 Slice, const Box& Box)
 {
 #define VERIFY_TEX_PARAMS(Expr, ...) if(!(Expr))LOG_ERROR("Texture \"", TexDesc.Name ? TexDesc.Name : "", "\": ", ##__VA_ARGS__)
 #ifdef DEVELOPMENT
@@ -121,7 +121,7 @@ void ValidateTextureRegion(const TextureDesc &TexDesc, Uint32 MipLevel, Uint32 S
     VERIFY_TEX_PARAMS( Box.MinY < Box.MaxY, "Invalid Y range: ", Box.MinY, "..", Box.MaxY);
     VERIFY_TEX_PARAMS( Box.MinZ < Box.MaxZ, "Invalid Z range: ", Box.MinZ, "..", Box.MaxZ);
     
-    if( TexDesc.Type == RESOURCE_DIM_TEX_1D_ARRAY ||
+    if (TexDesc.Type == RESOURCE_DIM_TEX_1D_ARRAY ||
         TexDesc.Type == RESOURCE_DIM_TEX_2D_ARRAY ||
         TexDesc.Type == RESOURCE_DIM_TEX_CUBE     || 
         TexDesc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY)
@@ -136,22 +136,31 @@ void ValidateTextureRegion(const TextureDesc &TexDesc, Uint32 MipLevel, Uint32 S
 
     Uint32 MipWidth = std::max(TexDesc.Width >> MipLevel, 1U);
     VERIFY_TEX_PARAMS( Box.MaxX <= MipWidth, "Region max X coordinate (", Box.MaxX, ") is out of allowed range [0, ", MipWidth, "]" );
-    if( TexDesc.Type != RESOURCE_DIM_TEX_1D && 
-        TexDesc.Type != RESOURCE_DIM_TEX_1D_ARRAY )
+    if (TexDesc.Type != RESOURCE_DIM_TEX_1D && 
+        TexDesc.Type != RESOURCE_DIM_TEX_1D_ARRAY)
     {
         Uint32 MipHeight = std::max(TexDesc.Height >> MipLevel, 1U);
         VERIFY_TEX_PARAMS( Box.MaxY <= MipHeight, "Region max Y coordinate (", Box.MaxY, ") is out of allowed range [0, ", MipHeight, "]" );
     }
 
-    if( TexDesc.Type == RESOURCE_DIM_TEX_3D )
+    if (TexDesc.Type == RESOURCE_DIM_TEX_3D)
     {
         Uint32 MipDepth = std::max(TexDesc.Depth >> MipLevel, 1U);
         VERIFY_TEX_PARAMS( Box.MaxZ <= MipDepth, "Region max Z coordinate (", Box.MaxZ, ") is out of allowed range  [0, ", MipDepth, "]" );
     }
+
+    const auto& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
+    if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
+    {
+        VERIFY_TEX_PARAMS( (Box.MinX % FmtAttribs.BlockWidth)  == 0, "For compressed formats update region min x (", Box.MinX, ") must be a multiple of block width (", FmtAttribs.BlockWidth, ")" );
+        VERIFY_TEX_PARAMS( (Box.MaxX % FmtAttribs.BlockWidth)  == 0, "For compressed formats update region max x (", Box.MaxX, ") must be a multiple of block width (", FmtAttribs.BlockWidth, ")" );
+        VERIFY_TEX_PARAMS( (Box.MinY % FmtAttribs.BlockHeight) == 0, "For compressed formats update region min y (", Box.MinY, ") must be a multiple of block height (", FmtAttribs.BlockHeight, ")" );
+        VERIFY_TEX_PARAMS( (Box.MaxY % FmtAttribs.BlockHeight) == 0, "For compressed formats update region max y (", Box.MaxY, ") must be a multiple of block height (", FmtAttribs.BlockHeight, ")" );
+    }
 #endif
 }
 
-void ValidateUpdateDataParams( const TextureDesc &TexDesc, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData )
+void ValidateUpdateDataParams( const TextureDesc& TexDesc, Uint32 MipLevel, Uint32 Slice, const Box& DstBox, const TextureSubResData& SubresData )
 {
     VERIFY((SubresData.pData != nullptr) ^ (SubresData.pSrcBuffer != nullptr), "Either CPU memory pointer or GPU buffer must be provided, exclusively");
     ValidateTextureRegion(TexDesc, MipLevel, Slice, DstBox);
@@ -161,6 +170,15 @@ void ValidateUpdateDataParams( const TextureDesc &TexDesc, Uint32 MipLevel, Uint
     VERIFY_TEX_PARAMS( TexDesc.SampleCount == 1, "Only non-multisampled textures can be updated with UpdateData()" );
     VERIFY_TEX_PARAMS( (SubresData.Stride & 0x03) == 0, "Texture data stride (", SubresData.Stride, ") must be at least 32-bit aligned" );
     VERIFY_TEX_PARAMS( (SubresData.DepthStride & 0x03) == 0, "Texture data depth stride (", SubresData.DepthStride, ") must be at least 32-bit aligned" );
+
+    const auto UpdateRegionWidth  = DstBox.MaxX - DstBox.MinX;
+    const auto UpdateRegionHeight = DstBox.MaxY - DstBox.MinY;
+    const auto& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
+    const Uint32 RowSize = FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED ?
+        UpdateRegionWidth / Uint32{FmtAttribs.BlockWidth} * Uint32{FmtAttribs.ComponentSize} :
+        UpdateRegionWidth * Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents};
+    DEV_CHECK_ERR(SubresData.Stride >= RowSize, "Source data stride (", SubresData.Stride, ") is below the image row size (", RowSize, ")");
+    DEV_CHECK_ERR(SubresData.DepthStride == 0 || SubresData.DepthStride >= SubresData.Stride * UpdateRegionHeight, "Source data depth stride (", SubresData.DepthStride, ") is below the image plane size (", SubresData.Stride * UpdateRegionHeight, ")");
 #endif
 }
 

@@ -847,23 +847,24 @@ namespace Diligent
         const auto& TexDesc = pTextureD3D12->GetDesc();
         const auto& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
         VERIFY_EXPR(DstBox.MaxX > DstBox.MinX && DstBox.MaxY > DstBox.MinY && DstBox.MaxZ > DstBox.MinZ);
-        auto UpdateRegionWidth  = DstBox.MaxX - DstBox.MinX;
-        auto UpdateRegionHeight = DstBox.MaxY - DstBox.MinY;
-        auto UpdateRegionDepth  = DstBox.MaxZ - DstBox.MinZ;
-        auto PixelSize = Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents};
-        auto BufferDataStride   = UpdateRegionWidth * PixelSize;
-        VERIFY(SrcStride >= UpdateRegionWidth * PixelSize, "Source data stride (", SrcStride, ") is below the image row width (", UpdateRegionWidth * PixelSize, ")");
+        const auto UpdateRegionWidth  = DstBox.MaxX - DstBox.MinX;
+        const auto UpdateRegionHeight = DstBox.MaxY - DstBox.MinY;
+        const auto UpdateRegionDepth  = DstBox.MaxZ - DstBox.MinZ;
+        const Uint32 RowSize = FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED ?
+            UpdateRegionWidth / Uint32{FmtAttribs.BlockWidth} * Uint32{FmtAttribs.ComponentSize} :
+            UpdateRegionWidth * Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents};
+        VERIFY(SrcStride >= RowSize, "Source data stride (", SrcStride, ") is below the image row size (", RowSize, ")");
         VERIFY(SrcDepthStride == 0 || SrcDepthStride >= SrcStride * UpdateRegionHeight, "Source data depth stride (", SrcDepthStride, ") is below the image plane size (", SrcStride * UpdateRegionHeight, ")");
         // RowPitch must be a multiple of 256 (aka. D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)
-        BufferDataStride = (BufferDataStride + D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1) & ~(D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1);
-        auto BufferDataDepthStride = UpdateRegionHeight * BufferDataStride;
-        auto MemorySize = UpdateRegionDepth * BufferDataDepthStride;
-        auto UploadSpace = AllocateDynamicSpace(MemorySize, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
-        auto AlignedOffset = (UploadSpace.Offset + (D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT-1)) & ~(D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT-1);
+        const auto BufferDataStride = (RowSize + D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1) & ~(D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1);
+        const auto BufferDataDepthStride = UpdateRegionHeight * BufferDataStride;
+        const auto MemorySize = UpdateRegionDepth * BufferDataDepthStride;
+        const auto UploadSpace = AllocateDynamicSpace(MemorySize, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
+        const auto AlignedOffset = (UploadSpace.Offset + (D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT-1)) & ~(D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT-1);
 
         for(Uint32 slice = 0; slice < UpdateRegionDepth; ++slice)
         {
-            for(Uint32 row = 0; row < UpdateRegionHeight; ++row)
+            for(Uint32 row = 0; row < UpdateRegionHeight / FmtAttribs.BlockHeight; ++row)
             {
                 const auto* pSrcPtr =
                     reinterpret_cast<const Uint8*>(pSrcData)
@@ -875,7 +876,7 @@ namespace Diligent
                     + row   * BufferDataStride
                     + slice * BufferDataDepthStride;
                 
-                memcpy(pDstPtr, pSrcPtr, UpdateRegionWidth * PixelSize);
+                memcpy(pDstPtr, pSrcPtr, RowSize);
             }
         }
         CopyTextureRegion(UploadSpace.pBuffer, static_cast<Uint32>(AlignedOffset), BufferDataStride, BufferDataDepthStride, MemorySize, pTextureD3D12, DstSubResIndex, DstBox);
