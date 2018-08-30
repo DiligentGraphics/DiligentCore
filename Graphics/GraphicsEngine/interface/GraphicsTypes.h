@@ -1400,6 +1400,25 @@ namespace Diligent
         Uint32 MaxY = 0; ///< Maximal Y coordinate. Default value is 0
         Uint32 MinZ = 0; ///< Minimal Z coordinate. Default value is 0
         Uint32 MaxZ = 1; ///< Maximal Z coordinate. Default value is 1
+
+       Box(Uint32 _MinX, Uint32 _MaxX,	
+           Uint32 _MinY, Uint32 _MaxY,	
+           Uint32 _MinZ, Uint32 _MaxZ) : 	
+            MinX(_MinX), MaxX(_MaxX),	
+            MinY(_MinY), MaxY(_MaxY),	
+            MinZ(_MinZ), MaxZ(_MaxZ)	
+        {}
+
+       Box(Uint32 _MinX, Uint32 _MaxX,	
+           Uint32 _MinY, Uint32 _MaxY) :
+            Box(_MinX, _MaxX, _MinY, _MaxY, 0, 1)
+        {}
+
+       Box(Uint32 _MinX, Uint32 _MaxX) :
+            Box(_MinX, _MaxX, 0, 0, 0, 1)
+        {}
+
+       Box(){}
     };
 
 
