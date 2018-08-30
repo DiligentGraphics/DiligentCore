@@ -1170,7 +1170,7 @@ namespace Diligent
         VERIFY(UpdateRegionDepth == 1 || SrcDepthStride >= PlaneSize, "Source data depth stride (", SrcDepthStride, ") is below the image plane size (", PlaneSize, ")");
 #endif
         const auto BufferDataStride      = RowSize;
-        const auto BufferDataDepthStride = (UpdateRegionHeight / FmtAttribs.BlockHeight) * BufferDataStride;
+        const auto BufferDataDepthStride = RowCount * BufferDataStride;
         const auto MemorySize = UpdateRegionDepth * BufferDataDepthStride;
         size_t Alignment   = 4;
         auto UploadSpace   = AllocateDynamicSpace(MemorySize + static_cast<Uint32>(Alignment));
