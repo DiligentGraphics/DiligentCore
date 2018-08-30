@@ -198,7 +198,6 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters,
         std::vector<VkBufferImageCopy> Regions(InitData.NumSubresources);
 
         UINT64 uploadBufferSize = 0;
-        auto TexelSize = Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents};
         Uint32 subres = 0;
         for(Uint32 layer = 0; layer < ImageCI.arrayLayers; ++layer)
         {
@@ -227,15 +226,21 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters,
                 CopyRegion.imageSubresource.baseArrayLayer = layer;
                 CopyRegion.imageSubresource.layerCount = 1;
 
+                Uint32 RowSize = 0;
                 if(FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
                 {
                     VERIFY_EXPR(FmtAttribs.BlockWidth > 1 && FmtAttribs.BlockHeight > 1);
-                    MipWidth = (MipWidth + FmtAttribs.BlockWidth-1) / FmtAttribs.BlockWidth;
+                    MipWidth  = (MipWidth  + FmtAttribs.BlockWidth -1) / FmtAttribs.BlockWidth;
                     MipHeight = (MipHeight + FmtAttribs.BlockHeight-1) / FmtAttribs.BlockHeight;
+                    RowSize   = MipWidth * Uint32{FmtAttribs.ComponentSize}; // ComponentSize is the block size
                 }
-                auto MipSize = MipWidth * MipHeight * MipDepth * TexelSize;
-                VERIFY(SubResData.Stride == 0 || SubResData.Stride >= MipWidth * TexelSize, "Stride is too small");
-                VERIFY(SubResData.DepthStride == 0 || SubResData.DepthStride >= MipWidth * MipHeight * TexelSize, "Depth stride is too small");
+                else
+                {
+                    RowSize = MipWidth * Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents};
+                }
+                auto MipSize = RowSize * MipHeight * MipDepth;
+                VERIFY(SubResData.Stride == 0 || SubResData.Stride >= RowSize, "Stride is too small");
+                VERIFY(SubResData.DepthStride == 0 || SubResData.DepthStride >= RowSize * MipHeight, "Depth stride is too small");
                 
                 // bufferOffset must be a multiple of 4 (18.4)
                 // If the calling command’s VkImage parameter is a compressed image, bufferOffset 
@@ -285,22 +290,28 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters,
                 auto MipWidth  = CopyRegion.imageExtent.width;
                 auto MipHeight = CopyRegion.imageExtent.height;
                 auto MipDepth  = CopyRegion.imageExtent.depth;
+                Uint32 RowSize = 0;
                 if(FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
                 {
                     VERIFY_EXPR(FmtAttribs.BlockWidth > 1 && FmtAttribs.BlockHeight > 1);
-                    MipWidth = (MipWidth + FmtAttribs.BlockWidth-1) / FmtAttribs.BlockWidth;
+                    MipWidth  = (MipWidth  + FmtAttribs.BlockWidth -1) / FmtAttribs.BlockWidth;
                     MipHeight = (MipHeight + FmtAttribs.BlockHeight-1) / FmtAttribs.BlockHeight;
+                    RowSize   = MipWidth * Uint32{FmtAttribs.ComponentSize}; // ComponentSize is the block size
                 }
-                VERIFY(SubResData.Stride == 0 || SubResData.Stride >= MipWidth * TexelSize, "Stride is too small");
-                VERIFY(SubResData.DepthStride == 0 || SubResData.DepthStride >= MipWidth * MipHeight * TexelSize, "Depth stride is too small");
+                else
+                {
+                    RowSize = MipWidth * Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents};
+                }
+                VERIFY(SubResData.Stride == 0 || SubResData.Stride >= RowSize, "Stride is too small");
+                VERIFY(SubResData.DepthStride == 0 || SubResData.DepthStride >= RowSize * MipHeight, "Depth stride is too small");
 
                 for(Uint32 z=0; z < MipDepth; ++z)
                 {
                     for(Uint32 y=0; y < MipHeight; ++y)
                     {
-                        memcpy(StagingData + CopyRegion.bufferOffset + (y + z * MipHeight) * MipWidth * TexelSize,
+                        memcpy(StagingData + CopyRegion.bufferOffset + (y + z * MipHeight) * RowSize,
                                reinterpret_cast<const uint8_t*>(SubResData.pData) + y * SubResData.Stride + z * SubResData.DepthStride,
-                               MipWidth * TexelSize);
+                               RowSize);
                     }
                 }
                
