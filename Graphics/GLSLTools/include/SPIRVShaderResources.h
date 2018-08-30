@@ -89,7 +89,7 @@ struct SPIRVShaderResourceAttribs
     static constexpr const Uint32 ResourceTypeBits = 4;
     static constexpr const Uint32 VarTypeBits      = 4;
     static_assert(SHADER_VARIABLE_TYPE_NUM_TYPES < (1 << VarTypeBits),       "Not enough bits to represent SHADER_VARIABLE_TYPE");
-    static_assert(NumResourceTypes               < (1 << ResourceTypeBits),  "Not enough bits to represent ResourceType");
+    static_assert(ResourceType::NumResourceTypes < (1 << ResourceTypeBits),  "Not enough bits to represent ResourceType");
 
     const char *Name;
     const Uint16                ArraySize;
