@@ -794,8 +794,15 @@ namespace Diligent
         Footpring.Footprint.Format = TexFormatToDXGI_Format(TexDesc.Format);
 
         Footpring.Footprint.RowPitch = static_cast<UINT>(SrcStride);
-        VERIFY(Footpring.Footprint.RowPitch * Footpring.Footprint.Height * Footpring.Footprint.Depth <= BufferSize, "Buffer is not large enough");
-        VERIFY(SrcDepthStride == 0 || static_cast<UINT>(SrcDepthStride) == Footpring.Footprint.RowPitch * Footpring.Footprint.Height, "Depth stride must be equal to the size 2D level");
+
+#ifdef _DEBUG
+        {
+            const auto& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
+            const Uint32 RowCount = std::max((Footpring.Footprint.Height/FmtAttribs.BlockHeight), 1u);
+            VERIFY(BufferSize >= Footpring.Footprint.RowPitch * RowCount * Footpring.Footprint.Depth, "Buffer is not large enough");
+            VERIFY(Footpring.Footprint.Depth == 1 || static_cast<UINT>(SrcDepthStride) == Footpring.Footprint.RowPitch * RowCount, "Depth stride must be equal to the size of 2D plane");
+        }
+#endif
 
         D3D12_BOX D3D12SrcBox;
         D3D12SrcBox.left    = 0;
@@ -847,24 +854,41 @@ namespace Diligent
         const auto& TexDesc = pTextureD3D12->GetDesc();
         const auto& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
         VERIFY_EXPR(DstBox.MaxX > DstBox.MinX && DstBox.MaxY > DstBox.MinY && DstBox.MaxZ > DstBox.MinZ);
-        const auto UpdateRegionWidth  = DstBox.MaxX - DstBox.MinX;
-        const auto UpdateRegionHeight = DstBox.MaxY - DstBox.MinY;
-        const auto UpdateRegionDepth  = DstBox.MaxZ - DstBox.MinZ;
-        const Uint32 RowSize = FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED ?
-            UpdateRegionWidth / Uint32{FmtAttribs.BlockWidth} * Uint32{FmtAttribs.ComponentSize} :
-            UpdateRegionWidth * Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents};
-        VERIFY(SrcStride >= RowSize, "Source data stride (", SrcStride, ") is below the image row size (", RowSize, ")");
-        VERIFY(SrcDepthStride == 0 || SrcDepthStride >= SrcStride * (UpdateRegionHeight / FmtAttribs.BlockHeight), "Source data depth stride (", SrcDepthStride, ") is below the image plane size (", SrcStride * UpdateRegionHeight, ")");
+        auto UpdateRegionWidth  = DstBox.MaxX - DstBox.MinX;
+        auto UpdateRegionHeight = DstBox.MaxY - DstBox.MinY;
+        auto UpdateRegionDepth  = DstBox.MaxZ - DstBox.MinZ;
+        Uint32 RowSize = 0;
+        Uint32 RowCount = 0;
+        if(FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
+        {
+            // Box must be aligned by the calling function
+            VERIFY_EXPR((UpdateRegionWidth  % FmtAttribs.BlockWidth) == 0);
+            VERIFY_EXPR((UpdateRegionHeight % FmtAttribs.BlockHeight) == 0);
+            RowSize  = UpdateRegionWidth / Uint32{FmtAttribs.BlockWidth} * Uint32{FmtAttribs.ComponentSize};
+            RowCount = UpdateRegionHeight / FmtAttribs.BlockHeight;
+        }
+        else
+        {
+            RowSize = UpdateRegionWidth * Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents};
+            RowCount = UpdateRegionHeight;
+        }
+#ifdef _DEBUG
+        {
+            VERIFY(SrcStride >= RowSize, "Source data stride (", SrcStride, ") is below the image row size (", RowSize, ")");
+            const Uint32 PlaneSize = SrcStride * RowCount;
+            VERIFY(UpdateRegionDepth == 1 || SrcDepthStride >= PlaneSize, "Source data depth stride (", SrcDepthStride, ") is below the image plane size (", PlaneSize, ")");
+        }
+#endif
         // RowPitch must be a multiple of 256 (aka. D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)
-        const auto BufferDataStride = (RowSize + D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1) & ~(D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1);
-        const auto BufferDataDepthStride = UpdateRegionHeight * BufferDataStride;
-        const auto MemorySize = UpdateRegionDepth * BufferDataDepthStride;
-        const auto UploadSpace = AllocateDynamicSpace(MemorySize, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
-        const auto AlignedOffset = (UploadSpace.Offset + (D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT-1)) & ~(D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT-1);
+        const auto AlignedStride      = (RowSize + D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1) & ~(D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1);
+        const auto AlignedDepthStride = RowCount * AlignedStride;
+        const auto MemorySize         = UpdateRegionDepth * AlignedDepthStride;
+        const auto UploadSpace        = AllocateDynamicSpace(MemorySize, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
+        const auto AlignedOffset      = (UploadSpace.Offset + (D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT-1)) & ~(D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT-1);
 
         for(Uint32 slice = 0; slice < UpdateRegionDepth; ++slice)
         {
-            for(Uint32 row = 0; row < UpdateRegionHeight / FmtAttribs.BlockHeight; ++row)
+            for(Uint32 row = 0; row < RowCount; ++row)
             {
                 const auto* pSrcPtr =
                     reinterpret_cast<const Uint8*>(pSrcData)
@@ -873,13 +897,13 @@ namespace Diligent
                 auto* pDstPtr =
                     reinterpret_cast<Uint8*>(UploadSpace.CPUAddress)
                     + (AlignedOffset - UploadSpace.Offset)
-                    + row   * BufferDataStride
-                    + slice * BufferDataDepthStride;
+                    + row   * AlignedStride
+                    + slice * AlignedDepthStride;
                 
                 memcpy(pDstPtr, pSrcPtr, RowSize);
             }
         }
-        CopyTextureRegion(UploadSpace.pBuffer, static_cast<Uint32>(AlignedOffset), BufferDataStride, BufferDataDepthStride, MemorySize, pTextureD3D12, DstSubResIndex, DstBox);
+        CopyTextureRegion(UploadSpace.pBuffer, static_cast<Uint32>(AlignedOffset), AlignedStride, AlignedDepthStride, MemorySize, pTextureD3D12, DstSubResIndex, DstBox);
     }
 
     void DeviceContextD3D12Impl::GenerateMips(TextureViewD3D12Impl* pTexView)

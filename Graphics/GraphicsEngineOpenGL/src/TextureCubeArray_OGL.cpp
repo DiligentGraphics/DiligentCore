@@ -73,8 +73,8 @@ TextureCubeArray_OGL::TextureCubeArray_OGL( IReferenceCounters *pRefCounters,
             {
                 for(Uint32 Mip = 0; Mip < m_Desc.MipLevels; ++Mip)
                 {
-                    Box DstBox(0, std::max(m_Desc.Width >>Mip, 1U),
-                               0, std::max(m_Desc.Height>>Mip, 1U) );
+                    Box DstBox{0, std::max(m_Desc.Width >>Mip, 1U),
+                               0, std::max(m_Desc.Height>>Mip, 1U)};
                     // UpdateData() is a virtual function. If we try to call it through vtbl from here,
                     // we will get into TextureBaseGL::UpdateData(), because instance of TextureCubeArray_OGL
                     // is not fully constructed yet.
@@ -133,9 +133,11 @@ void TextureCubeArray_OGL::UpdateData( IDeviceContext *pContext, Uint32 MipLevel
 
     if( TransferAttribs.IsCompressed )
     {
+        auto MipWidth  = std::max(m_Desc.Width  >> MipLevel, 1U);
+        auto MipHeight = std::max(m_Desc.Height >> MipLevel, 1U);
         VERIFY( (DstBox.MinX % 4) == 0 && (DstBox.MinY % 4) == 0 &&
-                ((DstBox.MaxX % 4) == 0 || DstBox.MaxX == std::max(m_Desc.Width >>MipLevel, 1U)) && 
-                ((DstBox.MaxY % 4) == 0 || DstBox.MaxY == std::max(m_Desc.Height>>MipLevel, 1U)), 
+                ((DstBox.MaxX % 4) == 0 || DstBox.MaxX == MipWidth) && 
+                ((DstBox.MaxY % 4) == 0 || DstBox.MaxY == MipHeight), 
                 "Compressed texture update region must be 4 pixel-aligned" );
         const auto &FmtAttribs = GetTextureFormatAttribs(m_Desc.Format);
         auto BlockBytesInRow = ((DstBox.MaxX - DstBox.MinX + 3)/4) * Uint32{FmtAttribs.ComponentSize};
@@ -146,12 +148,16 @@ void TextureCubeArray_OGL::UpdateData( IDeviceContext *pContext, Uint32 MipLevel
 
         //glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
         //glPixelStorei(GL_UNPACK_COMPRESSED_BLOCK_WIDTH, 0);
+        auto UpdateRegionWidth  = DstBox.MaxX - DstBox.MinX;
+        auto UpdateRegionHeight = DstBox.MaxY - DstBox.MinY;
+        UpdateRegionWidth  = std::min(UpdateRegionWidth,  MipWidth  - DstBox.MinX);
+        UpdateRegionHeight = std::min(UpdateRegionHeight, MipHeight - DstBox.MinY);
         glCompressedTexSubImage3D(m_BindTarget, MipLevel, 
                         DstBox.MinX, 
                         DstBox.MinY, 
                         Slice,
-                        DstBox.MaxX - DstBox.MinX, 
-                        DstBox.MaxY - DstBox.MinY,
+                        UpdateRegionWidth, 
+                        UpdateRegionHeight,
                         1,
                         // The format must be the same compressed-texture format previously 
                         // specified by glTexStorage2D() (thank you OpenGL for another useless 

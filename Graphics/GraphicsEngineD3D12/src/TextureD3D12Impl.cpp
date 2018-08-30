@@ -409,12 +409,38 @@ void TextureD3D12Impl::UpdateData( IDeviceContext*          pContext,
 {
     TTextureBase::UpdateData( pContext, MipLevel, Slice, DstBox, SubresData );
 
+    Box BlockAlignedBox;
+    const auto& FmtAttribs = GetTextureFormatAttribs(m_Desc.Format);
+    const Box* pBox = nullptr;
+    if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
+    {
+        // Align update region by the compressed block size
+
+        VERIFY( (DstBox.MinX % FmtAttribs.BlockWidth) == 0, "Update region min x (", DstBox.MinX, ") must be multiple of a compressed block width (", FmtAttribs.BlockWidth, ")");
+        BlockAlignedBox.MinX = DstBox.MinX;
+        VERIFY( (FmtAttribs.BlockWidth & (FmtAttribs.BlockWidth-1)) == 0, "Compressed block width (", FmtAttribs.BlockWidth, ") is expected to be power of 2");
+        BlockAlignedBox.MaxX = (DstBox.MaxX + FmtAttribs.BlockWidth-1) & ~(FmtAttribs.BlockWidth-1);
+ 
+        VERIFY( (DstBox.MinY % FmtAttribs.BlockHeight) == 0, "Update region min y (", DstBox.MinY, ") must be multiple of a compressed block height (", FmtAttribs.BlockHeight, ")");
+        BlockAlignedBox.MinY = DstBox.MinY;
+        VERIFY( (FmtAttribs.BlockHeight & (FmtAttribs.BlockHeight-1)) == 0, "Compressed block height (", FmtAttribs.BlockHeight, ") is expected to be power of 2");
+        BlockAlignedBox.MaxY = (DstBox.MaxY + FmtAttribs.BlockHeight-1) & ~(FmtAttribs.BlockHeight-1);
+
+        BlockAlignedBox.MinZ = DstBox.MinZ;
+        BlockAlignedBox.MaxZ = DstBox.MaxZ;
+
+        pBox = &BlockAlignedBox;
+    }
+    else
+    {
+        pBox = &DstBox;
+    }
     auto *pCtxD3D12 = ValidatedCast<DeviceContextD3D12Impl>(pContext);
     auto DstSubResIndex = D3D12CalcSubresource(MipLevel, Slice, 0, m_Desc.MipLevels, m_Desc.ArraySize);
     if (SubresData.pSrcBuffer == nullptr)
-        pCtxD3D12->UpdateTextureRegion(SubresData.pData, SubresData.Stride, SubresData.DepthStride, this, DstSubResIndex, DstBox);
+        pCtxD3D12->UpdateTextureRegion(SubresData.pData, SubresData.Stride, SubresData.DepthStride, this, DstSubResIndex, *pBox);
     else
-        pCtxD3D12->CopyTextureRegion(SubresData.pSrcBuffer, 0, SubresData.Stride, SubresData.DepthStride, this, DstSubResIndex, DstBox);
+        pCtxD3D12->CopyTextureRegion(SubresData.pSrcBuffer, 0, SubresData.Stride, SubresData.DepthStride, this, DstSubResIndex, *pBox);
 }
 
 void TextureD3D12Impl ::  CopyData(IDeviceContext* pContext, 

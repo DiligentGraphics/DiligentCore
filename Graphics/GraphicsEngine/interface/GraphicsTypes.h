@@ -1394,21 +1394,12 @@ namespace Diligent
     /// Box
     struct Box
     {
-        Uint32 MinX; ///< Minimal X coordinate. Default value is 0
-        Uint32 MaxX; ///< Maximal X coordinate. Default value is 0
-        Uint32 MinY; ///< Minimal Y coordinate. Default value is 0
-        Uint32 MaxY; ///< Maximal Y coordinate. Default value is 0
-        Uint32 MinZ; ///< Minimal Z coordinate. Default value is 0
-        Uint32 MaxZ; ///< Maximal Z coordinate. Default value is 1
-
-        /// Constructor intializes the structure
-        Box(Uint32 _MinX = 0, Uint32 _MaxX = 0,
-            Uint32 _MinY = 0, Uint32 _MaxY = 0,
-            Uint32 _MinZ = 0, Uint32 _MaxZ = 1) : 
-            MinX(_MinX), MaxX(_MaxX),
-            MinY(_MinY), MaxY(_MaxY),
-            MinZ(_MinZ), MaxZ(_MaxZ)
-        {}
+        Uint32 MinX = 0; ///< Minimal X coordinate. Default value is 0
+        Uint32 MaxX = 0; ///< Maximal X coordinate. Default value is 0
+        Uint32 MinY = 0; ///< Minimal Y coordinate. Default value is 0
+        Uint32 MaxY = 0; ///< Maximal Y coordinate. Default value is 0
+        Uint32 MinZ = 0; ///< Minimal Z coordinate. Default value is 0
+        Uint32 MaxZ = 1; ///< Maximal Z coordinate. Default value is 1
     };
 
 

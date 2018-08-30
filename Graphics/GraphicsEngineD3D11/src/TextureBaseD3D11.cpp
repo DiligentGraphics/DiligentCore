@@ -158,12 +158,24 @@ void TextureBaseD3D11::UpdateData( IDeviceContext* pContext, Uint32 MipLevel, Ui
     auto* pd3d11DeviceContext = static_cast<DeviceContextD3D11Impl*>(pContext)->GetD3D11DeviceContext();
 
     D3D11_BOX D3D11Box;
-    D3D11Box.left = DstBox.MinX;
-    D3D11Box.right = DstBox.MaxX;
-    D3D11Box.top = DstBox.MinY;
+    D3D11Box.left   = DstBox.MinX;
+    D3D11Box.right  = DstBox.MaxX;
+    D3D11Box.top    = DstBox.MinY;
     D3D11Box.bottom = DstBox.MaxY;
-    D3D11Box.front = DstBox.MinZ;
-    D3D11Box.back = DstBox.MaxZ;
+    D3D11Box.front  = DstBox.MinZ;
+    D3D11Box.back   = DstBox.MaxZ;
+    const auto& FmtAttribs = GetTextureFormatAttribs(m_Desc.Format);
+    if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
+    {
+        // Align update region by the compressed block size
+        VERIFY( (D3D11Box.left % FmtAttribs.BlockWidth) == 0, "Update region min x (", D3D11Box.left, ") must be multiple of a compressed block width (", FmtAttribs.BlockWidth, ")");
+        VERIFY( (FmtAttribs.BlockWidth & (FmtAttribs.BlockWidth-1)) == 0, "Compressed block width (", FmtAttribs.BlockWidth, ") is expected to be power of 2");
+        D3D11Box.right = (D3D11Box.right + FmtAttribs.BlockWidth-1) & ~(FmtAttribs.BlockWidth-1);
+ 
+        VERIFY( (D3D11Box.top % FmtAttribs.BlockHeight) == 0, "Update region min y (", D3D11Box.top, ") must be multiple of a compressed block height (", FmtAttribs.BlockHeight, ")");
+        VERIFY( (FmtAttribs.BlockHeight & (FmtAttribs.BlockHeight-1)) == 0, "Compressed block height (", FmtAttribs.BlockHeight, ") is expected to be power of 2");
+        D3D11Box.bottom = (D3D11Box.bottom + FmtAttribs.BlockHeight-1) & ~(FmtAttribs.BlockHeight-1);
+    }
     auto SubresIndex = D3D11CalcSubresource(MipLevel, Slice, m_Desc.MipLevels);
     pd3d11DeviceContext->UpdateSubresource(m_pd3d11Texture, SubresIndex, &D3D11Box, SubresData.pData, SubresData.Stride, SubresData.DepthStride);
 }

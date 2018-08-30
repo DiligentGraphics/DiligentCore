@@ -66,9 +66,9 @@ Texture3D_OGL::Texture3D_OGL( IReferenceCounters *pRefCounters,
         {
             for(Uint32 Mip = 0; Mip < m_Desc.MipLevels; ++Mip)
             {
-                Box DstBox(0, std::max(m_Desc.Width >>Mip, 1U),
-                            0, std::max(m_Desc.Height>>Mip, 1U), 
-                            0, std::max(m_Desc.Depth >>Mip, 1U));
+                Box DstBox{0, std::max(m_Desc.Width >>Mip, 1U),
+                           0, std::max(m_Desc.Height>>Mip, 1U), 
+                           0, std::max(m_Desc.Depth >>Mip, 1U)};
                 // UpdateData() is a virtual function. If we try to call it through vtbl from here,
                 // we will get into TextureBaseGL::UpdateData(), because instance of Texture3D_OGL
                 // is not fully constructed yet.

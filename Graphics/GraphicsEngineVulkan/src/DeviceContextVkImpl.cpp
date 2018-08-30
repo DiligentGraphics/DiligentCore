@@ -1135,23 +1135,49 @@ namespace Diligent
         VERIFY(TexDesc.SampleCount == 1, "Only single-sample textures can be updated with vkCmdCopyBufferToImage()");
         const auto& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
         VERIFY_EXPR(DstBox.MaxX > DstBox.MinX && DstBox.MaxY > DstBox.MinY && DstBox.MaxZ > DstBox.MinZ);
-        const auto UpdateRegionWidth  = DstBox.MaxX - DstBox.MinX;
-        const auto UpdateRegionHeight = DstBox.MaxY - DstBox.MinY;
-        const auto UpdateRegionDepth  = DstBox.MaxZ - DstBox.MinZ;
-        const Uint32 RowSize = FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED ?
-            UpdateRegionWidth / Uint32{FmtAttribs.BlockWidth} * Uint32{FmtAttribs.ComponentSize} :
-            UpdateRegionWidth * Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents};
+        auto UpdateRegionWidth  = DstBox.MaxX - DstBox.MinX;
+        auto UpdateRegionHeight = DstBox.MaxY - DstBox.MinY;
+        auto UpdateRegionDepth  = DstBox.MaxZ - DstBox.MinZ;
+        Uint32 RowSize = 0;
+        Uint32 RowCount = 0;
+        if(FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
+        {
+            // Align update region size by the block size. This is only necessary when updating
+            // coarse mip levels. Otherwise UpdateRegionWidth/Height should be multiples of block size
+            const auto BlockAlignedRegionWidth =  (UpdateRegionWidth  + (FmtAttribs.BlockWidth-1))  & ~(FmtAttribs.BlockWidth -1);
+            const auto BlockAlignedRegionHeight = (UpdateRegionHeight + (FmtAttribs.BlockHeight-1)) & ~(FmtAttribs.BlockHeight-1);
+            RowSize  = BlockAlignedRegionWidth  / Uint32{FmtAttribs.BlockWidth} * Uint32{FmtAttribs.ComponentSize};
+            RowCount = BlockAlignedRegionHeight / FmtAttribs.BlockHeight;
+            
+            // (imageExtent.width + imageOffset.x) must be less than or equal to the image subresource width, and
+            // (imageExtent.height + imageOffset.y) must be less than or equal to the image subresource height (18.4),
+            // so we need to clamp UpdateRegionWidth and Height
+            const Uint32 MipWidth  = std::max(TexDesc.Width  >> MipLevel, 1u);
+            const Uint32 MipHeight = std::max(TexDesc.Height >> MipLevel, 1u);
+            VERIFY_EXPR(MipWidth > DstBox.MinX);
+            UpdateRegionWidth  = std::min(UpdateRegionWidth,  MipWidth  - DstBox.MinX);
+            VERIFY_EXPR(MipHeight > DstBox.MinY);
+            UpdateRegionHeight = std::min(UpdateRegionHeight, MipHeight - DstBox.MinY);
+        }
+        else
+        {
+            RowSize  = UpdateRegionWidth * Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents};
+            RowCount = UpdateRegionHeight;
+        }
+#ifdef _DEBUG
         VERIFY(SrcStride >= RowSize, "Source data stride (", SrcStride, ") is below the image row size (", RowSize, ")");
-        VERIFY(SrcDepthStride == 0 || SrcDepthStride >= SrcStride * (UpdateRegionHeight / FmtAttribs.BlockHeight), "Source data depth stride (", SrcDepthStride, ") is below the image plane size (", SrcStride * UpdateRegionHeight, ")");
+        const Uint32 PlaneSize = SrcStride * RowCount;
+        VERIFY(UpdateRegionDepth == 1 || SrcDepthStride >= PlaneSize, "Source data depth stride (", SrcDepthStride, ") is below the image plane size (", PlaneSize, ")");
+#endif
         const auto BufferDataStride      = RowSize;
-        const auto BufferDataDepthStride = UpdateRegionHeight * BufferDataStride;
-        auto MemorySize = UpdateRegionDepth * BufferDataDepthStride;
-        size_t Alignment = 4;
-        auto UploadSpace = AllocateDynamicSpace(MemorySize + static_cast<Uint32>(Alignment));
+        const auto BufferDataDepthStride = (UpdateRegionHeight / FmtAttribs.BlockHeight) * BufferDataStride;
+        const auto MemorySize = UpdateRegionDepth * BufferDataDepthStride;
+        size_t Alignment   = 4;
+        auto UploadSpace   = AllocateDynamicSpace(MemorySize + static_cast<Uint32>(Alignment));
         auto AlignedOffset = (UploadSpace.Offset + (Alignment-1)) & ~(Alignment-1);
         for(Uint32 slice = 0; slice < UpdateRegionDepth; ++slice)
         {
-            for(Uint32 row = 0; row < UpdateRegionHeight / FmtAttribs.BlockHeight; ++row)
+            for(Uint32 row = 0; row < RowCount; ++row)
             {
                 const auto* pSrcPtr =
                     reinterpret_cast<const Uint8*>(pSrcData)
@@ -1201,6 +1227,10 @@ namespace Diligent
         CopyRegion.imageSubresource.baseArrayLayer = Slice;
         CopyRegion.imageSubresource.layerCount = 1;
         CopyRegion.imageSubresource.mipLevel = MipLevel;
+        // - imageOffset.x and (imageExtent.width + imageOffset.x) must both be greater than or equal to 0 and
+        //   less than or equal to the image subresource width (18.4)
+        // - imageOffset.y and (imageExtent.height + imageOffset.y) must both be greater than or equal to 0 and
+        //   less than or equal to the image subresource height (18.4)
         CopyRegion.imageOffset = VkOffset3D{static_cast<int32_t>(DstBox.MinX), static_cast<int32_t>(DstBox.MinY), static_cast<int32_t>(DstBox.MinZ)};
         CopyRegion.imageExtent = VkExtent3D{UpdateRegionWidth, UpdateRegionHeight, UpdateRegionDepth};
         
