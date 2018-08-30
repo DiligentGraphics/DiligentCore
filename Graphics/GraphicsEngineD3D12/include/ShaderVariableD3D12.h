@@ -163,7 +163,7 @@ public:
 
     virtual SHADER_VARIABLE_TYPE GetType()const override final
     {
-        return m_Resource.Attribs.VariableType;
+        return m_Resource.Attribs.GetVariableType();
     }
 
     virtual void Set(IDeviceObject *pObject)override final 

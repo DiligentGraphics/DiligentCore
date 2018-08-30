@@ -69,7 +69,7 @@ namespace Diligent
 
         virtual SHADER_VARIABLE_TYPE GetType()const override final
         {
-            return Attribs.VariableType;
+            return Attribs.GetVariableType();
         }
 
         virtual Uint32 GetArraySize()const override final

@@ -90,6 +90,7 @@ struct D3DShaderResourceAttribs
     const Uint16 BindPoint;
     const Uint16 BindCount;
 
+private:
     //            4              3               4              20                1
     // bit | 0  1  2  3   |  4   5   6   |  7  8  9  10 | 11  12 ...  30 |        31         |   
     //     |              |              |              |                |                   |
@@ -101,21 +102,27 @@ struct D3DShaderResourceAttribs
     static constexpr const Uint32 StaticSamplerFlagBits  = 1;
     static_assert(ShaderInputTypeBits + VariableTypeBits + SRVDimBits + SamplerIdBits + StaticSamplerFlagBits == 32, "Attributes are better be packed into 32 bits");
 
-    const D3D_SHADER_INPUT_TYPE InputType       : ShaderInputTypeBits;      // Max value: D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER == 11
-    const SHADER_VARIABLE_TYPE  VariableType    : VariableTypeBits;         // Max value: SHADER_VARIABLE_TYPE_DYNAMIC == 2
-    const D3D_SRV_DIMENSION     SRVDimension    : SRVDimBits;               // Max value: D3D_SRV_DIMENSION_BUFFEREX == 11
-    const Uint32                SamplerId       : SamplerIdBits;            // Max value: 1048575
-    const Uint32                StaticSamplerFlag : StaticSamplerFlagBits;  // Needs to be Uint32, otherwise sizeof(D3DShaderResourceAttribs)==24
-                                                                            // (https://stackoverflow.com/questions/308364/c-bitfield-packing-with-bools)
+    static_assert(D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER < (1 << ShaderInputTypeBits), "Not enough bits to represent D3D_SHADER_INPUT_TYPE");
+    static_assert(SHADER_VARIABLE_TYPE_NUM_TYPES        < (1 << VariableTypeBits),    "Not enough bits to represent SHADER_VARIABLE_TYPE");
+    static_assert(D3D_SRV_DIMENSION_BUFFEREX            < (1 << SRVDimBits),          "Not enough bits to represent D3D_SRV_DIMENSION");
 
+    // We need to use Uint32 instead of the actual type for reliability and correctness.
+    // There originally was a problem when the type of InputType was D3D_SHADER_INPUT_TYPE:
+    // the value of D3D_SIT_UAV_RWBYTEADDRESS (8) was interpreted as -8 (as the underlying enum type 
+    // is signed) causing errors
+    const Uint32  InputType         : ShaderInputTypeBits;      // Max value: D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER == 11
+    const Uint32  VariableType      : VariableTypeBits;         // Max value: SHADER_VARIABLE_TYPE_DYNAMIC == 2
+    const Uint32  SRVDimension      : SRVDimBits;               // Max value: D3D_SRV_DIMENSION_BUFFEREX == 11
+    const Uint32  SamplerId         : SamplerIdBits;            // Max value: 1048575
+    const Uint32  StaticSamplerFlag : StaticSamplerFlagBits;    // Needs to be Uint32, otherwise sizeof(D3DShaderResourceAttribs)==24
+                                                                // (https://stackoverflow.com/questions/308364/c-bitfield-packing-with-bools)
+
+public:
     static constexpr const Uint32 InvalidSamplerId = (1 << SamplerIdBits) - 1;
     static constexpr const Uint16 InvalidBindPoint = std::numeric_limits<Uint16>::max();
     static constexpr const Uint16 MaxBindPoint     = InvalidBindPoint - 1;
     static constexpr const Uint16 MaxBindCount     = std::numeric_limits<Uint16>::max();
 
-    static_assert(D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER < (1 << ShaderInputTypeBits), "Not enough bits to represent D3D_SHADER_INPUT_TYPE");
-    static_assert(SHADER_VARIABLE_TYPE_NUM_TYPES        < (1 << VariableTypeBits),    "Not enough bits to represent SHADER_VARIABLE_TYPE");
-    static_assert(D3D_SRV_DIMENSION_BUFFEREX            < (1 << SRVDimBits),          "Not enough bits to represent D3D_SRV_DIMENSION");
 
     D3DShaderResourceAttribs(const char*            _Name, 
                              UINT                   _BindPoint, 
@@ -126,11 +133,11 @@ struct D3DShaderResourceAttribs
                              Uint32                 _SamplerId, 
                              bool                   _IsStaticSampler)noexcept :
         Name             (_Name),
-        BindPoint        (static_cast<decltype(BindPoint)>(_BindPoint)),
-        BindCount        (static_cast<decltype(BindCount)>(_BindCount)),
-        InputType        (_InputType),
-        VariableType     (_VariableType),
-        SRVDimension     (_SRVDimension),
+        BindPoint        (static_cast<decltype(BindPoint)>   (_BindPoint)),
+        BindCount        (static_cast<decltype(BindCount)>   (_BindCount)),
+        InputType        (static_cast<decltype(InputType)>   (_InputType)),
+        VariableType     (static_cast<decltype(VariableType)>(_VariableType)),
+        SRVDimension     (static_cast<decltype(SRVDimension)>(_SRVDimension)),
         SamplerId        (_SamplerId),
         StaticSamplerFlag(_IsStaticSampler ? 1 : 0)
     {
@@ -141,7 +148,7 @@ struct D3DShaderResourceAttribs
         VERIFY(_SRVDimension  < (1 << SRVDimBits),          "SRV dimensions is out of expected range");
         VERIFY(_SamplerId     < (1 << SamplerIdBits),       "SamplerId is out of representable range");
 #ifdef _DEBUG
-        if(_InputType==D3D_SIT_SAMPLER)
+        if (_InputType==D3D_SIT_SAMPLER)
             VERIFY_EXPR(IsStaticSampler() == _IsStaticSampler);
         else
             VERIFY(!_IsStaticSampler, "Only samplers can be marked as static");
@@ -151,7 +158,7 @@ struct D3DShaderResourceAttribs
         else
             VERIFY(SamplerId == InvalidSamplerId, "Only textures can be assigned a valid texture sampler");
 
-        if(_IsStaticSampler)
+        if (_IsStaticSampler)
             VERIFY( _InputType == D3D_SIT_SAMPLER, "Invalid input type: D3D_SIT_SAMPLER is expected" );
 #endif
     }
@@ -162,9 +169,9 @@ struct D3DShaderResourceAttribs
             NamesPool.CopyString(rhs.Name),
             rhs.BindPoint,
             rhs.BindCount,
-            rhs.InputType,
-            rhs.VariableType,
-            rhs.SRVDimension,
+            rhs.GetInputType(),
+            rhs.GetVariableType(),
+            rhs.GetSRVDimension(),
             SamplerId,
             false
         }
@@ -178,9 +185,9 @@ struct D3DShaderResourceAttribs
             NamesPool.CopyString(rhs.Name),
             rhs.BindPoint,
             rhs.BindCount,
-            rhs.InputType,
-            rhs.VariableType,
-            rhs.SRVDimension,
+            rhs.GetInputType(),
+            rhs.GetVariableType(),
+            rhs.GetSRVDimension(),
             rhs.SamplerId,
             rhs.StaticSamplerFlag !=0 ? true : false
         }
@@ -192,6 +199,21 @@ struct D3DShaderResourceAttribs
     D3DShaderResourceAttribs& operator = (const D3DShaderResourceAttribs&  rhs) = delete;
     D3DShaderResourceAttribs& operator = (      D3DShaderResourceAttribs&& rhs) = delete;
     
+    D3D_SHADER_INPUT_TYPE GetInputType()const
+    {
+        return static_cast<D3D_SHADER_INPUT_TYPE>(InputType);
+    }
+
+    SHADER_VARIABLE_TYPE GetVariableType()const
+    {
+        return static_cast<SHADER_VARIABLE_TYPE>(VariableType);
+    }
+
+    D3D_SRV_DIMENSION GetSRVDimension()const
+    {
+        return static_cast<D3D_SRV_DIMENSION>(SRVDimension);
+    }
+
     Uint32 GetSamplerId()const
     {
         VERIFY( InputType == D3D_SIT_TEXTURE, "Invalid input type: D3D_SIT_TEXTURE is expected" );
@@ -237,6 +259,11 @@ struct D3DShaderResourceAttribs
     size_t GetHash()const
     {
         return ComputeHash(BindPoint, BindCount, InputType, VariableType, SRVDimension, SamplerId, StaticSamplerFlag);
+    }
+
+    bool IsAllowedType(Uint32 AllowedTypeBits)const
+    {
+        return Diligent::IsAllowedType(GetVariableType(), AllowedTypeBits);
     }
 };
 static_assert(sizeof(D3DShaderResourceAttribs) == sizeof(void*) + sizeof(Uint32)*2, "Unexpected sizeof(D3DShaderResourceAttribs)");
@@ -295,35 +322,35 @@ public:
         for(Uint32 n=0; n < GetNumCBs(); ++n)
         {
             const auto& CB = GetCB(n);
-            if( IsAllowedType(CB.VariableType, AllowedTypeBits) )
+            if( CB.IsAllowedType(AllowedTypeBits) )
                 HandleCB(CB, n);
         }
 
         for(Uint32 n=0; n < GetNumTexSRV(); ++n)
         {
             const auto &TexSRV = GetTexSRV(n);
-            if( IsAllowedType(TexSRV.VariableType, AllowedTypeBits) )
+            if( TexSRV.IsAllowedType(AllowedTypeBits) )
                 HandleTexSRV(TexSRV, n);
         }
     
         for(Uint32 n=0; n < GetNumTexUAV(); ++n)
         {
             const auto &TexUAV = GetTexUAV(n);
-            if( IsAllowedType(TexUAV.VariableType, AllowedTypeBits) )
+            if( TexUAV.IsAllowedType(AllowedTypeBits) )
                 HandleTexUAV(TexUAV, n);
         }
 
         for(Uint32 n=0; n < GetNumBufSRV(); ++n)
         {
             const auto &BufSRV = GetBufSRV(n);
-            if( IsAllowedType(BufSRV.VariableType, AllowedTypeBits) )
+            if( BufSRV.IsAllowedType(AllowedTypeBits) )
                 HandleBufSRV(BufSRV, n);
         }
 
         for(Uint32 n=0; n < GetNumBufUAV(); ++n)
         {
             const auto& BufUAV = GetBufUAV(n);
-            if( IsAllowedType(BufUAV.VariableType, AllowedTypeBits) )
+            if( BufUAV.IsAllowedType(AllowedTypeBits) )
                 HandleBufUAV(BufUAV, n);
         }
     }

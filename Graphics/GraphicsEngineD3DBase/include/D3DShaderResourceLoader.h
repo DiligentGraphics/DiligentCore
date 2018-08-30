@@ -212,7 +212,7 @@ namespace Diligent
                 for (const auto& Res : Resources)
                 {
                     // Skip samplers as they are not handled as independent variables
-                    if (Res.InputType != D3D_SIT_SAMPLER && strcmp(Res.Name, VarName) == 0)
+                    if (Res.GetInputType() != D3D_SIT_SAMPLER && strcmp(Res.Name, VarName) == 0)
                     {
                         VariableFound = true;   
                         break;
@@ -231,7 +231,7 @@ namespace Diligent
 
                 for (const auto& Res : Resources)
                 {
-                    if ( Res.InputType == D3D_SIT_TEXTURE && Res.SRVDimension != D3D_SRV_DIMENSION_BUFFER && strcmp(Res.Name, TexName) == 0)
+                    if ( Res.GetInputType() == D3D_SIT_TEXTURE && Res.GetSRVDimension() != D3D_SRV_DIMENSION_BUFFER && strcmp(Res.Name, TexName) == 0)
                     {
                         TextureFound = true;
                         break;
@@ -253,7 +253,7 @@ namespace Diligent
         for(size_t ResInd = 0; ResInd < Resources.size(); ++ResInd)
         {
             const auto& Res = Resources[ResInd];
-            switch( Res.InputType )
+            switch( Res.GetInputType() )
             {
                 case D3D_SIT_CBUFFER:
                 {
@@ -269,7 +269,7 @@ namespace Diligent
 
                 case D3D_SIT_TEXTURE:
                 {
-                    if( Res.SRVDimension == D3D_SRV_DIMENSION_BUFFER )
+                    if( Res.GetSRVDimension() == D3D_SRV_DIMENSION_BUFFER )
                     {
                         OnNewBuffSRV( Res );
                     }
@@ -289,7 +289,7 @@ namespace Diligent
 
                 case D3D_SIT_UAV_RWTYPED:
                 {
-                    if( Res.SRVDimension == D3D_SRV_DIMENSION_BUFFER )
+                    if( Res.GetSRVDimension() == D3D_SRV_DIMENSION_BUFFER )
                     {
                         OnNewBuffUAV( Res );
                     }
@@ -340,6 +340,11 @@ namespace Diligent
                 {
                     UNSUPPORTED( "RW structured buffers with counter are not supported" );
                     break;
+                }
+
+                default:
+                {
+                    UNEXPECTED("Unexpected resource input type");
                 }
             }
         }

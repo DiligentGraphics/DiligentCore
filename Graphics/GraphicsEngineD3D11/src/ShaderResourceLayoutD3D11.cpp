@@ -161,7 +161,7 @@ void ShaderResourceLayoutD3D11::Initialize(const std::shared_ptr<const ShaderRes
 
         [&](const D3DShaderResourceAttribs &CB, Uint32)
         {
-            VERIFY_EXPR( IsAllowedType(CB.VariableType, AllowedTypeBits) );
+            VERIFY_EXPR( CB.IsAllowedType(AllowedTypeBits) );
             // Initialize current CB in place, increment CB counter
             new (&GetCB(cb++)) ConstBuffBindInfo( CB, *this );
             NumCBSlots = std::max(NumCBSlots, static_cast<Uint32>(CB.BindPoint + CB.BindCount));
@@ -169,7 +169,7 @@ void ShaderResourceLayoutD3D11::Initialize(const std::shared_ptr<const ShaderRes
 
         [&](const D3DShaderResourceAttribs& TexSRV, Uint32)
         {
-            VERIFY_EXPR( IsAllowedType(TexSRV.VariableType, AllowedTypeBits) );
+            VERIFY_EXPR( TexSRV.IsAllowedType(AllowedTypeBits) );
             // Set reference to a special static instance representing invalid sampler            
             // if no sampler is assigned to texture SRV           
             const D3DShaderResourceAttribs& SamplerAttribs = TexSRV.IsValidSampler() ? 
@@ -183,7 +183,7 @@ void ShaderResourceLayoutD3D11::Initialize(const std::shared_ptr<const ShaderRes
 
         [&](const D3DShaderResourceAttribs &TexUAV, Uint32)
         {
-            VERIFY_EXPR( IsAllowedType(TexUAV.VariableType, AllowedTypeBits) );
+            VERIFY_EXPR( TexUAV.IsAllowedType(AllowedTypeBits) );
              
             // Initialize tex UAV in place, increment counter of tex UAVs
             new (&GetTexUAV(texUav++)) TexUAVBindInfo( TexUAV, *this );
@@ -192,7 +192,7 @@ void ShaderResourceLayoutD3D11::Initialize(const std::shared_ptr<const ShaderRes
 
         [&](const D3DShaderResourceAttribs &BuffSRV, Uint32)
         {
-            VERIFY_EXPR(IsAllowedType(BuffSRV.VariableType, AllowedTypeBits));
+            VERIFY_EXPR(BuffSRV.IsAllowedType(AllowedTypeBits));
             
             // Initialize buff SRV in place, increment counter of buff SRVs
             new (&GetBufSRV(bufSrv++)) BuffSRVBindInfo( BuffSRV, *this );
@@ -201,7 +201,7 @@ void ShaderResourceLayoutD3D11::Initialize(const std::shared_ptr<const ShaderRes
 
         [&](const D3DShaderResourceAttribs &BuffUAV, Uint32)
         {
-            VERIFY_EXPR(IsAllowedType(BuffUAV.VariableType, AllowedTypeBits));
+            VERIFY_EXPR(BuffUAV.IsAllowedType(AllowedTypeBits));
             
             // Initialize buff UAV in place, increment counter of buff UAVs
             new (&GetBufUAV(bufUav++)) BuffUAVBindInfo( BuffUAV, *this );
@@ -409,12 +409,12 @@ void ShaderResourceLayoutD3D11::ConstBuffBindInfo::BindResource(IDeviceObject*  
     }
 
 #ifdef VERIFY_SHADER_BINDINGS
-    if( Attribs.VariableType != SHADER_VARIABLE_TYPE_DYNAMIC)
+    if( Attribs.GetVariableType() != SHADER_VARIABLE_TYPE_DYNAMIC)
     {
         auto &CachedCB = pResourceCache->GetCB(Attribs.BindPoint + ArrayIndex);
         if( CachedCB.pBuff != nullptr && CachedCB.pBuff != pBuffD3D11Impl)
         {
-            auto VarTypeStr = GetShaderVariableTypeLiteralName(Attribs.VariableType);
+            auto VarTypeStr = GetShaderVariableTypeLiteralName(Attribs.GetVariableType());
             LOG_ERROR_MESSAGE( "Non-null constant buffer is already bound to ", VarTypeStr, " shader variable \"", Attribs.GetPrintName(ArrayIndex), "\" in shader \"", m_ParentResLayout.GetShaderName(), "\". Attempting to bind another resource or null is an error and may cause unpredicted behavior. Use another shader resource binding instance or mark shader variable as dynamic." );
         }
     }
@@ -480,12 +480,12 @@ void ShaderResourceLayoutD3D11::TexAndSamplerBindInfo::BindResource( IDeviceObje
     if(pViewD3D11 && !dbgVerifyViewType("texture view", pViewD3D11.RawPtr(), Attribs, ArrayIndex, TEXTURE_VIEW_SHADER_RESOURCE, m_ParentResLayout.GetShaderName()))
         pViewD3D11.Release();
 
-    if( Attribs.VariableType != SHADER_VARIABLE_TYPE_DYNAMIC)
+    if( Attribs.GetVariableType() != SHADER_VARIABLE_TYPE_DYNAMIC)
     {
         auto &CachedSRV = pResourceCache->GetSRV(Attribs.BindPoint + ArrayIndex);
         if( CachedSRV.pView != nullptr && CachedSRV.pView != pViewD3D11)
         {
-            auto VarTypeStr = GetShaderVariableTypeLiteralName(Attribs.VariableType);
+            auto VarTypeStr = GetShaderVariableTypeLiteralName(Attribs.GetVariableType());
             LOG_ERROR_MESSAGE( "Non-null texture SRV is already bound to ", VarTypeStr, " shader variable \"", Attribs.GetPrintName(ArrayIndex), "\" in shader \"", m_ParentResLayout.GetShaderName(), "\". Attempting to bind another resource or null is an error and may cause unpredicted behavior. Use another shader resource binding instance or mark shader variable as dynamic." );
         }
     }
@@ -543,12 +543,12 @@ void ShaderResourceLayoutD3D11::BuffSRVBindInfo::BindResource( IDeviceObject*   
     if(pViewD3D11 && !dbgVerifyViewType("buffer view", pViewD3D11.RawPtr(), Attribs, ArrayIndex, BUFFER_VIEW_SHADER_RESOURCE, m_ParentResLayout.GetShaderName()))
         pViewD3D11.Release();
 
-    if( Attribs.VariableType != SHADER_VARIABLE_TYPE_DYNAMIC)
+    if( Attribs.GetVariableType() != SHADER_VARIABLE_TYPE_DYNAMIC)
     {
         auto &CachedSRV = pResourceCache->GetSRV(Attribs.BindPoint + ArrayIndex);
         if( CachedSRV.pView != nullptr && CachedSRV.pView != pViewD3D11)
         {
-            auto VarTypeStr = GetShaderVariableTypeLiteralName(Attribs.VariableType);
+            auto VarTypeStr = GetShaderVariableTypeLiteralName(Attribs.GetVariableType());
             LOG_ERROR_MESSAGE( "Non-null buffer SRV is already bound to ", VarTypeStr, " shader variable \"", Attribs.GetPrintName(ArrayIndex), "\" in shader \"", m_ParentResLayout.GetShaderName(), "\". Attempting to bind another resource or null is an error and may cause unpredicted behavior. Use another shader resource binding instance or mark shader variable as dynamic." );
         }
     }
@@ -576,12 +576,12 @@ void ShaderResourceLayoutD3D11::TexUAVBindInfo::BindResource( IDeviceObject*    
     if(pViewD3D11 && !dbgVerifyViewType("texture view", pViewD3D11.RawPtr(), Attribs, ArrayIndex, TEXTURE_VIEW_UNORDERED_ACCESS, m_ParentResLayout.GetShaderName()))
         pViewD3D11.Release();
 
-    if( Attribs.VariableType != SHADER_VARIABLE_TYPE_DYNAMIC)
+    if( Attribs.GetVariableType() != SHADER_VARIABLE_TYPE_DYNAMIC)
     {
         auto &CachedUAV = pResourceCache->GetUAV(Attribs.BindPoint + ArrayIndex);
         if( CachedUAV.pView != nullptr && CachedUAV.pView != pViewD3D11)
         {
-            auto VarTypeStr = GetShaderVariableTypeLiteralName(Attribs.VariableType);
+            auto VarTypeStr = GetShaderVariableTypeLiteralName(Attribs.GetVariableType());
             LOG_ERROR_MESSAGE( "Non-null texture UAV is already bound to ", VarTypeStr, " shader variable \"", Attribs.GetPrintName(ArrayIndex), "\" in shader \"", m_ParentResLayout.GetShaderName(), "\". Attempting to bind another resource or null is an error and may cause unpredicted behavior. Use another shader resource binding instance or mark shader variable as dynamic." );
         }
     }
@@ -609,12 +609,12 @@ void ShaderResourceLayoutD3D11::BuffUAVBindInfo::BindResource( IDeviceObject*   
     if(pViewD3D11 && !dbgVerifyViewType("buffer view", pViewD3D11.RawPtr(), Attribs, ArrayIndex, BUFFER_VIEW_UNORDERED_ACCESS, m_ParentResLayout.GetShaderName()) )
         pViewD3D11.Release();
 
-    if( Attribs.VariableType != SHADER_VARIABLE_TYPE_DYNAMIC)
+    if( Attribs.GetVariableType() != SHADER_VARIABLE_TYPE_DYNAMIC)
     {
         auto &CachedUAV = pResourceCache->GetUAV(Attribs.BindPoint + ArrayIndex);
         if( CachedUAV.pView != nullptr && CachedUAV.pView != pViewD3D11)
         {
-            auto VarTypeStr = GetShaderVariableTypeLiteralName(Attribs.VariableType);
+            auto VarTypeStr = GetShaderVariableTypeLiteralName(Attribs.GetVariableType());
             LOG_ERROR_MESSAGE( "Non-null buffer UAV is already bound to ", VarTypeStr, " shader variable \"", Attribs.GetPrintName(ArrayIndex), "\" in shader \"", m_ParentResLayout.GetShaderName(), "\". Attempting to bind another resource or null is an error and may cause unpredicted behavior. Use another shader resource binding instance or mark shader variable as dynamic." );
         }
     }

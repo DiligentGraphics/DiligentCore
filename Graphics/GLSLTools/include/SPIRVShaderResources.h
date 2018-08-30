@@ -86,10 +86,15 @@ struct SPIRVShaderResourceAttribs
         NumResourceTypes
     };
 
+    static constexpr const Uint32 ResourceTypeBits = 4;
+    static constexpr const Uint32 VarTypeBits      = 4;
+    static_assert(SHADER_VARIABLE_TYPE_NUM_TYPES < (1 << VarTypeBits),       "Not enough bits to represent SHADER_VARIABLE_TYPE");
+    static_assert(NumResourceTypes               < (1 << ResourceTypeBits),  "Not enough bits to represent ResourceType");
+
     const char *Name;
     const Uint16                ArraySize;
-    const ResourceType          Type            : 4;
-    const SHADER_VARIABLE_TYPE  VarType         : 4;
+    const ResourceType          Type            : ResourceTypeBits;
+    const SHADER_VARIABLE_TYPE  VarType         : VarTypeBits;
     const Int8                  StaticSamplerInd;
 
     // Offset in SPIRV words (uint32_t) of binding & descriptor set decorations in SPIRV binary

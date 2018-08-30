@@ -43,7 +43,7 @@ static constexpr INTERFACE_ID IID_ShaderVariable =
 { 0xd57df3f, 0x977d, 0x4c8f, { 0xb6, 0x4c, 0x66, 0x75, 0x81, 0x4b, 0xc8, 0xc } };
 
 /// Describes the shader type
-enum SHADER_TYPE : Int32
+enum SHADER_TYPE : Uint32
 {
     SHADER_TYPE_UNKNOWN     = 0x000, ///< Unknown shader type
     SHADER_TYPE_VERTEX      = 0x001, ///< Vertex shader
@@ -54,7 +54,7 @@ enum SHADER_TYPE : Int32
     SHADER_TYPE_COMPUTE     = 0x020  ///< Compute shader
 };
 
-enum SHADER_PROFILE : Int32
+enum SHADER_PROFILE : Uint8
 {
     SHADER_PROFILE_DEFAULT = 0,
     SHADER_PROFILE_DX_4_0,
@@ -64,7 +64,7 @@ enum SHADER_PROFILE : Int32
 };
 
 /// Describes shader source code language
-enum SHADER_SOURCE_LANGUAGE : Int32
+enum SHADER_SOURCE_LANGUAGE : Uint32
 {
     /// Default language (GLSL for OpenGL/OpenGLES devices, HLSL for Direct3D11/Direct3D12 devices)
     SHADER_SOURCE_LANGUAGE_DEFAULT = 0,
@@ -78,7 +78,7 @@ enum SHADER_SOURCE_LANGUAGE : Int32
 
 /// Describes flags that can be supplied to IShader::BindResources()
 /// and IDeviceContext::BindShaderResources().
-enum BIND_SHADER_RESOURCES_FLAGS : Int32
+enum BIND_SHADER_RESOURCES_FLAGS : Uint32
 {
     /// Reset all bindings. If this flag is specified, all existing bindings will be
     /// broken. By default all existing bindings are preserved.
@@ -97,7 +97,7 @@ enum BIND_SHADER_RESOURCES_FLAGS : Int32
 };
 
 /// Describes shader variable type that is used by ShaderVariableDesc
-enum SHADER_VARIABLE_TYPE : Int32
+enum SHADER_VARIABLE_TYPE : Uint8
 {
     /// Shader variable is constant across all shader instances.
     /// It must be set *once* directly through IShader::BindResources() or through 
