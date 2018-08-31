@@ -39,6 +39,11 @@ namespace Diligent
         const GLchar* message,
         const void* userParam )
     {
+        // We are trying to disable flood of notifications through glDebugMessageControl(), but it has no effect, 
+        // so we have to filter them out here
+        if (type == GL_DEBUG_TYPE_OTHER && severity == GL_DEBUG_SEVERITY_NOTIFICATION)
+            return;
+
         std::stringstream MessageSS;
 
         MessageSS << "OpenGL debug message (";
@@ -169,12 +174,30 @@ namespace Diligent
                 glEnable( GL_DEBUG_OUTPUT_SYNCHRONOUS );
                 glDebugMessageCallback( openglCallbackFunction, nullptr );
                 GLuint unusedIds = 0;
-                glDebugMessageControl( GL_DONT_CARE,
-                    GL_DONT_CARE,
-                    GL_DONT_CARE,
-                    0,
-                    &unusedIds,
-                    true );
+                glDebugMessageControl(
+                    GL_DONT_CARE, // Source of debug messages to enable or disable
+                    GL_DONT_CARE, // Type of debug messages to enable or disable
+                    GL_DONT_CARE, // Severity of debug messages to enable or disable
+                    0,            // The length of the array ids
+                    &unusedIds,   // Array of unsigned integers contianing the ids of the messages to enable or disable
+                    GL_TRUE       // Flag determining whether the selected messages should be enabled or disabled
+                );
+                if( glGetError() != GL_NO_ERROR )
+                    LOG_ERROR_MESSAGE("Failed to enable debug messages");
+
+                // Disable notifications as they flood the output
+                // Note: quite commonly for OpenGL, this call does not work as described and has no effect.
+                // Even disabling all messages does not disable them
+                glDebugMessageControl(
+                    GL_DONT_CARE,                   // Source of debug messages to enable or disable
+                    GL_DEBUG_TYPE_OTHER,            // Type of debug messages to enable or disable
+                    GL_DEBUG_SEVERITY_NOTIFICATION, // Severity of debug messages to enable or disable
+                    0,            // The length of the array ids
+                    &unusedIds,   // Array of unsigned integers contianing the ids of the messages to enable or disable
+                    GL_FALSE      // Flag determining whether the selected messages should be enabled or disabled
+                );
+                if( glGetError() != GL_NO_ERROR )
+                    LOG_ERROR_MESSAGE("Failed to disable debug notification messages");
             }
 		}
 		else
