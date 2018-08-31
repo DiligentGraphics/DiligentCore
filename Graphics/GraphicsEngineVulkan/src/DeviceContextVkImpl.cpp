@@ -1144,6 +1144,8 @@ namespace Diligent
         {
             // Align update region size by the block size. This is only necessary when updating
             // coarse mip levels. Otherwise UpdateRegionWidth/Height should be multiples of block size
+            VERIFY_EXPR( (FmtAttribs.BlockWidth  & (FmtAttribs.BlockWidth-1))  == 0 );
+            VERIFY_EXPR( (FmtAttribs.BlockHeight & (FmtAttribs.BlockHeight-1)) == 0 );
             const auto BlockAlignedRegionWidth =  (UpdateRegionWidth  + (FmtAttribs.BlockWidth-1))  & ~(FmtAttribs.BlockWidth -1);
             const auto BlockAlignedRegionHeight = (UpdateRegionHeight + (FmtAttribs.BlockHeight-1)) & ~(FmtAttribs.BlockHeight-1);
             RowSize  = BlockAlignedRegionWidth  / Uint32{FmtAttribs.BlockWidth} * Uint32{FmtAttribs.ComponentSize};

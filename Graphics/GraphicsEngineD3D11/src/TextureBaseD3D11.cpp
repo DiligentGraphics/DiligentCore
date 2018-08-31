@@ -168,12 +168,12 @@ void TextureBaseD3D11::UpdateData( IDeviceContext* pContext, Uint32 MipLevel, Ui
     if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
     {
         // Align update region by the compressed block size
-        VERIFY( (D3D11Box.left % FmtAttribs.BlockWidth) == 0, "Update region min x (", D3D11Box.left, ") must be multiple of a compressed block width (", FmtAttribs.BlockWidth, ")");
-        VERIFY( (FmtAttribs.BlockWidth & (FmtAttribs.BlockWidth-1)) == 0, "Compressed block width (", FmtAttribs.BlockWidth, ") is expected to be power of 2");
+        VERIFY( (D3D11Box.left % FmtAttribs.BlockWidth) == 0, "Update region min X coordinate (", D3D11Box.left, ") must be multiple of a compressed block width (", Uint32{FmtAttribs.BlockWidth}, ")");
+        VERIFY( (FmtAttribs.BlockWidth & (FmtAttribs.BlockWidth-1)) == 0, "Compressed block width (", Uint32{FmtAttribs.BlockWidth}, ") is expected to be power of 2");
         D3D11Box.right = (D3D11Box.right + FmtAttribs.BlockWidth-1) & ~(FmtAttribs.BlockWidth-1);
  
-        VERIFY( (D3D11Box.top % FmtAttribs.BlockHeight) == 0, "Update region min y (", D3D11Box.top, ") must be multiple of a compressed block height (", FmtAttribs.BlockHeight, ")");
-        VERIFY( (FmtAttribs.BlockHeight & (FmtAttribs.BlockHeight-1)) == 0, "Compressed block height (", FmtAttribs.BlockHeight, ") is expected to be power of 2");
+        VERIFY( (D3D11Box.top % FmtAttribs.BlockHeight) == 0, "Update region min Y coordinate (", D3D11Box.top, ") must be multiple of a compressed block height (", Uint32{FmtAttribs.BlockHeight}, ")");
+        VERIFY( (FmtAttribs.BlockHeight & (FmtAttribs.BlockHeight-1)) == 0, "Compressed block height (", Uint32{FmtAttribs.BlockHeight}, ") is expected to be power of 2");
         D3D11Box.bottom = (D3D11Box.bottom + FmtAttribs.BlockHeight-1) & ~(FmtAttribs.BlockHeight-1);
     }
     auto SubresIndex = D3D11CalcSubresource(MipLevel, Slice, m_Desc.MipLevels);

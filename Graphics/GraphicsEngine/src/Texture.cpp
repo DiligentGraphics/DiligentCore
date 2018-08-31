@@ -141,8 +141,8 @@ void ValidateTextureRegion(const TextureDesc& TexDesc, Uint32 MipLevel, Uint32 S
         VERIFY_EXPR( (FmtAttribs.BlockWidth & (FmtAttribs.BlockWidth-1)) == 0);
         Uint32 BlockAlignedMipWidth = (MipWidth + (FmtAttribs.BlockWidth-1)) & ~(FmtAttribs.BlockWidth-1);
         VERIFY_TEX_PARAMS( Box.MaxX <= BlockAlignedMipWidth, "Region max X coordinate (", Box.MaxX, ") is out of allowed range [0, ", BlockAlignedMipWidth, "]" );
-        VERIFY_TEX_PARAMS( (Box.MinX % FmtAttribs.BlockWidth) == 0, "For compressed formats, update region min x (", Box.MinX, ") must be a multiple of block width (", FmtAttribs.BlockWidth, ")" );
-        VERIFY_TEX_PARAMS( (Box.MaxX % FmtAttribs.BlockWidth) == 0 || Box.MaxX == MipWidth, "For compressed formats, update region max x (", Box.MaxX, ") must be a multiple of block width (", FmtAttribs.BlockWidth, ") or equal the mip level width (", MipWidth, ")" );
+        VERIFY_TEX_PARAMS( (Box.MinX % FmtAttribs.BlockWidth) == 0, "For compressed formats, the region min X coordinate (", Box.MinX, ") must be a multiple of block width (", Uint32{FmtAttribs.BlockWidth}, ")" );
+        VERIFY_TEX_PARAMS( (Box.MaxX % FmtAttribs.BlockWidth) == 0 || Box.MaxX == MipWidth, "For compressed formats, the region max X coordinate (", Box.MaxX, ") must be a multiple of block width (", Uint32{FmtAttribs.BlockWidth}, ") or equal the mip level width (", MipWidth, ")" );
     }
     else
         VERIFY_TEX_PARAMS( Box.MaxX <= MipWidth, "Region max X coordinate (", Box.MaxX, ") is out of allowed range [0, ", MipWidth, "]" );
@@ -156,8 +156,8 @@ void ValidateTextureRegion(const TextureDesc& TexDesc, Uint32 MipLevel, Uint32 S
             VERIFY_EXPR( (FmtAttribs.BlockHeight & (FmtAttribs.BlockHeight-1)) == 0);
             Uint32 BlockAlignedMipHeight = (MipHeight + (FmtAttribs.BlockHeight-1)) & ~(FmtAttribs.BlockHeight-1);
             VERIFY_TEX_PARAMS( Box.MaxY <= BlockAlignedMipHeight, "Region max Y coordinate (", Box.MaxY, ") is out of allowed range [0, ", BlockAlignedMipHeight, "]" );
-            VERIFY_TEX_PARAMS( (Box.MinY % FmtAttribs.BlockHeight) == 0, "For compressed formats, update region min y (", Box.MinY, ") must be a multiple of block height (", FmtAttribs.BlockHeight, ")" );
-            VERIFY_TEX_PARAMS( (Box.MaxY % FmtAttribs.BlockHeight) == 0 || Box.MaxY == MipHeight, "For compressed formats, update region max y (", Box.MaxY, ") must be a multiple of block height (", FmtAttribs.BlockHeight, ") or equal the mip level height (", MipHeight, ")" );
+            VERIFY_TEX_PARAMS( (Box.MinY % FmtAttribs.BlockHeight) == 0, "For compressed formats, the region min Y coordinate (", Box.MinY, ") must be a multiple of block height (", Uint32{FmtAttribs.BlockHeight}, ")" );
+            VERIFY_TEX_PARAMS( (Box.MaxY % FmtAttribs.BlockHeight) == 0 || Box.MaxY == MipHeight, "For compressed formats, the region max Y coordinate (", Box.MaxY, ") must be a multiple of block height (", Uint32{FmtAttribs.BlockHeight}, ") or equal the mip level height (", MipHeight, ")" );
         }
         else
             VERIFY_TEX_PARAMS( Box.MaxY <= MipHeight, "Region max Y coordinate (", Box.MaxY, ") is out of allowed range [0, ", MipHeight, "]" );
@@ -178,7 +178,7 @@ void ValidateTextureRegion(const TextureDesc& TexDesc, Uint32 MipLevel, Uint32 S
 
 void ValidateUpdateDataParams( const TextureDesc& TexDesc, Uint32 MipLevel, Uint32 Slice, const Box& DstBox, const TextureSubResData& SubresData )
 {
-    VERIFY((SubresData.pData != nullptr) ^ (SubresData.pSrcBuffer != nullptr), "Either CPU memory pointer or GPU buffer must be provided, exclusively");
+    VERIFY((SubresData.pData != nullptr) ^ (SubresData.pSrcBuffer != nullptr), "Either CPU data pointer (pData) or GPU buffer (pSrcBuffer) must not be null, but not both");
     ValidateTextureRegion(TexDesc, MipLevel, Slice, DstBox);
 
 #ifdef DEVELOPMENT

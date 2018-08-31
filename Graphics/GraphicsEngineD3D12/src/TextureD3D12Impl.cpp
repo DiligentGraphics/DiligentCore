@@ -416,14 +416,14 @@ void TextureD3D12Impl::UpdateData( IDeviceContext*          pContext,
     {
         // Align update region by the compressed block size
 
-        VERIFY( (DstBox.MinX % FmtAttribs.BlockWidth) == 0, "Update region min x (", DstBox.MinX, ") must be multiple of a compressed block width (", FmtAttribs.BlockWidth, ")");
+        VERIFY( (DstBox.MinX % FmtAttribs.BlockWidth) == 0, "Update region min X coordinate (", DstBox.MinX, ") must be multiple of a compressed block width (", Uint32{FmtAttribs.BlockWidth}, ")");
         BlockAlignedBox.MinX = DstBox.MinX;
-        VERIFY( (FmtAttribs.BlockWidth & (FmtAttribs.BlockWidth-1)) == 0, "Compressed block width (", FmtAttribs.BlockWidth, ") is expected to be power of 2");
+        VERIFY( (FmtAttribs.BlockWidth & (FmtAttribs.BlockWidth-1)) == 0, "Compressed block width (", Uint32{FmtAttribs.BlockWidth}, ") is expected to be power of 2");
         BlockAlignedBox.MaxX = (DstBox.MaxX + FmtAttribs.BlockWidth-1) & ~(FmtAttribs.BlockWidth-1);
  
-        VERIFY( (DstBox.MinY % FmtAttribs.BlockHeight) == 0, "Update region min y (", DstBox.MinY, ") must be multiple of a compressed block height (", FmtAttribs.BlockHeight, ")");
+        VERIFY( (DstBox.MinY % FmtAttribs.BlockHeight) == 0, "Update region min Y coordinate (", DstBox.MinY, ") must be multiple of a compressed block height (", Uint32{FmtAttribs.BlockHeight}, ")");
         BlockAlignedBox.MinY = DstBox.MinY;
-        VERIFY( (FmtAttribs.BlockHeight & (FmtAttribs.BlockHeight-1)) == 0, "Compressed block height (", FmtAttribs.BlockHeight, ") is expected to be power of 2");
+        VERIFY( (FmtAttribs.BlockHeight & (FmtAttribs.BlockHeight-1)) == 0, "Compressed block height (", Uint32{FmtAttribs.BlockHeight}, ") is expected to be power of 2");
         BlockAlignedBox.MaxY = (DstBox.MaxY + FmtAttribs.BlockHeight-1) & ~(FmtAttribs.BlockHeight-1);
 
         BlockAlignedBox.MinZ = DstBox.MinZ;
