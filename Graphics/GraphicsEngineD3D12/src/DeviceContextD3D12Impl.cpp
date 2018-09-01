@@ -759,17 +759,17 @@ namespace Diligent
                                                    Uint32                  SrcStride,
                                                    Uint32                  SrcDepthStride,
                                                    Uint32                  BufferSize,
-                                                   class TextureD3D12Impl* pTextureD3D12,
+                                                   class TextureD3D12Impl& TextureD3D12,
                                                    Uint32                  DstSubResIndex,
                                                    const Box&              DstBox)
     {
-        const auto& TexDesc = pTextureD3D12->GetDesc();
+        const auto& TexDesc = TextureD3D12.GetDesc();
         auto *pCmdCtx = RequestCmdContext();
         auto *pCmdList = pCmdCtx->GetCommandList();
-        auto TextureState = pTextureD3D12->GetState();
+        auto TextureState = TextureD3D12.GetState();
         D3D12_RESOURCE_BARRIER BarrierDesc;
 		BarrierDesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-		BarrierDesc.Transition.pResource = pTextureD3D12->GetD3D12Resource();
+		BarrierDesc.Transition.pResource = TextureD3D12.GetD3D12Resource();
 		BarrierDesc.Transition.Subresource = DstSubResIndex;
 		BarrierDesc.Transition.StateBefore = TextureState;
 		BarrierDesc.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
@@ -780,7 +780,7 @@ namespace Diligent
 
         D3D12_TEXTURE_COPY_LOCATION DstLocation;
         DstLocation.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-        DstLocation.pResource = pTextureD3D12->GetD3D12Resource();
+        DstLocation.pResource = TextureD3D12.GetD3D12Resource();
         DstLocation.SubresourceIndex = static_cast<UINT>(DstSubResIndex);
 
         D3D12_TEXTURE_COPY_LOCATION SrcLocation;
@@ -830,7 +830,7 @@ namespace Diligent
                                                    Uint32                  SrcOffset, 
                                                    Uint32                  SrcStride,
                                                    Uint32                  SrcDepthStride,
-                                                   class TextureD3D12Impl* pTextureD3D12,
+                                                   class TextureD3D12Impl& TextureD3D12,
                                                    Uint32                  DstSubResIndex,
                                                    const Box&              DstBox)
     {
@@ -841,70 +841,135 @@ namespace Diligent
             RequestCmdContext()->TransitionResource(pBufferD3D12, D3D12_RESOURCE_STATE_GENERIC_READ, true);
         size_t DataStartByteOffset = 0;
         auto* pd3d12Buffer = pBufferD3D12->GetD3D12Buffer(DataStartByteOffset, m_ContextId);
-        CopyTextureRegion(pd3d12Buffer, static_cast<Uint32>(DataStartByteOffset) + SrcOffset, SrcStride, SrcDepthStride, pBufferD3D12->GetDesc().uiSizeInBytes, pTextureD3D12, DstSubResIndex, DstBox);
+        CopyTextureRegion(pd3d12Buffer, static_cast<Uint32>(DataStartByteOffset) + SrcOffset, SrcStride, SrcDepthStride, pBufferD3D12->GetDesc().uiSizeInBytes, TextureD3D12, DstSubResIndex, DstBox);
     }
 
-    void DeviceContextD3D12Impl::UpdateTextureRegion(const void*       pSrcData,
-                                                     Uint32            SrcStride,
-                                                     Uint32            SrcDepthStride,
-                                                     TextureD3D12Impl* pTextureD3D12,
-                                                     Uint32            DstSubResIndex,
-                                                     const Box&        DstBox)
+    DeviceContextD3D12Impl::TextureUploadSpace DeviceContextD3D12Impl::AllocateTextureUploadSpace(TEXTURE_FORMAT TexFmt,
+                                                                                                  const Box&     Region)
     {
-        const auto& TexDesc = pTextureD3D12->GetDesc();
-        const auto& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
-        VERIFY_EXPR(DstBox.MaxX > DstBox.MinX && DstBox.MaxY > DstBox.MinY && DstBox.MaxZ > DstBox.MinZ);
-        auto UpdateRegionWidth  = DstBox.MaxX - DstBox.MinX;
-        auto UpdateRegionHeight = DstBox.MaxY - DstBox.MinY;
-        auto UpdateRegionDepth  = DstBox.MaxZ - DstBox.MinZ;
-        Uint32 RowSize = 0;
-        Uint32 RowCount = 0;
+        TextureUploadSpace UploadSpace;
+        VERIFY_EXPR(Region.MaxX > Region.MinX && Region.MaxY > Region.MinY && Region.MaxZ > Region.MinZ);
+        auto UpdateRegionWidth  = Region.MaxX - Region.MinX;
+        auto UpdateRegionHeight = Region.MaxY - Region.MinY;
+        auto UpdateRegionDepth  = Region.MaxZ - Region.MinZ;
+        const auto& FmtAttribs = GetTextureFormatAttribs(TexFmt);
         if(FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
         {
             // Box must be aligned by the calling function
             VERIFY_EXPR((UpdateRegionWidth  % FmtAttribs.BlockWidth) == 0);
             VERIFY_EXPR((UpdateRegionHeight % FmtAttribs.BlockHeight) == 0);
-            RowSize  = UpdateRegionWidth / Uint32{FmtAttribs.BlockWidth} * Uint32{FmtAttribs.ComponentSize};
-            RowCount = UpdateRegionHeight / FmtAttribs.BlockHeight;
+            UploadSpace.RowSize  = UpdateRegionWidth / Uint32{FmtAttribs.BlockWidth} * Uint32{FmtAttribs.ComponentSize};
+            UploadSpace.RowCount = UpdateRegionHeight / FmtAttribs.BlockHeight;
         }
         else
         {
-            RowSize = UpdateRegionWidth * Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents};
-            RowCount = UpdateRegionHeight;
+            UploadSpace.RowSize  = UpdateRegionWidth * Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents};
+            UploadSpace.RowCount = UpdateRegionHeight;
         }
+        // RowPitch must be a multiple of 256 (aka. D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)
+        UploadSpace.Stride        = (UploadSpace.RowSize + D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1) & ~(D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1);
+        UploadSpace.DepthStride   = UploadSpace.RowCount * UploadSpace.Stride;
+        const auto MemorySize     = UpdateRegionDepth * UploadSpace.DepthStride;
+        UploadSpace.Allocation    = AllocateDynamicSpace(MemorySize, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
+        UploadSpace.AlignedOffset = (UploadSpace.Allocation.Offset + (D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT-1)) & ~(D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT-1);
+        UploadSpace.Region        = Region;
+
+        return UploadSpace;
+    }
+
+    void DeviceContextD3D12Impl::UpdateTextureRegion(const void*       pSrcData,
+                                                     Uint32            SrcStride,
+                                                     Uint32            SrcDepthStride,
+                                                     TextureD3D12Impl& TextureD3D12,
+                                                     Uint32            DstSubResIndex,
+                                                     const Box&        DstBox)
+    {
+        const auto& TexDesc = TextureD3D12.GetDesc();
+        auto UploadSpace = AllocateTextureUploadSpace(TexDesc.Format, DstBox);
+        auto UpdateRegionDepth = DstBox.MaxZ-DstBox.MinZ;
 #ifdef _DEBUG
         {
-            VERIFY(SrcStride >= RowSize, "Source data stride (", SrcStride, ") is below the image row size (", RowSize, ")");
-            const Uint32 PlaneSize = SrcStride * RowCount;
+            VERIFY(SrcStride >= UploadSpace.RowSize, "Source data stride (", SrcStride, ") is below the image row size (", UploadSpace.RowSize, ")");
+            const Uint32 PlaneSize = SrcStride * UploadSpace.RowCount;
             VERIFY(UpdateRegionDepth == 1 || SrcDepthStride >= PlaneSize, "Source data depth stride (", SrcDepthStride, ") is below the image plane size (", PlaneSize, ")");
         }
 #endif
-        // RowPitch must be a multiple of 256 (aka. D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)
-        const auto AlignedStride      = (RowSize + D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1) & ~(D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1);
-        const auto AlignedDepthStride = RowCount * AlignedStride;
-        const auto MemorySize         = UpdateRegionDepth * AlignedDepthStride;
-        const auto UploadSpace        = AllocateDynamicSpace(MemorySize, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
-        const auto AlignedOffset      = (UploadSpace.Offset + (D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT-1)) & ~(D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT-1);
+        const auto AlignedOffset = UploadSpace.AlignedOffset;
 
-        for(Uint32 slice = 0; slice < UpdateRegionDepth; ++slice)
+        for(Uint32 DepthSlice = 0; DepthSlice < UpdateRegionDepth; ++DepthSlice)
         {
-            for(Uint32 row = 0; row < RowCount; ++row)
+            for(Uint32 row = 0; row < UploadSpace.RowCount; ++row)
             {
                 const auto* pSrcPtr =
                     reinterpret_cast<const Uint8*>(pSrcData)
                     + row   * SrcStride
-                    + slice * SrcDepthStride;
+                    + DepthSlice * SrcDepthStride;
                 auto* pDstPtr =
-                    reinterpret_cast<Uint8*>(UploadSpace.CPUAddress)
-                    + (AlignedOffset - UploadSpace.Offset)
-                    + row   * AlignedStride
-                    + slice * AlignedDepthStride;
+                    reinterpret_cast<Uint8*>(UploadSpace.Allocation.CPUAddress)
+                    + (AlignedOffset - UploadSpace.Allocation.Offset)
+                    + row        * UploadSpace.Stride
+                    + DepthSlice * UploadSpace.DepthStride;
                 
-                memcpy(pDstPtr, pSrcPtr, RowSize);
+                memcpy(pDstPtr, pSrcPtr, UploadSpace.RowSize);
             }
         }
-        CopyTextureRegion(UploadSpace.pBuffer, static_cast<Uint32>(AlignedOffset), AlignedStride, AlignedDepthStride, MemorySize, pTextureD3D12, DstSubResIndex, DstBox);
+        CopyTextureRegion(UploadSpace.Allocation.pBuffer,
+                          static_cast<Uint32>(AlignedOffset),
+                          UploadSpace.Stride,
+                          UploadSpace.DepthStride,
+                          static_cast<Uint32>(UploadSpace.Allocation.Size - (AlignedOffset - UploadSpace.Allocation.Offset)),
+                          TextureD3D12,
+                          DstSubResIndex,
+                          DstBox);
     }
+
+    void DeviceContextD3D12Impl::MapTexture( TextureD3D12Impl&         TextureD3D12,
+                                             Uint32                    MipLevel,
+                                             Uint32                    ArraySlice,
+                                             MAP_TYPE                  MapType,
+                                             Uint32                    MapFlags,
+                                             const Box&                MapRegion,
+                                             MappedTextureSubresource& MappedData )
+    {
+        const auto& TexDesc = TextureD3D12.GetDesc();
+        auto UploadSpace = AllocateTextureUploadSpace(TexDesc.Format, MapRegion);
+        const auto AlignedOffset = (UploadSpace.Allocation.Offset + (D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT-1)) & ~(D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT-1);
+        MappedData.pData       = reinterpret_cast<Uint8*>(UploadSpace.Allocation.CPUAddress) + (UploadSpace.AlignedOffset - UploadSpace.Allocation.Offset);
+        MappedData.Stride      = UploadSpace.Stride;
+        MappedData.DepthStride = UploadSpace.DepthStride;
+
+        auto Subres = D3D12CalcSubresource(MipLevel, ArraySlice, 0, TexDesc.MipLevels, TexDesc.ArraySize);
+        auto it = m_TextureUploadAllocations.emplace(TextureUploadAllocationKey{&TextureD3D12, Subres}, std::move(UploadSpace));
+        if(!it.second)
+            LOG_ERROR_MESSAGE("Mip level ", MipLevel, ", slice ", ArraySlice, " of texture '", TexDesc.Name, "' has already been mapped");
+    }
+
+    void DeviceContextD3D12Impl::UnmapTexture( TextureD3D12Impl& TextureD3D12,
+                                               Uint32            MipLevel,
+                                               Uint32            ArraySlice)
+    {
+        const auto& TexDesc = TextureD3D12.GetDesc();
+        auto Subres = D3D12CalcSubresource(MipLevel, ArraySlice, 0, TexDesc.MipLevels, TexDesc.ArraySize);
+        auto UploadSpaceIt = m_TextureUploadAllocations.find(TextureUploadAllocationKey{&TextureD3D12, Subres});
+        if(UploadSpaceIt != m_TextureUploadAllocations.end())
+        {
+            auto& UploadSpace = UploadSpaceIt->second;
+            CopyTextureRegion(UploadSpace.Allocation.pBuffer,
+                              UploadSpace.AlignedOffset,
+                              UploadSpace.Stride,
+                              UploadSpace.DepthStride,
+                              static_cast<Uint32>(UploadSpace.Allocation.Size - (UploadSpace.AlignedOffset - UploadSpace.Allocation.Offset)),
+                              TextureD3D12,
+                              Subres,
+                              UploadSpace.Region);
+            m_TextureUploadAllocations.erase(UploadSpaceIt);
+        }
+        else
+        {
+            LOG_ERROR_MESSAGE("Failed to unmap mip level ", MipLevel, ", slice ", ArraySlice, " of texture '", TexDesc.Name, "'. The texture has either been unmapped already or has not been mapped");
+        }
+    }
+
 
     void DeviceContextD3D12Impl::GenerateMips(TextureViewD3D12Impl* pTexView)
     {

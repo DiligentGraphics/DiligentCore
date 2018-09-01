@@ -213,15 +213,22 @@ void TextureBaseD3D11 ::  CopyData(IDeviceContext* pContext,
     pd3d11DeviceContext->CopySubresourceRegion(m_pd3d11Texture, DstSubRes, DstX, DstY, DstZ, pSrTextureBaseD3D11->GetD3D11Texture(), SrcSubRes, pD3D11SrcBox);
 }
 
-void TextureBaseD3D11 :: Map( IDeviceContext* pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags, MappedTextureSubresource& MappedData )
+void TextureBaseD3D11 :: Map(IDeviceContext*           pContext,
+                             Uint32                    MipLevel,
+                             Uint32                    ArraySlice,
+                             MAP_TYPE                  MapType,
+                             Uint32                    MapFlags,
+                             const Box*                pMapRegion,
+                             MappedTextureSubresource& MappedData)
 {
-    TTextureBase::Map( pContext, Subresource, MapType, MapFlags, MappedData );
+    TTextureBase::Map(pContext, MipLevel, ArraySlice, MapType, MapFlags, pMapRegion, MappedData);
 
     auto* pd3d11DeviceContext = static_cast<DeviceContextD3D11Impl*>(pContext)->GetD3D11DeviceContext();
     D3D11_MAP d3d11MapType = static_cast<D3D11_MAP>(0);
     UINT d3d11MapFlags = 0;
     MapParamsToD3D11MapParams(MapType, MapFlags, d3d11MapType, d3d11MapFlags);
 
+    auto Subresource = D3D11CalcSubresource(MipLevel, ArraySlice, m_Desc.MipLevels);
     D3D11_MAPPED_SUBRESOURCE MappedTex;
     auto hr = pd3d11DeviceContext->Map(m_pd3d11Texture, Subresource, d3d11MapType, d3d11MapFlags, &MappedTex);
     if( FAILED(hr) )
@@ -237,11 +244,12 @@ void TextureBaseD3D11 :: Map( IDeviceContext* pContext, Uint32 Subresource, MAP_
     }
 }
 
-void TextureBaseD3D11::Unmap( IDeviceContext* pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags )
+void TextureBaseD3D11::Unmap( IDeviceContext* pContext, Uint32 MipLevel, Uint32 ArraySlice)
 {
-    TTextureBase::Unmap( pContext, Subresource, MapType, MapFlags );
+    TTextureBase::Unmap( pContext, MipLevel, ArraySlice);
 
     auto* pd3d11DeviceContext = static_cast<DeviceContextD3D11Impl*>(pContext)->GetD3D11DeviceContext();
+    auto Subresource = D3D11CalcSubresource(MipLevel, ArraySlice, m_Desc.MipLevels);
     pd3d11DeviceContext->Unmap(m_pd3d11Texture, Subresource);
 }
 

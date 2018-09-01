@@ -248,39 +248,31 @@ void VliadateCopyTextureDataParams( const TextureDesc &SrcTexDesc, Uint32 SrcMip
     ValidateTextureRegion(DstTexDesc, DstMipLevel, DstSlice, DstBox);
 }
 
+void ValidateMapTextureParams(const TextureDesc& TexDesc,
+                              Uint32             MipLevel,
+                              Uint32             ArraySlice,
+                              MAP_TYPE           MapType,
+                              Uint32             MapFlags,
+                              const Box*         pMapRegion)
+{
+    VERIFY_TEX_PARAMS( MipLevel < TexDesc.MipLevels, "Mip level (", MipLevel, ") is out of allowed range [0, ", TexDesc.MipLevels-1, "]" );
+    if (TexDesc.Type == RESOURCE_DIM_TEX_1D_ARRAY ||
+        TexDesc.Type == RESOURCE_DIM_TEX_2D_ARRAY ||
+        TexDesc.Type == RESOURCE_DIM_TEX_CUBE     || 
+        TexDesc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY)
+    {
+        VERIFY_TEX_PARAMS( ArraySlice < TexDesc.ArraySize, "Array slice (", ArraySlice, ") is out of range [0,", TexDesc.ArraySize-1, "]" );
+    }
+    else
+    {
+        VERIFY_TEX_PARAMS( ArraySlice == 0, "Array slice (", ArraySlice, ") must be 0 for non-array textures" );
+    }
 
-//void CTexture :: Map(MAP_TYPE MapType, Uint32 MapFlags, PVoid &pMappedData)
-//{
-    //switch(MapType)
-    //{
-    //    case MAP_READ:
-    //        VERIFY( "Only buffers with usage USAGE_CPU_ACCESSIBLE can be read from" && m_Desc.Usage == USAGE_CPU_ACCESSIBLE);
-    //        VERIFY( "Buffer being mapped for reading was not created with CPU_ACCESS_READ flag" && (m_Desc.CPUAccessFlags & CPU_ACCESS_READ));
-    //    break;
+    if(pMapRegion != nullptr)
+    {
+        ValidateTextureRegion(TexDesc, MipLevel, ArraySlice, *pMapRegion);
+    }
 
-    //    case MAP_WRITE:
-    //        VERIFY( "Only buffers with usage USAGE_CPU_ACCESSIBLE can be written to" && m_Desc.Usage == USAGE_CPU_ACCESSIBLE );
-    //        VERIFY( "Buffer being mapped for writing was not created with CPU_ACCESS_WRITE flag" && (m_Desc.CPUAccessFlags & CPU_ACCESS_WRITE));
-    //    break;
-
-    //    case MAP_READ_WRITE:
-    //        VERIFY( "Only buffers with usage USAGE_CPU_ACCESSIBLE can be read and written" && m_Desc.Usage == USAGE_CPU_ACCESSIBLE );
-    //        VERIFY( "Buffer being mapped for reading & writing was not created with CPU_ACCESS_WRITE flag" && (m_Desc.CPUAccessFlags & CPU_ACCESS_WRITE));
-    //        VERIFY( "Buffer being mapped for reading & writing was not created with CPU_ACCESS_READ flag" && (m_Desc.CPUAccessFlags & CPU_ACCESS_READ));
-    //    break;
-
-    //    case MAP_WRITE_DISCARD:
-    //        VERIFY( "Only dynamic buffers can be mapped with write discard flag" && m_Desc.Usage == USAGE_DYNAMIC );
-    //        VERIFY( "Dynamic buffer must be created with CPU_ACCESS_WRITE flag" && (m_Desc.CPUAccessFlags & CPU_ACCESS_WRITE) );
-    //    break;
-
-    //    case MAP_WRITE_NO_OVERWRITE:
-    //        VERIFY( "Only dynamic buffers can be mapped with write no overwrite flag" && m_Desc.Usage == USAGE_DYNAMIC );
-    //        VERIFY( "Dynamic buffer must be created with CPU_ACCESS_WRITE flag" && (m_Desc.CPUAccessFlags & CPU_ACCESS_WRITE) );
-    //    break;
-
-    //    default: VERIFY("Unknown map type" && false);
-    //}
-//}
+}
 
 }

@@ -40,6 +40,12 @@ void ValidateUpdateDataParams( const TextureDesc &TexDesc, Uint32 MipLevel, Uint
 void VliadateCopyTextureDataParams( const TextureDesc& SrcTexDesc, Uint32 SrcMipLevel, Uint32 SrcSlice, const Box* pSrcBox,
                                     const TextureDesc& DstTexDesc, Uint32 DstMipLevel, Uint32 DstSlice,
                                     Uint32 DstX, Uint32 DstY, Uint32 DstZ );
+void ValidateMapTextureParams(const TextureDesc&        TexDesc,
+                              Uint32                    MipLevel,
+                              Uint32                    ArraySlice,
+                              MAP_TYPE                  MapType,
+                              Uint32                    MapFlags,
+                              const Box*                pMapRegion);
 
 /// Base implementation of the ITexture interface
 
@@ -146,10 +152,16 @@ public:
                            Uint32 DstZ )override = 0;
 
     /// Base implementaiton of ITexture::Map()
-    virtual void Map( IDeviceContext* pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags, MappedTextureSubresource& MappedData )override = 0;
+    virtual void Map(IDeviceContext*           pContext,
+                     Uint32                    MipLevel,
+                     Uint32                    ArraySlice,
+                     MAP_TYPE                  MapType,
+                     Uint32                    MapFlags,
+                     const Box*                pMapRegion,
+                     MappedTextureSubresource& MappedData)override = 0;
 
     /// Base implementaiton of ITexture::Unmap()
-    virtual void Unmap( IDeviceContext* pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags )override = 0;
+    virtual void Unmap( IDeviceContext* pContext, Uint32 MipLevel, Uint32 ArraySlice)override = 0;
 
     /// Creates default texture views.
 
@@ -483,12 +495,20 @@ void TextureBase<BaseInterface, TRenderDeviceImpl, TTextureViewImpl, TTexViewObj
 }
 
 template<class BaseInterface, class TRenderDeviceImpl,class TTextureViewImpl, class TTexViewObjAllocator>
-void TextureBase<BaseInterface, TRenderDeviceImpl, TTextureViewImpl, TTexViewObjAllocator> :: Map( IDeviceContext* pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags, MappedTextureSubresource &MappedData )
+void TextureBase<BaseInterface, TRenderDeviceImpl, TTextureViewImpl, TTexViewObjAllocator> :: Map(
+                             IDeviceContext*           pContext,
+                             Uint32                    MipLevel,
+                             Uint32                    ArraySlice,
+                             MAP_TYPE                  MapType,
+                             Uint32                    MapFlags,
+                             const Box*                pMapRegion,
+                             MappedTextureSubresource& MappedData)
 {
+    ValidateMapTextureParams(m_Desc, MipLevel, ArraySlice, MapType, MapFlags, pMapRegion);
 }
 
 template<class BaseInterface, class TRenderDeviceImpl,class TTextureViewImpl, class TTexViewObjAllocator>
-void TextureBase<BaseInterface, TRenderDeviceImpl, TTextureViewImpl, TTexViewObjAllocator> :: Unmap( IDeviceContext* pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags )
+void TextureBase<BaseInterface, TRenderDeviceImpl, TTextureViewImpl, TTexViewObjAllocator> :: Unmap(IDeviceContext* pContext, Uint32 MipLevel, Uint32 ArraySlice)
 {
 }
 

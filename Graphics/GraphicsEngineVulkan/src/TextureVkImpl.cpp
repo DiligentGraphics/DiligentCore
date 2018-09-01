@@ -555,15 +555,21 @@ void TextureVkImpl ::  CopyData(IDeviceContext* pContext,
     pCtxVk->CopyTextureRegion(pSrcTexVk, this, CopyRegion);
 }
 
-void TextureVkImpl :: Map(IDeviceContext *pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags, MappedTextureSubresource &MappedData)
+void TextureVkImpl :: Map(IDeviceContext*           pContext,
+                          Uint32                    MipLevel,
+                          Uint32                    ArraySlice,
+                          MAP_TYPE                  MapType,
+                          Uint32                    MapFlags,
+                          const Box*                pMapRegion,
+                          MappedTextureSubresource& MappedData)
 {
-    TTextureBase::Map( pContext, Subresource, MapType, MapFlags, MappedData );
+    TTextureBase::Map(pContext, MipLevel, ArraySlice, MapType, MapFlags, pMapRegion, MappedData);
     UNEXPECTED("TextureVkImpl::Map() is not implemented");
 }
 
-void TextureVkImpl::Unmap( IDeviceContext *pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags )
+void TextureVkImpl::Unmap(IDeviceContext *pContext, Uint32 MipLevel, Uint32 ArraySlice)
 {
-    TTextureBase::Unmap( pContext, Subresource, MapType, MapFlags );
+    TTextureBase::Unmap(pContext, MipLevel, ArraySlice);
     UNEXPECTED("TextureVkImpl::Unmap() is not implemented");
 }
 

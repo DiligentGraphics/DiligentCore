@@ -438,9 +438,9 @@ void TextureD3D12Impl::UpdateData( IDeviceContext*          pContext,
     auto *pCtxD3D12 = ValidatedCast<DeviceContextD3D12Impl>(pContext);
     auto DstSubResIndex = D3D12CalcSubresource(MipLevel, Slice, 0, m_Desc.MipLevels, m_Desc.ArraySize);
     if (SubresData.pSrcBuffer == nullptr)
-        pCtxD3D12->UpdateTextureRegion(SubresData.pData, SubresData.Stride, SubresData.DepthStride, this, DstSubResIndex, *pBox);
+        pCtxD3D12->UpdateTextureRegion(SubresData.pData, SubresData.Stride, SubresData.DepthStride, *this, DstSubResIndex, *pBox);
     else
-        pCtxD3D12->CopyTextureRegion(SubresData.pSrcBuffer, 0, SubresData.Stride, SubresData.DepthStride, this, DstSubResIndex, *pBox);
+        pCtxD3D12->CopyTextureRegion(SubresData.pSrcBuffer, 0, SubresData.Stride, SubresData.DepthStride, *this, DstSubResIndex, *pBox);
 }
 
 void TextureD3D12Impl ::  CopyData(IDeviceContext* pContext, 
@@ -477,19 +477,46 @@ void TextureD3D12Impl ::  CopyData(IDeviceContext* pContext,
     pCtxD3D12->CopyTextureRegion(pSrcTexD3D12, SrcSubResIndex, pD3D12SrcBox, this, DstSubResIndex, DstX, DstY, DstZ);
 }
 
-void TextureD3D12Impl :: Map(IDeviceContext* pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags, MappedTextureSubresource &MappedData)
+void TextureD3D12Impl :: Map( IDeviceContext*           pContext,
+                              Uint32                    MipLevel,
+                              Uint32                    ArraySlice,
+                              MAP_TYPE                  MapType,
+                              Uint32                    MapFlags,
+                              const Box*                pMapRegion,
+                              MappedTextureSubresource& MappedData )
 {
-    TTextureBase::Map( pContext, Subresource, MapType, MapFlags, MappedData );
-    UNSUPPORTED("TextureD3D12Impl::Map() is not implemented");
+    TTextureBase::Map(pContext, MipLevel, ArraySlice, MapType, MapFlags, pMapRegion, MappedData);
 
-    //static char TmpDummyBuffer[1024*1024*64];
-    MappedData.pData = nullptr;//TmpDummyBuffer;
+    auto* pDeviceContextD3D12 = ValidatedCast<DeviceContextD3D12Impl>(pContext);
+    MappedData = MappedTextureSubresource{};
+
+    Box FullExtentBox;
+    if (pMapRegion == nullptr)
+    {
+        FullExtentBox.MaxX = std::max(m_Desc.Width  >> MipLevel, 1u);
+        FullExtentBox.MaxY = std::max(m_Desc.Height >> MipLevel, 1u);
+        if (m_Desc.Type == RESOURCE_DIM_TEX_3D)
+            FullExtentBox.MaxZ = std::max(m_Desc.Depth >> MipLevel, 1u);
+        pMapRegion = &FullExtentBox;
+    }
+
+    if(MapType == MAP_WRITE)
+    {
+        if( (MapFlags & (MAP_FLAG_DISCARD | MAP_FLAG_DO_NOT_SYNCHRONIZE)) != 0 )
+            LOG_WARNING_MESSAGE_ONCE("Mapping textures with flags MAP_FLAG_DISCARD or MAP_FLAG_DO_NOT_SYNCHRONIZE has no effect in D3D12 backend");
+        pDeviceContextD3D12->MapTexture(*this, MipLevel, ArraySlice, MapType, MapFlags, *pMapRegion, MappedData);
+    }
+    else
+    {
+        LOG_ERROR("Textures can currently only be mapped for writing in D3D12 backend");
+    }
 }
 
-void TextureD3D12Impl::Unmap( IDeviceContext* pContext, Uint32 Subresource, MAP_TYPE MapType, Uint32 MapFlags )
+void TextureD3D12Impl::Unmap(IDeviceContext* pContext, Uint32 MipLevel, Uint32 ArraySlice)
 {
-    TTextureBase::Unmap( pContext, Subresource, MapType, MapFlags );
-    UNSUPPORTED("TextureD3D12Impl::Unmap() is not implemented");
+    TTextureBase::Unmap(pContext, MipLevel, ArraySlice);
+    auto* pDeviceContextD3D12 = ValidatedCast<DeviceContextD3D12Impl>(pContext);
+    pDeviceContextD3D12->UnmapTexture(*this, MipLevel, ArraySlice);
 }
 
 

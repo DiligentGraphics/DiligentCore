@@ -26,15 +26,14 @@
 /// \file
 /// Declaration of Diligent::DeviceContextD3D12Impl class
 
+#include <unordered_map>
+
 #include "DeviceContextD3D12.h"
 #include "DeviceContextBase.h"
 #include "GenerateMips.h"
 #include "BufferD3D12Impl.h"
 #include "TextureViewD3D12Impl.h"
 #include "PipelineStateD3D12Impl.h"
-#ifdef _DEBUG
-#   define VERIFY_CONTEXT_BINDINGS
-#endif
 
 namespace Diligent
 {
@@ -115,7 +114,7 @@ public:
                            Uint32                   SrcOffset,
                            Uint32                   SrcStride,
                            Uint32                   SrcDepthStride,
-                           class TextureD3D12Impl*  pTextureD3D12,
+                           class TextureD3D12Impl&  TextureD3D12,
                            Uint32 DstSubResIndex,
                            const Box& DstBox);
     void CopyTextureRegion(ID3D12Resource*         pd3d12Buffer,
@@ -123,16 +122,28 @@ public:
                            Uint32                  SrcStride,
                            Uint32                  SrcDepthStride,
                            Uint32                  BufferSize,
-                           class TextureD3D12Impl* pTextureD3D12,
+                           class TextureD3D12Impl& TextureD3D12,
                            Uint32                  DstSubResIndex,
                            const Box&              DstBox);
 
     void UpdateTextureRegion(const void*             pSrcData,
                              Uint32                  SrcStride,
                              Uint32                  SrcDepthStride,
-                             class TextureD3D12Impl* pTextureD3D12,
+                             class TextureD3D12Impl& TextureD3D12,
                              Uint32                  DstSubResIndex,
                              const Box&              DstBox);
+
+    void MapTexture( class TextureD3D12Impl&   TextureD3D12,
+                     Uint32                    MipLevel,
+                     Uint32                    ArraySlice,
+                     MAP_TYPE                  MapType,
+                     Uint32                    MapFlags,
+                     const Box&                MapRegion,
+                     MappedTextureSubresource& MappedData );
+
+    void UnmapTexture( class TextureD3D12Impl&   TextureD3D12,
+                       Uint32                    MipLevel,
+                       Uint32                    ArraySlice);
 
     void GenerateMips(class TextureViewD3D12Impl *pTexView);
 
@@ -150,6 +161,20 @@ private:
     void CommitViewports();
     void CommitScissorRects(class GraphicsContext &GraphCtx, bool ScissorEnable);
     void Flush(bool RequestNewCmdCtx);
+
+    struct TextureUploadSpace
+    {
+        DynamicAllocation Allocation;
+        Uint32            AlignedOffset = 0;
+        Uint32            Stride        = 0;
+        Uint32            DepthStride   = 0;
+        Uint32            RowSize       = 0;
+        Uint32            RowCount      = 0;
+        Box               Region;
+    };
+    TextureUploadSpace AllocateTextureUploadSpace(TEXTURE_FORMAT     TexFmt,
+                                                  const Box&         Region);
+
 
     friend class SwapChainD3D12Impl;
     inline class CommandContext* RequestCmdContext()
@@ -186,6 +211,26 @@ private:
     const Uint32 m_ContextId;
 
     std::vector<std::pair<Uint64, RefCntAutoPtr<IFence> > > m_PendingFences;
+
+    struct TextureUploadAllocationKey
+    {
+        TextureD3D12Impl* const Texture;
+        UINT              const Subresource;
+
+        bool operator == (const TextureUploadAllocationKey& rhs)const
+        {
+            return Texture      == rhs.Texture &&
+                   Subresource  == rhs.Subresource;
+        }
+        struct Hasher
+        {
+            size_t operator()(const TextureUploadAllocationKey& Key)const
+            {
+                return ComputeHash(Key.Texture, Key.Subresource);
+            }
+        };
+    };
+    std::unordered_map<TextureUploadAllocationKey, TextureUploadSpace, TextureUploadAllocationKey::Hasher> m_TextureUploadAllocations;
 };
 
 }
