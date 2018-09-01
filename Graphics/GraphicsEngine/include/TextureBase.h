@@ -504,7 +504,7 @@ void TextureBase<BaseInterface, TRenderDeviceImpl, TTextureViewImpl, TTexViewObj
                              const Box*                pMapRegion,
                              MappedTextureSubresource& MappedData)
 {
-    ValidateMapTextureParams(m_Desc, MipLevel, ArraySlice, MapType, MapFlags, pMapRegion);
+    ValidateMapTextureParams(this->GetDesc(), MipLevel, ArraySlice, MapType, MapFlags, pMapRegion);
 }
 
 template<class BaseInterface, class TRenderDeviceImpl,class TTextureViewImpl, class TTexViewObjAllocator>
