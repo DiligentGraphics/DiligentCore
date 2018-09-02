@@ -933,13 +933,12 @@ namespace Diligent
     {
         const auto& TexDesc = TextureD3D12.GetDesc();
         auto UploadSpace = AllocateTextureUploadSpace(TexDesc.Format, MapRegion);
-        const auto AlignedOffset = (UploadSpace.Allocation.Offset + (D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT-1)) & ~(D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT-1);
         MappedData.pData       = reinterpret_cast<Uint8*>(UploadSpace.Allocation.CPUAddress) + (UploadSpace.AlignedOffset - UploadSpace.Allocation.Offset);
         MappedData.Stride      = UploadSpace.Stride;
         MappedData.DepthStride = UploadSpace.DepthStride;
 
         auto Subres = D3D12CalcSubresource(MipLevel, ArraySlice, 0, TexDesc.MipLevels, TexDesc.ArraySize);
-        auto it = m_TextureUploadAllocations.emplace(TextureUploadAllocationKey{&TextureD3D12, Subres}, std::move(UploadSpace));
+        auto it = m_MappedTextures.emplace(MappedTextureKey{&TextureD3D12, Subres}, std::move(UploadSpace));
         if(!it.second)
             LOG_ERROR_MESSAGE("Mip level ", MipLevel, ", slice ", ArraySlice, " of texture '", TexDesc.Name, "' has already been mapped");
     }
@@ -950,8 +949,8 @@ namespace Diligent
     {
         const auto& TexDesc = TextureD3D12.GetDesc();
         auto Subres = D3D12CalcSubresource(MipLevel, ArraySlice, 0, TexDesc.MipLevels, TexDesc.ArraySize);
-        auto UploadSpaceIt = m_TextureUploadAllocations.find(TextureUploadAllocationKey{&TextureD3D12, Subres});
-        if(UploadSpaceIt != m_TextureUploadAllocations.end())
+        auto UploadSpaceIt = m_MappedTextures.find(MappedTextureKey{&TextureD3D12, Subres});
+        if(UploadSpaceIt != m_MappedTextures.end())
         {
             auto& UploadSpace = UploadSpaceIt->second;
             CopyTextureRegion(UploadSpace.Allocation.pBuffer,
@@ -962,7 +961,7 @@ namespace Diligent
                               TextureD3D12,
                               Subres,
                               UploadSpace.Region);
-            m_TextureUploadAllocations.erase(UploadSpaceIt);
+            m_MappedTextures.erase(UploadSpaceIt);
         }
         else
         {

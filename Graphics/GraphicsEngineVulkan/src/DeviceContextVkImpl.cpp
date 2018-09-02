@@ -1123,6 +1123,56 @@ namespace Diligent
         ++m_State.NumCommands;
     }
 
+    DeviceContextVkImpl::TextureUploadSpace DeviceContextVkImpl::AllocateTextureUploadSpace(
+                                                  const TextureDesc& TexDesc,
+                                                  Uint32             MipLevel,
+                                                  const Box&         Region)
+    {
+        TextureUploadSpace UploadSpace;
+        const auto& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
+        VERIFY_EXPR(Region.MaxX > Region.MinX && Region.MaxY > Region.MinY && Region.MaxZ > Region.MinZ);
+        auto UpdateRegionWidth  = Region.MaxX - Region.MinX;
+        auto UpdateRegionHeight = Region.MaxY - Region.MinY;
+        auto UpdateRegionDepth  = Region.MaxZ - Region.MinZ;
+        if(FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
+        {
+            // Align update region size by the block size. This is only necessary when updating
+            // coarse mip levels. Otherwise UpdateRegionWidth/Height should be multiples of block size
+            VERIFY_EXPR( (FmtAttribs.BlockWidth  & (FmtAttribs.BlockWidth-1))  == 0 );
+            VERIFY_EXPR( (FmtAttribs.BlockHeight & (FmtAttribs.BlockHeight-1)) == 0 );
+            const auto BlockAlignedRegionWidth =  (UpdateRegionWidth  + (FmtAttribs.BlockWidth-1))  & ~(FmtAttribs.BlockWidth -1);
+            const auto BlockAlignedRegionHeight = (UpdateRegionHeight + (FmtAttribs.BlockHeight-1)) & ~(FmtAttribs.BlockHeight-1);
+            UploadSpace.RowSize  = BlockAlignedRegionWidth  / Uint32{FmtAttribs.BlockWidth} * Uint32{FmtAttribs.ComponentSize};
+            UploadSpace.RowCount = BlockAlignedRegionHeight / FmtAttribs.BlockHeight;
+            
+            // (imageExtent.width + imageOffset.x) must be less than or equal to the image subresource width, and
+            // (imageExtent.height + imageOffset.y) must be less than or equal to the image subresource height (18.4),
+            // so we need to clamp UpdateRegionWidth and Height
+            const Uint32 MipWidth  = std::max(TexDesc.Width  >> MipLevel, 1u);
+            const Uint32 MipHeight = std::max(TexDesc.Height >> MipLevel, 1u);
+            VERIFY_EXPR(MipWidth > Region.MinX);
+            UpdateRegionWidth  = std::min(UpdateRegionWidth,  MipWidth  - Region.MinX);
+            VERIFY_EXPR(MipHeight > Region.MinY);
+            UpdateRegionHeight = std::min(UpdateRegionHeight, MipHeight - Region.MinY);
+        }
+        else
+        {
+            UploadSpace.RowSize  = UpdateRegionWidth * Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents};
+            UploadSpace.RowCount = UpdateRegionHeight;
+        }
+
+        UploadSpace.Stride      = UploadSpace.RowSize;
+        UploadSpace.DepthStride = UploadSpace.RowCount * UploadSpace.Stride;
+        const auto MemorySize   = UpdateRegionDepth * UploadSpace.DepthStride;
+        size_t Alignment        = 4;
+        UploadSpace.Allocation  = AllocateDynamicSpace(MemorySize + static_cast<Uint32>(Alignment));
+        UploadSpace.AlignedOffset = static_cast<Uint32>((UploadSpace.Allocation.Offset + (Alignment-1)) & ~(Alignment-1));
+        UploadSpace.Region      = Region;
+
+        return UploadSpace;
+    }
+
+
     void DeviceContextVkImpl::UpdateTextureRegion(const void*    pSrcData,
                                                   Uint32         SrcStride,
                                                   Uint32         SrcDepthStride,
@@ -1133,69 +1183,39 @@ namespace Diligent
     {
         const auto& TexDesc = TextureVk.GetDesc();
         VERIFY(TexDesc.SampleCount == 1, "Only single-sample textures can be updated with vkCmdCopyBufferToImage()");
-        const auto& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
-        VERIFY_EXPR(DstBox.MaxX > DstBox.MinX && DstBox.MaxY > DstBox.MinY && DstBox.MaxZ > DstBox.MinZ);
-        auto UpdateRegionWidth  = DstBox.MaxX - DstBox.MinX;
-        auto UpdateRegionHeight = DstBox.MaxY - DstBox.MinY;
-        auto UpdateRegionDepth  = DstBox.MaxZ - DstBox.MinZ;
-        Uint32 RowSize = 0;
-        Uint32 RowCount = 0;
-        if(FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
-        {
-            // Align update region size by the block size. This is only necessary when updating
-            // coarse mip levels. Otherwise UpdateRegionWidth/Height should be multiples of block size
-            VERIFY_EXPR( (FmtAttribs.BlockWidth  & (FmtAttribs.BlockWidth-1))  == 0 );
-            VERIFY_EXPR( (FmtAttribs.BlockHeight & (FmtAttribs.BlockHeight-1)) == 0 );
-            const auto BlockAlignedRegionWidth =  (UpdateRegionWidth  + (FmtAttribs.BlockWidth-1))  & ~(FmtAttribs.BlockWidth -1);
-            const auto BlockAlignedRegionHeight = (UpdateRegionHeight + (FmtAttribs.BlockHeight-1)) & ~(FmtAttribs.BlockHeight-1);
-            RowSize  = BlockAlignedRegionWidth  / Uint32{FmtAttribs.BlockWidth} * Uint32{FmtAttribs.ComponentSize};
-            RowCount = BlockAlignedRegionHeight / FmtAttribs.BlockHeight;
-            
-            // (imageExtent.width + imageOffset.x) must be less than or equal to the image subresource width, and
-            // (imageExtent.height + imageOffset.y) must be less than or equal to the image subresource height (18.4),
-            // so we need to clamp UpdateRegionWidth and Height
-            const Uint32 MipWidth  = std::max(TexDesc.Width  >> MipLevel, 1u);
-            const Uint32 MipHeight = std::max(TexDesc.Height >> MipLevel, 1u);
-            VERIFY_EXPR(MipWidth > DstBox.MinX);
-            UpdateRegionWidth  = std::min(UpdateRegionWidth,  MipWidth  - DstBox.MinX);
-            VERIFY_EXPR(MipHeight > DstBox.MinY);
-            UpdateRegionHeight = std::min(UpdateRegionHeight, MipHeight - DstBox.MinY);
-        }
-        else
-        {
-            RowSize  = UpdateRegionWidth * Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents};
-            RowCount = UpdateRegionHeight;
-        }
+        auto UploadSpace = AllocateTextureUploadSpace(TexDesc, MipLevel, DstBox);
+        const auto UpdateRegionDepth  = UploadSpace.Region.MaxZ - UploadSpace.Region.MinZ;
+
 #ifdef _DEBUG
-        VERIFY(SrcStride >= RowSize, "Source data stride (", SrcStride, ") is below the image row size (", RowSize, ")");
-        const Uint32 PlaneSize = SrcStride * RowCount;
+        VERIFY(SrcStride >= UploadSpace.RowSize, "Source data stride (", SrcStride, ") is below the image row size (", UploadSpace.RowSize, ")");
+        const Uint32 PlaneSize = SrcStride * UploadSpace.RowCount;
         VERIFY(UpdateRegionDepth == 1 || SrcDepthStride >= PlaneSize, "Source data depth stride (", SrcDepthStride, ") is below the image plane size (", PlaneSize, ")");
 #endif
-        const auto BufferDataStride      = RowSize;
-        const auto BufferDataDepthStride = RowCount * BufferDataStride;
-        const auto MemorySize = UpdateRegionDepth * BufferDataDepthStride;
-        size_t Alignment   = 4;
-        auto UploadSpace   = AllocateDynamicSpace(MemorySize + static_cast<Uint32>(Alignment));
-        auto AlignedOffset = (UploadSpace.Offset + (Alignment-1)) & ~(Alignment-1);
-        for(Uint32 slice = 0; slice < UpdateRegionDepth; ++slice)
+        for(Uint32 DepthSlice = 0; DepthSlice < UpdateRegionDepth; ++DepthSlice)
         {
-            for(Uint32 row = 0; row < RowCount; ++row)
+            for(Uint32 row = 0; row < UploadSpace.RowCount; ++row)
             {
                 const auto* pSrcPtr =
                     reinterpret_cast<const Uint8*>(pSrcData)
-                    + row   * SrcStride
-                    + slice * SrcDepthStride;
+                    + row        * SrcStride
+                    + DepthSlice * SrcDepthStride;
                 auto* pDstPtr =
-                    UploadSpace.pDynamicMemMgr->GetCPUAddress()
-                    + AlignedOffset
-                    + row   * BufferDataStride
-                    + slice * BufferDataDepthStride;
+                    UploadSpace.Allocation.pDynamicMemMgr->GetCPUAddress()
+                    + UploadSpace.AlignedOffset
+                    + row        * UploadSpace.Stride
+                    + DepthSlice * UploadSpace.DepthStride;
                 
-                memcpy(pDstPtr, pSrcPtr, RowSize);
+                memcpy(pDstPtr, pSrcPtr, UploadSpace.RowSize);
             }
         }
+        WriteTextureUploadRegion(TextureVk, UploadSpace, MipLevel, Slice);
+    }
 
-
+    void DeviceContextVkImpl::WriteTextureUploadRegion(TextureVkImpl&      TextureVk,
+                                                       TextureUploadSpace& UploadSpace,
+                                                       Uint32              MipLevel,
+                                                       Uint32              ArraySlice)
+    {
         EnsureVkCmdBuffer();
         if (TextureVk.GetLayout() != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
         {
@@ -1203,7 +1223,7 @@ namespace Diligent
         }
 
         VkBufferImageCopy CopyRegion = {};
-        CopyRegion.bufferOffset = AlignedOffset; // must be a multiple of 4 (18.4)
+        CopyRegion.bufferOffset = UploadSpace.AlignedOffset; // must be a multiple of 4 (18.4)
 
         // bufferRowLength and bufferImageHeight specify the data in buffer memory as a subregion of a larger two- or
         // three-dimensional image, and control the addressing calculations of data in buffer memory. If either of these
@@ -1211,6 +1231,8 @@ namespace Diligent
         CopyRegion.bufferRowLength   = 0;
         CopyRegion.bufferImageHeight = 0;
 
+        const auto& TexDesc = TextureVk.GetDesc();
+        const auto& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
         // The aspectMask member of imageSubresource must only have a single bit set (18.4)
         if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH)
             CopyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
@@ -1226,22 +1248,72 @@ namespace Diligent
         else
             CopyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
-        CopyRegion.imageSubresource.baseArrayLayer = Slice;
+        CopyRegion.imageSubresource.baseArrayLayer = ArraySlice;
         CopyRegion.imageSubresource.layerCount = 1;
         CopyRegion.imageSubresource.mipLevel = MipLevel;
         // - imageOffset.x and (imageExtent.width + imageOffset.x) must both be greater than or equal to 0 and
         //   less than or equal to the image subresource width (18.4)
         // - imageOffset.y and (imageExtent.height + imageOffset.y) must both be greater than or equal to 0 and
         //   less than or equal to the image subresource height (18.4)
-        CopyRegion.imageOffset = VkOffset3D{static_cast<int32_t>(DstBox.MinX), static_cast<int32_t>(DstBox.MinY), static_cast<int32_t>(DstBox.MinZ)};
-        CopyRegion.imageExtent = VkExtent3D{UpdateRegionWidth, UpdateRegionHeight, UpdateRegionDepth};
+        const auto& Region = UploadSpace.Region;
+        CopyRegion.imageOffset = 
+            VkOffset3D
+            {
+                static_cast<int32_t>(Region.MinX),
+                static_cast<int32_t>(Region.MinY),
+                static_cast<int32_t>(Region.MinZ)
+            };
+        CopyRegion.imageExtent =
+            VkExtent3D
+            {
+                static_cast<uint32_t>(Region.MaxX - Region.MinX),
+                static_cast<uint32_t>(Region.MaxY - Region.MinY),
+                static_cast<uint32_t>(Region.MaxZ - Region.MinZ)
+            };
         
         m_CommandBuffer.CopyBufferToImage(
-            UploadSpace.pDynamicMemMgr->GetVkBuffer(),
+            UploadSpace.Allocation.pDynamicMemMgr->GetVkBuffer(),
             TextureVk.GetVkImage(),
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, // must be VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL or VK_IMAGE_LAYOUT_GENERAL (18.4)
             1,
             &CopyRegion);
+    }
+
+    void DeviceContextVkImpl::MapTexture( TextureVkImpl&            TextureVk,
+                                          Uint32                    MipLevel,
+                                          Uint32                    ArraySlice,
+                                          MAP_TYPE                  MapType,
+                                          Uint32                    MapFlags,
+                                          const Box&                MapRegion,
+                                          MappedTextureSubresource& MappedData )
+    {
+        const auto& TexDesc = TextureVk.GetDesc();
+        auto UploadSpace = AllocateTextureUploadSpace(TexDesc, MipLevel, MapRegion);
+        MappedData.pData       = reinterpret_cast<Uint8*>(UploadSpace.Allocation.pDynamicMemMgr->GetCPUAddress()) + UploadSpace.AlignedOffset;
+        MappedData.Stride      = UploadSpace.Stride;
+        MappedData.DepthStride = UploadSpace.DepthStride;
+
+        auto it = m_MappedTextures.emplace(MappedTextureKey{&TextureVk, MipLevel, ArraySlice}, std::move(UploadSpace));
+        if(!it.second)
+            LOG_ERROR_MESSAGE("Mip level ", MipLevel, ", slice ", ArraySlice, " of texture '", TexDesc.Name, "' has already been mapped");
+    }
+
+    void DeviceContextVkImpl::UnmapTexture( TextureVkImpl& TextureVk,
+                                            Uint32         MipLevel,
+                                            Uint32         ArraySlice)
+    {
+        const auto& TexDesc = TextureVk.GetDesc();
+        auto UploadSpaceIt = m_MappedTextures.find(MappedTextureKey{&TextureVk, MipLevel, ArraySlice});
+        if(UploadSpaceIt != m_MappedTextures.end())
+        {
+            auto& UploadSpace = UploadSpaceIt->second;
+            WriteTextureUploadRegion(TextureVk, UploadSpace, MipLevel, ArraySlice);
+            m_MappedTextures.erase(UploadSpaceIt);
+        }
+        else
+        {
+            LOG_ERROR_MESSAGE("Failed to unmap mip level ", MipLevel, ", slice ", ArraySlice, " of texture '", TexDesc.Name, "'. The texture has either been unmapped already or has not been mapped");
+        }
     }
 
     void DeviceContextVkImpl::FinishCommandList(class ICommandList **ppCommandList)

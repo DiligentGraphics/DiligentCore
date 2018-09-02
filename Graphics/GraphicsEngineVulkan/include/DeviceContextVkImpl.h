@@ -40,6 +40,7 @@
 #include "BufferVKImpl.h"
 #include "TextureViewVKImpl.h"
 #include "PipelineStateVKImpl.h"
+#include "HashUtils.h"
 
 namespace Diligent
 {
@@ -134,6 +135,18 @@ public:
                              Uint32               Slice,
                              const Box&           DstBox);
 
+    void MapTexture(TextureVkImpl&            TextureVk,
+                    Uint32                    MipLevel,
+                    Uint32                    ArraySlice,
+                    MAP_TYPE                  MapType,
+                    Uint32                    MapFlags,
+                    const Box&                MapRegion,
+                    MappedTextureSubresource& MappedData);
+
+    void UnmapTexture(TextureVkImpl& TextureVk,
+                      Uint32         MipLevel,
+                      Uint32         ArraySlice);
+
     void GenerateMips(class TextureViewVkImpl& TexView)
     {
         m_GenerateMipsHelper->GenerateMips(TexView, *this, *m_GenerateMipsSRB);
@@ -180,6 +193,25 @@ private:
     inline void DisposeCurrentCmdBuffer(Uint64 FenceValue);
     void ReleaseStaleContextResources(Uint64 SubmittedCmdBufferNumber, Uint64 SubmittedFenceValue, Uint64 CompletedFenceValue);
 
+    struct TextureUploadSpace
+    {
+        VulkanDynamicAllocation Allocation;
+        Uint32                  AlignedOffset = 0;
+        Uint32                  Stride        = 0;
+        Uint32                  DepthStride   = 0;
+        Uint32                  RowSize       = 0;
+        Uint32                  RowCount      = 0;
+        Box                     Region;
+    };
+    TextureUploadSpace AllocateTextureUploadSpace(const TextureDesc& TexDesc,
+                                                  Uint32             MipLevel,
+                                                  const Box&         Region);
+    void WriteTextureUploadRegion(TextureVkImpl&      TextureVk,
+                                  TextureUploadSpace& UploadSpace,
+                                  Uint32              MipLevel,
+                                  Uint32              ArraySlice);
+
+
     void DvpLogRenderPass_PSOMismatch();
 
     VulkanUtilities::VulkanCommandBuffer m_CommandBuffer;
@@ -220,6 +252,30 @@ private:
     std::vector<std::pair<Uint64, RefCntAutoPtr<IFence> > > m_PendingFences;
 
     std::unordered_map<BufferVkImpl*, VulkanUploadAllocation> m_UploadAllocations;
+
+    struct MappedTextureKey
+    {
+        TextureVkImpl* const Texture;
+        Uint32         const MipLevel;
+        Uint32         const ArraySlice;
+
+        bool operator == (const MappedTextureKey& rhs)const
+        {
+            return Texture    == rhs.Texture  &&
+                   MipLevel   == rhs.MipLevel &&
+                   ArraySlice == rhs.ArraySlice;
+        }
+        struct Hasher
+        {
+            size_t operator()(const MappedTextureKey& Key)const
+            {
+                return ComputeHash(Key.Texture, Key.MipLevel, Key.ArraySlice);
+            }
+        };
+    };
+    std::unordered_map<MappedTextureKey, TextureUploadSpace, MappedTextureKey::Hasher> m_MappedTextures;
+
+
 
     VulkanUploadHeap m_UploadHeap;
     DescriptorPoolManager m_DynamicDescriptorPool;

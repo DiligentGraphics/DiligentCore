@@ -212,25 +212,25 @@ private:
 
     std::vector<std::pair<Uint64, RefCntAutoPtr<IFence> > > m_PendingFences;
 
-    struct TextureUploadAllocationKey
+    struct MappedTextureKey
     {
         TextureD3D12Impl* const Texture;
         UINT              const Subresource;
 
-        bool operator == (const TextureUploadAllocationKey& rhs)const
+        bool operator == (const MappedTextureKey& rhs)const
         {
             return Texture      == rhs.Texture &&
                    Subresource  == rhs.Subresource;
         }
         struct Hasher
         {
-            size_t operator()(const TextureUploadAllocationKey& Key)const
+            size_t operator()(const MappedTextureKey& Key)const
             {
                 return ComputeHash(Key.Texture, Key.Subresource);
             }
         };
     };
-    std::unordered_map<TextureUploadAllocationKey, TextureUploadSpace, TextureUploadAllocationKey::Hasher> m_TextureUploadAllocations;
+    std::unordered_map<MappedTextureKey, TextureUploadSpace, MappedTextureKey::Hasher> m_MappedTextures;
 };
 
 }
