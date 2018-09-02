@@ -152,10 +152,6 @@ public:
         m_GenerateMipsHelper->GenerateMips(TexView, *this, *m_GenerateMipsSRB);
     }
 
-
-    void* AllocateUploadSpace(BufferVkImpl* pBuffer, size_t NumBytes);
-    void CopyAndFreeDynamicUploadData(BufferVkImpl* pBuffer);
-
     Uint32 GetContextId()const{return m_ContextId;}
 
     size_t GetNumCommandsInCtx()const { return m_State.NumCommands; }
@@ -193,23 +189,25 @@ private:
     inline void DisposeCurrentCmdBuffer(Uint64 FenceValue);
     void ReleaseStaleContextResources(Uint64 SubmittedCmdBufferNumber, Uint64 SubmittedFenceValue, Uint64 CompletedFenceValue);
 
-    struct TextureUploadSpace
+    struct BufferToTextureCopyInfo
     {
-        VulkanDynamicAllocation Allocation;
-        Uint32                  AlignedOffset = 0;
-        Uint32                  Stride        = 0;
-        Uint32                  DepthStride   = 0;
-        Uint32                  RowSize       = 0;
-        Uint32                  RowCount      = 0;
-        Box                     Region;
+        Uint32  RowSize     = 0;
+        Uint32  Stride      = 0;
+        Uint32  DepthStride = 0;
+        Uint32  MemorySize  = 0;
+        Uint32  RowCount    = 0;
+        Box     Region;
     };
-    TextureUploadSpace AllocateTextureUploadSpace(const TextureDesc& TexDesc,
-                                                  Uint32             MipLevel,
-                                                  const Box&         Region);
-    void WriteTextureUploadRegion(TextureVkImpl&      TextureVk,
-                                  TextureUploadSpace& UploadSpace,
-                                  Uint32              MipLevel,
-                                  Uint32              ArraySlice);
+    BufferToTextureCopyInfo GetBufferToTextureCopyInfo(const TextureDesc& TexDesc,
+                                                       Uint32             MipLevel,
+                                                       const Box&         Region)const;
+
+    void CopyBufferToTexture(VkBuffer         vkBuffer,
+                             Uint32           BufferOffset,
+                             const Box&       Region,
+                             TextureVkImpl&   TextureVk,
+                             Uint32           MipLevel,
+                             Uint32           ArraySlice);
 
 
     void DvpLogRenderPass_PSOMismatch();
@@ -273,7 +271,12 @@ private:
             }
         };
     };
-    std::unordered_map<MappedTextureKey, TextureUploadSpace, MappedTextureKey::Hasher> m_MappedTextures;
+    struct MappedTexture
+    {
+        BufferToTextureCopyInfo CopyInfo;
+        VulkanDynamicAllocation Allocation;
+    };
+    std::unordered_map<MappedTextureKey, MappedTexture, MappedTextureKey::Hasher> m_MappedTextures;
 
 
 

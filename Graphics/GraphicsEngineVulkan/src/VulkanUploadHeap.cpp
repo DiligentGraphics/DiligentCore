@@ -81,6 +81,9 @@ VulkanUploadHeap::UploadPageInfo VulkanUploadHeap::CreateNewPage(VkDeviceSize Si
 
 VulkanUploadAllocation VulkanUploadHeap::Allocate(size_t SizeInBytes)
 {
+    static constexpr const size_t MinimumAlignment = 4;
+    SizeInBytes = (SizeInBytes + MinimumAlignment-1) & ~(MinimumAlignment-1);
+
     VulkanUploadAllocation Allocation;
     if(SizeInBytes >= m_PageSize/2)
     {
@@ -104,7 +107,7 @@ VulkanUploadAllocation VulkanUploadHeap::Allocate(size_t SizeInBytes)
         }
 
         Allocation.vkBuffer   = m_CurrPage.vkBuffer;
-        Allocation.CPUAddress = m_CurrPage.CPUAddress;
+        Allocation.CPUAddress = m_CurrPage.CurrCPUAddress;
         Allocation.Size       = SizeInBytes;
         Allocation.Offset     = m_CurrPage.CurrOffset;
         m_CurrPage.Advance(SizeInBytes);

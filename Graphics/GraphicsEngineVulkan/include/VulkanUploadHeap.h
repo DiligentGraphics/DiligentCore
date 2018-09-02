@@ -87,19 +87,19 @@ private:
     struct CurrPageInfo
     {
         VkBuffer vkBuffer       = VK_NULL_HANDLE;
-        Uint8*   CPUAddress     = nullptr;
+        Uint8*   CurrCPUAddress = nullptr;
         size_t   CurrOffset     = 0;
         size_t   AvailableSize  = 0;
         void Reset(UploadPageInfo& NewPage, size_t PageSize)
         {
             vkBuffer       = NewPage.Buffer;
-            CPUAddress     = NewPage.CPUAddress;
+            CurrCPUAddress = NewPage.CPUAddress;
             CurrOffset     = 0;
             AvailableSize  = PageSize;
         }
         void Advance(size_t SizeInBytes)
         {
-            CPUAddress    += SizeInBytes;
+            CurrCPUAddress+= SizeInBytes;
             CurrOffset    += SizeInBytes;
             AvailableSize -= SizeInBytes;
         }
