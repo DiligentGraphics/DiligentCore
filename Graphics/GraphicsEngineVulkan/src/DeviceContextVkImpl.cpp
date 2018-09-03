@@ -1074,9 +1074,9 @@ namespace Diligent
 #endif
 
         VERIFY_EXPR( static_cast<size_t>(NumBytes) == NumBytes );
-        auto TmpSpace = m_UploadHeap.Allocate(static_cast<size_t>(NumBytes));
+        auto TmpSpace = m_UploadHeap.Allocate(static_cast<size_t>(NumBytes), 0);
 	    memcpy(TmpSpace.CPUAddress, pData, static_cast<size_t>(NumBytes));
-        UpdateBufferRegion(pBuffVk, DstOffset, NumBytes, TmpSpace.vkBuffer, TmpSpace.Offset);
+        UpdateBufferRegion(pBuffVk, DstOffset, NumBytes, TmpSpace.vkBuffer, TmpSpace.AlignedOffset);
         // The allocation will stay in the upload heap until the end of the frame at which point all upload
         // pages will be discarded
     }
@@ -1183,10 +1183,11 @@ namespace Diligent
         const auto UpdateRegionDepth  = CopyInfo.Region.MaxZ - CopyInfo.Region.MinZ;
 
         // For UpdateTextureRegion(), use UploadHeap, not dynamic heap
-        auto Allocation = m_UploadHeap.Allocate(CopyInfo.MemorySize);
+        static constexpr const size_t BufferOffsetAlignment = 4; // bufferOffset of VkBufferImageCopy must be a multiple of 4 (18.4)
+        auto Allocation = m_UploadHeap.Allocate(CopyInfo.MemorySize, BufferOffsetAlignment);
         // The allocation will stay in the upload heap until the end of the frame at which point all upload
         // pages will be discarded
-        VERIFY( (Allocation.Offset % 4) == 0, "Allocation offset must be at least 32-bit algined");
+        VERIFY( (Allocation.AlignedOffset % BufferOffsetAlignment) == 0, "Allocation offset must be at least 32-bit algined");
 
 #ifdef _DEBUG
         VERIFY(SrcStride >= CopyInfo.RowSize, "Source data stride (", SrcStride, ") is below the image row size (", CopyInfo.RowSize, ")");
@@ -1210,7 +1211,7 @@ namespace Diligent
             }
         }
         CopyBufferToTexture(Allocation.vkBuffer,
-                            static_cast<Uint32>(Allocation.Offset),
+                            static_cast<Uint32>(Allocation.AlignedOffset),
                             CopyInfo.Region,
                             TextureVk,
                             MipLevel,

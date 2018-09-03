@@ -79,10 +79,14 @@ VulkanUploadHeap::UploadPageInfo VulkanUploadHeap::CreateNewPage(VkDeviceSize Si
     return UploadPageInfo{std::move(MemAllocation), std::move(NewBuffer), CPUAddress};
 }
 
-VulkanUploadAllocation VulkanUploadHeap::Allocate(size_t SizeInBytes)
+VulkanUploadAllocation VulkanUploadHeap::Allocate(size_t SizeInBytes, size_t Alignment)
 {
-    static constexpr const size_t MinimumAlignment = 4;
-    SizeInBytes = (SizeInBytes + MinimumAlignment-1) & ~(MinimumAlignment-1);
+    VERIFY((Alignment & (Alignment-1)) == 0, "Alignment (", Alignment, ") must be power of two");
+    if (Alignment == 0)
+    {
+        static constexpr const size_t MinimumAlignment = 4;
+        Alignment = MinimumAlignment;
+    }
 
     VulkanUploadAllocation Allocation;
     if(SizeInBytes >= m_PageSize/2)
@@ -92,30 +96,38 @@ VulkanUploadAllocation VulkanUploadHeap::Allocate(size_t SizeInBytes)
         Allocation.vkBuffer   = NewPage.Buffer;
         Allocation.CPUAddress = NewPage.CPUAddress;
         Allocation.Size       = SizeInBytes;
-        Allocation.Offset     = 0;
-        m_CurrAllocatedSize   += NewPage.MemAllocation.Size;
+        VERIFY(Alignment < SizeInBytes, "Alignment must be smaller than the page size");
+        Allocation.AlignedOffset = 0;
+        m_CurrAllocatedSize      += NewPage.MemAllocation.Size;
         m_Pages.emplace_back(std::move(NewPage));
     }
     else
     {
-        if(m_CurrPage.AvailableSize < SizeInBytes)
+        auto AlignmentOffset = ((m_CurrPage.CurrOffset + (Alignment-1)) & ~(Alignment-1)) - m_CurrPage.CurrOffset;
+        if(m_CurrPage.AvailableSize < SizeInBytes + AlignmentOffset)
         {
+            // Allocate new page
             auto NewPage = CreateNewPage(m_PageSize);
             m_CurrPage.Reset(NewPage, m_PageSize);
             m_CurrAllocatedSize += NewPage.MemAllocation.Size;
             m_Pages.emplace_back(std::move(NewPage));
+            VERIFY_EXPR((m_CurrPage.CurrOffset & (Alignment-1)) == 0);
+            AlignmentOffset = 0;
         }
 
-        Allocation.vkBuffer   = m_CurrPage.vkBuffer;
-        Allocation.CPUAddress = m_CurrPage.CurrCPUAddress;
-        Allocation.Size       = SizeInBytes;
-        Allocation.Offset     = m_CurrPage.CurrOffset;
+        m_CurrPage.Advance(AlignmentOffset);
+        VERIFY_EXPR((m_CurrPage.CurrOffset & (Alignment-1)) == 0);
+        Allocation.vkBuffer      = m_CurrPage.vkBuffer;
+        Allocation.CPUAddress    = m_CurrPage.CurrCPUAddress;
+        Allocation.Size          = SizeInBytes;
+        Allocation.AlignedOffset = m_CurrPage.CurrOffset;
         m_CurrPage.Advance(SizeInBytes);
     }
-    m_CurrFrameSize += SizeInBytes;
+    m_CurrFrameSize += SizeInBytes; // Count unaligned size
     m_PeakFrameSize     = std::max(m_CurrFrameSize, m_PeakFrameSize);
     m_PeakAllocatedSize = std::max(m_CurrAllocatedSize, m_PeakAllocatedSize);
 
+    VERIFY_EXPR((Allocation.AlignedOffset & (Alignment-1)) == 0);
     return Allocation;
 }
 

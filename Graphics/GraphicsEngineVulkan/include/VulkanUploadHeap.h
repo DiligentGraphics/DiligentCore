@@ -34,21 +34,21 @@ class RenderDeviceVkImpl;
 struct VulkanUploadAllocation
 {
     VulkanUploadAllocation(){}
-    VulkanUploadAllocation(void* _CPUAddress, VkDeviceSize _Size, VkDeviceSize _Offset, VkBuffer _vkBuffer) :
-        CPUAddress(_CPUAddress),
-        Size      (_Size),
-        Offset    (_Offset),
-        vkBuffer  (_vkBuffer)
+    VulkanUploadAllocation(void* _CPUAddress, VkDeviceSize _Size, VkDeviceSize _AlignedOffset, VkBuffer _vkBuffer) :
+        CPUAddress   (_CPUAddress),
+        Size         (_Size),
+        AlignedOffset(_AlignedOffset),
+        vkBuffer     (_vkBuffer)
     {}
     VulkanUploadAllocation             (const VulkanUploadAllocation&) = delete;
     VulkanUploadAllocation& operator = (const VulkanUploadAllocation&) = delete;
     VulkanUploadAllocation             (VulkanUploadAllocation&&) = default;
     VulkanUploadAllocation& operator = (VulkanUploadAllocation&&) = default;
 
-    VkBuffer     vkBuffer   = VK_NULL_HANDLE;	    // Vulkan buffer associated with this memory.
-    void*        CPUAddress = nullptr;
-    VkDeviceSize Size       = 0;
-    VkDeviceSize Offset     = 0;
+    VkBuffer     vkBuffer      = VK_NULL_HANDLE; // Vulkan buffer associated with this memory.
+    void*        CPUAddress    = nullptr;
+    VkDeviceSize Size          = 0;
+    VkDeviceSize AlignedOffset = 0;
 };
 
 class VulkanUploadHeap
@@ -65,7 +65,7 @@ public:
 
     ~VulkanUploadHeap();
 
-    VulkanUploadAllocation Allocate(size_t SizeInBytes);
+    VulkanUploadAllocation Allocate(size_t SizeInBytes, size_t Alignment);
     void DiscardAllocations(uint64_t FenceValue);
 
     size_t GetStaleAllocationsCount()const
