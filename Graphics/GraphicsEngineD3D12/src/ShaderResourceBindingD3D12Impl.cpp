@@ -157,7 +157,7 @@ void ShaderResourceBindingD3D12Impl::dvpVerifyResourceBindings(const PipelineSta
 void ShaderResourceBindingD3D12Impl::InitializeStaticResources(const PipelineStateD3D12Impl* pPSO)
 {
     VERIFY(!StaticResourcesInitialized(), "Static resources have already been initialized");
-    VERIFY(pPSO == GetPipelineState(), "Invalid pipeline state provided");
+    VERIFY(pPSO->IsCompatibleWith(GetPipelineState()), "Currently bound pipeline state is not compatible with this SRB");
 
     auto NumShaders = pPSO->GetNumShaders();
     auto ppShaders = pPSO->GetShaders();
