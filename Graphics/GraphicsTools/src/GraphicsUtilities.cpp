@@ -83,30 +83,30 @@ void GenerateCheckerBoardPattern(Uint32 Width, Uint32 Height, TEXTURE_FORMAT Fmt
     case COMPONENT_TYPE_UNORM:
         GenerateCheckerBoardPatternInternal(Width, Height, Fmt, HorzCells, VertCells, pData, StrideInBytes, 
             [](Uint8 *pDstTexel, Uint32 NumComponents, float fVal)
-        {
-            Uint8 uVal = static_cast<Uint8>(fVal * 255.f);
-            for (Uint32 c = 0; c < NumComponents; ++c)
-                pDstTexel[c] = uVal;
-        });
+            {
+                Uint8 uVal = static_cast<Uint8>(fVal * 255.f);
+                for (Uint32 c = 0; c < NumComponents; ++c)
+                    pDstTexel[c] = uVal;
+            });
         break;
 
     case COMPONENT_TYPE_UNORM_SRGB:
         GenerateCheckerBoardPatternInternal(Width, Height, Fmt, HorzCells, VertCells, pData, StrideInBytes, 
             [](Uint8 *pDstTexel, Uint32 NumComponents, float fVal)
-        {
-            Uint8 uVal = static_cast<Uint8>(  LinearToSRGB(fVal) * 255.f);
-            for (Uint32 c = 0; c < NumComponents; ++c)
-                pDstTexel[c] = uVal;
-        });
+            {
+                Uint8 uVal = static_cast<Uint8>(  LinearToSRGB(fVal) * 255.f);
+                for (Uint32 c = 0; c < NumComponents; ++c)
+                    pDstTexel[c] = uVal;
+            });
         break;
 
     case COMPONENT_TYPE_FLOAT:
         GenerateCheckerBoardPatternInternal(Width, Height, Fmt, HorzCells, VertCells, pData, StrideInBytes, 
             [](Uint8 *pDstTexel, Uint32 NumComponents, float fVal)
-        {
-            for (Uint32 c = 0; c < NumComponents; ++c)
-                (reinterpret_cast<float*>(pDstTexel))[c] = fVal;
-        });
+            {
+                for (Uint32 c = 0; c < NumComponents; ++c)
+                    (reinterpret_cast<float*>(pDstTexel))[c] = fVal;
+            });
         break;
 
     default:
