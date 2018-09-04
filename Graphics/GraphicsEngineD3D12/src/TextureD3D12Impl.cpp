@@ -408,6 +408,8 @@ void TextureD3D12Impl::UpdateData( IDeviceContext*          pContext,
                                    const TextureSubResData& SubresData )
 {
     TTextureBase::UpdateData( pContext, MipLevel, Slice, DstBox, SubresData );
+    // OpenGL backend uses UpdateData() to initialize textures, so we can't check the usage in ValidateUpdateDataParams()
+    DEV_CHECK_ERR( m_Desc.Usage == USAGE_DEFAULT, "Only USAGE_DEFAULT textures should be updated with UpdateData()" );
 
     Box BlockAlignedBox;
     const auto& FmtAttribs = GetTextureFormatAttribs(m_Desc.Format);

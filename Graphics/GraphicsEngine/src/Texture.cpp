@@ -182,7 +182,6 @@ void ValidateUpdateDataParams( const TextureDesc& TexDesc, Uint32 MipLevel, Uint
     ValidateTextureRegion(TexDesc, MipLevel, Slice, DstBox);
 
 #ifdef DEVELOPMENT
-    VERIFY_TEX_PARAMS( TexDesc.Usage == USAGE_DEFAULT, "Only textures created with USAGE_DEFAULT can be updated with UpdateData()" );
     VERIFY_TEX_PARAMS( TexDesc.SampleCount == 1, "Only non-multisampled textures can be updated with UpdateData()" );
     VERIFY_TEX_PARAMS( (SubresData.Stride & 0x03) == 0, "Texture data stride (", SubresData.Stride, ") must be at least 32-bit aligned" );
     VERIFY_TEX_PARAMS( (SubresData.DepthStride & 0x03) == 0, "Texture data depth stride (", SubresData.DepthStride, ") must be at least 32-bit aligned" );
