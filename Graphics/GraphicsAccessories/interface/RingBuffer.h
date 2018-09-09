@@ -42,7 +42,7 @@ namespace Diligent
         using OffsetType = size_t;
         struct FrameHeadAttribs
         {
-            FrameHeadAttribs(Uint64 fv, OffsetType off, OffsetType sz) : 
+            FrameHeadAttribs(Uint64 fv, OffsetType off, OffsetType sz)noexcept : 
                 FenceValue(fv),
                 Offset    (off),
                 Size      (sz)
