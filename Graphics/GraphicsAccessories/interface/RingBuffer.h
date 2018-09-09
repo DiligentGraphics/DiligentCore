@@ -50,9 +50,9 @@ namespace Diligent
 
             // Fence value associated with the command list in which 
             // the allocation could have been referenced last time
-            const Uint64     FenceValue;
-            const OffsetType Offset;
-            const OffsetType Size;
+            Uint64     FenceValue;
+            OffsetType Offset;
+            OffsetType Size;
         };
         static constexpr const OffsetType InvalidOffset = static_cast<OffsetType>(-1);
 

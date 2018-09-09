@@ -98,9 +98,9 @@ struct STDAllocator
     T* allocate(std::size_t count)
     {
 #ifndef DEVELOPMENT
-        static constexpr char* m_dvpDescription = "<Unavailable in release build>";
-        static constexpr char* m_dvpFileName    = "<Unavailable in release build>";
-        static constexpr Int32 m_dvpLineNumber  = -1;
+        static constexpr const char* m_dvpDescription = "<Unavailable in release build>";
+        static constexpr const char* m_dvpFileName    = "<Unavailable in release build>";
+        static constexpr Int32       m_dvpLineNumber  = -1;
 #endif
         return reinterpret_cast<T*>( m_Allocator.Allocate(count * sizeof(T), m_dvpDescription, m_dvpFileName, m_dvpLineNumber ) );
     }
