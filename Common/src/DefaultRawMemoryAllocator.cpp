@@ -43,9 +43,9 @@ namespace Diligent
     void DefaultRawMemoryAllocator::Free(void *Ptr)
     {
 #ifdef _DEBUG
-        delete[] (reinterpret_cast<char*>(Ptr)-16);
+        delete[] (reinterpret_cast<Uint8*>(Ptr)-16);
 #else
-        delete[] Ptr;
+        delete[] reinterpret_cast<Uint8*>(Ptr);
 #endif
     }
 

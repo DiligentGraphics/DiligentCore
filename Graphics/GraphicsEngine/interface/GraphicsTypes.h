@@ -1511,8 +1511,8 @@ namespace Diligent
         }
 
         TextureFormatAttribs() : 
-            Format(TEX_FORMAT_UNKNOWN),
             Name("TEX_FORMAT_UNKNOWN"),
+            Format(TEX_FORMAT_UNKNOWN),
             ComponentSize(0),
             NumComponents(0),
             ComponentType(COMPONENT_TYPE_UNDEFINED),

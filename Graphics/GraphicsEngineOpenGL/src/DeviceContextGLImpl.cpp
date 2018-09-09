@@ -872,8 +872,7 @@ namespace Diligent
         // Viewport and scissor settings are not applied.
         if( pView != nullptr )
         {
-            const auto& ViewDesc = pView->GetDesc();
-            VERIFY( ViewDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL, "Incorrect view type: depth stencil is expected" );
+            VERIFY( pView->GetDesc().ViewType == TEXTURE_VIEW_DEPTH_STENCIL, "Incorrect view type: depth stencil is expected" );
             CHECK_DYNAMIC_TYPE( TextureViewGLImpl, pView );
             if( pView != m_pBoundDepthStencil )
             {
@@ -917,8 +916,7 @@ namespace Diligent
         Int32 RTIndex = -1;
         if( pView != nullptr )
         {
-            const auto& ViewDesc = pView->GetDesc();
-            VERIFY( ViewDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET, "Incorrect view type: render target is expected" );
+            VERIFY( pView->GetDesc().ViewType == TEXTURE_VIEW_RENDER_TARGET, "Incorrect view type: render target is expected" );
             CHECK_DYNAMIC_TYPE( TextureViewGLImpl, pView );
             for( Uint32 rt = 0; rt < m_NumBoundRenderTargets; ++rt )
                 if( m_pBoundRenderTargets[rt] == pView )

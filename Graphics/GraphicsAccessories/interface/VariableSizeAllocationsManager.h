@@ -147,6 +147,13 @@ namespace Diligent
         // is sufficient to properly align it
         struct Allocation
         {
+            Allocation(OffsetType offset, OffsetType  size) : 
+                UnalignedOffset(offset),
+                Size           (size)
+            {}
+
+            Allocation(){}
+
             OffsetType UnalignedOffset = InvalidOffset;
             OffsetType Size            = 0;
         };

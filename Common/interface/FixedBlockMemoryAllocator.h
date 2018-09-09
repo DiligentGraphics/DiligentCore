@@ -49,7 +49,7 @@ namespace Diligent
 #endif
 
 /// Memory allocator that allocates memory in a fixed-size chunks
-class FixedBlockMemoryAllocator : public IMemoryAllocator
+class FixedBlockMemoryAllocator final : public IMemoryAllocator
 {
 public:
     FixedBlockMemoryAllocator(IMemoryAllocator& RawMemoryAllocator, size_t BlockSize, Uint32 NumBlocksInPage);

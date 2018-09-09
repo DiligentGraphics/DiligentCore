@@ -258,7 +258,7 @@ void BufferBase<BaseInterface, RenderDeviceImplType, BufferViewImplType, TBuffVi
         if (this->m_Desc.Mode == BUFFER_MODE_FORMATTED && ViewDesc.Format.ValueType == VT_UNDEFINED)
             LOG_ERROR_AND_THROW("Format must be specified when creating a view of a formatted buffer");
 
-        if (this->m_Desc.Mode == BUFFER_MODE_FORMATTED || this->m_Desc.Mode == BUFFER_MODE_RAW && ViewDesc.Format.ValueType != VT_UNDEFINED)
+        if (this->m_Desc.Mode == BUFFER_MODE_FORMATTED || (this->m_Desc.Mode == BUFFER_MODE_RAW && ViewDesc.Format.ValueType != VT_UNDEFINED))
         {
             if (ViewDesc.Format.NumComponents <= 0 || ViewDesc.Format.NumComponents > 4)
                 LOG_ERROR_AND_THROW("Incorrect number of components (", Uint32{ViewDesc.Format.NumComponents}, "). 1, 2, 3, or 4 are allowed values");

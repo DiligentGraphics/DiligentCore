@@ -223,8 +223,8 @@ public:
         m_SamplerObjAllocator   (RawMemAllocator, SamplerObjSize, 32),
         m_PSOAllocator          (RawMemAllocator, PSOSize, 128),
         m_SRBAllocator          (RawMemAllocator, SRBSize, 1024),
-        m_FenceAllocator        (RawMemAllocator, FenceSize, 16),
-        m_ResMappingAllocator   (RawMemAllocator, sizeof(ResourceMappingImpl), 16)
+        m_ResMappingAllocator   (RawMemAllocator, sizeof(ResourceMappingImpl), 16),
+        m_FenceAllocator        (RawMemAllocator, FenceSize, 16)
     {
         // Initialize texture format info
         for( Uint32 Fmt = TEX_FORMAT_UNKNOWN; Fmt < TEX_FORMAT_NUM_FORMATS; ++Fmt )

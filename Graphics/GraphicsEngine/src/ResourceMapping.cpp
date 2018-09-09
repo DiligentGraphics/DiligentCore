@@ -37,7 +37,7 @@ namespace Diligent
 
     ThreadingTools::LockHelper ResourceMappingImpl::Lock()
     {
-        return std::move( ThreadingTools::LockHelper( m_LockFlag ) );
+        return ThreadingTools::LockHelper( m_LockFlag );
     }
 
     void ResourceMappingImpl::AddResourceArray( const Char *Name, Uint32 StartIndex, IDeviceObject * const* ppObjects, Uint32 NumElements, bool bIsUnique )
