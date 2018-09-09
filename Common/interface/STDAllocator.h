@@ -45,29 +45,35 @@ struct STDAllocator
     typedef std::size_t size_type;
     typedef std::ptrdiff_t difference_type;
 
-    STDAllocator(AllocatorType& Allocator, const Char* dbgDescription, const Char* dbgFileName, const  Int32 dbgLineNumber)noexcept : 
-        m_Allocator(Allocator),
-        m_dbgDescription(dbgDescription),
-        m_dbgFileName(dbgFileName),
-        m_dbgLineNumber(dbgLineNumber)
+    STDAllocator(AllocatorType& Allocator, const Char* Description, const Char* FileName, const  Int32 LineNumber)noexcept : 
+        m_Allocator     (Allocator)
+#ifdef DEVELOPMENT
+      , m_dvpDescription(Description)
+      , m_dvpFileName   (FileName)
+      , m_dvpLineNumber (LineNumber)
+#endif
     {
     }
 
     template <class U> 
     STDAllocator(const STDAllocator<U, AllocatorType>& other)noexcept : 
-        m_Allocator(other.m_Allocator),
-        m_dbgDescription(other.m_dbgDescription),
-        m_dbgFileName(other.m_dbgFileName),
-        m_dbgLineNumber(other.m_dbgLineNumber)
+        m_Allocator     (other.m_Allocator)
+#ifdef DEVELOPMENT
+      , m_dvpDescription(other.m_dvpDescription)
+      , m_dvpFileName   (other.m_dvpFileName)
+      , m_dvpLineNumber (other.m_dvpLineNumber)
+#endif
     {
     }
 
     template <class U> 
     STDAllocator(STDAllocator<U, AllocatorType>&& other)noexcept : 
-        m_Allocator(other.m_Allocator),
-        m_dbgDescription(other.m_dbgDescription),
-        m_dbgFileName(other.m_dbgFileName),
-        m_dbgLineNumber(other.m_dbgLineNumber)
+        m_Allocator     (other.m_Allocator)
+#ifdef DEVELOPMENT
+      , m_dvpDescription(other.m_dvpDescription)
+      , m_dvpFileName   (other.m_dvpFileName)
+      , m_dvpLineNumber (other.m_dvpLineNumber)
+#endif
     {
     }
 
@@ -76,9 +82,11 @@ struct STDAllocator
     {
         // Android build requires this operator to be defined - I have no idea why
         VERIFY_EXPR(&m_Allocator == &other.m_Allocator);
-        m_dbgDescription = other.m_dbgDescription;
-        m_dbgFileName = other.m_dbgFileName;
-        m_dbgLineNumber = other.m_dbgLineNumber;
+#ifdef DEVELOPMENT
+        m_dvpDescription = other.m_dvpDescription;
+        m_dvpFileName    = other.m_dvpFileName;
+        m_dvpLineNumber  = other.m_dvpLineNumber;
+#endif
         return *this;
     }
 
@@ -89,7 +97,12 @@ struct STDAllocator
 
     T* allocate(std::size_t count)
     {
-        return reinterpret_cast<T*>( m_Allocator.Allocate(count * sizeof(T), m_dbgDescription, m_dbgFileName, m_dbgLineNumber ) );
+#ifndef DEVELOPMENT
+        static constexpr char* m_dvpDescription = "<Unavailable in release build>";
+        static constexpr char* m_dvpFileName    = "<Unavailable in release build>";
+        static constexpr Int32 m_dvpLineNumber  = -1;
+#endif
+        return reinterpret_cast<T*>( m_Allocator.Allocate(count * sizeof(T), m_dvpDescription, m_dvpFileName, m_dvpLineNumber ) );
     }
 
     void deallocate(T* p, std::size_t count)
@@ -115,9 +128,11 @@ struct STDAllocator
     }
 
     AllocatorType &m_Allocator;
-    const Char* m_dbgDescription;
-    const Char* m_dbgFileName;
-    Int32 m_dbgLineNumber;
+#ifdef DEVELOPMENT
+    const Char* const m_dvpDescription;
+    const Char* const m_dvpFileName;
+    Int32       const m_dvpLineNumber;
+#endif
 };
 
 #define STD_ALLOCATOR(Type, AllocatorType, Allocator, Description) STDAllocator<Type, AllocatorType>(Allocator, Description, __FILE__, __LINE__)

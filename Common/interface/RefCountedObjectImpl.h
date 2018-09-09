@@ -593,21 +593,25 @@ template<typename ObjectType, typename AllocatorType = IMemoryAllocator>
 class MakeNewRCObj
 {
 public:
-    MakeNewRCObj(AllocatorType &Allocator, const Char* dbgDescription, const char* dbgFileName, const Int32 dbgLineNumber, IObject* pOwner = nullptr)noexcept : 
+    MakeNewRCObj(AllocatorType &Allocator, const Char* Description, const char* FileName, const Int32 LineNumber, IObject* pOwner = nullptr)noexcept : 
         m_pAllocator(&Allocator),
-        m_pOwner(pOwner),
-        m_dbgDescription(dbgDescription),
-        m_dbgFileName(dbgFileName),
-        m_dbgLineNumber(dbgLineNumber)
+        m_pOwner(pOwner)
+#ifdef DEVELOPMENT
+      , m_dvpDescription(Description)
+      , m_dvpFileName   (FileName)
+      , m_dvpLineNumber (LineNumber)
+#endif
     {
     }
 
     MakeNewRCObj(IObject* pOwner = nullptr)noexcept : 
-        m_pAllocator(nullptr),
-        m_pOwner(pOwner),
-        m_dbgDescription(nullptr),
-        m_dbgFileName(nullptr),
-        m_dbgLineNumber(0)
+        m_pAllocator    (nullptr),
+        m_pOwner        (pOwner)
+#ifdef DEVELOPMENT
+      , m_dvpDescription(nullptr)
+      , m_dvpFileName   (nullptr)
+      , m_dvpLineNumber (0)
+#endif
     {}
     
     MakeNewRCObj(const MakeNewRCObj&) = delete;
@@ -632,10 +636,15 @@ public:
         ObjectType *pObj = nullptr;
         try
         {
+#ifndef DEVELOPMENT
+            static constexpr char* m_dvpDescription = "<Unavailable in release build>";
+            static constexpr char* m_dvpFileName    = "<Unavailable in release build>";
+            static constexpr Int32 m_dvpLineNumber  = -1;
+#endif
             // Operators new and delete of RefCountedObject are private and only accessible
             // by methods of MakeNewRCObj
             if(m_pAllocator)
-                pObj = new(*m_pAllocator, m_dbgDescription, m_dbgFileName, m_dbgLineNumber) ObjectType(pRefCounters, std::forward<CtorArgTypes>(CtorArgs)... );
+                pObj = new(*m_pAllocator, m_dvpDescription, m_dvpFileName, m_dvpLineNumber) ObjectType(pRefCounters, std::forward<CtorArgTypes>(CtorArgs)... );
             else
                 pObj = new ObjectType( pRefCounters, std::forward<CtorArgTypes>(CtorArgs)... );
             if(pNewRefCounters != nullptr)
@@ -652,10 +661,13 @@ public:
     
 private:
     AllocatorType* const m_pAllocator;
-    IObject* const m_pOwner;
-    const Char* const m_dbgDescription;
-    const char* const m_dbgFileName;
-    const Int32 m_dbgLineNumber;
+    IObject*       const m_pOwner;
+
+#ifdef DEVELOPMENT
+    const Char* const m_dvpDescription;
+    const char* const m_dvpFileName;
+    Int32       const m_dvpLineNumber;
+#endif
 };
 
 #define NEW_RC_OBJ(Allocator, Desc, Type, ...) MakeNewRCObj<Type, typename std::remove_reference<decltype(Allocator)>::type>(Allocator, Desc, __FILE__, __LINE__, ##__VA_ARGS__)
