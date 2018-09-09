@@ -172,7 +172,7 @@ public:
         return m_DynamicDescriptorPool.Allocate(SetLayout);
     }
 
-    VulkanDynamicAllocation AllocateDynamicSpace(Uint32 SizeInBytes);
+    VulkanDynamicAllocation AllocateDynamicSpace(Uint32 SizeInBytes, Uint32 Alignment);
 
     void ResetRenderTargets();
     Int64 GetContextFrameNumber()const{return m_ContextFrameNumber;}
@@ -191,11 +191,12 @@ private:
 
     struct BufferToTextureCopyInfo
     {
-        Uint32  RowSize     = 0;
-        Uint32  Stride      = 0;
-        Uint32  DepthStride = 0;
-        Uint32  MemorySize  = 0;
-        Uint32  RowCount    = 0;
+        Uint32  RowSize        = 0;
+        Uint32  Stride         = 0;
+        Uint32  StrideInTexels = 0;
+        Uint32  DepthStride    = 0;
+        Uint32  MemorySize     = 0;
+        Uint32  RowCount       = 0;
         Box     Region;
     };
     BufferToTextureCopyInfo GetBufferToTextureCopyInfo(const TextureDesc& TexDesc,
@@ -204,6 +205,7 @@ private:
 
     void CopyBufferToTexture(VkBuffer         vkBuffer,
                              Uint32           BufferOffset,
+                             Uint32           BufferRowStrideInTexels,
                              const Box&       Region,
                              TextureVkImpl&   TextureVk,
                              Uint32           MipLevel,

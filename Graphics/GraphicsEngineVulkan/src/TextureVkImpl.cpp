@@ -150,8 +150,10 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters,
     else
         ImageMemoryFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
+    VERIFY( IsPowerOfTwo(MemReqs.alignment), "Alignment is not power of 2!");
     m_MemoryAllocation = pRenderDeviceVk->AllocateMemory(MemReqs, ImageMemoryFlags);
-    auto AlignedOffset = (m_MemoryAllocation.UnalignedOffset + (MemReqs.alignment-1)) & ~(MemReqs.alignment-1);
+    auto AlignedOffset = Align(m_MemoryAllocation.UnalignedOffset, MemReqs.alignment);
+    VERIFY_EXPR(m_MemoryAllocation.Size >= MemReqs.size + (AlignedOffset - m_MemoryAllocation.UnalignedOffset));
     auto Memory = m_MemoryAllocation.Page->GetVkMemory();
     auto err = LogicalDevice.BindImageMemory(m_VulkanImage, Memory, AlignedOffset);
     CHECK_VK_ERROR_AND_THROW(err, "Failed to bind image memory");
@@ -268,12 +270,14 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters,
         VulkanUtilities::BufferWrapper StagingBuffer = LogicalDevice.CreateBuffer(VkStaginBuffCI, StagingBufferName.c_str());
 
         VkMemoryRequirements StagingBufferMemReqs = LogicalDevice.GetBufferMemoryRequirements(StagingBuffer);
+        VERIFY( IsPowerOfTwo(StagingBufferMemReqs.alignment), "Alignment is not power of 2!");
         // VK_MEMORY_PROPERTY_HOST_COHERENT_BIT bit specifies that the host cache management commands vkFlushMappedMemoryRanges 
         // and vkInvalidateMappedMemoryRanges are NOT needed to flush host writes to the device or make device writes visible
         // to the host (10.2)
         auto StagingMemoryAllocation = pRenderDeviceVk->AllocateMemory(StagingBufferMemReqs, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
         auto StagingBufferMemory = StagingMemoryAllocation.Page->GetVkMemory();
-        auto AlignedStagingMemOffset = (StagingMemoryAllocation.UnalignedOffset + (StagingBufferMemReqs.alignment-1)) & ~(StagingBufferMemReqs.alignment-1);
+        auto AlignedStagingMemOffset = Align(StagingMemoryAllocation.UnalignedOffset, StagingBufferMemReqs.alignment);
+        VERIFY_EXPR(StagingMemoryAllocation.Size >= StagingBufferMemReqs.size + (AlignedStagingMemOffset - StagingMemoryAllocation.UnalignedOffset));
 
         auto *StagingData = reinterpret_cast<uint8_t*>(StagingMemoryAllocation.Page->GetCPUMemory());
         VERIFY_EXPR(StagingData != nullptr);

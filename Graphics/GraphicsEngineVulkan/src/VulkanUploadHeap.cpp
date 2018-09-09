@@ -81,12 +81,7 @@ VulkanUploadHeap::UploadPageInfo VulkanUploadHeap::CreateNewPage(VkDeviceSize Si
 
 VulkanUploadAllocation VulkanUploadHeap::Allocate(size_t SizeInBytes, size_t Alignment)
 {
-    VERIFY((Alignment & (Alignment-1)) == 0, "Alignment (", Alignment, ") must be power of two");
-    if (Alignment == 0)
-    {
-        static constexpr const size_t MinimumAlignment = 4;
-        Alignment = MinimumAlignment;
-    }
+    VERIFY(IsPowerOfTwo(Alignment), "Alignment (", Alignment, ") must be power of two");
 
     VulkanUploadAllocation Allocation;
     if(SizeInBytes >= m_PageSize/2)
@@ -103,7 +98,7 @@ VulkanUploadAllocation VulkanUploadHeap::Allocate(size_t SizeInBytes, size_t Ali
     }
     else
     {
-        auto AlignmentOffset = ((m_CurrPage.CurrOffset + (Alignment-1)) & ~(Alignment-1)) - m_CurrPage.CurrOffset;
+        auto AlignmentOffset = Align(m_CurrPage.CurrOffset, Alignment) - m_CurrPage.CurrOffset;
         if(m_CurrPage.AvailableSize < SizeInBytes + AlignmentOffset)
         {
             // Allocate new page

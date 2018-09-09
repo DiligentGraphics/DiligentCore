@@ -27,9 +27,12 @@
 #pragma once
 
 #include <map>
+#include <algorithm>
+
 #include "MemoryAllocator.h"
 #include "STDAllocator.h"
 #include "DebugUtilities.h"
+#include "Align.h"
 
 namespace Diligent
 {
@@ -57,7 +60,7 @@ namespace Diligent
     class VariableSizeAllocationsManager
     {
     public:
-        typedef size_t OffsetType;
+        using OffsetType = size_t;
         static constexpr OffsetType InvalidOffset = static_cast<OffsetType>(-1);
 
     private:
@@ -99,6 +102,7 @@ namespace Diligent
         {
             // Insert single maximum-size block
             AddNewBlock(0, m_MaxSize);
+            ResetCurrAlignment();
 
 #ifdef _DEBUG
             DbgVerifyList();
@@ -123,35 +127,48 @@ namespace Diligent
 #endif
         }
 
-        VariableSizeAllocationsManager(VariableSizeAllocationsManager&& rhs) : 
-            m_FreeBlocksByOffset(std::move(rhs.m_FreeBlocksByOffset)),
-            m_FreeBlocksBySize(std::move(rhs.m_FreeBlocksBySize)),
-            m_MaxSize(rhs.m_MaxSize),
-            m_FreeSize(rhs.m_FreeSize)
+        VariableSizeAllocationsManager(VariableSizeAllocationsManager&& rhs)noexcept : 
+            m_FreeBlocksByOffset (std::move(rhs.m_FreeBlocksByOffset)),
+            m_FreeBlocksBySize   (std::move(rhs.m_FreeBlocksBySize)),
+            m_MaxSize            (rhs.m_MaxSize),
+            m_FreeSize           (rhs.m_FreeSize),
+            m_CurrAlignment      (rhs.m_CurrAlignment)
         {
-            rhs.m_MaxSize = 0;
-            rhs.m_FreeSize = 0;
+            rhs.m_MaxSize       = 0;
+            rhs.m_FreeSize      = 0;
+            rhs.m_CurrAlignment = 0;
         }
 
         VariableSizeAllocationsManager& operator = (VariableSizeAllocationsManager&& rhs) = default;
-        VariableSizeAllocationsManager(const VariableSizeAllocationsManager&) = delete;
+        VariableSizeAllocationsManager             (const VariableSizeAllocationsManager&) = delete;
         VariableSizeAllocationsManager& operator = (const VariableSizeAllocationsManager&) = delete;
 
-        OffsetType Allocate(OffsetType Size)
+        // Offset returned by Allocate() may not be aligned, but the size of the allocation
+        // is sufficient to properly align it
+        struct Allocation
         {
-            VERIFY_EXPR(Size != 0);
-            if(m_FreeSize < Size)
-                return InvalidOffset;
+            OffsetType UnalignedOffset = InvalidOffset;
+            OffsetType Size            = 0;
+        };
 
-            // Get the first block that is large enough to encompass Size bytes
+        Allocation Allocate(OffsetType Size, OffsetType Alignment)
+        {
+            VERIFY_EXPR(Size > 0);
+            VERIFY(IsPowerOfTwo(Alignment), "Alignment (", Alignment, ") must be power of 2");
+            Size = Align(Size, Alignment);
+            if(m_FreeSize < Size)
+                return Allocation{InvalidOffset, 0};
+
+            auto AlignmentReserve = (Alignment > m_CurrAlignment) ? Alignment - m_CurrAlignment : 0;
+            // Get the first block that is large enough to encompass Size + AlignmentReserve bytes
             // lower_bound() returns an iterator pointing to the first element that 
             // is not less (i.e. >= ) than key
-            auto SmallestBlockItIt = m_FreeBlocksBySize.lower_bound(Size);
+            auto SmallestBlockItIt = m_FreeBlocksBySize.lower_bound(Size + AlignmentReserve);
             if(SmallestBlockItIt == m_FreeBlocksBySize.end())
-                return InvalidOffset;
+                return Allocation{InvalidOffset, 0};
 
             auto SmallestBlockIt = SmallestBlockItIt->second;
-            VERIFY_EXPR(Size <= SmallestBlockIt->second.Size);
+            VERIFY_EXPR(Size + AlignmentReserve <= SmallestBlockIt->second.Size);
             VERIFY_EXPR(SmallestBlockIt->second.Size == SmallestBlockItIt->first);
             
             //     SmallestBlockIt.Offset      
@@ -162,8 +179,12 @@ namespace Diligent
             //      Offset              NewOffset
             //
             auto Offset = SmallestBlockIt->first;
-            auto NewOffset = Offset + Size;
-            auto NewSize = SmallestBlockIt->second.Size - Size;
+            VERIFY_EXPR(Offset % m_CurrAlignment == 0);
+            auto AlignedOffset = Align(Offset, Alignment);
+            auto AdjustedSize = Size + (AlignedOffset - Offset);
+            VERIFY_EXPR(AdjustedSize <= Size + AlignmentReserve);
+            auto NewOffset = Offset + AdjustedSize;
+            auto NewSize = SmallestBlockIt->second.Size - AdjustedSize;
             VERIFY_EXPR(SmallestBlockItIt == SmallestBlockIt->second.OrderBySizeIt);
             m_FreeBlocksBySize.erase(SmallestBlockItIt);
             m_FreeBlocksByOffset.erase(SmallestBlockIt);
@@ -172,12 +193,31 @@ namespace Diligent
                 AddNewBlock(NewOffset, NewSize);
             }
 
-            m_FreeSize -= Size;
+            m_FreeSize -= AdjustedSize;
+
+            if ((Size & (m_CurrAlignment-1)) != 0)
+            {
+                if (IsPowerOfTwo(Size))
+                {
+                    VERIFY_EXPR(Size >= Alignment && Size < m_CurrAlignment);
+                    m_CurrAlignment = Size;
+                }
+                else
+                {
+                    m_CurrAlignment = std::min(m_CurrAlignment, Alignment);
+                }
+            }
 
 #ifdef _DEBUG
             DbgVerifyList();
 #endif
-            return Offset;
+            return Allocation{Offset, AdjustedSize};
+        }
+
+        void Free(Allocation&& allocation)
+        {
+            Free(allocation.UnalignedOffset, allocation.Size);
+            allocation = Allocation{};
         }
 
         void Free(OffsetType Offset, OffsetType Size)
@@ -264,6 +304,13 @@ namespace Diligent
             AddNewBlock(NewOffset, NewSize);
 
             m_FreeSize += Size;
+            if(IsEmpty())
+            {
+                // Reset current alignment
+                VERIFY_EXPR(DbgGetNumFreeBlocks() == 1);
+                ResetCurrAlignment();
+            }
+
 #ifdef _DEBUG
             DbgVerifyList();
 #endif
@@ -288,18 +335,26 @@ namespace Diligent
             NewBlockIt.first->second.OrderBySizeIt = OrderIt;
         }
 
+        void ResetCurrAlignment()
+        {
+            for(m_CurrAlignment = 1; m_CurrAlignment*2 <= m_MaxSize; m_CurrAlignment *= 2);
+        }
 
 #ifdef _DEBUG
         void DbgVerifyList()
         {
             OffsetType TotalFreeSize = 0;
-
+            
+            VERIFY_EXPR(IsPowerOfTwo(m_CurrAlignment));
             auto BlockIt = m_FreeBlocksByOffset.begin();
             auto PrevBlockIt = m_FreeBlocksByOffset.end();
             VERIFY_EXPR(m_FreeBlocksByOffset.size() == m_FreeBlocksBySize.size());
             while (BlockIt != m_FreeBlocksByOffset.end())
             {
                 VERIFY_EXPR(BlockIt->first >= 0 && BlockIt->first + BlockIt->second.Size <= m_MaxSize);
+                VERIFY( (BlockIt->first & (m_CurrAlignment-1)) == 0, "Block offset (", BlockIt->first, ") is not ", m_CurrAlignment, "-aligned" );
+                if (BlockIt->first + BlockIt->second.Size < m_MaxSize)
+                    VERIFY( (BlockIt->second.Size & (m_CurrAlignment-1)) == 0, "All block sizes except for the last one must be ", m_CurrAlignment, "-aligned" );
                 VERIFY_EXPR(BlockIt == BlockIt->second.OrderBySizeIt->second);
                 VERIFY_EXPR(BlockIt->second.Size == BlockIt->second.OrderBySizeIt->first);
                 //   PrevBlock.Offset                   BlockIt.first                     
@@ -327,7 +382,9 @@ namespace Diligent
         TFreeBlocksByOffsetMap m_FreeBlocksByOffset;
         TFreeBlocksBySizeMap   m_FreeBlocksBySize;
         
-        OffsetType m_MaxSize = 0;
-        OffsetType m_FreeSize = 0;
+        OffsetType m_MaxSize       = 0;
+        OffsetType m_FreeSize      = 0;
+        OffsetType m_CurrAlignment = 0;
+        // When adding new members, do not forget to update move ctor
     };
 }

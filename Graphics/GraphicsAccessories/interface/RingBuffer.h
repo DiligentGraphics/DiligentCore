@@ -31,6 +31,7 @@
 #include "MemoryAllocator.h"
 #include "STDAllocator.h"
 #include "DebugUtilities.h"
+#include "Align.h"
 
 namespace Diligent
 {
@@ -38,62 +39,62 @@ namespace Diligent
     class RingBuffer
     {
     public:
-        typedef size_t OffsetType;
-        struct FrameTailAttribs
+        using OffsetType = size_t;
+        struct FrameHeadAttribs
         {
-            FrameTailAttribs(Uint64 fv, OffsetType off, OffsetType sz) : 
+            FrameHeadAttribs(Uint64 fv, OffsetType off, OffsetType sz) : 
                 FenceValue(fv),
-                Offset(off),
-                Size(sz)
+                Offset    (off),
+                Size      (sz)
             {}
 
             // Fence value associated with the command list in which 
             // the allocation could have been referenced last time
-            Uint64 FenceValue;
-            OffsetType Offset;
-            OffsetType Size;
+            const Uint64     FenceValue;
+            const OffsetType Offset;
+            const OffsetType Size;
         };
         static constexpr const OffsetType InvalidOffset = static_cast<OffsetType>(-1);
 
         RingBuffer(OffsetType MaxSize, IMemoryAllocator &Allocator)noexcept : 
-            m_CompletedFrameTails(0, FrameTailAttribs(0,0,0), STD_ALLOCATOR_RAW_MEM(FrameTailAttribs, Allocator, "Allocator for vector<FrameNumOffsetPair>" )),
+            m_CompletedFrameHeads(STD_ALLOCATOR_RAW_MEM(FrameHeadAttribs, Allocator, "Allocator for deque<FrameHeadAttribs>")),
             m_MaxSize(MaxSize)
         {}
 
         RingBuffer(RingBuffer&& rhs)noexcept : 
-            m_CompletedFrameTails(std::move(rhs.m_CompletedFrameTails)),
-            m_Head(rhs.m_Head),
-            m_Tail(rhs.m_Tail),
-            m_MaxSize(rhs.m_MaxSize),
-            m_UsedSize(rhs.m_UsedSize),
-            m_CurrFrameSize(rhs.m_CurrFrameSize)
+            m_CompletedFrameHeads(std::move(rhs.m_CompletedFrameHeads)),
+            m_Tail          (rhs.m_Tail),
+            m_Head          (rhs.m_Head),
+            m_MaxSize       (rhs.m_MaxSize),
+            m_UsedSize      (rhs.m_UsedSize),
+            m_CurrFrameSize (rhs.m_CurrFrameSize)
         {
-            rhs.m_Head = 0;
-            rhs.m_Tail = 0;
-            rhs.m_MaxSize = 0;
-            rhs.m_UsedSize = 0;
+            rhs.m_Tail          = 0;
+            rhs.m_Head          = 0;
+            rhs.m_MaxSize       = 0;
+            rhs.m_UsedSize      = 0;
             rhs.m_CurrFrameSize = 0;
         }
 
         RingBuffer& operator = (RingBuffer&& rhs)noexcept
         {
-            m_CompletedFrameTails = std::move(rhs.m_CompletedFrameTails);
-            m_Head = rhs.m_Head;
-            m_Tail = rhs.m_Tail;
-            m_MaxSize = rhs.m_MaxSize;
-            m_UsedSize = rhs.m_UsedSize;
+            m_CompletedFrameHeads = std::move(rhs.m_CompletedFrameHeads);
+            m_Tail          = rhs.m_Tail;
+            m_Head          = rhs.m_Head;
+            m_MaxSize       = rhs.m_MaxSize;
+            m_UsedSize      = rhs.m_UsedSize;
             m_CurrFrameSize = rhs.m_CurrFrameSize;
 
-            rhs.m_MaxSize = 0;
-            rhs.m_Head = 0;
-            rhs.m_Tail = 0;
-            rhs.m_UsedSize = 0;
+            rhs.m_MaxSize       = 0;
+            rhs.m_Tail          = 0;
+            rhs.m_Head          = 0;
+            rhs.m_UsedSize      = 0;
             rhs.m_CurrFrameSize = 0;
 
             return *this;
         }
 
-        RingBuffer(const RingBuffer&) = delete;
+        RingBuffer             (const RingBuffer&) = delete;
         RingBuffer& operator = (const RingBuffer&) = delete;
 
         ~RingBuffer()
@@ -101,140 +102,126 @@ namespace Diligent
             VERIFY(m_UsedSize==0, "All space in the ring buffer must be released");
         }
 
-        OffsetType Allocate(OffsetType Size)
+        OffsetType Allocate(OffsetType Size, OffsetType Alignment)
         {
-            if(IsFull())
+            VERIFY_EXPR(Size > 0);
+            VERIFY(IsPowerOfTwo(Alignment), "Alignment (", Alignment, ") must be power of 2");
+            Size = Align(Size, Alignment);
+
+            if (m_UsedSize + Size > m_MaxSize)
             {
                 return InvalidOffset;
             }
 
-            if (m_Tail >= m_Head )
+            auto AlignedHead = Align(m_Head, Alignment);
+            if (m_Head >= m_Tail)
             {
-                //                     Head             Tail     MaxSize
-                //                     |                |        |
-                //  [                  xxxxxxxxxxxxxxxxx         ]
+                //                                         AlignedHead
+                //                     Tail          Head  |            MaxSize
+                //                     |                |  |            |
+                //  [                  xxxxxxxxxxxxxxxxx...             ]
                 //                                         
                 //
-                if (m_Tail + Size <= m_MaxSize)
+                if (AlignedHead + Size <= m_MaxSize)
                 {
-                    auto Offset = m_Tail;
-                    m_Tail += Size;
-                    m_UsedSize += Size;
-                    m_CurrFrameSize += Size;
+                    auto Offset       = AlignedHead;
+                    auto AdjustedSize = Size + (AlignedHead - m_Head);
+                    m_Head           += AdjustedSize;
+                    m_UsedSize       += AdjustedSize;
+                    m_CurrFrameSize  += AdjustedSize;
                     return Offset;
                 }
-                else if(Size <= m_Head)
+                else if (Size <= m_Tail)
                 {
                     // Allocate from the beginning of the buffer
-                    OffsetType AddSize = (m_MaxSize - m_Tail) + Size;
-                    m_UsedSize += AddSize;
+                    //
+                    //                                                    
+                    // Offset              Tail          Head               MaxSize
+                    //  |                  |                |<---AddSize--->|
+                    //  [                  xxxxxxxxxxxxxxxxx++++++++++++++++]
+                    // 
+                    OffsetType AddSize = (m_MaxSize - m_Head) + Size;
+                    m_UsedSize      += AddSize;
                     m_CurrFrameSize += AddSize;
-                    m_Tail = Size;
+                    m_Head           = Size;
                     return 0;
                 }
             }
-            else if (m_Tail + Size <= m_Head )
+            else if (AlignedHead + Size <= m_Tail )
             {
+                //          AlignedHead
+                //    Head  |              Tail             
+                //       |  |              |             
+                //  [xxxx...               xxxxxxxxxxxxxxxxxxxxxxxxxx]
                 //
-                //       Tail          Head             
-                //       |             |             
-                //  [xxxx              xxxxxxxxxxxxxxxxxxxxxxxxxx]
-                //
-                auto Offset = m_Tail;
-                m_Tail += Size;
-                m_UsedSize += Size;
-                m_CurrFrameSize += Size;
+                auto Offset       = AlignedHead;
+                auto AdjustedSize = Size + (AlignedHead - m_Head);
+                m_Head           += AdjustedSize;
+                m_UsedSize       += AdjustedSize;
+                m_CurrFrameSize  += AdjustedSize;
                 return Offset;
             }
 
             return InvalidOffset;
         }
 
-        // FenceValue is the fence value associated with the command list in which the tail
+        // FenceValue is the fence value associated with the command list in which the head
         // could have been referenced last time
         // See http://diligentgraphics.com/diligent-engine/architecture/d3d12/managing-resource-lifetimes/
         void FinishCurrentFrame(Uint64 FenceValue)
         {
-            m_CompletedFrameTails.emplace_back(FenceValue, m_Tail, m_CurrFrameSize);
-            m_CurrFrameSize = 0;
+#ifdef _DEBUG
+            if (!m_CompletedFrameHeads.empty())
+                VERIFY(FenceValue >= m_CompletedFrameHeads.back().FenceValue, "Current frame fence value (", FenceValue, ") is lower than the fence value of the previous frame (", m_CompletedFrameHeads.back().FenceValue, ")");
+#endif
+            // Ignore zero-size frames
+            if (m_CurrFrameSize != 0)
+            {
+                m_CompletedFrameHeads.emplace_back(FenceValue, m_Head, m_CurrFrameSize);
+                m_CurrFrameSize = 0;
+            }
         }
 
         // CompletedFenceValue indicates GPU progress
         // See http://diligentgraphics.com/diligent-engine/architecture/d3d12/managing-resource-lifetimes/
         void ReleaseCompletedFrames(Uint64 CompletedFenceValue)
         {
-            // We can release all tails whose associated fence value is less than or equal to CompletedFenceValue
-            while(!m_CompletedFrameTails.empty() && m_CompletedFrameTails.front().FenceValue <= CompletedFenceValue)
+            // We can release all heads whose associated fence value is less than or equal to CompletedFenceValue
+            while(!m_CompletedFrameHeads.empty() && m_CompletedFrameHeads.front().FenceValue <= CompletedFenceValue)
             {
-                const auto &OldestFrameTail = m_CompletedFrameTails.front();
-                VERIFY_EXPR(OldestFrameTail.Size <= m_UsedSize);
-                m_UsedSize -= OldestFrameTail.Size;
-                m_Head = OldestFrameTail.Offset;
-                m_CompletedFrameTails.pop_front();
+                const auto& OldestFrameHead = m_CompletedFrameHeads.front();
+                VERIFY_EXPR(OldestFrameHead.Size <= m_UsedSize);
+                m_UsedSize -= OldestFrameHead.Size;
+                m_Tail      = OldestFrameHead.Offset;
+                m_CompletedFrameHeads.pop_front();
+            }
+
+            if (IsEmpty())
+            {
+#ifdef _DEBUG
+                VERIFY(m_CompletedFrameHeads.empty(), "Zero-size heads are not added to the list, and since the buffer is empty, there must be no heads in the list");
+                for(const auto& head : m_CompletedFrameHeads)
+                    VERIFY(head.Size == 0, "Non zero-size head found");
+#endif
+                m_CompletedFrameHeads.clear();
+
+                //       t,h                 t,h           
+                //  |     |     |   ====>     |           |
+                m_Tail = m_Head = 0;
             }
         }
 
-        OffsetType GetMaxSize()const{return m_MaxSize;}
-        bool IsFull()const{ return m_UsedSize==m_MaxSize; };
-        bool IsEmpty()const{ return m_UsedSize==0; };
-        OffsetType GetUsedSize()const{return m_UsedSize;}
+        OffsetType GetMaxSize() const { return m_MaxSize; }
+        bool       IsFull()     const { return m_UsedSize==m_MaxSize; };
+        bool       IsEmpty()    const { return m_UsedSize==0; };
+        OffsetType GetUsedSize()const { return m_UsedSize; }
 
     private:
-        // Consider the following scenario for a 1024-byte buffer:
-        // Allocate(512)
-        //
-        //  h     t     m
-        //  |xxxxx|     |
-        
-        // FinishCurrentFrame(0)
-        //
-        //        t0
-        //  h     t     m
-        //  |xxxxx|     |
-        
-        // ReleaseCompletedFrames(1)
-        //
-        //        h 
-        //        t     m
-        //  |     |     |
-
-        // FinishCurrentFrame(1)
-        //
-        //        t1 
-        //        h 
-        //        t     m
-        //  |     |     |
-
-        // Allocate(512)
-        //
-        //        t1    t 
-        //        h     m
-        //  |     |xxxxx|
-
-        // Allocate(512)
-        //
-        //        t 
-        //        t1     
-        //        h     m
-        //  |xxxxx|xxxxx|
-
-        // FinishCurrentFrame(2)
-        // 
-        //        t 
-        //        t1 
-        //        t2     
-        //        h     m
-        //  |xxxxx|xxxxx|
-
-        // At this point there will be two tails in the queue, both at 512. m_UsedSize will be 0. When
-        // ReleaseCompletedFrames(2) is called, there wil be no way to find out if the current frame is 0 
-        // or the entire buffer if we don't store the frame size
-
-        std::deque< FrameTailAttribs, STDAllocatorRawMem<FrameTailAttribs> > m_CompletedFrameTails;
-        OffsetType m_Head = 0;
-        OffsetType m_Tail = 0;
-        OffsetType m_MaxSize = 0;
-        OffsetType m_UsedSize = 0;
+        std::deque< FrameHeadAttribs, STDAllocatorRawMem<FrameHeadAttribs> > m_CompletedFrameHeads;
+        OffsetType m_Tail          = 0;
+        OffsetType m_Head          = 0;
+        OffsetType m_MaxSize       = 0;
+        OffsetType m_UsedSize      = 0;
         OffsetType m_CurrFrameSize = 0;
     };
 }

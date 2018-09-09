@@ -117,7 +117,7 @@ namespace Diligent
         m_RingBuffers.emplace_back(InitialSize, Allocator, pDevice->GetD3D12Device(), m_bIsCPUAccessible);
     }
 
-    DynamicAllocation DynamicUploadHeap::Allocate(size_t SizeInBytes, size_t Alignment /*= DEFAULT_ALIGN*/)
+    DynamicAllocation DynamicUploadHeap::Allocate(size_t SizeInBytes, size_t Alignment)
     {
         // Every device context has its own upload heap, so there is no need to lock
 
@@ -128,18 +128,15 @@ namespace Diligent
         //      across several frames!
         //
 
-	    const size_t AlignmentMask = Alignment - 1;
-	    // Assert that it's a power of two.
-	    VERIFY_EXPR((AlignmentMask & Alignment) == 0);
+	    VERIFY_EXPR(IsPowerOfTwo(Alignment));
 	    // Align the allocation
-	    const size_t AlignedSize = (SizeInBytes + AlignmentMask) & ~AlignmentMask;
-        auto DynAlloc = m_RingBuffers.back().Allocate(AlignedSize);
+        auto DynAlloc = m_RingBuffers.back().Allocate(SizeInBytes, Alignment);
         if (!DynAlloc.pBuffer)
         {
             auto NewMaxSize = m_RingBuffers.back().GetMaxSize() * 2;
-            while(NewMaxSize < AlignedSize)NewMaxSize*=2;
+            while(NewMaxSize < SizeInBytes)NewMaxSize*=2;
             m_RingBuffers.emplace_back(NewMaxSize, m_Allocator, m_pDeviceD3D12->GetD3D12Device(), m_bIsCPUAccessible);
-            DynAlloc = m_RingBuffers.back().Allocate(AlignedSize);
+            DynAlloc = m_RingBuffers.back().Allocate(SizeInBytes, Alignment);
         }
 #ifdef _DEBUG
 		DynAlloc.FrameNum = m_pDeviceD3D12->GetCurrentFrameNumber();

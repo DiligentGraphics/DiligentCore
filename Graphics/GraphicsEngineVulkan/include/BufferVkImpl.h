@@ -87,7 +87,7 @@ public:
             DvpVerifyDynamicAllocation(pCtx);
 #endif
             auto& DynAlloc = m_DynamicAllocations[CtxId];
-            return static_cast<Uint32>(DynAlloc.Offset);
+            return static_cast<Uint32>(DynAlloc.AlignedOffset);
         }
     }
     VkBuffer GetVkBuffer()const override final;
@@ -117,7 +117,8 @@ private:
     virtual void CreateViewInternal( const struct BufferViewDesc& ViewDesc, IBufferView** ppView, bool bIsDefaultView )override;
 
     VulkanUtilities::BufferViewWrapper CreateView(struct BufferViewDesc &ViewDesc);
-    VkAccessFlags m_AccessFlags = 0;
+    VkAccessFlags m_AccessFlags            = 0;
+    Uint32        m_DynamicOffsetAlignment = 0;
 
 #ifdef DEVELOPMENT
     std::vector< std::pair<MAP_TYPE, Uint32> > m_DvpMapType;

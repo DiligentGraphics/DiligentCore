@@ -39,14 +39,14 @@ namespace VulkanUtilities
 
         static std::unique_ptr<VulkanPhysicalDevice> Create(VkPhysicalDevice vkDevice);
 
-        uint32_t FindQueueFamily(VkQueueFlags QueueFlags)const;
-        VkPhysicalDevice GetVkDeviceHandle()const{return m_VkDevice;}
-        bool IsExtensionSupported(const char* ExtensionName)const;
-        bool CheckPresentSupport(uint32_t queueFamilyIndex, VkSurfaceKHR VkSurface)const;
+        uint32_t         FindQueueFamily     (VkQueueFlags QueueFlags)                           const;
+        VkPhysicalDevice GetVkDeviceHandle   ()                                                  const { return m_VkDevice; }
+        bool             IsExtensionSupported(const char* ExtensionName)                         const;
+        bool             CheckPresentSupport (uint32_t queueFamilyIndex, VkSurfaceKHR VkSurface) const;
         
         static constexpr uint32_t InvalidMemoryTypeIndex = static_cast<uint32_t>(-1);
         uint32_t GetMemoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags properties)const;
-        const VkPhysicalDeviceProperties& GetProperties()const{return m_Properties;}
+        const VkPhysicalDeviceProperties& GetProperties() const {return m_Properties;}
 
     private:
         VulkanPhysicalDevice(VkPhysicalDevice vkDevice);

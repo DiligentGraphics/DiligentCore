@@ -354,7 +354,8 @@ void BufferD3D12Impl :: Map(IDeviceContext* pContext, MAP_TYPE MapType, Uint32 M
             auto ContextId = pDeviceContextD3D12->GetContextId();
             if ((MapFlags & MAP_FLAG_DISCARD) != 0 || m_DynamicData[ContextId].CPUAddress == nullptr) 
             {
-                m_DynamicData[ContextId] = pCtxD3D12->AllocateDynamicSpace(m_Desc.uiSizeInBytes, 0);
+                size_t Alignment = (m_Desc.BindFlags & BIND_UNIFORM_BUFFER) ? D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT : 16;
+                m_DynamicData[ContextId] = pCtxD3D12->AllocateDynamicSpace(m_Desc.uiSizeInBytes, Alignment);
             }
             else
             {

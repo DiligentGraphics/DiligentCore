@@ -1074,7 +1074,9 @@ namespace Diligent
 #endif
 
         VERIFY_EXPR( static_cast<size_t>(NumBytes) == NumBytes );
-        auto TmpSpace = m_UploadHeap.Allocate(static_cast<size_t>(NumBytes), 0);
+        constexpr size_t Alignment = 4;
+        // Source buffer offset must be multiple of 4 (18.4)
+        auto TmpSpace = m_UploadHeap.Allocate(static_cast<size_t>(NumBytes), Alignment);
 	    memcpy(TmpSpace.CPUAddress, pData, static_cast<size_t>(NumBytes));
         UpdateBufferRegion(pBuffVk, DstOffset, NumBytes, TmpSpace.vkBuffer, TmpSpace.AlignedOffset);
         // The allocation will stay in the upload heap until the end of the frame at which point all upload
@@ -1161,7 +1163,19 @@ namespace Diligent
             CopyInfo.RowCount = UpdateRegionHeight;
         }
 
-        CopyInfo.Stride      = CopyInfo.RowSize;
+        const auto& DeviceLimits = m_pDevice.RawPtr<const RenderDeviceVkImpl>()->GetPhysicalDevice().GetProperties().limits;
+        CopyInfo.Stride = Align(CopyInfo.RowSize, static_cast<Uint32>(DeviceLimits.optimalBufferCopyRowPitchAlignment));
+        if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
+        {
+            // If the calling command’s VkImage parameter is a compressed image,
+            // bufferRowLength must be a multiple of the compressed texel block width
+            // In texels (not even in compressed blocks!)
+            CopyInfo.StrideInTexels = CopyInfo.Stride / Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.BlockWidth};
+        }
+        else
+        {
+            CopyInfo.StrideInTexels = CopyInfo.Stride / (Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents});
+        }
         CopyInfo.DepthStride = CopyInfo.RowCount * CopyInfo.Stride;
         CopyInfo.MemorySize  = UpdateRegionDepth * CopyInfo.DepthStride;
         CopyInfo.Region      = Region;
@@ -1183,7 +1197,9 @@ namespace Diligent
         const auto UpdateRegionDepth  = CopyInfo.Region.MaxZ - CopyInfo.Region.MinZ;
 
         // For UpdateTextureRegion(), use UploadHeap, not dynamic heap
-        static constexpr const size_t BufferOffsetAlignment = 4; // bufferOffset of VkBufferImageCopy must be a multiple of 4 (18.4)
+        const auto& DeviceLimits = m_pDevice.RawPtr<const RenderDeviceVkImpl>()->GetPhysicalDevice().GetProperties().limits;
+        // Source buffer offset must be multiple of 4 (18.4)
+        auto BufferOffsetAlignment = std::max(DeviceLimits.optimalBufferCopyOffsetAlignment, VkDeviceSize{4});
         auto Allocation = m_UploadHeap.Allocate(CopyInfo.MemorySize, BufferOffsetAlignment);
         // The allocation will stay in the upload heap until the end of the frame at which point all upload
         // pages will be discarded
@@ -1212,6 +1228,7 @@ namespace Diligent
         }
         CopyBufferToTexture(Allocation.vkBuffer,
                             static_cast<Uint32>(Allocation.AlignedOffset),
+                            CopyInfo.StrideInTexels,
                             CopyInfo.Region,
                             TextureVk,
                             MipLevel,
@@ -1220,6 +1237,7 @@ namespace Diligent
 
     void DeviceContextVkImpl::CopyBufferToTexture(VkBuffer         vkBuffer,
                                                   Uint32           BufferOffset,
+                                                  Uint32           BufferRowStrideInTexels,
                                                   const Box&       Region,
                                                   TextureVkImpl&   TextureVk,
                                                   Uint32           MipLevel,
@@ -1238,7 +1256,7 @@ namespace Diligent
         // bufferRowLength and bufferImageHeight specify the data in buffer memory as a subregion of a larger two- or
         // three-dimensional image, and control the addressing calculations of data in buffer memory. If either of these
         // values is zero, that aspect of the buffer memory is considered to be tightly packed according to the imageExtent (18.4).
-        CopyRegion.bufferRowLength   = 0;
+        CopyRegion.bufferRowLength = BufferRowStrideInTexels;
         CopyRegion.bufferImageHeight = 0;
 
         const auto& TexDesc = TextureVk.GetDesc();
@@ -1300,10 +1318,12 @@ namespace Diligent
     {
         const auto& TexDesc = TextureVk.GetDesc();
         auto CopyInfo = GetBufferToTextureCopyInfo(TexDesc, MipLevel, MapRegion);
-        auto Allocation  = AllocateDynamicSpace(CopyInfo.MemorySize);
-        VERIFY( (Allocation.Offset % 4) == 0, "Allocation offset must be at least 32-bit algined");
+        const auto& DeviceLimits = m_pDevice.RawPtr<RenderDeviceVkImpl>()->GetPhysicalDevice().GetProperties().limits;
+        // Source buffer offset must be multiple of 4 (18.4)
+        auto Alignment = std::max(DeviceLimits.optimalBufferCopyOffsetAlignment, VkDeviceSize{4});
+        auto Allocation = AllocateDynamicSpace(CopyInfo.MemorySize, static_cast<Uint32>(Alignment));
 
-        MappedData.pData       = reinterpret_cast<Uint8*>(Allocation.pDynamicMemMgr->GetCPUAddress()) + Allocation.Offset;
+        MappedData.pData       = reinterpret_cast<Uint8*>(Allocation.pDynamicMemMgr->GetCPUAddress()) + Allocation.AlignedOffset;
         MappedData.Stride      = CopyInfo.Stride;
         MappedData.DepthStride = CopyInfo.DepthStride;
 
@@ -1322,7 +1342,8 @@ namespace Diligent
         {
             auto& MappedTex = UploadSpaceIt->second;
             CopyBufferToTexture(MappedTex.Allocation.pDynamicMemMgr->GetVkBuffer(),
-                                static_cast<Uint32>(MappedTex.Allocation.Offset),
+                                static_cast<Uint32>(MappedTex.Allocation.AlignedOffset),
+                                MappedTex.CopyInfo.StrideInTexels,
                                 MappedTex.CopyInfo.Region,
                                 TextureVk,
                                 MipLevel,
@@ -1495,9 +1516,9 @@ namespace Diligent
         BufferVk.SetAccessFlags(NewAccessFlags);
     }
 
-    VulkanDynamicAllocation DeviceContextVkImpl::AllocateDynamicSpace(Uint32 SizeInBytes)
+    VulkanDynamicAllocation DeviceContextVkImpl::AllocateDynamicSpace(Uint32 SizeInBytes, Uint32 Alignment)
     {
-        auto DynAlloc = m_DynamicHeap.Allocate(SizeInBytes, 0);
+        auto DynAlloc = m_DynamicHeap.Allocate(SizeInBytes, Alignment);
 #ifdef DEVELOPMENT
         DynAlloc.dvpFrameNumber = m_ContextFrameNumber;
 #endif

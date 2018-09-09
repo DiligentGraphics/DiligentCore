@@ -40,11 +40,11 @@ static VkDeviceSize GetDefaultAlignment(const VulkanUtilities::VulkanPhysicalDev
 VulkanDynamicMemoryManager::VulkanDynamicMemoryManager(IMemoryAllocator&   Allocator, 
                                                        RenderDeviceVkImpl& DeviceVk, 
                                                        Uint32              Size) :
+    TBase(Allocator, Size),
     m_DeviceVk(DeviceVk),
-    m_DefaultAlignment(GetDefaultAlignment(DeviceVk.GetPhysicalDevice())),
-    m_AllocationStrategy(Allocator, Size)
+    m_DefaultAlignment(GetDefaultAlignment(DeviceVk.GetPhysicalDevice()))
 {
-    VERIFY( (Size & (MinAlignment-1)) == 0, "Heap size is not min aligned");
+    VERIFY( (Size & (MasterBlockAlignment-1)) == 0, "Heap size (", Size, " is not aligned by the master block alignment (", MasterBlockAlignment, ")");
     VkBufferCreateInfo VkBuffCI = {};
     VkBuffCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     VkBuffCI.pNext = nullptr;
@@ -114,24 +114,27 @@ void VulkanDynamicMemoryManager::Destroy()
 VulkanDynamicMemoryManager::~VulkanDynamicMemoryManager()
 {
     VERIFY(m_BufferMemory == VK_NULL_HANDLE && m_VkBuffer == VK_NULL_HANDLE, "Vulkan resources must be explcitly released with Destroy()");
-    auto Size = m_AllocationStrategy.GetSize();
+    auto Size = GetSize();
     LOG_INFO_MESSAGE("Dynamic memory manager usage stats:\n"
                      "                       Total size: ", FormatMemorySize(Size, 2),
                      ". Peak allocated size: ", FormatMemorySize(m_TotalPeakSize, 2, Size),
                      ". Peak utilization: ", std::fixed, std::setprecision(1), static_cast<double>(m_TotalPeakSize) / static_cast<double>(std::max(Size, size_t{1})) * 100.0, '%' );
 }
 
-VulkanDynamicMemoryManager::OffsetType VulkanDynamicMemoryManager::Allocate(OffsetType SizeInBytes)
+
+VulkanDynamicMemoryManager::MasterBlock VulkanDynamicMemoryManager::AllocateMasterBlock(OffsetType SizeInBytes, OffsetType Alignment)
 {
-    VERIFY( (SizeInBytes & (MinAlignment-1)) == 0, "Allocation size is not minimally aligned" );
-    
-    if (SizeInBytes > m_AllocationStrategy.GetSize())
+    if (Alignment == 0)
+        Alignment = MasterBlockAlignment;
+   
+    if (SizeInBytes > GetSize())
     {
-        LOG_ERROR("Requested dynamic allocation size ", SizeInBytes, " exceeds maximum dynamic memory size ", m_AllocationStrategy.GetSize(), ". The app should increase dynamic heap size.");
-        return AllocationStategy::InvalidOffset;
+        LOG_ERROR("Requested dynamic allocation size ", SizeInBytes, " exceeds maximum dynamic memory size ", GetSize(), ". The app should increase dynamic heap size.");
+        return MasterBlock{};
     }
-    auto Offset = m_AllocationStrategy.Allocate(SizeInBytes);
-    if(Offset == AllocationStategy::InvalidOffset)
+
+    auto Block = TBase::AllocateMasterBlock(SizeInBytes, Alignment);
+    if (Block.UnalignedOffset == InvalidOffset)
     {
         // Allocation failed. Try to wait for GPU to finish pending frames to release some space
         auto StartIdleTime = std::chrono::high_resolution_clock::now();
@@ -139,12 +142,12 @@ VulkanDynamicMemoryManager::OffsetType VulkanDynamicMemoryManager::Allocate(Offs
         static constexpr const auto MaxIdleDuration = std::chrono::duration<double>{60.0 / 1000.0}; // 60 ms
         std::chrono::duration<double> IdleDuration;
         Uint32 SleepIterations = 0;
-        while(Offset == AllocationStategy::InvalidOffset && IdleDuration < MaxIdleDuration)
+        while (Block.UnalignedOffset == InvalidOffset && IdleDuration < MaxIdleDuration)
         {
             auto LastCompletedFenceValue = m_DeviceVk.GetCompletedFenceValue();
-            m_AllocationStrategy.ReleaseStaleAllocations(LastCompletedFenceValue);
-            Offset = m_AllocationStrategy.Allocate(SizeInBytes);
-            if (Offset == AllocationStategy::InvalidOffset)
+            ReleaseStaleBlocks(LastCompletedFenceValue);
+            Block = AllocateMasterBlock(SizeInBytes, Alignment);
+            if (Block.UnalignedOffset == InvalidOffset)
             {
                 std::this_thread::sleep_for(SleepPeriod);
                 ++SleepIterations;
@@ -154,14 +157,14 @@ VulkanDynamicMemoryManager::OffsetType VulkanDynamicMemoryManager::Allocate(Offs
             IdleDuration = std::chrono::duration_cast<std::chrono::duration<double>>(CurrTime - StartIdleTime);
         }
 
-        if(Offset == AllocationStategy::InvalidOffset)
+        if (Block.UnalignedOffset == InvalidOffset)
         {
             // Last resort - idle GPU (there seems to be a driver bug: vkQueueWaitIdle() deadlocks and never returns)
             //m_DeviceVk.IdleGPU(true);
             //auto LastCompletedFenceValue = m_DeviceVk.GetCompletedFenceValue();
             //m_AllocationStrategy.ReleaseStaleAllocations(LastCompletedFenceValue);
             //Offset = m_AllocationStrategy.Allocate(SizeInBytes);
-            if (Offset == AllocationStategy::InvalidOffset)
+            if (Block.UnalignedOffset == InvalidOffset)
             {
                 LOG_ERROR_MESSAGE("Space in dynamic heap is exausted! After idling for ", std::fixed, std::setprecision(1), IdleDuration.count()*1000.0, " ms still no space is available. Increase the size of the heap by setting EngineVkAttribs::DynamicHeapSize to a greater value or optimize dynamic resource usage");
             }
@@ -183,59 +186,71 @@ VulkanDynamicMemoryManager::OffsetType VulkanDynamicMemoryManager::Allocate(Offs
         }
     }
 
-    if (Offset != AllocationStategy::InvalidOffset)
+    if (Block.UnalignedOffset != InvalidOffset)
     {
-        m_TotalPeakSize = std::max(m_TotalPeakSize, m_AllocationStrategy.GetUsedSize());
+        m_TotalPeakSize = std::max(m_TotalPeakSize, GetUsedSize());
     }
-    return Offset;
+
+    return Block;
 }
 
 
 VulkanDynamicAllocation VulkanDynamicHeap::Allocate(Uint32 SizeInBytes, Uint32 Alignment)
 {
-    if (Alignment == 0)
-        Alignment = static_cast<Uint32>(m_DynamicMemMgr.m_DefaultAlignment);
+    VERIFY_EXPR(Alignment > 0);
+    VERIFY(IsPowerOfTwo(Alignment), "Alignment (", Alignment, ") must be power of 2");
 
-    const Uint32 AlignmentMask = Alignment - 1;
-    // Assert that it's a power of two.
-    VERIFY_EXPR((AlignmentMask & Alignment) == 0);
-
-    // Align the allocation
-    Uint32 AlignedSize = (SizeInBytes + AlignmentMask) & ~AlignmentMask;
-
-    auto Offset = InvalidOffset;
-    if(AlignedSize > m_PagSize/2)
+    auto AlignedOffset = InvalidOffset;
+    OffsetType AlignedSize = 0;
+    if(SizeInBytes > m_MasterBlockSize/2)
     {
-        AlignedSize = (SizeInBytes + VulkanDynamicMemoryManager::MinAlignment) & ~(VulkanDynamicMemoryManager::MinAlignment-1);
         // Allocate directly from the memory manager
-        Offset = m_DynamicMemMgr.Allocate(AlignedSize);
-        m_Allocations.emplace_back(Offset, AlignedSize);
+        auto MasterBlock = m_DynamicMemMgr.AllocateMasterBlock(SizeInBytes, Alignment);
+        if (MasterBlock.UnalignedOffset != InvalidOffset)
+        {
+            AlignedOffset = Align(MasterBlock.UnalignedOffset, size_t{Alignment});
+            AlignedSize = MasterBlock.Size;
+            VERIFY_EXPR(MasterBlock.Size >= SizeInBytes + (AlignedOffset - MasterBlock.UnalignedOffset));
+            m_MasterBlocks.emplace_back(MasterBlock);
+        }
     }
     else
     {
-        if(m_CurrOffset == InvalidOffset || AlignedSize > m_AvailableSize)
+        if (m_CurrOffset == InvalidOffset || SizeInBytes + (Align(m_CurrOffset, size_t{Alignment}) - m_CurrOffset) > m_AvailableSize)
         {
-            m_CurrOffset = m_DynamicMemMgr.Allocate(m_PagSize);
-            m_Allocations.emplace_back(m_CurrOffset, m_PagSize);
-            m_AvailableSize = m_PagSize;
+            auto MasterBlock = m_DynamicMemMgr.AllocateMasterBlock(m_MasterBlockSize, 0);
+            if (MasterBlock.UnalignedOffset != InvalidOffset)
+            {
+                m_CurrOffset = MasterBlock.UnalignedOffset;
+                m_MasterBlocks.emplace_back(MasterBlock);
+                m_AvailableSize = m_MasterBlockSize;
+            }
         }
-        if(m_CurrOffset != InvalidOffset)
+
+        if (m_CurrOffset != InvalidOffset)
         {
-            Offset = m_CurrOffset;
-            m_AvailableSize -= AlignedSize;
-            m_CurrOffset += AlignedSize;
+            AlignedOffset = Align(m_CurrOffset, size_t{Alignment});
+            AlignedSize = SizeInBytes + (AlignedOffset - m_CurrOffset);
+            if (AlignedSize <= m_AvailableSize)
+            {
+                m_AvailableSize -= static_cast<Uint32>(AlignedSize);
+                m_CurrOffset    += static_cast<Uint32>(AlignedSize);
+            }
+            else
+                AlignedOffset = InvalidOffset;
         }
     }
 
     // Every device context uses its own dynamic heap, so there is no need to lock
-    if(Offset != InvalidOffset)
+    if(AlignedOffset != InvalidOffset)
     {
-        m_CurrAllocatedSize += AlignedSize;
+        m_CurrAllocatedSize += static_cast<Uint32>(AlignedSize);
         m_CurrUsedSize      += SizeInBytes;
         m_PeakAllocatedSize = std::max(m_PeakAllocatedSize, m_CurrAllocatedSize);
         m_PeakUsedSize      = std::max(m_PeakUsedSize,      m_CurrUsedSize);
-
-        return VulkanDynamicAllocation{ m_DynamicMemMgr, Offset, SizeInBytes };
+        
+        VERIFY_EXPR((AlignedOffset & (Alignment-1)) == 0);
+        return VulkanDynamicAllocation{ m_DynamicMemMgr, AlignedOffset, SizeInBytes };
     }
     else
         return VulkanDynamicAllocation{};
@@ -243,8 +258,8 @@ VulkanDynamicAllocation VulkanDynamicHeap::Allocate(Uint32 SizeInBytes, Uint32 A
 
 void VulkanDynamicHeap::FinishFrame(Uint64 FenceValue)
 {
-    m_DynamicMemMgr.DiscardAllocations(m_Allocations, FenceValue);
-    m_Allocations.clear();
+    m_DynamicMemMgr.DiscardMasterBlocks(m_MasterBlocks, FenceValue);
+    m_MasterBlocks.clear();
 
     m_CurrOffset        = InvalidOffset;
     m_AvailableSize     = 0;

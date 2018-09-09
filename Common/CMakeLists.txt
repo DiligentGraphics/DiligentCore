@@ -8,6 +8,7 @@ set(INCLUDE
 
 set(INTERFACE 
     interface/AdvancedMath.h
+    interface/Align.h
     interface/BasicMath.h
     interface/BasicFileStream.h
     interface/DataBlobImpl.h

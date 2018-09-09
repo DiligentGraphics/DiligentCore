@@ -32,7 +32,7 @@ VulkanMemoryAllocation::~VulkanMemoryAllocation()
 {
     if (Page != nullptr)
     {
-        Page->Free(*this);
+        Page->Free(std::move(*this));
     }
 }
 
@@ -75,13 +75,16 @@ VulkanMemoryPage::~VulkanMemoryPage()
     VERIFY(IsEmpty(), "Destroying a page with not all allocations released");
 }
 
-VulkanMemoryAllocation VulkanMemoryPage::Allocate(VkDeviceSize size)
+VulkanMemoryAllocation VulkanMemoryPage::Allocate(VkDeviceSize size, VkDeviceSize alignment)
 {
     std::lock_guard<std::mutex> Lock(m_Mutex);
-    auto Offset = m_AllocationMgr.Allocate(size);
-    if (Offset != Diligent::VariableSizeAllocationsManager::InvalidOffset)
+    auto Allocation = m_AllocationMgr.Allocate(size, alignment);
+    if (Allocation.UnalignedOffset != Diligent::VariableSizeAllocationsManager::InvalidOffset)
     {
-        return VulkanMemoryAllocation{this, Offset, size};
+        // Offset may not necessarily be aligned, but the allocation is guaranteed to be large enough
+        // to accomodate requested alignment
+        VERIFY_EXPR( Diligent::Align(Allocation.UnalignedOffset, alignment) - Allocation.UnalignedOffset + size <= Allocation.Size );
+        return VulkanMemoryAllocation{this, Allocation.UnalignedOffset, Allocation.Size};
     }
     else
     {
@@ -89,11 +92,12 @@ VulkanMemoryAllocation VulkanMemoryPage::Allocate(VkDeviceSize size)
     }
 }
 
-void VulkanMemoryPage::Free(VulkanMemoryAllocation& Allocation)
+void VulkanMemoryPage::Free(VulkanMemoryAllocation&& Allocation)
 {
     m_ParentMemoryMgr.OnFreeAllocation(Allocation.Size, m_CPUMemory != nullptr);
     std::lock_guard<std::mutex> Lock(m_Mutex);
     m_AllocationMgr.Free(Allocation.UnalignedOffset, Allocation.Size);
+    Allocation = VulkanMemoryAllocation{};
 }
 
 VulkanMemoryAllocation VulkanMemoryManager::Allocate(const VkMemoryRequirements& MemReqs, VkMemoryPropertyFlags MemoryProps)
@@ -130,14 +134,13 @@ VulkanMemoryAllocation VulkanMemoryManager::Allocate(const VkMemoryRequirements&
 
 VulkanMemoryAllocation VulkanMemoryManager::Allocate(VkDeviceSize Size, VkDeviceSize Alignment, uint32_t MemoryTypeIndex, bool HostVisible)
 {
-    Size += Alignment;
     VulkanMemoryAllocation Allocation;
 
     std::lock_guard<std::mutex> Lock(m_PagesMtx);
     auto range = m_Pages.equal_range(MemoryTypeIndex);
     for(auto page_it = range.first; page_it != range.second; ++page_it)
     {
-        Allocation = page_it->second.Allocate(Size);
+        Allocation = page_it->second.Allocate(Size, Alignment);
         if (Allocation.Page != nullptr)
             break;
     }
@@ -157,11 +160,16 @@ VulkanMemoryAllocation VulkanMemoryManager::Allocate(VkDeviceSize Size, VkDevice
                          " page. (", Diligent::FormatMemorySize(PageSize, 2), ", type idx: ", MemoryTypeIndex, 
                          "). Current allocated size: ", Diligent::FormatMemorySize(m_CurrAllocatedSize[stat_ind], 2));
         OnNewPageCreated(it->second);
-        Allocation = it->second.Allocate(Size);
-        VERIFY(Allocation.Page != nullptr, "Failed to allocate new memory page");
+        Allocation = it->second.Allocate(Size, Alignment);
+        DEV_CHECK_ERR(Allocation.Page != nullptr, "Failed to allocate new memory page");
     }
 
-    m_CurrUsedSize[stat_ind].fetch_add(Size);
+    if (Allocation.Page != nullptr)
+    {
+        VERIFY_EXPR(Size + Diligent::Align(Allocation.UnalignedOffset, Alignment) - Allocation.UnalignedOffset <= Allocation.Size);
+    }
+
+    m_CurrUsedSize[stat_ind].fetch_add(Allocation.Size);
     m_PeakUsedSize[stat_ind] = std::max(m_PeakUsedSize[stat_ind], static_cast<VkDeviceSize>(m_CurrUsedSize[stat_ind].load()));
 
     return Allocation;

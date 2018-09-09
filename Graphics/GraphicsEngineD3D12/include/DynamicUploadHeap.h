@@ -28,9 +28,6 @@
 namespace Diligent
 {
 
-// Constant blocks must be multiples of 16 constants @ 16 bytes each
-#define DEFAULT_ALIGN 256
-
 struct DynamicAllocation
 {
     DynamicAllocation()noexcept{}
@@ -86,9 +83,9 @@ public:
 
     ~GPURingBuffer();
 
-    DynamicAllocation Allocate(size_t SizeInBytes)
+    DynamicAllocation Allocate(size_t SizeInBytes, size_t Alignment)
     {
-        auto Offset = RingBuffer::Allocate(SizeInBytes);
+        auto Offset = RingBuffer::Allocate(SizeInBytes, Alignment);
         if (Offset != RingBuffer::InvalidOffset)
         {
             DynamicAllocation DynAlloc(m_pBuffer, Offset, SizeInBytes);
@@ -126,7 +123,7 @@ public:
     DynamicUploadHeap& operator=(const DynamicUploadHeap&)= delete;
     DynamicUploadHeap& operator=(DynamicUploadHeap&&)     = delete;
 
-    DynamicAllocation Allocate( size_t SizeInBytes, size_t Alignment = DEFAULT_ALIGN );
+    DynamicAllocation Allocate( size_t SizeInBytes, size_t Alignment);
 
     void FinishFrame(Uint64 FenceValue, Uint64 LastCompletedFenceValue);
 

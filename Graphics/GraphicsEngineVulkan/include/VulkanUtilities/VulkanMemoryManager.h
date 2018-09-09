@@ -112,7 +112,7 @@ public:
     VkDeviceSize GetPageSize()const{return m_AllocationMgr.GetMaxSize();}
     VkDeviceSize GetUsedSize()const{return m_AllocationMgr.GetUsedSize();}
 
-    VulkanMemoryAllocation Allocate(VkDeviceSize size);
+    VulkanMemoryAllocation Allocate(VkDeviceSize size, VkDeviceSize alignment);
 
     VkDeviceMemory GetVkMemory()const{return m_VkMemory;}
     void* GetCPUMemory()const{return m_CPUMemory;}
@@ -121,7 +121,7 @@ private:
     friend struct VulkanMemoryAllocation;
     
     // Memory is reclaimed immediately. The application is responsible to ensure it is not in use by the GPU    
-    void Free(VulkanMemoryAllocation& Allocation);
+    void Free(VulkanMemoryAllocation&& Allocation);
 
     VulkanMemoryManager&                     m_ParentMemoryMgr;
     std::mutex                               m_Mutex;

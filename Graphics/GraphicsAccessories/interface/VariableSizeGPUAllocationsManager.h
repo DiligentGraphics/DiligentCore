@@ -73,6 +73,12 @@ namespace Diligent
         VariableSizeGPUAllocationsManager(const VariableSizeGPUAllocationsManager&) = delete;
         VariableSizeGPUAllocationsManager& operator = (const VariableSizeGPUAllocationsManager&) = delete;
 
+        void Free(VariableSizeAllocationsManager::Allocation&& allocation, Uint64 FenceValue)
+        {
+            Free(allocation.UnalignedOffset, allocation.Size, FenceValue);
+            allocation = VariableSizeAllocationsManager::Allocation{};
+        }
+
         void Free(OffsetType Offset, OffsetType Size, Uint64 FenceValue)
         {
             // Do not release the block immediately, but add

@@ -95,11 +95,14 @@ DescriptorHeapAllocation DescriptorHeapAllocationManager::Allocate(uint32_t Coun
     // Methods of VariableSizeGPUAllocationsManager class are not thread safe!
 
     // Use variable-size GPU allocations manager to allocate the requested number of descriptors
-    auto DescriptorHandleOffset = m_FreeBlockManager.Allocate(Count);
+    auto Allocation = m_FreeBlockManager.Allocate(Count, 1);
+    auto DescriptorHandleOffset = Allocation.UnalignedOffset;
     if (DescriptorHandleOffset == VariableSizeGPUAllocationsManager::InvalidOffset)
     {
-        return DescriptorHeapAllocation();
+        return DescriptorHeapAllocation{};
     }
+
+    VERIFY_EXPR(Allocation.Size == Count);
 
     // Compute the first CPU and GPU descriptor handles in the allocation by
     // offseting the first CPU and GPU descriptor handle in the range

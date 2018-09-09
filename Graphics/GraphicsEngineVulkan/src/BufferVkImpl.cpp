@@ -69,6 +69,8 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters*        pRefCounters,
     }
 
     const auto& LogicalDevice = pRenderDeviceVk->GetLogicalDevice();
+    const auto& DeviceLimits = pRenderDeviceVk->GetPhysicalDevice().GetProperties().limits;
+    m_DynamicOffsetAlignment = std::max(Uint32{4}, static_cast<Uint32>(DeviceLimits.optimalBufferCopyOffsetAlignment));
 
     VkBufferCreateInfo VkBuffCI = {};
     VkBuffCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -95,6 +97,12 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters*        pRefCounters,
         // 
         // So we have to set both VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT and VK_BUFFER_USAGE_STORAGE_BUFFER_BIT bits
         VkBuffCI.usage |= VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+
+        // Each element of pDynamicOffsets of vkCmdBindDescriptorSets function which corresponds to a descriptor
+        // binding with type VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC must be a multiple of
+        // VkPhysicalDeviceLimits::minStorageBufferOffsetAlignment (13.2.5)
+        m_DynamicOffsetAlignment = std::max(m_DynamicOffsetAlignment, static_cast<Uint32>(DeviceLimits.minTexelBufferOffsetAlignment));
+        m_DynamicOffsetAlignment = std::max(m_DynamicOffsetAlignment, static_cast<Uint32>(DeviceLimits.minStorageBufferOffsetAlignment));
     }
     if (m_Desc.BindFlags & BIND_SHADER_RESOURCE)
     {
@@ -102,6 +110,9 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters*        pRefCounters,
         // HLSL buffer SRV are mapped to storge buffers in GLSL, so we need to set both 
         // VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER and VK_BUFFER_USAGE_STORAGE_BUFFER_BIT flags
         VkBuffCI.usage |= VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+
+        m_DynamicOffsetAlignment = std::max(m_DynamicOffsetAlignment, static_cast<Uint32>(DeviceLimits.minTexelBufferOffsetAlignment));
+        m_DynamicOffsetAlignment = std::max(m_DynamicOffsetAlignment, static_cast<Uint32>(DeviceLimits.minStorageBufferOffsetAlignment));
     }
     if (m_Desc.BindFlags & BIND_VERTEX_BUFFER)
         VkBuffCI.usage |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
@@ -110,7 +121,14 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters*        pRefCounters,
     if (m_Desc.BindFlags & BIND_INDIRECT_DRAW_ARGS)
         VkBuffCI.usage |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
     if (m_Desc.BindFlags & BIND_UNIFORM_BUFFER)
+    {
         VkBuffCI.usage |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+
+        // Each element of pDynamicOffsets parameter of vkCmdBindDescriptorSets function which corresponds to a descriptor
+        // binding with type VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC must be a multiple of 
+        // VkPhysicalDeviceLimits::minUniformBufferOffsetAlignment (13.2.5)
+        m_DynamicOffsetAlignment = std::max(m_DynamicOffsetAlignment, static_cast<Uint32>(DeviceLimits.minUniformBufferOffsetAlignment));
+    }
 
     if(m_Desc.Usage == USAGE_DYNAMIC)
     {
@@ -148,10 +166,11 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters*        pRefCounters,
         else
             BufferMemoryFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
+        VERIFY( IsPowerOfTwo(MemReqs.alignment), "Alignment is not power of 2!");
         m_MemoryAllocation = pRenderDeviceVk->AllocateMemory(MemReqs, BufferMemoryFlags);
 
-        VERIFY( (MemReqs.alignment & (MemReqs.alignment-1)) == 0, "Alignment is not power of 2!");
-        auto AlignedOffset = (m_MemoryAllocation.UnalignedOffset + (MemReqs.alignment-1)) & ~(MemReqs.alignment-1);
+        auto AlignedOffset = Align(m_MemoryAllocation.UnalignedOffset, MemReqs.alignment);
+        VERIFY(m_MemoryAllocation.Size >= MemReqs.size + (AlignedOffset - m_MemoryAllocation.UnalignedOffset), "Size of memory allocation is too small");
         auto Memory = m_MemoryAllocation.Page->GetVkMemory();
         auto err = LogicalDevice.BindBufferMemory(m_VulkanBuffer, Memory, AlignedOffset);
         CHECK_VK_ERROR_AND_THROW(err, "Failed to bind buffer memory");
@@ -168,15 +187,17 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters*        pRefCounters,
             VulkanUtilities::BufferWrapper StagingBuffer = LogicalDevice.CreateBuffer(VkStaginBuffCI, StagingBufferName.c_str());
 
             VkMemoryRequirements StagingBufferMemReqs = LogicalDevice.GetBufferMemoryRequirements(StagingBuffer);
+            VERIFY( IsPowerOfTwo(StagingBufferMemReqs.alignment), "Alignment is not power of 2!");
 
             // VK_MEMORY_PROPERTY_HOST_COHERENT_BIT bit specifies that the host cache management commands vkFlushMappedMemoryRanges 
             // and vkInvalidateMappedMemoryRanges are NOT needed to flush host writes to the device or make device writes visible
             // to the host (10.2)
             auto StagingMemoryAllocation = pRenderDeviceVk->AllocateMemory(StagingBufferMemReqs, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
             auto StagingBufferMemory = StagingMemoryAllocation.Page->GetVkMemory();
-            auto AlignedStagingMemOffset = (StagingMemoryAllocation.UnalignedOffset + (StagingBufferMemReqs.alignment-1)) & ~(StagingBufferMemReqs.alignment-1);
+            auto AlignedStagingMemOffset = Align(StagingMemoryAllocation.UnalignedOffset, StagingBufferMemReqs.alignment);
+            VERIFY_EXPR(StagingMemoryAllocation.Size >= StagingBufferMemReqs.size + (AlignedStagingMemOffset - StagingMemoryAllocation.UnalignedOffset));
 
-            auto *StagingData = reinterpret_cast<uint8_t*>(StagingMemoryAllocation.Page->GetCPUMemory());
+            auto* StagingData = reinterpret_cast<uint8_t*>(StagingMemoryAllocation.Page->GetCPUMemory());
             if (StagingData == nullptr)
                 LOG_BUFFER_ERROR_AND_THROW("Failed to allocate staging data");
             memcpy(StagingData + AlignedStagingMemOffset, BuffData.pData, BuffData.DataSize);
@@ -334,7 +355,7 @@ void BufferVkImpl :: Map(IDeviceContext* pContext, MAP_TYPE MapType, Uint32 MapF
             auto& DynAllocation = m_DynamicAllocations[pDeviceContextVk->GetContextId()];
             if ( (MapFlags & MAP_FLAG_DISCARD) != 0 || DynAllocation.pDynamicMemMgr == nullptr )
             {
-                DynAllocation = pDeviceContextVk->AllocateDynamicSpace(m_Desc.uiSizeInBytes);
+                DynAllocation = pDeviceContextVk->AllocateDynamicSpace(m_Desc.uiSizeInBytes, m_DynamicOffsetAlignment);
             }
             else
             {
@@ -345,7 +366,7 @@ void BufferVkImpl :: Map(IDeviceContext* pContext, MAP_TYPE MapType, Uint32 MapF
             if (DynAllocation.pDynamicMemMgr != nullptr)
             {
                 auto* CPUAddress = DynAllocation.pDynamicMemMgr->GetCPUAddress();
-                pMappedData = CPUAddress + DynAllocation.Offset;
+                pMappedData = CPUAddress + DynAllocation.AlignedOffset;
             }
             else
             {
@@ -415,11 +436,11 @@ void BufferVkImpl::Unmap( IDeviceContext* pContext, MAP_TYPE MapType, Uint32 Map
         else if (m_Desc.Usage == USAGE_DYNAMIC)
         {
             VERIFY( MapFlags & (MAP_FLAG_DISCARD | MAP_FLAG_DO_NOT_SYNCHRONIZE), "Vk buffer must be mapped for writing with MAP_FLAG_DISCARD or MAP_FLAG_DO_NOT_SYNCHRONIZE flag");
-            if(m_VulkanBuffer != VK_NULL_HANDLE)
+            if (m_VulkanBuffer != VK_NULL_HANDLE)
             {
-                auto &DynAlloc = m_DynamicAllocations[CtxId];
+                auto& DynAlloc = m_DynamicAllocations[CtxId];
                 auto vkSrcBuff = DynAlloc.pDynamicMemMgr->GetVkBuffer();
-                pDeviceContextVk->UpdateBufferRegion(this, 0, m_Desc.uiSizeInBytes, vkSrcBuff, DynAlloc.Offset);
+                pDeviceContextVk->UpdateBufferRegion(this, 0, m_Desc.uiSizeInBytes, vkSrcBuff, DynAlloc.AlignedOffset);
             }
         }
     }

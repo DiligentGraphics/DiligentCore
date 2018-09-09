@@ -323,7 +323,7 @@ void RenderDeviceVkImpl::FinishFrame(bool ReleaseAllResources)
     // until the GPU is finished with the current frame
     ProcessStaleResources(SubmittedCmdBuffNumber, SubmittedFenceValue, CompletedFenceValue);
 
-    m_DynamicMemoryManager.ReleaseStaleAllocations(CompletedFenceValue);
+    m_DynamicMemoryManager.ReleaseStaleBlocks(CompletedFenceValue);
 
     Atomics::AtomicIncrement(m_FrameNumber);
 }

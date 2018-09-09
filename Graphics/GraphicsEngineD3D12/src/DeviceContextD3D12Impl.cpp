@@ -692,7 +692,7 @@ namespace Diligent
    
     DynamicAllocation DeviceContextD3D12Impl::AllocateDynamicSpace(size_t NumBytes, size_t Alignment)
     {
-        return m_pUploadHeap->Allocate(NumBytes + Alignment);
+        return m_pUploadHeap->Allocate(NumBytes, Alignment);
     }
 
     void DeviceContextD3D12Impl::UpdateBufferRegion(class BufferD3D12Impl* pBuffD3D12, DynamicAllocation& Allocation, Uint64 DstOffset, Uint64 NumBytes)
@@ -711,7 +711,8 @@ namespace Diligent
     {
         VERIFY(pBuffD3D12->GetDesc().Usage != USAGE_DYNAMIC, "Dynamic buffers must be updated via Map()");
         VERIFY_EXPR( static_cast<size_t>(NumBytes) == NumBytes );
-        auto TmpSpace = m_pUploadHeap->Allocate(static_cast<size_t>(NumBytes));
+        constexpr size_t DefaultAlginment = 16;
+        auto TmpSpace = m_pUploadHeap->Allocate(static_cast<size_t>(NumBytes), DefaultAlginment);
 	    memcpy(TmpSpace.CPUAddress, pData, static_cast<size_t>(NumBytes));
         UpdateBufferRegion(pBuffD3D12, TmpSpace, DstOffset, NumBytes);
     }
