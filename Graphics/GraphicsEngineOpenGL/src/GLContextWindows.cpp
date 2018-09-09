@@ -39,53 +39,52 @@ namespace Diligent
         const GLchar* message,
         const void* userParam )
     {
-        // We are trying to disable flood of notifications through glDebugMessageControl(), but it has no effect, 
+        // Note: disabling flood of notifications through glDebugMessageControl() has no effect, 
         // so we have to filter them out here
-        if (type == GL_DEBUG_TYPE_OTHER && severity == GL_DEBUG_SEVERITY_NOTIFICATION)
+        if (id == 131185 || // Buffer detailed info: Buffer object <X> (bound to GL_XXXX ... , usage hint is GL_DYNAMIC_DRAW) 
+                            // will use VIDEO memory as the source for buffer object operations.
+            id == 131186 // Buffer object <X> (bound to GL_XXXX, usage hint is GL_DYNAMIC_DRAW) is being copied/moved from VIDEO memory to HOST memory.
+            )
             return;
 
         std::stringstream MessageSS;
 
-        MessageSS << "OpenGL debug message (";
-        switch( type ) 
+        MessageSS << "OpenGL debug message " << id << " (";
+        switch (source)
         {
-            case GL_DEBUG_TYPE_ERROR:
-                MessageSS << "ERROR";
-                break;
-            case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR:
-                MessageSS << "DEPRECATED_BEHAVIOR";
-                break;
-            case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:
-                MessageSS << "UNDEFINED_BEHAVIOR";
-                break;
-            case GL_DEBUG_TYPE_PORTABILITY:
-                MessageSS << "PORTABILITY";
-                break;
-            case GL_DEBUG_TYPE_PERFORMANCE:
-                MessageSS << "PERFORMANCE";
-                break;
-            case GL_DEBUG_TYPE_OTHER:
-                MessageSS << "OTHER";
-                break;
+            case GL_DEBUG_SOURCE_API:             MessageSS << "Source: API.";             break;
+            case GL_DEBUG_SOURCE_WINDOW_SYSTEM:   MessageSS << "Source: Window System.";   break;
+            case GL_DEBUG_SOURCE_SHADER_COMPILER: MessageSS << "Source: Shader Compiler."; break;
+            case GL_DEBUG_SOURCE_THIRD_PARTY:     MessageSS << "Source: Third Party.";     break;
+            case GL_DEBUG_SOURCE_APPLICATION:     MessageSS << "Source: Application.";     break;
+            case GL_DEBUG_SOURCE_OTHER:           MessageSS << "Source: Other.";           break;
+            default:                              MessageSS << "Source: Unknown (" << source << ").";
         }
 
-        switch( severity )
+        switch (type)
         {
-            case GL_DEBUG_SEVERITY_LOW:
-                MessageSS << ", low severity";
-                break;
-            case GL_DEBUG_SEVERITY_MEDIUM:
-                MessageSS << ", medium severity";
-                break;
-            case GL_DEBUG_SEVERITY_HIGH:
-                MessageSS << ", HIGH severity";
-                break;
-            case GL_DEBUG_SEVERITY_NOTIFICATION:
-                MessageSS << ", notification";
-                break;
+            case GL_DEBUG_TYPE_ERROR:               MessageSS << " Type: ERROR.";                break;
+            case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR: MessageSS << " Type: Deprecated Behaviour."; break;
+            case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:  MessageSS << " Type: UNDEFINED BEHAVIOUR.";  break; 
+            case GL_DEBUG_TYPE_PORTABILITY:         MessageSS << " Type: Portability.";          break;
+            case GL_DEBUG_TYPE_PERFORMANCE:         MessageSS << " Type: PERFORMANCE.";          break;
+            case GL_DEBUG_TYPE_MARKER:              MessageSS << " Type: Marker.";               break;
+            case GL_DEBUG_TYPE_PUSH_GROUP:          MessageSS << " Type: Push Group.";           break;
+            case GL_DEBUG_TYPE_POP_GROUP:           MessageSS << " Type: Pop Group.";            break;
+            case GL_DEBUG_TYPE_OTHER:               MessageSS << " Type: Other.";                break;
+            default:                                MessageSS << " Type: Unknown (" << type << ").";
         }
 
-        MessageSS << ")" << std::endl << message << std::endl;
+        switch (severity)
+        {
+            case GL_DEBUG_SEVERITY_HIGH:         MessageSS << " Severity: HIGH";         break;
+            case GL_DEBUG_SEVERITY_MEDIUM:       MessageSS << " Severity: Medium";       break;
+            case GL_DEBUG_SEVERITY_LOW:          MessageSS << " Severity: Low";          break;
+            case GL_DEBUG_SEVERITY_NOTIFICATION: MessageSS << " Severity: Notification"; break;
+            default:                             MessageSS << " Severity: Unknown (" << severity << ")"; break;
+        }
+
+        MessageSS << "): " << message;
 
         LOG_INFO_MESSAGE( MessageSS.str().c_str() );
     }
@@ -184,20 +183,6 @@ namespace Diligent
                 );
                 if( glGetError() != GL_NO_ERROR )
                     LOG_ERROR_MESSAGE("Failed to enable debug messages");
-
-                // Disable notifications as they flood the output
-                // Note: quite commonly for OpenGL, this call does not work as described and has no effect.
-                // Even disabling all messages does not disable them
-                glDebugMessageControl(
-                    GL_DONT_CARE,                   // Source of debug messages to enable or disable
-                    GL_DEBUG_TYPE_OTHER,            // Type of debug messages to enable or disable
-                    GL_DEBUG_SEVERITY_NOTIFICATION, // Severity of debug messages to enable or disable
-                    0,            // The length of the array ids
-                    &unusedIds,   // Array of unsigned integers contianing the ids of the messages to enable or disable
-                    GL_FALSE      // Flag determining whether the selected messages should be enabled or disabled
-                );
-                if( glGetError() != GL_NO_ERROR )
-                    LOG_ERROR_MESSAGE("Failed to disable debug notification messages");
             }
 		}
 		else
