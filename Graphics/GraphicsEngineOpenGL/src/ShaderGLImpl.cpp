@@ -96,7 +96,8 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters *pRefCounters, RenderDeviceGLImpl 
             // infoLogLen accounts for null terminator
             auto *pOutputDataBlob = MakeNewRCObj<DataBlobImpl>()(infoLogLen + FullSource.length() + 1);
             char* DataPtr = reinterpret_cast<char*>(pOutputDataBlob->GetDataPtr());
-            memcpy(DataPtr, !infoLog.empty() ? infoLog.data() : nullptr, infoLogLen);
+            if (infoLogLen > 0)
+                memcpy(DataPtr, infoLog.data(), infoLogLen);
             memcpy(DataPtr + infoLogLen, FullSource.data(), FullSource.length() + 1);
             pOutputDataBlob->QueryInterface(IID_DataBlob, reinterpret_cast<IObject**>(CreationAttribs.ppCompilerOutput));
         }
