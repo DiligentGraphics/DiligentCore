@@ -59,7 +59,6 @@ set(SRC
     src/CommandContext.cpp
     src/CommandListManager.cpp
     src/CommandQueueD3D12Impl.cpp
-    src/D3D12ResourceBase.cpp
     src/D3D12TypeConversions.cpp
     src/D3D12Utils.cpp
     src/DescriptorHeap.cpp

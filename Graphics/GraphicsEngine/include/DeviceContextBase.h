@@ -44,6 +44,8 @@ namespace Diligent
 template<typename BufferImplType>
 struct VertexStreamInfo
 {
+    VertexStreamInfo(){}
+
     /// Strong reference to the buffer object
     RefCntAutoPtr<BufferImplType> pBuffer;
     Uint32 Offset = 0; ///< Offset in bytes

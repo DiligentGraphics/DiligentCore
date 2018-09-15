@@ -7,7 +7,6 @@ set(INCLUDE
     include/BufferD3D11Impl.h
     include/BufferViewD3D11Impl.h
     include/CommandListD3D11Impl.h
-    include/D3D11DebugUtilities.h
     include/D3D11TypeConversions.h
     include/D3D11TypeDefinitions.h
     include/DeviceContextD3D11Impl.h
@@ -53,7 +52,6 @@ set(SRC
     src/BufferD3D11Impl.cpp
     src/BufferViewD3D11Impl.cpp
     src/CommandListD3D11Impl.cpp
-    src/D3D11DebugUtilities.cpp
     src/D3D11TypeConversions.cpp
     src/DeviceContextD3D11Impl.cpp
     src/FenceD3D11Impl.cpp

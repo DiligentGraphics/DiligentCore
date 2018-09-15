@@ -38,14 +38,14 @@ public:
         m_TransitioningState((D3D12_RESOURCE_STATES)-1)*/
     {}
 
-    D3D12_RESOURCE_STATES GetState()const{return m_UsageState;}
-    void SetState(D3D12_RESOURCE_STATES UsageState){m_UsageState = UsageState;}
-    bool CheckAllStates(D3D12_RESOURCE_STATES States)const{return (m_UsageState & States) == States;}
-    bool CheckAnyState(D3D12_RESOURCE_STATES States)const{return (m_UsageState & States) != 0;}
-    ID3D12Resource *GetD3D12Resource(){ return m_pd3d12Resource; }
+    D3D12_RESOURCE_STATES GetState() const                            {return m_UsageState;}
+    void                  SetState(D3D12_RESOURCE_STATES UsageState)  {m_UsageState = UsageState;}
+    bool                  CheckAllStates(D3D12_RESOURCE_STATES States)const { return (m_UsageState & States) == States; }
+    bool                  CheckAnyState(D3D12_RESOURCE_STATES States) const { return (m_UsageState & States) != 0;      }
+    ID3D12Resource*       GetD3D12Resource()                                { return m_pd3d12Resource; }
 
 protected:
-	D3D12_RESOURCE_STATES m_UsageState;
+	D3D12_RESOURCE_STATES   m_UsageState;
 	//D3D12_RESOURCE_STATES m_TransitioningState;
     CComPtr<ID3D12Resource> m_pd3d12Resource; ///< D3D12 buffer object
 };
