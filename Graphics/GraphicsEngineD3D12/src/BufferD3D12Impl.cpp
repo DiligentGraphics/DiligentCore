@@ -53,14 +53,14 @@ BufferD3D12Impl :: BufferD3D12Impl(IReferenceCounters*          pRefCounters,
     {
         1 + pRenderDeviceD3D12->GetNumDeferredContexts(),
         std::make_pair(static_cast<MAP_TYPE>(-1), static_cast<Uint32>(-1)),
-        STD_ALLOCATOR_RAW_MEM(DynamicAllocation, GetRawAllocator(), "Allocator for vector<pair<MAP_TYPE,Uint32>>")
+        STD_ALLOCATOR_RAW_MEM(D3D12DynamicAllocation, GetRawAllocator(), "Allocator for vector<pair<MAP_TYPE,Uint32>>")
     },
 #endif
     m_DynamicData
     {
         BuffDesc.Usage == USAGE_DYNAMIC ? (1 + pRenderDeviceD3D12->GetNumDeferredContexts()) : 0,
-        DynamicAllocation(),
-        STD_ALLOCATOR_RAW_MEM(DynamicAllocation, GetRawAllocator(), "Allocator for vector<DynamicAllocation>")
+        D3D12DynamicAllocation{},
+        STD_ALLOCATOR_RAW_MEM(D3D12DynamicAllocation, GetRawAllocator(), "Allocator for vector<DynamicAllocation>")
     }
 {
 #define LOG_BUFFER_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Buffer \"", BuffDesc.Name ? BuffDesc.Name : "", "\": ", ##__VA_ARGS__);
@@ -271,13 +271,13 @@ BufferD3D12Impl :: BufferD3D12Impl(IReferenceCounters*        pRefCounters,
         false
     },
 #ifdef _DEBUG
-    m_DbgMapType(1 + pRenderDeviceD3D12->GetNumDeferredContexts(), std::make_pair(static_cast<MAP_TYPE>(-1), static_cast<Uint32>(-1)), STD_ALLOCATOR_RAW_MEM(DynamicAllocation, GetRawAllocator(), "Allocator for vector<pair<MAP_TYPE,Uint32>>")),
+    m_DbgMapType(1 + pRenderDeviceD3D12->GetNumDeferredContexts(), std::make_pair(static_cast<MAP_TYPE>(-1), static_cast<Uint32>(-1)), STD_ALLOCATOR_RAW_MEM(D3D12DynamicAllocation, GetRawAllocator(), "Allocator for vector<pair<MAP_TYPE,Uint32>>")),
 #endif
     m_DynamicData
     {
         BuffDesc.Usage == USAGE_DYNAMIC ? (1 + pRenderDeviceD3D12->GetNumDeferredContexts()) : 0,
-        DynamicAllocation(),
-        STD_ALLOCATOR_RAW_MEM(DynamicAllocation, GetRawAllocator(), "Allocator for vector<DynamicAllocation>")
+        D3D12DynamicAllocation{},
+        STD_ALLOCATOR_RAW_MEM(D3D12DynamicAllocation, GetRawAllocator(), "Allocator for vector<DynamicAllocation>")
     }
 {
     m_pd3d12Resource = pd3d12Buffer;
@@ -496,12 +496,51 @@ void BufferD3D12Impl::CreateCBV(D3D12_CPU_DESCRIPTOR_HANDLE CBVDescriptor)
     pDeviceD3D12->CreateConstantBufferView( &D3D12_CBVDesc, CBVDescriptor );
 }
 
+ID3D12Resource* BufferD3D12Impl::GetD3D12Buffer(size_t& DataStartByteOffset, IDeviceContext* pContext)
+{ 
+    auto* pd3d12Resource = GetD3D12Resource();
+    if(pd3d12Resource != nullptr)
+    {
+        VERIFY(m_Desc.Usage != USAGE_DYNAMIC || (m_Desc.BindFlags | (BIND_SHADER_RESOURCE|BIND_UNORDERED_ACCESS)) != 0, "Expected non-dynamic buffer or a buffer with SRV or UAV bind flags");
+        DataStartByteOffset = 0;
+        return pd3d12Resource; 
+    }
+    else
+    {
+        VERIFY(m_Desc.Usage == USAGE_DYNAMIC, "Dynamic buffer is expected");
+        auto* pCtxD3D12 = ValidatedCast<DeviceContextD3D12Impl>(pContext);
 #ifdef DEVELOPMENT
-void BufferD3D12Impl::DvpVerifyDynamicAllocation(Uint32 ContextId)const
+        DvpVerifyDynamicAllocation(pCtxD3D12);
+#endif
+        auto ContextId = pCtxD3D12->GetContextId();
+        DataStartByteOffset = m_DynamicData[ContextId].Offset;
+        return m_DynamicData[ContextId].pBuffer;
+    }
+}
+
+D3D12_GPU_VIRTUAL_ADDRESS BufferD3D12Impl::GetGPUAddress(class DeviceContextD3D12Impl* pCtx)
 {
-	auto CurrentFrame = ValidatedCast<RenderDeviceD3D12Impl>(GetDevice())->GetCurrentFrameNumber();
+    if(m_Desc.Usage == USAGE_DYNAMIC)
+    {
+#ifdef DEVELOPMENT
+        DvpVerifyDynamicAllocation(pCtx);
+#endif
+        Uint32 ContextId = pCtx->GetContextId();
+        return m_DynamicData[ContextId].GPUAddress;
+    }
+    else
+    {
+        return GetD3D12Resource()->GetGPUVirtualAddress();
+    }
+}
+
+#ifdef DEVELOPMENT
+void BufferD3D12Impl::DvpVerifyDynamicAllocation(DeviceContextD3D12Impl* pCtx)const
+{
+    auto ContextId = pCtx->GetContextId();
+	auto CurrentFrame = pCtx->GetCurrentFrameNumber();
     DEV_CHECK_ERR(m_DynamicData[ContextId].GPUAddress != 0, "Dynamic buffer '", m_Desc.Name, "' has not been mapped before its first use. Context Id: ", ContextId, ". Note: memory for dynamic buffers is allocated when a buffer is mapped.");
-    DEV_CHECK_ERR(m_DynamicData[ContextId].FrameNum == CurrentFrame, "Dynamic allocation of dynamic buffer '", m_Desc.Name, "' in frame ", CurrentFrame, " is out-of-date. Note: contents of all dynamic resources is discarded at the end of every frame. A buffer must be mapped before its first use in any frame.");
+    DEV_CHECK_ERR(m_DynamicData[ContextId].DvpCtxFrameNumber == static_cast<Uint64>(CurrentFrame), "Dynamic allocation of dynamic buffer '", m_Desc.Name, "' in frame ", CurrentFrame, " is out-of-date. Note: contents of all dynamic resources is discarded at the end of every frame. A buffer must be mapped before its first use in any frame.");
     VERIFY(GetState() == D3D12_RESOURCE_STATE_GENERIC_READ, "Dynamic buffers are expected to always be in D3D12_RESOURCE_STATE_GENERIC_READ state");
 }
 #endif

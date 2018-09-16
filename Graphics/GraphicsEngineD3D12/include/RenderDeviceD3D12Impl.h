@@ -31,7 +31,7 @@
 #include "DescriptorHeap.h"
 #include "CommandListManager.h"
 #include "CommandContext.h"
-#include "DynamicUploadHeap.h"
+#include "D3D12DynamicHeap.h"
 #include "Atomics.h"
 #include "CommandQueueD3D12.h"
 #include "ResourceReleaseQueue.h"
@@ -92,15 +92,14 @@ public:
 
 	void IdleGPU(bool ReleaseStaleObjects);
     CommandContext* AllocateCommandContext(const Char *ID = "");
-    void CloseAndExecuteCommandContext(CommandContext *pCtx, bool DiscardStaleObjects, std::vector<std::pair<Uint64, RefCntAutoPtr<IFence> > >* pSignalFences);
+    Uint64 CloseAndExecuteCommandContext(CommandContext *pCtx, bool DiscardStaleObjects, std::vector<std::pair<Uint64, RefCntAutoPtr<IFence> > >* pSignalFences);
     void DisposeCommandContext(CommandContext*);
 
     void SafeReleaseD3D12Object(ID3D12Object* pObj);
     void FinishFrame(bool ReleaseAllResources);
     virtual void FinishFrame()override final { FinishFrame(false); }
 
-    DynamicUploadHeap* RequestUploadHeap();
-    void ReleaseUploadHeap(DynamicUploadHeap* pUploadHeap);
+    D3D12DynamicMemoryManager& GetDynamicMemoryManager() {return m_DynamicMemoryManager;}
 
 private:
     virtual void TestTextureFormat( TEXTURE_FORMAT TexFormat )override final;
@@ -158,11 +157,9 @@ private:
 	std::deque<CommandContext*, STDAllocatorRawMem<CommandContext*> > m_AvailableContexts;
 	std::mutex m_ContextAllocationMutex;
 
-    std::mutex m_UploadHeapMutex;
-    typedef std::unique_ptr<DynamicUploadHeap, STDDeleterRawMem<DynamicUploadHeap> > UploadHeapPoolElemType;
-    std::vector< UploadHeapPoolElemType, STDAllocatorRawMem<UploadHeapPoolElemType> > m_UploadHeaps;
-
     ResourceReleaseQueue<StaticStaleResourceWrapper<CComPtr<ID3D12Object>>> m_ReleaseQueue;
+
+    D3D12DynamicMemoryManager m_DynamicMemoryManager;
 };
 
 }

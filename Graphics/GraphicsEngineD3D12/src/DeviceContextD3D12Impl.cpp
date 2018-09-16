@@ -32,12 +32,24 @@
 #include "FenceD3D12Impl.h"
 #include "D3D12TypeConversions.h"
 #include "d3dx12_win.h"
-#include "DynamicUploadHeap.h"
+#include "D3D12DynamicHeap.h"
 #include "CommandListD3D12Impl.h"
 #include "DXGITypeConversions.h"
 
 namespace Diligent
 {
+
+    static std::string GetDynamicHeapName(bool bIsDeferred, Uint32 ContextId)
+    {
+        if (bIsDeferred)
+        {
+            std::stringstream ss;
+            ss << "Dynamic heap of deferred context #" << ContextId;
+            return ss.str();
+        }
+        else
+            return "Dynamic heap of immediate context";
+    }
 
     DeviceContextD3D12Impl::DeviceContextD3D12Impl( IReferenceCounters*       pRefCounters,
                                                     RenderDeviceD3D12Impl*    pDeviceD3D12Impl,
@@ -45,7 +57,7 @@ namespace Diligent
                                                     const EngineD3D12Attribs& Attribs,
                                                     Uint32                    ContextId) :
         TDeviceContextBase(pRefCounters, pDeviceD3D12Impl, bIsDeferred),
-        m_pUploadHeap(pDeviceD3D12Impl->RequestUploadHeap() ),
+        m_DynamicHeap(pDeviceD3D12Impl->GetDynamicMemoryManager(), GetDynamicHeapName(bIsDeferred, ContextId), Attribs.DynamicHeapPageSize),
         m_NumCommandsInCurCtx(0),
         m_NumCommandsToFlush(bIsDeferred ? std::numeric_limits<decltype(m_NumCommandsToFlush)>::max() : Attribs.NumCommandsToFlushCmdList),
         m_pCurrCmdCtx(pDeviceD3D12Impl->AllocateCommandContext()),
@@ -199,7 +211,7 @@ namespace Diligent
 
         D3D12_INDEX_BUFFER_VIEW IBView;
         BufferD3D12Impl *pBuffD3D12 = static_cast<BufferD3D12Impl *>(m_pIndexBuffer.RawPtr());
-        IBView.BufferLocation = pBuffD3D12->GetGPUAddress(m_ContextId) + m_IndexDataStartOffset;
+        IBView.BufferLocation = pBuffD3D12->GetGPUAddress(this) + m_IndexDataStartOffset;
         if( IndexType == VT_UINT32 )
             IBView.Format = DXGI_FORMAT_R32_UINT;
         else
@@ -220,14 +232,14 @@ namespace Diligent
         bool IsDynamic = pBuffD3D12->GetDesc().Usage == USAGE_DYNAMIC;
 #ifdef DEVELOPMENT
         if(IsDynamic)
-            pBuffD3D12->DvpVerifyDynamicAllocation(m_ContextId);
+            pBuffD3D12->DvpVerifyDynamicAllocation(this);
 #endif
         auto &GraphicsCtx = RequestCmdContext()->AsGraphicsContext();
         // Resource transitioning must always be performed!
         GraphicsCtx.TransitionResource(pBuffD3D12, D3D12_RESOURCE_STATE_INDEX_BUFFER, true);
 
         size_t BuffDataStartByteOffset;
-        auto *pd3d12Buff = pBuffD3D12->GetD3D12Buffer(BuffDataStartByteOffset, m_ContextId);
+        auto *pd3d12Buff = pBuffD3D12->GetD3D12Buffer(BuffDataStartByteOffset, this);
 
         if( IsDynamic || 
             m_CommittedD3D12IndexBuffer != pd3d12Buff ||
@@ -274,7 +286,7 @@ namespace Diligent
                 {
                     DynamicBufferPresent = true;
 #ifdef DEVELOPMENT
-                    pBufferD3D12->DvpVerifyDynamicAllocation(m_ContextId);
+                    pBufferD3D12->DvpVerifyDynamicAllocation(this);
 #endif
                 }
 
@@ -285,7 +297,7 @@ namespace Diligent
                 // so there is no need to reference the resource here
                 //GraphicsCtx.AddReferencedObject(pd3d12Resource);
 
-                VBView.BufferLocation = pBufferD3D12->GetGPUAddress(m_ContextId) + CurrStream.Offset;
+                VBView.BufferLocation = pBufferD3D12->GetGPUAddress(this) + CurrStream.Offset;
                 VBView.StrideInBytes = Strides[Buff];
                 // Note that for a dynamic buffer, what we use here is the size of the buffer itself, not the upload heap buffer!
                 VBView.SizeInBytes = pBufferD3D12->GetDesc().uiSizeInBytes - CurrStream.Offset;
@@ -336,7 +348,7 @@ namespace Diligent
 
         if(m_pCommittedResourceCache != nullptr)
         {
-            m_pPipelineState->GetRootSignature().CommitRootViews(*m_pCommittedResourceCache, GraphCtx, false, m_ContextId);
+            m_pPipelineState->GetRootSignature().CommitRootViews(*m_pCommittedResourceCache, GraphCtx, false, this);
         }
 #ifdef _DEBUG
         else
@@ -352,12 +364,12 @@ namespace Diligent
         {
 #ifdef DEVELOPMENT
             if (pIndirectDrawAttribsD3D12->GetDesc().Usage == USAGE_DYNAMIC)
-                pIndirectDrawAttribsD3D12->DvpVerifyDynamicAllocation(m_ContextId);
+                pIndirectDrawAttribsD3D12->DvpVerifyDynamicAllocation(this);
 #endif
 
             GraphCtx.TransitionResource(pIndirectDrawAttribsD3D12, D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT);
             size_t BuffDataStartByteOffset;
-            ID3D12Resource *pd3d12ArgsBuff = pIndirectDrawAttribsD3D12->GetD3D12Buffer(BuffDataStartByteOffset, m_ContextId);
+            ID3D12Resource *pd3d12ArgsBuff = pIndirectDrawAttribsD3D12->GetD3D12Buffer(BuffDataStartByteOffset, this);
             GraphCtx.ExecuteIndirect(drawAttribs.IsIndexed ? m_pDrawIndexedIndirectSignature : m_pDrawIndirectSignature, pd3d12ArgsBuff, drawAttribs.IndirectDrawArgsOffset + BuffDataStartByteOffset);
         }
         else
@@ -382,7 +394,7 @@ namespace Diligent
       
         if(m_pCommittedResourceCache != nullptr)
         {
-            m_pPipelineState->GetRootSignature().CommitRootViews(*m_pCommittedResourceCache, ComputeCtx, true, m_ContextId);
+            m_pPipelineState->GetRootSignature().CommitRootViews(*m_pCommittedResourceCache, ComputeCtx, true, this);
         }
 #ifdef _DEBUG
         else
@@ -398,12 +410,12 @@ namespace Diligent
             {
 #ifdef DEVELOPMENT
                 if(pBufferD3D12->GetDesc().Usage == USAGE_DYNAMIC)
-                    pBufferD3D12->DvpVerifyDynamicAllocation(m_ContextId);
+                    pBufferD3D12->DvpVerifyDynamicAllocation(this);
 #endif
 
                 ComputeCtx.TransitionResource(pBufferD3D12, D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT);
                 size_t BuffDataStartByteOffset;
-                ID3D12Resource *pd3d12ArgsBuff = pBufferD3D12->GetD3D12Buffer(BuffDataStartByteOffset, m_ContextId);
+                ID3D12Resource *pd3d12ArgsBuff = pBufferD3D12->GetD3D12Buffer(BuffDataStartByteOffset, this);
                 ComputeCtx.ExecuteIndirect(m_pDispatchIndirectSignature, pd3d12ArgsBuff, DispatchAttrs.DispatchArgsByteOffset + BuffDataStartByteOffset);
             }
             else
@@ -491,7 +503,7 @@ namespace Diligent
             if (m_NumCommandsInCurCtx != 0)
             {
                 m_pCurrCmdCtx->FlushResourceBarriers();
-                pDeviceD3D12Impl->CloseAndExecuteCommandContext(m_pCurrCmdCtx, true, &m_PendingFences);
+                m_LastSubmittedFenceValue = pDeviceD3D12Impl->CloseAndExecuteCommandContext(m_pCurrCmdCtx, true, &m_PendingFences);
                 m_PendingFences.clear();
             }
             else
@@ -518,6 +530,9 @@ namespace Diligent
 
     void DeviceContextD3D12Impl::FinishFrame(bool ForceRelease)
     {
+        //Uint64 FenceValue = ForceRelease ? std::numeric_limits<Uint64>::max() : m_pDevice.RawPtr<RenderDeviceD3D12Impl>()->GetCompletedFenceValue();
+        m_DynamicHeap.FinishFrame(m_LastSubmittedFenceValue);
+        Atomics::AtomicIncrement(m_ContextFrameNumber);
     }
 
     void DeviceContextD3D12Impl::SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer** ppBuffers, Uint32* pOffsets, Uint32 Flags )
@@ -690,18 +705,18 @@ namespace Diligent
         }
     }
    
-    DynamicAllocation DeviceContextD3D12Impl::AllocateDynamicSpace(size_t NumBytes, size_t Alignment)
+    D3D12DynamicAllocation DeviceContextD3D12Impl::AllocateDynamicSpace(size_t NumBytes, size_t Alignment)
     {
-        return m_pUploadHeap->Allocate(NumBytes, Alignment);
+        return m_DynamicHeap.Allocate(NumBytes, Alignment, m_ContextFrameNumber);
     }
 
-    void DeviceContextD3D12Impl::UpdateBufferRegion(class BufferD3D12Impl* pBuffD3D12, DynamicAllocation& Allocation, Uint64 DstOffset, Uint64 NumBytes)
+    void DeviceContextD3D12Impl::UpdateBufferRegion(BufferD3D12Impl* pBuffD3D12, D3D12DynamicAllocation& Allocation, Uint64 DstOffset, Uint64 NumBytes)
     {
         auto pCmdCtx = RequestCmdContext();
         VERIFY_EXPR( static_cast<size_t>(NumBytes) == NumBytes );
         pCmdCtx->TransitionResource(pBuffD3D12, D3D12_RESOURCE_STATE_COPY_DEST, true);
         size_t DstBuffDataStartByteOffset;
-        auto *pd3d12Buff = pBuffD3D12->GetD3D12Buffer(DstBuffDataStartByteOffset, m_ContextId);
+        auto *pd3d12Buff = pBuffD3D12->GetD3D12Buffer(DstBuffDataStartByteOffset, this);
         VERIFY(DstBuffDataStartByteOffset == 0, "Dst buffer must not be suballocated");
         pCmdCtx->GetCommandList()->CopyBufferRegion( pd3d12Buff, DstOffset + DstBuffDataStartByteOffset, Allocation.pBuffer, Allocation.Offset, NumBytes);
         ++m_NumCommandsInCurCtx;
@@ -712,7 +727,7 @@ namespace Diligent
         VERIFY(pBuffD3D12->GetDesc().Usage != USAGE_DYNAMIC, "Dynamic buffers must be updated via Map()");
         VERIFY_EXPR( static_cast<size_t>(NumBytes) == NumBytes );
         constexpr size_t DefaultAlginment = 16;
-        auto TmpSpace = m_pUploadHeap->Allocate(static_cast<size_t>(NumBytes), DefaultAlginment);
+        auto TmpSpace = m_DynamicHeap.Allocate(static_cast<size_t>(NumBytes), DefaultAlginment, m_ContextFrameNumber);
 	    memcpy(TmpSpace.CPUAddress, pData, static_cast<size_t>(NumBytes));
         UpdateBufferRegion(pBuffD3D12, TmpSpace, DstOffset, NumBytes);
     }
@@ -725,11 +740,11 @@ namespace Diligent
         pCmdCtx->TransitionResource(pSrcBuffD3D12, D3D12_RESOURCE_STATE_COPY_SOURCE);
         pCmdCtx->TransitionResource(pDstBuffD3D12, D3D12_RESOURCE_STATE_COPY_DEST, true);
         size_t DstDataStartByteOffset;
-        auto *pd3d12DstBuff = pDstBuffD3D12->GetD3D12Buffer(DstDataStartByteOffset, m_ContextId);
+        auto *pd3d12DstBuff = pDstBuffD3D12->GetD3D12Buffer(DstDataStartByteOffset, this);
         VERIFY(DstDataStartByteOffset == 0, "Dst buffer must not be suballocated");
 
         size_t SrcDataStartByteOffset;
-        auto *pd3d12SrcBuff = pSrcBuffD3D12->GetD3D12Buffer(SrcDataStartByteOffset, m_ContextId);
+        auto *pd3d12SrcBuff = pSrcBuffD3D12->GetD3D12Buffer(SrcDataStartByteOffset, this);
         pCmdCtx->GetCommandList()->CopyBufferRegion( pd3d12DstBuff, DstOffset + DstDataStartByteOffset, pd3d12SrcBuff, SrcOffset+SrcDataStartByteOffset, NumBytes);
         ++m_NumCommandsInCurCtx;
     }
@@ -841,7 +856,7 @@ namespace Diligent
         else if(pBufferD3D12->GetState() != D3D12_RESOURCE_STATE_GENERIC_READ)
             RequestCmdContext()->TransitionResource(pBufferD3D12, D3D12_RESOURCE_STATE_GENERIC_READ, true);
         size_t DataStartByteOffset = 0;
-        auto* pd3d12Buffer = pBufferD3D12->GetD3D12Buffer(DataStartByteOffset, m_ContextId);
+        auto* pd3d12Buffer = pBufferD3D12->GetD3D12Buffer(DataStartByteOffset, this);
         CopyTextureRegion(pd3d12Buffer, static_cast<Uint32>(DataStartByteOffset) + SrcOffset, SrcStride, SrcDepthStride, pBufferD3D12->GetDesc().uiSizeInBytes, TextureD3D12, DstSubResIndex, DstBox);
     }
 
@@ -982,7 +997,7 @@ namespace Diligent
     {
         auto* pDeviceD3D12Impl = m_pDevice.RawPtr<RenderDeviceD3D12Impl>();
         CommandListD3D12Impl* pCmdListD3D12( NEW_RC_OBJ(m_CmdListAllocator, "CommandListD3D12Impl instance", CommandListD3D12Impl)
-                                                       (pDeviceD3D12Impl, m_pCurrCmdCtx) );
+                                                       (pDeviceD3D12Impl, this, m_pCurrCmdCtx) );
         pCmdListD3D12->QueryInterface( IID_CommandList, reinterpret_cast<IObject**>(ppCommandList) );
         m_pCurrCmdCtx = nullptr;
         Flush(true);
@@ -1004,7 +1019,11 @@ namespace Diligent
 
         CommandListD3D12Impl* pCmdListD3D12 = ValidatedCast<CommandListD3D12Impl>(pCommandList);
         VERIFY_EXPR(m_PendingFences.empty());
-        m_pDevice.RawPtr<RenderDeviceD3D12Impl>()->CloseAndExecuteCommandContext(pCmdListD3D12->Close(), true, nullptr);
+        CommandContext* pCmdContext = nullptr;
+        RefCntAutoPtr<DeviceContextD3D12Impl> pDeferredCtx;
+        pCmdListD3D12->Close(pCmdContext, pDeferredCtx);
+        pDeferredCtx->m_LastSubmittedFenceValue =
+            m_pDevice.RawPtr<RenderDeviceD3D12Impl>()->CloseAndExecuteCommandContext(pCmdContext, true, nullptr);
     }
 
     void DeviceContextD3D12Impl::SignalFence(IFence* pFence, Uint64 Value)

@@ -37,13 +37,13 @@ namespace Diligent
 template <typename T, typename AllocatorType>
 struct STDAllocator
 {
-    typedef T value_type;
-    typedef value_type* pointer;
-    typedef const value_type* const_pointer;
-    typedef value_type& reference;
-    typedef const value_type& const_reference;
-    typedef std::size_t size_type;
-    typedef std::ptrdiff_t difference_type;
+    using value_type      = T;
+    using pointer         = value_type*;
+    using const_pointer   = const value_type*;
+    using reference       = value_type&;
+    using const_reference = const value_type&;
+    using size_type       = std::size_t;
+    using difference_type = std::ptrdiff_t;
 
     STDAllocator(AllocatorType& Allocator, const Char* Description, const Char* FileName, const  Int32 LineNumber)noexcept : 
         m_Allocator     (Allocator)
@@ -104,6 +104,9 @@ struct STDAllocator
 #endif
         return reinterpret_cast<T*>( m_Allocator.Allocate(count * sizeof(T), m_dvpDescription, m_dvpFileName, m_dvpLineNumber ) );
     }
+
+    pointer       address(reference r)       { return &r; }
+    const_pointer address(const_reference r) { return &r; }
 
     void deallocate(T* p, std::size_t count)
     {

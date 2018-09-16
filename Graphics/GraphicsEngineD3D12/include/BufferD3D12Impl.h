@@ -31,7 +31,7 @@
 #include "BufferBase.h"
 #include "BufferViewD3D12Impl.h"
 #include "D3D12ResourceBase.h"
-#include "DynamicUploadHeap.h"
+#include "D3D12DynamicHeap.h"
 #include "RenderDeviceD3D12Impl.h"
 
 namespace Diligent
@@ -65,29 +65,10 @@ public:
     virtual void Unmap( IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags )override;
 
 #ifdef DEVELOPMENT
-    void DvpVerifyDynamicAllocation(Uint32 ContextId)const;
+    void DvpVerifyDynamicAllocation(class DeviceContextD3D12Impl* pCtx)const;
 #endif
 
-    virtual ID3D12Resource *GetD3D12Buffer(size_t &DataStartByteOffset, Uint32 ContextId)override final
-    { 
-        auto *pd3d12Resource = GetD3D12Resource();
-        if(pd3d12Resource != nullptr)
-        {
-            VERIFY(m_Desc.Usage != USAGE_DYNAMIC || (m_Desc.BindFlags | (BIND_SHADER_RESOURCE|BIND_UNORDERED_ACCESS)) != 0, "Expected non-dynamic buffer or a buffer with SRV or UAV bind flags");
-            DataStartByteOffset = 0;
-            return pd3d12Resource; 
-        }
-        else
-        {
-            VERIFY(m_Desc.Usage == USAGE_DYNAMIC, "Dynamic buffer is expected");
-
-#ifdef DEVELOPMENT
-            DvpVerifyDynamicAllocation(ContextId);
-#endif
-            DataStartByteOffset = m_DynamicData[ContextId].Offset;
-            return m_DynamicData[ContextId].pBuffer;
-        }
-    }
+    virtual ID3D12Resource* GetD3D12Buffer(size_t& DataStartByteOffset, IDeviceContext* pContext)override final;
     
     virtual void* GetNativeHandle()override final
     { 
@@ -100,20 +81,7 @@ public:
 
     virtual void SetD3D12ResourceState(D3D12_RESOURCE_STATES state)override final{ SetState(state); }
 
-    D3D12_GPU_VIRTUAL_ADDRESS GetGPUAddress(Uint32 ContextId)
-    {
-        if(m_Desc.Usage == USAGE_DYNAMIC)
-        {
-#ifdef DEVELOPMENT
-            DvpVerifyDynamicAllocation(ContextId);
-#endif
-            return m_DynamicData[ContextId].GPUAddress;
-        }
-        else
-        {
-            return GetD3D12Resource()->GetGPUVirtualAddress();
-        }
-    }
+    D3D12_GPU_VIRTUAL_ADDRESS GetGPUAddress(class DeviceContextD3D12Impl* pCtx);
 
     D3D12_CPU_DESCRIPTOR_HANDLE GetCBVHandle(){return m_CBVDescriptorAllocation.GetCpuHandle();}
 
@@ -131,7 +99,7 @@ private:
 
     friend class DeviceContextD3D12Impl;
     // Array of dynamic allocations for every device context
-    std::vector<DynamicAllocation,  STDAllocatorRawMem<DynamicAllocation> > m_DynamicData;
+    std::vector<D3D12DynamicAllocation,  STDAllocatorRawMem<D3D12DynamicAllocation> > m_DynamicData;
 };
 
 }

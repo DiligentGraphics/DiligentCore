@@ -32,34 +32,40 @@
 namespace Diligent
 {
 
+class DeviceContextD3D12Impl;
+class CommandContext;
+
 /// Implementation of the Diligent::ICommandList interface
 class CommandListD3D12Impl final : public CommandListBase<ICommandList, RenderDeviceD3D12Impl>
 {
 public:
     using TCommandListBase = CommandListBase<ICommandList, RenderDeviceD3D12Impl>;
 
-    CommandListD3D12Impl(IReferenceCounters*    pRefCounters, 
-                         RenderDeviceD3D12Impl* pDevice, 
-                         class CommandContext*  pCmdContext) :
+    CommandListD3D12Impl(IReferenceCounters*     pRefCounters, 
+                         RenderDeviceD3D12Impl*  pDevice,
+                         DeviceContextD3D12Impl* pDeferredCtx,
+                         CommandContext*         pCmdContext) :
         TCommandListBase(pRefCounters, pDevice),
-        m_pCmdContext(pCmdContext)
+        m_pDeferredCtx  (pDeferredCtx),
+        m_pCmdContext   (pCmdContext)
     {
     }
     
     ~CommandListD3D12Impl()
     {
-        VERIFY(m_pCmdContext == nullptr, "Destroying command list that was never executed");
+        VERIFY(m_pCmdContext == nullptr && m_pDeferredCtx == nullptr, "Destroying a command list that has not been executed");
     }
 
-    CommandContext* Close()
+    void Close(CommandContext*& pCmdContext, RefCntAutoPtr<DeviceContextD3D12Impl>& pDeferredCtx)
     {
-        CommandContext* pCmdContext = m_pCmdContext;
+        pCmdContext   = m_pCmdContext;
         m_pCmdContext = nullptr;
-        return pCmdContext;
+        pDeferredCtx  = std::move(m_pDeferredCtx);
     }
 
 private:
-    CommandContext* m_pCmdContext = nullptr;
+    RefCntAutoPtr<DeviceContextD3D12Impl> m_pDeferredCtx;
+    CommandContext*                       m_pCmdContext = nullptr;
 };
 
 }

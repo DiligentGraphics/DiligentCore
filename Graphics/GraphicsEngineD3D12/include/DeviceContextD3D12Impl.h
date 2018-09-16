@@ -34,6 +34,7 @@
 #include "BufferD3D12Impl.h"
 #include "TextureViewD3D12Impl.h"
 #include "PipelineStateD3D12Impl.h"
+#include "D3D12DynamicHeap.h"
 
 namespace Diligent
 {
@@ -105,7 +106,7 @@ public:
     ///// Number of different shader types (Vertex, Pixel, Geometry, Domain, Hull, Compute)
     //static constexpr int NumShaderTypes = 6;
 
-    void UpdateBufferRegion(class BufferD3D12Impl *pBuffD3D12, struct DynamicAllocation& Allocation, Uint64 DstOffset, Uint64 NumBytes);
+    void UpdateBufferRegion(class BufferD3D12Impl *pBuffD3D12, D3D12DynamicAllocation& Allocation, Uint64 DstOffset, Uint64 NumBytes);
     void UpdateBufferRegion(class BufferD3D12Impl *pBuffD3D12, const void *pData, Uint64 DstOffset, Uint64 NumBytes);
     void CopyBufferRegion(class BufferD3D12Impl *pSrcBuffD3D12, class BufferD3D12Impl *pDstBuffD3D12, Uint64 SrcOffset, Uint64 DstOffset, Uint64 NumBytes);
     void CopyTextureRegion(class TextureD3D12Impl *pSrcTexture, Uint32 SrcSubResIndex, const D3D12_BOX* pD3D12SrcBox,
@@ -147,11 +148,13 @@ public:
 
     void GenerateMips(class TextureViewD3D12Impl *pTexView);
 
-    struct DynamicAllocation AllocateDynamicSpace(size_t NumBytes, size_t Alignment);
+    D3D12DynamicAllocation AllocateDynamicSpace(size_t NumBytes, size_t Alignment);
     
     Uint32 GetContextId()const{return m_ContextId;}
 
     size_t GetNumCommandsInCtx()const { return m_NumCommandsInCurCtx; }
+
+    Int64 GetCurrentFrameNumber()const {return m_ContextFrameNumber; }
 
 private:
     void CommitD3D12IndexBuffer(VALUE_TYPE IndexType);
@@ -164,13 +167,13 @@ private:
 
     struct TextureUploadSpace
     {
-        DynamicAllocation Allocation;
-        Uint32            AlignedOffset = 0;
-        Uint32            Stride        = 0;
-        Uint32            DepthStride   = 0;
-        Uint32            RowSize       = 0;
-        Uint32            RowCount      = 0;
-        Box               Region;
+        D3D12DynamicAllocation Allocation;
+        Uint32                 AlignedOffset = 0;
+        Uint32                 Stride        = 0;
+        Uint32                 DepthStride   = 0;
+        Uint32                 RowSize       = 0;
+        Uint32                 RowCount      = 0;
+        Box                    Region;
     };
     TextureUploadSpace AllocateTextureUploadSpace(TEXTURE_FORMAT     TexFmt,
                                                   const Box&         Region);
@@ -188,6 +191,10 @@ private:
     const Uint32 m_NumCommandsToFlush = 192;
     CommandContext* m_pCurrCmdCtx = nullptr;
 
+    // The fence value that was signalled last time a command list was submitted for execution
+    Uint64 m_LastSubmittedFenceValue = 0;
+    Atomics::AtomicInt64 m_ContextFrameNumber = 0;
+
     CComPtr<ID3D12Resource> m_CommittedD3D12IndexBuffer;
     VALUE_TYPE m_CommittedIBFormat = VT_UNDEFINED;
     Uint32 m_CommittedD3D12IndexDataStartOffset = 0;
@@ -197,7 +204,7 @@ private:
     CComPtr<ID3D12CommandSignature> m_pDispatchIndirectSignature;
     
     GenerateMipsHelper m_MipsGenerator;
-    class DynamicUploadHeap* m_pUploadHeap = nullptr;
+    D3D12DynamicHeap m_DynamicHeap;
     
     /// Flag indicating if currently committed D3D12 vertex buffers are up to date
     bool m_bCommittedD3D12VBsUpToDate = false;

@@ -322,10 +322,10 @@ public:
     void TransitionResources(ShaderResourceCacheD3D12&  ResourceCache, 
                              class CommandContext&      Ctx)const;
 
-    void CommitRootViews(ShaderResourceCacheD3D12&  ResourceCache, 
-                         class CommandContext&      Ctx, 
-                         bool                       IsCompute,
-                         Uint32                     ContextId)const;
+    void CommitRootViews(ShaderResourceCacheD3D12&     ResourceCache, 
+                         class CommandContext&         Ctx, 
+                         bool                          IsCompute,
+                         class DeviceContextD3D12Impl* pCtx)const;
 
     Uint32 GetTotalSrvCbvUavSlots(SHADER_VARIABLE_TYPE VarType)const
     {

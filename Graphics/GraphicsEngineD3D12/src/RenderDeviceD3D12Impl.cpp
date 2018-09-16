@@ -83,8 +83,8 @@ RenderDeviceD3D12Impl :: RenderDeviceD3D12Impl(IReferenceCounters*          pRef
 	},
     m_ContextPool(STD_ALLOCATOR_RAW_MEM(ContextPoolElemType, GetRawAllocator(), "Allocator for vector<unique_ptr<CommandContext>>")),
     m_AvailableContexts(STD_ALLOCATOR_RAW_MEM(CommandContext*, GetRawAllocator(), "Allocator for vector<CommandContext*>")),
-    m_UploadHeaps(STD_ALLOCATOR_RAW_MEM(UploadHeapPoolElemType, GetRawAllocator(), "Allocator for vector<unique_ptr<DynamicUploadHeap>>")),
-    m_ReleaseQueue(GetRawAllocator())
+    m_ReleaseQueue(GetRawAllocator()),
+    m_DynamicMemoryManager(GetRawAllocator(), m_pd3d12Device, CreationAttribs.NumDynamicHeapPagesToReserve, CreationAttribs.DynamicHeapPageSize)
 {
     m_DeviceCaps.DevType = DeviceType::D3D12;
     m_DeviceCaps.MajorVersion = 12;
@@ -104,7 +104,8 @@ RenderDeviceD3D12Impl::~RenderDeviceD3D12Impl()
     // Call FinishFrame() again to destroy resources in
     // release queues
     FinishFrame(true);
-    
+
+    m_DynamicMemoryManager.Destroy(GetCompletedFenceValue());
 	m_ContextPool.clear();
 }
 
@@ -114,7 +115,7 @@ void RenderDeviceD3D12Impl::DisposeCommandContext(CommandContext* pCtx)
     m_AvailableContexts.push_back(pCtx);
 }
 
-void RenderDeviceD3D12Impl::CloseAndExecuteCommandContext(CommandContext* pCtx, bool DiscardStaleObjects, std::vector<std::pair<Uint64, RefCntAutoPtr<IFence> > >* pSignalFences)
+Uint64 RenderDeviceD3D12Impl::CloseAndExecuteCommandContext(CommandContext* pCtx, bool DiscardStaleObjects, std::vector<std::pair<Uint64, RefCntAutoPtr<IFence> > >* pSignalFences)
 {
     CComPtr<ID3D12CommandAllocator> pAllocator;
 	auto *pCmdList = pCtx->Close(&pAllocator);
@@ -185,6 +186,8 @@ void RenderDeviceD3D12Impl::CloseAndExecuteCommandContext(CommandContext* pCtx, 
 	    std::lock_guard<std::mutex> LockGuard(m_ContextAllocationMutex);
     	m_AvailableContexts.push_back(pCtx);
     }
+
+    return FenceValue;
 }
 
 
@@ -265,34 +268,10 @@ void RenderDeviceD3D12Impl::FinishFrame(bool ReleaseAllResources)
         Atomics::AtomicIncrement(m_NextCmdListNumber);
     }
 
-    {
-        // There is no need to lock as new heaps are only created during initialization
-        // time for every context
-        //std::lock_guard<std::mutex> LockGuard(m_UploadHeapMutex);
-        
-        // Upload heaps are used to update resource contents as well as to allocate
-        // space for dynamic resources.
-        // Initial resource data is uploaded using temporary one-time upload buffers, 
-        // so can be performed in parallel across frame boundaries
-        for (auto &UploadHeap : m_UploadHeaps)
-        {
-            // Currently upload heaps are free-threaded, so other threads must not allocate
-            // resources at the same time. This means that all dynamic buffers must be unmaped 
-            // in the same frame and all resources must be updated within boundaries of a single frame.
-            //
-            //    worker thread 3    | pDevice->CrateTexture(InitData) |    | pDevice->CrateBuffer(InitData) |    | pDevice->CrateTexture(InitData) |
-            //                                                                                               
-            //    worker thread 2     | pDfrdCtx2->UpdateResource()  |                                              ||
-            //                                                                                                      ||
-            //    worker thread 1       |  pDfrdCtx1->Map(WRITE_DISCARD) |    | pDfrdCtx1->UpdateResource()  |      ||
-            //                                                                                                      ||
-            //    main thread        |  pCtx->Map(WRITE_DISCARD )|  | pCtx->UpdateResource()  |                     ||   | Present() |
-            //
-            //
-            
-            UploadHeap->FinishFrame(NextFenceValue, CompletedFenceValue);
-        }
-    }
+    // Dynamic memory is used to update resource contents as well as to allocate
+    // space for dynamic resources.
+    // Initial resource data is uploaded using temporary one-time upload buffers
+    m_DynamicMemoryManager.ReleaseStalePages(CompletedFenceValue);
 
     for(Uint32 CPUHeap=0; CPUHeap < _countof(m_CPUDescriptorHeaps); ++CPUHeap)
     {
@@ -314,27 +293,6 @@ void RenderDeviceD3D12Impl::FinishFrame(bool ReleaseAllResources)
     Atomics::AtomicIncrement(m_FrameNumber);
 }
 
-DynamicUploadHeap* RenderDeviceD3D12Impl::RequestUploadHeap()
-{
-    std::lock_guard<std::mutex> LockGuard(m_UploadHeapMutex);
-
-#ifdef _DEBUG
-    size_t InitialSize = 1024+64;
-#else
-    size_t InitialSize = 64<<10;//16<<20;
-#endif
-
-    auto &UploadHeapAllocator = GetRawAllocator();
-    auto *pRawMem = ALLOCATE(UploadHeapAllocator, "DynamicUploadHeap instance", sizeof(DynamicUploadHeap));
-    auto *pNewHeap = new (pRawMem) DynamicUploadHeap(GetRawAllocator(), true, this, InitialSize);
-    m_UploadHeaps.emplace_back( pNewHeap, STDDeleterRawMem<DynamicUploadHeap>(UploadHeapAllocator) );
-    return pNewHeap;
-}
-
-void RenderDeviceD3D12Impl::ReleaseUploadHeap(DynamicUploadHeap* pUploadHeap)
-{
-
-}
 
 CommandContext* RenderDeviceD3D12Impl::AllocateCommandContext(const Char* ID)
 {

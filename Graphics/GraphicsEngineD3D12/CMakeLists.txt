@@ -16,7 +16,7 @@ set(INCLUDE
     include/d3dx12_win.h
     include/DescriptorHeap.h
     include/DeviceContextD3D12Impl.h
-    include/DynamicUploadHeap.h
+    include/D3D12DynamicHeap.h
     include/FenceD3D12Impl.h
     include/GenerateMips.h
     include/pch.h
@@ -63,7 +63,7 @@ set(SRC
     src/D3D12Utils.cpp
     src/DescriptorHeap.cpp
     src/DeviceContextD3D12Impl.cpp
-    src/DynamicUploadHeap.cpp
+    src/D3D12DynamicHeap.cpp
     src/FenceD3D12Impl.cpp
     src/GenerateMips.cpp
     src/PipelineStateD3D12Impl.cpp

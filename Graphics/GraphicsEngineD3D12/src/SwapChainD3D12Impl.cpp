@@ -127,6 +127,7 @@ void SwapChainD3D12Impl::Present(Uint32 SyncInterval)
     auto hr = m_pSwapChain->Present( SyncInterval, 0 );
     VERIFY(SUCCEEDED(hr), "Present failed");
 
+    pImmediateCtxD3D12->FinishFrame(false);
     pDeviceD3D12->FinishFrame();
 
 #if 0

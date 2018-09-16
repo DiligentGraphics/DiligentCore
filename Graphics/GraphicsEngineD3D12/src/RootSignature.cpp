@@ -1035,7 +1035,7 @@ void RootSignature::TransitionResources(ShaderResourceCacheD3D12& ResourceCache,
 void RootSignature::CommitRootViews(ShaderResourceCacheD3D12& ResourceCache, 
                                     CommandContext&           Ctx, 
                                     bool                      IsCompute,
-                                    Uint32                    ContextId)const
+                                    DeviceContextD3D12Impl*   pCtx)const
 {
     for(Uint32 rv = 0; rv < m_RootParams.GetNumRootViews(); ++rv)
     {
@@ -1054,7 +1054,7 @@ void RootSignature::CommitRootViews(ShaderResourceCacheD3D12& ResourceCache,
         if( !pBuffToTransition->CheckAllStates(D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER) )
             Ctx.TransitionResource(pBuffToTransition, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 
-        D3D12_GPU_VIRTUAL_ADDRESS CBVAddress = pBuffToTransition->GetGPUAddress(ContextId);
+        D3D12_GPU_VIRTUAL_ADDRESS CBVAddress = pBuffToTransition->GetGPUAddress(pCtx);
         if(IsCompute)
             Ctx.GetCommandList()->SetComputeRootConstantBufferView(RootInd, CBVAddress);
         else

@@ -1269,6 +1269,18 @@ namespace Diligent
         /// towards the limit. Command lists are only flushed when pipeline state is changed
         /// or when backbuffer is presented.
         Uint32 NumCommandsToFlushCmdList = 256;
+
+        /// A device context uses dynamic heap when it needs to allocate temporary
+        /// CPU-accessible memory to update a resource via IBufer::UpdateData() or
+        /// ITexture::UpdateData(), or to map dynamic resources.
+        /// Device contexts first request a chunk of memory from global dynamic
+        /// resource manager and then suballocate from this chunk in a lock-free
+        /// fashion. DynamicHeapPageSize defines the size of this chunk.
+        Uint32 DynamicHeapPageSize = 1 << 20;
+
+        /// Number of dynamic heap pages that will be reserved by the
+        /// global dynamic heap manager to avoid page creation at run time.
+        Uint32 NumDynamicHeapPagesToReserve = 1;
     };
 
     /// Attributes specific to Vulkan engine

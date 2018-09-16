@@ -39,9 +39,9 @@ class CommandListVkImpl final : public CommandListBase<ICommandList, RenderDevic
 public:
     using TCommandListBase = CommandListBase<ICommandList, RenderDeviceVkImpl>;
 
-    CommandListVkImpl(IReferenceCounters*  pRefCounters, 
-                      RenderDeviceVkImpl*  pDevice, 
-                      IDeviceContext*      pDeferredCtx, 
+    CommandListVkImpl(IReferenceCounters*  pRefCounters,
+                      RenderDeviceVkImpl*  pDevice,
+                      IDeviceContext*      pDeferredCtx,
                       VkCommandBuffer      vkCmdBuff,
                       Uint64               CommandListNumber) :
         TCommandListBase     (pRefCounters, pDevice),
@@ -56,14 +56,14 @@ public:
         VERIFY(m_vkCmdBuff == VK_NULL_HANDLE && !m_pDeferredCtx, "Destroying command list that was never executed");
     }
 
-    void Close(VkCommandBuffer&                CmdBuff,
-                RefCntAutoPtr<IDeviceContext>& pDeferredCtx,
-                Uint64&                        CommandBufferNumber)
+    void Close(VkCommandBuffer&               CmdBuff,
+               RefCntAutoPtr<IDeviceContext>& pDeferredCtx,
+               Uint64&                        CommandBufferNumber)
     {
-        CmdBuff = m_vkCmdBuff;
-        m_vkCmdBuff = VK_NULL_HANDLE;
-        pDeferredCtx = std::move(m_pDeferredCtx);
-        CommandBufferNumber = m_CommandBufferNumber;
+        CmdBuff               = m_vkCmdBuff;
+        m_vkCmdBuff           = VK_NULL_HANDLE;
+        pDeferredCtx          = std::move(m_pDeferredCtx);
+        CommandBufferNumber   = m_CommandBufferNumber;
         m_CommandBufferNumber = 0;
     }
 
