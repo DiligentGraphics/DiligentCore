@@ -27,25 +27,39 @@
 
 struct BasicPlatformMisc
 {
-    static Diligent::Uint32 GetMSB(Diligent::Uint32 Val)
+    template<typename Type>
+    static Diligent::Uint32 GetMSB(Type Val)
     {
-        if( Val == 0 )return 32;
+        if( Val == 0 )return sizeof(Type)*8;
 
-        Diligent::Uint32 MSB = 31;
-        while( !(Val & (1u << MSB)) )
+        Diligent::Uint32 MSB = sizeof(Type)*8-1;
+        while( !(Val & (Type{1} << MSB)) )
             --MSB;
 
         return MSB;
     }
 
-    static Diligent::Uint32 GetLSB(Diligent::Uint32 Val)
+    template<typename Type>
+    static Diligent::Uint32 GetLSB(Type Val)
     {
-        if( Val == 0 )return 32;
+        if( Val == 0 )return sizeof(Type)*8;
 
         Diligent::Uint32 LSB = 0;
-        while( !(Val & (1u << LSB)) )
+        while( !(Val & (Type{1} << LSB)) )
             ++LSB;
 
         return LSB;
+    }
+
+    template<typename Type>
+    static Diligent::Uint32 CountOneBits(Type Val)
+    {
+        Diligent::Uint32 bits = 0;
+        while(Val != 0)
+        {
+            Val &= (Val-1);
+            ++bits;
+        }
+        return bits;
     }
 };

@@ -30,7 +30,7 @@
 
 struct WindowsMisc : public BasicPlatformMisc
 {
-    static Diligent::Uint32 GetMSB(Diligent::Uint32 Val)
+    inline static Diligent::Uint32 GetMSB(Diligent::Uint32 Val)
     {
         if( Val == 0 )return 32;
 
@@ -41,7 +41,18 @@ struct WindowsMisc : public BasicPlatformMisc
         return MSB;
     }
 
-    static Diligent::Uint32 GetLSB(Diligent::Uint32 Val)
+    inline static Diligent::Uint32 GetMSB(Diligent::Uint64 Val)
+    {
+        if( Val == 0 )return 64;
+
+        unsigned long MSB = 64;
+        _BitScanReverse64(&MSB, Val);
+        VERIFY_EXPR(MSB == BasicPlatformMisc::GetMSB(Val));
+
+        return MSB;
+    }
+
+    inline static Diligent::Uint32 GetLSB(Diligent::Uint32 Val)
     {
         if( Val == 0 )return 32;
 
@@ -50,5 +61,30 @@ struct WindowsMisc : public BasicPlatformMisc
         VERIFY_EXPR(LSB == BasicPlatformMisc::GetLSB(Val));
 
         return LSB;
+    }
+
+    inline static Diligent::Uint32 GetLSB(Diligent::Uint64 Val)
+    {
+        if( Val == 0 )return 64;
+
+        unsigned long LSB = 64;
+        _BitScanForward64(&LSB, Val);
+        VERIFY_EXPR(LSB == BasicPlatformMisc::GetLSB(Val));
+
+        return LSB;
+    }
+
+    inline static Diligent::Uint32 CountOneBits(Diligent::Uint32 Val)
+    {
+        auto Bits = __popcnt(Val);
+        VERIFY_EXPR(Bits == BasicPlatformMisc::CountOneBits(Val));
+        return Bits;
+    }
+
+    inline static Diligent::Uint32 CountOneBits(Diligent::Uint64 Val)
+    {
+        auto Bits = __popcnt64(Val);
+        VERIFY_EXPR(Bits == BasicPlatformMisc::CountOneBits(Val));
+        return static_cast<Diligent::Uint32>(Bits);
     }
 };

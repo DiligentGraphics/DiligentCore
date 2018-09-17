@@ -27,19 +27,19 @@
 
 #if PLATFORM_WIN32 || PLATFORM_UNIVERSAL_WINDOWS
     #include "../Win32/include/Win32PlatformMisc.h"
-    typedef WindowsMisc PlatformMisc;
+    using PlatformMisc = WindowsMisc;
 
 #elif PLATFORM_ANDROID
     #include "../Android/include/AndroidPlatformMisc.h"
-    typedef AndroidMisc PlatformMisc;
+    using PlatformMisc = AndroidMisc;
 
 #elif PLATFORM_LINUX
     #include "../Linux/include/LinuxPlatformMisc.h"
-    typedef LinuxMisc PlatformMisc;
+    using PlatformMisc = LinuxMisc;
 
 #elif PLATFORM_MACOS || PLATFORM_IOS
     #include "../Apple/include/ApplePlatformMisc.h"
-    typedef AppleMisc PlatformMisc;
+    using PlatformMisc = AppleMisc;
 
 #else
 

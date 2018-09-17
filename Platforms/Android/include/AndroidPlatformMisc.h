@@ -25,19 +25,9 @@
 
 #include "../../Basic/interface/BasicPlatformMisc.h"
 #include "../../../Platforms/Basic/interface/DebugUtilities.h"
+#include "../../Linux/include/LinuxPlatformMisc.h"
 
-struct AndroidMisc : public BasicPlatformMisc
+struct AndroidMisc : public LinuxMisc
 {
-    static Diligent::Uint32 GetMSB(Diligent::Uint32 Val)
-    {
-        if( Val == 0 )return 32;
 
-        // Returns the number of leading 0-bits in x, starting at the 
-        // most significant bit position. If x is 0, the result is undefined.
-        auto LeadingZeros = __builtin_clz(Val);
-        auto MSB = 31 - LeadingZeros;
-        VERIFY_EXPR(MSB == BasicPlatformMisc::GetMSB(Val));
-
-        return MSB;
-    }
 };

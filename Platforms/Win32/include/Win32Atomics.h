@@ -27,18 +27,17 @@ struct WindowsAtomics
 {
     // Use windows-specific atomics. Standard atomic eventually call
     // the same functions, but introduce significant overhead
-
-    typedef long Long;
-    typedef volatile long AtomicLong;
-    typedef long long Int64;
-    typedef volatile long long AtomicInt64;
+    using Long        = long;
+    using AtomicLong  = volatile long;
+    using Int64       = long long;
+    using AtomicInt64 = volatile long long;
 
     // The function returns the resulting INCREMENTED value.
-    static Long AtomicIncrement(AtomicLong &Val);
+    static Long  AtomicIncrement(AtomicLong  &Val);
     static Int64 AtomicIncrement(AtomicInt64 &Val);
 
     // The function returns the resulting DECREMENTED value.
-    static Long AtomicDecrement(AtomicLong &Val);
+    static Long  AtomicDecrement(AtomicLong  &Val);
     static Int64 AtomicDecrement(AtomicInt64 &Val);
     
     // The function compares the Destination value with the Comparand value. If the Destination value is equal 
@@ -47,6 +46,6 @@ struct WindowsAtomics
     // The function returns the initial value of the Destination parameter
     static Long AtomicCompareExchange( AtomicLong &Destination, Long Exchange, Long Comparand);
 
-    static Long AtomicAdd( AtomicLong &Destination, Long Val);
+    static Long  AtomicAdd( AtomicLong  &Destination, Long  Val);
     static Int64 AtomicAdd( AtomicInt64 &Destination, Int64 Val);
 };
