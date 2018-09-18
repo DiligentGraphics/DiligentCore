@@ -46,7 +46,21 @@ struct WindowsMisc : public BasicPlatformMisc
         if( Val == 0 )return 64;
 
         unsigned long MSB = 64;
+#if _WIN64
         _BitScanReverse64(&MSB, Val);
+#else
+        Diligent::Uint32 high = static_cast<Diligent::Uint32>((Val>>32) & 0xFFFFFFFF);
+        if (high!=0)
+        {
+            MSB = 32 + GetMSB(high);
+        }
+        else
+        {
+            Diligent::Uint32 low = static_cast<Diligent::Uint32>(Val & 0xFFFFFFFF);
+            VERIFY_EXPR(low != 0);
+            MSB = GetMSB(low);
+        }
+#endif
         VERIFY_EXPR(MSB == BasicPlatformMisc::GetMSB(Val));
 
         return MSB;
@@ -68,9 +82,23 @@ struct WindowsMisc : public BasicPlatformMisc
         if( Val == 0 )return 64;
 
         unsigned long LSB = 64;
+#if _WIN64
         _BitScanForward64(&LSB, Val);
-        VERIFY_EXPR(LSB == BasicPlatformMisc::GetLSB(Val));
+#else
+        Diligent::Uint32 low = static_cast<Diligent::Uint32>(Val & 0xFFFFFFFF);
+        if (low != 0)
+        {
+            LSB = GetLSB(low);
+        }
+        else
+        {
+            Diligent::Uint32 high = static_cast<Diligent::Uint32>((Val>>32) & 0xFFFFFFFF);
+            VERIFY_EXPR(high != 0);
+            LSB = 32 + GetLSB(high);
+        }
+#endif
 
+        VERIFY_EXPR(LSB == BasicPlatformMisc::GetLSB(Val));
         return LSB;
     }
 
@@ -83,7 +111,12 @@ struct WindowsMisc : public BasicPlatformMisc
 
     inline static Diligent::Uint32 CountOneBits(Diligent::Uint64 Val)
     {
+#if _WIN64
         auto Bits = __popcnt64(Val);
+#else
+        auto Bits = CountOneBits( static_cast<Diligent::Uint32>((Val >>  0) & 0xFFFFFFFF) ) +
+                    CountOneBits( static_cast<Diligent::Uint32>((Val >> 32) & 0xFFFFFFFF) );
+#endif
         VERIFY_EXPR(Bits == BasicPlatformMisc::CountOneBits(Val));
         return static_cast<Diligent::Uint32>(Bits);
     }
