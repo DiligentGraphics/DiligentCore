@@ -28,6 +28,7 @@
 
 #include "RenderDeviceD3D12.h"
 #include "RenderDeviceD3DBase.h"
+#include "RenderDeviceNextGenBase.h"
 #include "DescriptorHeap.h"
 #include "CommandListManager.h"
 #include "CommandContext.h"
@@ -41,10 +42,10 @@ namespace Diligent
 {
 
 /// Implementation of the Diligent::IRenderDeviceD3D12 interface
-class RenderDeviceD3D12Impl final : public RenderDeviceD3DBase<IRenderDeviceD3D12>
+class RenderDeviceD3D12Impl final : public RenderDeviceNextGenBase< RenderDeviceD3DBase<IRenderDeviceD3D12>, ICommandQueueD3D12 >
 {
 public:
-    using TRenderDeviceBase = RenderDeviceD3DBase<IRenderDeviceD3D12>;
+    using TRenderDeviceBase = RenderDeviceNextGenBase< RenderDeviceD3DBase<IRenderDeviceD3D12>, ICommandQueueD3D12 >;
 
     RenderDeviceD3D12Impl( IReferenceCounters*       pRefCounters, 
                            IMemoryAllocator&         RawMemAllocator, 

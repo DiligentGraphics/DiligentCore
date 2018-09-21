@@ -151,6 +151,9 @@ struct PipelineStateDesc : DeviceObjectAttribs
     /// binding object instances.
     Uint32 SRBAllocationGranularity = 1;
 
+    /// Defines which command queues this pipeline state can be used with
+    Uint64 CommandQueueMask = 1;
+
     /// Graphics pipeline state description. This memeber is ignored if IsComputePipeline == True
     GraphicsPipelineDesc GraphicsPipeline;
 

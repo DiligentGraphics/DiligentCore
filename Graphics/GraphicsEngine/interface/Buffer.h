@@ -96,6 +96,9 @@ struct BufferDesc : DeviceObjectAttribs
     /// created for this buffer.
     Uint32 ElementByteStride = 0;
 
+    /// Defines which command queues this buffer can be used with
+    Uint64 CommandQueueMask = 1;
+
     /// Tests if two structures are equivalent
 
     /// \param [in] RHS - reference to the structure to perform comparison with
@@ -106,12 +109,13 @@ struct BufferDesc : DeviceObjectAttribs
     /// the buffer description.
     bool operator == (const BufferDesc& RHS)const
     {
-        return uiSizeInBytes     == RHS.uiSizeInBytes  && 
-               BindFlags         == RHS.BindFlags      &&
-               Usage             == RHS.Usage          &&
-               CPUAccessFlags    == RHS.CPUAccessFlags &&
-               Mode              == RHS.Mode           &&
-               ElementByteStride == RHS.ElementByteStride;
+        return uiSizeInBytes     == RHS.uiSizeInBytes     && 
+               BindFlags         == RHS.BindFlags         &&
+               Usage             == RHS.Usage             &&
+               CPUAccessFlags    == RHS.CPUAccessFlags    &&
+               Mode              == RHS.Mode              &&
+               ElementByteStride == RHS.ElementByteStride && 
+               CommandQueueMask  == RHS.CommandQueueMask;
     }
 };
 

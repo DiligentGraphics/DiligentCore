@@ -108,7 +108,8 @@ public:
 
     VulkanDynamicMemoryManager(IMemoryAllocator&         Allocator, 
                                class RenderDeviceVkImpl& DeviceVk, 
-                               Uint32                    Size);
+                               Uint32                    Size,
+                               Uint64                    CommandQueueMask);
     ~VulkanDynamicMemoryManager();
 
     VulkanDynamicMemoryManager            (const VulkanDynamicMemoryManager&)  = delete;
@@ -131,7 +132,7 @@ private:
     VulkanUtilities::DeviceMemoryWrapper m_BufferMemory;
     Uint8*                               m_CPUAddress;
     const VkDeviceSize                   m_DefaultAlignment;
-
+    const Uint64                         m_CommandQueueMask;
     OffsetType  m_TotalPeakSize    = 0;
 };
 

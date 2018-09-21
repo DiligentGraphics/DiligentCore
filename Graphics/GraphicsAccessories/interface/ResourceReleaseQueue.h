@@ -31,17 +31,17 @@
 
 #include <mutex>
 #include <deque>
-#include <memory>
 
 #include "MemoryAllocator.h"
 #include "STDAllocator.h"
 #include "DebugUtilities.h"
+#include "Atomics.h"
 
 namespace Diligent
 {
 
 /// Helper class that wraps stale resources of different types
-class DynamicStaleResourceWrapper
+class DynamicStaleResourceWrapper final
 {
 public:
     //   ___________________________                                  ___________________________
@@ -52,17 +52,20 @@ public:
     //             |                                                            |
     //             |                                                            |
     //             |                                                            |
-    //   __________V___________________________________               __________V___________________________________
-    //  |SpecificStaleResource<VulkanBufferWrapper>    |             |SpecificStaleResource<VulkanMemoryAllocation> |
-    //  |                                              |             |                                              |
-    //  |  VulkanBufferWrapper m_SpecificResource;     |             |  VulkanMemoryAllocation m_SpecificResource;  |
-    //  |______________________________________________|             |______________________________________________|
+    //   __________V_______________________________________           __________V___________________________________
+    //  |SpecificSharedStaleResource<VulkanBufferWrapper>  |         |SpecificStaleResource<VulkanMemoryAllocation> |
+    //  |                                                  |         |                                              |
+    //  |  VulkanBufferWrapper m_SpecificResource;         |         |  VulkanMemoryAllocation m_SpecificResource;  |
+    //  |  AtomicLong          m_RefCounter                |         |______________________________________________|
+    //  |__________________________________________________|
     //
 
-    template<typename ResourceType>
-    static DynamicStaleResourceWrapper Create(ResourceType&& Resource)
+    template<typename ResourceType, typename = typename std::enable_if<std::is_object<ResourceType>::value>::type>
+    static DynamicStaleResourceWrapper Create(ResourceType&& Resource, Atomics::Long NumReferences)
     {
-        class SpecificStaleResource : public StaleResourceBase
+        VERIFY_EXPR(NumReferences >= 1);
+
+        class SpecificStaleResource final : public StaleResourceBase
         {
         public:
             SpecificStaleResource(ResourceType&& SpecificResource) :
@@ -74,37 +77,87 @@ public:
             SpecificStaleResource& operator = (const SpecificStaleResource&) = delete;
             SpecificStaleResource& operator = (SpecificStaleResource&&)      = delete;
 
+            virtual void Release() override final
+            {
+                delete this;
+            }
+
         private:
             ResourceType m_SpecificResource;
         };
-        return DynamicStaleResourceWrapper{new SpecificStaleResource{std::move(Resource)}};
+
+        class SpecificSharedStaleResource final : public StaleResourceBase
+        {
+        public:
+            SpecificSharedStaleResource(ResourceType&& SpecificResource, Atomics::Long NumReferences) :
+                m_SpecificResource(std::move(SpecificResource))
+            {
+                m_RefCounter = NumReferences;
+            }
+
+            SpecificSharedStaleResource             (const SpecificSharedStaleResource&) = delete;
+            SpecificSharedStaleResource             (SpecificSharedStaleResource&&)      = delete;
+            SpecificSharedStaleResource& operator = (const SpecificSharedStaleResource&) = delete;
+            SpecificSharedStaleResource& operator = (SpecificSharedStaleResource&&)      = delete;
+
+            virtual void Release() override final
+            {
+                if (Atomics::AtomicDecrement(m_RefCounter) == 0)
+                {
+                    delete this;
+                }
+            }
+
+        private:
+            ResourceType m_SpecificResource;
+            Atomics::AtomicLong m_RefCounter;
+        };
+
+        return DynamicStaleResourceWrapper{
+            NumReferences == 1 ?
+                static_cast<StaleResourceBase*>( new SpecificStaleResource      {std::move(Resource)} ) :
+                static_cast<StaleResourceBase*>( new SpecificSharedStaleResource{std::move(Resource), NumReferences} )
+        };
     }
 
     DynamicStaleResourceWrapper(DynamicStaleResourceWrapper&& rhs)noexcept :
         m_pStaleResource(std::move(rhs.m_pStaleResource))
-    {}
-
-    DynamicStaleResourceWrapper& operator = (DynamicStaleResourceWrapper&& rhs)noexcept
     {
-        m_pStaleResource = std::move(rhs.m_pStaleResource);
-        return *this;
+        rhs.m_pStaleResource = nullptr;
     }
 
-    DynamicStaleResourceWrapper             (const DynamicStaleResourceWrapper&) = delete;
-    DynamicStaleResourceWrapper& operator = (const DynamicStaleResourceWrapper&) = delete;
+    DynamicStaleResourceWrapper (const DynamicStaleResourceWrapper& rhs) :
+        m_pStaleResource(rhs.m_pStaleResource)
+    {
+    }
+
+    DynamicStaleResourceWrapper& operator = (const DynamicStaleResourceWrapper&)  = delete;
+    DynamicStaleResourceWrapper& operator = (      DynamicStaleResourceWrapper&&) = delete;
+
+    void GiveUpOwnership()
+    {
+        m_pStaleResource = nullptr;
+    }
+
+    ~DynamicStaleResourceWrapper()
+    {
+        if (m_pStaleResource != nullptr)
+            m_pStaleResource->Release();
+    }
 
 private:
     class StaleResourceBase
     {
     public:
         virtual ~StaleResourceBase() = 0 {}
+        virtual void Release() = 0;
     };
 
     DynamicStaleResourceWrapper(StaleResourceBase *pStaleResource) :
         m_pStaleResource(pStaleResource)
     {}
 
-    std::unique_ptr<StaleResourceBase> m_pStaleResource;
+    StaleResourceBase* m_pStaleResource;
 };
 
 /// Helper class that wraps stale resources of the same type
@@ -112,8 +165,9 @@ template<typename ResourceType>
 class StaticStaleResourceWrapper
 {
 public:
-    static StaticStaleResourceWrapper Create(ResourceType&& Resource)
+    static StaticStaleResourceWrapper Create(ResourceType&& Resource, Atomics::Long NumReferences)
     {
+        VERIFY(NumReferences == 1, "Number of references must be 1 for StaticStaleResourceWrapper");
         return StaticStaleResourceWrapper{std::move(Resource)};
     }
 
@@ -129,7 +183,6 @@ public:
 
     StaticStaleResourceWrapper             (const StaticStaleResourceWrapper&) = delete;
     StaticStaleResourceWrapper& operator = (const StaticStaleResourceWrapper&) = delete;
-
 
 private:
     StaticStaleResourceWrapper(ResourceType&& StaleResource) : 
@@ -154,7 +207,7 @@ class ResourceReleaseQueue
 {
 public:
     ResourceReleaseQueue(IMemoryAllocator& Allocator) : 
-        m_ReleaseQueue(STD_ALLOCATOR_RAW_MEM(ReleaseQueueElemType, Allocator, "Allocator for deque<ReleaseQueueElemType>")),
+        m_ReleaseQueue  (STD_ALLOCATOR_RAW_MEM(ReleaseQueueElemType, Allocator, "Allocator for deque<ReleaseQueueElemType>")),
         m_StaleResources(STD_ALLOCATOR_RAW_MEM(ReleaseQueueElemType, Allocator, "Allocator for deque<ReleaseQueueElemType>"))
     {}
 
@@ -164,24 +217,67 @@ public:
         VERIFY(m_ReleaseQueue.empty(), "Release queue is not empty");
     }
 
-    /// Moves resource to the stale resources queue
-    /// \param [in] Resource              - Resource to be released
-    /// \param [in] NextCommandListNumber - Number of the command list that will be submitted to the queue next
-    template<typename ResourceType>
-    void SafeReleaseResource(ResourceType&& Resource, Uint64 NextCommandListNumber)
+    /// Creates a resource wrapper for the specific resource type
+    /// \param [in] Resource      - Resource to be released
+    /// \param [in] NumReferences - Number of references to the resource
+    template<typename ResourceType, typename = typename std::enable_if<std::is_object<ResourceType>::value>::type>
+    static ResourceWrapperType CreateWrapper(ResourceType&& Resource, Atomics::Long NumReferences)
     {
-        std::lock_guard<std::mutex> LockGuard(m_StaleObjectsMutex);
-        m_StaleResources.emplace_back(NextCommandListNumber, ResourceWrapperType::Create(std::move(Resource)) );
+        return ResourceWrapperType::Create(std::move(Resource), NumReferences);
     }
 
-    /// Adds resource directly to the release queue
+    /// Moves a resource to the stale resources queue
+    /// \param [in] Resource              - Resource to be released
+    /// \param [in] NextCommandListNumber - Number of the command list that will be submitted to the queue next
+    template<typename ResourceType, typename = typename std::enable_if<std::is_object<ResourceType>::value>::type>
+    void SafeReleaseResource(ResourceType&& Resource, Uint64 NextCommandListNumber)
+    {
+        SafeReleaseResource(CreateWrapper(std::move(Resource), 1), NextCommandListNumber);
+    }
+
+    /// Moves a resource wrapper to the stale resources queue
+    /// \param [in] Wrapper               - Resource wrapper containing the resource to be released
+    /// \param [in] NextCommandListNumber - Number of the command list that will be submitted to the queue next
+    void SafeReleaseResource(ResourceWrapperType&& Wrapper, Uint64 NextCommandListNumber)
+    {
+        std::lock_guard<std::mutex> LockGuard(m_StaleObjectsMutex);
+        m_StaleResources.emplace_back(NextCommandListNumber, std::move(Wrapper));
+    }
+
+    /// Moves a copy of the resource wrapper to the stale resources queue
+    /// \param [in] Wrapper               - Resource wrapper containing the resource to be released
+    /// \param [in] NextCommandListNumber - Number of the command list that will be submitted to the queue next
+    void SafeReleaseResource(const ResourceWrapperType& Wrapper, Uint64 NextCommandListNumber)
+    {
+        std::lock_guard<std::mutex> LockGuard(m_StaleObjectsMutex);
+        m_StaleResources.emplace_back(NextCommandListNumber, Wrapper);
+    }
+
+    /// Adds a resource directly to the release queue
     /// \param [in] Resource    - Resource to be released.
     /// \param [in] FenceValue  - Fence value indicating when the resource was used last time.
-    template<typename ResourceType>
+    template<typename ResourceType, typename = typename std::enable_if<std::is_object<ResourceType>::value>::type>
     void DiscardResource(ResourceType&& Resource, Uint64 FenceValue)
     {
+        DiscardResource(CreateWrapper(std::move(Resource), 1), FenceValue);
+    }
+
+    /// Adds a resource wrapper directly to the release queue
+    /// \param [in] Wrapper     - Resource wrapper containing the resource to be released.
+    /// \param [in] FenceValue  - Fence value indicating when the resource was used last time.
+    void DiscardResource(ResourceWrapperType&& Wrapper, Uint64 FenceValue)
+    {
         std::lock_guard<std::mutex> ReleaseQueueLock(m_ReleaseQueueMutex);
-        m_ReleaseQueue.emplace_back(FenceValue, ResourceWrapperType::Create(std::move(Resource)) );
+        m_ReleaseQueue.emplace_back(FenceValue, std::move(Wrapper) );
+    }
+
+    /// Adds a copy of the resource wrapper directly to the release queue
+    /// \param [in] Wrapper     - Resource wrapper containing the resource to be released.
+    /// \param [in] FenceValue  - Fence value indicating when the resource was used last time.
+    void DiscardResource(const ResourceWrapperType& Wrapper, Uint64 FenceValue)
+    {
+        std::lock_guard<std::mutex> ReleaseQueueLock(m_ReleaseQueueMutex);
+        m_ReleaseQueue.emplace_back(FenceValue, Wrapper);
     }
 
     /// Adds multiple resources directly to the release queue
@@ -194,7 +290,7 @@ public:
         ResourceType Resource;
         while(Iterator(Resource))
         {
-            m_ReleaseQueue.emplace_back(FenceValue, ResourceWrapperType::Create(std::move(Resource)) );
+            m_ReleaseQueue.emplace_back(FenceValue, CreateWrapper(std::move(Resource), 1) );
         }
     }
 

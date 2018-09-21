@@ -141,7 +141,8 @@ PRIVATE
 set(PRIVATE_DEPENDENCIES 
     BuildSettings 
     Common 
-    GraphicsEngineD3DBase 
+    GraphicsEngineD3DBase
+    GraphicsEngineNextGenBase
     TargetPlatform 
     dxgi.lib
     D3D12.lib 

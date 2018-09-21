@@ -47,7 +47,7 @@ public:
     static VkDescriptorType GetVkDescriptorType(const SPIRVShaderResourceAttribs &Res);
 
     PipelineLayout();
-    void Release(RenderDeviceVkImpl* pDeviceVkImpl);
+    void Release(RenderDeviceVkImpl* pDeviceVkImpl, Uint64 CommandQueueMask);
     void Finalize(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice);
 
     VkPipelineLayout GetVkPipelineLayout()const{return m_LayoutMgr.GetVkPipelineLayout();}
@@ -153,7 +153,7 @@ private:
             ~DescriptorSetLayout();
             void AddBinding(const VkDescriptorSetLayoutBinding& Binding, IMemoryAllocator& MemAllocator);
             void Finalize(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice, IMemoryAllocator& MemAllocator, VkDescriptorSetLayoutBinding* pNewBindings);
-            void Release(RenderDeviceVkImpl* pRenderDeviceVk, IMemoryAllocator& MemAllocator);
+            void Release(RenderDeviceVkImpl* pRenderDeviceVk, IMemoryAllocator& MemAllocator, Uint64 CommandQueueMask);
 
             bool operator == (const DescriptorSetLayout& rhs)const;
             bool operator != (const DescriptorSetLayout& rhs)const{return !(*this == rhs);}
@@ -173,7 +173,7 @@ private:
         DescriptorSetLayoutManager& operator= (DescriptorSetLayoutManager&&)      = delete;
         
         void Finalize(const VulkanUtilities::VulkanLogicalDevice &LogicalDevice);
-        void Release(RenderDeviceVkImpl* pRenderDeviceVk);
+        void Release(RenderDeviceVkImpl* pRenderDeviceVk, Uint64 CommandQueueMask);
 
               DescriptorSetLayout& GetDescriptorSet(SHADER_VARIABLE_TYPE VarType)      { return m_DescriptorSetLayouts[VarType == SHADER_VARIABLE_TYPE_DYNAMIC ? 1 : 0]; }
         const DescriptorSetLayout& GetDescriptorSet(SHADER_VARIABLE_TYPE VarType)const { return m_DescriptorSetLayouts[VarType == SHADER_VARIABLE_TYPE_DYNAMIC ? 1 : 0]; }

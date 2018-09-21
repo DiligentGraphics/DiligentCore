@@ -1,0 +1,275 @@
+/*     Copyright 2015-2018 Egor Yusov
+ *  
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ * 
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ *  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ *  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ *  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF ANY PROPRIETARY RIGHTS.
+ *
+ *  In no event and under no legal theory, whether in tort (including negligence), 
+ *  contract, or otherwise, unless required by applicable law (such as deliberate 
+ *  and grossly negligent acts) or agreed to in writing, shall any Contributor be
+ *  liable for any damages, including any direct, indirect, special, incidental, 
+ *  or consequential damages of any character arising as a result of this License or 
+ *  out of the use or inability to use the software (including but not limited to damages 
+ *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and 
+ *  all other commercial damages or losses), even if such Contributor has been advised 
+ *  of the possibility of such damages.
+ */
+
+#pragma once
+
+#include <vector>
+#include <mutex>
+
+#include "Atomics.h"
+#include "BasicTypes.h"
+#include "ReferenceCounters.h"
+#include "MemoryAllocator.h"
+#include "RefCntAutoPtr.h"
+#include "PlatformMisc.h"
+#include "ResourceReleaseQueue.h"
+
+namespace Diligent
+{
+
+/// Base implementation of the render device for next-generation backends.
+
+template<class TBase, typename CommandQueueType>
+class RenderDeviceNextGenBase : public TBase
+{
+public:
+    RenderDeviceNextGenBase(IReferenceCounters* pRefCounters, 
+                            IMemoryAllocator&   RawMemAllocator, 
+                            size_t NumQueues,
+                            Uint32 NumDeferredContexts,
+                            size_t TextureObjSize, 
+                            size_t TexViewObjSize,
+                            size_t BufferObjSize, 
+                            size_t BuffViewObjSize,
+                            size_t ShaderObjSize, 
+                            size_t SamplerObjSize,
+                            size_t PSOSize,
+                            size_t SRBSize,
+                            size_t FenceSize) :
+        TBase(pRefCounters,
+              RawMemAllocator,
+              NumDeferredContexts,
+              TextureObjSize,
+              TexViewObjSize,
+              BufferObjSize,
+              BuffViewObjSize,
+              ShaderObjSize,
+              SamplerObjSize,
+              PSOSize,
+              SRBSize,
+              FenceSize),
+        m_NumQueues(NumQueues)
+    {
+        m_CommandQueues = reinterpret_cast<CommandQueue*>(ALLOCATE(m_RawMemAllocator, "Raw memory for the device command/release queues", sizeof(CommandQueue)*m_NumQueues));
+        for(size_t q=0; q < m_NumQueues; ++q)
+            new(m_CommandQueues+q)CommandQueue(m_RawMemAllocator);
+    }
+
+    ~RenderDeviceNextGenBase()
+    {
+        DestroyCommandQueues();
+    }
+
+    // The following basic requirement guarantees correctness of resource deallocation:
+    //
+    //        A resource is never released before the last draw command referencing it is submitted to the command queue
+    //
+
+    //
+    // CPU
+    //                       Last Reference
+    //                        of resource X
+    //                             |
+    //                             |     Submit Cmd       Submit Cmd            Submit Cmd
+    //                             |      List N           List N+1              List N+2
+    //                             V         |                |                     |
+    //    NextFenceValue       |   *  N      |      N+1       |          N+2        |
+    //
+    //
+    //    CompletedFenceValue       |     N-3      |      N-2      |        N-1        |        N       |
+    //                              .              .               .                   .                .
+    // -----------------------------.--------------.---------------.-------------------.----------------.-------------
+    //                              .              .               .                   .                .
+    //       
+    // GPU                          | Cmd List N-2 | Cmd List N-1  |    Cmd List N     |   Cmd List N+1 |
+    //                                                                                 |
+    //                                                                                 |
+    //                                                                          Resource X can
+    //                                                                           be released
+    template<typename ObjectType, typename = typename std::enable_if<std::is_object<ObjectType>::value>::type>
+    void SafeReleaseDeviceObject(ObjectType&& Object, Uint64 QueueMask)
+    {
+        QueueMask &= GetCommandQueueMask();
+        
+        VERIFY(QueueMask != 0, "At least one bit should be set in the command queue mask");
+        if (QueueMask == 0)
+            return;
+
+        Atomics::Long NumReferences = PlatformMisc::CountOneBits(QueueMask);
+        auto Wrapper = DynamicStaleResourceWrapper::Create(std::move(Object), NumReferences);
+
+        while (QueueMask != 0)
+        {
+            auto QueueIndex = PlatformMisc::GetLSB(QueueMask);
+            VERIFY_EXPR(QueueIndex < m_NumQueues);
+
+            auto& Queue = m_CommandQueues[QueueIndex];
+            // Do not use std::move on wrapper!!!
+            Queue.ReleaseQueue.SafeReleaseResource(Wrapper, Queue.NextCmdBufferNumber);
+            QueueMask &= ~(Uint64{1} << Uint64{QueueIndex});
+            --NumReferences;
+        }
+        VERIFY_EXPR(NumReferences == 0);
+
+        Wrapper.GiveUpOwnership();
+    }
+    
+    size_t GetCommandQueueCount()const
+    {
+        return m_NumQueues;
+    }
+
+    Uint64 GetCommandQueueMask()const
+    {
+        return (m_NumQueues < 64) ? ((Uint64{1} << Uint64{m_NumQueues}) - 1) : ~Uint64{0};
+    }
+
+    void PurgeReleaseQueues()
+    {
+        for(size_t q=0; q < m_NumQueues; ++q)
+        {
+            auto& Queue = m_CommandQueues[q];
+            Queue.ReleaseQueue.Purge(Queue.CmdQueue->GetCompletedFenceValue());
+        }
+    }
+
+    void IdleCommandQueues(bool IncrementCmdBuffNumber, bool ReleaseResources)
+    {
+        for(size_t q=0; q < m_NumQueues; ++q)
+        {
+            auto& Queue = m_CommandQueues[q];
+
+            Uint64 CmdBufferNumber = 0;
+            Uint64 FenceValue      = 0;
+            {
+                std::lock_guard<std::mutex> Lock(Queue.Mtx);
+
+                if (IncrementCmdBuffNumber)
+                {
+                    // Increment command buffer number before idling the queue.
+                    // This will make sure that any resource released while this function
+                    // is running will be associated with the next command buffer submission.
+                    CmdBufferNumber = static_cast<Uint64>(Queue.NextCmdBufferNumber);
+                    Atomics::AtomicIncrement(Queue.NextCmdBufferNumber);
+                }
+
+                FenceValue = Queue.CmdQueue->WaitForIdle();
+            }
+
+            if (ReleaseResources)
+            {
+                Queue.ReleaseQueue.DiscardStaleResources(CmdBufferNumber, FenceValue);
+                Queue.ReleaseQueue.Purge(Queue.CmdQueue->GetCompletedFenceValue());
+            }
+        }
+    }
+
+    struct SubmittedCommandBufferInfo
+    {
+        Uint64 CmdBufferNumber = 0;
+        Uint64 FenceValue      = 0;
+    };
+    template<typename SubmitDataType>
+    SubmittedCommandBufferInfo SubmitCommandBuffer(Uint32 QueueIndex, SubmitDataType& SubmitData, bool DiscardStaleResources)
+    {
+        SubmittedCommandBufferInfo CmdBuffInfo;
+        VERIFY_EXPR(QueueIndex < m_NumQueues);
+        auto& Queue = m_CommandQueues[QueueIndex];
+
+        {
+            std::lock_guard<std::mutex> Lock(Queue.Mtx);
+
+            // Increment command buffer number before submitting the cmd buffer.
+            // This will make sure that any resource released while this function
+            // is running will be associated with the next command buffer.
+            CmdBuffInfo.CmdBufferNumber = static_cast<Uint64>(Queue.NextCmdBufferNumber);
+            Atomics::AtomicIncrement(Queue.NextCmdBufferNumber);
+
+            CmdBuffInfo.FenceValue = Queue.CmdQueue->Submit(SubmitData);
+        }
+
+        if (DiscardStaleResources)
+        {
+            // The following basic requirement guarantees correctness of resource deallocation:
+            //
+            //        A resource is never released before the last draw command referencing it is submitted for execution
+            //
+
+            // Move stale objects into the release queue.
+            // Note that objects are moved from stale list to release queue based on the cmd buffer number, 
+            // not fence value. This makes sure that basic requirement is met even when the fence value is 
+            // not incremented while executing the command buffer (as is the case with Unity command queue).
+
+            // As long as resources used by deferred contexts are not released before the command list
+            // is executed through immediate context, this stategy always works.
+            Queue.ReleaseQueue.DiscardStaleResources(CmdBuffInfo.CmdBufferNumber, CmdBuffInfo.FenceValue);
+        }
+
+        return CmdBuffInfo;
+    }
+
+    ResourceReleaseQueue<DynamicStaleResourceWrapper>& GetReleaseQueue(Uint32 QueueIndex)
+    {
+        VERIFY_EXPR(QueueIndex < m_NumQueues);
+        return m_CommandQueues[QueueIndex].ReleaseQueue;
+    }
+
+    CommandQueueType& GetCommandQueue(Uint32 QueueIndex)
+    {
+        VERIFY_EXPR(QueueIndex < m_NumQueues);
+        return *m_CommandQueues[QueueIndex].CmdQueue;
+    }
+
+protected:
+    void DestroyCommandQueues()
+    {
+        if (m_CommandQueues != nullptr)
+        {
+            for(size_t q=0; q < m_NumQueues; ++q)
+                m_CommandQueues[q].~CommandQueue();
+            m_RawMemAllocator.Free(m_CommandQueues);
+            m_CommandQueues = nullptr;
+        }
+    }
+
+    struct CommandQueue
+    {
+        CommandQueue(IMemoryAllocator& Allocator)noexcept : 
+            ReleaseQueue(Allocator)
+        {}
+
+        CommandQueue             (const CommandQueue& rhs)  = delete;
+        CommandQueue             (      CommandQueue&& rhs) = delete;
+        CommandQueue& operator = (const CommandQueue& rhs)  = delete;
+        CommandQueue& operator = (      CommandQueue&& rhs) = delete;
+        
+        std::mutex                                        Mtx;
+        Atomics::Int64                                    NextCmdBufferNumber = 0;
+        RefCntAutoPtr<CommandQueueType>                   CmdQueue;
+        ResourceReleaseQueue<DynamicStaleResourceWrapper> ReleaseQueue;
+    };
+    const size_t  m_NumQueues     = 0;
+    CommandQueue* m_CommandQueues = nullptr;
+};
+
+}

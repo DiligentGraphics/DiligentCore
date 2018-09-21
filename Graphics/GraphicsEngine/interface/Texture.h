@@ -82,53 +82,55 @@ struct OptimizedClearValue
 struct TextureDesc : DeviceObjectAttribs
 {
     /// Texture type. See Diligent::RESOURCE_DIMENSION for details.
-    RESOURCE_DIMENSION Type;
+    RESOURCE_DIMENSION Type = RESOURCE_DIM_UNDEFINED;
 
     /// Texture width, in pixels.
-    Uint32 Width;
+    Uint32 Width = 0;
 
     /// Texture height, in pixels.
-    Uint32 Height;
+    Uint32 Height = 0;
     union
     {
         /// For a 1D array or 2D array, number of array slices
-        Uint32 ArraySize;
+        Uint32 ArraySize = 1;
 
         /// For a 3D texture, number of depth slices
         Uint32 Depth;
     };
 
     /// Texture format, see Diligent::TEXTURE_FORMAT.
-    TEXTURE_FORMAT Format;
+    TEXTURE_FORMAT Format = TEX_FORMAT_UNKNOWN;
 
     /// Number of Mip levels in the texture. Multisampled textures can only have 1 Mip level.
     /// Specify 0 to generate full mipmap chain.
-    Uint32 MipLevels;
+    Uint32 MipLevels = 1;
 
     /// Number of samples.\n
     /// Only 2D textures or 2D texture arrays can be multisampled.
-    Uint32 SampleCount;
+    Uint32 SampleCount = 1;
 
     /// Texture usage. See Diligent::USAGE for details.
-    USAGE Usage;
+    USAGE Usage = USAGE_DEFAULT;
 
     /// Bind flags, see Diligent::BIND_FLAGS for details. \n
     /// The following bind flags are allowed:
     /// Diligent::BIND_SHADER_RESOURCE, Diligent::BIND_RENDER_TARGET, Diligent::BIND_DEPTH_STENCIL,
     /// Diligent::and BIND_UNORDERED_ACCESS. \n
     /// Multisampled textures cannot have Diligent::BIND_UNORDERED_ACCESS flag set
-    Uint32 BindFlags;
+    Uint32 BindFlags = 0;
 
     /// CPU access flags or 0 if no CPU access is allowed, 
     /// see Diligent::CPU_ACCESS_FLAG for details.
-    Uint32 CPUAccessFlags;
+    Uint32 CPUAccessFlags = 0;
     
-
     /// Miscellaneous flags, see Diligent::MISC_TEXTURE_FLAG for details.
-    Uint32 MiscFlags;
+    Uint32 MiscFlags = 0;
     
     /// Optimized clear value
     OptimizedClearValue ClearValue;
+
+    /// Defines which command queues this texture can be used with
+    Uint64 CommandQueueMask = 1;
 
     /// Initializes the structure members with default values
 
@@ -146,20 +148,8 @@ struct TextureDesc : DeviceObjectAttribs
     /// BindFlags       | 0
     /// CPUAccessFlags  | 0
     /// MiscFlags       | 0
-    TextureDesc() : 
-        Type(RESOURCE_DIM_UNDEFINED),
-        Width(0),
-        Height(0),
-        ArraySize(1),
-        Format(TEX_FORMAT_UNKNOWN),
-        MipLevels(1),
-        SampleCount(1),
-        Usage(USAGE_DEFAULT),
-        BindFlags(0),
-        CPUAccessFlags(0),
-        MiscFlags(0)
-    {
-    }
+    /// CommandQueueMask| 1
+    TextureDesc() {}
 
     /// Tests if two structures are equivalent
 
@@ -174,18 +164,19 @@ struct TextureDesc : DeviceObjectAttribs
                 // Name is primarily used for debug purposes and does not affect the state.
                 // It is ignored in comparison operation.
         return  // strcmp(Name, RHS.Name) == 0          &&
-                Type           == RHS.Type           &&
-                Width          == RHS.Width          &&
-                Height         == RHS.Height         &&
-                ArraySize      == RHS.ArraySize      &&
-                Format         == RHS.Format         &&
-                MipLevels      == RHS.MipLevels      &&
-                SampleCount    == RHS.SampleCount    &&
-                Usage          == RHS.Usage          &&
-                BindFlags      == RHS.BindFlags      &&
-                CPUAccessFlags == RHS.CPUAccessFlags &&
-                MiscFlags      == RHS.MiscFlags      &&
-                ClearValue     == RHS.ClearValue;
+                Type             == RHS.Type           &&
+                Width            == RHS.Width          &&
+                Height           == RHS.Height         &&
+                ArraySize        == RHS.ArraySize      &&
+                Format           == RHS.Format         &&
+                MipLevels        == RHS.MipLevels      &&
+                SampleCount      == RHS.SampleCount    &&
+                Usage            == RHS.Usage          &&
+                BindFlags        == RHS.BindFlags      &&
+                CPUAccessFlags   == RHS.CPUAccessFlags &&
+                MiscFlags        == RHS.MiscFlags      &&
+                ClearValue       == RHS.ClearValue     &&
+                CommandQueueMask == RHS.CommandQueueMask;
     }
 };
 

@@ -29,6 +29,7 @@
 
 #include "RenderDeviceVk.h"
 #include "RenderDeviceBase.h"
+#include "RenderDeviceNextGenBase.h"
 #include "DescriptorPoolManager.h"
 #include "VulkanDynamicHeap.h"
 #include "Atomics.h"
@@ -51,10 +52,10 @@ namespace Diligent
 {
 
 /// Implementation of the Diligent::IRenderDeviceVk interface
-class RenderDeviceVkImpl final : public RenderDeviceBase<IRenderDeviceVk>
+class RenderDeviceVkImpl final : public RenderDeviceNextGenBase<RenderDeviceBase<IRenderDeviceVk>, ICommandQueueVk>
 {
 public:
-    using TRenderDeviceBase = RenderDeviceBase<IRenderDeviceVk>;
+    using TRenderDeviceBase = RenderDeviceNextGenBase<RenderDeviceBase<IRenderDeviceVk>, ICommandQueueVk>;
 
     RenderDeviceVkImpl( IReferenceCounters*     pRefCounters, 
                         IMemoryAllocator&       RawMemAllocator, 
@@ -88,40 +89,36 @@ public:
 
     virtual void CreateBufferFromVulkanResource(VkBuffer vkBuffer, const BufferDesc& BuffDesc, IBuffer** ppBuffer)override final;
 
-    Uint64 GetCompletedFenceValue();
-	virtual Uint64 GetNextFenceValue() override final
+    virtual Uint64 GetCompletedFenceValue(Uint32 QueueIndex) override final
     {
-        return m_pCommandQueue->GetNextFenceValue();
+        return m_CommandQueues[QueueIndex].CmdQueue->GetCompletedFenceValue();
     }
 
-	Uint64 GetCurrentFrameNumber()const {return static_cast<Uint64>(m_FrameNumber);}
-    virtual Bool IsFenceSignaled(Uint64 FenceValue) override final;
+    virtual Uint64 GetNextFenceValue(Uint32 QueueIndex) override final
+    {
+        return m_CommandQueues[QueueIndex].CmdQueue->GetNextFenceValue();
+    }
 
-    ICommandQueueVk *GetCmdQueue(){return m_pCommandQueue;}
-    
-    // Idles GPU and returns fence value that was signaled
-	Uint64 IdleGPU(bool ReleaseStaleObjects);
+    virtual Bool IsFenceSignaled(Uint32 QueueIndex, Uint64 FenceValue) override final
+    {
+        return FenceValue <= GetCompletedFenceValue(QueueIndex);
+    }
+
+    // Idles GPU
+	void IdleGPU(bool ReleaseStaleObjects);
     // pImmediateCtx parameter is only used to make sure the command buffer is submitted from the immediate context
     // The method returns fence value associated with the submitted command buffer
     Uint64 ExecuteCommandBuffer(const VkSubmitInfo &SubmitInfo, class DeviceContextVkImpl* pImmediateCtx, std::vector<std::pair<Uint64, RefCntAutoPtr<IFence> > >* pSignalFences);
 
     void AllocateTransientCmdPool(VulkanUtilities::CommandPoolWrapper& CmdPool, VkCommandBuffer& vkCmdBuff, const Char* DebugPoolName = nullptr);
-    void ExecuteAndDisposeTransientCmdBuff(VkCommandBuffer vkCmdBuff, VulkanUtilities::CommandPoolWrapper&& CmdPool);
+    void ExecuteAndDisposeTransientCmdBuff(Uint32 QueueIndex, VkCommandBuffer vkCmdBuff, VulkanUtilities::CommandPoolWrapper&& CmdPool);
 
-    template<typename ObjectType>
-    void SafeReleaseVkObject(ObjectType&& Object)
-    {
-        m_ReleaseQueue.SafeReleaseResource(std::move(Object), m_NextCmdBuffNumber);
-    }
-
-    ResourceReleaseQueue<DynamicStaleResourceWrapper>& GetReleaseQueue(){return m_ReleaseQueue;}
-    
     void FinishFrame(bool ReleaseAllResources);
     virtual void FinishFrame()override final { FinishFrame(false); }
 
-    DescriptorPoolAllocation AllocateDescriptorSet(VkDescriptorSetLayout SetLayout)
+    DescriptorPoolAllocation AllocateDescriptorSet(Uint64 CommandQueueMask, VkDescriptorSetLayout SetLayout)
     {
-        return m_MainDescriptorPool.Allocate(SetLayout);
+        return m_MainDescriptorPool.Allocate(CommandQueueMask, SetLayout);
     }
 
     std::shared_ptr<const VulkanUtilities::VulkanInstance> GetVulkanInstance()const{return m_VulkanInstance;}
@@ -140,7 +137,6 @@ public:
      
 private:
     virtual void TestTextureFormat( TEXTURE_FORMAT TexFormat )override final;
-    void ProcessStaleResources(Uint64 SubmittedCmdBufferNumber, Uint64 SubmittedFenceValue, Uint64 CompletedFenceValue);
 
     // Submits command buffer for execution to the command queue
     // Returns the submitted command buffer number and the fence value
@@ -152,54 +148,19 @@ private:
     std::shared_ptr<VulkanUtilities::VulkanInstance>        m_VulkanInstance;
     std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice>  m_PhysicalDevice;
     std::shared_ptr<VulkanUtilities::VulkanLogicalDevice>   m_LogicalVkDevice;
-    
-    std::mutex                      m_SubmitCmdBufferMutex;
-    RefCntAutoPtr<ICommandQueueVk>  m_pCommandQueue;
 
     EngineVkAttribs m_EngineAttribs;
 
-	Atomics::AtomicInt64 m_FrameNumber;
-    Atomics::AtomicInt64 m_NextCmdBuffNumber;
-    
-    // The following basic requirement guarantees correctness of resource deallocation:
-    //
-    //        A resource is never released before the last draw command referencing it is invoked on the immediate context
-    //
-
-    //
-    // CPU
-    //                       Last Reference
-    //                        of resource X
-    //                             |
-    //                             |     Submit Cmd       Submit Cmd            Submit Cmd
-    //                             |      List N           List N+1              List N+2
-    //                             V         |                |                     |
-    //    NextFenceValue       |   *  N      |      N+1       |          N+2        |
-    //
-    //
-    //    CompletedFenceValue       |     N-3      |      N-2      |        N-1        |        N       |
-    //                              .              .               .                   .                .
-    // -----------------------------.--------------.---------------.-------------------.----------------.-------------
-    //                              .              .               .                   .                .
-    //       
-    // GPU                          | Cmd List N-2 | Cmd List N-1  |    Cmd List N     |   Cmd List N+1 |
-    //                                                                                 |
-    //                                                                                 |
-    //                                                                          Resource X can
-    //                                                                           be released
-
-    FramebufferCache m_FramebufferCache;
-    RenderPassCache  m_RenderPassCache;
-
+    FramebufferCache      m_FramebufferCache;
+    RenderPassCache       m_RenderPassCache;
     DescriptorPoolManager m_MainDescriptorPool;
 
     // These one-time command pools are used by buffer and texture constructors to
     // issue copy commands. Vulkan requires that every command pool is used by one thread 
     // at a time, so every constructor must allocate command buffer from its own pool.
-    CommandPoolManager m_TransientCmdPoolMgr;
+    CommandPoolManager    m_TransientCmdPoolMgr;
 
     VulkanUtilities::VulkanMemoryManager m_MemoryMgr;
-    ResourceReleaseQueue<DynamicStaleResourceWrapper> m_ReleaseQueue;
 
     VulkanDynamicMemoryManager m_DynamicMemoryManager;
 };

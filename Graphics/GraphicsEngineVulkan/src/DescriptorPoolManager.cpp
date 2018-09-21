@@ -35,9 +35,9 @@ void DescriptorPoolAllocation::Release()
         VERIFY_EXPR(ParentPoolMgr != nullptr && ParentPool != nullptr);
         ParentPoolMgr->FreeAllocation(Set, *ParentPool);
 
-        Set = VK_NULL_HANDLE;
+        Set           = VK_NULL_HANDLE;
         ParentPoolMgr = nullptr;
-        ParentPool = nullptr;
+        ParentPool    = nullptr;
     }
 }
 
@@ -56,7 +56,7 @@ void DescriptorPoolManager::CreateNewPool()
     m_DescriptorPools.emplace_front( new VulkanUtilities::VulkanDescriptorPool(m_LogicalDevice, PoolCI) );
 }
 
-DescriptorPoolAllocation DescriptorPoolManager::Allocate(VkDescriptorSetLayout SetLayout)
+DescriptorPoolAllocation DescriptorPoolManager::Allocate(Uint64 CommandQueueMask, VkDescriptorSetLayout SetLayout)
 {
     // Descriptor pools are externally synchronized, meaning that the application must not allocate 
     // and/or free descriptor sets from the same pool in multiple threads simultaneously (13.2.3)
@@ -74,7 +74,7 @@ DescriptorPoolAllocation DescriptorPoolManager::Allocate(VkDescriptorSetLayout S
             {
                 std::swap(*it, m_DescriptorPools.front());
             }
-            return {Set, Pool, *this};
+            return {Set, CommandQueueMask, Pool, *this};
         }
     }
 
@@ -86,7 +86,7 @@ DescriptorPoolAllocation DescriptorPoolManager::Allocate(VkDescriptorSetLayout S
     auto Set = NewPool.AllocateDescriptorSet(SetLayout);
     VERIFY(Set != VK_NULL_HANDLE, "Failed to allocate descriptor set");
 
-    return {Set, NewPool, *this };
+    return {Set, CommandQueueMask, NewPool, *this };
 }
 
 void DescriptorPoolManager::FreeAllocation(VkDescriptorSet Set, VulkanUtilities::VulkanDescriptorPool& Pool)

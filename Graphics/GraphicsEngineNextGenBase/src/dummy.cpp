@@ -21,40 +21,5 @@
  *  of the possibility of such damages.
  */
 
-#include "pch.h"
-#include "BufferViewVkImpl.h"
-#include "RenderDeviceVkImpl.h"
-#include "BufferVkImpl.h"
+#include "RenderDeviceNextGenBase.h"
 
-namespace Diligent
-{
-
-BufferViewVkImpl::BufferViewVkImpl( IReferenceCounters*                  pRefCounters,
-                                    RenderDeviceVkImpl*                  pDevice, 
-                                    const BufferViewDesc&                ViewDesc, 
-                                    IBuffer*                             pBuffer,
-                                    VulkanUtilities::BufferViewWrapper&& BuffView,
-                                    bool                                 bIsDefaultView ) :
-    TBufferViewBase( pRefCounters, pDevice, ViewDesc, pBuffer, bIsDefaultView ),
-    m_BuffView(std::move(BuffView))
-{
-}
-
-BufferViewVkImpl::~BufferViewVkImpl()
-{
-    m_pDevice->SafeReleaseDeviceObject(std::move(m_BuffView), GetBufferVk()->GetDesc().CommandQueueMask);
-}
-
-IMPLEMENT_QUERY_INTERFACE( BufferViewVkImpl, IID_BufferViewVk, TBufferViewBase )
-
-const BufferVkImpl* BufferViewVkImpl::GetBufferVk()const
-{
-    return ValidatedCast<const BufferVkImpl>(m_pBuffer);
-}
-
-BufferVkImpl* BufferViewVkImpl::GetBufferVk()
-{
-    return ValidatedCast<BufferVkImpl>(m_pBuffer);
-}
-
-}

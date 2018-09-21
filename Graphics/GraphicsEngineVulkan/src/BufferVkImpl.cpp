@@ -221,7 +221,8 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters*        pRefCounters,
             BuffCopy.size = VkBuffCI.size;
             vkCmdCopyBuffer(vkCmdBuff, StagingBuffer, m_VulkanBuffer, 1, &BuffCopy);
 
-	        pRenderDeviceVk->ExecuteAndDisposeTransientCmdBuff(vkCmdBuff, std::move(CmdPool));
+            Uint32 QueueIndex = 0;
+	        pRenderDeviceVk->ExecuteAndDisposeTransientCmdBuff(QueueIndex, vkCmdBuff, std::move(CmdPool));
 
 
             // After command buffer is submitted, safe-release staging resources. This strategy
@@ -248,8 +249,8 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters*        pRefCounters,
             //              |            |                                                |   - {F+1, StagingBuffer} -> Release Queue 
             //              |            |                                                | 
 
-            pRenderDeviceVk->SafeReleaseVkObject(std::move(StagingBuffer));
-            pRenderDeviceVk->SafeReleaseVkObject(std::move(StagingMemoryAllocation));
+            pRenderDeviceVk->SafeReleaseDeviceObject(std::move(StagingBuffer),           Uint64{1} << Uint64{QueueIndex});
+            pRenderDeviceVk->SafeReleaseDeviceObject(std::move(StagingMemoryAllocation), Uint64{1} << Uint64{QueueIndex});
         }
         else
         {
@@ -278,9 +279,9 @@ BufferVkImpl :: ~BufferVkImpl()
 {
     // Vk object can only be destroyed when it is no longer used by the GPU
     if(m_VulkanBuffer != VK_NULL_HANDLE)
-        m_pDevice->SafeReleaseVkObject(std::move(m_VulkanBuffer));
+        m_pDevice->SafeReleaseDeviceObject(std::move(m_VulkanBuffer), m_Desc.CommandQueueMask);
     if(m_MemoryAllocation.Page != nullptr)
-        m_pDevice->SafeReleaseVkObject(std::move(m_MemoryAllocation));
+        m_pDevice->SafeReleaseDeviceObject(std::move(m_MemoryAllocation), m_Desc.CommandQueueMask);
 }
 
 IMPLEMENT_QUERY_INTERFACE( BufferVkImpl, IID_BufferVk, TBufferBase )

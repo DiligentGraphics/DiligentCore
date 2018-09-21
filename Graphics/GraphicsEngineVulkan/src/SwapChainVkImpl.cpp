@@ -84,8 +84,8 @@ SwapChainVkImpl::SwapChainVkImpl(IReferenceCounters*    pRefCounters,
 
     CHECK_VK_ERROR_AND_THROW(err, "Failed to create OS-specific surface");
     const auto& PhysicalDevice = pRenderDeviceVk->GetPhysicalDevice();
-    auto *CmdQueueVK = pRenderDeviceVk->GetCmdQueue();
-    auto QueueFamilyIndex = CmdQueueVK->GetQueueFamilyIndex();
+    auto& CmdQueueVK = pRenderDeviceVk->GetCommandQueue(0);
+    auto QueueFamilyIndex = CmdQueueVK.GetQueueFamilyIndex();
     if( !PhysicalDevice.CheckPresentSupport(QueueFamilyIndex, m_VkSurface) )
     {
         LOG_ERROR_AND_THROW("Selected physical device does not support present capability.\n"
@@ -454,10 +454,7 @@ void SwapChainVkImpl::Present(Uint32 SyncInterval)
         PresentInfo.pImageIndices = &m_BackBufferIndex;
         VkResult Result = VK_SUCCESS;
         PresentInfo.pResults = &Result;
-    
-        auto vkCmdQueue = pDeviceVk->GetCmdQueue()->GetVkQueue();
-        vkQueuePresentKHR(vkCmdQueue, &PresentInfo);
-        VERIFY(Result == VK_SUCCESS, "Present failed");
+        pDeviceVk->GetCommandQueue(0).Present(PresentInfo);
     }
 
     pImmediateCtxVk->FinishFrame(false);

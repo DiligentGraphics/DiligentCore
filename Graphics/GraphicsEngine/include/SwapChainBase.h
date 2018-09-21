@@ -26,6 +26,8 @@
 /// \file
 /// Implementation of the Diligent::SwapChainBase template class
 
+#include "RenderDevice.h"
+#include "DeviceContext.h"
 #include "SwapChain.h"
 #include "DeviceObjectBase.h"
 #include "Errors.h"

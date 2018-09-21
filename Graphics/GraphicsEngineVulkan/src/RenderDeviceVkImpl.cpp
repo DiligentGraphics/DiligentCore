@@ -50,6 +50,7 @@ RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters*                    
     {
         pRefCounters,
         RawMemAllocator,
+        1,
         NumDeferredContexts,
         sizeof(TextureVkImpl),
         sizeof(TextureViewVkImpl),
@@ -64,10 +65,7 @@ RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters*                    
     m_VulkanInstance(Instance),
     m_PhysicalDevice(std::move(PhysicalDevice)),
     m_LogicalVkDevice(std::move(LogicalDevice)),
-    m_pCommandQueue(pCmdQueue),
     m_EngineAttribs(CreationAttribs),
-	m_FrameNumber(0),
-    m_NextCmdBuffNumber(0),
     m_FramebufferCache(*this),
     m_RenderPassCache(*this),
     m_MainDescriptorPool
@@ -90,14 +88,16 @@ RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters*                    
     },
     m_TransientCmdPoolMgr(*m_LogicalVkDevice, pCmdQueue->GetQueueFamilyIndex(), VK_COMMAND_POOL_CREATE_TRANSIENT_BIT),
     m_MemoryMgr("Global resource memory manager", *m_LogicalVkDevice, *m_PhysicalDevice, GetRawAllocator(), CreationAttribs.DeviceLocalMemoryPageSize, CreationAttribs.HostVisibleMemoryPageSize, CreationAttribs.DeviceLocalMemoryReserveSize, CreationAttribs.HostVisibleMemoryReserveSize),
-    m_ReleaseQueue(GetRawAllocator()),
     m_DynamicMemoryManager
     {
         GetRawAllocator(),
         *this,
-        CreationAttribs.DynamicHeapSize
+        CreationAttribs.DynamicHeapSize,
+        ~Uint64{0}
     }
 {
+    m_CommandQueues[0].CmdQueue = pCmdQueue;
+
     m_DeviceCaps.DevType = DeviceType::Vulkan;
     m_DeviceCaps.MajorVersion = 1;
     m_DeviceCaps.MinorVersion = 0;
@@ -121,7 +121,10 @@ RenderDeviceVkImpl::~RenderDeviceVkImpl()
     // release queues
     FinishFrame(true);
 
-    m_TransientCmdPoolMgr.DestroyPools(m_pCommandQueue->GetCompletedFenceValue());
+    m_TransientCmdPoolMgr.DestroyPools(m_CommandQueues[0].CmdQueue->GetCompletedFenceValue());
+
+    // We must destroy command queues explicitly prior to releasing Vulkan device
+    DestroyCommandQueues();
 
     //if(m_PhysicalDevice)
     //{
@@ -134,7 +137,8 @@ RenderDeviceVkImpl::~RenderDeviceVkImpl()
 
 void RenderDeviceVkImpl::AllocateTransientCmdPool(VulkanUtilities::CommandPoolWrapper& CmdPool, VkCommandBuffer& vkCmdBuff, const Char *DebugPoolName)
 {
-    auto CompletedFenceValue = GetCompletedFenceValue();
+    // TODO: rework this
+    auto CompletedFenceValue = m_CommandQueues[0].CmdQueue->GetCompletedFenceValue();
     CmdPool = m_TransientCmdPoolMgr.AllocateCommandPool(CompletedFenceValue, DebugPoolName);
 
     // Allocate command buffer from the cmd pool
@@ -158,7 +162,7 @@ void RenderDeviceVkImpl::AllocateTransientCmdPool(VulkanUtilities::CommandPoolWr
 }
 
 
-void RenderDeviceVkImpl::ExecuteAndDisposeTransientCmdBuff(VkCommandBuffer vkCmdBuff, VulkanUtilities::CommandPoolWrapper&& CmdPool)
+void RenderDeviceVkImpl::ExecuteAndDisposeTransientCmdBuff(Uint32 QueueIndex, VkCommandBuffer vkCmdBuff, VulkanUtilities::CommandPoolWrapper&& CmdPool)
 {
     VERIFY_EXPR(vkCmdBuff != VK_NULL_HANDLE);
 
@@ -169,11 +173,6 @@ void RenderDeviceVkImpl::ExecuteAndDisposeTransientCmdBuff(VkCommandBuffer vkCmd
     SubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     SubmitInfo.commandBufferCount = 1;
     SubmitInfo.pCommandBuffers = &vkCmdBuff;
-
-    Uint64 SubmittedFenceValue = 0;
-    Uint64 SubmittedCmdBuffNumber = 0;
-    SubmitCommandBuffer(SubmitInfo, SubmittedCmdBuffNumber, SubmittedFenceValue, nullptr);
-
 
     // We MUST NOT discard stale objects when executing transient command buffer,
     // otherwise a resource can be destroyed while still being used by the GPU:
@@ -197,10 +196,12 @@ void RenderDeviceVkImpl::ExecuteAndDisposeTransientCmdBuff(VkCommandBuffer vkCmd
     //              |            |  - ResourceX is already in release     |                                      |
     //              |            |    queue with fence value F, and       |                                      |
     //              |            |    F < SubmittedFenceValue==F+1        |                                      |
-    
-
+    //
+    // Since transient command buffers do not count as real command buffers, submit them directly to the queue
+    // to avoid interference with the command buffer numbers
+    Uint64 FenceValue = GetCommandQueue(0).Submit(SubmitInfo);
     // Dispose command pool
-    m_TransientCmdPoolMgr.DisposeCommandPool(std::move(CmdPool), SubmittedFenceValue);
+    m_TransientCmdPoolMgr.DisposeCommandPool(std::move(CmdPool), FenceValue);
 }
 
 void RenderDeviceVkImpl::SubmitCommandBuffer(const VkSubmitInfo& SubmitInfo, 
@@ -209,22 +210,18 @@ void RenderDeviceVkImpl::SubmitCommandBuffer(const VkSubmitInfo& SubmitInfo,
                                              std::vector<std::pair<Uint64, RefCntAutoPtr<IFence> > >* pFences // List of fences to signal
                                              )
 {
-    // The lock is required to atomically update m_NextCmdBuffNumber
-	std::lock_guard<std::mutex> LockGuard(m_SubmitCmdBufferMutex);
-    auto NextFenceValue = m_pCommandQueue->GetNextFenceValue();
 	// Submit the command list to the queue
-    SubmittedFenceValue = m_pCommandQueue->ExecuteCommandBuffer(SubmitInfo);
-    VERIFY(SubmittedFenceValue >= NextFenceValue, "Fence value of the executed command list is less than the next fence value previously queried through GetNextFenceValue()");
-    SubmittedFenceValue = std::max(SubmittedFenceValue, NextFenceValue);
-    SubmittedCmdBuffNumber = m_NextCmdBuffNumber;
-    Atomics::AtomicIncrement(m_NextCmdBuffNumber);
+    Uint32 QueueIndex = 0;
+    auto CmbBuffInfo = TRenderDeviceBase::SubmitCommandBuffer(QueueIndex, SubmitInfo, true);
+    SubmittedFenceValue    = CmbBuffInfo.FenceValue;
+    SubmittedCmdBuffNumber = CmbBuffInfo.CmdBufferNumber;
     if (pFences != nullptr)
     {
         for (auto& val_fence : *pFences)
         {
             auto* pFenceVkImpl = val_fence.second.RawPtr<FenceVkImpl>();
             auto vkFence = pFenceVkImpl->GetVkFence();
-            m_pCommandQueue->SignalFence(vkFence);
+            m_CommandQueues[QueueIndex].CmdQueue->SignalFence(vkFence);
             pFenceVkImpl->AddPendingFence(std::move(vkFence), val_fence.first);
         }
     }
@@ -240,44 +237,20 @@ Uint64 RenderDeviceVkImpl::ExecuteCommandBuffer(const VkSubmitInfo& SubmitInfo, 
     Uint64 SubmittedCmdBuffNumber = 0;
     SubmitCommandBuffer(SubmitInfo, SubmittedCmdBuffNumber, SubmittedFenceValue, pSignalFences);
 
-    // The following basic requirement guarantees correctness of resource deallocation:
-    //
-    //        A resource is never released before the last draw command referencing it is invoked on the immediate context
-    //
-
-    // Move stale objects into the release queue.
-    // Note that objects are moved from stale list to release queue based on the cmd buffer number, 
-    // not fence value. This makes sure that basic requirement is met even when the fence value is 
-    // not incremented while executing the command buffer (as is the case with Unity command queue).
-
-    // As long as resources used by deferred contexts are not released until the command list
-    // is executed through immediate context, this stategy always works.
-
-    auto CompletedFenceValue = GetCompletedFenceValue();
-    ProcessStaleResources(SubmittedCmdBuffNumber, SubmittedFenceValue, CompletedFenceValue);
+    // TODO: rework this
+    auto CompletedFenceValue = m_CommandQueues[0].CmdQueue->GetCompletedFenceValue();
+    m_MainDescriptorPool.ReleaseStaleAllocations(CompletedFenceValue);
+    m_MemoryMgr.ShrinkMemory();
+    PurgeReleaseQueues();
 
     return SubmittedFenceValue;
 }
 
 
-Uint64 RenderDeviceVkImpl::IdleGPU(bool ReleaseStaleObjects) 
+void RenderDeviceVkImpl::IdleGPU(bool ReleaseStaleObjects) 
 { 
-    Uint64 SubmittedFenceValue = 0;
-    Uint64 SubmittedCmdBuffNumber = 0;
-
-    {
-        // CommandQueueVkImpl::IdleGPU increments next fence value and returns
-        // the previous value
-        SubmittedFenceValue = m_pCommandQueue->IdleGPU();
-
-        m_LogicalVkDevice->WaitIdle();
-
-        // Increment cmd list number while keeping queue locked. 
-        // This guarantees that any Vk object released after the lock
-        // is released, will be associated with the incremented cmd list number
-        SubmittedCmdBuffNumber = m_NextCmdBuffNumber;
-        Atomics::AtomicIncrement(m_NextCmdBuffNumber);
-    }
+    IdleCommandQueues(ReleaseStaleObjects, ReleaseStaleObjects);
+    m_LogicalVkDevice->WaitIdle();
 
     if (ReleaseStaleObjects)
     {
@@ -287,54 +260,33 @@ Uint64 RenderDeviceVkImpl::IdleGPU(bool ReleaseStaleObjects)
         // Since GPU has been idled, it it is safe to do so
 
         // SubmittedFenceValue has now been signaled by the GPU since we waited for it
-        auto CompletedFenceValue = SubmittedFenceValue;
-        ProcessStaleResources(SubmittedCmdBuffNumber, SubmittedFenceValue, CompletedFenceValue);
+        m_MainDescriptorPool.ReleaseStaleAllocations(m_CommandQueues[0].CmdQueue->GetCompletedFenceValue());
+        m_MemoryMgr.ShrinkMemory();
     }
-
-    return SubmittedFenceValue;
-}
-
-
-Bool RenderDeviceVkImpl::IsFenceSignaled(Uint64 FenceValue) 
-{
-    return FenceValue <= GetCompletedFenceValue();
-}
-
-Uint64 RenderDeviceVkImpl::GetCompletedFenceValue()
-{
-    return m_pCommandQueue->GetCompletedFenceValue();
 }
 
 
 void RenderDeviceVkImpl::FinishFrame(bool ReleaseAllResources)
 {
-    auto CompletedFenceValue = ReleaseAllResources ? std::numeric_limits<Uint64>::max() : GetCompletedFenceValue();
-
-
+    // TODO: rework this
+    auto CompletedFenceValue = ReleaseAllResources ? std::numeric_limits<Uint64>::max() : m_CommandQueues[0].CmdQueue->GetCompletedFenceValue();
+    
+    // Discard all remaining objects. This is important to do if there were 
+    // no command lists submitted during the frame. All stale resources will
+    // be associated with the submitted fence value and thus will not be released
+    // until the GPU is finished with the current frame
     Uint64 SubmittedFenceValue = 0;
     Uint64 SubmittedCmdBuffNumber = 0;
     VkSubmitInfo DummySubmitInfo = {};
     // Submit empty command buffer to set a fence on the GPU
     SubmitCommandBuffer(DummySubmitInfo, SubmittedCmdBuffNumber, SubmittedFenceValue, nullptr);
         
-    // Discard all remaining objects. This is important to do if there were 
-    // no command lists submitted during the frame. All stale resources will
-    // be associated with the submitted fence value and thus will not be released
-    // until the GPU is finished with the current frame
-    ProcessStaleResources(SubmittedCmdBuffNumber, SubmittedFenceValue, CompletedFenceValue);
+    PurgeReleaseQueues();
 
-    m_DynamicMemoryManager.ReleaseStaleBlocks(CompletedFenceValue);
-
-    Atomics::AtomicIncrement(m_FrameNumber);
-}
-
-
-void RenderDeviceVkImpl::ProcessStaleResources(Uint64 SubmittedCmdBufferNumber, Uint64 SubmittedFenceValue, Uint64 CompletedFenceValue)
-{
-    m_ReleaseQueue.DiscardStaleResources(SubmittedCmdBufferNumber, SubmittedFenceValue);
-    m_ReleaseQueue.Purge(CompletedFenceValue);
     m_MainDescriptorPool.ReleaseStaleAllocations(CompletedFenceValue);
     m_MemoryMgr.ShrinkMemory();
+
+    m_DynamicMemoryManager.ReleaseStaleBlocks(CompletedFenceValue);
 }
 
 

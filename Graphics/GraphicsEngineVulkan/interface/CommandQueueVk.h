@@ -41,17 +41,20 @@ class ICommandQueueVk : public Diligent::IObject
 {
 public:
 	/// Returns the fence value that will be signaled next time
-	virtual UINT64 GetNextFenceValue() = 0;
+	virtual Uint64 GetNextFenceValue() = 0;
 
-	/// Executes a given command buffer
+	/// Submits a given command buffer to the command queue
 
-    /// \return Fence value associated with the executed command buffer
-	virtual Uint64 ExecuteCommandBuffer(VkCommandBuffer cmdBuffer) = 0;
+    /// \return Fence value associated with the submitted command buffer
+	virtual Uint64 Submit(VkCommandBuffer cmdBuffer) = 0;
 
     /// Submits a given chunk of work to the command queue
 
-    /// \return Fence value associated with the executed command buffer
-    virtual Uint64 ExecuteCommandBuffer(const VkSubmitInfo& SubmitInfo) = 0;
+    /// \return Fence value associated with the submitted command buffer
+    virtual Uint64 Submit(const VkSubmitInfo& SubmitInfo) = 0;
+
+    /// Presents the current swap chain image on the screen
+    virtual void Present(const VkPresentInfoKHR& PresentInfo) = 0;
 
     /// Returns Vulkan command queue. May return VK_NULL_HANDLE if queue is anavailable
     virtual VkQueue GetVkQueue() = 0;
@@ -65,7 +68,7 @@ public:
     /// Blocks execution until all pending GPU commands are complete
 
     /// \return Last completed fence value
-    virtual UINT64 IdleGPU() = 0;
+    virtual Uint64 WaitForIdle() = 0;
 
     /// Signals the given fence
     virtual void SignalFence(VkFence vkFence) = 0;

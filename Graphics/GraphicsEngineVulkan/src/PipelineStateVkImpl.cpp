@@ -402,14 +402,14 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters*      pRefCounters
 
 PipelineStateVkImpl::~PipelineStateVkImpl()
 {
-    m_pDevice->SafeReleaseVkObject(std::move(m_Pipeline));
-    m_PipelineLayout.Release(m_pDevice);
+    m_pDevice->SafeReleaseDeviceObject(std::move(m_Pipeline), m_Desc.CommandQueueMask);
+    m_PipelineLayout.Release(m_pDevice, m_Desc.CommandQueueMask);
 
     for (auto& ShaderModule : m_ShaderModules)
     {
         if (ShaderModule != VK_NULL_HANDLE)
         {
-            m_pDevice->SafeReleaseVkObject(std::move(ShaderModule));
+            m_pDevice->SafeReleaseDeviceObject(std::move(ShaderModule), m_Desc.CommandQueueMask);
         }
     }
 

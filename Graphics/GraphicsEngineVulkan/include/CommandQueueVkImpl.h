@@ -51,18 +51,20 @@ public:
     virtual void QueryInterface( const Diligent::INTERFACE_ID& IID, IObject** ppInterface )override;
 
 	// Returns the fence value that will be signaled next time
-    virtual UINT64 GetNextFenceValue()override final { return m_NextFenceValue; }
+    virtual Uint64 GetNextFenceValue()override final { return m_NextFenceValue; }
 
-	// Executes a given command buffer
-	virtual Uint64 ExecuteCommandBuffer(VkCommandBuffer cmdBuffer)override final;
+	// Submits a given command buffer to the queue
+	virtual Uint64 Submit(VkCommandBuffer cmdBuffer)override final;
 
-    virtual Uint64 ExecuteCommandBuffer(const VkSubmitInfo& SubmitInfo)override final;
+    virtual Uint64 Submit(const VkSubmitInfo& SubmitInfo)override final;
+
+    virtual void Present(const VkPresentInfoKHR& PresentInfo)override final;
 
     virtual VkQueue GetVkQueue()override final{return m_VkQueue;}
 
     virtual uint32_t GetQueueFamilyIndex()override final { return m_QueueFamilyIndex; }
     
-    virtual Uint64 IdleGPU()override final;
+    virtual Uint64 WaitForIdle()override final;
 
     virtual Uint64 GetCompletedFenceValue()override final;
 

@@ -40,9 +40,11 @@ class DescriptorPoolAllocation
 {
 public:
     DescriptorPoolAllocation(VkDescriptorSet                        _Set,
+                             Uint64                                 _CmdQueueMask,
                              VulkanUtilities::VulkanDescriptorPool& _ParentPool,
                              DescriptorPoolManager&                 _ParentPoolMgr)noexcept :
         Set          (_Set),
+        CmdQueueMask(_CmdQueueMask),
         ParentPool   (&_ParentPool),
         ParentPoolMgr(&_ParentPoolMgr)
     {}
@@ -53,10 +55,12 @@ public:
 
     DescriptorPoolAllocation(DescriptorPoolAllocation&& rhs)noexcept : 
         Set          (rhs.Set),
+        CmdQueueMask (rhs.CmdQueueMask),
         ParentPool   (rhs.ParentPool),
         ParentPoolMgr(rhs.ParentPoolMgr)
     {
         rhs.Set           = VK_NULL_HANDLE;
+        rhs.CmdQueueMask  = 0;
         rhs.ParentPool    = nullptr;
         rhs.ParentPoolMgr = nullptr;
     }
@@ -66,10 +70,12 @@ public:
         Release();
 
         Set           = rhs.Set;
+        CmdQueueMask  = rhs.CmdQueueMask;
         ParentPool    = rhs.ParentPool;
         ParentPoolMgr = rhs.ParentPoolMgr;
 
         rhs.Set           = VK_NULL_HANDLE;
+        rhs.CmdQueueMask  = 0;
         rhs.ParentPool    = nullptr;
         rhs.ParentPoolMgr = nullptr;
         
@@ -92,6 +98,7 @@ public:
 
 private:
     VkDescriptorSet                        Set           = VK_NULL_HANDLE;
+    Uint64                                 CmdQueueMask  = 0;
     VulkanUtilities::VulkanDescriptorPool* ParentPool    = nullptr;
     DescriptorPoolManager*                 ParentPoolMgr = nullptr;
 };
@@ -125,7 +132,7 @@ public:
     DescriptorPoolManager& operator = (const DescriptorPoolManager&) = delete;
     DescriptorPoolManager& operator = (DescriptorPoolManager&&)      = delete;
 
-    DescriptorPoolAllocation Allocate(VkDescriptorSetLayout SetLayout);
+    DescriptorPoolAllocation Allocate(Uint64 CommandQueueMask, VkDescriptorSetLayout SetLayout);
     void DisposeAllocations(uint64_t FenceValue);
     void ReleaseStaleAllocations(uint64_t LastCompletedFence);
     

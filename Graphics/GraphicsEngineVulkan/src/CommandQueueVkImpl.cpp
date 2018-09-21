@@ -41,18 +41,22 @@ CommandQueueVkImpl::CommandQueueVkImpl(IReferenceCounters*                      
 
 CommandQueueVkImpl::~CommandQueueVkImpl()
 {
-    // Queues are created along with a logical device during vkCreateDevice.
-    // All queues associated with a logical device are destroyed when vkDestroyDevice 
+    // Queues are created along with the logical device during vkCreateDevice.
+    // All queues associated with the logical device are destroyed when vkDestroyDevice 
     // is called on that device.
-
 }
 
 IMPLEMENT_QUERY_INTERFACE( CommandQueueVkImpl, IID_CommandQueueVk, TBase )
 
 
-Uint64 CommandQueueVkImpl::ExecuteCommandBuffer(const VkSubmitInfo& SubmitInfo)
+Uint64 CommandQueueVkImpl::Submit(const VkSubmitInfo& SubmitInfo)
 {
     std::lock_guard<std::mutex> Lock(m_QueueMutex);
+    
+    auto FenceValue = m_NextFenceValue;
+    // Increment the value before submitting the buffer to be overly safe
+    Atomics::AtomicIncrement(m_NextFenceValue);
+
     auto vkFence = m_pFence->GetVkFence();
     bool SubmitCount = 
         (SubmitInfo.waitSemaphoreCount   != 0 || 
@@ -60,18 +64,15 @@ Uint64 CommandQueueVkImpl::ExecuteCommandBuffer(const VkSubmitInfo& SubmitInfo)
          SubmitInfo.signalSemaphoreCount != 0) ? 
         1 : 0;
     auto err = vkQueueSubmit(m_VkQueue, SubmitCount, &SubmitInfo, vkFence);
-    VERIFY(err == VK_SUCCESS, "Failed to submit command buffer to the command queue");
+    DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to submit command buffer to the command queue");
 
     // We must atomically place the (value, fence) pair into the deque
-    auto FenceValue = m_NextFenceValue;
     m_pFence->AddPendingFence(std::move(vkFence), FenceValue);
 
-    // Increment the value
-    Atomics::AtomicIncrement(m_NextFenceValue);
     return FenceValue;
 }
 
-Uint64 CommandQueueVkImpl::ExecuteCommandBuffer(VkCommandBuffer cmdBuffer)
+Uint64 CommandQueueVkImpl::Submit(VkCommandBuffer cmdBuffer)
 {
     VkSubmitInfo SubmitInfo = {};
     SubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -87,10 +88,10 @@ Uint64 CommandQueueVkImpl::ExecuteCommandBuffer(VkCommandBuffer cmdBuffer)
     SubmitInfo.pSignalSemaphores = nullptr; // a pointer to an array of semaphores which will be signaled when the 
                                             // command buffers for this batch have completed execution
 
-    return ExecuteCommandBuffer(SubmitInfo);
+    return Submit(SubmitInfo);
 }
 
-Uint64 CommandQueueVkImpl::IdleGPU()
+Uint64 CommandQueueVkImpl::WaitForIdle()
 {
     std::lock_guard<std::mutex> Lock(m_QueueMutex);
 
@@ -113,8 +114,16 @@ Uint64 CommandQueueVkImpl::GetCompletedFenceValue()
 
 void CommandQueueVkImpl::SignalFence(VkFence vkFence)
 {
+    std::lock_guard<std::mutex> Lock(m_QueueMutex);
     auto err = vkQueueSubmit(m_VkQueue, 0, nullptr, vkFence);
-    VERIFY(err == VK_SUCCESS, "Failed to submit command buffer to the command queue");
+    DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to submit command buffer to the command queue");
+}
+
+void CommandQueueVkImpl::Present(const VkPresentInfoKHR& PresentInfo)
+{
+    std::lock_guard<std::mutex> Lock(m_QueueMutex);
+    auto Result = vkQueuePresentKHR(m_VkQueue, &PresentInfo);
+    DEV_CHECK_ERR(Result == VK_SUCCESS, "Present failed");
 }
 
 }

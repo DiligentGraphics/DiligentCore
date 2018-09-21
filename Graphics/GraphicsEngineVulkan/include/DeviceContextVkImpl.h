@@ -56,6 +56,7 @@ public:
                         bool                                  bIsDeferred,
                         const EngineVkAttribs&                Attribs,
                         Uint32                                ContextId,
+                        Uint32                                CommandQueueId,
                         std::shared_ptr<GenerateMipsVkHelper> GenerateMipsHelper);
     ~DeviceContextVkImpl();
     
@@ -169,7 +170,7 @@ public:
     {
         // Descriptor pools are externally synchronized, meaning that the application must not allocate 
         // and/or free descriptor sets from the same pool in multiple threads simultaneously (13.2.3)
-        return m_DynamicDescriptorPool.Allocate(SetLayout);
+        return m_DynamicDescriptorPool.Allocate( Uint64{1} << Uint64{m_CommandQueueId}, SetLayout);
     }
 
     VulkanDynamicAllocation AllocateDynamicSpace(Uint32 SizeInBytes, Uint32 Alignment);
@@ -240,6 +241,7 @@ private:
     FixedBlockMemoryAllocator m_CmdListAllocator;
 
     const Uint32 m_ContextId;
+    const Uint32 m_CommandQueueId;
 
     VulkanUtilities::VulkanCommandBufferPool m_CmdPool;
 
@@ -282,7 +284,7 @@ private:
 
 
 
-    VulkanUploadHeap m_UploadHeap;
+    VulkanUploadHeap      m_UploadHeap;
     DescriptorPoolManager m_DynamicDescriptorPool;
 
     // Number of the command buffer currently being recorded by the context and that will

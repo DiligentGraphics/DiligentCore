@@ -39,10 +39,12 @@ static VkDeviceSize GetDefaultAlignment(const VulkanUtilities::VulkanPhysicalDev
 
 VulkanDynamicMemoryManager::VulkanDynamicMemoryManager(IMemoryAllocator&   Allocator, 
                                                        RenderDeviceVkImpl& DeviceVk, 
-                                                       Uint32              Size) :
+                                                       Uint32              Size,
+                                                       Uint64              CommandQueueMask) :
     TBase(Allocator, Size),
     m_DeviceVk(DeviceVk),
-    m_DefaultAlignment(GetDefaultAlignment(DeviceVk.GetPhysicalDevice()))
+    m_DefaultAlignment(GetDefaultAlignment(DeviceVk.GetPhysicalDevice())),
+    m_CommandQueueMask(CommandQueueMask)
 {
     VERIFY( (Size & (MasterBlockAlignment-1)) == 0, "Heap size (", Size, " is not aligned by the master block alignment (", MasterBlockAlignment, ")");
     VkBufferCreateInfo VkBuffCI = {};
@@ -105,8 +107,8 @@ void VulkanDynamicMemoryManager::Destroy()
     if (m_VkBuffer)
     {
         m_DeviceVk.GetLogicalDevice().UnmapMemory(m_BufferMemory);
-        m_DeviceVk.SafeReleaseVkObject(std::move(m_VkBuffer));
-        m_DeviceVk.SafeReleaseVkObject(std::move(m_BufferMemory));
+        m_DeviceVk.SafeReleaseDeviceObject(std::move(m_VkBuffer),     m_CommandQueueMask);
+        m_DeviceVk.SafeReleaseDeviceObject(std::move(m_BufferMemory), m_CommandQueueMask);
     }
     m_CPUAddress = nullptr;
 }
@@ -144,7 +146,8 @@ VulkanDynamicMemoryManager::MasterBlock VulkanDynamicMemoryManager::AllocateMast
         Uint32 SleepIterations = 0;
         while (Block.UnalignedOffset == InvalidOffset && IdleDuration < MaxIdleDuration)
         {
-            auto LastCompletedFenceValue = m_DeviceVk.GetCompletedFenceValue();
+            // TODO: rework
+            auto LastCompletedFenceValue = m_DeviceVk.GetCompletedFenceValue(0);
             ReleaseStaleBlocks(LastCompletedFenceValue);
             Block = AllocateMasterBlock(SizeInBytes, Alignment);
             if (Block.UnalignedOffset == InvalidOffset)

@@ -53,6 +53,7 @@ private:
     friend class ShaderVkImpl;
     /// Vk sampler handle
     VulkanUtilities::SamplerWrapper m_VkSampler;
+    static constexpr Uint64 m_CommandQueueMask = ~Uint64{0};
 };
 
 }

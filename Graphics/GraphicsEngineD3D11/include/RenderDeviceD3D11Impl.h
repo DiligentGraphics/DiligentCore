@@ -66,6 +66,9 @@ public:
     virtual void CreateTextureFromD3DResource(ID3D11Texture2D* pd3d11Texture, ITexture** ppTexture)override final;
     virtual void CreateTextureFromD3DResource(ID3D11Texture3D* pd3d11Texture, ITexture** ppTexture)override final;
 
+    size_t GetCommandQueueCount()const { return 1; }
+    Uint64 GetCommandQueueMask()const { return Uint64{1};}
+
 private:
     virtual void TestTextureFormat( TEXTURE_FORMAT TexFormat )override final;
 

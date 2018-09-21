@@ -66,7 +66,7 @@ public:
     ~VulkanUploadHeap();
 
     VulkanUploadAllocation Allocate(size_t SizeInBytes, size_t Alignment);
-    void DiscardAllocations(uint64_t FenceValue);
+    void DiscardAllocations(Uint32 CommandQueueIndex, uint64_t FenceValue);
 
     size_t GetStaleAllocationsCount()const
     {

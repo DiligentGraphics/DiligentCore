@@ -16,6 +16,10 @@ INTERFACE
 add_subdirectory(GraphicsAccessories)
 add_subdirectory(GraphicsEngine)
 
+if(D3D12_SUPPORTED OR VULKAN_SUPPORTED)
+    add_subdirectory(GraphicsEngineNextGenBase)
+endif()
+
 if(D3D11_SUPPORTED OR D3D12_SUPPORTED)
     add_subdirectory(GraphicsEngineD3DBase)
 endif()

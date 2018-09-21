@@ -56,6 +56,7 @@ public:
         Uint32       NumRenderTargets;
         VkImageView  DSV;
         VkImageView  RTVs[MaxRenderTargets];
+        Uint64       CommandQueueMask;
 
         bool operator == (const FramebufferCacheKey &rhs)const;
         size_t GetHash()const;

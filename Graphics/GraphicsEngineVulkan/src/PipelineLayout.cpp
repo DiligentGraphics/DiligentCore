@@ -183,9 +183,9 @@ void PipelineLayout::DescriptorSetLayoutManager::DescriptorSetLayout::Finalize(c
     pBindings = pNewBindings;
 }
 
-void PipelineLayout::DescriptorSetLayoutManager::DescriptorSetLayout::Release(RenderDeviceVkImpl *pRenderDeviceVk, IMemoryAllocator &MemAllocator)
+void PipelineLayout::DescriptorSetLayoutManager::DescriptorSetLayout::Release(RenderDeviceVkImpl *pRenderDeviceVk, IMemoryAllocator &MemAllocator, Uint64 CommandQueueMask)
 {
-    pRenderDeviceVk->SafeReleaseVkObject(std::move(VkLayout));
+    pRenderDeviceVk->SafeReleaseDeviceObject(std::move(VkLayout), CommandQueueMask);
     for (uint32_t b=0; b < NumLayoutBindings; ++b)
     {
         if (pBindings[b].pImmutableSamplers != nullptr)
@@ -276,12 +276,12 @@ void PipelineLayout::DescriptorSetLayoutManager::Finalize(const VulkanUtilities:
     VERIFY_EXPR(BindingOffset == TotalBindings);
 }
 
-void PipelineLayout::DescriptorSetLayoutManager::Release(RenderDeviceVkImpl *pRenderDeviceVk)
+void PipelineLayout::DescriptorSetLayoutManager::Release(RenderDeviceVkImpl *pRenderDeviceVk, Uint64 CommandQueueMask)
 {
     for (auto &Layout : m_DescriptorSetLayouts)
-        Layout.Release(pRenderDeviceVk, m_MemAllocator);
+        Layout.Release(pRenderDeviceVk, m_MemAllocator, CommandQueueMask);
 
-    pRenderDeviceVk->SafeReleaseVkObject(std::move(m_VkPipelineLayout));
+    pRenderDeviceVk->SafeReleaseDeviceObject(std::move(m_VkPipelineLayout), CommandQueueMask);
 }
 
 PipelineLayout::DescriptorSetLayoutManager::~DescriptorSetLayoutManager()
@@ -359,9 +359,9 @@ PipelineLayout::PipelineLayout() :
 {
 }
 
-void PipelineLayout::Release(RenderDeviceVkImpl *pDeviceVkImpl)
+void PipelineLayout::Release(RenderDeviceVkImpl *pDeviceVkImpl, Uint64 CommandQueueMask)
 {
-    m_LayoutMgr.Release(pDeviceVkImpl);
+    m_LayoutMgr.Release(pDeviceVkImpl, CommandQueueMask);
 }
 
 void PipelineLayout::AllocateResourceSlot(const SPIRVShaderResourceAttribs& ResAttribs,
@@ -416,7 +416,7 @@ void PipelineLayout::InitResourceCache(RenderDeviceVkImpl* pDeviceVkImpl, Shader
     const auto &StaticAndMutSet = m_LayoutMgr.GetDescriptorSet(SHADER_VARIABLE_TYPE_STATIC);
     if (StaticAndMutSet.SetIndex >= 0)
     {
-        DescriptorPoolAllocation SetAllocation = pDeviceVkImpl->AllocateDescriptorSet(StaticAndMutSet.VkLayout);
+        DescriptorPoolAllocation SetAllocation = pDeviceVkImpl->AllocateDescriptorSet(~Uint64{0}, StaticAndMutSet.VkLayout);
         ResourceCache.GetDescriptorSet(StaticAndMutSet.SetIndex).AssignDescriptorSetAllocation(std::move(SetAllocation));
     }
 }

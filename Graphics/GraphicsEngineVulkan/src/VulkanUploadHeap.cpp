@@ -126,9 +126,9 @@ VulkanUploadAllocation VulkanUploadHeap::Allocate(size_t SizeInBytes, size_t Ali
     return Allocation;
 }
 
-void VulkanUploadHeap::DiscardAllocations(uint64_t FenceValue)
+void VulkanUploadHeap::DiscardAllocations(Uint32 CommandQueueIndex, uint64_t FenceValue)
 {
-    auto& ReleaseQueue = m_RenderDevice.GetReleaseQueue();
+    auto& ReleaseQueue = m_RenderDevice.GetReleaseQueue(CommandQueueIndex);
 
     {
         auto AllocIt = m_Pages.begin();

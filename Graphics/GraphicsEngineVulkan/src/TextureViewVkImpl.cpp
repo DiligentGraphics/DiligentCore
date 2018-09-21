@@ -44,7 +44,7 @@ TextureViewVkImpl::~TextureViewVkImpl()
 {
     if(m_Desc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL || m_Desc.ViewType == TEXTURE_VIEW_RENDER_TARGET)
         m_pDevice->GetFramebufferCache().OnDestroyImageView(m_ImageView);
-    m_pDevice->SafeReleaseVkObject(std::move(m_ImageView));
+    m_pDevice->SafeReleaseDeviceObject(std::move(m_ImageView), m_pTexture->GetDesc().CommandQueueMask);
 }
 
 IMPLEMENT_QUERY_INTERFACE( TextureViewVkImpl, IID_TextureViewVk, TTextureViewBase )

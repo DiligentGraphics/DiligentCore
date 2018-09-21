@@ -44,11 +44,14 @@ public:
     virtual VkDevice GetVkDevice() = 0;
 
     /// Returns the fence value that will be signaled by the GPU command queue next
-    virtual Uint64 GetNextFenceValue() = 0;
+    virtual Uint64 GetNextFenceValue(Uint32 QueueIndex) = 0;
+
+    /// Returns the last completed fence value for the given command queue
+    virtual Uint64 GetCompletedFenceValue(Uint32 QueueIndex) = 0;
 
     /// Checks if the fence value has been signaled by the GPU. True means
     /// that all associated work has been finished
-    virtual Bool IsFenceSignaled(Uint64 FenceValue) = 0;
+    virtual Bool IsFenceSignaled(Uint32 QueueIndex, Uint64 FenceValue) = 0;
 
     /// Should be called at the end of the frame when attached to existing D3D12 device
     /// Otherwise the method is automatically called before present

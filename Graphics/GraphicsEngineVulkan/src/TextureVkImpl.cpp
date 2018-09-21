@@ -335,13 +335,14 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters,
             m_CurrentLayout, // dstImageLayout must be VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL or VK_IMAGE_LAYOUT_GENERAL (18.4)
             static_cast<uint32_t>(Regions.size()), Regions.data());
 
-	    pRenderDeviceVk->ExecuteAndDisposeTransientCmdBuff(vkCmdBuff, std::move(CmdPool));
+        Uint32 QueueIndex = 0;
+	    pRenderDeviceVk->ExecuteAndDisposeTransientCmdBuff(QueueIndex, vkCmdBuff, std::move(CmdPool));
 
         // After command buffer is submitted, safe-release resources. This strategy
         // is little overconservative as the resources will be released after the first
         // command buffer submitted through the immediate context will be completed
-        pRenderDeviceVk->SafeReleaseVkObject(std::move(StagingBuffer));
-        pRenderDeviceVk->SafeReleaseVkObject(std::move(StagingMemoryAllocation));
+        pRenderDeviceVk->SafeReleaseDeviceObject(std::move(StagingBuffer),           Uint64{1} << Uint64{QueueIndex});
+        pRenderDeviceVk->SafeReleaseDeviceObject(std::move(StagingMemoryAllocation), Uint64{1} << Uint64{QueueIndex});
     }
     else
     {
@@ -373,7 +374,8 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters,
         {
             UNEXPECTED("Unexpected aspect mask");
         }
-        pRenderDeviceVk->ExecuteAndDisposeTransientCmdBuff(vkCmdBuff, std::move(CmdPool));
+        Uint32 QueueIndex = 0;
+        pRenderDeviceVk->ExecuteAndDisposeTransientCmdBuff(QueueIndex, vkCmdBuff, std::move(CmdPool));
     }
 
 
@@ -480,8 +482,8 @@ TextureVkImpl :: ~TextureVkImpl()
 {
     // Vk object can only be destroyed when it is no longer used by the GPU
     // Wrappers for external texture will not be destroyed as they are created with null device pointer
-    m_pDevice->SafeReleaseVkObject(std::move(m_VulkanImage));
-    m_pDevice->SafeReleaseVkObject(std::move(m_MemoryAllocation));
+    m_pDevice->SafeReleaseDeviceObject(std::move(m_VulkanImage),      m_Desc.CommandQueueMask);
+    m_pDevice->SafeReleaseDeviceObject(std::move(m_MemoryAllocation), m_Desc.CommandQueueMask);
 }
 
 void TextureVkImpl::UpdateData( IDeviceContext *pContext, Uint32 MipLevel, Uint32 Slice, const Box& DstBox, const TextureSubResData& SubresData )

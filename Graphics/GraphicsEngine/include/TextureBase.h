@@ -59,7 +59,7 @@ void ValidateMapTextureParams(const TextureDesc&        TexDesc,
 ///                            (Diligent::TextureViewD3D11Impl, Diligent::TextureViewD3D12Impl,
 ///                             Diligent::TextureViewGLImpl or Diligent::TextureViewVkImpl).
 /// \tparam TTexViewObjAllocator - type of the allocator that is used to allocate memory for the texture view object instances
-template<class BaseInterface, class TRenderDeviceImpl,class TTextureViewImpl, class TTexViewObjAllocator>
+template<class BaseInterface, class TRenderDeviceImpl, class TTextureViewImpl, class TTexViewObjAllocator>
 class TextureBase : public DeviceObjectBase<BaseInterface, TRenderDeviceImpl, TextureDesc>
 {
 public:
@@ -74,7 +74,7 @@ public:
 	///							   must not keep a strong reference to the device
     TextureBase( IReferenceCounters*    pRefCounters, 
                  TTexViewObjAllocator&  TexViewObjAllocator,
-                 TRenderDeviceImpl*  pDevice, 
+                 TRenderDeviceImpl*     pDevice, 
                  const TextureDesc&     Desc, 
                  bool                   bIsDeviceInternal = false ) :
         TDeviceObjectBase( pRefCounters, pDevice, Desc, bIsDeviceInternal ),
@@ -110,6 +110,10 @@ public:
                 UNEXPECTED( "Unkwnown texture type" );
             }
         }
+
+        Uint64 DeviceQueuesMask = pDevice->GetCommandQueueMask();
+        DEV_CHECK_ERR( (m_Desc.CommandQueueMask & DeviceQueuesMask) != 0, "No bits in the command queue mask (0x", std::hex, m_Desc.CommandQueueMask, ") correspond to one of ", pDevice->GetCommandQueueCount(), " available device command queues");
+        m_Desc.CommandQueueMask &= DeviceQueuesMask;
 
         // Validate correctness of texture description
         ValidateTextureDesc( this->m_Desc );

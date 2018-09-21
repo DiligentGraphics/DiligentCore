@@ -47,6 +47,7 @@ RenderDeviceD3D12Impl :: RenderDeviceD3D12Impl(IReferenceCounters*          pRef
     {
         pRefCounters,
         RawMemAllocator,
+        1,
         NumDeferredContexts,
         sizeof(TextureD3D12Impl),
         sizeof(TextureViewD3D12Impl),

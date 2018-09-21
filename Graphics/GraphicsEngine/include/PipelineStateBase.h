@@ -165,6 +165,10 @@ public:
             else
                 VERIFY(m_Strides[BuffSlot] == It->Stride, "Incosistent stride");
         }
+
+        Uint64 DeviceQueuesMask = pDevice->GetCommandQueueMask();
+        DEV_CHECK_ERR( (m_Desc.CommandQueueMask & DeviceQueuesMask) != 0, "No bits in the command queue mask (0x", std::hex, m_Desc.CommandQueueMask, ") correspond to one of ", pDevice->GetCommandQueueCount(), " available device command queues");
+        m_Desc.CommandQueueMask &= DeviceQueuesMask;
     }
 
     ~PipelineStateBase()

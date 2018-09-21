@@ -215,16 +215,17 @@ public:
         m_TextureFormatsInfo    (TEX_FORMAT_NUM_FORMATS, TextureFormatInfoExt(), STD_ALLOCATOR_RAW_MEM(TextureFormatInfoExt, RawMemAllocator, "Allocator for vector<TextureFormatInfoExt>") ),
         m_TexFmtInfoInitFlags   (TEX_FORMAT_NUM_FORMATS, false, STD_ALLOCATOR_RAW_MEM(bool, RawMemAllocator, "Allocator for vector<bool>") ),
         m_wpDeferredContexts    (NumDeferredContexts, RefCntWeakPtr<IDeviceContext>(), STD_ALLOCATOR_RAW_MEM(RefCntWeakPtr<IDeviceContext>, RawMemAllocator, "Allocator for vector< RefCntWeakPtr<IDeviceContext> >")),
-        m_TexObjAllocator       (RawMemAllocator, TextureObjSize, 64),
-        m_TexViewObjAllocator   (RawMemAllocator, TexViewObjSize, 64),
-        m_BufObjAllocator       (RawMemAllocator, BufferObjSize, 128),
-        m_BuffViewObjAllocator  (RawMemAllocator, BuffViewObjSize, 128),
-        m_ShaderObjAllocator    (RawMemAllocator, ShaderObjSize, 32),
-        m_SamplerObjAllocator   (RawMemAllocator, SamplerObjSize, 32),
-        m_PSOAllocator          (RawMemAllocator, PSOSize, 128),
-        m_SRBAllocator          (RawMemAllocator, SRBSize, 1024),
+        m_RawMemAllocator       (RawMemAllocator),
+        m_TexObjAllocator       (RawMemAllocator, TextureObjSize,              64),
+        m_TexViewObjAllocator   (RawMemAllocator, TexViewObjSize,              64),
+        m_BufObjAllocator       (RawMemAllocator, BufferObjSize,              128),
+        m_BuffViewObjAllocator  (RawMemAllocator, BuffViewObjSize,            128),
+        m_ShaderObjAllocator    (RawMemAllocator, ShaderObjSize,               32),
+        m_SamplerObjAllocator   (RawMemAllocator, SamplerObjSize,              32),
+        m_PSOAllocator          (RawMemAllocator, PSOSize,                    128),
+        m_SRBAllocator          (RawMemAllocator, SRBSize,                   1024),
         m_ResMappingAllocator   (RawMemAllocator, sizeof(ResourceMappingImpl), 16),
-        m_FenceAllocator        (RawMemAllocator, FenceSize, 16)
+        m_FenceAllocator        (RawMemAllocator, FenceSize,                   16)
     {
         // Initialize texture format info
         for( Uint32 Fmt = TEX_FORMAT_UNKNOWN; Fmt < TEX_FORMAT_NUM_FORMATS; ++Fmt )
@@ -379,6 +380,7 @@ protected:
     /// Weak references to deferred contexts. 
     std::vector< RefCntWeakPtr<IDeviceContext>, STDAllocatorRawMem<RefCntWeakPtr<IDeviceContext> > > m_wpDeferredContexts;
 
+    IMemoryAllocator&         m_RawMemAllocator;         ///< Raw memory allocator
     FixedBlockMemoryAllocator m_TexObjAllocator;         ///< Allocator for texture objects
     FixedBlockMemoryAllocator m_TexViewObjAllocator;     ///< Allocator for texture view objects
     FixedBlockMemoryAllocator m_BufObjAllocator;         ///< Allocator for buffer objects

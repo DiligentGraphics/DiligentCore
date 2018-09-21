@@ -89,6 +89,9 @@ public:
     void OnDestroyPSO(IPipelineState *pPSO);
     void OnDestroyBuffer(IBuffer *pBuffer);
 
+    size_t GetCommandQueueCount()const { return 1; }
+    Uint64 GetCommandQueueMask()const { return Uint64{1};}
+
 protected:
     friend class DeviceContextGLImpl;
     friend class TextureBaseGL;

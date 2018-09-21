@@ -176,7 +176,7 @@ set(PRIVATE_DEPENDENCIES
     BuildSettings 
     Common 
     TargetPlatform
-    GraphicsEngine
+    GraphicsEngineNextGenBase
     GLSLTools
 )
 

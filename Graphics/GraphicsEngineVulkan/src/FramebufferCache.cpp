@@ -35,7 +35,8 @@ bool FramebufferCache::FramebufferCacheKey::operator == (const FramebufferCacheK
     if (GetHash()        != rhs.GetHash()        ||
         Pass             != rhs.Pass             ||
         NumRenderTargets != rhs.NumRenderTargets ||
-        DSV              != rhs.DSV)
+        DSV              != rhs.DSV              ||
+        CommandQueueMask != rhs.CommandQueueMask)
     {
         return false;
     }
@@ -51,7 +52,7 @@ size_t FramebufferCache::FramebufferCacheKey::GetHash()const
 {
     if (Hash == 0)
     {
-        Hash = ComputeHash(Pass, NumRenderTargets, DSV);
+        Hash = ComputeHash(Pass, NumRenderTargets, DSV, CommandQueueMask);
         for(Uint32 rt = 0; rt < NumRenderTargets; ++rt)
             HashCombine(Hash, RTVs[rt]);
     }
@@ -124,7 +125,7 @@ void FramebufferCache::OnDestroyImageView(VkImageView ImgView)
         // The framebuffer is deleted whenever any of the image views is deleted
         if (fb_it != m_Cache.end())
         {
-            m_DeviceVk.SafeReleaseVkObject(std::move(fb_it->second));
+            m_DeviceVk.SafeReleaseDeviceObject(std::move(fb_it->second), it->second.CommandQueueMask);
             m_Cache.erase(fb_it);
         }
     }
@@ -145,7 +146,7 @@ void FramebufferCache::OnDestroyRenderPass(VkRenderPass Pass)
         // The framebuffer is deleted whenever any of the image views or render pass is destroyed
         if (fb_it != m_Cache.end())
         {
-            m_DeviceVk.SafeReleaseVkObject(std::move(fb_it->second));
+            m_DeviceVk.SafeReleaseDeviceObject(std::move(fb_it->second), it->second.CommandQueueMask);
             m_Cache.erase(fb_it);
         }
     }
