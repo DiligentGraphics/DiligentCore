@@ -270,6 +270,13 @@ void RenderDeviceVkImpl::IdleGPU(bool ReleaseStaleObjects)
     }
 }
 
+void RenderDeviceVkImpl::FlushStaleResources(Uint32 CmdQueueIndex)
+{
+    // Submit empty command buffer to the queue. This will effectively signal the fence and 
+    // discard all resources
+    VkSubmitInfo DummySumbitInfo = {};
+    TRenderDeviceBase::SubmitCommandBuffer(0, DummySumbitInfo, true);
+}
 
 void RenderDeviceVkImpl::FinishFrame(bool ReleaseAllResources)
 {
@@ -277,13 +284,9 @@ void RenderDeviceVkImpl::FinishFrame(bool ReleaseAllResources)
     // no command lists submitted during the frame. All stale resources will
     // be associated with the submitted fence value and thus will not be released
     // until the GPU is finished with the current frame
-    Uint64 SubmittedFenceValue = 0;
-    Uint64 SubmittedCmdBuffNumber = 0;
-    VkSubmitInfo DummySubmitInfo = {};
     
     // TODO: Rework
-    // Submit empty command buffer to set a fence on the GPU
-    auto CmbBuffInfo = TRenderDeviceBase::SubmitCommandBuffer(0, DummySubmitInfo, true);
+    FlushStaleResources(0);
         
     // TODO: rework this
     auto CompletedFenceValue = ReleaseAllResources ? std::numeric_limits<Uint64>::max() : m_CommandQueues[0].CmdQueue->GetCompletedFenceValue();

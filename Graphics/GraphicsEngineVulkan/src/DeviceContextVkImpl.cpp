@@ -70,6 +70,7 @@ namespace Diligent
         m_CmdListAllocator{ GetRawAllocator(), sizeof(CommandListVkImpl), 64 },
         m_ContextId{ContextId},
         m_CommandQueueId{CommandQueueId},
+        m_SubmittedBuffersCmdQueueMask{bIsDeferred ? 0 : Uint64{1} << CommandQueueId},
         // Command pools for deferred contexts must be thread safe because finished command buffers are executed and released from another thread
         m_CmdPool
         {
@@ -149,7 +150,7 @@ namespace Diligent
         // There must be no resources in the stale resource list. For immediate context, all stale resources must have been
         // moved to the release queue by Flush(). For deferred contexts, this should have happened in the last FinishCommandList()
         // call.
-        VERIFY(m_UploadHeap.GetStaleAllocationsCount() == 0, "All stale allocations must have been discarded at this point");
+        VERIFY(m_UploadHeap.GetStalePagesCount() == 0, "All stale pages must have been discarded at this point");
         VERIFY(m_DynamicDescriptorPool.GetStaleAllocationCount() == 0, "All stale dynamic descriptor set allocations must have been discarded at this point");
         // TODO: rework
         ReleaseStaleContextResources(m_NextCmdBuffNumber, m_LastSubmittedFenceValue, pDeviceVkImpl->GetCompletedFenceValue(0));
@@ -752,9 +753,20 @@ namespace Diligent
                 "There are outstanding commands in the deferred device context when finishing the frame. This is an error and may cause unpredicted behaviour. Close all deferred contexts and execute them before finishing the frame" :
                 "There are outstanding commands in the immediate device context when finishing the frame. This is an error and may cause unpredicted behaviour. Call Flush() to submit all commands for execution before finishing the frame");
 
-        m_UploadHeap.DiscardAllocations(m_CommandQueueId, m_LastSubmittedFenceValue);
+        VERIFY_EXPR(m_bIsDeferred || m_SubmittedBuffersCmdQueueMask == (Uint64{1}<<m_CommandQueueId));
+        m_UploadHeap.ReleaseAllocatedPages(m_SubmittedBuffersCmdQueueMask);
+        if (m_bIsDeferred)
+            m_SubmittedBuffersCmdQueueMask = 0;
+
         m_DynamicDescriptorPool.ReleaseStaleAllocations(CompletedFenceValue);
         m_DynamicHeap.FinishFrame(m_LastSubmittedFenceValue);
+
+        if (!m_bIsDeferred)
+        {
+            // Make all stale resource move into the release queue
+            m_pDevice.RawPtr<RenderDeviceVkImpl>()->FlushStaleResources(m_CommandQueueId);
+        }
+
         Atomics::AtomicIncrement(m_ContextFrameNumber);
     }
 
@@ -1440,7 +1452,8 @@ namespace Diligent
         auto pDeferredCtxVkImpl = pDeferredCtx.RawPtr<DeviceContextVkImpl>();
         auto SubmittedFenceValue = pDeviceVkImpl->ExecuteCommandBuffer(SubmitInfo, this, nullptr);
         pDeferredCtxVkImpl->m_LastSubmittedFenceValue = SubmittedFenceValue;
-        
+        // Set the bit in the deferred context cmd queue mask corresponding to cmd queue of this context
+        pDeferredCtxVkImpl->m_SubmittedBuffersCmdQueueMask |= Uint64{1} << m_CommandQueueId;
         // It is OK to dispose command buffer from another thread. We are not going to
         // record any commands and only need to add the buffer to the queue
         pDeferredCtxVkImpl->DisposeVkCmdBuffer(vkCmdBuff, SubmittedFenceValue);

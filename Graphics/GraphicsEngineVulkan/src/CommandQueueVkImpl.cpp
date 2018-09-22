@@ -58,7 +58,7 @@ Uint64 CommandQueueVkImpl::Submit(const VkSubmitInfo& SubmitInfo)
     Atomics::AtomicIncrement(m_NextFenceValue);
 
     auto vkFence = m_pFence->GetVkFence();
-    bool SubmitCount = 
+    uint32_t SubmitCount = 
         (SubmitInfo.waitSemaphoreCount   != 0 || 
          SubmitInfo.commandBufferCount   != 0 || 
          SubmitInfo.signalSemaphoreCount != 0) ? 

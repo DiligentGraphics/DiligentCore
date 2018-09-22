@@ -66,9 +66,9 @@ public:
     ~VulkanUploadHeap();
 
     VulkanUploadAllocation Allocate(size_t SizeInBytes, size_t Alignment);
-    void DiscardAllocations(Uint32 CommandQueueIndex, uint64_t FenceValue);
+    void ReleaseAllocatedPages(Uint64 CmdQueueMask);
 
-    size_t GetStaleAllocationsCount()const
+    size_t GetStalePagesCount()const
     {
         return m_Pages.size();
     }

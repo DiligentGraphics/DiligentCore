@@ -126,36 +126,14 @@ VulkanUploadAllocation VulkanUploadHeap::Allocate(size_t SizeInBytes, size_t Ali
     return Allocation;
 }
 
-void VulkanUploadHeap::DiscardAllocations(Uint32 CommandQueueIndex, uint64_t FenceValue)
+void VulkanUploadHeap::ReleaseAllocatedPages(Uint64 CmdQueueMask)
 {
-    auto& ReleaseQueue = m_RenderDevice.GetReleaseQueue(CommandQueueIndex);
-
+    // The pages will go into the stale resources queue first, however they will move into the release
+    // queue rightaway when RenderDeviceVkImpl::FlushStaleResources() is called by the DeviceContextVkImpl::FinishFrame()
+    for (auto& Page : m_Pages)
     {
-        auto AllocIt = m_Pages.begin();
-        ReleaseQueue.DiscardResources<VulkanUtilities::VulkanMemoryAllocation>(FenceValue, [&](VulkanUtilities::VulkanMemoryAllocation& MemAllocation)
-        {
-            if(AllocIt != m_Pages.end())
-            {
-                MemAllocation = std::move(AllocIt->MemAllocation);
-                ++AllocIt;
-                return true;
-            }
-            return false;
-        });
-    }
-
-    {
-        auto AllocIt = m_Pages.begin();
-        ReleaseQueue.DiscardResources<VulkanUtilities::BufferWrapper>(FenceValue, [&](VulkanUtilities::BufferWrapper& Buffer)
-        {
-            if(AllocIt != m_Pages.end())
-            {
-                Buffer = std::move(AllocIt->Buffer);
-                ++AllocIt;
-                return true;
-            }
-            return false;
-        });
+        m_RenderDevice.SafeReleaseDeviceObject(std::move(Page.MemAllocation), CmdQueueMask);
+        m_RenderDevice.SafeReleaseDeviceObject(std::move(Page.Buffer),        CmdQueueMask);
     }
 
     m_Pages.clear();

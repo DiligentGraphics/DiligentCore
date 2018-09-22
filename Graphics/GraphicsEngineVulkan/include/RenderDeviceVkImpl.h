@@ -119,7 +119,8 @@ public:
     VulkanUtilities::VulkanMemoryManager& GetGlobalMemoryManager() { return m_MemoryMgr; }
 
     VulkanDynamicMemoryManager& GetDynamicMemoryManager() { return m_DynamicMemoryManager; }
-     
+    void FlushStaleResources(Uint32 CmdQueueIndex);
+
 private:
     virtual void TestTextureFormat( TEXTURE_FORMAT TexFormat )override final;
 

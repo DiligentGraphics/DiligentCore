@@ -243,6 +243,13 @@ private:
     const Uint32 m_ContextId;
     const Uint32 m_CommandQueueId;
 
+    // This mask indicates which command queues command buffers from this context were submitted to.
+    // For immediate context, this will always be 1 << m_CommandQueueId. 
+    // For deferred contexts, this will accumulate bits of the queues to which command buffers
+    // were submitted to before FinishFrame() was called. This mask is used to release resources
+    // allocated by the context during the frame when FinishFrame() is called.
+    Uint64 m_SubmittedBuffersCmdQueueMask = 0;
+
     VulkanUtilities::VulkanCommandBufferPool m_CmdPool;
 
     // Semaphores are not owned by the command context
