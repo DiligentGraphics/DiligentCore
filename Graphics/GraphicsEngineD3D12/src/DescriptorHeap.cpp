@@ -136,7 +136,8 @@ void DescriptorHeapAllocationManager::Free(DescriptorHeapAllocation&& Allocation
     //
     // If basic requirement is met, GetNextFenceValue() will never return a number that is less than the fence value 
     // associated with the last command list that references descriptors from the allocation
-    m_FreeBlockManager.Free(DescriptorOffset, Allocation.GetNumHandles(), m_pDeviceD3D12Impl->GetNextFenceValue());
+    // TODO: Rework
+    m_FreeBlockManager.Free(DescriptorOffset, Allocation.GetNumHandles(), m_pDeviceD3D12Impl->GetNextFenceValue(0));
     
     // Clear the allocation
     Allocation = DescriptorHeapAllocation();

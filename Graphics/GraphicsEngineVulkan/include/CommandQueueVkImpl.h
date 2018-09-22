@@ -62,7 +62,7 @@ public:
 
     virtual VkQueue GetVkQueue()override final{return m_VkQueue;}
 
-    virtual uint32_t GetQueueFamilyIndex()override final { return m_QueueFamilyIndex; }
+    virtual uint32_t GetQueueFamilyIndex()const override final { return m_QueueFamilyIndex; }
     
     virtual Uint64 WaitForIdle()override final;
 

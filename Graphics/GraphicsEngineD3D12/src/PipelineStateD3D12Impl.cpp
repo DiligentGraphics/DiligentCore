@@ -239,7 +239,7 @@ PipelineStateD3D12Impl::~PipelineStateD3D12Impl()
     ShaderResLayoutAllocator.Free(m_pShaderResourceLayouts);
 
     // D3D12 object can only be destroyed when it is no longer used by the GPU
-    m_pDevice->SafeReleaseD3D12Object(m_pd3d12PSO);
+    m_pDevice->SafeReleaseDeviceObject(std::move(m_pd3d12PSO), m_Desc.CommandQueueMask);
 }
 
 IMPLEMENT_QUERY_INTERFACE( PipelineStateD3D12Impl, IID_PipelineStateD3D12, TPipelineStateBase )

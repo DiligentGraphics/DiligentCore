@@ -45,7 +45,8 @@ class RenderDeviceNextGenBase : public TBase
 public:
     RenderDeviceNextGenBase(IReferenceCounters* pRefCounters, 
                             IMemoryAllocator&   RawMemAllocator, 
-                            size_t NumQueues,
+                            size_t              CmdQueueCount,
+                            CommandQueueType**  Queues,
                             Uint32 NumDeferredContexts,
                             size_t TextureObjSize, 
                             size_t TexViewObjSize,
@@ -68,11 +69,11 @@ public:
               PSOSize,
               SRBSize,
               FenceSize),
-        m_NumQueues(NumQueues)
+        m_CmdQueueCount(CmdQueueCount)
     {
-        m_CommandQueues = reinterpret_cast<CommandQueue*>(ALLOCATE(m_RawMemAllocator, "Raw memory for the device command/release queues", sizeof(CommandQueue)*m_NumQueues));
-        for(size_t q=0; q < m_NumQueues; ++q)
-            new(m_CommandQueues+q)CommandQueue(m_RawMemAllocator);
+        m_CommandQueues = reinterpret_cast<CommandQueue*>(ALLOCATE(m_RawMemAllocator, "Raw memory for the device command/release queues", sizeof(CommandQueue)*m_CmdQueueCount));
+        for(size_t q=0; q < m_CmdQueueCount; ++q)
+            new(m_CommandQueues+q)CommandQueue(RefCntAutoPtr<CommandQueueType>(Queues[q]), m_RawMemAllocator);
     }
 
     ~RenderDeviceNextGenBase()
@@ -121,7 +122,7 @@ public:
         while (QueueMask != 0)
         {
             auto QueueIndex = PlatformMisc::GetLSB(QueueMask);
-            VERIFY_EXPR(QueueIndex < m_NumQueues);
+            VERIFY_EXPR(QueueIndex < m_CmdQueueCount);
 
             auto& Queue = m_CommandQueues[QueueIndex];
             // Do not use std::move on wrapper!!!
@@ -136,26 +137,26 @@ public:
     
     size_t GetCommandQueueCount()const
     {
-        return m_NumQueues;
+        return m_CmdQueueCount;
     }
 
     Uint64 GetCommandQueueMask()const
     {
-        return (m_NumQueues < 64) ? ((Uint64{1} << Uint64{m_NumQueues}) - 1) : ~Uint64{0};
+        return (m_CmdQueueCount < 64) ? ((Uint64{1} << Uint64{m_CmdQueueCount}) - 1) : ~Uint64{0};
     }
 
     void PurgeReleaseQueues()
     {
-        for(size_t q=0; q < m_NumQueues; ++q)
+        for(size_t q=0; q < m_CmdQueueCount; ++q)
         {
             auto& Queue = m_CommandQueues[q];
             Queue.ReleaseQueue.Purge(Queue.CmdQueue->GetCompletedFenceValue());
         }
     }
 
-    void IdleCommandQueues(bool IncrementCmdBuffNumber, bool ReleaseResources)
+    void IdleCommandQueues(bool ReleaseResources)
     {
-        for(size_t q=0; q < m_NumQueues; ++q)
+        for(size_t q=0; q < m_CmdQueueCount; ++q)
         {
             auto& Queue = m_CommandQueues[q];
 
@@ -164,7 +165,7 @@ public:
             {
                 std::lock_guard<std::mutex> Lock(Queue.Mtx);
 
-                if (IncrementCmdBuffNumber)
+                if (ReleaseResources)
                 {
                     // Increment command buffer number before idling the queue.
                     // This will make sure that any resource released while this function
@@ -193,7 +194,7 @@ public:
     SubmittedCommandBufferInfo SubmitCommandBuffer(Uint32 QueueIndex, SubmitDataType& SubmitData, bool DiscardStaleResources)
     {
         SubmittedCommandBufferInfo CmdBuffInfo;
-        VERIFY_EXPR(QueueIndex < m_NumQueues);
+        VERIFY_EXPR(QueueIndex < m_CmdQueueCount);
         auto& Queue = m_CommandQueues[QueueIndex];
 
         {
@@ -230,14 +231,38 @@ public:
 
     ResourceReleaseQueue<DynamicStaleResourceWrapper>& GetReleaseQueue(Uint32 QueueIndex)
     {
-        VERIFY_EXPR(QueueIndex < m_NumQueues);
+        VERIFY_EXPR(QueueIndex < m_CmdQueueCount);
         return m_CommandQueues[QueueIndex].ReleaseQueue;
     }
 
-    CommandQueueType& GetCommandQueue(Uint32 QueueIndex)
+    const CommandQueueType& GetCommandQueue(Uint32 QueueIndex)
     {
-        VERIFY_EXPR(QueueIndex < m_NumQueues);
+        VERIFY_EXPR(QueueIndex < m_CmdQueueCount);
         return *m_CommandQueues[QueueIndex].CmdQueue;
+    }
+
+    virtual Uint64 GetCompletedFenceValue(Uint32 QueueIndex) override final
+    {
+        return m_CommandQueues[QueueIndex].CmdQueue->GetCompletedFenceValue();
+    }
+
+    virtual Uint64 GetNextFenceValue(Uint32 QueueIndex) override final
+    {
+        return m_CommandQueues[QueueIndex].CmdQueue->GetNextFenceValue();
+    }
+
+    virtual Bool IsFenceSignaled(Uint32 QueueIndex, Uint64 FenceValue) override final
+    {
+        return FenceValue <= GetCompletedFenceValue(QueueIndex);
+    }
+
+    template<typename TAction>
+    void LockCommandQueue(Uint32 QueueIndex, TAction Action)
+    {
+        VERIFY_EXPR(QueueIndex < m_CmdQueueCount);
+        auto& Queue = m_CommandQueues[QueueIndex];
+        std::lock_guard<std::mutex> Lock(Queue.Mtx);
+        Action(Queue.CmdQueue);
     }
 
 protected:
@@ -245,7 +270,7 @@ protected:
     {
         if (m_CommandQueues != nullptr)
         {
-            for(size_t q=0; q < m_NumQueues; ++q)
+            for(size_t q=0; q < m_CmdQueueCount; ++q)
                 m_CommandQueues[q].~CommandQueue();
             m_RawMemAllocator.Free(m_CommandQueues);
             m_CommandQueues = nullptr;
@@ -254,7 +279,8 @@ protected:
 
     struct CommandQueue
     {
-        CommandQueue(IMemoryAllocator& Allocator)noexcept : 
+        CommandQueue(RefCntAutoPtr<CommandQueueType> _CmdQueue, IMemoryAllocator& Allocator)noexcept : 
+            CmdQueue    (std::move(_CmdQueue)),
             ReleaseQueue(Allocator)
         {}
 
@@ -268,7 +294,7 @@ protected:
         RefCntAutoPtr<CommandQueueType>                   CmdQueue;
         ResourceReleaseQueue<DynamicStaleResourceWrapper> ReleaseQueue;
     };
-    const size_t  m_NumQueues     = 0;
+    const size_t  m_CmdQueueCount = 0;
     CommandQueue* m_CommandQueues = nullptr;
 };
 

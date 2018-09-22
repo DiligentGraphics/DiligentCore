@@ -41,8 +41,12 @@ SwapChainD3D12Impl::SwapChainD3D12Impl(IReferenceCounters*       pRefCounters,
     TSwapChainBase(pRefCounters, pRenderDeviceD3D12, pDeviceContextD3D12, SCDesc, FSDesc, pNativeWndHandle),
     m_pBackBufferRTV(STD_ALLOCATOR_RAW_MEM(RefCntAutoPtr<ITextureView>, GetRawAllocator(), "Allocator for vector<RefCntAutoPtr<ITextureView>>"))
 {
-    auto *pd3d12CmdQueue = pRenderDeviceD3D12->GetCmdQueue()->GetD3D12CommandQueue();
-    CreateDXGISwapChain(pd3d12CmdQueue);
+    pRenderDeviceD3D12->LockCommandQueue(0, 
+        [this](ICommandQueueD3D12 *pCmdQueue)
+        {
+            CreateDXGISwapChain(pCmdQueue->GetD3D12CommandQueue());
+        }
+    );
     InitBuffersAndViews();
 }
 
@@ -173,8 +177,12 @@ void SwapChainD3D12Impl::UpdateSwapChain(bool CreateNew)
             if(CreateNew)
             {
                 m_pSwapChain.Release();
-                auto *pd3d12CmdQueue = m_pRenderDevice.RawPtr<RenderDeviceD3D12Impl>()->GetCmdQueue()->GetD3D12CommandQueue();
-                CreateDXGISwapChain(pd3d12CmdQueue);
+                m_pRenderDevice.RawPtr<RenderDeviceD3D12Impl>()->LockCommandQueue(0, 
+                    [this](ICommandQueueD3D12 *pCmdQueue)
+                    {
+                        CreateDXGISwapChain(pCmdQueue->GetD3D12CommandQueue());
+                    }
+                );
             }
             else
             {

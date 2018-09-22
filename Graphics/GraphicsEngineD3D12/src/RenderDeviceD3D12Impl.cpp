@@ -41,13 +41,15 @@ RenderDeviceD3D12Impl :: RenderDeviceD3D12Impl(IReferenceCounters*          pRef
                                                IMemoryAllocator&            RawMemAllocator,
                                                const EngineD3D12Attribs&    CreationAttribs,
                                                ID3D12Device*                pd3d12Device,
-                                               ICommandQueueD3D12*          pCmdQueue,
+                                               size_t                       CommandQueueCount,
+                                               ICommandQueueD3D12**         ppCmdQueues, 
                                                Uint32                       NumDeferredContexts) : 
     TRenderDeviceBase
     {
         pRefCounters,
         RawMemAllocator,
-        1,
+        CommandQueueCount,
+        ppCmdQueues,
         NumDeferredContexts,
         sizeof(TextureD3D12Impl),
         sizeof(TextureViewD3D12Impl),
@@ -60,10 +62,7 @@ RenderDeviceD3D12Impl :: RenderDeviceD3D12Impl(IReferenceCounters*          pRef
         sizeof(FenceD3D12Impl)
     },
     m_pd3d12Device  (pd3d12Device),
-    m_pCommandQueue (pCmdQueue),
     m_EngineAttribs (CreationAttribs),
-	m_FrameNumber      (0),
-    m_NextCmdListNumber(0),
     m_CmdListManager(this),
     m_CPUDescriptorHeaps
     {
@@ -84,7 +83,6 @@ RenderDeviceD3D12Impl :: RenderDeviceD3D12Impl(IReferenceCounters*          pRef
 	},
     m_ContextPool(STD_ALLOCATOR_RAW_MEM(ContextPoolElemType, GetRawAllocator(), "Allocator for vector<unique_ptr<CommandContext>>")),
     m_AvailableContexts(STD_ALLOCATOR_RAW_MEM(CommandContext*, GetRawAllocator(), "Allocator for vector<CommandContext*>")),
-    m_ReleaseQueue(GetRawAllocator()),
     m_DynamicMemoryManager(GetRawAllocator(), m_pd3d12Device, CreationAttribs.NumDynamicHeapPagesToReserve, CreationAttribs.DynamicHeapPageSize)
 {
     m_DeviceCaps.DevType = DeviceType::D3D12;
@@ -106,8 +104,11 @@ RenderDeviceD3D12Impl::~RenderDeviceD3D12Impl()
     // release queues
     FinishFrame(true);
 
-    m_DynamicMemoryManager.Destroy(GetCompletedFenceValue());
+    // TODO: Rework
+    m_DynamicMemoryManager.Destroy(GetCompletedFenceValue(0));
+
 	m_ContextPool.clear();
+    DestroyCommandQueues();
 }
 
 void RenderDeviceD3D12Impl::DisposeCommandContext(CommandContext* pCtx)
@@ -116,41 +117,36 @@ void RenderDeviceD3D12Impl::DisposeCommandContext(CommandContext* pCtx)
     m_AvailableContexts.push_back(pCtx);
 }
 
+void RenderDeviceD3D12Impl::CloseAndExecuteTransientCommandContext(Uint32 CommandQueueIndex, CommandContext *pCtx)
+{
+    CComPtr<ID3D12CommandAllocator> pAllocator;
+	auto *pCmdList = pCtx->Close(&pAllocator);
+    Uint64 FenceValue = 0;
+    // Execute command list directly through the queue to avoid interference with command list numbers in the queue
+    LockCommandQueue(CommandQueueIndex, 
+        [&](ICommandQueueD3D12* pCmdQueue)
+        {
+            FenceValue = pCmdQueue->Submit(pCmdList);
+        }
+    );
+    // DiscardAllocator() is thread-safe
+    // TODO: Rework
+	m_CmdListManager.DiscardAllocator(FenceValue, pAllocator);
+
+    {
+	    std::lock_guard<std::mutex> LockGuard(m_ContextAllocationMutex);
+    	m_AvailableContexts.push_back(pCtx);
+    }
+}
+
 Uint64 RenderDeviceD3D12Impl::CloseAndExecuteCommandContext(CommandContext* pCtx, bool DiscardStaleObjects, std::vector<std::pair<Uint64, RefCntAutoPtr<IFence> > >* pSignalFences)
 {
     CComPtr<ID3D12CommandAllocator> pAllocator;
 	auto *pCmdList = pCtx->Close(&pAllocator);
 
+    Uint32 QueueIndex = 0;
     Uint64 FenceValue = 0;
-    Uint64 CmdListNumber = 0;
     {
-	    std::lock_guard<std::mutex> LockGuard(m_CmdQueueMutex);
-        auto NextFenceValue = m_pCommandQueue->GetNextFenceValue();
-	    // Submit the command list to the queue
-        FenceValue = m_pCommandQueue->ExecuteCommandList(pCmdList);
-        VERIFY(FenceValue >= NextFenceValue, "Fence value of the executed command list is less than the next fence value previously queried through GetNextFenceValue()");
-        FenceValue = std::max(FenceValue, NextFenceValue);
-        CmdListNumber = m_NextCmdListNumber;
-        Atomics::AtomicIncrement(m_NextCmdListNumber);
-        if (pSignalFences != nullptr)
-        {
-            for (auto& val_fence : *pSignalFences)
-            {
-                auto* pFenceD3D12Impl = val_fence.second.RawPtr<FenceD3D12Impl>();
-                auto* pd3d12Fence = pFenceD3D12Impl->GetD3D12Fence();
-                m_pCommandQueue->SignalFence(pd3d12Fence, val_fence.first);
-            }
-        }
-    }
-
-    if (DiscardStaleObjects)
-    {
-        // The following basic requirement guarantees correctness of resource deallocation:
-        //
-        //        A resource is never released before the last draw command referencing it is invoked on the immediate context
-        //
-        // See http://diligentgraphics.com/diligent-engine/architecture/d3d12/managing-resource-lifetimes/
-
         // Stale objects should only be discarded when submitting cmd list from 
         // the immediate context, otherwise the basic requirement may be violated
         // as in the following scenario
@@ -169,18 +165,24 @@ Uint64 RenderDeviceD3D12Impl::CloseAndExecuteCommandContext(CommandContext* pCtx
         //                  |     N+1, but resource it references    |                                   |
         //                  |     was added to the delete queue      |                                   |
         //                  |     with number N                      |                                   |
-
-        // Move stale objects into a release queue.
-        // Note that objects are moved from stale list to release queue based on the
-        // cmd list number, not the fence value. This makes sure that basic requirement
-        // is met even when the fence value is not incremented while executing 
-        // the command list (as is the case with Unity command queue).
-        m_ReleaseQueue.DiscardStaleResources(CmdListNumber, FenceValue);
+        auto SubmittedCmdBuffInfo = TRenderDeviceBase::SubmitCommandBuffer(QueueIndex, pCmdList, true);
+        FenceValue = SubmittedCmdBuffInfo.FenceValue;
+        if (pSignalFences != nullptr)
+        {
+            for (auto& val_fence : *pSignalFences)
+            {
+                auto* pFenceD3D12Impl = val_fence.second.RawPtr<FenceD3D12Impl>();
+                auto* pd3d12Fence = pFenceD3D12Impl->GetD3D12Fence();
+                m_CommandQueues[QueueIndex].CmdQueue->SignalFence(pd3d12Fence, val_fence.first);
+            }
+        }
     }
 
     // DiscardAllocator() is thread-safe
+    // TODO: Rework
 	m_CmdListManager.DiscardAllocator(FenceValue, pAllocator);
     
+    // TODO: Rework
     pCtx->DiscardDynamicDescriptors(FenceValue);
 
     {
@@ -194,39 +196,10 @@ Uint64 RenderDeviceD3D12Impl::CloseAndExecuteCommandContext(CommandContext* pCtx
 
 void RenderDeviceD3D12Impl::IdleGPU(bool ReleaseStaleObjects) 
 { 
-    Uint64 FenceValue = 0;
-    Uint64 CmdListNumber = 0;
-    {
-        // Lock the command queue to avoid other threads interfering with the GPU
-        std::lock_guard<std::mutex> LockGuard(m_CmdQueueMutex);
-        FenceValue = m_pCommandQueue->GetNextFenceValue();
-        m_pCommandQueue->IdleGPU();
-        // Increment cmd list number while keeping queue locked. 
-        // This guarantees that any D3D12 object released after the lock
-        // is released, will be associated with the incremented cmd list number
-        CmdListNumber = m_NextCmdListNumber;
-        Atomics::AtomicIncrement(m_NextCmdListNumber);
-    }
-    
-    if (ReleaseStaleObjects)
-    {
-        // Do not wait until the end of the frame and force deletion. 
-        // This is necessary to release outstanding references to the
-        // swap chain buffers when it is resized in the middle of the frame.
-        // Since GPU has been idled, it it is safe to do so
-        m_ReleaseQueue.DiscardStaleResources(CmdListNumber, FenceValue);
-        m_ReleaseQueue.Purge(FenceValue);
-    }
-}
-
-Bool RenderDeviceD3D12Impl::IsFenceSignaled(Uint64 FenceValue) 
-{
-    return FenceValue <= GetCompletedFenceValue();
-}
-
-Uint64 RenderDeviceD3D12Impl::GetCompletedFenceValue()
-{
-    return m_pCommandQueue->GetCompletedFenceValue();
+    // Do not wait until the end of the frame and force deletion. 
+    // It is necessary to release outstanding references to the
+    // swap chain buffers when it is resized in the middle of the frame.
+    IdleCommandQueues(ReleaseStaleObjects);
 }
 
 void RenderDeviceD3D12Impl::FinishFrame(bool ReleaseAllResources)
@@ -250,24 +223,16 @@ void RenderDeviceD3D12Impl::FinishFrame(bool ReleaseAllResources)
         }
     }
     
-    auto CompletedFenceValue = ReleaseAllResources ? std::numeric_limits<Uint64>::max() : GetCompletedFenceValue();
+    // TODO: rework
+    // Submit empty command list to set a fence on the GPU and increment command list number.
+    // Discard all remaining objects which is important to do if there were 
+    // no command lists submitted during the frame
+    ID3D12GraphicsCommandList* pNullCmdList = nullptr;
+    TRenderDeviceBase::SubmitCommandBuffer(0, pNullCmdList, true);
 
-    // We must use NextFenceValue here, NOT current value, because the 
-    // fence value may or may not have been incremented when the last 
-    // command list was submitted for execution (Unity only
-    // increments fence value once per frame)
-    Uint64 NextFenceValue = 0;
-    Uint64 CmdListNumber = 0;
-    {
-        // Lock the command queue to avoid other threads interfering with the GPU
-        std::lock_guard<std::mutex> LockGuard(m_CmdQueueMutex);
-        NextFenceValue = m_pCommandQueue->GetNextFenceValue();
-        // Increment cmd list number while keeping queue locked. 
-        // This guarantees that any D3D12 object released after the lock
-        // is released, will be associated with the incremented cmd list number
-        CmdListNumber = m_NextCmdListNumber;
-        Atomics::AtomicIncrement(m_NextCmdListNumber);
-    }
+    auto CompletedFenceValue = ReleaseAllResources ? std::numeric_limits<Uint64>::max() : GetCompletedFenceValue(0);
+   
+    PurgeReleaseQueues();
 
     // Dynamic memory is used to update resource contents as well as to allocate
     // space for dynamic resources.
@@ -285,13 +250,6 @@ void RenderDeviceD3D12Impl::FinishFrame(bool ReleaseAllResources)
     {
         m_GPUDescriptorHeaps[GPUHeap].ReleaseStaleAllocations(CompletedFenceValue);
     }
-
-    // Discard all remaining objects. This is important to do if there were 
-    // no command lists submitted during the frame
-    m_ReleaseQueue.DiscardStaleResources(CmdListNumber, NextFenceValue);
-    m_ReleaseQueue.Purge(CompletedFenceValue);
-
-    Atomics::AtomicIncrement(m_FrameNumber);
 }
 
 
@@ -319,14 +277,6 @@ CommandContext* RenderDeviceD3D12Impl::AllocateCommandContext(const Char* ID)
 	//	EngineProfiling::BeginBlock(ID, NewContext);
 
 	return ret;
-}
-
-void RenderDeviceD3D12Impl::SafeReleaseD3D12Object(ID3D12Object* pObj)
-{
-    // When D3D12 object is released, it is first moved into the
-    // stale objects list. The list is moved into a release queue
-    // when the next command list is executed. 
-    m_ReleaseQueue.SafeReleaseResource(CComPtr<ID3D12Object>(pObj), m_NextCmdListNumber);
 }
 
 bool CreateTestResource(ID3D12Device* pDevice, const D3D12_RESOURCE_DESC& ResDesc)

@@ -25,6 +25,7 @@
 /// Routines that initialize Vulkan-based engine implementation
 
 #include "pch.h"
+#include <array>
 #include "RenderDeviceFactoryVk.h"
 #include "RenderDeviceVkImpl.h"
 #include "DeviceContextVkImpl.h"
@@ -55,7 +56,8 @@ public:
     void AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::VulkanInstance>       Instance,
                               std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice> PhysicalDevice,
                               std::shared_ptr<VulkanUtilities::VulkanLogicalDevice>  LogicalDevice,
-                              ICommandQueueVk*       pCommandQueue,
+                              size_t                 CommandQueueCount,
+                              ICommandQueueVk**      ppCommandQueues,
                               const EngineVkAttribs& EngineAttribs, 
                               IRenderDevice**        ppDevice, 
                               IDeviceContext**       ppContexts,
@@ -194,7 +196,8 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk( const EngineVkAttribs& Crea
         auto &RawMemAllocator = GetRawAllocator();
         pCmdQueueVk = NEW_RC_OBJ(RawMemAllocator, "CommandQueueVk instance", CommandQueueVkImpl)(LogicalDevice, QueueInfo.queueFamilyIndex);
 
-        AttachToVulkanDevice(Instance, std::move(PhysicalDevice), LogicalDevice, pCmdQueueVk, CreationAttribs, ppDevice, ppContexts, NumDeferredContexts);
+        std::array<ICommandQueueVk*, 1> CommandQueues = {pCmdQueueVk};
+        AttachToVulkanDevice(Instance, std::move(PhysicalDevice), LogicalDevice, CommandQueues.size(), CommandQueues.data(), CreationAttribs, ppDevice, ppContexts, NumDeferredContexts);
 
         FenceDesc Desc;
         Desc.Name = "Command queue fence";
@@ -230,14 +233,15 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk( const EngineVkAttribs& Crea
 void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::VulkanInstance>       Instance,
                                                std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice> PhysicalDevice,
                                                std::shared_ptr<VulkanUtilities::VulkanLogicalDevice>  LogicalDevice,
-                                               ICommandQueueVk*       pCommandQueue,
+                                               size_t                 CommandQueueCount,
+                                               ICommandQueueVk**      ppCommandQueues,
                                                const EngineVkAttribs& EngineAttribs, 
                                                IRenderDevice**        ppDevice, 
                                                IDeviceContext**       ppContexts,
                                                Uint32                 NumDeferredContexts)
 {
-    VERIFY( pCommandQueue && ppDevice && ppContexts, "Null pointer provided" );
-    if(!LogicalDevice || !pCommandQueue || !ppDevice || !ppContexts )
+    VERIFY( ppCommandQueues && ppDevice && ppContexts, "Null pointer provided" );
+    if(!LogicalDevice || !ppCommandQueues || !ppDevice || !ppContexts )
         return;
 
     *ppDevice = nullptr;
@@ -246,7 +250,7 @@ void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::
     try
     {
         auto &RawMemAllocator = GetRawAllocator();
-        RenderDeviceVkImpl *pRenderDeviceVk( NEW_RC_OBJ(RawMemAllocator, "RenderDeviceVkImpl instance", RenderDeviceVkImpl)(RawMemAllocator, EngineAttribs, pCommandQueue, Instance, std::move(PhysicalDevice), LogicalDevice, NumDeferredContexts ) );
+        RenderDeviceVkImpl *pRenderDeviceVk( NEW_RC_OBJ(RawMemAllocator, "RenderDeviceVkImpl instance", RenderDeviceVkImpl)(RawMemAllocator, EngineAttribs, CommandQueueCount, ppCommandQueues, Instance, std::move(PhysicalDevice), LogicalDevice, NumDeferredContexts ) );
         pRenderDeviceVk->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice) );
 
         std::shared_ptr<GenerateMipsVkHelper> GenerateMipsHelper(new GenerateMipsVkHelper(*pRenderDeviceVk));

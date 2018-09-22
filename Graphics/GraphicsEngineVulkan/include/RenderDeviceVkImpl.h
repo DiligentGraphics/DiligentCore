@@ -44,7 +44,6 @@
 #include "FramebufferCache.h"
 #include "RenderPassCache.h"
 #include "CommandPoolManager.h"
-#include "ResourceReleaseQueue.h"
 #include "VulkanDynamicHeap.h"
 
 /// Namespace for the Direct3D11 implementation of the graphics engine
@@ -60,7 +59,8 @@ public:
     RenderDeviceVkImpl( IReferenceCounters*     pRefCounters, 
                         IMemoryAllocator&       RawMemAllocator, 
                         const EngineVkAttribs&  CreationAttribs, 
-                        ICommandQueueVk*        pCmdQueue, 
+                        size_t                  CommandQueueCount,
+                        ICommandQueueVk**       pCmdQueues, 
                         std::shared_ptr<VulkanUtilities::VulkanInstance>        Instance,
                         std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice>  PhysicalDevice,
                         std::shared_ptr<VulkanUtilities::VulkanLogicalDevice>   LogicalDevice,
@@ -88,21 +88,6 @@ public:
     virtual void CreateTextureFromVulkanImage(VkImage vkImage, const TextureDesc& TexDesc, ITexture** ppTexture)override final;
 
     virtual void CreateBufferFromVulkanResource(VkBuffer vkBuffer, const BufferDesc& BuffDesc, IBuffer** ppBuffer)override final;
-
-    virtual Uint64 GetCompletedFenceValue(Uint32 QueueIndex) override final
-    {
-        return m_CommandQueues[QueueIndex].CmdQueue->GetCompletedFenceValue();
-    }
-
-    virtual Uint64 GetNextFenceValue(Uint32 QueueIndex) override final
-    {
-        return m_CommandQueues[QueueIndex].CmdQueue->GetNextFenceValue();
-    }
-
-    virtual Bool IsFenceSignaled(Uint32 QueueIndex, Uint64 FenceValue) override final
-    {
-        return FenceValue <= GetCompletedFenceValue(QueueIndex);
-    }
 
     // Idles GPU
 	void IdleGPU(bool ReleaseStaleObjects);

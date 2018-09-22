@@ -47,29 +47,42 @@ CommandQueueD3D12Impl::~CommandQueueD3D12Impl()
 
 IMPLEMENT_QUERY_INTERFACE( CommandQueueD3D12Impl, IID_CommandQueueD3D12, TBase )
 
-UINT64 CommandQueueD3D12Impl::ExecuteCommandList(ID3D12GraphicsCommandList* commandList)
+Uint64 CommandQueueD3D12Impl::Submit(ID3D12GraphicsCommandList* commandList)
 {
-    ID3D12CommandList *const ppCmdLists[] = {commandList};
-	m_pd3d12CmdQueue->ExecuteCommandLists(1, ppCmdLists);
+    std::lock_guard<std::mutex> Lock(m_QueueMtx);
+
     auto FenceValue = m_NextFenceValue;
-    // Signal the fence
-    m_pd3d12CmdQueue->Signal(m_d3d12Fence, FenceValue);
-    // Increment the value
+    // Increment the value before submitting the list
     Atomics::AtomicIncrement(m_NextFenceValue);
+
+    if (commandList != nullptr)
+    {
+        ID3D12CommandList *const ppCmdLists[] = {commandList};
+	    m_pd3d12CmdQueue->ExecuteCommandLists(1, ppCmdLists);
+    }
+
+    // Signal the fence. This must be done atomically with command list submission.
+    m_pd3d12CmdQueue->Signal(m_d3d12Fence, FenceValue);
+    
     return FenceValue;
 }
 
-void CommandQueueD3D12Impl::IdleGPU()
+Uint64 CommandQueueD3D12Impl::WaitForIdle()
 {
+    std::lock_guard<std::mutex> Lock(m_QueueMtx);
+
     Uint64 LastSignaledFenceValue = m_NextFenceValue;
-    m_pd3d12CmdQueue->Signal(m_d3d12Fence, LastSignaledFenceValue);
     Atomics::AtomicIncrement(m_NextFenceValue);
+
+    m_pd3d12CmdQueue->Signal(m_d3d12Fence, LastSignaledFenceValue);
+    
     if (GetCompletedFenceValue() < LastSignaledFenceValue)
     {
         m_d3d12Fence->SetEventOnCompletion(LastSignaledFenceValue, m_WaitForGPUEventHandle);
         WaitForSingleObject(m_WaitForGPUEventHandle, INFINITE);
         VERIFY(GetCompletedFenceValue() == LastSignaledFenceValue, "Unexpected signaled fence value");
     }
+    return LastSignaledFenceValue;
 }
 
 Uint64 CommandQueueD3D12Impl::GetCompletedFenceValue()
@@ -82,6 +95,7 @@ Uint64 CommandQueueD3D12Impl::GetCompletedFenceValue()
 
 void CommandQueueD3D12Impl::SignalFence(ID3D12Fence* pFence, Uint64 Value)
 {
+    std::lock_guard<std::mutex> Lock(m_QueueMtx);
     m_pd3d12CmdQueue->Signal(pFence, Value);
 }
 

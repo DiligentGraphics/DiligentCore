@@ -60,7 +60,7 @@ public:
     virtual VkQueue GetVkQueue() = 0;
 
     /// Returns vulkan command queue family index
-    virtual uint32_t GetQueueFamilyIndex() = 0;
+    virtual uint32_t GetQueueFamilyIndex()const = 0;
 
     /// Returns value of the last completed fence
     virtual Uint64 GetCompletedFenceValue() = 0;

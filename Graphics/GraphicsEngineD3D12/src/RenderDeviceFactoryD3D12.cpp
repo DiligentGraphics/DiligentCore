@@ -25,6 +25,7 @@
 /// Routines that initialize D3D12-based engine implementation
 
 #include "pch.h"
+#include <array>
 #include "RenderDeviceFactoryD3D12.h"
 #include "RenderDeviceD3D12Impl.h"
 #include "DeviceContextD3D12Impl.h"
@@ -56,7 +57,8 @@ public:
                                        Uint32                    NumDeferredContexts)override final;
 
     void AttachToD3D12Device(void*                     pd3d12NativeDevice, 
-                             ICommandQueueD3D12*       pCommandQueue,
+                             size_t                    CommandQueueCount,
+                             ICommandQueueD3D12**      ppCommandQueues,
                              const EngineD3D12Attribs& EngineAttribs, 
                              IRenderDevice**           ppDevice, 
                              IDeviceContext**          ppContexts,
@@ -260,14 +262,16 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12( const EngineD3D12Attr
         return;
     }
         
-    AttachToD3D12Device(d3d12Device, pCmdQueueD3D12, CreationAttribs, ppDevice, ppContexts, NumDeferredContexts);
+    std::array<ICommandQueueD3D12*, 1> CmdQueues = {pCmdQueueD3D12};
+    AttachToD3D12Device(d3d12Device, CmdQueues.size(), CmdQueues.data(), CreationAttribs, ppDevice, ppContexts, NumDeferredContexts);
 }
 
 
 /// Attaches to existing D3D12 device
 
 /// \param [in] pd3d12NativeDevice - pointer to native D3D12 device
-/// \param [in] pCommandQueue - pointer to the implementation of command queue
+/// \param [in] CommandQueueCount - Number of command queues
+/// \param [in] ppCommandQueues - pointer to the array of command queues
 /// \param [in] EngineAttribs - Engine creation attributes.
 /// \param [out] ppDevice - Address of the memory location where pointer to 
 ///                         the created device will be written
@@ -280,7 +284,8 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12( const EngineD3D12Attr
 ///                                   contexts are written to ppContexts array starting 
 ///                                   at position 1
 void EngineFactoryD3D12Impl::AttachToD3D12Device(void*                     pd3d12NativeDevice, 
-                                                 ICommandQueueD3D12*       pCommandQueue,
+                                                 size_t                    CommandQueueCount,
+                                                 ICommandQueueD3D12**      ppCommandQueues,
                                                  const EngineD3D12Attribs& EngineAttribs, 
                                                  IRenderDevice**           ppDevice, 
                                                  IDeviceContext**          ppContexts,
@@ -289,8 +294,8 @@ void EngineFactoryD3D12Impl::AttachToD3D12Device(void*                     pd3d1
     if (EngineAttribs.DebugMessageCallback != nullptr)
         SetDebugMessageCallback(EngineAttribs.DebugMessageCallback);
 
-    VERIFY( pd3d12NativeDevice && pCommandQueue && ppDevice && ppContexts, "Null pointer provided" );
-    if( !pd3d12NativeDevice || !pCommandQueue || !ppDevice || !ppContexts )
+    VERIFY( pd3d12NativeDevice && ppCommandQueues && ppDevice && ppContexts, "Null pointer provided" );
+    if( !pd3d12NativeDevice || !ppCommandQueues || !ppDevice || !ppContexts )
         return;
 
     *ppDevice = nullptr;
@@ -301,7 +306,7 @@ void EngineFactoryD3D12Impl::AttachToD3D12Device(void*                     pd3d1
         SetRawAllocator(EngineAttribs.pRawMemAllocator);
         auto &RawMemAllocator = GetRawAllocator();
         auto d3d12Device = reinterpret_cast<ID3D12Device*>(pd3d12NativeDevice);
-        RenderDeviceD3D12Impl *pRenderDeviceD3D12( NEW_RC_OBJ(RawMemAllocator, "RenderDeviceD3D12Impl instance", RenderDeviceD3D12Impl)(RawMemAllocator, EngineAttribs, d3d12Device, pCommandQueue, NumDeferredContexts ) );
+        RenderDeviceD3D12Impl *pRenderDeviceD3D12( NEW_RC_OBJ(RawMemAllocator, "RenderDeviceD3D12Impl instance", RenderDeviceD3D12Impl)(RawMemAllocator, EngineAttribs, d3d12Device, CommandQueueCount, ppCommandQueues, NumDeferredContexts ) );
         pRenderDeviceD3D12->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice) );
 
         RefCntAutoPtr<DeviceContextD3D12Impl> pImmediateCtxD3D12( NEW_RC_OBJ(RawMemAllocator, "DeviceContextD3D12Impl instance", DeviceContextD3D12Impl)(pRenderDeviceD3D12, false, EngineAttribs, 0) );

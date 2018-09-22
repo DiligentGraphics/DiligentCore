@@ -208,7 +208,7 @@ namespace Diligent
                     if (!Deque.empty())
                     {
                         auto &FrontBuff = Deque.front();
-                        if (m_pInternalData->m_pDeviceD3D12->IsFenceSignaled(FrontBuff.first))
+                        if (m_pInternalData->m_pDeviceD3D12->IsFenceSignaled(0, FrontBuff.first))
                         {
                             *ppBuffer = FrontBuff.second.Detach();
                             Deque.pop_front();
@@ -270,7 +270,7 @@ namespace Diligent
         std::lock_guard<std::mutex> CacheLock(m_pInternalData->m_UploadBuffCacheMtx);
         auto &Cache = m_pInternalData->m_UploadBufferCache;
         auto &Deque = Cache[pUploadBufferD3D12->GetDesc()];
-        Uint64 FenceValue = m_pInternalData->m_pDeviceD3D12->GetNextFenceValue();
+        Uint64 FenceValue = m_pInternalData->m_pDeviceD3D12->GetNextFenceValue(0);
         Deque.emplace_back( FenceValue, pUploadBufferD3D12 );
     }
 }

@@ -64,8 +64,9 @@ void CommandListManager::RequestAllocator(ID3D12CommandAllocator** ppAllocator)
         // later
 		auto& AllocatorPair = m_DiscardedAllocators.front();
         
+        // TODO: Rework
         // Get the last completed fence value
-        auto CompletedFenceValue = m_pDeviceD3D12->GetCompletedFenceValue();
+        auto CompletedFenceValue = m_pDeviceD3D12->GetCompletedFenceValue(0);
         // Note that CompletedFenceValue only grows. So if after we queried
         // the value, the actual value is increased in other thread, this will not
         // be an issue as the only consequence is that potentially available  

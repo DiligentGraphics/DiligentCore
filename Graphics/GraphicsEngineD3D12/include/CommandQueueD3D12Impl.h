@@ -28,6 +28,7 @@
 
 #include "CommandQueueD3D12.h"
 #include "ObjectBase.h"
+#include <mutex>
 
 namespace Diligent
 {
@@ -44,14 +45,14 @@ public:
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
 
 	// Returns the fence value that will be signaled next time
-    virtual UINT64 GetNextFenceValue()override final { return m_NextFenceValue; }
+    virtual Uint64 GetNextFenceValue()override final { return m_NextFenceValue; }
 
 	// Executes a given command list
-	virtual UINT64 ExecuteCommandList(ID3D12GraphicsCommandList* commandList)override final;
+	virtual Uint64 Submit(ID3D12GraphicsCommandList* commandList)override final;
 
     virtual ID3D12CommandQueue* GetD3D12CommandQueue()override final { return m_pd3d12CmdQueue; }
 
-    virtual void IdleGPU()override final;
+    virtual Uint64 WaitForIdle()override final;
 
     virtual Uint64 GetCompletedFenceValue()override final;
 
@@ -64,6 +65,7 @@ private:
     // Last fence value completed by the GPU
     volatile Uint64 m_LastCompletedFenceValue = 0;
 
+    std::mutex                  m_QueueMtx;
     CComPtr<ID3D12CommandQueue> m_pd3d12CmdQueue;
 
     // The fence is signaled right after the command list has been 

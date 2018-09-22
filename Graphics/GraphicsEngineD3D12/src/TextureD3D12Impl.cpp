@@ -218,7 +218,8 @@ TextureD3D12Impl :: TextureD3D12Impl(IReferenceCounters*        pRefCounters,
         //                  |     N+1, but resource it references    |                                   |
         //                  |     was added to the delete queue      |                                   |
         //                  |     with value N                       |                                   |
-	    pRenderDeviceD3D12->CloseAndExecuteCommandContext(pInitContext, false, nullptr);
+        Uint32 QueueIndex = 0;
+	    pRenderDeviceD3D12->CloseAndExecuteTransientCommandContext(QueueIndex, pInitContext);
 
         // We MUST NOT call TransitionResource() from here, because
         // it will call AddRef() and potentially Release(), while 
@@ -226,7 +227,7 @@ TextureD3D12Impl :: TextureD3D12Impl(IReferenceCounters*        pRefCounters,
         // Add reference to the object to the release queue to keep it alive
         // until copy operation is complete.  This must be done after
         // submitting command list for execution!
-        pRenderDeviceD3D12->SafeReleaseD3D12Object(UploadBuffer);
+        pRenderDeviceD3D12->SafeReleaseDeviceObject(std::move(UploadBuffer), Uint64{1} << QueueIndex);
     }
 
     if(m_Desc.MiscFlags & MISC_TEXTURE_FLAG_GENERATE_MIPS)
@@ -398,7 +399,7 @@ TextureD3D12Impl :: ~TextureD3D12Impl()
 {
     // D3D12 object can only be destroyed when it is no longer used by the GPU
     auto *pDeviceD3D12Impl = ValidatedCast<RenderDeviceD3D12Impl>(GetDevice());
-    pDeviceD3D12Impl->SafeReleaseD3D12Object(m_pd3d12Resource);
+    pDeviceD3D12Impl->SafeReleaseDeviceObject(std::move(m_pd3d12Resource), m_Desc.CommandQueueMask);
 }
 
 void TextureD3D12Impl::UpdateData( IDeviceContext*          pContext,

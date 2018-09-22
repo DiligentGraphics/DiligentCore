@@ -38,12 +38,12 @@ class ICommandQueueD3D12 : public Diligent::IObject
 {
 public:
 	/// Returns the fence value that will be signaled next time
-	virtual UINT64 GetNextFenceValue() = 0;
+	virtual Uint64 GetNextFenceValue() = 0;
 
 	/// Executes a given command list
 
     /// \return Fence value associated with the executed command list
-	virtual UINT64 ExecuteCommandList(ID3D12GraphicsCommandList* commandList) = 0;
+	virtual Uint64 Submit(ID3D12GraphicsCommandList* commandList) = 0;
 
     /// Returns D3D12 command queue. May return null if queue is anavailable
     virtual ID3D12CommandQueue* GetD3D12CommandQueue() = 0;
@@ -52,7 +52,7 @@ public:
     virtual Uint64 GetCompletedFenceValue() = 0;
 
     /// Blocks execution until all pending GPU commands are complete
-    virtual void IdleGPU() = 0;
+    virtual Uint64 WaitForIdle() = 0;
 
     /// Signals the given fence
     virtual void SignalFence(ID3D12Fence* pFence, Uint64 Value) = 0;

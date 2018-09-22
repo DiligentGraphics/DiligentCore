@@ -41,7 +41,8 @@ namespace Diligent
 RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters*                                     pRefCounters, 
                                          IMemoryAllocator&                                       RawMemAllocator, 
                                          const EngineVkAttribs&                                  CreationAttribs, 
-                                         ICommandQueueVk*                                        pCmdQueue,
+                                         size_t                                                  CommandQueueCount,
+                                         ICommandQueueVk**                                       CmdQueues, 
                                          std::shared_ptr<VulkanUtilities::VulkanInstance>        Instance,
                                          std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice>  PhysicalDevice,
                                          std::shared_ptr<VulkanUtilities::VulkanLogicalDevice>   LogicalDevice,
@@ -50,7 +51,8 @@ RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters*                    
     {
         pRefCounters,
         RawMemAllocator,
-        1,
+        CommandQueueCount,
+        CmdQueues,
         NumDeferredContexts,
         sizeof(TextureVkImpl),
         sizeof(TextureViewVkImpl),
@@ -86,7 +88,7 @@ RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters*                    
         },
         CreationAttribs.MainDescriptorPoolSize.MaxDescriptorSets
     },
-    m_TransientCmdPoolMgr(*m_LogicalVkDevice, pCmdQueue->GetQueueFamilyIndex(), VK_COMMAND_POOL_CREATE_TRANSIENT_BIT),
+    m_TransientCmdPoolMgr(*m_LogicalVkDevice, CmdQueues[0]->GetQueueFamilyIndex(), VK_COMMAND_POOL_CREATE_TRANSIENT_BIT),
     m_MemoryMgr("Global resource memory manager", *m_LogicalVkDevice, *m_PhysicalDevice, GetRawAllocator(), CreationAttribs.DeviceLocalMemoryPageSize, CreationAttribs.HostVisibleMemoryPageSize, CreationAttribs.DeviceLocalMemoryReserveSize, CreationAttribs.HostVisibleMemoryReserveSize),
     m_DynamicMemoryManager
     {
@@ -96,8 +98,6 @@ RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters*                    
         ~Uint64{0}
     }
 {
-    m_CommandQueues[0].CmdQueue = pCmdQueue;
-
     m_DeviceCaps.DevType = DeviceType::Vulkan;
     m_DeviceCaps.MajorVersion = 1;
     m_DeviceCaps.MinorVersion = 0;
@@ -199,7 +199,12 @@ void RenderDeviceVkImpl::ExecuteAndDisposeTransientCmdBuff(Uint32 QueueIndex, Vk
     //
     // Since transient command buffers do not count as real command buffers, submit them directly to the queue
     // to avoid interference with the command buffer numbers
-    Uint64 FenceValue = GetCommandQueue(0).Submit(SubmitInfo);
+    Uint64 FenceValue = 0;
+    LockCommandQueue(0, [&](ICommandQueueVk* pCmdQueueVk)
+        {
+            FenceValue = pCmdQueueVk->Submit(SubmitInfo);
+        }
+    );
     // Dispose command pool
     m_TransientCmdPoolMgr.DisposeCommandPool(std::move(CmdPool), FenceValue);
 }
@@ -249,7 +254,7 @@ Uint64 RenderDeviceVkImpl::ExecuteCommandBuffer(const VkSubmitInfo& SubmitInfo, 
 
 void RenderDeviceVkImpl::IdleGPU(bool ReleaseStaleObjects) 
 { 
-    IdleCommandQueues(ReleaseStaleObjects, ReleaseStaleObjects);
+    IdleCommandQueues(ReleaseStaleObjects);
     m_LogicalVkDevice->WaitIdle();
 
     if (ReleaseStaleObjects)
@@ -268,9 +273,6 @@ void RenderDeviceVkImpl::IdleGPU(bool ReleaseStaleObjects)
 
 void RenderDeviceVkImpl::FinishFrame(bool ReleaseAllResources)
 {
-    // TODO: rework this
-    auto CompletedFenceValue = ReleaseAllResources ? std::numeric_limits<Uint64>::max() : m_CommandQueues[0].CmdQueue->GetCompletedFenceValue();
-    
     // Discard all remaining objects. This is important to do if there were 
     // no command lists submitted during the frame. All stale resources will
     // be associated with the submitted fence value and thus will not be released
@@ -278,9 +280,14 @@ void RenderDeviceVkImpl::FinishFrame(bool ReleaseAllResources)
     Uint64 SubmittedFenceValue = 0;
     Uint64 SubmittedCmdBuffNumber = 0;
     VkSubmitInfo DummySubmitInfo = {};
+    
+    // TODO: Rework
     // Submit empty command buffer to set a fence on the GPU
-    SubmitCommandBuffer(DummySubmitInfo, SubmittedCmdBuffNumber, SubmittedFenceValue, nullptr);
+    auto CmbBuffInfo = TRenderDeviceBase::SubmitCommandBuffer(0, DummySubmitInfo, true);
         
+    // TODO: rework this
+    auto CompletedFenceValue = ReleaseAllResources ? std::numeric_limits<Uint64>::max() : m_CommandQueues[0].CmdQueue->GetCompletedFenceValue();
+
     PurgeReleaseQueues();
 
     m_MainDescriptorPool.ReleaseStaleAllocations(CompletedFenceValue);

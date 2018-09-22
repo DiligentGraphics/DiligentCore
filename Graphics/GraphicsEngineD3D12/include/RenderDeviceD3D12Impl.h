@@ -35,7 +35,6 @@
 #include "D3D12DynamicHeap.h"
 #include "Atomics.h"
 #include "CommandQueueD3D12.h"
-#include "ResourceReleaseQueue.h"
 
 /// Namespace for the Direct3D11 implementation of the graphics engine
 namespace Diligent
@@ -51,7 +50,8 @@ public:
                            IMemoryAllocator&         RawMemAllocator, 
                            const EngineD3D12Attribs& CreationAttribs, 
                            ID3D12Device*             pD3D12Device, 
-                           ICommandQueueD3D12*       pCmdQueue, 
+                           size_t                    CommandQueueCount,
+                           ICommandQueueD3D12**      ppCmdQueues, 
                            Uint32                    NumDeferredContexts );
     ~RenderDeviceD3D12Impl();
 
@@ -80,23 +80,12 @@ public:
     DescriptorHeapAllocation AllocateDescriptor( D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count = 1 );
     DescriptorHeapAllocation AllocateGPUDescriptors( D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count = 1 );
 
-    Uint64 GetCompletedFenceValue();
-	virtual Uint64 GetNextFenceValue() override final
-    {
-        return m_pCommandQueue->GetNextFenceValue();
-    }
-
-	Uint64 GetCurrentFrameNumber()const {return static_cast<Uint64>(m_FrameNumber);}
-    virtual Bool IsFenceSignaled(Uint64 FenceValue) override final;
-
-    ICommandQueueD3D12 *GetCmdQueue(){return m_pCommandQueue;}
-
 	void IdleGPU(bool ReleaseStaleObjects);
     CommandContext* AllocateCommandContext(const Char *ID = "");
+    void CloseAndExecuteTransientCommandContext(Uint32 CommandQueueIndex, CommandContext *pCtx);
     Uint64 CloseAndExecuteCommandContext(CommandContext *pCtx, bool DiscardStaleObjects, std::vector<std::pair<Uint64, RefCntAutoPtr<IFence> > >* pSignalFences);
     void DisposeCommandContext(CommandContext*);
 
-    void SafeReleaseD3D12Object(ID3D12Object* pObj);
     void FinishFrame(bool ReleaseAllResources);
     virtual void FinishFrame()override final { FinishFrame(false); }
 
@@ -107,7 +96,6 @@ private:
 
     /// D3D12 device
     CComPtr<ID3D12Device> m_pd3d12Device;
-    RefCntAutoPtr<ICommandQueueD3D12> m_pCommandQueue;
 
     EngineD3D12Attribs m_EngineAttribs;
 
@@ -117,39 +105,6 @@ private:
 	
 	const Uint32 m_DynamicDescriptorAllocationChunkSize[2];
 
-	std::mutex m_CmdQueueMutex;
-
-	Atomics::AtomicInt64 m_FrameNumber;
-    Atomics::AtomicInt64 m_NextCmdListNumber;
-
-    // The following basic requirement guarantees correctness of resource deallocation:
-    //
-    //        A resource is never released before the last draw command referencing it is invoked on the immediate context
-    //
-    // See http://diligentgraphics.com/diligent-engine/architecture/d3d12/managing-resource-lifetimes/
-
-    //
-    // CPU
-    //                       Last Reference
-    //                        of resource X
-    //                             |
-    //                             |     Submit Cmd       Submit Cmd            Submit Cmd
-    //                             |      List N           List N+1              List N+2
-    //                             V         |                |                     |
-    //    NextFenceValue       |   *  N      |      N+1       |          N+2        |
-    //
-    //
-    //    CompletedFenceValue       |     N-3      |      N-2      |        N-1        |        N       |
-    //                              .              .               .                   .                .
-    // -----------------------------.--------------.---------------.-------------------.----------------.-------------
-    //                              .              .               .                   .                .
-    //       
-    // GPU                          | Cmd List N-2 | Cmd List N-1  |    Cmd List N     |   Cmd List N+1 |
-    //                                                                                 |
-    //                                                                                 |
-    //                                                                          Resource X can
-    //                                                                           be released
-
     CommandListManager m_CmdListManager;
 
     typedef std::unique_ptr<CommandContext, STDDeleterRawMem<CommandContext> > ContextPoolElemType;
@@ -157,8 +112,6 @@ private:
 
 	std::deque<CommandContext*, STDAllocatorRawMem<CommandContext*> > m_AvailableContexts;
 	std::mutex m_ContextAllocationMutex;
-
-    ResourceReleaseQueue<StaticStaleResourceWrapper<CComPtr<ID3D12Object>>> m_ReleaseQueue;
 
     D3D12DynamicMemoryManager m_DynamicMemoryManager;
 };

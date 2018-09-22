@@ -48,7 +48,8 @@ public:
                                                Uint32                    NumDeferredContexts) = 0;
 
     virtual void AttachToD3D12Device(void*                      pd3d12NativeDevice, 
-                                     class ICommandQueueD3D12*  pCommandQueue,
+                                     size_t                     CommandQueueCount,
+                                     class ICommandQueueD3D12** ppCommandQueues,
                                      const EngineD3D12Attribs&  EngineAttribs, 
                                      IRenderDevice**            ppDevice, 
                                      IDeviceContext**           ppContexts,
