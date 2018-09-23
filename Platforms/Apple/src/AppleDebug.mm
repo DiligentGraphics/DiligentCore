@@ -27,7 +27,7 @@
 #import <Foundation/Foundation.h>
 
 #include "AppleDebug.h"
-#include "FormatMessage.h"
+#include "FormatString.h"
 
 using namespace Diligent;
 
