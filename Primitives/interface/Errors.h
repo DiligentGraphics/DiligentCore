@@ -93,7 +93,7 @@ do{                                     \
 
 #define LOG_DEBUG_MESSAGE(Severity, ...)\
 do{                                                     \
-    auto _msg = Diligent::FormatString( ##__VA_ARGS__ );\
+    auto _msg = Diligent::FormatString( __VA_ARGS__ );\
     if(Diligent::DebugMessageCallback != nullptr) Diligent::DebugMessageCallback( Severity, _msg.c_str(), nullptr, nullptr, 0 );\
 }while(false)
 
