@@ -188,7 +188,7 @@ private:
     inline void EnsureVkCmdBuffer();
     inline void DisposeVkCmdBuffer(VkCommandBuffer vkCmdBuff, Uint64 FenceValue);
     inline void DisposeCurrentCmdBuffer(Uint64 FenceValue);
-    void ReleaseStaleContextResources(Uint64 SubmittedCmdBufferNumber, Uint64 SubmittedFenceValue, Uint64 CompletedFenceValue);
+    void ReleaseStaleContextResources(Uint64 SubmittedFenceValue, Uint64 CompletedFenceValue);
 
     struct BufferToTextureCopyInfo
     {

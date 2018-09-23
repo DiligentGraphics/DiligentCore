@@ -143,6 +143,8 @@ namespace Diligent
 
         // We must now wait for GPU to finish so that we can safely destroy all context resources.
         // We need to idle when destroying deferred contexts as well since some resources may still be in use.
+        // Also, upload allocation for instance reference the upload heap, so it must be alive when these
+        // allocations are destroyed by the release queue.
         pDeviceVkImpl->IdleGPU(true);
 
         DisposeCurrentCmdBuffer(m_LastSubmittedFenceValue);
@@ -153,7 +155,7 @@ namespace Diligent
         VERIFY(m_UploadHeap.GetStalePagesCount() == 0, "All stale pages must have been discarded at this point");
         VERIFY(m_DynamicDescriptorPool.GetStaleAllocationCount() == 0, "All stale dynamic descriptor set allocations must have been discarded at this point");
         // TODO: rework
-        ReleaseStaleContextResources(m_NextCmdBuffNumber, m_LastSubmittedFenceValue, pDeviceVkImpl->GetCompletedFenceValue(0));
+        ReleaseStaleContextResources(m_LastSubmittedFenceValue, pDeviceVkImpl->GetCompletedFenceValue(0));
         // Since we idled the GPU, all stale resources must have been destroyed now
         VERIFY(m_DynamicDescriptorPool.GetPendingReleaseAllocationCount() == 0, "All stale descriptor set allocations must have been destroyed at this point");
 
@@ -753,24 +755,31 @@ namespace Diligent
                 "There are outstanding commands in the deferred device context when finishing the frame. This is an error and may cause unpredicted behaviour. Close all deferred contexts and execute them before finishing the frame" :
                 "There are outstanding commands in the immediate device context when finishing the frame. This is an error and may cause unpredicted behaviour. Call Flush() to submit all commands for execution before finishing the frame");
 
+        auto& DeviceVkImpl = *m_pDevice.RawPtr<RenderDeviceVkImpl>();
+
         VERIFY_EXPR(m_bIsDeferred || m_SubmittedBuffersCmdQueueMask == (Uint64{1}<<m_CommandQueueId));
+        // The released resources will go into the stale resources queue first, however they will move into
+        // the release queue rightaway when RenderDeviceVkImpl::FlushStaleResources() is called
         m_UploadHeap.ReleaseAllocatedPages(m_SubmittedBuffersCmdQueueMask);
-        if (m_bIsDeferred)
-            m_SubmittedBuffersCmdQueueMask = 0;
-
+        m_DynamicHeap.FinishFrame(DeviceVkImpl, m_SubmittedBuffersCmdQueueMask);
+        
         m_DynamicDescriptorPool.ReleaseStaleAllocations(CompletedFenceValue);
-        m_DynamicHeap.FinishFrame(m_LastSubmittedFenceValue);
 
-        if (!m_bIsDeferred)
+        if (m_bIsDeferred)
+        {
+            // For deferred context, reset submitted cmd queue mask
+            m_SubmittedBuffersCmdQueueMask = 0;
+        }
+        else
         {
             // Make all stale resource move into the release queue
-            m_pDevice.RawPtr<RenderDeviceVkImpl>()->FlushStaleResources(m_CommandQueueId);
+            DeviceVkImpl.FlushStaleResources(m_CommandQueueId);
         }
 
         Atomics::AtomicIncrement(m_ContextFrameNumber);
     }
 
-    void DeviceContextVkImpl::ReleaseStaleContextResources(Uint64 SubmittedCmdBufferNumber, Uint64 SubmittedFenceValue, Uint64 CompletedFenceValue)
+    void DeviceContextVkImpl::ReleaseStaleContextResources(Uint64 SubmittedFenceValue, Uint64 CompletedFenceValue)
     {
         m_DynamicDescriptorPool.DisposeAllocations(SubmittedFenceValue);
         m_DynamicDescriptorPool.ReleaseStaleAllocations(CompletedFenceValue);
@@ -836,7 +845,7 @@ namespace Diligent
         Atomics::AtomicIncrement(m_NextCmdBuffNumber);
         // TODO: rework
         auto CompletedFenceValue = pDeviceVkImpl->GetCompletedFenceValue(0);
-        ReleaseStaleContextResources(SubmittedCmdBuffNumber, m_LastSubmittedFenceValue, CompletedFenceValue);
+        ReleaseStaleContextResources(m_LastSubmittedFenceValue, CompletedFenceValue);
 
         m_State = ContextState{};
         m_DescrSetBindInfo.Reset();
@@ -1460,7 +1469,7 @@ namespace Diligent
         // We can now release all temporary resources in the deferred context associated with the submitted command list
         // TODO: rework
         auto CompletedFenceValue = pDeviceVkImpl->GetCompletedFenceValue(0);
-        pDeferredCtxVkImpl->ReleaseStaleContextResources(DeferredCtxCmdBuffNumber, SubmittedFenceValue, CompletedFenceValue);
+        pDeferredCtxVkImpl->ReleaseStaleContextResources(SubmittedFenceValue, CompletedFenceValue);
     }
 
     void DeviceContextVkImpl::SignalFence(IFence* pFence, Uint64 Value)

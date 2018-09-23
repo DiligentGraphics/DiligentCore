@@ -271,7 +271,12 @@ protected:
         if (m_CommandQueues != nullptr)
         {
             for(size_t q=0; q < m_CmdQueueCount; ++q)
-                m_CommandQueues[q].~CommandQueue();
+            {
+                auto& Queue = m_CommandQueues[q];
+                DEV_CHECK_ERR(Queue.ReleaseQueue.GetStaleResourceCount() == 0, "All stale resources must be released before destroying a command queue");
+                DEV_CHECK_ERR(Queue.ReleaseQueue.GetPendingReleaseResourceCount() == 0, "All resources must be released before destroying a command queue");
+                Queue.~CommandQueue();
+            }
             m_RawMemAllocator.Free(m_CommandQueues);
             m_CommandQueues = nullptr;
         }

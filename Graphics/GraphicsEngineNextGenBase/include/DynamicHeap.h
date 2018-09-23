@@ -105,27 +105,45 @@ public:
     MasterBlockListBasedManager& operator= (const MasterBlockListBasedManager&)  = delete;
     MasterBlockListBasedManager& operator= (      MasterBlockListBasedManager&&) = delete;
 
-    void DiscardMasterBlocks(std::vector<MasterBlock>& Blocks, Uint64 FenceValue)
+    template<typename RenderDeviceImplType>
+    void ReleaseMasterBlocks(std::vector<MasterBlock>& Blocks, RenderDeviceImplType& Device, Uint64 CmdQueueMask)
     {
-        std::lock_guard<std::mutex> Lock(m_ReleaseQueueMtx);
-        for(auto& Block : Blocks)
-            m_ReleaseQueue.emplace_back(std::move(Block), FenceValue);
-    }
-
-    void ReleaseStaleBlocks(Uint64 LastCompletedFenceValue)
-    {
-        std::lock_guard<std::mutex> MgrLock(m_AllocationsMgrMtx);
-        std::lock_guard<std::mutex> QueueLock(m_ReleaseQueueMtx);
-        while (!m_ReleaseQueue.empty())
+        struct StaleMasterBlock
         {
-            auto &FirstAllocation = m_ReleaseQueue.front();
-            if (FirstAllocation.FenceValue <= LastCompletedFenceValue)
+
+            MasterBlock                  Block;
+            MasterBlockListBasedManager* Mgr;
+
+            StaleMasterBlock(MasterBlock&& _Block, MasterBlockListBasedManager* _Mgr) :
+                Block (std::move(_Block)),
+                Mgr   (_Mgr)
             {
-                m_AllocationsMgr.Free(std::move(FirstAllocation.Block));
-                m_ReleaseQueue.pop_front();
             }
-            else
-                break;
+
+            StaleMasterBlock            (const StaleMasterBlock&)  = delete;
+            StaleMasterBlock& operator= (const StaleMasterBlock&)  = delete;
+            StaleMasterBlock& operator= (      StaleMasterBlock&&) = delete;
+            
+            StaleMasterBlock(StaleMasterBlock&& rhs)noexcept : 
+                Block (std::move(rhs.Block)),
+                Mgr   (rhs.Mgr)
+            {
+                rhs.Block = MasterBlock{};
+                rhs.Mgr   = nullptr;
+            }
+
+            ~StaleMasterBlock()
+            {
+                if (Mgr != nullptr)
+                {
+                    std::lock_guard<std::mutex> Lock(Mgr->m_AllocationsMgrMtx);
+                    Mgr->m_AllocationsMgr.Free(std::move(Block));
+                }
+            }
+        };
+        for(auto& Block : Blocks)
+        {
+            Device.SafeReleaseDeviceObject(StaleMasterBlock{std::move(Block), this}, CmdQueueMask);
         }
     }
 
@@ -142,21 +160,6 @@ protected:
 private:
     std::mutex                      m_AllocationsMgrMtx;
     VariableSizeAllocationsManager  m_AllocationsMgr;
-
-    struct StaleBlockInfo
-    {
-        MasterBlock Block;
-        Uint64      FenceValue;
-        StaleBlockInfo(MasterBlock&& _Block,
-                       Uint64     _FenceValue) :
-            Block     (_Block),
-            FenceValue(_FenceValue)
-        {
-            _Block = MasterBlock{};
-        }
-    };
-    std::deque<StaleBlockInfo> m_ReleaseQueue;
-    std::mutex                 m_ReleaseQueueMtx;
 };
 
 } // namespace DynamicHeap

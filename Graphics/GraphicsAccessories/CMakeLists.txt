@@ -3,7 +3,6 @@ cmake_minimum_required (VERSION 3.6)
 project(GraphicsAccessories CXX)
 
 set(INTERFACE 
-    interface/DynamicHeap.h
     interface/GraphicsAccessories.h
     interface/ResourceReleaseQueue.h
     interface/RingBuffer.h

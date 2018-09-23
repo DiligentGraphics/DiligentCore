@@ -154,7 +154,9 @@ public:
     ~VulkanDynamicHeap();
 
     VulkanDynamicAllocation Allocate(Uint32 SizeInBytes, Uint32 Alignment);
-    void FinishFrame(Uint64 FenceValue);
+    // CmdQueueMask indicates which command queues the allocations from this heap were used
+    // with during the last frame
+    void FinishFrame(RenderDeviceVkImpl& DeviceVkImpl, Uint64 CmdQueueMask);
 
     using OffsetType  = VulkanDynamicMemoryManager::OffsetType;
     using MasterBlock = VulkanDynamicMemoryManager::MasterBlock;

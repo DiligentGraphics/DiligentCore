@@ -146,10 +146,8 @@ VulkanDynamicMemoryManager::MasterBlock VulkanDynamicMemoryManager::AllocateMast
         Uint32 SleepIterations = 0;
         while (Block.UnalignedOffset == InvalidOffset && IdleDuration < MaxIdleDuration)
         {
-            // TODO: rework
-            auto LastCompletedFenceValue = m_DeviceVk.GetCompletedFenceValue(0);
-            ReleaseStaleBlocks(LastCompletedFenceValue);
-            Block = AllocateMasterBlock(SizeInBytes, Alignment);
+            m_DeviceVk.PurgeReleaseQueues();
+            Block = TBase::AllocateMasterBlock(SizeInBytes, Alignment);
             if (Block.UnalignedOffset == InvalidOffset)
             {
                 std::this_thread::sleep_for(SleepPeriod);
@@ -259,9 +257,9 @@ VulkanDynamicAllocation VulkanDynamicHeap::Allocate(Uint32 SizeInBytes, Uint32 A
         return VulkanDynamicAllocation{};
 }
 
-void VulkanDynamicHeap::FinishFrame(Uint64 FenceValue)
+void VulkanDynamicHeap::FinishFrame(RenderDeviceVkImpl& DeviceVkImpl, Uint64 CmdQueueMask)
 {
-    m_DynamicMemMgr.DiscardMasterBlocks(m_MasterBlocks, FenceValue);
+    m_DynamicMemMgr.ReleaseMasterBlocks(m_MasterBlocks, DeviceVkImpl, CmdQueueMask);
     m_MasterBlocks.clear();
 
     m_CurrOffset        = InvalidOffset;
