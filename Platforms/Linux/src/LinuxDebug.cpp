@@ -25,7 +25,7 @@
 #include <iostream>
 
 #include "LinuxDebug.h"
-#include "FormatMessage.h"
+#include "FormatString.h"
 
 using namespace Diligent;
 

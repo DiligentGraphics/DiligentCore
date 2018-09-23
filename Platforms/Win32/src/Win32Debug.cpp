@@ -24,7 +24,7 @@
 #include "pch.h"
 
 #include "Win32Debug.h"
-#include "FormatMessage.h"
+#include "FormatString.h"
 #include <csignal>
 #include <iostream>
 #include <Windows.h>

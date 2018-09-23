@@ -28,19 +28,25 @@
 
 namespace Diligent
 {
-    typedef std::stringstream MsgStream;
-
     template<typename SSType, typename ArgType>
-    void FormatMsg( SSType &ss, const ArgType& Arg )
+    void FormatStrSS(SSType &ss, const ArgType& Arg)
     {
         ss << Arg;
     }
 
     template<typename SSType, typename FirstArgType, typename... RestArgsType>
-    void FormatMsg( SSType &ss, const FirstArgType& FirstArg, const RestArgsType&... RestArgs )
+    void FormatStrSS(SSType &ss, const FirstArgType& FirstArg, const RestArgsType&... RestArgs)
     {
-        FormatMsg( ss, FirstArg );
-        FormatMsg( ss, RestArgs... ); // recursive call using pack expansion syntax
+        FormatStrSS( ss, FirstArg );
+        FormatStrSS( ss, RestArgs... ); // recursive call using pack expansion syntax
+    }
+
+    template<typename... RestArgsType>
+    std::string FormatString(const RestArgsType&... Args)
+    {
+        std::stringstream ss;
+        FormatStrSS(ss, Args...);
+        return ss.str();
     }
 
     template<typename Type>
@@ -58,7 +64,7 @@ namespace Diligent
     }
 
     template<typename SSType, typename Type>
-    void FormatMsg(SSType& ss, const MemorySizeFormatter<Type>& Arg)
+    void FormatStrSS(SSType& ss, const MemorySizeFormatter<Type>& Arg)
     {
         auto ref_size = Arg.ref_size != 0 ? Arg.ref_size : Arg.size;
         if (ref_size >= (1 << 30))

@@ -49,9 +49,8 @@ VulkanMemoryPage::VulkanMemoryPage(VulkanMemoryManager& ParentMemoryMgr,
     MemAlloc.allocationSize = PageSize;
     MemAlloc.memoryTypeIndex = MemoryTypeIndex;
 
-    std::stringstream ss;
-    Diligent::FormatMsg(ss, "Device memory page. Size: ", Diligent::FormatMemorySize(PageSize, 2), ", type: ", MemoryTypeIndex);
-    m_VkMemory = ParentMemoryMgr.m_LogicalDevice.AllocateDeviceMemory(MemAlloc, ss.str().c_str());
+    auto MemoryName = Diligent::FormatString("Device memory page. Size: ", Diligent::FormatMemorySize(PageSize, 2), ", type: ", MemoryTypeIndex);
+    m_VkMemory = ParentMemoryMgr.m_LogicalDevice.AllocateDeviceMemory(MemAlloc, MemoryName.c_str());
 
     if (IsHostVisible)
     {

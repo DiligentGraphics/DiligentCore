@@ -22,7 +22,7 @@
  */
 
 #include "AndroidDebug.h"
-#include "FormatMessage.h"
+#include "FormatString.h"
 #include <android/log.h>
 #include <csignal>
 

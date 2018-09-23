@@ -22,7 +22,7 @@
  */
 
 #include "BasicPlatformDebug.h"
-#include "FormatMessage.h"
+#include "FormatString.h"
 #include "BasicFileSystem.h"
 #include <iostream>
 
@@ -35,9 +35,7 @@ String BasicPlatformDebug :: FormatAssertionFailedMessage( const Char *Message,
 {
     String FileName;
     BasicFileSystem::SplitFilePath( File, nullptr, &FileName );
-    std::stringstream msgss;
-    Diligent::FormatMsg( msgss, "Debug assertion failed in ", Function, "(), file ", FileName, ", line ", Line, ":\n", Message);
-    return msgss.str();
+    return Diligent::FormatString("Debug assertion failed in ", Function, "(), file ", FileName, ", line ", Line, ":\n", Message);
 }
 
 String BasicPlatformDebug::FormatDebugMessage(DebugMessageSeverity Severity, 

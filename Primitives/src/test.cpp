@@ -26,6 +26,6 @@
 #include "ReferenceCounters.h"
 #include "Object.h"
 #include "MemoryAllocator.h"
-#include "FormatMessage.h"
+#include "FormatString.h"
 #include "FileStream.h"
 #include "DataBlob.h"

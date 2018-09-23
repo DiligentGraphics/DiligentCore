@@ -13,7 +13,7 @@ set(INTERFACE
     interface/DebugOutput.h
     interface/Errors.h
     interface/FileStream.h
-    interface/FormatMessage.h
+    interface/FormatString.h
     interface/InterfaceID.h
     interface/MemoryAllocator.h
     interface/Object.h

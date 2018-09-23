@@ -23,7 +23,7 @@
 
 #pragma once
 
-#include "../../../Primitives/interface/FormatMessage.h"
+#include "../../../Primitives/interface/FormatString.h"
 #include "../../../Primitives/interface/Errors.h"
 #include "BasicPlatformDebug.h"
 
@@ -33,9 +33,8 @@
 
 #define ASSERTION_FAILED(Message, ...)\
 do{                                         \
-    Diligent::MsgStream ms;                 \
-    Diligent::FormatMsg( ms, Message, ##__VA_ARGS__);\
-    DebugAssertionFailed( ms.str().c_str(), __FUNCTION__, __FILE__, __LINE__); \
+    auto msg = Diligent::FormatString(Message, ##__VA_ARGS__);\
+    DebugAssertionFailed( msg.c_str(), __FUNCTION__, __FILE__, __LINE__); \
 }while(false)
 
 #   define VERIFY(Expr, Message, ...)\

@@ -916,11 +916,10 @@ String HLSL2GLSLConverterImpl::ConversionStream::PrintTokenContext( IteratorType
 
 
 #define VERIFY_PARSER_STATE( Token, Condition, ... )\
-    if( !(Condition) )                                                  \
-    {                                                                   \
-        MsgStream ss;                                        \
-        FormatMsg( ss, __VA_ARGS__ );                        \
-        LOG_ERROR_AND_THROW( ss.str(), "\n", PrintTokenContext(Token, 4) );\
+    if( !(Condition) )                                                \
+    {                                                                 \
+        auto err = FormatString(__VA_ARGS__ );                        \
+        LOG_ERROR_AND_THROW( err, "\n", PrintTokenContext(Token, 4) );\
     }
 
 template<typename IterType>

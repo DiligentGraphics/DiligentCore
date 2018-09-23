@@ -28,7 +28,7 @@
 #include <iostream>
 
 #include "DebugOutput.h"
-#include "FormatMessage.h"
+#include "FormatString.h"
 
 namespace Diligent
 {
@@ -44,16 +44,14 @@ inline void ThrowIf<true>(std::string &&msg)
     throw std::runtime_error( std::move(msg) );
 }
 
-template<bool bThrowException, typename FirstArgType, typename... RestArgsType>
-void LogError( const char *Function, const char *FullFilePath, int Line, const FirstArgType& first, const RestArgsType&... RestArgs )
+template<bool bThrowException, typename... ArgsType>
+void LogError( const char *Function, const char *FullFilePath, int Line, const ArgsType&... Args )
 {
     std::string FileName(FullFilePath);
     auto LastSlashPos = FileName.find_last_of("/\\");
     if(LastSlashPos != std::string::npos)
         FileName.erase(0, LastSlashPos+1);
-    Diligent::MsgStream ss;
-    Diligent::FormatMsg( ss, first, RestArgs... );
-    auto Msg = ss.str();
+    auto Msg = Diligent::FormatString(Args...);
     if(DebugMessageCallback != nullptr)
     {
         DebugMessageCallback( bThrowException ? DebugMessageSeverity::FatalError : DebugMessageSeverity::Error, Msg.c_str(), Function, FileName.c_str(), Line);
@@ -94,10 +92,9 @@ do{                                     \
 
 
 #define LOG_DEBUG_MESSAGE(Severity, ...)\
-do{                                               \
-    Diligent::MsgStream _msg_ss;                  \
-    Diligent::FormatMsg( _msg_ss, ##__VA_ARGS__ );\
-    if(Diligent::DebugMessageCallback != nullptr) Diligent::DebugMessageCallback( Severity, _msg_ss.str().c_str(), nullptr, nullptr, 0 );\
+do{                                                  \
+    auto _msg = Diligent::FormatString(##__VA_ARGS__ );\
+    if(Diligent::DebugMessageCallback != nullptr) Diligent::DebugMessageCallback( Severity, _msg.c_str(), nullptr, nullptr, 0 );\
 }while(false)
 
 #define LOG_ERROR_MESSAGE(...)    LOG_DEBUG_MESSAGE(Diligent::DebugMessageSeverity::Error,   ##__VA_ARGS__)

@@ -81,10 +81,9 @@ do{                         \
     HRESULT _hr_ = Expr;    \
     if(FAILED(_hr_))        \
     {                       \
-        Diligent::MsgStream ms;                \
-        Diligent::FormatMsg(ms, __VA_ARGS__);  \
-        ComErrorDesc ErrDesc( _hr_ );          \
-        LOG_ERROR_AND_THROW( ms.str(), "\nHRESULT Desc: ", ErrDesc.Get());\
+        auto msg = Diligent::FormatString(__VA_ARGS__);  \
+        ComErrorDesc ErrDesc( _hr_ );                    \
+        LOG_ERROR_AND_THROW( msg, "\nHRESULT Desc: ", ErrDesc.Get());\
     }                       \
 }while(false)
 

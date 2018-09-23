@@ -24,7 +24,7 @@
 #include "pch.h"
 
 #include "UWPDebug.h"
-#include "FormatMessage.h"
+#include "FormatString.h"
 #include <csignal>
 
 #define NOMINMAX
