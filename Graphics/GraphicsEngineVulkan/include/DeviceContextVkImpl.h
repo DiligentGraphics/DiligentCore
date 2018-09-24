@@ -164,7 +164,7 @@ public:
     }
 
     virtual void FinishFrame(bool ForceRelease)override final;
-    void FinishFrame(Uint64 CompletedFenceValue);
+    void FinishFrame();
 
     VkDescriptorSet AllocateDynamicDescriptorSet(VkDescriptorSetLayout SetLayout)
     {
@@ -186,9 +186,8 @@ private:
     void CommitScissorRects();
     
     inline void EnsureVkCmdBuffer();
-    inline void DisposeVkCmdBuffer(VkCommandBuffer vkCmdBuff, Uint64 FenceValue);
-    inline void DisposeCurrentCmdBuffer(Uint64 FenceValue);
-    void ReleaseStaleContextResources(Uint64 SubmittedFenceValue, Uint64 CompletedFenceValue);
+    inline void DisposeVkCmdBuffer(Uint32 CmdQueue, VkCommandBuffer vkCmdBuff, Uint64 FenceValue);
+    inline void DisposeCurrentCmdBuffer(Uint32 CmdQueue, Uint64 FenceValue);
 
     struct BufferToTextureCopyInfo
     {
@@ -250,8 +249,6 @@ private:
     // allocated by the context during the frame when FinishFrame() is called.
     Uint64 m_SubmittedBuffersCmdQueueMask = 0;
 
-    VulkanUtilities::VulkanCommandBufferPool m_CmdPool;
-
     // Semaphores are not owned by the command context
     std::vector<VkSemaphore>                m_WaitSemaphores;
     std::vector<VkPipelineStageFlags>       m_WaitDstStageMasks;
@@ -290,15 +287,14 @@ private:
     std::unordered_map<MappedTextureKey, MappedTexture, MappedTextureKey::Hasher> m_MappedTextures;
 
 
-
-    VulkanUploadHeap              m_UploadHeap;
-    DynamicDescriptorSetAllocator m_DynamicDescrSetAllocator;
+    VulkanUtilities::VulkanCommandBufferPool m_CmdPool;
+    VulkanUploadHeap                         m_UploadHeap;
+    VulkanDynamicHeap                        m_DynamicHeap;
+    DynamicDescriptorSetAllocator            m_DynamicDescrSetAllocator;
 
     Atomics::AtomicInt64 m_ContextFrameNumber;
-    Uint64 m_LastSubmittedFenceValue = 0;
 
     PipelineLayout::DescriptorSetBindInfo m_DescrSetBindInfo;
-    VulkanDynamicHeap m_DynamicHeap;
     std::shared_ptr<GenerateMipsVkHelper> m_GenerateMipsHelper;
     RefCntAutoPtr<IShaderResourceBinding> m_GenerateMipsSRB;
 

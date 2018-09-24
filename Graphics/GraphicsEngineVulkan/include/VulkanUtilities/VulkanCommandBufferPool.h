@@ -37,8 +37,7 @@ namespace VulkanUtilities
     public:
         VulkanCommandBufferPool(std::shared_ptr<const VulkanUtilities::VulkanLogicalDevice> LogicalDevice, 
                                 uint32_t                                                    queueFamilyIndex, 
-                                VkCommandPoolCreateFlags                                    flags,
-                                bool                                                        IsThreadSafe);
+                                VkCommandPoolCreateFlags                                    flags);
 
         VulkanCommandBufferPool             (const VulkanCommandBufferPool&) = delete;
         VulkanCommandBufferPool             (VulkanCommandBufferPool&&)      = delete;
@@ -47,8 +46,8 @@ namespace VulkanUtilities
 
         ~VulkanCommandBufferPool();
 
-        VkCommandBuffer GetCommandBuffer(uint64_t LastCompletedFence, const char* DebugName = "");
-        void DisposeCommandBuffer(VkCommandBuffer CmdBuffer, uint64_t FenceValue);
+        VkCommandBuffer GetCommandBuffer(const char* DebugName = "");
+        void FreeCommandBuffer(VkCommandBuffer&& CmdBuffer);
         
         CommandPoolWrapper&& Release();
 
@@ -57,12 +56,7 @@ namespace VulkanUtilities
         std::shared_ptr<const VulkanUtilities::VulkanLogicalDevice> m_LogicalDevice;
         CommandPoolWrapper m_CmdPool;
         
-        const bool m_IsThreadSafe;
-
         std::mutex m_Mutex;
-        // fist    - the fence value associated with the command buffer when it was executed
-        // second  - the command buffer
-        typedef std::pair<uint64_t, VkCommandBuffer > QueueElemType;
-        std::deque< QueueElemType > m_DiscardedCmdBuffers;
+        std::deque< VkCommandBuffer > m_CmdBuffers;
     };
 }

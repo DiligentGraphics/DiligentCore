@@ -230,7 +230,9 @@ void RenderDeviceVkImpl::ExecuteAndDisposeTransientCmdBuff(Uint32 QueueIndex, Vk
                 CommandPoolDeleter(CommandPoolManager& _CmdPoolMgr, VulkanUtilities::CommandPoolWrapper&& _Pool) :
                     CmdPoolMgr(&_CmdPoolMgr),
                     Pool      (std::move(_Pool))
-                {}
+                {
+                    VERIFY_EXPR(Pool != VK_NULL_HANDLE);
+                }
 
                 CommandPoolDeleter             (const CommandPoolDeleter&)  = delete;
                 CommandPoolDeleter& operator = (const CommandPoolDeleter&)  = delete;

@@ -52,19 +52,19 @@ namespace Diligent
                                               Uint32                                ContextId,
                                               Uint32                                CommandQueueId,
                                               std::shared_ptr<GenerateMipsVkHelper> GenerateMipsHelper) :
-        TDeviceContextBase{pRefCounters, pDeviceVkImpl, bIsDeferred},
-        m_NumCommandsToFlush{bIsDeferred ? std::numeric_limits<decltype(m_NumCommandsToFlush)>::max() : Attribs.NumCommandsToFlushCmdBuffer},
-        m_CmdListAllocator{ GetRawAllocator(), sizeof(CommandListVkImpl), 64 },
-        m_ContextId{ContextId},
-        m_CommandQueueId{CommandQueueId},
+        TDeviceContextBase  {pRefCounters, pDeviceVkImpl, bIsDeferred},
+        m_NumCommandsToFlush          {bIsDeferred ? std::numeric_limits<decltype(m_NumCommandsToFlush)>::max() : Attribs.NumCommandsToFlushCmdBuffer},
+        m_CmdListAllocator            { GetRawAllocator(), sizeof(CommandListVkImpl), 64 },
+        m_ContextId                   {ContextId},
+        m_CommandQueueId              {CommandQueueId},
         m_SubmittedBuffersCmdQueueMask{bIsDeferred ? 0 : Uint64{1} << CommandQueueId},
-        // Command pools for deferred contexts must be thread safe because finished command buffers are executed and released from another thread
+        // Command pools must be thread safe because command buffers are returned into pools by release queues
+        // potentially running in another thread
         m_CmdPool
         {
             pDeviceVkImpl->GetLogicalDevice().GetSharedPtr(),
             pDeviceVkImpl->GetCommandQueue(CommandQueueId).GetQueueFamilyIndex(),
-            VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, 
-            bIsDeferred
+            VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT
         },
         // Upload heap must always be thread-safe as Finish() may be called from another thread
         m_UploadHeap
@@ -73,7 +73,6 @@ namespace Diligent
             GetContextObjectName("Upload heap", bIsDeferred, ContextId),
             Attribs.UploadHeapPageSize
         },
-        m_ContextFrameNumber(0),
         m_DynamicHeap
         {
             pDeviceVkImpl->GetDynamicMemoryManager(),
@@ -85,6 +84,7 @@ namespace Diligent
             pDeviceVkImpl->GetDynamicDescriptorPool(),
             GetContextObjectName("Dynamic descriptor set allocator", bIsDeferred, ContextId),
         },
+        m_ContextFrameNumber(0),
         m_GenerateMipsHelper(std::move(GenerateMipsHelper))
     {
         m_GenerateMipsHelper->CreateSRB(&m_GenerateMipsSRB);
@@ -113,13 +113,8 @@ namespace Diligent
             Flush();
         }
 
-        // We must now wait for GPU to finish so that we can safely destroy all context resources.
-        // We need to idle when destroying deferred contexts as well since some resources may still be in use.
-        // Also, upload allocation for instance reference the upload heap, so it must be alive when these
-        // allocations are destroyed by the release queue.
-        pDeviceVkImpl->IdleGPU(true);
-
-        DisposeCurrentCmdBuffer(m_LastSubmittedFenceValue);
+        // TODO: remove
+        //DisposeCurrentCmdBuffer(m_CommandQueueId, m_LastSubmittedFenceValue);
 
         // There must be no resources in the stale resource list. For immediate context, all stale resources must have been
         // moved to the release queue by Flush(). For deferred contexts, this should have happened in the last FinishCommandList()
@@ -127,14 +122,15 @@ namespace Diligent
         VERIFY(m_UploadHeap.GetStalePagesCount() == 0, "All stale pages must have been discarded at this point");
         VERIFY(m_DynamicDescrSetAllocator.GetAllocatedPoolCount() == 0, "All allocated dynamic descriptor set pools must have been released at this point");
         
-        // TODO: rework
-        ReleaseStaleContextResources(m_LastSubmittedFenceValue, pDeviceVkImpl->GetCompletedFenceValue(0));
-        // Since we idled the GPU, all stale resources must have been destroyed now
-        // TODO: remove
-        //VERIFY(m_DynamicDescriptorPool.GetPendingReleaseAllocationCount() == 0, "All stale descriptor set allocations must have been destroyed at this point");
-
         auto VkCmdPool = m_CmdPool.Release();
         pDeviceVkImpl->SafeReleaseDeviceObject(std::move(VkCmdPool), ~Uint64{0});
+
+        // TODO:
+        // We must now wait for GPU to finish so that we can safely destroy all context resources.
+        // We need to idle when destroying deferred contexts as well since some resources may still be in use.
+        // Also, upload allocation for instance reference the upload heap, so it must be alive when these
+        // allocations are destroyed by the release queue.
+        pDeviceVkImpl->IdleGPU(true);
     }
 
     IMPLEMENT_QUERY_INTERFACE( DeviceContextVkImpl, IID_DeviceContextVk, TDeviceContextBase )
@@ -146,26 +142,61 @@ namespace Diligent
         m_State.NumCommands = m_State.NumCommands != 0 ? m_State.NumCommands : 1;
         if (m_CommandBuffer.GetVkCmdBuffer() == VK_NULL_HANDLE)
         {
-            auto pDeviceVkImpl = m_pDevice.RawPtr<RenderDeviceVkImpl>();
-            // TODO: rework
-            auto vkCmdBuff = m_CmdPool.GetCommandBuffer(pDeviceVkImpl->GetCompletedFenceValue(0));
+            auto vkCmdBuff = m_CmdPool.GetCommandBuffer();
             m_CommandBuffer.SetVkCmdBuffer(vkCmdBuff);
         }
     }
 
-    void DeviceContextVkImpl::DisposeVkCmdBuffer(VkCommandBuffer vkCmdBuff, Uint64 FenceValue)
+    void DeviceContextVkImpl::DisposeVkCmdBuffer(Uint32 CmdQueue, VkCommandBuffer vkCmdBuff, Uint64 FenceValue)
     {
         VERIFY_EXPR(vkCmdBuff != VK_NULL_HANDLE);
-        m_CmdPool.DisposeCommandBuffer(vkCmdBuff, FenceValue);
+        auto& DeviceVkImpl = *m_pDevice.RawPtr<RenderDeviceVkImpl>();
+        auto& ReleaseQueue = DeviceVkImpl.GetReleaseQueue(CmdQueue);
+        class CmdBufferDeleter
+        {
+        public:
+            CmdBufferDeleter(VkCommandBuffer                           _vkCmdBuff, 
+                             VulkanUtilities::VulkanCommandBufferPool& _Pool) :
+                vkCmdBuff(_vkCmdBuff),
+                Pool     (&_Pool)
+            {
+                VERIFY_EXPR(vkCmdBuff != VK_NULL_HANDLE);
+            }
+            CmdBufferDeleter             (const CmdBufferDeleter&)  = delete;
+            CmdBufferDeleter& operator = (const CmdBufferDeleter&)  = delete;
+            CmdBufferDeleter& operator = (      CmdBufferDeleter&&) = delete;
+
+            CmdBufferDeleter(CmdBufferDeleter&& rhs) : 
+                vkCmdBuff(rhs.vkCmdBuff),
+                Pool     (rhs.Pool)
+            {
+                rhs.vkCmdBuff = VK_NULL_HANDLE;
+                rhs.Pool      = nullptr;
+            }
+
+            ~CmdBufferDeleter()
+            {
+                if(Pool != nullptr)
+                {
+                    Pool->FreeCommandBuffer(std::move(vkCmdBuff));
+                }
+            }
+
+        private:
+            VkCommandBuffer                           vkCmdBuff;
+            VulkanUtilities::VulkanCommandBufferPool* Pool;
+        };
+        
+        ReleaseQueue.DiscardResource(CmdBufferDeleter{vkCmdBuff, m_CmdPool}, FenceValue);
     }
 
-    inline void DeviceContextVkImpl::DisposeCurrentCmdBuffer(Uint64 FenceValue)
+    inline void DeviceContextVkImpl::DisposeCurrentCmdBuffer(Uint32 CmdQueue, Uint64 FenceValue)
     {
         VERIFY(m_CommandBuffer.GetState().RenderPass == VK_NULL_HANDLE, "Disposing command buffer with unifinished render pass");
         auto vkCmdBuff = m_CommandBuffer.GetVkCmdBuffer();
         if (vkCmdBuff != VK_NULL_HANDLE)
         {
-            DisposeVkCmdBuffer(vkCmdBuff, FenceValue);
+            DisposeVkCmdBuffer(CmdQueue, vkCmdBuff, FenceValue);
             m_CommandBuffer.Reset();
         }
     }
@@ -719,10 +750,10 @@ namespace Diligent
     void DeviceContextVkImpl::FinishFrame(bool ForceRelease)
     {
         // TODO: rework
-        FinishFrame(ForceRelease ? std::numeric_limits<Uint64>::max() : m_pDevice.RawPtr<RenderDeviceVkImpl>()->GetCompletedFenceValue(0));
+        FinishFrame();
     }
 
-    void DeviceContextVkImpl::FinishFrame(Uint64 CompletedFenceValue)
+    void DeviceContextVkImpl::FinishFrame()
     {
         if(GetNumCommandsInCtx() != 0)
             LOG_ERROR_MESSAGE(m_bIsDeferred ? 
@@ -750,12 +781,6 @@ namespace Diligent
         }
 
         Atomics::AtomicIncrement(m_ContextFrameNumber);
-    }
-
-    void DeviceContextVkImpl::ReleaseStaleContextResources(Uint64 SubmittedFenceValue, Uint64 CompletedFenceValue)
-    {
-        //m_DynamicDescriptorPool.DisposeAllocations(SubmittedFenceValue);
-        //m_DynamicDescriptorPool.ReleaseStaleAllocations(CompletedFenceValue);
     }
 
     void DeviceContextVkImpl::Flush()
@@ -794,14 +819,14 @@ namespace Diligent
 
         SubmitInfo.waitSemaphoreCount = static_cast<uint32_t>(m_WaitSemaphores.size());
         VERIFY_EXPR(m_WaitSemaphores.size() == m_WaitDstStageMasks.size());
-        SubmitInfo.pWaitSemaphores = SubmitInfo.waitSemaphoreCount != 0 ? m_WaitSemaphores.data() : nullptr;
-        SubmitInfo.pWaitDstStageMask = SubmitInfo.waitSemaphoreCount != 0 ? m_WaitDstStageMasks.data() : nullptr;
+        SubmitInfo.pWaitSemaphores      = SubmitInfo.waitSemaphoreCount != 0 ? m_WaitSemaphores.data() : nullptr;
+        SubmitInfo.pWaitDstStageMask    = SubmitInfo.waitSemaphoreCount != 0 ? m_WaitDstStageMasks.data() : nullptr;
         SubmitInfo.signalSemaphoreCount = static_cast<uint32_t>(m_SignalSemaphores.size());
-        SubmitInfo.pSignalSemaphores = SubmitInfo.signalSemaphoreCount != 0 ? m_SignalSemaphores.data() : nullptr;
+        SubmitInfo.pSignalSemaphores    = SubmitInfo.signalSemaphoreCount != 0 ? m_SignalSemaphores.data() : nullptr;
 
         // Submit command buffer even if there are no commands to release stale resources.
         //if (SubmitInfo.commandBufferCount != 0 || SubmitInfo.waitSemaphoreCount !=0 || SubmitInfo.signalSemaphoreCount != 0)
-        m_LastSubmittedFenceValue = pDeviceVkImpl->ExecuteCommandBuffer(m_CommandQueueId, SubmitInfo, this, &m_PendingFences);
+        auto SubmittedFenceValue = pDeviceVkImpl->ExecuteCommandBuffer(m_CommandQueueId, SubmitInfo, this, &m_PendingFences);
         
         m_WaitSemaphores.clear();
         m_WaitDstStageMasks.clear();
@@ -810,13 +835,8 @@ namespace Diligent
 
         if (vkCmdBuff != VK_NULL_HANDLE)
         {
-            DisposeCurrentCmdBuffer(m_LastSubmittedFenceValue);
+            DisposeCurrentCmdBuffer(m_CommandQueueId, SubmittedFenceValue);
         }
-
-        // Release temporary resources that were used by this context while recording the last command buffer
-        // TODO: rework
-        auto CompletedFenceValue = pDeviceVkImpl->GetCompletedFenceValue(0);
-        ReleaseStaleContextResources(m_LastSubmittedFenceValue, CompletedFenceValue);
 
         m_State = ContextState{};
         m_DescrSetBindInfo.Reset();
@@ -1427,16 +1447,11 @@ namespace Diligent
         VERIFY_EXPR(m_PendingFences.empty());
         auto pDeferredCtxVkImpl = pDeferredCtx.RawPtr<DeviceContextVkImpl>();
         auto SubmittedFenceValue = pDeviceVkImpl->ExecuteCommandBuffer(m_CommandQueueId, SubmitInfo, this, nullptr);
-        pDeferredCtxVkImpl->m_LastSubmittedFenceValue = SubmittedFenceValue;
         // Set the bit in the deferred context cmd queue mask corresponding to cmd queue of this context
         pDeferredCtxVkImpl->m_SubmittedBuffersCmdQueueMask |= Uint64{1} << m_CommandQueueId;
         // It is OK to dispose command buffer from another thread. We are not going to
         // record any commands and only need to add the buffer to the queue
-        pDeferredCtxVkImpl->DisposeVkCmdBuffer(vkCmdBuff, SubmittedFenceValue);
-        // We can now release all temporary resources in the deferred context associated with the submitted command list
-        // TODO: rework
-        auto CompletedFenceValue = pDeviceVkImpl->GetCompletedFenceValue(0);
-        pDeferredCtxVkImpl->ReleaseStaleContextResources(SubmittedFenceValue, CompletedFenceValue);
+        pDeferredCtxVkImpl->DisposeVkCmdBuffer(m_CommandQueueId, vkCmdBuff, SubmittedFenceValue);
     }
 
     void DeviceContextVkImpl::SignalFence(IFence* pFence, Uint64 Value)
