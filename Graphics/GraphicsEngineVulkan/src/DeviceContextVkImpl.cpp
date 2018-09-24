@@ -801,7 +801,7 @@ namespace Diligent
 
         // Submit command buffer even if there are no commands to release stale resources.
         //if (SubmitInfo.commandBufferCount != 0 || SubmitInfo.waitSemaphoreCount !=0 || SubmitInfo.signalSemaphoreCount != 0)
-        m_LastSubmittedFenceValue = pDeviceVkImpl->ExecuteCommandBuffer(SubmitInfo, this, &m_PendingFences);
+        m_LastSubmittedFenceValue = pDeviceVkImpl->ExecuteCommandBuffer(m_CommandQueueId, SubmitInfo, this, &m_PendingFences);
         
         m_WaitSemaphores.clear();
         m_WaitDstStageMasks.clear();
@@ -1426,7 +1426,7 @@ namespace Diligent
         auto pDeviceVkImpl = m_pDevice.RawPtr<RenderDeviceVkImpl>();
         VERIFY_EXPR(m_PendingFences.empty());
         auto pDeferredCtxVkImpl = pDeferredCtx.RawPtr<DeviceContextVkImpl>();
-        auto SubmittedFenceValue = pDeviceVkImpl->ExecuteCommandBuffer(SubmitInfo, this, nullptr);
+        auto SubmittedFenceValue = pDeviceVkImpl->ExecuteCommandBuffer(m_CommandQueueId, SubmitInfo, this, nullptr);
         pDeferredCtxVkImpl->m_LastSubmittedFenceValue = SubmittedFenceValue;
         // Set the bit in the deferred context cmd queue mask corresponding to cmd queue of this context
         pDeferredCtxVkImpl->m_SubmittedBuffersCmdQueueMask |= Uint64{1} << m_CommandQueueId;

@@ -264,14 +264,14 @@ void RenderDeviceVkImpl::ExecuteAndDisposeTransientCmdBuff(Uint32 QueueIndex, Vk
    
 }
 
-void RenderDeviceVkImpl::SubmitCommandBuffer(const VkSubmitInfo& SubmitInfo, 
+void RenderDeviceVkImpl::SubmitCommandBuffer(Uint32 QueueIndex, 
+                                             const VkSubmitInfo& SubmitInfo, 
                                              Uint64&             SubmittedCmdBuffNumber,                      // Number of the submitted command buffer 
                                              Uint64&             SubmittedFenceValue,                         // Fence value associated with the submitted command buffer
                                              std::vector<std::pair<Uint64, RefCntAutoPtr<IFence> > >* pFences // List of fences to signal
                                              )
 {
 	// Submit the command list to the queue
-    Uint32 QueueIndex = 0;
     auto CmbBuffInfo = TRenderDeviceBase::SubmitCommandBuffer(QueueIndex, SubmitInfo, true);
     SubmittedFenceValue    = CmbBuffInfo.FenceValue;
     SubmittedCmdBuffNumber = CmbBuffInfo.CmdBufferNumber;
@@ -287,7 +287,7 @@ void RenderDeviceVkImpl::SubmitCommandBuffer(const VkSubmitInfo& SubmitInfo,
     }
 }
 
-Uint64 RenderDeviceVkImpl::ExecuteCommandBuffer(const VkSubmitInfo& SubmitInfo, DeviceContextVkImpl* pImmediateCtx, std::vector<std::pair<Uint64, RefCntAutoPtr<IFence> > >* pSignalFences)
+Uint64 RenderDeviceVkImpl::ExecuteCommandBuffer(Uint32 QueueIndex, const VkSubmitInfo& SubmitInfo, DeviceContextVkImpl* pImmediateCtx, std::vector<std::pair<Uint64, RefCntAutoPtr<IFence> > >* pSignalFences)
 {
     // pImmediateCtx parameter is only used to make sure the command buffer is submitted from the immediate context
     // Stale objects MUST only be discarded when submitting cmd list from the immediate context
@@ -295,13 +295,10 @@ Uint64 RenderDeviceVkImpl::ExecuteCommandBuffer(const VkSubmitInfo& SubmitInfo, 
 
     Uint64 SubmittedFenceValue = 0;
     Uint64 SubmittedCmdBuffNumber = 0;
-    SubmitCommandBuffer(SubmitInfo, SubmittedCmdBuffNumber, SubmittedFenceValue, pSignalFences);
+    SubmitCommandBuffer(QueueIndex, SubmitInfo, SubmittedCmdBuffNumber, SubmittedFenceValue, pSignalFences);
 
-    // TODO: rework this
-    //auto CompletedFenceValue = m_CommandQueues[0].CmdQueue->GetCompletedFenceValue();
-    //m_MainDescriptorPool.ReleaseStaleAllocations(CompletedFenceValue);
     m_MemoryMgr.ShrinkMemory();
-    PurgeReleaseQueues();
+    PurgeReleaseQueue(QueueIndex);
 
     return SubmittedFenceValue;
 }

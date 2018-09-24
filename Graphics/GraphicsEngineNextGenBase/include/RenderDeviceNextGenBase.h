@@ -147,12 +147,16 @@ public:
 
     void PurgeReleaseQueues(bool ForceRelease = false)
     {
-        for(size_t q=0; q < m_CmdQueueCount; ++q)
-        {
-            auto& Queue = m_CommandQueues[q];
-            auto CompletedFenceValue = ForceRelease ? std::numeric_limits<Uint64>::max() : Queue.CmdQueue->GetCompletedFenceValue();
-            Queue.ReleaseQueue.Purge(CompletedFenceValue);
-        }
+        for(Uint32 q=0; q < m_CmdQueueCount; ++q)
+            PurgeReleaseQueue(q);
+    }
+
+    void PurgeReleaseQueue(Uint32 QueueIndex, bool ForceRelease = false)
+    {
+        VERIFY_EXPR(QueueIndex < m_CmdQueueCount);
+        auto& Queue = m_CommandQueues[QueueIndex];
+        auto CompletedFenceValue = ForceRelease ? std::numeric_limits<Uint64>::max() : Queue.CmdQueue->GetCompletedFenceValue();
+        Queue.ReleaseQueue.Purge(CompletedFenceValue);
     }
 
     void IdleCommandQueues(bool ReleaseResources)
