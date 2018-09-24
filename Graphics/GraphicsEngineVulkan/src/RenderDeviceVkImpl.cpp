@@ -110,7 +110,7 @@ RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters*                    
         CreationAttribs.DynamicDescriptorPoolSize.MaxDescriptorSets,
         false // Pools can only be reset
     },
-    m_TransientCmdPoolMgr(*m_LogicalVkDevice, CmdQueues[0]->GetQueueFamilyIndex(), VK_COMMAND_POOL_CREATE_TRANSIENT_BIT),
+    m_TransientCmdPoolMgr(*this, "Transient command buffer pool manager", CmdQueues[0]->GetQueueFamilyIndex(), VK_COMMAND_POOL_CREATE_TRANSIENT_BIT),
     m_MemoryMgr("Global resource memory manager", *m_LogicalVkDevice, *m_PhysicalDevice, GetRawAllocator(), CreationAttribs.DeviceLocalMemoryPageSize, CreationAttribs.HostVisibleMemoryPageSize, CreationAttribs.DeviceLocalMemoryReserveSize, CreationAttribs.HostVisibleMemoryReserveSize),
     m_DynamicMemoryManager
     {
@@ -143,7 +143,7 @@ RenderDeviceVkImpl::~RenderDeviceVkImpl()
     // release queues
     FinishFrame(true);
 
-    m_TransientCmdPoolMgr.DestroyPools(m_CommandQueues[0].CmdQueue->GetCompletedFenceValue());
+    m_TransientCmdPoolMgr.DestroyPools();
 
     // We must destroy command queues explicitly prior to releasing Vulkan device
     DestroyCommandQueues();
@@ -159,9 +159,7 @@ RenderDeviceVkImpl::~RenderDeviceVkImpl()
 
 void RenderDeviceVkImpl::AllocateTransientCmdPool(VulkanUtilities::CommandPoolWrapper& CmdPool, VkCommandBuffer& vkCmdBuff, const Char *DebugPoolName)
 {
-    // TODO: rework this
-    auto CompletedFenceValue = m_CommandQueues[0].CmdQueue->GetCompletedFenceValue();
-    CmdPool = m_TransientCmdPoolMgr.AllocateCommandPool(CompletedFenceValue, DebugPoolName);
+    CmdPool = m_TransientCmdPoolMgr.AllocateCommandPool(DebugPoolName);
 
     // Allocate command buffer from the cmd pool
     VkCommandBufferAllocateInfo BuffAllocInfo = {};
@@ -222,13 +220,48 @@ void RenderDeviceVkImpl::ExecuteAndDisposeTransientCmdBuff(Uint32 QueueIndex, Vk
     // Since transient command buffers do not count as real command buffers, submit them directly to the queue
     // to avoid interference with the command buffer numbers
     Uint64 FenceValue = 0;
-    LockCommandQueue(0, [&](ICommandQueueVk* pCmdQueueVk)
+    LockCommandQueue(QueueIndex, [&](ICommandQueueVk* pCmdQueueVk)
         {
             FenceValue = pCmdQueueVk->Submit(SubmitInfo);
+
+            class CommandPoolDeleter
+            {
+            public:
+                CommandPoolDeleter(CommandPoolManager& _CmdPoolMgr, VulkanUtilities::CommandPoolWrapper&& _Pool) :
+                    CmdPoolMgr(&_CmdPoolMgr),
+                    Pool      (std::move(_Pool))
+                {}
+
+                CommandPoolDeleter             (const CommandPoolDeleter&)  = delete;
+                CommandPoolDeleter& operator = (const CommandPoolDeleter&)  = delete;
+                CommandPoolDeleter& operator = (      CommandPoolDeleter&&) = delete;
+
+                CommandPoolDeleter(CommandPoolDeleter&& rhs) : 
+                    CmdPoolMgr(rhs.CmdPoolMgr),
+                    Pool      (std::move(rhs.Pool))
+                {
+                    rhs.CmdPoolMgr = nullptr;
+                }
+                     
+
+                ~CommandPoolDeleter()
+                {
+                    if (CmdPoolMgr!=nullptr)
+                    {
+                        CmdPoolMgr->FreeCommandPool(std::move(Pool));
+                    }
+                }
+            private:
+                CommandPoolManager*                 CmdPoolMgr;
+                VulkanUtilities::CommandPoolWrapper Pool;
+            };
+
+            // Discard command pool directly to the release queue since we know exactly which queue it was submitted to 
+            // as well as the associated FenceValue
+            m_CommandQueues[QueueIndex].ReleaseQueue.DiscardResource(CommandPoolDeleter{m_TransientCmdPoolMgr, std::move(CmdPool)}, FenceValue);
         }
     );
-    // Dispose command pool
-    m_TransientCmdPoolMgr.DisposeCommandPool(std::move(CmdPool), FenceValue);
+   
 }
 
 void RenderDeviceVkImpl::SubmitCommandBuffer(const VkSubmitInfo& SubmitInfo, 

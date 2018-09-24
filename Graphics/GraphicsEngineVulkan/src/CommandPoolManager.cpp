@@ -23,31 +23,35 @@
 
 #include "pch.h"
 #include "CommandPoolManager.h"
+#include "RenderDeviceVkImpl.h"
 
 namespace Diligent
 {
 
-CommandPoolManager::CommandPoolManager(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice, 
-                                       uint32_t                                    queueFamilyIndex, 
-                                       VkCommandPoolCreateFlags                    flags)noexcept:
-    m_LogicalDevice   (LogicalDevice),
+CommandPoolManager::CommandPoolManager(RenderDeviceVkImpl&      DeviceVkImpl, 
+                                       std::string              Name,
+                                       uint32_t                 queueFamilyIndex, 
+                                       VkCommandPoolCreateFlags flags)noexcept:
+    m_DeviceVkImpl    (DeviceVkImpl),
+    m_Name            (std::move(Name)),
     m_QueueFamilyIndex(queueFamilyIndex),
     m_CmdPoolFlags    (flags),
-    m_CmdPools(STD_ALLOCATOR_RAW_MEM(CmdPoolQueueElemType, GetRawAllocator(), "Allocator for deque< std::pair<uint64_t, CommandPoolWrapper > >"))
+    m_CmdPools        (STD_ALLOCATOR_RAW_MEM(VulkanUtilities::CommandPoolWrapper, GetRawAllocator(), "Allocator for deque<VulkanUtilities::CommandPoolWrapper>"))
 {
 }
 
-VulkanUtilities::CommandPoolWrapper CommandPoolManager::AllocateCommandPool(uint64_t CompletedFenceValue, const char* DebugName)
+VulkanUtilities::CommandPoolWrapper CommandPoolManager::AllocateCommandPool(const char* DebugName)
 {
     std::lock_guard<std::mutex> LockGuard(m_Mutex);
 
     VulkanUtilities::CommandPoolWrapper CmdPool;
-    if(!m_CmdPools.empty() && m_CmdPools.front().first <= CompletedFenceValue)
+    if(!m_CmdPools.empty())
     {
-        CmdPool = std::move(m_CmdPools.front().second);
+        CmdPool = std::move(m_CmdPools.front());
         m_CmdPools.pop_front();
     }
 
+    auto& LogicalDevice = m_DeviceVkImpl.GetLogicalDevice();
     if(CmdPool == VK_NULL_HANDLE)
     {
         VkCommandPoolCreateInfo CmdPoolCI = {};
@@ -55,30 +59,26 @@ VulkanUtilities::CommandPoolWrapper CommandPoolManager::AllocateCommandPool(uint
         CmdPoolCI.pNext = nullptr;
         CmdPoolCI.queueFamilyIndex = m_QueueFamilyIndex;
         CmdPoolCI.flags = m_CmdPoolFlags;
-        CmdPool = m_LogicalDevice.CreateCommandPool(CmdPoolCI);
+        CmdPool = LogicalDevice.CreateCommandPool(CmdPoolCI);
         VERIFY_EXPR(CmdPool != VK_NULL_HANDLE);
     }
 
-    m_LogicalDevice.ResetCommandPool(CmdPool);
+    LogicalDevice.ResetCommandPool(CmdPool);
 
     return std::move(CmdPool);
 }
 
-void CommandPoolManager::DisposeCommandPool(VulkanUtilities::CommandPoolWrapper&& CmdPool, uint64_t FenceValue)
+void CommandPoolManager::FreeCommandPool(VulkanUtilities::CommandPoolWrapper&& CmdPool)
 {
     std::lock_guard<std::mutex> LockGuard(m_Mutex);
-    // Command pools must be disposed after the corresponding command list has been submitted to the queue.
-    // At this point the fence value has been incremented, so the pool can be added to the queue.
-    // There is no need to go through stale objects queue as FenceValue is guaranteed to be signaled
-    // afer the command buffer submission
-    m_CmdPools.emplace_back(FenceValue, std::move(CmdPool));
+    m_CmdPools.emplace_back(std::move(CmdPool));
 }
 
-void CommandPoolManager::DestroyPools(uint64_t CompletedFenceValue)
+void CommandPoolManager::DestroyPools()
 {
     std::lock_guard<std::mutex> LockGuard(m_Mutex);
-    while(!m_CmdPools.empty() && m_CmdPools.front().first <= CompletedFenceValue)
-        m_CmdPools.pop_front();
+    LOG_INFO_MESSAGE(m_Name, " allocated descriptor pool count: ", m_CmdPools.size() );
+    m_CmdPools.clear();
 }
 
 CommandPoolManager::~CommandPoolManager()

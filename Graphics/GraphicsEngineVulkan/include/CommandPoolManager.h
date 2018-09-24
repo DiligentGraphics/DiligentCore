@@ -31,12 +31,15 @@
 namespace Diligent
 {
 
+class RenderDeviceVkImpl;
+
 class CommandPoolManager
 {
 public:
-    CommandPoolManager(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice, 
-                       uint32_t                                    queueFamilyIndex, 
-                       VkCommandPoolCreateFlags                    flags)noexcept;
+    CommandPoolManager(RenderDeviceVkImpl&      DeviceVkImpl, 
+                       std::string              Name,
+                       uint32_t                 queueFamilyIndex, 
+                       VkCommandPoolCreateFlags flags)noexcept;
     
     CommandPoolManager             (const CommandPoolManager&) = delete;
     CommandPoolManager             (CommandPoolManager&&)      = delete;
@@ -46,25 +49,21 @@ public:
     ~CommandPoolManager();
 
     // Allocates Vulkan command pool.
-    // The method first tries to find previously disposed command pool that can be safely reused
-    // (i.e., whose FenceValue <= CompletedFenceValue). If no buffer can be reused, the method creates
-    // a new one
-    VulkanUtilities::CommandPoolWrapper AllocateCommandPool(uint64_t CompletedFenceValue, const char *DebugName = nullptr);
+    VulkanUtilities::CommandPoolWrapper AllocateCommandPool(const char *DebugName = nullptr);
     
-    // Disposes command pool. The buffer allocated from this pool MUST have already been submitted to the queue,
-    // and FenceValue must be the value associated with this command buffer
-    void DisposeCommandPool(VulkanUtilities::CommandPoolWrapper&& CmdPool, uint64_t FenceValue);
+    // Returns command pool to the list of available pools. The GPU must have finished using the pool
+    void FreeCommandPool(VulkanUtilities::CommandPoolWrapper&& CmdPool);
 
-    void DestroyPools(uint64_t CompletedFenceValue);
+    void DestroyPools();
 
 private:
-    const VulkanUtilities::VulkanLogicalDevice& m_LogicalDevice;
+    RenderDeviceVkImpl&                         m_DeviceVkImpl;
+    const std::string                           m_Name;
     const uint32_t                              m_QueueFamilyIndex;
     const VkCommandPoolCreateFlags              m_CmdPoolFlags;
 
-    std::mutex m_Mutex;
-    using CmdPoolQueueElemType = std::pair<uint64_t, VulkanUtilities::CommandPoolWrapper>;
-    std::deque< CmdPoolQueueElemType, STDAllocatorRawMem<CmdPoolQueueElemType> > m_CmdPools;
+    std::mutex                                      m_Mutex;
+    std::deque< VulkanUtilities::CommandPoolWrapper, STDAllocatorRawMem<VulkanUtilities::CommandPoolWrapper> > m_CmdPools;
 };
 
 }
