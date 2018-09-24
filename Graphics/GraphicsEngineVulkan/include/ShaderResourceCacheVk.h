@@ -140,7 +140,7 @@ public:
             return m_DescriptorSetAllocation.GetVkDescriptorSet();
         }
 
-        void AssignDescriptorSetAllocation(DescriptorPoolAllocation&& Allocation)
+        void AssignDescriptorSetAllocation(DescriptorSetAllocation&& Allocation)
         {
             VERIFY(m_NumResources > 0, "Descriptor set is empty");
             m_DescriptorSetAllocation = std::move(Allocation);
@@ -150,7 +150,7 @@ public:
 
     private:
         Resource* const m_pResources = nullptr;
-        DescriptorPoolAllocation m_DescriptorSetAllocation;
+        DescriptorSetAllocation m_DescriptorSetAllocation;
     };
 
     inline DescriptorSet& GetDescriptorSet(Uint32 Index)

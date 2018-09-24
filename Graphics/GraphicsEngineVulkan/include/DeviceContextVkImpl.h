@@ -166,11 +166,11 @@ public:
     virtual void FinishFrame(bool ForceRelease)override final;
     void FinishFrame(Uint64 CompletedFenceValue);
 
-    DescriptorPoolAllocation AllocateDynamicDescriptorSet(VkDescriptorSetLayout SetLayout)
+    VkDescriptorSet AllocateDynamicDescriptorSet(VkDescriptorSetLayout SetLayout)
     {
         // Descriptor pools are externally synchronized, meaning that the application must not allocate 
         // and/or free descriptor sets from the same pool in multiple threads simultaneously (13.2.3)
-        return m_DynamicDescriptorPool.Allocate( Uint64{1} << Uint64{m_CommandQueueId}, SetLayout);
+        return m_DynamicDescrSetAllocator.Allocate(SetLayout, "");
     }
 
     VulkanDynamicAllocation AllocateDynamicSpace(Uint32 SizeInBytes, Uint32 Alignment);
@@ -291,8 +291,8 @@ private:
 
 
 
-    VulkanUploadHeap      m_UploadHeap;
-    DescriptorPoolManager m_DynamicDescriptorPool;
+    VulkanUploadHeap              m_UploadHeap;
+    DynamicDescriptorSetAllocator m_DynamicDescrSetAllocator;
 
     // Number of the command buffer currently being recorded by the context and that will
     // be submitted next

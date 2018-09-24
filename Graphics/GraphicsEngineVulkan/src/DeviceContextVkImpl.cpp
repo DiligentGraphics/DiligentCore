@@ -34,28 +34,15 @@
 
 namespace Diligent
 {
-    static std::string GetUploadHeapName(bool bIsDeferred, Uint32 ContextId)
+    static std::string GetContextObjectName(const char* Object, bool bIsDeferred, Uint32 ContextId)
     {
+        std::stringstream ss;
+        ss << Object;
         if (bIsDeferred)
-        {
-            std::stringstream ss;
-            ss <<  "Upload heap of deferred context #" << ContextId;
-            return ss.str();
-        }
+            ss << " of deferred context #" << ContextId;
         else
-            return "Upload heap of immediate context";
-    }
-
-    static std::string GetDynamicHeapName(bool bIsDeferred, Uint32 ContextId)
-    {
-        if (bIsDeferred)
-        {
-            std::stringstream ss;
-            ss << "Dynamic heap of deferred context #" << ContextId;
-            return ss.str();
-        }
-        else
-            return "Dynamic heap of immediate context";
+            ss << " of immediate context";
+        return ss.str();
     }
 
     DeviceContextVkImpl::DeviceContextVkImpl( IReferenceCounters*                   pRefCounters, 
@@ -83,35 +70,21 @@ namespace Diligent
         m_UploadHeap
         {
             *pDeviceVkImpl,
-            GetUploadHeapName(bIsDeferred, ContextId),
+            GetContextObjectName("Upload heap", bIsDeferred, ContextId),
             Attribs.UploadHeapPageSize
-        },
-        // Descriptor pools must always be thread-safe as for a deferred context, Finish() may be called from another thread
-        m_DynamicDescriptorPool
-        {
-            pDeviceVkImpl->GetLogicalDevice().GetSharedPtr(),
-            std::vector<VkDescriptorPoolSize>
-            {
-                {VK_DESCRIPTOR_TYPE_SAMPLER,                Attribs.DynamicDescriptorPoolSize.NumSeparateSamplerDescriptors},
-                {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, Attribs.DynamicDescriptorPoolSize.NumCombinedSamplerDescriptors},
-                {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,          Attribs.DynamicDescriptorPoolSize.NumSampledImageDescriptors},
-                {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,          Attribs.DynamicDescriptorPoolSize.NumStorageImageDescriptors},
-                {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,   Attribs.DynamicDescriptorPoolSize.NumUniformTexelBufferDescriptors},
-                {VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,   Attribs.DynamicDescriptorPoolSize.NumStorageTexelBufferDescriptors},
-                //{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         Attribs.DynamicDescriptorPoolSize.NumUniformBufferDescriptors},
-                //{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,         Attribs.DynamicDescriptorPoolSize.NumStorageBufferDescriptors},
-                {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, Attribs.DynamicDescriptorPoolSize.NumUniformBufferDescriptors},
-                {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, Attribs.DynamicDescriptorPoolSize.NumStorageBufferDescriptors},
-            },
-            Attribs.DynamicDescriptorPoolSize.MaxDescriptorSets,
         },
         m_NextCmdBuffNumber(0),
         m_ContextFrameNumber(0),
         m_DynamicHeap
         {
             pDeviceVkImpl->GetDynamicMemoryManager(),
-            GetDynamicHeapName(bIsDeferred, ContextId),
+            GetContextObjectName("Dynamic heap", bIsDeferred, ContextId),
             Attribs.DynamicHeapPageSize
+        },
+        m_DynamicDescrSetAllocator
+        {
+            pDeviceVkImpl->GetDynamicDescriptorPool(),
+            GetContextObjectName("Dynamic descriptor set allocator", bIsDeferred, ContextId),
         },
         m_GenerateMipsHelper(std::move(GenerateMipsHelper))
     {
@@ -153,11 +126,13 @@ namespace Diligent
         // moved to the release queue by Flush(). For deferred contexts, this should have happened in the last FinishCommandList()
         // call.
         VERIFY(m_UploadHeap.GetStalePagesCount() == 0, "All stale pages must have been discarded at this point");
-        VERIFY(m_DynamicDescriptorPool.GetStaleAllocationCount() == 0, "All stale dynamic descriptor set allocations must have been discarded at this point");
+        VERIFY(m_DynamicDescrSetAllocator.GetAllocatedPoolCount() == 0, "All allocated dynamic descriptor set pools must have been released at this point");
+        
         // TODO: rework
         ReleaseStaleContextResources(m_LastSubmittedFenceValue, pDeviceVkImpl->GetCompletedFenceValue(0));
         // Since we idled the GPU, all stale resources must have been destroyed now
-        VERIFY(m_DynamicDescriptorPool.GetPendingReleaseAllocationCount() == 0, "All stale descriptor set allocations must have been destroyed at this point");
+        // TODO: remove
+        //VERIFY(m_DynamicDescriptorPool.GetPendingReleaseAllocationCount() == 0, "All stale descriptor set allocations must have been destroyed at this point");
 
         auto VkCmdPool = m_CmdPool.Release();
         pDeviceVkImpl->SafeReleaseDeviceObject(std::move(VkCmdPool), ~Uint64{0});
@@ -762,8 +737,7 @@ namespace Diligent
         // the release queue rightaway when RenderDeviceVkImpl::FlushStaleResources() is called
         m_UploadHeap.ReleaseAllocatedPages(m_SubmittedBuffersCmdQueueMask);
         m_DynamicHeap.FinishFrame(DeviceVkImpl, m_SubmittedBuffersCmdQueueMask);
-        
-        m_DynamicDescriptorPool.ReleaseStaleAllocations(CompletedFenceValue);
+        m_DynamicDescrSetAllocator.ReleasePools(m_SubmittedBuffersCmdQueueMask);
 
         if (m_bIsDeferred)
         {
@@ -781,8 +755,8 @@ namespace Diligent
 
     void DeviceContextVkImpl::ReleaseStaleContextResources(Uint64 SubmittedFenceValue, Uint64 CompletedFenceValue)
     {
-        m_DynamicDescriptorPool.DisposeAllocations(SubmittedFenceValue);
-        m_DynamicDescriptorPool.ReleaseStaleAllocations(CompletedFenceValue);
+        //m_DynamicDescriptorPool.DisposeAllocations(SubmittedFenceValue);
+        //m_DynamicDescriptorPool.ReleaseStaleAllocations(CompletedFenceValue);
     }
 
     void DeviceContextVkImpl::Flush()

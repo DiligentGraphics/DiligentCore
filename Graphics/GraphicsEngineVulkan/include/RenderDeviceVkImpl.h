@@ -101,10 +101,11 @@ public:
     void FinishFrame(bool ReleaseAllResources);
     virtual void FinishFrame()override final { FinishFrame(false); }
 
-    DescriptorPoolAllocation AllocateDescriptorSet(Uint64 CommandQueueMask, VkDescriptorSetLayout SetLayout)
+    DescriptorSetAllocation AllocateDescriptorSet(Uint64 CommandQueueMask, VkDescriptorSetLayout SetLayout)
     {
-        return m_MainDescriptorPool.Allocate(CommandQueueMask, SetLayout);
+        return m_DescriptorSetAllocator.Allocate(CommandQueueMask, SetLayout);
     }
+    DescriptorPoolManager& GetDynamicDescriptorPool(){return m_DynamicDescriptorPool;}
 
     std::shared_ptr<const VulkanUtilities::VulkanInstance> GetVulkanInstance()const{return m_VulkanInstance;}
     const VulkanUtilities::VulkanPhysicalDevice& GetPhysicalDevice()const {return *m_PhysicalDevice;}
@@ -137,9 +138,10 @@ private:
 
     EngineVkAttribs m_EngineAttribs;
 
-    FramebufferCache      m_FramebufferCache;
-    RenderPassCache       m_RenderPassCache;
-    DescriptorPoolManager m_MainDescriptorPool;
+    FramebufferCache       m_FramebufferCache;
+    RenderPassCache        m_RenderPassCache;
+    DescriptorSetAllocator m_DescriptorSetAllocator;
+    DescriptorPoolManager  m_DynamicDescriptorPool;
 
     // These one-time command pools are used by buffer and texture constructors to
     // issue copy commands. Vulkan requires that every command pool is used by one thread 

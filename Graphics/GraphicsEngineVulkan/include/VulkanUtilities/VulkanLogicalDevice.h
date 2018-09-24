@@ -123,6 +123,9 @@ namespace VulkanUtilities
         VkResult ResetCommandPool(VkCommandPool             vkCmdPool,
                                   VkCommandPoolResetFlags   flags = 0)const;
 
+        VkResult ResetDescriptorPool(VkDescriptorPool           descriptorPool,
+                                     VkDescriptorPoolResetFlags flags = 0)const;
+
     private:
         VulkanLogicalDevice(VkPhysicalDevice vkPhysicalDevice, 
                             const VkDeviceCreateInfo &DeviceCI, 

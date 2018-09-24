@@ -71,7 +71,7 @@ namespace VulkanUtilities
     void VulkanLogicalDevice::WaitIdle()const
     {
         auto err = vkDeviceWaitIdle(m_VkDevice);
-        VERIFY_EXPR(err == VK_SUCCESS);
+        DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to idle device");
     }
 
     template<typename VkObjectType, typename VkCreateObjectFuncType, typename VkObjectCreateInfoType>
@@ -248,7 +248,7 @@ namespace VulkanUtilities
 
         VkCommandBuffer CmdBuff = VK_NULL_HANDLE;
         auto err = vkAllocateCommandBuffers(m_VkDevice, &AllocInfo, &CmdBuff);
-        VERIFY(err == VK_SUCCESS, "Failed to allocate command buffer '", DebugName, '\'');
+        DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to allocate command buffer '", DebugName, '\'');
 
         if (DebugName != nullptr && *DebugName != 0)
             SetCommandBufferName(m_VkDevice, CmdBuff, DebugName);
@@ -423,7 +423,7 @@ namespace VulkanUtilities
     VkResult VulkanLogicalDevice::ResetFence(VkFence fence)const
     {
         auto err = vkResetFences(m_VkDevice, 1, &fence);
-        VERIFY(err == VK_SUCCESS, "Failed to reset fence");
+        DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to reset fence");
         return err;
     }
 
@@ -439,7 +439,15 @@ namespace VulkanUtilities
                                                    VkCommandPoolResetFlags  flags)const
     {
         auto err = vkResetCommandPool(m_VkDevice, vkCmdPool, flags);
-        VERIFY(err == VK_SUCCESS, "Failed to reset command pool");
+        DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to reset command pool");
+        return err;
+    }
+
+    VkResult VulkanLogicalDevice::ResetDescriptorPool(VkDescriptorPool           vkDescriptorPool,
+                                                      VkDescriptorPoolResetFlags flags)const
+    {
+        auto err = vkResetDescriptorPool(m_VkDevice, vkDescriptorPool, flags);
+        DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to reset descriptor pool");
         return err;
     }
 }

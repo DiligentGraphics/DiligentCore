@@ -26,7 +26,7 @@
 #include <deque>
 #include <mutex>
 #include "STDAllocator.h"
-#include "VulkanUtilities/VulkanDescriptorPool.h"
+#include "VulkanUtilities/VulkanLogicalDevice.h"
 
 namespace Diligent
 {

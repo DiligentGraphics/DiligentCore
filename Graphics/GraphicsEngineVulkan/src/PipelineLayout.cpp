@@ -416,7 +416,7 @@ void PipelineLayout::InitResourceCache(RenderDeviceVkImpl* pDeviceVkImpl, Shader
     const auto &StaticAndMutSet = m_LayoutMgr.GetDescriptorSet(SHADER_VARIABLE_TYPE_STATIC);
     if (StaticAndMutSet.SetIndex >= 0)
     {
-        DescriptorPoolAllocation SetAllocation = pDeviceVkImpl->AllocateDescriptorSet(~Uint64{0}, StaticAndMutSet.VkLayout);
+        DescriptorSetAllocation SetAllocation = pDeviceVkImpl->AllocateDescriptorSet(~Uint64{0}, StaticAndMutSet.VkLayout);
         ResourceCache.GetDescriptorSet(StaticAndMutSet.SetIndex).AssignDescriptorSetAllocation(std::move(SetAllocation));
     }
 }

@@ -551,23 +551,23 @@ void PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBind
 #endif
         }
 
-        DescriptorPoolAllocation DynamicDescrSetAllocation;
+        VkDescriptorSet DynamicDescrSet = VK_NULL_HANDLE;
         auto DynamicDescriptorSetVkLayout = m_PipelineLayout.GetDynamicDescriptorSetVkLayout();
         if (DynamicDescriptorSetVkLayout != VK_NULL_HANDLE)
         {
             // Allocate vulkan descriptor set for dynamic resources
-            DynamicDescrSetAllocation = pCtxVkImpl->AllocateDynamicDescriptorSet(DynamicDescriptorSetVkLayout);
+            DynamicDescrSet = pCtxVkImpl->AllocateDynamicDescriptorSet(DynamicDescriptorSetVkLayout);
             // Commit all dynamic resource descriptors
             for (Uint32 s=0; s < m_NumShaders; ++s)
             {
                 const auto& Layout = m_ShaderResourceLayouts[s];
                 if (Layout.GetResourceCount(SHADER_VARIABLE_TYPE_DYNAMIC) != 0)
-                    Layout.CommitDynamicResources(ResourceCache, DynamicDescrSetAllocation.GetVkDescriptorSet());
+                    Layout.CommitDynamicResources(ResourceCache, DynamicDescrSet);
             }
         }
         // Prepare descriptor sets, and also bind them if there are no dynamic descriptors
         VERIFY_EXPR(pDescrSetBindInfo != nullptr);
-        m_PipelineLayout.PrepareDescriptorSets(pCtxVkImpl, m_Desc.IsComputePipeline, ResourceCache, *pDescrSetBindInfo, DynamicDescrSetAllocation.GetVkDescriptorSet());
+        m_PipelineLayout.PrepareDescriptorSets(pCtxVkImpl, m_Desc.IsComputePipeline, ResourceCache, *pDescrSetBindInfo, DynamicDescrSet);
         // Dynamic descriptor set allocation automatically goes back to the context's dynamic descriptor pool. 
         // release queue. It will stay there until the next command list is executed, at which point it will be discarded
         // and actually released later

@@ -126,7 +126,7 @@ public:
         rhs.m_pStaleResource = nullptr;
     }
 
-    DynamicStaleResourceWrapper (const DynamicStaleResourceWrapper& rhs) :
+    DynamicStaleResourceWrapper (const DynamicStaleResourceWrapper& rhs)noexcept :
         m_pStaleResource(rhs.m_pStaleResource)
     {
     }
@@ -213,8 +213,8 @@ public:
 
     ~ResourceReleaseQueue()
     {
-        VERIFY(m_StaleResources.empty(), "Not all stale objects were destroyed");
-        VERIFY(m_ReleaseQueue.empty(), "Release queue is not empty");
+        DEV_CHECK_ERR(m_StaleResources.empty(), "Not all stale objects were destroyed");
+        DEV_CHECK_ERR(m_ReleaseQueue.empty(), "Release queue is not empty");
     }
 
     /// Creates a resource wrapper for the specific resource type

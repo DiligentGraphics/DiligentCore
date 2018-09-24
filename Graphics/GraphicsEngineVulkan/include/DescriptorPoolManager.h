@@ -29,56 +29,54 @@
 #include <vector>
 #include <deque>
 #include <mutex>
-#include "VulkanUtilities/VulkanDescriptorPool.h"
+#include "VulkanUtilities/VulkanObjectWrappers.h"
 
 namespace Diligent
 {
 
-class DescriptorPoolManager;
+class DescriptorSetAllocator;
+class RenderDeviceVkImpl;
 
-class DescriptorPoolAllocation
+// This class manages descriptor set allocation. 
+// The class destructor calls DescriptorSetAllocator::FreeDescriptorSet() that moves
+// the set into the release queue.
+class DescriptorSetAllocation
 {
 public:
-    DescriptorPoolAllocation(VkDescriptorSet                        _Set,
-                             Uint64                                 _CmdQueueMask,
-                             VulkanUtilities::VulkanDescriptorPool& _ParentPool,
-                             DescriptorPoolManager&                 _ParentPoolMgr)noexcept :
-        Set          (_Set),
-        CmdQueueMask(_CmdQueueMask),
-        ParentPool   (&_ParentPool),
-        ParentPoolMgr(&_ParentPoolMgr)
+    DescriptorSetAllocation(VkDescriptorSet         _Set,
+                            VkDescriptorPool        _Pool,
+                            Uint64                  _CmdQueueMask,
+                            DescriptorSetAllocator& _DescrSetAllocator)noexcept :
+        Set              (_Set),
+        Pool             (_Pool),
+        CmdQueueMask     (_CmdQueueMask),
+        DescrSetAllocator(&_DescrSetAllocator)
     {}
-    DescriptorPoolAllocation()noexcept{}
+    DescriptorSetAllocation()noexcept{}
 
-    DescriptorPoolAllocation             (const DescriptorPoolAllocation&) = delete;
-    DescriptorPoolAllocation& operator = (const DescriptorPoolAllocation&) = delete;
+    DescriptorSetAllocation             (const DescriptorSetAllocation&) = delete;
+    DescriptorSetAllocation& operator = (const DescriptorSetAllocation&) = delete;
 
-    DescriptorPoolAllocation(DescriptorPoolAllocation&& rhs)noexcept : 
-        Set          (rhs.Set),
-        CmdQueueMask (rhs.CmdQueueMask),
-        ParentPool   (rhs.ParentPool),
-        ParentPoolMgr(rhs.ParentPoolMgr)
+    DescriptorSetAllocation(DescriptorSetAllocation&& rhs)noexcept : 
+        Set              (rhs.Set),
+        CmdQueueMask     (rhs.CmdQueueMask),
+        Pool             (rhs.Pool),
+        DescrSetAllocator(rhs.DescrSetAllocator)
     {
-        rhs.Set           = VK_NULL_HANDLE;
-        rhs.CmdQueueMask  = 0;
-        rhs.ParentPool    = nullptr;
-        rhs.ParentPoolMgr = nullptr;
+        rhs.Reset();
     }
     
-    DescriptorPoolAllocation& operator = (DescriptorPoolAllocation&& rhs)noexcept
+    DescriptorSetAllocation& operator = (DescriptorSetAllocation&& rhs)noexcept
     {
         Release();
 
-        Set           = rhs.Set;
-        CmdQueueMask  = rhs.CmdQueueMask;
-        ParentPool    = rhs.ParentPool;
-        ParentPoolMgr = rhs.ParentPoolMgr;
+        Set               = rhs.Set;
+        CmdQueueMask      = rhs.CmdQueueMask;
+        Pool              = rhs.Pool;
+        DescrSetAllocator = rhs.DescrSetAllocator;
 
-        rhs.Set           = VK_NULL_HANDLE;
-        rhs.CmdQueueMask  = 0;
-        rhs.ParentPool    = nullptr;
-        rhs.ParentPoolMgr = nullptr;
-        
+        rhs.Reset();
+
         return *this;
     }
 
@@ -87,9 +85,17 @@ public:
         return Set != VK_NULL_HANDLE;
     }
 
+    void Reset()
+    {
+        Set               = VK_NULL_HANDLE;
+        Pool              = VK_NULL_HANDLE;
+        CmdQueueMask      = 0;
+        DescrSetAllocator = nullptr;
+    }
+
     void Release();
 
-    ~DescriptorPoolAllocation()
+    ~DescriptorSetAllocation()
     {
         Release();
     }
@@ -97,66 +103,97 @@ public:
     VkDescriptorSet GetVkDescriptorSet()const {return Set;}
 
 private:
-    VkDescriptorSet                        Set           = VK_NULL_HANDLE;
-    Uint64                                 CmdQueueMask  = 0;
-    VulkanUtilities::VulkanDescriptorPool* ParentPool    = nullptr;
-    DescriptorPoolManager*                 ParentPoolMgr = nullptr;
+    VkDescriptorSet         Set               = VK_NULL_HANDLE;
+    VkDescriptorPool        Pool              = VK_NULL_HANDLE;
+    Uint64                  CmdQueueMask      = 0;
+    DescriptorSetAllocator* DescrSetAllocator = nullptr;
 };
 
+// The class manages pool of descriptor set pools
 class DescriptorPoolManager
 {
 public:
-    DescriptorPoolManager(std::shared_ptr<const VulkanUtilities::VulkanLogicalDevice> LogicalDevice,
-                          std::vector<VkDescriptorPoolSize>                           PoolSizes,
-                          uint32_t                                                    MaxSets) noexcept:
-        m_LogicalDevice(std::move(LogicalDevice)),
-        m_PoolSizes    (std::move(PoolSizes)),
-        m_MaxSets      (MaxSets)
-    {
-        CreateNewPool();
-    }
-
-    // Move constructor must be noexcept, otherwise vector<DescriptorPoolManager> will fail to compile on MSVC
-    // So we have to implement it manually. = default also does not work
-    DescriptorPoolManager(DescriptorPoolManager&& rhs)noexcept : 
-        m_PoolSizes          (std::move(rhs.m_PoolSizes)),
-        m_MaxSets            (std::move(rhs.m_MaxSets)),
-        //m_Mutex(std::move(rhs.m_Mutex)), mutex is not movable
-        m_LogicalDevice      (std::move(rhs.m_LogicalDevice)),
-        m_DescriptorPools    (std::move(rhs.m_DescriptorPools)),
-        m_ReleasedAllocations(std::move(rhs.m_ReleasedAllocations))
+    DescriptorPoolManager(RenderDeviceVkImpl&               DeviceVkImpl,
+                          std::string                       PoolName,
+                          std::vector<VkDescriptorPoolSize> PoolSizes,
+                          uint32_t                          MaxSets,
+                          bool                              AllowFreeing) noexcept:
+        m_DeviceVkImpl(DeviceVkImpl),
+        m_PoolName    (std::move(PoolName)),
+        m_PoolSizes   (std::move(PoolSizes)),
+        m_MaxSets     (MaxSets),
+        m_AllowFreeing(AllowFreeing)
     {
     }
+    ~DescriptorPoolManager();
 
     DescriptorPoolManager             (const DescriptorPoolManager&) = delete;
     DescriptorPoolManager& operator = (const DescriptorPoolManager&) = delete;
+    DescriptorPoolManager             (DescriptorPoolManager&&)      = delete;
     DescriptorPoolManager& operator = (DescriptorPoolManager&&)      = delete;
-
-    DescriptorPoolAllocation Allocate(Uint64 CommandQueueMask, VkDescriptorSetLayout SetLayout);
-    void DisposeAllocations(uint64_t FenceValue);
-    void ReleaseStaleAllocations(uint64_t LastCompletedFence);
     
-    size_t GetStaleAllocationCount()const
-    {
-        return m_ReleasedAllocations.size();
-    }
-    size_t GetPendingReleaseAllocationCount();
+    VulkanUtilities::DescriptorPoolWrapper GetPool(const char* DebugName);
+    void FreePool(VulkanUtilities::DescriptorPoolWrapper&& Pool);
 
-private:
-    friend class DescriptorPoolAllocation;
-    void FreeAllocation(VkDescriptorSet Set, VulkanUtilities::VulkanDescriptorPool& Pool);
+protected:
+    friend class DynamicDescriptorSetAllocator;
+    VulkanUtilities::DescriptorPoolWrapper CreateDescriptorPool(const char* DebugName);
 
-    void CreateNewPool();
+    RenderDeviceVkImpl& m_DeviceVkImpl;
+    const std::string   m_PoolName;
 
     const std::vector<VkDescriptorPoolSize> m_PoolSizes;
-    const uint32_t m_MaxSets;
+    const uint32_t                          m_MaxSets;
+    const bool                              m_AllowFreeing;
+    
+    std::mutex                                           m_Mutex;
+    std::deque< VulkanUtilities::DescriptorPoolWrapper > m_Pools;
+};
 
-    std::mutex m_Mutex;
-    std::shared_ptr<const VulkanUtilities::VulkanLogicalDevice>                       m_LogicalDevice;
-    std::deque< std::unique_ptr<VulkanUtilities::VulkanDescriptorPool> >              m_DescriptorPools;
-    std::vector< std::pair<VkDescriptorSet, VulkanUtilities::VulkanDescriptorPool*> > m_ReleasedAllocations;
+// The class allocates descriptors from the main descriptor pool.
+// Descriptors can be released and returned to the pool
+class DescriptorSetAllocator : public DescriptorPoolManager
+{
+public:
+    friend class DescriptorSetAllocation;
+    DescriptorSetAllocator(RenderDeviceVkImpl&               DeviceVkImpl,
+                           std::string                       PoolName,
+                           std::vector<VkDescriptorPoolSize> PoolSizes,
+                           uint32_t                          MaxSets,
+                           bool                              AllowFreeing) noexcept:
+        DescriptorPoolManager(DeviceVkImpl, std::move(PoolName), std::move(PoolSizes), MaxSets, AllowFreeing)
+    {
+    }
 
-    // When adding new members, do not forget to update move ctor!
+    DescriptorSetAllocation Allocate(Uint64 CommandQueueMask, VkDescriptorSetLayout SetLayout);
+
+private:  
+    void FreeDescriptorSet(VkDescriptorSet Set, VkDescriptorPool Pool, Uint64 QueueMask);
+};
+
+// The class manages dynamic descriptor sets. It first requests descriptor pool from
+// the global manager and performs allocations from this pool. When space in the pool is exhausted,
+// the class requests new pool.
+// The class is not thread-safe as device contexts must not be used in multiple threads at the same time.
+// Entire pools are recycled at the end of every frame.
+class DynamicDescriptorSetAllocator
+{
+public:
+    DynamicDescriptorSetAllocator(DescriptorPoolManager& PoolMgr, std::string Name) : 
+        m_PoolMgr(PoolMgr),
+        m_Name(std::move(Name))
+    {}
+    ~DynamicDescriptorSetAllocator();
+
+    VkDescriptorSet Allocate(VkDescriptorSetLayout SetLayout, const char* DebugName);
+    void ReleasePools(Uint64 QueueMask);
+    size_t GetAllocatedPoolCount()const{return m_AllocatedPools.size();}
+
+private:
+    DescriptorPoolManager&                              m_PoolMgr;
+    const std::string                                   m_Name;
+    std::vector<VulkanUtilities::DescriptorPoolWrapper> m_AllocatedPools;
+    size_t                                              m_PeakPoolCount = 0;
 };
 
 }

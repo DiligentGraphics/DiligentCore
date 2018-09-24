@@ -28,6 +28,11 @@
 
 namespace Diligent
 {
+    template<typename SSType>
+    void FormatStrSS(SSType &ss)
+    {
+    }
+
     template<typename SSType, typename ArgType>
     void FormatStrSS(SSType &ss, const ArgType& Arg)
     {

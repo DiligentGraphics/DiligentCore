@@ -151,7 +151,7 @@ namespace VulkanUtilities
     //                                 VkPhysicalDeviceMemoryProperties structure for the physical device is 
     //                                 supported for the resource.
     // * requiredProperties   -  required memory properties (device local, host visible, etc.)
-    uint32_t VulkanPhysicalDevice::GetMemoryTypeIndex(uint32_t memoryTypeBitsRequirement,
+    uint32_t VulkanPhysicalDevice::GetMemoryTypeIndex(uint32_t              memoryTypeBitsRequirement,
                                                       VkMemoryPropertyFlags requiredProperties)const
     {
         // Iterate over all memory types available for the device

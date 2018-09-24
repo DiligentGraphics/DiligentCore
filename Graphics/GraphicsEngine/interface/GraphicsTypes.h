@@ -1365,12 +1365,15 @@ namespace Diligent
         /// Size of the main descriptor pool that is used to allocate descriptor sets
         /// for static and mutable variables. If allocation from the current pool fails,
         /// the engine creates another one.
-        DescriptorPoolSize MainDescriptorPoolSize    {1024, 1024, 8192, 8192, 1024, 4096, 4096, 1024, 1024};
+        //                                             Max  SepSm  CmbSm  SmpImg StrImg   UB     SB    UTxB   StTxB
+        DescriptorPoolSize MainDescriptorPoolSize    {8192,  1024,  8192,  8192,  1024,  4096,  4096,  1024,  1024};
 
         /// Size of the dynamic descriptor pool that is used to allocate descriptor sets
-        /// for dynamic variables. Every device context has its own dynamic descriptor pool.
-        /// If allocation from the current pool fails, the engine creates another one.
-        DescriptorPoolSize DynamicDescriptorPoolSize { 256,  256, 2048, 2048,  256, 1024, 1024,  256,  256};
+        /// for dynamic variables. Every device context has its own dynamic descriptor set allocator.
+        /// The allocator requests pools from global dynamic descriptor pool manager, and then 
+        /// performs lock-free suballocations from the pool.
+        //                                             Max  SepSm  CmbSm  SmpImg StrImg   UB     SB    UTxB   StTxB
+        DescriptorPoolSize DynamicDescriptorPoolSize {2048,   256,  2048,  2048,   256,  1024,  1024,   256,   256};
 
         /// Allocation granularity for device-local memory
         Uint32 DeviceLocalMemoryPageSize = 16 << 20;

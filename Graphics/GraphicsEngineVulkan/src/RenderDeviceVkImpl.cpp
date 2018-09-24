@@ -70,9 +70,10 @@ RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters*                    
     m_EngineAttribs(CreationAttribs),
     m_FramebufferCache(*this),
     m_RenderPassCache(*this),
-    m_MainDescriptorPool
+    m_DescriptorSetAllocator
     {
-        m_LogicalVkDevice, 
+        *this,
+        "Main descriptor pool",
         std::vector<VkDescriptorPoolSize>
         {
             {VK_DESCRIPTOR_TYPE_SAMPLER,                CreationAttribs.MainDescriptorPoolSize.NumSeparateSamplerDescriptors},
@@ -86,7 +87,28 @@ RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters*                    
             {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, CreationAttribs.MainDescriptorPoolSize.NumUniformBufferDescriptors},
             {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, CreationAttribs.MainDescriptorPoolSize.NumStorageBufferDescriptors},
         },
-        CreationAttribs.MainDescriptorPoolSize.MaxDescriptorSets
+        CreationAttribs.MainDescriptorPoolSize.MaxDescriptorSets,
+        true
+    },
+    m_DynamicDescriptorPool
+    {
+        *this,
+        "Dynamic descriptor pool",
+        std::vector<VkDescriptorPoolSize>
+        {
+            {VK_DESCRIPTOR_TYPE_SAMPLER,                CreationAttribs.DynamicDescriptorPoolSize.NumSeparateSamplerDescriptors},
+            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, CreationAttribs.DynamicDescriptorPoolSize.NumCombinedSamplerDescriptors},
+            {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,          CreationAttribs.DynamicDescriptorPoolSize.NumSampledImageDescriptors},
+            {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,          CreationAttribs.DynamicDescriptorPoolSize.NumStorageImageDescriptors},
+            {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,   CreationAttribs.DynamicDescriptorPoolSize.NumUniformTexelBufferDescriptors},
+            {VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,   CreationAttribs.DynamicDescriptorPoolSize.NumStorageTexelBufferDescriptors},
+            //{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         CreationAttribs.DynamicDescriptorPoolSize.NumUniformBufferDescriptors},
+            //{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,         CreationAttribs.DynamicDescriptorPoolSize.NumStorageBufferDescriptors},
+            {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, CreationAttribs.DynamicDescriptorPoolSize.NumUniformBufferDescriptors},
+            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, CreationAttribs.DynamicDescriptorPoolSize.NumStorageBufferDescriptors},
+        },
+        CreationAttribs.DynamicDescriptorPoolSize.MaxDescriptorSets,
+        false // Pools can only be reset
     },
     m_TransientCmdPoolMgr(*m_LogicalVkDevice, CmdQueues[0]->GetQueueFamilyIndex(), VK_COMMAND_POOL_CREATE_TRANSIENT_BIT),
     m_MemoryMgr("Global resource memory manager", *m_LogicalVkDevice, *m_PhysicalDevice, GetRawAllocator(), CreationAttribs.DeviceLocalMemoryPageSize, CreationAttribs.HostVisibleMemoryPageSize, CreationAttribs.DeviceLocalMemoryReserveSize, CreationAttribs.HostVisibleMemoryReserveSize),
@@ -243,8 +265,8 @@ Uint64 RenderDeviceVkImpl::ExecuteCommandBuffer(const VkSubmitInfo& SubmitInfo, 
     SubmitCommandBuffer(SubmitInfo, SubmittedCmdBuffNumber, SubmittedFenceValue, pSignalFences);
 
     // TODO: rework this
-    auto CompletedFenceValue = m_CommandQueues[0].CmdQueue->GetCompletedFenceValue();
-    m_MainDescriptorPool.ReleaseStaleAllocations(CompletedFenceValue);
+    //auto CompletedFenceValue = m_CommandQueues[0].CmdQueue->GetCompletedFenceValue();
+    //m_MainDescriptorPool.ReleaseStaleAllocations(CompletedFenceValue);
     m_MemoryMgr.ShrinkMemory();
     PurgeReleaseQueues();
 
@@ -265,7 +287,7 @@ void RenderDeviceVkImpl::IdleGPU(bool ReleaseStaleObjects)
         // Since GPU has been idled, it it is safe to do so
 
         // SubmittedFenceValue has now been signaled by the GPU since we waited for it
-        m_MainDescriptorPool.ReleaseStaleAllocations(m_CommandQueues[0].CmdQueue->GetCompletedFenceValue());
+        //m_MainDescriptorPool.ReleaseStaleAllocations(m_CommandQueues[0].CmdQueue->GetCompletedFenceValue());
         m_MemoryMgr.ShrinkMemory();
     }
 }
@@ -291,7 +313,7 @@ void RenderDeviceVkImpl::FinishFrame(bool ReleaseAllResources)
     // TODO: rework this
     auto CompletedFenceValue = ReleaseAllResources ? std::numeric_limits<Uint64>::max() : m_CommandQueues[0].CmdQueue->GetCompletedFenceValue();
 
-    m_MainDescriptorPool.ReleaseStaleAllocations(CompletedFenceValue);
+    //m_MainDescriptorPool.ReleaseStaleAllocations(CompletedFenceValue);
     m_MemoryMgr.ShrinkMemory();
 
     PurgeReleaseQueues();
