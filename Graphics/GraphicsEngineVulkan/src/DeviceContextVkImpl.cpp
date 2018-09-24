@@ -73,7 +73,6 @@ namespace Diligent
             GetContextObjectName("Upload heap", bIsDeferred, ContextId),
             Attribs.UploadHeapPageSize
         },
-        m_NextCmdBuffNumber(0),
         m_ContextFrameNumber(0),
         m_DynamicHeap
         {
@@ -815,8 +814,6 @@ namespace Diligent
         }
 
         // Release temporary resources that were used by this context while recording the last command buffer
-        auto SubmittedCmdBuffNumber = m_NextCmdBuffNumber;
-        Atomics::AtomicIncrement(m_NextCmdBuffNumber);
         // TODO: rework
         auto CompletedFenceValue = pDeviceVkImpl->GetCompletedFenceValue(0);
         ReleaseStaleContextResources(m_LastSubmittedFenceValue, CompletedFenceValue);
@@ -1371,14 +1368,11 @@ namespace Diligent
 
         auto* pDeviceVkImpl = m_pDevice.RawPtr<RenderDeviceVkImpl>();
         CommandListVkImpl *pCmdListVk( NEW_RC_OBJ(m_CmdListAllocator, "CommandListVkImpl instance", CommandListVkImpl)
-                                                 (pDeviceVkImpl, this, vkCmdBuff, m_NextCmdBuffNumber) );
+                                                 (pDeviceVkImpl, this, vkCmdBuff) );
         pCmdListVk->QueryInterface( IID_CommandList, reinterpret_cast<IObject**>(ppCommandList) );
         
         m_CommandBuffer.SetVkCmdBuffer(VK_NULL_HANDLE);
         
-        // Increment command buffer number, but do not release any resources until the command list is executed
-        Atomics::AtomicIncrement(m_NextCmdBuffNumber);
-
         m_CommandBuffer.Reset();
         m_State = ContextState{};
         m_DescrSetBindInfo.Reset();
@@ -1422,8 +1416,7 @@ namespace Diligent
         CommandListVkImpl* pCmdListVk = ValidatedCast<CommandListVkImpl>(pCommandList);
         VkCommandBuffer vkCmdBuff = VK_NULL_HANDLE;
         RefCntAutoPtr<IDeviceContext> pDeferredCtx;
-        Uint64 DeferredCtxCmdBuffNumber = 0;
-        pCmdListVk->Close(vkCmdBuff, pDeferredCtx, DeferredCtxCmdBuffNumber);
+        pCmdListVk->Close(vkCmdBuff, pDeferredCtx);
         VERIFY(vkCmdBuff != VK_NULL_HANDLE, "Trying to execute empty command buffer");
         VERIFY_EXPR(pDeferredCtx);
         VkSubmitInfo SubmitInfo = {};

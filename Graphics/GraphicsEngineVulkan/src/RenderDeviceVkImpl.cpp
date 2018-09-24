@@ -311,12 +311,12 @@ void RenderDeviceVkImpl::FinishFrame(bool ReleaseAllResources)
     FlushStaleResources(0);
         
     // TODO: rework this
-    auto CompletedFenceValue = ReleaseAllResources ? std::numeric_limits<Uint64>::max() : m_CommandQueues[0].CmdQueue->GetCompletedFenceValue();
+    //auto CompletedFenceValue = ReleaseAllResources ? std::numeric_limits<Uint64>::max() : m_CommandQueues[0].CmdQueue->GetCompletedFenceValue();
 
     //m_MainDescriptorPool.ReleaseStaleAllocations(CompletedFenceValue);
     m_MemoryMgr.ShrinkMemory();
 
-    PurgeReleaseQueues();
+    PurgeReleaseQueues(ReleaseAllResources);
 }
 
 

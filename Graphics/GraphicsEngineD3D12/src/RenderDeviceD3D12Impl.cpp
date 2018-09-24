@@ -232,7 +232,7 @@ void RenderDeviceD3D12Impl::FinishFrame(bool ReleaseAllResources)
 
     auto CompletedFenceValue = ReleaseAllResources ? std::numeric_limits<Uint64>::max() : GetCompletedFenceValue(0);
    
-    PurgeReleaseQueues();
+    PurgeReleaseQueues(ReleaseAllResources);
 
     // Dynamic memory is used to update resource contents as well as to allocate
     // space for dynamic resources.

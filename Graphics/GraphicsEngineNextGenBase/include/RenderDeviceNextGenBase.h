@@ -145,12 +145,13 @@ public:
         return (m_CmdQueueCount < 64) ? ((Uint64{1} << Uint64{m_CmdQueueCount}) - 1) : ~Uint64{0};
     }
 
-    void PurgeReleaseQueues()
+    void PurgeReleaseQueues(bool ForceRelease = false)
     {
         for(size_t q=0; q < m_CmdQueueCount; ++q)
         {
             auto& Queue = m_CommandQueues[q];
-            Queue.ReleaseQueue.Purge(Queue.CmdQueue->GetCompletedFenceValue());
+            auto CompletedFenceValue = ForceRelease ? std::numeric_limits<Uint64>::max() : Queue.CmdQueue->GetCompletedFenceValue();
+            Queue.ReleaseQueue.Purge(CompletedFenceValue);
         }
     }
 

@@ -294,9 +294,6 @@ private:
     VulkanUploadHeap              m_UploadHeap;
     DynamicDescriptorSetAllocator m_DynamicDescrSetAllocator;
 
-    // Number of the command buffer currently being recorded by the context and that will
-    // be submitted next
-    Atomics::AtomicInt64 m_NextCmdBuffNumber;
     Atomics::AtomicInt64 m_ContextFrameNumber;
     Uint64 m_LastSubmittedFenceValue = 0;
 
