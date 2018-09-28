@@ -34,7 +34,6 @@
 #include "SRBMemoryAllocator.h"
 #include "RenderDeviceD3D12Impl.h"
 
-/// Namespace for the Direct3D11 implementation of the graphics engine
 namespace Diligent
 {
 

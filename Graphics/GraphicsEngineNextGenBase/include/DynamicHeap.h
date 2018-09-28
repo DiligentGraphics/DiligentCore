@@ -29,6 +29,7 @@
 #include <mutex>
 #include <deque>
 #include <vector>
+#include <atomic>
 #include "VariableSizeAllocationsManager.h"
 #include "RingBuffer.h"
 
@@ -105,16 +106,20 @@ public:
     MasterBlockListBasedManager& operator= (const MasterBlockListBasedManager&)  = delete;
     MasterBlockListBasedManager& operator= (      MasterBlockListBasedManager&&) = delete;
 
+    ~MasterBlockListBasedManager()
+    {
+        DEV_CHECK_ERR(m_MasterBlockCounter == 0, m_MasterBlockCounter, " master block(s) have not been returned to the manager");
+    }
+
     template<typename RenderDeviceImplType>
     void ReleaseMasterBlocks(std::vector<MasterBlock>& Blocks, RenderDeviceImplType& Device, Uint64 CmdQueueMask)
     {
         struct StaleMasterBlock
         {
-
             MasterBlock                  Block;
             MasterBlockListBasedManager* Mgr;
 
-            StaleMasterBlock(MasterBlock&& _Block, MasterBlockListBasedManager* _Mgr) :
+            StaleMasterBlock(MasterBlock&& _Block, MasterBlockListBasedManager* _Mgr)noexcept :
                 Block (std::move(_Block)),
                 Mgr   (_Mgr)
             {
@@ -137,6 +142,9 @@ public:
                 if (Mgr != nullptr)
                 {
                     std::lock_guard<std::mutex> Lock(Mgr->m_AllocationsMgrMtx);
+#ifdef DEVELOPMENT
+                    --Mgr->m_MasterBlockCounter;
+#endif
                     Mgr->m_AllocationsMgr.Free(std::move(Block));
                 }
             }
@@ -154,12 +162,19 @@ protected:
     MasterBlock AllocateMasterBlock(OffsetType SizeInBytes, OffsetType Alignment)
     {
         std::lock_guard<std::mutex> Lock(m_AllocationsMgrMtx);
+#ifdef DEVELOPMENT
+        ++m_MasterBlockCounter;
+#endif
         return m_AllocationsMgr.Allocate(SizeInBytes, Alignment);
     }
 
 private:
     std::mutex                      m_AllocationsMgrMtx;
     VariableSizeAllocationsManager  m_AllocationsMgr;
+
+#ifdef DEVELOPMENT
+    std::atomic_int32_t             m_MasterBlockCounter = 0;
+#endif
 };
 
 } // namespace DynamicHeap

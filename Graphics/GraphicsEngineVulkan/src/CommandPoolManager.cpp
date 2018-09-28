@@ -65,18 +65,25 @@ VulkanUtilities::CommandPoolWrapper CommandPoolManager::AllocateCommandPool(cons
 
     LogicalDevice.ResetCommandPool(CmdPool);
 
+#ifdef DEVELOPMENT
+    ++m_AllocatedPoolCounter;
+#endif
     return std::move(CmdPool);
 }
 
 void CommandPoolManager::FreeCommandPool(VulkanUtilities::CommandPoolWrapper&& CmdPool)
 {
     std::lock_guard<std::mutex> LockGuard(m_Mutex);
+#ifdef DEVELOPMENT
+    --m_AllocatedPoolCounter;
+#endif
     m_CmdPools.emplace_back(std::move(CmdPool));
 }
 
 void CommandPoolManager::DestroyPools()
 {
     std::lock_guard<std::mutex> LockGuard(m_Mutex);
+    DEV_CHECK_ERR(m_AllocatedPoolCounter == 0, m_AllocatedPoolCounter, " command pools have not been returned to the manager.");
     LOG_INFO_MESSAGE(m_Name, " allocated descriptor pool count: ", m_CmdPools.size() );
     m_CmdPools.clear();
 }

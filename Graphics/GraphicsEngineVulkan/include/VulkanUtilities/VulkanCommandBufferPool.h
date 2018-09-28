@@ -26,6 +26,7 @@
 #include <deque>
 #include <memory>
 #include <mutex>
+#include <atomic>
 #include "vulkan.h"
 #include "VulkanLogicalDevice.h"
 #include "VulkanObjectWrappers.h"
@@ -51,6 +52,10 @@ namespace VulkanUtilities
         
         CommandPoolWrapper&& Release();
 
+#ifdef DEVELOPMENT
+        int32_t DvpGetBufferCounter()const{return m_BuffCounter;}
+#endif
+
     private:
         // Shared point to logical device must be defined before the command pool
         std::shared_ptr<const VulkanUtilities::VulkanLogicalDevice> m_LogicalDevice;
@@ -58,5 +63,8 @@ namespace VulkanUtilities
         
         std::mutex m_Mutex;
         std::deque< VkCommandBuffer > m_CmdBuffers;
+#ifdef DEVELOPMENT
+        std::atomic_int32_t m_BuffCounter = 0;
+#endif
     };
 }

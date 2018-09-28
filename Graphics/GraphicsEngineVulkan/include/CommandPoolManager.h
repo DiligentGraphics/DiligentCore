@@ -25,6 +25,7 @@
 
 #include <deque>
 #include <mutex>
+#include <atomic>
 #include "STDAllocator.h"
 #include "VulkanUtilities/VulkanLogicalDevice.h"
 
@@ -41,10 +42,10 @@ public:
                        uint32_t                 queueFamilyIndex, 
                        VkCommandPoolCreateFlags flags)noexcept;
     
-    CommandPoolManager             (const CommandPoolManager&) = delete;
-    CommandPoolManager             (CommandPoolManager&&)      = delete;
-    CommandPoolManager& operator = (const CommandPoolManager&) = delete;
-    CommandPoolManager& operator = (CommandPoolManager&&)      = delete;
+    CommandPoolManager             (const CommandPoolManager&)  = delete;
+    CommandPoolManager             (      CommandPoolManager&&) = delete;
+    CommandPoolManager& operator = (const CommandPoolManager&)  = delete;
+    CommandPoolManager& operator = (      CommandPoolManager&&) = delete;
 
     ~CommandPoolManager();
 
@@ -57,13 +58,17 @@ public:
     void DestroyPools();
 
 private:
-    RenderDeviceVkImpl&                         m_DeviceVkImpl;
-    const std::string                           m_Name;
-    const uint32_t                              m_QueueFamilyIndex;
-    const VkCommandPoolCreateFlags              m_CmdPoolFlags;
+    RenderDeviceVkImpl&             m_DeviceVkImpl;
+    const std::string               m_Name;
+    const uint32_t                  m_QueueFamilyIndex;
+    const VkCommandPoolCreateFlags  m_CmdPoolFlags;
 
-    std::mutex                                      m_Mutex;
+    std::mutex                      m_Mutex;
     std::deque< VulkanUtilities::CommandPoolWrapper, STDAllocatorRawMem<VulkanUtilities::CommandPoolWrapper> > m_CmdPools;
+
+#ifdef DEVELOPMENT
+    std::atomic_int32_t m_AllocatedPoolCounter = 0;
+#endif
 };
 
 }

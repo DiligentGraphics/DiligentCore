@@ -47,6 +47,7 @@ namespace VulkanUtilities
     VulkanCommandBufferPool::~VulkanCommandBufferPool()
     {
         m_CmdPool.Release();
+        DEV_CHECK_ERR(m_BuffCounter == 0, m_BuffCounter, " command buffer(s) have not been returned to the pool. If there are outstanding references to these buffers in release queues, FreeCommandBuffer() will crash when attempting to return a buffer to the pool.");
     }
 
     VkCommandBuffer VulkanCommandBufferPool::GetCommandBuffer(const char* DebugName)
@@ -89,8 +90,10 @@ namespace VulkanUtilities
                                                                               // and recorded again between each submission.
         CmdBuffBeginInfo.pInheritanceInfo = nullptr; // Ignored for a primary command buffer
         auto err = vkBeginCommandBuffer(CmdBuffer, &CmdBuffBeginInfo);
-        VERIFY(err == VK_SUCCESS, "Failed to begin command buffer");
-
+        DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to begin command buffer");
+#ifdef DEVELOPMENT
+        ++m_BuffCounter;
+#endif
         return CmdBuffer;
     }
 
@@ -101,6 +104,9 @@ namespace VulkanUtilities
         // executed the command buffer
         m_CmdBuffers.emplace_back(CmdBuffer);
         CmdBuffer = VK_NULL_HANDLE;
+#ifdef DEVELOPMENT
+        --m_BuffCounter;
+#endif
     }
 
     CommandPoolWrapper&& VulkanCommandBufferPool::Release()

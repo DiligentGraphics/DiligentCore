@@ -56,12 +56,16 @@ VulkanUtilities::DescriptorPoolWrapper DescriptorPoolManager::CreateDescriptorPo
 
 DescriptorPoolManager::~DescriptorPoolManager()
 {
+    DEV_CHECK_ERR(m_AllocatedPoolCounter == 0, "Not all allocated descriptor pools are returned to the pool manager");
     LOG_INFO_MESSAGE(m_PoolName, " stats: allocated ", m_Pools.size(), " pool(s)");
 }
 
 VulkanUtilities::DescriptorPoolWrapper DescriptorPoolManager::GetPool(const char* DebugName)
 {
     std::lock_guard<std::mutex> Lock(m_Mutex);
+#ifdef DEVELOPMENT
+    ++m_AllocatedPoolCounter;
+#endif
     if (m_Pools.empty())
         return CreateDescriptorPool(DebugName);
     else
@@ -79,6 +83,9 @@ void DescriptorPoolManager::FreePool(VulkanUtilities::DescriptorPoolWrapper&& Po
     std::lock_guard<std::mutex> Lock(m_Mutex);
     m_DeviceVkImpl.GetLogicalDevice().ResetDescriptorPool(Pool);
     m_Pools.emplace_back(std::move(Pool));
+#ifdef DEVELOPMENT
+    --m_AllocatedPoolCounter;
+#endif
 }
 
 
@@ -202,7 +209,7 @@ void DynamicDescriptorSetAllocator::ReleasePools(Uint64 QueueMask)
     {
     public:
         DescriptorPoolDeleter(DescriptorPoolManager&                   _PoolMgr,
-                              VulkanUtilities::DescriptorPoolWrapper&& _Pool) : 
+                              VulkanUtilities::DescriptorPoolWrapper&& _Pool) noexcept : 
             PoolMgr (&_PoolMgr),
             Pool    (std::move(_Pool))
         {}
@@ -241,6 +248,7 @@ void DynamicDescriptorSetAllocator::ReleasePools(Uint64 QueueMask)
 
 DynamicDescriptorSetAllocator::~DynamicDescriptorSetAllocator()
 {
+    DEV_CHECK_ERR(m_AllocatedPools.empty(), "All allocated pools must be returned to the parent descriptor pool manager");
     LOG_INFO_MESSAGE(m_Name, " peak descriptor pool count: ", m_PeakPoolCount);
 }
 

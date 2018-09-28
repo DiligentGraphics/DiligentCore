@@ -108,29 +108,24 @@ namespace Diligent
 
         if (!m_bIsDeferred)
         {
-            // There should be no outstanding commands, but we need to call Flush to discard all stale
-            // context resources to actually destroy them in the next call to ReleaseStaleContextResources()
             Flush();
         }
 
-        // TODO: remove
-        //DisposeCurrentCmdBuffer(m_CommandQueueId, m_LastSubmittedFenceValue);
+        FinishFrame(false);
 
-        // There must be no resources in the stale resource list. For immediate context, all stale resources must have been
-        // moved to the release queue by Flush(). For deferred contexts, this should have happened in the last FinishCommandList()
-        // call.
-        VERIFY(m_UploadHeap.GetStalePagesCount() == 0, "All stale pages must have been discarded at this point");
-        VERIFY(m_DynamicDescrSetAllocator.GetAllocatedPoolCount() == 0, "All allocated dynamic descriptor set pools must have been released at this point");
-        
+        // There must be no stale resources
+        DEV_CHECK_ERR(m_UploadHeap.GetStalePagesCount()                  == 0, "All allocated upload heap pages must have been released at this point");
+        DEV_CHECK_ERR(m_DynamicHeap.GetAllocatedMasterBlockCount()       == 0, "All allocated dynamic heap master blocks must have been released");
+        DEV_CHECK_ERR(m_DynamicDescrSetAllocator.GetAllocatedPoolCount() == 0, "All allocated dynamic descriptor set pools must have been released at this point");
+
         auto VkCmdPool = m_CmdPool.Release();
         pDeviceVkImpl->SafeReleaseDeviceObject(std::move(VkCmdPool), ~Uint64{0});
 
-        // TODO:
-        // We must now wait for GPU to finish so that we can safely destroy all context resources.
-        // We need to idle when destroying deferred contexts as well since some resources may still be in use.
-        // Also, upload allocation for instance reference the upload heap, so it must be alive when these
-        // allocations are destroyed by the release queue.
-        pDeviceVkImpl->IdleGPU(true);
+        // The main reason we need to idle the GPU is because we need to make sure that all command buffers are returned to the
+        // pool. Upload heap, dynamic heap and dynamic descriptor manager return their resources to global managers and
+        // do not really need to wait for GPU to idle.
+        pDeviceVkImpl->IdleGPU();
+        DEV_CHECK_ERR(m_CmdPool.DvpGetBufferCounter() == 0, "All command buffers must have been returned to the pool");
     }
 
     IMPLEMENT_QUERY_INTERFACE( DeviceContextVkImpl, IID_DeviceContextVk, TDeviceContextBase )
@@ -156,19 +151,20 @@ namespace Diligent
         {
         public:
             CmdBufferDeleter(VkCommandBuffer                           _vkCmdBuff, 
-                             VulkanUtilities::VulkanCommandBufferPool& _Pool) :
-                vkCmdBuff(_vkCmdBuff),
-                Pool     (&_Pool)
+                             VulkanUtilities::VulkanCommandBufferPool& _Pool) noexcept :
+                vkCmdBuff (_vkCmdBuff),
+                Pool      (&_Pool)
             {
                 VERIFY_EXPR(vkCmdBuff != VK_NULL_HANDLE);
             }
+
             CmdBufferDeleter             (const CmdBufferDeleter&)  = delete;
             CmdBufferDeleter& operator = (const CmdBufferDeleter&)  = delete;
             CmdBufferDeleter& operator = (      CmdBufferDeleter&&) = delete;
 
-            CmdBufferDeleter(CmdBufferDeleter&& rhs) : 
-                vkCmdBuff(rhs.vkCmdBuff),
-                Pool     (rhs.Pool)
+            CmdBufferDeleter(CmdBufferDeleter&& rhs) noexcept : 
+                vkCmdBuff (rhs.vkCmdBuff),
+                Pool      (rhs.Pool)
             {
                 rhs.vkCmdBuff = VK_NULL_HANDLE;
                 rhs.Pool      = nullptr;
@@ -747,26 +743,29 @@ namespace Diligent
         ++m_State.NumCommands;
     }
 
-    void DeviceContextVkImpl::FinishFrame(bool ForceRelease)
-    {
-        // TODO: rework
-        FinishFrame();
-    }
-
-    void DeviceContextVkImpl::FinishFrame()
+    void DeviceContextVkImpl::FinishFrame(bool /*ForceRelease*/)
     {
         if(GetNumCommandsInCtx() != 0)
             LOG_ERROR_MESSAGE(m_bIsDeferred ? 
                 "There are outstanding commands in the deferred device context when finishing the frame. This is an error and may cause unpredicted behaviour. Close all deferred contexts and execute them before finishing the frame" :
                 "There are outstanding commands in the immediate device context when finishing the frame. This is an error and may cause unpredicted behaviour. Call Flush() to submit all commands for execution before finishing the frame");
 
+        if (!m_MappedTextures.empty())
+            LOG_ERROR_MESSAGE("There are mapped textures in the device context when finishing the frame. All dynamic resources must be used in the same frame in which they are mapped.");
+
         auto& DeviceVkImpl = *m_pDevice.RawPtr<RenderDeviceVkImpl>();
 
         VERIFY_EXPR(m_bIsDeferred || m_SubmittedBuffersCmdQueueMask == (Uint64{1}<<m_CommandQueueId));
-        // The released resources will go into the stale resources queue first, however they will move into
-        // the release queue rightaway when RenderDeviceVkImpl::FlushStaleResources() is called
+
+        // Release resources used by the context during this frame.
+        
+        // Upload heap returns all allocated pages to the global memory manager
         m_UploadHeap.ReleaseAllocatedPages(m_SubmittedBuffersCmdQueueMask);
-        m_DynamicHeap.FinishFrame(DeviceVkImpl, m_SubmittedBuffersCmdQueueMask);
+        
+        // Dynamic heap returns all allocated master blocks to global dynamic memory manager
+        m_DynamicHeap.ReleaseMasterBlocks(DeviceVkImpl, m_SubmittedBuffersCmdQueueMask);
+
+        // Dynamic descriptor set allocator returns all allocated pools to global dynamic descriptor pool manager
         m_DynamicDescrSetAllocator.ReleasePools(m_SubmittedBuffersCmdQueueMask);
 
         if (m_bIsDeferred)

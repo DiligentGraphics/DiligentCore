@@ -257,7 +257,7 @@ VulkanDynamicAllocation VulkanDynamicHeap::Allocate(Uint32 SizeInBytes, Uint32 A
         return VulkanDynamicAllocation{};
 }
 
-void VulkanDynamicHeap::FinishFrame(RenderDeviceVkImpl& DeviceVkImpl, Uint64 CmdQueueMask)
+void VulkanDynamicHeap::ReleaseMasterBlocks(RenderDeviceVkImpl& DeviceVkImpl, Uint64 CmdQueueMask)
 {
     m_DynamicMemMgr.ReleaseMasterBlocks(m_MasterBlocks, DeviceVkImpl, CmdQueueMask);
     m_MasterBlocks.clear();
@@ -271,6 +271,8 @@ void VulkanDynamicHeap::FinishFrame(RenderDeviceVkImpl& DeviceVkImpl, Uint64 Cmd
 
 VulkanDynamicHeap::~VulkanDynamicHeap()
 {
+    DEV_CHECK_ERR(m_MasterBlocks.empty(), m_MasterBlocks.size(), " master block(s) have not been returned to dynamic memory manager");
+
     LOG_INFO_MESSAGE(m_HeapName, " usage stats:\n"
         "                       Peak used/peak allocated size: ", FormatMemorySize(m_PeakUsedSize, 2, m_PeakAllocatedSize), '/', FormatMemorySize(m_PeakAllocatedSize, 2, m_PeakAllocatedSize),
         ". Peak utilization: ", std::fixed, std::setprecision(1), static_cast<double>(m_PeakUsedSize) / static_cast<double>(std::max(m_PeakAllocatedSize, 1U)) * 100.0, '%');

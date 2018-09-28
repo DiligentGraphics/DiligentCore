@@ -163,8 +163,8 @@ public:
         return m_CommandBuffer;
     }
 
-    virtual void FinishFrame(bool ForceRelease)override final;
-    void FinishFrame();
+    // TODO: remove ForceRelease
+    virtual void FinishFrame(bool /*ForceRelease*/)override final;
 
     VkDescriptorSet AllocateDynamicDescriptorSet(VkDescriptorSetLayout SetLayout)
     {

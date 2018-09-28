@@ -29,6 +29,7 @@
 #include <vector>
 #include <deque>
 #include <mutex>
+#include <atomic>
 #include "VulkanUtilities/VulkanObjectWrappers.h"
 
 namespace Diligent
@@ -109,7 +110,18 @@ private:
     DescriptorSetAllocator* DescrSetAllocator = nullptr;
 };
 
+
 // The class manages pool of descriptor set pools
+//      ______________________________     
+//     |                              |
+//     |     DescriptorPoolManager    |
+//     |                              |
+//     |   | Pool[0] | Pool[1] | ...  |
+//     |______________________________|
+//             |            A        
+//   GetPool() |            | FreePool()
+//             V            |
+//
 class DescriptorPoolManager
 {
 public:
@@ -148,7 +160,12 @@ protected:
     
     std::mutex                                           m_Mutex;
     std::deque< VulkanUtilities::DescriptorPoolWrapper > m_Pools;
+
+#ifdef DEVELOPMENT
+    std::atomic_int32_t                                  m_AllocatedPoolCounter = 0;
+#endif
 };
+
 
 // The class allocates descriptors from the main descriptor pool.
 // Descriptors can be released and returned to the pool
@@ -171,11 +188,28 @@ private:
     void FreeDescriptorSet(VkDescriptorSet Set, VkDescriptorPool Pool, Uint64 QueueMask);
 };
 
-// The class manages dynamic descriptor sets. It first requests descriptor pool from
-// the global manager and performs allocations from this pool. When space in the pool is exhausted,
-// the class requests new pool.
+
+// DynamicDescriptorSetAllocator manages dynamic descriptor sets. It first requests descriptor pool from
+// the global manager and allocates descriptor sets from this pool. When space in the pool is exhausted,
+// the class requests a new pool.
 // The class is not thread-safe as device contexts must not be used in multiple threads at the same time.
-// Entire pools are recycled at the end of every frame.
+// All allocated pools are recycled at the end of every frame.
+//   ____________________________________________________________________________
+//  |                                                                            |
+//  |                           DynamicDescriptorSetAllocator                    |
+//  |                                                                            |
+//  |  || DescriptorPool[0] | DescriptorPool[1] |  ...   | DescriptorPool[N] ||  |
+//  |__________|_________________________________________________________________|
+//             |                          A                   |
+//             |                          |                   |
+//             |Allocate()       GetPool()|                   |FreePool()
+//             |                     _____|___________________V____     
+//             V                    |                              |
+//       VkDescriptorSet            |     DescriptorPoolManager    |
+//                                  |                              |
+//                                  |   |Global dynamic buffer|    |
+//                                  |______________________________|
+//
 class DynamicDescriptorSetAllocator
 {
 public:

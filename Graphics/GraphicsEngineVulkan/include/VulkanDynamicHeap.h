@@ -55,6 +55,7 @@ struct VulkanDynamicAllocation
 
     VulkanDynamicAllocation             (const VulkanDynamicAllocation&) = delete;
     VulkanDynamicAllocation& operator = (const VulkanDynamicAllocation&) = delete;
+
     VulkanDynamicAllocation             (VulkanDynamicAllocation&& rhs)noexcept :
         pDynamicMemMgr(rhs.pDynamicMemMgr),
         AlignedOffset (rhs.AlignedOffset),
@@ -95,10 +96,19 @@ struct VulkanDynamicAllocation
 };
 
 
-
+// VulkanDynamicMemoryManager manages allocation of master blocks from global dynamic buffer
+//
+//   _______________________________________________________________________
+//  |                                                                       |
+//  |                      VulkanDynamicMemoryManager                       |
+//  |                                                                       |
+//  |  || - - - - - - - - - - Dynamic Memory Buffer- - - - - - - - - -||    |
+//  |  || MasterBlock[0] | MasterBlock[1] |  ...   | MasterBlock[N-1] ||    |
+//  |_______________________________________________________________________|
+//
 // We cannot use global memory manager for dynamic resources because they
 // need to use the same Vulkan buffer
-class VulkanDynamicMemoryManager : public DynamicHeap::MasterBlockListBasedManager // or MasterBlockRingBufferBasedManager
+class VulkanDynamicMemoryManager : public DynamicHeap::MasterBlockListBasedManager
 {
 public:
     using TBase = DynamicHeap::MasterBlockListBasedManager;
@@ -137,6 +147,32 @@ private:
 };
 
 
+
+// Dynamic heap is used by a device context to allocate dynamic space when 
+// mapping a buffer or a texture. This is very similar to upload heap,
+// however dynamic heap uses special persistently mapped buffer while
+// upload heap uses global memory manager.
+// 
+// The heap allocates master blocks from the global dynamic memory manager.
+// The pages are released and returned to the manager at the end of every frame.
+// 
+//   _______________________________________________________________________________________________________________________________
+//  |                                                                                                                               |
+//  |                                                  VulkanDynamicHeap                                                            |
+//  |                                                                                                                               |
+//  |  || - - - - - - - - - MasterBlock[0]- - - - - - - - -||    || - - - - - - - - - MasterBlock[1]- - - - - - - - -||             |
+//  |  || Allocation0 | Allocation1 |  ...   | AllocationN ||    || Allocation0 | Allocation1 |  ...   | AllocationM ||   ...       |
+//  |__________|____________________________________________________________________________________________________________________|
+//             |                                      A                   |
+//             |                                      |                   |
+//             |Allocate()       AllocateMasterBlock()|                   |FinishFrame()
+//             |                                ______|___________________V____     
+//             V                               |                              |
+//                                             |  VulkanDynamicMemoryManager  |
+//                                             |                              |
+//                                             |   |Global dynamic buffer|    |
+//                                             |______________________________|
+//
 class VulkanDynamicHeap
 {
 public:
@@ -156,11 +192,13 @@ public:
     VulkanDynamicAllocation Allocate(Uint32 SizeInBytes, Uint32 Alignment);
     // CmdQueueMask indicates which command queues the allocations from this heap were used
     // with during the last frame
-    void FinishFrame(RenderDeviceVkImpl& DeviceVkImpl, Uint64 CmdQueueMask);
+    void ReleaseMasterBlocks(RenderDeviceVkImpl& DeviceVkImpl, Uint64 CmdQueueMask);
 
     using OffsetType  = VulkanDynamicMemoryManager::OffsetType;
     using MasterBlock = VulkanDynamicMemoryManager::MasterBlock;
     static constexpr OffsetType InvalidOffset = VulkanDynamicMemoryManager::InvalidOffset;
+    
+    size_t GetAllocatedMasterBlockCount()const {return m_MasterBlocks.size();}
 
 private:
     VulkanDynamicMemoryManager& m_DynamicMemMgr;

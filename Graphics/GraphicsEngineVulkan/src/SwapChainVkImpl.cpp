@@ -322,7 +322,7 @@ SwapChainVkImpl::~SwapChainVkImpl()
     if(m_VkSwapChain != VK_NULL_HANDLE)
     {
         auto *pDeviceVkImpl = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
-        pDeviceVkImpl->IdleGPU(true);
+        pDeviceVkImpl->IdleGPU();
         vkDestroySwapchainKHR(pDeviceVkImpl->GetVkDevice(), m_VkSwapChain, NULL);
     }
 }
@@ -463,7 +463,7 @@ void SwapChainVkImpl::Present(Uint32 SyncInterval)
     }
 
     pImmediateCtxVk->FinishFrame(false);
-    pDeviceVk->FinishFrame();
+    pDeviceVk->ReleaseStaleResources();
 
     if (!m_IsMinimized)
     {
@@ -507,7 +507,7 @@ void SwapChainVkImpl::Resize( Uint32 NewWidth, Uint32 NewHeight )
 
                 // This will release references to Vk swap chain buffers hold by
                 // m_pBackBufferRTV[]
-                pDeviceVk->IdleGPU(true);
+                pDeviceVk->IdleGPU();
 
                 // We must wait unitl GPU is idled before destroying semaphores as they
                 // are destroyed immediately

@@ -25,25 +25,52 @@
 
 #include <unordered_map>
 #include "VulkanUtilities/VulkanMemoryManager.h"
+#include "VulkanUtilities/VulkanObjectWrappers.h"
 
 namespace Diligent
 {
 
+// Upload heap is used by a device context to update texture and buffer regions through 
+// UpdateBufferRegion() and UpdateTextureRegion().
+// 
+// The heap allocates pages from the global memory manager.
+// The pages are released and returned to the manager at the end of every frame.
+// 
+//   _______________________________________________________________________________________________________________________________
+//  |                                                                                                                               |
+//  |                                                  VulkanUploadHeap                                                             |
+//  |                                                                                                                               |
+//  |  || - - - - - - - - - - Page[0] - - - - - - - - - - -||    || - - - - - - - - - - Page[1] - - - - - - - - - - -||             |
+//  |  || Allocation0 | Allocation1 |  ...   | AllocationN ||    || Allocation0 | Allocation1 |  ...   | AllocationM ||   ...       |
+//  |__________|____________________________________________________________________________________________________________________|
+//             |                                      A                   |
+//             |                                      |                   |
+//             |Allocate()             CreateNewPage()|                   |ReleaseAllocatedPages()
+//             |                                ______|___________________V____     
+//             V                               |                              |
+//   VulkanUploadAllocation                    |    Global Memory Manager     |
+//                                             |    (VulkanMemoryManager)     |
+//                                             |                              |
+//                                             |______________________________|
+//
 class RenderDeviceVkImpl;
 
 struct VulkanUploadAllocation
 {
-    VulkanUploadAllocation(){}
-    VulkanUploadAllocation(void* _CPUAddress, VkDeviceSize _Size, VkDeviceSize _AlignedOffset, VkBuffer _vkBuffer) :
+    VulkanUploadAllocation() noexcept {}
+    VulkanUploadAllocation(void*        _CPUAddress,
+                           VkDeviceSize _Size,
+                           VkDeviceSize _AlignedOffset,
+                           VkBuffer     _vkBuffer) noexcept :
         CPUAddress   (_CPUAddress),
         Size         (_Size),
         AlignedOffset(_AlignedOffset),
         vkBuffer     (_vkBuffer)
     {}
-    VulkanUploadAllocation             (const VulkanUploadAllocation&) = delete;
-    VulkanUploadAllocation& operator = (const VulkanUploadAllocation&) = delete;
-    VulkanUploadAllocation             (VulkanUploadAllocation&&) = default;
-    VulkanUploadAllocation& operator = (VulkanUploadAllocation&&) = default;
+    VulkanUploadAllocation             (const VulkanUploadAllocation&)  = delete;
+    VulkanUploadAllocation& operator = (const VulkanUploadAllocation&)  = delete;
+    VulkanUploadAllocation             (      VulkanUploadAllocation&&) = default;
+    VulkanUploadAllocation& operator = (      VulkanUploadAllocation&&) = default;
 
     VkBuffer     vkBuffer      = VK_NULL_HANDLE; // Vulkan buffer associated with this memory.
     void*        CPUAddress    = nullptr;
@@ -58,14 +85,15 @@ public:
                      std::string         HeapName,
                      VkDeviceSize        PageSize);
     
-    VulkanUploadHeap            (VulkanUploadHeap&&)      = delete;
-    VulkanUploadHeap            (const VulkanUploadHeap&) = delete;
-    VulkanUploadHeap& operator= (VulkanUploadHeap&)       = delete;
-    VulkanUploadHeap& operator= (VulkanUploadHeap&& rhs)  = delete;
+    VulkanUploadHeap            (const VulkanUploadHeap&)  = delete;
+    VulkanUploadHeap            (      VulkanUploadHeap&&) = delete;
+    VulkanUploadHeap& operator= (const VulkanUploadHeap&)  = delete;
+    VulkanUploadHeap& operator= (      VulkanUploadHeap&&) = delete;
 
     ~VulkanUploadHeap();
 
     VulkanUploadAllocation Allocate(size_t SizeInBytes, size_t Alignment);
+    // Releases all allocated pages that are returned to the global memory manager by the release queues
     void ReleaseAllocatedPages(Uint64 CmdQueueMask);
 
     size_t GetStalePagesCount()const
@@ -74,8 +102,10 @@ public:
     }
 
 private:
-    RenderDeviceVkImpl&                   m_RenderDevice;
-    std::string                           m_HeapName;
+    RenderDeviceVkImpl& m_RenderDevice;
+    std::string         m_HeapName;
+    const VkDeviceSize  m_PageSize;
+
     struct UploadPageInfo
     {
         VulkanUtilities::VulkanMemoryAllocation MemAllocation;
@@ -109,8 +139,6 @@ private:
     size_t   m_PeakFrameSize   = 0;
     size_t   m_CurrAllocatedSize   = 0;
     size_t   m_PeakAllocatedSize   = 0;
-
-    const VkDeviceSize m_PageSize;
 
     UploadPageInfo CreateNewPage(VkDeviceSize SizeInBytes);
 };

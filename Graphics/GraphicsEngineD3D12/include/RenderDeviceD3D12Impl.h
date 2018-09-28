@@ -36,7 +36,6 @@
 #include "Atomics.h"
 #include "CommandQueueD3D12.h"
 
-/// Namespace for the Direct3D11 implementation of the graphics engine
 namespace Diligent
 {
 

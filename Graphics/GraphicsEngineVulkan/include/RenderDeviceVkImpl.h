@@ -46,7 +46,6 @@
 #include "CommandPoolManager.h"
 #include "VulkanDynamicHeap.h"
 
-/// Namespace for the Direct3D11 implementation of the graphics engine
 namespace Diligent
 {
 
@@ -89,8 +88,8 @@ public:
 
     virtual void CreateBufferFromVulkanResource(VkBuffer vkBuffer, const BufferDesc& BuffDesc, IBuffer** ppBuffer)override final;
 
-    // Idles GPU
-	void IdleGPU(bool ReleaseStaleObjects);
+    // Idles the GPU
+	void IdleGPU();
     // pImmediateCtx parameter is only used to make sure the command buffer is submitted from the immediate context
     // The method returns fence value associated with the submitted command buffer
     Uint64 ExecuteCommandBuffer(Uint32 QueueIndex, const VkSubmitInfo &SubmitInfo, class DeviceContextVkImpl* pImmediateCtx, std::vector<std::pair<Uint64, RefCntAutoPtr<IFence> > >* pSignalFences);
@@ -98,8 +97,7 @@ public:
     void AllocateTransientCmdPool(VulkanUtilities::CommandPoolWrapper& CmdPool, VkCommandBuffer& vkCmdBuff, const Char* DebugPoolName = nullptr);
     void ExecuteAndDisposeTransientCmdBuff(Uint32 QueueIndex, VkCommandBuffer vkCmdBuff, VulkanUtilities::CommandPoolWrapper&& CmdPool);
 
-    void FinishFrame(bool ReleaseAllResources);
-    virtual void FinishFrame()override final { FinishFrame(false); }
+    virtual void ReleaseStaleResources(bool ForceRelease = false)override final;
 
     DescriptorSetAllocation AllocateDescriptorSet(Uint64 CommandQueueMask, VkDescriptorSetLayout SetLayout)
     {
@@ -107,11 +105,11 @@ public:
     }
     DescriptorPoolManager& GetDynamicDescriptorPool(){return m_DynamicDescriptorPool;}
 
-    std::shared_ptr<const VulkanUtilities::VulkanInstance> GetVulkanInstance()const{return m_VulkanInstance;}
-    const VulkanUtilities::VulkanPhysicalDevice& GetPhysicalDevice()const {return *m_PhysicalDevice;}
-    const VulkanUtilities::VulkanLogicalDevice&  GetLogicalDevice ()      {return *m_LogicalVkDevice;}
-    FramebufferCache& GetFramebufferCache(){return m_FramebufferCache;}
-    RenderPassCache&  GetRenderPassCache() {return m_RenderPassCache;}
+    std::shared_ptr<const VulkanUtilities::VulkanInstance> GetVulkanInstance()const { return m_VulkanInstance;}
+    const VulkanUtilities::VulkanPhysicalDevice&           GetPhysicalDevice()const { return *m_PhysicalDevice;}
+    const VulkanUtilities::VulkanLogicalDevice&            GetLogicalDevice ()      { return *m_LogicalVkDevice;}
+    FramebufferCache&                                      GetFramebufferCache()    { return m_FramebufferCache;}
+    RenderPassCache&                                       GetRenderPassCache()     { return m_RenderPassCache;}
 
     VulkanUtilities::VulkanMemoryAllocation AllocateMemory(const VkMemoryRequirements& MemReqs, VkMemoryPropertyFlags MemoryProperties)
     {

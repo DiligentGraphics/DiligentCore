@@ -133,15 +133,11 @@ RenderDeviceVkImpl::~RenderDeviceVkImpl()
 {
     // Explicitly destroy dynamic heap
     m_DynamicMemoryManager.Destroy();
-	// Finish current frame. This will release resources taken by previous frames, and
-    // will move all stale resources to the release queues. The resources will not be
-    // release until the next call to FinishFrame()
-    FinishFrame(false);
+
     // Wait for the GPU to complete all its operations
-    IdleGPU(true);
-    // Call FinishFrame() again to destroy resources in
-    // release queues
-    FinishFrame(true);
+    IdleGPU();
+    
+    ReleaseStaleResources(true);
 
     m_TransientCmdPoolMgr.DestroyPools();
 
@@ -218,9 +214,10 @@ void RenderDeviceVkImpl::ExecuteAndDisposeTransientCmdBuff(Uint32 QueueIndex, Vk
     //              |            |    F < SubmittedFenceValue==F+1        |                                      |
     //
     // Since transient command buffers do not count as real command buffers, submit them directly to the queue
-    // to avoid interference with the command buffer numbers
+    // to avoid interference with the command buffer counter
     Uint64 FenceValue = 0;
-    LockCommandQueue(QueueIndex, [&](ICommandQueueVk* pCmdQueueVk)
+    LockCommandQueue(QueueIndex, 
+        [&](ICommandQueueVk* pCmdQueueVk)
         {
             FenceValue = pCmdQueueVk->Submit(SubmitInfo);
 
@@ -306,22 +303,11 @@ Uint64 RenderDeviceVkImpl::ExecuteCommandBuffer(Uint32 QueueIndex, const VkSubmi
 }
 
 
-void RenderDeviceVkImpl::IdleGPU(bool ReleaseStaleObjects) 
+void RenderDeviceVkImpl::IdleGPU() 
 { 
-    IdleCommandQueues(ReleaseStaleObjects);
+    IdleCommandQueues(true);
     m_LogicalVkDevice->WaitIdle();
-
-    if (ReleaseStaleObjects)
-    {
-        // Do not wait until the end of the frame and force deletion. 
-        // This is necessary to release outstanding references to the
-        // swap chain buffers when it is resized in the middle of the frame.
-        // Since GPU has been idled, it it is safe to do so
-
-        // SubmittedFenceValue has now been signaled by the GPU since we waited for it
-        //m_MainDescriptorPool.ReleaseStaleAllocations(m_CommandQueues[0].CmdQueue->GetCompletedFenceValue());
-        m_MemoryMgr.ShrinkMemory();
-    }
+    ReleaseStaleResources();
 }
 
 void RenderDeviceVkImpl::FlushStaleResources(Uint32 CmdQueueIndex)
@@ -332,23 +318,10 @@ void RenderDeviceVkImpl::FlushStaleResources(Uint32 CmdQueueIndex)
     TRenderDeviceBase::SubmitCommandBuffer(0, DummySumbitInfo, true);
 }
 
-void RenderDeviceVkImpl::FinishFrame(bool ReleaseAllResources)
+void RenderDeviceVkImpl::ReleaseStaleResources(bool ForceRelease)
 {
-    // Discard all remaining objects. This is important to do if there were 
-    // no command lists submitted during the frame. All stale resources will
-    // be associated with the submitted fence value and thus will not be released
-    // until the GPU is finished with the current frame
-    
-    // TODO: Rework
-    FlushStaleResources(0);
-        
-    // TODO: rework this
-    //auto CompletedFenceValue = ReleaseAllResources ? std::numeric_limits<Uint64>::max() : m_CommandQueues[0].CmdQueue->GetCompletedFenceValue();
-
-    //m_MainDescriptorPool.ReleaseStaleAllocations(CompletedFenceValue);
     m_MemoryMgr.ShrinkMemory();
-
-    PurgeReleaseQueues(ReleaseAllResources);
+    PurgeReleaseQueues(ForceRelease);
 }
 
 
