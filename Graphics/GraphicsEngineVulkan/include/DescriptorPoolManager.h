@@ -149,6 +149,10 @@ public:
 
     RenderDeviceVkImpl& GetDeviceVkImpl() {return m_DeviceVkImpl;}
 
+#ifdef DEVELOPMENT
+    int32_t GetAllocatedPoolCounter()const{return m_AllocatedPoolCounter;}
+#endif
+
 protected:
     VulkanUtilities::DescriptorPoolWrapper CreateDescriptorPool(const char* DebugName)const;
 
@@ -186,10 +190,20 @@ public:
     {
     }
 
+    ~DescriptorSetAllocator();
+
     DescriptorSetAllocation Allocate(Uint64 CommandQueueMask, VkDescriptorSetLayout SetLayout);
+
+#ifdef DEVELOPMENT
+    int32_t GetAllocatedDescriptorSetCounter()const{return m_AllocatedSetCounter;}
+#endif
 
 private:  
     void FreeDescriptorSet(VkDescriptorSet Set, VkDescriptorPool Pool, Uint64 QueueMask);
+
+#ifdef DEVELOPMENT
+    std::atomic_int32_t m_AllocatedSetCounter = 0;
+#endif
 };
 
 

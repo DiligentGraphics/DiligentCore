@@ -158,6 +158,10 @@ public:
     OffsetType GetSize()    const { return m_AllocationsMgr.GetMaxSize(); }
     OffsetType GetUsedSize()const { return m_AllocationsMgr.GetUsedSize();}
 
+#ifdef DEVELOPMENT
+    int32_t GetMasterBlockCounter()const{return m_MasterBlockCounter;}
+#endif
+
 protected:
     MasterBlock AllocateMasterBlock(OffsetType SizeInBytes, OffsetType Alignment)
     {

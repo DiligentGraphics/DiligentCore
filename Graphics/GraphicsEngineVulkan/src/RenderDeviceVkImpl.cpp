@@ -139,7 +139,10 @@ RenderDeviceVkImpl::~RenderDeviceVkImpl()
     
     ReleaseStaleResources(true);
 
-    VERIFY(m_TransientCmdPoolMgr.GetAllocatedPoolCount() == 0, "All allocated transient command pools must have been released now. If there are outstanding references to the pools in release queues, the app will crash when CommandPoolManager::FreeCommandPool() is called.");
+    DEV_CHECK_ERR(m_DescriptorSetAllocator.GetAllocatedDescriptorSetCounter() == 0, "All allocated descriptor sets must have been released now.");
+    DEV_CHECK_ERR(m_TransientCmdPoolMgr.GetAllocatedPoolCount() == 0, "All allocated transient command pools must have been released now. If there are outstanding references to the pools in release queues, the app will crash when CommandPoolManager::FreeCommandPool() is called.");
+    DEV_CHECK_ERR(m_DynamicDescriptorPool.GetAllocatedPoolCounter() == 0, "All allocated dynamic descriptor pools must have been released now.");
+    DEV_CHECK_ERR(m_DynamicMemoryManager.GetMasterBlockCounter() == 0, "All allocated dynamic master blocks must have been returned to the pool.");
 
     // Immediately destroys all command pools
     m_TransientCmdPoolMgr.DestroyPools();

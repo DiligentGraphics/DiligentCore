@@ -144,6 +144,11 @@ static VkDescriptorSet AllocateDescriptorSet(const VulkanUtilities::VulkanLogica
 }
 
 
+DescriptorSetAllocator::~DescriptorSetAllocator()
+{
+    DEV_CHECK_ERR(m_AllocatedSetCounter == 0, m_AllocatedSetCounter, " descriptor set(s) have not been returned to the allocator. If there are outstanding references to the sets in release queues, the app will crash when DescriptorSetAllocator::FreeDescriptorSet() is called");
+}
+
 DescriptorSetAllocation DescriptorSetAllocator::Allocate(Uint64 CommandQueueMask, VkDescriptorSetLayout SetLayout)
 {
     // Descriptor pools are externally synchronized, meaning that the application must not allocate 
@@ -163,6 +168,10 @@ DescriptorSetAllocation DescriptorSetAllocator::Allocate(Uint64 CommandQueueMask
             {
                 std::swap(*it, m_Pools.front());
             }
+
+#ifdef DEVELOPMENT
+            ++m_AllocatedSetCounter;
+#endif
             return {Set, Pool, CommandQueueMask, *this};
         }
     }
@@ -174,6 +183,10 @@ DescriptorSetAllocation DescriptorSetAllocator::Allocate(Uint64 CommandQueueMask
     auto& NewPool = m_Pools.front();
     auto Set = AllocateDescriptorSet(LogicalDevice, NewPool, SetLayout, "");
     DEV_CHECK_ERR(Set != VK_NULL_HANDLE, "Failed to allocate descriptor set");
+
+#ifdef DEVELOPMENT
+    ++m_AllocatedSetCounter;
+#endif
 
     return {Set, NewPool, CommandQueueMask, *this };
 }
@@ -211,6 +224,9 @@ void DescriptorSetAllocator::FreeDescriptorSet(VkDescriptorSet Set, VkDescriptor
             {
                 std::lock_guard<std::mutex> Lock(Allocator->m_Mutex);
                 Allocator->m_DeviceVkImpl.GetLogicalDevice().FreeDescriptorSet(Pool, Set);
+#ifdef DEVELOPMENT
+                --Allocator->m_AllocatedSetCounter;
+#endif
             }
         }
 
