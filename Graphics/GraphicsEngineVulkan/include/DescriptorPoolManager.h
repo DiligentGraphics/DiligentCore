@@ -145,11 +145,12 @@ public:
     DescriptorPoolManager& operator = (DescriptorPoolManager&&)      = delete;
     
     VulkanUtilities::DescriptorPoolWrapper GetPool(const char* DebugName);
-    void FreePool(VulkanUtilities::DescriptorPoolWrapper&& Pool);
+    void DisposePool(VulkanUtilities::DescriptorPoolWrapper&& Pool, Uint64 QueueMask);
+
+    RenderDeviceVkImpl& GetDeviceVkImpl() {return m_DeviceVkImpl;}
 
 protected:
-    friend class DynamicDescriptorSetAllocator;
-    VulkanUtilities::DescriptorPoolWrapper CreateDescriptorPool(const char* DebugName);
+    VulkanUtilities::DescriptorPoolWrapper CreateDescriptorPool(const char* DebugName)const;
 
     RenderDeviceVkImpl& m_DeviceVkImpl;
     const std::string   m_PoolName;
@@ -161,14 +162,17 @@ protected:
     std::mutex                                           m_Mutex;
     std::deque< VulkanUtilities::DescriptorPoolWrapper > m_Pools;
 
+private:
+    void FreePool(VulkanUtilities::DescriptorPoolWrapper&& Pool);
+
 #ifdef DEVELOPMENT
     std::atomic_int32_t                                  m_AllocatedPoolCounter = 0;
 #endif
 };
 
 
-// The class allocates descriptors from the main descriptor pool.
-// Descriptors can be released and returned to the pool
+// The class allocates descriptor sets from the main descriptor pool.
+// Descriptors sets can be released and returned to the pool
 class DescriptorSetAllocator : public DescriptorPoolManager
 {
 public:
@@ -192,7 +196,7 @@ private:
 // DynamicDescriptorSetAllocator manages dynamic descriptor sets. It first requests descriptor pool from
 // the global manager and allocates descriptor sets from this pool. When space in the pool is exhausted,
 // the class requests a new pool.
-// The class is not thread-safe as device contexts must not be used in multiple threads at the same time.
+// The class is not thread-safe as device contexts must not be used in multiple threads simultaneously.
 // All allocated pools are recycled at the end of every frame.
 //   ____________________________________________________________________________
 //  |                                                                            |
@@ -214,17 +218,22 @@ class DynamicDescriptorSetAllocator
 {
 public:
     DynamicDescriptorSetAllocator(DescriptorPoolManager& PoolMgr, std::string Name) : 
-        m_PoolMgr(PoolMgr),
-        m_Name(std::move(Name))
+        m_GlobalPoolMgr(PoolMgr),
+        m_Name         (std::move(Name))
     {}
     ~DynamicDescriptorSetAllocator();
 
     VkDescriptorSet Allocate(VkDescriptorSetLayout SetLayout, const char* DebugName);
+
+    // Releases all allocated pools that are later returned to the global pool manager.
+    // As global pool manager is hosted by the render device, the allocator can
+    // be destroyed before the pools are actually returned to the global pool manager.
     void ReleasePools(Uint64 QueueMask);
+
     size_t GetAllocatedPoolCount()const{return m_AllocatedPools.size();}
 
 private:
-    DescriptorPoolManager&                              m_PoolMgr;
+    DescriptorPoolManager&                              m_GlobalPoolMgr;
     const std::string                                   m_Name;
     std::vector<VulkanUtilities::DescriptorPoolWrapper> m_AllocatedPools;
     size_t                                              m_PeakPoolCount = 0;

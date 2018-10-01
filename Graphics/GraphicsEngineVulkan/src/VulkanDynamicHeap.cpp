@@ -206,7 +206,7 @@ VulkanDynamicAllocation VulkanDynamicHeap::Allocate(Uint32 SizeInBytes, Uint32 A
     if(SizeInBytes > m_MasterBlockSize/2)
     {
         // Allocate directly from the memory manager
-        auto MasterBlock = m_DynamicMemMgr.AllocateMasterBlock(SizeInBytes, Alignment);
+        auto MasterBlock = m_GlobalDynamicMemMgr.AllocateMasterBlock(SizeInBytes, Alignment);
         if (MasterBlock.UnalignedOffset != InvalidOffset)
         {
             AlignedOffset = Align(MasterBlock.UnalignedOffset, size_t{Alignment});
@@ -219,7 +219,7 @@ VulkanDynamicAllocation VulkanDynamicHeap::Allocate(Uint32 SizeInBytes, Uint32 A
     {
         if (m_CurrOffset == InvalidOffset || SizeInBytes + (Align(m_CurrOffset, size_t{Alignment}) - m_CurrOffset) > m_AvailableSize)
         {
-            auto MasterBlock = m_DynamicMemMgr.AllocateMasterBlock(m_MasterBlockSize, 0);
+            auto MasterBlock = m_GlobalDynamicMemMgr.AllocateMasterBlock(m_MasterBlockSize, 0);
             if (MasterBlock.UnalignedOffset != InvalidOffset)
             {
                 m_CurrOffset = MasterBlock.UnalignedOffset;
@@ -251,7 +251,7 @@ VulkanDynamicAllocation VulkanDynamicHeap::Allocate(Uint32 SizeInBytes, Uint32 A
         m_PeakUsedSize      = std::max(m_PeakUsedSize,      m_CurrUsedSize);
         
         VERIFY_EXPR((AlignedOffset & (Alignment-1)) == 0);
-        return VulkanDynamicAllocation{ m_DynamicMemMgr, AlignedOffset, SizeInBytes };
+        return VulkanDynamicAllocation{ m_GlobalDynamicMemMgr, AlignedOffset, SizeInBytes };
     }
     else
         return VulkanDynamicAllocation{};
@@ -259,7 +259,7 @@ VulkanDynamicAllocation VulkanDynamicHeap::Allocate(Uint32 SizeInBytes, Uint32 A
 
 void VulkanDynamicHeap::ReleaseMasterBlocks(RenderDeviceVkImpl& DeviceVkImpl, Uint64 CmdQueueMask)
 {
-    m_DynamicMemMgr.ReleaseMasterBlocks(m_MasterBlocks, DeviceVkImpl, CmdQueueMask);
+    m_GlobalDynamicMemMgr.ReleaseMasterBlocks(m_MasterBlocks, DeviceVkImpl, CmdQueueMask);
     m_MasterBlocks.clear();
 
     m_CurrOffset        = InvalidOffset;

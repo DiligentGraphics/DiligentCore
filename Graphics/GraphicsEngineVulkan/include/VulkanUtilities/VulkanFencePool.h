@@ -34,7 +34,7 @@ namespace VulkanUtilities
     class VulkanFencePool
     {
     public:
-        VulkanFencePool(std::shared_ptr<const VulkanLogicalDevice> LogicalDevice);
+        VulkanFencePool(std::shared_ptr<const VulkanLogicalDevice> LogicalDevice)noexcept;
 
         VulkanFencePool             (const VulkanFencePool&) = delete;
         VulkanFencePool             (VulkanFencePool&&)      = delete;
@@ -43,12 +43,12 @@ namespace VulkanUtilities
 
         ~VulkanFencePool();
 
-        VulkanUtilities::FenceWrapper GetFence();
-        void DisposeFence(VulkanUtilities::FenceWrapper&& Fence);
+        FenceWrapper GetFence();
+        void DisposeFence(FenceWrapper&& Fence);
 
     private:
         // Shared pointer to logical device must be declared before fences
         std::shared_ptr<const VulkanLogicalDevice> m_LogicalDevice;
-        std::vector<VulkanUtilities::FenceWrapper> m_Fences;
+        std::vector<FenceWrapper>                  m_Fences;
     };
 }

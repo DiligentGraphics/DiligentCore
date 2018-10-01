@@ -759,13 +759,19 @@ namespace Diligent
 
         // Release resources used by the context during this frame.
         
-        // Upload heap returns all allocated pages to the global memory manager
+        // Upload heap returns all allocated pages to the global memory manager.
+        // Note: as global memory manager is hosted by the render device, the upload heap can be destroyed
+        // before the pages are actually returned to the manager.
         m_UploadHeap.ReleaseAllocatedPages(m_SubmittedBuffersCmdQueueMask);
         
-        // Dynamic heap returns all allocated master blocks to global dynamic memory manager
+        // Dynamic heap returns all allocated master blocks to the global dynamic memory manager.
+        // Note: as global dynamic memory manager is hosted by the render device, the dynamic heap can
+        // be destroyed before the blocks are actually returned to the global dynamic memory manager.
         m_DynamicHeap.ReleaseMasterBlocks(DeviceVkImpl, m_SubmittedBuffersCmdQueueMask);
 
-        // Dynamic descriptor set allocator returns all allocated pools to global dynamic descriptor pool manager
+        // Dynamic descriptor set allocator returns all allocated pools to the global dynamic descriptor pool manager.
+        // Note: as global pool manager is hosted by the render device, the allocator can
+        // be destroyed before the pools are actually returned to the global pool manager.
         m_DynamicDescrSetAllocator.ReleasePools(m_SubmittedBuffersCmdQueueMask);
 
         if (m_bIsDeferred)
@@ -1408,26 +1414,6 @@ namespace Diligent
             return;
         }
 
-        // First execute commands in this context
-        
-        // Note that not discarding resources when flushing the context does not help in case of multiple 
-        // deferred contexts, and resources must not be released until the command list is executed via 
-        // immediate context.
-        
-        // Next Cmd Buff| Next Fence |       Deferred Context  1      |       Deferred Contex 2        |   Immediate Context
-        //              |            |                                |                                |
-        //      N       |     F      |                                |                                |
-        //              |            | Draw(ResourceX)                |                                |
-        //              |            | Release(ResourceX)             | Draw(ResourceY)                |
-        //              |            | - {N, ResourceX} -> Stale Objs | Release(ResourceY)             |
-        //              |            |                                | - {N, ResourceY} -> Stale Objs |
-        //              |            |                                |                                |  ExecuteCmdList(CmdList1)
-        //              |            |                                |                                |  {F, ResourceX}-> Release queue
-        //              |            |                                |                                |  {F, ResourceY}-> Release queue
-        //     N+1      |    F+1     |                                |                                |
-        //              |            |                                |                                |  ExecuteCmdList(CmdList2)
-        //              |            |                                |                                |  - ResourceY is in release queue
-        //              |            |                                |                                |
         Flush();
         
         InvalidateState();
@@ -1439,9 +1425,10 @@ namespace Diligent
         VERIFY(vkCmdBuff != VK_NULL_HANDLE, "Trying to execute empty command buffer");
         VERIFY_EXPR(pDeferredCtx);
         VkSubmitInfo SubmitInfo = {};
-        SubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        SubmitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        SubmitInfo.pNext              = nullptr;
         SubmitInfo.commandBufferCount = 1;
-        SubmitInfo.pCommandBuffers = &vkCmdBuff;
+        SubmitInfo.pCommandBuffers    = &vkCmdBuff;
         auto pDeviceVkImpl = m_pDevice.RawPtr<RenderDeviceVkImpl>();
         VERIFY_EXPR(m_PendingFences.empty());
         auto pDeferredCtxVkImpl = pDeferredCtx.RawPtr<DeviceContextVkImpl>();

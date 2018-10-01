@@ -117,11 +117,6 @@ public:
         m_SignalSemaphores.push_back(Semaphore);
     }
 
-    ///// Clears the state caches. This function is called once per frame
-    ///// (before present) to release all outstanding objects
-    ///// that are only kept alive by references in the cache
-    //void ClearShaderStateCache();
-
     void UpdateBufferRegion(class BufferVkImpl* pBuffVk, Uint64 DstOffset, Uint64 NumBytes, VkBuffer vkSrcBuffer, Uint64 SrcOffset);
     void UpdateBufferRegion(class BufferVkImpl* pBuffVk, const void* pData, Uint64 DstOffset, Uint64 NumBytes);
 
@@ -250,9 +245,9 @@ private:
     Uint64 m_SubmittedBuffersCmdQueueMask = 0;
 
     // Semaphores are not owned by the command context
-    std::vector<VkSemaphore>                m_WaitSemaphores;
-    std::vector<VkPipelineStageFlags>       m_WaitDstStageMasks;
-    std::vector<VkSemaphore>                m_SignalSemaphores;
+    std::vector<VkSemaphore>           m_WaitSemaphores;
+    std::vector<VkPipelineStageFlags>  m_WaitDstStageMasks;
+    std::vector<VkSemaphore>           m_SignalSemaphores;
 
     // List of fences to signal next time the command context is flushed
     std::vector<std::pair<Uint64, RefCntAutoPtr<IFence> > > m_PendingFences;

@@ -36,18 +36,19 @@ namespace VulkanUtilities
     class VulkanCommandBufferPool
     {
     public:
-        VulkanCommandBufferPool(std::shared_ptr<const VulkanUtilities::VulkanLogicalDevice> LogicalDevice, 
-                                uint32_t                                                    queueFamilyIndex, 
-                                VkCommandPoolCreateFlags                                    flags);
+        VulkanCommandBufferPool(std::shared_ptr<const VulkanLogicalDevice> LogicalDevice, 
+                                uint32_t                                   queueFamilyIndex, 
+                                VkCommandPoolCreateFlags                   flags);
 
-        VulkanCommandBufferPool             (const VulkanCommandBufferPool&) = delete;
-        VulkanCommandBufferPool             (VulkanCommandBufferPool&&)      = delete;
-        VulkanCommandBufferPool& operator = (const VulkanCommandBufferPool&) = delete;
-        VulkanCommandBufferPool& operator = (VulkanCommandBufferPool&&)      = delete;
+        VulkanCommandBufferPool             (const VulkanCommandBufferPool&)  = delete;
+        VulkanCommandBufferPool             (      VulkanCommandBufferPool&&) = delete;
+        VulkanCommandBufferPool& operator = (const VulkanCommandBufferPool&)  = delete;
+        VulkanCommandBufferPool& operator = (      VulkanCommandBufferPool&&) = delete;
 
         ~VulkanCommandBufferPool();
 
         VkCommandBuffer GetCommandBuffer(const char* DebugName = "");
+        // The GPU must have finished with the command buffer being returned to the pool
         void FreeCommandBuffer(VkCommandBuffer&& CmdBuffer);
         
         CommandPoolWrapper&& Release();
@@ -58,7 +59,7 @@ namespace VulkanUtilities
 
     private:
         // Shared point to logical device must be defined before the command pool
-        std::shared_ptr<const VulkanUtilities::VulkanLogicalDevice> m_LogicalDevice;
+        std::shared_ptr<const VulkanLogicalDevice> m_LogicalDevice;
         CommandPoolWrapper m_CmdPool;
         
         std::mutex m_Mutex;

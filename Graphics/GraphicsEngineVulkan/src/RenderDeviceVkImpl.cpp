@@ -139,6 +139,9 @@ RenderDeviceVkImpl::~RenderDeviceVkImpl()
     
     ReleaseStaleResources(true);
 
+    VERIFY(m_TransientCmdPoolMgr.GetAllocatedPoolCount() == 0, "All allocated transient command pools must have been released now. If there are outstanding references to the pools in release queues, the app will crash when CommandPoolManager::FreeCommandPool() is called.");
+
+    // Immediately destroys all command pools
     m_TransientCmdPoolMgr.DestroyPools();
 
     // We must destroy command queues explicitly prior to releasing Vulkan device
@@ -159,13 +162,13 @@ void RenderDeviceVkImpl::AllocateTransientCmdPool(VulkanUtilities::CommandPoolWr
 
     // Allocate command buffer from the cmd pool
     VkCommandBufferAllocateInfo BuffAllocInfo = {};
-    BuffAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    BuffAllocInfo.pNext = nullptr;
-    BuffAllocInfo.commandPool = CmdPool;
-    BuffAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    BuffAllocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    BuffAllocInfo.pNext              = nullptr;
+    BuffAllocInfo.commandPool        = CmdPool;
+    BuffAllocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     BuffAllocInfo.commandBufferCount = 1;
     vkCmdBuff = m_LogicalVkDevice->AllocateVkCommandBuffer(BuffAllocInfo);
-    VERIFY_EXPR(vkCmdBuff != VK_NULL_HANDLE);
+    DEV_CHECK_ERR(vkCmdBuff != VK_NULL_HANDLE, "Failed to allocate Vulkan command buffer");
         
     VkCommandBufferBeginInfo CmdBuffBeginInfo = {};
     CmdBuffBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -174,7 +177,8 @@ void RenderDeviceVkImpl::AllocateTransientCmdPool(VulkanUtilities::CommandPoolWr
                                                                           // submitted once, and the command buffer will be reset 
                                                                           // and recorded again between each submission.
     CmdBuffBeginInfo.pInheritanceInfo = nullptr; // Ignored for a primary command buffer
-    vkBeginCommandBuffer(vkCmdBuff, &CmdBuffBeginInfo);
+    auto err = vkBeginCommandBuffer(vkCmdBuff, &CmdBuffBeginInfo);
+    DEV_CHECK_ERR(err == VK_SUCCESS, "vkBeginCommandBuffer() failed");
 }
 
 
@@ -183,12 +187,12 @@ void RenderDeviceVkImpl::ExecuteAndDisposeTransientCmdBuff(Uint32 QueueIndex, Vk
     VERIFY_EXPR(vkCmdBuff != VK_NULL_HANDLE);
 
     auto err = vkEndCommandBuffer(vkCmdBuff);
-    VERIFY(err == VK_SUCCESS, "Failed to end command buffer");
+    DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to end command buffer");
 
     VkSubmitInfo SubmitInfo = {};
-    SubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    SubmitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     SubmitInfo.commandBufferCount = 1;
-    SubmitInfo.pCommandBuffers = &vkCmdBuff;
+    SubmitInfo.pCommandBuffers    = &vkCmdBuff;
 
     // We MUST NOT discard stale objects when executing transient command buffer,
     // otherwise a resource can be destroyed while still being used by the GPU:

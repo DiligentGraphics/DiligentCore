@@ -30,18 +30,18 @@
 
 namespace VulkanUtilities
 {
-    VulkanCommandBufferPool::VulkanCommandBufferPool(std::shared_ptr<const VulkanUtilities::VulkanLogicalDevice> LogicalDevice,
-                                                     uint32_t                                                    queueFamilyIndex, 
-                                                     VkCommandPoolCreateFlags                                    flags) :
-        m_LogicalDevice(LogicalDevice)
+    VulkanCommandBufferPool::VulkanCommandBufferPool(std::shared_ptr<const VulkanLogicalDevice> LogicalDevice,
+                                                     uint32_t                                   queueFamilyIndex, 
+                                                     VkCommandPoolCreateFlags                   flags) :
+        m_LogicalDevice(std::move(LogicalDevice))
     {
         VkCommandPoolCreateInfo CmdPoolCI = {};
-        CmdPoolCI.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-        CmdPoolCI.pNext = nullptr;
+        CmdPoolCI.sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+        CmdPoolCI.pNext            = nullptr;
         CmdPoolCI.queueFamilyIndex = queueFamilyIndex;
-        CmdPoolCI.flags = flags;
+        CmdPoolCI.flags            = flags;
         m_CmdPool = m_LogicalDevice->CreateCommandPool(CmdPoolCI);
-        VERIFY_EXPR(m_CmdPool != VK_NULL_HANDLE);
+        DEV_CHECK_ERR(m_CmdPool != VK_NULL_HANDLE, "Failed to create vulkan command pool");
     }
 
     VulkanCommandBufferPool::~VulkanCommandBufferPool()
@@ -62,7 +62,7 @@ namespace VulkanUtilities
                 CmdBuffer = m_CmdBuffers.front();
                 auto err = vkResetCommandBuffer(CmdBuffer, 
                     0 // VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT -  specifies that most or all memory resources currently 
-                        // owned by the command buffer should be returned to the parent command pool.
+                      // owned by the command buffer should be returned to the parent command pool.
                 );
                 DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to reset command buffer");
                 m_CmdBuffers.pop_front();
@@ -73,13 +73,14 @@ namespace VulkanUtilities
         if (CmdBuffer == VK_NULL_HANDLE)
         {
             VkCommandBufferAllocateInfo BuffAllocInfo = {};
-            BuffAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-            BuffAllocInfo.pNext = nullptr;
-            BuffAllocInfo.commandPool = m_CmdPool;
-            BuffAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+            BuffAllocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+            BuffAllocInfo.pNext              = nullptr;
+            BuffAllocInfo.commandPool        = m_CmdPool;
+            BuffAllocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
             BuffAllocInfo.commandBufferCount = 1;
 
             CmdBuffer = m_LogicalDevice->AllocateVkCommandBuffer(BuffAllocInfo);
+            DEV_CHECK_ERR(CmdBuffer != VK_NULL_HANDLE, "Failed to allocate vulkan command buffer");
         }
 
         VkCommandBufferBeginInfo CmdBuffBeginInfo = {};
@@ -100,8 +101,6 @@ namespace VulkanUtilities
     void VulkanCommandBufferPool::FreeCommandBuffer(VkCommandBuffer&& CmdBuffer)
     {
         std::lock_guard<std::mutex> Lock(m_Mutex);
-        // FenceValue is the value that was signaled by the command queue after it 
-        // executed the command buffer
         m_CmdBuffers.emplace_back(CmdBuffer);
         CmdBuffer = VK_NULL_HANDLE;
 #ifdef DEVELOPMENT

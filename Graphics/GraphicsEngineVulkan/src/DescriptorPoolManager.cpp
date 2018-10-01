@@ -39,7 +39,7 @@ void DescriptorSetAllocation::Release()
     }
 }
 
-VulkanUtilities::DescriptorPoolWrapper DescriptorPoolManager::CreateDescriptorPool(const char* DebugName)
+VulkanUtilities::DescriptorPoolWrapper DescriptorPoolManager::CreateDescriptorPool(const char* DebugName)const
 {
     VkDescriptorPoolCreateInfo PoolCI = {};
     PoolCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -47,10 +47,10 @@ VulkanUtilities::DescriptorPoolWrapper DescriptorPoolManager::CreateDescriptorPo
     // VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT specifies that descriptor sets can 
     // return their individual allocations to the pool, i.e. all of vkAllocateDescriptorSets, 
     // vkFreeDescriptorSets, and vkResetDescriptorPool are allowed. (13.2.3)
-    PoolCI.flags = m_AllowFreeing ? VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT : 0;
-    PoolCI.maxSets = m_MaxSets;
+    PoolCI.flags         = m_AllowFreeing ? VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT : 0;
+    PoolCI.maxSets       = m_MaxSets;
     PoolCI.poolSizeCount = static_cast<uint32_t>(m_PoolSizes.size());
-    PoolCI.pPoolSizes = m_PoolSizes.data();
+    PoolCI.pPoolSizes    = m_PoolSizes.data();
     return m_DeviceVkImpl.GetLogicalDevice().CreateDescriptorPool(PoolCI, DebugName);
 }
 
@@ -78,6 +78,44 @@ VulkanUtilities::DescriptorPoolWrapper DescriptorPoolManager::GetPool(const char
     }
 }
 
+void DescriptorPoolManager::DisposePool(VulkanUtilities::DescriptorPoolWrapper&& Pool, Uint64 QueueMask)
+{
+    class DescriptorPoolDeleter
+    {
+    public:
+        DescriptorPoolDeleter(DescriptorPoolManager&                   _PoolMgr,
+                              VulkanUtilities::DescriptorPoolWrapper&& _Pool) noexcept : 
+            PoolMgr (&_PoolMgr),
+            Pool    (std::move(_Pool))
+        {}
+
+        DescriptorPoolDeleter             (const DescriptorPoolDeleter&) = delete;
+        DescriptorPoolDeleter& operator = (const DescriptorPoolDeleter&) = delete;
+        DescriptorPoolDeleter& operator = (      DescriptorPoolDeleter&&)= delete;
+
+        DescriptorPoolDeleter(DescriptorPoolDeleter&& rhs)noexcept : 
+            PoolMgr (rhs.PoolMgr),
+            Pool    (std::move(rhs.Pool))
+        {
+            rhs.PoolMgr = nullptr;
+        }
+
+        ~DescriptorPoolDeleter()
+        {
+            if (PoolMgr!=nullptr)
+            {
+                PoolMgr->FreePool(std::move(Pool));
+            }
+        }
+
+    private:
+        DescriptorPoolManager*                 PoolMgr;
+        VulkanUtilities::DescriptorPoolWrapper Pool;
+    };
+
+    m_DeviceVkImpl.SafeReleaseDeviceObject(DescriptorPoolDeleter{*this, std::move(Pool)}, QueueMask);
+}
+
 void DescriptorPoolManager::FreePool(VulkanUtilities::DescriptorPoolWrapper&& Pool)
 {
     std::lock_guard<std::mutex> Lock(m_Mutex);
@@ -95,11 +133,11 @@ static VkDescriptorSet AllocateDescriptorSet(const VulkanUtilities::VulkanLogica
                                              const char*                                 DebugName)
 {
     VkDescriptorSetAllocateInfo DescrSetAllocInfo = {};
-    DescrSetAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    DescrSetAllocInfo.pNext = nullptr;
-    DescrSetAllocInfo.descriptorPool = Pool;
+    DescrSetAllocInfo.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    DescrSetAllocInfo.pNext              = nullptr;
+    DescrSetAllocInfo.descriptorPool     = Pool;
     DescrSetAllocInfo.descriptorSetCount = 1;
-    DescrSetAllocInfo.pSetLayouts = &SetLayout;
+    DescrSetAllocInfo.pSetLayouts        = &SetLayout;
     // Descriptor pools are externally synchronized, meaning that the application must not allocate 
     // and/or free descriptor sets from the same pool in multiple threads simultaneously (13.2.3)
     return LogicalDevice.AllocateVkDescriptorSet(DescrSetAllocInfo, DebugName);
@@ -135,7 +173,7 @@ DescriptorSetAllocation DescriptorSetAllocator::Allocate(Uint64 CommandQueueMask
 
     auto& NewPool = m_Pools.front();
     auto Set = AllocateDescriptorSet(LogicalDevice, NewPool, SetLayout, "");
-    VERIFY(Set != VK_NULL_HANDLE, "Failed to allocate descriptor set");
+    DEV_CHECK_ERR(Set != VK_NULL_HANDLE, "Failed to allocate descriptor set");
 
     return {Set, NewPool, CommandQueueMask, *this };
 }
@@ -188,7 +226,7 @@ void DescriptorSetAllocator::FreeDescriptorSet(VkDescriptorSet Set, VkDescriptor
 VkDescriptorSet DynamicDescriptorSetAllocator::Allocate(VkDescriptorSetLayout SetLayout, const char* DebugName)
 {
     VkDescriptorSet set = VK_NULL_HANDLE;
-    const auto& LogicalDevice = m_PoolMgr.m_DeviceVkImpl.GetLogicalDevice();
+    const auto& LogicalDevice = m_GlobalPoolMgr.GetDeviceVkImpl().GetLogicalDevice();
     if (!m_AllocatedPools.empty())
     {
         set = AllocateDescriptorSet(LogicalDevice, m_AllocatedPools.back(), SetLayout, DebugName);
@@ -196,7 +234,7 @@ VkDescriptorSet DynamicDescriptorSetAllocator::Allocate(VkDescriptorSetLayout Se
 
     if (set == VK_NULL_HANDLE)
     {
-        m_AllocatedPools.emplace_back(m_PoolMgr.GetPool("Dynamic Descriptor Pool"));
+        m_AllocatedPools.emplace_back(m_GlobalPoolMgr.GetPool("Dynamic Descriptor Pool"));
         set = AllocateDescriptorSet(LogicalDevice, m_AllocatedPools.back(), SetLayout, DebugName);
     }
     
@@ -205,42 +243,9 @@ VkDescriptorSet DynamicDescriptorSetAllocator::Allocate(VkDescriptorSetLayout Se
 
 void DynamicDescriptorSetAllocator::ReleasePools(Uint64 QueueMask)
 {
-    class DescriptorPoolDeleter
-    {
-    public:
-        DescriptorPoolDeleter(DescriptorPoolManager&                   _PoolMgr,
-                              VulkanUtilities::DescriptorPoolWrapper&& _Pool) noexcept : 
-            PoolMgr (&_PoolMgr),
-            Pool    (std::move(_Pool))
-        {}
-
-        DescriptorPoolDeleter             (const DescriptorPoolDeleter&) = delete;
-        DescriptorPoolDeleter& operator = (const DescriptorPoolDeleter&) = delete;
-        DescriptorPoolDeleter& operator = (      DescriptorPoolDeleter&&)= delete;
-
-        DescriptorPoolDeleter(DescriptorPoolDeleter&& rhs)noexcept : 
-            PoolMgr (rhs.PoolMgr),
-            Pool    (std::move(rhs.Pool))
-        {
-            rhs.PoolMgr = nullptr;
-        }
-
-        ~DescriptorPoolDeleter()
-        {
-            if (PoolMgr!=nullptr)
-            {
-                PoolMgr->FreePool(std::move(Pool));
-            }
-        }
-
-    private:
-        DescriptorPoolManager*                 PoolMgr;
-        VulkanUtilities::DescriptorPoolWrapper Pool;
-    };
-
     for(auto& Pool : m_AllocatedPools)
     {
-        m_PoolMgr.m_DeviceVkImpl.SafeReleaseDeviceObject(DescriptorPoolDeleter{m_PoolMgr, std::move(Pool)}, QueueMask);
+        m_GlobalPoolMgr.DisposePool(std::move(Pool), QueueMask);
     }
     m_PeakPoolCount = std::max(m_PeakPoolCount, m_AllocatedPools.size());
     m_AllocatedPools.clear();

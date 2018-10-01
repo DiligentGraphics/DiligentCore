@@ -32,10 +32,10 @@ namespace VulkanUtilities
     {
     public:
         VulkanCommandBuffer()noexcept{}
-        VulkanCommandBuffer             (const VulkanCommandBuffer&) = delete;
-        VulkanCommandBuffer             (VulkanCommandBuffer&&)      = delete;
-        VulkanCommandBuffer& operator = (const VulkanCommandBuffer&) = delete;
-        VulkanCommandBuffer& operator = (VulkanCommandBuffer&&)      = delete;
+        VulkanCommandBuffer             (const VulkanCommandBuffer&)  = delete;
+        VulkanCommandBuffer             (      VulkanCommandBuffer&&) = delete;
+        VulkanCommandBuffer& operator = (const VulkanCommandBuffer&)  = delete;
+        VulkanCommandBuffer& operator = (      VulkanCommandBuffer&&) = delete;
 
         void ClearColorImage(VkImage Image, const VkClearColorValue& Color, const VkImageSubresourceRange& Subresource)
         {

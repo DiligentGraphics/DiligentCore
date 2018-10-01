@@ -177,7 +177,7 @@ class VulkanDynamicHeap
 {
 public:
     VulkanDynamicHeap(VulkanDynamicMemoryManager& DynamicMemMgr, std::string HeapName, Uint32 PageSize) :
-        m_DynamicMemMgr(DynamicMemMgr),
+        m_GlobalDynamicMemMgr(DynamicMemMgr),
         m_HeapName(std::move(HeapName)),
         m_MasterBlockSize(PageSize)
     {}
@@ -190,8 +190,12 @@ public:
     ~VulkanDynamicHeap();
 
     VulkanDynamicAllocation Allocate(Uint32 SizeInBytes, Uint32 Alignment);
+    
+    // Releases all master blocks that are later returned to the global dynamic memory manager.
     // CmdQueueMask indicates which command queues the allocations from this heap were used
-    // with during the last frame
+    // with during the last frame.
+    // As global dynamic memory manager is hosted by the render device, the dynamic heap can
+    // be destroyed before the blocks are actually returned to the global dynamic memory manager.
     void ReleaseMasterBlocks(RenderDeviceVkImpl& DeviceVkImpl, Uint64 CmdQueueMask);
 
     using OffsetType  = VulkanDynamicMemoryManager::OffsetType;
@@ -201,7 +205,7 @@ public:
     size_t GetAllocatedMasterBlockCount()const {return m_MasterBlocks.size();}
 
 private:
-    VulkanDynamicMemoryManager& m_DynamicMemMgr;
+    VulkanDynamicMemoryManager& m_GlobalDynamicMemMgr;
     const std::string m_HeapName;
 
     std::vector<MasterBlock> m_MasterBlocks;

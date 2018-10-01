@@ -93,7 +93,10 @@ public:
     ~VulkanUploadHeap();
 
     VulkanUploadAllocation Allocate(size_t SizeInBytes, size_t Alignment);
-    // Releases all allocated pages that are returned to the global memory manager by the release queues
+    
+    // Releases all allocated pages that are later returned to the global memory manager by the release queues.
+    // As global memory manager is hosted by the render device, the upload heap can be destroyed before the 
+    // pages are actually returned to the manager.
     void ReleaseAllocatedPages(Uint64 CmdQueueMask);
 
     size_t GetStalePagesCount()const
@@ -140,7 +143,7 @@ private:
     size_t   m_CurrAllocatedSize   = 0;
     size_t   m_PeakAllocatedSize   = 0;
 
-    UploadPageInfo CreateNewPage(VkDeviceSize SizeInBytes);
+    UploadPageInfo CreateNewPage(VkDeviceSize SizeInBytes)const;
 };
 
 }

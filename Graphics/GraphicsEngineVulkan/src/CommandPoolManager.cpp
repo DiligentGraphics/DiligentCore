@@ -55,12 +55,12 @@ VulkanUtilities::CommandPoolWrapper CommandPoolManager::AllocateCommandPool(cons
     if(CmdPool == VK_NULL_HANDLE)
     {
         VkCommandPoolCreateInfo CmdPoolCI = {};
-        CmdPoolCI.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-        CmdPoolCI.pNext = nullptr;
+        CmdPoolCI.sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+        CmdPoolCI.pNext            = nullptr;
         CmdPoolCI.queueFamilyIndex = m_QueueFamilyIndex;
-        CmdPoolCI.flags = m_CmdPoolFlags;
+        CmdPoolCI.flags            = m_CmdPoolFlags;
         CmdPool = LogicalDevice.CreateCommandPool(CmdPoolCI);
-        VERIFY_EXPR(CmdPool != VK_NULL_HANDLE);
+        DEV_CHECK_ERR(CmdPool != VK_NULL_HANDLE, "Failed to create Vulkan command pool");
     }
 
     LogicalDevice.ResetCommandPool(CmdPool);

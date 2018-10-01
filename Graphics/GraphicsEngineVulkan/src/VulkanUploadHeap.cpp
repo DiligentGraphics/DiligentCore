@@ -43,17 +43,17 @@ VulkanUploadHeap::~VulkanUploadHeap()
     LOG_INFO_MESSAGE(m_HeapName, " peak used/peak allocated frame size: ", FormatMemorySize(m_PeakFrameSize, 2, m_PeakAllocatedSize), '/', FormatMemorySize(m_PeakAllocatedSize, 2));
 }
 
-VulkanUploadHeap::UploadPageInfo VulkanUploadHeap::CreateNewPage(VkDeviceSize SizeInBytes)
+VulkanUploadHeap::UploadPageInfo VulkanUploadHeap::CreateNewPage(VkDeviceSize SizeInBytes)const
 {
     VkBufferCreateInfo StagingBufferCI = {};
-    StagingBufferCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    StagingBufferCI.pNext = nullptr;
-    StagingBufferCI.flags = 0; // VK_BUFFER_CREATE_SPARSE_BINDING_BIT, VK_BUFFER_CREATE_SPARSE_RESIDENCY_BIT, VK_BUFFER_CREATE_SPARSE_ALIASED_BIT
-    StagingBufferCI.size  = SizeInBytes;
-    StagingBufferCI.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-    StagingBufferCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    StagingBufferCI.sType                 = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    StagingBufferCI.pNext                 = nullptr;
+    StagingBufferCI.flags                 = 0; // VK_BUFFER_CREATE_SPARSE_BINDING_BIT, VK_BUFFER_CREATE_SPARSE_RESIDENCY_BIT, VK_BUFFER_CREATE_SPARSE_ALIASED_BIT
+    StagingBufferCI.size                  = SizeInBytes;
+    StagingBufferCI.usage                 = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    StagingBufferCI.sharingMode           = VK_SHARING_MODE_EXCLUSIVE;
     StagingBufferCI.queueFamilyIndexCount = 0;
-    StagingBufferCI.pQueueFamilyIndices = nullptr;
+    StagingBufferCI.pQueueFamilyIndices   = nullptr;
 
     const auto& LogicalDevice  = m_RenderDevice.GetLogicalDevice();
     const auto& PhysicalDevice = m_RenderDevice.GetPhysicalDevice();
@@ -62,7 +62,7 @@ VulkanUploadHeap::UploadPageInfo VulkanUploadHeap::CreateNewPage(VkDeviceSize Si
     auto NewBuffer = LogicalDevice.CreateBuffer(StagingBufferCI, "Upload buffer");
     auto MemReqs = LogicalDevice.GetBufferMemoryRequirements(NewBuffer);
     auto MemoryTypeIndex = PhysicalDevice.GetMemoryTypeIndex(MemReqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-    VERIFY(MemoryTypeIndex != VulkanUtilities::VulkanPhysicalDevice::InvalidMemoryTypeIndex,
+    DEV_CHECK_ERR(MemoryTypeIndex != VulkanUtilities::VulkanPhysicalDevice::InvalidMemoryTypeIndex,
            "Vulkan spec requires that for a VkBuffer not created with the VK_BUFFER_CREATE_SPARSE_BINDING_BIT "
            "bit set, or for a VkImage that was created with a VK_IMAGE_TILING_LINEAR value in the tiling member "
            "of the VkImageCreateInfo structure passed to vkCreateImage, the memoryTypeBits member always contains "
@@ -73,7 +73,7 @@ VulkanUploadHeap::UploadPageInfo VulkanUploadHeap::CreateNewPage(VkDeviceSize Si
 
     auto AlignedOffset = (MemAllocation.UnalignedOffset + (MemReqs.alignment-1)) & ~(MemReqs.alignment-1);
     auto err = LogicalDevice.BindBufferMemory(NewBuffer, MemAllocation.Page->GetVkMemory(), AlignedOffset);
-    CHECK_VK_ERROR_AND_THROW(err, "Failed to bind buffer memory");
+    DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to bind buffer memory");
     auto CPUAddress = reinterpret_cast<Uint8*>(MemAllocation.Page->GetCPUMemory()) + AlignedOffset;
 
     return UploadPageInfo{std::move(MemAllocation), std::move(NewBuffer), CPUAddress};

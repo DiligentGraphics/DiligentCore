@@ -28,7 +28,7 @@
 
 namespace VulkanUtilities
 {
-    VulkanFencePool::VulkanFencePool(std::shared_ptr<const VulkanLogicalDevice> LogicalDevice) :
+    VulkanFencePool::VulkanFencePool(std::shared_ptr<const VulkanLogicalDevice> LogicalDevice)noexcept :
         m_LogicalDevice(std::move(LogicalDevice))
     {}
 
@@ -36,14 +36,14 @@ namespace VulkanUtilities
     {
         for (const auto& fence : m_Fences)
         {
-            VERIFY(m_LogicalDevice->GetFenceStatus(fence) == VK_SUCCESS, "Destroying a fence that has not been signaled");
+            DEV_CHECK_ERR(m_LogicalDevice->GetFenceStatus(fence) == VK_SUCCESS, "Destroying a fence that has not been signaled");
         }
         m_Fences.clear();
     }
 
-    VulkanUtilities::FenceWrapper VulkanFencePool::GetFence()
+    FenceWrapper VulkanFencePool::GetFence()
     {
-        VulkanUtilities::FenceWrapper Fence;
+        FenceWrapper Fence;
         if(!m_Fences.empty())
         {
             Fence = std::move(m_Fences.back());
@@ -61,9 +61,9 @@ namespace VulkanUtilities
         return Fence;
     }
 
-    void VulkanFencePool::DisposeFence(VulkanUtilities::FenceWrapper&& Fence)
+    void VulkanFencePool::DisposeFence(FenceWrapper&& Fence)
     {
-        VERIFY(m_LogicalDevice->GetFenceStatus(Fence) == VK_SUCCESS, "Disposing a fence that has not been signaled");
+        DEV_CHECK_ERR(m_LogicalDevice->GetFenceStatus(Fence) == VK_SUCCESS, "Disposing a fence that has not been signaled");
         m_Fences.emplace_back(std::move(Fence));
     }
 }

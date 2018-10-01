@@ -57,6 +57,10 @@ public:
 
     void DestroyPools();
 
+#ifdef DEVELOPMENT
+    int32_t GetAllocatedPoolCount()const{return m_AllocatedPoolCounter;}
+#endif
+
 private:
     RenderDeviceVkImpl&             m_DeviceVkImpl;
     const std::string               m_Name;
