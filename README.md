@@ -6,7 +6,7 @@ The module's cmake script defines a number of variables that are required to gen
 so it must always be handled first.
 
 To build the module, see 
-[build instrcutions](https://github.com/DiligentGraphics/DiligentEngine/blob/master/README.md#build-and-run-instructions) 
+[build instructions](https://github.com/DiligentGraphics/DiligentEngine/blob/master/README.md#build-and-run-instructions) 
 in the master repository.
 
 # Build Status
