@@ -462,7 +462,7 @@ void SwapChainVkImpl::Present(Uint32 SyncInterval)
         );
     }
 
-    pImmediateCtxVk->FinishFrame(false);
+    pImmediateCtxVk->FinishFrame();
     pDeviceVk->ReleaseStaleResources();
 
     if (!m_IsMinimized)

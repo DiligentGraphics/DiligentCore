@@ -916,7 +916,7 @@ namespace Diligent
         m_pd3d11DeviceContext->Flush();
     }
 
-    void DeviceContextD3D11Impl::FinishFrame(bool ForceRelease)
+    void DeviceContextD3D11Impl::FinishFrame()
     {
     }
 

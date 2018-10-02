@@ -111,7 +111,7 @@ namespace Diligent
             Flush();
         }
 
-        FinishFrame(false);
+        FinishFrame();
 
         // There must be no stale resources
         DEV_CHECK_ERR(m_UploadHeap.GetStalePagesCount()                  == 0, "All allocated upload heap pages must have been released at this point");
@@ -743,7 +743,7 @@ namespace Diligent
         ++m_State.NumCommands;
     }
 
-    void DeviceContextVkImpl::FinishFrame(bool /*ForceRelease*/)
+    void DeviceContextVkImpl::FinishFrame()
     {
         if(GetNumCommandsInCtx() != 0)
             LOG_ERROR_MESSAGE(m_bIsDeferred ? 

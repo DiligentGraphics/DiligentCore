@@ -528,7 +528,7 @@ namespace Diligent
         Flush(true);
     }
 
-    void DeviceContextD3D12Impl::FinishFrame(bool ForceRelease)
+    void DeviceContextD3D12Impl::FinishFrame()
     {
         //Uint64 FenceValue = ForceRelease ? std::numeric_limits<Uint64>::max() : m_pDevice.RawPtr<RenderDeviceD3D12Impl>()->GetCompletedFenceValue();
         m_DynamicHeap.FinishFrame(m_LastSubmittedFenceValue);

@@ -973,7 +973,7 @@ namespace Diligent
         glFlush();
     }
 
-    void DeviceContextGLImpl::FinishFrame(bool ForceRelease)
+    void DeviceContextGLImpl::FinishFrame()
     {
     }
 

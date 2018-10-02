@@ -78,7 +78,7 @@ public:
 
     virtual void Flush()override final;
 
-    virtual void FinishFrame(bool ForceRelease)override final;
+    virtual void FinishFrame()override final;
 
     virtual void FinishCommandList(class ICommandList **ppCommandList)override final;
 

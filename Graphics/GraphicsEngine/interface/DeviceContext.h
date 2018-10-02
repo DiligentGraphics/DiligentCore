@@ -513,13 +513,11 @@ public:
     /// release dynamic resources. The method has some overhead, so it is better to call it once
     /// per frame, though it can be called with different frequency. Note that unless the GPU is idled,
     /// the resources may actually be released several frames after the one they were used in last time.
-    /// \param ForceRelease - force release all stale resources. Use this option only if you are sure
-    ///                       the resources are not in use by the GPU (the GPU has been idled or a 
-    ///                       fence indicates all commands are finished).
     /// \note After the call all dynamic resources become invalid and must be written again before the next use. 
+    ///       Also, all committed resources become invalid.
     ///       For deferred contexts, this method must be called after all command lists referencing dynamic resources
     ///       have been executed through immediate context.
-    virtual void FinishFrame(bool ForceRelease = false) = 0;
+    virtual void FinishFrame() = 0;
 };
 
 }
