@@ -70,17 +70,16 @@ D3D12DynamicPage::D3D12DynamicPage(ID3D12Device* pd3d12Device, Uint64 Size)
     LOG_INFO_MESSAGE("Created dynamic memory page. Size: ", FormatMemorySize(Size,2), "; GPU virtual address 0x", std::hex, m_GPUVirtualAddress);
 }
 
-D3D12DynamicMemoryManager::D3D12DynamicMemoryManager(IMemoryAllocator&  Allocator, 
-                                                     ID3D12Device*      pd3d12Device,
-                                                     Uint32             NumPagesToReserve,
-                                                     Uint64             PageSize) : 
-    m_pd3d12Device(pd3d12Device),
-    m_AvailablePages(STD_ALLOCATOR_RAW_MEM(AvailablePagesMapElemType, Allocator, "Allocator for multimap<AvailablePagesMapElemType>")),
-    m_StalePages(STD_ALLOCATOR_RAW_MEM(StalePageInfo, Allocator, "Allocator for deque<StalePageInfo>"))
+D3D12DynamicMemoryManager::D3D12DynamicMemoryManager(IMemoryAllocator&      Allocator, 
+                                                     RenderDeviceD3D12Impl& DeviceD3D12Impl,
+                                                     Uint32                 NumPagesToReserve,
+                                                     Uint64                 PageSize) : 
+    m_DeviceD3D12Impl(DeviceD3D12Impl),
+    m_AvailablePages(STD_ALLOCATOR_RAW_MEM(AvailablePagesMapElemType, Allocator, "Allocator for multimap<AvailablePagesMapElemType>"))
 {
     for(Uint32 i=0; i < NumPagesToReserve; ++i)
     {
-        D3D12DynamicPage Page(m_pd3d12Device, PageSize);
+        D3D12DynamicPage Page(m_DeviceD3D12Impl.GetD3D12Device(), PageSize);
         auto Size = Page.GetSize();
         m_AvailablePages.emplace(Size, std::move(Page));
     }
@@ -89,6 +88,9 @@ D3D12DynamicMemoryManager::D3D12DynamicMemoryManager(IMemoryAllocator&  Allocato
 D3D12DynamicPage D3D12DynamicMemoryManager::AllocatePage(Uint64 SizeInBytes)
 {
     std::lock_guard<std::mutex> AvailablePagesLock(m_AvailablePagesMtx);
+#ifdef DEVELOPMENT
+    ++m_AllocatedPageCounter;
+#endif
     auto PageIt = m_AvailablePages.lower_bound(SizeInBytes); // Returns an iterator pointing to the first element that is not less than key
     if (PageIt != m_AvailablePages.end())
     {
@@ -99,14 +101,56 @@ D3D12DynamicPage D3D12DynamicMemoryManager::AllocatePage(Uint64 SizeInBytes)
     }
     else
     {
-        return D3D12DynamicPage{m_pd3d12Device, SizeInBytes};
+        return D3D12DynamicPage{m_DeviceD3D12Impl.GetD3D12Device(), SizeInBytes};
     }
 }
 
-void D3D12DynamicMemoryManager::Destroy(Uint64 LastCompletedFenceValue)
+void D3D12DynamicMemoryManager::ReleasePages(std::vector<D3D12DynamicPage>& Pages, Uint64 QueueMask)
 {
-    ReleaseStalePages(LastCompletedFenceValue);
-    DEV_CHECK_ERR(m_StalePages.empty(), "Not all stale pages have been released and are still in use. The device must be idled before calling Destroy()");
+    struct StalePage
+    {
+        D3D12DynamicPage           Page;
+        D3D12DynamicMemoryManager* Mgr;
+
+        StalePage(D3D12DynamicPage&& _Page, D3D12DynamicMemoryManager* _Mgr)noexcept :
+            Page (std::move(_Page)),
+            Mgr  (_Mgr)
+        {
+        }
+
+        StalePage            (const StalePage&)  = delete;
+        StalePage& operator= (const StalePage&)  = delete;
+        StalePage& operator= (      StalePage&&) = delete;
+            
+        StalePage(StalePage&& rhs)noexcept : 
+            Page (std::move(rhs.Page)),
+            Mgr  (rhs.Mgr)
+        {
+            rhs.Mgr  = nullptr;
+        }
+
+        ~StalePage()
+        {
+            if (Mgr != nullptr)
+            {
+                std::lock_guard<std::mutex> Lock(Mgr->m_AvailablePagesMtx);
+#ifdef DEVELOPMENT
+                --Mgr->m_AllocatedPageCounter;
+#endif
+                auto PageSize = Page.GetSize();
+                Mgr->m_AvailablePages.emplace(PageSize, std::move(Page));
+            }
+        }
+    };
+    for(auto& Page : Pages)
+    {
+        m_DeviceD3D12Impl.SafeReleaseDeviceObject(StalePage{std::move(Page), this}, QueueMask);
+    }
+}
+
+void D3D12DynamicMemoryManager::Destroy()
+{
+    DEV_CHECK_ERR(m_AllocatedPageCounter == 0, m_AllocatedPageCounter, " page(s) have not been returned to the manager.");
     Uint64 TotalAllocatedSize = 0;
     for(const auto& Page : m_AvailablePages)
         TotalAllocatedSize += Page.second.GetSize();
@@ -114,13 +158,13 @@ void D3D12DynamicMemoryManager::Destroy(Uint64 LastCompletedFenceValue)
     LOG_INFO_MESSAGE("Dynamic memory manager usage stats:\n"
                      "                       Total allocated memory: ", FormatMemorySize(TotalAllocatedSize, 2));
 
-    m_StalePages.clear();
     m_AvailablePages.clear();
 }
 
 D3D12DynamicMemoryManager::~D3D12DynamicMemoryManager()
 {
-    VERIFY(m_AvailablePages.empty() && m_StalePages.empty(), "Not all pages are destroyed. Dynamic memory manager must be explicitly destroyed with Destroy() method");
+    DEV_CHECK_ERR(m_AllocatedPageCounter == 0, m_AllocatedPageCounter, " page(s) have not been released. If there are outstanding references to the pages in release queues, the app will crash when the page is returned to the manager.");
+    VERIFY(m_AvailablePages.empty(), "Not all pages are destroyed. Dynamic memory manager must be explicitly destroyed with Destroy() method");
 }
 
 
@@ -185,9 +229,9 @@ D3D12DynamicAllocation D3D12DynamicHeap::Allocate(Uint64 SizeInBytes, Uint64 Ali
         return D3D12DynamicAllocation{};
 }
 
-void D3D12DynamicHeap::FinishFrame(Uint64 FenceValue)
+void D3D12DynamicHeap::ReleaseAllocatedPages(Uint64 QueueMask)
 {
-    m_DynamicMemMgr.DiscardPages(m_AllocatedPages, FenceValue);
+    m_DynamicMemMgr.ReleasePages(m_AllocatedPages, QueueMask);
     m_AllocatedPages.clear();
 
     m_CurrOffset        = InvalidOffset;

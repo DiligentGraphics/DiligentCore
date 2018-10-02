@@ -52,12 +52,16 @@ namespace Diligent
                                               Uint32                                ContextId,
                                               Uint32                                CommandQueueId,
                                               std::shared_ptr<GenerateMipsVkHelper> GenerateMipsHelper) :
-        TDeviceContextBase  {pRefCounters, pDeviceVkImpl, bIsDeferred},
-        m_NumCommandsToFlush          {bIsDeferred ? std::numeric_limits<decltype(m_NumCommandsToFlush)>::max() : Attribs.NumCommandsToFlushCmdBuffer},
-        m_CmdListAllocator            { GetRawAllocator(), sizeof(CommandListVkImpl), 64 },
-        m_ContextId                   {ContextId},
-        m_CommandQueueId              {CommandQueueId},
-        m_SubmittedBuffersCmdQueueMask{bIsDeferred ? 0 : Uint64{1} << CommandQueueId},
+        TDeviceContextBase
+        {
+            pRefCounters,
+            pDeviceVkImpl,
+            ContextId,
+            CommandQueueId,
+            bIsDeferred ? std::numeric_limits<decltype(m_NumCommandsToFlush)>::max() : Attribs.NumCommandsToFlushCmdBuffer,
+            bIsDeferred
+        },
+        m_CmdListAllocator  { GetRawAllocator(), sizeof(CommandListVkImpl), 64 },
         // Command pools must be thread safe because command buffers are returned into pools by release queues
         // potentially running in another thread
         m_CmdPool
@@ -84,7 +88,6 @@ namespace Diligent
             pDeviceVkImpl->GetDynamicDescriptorPool(),
             GetContextObjectName("Dynamic descriptor set allocator", bIsDeferred, ContextId),
         },
-        m_ContextFrameNumber(0),
         m_GenerateMipsHelper(std::move(GenerateMipsHelper))
     {
         m_GenerateMipsHelper->CreateSRB(&m_GenerateMipsSRB);
@@ -774,18 +777,13 @@ namespace Diligent
         // be destroyed before the pools are actually returned to the global pool manager.
         m_DynamicDescrSetAllocator.ReleasePools(m_SubmittedBuffersCmdQueueMask);
 
-        if (m_bIsDeferred)
-        {
-            // For deferred context, reset submitted cmd queue mask
-            m_SubmittedBuffersCmdQueueMask = 0;
-        }
-        else
+        if (!m_bIsDeferred)
         {
             // Make all stale resource move into the release queue
             DeviceVkImpl.FlushStaleResources(m_CommandQueueId);
         }
 
-        Atomics::AtomicIncrement(m_ContextFrameNumber);
+        EndFrame();
     }
 
     void DeviceContextVkImpl::Flush()

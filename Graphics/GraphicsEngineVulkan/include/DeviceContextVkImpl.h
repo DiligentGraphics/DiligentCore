@@ -29,6 +29,7 @@
 
 #include "DeviceContextVk.h"
 #include "DeviceContextBase.h"
+#include "DeviceContextNextGenBase.h"
 #include "VulkanUtilities/VulkanCommandBufferPool.h"
 #include "VulkanUtilities/VulkanCommandBuffer.h"
 #include "VulkanUploadHeap.h"
@@ -46,10 +47,10 @@ namespace Diligent
 {
 
 /// Implementation of the Diligent::IDeviceContext interface
-class DeviceContextVkImpl final : public DeviceContextBase<IDeviceContextVk, BufferVkImpl, TextureViewVkImpl, PipelineStateVkImpl>
+class DeviceContextVkImpl final : public DeviceContextNextGenBase< DeviceContextBase<IDeviceContextVk, BufferVkImpl, TextureViewVkImpl, PipelineStateVkImpl> >
 {
 public:
-    using TDeviceContextBase = DeviceContextBase<IDeviceContextVk, BufferVkImpl, TextureViewVkImpl, PipelineStateVkImpl>;
+    using TDeviceContextBase = DeviceContextNextGenBase< DeviceContextBase<IDeviceContextVk, BufferVkImpl, TextureViewVkImpl, PipelineStateVkImpl> >;
 
     DeviceContextVkImpl(IReferenceCounters*                   pRefCounters,
                         class RenderDeviceVkImpl*             pDevice,
@@ -233,16 +234,6 @@ private:
 
     FixedBlockMemoryAllocator m_CmdListAllocator;
 
-    const Uint32 m_ContextId;
-    const Uint32 m_CommandQueueId;
-
-    // This mask indicates which command queues command buffers from this context were submitted to.
-    // For immediate context, this will always be 1 << m_CommandQueueId. 
-    // For deferred contexts, this will accumulate bits of the queues to which command buffers
-    // were submitted to before FinishFrame() was called. This mask is used to release resources
-    // allocated by the context during the frame when FinishFrame() is called.
-    Uint64 m_SubmittedBuffersCmdQueueMask = 0;
-
     // Semaphores are not owned by the command context
     std::vector<VkSemaphore>           m_WaitSemaphores;
     std::vector<VkPipelineStageFlags>  m_WaitDstStageMasks;
@@ -285,8 +276,6 @@ private:
     VulkanUploadHeap                         m_UploadHeap;
     VulkanDynamicHeap                        m_DynamicHeap;
     DynamicDescriptorSetAllocator            m_DynamicDescrSetAllocator;
-
-    Atomics::AtomicInt64 m_ContextFrameNumber;
 
     PipelineLayout::DescriptorSetBindInfo m_DescrSetBindInfo;
     std::shared_ptr<GenerateMipsVkHelper> m_GenerateMipsHelper;

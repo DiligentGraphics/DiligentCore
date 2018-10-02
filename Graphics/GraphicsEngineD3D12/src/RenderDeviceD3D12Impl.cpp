@@ -83,7 +83,7 @@ RenderDeviceD3D12Impl :: RenderDeviceD3D12Impl(IReferenceCounters*          pRef
 	},
     m_ContextPool(STD_ALLOCATOR_RAW_MEM(ContextPoolElemType, GetRawAllocator(), "Allocator for vector<unique_ptr<CommandContext>>")),
     m_AvailableContexts(STD_ALLOCATOR_RAW_MEM(CommandContext*, GetRawAllocator(), "Allocator for vector<CommandContext*>")),
-    m_DynamicMemoryManager(GetRawAllocator(), m_pd3d12Device, CreationAttribs.NumDynamicHeapPagesToReserve, CreationAttribs.DynamicHeapPageSize)
+    m_DynamicMemoryManager(GetRawAllocator(), *this, CreationAttribs.NumDynamicHeapPagesToReserve, CreationAttribs.DynamicHeapPageSize)
 {
     m_DeviceCaps.DevType = DeviceType::D3D12;
     m_DeviceCaps.MajorVersion = 12;
@@ -104,8 +104,8 @@ RenderDeviceD3D12Impl::~RenderDeviceD3D12Impl()
     // release queues
     FinishFrame(true);
 
-    // TODO: Rework
-    m_DynamicMemoryManager.Destroy(GetCompletedFenceValue(0));
+    DEV_CHECK_ERR(m_DynamicMemoryManager.GetAllocatedPageCounter() == 0, "All allocated dynamic pages must have been returned to the manager at this point.");
+    m_DynamicMemoryManager.Destroy();
 
 	m_ContextPool.clear();
     DestroyCommandQueues();
@@ -204,6 +204,7 @@ void RenderDeviceD3D12Impl::IdleGPU(bool ReleaseStaleObjects)
 
 void RenderDeviceD3D12Impl::FinishFrame(bool ReleaseAllResources)
 {
+    // TODO: remove
     {
         if (auto pImmediateCtx = m_wpImmediateContext.Lock())
         {
@@ -233,11 +234,6 @@ void RenderDeviceD3D12Impl::FinishFrame(bool ReleaseAllResources)
     auto CompletedFenceValue = ReleaseAllResources ? std::numeric_limits<Uint64>::max() : GetCompletedFenceValue(0);
    
     PurgeReleaseQueues(ReleaseAllResources);
-
-    // Dynamic memory is used to update resource contents as well as to allocate
-    // space for dynamic resources.
-    // Initial resource data is uploaded using temporary one-time upload buffers
-    m_DynamicMemoryManager.ReleaseStalePages(CompletedFenceValue);
 
     for(Uint32 CPUHeap=0; CPUHeap < _countof(m_CPUDescriptorHeaps); ++CPUHeap)
     {

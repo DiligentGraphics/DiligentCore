@@ -55,17 +55,24 @@ namespace Diligent
                                                     RenderDeviceD3D12Impl*    pDeviceD3D12Impl,
                                                     bool                      bIsDeferred,
                                                     const EngineD3D12Attribs& Attribs,
-                                                    Uint32                    ContextId) :
-        TDeviceContextBase(pRefCounters, pDeviceD3D12Impl, bIsDeferred),
+                                                    Uint32                    ContextId,
+                                                    Uint32                    CommandQueueId) :
+        TDeviceContextBase
+        {
+            pRefCounters,
+            pDeviceD3D12Impl,
+            ContextId,
+            CommandQueueId,
+            bIsDeferred ? std::numeric_limits<decltype(m_NumCommandsToFlush)>::max() : Attribs.NumCommandsToFlushCmdList,
+            bIsDeferred
+        },
         m_DynamicHeap(pDeviceD3D12Impl->GetDynamicMemoryManager(), GetDynamicHeapName(bIsDeferred, ContextId), Attribs.DynamicHeapPageSize),
         m_NumCommandsInCurCtx(0),
-        m_NumCommandsToFlush(bIsDeferred ? std::numeric_limits<decltype(m_NumCommandsToFlush)>::max() : Attribs.NumCommandsToFlushCmdList),
         m_pCurrCmdCtx(pDeviceD3D12Impl->AllocateCommandContext()),
         m_CommittedIBFormat(VT_UNDEFINED),
         m_CommittedD3D12IndexDataStartOffset(0),
         m_MipsGenerator(pDeviceD3D12Impl->GetD3D12Device()),
-        m_CmdListAllocator(GetRawAllocator(), sizeof(CommandListD3D12Impl), 64 ),
-        m_ContextId(ContextId)
+        m_CmdListAllocator(GetRawAllocator(), sizeof(CommandListD3D12Impl), 64 )
     {
         auto *pd3d12Device = pDeviceD3D12Impl->GetD3D12Device();
 
@@ -503,7 +510,7 @@ namespace Diligent
             if (m_NumCommandsInCurCtx != 0)
             {
                 m_pCurrCmdCtx->FlushResourceBarriers();
-                m_LastSubmittedFenceValue = pDeviceD3D12Impl->CloseAndExecuteCommandContext(m_pCurrCmdCtx, true, &m_PendingFences);
+                auto FenceValue = pDeviceD3D12Impl->CloseAndExecuteCommandContext(m_pCurrCmdCtx, true, &m_PendingFences);
                 m_PendingFences.clear();
             }
             else
@@ -530,9 +537,9 @@ namespace Diligent
 
     void DeviceContextD3D12Impl::FinishFrame()
     {
-        //Uint64 FenceValue = ForceRelease ? std::numeric_limits<Uint64>::max() : m_pDevice.RawPtr<RenderDeviceD3D12Impl>()->GetCompletedFenceValue();
-        m_DynamicHeap.FinishFrame(m_LastSubmittedFenceValue);
-        Atomics::AtomicIncrement(m_ContextFrameNumber);
+        VERIFY_EXPR(m_bIsDeferred || m_SubmittedBuffersCmdQueueMask == (Uint64{1}<<m_CommandQueueId));
+        m_DynamicHeap.ReleaseAllocatedPages(m_SubmittedBuffersCmdQueueMask);
+        EndFrame();
     }
 
     void DeviceContextD3D12Impl::SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer** ppBuffers, Uint32* pOffsets, Uint32 Flags )
@@ -1022,8 +1029,9 @@ namespace Diligent
         CommandContext* pCmdContext = nullptr;
         RefCntAutoPtr<DeviceContextD3D12Impl> pDeferredCtx;
         pCmdListD3D12->Close(pCmdContext, pDeferredCtx);
-        pDeferredCtx->m_LastSubmittedFenceValue =
-            m_pDevice.RawPtr<RenderDeviceD3D12Impl>()->CloseAndExecuteCommandContext(pCmdContext, true, nullptr);
+        auto FenceValue = m_pDevice.RawPtr<RenderDeviceD3D12Impl>()->CloseAndExecuteCommandContext(pCmdContext, true, nullptr);
+        // Set the bit in the deferred context cmd queue mask corresponding to cmd queue of this context
+        pDeferredCtx->m_SubmittedBuffersCmdQueueMask |= Uint64{1} << m_CommandQueueId;
     }
 
     void DeviceContextD3D12Impl::SignalFence(IFence* pFence, Uint64 Value)

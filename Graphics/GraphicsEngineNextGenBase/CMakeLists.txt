@@ -3,6 +3,7 @@ cmake_minimum_required (VERSION 3.6)
 project(GraphicsEngineNextGenBase CXX)
 
 set(INCLUDE 
+    include/DeviceContextNextGenBase.h
     include/DynamicHeap.h
     include/RenderDeviceNextGenBase.h
 )

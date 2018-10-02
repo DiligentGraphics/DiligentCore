@@ -26,9 +26,12 @@
 #include <mutex>
 #include <map>
 #include <deque>
+#include <atomic>
 
 namespace Diligent
 {
+
+class RenderDeviceD3D12Impl;
 
 struct D3D12DynamicAllocation
 {
@@ -110,10 +113,10 @@ private:
 class D3D12DynamicMemoryManager
 {
 public:
-    D3D12DynamicMemoryManager(IMemoryAllocator& Allocator, 
-                              ID3D12Device*     pd3d12Device,
-                              Uint32            NumPagesToReserve,
-                              Uint64            PageSize);
+    D3D12DynamicMemoryManager(IMemoryAllocator&      Allocator, 
+                              RenderDeviceD3D12Impl& DeviceD3D12Impl,
+                              Uint32                 NumPagesToReserve,
+                              Uint64                 PageSize);
     ~D3D12DynamicMemoryManager();
 
     D3D12DynamicMemoryManager            (const D3D12DynamicMemoryManager&)  = delete;
@@ -121,54 +124,26 @@ public:
     D3D12DynamicMemoryManager& operator= (const D3D12DynamicMemoryManager&)  = delete;
     D3D12DynamicMemoryManager& operator= (      D3D12DynamicMemoryManager&&) = delete;
 
-    void DiscardPages(std::vector<D3D12DynamicPage>& Pages, Uint64 FenceValue)
-    {
-        std::lock_guard<std::mutex> Lock(m_StalePagesMtx);
-        for(auto& Page : Pages)
-            m_StalePages.emplace_back(FenceValue, std::move(Page));
-    }
+    void ReleasePages(std::vector<D3D12DynamicPage>& Pages, Uint64 QueueMask);
 
-    void ReleaseStalePages(Uint64 LastCompletedFenceValue)
-    {
-        std::lock_guard<std::mutex> AvailablePagesLock(m_AvailablePagesMtx);
-        std::lock_guard<std::mutex> StalePagesLock(m_StalePagesMtx);
-        while (!m_StalePages.empty())
-        {
-            auto& FirstPage = m_StalePages.front();
-            if (FirstPage.FenceValue <= LastCompletedFenceValue)
-            {
-                auto PageSize = FirstPage.Page.GetSize();
-                m_AvailablePages.emplace(PageSize, std::move(FirstPage.Page));
-                m_StalePages.pop_front();
-            }
-            else
-                break;
-        }
-    }
-
-    void Destroy(Uint64 LastCompletedFenceValue);
+    void Destroy();
 
     D3D12DynamicPage AllocatePage(Uint64 SizeInBytes);
 
+#ifdef DEVELOPMENT
+    int32_t GetAllocatedPageCounter()const{return m_AllocatedPageCounter;}
+#endif
+
 private:
-    CComPtr<ID3D12Device> m_pd3d12Device;
+    RenderDeviceD3D12Impl& m_DeviceD3D12Impl;
     
     std::mutex m_AvailablePagesMtx;
     using AvailablePagesMapElemType = std::pair<Uint64, D3D12DynamicPage>;
     std::multimap<Uint64, D3D12DynamicPage, std::less<Uint64>, STDAllocatorRawMem<AvailablePagesMapElemType> > m_AvailablePages;
 
-    std::mutex m_StalePagesMtx;
-    struct StalePageInfo
-    {
-        StalePageInfo(Uint64 _FenceValue, D3D12DynamicPage&& _Page) : 
-            FenceValue(_FenceValue),
-            Page      (std::move(_Page))
-        {}
-
-        Uint64           FenceValue;
-        D3D12DynamicPage Page;
-    };
-    std::deque<StalePageInfo, STDAllocatorRawMem<StalePageInfo> > m_StalePages;
+#ifdef DEVELOPMENT
+    std::atomic_int32_t m_AllocatedPageCounter = 0;
+#endif
 };
 
 
@@ -189,7 +164,7 @@ public:
     ~D3D12DynamicHeap();
 
     D3D12DynamicAllocation Allocate(Uint64 SizeInBytes, Uint64 Alignment, Uint64 DvpCtxFrameNumber);
-    void FinishFrame(Uint64 FenceValue);
+    void ReleaseAllocatedPages(Uint64 QueueMask);
 
     static constexpr Uint64 InvalidOffset = static_cast<Uint64>(-1);
 

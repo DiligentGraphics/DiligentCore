@@ -30,6 +30,7 @@
 
 #include "DeviceContextD3D12.h"
 #include "DeviceContextBase.h"
+#include "DeviceContextNextGenBase.h"
 #include "GenerateMips.h"
 #include "BufferD3D12Impl.h"
 #include "TextureViewD3D12Impl.h"
@@ -40,16 +41,17 @@ namespace Diligent
 {
 
 /// Implementation of the Diligent::IDeviceContext interface
-class DeviceContextD3D12Impl final : public DeviceContextBase<IDeviceContextD3D12, BufferD3D12Impl, TextureViewD3D12Impl, PipelineStateD3D12Impl>
+class DeviceContextD3D12Impl final : public DeviceContextNextGenBase< DeviceContextBase<IDeviceContextD3D12, BufferD3D12Impl, TextureViewD3D12Impl, PipelineStateD3D12Impl> >
 {
 public:
-    using TDeviceContextBase = DeviceContextBase<IDeviceContextD3D12, BufferD3D12Impl, TextureViewD3D12Impl, PipelineStateD3D12Impl>;
+    using TDeviceContextBase = DeviceContextNextGenBase< DeviceContextBase<IDeviceContextD3D12, BufferD3D12Impl, TextureViewD3D12Impl, PipelineStateD3D12Impl> >;
 
     DeviceContextD3D12Impl(IReferenceCounters*          pRefCounters, 
                            class RenderDeviceD3D12Impl* pDevice, 
                            bool                         bIsDeferred, 
                            const EngineD3D12Attribs&    Attribs, 
-                           Uint32                       ContextId);
+                           Uint32                       ContextId,
+                           Uint32                       CommandQueueId);
     ~DeviceContextD3D12Impl();
     
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
@@ -188,12 +190,7 @@ private:
         return m_pCurrCmdCtx;
     }
     size_t m_NumCommandsInCurCtx = 0;
-    const Uint32 m_NumCommandsToFlush = 192;
     CommandContext* m_pCurrCmdCtx = nullptr;
-
-    // The fence value that was signalled last time a command list was submitted for execution
-    Uint64 m_LastSubmittedFenceValue = 0;
-    Atomics::AtomicInt64 m_ContextFrameNumber = 0;
 
     CComPtr<ID3D12Resource> m_CommittedD3D12IndexBuffer;
     VALUE_TYPE m_CommittedIBFormat = VT_UNDEFINED;
@@ -215,7 +212,6 @@ private:
     class ShaderResourceCacheD3D12 *m_pCommittedResourceCache = nullptr;
 
     FixedBlockMemoryAllocator m_CmdListAllocator;
-    const Uint32 m_ContextId;
 
     std::vector<std::pair<Uint64, RefCntAutoPtr<IFence> > > m_PendingFences;
 
