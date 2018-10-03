@@ -166,6 +166,7 @@ private:
     void CommitViewports();
     void CommitScissorRects(class GraphicsContext &GraphCtx, bool ScissorEnable);
     void Flush(bool RequestNewCmdCtx);
+    void RequestCommandContext(RenderDeviceD3D12Impl* pDeviceD3D12Impl);
 
     struct TextureUploadSpace
     {
@@ -203,6 +204,11 @@ private:
     GenerateMipsHelper m_MipsGenerator;
     D3D12DynamicHeap m_DynamicHeap;
     
+    // Every context must use its own allocator that maintains individual list of retired descriptor heaps to 
+    // avoid interference with other command contexts
+    // The allocations in heaps are discarded at the end of the frame.
+    DynamicSuballocationsManager m_DynamicGPUDescriptorAllocator[2];
+
     /// Flag indicating if currently committed D3D12 vertex buffers are up to date
     bool m_bCommittedD3D12VBsUpToDate = false;
 

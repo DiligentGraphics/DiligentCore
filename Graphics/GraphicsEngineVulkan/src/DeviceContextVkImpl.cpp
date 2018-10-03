@@ -777,13 +777,7 @@ namespace Diligent
         // be destroyed before the pools are actually returned to the global pool manager.
         m_DynamicDescrSetAllocator.ReleasePools(m_SubmittedBuffersCmdQueueMask);
 
-        if (!m_bIsDeferred)
-        {
-            // Make all stale resource move into the release queue
-            DeviceVkImpl.FlushStaleResources(m_CommandQueueId);
-        }
-
-        EndFrame();
+        EndFrame(DeviceVkImpl);
     }
 
     void DeviceContextVkImpl::Flush()

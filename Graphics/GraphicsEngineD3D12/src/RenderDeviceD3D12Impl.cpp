@@ -66,15 +66,15 @@ RenderDeviceD3D12Impl :: RenderDeviceD3D12Impl(IReferenceCounters*          pRef
     m_CmdListManager(this),
     m_CPUDescriptorHeaps
     {
-        {RawMemAllocator, this, CreationAttribs.CPUDescriptorHeapAllocationSize[0], D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE},
-        {RawMemAllocator, this, CreationAttribs.CPUDescriptorHeapAllocationSize[1], D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER,     D3D12_DESCRIPTOR_HEAP_FLAG_NONE},
-        {RawMemAllocator, this, CreationAttribs.CPUDescriptorHeapAllocationSize[2], D3D12_DESCRIPTOR_HEAP_TYPE_RTV,         D3D12_DESCRIPTOR_HEAP_FLAG_NONE},
-        {RawMemAllocator, this, CreationAttribs.CPUDescriptorHeapAllocationSize[3], D3D12_DESCRIPTOR_HEAP_TYPE_DSV,         D3D12_DESCRIPTOR_HEAP_FLAG_NONE}
+        {RawMemAllocator, *this, CreationAttribs.CPUDescriptorHeapAllocationSize[0], D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE},
+        {RawMemAllocator, *this, CreationAttribs.CPUDescriptorHeapAllocationSize[1], D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER,     D3D12_DESCRIPTOR_HEAP_FLAG_NONE},
+        {RawMemAllocator, *this, CreationAttribs.CPUDescriptorHeapAllocationSize[2], D3D12_DESCRIPTOR_HEAP_TYPE_RTV,         D3D12_DESCRIPTOR_HEAP_FLAG_NONE},
+        {RawMemAllocator, *this, CreationAttribs.CPUDescriptorHeapAllocationSize[3], D3D12_DESCRIPTOR_HEAP_TYPE_DSV,         D3D12_DESCRIPTOR_HEAP_FLAG_NONE}
     },
     m_GPUDescriptorHeaps
     {
-        {RawMemAllocator, this, CreationAttribs.GPUDescriptorHeapSize[0], CreationAttribs.GPUDescriptorHeapDynamicSize[0], D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE},
-        {RawMemAllocator, this, CreationAttribs.GPUDescriptorHeapSize[1], CreationAttribs.GPUDescriptorHeapDynamicSize[1], D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER,     D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE}
+        {RawMemAllocator, *this, CreationAttribs.GPUDescriptorHeapSize[0], CreationAttribs.GPUDescriptorHeapDynamicSize[0], D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE},
+        {RawMemAllocator, *this, CreationAttribs.GPUDescriptorHeapSize[1], CreationAttribs.GPUDescriptorHeapDynamicSize[1], D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER,     D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE}
     },
 	m_DynamicDescriptorAllocationChunkSize
 	{
@@ -94,15 +94,9 @@ RenderDeviceD3D12Impl :: RenderDeviceD3D12Impl(IReferenceCounters*          pRef
 
 RenderDeviceD3D12Impl::~RenderDeviceD3D12Impl()
 {
-	// Finish current frame. This will release resources taken by previous frames, and
-    // will move all stale resources to the release queues. The resources will not be
-    // release until next call to FinishFrame()
-    FinishFrame();
     // Wait for the GPU to complete all its operations
     IdleGPU(true);
-    // Call FinishFrame() again to destroy resources in
-    // release queues
-    FinishFrame(true);
+    ReleaseStaleResources(true);
 
     DEV_CHECK_ERR(m_DynamicMemoryManager.GetAllocatedPageCounter() == 0, "All allocated dynamic pages must have been returned to the manager at this point.");
     m_DynamicMemoryManager.Destroy();
@@ -181,9 +175,6 @@ Uint64 RenderDeviceD3D12Impl::CloseAndExecuteCommandContext(CommandContext* pCtx
     // DiscardAllocator() is thread-safe
     // TODO: Rework
 	m_CmdListManager.DiscardAllocator(FenceValue, pAllocator);
-    
-    // TODO: Rework
-    pCtx->DiscardDynamicDescriptors(FenceValue);
 
     {
 	    std::lock_guard<std::mutex> LockGuard(m_ContextAllocationMutex);
@@ -202,50 +193,17 @@ void RenderDeviceD3D12Impl::IdleGPU(bool ReleaseStaleObjects)
     IdleCommandQueues(ReleaseStaleObjects);
 }
 
-void RenderDeviceD3D12Impl::FinishFrame(bool ReleaseAllResources)
+void RenderDeviceD3D12Impl::FlushStaleResources(Uint32 CmdQueueIndex)
 {
-    // TODO: remove
-    {
-        if (auto pImmediateCtx = m_wpImmediateContext.Lock())
-        {
-            auto pImmediateCtxD3D12 = pImmediateCtx.RawPtr<DeviceContextD3D12Impl>();
-            if(pImmediateCtxD3D12->GetNumCommandsInCtx() != 0)
-                LOG_ERROR_MESSAGE("There are outstanding commands in the immediate device context when finishing the frame. This is an error and may cause unpredicted behaviour. Call Flush() to submit all commands for execution before finishing the frame");
-        }
-
-        for (auto wpDeferredCtx : m_wpDeferredContexts)
-        {
-            if (auto pDeferredCtx = wpDeferredCtx.Lock())
-            {
-                auto pDeferredCtxD3D12 = pDeferredCtx.RawPtr<DeviceContextD3D12Impl>();
-                if(pDeferredCtxD3D12->GetNumCommandsInCtx() != 0)
-                    LOG_ERROR_MESSAGE("There are outstanding commands in the deferred device context when finishing the frame. This is an error and may cause unpredicted behaviour. Close all deferred contexts and execute them before finishing the frame");
-            }
-        }
-    }
-    
-    // TODO: rework
-    // Submit empty command list to set a fence on the GPU and increment command list number.
-    // Discard all remaining objects which is important to do if there were 
-    // no command lists submitted during the frame
+    // Submit empty command list to the queue. This will effectively signal the fence and 
+    // discard all resources
     ID3D12GraphicsCommandList* pNullCmdList = nullptr;
     TRenderDeviceBase::SubmitCommandBuffer(0, pNullCmdList, true);
+}
 
-    auto CompletedFenceValue = ReleaseAllResources ? std::numeric_limits<Uint64>::max() : GetCompletedFenceValue(0);
-   
-    PurgeReleaseQueues(ReleaseAllResources);
-
-    for(Uint32 CPUHeap=0; CPUHeap < _countof(m_CPUDescriptorHeaps); ++CPUHeap)
-    {
-        // This is OK if other thread disposes descriptor heap allocation at this time
-        // The allocation will be registered as part of the current frame
-        m_CPUDescriptorHeaps[CPUHeap].ReleaseStaleAllocations(CompletedFenceValue);
-    }
-        
-    for(Uint32 GPUHeap=0; GPUHeap < _countof(m_GPUDescriptorHeaps); ++GPUHeap)
-    {
-        m_GPUDescriptorHeaps[GPUHeap].ReleaseStaleAllocations(CompletedFenceValue);
-    }
+void RenderDeviceD3D12Impl::ReleaseStaleResources(bool ForceRelease)
+{
+    PurgeReleaseQueues(ForceRelease);
 }
 
 
@@ -258,7 +216,7 @@ CommandContext* RenderDeviceD3D12Impl::AllocateCommandContext(const Char* ID)
 	{
         auto &CmdCtxAllocator = GetRawAllocator();
         auto *pRawMem = ALLOCATE(CmdCtxAllocator, "CommandContext instance", sizeof(CommandContext));
-		ret = new (pRawMem) CommandContext( GetRawAllocator(), m_CmdListManager, m_GPUDescriptorHeaps, m_DynamicDescriptorAllocationChunkSize);
+		ret = new (pRawMem) CommandContext(m_CmdListManager);
 		m_ContextPool.emplace_back(ret, STDDeleterRawMem<CommandContext>(CmdCtxAllocator) );
 	}
 	else

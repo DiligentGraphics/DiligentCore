@@ -151,9 +151,9 @@ class D3D12DynamicHeap
 {
 public:
     D3D12DynamicHeap(D3D12DynamicMemoryManager& DynamicMemMgr, std::string HeapName, Uint64 PageSize) :
-        m_DynamicMemMgr (DynamicMemMgr),
-        m_HeapName      (std::move(HeapName)),
-        m_PageSize      (PageSize)
+        m_GlobalDynamicMemMgr (DynamicMemMgr),
+        m_HeapName            (std::move(HeapName)),
+        m_PageSize            (PageSize)
     {}
 
     D3D12DynamicHeap            (const D3D12DynamicHeap&) = delete;
@@ -168,8 +168,10 @@ public:
 
     static constexpr Uint64 InvalidOffset = static_cast<Uint64>(-1);
 
+    size_t GetAllocatedPagesCount() const {return m_AllocatedPages.size();}
+
 private:
-    D3D12DynamicMemoryManager& m_DynamicMemMgr;
+    D3D12DynamicMemoryManager& m_GlobalDynamicMemMgr;
     const std::string m_HeapName;
 
     std::vector<D3D12DynamicPage> m_AllocatedPages;

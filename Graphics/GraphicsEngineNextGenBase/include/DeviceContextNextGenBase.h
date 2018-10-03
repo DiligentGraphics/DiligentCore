@@ -61,12 +61,17 @@ public:
 protected:
 
     // Should be called at the end of FinishFrame()
-    void EndFrame()
+    template<typename RenderDeviceImplType>
+    void EndFrame(RenderDeviceImplType& RenderDeviceImpl)
     {
         if (m_bIsDeferred)
         {
             // For deferred context, reset submitted cmd queue mask
             m_SubmittedBuffersCmdQueueMask = 0;
+        }
+        else
+        {
+            RenderDeviceImpl.FlushStaleResources(m_CommandQueueId);
         }
         Atomics::AtomicIncrement(m_ContextFrameNumber);
     }

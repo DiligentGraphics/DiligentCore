@@ -30,18 +30,10 @@
 namespace Diligent
 {
 
-CommandContext::CommandContext( IMemoryAllocator&    MemAllocator,
-                                CommandListManager&  CmdListManager, 
-                                GPUDescriptorHeap    GPUDescriptorHeaps[],
-                                const Uint32         DynamicDescriptorAllocationChunkSize[]) :
+CommandContext::CommandContext( CommandListManager& CmdListManager) :
 	m_pCurGraphicsRootSignature (nullptr),
 	m_pCurPipelineState         (nullptr),
 	m_pCurComputeRootSignature  (nullptr),
-    m_DynamicGPUDescriptorAllocator
-    {
-        {MemAllocator, GPUDescriptorHeaps[0], DynamicDescriptorAllocationChunkSize[0]},
-        {MemAllocator, GPUDescriptorHeaps[1], DynamicDescriptorAllocationChunkSize[1]}
-    },
     m_PendingResourceBarriers( STD_ALLOCATOR_RAW_MEM(D3D12_RESOURCE_BARRIER, GetRawAllocator(), "Allocator for vector<D3D12_RESOURCE_BARRIER>") ),
     m_PendingBarrierObjects( STD_ALLOCATOR_RAW_MEM(RefCntAutoPtr<IDeviceObject>, GetRawAllocator(), "Allocator for vector<RefCntAutoPtr<IDeviceObject>>") )
 {
@@ -75,6 +67,8 @@ void CommandContext::Reset( CommandListManager& CmdListManager )
 	m_PendingResourceBarriers.clear();
     m_PendingBarrierObjects.clear();
     m_BoundDescriptorHeaps = ShaderDescriptorHeaps();
+    
+    m_DynamicGPUDescriptorAllocators = nullptr;
 
     m_PrimitiveTopology = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
 #if 0
@@ -298,16 +292,10 @@ void CommandContext::InsertAliasBarrier(D3D12ResourceBase& Before, D3D12Resource
         FlushResourceBarriers();
 }
 
-void CommandContext::DiscardDynamicDescriptors(Uint64 FenceValue)
-{
-    for(size_t HeapType = 0; HeapType < _countof(m_DynamicGPUDescriptorAllocator); ++HeapType)
-        m_DynamicGPUDescriptorAllocator[HeapType].DiscardAllocations(FenceValue);
-}
-
 DescriptorHeapAllocation CommandContext::AllocateDynamicGPUVisibleDescriptor( D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count )
 {
     VERIFY(Type >= D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV && Type <= D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, "Invalid heap type");
-    return m_DynamicGPUDescriptorAllocator[Type].Allocate(Count);
+    return m_DynamicGPUDescriptorAllocators[Type].Allocate(Count);
 }
 
 }

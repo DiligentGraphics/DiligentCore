@@ -112,9 +112,9 @@ void D3D12DynamicMemoryManager::ReleasePages(std::vector<D3D12DynamicPage>& Page
         D3D12DynamicPage           Page;
         D3D12DynamicMemoryManager* Mgr;
 
-        StalePage(D3D12DynamicPage&& _Page, D3D12DynamicMemoryManager* _Mgr)noexcept :
+        StalePage(D3D12DynamicPage&& _Page, D3D12DynamicMemoryManager& _Mgr)noexcept :
             Page (std::move(_Page)),
-            Mgr  (_Mgr)
+            Mgr  (&_Mgr)
         {
         }
 
@@ -144,7 +144,7 @@ void D3D12DynamicMemoryManager::ReleasePages(std::vector<D3D12DynamicPage>& Page
     };
     for(auto& Page : Pages)
     {
-        m_DeviceD3D12Impl.SafeReleaseDeviceObject(StalePage{std::move(Page), this}, QueueMask);
+        m_DeviceD3D12Impl.SafeReleaseDeviceObject(StalePage{std::move(Page), *this}, QueueMask);
     }
 }
 
@@ -188,7 +188,7 @@ D3D12DynamicAllocation D3D12DynamicHeap::Allocate(Uint64 SizeInBytes, Uint64 Ali
         while(NewPageSize < SizeInBytes)
             NewPageSize *= 2;
 
-        auto NewPage = m_DynamicMemMgr.AllocatePage(NewPageSize);
+        auto NewPage = m_GlobalDynamicMemMgr.AllocatePage(NewPageSize);
         if (NewPage.IsValid())
         {
             m_CurrOffset    = 0;
@@ -231,7 +231,7 @@ D3D12DynamicAllocation D3D12DynamicHeap::Allocate(Uint64 SizeInBytes, Uint64 Ali
 
 void D3D12DynamicHeap::ReleaseAllocatedPages(Uint64 QueueMask)
 {
-    m_DynamicMemMgr.ReleasePages(m_AllocatedPages, QueueMask);
+    m_GlobalDynamicMemMgr.ReleasePages(m_AllocatedPages, QueueMask);
     m_AllocatedPages.clear();
 
     m_CurrOffset        = InvalidOffset;

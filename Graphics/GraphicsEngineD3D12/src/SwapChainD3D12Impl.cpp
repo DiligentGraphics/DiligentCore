@@ -132,7 +132,7 @@ void SwapChainD3D12Impl::Present(Uint32 SyncInterval)
     VERIFY(SUCCEEDED(hr), "Present failed");
 
     pImmediateCtxD3D12->FinishFrame();
-    pDeviceD3D12->FinishFrame();
+    pDeviceD3D12->ReleaseStaleResources();
 
 #if 0
 #if PLATFORM_UNIVERSAL_WINDOWS

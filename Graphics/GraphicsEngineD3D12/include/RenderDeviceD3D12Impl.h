@@ -85,10 +85,19 @@ public:
     Uint64 CloseAndExecuteCommandContext(CommandContext *pCtx, bool DiscardStaleObjects, std::vector<std::pair<Uint64, RefCntAutoPtr<IFence> > >* pSignalFences);
     void DisposeCommandContext(CommandContext*);
 
-    void FinishFrame(bool ReleaseAllResources);
-    virtual void FinishFrame()override final { FinishFrame(false); }
+    void FlushStaleResources(Uint32 CmdQueueIndex);
+    void ReleaseStaleResources(bool ForceRelease = false);
 
     D3D12DynamicMemoryManager& GetDynamicMemoryManager() {return m_DynamicMemoryManager;}
+
+    GPUDescriptorHeap& GetGPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE Type)
+    {
+        return m_GPUDescriptorHeaps[Type];
+    }
+    Uint32 GetDynamicDescriptorAllocationChunkSize(D3D12_DESCRIPTOR_HEAP_TYPE Type)
+    {
+        return m_DynamicDescriptorAllocationChunkSize[Type];
+    }
 
 private:
     virtual void TestTextureFormat( TEXTURE_FORMAT TexFormat )override final;

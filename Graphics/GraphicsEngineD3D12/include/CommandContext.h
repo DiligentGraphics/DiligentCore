@@ -59,10 +59,7 @@ class CommandContext
 {
 public:
 
-	CommandContext( IMemoryAllocator &MemAllocator,
-                    class CommandListManager& CmdListManager, 
-                    GPUDescriptorHeap GPUDescriptorHeaps[],
-                    const Uint32 DynamicDescriptorAllocationChunkSize[]);
+	CommandContext( class CommandListManager& CmdListManager);
 
     ~CommandContext(void);
 
@@ -115,7 +112,6 @@ public:
     void SetID(const Char* ID) { m_ID = ID; }
     ID3D12GraphicsCommandList *GetCommandList(){return m_pCommandList;}
     
-    void DiscardDynamicDescriptors(Uint64 FenceValue);
     DescriptorHeapAllocation AllocateDynamicGPUVisibleDescriptor( D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count = 1 );
 
     void InsertUAVBarrier(D3D12ResourceBase& Resource, IDeviceObject &Object, bool FlushImmediate = false);
@@ -128,6 +124,11 @@ public:
         }
     }
 
+    void SetDynamicGPUDescriptorAllocators(DynamicSuballocationsManager* Allocators)
+    {
+        m_DynamicGPUDescriptorAllocators = Allocators;
+    }
+
 protected:
     void TransitionResource(D3D12ResourceBase& Resource, IDeviceObject &Object, D3D12_RESOURCE_STATES NewState, bool FlushImmediate);
     void InsertAliasBarrier(D3D12ResourceBase& Before, D3D12ResourceBase& After, IDeviceObject &BeforeObj, IDeviceObject &AfterObj, bool FlushImmediate = false);
@@ -135,9 +136,9 @@ protected:
 	CComPtr<ID3D12GraphicsCommandList> m_pCommandList;
 	CComPtr<ID3D12CommandAllocator> m_pCurrentAllocator;
 
-    ID3D12PipelineState* m_pCurPipelineState = nullptr;
+    ID3D12PipelineState* m_pCurPipelineState         = nullptr;
 	ID3D12RootSignature* m_pCurGraphicsRootSignature = nullptr;
-	ID3D12RootSignature* m_pCurComputeRootSignature = nullptr;
+	ID3D12RootSignature* m_pCurComputeRootSignature  = nullptr;
 
     static constexpr int MaxPendingBarriers = 16;
 	std::vector<D3D12_RESOURCE_BARRIER, STDAllocatorRawMem<D3D12_RESOURCE_BARRIER> > m_PendingResourceBarriers;
@@ -149,10 +150,7 @@ protected:
 
     ShaderDescriptorHeaps m_BoundDescriptorHeaps;
     
-    // Every context must use its own allocator that maintains individual list of retired descriptor heaps to 
-    // avoid interference with other command contexts
-    // The heaps can only be discarded after the command list is submitted for execution
-    DynamicSuballocationsManager m_DynamicGPUDescriptorAllocator[2];
+    DynamicSuballocationsManager* m_DynamicGPUDescriptorAllocators = nullptr;
 
 	String m_ID;
 

@@ -66,14 +66,33 @@ namespace Diligent
             bIsDeferred ? std::numeric_limits<decltype(m_NumCommandsToFlush)>::max() : Attribs.NumCommandsToFlushCmdList,
             bIsDeferred
         },
-        m_DynamicHeap(pDeviceD3D12Impl->GetDynamicMemoryManager(), GetDynamicHeapName(bIsDeferred, ContextId), Attribs.DynamicHeapPageSize),
+        m_DynamicHeap
+        {
+            pDeviceD3D12Impl->GetDynamicMemoryManager(),
+            GetDynamicHeapName(bIsDeferred, ContextId),
+            Attribs.DynamicHeapPageSize
+        },
+        m_DynamicGPUDescriptorAllocator
+        {
+            {
+                GetRawAllocator(),
+                pDeviceD3D12Impl->GetGPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV),
+                pDeviceD3D12Impl->GetDynamicDescriptorAllocationChunkSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
+            },
+            {
+                GetRawAllocator(),
+                pDeviceD3D12Impl->GetGPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER),
+                pDeviceD3D12Impl->GetDynamicDescriptorAllocationChunkSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER)
+            }
+        },
         m_NumCommandsInCurCtx(0),
-        m_pCurrCmdCtx(pDeviceD3D12Impl->AllocateCommandContext()),
         m_CommittedIBFormat(VT_UNDEFINED),
         m_CommittedD3D12IndexDataStartOffset(0),
         m_MipsGenerator(pDeviceD3D12Impl->GetD3D12Device()),
         m_CmdListAllocator(GetRawAllocator(), sizeof(CommandListD3D12Impl), 64 )
     {
+        RequestCommandContext(pDeviceD3D12Impl);
+
         auto *pd3d12Device = pDeviceD3D12Impl->GetD3D12Device();
 
         D3D12_COMMAND_SIGNATURE_DESC CmdSignatureDesc = {};
@@ -108,6 +127,18 @@ namespace Diligent
                 LOG_WARNING_MESSAGE("Flusing outstanding commands from the device context being destroyed. This may result in D3D12 synchronization errors");
 
             Flush(false);
+        }
+
+        // Note: as dynamic pages are returned to the global dynamic memory manager hosted by the render device,
+        // the dynamic heap can be destroyed before all pages are actually returned to the global manager.
+        DEV_CHECK_ERR(m_DynamicHeap.GetAllocatedPagesCount() == 0, "All dynamic pages must have been released by now.");
+
+        for(size_t i=0; i < _countof(m_DynamicGPUDescriptorAllocator); ++i)
+        {
+            // Note: as dynamic decriptor suballocations are returned to the global GPU descriptor heap that
+            // is hosted by the render device, the descriptor allocator can be destroyed before all suballocations
+            // are actually returned to the global heap.
+            DEV_CHECK_ERR(m_DynamicGPUDescriptorAllocator[i].GetSuballocationCount() == 0, "All dynamic suballocations must have been released");
         }
     }
 
@@ -501,6 +532,12 @@ namespace Diligent
         ++m_NumCommandsInCurCtx;
     }
 
+    void DeviceContextD3D12Impl::RequestCommandContext(RenderDeviceD3D12Impl* pDeviceD3D12Impl)
+    {
+        m_pCurrCmdCtx = pDeviceD3D12Impl->AllocateCommandContext();
+        m_pCurrCmdCtx->SetDynamicGPUDescriptorAllocators(m_DynamicGPUDescriptorAllocator);
+    }
+
     void DeviceContextD3D12Impl::Flush(bool RequestNewCmdCtx)
     {
         auto pDeviceD3D12Impl = m_pDevice.RawPtr<RenderDeviceD3D12Impl>();
@@ -517,7 +554,8 @@ namespace Diligent
                 pDeviceD3D12Impl->DisposeCommandContext(m_pCurrCmdCtx);
         }
 
-        m_pCurrCmdCtx = RequestNewCmdCtx ? pDeviceD3D12Impl->AllocateCommandContext() : nullptr;
+        if(RequestNewCmdCtx)
+            RequestCommandContext(pDeviceD3D12Impl);
         m_NumCommandsInCurCtx = 0;
 
         m_CommittedD3D12IndexBuffer = nullptr;
@@ -538,8 +576,13 @@ namespace Diligent
     void DeviceContextD3D12Impl::FinishFrame()
     {
         VERIFY_EXPR(m_bIsDeferred || m_SubmittedBuffersCmdQueueMask == (Uint64{1}<<m_CommandQueueId));
+
         m_DynamicHeap.ReleaseAllocatedPages(m_SubmittedBuffersCmdQueueMask);
-        EndFrame();
+        
+        for(size_t i=0; i < _countof(m_DynamicGPUDescriptorAllocator); ++i)
+            m_DynamicGPUDescriptorAllocator[i].ReleaseAllocations(m_SubmittedBuffersCmdQueueMask);
+
+        EndFrame(*m_pDevice.RawPtr<RenderDeviceD3D12Impl>());
     }
 
     void DeviceContextD3D12Impl::SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer** ppBuffers, Uint32* pOffsets, Uint32 Flags )
