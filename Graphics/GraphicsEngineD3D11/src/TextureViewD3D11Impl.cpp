@@ -37,6 +37,11 @@ TextureViewD3D11Impl::TextureViewD3D11Impl( IReferenceCounters*    pRefCounters,
     TTextureViewBase( pRefCounters, pDevice, ViewDesc, pTexture, bIsDefaultView ),
     m_pD3D11View( pD3D11View )
 {
+    if (*m_Desc.Name != 0)
+    {
+        auto hr = m_pD3D11View->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen(m_Desc.Name)), m_Desc.Name);
+        DEV_CHECK_ERR(SUCCEEDED(hr), "Failed to set texture view name");
+    }
 }
 
 IMPLEMENT_QUERY_INTERFACE( TextureViewD3D11Impl, IID_TextureViewD3D11, TTextureViewBase )

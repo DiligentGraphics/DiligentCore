@@ -21,28 +21,5 @@
  *  of the possibility of such damages.
  */
 
-#include "pch.h"
-#include "BufferViewD3D11Impl.h"
-
-namespace Diligent
-{
-
-BufferViewD3D11Impl::BufferViewD3D11Impl( IReferenceCounters*    pRefCounters,
-                                          RenderDeviceD3D11Impl* pDevice, 
-                                          const BufferViewDesc&  ViewDesc, 
-                                          IBuffer*               pBuffer,
-                                          ID3D11View*            pD3D11View,
-                                          bool                   bIsDefaultView ) :
-    TBufferViewBase( pRefCounters, pDevice, ViewDesc, pBuffer, bIsDefaultView ),
-    m_pD3D11View( pD3D11View )
-{
-    if (*m_Desc.Name != 0)
-    {
-        auto hr = m_pD3D11View->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen(m_Desc.Name)), m_Desc.Name);
-        DEV_CHECK_ERR(SUCCEEDED(hr), "Failed to set buffer view name");
-    }
-}
-
-IMPLEMENT_QUERY_INTERFACE( BufferViewD3D11Impl, IID_BufferViewD3D11, TBufferViewBase )
-
-}
+#define INITGUID
+#include <d3dcommon.h>

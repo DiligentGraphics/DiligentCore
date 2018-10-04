@@ -67,6 +67,12 @@ Texture2D_D3D11 :: Texture2D_D3D11(IReferenceCounters*        pRefCounters,
     HRESULT hr = pDeviceD3D11->CreateTexture2D(&Tex2DDesc, D3D11InitData.size() ? D3D11InitData.data() : nullptr, &ptex2D);
     m_pd3d11Texture.Attach(ptex2D);
     CHECK_D3D_RESULT_THROW( hr, "Failed to create the Direct3D11 Texture2D" );
+
+    if (*m_Desc.Name != 0)
+    {
+        hr = m_pd3d11Texture->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen(m_Desc.Name)), m_Desc.Name);
+        DEV_CHECK_ERR(SUCCEEDED(hr), "Failed to set texture name");
+    }
 }
 
 static TextureDesc TexDescFromD3D11Texture2D(ID3D11Texture2D *pd3d11Texture)

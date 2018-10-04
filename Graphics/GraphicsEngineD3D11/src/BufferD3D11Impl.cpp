@@ -97,6 +97,12 @@ BufferD3D11Impl :: BufferD3D11Impl(IReferenceCounters*        pRefCounters,
     auto *pDeviceD3D11 = pRenderDeviceD3D11->GetD3D11Device();
     CHECK_D3D_RESULT_THROW( pDeviceD3D11->CreateBuffer(&D3D11BuffDesc, InitData.pSysMem ? &InitData : nullptr, &m_pd3d11Buffer),
                             "Failed to create the Direct3D11 buffer" );
+
+    if (*m_Desc.Name != 0)
+    {
+        auto hr = m_pd3d11Buffer->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen(m_Desc.Name)), m_Desc.Name);
+        DEV_CHECK_ERR(SUCCEEDED(hr), "Failed to set buffer name");
+    }
 }
 
 static BufferDesc BuffDescFromD3D11Buffer(ID3D11Buffer *pd3d11Buffer, BufferDesc BuffDesc)

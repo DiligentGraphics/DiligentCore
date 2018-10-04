@@ -55,6 +55,7 @@ set(SRC
     src/D3D11TypeConversions.cpp
     src/DeviceContextD3D11Impl.cpp
     src/FenceD3D11Impl.cpp
+    src/GUIDDef.cpp
     src/PipelineStateD3D11Impl.cpp
     src/RenderDeviceD3D11Impl.cpp
     src/RenderDeviceFactoryD3D11.cpp
