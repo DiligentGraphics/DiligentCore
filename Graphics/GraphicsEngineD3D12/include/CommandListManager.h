@@ -24,43 +24,49 @@
 #pragma once
 
 #include <vector>
-#include <deque>
 #include <mutex>
 #include <stdint.h>
 
 namespace Diligent
 {
 
+class RenderDeviceD3D12Impl;
+
 class CommandListManager
 {
 public:
-	CommandListManager(class RenderDeviceD3D12Impl *pDeviceD3D12);
+	CommandListManager(RenderDeviceD3D12Impl& DeviceD3D12Impl);
 	~CommandListManager();
 
-    CommandListManager(const CommandListManager&) = delete;
-    CommandListManager(CommandListManager&&) = delete;
-    CommandListManager& operator = (const CommandListManager&) = delete;
-    CommandListManager& operator = (CommandListManager&&) = delete;
+    CommandListManager             (const CommandListManager&)  = delete;
+    CommandListManager             (      CommandListManager&&) = delete;
+    CommandListManager& operator = (const CommandListManager&)  = delete;
+    CommandListManager& operator = (      CommandListManager&&) = delete;
 
     void CreateNewCommandList( ID3D12GraphicsCommandList** ppList, ID3D12CommandAllocator** ppAllocator );
     
-    // Discards the allocator.
-    // FenceValue is the value that was signaled by the command queue after it 
-    // executed the the command list created by the allocator
-    void DiscardAllocator( Uint64 FenceValue, ID3D12CommandAllocator* pAllocator );
-
     void RequestAllocator(ID3D12CommandAllocator** ppAllocator);
+    void ReleaseAllocator(CComPtr<ID3D12CommandAllocator>&& Allocator, Uint32 CmdQueue, Uint64 FenceValue);
+
+    // Returns allocator to the list of available allocators. The GPU must have finished using the
+    // allocator
+    void FreeAllocator( CComPtr<ID3D12CommandAllocator>&& Allocator );
+
+#ifdef DEVELOPMENT
+    Atomics::Long GetAllocatorCounter() const {return m_AllocatorCounter;}
+#endif
 
 private:
-    // fist    - the fence value associated with the command list that was created by the allocator 
-    // second  - the allocator to be discarded
-    typedef std::pair<Uint64, CComPtr<ID3D12CommandAllocator> > DiscardedAllocatorQueueElemType;
-	std::deque< DiscardedAllocatorQueueElemType, STDAllocatorRawMem<DiscardedAllocatorQueueElemType> > m_DiscardedAllocators;
-
-	std::mutex m_AllocatorMutex;
-    RenderDeviceD3D12Impl *m_pDeviceD3D12;
+    std::mutex m_AllocatorMutex;
+	std::vector< CComPtr<ID3D12CommandAllocator>, STDAllocatorRawMem<CComPtr<ID3D12CommandAllocator>> > m_FreeAllocators;
+	
+    RenderDeviceD3D12Impl& m_DeviceD3D12Impl;
 
     Atomics::AtomicLong m_NumAllocators = 0; // For debug purposes only
+
+#ifdef DEVELOPMENT
+    Atomics::AtomicLong m_AllocatorCounter = 0;
+#endif
 };
 
 }

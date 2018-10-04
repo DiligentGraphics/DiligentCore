@@ -45,19 +45,20 @@ CommandContext::CommandContext( CommandListManager& CmdListManager) :
 
 CommandContext::~CommandContext( void )
 {
+    DEV_CHECK_ERR(m_pCurrentAllocator == nullptr, "Command allocator must be released prior to destroying the command context");
 }
-
-
 
 void CommandContext::Reset( CommandListManager& CmdListManager )
 {
 	// We only call Reset() on previously freed contexts. The command list persists, but we need to
-	// request a new allocator if there is none
-    // The allocator may not be null if the command context was previously disposed without being executed
+	// request a new allocator
 	VERIFY_EXPR(m_pCommandList != nullptr);
     if( !m_pCurrentAllocator )
     {
         CmdListManager.RequestAllocator(&m_pCurrentAllocator);
+        // Unlike ID3D12CommandAllocator::Reset, ID3D12GraphicsCommandList::Reset can be called while the 
+        // command list is still being executed. A typical pattern is to submit a command list and then 
+        // immediately reset it to reuse the allocated memory for another command list.
         m_pCommandList->Reset(m_pCurrentAllocator, nullptr);
     }
 
@@ -76,7 +77,7 @@ void CommandContext::Reset( CommandListManager& CmdListManager )
 #endif
 }
 
-ID3D12GraphicsCommandList* CommandContext::Close(ID3D12CommandAllocator** ppAllocator)
+ID3D12GraphicsCommandList* CommandContext::Close(CComPtr<ID3D12CommandAllocator>& pAllocator)
 {
 	FlushResourceBarriers();
 
@@ -85,14 +86,11 @@ ID3D12GraphicsCommandList* CommandContext::Close(ID3D12CommandAllocator** ppAllo
 
 	VERIFY_EXPR(m_pCurrentAllocator != nullptr);
 	auto hr = m_pCommandList->Close();
-    VERIFY(SUCCEEDED(hr), "Failed to close the command list");
-
-    if( ppAllocator != nullptr )
-        *ppAllocator = m_pCurrentAllocator.Detach();
+    DEV_CHECK_ERR(SUCCEEDED(hr), "Failed to close the command list");
+    
+    pAllocator = std::move(m_pCurrentAllocator);
     return m_pCommandList;
 }
-
-
 
 void GraphicsContext::SetRenderTargets( UINT NumRTVs, ITextureViewD3D12** ppRTVs, ITextureViewD3D12* pDSV )
 {

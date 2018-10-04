@@ -61,11 +61,11 @@ public:
 
 	CommandContext( class CommandListManager& CmdListManager);
 
-    ~CommandContext(void);
+    ~CommandContext();
 
 	// Submit the command buffer and reset it.  This is encouraged to keep the GPU busy and reduce latency.
 	// Taking too long to build command lists and submit them can idle the GPU.
-	ID3D12GraphicsCommandList* Close(ID3D12CommandAllocator **ppAllocator);
+	ID3D12GraphicsCommandList* Close(CComPtr<ID3D12CommandAllocator>& pAllocator);
 	void Reset( CommandListManager& CmdListManager );
 
 	class GraphicsContext& AsGraphicsContext();
@@ -134,7 +134,7 @@ protected:
     void InsertAliasBarrier(D3D12ResourceBase& Before, D3D12ResourceBase& After, IDeviceObject &BeforeObj, IDeviceObject &AfterObj, bool FlushImmediate = false);
 
 	CComPtr<ID3D12GraphicsCommandList> m_pCommandList;
-	CComPtr<ID3D12CommandAllocator> m_pCurrentAllocator;
+	CComPtr<ID3D12CommandAllocator>    m_pCurrentAllocator;
 
     ID3D12PipelineState* m_pCurPipelineState         = nullptr;
 	ID3D12RootSignature* m_pCurGraphicsRootSignature = nullptr;

@@ -547,7 +547,7 @@ namespace Diligent
             if (m_NumCommandsInCurCtx != 0)
             {
                 m_pCurrCmdCtx->FlushResourceBarriers();
-                auto FenceValue = pDeviceD3D12Impl->CloseAndExecuteCommandContext(m_pCurrCmdCtx, true, &m_PendingFences);
+                pDeviceD3D12Impl->CloseAndExecuteCommandContext(m_pCurrCmdCtx, true, &m_PendingFences);
                 m_PendingFences.clear();
             }
             else
@@ -1072,7 +1072,7 @@ namespace Diligent
         CommandContext* pCmdContext = nullptr;
         RefCntAutoPtr<DeviceContextD3D12Impl> pDeferredCtx;
         pCmdListD3D12->Close(pCmdContext, pDeferredCtx);
-        auto FenceValue = m_pDevice.RawPtr<RenderDeviceD3D12Impl>()->CloseAndExecuteCommandContext(pCmdContext, true, nullptr);
+        m_pDevice.RawPtr<RenderDeviceD3D12Impl>()->CloseAndExecuteCommandContext(pCmdContext, true, nullptr);
         // Set the bit in the deferred context cmd queue mask corresponding to cmd queue of this context
         pDeferredCtx->m_SubmittedBuffersCmdQueueMask |= Uint64{1} << m_CommandQueueId;
     }

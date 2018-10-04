@@ -63,7 +63,7 @@ RenderDeviceD3D12Impl :: RenderDeviceD3D12Impl(IReferenceCounters*          pRef
     },
     m_pd3d12Device  (pd3d12Device),
     m_EngineAttribs (CreationAttribs),
-    m_CmdListManager(this),
+    m_CmdListManager(*this),
     m_CPUDescriptorHeaps
     {
         {RawMemAllocator, *this, CreationAttribs.CPUDescriptorHeapAllocationSize[0], D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE},
@@ -100,6 +100,7 @@ RenderDeviceD3D12Impl::~RenderDeviceD3D12Impl()
 
     DEV_CHECK_ERR(m_DynamicMemoryManager.GetAllocatedPageCounter() == 0, "All allocated dynamic pages must have been returned to the manager at this point.");
     m_DynamicMemoryManager.Destroy();
+    DEV_CHECK_ERR(m_CmdListManager.GetAllocatorCounter() == 0, "All allocators must have been returned to the manager at this point.");
 
 	m_ContextPool.clear();
     DestroyCommandQueues();
@@ -108,13 +109,17 @@ RenderDeviceD3D12Impl::~RenderDeviceD3D12Impl()
 void RenderDeviceD3D12Impl::DisposeCommandContext(CommandContext* pCtx)
 {
 	std::lock_guard<std::mutex> LockGuard(m_ContextAllocationMutex);
+    CComPtr<ID3D12CommandAllocator> pAllocator; 
+    pCtx->Close(pAllocator);
+    // Since allocator has not been used, we can add it directly to the free allocator list
+    m_CmdListManager.FreeAllocator(std::move(pAllocator));
     m_AvailableContexts.push_back(pCtx);
 }
 
 void RenderDeviceD3D12Impl::CloseAndExecuteTransientCommandContext(Uint32 CommandQueueIndex, CommandContext *pCtx)
 {
     CComPtr<ID3D12CommandAllocator> pAllocator;
-	auto *pCmdList = pCtx->Close(&pAllocator);
+    ID3D12GraphicsCommandList* pCmdList = pCtx->Close(pAllocator);
     Uint64 FenceValue = 0;
     // Execute command list directly through the queue to avoid interference with command list numbers in the queue
     LockCommandQueue(CommandQueueIndex, 
@@ -123,9 +128,8 @@ void RenderDeviceD3D12Impl::CloseAndExecuteTransientCommandContext(Uint32 Comman
             FenceValue = pCmdQueue->Submit(pCmdList);
         }
     );
-    // DiscardAllocator() is thread-safe
-    // TODO: Rework
-	m_CmdListManager.DiscardAllocator(FenceValue, pAllocator);
+
+	m_CmdListManager.ReleaseAllocator(std::move(pAllocator), CommandQueueIndex, FenceValue);
 
     {
 	    std::lock_guard<std::mutex> LockGuard(m_ContextAllocationMutex);
@@ -136,7 +140,7 @@ void RenderDeviceD3D12Impl::CloseAndExecuteTransientCommandContext(Uint32 Comman
 Uint64 RenderDeviceD3D12Impl::CloseAndExecuteCommandContext(CommandContext* pCtx, bool DiscardStaleObjects, std::vector<std::pair<Uint64, RefCntAutoPtr<IFence> > >* pSignalFences)
 {
     CComPtr<ID3D12CommandAllocator> pAllocator;
-	auto *pCmdList = pCtx->Close(&pAllocator);
+    ID3D12GraphicsCommandList* pCmdList = pCtx->Close(pAllocator);
 
     Uint32 QueueIndex = 0;
     Uint64 FenceValue = 0;
@@ -172,9 +176,7 @@ Uint64 RenderDeviceD3D12Impl::CloseAndExecuteCommandContext(CommandContext* pCtx
         }
     }
 
-    // DiscardAllocator() is thread-safe
-    // TODO: Rework
-	m_CmdListManager.DiscardAllocator(FenceValue, pAllocator);
+	m_CmdListManager.ReleaseAllocator(std::move(pAllocator), QueueIndex, FenceValue);
 
     {
 	    std::lock_guard<std::mutex> LockGuard(m_ContextAllocationMutex);
@@ -198,7 +200,7 @@ void RenderDeviceD3D12Impl::FlushStaleResources(Uint32 CmdQueueIndex)
     // Submit empty command list to the queue. This will effectively signal the fence and 
     // discard all resources
     ID3D12GraphicsCommandList* pNullCmdList = nullptr;
-    TRenderDeviceBase::SubmitCommandBuffer(0, pNullCmdList, true);
+    TRenderDeviceBase::SubmitCommandBuffer(CmdQueueIndex, pNullCmdList, true);
 }
 
 void RenderDeviceD3D12Impl::ReleaseStaleResources(bool ForceRelease)
