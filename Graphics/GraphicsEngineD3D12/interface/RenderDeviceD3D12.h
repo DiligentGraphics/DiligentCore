@@ -55,13 +55,6 @@ public:
     /// that all associated work has been finished
     virtual Bool IsFenceSignaled(Uint32 QueueIndex, Uint64 FenceValue) = 0;
 
-    /// Purges device release queues and releases all stale resources. 
-    /// This method is automatically called by ISwapChain::Present().
-    /// \param [in]  ForceRelease - Forces release of all objects. Use this option with
-    ///                             great care only if you are sure the resources are not
-    ///                             in use by the GPU (such as when the device has just been idled).
-    virtual void ReleaseStaleResources(bool ForceRelease = false) = 0;
-
     /// Creates a texture object from native d3d12 resource
 
     /// \param [in] pd3d12Texture - pointer to the native D3D12 texture

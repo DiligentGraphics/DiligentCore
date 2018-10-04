@@ -80,6 +80,8 @@ public:
 
     virtual void CreateBufferFromGLHandle(Uint32 GLHandle, const BufferDesc &BuffDesc, IBuffer **ppBuffer)override final;
 
+    virtual void ReleaseStaleResources(bool ForceRelease = false)override final {}
+
     const GPUInfo& GetGPUInfo(){ return m_GPUInfo; }
 
     FBOCache& GetFBOCache(GLContext::NativeGLContextType Context);

@@ -81,24 +81,23 @@ public:
 
 	void IdleGPU(bool ReleaseStaleObjects);
     CommandContext* AllocateCommandContext(const Char *ID = "");
-    void CloseAndExecuteTransientCommandContext(Uint32 CommandQueueIndex, CommandContext *pCtx);
-    Uint64 CloseAndExecuteCommandContext(CommandContext *pCtx, bool DiscardStaleObjects, std::vector<std::pair<Uint64, RefCntAutoPtr<IFence> > >* pSignalFences);
-    void DisposeCommandContext(CommandContext*);
+    void CloseAndExecuteTransientCommandContext(Uint32 CommandQueueIndex, CommandContext* pCtx);
+    Uint64 CloseAndExecuteCommandContext(Uint32 QueueIndex, CommandContext *pCtx, bool DiscardStaleObjects, std::vector<std::pair<Uint64, RefCntAutoPtr<IFence> > >* pSignalFences);
+    
+    // Disposes an unused command context
+    void DisposeCommandContext(CommandContext* pCtx);
 
     void FlushStaleResources(Uint32 CmdQueueIndex);
-    void ReleaseStaleResources(bool ForceRelease = false);
+    virtual void ReleaseStaleResources(bool ForceRelease = false)override final;
 
     D3D12DynamicMemoryManager& GetDynamicMemoryManager() {return m_DynamicMemoryManager;}
 
     GPUDescriptorHeap& GetGPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE Type)
     {
+        VERIFY_EXPR(Type == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV || Type == D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
         return m_GPUDescriptorHeaps[Type];
     }
-    Uint32 GetDynamicDescriptorAllocationChunkSize(D3D12_DESCRIPTOR_HEAP_TYPE Type)
-    {
-        return m_DynamicDescriptorAllocationChunkSize[Type];
-    }
-
+    
 private:
     virtual void TestTextureFormat( TEXTURE_FORMAT TexFormat )override final;
 
@@ -111,15 +110,14 @@ private:
     GPUDescriptorHeap m_GPUDescriptorHeaps[2]; // D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV == 0
                                                // D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER	 == 1
 	
-	const Uint32 m_DynamicDescriptorAllocationChunkSize[2];
-
     CommandListManager m_CmdListManager;
 
     typedef std::unique_ptr<CommandContext, STDDeleterRawMem<CommandContext> > ContextPoolElemType;
 	std::vector< ContextPoolElemType, STDAllocatorRawMem<ContextPoolElemType> > m_ContextPool;
 
+    std::mutex m_AvailableContextsMutex;
 	std::deque<CommandContext*, STDAllocatorRawMem<CommandContext*> > m_AvailableContexts;
-	std::mutex m_ContextAllocationMutex;
+	
 
     D3D12DynamicMemoryManager m_DynamicMemoryManager;
 };

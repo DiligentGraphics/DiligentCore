@@ -183,6 +183,13 @@ public:
     ///         considerably slower than GetTextureFormatInfo(). If you do not require
     ///         extended information, call GetTextureFormatInfo() instead.
     virtual const TextureFormatInfoExt& GetTextureFormatInfoExt( TEXTURE_FORMAT TexFormat ) = 0;
+
+    /// Purges device release queues and releases all stale resources. 
+    /// This method is automatically called by ISwapChain::Present().
+    /// \param [in]  ForceRelease - Forces release of all objects. Use this option with
+    ///                             great care only if you are sure the resources are not
+    ///                             in use by the GPU (such as when the device has just been idled).
+    virtual void ReleaseStaleResources(bool ForceRelease = false) = 0;
 };
 
 }

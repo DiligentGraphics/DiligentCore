@@ -77,12 +77,12 @@ namespace Diligent
             {
                 GetRawAllocator(),
                 pDeviceD3D12Impl->GetGPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV),
-                pDeviceD3D12Impl->GetDynamicDescriptorAllocationChunkSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
+        		Attribs.DynamicDescriptorAllocationChunkSize[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]
             },
             {
                 GetRawAllocator(),
                 pDeviceD3D12Impl->GetGPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER),
-                pDeviceD3D12Impl->GetDynamicDescriptorAllocationChunkSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER)
+                Attribs.DynamicDescriptorAllocationChunkSize[D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER]
             }
         },
         m_NumCommandsInCurCtx(0),
@@ -547,7 +547,7 @@ namespace Diligent
             if (m_NumCommandsInCurCtx != 0)
             {
                 m_pCurrCmdCtx->FlushResourceBarriers();
-                pDeviceD3D12Impl->CloseAndExecuteCommandContext(m_pCurrCmdCtx, true, &m_PendingFences);
+                pDeviceD3D12Impl->CloseAndExecuteCommandContext(m_CommandQueueId, m_pCurrCmdCtx, true, &m_PendingFences);
                 m_PendingFences.clear();
             }
             else
@@ -1072,7 +1072,7 @@ namespace Diligent
         CommandContext* pCmdContext = nullptr;
         RefCntAutoPtr<DeviceContextD3D12Impl> pDeferredCtx;
         pCmdListD3D12->Close(pCmdContext, pDeferredCtx);
-        m_pDevice.RawPtr<RenderDeviceD3D12Impl>()->CloseAndExecuteCommandContext(pCmdContext, true, nullptr);
+        m_pDevice.RawPtr<RenderDeviceD3D12Impl>()->CloseAndExecuteCommandContext(m_CommandQueueId, pCmdContext, true, nullptr);
         // Set the bit in the deferred context cmd queue mask corresponding to cmd queue of this context
         pDeferredCtx->m_SubmittedBuffersCmdQueueMask |= Uint64{1} << m_CommandQueueId;
     }
