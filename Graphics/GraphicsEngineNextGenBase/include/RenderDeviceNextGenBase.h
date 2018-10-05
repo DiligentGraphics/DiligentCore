@@ -148,7 +148,7 @@ public:
     void PurgeReleaseQueues(bool ForceRelease = false)
     {
         for(Uint32 q=0; q < m_CmdQueueCount; ++q)
-            PurgeReleaseQueue(q);
+            PurgeReleaseQueue(q, ForceRelease);
     }
 
     void PurgeReleaseQueue(Uint32 QueueIndex, bool ForceRelease = false)
