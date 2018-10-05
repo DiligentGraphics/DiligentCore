@@ -38,12 +38,11 @@
 namespace Diligent
 {
 
-ShaderResourceLayoutD3D11::ShaderResourceLayoutD3D11(IObject& Owner, IMemoryAllocator& ResLayoutDataAllocator) : 
-    m_Owner(Owner),
+ShaderResourceLayoutD3D11::ShaderResourceLayoutD3D11(IObject& Owner) : 
+    m_Owner(Owner)
 #if USE_VARIABLE_HASH_MAP
-    m_VariableHash(STD_ALLOCATOR_RAW_MEM(VariableHashData, GetRawAllocator(), "Allocator for vector<BuffSRVBindInfo>")),
+  , m_VariableHash(STD_ALLOCATOR_RAW_MEM(VariableHashData, GetRawAllocator(), "Allocator for vector<BuffSRVBindInfo>"))
 #endif
-    m_ResourceBuffer(nullptr, STDDeleterRawMem<void>(ResLayoutDataAllocator))
 {
 }
 
@@ -102,8 +101,6 @@ void ShaderResourceLayoutD3D11::Initialize(const std::shared_ptr<const ShaderRes
 {
     // http://diligentgraphics.com/diligent-engine/architecture/d3d11/shader-resource-layout#Shader-Resource-Layout-Initialization
 
-    VERIFY(&m_ResourceBuffer.get_deleter().m_Allocator == &ResLayoutDataAllocator, "Incosistent memory alloctor");
-
     m_pResources = pSrcResources;
     m_pResourceCache = &ResourceCache;
 
@@ -131,7 +128,7 @@ void ShaderResourceLayoutD3D11::Initialize(const std::shared_ptr<const ShaderRes
     if( MemorySize )
     {
         auto *pRawMem = ALLOCATE(ResLayoutDataAllocator, "Raw memory buffer for shader resource layout resources", MemorySize);
-        m_ResourceBuffer.reset(pRawMem);
+        m_ResourceBuffer = std::unique_ptr<void, STDDeleterRawMem<void> >(pRawMem, ResLayoutDataAllocator);
     }
 
     VERIFY_EXPR(NumCBs < 255);

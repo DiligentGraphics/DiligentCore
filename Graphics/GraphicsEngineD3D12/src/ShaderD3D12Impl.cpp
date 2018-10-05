@@ -38,7 +38,7 @@ ShaderD3D12Impl::ShaderD3D12Impl(IReferenceCounters*          pRefCounters,
                                  const ShaderCreationAttribs& ShaderCreationAttribs) : 
     TShaderBase(pRefCounters, pRenderDeviceD3D12, ShaderCreationAttribs.Desc),
     ShaderD3DBase(ShaderCreationAttribs),
-    m_StaticResLayout(*this, GetRawAllocator()),
+    m_StaticResLayout(*this),
     m_StaticResCache(ShaderResourceCacheD3D12::DbgCacheContentType::StaticShaderResources),
     m_StaticVarsMgr(*this)
 {

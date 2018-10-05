@@ -25,7 +25,6 @@
 
 /// \file
 /// Declaration of Diligent::RenderDeviceD3D12Impl class
-
 #include "RenderDeviceD3D12.h"
 #include "RenderDeviceD3DBase.h"
 #include "RenderDeviceNextGenBase.h"
@@ -80,12 +79,14 @@ public:
     DescriptorHeapAllocation AllocateGPUDescriptors( D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count = 1 );
 
 	void IdleGPU(bool ReleaseStaleObjects);
-    CommandContext* AllocateCommandContext(const Char *ID = "");
-    void CloseAndExecuteTransientCommandContext(Uint32 CommandQueueIndex, CommandContext* pCtx);
-    Uint64 CloseAndExecuteCommandContext(Uint32 QueueIndex, CommandContext *pCtx, bool DiscardStaleObjects, std::vector<std::pair<Uint64, RefCntAutoPtr<IFence> > >* pSignalFences);
-    
+
+    using PooledCommandContext = std::unique_ptr<CommandContext, STDDeleterRawMem<CommandContext> >;
+    PooledCommandContext AllocateCommandContext(const Char *ID = "");
+    void CloseAndExecuteTransientCommandContext(Uint32 CommandQueueIndex, PooledCommandContext&& Ctx);
+    Uint64 CloseAndExecuteCommandContext(Uint32 QueueIndex, PooledCommandContext&& Ctx, bool DiscardStaleObjects, std::vector<std::pair<Uint64, RefCntAutoPtr<IFence> > >* pSignalFences);
+
     // Disposes an unused command context
-    void DisposeCommandContext(CommandContext* pCtx);
+    void DisposeCommandContext(PooledCommandContext&& Ctx);
 
     void FlushStaleResources(Uint32 CmdQueueIndex);
     virtual void ReleaseStaleResources(bool ForceRelease = false)override final;
@@ -100,8 +101,8 @@ public:
     
 private:
     virtual void TestTextureFormat( TEXTURE_FORMAT TexFormat )override final;
+    void FreeCommandContext(PooledCommandContext&& Ctx);
 
-    /// D3D12 device
     CComPtr<ID3D12Device> m_pd3d12Device;
 
     EngineD3D12Attribs m_EngineAttribs;
@@ -112,12 +113,11 @@ private:
 	
     CommandListManager m_CmdListManager;
 
-    typedef std::unique_ptr<CommandContext, STDDeleterRawMem<CommandContext> > ContextPoolElemType;
-	std::vector< ContextPoolElemType, STDAllocatorRawMem<ContextPoolElemType> > m_ContextPool;
-
-    std::mutex m_AvailableContextsMutex;
-	std::deque<CommandContext*, STDAllocatorRawMem<CommandContext*> > m_AvailableContexts;
-	
+    std::mutex m_ContextPoolMutex;
+	std::vector< PooledCommandContext, STDAllocatorRawMem<PooledCommandContext> > m_ContextPool;
+#ifdef DEVELOPMENT
+    Atomics::AtomicLong m_AllocatedCtxCounter = 0;
+#endif
 
     D3D12DynamicMemoryManager m_DynamicMemoryManager;
 };

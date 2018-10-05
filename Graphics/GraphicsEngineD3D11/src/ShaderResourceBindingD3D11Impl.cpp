@@ -69,7 +69,7 @@ ShaderResourceBindingD3D11Impl::ShaderResourceBindingD3D11Impl( IReferenceCounte
         // Shader resource layout will only contain dynamic and mutable variables
         // http://diligentgraphics.com/diligent-engine/architecture/d3d11/shader-resource-cache#Shader-Resource-Cache-Initialization
         SHADER_VARIABLE_TYPE VarTypes[] = {SHADER_VARIABLE_TYPE_MUTABLE, SHADER_VARIABLE_TYPE_DYNAMIC};
-        new (m_pResourceLayouts + s) ShaderResourceLayoutD3D11(*this, ResLayoutDataAllocator);
+        new (m_pResourceLayouts + s) ShaderResourceLayoutD3D11(*this);
         m_pResourceLayouts[s].Initialize(pShaderD3D11->GetResources(), VarTypes, _countof(VarTypes), m_pBoundResourceCaches[s], ResCacheDataAllocator, ResLayoutDataAllocator);
 
         Resources.InitStaticSamplers(m_pBoundResourceCaches[s]);

@@ -183,15 +183,15 @@ private:
 
 
     friend class SwapChainD3D12Impl;
-    inline class CommandContext* RequestCmdContext()
+    inline class CommandContext& GetCmdContext()
     {
         // Make sure that the number of commands in the context is at least one,
         // so that the context cannot be disposed by Flush()
         m_NumCommandsInCurCtx = m_NumCommandsInCurCtx != 0 ? m_NumCommandsInCurCtx : 1;
-        return m_pCurrCmdCtx;
+        return *m_CurrCmdCtx;
     }
     size_t m_NumCommandsInCurCtx = 0;
-    CommandContext* m_pCurrCmdCtx = nullptr;
+    std::unique_ptr<CommandContext, STDDeleterRawMem<CommandContext> > m_CurrCmdCtx;
 
     CComPtr<ID3D12Resource> m_CommittedD3D12IndexBuffer;
     VALUE_TYPE m_CommittedIBFormat = VT_UNDEFINED;

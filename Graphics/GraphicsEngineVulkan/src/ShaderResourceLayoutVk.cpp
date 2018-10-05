@@ -38,11 +38,9 @@ namespace Diligent
 {
  
 ShaderResourceLayoutVk::ShaderResourceLayoutVk(IObject&                                    Owner, 
-                                               const VulkanUtilities::VulkanLogicalDevice& LogicalDevice,
-                                               IMemoryAllocator&                           ResourceLayoutDataAllocator) :
+                                               const VulkanUtilities::VulkanLogicalDevice& LogicalDevice) :
     m_Owner(Owner),
-    m_LogicalDevice(LogicalDevice),
-    m_ResourceBuffer(nullptr, STDDeleterRawMem<void>(ResourceLayoutDataAllocator))
+    m_LogicalDevice(LogicalDevice)
 {
 }
 
@@ -86,13 +84,12 @@ void ShaderResourceLayoutVk::AllocateMemory(std::shared_ptr<const SPIRVShaderRes
     VERIFY(TotalResources <= Uint32{std::numeric_limits<Uint16>::max()}, "Total number of resources exceeds Uint16 max representable value" );
     m_NumResources[SHADER_VARIABLE_TYPE_NUM_TYPES] = static_cast<Uint16>(TotalResources);
 
-    VERIFY( &m_ResourceBuffer.get_deleter().m_Allocator == &Allocator, "Inconsistent memory allocators" );
     size_t MemSize = TotalResources * sizeof(VkResource);
     if(MemSize == 0)
         return;
 
     auto *pRawMem = ALLOCATE(Allocator, "Raw memory buffer for shader resource layout resources", MemSize);
-    m_ResourceBuffer.reset(pRawMem);
+    m_ResourceBuffer = std::unique_ptr<void, STDDeleterRawMem<void> >(pRawMem, Allocator);
 }
 
 void ShaderResourceLayoutVk::InitializeStaticResourceLayout(std::shared_ptr<const SPIRVShaderResources> pSrcResources,

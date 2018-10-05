@@ -91,7 +91,6 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&         Allocator,
                                            IRenderDevice*            pRenderDevice,
                                            std::vector<uint32_t>     spirv_binary,
                                            const ShaderDesc&         shaderDesc) :
-    m_MemoryBuffer(nullptr, STDDeleterRawMem<void>(Allocator)),
     m_ShaderType(shaderDesc.ShaderType)
 {
     // https://github.com/KhronosGroup/SPIRV-Cross/wiki/Reflection-API-user-guide
@@ -327,8 +326,6 @@ void SPIRVShaderResources::Initialize(IMemoryAllocator& Allocator,
                                       Uint32            NumStaticSamplers,
                                       size_t            ResourceNamesPoolSize)
 {
-    VERIFY(&m_MemoryBuffer.get_deleter().m_Allocator == &Allocator, "Incosistent allocators provided");
-
     static constexpr OffsetType UniformBufferOffset = 0;
 
     const auto MaxOffset = static_cast<Uint32>(std::numeric_limits<OffsetType>::max());
@@ -373,7 +370,7 @@ void SPIRVShaderResources::Initialize(IMemoryAllocator& Allocator,
     if (MemorySize)
     {
         auto *pRawMem = Allocator.Allocate(MemorySize, "Memory for shader resources", __FILE__, __LINE__);
-        m_MemoryBuffer.reset(pRawMem);
+        m_MemoryBuffer = std::unique_ptr<void, STDDeleterRawMem<void>>(pRawMem, Allocator);
         char* NamesPool = reinterpret_cast<char*>(m_MemoryBuffer.get()) + 
                           m_TotalResources * sizeof(SPIRVShaderResourceAttribs) +
                           m_NumStaticSamplers * sizeof(SamplerPtrType);

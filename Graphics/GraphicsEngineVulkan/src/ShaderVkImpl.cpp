@@ -38,7 +38,7 @@ namespace Diligent
 
 ShaderVkImpl::ShaderVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl* pRenderDeviceVk, const ShaderCreationAttribs& CreationAttribs) : 
     TShaderBase(pRefCounters, pRenderDeviceVk, CreationAttribs.Desc),
-    m_StaticResLayout(*this, pRenderDeviceVk->GetLogicalDevice(), GetRawAllocator()),
+    m_StaticResLayout(*this, pRenderDeviceVk->GetLogicalDevice()),
     m_StaticResCache(ShaderResourceCacheVk::DbgCacheContentType::StaticShaderResources),
     m_StaticVarsMgr(*this)
 {

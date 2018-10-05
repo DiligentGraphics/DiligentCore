@@ -38,10 +38,8 @@
 namespace Diligent
 {
  
-ShaderResourceLayoutD3D12::ShaderResourceLayoutD3D12(IObject&          Owner,
-                                                     IMemoryAllocator& ResourceLayoutDataAllocator) : 
-    m_Owner(Owner),
-    m_ResourceBuffer(nullptr, STDDeleterRawMem<void>(ResourceLayoutDataAllocator))
+ShaderResourceLayoutD3D12::ShaderResourceLayoutD3D12(IObject& Owner) : 
+    m_Owner(Owner)
 {
 }
 
@@ -85,8 +83,6 @@ void ShaderResourceLayoutD3D12::AllocateMemory(IMemoryAllocator&                
                                                const std::array<Uint32, SHADER_VARIABLE_TYPE_NUM_TYPES>& CbvSrvUavCount,
                                                const std::array<Uint32, SHADER_VARIABLE_TYPE_NUM_TYPES>& SamplerCount)
 {
-    VERIFY( &m_ResourceBuffer.get_deleter().m_Allocator == &Allocator, "Inconsistent memory allocators" );
-
     m_CbvSrvUavOffsets[0] = 0;
     for(SHADER_VARIABLE_TYPE VarType = SHADER_VARIABLE_TYPE_STATIC; VarType < SHADER_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_VARIABLE_TYPE>(VarType+1))
     {
@@ -108,7 +104,7 @@ void ShaderResourceLayoutD3D12::AllocateMemory(IMemoryAllocator&                
         return;
 
     auto *pRawMem = ALLOCATE(Allocator, "Raw memory buffer for shader resource layout resources", MemSize);
-    m_ResourceBuffer.reset(pRawMem);
+    m_ResourceBuffer = std::unique_ptr<void, STDDeleterRawMem<void> >(pRawMem, Allocator);
 }
 
 

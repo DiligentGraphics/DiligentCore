@@ -35,7 +35,7 @@ ShaderD3D11Impl::ShaderD3D11Impl(IReferenceCounters*          pRefCounters,
                                  const ShaderCreationAttribs& CreationAttribs) : 
     TShaderBase(pRefCounters, pRenderDeviceD3D11, CreationAttribs.Desc),
     ShaderD3DBase(CreationAttribs),
-    m_StaticResLayout(*this, GetRawAllocator()),
+    m_StaticResLayout(*this),
     m_ShaderTypeIndex(Diligent::GetShaderTypeIndex(CreationAttribs.Desc.ShaderType))
 {
     auto *pDeviceD3D11 = pRenderDeviceD3D11->GetD3D11Device();

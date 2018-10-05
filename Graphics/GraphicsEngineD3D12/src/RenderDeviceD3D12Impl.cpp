@@ -76,8 +76,7 @@ RenderDeviceD3D12Impl :: RenderDeviceD3D12Impl(IReferenceCounters*          pRef
         {RawMemAllocator, *this, CreationAttribs.GPUDescriptorHeapSize[0], CreationAttribs.GPUDescriptorHeapDynamicSize[0], D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE},
         {RawMemAllocator, *this, CreationAttribs.GPUDescriptorHeapSize[1], CreationAttribs.GPUDescriptorHeapDynamicSize[1], D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER,     D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE}
     },
-    m_ContextPool(STD_ALLOCATOR_RAW_MEM(ContextPoolElemType, GetRawAllocator(), "Allocator for vector<unique_ptr<CommandContext>>")),
-    m_AvailableContexts(STD_ALLOCATOR_RAW_MEM(CommandContext*, GetRawAllocator(), "Allocator for vector<CommandContext*>")),
+    m_ContextPool(STD_ALLOCATOR_RAW_MEM(PooledCommandContext, GetRawAllocator(), "Allocator for vector<PooledCommandContext>")),
     m_DynamicMemoryManager(GetRawAllocator(), *this, CreationAttribs.NumDynamicHeapPagesToReserve, CreationAttribs.DynamicHeapPageSize)
 {
     m_DeviceCaps.DevType = DeviceType::D3D12;
@@ -96,28 +95,34 @@ RenderDeviceD3D12Impl::~RenderDeviceD3D12Impl()
     DEV_CHECK_ERR(m_DynamicMemoryManager.GetAllocatedPageCounter() == 0, "All allocated dynamic pages must have been returned to the manager at this point.");
     m_DynamicMemoryManager.Destroy();
     DEV_CHECK_ERR(m_CmdListManager.GetAllocatorCounter() == 0, "All allocators must have been returned to the manager at this point.");
-    DEV_CHECK_ERR(m_AvailableContexts.size() == m_ContextPool.size(), "All contexts must have been released.");
+    DEV_CHECK_ERR(m_AllocatedCtxCounter == 0, "All contexts must have been released.");
 
 	m_ContextPool.clear();
     DestroyCommandQueues();
 }
 
-void RenderDeviceD3D12Impl::DisposeCommandContext(CommandContext* pCtx)
+void RenderDeviceD3D12Impl::DisposeCommandContext(PooledCommandContext&& Ctx)
 {
 	CComPtr<ID3D12CommandAllocator> pAllocator; 
-    pCtx->Close(pAllocator);
+    Ctx->Close(pAllocator);
     // Since allocator has not been used, we cmd list manager can put it directly into the free allocator list
     m_CmdListManager.FreeAllocator(std::move(pAllocator));
-    {
-        std::lock_guard<std::mutex> LockGuard(m_AvailableContextsMutex);
-        m_AvailableContexts.push_back(pCtx);
-    }
+    FreeCommandContext(std::move(Ctx));
 }
 
-void RenderDeviceD3D12Impl::CloseAndExecuteTransientCommandContext(Uint32 CommandQueueIndex, CommandContext *pCtx)
+void RenderDeviceD3D12Impl::FreeCommandContext(PooledCommandContext&& Ctx)
+{
+	std::lock_guard<std::mutex> LockGuard(m_ContextPoolMutex);
+    m_ContextPool.emplace_back(std::move(Ctx));
+#ifdef DEVELOPMENT
+    Atomics::AtomicDecrement(m_AllocatedCtxCounter);
+#endif
+}
+
+void RenderDeviceD3D12Impl::CloseAndExecuteTransientCommandContext(Uint32 CommandQueueIndex, PooledCommandContext&& Ctx)
 {
     CComPtr<ID3D12CommandAllocator> pAllocator;
-    ID3D12GraphicsCommandList* pCmdList = pCtx->Close(pAllocator);
+    ID3D12GraphicsCommandList* pCmdList = Ctx->Close(pAllocator);
     Uint64 FenceValue = 0;
     // Execute command list directly through the queue to avoid interference with command list numbers in the queue
     LockCommandQueue(CommandQueueIndex, 
@@ -126,19 +131,14 @@ void RenderDeviceD3D12Impl::CloseAndExecuteTransientCommandContext(Uint32 Comman
             FenceValue = pCmdQueue->Submit(pCmdList);
         }
     );
-
 	m_CmdListManager.ReleaseAllocator(std::move(pAllocator), CommandQueueIndex, FenceValue);
-
-    {
-	    std::lock_guard<std::mutex> LockGuard(m_AvailableContextsMutex);
-    	m_AvailableContexts.push_back(pCtx);
-    }
+    FreeCommandContext(std::move(Ctx));
 }
 
-Uint64 RenderDeviceD3D12Impl::CloseAndExecuteCommandContext(Uint32 QueueIndex, CommandContext* pCtx, bool DiscardStaleObjects, std::vector<std::pair<Uint64, RefCntAutoPtr<IFence> > >* pSignalFences)
+Uint64 RenderDeviceD3D12Impl::CloseAndExecuteCommandContext(Uint32 QueueIndex, PooledCommandContext&& Ctx, bool DiscardStaleObjects, std::vector<std::pair<Uint64, RefCntAutoPtr<IFence> > >* pSignalFences)
 {
     CComPtr<ID3D12CommandAllocator> pAllocator;
-    ID3D12GraphicsCommandList* pCmdList = pCtx->Close(pAllocator);
+    ID3D12GraphicsCommandList* pCmdList = Ctx->Close(pAllocator);
 
     Uint64 FenceValue = 0;
     {
@@ -174,11 +174,7 @@ Uint64 RenderDeviceD3D12Impl::CloseAndExecuteCommandContext(Uint32 QueueIndex, C
     }
 
 	m_CmdListManager.ReleaseAllocator(std::move(pAllocator), QueueIndex, FenceValue);
-
-    {
-	    std::lock_guard<std::mutex> LockGuard(m_AvailableContextsMutex);
-    	m_AvailableContexts.push_back(pCtx);
-    }
+    FreeCommandContext(std::move(Ctx));
 
     PurgeReleaseQueue(QueueIndex);
 
@@ -208,30 +204,31 @@ void RenderDeviceD3D12Impl::ReleaseStaleResources(bool ForceRelease)
 }
 
 
-CommandContext* RenderDeviceD3D12Impl::AllocateCommandContext(const Char* ID)
+RenderDeviceD3D12Impl::PooledCommandContext RenderDeviceD3D12Impl::AllocateCommandContext(const Char* ID)
 {
-	std::lock_guard<std::mutex> LockGuard(m_AvailableContextsMutex);
+    {
+    	std::lock_guard<std::mutex> LockGuard(m_ContextPoolMutex);
+        if (!m_ContextPool.empty())
+        {
+            PooledCommandContext Ctx = std::move(m_ContextPool.back());
+            m_ContextPool.pop_back();
+            Ctx->Reset(m_CmdListManager);
+            Ctx->SetID(ID);
+#ifdef DEVELOPMENT
+            Atomics::AtomicIncrement(m_AllocatedCtxCounter);
+#endif
+            return Ctx;
+        }
+    }
 
-	CommandContext* ret = nullptr;
-	if (m_AvailableContexts.empty())
-	{
-        auto &CmdCtxAllocator = GetRawAllocator();
-        auto *pRawMem = ALLOCATE(CmdCtxAllocator, "CommandContext instance", sizeof(CommandContext));
-		ret = new (pRawMem) CommandContext(m_CmdListManager);
-		m_ContextPool.emplace_back(ret, STDDeleterRawMem<CommandContext>(CmdCtxAllocator) );
-	}
-	else
-	{
-		ret = m_AvailableContexts.front();
-		m_AvailableContexts.pop_front();
-		ret->Reset(m_CmdListManager);
-	}
-	VERIFY_EXPR(ret != nullptr);
-	ret->SetID(ID);
-	//if ( ID != nullptr && *ID != 0 )
-	//	EngineProfiling::BeginBlock(ID, NewContext);
-
-	return ret;
+    auto& CmdCtxAllocator = GetRawAllocator();
+    auto* pRawMem = ALLOCATE(CmdCtxAllocator, "CommandContext instance", sizeof(CommandContext));
+	auto pCtx = new (pRawMem) CommandContext(m_CmdListManager);
+    pCtx->SetID(ID);
+#ifdef DEVELOPMENT
+    Atomics::AtomicIncrement(m_AllocatedCtxCounter);
+#endif
+    return PooledCommandContext(pCtx, CmdCtxAllocator);
 }
 
 bool CreateTestResource(ID3D12Device* pDevice, const D3D12_RESOURCE_DESC& ResDesc)

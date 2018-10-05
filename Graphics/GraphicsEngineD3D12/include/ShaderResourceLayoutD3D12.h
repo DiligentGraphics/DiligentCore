@@ -109,7 +109,7 @@ namespace Diligent
 class ShaderResourceLayoutD3D12 final
 {
 public:
-    ShaderResourceLayoutD3D12(IObject& Owner, IMemoryAllocator& ResourceLayoutDataAllocator);
+    ShaderResourceLayoutD3D12(IObject& Owner);
 
     ShaderResourceLayoutD3D12            (const ShaderResourceLayoutD3D12&) = delete;
     ShaderResourceLayoutD3D12            (ShaderResourceLayoutD3D12&&)      = delete;

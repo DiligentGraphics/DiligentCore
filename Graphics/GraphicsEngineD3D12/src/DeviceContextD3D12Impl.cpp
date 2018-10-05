@@ -120,7 +120,7 @@ namespace Diligent
     DeviceContextD3D12Impl::~DeviceContextD3D12Impl()
     {
         if(m_bIsDeferred)
-            m_pDevice.RawPtr<RenderDeviceD3D12Impl>()->DisposeCommandContext(m_pCurrCmdCtx);
+            m_pDevice.RawPtr<RenderDeviceD3D12Impl>()->DisposeCommandContext(std::move(m_CurrCmdCtx));
         else
         {
             if (m_NumCommandsInCurCtx != 0)
@@ -178,16 +178,16 @@ namespace Diligent
 
         TDeviceContextBase::SetPipelineState( pPipelineStateD3D12, 0 /*Dummy*/ );
 
-        auto *pCmdCtx = RequestCmdContext();
+        auto& CmdCtx = GetCmdContext();
         
         auto *pd3d12PSO = pPipelineStateD3D12->GetD3D12PipelineState();
         if (PSODesc.IsComputePipeline)
         {
-            pCmdCtx->AsComputeContext().SetPipelineState(pd3d12PSO);
+            CmdCtx.AsComputeContext().SetPipelineState(pd3d12PSO);
         }
         else
         {
-            auto &GraphicsCtx = pCmdCtx->AsGraphicsContext();
+            auto &GraphicsCtx = CmdCtx.AsGraphicsContext();
             GraphicsCtx.SetPipelineState(pd3d12PSO);
 
             auto D3D12Topology = TopologyToD3D12Topology(PSODesc.GraphicsPipeline.PrimitiveTopology);
@@ -213,9 +213,9 @@ namespace Diligent
     {
         VERIFY_EXPR(pPipelineState != nullptr);
 
-        auto *pCtx = RequestCmdContext();
+        auto& Ctx = GetCmdContext();
         auto *pPipelineStateD3D12 = ValidatedCast<PipelineStateD3D12Impl>(pPipelineState);
-        pPipelineStateD3D12->CommitAndTransitionShaderResources(pShaderResourceBinding, *pCtx, false, true);
+        pPipelineStateD3D12->CommitAndTransitionShaderResources(pShaderResourceBinding, Ctx, false, true);
     }
 
     void DeviceContextD3D12Impl::CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, Uint32 Flags)
@@ -223,15 +223,15 @@ namespace Diligent
         if (!DeviceContextBase::CommitShaderResources(pShaderResourceBinding, Flags, 0 /*Dummy*/))
             return;
 
-        auto *pCtx = RequestCmdContext();
-        m_pCommittedResourceCache = m_pPipelineState->CommitAndTransitionShaderResources(pShaderResourceBinding, *pCtx, true, (Flags & COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES)!=0);
+        auto& Ctx = GetCmdContext();
+        m_pCommittedResourceCache = m_pPipelineState->CommitAndTransitionShaderResources(pShaderResourceBinding, Ctx, true, (Flags & COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES)!=0);
     }
 
     void DeviceContextD3D12Impl::SetStencilRef(Uint32 StencilRef)
     {
         if (TDeviceContextBase::SetStencilRef(StencilRef, 0))
         {
-            RequestCmdContext()->AsGraphicsContext().SetStencilRef( m_StencilRef );
+            GetCmdContext().AsGraphicsContext().SetStencilRef( m_StencilRef );
         }
     }
 
@@ -239,7 +239,7 @@ namespace Diligent
     {
         if (TDeviceContextBase::SetBlendFactors(m_BlendFactors, 0))
         {
-            RequestCmdContext()->AsGraphicsContext().SetBlendFactor( m_BlendFactors );
+            GetCmdContext().AsGraphicsContext().SetBlendFactor( m_BlendFactors );
         }
     }
 
@@ -263,7 +263,7 @@ namespace Diligent
         // Device context keeps strong reference to bound index buffer.
         // When the buffer is unbound, the reference to the D3D12 resource
         // is added to the context. There is no need to add reference here
-        //auto &GraphicsCtx = RequestCmdContext()->AsGraphicsContext();
+        //auto &GraphicsCtx = GetCmdContext().AsGraphicsContext();
         //auto *pd3d12Resource = pBuffD3D12->GetD3D12Buffer();
         //GraphicsCtx.AddReferencedObject(pd3d12Resource);
 
@@ -272,7 +272,7 @@ namespace Diligent
         if(IsDynamic)
             pBuffD3D12->DvpVerifyDynamicAllocation(this);
 #endif
-        auto &GraphicsCtx = RequestCmdContext()->AsGraphicsContext();
+        auto& GraphicsCtx = GetCmdContext().AsGraphicsContext();
         // Resource transitioning must always be performed!
         GraphicsCtx.TransitionResource(pBuffD3D12, D3D12_RESOURCE_STATE_INDEX_BUFFER, true);
 
@@ -361,7 +361,7 @@ namespace Diligent
             return;
 #endif
 
-        auto &GraphCtx = RequestCmdContext()->AsGraphicsContext();
+        auto& GraphCtx = GetCmdContext().AsGraphicsContext();
         if( drawAttribs.IsIndexed )
         {
             if( m_CommittedIBFormat != drawAttribs.IndexType )
@@ -427,7 +427,7 @@ namespace Diligent
             return;
 #endif
 
-        auto& ComputeCtx = RequestCmdContext()->AsComputeContext();
+        auto& ComputeCtx = GetCmdContext().AsComputeContext();
         ComputeCtx.SetRootSignature( m_pPipelineState->GetD3D12RootSignature() );
       
         if(m_pCommittedResourceCache != nullptr)
@@ -494,7 +494,7 @@ namespace Diligent
         if( ClearFlags & CLEAR_STENCIL_FLAG ) d3d12ClearFlags |= D3D12_CLEAR_FLAG_STENCIL;
         // The full extent of the resource view is always cleared. 
         // Viewport and scissor settings are not applied??
-        RequestCmdContext()->AsGraphicsContext().ClearDepthStencil( pDSVD3D12, d3d12ClearFlags, fDepth, Stencil );
+        GetCmdContext().AsGraphicsContext().ClearDepthStencil( pDSVD3D12, d3d12ClearFlags, fDepth, Stencil );
         ++m_NumCommandsInCurCtx;
     }
 
@@ -528,30 +528,30 @@ namespace Diligent
 
         // The full extent of the resource view is always cleared. 
         // Viewport and scissor settings are not applied??
-        RequestCmdContext()->AsGraphicsContext().ClearRenderTarget( pd3d12RTV, RGBA );
+        GetCmdContext().AsGraphicsContext().ClearRenderTarget( pd3d12RTV, RGBA );
         ++m_NumCommandsInCurCtx;
     }
 
     void DeviceContextD3D12Impl::RequestCommandContext(RenderDeviceD3D12Impl* pDeviceD3D12Impl)
     {
-        m_pCurrCmdCtx = pDeviceD3D12Impl->AllocateCommandContext();
-        m_pCurrCmdCtx->SetDynamicGPUDescriptorAllocators(m_DynamicGPUDescriptorAllocator);
+        m_CurrCmdCtx = pDeviceD3D12Impl->AllocateCommandContext();
+        m_CurrCmdCtx->SetDynamicGPUDescriptorAllocators(m_DynamicGPUDescriptorAllocator);
     }
 
     void DeviceContextD3D12Impl::Flush(bool RequestNewCmdCtx)
     {
         auto pDeviceD3D12Impl = m_pDevice.RawPtr<RenderDeviceD3D12Impl>();
-        if( m_pCurrCmdCtx )
+        if( m_CurrCmdCtx )
         {
             VERIFY(!m_bIsDeferred, "Deferred contexts cannot execute command lists directly");
             if (m_NumCommandsInCurCtx != 0)
             {
-                m_pCurrCmdCtx->FlushResourceBarriers();
-                pDeviceD3D12Impl->CloseAndExecuteCommandContext(m_CommandQueueId, m_pCurrCmdCtx, true, &m_PendingFences);
+                m_CurrCmdCtx->FlushResourceBarriers();
+                pDeviceD3D12Impl->CloseAndExecuteCommandContext(m_CommandQueueId, std::move(m_CurrCmdCtx), true, &m_PendingFences);
                 m_PendingFences.clear();
             }
             else
-                pDeviceD3D12Impl->DisposeCommandContext(m_pCurrCmdCtx);
+                pDeviceD3D12Impl->DisposeCommandContext(std::move(m_CurrCmdCtx));
         }
 
         if(RequestNewCmdCtx)
@@ -626,7 +626,7 @@ namespace Diligent
         }
         // All viewports must be set atomically as one operation. 
         // Any viewports not defined by the call are disabled.
-        RequestCmdContext()->AsGraphicsContext().SetViewports( m_NumViewports, d3d12Viewports );
+        GetCmdContext().AsGraphicsContext().SetViewports( m_NumViewports, d3d12Viewports );
     }
 
     void DeviceContextD3D12Impl::SetViewports( Uint32 NumViewports, const Viewport* pViewports, Uint32 RTWidth, Uint32 RTHeight  )
@@ -704,7 +704,7 @@ namespace Diligent
             if(!PSODesc.IsComputePipeline && PSODesc.GraphicsPipeline.RasterizerDesc.ScissorEnable)
             {
                 VERIFY(NumRects == m_NumScissorRects, "Unexpected number of scissor rects");
-                auto &Ctx = RequestCmdContext()->AsGraphicsContext();
+                auto& Ctx = GetCmdContext().AsGraphicsContext();
                 CommitScissorRects(Ctx, true);
             }
         }
@@ -741,7 +741,7 @@ namespace Diligent
                 ppRTVs[rt] = m_pBoundRenderTargets[rt].RawPtr<ITextureViewD3D12>();
             pDSV = m_pBoundDepthStencil.RawPtr<ITextureViewD3D12>();
         }
-        RequestCmdContext()->AsGraphicsContext().SetRenderTargets(NumRenderTargets, ppRTVs, pDSV);
+        GetCmdContext().AsGraphicsContext().SetRenderTargets(NumRenderTargets, ppRTVs, pDSV);
     }
 
     void DeviceContextD3D12Impl::SetRenderTargets( Uint32 NumRenderTargets, ITextureView *ppRenderTargets[], ITextureView *pDepthStencil )
@@ -762,13 +762,13 @@ namespace Diligent
 
     void DeviceContextD3D12Impl::UpdateBufferRegion(BufferD3D12Impl* pBuffD3D12, D3D12DynamicAllocation& Allocation, Uint64 DstOffset, Uint64 NumBytes)
     {
-        auto pCmdCtx = RequestCmdContext();
+        auto& CmdCtx = GetCmdContext();
         VERIFY_EXPR( static_cast<size_t>(NumBytes) == NumBytes );
-        pCmdCtx->TransitionResource(pBuffD3D12, D3D12_RESOURCE_STATE_COPY_DEST, true);
+        CmdCtx.TransitionResource(pBuffD3D12, D3D12_RESOURCE_STATE_COPY_DEST, true);
         size_t DstBuffDataStartByteOffset;
         auto *pd3d12Buff = pBuffD3D12->GetD3D12Buffer(DstBuffDataStartByteOffset, this);
         VERIFY(DstBuffDataStartByteOffset == 0, "Dst buffer must not be suballocated");
-        pCmdCtx->GetCommandList()->CopyBufferRegion( pd3d12Buff, DstOffset + DstBuffDataStartByteOffset, Allocation.pBuffer, Allocation.Offset, NumBytes);
+        CmdCtx.GetCommandList()->CopyBufferRegion( pd3d12Buff, DstOffset + DstBuffDataStartByteOffset, Allocation.pBuffer, Allocation.Offset, NumBytes);
         ++m_NumCommandsInCurCtx;
     }
 
@@ -786,25 +786,25 @@ namespace Diligent
     {
         VERIFY(pDstBuffD3D12->GetDesc().Usage != USAGE_DYNAMIC, "Dynamic buffers cannot be copy destinations");
 
-        auto pCmdCtx = RequestCmdContext();
-        pCmdCtx->TransitionResource(pSrcBuffD3D12, D3D12_RESOURCE_STATE_COPY_SOURCE);
-        pCmdCtx->TransitionResource(pDstBuffD3D12, D3D12_RESOURCE_STATE_COPY_DEST, true);
+        auto& CmdCtx = GetCmdContext();
+        CmdCtx.TransitionResource(pSrcBuffD3D12, D3D12_RESOURCE_STATE_COPY_SOURCE);
+        CmdCtx.TransitionResource(pDstBuffD3D12, D3D12_RESOURCE_STATE_COPY_DEST, true);
         size_t DstDataStartByteOffset;
         auto *pd3d12DstBuff = pDstBuffD3D12->GetD3D12Buffer(DstDataStartByteOffset, this);
         VERIFY(DstDataStartByteOffset == 0, "Dst buffer must not be suballocated");
 
         size_t SrcDataStartByteOffset;
         auto *pd3d12SrcBuff = pSrcBuffD3D12->GetD3D12Buffer(SrcDataStartByteOffset, this);
-        pCmdCtx->GetCommandList()->CopyBufferRegion( pd3d12DstBuff, DstOffset + DstDataStartByteOffset, pd3d12SrcBuff, SrcOffset+SrcDataStartByteOffset, NumBytes);
+        CmdCtx.GetCommandList()->CopyBufferRegion( pd3d12DstBuff, DstOffset + DstDataStartByteOffset, pd3d12SrcBuff, SrcOffset+SrcDataStartByteOffset, NumBytes);
         ++m_NumCommandsInCurCtx;
     }
 
     void DeviceContextD3D12Impl::CopyTextureRegion(TextureD3D12Impl* pSrcTexture, Uint32 SrcSubResIndex, const D3D12_BOX* pD3D12SrcBox,
                                                    TextureD3D12Impl* pDstTexture, Uint32 DstSubResIndex, Uint32 DstX, Uint32 DstY, Uint32 DstZ)
     {
-        auto pCmdCtx = RequestCmdContext();
-        pCmdCtx->TransitionResource(pSrcTexture, D3D12_RESOURCE_STATE_COPY_SOURCE);
-        pCmdCtx->TransitionResource(pDstTexture, D3D12_RESOURCE_STATE_COPY_DEST, true);
+        auto& CmdCtx = GetCmdContext();
+        CmdCtx.TransitionResource(pSrcTexture, D3D12_RESOURCE_STATE_COPY_SOURCE);
+        CmdCtx.TransitionResource(pDstTexture, D3D12_RESOURCE_STATE_COPY_DEST, true);
 
         D3D12_TEXTURE_COPY_LOCATION DstLocation = {}, SrcLocation = {};
 
@@ -816,7 +816,7 @@ namespace Diligent
         SrcLocation.pResource = pSrcTexture->GetD3D12Resource();
         SrcLocation.SubresourceIndex = SrcSubResIndex;
 
-        pCmdCtx->GetCommandList()->CopyTextureRegion( &DstLocation, DstX, DstY, DstZ, &SrcLocation, pD3D12SrcBox);
+        CmdCtx.GetCommandList()->CopyTextureRegion( &DstLocation, DstX, DstY, DstZ, &SrcLocation, pD3D12SrcBox);
         ++m_NumCommandsInCurCtx;
     }
 
@@ -830,8 +830,8 @@ namespace Diligent
                                                    const Box&              DstBox)
     {
         const auto& TexDesc = TextureD3D12.GetDesc();
-        auto *pCmdCtx = RequestCmdContext();
-        auto *pCmdList = pCmdCtx->GetCommandList();
+        auto& CmdCtx = GetCmdContext();
+        auto *pCmdList = CmdCtx.GetCommandList();
         auto TextureState = TextureD3D12.GetState();
         D3D12_RESOURCE_BARRIER BarrierDesc;
 		BarrierDesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -877,7 +877,7 @@ namespace Diligent
         D3D12SrcBox.bottom  = Footpring.Footprint.Height;
         D3D12SrcBox.front   = 0;
         D3D12SrcBox.back    = Footpring.Footprint.Depth;
-        pCmdCtx->GetCommandList()->CopyTextureRegion( &DstLocation, 
+        CmdCtx.GetCommandList()->CopyTextureRegion( &DstLocation, 
             static_cast<UINT>( DstBox.MinX ), 
             static_cast<UINT>( DstBox.MinY ), 
             static_cast<UINT>( DstBox.MinZ ),
@@ -904,7 +904,7 @@ namespace Diligent
         if(pBufferD3D12->GetDesc().Usage == USAGE_DYNAMIC)
             VERIFY(pBufferD3D12->GetState() == D3D12_RESOURCE_STATE_GENERIC_READ, "Dynamic buffer is expected to always be in D3D12_RESOURCE_STATE_GENERIC_READ state");
         else if(pBufferD3D12->GetState() != D3D12_RESOURCE_STATE_GENERIC_READ)
-            RequestCmdContext()->TransitionResource(pBufferD3D12, D3D12_RESOURCE_STATE_GENERIC_READ, true);
+            GetCmdContext().TransitionResource(pBufferD3D12, D3D12_RESOURCE_STATE_GENERIC_READ, true);
         size_t DataStartByteOffset = 0;
         auto* pd3d12Buffer = pBufferD3D12->GetD3D12Buffer(DataStartByteOffset, this);
         CopyTextureRegion(pd3d12Buffer, static_cast<Uint32>(DataStartByteOffset) + SrcOffset, SrcStride, SrcDepthStride, pBufferD3D12->GetDesc().uiSizeInBytes, TextureD3D12, DstSubResIndex, DstBox);
@@ -1038,8 +1038,8 @@ namespace Diligent
 
     void DeviceContextD3D12Impl::GenerateMips(TextureViewD3D12Impl* pTexView)
     {
-        auto *pCtx = RequestCmdContext();
-        m_MipsGenerator.GenerateMips(m_pDevice.RawPtr<RenderDeviceD3D12Impl>(), pTexView, *pCtx);
+        auto& Ctx = GetCmdContext();
+        m_MipsGenerator.GenerateMips(m_pDevice.RawPtr<RenderDeviceD3D12Impl>(), pTexView, Ctx);
         ++m_NumCommandsInCurCtx;
     }
 
@@ -1047,9 +1047,8 @@ namespace Diligent
     {
         auto* pDeviceD3D12Impl = m_pDevice.RawPtr<RenderDeviceD3D12Impl>();
         CommandListD3D12Impl* pCmdListD3D12( NEW_RC_OBJ(m_CmdListAllocator, "CommandListD3D12Impl instance", CommandListD3D12Impl)
-                                                       (pDeviceD3D12Impl, this, m_pCurrCmdCtx) );
+                                                       (pDeviceD3D12Impl, this, std::move(m_CurrCmdCtx)) );
         pCmdListD3D12->QueryInterface( IID_CommandList, reinterpret_cast<IObject**>(ppCommandList) );
-        m_pCurrCmdCtx = nullptr;
         Flush(true);
 
         InvalidateState();
@@ -1069,10 +1068,9 @@ namespace Diligent
 
         CommandListD3D12Impl* pCmdListD3D12 = ValidatedCast<CommandListD3D12Impl>(pCommandList);
         VERIFY_EXPR(m_PendingFences.empty());
-        CommandContext* pCmdContext = nullptr;
         RefCntAutoPtr<DeviceContextD3D12Impl> pDeferredCtx;
-        pCmdListD3D12->Close(pCmdContext, pDeferredCtx);
-        m_pDevice.RawPtr<RenderDeviceD3D12Impl>()->CloseAndExecuteCommandContext(m_CommandQueueId, pCmdContext, true, nullptr);
+        auto CmdContext = pCmdListD3D12->Close(pDeferredCtx);
+        m_pDevice.RawPtr<RenderDeviceD3D12Impl>()->CloseAndExecuteCommandContext(m_CommandQueueId, std::move(CmdContext), true, nullptr);
         // Set the bit in the deferred context cmd queue mask corresponding to cmd queue of this context
         pDeferredCtx->m_SubmittedBuffersCmdQueueMask |= Uint64{1} << m_CommandQueueId;
     }
@@ -1086,14 +1084,14 @@ namespace Diligent
     void DeviceContextD3D12Impl::TransitionTextureState(ITexture *pTexture, D3D12_RESOURCE_STATES State)
     {
         VERIFY_EXPR(pTexture != nullptr);
-        auto *pCmdCtx = RequestCmdContext();
-        pCmdCtx->TransitionResource(ValidatedCast<ITextureD3D12>(pTexture), State);
+        auto& CmdCtx = GetCmdContext();
+        CmdCtx.TransitionResource(ValidatedCast<ITextureD3D12>(pTexture), State);
     }
 
     void DeviceContextD3D12Impl::TransitionBufferState(IBuffer *pBuffer, D3D12_RESOURCE_STATES State)
     {
         VERIFY_EXPR(pBuffer != nullptr);
-        auto *pCmdCtx = RequestCmdContext();
-        pCmdCtx->TransitionResource(ValidatedCast<IBufferD3D12>(pBuffer), State);
+        auto& CmdCtx = GetCmdContext();
+        CmdCtx.TransitionResource(ValidatedCast<IBufferD3D12>(pBuffer), State);
     }
 }

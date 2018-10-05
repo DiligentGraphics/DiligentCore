@@ -60,6 +60,10 @@ class CommandContext
 public:
 
 	CommandContext( class CommandListManager& CmdListManager);
+    CommandContext             (const CommandContext&)  = delete;
+    CommandContext& operator = (const CommandContext&)  = delete;
+    CommandContext             (      CommandContext&&) = delete;
+    CommandContext& operator = (      CommandContext&&) = delete;
 
     ~CommandContext();
 

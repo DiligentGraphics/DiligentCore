@@ -187,7 +187,7 @@ TextureD3D12Impl :: TextureD3D12Impl(IReferenceCounters*        pRefCounters,
         if(FAILED(hr))
             LOG_ERROR_AND_THROW("Failed to create committed resource in an upload heap");
 
-        auto *pInitContext = pRenderDeviceD3D12->AllocateCommandContext();
+        auto InitContext = pRenderDeviceD3D12->AllocateCommandContext();
 	    // copy data to the intermediate upload heap and then schedule a copy from the upload heap to the default texture
         VERIFY_EXPR(m_UsageState == D3D12_RESOURCE_STATE_COPY_DEST);
         std::vector<D3D12_SUBRESOURCE_DATA, STDAllocatorRawMem<D3D12_SUBRESOURCE_DATA> > D3D12SubResData(InitData.NumSubresources, D3D12_SUBRESOURCE_DATA(), STD_ALLOCATOR_RAW_MEM(D3D12_SUBRESOURCE_DATA, GetRawAllocator(), "Allocator for vector<D3D12_SUBRESOURCE_DATA>") );
@@ -197,7 +197,7 @@ TextureD3D12Impl :: TextureD3D12Impl(IReferenceCounters*        pRefCounters,
             D3D12SubResData[subres].RowPitch = InitData.pSubResources[subres].Stride;
             D3D12SubResData[subres].SlicePitch = InitData.pSubResources[subres].DepthStride;
         }
-	    auto UploadedSize = UpdateSubresources(pInitContext->GetCommandList(), m_pd3d12Resource, UploadBuffer, 0, 0, InitData.NumSubresources, D3D12SubResData.data());
+	    auto UploadedSize = UpdateSubresources(InitContext->GetCommandList(), m_pd3d12Resource, UploadBuffer, 0, 0, InitData.NumSubresources, D3D12SubResData.data());
         VERIFY(UploadedSize == uploadBufferSize, "Incorrect uploaded data size (", UploadedSize, "). ", uploadBufferSize, " is expected");
 
         // Command list fence should only be signaled when submitting cmd list
@@ -219,7 +219,7 @@ TextureD3D12Impl :: TextureD3D12Impl(IReferenceCounters*        pRefCounters,
         //                  |     was added to the delete queue      |                                   |
         //                  |     with value N                       |                                   |
         Uint32 QueueIndex = 0;
-	    pRenderDeviceD3D12->CloseAndExecuteTransientCommandContext(QueueIndex, pInitContext);
+	    pRenderDeviceD3D12->CloseAndExecuteTransientCommandContext(QueueIndex, std::move(InitContext));
 
         // We MUST NOT call TransitionResource() from here, because
         // it will call AddRef() and potentially Release(), while 

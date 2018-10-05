@@ -175,13 +175,13 @@ BufferD3D12Impl :: BufferD3D12Impl(IReferenceCounters*          pRefCounters,
 	        memcpy(DestAddress, BuffData.pData, BuffData.DataSize);
 	        UploadBuffer->Unmap(0, nullptr);
 
-            auto  *pInitContext = pRenderDeviceD3D12->AllocateCommandContext();
+            auto InitContext = pRenderDeviceD3D12->AllocateCommandContext();
 	        // copy data to the intermediate upload heap and then schedule a copy from the upload heap to the default buffer
             VERIFY_EXPR(m_UsageState == D3D12_RESOURCE_STATE_COPY_DEST);
             // We MUST NOT call TransitionResource() from here, because
             // it will call AddRef() and potentially Release(), while 
             // the object is not constructed yet
-	        pInitContext->CopyResource(m_pd3d12Resource, UploadBuffer);
+	        InitContext->CopyResource(m_pd3d12Resource, UploadBuffer);
 
             // Command list fence should only be signaled when submitting cmd list
             // from the immediate context, otherwise the basic requirement will be violated
@@ -202,7 +202,7 @@ BufferD3D12Impl :: BufferD3D12Impl(IReferenceCounters*          pRefCounters,
             //                  |     was added to the delete queue      |                                   |
             //                  |     with value N                       |                                   |
             Uint32 QueueIndex = 0;
-	        pRenderDeviceD3D12->CloseAndExecuteTransientCommandContext(QueueIndex, pInitContext);
+	        pRenderDeviceD3D12->CloseAndExecuteTransientCommandContext(QueueIndex, std::move(InitContext));
 
             // Add reference to the object to the release queue to keep it alive
             // until copy operation is complete. This must be done after

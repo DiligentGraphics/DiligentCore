@@ -143,7 +143,7 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters*      pRefCounters
     m_ShaderResourceLayouts = reinterpret_cast<ShaderResourceLayoutVk*>(pResLayoutRawMem);
     for (Uint32 s=0; s < m_NumShaders; ++s)
     {
-        new (m_ShaderResourceLayouts + s) ShaderResourceLayoutVk(*this, LogicalDevice, GetRawAllocator());
+        new (m_ShaderResourceLayouts + s) ShaderResourceLayoutVk(*this, LogicalDevice);
         auto* pShaderVk = GetShader<const ShaderVkImpl>(s);
         ShaderResources[s] = pShaderVk->GetShaderResources();
         ShaderSPIRVs[s] = pShaderVk->GetSPIRV();

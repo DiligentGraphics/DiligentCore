@@ -41,13 +41,13 @@ class CommandListD3D12Impl final : public CommandListBase<ICommandList, RenderDe
 public:
     using TCommandListBase = CommandListBase<ICommandList, RenderDeviceD3D12Impl>;
 
-    CommandListD3D12Impl(IReferenceCounters*     pRefCounters, 
-                         RenderDeviceD3D12Impl*  pDevice,
-                         DeviceContextD3D12Impl* pDeferredCtx,
-                         CommandContext*         pCmdContext) :
+    CommandListD3D12Impl(IReferenceCounters*                            pRefCounters, 
+                         RenderDeviceD3D12Impl*                         pDevice,
+                         DeviceContextD3D12Impl*                        pDeferredCtx,
+                         RenderDeviceD3D12Impl::PooledCommandContext&&  pCmdContext) :
         TCommandListBase(pRefCounters, pDevice),
         m_pDeferredCtx  (pDeferredCtx),
-        m_pCmdContext   (pCmdContext)
+        m_pCmdContext   (std::move(pCmdContext))
     {
     }
     
@@ -56,16 +56,15 @@ public:
         DEV_CHECK_ERR(m_pCmdContext == nullptr && m_pDeferredCtx == nullptr, "Destroying a command list that has not been executed");
     }
 
-    void Close(CommandContext*& pCmdContext, RefCntAutoPtr<DeviceContextD3D12Impl>& pDeferredCtx)
+    RenderDeviceD3D12Impl::PooledCommandContext Close(RefCntAutoPtr<DeviceContextD3D12Impl>& pDeferredCtx)
     {
-        pCmdContext   = m_pCmdContext;
-        m_pCmdContext = nullptr;
         pDeferredCtx  = std::move(m_pDeferredCtx);
+        return std::move(m_pCmdContext);
     }
 
 private:
-    RefCntAutoPtr<DeviceContextD3D12Impl> m_pDeferredCtx;
-    CommandContext*                       m_pCmdContext = nullptr;
+    RefCntAutoPtr<DeviceContextD3D12Impl>       m_pDeferredCtx;
+    RenderDeviceD3D12Impl::PooledCommandContext m_pCmdContext;
 };
 
 }

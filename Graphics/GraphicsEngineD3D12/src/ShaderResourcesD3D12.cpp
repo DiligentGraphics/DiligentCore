@@ -35,7 +35,7 @@ namespace Diligent
 
 
 ShaderResourcesD3D12::ShaderResourcesD3D12(ID3DBlob *pShaderBytecode, const ShaderDesc &ShdrDesc) :
-    ShaderResources(GetRawAllocator(), ShdrDesc.ShaderType)
+    ShaderResources(ShdrDesc.ShaderType)
 {
     Uint32 CurrCB = 0, CurrTexSRV = 0, CurrTexUAV = 0, CurrBufSRV = 0, CurrBufUAV = 0, CurrSampler = 0;
     LoadD3DShaderResources<D3D12_SHADER_DESC, D3D12_SHADER_INPUT_BIND_DESC, ID3D12ShaderReflection>(

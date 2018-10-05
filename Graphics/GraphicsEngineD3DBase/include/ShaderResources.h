@@ -273,7 +273,7 @@ static_assert(sizeof(D3DShaderResourceAttribs) == sizeof(void*) + sizeof(Uint32)
 class ShaderResources
 {
 public:
-    ShaderResources(IMemoryAllocator &Allocator, SHADER_TYPE ShaderType);
+    ShaderResources(SHADER_TYPE ShaderType);
 
     ShaderResources             (const ShaderResources&) = delete;
     ShaderResources             (ShaderResources&&)      = delete;

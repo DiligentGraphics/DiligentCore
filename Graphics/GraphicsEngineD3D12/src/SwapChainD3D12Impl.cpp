@@ -117,12 +117,12 @@ void SwapChainD3D12Impl::Present(Uint32 SyncInterval)
         return;
     }
 
-    auto *pImmediateCtx = pDeviceContext.RawPtr();
-    auto *pImmediateCtxD3D12 = ValidatedCast<DeviceContextD3D12Impl>( pImmediateCtx );
+    auto* pImmediateCtx = pDeviceContext.RawPtr();
+    auto* pImmediateCtxD3D12 = ValidatedCast<DeviceContextD3D12Impl>( pImmediateCtx );
 
-    auto *pCmdCtx = pImmediateCtxD3D12->RequestCmdContext();
-    auto *pBackBuffer = ValidatedCast<TextureD3D12Impl>( GetCurrentBackBufferRTV()->GetTexture() );
-    pCmdCtx->TransitionResource( pBackBuffer, D3D12_RESOURCE_STATE_PRESENT);
+    auto& CmdCtx = pImmediateCtxD3D12->GetCmdContext();
+    auto* pBackBuffer = ValidatedCast<TextureD3D12Impl>( GetCurrentBackBufferRTV()->GetTexture() );
+    CmdCtx.TransitionResource( pBackBuffer, D3D12_RESOURCE_STATE_PRESENT);
 
     pImmediateCtxD3D12->Flush();
 

@@ -112,8 +112,7 @@ class ShaderResourceLayoutVk
 {
 public:
     ShaderResourceLayoutVk(IObject&                                    Owner, 
-                           const VulkanUtilities::VulkanLogicalDevice& LogicalDevice, 
-                           IMemoryAllocator&                           ResourceLayoutDataAllocator);
+                           const VulkanUtilities::VulkanLogicalDevice& LogicalDevice);
 
     ShaderResourceLayoutVk              (const ShaderResourceLayoutVk&) = delete;
     ShaderResourceLayoutVk              (ShaderResourceLayoutVk&&)      = delete;

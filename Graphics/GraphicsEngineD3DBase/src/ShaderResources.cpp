@@ -60,8 +60,6 @@ void ShaderResources::Initialize(IMemoryAllocator& Allocator,
                                  Uint32            NumSamplers,
                                  size_t            ResourceNamesPoolSize)
 {
-    VERIFY( &m_MemoryBuffer.get_deleter().m_Allocator == &Allocator, "Incosistent allocators provided");
-
     const auto MaxOffset = static_cast<Uint32>(std::numeric_limits<OffsetType>::max());
     VERIFY(NumCBs <= MaxOffset, "Max offset exceeded");
     m_TexSRVOffset    = 0                + static_cast<OffsetType>(NumCBs);
@@ -92,15 +90,14 @@ void ShaderResources::Initialize(IMemoryAllocator& Allocator,
 
     if( MemorySize )
     {
-        auto *pRawMem = ALLOCATE(Allocator, "Allocator for shader resources", MemorySize );
-        m_MemoryBuffer.reset(pRawMem);
+        auto* pRawMem = ALLOCATE(Allocator, "Allocator for shader resources", MemorySize );
+        m_MemoryBuffer = std::unique_ptr< void, STDDeleterRawMem<void> >(pRawMem, Allocator);
         char* NamesPool = reinterpret_cast<char*>(reinterpret_cast<D3DShaderResourceAttribs*>(pRawMem) + m_TotalResources);
         m_ResourceNames.AssignMemory(NamesPool, ResourceNamesPoolSize);
     }    
 }
 
-ShaderResources::ShaderResources(IMemoryAllocator &Allocator, SHADER_TYPE ShaderType):
-    m_MemoryBuffer(nullptr, STDDeleterRawMem<void>(Allocator)),
+ShaderResources::ShaderResources(SHADER_TYPE ShaderType):
     m_ShaderType(ShaderType)
 {
 }

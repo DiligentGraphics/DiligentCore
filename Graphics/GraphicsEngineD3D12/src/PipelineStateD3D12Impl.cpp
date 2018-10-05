@@ -77,7 +77,7 @@ PipelineStateD3D12Impl :: PipelineStateD3D12Impl(IReferenceCounters*      pRefCo
     for (Uint32 s=0; s < m_NumShaders; ++s)
     {
         auto* pShaderD3D12 = GetShader<ShaderD3D12Impl>(s);
-        new (m_pShaderResourceLayouts+s) ShaderResourceLayoutD3D12(*this, GetRawAllocator());
+        new (m_pShaderResourceLayouts+s) ShaderResourceLayoutD3D12(*this);
         m_pShaderResourceLayouts[s].Initialize(pDeviceD3D12->GetD3D12Device(), pShaderD3D12->GetShaderResources(), GetRawAllocator(), nullptr, 0, nullptr, &m_RootSig);
     }
     m_RootSig.Finalize(pd3d12Device);

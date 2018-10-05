@@ -49,7 +49,7 @@ class IMemoryAllocator;
 class ShaderResourceLayoutD3D11
 {
 public:
-    ShaderResourceLayoutD3D11(IObject &Owner, IMemoryAllocator& ResLayoutDataAllocator);
+    ShaderResourceLayoutD3D11(IObject &Owner);
     ~ShaderResourceLayoutD3D11();
 
     // No copies or moves

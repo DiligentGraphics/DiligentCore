@@ -158,17 +158,37 @@ template<class T> using STDAllocatorRawMem = STDAllocator<T, IMemoryAllocator>;
 template< class T, typename AllocatorType > 
 struct STDDeleter
 {
-    STDDeleter(AllocatorType &Allocator) : 
-        m_Allocator(Allocator)
+    STDDeleter() noexcept {}
+
+    STDDeleter(AllocatorType& Allocator) noexcept : 
+        m_Allocator(&Allocator)
     {}
-        
-    void operator()(T *ptr)
+    
+    STDDeleter             (const STDDeleter&) = default;
+    STDDeleter& operator = (const STDDeleter&) = default;
+
+    STDDeleter(STDDeleter&& rhs) noexcept : 
+        m_Allocator(rhs.m_Allocator)
     {
-        ptr->~T();
-        m_Allocator.Free(ptr);
+        rhs.m_Allocator = nullptr;
     }
 
-    AllocatorType &m_Allocator;
+    STDDeleter& operator = (STDDeleter&& rhs) noexcept
+    {
+        m_Allocator = rhs.m_Allocator;
+        rhs.m_Allocator = nullptr;
+        return *this;
+    }
+
+    void operator()(T *ptr) noexcept
+    {
+        VERIFY(m_Allocator != nullptr, "The deleter has been moved away or never initialized, and can't be used");
+        ptr->~T();
+        m_Allocator->Free(ptr);
+    }
+
+private:
+    AllocatorType* m_Allocator = nullptr;
 };
 template<class T> using STDDeleterRawMem = STDDeleter<T, IMemoryAllocator>; 
 
