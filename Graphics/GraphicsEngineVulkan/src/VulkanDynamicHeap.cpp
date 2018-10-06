@@ -160,19 +160,17 @@ VulkanDynamicMemoryManager::MasterBlock VulkanDynamicMemoryManager::AllocateMast
 
         if (!Block.IsValid())
         {
-            // Last resort - idle GPU (there seems to be a driver bug: vkQueueWaitIdle() deadlocks and never returns)
-            //m_DeviceVk.IdleGPU(true);
-            //auto LastCompletedFenceValue = m_DeviceVk.GetCompletedFenceValue();
-            //m_AllocationStrategy.ReleaseStaleAllocations(LastCompletedFenceValue);
-            //Offset = m_AllocationStrategy.Allocate(SizeInBytes);
+            // Last resort - idle GPU (there seems to have been a driver bug at some point: vkQueueWaitIdle() would deadlock and never return)
+            m_DeviceVk.IdleGPU();
+            Block = TBase::AllocateMasterBlock(SizeInBytes, Alignment);
             if (!Block.IsValid())
             {
                 LOG_ERROR_MESSAGE("Space in dynamic heap is exausted! After idling for ", std::fixed, std::setprecision(1), IdleDuration.count()*1000.0, " ms still no space is available. Increase the size of the heap by setting EngineVkAttribs::DynamicHeapSize to a greater value or optimize dynamic resource usage");
             }
-            //else
-            //{
-            //    LOG_WARNING_MESSAGE("Space in dynamic heap is almost exausted. Allocation forced idling the GPU. Increase the size of the heap by setting EngineVkAttribs::DynamicHeapSize to a greater value or optimize dynamic resource usage");
-            //}
+            else
+            {
+                LOG_WARNING_MESSAGE("Space in dynamic heap is almost exausted. Allocation forced idling the GPU. Increase the size of the heap by setting EngineVkAttribs::DynamicHeapSize to a greater value or optimize dynamic resource usage");
+            }
         }
         else
         {
