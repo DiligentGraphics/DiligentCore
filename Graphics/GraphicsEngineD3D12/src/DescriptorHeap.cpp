@@ -98,22 +98,19 @@ DescriptorHeapAllocation DescriptorHeapAllocationManager::Allocate(uint32_t Coun
 
     // Use variable-size GPU allocations manager to allocate the requested number of descriptors
     auto Allocation = m_FreeBlockManager.Allocate(Count, 1);
-    auto DescriptorHandleOffset = Allocation.UnalignedOffset;
-    if (DescriptorHandleOffset == VariableSizeAllocationsManager::InvalidOffset)
-    {
+    if (!Allocation.IsValid())
         return DescriptorHeapAllocation{};
-    }
 
     VERIFY_EXPR(Allocation.Size == Count);
 
     // Compute the first CPU and GPU descriptor handles in the allocation by
     // offseting the first CPU and GPU descriptor handle in the range
     auto CPUHandle = m_FirstCPUHandle;
-    CPUHandle.ptr += DescriptorHandleOffset * m_DescriptorSize;
+    CPUHandle.ptr += Allocation.UnalignedOffset * m_DescriptorSize;
 
     auto GPUHandle = m_FirstGPUHandle; // Will be null if the heap is not GPU-visible
     if (m_HeapDesc.Flags & D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE)
-        GPUHandle.ptr += DescriptorHandleOffset * m_DescriptorSize;
+        GPUHandle.ptr += Allocation.UnalignedOffset * m_DescriptorSize;
 
     m_MaxAllocatedSize = std::max(m_MaxAllocatedSize, m_FreeBlockManager.GetUsedSize());
 

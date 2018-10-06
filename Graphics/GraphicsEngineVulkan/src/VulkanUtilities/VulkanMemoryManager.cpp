@@ -78,7 +78,7 @@ VulkanMemoryAllocation VulkanMemoryPage::Allocate(VkDeviceSize size, VkDeviceSiz
 {
     std::lock_guard<std::mutex> Lock(m_Mutex);
     auto Allocation = m_AllocationMgr.Allocate(size, alignment);
-    if (Allocation.UnalignedOffset != Diligent::VariableSizeAllocationsManager::InvalidOffset)
+    if (Allocation.IsValid())
     {
         // Offset may not necessarily be aligned, but the allocation is guaranteed to be large enough
         // to accomodate requested alignment

@@ -61,8 +61,7 @@ namespace Diligent
     {
     public:
         using OffsetType = size_t;
-        static constexpr OffsetType InvalidOffset = static_cast<OffsetType>(-1);
-
+        
     private:
         struct FreeBlockInfo;
 
@@ -154,17 +153,28 @@ namespace Diligent
 
             Allocation(){}
 
+            static constexpr OffsetType InvalidOffset = static_cast<OffsetType>(-1);
+            static Allocation InvalidAllocation()
+            {
+                return Allocation { InvalidOffset, 0 };
+            }
+
+            bool IsValid() const
+            {
+                return UnalignedOffset != InvalidAllocation().UnalignedOffset;
+            }
+
             OffsetType UnalignedOffset = InvalidOffset;
             OffsetType Size            = 0;
         };
-
+        
         Allocation Allocate(OffsetType Size, OffsetType Alignment)
         {
             VERIFY_EXPR(Size > 0);
             VERIFY(IsPowerOfTwo(Alignment), "Alignment (", Alignment, ") must be power of 2");
             Size = Align(Size, Alignment);
             if(m_FreeSize < Size)
-                return Allocation{InvalidOffset, 0};
+                return Allocation::InvalidAllocation();
 
             auto AlignmentReserve = (Alignment > m_CurrAlignment) ? Alignment - m_CurrAlignment : 0;
             // Get the first block that is large enough to encompass Size + AlignmentReserve bytes
@@ -172,7 +182,7 @@ namespace Diligent
             // is not less (i.e. >= ) than key
             auto SmallestBlockItIt = m_FreeBlocksBySize.lower_bound(Size + AlignmentReserve);
             if(SmallestBlockItIt == m_FreeBlocksBySize.end())
-                return Allocation{InvalidOffset, 0};
+                return Allocation::InvalidAllocation();
 
             auto SmallestBlockIt = SmallestBlockItIt->second;
             VERIFY_EXPR(Size + AlignmentReserve <= SmallestBlockIt->second.Size);

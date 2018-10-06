@@ -136,7 +136,7 @@ VulkanDynamicMemoryManager::MasterBlock VulkanDynamicMemoryManager::AllocateMast
     }
 
     auto Block = TBase::AllocateMasterBlock(SizeInBytes, Alignment);
-    if (Block.UnalignedOffset == InvalidOffset)
+    if (!Block.IsValid())
     {
         // Allocation failed. Try to wait for GPU to finish pending frames to release some space
         auto StartIdleTime = std::chrono::high_resolution_clock::now();
@@ -144,11 +144,11 @@ VulkanDynamicMemoryManager::MasterBlock VulkanDynamicMemoryManager::AllocateMast
         static constexpr const auto MaxIdleDuration = std::chrono::duration<double>{60.0 / 1000.0}; // 60 ms
         std::chrono::duration<double> IdleDuration;
         Uint32 SleepIterations = 0;
-        while (Block.UnalignedOffset == InvalidOffset && IdleDuration < MaxIdleDuration)
+        while (!Block.IsValid() && IdleDuration < MaxIdleDuration)
         {
             m_DeviceVk.PurgeReleaseQueues();
             Block = TBase::AllocateMasterBlock(SizeInBytes, Alignment);
-            if (Block.UnalignedOffset == InvalidOffset)
+            if (!Block.IsValid())
             {
                 std::this_thread::sleep_for(SleepPeriod);
                 ++SleepIterations;
@@ -158,14 +158,14 @@ VulkanDynamicMemoryManager::MasterBlock VulkanDynamicMemoryManager::AllocateMast
             IdleDuration = std::chrono::duration_cast<std::chrono::duration<double>>(CurrTime - StartIdleTime);
         }
 
-        if (Block.UnalignedOffset == InvalidOffset)
+        if (!Block.IsValid())
         {
             // Last resort - idle GPU (there seems to be a driver bug: vkQueueWaitIdle() deadlocks and never returns)
             //m_DeviceVk.IdleGPU(true);
             //auto LastCompletedFenceValue = m_DeviceVk.GetCompletedFenceValue();
             //m_AllocationStrategy.ReleaseStaleAllocations(LastCompletedFenceValue);
             //Offset = m_AllocationStrategy.Allocate(SizeInBytes);
-            if (Block.UnalignedOffset == InvalidOffset)
+            if (!Block.IsValid())
             {
                 LOG_ERROR_MESSAGE("Space in dynamic heap is exausted! After idling for ", std::fixed, std::setprecision(1), IdleDuration.count()*1000.0, " ms still no space is available. Increase the size of the heap by setting EngineVkAttribs::DynamicHeapSize to a greater value or optimize dynamic resource usage");
             }
@@ -187,7 +187,7 @@ VulkanDynamicMemoryManager::MasterBlock VulkanDynamicMemoryManager::AllocateMast
         }
     }
 
-    if (Block.UnalignedOffset != InvalidOffset)
+    if (Block.IsValid())
     {
         m_TotalPeakSize = std::max(m_TotalPeakSize, GetUsedSize());
     }
@@ -207,7 +207,7 @@ VulkanDynamicAllocation VulkanDynamicHeap::Allocate(Uint32 SizeInBytes, Uint32 A
     {
         // Allocate directly from the memory manager
         auto MasterBlock = m_GlobalDynamicMemMgr.AllocateMasterBlock(SizeInBytes, Alignment);
-        if (MasterBlock.UnalignedOffset != InvalidOffset)
+        if (MasterBlock.IsValid())
         {
             AlignedOffset = Align(MasterBlock.UnalignedOffset, size_t{Alignment});
             AlignedSize = MasterBlock.Size;
@@ -220,7 +220,7 @@ VulkanDynamicAllocation VulkanDynamicHeap::Allocate(Uint32 SizeInBytes, Uint32 A
         if (m_CurrOffset == InvalidOffset || SizeInBytes + (Align(m_CurrOffset, size_t{Alignment}) - m_CurrOffset) > m_AvailableSize)
         {
             auto MasterBlock = m_GlobalDynamicMemMgr.AllocateMasterBlock(m_MasterBlockSize, 0);
-            if (MasterBlock.UnalignedOffset != InvalidOffset)
+            if (MasterBlock.IsValid())
             {
                 m_CurrOffset = MasterBlock.UnalignedOffset;
                 m_MasterBlocks.emplace_back(MasterBlock);

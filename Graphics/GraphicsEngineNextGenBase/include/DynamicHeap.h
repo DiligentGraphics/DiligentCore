@@ -94,7 +94,6 @@ class MasterBlockListBasedManager
 public:
     using OffsetType  = VariableSizeAllocationsManager::OffsetType;
     using MasterBlock = VariableSizeAllocationsManager::Allocation;
-    static constexpr const OffsetType InvalidOffset = VariableSizeAllocationsManager::InvalidOffset;
 
     MasterBlockListBasedManager(IMemoryAllocator& Allocator, 
                                 Uint32            Size) : 

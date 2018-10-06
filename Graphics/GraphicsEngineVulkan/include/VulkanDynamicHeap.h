@@ -112,8 +112,7 @@ class VulkanDynamicMemoryManager : public DynamicHeap::MasterBlockListBasedManag
 {
 public:
     using TBase = DynamicHeap::MasterBlockListBasedManager;
-    using OffsetType = TBase::OffsetType;
-    using TBase::InvalidOffset;
+    using OffsetType  = TBase::OffsetType;
     using MasterBlock = TBase::MasterBlock;
 
     VulkanDynamicMemoryManager(IMemoryAllocator&         Allocator, 
@@ -200,7 +199,7 @@ public:
 
     using OffsetType  = VulkanDynamicMemoryManager::OffsetType;
     using MasterBlock = VulkanDynamicMemoryManager::MasterBlock;
-    static constexpr OffsetType InvalidOffset = VulkanDynamicMemoryManager::InvalidOffset;
+    static constexpr OffsetType InvalidOffset = static_cast<OffsetType>(-1);
     
     size_t GetAllocatedMasterBlockCount()const {return m_MasterBlocks.size();}
 
