@@ -1237,23 +1237,23 @@ namespace Diligent
         /// Size of the CPU descriptor heap allocations for different heap types.
         Uint32 CPUDescriptorHeapAllocationSize[4] = 
         {
-            1024,  // D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
-            256,   // D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER
-            128,   // D3D12_DESCRIPTOR_HEAP_TYPE_RTV
-            64     // D3D12_DESCRIPTOR_HEAP_TYPE_DSV
+            8192,  // D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
+            2048,  // D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER
+            1024,  // D3D12_DESCRIPTOR_HEAP_TYPE_RTV
+            1024   // D3D12_DESCRIPTOR_HEAP_TYPE_DSV
         };
 
         /// Size of the GPU descriptor heap allocations for different heap types.
         Uint32 GPUDescriptorHeapSize[2] = 
         {
-            16384,  // D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
-            1024    // D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER
+            16384, // D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
+            1024   // D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER
         };
 
         /// Size of the dynamic GPU descriptor heap region for different heap types.
         Uint32 GPUDescriptorHeapDynamicSize[2] = 
         {
-            4096,  // D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
+            8192,  // D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
             1024   // D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER
         };
 
@@ -1261,8 +1261,8 @@ namespace Diligent
 		/// request from the main GPU descriptor heap.
 		Uint32 DynamicDescriptorAllocationChunkSize[2] = 
 		{
-			128,  // D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
-			16    // D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER
+			256,  // D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
+			32    // D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER
 		};
 
         /// Number of commands to flush the command list. Only draw/dispatch commands count

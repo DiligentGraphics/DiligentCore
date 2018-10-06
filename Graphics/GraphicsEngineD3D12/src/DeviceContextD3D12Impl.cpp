@@ -39,16 +39,15 @@
 namespace Diligent
 {
 
-    static std::string GetDynamicHeapName(bool bIsDeferred, Uint32 ContextId)
+    static std::string GetContextObjectName(const char* Object, bool bIsDeferred, Uint32 ContextId)
     {
+        std::stringstream ss;
+        ss << Object;
         if (bIsDeferred)
-        {
-            std::stringstream ss;
-            ss << "Dynamic heap of deferred context #" << ContextId;
-            return ss.str();
-        }
+            ss << " of deferred context #" << ContextId;
         else
-            return "Dynamic heap of immediate context";
+            ss << " of immediate context";
+        return ss.str();
     }
 
     DeviceContextD3D12Impl::DeviceContextD3D12Impl( IReferenceCounters*       pRefCounters,
@@ -69,7 +68,7 @@ namespace Diligent
         m_DynamicHeap
         {
             pDeviceD3D12Impl->GetDynamicMemoryManager(),
-            GetDynamicHeapName(bIsDeferred, ContextId),
+            GetContextObjectName("Dynamic heap", bIsDeferred, ContextId),
             Attribs.DynamicHeapPageSize
         },
         m_DynamicGPUDescriptorAllocator
@@ -77,12 +76,14 @@ namespace Diligent
             {
                 GetRawAllocator(),
                 pDeviceD3D12Impl->GetGPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV),
-        		Attribs.DynamicDescriptorAllocationChunkSize[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]
+        		Attribs.DynamicDescriptorAllocationChunkSize[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV],
+                GetContextObjectName("CBV_SRV_UAV dynamic descriptor allocator", bIsDeferred, ContextId)
             },
             {
                 GetRawAllocator(),
                 pDeviceD3D12Impl->GetGPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER),
-                Attribs.DynamicDescriptorAllocationChunkSize[D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER]
+                Attribs.DynamicDescriptorAllocationChunkSize[D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER],
+                GetContextObjectName("SAMPLER     dynamic descriptor allocator", bIsDeferred, ContextId)
             }
         },
         m_NumCommandsInCurCtx(0),

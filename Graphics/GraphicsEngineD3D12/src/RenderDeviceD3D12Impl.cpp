@@ -92,6 +92,17 @@ RenderDeviceD3D12Impl::~RenderDeviceD3D12Impl()
     IdleGPU(true);
     ReleaseStaleResources(true);
 
+#ifdef DEVELOPMENT
+    for (auto i=0; i < _countof(m_CPUDescriptorHeaps); ++i)
+    {
+        DEV_CHECK_ERR(m_CPUDescriptorHeaps[i].DvpGetTotalAllocationCount() == 0, "All CPU descriptor heap allocations must be released");
+    }
+    for (auto i=0; i < _countof(m_GPUDescriptorHeaps); ++i)
+    {
+        DEV_CHECK_ERR(m_GPUDescriptorHeaps[i].DvpGetTotalAllocationCount() == 0, "All GPU descriptor heap allocations must be released");
+    }
+#endif
+
     DEV_CHECK_ERR(m_DynamicMemoryManager.GetAllocatedPageCounter() == 0, "All allocated dynamic pages must have been returned to the manager at this point.");
     m_DynamicMemoryManager.Destroy();
     DEV_CHECK_ERR(m_CmdListManager.GetAllocatorCounter() == 0, "All allocators must have been returned to the manager at this point.");

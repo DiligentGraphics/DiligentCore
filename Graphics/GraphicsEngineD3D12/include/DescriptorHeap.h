@@ -79,7 +79,7 @@ public:
                               D3D12_CPU_DESCRIPTOR_HANDLE CpuHandle, 
                               D3D12_GPU_DESCRIPTOR_HANDLE GpuHandle, 
                               Uint32                      NHandles, 
-                              Uint16                      AllocationManagerId = static_cast<Uint16>(-1) )noexcept : 
+                              Uint16                      AllocationManagerId )noexcept : 
         m_FirstCpuHandle      (CpuHandle), 
         m_FirstGpuHandle      (GpuHandle),
         m_pAllocator          (&Allocator),
@@ -210,7 +210,7 @@ private:
 
 
 // The class performs suballocations within one D3D12 descriptor heap. 
-// It uses VariableSizeGPUAllocationsManager to manage free space in the heap
+// It uses VariableSizeAllocationsManager to manage free space in the heap
 //
 // |  X  X  X  X  O  O  O  X  X  O  O  X  O  O  O  O  |  D3D12 descriptor heap
 //  
@@ -240,25 +240,25 @@ public:
 
     // = default causes compiler error when instantiating std::vector::emplace_back() in Visual Studio 2015 (Version 14.0.23107.0 D14REL)
     DescriptorHeapAllocationManager(DescriptorHeapAllocationManager&& rhs)noexcept : 
-        m_FreeBlockManager          (std::move(rhs.m_FreeBlockManager)),
+        m_ParentAllocator           (rhs.m_ParentAllocator),
+        m_DeviceD3D12Impl           (rhs.m_DeviceD3D12Impl),
+        m_ThisManagerId             (rhs.m_ThisManagerId),
         m_HeapDesc                  (rhs.m_HeapDesc),
-	    m_pd3d12DescriptorHeap      (std::move(rhs.m_pd3d12DescriptorHeap)),
-	    m_FirstCPUHandle            (rhs.m_FirstCPUHandle),
-        m_FirstGPUHandle            (rhs.m_FirstGPUHandle),
         m_DescriptorSize            (rhs.m_DescriptorSize),
         m_NumDescriptorsInAllocation(rhs.m_NumDescriptorsInAllocation),
+	    m_FirstCPUHandle            (rhs.m_FirstCPUHandle),
+        m_FirstGPUHandle            (rhs.m_FirstGPUHandle),
+        m_MaxAllocatedSize          (rhs.m_MaxAllocatedSize),
         // Mutex is not movable
-        //m_AllocationMutex(std::move(rhs.m_AllocationMutex))
-        m_DeviceD3D12Impl           (rhs.m_DeviceD3D12Impl),
-        m_ParentAllocator           (rhs.m_ParentAllocator),
-        m_ThisManagerId             (rhs.m_ThisManagerId)
+        //m_FreeBlockManagerMutex     (std::move(rhs.m_FreeBlockManagerMutex))
+        m_FreeBlockManager          (std::move(rhs.m_FreeBlockManager)),
+        m_pd3d12DescriptorHeap      (std::move(rhs.m_pd3d12DescriptorHeap))
     {
+        rhs.m_NumDescriptorsInAllocation = 0; // Must be set to zero so that debug check in dtor passes
+        rhs.m_ThisManagerId              = static_cast<size_t>(-1);
 	    rhs.m_FirstCPUHandle.ptr         = 0;
         rhs.m_FirstGPUHandle.ptr         = 0;
-        rhs.m_DescriptorSize             = 0;
-        rhs.m_NumDescriptorsInAllocation = 0;
-        rhs.m_HeapDesc.NumDescriptors    = 0;
-        rhs.m_ThisManagerId              = static_cast<size_t>(-1);
+        rhs.m_MaxAllocatedSize           = 0;
 #ifdef DEVELOPMENT
         m_AllocationsCounter.store(rhs.m_AllocationsCounter.load());
         rhs.m_AllocationsCounter = 0;
@@ -285,11 +285,25 @@ public:
 #endif
 
 private:
-    // Allocations manager used to handle descriptor allocations within the heap
-    VariableSizeAllocationsManager m_FreeBlockManager;
+    IDescriptorAllocator&  m_ParentAllocator;
+    RenderDeviceD3D12Impl& m_DeviceD3D12Impl;
+
+    // External ID assigned to this descriptor allocations manager
+    size_t m_ThisManagerId = static_cast<size_t>(-1);
     
     // Heap description
-    D3D12_DESCRIPTOR_HEAP_DESC m_HeapDesc;
+    const D3D12_DESCRIPTOR_HEAP_DESC m_HeapDesc;
+
+    const UINT m_DescriptorSize = 0;
+
+    // Number of descriptors in the allocation. 
+    // If this manager was initialized as a subrange in the existing heap,
+    // this value may be different from m_HeapDesc.NumDescriptors
+    Uint32 m_NumDescriptorsInAllocation = 0;
+
+    // Allocations manager used to handle descriptor allocations within the heap
+    std::mutex                     m_FreeBlockManagerMutex;
+    VariableSizeAllocationsManager m_FreeBlockManager;
 
     // Strong reference to D3D12 descriptor heap object
 	CComPtr<ID3D12DescriptorHeap> m_pd3d12DescriptorHeap;
@@ -300,28 +314,16 @@ private:
     // First GPU descriptor handle in the available descriptor range
     D3D12_GPU_DESCRIPTOR_HANDLE m_FirstGPUHandle = {0};
 
-    UINT m_DescriptorSize = 0;
-
-    // Number of descriptors in the allocation. 
-    // If this manager was initialized as a subrange in the existing heap,
-    // this value may be different from m_HeapDesc.NumDescriptors
-    Uint32 m_NumDescriptorsInAllocation = 0;
-
-    std::mutex m_AllocationMutex;
-    RenderDeviceD3D12Impl& m_DeviceD3D12Impl;
-    IDescriptorAllocator&  m_ParentAllocator;
-    
     size_t m_MaxAllocatedSize = 0;
-
-    // External ID assigned to this descriptor allocations manager
-    size_t m_ThisManagerId = static_cast<size_t>(-1);
 
 #ifdef DEVELOPMENT
     std::atomic_int32_t m_AllocationsCounter = 0;
 #endif
+
+    // Note: when adding new members, do not forget to update move ctor
 };
 
-// CPU descriptor heap is intended to provide storage for resource view descriptor handles
+// CPU descriptor heap is intended to provide storage for resource view descriptor handles.
 // It contains a pool of DescriptorHeapAllocationManager object instances, where every instance manages
 // its own CPU-only D3D12 descriptor heap:
 //
@@ -355,35 +357,40 @@ public:
 
     ~CPUDescriptorHeap();
 
-	virtual DescriptorHeapAllocation Allocate( uint32_t Count )override final ;
-    virtual void Free(DescriptorHeapAllocation&& Allocation, Uint64 CmdQueueMask)override final ;
+	virtual DescriptorHeapAllocation Allocate( uint32_t Count )override final;
+    virtual void Free(DescriptorHeapAllocation&& Allocation, Uint64 CmdQueueMask)override final;
     virtual Uint32 GetDescriptorSize()const override final {return m_DescriptorSize;}
+
+#ifdef DEVELOPMENT
+    int32_t DvpGetTotalAllocationCount();
+#endif
 
 private:
     void FreeAllocation(DescriptorHeapAllocation&& Allocation);
 
-    // Pool of descriptor heap managers
-    std::vector<DescriptorHeapAllocationManager, STDAllocatorRawMem<DescriptorHeapAllocationManager> > m_HeapPool;
-    // Indices of available descriptor heap managers
-    std::unordered_set<size_t, std::hash<size_t>, std::equal_to<size_t>, STDAllocatorRawMem<size_t> > m_AvailableHeaps;
-    IMemoryAllocator &m_MemAllocator;
- 
-	std::mutex m_HeapPoolMutex;
+    IMemoryAllocator&       m_MemAllocator;
+    RenderDeviceD3D12Impl&  m_DeviceD3D12Impl;
 
+    // Pool of descriptor heap managers
+    std::mutex                                                                                        m_HeapPoolMutex;
+    std::vector<DescriptorHeapAllocationManager, STDAllocatorRawMem<DescriptorHeapAllocationManager>> m_HeapPool;
+    // Indices of available descriptor heap managers
+    std::unordered_set<size_t, std::hash<size_t>, std::equal_to<size_t>, STDAllocatorRawMem<size_t>>  m_AvailableHeaps;
+    
     D3D12_DESCRIPTOR_HEAP_DESC m_HeapDesc;
-	RenderDeviceD3D12Impl& m_DeviceD3D12Impl;
-	UINT m_DescriptorSize = 0;
+	const UINT m_DescriptorSize = 0;
+
     // Maximum heap size during the application lifetime - for statistic purposes
 	Uint32 m_MaxSize     = 0;
     Uint32 m_CurrentSize = 0;
 };
 
 // GPU descriptor heap provides storage for shader-visible descriptors
-// The heap contains single D3D12 descriptor heap that is broken into two parts.
+// The heap contains single D3D12 descriptor heap that is split into two parts.
 // The first part stores static and mutable resource descriptor handles.
-// The second part is intended to provide temporary storage for dynamic resources
+// The second part is intended to provide temporary storage for dynamic resources.
 // Space for dynamic resources is allocated in chunks, and then descriptors are suballocated within every
-// chunk. DynamicSuballocationsManager facilitates this process
+// chunk. DynamicSuballocationsManager facilitates this process.
 //
 //     
 //     static and mutable handles      ||                 dynamic space
@@ -447,13 +454,22 @@ public:
         return m_DynamicAllocationsManager.Allocate(Count);
     }
 
-    const D3D12_DESCRIPTOR_HEAP_DESC &GetHeapDesc()const{return m_HeapDesc;}
+    const D3D12_DESCRIPTOR_HEAP_DESC& GetHeapDesc()const{return m_HeapDesc;}
 	Uint32 GetMaxStaticDescriptors() const { return m_HeapAllocationManager.GetMaxDescriptors();     }
 	Uint32 GetMaxDynamicDescriptors()const { return m_DynamicAllocationsManager.GetMaxDescriptors(); }
 
-protected:
+#ifdef DEVELOPMENT
+    int32_t DvpGetTotalAllocationCount()const
+    {
+        return m_HeapAllocationManager.DvpGetAllocationsCounter() + 
+               m_DynamicAllocationsManager.DvpGetAllocationsCounter();
+    }
+#endif
 
-    D3D12_DESCRIPTOR_HEAP_DESC m_HeapDesc;
+protected:
+    RenderDeviceD3D12Impl& m_DeviceD3D12Impl;
+
+    const D3D12_DESCRIPTOR_HEAP_DESC m_HeapDesc;
     CComPtr<ID3D12DescriptorHeap> m_pd3d12DescriptorHeap;
 
     const UINT m_DescriptorSize;
@@ -463,8 +479,6 @@ protected:
     
     // Allocation manager for dynamic part
     DescriptorHeapAllocationManager m_DynamicAllocationsManager;
-        
-    RenderDeviceD3D12Impl& m_DeviceD3D12Impl;
 };
 
 
@@ -481,12 +495,17 @@ protected:
 class DynamicSuballocationsManager final : public IDescriptorAllocator
 {
 public:
-    DynamicSuballocationsManager(IMemoryAllocator &Allocator, GPUDescriptorHeap& ParentGPUHeap, Uint32 DynamicChunkSize);
+    DynamicSuballocationsManager(IMemoryAllocator&  Allocator,
+                                 GPUDescriptorHeap& ParentGPUHeap,
+                                 Uint32             DynamicChunkSize,
+                                 String             ManagerName);
 
     DynamicSuballocationsManager             (const DynamicSuballocationsManager&) = delete;
     DynamicSuballocationsManager             (DynamicSuballocationsManager&&)      = delete;
     DynamicSuballocationsManager& operator = (const DynamicSuballocationsManager&) = delete;
     DynamicSuballocationsManager& operator = (DynamicSuballocationsManager&&)      = delete;
+
+    ~DynamicSuballocationsManager();
 
     void ReleaseAllocations(Uint64 CmdQueueMask);
 
@@ -503,15 +522,21 @@ public:
     size_t GetSuballocationCount()const {return m_Suballocations.size();}
 
 private:
+    // Parent GPU descriptor heap that is used to allocate chunks
+    GPUDescriptorHeap& m_ParentGPUHeap;
+    const String       m_ManagerName;
+
     // List of chunks allocated from the master GPU descriptor heap. All chunks are disposed at the end
     // of the frame
     std::vector<DescriptorHeapAllocation, STDAllocatorRawMem<DescriptorHeapAllocation> > m_Suballocations;
 
-	Uint32 m_CurrentSuballocationOffset = 0;
-    Uint32 m_DynamicChunkSize           = 0;
+	Uint32 m_CurrentSuballocationOffset  = 0;
+    Uint32 m_DynamicChunkSize            = 0;
 
-    // Parent GPU descriptor heap that is used to allocate chunks
-    GPUDescriptorHeap& m_ParentGPUHeap;
+    Uint32 m_CurrDescriptorCount         = 0;
+    Uint32 m_PeakDescriptorCount         = 0;
+    Uint32 m_CurrSuballocationsTotalSize = 0;
+    Uint32 m_PeakSuballocationsTotalSize = 0;
 };
 
 }
