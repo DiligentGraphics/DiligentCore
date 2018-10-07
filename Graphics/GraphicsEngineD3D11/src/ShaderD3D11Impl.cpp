@@ -69,6 +69,12 @@ ShaderD3D11Impl::ShaderD3D11Impl(IReferenceCounters*          pRefCounters,
     if(!m_pShader)
         LOG_ERROR_AND_THROW("Failed to create the shader from the byte code");
 
+    if (*m_Desc.Name != 0)
+    {
+        auto hr = m_pShader->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen(m_Desc.Name)), m_Desc.Name);
+        DEV_CHECK_ERR(SUCCEEDED(hr), "Failed to set shader name");
+    }
+
     // Load shader resources
     auto &Allocator = GetRawAllocator();
     auto *pRawMem = ALLOCATE(Allocator, "Allocator for ShaderResources", sizeof(ShaderResourcesD3D11));

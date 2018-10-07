@@ -36,6 +36,11 @@ CommandListD3D11Impl :: CommandListD3D11Impl(IReferenceCounters*    pRefCounters
     TCommandListBase(pRefCounters, pDevice),
     m_pd3d11CommandList(pd3d11CommandList)
 {
+    if (*m_Desc.Name != 0)
+    {
+        auto hr = m_pd3d11CommandList->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen(m_Desc.Name)), m_Desc.Name);
+        DEV_CHECK_ERR(SUCCEEDED(hr), "Failed to set command list name");
+    }
 }
 
 CommandListD3D11Impl :: ~CommandListD3D11Impl()

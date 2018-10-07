@@ -50,6 +50,11 @@ SamplerD3D11Impl::SamplerD3D11Impl(IReferenceCounters*    pRefCounters,
     };
     CHECK_D3D_RESULT_THROW( pd3d11Device->CreateSamplerState(&D3D11SamplerDesc, &m_pd3dSampler),
                             "Failed to create the Direct3D11 sampler");
+    if (*m_Desc.Name != 0)
+    {
+        auto hr = m_pd3dSampler->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen(m_Desc.Name)), m_Desc.Name);
+        DEV_CHECK_ERR(SUCCEEDED(hr), "Failed to set sampler name");
+    }
 }
 
 SamplerD3D11Impl::~SamplerD3D11Impl()
