@@ -290,10 +290,4 @@ void CommandContext::InsertAliasBarrier(D3D12ResourceBase& Before, D3D12Resource
         FlushResourceBarriers();
 }
 
-DescriptorHeapAllocation CommandContext::AllocateDynamicGPUVisibleDescriptor( D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count )
-{
-    VERIFY(Type >= D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV && Type <= D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, "Invalid heap type");
-    return m_DynamicGPUDescriptorAllocators[Type].Allocate(Count);
-}
-
 }

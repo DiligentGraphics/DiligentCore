@@ -578,8 +578,11 @@ namespace Diligent
     {
         VERIFY_EXPR(m_bIsDeferred || m_SubmittedBuffersCmdQueueMask == (Uint64{1}<<m_CommandQueueId));
 
+        // Released pages are returned to the global dynamic memory manager hosted by render device.
         m_DynamicHeap.ReleaseAllocatedPages(m_SubmittedBuffersCmdQueueMask);
         
+        // Dynamic GPU descriptor allocations are returned to the global GPU descriptor heap
+        // hosted by the render device.
         for(size_t i=0; i < _countof(m_DynamicGPUDescriptorAllocator); ++i)
             m_DynamicGPUDescriptorAllocator[i].ReleaseAllocations(m_SubmittedBuffersCmdQueueMask);
 

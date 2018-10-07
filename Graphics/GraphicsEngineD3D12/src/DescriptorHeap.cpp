@@ -403,7 +403,8 @@ DynamicSuballocationsManager::~DynamicSuballocationsManager()
 void DynamicSuballocationsManager::ReleaseAllocations(Uint64 CmdQueueMask)
 {
     // Clear the list and dispose all allocated chunks of GPU descriptor heap.
-    // The chunks will be added to the release queue in the allocations manager
+    // The chunks will be added to release queues and eventually returned to the 
+    // parent GPU heap.
     for(auto& Allocation : m_Suballocations)
     {
         m_ParentGPUHeap.Free(std::move(Allocation), CmdQueueMask);
@@ -425,7 +426,7 @@ DescriptorHeapAllocation DynamicSuballocationsManager::Allocate(Uint32 Count)
         // Request a new chunk from the parent GPU descriptor heap
         auto SuballocationSize = std::max(m_DynamicChunkSize, Count);
         auto NewDynamicSubAllocation = m_ParentGPUHeap.AllocateDynamic(SuballocationSize);
-        if (NewDynamicSubAllocation.GetCpuHandle().ptr == 0)
+        if (NewDynamicSubAllocation.IsNull())
         {
             LOG_ERROR_MESSAGE("Failed to suballocate region for dynamic descriptors");
             return DescriptorHeapAllocation();
@@ -438,7 +439,7 @@ DescriptorHeapAllocation DynamicSuballocationsManager::Allocate(Uint32 Count)
     }
 
     // Perform suballocation from the last chunk
-    auto &CurrentSuballocation = m_Suballocations.back();
+    auto& CurrentSuballocation = m_Suballocations.back();
     
     auto ManagerId = CurrentSuballocation.GetAllocationManagerId();
     VERIFY(ManagerId < std::numeric_limits<Uint16>::max(), "ManagerID exceed allowed limit");

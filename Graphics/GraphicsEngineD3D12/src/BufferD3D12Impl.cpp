@@ -328,7 +328,7 @@ void BufferD3D12Impl :: Map(IDeviceContext* pContext, MAP_TYPE MapType, Uint32 M
         LOG_WARNING_MESSAGE_ONCE("Mapping CPU buffer for reading on D3D12 currently requires flushing context and idling GPU");
         pDeviceContextD3D12->Flush();
         auto *pDeviceD3D12 = ValidatedCast<RenderDeviceD3D12Impl>(GetDevice());
-        pDeviceD3D12->IdleGPU(false);
+        pDeviceD3D12->IdleGPU();
 
         VERIFY(m_Desc.Usage == USAGE_CPU_ACCESSIBLE, "Buffer must be created as USAGE_CPU_ACCESSIBLE to be mapped for reading");
         D3D12_RANGE MapRange;

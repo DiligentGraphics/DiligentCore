@@ -116,7 +116,12 @@ public:
     void SetID(const Char* ID) { m_ID = ID; }
     ID3D12GraphicsCommandList *GetCommandList(){return m_pCommandList;}
     
-    DescriptorHeapAllocation AllocateDynamicGPUVisibleDescriptor( D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count = 1 );
+    DescriptorHeapAllocation AllocateDynamicGPUVisibleDescriptor( D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count = 1 )
+    {
+        VERIFY(m_DynamicGPUDescriptorAllocators != nullptr, "Dynamic GPU descriptor llocators have not been initialized. Did you forget to call SetDynamicGPUDescriptorAllocators() after resetting the context?");
+        VERIFY(Type >= D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV && Type <= D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, "Invalid heap type");
+        return m_DynamicGPUDescriptorAllocators[Type].Allocate(Count);
+    }
 
     void InsertUAVBarrier(D3D12ResourceBase& Resource, IDeviceObject &Object, bool FlushImmediate = false);
 

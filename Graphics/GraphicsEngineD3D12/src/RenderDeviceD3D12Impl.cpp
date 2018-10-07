@@ -89,7 +89,7 @@ RenderDeviceD3D12Impl :: RenderDeviceD3D12Impl(IReferenceCounters*          pRef
 RenderDeviceD3D12Impl::~RenderDeviceD3D12Impl()
 {
     // Wait for the GPU to complete all its operations
-    IdleGPU(true);
+    IdleGPU();
     ReleaseStaleResources(true);
 
 #ifdef DEVELOPMENT
@@ -193,12 +193,9 @@ Uint64 RenderDeviceD3D12Impl::CloseAndExecuteCommandContext(Uint32 QueueIndex, P
 }
 
 
-void RenderDeviceD3D12Impl::IdleGPU(bool ReleaseStaleObjects) 
+void RenderDeviceD3D12Impl::IdleGPU() 
 { 
-    // Do not wait until the end of the frame and force deletion. 
-    // It is necessary to release outstanding references to the
-    // swap chain buffers when it is resized in the middle of the frame.
-    IdleCommandQueues(ReleaseStaleObjects);
+    IdleCommandQueues(true);
 }
 
 void RenderDeviceD3D12Impl::FlushStaleResources(Uint32 CmdQueueIndex)

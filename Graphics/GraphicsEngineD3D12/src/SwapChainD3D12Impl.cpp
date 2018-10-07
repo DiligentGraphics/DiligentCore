@@ -172,7 +172,7 @@ void SwapChainD3D12Impl::UpdateSwapChain(bool CreateNew)
 
             // This will release references to D3D12 swap chain buffers hold by
             // m_pBackBufferRTV[]
-            pDeviceD3D12->IdleGPU(true);
+            pDeviceD3D12->IdleGPU();
 
             if(CreateNew)
             {

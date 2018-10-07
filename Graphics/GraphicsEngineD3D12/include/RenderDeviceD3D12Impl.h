@@ -78,7 +78,7 @@ public:
     DescriptorHeapAllocation AllocateDescriptor( D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count = 1 );
     DescriptorHeapAllocation AllocateGPUDescriptors( D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count = 1 );
 
-	void IdleGPU(bool ReleaseStaleObjects);
+	void IdleGPU();
 
     using PooledCommandContext = std::unique_ptr<CommandContext, STDDeleterRawMem<CommandContext> >;
     PooledCommandContext AllocateCommandContext(const Char *ID = "");
