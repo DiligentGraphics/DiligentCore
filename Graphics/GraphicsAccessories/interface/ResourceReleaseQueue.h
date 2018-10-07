@@ -149,7 +149,7 @@ private:
     class StaleResourceBase
     {
     public:
-        virtual ~StaleResourceBase() = 0 {}
+        virtual ~StaleResourceBase() = 0;
         virtual void Release() = 0;
     };
 
@@ -159,6 +159,10 @@ private:
 
     StaleResourceBase* m_pStaleResource;
 };
+
+inline DynamicStaleResourceWrapper::StaleResourceBase::~StaleResourceBase()
+{
+}
 
 /// Helper class that wraps stale resources of the same type
 template<typename ResourceType>
