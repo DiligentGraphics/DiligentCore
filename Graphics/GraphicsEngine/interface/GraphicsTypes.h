@@ -1575,7 +1575,8 @@ namespace Diligent
         /// Indicates if the format can be used to create a cube texture 
         bool TexCubeFmt = false;
 
-        /// Indicates if the format can be used to create a multisampled 2D texture 
-        bool SupportsMS = false;
+        /// A bitmask specifying all the supported sample counts for this texture format.
+        /// If the format supports n samples, then (SampleCounts & n) != 0
+        Uint32 SampleCounts = 0;
     };
 }

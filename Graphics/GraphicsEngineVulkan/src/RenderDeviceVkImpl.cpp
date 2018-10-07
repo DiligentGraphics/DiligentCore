@@ -397,7 +397,7 @@ void RenderDeviceVkImpl::TestTextureFormat( TEXTURE_FORMAT TexFormat )
             TexFormatInfo.ColorRenderable = err == VK_SUCCESS;
             if (TexFormatInfo.ColorRenderable)
             {
-                TexFormatInfo.SupportsMS = ImgFmtProps.sampleCounts > VK_SAMPLE_COUNT_1_BIT;
+                TexFormatInfo.SampleCounts = ImgFmtProps.sampleCounts;
             }
         }
     }
@@ -415,7 +415,7 @@ void RenderDeviceVkImpl::TestTextureFormat( TEXTURE_FORMAT TexFormat )
             TexFormatInfo.DepthRenderable = err == VK_SUCCESS;
             if (TexFormatInfo.DepthRenderable)
             {
-                TexFormatInfo.SupportsMS = ImgFmtProps.sampleCounts > VK_SAMPLE_COUNT_1_BIT;
+                TexFormatInfo.SampleCounts = ImgFmtProps.sampleCounts;
             }
         }
     }

@@ -62,7 +62,7 @@ void SwapChainD3D11Impl::CreateRTVandDSV()
                             "Failed to get back buffer from swap chain" );
     static const char BackBufferName[] = "Main back buffer";
     auto hr = pd3dBackBuffer->SetPrivateData(WKPDID_D3DDebugObjectName, _countof(BackBufferName)-1, BackBufferName);
-    VERIFY(SUCCEEDED(hr));
+    DEV_CHECK_ERR(SUCCEEDED(hr), "Failed to set back buffer name");
 
     RefCntAutoPtr<ITexture> pBackBuffer;
     pRenderDeviceD3D11Impl->CreateTextureFromD3DResource(pd3dBackBuffer, &pBackBuffer);

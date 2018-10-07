@@ -70,144 +70,37 @@ RenderDeviceD3D11Impl :: RenderDeviceD3D11Impl(IReferenceCounters*       pRefCou
     m_DeviceCaps.bMultithreadedResourceCreationSupported = True;
 }
 
-
-bool CreateTestTexture1D(ID3D11Device* pDevice, const D3D11_TEXTURE1D_DESC& TexDesc)
-{
-    // Set the texture pointer address to nullptr to validate input parameters
-    // without creating the texture
-    // https://msdn.microsoft.com/en-us/library/windows/desktop/ff476520(v=vs.85).aspx
-    HRESULT hr = pDevice->CreateTexture1D( &TexDesc, nullptr, nullptr );
-    return hr == S_FALSE; // S_FALSE means that input parameters passed validation
-}
-
-bool CreateTestTexture2D(ID3D11Device* pDevice, const D3D11_TEXTURE2D_DESC &TexDesc)
-{
-    // Set the texture pointer address to nullptr to validate input parameters
-    // without creating the texture
-    // https://msdn.microsoft.com/en-us/library/windows/desktop/ff476521(v=vs.85).aspx
-    HRESULT hr = pDevice->CreateTexture2D( &TexDesc, nullptr, nullptr );
-    return hr == S_FALSE; // S_FALSE means that input parameters passed validation
-}
-
-bool CreateTestTexture3D(ID3D11Device* pDevice, const D3D11_TEXTURE3D_DESC& TexDesc)
-{
-    // Set the texture pointer address to nullptr to validate input parameters
-    // without creating the texture
-    // https://msdn.microsoft.com/en-us/library/windows/desktop/ff476522(v=vs.85).aspx
-    HRESULT hr = pDevice->CreateTexture3D( &TexDesc, nullptr, nullptr );
-    return hr == S_FALSE; // S_FALSE means that input parameters passed validation
-}
-
 void RenderDeviceD3D11Impl::TestTextureFormat( TEXTURE_FORMAT TexFormat )
 {
     auto &TexFormatInfo = m_TextureFormatsInfo[TexFormat];
     VERIFY( TexFormatInfo.Supported, "Texture format is not supported" );
 
     auto DXGIFormat = TexFormatToDXGI_Format(TexFormat);
-    UINT DefaultBind = 0;
-    if( TexFormatInfo.ComponentType == COMPONENT_TYPE_DEPTH ||
-        TexFormatInfo.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL )
-        DefaultBind = D3D11_BIND_DEPTH_STENCIL;
-    else
-        DefaultBind = D3D11_BIND_SHADER_RESOURCE;
-
-    const int TestTextureDim = 32;
-    const int TestTextureDepth = 8;
-    
-    // Create test texture 1D
-    TexFormatInfo.Tex1DFmt = false;
-    if( TexFormatInfo.ComponentType != COMPONENT_TYPE_COMPRESSED )
+   
+    UINT FormatSupport = 0;
+    auto hr = m_pd3d11Device->CheckFormatSupport(DXGIFormat, &FormatSupport);
+    if (FAILED(hr))
     {
-        D3D11_TEXTURE1D_DESC Tex1DDesc =
-        {
-            TestTextureDim,            // UINT Width;
-            1,                         // UINT MipLevels;
-            1,                         // UINT ArraySize;
-            DXGIFormat,                // DXGI_FORMAT Format;
-            D3D11_USAGE_DEFAULT,       // D3D11_USAGE Usage;
-            DefaultBind,               // UINT BindFlags;
-            0,                         // UINT CPUAccessFlags;
-            0                          // UINT MiscFlags;
-        };
-        TexFormatInfo.Tex1DFmt = CreateTestTexture1D(m_pd3d11Device, Tex1DDesc );
+        LOG_ERROR_MESSAGE("CheckFormatSupport() failed for format ", DXGIFormat);
+        return;
     }
 
-    // Create test texture 2D
-    TexFormatInfo.Tex2DFmt = false;
-    TexFormatInfo.TexCubeFmt = false;
-    TexFormatInfo.ColorRenderable = false;
-    TexFormatInfo.DepthRenderable = false;
-    TexFormatInfo.SupportsMS = false;
+    TexFormatInfo.Filterable      = ((FormatSupport & D3D11_FORMAT_SUPPORT_SHADER_SAMPLE) != 0) || 
+                                    ((FormatSupport & D3D11_FORMAT_SUPPORT_SHADER_SAMPLE_COMPARISON) != 0);
+    TexFormatInfo.ColorRenderable = (FormatSupport & D3D11_FORMAT_SUPPORT_RENDER_TARGET) != 0;
+    TexFormatInfo.DepthRenderable = (FormatSupport & D3D11_FORMAT_SUPPORT_DEPTH_STENCIL) != 0;
+    TexFormatInfo.Tex1DFmt        = (FormatSupport & D3D11_FORMAT_SUPPORT_TEXTURE1D) != 0;
+    TexFormatInfo.Tex2DFmt        = (FormatSupport & D3D11_FORMAT_SUPPORT_TEXTURE2D) != 0;
+    TexFormatInfo.Tex3DFmt        = (FormatSupport & D3D11_FORMAT_SUPPORT_TEXTURE3D) != 0;
+    TexFormatInfo.TexCubeFmt      = (FormatSupport & D3D11_FORMAT_SUPPORT_TEXTURECUBE) != 0;
+
+    TexFormatInfo.SampleCounts = 0x0;
+    for(Uint32 SampleCount = 1; SampleCount <= D3D11_MAX_MULTISAMPLE_SAMPLE_COUNT; SampleCount *= 2)
     {
-        D3D11_TEXTURE2D_DESC Tex2DDesc =
-        {
-            TestTextureDim,      // UINT Width;
-            TestTextureDim,      // UINT Height;
-            1,                   // UINT MipLevels;
-            1,                   // UINT ArraySize;
-            DXGIFormat,          // DXGI_FORMAT Format;
-            { 1, 0 },            // DXGI_SAMPLE_DESC SampleDesc;
-            D3D11_USAGE_DEFAULT, // D3D11_USAGE Usage;
-            DefaultBind,         // UINT BindFlags;
-            0,                   // UINT CPUAccessFlags;
-            0,                   // UINT MiscFlags;
-        };
-        TexFormatInfo.Tex2DFmt = CreateTestTexture2D( m_pd3d11Device, Tex2DDesc );
-
-        if( TexFormatInfo.Tex2DFmt )
-        {
-            {
-                D3D11_TEXTURE2D_DESC CubeTexDesc = Tex2DDesc;
-                CubeTexDesc.ArraySize = 6;
-                CubeTexDesc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
-                TexFormatInfo.TexCubeFmt = CreateTestTexture2D( m_pd3d11Device, CubeTexDesc );
-            }
-
-            if( TexFormatInfo.ComponentType == COMPONENT_TYPE_DEPTH ||
-                TexFormatInfo.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL )
-            {
-                Tex2DDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
-                TexFormatInfo.DepthRenderable = CreateTestTexture2D( m_pd3d11Device, Tex2DDesc );
-
-                if( TexFormatInfo.DepthRenderable )
-                {
-                    Tex2DDesc.SampleDesc.Count = 4;
-                    TexFormatInfo.SupportsMS = CreateTestTexture2D( m_pd3d11Device, Tex2DDesc );
-                }
-            }
-            else if( TexFormatInfo.ComponentType != COMPONENT_TYPE_COMPRESSED && 
-                     TexFormatInfo.Format != DXGI_FORMAT_R9G9B9E5_SHAREDEXP)
-            {
-                Tex2DDesc.BindFlags = D3D11_BIND_RENDER_TARGET;
-                TexFormatInfo.ColorRenderable = CreateTestTexture2D( m_pd3d11Device, Tex2DDesc );
-                if( TexFormatInfo.ColorRenderable )
-                {
-                    Tex2DDesc.SampleDesc.Count = 4;
-                    TexFormatInfo.SupportsMS = CreateTestTexture2D( m_pd3d11Device, Tex2DDesc );
-                }
-            }
-        }
-    }
-
-    // Create test texture 3D
-    TexFormatInfo.Tex3DFmt = false;
-    // 3D textures do not support depth formats
-    if( !(TexFormatInfo.ComponentType == COMPONENT_TYPE_DEPTH ||
-          TexFormatInfo.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL) )
-    {
-        D3D11_TEXTURE3D_DESC Tex3DDesc =
-        {
-            TestTextureDim,     // UINT Width;
-            TestTextureDim,     // UINT Height;
-            TestTextureDepth,   // UINT Depth;
-            1,                  // UINT MipLevels;
-            DXGIFormat,         // DXGI_FORMAT Format;
-            D3D11_USAGE_DEFAULT,// D3D11_USAGE Usage;
-            DefaultBind,        // UINT BindFlags;
-            0,                  // UINT CPUAccessFlags;
-            0                   // UINT MiscFlags;
-        };
-        TexFormatInfo.Tex3DFmt = CreateTestTexture3D( m_pd3d11Device, Tex3DDesc );
+        UINT QualityLevels = 0;
+        hr = m_pd3d11Device->CheckMultisampleQualityLevels(DXGIFormat, SampleCount, &QualityLevels);
+        if(SUCCEEDED(hr) && QualityLevels > 0)
+            TexFormatInfo.SampleCounts |= SampleCount;
     }
 }
 

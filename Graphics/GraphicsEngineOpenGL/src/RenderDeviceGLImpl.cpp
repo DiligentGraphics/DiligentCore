@@ -646,16 +646,21 @@ void RenderDeviceGLImpl::TestTextureFormat( TEXTURE_FORMAT TexFormat )
         }
     }
 
-    TexFormatInfo.SupportsMS = false;
+    TexFormatInfo.SampleCounts = 0x01;
     if( TexFormatInfo.ComponentType != COMPONENT_TYPE_COMPRESSED &&  
         m_DeviceCaps.TexCaps.bTexture2DMSSupported )
     {
 #if GL_ARB_texture_storage_multisample
-        GLObjectWrappers::GLTextureObj TestGLTex( true );
-        TexFormatInfo.SupportsMS = CreateTestGLTexture( ContextState, GL_TEXTURE_2D_MULTISAMPLE, TestGLTex, [&]()
+        for (GLsizei SampleCount = 2; SampleCount <= 8; SampleCount *= 2)
         {
-            glTexStorage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, 4, GLFmt, TestTextureDim, TestTextureDim, GL_TRUE);
-        } );
+            GLObjectWrappers::GLTextureObj TestGLTex( true );
+            auto SampleCountSupported = CreateTestGLTexture( ContextState, GL_TEXTURE_2D_MULTISAMPLE, TestGLTex, [&]()
+            {
+                glTexStorage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, SampleCount, GLFmt, TestTextureDim, TestTextureDim, GL_TRUE);
+            } );
+            if (SampleCountSupported)
+                TexFormatInfo.SampleCounts |= SampleCount;
+        }
 #endif
     }
 
