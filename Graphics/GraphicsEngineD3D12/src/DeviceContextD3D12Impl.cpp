@@ -576,6 +576,11 @@ namespace Diligent
 
     void DeviceContextD3D12Impl::FinishFrame()
     {
+        if (GetNumCommandsInCtx() != 0)
+            LOG_ERROR_MESSAGE(m_bIsDeferred ? 
+                "There are outstanding commands in the deferred device context when finishing the frame. This is an error and may cause unpredicted behaviour. Close all deferred contexts and execute them before finishing the frame" :
+                "There are outstanding commands in the immediate device context when finishing the frame. This is an error and may cause unpredicted behaviour. Call Flush() to submit all commands for execution before finishing the frame");
+
         VERIFY_EXPR(m_bIsDeferred || m_SubmittedBuffersCmdQueueMask == (Uint64{1}<<m_CommandQueueId));
 
         // Released pages are returned to the global dynamic memory manager hosted by render device.
