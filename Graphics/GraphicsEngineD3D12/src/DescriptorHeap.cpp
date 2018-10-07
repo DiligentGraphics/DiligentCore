@@ -180,11 +180,10 @@ CPUDescriptorHeap::~CPUDescriptorHeap()
         DEV_CHECK_ERR(Heap.GetNumAvailableDescriptors() == Heap.GetMaxDescriptors(), "Not all descriptors in the descriptor pool are released");
         TotalDescriptors += Heap.GetMaxDescriptors();
     }
-    TotalDescriptors = std::max(TotalDescriptors, 1u);
 
     LOG_INFO_MESSAGE(std::setw(38), std::left, GetD3D12DescriptorHeapTypeLiteralName(m_HeapDesc.Type), " CPU heap allocated pool count: ", m_HeapPool.size(),
                      ". Max descriptors: ", m_MaxSize, '/', TotalDescriptors,
-                     " (", std::fixed, std::setprecision(2), m_MaxSize*100.0 / TotalDescriptors, "%).");
+                     " (", std::fixed, std::setprecision(2), m_MaxSize*100.0 / std::max(TotalDescriptors, 1u), "%).");
 }
 
 #ifdef DEVELOPMENT
