@@ -96,7 +96,7 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*      pRefCoun
         CHECK_D3D_RESULT_THROW( pDeviceD3D11->CreateDepthStencilState( &D3D11DSSDesc, &m_pd3d11DepthStencilState ),
                                 "Failed to create D3D11 depth stencil state" );
 
-           // Create input layout
+        // Create input layout
         if( m_LayoutElements.size() > 0 ) 
         {
             std::vector<D3D11_INPUT_ELEMENT_DESC, STDAllocatorRawMem<D3D11_INPUT_ELEMENT_DESC> > d311InputElements(STD_ALLOCATOR_RAW_MEM(D3D11_INPUT_ELEMENT_DESC, GetRawAllocator(), "Allocator for vector<D3D11_INPUT_ELEMENT_DESC>") );
@@ -108,34 +108,6 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*      pRefCoun
 
             CHECK_D3D_RESULT_THROW( pDeviceD3D11->CreateInputLayout(d311InputElements.data(), static_cast<UINT>(d311InputElements.size()), pVSByteCode->GetBufferPointer(), pVSByteCode->GetBufferSize(), &m_pd3d11InputLayout ),
                                     "Failed to create the Direct3D11 input layout");
-        }
-
-        if (*m_Desc.Name != 0)
-        {
-            {
-                String BSName = String(m_Desc.Name) + " - Blend State";
-                auto hr = m_pd3d11BlendState->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(BSName.length()), BSName.c_str());
-                DEV_CHECK_ERR(SUCCEEDED(hr), "Failed to set blend state name");
-            }
-
-            {
-                String DSSName = String(m_Desc.Name) + " - Depth-Stencil State";
-                auto hr = m_pd3d11DepthStencilState->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(DSSName.length()), DSSName.c_str());
-                DEV_CHECK_ERR(SUCCEEDED(hr), "Failed to set depth-stencil state name");
-            }
-
-            {
-                String RSName = String(m_Desc.Name) + " - Raterizer State";
-                auto hr = m_pd3d11RasterizerState->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(RSName.length()), RSName.c_str());
-                DEV_CHECK_ERR(SUCCEEDED(hr), "Failed to set rasterizer state name");
-            }
-
-            if (m_pd3d11InputLayout)
-            {
-                String LayoutName = String(m_Desc.Name) + " - Input Layout";
-                auto hr = m_pd3d11InputLayout->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(LayoutName.length()), LayoutName.c_str());
-                DEV_CHECK_ERR(SUCCEEDED(hr), "Failed to set input layout state name");
-            }
         }
     }
 
