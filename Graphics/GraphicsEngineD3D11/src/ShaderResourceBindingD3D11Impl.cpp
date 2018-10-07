@@ -149,7 +149,7 @@ IShaderVariable* ShaderResourceBindingD3D11Impl::GetVariable(SHADER_TYPE ShaderT
     auto ResLayoutIndex = m_ResourceLayoutIndex[Ind];
     if( ResLayoutIndex < 0 )
     {
-        LOG_ERROR("Unable to find mutable/dynamic variable '", Name, "': shader stage ", GetShaderTypeLiteralName(ShaderType), " is inactive");
+        LOG_WARNING_MESSAGE("Unable to find mutable/dynamic variable '", Name, "': shader stage ", GetShaderTypeLiteralName(ShaderType), " is inactive");
         return nullptr;
     }
 
@@ -163,7 +163,7 @@ Uint32 ShaderResourceBindingD3D11Impl::GetVariableCount(SHADER_TYPE ShaderType) 
     auto ResLayoutIndex = m_ResourceLayoutIndex[Ind];
     if( ResLayoutIndex < 0 )
     {
-        LOG_ERROR("Unable to get the number of mutable/dynamic variables: shader stage ", GetShaderTypeLiteralName(ShaderType), " is inactive");
+        LOG_WARNING_MESSAGE("Unable to get the number of mutable/dynamic variables: shader stage ", GetShaderTypeLiteralName(ShaderType), " is inactive");
         return 0;
     }
 

@@ -107,7 +107,7 @@ IShaderVariable* ShaderResourceBindingVkImpl::GetVariable(SHADER_TYPE ShaderType
     auto ResLayoutInd = m_ResourceLayoutIndex[ShaderInd];
     if (ResLayoutInd < 0)
     {
-        LOG_ERROR("Unable to find mutable/dynamic variable '", Name, "': shader stage ", GetShaderTypeLiteralName(ShaderType), " is inactive");
+        LOG_WARNING_MESSAGE("Unable to find mutable/dynamic variable '", Name, "': shader stage ", GetShaderTypeLiteralName(ShaderType), " is inactive");
         return nullptr;
     }
     return m_pShaderVarMgrs[ResLayoutInd].GetVariable(Name);
@@ -119,7 +119,7 @@ Uint32 ShaderResourceBindingVkImpl::GetVariableCount(SHADER_TYPE ShaderType) con
     auto ResLayoutInd = m_ResourceLayoutIndex[ShaderInd];
     if (ResLayoutInd < 0)
     {
-        LOG_ERROR("Unable to get the number of mutable/dynamic variables: shader stage ", GetShaderTypeLiteralName(ShaderType), " is inactive");
+        LOG_WARNING_MESSAGE("Unable to get the number of mutable/dynamic variables: shader stage ", GetShaderTypeLiteralName(ShaderType), " is inactive");
         return 0;
     }
     return m_pShaderVarMgrs[ResLayoutInd].GetVariableCount();
