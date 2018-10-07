@@ -845,22 +845,11 @@ namespace Diligent
 
     void DeviceContextD3D11Impl::ClearDepthStencil( ITextureView* pView, Uint32 ClearFlags, float fDepth, Uint8 Stencil )
     {
-        ID3D11DepthStencilView* pd3d11DSV = nullptr;
-        if( pView != nullptr )
-        {
-#ifdef _DEBUG
-            const auto& ViewDesc = pView->GetDesc();
-            VERIFY( ViewDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL, "Incorrect view type: depth stencil is expected" );
-#endif
-            auto* pViewD3D11 = ValidatedCast<TextureViewD3D11Impl>(pView);
-            pd3d11DSV = static_cast<ID3D11DepthStencilView *>(pViewD3D11->GetD3D11View());
-        }
-        else
+        if (pView == nullptr)
         {
             if (m_pSwapChain)
             {
-                pd3d11DSV = m_pSwapChain.RawPtr<ISwapChainD3D11>()->GetDSV();
-                VERIFY_EXPR(pd3d11DSV != nullptr);
+                pView = m_pSwapChain->GetDepthBufferDSV();
             }
             else
             {
@@ -868,6 +857,14 @@ namespace Diligent
                 return;
             }
         }
+
+#ifdef DEVELOPMENT
+        const auto& ViewDesc = pView->GetDesc();
+        VERIFY( ViewDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL, "Incorrect view type: depth stencil is expected" );
+#endif
+        auto* pViewD3D11 = ValidatedCast<TextureViewD3D11Impl>(pView);
+        auto* pd3d11DSV = static_cast<ID3D11DepthStencilView*>(pViewD3D11->GetD3D11View());
+
         UINT32 d3d11ClearFlags = 0;
         if( ClearFlags & CLEAR_DEPTH_FLAG )   d3d11ClearFlags |= D3D11_CLEAR_DEPTH;
         if( ClearFlags & CLEAR_STENCIL_FLAG ) d3d11ClearFlags |= D3D11_CLEAR_STENCIL;
@@ -878,22 +875,11 @@ namespace Diligent
 
     void DeviceContextD3D11Impl::ClearRenderTarget( ITextureView* pView, const float *RGBA )
     {
-        ID3D11RenderTargetView* pd3d11RTV = nullptr;
-        if( pView != nullptr )
+        if (pView == nullptr)
         {
-#ifdef _DEBUG
-            const auto& ViewDesc = pView->GetDesc();
-            VERIFY( ViewDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET, "Incorrect view type: render target is expected" );
-#endif
-            auto* pViewD3D11 = ValidatedCast<TextureViewD3D11Impl>(pView);
-            pd3d11RTV = static_cast<ID3D11RenderTargetView*>(pViewD3D11->GetD3D11View());
-        }
-        else
-        {
-            if (m_pSwapChain)
+            if (m_pSwapChain != nullptr)
             {
-                pd3d11RTV = m_pSwapChain.RawPtr<ISwapChainD3D11>()->GetRTV();
-                VERIFY_EXPR(pd3d11RTV != nullptr);
+                pView = m_pSwapChain->GetCurrentBackBufferRTV();
             }
             else
             {
@@ -902,6 +888,13 @@ namespace Diligent
             }
         }
 
+#ifdef DEVELOPMENT
+        const auto& ViewDesc = pView->GetDesc();
+        VERIFY( ViewDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET, "Incorrect view type: render target is expected" );
+#endif
+        auto* pViewD3D11 = ValidatedCast<TextureViewD3D11Impl>(pView);
+        auto* pd3d11RTV = static_cast<ID3D11RenderTargetView*>(pViewD3D11->GetD3D11View());
+        
         static const float Zero[4] = { 0.f, 0.f, 0.f, 0.f };
         if( RGBA == nullptr )
             RGBA = Zero;
@@ -990,8 +983,10 @@ namespace Diligent
             {
                 NumRenderTargets = 1;
                 auto* pSwapChainD3D11 = m_pSwapChain.RawPtr<ISwapChainD3D11>();
-                pd3d11RTs[0] = pSwapChainD3D11->GetRTV();
-                pd3d11DSV = pSwapChainD3D11->GetDSV();
+                auto* pBackBufferViewD3D11 = pSwapChainD3D11->GetCurrentBackBufferRTV();
+                pd3d11RTs[0] = static_cast<ID3D11RenderTargetView*>(pBackBufferViewD3D11->GetD3D11View());
+                auto* pDepthBufferViewD3D11 = pSwapChainD3D11->GetDepthBufferDSV();
+                pd3d11DSV = static_cast<ID3D11DepthStencilView*>(pDepthBufferViewD3D11->GetD3D11View());
                 VERIFY_EXPR(pd3d11RTs[0] != nullptr && pd3d11DSV != nullptr);
             }
             else
@@ -1007,7 +1002,7 @@ namespace Diligent
                 auto* pView = m_pBoundRenderTargets[rt].RawPtr();
                 if( pView )
                 {
-                    auto* pViewD3D11 = static_cast<TextureViewD3D11Impl*>(pView);
+                    auto* pViewD3D11 = ValidatedCast<TextureViewD3D11Impl>(pView);
                     pd3d11RTs[rt] = static_cast<ID3D11RenderTargetView*>(pViewD3D11->GetD3D11View());
                 }
                 else
@@ -1017,7 +1012,7 @@ namespace Diligent
             auto* pDepthStencil = m_pBoundDepthStencil.RawPtr();
             if( pDepthStencil != nullptr )
             {
-                auto* pViewD3D11 = static_cast<TextureViewD3D11Impl*>(pDepthStencil);
+                auto* pViewD3D11 = ValidatedCast<TextureViewD3D11Impl>(pDepthStencil);
                 pd3d11DSV = static_cast<ID3D11DepthStencilView*>(pViewD3D11->GetD3D11View());
             }
         }

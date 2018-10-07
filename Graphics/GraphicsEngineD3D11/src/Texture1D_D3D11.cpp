@@ -74,20 +74,32 @@ static TextureDesc TexDescFromD3D11Texture1D(ID3D11Texture1D *pd3d11Texture)
 {
     D3D11_TEXTURE1D_DESC D3D11TexDesc;
     pd3d11Texture->GetDesc(&D3D11TexDesc);
-
+    
     TextureDesc TexDesc;
-    TexDesc.Name = "Texture1D_D3D11 from native d3d11 texture";
-    TexDesc.Type = D3D11TexDesc.ArraySize > 1 ? RESOURCE_DIM_TEX_1D_ARRAY : RESOURCE_DIM_TEX_1D;
-    TexDesc.Width = Uint32{D3D11TexDesc.Width};
-    TexDesc.Height = 1;
-    TexDesc.ArraySize = Uint32{D3D11TexDesc.ArraySize};
-    TexDesc.Format = DXGI_FormatToTexFormat(D3D11TexDesc.Format);
-    TexDesc.MipLevels = Uint32{D3D11TexDesc.MipLevels};
-    TexDesc.SampleCount = 1;
-    TexDesc.Usage = D3D11UsageToUsage(D3D11TexDesc.Usage);
-    TexDesc.BindFlags = D3D11BindFlagsToBindFlags(D3D11TexDesc.BindFlags);
+
+    UINT DataSize = 0;
+    pd3d11Texture->GetPrivateData(WKPDID_D3DDebugObjectName, &DataSize, nullptr);
+    std::vector<char> ObjectName;
+    if (DataSize > 0)
+    {
+        ObjectName.resize(DataSize+1); // Null terminator is not reported in DataSize
+        pd3d11Texture->GetPrivateData(WKPDID_D3DDebugObjectName, &DataSize, ObjectName.data());
+        TexDesc.Name = ObjectName.data();
+    }
+    else
+        TexDesc.Name = "Texture1D_D3D11 from native d3d11 texture";
+
+    TexDesc.Type           = D3D11TexDesc.ArraySize > 1 ? RESOURCE_DIM_TEX_1D_ARRAY : RESOURCE_DIM_TEX_1D;
+    TexDesc.Width          = Uint32{D3D11TexDesc.Width};
+    TexDesc.Height         = 1;
+    TexDesc.ArraySize      = Uint32{D3D11TexDesc.ArraySize};
+    TexDesc.Format         = DXGI_FormatToTexFormat(D3D11TexDesc.Format);
+    TexDesc.MipLevels      = Uint32{D3D11TexDesc.MipLevels};
+    TexDesc.SampleCount    = 1;
+    TexDesc.Usage          = D3D11UsageToUsage(D3D11TexDesc.Usage);
+    TexDesc.BindFlags      = D3D11BindFlagsToBindFlags(D3D11TexDesc.BindFlags);
     TexDesc.CPUAccessFlags = D3D11CPUAccessFlagsToCPUAccessFlags(D3D11TexDesc.CPUAccessFlags);
-    TexDesc.MiscFlags = D3D11MiscFlagsToMiscTextureFlags(D3D11TexDesc.MiscFlags);
+    TexDesc.MiscFlags      = D3D11MiscFlagsToMiscTextureFlags(D3D11TexDesc.MiscFlags);
 
     return TexDesc;
 }

@@ -27,6 +27,7 @@
 /// Definition of the Diligent::ISwapChainD3D11 interface
 
 #include "../../GraphicsEngine/interface/SwapChain.h"
+#include "TextureViewD3D11.h"
 
 namespace Diligent
 {
@@ -39,24 +40,17 @@ static constexpr INTERFACE_ID IID_SwapChainD3D11 =
 class ISwapChainD3D11 : public ISwapChain
 {
 public:
+    /// Returns render target view of the back buffer in the swap chain
+    virtual ITextureViewD3D11* GetCurrentBackBufferRTV() = 0;
+
+    /// Returns depth-stencil view of the depth buffer
+    virtual ITextureViewD3D11* GetDepthBufferDSV() = 0;
 
     /// Returns a pointer to the IDXGISwapChain interface of the internal DXGI object.
 
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
     virtual IDXGISwapChain* GetDXGISwapChain() = 0;
-
-    /// Returns d3d11 render target view of the swap chain's back buffer
-
-    /// The method does *NOT* call AddRef() on the returned interface,
-    /// so Release() must not be called.
-    virtual ID3D11RenderTargetView* GetRTV() = 0;
-
-    /// Returns d3d11 depth stencil view of the internal depth buffer object
-
-    /// The method does *NOT* call AddRef() on the returned interface,
-    /// so Release() must not be called.
-    virtual ID3D11DepthStencilView* GetDSV() = 0;
 };
 
 }

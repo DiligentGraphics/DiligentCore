@@ -51,46 +51,47 @@ SwapChainD3D11Impl::~SwapChainD3D11Impl()
 
 void SwapChainD3D11Impl::CreateRTVandDSV()
 {
-    auto *pDevice = m_pRenderDevice.RawPtr<RenderDeviceD3D11Impl>()->GetD3D11Device();
-
+    auto* pRenderDeviceD3D11Impl = m_pRenderDevice.RawPtr<RenderDeviceD3D11Impl>();
+    
     m_pRenderTargetView.Release();
     m_pDepthStencilView.Release();
 
     // Create a render target view
-    CComPtr<ID3D11Texture2D> pBackBuffer;
-    CHECK_D3D_RESULT_THROW( m_pSwapChain->GetBuffer( 0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>( static_cast<ID3D11Texture2D**>(&pBackBuffer) ) ),
+    CComPtr<ID3D11Texture2D> pd3dBackBuffer;
+    CHECK_D3D_RESULT_THROW( m_pSwapChain->GetBuffer( 0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>( static_cast<ID3D11Texture2D**>(&pd3dBackBuffer) ) ),
                             "Failed to get back buffer from swap chain" );
+    static const char BackBufferName[] = "Main back buffer";
+    auto hr = pd3dBackBuffer->SetPrivateData(WKPDID_D3DDebugObjectName, _countof(BackBufferName)-1, BackBufferName);
+    VERIFY(SUCCEEDED(hr));
 
-    D3D11_RENDER_TARGET_VIEW_DESC RTVDesc = {};
-    RTVDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
-    // We need to explicitly specify RTV format, as we may need to create RGBA8_UNORM_SRGB RTV for
-    // a RGBA8_UNORM swap chain
-    RTVDesc.Format = TexFormatToDXGI_Format(m_SwapChainDesc.ColorBufferFormat);
-    RTVDesc.Texture2D.MipSlice = 0;
-    CHECK_D3D_RESULT_THROW( pDevice->CreateRenderTargetView( pBackBuffer, &RTVDesc, &m_pRenderTargetView ),
-                            "Failed to get RTV for the back buffer" );
+    RefCntAutoPtr<ITexture> pBackBuffer;
+    pRenderDeviceD3D11Impl->CreateTextureFromD3DResource(pd3dBackBuffer, &pBackBuffer);
 
+    TextureViewDesc RTVDesc;
+    RTVDesc.ViewType = TEXTURE_VIEW_RENDER_TARGET;
+    RTVDesc.Format = m_SwapChainDesc.ColorBufferFormat;
+    RefCntAutoPtr<ITextureView> pRTV;
+    pBackBuffer->CreateView(RTVDesc, &pRTV);
+    m_pRenderTargetView = RefCntAutoPtr<ITextureViewD3D11>(pRTV, IID_TextureViewD3D11);
+    
     // Create depth buffer
-    D3D11_TEXTURE2D_DESC DepthBufferDesc;
+    TextureDesc DepthBufferDesc;
+    DepthBufferDesc.Name = "Main depth buffer";
+    DepthBufferDesc.Type = RESOURCE_DIM_TEX_2D;
     DepthBufferDesc.Width = m_SwapChainDesc.Width;
     DepthBufferDesc.Height = m_SwapChainDesc.Height;
     DepthBufferDesc.MipLevels = 1;
     DepthBufferDesc.ArraySize = 1;
-    auto DepthFormat = TexFormatToDXGI_Format( m_SwapChainDesc.DepthBufferFormat );
-    DepthBufferDesc.Format = DepthFormat;
-    DepthBufferDesc.SampleDesc.Count = m_SwapChainDesc.SamplesCount;
-    DepthBufferDesc.SampleDesc.Quality = 0;
-    DepthBufferDesc.Usage = D3D11_USAGE_DEFAULT;
-    DepthBufferDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+    DepthBufferDesc.Format = m_SwapChainDesc.DepthBufferFormat;
+    DepthBufferDesc.SampleCount = m_SwapChainDesc.SamplesCount;
+    DepthBufferDesc.Usage = USAGE_DEFAULT;
+    DepthBufferDesc.BindFlags = BIND_DEPTH_STENCIL;
     DepthBufferDesc.CPUAccessFlags = 0;
     DepthBufferDesc.MiscFlags = 0;
-    CComPtr<ID3D11Texture2D> ptex2DDepthBuffer;
-    CHECK_D3D_RESULT_THROW( pDevice->CreateTexture2D( &DepthBufferDesc, NULL, &ptex2DDepthBuffer ),
-                            "Failed to create the depth buffer" );
-
-    // Create DSV
-    CHECK_D3D_RESULT_THROW( pDevice->CreateDepthStencilView( ptex2DDepthBuffer, NULL, &m_pDepthStencilView ),
-                            "Failed to create the DSV for the depth buffer" );
+    RefCntAutoPtr<ITexture> ptex2DDepthBuffer;
+    m_pRenderDevice->CreateTexture(DepthBufferDesc, TextureData{}, &ptex2DDepthBuffer);
+    auto pDSV = ptex2DDepthBuffer->GetDefaultView(TEXTURE_VIEW_DEPTH_STENCIL);
+    m_pDepthStencilView = RefCntAutoPtr<ITextureViewD3D11>(pDSV, IID_TextureViewD3D11);
 }
 
 IMPLEMENT_QUERY_INTERFACE( SwapChainD3D11Impl, IID_SwapChainD3D11, TSwapChainBase )

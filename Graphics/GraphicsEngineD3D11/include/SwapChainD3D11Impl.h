@@ -54,20 +54,15 @@ public:
 
     virtual IDXGISwapChain* GetDXGISwapChain()override final{ return m_pSwapChain; }
 
-    virtual ID3D11RenderTargetView* GetRTV()override final{ return m_pRenderTargetView; }
-    virtual ID3D11DepthStencilView* GetDSV()override final{ return m_pDepthStencilView; }
-
-    virtual ITextureView* GetCurrentBackBufferRTV()override final{return nullptr;}
-    virtual ITextureView* GetDepthBufferDSV()override final{return nullptr;}
+    virtual ITextureViewD3D11* GetCurrentBackBufferRTV()override final{return m_pRenderTargetView;}
+    virtual ITextureViewD3D11* GetDepthBufferDSV()      override final{return m_pDepthStencilView;}
 
 private:
     virtual void UpdateSwapChain(bool CreateNew)override final;
     void CreateRTVandDSV();
 
-    /// Back buffer render target view
-    CComPtr<ID3D11RenderTargetView> m_pRenderTargetView;
-    /// Back buffer depth-stencil view
-    CComPtr<ID3D11DepthStencilView> m_pDepthStencilView;
+    RefCntAutoPtr<ITextureViewD3D11> m_pRenderTargetView;
+    RefCntAutoPtr<ITextureViewD3D11> m_pDepthStencilView;
 };
 
 }
