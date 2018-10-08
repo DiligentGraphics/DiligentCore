@@ -514,9 +514,10 @@ public:
     /// per frame, though it can be called with different frequency. Note that unless the GPU is idled,
     /// the resources may actually be released several frames after the one they were used in last time.
     /// \note After the call all dynamic resources become invalid and must be written again before the next use. 
-    ///       Also, all committed resources become invalid.
+    ///       Also, all committed resources become invalid.\n
     ///       For deferred contexts, this method must be called after all command lists referencing dynamic resources
-    ///       have been executed through immediate context.
+    ///       have been executed through immediate context.\n
+    ///       The method does not Flush() the context.
     virtual void FinishFrame() = 0;
 };
 

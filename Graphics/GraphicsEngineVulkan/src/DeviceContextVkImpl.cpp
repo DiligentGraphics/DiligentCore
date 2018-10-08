@@ -102,11 +102,10 @@ namespace Diligent
 
     DeviceContextVkImpl::~DeviceContextVkImpl()
     {
-        auto* pDeviceVkImpl = m_pDevice.RawPtr<RenderDeviceVkImpl>();
         if (m_State.NumCommands != 0)
         {
             LOG_ERROR_MESSAGE(m_bIsDeferred ? 
-                                "There are outstanding commands in the deferred context being destroyed, which indicates that FinishCommandList() has not been called." :
+                                "There are outstanding commands in deferred context #", m_ContextId, " being destroyed, which indicates that FinishCommandList() has not been called." :
                                 "There are outstanding commands in the immediate context being destroyed, which indicates the context has not been Flush()'ed.",
                               " This is unexpected and may result in synchronization errors");
         }
@@ -124,6 +123,8 @@ namespace Diligent
         DEV_CHECK_ERR(m_UploadHeap.GetStalePagesCount()                  == 0, "All allocated upload heap pages must have been released at this point");
         DEV_CHECK_ERR(m_DynamicHeap.GetAllocatedMasterBlockCount()       == 0, "All allocated dynamic heap master blocks must have been released");
         DEV_CHECK_ERR(m_DynamicDescrSetAllocator.GetAllocatedPoolCount() == 0, "All allocated dynamic descriptor set pools must have been released at this point");
+
+        auto* pDeviceVkImpl = m_pDevice.RawPtr<RenderDeviceVkImpl>();
 
         auto VkCmdPool = m_CmdPool.Release();
         pDeviceVkImpl->SafeReleaseDeviceObject(std::move(VkCmdPool), ~Uint64{0});
@@ -754,7 +755,7 @@ namespace Diligent
         if(GetNumCommandsInCtx() != 0)
         {
             LOG_ERROR_MESSAGE(m_bIsDeferred ? 
-                "There are outstanding commands in the deferred device context when finishing the frame. This is an error and may cause unpredicted behaviour. Close all deferred contexts and execute them before finishing the frame" :
+                "There are outstanding commands in deferred device context #", m_ContextId, " when finishing the frame. This is an error and may cause unpredicted behaviour. Close all deferred contexts and execute them before finishing the frame" :
                 "There are outstanding commands in the immediate device context when finishing the frame. This is an error and may cause unpredicted behaviour. Call Flush() to submit all commands for execution before finishing the frame");
         }
 
@@ -787,13 +788,11 @@ namespace Diligent
 
     void DeviceContextVkImpl::Flush()
     {
-#ifdef DEVELOPMENT
         if (m_bIsDeferred)
         {
-            LOG_ERROR("Flush() should only be called for immediate contexts");
+            LOG_ERROR_MESSAGE("Flush() should only be called for immediate contexts");
             return;
         }
-#endif
 
         VkSubmitInfo SubmitInfo = {};
         SubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -1405,7 +1404,7 @@ namespace Diligent
     {
         if (m_bIsDeferred)
         {
-            LOG_ERROR("Only immediate context can execute command list");
+            LOG_ERROR_MESSAGE("Only immediate context can execute command list");
             return;
         }
 
