@@ -32,8 +32,8 @@
 #include "ShaderResourceBindingD3D12Impl.h"
 #include "DeviceContextD3D12Impl.h"
 #include "FenceD3D12Impl.h"
-
 #include "EngineMemory.h"
+
 namespace Diligent
 {
 

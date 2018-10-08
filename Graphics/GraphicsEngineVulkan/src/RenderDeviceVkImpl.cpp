@@ -22,7 +22,6 @@
  */
 
 #include "pch.h"
-#include <sstream>
 #include "RenderDeviceVkImpl.h"
 #include "PipelineStateVkImpl.h"
 #include "ShaderVkImpl.h"

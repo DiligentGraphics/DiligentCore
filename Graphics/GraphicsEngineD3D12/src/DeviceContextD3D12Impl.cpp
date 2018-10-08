@@ -22,6 +22,7 @@
  */
 
 #include "pch.h"
+#include <sstream>
 #include "RenderDeviceD3D12Impl.h"
 #include "DeviceContextD3D12Impl.h"
 #include "SwapChainD3D12.h"

@@ -802,7 +802,6 @@ namespace Diligent
         auto vkCmdBuff = m_CommandBuffer.GetVkCmdBuffer();
         if (vkCmdBuff != VK_NULL_HANDLE )
         {
-            VERIFY(!m_bIsDeferred, "Deferred contexts cannot execute command lists directly");
             if (m_State.NumCommands != 0)
             {
                 if (m_CommandBuffer.GetState().RenderPass != VK_NULL_HANDLE)
@@ -1226,9 +1225,11 @@ namespace Diligent
         VERIFY( (Allocation.AlignedOffset % BufferOffsetAlignment) == 0, "Allocation offset must be at least 32-bit algined");
 
 #ifdef _DEBUG
-        VERIFY(SrcStride >= CopyInfo.RowSize, "Source data stride (", SrcStride, ") is below the image row size (", CopyInfo.RowSize, ")");
-        const Uint32 PlaneSize = SrcStride * CopyInfo.RowCount;
-        VERIFY(UpdateRegionDepth == 1 || SrcDepthStride >= PlaneSize, "Source data depth stride (", SrcDepthStride, ") is below the image plane size (", PlaneSize, ")");
+        {
+            VERIFY(SrcStride >= CopyInfo.RowSize, "Source data stride (", SrcStride, ") is below the image row size (", CopyInfo.RowSize, ")");
+            const Uint32 PlaneSize = SrcStride * CopyInfo.RowCount;
+            VERIFY(UpdateRegionDepth == 1 || SrcDepthStride >= PlaneSize, "Source data depth stride (", SrcDepthStride, ") is below the image plane size (", PlaneSize, ")");
+        }
 #endif
         for(Uint32 DepthSlice = 0; DepthSlice < UpdateRegionDepth; ++DepthSlice)
         {
@@ -1385,7 +1386,7 @@ namespace Diligent
 
         auto vkCmdBuff = m_CommandBuffer.GetVkCmdBuffer();
         auto err = vkEndCommandBuffer(vkCmdBuff);
-        VERIFY(err == VK_SUCCESS, "Failed to end command buffer");
+        DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to end command buffer");
 
         auto* pDeviceVkImpl = m_pDevice.RawPtr<RenderDeviceVkImpl>();
         CommandListVkImpl *pCmdListVk( NEW_RC_OBJ(m_CmdListAllocator, "CommandListVkImpl instance", CommandListVkImpl)
