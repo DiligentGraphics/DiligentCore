@@ -154,7 +154,7 @@ public:
     
     Uint32 GetContextId()const{return m_ContextId;}
 
-    size_t GetNumCommandsInCtx()const { return m_NumCommandsInCurCtx; }
+    size_t GetNumCommandsInCtx()const { return m_State.NumCommands; }
 
     Int64 GetCurrentFrameNumber()const {return m_ContextFrameNumber; }
 
@@ -187,35 +187,40 @@ private:
     {
         // Make sure that the number of commands in the context is at least one,
         // so that the context cannot be disposed by Flush()
-        m_NumCommandsInCurCtx = m_NumCommandsInCurCtx != 0 ? m_NumCommandsInCurCtx : 1;
+        m_State.NumCommands = m_State.NumCommands != 0 ? m_State.NumCommands : 1;
         return *m_CurrCmdCtx;
     }
-    size_t m_NumCommandsInCurCtx = 0;
     std::unique_ptr<CommandContext, STDDeleterRawMem<CommandContext> > m_CurrCmdCtx;
 
-    CComPtr<ID3D12Resource> m_CommittedD3D12IndexBuffer;
-    VALUE_TYPE m_CommittedIBFormat = VT_UNDEFINED;
-    Uint32 m_CommittedD3D12IndexDataStartOffset = 0;
+    struct State
+    {
+        size_t                  NumCommands = 0;
+        
+        CComPtr<ID3D12Resource> CommittedD3D12IndexBuffer;
+        VALUE_TYPE              CommittedIBFormat                  = VT_UNDEFINED;
+        Uint32                  CommittedD3D12IndexDataStartOffset = 0;
+
+        // Flag indicating if currently committed D3D12 vertex buffers are up to date
+        bool bCommittedD3D12VBsUpToDate = false;
+
+        // Fl indicating if currently committed D3D11 index buffer is up to date
+        bool bCommittedD3D12IBUpToDate  = false;
+
+        class ShaderResourceCacheD3D12* pCommittedResourceCache = nullptr;
+    }m_State;
 
     CComPtr<ID3D12CommandSignature> m_pDrawIndirectSignature;
     CComPtr<ID3D12CommandSignature> m_pDrawIndexedIndirectSignature;
     CComPtr<ID3D12CommandSignature> m_pDispatchIndirectSignature;
     
     GenerateMipsHelper m_MipsGenerator;
+
     D3D12DynamicHeap m_DynamicHeap;
     
     // Every context must use its own allocator that maintains individual list of retired descriptor heaps to 
     // avoid interference with other command contexts
     // The allocations in heaps are discarded at the end of the frame.
     DynamicSuballocationsManager m_DynamicGPUDescriptorAllocator[2];
-
-    /// Flag indicating if currently committed D3D12 vertex buffers are up to date
-    bool m_bCommittedD3D12VBsUpToDate = false;
-
-    /// Flag indicating if currently committed D3D11 index buffer is up to date
-    bool m_bCommittedD3D12IBUpToDate = false;
-
-    class ShaderResourceCacheD3D12 *m_pCommittedResourceCache = nullptr;
 
     FixedBlockMemoryAllocator m_CmdListAllocator;
 

@@ -104,16 +104,20 @@ namespace Diligent
     {
         auto* pDeviceVkImpl = m_pDevice.RawPtr<RenderDeviceVkImpl>();
         if (m_State.NumCommands != 0)
+        {
             LOG_ERROR_MESSAGE(m_bIsDeferred ? 
                                 "There are outstanding commands in the deferred context being destroyed, which indicates that FinishCommandList() has not been called." :
                                 "There are outstanding commands in the immediate context being destroyed, which indicates the context has not been Flush()'ed.",
                               " This is unexpected and may result in synchronization errors");
+        }
 
         if (!m_bIsDeferred)
         {
             Flush();
         }
 
+        // For deferred contexts, m_SubmittedBuffersCmdQueueMask is reset to 0 after every call to FinishFrame().
+        // In this case there are no resources to release, so there will be no issues.
         FinishFrame();
 
         // There must be no stale resources
@@ -148,8 +152,6 @@ namespace Diligent
     void DeviceContextVkImpl::DisposeVkCmdBuffer(Uint32 CmdQueue, VkCommandBuffer vkCmdBuff, Uint64 FenceValue)
     {
         VERIFY_EXPR(vkCmdBuff != VK_NULL_HANDLE);
-        auto& DeviceVkImpl = *m_pDevice.RawPtr<RenderDeviceVkImpl>();
-        auto& ReleaseQueue = DeviceVkImpl.GetReleaseQueue(CmdQueue);
         class CmdBufferDeleter
         {
         public:
@@ -186,6 +188,7 @@ namespace Diligent
             VulkanUtilities::VulkanCommandBufferPool* Pool;
         };
         
+        auto& ReleaseQueue = m_pDevice.RawPtr<RenderDeviceVkImpl>()->GetReleaseQueue(CmdQueue);
         ReleaseQueue.DiscardResource(CmdBufferDeleter{vkCmdBuff, m_CmdPool}, FenceValue);
     }
 
@@ -749,9 +752,11 @@ namespace Diligent
     void DeviceContextVkImpl::FinishFrame()
     {
         if(GetNumCommandsInCtx() != 0)
+        {
             LOG_ERROR_MESSAGE(m_bIsDeferred ? 
                 "There are outstanding commands in the deferred device context when finishing the frame. This is an error and may cause unpredicted behaviour. Close all deferred contexts and execute them before finishing the frame" :
                 "There are outstanding commands in the immediate device context when finishing the frame. This is an error and may cause unpredicted behaviour. Call Flush() to submit all commands for execution before finishing the frame");
+        }
 
         if (!m_MappedTextures.empty())
             LOG_ERROR_MESSAGE("There are mapped textures in the device context when finishing the frame. All dynamic resources must be used in the same frame in which they are mapped.");
@@ -1387,8 +1392,6 @@ namespace Diligent
         CommandListVkImpl *pCmdListVk( NEW_RC_OBJ(m_CmdListAllocator, "CommandListVkImpl instance", CommandListVkImpl)
                                                  (pDeviceVkImpl, this, vkCmdBuff) );
         pCmdListVk->QueryInterface( IID_CommandList, reinterpret_cast<IObject**>(ppCommandList) );
-        
-        m_CommandBuffer.SetVkCmdBuffer(VK_NULL_HANDLE);
         
         m_CommandBuffer.Reset();
         m_State = ContextState{};

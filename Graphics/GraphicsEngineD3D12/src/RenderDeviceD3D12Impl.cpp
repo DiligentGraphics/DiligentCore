@@ -196,6 +196,7 @@ Uint64 RenderDeviceD3D12Impl::CloseAndExecuteCommandContext(Uint32 QueueIndex, P
 void RenderDeviceD3D12Impl::IdleGPU() 
 { 
     IdleCommandQueues(true);
+    ReleaseStaleResources();
 }
 
 void RenderDeviceD3D12Impl::FlushStaleResources(Uint32 CmdQueueIndex)

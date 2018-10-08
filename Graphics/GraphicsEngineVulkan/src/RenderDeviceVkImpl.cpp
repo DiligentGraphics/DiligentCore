@@ -131,7 +131,8 @@ RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters*                    
 
 RenderDeviceVkImpl::~RenderDeviceVkImpl()
 {
-    // Explicitly destroy dynamic heap
+    // Explicitly destroy dynamic heap. This will move resources owned by 
+    // the heap into release queues
     m_DynamicMemoryManager.Destroy();
 
     // Wait for the GPU to complete all its operations

@@ -86,9 +86,6 @@ namespace Diligent
                 GetContextObjectName("SAMPLER     dynamic descriptor allocator", bIsDeferred, ContextId)
             }
         },
-        m_NumCommandsInCurCtx(0),
-        m_CommittedIBFormat(VT_UNDEFINED),
-        m_CommittedD3D12IndexDataStartOffset(0),
         m_MipsGenerator(pDeviceD3D12Impl->GetD3D12Device()),
         m_CmdListAllocator(GetRawAllocator(), sizeof(CommandListD3D12Impl), 64 )
     {
@@ -120,15 +117,30 @@ namespace Diligent
 
     DeviceContextD3D12Impl::~DeviceContextD3D12Impl()
     {
+        if (m_State.NumCommands != 0)
+        {
+            LOG_ERROR_MESSAGE(m_bIsDeferred ? 
+                                "There are outstanding commands in the deferred context being destroyed, which indicates that FinishCommandList() has not been called." :
+                                "There are outstanding commands in the immediate context being destroyed, which indicates the context has not been Flush()'ed.",
+                              " This is unexpected and may result in synchronization errors");
+        }
+
         if(m_bIsDeferred)
-            m_pDevice.RawPtr<RenderDeviceD3D12Impl>()->DisposeCommandContext(std::move(m_CurrCmdCtx));
+        {
+            if (m_CurrCmdCtx)
+            {
+                // The command context has never been executed, so it can be disposed without going through release queue
+                m_pDevice.RawPtr<RenderDeviceD3D12Impl>()->DisposeCommandContext(std::move(m_CurrCmdCtx));
+            }
+        }
         else
         {
-            if (m_NumCommandsInCurCtx != 0)
-                LOG_WARNING_MESSAGE("Flusing outstanding commands from the device context being destroyed. This may result in D3D12 synchronization errors");
-
             Flush(false);
         }
+
+        // For deferred contexts, m_SubmittedBuffersCmdQueueMask is reset to 0 after every call to FinishFrame().
+        // In this case there are no resources to release, so there will be no issues.
+        FinishFrame();
 
         // Note: as dynamic pages are returned to the global dynamic memory manager hosted by the render device,
         // the dynamic heap can be destroyed before all pages are actually returned to the global manager.
@@ -148,7 +160,7 @@ namespace Diligent
     void DeviceContextD3D12Impl::SetPipelineState(IPipelineState* pPipelineState)
     {
         // Never flush deferred context!
-        if (!m_bIsDeferred && m_NumCommandsInCurCtx >= m_NumCommandsToFlush)
+        if (!m_bIsDeferred && m_State.NumCommands >= m_NumCommandsToFlush)
         {
             Flush(true);
         }
@@ -207,7 +219,7 @@ namespace Diligent
                 CommitScissorRects(GraphicsCtx, PSODesc.GraphicsPipeline.RasterizerDesc.ScissorEnable);
             }
         }
-        m_pCommittedResourceCache = nullptr;
+        m_State.pCommittedResourceCache = nullptr;
     }
 
     void DeviceContextD3D12Impl::TransitionShaderResources(IPipelineState* pPipelineState, IShaderResourceBinding* pShaderResourceBinding)
@@ -225,7 +237,7 @@ namespace Diligent
             return;
 
         auto& Ctx = GetCmdContext();
-        m_pCommittedResourceCache = m_pPipelineState->CommitAndTransitionShaderResources(pShaderResourceBinding, Ctx, true, (Flags & COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES)!=0);
+        m_State.pCommittedResourceCache = m_pPipelineState->CommitAndTransitionShaderResources(pShaderResourceBinding, Ctx, true, (Flags & COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES)!=0);
     }
 
     void DeviceContextD3D12Impl::SetStencilRef(Uint32 StencilRef)
@@ -281,19 +293,19 @@ namespace Diligent
         auto *pd3d12Buff = pBuffD3D12->GetD3D12Buffer(BuffDataStartByteOffset, this);
 
         if( IsDynamic || 
-            m_CommittedD3D12IndexBuffer != pd3d12Buff ||
-            m_CommittedIBFormat != IndexType ||
-            m_CommittedD3D12IndexDataStartOffset != m_IndexDataStartOffset + BuffDataStartByteOffset)
+            m_State.CommittedD3D12IndexBuffer          != pd3d12Buff ||
+            m_State.CommittedIBFormat                  != IndexType  ||
+            m_State.CommittedD3D12IndexDataStartOffset != m_IndexDataStartOffset + BuffDataStartByteOffset)
         {
-            m_CommittedD3D12IndexBuffer = pd3d12Buff;
-            m_CommittedIBFormat = IndexType;
-            m_CommittedD3D12IndexDataStartOffset = m_IndexDataStartOffset + static_cast<Uint32>(BuffDataStartByteOffset);
+            m_State.CommittedD3D12IndexBuffer = pd3d12Buff;
+            m_State.CommittedIBFormat = IndexType;
+            m_State.CommittedD3D12IndexDataStartOffset = m_IndexDataStartOffset + static_cast<Uint32>(BuffDataStartByteOffset);
             GraphicsCtx.SetIndexBuffer( IBView );
         }
         
         // GPU virtual address of a dynamic index buffer can change every time
         // a draw command is invoked
-        m_bCommittedD3D12IBUpToDate = !IsDynamic;
+        m_State.bCommittedD3D12IBUpToDate = !IsDynamic;
     }
 
     void DeviceContextD3D12Impl::TransitionD3D12VertexBuffers(GraphicsContext& GraphCtx)
@@ -352,7 +364,7 @@ namespace Diligent
 
         // GPU virtual address of a dynamic vertex buffer can change every time
         // a draw command is invoked
-        m_bCommittedD3D12VBsUpToDate = !DynamicBufferPresent;
+        m_State.bCommittedD3D12VBsUpToDate = !DynamicBufferPresent;
     }
 
     void DeviceContextD3D12Impl::Draw( DrawAttribs& drawAttribs )
@@ -365,10 +377,10 @@ namespace Diligent
         auto& GraphCtx = GetCmdContext().AsGraphicsContext();
         if( drawAttribs.IsIndexed )
         {
-            if( m_CommittedIBFormat != drawAttribs.IndexType )
-                m_bCommittedD3D12IBUpToDate = false;
+            if( m_State.CommittedIBFormat != drawAttribs.IndexType )
+                m_State.bCommittedD3D12IBUpToDate = false;
 
-            if(m_bCommittedD3D12IBUpToDate)
+            if (m_State.bCommittedD3D12IBUpToDate)
             {
                 BufferD3D12Impl *pBuffD3D12 = static_cast<BufferD3D12Impl *>(m_pIndexBuffer.RawPtr());
                 if(!pBuffD3D12->CheckAllStates(D3D12_RESOURCE_STATE_INDEX_BUFFER))
@@ -378,16 +390,16 @@ namespace Diligent
                 CommitD3D12IndexBuffer(drawAttribs.IndexType);
         }
 
-        if(m_bCommittedD3D12VBsUpToDate)
+        if (m_State.bCommittedD3D12VBsUpToDate)
             TransitionD3D12VertexBuffers(GraphCtx);
         else
             CommitD3D12VertexBuffers(GraphCtx);
 
         GraphCtx.SetRootSignature( m_pPipelineState->GetD3D12RootSignature() );
 
-        if(m_pCommittedResourceCache != nullptr)
+        if (m_State.pCommittedResourceCache != nullptr)
         {
-            m_pPipelineState->GetRootSignature().CommitRootViews(*m_pCommittedResourceCache, GraphCtx, false, this);
+            m_pPipelineState->GetRootSignature().CommitRootViews(*m_State.pCommittedResourceCache, GraphCtx, false, this);
         }
 #ifdef _DEBUG
         else
@@ -418,7 +430,7 @@ namespace Diligent
             else
                 GraphCtx.Draw(drawAttribs.NumVertices, drawAttribs.NumInstances, drawAttribs.StartVertexLocation, drawAttribs.FirstInstanceLocation );
         }
-        ++m_NumCommandsInCurCtx;
+        ++m_State.NumCommands;
     }
 
     void DeviceContextD3D12Impl::DispatchCompute( const DispatchComputeAttribs& DispatchAttrs )
@@ -431,9 +443,9 @@ namespace Diligent
         auto& ComputeCtx = GetCmdContext().AsComputeContext();
         ComputeCtx.SetRootSignature( m_pPipelineState->GetD3D12RootSignature() );
       
-        if(m_pCommittedResourceCache != nullptr)
+        if (m_State.pCommittedResourceCache != nullptr)
         {
-            m_pPipelineState->GetRootSignature().CommitRootViews(*m_pCommittedResourceCache, ComputeCtx, true, this);
+            m_pPipelineState->GetRootSignature().CommitRootViews(*m_State.pCommittedResourceCache, ComputeCtx, true, this);
         }
 #ifdef _DEBUG
         else
@@ -464,7 +476,7 @@ namespace Diligent
         }
         else
             ComputeCtx.Dispatch(DispatchAttrs.ThreadGroupCountX, DispatchAttrs.ThreadGroupCountY, DispatchAttrs.ThreadGroupCountZ);
-        ++m_NumCommandsInCurCtx;
+        ++m_State.NumCommands;
     }
 
     void DeviceContextD3D12Impl::ClearDepthStencil( ITextureView* pView, Uint32 ClearFlags, float fDepth, Uint8 Stencil )
@@ -496,7 +508,7 @@ namespace Diligent
         // The full extent of the resource view is always cleared. 
         // Viewport and scissor settings are not applied??
         GetCmdContext().AsGraphicsContext().ClearDepthStencil( pDSVD3D12, d3d12ClearFlags, fDepth, Stencil );
-        ++m_NumCommandsInCurCtx;
+        ++m_State.NumCommands;
     }
 
     void DeviceContextD3D12Impl::ClearRenderTarget( ITextureView* pView, const float* RGBA )
@@ -530,7 +542,7 @@ namespace Diligent
         // The full extent of the resource view is always cleared. 
         // Viewport and scissor settings are not applied??
         GetCmdContext().AsGraphicsContext().ClearRenderTarget( pd3d12RTV, RGBA );
-        ++m_NumCommandsInCurCtx;
+        ++m_State.NumCommands;
     }
 
     void DeviceContextD3D12Impl::RequestCommandContext(RenderDeviceD3D12Impl* pDeviceD3D12Impl)
@@ -545,7 +557,7 @@ namespace Diligent
         if( m_CurrCmdCtx )
         {
             VERIFY(!m_bIsDeferred, "Deferred contexts cannot execute command lists directly");
-            if (m_NumCommandsInCurCtx != 0)
+            if (m_State.NumCommands != 0)
             {
                 m_CurrCmdCtx->FlushResourceBarriers();
                 pDeviceD3D12Impl->CloseAndExecuteCommandContext(m_CommandQueueId, std::move(m_CurrCmdCtx), true, &m_PendingFences);
@@ -557,13 +569,8 @@ namespace Diligent
 
         if(RequestNewCmdCtx)
             RequestCommandContext(pDeviceD3D12Impl);
-        m_NumCommandsInCurCtx = 0;
 
-        m_CommittedD3D12IndexBuffer = nullptr;
-        m_CommittedD3D12IndexDataStartOffset = 0;
-        m_CommittedIBFormat = VT_UNDEFINED;
-        m_bCommittedD3D12VBsUpToDate = false;
-        m_bCommittedD3D12IBUpToDate  = false;
+        m_State = State{};
 
         m_pPipelineState = nullptr; 
     }
@@ -577,9 +584,11 @@ namespace Diligent
     void DeviceContextD3D12Impl::FinishFrame()
     {
         if (GetNumCommandsInCtx() != 0)
+        {
             LOG_ERROR_MESSAGE(m_bIsDeferred ? 
                 "There are outstanding commands in the deferred device context when finishing the frame. This is an error and may cause unpredicted behaviour. Close all deferred contexts and execute them before finishing the frame" :
                 "There are outstanding commands in the immediate device context when finishing the frame. This is an error and may cause unpredicted behaviour. Call Flush() to submit all commands for execution before finishing the frame");
+        }
 
         VERIFY_EXPR(m_bIsDeferred || m_SubmittedBuffersCmdQueueMask == (Uint64{1}<<m_CommandQueueId));
 
@@ -597,26 +606,22 @@ namespace Diligent
     void DeviceContextD3D12Impl::SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer** ppBuffers, Uint32* pOffsets, Uint32 Flags )
     {
         TDeviceContextBase::SetVertexBuffers( StartSlot, NumBuffersSet, ppBuffers, pOffsets, Flags );
-        m_bCommittedD3D12VBsUpToDate = false;
+        m_State.bCommittedD3D12VBsUpToDate = false;
     }
 
     void DeviceContextD3D12Impl::InvalidateState()
     {
-        if (m_NumCommandsInCurCtx != 0)
+        if (m_State.NumCommands != 0)
             LOG_WARNING_MESSAGE("Invalidating context that has outstanding commands in it. Call Flush() to submit commands for execution");
 
         TDeviceContextBase::InvalidateState();
-        m_CommittedD3D12IndexBuffer = nullptr;
-        m_CommittedD3D12IndexDataStartOffset = 0;
-        m_CommittedIBFormat = VT_UNDEFINED;
-        m_bCommittedD3D12VBsUpToDate = false;
-        m_bCommittedD3D12IBUpToDate = false;
+        m_State = State{};
     }
 
     void DeviceContextD3D12Impl::SetIndexBuffer( IBuffer* pIndexBuffer, Uint32 ByteOffset )
     {
         TDeviceContextBase::SetIndexBuffer( pIndexBuffer, ByteOffset );
-        m_bCommittedD3D12IBUpToDate = false;
+        m_State.bCommittedD3D12IBUpToDate = false;
     }
 
     void DeviceContextD3D12Impl::CommitViewports()
@@ -778,7 +783,7 @@ namespace Diligent
         auto *pd3d12Buff = pBuffD3D12->GetD3D12Buffer(DstBuffDataStartByteOffset, this);
         VERIFY(DstBuffDataStartByteOffset == 0, "Dst buffer must not be suballocated");
         CmdCtx.GetCommandList()->CopyBufferRegion( pd3d12Buff, DstOffset + DstBuffDataStartByteOffset, Allocation.pBuffer, Allocation.Offset, NumBytes);
-        ++m_NumCommandsInCurCtx;
+        ++m_State.NumCommands;
     }
 
     void DeviceContextD3D12Impl::UpdateBufferRegion(BufferD3D12Impl* pBuffD3D12, const void* pData, Uint64 DstOffset, Uint64 NumBytes)
@@ -805,7 +810,7 @@ namespace Diligent
         size_t SrcDataStartByteOffset;
         auto *pd3d12SrcBuff = pSrcBuffD3D12->GetD3D12Buffer(SrcDataStartByteOffset, this);
         CmdCtx.GetCommandList()->CopyBufferRegion( pd3d12DstBuff, DstOffset + DstDataStartByteOffset, pd3d12SrcBuff, SrcOffset+SrcDataStartByteOffset, NumBytes);
-        ++m_NumCommandsInCurCtx;
+        ++m_State.NumCommands;
     }
 
     void DeviceContextD3D12Impl::CopyTextureRegion(TextureD3D12Impl* pSrcTexture, Uint32 SrcSubResIndex, const D3D12_BOX* pD3D12SrcBox,
@@ -826,7 +831,7 @@ namespace Diligent
         SrcLocation.SubresourceIndex = SrcSubResIndex;
 
         CmdCtx.GetCommandList()->CopyTextureRegion( &DstLocation, DstX, DstY, DstZ, &SrcLocation, pD3D12SrcBox);
-        ++m_NumCommandsInCurCtx;
+        ++m_State.NumCommands;
     }
 
     void DeviceContextD3D12Impl::CopyTextureRegion(ID3D12Resource*         pd3d12Buffer,
@@ -892,7 +897,7 @@ namespace Diligent
             static_cast<UINT>( DstBox.MinZ ),
             &SrcLocation, &D3D12SrcBox);
 
-        ++m_NumCommandsInCurCtx;
+        ++m_State.NumCommands;
 
         if (StateTransitionRequired)
         {
@@ -1049,7 +1054,7 @@ namespace Diligent
     {
         auto& Ctx = GetCmdContext();
         m_MipsGenerator.GenerateMips(m_pDevice.RawPtr<RenderDeviceD3D12Impl>(), pTexView, Ctx);
-        ++m_NumCommandsInCurCtx;
+        ++m_State.NumCommands;
     }
 
     void DeviceContextD3D12Impl::FinishCommandList(ICommandList** ppCommandList)
