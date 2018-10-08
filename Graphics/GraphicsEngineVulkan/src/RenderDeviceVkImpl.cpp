@@ -227,47 +227,9 @@ void RenderDeviceVkImpl::ExecuteAndDisposeTransientCmdBuff(Uint32 QueueIndex, Vk
         [&](ICommandQueueVk* pCmdQueueVk)
         {
             FenceValue = pCmdQueueVk->Submit(SubmitInfo);
-
-            class CommandPoolDeleter
-            {
-            public:
-                CommandPoolDeleter(CommandPoolManager& _CmdPoolMgr, VulkanUtilities::CommandPoolWrapper&& _Pool) :
-                    CmdPoolMgr(&_CmdPoolMgr),
-                    Pool      (std::move(_Pool))
-                {
-                    VERIFY_EXPR(Pool != VK_NULL_HANDLE);
-                }
-
-                CommandPoolDeleter             (const CommandPoolDeleter&)  = delete;
-                CommandPoolDeleter& operator = (const CommandPoolDeleter&)  = delete;
-                CommandPoolDeleter& operator = (      CommandPoolDeleter&&) = delete;
-
-                CommandPoolDeleter(CommandPoolDeleter&& rhs) : 
-                    CmdPoolMgr(rhs.CmdPoolMgr),
-                    Pool      (std::move(rhs.Pool))
-                {
-                    rhs.CmdPoolMgr = nullptr;
-                }
-                     
-
-                ~CommandPoolDeleter()
-                {
-                    if (CmdPoolMgr!=nullptr)
-                    {
-                        CmdPoolMgr->FreeCommandPool(std::move(Pool));
-                    }
-                }
-            private:
-                CommandPoolManager*                 CmdPoolMgr;
-                VulkanUtilities::CommandPoolWrapper Pool;
-            };
-
-            // Discard command pool directly to the release queue since we know exactly which queue it was submitted to 
-            // as well as the associated FenceValue
-            m_CommandQueues[QueueIndex].ReleaseQueue.DiscardResource(CommandPoolDeleter{m_TransientCmdPoolMgr, std::move(CmdPool)}, FenceValue);
         }
     );
-   
+    m_TransientCmdPoolMgr.SafeReleaseCommandPool(std::move(CmdPool), QueueIndex, FenceValue);
 }
 
 void RenderDeviceVkImpl::SubmitCommandBuffer(Uint32 QueueIndex, 

@@ -52,8 +52,7 @@ public:
     // Allocates Vulkan command pool.
     VulkanUtilities::CommandPoolWrapper AllocateCommandPool(const char *DebugName = nullptr);
     
-    // Returns command pool to the list of available pools. The GPU must have finished using the pool
-    void FreeCommandPool(VulkanUtilities::CommandPoolWrapper&& CmdPool);
+    void SafeReleaseCommandPool(VulkanUtilities::CommandPoolWrapper&& CmdPool, Uint32 CmdQueueIndex, Uint64 FenceValue);
 
     void DestroyPools();
 
@@ -62,6 +61,9 @@ public:
 #endif
 
 private:
+    // Returns command pool to the list of available pools. The GPU must have finished using the pool
+    void FreeCommandPool(VulkanUtilities::CommandPoolWrapper&& CmdPool);
+
     RenderDeviceVkImpl&             m_DeviceVkImpl;
     const std::string               m_Name;
     const uint32_t                  m_QueueFamilyIndex;

@@ -71,6 +71,47 @@ VulkanUtilities::CommandPoolWrapper CommandPoolManager::AllocateCommandPool(cons
     return std::move(CmdPool);
 }
 
+void CommandPoolManager::SafeReleaseCommandPool(VulkanUtilities::CommandPoolWrapper&& CmdPool, Uint32 CmdQueueIndex, Uint64 FenceValue)
+{
+    class CommandPoolDeleter
+    {
+    public:
+        CommandPoolDeleter(CommandPoolManager& _CmdPoolMgr, VulkanUtilities::CommandPoolWrapper&& _Pool) :
+            CmdPoolMgr(&_CmdPoolMgr),
+            Pool      (std::move(_Pool))
+        {
+            VERIFY_EXPR(Pool != VK_NULL_HANDLE);
+        }
+
+        CommandPoolDeleter             (const CommandPoolDeleter&)  = delete;
+        CommandPoolDeleter& operator = (const CommandPoolDeleter&)  = delete;
+        CommandPoolDeleter& operator = (      CommandPoolDeleter&&) = delete;
+
+        CommandPoolDeleter(CommandPoolDeleter&& rhs) : 
+            CmdPoolMgr(rhs.CmdPoolMgr),
+            Pool      (std::move(rhs.Pool))
+        {
+            rhs.CmdPoolMgr = nullptr;
+        }
+                     
+
+        ~CommandPoolDeleter()
+        {
+            if (CmdPoolMgr!=nullptr)
+            {
+                CmdPoolMgr->FreeCommandPool(std::move(Pool));
+            }
+        }
+    private:
+        CommandPoolManager*                 CmdPoolMgr;
+        VulkanUtilities::CommandPoolWrapper Pool;
+    };
+
+    // Discard command pool directly to the release queue since we know exactly which queue it was submitted to 
+    // as well as the associated FenceValue
+    m_DeviceVkImpl.GetReleaseQueue(CmdQueueIndex).DiscardResource(CommandPoolDeleter{*this, std::move(CmdPool)}, FenceValue);
+}
+
 void CommandPoolManager::FreeCommandPool(VulkanUtilities::CommandPoolWrapper&& CmdPool)
 {
     std::lock_guard<std::mutex> LockGuard(m_Mutex);
@@ -83,14 +124,14 @@ void CommandPoolManager::FreeCommandPool(VulkanUtilities::CommandPoolWrapper&& C
 void CommandPoolManager::DestroyPools()
 {
     std::lock_guard<std::mutex> LockGuard(m_Mutex);
-    DEV_CHECK_ERR(m_AllocatedPoolCounter == 0, m_AllocatedPoolCounter, " command pools have not been returned to the manager.");
+    DEV_CHECK_ERR(m_AllocatedPoolCounter == 0, m_AllocatedPoolCounter, " pool(s) have not been freed. This will cause a crash if the references to these pools are still in release queues when CommandPoolManager::FreeCommandPool() is called for destroyed CommandPoolManager object.");
     LOG_INFO_MESSAGE(m_Name, " allocated descriptor pool count: ", m_CmdPools.size() );
     m_CmdPools.clear();
 }
 
 CommandPoolManager::~CommandPoolManager()
 {
-    VERIFY(m_CmdPools.empty(), "Command pools have not been destroyed");
+    DEV_CHECK_ERR(m_CmdPools.empty() && m_AllocatedPoolCounter == 0, "Command pools have not been destroyed");
 }
 
 }
