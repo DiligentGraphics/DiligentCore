@@ -106,6 +106,9 @@ public:
     /// states.
     void ReleaseCommittedShaderResources();
 
+    /// Unbinds all render targets. Used when resizing the swap chain.
+    void ResetRenderTargets();
+
     /// Number of different shader types (Vertex, Pixel, Geometry, Domain, Hull, Compute)
     static constexpr int NumShaderTypes = 6;
 

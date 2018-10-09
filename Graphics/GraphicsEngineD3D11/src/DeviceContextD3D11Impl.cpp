@@ -1282,6 +1282,12 @@ namespace Diligent
         pTexD3D11->ClearState(D3D11TextureState::DepthStencil);
     }
 
+    void DeviceContextD3D11Impl::ResetRenderTargets()
+    {
+        TDeviceContextBase::ResetRenderTargets();
+        m_pd3d11DeviceContext->OMSetRenderTargets(0, nullptr, nullptr);
+    }
+
     void DeviceContextD3D11Impl::SetRenderTargets( Uint32 NumRenderTargets, ITextureView* ppRenderTargets[], ITextureView* pDepthStencil )
     {
         if( TDeviceContextBase::SetRenderTargets( NumRenderTargets, ppRenderTargets, pDepthStencil ) )
