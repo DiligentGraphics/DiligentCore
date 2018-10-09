@@ -553,8 +553,8 @@ const Char* GetResourceDimString( RESOURCE_DIMENSION TexType )
         TexTypeStrings[RESOURCE_DIM_TEX_2D]         = "Tex 2D";
         TexTypeStrings[RESOURCE_DIM_TEX_2D_ARRAY]   = "Tex 2D Array";
         TexTypeStrings[RESOURCE_DIM_TEX_3D]         = "Tex 3D";
-        TexTypeStrings[RESOURCE_DIM_TEX_2D_ARRAY]   = "Tex Cube";
-        TexTypeStrings[RESOURCE_DIM_TEX_3D]         = "Tex Cube Array";
+        TexTypeStrings[RESOURCE_DIM_TEX_CUBE]       = "Tex Cube";
+        TexTypeStrings[RESOURCE_DIM_TEX_CUBE_ARRAY] = "Tex Cube Array";
         static_assert(RESOURCE_DIM_NUM_DIMENSIONS == RESOURCE_DIM_TEX_CUBE_ARRAY + 1, "Not all texture type strings initialized.");
 
         bTexTypeStrsInit = true;
