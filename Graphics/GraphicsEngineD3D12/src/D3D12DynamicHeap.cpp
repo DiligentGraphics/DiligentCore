@@ -172,9 +172,15 @@ D3D12DynamicHeap::~D3D12DynamicHeap()
 {
     VERIFY(m_AllocatedPages.empty(), "Allocated pages have not been released which indicates FinishFrame() has not been called");
     
+    auto PeakAllocatedPages = m_PeakAllocatedSize / m_PageSize;
     LOG_INFO_MESSAGE(m_HeapName, " usage stats:\n"
-        "                       Peak used/peak allocated size: ", FormatMemorySize(m_PeakUsedSize, 2, m_PeakAllocatedSize), '/', FormatMemorySize(m_PeakAllocatedSize, 2, m_PeakAllocatedSize),
-        ". Peak utilization: ", std::fixed, std::setprecision(1), static_cast<double>(m_PeakUsedSize) / static_cast<double>(std::max(m_PeakAllocatedSize, Uint64{1})) * 100.0, '%');
+        "                       Peak used/aligned/allocated size: ",
+                                FormatMemorySize(m_PeakUsedSize,      2, m_PeakAllocatedSize), " / ",
+                                FormatMemorySize(m_PeakAlignedSize,   2, m_PeakAllocatedSize), " / ",
+                                FormatMemorySize(m_PeakAllocatedSize, 2, m_PeakAllocatedSize),
+                                " (", PeakAllocatedPages, (PeakAllocatedPages == 1 ? " page)" : " pages)"),
+        ". Peak efficiency (used/aligned): ",   std::fixed, std::setprecision(1), static_cast<double>(m_PeakUsedSize) / static_cast<double>(std::max(m_PeakAlignedSize, Uint64{1})) * 100.0, '%',
+        ". Peak utilization (used/allocated): ", std::fixed, std::setprecision(1), static_cast<double>(m_PeakUsedSize) / static_cast<double>(std::max(m_PeakAllocatedSize, Uint64{1})) * 100.0, '%');
 }
 
 D3D12DynamicAllocation D3D12DynamicHeap::Allocate(Uint64 SizeInBytes, Uint64 Alignment, Uint64 DvpCtxFrameNumber)
@@ -210,7 +216,10 @@ D3D12DynamicAllocation D3D12DynamicHeap::Allocate(Uint64 SizeInBytes, Uint64 Ali
         m_CurrOffset    += AdjustedSize;
         
         m_CurrUsedSize += SizeInBytes;
-        m_PeakUsedSize  = std::max(m_PeakUsedSize,      m_CurrUsedSize);
+        m_PeakUsedSize  = std::max(m_PeakUsedSize, m_CurrUsedSize);
+
+        m_CurrAlignedSize += AdjustedSize;
+        m_PeakAlignedSize  = std::max(m_PeakAlignedSize, m_CurrAlignedSize);
         
         auto& CurrPage = m_AllocatedPages.back();
         return D3D12DynamicAllocation
@@ -238,6 +247,7 @@ void D3D12DynamicHeap::ReleaseAllocatedPages(Uint64 QueueMask)
     m_AvailableSize     = 0;
     m_CurrAllocatedSize = 0;
     m_CurrUsedSize      = 0;
+    m_CurrAlignedSize   = 0;
 }
 
 }

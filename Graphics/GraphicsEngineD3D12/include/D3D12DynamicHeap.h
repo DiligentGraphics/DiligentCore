@@ -183,8 +183,10 @@ private:
 
     Uint64 m_CurrAllocatedSize = 0;
     Uint64 m_CurrUsedSize      = 0;
+    Uint64 m_CurrAlignedSize   = 0;
     Uint64 m_PeakAllocatedSize = 0;
     Uint64 m_PeakUsedSize      = 0;
+    Uint64 m_PeakAlignedSize   = 0;
 };
 
 }
