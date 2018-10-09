@@ -213,10 +213,12 @@ private:
     const Uint32 m_MasterBlockSize;
     Uint32 m_AvailableSize     = 0;
 
-    Uint32 m_CurrAllocatedSize = 0;
+    Uint32 m_CurrAlignedSize   = 0;
     Uint32 m_CurrUsedSize      = 0;
-    Uint32 m_PeakAllocatedSize = 0;
+    Uint32 m_PeakAlignedSize   = 0;
     Uint32 m_PeakUsedSize      = 0;
+    Uint32 m_CurrAllocatedSize = 0;
+    Uint32 m_PeakAllocatedSize = 0;
 };
 
 }

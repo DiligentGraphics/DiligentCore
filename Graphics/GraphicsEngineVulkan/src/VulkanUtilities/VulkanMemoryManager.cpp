@@ -208,13 +208,18 @@ void VulkanMemoryManager::OnFreeAllocation(VkDeviceSize Size, bool IsHostVisble)
 
 VulkanMemoryManager::~VulkanMemoryManager()
 {
+    auto PeakDeviceLocalPages  = m_PeakAllocatedSize[0] / m_DeviceLocalPageSize;
+    auto PeakHostVisisblePages = m_PeakAllocatedSize[1] / m_HostVisiblePageSize;
     LOG_INFO_MESSAGE("VulkanMemoryManager '", m_MgrName, "' stats:\n"
-                     "                       Peak used/peak allocated device-local memory size: ", 
-                     Diligent::FormatMemorySize(m_PeakUsedSize[0],      2, m_PeakAllocatedSize[0]), "/",
-                     Diligent::FormatMemorySize( m_PeakAllocatedSize[0], 2, m_PeakAllocatedSize[0]),
-                     "\n                       Peak used/peak allocated host-visible memory size: ", 
-                     Diligent::FormatMemorySize(m_PeakUsedSize[1],      2, m_PeakAllocatedSize[1]), "/",
-                     Diligent::FormatMemorySize(m_PeakAllocatedSize[1], 2, m_PeakAllocatedSize[1]));
+                     "                       Peak used/allocated device-local memory size: ", 
+                     Diligent::FormatMemorySize(m_PeakUsedSize[0],      2, m_PeakAllocatedSize[0]), " / ",
+                     Diligent::FormatMemorySize(m_PeakAllocatedSize[0], 2, m_PeakAllocatedSize[0]),
+                     " (", PeakDeviceLocalPages, (PeakDeviceLocalPages == 1 ? " page)" : " pages)"),
+                     "\n                       Peak used/allocated host-visible memory size: ", 
+                     Diligent::FormatMemorySize(m_PeakUsedSize[1],      2, m_PeakAllocatedSize[1]), " / ",
+                     Diligent::FormatMemorySize(m_PeakAllocatedSize[1], 2, m_PeakAllocatedSize[1]),
+                     " (", PeakHostVisisblePages, (PeakHostVisisblePages == 1 ? " page)" : " pages)")
+        );
     
     for(auto it=m_Pages.begin(); it != m_Pages.end(); ++it )
         VERIFY(it->second.IsEmpty(), "The page contains outstanding allocations");

@@ -208,8 +208,9 @@ VulkanDynamicAllocation VulkanDynamicHeap::Allocate(Uint32 SizeInBytes, Uint32 A
         if (MasterBlock.IsValid())
         {
             AlignedOffset = Align(MasterBlock.UnalignedOffset, size_t{Alignment});
-            AlignedSize = MasterBlock.Size;
+            AlignedSize   = MasterBlock.Size;
             VERIFY_EXPR(MasterBlock.Size >= SizeInBytes + (AlignedOffset - MasterBlock.UnalignedOffset));
+            m_CurrAllocatedSize += static_cast<Uint32>(MasterBlock.Size);
             m_MasterBlocks.emplace_back(MasterBlock);
         }
     }
@@ -220,9 +221,10 @@ VulkanDynamicAllocation VulkanDynamicHeap::Allocate(Uint32 SizeInBytes, Uint32 A
             auto MasterBlock = m_GlobalDynamicMemMgr.AllocateMasterBlock(m_MasterBlockSize, 0);
             if (MasterBlock.IsValid())
             {
-                m_CurrOffset = MasterBlock.UnalignedOffset;
+                m_CurrOffset         = MasterBlock.UnalignedOffset;
+                m_CurrAllocatedSize += static_cast<Uint32>(MasterBlock.Size);
+                m_AvailableSize      = static_cast<Uint32>(MasterBlock.Size);
                 m_MasterBlocks.emplace_back(MasterBlock);
-                m_AvailableSize = m_MasterBlockSize;
             }
         }
 
@@ -243,10 +245,11 @@ VulkanDynamicAllocation VulkanDynamicHeap::Allocate(Uint32 SizeInBytes, Uint32 A
     // Every device context uses its own dynamic heap, so there is no need to lock
     if(AlignedOffset != InvalidOffset)
     {
-        m_CurrAllocatedSize += static_cast<Uint32>(AlignedSize);
-        m_CurrUsedSize      += SizeInBytes;
-        m_PeakAllocatedSize = std::max(m_PeakAllocatedSize, m_CurrAllocatedSize);
-        m_PeakUsedSize      = std::max(m_PeakUsedSize,      m_CurrUsedSize);
+        m_CurrAlignedSize += static_cast<Uint32>(AlignedSize);
+        m_CurrUsedSize    += SizeInBytes;
+        m_PeakAlignedSize = std::max(m_PeakAlignedSize, m_CurrAlignedSize);
+        m_PeakUsedSize    = std::max(m_PeakUsedSize,    m_CurrUsedSize);
+        m_PeakAllocatedSize   = std::max(m_PeakAllocatedSize,   m_CurrAllocatedSize);
         
         VERIFY_EXPR((AlignedOffset & (Alignment-1)) == 0);
         return VulkanDynamicAllocation{ m_GlobalDynamicMemMgr, AlignedOffset, SizeInBytes };
@@ -260,20 +263,27 @@ void VulkanDynamicHeap::ReleaseMasterBlocks(RenderDeviceVkImpl& DeviceVkImpl, Ui
     m_GlobalDynamicMemMgr.ReleaseMasterBlocks(m_MasterBlocks, DeviceVkImpl, CmdQueueMask);
     m_MasterBlocks.clear();
 
-    m_CurrOffset        = InvalidOffset;
-    m_AvailableSize     = 0;
+    m_CurrOffset      = InvalidOffset;
+    m_AvailableSize   = 0;
 
-    m_CurrAllocatedSize = 0;
-    m_CurrUsedSize      = 0;
+    m_CurrUsedSize    = 0;
+    m_CurrAlignedSize = 0;
+    m_CurrAllocatedSize   = 0;
 }
 
 VulkanDynamicHeap::~VulkanDynamicHeap()
 {
     DEV_CHECK_ERR(m_MasterBlocks.empty(), m_MasterBlocks.size(), " master block(s) have not been returned to dynamic memory manager");
 
+    auto PeakAllocatedPages = m_PeakAllocatedSize / m_MasterBlockSize;
     LOG_INFO_MESSAGE(m_HeapName, " usage stats:\n"
-        "                       Peak used/peak allocated size: ", FormatMemorySize(m_PeakUsedSize, 2, m_PeakAllocatedSize), '/', FormatMemorySize(m_PeakAllocatedSize, 2, m_PeakAllocatedSize),
-        ". Peak utilization: ", std::fixed, std::setprecision(1), static_cast<double>(m_PeakUsedSize) / static_cast<double>(std::max(m_PeakAllocatedSize, 1U)) * 100.0, '%');
+        "                       Peak used/aligned/allocated size: ", FormatMemorySize(m_PeakUsedSize,      2, m_PeakAllocatedSize), " / ", 
+                                                                     FormatMemorySize(m_PeakAlignedSize,   2, m_PeakAllocatedSize), " / ", 
+                                                                     FormatMemorySize(m_PeakAllocatedSize, 2, m_PeakAllocatedSize),
+                                                                     " (", PeakAllocatedPages, (PeakAllocatedPages == 1 ? " page)" : " pages)"),
+        ". Peak efficiency (used/aligned): ",    std::fixed, std::setprecision(1), static_cast<double>(m_PeakUsedSize) / static_cast<double>(std::max(m_PeakAlignedSize, 1U)) * 100.0, '%',
+        ". Peak utilization (used/allocated): ", std::fixed, std::setprecision(1), static_cast<double>(m_PeakUsedSize) / static_cast<double>(std::max(m_PeakAllocatedSize, 1U)) * 100.0, '%'
+    );
 }
 
 }

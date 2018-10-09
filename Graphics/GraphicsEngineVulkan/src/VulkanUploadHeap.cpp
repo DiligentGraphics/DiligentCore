@@ -40,7 +40,9 @@ VulkanUploadHeap::VulkanUploadHeap(RenderDeviceVkImpl& RenderDevice,
 VulkanUploadHeap::~VulkanUploadHeap()
 {
     DEV_CHECK_ERR(m_Pages.empty(), "Upload heap '", m_HeapName, "' not all pages are released");
-    LOG_INFO_MESSAGE(m_HeapName, " peak used/peak allocated frame size: ", FormatMemorySize(m_PeakFrameSize, 2, m_PeakAllocatedSize), '/', FormatMemorySize(m_PeakAllocatedSize, 2));
+    auto PeakAllocatedPages = m_PeakAllocatedSize / m_PageSize;
+    LOG_INFO_MESSAGE(m_HeapName, " peak used/allocated frame size: ", FormatMemorySize(m_PeakFrameSize, 2, m_PeakAllocatedSize), " / ", FormatMemorySize(m_PeakAllocatedSize, 2),
+                                 " (", PeakAllocatedPages, (PeakAllocatedPages == 1 ? " page)" : " pages)") );
 }
 
 VulkanUploadHeap::UploadPageInfo VulkanUploadHeap::CreateNewPage(VkDeviceSize SizeInBytes)const
