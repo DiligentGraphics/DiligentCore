@@ -175,8 +175,8 @@ D3D12DynamicHeap::~D3D12DynamicHeap()
     auto PeakAllocatedPages = m_PeakAllocatedSize / m_PageSize;
     LOG_INFO_MESSAGE(m_HeapName, " usage stats:\n"
         "                       Peak used/aligned/allocated size: ",
-                                FormatMemorySize(m_PeakUsedSize,      2, m_PeakAllocatedSize), " / ",
-                                FormatMemorySize(m_PeakAlignedSize,   2, m_PeakAllocatedSize), " / ",
+                                FormatMemorySize(m_PeakUsedSize,      2, m_PeakAlignedSize), " / ",
+                                FormatMemorySize(m_PeakAlignedSize,   2, m_PeakAlignedSize), " / ",
                                 FormatMemorySize(m_PeakAllocatedSize, 2, m_PeakAllocatedSize),
                                 " (", PeakAllocatedPages, (PeakAllocatedPages == 1 ? " page)" : " pages)"),
         ". Peak efficiency (used/aligned): ",   std::fixed, std::setprecision(1), static_cast<double>(m_PeakUsedSize) / static_cast<double>(std::max(m_PeakAlignedSize, Uint64{1})) * 100.0, '%',
