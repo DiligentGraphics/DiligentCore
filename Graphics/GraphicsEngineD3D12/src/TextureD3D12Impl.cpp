@@ -43,15 +43,30 @@ DXGI_FORMAT GetClearFormat(DXGI_FORMAT Fmt, D3D12_RESOURCE_FLAGS Flags)
     {
         switch (Fmt)
         {
-            case DXGI_FORMAT_R32_TYPELESS: return DXGI_FORMAT_D32_FLOAT;
-            case DXGI_FORMAT_R16_TYPELESS: return DXGI_FORMAT_D16_UNORM;
-            case DXGI_FORMAT_R24G8_TYPELESS: return DXGI_FORMAT_D24_UNORM_S8_UINT;
+            case DXGI_FORMAT_R32_TYPELESS:      return DXGI_FORMAT_D32_FLOAT;
+            case DXGI_FORMAT_R16_TYPELESS:      return DXGI_FORMAT_D16_UNORM;
+            case DXGI_FORMAT_R24G8_TYPELESS:    return DXGI_FORMAT_D24_UNORM_S8_UINT;
             case DXGI_FORMAT_R32G8X24_TYPELESS: return DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
         }
     }
     else if (Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET)
     {
-
+        switch (Fmt)
+        {
+            case DXGI_FORMAT_R32G32B32A32_TYPELESS: return DXGI_FORMAT_R32G32B32A32_FLOAT;
+            case DXGI_FORMAT_R32G32B32_TYPELESS:    return DXGI_FORMAT_R32G32B32_FLOAT;  
+            case DXGI_FORMAT_R16G16B16A16_TYPELESS: return DXGI_FORMAT_R16G16B16A16_FLOAT;
+            case DXGI_FORMAT_R32G32_TYPELESS:       return DXGI_FORMAT_R32G32_FLOAT;     
+            case DXGI_FORMAT_R10G10B10A2_TYPELESS:  return DXGI_FORMAT_R10G10B10A2_UNORM;
+            case DXGI_FORMAT_R8G8B8A8_TYPELESS:     return DXGI_FORMAT_R8G8B8A8_UNORM;   
+            case DXGI_FORMAT_R16G16_TYPELESS:       return DXGI_FORMAT_R16G16_FLOAT;     
+            case DXGI_FORMAT_R32_TYPELESS:          return DXGI_FORMAT_R32_FLOAT;        
+            case DXGI_FORMAT_R8G8_TYPELESS:         return DXGI_FORMAT_R8G8_UNORM;       
+            case DXGI_FORMAT_R16_TYPELESS:          return DXGI_FORMAT_R16_FLOAT;        
+            case DXGI_FORMAT_R8_TYPELESS:           return DXGI_FORMAT_R8_UNORM;         
+            case DXGI_FORMAT_B8G8R8A8_TYPELESS:     return DXGI_FORMAT_B8G8R8A8_UNORM;   
+            case DXGI_FORMAT_B8G8R8X8_TYPELESS:     return DXGI_FORMAT_B8G8R8X8_UNORM;   
+        }
     }
     return Fmt;
 }
@@ -303,8 +318,9 @@ static TextureDesc InitTexDescFromD3D12Resource(ID3D12Resource* pTexture, const 
     if ((ResourceDesc.Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE) == 0)
     {
         auto FormatAttribs = GetTextureFormatAttribs(TexDesc.Format);
-        if (FormatAttribs.ComponentType != COMPONENT_TYPE_DEPTH &&
-            FormatAttribs.ComponentType != COMPONENT_TYPE_DEPTH_STENCIL)
+        if (FormatAttribs.IsTypeless ||
+            (FormatAttribs.ComponentType != COMPONENT_TYPE_DEPTH &&
+             FormatAttribs.ComponentType != COMPONENT_TYPE_DEPTH_STENCIL) )
         {
             TexDesc.BindFlags |= BIND_SHADER_RESOURCE;
         }

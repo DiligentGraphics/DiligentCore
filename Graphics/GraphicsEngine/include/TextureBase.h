@@ -383,6 +383,11 @@ void TextureBase<BaseInterface, TRenderDeviceImpl, TTextureViewImpl, TTexViewObj
         UNEXPECTED("Unexpected texture dimension");
     }
 
+    if (GetTextureFormatAttribs(ViewDesc.Format).IsTypeless)
+    {
+        TEX_VIEW_VALIDATION_ERROR( "Texture view format (", GetTextureFormatAttribs(ViewDesc.Format).Name, ") cannot be typeless" );
+    }
+
 #undef TEX_VIEW_VALIDATION_ERROR
 
     if( ViewDesc.NumMipLevels == 0 )
