@@ -78,6 +78,8 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters,
         TEXTURE_VIEW_TYPE DefaultTexView;
         if(m_Desc.BindFlags & BIND_DEPTH_STENCIL)
             DefaultTexView = TEXTURE_VIEW_DEPTH_STENCIL;
+        else if (m_Desc.BindFlags & BIND_UNORDERED_ACCESS)
+            DefaultTexView = TEXTURE_VIEW_UNORDERED_ACCESS;
         else if (m_Desc.BindFlags & BIND_RENDER_TARGET)
             DefaultTexView = TEXTURE_VIEW_RENDER_TARGET;
         else
