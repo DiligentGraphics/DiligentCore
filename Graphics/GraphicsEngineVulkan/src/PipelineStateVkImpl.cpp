@@ -568,9 +568,8 @@ void PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBind
         // Prepare descriptor sets, and also bind them if there are no dynamic descriptors
         VERIFY_EXPR(pDescrSetBindInfo != nullptr);
         m_PipelineLayout.PrepareDescriptorSets(pCtxVkImpl, m_Desc.IsComputePipeline, ResourceCache, *pDescrSetBindInfo, DynamicDescrSet);
-        // Dynamic descriptor set allocation automatically goes back to the context's dynamic descriptor pool. 
-        // release queue. It will stay there until the next command list is executed, at which point it will be discarded
-        // and actually released later
+        // Dynamic descriptor sets are not released individually. Instead, all dynamic descriptor pools 
+        // are released at the end of the frame by DeviceContextVkImpl::FinishFrame().
     }
     else
     {
