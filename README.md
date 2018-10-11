@@ -613,6 +613,8 @@ objects. Refer to the following pages for more information:
 
 ## Current Progress
 
+## v2.3.a
+
 * API Changes:
   * Added `IFence` interface and `IDeviceContext::SignalFence()` method to enable CPU-GPU synchronization
   * Added `GetType`, `GetArraySize`, `GetName`, and `GetIndex` methods to `IShaderVariable` interface;
