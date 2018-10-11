@@ -64,8 +64,6 @@
 namespace Diligent
 {
 
-static const Char* D3DSamplerSuffix = "_sampler";
-
 inline bool IsAllowedType(SHADER_VARIABLE_TYPE VarType, Uint32 AllowedTypeBits)noexcept
 {
     return ((1 << VarType) & AllowedTypeBits) != 0;
@@ -390,7 +388,7 @@ protected:
     D3DShaderResourceAttribs& GetBufUAV (Uint32 n)noexcept{ return GetResAttribs(n, GetNumBufUAV(),   m_BufUAVOffset); }
     D3DShaderResourceAttribs& GetSampler(Uint32 n)noexcept{ return GetResAttribs(n, GetNumSamplers(), m_SamplersOffset); }
 
-    Uint32 FindAssignedSamplerId(const D3DShaderResourceAttribs& TexSRV)const;
+    Uint32 FindAssignedSamplerId(const D3DShaderResourceAttribs& TexSRV, const char* SamplerSuffix)const;
 
 private:
     // Memory buffer that holds all resources as continuous chunk of memory:

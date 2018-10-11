@@ -1727,7 +1727,8 @@ void ParseImageFormat(const String &Comment, String& ImageFormat)
 //
 void HLSL2GLSLConverterImpl::ConversionStream::ProcessTextureDeclaration( TokenListType::iterator &Token, 
                                                                           const std::vector<SamplerHashType> &Samplers, 
-                                                                          ObjectsTypeHashType &Objects )
+                                                                          ObjectsTypeHashType &Objects, 
+                                                                          const char* SamplerSuffix )
 {
     auto TexDeclToken = Token;
     auto TextureDim = TexDeclToken->Type;
@@ -1908,7 +1909,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessTextureDeclaration( TokenL
         if( !IsRWTexture )
         {
             // Try to find matching sampler
-            auto SamplerName = TextureName + "_sampler";
+            auto SamplerName = TextureName + SamplerSuffix;
             // Search all scopes starting with the innermost
             for( auto ScopeIt = Samplers.rbegin(); ScopeIt != Samplers.rend(); ++ScopeIt )
             {
@@ -4372,7 +4373,7 @@ String HLSL2GLSLConverterImpl::Convert(ConversionAttribs &Attribs)const
         if(Attribs.ppConversionStream == nullptr)
         {
             ConversionStream Stream(nullptr, *this, Attribs.InputFileName, Attribs.pSourceStreamFactory, Attribs.HLSLSource, Attribs.NumSymbols, false);
-            return Stream.Convert(Attribs.EntryPoint, Attribs.ShaderType, Attribs.IncludeDefinitions);
+            return Stream.Convert(Attribs.EntryPoint, Attribs.ShaderType, Attribs.IncludeDefinitions, Attribs.SamplerSuffix);
         }
         else
         {
@@ -4395,7 +4396,7 @@ String HLSL2GLSLConverterImpl::Convert(ConversionAttribs &Attribs)const
                 pStream = ValidatedCast<ConversionStream>(*Attribs.ppConversionStream);
             }
 
-            return pStream->Convert(Attribs.EntryPoint, Attribs.ShaderType, Attribs.IncludeDefinitions);
+            return pStream->Convert(Attribs.EntryPoint, Attribs.ShaderType, Attribs.IncludeDefinitions, Attribs.SamplerSuffix);
         }
 }
 
@@ -4416,11 +4417,11 @@ void HLSL2GLSLConverterImpl::CreateStream(const Char* InputFileName,
     }
 }
 
-void HLSL2GLSLConverterImpl::ConversionStream::Convert(const Char* EntryPoint, SHADER_TYPE ShaderType, bool IncludeDefintions, IDataBlob **ppGLSLSource)
+void HLSL2GLSLConverterImpl::ConversionStream::Convert(const Char* EntryPoint, SHADER_TYPE ShaderType, bool IncludeDefintions, const char* SamplerSuffix, IDataBlob **ppGLSLSource)
 {
     try
     {
-        auto GLSLSource = Convert(EntryPoint, ShaderType, IncludeDefintions);
+        auto GLSLSource = Convert(EntryPoint, ShaderType, IncludeDefintions, SamplerSuffix);
         StringDataBlobImpl *pDataBlob = MakeNewRCObj<StringDataBlobImpl>()( std::move(GLSLSource) );
         pDataBlob->QueryInterface( IID_DataBlob, reinterpret_cast<IObject**>(ppGLSLSource) );
     }
@@ -4430,7 +4431,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::Convert(const Char* EntryPoint, S
     }
 }
 
-String HLSL2GLSLConverterImpl::ConversionStream::Convert( const Char* EntryPoint, SHADER_TYPE ShaderType, bool IncludeDefintions )
+String HLSL2GLSLConverterImpl::ConversionStream::Convert( const Char* EntryPoint, SHADER_TYPE ShaderType, bool IncludeDefintions, const char* SamplerSuffix )
 {
     TokenListType TokensCopy(m_bPreserveTokens ? m_Tokens : TokenListType());
 
@@ -4629,7 +4630,7 @@ String HLSL2GLSLConverterImpl::ConversionStream::Convert( const Char* EntryPoint
             {
                 // Process texture declaration, and add it to the top of the
                 // object stack
-                ProcessTextureDeclaration( Token, Samplers, m_Objects.back() );
+                ProcessTextureDeclaration( Token, Samplers, m_Objects.back(), SamplerSuffix );
             }
             else
                 ++Token;

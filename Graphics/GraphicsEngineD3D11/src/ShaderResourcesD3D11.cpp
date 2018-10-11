@@ -34,7 +34,10 @@ namespace Diligent
 {
 
 
-ShaderResourcesD3D11::ShaderResourcesD3D11(RenderDeviceD3D11Impl* pDeviceD3D11Impl, ID3DBlob* pShaderBytecode, const ShaderDesc& ShdrDesc) :
+ShaderResourcesD3D11::ShaderResourcesD3D11(RenderDeviceD3D11Impl* pDeviceD3D11Impl,
+                                           ID3DBlob*              pShaderBytecode,
+                                           const ShaderDesc&      ShdrDesc,
+                                           const char*            CombinedSamplerSuffix) :
     ShaderResources(ShdrDesc.ShaderType),
     m_ShaderName(ShdrDesc.Name),
     m_StaticSamplers(nullptr, STDDeleterRawMem< void >(GetRawAllocator()))
@@ -96,12 +99,12 @@ ShaderResourcesD3D11::ShaderResourcesD3D11(RenderDeviceD3D11Impl* pDeviceD3D11Im
             VERIFY( TexAttribs.BindPoint + TexAttribs.BindCount-1 <= MaxAllowedBindPoint, "Tex SRV bind point exceeds supported range" );
             m_MaxSRVBindPoint = std::max(m_MaxSRVBindPoint, static_cast<MaxBindPointType>(TexAttribs.BindPoint + TexAttribs.BindCount-1));
 
-            auto SamplerId = FindAssignedSamplerId(TexAttribs);
+            auto SamplerId = CombinedSamplerSuffix != nullptr ? FindAssignedSamplerId(TexAttribs, CombinedSamplerSuffix) : D3DShaderResourceAttribs::InvalidSamplerId;
             new (&GetTexSRV(CurrTexSRV++)) D3DShaderResourceAttribs(m_ResourceNames, TexAttribs, SamplerId);
         },
 
         ShdrDesc,
-        D3DSamplerSuffix);
+        CombinedSamplerSuffix);
 
     VERIFY_EXPR(m_ResourceNames.GetRemainingSize() == 0);
     VERIFY(CurrCB == GetNumCBs(), "Not all CBs are initialized, which will result in a crash when ~D3DShaderResourceAttribs() is called");
@@ -131,7 +134,7 @@ ShaderResourcesD3D11::ShaderResourcesD3D11(RenderDeviceD3D11Impl* pDeviceD3D11Im
                 for (; ssd < ShdrDesc.NumStaticSamplers; ++ssd)
                 {
                     const auto& StaticSamplerDesc = ShdrDesc.StaticSamplers[ssd];
-                    if (StrCmpSuff(Sam.Name, StaticSamplerDesc.TextureName, D3DSamplerSuffix))
+                    if (StrCmpSuff(Sam.Name, StaticSamplerDesc.TextureName, CombinedSamplerSuffix))
                     {
                         auto &StaticSamplerAttrs = GetStaticSampler(CurrStaticSam++);
                         StaticSamplerAttrs.first = &Sam;

@@ -241,6 +241,7 @@ String BuildGLSLSourceString(const ShaderCreationAttribs& CreationAttribs, Targe
         Attribs.ShaderType = CreationAttribs.Desc.ShaderType;
         Attribs.IncludeDefinitions = true;
         Attribs.InputFileName = CreationAttribs.FilePath;
+        Attribs.SamplerSuffix = CreationAttribs.CombinedSamplerSuffix;
         auto ConvertedSource = Converter.Convert(Attribs);
         
         GLSLSource.append(ConvertedSource);

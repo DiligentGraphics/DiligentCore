@@ -256,6 +256,11 @@ struct ShaderCreationAttribs
     /// This member is ignored if ByteCode is not null
     const ShaderMacro *Macros = nullptr;
 
+    /// Defines the suffix added to the texture variable name to get corresponding
+    /// sampler name.  For example, for default value "_sampler", a texture named 
+    /// "tex" will be combined with sampler named "tex_sampler". 
+    const Char* CombinedSamplerSuffix = "_sampler";
+
 	/// Shader description. See Diligent::ShaderDesc.
     ShaderDesc Desc;
 

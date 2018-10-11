@@ -34,7 +34,7 @@ namespace Diligent
 {
 
 
-ShaderResourcesD3D12::ShaderResourcesD3D12(ID3DBlob *pShaderBytecode, const ShaderDesc &ShdrDesc) :
+ShaderResourcesD3D12::ShaderResourcesD3D12(ID3DBlob* pShaderBytecode, const ShaderDesc& ShdrDesc, const char* CombinedSamplerSuffix) :
     ShaderResources(ShdrDesc.ShaderType)
 {
     Uint32 CurrCB = 0, CurrTexSRV = 0, CurrTexUAV = 0, CurrBufSRV = 0, CurrBufUAV = 0, CurrSampler = 0;
@@ -75,12 +75,15 @@ ShaderResourcesD3D12::ShaderResourcesD3D12(ID3DBlob *pShaderBytecode, const Shad
         {
             VERIFY(CurrSampler == GetNumSamplers(), "All samplers must be initialized before texture SRVs" );
 
-            auto SamplerId = FindAssignedSamplerId(TexAttribs);
+            auto SamplerId = 
+                CombinedSamplerSuffix != nullptr ? 
+                    FindAssignedSamplerId(TexAttribs, CombinedSamplerSuffix) : 
+                    D3DShaderResourceAttribs::InvalidSamplerId;
             new (&GetTexSRV(CurrTexSRV++)) D3DShaderResourceAttribs(m_ResourceNames, TexAttribs, SamplerId);
         },
 
         ShdrDesc,
-        D3DSamplerSuffix);
+        CombinedSamplerSuffix);
 
     VERIFY_EXPR(m_ResourceNames.GetRemainingSize() == 0);
     VERIFY(CurrCB == GetNumCBs(), "Not all CBs are initialized, which will result in a crash when ~D3DShaderResourceAttribs() is called");

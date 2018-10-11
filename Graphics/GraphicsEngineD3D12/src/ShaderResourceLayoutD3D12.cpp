@@ -525,7 +525,7 @@ const ShaderResourceLayoutD3D12::D3D12Resource& ShaderResourceLayoutD3D12::GetAs
     VERIFY(TexSrv.IsValidSampler(), "Texture SRV has no associated sampler");
     const auto& SamInfo = GetSampler(TexSrv.Attribs.GetVariableType(), TexSrv.SamplerId);
     VERIFY(SamInfo.Attribs.GetVariableType() == TexSrv.Attribs.GetVariableType(), "Inconsistent texture and sampler variable types");
-    VERIFY(StrCmpSuff(SamInfo.Attribs.Name, TexSrv.Attribs.Name, D3DSamplerSuffix), "Sampler name \"", SamInfo.Attribs.Name, "\" does not match texture name \"", TexSrv.Attribs.Name, '\"');
+    //VERIFY(StrCmpSuff(SamInfo.Attribs.Name, TexSrv.Attribs.Name, SamplerSuffix), "Sampler name \"", SamInfo.Attribs.Name, "\" does not match texture name \"", TexSrv.Attribs.Name, '\"');
     return SamInfo;
 }
 

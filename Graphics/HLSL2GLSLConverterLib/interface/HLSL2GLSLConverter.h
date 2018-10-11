@@ -39,7 +39,7 @@ static constexpr INTERFACE_ID IID_HLSL2GLSLConversionStream =
 class IHLSL2GLSLConversionStream : public IObject
 {
 public:
-    virtual void Convert(const Char* EntryPoint, SHADER_TYPE ShaderType, bool IncludeDefintions, IDataBlob **ppGLSLSource) = 0;
+    virtual void Convert(const Char* EntryPoint, SHADER_TYPE ShaderType, bool IncludeDefintions, const char* SamplerSuffix, IDataBlob **ppGLSLSource) = 0;
 };
 
 

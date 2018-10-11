@@ -100,6 +100,7 @@ namespace Diligent
             SHADER_TYPE ShaderType = SHADER_TYPE_UNKNOWN;
             bool IncludeDefinitions = false;
             const Char* InputFileName = nullptr;
+            const Char* SamplerSuffix = "_sampler";
         };
 
         String Convert(ConversionAttribs &Attribs)const;
@@ -223,8 +224,8 @@ namespace Diligent
                              size_t NumSymbols,
                              bool bPreserveTokens);
 
-            String Convert(const Char* EntryPoint, SHADER_TYPE ShaderType, bool IncludeDefintions);
-            virtual void Convert(const Char* EntryPoint, SHADER_TYPE ShaderType, bool IncludeDefintions, IDataBlob **ppGLSLSource)override;
+            String Convert(const Char* EntryPoint, SHADER_TYPE ShaderType, bool IncludeDefintions, const char* SamplerSuffix);
+            virtual void Convert(const Char* EntryPoint, SHADER_TYPE ShaderType, bool IncludeDefintions, const char* SamplerSuffix, IDataBlob **ppGLSLSource)override;
             
             IMPLEMENT_QUERY_INTERFACE_IN_PLACE( IID_HLSL2GLSLConversionStream, TBase )
 
@@ -251,7 +252,7 @@ namespace Diligent
             void ProcessConstantBuffer(TokenListType::iterator &Token);
             void ProcessStructuredBuffer(TokenListType::iterator &Token);
             void ParseSamplers(TokenListType::iterator &ScopeStart, SamplerHashType &SamplersHash);
-            void ProcessTextureDeclaration(TokenListType::iterator &Token, const std::vector<SamplerHashType> &SamplersHash, ObjectsTypeHashType &Objects);
+            void ProcessTextureDeclaration(TokenListType::iterator &Token, const std::vector<SamplerHashType> &SamplersHash, ObjectsTypeHashType &Objects, const char* SamplerSuffix);
             bool ProcessObjectMethod(TokenListType::iterator &Token, const TokenListType::iterator &ScopeStart, const TokenListType::iterator &ScopeEnd);
             Uint32 CountFunctionArguments(TokenListType::iterator &Token, const TokenListType::iterator &ScopeEnd);
             bool ProcessRWTextureStore(TokenListType::iterator &Token, const TokenListType::iterator &ScopeEnd);

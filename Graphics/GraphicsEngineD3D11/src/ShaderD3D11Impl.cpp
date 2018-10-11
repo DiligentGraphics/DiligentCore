@@ -78,7 +78,7 @@ ShaderD3D11Impl::ShaderD3D11Impl(IReferenceCounters*          pRefCounters,
     // Load shader resources
     auto &Allocator = GetRawAllocator();
     auto *pRawMem = ALLOCATE(Allocator, "Allocator for ShaderResources", sizeof(ShaderResourcesD3D11));
-    auto *pResources = new (pRawMem) ShaderResourcesD3D11(pRenderDeviceD3D11, m_pShaderByteCode, m_Desc);
+    auto *pResources = new (pRawMem) ShaderResourcesD3D11(pRenderDeviceD3D11, m_pShaderByteCode, m_Desc, CreationAttribs.CombinedSamplerSuffix);
     m_pShaderResources.reset(pResources, STDDeleterRawMem<ShaderResourcesD3D11>(Allocator));
 
     // Clone only static resources that will be set directly in the shader
