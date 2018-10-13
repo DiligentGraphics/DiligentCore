@@ -98,27 +98,66 @@ inline int StrCmpNoCase(const char* Str1, const char* Str2)
 }
 
 // Returns true if RefStr == Str + Suff
-inline bool StrCmpSuff(const char *RefStr, const char *Str, const char *Suff)
+// If NoSuffixAllowed == true, also returns true if RefStr == Str
+inline bool StrCmpSuff(const char* RefStr, const char* Str, const char* Suff, bool NoSuffixAllowed = false)
 {
-    VERIFY_EXPR(RefStr != nullptr && Str!= nullptr && Suff != nullptr);
-    if(RefStr==nullptr)
+    VERIFY_EXPR(RefStr != nullptr && Str!= nullptr);
+    if (RefStr==nullptr)
         return false;
 
-    const auto *r = RefStr;
-    const auto *s = Str;
-    for(; *r!=0 && *s!=0; ++r, ++s)
+    const auto* r = RefStr;
+    const auto* s = Str;
+    // abc_def     abc
+    // ^           ^
+    // r           s
+    for (; *r != 0 && *s != 0; ++r, ++s)
     {
         if (*r != *s)
+        {
+            // abc_def     abx
+            //   ^           ^
+            //   r           s
             return false;
+        }
     }
 
-    if( *s != 0 )
+    if (*s != 0)
     {
+        // abc         abc_def
+        //    ^           ^
+        //    r           s
         VERIFY_EXPR(*r == 0);
         return false;
     }
+    else
+    {
+        // abc_def     abc
+        //    ^           ^
+        //    r           s
 
-    return strcmp(r, Suff) == 0;
+        if (NoSuffixAllowed && *r == 0)
+        {
+            // abc         abc      _def
+            //    ^           ^
+            //    r           s
+            return true;
+        }
+
+        if (Suff != nullptr)
+        {
+            // abc_def     abc       _def
+            //    ^           ^      ^
+            //    r           s      Suff
+            return strcmp(r, Suff) == 0;
+        }
+        else
+        {
+            // abc         abc                abc_def         abc
+            //    ^           ^       or         ^               ^
+            //    r           s                  r               s
+            return *r == 0;
+        }
+    }
 }
 
 inline void StrToLowerInPlace(std::string &str)
