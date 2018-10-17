@@ -40,15 +40,15 @@
 //   |                      |  unique_ptr    |        |           |           |           |           |            |
 //   | ShaderResourcesD3D11 |--------------->|   CBs  |  TexSRVs  |  TexUAVs  |  BufSRVs  |  BufUAVs  |  Samplers  |
 //   |______________________|                |________|___________|___________|___________|___________|____________|
-//            A                                     A         A          A          A           A               A
-//            |                                      \         \          \          \           \              |
-//            |shared_ptr                            Ref       Ref        Ref        Ref         Ref            |
-//    ________|__________________                  ____\_________\__________\__________\___________\_______     |
-//   |                           |   unique_ptr   |        |           |           |           |           |    |
-//   | ShaderResourceLayoutD3D11 |--------------->|   CBs  |  TexSRVs  |  TexUAVs  |  BufSRVs  |  BufUAVs  |    |
-//   |___________________________|                |________|___________|___________|___________|___________|    |
-//                                                               |                                             Ref 
-//                                                               |______________________________________________|
+//            A                                     A         A          A          A           A            A   
+//            |                                      \         \          \          \           \           \   
+//            |shared_ptr                            Ref       Ref        Ref        Ref         Ref         Ref 
+//    ________|__________________                  ____\_________\__________\__________\___________\_______ ___\______
+//   |                           |   unique_ptr   |        |           |           |           |           |          |
+//   | ShaderResourceLayoutD3D11 |--------------->|   CBs  |  TexSRVs  |  TexUAVs  |  BufSRVs  |  BufUAVs  | Samplers |
+//   |___________________________|                |________|___________|___________|___________|___________|__________|
+//                                                               |                                              A  
+//                                                               |_________________SamplerIndex_________________|
 //               
 //
 //  One ShaderResources instance can be referenced by multiple objects
@@ -95,8 +95,8 @@ public:
     __forceinline Int32 GetMaxSamplerBindPoint()const{return m_MaxSamplerBindPoint; }
     __forceinline Int32 GetMaxUAVBindPoint()    const{return m_MaxUAVBindPoint;     }
 
-#ifdef VERIFY_SHADER_BINDINGS
-    void dbgVerifyCommittedResources(ID3D11Buffer*              CommittedD3D11CBs[],
+#ifdef DEVELOPMENT
+    void dvpVerifyCommittedResources(ID3D11Buffer*              CommittedD3D11CBs[],
                                      ID3D11ShaderResourceView*  CommittedD3D11SRVs[],
                                      ID3D11Resource*            CommittedD3D11SRVResources[],
                                      ID3D11SamplerState*        CommittedD3D11Samplers[],

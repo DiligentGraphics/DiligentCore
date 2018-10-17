@@ -45,7 +45,7 @@ ShaderD3D12Impl::ShaderD3D12Impl(IReferenceCounters*          pRefCounters,
     // Load shader resources
     auto& Allocator = GetRawAllocator();
     auto* pRawMem = ALLOCATE(Allocator, "Allocator for ShaderResources", sizeof(ShaderResourcesD3D12));
-    auto* pResources = new (pRawMem) ShaderResourcesD3D12(m_pShaderByteCode, m_Desc, ShaderCreationAttribs.CombinedSamplerSuffix);
+    auto* pResources = new (pRawMem) ShaderResourcesD3D12(m_pShaderByteCode, m_Desc, ShaderCreationAttribs.UseCombinedTextureSamplers ? ShaderCreationAttribs.CombinedSamplerSuffix : nullptr);
     m_pShaderResources.reset(pResources, STDDeleterRawMem<ShaderResourcesD3D12>(Allocator));
 
     // Clone only static resources that will be set directly in the shader

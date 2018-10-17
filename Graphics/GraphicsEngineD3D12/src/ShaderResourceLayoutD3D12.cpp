@@ -137,12 +137,17 @@ void ShaderResourceLayoutD3D12::Initialize(ID3D12Device*                        
             VERIFY_EXPR(CB.IsAllowedType(AllowedTypeBits));
             ++CbvSrvUavCount[CB.GetVariableType()];
         },
+        [&](const D3DShaderResourceAttribs& Sam, Uint32)
+        {
+            VERIFY_EXPR(Sam.IsAllowedType(AllowedTypeBits));
+            
+        },
         [&](const D3DShaderResourceAttribs& TexSRV, Uint32)
         {
             VERIFY_EXPR(TexSRV.IsAllowedType(AllowedTypeBits));
             auto VarType = TexSRV.GetVariableType();
             ++CbvSrvUavCount[VarType];
-            if(TexSRV.IsValidSampler())
+            if(TexSRV.ValidSamplerAssigned())
             {
                 auto SamplerId = TexSRV.GetSamplerId();
                 const auto& SamplerAttribs = m_pResources->GetSampler(SamplerId);
@@ -220,13 +225,18 @@ void ShaderResourceLayoutD3D12::Initialize(ID3D12Device*                        
             VERIFY_EXPR( CB.IsAllowedType(AllowedTypeBits) );
             AddResource(CB, CachedResourceType::CBV);
         },
+        [&](const D3DShaderResourceAttribs& Sam, Uint32)
+        {
+            VERIFY_EXPR( Sam.IsAllowedType(AllowedTypeBits) );
+            
+        },
         [&](const D3DShaderResourceAttribs& TexSRV, Uint32)
         {
             VERIFY_EXPR(TexSRV.IsAllowedType(AllowedTypeBits) );
             auto VarType = TexSRV.GetVariableType();
             
             Uint32 SamplerId = D3D12Resource::InvalidSamplerId;
-            if(TexSRV.IsValidSampler())
+            if(TexSRV.ValidSamplerAssigned())
             {
                 const auto& SrcSamplerAttribs = m_pResources->GetSampler(TexSRV.GetSamplerId());
                 VERIFY(SrcSamplerAttribs.GetVariableType() == VarType, "Inconsistent texture and sampler variable types" );

@@ -127,8 +127,8 @@ void ShaderResourceBindingD3D11Impl::BindStaticShaderResources()
     for (Uint32 shader = 0; shader < NumShaders; ++shader)
     {
         auto *pShaderD3D11 = ValidatedCast<ShaderD3D11Impl>( ppShaders[shader] );
-#ifdef VERIFY_SHADER_BINDINGS
-        pShaderD3D11->GetStaticResourceLayout().dbgVerifyBindings();
+#ifdef DEVELOPMENT
+        pShaderD3D11->GetStaticResourceLayout().dvpVerifyBindings();
 #endif
 
 #ifdef _DEBUG

@@ -205,9 +205,9 @@ public:
             for (Uint32 s = 0; s < this->m_Desc.NumStaticSamplers; ++s, ++Str)
             {
                 m_StaticSamplers[s] = this->m_Desc.StaticSamplers[s];
-                VERIFY(m_StaticSamplers[s].TextureName != nullptr, "Static sampler texture name not provided");
-                *Str = m_StaticSamplers[s].TextureName;
-                m_StaticSamplers[s].TextureName = Str->c_str();
+                VERIFY(m_StaticSamplers[s].SamplerOrTextureName != nullptr, "Static sampler or texture name is not provided");
+                *Str = m_StaticSamplers[s].SamplerOrTextureName;
+                m_StaticSamplers[s].SamplerOrTextureName = Str->c_str();
 #ifdef DEVELOPMENT
                 const auto &BorderColor = m_StaticSamplers[s].Desc.BorderColor;
                 if( !( (BorderColor[0] == 0 && BorderColor[1] == 0 && BorderColor[2] == 0 && BorderColor[3] == 0) ||

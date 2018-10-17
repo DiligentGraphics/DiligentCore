@@ -80,7 +80,7 @@ static Int32 FindStaticSampler(const ShaderDesc& shaderDesc, const std::string& 
     for(Uint32 s=0; s < shaderDesc.NumStaticSamplers; ++s)
     {
         const auto& StSam = shaderDesc.StaticSamplers[s];
-        if(SamplerName.compare(StSam.TextureName) == 0)
+        if (SamplerName.compare(StSam.SamplerOrTextureName) == 0)
             return s;
     }
 
@@ -282,7 +282,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&         Allocator,
         for (Uint32 s = 0; s < shaderDesc.NumStaticSamplers; ++s)
         {
             bool SamplerFound = false;
-            const auto *SamName = shaderDesc.StaticSamplers[s].TextureName;
+            const auto* SamName = shaderDesc.StaticSamplers[s].SamplerOrTextureName;
             for (Uint32 i = 0; i < GetNumSmplImgs(); ++i)
             {
                 const auto &SmplImg = GetSmplImg(i);

@@ -135,16 +135,17 @@ struct ShaderVariableDesc
 /// Static sampler description
 struct StaticSamplerDesc
 {
-    /// Name of the texture variable that static sampler will be assigned to
-    const Char* TextureName = nullptr;
+    /// The name of the sampler itself or the name of the texture variable that 
+    /// this static sampler is assigned to if combined texture samplers are used.
+    const Char* SamplerOrTextureName = nullptr;
 
     /// Sampler description
     SamplerDesc Desc;
 
-    StaticSamplerDesc(){};
-    StaticSamplerDesc(const Char* _TexName, const SamplerDesc &_Desc) : 
-        TextureName(_TexName),
-        Desc(_Desc)
+    StaticSamplerDesc(){}
+    StaticSamplerDesc(const Char* _SamplerOrTextureName, const SamplerDesc& _Desc) : 
+        SamplerOrTextureName(_SamplerOrTextureName),
+        Desc                (_Desc)
     {}
 };
 
@@ -256,9 +257,19 @@ struct ShaderCreationAttribs
     /// This member is ignored if ByteCode is not null
     const ShaderMacro *Macros = nullptr;
 
-    /// Defines the suffix added to the texture variable name to get corresponding
-    /// sampler name.  For example, for default value "_sampler", a texture named 
-    /// "tex" will be combined with sampler named "tex_sampler". 
+    /// If set to true, textures will be combined with texture samplers.
+    /// The CombinedSamplerSuffix member defines the suffix added to the texture variable
+    /// name to get corresponding sampler name. When using combined samplers,
+    /// the sampler assigned to the shader resource view is automatically set when
+    /// the view is bound. Otherwise samplers need to be explicitly set similar to other 
+    /// shader variables.
+    bool UseCombinedTextureSamplers = false;
+
+    /// If UseCombinedTextureSamplers is true, defines the suffix added to the
+    /// texture variable name to get corresponding sampler name.  For example,
+    /// for default value "_sampler", a texture named "tex" will be combined 
+    /// with sampler named "tex_sampler". 
+    /// If UseCombinedTextureSamplers is false, this member is ignored.
     const Char* CombinedSamplerSuffix = "_sampler";
 
 	/// Shader description. See Diligent::ShaderDesc.

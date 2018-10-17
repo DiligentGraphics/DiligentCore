@@ -230,6 +230,10 @@ String BuildGLSLSourceString(const ShaderCreationAttribs& CreationAttribs, Targe
 
     if (CreationAttribs.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL)
     {
+        if (!CreationAttribs.UseCombinedTextureSamplers)
+        {
+            LOG_ERROR_AND_THROW("Combined texture samplers are required to convert HLSL source to GLSL");
+        }
         // Convert HLSL to GLSL
         const auto &Converter = HLSL2GLSLConverterImpl::GetInstance();
         HLSL2GLSLConverterImpl::ConversionAttribs Attribs;

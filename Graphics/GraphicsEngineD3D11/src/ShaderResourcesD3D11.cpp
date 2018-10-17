@@ -42,77 +42,59 @@ ShaderResourcesD3D11::ShaderResourcesD3D11(RenderDeviceD3D11Impl* pDeviceD3D11Im
     m_ShaderName(ShdrDesc.Name),
     m_StaticSamplers(nullptr, STDDeleterRawMem< void >(GetRawAllocator()))
 {
-    Uint32 CurrCB = 0, CurrTexSRV = 0, CurrTexUAV = 0, CurrBufSRV = 0, CurrBufUAV = 0, CurrSampler = 0;
-    LoadD3DShaderResources<D3D11_SHADER_DESC, D3D11_SHADER_INPUT_BIND_DESC, ID3D11ShaderReflection>(
-        pShaderBytecode,
+    class NewResourceHandler
+    {
+    public:
+        NewResourceHandler(ShaderResourcesD3D11& ResourcesD3D11) : 
+            Res(ResourcesD3D11)
+        {}
 
-        [&](Uint32 NumCBs, Uint32 NumTexSRVs, Uint32 NumTexUAVs, Uint32 NumBufSRVs, Uint32 NumBufUAVs, Uint32 NumSamplers, size_t ResourceNamesPoolSize)
-        {
-            Initialize(GetRawAllocator(), NumCBs, NumTexSRVs, NumTexUAVs, NumBufSRVs, NumBufUAVs, NumSamplers, ResourceNamesPoolSize);
-        },
-
-        [&](const D3DShaderResourceAttribs& CBAttribs)
+        void OnNewCB(const D3DShaderResourceAttribs& CBAttribs)
         {
             VERIFY( CBAttribs.BindPoint + CBAttribs.BindCount-1 <= MaxAllowedBindPoint, "CB bind point exceeds supported range" );
-            m_MaxCBBindPoint = std::max(m_MaxCBBindPoint, static_cast<MaxBindPointType>(CBAttribs.BindPoint + CBAttribs.BindCount-1));
+            Res.m_MaxCBBindPoint = std::max(Res.m_MaxCBBindPoint, static_cast<MaxBindPointType>(CBAttribs.BindPoint + CBAttribs.BindCount-1));
+        }
 
-            new (&GetCB(CurrCB++)) D3DShaderResourceAttribs(m_ResourceNames, CBAttribs);
-        },
-
-        [&](const D3DShaderResourceAttribs& TexUAV)
+        void OnNewTexUAV (const D3DShaderResourceAttribs& TexUAV)
         {
             VERIFY( TexUAV.BindPoint + TexUAV.BindCount-1 <= MaxAllowedBindPoint, "Tex UAV bind point exceeds supported range" );
-            m_MaxUAVBindPoint = std::max(m_MaxUAVBindPoint, static_cast<MaxBindPointType>(TexUAV.BindPoint + TexUAV.BindCount-1));
+            Res.m_MaxUAVBindPoint = std::max(Res.m_MaxUAVBindPoint, static_cast<MaxBindPointType>(TexUAV.BindPoint + TexUAV.BindCount-1));
+        }
 
-            new (&GetTexUAV(CurrTexUAV++)) D3DShaderResourceAttribs(m_ResourceNames, TexUAV);
-        },
-
-        [&](const D3DShaderResourceAttribs& BuffUAV)
+        void OnNewBuffUAV(const D3DShaderResourceAttribs& BuffUAV)
         {
             VERIFY( BuffUAV.BindPoint + BuffUAV.BindCount-1 <= MaxAllowedBindPoint, "Buff UAV bind point exceeds supported range" );
-            m_MaxUAVBindPoint = std::max(m_MaxUAVBindPoint, static_cast<MaxBindPointType>(BuffUAV.BindPoint + BuffUAV.BindCount-1));
+            Res.m_MaxUAVBindPoint = std::max(Res.m_MaxUAVBindPoint, static_cast<MaxBindPointType>(BuffUAV.BindPoint + BuffUAV.BindCount-1));
+        }
 
-            new (&GetBufUAV(CurrBufUAV++)) D3DShaderResourceAttribs(m_ResourceNames, BuffUAV);
-        },
-
-        [&](const D3DShaderResourceAttribs& BuffSRV)
+        void OnNewBuffSRV(const D3DShaderResourceAttribs& BuffSRV)
         {
             VERIFY( BuffSRV.BindPoint + BuffSRV.BindCount-1 <= MaxAllowedBindPoint, "Buff SRV bind point exceeds supported range" );
-            m_MaxSRVBindPoint = std::max(m_MaxSRVBindPoint, static_cast<MaxBindPointType>(BuffSRV.BindPoint + BuffSRV.BindCount-1));
+            Res.m_MaxSRVBindPoint = std::max(Res.m_MaxSRVBindPoint, static_cast<MaxBindPointType>(BuffSRV.BindPoint + BuffSRV.BindCount-1));
+        }
 
-            new (&GetBufSRV(CurrBufSRV++)) D3DShaderResourceAttribs(m_ResourceNames, BuffSRV);
-        },
-
-        [&](const D3DShaderResourceAttribs& SamplerAttribs)
+        void OnNewSampler(const D3DShaderResourceAttribs& SamplerAttribs)
         {
             VERIFY( SamplerAttribs.BindPoint + SamplerAttribs.BindCount-1 <= MaxAllowedBindPoint, "Sampler bind point exceeds supported range" );
-            m_MaxSamplerBindPoint = std::max(m_MaxSamplerBindPoint, static_cast<MaxBindPointType>(SamplerAttribs.BindPoint + SamplerAttribs.BindCount-1));
-            m_NumStaticSamplers += SamplerAttribs.IsStaticSampler() ? 1 : 0;
-
-            new (&GetSampler(CurrSampler++)) D3DShaderResourceAttribs(m_ResourceNames, SamplerAttribs);
-        },
-
-        [&](const D3DShaderResourceAttribs& TexAttribs)
+            Res.m_MaxSamplerBindPoint = std::max(Res.m_MaxSamplerBindPoint, static_cast<MaxBindPointType>(SamplerAttribs.BindPoint + SamplerAttribs.BindCount-1));
+            Res.m_NumStaticSamplers += SamplerAttribs.IsStaticSampler() ? 1 : 0;
+        }
+        
+        void OnNewTexSRV(const D3DShaderResourceAttribs& TexAttribs)
         {
-            VERIFY(CurrSampler == GetNumSamplers(), "All samplers must be initialized before texture SRVs" );
-
             VERIFY( TexAttribs.BindPoint + TexAttribs.BindCount-1 <= MaxAllowedBindPoint, "Tex SRV bind point exceeds supported range" );
-            m_MaxSRVBindPoint = std::max(m_MaxSRVBindPoint, static_cast<MaxBindPointType>(TexAttribs.BindPoint + TexAttribs.BindCount-1));
+            Res.m_MaxSRVBindPoint = std::max(Res.m_MaxSRVBindPoint, static_cast<MaxBindPointType>(TexAttribs.BindPoint + TexAttribs.BindCount-1));
+        }
 
-            auto SamplerId = CombinedSamplerSuffix != nullptr ? FindAssignedSamplerId(TexAttribs, CombinedSamplerSuffix) : D3DShaderResourceAttribs::InvalidSamplerId;
-            new (&GetTexSRV(CurrTexSRV++)) D3DShaderResourceAttribs(m_ResourceNames, TexAttribs, SamplerId);
-        },
+    private:
+        ShaderResourcesD3D11& Res;
+    };
 
+    Initialize<D3D11_SHADER_DESC, D3D11_SHADER_INPUT_BIND_DESC, ID3D11ShaderReflection>(
+        pShaderBytecode,
+        NewResourceHandler{*this},
         ShdrDesc,
         CombinedSamplerSuffix);
-
-    VERIFY_EXPR(m_ResourceNames.GetRemainingSize() == 0);
-    VERIFY(CurrCB == GetNumCBs(), "Not all CBs are initialized, which will result in a crash when ~D3DShaderResourceAttribs() is called");
-    VERIFY(CurrTexSRV == GetNumTexSRV(), "Not all Tex SRVs are initialized, which will result in a crash when ~D3DShaderResourceAttribs() is called" );
-    VERIFY(CurrTexUAV == GetNumTexUAV(), "Not all Tex UAVs are initialized, which will result in a crash when ~D3DShaderResourceAttribs() is called" );
-    VERIFY(CurrBufSRV == GetNumBufSRV(), "Not all Buf SRVs are initialized, which will result in a crash when ~D3DShaderResourceAttribs() is called" );
-    VERIFY(CurrBufUAV == GetNumBufUAV(), "Not all Buf UAVs are initialized, which will result in a crash when ~D3DShaderResourceAttribs() is called" );
-    VERIFY(CurrSampler == GetNumSamplers(), "Not all Samplers are initialized, which will result in a crash when ~D3DShaderResourceAttribs() is called" );
 
     // Create static samplers
     if (m_NumStaticSamplers > 0)
@@ -134,7 +116,7 @@ ShaderResourcesD3D11::ShaderResourcesD3D11(RenderDeviceD3D11Impl* pDeviceD3D11Im
                 for (; ssd < ShdrDesc.NumStaticSamplers; ++ssd)
                 {
                     const auto& StaticSamplerDesc = ShdrDesc.StaticSamplers[ssd];
-                    if (StrCmpSuff(Sam.Name, StaticSamplerDesc.TextureName, CombinedSamplerSuffix))
+                    if (StrCmpSuff(Sam.Name, StaticSamplerDesc.SamplerOrTextureName, CombinedSamplerSuffix))
                     {
                         auto &StaticSamplerAttrs = GetStaticSampler(CurrStaticSam++);
                         StaticSamplerAttrs.first = &Sam;
@@ -168,7 +150,7 @@ void ShaderResourcesD3D11::InitStaticSamplers(ShaderResourceCacheD3D11 &Resource
     }
 }
 
-#ifdef VERIFY_SHADER_BINDINGS
+#ifdef DEVELOPMENT
 static String DbgMakeResourceName(const D3DShaderResourceAttribs &Attr, Uint32 BindPoint)
 {
     VERIFY( BindPoint >= (Uint32)Attr.BindPoint && BindPoint < (Uint32)Attr.BindPoint + Attr.BindCount, "Bind point is out of allowed range");
@@ -178,7 +160,7 @@ static String DbgMakeResourceName(const D3DShaderResourceAttribs &Attr, Uint32 B
         return String(Attr.Name) + '[' + std::to_string(BindPoint - Attr.BindPoint) + ']';
 }
 
-void ShaderResourcesD3D11::dbgVerifyCommittedResources(ID3D11Buffer*              CommittedD3D11CBs[],
+void ShaderResourcesD3D11::dvpVerifyCommittedResources(ID3D11Buffer*              CommittedD3D11CBs[],
                                                        ID3D11ShaderResourceView*  CommittedD3D11SRVs[],
                                                        ID3D11Resource*            CommittedD3D11SRVResources[],
                                                        ID3D11SamplerState*        CommittedD3D11Samplers[],
@@ -240,6 +222,37 @@ void ShaderResourcesD3D11::dbgVerifyCommittedResources(ID3D11Buffer*            
             }
         },
 
+        [&](const D3DShaderResourceAttribs &sam, Uint32)
+        {
+            for(auto BindPoint = sam.BindPoint; BindPoint < sam.BindPoint + sam.BindCount; ++BindPoint)
+            {
+                if (BindPoint >= ResourceCache.GetSamplerCount())
+                {
+                    LOG_ERROR_MESSAGE( "Unable to find sampler \"", DbgMakeResourceName(sam,BindPoint), "\" (slot ", BindPoint, ") in the resource cache: the cache reserves ", ResourceCache.GetSamplerCount()," Sampler slots only. This should never happen and may be the result of using wrong resource cache." );
+                    continue;
+                }
+                auto &Sam = CachedSamplers[BindPoint];
+                if(Sam.pSampler == nullptr)
+                {
+                    LOG_ERROR_MESSAGE( "Sampler \"", DbgMakeResourceName(sam,BindPoint), "\" (slot ", BindPoint, ") is not initialized in the resource cache." );
+                    continue;
+                }
+                VERIFY_EXPR(d3d11Samplers[BindPoint] == Sam.pSampler->GetD3D11SamplerState());
+
+                if(CommittedD3D11Samplers[BindPoint] == nullptr )
+                {
+                    LOG_ERROR_MESSAGE( "No D3D11 sampler committed to variable \"", DbgMakeResourceName(sam,BindPoint), "\" (slot ", BindPoint ,") in shader \"", GetShaderName(), "\"" );
+                    continue;
+                }
+
+                if(CommittedD3D11Samplers[BindPoint] != d3d11Samplers[BindPoint])
+                {
+                    LOG_ERROR_MESSAGE( "D3D11 sampler committed to variable \"", DbgMakeResourceName(sam,BindPoint), "\" (slot ", BindPoint ,") in shader \"", GetShaderName(), "\" does not match the resource in the resource cache" );
+                    continue;
+                }
+            }
+        },
+
         [&](const D3DShaderResourceAttribs& tex, Uint32)
         {
             for(auto BindPoint = tex.BindPoint; BindPoint < tex.BindPoint + tex.BindCount; ++BindPoint)
@@ -279,39 +292,11 @@ void ShaderResourcesD3D11::dbgVerifyCommittedResources(ID3D11Buffer*            
                 }
             }
 
-            if( tex.IsValidSampler() )
+            if( tex.ValidSamplerAssigned() )
             {
                 const auto& SamAttribs = GetSampler( tex.GetSamplerId() );
                 VERIFY_EXPR(SamAttribs.IsValidBindPoint());
                 VERIFY_EXPR(SamAttribs.BindCount == 1 || SamAttribs.BindCount == tex.BindCount);
-
-                for(auto SamBindPoint = SamAttribs.BindPoint; SamBindPoint < SamAttribs.BindPoint + SamAttribs.BindCount; ++SamBindPoint)
-                {
-                    if (SamBindPoint >= ResourceCache.GetSamplerCount())
-                    {
-                        LOG_ERROR_MESSAGE( "Unable to find sampler \"", DbgMakeResourceName(SamAttribs,SamBindPoint), "\" (slot ", SamBindPoint, ") in the resource cache: the cache reserves ", ResourceCache.GetSamplerCount()," Sampler slots only. This should never happen and may be the result of using wrong resource cache." );
-                        continue;
-                    }
-                    auto &Sam = CachedSamplers[SamBindPoint];
-                    if(Sam.pSampler == nullptr)
-                    {
-                        LOG_ERROR_MESSAGE( "Sampler \"", DbgMakeResourceName(SamAttribs,SamBindPoint), "\" (slot ", SamBindPoint, ") is not initialized in the resource cache." );
-                        continue;
-                    }
-                    VERIFY_EXPR(d3d11Samplers[SamBindPoint] == Sam.pSampler->GetD3D11SamplerState());
-
-                    if(CommittedD3D11Samplers[SamBindPoint] == nullptr )
-                    {
-                        LOG_ERROR_MESSAGE( "No D3D11 sampler committed to variable \"", DbgMakeResourceName(SamAttribs,SamBindPoint), "\" (slot ", SamBindPoint ,") in shader \"", GetShaderName(), "\"" );
-                        continue;
-                    }
-
-                    if(CommittedD3D11Samplers[SamBindPoint] != d3d11Samplers[SamBindPoint])
-                    {
-                        LOG_ERROR_MESSAGE( "D3D11 sampler committed to variable \"", DbgMakeResourceName(SamAttribs,SamBindPoint), "\" (slot ", SamBindPoint ,") in shader \"", GetShaderName(), "\" does not match the resource in the resource cache" );
-                        continue;
-                    }
-                }
             }
         },
 

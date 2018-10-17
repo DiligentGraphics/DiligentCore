@@ -51,14 +51,14 @@ ShaderResources::~ShaderResources()
         GetSampler(n).~D3DShaderResourceAttribs();
 }
 
-void ShaderResources::Initialize(IMemoryAllocator& Allocator, 
-                                 Uint32            NumCBs, 
-                                 Uint32            NumTexSRVs, 
-                                 Uint32            NumTexUAVs, 
-                                 Uint32            NumBufSRVs, 
-                                 Uint32            NumBufUAVs, 
-                                 Uint32            NumSamplers,
-                                 size_t            ResourceNamesPoolSize)
+void ShaderResources::AllocateMemory(IMemoryAllocator& Allocator, 
+                                     Uint32            NumCBs, 
+                                     Uint32            NumTexSRVs, 
+                                     Uint32            NumTexUAVs, 
+                                     Uint32            NumBufSRVs, 
+                                     Uint32            NumBufUAVs, 
+                                     Uint32            NumSamplers,
+                                     size_t            ResourceNamesPoolSize)
 {
     const auto MaxOffset = static_cast<Uint32>(std::numeric_limits<OffsetType>::max());
     VERIFY(NumCBs <= MaxOffset, "Max offset exceeded");
@@ -102,17 +102,16 @@ ShaderResources::ShaderResources(SHADER_TYPE ShaderType):
 {
 }
 
-void ShaderResources::CountResources(const SHADER_VARIABLE_TYPE *AllowedVarTypes, Uint32 NumAllowedTypes, 
-                                     Uint32& NumCBs, Uint32& NumTexSRVs, Uint32& NumTexUAVs, 
-                                     Uint32& NumBufSRVs, Uint32& NumBufUAVs, Uint32& NumSamplers)const noexcept
+void ShaderResources::CountResources(const SHADER_VARIABLE_TYPE* AllowedVarTypes,
+                                     Uint32                      NumAllowedTypes, 
+                                     Uint32&                     NumCBs, 
+                                     Uint32&                     NumTexSRVs,
+                                     Uint32&                     NumTexUAVs, 
+                                     Uint32&                     NumBufSRVs,
+                                     Uint32&                     NumBufUAVs,
+                                     Uint32&                     NumSamplers)const noexcept
 {
-    // In release mode, MS compiler generates this false warning:
-    // Warning	C4189 'AllowedTypeBits': local variable is initialized but not referenced
-    // Most likely it somehow gets confused by the variable being eliminated during function inlining
-#pragma warning(push)
-#pragma warning(disable : 4189)
-    Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
-#pragma warning (pop)   
+    auto AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
 
     NumCBs = 0;
     NumTexSRVs = 0;
@@ -123,28 +122,34 @@ void ShaderResources::CountResources(const SHADER_VARIABLE_TYPE *AllowedVarTypes
     ProcessResources(
         AllowedVarTypes, NumAllowedTypes,
 
-        [&](const D3DShaderResourceAttribs &CB, Uint32)
+        [&](const D3DShaderResourceAttribs& CB, Uint32)
         {
             VERIFY_EXPR(CB.IsAllowedType(AllowedTypeBits));
             ++NumCBs;
+        },
+        [&](const D3DShaderResourceAttribs& Sam, Uint32)
+        {
+            VERIFY_EXPR(Sam.IsAllowedType(AllowedTypeBits));
+            // Skip static samplers
+            if (!Sam.IsStaticSampler())
+                ++NumSamplers;
         },
         [&](const D3DShaderResourceAttribs& TexSRV, Uint32)
         {
             VERIFY_EXPR(TexSRV.IsAllowedType(AllowedTypeBits));
             ++NumTexSRVs;
-            NumSamplers += TexSRV.IsValidSampler() ? 1 : 0;
         },
-        [&](const D3DShaderResourceAttribs &TexUAV, Uint32)
+        [&](const D3DShaderResourceAttribs& TexUAV, Uint32)
         {
             VERIFY_EXPR(TexUAV.IsAllowedType(AllowedTypeBits));
             ++NumTexUAVs;
         },
-        [&](const D3DShaderResourceAttribs &BufSRV, Uint32)
+        [&](const D3DShaderResourceAttribs& BufSRV, Uint32)
         {
             VERIFY_EXPR(BufSRV.IsAllowedType(AllowedTypeBits));
             ++NumBufSRVs;
         },
-        [&](const D3DShaderResourceAttribs &BufUAV, Uint32)
+        [&](const D3DShaderResourceAttribs& BufUAV, Uint32)
         {
             VERIFY_EXPR(BufUAV.IsAllowedType(AllowedTypeBits));
             ++NumBufUAVs;
@@ -184,9 +189,14 @@ bool ShaderResources::IsCompatibleWith(const ShaderResources &Res)const
     ProcessResources(
         nullptr, 0,
 
-        [&](const D3DShaderResourceAttribs &CB, Uint32 n)
+        [&](const D3DShaderResourceAttribs& CB, Uint32 n)
         {
             if(!CB.IsCompatibleWith(Res.GetCB(n)))
+                IsCompatible = false;
+        },
+        [&](const D3DShaderResourceAttribs& Sam, Uint32 n)
+        {
+            if(!Sam.IsCompatibleWith(Res.GetSampler(n)))
                 IsCompatible = false;
         },
         [&](const D3DShaderResourceAttribs& TexSRV, Uint32 n)
@@ -194,17 +204,17 @@ bool ShaderResources::IsCompatibleWith(const ShaderResources &Res)const
             if(!TexSRV.IsCompatibleWith(Res.GetTexSRV(n)))
                 IsCompatible = false;
         },
-        [&](const D3DShaderResourceAttribs &TexUAV, Uint32 n)
+        [&](const D3DShaderResourceAttribs& TexUAV, Uint32 n)
         {
             if(!TexUAV.IsCompatibleWith(Res.GetTexUAV(n)))
                 IsCompatible = false;
         },
-        [&](const D3DShaderResourceAttribs &BufSRV, Uint32 n)
+        [&](const D3DShaderResourceAttribs& BufSRV, Uint32 n)
         {
             if(!BufSRV.IsCompatibleWith(Res.GetBufSRV(n)))
                 IsCompatible = false;
         },
-        [&](const D3DShaderResourceAttribs &BufUAV, Uint32 n)
+        [&](const D3DShaderResourceAttribs& BufUAV, Uint32 n)
         {
             if(!BufUAV.IsCompatibleWith(Res.GetBufUAV(n)))
                 IsCompatible = false;
@@ -218,23 +228,27 @@ size_t ShaderResources::GetHash()const
     size_t hash = ComputeHash(GetNumCBs(), GetNumTexSRV(), GetNumTexUAV(), GetNumBufSRV(), GetNumBufUAV());
     ProcessResources(
         nullptr, 0,
-        [&](const D3DShaderResourceAttribs &CB, Uint32)
+        [&](const D3DShaderResourceAttribs& CB, Uint32)
         {
             HashCombine(hash, CB);
         },
-        [&](const D3DShaderResourceAttribs &TexSRV, Uint32)
+        [&](const D3DShaderResourceAttribs& Sam, Uint32)
+        {
+            HashCombine(hash, Sam);
+        },
+        [&](const D3DShaderResourceAttribs& TexSRV, Uint32)
         {
             HashCombine(hash, TexSRV);
         },
-        [&](const D3DShaderResourceAttribs &TexUAV, Uint32)
+        [&](const D3DShaderResourceAttribs& TexUAV, Uint32)
         {
             HashCombine(hash, TexUAV);
         },
-        [&](const D3DShaderResourceAttribs &BufSRV, Uint32)
+        [&](const D3DShaderResourceAttribs& BufSRV, Uint32)
         {
             HashCombine(hash, BufSRV);
         },
-        [&](const D3DShaderResourceAttribs &BufUAV, Uint32)
+        [&](const D3DShaderResourceAttribs& BufUAV, Uint32)
         {
             HashCombine(hash, BufUAV);
         }

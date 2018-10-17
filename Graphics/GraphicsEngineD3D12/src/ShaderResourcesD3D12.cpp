@@ -37,61 +37,22 @@ namespace Diligent
 ShaderResourcesD3D12::ShaderResourcesD3D12(ID3DBlob* pShaderBytecode, const ShaderDesc& ShdrDesc, const char* CombinedSamplerSuffix) :
     ShaderResources(ShdrDesc.ShaderType)
 {
-    Uint32 CurrCB = 0, CurrTexSRV = 0, CurrTexUAV = 0, CurrBufSRV = 0, CurrBufUAV = 0, CurrSampler = 0;
-    LoadD3DShaderResources<D3D12_SHADER_DESC, D3D12_SHADER_INPUT_BIND_DESC, ID3D12ShaderReflection>(
+    class NewResourceHandler
+    {
+    public:
+        void OnNewCB     (const D3DShaderResourceAttribs& CBAttribs)     {}
+        void OnNewTexUAV (const D3DShaderResourceAttribs& TexUAV)        {}
+        void OnNewBuffUAV(const D3DShaderResourceAttribs& BuffUAV)       {}
+        void OnNewBuffSRV(const D3DShaderResourceAttribs& BuffSRV)       {}
+        void OnNewSampler(const D3DShaderResourceAttribs& SamplerAttribs){}
+        void OnNewTexSRV (const D3DShaderResourceAttribs& TexAttribs)    {}
+    };
+    Initialize<D3D12_SHADER_DESC, D3D12_SHADER_INPUT_BIND_DESC, ID3D12ShaderReflection>(
         pShaderBytecode,
-
-        [&](Uint32 NumCBs, Uint32 NumTexSRVs, Uint32 NumTexUAVs, Uint32 NumBufSRVs, Uint32 NumBufUAVs, Uint32 NumSamplers, size_t ResourceNamesPoolSize)
-        {
-            Initialize(GetRawAllocator(), NumCBs, NumTexSRVs, NumTexUAVs, NumBufSRVs, NumBufUAVs, NumSamplers, ResourceNamesPoolSize);
-        },
-
-        [&](const D3DShaderResourceAttribs& CBAttribs)
-        {
-            new (&GetCB(CurrCB++)) D3DShaderResourceAttribs(m_ResourceNames, CBAttribs);
-        },
-
-        [&](const D3DShaderResourceAttribs& TexUAV)
-        {
-            new (&GetTexUAV(CurrTexUAV++)) D3DShaderResourceAttribs(m_ResourceNames, TexUAV);
-        },
-
-        [&](const D3DShaderResourceAttribs& BuffUAV)
-        {
-            new (&GetBufUAV(CurrBufUAV++)) D3DShaderResourceAttribs(m_ResourceNames, BuffUAV);
-        },
-
-        [&](const D3DShaderResourceAttribs& BuffSRV)
-        {
-            new (&GetBufSRV(CurrBufSRV++)) D3DShaderResourceAttribs(m_ResourceNames, BuffSRV);
-        },
-
-        [&](const D3DShaderResourceAttribs& SamplerAttribs)
-        {
-            new (&GetSampler(CurrSampler++)) D3DShaderResourceAttribs(m_ResourceNames, SamplerAttribs);
-        },
-
-        [&](const D3DShaderResourceAttribs& TexAttribs)
-        {
-            VERIFY(CurrSampler == GetNumSamplers(), "All samplers must be initialized before texture SRVs" );
-
-            auto SamplerId = 
-                CombinedSamplerSuffix != nullptr ? 
-                    FindAssignedSamplerId(TexAttribs, CombinedSamplerSuffix) : 
-                    D3DShaderResourceAttribs::InvalidSamplerId;
-            new (&GetTexSRV(CurrTexSRV++)) D3DShaderResourceAttribs(m_ResourceNames, TexAttribs, SamplerId);
-        },
-
+        NewResourceHandler{},
         ShdrDesc,
-        CombinedSamplerSuffix);
-
-    VERIFY_EXPR(m_ResourceNames.GetRemainingSize() == 0);
-    VERIFY(CurrCB == GetNumCBs(), "Not all CBs are initialized, which will result in a crash when ~D3DShaderResourceAttribs() is called");
-    VERIFY(CurrTexSRV == GetNumTexSRV(), "Not all Tex SRVs are initialized, which will result in a crash when ~D3DShaderResourceAttribs() is called" );
-    VERIFY(CurrTexUAV == GetNumTexUAV(), "Not all Tex UAVs are initialized, which will result in a crash when ~D3DShaderResourceAttribs() is called" );
-    VERIFY(CurrBufSRV == GetNumBufSRV(), "Not all Buf SRVs are initialized, which will result in a crash when ~D3DShaderResourceAttribs() is called" );
-    VERIFY(CurrBufUAV == GetNumBufUAV(), "Not all Buf UAVs are initialized, which will result in a crash when ~D3DShaderResourceAttribs() is called" );
-    VERIFY(CurrSampler == GetNumSamplers(), "Not all Samplers are initialized, which will result in a crash when ~D3DShaderResourceAttribs() is called" );
+        CombinedSamplerSuffix
+    );
 }
 
 }

@@ -98,7 +98,7 @@ inline int StrCmpNoCase(const char* Str1, const char* Str2)
 }
 
 // Returns true if RefStr == Str + Suff
-// If NoSuffixAllowed == true, also returns true if RefStr == Str
+// If Suff == nullptr or NoSuffixAllowed == true, also returns true if RefStr == Str
 inline bool StrCmpSuff(const char* RefStr, const char* Str, const char* Suff, bool NoSuffixAllowed = false)
 {
     VERIFY_EXPR(RefStr != nullptr && Str!= nullptr);
@@ -123,9 +123,9 @@ inline bool StrCmpSuff(const char* RefStr, const char* Str, const char* Suff, bo
 
     if (*s != 0)
     {
-        // abc         abc_def
-        //    ^           ^
-        //    r           s
+        // ab         abc
+        //   ^          ^
+        //   r          s
         VERIFY_EXPR(*r == 0);
         return false;
     }

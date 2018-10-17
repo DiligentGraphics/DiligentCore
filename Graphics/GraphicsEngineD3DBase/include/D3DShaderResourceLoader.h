@@ -70,6 +70,8 @@ namespace Diligent
         Resources.reserve(shaderDesc.BoundResources);
         std::unordered_set<std::string> ResourceNamesTmpPool;
         
+        const bool UseCombinedTextureSamplers = SamplerSuffix != nullptr;
+
         Uint32 NumCBs = 0, NumTexSRVs = 0, NumTexUAVs = 0, NumBufSRVs = 0, NumBufUAVs = 0, NumSamplers = 0;
         size_t ResourceNamesPoolSize = 0;
         // Number of resources to skip (used for array resources)
@@ -151,17 +153,17 @@ namespace Diligent
             {
                 for (Uint32 s = 0; s < ShdrDesc.NumStaticSamplers; ++s)
                 {
-                    if( StrCmpSuff(Name.c_str(), ShdrDesc.StaticSamplers[s].TextureName, SamplerSuffix) )
+                    if (StrCmpSuff(Name.c_str(), ShdrDesc.StaticSamplers[s].SamplerOrTextureName, SamplerSuffix))
                     {
                         IsStaticSampler = true;
                         break;
                     }
                 }
-                // Use texture name to derive sampler type
+                // Use texture or sampler name to derive sampler type
                 VarType = GetShaderVariableType(ShdrDesc.DefaultVariableType, ShdrDesc.VariableDesc, ShdrDesc.NumVariables,
-                                                [&](const char *TexName)
+                                                [&](const char* VarName)
                                                 {
-                                                    return StrCmpSuff(Name.c_str(), TexName, SamplerSuffix);
+                                                    return StrCmpSuff(Name.c_str(), VarName, SamplerSuffix);
                                                 });
             }
             else
@@ -201,7 +203,7 @@ namespace Diligent
         }
 
 
-#ifdef _DEBUG
+#ifdef DEVELOPMENT
         if(ShdrDesc.NumVariables != 0 || ShdrDesc.NumStaticSamplers != 0 )
         {
             for (Uint32 v = 0; v < ShdrDesc.NumVariables; ++v)
@@ -211,8 +213,9 @@ namespace Diligent
 
                 for (const auto& Res : Resources)
                 {
-                    // Skip samplers as they are not handled as independent variables
-                    if (Res.GetInputType() != D3D_SIT_SAMPLER && strcmp(Res.Name, VarName) == 0)
+                    // Skip samplers if combined texture samplers are used as 
+                    // in this case they are not treated as independent variables
+                    if ( !(UseCombinedTextureSamplers && Res.GetInputType() == D3D_SIT_SAMPLER) && strcmp(Res.Name, VarName) == 0)
                     {
                         VariableFound = true;   
                         break;
@@ -226,20 +229,25 @@ namespace Diligent
 
             for (Uint32 s = 0; s < ShdrDesc.NumStaticSamplers; ++s)
             {
-                bool TextureFound = false;
-                const auto *TexName = ShdrDesc.StaticSamplers[s].TextureName;
+                const auto* TexOrSamName = ShdrDesc.StaticSamplers[s].SamplerOrTextureName;
 
+                bool TextureOrSamplerFound = false;
                 for (const auto& Res : Resources)
                 {
-                    if ( Res.GetInputType() == D3D_SIT_TEXTURE && Res.GetSRVDimension() != D3D_SRV_DIMENSION_BUFFER && strcmp(Res.Name, TexName) == 0)
+                    if( UseCombinedTextureSamplers && Res.GetInputType() == D3D_SIT_TEXTURE && Res.GetSRVDimension() != D3D_SRV_DIMENSION_BUFFER ||
+                       !UseCombinedTextureSamplers && Res.GetInputType() == D3D_SIT_SAMPLER)
                     {
-                        TextureFound = true;
-                        break;
+                        TextureOrSamplerFound = (strcmp(Res.Name, TexOrSamName) == 0);
+                        if (TextureOrSamplerFound)
+                            break;
                     }
                 }
-                if(!TextureFound)
+                if (!TextureOrSamplerFound)
                 {
-                    LOG_WARNING_MESSAGE("Static sampler specifies a texture \"", TexName, "\" that is not found in shader \"", ShdrDesc.Name, '\"');
+                    if (UseCombinedTextureSamplers)
+                        LOG_WARNING_MESSAGE("Static sampler specifies a texture '", TexOrSamName, "' that is not found in shader '", ShdrDesc.Name, '\'');
+                    else
+                        LOG_WARNING_MESSAGE("Static sampler '", TexOrSamName, "' is not found in shader '", ShdrDesc.Name, '\'');
                 }
             }
         }

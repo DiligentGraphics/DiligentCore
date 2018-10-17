@@ -262,7 +262,7 @@ void RootSignature::InitStaticSampler(SHADER_TYPE ShaderType, const String& Text
     for (auto& StSmplr : m_StaticSamplers)
     {
         if (StSmplr.ShaderVisibility == ShaderVisibility &&
-            TextureName.compare(StSmplr.SamplerDesc.TextureName) == 0)
+            TextureName.compare(StSmplr.SamplerDesc.SamplerOrTextureName) == 0)
         {
             StSmplr.ShaderRegister = SamplerAttribs.BindPoint;
             StSmplr.ArraySize = SamplerAttribs.BindCount;

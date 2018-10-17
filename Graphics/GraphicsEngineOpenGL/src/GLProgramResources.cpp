@@ -181,7 +181,7 @@ namespace Diligent
                     RefCntAutoPtr<SamplerGLImpl> pStaticSampler;
                     for (Uint32 s = 0; s < NumStaticSamplers; ++s)
                     {
-                        if (strcmp(Name.data(), StaticSamplers[s].TextureName) == 0)
+                        if (strcmp(Name.data(), StaticSamplers[s].SamplerOrTextureName) == 0)
                         {
                             pDeviceGLImpl->CreateSampler(StaticSamplers[s].Desc, reinterpret_cast<ISampler**>(static_cast<SamplerGLImpl**>(&pStaticSampler)) );
                             break;

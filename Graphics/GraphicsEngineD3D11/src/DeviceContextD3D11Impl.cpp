@@ -201,7 +201,7 @@ namespace Diligent
 #ifdef DEVELOPMENT
         for (Uint32 s = 0; s < NumShaders; ++s)
         {
-            pShaderResBindingD3D11->GetResourceLayout(s).dbgVerifyBindings();
+            pShaderResBindingD3D11->GetResourceLayout(s).dvpVerifyBindings();
             // Static resource bindings are verified in BindStaticShaderResources()
         }
 #endif
@@ -597,7 +597,7 @@ namespace Diligent
             if( CommitResources && m_DebugFlags & (Uint32)EngineD3D11DebugFlags::VerifyCommittedShaderResources )
             {
                 // Use full resource layout to verify that all required resources are committed
-                pShaderD3D11->GetResources()->dbgVerifyCommittedResources(
+                pShaderD3D11->GetResources()->dvpVerifyCommittedResources(
                             m_CommittedD3D11CBs[ShaderTypeInd], 
                             m_CommittedD3D11SRVs[ShaderTypeInd], 
                             m_CommittedD3D11SRVResources[ShaderTypeInd], 
