@@ -250,7 +250,7 @@ private:
     const ConstBuffBindInfo& GetCB(Uint32 cb)const
     {
         VERIFY_EXPR(cb<m_NumCBs);
-        return reinterpret_cast<ConstBuffBindInfo*>(m_ResourceBuffer.get())[cb];
+        return reinterpret_cast<const ConstBuffBindInfo*>(m_ResourceBuffer.get())[cb];
     }
 
     TexSRVBindInfo& GetTexSRV(Uint32 t)
@@ -261,7 +261,7 @@ private:
     const TexSRVBindInfo& GetTexSRV(Uint32 t)const
     {
         VERIFY_EXPR(t<m_NumTexSRVs);
-        return reinterpret_cast<TexSRVBindInfo*>( reinterpret_cast<Uint8*>(m_ResourceBuffer.get()) + m_TexSRVsOffset)[t];
+        return reinterpret_cast<const TexSRVBindInfo*>( reinterpret_cast<const Uint8*>(m_ResourceBuffer.get()) + m_TexSRVsOffset)[t];
     }
 
     TexUAVBindInfo& GetTexUAV(Uint32 u)
@@ -272,7 +272,7 @@ private:
     const TexUAVBindInfo& GetTexUAV(Uint32 u)const
     {
         VERIFY_EXPR(u < m_NumTexUAVs);
-        return reinterpret_cast<TexUAVBindInfo*>( reinterpret_cast<Uint8*>(m_ResourceBuffer.get()) + m_TexUAVsOffset)[u];
+        return reinterpret_cast<const TexUAVBindInfo*>( reinterpret_cast<const Uint8*>(m_ResourceBuffer.get()) + m_TexUAVsOffset)[u];
     }
 
     BuffUAVBindInfo& GetBufUAV(Uint32 u)
@@ -283,7 +283,7 @@ private:
     const BuffUAVBindInfo& GetBufUAV(Uint32 u)const
     {
         VERIFY_EXPR(u < m_NumBufUAVs);
-        return reinterpret_cast<BuffUAVBindInfo*>( reinterpret_cast<Uint8*>(m_ResourceBuffer.get()) + m_BuffUAVsOffset)[u];
+        return reinterpret_cast<const BuffUAVBindInfo*>( reinterpret_cast<const Uint8*>(m_ResourceBuffer.get()) + m_BuffUAVsOffset)[u];
     }
 
     BuffSRVBindInfo& GetBufSRV(Uint32 s)
@@ -294,7 +294,7 @@ private:
     const BuffSRVBindInfo& GetBufSRV(Uint32 s)const
     {
         VERIFY_EXPR(s < m_NumBufSRVs);
-        return reinterpret_cast<BuffSRVBindInfo*>( reinterpret_cast<Uint8*>(m_ResourceBuffer.get()) + m_BuffSRVsOffset)[s];
+        return reinterpret_cast<const BuffSRVBindInfo*>( reinterpret_cast<const Uint8*>(m_ResourceBuffer.get()) + m_BuffSRVsOffset)[s];
     }
 
     SamplerBindInfo& GetSampler(Uint32 s)
@@ -305,7 +305,7 @@ private:
     const SamplerBindInfo& GetSampler(Uint32 s)const
     {
         VERIFY_EXPR(s < m_NumSamplers);
-        return reinterpret_cast<SamplerBindInfo*>( reinterpret_cast<Uint8*>(m_ResourceBuffer.get()) + m_SamplerOffset)[s];
+        return reinterpret_cast<const SamplerBindInfo*>( reinterpret_cast<const Uint8*>(m_ResourceBuffer.get()) + m_SamplerOffset)[s];
     }
 
     template<typename THandleCB,

@@ -255,14 +255,17 @@ D3D12_DESCRIPTOR_HEAP_TYPE HeapTypeFromRangeType(D3D12_DESCRIPTOR_RANGE_TYPE Ran
 }
 
 
-void RootSignature::InitStaticSampler(SHADER_TYPE ShaderType, const String& TextureName, const D3DShaderResourceAttribs& SamplerAttribs)
+void RootSignature::InitStaticSampler(SHADER_TYPE                     ShaderType,
+                                      const char*                     SamplerName,
+                                      const char*                     SamplerSuffix,
+                                      const D3DShaderResourceAttribs& SamplerAttribs)
 {
     auto ShaderVisibility = GetShaderVisibility(ShaderType);
     auto SamplerFound = false;
     for (auto& StSmplr : m_StaticSamplers)
     {
         if (StSmplr.ShaderVisibility == ShaderVisibility &&
-            TextureName.compare(StSmplr.SamplerDesc.SamplerOrTextureName) == 0)
+            StreqSuff(SamplerName, StSmplr.SamplerDesc.SamplerOrTextureName, SamplerSuffix))
         {
             StSmplr.ShaderRegister = SamplerAttribs.BindPoint;
             StSmplr.ArraySize = SamplerAttribs.BindCount;
@@ -274,7 +277,7 @@ void RootSignature::InitStaticSampler(SHADER_TYPE ShaderType, const String& Text
 
     if (!SamplerFound)
     {
-        LOG_ERROR("Failed to find static sampler for variable \"", TextureName, '\"');
+        LOG_ERROR("Unable to find static sampler \'", SamplerName, '\'');
     }
 }
 
@@ -935,22 +938,24 @@ void RootSignature::CommitDescriptorHandlesInternal_SMD(RenderDeviceD3D12Impl*  
                     {
                         if (IsResourceTable)
                         {
-                            if( Res.CPUDescriptorHandle.ptr == 0 )
+                            VERIFY( DynamicCbvSrvUavTblOffset < NumDynamicCbvSrvUavDescriptors, "Not enough space in the descriptor heap allocation");
+
+                            if( Res.CPUDescriptorHandle.ptr != 0 )
+                                pd3d12Device->CopyDescriptorsSimple(1, DynamicCbvSrvUavDescriptors.GetCpuHandle(DynamicCbvSrvUavTblOffset), Res.CPUDescriptorHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+                            else
                                 LOG_ERROR_MESSAGE("No valid CbvSrvUav descriptor handle found for root parameter ", RootInd, ", descriptor slot ", OffsetFromTableStart);
 
-                            VERIFY( DynamicCbvSrvUavTblOffset < NumDynamicCbvSrvUavDescriptors, "Not enough space in the descriptor heap allocation");
-                            
-                            pd3d12Device->CopyDescriptorsSimple(1, DynamicCbvSrvUavDescriptors.GetCpuHandle(DynamicCbvSrvUavTblOffset), Res.CPUDescriptorHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
                             ++DynamicCbvSrvUavTblOffset;
                         }
                         else
                         {
-                            if( Res.CPUDescriptorHandle.ptr == 0 )
-                                LOG_ERROR_MESSAGE("No valid sampler descriptor handle found for root parameter ", RootInd, ", descriptor slot ", OffsetFromTableStart);
-
                             VERIFY( DynamicSamplerTblOffset < NumDynamicSamplerDescriptors, "Not enough space in the descriptor heap allocation");
-                            
-                            pd3d12Device->CopyDescriptorsSimple(1, DynamicSamplerDescriptors.GetCpuHandle(DynamicSamplerTblOffset), Res.CPUDescriptorHandle, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+
+                            if( Res.CPUDescriptorHandle.ptr != 0 )
+                                pd3d12Device->CopyDescriptorsSimple(1, DynamicSamplerDescriptors.GetCpuHandle(DynamicSamplerTblOffset), Res.CPUDescriptorHandle, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+                            else
+                                LOG_ERROR_MESSAGE("No valid sampler descriptor handle found for root parameter ", RootInd, ", descriptor slot ", OffsetFromTableStart);
+                                                        
                             ++DynamicSamplerTblOffset;
                         }
                     }

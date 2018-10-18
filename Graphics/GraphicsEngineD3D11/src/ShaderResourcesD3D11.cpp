@@ -116,7 +116,7 @@ ShaderResourcesD3D11::ShaderResourcesD3D11(RenderDeviceD3D11Impl* pDeviceD3D11Im
                 for (; ssd < ShdrDesc.NumStaticSamplers; ++ssd)
                 {
                     const auto& StaticSamplerDesc = ShdrDesc.StaticSamplers[ssd];
-                    if (StrCmpSuff(Sam.Name, StaticSamplerDesc.SamplerOrTextureName, CombinedSamplerSuffix))
+                    if (StreqSuff(Sam.Name, StaticSamplerDesc.SamplerOrTextureName, CombinedSamplerSuffix))
                     {
                         auto &StaticSamplerAttrs = GetStaticSampler(CurrStaticSam++);
                         StaticSamplerAttrs.first = &Sam;

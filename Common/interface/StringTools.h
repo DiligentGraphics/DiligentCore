@@ -99,7 +99,7 @@ inline int StrCmpNoCase(const char* Str1, const char* Str2)
 
 // Returns true if RefStr == Str + Suff
 // If Suff == nullptr or NoSuffixAllowed == true, also returns true if RefStr == Str
-inline bool StrCmpSuff(const char* RefStr, const char* Str, const char* Suff, bool NoSuffixAllowed = false)
+inline bool StreqSuff(const char* RefStr, const char* Str, const char* Suff, bool NoSuffixAllowed = false)
 {
     VERIFY_EXPR(RefStr != nullptr && Str!= nullptr);
     if (RefStr==nullptr)

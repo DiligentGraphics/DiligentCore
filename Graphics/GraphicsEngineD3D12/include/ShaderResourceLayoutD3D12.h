@@ -186,9 +186,9 @@ public:
                           Uint32                    ArrayIndex,
                           ShaderResourceCacheD3D12& ResourceCache)const;
 
-        bool IsValidSampler()  const { return SamplerId            != InvalidSamplerId; }
-        bool IsValidRootIndex()const { return RootIndex            != InvalidRootIndex; }
-        bool IsValidOffset()   const { return OffsetFromTableStart != InvalidOffset;    }
+        bool ValidSamplerAssigned()const { return SamplerId            != InvalidSamplerId; }
+        bool IsValidRootIndex()    const { return RootIndex            != InvalidRootIndex; }
+        bool IsValidOffset()       const { return OffsetFromTableStart != InvalidOffset;    }
 
         CachedResourceType GetResType() const { return static_cast<CachedResourceType>( ResourceType ); }
 
@@ -208,7 +208,7 @@ public:
                                TViewTypeEnum                       dbgExpectedViewType, 
                                TBindSamplerProcType                BindSamplerProc)const;
 
-        void CacheSampler(class ITextureViewD3D12*            pTexViewD3D12,
+        void CacheSampler(IDeviceObject*                      pSampler,
                           ShaderResourceCacheD3D12::Resource& DstSam, 
                           Uint32                              ArrayIndex,
                           D3D12_CPU_DESCRIPTOR_HANDLE         ShdrVisibleHeapCPUDescriptorHandle)const;
@@ -243,6 +243,8 @@ public:
         VERIFY_EXPR( s < GetSamplerCount(VarType) );
         return GetResource(GetSamplerOffset(VarType,s));
     }
+
+    const bool IsUsingSeparateSamplers() const {return !m_pResources->IsUsingCombinedTextureSamplers();}
 
 private:
     const D3D12Resource& GetAssignedSampler(const D3D12Resource& TexSrv)const;
@@ -299,6 +301,11 @@ private:
     {
         VERIFY_EXPR( s < GetSamplerCount(VarType) );
         return GetResource(GetSamplerOffset(VarType,s));
+    }
+    const D3D12Resource& GetSampler(Uint32 s)const
+    {
+        VERIFY_EXPR( s < GetTotalSamplerCount() );
+        return GetResource(m_SamplersOffsets[0] + s);
     }
 
     void AllocateMemory(IMemoryAllocator&                                         Allocator,

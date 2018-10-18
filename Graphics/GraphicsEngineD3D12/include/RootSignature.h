@@ -298,9 +298,10 @@ public:
 
     void InitResourceCache(class RenderDeviceD3D12Impl* pDeviceD3D12Impl, class ShaderResourceCacheD3D12& ResourceCache, IMemoryAllocator& CacheMemAllocator)const;
     
-    void InitStaticSampler(SHADER_TYPE                    ShaderType,
-                          const String&                   TextureName,
-                          const D3DShaderResourceAttribs& ShaderResAttribs);
+    void InitStaticSampler(SHADER_TYPE                     ShaderType,
+                           const char*                     SamplerName,
+                           const char*                     SamplerSuffix,
+                           const D3DShaderResourceAttribs& ShaderResAttribs);
 
     void AllocateResourceSlot(SHADER_TYPE                      ShaderType, 
                               const D3DShaderResourceAttribs&  ShaderResAttribs, 

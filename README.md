@@ -613,6 +613,12 @@ objects. Refer to the following pages for more information:
 
 ## Current Progress
 
+* API Changes
+  * Implemented separate texture samplers: 
+    * Added `UseCombinedTextureSamplers` and `CombinedSamplerSuffix` members to `ShaderCreationAttribs` structure
+    * When separate samplers are used (`UseCombinedTextureSamplers == false`), samplers are set in the same way as other shader variables
+      via shader or SRB objects
+
 ## v2.3.a
 
 * API Changes:

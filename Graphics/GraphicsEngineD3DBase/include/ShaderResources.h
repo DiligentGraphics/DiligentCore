@@ -388,8 +388,9 @@ public:
         }
     }
 
-    bool IsCompatibleWith(const ShaderResources& Resources) const;
-    bool IsUsingCombinedTextureSamplers() const {return m_UseCombinedTextureSamplers;}
+    bool        IsCompatibleWith(const ShaderResources& Resources) const;
+    bool        IsUsingCombinedTextureSamplers() const { return m_SamplerSuffix != nullptr; }
+    const char* GetCombinedSamplerSuffix()       const { return m_SamplerSuffix; }
 
     size_t GetHash()const;
 
@@ -415,7 +416,7 @@ protected:
     {
         VERIFY(n < NumResources, "Resource index (", n, ") is out of range. Resource array size: ", NumResources);
         VERIFY_EXPR(Offset + n < m_TotalResources);
-        return reinterpret_cast<D3DShaderResourceAttribs*>(m_MemoryBuffer.get())[Offset + n];
+        return reinterpret_cast<const D3DShaderResourceAttribs*>(m_MemoryBuffer.get())[Offset + n];
     }
 
     D3DShaderResourceAttribs& GetCB     (Uint32 n)noexcept{ return GetResAttribs(n, GetNumCBs(),                   0); }
@@ -441,7 +442,8 @@ private:
     // | CBs | TexSRVs | TexUAVs | BufSRVs | BufUAVs | Samplers |  Resource Names  |
     std::unique_ptr< void, STDDeleterRawMem<void> > m_MemoryBuffer;
 
-    StringPool m_ResourceNames;
+    StringPool  m_ResourceNames;
+    const char* m_SamplerSuffix = nullptr; // The suffix is put into the m_ResourceNames
 
     // Offsets in elements of D3DShaderResourceAttribs
     typedef Uint16 OffsetType;
@@ -451,8 +453,6 @@ private:
     OffsetType m_BufUAVOffset   = 0;
     OffsetType m_SamplersOffset = 0;
     OffsetType m_TotalResources = 0;
-
-    bool       m_UseCombinedTextureSamplers = false;
 
     SHADER_TYPE m_ShaderType = SHADER_TYPE_UNKNOWN;
 };
@@ -467,14 +467,15 @@ void ShaderResources::Initialize(ID3DBlob*           pShaderByteCode,
                                  const ShaderDesc&   ShdrDesc,
                                  const Char*         CombinedSamplerSuffix)
 {
-    m_UseCombinedTextureSamplers = CombinedSamplerSuffix != nullptr;
-
     Uint32 CurrCB = 0, CurrTexSRV = 0, CurrTexUAV = 0, CurrBufSRV = 0, CurrBufUAV = 0, CurrSampler = 0;
     LoadD3DShaderResources<D3D_SHADER_DESC, D3D_SHADER_INPUT_BIND_DESC, TShaderReflection>(
         pShaderByteCode,
 
         [&](Uint32 NumCBs, Uint32 NumTexSRVs, Uint32 NumTexUAVs, Uint32 NumBufSRVs, Uint32 NumBufUAVs, Uint32 NumSamplers, size_t ResourceNamesPoolSize)
         {
+            if (CombinedSamplerSuffix != nullptr)
+                ResourceNamesPoolSize += strlen(CombinedSamplerSuffix)+1;
+
             AllocateMemory(GetRawAllocator(), NumCBs, NumTexSRVs, NumTexUAVs, NumBufSRVs, NumBufUAVs, NumSamplers, ResourceNamesPoolSize);
         },
 
@@ -531,17 +532,19 @@ void ShaderResources::Initialize(ID3DBlob*           pShaderByteCode,
         ShdrDesc,
         CombinedSamplerSuffix);
 
-#ifdef DEVELOPMENT
     if (CombinedSamplerSuffix != nullptr)
     {
+        m_SamplerSuffix = m_ResourceNames.CopyString(CombinedSamplerSuffix);
+
+#ifdef DEVELOPMENT
         for (Uint32 n=0; n < GetNumSamplers(); ++n)
         {
             const auto& Sampler = GetSampler(n);
             if (!Sampler.ValidTexSRVAssigned())
                 LOG_ERROR_MESSAGE("Shader '", ShdrDesc.Name, "' uses combined texture samplers, but sampler '", Sampler.Name, "' is not assigned to any texture");
         }
-    }
 #endif
+    }
 
     VERIFY_EXPR(m_ResourceNames.GetRemainingSize() == 0);
     VERIFY(CurrCB      == GetNumCBs(),      "Not all CBs are initialized which will cause a crash when ~D3DShaderResourceAttribs() is called");

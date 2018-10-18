@@ -35,9 +35,14 @@ size_t ShaderVariableManagerD3D12::GetRequiredMemorySize(const ShaderResourceLay
 {
     NumVariables = 0;
     Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
-    for(SHADER_VARIABLE_TYPE VarType = SHADER_VARIABLE_TYPE_STATIC; VarType < SHADER_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_VARIABLE_TYPE>(VarType+1))
+    for (SHADER_VARIABLE_TYPE VarType = SHADER_VARIABLE_TYPE_STATIC; VarType < SHADER_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_VARIABLE_TYPE>(VarType+1))
     {
-        NumVariables += IsAllowedType(VarType, AllowedTypeBits) ? Layout.GetCbvSrvUavCount(VarType) : 0;
+        if (IsAllowedType(VarType, AllowedTypeBits))
+        {
+            NumVariables += Layout.GetCbvSrvUavCount(VarType);
+            if (Layout.IsUsingSeparateSamplers())
+                NumVariables += Layout.GetSamplerCount(VarType);
+        }
     }
     
     return NumVariables*sizeof(ShaderVariableD3D12Impl);
@@ -67,17 +72,28 @@ void ShaderVariableManagerD3D12::Initialize(const ShaderResourceLayoutD3D12& Src
     m_pVariables = reinterpret_cast<ShaderVariableD3D12Impl*>(pRawMem);
 
     Uint32 VarInd = 0;
-    for(SHADER_VARIABLE_TYPE VarType = SHADER_VARIABLE_TYPE_STATIC; VarType < SHADER_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_VARIABLE_TYPE>(VarType+1))
+    for (SHADER_VARIABLE_TYPE VarType = SHADER_VARIABLE_TYPE_STATIC; VarType < SHADER_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_VARIABLE_TYPE>(VarType+1))
     {
         if (!IsAllowedType(VarType, AllowedTypeBits))
             continue;
 
         Uint32 NumResources = SrcLayout.GetCbvSrvUavCount(VarType);
-        for( Uint32 r=0; r < NumResources; ++r )
+        for (Uint32 r=0; r < NumResources; ++r)
         {
             const auto& SrcRes = SrcLayout.GetSrvCbvUav(VarType, r);
-            ::new (m_pVariables + VarInd) ShaderVariableD3D12Impl(*this, SrcRes );
+            ::new (m_pVariables + VarInd) ShaderVariableD3D12Impl(*this, SrcRes);
             ++VarInd;
+        }
+
+        if (SrcLayout.IsUsingSeparateSamplers())
+        {
+            Uint32 NumSamplers = SrcLayout.GetSamplerCount(VarType);
+            for (Uint32 r=0; r < NumSamplers; ++r)
+            {
+                const auto& SrcSampler = SrcLayout.GetSampler(VarType, r);
+                ::new (m_pVariables + VarInd) ShaderVariableD3D12Impl(*this, SrcSampler);
+                ++VarInd;
+            }
         }
     }
     VERIFY_EXPR(VarInd == m_NumVariables);
@@ -160,7 +176,7 @@ void ShaderVariableManagerD3D12::BindResources( IResourceMapping* pResourceMappi
         
         for(Uint32 ArrInd = 0; ArrInd < Res.Attribs.BindCount; ++ArrInd)
         {
-            if( Flags & BIND_SHADER_RESOURCES_RESET_BINDINGS )
+            if (Flags & BIND_SHADER_RESOURCES_RESET_BINDINGS)
                 Res.BindResource(nullptr, ArrInd, *m_pResourceCache);
 
             if( (Flags & BIND_SHADER_RESOURCES_UPDATE_UNRESOLVED) && Res.IsBound(ArrInd, *m_pResourceCache) )

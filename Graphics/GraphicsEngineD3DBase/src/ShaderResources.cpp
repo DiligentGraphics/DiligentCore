@@ -166,7 +166,7 @@ Uint32 ShaderResources::FindAssignedSamplerId(const D3DShaderResourceAttribs& Te
     for (Uint32 s = 0; s < NumSamplers; ++s)
     {
         const auto &Sampler = GetSampler(s);
-        if( StrCmpSuff(Sampler.Name, TexSRV.Name, SamplerSuffix) )
+        if( StreqSuff(Sampler.Name, TexSRV.Name, SamplerSuffix) )
         {
             VERIFY(Sampler.GetVariableType() == TexSRV.GetVariableType(), "Inconsistent texture and sampler variable types");
             VERIFY(Sampler.BindCount == TexSRV.BindCount || Sampler.BindCount == 1, "Sampler assigned to array \"", TexSRV.Name, "\" is expected to be scalar or have the same dimension (",TexSRV.BindCount,"). Actual sampler array dimension : ",  Sampler.BindCount);

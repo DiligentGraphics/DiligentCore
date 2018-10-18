@@ -186,6 +186,10 @@ void ShaderResourceLayoutD3D11::Initialize(const std::shared_ptr<const ShaderRes
             if (TexSRV.ValidSamplerAssigned())
             {
                 const auto& AssignedSamplerAttribs = m_pResources->GetSampler(TexSRV.GetSamplerId());
+                DEV_CHECK_ERR(AssignedSamplerAttribs.GetVariableType() == TexSRV.GetVariableType(),
+                              "The type (", GetShaderVariableTypeLiteralName(TexSRV.GetVariableType()),") of texture SRV variable '", TexSRV.Name,
+                              "' is not consistent with the type (", GetShaderVariableTypeLiteralName(AssignedSamplerAttribs.GetVariableType()),
+                               ") of the sampler '", AssignedSamplerAttribs.Name, "' that is assigned to it");
                 // Do not assign static sampler to texture SRV as it is initialized directly in the shader resource cache
                 if (!AssignedSamplerAttribs.IsStaticSampler())
                 {
@@ -366,7 +370,7 @@ void ShaderResourceLayoutD3D11::ConstBuffBindInfo::BindResource(IDeviceObject* p
 {
     auto &pResourceCache = m_ParentResLayout.m_pResourceCache;
     VERIFY(pResourceCache, "Resource cache is null");
-    VERIFY_EXPR(ArrayIndex < Attribs.BindCount);
+    DEV_CHECK_ERR(ArrayIndex < Attribs.BindCount, "Array index (", ArrayIndex, ") is out of range for variable '", Attribs.Name, "'. Max allowed index: ", Attribs.BindCount);
 
     RefCntAutoPtr<BufferD3D11Impl> pBuffD3D11Impl;
     if( pBuffer )
@@ -448,7 +452,7 @@ void ShaderResourceLayoutD3D11::TexSRVBindInfo::BindResource(IDeviceObject* pVie
                                                              Uint32         ArrayIndex)
 {
     VERIFY(m_ParentResLayout.m_pResourceCache, "Resource cache is null");
-    VERIFY_EXPR(ArrayIndex < Attribs.BindCount);
+    DEV_CHECK_ERR(ArrayIndex < Attribs.BindCount, "Array index (", ArrayIndex, ") is out of range for variable '", Attribs.Name, "'. Max allowed index: ", Attribs.BindCount);
     auto& ResourceCache = *m_ParentResLayout.m_pResourceCache;
 
     // We cannot use ValidatedCast<> here as the resource retrieved from the
@@ -502,7 +506,7 @@ void ShaderResourceLayoutD3D11::SamplerBindInfo::BindResource(IDeviceObject* pSa
                                                               Uint32         ArrayIndex)
 {
     VERIFY(m_ParentResLayout.m_pResourceCache != nullptr, "Resource cache is null");
-    VERIFY_EXPR(ArrayIndex < Attribs.BindCount);
+    DEV_CHECK_ERR(ArrayIndex < Attribs.BindCount, "Array index (", ArrayIndex, ") is out of range for variable '", Attribs.Name, "'. Max allowed index: ", Attribs.BindCount);
     auto& ResourceCache = *m_ParentResLayout.m_pResourceCache;
     VERIFY(!Attribs.IsStaticSampler(), "Cannot bind sampler to a static sampler");
 
@@ -538,7 +542,7 @@ void ShaderResourceLayoutD3D11::BuffSRVBindInfo::BindResource(IDeviceObject* pVi
                                                               Uint32         ArrayIndex)
 {
     VERIFY(m_ParentResLayout.m_pResourceCache != nullptr, "Resource cache is null");
-    VERIFY(ArrayIndex < Attribs.BindCount, "Array index is out of range");
+    DEV_CHECK_ERR(ArrayIndex < Attribs.BindCount, "Array index (", ArrayIndex, ") is out of range for variable '", Attribs.Name, "'. Max allowed index: ", Attribs.BindCount);
     auto& ResourceCache = *m_ParentResLayout.m_pResourceCache;
 
     // We cannot use ValidatedCast<> here as the resource retrieved from the
@@ -569,7 +573,7 @@ void ShaderResourceLayoutD3D11::TexUAVBindInfo::BindResource(IDeviceObject* pVie
                                                              Uint32         ArrayIndex)
 {
     VERIFY(m_ParentResLayout.m_pResourceCache != nullptr, "Resource cache is null");
-    VERIFY(ArrayIndex < Attribs.BindCount, "Array index is out of range");
+    DEV_CHECK_ERR(ArrayIndex < Attribs.BindCount, "Array index (", ArrayIndex, ") is out of range for variable '", Attribs.Name, "'. Max allowed index: ", Attribs.BindCount);
     auto& ResourceCache = *m_ParentResLayout.m_pResourceCache;
 
     // We cannot use ValidatedCast<> here as the resource retrieved from the
@@ -600,7 +604,7 @@ void ShaderResourceLayoutD3D11::BuffUAVBindInfo::BindResource(IDeviceObject* pVi
                                                               Uint32         ArrayIndex)
 {
     VERIFY(m_ParentResLayout.m_pResourceCache != nullptr, "Resource cache is null");
-    VERIFY(ArrayIndex < Attribs.BindCount, "Array index is out of range");
+    DEV_CHECK_ERR(ArrayIndex < Attribs.BindCount, "Array index (", ArrayIndex, ") is out of range for variable '", Attribs.Name, "'. Max allowed index: ", Attribs.BindCount);
     auto& ResourceCache = *m_ParentResLayout.m_pResourceCache;
 
     // We cannot use ValidatedCast<> here as the resource retrieved from the
@@ -799,7 +803,7 @@ Uint32 ShaderResourceLayoutD3D11::GetVariableIndex(const ShaderVariableD3D11Base
     Uint32 Index = 0;
     if (Offset < m_TexSRVsOffset)
     {
-        VERIFY(Offset % sizeof(ConstBuffBindInfo) == 0, "Offset is not multiple of sizeof(ConstBuffBindInfo)");
+        DEV_CHECK_ERR(Offset % sizeof(ConstBuffBindInfo) == 0, "Offset is not multiple of sizeof(ConstBuffBindInfo)");
         return Index + static_cast<Uint32>(Offset / sizeof(ConstBuffBindInfo));
     }
     else
@@ -807,7 +811,7 @@ Uint32 ShaderResourceLayoutD3D11::GetVariableIndex(const ShaderVariableD3D11Base
 
     if (Offset < m_TexUAVsOffset)
     {
-        VERIFY( (Offset - m_TexSRVsOffset) % sizeof(TexSRVBindInfo) == 0, "Offset is not multiple of sizeof(TexSRVBindInfo)");
+        DEV_CHECK_ERR( (Offset - m_TexSRVsOffset) % sizeof(TexSRVBindInfo) == 0, "Offset is not multiple of sizeof(TexSRVBindInfo)");
         return Index + static_cast<Uint32>((Offset - m_TexSRVsOffset) / sizeof(TexSRVBindInfo));
     }
     else
@@ -815,7 +819,7 @@ Uint32 ShaderResourceLayoutD3D11::GetVariableIndex(const ShaderVariableD3D11Base
 
     if (Offset < m_BuffUAVsOffset)
     {
-        VERIFY( (Offset - m_TexUAVsOffset) % sizeof(TexUAVBindInfo) == 0, "Offset is not multiple of sizeof(TexUAVBindInfo)");
+        DEV_CHECK_ERR( (Offset - m_TexUAVsOffset) % sizeof(TexUAVBindInfo) == 0, "Offset is not multiple of sizeof(TexUAVBindInfo)");
         return Index + static_cast<Uint32>((Offset - m_TexUAVsOffset) / sizeof(TexUAVBindInfo));
     }
     else
@@ -823,7 +827,7 @@ Uint32 ShaderResourceLayoutD3D11::GetVariableIndex(const ShaderVariableD3D11Base
 
     if (Offset < m_BuffSRVsOffset)
     {
-        VERIFY( (Offset - m_BuffUAVsOffset) % sizeof(BuffUAVBindInfo) == 0, "Offset is not multiple of sizeof(BuffUAVBindInfo)" );
+        DEV_CHECK_ERR( (Offset - m_BuffUAVsOffset) % sizeof(BuffUAVBindInfo) == 0, "Offset is not multiple of sizeof(BuffUAVBindInfo)" );
         return Index + static_cast<Uint32>((Offset - m_BuffUAVsOffset) / sizeof(BuffUAVBindInfo));
     }
     else
@@ -831,7 +835,7 @@ Uint32 ShaderResourceLayoutD3D11::GetVariableIndex(const ShaderVariableD3D11Base
 
     if (Offset < static_cast<std::ptrdiff_t>(m_BuffSRVsOffset + m_NumBufSRVs * sizeof(BuffSRVBindInfo)))
     {
-        VERIFY( (Offset - m_BuffSRVsOffset) % sizeof(BuffSRVBindInfo) == 0, "Offset is not multiple of sizeof(BuffSRVBindInfo)" );
+        DEV_CHECK_ERR( (Offset - m_BuffSRVsOffset) % sizeof(BuffSRVBindInfo) == 0, "Offset is not multiple of sizeof(BuffSRVBindInfo)" );
         return Index + static_cast<Uint32>((Offset - m_BuffSRVsOffset) / sizeof(BuffSRVBindInfo));
     }
     else
@@ -839,7 +843,7 @@ Uint32 ShaderResourceLayoutD3D11::GetVariableIndex(const ShaderVariableD3D11Base
 
     if (Offset < static_cast<std::ptrdiff_t>(m_SamplerOffset + m_NumSamplers * sizeof(SamplerBindInfo)))
     {
-        VERIFY( (Offset - m_SamplerOffset) % sizeof(SamplerBindInfo) == 0, "Offset is not multiple of sizeof(SamplerBindInfo)" );
+        DEV_CHECK_ERR( (Offset - m_SamplerOffset) % sizeof(SamplerBindInfo) == 0, "Offset is not multiple of sizeof(SamplerBindInfo)" );
         return Index + static_cast<Uint32>((Offset - m_SamplerOffset) / sizeof(SamplerBindInfo));
     }
     else

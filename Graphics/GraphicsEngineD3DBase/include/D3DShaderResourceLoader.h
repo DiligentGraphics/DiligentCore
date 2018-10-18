@@ -153,7 +153,7 @@ namespace Diligent
             {
                 for (Uint32 s = 0; s < ShdrDesc.NumStaticSamplers; ++s)
                 {
-                    if (StrCmpSuff(Name.c_str(), ShdrDesc.StaticSamplers[s].SamplerOrTextureName, SamplerSuffix))
+                    if (StreqSuff(Name.c_str(), ShdrDesc.StaticSamplers[s].SamplerOrTextureName, SamplerSuffix))
                     {
                         IsStaticSampler = true;
                         break;
@@ -163,7 +163,7 @@ namespace Diligent
                 VarType = GetShaderVariableType(ShdrDesc.DefaultVariableType, ShdrDesc.VariableDesc, ShdrDesc.NumVariables,
                                                 [&](const char* VarName)
                                                 {
-                                                    return StrCmpSuff(Name.c_str(), VarName, SamplerSuffix);
+                                                    return StreqSuff(Name.c_str(), VarName, SamplerSuffix);
                                                 });
             }
             else
