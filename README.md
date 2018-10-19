@@ -491,26 +491,26 @@ pRenderDevice->CreateResourceMapping( ResMappingDesc, &pResMapping );
 The resource mapping can then be used to bind all resources in a shader (`IShader::BindResources()`):
 
 ```cpp
-pPixelShader->BindResources(pResMapping, BIND_SHADER_RESOURCES_ALL_RESOLVED);
+pPixelShader->BindResources(pResMapping, BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED);
 ```
 
 in a shader resource binding (`IShaderResourceBinding::BindResources()`):
 
 ```cpp
-m_pSRB->BindResources(SHADER_TYPE_VERTEX|SHADER_TYPE_PIXEL, pResMapping, BIND_SHADER_RESOURCES_ALL_RESOLVED);
+m_pSRB->BindResources(SHADER_TYPE_VERTEX|SHADER_TYPE_PIXEL, pResMapping, BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED);
 ```
 
 or in a pipeline state (`IPipelineState::BindShaderResources()`):
 
 ```cpp
-m_pPSO->BindResources(pResMapping, BIND_SHADER_RESOURCES_ALL_RESOLVED);
+m_pPSO->BindResources(pResMapping, BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED);
 ```
 
 The last parameter to all `BindResources()` functions defines how resources should be resolved:
 
 * `BIND_SHADER_RESOURCES_RESET_BINDINGS`    - Reset all bindings. If this flag is specified, all bindings will be reset to null before new bindings are set. By default all existing bindings are preserved.
-* `BIND_SHADER_RESOURCES_UPDATE_UNRESOLVED` - If this flag is specified, only unresolved bindings will be updated. All resolved bindings will keep their original values. If this flag is not specified, every shader variable will be updated if the mapping contains corresponding resource.
-* `BIND_SHADER_RESOURCES_ALL_RESOLVED`      - If this flag is specified, all shader bindings are expected be resolved after the call. If this is not the case, debug error will be displayed.
+* `BIND_SHADER_RESOURCES_KEEP_EXISTING` - If this flag is specified, only unresolved bindings will be updated. All resolved bindings will keep their original values. If this flag is not specified, every shader variable will be updated if the mapping contains corresponding resource.
+* `BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED`      - If this flag is specified, all shader bindings are expected be resolved after the call. If this is not the case, debug error will be displayed.
 
 `BindResources()` may be called several times with different resource mappings to bind resources.
 However, it is recommended to use one large resource mapping as the size of the mapping does not affect element search time.
@@ -618,6 +618,9 @@ objects. Refer to the following pages for more information:
     * Added `UseCombinedTextureSamplers` and `CombinedSamplerSuffix` members to `ShaderCreationAttribs` structure
     * When separate samplers are used (`UseCombinedTextureSamplers == false`), samplers are set in the same way as other shader variables
       via shader or SRB objects
+  * Removed `BIND_SHADER_RESOURCES_RESET_BINDINGS` flag, renamed `BIND_SHADER_RESOURCES_KEEP_EXISTING` to `BIND_SHADER_RESOURCES_KEEP_EXISTING`.
+	Added 'BIND_SHADER_RESOURCES_UPDATE_STATIC', 'BIND_SHADER_RESOURCES_UPDATE_MUTABLE', 'BIND_SHADER_RESOURCES_UPDATE_DYNAMIC', and
+	'BIND_SHADER_RESOURCES_UPDATE_ALL' flags
 
 ## v2.3.a
 

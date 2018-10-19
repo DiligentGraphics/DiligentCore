@@ -169,30 +169,33 @@ void ShaderVariableManagerD3D12::BindResources( IResourceMapping* pResourceMappi
     VERIFY_EXPR(m_pResourceCache != nullptr);
     DEV_CHECK_ERR(pResourceMapping != nullptr, "Failed to bind resources: resource mapping is null");
     
-    for(Uint32 v=0; v < m_NumVariables; ++v)
+    if ( (Flags & BIND_SHADER_RESOURCES_UPDATE_ALL) == 0 )
+        Flags |= BIND_SHADER_RESOURCES_UPDATE_ALL;
+
+    for (Uint32 v=0; v < m_NumVariables; ++v)
     {
         auto &Var = m_pVariables[v];
         const auto& Res = Var.m_Resource;
         
-        for(Uint32 ArrInd = 0; ArrInd < Res.Attribs.BindCount; ++ArrInd)
-        {
-            if (Flags & BIND_SHADER_RESOURCES_RESET_BINDINGS)
-                Res.BindResource(nullptr, ArrInd, *m_pResourceCache);
+        if ( (Flags & (1 << Res.Attribs.GetVariableType())) == 0 )
+            continue;
 
-            if( (Flags & BIND_SHADER_RESOURCES_UPDATE_UNRESOLVED) && Res.IsBound(ArrInd, *m_pResourceCache) )
-                return;
+        for (Uint32 ArrInd = 0; ArrInd < Res.Attribs.BindCount; ++ArrInd)
+        {
+            if( (Flags & BIND_SHADER_RESOURCES_KEEP_EXISTING) && Res.IsBound(ArrInd, *m_pResourceCache) )
+                continue;
 
             RefCntAutoPtr<IDeviceObject> pObj;
             VERIFY_EXPR(pResourceMapping != nullptr);
             pResourceMapping->GetResource( Res.Attribs.Name, &pObj, ArrInd );
-            if( pObj )
+            if ( pObj )
             {
                 //  Call non-virtual function
                 Res.BindResource(pObj, ArrInd, *m_pResourceCache);
             }
             else
             {
-                if( (Flags & BIND_SHADER_RESOURCES_ALL_RESOLVED) && !Res.IsBound(ArrInd, *m_pResourceCache) )
+                if( (Flags & BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED) && !Res.IsBound(ArrInd, *m_pResourceCache) )
                     LOG_ERROR_MESSAGE( "Cannot bind resource to shader variable \"", Res.Attribs.GetPrintName(ArrInd), "\": resource view not found in the resource mapping" );
             }
         }

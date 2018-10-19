@@ -76,26 +76,6 @@ enum SHADER_SOURCE_LANGUAGE : Uint32
     SHADER_SOURCE_LANGUAGE_GLSL
 };
 
-/// Describes flags that can be supplied to IShader::BindResources()
-/// and IDeviceContext::BindShaderResources().
-enum BIND_SHADER_RESOURCES_FLAGS : Uint32
-{
-    /// Reset all bindings. If this flag is specified, all existing bindings will be
-    /// broken. By default all existing bindings are preserved.
-    BIND_SHADER_RESOURCES_RESET_BINDINGS = 0x01,
-
-    /// If this flag is specified, only unresolved bindings will be updated.
-    /// All resolved bindings will keep their original values.
-    /// If this flag is not specified, every shader variable will be
-    /// updated if the mapping contains corresponding resource.
-    BIND_SHADER_RESOURCES_UPDATE_UNRESOLVED = 0x02,
-
-    /// If this flag is specified, all shader bindings are expected
-    /// to be resolved after the call. If this is not the case, debug error 
-    /// will be displayed.
-    BIND_SHADER_RESOURCES_ALL_RESOLVED = 0x04
-};
-
 /// Describes shader variable type that is used by ShaderVariableDesc
 enum SHADER_VARIABLE_TYPE : Uint8
 {
@@ -115,6 +95,42 @@ enum SHADER_VARIABLE_TYPE : Uint8
 
     /// Total number of shader variable types
     SHADER_VARIABLE_TYPE_NUM_TYPES
+};
+
+
+static_assert(SHADER_VARIABLE_TYPE_STATIC == 0 && SHADER_VARIABLE_TYPE_MUTABLE == 1 && SHADER_VARIABLE_TYPE_DYNAMIC == 2 && SHADER_VARIABLE_TYPE_NUM_TYPES == 3, "BIND_SHADER_RESOURCES_UPDATE_* flags rely on shader variable SHADER_VARIABLE_TYPE_* values being 0,1,2");
+/// Describes flags that can be given to IShader::BindResources(),
+/// IPipelineState::BindShaderResources(), and IDeviceContext::BindShaderResources() methods.
+enum BIND_SHADER_RESOURCES_FLAGS : Uint32
+{
+    /// Indicates that static variable bindings are to be updated.
+    BIND_SHADER_RESOURCES_UPDATE_STATIC  = (0x01 << SHADER_VARIABLE_TYPE_STATIC),
+
+    /// Indicates that mutable variable bindings are to be updated.
+    BIND_SHADER_RESOURCES_UPDATE_MUTABLE = (0x01 << SHADER_VARIABLE_TYPE_MUTABLE),
+
+    /// Indicates that dynamic variable bindings are to be updated.
+    BIND_SHADER_RESOURCES_UPDATE_DYNAMIC = (0x01 << SHADER_VARIABLE_TYPE_DYNAMIC),
+
+    /// Indicates that all variable types (static, mutable and dynamic) are to be updated.
+    /// \note If none of BIND_SHADER_RESOURCES_UPDATE_STATIC, BIND_SHADER_RESOURCES_UPDATE_MUTABLE,
+    ///       and BIND_SHADER_RESOURCES_UPDATE_DYNAMIC flags are set, all variable types are updated
+    ///       as if BIND_SHADER_RESOURCES_UPDATE_ALL was specified.
+    BIND_SHADER_RESOURCES_UPDATE_ALL = (BIND_SHADER_RESOURCES_UPDATE_STATIC | BIND_SHADER_RESOURCES_UPDATE_MUTABLE | BIND_SHADER_RESOURCES_UPDATE_DYNAMIC),
+
+    /// If this flag is specified, all existing bindings will be preserved and 
+    /// only unresolved ones will be updated.
+    /// If this flag is not specified, every shader variable will be
+    /// updated if the mapping contains corresponding resource.
+    BIND_SHADER_RESOURCES_KEEP_EXISTING = 0x08,
+
+    /// If this flag is specified, all shader bindings are expected
+    /// to be resolved after the call. If this is not the case, debug message 
+    /// will be displayed.
+    /// \note Only these variables are verified that are being updated by setting
+    ///       BIND_SHADER_RESOURCES_UPDATE_STATIC, BIND_SHADER_RESOURCES_UPDATE_MUTABLE, and
+    ///       BIND_SHADER_RESOURCES_UPDATE_DYNAMIC flags.
+    BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED = 0x10
 };
 
 /// Describes shader variable

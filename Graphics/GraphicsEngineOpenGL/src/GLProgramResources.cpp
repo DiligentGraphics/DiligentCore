@@ -428,16 +428,17 @@ namespace Diligent
     template<typename TResArrayType>
     void BindResourcesHelper(TResArrayType &ResArr, IResourceMapping *pResourceMapping, Uint32 Flags)
     {
-        for( auto res = ResArr.begin(); res != ResArr.end(); ++res )
+        for (auto& res : ResArr)
         {
-            auto &Name = res->Name;
-            for(Uint32 ArrInd = 0; ArrInd < res->pResources.size(); ++ArrInd)
-            {
-                auto &CurrResource = res->pResources[ArrInd];
-                if( Flags & BIND_SHADER_RESOURCES_RESET_BINDINGS )
-                    CurrResource.Release();
+            if ( (Flags & (1 << res.VarType)) == 0 )
+                continue;
 
-                if( (Flags & BIND_SHADER_RESOURCES_UPDATE_UNRESOLVED) && CurrResource )
+            auto &Name = res.Name;
+            for(Uint32 ArrInd = 0; ArrInd < res.pResources.size(); ++ArrInd)
+            {
+                auto &CurrResource = res.pResources[ArrInd];
+
+                if( (Flags & BIND_SHADER_RESOURCES_KEEP_EXISTING) && CurrResource )
                     continue; // Skip already resolved resources
 
                 RefCntAutoPtr<IDeviceObject> pNewRes;
@@ -445,13 +446,13 @@ namespace Diligent
 
                 if (pNewRes != nullptr)
                 {
-                    if(res->VarType == SHADER_VARIABLE_TYPE_STATIC && CurrResource !=  nullptr && CurrResource != pNewRes )
+                    if(res.VarType == SHADER_VARIABLE_TYPE_STATIC && CurrResource !=  nullptr && CurrResource != pNewRes )
                         LOG_ERROR_MESSAGE( "Updating binding for static variable \"", Name, "\" is invalid and may result in an undefined behavior" );
                     CurrResource = pNewRes;
                 }
                 else
                 {
-                    if ( CurrResource == nullptr && (Flags & BIND_SHADER_RESOURCES_ALL_RESOLVED) )
+                    if ( CurrResource == nullptr && (Flags & BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED) )
                         LOG_ERROR_MESSAGE("Resource \"", Name, "\" is not found in the resource mapping");
                 }
             }
@@ -462,6 +463,9 @@ namespace Diligent
     {
         if( !pResourceMapping )
             return;
+
+        if ( (Flags & BIND_SHADER_RESOURCES_UPDATE_ALL) == 0 )
+            Flags |= BIND_SHADER_RESOURCES_UPDATE_ALL;
 
         BindResourcesHelper( m_UniformBlocks, pResourceMapping, Flags );
         BindResourcesHelper( m_Samplers,      pResourceMapping, Flags );

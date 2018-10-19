@@ -159,6 +159,9 @@ void ShaderVariableManagerVk::BindResources( IResourceMapping* pResourceMapping,
         return;
     }
 
+    if ( (Flags & BIND_SHADER_RESOURCES_UPDATE_ALL) == 0 )
+        Flags |= BIND_SHADER_RESOURCES_UPDATE_ALL;
+
     for(Uint32 v=0; v < m_NumVariables; ++v)
     {
         auto &Var = m_pVariables[v];
@@ -168,12 +171,12 @@ void ShaderVariableManagerVk::BindResources( IResourceMapping* pResourceMapping,
         if(Res.SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler && Res.SpirvAttribs.StaticSamplerInd >= 0)
             continue;
 
+        if ( (Flags & (1 << Res.SpirvAttribs.VarType)) == 0 )
+            continue;
+
         for(Uint32 ArrInd = 0; ArrInd < Res.SpirvAttribs.ArraySize; ++ArrInd)
         {
-            if( Flags & BIND_SHADER_RESOURCES_RESET_BINDINGS )
-                Res.BindResource(nullptr, ArrInd, *m_pResourceCache);
-
-            if( (Flags & BIND_SHADER_RESOURCES_UPDATE_UNRESOLVED) && Res.IsBound(ArrInd, *m_pResourceCache) )
+            if( (Flags & BIND_SHADER_RESOURCES_KEEP_EXISTING) && Res.IsBound(ArrInd, *m_pResourceCache) )
                 continue;
 
             const auto* VarName = Res.SpirvAttribs.Name;
@@ -185,7 +188,7 @@ void ShaderVariableManagerVk::BindResources( IResourceMapping* pResourceMapping,
             }
             else
             {
-                if( (Flags & BIND_SHADER_RESOURCES_ALL_RESOLVED) && !Res.IsBound(ArrInd, *m_pResourceCache) )
+                if( (Flags & BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED) && !Res.IsBound(ArrInd, *m_pResourceCache) )
                     LOG_ERROR_MESSAGE( "Cannot bind resource to shader variable \"", Res.SpirvAttribs.GetPrintName(ArrInd), "\": resource view not found in the resource mapping" );
             }
         }

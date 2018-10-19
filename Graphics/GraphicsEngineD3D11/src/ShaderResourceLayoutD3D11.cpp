@@ -692,25 +692,25 @@ public:
     template<typename ResourceType>
     void Bind( ResourceType &Res)
     {
-        for(Uint16 elem=0; elem < Res.Attribs.BindCount; ++elem)
-        {
-            if( Flags & BIND_SHADER_RESOURCES_RESET_BINDINGS )
-                Res.BindResource(nullptr, elem);
+        if ( (Flags & (1 << Res.Attribs.GetVariableType())) == 0 )
+            return;
 
-            if( (Flags & BIND_SHADER_RESOURCES_UPDATE_UNRESOLVED) && Res.IsBound(elem) )
-                return;
+        for (Uint16 elem=0; elem < Res.Attribs.BindCount; ++elem)
+        {
+            if ( (Flags & BIND_SHADER_RESOURCES_KEEP_EXISTING) && Res.IsBound(elem) )
+                continue;
 
             const auto* VarName = Res.Attribs.Name;
             RefCntAutoPtr<IDeviceObject> pRes;
             ResourceMapping.GetResource( VarName, &pRes, elem );
-            if( pRes )
+            if (pRes)
             {
                 //  Call non-virtual function
                 Res.BindResource(pRes, elem);
             }
             else
             {
-                if( (Flags & BIND_SHADER_RESOURCES_ALL_RESOLVED) && !Res.IsBound(elem) )
+                if ( (Flags & BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED) && !Res.IsBound(elem) )
                     LOG_ERROR_MESSAGE( "Cannot bind resource to shader variable \"", VarName, "\": resource view not found in the resource mapping" );
             }
         }
@@ -730,6 +730,9 @@ void ShaderResourceLayoutD3D11::BindResources( IResourceMapping* pResourceMappin
         LOG_ERROR_MESSAGE( "Failed to bind resources in shader \"", GetShaderName(), "\": resource mapping is null" );
         return;
     }
+    
+    if ( (Flags & BIND_SHADER_RESOURCES_UPDATE_ALL) == 0 )
+        Flags |= BIND_SHADER_RESOURCES_UPDATE_ALL;
 
     BindResourceHelper BindResHelper(*pResourceMapping, Flags);
 
