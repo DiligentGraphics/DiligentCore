@@ -508,8 +508,13 @@ m_pPSO->BindResources(pResMapping, BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED);
 
 The last parameter to all `BindResources()` functions defines how resources should be resolved:
 
-* `BIND_SHADER_RESOURCES_RESET_BINDINGS`    - Reset all bindings. If this flag is specified, all bindings will be reset to null before new bindings are set. By default all existing bindings are preserved.
-* `BIND_SHADER_RESOURCES_KEEP_EXISTING` - If this flag is specified, only unresolved bindings will be updated. All resolved bindings will keep their original values. If this flag is not specified, every shader variable will be updated if the mapping contains corresponding resource.
+* `BIND_SHADER_RESOURCES_UPDATE_STATIC` - Indicates that static variable bindings are to be updated.
+* `BIND_SHADER_RESOURCES_UPDATE_MUTABLE` - Indicates that mutable variable bindings are to be updated.
+* `BIND_SHADER_RESOURCES_UPDATE_DYNAMIC` -Indicates that dynamic variable bindings are to be updated.
+* `BIND_SHADER_RESOURCES_UPDATE_ALL` - Indicates that all variable types (static, mutable and dynamic) are to be updated.
+   Note that if none of `BIND_SHADER_RESOURCES_UPDATE_STATIC`, `BIND_SHADER_RESOURCES_UPDATE_MUTABLE`, and 
+   `BIND_SHADER_RESOURCES_UPDATE_DYNAMIC` flags are set, all variable types are updated as if `BIND_SHADER_RESOURCES_UPDATE_ALL` was specified.
+* `BIND_SHADER_RESOURCES_KEEP_EXISTING` - If this flag is specified, only unresolved bindings will be updated. All existing bindings will keep their original values. If this flag is not specified, every shader variable will be updated if the mapping contains corresponding resource.
 * `BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED`      - If this flag is specified, all shader bindings are expected be resolved after the call. If this is not the case, debug error will be displayed.
 
 `BindResources()` may be called several times with different resource mappings to bind resources.
@@ -663,7 +668,7 @@ objects. Refer to the following pages for more information:
   * Replaced `PRIMITIVE_TOPOLOGY_TYPE GraphicsPipelineDesc::PrimitiveTopologyType` 
     with `PRIMITIVE_TOPOLOGY GraphicsPipelineDesc::PrimitiveTopology`
   * Removed `DrawAttribs::Topology`
-  * Removed `pStrides` prarameter from `IDeviceContext::SetVertexBuffers()`. Strides are now defined
+  * Removed `pStrides` parameter from `IDeviceContext::SetVertexBuffers()`. Strides are now defined
     through vertex layout.
 
 ## v2.2
