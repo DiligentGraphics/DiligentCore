@@ -85,6 +85,7 @@ public:
             pObj->QueryInterface( IID, reinterpret_cast<IObject**>(&m_pObject) );
     }
 
+    // Copy constructor must not be template!
     RefCntAutoPtr(const RefCntAutoPtr& AutoPtr) : 
         m_pObject(AutoPtr.m_pObject)
     {
@@ -92,7 +93,22 @@ public:
             m_pObject->AddRef();
     }
 
+    template<typename DerivedType, typename = typename std::enable_if<std::is_base_of<T, DerivedType>::value>::type>
+    RefCntAutoPtr(const RefCntAutoPtr<DerivedType>& AutoPtr) : 
+        RefCntAutoPtr<T>(AutoPtr.m_pObject)
+    {
+    }
+
+    // Non-template move constructor
     RefCntAutoPtr(RefCntAutoPtr&& AutoPtr) : 
+        m_pObject(std::move(AutoPtr.m_pObject))
+    {
+        //Make sure original pointer has no references to the object
+        AutoPtr.m_pObject = nullptr;
+    }
+
+    template<typename DerivedType, typename = typename std::enable_if<std::is_base_of<T, DerivedType>::value>::type>
+    RefCntAutoPtr(RefCntAutoPtr<DerivedType>&& AutoPtr) : 
         m_pObject(std::move(AutoPtr.m_pObject))
     {
         //Make sure original pointer has no references to the object
@@ -149,16 +165,26 @@ public:
         return *this = AutoPtr.m_pObject;
     }
 
+    template<typename DerivedType, typename = typename std::enable_if<std::is_base_of<T, DerivedType>::value>::type>
+    RefCntAutoPtr& operator = (const RefCntAutoPtr<DerivedType>& AutoPtr)
+    {
+        return *this = static_cast<T*>(AutoPtr.m_pObject);
+    }
+
     RefCntAutoPtr& operator = (RefCntAutoPtr&& AutoPtr)
     {
         if (m_pObject != AutoPtr.m_pObject)
-        {
-            if (m_pObject)
-                m_pObject->Release();
-            m_pObject = std::move(AutoPtr.m_pObject);
-            //Make sure original pointer has no references to the object
-            AutoPtr.m_pObject = nullptr;
-        }
+            Attach(AutoPtr.Detach());
+
+        return *this;
+     }
+
+    template<typename DerivedType, typename = typename std::enable_if<std::is_base_of<T, DerivedType>::value>::type>
+    RefCntAutoPtr& operator = (RefCntAutoPtr<DerivedType>&& AutoPtr)
+    {
+        if (m_pObject != AutoPtr.m_pObject)
+            Attach(AutoPtr.Detach());
+
         return *this;
      }
 
@@ -245,6 +271,9 @@ public:
     const T** GetRawDblPtr()const{return &m_pObject;}
 
 private:
+    template<typename OtherType>
+    friend class RefCntAutoPtr;
+
     T* m_pObject;
 };
 

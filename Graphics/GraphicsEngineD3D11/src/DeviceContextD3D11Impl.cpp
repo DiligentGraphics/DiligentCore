@@ -594,7 +594,7 @@ namespace Diligent
 
 
 #ifdef DEVELOPMENT
-            if( CommitResources && m_DebugFlags & (Uint32)EngineD3D11DebugFlags::VerifyCommittedShaderResources )
+            if( CommitResources && (m_DebugFlags & (Uint32)EngineD3D11DebugFlags::VerifyCommittedShaderResources) != 0 )
             {
                 // Use full resource layout to verify that all required resources are committed
                 pShaderD3D11->GetResources()->dvpVerifyCommittedResources(

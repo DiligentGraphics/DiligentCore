@@ -87,7 +87,7 @@ ShaderD3D11Impl::ShaderD3D11Impl(IReferenceCounters*          pRefCounters,
     m_StaticResLayout.Initialize(m_pShaderResources, VarTypes, _countof(VarTypes), m_StaticResCache, GetRawAllocator(), GetRawAllocator());
 
     // This is not required, but still...
-    m_pShaderResources->InitStaticSamplers(m_StaticResCache);
+    m_pShaderResources->SetStaticSamplers(m_StaticResCache);
 
     // Byte code is only required for the vertex shader to create input layout
     if( CreationAttribs.Desc.ShaderType != SHADER_TYPE_VERTEX )

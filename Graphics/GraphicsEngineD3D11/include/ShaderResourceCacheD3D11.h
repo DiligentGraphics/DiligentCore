@@ -152,7 +152,7 @@ public:
         SetD3D11ResourceInternal<CachedResource>(Slot, GetUAVCount(), &ShaderResourceCacheD3D11::GetUAVArrays, std::move(pBuffView), pd3d11UAV);
     }
 
-    __forceinline void SetSampler(Uint32 Slot, SamplerD3D11Impl *pSampler)
+    __forceinline void SetSampler(Uint32 Slot, SamplerD3D11Impl* pSampler)
     {
         auto *pd3d11Sampler = pSampler ? pSampler->SamplerD3D11Impl::GetD3D11SamplerState() : nullptr;
         SetD3D11ResourceInternal<CachedSampler>(Slot, GetSamplerCount(), &ShaderResourceCacheD3D11::GetSamplerArrays, pSampler, pd3d11Sampler);

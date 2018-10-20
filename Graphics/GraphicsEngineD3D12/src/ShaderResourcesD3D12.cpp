@@ -27,8 +27,6 @@
 #include "ShaderResourcesD3D12.h"
 #include "ShaderD3DBase.h"
 #include "ShaderBase.h"
-#include "D3DShaderResourceLoader.h"
-
 
 namespace Diligent
 {

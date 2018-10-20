@@ -25,7 +25,6 @@
 
 #include "RootSignature.h"
 #include "ShaderResourceLayoutD3D12.h"
-#include "D3DShaderResourceLoader.h"
 #include "ShaderD3D12Impl.h"
 #include "CommandContext.h"
 #include "RenderDeviceD3D12Impl.h"

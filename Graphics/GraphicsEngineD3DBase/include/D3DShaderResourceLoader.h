@@ -113,7 +113,7 @@ namespace Diligent
                 // Name == "g_tex2DDiffuse"
                 VERIFY_EXPR(Name.length() == OpenBracketPos);
 #ifdef _DEBUG
-                for (const auto &ExistingRes : Resources)
+                for (const auto& ExistingRes : Resources)
                 {
                     VERIFY(Name.compare(ExistingRes.Name) != 0, "Resource with the same name has already been enumerated. All array elements are expected to be enumerated one after another");
                 }
@@ -204,51 +204,49 @@ namespace Diligent
 
 
 #ifdef DEVELOPMENT
-        if(ShdrDesc.NumVariables != 0 || ShdrDesc.NumStaticSamplers != 0 )
+        for (Uint32 v = 0; v < ShdrDesc.NumVariables; ++v)
         {
-            for (Uint32 v = 0; v < ShdrDesc.NumVariables; ++v)
-            {
-                bool VariableFound = false;
-                const auto* VarName = ShdrDesc.VariableDesc[v].Name;
+            bool VariableFound = false;
+            const auto* VarName = ShdrDesc.VariableDesc[v].Name;
 
-                for (const auto& Res : Resources)
+            for (const auto& Res : Resources)
+            {
+                // Skip samplers if combined texture samplers are used as 
+                // in this case they are not treated as independent variables
+                if (UseCombinedTextureSamplers && Res.GetInputType() == D3D_SIT_SAMPLER)
+                    continue;
+
+                VariableFound = (strcmp(Res.Name, VarName) == 0);
+                if (VariableFound)
+                    break;
+            }
+            if(!VariableFound)
+            {
+                LOG_WARNING_MESSAGE("Variable \"", VarName, "\" not found in shader \"", ShdrDesc.Name, '\"');
+            }
+        }
+
+        for (Uint32 s = 0; s < ShdrDesc.NumStaticSamplers; ++s)
+        {
+            const auto* TexOrSamName = ShdrDesc.StaticSamplers[s].SamplerOrTextureName;
+
+            bool TextureOrSamplerFound = false;
+            for (const auto& Res : Resources)
+            {
+                if( UseCombinedTextureSamplers && Res.GetInputType() == D3D_SIT_TEXTURE && Res.GetSRVDimension() != D3D_SRV_DIMENSION_BUFFER ||
+                    !UseCombinedTextureSamplers && Res.GetInputType() == D3D_SIT_SAMPLER)
                 {
-                    // Skip samplers if combined texture samplers are used as 
-                    // in this case they are not treated as independent variables
-                    if ( !(UseCombinedTextureSamplers && Res.GetInputType() == D3D_SIT_SAMPLER) && strcmp(Res.Name, VarName) == 0)
-                    {
-                        VariableFound = true;   
+                    TextureOrSamplerFound = (strcmp(Res.Name, TexOrSamName) == 0);
+                    if (TextureOrSamplerFound)
                         break;
-                    }
-                }
-                if(!VariableFound)
-                {
-                    LOG_WARNING_MESSAGE("Variable \"", VarName, "\" not found in shader \"", ShdrDesc.Name, '\"');
                 }
             }
-
-            for (Uint32 s = 0; s < ShdrDesc.NumStaticSamplers; ++s)
+            if (!TextureOrSamplerFound)
             {
-                const auto* TexOrSamName = ShdrDesc.StaticSamplers[s].SamplerOrTextureName;
-
-                bool TextureOrSamplerFound = false;
-                for (const auto& Res : Resources)
-                {
-                    if( UseCombinedTextureSamplers && Res.GetInputType() == D3D_SIT_TEXTURE && Res.GetSRVDimension() != D3D_SRV_DIMENSION_BUFFER ||
-                       !UseCombinedTextureSamplers && Res.GetInputType() == D3D_SIT_SAMPLER)
-                    {
-                        TextureOrSamplerFound = (strcmp(Res.Name, TexOrSamName) == 0);
-                        if (TextureOrSamplerFound)
-                            break;
-                    }
-                }
-                if (!TextureOrSamplerFound)
-                {
-                    if (UseCombinedTextureSamplers)
-                        LOG_WARNING_MESSAGE("Static sampler specifies a texture '", TexOrSamName, "' that is not found in shader '", ShdrDesc.Name, '\'');
-                    else
-                        LOG_WARNING_MESSAGE("Static sampler '", TexOrSamName, "' is not found in shader '", ShdrDesc.Name, '\'');
-                }
+                if (UseCombinedTextureSamplers)
+                    LOG_WARNING_MESSAGE("Static sampler specifies a texture '", TexOrSamName, "' that is not found in shader '", ShdrDesc.Name, '\'');
+                else
+                    LOG_WARNING_MESSAGE("Static sampler '", TexOrSamName, "' is not found in shader '", ShdrDesc.Name, '\'');
             }
         }
 #endif
@@ -261,7 +259,7 @@ namespace Diligent
         for(size_t ResInd = 0; ResInd < Resources.size(); ++ResInd)
         {
             const auto& Res = Resources[ResInd];
-            switch( Res.GetInputType() )
+            switch (Res.GetInputType())
             {
                 case D3D_SIT_CBUFFER:
                 {
@@ -277,7 +275,7 @@ namespace Diligent
 
                 case D3D_SIT_TEXTURE:
                 {
-                    if( Res.GetSRVDimension() == D3D_SRV_DIMENSION_BUFFER )
+                    if (Res.GetSRVDimension() == D3D_SRV_DIMENSION_BUFFER)
                     {
                         OnNewBuffSRV( Res );
                     }
@@ -297,7 +295,7 @@ namespace Diligent
 
                 case D3D_SIT_UAV_RWTYPED:
                 {
-                    if( Res.GetSRVDimension() == D3D_SRV_DIMENSION_BUFFER )
+                    if (Res.GetSRVDimension() == D3D_SRV_DIMENSION_BUFFER)
                     {
                         OnNewBuffUAV( Res );
                     }
@@ -358,7 +356,7 @@ namespace Diligent
         }
 
         // Process texture SRVs. We need to do this after all samplers are initialized
-        for( auto TexSRVInd : TexSRVInds )
+        for (auto TexSRVInd : TexSRVInds)
         {
             OnNewTexSRV( Resources[TexSRVInd] );
         }

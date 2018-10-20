@@ -72,7 +72,7 @@ ShaderResourceBindingD3D11Impl::ShaderResourceBindingD3D11Impl( IReferenceCounte
         new (m_pResourceLayouts + s) ShaderResourceLayoutD3D11(*this);
         m_pResourceLayouts[s].Initialize(pShaderD3D11->GetResources(), VarTypes, _countof(VarTypes), m_pBoundResourceCaches[s], ResCacheDataAllocator, ResLayoutDataAllocator);
 
-        Resources.InitStaticSamplers(m_pBoundResourceCaches[s]);
+        Resources.SetStaticSamplers(m_pBoundResourceCaches[s]);
 
         m_ResourceLayoutIndex[ShaderInd] = s;
         m_ShaderTypeIndex[s] = static_cast<Int8>(ShaderInd);

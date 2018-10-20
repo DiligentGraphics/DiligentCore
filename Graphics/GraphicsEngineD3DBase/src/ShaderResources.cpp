@@ -161,15 +161,18 @@ void ShaderResources::CountResources(const SHADER_VARIABLE_TYPE* AllowedVarTypes
 Uint32 ShaderResources::FindAssignedSamplerId(const D3DShaderResourceAttribs& TexSRV, const char* SamplerSuffix)const
 {
     VERIFY_EXPR(SamplerSuffix != nullptr && *SamplerSuffix != 0);
-    VERIFY_EXPR(TexSRV.GetInputType() == D3D_SIT_TEXTURE);
+    VERIFY_EXPR(TexSRV.GetInputType() == D3D_SIT_TEXTURE && TexSRV.GetSRVDimension() != D3D_SRV_DIMENSION_BUFFER);
     auto NumSamplers = GetNumSamplers();
     for (Uint32 s = 0; s < NumSamplers; ++s)
     {
-        const auto &Sampler = GetSampler(s);
-        if( StreqSuff(Sampler.Name, TexSRV.Name, SamplerSuffix) )
+        const auto& Sampler = GetSampler(s);
+        if ( StreqSuff(Sampler.Name, TexSRV.Name, SamplerSuffix) )
         {
-            VERIFY(Sampler.GetVariableType() == TexSRV.GetVariableType(), "Inconsistent texture and sampler variable types");
-            VERIFY(Sampler.BindCount == TexSRV.BindCount || Sampler.BindCount == 1, "Sampler assigned to array \"", TexSRV.Name, "\" is expected to be scalar or have the same dimension (",TexSRV.BindCount,"). Actual sampler array dimension : ",  Sampler.BindCount);
+            DEV_CHECK_ERR(Sampler.GetVariableType() == TexSRV.GetVariableType(),
+                            "The type (", GetShaderVariableTypeLiteralName(TexSRV.GetVariableType()),") of texture SRV variable '", TexSRV.Name,
+                            "' is not consistent with the type (", GetShaderVariableTypeLiteralName(Sampler.GetVariableType()),
+                            ") of the sampler '", Sampler.Name, "' that is assigned to it");
+            DEV_CHECK_ERR(Sampler.BindCount == TexSRV.BindCount || Sampler.BindCount == 1, "Sampler '", Sampler.Name, "' assigned to texture '", TexSRV.Name, "' must be scalar or have the same array dimension (", TexSRV.BindCount, "). Actual sampler array dimension : ",  Sampler.BindCount);
             return s;
         }
     }
@@ -178,11 +181,12 @@ Uint32 ShaderResources::FindAssignedSamplerId(const D3DShaderResourceAttribs& Te
 
 bool ShaderResources::IsCompatibleWith(const ShaderResources &Res)const
 {
-    if (GetNumCBs()    != Res.GetNumCBs()    ||
-        GetNumTexSRV() != Res.GetNumTexSRV() ||
-        GetNumTexUAV() != Res.GetNumTexUAV() ||
-        GetNumBufSRV() != Res.GetNumBufSRV() ||
-        GetNumBufUAV() != Res.GetNumBufUAV())
+    if (GetNumCBs()      != Res.GetNumCBs()    ||
+        GetNumTexSRV()   != Res.GetNumTexSRV() ||
+        GetNumTexUAV()   != Res.GetNumTexUAV() ||
+        GetNumBufSRV()   != Res.GetNumBufSRV() ||
+        GetNumBufUAV()   != Res.GetNumBufUAV() ||
+        GetNumSamplers() != Res.GetNumSamplers())
         return false;
 
     bool IsCompatible = true;
@@ -191,32 +195,32 @@ bool ShaderResources::IsCompatibleWith(const ShaderResources &Res)const
 
         [&](const D3DShaderResourceAttribs& CB, Uint32 n)
         {
-            if(!CB.IsCompatibleWith(Res.GetCB(n)))
+            if (!CB.IsCompatibleWith(Res.GetCB(n)))
                 IsCompatible = false;
         },
         [&](const D3DShaderResourceAttribs& Sam, Uint32 n)
         {
-            if(!Sam.IsCompatibleWith(Res.GetSampler(n)))
+            if (!Sam.IsCompatibleWith(Res.GetSampler(n)))
                 IsCompatible = false;
         },
         [&](const D3DShaderResourceAttribs& TexSRV, Uint32 n)
         {
-            if(!TexSRV.IsCompatibleWith(Res.GetTexSRV(n)))
+            if (!TexSRV.IsCompatibleWith(Res.GetTexSRV(n)))
                 IsCompatible = false;
         },
         [&](const D3DShaderResourceAttribs& TexUAV, Uint32 n)
         {
-            if(!TexUAV.IsCompatibleWith(Res.GetTexUAV(n)))
+            if (!TexUAV.IsCompatibleWith(Res.GetTexUAV(n)))
                 IsCompatible = false;
         },
         [&](const D3DShaderResourceAttribs& BufSRV, Uint32 n)
         {
-            if(!BufSRV.IsCompatibleWith(Res.GetBufSRV(n)))
+            if (!BufSRV.IsCompatibleWith(Res.GetBufSRV(n)))
                 IsCompatible = false;
         },
         [&](const D3DShaderResourceAttribs& BufUAV, Uint32 n)
         {
-            if(!BufUAV.IsCompatibleWith(Res.GetBufUAV(n)))
+            if (!BufUAV.IsCompatibleWith(Res.GetBufUAV(n)))
                 IsCompatible = false;
         }
     );
@@ -225,7 +229,7 @@ bool ShaderResources::IsCompatibleWith(const ShaderResources &Res)const
 
 size_t ShaderResources::GetHash()const
 {
-    size_t hash = ComputeHash(GetNumCBs(), GetNumTexSRV(), GetNumTexUAV(), GetNumBufSRV(), GetNumBufUAV());
+    size_t hash = ComputeHash(GetNumCBs(), GetNumTexSRV(), GetNumTexUAV(), GetNumBufSRV(), GetNumBufUAV(), GetNumSamplers());
     ProcessResources(
         nullptr, 0,
         [&](const D3DShaderResourceAttribs& CB, Uint32)

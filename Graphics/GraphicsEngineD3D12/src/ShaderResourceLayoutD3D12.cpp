@@ -25,7 +25,6 @@
 
 #include "ShaderResourceLayoutD3D12.h"
 #include "ShaderResourceCacheD3D12.h"
-#include "D3DShaderResourceLoader.h"
 #include "BufferD3D12Impl.h"
 #include "BufferViewD3D12.h"
 #include "TextureD3D12Impl.h"
@@ -324,8 +323,8 @@ void ShaderResourceLayoutD3D12::Initialize(ID3D12Device*                        
 #define LOG_RESOURCE_BINDING_ERROR(ResType, pResource, VarName, ShaderName, ...)\
 {                                                                                                   \
     const auto &ResName = pResource->GetDesc().Name;                                                \
-    LOG_ERROR_MESSAGE( "Failed to bind ", ResType, " \"", ResName, "\" to variable \"", VarName,    \
-                        "\" in shader \"", ShaderName, "\". ", __VA_ARGS__ );                \
+    LOG_ERROR_MESSAGE( "Failed to bind ", ResType, " '", ResName, "' to variable '", VarName,    \
+                        "' in shader '", ShaderName, "'. ", __VA_ARGS__ );                \
 }
 
 
@@ -340,16 +339,16 @@ void ShaderResourceLayoutD3D12::D3D12Resource::CacheCB(IDeviceObject*           
     // We cannot use ValidatedCast<> here as the resource retrieved from the
     // resource mapping can be of wrong type
     RefCntAutoPtr<BufferD3D12Impl> pBuffD3D12(pBuffer, IID_BufferD3D12);
-    if( pBuffD3D12 )
+    if (pBuffD3D12)
     {
-        if( pBuffD3D12->GetDesc().BindFlags & BIND_UNIFORM_BUFFER )
+        if (pBuffD3D12->GetDesc().BindFlags & BIND_UNIFORM_BUFFER)
         {
-            if( Attribs.GetVariableType() != SHADER_VARIABLE_TYPE_DYNAMIC && DstRes.pObject != nullptr )
+            if (Attribs.GetVariableType() != SHADER_VARIABLE_TYPE_DYNAMIC && DstRes.pObject != nullptr)
             {
-                if(DstRes.pObject != pBuffD3D12)
+                if (DstRes.pObject != pBuffD3D12)
                 {
                     auto VarTypeStr = GetShaderVariableTypeLiteralName(Attribs.GetVariableType());
-                    LOG_ERROR_MESSAGE( "Non-null constant buffer is already bound to ", VarTypeStr, " shader variable \"", Attribs.GetPrintName(ArrayInd), "\" in shader \"", ParentResLayout.GetShaderName(), "\". Attempring to bind another constant buffer is an error and will be ignored. Use another shader resource binding instance or label the variable as dynamic." );
+                    LOG_ERROR_MESSAGE( "Non-null constant buffer is already bound to ", VarTypeStr, " shader variable '", Attribs.GetPrintName(ArrayInd), "' in shader '", ParentResLayout.GetShaderName(), "'. Attempting to bind another constant buffer is an error and will be ignored. Use another shader resource binding instance or label the variable as dynamic." );
                 }
 
                 // Do not update resource if one is already bound unless it is dynamic. This may be 
@@ -359,19 +358,19 @@ void ShaderResourceLayoutD3D12::D3D12Resource::CacheCB(IDeviceObject*           
 
             DstRes.Type = GetResType();
             DstRes.CPUDescriptorHandle = pBuffD3D12->GetCBVHandle();
-            VERIFY(DstRes.CPUDescriptorHandle.ptr != 0 || pBuffD3D12->GetDesc().Usage == USAGE_DYNAMIC, "No relevant CBV CPU descriptor handle");
+            VERIFY (DstRes.CPUDescriptorHandle.ptr != 0 || pBuffD3D12->GetDesc().Usage == USAGE_DYNAMIC, "No relevant CBV CPU descriptor handle");
             
-            if(ShdrVisibleHeapCPUDescriptorHandle.ptr != 0 )
+            if (ShdrVisibleHeapCPUDescriptorHandle.ptr != 0)
             {
                 // Dynamic resources are assigned descriptor in the GPU-visible heap at every draw call, and
                 // the descriptor is copied by the RootSignature when resources are committed
                 VERIFY(DstRes.pObject == nullptr, "Static and mutable resource descriptors must be copied only once");
 
-                ID3D12Device *pd3d12Device = ParentResLayout.m_pd3d12Device;
+                ID3D12Device* pd3d12Device = ParentResLayout.m_pd3d12Device;
                 pd3d12Device->CopyDescriptorsSimple(1, ShdrVisibleHeapCPUDescriptorHandle, DstRes.CPUDescriptorHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
             }
 
-            DstRes.pObject = pBuffD3D12;
+            DstRes.pObject = std::move(pBuffD3D12);
         }
         else
         {
@@ -435,10 +434,10 @@ void ShaderResourceLayoutD3D12::D3D12Resource::CacheResourceView(IDeviceObject* 
 #endif
         if (Attribs.GetVariableType() != SHADER_VARIABLE_TYPE_DYNAMIC && DstRes.pObject != nullptr)
         {
-            if(DstRes.pObject != pViewD3D12)
+            if (DstRes.pObject != pViewD3D12)
             {
                 auto VarTypeStr = GetShaderVariableTypeLiteralName(Attribs.GetVariableType());
-                LOG_ERROR_MESSAGE( "Non-null resource is already bound to ", VarTypeStr, " shader variable \"", Attribs.GetPrintName(ArrayIndex), "\" in shader \"", ParentResLayout.GetShaderName(), "\". Attempting to bind another resource or null is an error and will be ignored. Use another shader resource binding instance or label the variable as dynamic." );
+                LOG_ERROR_MESSAGE( "Non-null resource is already bound to ", VarTypeStr, " shader variable '", Attribs.GetPrintName(ArrayIndex), "' in shader '", ParentResLayout.GetShaderName(), "'. Attempting to bind another resource or null is an error and will be ignored. Use another shader resource binding instance or label the variable as dynamic." );
             }
 
             // Do not update resource if one is already bound unless it is dynamic. This may be 
@@ -450,18 +449,19 @@ void ShaderResourceLayoutD3D12::D3D12Resource::CacheResourceView(IDeviceObject* 
         DstRes.CPUDescriptorHandle = pViewD3D12->GetCPUDescriptorHandle();
         VERIFY(DstRes.CPUDescriptorHandle.ptr != 0, "No relevant D3D12 view");
 
-        if(ShdrVisibleHeapCPUDescriptorHandle.ptr != 0)
+        if (ShdrVisibleHeapCPUDescriptorHandle.ptr != 0)
         {
             // Dynamic resources are assigned descriptor in the GPU-visible heap at every draw call, and
             // the descriptor is copied by the RootSignature when resources are committed
             VERIFY(DstRes.pObject == nullptr, "Static and mutable resource descriptors must be copied only once");
 
-            ID3D12Device *pd3d12Device = ParentResLayout.m_pd3d12Device;
+            ID3D12Device* pd3d12Device = ParentResLayout.m_pd3d12Device;
             pd3d12Device->CopyDescriptorsSimple(1, ShdrVisibleHeapCPUDescriptorHandle, DstRes.CPUDescriptorHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
         }
-        DstRes.pObject = pViewD3D12;
-
+        
         BindSamplerProc(pViewD3D12);
+
+        DstRes.pObject = std::move(pViewD3D12);
     }
     else
     {
@@ -485,7 +485,7 @@ void ShaderResourceLayoutD3D12::D3D12Resource::CacheSampler(IDeviceObject*      
             if (DstSam.pObject != pSampler)
             {
                 auto VarTypeStr = GetShaderVariableTypeLiteralName(Attribs.GetVariableType());
-                LOG_ERROR_MESSAGE( "Non-null sampler is already bound to ", VarTypeStr, " shader variable \"", Attribs.GetPrintName(ArrayIndex), "\" in shader \"", ParentResLayout.GetShaderName(), "\". Attempting to bind another sampler is an error and will be ignored. Use another shader resource binding instance or label the variable as dynamic." );
+                LOG_ERROR_MESSAGE( "Non-null sampler is already bound to ", VarTypeStr, " shader variable '", Attribs.GetPrintName(ArrayIndex), "' in shader '", ParentResLayout.GetShaderName(), "'. Attempting to bind another sampler is an error and will be ignored. Use another shader resource binding instance or label the variable as dynamic." );
             }
                 
             // Do not update resource if one is already bound unless it is dynamic. This may be 
@@ -504,11 +504,11 @@ void ShaderResourceLayoutD3D12::D3D12Resource::CacheSampler(IDeviceObject*      
             // the descriptor is copied by the RootSignature when resources are committed
             VERIFY(DstSam.pObject == nullptr, "Static and mutable resource descriptors must be copied only once");
 
-            ID3D12Device *pd3d12Device = ParentResLayout.m_pd3d12Device;
+            ID3D12Device* pd3d12Device = ParentResLayout.m_pd3d12Device;
             pd3d12Device->CopyDescriptorsSimple(1, ShdrVisibleHeapCPUDescriptorHandle, DstSam.CPUDescriptorHandle, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
         }
 
-        DstSam.pObject = pSampler;
+        DstSam.pObject = std::move(pSamplerD3D12);
     }
     else
     {
@@ -522,7 +522,7 @@ const ShaderResourceLayoutD3D12::D3D12Resource& ShaderResourceLayoutD3D12::GetAs
     VERIFY(TexSrv.ValidSamplerAssigned(), "Texture SRV has no associated sampler");
     const auto& SamInfo = GetSampler(TexSrv.SamplerId);
     VERIFY(SamInfo.Attribs.GetVariableType() == TexSrv.Attribs.GetVariableType(), "Inconsistent texture and sampler variable types");
-    VERIFY(StreqSuff(SamInfo.Attribs.Name, TexSrv.Attribs.Name, m_pResources->GetCombinedSamplerSuffix()), "Sampler name \"", SamInfo.Attribs.Name, "\" does not match texture name \"", TexSrv.Attribs.Name, '\"');
+    VERIFY(StreqSuff(SamInfo.Attribs.Name, TexSrv.Attribs.Name, m_pResources->GetCombinedSamplerSuffix()), "Sampler name '", SamInfo.Attribs.Name, "' does not match texture name '", TexSrv.Attribs.Name, '\'');
     return SamInfo;
 }
 
@@ -572,7 +572,7 @@ void ShaderResourceLayoutD3D12::D3D12Resource::BindResource(IDeviceObject*      
     }
 #endif
 
-    if( pObj )
+    if (pObj)
     {
         switch (GetResType())
         {
@@ -585,7 +585,7 @@ void ShaderResourceLayoutD3D12::D3D12Resource::BindResource(IDeviceObject*      
                 {
                     if(ValidSamplerAssigned())
                     {
-                        auto &Sam = ParentResLayout.GetAssignedSampler(*this);
+                        auto& Sam = ParentResLayout.GetAssignedSampler(*this);
                         VERIFY( !Sam.Attribs.IsStaticSampler(), "Static samplers should never be assigned space in the cache" );
                         VERIFY_EXPR(Attribs.BindCount == Sam.Attribs.BindCount || Sam.Attribs.BindCount == 1);
                         auto SamplerArrInd = Sam.Attribs.BindCount > 1 ? ArrayIndex : 0;
@@ -617,7 +617,7 @@ void ShaderResourceLayoutD3D12::D3D12Resource::BindResource(IDeviceObject*      
                         }
                         else
                         {
-                            LOG_ERROR_MESSAGE( "Failed to bind sampler to variable \"", Sam.Attribs.Name, ". Sampler is not set in the texture view \"", pTexView->GetDesc().Name, "\"" );
+                            LOG_ERROR_MESSAGE( "Failed to bind sampler to variable '", Sam.Attribs.Name, ". Sampler is not set in the texture view '", pTexView->GetDesc().Name, '\'' );
                         }
                     }
                 });
@@ -646,17 +646,17 @@ void ShaderResourceLayoutD3D12::D3D12Resource::BindResource(IDeviceObject*      
     else
     {
         if (DstRes.pObject != nullptr && Attribs.GetVariableType() != SHADER_VARIABLE_TYPE_DYNAMIC)
-            LOG_ERROR_MESSAGE( "Shader variable \"", Attribs.Name, "\" in shader \"", ParentResLayout.GetShaderName(), "\" is not dynamic but is being reset to null. This is an error and may cause unpredicted behavior. Use another shader resource binding instance or label the variable as dynamic if you need to bind another resource." );
+            LOG_ERROR_MESSAGE( "Shader variable '", Attribs.Name, "' in shader '", ParentResLayout.GetShaderName(), "' is not dynamic but is being reset to null. This is an error and may cause unpredicted behavior. Use another shader resource binding instance or label the variable as dynamic if you need to bind another resource." );
 
         DstRes = ShaderResourceCacheD3D12::Resource{};
         if (ValidSamplerAssigned())
         {
-            auto &Sam = ParentResLayout.GetAssignedSampler(*this);
+            auto& Sam = ParentResLayout.GetAssignedSampler(*this);
             D3D12_CPU_DESCRIPTOR_HANDLE NullHandle = {0};
             auto SamplerArrInd = Sam.Attribs.BindCount > 1 ? ArrayIndex : 0;
             auto& DstSam = ResourceCache.GetRootTable(Sam.RootIndex).GetResource(Sam.OffsetFromTableStart + SamplerArrInd, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, ParentResLayout.m_pResources->GetShaderType());
             if (DstSam.pObject != nullptr && Sam.Attribs.GetVariableType() != SHADER_VARIABLE_TYPE_DYNAMIC)
-                LOG_ERROR_MESSAGE( "Sampler variable \"", Sam.Attribs.Name, "\" in shader \"", ParentResLayout.GetShaderName(), "\" is not dynamic but is being reset to null. This is an error and may cause unpredicted behavior. Use another shader resource binding instance or label the variable as dynamic if you need to bind another sampler." );
+                LOG_ERROR_MESSAGE( "Sampler variable '", Sam.Attribs.Name, "' in shader '", ParentResLayout.GetShaderName(), "' is not dynamic but is being reset to null. This is an error and may cause unpredicted behavior. Use another shader resource binding instance or label the variable as dynamic if you need to bind another sampler." );
             DstSam = ShaderResourceCacheD3D12::Resource{};
         }
     }
@@ -666,7 +666,7 @@ bool ShaderResourceLayoutD3D12::D3D12Resource::IsBound(Uint32 ArrayIndex, const 
 {
     VERIFY_EXPR(ArrayIndex < Attribs.BindCount);
 
-    if( RootIndex < ResourceCache.GetNumRootTables() )
+    if (RootIndex < ResourceCache.GetNumRootTables())
     {
         const auto& RootTable = ResourceCache.GetRootTable(RootIndex);
         if(OffsetFromTableStart + ArrayIndex < RootTable.GetSize())
@@ -710,7 +710,7 @@ void ShaderResourceLayoutD3D12::CopyStaticResourceDesriptorHandles(const ShaderR
             // D3D12_DESCRIPTOR_RANGE_TYPE_CBV = 2
             const auto& SrcRes = SrcCache.GetRootTable(RangeType).GetResource(BindPoint, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, m_pResources->GetShaderType());
             if( !SrcRes.pObject )
-                LOG_ERROR_MESSAGE( "No resource assigned to static shader variable \"", res.Attribs.GetPrintName(ArrInd), "\" in shader \"", GetShaderName(), "\"." );
+                LOG_ERROR_MESSAGE( "No resource assigned to static shader variable '", res.Attribs.GetPrintName(ArrInd), "' in shader '", GetShaderName(), "'." );
             // Destination resource is at the root index and offset defined by the resource layout
             auto& DstRes = DstCache.GetRootTable(res.RootIndex).GetResource(res.OffsetFromTableStart + ArrInd, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, m_pResources->GetShaderType());
         
@@ -761,7 +761,7 @@ void ShaderResourceLayoutD3D12::CopyStaticResourceDesriptorHandles(const ShaderR
             // (D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER = 3), at offset BindPoint 
             const auto& SrcSampler = SrcCache.GetRootTable(D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER).GetResource(BindPoint, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, m_pResources->GetShaderType());
             if( !SrcSampler.pObject )
-                LOG_ERROR_MESSAGE( "No sampler assigned to static shader variable \"", SamInfo.Attribs.GetPrintName(ArrInd), "\" in shader \"", GetShaderName(), "\"." );
+                LOG_ERROR_MESSAGE( "No sampler assigned to static shader variable '", SamInfo.Attribs.GetPrintName(ArrInd), "' in shader '", GetShaderName(), "'." );
             auto &DstSampler = DstCache.GetRootTable(SamInfo.RootIndex).GetResource(SamInfo.OffsetFromTableStart + ArrInd, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, m_pResources->GetShaderType());
             
             if(DstSampler.pObject != SrcSampler.pObject)
@@ -811,20 +811,20 @@ void ShaderResourceLayoutD3D12::dvpVerifyBindings(ShaderResourceCacheD3D12& Reso
                 if( !CachedRes.pObject || 
                      // Dynamic buffers do not have CPU descriptor handle as they do not keep D3D12 buffer, and space is allocated from the GPU ring buffer
                      CachedRes.CPUDescriptorHandle.ptr == 0 && !(CachedRes.Type==CachedResourceType::CBV && CachedRes.pObject.RawPtr<const BufferD3D12Impl>()->GetDesc().Usage == USAGE_DYNAMIC) )
-                    LOG_ERROR_MESSAGE( "No resource is bound to ", GetShaderVariableTypeLiteralName(res.Attribs.GetVariableType()), " variable \"", res.Attribs.GetPrintName(ArrInd), "\" in shader \"", GetShaderName(), "\"" );
+                    LOG_ERROR_MESSAGE( "No resource is bound to ", GetShaderVariableTypeLiteralName(res.Attribs.GetVariableType()), " variable '", res.Attribs.GetPrintName(ArrInd), "' in shader '", GetShaderName(), "'" );
                 
                 if (res.Attribs.BindCount > 1 && res.ValidSamplerAssigned())
                 {
                     // Verify that if single sampler is used for all texture array elements, all samplers set in the resource views are consistent
                     const auto &SamInfo = const_cast<ShaderResourceLayoutD3D12*>(this)->GetAssignedSampler(res);
-                    if(SamInfo.Attribs.BindCount == 1)
+                    if (SamInfo.Attribs.BindCount == 1)
                     {
                         const auto &CachedSampler = ResourceCache.GetRootTable(SamInfo.RootIndex).GetResource(SamInfo.OffsetFromTableStart, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, m_pResources->GetShaderType());
-                        if( auto *pTexView = CachedRes.pObject.RawPtr<const ITextureView>() )
+                        if (auto *pTexView = CachedRes.pObject.RawPtr<const ITextureView>())
                         {
                             auto *pSampler = const_cast<ITextureView*>(pTexView)->GetSampler();
                             if (pSampler != nullptr && CachedSampler.pObject != nullptr && CachedSampler.pObject != pSampler)
-                                LOG_ERROR_MESSAGE( "All elements of texture array \"", res.Attribs.Name, "\" in shader \"", GetShaderName(), "\" share the same sampler. However, the sampler set in view for element ", ArrInd, " does not match bound sampler. This may cause incorrect behavior on GL platform."  );
+                                LOG_ERROR_MESSAGE( "All elements of texture array '", res.Attribs.Name, "' in shader '", GetShaderName(), "' share the same sampler. However, the sampler set in view for element ", ArrInd, " does not match bound sampler. This may cause incorrect behavior on GL platform."  );
                         }
                     }
                 }
@@ -844,7 +844,7 @@ void ShaderResourceLayoutD3D12::dvpVerifyBindings(ShaderResourceCacheD3D12& Reso
                         }
                         else
                         {
-                            if(res.Attribs.GetVariableType() == SHADER_VARIABLE_TYPE_DYNAMIC)
+                            if (res.Attribs.GetVariableType() == SHADER_VARIABLE_TYPE_DYNAMIC)
                                 VERIFY(ShdrVisibleHeapCPUDescriptorHandle.ptr == 0, "Dynamic resources of a shader resource binding should be assigned shader visible descriptor space at every draw call");
                             else
                                 VERIFY(ShdrVisibleHeapCPUDescriptorHandle.ptr != 0, "Non-dynamics resources of a shader resource binding must be assigned shader visible descriptor space");
@@ -865,15 +865,15 @@ void ShaderResourceLayoutD3D12::dvpVerifyBindings(ShaderResourceCacheD3D12& Reso
                 VERIFY(!SamInfo.Attribs.IsStaticSampler(), "Static samplers should never be assigned space in the cache" );
                 VERIFY(SamInfo.Attribs.IsValidBindPoint(), "Sampler bind point must be valid");
                 
-                for(Uint32 ArrInd = 0; ArrInd < SamInfo.Attribs.BindCount; ++ArrInd)
+                for (Uint32 ArrInd = 0; ArrInd < SamInfo.Attribs.BindCount; ++ArrInd)
                 {
                     const auto &CachedSampler = ResourceCache.GetRootTable(SamInfo.RootIndex).GetResource(SamInfo.OffsetFromTableStart + ArrInd, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, m_pResources->GetShaderType());
-                    if( CachedSampler.pObject )
+                    if (CachedSampler.pObject)
                         VERIFY(CachedSampler.Type == CachedResourceType::Sampler, "Incorrect cached sampler type");
                     else
                         VERIFY(CachedSampler.Type == CachedResourceType::Unknown, "Unexpected cached sampler type");
-                    if( !CachedSampler.pObject || CachedSampler.CPUDescriptorHandle.ptr == 0 )
-                        LOG_ERROR_MESSAGE("No sampler is assigned to texture variable \"", res.Attribs.GetPrintName(ArrInd), "\" in shader \"", GetShaderName(), "\"");
+                    if (!CachedSampler.pObject || CachedSampler.CPUDescriptorHandle.ptr == 0)
+                        LOG_ERROR_MESSAGE("No sampler is assigned to texture variable '", res.Attribs.GetPrintName(ArrInd), "' in shader '", GetShaderName(), "'");
 
 #ifdef _DEBUG
                     {
@@ -884,7 +884,7 @@ void ShaderResourceLayoutD3D12::dvpVerifyBindings(ShaderResourceCacheD3D12& Reso
                         }
                         else if (ResourceCache.DbgGetContentType() == ShaderResourceCacheD3D12::DbgCacheContentType::SRBResources)
                         {
-                            if(SamInfo.Attribs.GetVariableType() == SHADER_VARIABLE_TYPE_DYNAMIC)
+                            if (SamInfo.Attribs.GetVariableType() == SHADER_VARIABLE_TYPE_DYNAMIC)
                                 VERIFY(ShdrVisibleHeapCPUDescriptorHandle.ptr == 0, "Dynamic resources of a shader resource binding should be assigned shader visible descriptor space at every draw call");
                             else
                                 VERIFY(ShdrVisibleHeapCPUDescriptorHandle.ptr != 0, "Non-dynamics resources of a shader resource binding must be assigned shader visible descriptor space");
@@ -899,20 +899,20 @@ void ShaderResourceLayoutD3D12::dvpVerifyBindings(ShaderResourceCacheD3D12& Reso
             }
         }
 
-        for(Uint32 s=0; s < GetSamplerCount(VarType); ++s)
+        for (Uint32 s=0; s < GetSamplerCount(VarType); ++s)
         {
             const auto &sam = GetSampler(VarType, s);
             VERIFY(sam.Attribs.GetVariableType() == VarType, "Unexpected sampler variable type");
             
-            for(Uint32 ArrInd = 0; ArrInd < sam.Attribs.BindCount; ++ArrInd)
+            for (Uint32 ArrInd = 0; ArrInd < sam.Attribs.BindCount; ++ArrInd)
             {
                 const auto &CachedSampler = ResourceCache.GetRootTable(sam.RootIndex).GetResource(sam.OffsetFromTableStart + ArrInd, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, m_pResources->GetShaderType());
-                if( CachedSampler.pObject )
+                if (CachedSampler.pObject)
                     VERIFY(CachedSampler.Type == CachedResourceType::Sampler, "Incorrect cached sampler type");
                 else
                     VERIFY(CachedSampler.Type == CachedResourceType::Unknown, "Unexpected cached sampler type");
-                if( !CachedSampler.pObject || CachedSampler.CPUDescriptorHandle.ptr == 0 )
-                    LOG_ERROR_MESSAGE( "No sampler is bound to sampler variable \"", sam.Attribs.GetPrintName(ArrInd), "\" in shader \"", GetShaderName(), "\"" );
+                if (!CachedSampler.pObject || CachedSampler.CPUDescriptorHandle.ptr == 0)
+                    LOG_ERROR_MESSAGE( "No sampler is bound to sampler variable '", sam.Attribs.GetPrintName(ArrInd), "' in shader '", GetShaderName(), "'" );
             }
         }
     }

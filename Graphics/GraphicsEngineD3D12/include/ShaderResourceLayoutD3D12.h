@@ -135,10 +135,10 @@ public:
     // sizeof(D3D12Resource) == 24 (x64)
     struct D3D12Resource final
     {
-        D3D12Resource             (const D3D12Resource&) = delete;
-        D3D12Resource             (D3D12Resource&&)      = delete;
-        D3D12Resource& operator = (const D3D12Resource&) = delete;
-        D3D12Resource& operator = (D3D12Resource&&)      = delete;
+        D3D12Resource             (const D3D12Resource&)  = delete;
+        D3D12Resource             (      D3D12Resource&&) = delete;
+        D3D12Resource& operator = (const D3D12Resource&)  = delete;
+        D3D12Resource& operator = (      D3D12Resource&&) = delete;
 
         static constexpr const Uint32 ResourceTypeBits = 3;
         static constexpr const Uint32 RootIndexBits    = 16 - ResourceTypeBits;
@@ -248,7 +248,7 @@ public:
 
 private:
     const D3D12Resource& GetAssignedSampler(const D3D12Resource& TexSrv)const;
-    D3D12Resource& GetAssignedSampler(const D3D12Resource& TexSrv);
+          D3D12Resource& GetAssignedSampler(const D3D12Resource& TexSrv);
 
     const Char* GetShaderName()const;
 

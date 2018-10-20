@@ -47,7 +47,7 @@ public:
     ShaderResourceLayoutD3D11(IObject& Owner);
     ~ShaderResourceLayoutD3D11();
 
-    // No copies or moves
+    // No copies, only moves are allowed
     ShaderResourceLayoutD3D11             (const ShaderResourceLayoutD3D11&)  = delete;
     ShaderResourceLayoutD3D11& operator = (const ShaderResourceLayoutD3D11&)  = delete;
     ShaderResourceLayoutD3D11             (      ShaderResourceLayoutD3D11&&) = default;
@@ -57,12 +57,12 @@ public:
                                         const SHADER_VARIABLE_TYPE* VarTypes, 
                                         Uint32                      NumVarTypes);
 
-    void Initialize(const std::shared_ptr<const ShaderResourcesD3D11>& pSrcResources,
-                    const SHADER_VARIABLE_TYPE*                        VarTypes, 
-                    Uint32                                             NumVarTypes, 
-                    ShaderResourceCacheD3D11&                          ResourceCache,
-                    IMemoryAllocator&                                  ResCacheDataAllocator,
-                    IMemoryAllocator&                                  ResLayoutDataAllocator);
+    void Initialize(std::shared_ptr<const ShaderResourcesD3D11> pSrcResources,
+                    const SHADER_VARIABLE_TYPE*                 VarTypes, 
+                    Uint32                                      NumVarTypes, 
+                    ShaderResourceCacheD3D11&                   ResourceCache,
+                    IMemoryAllocator&                           ResCacheDataAllocator,
+                    IMemoryAllocator&                           ResLayoutDataAllocator);
 
     void CopyResources(ShaderResourceCacheD3D11& DstCache);
 
@@ -220,7 +220,10 @@ public:
 
 private:
 
-    const Char* GetShaderName()const;
+    const Char* GetShaderName()const
+    {
+        return m_pResources->GetShaderName();
+    }
 
     // No need to use shared pointer, as the resource cache is either part of the same
     // ShaderD3D11Impl object, or ShaderResourceBindingD3D11Impl object

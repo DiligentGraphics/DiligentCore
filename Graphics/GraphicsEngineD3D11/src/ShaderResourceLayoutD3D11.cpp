@@ -32,7 +32,6 @@
 #include "TextureBaseD3D11.h"
 #include "TextureViewD3D11.h"
 #include "SamplerD3D11Impl.h"
-#include "D3DShaderResourceLoader.h"
 #include "ShaderD3D11Impl.h"
 
 namespace Diligent
@@ -46,7 +45,7 @@ ShaderResourceLayoutD3D11::ShaderResourceLayoutD3D11(IObject& Owner) :
 ShaderResourceLayoutD3D11::~ShaderResourceLayoutD3D11()
 {
     HandleResources(
-        [&](ConstBuffBindInfo&cb)
+        [&](ConstBuffBindInfo& cb)
         {
             cb.~ConstBuffBindInfo();
         },
@@ -93,23 +92,23 @@ size_t ShaderResourceLayoutD3D11::GetRequiredMemorySize(const ShaderResourcesD3D
     return MemSize;
 }
 
-void ShaderResourceLayoutD3D11::Initialize(const std::shared_ptr<const ShaderResourcesD3D11>& pSrcResources,
-                                           const SHADER_VARIABLE_TYPE*                        VarTypes, 
-                                           Uint32                                             NumVarTypes, 
-                                           ShaderResourceCacheD3D11&                          ResourceCache,
-                                           IMemoryAllocator&                                  ResCacheDataAllocator,
-                                           IMemoryAllocator&                                  ResLayoutDataAllocator)
+void ShaderResourceLayoutD3D11::Initialize(std::shared_ptr<const ShaderResourcesD3D11> pSrcResources,
+                                           const SHADER_VARIABLE_TYPE*                 VarTypes, 
+                                           Uint32                                      NumVarTypes, 
+                                           ShaderResourceCacheD3D11&                   ResourceCache,
+                                           IMemoryAllocator&                           ResCacheDataAllocator,
+                                           IMemoryAllocator&                           ResLayoutDataAllocator)
 {
     // http://diligentgraphics.com/diligent-engine/architecture/d3d11/shader-resource-layout#Shader-Resource-Layout-Initialization
 
-    m_pResources = pSrcResources;
+    m_pResources = std::move(pSrcResources);
     m_pResourceCache = &ResourceCache;
 
     auto AllowedTypeBits = GetAllowedTypeBits(VarTypes, NumVarTypes);
 
     // Count total number of resources of allowed types
     Uint32 NumCBs, NumTexSRVs, NumTexUAVs, NumBufSRVs, NumBufUAVs, NumSamplers;
-    pSrcResources->CountResources(VarTypes, NumVarTypes, NumCBs, NumTexSRVs, NumTexUAVs, NumBufSRVs, NumBufUAVs, NumSamplers);
+    m_pResources->CountResources(VarTypes, NumVarTypes, NumCBs, NumTexSRVs, NumTexUAVs, NumBufSRVs, NumBufUAVs, NumSamplers);
 
     // Initialize offsets
     m_TexSRVsOffset        = 0                + static_cast<Uint16>( NumCBs      * sizeof(ConstBuffBindInfo));
@@ -119,7 +118,7 @@ void ShaderResourceLayoutD3D11::Initialize(const std::shared_ptr<const ShaderRes
     m_SamplerOffset        = m_BuffSRVsOffset + static_cast<Uint16>( NumBufSRVs  * sizeof(BuffSRVBindInfo)  );
     auto MemorySize        = m_SamplerOffset  +                      NumSamplers * sizeof(SamplerBindInfo)   ;
 
-    VERIFY_EXPR(MemorySize == GetRequiredMemorySize(*pSrcResources, VarTypes, NumVarTypes));
+    VERIFY_EXPR(MemorySize == GetRequiredMemorySize(*m_pResources, VarTypes, NumVarTypes));
 
     if( MemorySize )
     {
@@ -152,7 +151,7 @@ void ShaderResourceLayoutD3D11::Initialize(const std::shared_ptr<const ShaderRes
     Uint32 NumSRVSlots = 0;
     Uint32 NumSamplerSlots = 0;
     Uint32 NumUAVSlots = 0;
-    pSrcResources->ProcessResources(
+    m_pResources->ProcessResources(
         VarTypes, NumVarTypes,
 
         [&](const D3DShaderResourceAttribs& CB, Uint32)
@@ -161,7 +160,7 @@ void ShaderResourceLayoutD3D11::Initialize(const std::shared_ptr<const ShaderRes
 
             // Initialize current CB in place, increment CB counter
             new (&GetCB(cb++)) ConstBuffBindInfo( CB, *this );
-            NumCBSlots = std::max(NumCBSlots, static_cast<Uint32>(CB.BindPoint + CB.BindCount));
+            NumCBSlots = std::max(NumCBSlots, Uint32{CB.BindPoint} + Uint32{CB.BindCount});
         },
 
         [&](const D3DShaderResourceAttribs& Sampler, Uint32)
@@ -173,7 +172,7 @@ void ShaderResourceLayoutD3D11::Initialize(const std::shared_ptr<const ShaderRes
             {
                 // Initialize current sampler in place, increment sampler counter
                 new (&GetSampler(sam++)) SamplerBindInfo( Sampler, *this );
-                NumSamplerSlots = std::max(NumSamplerSlots, static_cast<Uint32>(Sampler.BindPoint + Sampler.BindCount));
+                NumSamplerSlots = std::max(NumSamplerSlots, Uint32{Sampler.BindPoint} + Uint32{Sampler.BindCount});
             }
         },
 
@@ -205,7 +204,7 @@ void ShaderResourceLayoutD3D11::Initialize(const std::shared_ptr<const ShaderRes
 
             // Initialize tex SRV in place, increment counter of tex SRVs
             new (&GetTexSRV(texSrv++)) TexSRVBindInfo( TexSRV, AssignedSamplerIndex, *this );
-            NumSRVSlots = std::max(NumSRVSlots, static_cast<Uint32>(TexSRV.BindPoint + TexSRV.BindCount));
+            NumSRVSlots = std::max(NumSRVSlots, Uint32{TexSRV.BindPoint} + Uint32{TexSRV.BindCount});
         },
 
         [&](const D3DShaderResourceAttribs& TexUAV, Uint32)
@@ -214,7 +213,7 @@ void ShaderResourceLayoutD3D11::Initialize(const std::shared_ptr<const ShaderRes
              
             // Initialize tex UAV in place, increment counter of tex UAVs
             new (&GetTexUAV(texUav++)) TexUAVBindInfo( TexUAV, *this );
-            NumUAVSlots = std::max(NumUAVSlots, static_cast<Uint32>(TexUAV.BindPoint + TexUAV.BindCount));
+            NumUAVSlots = std::max(NumUAVSlots, Uint32{TexUAV.BindPoint} + Uint32{TexUAV.BindCount});
         },
 
         [&](const D3DShaderResourceAttribs& BuffSRV, Uint32)
@@ -223,7 +222,7 @@ void ShaderResourceLayoutD3D11::Initialize(const std::shared_ptr<const ShaderRes
             
             // Initialize buff SRV in place, increment counter of buff SRVs
             new (&GetBufSRV(bufSrv++)) BuffSRVBindInfo( BuffSRV, *this );
-            NumSRVSlots = std::max(NumSRVSlots, static_cast<Uint32>(BuffSRV.BindPoint + BuffSRV.BindCount));
+            NumSRVSlots = std::max(NumSRVSlots, Uint32{BuffSRV.BindPoint} + Uint32{BuffSRV.BindCount});
         },
 
         [&](const D3DShaderResourceAttribs& BuffUAV, Uint32)
@@ -232,9 +231,16 @@ void ShaderResourceLayoutD3D11::Initialize(const std::shared_ptr<const ShaderRes
             
             // Initialize buff UAV in place, increment counter of buff UAVs
             new (&GetBufUAV(bufUav++)) BuffUAVBindInfo( BuffUAV, *this );
-            NumUAVSlots = std::max(NumUAVSlots, static_cast<Uint32>(BuffUAV.BindPoint + BuffUAV.BindCount));
+            NumUAVSlots = std::max(NumUAVSlots, Uint32{BuffUAV.BindPoint} + Uint32{BuffUAV.BindCount});
         }
     );
+
+    VERIFY(cb     == m_NumCBs,      "Not all CBs are initialized which will cause a crash when dtor is called");
+    VERIFY(texSrv == m_NumTexSRVs,  "Not all Tex SRVs are initialized which will cause a crash when dtor is called");
+    VERIFY(texUav == m_NumTexUAVs,  "Not all Tex UAVs are initialized which will cause a crash when dtor is called");
+    VERIFY(bufSrv == m_NumBufSRVs,  "Not all Buf SRVs are initialized which will cause a crash when dtor is called");
+    VERIFY(bufUav == m_NumBufUAVs,  "Not all Buf UAVs are initialized which will cause a crash when dtor is called");
+    VERIFY(sam    == m_NumSamplers, "Not all samplers are initialized which will cause a crash when dtor is called");
 
     // Shader resource cache in the SRB is initialized by the constructor of ShaderResourceBindingD3D11Impl to
     // hold all variable types. The corresponding layout in the SRB is initialized to keep mutable and dynamic 
@@ -245,23 +251,16 @@ void ShaderResourceLayoutD3D11::Initialize(const std::shared_ptr<const ShaderRes
         // NOTE that here we are using max bind points required to cache only the shader variables of allowed types!
         m_pResourceCache->Initialize(NumCBSlots, NumSRVSlots, NumSamplerSlots, NumUAVSlots, ResCacheDataAllocator);
     }
-
-    VERIFY(cb     == m_NumCBs,      "Not all CBs are initialized which will cause a crash when dtor is called");
-    VERIFY(texSrv == m_NumTexSRVs,  "Not all Tex SRVs are initialized which will cause a crash when dtor is called");
-    VERIFY(texUav == m_NumTexUAVs,  "Not all Tex UAVs are initialized which will cause a crash when dtor is called");
-    VERIFY(bufSrv == m_NumBufSRVs,  "Not all Buf SRVs are initialized which will cause a crash when dtor is called");
-    VERIFY(bufUav == m_NumBufUAVs,  "Not all Buf UAVs are initialized which will cause a crash when dtor is called");
-    VERIFY(sam    == m_NumSamplers, "Not all samplers are initialized which will cause a crash when dtor is called");
 }
 
 void ShaderResourceLayoutD3D11::CopyResources(ShaderResourceCacheD3D11& DstCache)
 {
     VERIFY(m_pResourceCache, "Resource cache must not be null");
 
-    VERIFY( DstCache.GetCBCount()      >= m_pResourceCache->GetCBCount(), "Dst cache is not large enough to contain all CBs" );
-    VERIFY( DstCache.GetSRVCount()     >= m_pResourceCache->GetSRVCount(), "Dst cache is not large enough to contain all SRVs" );
+    VERIFY( DstCache.GetCBCount()      >= m_pResourceCache->GetCBCount(),      "Dst cache is not large enough to contain all CBs" );
+    VERIFY( DstCache.GetSRVCount()     >= m_pResourceCache->GetSRVCount(),     "Dst cache is not large enough to contain all SRVs" );
     VERIFY( DstCache.GetSamplerCount() >= m_pResourceCache->GetSamplerCount(), "Dst cache is not large enough to contain all samplers" );
-    VERIFY( DstCache.GetUAVCount()     >= m_pResourceCache->GetUAVCount(), "Dst cache is not large enough to contain all UAVs" );
+    VERIFY( DstCache.GetUAVCount()     >= m_pResourceCache->GetUAVCount(),     "Dst cache is not large enough to contain all UAVs" );
 
     ShaderResourceCacheD3D11::CachedCB*       CachedCBs          = nullptr;
     ID3D11Buffer**                            d3d11CBs           = nullptr;
@@ -358,61 +357,52 @@ void ShaderResourceLayoutD3D11::CopyResources(ShaderResourceCacheD3D11& DstCache
 do{                                                                                       \
     const auto* ResName = pResource->GetDesc().Name;                                      \
     if(Attribs.BindCount>1)                                                               \
-        LOG_ERROR_MESSAGE( "Failed to bind ", ResType, " \"", ResName, "\" to variable \"", Attribs.Name,\
-                           "[", ArrayInd, "]\" in shader \"", ShaderName, "\". ", __VA_ARGS__ );         \
+        LOG_ERROR_MESSAGE( "Failed to bind ", ResType, " '", ResName, "' to variable '", Attribs.Name,\
+                           "[", ArrayInd, "]' in shader '", ShaderName, "'. ", __VA_ARGS__ );         \
     else                                                                                                 \
-        LOG_ERROR_MESSAGE( "Failed to bind ", ResType, " \"", ResName, "\" to variable \"", Attribs.Name,\
-                           "\" in shader \"", ShaderName, "\". ", __VA_ARGS__ );                         \
+        LOG_ERROR_MESSAGE( "Failed to bind ", ResType, " '", ResName, "' to variable '", Attribs.Name,\
+                           "' in shader '", ShaderName, "'. ", __VA_ARGS__ );                         \
 }while(false)
 
 void ShaderResourceLayoutD3D11::ConstBuffBindInfo::BindResource(IDeviceObject* pBuffer,
                                                                 Uint32         ArrayIndex)
 {
-    auto &pResourceCache = m_ParentResLayout.m_pResourceCache;
-    VERIFY(pResourceCache, "Resource cache is null");
+    VERIFY(m_ParentResLayout.m_pResourceCache != nullptr, "Resource cache is null");
     DEV_CHECK_ERR(ArrayIndex < Attribs.BindCount, "Array index (", ArrayIndex, ") is out of range for variable '", Attribs.Name, "'. Max allowed index: ", Attribs.BindCount);
+    auto& ResourceCache = *m_ParentResLayout.m_pResourceCache;
 
-    RefCntAutoPtr<BufferD3D11Impl> pBuffD3D11Impl;
-    if( pBuffer )
-    {
-        // We cannot use ValidatedCast<> here as the resource retrieved from the
-        // resource mapping can be of wrong type
-        IBufferD3D11 *pBuffD3D11 = nullptr;
-        pBuffer->QueryInterface(IID_BufferD3D11, reinterpret_cast<IObject**>(&pBuffD3D11));
-        if( pBuffD3D11 )
-        {
-            pBuffD3D11Impl.Attach(ValidatedCast<BufferD3D11Impl>(pBuffD3D11));
-            if( !(pBuffD3D11Impl->GetDesc().BindFlags & BIND_UNIFORM_BUFFER) )
-            {
-                pBuffD3D11Impl.Release();
-                LOG_RESOURCE_BINDING_ERROR("buffer", pBuffer, Attribs, ArrayIndex, m_ParentResLayout.GetShaderName(), "Buffer was not created with BIND_UNIFORM_BUFFER flag.");
-            }
-        }
-        else
-        {
-            LOG_RESOURCE_BINDING_ERROR("buffer", pBuffer, Attribs, ArrayIndex, m_ParentResLayout.GetShaderName(), "Incorrect resource type: buffer is expected.");
-        }
-    }
-
+    // We cannot use ValidatedCast<> here as the resource retrieved from the
+    // resource mapping can be of wrong type
+    RefCntAutoPtr<BufferD3D11Impl> pBuffD3D11Impl(pBuffer, IID_BufferD3D11);
 #ifdef DEVELOPMENT
-    if( Attribs.GetVariableType() != SHADER_VARIABLE_TYPE_DYNAMIC)
+    if (pBuffer && !pBuffD3D11Impl)
+        LOG_RESOURCE_BINDING_ERROR("buffer", pBuffer, Attribs, ArrayIndex, m_ParentResLayout.GetShaderName(), "Incorrect resource type: buffer is expected.");
+
+    if (pBuffD3D11Impl && (pBuffD3D11Impl->GetDesc().BindFlags & BIND_UNIFORM_BUFFER) == 0)
     {
-        auto &CachedCB = pResourceCache->GetCB(Attribs.BindPoint + ArrayIndex);
-        if( CachedCB.pBuff != nullptr && CachedCB.pBuff != pBuffD3D11Impl)
+        LOG_RESOURCE_BINDING_ERROR("buffer", pBuffer, Attribs, ArrayIndex, m_ParentResLayout.GetShaderName(), "Buffer was not created with BIND_UNIFORM_BUFFER flag.");
+        pBuffD3D11Impl.Release();
+    }
+       
+    if (Attribs.GetVariableType() != SHADER_VARIABLE_TYPE_DYNAMIC)
+    {
+        auto& CachedCB = ResourceCache.GetCB(Attribs.BindPoint + ArrayIndex);
+        if (CachedCB.pBuff != nullptr && CachedCB.pBuff != pBuffD3D11Impl)
         {
             auto VarTypeStr = GetShaderVariableTypeLiteralName(Attribs.GetVariableType());
-            LOG_ERROR_MESSAGE( "Non-null constant buffer is already bound to ", VarTypeStr, " shader variable \"", Attribs.GetPrintName(ArrayIndex), "\" in shader \"", m_ParentResLayout.GetShaderName(), "\". Attempting to bind another resource or null is an error and may cause unpredicted behavior. Use another shader resource binding instance or label the variable as dynamic." );
+            LOG_ERROR_MESSAGE( "Non-null constant buffer is already bound to ", VarTypeStr, " shader variable '", Attribs.GetPrintName(ArrayIndex), "' in shader '", m_ParentResLayout.GetShaderName(), "'. Attempting to bind another resource or null is an error and may cause unpredicted behavior. Use another shader resource binding instance or label the variable as dynamic." );
         }
     }
 #endif
-    pResourceCache->SetCB(Attribs.BindPoint + ArrayIndex, std::move(pBuffD3D11Impl) );
+
+    ResourceCache.SetCB(Attribs.BindPoint + ArrayIndex, std::move(pBuffD3D11Impl) );
 }
 
 
 
 bool ShaderResourceLayoutD3D11::ConstBuffBindInfo::IsBound(Uint32 ArrayIndex)
 {
-    auto &pResourceCache = m_ParentResLayout.m_pResourceCache;
+    auto* pResourceCache = m_ParentResLayout.m_pResourceCache;
     VERIFY(pResourceCache, "Resource cache is null");
     VERIFY_EXPR(ArrayIndex < Attribs.BindCount);
 
@@ -424,12 +414,12 @@ bool ShaderResourceLayoutD3D11::ConstBuffBindInfo::IsBound(Uint32 ArrayIndex)
 #ifdef DEVELOPMENT
 template<typename TResourceViewType, ///< Type of the view (ITextureViewD3D11 or IBufferViewD3D11)
          typename TViewTypeEnum>     ///< Type of the expected view enum
-bool dbgVerifyViewType( const char *ViewTypeName,
-                        TResourceViewType pViewD3D11,
+bool dbgVerifyViewType( const char*                     ViewTypeName,
+                        TResourceViewType               pViewD3D11,
                         const D3DShaderResourceAttribs& Attribs, 
-                        Uint32 ArrayIndex,
-                        TViewTypeEnum dbgExpectedViewType,
-                        const String &ShaderName )
+                        Uint32                          ArrayIndex,
+                        TViewTypeEnum                   dbgExpectedViewType,
+                        const Char*                     ShaderName )
 {
     const auto& ViewDesc = pViewD3D11->GetDesc();
     auto ViewType = ViewDesc.ViewType;
@@ -442,7 +432,7 @@ bool dbgVerifyViewType( const char *ViewTypeName,
         const auto *ExpectedViewTypeName = GetViewTypeLiteralName( dbgExpectedViewType );
         const auto *ActualViewTypeName = GetViewTypeLiteralName( ViewType );
         LOG_RESOURCE_BINDING_ERROR(ViewTypeName, pViewD3D11, Attribs, ArrayIndex, ShaderName, 
-                                   "Incorrect view type: ", ExpectedViewTypeName, " is expected, ", ActualViewTypeName, " provided." );
+                                   "Incorrect view type: ", ExpectedViewTypeName, " is expected, ", ActualViewTypeName, " is provided." );
         return false;
     }
 }
@@ -460,17 +450,17 @@ void ShaderResourceLayoutD3D11::TexSRVBindInfo::BindResource(IDeviceObject* pVie
     RefCntAutoPtr<TextureViewD3D11Impl> pViewD3D11(pView, IID_TextureViewD3D11);
 #ifdef DEVELOPMENT
     if (pView && !pViewD3D11)
-        LOG_RESOURCE_BINDING_ERROR("resource", pView, Attribs, ArrayIndex, "", "Incorect resource type: texture view is expected.");
+        LOG_RESOURCE_BINDING_ERROR("resource", pView, Attribs, ArrayIndex, m_ParentResLayout.GetShaderName(), "Incorect resource type: texture view is expected.");
     if (pViewD3D11 && !dbgVerifyViewType("texture view", pViewD3D11.RawPtr(), Attribs, ArrayIndex, TEXTURE_VIEW_SHADER_RESOURCE, m_ParentResLayout.GetShaderName()))
         pViewD3D11.Release();
 
     if( Attribs.GetVariableType() != SHADER_VARIABLE_TYPE_DYNAMIC)
     {
-        auto &CachedSRV = ResourceCache.GetSRV(Attribs.BindPoint + ArrayIndex);
-        if( CachedSRV.pView != nullptr && CachedSRV.pView != pViewD3D11)
+        auto& CachedSRV = ResourceCache.GetSRV(Attribs.BindPoint + ArrayIndex);
+        if (CachedSRV.pView != nullptr && CachedSRV.pView != pViewD3D11)
         {
             auto VarTypeStr = GetShaderVariableTypeLiteralName(Attribs.GetVariableType());
-            LOG_ERROR_MESSAGE( "Non-null texture SRV is already bound to ", VarTypeStr, " shader variable \"", Attribs.GetPrintName(ArrayIndex), "\" in shader \"", m_ParentResLayout.GetShaderName(), "\". Attempting to bind another resource or null is an error and may cause unpredicted behavior. Use another shader resource binding instance or label the variable as dynamic." );
+            LOG_ERROR_MESSAGE( "Non-null texture SRV is already bound to ", VarTypeStr, " shader variable '", Attribs.GetPrintName(ArrayIndex), "' in shader '", m_ParentResLayout.GetShaderName(), "'. Attempting to bind another resource or null is an error and may cause unpredicted behavior. Use another shader resource binding instance or label the variable as dynamic." );
         }
     }
 #endif
@@ -482,20 +472,31 @@ void ShaderResourceLayoutD3D11::TexSRVBindInfo::BindResource(IDeviceObject* pVie
         VERIFY_EXPR(Sampler.Attribs.BindCount == Attribs.BindCount || Sampler.Attribs.BindCount == 1);
         auto SamplerBindPoint = Sampler.Attribs.BindPoint + (Sampler.Attribs.BindCount != 1 ? ArrayIndex : 0);
 
-        SamplerD3D11Impl *pSamplerD3D11Impl = nullptr;
-        if( pViewD3D11 )
+        SamplerD3D11Impl* pSamplerD3D11Impl = nullptr;
+        if (pViewD3D11)
         {
             pSamplerD3D11Impl = ValidatedCast<SamplerD3D11Impl>(pViewD3D11->GetSampler());
 #ifdef DEVELOPMENT
             if (pSamplerD3D11Impl == nullptr)
             {
                 if(Sampler.Attribs.BindCount > 1)
-                    LOG_ERROR_MESSAGE( "Failed to bind sampler to variable \"", Sampler.Attribs.Name, "[", ArrayIndex,"]\". Sampler is not set in the texture view \"", pViewD3D11->GetDesc().Name, "\"" );
+                    LOG_ERROR_MESSAGE( "Failed to bind sampler to variable '", Sampler.Attribs.Name, "[", ArrayIndex,"]'. Sampler is not set in the texture view '", pViewD3D11->GetDesc().Name, "'" );
                 else
-                    LOG_ERROR_MESSAGE( "Failed to bind sampler to variable \"", Sampler.Attribs.Name, "\". Sampler is not set in the texture view \"", pViewD3D11->GetDesc().Name, "\"" );
+                    LOG_ERROR_MESSAGE( "Failed to bind sampler to variable '", Sampler.Attribs.Name, "'. Sampler is not set in the texture view '", pViewD3D11->GetDesc().Name, "'" );
             }
 #endif
         }
+#ifdef DEVELOPMENT
+        if (Sampler.Attribs.GetVariableType() != SHADER_VARIABLE_TYPE_DYNAMIC)
+        {
+            auto& CachedSampler = ResourceCache.GetSampler(SamplerBindPoint);
+            if (CachedSampler.pSampler != nullptr && CachedSampler.pSampler != pSamplerD3D11Impl)
+            {
+                auto VarTypeStr = GetShaderVariableTypeLiteralName(Attribs.GetVariableType());
+                LOG_ERROR_MESSAGE( "Non-null sampler is already bound to ", VarTypeStr, " shader variable '", Sampler.Attribs.GetPrintName(ArrayIndex), "' in shader '", m_ParentResLayout.GetShaderName(), "'. Attempting to bind another sampler or null is an error and may cause unpredicted behavior. Use another shader resource binding instance or label the variable as dynamic." );
+            }
+        }
+#endif
         ResourceCache.SetSampler(SamplerBindPoint, pSamplerD3D11Impl);
     }          
 
@@ -516,7 +517,7 @@ void ShaderResourceLayoutD3D11::SamplerBindInfo::BindResource(IDeviceObject* pSa
 
 #ifdef DEVELOPMENT
     if (pSampler && !pSamplerD3D11)
-        LOG_RESOURCE_BINDING_ERROR("sampler", pSampler, Attribs, ArrayIndex, "", "Incorect resource type: sampler is expected.");
+        LOG_RESOURCE_BINDING_ERROR("sampler", pSampler, Attribs, ArrayIndex, m_ParentResLayout.GetShaderName(), "Incorect resource type: sampler is expected.");
 
     if (Attribs.ValidTexSRVAssigned())
     {
@@ -524,13 +525,13 @@ void ShaderResourceLayoutD3D11::SamplerBindInfo::BindResource(IDeviceObject* pSa
         LOG_WARNING_MESSAGE("Texture sampler sampler '", Attribs.Name, "' is assigned to texture SRV '", TexSRVName, "' and should not be accessed directly. The sampler is initialized when texture SRV is set to '", TexSRVName, "' variable.");
     }
 
-    if( Attribs.GetVariableType() != SHADER_VARIABLE_TYPE_DYNAMIC)
+    if (Attribs.GetVariableType() != SHADER_VARIABLE_TYPE_DYNAMIC)
     {
-        auto &CachedSampler = ResourceCache.GetSampler(Attribs.BindPoint + ArrayIndex);
+        auto& CachedSampler = ResourceCache.GetSampler(Attribs.BindPoint + ArrayIndex);
         if( CachedSampler.pSampler != nullptr && CachedSampler.pSampler != pSamplerD3D11)
         {
             auto VarTypeStr = GetShaderVariableTypeLiteralName(Attribs.GetVariableType());
-            LOG_ERROR_MESSAGE( "Non-null sampler is already bound to ", VarTypeStr, " shader variable \"", Attribs.GetPrintName(ArrayIndex), "\" in shader \"", m_ParentResLayout.GetShaderName(), "\". Attempting to bind another sampler or null is an error and may cause unpredicted behavior. Use another shader resource binding instance or label the variable as dynamic." );
+            LOG_ERROR_MESSAGE( "Non-null sampler is already bound to ", VarTypeStr, " shader variable '", Attribs.GetPrintName(ArrayIndex), "' in shader '", m_ParentResLayout.GetShaderName(), "'. Attempting to bind another sampler or null is an error and may cause unpredicted behavior. Use another shader resource binding instance or label the variable as dynamic." );
         }
     }
 #endif
@@ -550,17 +551,17 @@ void ShaderResourceLayoutD3D11::BuffSRVBindInfo::BindResource(IDeviceObject* pVi
     RefCntAutoPtr<BufferViewD3D11Impl> pViewD3D11(pView, IID_BufferViewD3D11);
 #ifdef DEVELOPMENT
     if (pView && !pViewD3D11)
-        LOG_RESOURCE_BINDING_ERROR("resource", pView, Attribs, ArrayIndex, "", "Incorect resource type: buffer view is expected.");
+        LOG_RESOURCE_BINDING_ERROR("resource", pView, Attribs, ArrayIndex, m_ParentResLayout.GetShaderName(), "Incorect resource type: buffer view is expected.");
     if (pViewD3D11 && !dbgVerifyViewType("buffer view", pViewD3D11.RawPtr(), Attribs, ArrayIndex, BUFFER_VIEW_SHADER_RESOURCE, m_ParentResLayout.GetShaderName()))
         pViewD3D11.Release();
 
     if (Attribs.GetVariableType() != SHADER_VARIABLE_TYPE_DYNAMIC)
     {
-        auto &CachedSRV = ResourceCache.GetSRV(Attribs.BindPoint + ArrayIndex);
-        if( CachedSRV.pView != nullptr && CachedSRV.pView != pViewD3D11)
+        auto& CachedSRV = ResourceCache.GetSRV(Attribs.BindPoint + ArrayIndex);
+        if (CachedSRV.pView != nullptr && CachedSRV.pView != pViewD3D11)
         {
             auto VarTypeStr = GetShaderVariableTypeLiteralName(Attribs.GetVariableType());
-            LOG_ERROR_MESSAGE( "Non-null buffer SRV is already bound to ", VarTypeStr, " shader variable \"", Attribs.GetPrintName(ArrayIndex), "\" in shader \"", m_ParentResLayout.GetShaderName(), "\". Attempting to bind another resource or null is an error and may cause unpredicted behavior. Use another shader resource binding instance or label the variable as dynamic." );
+            LOG_ERROR_MESSAGE( "Non-null buffer SRV is already bound to ", VarTypeStr, " shader variable '", Attribs.GetPrintName(ArrayIndex), "' in shader '", m_ParentResLayout.GetShaderName(), "'. Attempting to bind another resource or null is an error and may cause unpredicted behavior. Use another shader resource binding instance or label the variable as dynamic." );
         }
     }
 #endif
@@ -581,17 +582,17 @@ void ShaderResourceLayoutD3D11::TexUAVBindInfo::BindResource(IDeviceObject* pVie
     RefCntAutoPtr<TextureViewD3D11Impl> pViewD3D11(pView, IID_TextureViewD3D11);
 #ifdef DEVELOPMENT
     if (pView && !pViewD3D11)
-        LOG_RESOURCE_BINDING_ERROR("resource", pView, Attribs, ArrayIndex, "", "Incorect resource type: texture view is expected.");
+        LOG_RESOURCE_BINDING_ERROR("resource", pView, Attribs, ArrayIndex, m_ParentResLayout.GetShaderName(), "Incorect resource type: texture view is expected.");
     if (pViewD3D11 && !dbgVerifyViewType("texture view", pViewD3D11.RawPtr(), Attribs, ArrayIndex, TEXTURE_VIEW_UNORDERED_ACCESS, m_ParentResLayout.GetShaderName()))
         pViewD3D11.Release();
 
     if (Attribs.GetVariableType() != SHADER_VARIABLE_TYPE_DYNAMIC)
     {
-        auto &CachedUAV = ResourceCache.GetUAV(Attribs.BindPoint + ArrayIndex);
-        if( CachedUAV.pView != nullptr && CachedUAV.pView != pViewD3D11)
+        auto& CachedUAV = ResourceCache.GetUAV(Attribs.BindPoint + ArrayIndex);
+        if (CachedUAV.pView != nullptr && CachedUAV.pView != pViewD3D11)
         {
             auto VarTypeStr = GetShaderVariableTypeLiteralName(Attribs.GetVariableType());
-            LOG_ERROR_MESSAGE( "Non-null texture UAV is already bound to ", VarTypeStr, " shader variable \"", Attribs.GetPrintName(ArrayIndex), "\" in shader \"", m_ParentResLayout.GetShaderName(), "\". Attempting to bind another resource or null is an error and may cause unpredicted behavior. Use another shader resource binding instance or label the variable as dynamic." );
+            LOG_ERROR_MESSAGE( "Non-null texture UAV is already bound to ", VarTypeStr, " shader variable '", Attribs.GetPrintName(ArrayIndex), "' in shader '", m_ParentResLayout.GetShaderName(), "'. Attempting to bind another resource or null is an error and may cause unpredicted behavior. Use another shader resource binding instance or label the variable as dynamic." );
         }
     }
 #endif
@@ -612,17 +613,17 @@ void ShaderResourceLayoutD3D11::BuffUAVBindInfo::BindResource(IDeviceObject* pVi
     RefCntAutoPtr<BufferViewD3D11Impl> pViewD3D11(pView, IID_BufferViewD3D11);
 #ifdef DEVELOPMENT
     if (pView && !pViewD3D11)
-        LOG_RESOURCE_BINDING_ERROR("resource", pView, Attribs, ArrayIndex, "", "Incorect resource type: buffer view is expected.");
+        LOG_RESOURCE_BINDING_ERROR("resource", pView, Attribs, ArrayIndex, m_ParentResLayout.GetShaderName(), "Incorect resource type: buffer view is expected.");
     if (pViewD3D11 && !dbgVerifyViewType("buffer view", pViewD3D11.RawPtr(), Attribs, ArrayIndex, BUFFER_VIEW_UNORDERED_ACCESS, m_ParentResLayout.GetShaderName()) )
         pViewD3D11.Release();
 
     if (Attribs.GetVariableType() != SHADER_VARIABLE_TYPE_DYNAMIC)
     {
-        auto &CachedUAV = ResourceCache.GetUAV(Attribs.BindPoint + ArrayIndex);
-        if( CachedUAV.pView != nullptr && CachedUAV.pView != pViewD3D11)
+        auto& CachedUAV = ResourceCache.GetUAV(Attribs.BindPoint + ArrayIndex);
+        if (CachedUAV.pView != nullptr && CachedUAV.pView != pViewD3D11)
         {
             auto VarTypeStr = GetShaderVariableTypeLiteralName(Attribs.GetVariableType());
-            LOG_ERROR_MESSAGE( "Non-null buffer UAV is already bound to ", VarTypeStr, " shader variable \"", Attribs.GetPrintName(ArrayIndex), "\" in shader \"", m_ParentResLayout.GetShaderName(), "\". Attempting to bind another resource or null is an error and may cause unpredicted behavior. Use another shader resource binding instance or label the variable as dynamic." );
+            LOG_ERROR_MESSAGE( "Non-null buffer UAV is already bound to ", VarTypeStr, " shader variable '", Attribs.GetPrintName(ArrayIndex), "' in shader '", m_ParentResLayout.GetShaderName(), "'. Attempting to bind another resource or null is an error and may cause unpredicted behavior. Use another shader resource binding instance or label the variable as dynamic." );
         }
     }
 #endif
@@ -711,7 +712,7 @@ public:
             else
             {
                 if ( (Flags & BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED) && !Res.IsBound(elem) )
-                    LOG_ERROR_MESSAGE( "Cannot bind resource to shader variable \"", VarName, "\": resource view not found in the resource mapping" );
+                    LOG_ERROR_MESSAGE( "Cannot bind resource to shader variable '", VarName, "': resource view not found in the resource mapping" );
             }
         }
     }
@@ -727,7 +728,7 @@ void ShaderResourceLayoutD3D11::BindResources( IResourceMapping* pResourceMappin
 
     if (pResourceMapping == nullptr)
     {
-        LOG_ERROR_MESSAGE( "Failed to bind resources in shader \"", GetShaderName(), "\": resource mapping is null" );
+        LOG_ERROR_MESSAGE( "Failed to bind resources in shader '", GetShaderName(), "': resource mapping is null" );
         return;
     }
     
@@ -787,9 +788,13 @@ IShaderVariable* ShaderResourceLayoutD3D11::GetShaderVariable(const Char* Name)
     for (Uint32 u = 0; u < m_NumBufUAVs; ++u)
         if (strcmp(GetBufUAV(u).Attribs.Name, Name) == 0 )
             return &GetBufUAV(u);
-    for (Uint32 s = 0; s < m_NumSamplers; ++s)
-        if (strcmp(GetSampler(s).Attribs.Name, Name) == 0 )
-            return &GetSampler(s);
+    
+    if (!m_pResources->IsUsingCombinedTextureSamplers())
+    {
+        for (Uint32 s = 0; s < m_NumSamplers; ++s)
+            if (strcmp(GetSampler(s).Attribs.Name, Name) == 0 )
+                return &GetSampler(s);
+    }
 
     return nullptr;
 }
@@ -844,7 +849,8 @@ Uint32 ShaderResourceLayoutD3D11::GetVariableIndex(const ShaderVariableD3D11Base
     else
         Index += m_NumBufSRVs;
 
-    if (Offset < static_cast<std::ptrdiff_t>(m_SamplerOffset + m_NumSamplers * sizeof(SamplerBindInfo)))
+    if (!m_pResources->IsUsingCombinedTextureSamplers() &&
+        Offset < static_cast<std::ptrdiff_t>(m_SamplerOffset + m_NumSamplers * sizeof(SamplerBindInfo)))
     {
         DEV_CHECK_ERR( (Offset - m_SamplerOffset) % sizeof(SamplerBindInfo) == 0, "Offset is not multiple of sizeof(SamplerBindInfo)" );
         return Index + static_cast<Uint32>((Offset - m_SamplerOffset) / sizeof(SamplerBindInfo));
@@ -858,7 +864,7 @@ Uint32 ShaderResourceLayoutD3D11::GetVariableIndex(const ShaderVariableD3D11Base
 
 IShaderVariable* ShaderResourceLayoutD3D11::GetShaderVariable( Uint32 Index )
 {
-    if(Index >= GetTotalResourceCount())
+    if (Index >= GetTotalResourceCount())
     {
         LOG_ERROR("Invalid resource index ", Index);
         return nullptr;
@@ -902,10 +908,6 @@ IShaderVariable* ShaderResourceLayoutD3D11::GetShaderVariable( Uint32 Index )
     return nullptr;
 }
 
-const Char* ShaderResourceLayoutD3D11::GetShaderName()const
-{
-    return m_pResources->GetShaderName();
-}
 
 #ifdef DEVELOPMENT
 void ShaderResourceLayoutD3D11::dvpVerifyBindings()const
@@ -913,10 +915,10 @@ void ShaderResourceLayoutD3D11::dvpVerifyBindings()const
 
 #define LOG_MISSING_BINDING(VarType, Attrs, BindPt)\
 do{                                                \
-    if(Attrs.BindCount == 1)                       \
-        LOG_ERROR_MESSAGE( "No resource is bound to ", VarType, " variable \"", Attrs.Name, "\" in shader \"", GetShaderName(), "\"" );   \
+    if (Attrs.BindCount == 1)                      \
+        LOG_ERROR_MESSAGE( "No resource is bound to ", VarType, " variable '", Attrs.Name, "' in shader '", GetShaderName(), "'" );   \
     else                                                                                                                                  \
-        LOG_ERROR_MESSAGE( "No resource is bound to ", VarType, " variable \"", Attrs.Name, "[", BindPt-Attrs.BindPoint, "]\" in shader \"", GetShaderName(), "\"" );\
+        LOG_ERROR_MESSAGE( "No resource is bound to ", VarType, " variable '", Attrs.Name, "[", BindPt-Attrs.BindPoint, "]' in shader '", GetShaderName(), "'" );\
 }while(false)
 
     m_pResourceCache->dbgVerifyCacheConsistency();
@@ -924,9 +926,9 @@ do{                                                \
     // Use const_cast to avoid duplication of the HandleResources() function
     // The function actually changes nothing
     const_cast<ShaderResourceLayoutD3D11*>(this)->HandleResources(
-        [&](const ConstBuffBindInfo&cb)
+        [&](const ConstBuffBindInfo& cb)
         {
-            for (auto BindPoint = cb.Attribs.BindPoint; BindPoint < cb.Attribs.BindPoint + cb.Attribs.BindCount; ++BindPoint)
+            for (Uint32 BindPoint = cb.Attribs.BindPoint; BindPoint < Uint32{cb.Attribs.BindPoint} + cb.Attribs.BindCount; ++BindPoint)
             {
                 if (!m_pResourceCache->IsCBBound(BindPoint))
                     LOG_MISSING_BINDING("constant buffer", cb.Attribs, BindPoint);
@@ -935,7 +937,7 @@ do{                                                \
 
         [&](const TexSRVBindInfo& ts)
         {
-            for (auto BindPoint = ts.Attribs.BindPoint; BindPoint < ts.Attribs.BindPoint + ts.Attribs.BindCount; ++BindPoint)
+            for (Uint32 BindPoint = ts.Attribs.BindPoint; BindPoint < Uint32{ts.Attribs.BindPoint} + ts.Attribs.BindCount; ++BindPoint)
             {
                 if (!m_pResourceCache->IsSRVBound(BindPoint, true))
                     LOG_MISSING_BINDING("texture", ts.Attribs, BindPoint);
@@ -948,23 +950,23 @@ do{                                                \
                     // Verify that if single sampler is used for all texture array elements, all samplers set in the resource views are consistent
                     if (ts.Attribs.BindCount > 1 && Sampler.Attribs.BindCount == 1)
                     {
-                        ShaderResourceCacheD3D11::CachedSampler *pCachedSamplers = nullptr;
-                        ID3D11SamplerState **ppCachedD3D11Samplers = nullptr;
+                        ShaderResourceCacheD3D11::CachedSampler* pCachedSamplers       = nullptr;
+                        ID3D11SamplerState**                     ppCachedD3D11Samplers = nullptr;
                         m_pResourceCache->GetSamplerArrays(pCachedSamplers, ppCachedD3D11Samplers);
                         VERIFY_EXPR(Sampler.Attribs.BindPoint < m_pResourceCache->GetSamplerCount());
                         const auto& CachedSampler = pCachedSamplers[Sampler.Attribs.BindPoint];
 
-                        ShaderResourceCacheD3D11::CachedResource *pCachedResources = nullptr;
-                        ID3D11ShaderResourceView **ppCachedD3D11Resources = nullptr;
+                        ShaderResourceCacheD3D11::CachedResource* pCachedResources       = nullptr;
+                        ID3D11ShaderResourceView**                ppCachedD3D11Resources = nullptr;
                         m_pResourceCache->GetSRVArrays(pCachedResources, ppCachedD3D11Resources);
                         VERIFY_EXPR(BindPoint < m_pResourceCache->GetSRVCount());
                         auto& CachedResource = pCachedResources[BindPoint];
-                        if(CachedResource.pView)
+                        if (CachedResource.pView)
                         {
                             auto* pTexView = CachedResource.pView.RawPtr<ITextureView>();
                             auto* pSampler = pTexView->GetSampler();
-                            if(pSampler != nullptr && pSampler != CachedSampler.pSampler.RawPtr())
-                                LOG_ERROR_MESSAGE( "All elements of texture array \"", ts.Attribs.Name, "\" in shader \"", GetShaderName(), "\" share the same sampler. However, the sampler set in view for element ", BindPoint - ts.Attribs.BindPoint, " does not match bound sampler. This may cause incorrect behavior on GL platform."  );
+                            if (pSampler != nullptr && pSampler != CachedSampler.pSampler.RawPtr())
+                                LOG_ERROR_MESSAGE( "All elements of texture array '", ts.Attribs.Name, "' in shader '", GetShaderName(), "' share the same sampler. However, the sampler set in view for element ", BindPoint - ts.Attribs.BindPoint, " does not match bound sampler. This may cause incorrect behavior on GL platform."  );
                         }
                     }
                 }
@@ -973,7 +975,7 @@ do{                                                \
 
         [&](const TexUAVBindInfo& uav)
         {
-            for (auto BindPoint = uav.Attribs.BindPoint; BindPoint < uav.Attribs.BindPoint + uav.Attribs.BindCount; ++BindPoint)
+            for (Uint32 BindPoint = uav.Attribs.BindPoint; BindPoint < Uint32{uav.Attribs.BindPoint} + uav.Attribs.BindCount; ++BindPoint)
             {
                 if (!m_pResourceCache->IsUAVBound(BindPoint, true))
                     LOG_MISSING_BINDING("texture UAV", uav.Attribs, BindPoint);
@@ -982,7 +984,7 @@ do{                                                \
 
         [&](const BuffSRVBindInfo& buf)
         {
-            for (auto BindPoint = buf.Attribs.BindPoint; BindPoint < buf.Attribs.BindPoint + buf.Attribs.BindCount; ++BindPoint)
+            for (Uint32 BindPoint = buf.Attribs.BindPoint; BindPoint < Uint32{buf.Attribs.BindPoint} + buf.Attribs.BindCount; ++BindPoint)
             {
                 if (!m_pResourceCache->IsSRVBound(BindPoint, false))
                     LOG_MISSING_BINDING("buffer", buf.Attribs, BindPoint);
@@ -991,7 +993,7 @@ do{                                                \
 
         [&](const BuffUAVBindInfo& uav)
         {
-            for (auto BindPoint = uav.Attribs.BindPoint; BindPoint < uav.Attribs.BindPoint + uav.Attribs.BindCount; ++BindPoint)
+            for (Uint32 BindPoint = uav.Attribs.BindPoint; BindPoint < Uint32{uav.Attribs.BindPoint} + uav.Attribs.BindCount; ++BindPoint)
             {
                 if (!m_pResourceCache->IsUAVBound(BindPoint, false))
                     LOG_MISSING_BINDING("buffer UAV", uav.Attribs, BindPoint);
@@ -1000,7 +1002,7 @@ do{                                                \
 
         [&](const SamplerBindInfo& sam)
         {
-            for (auto BindPoint = sam.Attribs.BindPoint; BindPoint < sam.Attribs.BindPoint + sam.Attribs.BindCount; ++BindPoint)
+            for (Uint32 BindPoint = sam.Attribs.BindPoint; BindPoint < Uint32{sam.Attribs.BindPoint} + sam.Attribs.BindCount; ++BindPoint)
             {
                 if (!m_pResourceCache->IsSamplerBound(BindPoint))
                     LOG_MISSING_BINDING("sampler", sam.Attribs, BindPoint);

@@ -51,7 +51,7 @@
 //                                                               |_________________SamplerIndex_________________|
 //               
 //
-//  One ShaderResources instance can be referenced by multiple objects
+//  One ShaderResourcesD3D11 instance can be referenced by multiple objects
 //
 //
 //                                                                               ____<m_pResourceLayouts>___        ________________________________ 
@@ -73,13 +73,14 @@
 //
 //
 
+#include <vector>
 
 #include "ShaderResources.h"
 
 namespace Diligent
 {
 
-/// Diligent::ShaderResources class
+/// Diligent::ShaderResourcesD3D11 class
 class ShaderResourcesD3D11 : public ShaderResources
 {
 public:
@@ -90,10 +91,15 @@ public:
                          const char*                  CombinedSamplerSuffix);
     ~ShaderResourcesD3D11();
 
-    __forceinline Int32 GetMaxCBBindPoint()     const{return m_MaxCBBindPoint;      }
-    __forceinline Int32 GetMaxSRVBindPoint()    const{return m_MaxSRVBindPoint;     }
-    __forceinline Int32 GetMaxSamplerBindPoint()const{return m_MaxSamplerBindPoint; }
-    __forceinline Int32 GetMaxUAVBindPoint()    const{return m_MaxUAVBindPoint;     }
+    ShaderResourcesD3D11             (const ShaderResourcesD3D11&)  = delete;
+    ShaderResourcesD3D11             (      ShaderResourcesD3D11&&) = delete;
+    ShaderResourcesD3D11& operator = (const ShaderResourcesD3D11&)  = delete;
+    ShaderResourcesD3D11& operator = (      ShaderResourcesD3D11&&) = delete;
+
+    __forceinline Int32 GetMaxCBBindPoint()     const { return m_MaxCBBindPoint;      }
+    __forceinline Int32 GetMaxSRVBindPoint()    const { return m_MaxSRVBindPoint;     }
+    __forceinline Int32 GetMaxSamplerBindPoint()const { return m_MaxSamplerBindPoint; }
+    __forceinline Int32 GetMaxUAVBindPoint()    const { return m_MaxUAVBindPoint;     }
 
 #ifdef DEVELOPMENT
     void dvpVerifyCommittedResources(ID3D11Buffer*              CommittedD3D11CBs[],
@@ -105,18 +111,17 @@ public:
                                      class ShaderResourceCacheD3D11& ResourceCache)const;
 #endif
 
-    const Char *GetShaderName()const{return m_ShaderName;}
+    const Char* GetShaderName() const { return m_ShaderName; }
     
-    void InitStaticSamplers(class ShaderResourceCacheD3D11& ResourceCache)const;
+    void SetStaticSamplers(class ShaderResourceCacheD3D11& ResourceCache)const;
 
 private:
-    typedef Int8 MaxBindPointType;
+    using MaxBindPointType = Int8;
 
     MaxBindPointType m_MaxCBBindPoint      = -1; // Max == 13
     MaxBindPointType m_MaxSRVBindPoint     = -1; // Max == 127
     MaxBindPointType m_MaxSamplerBindPoint = -1; // Max == 15
     MaxBindPointType m_MaxUAVBindPoint     = -1; // Max == 7
-    Uint8            m_NumStaticSamplers   =  0; // Max == 16
 
     static constexpr UINT MaxAllowedBindPoint = std::numeric_limits<MaxBindPointType>::max();
     static_assert(D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT-1 <= MaxAllowedBindPoint, "Not enough bits to represent max CB slot" );
@@ -126,17 +131,13 @@ private:
 
     // ShaderResourcesD3D11 is part of the ShaderD3D11Impl object, so we can simply
     // reference shader name without the need to copy it
-    const Char* m_ShaderName;
+    const Char* const m_ShaderName;
 
-    typedef std::pair<const D3DShaderResourceAttribs*, RefCntAutoPtr<ISampler> > StaticSamplerAttribs;
-    StaticSamplerAttribs& GetStaticSampler(Uint32 n)
-    {
-        VERIFY_EXPR(n < m_NumStaticSamplers);
-        return reinterpret_cast< StaticSamplerAttribs* >(m_StaticSamplers.get())[n];
-    }
+    using StaticSamplerAttribs = std::pair<const D3DShaderResourceAttribs&, RefCntAutoPtr<ISampler>>;
+    using StaticSamplerVector = std::vector<StaticSamplerAttribs, STDAllocatorRawMem<StaticSamplerAttribs>>;
+    void InitStaticSamplers(StaticSamplerVector&& StaticSamplers);
 
-    // We have to use void, because we will be calling destructors manually
-    std::unique_ptr< void, STDDeleterRawMem<void > > m_StaticSamplers;
+    StaticSamplerVector m_StaticSamplers;
 };
 
 }

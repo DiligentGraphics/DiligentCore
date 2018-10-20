@@ -61,6 +61,7 @@
 #include "STDAllocator.h"
 #include "HashUtils.h"
 #include "StringPool.h"
+#include "D3DShaderResourceLoader.h"
 
 namespace Diligent
 {
@@ -70,7 +71,7 @@ inline bool IsAllowedType(SHADER_VARIABLE_TYPE VarType, Uint32 AllowedTypeBits)n
     return ((1 << VarType) & AllowedTypeBits) != 0;
 }
 
-inline Uint32 GetAllowedTypeBits(const SHADER_VARIABLE_TYPE *AllowedVarTypes, Uint32 NumAllowedTypes)noexcept
+inline Uint32 GetAllowedTypeBits(const SHADER_VARIABLE_TYPE* AllowedVarTypes, Uint32 NumAllowedTypes)noexcept
 {
     if (AllowedVarTypes == nullptr)
         return 0xFFFFFFFF;
@@ -90,7 +91,7 @@ struct D3DShaderResourceAttribs
     const Uint16 BindCount;
 
 private:
-    //            4              3               4              20                        1
+    //            4              3               4                 20                    1
     // bit | 0  1  2  3   |  4   5   6   |  7  8  9  10 | 11  12  13   ...   30 |        31         |   
     //     |              |              |              |                       |                   |
     //     |  InputType   | VariableType |   SRV Dim    | SamplerOrTexSRVIdBits | StaticSamplerFlag |
@@ -361,21 +362,21 @@ public:
 
         for(Uint32 n=0; n < GetNumTexSRV(); ++n)
         {
-            const auto &TexSRV = GetTexSRV(n);
+            const auto& TexSRV = GetTexSRV(n);
             if( TexSRV.IsAllowedType(AllowedTypeBits) )
                 HandleTexSRV(TexSRV, n);
         }
     
         for(Uint32 n=0; n < GetNumTexUAV(); ++n)
         {
-            const auto &TexUAV = GetTexUAV(n);
+            const auto& TexUAV = GetTexUAV(n);
             if( TexUAV.IsAllowedType(AllowedTypeBits) )
                 HandleTexUAV(TexUAV, n);
         }
 
         for(Uint32 n=0; n < GetNumBufSRV(); ++n)
         {
-            const auto &BufSRV = GetBufSRV(n);
+            const auto& BufSRV = GetBufSRV(n);
             if( BufSRV.IsAllowedType(AllowedTypeBits) )
                 HandleBufSRV(BufSRV, n);
         }
@@ -419,11 +420,11 @@ protected:
         return reinterpret_cast<const D3DShaderResourceAttribs*>(m_MemoryBuffer.get())[Offset + n];
     }
 
-    D3DShaderResourceAttribs& GetCB     (Uint32 n)noexcept{ return GetResAttribs(n, GetNumCBs(),                   0); }
-    D3DShaderResourceAttribs& GetTexSRV (Uint32 n)noexcept{ return GetResAttribs(n, GetNumTexSRV(),   m_TexSRVOffset); }
-    D3DShaderResourceAttribs& GetTexUAV (Uint32 n)noexcept{ return GetResAttribs(n, GetNumTexUAV(),   m_TexUAVOffset); }
-    D3DShaderResourceAttribs& GetBufSRV (Uint32 n)noexcept{ return GetResAttribs(n, GetNumBufSRV(),   m_BufSRVOffset); }
-    D3DShaderResourceAttribs& GetBufUAV (Uint32 n)noexcept{ return GetResAttribs(n, GetNumBufUAV(),   m_BufUAVOffset); }
+    D3DShaderResourceAttribs& GetCB     (Uint32 n)noexcept{ return GetResAttribs(n, GetNumCBs(),                   0);   }
+    D3DShaderResourceAttribs& GetTexSRV (Uint32 n)noexcept{ return GetResAttribs(n, GetNumTexSRV(),   m_TexSRVOffset);   }
+    D3DShaderResourceAttribs& GetTexUAV (Uint32 n)noexcept{ return GetResAttribs(n, GetNumTexUAV(),   m_TexUAVOffset);   }
+    D3DShaderResourceAttribs& GetBufSRV (Uint32 n)noexcept{ return GetResAttribs(n, GetNumBufSRV(),   m_BufSRVOffset);   }
+    D3DShaderResourceAttribs& GetBufUAV (Uint32 n)noexcept{ return GetResAttribs(n, GetNumBufUAV(),   m_BufUAVOffset);   }
     D3DShaderResourceAttribs& GetSampler(Uint32 n)noexcept{ return GetResAttribs(n, GetNumSamplers(), m_SamplersOffset); }
 
 private:

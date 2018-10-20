@@ -58,7 +58,7 @@ inline bool IsAllowedType(SHADER_VARIABLE_TYPE VarType, Uint32 AllowedTypeBits)n
     return ((1 << VarType) & AllowedTypeBits) != 0;
 }
 
-inline Uint32 GetAllowedTypeBits(const SHADER_VARIABLE_TYPE *AllowedVarTypes, Uint32 NumAllowedTypes)noexcept
+inline Uint32 GetAllowedTypeBits(const SHADER_VARIABLE_TYPE* AllowedVarTypes, Uint32 NumAllowedTypes)noexcept
 {
     if(AllowedVarTypes == nullptr)
         return 0xFFFFFFFF;
