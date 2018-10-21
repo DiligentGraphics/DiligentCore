@@ -16,6 +16,9 @@ if(PLATFORM_WIN32)
         FOLDER Core/External/glslang
     )
 
+    # glslang "kindly" sets global CMAKE_DEBUG_POSTFIX to "d", which we have to unset now
+    unset(CMAKE_DEBUG_POSTFIX CACHE)
+
     add_subdirectory(SPIRV-Cross)
     set_target_properties(SPIRVCross PROPERTIES
         FOLDER Core/External
