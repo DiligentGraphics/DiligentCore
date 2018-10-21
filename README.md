@@ -16,6 +16,12 @@ in the master repository.
 | Win32/Universal Windows    | [![Build Status](https://ci.appveyor.com/api/projects/status/github/DiligentGraphics/DiligentCore?svg=true)](https://ci.appveyor.com/project/DiligentGraphics/diligentcore) |
 | Linux/MacOS/iOS            | [![Build Status](https://travis-ci.org/DiligentGraphics/DiligentCore.svg?branch=master)](https://travis-ci.org/DiligentGraphics/DiligentCore)      |
 
+# Clonning the Repository
+
+To get the repository and all submodules, use the following command:
+
+ git clone --recursive https://github.com/DiligentGraphics/DiligentCore.git
+
 
 # Repository structure
 

@@ -1,0 +1,3 @@
+[submodule "External/glslang"]
+	path = External/glslang
+	url = https://github.com/DiligentGraphics/glslang.git
