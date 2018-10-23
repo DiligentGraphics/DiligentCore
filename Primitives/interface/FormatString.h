@@ -57,9 +57,14 @@ namespace Diligent
     template<typename Type>
     struct MemorySizeFormatter
     {
-        Type size        = 0;
+        MemorySizeFormatter(Type _size, size_t _precision, Type _ref_size) : 
+            size     (_size),
+            precision(_precision),
+            ref_size (_ref_size)
+        {}
+        Type   size      = 0;
         size_t precision = 0;
-        Type ref_size    = 0;
+        Type   ref_size  = 0;
     };
 
     template<typename Type>
