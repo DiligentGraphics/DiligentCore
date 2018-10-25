@@ -35,6 +35,16 @@
 
 namespace Diligent
 {
+    struct D3DShaderResourceCounters
+    {
+        Uint32 NumCBs      = 0;
+        Uint32 NumTexSRVs  = 0;
+        Uint32 NumTexUAVs  = 0; 
+        Uint32 NumBufSRVs  = 0;
+        Uint32 NumBufUAVs  = 0;
+        Uint32 NumSamplers = 0;
+    };
+
     template<typename D3D_SHADER_DESC, 
              typename D3D_SHADER_INPUT_BIND_DESC,
              typename TShaderReflection, 
@@ -72,7 +82,7 @@ namespace Diligent
         
         const bool UseCombinedTextureSamplers = SamplerSuffix != nullptr;
 
-        Uint32 NumCBs = 0, NumTexSRVs = 0, NumTexUAVs = 0, NumBufSRVs = 0, NumBufUAVs = 0, NumSamplers = 0;
+        D3DShaderResourceCounters RC;
         size_t ResourceNamesPoolSize = 0;
         // Number of resources to skip (used for array resources)
         UINT SkipCount = 1;
@@ -174,18 +184,18 @@ namespace Diligent
 
             switch( BindingDesc.Type )
             {
-                case D3D_SIT_CBUFFER:                       ++NumCBs;                                                                        break;
-                case D3D_SIT_TBUFFER:                       UNSUPPORTED( "TBuffers are not supported" );                                     break;
-                case D3D_SIT_TEXTURE:                       ++(BindingDesc.Dimension == D3D_SRV_DIMENSION_BUFFER ? NumBufSRVs : NumTexSRVs); break;
-                case D3D_SIT_SAMPLER:                       ++NumSamplers;                                                                   break;
-                case D3D_SIT_UAV_RWTYPED:                   ++(BindingDesc.Dimension == D3D_SRV_DIMENSION_BUFFER ? NumBufUAVs : NumTexUAVs); break;
-                case D3D_SIT_STRUCTURED:                    ++NumBufSRVs;                                                                    break;
-                case D3D_SIT_UAV_RWSTRUCTURED:              ++NumBufUAVs;                                                                    break;
-                case D3D_SIT_BYTEADDRESS:                   ++NumBufSRVs;                                                                    break;
-                case D3D_SIT_UAV_RWBYTEADDRESS:             ++NumBufUAVs;                                                                    break;
-                case D3D_SIT_UAV_APPEND_STRUCTURED:         UNSUPPORTED( "Append structured buffers are not supported" );                    break;
-                case D3D_SIT_UAV_CONSUME_STRUCTURED:        UNSUPPORTED( "Consume structured buffers are not supported" );                   break;
-                case D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER: UNSUPPORTED( "RW structured buffers with counter are not supported" );           break;
+                case D3D_SIT_CBUFFER:                       ++RC.NumCBs;                                                                           break;
+                case D3D_SIT_TBUFFER:                       UNSUPPORTED( "TBuffers are not supported" );                                           break;
+                case D3D_SIT_TEXTURE:                       ++(BindingDesc.Dimension == D3D_SRV_DIMENSION_BUFFER ? RC.NumBufSRVs : RC.NumTexSRVs); break;
+                case D3D_SIT_SAMPLER:                       ++RC.NumSamplers;                                                                      break;
+                case D3D_SIT_UAV_RWTYPED:                   ++(BindingDesc.Dimension == D3D_SRV_DIMENSION_BUFFER ? RC.NumBufUAVs : RC.NumTexUAVs); break;
+                case D3D_SIT_STRUCTURED:                    ++RC.NumBufSRVs;                                                                       break;
+                case D3D_SIT_UAV_RWSTRUCTURED:              ++RC.NumBufUAVs;                                                                       break;
+                case D3D_SIT_BYTEADDRESS:                   ++RC.NumBufSRVs;                                                                       break;
+                case D3D_SIT_UAV_RWBYTEADDRESS:             ++RC.NumBufUAVs;                                                                       break;
+                case D3D_SIT_UAV_APPEND_STRUCTURED:         UNSUPPORTED( "Append structured buffers are not supported" );                          break;
+                case D3D_SIT_UAV_CONSUME_STRUCTURED:        UNSUPPORTED( "Consume structured buffers are not supported" );                         break;
+                case D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER: UNSUPPORTED( "RW structured buffers with counter are not supported" );                 break;
                 default: UNEXPECTED("Unexpected resource type");
             }
             ResourceNamesPoolSize += Name.length() + 1;
@@ -251,10 +261,10 @@ namespace Diligent
         }
 #endif
 
-        OnResourcesCounted(NumCBs, NumTexSRVs, NumTexUAVs, NumBufSRVs, NumBufUAVs, NumSamplers, ResourceNamesPoolSize);
+        OnResourcesCounted(RC, ResourceNamesPoolSize);
 
         std::vector<size_t, STDAllocatorRawMem<size_t> > TexSRVInds( STD_ALLOCATOR_RAW_MEM(size_t, GetRawAllocator(), "Allocator for vector<size_t>") );
-        TexSRVInds.reserve(NumTexSRVs);
+        TexSRVInds.reserve(RC.NumTexSRVs);
 
         for(size_t ResInd = 0; ResInd < Resources.size(); ++ResInd)
         {

@@ -211,12 +211,27 @@ public:
     Uint32 GetVariableIndex(const ShaderVariableD3D11Base& Variable)const;
     Uint32 GetTotalResourceCount()const
     {
-        auto ResourceCount = m_NumCBs + m_NumTexSRVs + m_NumTexUAVs + m_NumBufUAVs + m_NumBufSRVs;
+        auto ResourceCount = GetNumCBs() + GetNumTexSRVs() + GetNumTexUAVs() + GetNumBufUAVs() + GetNumBufSRVs();
         // Do not expose sampler variables when using combined texture samplers
         if (!m_pResources->IsUsingCombinedTextureSamplers())
-            ResourceCount += m_NumSamplers;
+            ResourceCount += GetNumSamplers();
         return ResourceCount;
     }
+
+    Uint32 GetNumCBs()      const { return (m_TexSRVsOffset  - 0               ) / sizeof(ConstBuffBindInfo);}
+    Uint32 GetNumTexSRVs()  const { return (m_TexUAVsOffset  - m_TexSRVsOffset ) / sizeof(TexSRVBindInfo);   }
+    Uint32 GetNumTexUAVs()  const { return (m_BuffSRVsOffset - m_TexUAVsOffset ) / sizeof(TexUAVBindInfo) ;  }
+    Uint32 GetNumBufSRVs()  const { return (m_BuffUAVsOffset - m_BuffSRVsOffset) / sizeof(BuffSRVBindInfo);  }
+    Uint32 GetNumBufUAVs()  const { return (m_SamplerOffset  - m_BuffUAVsOffset) / sizeof(BuffUAVBindInfo);  }
+    Uint32 GetNumSamplers() const { return (m_MemorySize     - m_SamplerOffset ) / sizeof(SamplerBindInfo);  }
+
+    template<typename ResourceType> Uint32 GetNumResources()const;
+    template<> Uint32 GetNumResources<ConstBuffBindInfo>() const { return GetNumCBs();      }
+    template<> Uint32 GetNumResources<TexSRVBindInfo>   () const { return GetNumTexSRVs();  }
+    template<> Uint32 GetNumResources<TexUAVBindInfo>   () const { return GetNumTexUAVs();  }
+    template<> Uint32 GetNumResources<BuffSRVBindInfo>  () const { return GetNumBufSRVs();  }
+    template<> Uint32 GetNumResources<BuffUAVBindInfo>  () const { return GetNumBufUAVs();  }
+    template<> Uint32 GetNumResources<SamplerBindInfo>  () const { return GetNumSamplers(); }
 
 private:
 
@@ -232,84 +247,40 @@ private:
     std::unique_ptr<void, STDDeleterRawMem<void> > m_ResourceBuffer;
 
     // Offsets in bytes
-    Uint16 m_TexSRVsOffset  = 0;
-    Uint16 m_TexUAVsOffset  = 0;
-    Uint16 m_BuffUAVsOffset = 0;
-    Uint16 m_BuffSRVsOffset = 0;
-    Uint16 m_SamplerOffset  = 0;
+    using OffsetType = Uint16;
+    OffsetType m_TexSRVsOffset  = 0;
+    OffsetType m_TexUAVsOffset  = 0;
+    OffsetType m_BuffSRVsOffset = 0;
+    OffsetType m_BuffUAVsOffset = 0;
+    OffsetType m_SamplerOffset  = 0;
+    OffsetType m_MemorySize     = 0;
     
-    Uint8 m_NumCBs      = 0; // Max == 14
-    Uint8 m_NumTexSRVs  = 0; // Max == 128
-    Uint8 m_NumTexUAVs  = 0; // Max == 8
-    Uint8 m_NumBufUAVs  = 0; // Max == 8
-    Uint8 m_NumBufSRVs  = 0; // Max == 128
-    Uint8 m_NumSamplers = 0; // Max == 16
+    template<typename ResourceType> OffsetType GetResourceOffset()const;
+    template<> OffsetType GetResourceOffset<ConstBuffBindInfo>() const { return 0;                }
+    template<> OffsetType GetResourceOffset<TexSRVBindInfo>   () const { return m_TexSRVsOffset;  }
+    template<> OffsetType GetResourceOffset<TexUAVBindInfo>   () const { return m_TexUAVsOffset;  }
+    template<> OffsetType GetResourceOffset<BuffSRVBindInfo>  () const { return m_BuffSRVsOffset; }
+    template<> OffsetType GetResourceOffset<BuffUAVBindInfo>  () const { return m_BuffUAVsOffset; }
+    template<> OffsetType GetResourceOffset<SamplerBindInfo>  () const { return m_SamplerOffset;  }
 
-    ConstBuffBindInfo& GetCB(Uint32 cb)
+    template<typename ResourceType>
+    ResourceType& GetResource(Uint32 ResIndex)
     {
-        VERIFY_EXPR(cb<m_NumCBs);
-        return reinterpret_cast<ConstBuffBindInfo*>(m_ResourceBuffer.get())[cb];
+        VERIFY(ResIndex < GetNumResources<ResourceType>(), "Resource index (", ResIndex, ") exceeds max allowed value (", GetNumResources<ResourceType>(), ")");
+        auto Offset = GetResourceOffset<ResourceType>();
+        return reinterpret_cast<ResourceType*>( reinterpret_cast<Uint8*>(m_ResourceBuffer.get()) + Offset)[ResIndex];
     }
-    const ConstBuffBindInfo& GetCB(Uint32 cb)const
+    
+    template<typename ResourceType>
+    const ResourceType& GetConstResource(Uint32 ResIndex)const
     {
-        VERIFY_EXPR(cb<m_NumCBs);
-        return reinterpret_cast<const ConstBuffBindInfo*>(m_ResourceBuffer.get())[cb];
+        VERIFY(ResIndex < GetNumResources<ResourceType>(), "Resource index (", ResIndex, ") exceeds max allowed value (", GetNumResources<ResourceType>(), ")");
+        auto Offset = GetResourceOffset<ResourceType>();
+        return reinterpret_cast<const ResourceType*>( reinterpret_cast<const Uint8*>(m_ResourceBuffer.get()) + Offset)[ResIndex];
     }
-
-    TexSRVBindInfo& GetTexSRV(Uint32 t)
-    {
-        VERIFY_EXPR(t<m_NumTexSRVs);
-        return reinterpret_cast<TexSRVBindInfo*>( reinterpret_cast<Uint8*>(m_ResourceBuffer.get()) + m_TexSRVsOffset)[t];
-    }
-    const TexSRVBindInfo& GetTexSRV(Uint32 t)const
-    {
-        VERIFY_EXPR(t<m_NumTexSRVs);
-        return reinterpret_cast<const TexSRVBindInfo*>( reinterpret_cast<const Uint8*>(m_ResourceBuffer.get()) + m_TexSRVsOffset)[t];
-    }
-
-    TexUAVBindInfo& GetTexUAV(Uint32 u)
-    {
-        VERIFY_EXPR(u < m_NumTexUAVs);
-        return reinterpret_cast<TexUAVBindInfo*>( reinterpret_cast<Uint8*>(m_ResourceBuffer.get()) + m_TexUAVsOffset)[u];
-    }
-    const TexUAVBindInfo& GetTexUAV(Uint32 u)const
-    {
-        VERIFY_EXPR(u < m_NumTexUAVs);
-        return reinterpret_cast<const TexUAVBindInfo*>( reinterpret_cast<const Uint8*>(m_ResourceBuffer.get()) + m_TexUAVsOffset)[u];
-    }
-
-    BuffUAVBindInfo& GetBufUAV(Uint32 u)
-    {
-        VERIFY_EXPR(u < m_NumBufUAVs);
-        return reinterpret_cast<BuffUAVBindInfo*>( reinterpret_cast<Uint8*>(m_ResourceBuffer.get()) + m_BuffUAVsOffset)[u];
-    }
-    const BuffUAVBindInfo& GetBufUAV(Uint32 u)const
-    {
-        VERIFY_EXPR(u < m_NumBufUAVs);
-        return reinterpret_cast<const BuffUAVBindInfo*>( reinterpret_cast<const Uint8*>(m_ResourceBuffer.get()) + m_BuffUAVsOffset)[u];
-    }
-
-    BuffSRVBindInfo& GetBufSRV(Uint32 s)
-    {
-        VERIFY_EXPR(s < m_NumBufSRVs);
-        return reinterpret_cast<BuffSRVBindInfo*>( reinterpret_cast<Uint8*>(m_ResourceBuffer.get()) + m_BuffSRVsOffset)[s];
-    }
-    const BuffSRVBindInfo& GetBufSRV(Uint32 s)const
-    {
-        VERIFY_EXPR(s < m_NumBufSRVs);
-        return reinterpret_cast<const BuffSRVBindInfo*>( reinterpret_cast<const Uint8*>(m_ResourceBuffer.get()) + m_BuffSRVsOffset)[s];
-    }
-
-    SamplerBindInfo& GetSampler(Uint32 s)
-    {
-        VERIFY_EXPR(s < m_NumSamplers);
-        return reinterpret_cast<SamplerBindInfo*>( reinterpret_cast<Uint8*>(m_ResourceBuffer.get()) + m_SamplerOffset)[s];
-    }
-    const SamplerBindInfo& GetSampler(Uint32 s)const
-    {
-        VERIFY_EXPR(s < m_NumSamplers);
-        return reinterpret_cast<const SamplerBindInfo*>( reinterpret_cast<const Uint8*>(m_ResourceBuffer.get()) + m_SamplerOffset)[s];
-    }
+    
+    template<typename ResourceType>
+    IShaderVariable* GetResourceByName( const Char* Name );
 
     template<typename THandleCB,
              typename THandleTexSRV,
@@ -324,22 +295,30 @@ private:
                          THandleBufUAV  HandleBufUAV,
                          THandleSampler HandleSampler)
     {
-        for (Uint32 cb = 0; cb < m_NumCBs; ++cb)
-            HandleCB(GetCB(cb));
-        for (Uint32 t = 0; t < m_NumTexSRVs; ++t)
-            HandleTexSRV(GetTexSRV(t));
-        for (Uint32 u = 0; u < m_NumTexUAVs; ++u)
-            HandleTexUAV(GetTexUAV(u));
-        for (Uint32 s = 0; s < m_NumBufSRVs; ++s)
-            HandleBufSRV(GetBufSRV(s));
-        for (Uint32 u = 0; u < m_NumBufUAVs; ++u)
-            HandleBufUAV(GetBufUAV(u));
-        for (Uint32 s = 0; s < m_NumSamplers; ++s)
-            HandleSampler(GetSampler(s));
+        for (Uint32 cb = 0; cb < GetNumResources<ConstBuffBindInfo>(); ++cb)
+            HandleCB(GetResource<ConstBuffBindInfo>(cb));
+
+        for (Uint32 t = 0; t < GetNumResources<TexSRVBindInfo>(); ++t)
+            HandleTexSRV(GetResource<TexSRVBindInfo>(t));
+
+        for (Uint32 u = 0; u < GetNumResources<TexUAVBindInfo>(); ++u)
+            HandleTexUAV(GetResource<TexUAVBindInfo>(u));
+
+        for (Uint32 s = 0; s < GetNumResources<BuffSRVBindInfo>(); ++s)
+            HandleBufSRV(GetResource<BuffSRVBindInfo>(s));
+
+        for (Uint32 u = 0; u < GetNumResources<BuffUAVBindInfo>(); ++u)
+            HandleBufUAV(GetResource<BuffUAVBindInfo>(u));
+
+        for (Uint32 s = 0; s < GetNumResources<SamplerBindInfo>(); ++s)
+            HandleSampler(GetResource<SamplerBindInfo>(s));
     }
 
     std::shared_ptr<const ShaderResourcesD3D11> m_pResources;
     IObject& m_Owner;
+
+    friend class ShaderVariableIndexLocator;
+    friend class ShaderVariableLocator;
 };
 
 }
