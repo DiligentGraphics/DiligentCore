@@ -33,7 +33,7 @@
 namespace Diligent
 {
 
-const Char* g_HLSLDefinitions = 
+static const Char* g_HLSLDefinitions = 
 {
     #include "HLSLDefinitions_inc.fxh"
 };

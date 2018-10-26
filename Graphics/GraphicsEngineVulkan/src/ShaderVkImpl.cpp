@@ -28,22 +28,27 @@
 #include "RenderDeviceVkImpl.h"
 #include "DataBlobImpl.h"
 #include "GLSLSourceBuilder.h"
-#include "GLSL2SPIRV.h"
-
-using namespace Diligent;
+#include "SPIRVUtils.h"
 
 namespace Diligent
 {
 
-
 ShaderVkImpl::ShaderVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl* pRenderDeviceVk, const ShaderCreationAttribs& CreationAttribs) : 
-    TShaderBase(pRefCounters, pRenderDeviceVk, CreationAttribs.Desc),
-    m_StaticResLayout(*this, pRenderDeviceVk->GetLogicalDevice()),
-    m_StaticResCache(ShaderResourceCacheVk::DbgCacheContentType::StaticShaderResources),
-    m_StaticVarsMgr(*this)
+    TShaderBase       (pRefCounters, pRenderDeviceVk, CreationAttribs.Desc),
+    m_StaticResLayout (*this, pRenderDeviceVk->GetLogicalDevice()),
+    m_StaticResCache  (ShaderResourceCacheVk::DbgCacheContentType::StaticShaderResources),
+    m_StaticVarsMgr   (*this)
 {
-    auto GLSLSource = BuildGLSLSourceString(CreationAttribs, TargetGLSLCompiler::glslang, "#define TARGET_API_VULKAN 1\n");
-    m_SPIRV = GLSLtoSPIRV(m_Desc.ShaderType, GLSLSource.c_str(), CreationAttribs.ppCompilerOutput);
+    if (CreationAttribs.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL)
+    {
+        m_SPIRV = HLSLtoSPIRV(CreationAttribs, CreationAttribs.ppCompilerOutput);
+    }
+    else
+    {
+        auto GLSLSource = BuildGLSLSourceString(CreationAttribs, TargetGLSLCompiler::glslang, "#define TARGET_API_VULKAN 1\n");
+        m_SPIRV = GLSLtoSPIRV(m_Desc.ShaderType, GLSLSource.c_str(), static_cast<int>(GLSLSource.length()), CreationAttribs.ppCompilerOutput);
+    }
+    
     if (m_SPIRV.empty())
     {
         LOG_ERROR_AND_THROW("Failed to compile shader");
@@ -51,16 +56,16 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl*
 
     // We cannot create shader module here because resource bindings are assigned when
     // pipeline state is created
-
+    
     // Load shader resources
-    auto &Allocator = GetRawAllocator();
-    auto *pRawMem = ALLOCATE(Allocator, "Allocator for ShaderResources", sizeof(SPIRVShaderResources));
-    auto *pResources = new (pRawMem) SPIRVShaderResources(Allocator, pRenderDeviceVk, m_SPIRV, m_Desc);
+    auto& Allocator = GetRawAllocator();
+    auto* pRawMem = ALLOCATE(Allocator, "Allocator for ShaderResources", sizeof(SPIRVShaderResources));
+    auto* pResources = new (pRawMem) SPIRVShaderResources(Allocator, pRenderDeviceVk, m_SPIRV, m_Desc, CreationAttribs.UseCombinedTextureSamplers ? CreationAttribs.CombinedSamplerSuffix : nullptr);
     m_pShaderResources.reset(pResources, STDDeleterRawMem<SPIRVShaderResources>(Allocator));
 
     m_StaticResLayout.InitializeStaticResourceLayout(m_pShaderResources, GetRawAllocator(), m_StaticResCache);
     // m_StaticResLayout only contains static resources, so reference all of them
-    m_StaticVarsMgr.Initialize(m_StaticResLayout, GetRawAllocator(), nullptr,  0, m_StaticResCache);
+    m_StaticVarsMgr.Initialize(m_StaticResLayout, GetRawAllocator(), nullptr, 0, m_StaticResCache);
 }
 
 ShaderVkImpl::~ShaderVkImpl()

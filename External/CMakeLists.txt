@@ -9,12 +9,28 @@ if(PLATFORM_ANDROID)
 endif()
 
 if(PLATFORM_WIN32)
+    # We only need to have SPIRV-Headers folder, but we
+    # do not really need any target from the project.
+    #add_subdirectory(SPIRV-Headers)
+    #set_directory_root_folder("SPIRV-Headers" "Core/External/SPIRV-Headers")
+
+    set(SPIRV-Headers_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/SPIRV-Headers")
+    set(SPIRV_SKIP_TESTS ON)
+    set(SPIRV_SKIP_EXECUTABLES ON)
+    set(SKIP_SPIRV_TOOLS_INSTALL ON)
+    add_subdirectory(SPIRV-Tools)
+    set_directory_root_folder("SPIRV-Tools" "Core/External/SPIRV-Tools")
+    # We only need SPIRV-Tools-opt for glslang that also depends on SPIRV-Tools.
+    # Exclude all other targets from build to save build time
+    find_targets_in_directory(SPIRV_Tools_Targets "SPIRV-Tools")
+    list(REMOVE_ITEM SPIRV_Tools_Targets SPIRV-Tools SPIRV-Tools-opt)
+    set_target_properties(${SPIRV_Tools_Targets} PROPERTIES EXCLUDE_FROM_ALL 1 EXCLUDE_FROM_DEFAULT_BUILD 1)
+
     option(ENABLE_GLSLANG_BINARIES OFF)
-    option(SKIP_GLSLANG_INSTALL ON)
+    option(ENABLE_SPVREMAPPER OFF)
+    set(SKIP_GLSLANG_INSTALL ON)
     add_subdirectory(glslang)
-    set_target_properties(glslang OGLCompiler OSDependent SPIRV SPVRemapper HLSL PROPERTIES
-        FOLDER Core/External/glslang
-    )
+    set_directory_root_folder("glslang" "Core/External/glslang")
 
     # glslang "kindly" sets global CMAKE_DEBUG_POSTFIX to "d", which we have to unset now
     unset(CMAKE_DEBUG_POSTFIX CACHE)

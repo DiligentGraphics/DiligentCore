@@ -4,3 +4,9 @@
 [submodule "External/SPIRV-Cross"]
 	path = External/SPIRV-Cross
 	url = https://github.com/DiligentGraphics/SPIRV-Cross.git
+[submodule "External/SPIRV-Tools"]
+	path = External/SPIRV-Tools
+	url = https://github.com/DiligentGraphics/SPIRV-Tools.git
+[submodule "external/SPIRV-Headers"]
+	path = external/SPIRV-Headers
+	url = https://github.com/DiligentGraphics/SPIRV-Headers.git

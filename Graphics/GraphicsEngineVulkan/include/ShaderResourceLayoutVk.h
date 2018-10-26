@@ -144,9 +144,15 @@ public:
         VkResource& operator = (const VkResource&) = delete;
         VkResource& operator = (VkResource&&)      = delete;
 
+        static constexpr const Uint32 CacheOffsetBits    = 24;
+        static constexpr const Uint32 SamplerIndBits     = 8;
+        static constexpr const Uint32 InvalidSamplerInd  = (1 << SamplerIndBits)-1;
+
         const Uint16 Binding;
         const Uint16 DescriptorSet;
-        const Uint32 CacheOffset; // Offset from the beginning of the cached descriptor set
+        const Uint32 CacheOffset   : CacheOffsetBits; // Offset from the beginning of the cached descriptor set
+        const Uint32 SamplerInd    : SamplerIndBits;  // When using combined texture samplers, index of the separate sampler 
+                                                      // assigned to separate image
         const SPIRVShaderResourceAttribs&   SpirvAttribs;
         const ShaderResourceLayoutVk&       ParentResLayout;
 
@@ -154,15 +160,19 @@ public:
                    const SPIRVShaderResourceAttribs&    _SpirvAttribs,
                    uint32_t                             _Binding,
                    uint32_t                             _DescriptorSet,
-                   Uint32                               _CacheOffset)noexcept :
+                   Uint32                               _CacheOffset,
+                   Uint32                               _SamplerInd)noexcept :
             Binding         (static_cast<decltype(Binding)>(_Binding)),
             DescriptorSet   (static_cast<decltype(DescriptorSet)>(_DescriptorSet)),
             CacheOffset     (_CacheOffset),
+            SamplerInd      (_SamplerInd),
             SpirvAttribs    (_SpirvAttribs),
             ParentResLayout (_ParentLayout)
         {
-            VERIFY(_Binding <= std::numeric_limits<decltype(Binding)>::max(), "Binding (", _Binding, ") exceeds representable max value", std::numeric_limits<decltype(Binding)>::max() );
-            VERIFY(_DescriptorSet <= std::numeric_limits<decltype(DescriptorSet)>::max(), "Descriptor set (", _DescriptorSet, ") exceeds representable max value", std::numeric_limits<decltype(DescriptorSet)>::max());
+            VERIFY(_CacheOffset   < (1 << CacheOffsetBits),                               "Cache offset (", _CacheOffset, ") exceeds max representable value ", (1 << CacheOffsetBits) );
+            VERIFY(_SamplerInd    < (1 << SamplerIndBits),                                "Sampler index  (", _SamplerInd, ") exceeds max representable value ", (1 << SamplerIndBits) );
+            VERIFY(_Binding       <= std::numeric_limits<decltype(Binding)>::max(),       "Binding (", _Binding, ") exceeds max representable value ", std::numeric_limits<decltype(Binding)>::max() );
+            VERIFY(_DescriptorSet <= std::numeric_limits<decltype(DescriptorSet)>::max(), "Descriptor set (", _DescriptorSet, ") exceeds max representable value ", std::numeric_limits<decltype(DescriptorSet)>::max());
         }
 
         // Checks if a resource is bound in ResourceCache at the given ArrayIndex
@@ -193,11 +203,13 @@ public:
                               ShaderResourceCacheVk::Resource&   DstRes, 
                               VkDescriptorSet                    vkDescrSet,
                               Uint32                             ArrayInd)const;
-
+            
+        template<typename TCacheSampler>
         void CacheImage(IDeviceObject*                   pTexView,
                         ShaderResourceCacheVk::Resource& DstRes,
                         VkDescriptorSet                  vkDescrSet,
-                        Uint32                           ArrayInd)const;
+                        Uint32                           ArrayInd,
+                        TCacheSampler                    CacheSampler)const;
 
         void CacheSeparateSampler(IDeviceObject*                   pSampler,
                                   ShaderResourceCacheVk::Resource& DstRes,
@@ -242,6 +254,8 @@ public:
         return Resources[GetResourceOffset(VarType,r)];
     }
 
+    bool IsUsingSeparateSamplers()const {return !m_pResources->IsUsingCombinedSamplers();}
+
 private:
     Uint32 GetResourceOffset(SHADER_VARIABLE_TYPE VarType, Uint32 r)const
     {
@@ -275,6 +289,8 @@ private:
                         IMemoryAllocator&                           Allocator,
                         const SHADER_VARIABLE_TYPE*                 AllowedVarTypes,
                         Uint32                                      NumAllowedTypes);
+
+    Uint32 FindAssignedSampler(const SPIRVShaderResourceAttribs& SepImg, Uint32 CurrResourceCount)const;
 
 
     IObject&                                            m_Owner;

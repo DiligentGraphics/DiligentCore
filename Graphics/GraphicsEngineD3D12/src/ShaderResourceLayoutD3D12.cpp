@@ -271,7 +271,11 @@ void ShaderResourceLayoutD3D12::Initialize(ID3D12Device*                        
                         if (strcmp(Sampler.Attribs.Name, SamplerAttribs.Name) == 0)
                             break;
                     }
-                    VERIFY(SamplerId < SamplerCount, "Unable to find assigned sampler");
+                    if (SamplerId == SamplerCount)
+                    {
+                        LOG_ERROR("Unable to find sampler '", SamplerAttribs.Name, "' assigned to texture SRV '", TexSRV.Name, "' in the list of already created resources. This seems to be a bug.");
+                        SamplerId = D3D12Resource::InvalidSamplerId;
+                    }
                     VERIFY(SamplerId <= D3D12Resource::MaxSamplerId, "Sampler index excceeds allowed limit");
                 }
             }

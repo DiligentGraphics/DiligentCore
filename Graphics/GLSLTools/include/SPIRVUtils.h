@@ -32,6 +32,7 @@ namespace Diligent
 
 void InitializeGlslang();
 void FinalizeGlslang();
-std::vector<unsigned int> GLSLtoSPIRV(const SHADER_TYPE ShaderType, const char* ShaderSource, IDataBlob** ppCompilerOutput);
+std::vector<unsigned int> GLSLtoSPIRV(SHADER_TYPE ShaderType, const char* ShaderSource, int SourceCodeLen, IDataBlob** ppCompilerOutput);
+std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreationAttribs& Attribs, IDataBlob** ppCompilerOutput);
 
 }

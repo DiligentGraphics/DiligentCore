@@ -316,15 +316,8 @@ public:
     const D3DShaderResourceAttribs& GetBufUAV (Uint32 n)const noexcept{ return GetResAttribs(n, GetNumBufUAV(),   m_BufUAVOffset); }
     const D3DShaderResourceAttribs& GetSampler(Uint32 n)const noexcept{ return GetResAttribs(n, GetNumSamplers(), m_SamplersOffset); }
 
-    
-    void CountResources(const SHADER_VARIABLE_TYPE* AllowedVarTypes,
-                        Uint32                      NumAllowedTypes, 
-                        Uint32&                     NumCBs,
-                        Uint32&                     NumTexSRVs,
-                        Uint32&                     NumTexUAVs, 
-                        Uint32&                     NumBufSRVs,
-                        Uint32&                     NumBufUAVs,
-                        Uint32&                     NumSamplers)const noexcept;
+    D3DShaderResourceCounters CountResources(const SHADER_VARIABLE_TYPE* AllowedVarTypes,
+                                             Uint32                      NumAllowedTypes)const noexcept;
 
     SHADER_TYPE GetShaderType()const noexcept{return m_ShaderType;}
 
@@ -428,14 +421,9 @@ protected:
     D3DShaderResourceAttribs& GetSampler(Uint32 n)noexcept{ return GetResAttribs(n, GetNumSamplers(), m_SamplersOffset); }
 
 private:
-    void AllocateMemory(IMemoryAllocator& Allocator, 
-                        Uint32            NumCBs, 
-                        Uint32            NumTexSRVs, 
-                        Uint32            NumTexUAVs, 
-                        Uint32            NumBufSRVs, 
-                        Uint32            NumBufUAVs, 
-                        Uint32            NumSamplers,
-                        size_t            ResourceNamesPoolSize);
+    void AllocateMemory(IMemoryAllocator&                Allocator, 
+                        const D3DShaderResourceCounters& ResCounters,
+                        size_t                           ResourceNamesPoolSize);
 
     Uint32 FindAssignedSamplerId(const D3DShaderResourceAttribs& TexSRV, const char* SamplerSuffix)const;
 
@@ -472,12 +460,12 @@ void ShaderResources::Initialize(ID3DBlob*           pShaderByteCode,
     LoadD3DShaderResources<D3D_SHADER_DESC, D3D_SHADER_INPUT_BIND_DESC, TShaderReflection>(
         pShaderByteCode,
 
-        [&](Uint32 NumCBs, Uint32 NumTexSRVs, Uint32 NumTexUAVs, Uint32 NumBufSRVs, Uint32 NumBufUAVs, Uint32 NumSamplers, size_t ResourceNamesPoolSize)
+        [&](const D3DShaderResourceCounters& ResCounters, size_t ResourceNamesPoolSize)
         {
             if (CombinedSamplerSuffix != nullptr)
                 ResourceNamesPoolSize += strlen(CombinedSamplerSuffix)+1;
 
-            AllocateMemory(GetRawAllocator(), NumCBs, NumTexSRVs, NumTexUAVs, NumBufSRVs, NumBufUAVs, NumSamplers, ResourceNamesPoolSize);
+            AllocateMemory(GetRawAllocator(), ResCounters, ResourceNamesPoolSize);
         },
 
         [&](const D3DShaderResourceAttribs& CBAttribs)

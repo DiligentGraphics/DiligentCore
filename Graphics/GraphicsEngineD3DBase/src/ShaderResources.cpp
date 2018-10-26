@@ -51,42 +51,36 @@ ShaderResources::~ShaderResources()
         GetSampler(n).~D3DShaderResourceAttribs();
 }
 
-void ShaderResources::AllocateMemory(IMemoryAllocator& Allocator, 
-                                     Uint32            NumCBs, 
-                                     Uint32            NumTexSRVs, 
-                                     Uint32            NumTexUAVs, 
-                                     Uint32            NumBufSRVs, 
-                                     Uint32            NumBufUAVs, 
-                                     Uint32            NumSamplers,
-                                     size_t            ResourceNamesPoolSize)
+void ShaderResources::AllocateMemory(IMemoryAllocator&                Allocator, 
+                                     const D3DShaderResourceCounters& ResCounters,
+                                     size_t                           ResourceNamesPoolSize)
 {
-    const auto MaxOffset = static_cast<Uint32>(std::numeric_limits<OffsetType>::max());
-    VERIFY(NumCBs <= MaxOffset, "Max offset exceeded");
-    m_TexSRVOffset    = 0                + static_cast<OffsetType>(NumCBs);
+    Uint32 CurrentOffset = 0;
+    auto AdvanceOffset = [&CurrentOffset](Uint32 NumResources)
+    {
+        constexpr Uint32 MaxOffset = std::numeric_limits<OffsetType>::max();
+        VERIFY(CurrentOffset <= MaxOffset, "Current offser (", CurrentOffset, ") exceeds max allowed value (", MaxOffset, ")");
+        auto Offset = static_cast<OffsetType>(CurrentOffset);
+        CurrentOffset += NumResources;
+        return Offset;
+    };
 
-    VERIFY(m_TexSRVOffset   + NumTexSRVs <= MaxOffset, "Max offset exceeded");
-    m_TexUAVOffset    = m_TexSRVOffset   + static_cast<OffsetType>(NumTexSRVs);
-
-    VERIFY(m_TexUAVOffset   + NumTexUAVs <= MaxOffset, "Max offset exceeded");
-    m_BufSRVOffset    = m_TexUAVOffset   + static_cast<OffsetType>(NumTexUAVs);
-
-    VERIFY(m_BufSRVOffset   + NumBufSRVs <= MaxOffset, "Max offset exceeded");
-    m_BufUAVOffset    = m_BufSRVOffset   + static_cast<OffsetType>(NumBufSRVs);
-
-    VERIFY(m_BufUAVOffset   + NumBufUAVs <= MaxOffset, "Max offset exceeded");
-    m_SamplersOffset  = m_BufUAVOffset   + static_cast<OffsetType>(NumBufUAVs);
-
-    VERIFY(m_SamplersOffset + NumSamplers<= MaxOffset, "Max offset exceeded");
-    m_TotalResources = m_SamplersOffset + static_cast<OffsetType>(NumSamplers);
+    auto CBOffset    = AdvanceOffset(ResCounters.NumCBs);       CBOffset; // To suppress warning
+    m_TexSRVOffset   = AdvanceOffset(ResCounters.NumTexSRVs);
+    m_TexUAVOffset   = AdvanceOffset(ResCounters.NumTexUAVs);
+    m_BufSRVOffset   = AdvanceOffset(ResCounters.NumBufSRVs);
+    m_BufUAVOffset   = AdvanceOffset(ResCounters.NumBufUAVs);
+    m_SamplersOffset = AdvanceOffset(ResCounters.NumSamplers);
+    m_TotalResources = AdvanceOffset(0);
 
     auto MemorySize = m_TotalResources * sizeof(D3DShaderResourceAttribs) + ResourceNamesPoolSize * sizeof(char);
 
-    VERIFY_EXPR(GetNumCBs()     == NumCBs);
-    VERIFY_EXPR(GetNumTexSRV()  == NumTexSRVs);
-    VERIFY_EXPR(GetNumTexUAV()  == NumTexUAVs);
-    VERIFY_EXPR(GetNumBufSRV()  == NumBufSRVs);
-    VERIFY_EXPR(GetNumBufUAV()  == NumBufUAVs);
-    VERIFY_EXPR(GetNumSamplers()== NumSamplers);
+    VERIFY_EXPR(GetNumCBs()     == ResCounters.NumCBs);
+    VERIFY_EXPR(GetNumTexSRV()  == ResCounters.NumTexSRVs);
+    VERIFY_EXPR(GetNumTexUAV()  == ResCounters.NumTexUAVs);
+    VERIFY_EXPR(GetNumBufSRV()  == ResCounters.NumBufSRVs);
+    VERIFY_EXPR(GetNumBufUAV()  == ResCounters.NumBufUAVs);
+    VERIFY_EXPR(GetNumSamplers()== ResCounters.NumSamplers);
 
     if( MemorySize )
     {
@@ -102,59 +96,50 @@ ShaderResources::ShaderResources(SHADER_TYPE ShaderType):
 {
 }
 
-void ShaderResources::CountResources(const SHADER_VARIABLE_TYPE* AllowedVarTypes,
-                                     Uint32                      NumAllowedTypes, 
-                                     Uint32&                     NumCBs, 
-                                     Uint32&                     NumTexSRVs,
-                                     Uint32&                     NumTexUAVs, 
-                                     Uint32&                     NumBufSRVs,
-                                     Uint32&                     NumBufUAVs,
-                                     Uint32&                     NumSamplers)const noexcept
+D3DShaderResourceCounters ShaderResources::CountResources(const SHADER_VARIABLE_TYPE* AllowedVarTypes,
+                                                          Uint32                      NumAllowedTypes)const noexcept
 {
     auto AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
 
-    NumCBs = 0;
-    NumTexSRVs = 0;
-    NumTexUAVs = 0;
-    NumBufSRVs = 0;
-    NumBufUAVs = 0;
-    NumSamplers = 0;
+    D3DShaderResourceCounters Counters;
     ProcessResources(
         AllowedVarTypes, NumAllowedTypes,
 
         [&](const D3DShaderResourceAttribs& CB, Uint32)
         {
             VERIFY_EXPR(CB.IsAllowedType(AllowedTypeBits));
-            ++NumCBs;
+            ++Counters.NumCBs;
         },
         [&](const D3DShaderResourceAttribs& Sam, Uint32)
         {
             VERIFY_EXPR(Sam.IsAllowedType(AllowedTypeBits));
             // Skip static samplers
             if (!Sam.IsStaticSampler())
-                ++NumSamplers;
+                ++Counters.NumSamplers;
         },
         [&](const D3DShaderResourceAttribs& TexSRV, Uint32)
         {
             VERIFY_EXPR(TexSRV.IsAllowedType(AllowedTypeBits));
-            ++NumTexSRVs;
+            ++Counters.NumTexSRVs;
         },
         [&](const D3DShaderResourceAttribs& TexUAV, Uint32)
         {
             VERIFY_EXPR(TexUAV.IsAllowedType(AllowedTypeBits));
-            ++NumTexUAVs;
+            ++Counters.NumTexUAVs;
         },
         [&](const D3DShaderResourceAttribs& BufSRV, Uint32)
         {
             VERIFY_EXPR(BufSRV.IsAllowedType(AllowedTypeBits));
-            ++NumBufSRVs;
+            ++Counters.NumBufSRVs;
         },
         [&](const D3DShaderResourceAttribs& BufUAV, Uint32)
         {
             VERIFY_EXPR(BufUAV.IsAllowedType(AllowedTypeBits));
-            ++NumBufUAVs;
+            ++Counters.NumBufUAVs;
         }
     );
+
+    return Counters;
 }
 
 

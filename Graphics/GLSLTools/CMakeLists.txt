@@ -13,11 +13,11 @@ set(SOURCE
 if(VULKAN_SUPPORTED)
     list(APPEND SOURCE 
         src/SPIRVShaderResources.cpp
-        src/GLSL2SPIRV.cpp
+        src/SPIRVUtils.cpp
     )
     list(APPEND INCLUDE 
         include/SPIRVShaderResources.h
-        include/GLSL2SPIRV.h
+        include/SPIRVUtils.h
     )
 endif()
 

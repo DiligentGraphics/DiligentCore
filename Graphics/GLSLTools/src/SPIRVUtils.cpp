@@ -21,6 +21,11 @@
  *  of the possibility of such damages.
  */
 
+#include <unordered_set>
+#include <unordered_map>
+#include <memory>
+#include <array>
+
 #if PLATFORM_ANDROID
     // Android specific include files.
 #   include <unordered_map>
@@ -36,9 +41,15 @@
 #	include "SPIRV/GlslangToSpv.h"
 #endif
 
-#include "GLSL2SPIRV.h"
+#include "SPIRVUtils.h"
 #include "DebugUtilities.h"
 #include "DataBlobImpl.h"
+#include "RefCntAutoPtr.h"
+
+static const char g_HLSLDefinitions[] = 
+{
+    #include "../../GraphicsEngineD3DBase/include/HLSLDefinitions_inc.fxh"
+};
 
 namespace Diligent
 {
@@ -161,6 +172,16 @@ TBuiltInResource InitResources()
     Resources.maxCullDistances = 8;
     Resources.maxCombinedClipAndCullDistances = 8;
     Resources.maxSamples = 4;
+    Resources.maxMeshOutputVerticesNV = 256;
+    Resources.maxMeshOutputPrimitivesNV = 512;
+    Resources.maxMeshWorkGroupSizeX_NV = 32;
+    Resources.maxMeshWorkGroupSizeY_NV = 1;
+    Resources.maxMeshWorkGroupSizeZ_NV = 1;
+    Resources.maxTaskWorkGroupSizeX_NV = 32;
+    Resources.maxTaskWorkGroupSizeY_NV = 1;
+    Resources.maxTaskWorkGroupSizeZ_NV = 1;
+    Resources.maxMeshViewCountNV = 4;
+
     Resources.limits.nonInductiveForLoops = 1;
     Resources.limits.whileLoops = 1;
     Resources.limits.doWhileLoops = 1;
@@ -268,57 +289,46 @@ public:
     }
 };
 
-static void InitializeCompilerOutputBlob(const char* ShaderSource, const std::string& ErrorLog, IDataBlob** ppCompilerOutput)
+static void LogCompilerError(const char* DebugOutputMessage,
+                             const char* InfoLog,
+                             const char* InfoDebugLog,
+                             const char* ShaderSource,
+                             size_t      SourceCodeLen,
+                             IDataBlob** ppCompilerOutput)
 {
-    VERIFY_EXPR(ppCompilerOutput != nullptr);
-    auto SourceLen = strlen(ShaderSource);
-    auto* pOutputDataBlob = MakeNewRCObj<DataBlobImpl>()(SourceLen + 1 + ErrorLog.length() + 1);
-    char* DataPtr = reinterpret_cast<char*>(pOutputDataBlob->GetDataPtr());
-    memcpy(DataPtr, ErrorLog.data(), ErrorLog.length() + 1);
-    memcpy(DataPtr + ErrorLog.length() + 1, ShaderSource, SourceLen + 1);
-    pOutputDataBlob->QueryInterface(IID_DataBlob, reinterpret_cast<IObject**>(ppCompilerOutput));
+    std::string ErrorLog(InfoLog);
+    if (*InfoDebugLog != '\0')
+    {
+        ErrorLog.push_back('\n');
+        ErrorLog.append(InfoDebugLog);
+    }
+    LOG_ERROR_MESSAGE(DebugOutputMessage, ErrorLog);
+
+    if (ppCompilerOutput != nullptr)
+    {
+        auto* pOutputDataBlob = MakeNewRCObj<DataBlobImpl>()(SourceCodeLen + 1 + ErrorLog.length() + 1);
+        char* DataPtr = reinterpret_cast<char*>(pOutputDataBlob->GetDataPtr());
+        memcpy(DataPtr, ErrorLog.data(), ErrorLog.length() + 1);
+        memcpy(DataPtr + ErrorLog.length() + 1, ShaderSource, SourceCodeLen + 1);
+        pOutputDataBlob->QueryInterface(IID_DataBlob, reinterpret_cast<IObject**>(ppCompilerOutput));
+    }
 }
 
-std::vector<unsigned int> GLSLtoSPIRV(const SHADER_TYPE ShaderType, const char* ShaderSource, IDataBlob** ppCompilerOutput) 
+static std::vector<unsigned int> CompileShaderInternal(glslang::TShader&           Shader,
+                                                       EShMessages                 messages,
+                                                       glslang::TShader::Includer* pIncluder,
+                                                       const char*                 ShaderSource,
+                                                       size_t                      SourceCodeLen,
+                                                       IDataBlob**                 ppCompilerOutput)
 {
-#if PLATFORM_ANDROID
-
-    // On Android, use shaderc instead.
-    shaderc::Compiler compiler;
-    shaderc::SpvCompilationResult module =
-        compiler.CompileGlslToSpv(pshader, strlen(pshader), MapShadercType(shader_type), "shader");
-    if (module.GetCompilationStatus() != shaderc_compilation_status_success) {
-        LOGE("Error: Id=%d, Msg=%s", module.GetCompilationStatus(), module.GetErrorMessage().c_str());
-        return false;
-    }
-    std::vector<unsigned int> spirv;
-    spirv.assign(module.cbegin(), module.cend());
-
-#else
-
-    EShLanguage ShLang = ShaderTypeToShLanguage(ShaderType);
-    glslang::TShader Shader(ShLang);
-    TBuiltInResource Resources = InitResources();
-
-    // Enable SPIR-V and Vulkan rules when parsing GLSL
-    EShMessages messages = (EShMessages)(EShMsgSpvRules | EShMsgVulkanRules);
-
-    const char* ShaderStrings[] = { ShaderSource };
-    Shader.setStrings(ShaderStrings, 1);
-    
     Shader.setAutoMapBindings(true);
-    if (!Shader.parse(&Resources, 100, false, messages))
+    TBuiltInResource Resources = InitResources();
+    auto ParseResult = pIncluder != nullptr ?
+        Shader.parse(&Resources, 100, false, messages, *pIncluder) : 
+        Shader.parse(&Resources, 100, false, messages);
+    if (!ParseResult)
     {
-        std::string Log(Shader.getInfoLog());
-        if(*Shader.getInfoDebugLog() != '\0')
-        {
-            Log.push_back('\n');
-            Log.append(Shader.getInfoDebugLog());
-        }
-        LOG_ERROR_MESSAGE("Failed to parse shader source: \n", Log);
-        if(ppCompilerOutput != nullptr)
-            InitializeCompilerOutputBlob(ShaderSource, Log, ppCompilerOutput);
-
+        LogCompilerError("Failed to parse shader source: \n", Shader.getInfoLog(), Shader.getInfoDebugLog(), ShaderSource, SourceCodeLen, ppCompilerOutput);
         return {};
     }
 
@@ -326,16 +336,7 @@ std::vector<unsigned int> GLSLtoSPIRV(const SHADER_TYPE ShaderType, const char* 
     Program.addShader(&Shader);
     if (!Program.link(messages))
     {
-        std::string Log(Shader.getInfoLog());
-        if(*Shader.getInfoDebugLog() != '\0')
-        {
-            Log.push_back('\n');
-            Log.append(Shader.getInfoDebugLog());
-        }
-        LOG_ERROR_MESSAGE("Failed to link program: \n", Log);
-        if(ppCompilerOutput != nullptr)
-            InitializeCompilerOutputBlob(ShaderSource, Log, ppCompilerOutput);
-
+        LogCompilerError("Failed to link program: \n", Program.getInfoLog(), Program.getInfoDebugLog(), ShaderSource, SourceCodeLen, ppCompilerOutput);
         return {};
     }
 
@@ -344,10 +345,159 @@ std::vector<unsigned int> GLSLtoSPIRV(const SHADER_TYPE ShaderType, const char* 
     Program.mapIO(&Resovler);
 
     std::vector<unsigned int> spirv;
-    glslang::GlslangToSpv(*Program.getIntermediate(ShLang), spirv);
-#endif
+    glslang::GlslangToSpv(*Program.getIntermediate(Shader.getStage()), spirv);
 
     return std::move(spirv);
+}
+
+
+class IncluderImpl : public glslang::TShader::Includer
+{
+public:
+    IncluderImpl(IShaderSourceInputStreamFactory* pInputStreamFactory) :
+        m_pInputStreamFactory(pInputStreamFactory)
+    {}
+
+    // For the "system" or <>-style includes; search the "system" paths.
+    virtual IncludeResult* includeSystem(const char* headerName,
+                                         const char* /*includerName*/,
+                                         size_t /*inclusionDepth*/)
+    {
+        return nullptr;
+    }
+
+    // For the "local"-only aspect of a "" include. Should not search in the
+    // "system" paths, because on returning a failure, the parser will
+    // call includeSystem() to look in the "system" locations.
+    virtual IncludeResult* includeLocal(const char* headerName,
+                                        const char* /*includerName*/,
+                                        size_t /*inclusionDepth*/)
+    {
+        DEV_CHECK_ERR(m_pInputStreamFactory != nullptr, "The shader source conains #include directives, but no input stream factory was provided");
+        RefCntAutoPtr<IFileStream> pSourceStream;
+        m_pInputStreamFactory->CreateInputStream( headerName, &pSourceStream );
+        if( pSourceStream == nullptr )
+        {
+            LOG_ERROR( "Failed to open shader include file \"", headerName, "\". Check that the file exists" );
+            return nullptr;
+        }
+
+        RefCntAutoPtr<IDataBlob> pFileData( MakeNewRCObj<DataBlobImpl>()(0) );
+        pSourceStream->Read( pFileData );
+        auto* pNewInclude =
+            new IncludeResult
+            {
+                headerName,
+                reinterpret_cast<const char*>(pFileData->GetDataPtr()),
+                pFileData->GetSize(),
+                nullptr
+            };
+
+        m_IncludeRes.emplace(pNewInclude);
+        m_DataBlobs.emplace(pNewInclude, std::move(pFileData));
+        return pNewInclude;
+    }
+
+    // Signals that the parser will no longer use the contents of the
+    // specified IncludeResult.
+    virtual void releaseInclude(IncludeResult* IncldRes)
+    {
+        m_DataBlobs.erase(IncldRes);
+    }
+
+private:
+    IShaderSourceInputStreamFactory* const m_pInputStreamFactory;
+    std::unordered_set<std::unique_ptr<IncludeResult>> m_IncludeRes;
+    std::unordered_map<IncludeResult*, RefCntAutoPtr<IDataBlob>> m_DataBlobs;
+};
+
+std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreationAttribs& Attribs, IDataBlob** ppCompilerOutput)
+{
+    EShLanguage ShLang = ShaderTypeToShLanguage(Attribs.Desc.ShaderType);
+    glslang::TShader Shader(ShLang);
+    TBuiltInResource Resources = InitResources();
+
+    EShMessages messages = (EShMessages)(EShMsgReadHlsl | EShMsgHlslLegalization);
+
+    VERIFY_EXPR(Attribs.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL);
+    
+    Shader.setEnvInput(glslang::EShSourceHlsl, ShLang, glslang::EShClientVulkan, 100);
+    Shader.setEnvClient(glslang::EShClientVulkan, glslang::EShTargetVulkan_1_0);
+    Shader.setEnvTarget(glslang::EShTargetSpv, glslang::EShTargetSpv_1_0);
+    Shader.setHlslIoMapping(true);
+    Shader.setSourceEntryPoint(Attribs.EntryPoint);
+    Shader.setEntryPoint("main");
+
+    RefCntAutoPtr<IDataBlob> pFileData(MakeNewRCObj<DataBlobImpl>()(0));
+    const char* SourceCode = 0;
+    int SourceCodeLen = 0;
+    if (Attribs.Source)
+    {
+        SourceCode = Attribs.Source;
+        SourceCodeLen = static_cast<int>(strlen(Attribs.Source));
+    }
+    else
+    {
+        VERIFY(Attribs.pShaderSourceStreamFactory, "Input stream factory is null");
+        RefCntAutoPtr<IFileStream> pSourceStream;
+        Attribs.pShaderSourceStreamFactory->CreateInputStream(Attribs.FilePath, &pSourceStream);
+        if (pSourceStream == nullptr)
+            LOG_ERROR_AND_THROW("Failed to open shader source file");
+
+        pSourceStream->Read(pFileData);
+        SourceCode = reinterpret_cast<char*>(pFileData->GetDataPtr());
+        SourceCodeLen = static_cast<int>(pFileData->GetSize());
+    }
+
+    int NumShaderStrings = 0;
+    constexpr size_t MaxShaderStrings = 3;
+    std::array<const char*, MaxShaderStrings> ShaderStrings;
+    std::array<int,         MaxShaderStrings> ShaderStringLenghts;
+    
+    std::string HLSLDefinitions(g_HLSLDefinitions);
+    ShaderStrings      [NumShaderStrings] = HLSLDefinitions.c_str();
+    ShaderStringLenghts[NumShaderStrings] = HLSLDefinitions.length();
+    ++NumShaderStrings;
+    
+    std::string Defines;
+    if (Attribs.Macros != nullptr)
+    {
+        auto* pMacro = Attribs.Macros;
+        while (pMacro->Name != nullptr && pMacro->Definition != nullptr)
+        {
+            Defines += "#define ";
+            Defines += pMacro->Name;
+            Defines += ' ';
+            Defines += pMacro->Definition;
+            Defines += "\n";
+            ++pMacro;
+        }
+        ShaderStrings      [NumShaderStrings] = Defines.c_str();
+        ShaderStringLenghts[NumShaderStrings] = static_cast<int>(Defines.length());
+        ++NumShaderStrings;
+    }
+    ShaderStrings      [NumShaderStrings] = SourceCode;
+    ShaderStringLenghts[NumShaderStrings] = SourceCodeLen;
+    ++NumShaderStrings;
+    Shader.setStringsWithLengths(ShaderStrings.data(), ShaderStringLenghts.data(), NumShaderStrings);
+    
+    IncluderImpl Includer(Attribs.pShaderSourceStreamFactory);
+    return CompileShaderInternal(Shader, messages, &Includer, SourceCode, SourceCodeLen, ppCompilerOutput);
+}
+
+std::vector<unsigned int> GLSLtoSPIRV(const SHADER_TYPE ShaderType, const char* ShaderSource, int SourceCodeLen, IDataBlob** ppCompilerOutput) 
+{
+    EShLanguage ShLang = ShaderTypeToShLanguage(ShaderType);
+    glslang::TShader Shader(ShLang);
+    
+    // Enable SPIR-V and Vulkan rules when parsing GLSL
+    EShMessages messages = (EShMessages)(EShMsgSpvRules | EShMsgVulkanRules);
+
+    const char* ShaderStrings[] = {ShaderSource };
+    int         Lenghts[]       = {SourceCodeLen};
+    Shader.setStringsWithLengths(ShaderStrings, Lenghts, 1);
+    
+    return CompileShaderInternal(Shader, messages, nullptr, ShaderSource, SourceCodeLen, ppCompilerOutput);
 }
 
 }

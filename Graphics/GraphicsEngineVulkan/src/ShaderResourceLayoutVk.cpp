@@ -68,7 +68,7 @@ void ShaderResourceLayoutVk::AllocateMemory(std::shared_ptr<const SPIRVShaderRes
     m_pResources->ProcessResources(
         AllowedVarTypes, NumAllowedTypes,
 
-        [&](const SPIRVShaderResourceAttribs &ResAttribs, Uint32)
+        [&](const SPIRVShaderResourceAttribs& ResAttribs, Uint32)
         {
             VERIFY_EXPR(IsAllowedType(ResAttribs.VarType, AllowedTypeBits));
             VERIFY( Uint32{m_NumResources[ResAttribs.VarType]} + 1 <= Uint32{std::numeric_limits<Uint16>::max()}, "Number of resources exceeds max representable value");
@@ -104,13 +104,21 @@ void ShaderResourceLayoutVk::InitializeStaticResourceLayout(std::shared_ptr<cons
 
     m_pResources->ProcessResources(
         &AllowedVarType, 1,
-        [&](const SPIRVShaderResourceAttribs &Attribs, Uint32)
+        [&](const SPIRVShaderResourceAttribs& Attribs, Uint32)
         {
             Uint32 Binding       = Attribs.Type;
             Uint32 DescriptorSet = 0;
             Uint32 CacheOffset   = StaticResCacheSize;
             StaticResCacheSize += Attribs.ArraySize;
-            ::new (&GetResource(Attribs.VarType, CurrResInd[Attribs.VarType]++)) VkResource(*this, Attribs, Binding, DescriptorSet, CacheOffset);
+            
+            Uint32 SamplerInd = VkResource::InvalidSamplerInd;
+            if (Attribs.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateImage)
+            {
+                // Separate samplers are enumerated before separate images, so the sampler
+                // assigned to this separate image must already be created.
+                SamplerInd = FindAssignedSampler(Attribs, CurrResInd[Attribs.VarType]);
+            }
+            ::new (&GetResource(Attribs.VarType, CurrResInd[Attribs.VarType]++)) VkResource(*this, Attribs, Binding, DescriptorSet, CacheOffset, SamplerInd);
         }
     );
 
@@ -148,10 +156,11 @@ void ShaderResourceLayoutVk::Initialize(Uint32 NumShaders,
     std::unordered_map<Uint32, std::pair<Uint32, Uint32>> dbgBindings_CacheOffsets;
 #endif
 
-    auto AddResource = [&](Uint32                               ShaderInd,
-                           ShaderResourceLayoutVk&              ResLayout,
-                           const SPIRVShaderResources&          Resources, 
-                           const SPIRVShaderResourceAttribs&    Attribs)
+    auto AddResource = [&](Uint32                            ShaderInd,
+                           ShaderResourceLayoutVk&           ResLayout,
+                           const SPIRVShaderResources&       Resources, 
+                           const SPIRVShaderResourceAttribs& Attribs,
+                           Uint32                            SamplerInd = VkResource::InvalidSamplerInd)
     {
         Uint32 Binding = 0;
         Uint32 DescriptorSet = 0;
@@ -179,7 +188,7 @@ void ShaderResourceLayoutVk::Initialize(Uint32 NumShaders,
 #endif
 
         auto& ResInd = CurrResInd[ShaderInd][Attribs.VarType];
-        ::new (&ResLayout.GetResource(Attribs.VarType, ResInd++)) VkResource(ResLayout, Attribs, Binding, DescriptorSet, CacheOffset);
+        ::new (&ResLayout.GetResource(Attribs.VarType, ResInd++)) VkResource(ResLayout, Attribs, Binding, DescriptorSet, CacheOffset, SamplerInd);
     };
 
     // First process uniform buffers for all shader stages to make sure all UBs go first in every descriptor set
@@ -220,41 +229,48 @@ void ShaderResourceLayoutVk::Initialize(Uint32 NumShaders,
         Resources.ProcessResources(
             AllowedVarTypes, NumAllowedTypes,
 
-            [&](const SPIRVShaderResourceAttribs &UB, Uint32)
+            [&](const SPIRVShaderResourceAttribs& UB, Uint32)
             {
+                VERIFY_EXPR(UB.Type == SPIRVShaderResourceAttribs::ResourceType::UniformBuffer);
                 VERIFY_EXPR(IsAllowedType(UB.VarType, AllowedTypeBits));
                 // Skip
             },
             [&](const SPIRVShaderResourceAttribs& SB, Uint32)
             {
+                VERIFY_EXPR(SB.Type == SPIRVShaderResourceAttribs::ResourceType::StorageBuffer);
                 VERIFY_EXPR(IsAllowedType(SB.VarType, AllowedTypeBits));
                 // Skip
             },
-            [&](const SPIRVShaderResourceAttribs &Img, Uint32)
+            [&](const SPIRVShaderResourceAttribs& Img, Uint32)
             {
+                VERIFY_EXPR(Img.Type == SPIRVShaderResourceAttribs::ResourceType::StorageImage || Img.Type == SPIRVShaderResourceAttribs::ResourceType::StorageTexelBuffer);
                 VERIFY_EXPR(IsAllowedType(Img.VarType, AllowedTypeBits));
                 AddResource(s, Layout, Resources, Img);
             },
-            [&](const SPIRVShaderResourceAttribs &SmplImg, Uint32)
+            [&](const SPIRVShaderResourceAttribs& SmplImg, Uint32)
             {
+                VERIFY_EXPR(SmplImg.Type == SPIRVShaderResourceAttribs::ResourceType::SampledImage || SmplImg.Type == SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer);
                 VERIFY_EXPR(IsAllowedType(SmplImg.VarType, AllowedTypeBits));
                 AddResource(s, Layout, Resources, SmplImg);
             },
-            [&](const SPIRVShaderResourceAttribs &AC, Uint32)
+            [&](const SPIRVShaderResourceAttribs& AC, Uint32)
             {
+                VERIFY_EXPR(AC.Type == SPIRVShaderResourceAttribs::ResourceType::AtomicCounter);
                 VERIFY_EXPR(IsAllowedType(AC.VarType, AllowedTypeBits));
                 AddResource(s, Layout, Resources, AC);
             },
-            [&](const SPIRVShaderResourceAttribs &SepImg, Uint32)
+            [&](const SPIRVShaderResourceAttribs& SepSmpl, Uint32)
             {
-                VERIFY_EXPR(IsAllowedType(SepImg.VarType, AllowedTypeBits));
-                AddResource(s, Layout, Resources, SepImg);
-            },
-
-            [&](const SPIRVShaderResourceAttribs &SepSmpl, Uint32)
-            {
+                VERIFY_EXPR(SepSmpl.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler);
                 VERIFY_EXPR(IsAllowedType(SepSmpl.VarType, AllowedTypeBits));
                 AddResource(s, Layout, Resources, SepSmpl);
+            },
+            [&](const SPIRVShaderResourceAttribs& SepImg, Uint32)
+            {
+                VERIFY_EXPR(SepImg.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateImage);
+                VERIFY_EXPR(IsAllowedType(SepImg.VarType, AllowedTypeBits));
+                Uint32 SamplerInd = Layout.FindAssignedSampler(SepImg, CurrResInd[s][SepImg.VarType]);
+                AddResource(s, Layout, Resources, SepImg, SamplerInd);
             }
         );
     }
@@ -271,11 +287,43 @@ void ShaderResourceLayoutVk::Initialize(Uint32 NumShaders,
 #endif
 }
 
+
+Uint32 ShaderResourceLayoutVk::FindAssignedSampler(const SPIRVShaderResourceAttribs& SepImg, Uint32 CurrResourceCount)const
+{
+    VERIFY_EXPR(SepImg.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateImage);
+    
+    Uint32 SamplerInd = VkResource::InvalidSamplerInd;
+    if (m_pResources->IsUsingCombinedSamplers() && SepImg.ValidSepSamplerAssigned())
+    {
+        const auto& SepSampler = m_pResources->GetSepSmplr(SepImg.SepSmplrOrImgInd);
+        DEV_CHECK_ERR(SepImg.VarType == SepSampler.VarType,
+                        "The type (", GetShaderVariableTypeLiteralName(SepImg.VarType),") of separate image variable '", SepImg.Name,
+                        "' is not consistent with the type (", GetShaderVariableTypeLiteralName(SepSampler.VarType),
+                        ") of the separate sampler '", SepSampler.Name, "' that is assigned to it.");
+                    
+        for (SamplerInd = 0; SamplerInd < CurrResourceCount; ++SamplerInd)
+        {
+            const auto& Res = GetResource(SepSampler.VarType, SamplerInd);
+            if (Res.SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler && 
+                strcmp(Res.SpirvAttribs.Name, SepSampler.Name) == 0)
+            {
+                break;
+            }
+        }
+        if (SamplerInd == CurrResourceCount)
+        {
+            LOG_ERROR("Unable to find separate sampler '", SepSampler.Name, "' assigned to separate image '", SepImg.Name, "' in the list of already created resources. This seems to be a bug.");
+            SamplerInd = VkResource::InvalidSamplerInd;
+        }
+    }
+    return SamplerInd;
+}
+
 #define LOG_RESOURCE_BINDING_ERROR(ResType, pResource, VarName, ShaderName, ...)\
-{                                                                                                   \
-    const auto &ResName = pResource->GetDesc().Name;                                                \
-    LOG_ERROR_MESSAGE( "Failed to bind ", ResType, " \"", ResName, "\" to variable \"", VarName,    \
-                        "\" in shader \"", ShaderName, "\". ", __VA_ARGS__ );                \
+{                                                                                             \
+    const auto &ResName = pResource->GetDesc().Name;                                          \
+    LOG_ERROR_MESSAGE( "Failed to bind ", ResType, " '", ResName, "' to variable '", VarName, \
+                        "' in shader '", ShaderName, "'. ", __VA_ARGS__ );                    \
 }
 
 void ShaderResourceLayoutVk::VkResource::UpdateDescriptorHandle(VkDescriptorSet                vkDescrSet,
@@ -319,7 +367,7 @@ bool ShaderResourceLayoutVk::VkResource::UpdateCachedResource(ShaderResourceCach
             if (DstRes.pObject != pResource)
             {
                 auto VarTypeStr = GetShaderVariableTypeLiteralName(SpirvAttribs.VarType);
-                LOG_ERROR_MESSAGE("Non-null resource is already bound to ", VarTypeStr, " shader variable \"", SpirvAttribs.GetPrintName(ArrayInd), "\" in shader \"", ParentResLayout.GetShaderName(), "\". Attempring to bind another resource is an error and will be ignored. Use another shader resource binding instance or label the variable as dynamic.");
+                LOG_ERROR_MESSAGE("Non-null resource is already bound to ", VarTypeStr, " shader variable '", SpirvAttribs.GetPrintName(ArrayInd), "' in shader '", ParentResLayout.GetShaderName(), "'. Attempring to bind another resource is an error and will be ignored. Use another shader resource binding instance or label the variable as dynamic.");
             }
 
             // Do not update resource if one is already bound unless it is dynamic. This may be 
@@ -441,20 +489,23 @@ void ShaderResourceLayoutVk::VkResource::CacheTexelBuffer(IDeviceObject*        
     }
 }
 
+template<typename TCacheSampler>
 void ShaderResourceLayoutVk::VkResource::CacheImage(IDeviceObject*                   pTexView,
                                                     ShaderResourceCacheVk::Resource& DstRes,
                                                     VkDescriptorSet                  vkDescrSet,
-                                                    Uint32                           ArrayInd)const
+                                                    Uint32                           ArrayInd,
+                                                    TCacheSampler                    CacheSampler)const
 {
-    VERIFY(SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::StorageImage || 
+    VERIFY(SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::StorageImage  || 
            SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateImage ||
            SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SampledImage,
            "Storage image, separate image or sampled image resource is expected");
 
     if (UpdateCachedResource(DstRes, ArrayInd, pTexView, IID_TextureViewVk, "texture view") )
     {
-#ifdef DEVELOPMENT
+        // We can do RawPtr here safely since UpdateCachedResource() returned true
         auto* pTexViewVk = DstRes.pObject.RawPtr<TextureViewVkImpl>();
+#ifdef DEVELOPMENT
         const auto ViewType = pTexViewVk->GetDesc().ViewType;
         const bool IsStorageImage = SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::StorageImage;
         const auto dbgExpectedViewType = IsStorageImage ? TEXTURE_VIEW_UNORDERED_ACCESS : TEXTURE_VIEW_SHADER_RESOURCE;
@@ -472,7 +523,7 @@ void ShaderResourceLayoutVk::VkResource::CacheImage(IDeviceObject*              
         {
             if(pTexViewVk->GetSampler() == nullptr)
             {
-                LOG_RESOURCE_BINDING_ERROR("resource", pTexView, SpirvAttribs.GetPrintName(ArrayInd), ParentResLayout.GetShaderName(), "No sampler assigned to texture view.");
+                LOG_RESOURCE_BINDING_ERROR("resource", pTexView, SpirvAttribs.GetPrintName(ArrayInd), ParentResLayout.GetShaderName(), "No sampler assigned to texture view '", pTexViewVk->GetDesc().Name, "'");
             }
         }
 #endif
@@ -483,6 +534,24 @@ void ShaderResourceLayoutVk::VkResource::CacheImage(IDeviceObject*              
         {
             VkDescriptorImageInfo DescrImgInfo = DstRes.GetImageDescriptorWriteInfo(SpirvAttribs.StaticSamplerInd >= 0);
             UpdateDescriptorHandle(vkDescrSet, ArrayInd, &DescrImgInfo, nullptr, nullptr);
+        }
+
+        if (SamplerInd != InvalidSamplerInd)
+        {
+            VERIFY_EXPR(SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateImage);
+            VERIFY_EXPR(SpirvAttribs.StaticSamplerInd < 0);
+            auto* pSampler = pTexViewVk->GetSampler();
+            const auto& SamplerAttribs = ParentResLayout.GetResource(SpirvAttribs.VarType, SamplerInd);
+            if (pSampler != nullptr)
+            {
+                CacheSampler(SamplerAttribs, pSampler);
+            }
+            else
+            {
+                LOG_ERROR_MESSAGE( "Failed to bind sampler to sampler variable '", SamplerAttribs.SpirvAttribs.Name,
+                                   "' assigned to separate image '", SpirvAttribs.GetPrintName(ArrayInd), "' in shader '",
+                                   ParentResLayout.GetShaderName(), "': no sampler is set in texture view '", pTexViewVk->GetDesc().Name, '\'');                    \
+            }
         }
     }
 }
@@ -554,7 +623,17 @@ void ShaderResourceLayoutVk::VkResource::BindResource(IDeviceObject *pObj, Uint3
             case SPIRVShaderResourceAttribs::ResourceType::StorageImage:
             case SPIRVShaderResourceAttribs::ResourceType::SeparateImage:
             case SPIRVShaderResourceAttribs::ResourceType::SampledImage:
-                CacheImage(pObj, DstRes, vkDescrSet, ArrayIndex);
+                CacheImage(pObj, DstRes, vkDescrSet, ArrayIndex, 
+                    [&](const VkResource& SeparateSampler, ISampler* pSampler)
+                    {
+                        DEV_CHECK_ERR(SeparateSampler.SpirvAttribs.ArraySize == 1 || SeparateSampler.SpirvAttribs.ArraySize == SpirvAttribs.ArraySize,
+                                      "Array size (", SeparateSampler.SpirvAttribs.ArraySize,") of separate sampler variable '",
+                                      SeparateSampler.SpirvAttribs.Name, "' must be one or same as the array size (", SpirvAttribs.ArraySize,
+                                      ") of separate image variable '", SpirvAttribs.Name, "' it is assigned to");
+                        Uint32 SamplerArrInd = SeparateSampler.SpirvAttribs.ArraySize == 0 ? ArrayIndex : 0;
+                        SeparateSampler.BindResource(pSampler, SamplerArrInd, ResourceCache);
+                    }
+                );
             break;
 
             case SPIRVShaderResourceAttribs::ResourceType::SeparateSampler:
@@ -577,7 +656,7 @@ void ShaderResourceLayoutVk::VkResource::BindResource(IDeviceObject *pObj, Uint3
     {
         if (DstRes.pObject && SpirvAttribs.VarType != SHADER_VARIABLE_TYPE_DYNAMIC)
         {
-            LOG_ERROR_MESSAGE( "Shader variable \"", SpirvAttribs.Name, "\" in shader \"", ParentResLayout.GetShaderName(), "\" is not dynamic but being unbound. This is an error and may cause unpredicted behavior. Use another shader resource binding instance or label shader variable as dynamic if you need to bind another resource." );
+            LOG_ERROR_MESSAGE( "Shader variable '", SpirvAttribs.Name, "' in shader '", ParentResLayout.GetShaderName(), "' is not dynamic but being unbound. This is an error and may cause unpredicted behavior. Use another shader resource binding instance or label shader variable as dynamic if you need to bind another resource." );
         }
 
         DstRes.pObject.Release();
@@ -628,7 +707,7 @@ void ShaderResourceLayoutVk::InitializeStaticResources(const ShaderResourceLayou
             auto SrcOffset = SrcRes.CacheOffset + ArrInd;
             IDeviceObject* pObject = SrcResourceCache.GetDescriptorSet(SrcRes.DescriptorSet).GetResource(SrcOffset).pObject;
             if (!pObject)
-                LOG_ERROR_MESSAGE("No resource assigned to static shader variable \"", SrcRes.SpirvAttribs.GetPrintName(ArrInd), "\" in shader \"", GetShaderName(), "\".");
+                LOG_ERROR_MESSAGE("No resource assigned to static shader variable '", SrcRes.SpirvAttribs.GetPrintName(ArrInd), "' in shader '", GetShaderName(), "'.");
             
             auto DstOffset = DstRes.CacheOffset + ArrInd;
             IDeviceObject* pCachedResource = DstResourceCache.GetDescriptorSet(DstRes.DescriptorSet).GetResource(DstOffset).pObject;
@@ -659,7 +738,7 @@ void ShaderResourceLayoutVk::dvpVerifyBindings(const ShaderResourceCacheVk& Reso
                 if(CachedRes.pObject == nullptr && 
                    !(Res.SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler && Res.SpirvAttribs.StaticSamplerInd >= 0))
                 {
-                    LOG_ERROR_MESSAGE("No resource is bound to ", GetShaderVariableTypeLiteralName(Res.SpirvAttribs.VarType), " variable \"", Res.SpirvAttribs.GetPrintName(ArrInd), "\" in shader \"", GetShaderName(), "\"");
+                    LOG_ERROR_MESSAGE("No resource is bound to ", GetShaderVariableTypeLiteralName(Res.SpirvAttribs.VarType), " variable '", Res.SpirvAttribs.GetPrintName(ArrInd), "' in shader '", GetShaderName(), "'");
                 }
 #ifdef _DEBUG
                 auto vkDescSet = CachedDescrSet.GetVkDescriptorSet();
