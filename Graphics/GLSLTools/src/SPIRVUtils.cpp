@@ -456,7 +456,7 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreationAttribs& Attribs, IDat
     
     std::string HLSLDefinitions(g_HLSLDefinitions);
     ShaderStrings      [NumShaderStrings] = HLSLDefinitions.c_str();
-    ShaderStringLenghts[NumShaderStrings] = HLSLDefinitions.length();
+    ShaderStringLenghts[NumShaderStrings] = static_cast<int>(HLSLDefinitions.length());
     ++NumShaderStrings;
     
     std::string Defines;
