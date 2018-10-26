@@ -130,8 +130,8 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator,
     ResCounters.NumImgs      = static_cast<Uint32>(resources.storage_images.size());
     ResCounters.NumSmpldImgs = static_cast<Uint32>(resources.sampled_images.size());
     ResCounters.NumACs       = static_cast<Uint32>(resources.atomic_counters.size());
-    ResCounters.NumSepImgs   = static_cast<Uint32>(resources.separate_samplers.size());
-    ResCounters.NumSepSmplrs = static_cast<Uint32>(resources.separate_images.size());
+    ResCounters.NumSepSmplrs = static_cast<Uint32>(resources.separate_samplers.size());
+    ResCounters.NumSepImgs   = static_cast<Uint32>(resources.separate_images.size());
     Initialize(Allocator, ResCounters, shaderDesc.NumStaticSamplers, ResourceNamesPoolSize);
 
     {

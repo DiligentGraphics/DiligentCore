@@ -46,6 +46,11 @@
 #include "DataBlobImpl.h"
 #include "RefCntAutoPtr.h"
 
+static const char g_HLSLDefinitions[] = 
+{
+    #include "../../GraphicsEngineD3DBase/include/HLSLDefinitions_inc.fxh"
+};
+
 namespace Diligent
 {
 
@@ -412,14 +417,13 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreationAttribs& Attribs, IDat
     glslang::TShader Shader(ShLang);
     TBuiltInResource Resources = InitResources();
 
-    EShMessages messages = (EShMessages)(EShMsgSpvRules | EShMsgVulkanRules);
+    EShMessages messages = (EShMessages)(EShMsgReadHlsl | EShMsgHlslLegalization);
 
     VERIFY_EXPR(Attribs.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL);
     
     Shader.setEnvInput(glslang::EShSourceHlsl, ShLang, glslang::EShClientVulkan, 100);
     Shader.setEnvClient(glslang::EShClientVulkan, glslang::EShTargetVulkan_1_0);
     Shader.setEnvTarget(glslang::EShTargetSpv, glslang::EShTargetSpv_1_0);
-    messages = (EShMessages)(EShMsgReadHlsl | EShMsgHlslLegalization);
     Shader.setHlslIoMapping(true);
     Shader.setSourceEntryPoint(Attribs.EntryPoint);
     Shader.setEntryPoint("main");
@@ -446,9 +450,15 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreationAttribs& Attribs, IDat
     }
 
     int NumShaderStrings = 0;
-    constexpr size_t MaxShaderStrings = 2;
+    constexpr size_t MaxShaderStrings = 3;
     std::array<const char*, MaxShaderStrings> ShaderStrings;
     std::array<int,         MaxShaderStrings> ShaderStringLenghts;
+    
+    std::string HLSLDefinitions(g_HLSLDefinitions);
+    ShaderStrings      [NumShaderStrings] = HLSLDefinitions.c_str();
+    ShaderStringLenghts[NumShaderStrings] = HLSLDefinitions.length();
+    ++NumShaderStrings;
+    
     std::string Defines;
     if (Attribs.Macros != nullptr)
     {
