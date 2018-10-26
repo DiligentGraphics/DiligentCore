@@ -252,7 +252,9 @@ struct ShaderCreationAttribs
     /// Compiled shader bytecode. 
     
     /// If shader byte code is provided, FilePath and Source members must be null
-    /// \note. This option is currently only supported for D3D11 and D3D12. 
+    /// \note. This option is supported for D3D11, D3D12 and Vulkan backends. 
+    ///        For D3D11 and D3D12 backends, HLSL bytecode should be provided. Vulkan
+    ///        backend expects SPIRV bytecode.
     ///        The bytecode must contain reflection information. If shaders were compiled 
     ///        using fxc, make sure that /Qstrip_reflect option is *not* specified.
     ///        Also, shaders need to be compiled against 4.0 profile or higher.
@@ -260,7 +262,7 @@ struct ShaderCreationAttribs
 
     /// Size of the compiled shader bytecode
 
-    /// Byte code size must be provided if ByteCode is not null
+    /// Byte code size (in bytes) must be provided if ByteCode is not null
     size_t ByteCodeSize = 0;
 
 	/// Shader entry point

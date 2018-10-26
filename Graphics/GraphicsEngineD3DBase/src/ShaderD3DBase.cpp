@@ -137,8 +137,8 @@ ShaderD3DBase::ShaderD3DBase(const ShaderCreationAttribs &CreationAttribs)
 {
     if (CreationAttribs.Source || CreationAttribs.FilePath)
     {
-        VERIFY(CreationAttribs.ByteCode == nullptr, "'ByteCode' must be null when shader is created from the source code or a file");
-        VERIFY(CreationAttribs.ByteCodeSize == 0, "'ByteCodeSize' must be 0 when shader is created from the source code or a file");
+        DEV_CHECK_ERR(CreationAttribs.ByteCode == nullptr, "'ByteCode' must be null when shader is created from the source code or a file");
+        DEV_CHECK_ERR(CreationAttribs.ByteCodeSize == 0, "'ByteCodeSize' must be 0 when shader is created from the source code or a file");
 
         std::string strShaderProfile;
         switch(CreationAttribs.Desc.ShaderType)
@@ -159,12 +159,12 @@ ShaderD3DBase::ShaderD3DBase(const ShaderCreationAttribs &CreationAttribs)
         String ShaderSource(g_HLSLDefinitions);
         if (CreationAttribs.Source)
         {
-            VERIFY(CreationAttribs.FilePath == nullptr, "'FilePath' is expected to be null when shader source code is provided");
+            DEV_CHECK_ERR(CreationAttribs.FilePath == nullptr, "'FilePath' is expected to be null when shader source code is provided");
             ShaderSource.append(CreationAttribs.Source);
         }
         else
         {
-            VERIFY(CreationAttribs.pShaderSourceStreamFactory, "Input stream factory is null");
+            DEV_CHECK_ERR(CreationAttribs.pShaderSourceStreamFactory, "Input stream factory is null");
             RefCntAutoPtr<IFileStream> pSourceStream;
             CreationAttribs.pShaderSourceStreamFactory->CreateInputStream(CreationAttribs.FilePath, &pSourceStream);
             RefCntAutoPtr<IDataBlob> pFileData(MakeNewRCObj<DataBlobImpl>()(0));
@@ -189,7 +189,7 @@ ShaderD3DBase::ShaderD3DBase(const ShaderCreationAttribs &CreationAttribs)
             pDefines = D3DMacros.data();
         }
 
-        VERIFY(CreationAttribs.EntryPoint != nullptr, "Entry point must not be null");
+        DEV_CHECK_ERR(CreationAttribs.EntryPoint != nullptr, "Entry point must not be null");
         CComPtr<ID3DBlob> errors;
         auto hr = CompileShader(ShaderSource.c_str(), CreationAttribs.EntryPoint, pDefines, CreationAttribs.pShaderSourceStreamFactory, strShaderProfile.c_str(), &m_pShaderByteCode, &errors);
 
@@ -219,7 +219,7 @@ ShaderD3DBase::ShaderD3DBase(const ShaderCreationAttribs &CreationAttribs)
     }
     else if (CreationAttribs.ByteCode)
     {
-        VERIFY(CreationAttribs.ByteCodeSize != 0, "ByteCode size must be greater than 0");
+        DEV_CHECK_ERR(CreationAttribs.ByteCodeSize != 0, "ByteCode size must be greater than 0");
         CHECK_D3D_RESULT_THROW(D3DCreateBlob(CreationAttribs.ByteCodeSize, &m_pShaderByteCode), "Failed to create D3D blob");
         memcpy(m_pShaderByteCode->GetBufferPointer(), CreationAttribs.ByteCode, CreationAttribs.ByteCodeSize);
     }

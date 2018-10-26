@@ -39,19 +39,36 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl*
     m_StaticResCache  (ShaderResourceCacheVk::DbgCacheContentType::StaticShaderResources),
     m_StaticVarsMgr   (*this)
 {
-    if (CreationAttribs.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL)
+    if (CreationAttribs.Source != nullptr || CreationAttribs.FilePath != nullptr)
     {
-        m_SPIRV = HLSLtoSPIRV(CreationAttribs, CreationAttribs.ppCompilerOutput);
-    }
-    else
-    {
-        auto GLSLSource = BuildGLSLSourceString(CreationAttribs, TargetGLSLCompiler::glslang, "#define TARGET_API_VULKAN 1\n");
-        m_SPIRV = GLSLtoSPIRV(m_Desc.ShaderType, GLSLSource.c_str(), static_cast<int>(GLSLSource.length()), CreationAttribs.ppCompilerOutput);
-    }
+        DEV_CHECK_ERR(CreationAttribs.ByteCode == nullptr, "'ByteCode' must be null when shader is created from source code or a file");
+        DEV_CHECK_ERR(CreationAttribs.ByteCodeSize == 0, "'ByteCodeSize' must be 0 when shader is created from source code or a file");
+
+        if (CreationAttribs.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL)
+        {
+            m_SPIRV = HLSLtoSPIRV(CreationAttribs, CreationAttribs.ppCompilerOutput);
+        }
+        else
+        {
+            auto GLSLSource = BuildGLSLSourceString(CreationAttribs, TargetGLSLCompiler::glslang, "#define TARGET_API_VULKAN 1\n");
+            m_SPIRV = GLSLtoSPIRV(m_Desc.ShaderType, GLSLSource.c_str(), static_cast<int>(GLSLSource.length()), CreationAttribs.ppCompilerOutput);
+        }
     
-    if (m_SPIRV.empty())
+        if (m_SPIRV.empty())
+        {
+            LOG_ERROR_AND_THROW("Failed to compile shader");
+        }
+    }
+    else if (CreationAttribs.ByteCode != nullptr)
     {
-        LOG_ERROR_AND_THROW("Failed to compile shader");
+        DEV_CHECK_ERR(CreationAttribs.ByteCodeSize != 0, "ByteCodeSize must not be 0");
+        DEV_CHECK_ERR(CreationAttribs.ByteCodeSize % 4 == 0, "Byte code size (", CreationAttribs.ByteCodeSize, ") is not multiple of 4");
+        m_SPIRV.resize(CreationAttribs.ByteCodeSize/4);
+        memcpy(m_SPIRV.data(), CreationAttribs.ByteCode, CreationAttribs.ByteCodeSize);
+    }
+    else 
+    {
+        LOG_ERROR_AND_THROW("Shader source must be provided through one of the 'Source', 'FilePath' or 'ByteCode' members");
     }
 
     // We cannot create shader module here because resource bindings are assigned when
