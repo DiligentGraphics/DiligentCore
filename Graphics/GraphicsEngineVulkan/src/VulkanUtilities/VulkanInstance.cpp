@@ -26,7 +26,7 @@
 #include "VulkanErrors.h"
 #include "VulkanUtilities/VulkanInstance.h"
 #include "VulkanUtilities/VulkanDebug.h"
-#include "GLSL2SPIRV.h"
+#include "SPIRVUtils.h"
 
 namespace VulkanUtilities
 {
