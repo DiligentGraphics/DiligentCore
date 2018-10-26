@@ -330,22 +330,21 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator,
         {
             const auto* SamName = shaderDesc.StaticSamplers[s].SamplerOrTextureName;
             bool SamplerFound = false;
-            if (CombinedSamplerSuffix != nullptr)
+
+            for (Uint32 i = 0; i < GetNumSmpldImgs(); ++i)
             {
-                for (Uint32 i = 0; i < GetNumSmpldImgs(); ++i)
-                {
-                    const auto& SmplImg = GetSmpldImg(i);
-                    SamplerFound = (strcmp(SmplImg.Name, SamName) == 0);
-                    if (SamplerFound)
-                        break;
-                }
+                const auto& SmplImg = GetSmpldImg(i);
+                SamplerFound = (strcmp(SmplImg.Name, SamName) == 0);
+                if (SamplerFound)
+                    break;
             }
-            else
+
+            if (!SamplerFound)
             {
                 for (Uint32 i = 0; i < GetNumSepSmplrs(); ++i)
                 {
                     const auto& SepSmpl = GetSepSmplr(i);
-                    SamplerFound = (strcmp(SepSmpl.Name, SamName) == 0);
+                    SamplerFound = StreqSuff(SepSmpl.Name, SamName, CombinedSamplerSuffix);
                     if (SamplerFound)
                         break;
                 }
