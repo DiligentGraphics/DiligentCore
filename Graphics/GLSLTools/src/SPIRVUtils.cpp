@@ -449,20 +449,11 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreationAttribs& Attribs, IDat
         SourceCodeLen = static_cast<int>(pFileData->GetSize());
     }
 
-    int NumShaderStrings = 0;
-    constexpr size_t MaxShaderStrings = 3;
-    std::array<const char*, MaxShaderStrings> ShaderStrings       = {};
-    std::array<int,         MaxShaderStrings> ShaderStringLenghts = {};
-    std::array<const char*, MaxShaderStrings> Names               = {};
-    
-    ShaderStrings      [NumShaderStrings] = g_HLSLDefinitions;
-    ShaderStringLenghts[NumShaderStrings] = static_cast<int>(strlen(g_HLSLDefinitions));
-    Names              [NumShaderStrings] = "HLSL Definitions";
-    ++NumShaderStrings;
-    
     std::string Defines;
     if (Attribs.Macros != nullptr)
     {
+        Defines = g_HLSLDefinitions;
+        Defines += '\n';
         auto* pMacro = Attribs.Macros;
         while (pMacro->Name != nullptr && pMacro->Definition != nullptr)
         {
@@ -473,16 +464,16 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreationAttribs& Attribs, IDat
             Defines += "\n";
             ++pMacro;
         }
-        ShaderStrings      [NumShaderStrings] = Defines.c_str();
-        ShaderStringLenghts[NumShaderStrings] = static_cast<int>(Defines.length());
-        Names              [NumShaderStrings] = "Macros";
-        ++NumShaderStrings;
+        Shader.setPreamble(Defines.c_str());
     }
-    ShaderStrings      [NumShaderStrings] = SourceCode;
-    ShaderStringLenghts[NumShaderStrings] = SourceCodeLen;
-    Names              [NumShaderStrings] = Attribs.FilePath != nullptr ? Attribs.FilePath : "";
-    ++NumShaderStrings;
-    Shader.setStringsWithLengthsAndNames(ShaderStrings.data(), ShaderStringLenghts.data(), Names.data(), NumShaderStrings);
+    else
+    {
+        Shader.setPreamble(g_HLSLDefinitions);
+    }
+    const char* ShaderStrings      [] = {SourceCode};
+    const int   ShaderStringLenghts[] = {SourceCodeLen};
+    const char* Names              [] = {Attribs.FilePath != nullptr ? Attribs.FilePath : ""};
+    Shader.setStringsWithLengthsAndNames(ShaderStrings, ShaderStringLenghts, Names, 1);
     
     IncluderImpl Includer(Attribs.pShaderSourceStreamFactory);
     return CompileShaderInternal(Shader, messages, &Includer, SourceCode, SourceCodeLen, ppCompilerOutput);

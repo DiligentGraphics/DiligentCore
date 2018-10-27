@@ -37,7 +37,22 @@ size_t ShaderVariableManagerVk::GetRequiredMemorySize(const ShaderResourceLayout
     Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
     for(SHADER_VARIABLE_TYPE VarType = SHADER_VARIABLE_TYPE_STATIC; VarType < SHADER_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_VARIABLE_TYPE>(VarType+1))
     {
-        NumVariables += IsAllowedType(VarType, AllowedTypeBits) ? Layout.GetResourceCount(VarType) : 0;
+        if (IsAllowedType(VarType, AllowedTypeBits))
+        {
+            auto NumResources = Layout.GetResourceCount(VarType);
+            if (Layout.IsUsingSeparateSamplers())
+                NumVariables += NumResources;
+            else
+            {
+                // When using HLSL-style combined image samplers, we need to skip separate samplers
+                for( Uint32 r=0; r < NumResources; ++r )
+                {
+                    const auto& SrcRes = Layout.GetResource(VarType, r);
+                    if (SrcRes.SpirvAttribs.Type != SPIRVShaderResourceAttribs::ResourceType::SeparateSampler)
+                        ++NumVariables;
+                }
+            }
+        }
     }
     
     return NumVariables*sizeof(ShaderVariableVkImpl);
@@ -75,7 +90,10 @@ void ShaderVariableManagerVk::Initialize(const ShaderResourceLayoutVk& SrcLayout
         Uint32 NumResources = SrcLayout.GetResourceCount(VarType);
         for( Uint32 r=0; r < NumResources; ++r )
         {
-            const auto &SrcRes = SrcLayout.GetResource(VarType, r);
+            const auto& SrcRes = SrcLayout.GetResource(VarType, r);
+            if (!SrcLayout.IsUsingSeparateSamplers() && SrcRes.SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler)
+                continue;
+
             ::new (m_pVariables + VarInd) ShaderVariableVkImpl(*this, SrcRes );
             ++VarInd;
         }
