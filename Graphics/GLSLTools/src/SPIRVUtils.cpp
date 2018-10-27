@@ -417,7 +417,7 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreationAttribs& Attribs, IDat
     glslang::TShader Shader(ShLang);
     TBuiltInResource Resources = InitResources();
 
-    EShMessages messages = (EShMessages)(EShMsgReadHlsl | EShMsgHlslLegalization);
+    EShMessages messages = (EShMessages)(EShMsgSpvRules | EShMsgVulkanRules | EShMsgReadHlsl | EShMsgHlslLegalization);
 
     VERIFY_EXPR(Attribs.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL);
     
@@ -451,12 +451,13 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreationAttribs& Attribs, IDat
 
     int NumShaderStrings = 0;
     constexpr size_t MaxShaderStrings = 3;
-    std::array<const char*, MaxShaderStrings> ShaderStrings;
-    std::array<int,         MaxShaderStrings> ShaderStringLenghts;
+    std::array<const char*, MaxShaderStrings> ShaderStrings       = {};
+    std::array<int,         MaxShaderStrings> ShaderStringLenghts = {};
+    std::array<const char*, MaxShaderStrings> Names               = {};
     
-    std::string HLSLDefinitions(g_HLSLDefinitions);
-    ShaderStrings      [NumShaderStrings] = HLSLDefinitions.c_str();
-    ShaderStringLenghts[NumShaderStrings] = static_cast<int>(HLSLDefinitions.length());
+    ShaderStrings      [NumShaderStrings] = g_HLSLDefinitions;
+    ShaderStringLenghts[NumShaderStrings] = static_cast<int>(strlen(g_HLSLDefinitions));
+    Names              [NumShaderStrings] = "HLSL Definitions";
     ++NumShaderStrings;
     
     std::string Defines;
@@ -474,12 +475,14 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreationAttribs& Attribs, IDat
         }
         ShaderStrings      [NumShaderStrings] = Defines.c_str();
         ShaderStringLenghts[NumShaderStrings] = static_cast<int>(Defines.length());
+        Names              [NumShaderStrings] = "Macros";
         ++NumShaderStrings;
     }
     ShaderStrings      [NumShaderStrings] = SourceCode;
     ShaderStringLenghts[NumShaderStrings] = SourceCodeLen;
+    Names              [NumShaderStrings] = Attribs.FilePath != nullptr ? Attribs.FilePath : "";
     ++NumShaderStrings;
-    Shader.setStringsWithLengths(ShaderStrings.data(), ShaderStringLenghts.data(), NumShaderStrings);
+    Shader.setStringsWithLengthsAndNames(ShaderStrings.data(), ShaderStringLenghts.data(), Names.data(), NumShaderStrings);
     
     IncluderImpl Includer(Attribs.pShaderSourceStreamFactory);
     return CompileShaderInternal(Shader, messages, &Includer, SourceCode, SourceCodeLen, ppCompilerOutput);
@@ -490,7 +493,6 @@ std::vector<unsigned int> GLSLtoSPIRV(const SHADER_TYPE ShaderType, const char* 
     EShLanguage ShLang = ShaderTypeToShLanguage(ShaderType);
     glslang::TShader Shader(ShLang);
     
-    // Enable SPIR-V and Vulkan rules when parsing GLSL
     EShMessages messages = (EShMessages)(EShMsgSpvRules | EShMsgVulkanRules);
 
     const char* ShaderStrings[] = {ShaderSource };
