@@ -144,8 +144,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator,
                                            UB, 
                                            m_ResourceNames.CopyString(UB.name), 
                                            SPIRVShaderResourceAttribs::ResourceType::UniformBuffer, 
-                                           GetShaderVariableType(UB.name, shaderDesc), 
-                                           -1);
+                                           GetShaderVariableType(UB.name, shaderDesc));
         }
         VERIFY_EXPR(CurrUB == GetNumUBs());
     }
@@ -159,8 +158,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator,
                                            SB, 
                                            m_ResourceNames.CopyString(SB.name),
                                            SPIRVShaderResourceAttribs::ResourceType::StorageBuffer,
-                                           GetShaderVariableType(SB.name, shaderDesc), 
-                                           -1);
+                                           GetShaderVariableType(SB.name, shaderDesc));
         }
         VERIFY_EXPR(CurrSB == GetNumSBs());
     }
@@ -198,8 +196,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator,
                                            Img, 
                                            m_ResourceNames.CopyString(Img.name), 
                                            ResType, 
-                                           GetShaderVariableType(Img.name, shaderDesc), 
-                                           -1);
+                                           GetShaderVariableType(Img.name, shaderDesc));
         }
         VERIFY_EXPR(CurrImg == GetNumImgs());
     }
@@ -213,8 +210,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator,
                                            AC, 
                                            m_ResourceNames.CopyString(AC.name),
                                            SPIRVShaderResourceAttribs::ResourceType::AtomicCounter,
-                                           GetShaderVariableType(AC.name, shaderDesc), 
-                                           -1);
+                                           GetShaderVariableType(AC.name, shaderDesc));
         }
         VERIFY_EXPR(CurrAC == GetNumACs());
     }
@@ -256,6 +252,9 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator,
                     if (StreqSuff(SepSmplr.Name, SepImg.name.c_str(), CombinedSamplerSuffix))
                     {
                         SepSmplr.AssignSeparateImage(CurrSepImg);
+                        // Do no assign immutable samplers to separate images as immutable
+                        // samplers are initialized in the pipeline layout and never bound
+                        // at run time.
                         if (SepSmplr.IsImmutableSamplerAssigned())
                             SamplerInd = NumSepSmpls;
                         break;
@@ -277,7 +276,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator,
                 const auto& SepSmplr = GetSepSmplr(pNewSepImg->GetAssignedSepSamplerInd());
                 DEV_CHECK_ERR(SepSmplr.ArraySize == 1 || SepSmplr.ArraySize == pNewSepImg->ArraySize,
                               "Array size (", SepSmplr.ArraySize,") of separate sampler variable '",
-                              SepSmplr.Name, "' must be one or same as the array size (", pNewSepImg->ArraySize,
+                              SepSmplr.Name, "' must be equal to 1 or be the same as the array size (", pNewSepImg->ArraySize,
                               ") of separate image variable '", pNewSepImg->Name, "' it is assigned to");
             }
         }
@@ -293,8 +292,8 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator,
 
     for (Uint32 s = 0; s < m_NumImmutableSamplers; ++s)
     {
-        SamplerPtrType &pStaticSampler = GetImmutableSampler(s);
-        new (std::addressof(pStaticSampler)) SamplerPtrType();
+        SamplerPtrType& pStaticSampler = GetImmutableSampler(s);
+        new (std::addressof(pStaticSampler)) SamplerPtrType;
         pRenderDevice->CreateSampler(shaderDesc.StaticSamplers[s].Desc, &pStaticSampler);
     }
 
@@ -306,12 +305,12 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator,
         for (Uint32 v = 0; v < shaderDesc.NumVariables; ++v)
         {
             bool VariableFound = false;
-            const auto *VarName = shaderDesc.VariableDesc[v].Name;
+            const auto* VarName = shaderDesc.VariableDesc[v].Name;
             auto VarType = shaderDesc.VariableDesc[v].Type;
 
             for (Uint32 res = 0; res < GetTotalResources(); ++res)
             {
-                const auto &ResAttribs = GetResource(res);
+                const auto& ResAttribs = GetResource(res);
                 if (strcmp(ResAttribs.Name, VarName) == 0)
                 {
                     VariableFound = true;
@@ -320,7 +319,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator,
             }
             if (!VariableFound)
             {
-                LOG_WARNING_MESSAGE("Variable '", VarName, "' labeled as ", GetShaderVariableTypeLiteralName(VarType), " not found in shader \'", shaderDesc.Name, "'");
+                LOG_WARNING_MESSAGE("Variable '", VarName, "' labeled as ", GetShaderVariableTypeLiteralName(VarType), " not found in shader '", shaderDesc.Name, "'");
             }
         }
     }
@@ -332,6 +331,8 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator,
             const auto* SamName = shaderDesc.StaticSamplers[s].SamplerOrTextureName;
             bool SamplerFound = false;
 
+            // Irrespective of whether HLSL-style combined image samplers are used,
+            // a static sampler can be assigned to GLSL sampled image (i.e. sampler2D g_tex)
             for (Uint32 i = 0; i < GetNumSmpldImgs(); ++i)
             {
                 const auto& SmplImg = GetSmpldImg(i);
@@ -342,6 +343,9 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator,
 
             if (!SamplerFound)
             {
+                // Check if static sampler is assigned to a separate sampler or
+                // separate image depending on whether HLSL-style combined samplers
+                // are used
                 for (Uint32 i = 0; i < GetNumSepSmplrs(); ++i)
                 {
                     const auto& SepSmpl = GetSepSmplr(i);
@@ -416,7 +420,7 @@ void SPIRVShaderResources::Initialize(IMemoryAllocator&       Allocator,
         auto *pRawMem = Allocator.Allocate(MemorySize, "Memory for shader resources", __FILE__, __LINE__);
         m_MemoryBuffer = std::unique_ptr<void, STDDeleterRawMem<void>>(pRawMem, Allocator);
         char* NamesPool = reinterpret_cast<char*>(m_MemoryBuffer.get()) + 
-                          m_TotalResources * sizeof(SPIRVShaderResourceAttribs) +
+                          m_TotalResources       * sizeof(SPIRVShaderResourceAttribs) +
                           m_NumImmutableSamplers * sizeof(SamplerPtrType);
         m_ResourceNames.AssignMemory(NamesPool, ResourceNamesPoolSize);
     }
@@ -604,10 +608,10 @@ bool SPIRVShaderResources::IsCompatibleWith(const SPIRVShaderResources& Resource
 
     bool IsCompatible = true;
     ProcessResources(nullptr, 0,
-        [&](const SPIRVShaderResourceAttribs &Res, Uint32 n)
+        [&](const SPIRVShaderResourceAttribs& Res, Uint32 n)
         {
-            const auto &Res2 = Resources.GetResource(n);
-            if(!Res.IsCompatibleWith(Res2))
+            const auto& Res2 = Resources.GetResource(n);
+            if (!Res.IsCompatibleWith(Res2))
                 IsCompatible = false;
         });
 

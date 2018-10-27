@@ -115,7 +115,7 @@ public:
                                const char*                  _Name,
                                ResourceType                 _Type, 
                                SHADER_VARIABLE_TYPE         _VarType,
-                               Int32                        _ImmutableSamplerInd,
+                               Int32                        _ImmutableSamplerInd = -1,
                                Uint32                       _SamplerOrSepImgInd = InvalidSepSmplrOrImgInd)noexcept;
 
     bool IsValidSepSamplerAssigned() const
@@ -386,7 +386,7 @@ private:
     }
 
     // Memory buffer that holds all resources as continuous chunk of memory:
-    // |  UBs  |  SBs  |  StrgImgs  |  SmplImgs  |  ACs  |  SepSamplers  |  SepImgs  |   Static Samplers |   Resource Names   |
+    // |  UBs  |  SBs  |  StrgImgs  |  SmplImgs  |  ACs  |  SepSamplers  |  SepImgs  |   Immutable Samplers |   Resource Names   |
     std::unique_ptr< void, STDDeleterRawMem<void> > m_MemoryBuffer;
     StringPool m_ResourceNames;
 
