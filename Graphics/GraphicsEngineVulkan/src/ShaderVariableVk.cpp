@@ -186,13 +186,13 @@ void ShaderVariableManagerVk::BindResources( IResourceMapping* pResourceMapping,
         const auto& Res = Var.m_Resource;
         
         // Skip immutable separate samplers
-        if(Res.SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler && Res.SpirvAttribs.StaticSamplerInd >= 0)
+        if (Res.SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler && Res.SpirvAttribs.IsImmutableSamplerAssigned())
             continue;
 
         if ( (Flags & (1 << Res.SpirvAttribs.VarType)) == 0 )
             continue;
 
-        for(Uint32 ArrInd = 0; ArrInd < Res.SpirvAttribs.ArraySize; ++ArrInd)
+        for (Uint32 ArrInd = 0; ArrInd < Res.SpirvAttribs.ArraySize; ++ArrInd)
         {
             if( (Flags & BIND_SHADER_RESOURCES_KEEP_EXISTING) && Res.IsBound(ArrInd, *m_pResourceCache) )
                 continue;

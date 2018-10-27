@@ -63,24 +63,25 @@ SPIRVShaderResourceAttribs::SPIRVShaderResourceAttribs(const spirv_cross::Compil
                                                        const char*                   _Name,
                                                        ResourceType                  _Type, 
                                                        SHADER_VARIABLE_TYPE          _VarType,
-                                                       Int32                         _StaticSamplerInd,
+                                                       Int32                         _ImmutableSamplerInd,
                                                        Uint32                        _SepSmplrOrImgInd)noexcept :
     Name                         (_Name),
     ArraySize                    (GetResourceArraySize<decltype(ArraySize)>(Compiler, Res)),
     Type                         (_Type),
     VarType                      (_VarType),
-    StaticSamplerInd             (static_cast<decltype(StaticSamplerInd)>(_StaticSamplerInd)),
+    ImmutableSamplerInd          (_ImmutableSamplerInd >= 0 ? static_cast<decltype(ImmutableSamplerInd)>(_ImmutableSamplerInd) : InvalidImmutableSamplerInd),
     SepSmplrOrImgInd             (_SepSmplrOrImgInd),
     BindingDecorationOffset      (GetDecorationOffset(Compiler, Res, spv::Decoration::DecorationBinding)),
     DescriptorSetDecorationOffset(GetDecorationOffset(Compiler, Res, spv::Decoration::DecorationDescriptorSet))
 {
-    VERIFY(_StaticSamplerInd >= std::numeric_limits<decltype(StaticSamplerInd)>::min() && 
-           _StaticSamplerInd <= std::numeric_limits<decltype(StaticSamplerInd)>::max(), "Static sampler index is out of representable range" );
+    VERIFY(_ImmutableSamplerInd < 0 || _ImmutableSamplerInd <= std::numeric_limits<decltype(ImmutableSamplerInd)>::max(), "Static sampler index is out of representable range" );
+    VERIFY(_SepSmplrOrImgInd == SPIRVShaderResourceAttribs::InvalidSepSmplrOrImgInd || _Type == ResourceType::SeparateSampler ||
+           _Type == ResourceType::SeparateImage, "Only separate images or separate samplers can be assinged valid SepSmplrOrImgInd value");
 }
 
-static Int32 FindStaticSampler(const ShaderDesc& shaderDesc, const std::string& SamplerName, const char* SamplerSuffix)
+static Int32 FindImmutableSampler(const ShaderDesc& shaderDesc, const std::string& SamplerName, const char* SamplerSuffix)
 {
-    for(Uint32 s=0; s < shaderDesc.NumStaticSamplers; ++s)
+    for (Uint32 s=0; s < shaderDesc.NumStaticSamplers; ++s)
     {
         const auto& StSam = shaderDesc.StaticSamplers[s];
         if (StreqSuff(SamplerName.c_str(), StSam.SamplerOrTextureName, SamplerSuffix))
@@ -168,7 +169,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator,
         Uint32 CurrSmplImg = 0;
         for (const auto &SmplImg : resources.sampled_images)
         {
-            auto StaticSamplerInd = FindStaticSampler(shaderDesc, SmplImg.name, nullptr);
+            auto ImmutableSamplerInd = FindImmutableSampler(shaderDesc, SmplImg.name, nullptr);
             const auto& type = Compiler.get_type(SmplImg.type_id);
             auto ResType = type.image.dim == spv::DimBuffer ?
                 SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer :
@@ -179,7 +180,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator,
                                            m_ResourceNames.CopyString(SmplImg.name), 
                                            ResType, 
                                            GetShaderVariableType(SmplImg.name, shaderDesc), 
-                                           StaticSamplerInd);
+                                           ImmutableSamplerInd);
         }
         VERIFY_EXPR(CurrSmplImg == GetNumSmpldImgs()); 
     }
@@ -222,7 +223,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator,
         Uint32 CurrSepSmpl = 0;
         for (const auto &SepSam : resources.separate_samplers)
         {
-            auto StaticSamplerInd = FindStaticSampler(shaderDesc, SepSam.name, CombinedSamplerSuffix);
+            auto ImmutableSamplerInd = FindImmutableSampler(shaderDesc, SepSam.name, CombinedSamplerSuffix);
             // Use texture or sampler name to derive sampler type
             auto VarType = GetShaderVariableType(shaderDesc.DefaultVariableType, shaderDesc.VariableDesc, shaderDesc.NumVariables,
                                                  [&](const char* VarName)
@@ -236,7 +237,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator,
                                            m_ResourceNames.CopyString(SepSam.name),
                                            SPIRVShaderResourceAttribs::ResourceType::SeparateSampler, 
                                            VarType,
-                                           StaticSamplerInd);
+                                           ImmutableSamplerInd);
         }
         VERIFY_EXPR(CurrSepSmpl == GetNumSepSmplrs());
     }
@@ -254,8 +255,8 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator,
                     auto& SepSmplr = GetSepSmplr(SamplerInd);
                     if (StreqSuff(SepSmplr.Name, SepImg.name.c_str(), CombinedSamplerSuffix))
                     {
-                        SepSmplr.SepSmplrOrImgInd = static_cast<Uint16>(CurrSepImg);
-                        if (SepSmplr.StaticSamplerInd >= 0)
+                        SepSmplr.AssignSeparateImage(CurrSepImg);
+                        if (SepSmplr.IsImmutableSamplerAssigned())
                             SamplerInd = NumSepSmpls;
                         break;
                     }
@@ -271,9 +272,9 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator,
                                            GetShaderVariableType(SepImg.name, shaderDesc), 
                                            -1,
                                            SamplerInd);
-            if (pNewSepImg->ValidSepSamplerAssigned())
+            if (pNewSepImg->IsValidSepSamplerAssigned())
             {
-                const auto& SepSmplr = GetSepSmplr(pNewSepImg->SepSmplrOrImgInd);
+                const auto& SepSmplr = GetSepSmplr(pNewSepImg->GetAssignedSepSamplerInd());
                 DEV_CHECK_ERR(SepSmplr.ArraySize == 1 || SepSmplr.ArraySize == pNewSepImg->ArraySize,
                               "Array size (", SepSmplr.ArraySize,") of separate sampler variable '",
                               SepSmplr.Name, "' must be one or same as the array size (", pNewSepImg->ArraySize,
@@ -290,9 +291,9 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator,
 
     VERIFY(m_ResourceNames.GetRemainingSize() == 0, "Names pool must be empty");
 
-    for (Uint32 s = 0; s < m_NumStaticSamplers; ++s)
+    for (Uint32 s = 0; s < m_NumImmutableSamplers; ++s)
     {
-        SamplerPtrType &pStaticSampler = GetStaticSampler(s);
+        SamplerPtrType &pStaticSampler = GetImmutableSampler(s);
         new (std::addressof(pStaticSampler)) SamplerPtrType();
         pRenderDevice->CreateSampler(shaderDesc.StaticSamplers[s].Desc, &pStaticSampler);
     }
@@ -362,7 +363,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator,
         for (Uint32 n=0; n < GetNumSepSmplrs(); ++n)
         {
             const auto& SepSmplr = GetSepSmplr(n);
-            if (!SepSmplr.ValidSepImageAssigned())
+            if (!SepSmplr.IsValidSepImageAssigned())
                 LOG_ERROR_MESSAGE("Shader '", shaderDesc.Name, "' uses combined texture samplers, but separate sampler '", SepSmplr.Name, "' is not assigned to any texture");
         }
     }
@@ -371,7 +372,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator,
 
 void SPIRVShaderResources::Initialize(IMemoryAllocator&       Allocator, 
                                       const ResourceCounters& Counters,
-                                      Uint32                  NumStaticSamplers,
+                                      Uint32                  NumImmutableSamplers,
                                       size_t                  ResourceNamesPoolSize)
 {
     Uint32 CurrentOffset = 0;
@@ -393,14 +394,14 @@ void SPIRVShaderResources::Initialize(IMemoryAllocator&       Allocator,
     m_SeparateImageOffset    = AdvanceOffset(Counters.NumSepImgs);
     m_TotalResources         = AdvanceOffset(0);
 
-    VERIFY(NumStaticSamplers <= MaxOffset, "Max offset exceeded");
-    m_NumStaticSamplers = static_cast<OffsetType>(NumStaticSamplers);
+    VERIFY(NumImmutableSamplers <= MaxOffset, "Max offset exceeded");
+    m_NumImmutableSamplers = static_cast<OffsetType>(NumImmutableSamplers);
 
     static_assert(sizeof(SPIRVShaderResourceAttribs) % sizeof(void*) == 0, "Size of SPIRVShaderResourceAttribs struct must be multiple of sizeof(void*)");
-    static_assert(sizeof(SamplerPtrType) % sizeof(void*) == 0, "Size of SamplerPtrType must be multiple of sizeof(void*)");
-    auto MemorySize = m_TotalResources      * sizeof(SPIRVShaderResourceAttribs) + 
-                      m_NumStaticSamplers   * sizeof(SamplerPtrType) +
-                      ResourceNamesPoolSize * sizeof(char);
+    static_assert(sizeof(SamplerPtrType)             % sizeof(void*) == 0, "Size of SamplerPtrType must be multiple of sizeof(void*)");
+    auto MemorySize = m_TotalResources       * sizeof(SPIRVShaderResourceAttribs) + 
+                      m_NumImmutableSamplers * sizeof(SamplerPtrType) +
+                      ResourceNamesPoolSize  * sizeof(char);
 
     VERIFY_EXPR(GetNumUBs()       == Counters.NumUBs);
     VERIFY_EXPR(GetNumSBs()       == Counters.NumSBs);
@@ -416,7 +417,7 @@ void SPIRVShaderResources::Initialize(IMemoryAllocator&       Allocator,
         m_MemoryBuffer = std::unique_ptr<void, STDDeleterRawMem<void>>(pRawMem, Allocator);
         char* NamesPool = reinterpret_cast<char*>(m_MemoryBuffer.get()) + 
                           m_TotalResources * sizeof(SPIRVShaderResourceAttribs) +
-                          m_NumStaticSamplers * sizeof(SamplerPtrType);
+                          m_NumImmutableSamplers * sizeof(SamplerPtrType);
         m_ResourceNames.AssignMemory(NamesPool, ResourceNamesPoolSize);
     }
 }
@@ -444,8 +445,8 @@ SPIRVShaderResources::~SPIRVShaderResources()
     for (Uint32 n = 0; n < GetNumSepImgs(); ++n)
         GetSepImg(n).~SPIRVShaderResourceAttribs();
 
-    for (Uint32 n = 0; n < GetNumStaticSamplers(); ++n)
-        GetStaticSampler(n).~SamplerPtrType();
+    for (Uint32 n = 0; n < GetNumImmutableSamplers(); ++n)
+        GetImmutableSampler(n).~SamplerPtrType();
 }
 
 SPIRVShaderResources::ResourceCounters  SPIRVShaderResources::CountResources(const SHADER_VARIABLE_TYPE* AllowedVarTypes,
@@ -509,7 +510,7 @@ std::string SPIRVShaderResources::DumpResources()
     ss << "Resource counters (" << GetTotalResources() << " total):" << std::endl << "UBs: " << GetNumUBs() << "; SBs: " 
         << GetNumSBs() << "; Imgs: " << GetNumImgs() << "; Smpl Imgs: " << GetNumSmpldImgs() << "; ACs: " << GetNumACs() 
         << "; Sep Imgs: " << GetNumSepImgs() << "; Sep Smpls: " << GetNumSepSmplrs() << '.' << std::endl
-        << "Num Static Samplers: " << GetNumStaticSamplers() << std::endl << "Resources:";
+        << "Num Static Samplers: " << GetNumImmutableSamplers() << std::endl << "Resources:";
     
     Uint32 ResNum = 0;
     auto DumpResource = [&ss, &ResNum](const SPIRVShaderResourceAttribs& Res)
@@ -522,9 +523,9 @@ std::string SPIRVShaderResources::DumpResources()
         ss << std::setw(32) << FullResNameSS.str();
         ss << " (" << GetShaderVariableTypeLiteralName(Res.VarType) << ")";
 
-        if (Res.StaticSamplerInd >= 0)
+        if (Res.IsImmutableSamplerAssigned())
         {
-            ss << " Static sampler: " << Int32{ Res.StaticSamplerInd };
+            ss << " Immutable sampler: " << Res.GetImmutableSamplerInd();
         }
         ++ResNum;
     };
@@ -597,7 +598,7 @@ bool SPIRVShaderResources::IsCompatibleWith(const SPIRVShaderResources& Resource
         GetNumACs()            != Resources.GetNumACs()            ||
         GetNumSepImgs()        != Resources.GetNumSepImgs()        ||
         GetNumSepSmplrs()      != Resources.GetNumSepSmplrs()       ||
-        GetNumStaticSamplers() != Resources.GetNumStaticSamplers() )
+        GetNumImmutableSamplers() != Resources.GetNumImmutableSamplers() )
         return false;
     VERIFY_EXPR(GetTotalResources() == Resources.GetTotalResources());
 

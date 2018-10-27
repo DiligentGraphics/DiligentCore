@@ -335,7 +335,7 @@ void PipelineLayout::DescriptorSetLayoutManager::AllocateResourceSlot(const SPIR
     VkBinding.descriptorCount = ResAttribs.ArraySize;
     // There are no limitations on what combinations of stages can use a descriptor binding (13.2.1)
     VkBinding.stageFlags = ShaderTypeToVkShaderStageFlagBit(ShaderType);
-    if (ResAttribs.StaticSamplerInd >= 0)
+    if (ResAttribs.IsImmutableSamplerAssigned())
     {
         VERIFY(vkStaticSampler != VK_NULL_HANDLE, "No static sampler provided");
         // If descriptorType is VK_DESCRIPTOR_TYPE_SAMPLER or VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, and 

@@ -415,8 +415,6 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreationAttribs& Attribs, IDat
 {
     EShLanguage ShLang = ShaderTypeToShLanguage(Attribs.Desc.ShaderType);
     glslang::TShader Shader(ShLang);
-    TBuiltInResource Resources = InitResources();
-
     EShMessages messages = (EShMessages)(EShMsgSpvRules | EShMsgVulkanRules | EShMsgReadHlsl | EShMsgHlslLegalization);
 
     VERIFY_EXPR(Attribs.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL);

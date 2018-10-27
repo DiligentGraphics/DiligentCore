@@ -166,7 +166,7 @@ void ShaderResourceLayoutVk::Initialize(Uint32 NumShaders,
         Uint32 DescriptorSet = 0;
         Uint32 CacheOffset = 0;
 
-        auto* pStaticSampler = Resources.GetStaticSampler(Attribs);
+        auto* pStaticSampler = Resources.GetImmutableSampler(Attribs);
         VkSampler vkStaticSampler = VK_NULL_HANDLE;
         if (pStaticSampler != nullptr)
             vkStaticSampler = ValidatedCast<SamplerVkImpl>(pStaticSampler)->GetVkSampler();
@@ -293,9 +293,9 @@ Uint32 ShaderResourceLayoutVk::FindAssignedSampler(const SPIRVShaderResourceAttr
     VERIFY_EXPR(SepImg.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateImage);
     
     Uint32 SamplerInd = VkResource::InvalidSamplerInd;
-    if (m_pResources->IsUsingCombinedSamplers() && SepImg.ValidSepSamplerAssigned())
+    if (m_pResources->IsUsingCombinedSamplers() && SepImg.IsValidSepSamplerAssigned())
     {
-        const auto& SepSampler = m_pResources->GetSepSmplr(SepImg.SepSmplrOrImgInd);
+        const auto& SepSampler = m_pResources->GetSepSmplr(SepImg.GetAssignedSepSamplerInd());
         DEV_CHECK_ERR(SepImg.VarType == SepSampler.VarType,
                         "The type (", GetShaderVariableTypeLiteralName(SepImg.VarType),") of separate image variable '", SepImg.Name,
                         "' is not consistent with the type (", GetShaderVariableTypeLiteralName(SepSampler.VarType),
@@ -519,7 +519,7 @@ void ShaderResourceLayoutVk::VkResource::CacheImage(IDeviceObject*              
             return;
         }
 
-        if (SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SampledImage && SpirvAttribs.StaticSamplerInd < 0)
+        if (SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SampledImage && !SpirvAttribs.IsImmutableSamplerAssigned())
         {
             if(pTexViewVk->GetSampler() == nullptr)
             {
@@ -532,14 +532,14 @@ void ShaderResourceLayoutVk::VkResource::CacheImage(IDeviceObject*              
         // are updated at once by CommitDynamicResources() when SRB is committed.
         if (vkDescrSet != VK_NULL_HANDLE && SpirvAttribs.VarType != SHADER_VARIABLE_TYPE_DYNAMIC)
         {
-            VkDescriptorImageInfo DescrImgInfo = DstRes.GetImageDescriptorWriteInfo(SpirvAttribs.StaticSamplerInd >= 0);
+            VkDescriptorImageInfo DescrImgInfo = DstRes.GetImageDescriptorWriteInfo(SpirvAttribs.IsImmutableSamplerAssigned());
             UpdateDescriptorHandle(vkDescrSet, ArrayInd, &DescrImgInfo, nullptr, nullptr);
         }
 
         if (SamplerInd != InvalidSamplerInd)
         {
             VERIFY_EXPR(SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateImage);
-            VERIFY_EXPR(SpirvAttribs.StaticSamplerInd < 0);
+            VERIFY_EXPR(!SpirvAttribs.IsImmutableSamplerAssigned());
             auto* pSampler = pTexViewVk->GetSampler();
             const auto& SamplerAttribs = ParentResLayout.GetResource(SpirvAttribs.VarType, SamplerInd);
             if (pSampler != nullptr)
@@ -637,7 +637,7 @@ void ShaderResourceLayoutVk::VkResource::BindResource(IDeviceObject *pObj, Uint3
             break;
 
             case SPIRVShaderResourceAttribs::ResourceType::SeparateSampler:
-                if(SpirvAttribs.StaticSamplerInd < 0)
+                if (!SpirvAttribs.IsImmutableSamplerAssigned())
                 {
                     CacheSeparateSampler(pObj, DstRes, vkDescrSet, ArrayIndex);
                 }
@@ -699,8 +699,8 @@ void ShaderResourceLayoutVk::InitializeStaticResources(const ShaderResourceLayou
         VERIFY(SrcRes.SpirvAttribs.ArraySize == DstRes.SpirvAttribs.ArraySize, "Inconsistent array size");
 
         if(DstRes.SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler && 
-           DstRes.SpirvAttribs.StaticSamplerInd >= 0)
-            continue; // Skip static samplers
+           DstRes.SpirvAttribs.IsImmutableSamplerAssigned())
+            continue; // Skip immutable samplers
 
         for(Uint32 ArrInd = 0; ArrInd < DstRes.SpirvAttribs.ArraySize; ++ArrInd)
         {
@@ -736,7 +736,7 @@ void ShaderResourceLayoutVk::dvpVerifyBindings(const ShaderResourceCacheVk& Reso
                 const auto &CachedRes = CachedDescrSet.GetResource(Res.CacheOffset + ArrInd);
                 VERIFY(CachedRes.Type == Res.SpirvAttribs.Type, "Inconsistent types");
                 if(CachedRes.pObject == nullptr && 
-                   !(Res.SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler && Res.SpirvAttribs.StaticSamplerInd >= 0))
+                   !(Res.SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler && Res.SpirvAttribs.IsImmutableSamplerAssigned()))
                 {
                     LOG_ERROR_MESSAGE("No resource is bound to ", GetShaderVariableTypeLiteralName(Res.SpirvAttribs.VarType), " variable '", Res.SpirvAttribs.GetPrintName(ArrInd), "' in shader '", GetShaderName(), "'");
                 }
@@ -905,10 +905,10 @@ void ShaderResourceLayoutVk::CommitDynamicResources(const ShaderResourceCacheVk&
             case SPIRVShaderResourceAttribs::ResourceType::StorageImage:
             case SPIRVShaderResourceAttribs::ResourceType::SampledImage:
                 WriteDescrSetIt->pImageInfo = &(*DescrImgIt);
-                while(ArrElem < Res.SpirvAttribs.ArraySize && DescrImgIt != DescrImgInfoArr.end())
+                while (ArrElem < Res.SpirvAttribs.ArraySize && DescrImgIt != DescrImgInfoArr.end())
                 {
                     const auto& CachedRes = SetResources.GetResource(Res.CacheOffset + ArrElem);
-                    *DescrImgIt = CachedRes.GetImageDescriptorWriteInfo(Res.SpirvAttribs.StaticSamplerInd >= 0);
+                    *DescrImgIt = CachedRes.GetImageDescriptorWriteInfo(Res.SpirvAttribs.IsImmutableSamplerAssigned());
                     ++DescrImgIt;
                     ++ArrElem;
                 }
@@ -922,10 +922,10 @@ void ShaderResourceLayoutVk::CommitDynamicResources(const ShaderResourceCacheVk&
             case SPIRVShaderResourceAttribs::ResourceType::SeparateSampler:
                 // Immutable samplers are permanently bound into the set layout; later binding a sampler 
                 // into an immutable sampler slot in a descriptor set is not allowed (13.2.1)
-                if(Res.SpirvAttribs.StaticSamplerInd < 0)
+                if (!Res.SpirvAttribs.IsImmutableSamplerAssigned())
                 {
                     WriteDescrSetIt->pImageInfo = &(*DescrImgIt);
-                    while(ArrElem < Res.SpirvAttribs.ArraySize && DescrImgIt != DescrImgInfoArr.end())
+                    while (ArrElem < Res.SpirvAttribs.ArraySize && DescrImgIt != DescrImgInfoArr.end())
                     {
                         const auto& CachedRes = SetResources.GetResource(Res.CacheOffset + ArrElem);
                         *DescrImgIt = CachedRes.GetSamplerDescriptorWriteInfo();
