@@ -47,9 +47,9 @@
 //
 //
 //    ______________________                  ________________________________________________________________________
-//   |                      |  unique_ptr    |        |         |          |          |       |         |             |
-//   | SPIRVShaderResources |--------------->|   UBs  |   SBs   | StrgImgs | SmplImgs |  ACs  | SepImgs | SepSamplers |
-//   |______________________|                |________|_________|__________|__________|_______|_________|_____________|
+//   |                      |  unique_ptr    |        |         |          |          |       |             |         |
+//   | SPIRVShaderResources |--------------->|   UBs  |   SBs   | StrgImgs | SmplImgs |  ACs  | SepSamplers | SepImgs |
+//   |______________________|                |________|_________|__________|__________|_______|_____________|_________|
 //            A                                           A                     A
 //            |                                           |                     |
 //            |shared_ptr                                Ref                   Ref
@@ -148,13 +148,13 @@ public:
         static constexpr const Uint32 SamplerIndBits     = 8;
         static constexpr const Uint32 InvalidSamplerInd  = (1 << SamplerIndBits)-1;
 
-        const Uint16 Binding;
-        const Uint16 DescriptorSet;
-        const Uint32 CacheOffset   : CacheOffsetBits; // Offset from the beginning of the cached descriptor set
-        const Uint32 SamplerInd    : SamplerIndBits;  // When using combined texture samplers, index of the separate sampler 
+/* 0 */ const Uint16 Binding;
+/* 2 */ const Uint16 DescriptorSet;
+/* 4 */ const Uint32 CacheOffset   : CacheOffsetBits; // Offset from the beginning of the cached descriptor set
+/* 7 */ const Uint32 SamplerInd    : SamplerIndBits;  // When using combined texture samplers, index of the separate sampler 
                                                       // assigned to separate image
-        const SPIRVShaderResourceAttribs&   SpirvAttribs;
-        const ShaderResourceLayoutVk&       ParentResLayout;
+/* 8 */ const SPIRVShaderResourceAttribs&  SpirvAttribs;
+/*16 */ const ShaderResourceLayoutVk&      ParentResLayout;
 
         VkResource(const ShaderResourceLayoutVk&        _ParentLayout,
                    const SPIRVShaderResourceAttribs&    _SpirvAttribs,
@@ -179,7 +179,7 @@ public:
         bool IsBound(Uint32 ArrayIndex, const ShaderResourceCacheVk& ResourceCache)const;
         
         // Binds a resource pObject in the ResourceCache
-        void BindResource(IDeviceObject *pObject, Uint32 ArrayIndex, ShaderResourceCacheVk& ResourceCache)const;
+        void BindResource(IDeviceObject* pObject, Uint32 ArrayIndex, ShaderResourceCacheVk& ResourceCache)const;
 
         // Updates resource descriptor in the descriptor set
         inline void UpdateDescriptorHandle(VkDescriptorSet                  vkDescrSet,

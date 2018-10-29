@@ -253,8 +253,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator,
                     {
                         SepSmplr.AssignSeparateImage(CurrSepImg);
                         // Do no assign immutable samplers to separate images as immutable
-                        // samplers are initialized in the pipeline layout and never bound
-                        // at run time.
+                        // samplers are permanently bound into the set layout
                         if (SepSmplr.IsImmutableSamplerAssigned())
                             SamplerInd = NumSepSmpls;
                         break;
@@ -595,13 +594,13 @@ std::string SPIRVShaderResources::DumpResources()
 
 bool SPIRVShaderResources::IsCompatibleWith(const SPIRVShaderResources& Resources)const
 {
-    if( GetNumUBs()            != Resources.GetNumUBs()            ||
-        GetNumSBs()            != Resources.GetNumSBs()            ||
-        GetNumImgs()           != Resources.GetNumImgs()           ||
-        GetNumSmpldImgs()      != Resources.GetNumSmpldImgs()       ||
-        GetNumACs()            != Resources.GetNumACs()            ||
-        GetNumSepImgs()        != Resources.GetNumSepImgs()        ||
-        GetNumSepSmplrs()      != Resources.GetNumSepSmplrs()       ||
+    if( GetNumUBs()               != Resources.GetNumUBs()        ||
+        GetNumSBs()               != Resources.GetNumSBs()        ||
+        GetNumImgs()              != Resources.GetNumImgs()       ||
+        GetNumSmpldImgs()         != Resources.GetNumSmpldImgs()  ||
+        GetNumACs()               != Resources.GetNumACs()        ||
+        GetNumSepImgs()           != Resources.GetNumSepImgs()    ||
+        GetNumSepSmplrs()         != Resources.GetNumSepSmplrs()  ||
         GetNumImmutableSamplers() != Resources.GetNumImmutableSamplers() )
         return false;
     VERIFY_EXPR(GetTotalResources() == Resources.GetTotalResources());
