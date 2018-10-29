@@ -629,9 +629,9 @@ void ShaderResourceLayoutVk::VkResource::BindResource(IDeviceObject *pObj, Uint3
                         VERIFY_EXPR(SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateImage);
                         DEV_CHECK_ERR(SeparateSampler.SpirvAttribs.ArraySize == 1 || SeparateSampler.SpirvAttribs.ArraySize == SpirvAttribs.ArraySize,
                                       "Array size (", SeparateSampler.SpirvAttribs.ArraySize,") of separate sampler variable '",
-                                      SeparateSampler.SpirvAttribs.Name, "' must be one or same as the array size (", SpirvAttribs.ArraySize,
+                                      SeparateSampler.SpirvAttribs.Name, "' must be one or the same as the array size (", SpirvAttribs.ArraySize,
                                       ") of separate image variable '", SpirvAttribs.Name, "' it is assigned to");
-                        Uint32 SamplerArrInd = SeparateSampler.SpirvAttribs.ArraySize == 0 ? ArrayIndex : 0;
+                        Uint32 SamplerArrInd = SeparateSampler.SpirvAttribs.ArraySize == 1 ? 0 : ArrayIndex;
                         SeparateSampler.BindResource(pSampler, SamplerArrInd, ResourceCache);
                     }
                 );

@@ -218,6 +218,7 @@ template void ShaderResourceCacheVk::TransitionResources<true>(DeviceContextVkIm
 VkDescriptorBufferInfo ShaderResourceCacheVk::Resource::GetUniformBufferDescriptorWriteInfo()const
 {
     VERIFY(Type == SPIRVShaderResourceAttribs::ResourceType::UniformBuffer, "Uniform buffer resource is expected");
+    DEV_CHECK_ERR(pObject != nullptr, "Unable to get uniform buffer write info: cached object is null");
 
     auto* pBuffVk = pObject.RawPtr<const BufferVkImpl>();
     // VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER or VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC descriptor type require
@@ -236,6 +237,7 @@ VkDescriptorBufferInfo ShaderResourceCacheVk::Resource::GetUniformBufferDescript
 VkDescriptorBufferInfo ShaderResourceCacheVk::Resource::GetStorageBufferDescriptorWriteInfo()const
 {
     VERIFY(Type == SPIRVShaderResourceAttribs::ResourceType::StorageBuffer, "Storage buffer resource is expected");
+    DEV_CHECK_ERR(pObject != nullptr, "Unable to get storage buffer write info: cached object is null");
 
     auto* pBuffViewVk = pObject.RawPtr<const BufferViewVkImpl>();
     const auto& ViewDesc = pBuffViewVk->GetDesc();
@@ -261,6 +263,7 @@ VkDescriptorImageInfo ShaderResourceCacheVk::Resource::GetImageDescriptorWriteIn
            Type == SPIRVShaderResourceAttribs::ResourceType::SeparateImage ||
            Type == SPIRVShaderResourceAttribs::ResourceType::SampledImage,
            "Storage image, separate image or sampled image resource is expected");
+    DEV_CHECK_ERR(pObject != nullptr, "Unable to get image descriptor write info: cached object is null");
 
     bool IsStorageImage = Type == SPIRVShaderResourceAttribs::ResourceType::StorageImage;
 
@@ -310,6 +313,7 @@ VkBufferView ShaderResourceCacheVk::Resource::GetBufferViewWriteInfo()const
     VERIFY(Type == SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer ||
            Type == SPIRVShaderResourceAttribs::ResourceType::StorageTexelBuffer,
            "Uniform or storage buffer resource is expected");
+    DEV_CHECK_ERR(pObject != nullptr, "Unable to get buffer view write info: cached object is null");
 
     // The following bits must have been set at buffer creation time:
     //  * VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER  ->  VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT
@@ -321,6 +325,7 @@ VkBufferView ShaderResourceCacheVk::Resource::GetBufferViewWriteInfo()const
 VkDescriptorImageInfo ShaderResourceCacheVk::Resource::GetSamplerDescriptorWriteInfo()const
 {
     VERIFY(Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler, "Separate sampler resource is expected");
+    DEV_CHECK_ERR(pObject != nullptr, "Unable to get separate sampler descriptor write info: cached object is null");
 
     auto* pSamplerVk = pObject.RawPtr<const SamplerVkImpl>();
     VkDescriptorImageInfo DescrImgInfo;
