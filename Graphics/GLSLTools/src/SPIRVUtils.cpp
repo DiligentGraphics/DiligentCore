@@ -423,8 +423,7 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreationAttribs& Attribs, IDat
     Shader.setEnvClient(glslang::EShClientVulkan, glslang::EShTargetVulkan_1_0);
     Shader.setEnvTarget(glslang::EShTargetSpv, glslang::EShTargetSpv_1_0);
     Shader.setHlslIoMapping(true);
-    Shader.setSourceEntryPoint(Attribs.EntryPoint);
-    Shader.setEntryPoint("main");
+    Shader.setEntryPoint(Attribs.EntryPoint);
 
     RefCntAutoPtr<IDataBlob> pFileData(MakeNewRCObj<DataBlobImpl>()(0));
     const char* SourceCode = 0;

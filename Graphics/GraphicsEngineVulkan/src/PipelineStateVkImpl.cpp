@@ -172,8 +172,8 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters*      pRefCounters
     std::array<VkPipelineShaderStageCreateInfo, MaxShadersInPipeline> ShaderStages = {};
     for (Uint32 s = 0; s < m_NumShaders; ++s)
     {
-        auto* pShader = m_ppShaders[s];
-        auto ShaderType = pShader->GetDesc().ShaderType;
+        auto* pShaderVk = GetShader<const ShaderVkImpl>(s);
+        auto ShaderType = pShaderVk->GetDesc().ShaderType;
 
         auto& StageCI = ShaderStages[s];
         StageCI.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -200,7 +200,7 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters*      pRefCounters
         m_ShaderModules[s] = LogicalDevice.CreateShaderModule(ShaderModuleCI, m_Desc.Name);
 
         StageCI.module = m_ShaderModules[s];
-        StageCI.pName = "main"; // entry point
+        StageCI.pName = pShaderVk->GetEntryPoint();
         StageCI.pSpecializationInfo = nullptr;
     }
 

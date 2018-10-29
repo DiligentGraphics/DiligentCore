@@ -37,7 +37,8 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl*
     TShaderBase       (pRefCounters, pRenderDeviceVk, CreationAttribs.Desc),
     m_StaticResLayout (*this, pRenderDeviceVk->GetLogicalDevice()),
     m_StaticResCache  (ShaderResourceCacheVk::DbgCacheContentType::StaticShaderResources),
-    m_StaticVarsMgr   (*this)
+    m_StaticVarsMgr   (*this),
+    m_EntryPoint      (CreationAttribs.EntryPoint)
 {
     if (CreationAttribs.Source != nullptr || CreationAttribs.FilePath != nullptr)
     {

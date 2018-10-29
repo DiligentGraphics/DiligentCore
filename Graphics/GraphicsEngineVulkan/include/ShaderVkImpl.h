@@ -80,6 +80,8 @@ public:
     const ShaderResourceLayoutVk& GetStaticResLayout()const{return m_StaticResLayout;}
     ShaderResourceCacheVk& GetStaticResCache(){return m_StaticResCache;}
 
+    const char* GetEntryPoint() const { return m_EntryPoint.c_str(); }
+
 #ifdef DEVELOPMENT
     void DvpVerifyStaticResourceBindings();
 #endif
@@ -92,6 +94,7 @@ private:
     ShaderResourceCacheVk   m_StaticResCache;
     ShaderVariableManagerVk m_StaticVarsMgr;
 
+    const std::string m_EntryPoint;
     std::vector<uint32_t> m_SPIRV;
 };
 
