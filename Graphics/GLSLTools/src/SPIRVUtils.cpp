@@ -363,16 +363,6 @@ public:
                                          const char* /*includerName*/,
                                          size_t /*inclusionDepth*/)
     {
-        return nullptr;
-    }
-
-    // For the "local"-only aspect of a "" include. Should not search in the
-    // "system" paths, because on returning a failure, the parser will
-    // call includeSystem() to look in the "system" locations.
-    virtual IncludeResult* includeLocal(const char* headerName,
-                                        const char* /*includerName*/,
-                                        size_t /*inclusionDepth*/)
-    {
         DEV_CHECK_ERR(m_pInputStreamFactory != nullptr, "The shader source conains #include directives, but no input stream factory was provided");
         RefCntAutoPtr<IFileStream> pSourceStream;
         m_pInputStreamFactory->CreateInputStream( headerName, &pSourceStream );
@@ -396,6 +386,16 @@ public:
         m_IncludeRes.emplace(pNewInclude);
         m_DataBlobs.emplace(pNewInclude, std::move(pFileData));
         return pNewInclude;
+    }
+
+    // For the "local"-only aspect of a "" include. Should not search in the
+    // "system" paths, because on returning a failure, the parser will
+    // call includeSystem() to look in the "system" locations.
+    virtual IncludeResult* includeLocal(const char* /*headerName*/,
+                                        const char* /*includerName*/,
+                                        size_t /*inclusionDepth*/)
+    {
+        return nullptr;
     }
 
     // Signals that the parser will no longer use the contents of the
