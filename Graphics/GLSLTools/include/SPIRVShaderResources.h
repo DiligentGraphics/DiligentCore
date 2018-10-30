@@ -30,7 +30,7 @@
 //
 //   m_MemoryBuffer                                                                                                              m_TotalResources
 //    |                                                                                                                             |
-//    | Uniform Buffers | Storage Buffers | Storage Images | Sampled Images | Atomic Counters | Separate Samplers | Separate Images |  Immutable Samplers  |   Resource Names   |
+//    | Uniform Buffers | Storage Buffers | Storage Images | Sampled Images | Atomic Counters | Separate Samplers | Separate Images |  Immutable Samplers  |   Stage Inputs   |   Resource Names   |
 
 #include <memory>
 #include <vector>
@@ -190,6 +190,18 @@ public:
 };
 static_assert(sizeof(SPIRVShaderResourceAttribs) % sizeof(void*) == 0, "Size of SPIRVShaderResourceAttribs struct must be multiple of sizeof(void*)" );
 
+struct SPIRVShaderStageInputAttribs
+{
+    SPIRVShaderStageInputAttribs(const char* _Semantic, uint32_t _LocationDecorationOffset) :
+        Semantic                (_Semantic),
+        LocationDecorationOffset(_LocationDecorationOffset)
+    {}
+
+    const char* const Semantic;
+    const uint32_t LocationDecorationOffset;
+};
+static_assert(sizeof(SPIRVShaderStageInputAttribs) % sizeof(void*) == 0, "Size of SPIRVShaderStageInputAttribs struct must be multiple of sizeof(void*)" );
+
 /// Diligent::SPIRVShaderResources class
 class SPIRVShaderResources
 {
@@ -198,7 +210,8 @@ public:
                          IRenderDevice*         pRenderDevice,
                          std::vector<uint32_t>  spirv_binary,
                          const ShaderDesc&      shaderDesc,
-                         const char*            CombinedSamplerSuffix);
+                         const char*            CombinedSamplerSuffix,
+                         bool                   LoadShaderStageInputs);
 
     SPIRVShaderResources             (const SPIRVShaderResources&)  = delete;
     SPIRVShaderResources             (      SPIRVShaderResources&&) = delete;
@@ -218,6 +231,7 @@ public:
     Uint32 GetNumSepImgs  ()const noexcept{ return (m_TotalResources        - m_SeparateImageOffset);  }
     Uint32 GetTotalResources()      const noexcept { return m_TotalResources; }
     Uint32 GetNumImmutableSamplers()const noexcept { return m_NumImmutableSamplers; }
+    Uint32 GetNumShaderStageInputs()const noexcept { return m_NumShaderStageInputs; }
 
     const SPIRVShaderResourceAttribs& GetUB      (Uint32 n)const noexcept{ return GetResAttribs(n, GetNumUBs(),         0                      ); }
     const SPIRVShaderResourceAttribs& GetSB      (Uint32 n)const noexcept{ return GetResAttribs(n, GetNumSBs(),         m_StorageBufferOffset  ); }
@@ -237,6 +251,14 @@ public:
         VERIFY(ImmutableSamplerInd < m_NumImmutableSamplers, "Static sampler index (", ImmutableSamplerInd, ") is out of range. Array size: ", m_NumImmutableSamplers);
         auto* ResourceMemoryEnd = reinterpret_cast<SPIRVShaderResourceAttribs*>(m_MemoryBuffer.get()) + m_TotalResources;
         return reinterpret_cast<SamplerPtrType*>(ResourceMemoryEnd)[ImmutableSamplerInd];
+    }
+
+    const SPIRVShaderStageInputAttribs& GetShaderStageInputAttribs(Uint32 n)const noexcept
+    {
+        VERIFY(n < m_NumShaderStageInputs, "Shader stage input index (", n, ") is out of range. Total input count: ", m_NumShaderStageInputs);
+        auto* ResourceMemoryEnd = reinterpret_cast<const SPIRVShaderResourceAttribs*>(m_MemoryBuffer.get()) + m_TotalResources;
+        auto* ImmutableSamplerMemoryEnd = reinterpret_cast<const SamplerPtrType*>(ResourceMemoryEnd) + m_NumImmutableSamplers;
+        return reinterpret_cast<const SPIRVShaderStageInputAttribs*>(ImmutableSamplerMemoryEnd)[n];
     }
 
     struct ResourceCounters
@@ -353,18 +375,19 @@ private:
     void Initialize(IMemoryAllocator&       Allocator, 
                     const ResourceCounters& Counters,
                     Uint32                  NumImmutableSamplers,
+                    Uint32                  NumShaderStageInputs,
                     size_t                  ResourceNamesPoolSize);
 
     __forceinline SPIRVShaderResourceAttribs& GetResAttribs(Uint32 n, Uint32 NumResources, Uint32 Offset)noexcept
     {
-        VERIFY(n < NumResources, "Resource index (", n, ") is out of range. Resource array size: ", NumResources);
+        VERIFY(n < NumResources, "Resource index (", n, ") is out of range. Total resource count: ", NumResources);
         VERIFY_EXPR(Offset + n < m_TotalResources);
         return reinterpret_cast<SPIRVShaderResourceAttribs*>(m_MemoryBuffer.get())[Offset + n];
     }
 
     __forceinline const SPIRVShaderResourceAttribs& GetResAttribs(Uint32 n, Uint32 NumResources, Uint32 Offset)const noexcept
     {
-        VERIFY(n < NumResources, "Resource index (", n, ") is out of range. Resource array size: ", NumResources);
+        VERIFY(n < NumResources, "Resource index (", n, ") is out of range. Total resource count: ", NumResources);
         VERIFY_EXPR(Offset + n < m_TotalResources);
         return reinterpret_cast<SPIRVShaderResourceAttribs*>(m_MemoryBuffer.get())[Offset + n];
     }
@@ -380,13 +403,18 @@ private:
 
     SamplerPtrType& GetImmutableSampler(Uint32 n)noexcept
     {
-        VERIFY(n < m_NumImmutableSamplers, "Static sampler index (", n, ") is out of range. Array size: ", m_NumImmutableSamplers);
+        VERIFY(n < m_NumImmutableSamplers, "Immutable sampler index (", n, ") is out of range. Total immutable sampler count: ", m_NumImmutableSamplers);
         auto* ResourceMemoryEnd = reinterpret_cast<SPIRVShaderResourceAttribs*>(m_MemoryBuffer.get()) + m_TotalResources;
         return reinterpret_cast<SamplerPtrType*>(ResourceMemoryEnd)[n];
     }
 
+    SPIRVShaderStageInputAttribs& GetShaderStageInputAttribs(Uint32 n)noexcept
+    {
+        return const_cast<SPIRVShaderStageInputAttribs&>(const_cast<const SPIRVShaderResources*>(this)->GetShaderStageInputAttribs(n));
+    }
+
     // Memory buffer that holds all resources as continuous chunk of memory:
-    // |  UBs  |  SBs  |  StrgImgs  |  SmplImgs  |  ACs  |  SepSamplers  |  SepImgs  |   Immutable Samplers |   Resource Names   |
+    // |  UBs  |  SBs  |  StrgImgs  |  SmplImgs  |  ACs  |  SepSamplers  |  SepImgs  | Immutable Samplers | Stage Inputs | Resource Names |
     std::unique_ptr< void, STDDeleterRawMem<void> > m_MemoryBuffer;
     StringPool m_ResourceNames;
 
@@ -400,7 +428,8 @@ private:
     OffsetType m_SeparateSamplerOffset = 0;
     OffsetType m_SeparateImageOffset   = 0;
     OffsetType m_TotalResources        = 0;
-    OffsetType m_NumImmutableSamplers     = 0;
+    OffsetType m_NumImmutableSamplers  = 0;
+    OffsetType m_NumShaderStageInputs  = 0;
 
     SHADER_TYPE m_ShaderType = SHADER_TYPE_UNKNOWN;
 };

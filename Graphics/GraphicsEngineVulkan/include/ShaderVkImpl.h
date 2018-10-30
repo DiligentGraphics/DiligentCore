@@ -87,6 +87,8 @@ public:
 #endif
     
 private:
+    void MapHLSLVertexShaderInputs();
+
     // ShaderResources class instance must be referenced through the shared pointer, because 
     // it is referenced by ShaderResourceLayoutVk class instances
     std::shared_ptr<const SPIRVShaderResources> m_pShaderResources;

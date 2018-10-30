@@ -22,6 +22,7 @@
  */
 
 #include <array>
+#include <cctype>
 #include "pch.h"
 
 #include "ShaderVkImpl.h"
@@ -78,12 +79,49 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl*
     // Load shader resources
     auto& Allocator = GetRawAllocator();
     auto* pRawMem = ALLOCATE(Allocator, "Allocator for ShaderResources", sizeof(SPIRVShaderResources));
-    auto* pResources = new (pRawMem) SPIRVShaderResources(Allocator, pRenderDeviceVk, m_SPIRV, m_Desc, CreationAttribs.UseCombinedTextureSamplers ? CreationAttribs.CombinedSamplerSuffix : nullptr);
+    bool IsHLSLVertexShader = CreationAttribs.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL && m_Desc.ShaderType == SHADER_TYPE_VERTEX;
+    auto* pResources = new (pRawMem) SPIRVShaderResources(Allocator, pRenderDeviceVk, m_SPIRV, m_Desc, CreationAttribs.UseCombinedTextureSamplers ? CreationAttribs.CombinedSamplerSuffix : nullptr, IsHLSLVertexShader);
     m_pShaderResources.reset(pResources, STDDeleterRawMem<SPIRVShaderResources>(Allocator));
+    
+    if (IsHLSLVertexShader)
+    {
+        MapHLSLVertexShaderInputs();
+    }
 
     m_StaticResLayout.InitializeStaticResourceLayout(m_pShaderResources, GetRawAllocator(), m_StaticResCache);
     // m_StaticResLayout only contains static resources, so reference all of them
     m_StaticVarsMgr.Initialize(m_StaticResLayout, GetRawAllocator(), nullptr, 0, m_StaticResCache);
+}
+
+void ShaderVkImpl::MapHLSLVertexShaderInputs()
+{
+    for (Uint32 i = 0; i < m_pShaderResources->GetNumShaderStageInputs(); ++i)
+    {
+        const auto& Input = m_pShaderResources->GetShaderStageInputAttribs(i);
+        const char* s = Input.Semantic;
+        static const char* Prefix = "attrib";
+        const char* p = Prefix;
+        while(*s != 0 && *p != 0 && *p == std::tolower(static_cast<unsigned char>(*s)) )
+        {
+            ++p;
+            ++s;
+        }
+
+        if (*p != 0)
+        {
+            LOG_ERROR_MESSAGE("Unable to map semantic '", Input.Semantic, "' to input location: semantics must have 'ATTRIBx' format.");
+            continue;
+        }
+
+        char* EndPtr = nullptr;
+        auto Location = strtol(s, &EndPtr, 10);
+        if (*EndPtr != 0)
+        {
+            LOG_ERROR_MESSAGE("Unable to map semantic '", Input.Semantic, "' to input location: semantics must have 'ATTRIBx' format.");
+            continue;
+        }
+        m_SPIRV[Input.LocationDecorationOffset] = Location;
+    }
 }
 
 ShaderVkImpl::~ShaderVkImpl()

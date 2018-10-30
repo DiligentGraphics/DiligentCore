@@ -95,7 +95,8 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator,
                                            IRenderDevice*         pRenderDevice,
                                            std::vector<uint32_t>  spirv_binary,
                                            const ShaderDesc&      shaderDesc,
-                                           const char*            CombinedSamplerSuffix) :
+                                           const char*            CombinedSamplerSuffix,
+                                           bool                   LoadShaderStageInputs) :
     m_ShaderType(shaderDesc.ShaderType)
 {
     // https://github.com/KhronosGroup/SPIRV-Cross/wiki/Reflection-API-user-guide
@@ -103,7 +104,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator,
 
     // The SPIR-V is now parsed, and we can perform reflection on it.
     spirv_cross::ShaderResources resources = Compiler.get_shader_resources();
-
+    
     size_t ResourceNamesPoolSize = 0;
     for(auto *pResType : 
         {
@@ -125,6 +126,47 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator,
         ResourceNamesPoolSize += strlen(CombinedSamplerSuffix) + 1;
     }
 
+    Uint32 NumShaderStageInputs = 0;
+
+    if (resources.stage_inputs.empty())
+        LoadShaderStageInputs = false;
+    if (LoadShaderStageInputs)
+    {
+        const auto& Extensions = Compiler.get_declared_extensions();
+        bool HlslFunctionality1 = false;
+        for (const auto& ext : Extensions )
+        {
+            HlslFunctionality1 = (ext == "SPV_GOOGLE_hlsl_functionality1");
+            if (HlslFunctionality1)
+                break;
+        }
+        
+        if (HlslFunctionality1)
+        {
+            for(const auto& Input : resources.stage_inputs)
+            {
+                if (Compiler.has_decoration(Input.id, spv::Decoration::DecorationHlslSemanticGOOGLE))
+                {
+                    const auto& Semantic = Compiler.get_decoration_string(Input.id, spv::Decoration::DecorationHlslSemanticGOOGLE);
+                    ResourceNamesPoolSize += Semantic.length()+1;
+                    ++NumShaderStageInputs;
+                }
+                else
+                {
+                    LOG_ERROR_MESSAGE("Shader input '", Input.name, "' does not have DecorationHlslSemanticGOOGLE decoration, which is unexpected as the shader declares SPV_GOOGLE_hlsl_functionality1 extension");
+                }
+            }
+        }
+        else
+        {
+            LoadShaderStageInputs = false;
+            LOG_WARNING_MESSAGE("SPIRV byte code of shader '", shaderDesc.Name, "' does not use SPV_GOOGLE_hlsl_functionality1 extension. "
+                                "As a result, it is not possible to get semantics of shader inputs and map them to proper locations. "
+                                "The shader will still work correctly if all attributes are declared in ascending order without any gaps. "
+                                "Enable SPV_GOOGLE_hlsl_functionality1 in your compiler to allow proper mapping of vertex shader inputs.");
+        }
+    }
+
     ResourceCounters ResCounters;
     ResCounters.NumUBs       = static_cast<Uint32>(resources.uniform_buffers.size());
     ResCounters.NumSBs       = static_cast<Uint32>(resources.storage_buffers.size());
@@ -133,7 +175,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator,
     ResCounters.NumACs       = static_cast<Uint32>(resources.atomic_counters.size());
     ResCounters.NumSepSmplrs = static_cast<Uint32>(resources.separate_samplers.size());
     ResCounters.NumSepImgs   = static_cast<Uint32>(resources.separate_images.size());
-    Initialize(Allocator, ResCounters, shaderDesc.NumStaticSamplers, ResourceNamesPoolSize);
+    Initialize(Allocator, ResCounters, shaderDesc.NumStaticSamplers, NumShaderStageInputs, ResourceNamesPoolSize);
 
     {
         Uint32 CurrUB = 0;
@@ -287,14 +329,29 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator,
         m_CombinedSamplerSuffix = m_ResourceNames.CopyString(CombinedSamplerSuffix);
     }
 
-    VERIFY(m_ResourceNames.GetRemainingSize() == 0, "Names pool must be empty");
-
     for (Uint32 s = 0; s < m_NumImmutableSamplers; ++s)
     {
         SamplerPtrType& pStaticSampler = GetImmutableSampler(s);
         new (std::addressof(pStaticSampler)) SamplerPtrType;
         pRenderDevice->CreateSampler(shaderDesc.StaticSamplers[s].Desc, &pStaticSampler);
     }
+
+    if (LoadShaderStageInputs)
+    {
+        Uint32 CurrStageInput = 0;
+        for(const auto& Input : resources.stage_inputs)
+        {
+            if (Compiler.has_decoration(Input.id, spv::Decoration::DecorationHlslSemanticGOOGLE))
+            {
+                const auto& Semantic = Compiler.get_decoration_string(Input.id, spv::Decoration::DecorationHlslSemanticGOOGLE);
+                new (&GetShaderStageInputAttribs(CurrStageInput++)) 
+                    SPIRVShaderStageInputAttribs(m_ResourceNames.CopyString(Semantic), GetDecorationOffset(Compiler, Input, spv::Decoration::DecorationLocation));
+            }
+        }
+        VERIFY_EXPR(CurrStageInput == GetNumShaderStageInputs());
+    }
+
+    VERIFY(m_ResourceNames.GetRemainingSize() == 0, "Names pool must be empty");
 
     //LOG_INFO_MESSAGE(DumpResources());
 
@@ -376,6 +433,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator,
 void SPIRVShaderResources::Initialize(IMemoryAllocator&       Allocator, 
                                       const ResourceCounters& Counters,
                                       Uint32                  NumImmutableSamplers,
+                                      Uint32                  NumShaderStageInputs,
                                       size_t                  ResourceNamesPoolSize)
 {
     Uint32 CurrentOffset = 0;
@@ -400,10 +458,14 @@ void SPIRVShaderResources::Initialize(IMemoryAllocator&       Allocator,
     VERIFY(NumImmutableSamplers <= MaxOffset, "Max offset exceeded");
     m_NumImmutableSamplers = static_cast<OffsetType>(NumImmutableSamplers);
 
+    VERIFY(NumShaderStageInputs <= MaxOffset, "Max offset exceeded");
+    m_NumShaderStageInputs = static_cast<OffsetType>(NumShaderStageInputs);
+
     static_assert(sizeof(SPIRVShaderResourceAttribs) % sizeof(void*) == 0, "Size of SPIRVShaderResourceAttribs struct must be multiple of sizeof(void*)");
     static_assert(sizeof(SamplerPtrType)             % sizeof(void*) == 0, "Size of SamplerPtrType must be multiple of sizeof(void*)");
     auto MemorySize = m_TotalResources       * sizeof(SPIRVShaderResourceAttribs) + 
                       m_NumImmutableSamplers * sizeof(SamplerPtrType) +
+                      m_NumShaderStageInputs * sizeof(SPIRVShaderStageInputAttribs) +
                       ResourceNamesPoolSize  * sizeof(char);
 
     VERIFY_EXPR(GetNumUBs()       == Counters.NumUBs);
@@ -420,7 +482,8 @@ void SPIRVShaderResources::Initialize(IMemoryAllocator&       Allocator,
         m_MemoryBuffer = std::unique_ptr<void, STDDeleterRawMem<void>>(pRawMem, Allocator);
         char* NamesPool = reinterpret_cast<char*>(m_MemoryBuffer.get()) + 
                           m_TotalResources       * sizeof(SPIRVShaderResourceAttribs) +
-                          m_NumImmutableSamplers * sizeof(SamplerPtrType);
+                          m_NumImmutableSamplers * sizeof(SamplerPtrType) +
+                          m_NumShaderStageInputs * sizeof(SPIRVShaderStageInputAttribs);
         m_ResourceNames.AssignMemory(NamesPool, ResourceNamesPoolSize);
     }
 }
@@ -450,6 +513,9 @@ SPIRVShaderResources::~SPIRVShaderResources()
 
     for (Uint32 n = 0; n < GetNumImmutableSamplers(); ++n)
         GetImmutableSampler(n).~SamplerPtrType();
+    
+    for (Uint32 n = 0; n < GetNumShaderStageInputs(); ++n)
+        GetShaderStageInputAttribs(n).~SPIRVShaderStageInputAttribs();
 }
 
 SPIRVShaderResources::ResourceCounters  SPIRVShaderResources::CountResources(const SHADER_VARIABLE_TYPE* AllowedVarTypes,
@@ -601,7 +667,7 @@ bool SPIRVShaderResources::IsCompatibleWith(const SPIRVShaderResources& Resource
         GetNumACs()               != Resources.GetNumACs()        ||
         GetNumSepImgs()           != Resources.GetNumSepImgs()    ||
         GetNumSepSmplrs()         != Resources.GetNumSepSmplrs()  ||
-        GetNumImmutableSamplers() != Resources.GetNumImmutableSamplers() )
+        GetNumImmutableSamplers() != Resources.GetNumImmutableSamplers())
         return false;
     VERIFY_EXPR(GetTotalResources() == Resources.GetTotalResources());
 

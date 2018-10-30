@@ -424,6 +424,7 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreationAttribs& Attribs, IDat
     Shader.setEnvTarget(glslang::EShTargetSpv, glslang::EShTargetSpv_1_0);
     Shader.setHlslIoMapping(true);
     Shader.setEntryPoint(Attribs.EntryPoint);
+    Shader.setEnvTargetHlslFunctionality1();
 
     RefCntAutoPtr<IDataBlob> pFileData(MakeNewRCObj<DataBlobImpl>()(0));
     const char* SourceCode = 0;
