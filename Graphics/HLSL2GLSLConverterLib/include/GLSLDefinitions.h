@@ -644,6 +644,38 @@ uvec3  _ToUvec( vec3  f3 ){ return _ToUvec3( f3.x, f3.y, f3.z ); }
 uvec4  _ToUvec( vec4  f4 ){ return _ToUvec4( f4.x, f4.y, f4.z, f4.w ); }
 
 
+// We have to redefine 'float frexp(float, int)' as 'float frexp(float, float)'
+float _frexp(float f1, out float fexp1)
+{
+    int iexp1;
+    float sig1 = frexp(f1, iexp1);
+    fexp1 = float(iexp1);
+    return sig1;
+}
+vec2 _frexp(vec2 f2, out vec2 fexp2)
+{
+    ivec2 iexp2;
+    vec2 sig2 = frexp(f2, iexp2);
+    fexp2 = vec2(iexp2);
+    return sig2;
+}
+vec3 _frexp(vec3 f3, out vec3 fexp3)
+{
+    ivec3 iexp3;
+    vec3 sig3 = frexp(f3, iexp3);
+    fexp3 = vec3(iexp3);
+    return sig3;
+}
+vec4 _frexp(vec4 f4, out vec4 fexp4)
+{
+    ivec4 iexp4;
+    vec4 sig4 = frexp(f4, iexp4);
+    fexp4 = vec4(iexp4);
+    return sig4;
+}
+#define frexp _frexp
+
+
 // TEXTURE FUNCTION STUB MACROS
 // https://www.opengl.org/wiki/Sampler_(GLSL)
 

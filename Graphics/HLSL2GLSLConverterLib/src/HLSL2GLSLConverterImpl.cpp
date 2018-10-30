@@ -213,7 +213,7 @@
 //   (-) fmod( {matrix types} )
 // [V] frac( {float, float2, float3, float4} )
 //   (-) frac( {matrix types} )
-// [V] frexp( {float, float2, float3, float4}, {int, int2, int3, int4} )
+// [V] frexp( {float, float2, float3, float4}, {float, float2, float3, float4} )
 // [V] fwidth( {float, float2, float3, float4} )
 //   (-) fwidth( {matrix types} )
 // [V] isfinite( {float, float2, float3, float4} ) - implemented as (!isinf(x) && !isnan(x))
