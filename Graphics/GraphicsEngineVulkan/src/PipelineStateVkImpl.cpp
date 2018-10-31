@@ -31,6 +31,7 @@
 #include "ShaderResourceBindingVkImpl.h"
 #include "EngineMemory.h"
 #include "StringTools.h"
+#include "spirv-tools/optimizer.hpp"
 
 namespace Diligent
 {
@@ -126,6 +127,22 @@ VkRenderPassCreateInfo PipelineStateVkImpl::GetRenderPassCreateInfo(
     return RenderPassCI;
 }
 
+static std::vector<uint32_t> StripReflection(const std::vector<uint32_t>& OriginalSPIRV)
+{
+    std::vector<uint32_t> StrippedSPIRV;
+    spvtools::Optimizer SpirvOptimizer(SPV_ENV_VULKAN_1_0);
+    // Decorations defined in SPV_GOOGLE_hlsl_functionality1 are the only instructions
+    // removed by strip-reflect-info pass. SPIRV offsets become INVALID after this operation.
+    SpirvOptimizer.RegisterPass(spvtools::CreateStripReflectInfoPass());
+    auto res = SpirvOptimizer.Run(OriginalSPIRV.data(), OriginalSPIRV.size(), &StrippedSPIRV);
+    if (!res)
+    {
+        // Optimized SPIRV may be invalid
+        StrippedSPIRV.clear();
+    }
+    return StrippedSPIRV;
+}
+
 PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters*      pRefCounters,
                                            RenderDeviceVkImpl*      pDeviceVk,
                                            const PipelineStateDesc& PipelineDesc) : 
@@ -195,8 +212,23 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters*      pRefCounters
         ShaderModuleCI.pNext = nullptr;
         ShaderModuleCI.flags = 0;
         const auto& SPIRV = ShaderSPIRVs[s];
-        ShaderModuleCI.codeSize = SPIRV.size() * sizeof(uint32_t);
-        ShaderModuleCI.pCode = SPIRV.data();
+
+        // We have to strip reflection instructions to fix the follownig validation error:
+        //     SPIR-V module not valid: DecorateStringGOOGLE requires one of the following extensions: SPV_GOOGLE_decorate_string 
+        // Optimizer also performs validation and may catch problems with the byte code.
+        auto StrippedSPIRV = StripReflection(SPIRV);
+        if (!StrippedSPIRV.empty())
+        {
+            ShaderModuleCI.codeSize = StrippedSPIRV.size() * sizeof(uint32_t);
+            ShaderModuleCI.pCode    = StrippedSPIRV.data();
+        }
+        else
+        {
+            LOG_ERROR("Failed to strip reflection information from shader '", pShaderVk->GetDesc().Name, "'. This may indicate a problem with the byte code.");
+            ShaderModuleCI.codeSize = SPIRV.size() * sizeof(uint32_t);
+            ShaderModuleCI.pCode    = SPIRV.data();
+        }
+
         m_ShaderModules[s] = LogicalDevice.CreateShaderModule(ShaderModuleCI, m_Desc.Name);
 
         StageCI.module = m_ShaderModules[s];

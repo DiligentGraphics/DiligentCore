@@ -176,6 +176,7 @@ set(PRIVATE_DEPENDENCIES
     TargetPlatform
     GraphicsEngineNextGenBase
     GLSLTools
+    SPIRV-Tools-opt
 )
 
 if(PLATFORM_WIN32)
