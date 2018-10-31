@@ -7,6 +7,6 @@
 [submodule "External/SPIRV-Tools"]
 	path = External/SPIRV-Tools
 	url = https://github.com/DiligentGraphics/SPIRV-Tools.git
-[submodule "External/SPIRV-Headers"]
+[submodule "external/SPIRV-Headers"]
 	path = External/SPIRV-Headers
 	url = https://github.com/DiligentGraphics/SPIRV-Headers.git
