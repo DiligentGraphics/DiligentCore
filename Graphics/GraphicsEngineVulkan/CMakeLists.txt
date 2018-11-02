@@ -149,22 +149,14 @@ add_library(GraphicsEngineVk-static STATIC
 )
 
 add_library(GraphicsEngineVk-shared SHARED 
-    ${SRC} ${VULKAN_UTILS_SRC} ${INTERFACE} ${INCLUDE} ${VULKAN_UTILS_INCLUDE} ${GENERATE_MIPS_SHADER} ${GENERATE_MIPS_SHADER_INC}
     src/DLLMain.cpp
     src/GraphicsEngineVk.def
     readme.md
 )
 
 add_dependencies(GraphicsEngineVk-static ProcessGenerateMipsVkShader)
-add_dependencies(GraphicsEngineVk-shared ProcessGenerateMipsVkShader)
 
 target_include_directories(GraphicsEngineVk-static 
-PRIVATE
-    include
-    ../../External/vulkan
-)
-
-target_include_directories(GraphicsEngineVk-shared 
 PRIVATE
     include
     ../../External/vulkan
@@ -190,7 +182,7 @@ set(PUBLIC_DEPENDENCIES
 
 target_link_libraries(GraphicsEngineVk-static PRIVATE ${PRIVATE_DEPENDENCIES} PUBLIC ${PUBLIC_DEPENDENCIES})
 
-target_link_libraries(GraphicsEngineVk-shared PRIVATE ${PRIVATE_DEPENDENCIES} PUBLIC ${PUBLIC_DEPENDENCIES})
+target_link_libraries(GraphicsEngineVk-shared PUBLIC GraphicsEngineVk-static)
 target_compile_definitions(GraphicsEngineVk-shared PUBLIC ENGINE_DLL=1)
 
 

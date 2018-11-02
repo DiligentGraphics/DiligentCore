@@ -90,7 +90,6 @@ add_library(GraphicsEngineD3D11-static STATIC
 )
 
 add_library(GraphicsEngineD3D11-shared SHARED 
-    ${SRC} ${INTERFACE} ${INCLUDE}
     src/DLLMain.cpp
     src/GraphicsEngineD3D11.def
     readme.md
@@ -107,12 +106,8 @@ PRIVATE
     include
 )
 
-target_include_directories(GraphicsEngineD3D11-shared
+target_link_libraries(GraphicsEngineD3D11-static
 PRIVATE
-    include
-)
-
-set(PRIVATE_DEPENDENCIES 
     BuildSettings 
     GraphicsEngineD3DBase 
     TargetPlatform
@@ -120,15 +115,11 @@ set(PRIVATE_DEPENDENCIES
     dxgi.lib
     d3d11.lib 
     d3dcompiler.lib
-)
-
-set(PUBLIC_DEPENDENCIES 
+PUBLIC
     GraphicsEngineD3D11Interface
 )
 
-target_link_libraries(GraphicsEngineD3D11-static PRIVATE ${PRIVATE_DEPENDENCIES} PUBLIC ${PUBLIC_DEPENDENCIES})
-
-target_link_libraries(GraphicsEngineD3D11-shared PRIVATE ${PRIVATE_DEPENDENCIES} PUBLIC ${PUBLIC_DEPENDENCIES})
+target_link_libraries(GraphicsEngineD3D11-shared PUBLIC GraphicsEngineD3D11-static)
 target_compile_definitions(GraphicsEngineD3D11-shared PUBLIC ENGINE_DLL=1)
 
 source_group("src" FILES ${SRC} )

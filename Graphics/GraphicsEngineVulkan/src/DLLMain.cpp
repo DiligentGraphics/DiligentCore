@@ -21,7 +21,8 @@
  *  of the possibility of such damages.
  */
 
-#include "pch.h"
+#include <Windows.h>
+#include <crtdbg.h>
 
 BOOL APIENTRY DllMain(HANDLE hModule, 
                       DWORD  ul_reason_for_call, 

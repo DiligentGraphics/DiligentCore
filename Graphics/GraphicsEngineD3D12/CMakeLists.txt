@@ -119,11 +119,9 @@ add_library(GraphicsEngineD3D12-static STATIC
 )
 
 add_library(GraphicsEngineD3D12-shared SHARED 
-    ${SRC} ${INTERFACE} ${INCLUDE} ${SHADERS}
     src/DLLMain.cpp
     src/GraphicsEngineD3D12.def
     readme.md
-    shaders/GenerateMips/GenerateMipsCS.hlsli
 )
 
 target_include_directories(GraphicsEngineD3D12-static 
@@ -132,13 +130,8 @@ PRIVATE
     include
 )
 
-target_include_directories(GraphicsEngineD3D12-shared 
+target_link_libraries(GraphicsEngineD3D12-static
 PRIVATE
-    ${CMAKE_CURRENT_BINARY_DIR}/CompiledShaders
-    include
-)
-
-set(PRIVATE_DEPENDENCIES 
     BuildSettings 
     Common 
     GraphicsEngineD3DBase
@@ -147,15 +140,11 @@ set(PRIVATE_DEPENDENCIES
     dxgi.lib
     D3D12.lib 
     d3dcompiler.lib
-)
-
-set(PUBLIC_DEPENDENCIES 
+PUBLIC
     GraphicsEngineD3D12Interface
 )
 
-target_link_libraries(GraphicsEngineD3D12-static PRIVATE ${PRIVATE_DEPENDENCIES} PUBLIC ${PUBLIC_DEPENDENCIES})
-
-target_link_libraries(GraphicsEngineD3D12-shared PRIVATE ${PRIVATE_DEPENDENCIES} PUBLIC ${PUBLIC_DEPENDENCIES})
+target_link_libraries(GraphicsEngineD3D12-shared PUBLIC GraphicsEngineD3D12-static)
 target_compile_definitions(GraphicsEngineD3D12-shared PUBLIC ENGINE_DLL=1)
 
 # Set output name to GraphicsEngineD3D12_{32|64}{r|d}

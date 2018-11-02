@@ -235,8 +235,7 @@ void EngineFactoryOpenGLImpl::CreateHLSL2GLSLConverter(IHLSL2GLSLConverter **ppC
 }
 
 
-API_QUALIFIER
-Diligent::IEngineFactoryOpenGL* GetEngineFactoryOpenGL()
+Diligent::IEngineFactoryOpenGL* GetEngineFactoryOpenGLInternal()
 {
     return Diligent::EngineFactoryOpenGLImpl::GetInstance();
 }

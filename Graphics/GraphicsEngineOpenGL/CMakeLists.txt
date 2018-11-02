@@ -64,7 +64,7 @@ set(SOURCE
     src/GLProgramResources.cpp
     src/GLTypeConversions.cpp
     src/PipelineStateGLImpl.cpp
-    src/RenderDeviceFactoryOpenGL.cpp
+	src/RenderDeviceFactoryOpenGL.cpp
     src/RenderDeviceGLImpl.cpp
     src/SamplerGLImpl.cpp
     src/ShaderGLImpl.cpp
@@ -136,7 +136,6 @@ add_library(GraphicsEngineOpenGL-static STATIC
 )
 
 add_library(GraphicsEngineOpenGL-shared SHARED 
-    ${SOURCE} ${INTERFACE} ${INCLUDE}
     readme.md
 )
 if(PLATFORM_WIN32)
@@ -153,11 +152,6 @@ PRIVATE
     ../HLSL2GLSLConverterLib/include
 )
 
-target_include_directories(GraphicsEngineOpenGL-shared
-PRIVATE
-    include
-    ../HLSL2GLSLConverterLib/include
-)
 
 set(PRIVATE_DEPENDENCIES 
     BuildSettings 
@@ -201,7 +195,7 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 target_link_libraries(GraphicsEngineOpenGL-static PRIVATE ${PRIVATE_DEPENDENCIES} PUBLIC ${PUBLIC_DEPENDENCIES})
-target_link_libraries(GraphicsEngineOpenGL-shared PRIVATE ${PRIVATE_DEPENDENCIES} PUBLIC ${PUBLIC_DEPENDENCIES})
+target_link_libraries(GraphicsEngineOpenGL-shared PUBLIC GraphicsEngineOpenGL-static)
 target_compile_definitions(GraphicsEngineOpenGL-shared PUBLIC ENGINE_DLL=1 PRIVATE BUILDING_DLL=1)
 
 if(PLATFORM_WIN32)

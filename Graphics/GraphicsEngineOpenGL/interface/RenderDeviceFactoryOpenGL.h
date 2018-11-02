@@ -105,7 +105,7 @@ public:
             return false;
         }
 
-        GetFactoryFunc = reinterpret_cast<GetEngineFactoryOpenGLType>( GetProcAddress(hModule, "GetEngineFactoryOpenGL") );
+        GetFactoryFunc = reinterpret_cast<GetEngineFactoryOpenGLType>( GetProcAddress(hModule, "GetEngineFactoryOpenGLInternal") );
         if( GetFactoryFunc == NULL )
         {
             std::stringstream ss;
@@ -119,9 +119,14 @@ public:
 
 #else
 
+    IEngineFactoryOpenGL* GetEngineFactoryOpenGLInternal();
+
     // Do not forget to call System.loadLibrary("GraphicsEngineOpenGL") in Java on Android!
     API_QUALIFIER
-    IEngineFactoryOpenGL* GetEngineFactoryOpenGL();
+    inline IEngineFactoryOpenGL* GetEngineFactoryOpenGL()
+    {
+        return GetEngineFactoryOpenGLInternal();
+    }
 
 #endif
 
