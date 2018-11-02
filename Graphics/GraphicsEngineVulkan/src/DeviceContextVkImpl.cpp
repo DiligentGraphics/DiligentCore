@@ -1219,6 +1219,13 @@ namespace Diligent
         const auto& DeviceLimits = m_pDevice.RawPtr<const RenderDeviceVkImpl>()->GetPhysicalDevice().GetProperties().limits;
         // Source buffer offset must be multiple of 4 (18.4)
         auto BufferOffsetAlignment = std::max(DeviceLimits.optimalBufferCopyOffsetAlignment, VkDeviceSize{4});
+        // If the calling command’s VkImage parameter is a compressed image, bufferOffset must be a multiple of 
+        // the compressed texel block size in bytes (18.4)
+        const auto& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
+        if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
+        {
+            BufferOffsetAlignment = std::max(BufferOffsetAlignment, VkDeviceSize{FmtAttribs.ComponentSize});
+        }
         auto Allocation = m_UploadHeap.Allocate(CopyInfo.MemorySize, BufferOffsetAlignment);
         // The allocation will stay in the upload heap until the end of the frame at which point all upload
         // pages will be discarded
@@ -1342,6 +1349,13 @@ namespace Diligent
         const auto& DeviceLimits = m_pDevice.RawPtr<RenderDeviceVkImpl>()->GetPhysicalDevice().GetProperties().limits;
         // Source buffer offset must be multiple of 4 (18.4)
         auto Alignment = std::max(DeviceLimits.optimalBufferCopyOffsetAlignment, VkDeviceSize{4});
+        // If the calling command’s VkImage parameter is a compressed image, bufferOffset must be a multiple of 
+        // the compressed texel block size in bytes (18.4)
+        const auto& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
+        if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
+        {
+            Alignment = std::max(Alignment, VkDeviceSize{FmtAttribs.ComponentSize});
+        }
         auto Allocation = AllocateDynamicSpace(CopyInfo.MemorySize, static_cast<Uint32>(Alignment));
 
         MappedData.pData       = reinterpret_cast<Uint8*>(Allocation.pDynamicMemMgr->GetCPUAddress()) + Allocation.AlignedOffset;
