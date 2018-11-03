@@ -303,7 +303,7 @@ namespace Diligent
 
     void DeviceContextVkImpl::TransitionVkVertexBuffers()
     {
-        for ( UINT Buff = 0; Buff < m_NumVertexStreams; ++Buff )
+        for ( Uint32 Buff = 0; Buff < m_NumVertexStreams; ++Buff )
         {
             auto& CurrStream = m_VertexStreams[Buff];
             auto* pBufferVk = CurrStream.pBuffer.RawPtr();
@@ -323,7 +323,7 @@ namespace Diligent
         VkDeviceSize Offsets[MaxBufferSlots];
         VERIFY( m_NumVertexStreams <= MaxBufferSlots, "Too many buffers are being set" );
         bool DynamicBufferPresent = false;
-        for ( UINT slot = 0; slot < m_NumVertexStreams; ++slot )
+        for ( Uint32 slot = 0; slot < m_NumVertexStreams; ++slot )
         {
             auto& CurrStream = m_VertexStreams[slot];
             if (auto* pBufferVk = CurrStream.pBuffer.RawPtr())
@@ -1186,7 +1186,7 @@ namespace Diligent
         CopyInfo.Stride = Align(CopyInfo.RowSize, static_cast<Uint32>(DeviceLimits.optimalBufferCopyRowPitchAlignment));
         if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
         {
-            // If the calling command’s VkImage parameter is a compressed image,
+            // If the calling commandï¿½s VkImage parameter is a compressed image,
             // bufferRowLength must be a multiple of the compressed texel block width
             // In texels (not even in compressed blocks!)
             CopyInfo.StrideInTexels = CopyInfo.Stride / Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.BlockWidth};
@@ -1219,7 +1219,7 @@ namespace Diligent
         const auto& DeviceLimits = m_pDevice.RawPtr<const RenderDeviceVkImpl>()->GetPhysicalDevice().GetProperties().limits;
         // Source buffer offset must be multiple of 4 (18.4)
         auto BufferOffsetAlignment = std::max(DeviceLimits.optimalBufferCopyOffsetAlignment, VkDeviceSize{4});
-        // If the calling command’s VkImage parameter is a compressed image, bufferOffset must be a multiple of 
+        // If the calling commandï¿½s VkImage parameter is a compressed image, bufferOffset must be a multiple of 
         // the compressed texel block size in bytes (18.4)
         const auto& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
         if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
@@ -1349,7 +1349,7 @@ namespace Diligent
         const auto& DeviceLimits = m_pDevice.RawPtr<RenderDeviceVkImpl>()->GetPhysicalDevice().GetProperties().limits;
         // Source buffer offset must be multiple of 4 (18.4)
         auto Alignment = std::max(DeviceLimits.optimalBufferCopyOffsetAlignment, VkDeviceSize{4});
-        // If the calling command’s VkImage parameter is a compressed image, bufferOffset must be a multiple of 
+        // If the calling commandï¿½s VkImage parameter is a compressed image, bufferOffset must be a multiple of 
         // the compressed texel block size in bytes (18.4)
         const auto& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
         if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)

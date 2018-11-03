@@ -34,6 +34,17 @@
 namespace Diligent
 {
 
+template <typename T>
+typename std::enable_if<std::is_destructible<T>::value, void>::type Destruct(T *ptr)
+{
+    ptr->~T();
+}
+
+template <typename T>
+typename std::enable_if<!std::is_destructible<T>::value, void>::type Destruct(T *ptr)
+{
+}
+
 template <typename T, typename AllocatorType>
 struct STDAllocator
 {
@@ -183,7 +194,7 @@ struct STDDeleter
     void operator()(T *ptr) noexcept
     {
         VERIFY(m_Allocator != nullptr, "The deleter has been moved away or never initialized, and can't be used");
-        ptr->~T();
+        Destruct(ptr);
         m_Allocator->Free(ptr);
     }
 

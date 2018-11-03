@@ -27,9 +27,10 @@
 
 struct BasicAtomics
 {
-    typedef long Long;
-    typedef std::atomic<Long> AtomicLong;
-    typedef std::atomic<int64_t> AtomicInt64;
+    using Long        = long;
+    using AtomicLong  = std::atomic<Long>;
+    using Int64       = int64_t;
+    using AtomicInt64 = std::atomic<Int64>;
 
     // The function returns the resulting INCREMENTED value.
     template<typename Type>
