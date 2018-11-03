@@ -29,6 +29,7 @@
 #include "TextureViewVkImpl.h"
 #include "TextureVkImpl.h"
 #include "MapHelper.h"
+#include "PlatformMisc.h"
 #include "../../GraphicsTools/include/ShaderMacroHelper.h"
 #include "../../GraphicsTools/include/CommonlyUsedStates.h"
 
@@ -248,8 +249,7 @@ namespace Diligent
             // expensive.  Maybe we can update the code later to compute sample weights for
             // each successive downsample.  We use _BitScanForward to count number of zeros
             // in the low bits.  Zeros indicate we can divide by two without truncating.
-            uint32_t AdditionalMips;
-            _BitScanForward((unsigned long*)&AdditionalMips, DstWidth | DstHeight);
+            uint32_t AdditionalMips = PlatformMisc::GetLSB(DstWidth | DstHeight);
             uint32_t NumMips = 1 + (AdditionalMips > 3 ? 3 : AdditionalMips);
             if (TopMip + NumMips > TexDesc.MipLevels - 1)
                 NumMips = TexDesc.MipLevels - 1 - TopMip;

@@ -50,7 +50,7 @@ namespace VulkanUtilities
         VkCommandBuffer GetCommandBuffer(const char* DebugName = "");
         // The GPU must have finished with the command buffer being returned to the pool
         void FreeCommandBuffer(VkCommandBuffer&& CmdBuffer);
-        
+
         CommandPoolWrapper&& Release();
 
 #ifdef DEVELOPMENT
@@ -61,11 +61,11 @@ namespace VulkanUtilities
         // Shared point to logical device must be defined before the command pool
         std::shared_ptr<const VulkanLogicalDevice> m_LogicalDevice;
         CommandPoolWrapper m_CmdPool;
-        
+
         std::mutex m_Mutex;
         std::deque< VkCommandBuffer > m_CmdBuffers;
 #ifdef DEVELOPMENT
-        std::atomic_int32_t m_BuffCounter = 0;
+        std::atomic_int32_t m_BuffCounter;
 #endif
     };
 }

@@ -52,8 +52,8 @@ IMPLEMENT_QUERY_INTERFACE( CommandQueueVkImpl, IID_CommandQueueVk, TBase )
 Uint64 CommandQueueVkImpl::Submit(const VkSubmitInfo& SubmitInfo)
 {
     std::lock_guard<std::mutex> Lock(m_QueueMutex);
-    
-    auto FenceValue = m_NextFenceValue;
+
+    Atomics::Int64 FenceValue = m_NextFenceValue;
     // Increment the value before submitting the buffer to be overly safe
     Atomics::AtomicIncrement(m_NextFenceValue);
 

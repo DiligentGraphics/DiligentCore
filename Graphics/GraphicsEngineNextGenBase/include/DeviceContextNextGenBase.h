@@ -64,7 +64,7 @@ protected:
     template<typename RenderDeviceImplType>
     void EndFrame(RenderDeviceImplType& RenderDeviceImpl)
     {
-        if (m_bIsDeferred)
+        if (this->m_bIsDeferred)
         {
             // For deferred context, reset submitted cmd queue mask
             m_SubmittedBuffersCmdQueueMask = 0;

@@ -42,6 +42,9 @@ namespace VulkanUtilities
         CmdPoolCI.flags            = flags;
         m_CmdPool = m_LogicalDevice->CreateCommandPool(CmdPoolCI);
         DEV_CHECK_ERR(m_CmdPool != VK_NULL_HANDLE, "Failed to create vulkan command pool");
+#ifdef DEVELOPMENT
+        m_BuffCounter = 0;
+#endif
     }
 
     VulkanCommandBufferPool::~VulkanCommandBufferPool()

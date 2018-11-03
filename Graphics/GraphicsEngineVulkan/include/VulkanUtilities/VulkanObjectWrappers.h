@@ -24,12 +24,10 @@
 #pragma once
 
 #include <memory>
-#include "vulkan.h"
+#include "VulkanLogicalDevice.h"
 
 namespace VulkanUtilities
 {
-    class VulkanLogicalDevice;
-
     template<typename VulkanObjectType>
     class VulkanObjectWrapper
     {
@@ -97,21 +95,4 @@ namespace VulkanUtilities
         std::shared_ptr<const VulkanLogicalDevice> m_pLogicalDevice;
         VulkanObjectType m_VkObject;
     };
-
-    using CommandPoolWrapper  = VulkanObjectWrapper<VkCommandPool>;
-    using BufferWrapper       = VulkanObjectWrapper<VkBuffer>;
-    using BufferViewWrapper   = VulkanObjectWrapper<VkBufferView>;
-    using ImageWrapper        = VulkanObjectWrapper<VkImage>;
-    using ImageViewWrapper    = VulkanObjectWrapper<VkImageView>;
-    using DeviceMemoryWrapper = VulkanObjectWrapper<VkDeviceMemory>;
-    using FenceWrapper        = VulkanObjectWrapper<VkFence>;
-    using RenderPassWrapper   = VulkanObjectWrapper<VkRenderPass>;
-    using PipelineWrapper     = VulkanObjectWrapper<VkPipeline>;
-    using ShaderModuleWrapper = VulkanObjectWrapper<VkShaderModule>;
-    using PipelineLayoutWrapper = VulkanObjectWrapper<VkPipelineLayout>;
-    using SamplerWrapper        = VulkanObjectWrapper<VkSampler>;
-    using FramebufferWrapper    = VulkanObjectWrapper<VkFramebuffer>;
-    using DescriptorPoolWrapper = VulkanObjectWrapper<VkDescriptorPool>;
-    using DescriptorSetLayoutWrapper = VulkanObjectWrapper<VkDescriptorSetLayout>;
-    using SemaphoreWrapper      = VulkanObjectWrapper<VkSemaphore>;
 }

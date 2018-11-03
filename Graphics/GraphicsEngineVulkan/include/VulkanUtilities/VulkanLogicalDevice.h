@@ -25,10 +25,29 @@
 
 #include <memory>
 #include "vulkan.h"
-#include "VulkanObjectWrappers.h"
 
 namespace VulkanUtilities
 {
+    template<typename VulkanObjectType>
+    class VulkanObjectWrapper;
+
+    using CommandPoolWrapper    = VulkanObjectWrapper<VkCommandPool>;
+    using BufferWrapper         = VulkanObjectWrapper<VkBuffer>;
+    using BufferViewWrapper     = VulkanObjectWrapper<VkBufferView>;
+    using ImageWrapper          = VulkanObjectWrapper<VkImage>;
+    using ImageViewWrapper      = VulkanObjectWrapper<VkImageView>;
+    using DeviceMemoryWrapper   = VulkanObjectWrapper<VkDeviceMemory>;
+    using FenceWrapper          = VulkanObjectWrapper<VkFence>;
+    using RenderPassWrapper     = VulkanObjectWrapper<VkRenderPass>;
+    using PipelineWrapper       = VulkanObjectWrapper<VkPipeline>;
+    using ShaderModuleWrapper   = VulkanObjectWrapper<VkShaderModule>;
+    using PipelineLayoutWrapper = VulkanObjectWrapper<VkPipelineLayout>;
+    using SamplerWrapper        = VulkanObjectWrapper<VkSampler>;
+    using FramebufferWrapper    = VulkanObjectWrapper<VkFramebuffer>;
+    using DescriptorPoolWrapper = VulkanObjectWrapper<VkDescriptorPool>;
+    using DescriptorSetLayoutWrapper = VulkanObjectWrapper<VkDescriptorSetLayout>;
+    using SemaphoreWrapper      = VulkanObjectWrapper<VkSemaphore>;
+
     class VulkanLogicalDevice : public std::enable_shared_from_this<VulkanLogicalDevice>
     {
     public:
@@ -80,7 +99,7 @@ namespace VulkanUtilities
         DescriptorPoolWrapper CreateDescriptorPool(const VkDescriptorPoolCreateInfo &DescrPoolCI,   const char* DebugName = "")const;
         DescriptorSetLayoutWrapper CreateDescriptorSetLayout(const VkDescriptorSetLayoutCreateInfo &LayoutCI, const char* DebugName = "")const;
         SemaphoreWrapper    CreateSemaphore(const VkSemaphoreCreateInfo &SemaphoreCI, const char* DebugName = "")const;
-        
+
         VkCommandBuffer     AllocateVkCommandBuffer(const VkCommandBufferAllocateInfo &AllocInfo, const char* DebugName = "")const;
         VkDescriptorSet     AllocateVkDescriptorSet(const VkDescriptorSetAllocateInfo &AllocInfo, const char* DebugName = "")const;
 
@@ -119,7 +138,7 @@ namespace VulkanUtilities
                                   const VkWriteDescriptorSet*   pDescriptorWrites,
                                   uint32_t                      descriptorCopyCount,
                                   const VkCopyDescriptorSet*    pDescriptorCopies)const;
-        
+
         VkResult ResetCommandPool(VkCommandPool             vkCmdPool,
                                   VkCommandPoolResetFlags   flags = 0)const;
 

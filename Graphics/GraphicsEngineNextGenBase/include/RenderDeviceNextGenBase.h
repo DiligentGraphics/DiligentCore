@@ -71,9 +71,9 @@ public:
               FenceSize),
         m_CmdQueueCount(CmdQueueCount)
     {
-        m_CommandQueues = reinterpret_cast<CommandQueue*>(ALLOCATE(m_RawMemAllocator, "Raw memory for the device command/release queues", sizeof(CommandQueue)*m_CmdQueueCount));
+        m_CommandQueues = reinterpret_cast<CommandQueue*>(ALLOCATE(this->m_RawMemAllocator, "Raw memory for the device command/release queues", sizeof(CommandQueue)*m_CmdQueueCount));
         for(size_t q=0; q < m_CmdQueueCount; ++q)
-            new(m_CommandQueues+q)CommandQueue(RefCntAutoPtr<CommandQueueType>(Queues[q]), m_RawMemAllocator);
+            new(m_CommandQueues+q)CommandQueue(RefCntAutoPtr<CommandQueueType>(Queues[q]), this->m_RawMemAllocator);
     }
 
     ~RenderDeviceNextGenBase()
@@ -282,7 +282,7 @@ protected:
                 DEV_CHECK_ERR(Queue.ReleaseQueue.GetPendingReleaseResourceCount() == 0, "All resources must be released before destroying a command queue");
                 Queue.~CommandQueue();
             }
-            m_RawMemAllocator.Free(m_CommandQueues);
+            this->m_RawMemAllocator.Free(m_CommandQueues);
             m_CommandQueues = nullptr;
         }
     }
@@ -292,7 +292,9 @@ protected:
         CommandQueue(RefCntAutoPtr<CommandQueueType> _CmdQueue, IMemoryAllocator& Allocator)noexcept : 
             CmdQueue    (std::move(_CmdQueue)),
             ReleaseQueue(Allocator)
-        {}
+        {
+            NextCmdBufferNumber = 0;
+        }
 
         CommandQueue             (const CommandQueue& rhs)  = delete;
         CommandQueue             (      CommandQueue&& rhs) = delete;
@@ -300,7 +302,7 @@ protected:
         CommandQueue& operator = (      CommandQueue&& rhs) = delete;
         
         std::mutex                                        Mtx;
-        Atomics::Int64                                    NextCmdBufferNumber = 0;
+        Atomics::AtomicInt64                              NextCmdBufferNumber;
         RefCntAutoPtr<CommandQueueType>                   CmdQueue;
         ResourceReleaseQueue<DynamicStaleResourceWrapper> ReleaseQueue;
     };

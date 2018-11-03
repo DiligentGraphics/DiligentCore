@@ -27,6 +27,7 @@
 #include "VulkanUtilities/VulkanInstance.h"
 #include "VulkanUtilities/VulkanDebug.h"
 #include "SPIRVUtils.h"
+#include "PlatformDefinitions.h"
 
 namespace VulkanUtilities
 {

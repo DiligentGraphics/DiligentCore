@@ -136,6 +136,9 @@ public:
         m_MaxSets     (MaxSets),
         m_AllowFreeing(AllowFreeing)
     {
+#ifdef DEVELOPMENT
+        m_AllocatedPoolCounter = 0;
+#endif
     }
     ~DescriptorPoolManager();
 
@@ -170,7 +173,7 @@ private:
     void FreePool(VulkanUtilities::DescriptorPoolWrapper&& Pool);
 
 #ifdef DEVELOPMENT
-    std::atomic_int32_t                                  m_AllocatedPoolCounter = 0;
+    std::atomic_int32_t                                  m_AllocatedPoolCounter;
 #endif
 };
 
@@ -188,6 +191,9 @@ public:
                            bool                              AllowFreeing) noexcept:
         DescriptorPoolManager(DeviceVkImpl, std::move(PoolName), std::move(PoolSizes), MaxSets, AllowFreeing)
     {
+#ifdef DEVELOPMENT
+        m_AllocatedSetCounter = 0;
+#endif
     }
 
     ~DescriptorSetAllocator();
@@ -202,7 +208,7 @@ private:
     void FreeDescriptorSet(VkDescriptorSet Set, VkDescriptorPool Pool, Uint64 QueueMask);
 
 #ifdef DEVELOPMENT
-    std::atomic_int32_t m_AllocatedSetCounter = 0;
+    std::atomic_int32_t m_AllocatedSetCounter;
 #endif
 };
 

@@ -137,18 +137,6 @@ namespace Diligent
     }
 
     IMPLEMENT_QUERY_INTERFACE( DeviceContextVkImpl, IID_DeviceContextVk, TDeviceContextBase )
-    
-    inline void DeviceContextVkImpl::EnsureVkCmdBuffer()
-    {
-        // Make sure that the number of commands in the context is at least one,
-        // so that the context cannot be disposed by Flush()
-        m_State.NumCommands = m_State.NumCommands != 0 ? m_State.NumCommands : 1;
-        if (m_CommandBuffer.GetVkCmdBuffer() == VK_NULL_HANDLE)
-        {
-            auto vkCmdBuff = m_CmdPool.GetCommandBuffer();
-            m_CommandBuffer.SetVkCmdBuffer(vkCmdBuff);
-        }
-    }
 
     void DeviceContextVkImpl::DisposeVkCmdBuffer(Uint32 CmdQueue, VkCommandBuffer vkCmdBuff, Uint64 FenceValue)
     {
@@ -188,7 +176,7 @@ namespace Diligent
             VkCommandBuffer                           vkCmdBuff;
             VulkanUtilities::VulkanCommandBufferPool* Pool;
         };
-        
+
         auto& ReleaseQueue = m_pDevice.RawPtr<RenderDeviceVkImpl>()->GetReleaseQueue(CmdQueue);
         ReleaseQueue.DiscardResource(CmdBufferDeleter{vkCmdBuff, m_CmdPool}, FenceValue);
     }

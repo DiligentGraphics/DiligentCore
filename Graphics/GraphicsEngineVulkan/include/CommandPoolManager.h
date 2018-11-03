@@ -73,7 +73,7 @@ private:
     std::deque< VulkanUtilities::CommandPoolWrapper, STDAllocatorRawMem<VulkanUtilities::CommandPoolWrapper> > m_CmdPools;
 
 #ifdef DEVELOPMENT
-    std::atomic_int32_t m_AllocatedPoolCounter = 0;
+    std::atomic_int32_t m_AllocatedPoolCounter;
 #endif
 };
 

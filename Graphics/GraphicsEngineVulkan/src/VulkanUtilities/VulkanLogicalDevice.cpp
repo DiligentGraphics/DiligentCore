@@ -25,6 +25,7 @@
 #include "VulkanErrors.h"
 #include "VulkanUtilities/VulkanLogicalDevice.h"
 #include "VulkanUtilities/VulkanDebug.h"
+#include "VulkanUtilities/VulkanObjectWrappers.h"
 
 namespace VulkanUtilities
 {

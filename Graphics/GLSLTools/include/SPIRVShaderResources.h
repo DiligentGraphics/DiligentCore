@@ -378,14 +378,14 @@ private:
                     Uint32                  NumShaderStageInputs,
                     size_t                  ResourceNamesPoolSize);
 
-    __forceinline SPIRVShaderResourceAttribs& GetResAttribs(Uint32 n, Uint32 NumResources, Uint32 Offset)noexcept
+    SPIRVShaderResourceAttribs& GetResAttribs(Uint32 n, Uint32 NumResources, Uint32 Offset)noexcept
     {
         VERIFY(n < NumResources, "Resource index (", n, ") is out of range. Total resource count: ", NumResources);
         VERIFY_EXPR(Offset + n < m_TotalResources);
         return reinterpret_cast<SPIRVShaderResourceAttribs*>(m_MemoryBuffer.get())[Offset + n];
     }
 
-    __forceinline const SPIRVShaderResourceAttribs& GetResAttribs(Uint32 n, Uint32 NumResources, Uint32 Offset)const noexcept
+    const SPIRVShaderResourceAttribs& GetResAttribs(Uint32 n, Uint32 NumResources, Uint32 Offset)const noexcept
     {
         VERIFY(n < NumResources, "Resource index (", n, ") is out of range. Total resource count: ", NumResources);
         VERIFY_EXPR(Offset + n < m_TotalResources);

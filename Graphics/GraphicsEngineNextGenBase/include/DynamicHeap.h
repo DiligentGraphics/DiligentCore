@@ -98,7 +98,11 @@ public:
     MasterBlockListBasedManager(IMemoryAllocator& Allocator, 
                                 Uint32            Size) : 
         m_AllocationsMgr(Size, Allocator)
-    {}
+    {
+#ifdef DEVELOPMENT
+        m_MasterBlockCounter = 0;
+#endif
+    }
 
     MasterBlockListBasedManager            (const MasterBlockListBasedManager&)  = delete;
     MasterBlockListBasedManager            (      MasterBlockListBasedManager&&) = delete;
@@ -176,7 +180,7 @@ private:
     VariableSizeAllocationsManager  m_AllocationsMgr;
 
 #ifdef DEVELOPMENT
-    std::atomic_int32_t             m_MasterBlockCounter = 0;
+    std::atomic_int32_t             m_MasterBlockCounter;
 #endif
 };
 

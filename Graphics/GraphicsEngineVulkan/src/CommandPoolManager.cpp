@@ -38,6 +38,9 @@ CommandPoolManager::CommandPoolManager(RenderDeviceVkImpl&      DeviceVkImpl,
     m_CmdPoolFlags    (flags),
     m_CmdPools        (STD_ALLOCATOR_RAW_MEM(VulkanUtilities::CommandPoolWrapper, GetRawAllocator(), "Allocator for deque<VulkanUtilities::CommandPoolWrapper>"))
 {
+#ifdef DEVELOPMENT
+    m_AllocatedPoolCounter = 0;
+#endif
 }
 
 VulkanUtilities::CommandPoolWrapper CommandPoolManager::AllocateCommandPool(const char* DebugName)

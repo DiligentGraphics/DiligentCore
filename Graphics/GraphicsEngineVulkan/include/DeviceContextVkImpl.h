@@ -38,9 +38,9 @@
 #include "DescriptorPoolManager.h"
 #include "PipelineLayout.h"
 #include "GenerateMipsVkHelper.h"
-#include "BufferVKImpl.h"
-#include "TextureViewVKImpl.h"
-#include "PipelineStateVKImpl.h"
+#include "BufferVkImpl.h"
+#include "TextureViewVkImpl.h"
+#include "PipelineStateVkImpl.h"
 #include "HashUtils.h"
 
 namespace Diligent
@@ -180,7 +180,18 @@ private:
     void CommitViewports();
     void CommitScissorRects();
     
-    inline void EnsureVkCmdBuffer();
+    inline void EnsureVkCmdBuffer()
+    {
+        // Make sure that the number of commands in the context is at least one,
+        // so that the context cannot be disposed by Flush()
+        m_State.NumCommands = m_State.NumCommands != 0 ? m_State.NumCommands : 1;
+        if (m_CommandBuffer.GetVkCmdBuffer() == VK_NULL_HANDLE)
+        {
+            auto vkCmdBuff = m_CmdPool.GetCommandBuffer();
+            m_CommandBuffer.SetVkCmdBuffer(vkCmdBuff);
+        }
+    }
+    
     inline void DisposeVkCmdBuffer(Uint32 CmdQueue, VkCommandBuffer vkCmdBuff, Uint64 FenceValue);
     inline void DisposeCurrentCmdBuffer(Uint32 CmdQueue, Uint64 FenceValue);
 
