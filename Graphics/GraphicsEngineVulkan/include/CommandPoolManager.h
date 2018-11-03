@@ -27,7 +27,7 @@
 #include <mutex>
 #include <atomic>
 #include "STDAllocator.h"
-#include "VulkanUtilities/VulkanLogicalDevice.h"
+#include "VulkanUtilities/VulkanObjectWrappers.h"
 
 namespace Diligent
 {
