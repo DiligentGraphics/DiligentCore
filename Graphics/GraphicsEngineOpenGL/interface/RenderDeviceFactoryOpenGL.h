@@ -119,12 +119,11 @@ public:
 
 #else
 
-    IEngineFactoryOpenGL* GetEngineFactoryOpenGLInternal();
-
     // Do not forget to call System.loadLibrary("GraphicsEngineOpenGL") in Java on Android!
     API_QUALIFIER
     inline IEngineFactoryOpenGL* GetEngineFactoryOpenGL()
     {
+        IEngineFactoryOpenGL* GetEngineFactoryOpenGLInternal();
         return GetEngineFactoryOpenGLInternal();
     }
 

@@ -375,7 +375,7 @@ void LoadGraphicsEngineVk(GetEngineFactoryVkType &GetFactoryFunc)
 #endif
 
 
-IEngineFactoryVk* GetEngineFactoryVk()
+IEngineFactoryVk* GetEngineFactoryVkInternal()
 {
     return EngineFactoryVkImpl::GetInstance();
 }

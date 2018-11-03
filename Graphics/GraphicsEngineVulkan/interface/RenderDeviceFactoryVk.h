@@ -32,8 +32,25 @@
 #include "../../GraphicsEngine/interface/DeviceContext.h"
 #include "../../GraphicsEngine/interface/SwapChain.h"
 
-#if PLATFORM_UNIVERSAL_WINDOWS && defined(ENGINE_DLL)
-#   include "../../../Common/interface/StringTools.h"
+#if PLATFORM_WIN32
+
+#   define API_QUALIFIER
+
+#elif PLATFORM_ANDROID || PLATFORM_LINUX || PLATFORM_MACOS || PLATFORM_IOS
+
+#   if ENGINE_DLL
+#       if BUILDING_DLL
+            // https://gcc.gnu.org/wiki/Visibility
+#           define API_QUALIFIER __attribute__((visibility("default")))
+#       else
+#           define API_QUALIFIER __attribute__((visibility("default")))
+#       endif
+#   else
+#       define API_QUALIFIER
+#   endif
+
+#else
+#    error Unsupported platform
 #endif
 
 namespace Diligent
@@ -63,7 +80,7 @@ namespace Diligent
     };
 
 
-#if ENGINE_DLL
+#if ENGINE_DLL && PLATFORM_WIN32
 
     typedef IEngineFactoryVk* (*GetEngineFactoryVkType)();
 
@@ -85,14 +102,7 @@ namespace Diligent
 #endif
 
         LibName += ".dll";
-#if PLATFORM_WIN32
         auto hModule = LoadLibraryA(LibName.c_str());
-#elif PLATFORM_UNIVERSAL_WINDOWS
-        auto hModule = LoadPackagedLibrary(WidenString(LibName).c_str(), 0);
-#else
-#   error Unexpected platform
-#endif
-
         if (hModule == NULL)
         {
             std::stringstream ss;
@@ -101,7 +111,7 @@ namespace Diligent
             return false;
         }
 
-        GetFactoryFunc = reinterpret_cast<GetEngineFactoryVkType>(GetProcAddress(hModule, "GetEngineFactoryVk"));
+        GetFactoryFunc = reinterpret_cast<GetEngineFactoryVkType>(GetProcAddress(hModule, "GetEngineFactoryVkInternal"));
         if (GetFactoryFunc == NULL)
         {
             std::stringstream ss;
@@ -115,7 +125,12 @@ namespace Diligent
     }
 #else
 
-    IEngineFactoryVk* GetEngineFactoryVk();
+    API_QUALIFIER
+    inline IEngineFactoryVk* GetEngineFactoryVk()
+    {
+        IEngineFactoryVk* GetEngineFactoryVkInternal();
+        return GetEngineFactoryVkInternal();
+    }
 
 #endif
 
