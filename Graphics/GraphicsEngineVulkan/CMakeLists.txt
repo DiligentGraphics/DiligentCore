@@ -149,10 +149,15 @@ add_library(GraphicsEngineVk-static STATIC
 )
 
 add_library(GraphicsEngineVk-shared SHARED 
-    src/DLLMain.cpp
-    src/GraphicsEngineVk.def
     readme.md
 )
+
+if(PLATFORM_WIN32)
+    target_sources(GraphicsEngineVk-shared PRIVATE
+        src/DLLMain.cpp
+        src/GraphicsEngineVk.def
+    )
+endif()
 
 add_dependencies(GraphicsEngineVk-static ProcessGenerateMipsVkShader)
 
@@ -172,9 +177,11 @@ set(PRIVATE_DEPENDENCIES
 )
 
 if(PLATFORM_WIN32)
-    find_library(Vulkan_LIBRARY NAMES vulkan-1 vulkan PATHS ../../External/vulkan/)    
-    list(APPEND PRIVATE_DEPENDENCIES ${Vulkan_LIBRARY})
+    find_library(Vulkan_LIBRARY NAMES vulkan-1 vulkan PATHS "../../External/vulkan/libs")
+else()
+    find_library(Vulkan_LIBRARY NAMES vulkan HINTS "$ENV{VULKAN_SDK}/lib" "../../External/vulkan/libs" REQUIRED)
 endif()
+list(APPEND PRIVATE_DEPENDENCIES ${Vulkan_LIBRARY})
 
 set(PUBLIC_DEPENDENCIES 
     GraphicsEngineVkInterface
@@ -183,17 +190,29 @@ set(PUBLIC_DEPENDENCIES
 target_link_libraries(GraphicsEngineVk-static PRIVATE ${PRIVATE_DEPENDENCIES} PUBLIC ${PUBLIC_DEPENDENCIES})
 
 target_link_libraries(GraphicsEngineVk-shared PUBLIC GraphicsEngineVk-static)
-target_compile_definitions(GraphicsEngineVk-shared PUBLIC ENGINE_DLL=1)
+target_compile_definitions(GraphicsEngineVk-shared PUBLIC ENGINE_DLL=1 PRIVATE BUILDING_DLL=1)
 
 
 if(PLATFORM_WIN32)
     set(PRIVATE_COMPILE_DEFINITIONS VK_USE_PLATFORM_WIN32_KHR=1 NOMINMAX)
+elseif(PLATFORM_LINUX)
+    set(PRIVATE_COMPILE_DEFINITIONS VK_USE_PLATFORM_XCB_KHR=1)
+else()
+    message(FATAL_ERROR "Unknwon platform")
 endif()
 target_compile_definitions(GraphicsEngineVk-shared PRIVATE ${PRIVATE_COMPILE_DEFINITIONS})
 target_compile_definitions(GraphicsEngineVk-static PRIVATE ${PRIVATE_COMPILE_DEFINITIONS})
 
-# Set output name to GraphicsEngineVk_{32|64}{r|d}
-set_dll_output_name(GraphicsEngineVk-shared GraphicsEngineVk)
+if(PLATFORM_WIN32)
+
+    # Set output name to GraphicsEngineVk_{32|64}{r|d}
+    set_dll_output_name(GraphicsEngineVk-shared GraphicsEngineVk)
+
+else()
+    set_target_properties(GraphicsEngineVk-shared PROPERTIES
+        OUTPUT_NAME GraphicsEngineVk
+    )
+endif()
 
 set_common_target_properties(GraphicsEngineVk-shared)
 set_common_target_properties(GraphicsEngineVk-static)

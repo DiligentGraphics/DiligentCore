@@ -53,33 +53,33 @@ SwapChainVkImpl::SwapChainVkImpl(IReferenceCounters*    pRefCounters,
     VkAndroidSurfaceCreateInfoKHR surfaceCreateInfo = {};
     surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
     surfaceCreateInfo.window = window;
-    auto err = vkCreateAndroidSurfaceKHR(instance, &surfaceCreateInfo, NULL, &m_VkSurface);
+    auto err = vkCreateAndroidSurfaceKHR(m_VulkanInstance->GetVkInstance(), &surfaceCreateInfo, NULL, &m_VkSurface);
 #elif defined(VK_USE_PLATFORM_IOS_MVK)
     VkIOSSurfaceCreateInfoMVK surfaceCreateInfo = {};
     surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_IOS_SURFACE_CREATE_INFO_MVK;
     surfaceCreateInfo.pNext = NULL;
     surfaceCreateInfo.flags = 0;
     surfaceCreateInfo.pView = view;
-    auto err = vkCreateIOSSurfaceMVK(instance, &surfaceCreateInfo, nullptr, &m_VkSurface);
+    auto err = vkCreateIOSSurfaceMVK(m_VulkanInstance->GetVkInstance(), &surfaceCreateInfo, nullptr, &m_VkSurface);
 #elif defined(VK_USE_PLATFORM_MACOS_MVK)
     VkMacOSSurfaceCreateInfoMVK surfaceCreateInfo = {};
     surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_MACOS_SURFACE_CREATE_INFO_MVK;
     surfaceCreateInfo.pNext = NULL;
     surfaceCreateInfo.flags = 0;
     surfaceCreateInfo.pView = view;
-    auto err = vkCreateMacOSSurfaceMVK(instance, &surfaceCreateInfo, NULL, &m_VkSurface);
+    auto err = vkCreateMacOSSurfaceMVK(m_VulkanInstance->GetVkInstance(), &surfaceCreateInfo, NULL, &m_VkSurface);
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
     VkWaylandSurfaceCreateInfoKHR surfaceCreateInfo = {};
     surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
     surfaceCreateInfo.display = display;
     surfaceCreatem_VkSurface = window;
-    err = vkCreateWaylandSurfaceKHR(instance, &surfaceCreateInfo, nullptr, &m_VkSurface);
+    err = vkCreateWaylandSurfaceKHR(m_VulkanInstance->GetVkInstance(), &surfaceCreateInfo, nullptr, &m_VkSurface);
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
     VkXcbSurfaceCreateInfoKHR surfaceCreateInfo = {};
     surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
-    surfaceCreateInfo.connection = connection;
-    surfaceCreateInfo.window = window;
-    auto err = vkCreateXcbSurfaceKHR(instance, &surfaceCreateInfo, nullptr, &m_VkSurface);
+    surfaceCreateInfo.connection = 0;//connection;
+    surfaceCreateInfo.window = 0;//window;
+    auto err = vkCreateXcbSurfaceKHR(m_VulkanInstance->GetVkInstance(), &surfaceCreateInfo, nullptr, &m_VkSurface);
 #endif
 
     CHECK_VK_ERROR_AND_THROW(err, "Failed to create OS-specific surface");
