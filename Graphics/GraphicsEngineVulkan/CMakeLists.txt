@@ -192,6 +192,10 @@ target_link_libraries(GraphicsEngineVk-static PRIVATE ${PRIVATE_DEPENDENCIES} PU
 target_link_libraries(GraphicsEngineVk-shared PUBLIC GraphicsEngineVk-static)
 target_compile_definitions(GraphicsEngineVk-shared PUBLIC ENGINE_DLL=1)
 
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR 
+	CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    set_target_properties(GraphicsEngineVk-shared PROPERTIES CXX_VISIBILITY_PRESET hidden) # -fvisibility=hidden
+endif()
 
 if(PLATFORM_WIN32)
     set(PRIVATE_COMPILE_DEFINITIONS VK_USE_PLATFORM_WIN32_KHR=1 NOMINMAX)
