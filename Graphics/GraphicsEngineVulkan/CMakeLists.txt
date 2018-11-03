@@ -190,7 +190,7 @@ set(PUBLIC_DEPENDENCIES
 target_link_libraries(GraphicsEngineVk-static PRIVATE ${PRIVATE_DEPENDENCIES} PUBLIC ${PUBLIC_DEPENDENCIES})
 
 target_link_libraries(GraphicsEngineVk-shared PUBLIC GraphicsEngineVk-static)
-target_compile_definitions(GraphicsEngineVk-shared PUBLIC ENGINE_DLL=1 PRIVATE BUILDING_DLL=1)
+target_compile_definitions(GraphicsEngineVk-shared PUBLIC ENGINE_DLL=1)
 
 
 if(PLATFORM_WIN32)

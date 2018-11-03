@@ -196,7 +196,7 @@ endif()
 
 target_link_libraries(GraphicsEngineOpenGL-static PRIVATE ${PRIVATE_DEPENDENCIES} PUBLIC ${PUBLIC_DEPENDENCIES})
 target_link_libraries(GraphicsEngineOpenGL-shared PUBLIC GraphicsEngineOpenGL-static)
-target_compile_definitions(GraphicsEngineOpenGL-shared PUBLIC ENGINE_DLL=1 PRIVATE BUILDING_DLL=1)
+target_compile_definitions(GraphicsEngineOpenGL-shared PUBLIC ENGINE_DLL=1)
 
 if(PLATFORM_WIN32)
 

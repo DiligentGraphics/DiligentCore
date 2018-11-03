@@ -38,16 +38,8 @@
 
 #elif PLATFORM_ANDROID || PLATFORM_LINUX || PLATFORM_MACOS || PLATFORM_IOS
 
-#   if ENGINE_DLL
-#       if BUILDING_DLL
-            // https://gcc.gnu.org/wiki/Visibility
-#           define API_QUALIFIER __attribute__((visibility("default")))
-#       else
-#           define API_QUALIFIER __attribute__((visibility("default")))
-#       endif
-#   else
-#       define API_QUALIFIER
-#   endif
+    // https://gcc.gnu.org/wiki/Visibility
+#   define API_QUALIFIER __attribute__((visibility("default")))
 
 #else
 #    error Unsupported platform
@@ -111,7 +103,7 @@ namespace Diligent
             return false;
         }
 
-        GetFactoryFunc = reinterpret_cast<GetEngineFactoryVkType>(GetProcAddress(hModule, "GetEngineFactoryVkInternal"));
+        GetFactoryFunc = reinterpret_cast<GetEngineFactoryVkType>(GetProcAddress(hModule, "GetEngineFactoryVk"));
         if (GetFactoryFunc == NULL)
         {
             std::stringstream ss;
@@ -126,11 +118,7 @@ namespace Diligent
 #else
 
     API_QUALIFIER
-    inline IEngineFactoryVk* GetEngineFactoryVk()
-    {
-        IEngineFactoryVk* GetEngineFactoryVkInternal();
-        return GetEngineFactoryVkInternal();
-    }
+    IEngineFactoryVk* GetEngineFactoryVk();
 
 #endif
 

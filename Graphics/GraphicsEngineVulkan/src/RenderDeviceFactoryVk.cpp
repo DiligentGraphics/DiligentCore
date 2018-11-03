@@ -374,8 +374,8 @@ void LoadGraphicsEngineVk(GetEngineFactoryVkType &GetFactoryFunc)
 }
 #endif
 
-
-IEngineFactoryVk* GetEngineFactoryVkInternal()
+API_QUALIFIER
+IEngineFactoryVk* GetEngineFactoryVk()
 {
     return EngineFactoryVkImpl::GetInstance();
 }

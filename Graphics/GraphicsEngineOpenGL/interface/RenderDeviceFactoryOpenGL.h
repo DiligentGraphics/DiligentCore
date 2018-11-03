@@ -36,23 +36,17 @@
 
 #include "EngineGLAttribs.h"
 
-#if PLATFORM_WIN32 || PLATFORM_UNIVERSAL_WINDOWS
+#if PLATFORM_WIN32
 
 #   define API_QUALIFIER
 
 #elif PLATFORM_ANDROID || PLATFORM_LINUX || PLATFORM_MACOS || PLATFORM_IOS
 
-#   if ENGINE_DLL
-#       if BUILDING_DLL
-            // https://gcc.gnu.org/wiki/Visibility
-#           define API_QUALIFIER __attribute__((visibility("default")))
-#       else
-#           define API_QUALIFIER __attribute__((visibility("default")))
-#       endif
-#   else
-#       define API_QUALIFIER
-#   endif
+    // https://gcc.gnu.org/wiki/Visibility
+#   define API_QUALIFIER __attribute__((visibility("default")))
 
+#else
+#    error Unsupported platform
 #endif
 
 namespace Diligent
@@ -105,7 +99,7 @@ public:
             return false;
         }
 
-        GetFactoryFunc = reinterpret_cast<GetEngineFactoryOpenGLType>( GetProcAddress(hModule, "GetEngineFactoryOpenGLInternal") );
+        GetFactoryFunc = reinterpret_cast<GetEngineFactoryOpenGLType>( GetProcAddress(hModule, "GetEngineFactoryOpenGL") );
         if( GetFactoryFunc == NULL )
         {
             std::stringstream ss;
@@ -121,11 +115,7 @@ public:
 
     // Do not forget to call System.loadLibrary("GraphicsEngineOpenGL") in Java on Android!
     API_QUALIFIER
-    inline IEngineFactoryOpenGL* GetEngineFactoryOpenGL()
-    {
-        IEngineFactoryOpenGL* GetEngineFactoryOpenGLInternal();
-        return GetEngineFactoryOpenGLInternal();
-    }
+    IEngineFactoryOpenGL* GetEngineFactoryOpenGL();
 
 #endif
 
