@@ -247,7 +247,7 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters,
                 VERIFY(SubResData.DepthStride == 0 || SubResData.DepthStride >= RowSize * MipHeight, "Depth stride is too small");
                 
                 // bufferOffset must be a multiple of 4 (18.4)
-                // If the calling command�s VkImage parameter is a compressed image, bufferOffset 
+                // If the calling command's VkImage parameter is a compressed image, bufferOffset 
                 // must be a multiple of the compressed texel block size in bytes (18.4). This
                 // is automatically guaranteed as MipWidth and MipHeight are rounded to block size
                 uploadBufferSize += (MipSize + 3) & (~3);
