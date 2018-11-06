@@ -67,11 +67,12 @@ public:
     }
 
     virtual ITextureViewVk* GetDepthBufferDSV()override final{return m_pDepthBufferDSV;}
-    
+
 private:
     void CreateVulkanSwapChain();
     void InitBuffersAndViews();
     void AcquireNextImage(DeviceContextVkImpl* pDeviceCtxVk);
+    void RecreateVulkanSwapchain(DeviceContextVkImpl* pImmediateCtxVk);
 
     std::shared_ptr<const VulkanUtilities::VulkanInstance> m_VulkanInstance;
     VkSurfaceKHR   m_VkSurface     = VK_NULL_HANDLE;

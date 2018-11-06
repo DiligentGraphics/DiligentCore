@@ -119,11 +119,10 @@ void CommandQueueVkImpl::SignalFence(VkFence vkFence)
     DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to submit command buffer to the command queue");
 }
 
-void CommandQueueVkImpl::Present(const VkPresentInfoKHR& PresentInfo)
+VkResult CommandQueueVkImpl::Present(const VkPresentInfoKHR& PresentInfo)
 {
     std::lock_guard<std::mutex> Lock(m_QueueMutex);
-    auto Result = vkQueuePresentKHR(m_VkQueue, &PresentInfo);
-    DEV_CHECK_ERR(Result == VK_SUCCESS, "Present failed");
+    return vkQueuePresentKHR(m_VkQueue, &PresentInfo);
 }
 
 }

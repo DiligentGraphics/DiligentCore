@@ -54,7 +54,7 @@ public:
     virtual Uint64 Submit(const VkSubmitInfo& SubmitInfo) = 0;
 
     /// Presents the current swap chain image on the screen
-    virtual void Present(const VkPresentInfoKHR& PresentInfo) = 0;
+    virtual VkResult Present(const VkPresentInfoKHR& PresentInfo) = 0;
 
     /// Returns Vulkan command queue. May return VK_NULL_HANDLE if queue is anavailable
     virtual VkQueue GetVkQueue() = 0;

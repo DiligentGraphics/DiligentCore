@@ -58,12 +58,12 @@ public:
 
     virtual Uint64 Submit(const VkSubmitInfo& SubmitInfo)override final;
 
-    virtual void Present(const VkPresentInfoKHR& PresentInfo)override final;
+    virtual VkResult Present(const VkPresentInfoKHR& PresentInfo)override final;
 
     virtual VkQueue GetVkQueue()override final{return m_VkQueue;}
 
     virtual uint32_t GetQueueFamilyIndex()const override final { return m_QueueFamilyIndex; }
-    
+
     virtual Uint64 WaitForIdle()override final;
 
     virtual Uint64 GetCompletedFenceValue()override final;

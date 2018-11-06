@@ -77,8 +77,14 @@ SwapChainVkImpl::SwapChainVkImpl(IReferenceCounters*    pRefCounters,
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
     VkXcbSurfaceCreateInfoKHR surfaceCreateInfo = {};
     surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
-    surfaceCreateInfo.connection = 0;//connection;
-    surfaceCreateInfo.window = 0;//window;
+    struct XCBInfo
+    {
+        xcb_connection_t* connection = nullptr;
+        uint32_t window = 0;
+    };
+    XCBInfo& info = *reinterpret_cast<XCBInfo*>(pNativeWndHandle);
+    surfaceCreateInfo.connection = info.connection;
+    surfaceCreateInfo.window = info.window;
     auto err = vkCreateXcbSurfaceKHR(m_VulkanInstance->GetVkInstance(), &surfaceCreateInfo, nullptr, &m_VkSurface);
 #endif
 
@@ -439,7 +445,9 @@ void SwapChainVkImpl::Present(Uint32 SyncInterval)
     }
 
     pImmediateCtxVk->Flush();
-    
+    // If present fails, default FB will be undbound by RecreateVulkanSwapchain(), so we need to check it now
+    bool IsDefaultFBBound = pImmediateCtxVk->IsDefaultFBBound();
+
     if (!m_IsMinimized)
     {
         VkPresentInfoKHR PresentInfo = {};
@@ -460,6 +468,16 @@ void SwapChainVkImpl::Present(Uint32 SyncInterval)
                 pCmdQueueVk->Present(PresentInfo);
             }
         );
+
+        if (Result == VK_SUBOPTIMAL_KHR || Result == VK_ERROR_OUT_OF_DATE_KHR)
+        {
+            RecreateVulkanSwapchain(pImmediateCtxVk);
+            m_SemaphoreIndex = m_SwapChainDesc.BufferCount-1; // To start with 0 index when acquire next image
+        }
+        else
+        {
+            DEV_CHECK_ERR(Result == VK_SUCCESS, "Present failed");
+        }
     }
 
     pImmediateCtxVk->FinishFrame();
@@ -473,13 +491,38 @@ void SwapChainVkImpl::Present(Uint32 SyncInterval)
 
         AcquireNextImage(pImmediateCtxVk);
 
-        if(pImmediateCtxVk->IsDefaultFBBound())
+        if (IsDefaultFBBound)
         {
             // If default framebuffer is bound, we need to call SetRenderTargets()
             // to bind new back buffer RTV
             pImmediateCtxVk->SetRenderTargets(0, nullptr, nullptr);
         }
     }
+}
+
+void SwapChainVkImpl::RecreateVulkanSwapchain(DeviceContextVkImpl* pImmediateCtxVk)
+{
+    if (pImmediateCtxVk->IsDefaultFBBound())
+        pImmediateCtxVk->ResetRenderTargets();
+
+    // All references to the swap chain must be released before it can be resized
+    m_pBackBufferRTV.clear();
+    m_SwapChainImagesInitialized.clear();
+    m_pDepthBufferDSV.Release();
+
+    RenderDeviceVkImpl* pDeviceVk = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
+    // This will release references to Vk swap chain buffers hold by
+    // m_pBackBufferRTV[]
+    pDeviceVk->IdleGPU();
+
+    // We must wait unitl GPU is idled before destroying semaphores as they
+    // are destroyed immediately
+    m_ImageAcquiredSemaphores.clear();
+    m_DrawCompleteSemaphores.clear();
+    m_SemaphoreIndex = 0;
+
+    CreateVulkanSwapChain();
+    InitBuffersAndViews();
 }
 
 void SwapChainVkImpl::Resize( Uint32 NewWidth, Uint32 NewHeight )
@@ -490,35 +533,17 @@ void SwapChainVkImpl::Resize( Uint32 NewWidth, Uint32 NewHeight )
         VERIFY( pDeviceContext, "Immediate context has been released" );
         if( pDeviceContext )
         {
-            RenderDeviceVkImpl *pDeviceVk = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
             pDeviceContext->Flush();
 
             try
             {
-                auto *pImmediateCtxVk = pDeviceContext.RawPtr<DeviceContextVkImpl>();
+            	auto* pImmediateCtxVk = pDeviceContext.RawPtr<DeviceContextVkImpl>();
+                // RecreateVulkanSwapchain() unbinds default FB
                 bool bIsDefaultFBBound = pImmediateCtxVk->IsDefaultFBBound();
-                if(bIsDefaultFBBound)
-                    pImmediateCtxVk->ResetRenderTargets();
+                RecreateVulkanSwapchain(pImmediateCtxVk);
 
-                // All references to the swap chain must be released before it can be resized
-                m_pBackBufferRTV.clear();
-                m_SwapChainImagesInitialized.clear();
-                m_pDepthBufferDSV.Release();
-
-                // This will release references to Vk swap chain buffers hold by
-                // m_pBackBufferRTV[]
-                pDeviceVk->IdleGPU();
-
-                // We must wait unitl GPU is idled before destroying semaphores as they
-                // are destroyed immediately
-                m_ImageAcquiredSemaphores.clear();
-                m_DrawCompleteSemaphores.clear();
-                m_SemaphoreIndex = 0;
-
-                CreateVulkanSwapChain();
-                InitBuffersAndViews();
                 AcquireNextImage(pImmediateCtxVk);
-                
+
                 if( bIsDefaultFBBound )
                 {
                     // Set default render target and viewport
