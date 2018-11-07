@@ -56,7 +56,7 @@ struct STDAllocator
     using size_type       = std::size_t;
     using difference_type = std::ptrdiff_t;
 
-    STDAllocator(AllocatorType& Allocator, const Char* Description, const Char* FileName, const  Int32 LineNumber)noexcept : 
+    STDAllocator(AllocatorType& Allocator, const Char* Description, const Char* FileName, const Int32 LineNumber)noexcept : 
         m_Allocator     (Allocator)
 #ifdef DEVELOPMENT
       , m_dvpDescription(Description)
@@ -91,12 +91,14 @@ struct STDAllocator
     template <class U> 
     STDAllocator& operator = (STDAllocator<U, AllocatorType>&& other)noexcept
     {
-        // Android build requires this operator to be defined - I have no idea why
-        VERIFY_EXPR(&m_Allocator == &other.m_Allocator);
+        // Android build requires this operator to be defined - I have no idea why.
+        // There is no default constructor to create null allocator, so all fields must be
+        // initialized.
+        DEV_CHECK_ERR(&m_Allocator == &other.m_Allocator, "Inconsistent allocators");
 #ifdef DEVELOPMENT
-        m_dvpDescription = other.m_dvpDescription;
-        m_dvpFileName    = other.m_dvpFileName;
-        m_dvpLineNumber  = other.m_dvpLineNumber;
+        DEV_CHECK_ERR(m_dvpDescription == other.m_dvpDescription, "Incosistent allocator descriptions");
+        DEV_CHECK_ERR(m_dvpFileName    == other.m_dvpFileName,    "Incosistent allocator file names");
+        DEV_CHECK_ERR(m_dvpLineNumber  == other.m_dvpLineNumber,  "Incosistent allocator line numbers");
 #endif
         return *this;
     }
