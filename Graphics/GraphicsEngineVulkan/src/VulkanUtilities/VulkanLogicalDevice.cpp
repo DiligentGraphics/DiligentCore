@@ -424,8 +424,16 @@ namespace VulkanUtilities
     VkResult VulkanLogicalDevice::ResetFence(VkFence fence)const
     {
         auto err = vkResetFences(m_VkDevice, 1, &fence);
-        DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to reset fence");
+        DEV_CHECK_ERR(err == VK_SUCCESS, "vkResetFences() failed");
         return err;
+    }
+
+    VkResult VulkanLogicalDevice::WaitForFences(uint32_t          fenceCount,
+                                                const VkFence*    pFences,
+                                                VkBool32          waitAll,
+                                                uint64_t          timeout) const
+    {
+        return vkWaitForFences(m_VkDevice, fenceCount, pFences, waitAll, timeout);
     }
 
     void VulkanLogicalDevice::UpdateDescriptorSets(uint32_t                     descriptorWriteCount, 

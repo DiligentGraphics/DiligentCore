@@ -133,6 +133,10 @@ namespace VulkanUtilities
 
         VkResult GetFenceStatus(VkFence fence)const;
         VkResult ResetFence(VkFence fence)const;
+        VkResult WaitForFences(uint32_t          fenceCount,
+                               const VkFence*    pFences,
+                               VkBool32          waitAll,
+                               uint64_t          timeout)const;
 
         void UpdateDescriptorSets(uint32_t                      descriptorWriteCount, 
                                   const VkWriteDescriptorSet*   pDescriptorWrites,

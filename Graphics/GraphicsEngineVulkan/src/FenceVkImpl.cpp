@@ -41,11 +41,10 @@ FenceVkImpl :: FenceVkImpl(IReferenceCounters* pRefCounters,
 
 FenceVkImpl :: ~FenceVkImpl()
 {
-    while (!m_PendingFences.empty())
-    {
-        m_FencePool.DisposeFence(std::move(m_PendingFences.front().second));
-        m_PendingFences.pop_front();
-    }
+    // Do not dispose pending fences as the pool checks that the fence
+    // is signalled, while pending fences may not be.
+    // The pool will be destroyed next anyway, so it makes no difference.
+    m_PendingFences.clear();
 }
 
 Uint64 FenceVkImpl :: GetCompletedValue()
@@ -87,7 +86,7 @@ void FenceVkImpl :: Wait()
         while (LogicalDevice.GetFenceStatus(val_fence.second) != VK_SUCCESS)
         {
             VkFence FenceToWait = val_fence.second;
-            auto res = vkWaitForFences(LogicalDevice.GetVkDevice(), 1, &FenceToWait, VK_TRUE, UINT64_MAX);
+            auto res = LogicalDevice.WaitForFences(1, &FenceToWait, VK_TRUE, UINT64_MAX);
             VERIFY_EXPR(res == VK_SUCCESS);
         }
 
