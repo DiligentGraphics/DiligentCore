@@ -42,7 +42,7 @@ BufferViewVkImpl::BufferViewVkImpl( IReferenceCounters*                  pRefCou
 
 BufferViewVkImpl::~BufferViewVkImpl()
 {
-    m_pDevice->SafeReleaseDeviceObject(std::move(m_BuffView), GetBufferVk()->GetDesc().CommandQueueMask);
+    m_pDevice->SafeReleaseDeviceObject(std::move(m_BuffView), m_pBuffer->GetDesc().CommandQueueMask);
 }
 
 IMPLEMENT_QUERY_INTERFACE( BufferViewVkImpl, IID_BufferViewVk, TBufferViewBase )
