@@ -211,7 +211,8 @@ public:
                          std::vector<uint32_t>  spirv_binary,
                          const ShaderDesc&      shaderDesc,
                          const char*            CombinedSamplerSuffix,
-                         bool                   LoadShaderStageInputs);
+                         bool                   LoadShaderStageInputs,
+                         std::string&           EntryPoint);
 
     SPIRVShaderResources             (const SPIRVShaderResources&)  = delete;
     SPIRVShaderResources             (      SPIRVShaderResources&&) = delete;

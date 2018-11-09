@@ -96,7 +96,7 @@ private:
     ShaderResourceCacheVk   m_StaticResCache;
     ShaderVariableManagerVk m_StaticVarsMgr;
 
-    const std::string m_EntryPoint;
+    std::string           m_EntryPoint;
     std::vector<uint32_t> m_SPIRV;
 };
 

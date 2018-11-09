@@ -38,8 +38,7 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl*
     TShaderBase       (pRefCounters, pRenderDeviceVk, CreationAttribs.Desc),
     m_StaticResLayout (*this, pRenderDeviceVk->GetLogicalDevice()),
     m_StaticResCache  (ShaderResourceCacheVk::DbgCacheContentType::StaticShaderResources),
-    m_StaticVarsMgr   (*this),
-    m_EntryPoint      (CreationAttribs.EntryPoint)
+    m_StaticVarsMgr   (*this)
 {
     if (CreationAttribs.Source != nullptr || CreationAttribs.FilePath != nullptr)
     {
@@ -80,7 +79,7 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl*
     auto& Allocator = GetRawAllocator();
     auto* pRawMem = ALLOCATE(Allocator, "Allocator for ShaderResources", sizeof(SPIRVShaderResources));
     bool IsHLSLVertexShader = CreationAttribs.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL && m_Desc.ShaderType == SHADER_TYPE_VERTEX;
-    auto* pResources = new (pRawMem) SPIRVShaderResources(Allocator, pRenderDeviceVk, m_SPIRV, m_Desc, CreationAttribs.UseCombinedTextureSamplers ? CreationAttribs.CombinedSamplerSuffix : nullptr, IsHLSLVertexShader);
+    auto* pResources = new (pRawMem) SPIRVShaderResources(Allocator, pRenderDeviceVk, m_SPIRV, m_Desc, CreationAttribs.UseCombinedTextureSamplers ? CreationAttribs.CombinedSamplerSuffix : nullptr, IsHLSLVertexShader, m_EntryPoint);
     m_pShaderResources.reset(pResources, STDDeleterRawMem<SPIRVShaderResources>(Allocator));
     
     if (IsHLSLVertexShader)

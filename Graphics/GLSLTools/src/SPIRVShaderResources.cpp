@@ -91,16 +91,56 @@ static Int32 FindImmutableSampler(const ShaderDesc& shaderDesc, const std::strin
     return -1;
 }
 
+static spv::ExecutionModel ShaderTypeToExecutionModel(SHADER_TYPE ShaderType)
+{
+    switch(ShaderType)
+    {
+        case SHADER_TYPE_VERTEX:    return spv::ExecutionModelVertex;
+        case SHADER_TYPE_HULL:      return spv::ExecutionModelTessellationControl;
+        case SHADER_TYPE_DOMAIN:    return spv::ExecutionModelTessellationEvaluation;
+        case SHADER_TYPE_GEOMETRY:  return spv::ExecutionModelGeometry;
+        case SHADER_TYPE_PIXEL:     return spv::ExecutionModelFragment;
+        case SHADER_TYPE_COMPUTE:   return spv::ExecutionModelGLCompute;
+
+        default:
+            UNEXPECTED("Unexpected shader type");
+            return spv::ExecutionModelVertex;
+    }
+}
+
 SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator, 
                                            IRenderDevice*         pRenderDevice,
                                            std::vector<uint32_t>  spirv_binary,
                                            const ShaderDesc&      shaderDesc,
                                            const char*            CombinedSamplerSuffix,
-                                           bool                   LoadShaderStageInputs) :
+                                           bool                   LoadShaderStageInputs,
+                                           std::string&           EntryPoint) :
     m_ShaderType(shaderDesc.ShaderType)
 {
     // https://github.com/KhronosGroup/SPIRV-Cross/wiki/Reflection-API-user-guide
     spirv_cross::Compiler Compiler(std::move(spirv_binary));
+
+    spv::ExecutionModel ExecutionModel = ShaderTypeToExecutionModel(shaderDesc.ShaderType);
+    auto EntryPoints = Compiler.get_entry_points_and_stages();
+    for (const auto& CurrEntryPoint : EntryPoints)
+    {
+        if (CurrEntryPoint.execution_model == ExecutionModel)
+        {
+            if (!EntryPoint.empty())
+            {
+                LOG_WARNING_MESSAGE("More than one entry point of type ", GetShaderTypeLiteralName(shaderDesc.ShaderType), " found in SPIRV binary for shader '", shaderDesc.Name, "'. The first one ('", EntryPoint, "') will be used.");
+            }
+            else
+            {
+                EntryPoint = CurrEntryPoint.name;
+            }
+        }
+    }
+    if (EntryPoint.empty())
+    {
+        LOG_ERROR_AND_THROW("Unable to find entry point of type ", GetShaderTypeLiteralName(shaderDesc.ShaderType), " in SPIRV binary for shader '", shaderDesc.Name, "'");
+    }
+    Compiler.set_entry_point(EntryPoint, ExecutionModel);
 
     // The SPIR-V is now parsed, and we can perform reflection on it.
     spirv_cross::ShaderResources resources = Compiler.get_shader_resources();
