@@ -54,7 +54,7 @@ namespace VulkanUtilities
 	// End the label region
 	void EndCmdQueueLabelRegion(VkQueue cmdQueue);
 
-	// Start a single label
+	// Insert a single label
 	void InsertCmdQueueLabel(VkQueue cmdQueue, const char* pLabelName, const float* color);
 
 	// Start a new label region
@@ -63,7 +63,7 @@ namespace VulkanUtilities
 	// End the label region
 	void EndCmdBufferLabelRegion(VkCommandBuffer cmdBuffer);
 
-	// Start a single label
+	// Insert a single label
 	void InsertCmdBufferLabel(VkCommandBuffer cmdBuffer, const char* pLabelName, const float* color);
 
 	// Object specific naming functions
