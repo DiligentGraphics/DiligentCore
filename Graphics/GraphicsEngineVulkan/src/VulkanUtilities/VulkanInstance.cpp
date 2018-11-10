@@ -106,18 +106,26 @@ namespace VulkanUtilities
 #endif
         };
 
-        if (EnableValidation)
-        {
-            GlobalExtensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
-        }
-
         for (uint32_t ext = 0; ext < GlobalExtensionCount; ++ext)
             GlobalExtensions.push_back(ppGlobalExtensionNames[ext]);
 
         for(const auto* ExtName : GlobalExtensions)
         {
             if (!IsExtensionAvailable(ExtName))
-                LOG_ERROR_AND_THROW("Requested extension ", ExtName, " is not available");
+                LOG_ERROR_AND_THROW("Required extension ", ExtName, " is not available");
+        }
+
+        if (EnableValidation)
+        {
+            m_DebugUtilsEnabled = IsExtensionAvailable(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+            if (m_DebugUtilsEnabled)
+            {
+                GlobalExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+            }
+            else
+            {
+                LOG_WARNING_MESSAGE("Extension ", VK_EXT_DEBUG_UTILS_EXTENSION_NAME, " is not available.");
+            }
         }
 
         VkApplicationInfo appInfo = {};
@@ -153,23 +161,20 @@ namespace VulkanUtilities
             {
                 InstanceCreateInfo.enabledLayerCount = static_cast<uint32_t>(_countof(VulkanUtilities::ValidationLayerNames));
                 InstanceCreateInfo.ppEnabledLayerNames = VulkanUtilities::ValidationLayerNames;
-                m_ValidationEnabled = true;
             }
         }
         auto res = vkCreateInstance(&InstanceCreateInfo, m_pVkAllocator, &m_VkInstance);
         CHECK_VK_ERROR_AND_THROW(res, "Failed to create Vulkan instance");
 
         // If requested, we enable the default validation layers for debugging
-        if (m_ValidationEnabled)
+        if (m_DebugUtilsEnabled)
         {
-            // The report flags determine what type of messages for the layers will be displayed
-            // For validating (debugging) an appplication the error and warning bits should suffice
-            VkDebugReportFlagsEXT debugReportFlags =
-                VK_DEBUG_REPORT_ERROR_BIT_EXT |
-                VK_DEBUG_REPORT_WARNING_BIT_EXT |
-                VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
-            // Additional flags include performance info, loader and layer debug messages, etc.
-            VulkanUtilities::SetupDebugging(m_VkInstance, debugReportFlags, VK_NULL_HANDLE);
+            VkDebugUtilsMessageSeverityFlagsEXT messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | 
+                                                                  VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+            VkDebugUtilsMessageTypeFlagsEXT messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+                                                          VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+                                                          VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+            VulkanUtilities::SetupDebugging(m_VkInstance, messageSeverity, messageType, nullptr);
         }
 
         // Enumerate physical devices
@@ -194,9 +199,9 @@ namespace VulkanUtilities
 
     VulkanInstance::~VulkanInstance()
     {
-        if (m_ValidationEnabled)
+        if (m_DebugUtilsEnabled)
         {
-            VulkanUtilities::FreeDebugCallback(m_VkInstance);
+            VulkanUtilities::FreeDebugging(m_VkInstance);
         }
         vkDestroyInstance(m_VkInstance, m_pVkAllocator);
 

@@ -53,8 +53,7 @@ namespace VulkanUtilities
     public:
         static std::shared_ptr<VulkanLogicalDevice> Create(VkPhysicalDevice             vkPhysicalDevice, 
                                                            const VkDeviceCreateInfo&    DeviceCI, 
-                                                           const VkAllocationCallbacks* vkAllocator,
-                                                           bool                         EnableDebugMarkers);
+                                                           const VkAllocationCallbacks* vkAllocator);
 
         VulkanLogicalDevice             (const VulkanLogicalDevice&) = delete;
         VulkanLogicalDevice             (VulkanLogicalDevice&&)      = delete;
@@ -152,8 +151,7 @@ namespace VulkanUtilities
     private:
         VulkanLogicalDevice(VkPhysicalDevice vkPhysicalDevice, 
                             const VkDeviceCreateInfo &DeviceCI, 
-                            const VkAllocationCallbacks* vkAllocator,
-                            bool EnableDebugMarkers);
+                            const VkAllocationCallbacks* vkAllocator);
 
         template<typename VkObjectType, typename VkCreateObjectFuncType, typename VkObjectCreateInfoType>
         VulkanObjectWrapper<VkObjectType> CreateVulkanObject(VkCreateObjectFuncType        VkCreateObject,

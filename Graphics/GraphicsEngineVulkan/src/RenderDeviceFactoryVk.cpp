@@ -174,23 +174,12 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk( const EngineVkAttribs& Crea
             VK_KHR_SWAPCHAIN_EXTENSION_NAME, 
             VK_KHR_MAINTENANCE1_EXTENSION_NAME // To allow negative viewport height
         };
-        const bool DebugMarkersSupported = PhysicalDevice->IsExtensionSupported(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
-        if (DebugMarkersSupported && CreationAttribs.EnableValidation)
-        {
-            DeviceExtensions.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
-        }
-
         DeviceCreateInfo.ppEnabledExtensionNames = DeviceExtensions.empty() ? nullptr : DeviceExtensions.data();
         DeviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(DeviceExtensions.size());
-        
-        if (!DebugMarkersSupported && CreationAttribs.EnableValidation)
-        {
-            LOG_INFO_MESSAGE("Debug marker extension \"", VK_EXT_DEBUG_MARKER_EXTENSION_NAME, "\" is not found");
-        }
 
         auto vkAllocator = Instance->GetVkAllocator();
         auto vkPhysicalDevice = PhysicalDevice->GetVkDeviceHandle();
-        auto LogicalDevice = VulkanUtilities::VulkanLogicalDevice::Create(vkPhysicalDevice, DeviceCreateInfo, vkAllocator, DebugMarkersSupported && CreationAttribs.EnableValidation);
+        auto LogicalDevice = VulkanUtilities::VulkanLogicalDevice::Create(vkPhysicalDevice, DeviceCreateInfo, vkAllocator);
 
         RefCntAutoPtr<CommandQueueVkImpl> pCmdQueueVk;
         auto &RawMemAllocator = GetRawAllocator();

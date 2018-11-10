@@ -27,39 +27,44 @@ namespace VulkanUtilities
 
 	// Load debug function pointers and set debug callback
 	// if callBack is NULL, default message callback will be used
-	void SetupDebugging(
-		VkInstance instance,
-		VkDebugReportFlagsEXT flags,
-		VkDebugReportCallbackEXT callBack,
-        void *pUserData = nullptr);
+	void SetupDebugging(VkInstance                           instance,
+                        VkDebugUtilsMessageSeverityFlagsEXT  messageSeverity,
+                        VkDebugUtilsMessageTypeFlagsEXT      messageType,
+                        void*                                pUserData = nullptr);
 	// Clear debug callback
-	void FreeDebugCallback(VkInstance instance);
+	void FreeDebugging(VkInstance instance);
 	
 	// Setup and functions for the VK_EXT_debug_marker_extension
 	// Extension spec can be found at https://github.com/KhronosGroup/Vulkan-Docs/blob/1.0-VK_EXT_debug_marker/doc/specs/vulkan/appendices/VK_EXT_debug_marker.txt
 	// Note that the extension will only be present if run from an offline debugging application
 	// The actual check for extension presence and enabling it on the device is done in the example base class
 	// See VulkanExampleBase::createInstance and VulkanExampleBase::createDevice (base/vulkanexamplebase.cpp)
-		
-    // Get function pointers for the debug report extensions from the device
-	void SetupDebugMarkers(VkDevice device);
 
 	// Sets the debug name of an object
 	// All Objects in Vulkan are represented by their 64-bit handles which are passed into this function
 	// along with the object type
-	void SetObjectName(VkDevice device, uint64_t object, VkDebugReportObjectTypeEXT objectType, const char *name);
+	void SetObjectName(VkDevice device, uint64_t object, VkObjectType objectType, const char *name);
 
 	// Set the tag for an object
-	void SetObjectTag(VkDevice device, uint64_t object, VkDebugReportObjectTypeEXT objectType, uint64_t name, size_t tagSize, const void* tag);
+	void SetObjectTag(VkDevice device, uint64_t objectHandle, VkObjectType objectType, uint64_t name, size_t tagSize, const void* tag);
 
-	// Start a new debug marker region
-	//void BeginRegion(VkCommandBuffer cmdbuffer, const char* pMarkerName, glm::vec4 color);
+	// Start a new label region
+	void BeginCmdQueueLabelRegion(VkQueue cmdQueue, const char* pLabelName, const float* color);
 
-	// Insert a new debug marker into the command buffer
-	//void Insert(VkCommandBuffer cmdbuffer, std::string markerName, glm::vec4 color);
+	// End the label region
+	void EndCmdQueueLabelRegion(VkQueue cmdQueue);
 
-	// End the current debug marker region
-	//void EndRegion(VkCommandBuffer cmdBuffer);
+	// Start a single label
+	void InsertCmdQueueLabel(VkQueue cmdQueue, const char* pLabelName, const float* color);
+
+	// Start a new label region
+	void BeginCmdBufferLabelRegion(VkCommandBuffer cmdBuffer, const char* pLabelName, const float* color);
+
+	// End the label region
+	void EndCmdBufferLabelRegion(VkCommandBuffer cmdBuffer);
+
+	// Start a single label
+	void InsertCmdBufferLabel(VkCommandBuffer cmdBuffer, const char* pLabelName, const float* color);
 
 	// Object specific naming functions
     void SetCommandPoolName         (VkDevice device, VkCommandPool         cmdPool,             const char * name);
@@ -108,4 +113,5 @@ namespace VulkanUtilities
     const char* VkAccessFlagBitToString(VkAccessFlagBits Bit);
     const char* VkImageLayoutToString  (VkImageLayout    Layout);
     std::string VkAccessFlagsToString  (VkAccessFlags    Flags);
+    const char* VkObjectTypeToString   (VkObjectType ObjectType);
 }

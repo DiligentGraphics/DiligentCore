@@ -31,10 +31,9 @@ namespace VulkanUtilities
 {
     std::shared_ptr<VulkanLogicalDevice> VulkanLogicalDevice::Create(VkPhysicalDevice             vkPhysicalDevice,
                                                                      const VkDeviceCreateInfo&    DeviceCI, 
-                                                                     const VkAllocationCallbacks* vkAllocator,
-                                                                     bool                         EnableDebugMarkers)
+                                                                     const VkAllocationCallbacks* vkAllocator)
     {
-        auto *LogicalDevice = new VulkanLogicalDevice(vkPhysicalDevice, DeviceCI, vkAllocator, EnableDebugMarkers);
+        auto *LogicalDevice = new VulkanLogicalDevice(vkPhysicalDevice, DeviceCI, vkAllocator);
         return std::shared_ptr<VulkanLogicalDevice>(LogicalDevice);
     }
 
@@ -45,17 +44,11 @@ namespace VulkanUtilities
 
     VulkanLogicalDevice::VulkanLogicalDevice(VkPhysicalDevice             vkPhysicalDevice, 
                                              const VkDeviceCreateInfo&    DeviceCI, 
-                                             const VkAllocationCallbacks* vkAllocator,
-                                             bool                         EnableDebugMarkers) :
+                                             const VkAllocationCallbacks* vkAllocator) :
         m_VkAllocator(vkAllocator)
     {
         auto res = vkCreateDevice(vkPhysicalDevice, &DeviceCI, vkAllocator, &m_VkDevice);
         CHECK_VK_ERROR_AND_THROW(res, "Failed to create logical device");
-
-        if (EnableDebugMarkers)
-        {
-            SetupDebugMarkers(m_VkDevice);
-        }
     }
 
     VkQueue VulkanLogicalDevice::GetQueue(uint32_t queueFamilyIndex, uint32_t queueIndex)

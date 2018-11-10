@@ -65,7 +65,7 @@ namespace VulkanUtilities
                        const char* const*     ppGlobalExtensionNames,
                        VkAllocationCallbacks* pVkAllocator);
 
-        bool m_ValidationEnabled = false;
+        bool m_DebugUtilsEnabled = false;
         VkAllocationCallbacks* const m_pVkAllocator;
         VkInstance m_VkInstance = VK_NULL_HANDLE;
 
