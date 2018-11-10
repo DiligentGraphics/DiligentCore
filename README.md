@@ -9,7 +9,7 @@ To build the module, see
 [build instructions](https://github.com/DiligentGraphics/DiligentEngine/blob/master/README.md#build-and-run-instructions) 
 in the master repository.
 
-# Build Status
+Build Status
 
 | Platform                   | Status        |
 | -------------------------- | ------------- |
