@@ -1,4 +1,4 @@
-# DiligentCore
+# DiligentCore <img src="media/diligentgraphics-logo.png" height=64 align="right" valign="middle">
 
 This module implements [Diligent Engine](https://github.com/DiligentGraphics/DiligentEngine)'s core functionality: Direct3D11, Direct3D12,
 OpenGL, OpenGLES, and Vulkan rendering backends as well as basic platform-specific utilities. It is self-contained and can be built by its own.
