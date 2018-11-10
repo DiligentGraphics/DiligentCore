@@ -16,39 +16,16 @@ in the master repository.
 | Win32/Universal Windows    | [![Build Status](https://ci.appveyor.com/api/projects/status/github/DiligentGraphics/DiligentCore?svg=true)](https://ci.appveyor.com/project/DiligentGraphics/diligentcore) |
 | Linux/MacOS/iOS            | [![Build Status](https://travis-ci.org/DiligentGraphics/DiligentCore.svg?branch=master)](https://travis-ci.org/DiligentGraphics/DiligentCore)      |
 
+![Crates.io](https://img.shields.io/crates/l/rustc-serialize.svg)
+[![Chat on gitter](https://badges.gitter.im/gitterHQ/gitter.png)](https://gitter.im/diligent-engine)
+
 # Clonning the Repository
 
 To get the repository and all submodules, use the following command:
 
  git clone --recursive https://github.com/DiligentGraphics/DiligentCore.git
 
-
-# Repository structure
-
- The repository contains the following projects:
-
- | Project                                                          | Description       |
- |------------------------------------------------------------------|-------------------|
- | [Primitives](https://github.com/DiligentGraphics/DiligentCore/tree/master/Primitives)                                        | Definitions of basic types (Int32, Int16, Uint32, etc.) and interfaces (IObject, IReferenceCounters, etc.) |
- | [Common](https://github.com/DiligentGraphics/DiligentCore/tree/master/Common)                                                | Common functionality such as file wrapper, logging, debug utilities, etc. |
- | [Graphics/GraphicsAccessories](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsAccessories)    | Basic graphics accessories used by all implementations  |
- | [Graphics/GraphicsEngine](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngine)              | Platform-independent base functionality |
- | [Graphics/GraphicsEngineD3DBase](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngineD3DBase)| Base functionality for D3D11/D3D12 implementations |
- | [Graphics/GraphicsEngineD3D11](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngineD3D11)     | Implementation of Direct3D11 rendering backend |
- | [Graphics/GraphicsEngineD3D12](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngineD3D12)     | Implementation of Direct3D12 rendering backend |
- | [Graphics/GraphicsEngineOpenGL](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngineOpenGL)   | Implementation of OpenGL/GLES rendering backend |
- | [Graphics/GraphicsEngineVulkan](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngineVulkan)   | Implementation of Vulkan rendering backend |
- | [Graphics/GraphicsTools](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsTools)                 | Graphics utilities build on top of core interfaces (definitions of commonly used states, texture uploaders, etc.) |
- | [Graphics/HLSL2GLSLConverterLib](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/HLSL2GLSLConverterLib) | HLSL to GLSL source code converter library |
- | [Platforms/Basic](https://github.com/DiligentGraphics/DiligentCore/tree/master/Platforms/Basic)      | Interface for platform-specific routines and implementation of some common functionality |
- | [Platforms/Android](https://github.com/DiligentGraphics/DiligentCore/tree/master/Platforms/Android)  | Implementation of platform-specific routines on Android |
- | [Platforms/Apple](https://github.com/DiligentGraphics/DiligentCore/tree/master/Platforms/Apple)      | Implementation of platform-specific routines on Apple platforms (MacOS, iOS)|
- | [Platforms/UWP](https://github.com/DiligentGraphics/DiligentCore/tree/master/Platforms/UWP)          | Implementation of platform-specific routines on Universal Windows platform |
- | [Platforms/Win32](https://github.com/DiligentGraphics/DiligentCore/tree/master/Platforms/Win32)      | Implementation of platform-specific routines on Win32 platform |
- | [Platforms/Linux](https://github.com/DiligentGraphics/DiligentCore/tree/master/Platforms/Linux)      | Implementation of platform-specific routines on Linux platform |
- | External/glew | Cross-platform library for loading OpenGL extensions |
-
-
+ 
 # API Basics
 
 ## Initializing the Engine
@@ -606,6 +583,32 @@ objects. Refer to the following pages for more information:
 [OpenGL/GLES Interoperability](http://diligentgraphics.com/diligent-engine/native-api-interoperability/openglgles-interoperability/)
 
 
+# Repository structure
+
+ The repository contains the following projects:
+
+ | Project                                                          | Description       |
+ |------------------------------------------------------------------|-------------------|
+ | [Primitives](https://github.com/DiligentGraphics/DiligentCore/tree/master/Primitives)                                        | Definitions of basic types (Int32, Int16, Uint32, etc.) and interfaces (IObject, IReferenceCounters, etc.) |
+ | [Common](https://github.com/DiligentGraphics/DiligentCore/tree/master/Common)                                                | Common functionality such as file wrapper, logging, debug utilities, etc. |
+ | [Graphics/GraphicsAccessories](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsAccessories)    | Basic graphics accessories used by all implementations  |
+ | [Graphics/GraphicsEngine](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngine)              | Platform-independent base functionality |
+ | [Graphics/GraphicsEngineD3DBase](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngineD3DBase)| Base functionality for D3D11/D3D12 implementations |
+ | [Graphics/GraphicsEngineD3D11](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngineD3D11)     | Implementation of Direct3D11 rendering backend |
+ | [Graphics/GraphicsEngineD3D12](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngineD3D12)     | Implementation of Direct3D12 rendering backend |
+ | [Graphics/GraphicsEngineOpenGL](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngineOpenGL)   | Implementation of OpenGL/GLES rendering backend |
+ | [Graphics/GraphicsEngineVulkan](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngineVulkan)   | Implementation of Vulkan rendering backend |
+ | [Graphics/GraphicsTools](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsTools)                 | Graphics utilities build on top of core interfaces (definitions of commonly used states, texture uploaders, etc.) |
+ | [Graphics/HLSL2GLSLConverterLib](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/HLSL2GLSLConverterLib) | HLSL to GLSL source code converter library |
+ | [Platforms/Basic](https://github.com/DiligentGraphics/DiligentCore/tree/master/Platforms/Basic)      | Interface for platform-specific routines and implementation of some common functionality |
+ | [Platforms/Android](https://github.com/DiligentGraphics/DiligentCore/tree/master/Platforms/Android)  | Implementation of platform-specific routines on Android |
+ | [Platforms/Apple](https://github.com/DiligentGraphics/DiligentCore/tree/master/Platforms/Apple)      | Implementation of platform-specific routines on Apple platforms (MacOS, iOS)|
+ | [Platforms/UWP](https://github.com/DiligentGraphics/DiligentCore/tree/master/Platforms/UWP)          | Implementation of platform-specific routines on Universal Windows platform |
+ | [Platforms/Win32](https://github.com/DiligentGraphics/DiligentCore/tree/master/Platforms/Win32)      | Implementation of platform-specific routines on Win32 platform |
+ | [Platforms/Linux](https://github.com/DiligentGraphics/DiligentCore/tree/master/Platforms/Linux)      | Implementation of platform-specific routines on Linux platform |
+ | External | Third-party libraries and modules |
+
+
 # References
 
 [Diligent Engine on the Web](http://diligentgraphics.com)
@@ -620,121 +623,9 @@ objects. Refer to the following pages for more information:
 
 [API Reference][1]
 
-# Version History
+# Release History
 
-## Current Progress
-
-* API Changes
-  * Implemented separate texture samplers: 
-    * Added `UseCombinedTextureSamplers` and `CombinedSamplerSuffix` members to `ShaderCreationAttribs` structure
-    * When separate samplers are used (`UseCombinedTextureSamplers == false`), samplers are set in the same way as other shader variables
-      via shader or SRB objects
-  * Removed `BIND_SHADER_RESOURCES_RESET_BINDINGS` flag, renamed `BIND_SHADER_RESOURCES_KEEP_EXISTING` to `BIND_SHADER_RESOURCES_KEEP_EXISTING`.
-	Added 'BIND_SHADER_RESOURCES_UPDATE_STATIC', 'BIND_SHADER_RESOURCES_UPDATE_MUTABLE', 'BIND_SHADER_RESOURCES_UPDATE_DYNAMIC', and
-	'BIND_SHADER_RESOURCES_UPDATE_ALL' flags
-* Using glslang to compile HLSL to SPIRV in Vulkan backend instead of relying on HLSL->GLSL converter
-
-## v2.3.a
-
-* API Changes:
-  * Added `IFence` interface and `IDeviceContext::SignalFence()` method to enable CPU-GPU synchronization
-  * Added `GetType`, `GetArraySize`, `GetName`, and `GetIndex` methods to `IShaderVariable` interface;
-    Added `GetVariableCount` and `GetShaderVariable(Uint32 Index)` methods to `IShader` interface; 
-    Added `GetVariableCount` and `GetVariable(SHADER_TYPE ShaderType, Uint32 Index)` to `IShaderResourceBinding` interface.
-  * Added `BUFFER_MODE_RAW` mode allowing raw buffer views in D3D11/D3D12.
-  * Moved `Format` member from `BufferDesc` to `BufferViewDesc`
-  * Removed `IsIndirect` member from `DrawAttrbis` as setting `pIndirectDrawAttribs` to a non-null buffer already indicates indirect rendering
-
-## v2.3
-
-* Implemented Vulkan backend
-* Implemented hardware adapter & display mode enumeration in D3D11 and D3D12 modes
-* Implemented initialization in fullscreen mode as well as toggling between fullscreen and windowed modes in run time
-* Added sync interval parameter to ISwapChain::Present()
-* Fixed issues with relative paths in headers
-* API Changes:
-  * Math library functions `SetNearFarClipPlanes()`, `GetNearFarPlaneFromProjMatrix()`, `Projection()`,
-    `OrthoOffCenter()`, and `Ortho()` take `bIsGL` flag instead of `bIsDirectX`
-  * Vertex buffer strides are now defined by the pipeline state as part of the input layout description (`LayoutElement::Stride`)
-  * Added `COMMIT_SHADER_RESOURCES_FLAG_VERIFY_STATES` flag
-  * Added `NumViewports` member to `GraphicsPipelineDesc` structure
-
-## v2.2.a
-
-### New Features
-
-* **Implemented Vulkan backend**
-* Implemented PSO compatibility: if two pipeline states share the same shader resource layout,
-  they can use SRB objects interchangeably.
-* Added `IPipelineState::IsCompatibleWith(const IPipelineState *pPSO)` method that returns true if two 
-  pipeline states are compatible.
-* Added sync interval parameter to ISwapChain::Present()
-* API Changes
-  * Added `NumViewports` member to `GraphicsPipelineDesc` struct
-  * Removed `PRIMITIVE_TOPOLOGY_TYPE` type
-  * Replaced `PRIMITIVE_TOPOLOGY_TYPE GraphicsPipelineDesc::PrimitiveTopologyType` 
-    with `PRIMITIVE_TOPOLOGY GraphicsPipelineDesc::PrimitiveTopology`
-  * Removed `DrawAttribs::Topology`
-  * Removed `pStrides` parameter from `IDeviceContext::SetVertexBuffers()`. Strides are now defined
-    through vertex layout.
-
-## v2.2
-
-* Added MacOS and iOS support
-* Improved GLSL2HLSL converter to fix multiple issues on GLES
-
-## v2.1.b
-
-* Removed legacy Visual Studio solution and project files
-* Added API reference
-
-## v2.1.a
-
-* Refactored build system to use CMake
-* Added support for Linux platform
-
-## v2.1
-
-### New Features
-
-#### Core
-
-* Interoperability with native API
-  * Accessing internal objects and handles
-  * Createing diligent engine buffers/textures from native resources
-  * Attaching to existing D3D11/D3D12 device or GL context
-  * Resource state and command queue synchronization for D3D12
-* Integraion with Unity
-* Geometry shader support
-* Tessellation support
-* Performance optimizations
-
-#### HLSL->GLSL converter
-* Support for structured buffers
-* HLSL->GLSL conversion is now a two-stage process:
-  * Creating conversion stream
-  * Creating GLSL source from the stream
-* Geometry shader support
-* Tessellation control and tessellation evaluation shader support
-* Support for non-void shader functions
-* Allowing structs as input parameters for shader functions
-
-
-## v2.0 (alpha)
-
-Alpha release of Diligent Engine 2.0. The engine has been updated to take advantages of Direct3D12:
-
-* Pipeline State Object encompasses all coarse-grain state objects like Depth-Stencil State, Blend State, Rasterizer State, shader states etc.
-* New shader resource binding model implemented to leverage Direct3D12
-
-* OpenGL and Direct3D11 backends
-* Alpha release is only available on Windows platform
-* Direct3D11 backend is very thoroughly optimized and has very low overhead compared to native D3D11 implementation
-* Direct3D12 implementation is preliminary and not yet optimized
-
-### v1.0.0
-
-Initial release
+See [Release History](ReleaseHistory.md)
 
 # License
 
