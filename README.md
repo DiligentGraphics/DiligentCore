@@ -16,7 +16,7 @@ in the master repository.
 | Win32/Universal Windows    | [![Build Status](https://ci.appveyor.com/api/projects/status/github/DiligentGraphics/DiligentCore?svg=true)](https://ci.appveyor.com/project/DiligentGraphics/diligentcore) |
 | Linux/MacOS/iOS            | [![Build Status](https://travis-ci.org/DiligentGraphics/DiligentCore.svg?branch=master)](https://travis-ci.org/DiligentGraphics/DiligentCore)      |
 
-![Crates.io](https://img.shields.io/crates/l/rustc-serialize.svg)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Chat on gitter](https://badges.gitter.im/gitterHQ/gitter.png)](https://gitter.im/diligent-engine)
 
 # Clonning the Repository
@@ -626,10 +626,6 @@ objects. Refer to the following pages for more information:
 # Release History
 
 See [Release History](ReleaseHistory.md)
-
-# License
-
-Licensed under the [Apache License, Version 2.0](License.txt)
 
 
 
