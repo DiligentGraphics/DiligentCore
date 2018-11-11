@@ -13,7 +13,7 @@ so it must always be handled first.
 | <img src="media/macos-logo.png" width=24 valign="middle"> MacOS                | [![Build Status](https://travis-ci.org/DiligentGraphics/DiligentCore.svg?branch=master)](https://travis-ci.org/DiligentGraphics/DiligentCore)      |
 |<img src="media/apple-logo.png" width=24 valign="middle"> iOS                  | [![Build Status](https://travis-ci.org/DiligentGraphics/DiligentCore.svg?branch=master)](https://travis-ci.org/DiligentGraphics/DiligentCore)      |
 
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](License.txt)
 [![Chat on gitter](https://badges.gitter.im/gitterHQ/gitter.png)](https://gitter.im/diligent-engine)
 
 # Clonning the Repository
