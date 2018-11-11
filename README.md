@@ -625,8 +625,8 @@ See [Release History](ReleaseHistory.md)
 
 [diligentgraphics.com](http://diligentgraphics.com)
 
-[![Diligent Engine on Twitter](media/twitter.png)](https://twitter.com/diligentengine) [![Diligent Engine on Facebook](media/facebook.png)](https://www.facebook.com/DiligentGraphics/)
+[![Diligent Engine on Twitter](https://github.com/DiligentGraphics/DiligentCore/blob/master/media/twitter.png)](https://twitter.com/diligentengine)
+[![Diligent Engine on Facebook](https://github.com/DiligentGraphics/DiligentCore/blob/master/media/facebook.png)](https://www.facebook.com/DiligentGraphics/)
 
 
 [1]: https://cdn.rawgit.com/DiligentGraphics/DiligentCore/4949ec8a/doc/html/index.html
-
