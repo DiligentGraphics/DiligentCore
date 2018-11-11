@@ -76,40 +76,11 @@ For more information about interoperability with OpenGL, please visit [Diligent 
 
 # References
 
-[Diligent Engine](http://diligentgraphics.com/diligent-engine)
-
 [Interoperability with OpenGL/GLES](http://diligentgraphics.com/diligent-engine/native-api-interoperability/openglgles-interoperability/)
 
-# Release Notes
-
-## 2.1
-
-### New features
-
-* Interoperability with OpenGL/GLES
-  - Accessing GL handles of internal texture/buffer objects
-  - Createing diligent engine buffers/textures from OpenGL handles
-  - Attaching to existing OpenGL context
-* Integraion with Unity
-* Geometry shader support
-* Tessellation support
-* Support ofr multiple GL contexts: VAO, FBO & Program Pipelines are created and cached for multiple native contexts. 
-  `IDeviceContextGL::UpdateCurrentGLContext()` sets the active GL context in the thread
-
-### API Changes
-
-* Updated map interface: removed MAP_WRITE_DISCARD and MAP_WRITE_NO_OVERWRITE map types and added MAP_FLAG_DISCARD and MAP_FLAG_DO_NOT_SYNCHRONIZE flags instead
-
-## 2.0
-
-Reworked the API to follow D3D12 style
-
-## 1.0
-
-Initial release
-
-
-
-**Copyright 2015-2018 Egor Yusov**
+-------------------
 
 [diligentgraphics.com](http://diligentgraphics.com)
+
+[![Diligent Engine on Twitter](media/twitter.png)](https://twitter.com/diligentengine)
+[![Diligent Engine on Facebook](media/facebook.png)](https://www.facebook.com/DiligentGraphics/)

@@ -101,56 +101,13 @@ For more information about interoperability with D3D12, please visit [Diligent E
 
 # References
 
-[Diligent Engine on the Web](http://diligentgraphics.com/diligent-engine)
-
 [Interoperability with Direct3D12](http://diligentgraphics.com/diligent-engine/native-api-interoperability/direct3d12-interoperability/)
 
 [Architecture of D3D12-based implementation](http://diligentgraphics.com/diligent-engine/architecture/D3D12)
 
-# Release Notes
-
-## 2.1
-
-### New fatures
-
-* Interoperability with Direct3D12
-** Accessing internal D3D12 objects and handles
-** Createing diligent engine buffers/textures from D3D12 resources
-** Attaching to existing D3D12 device
-** Resource state and command queue synchronization
-* Integraion with Unity
-* Geometry shader support
-* Tessellation support
-* Support for dynamic buffers with SRV/UAV bind flags
-* Support for structured buffers in HSLS shaders
-* Performance optimizations
-
-### API Changes
-
-* Updated map interface: removed MAP_WRITE_DISCARD and MAP_WRITE_NO_OVERWRITE map types and added MAP_FLAG_DISCARD and MAP_FLAG_DO_NOT_SYNCHRONIZE flags instead
-
-### Bug fixes
-
-* Issues with deferred contexts
-  - Never flush deferred D3D12 context
-  - Invalidate context state from FinishCommandList() and ExecuteCommandList()
-  - Not binding default RTV & DSV for deferred contexts
-* Issues with idling GPU
-* Object relase bug: when releasing last reference to a device object, render device was destroyed before the object was fully released
-* Fixed mipmap generation for SRGB textures
-* Fixed mipmap generation for texture arrays
-
-
-## 2.0
-
-Reworked the API to follow D3D12 style
-
-## 1.0
-
-Initial release
-
-
-
-**Copyright 2015-2018 Egor Yusov**
+-------------------
 
 [diligentgraphics.com](http://diligentgraphics.com)
+
+[![Diligent Engine on Twitter](media/twitter.png)](https://twitter.com/diligentengine)
+[![Diligent Engine on Facebook](media/facebook.png)](https://www.facebook.com/DiligentGraphics/)

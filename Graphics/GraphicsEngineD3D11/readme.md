@@ -84,45 +84,13 @@ For more information about interoperability with D3D11, please visit [Diligent E
 
 # References
 
-[Diligent Engine on the Web](http://diligentgraphics.com/diligent-engine)
-
 [Interoperability with Direct3D11](http://diligentgraphics.com/diligent-engine/native-api-interoperability/direct3d11-interoperability/)
 
 [Architecture of D3D11-based implementation](http://diligentgraphics.com/diligent-engine/architecture/d3d11)
 
-# Release Notes
-
-## 2.1
-
-### New features
-
-* Interoperability with Direct3D11
-  - Accessing internal D3D11 objects and handles
-  - Createing diligent engine buffers/textures from D3D11 resources
-  - Attaching to existing D3D11 device
-* Integraion with Unity
-* Geometry shader support
-* Tessellation support
-* Support for structured buffers in HSLS shaders
-
-### API Changes
-
-* Updated map interface: removed MAP_WRITE_DISCARD and MAP_WRITE_NO_OVERWRITE map types and added MAP_FLAG_DISCARD and MAP_FLAG_DO_NOT_SYNCHRONIZE flags instead
-
-### Bug fixes
-
-* Fixed issue with unaligned uniform buffers
-
-## 2.0
-
-Reworked the API to follow D3D12 style
-
-## 1.0
-
-Initial release
-
-
-
-**Copyright 2015-2018 Egor Yusov**
+-------------------
 
 [diligentgraphics.com](http://diligentgraphics.com)
+
+[![Diligent Engine on Twitter](media/twitter.png)](https://twitter.com/diligentengine)
+[![Diligent Engine on Facebook](media/facebook.png)](https://www.facebook.com/DiligentGraphics/)
