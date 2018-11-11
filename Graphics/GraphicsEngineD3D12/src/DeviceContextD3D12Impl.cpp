@@ -251,7 +251,7 @@ namespace Diligent
 
     void DeviceContextD3D12Impl::SetBlendFactors(const float* pBlendFactors)
     {
-        if (TDeviceContextBase::SetBlendFactors(m_BlendFactors, 0))
+        if (TDeviceContextBase::SetBlendFactors(pBlendFactors, 0))
         {
             GetCmdContext().AsGraphicsContext().SetBlendFactor( m_BlendFactors );
         }

@@ -282,7 +282,7 @@ namespace Diligent
 
     void DeviceContextVkImpl::SetBlendFactors(const float* pBlendFactors)
     {
-        if (TDeviceContextBase::SetBlendFactors(m_BlendFactors, 0))
+        if (TDeviceContextBase::SetBlendFactors(pBlendFactors, 0))
         {
             EnsureVkCmdBuffer();
             m_CommandBuffer.SetBlendConstants(m_BlendFactors);
