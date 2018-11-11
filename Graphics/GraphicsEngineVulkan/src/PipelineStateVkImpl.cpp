@@ -229,7 +229,7 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters*      pRefCounters
             ShaderModuleCI.pCode    = SPIRV.data();
         }
 
-        m_ShaderModules[s] = LogicalDevice.CreateShaderModule(ShaderModuleCI, m_Desc.Name);
+        m_ShaderModules[s] = LogicalDevice.CreateShaderModule(ShaderModuleCI, pShaderVk->GetDesc().Name);
 
         StageCI.module = m_ShaderModules[s];
         StageCI.pName = pShaderVk->GetEntryPoint();
