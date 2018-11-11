@@ -53,9 +53,9 @@ void InitializeDiligentEngine(HWND NativeWindowHandle)
 #endif
             auto *pFactoryD3D11 = GetEngineFactoryD3D11();
             pFactoryD3D11->CreateDeviceAndContextsD3D11(DeviceAttribs, &m_pDevice,
-			                                            &m_pImmediateContext, NumDeferredCtx);
+			                                &m_pImmediateContext, NumDeferredCtx);
             pFactoryD3D11->CreateSwapChainD3D11(m_pDevice, m_pImmediateContext,
-			                                    SCDesc, NativeWindowHandle, &m_pSwapChain);
+			                        SCDesc, NativeWindowHandle, &m_pSwapChain);
         }
         break;
 
@@ -69,9 +69,9 @@ void InitializeDiligentEngine(HWND NativeWindowHandle)
             EngineD3D12Attribs EngD3D12Attribs;
             auto *pFactoryD3D12 = GetEngineFactoryD3D12();
             pFactoryD3D12->CreateDeviceAndContextsD3D12(EngD3D12Attribs, &m_pDevice,
-			                                            &m_pImmediateContext, NumDeferredCtx);
+			                                &m_pImmediateContext, NumDeferredCtx);
             pFactoryD3D12->CreateSwapChainD3D12(m_pDevice, m_pImmediateContext,
-			                                    SCDesc, NativeWindowHandle, &m_pSwapChain);
+			                        SCDesc, NativeWindowHandle, &m_pSwapChain);
         }
         break;
 
@@ -162,14 +162,14 @@ file for more details.
 
 ### Linux
 
-On Linux platform, the only API currently supported is OpenGL. Initialization of GL context on Linux is tightly
+On Linux platform, the engine supports OpenGL and Vulkan backends. Initialization of GL context on Linux is tightly
 coupled with window creation. As a result, Diligent Engine does not initialize the context, but
 attaches to the one initialized by the app. An example of the engine initialization on Linux can be found in
 [Tutorial00_HelloLinux.cpp](https://github.com/DiligentGraphics/DiligentSamples/blob/master/Tutorials/Tutorial00_HelloLinux/src/Tutorial00_HelloLinux.cpp).
 
 ### MacOS
 
-Similar to Linux, the only API currently supported by Diligent Engine on MacOS is OpenGL. Initialization of GL context on MacOS is
+On MacOS the only API currently supported by Diligent Engine is OpenGL. Initialization of GL context on MacOS is
 performed by the application, and the engine attaches to the context initialized by the app; see
 [GLView.m](https://github.com/DiligentGraphics/DiligentEngine/blob/master/Common/NativeApp/Apple/Source/Classes/OSX/GLView.m)
 for details.
