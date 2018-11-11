@@ -611,12 +611,6 @@ objects. Refer to the following pages for more information:
 
 # References
 
-[Diligent Engine on the Web](http://diligentgraphics.com)
-
-[Diligent Engine on Twitter](https://twitter.com/diligentengine)
-
-[Diligent Engine on Facebook](https://www.facebook.com/DiligentGraphics/)
-
 [Diligent Engine Architecture](http://diligentgraphics.com/diligent-engine/architecture/)
 
 [API Basics](http://diligentgraphics.com/diligent-engine/api-basics/)
@@ -627,9 +621,7 @@ objects. Refer to the following pages for more information:
 
 See [Release History](ReleaseHistory.md)
 
-
-
-**Copyright 2015-2018 Egor Yusov**
+-------------------
 
 [diligentgraphics.com](http://diligentgraphics.com)
 
