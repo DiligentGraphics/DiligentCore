@@ -1,4 +1,4 @@
-# DiligentCore <img src="media/diligentgraphics-logo.png" height=64 align="right" valign="middle">
+# Diligent Core [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=An%20easy-to-use%20cross-platform%20graphics%20library%20that%20takes%20full%20advantage%20of%20%23Direct3D12%20and%20%23VulkanAPI&url=https://github.com/DiligentGraphics/DiligentEngine) <img src="media/diligentgraphics-logo.png" height=64 align="right" valign="middle">
 
 This module implements [Diligent Engine](https://github.com/DiligentGraphics/DiligentEngine)'s core functionality: Direct3D11, Direct3D12,
 OpenGL, OpenGLES, and Vulkan rendering backends as well as basic platform-specific utilities. It is self-contained and can be built by its own.
