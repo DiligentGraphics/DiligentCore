@@ -23,6 +23,7 @@
 
 #include <iomanip>
 #include "SPIRVShaderResources.h"
+#include "spirv_parser.hpp"
 #include "spirv_cross.hpp"
 #include "ShaderBase.h"
 #include "GraphicsAccessories.h"
@@ -108,6 +109,27 @@ static spv::ExecutionModel ShaderTypeToExecutionModel(SHADER_TYPE ShaderType)
     }
 }
 
+const std::string& GetUBName(spirv_cross::Compiler& Compiler, const spirv_cross::Resource& UB, const spirv_cross::ParsedIR::Source& IRSource)
+{
+    // Consider the following HLSL constant buffer:
+    //    cbuffer Constants
+    //    {
+    //        float4x4 g_WorldViewProj;
+    //    };
+    //
+    // Reflecion information for this constant buffer extracted from the byte code produced
+    // by glslang and dxc looks as follows:
+    // 
+    //                                  glslang                DXC
+    //  UB.name                       "Constants"        "type_Constants"
+    //  Compiler.get_name(UB.id)      ""                 "Constants"
+    //
+    // For byte code produced from GLSL, we must always use UB.name
+
+    const auto& instance_name = Compiler.get_name(UB.id);
+    return (IRSource.hlsl && !instance_name.empty()) ? instance_name : UB.name;
+}
+
 SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator, 
                                            IRenderDevice*         pRenderDevice,
                                            std::vector<uint32_t>  spirv_binary,
@@ -118,7 +140,10 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator,
     m_ShaderType(shaderDesc.ShaderType)
 {
     // https://github.com/KhronosGroup/SPIRV-Cross/wiki/Reflection-API-user-guide
-    spirv_cross::Compiler Compiler(std::move(spirv_binary));
+	spirv_cross::Parser parser(move(spirv_binary));
+	parser.parse();
+    auto ParsedIRSource = parser.get_parsed_ir().source;
+    spirv_cross::Compiler Compiler(std::move(parser.get_parsed_ir()));
 
     spv::ExecutionModel ExecutionModel = ShaderTypeToExecutionModel(shaderDesc.ShaderType);
     auto EntryPoints = Compiler.get_entry_points_and_stages();
@@ -146,9 +171,10 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator,
     spirv_cross::ShaderResources resources = Compiler.get_shader_resources();
     
     size_t ResourceNamesPoolSize = 0;
+    for(const auto &ub : resources.uniform_buffers)
+        ResourceNamesPoolSize += GetUBName(Compiler, ub, ParsedIRSource).length() + 1;
     for(auto *pResType : 
         {
-            &resources.uniform_buffers,
             &resources.storage_buffers,
             &resources.storage_images,
             &resources.sampled_images,
@@ -221,12 +247,13 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator,
         Uint32 CurrUB = 0;
         for (const auto &UB : resources.uniform_buffers)
         {
+            const auto& name = GetUBName(Compiler, UB, ParsedIRSource);
             new (&GetUB(CurrUB++)) 
                 SPIRVShaderResourceAttribs(Compiler, 
                                            UB, 
-                                           m_ResourceNames.CopyString(UB.name), 
+                                           m_ResourceNames.CopyString(name), 
                                            SPIRVShaderResourceAttribs::ResourceType::UniformBuffer, 
-                                           GetShaderVariableType(UB.name, shaderDesc));
+                                           GetShaderVariableType(name, shaderDesc));
         }
         VERIFY_EXPR(CurrUB == GetNumUBs());
     }
