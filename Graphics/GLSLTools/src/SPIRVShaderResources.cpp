@@ -112,19 +112,34 @@ static spv::ExecutionModel ShaderTypeToExecutionModel(SHADER_TYPE ShaderType)
 const std::string& GetUBName(spirv_cross::Compiler& Compiler, const spirv_cross::Resource& UB, const spirv_cross::ParsedIR::Source& IRSource)
 {
     // Consider the following HLSL constant buffer:
+    //
     //    cbuffer Constants
     //    {
     //        float4x4 g_WorldViewProj;
     //    };
     //
-    // Reflecion information for this constant buffer extracted from the byte code produced
-    // by glslang and dxc looks as follows:
+    // glslang emits SPIRV as if the following GLSL was written:
     // 
-    //                                  glslang                DXC
-    //  UB.name                       "Constants"        "type_Constants"
-    //  Compiler.get_name(UB.id)      ""                 "Constants"
+    //    uniform Constants // UB.name
+    //    {
+    //        float4x4 g_WorldViewProj;
+    //    }; // no instance name
     //
-    // For byte code produced from GLSL, we must always use UB.name
+    // DXC emits the byte code that corresponds to the following GLSL: 
+    // 
+    //    uniform type_Constants // UB.name
+    //    {
+    //        float4x4 g_WorldViewProj;
+    //    }Constants; // get_name(UB.id)
+    //
+    //
+    //                            |     glslang      |         DXC
+    //  -------------------------------------------------------------------
+    //  UB.name                   |   "Constants"    |   "type_Constants"
+    //  Compiler.get_name(UB.id)  |   ""             |   "Constants"
+    //
+    // Note that for the byte code produced from GLSL, we must always 
+    // use UB.name even if the instance name is present
 
     const auto& instance_name = Compiler.get_name(UB.id);
     return (IRSource.hlsl && !instance_name.empty()) ? instance_name : UB.name;
