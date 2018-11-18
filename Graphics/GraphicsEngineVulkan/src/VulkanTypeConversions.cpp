@@ -26,6 +26,7 @@
 #include <array>
 
 #include "VulkanTypeConversions.h"
+#include "PlatformMisc.h"
 
 namespace Diligent
 {
@@ -1098,4 +1099,126 @@ VkBorderColor BorderColorToVkBorderColor(const Float32 BorderColor[])
     return vkBorderColor;
 }
 
+
+static VkAccessFlags ResourceStateFlagToVkAccessFlags(RESOURCE_STATE StateFlag)
+{
+    // Currently not used:
+    //VK_ACCESS_INPUT_ATTACHMENT_READ_BIT
+    //VK_ACCESS_HOST_READ_BIT
+    //VK_ACCESS_HOST_WRITE_BIT
+    //VK_ACCESS_MEMORY_READ_BIT
+    //VK_ACCESS_MEMORY_WRITE_BIT
+    //VK_ACCESS_TRANSFORM_FEEDBACK_COUNTER_READ_BIT_EXT
+    //VK_ACCESS_TRANSFORM_FEEDBACK_COUNTER_WRITE_BIT_EXT
+    //VK_ACCESS_CONDITIONAL_RENDERING_READ_BIT_EXT
+    //VK_ACCESS_COMMAND_PROCESS_READ_BIT_NVX
+    //VK_ACCESS_COMMAND_PROCESS_WRITE_BIT_NVX
+    //VK_ACCESS_COLOR_ATTACHMENT_READ_NONCOHERENT_BIT_EXT
+    //VK_ACCESS_SHADING_RATE_IMAGE_READ_BIT_NV
+    //VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_NVX
+    //VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_NVX
+
+    static_assert(RESOURCE_STATE_MAX_BIT == 0x8000, "This function must be updated to handle new resource state flag");
+    VERIFY((StateFlag & (StateFlag-1)) == 0, "Only single bit must be set");
+    switch(StateFlag)
+    {
+        case RESOURCE_STATE_UNDEFINED:         return 0;
+        case RESOURCE_STATE_VERTEX_BUFFER:     return VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
+        case RESOURCE_STATE_CONSTANT_BUFFER:   return VK_ACCESS_UNIFORM_READ_BIT;
+        case RESOURCE_STATE_INDEX_BUFFER:      return VK_ACCESS_INDEX_READ_BIT;
+        case RESOURCE_STATE_RENDER_TARGET:     return VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        case RESOURCE_STATE_UNORDERED_ACCESS:  return VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT;
+        case RESOURCE_STATE_DEPTH_WRITE:       return VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+        case RESOURCE_STATE_DEPTH_READ:        return VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+        case RESOURCE_STATE_SHADER_RESOURCE:   return VK_ACCESS_SHADER_READ_BIT;
+        case RESOURCE_STATE_STREAM_OUT:        return VK_ACCESS_TRANSFORM_FEEDBACK_WRITE_BIT_EXT;
+        case RESOURCE_STATE_INDIRECT_ARGUMENT: return VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
+        case RESOURCE_STATE_COPY_DEST:         return VK_ACCESS_TRANSFER_WRITE_BIT;
+        case RESOURCE_STATE_COPY_SOURCE:       return VK_ACCESS_TRANSFER_READ_BIT;
+        case RESOURCE_STATE_RESOLVE_DEST:      return VK_ACCESS_MEMORY_READ_BIT;
+        case RESOURCE_STATE_RESOLVE_SOURCE:    return VK_ACCESS_MEMORY_WRITE_BIT;
+        case RESOURCE_STATE_PRESENT:           return VK_ACCESS_MEMORY_READ_BIT;
+
+        default:
+            UNEXPECTED("Unexpected resource state flag");
+            return 0;
+    }
+}
+
+class StateFlagBitPosToVkAccessFlags
+{
+public:
+    StateFlagBitPosToVkAccessFlags()
+    {
+        static_assert( (1 << MaxFlagBitPos) == RESOURCE_STATE_MAX_BIT, "This function must be updated to handle new resource state flag");
+        for (Uint32 bit=0; bit < MaxFlagBitPos; ++bit)
+        {
+            FlagBitPosToVkAccessFlagsMap[bit] = ResourceStateFlagToVkAccessFlags(static_cast<RESOURCE_STATE>(1<<bit));
+        }
+    }
+
+    VkAccessFlags operator()(Uint32 BitPos)const
+    {
+        VERIFY(BitPos <= MaxFlagBitPos, "Resource state flag bit position (", BitPos, ") exceeds max bit position (", MaxFlagBitPos, ")");
+        return FlagBitPosToVkAccessFlagsMap[BitPos];
+    }
+
+private:
+    static constexpr Uint32 MaxFlagBitPos = 15;
+    std::array<VkAccessFlags, MaxFlagBitPos + 1> FlagBitPosToVkAccessFlagsMap;
+};
+
+
+VkAccessFlags ResourceStateFlagsToVkAccessFlags(RESOURCE_STATE StateFlags)
+{
+    VERIFY(StateFlags < (RESOURCE_STATE_MAX_BIT<<1), "Resource state flags are out of range");
+    static const StateFlagBitPosToVkAccessFlags BitPosToAccessFlags;
+    VkAccessFlags AccessFlags = 0;
+    Uint32 Bits = StateFlags;
+    while(Bits != 0)
+    {
+        auto lsb = PlatformMisc::GetLSB(Bits);
+        AccessFlags |= BitPosToAccessFlags(lsb);
+        Bits &= ~(1<<lsb);
+    }
+    return AccessFlags;
+}
+
+
+VkImageLayout ResourceStateToVkImageLayout(RESOURCE_STATE StateFlag)
+{
+    // Currently not used:
+    //VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL
+    //VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL
+    //VK_IMAGE_LAYOUT_SHADING_RATE_OPTIMAL_NV
+    //VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL_KHR = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL,
+    //VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL_KHR = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL,
+
+    static_assert(RESOURCE_STATE_MAX_BIT == 0x8000, "This function must be updated to handle new resource state flag");
+    VERIFY((StateFlag & (StateFlag-1)) == 0, "Only single bit must be set");
+    switch(StateFlag)
+    {
+        case RESOURCE_STATE_UNDEFINED:         return VK_IMAGE_LAYOUT_UNDEFINED;
+        case RESOURCE_STATE_VERTEX_BUFFER:     UNEXPECTED("Invalid resource state"); return VK_IMAGE_LAYOUT_UNDEFINED;
+        case RESOURCE_STATE_CONSTANT_BUFFER:   UNEXPECTED("Invalid resource state"); return VK_IMAGE_LAYOUT_UNDEFINED;
+        case RESOURCE_STATE_INDEX_BUFFER:      UNEXPECTED("Invalid resource state"); return VK_IMAGE_LAYOUT_UNDEFINED;
+        case RESOURCE_STATE_RENDER_TARGET:     return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        case RESOURCE_STATE_UNORDERED_ACCESS:  return VK_IMAGE_LAYOUT_GENERAL;
+        case RESOURCE_STATE_DEPTH_WRITE:       return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        case RESOURCE_STATE_DEPTH_READ:        return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+        case RESOURCE_STATE_SHADER_RESOURCE:   return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        case RESOURCE_STATE_STREAM_OUT:        UNEXPECTED("Invalid resource state"); return VK_IMAGE_LAYOUT_UNDEFINED;
+        case RESOURCE_STATE_INDIRECT_ARGUMENT: UNEXPECTED("Invalid resource state"); return VK_IMAGE_LAYOUT_UNDEFINED;
+        case RESOURCE_STATE_COPY_DEST:         return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        case RESOURCE_STATE_COPY_SOURCE:       return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+        case RESOURCE_STATE_RESOLVE_DEST:      UNSUPPORTED("Not currently implemented"); return VK_IMAGE_LAYOUT_UNDEFINED;
+        case RESOURCE_STATE_RESOLVE_SOURCE:    UNSUPPORTED("Not currently implemented"); return VK_IMAGE_LAYOUT_UNDEFINED;
+        case RESOURCE_STATE_PRESENT:           return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+        default:
+            UNEXPECTED("Unexpected resource state flag");
+            return VK_IMAGE_LAYOUT_UNDEFINED;
+    }
+}
+    
 }

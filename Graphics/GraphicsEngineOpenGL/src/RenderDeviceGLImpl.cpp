@@ -121,7 +121,7 @@ void RenderDeviceGLImpl :: CreateBuffer(const BufferDesc& BuffDesc, const Buffer
 	CreateBuffer(BuffDesc, BuffData, ppBuffer, false);
 }
 
-void RenderDeviceGLImpl :: CreateBufferFromGLHandle(Uint32 GLHandle, const BufferDesc& BuffDesc, IBuffer **ppBuffer)
+void RenderDeviceGLImpl :: CreateBufferFromGLHandle(Uint32 GLHandle, const BufferDesc& BuffDesc, RESOURCE_STATE InitialState, IBuffer **ppBuffer)
 {
     VERIFY(GLHandle, "GL buffer handle must not be null");
     CreateDeviceObject( "buffer", BuffDesc, ppBuffer, 
@@ -222,7 +222,7 @@ void RenderDeviceGLImpl::CreateTexture(const TextureDesc& TexDesc, const Texture
 	CreateTexture(TexDesc, Data, ppTexture, false);
 }
 
-void RenderDeviceGLImpl::CreateTextureFromGLHandle(Uint32 GLHandle, const TextureDesc& TexDesc, ITexture **ppTexture)
+void RenderDeviceGLImpl::CreateTextureFromGLHandle(Uint32 GLHandle, const TextureDesc& TexDesc, RESOURCE_STATE InitialState, ITexture **ppTexture)
 {
     VERIFY(GLHandle, "GL texture handle must not be null");
     CreateDeviceObject( "texture", TexDesc, ppTexture,

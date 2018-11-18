@@ -368,6 +368,18 @@ public:
     ///         pointer to ID3D12Resource interface, for D3D12 implementation\n
     ///         GL buffer handle, for GL implementation
     virtual void* GetNativeHandle() = 0;
+
+    /// Sets the usage state for all texture subresources.
+
+    /// \note This method does not perform state transition, but
+    ///       resets the internal texture state to the given value.
+    ///       This method should be used after the application finished
+    ///       manually managing the texture state and wants to hand over
+    ///       state management back to the engine.
+    virtual void SetState(RESOURCE_STATE State) = 0;
+
+    /// Returns the internal texture state
+    virtual RESOURCE_STATE GetState() const = 0;
 };
 
 }

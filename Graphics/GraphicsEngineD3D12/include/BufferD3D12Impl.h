@@ -54,6 +54,7 @@ public:
                     FixedBlockMemoryAllocator&   BuffViewObjMemAllocator, 
                     class RenderDeviceD3D12Impl* pDeviceD3D12, 
                     const BufferDesc&            BuffDesc, 
+                    RESOURCE_STATE               InitialState,
                     ID3D12Resource*              pd3d12Buffer);
     ~BufferD3D12Impl();
 
@@ -79,7 +80,7 @@ public:
         return pd3d12Buffer;
     }
 
-    virtual void SetD3D12ResourceState(D3D12_RESOURCE_STATES state)override final{ SetState(state); }
+    virtual void SetD3D12ResourceState(D3D12_RESOURCE_STATES state)override final;
 
     D3D12_GPU_VIRTUAL_ADDRESS GetGPUAddress(class DeviceContextD3D12Impl* pCtx);
 

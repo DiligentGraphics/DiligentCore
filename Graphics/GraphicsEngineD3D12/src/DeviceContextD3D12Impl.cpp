@@ -287,8 +287,8 @@ namespace Diligent
             pBuffD3D12->DvpVerifyDynamicAllocation(this);
 #endif
         auto& GraphicsCtx = GetCmdContext().AsGraphicsContext();
-        // Resource transitioning must always be performed!
-        GraphicsCtx.TransitionResource(pBuffD3D12, D3D12_RESOURCE_STATE_INDEX_BUFFER, true);
+        if (pBuffD3D12->IsInKnownState() && !pBuffD3D12->CheckState(RESOURCE_STATE_INDEX_BUFFER))
+            GraphicsCtx.TransitionResource(pBuffD3D12, RESOURCE_STATE_INDEX_BUFFER);
 
         size_t BuffDataStartByteOffset;
         auto *pd3d12Buff = pBuffD3D12->GetD3D12Buffer(BuffDataStartByteOffset, this);
@@ -315,8 +315,8 @@ namespace Diligent
         {
             auto& CurrStream = m_VertexStreams[Buff];
             auto* pBufferD3D12 = CurrStream.pBuffer.RawPtr();
-            if(pBufferD3D12 != nullptr && !pBufferD3D12->CheckAllStates(D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER))
-                GraphCtx.TransitionResource(pBufferD3D12, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+            if (pBufferD3D12 != nullptr && pBufferD3D12->IsInKnownState() && !pBufferD3D12->CheckState(RESOURCE_STATE_VERTEX_BUFFER))
+                GraphCtx.TransitionResource(pBufferD3D12, RESOURCE_STATE_VERTEX_BUFFER);
         }
     }
 
@@ -342,7 +342,8 @@ namespace Diligent
 #endif
                 }
 
-                GraphCtx.TransitionResource(pBufferD3D12, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+                if (pBufferD3D12->IsInKnownState() && !pBufferD3D12->CheckState(RESOURCE_STATE_VERTEX_BUFFER))
+                    GraphCtx.TransitionResource(pBufferD3D12, RESOURCE_STATE_VERTEX_BUFFER);
             
                 // Device context keeps strong references to all vertex buffers.
                 // When a buffer is unbound, a reference to D3D12 resource is added to the context,
@@ -384,8 +385,8 @@ namespace Diligent
             if (m_State.bCommittedD3D12IBUpToDate)
             {
                 BufferD3D12Impl *pBuffD3D12 = static_cast<BufferD3D12Impl *>(m_pIndexBuffer.RawPtr());
-                if(!pBuffD3D12->CheckAllStates(D3D12_RESOURCE_STATE_INDEX_BUFFER))
-                    GraphCtx.TransitionResource(pBuffD3D12, D3D12_RESOURCE_STATE_INDEX_BUFFER, true);
+                if (pBuffD3D12->IsInKnownState() && !pBuffD3D12->CheckState(RESOURCE_STATE_INDEX_BUFFER))
+                    GraphCtx.TransitionResource(pBuffD3D12, RESOURCE_STATE_INDEX_BUFFER);
             }
             else
                 CommitD3D12IndexBuffer(drawAttribs.IndexType);
@@ -419,7 +420,8 @@ namespace Diligent
                 pIndirectDrawAttribsD3D12->DvpVerifyDynamicAllocation(this);
 #endif
 
-            GraphCtx.TransitionResource(pIndirectDrawAttribsD3D12, D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT);
+            if (pIndirectDrawAttribsD3D12->IsInKnownState() && !pIndirectDrawAttribsD3D12->CheckState(RESOURCE_STATE_INDIRECT_ARGUMENT))
+                GraphCtx.TransitionResource(pIndirectDrawAttribsD3D12, RESOURCE_STATE_INDIRECT_ARGUMENT);
             size_t BuffDataStartByteOffset;
             ID3D12Resource *pd3d12ArgsBuff = pIndirectDrawAttribsD3D12->GetD3D12Buffer(BuffDataStartByteOffset, this);
             GraphCtx.ExecuteIndirect(drawAttribs.IsIndexed ? m_pDrawIndexedIndirectSignature : m_pDrawIndirectSignature, pd3d12ArgsBuff, drawAttribs.IndirectDrawArgsOffset + BuffDataStartByteOffset);
@@ -465,7 +467,8 @@ namespace Diligent
                     pBufferD3D12->DvpVerifyDynamicAllocation(this);
 #endif
 
-                ComputeCtx.TransitionResource(pBufferD3D12, D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT);
+                if (pBufferD3D12->IsInKnownState() && !pBufferD3D12->CheckState(RESOURCE_STATE_INDIRECT_ARGUMENT))
+                    ComputeCtx.TransitionResource(pBufferD3D12, RESOURCE_STATE_INDIRECT_ARGUMENT);
                 size_t BuffDataStartByteOffset;
                 ID3D12Resource *pd3d12ArgsBuff = pBufferD3D12->GetD3D12Buffer(BuffDataStartByteOffset, this);
                 ComputeCtx.ExecuteIndirect(m_pDispatchIndirectSignature, pd3d12ArgsBuff, DispatchAttrs.DispatchArgsByteOffset + BuffDataStartByteOffset);
@@ -784,10 +787,12 @@ namespace Diligent
     {
         auto& CmdCtx = GetCmdContext();
         VERIFY_EXPR( static_cast<size_t>(NumBytes) == NumBytes );
-        CmdCtx.TransitionResource(pBuffD3D12, D3D12_RESOURCE_STATE_COPY_DEST, true);
+        if (pBuffD3D12->IsInKnownState() && !pBuffD3D12->CheckState(RESOURCE_STATE_COPY_DEST))
+            CmdCtx.TransitionResource(pBuffD3D12, RESOURCE_STATE_COPY_DEST);
         size_t DstBuffDataStartByteOffset;
         auto *pd3d12Buff = pBuffD3D12->GetD3D12Buffer(DstBuffDataStartByteOffset, this);
         VERIFY(DstBuffDataStartByteOffset == 0, "Dst buffer must not be suballocated");
+        CmdCtx.FlushResourceBarriers();
         CmdCtx.GetCommandList()->CopyBufferRegion( pd3d12Buff, DstOffset + DstBuffDataStartByteOffset, Allocation.pBuffer, Allocation.Offset, NumBytes);
         ++m_State.NumCommands;
     }
@@ -807,14 +812,17 @@ namespace Diligent
         VERIFY(pDstBuffD3D12->GetDesc().Usage != USAGE_DYNAMIC, "Dynamic buffers cannot be copy destinations");
 
         auto& CmdCtx = GetCmdContext();
-        CmdCtx.TransitionResource(pSrcBuffD3D12, D3D12_RESOURCE_STATE_COPY_SOURCE);
-        CmdCtx.TransitionResource(pDstBuffD3D12, D3D12_RESOURCE_STATE_COPY_DEST, true);
+        if (pSrcBuffD3D12->IsInKnownState() && !pSrcBuffD3D12->CheckState(RESOURCE_STATE_COPY_SOURCE))
+            CmdCtx.TransitionResource(pSrcBuffD3D12, RESOURCE_STATE_COPY_SOURCE);
+        if (pDstBuffD3D12->IsInKnownState() && !pDstBuffD3D12->CheckState(RESOURCE_STATE_COPY_DEST))
+            CmdCtx.TransitionResource(pDstBuffD3D12, RESOURCE_STATE_COPY_DEST);
         size_t DstDataStartByteOffset;
-        auto *pd3d12DstBuff = pDstBuffD3D12->GetD3D12Buffer(DstDataStartByteOffset, this);
+        auto* pd3d12DstBuff = pDstBuffD3D12->GetD3D12Buffer(DstDataStartByteOffset, this);
         VERIFY(DstDataStartByteOffset == 0, "Dst buffer must not be suballocated");
 
         size_t SrcDataStartByteOffset;
-        auto *pd3d12SrcBuff = pSrcBuffD3D12->GetD3D12Buffer(SrcDataStartByteOffset, this);
+        auto* pd3d12SrcBuff = pSrcBuffD3D12->GetD3D12Buffer(SrcDataStartByteOffset, this);
+        CmdCtx.FlushResourceBarriers();
         CmdCtx.GetCommandList()->CopyBufferRegion( pd3d12DstBuff, DstOffset + DstDataStartByteOffset, pd3d12SrcBuff, SrcOffset+SrcDataStartByteOffset, NumBytes);
         ++m_State.NumCommands;
     }
@@ -823,8 +831,11 @@ namespace Diligent
                                                    TextureD3D12Impl* pDstTexture, Uint32 DstSubResIndex, Uint32 DstX, Uint32 DstY, Uint32 DstZ)
     {
         auto& CmdCtx = GetCmdContext();
-        CmdCtx.TransitionResource(pSrcTexture, D3D12_RESOURCE_STATE_COPY_SOURCE);
-        CmdCtx.TransitionResource(pDstTexture, D3D12_RESOURCE_STATE_COPY_DEST, true);
+        
+        if (pSrcTexture->IsInKnownState() && !pSrcTexture->CheckState(RESOURCE_STATE_COPY_SOURCE))
+            CmdCtx.TransitionResource(pSrcTexture, RESOURCE_STATE_COPY_SOURCE);
+        if (pDstTexture->IsInKnownState() && !pDstTexture->CheckState(RESOURCE_STATE_COPY_DEST))
+            CmdCtx.TransitionResource(pDstTexture, RESOURCE_STATE_COPY_DEST);
 
         D3D12_TEXTURE_COPY_LOCATION DstLocation = {}, SrcLocation = {};
 
@@ -836,33 +847,35 @@ namespace Diligent
         SrcLocation.pResource = pSrcTexture->GetD3D12Resource();
         SrcLocation.SubresourceIndex = SrcSubResIndex;
 
+        CmdCtx.FlushResourceBarriers();
         CmdCtx.GetCommandList()->CopyTextureRegion( &DstLocation, DstX, DstY, DstZ, &SrcLocation, pD3D12SrcBox);
         ++m_State.NumCommands;
     }
 
-    void DeviceContextD3D12Impl::CopyTextureRegion(ID3D12Resource*         pd3d12Buffer,
-                                                   Uint32                  SrcOffset, 
-                                                   Uint32                  SrcStride,
-                                                   Uint32                  SrcDepthStride,
-                                                   Uint32                  BufferSize,
-                                                   class TextureD3D12Impl& TextureD3D12,
-                                                   Uint32                  DstSubResIndex,
-                                                   const Box&              DstBox)
+    void DeviceContextD3D12Impl::CopyTextureRegion(ID3D12Resource*   pd3d12Buffer,
+                                                   Uint32            SrcOffset, 
+                                                   Uint32            SrcStride,
+                                                   Uint32            SrcDepthStride,
+                                                   Uint32            BufferSize,
+                                                   TextureD3D12Impl& TextureD3D12,
+                                                   Uint32            DstSubResIndex,
+                                                   const Box&        DstBox)
     {
         const auto& TexDesc = TextureD3D12.GetDesc();
         auto& CmdCtx = GetCmdContext();
-        auto *pCmdList = CmdCtx.GetCommandList();
-        auto TextureState = TextureD3D12.GetState();
+        auto* pCmdList = CmdCtx.GetCommandList();
+        bool StateTransitionRequired = TextureD3D12.IsInKnownState() && !TextureD3D12.CheckState(RESOURCE_STATE_COPY_DEST);
         D3D12_RESOURCE_BARRIER BarrierDesc;
-		BarrierDesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-		BarrierDesc.Transition.pResource = TextureD3D12.GetD3D12Resource();
-		BarrierDesc.Transition.Subresource = DstSubResIndex;
-		BarrierDesc.Transition.StateBefore = TextureState;
-		BarrierDesc.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
-        BarrierDesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-        bool StateTransitionRequired = (TextureState & D3D12_RESOURCE_STATE_COPY_DEST) != D3D12_RESOURCE_STATE_COPY_DEST;
-	    if (StateTransitionRequired)
+        if (StateTransitionRequired)
+        {
+		    BarrierDesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+		    BarrierDesc.Transition.pResource = TextureD3D12.GetD3D12Resource();
+		    BarrierDesc.Transition.Subresource = DstSubResIndex;
+		    BarrierDesc.Transition.StateBefore = ResourceStateFlagsToD3D12ResourceStates(TextureD3D12.GetState());
+		    BarrierDesc.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
+            BarrierDesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
             pCmdList->ResourceBarrier(1, &BarrierDesc);
+        }
 
         D3D12_TEXTURE_COPY_LOCATION DstLocation;
         DstLocation.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
@@ -921,10 +934,12 @@ namespace Diligent
                                                    const Box&              DstBox)
     {
         auto* pBufferD3D12 = ValidatedCast<BufferD3D12Impl>(pSrcBuffer);
-        if(pBufferD3D12->GetDesc().Usage == USAGE_DYNAMIC)
-            VERIFY(pBufferD3D12->GetState() == D3D12_RESOURCE_STATE_GENERIC_READ, "Dynamic buffer is expected to always be in D3D12_RESOURCE_STATE_GENERIC_READ state");
-        else if(pBufferD3D12->GetState() != D3D12_RESOURCE_STATE_GENERIC_READ)
-            GetCmdContext().TransitionResource(pBufferD3D12, D3D12_RESOURCE_STATE_GENERIC_READ, true);
+        auto BufferState = pBufferD3D12->GetState();
+        if (pBufferD3D12->GetDesc().Usage == USAGE_DYNAMIC)
+            DEV_CHECK_ERR(BufferState == RESOURCE_STATE_GENERIC_READ, "Dynamic buffer is expected to always be in RESOURCE_STATE_GENERIC_READ state");
+        else if (BufferState != RESOURCE_STATE_GENERIC_READ && BufferState != RESOURCE_STATE_UNKNOWN)
+            GetCmdContext().TransitionResource(pBufferD3D12, RESOURCE_STATE_GENERIC_READ);
+        GetCmdContext().FlushResourceBarriers();
         size_t DataStartByteOffset = 0;
         auto* pd3d12Buffer = pBufferD3D12->GetD3D12Buffer(DataStartByteOffset, this);
         CopyTextureRegion(pd3d12Buffer, static_cast<Uint32>(DataStartByteOffset) + SrcOffset, SrcStride, SrcDepthStride, pBufferD3D12->GetDesc().uiSizeInBytes, TextureD3D12, DstSubResIndex, DstBox);
@@ -1101,17 +1116,26 @@ namespace Diligent
         m_PendingFences.emplace_back(Value, pFence);
     };
 
+    void DeviceContextD3D12Impl::TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers)
+    {
+        auto& CmdCtx = GetCmdContext();
+        for(Uint32 i = 0; i < BarrierCount; ++i)
+            CmdCtx.TransitionResource(pResourceBarriers[i]);
+    }
+
     void DeviceContextD3D12Impl::TransitionTextureState(ITexture *pTexture, D3D12_RESOURCE_STATES State)
     {
         VERIFY_EXPR(pTexture != nullptr);
+        DEV_CHECK_ERR(pTexture->GetState() != RESOURCE_STATE_UNKNOWN, "Texture state is unknown");
         auto& CmdCtx = GetCmdContext();
-        CmdCtx.TransitionResource(ValidatedCast<ITextureD3D12>(pTexture), State);
+        CmdCtx.TransitionResource(ValidatedCast<ITextureD3D12>(pTexture), D3D12ResourceStatesToResourceStateFlags(State));
     }
 
     void DeviceContextD3D12Impl::TransitionBufferState(IBuffer *pBuffer, D3D12_RESOURCE_STATES State)
     {
         VERIFY_EXPR(pBuffer != nullptr);
+        DEV_CHECK_ERR(pBuffer->GetState() != RESOURCE_STATE_UNKNOWN, "Buffer state is unknown");
         auto& CmdCtx = GetCmdContext();
-        CmdCtx.TransitionResource(ValidatedCast<IBufferD3D12>(pBuffer), State);
+        CmdCtx.TransitionResource(ValidatedCast<IBufferD3D12>(pBuffer), D3D12ResourceStatesToResourceStateFlags(State));
     }
 }

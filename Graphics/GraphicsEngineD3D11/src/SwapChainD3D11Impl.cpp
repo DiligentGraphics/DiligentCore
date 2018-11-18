@@ -65,7 +65,7 @@ void SwapChainD3D11Impl::CreateRTVandDSV()
     DEV_CHECK_ERR(SUCCEEDED(hr), "Failed to set back buffer name");
 
     RefCntAutoPtr<ITexture> pBackBuffer;
-    pRenderDeviceD3D11Impl->CreateTextureFromD3DResource(pd3dBackBuffer, &pBackBuffer);
+    pRenderDeviceD3D11Impl->CreateTextureFromD3DResource(pd3dBackBuffer, RESOURCE_STATE_UNKNOWN, &pBackBuffer);
 
     TextureViewDesc RTVDesc;
     RTVDesc.ViewType = TEXTURE_VIEW_RENDER_TARGET;

@@ -98,7 +98,7 @@ BufferD3D12Impl :: BufferD3D12Impl(IReferenceCounters*          pRefCounters,
         // Dynamic buffers with SRV or UAV flags need to be allocated in GPU-only memory
         // Dynamic upload heap buffer is always in D3D12_RESOURCE_STATE_GENERIC_READ state
 
-        m_UsageState = D3D12_RESOURCE_STATE_GENERIC_READ;
+        SetState(RESOURCE_STATE_GENERIC_READ);
         VERIFY_EXPR(m_DynamicData.size() == 1 + pRenderDeviceD3D12->GetNumDeferredContexts());
     }
     else
@@ -131,9 +131,9 @@ BufferD3D12Impl :: BufferD3D12Impl(IReferenceCounters*          pRefCounters,
             HeapProps.Type = D3D12_HEAP_TYPE_DEFAULT;
 
         if(HeapProps.Type == D3D12_HEAP_TYPE_READBACK)
-            m_UsageState = D3D12_RESOURCE_STATE_COPY_DEST;
+            SetState(RESOURCE_STATE_COPY_DEST);
         else if(HeapProps.Type == D3D12_HEAP_TYPE_UPLOAD)
-            m_UsageState = D3D12_RESOURCE_STATE_GENERIC_READ;
+            SetState(RESOURCE_STATE_GENERIC_READ);
 	    HeapProps.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
 	    HeapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
 	    HeapProps.CreationNodeMask = 1;
@@ -141,10 +141,14 @@ BufferD3D12Impl :: BufferD3D12Impl(IReferenceCounters*          pRefCounters,
 
         bool bInitializeBuffer = (BuffData.pData != nullptr && BuffData.DataSize > 0);
         if(bInitializeBuffer)
-            m_UsageState = D3D12_RESOURCE_STATE_COPY_DEST;
+            SetState(RESOURCE_STATE_COPY_DEST);
 
+        if (!IsInKnownState())
+            SetState(RESOURCE_STATE_UNDEFINED);
+
+        auto D3D12State = ResourceStateFlagsToD3D12ResourceStates(GetState());
         auto hr = pd3d12Device->CreateCommittedResource( &HeapProps, D3D12_HEAP_FLAG_NONE,
-		    &D3D12BuffDesc, m_UsageState, nullptr, __uuidof(m_pd3d12Resource), reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&m_pd3d12Resource)) );
+		    &D3D12BuffDesc, D3D12State, nullptr, __uuidof(m_pd3d12Resource), reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&m_pd3d12Resource)) );
         if(FAILED(hr))
             LOG_ERROR_AND_THROW("Failed to create D3D12 buffer");
 
@@ -158,7 +162,7 @@ BufferD3D12Impl :: BufferD3D12Impl(IReferenceCounters*          pRefCounters,
 	        UploadHeapProps.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
 	        UploadHeapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
 	        UploadHeapProps.CreationNodeMask     = 1;
-	        UploadHeapProps.VisibleNodeMask         = 1;
+	        UploadHeapProps.VisibleNodeMask      = 1;
 
             D3D12BuffDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
             CComPtr<ID3D12Resource> UploadBuffer;
@@ -177,7 +181,7 @@ BufferD3D12Impl :: BufferD3D12Impl(IReferenceCounters*          pRefCounters,
 
             auto InitContext = pRenderDeviceD3D12->AllocateCommandContext();
 	        // copy data to the intermediate upload heap and then schedule a copy from the upload heap to the default buffer
-            VERIFY_EXPR(m_UsageState == D3D12_RESOURCE_STATE_COPY_DEST);
+            VERIFY_EXPR(CheckState(RESOURCE_STATE_COPY_DEST));
             // We MUST NOT call TransitionResource() from here, because
             // it will call AddRef() and potentially Release(), while 
             // the object is not constructed yet
@@ -262,6 +266,7 @@ BufferD3D12Impl :: BufferD3D12Impl(IReferenceCounters*        pRefCounters,
                                    FixedBlockMemoryAllocator& BuffViewObjMemAllocator, 
                                    RenderDeviceD3D12Impl*     pRenderDeviceD3D12, 
                                    const BufferDesc&          BuffDesc,
+                                   RESOURCE_STATE             InitialState,
                                    ID3D12Resource*            pd3d12Buffer) : 
     TBufferBase
     {
@@ -282,6 +287,7 @@ BufferD3D12Impl :: BufferD3D12Impl(IReferenceCounters*        pRefCounters,
     }
 {
     m_pd3d12Resource = pd3d12Buffer;
+    SetState(InitialState);
 
     if (m_Desc.BindFlags & BIND_UNIFORM_BUFFER)
     {
@@ -542,8 +548,13 @@ void BufferD3D12Impl::DvpVerifyDynamicAllocation(DeviceContextD3D12Impl* pCtx)co
 	auto CurrentFrame = pCtx->GetCurrentFrameNumber();
     DEV_CHECK_ERR(m_DynamicData[ContextId].GPUAddress != 0, "Dynamic buffer '", m_Desc.Name, "' has not been mapped before its first use. Context Id: ", ContextId, ". Note: memory for dynamic buffers is allocated when a buffer is mapped.");
     DEV_CHECK_ERR(m_DynamicData[ContextId].DvpCtxFrameNumber == static_cast<Uint64>(CurrentFrame), "Dynamic allocation of dynamic buffer '", m_Desc.Name, "' in frame ", CurrentFrame, " is out-of-date. Note: contents of all dynamic resources is discarded at the end of every frame. A buffer must be mapped before its first use in any frame.");
-    VERIFY(GetState() == D3D12_RESOURCE_STATE_GENERIC_READ, "Dynamic buffers are expected to always be in D3D12_RESOURCE_STATE_GENERIC_READ state");
+    VERIFY(GetState() == RESOURCE_STATE_GENERIC_READ, "Dynamic buffers are expected to always be in RESOURCE_STATE_GENERIC_READ state");
 }
 #endif
+
+void BufferD3D12Impl::SetD3D12ResourceState(D3D12_RESOURCE_STATES state)
+{
+    SetState(D3D12ResourceStatesToResourceStateFlags(state));
+}
 
 }

@@ -32,6 +32,9 @@
 /// Graphics engine namespace
 namespace Diligent
 {
+    class ITexture;
+    class IBuffer;
+
     /// Value type
 
     /// This enumeration describes value type. It is used by
@@ -63,15 +66,15 @@ namespace Diligent
     {
         BIND_NONE               = 0x0L, ///< Undefined binding
         BIND_VERTEX_BUFFER	    = 0x1L, ///< A buffer can be bound as a vertex buffer
-	    BIND_INDEX_BUFFER	    = 0x2L, ///< A buffer can be bound as an index buffer
-	    BIND_UNIFORM_BUFFER	    = 0x4L, ///< A buffer can be bound as a uniform buffer
+        BIND_INDEX_BUFFER	    = 0x2L, ///< A buffer can be bound as an index buffer
+        BIND_UNIFORM_BUFFER	    = 0x4L, ///< A buffer can be bound as a uniform buffer
                                         ///  \warning This flag may not be combined with any other bind flag
-	    BIND_SHADER_RESOURCE	= 0x8L, ///< A buffer or a texture can be bound as a shader resource
+        BIND_SHADER_RESOURCE	= 0x8L, ///< A buffer or a texture can be bound as a shader resource
                                         ///  \warning This flag cannot be used with MAP_WRITE_NO_OVERWRITE flag 
-	    BIND_STREAM_OUTPUT	    = 0x10L,///< A buffer can be bound as a target for stream output stage
-	    BIND_RENDER_TARGET	    = 0x20L,///< A texture can be bound as a render target
-	    BIND_DEPTH_STENCIL	    = 0x40L,///< A texture can be bound as a depth-stencil target
-	    BIND_UNORDERED_ACCESS	= 0x80L,///< A buffer or a texture can be bound as an unordered access view
+        BIND_STREAM_OUTPUT	    = 0x10L,///< A buffer can be bound as a target for stream output stage
+        BIND_RENDER_TARGET	    = 0x20L,///< A texture can be bound as a render target
+        BIND_DEPTH_STENCIL	    = 0x40L,///< A texture can be bound as a depth-stencil target
+        BIND_UNORDERED_ACCESS	= 0x80L,///< A buffer or a texture can be bound as an unordered access view
         BIND_INDIRECT_DRAW_ARGS	= 0x100L///< A buffer can be bound as the source buffer for indirect draw commands
     };
 
@@ -125,17 +128,17 @@ namespace Diligent
     /// - ITexture::Map to describe texture mapping type
     enum MAP_TYPE : Uint8
     {
-        /// Resource is mapped for reading. \n
+        /// The resource is mapped for reading. \n
         /// D3D11 counterpart: D3D11_MAP_READ. OpenGL counterpart: GL_MAP_READ_BIT
         MAP_READ = 0x01,       
 
-        /// Resource is mapped for writing. \n
+        /// The resource is mapped for writing. \n
         /// D3D11 counterpart: D3D11_MAP_WRITE. OpenGL counterpart: GL_MAP_WRITE_BIT
-	    MAP_WRITE = 0x02,          
+        MAP_WRITE = 0x02,          
 
-        /// Resource is mapped for reading and writing. \n
+        /// The resource is mapped for reading and writing. \n
         /// D3D11 counterpart: D3D11_MAP_READ_WRITE. OpenGL counterpart: GL_MAP_WRITE_BIT | GL_MAP_READ_BIT
-	    MAP_READ_WRITE = 0x03
+        MAP_READ_WRITE = 0x03
     };
 
     /// Special map flags
@@ -156,13 +159,13 @@ namespace Diligent
         /// Previous contents of the resource will be undefined. This flag is only compatible with MAP_WRITE\n
         /// D3D11 counterpart: D3D11_MAP_WRITE_DISCARD. OpenGL counterpart: GL_MAP_INVALIDATE_BUFFER_BIT
         /// \note OpenGL implementation may orphan a buffer instead 
-	    MAP_FLAG_DISCARD = 0x002,
+        MAP_FLAG_DISCARD = 0x002,
 
         /// The system will not synchronize pending operations before mapping the buffer. It is responsibility
         /// of the application to make sure that the buffer contents is not overwritten while it is in use by 
         /// the GPU.\n
         /// D3D11 counterpart:  D3D11_MAP_WRITE_NO_OVERWRITE. OpenGL counterpart: GL_MAP_UNSYNCHRONIZED_BIT
-	    MAP_FLAG_DO_NOT_SYNCHRONIZE = 0x004
+        MAP_FLAG_DO_NOT_SYNCHRONIZE = 0x004
     };
 
     /// Describes resource dimension
@@ -782,8 +785,8 @@ namespace Diligent
     {
         FILTER_TYPE_UNKNOWN  = 0,           ///< Unknown filter type
         FILTER_TYPE_POINT,                  ///< Point filtering
-	    FILTER_TYPE_LINEAR,                 ///< Linear filtering
-	    FILTER_TYPE_ANISOTROPIC,            ///< Anisotropic filtering
+        FILTER_TYPE_LINEAR,                 ///< Linear filtering
+        FILTER_TYPE_ANISOTROPIC,            ///< Anisotropic filtering
         FILTER_TYPE_COMPARISON_POINT,       ///< Comparison-point filtering
         FILTER_TYPE_COMPARISON_LINEAR,      ///< Comparison-linear filtering
         FILTER_TYPE_COMPARISON_ANISOTROPIC, ///< Comparison-anisotropic filtering
@@ -814,24 +817,24 @@ namespace Diligent
 
         /// Flip the texture at every integer junction. \n
         /// Direct3D Counterpart: D3D11_TEXTURE_ADDRESS_MIRROR/D3D12_TEXTURE_ADDRESS_MODE_MIRROR. OpenGL counterpart: GL_MIRRORED_REPEAT
-	    TEXTURE_ADDRESS_MIRROR	= 2,
+        TEXTURE_ADDRESS_MIRROR	= 2,
 
         /// Texture coordinates outside the range [0.0, 1.0] are set to the 
         /// texture color at 0.0 or 1.0, respectively. \n
         /// Direct3D Counterpart: D3D11_TEXTURE_ADDRESS_CLAMP/D3D12_TEXTURE_ADDRESS_MODE_CLAMP. OpenGL counterpart: GL_CLAMP_TO_EDGE
-	    TEXTURE_ADDRESS_CLAMP	= 3,
+        TEXTURE_ADDRESS_CLAMP	= 3,
 
         /// Texture coordinates outside the range [0.0, 1.0] are set to the border color specified
         /// specified in SamplerDesc structure. \n
         /// Direct3D Counterpart: D3D11_TEXTURE_ADDRESS_BORDER/D3D12_TEXTURE_ADDRESS_MODE_BORDER. OpenGL counterpart: GL_CLAMP_TO_BORDER
-	    TEXTURE_ADDRESS_BORDER	= 4,
+        TEXTURE_ADDRESS_BORDER	= 4,
 
         /// Similar to TEXTURE_ADDRESS_MIRROR and TEXTURE_ADDRESS_CLAMP. Takes the absolute 
         /// value of the texture coordinate (thus, mirroring around 0), and then clamps to 
         /// the maximum value. \n
         /// Direct3D Counterpart: D3D11_TEXTURE_ADDRESS_MIRROR_ONCE/D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE. OpenGL counterpart: GL_MIRROR_CLAMP_TO_EDGE
         /// \note GL_MIRROR_CLAMP_TO_EDGE is only available in OpenGL4.4+, and is not available until at least OpenGLES3.1
-	    TEXTURE_ADDRESS_MIRROR_ONCE	= 5,
+        TEXTURE_ADDRESS_MIRROR_ONCE	= 5,
 
         /// Helper value that stores the total number of texture address modes in the enumeration
         TEXTURE_ADDRESS_NUM_MODES
@@ -856,28 +859,28 @@ namespace Diligent
 
         /// Comparison passes if the source data is less than the destination data.\n
         /// Direct3D counterpart: D3D11_COMPARISON_LESS/D3D12_COMPARISON_FUNC_LESS. OpenGL counterpart: GL_LESS.
-	    COMPARISON_FUNC_LESS,
+        COMPARISON_FUNC_LESS,
 
         /// Comparison passes if the source data is equal to the destination data.\n
         /// Direct3D counterpart: D3D11_COMPARISON_EQUAL/D3D12_COMPARISON_FUNC_EQUAL. OpenGL counterpart: GL_EQUAL.
-	    COMPARISON_FUNC_EQUAL,
+        COMPARISON_FUNC_EQUAL,
 
         /// Comparison passes if the source data is less than or equal to the destination data.\n
         /// Direct3D counterpart: D3D11_COMPARISON_LESS_EQUAL/D3D12_COMPARISON_FUNC_LESS_EQUAL. OpenGL counterpart: GL_LEQUAL.
-	    COMPARISON_FUNC_LESS_EQUAL,
+        COMPARISON_FUNC_LESS_EQUAL,
 
         /// Comparison passes if the source data is greater than the destination data.\n
         /// Direct3D counterpart: 3D11_COMPARISON_GREATER/D3D12_COMPARISON_FUNC_GREATER. OpenGL counterpart: GL_GREATER.
-	    COMPARISON_FUNC_GREATER,
+        COMPARISON_FUNC_GREATER,
 
         /// Comparison passes if the source data is not equal to the destination data.\n
         /// Direct3D counterpart: D3D11_COMPARISON_NOT_EQUAL/D3D12_COMPARISON_FUNC_NOT_EQUAL. OpenGL counterpart: GL_NOTEQUAL.
-	    COMPARISON_FUNC_NOT_EQUAL,
+        COMPARISON_FUNC_NOT_EQUAL,
         
         /// Comparison passes if the source data is greater than or equal to the destination data.\n
         /// Direct3D counterpart: D3D11_COMPARISON_GREATER_EQUAL/D3D12_COMPARISON_FUNC_GREATER_EQUAL. OpenGL counterpart: GL_GEQUAL.
-	    COMPARISON_FUNC_GREATER_EQUAL,
-	    
+        COMPARISON_FUNC_GREATER_EQUAL,
+        
         /// Comparison always passes. \n
         /// Direct3D counterpart: D3D11_COMPARISON_ALWAYS/D3D12_COMPARISON_FUNC_ALWAYS. OpenGL counterpart: GL_ALWAYS.
         COMPARISON_FUNC_ALWAYS,
@@ -1257,13 +1260,13 @@ namespace Diligent
             1024   // D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER
         };
 
-		/// This is the size of the chunk that dynamic descriptor allocations manager
-		/// request from the main GPU descriptor heap.
-		Uint32 DynamicDescriptorAllocationChunkSize[2] = 
-		{
-			256,  // D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
-			32    // D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER
-		};
+        /// This is the size of the chunk that dynamic descriptor allocations manager
+        /// request from the main GPU descriptor heap.
+        Uint32 DynamicDescriptorAllocationChunkSize[2] = 
+        {
+            256,  // D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
+            32    // D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER
+        };
 
         /// Number of commands to flush the command list. Only draw/dispatch commands count
         /// towards the limit. Command lists are only flushed when pipeline state is changed
@@ -1578,5 +1581,150 @@ namespace Diligent
         /// A bitmask specifying all the supported sample counts for this texture format.
         /// If the format supports n samples, then (SampleCounts & n) != 0
         Uint32 SampleCounts = 0;
+    };
+
+    /// Resource usage state
+    enum RESOURCE_STATE : Uint32
+    {
+        /// The resource state is not known to the engine and is managed by the application
+        RESOURCE_STATE_UNKNOWN              = 0x0000,
+
+        /// The resource state is known to the engine, but is undefined. A resource is typically in an undefined state right after initialization.
+        RESOURCE_STATE_UNDEFINED            = 0x0001,
+
+        /// The resource is accessed as vertex buffer
+        RESOURCE_STATE_VERTEX_BUFFER        = 0x0002,
+
+        /// The resource is accessed as constant (uniform) buffer
+        RESOURCE_STATE_CONSTANT_BUFFER      = 0x0004,
+
+        /// The resource is accessed as index buffer
+        RESOURCE_STATE_INDEX_BUFFER         = 0x0008,
+
+        /// The resource is accessed as render target
+        RESOURCE_STATE_RENDER_TARGET        = 0x0010,
+        
+        /// The resource is used for unordered access
+        RESOURCE_STATE_UNORDERED_ACCESS     = 0x0020,
+
+        /// The resource is used in a writable depth-stencil view or in clear operation
+        RESOURCE_STATE_DEPTH_WRITE          = 0x0040,
+
+        /// The resource is used in a read-only depth-stencil view
+        RESOURCE_STATE_DEPTH_READ           = 0x0080,
+
+        /// The resource is accessed from a shader
+        RESOURCE_STATE_SHADER_RESOURCE      = 0x0100,
+        
+        /// The resource is used as the destination for stream output
+        RESOURCE_STATE_STREAM_OUT           = 0x0200,
+
+        /// The resource is used as indirect draw/dispatch arguments buffer
+        RESOURCE_STATE_INDIRECT_ARGUMENT    = 0x0400,
+
+        /// The resource is used as the destination in a copy operation
+        RESOURCE_STATE_COPY_DEST            = 0x0800,
+
+        /// The resource is used as the source in a copy operation 
+        RESOURCE_STATE_COPY_SOURCE          = 0x1000,
+        
+        /// The resource is used as the destination in a resolve operation 
+        RESOURCE_STATE_RESOLVE_DEST         = 0x2000,
+        
+        /// The resource is used as the source in a resolve operation 
+        RESOURCE_STATE_RESOLVE_SOURCE       = 0x4000,
+
+        /// The resource is used for present
+        RESOURCE_STATE_PRESENT              = 0x8000,
+
+        RESOURCE_STATE_MAX_BIT              = 0x8000,
+
+        RESOURCE_STATE_GENERIC_READ         = RESOURCE_STATE_VERTEX_BUFFER     |
+                                              RESOURCE_STATE_CONSTANT_BUFFER   |
+                                              RESOURCE_STATE_INDEX_BUFFER      |
+                                              RESOURCE_STATE_SHADER_RESOURCE   |
+                                              RESOURCE_STATE_INDIRECT_ARGUMENT |
+                                              RESOURCE_STATE_COPY_SOURCE
+    };
+
+
+    /// Resource state transition barrier description
+    struct StateTransitionDesc
+    {
+        static constexpr const Uint32 AllMipLevels   = static_cast<Uint32>(-1);
+        static constexpr const Uint32 AllArraySlices = static_cast<Uint32>(-1);
+        
+        /// Texture to transition.
+        /// \note Exactly one of pTexture or pBuffer must be non-null.
+        ITexture* pTexture       = nullptr;
+        
+        /// Buffer to transition.
+        /// \note Exactly one of pTexture or pBuffer must be non-null.
+        IBuffer* pBuffer         = nullptr;
+        
+        /// When transitioning a texture, first mip level of the subresource range to transition.
+        Uint32 FirstMipLevel     = 0;
+
+        /// When transitioning a texture, number of mip levels of the subresource range to transition.
+        Uint32 MipLevelsCount    = AllMipLevels;
+
+        /// When transitioning a texture, first array slice of the subresource range to transition.
+        Uint32 FirstArraySlice   = 0;
+
+        /// When transitioning a texture, number of array slices of the subresource range to transition.
+        Uint32 ArraySliceCount   = AllArraySlices;
+
+        /// Resource state before transition. If this value is RESOURCE_STATE_UNKNOWN,
+        /// internal resource state will be used, which must be defined in this case.
+        RESOURCE_STATE OldState = RESOURCE_STATE_UNKNOWN;
+
+        /// Resource state after transition.
+        RESOURCE_STATE NewState  = RESOURCE_STATE_UNKNOWN;
+
+        /// If set to true, the internal resource state will be set to NewState and the engine
+        /// will be able to take the resource state management. In this case it is the 
+        /// responsibility of the application to make sure that all subresources are indeed in
+        /// designated state.
+        /// If set to false, internal resource state will be set to RESOURCE_STATE_UNKNOWN, and the 
+        /// engine will not manage or check the resource state in all further operations until the
+        /// state is set to a known value.
+        bool UpdateResourceState = false;
+
+        StateTransitionDesc(){}
+
+        StateTransitionDesc(ITexture*      _pTexture, 
+                            RESOURCE_STATE _OldState,
+                            RESOURCE_STATE _NewState, 
+                            Uint32         _FirstMipLevel   = 0,
+                            Uint32         _MipLevelsCount  = AllMipLevels,
+                            Uint32         _FirstArraySlice = 0,
+                            Uint32         _ArraySliceCount = AllArraySlices,
+                            bool           _UpdateState     = false) : 
+            pTexture            (_pTexture),
+            FirstMipLevel       (_FirstMipLevel),
+            MipLevelsCount      (_MipLevelsCount),
+            FirstArraySlice     (_FirstArraySlice),
+            ArraySliceCount     (_ArraySliceCount),
+            OldState            (_OldState),
+            NewState            (_NewState),
+            UpdateResourceState (_UpdateState)
+        {}
+
+        StateTransitionDesc(ITexture*      _pTexture, 
+                            RESOURCE_STATE _OldState,
+                            RESOURCE_STATE _NewState, 
+                            bool           _UpdateState) :
+            StateTransitionDesc(_pTexture, _OldState, _NewState, 0, AllMipLevels, 0, AllArraySlices, _UpdateState)
+        {}
+
+        StateTransitionDesc(IBuffer*       _pBuffer, 
+                            RESOURCE_STATE _OldState,
+                            RESOURCE_STATE _NewState,
+                            bool           _UpdateState) : 
+            pBuffer             (_pBuffer),
+            OldState            (_OldState),
+            NewState            (_NewState),
+            UpdateResourceState (_UpdateState)
+        {}
     };
 }

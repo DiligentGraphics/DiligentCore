@@ -27,6 +27,7 @@
 /// Implementation of the Diligent::TextureBase template class
 
 #include "Texture.h"
+#include "GraphicsTypes.h"
 #include "DeviceObjectBase.h"
 #include "GraphicsAccessories.h"
 #include "STDAllocator.h"
@@ -107,7 +108,7 @@ public:
             }
             else
             {
-                UNEXPECTED( "Unkwnown texture type" );
+                UNEXPECTED( "Unknown texture type" );
             }
         }
 
@@ -178,6 +179,28 @@ public:
     /// The function calls CreateViewInternal().
     void CreateDefaultViews();
 
+    virtual void SetState(RESOURCE_STATE State)override final
+    {
+        this->m_State = State;
+    }
+
+    virtual RESOURCE_STATE GetState() const override final
+    {
+        return this->m_State;
+    }
+
+    bool IsInKnownState() const 
+    {
+        return this->m_State != RESOURCE_STATE_UNKNOWN;
+    }
+
+    bool CheckState(RESOURCE_STATE State)const
+    {
+        VERIFY((State & (State-1)) == 0, "Single state is expected");
+        VERIFY(IsInKnownState(), "Texture state is unknown");
+        return (this->m_State & State) == State;
+    }
+
 protected:
     
     /// Pure virtual function that creates texture view for the specific engine implementation.
@@ -210,6 +233,8 @@ protected:
     }
 
     void CorrectTextureViewDesc( struct TextureViewDesc& ViewDesc );
+
+    RESOURCE_STATE m_State = RESOURCE_STATE_UNKNOWN;
 };
 
 

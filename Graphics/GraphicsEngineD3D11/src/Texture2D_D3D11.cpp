@@ -111,10 +111,12 @@ static TextureDesc TexDescFromD3D11Texture2D(ID3D11Texture2D *pd3d11Texture)
 Texture2D_D3D11 :: Texture2D_D3D11(IReferenceCounters*        pRefCounters, 
                                    FixedBlockMemoryAllocator& TexViewObjAllocator, 
                                    RenderDeviceD3D11Impl*     pDeviceD3D11, 
+                                   RESOURCE_STATE             InitialState,
                                    ID3D11Texture2D*           pd3d11Texture) : 
     TextureBaseD3D11(pRefCounters, TexViewObjAllocator, pDeviceD3D11, TexDescFromD3D11Texture2D(pd3d11Texture), TextureData())
 {
     m_pd3d11Texture = pd3d11Texture;
+    SetState(InitialState);
 }
 
 Texture2D_D3D11 :: ~Texture2D_D3D11()

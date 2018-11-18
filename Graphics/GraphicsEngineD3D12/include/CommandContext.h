@@ -83,10 +83,20 @@ public:
         m_pCommandList->CopyResource(pDstRes, pSrcRes);
     }
 
-    void TransitionResource(ITextureD3D12 *pTexture, D3D12_RESOURCE_STATES NewState, bool FlushImmediate = false);
-    void TransitionResource(IBufferD3D12 *pBuffer, D3D12_RESOURCE_STATES NewState, bool FlushImmediate = false);
+    void TransitionResource(ITextureD3D12 *pTexture, RESOURCE_STATE NewState);
+    void TransitionResource(IBufferD3D12 *pBuffer, RESOURCE_STATE NewState);
+    void TransitionResource(const StateTransitionDesc& Barrier);
 	//void BeginResourceTransition(GpuResource& Resource, D3D12_RESOURCE_STATES NewState, bool FlushImmediate = false);
-	void FlushResourceBarriers();
+	
+    void FlushResourceBarriers()
+    {
+	    if (!m_PendingResourceBarriers.empty())
+        {
+	        m_pCommandList->ResourceBarrier(static_cast<UINT>(m_PendingResourceBarriers.size()), m_PendingResourceBarriers.data());
+	        m_PendingResourceBarriers.clear();
+        }
+    }
+
 
     struct ShaderDescriptorHeaps
     {
@@ -123,7 +133,7 @@ public:
         return m_DynamicGPUDescriptorAllocators[Type].Allocate(Count);
     }
 
-    void InsertUAVBarrier(D3D12ResourceBase& Resource, IDeviceObject &Object, bool FlushImmediate = false);
+    void InsertUAVBarrier(ID3D12Resource* pd3d12Resource);
 
 	void SetPipelineState( ID3D12PipelineState* pPSO )
     {
@@ -139,8 +149,7 @@ public:
     }
 
 protected:
-    void TransitionResource(D3D12ResourceBase& Resource, IDeviceObject &Object, D3D12_RESOURCE_STATES NewState, bool FlushImmediate);
-    void InsertAliasBarrier(D3D12ResourceBase& Before, D3D12ResourceBase& After, IDeviceObject &BeforeObj, IDeviceObject &AfterObj, bool FlushImmediate = false);
+    void InsertAliasBarrier(D3D12ResourceBase& Before, D3D12ResourceBase& After, bool FlushImmediate = false);
 
 	CComPtr<ID3D12GraphicsCommandList> m_pCommandList;
 	CComPtr<ID3D12CommandAllocator>    m_pCurrentAllocator;
@@ -151,11 +160,6 @@ protected:
 
     static constexpr int MaxPendingBarriers = 16;
 	std::vector<D3D12_RESOURCE_BARRIER, STDAllocatorRawMem<D3D12_RESOURCE_BARRIER> > m_PendingResourceBarriers;
-    // We must make sure that all referenced objects are alive until barriers are executed
-    // Keeping reference to ID3D12Resource is not sufficient!
-    // TextureD3D12Impl::~TextureD3D12Impl() and BufferD3D12Impl::~BufferD3D12Impl()
-    // are responsible for putting the D3D12 resource in the release queue
-    std::vector< RefCntAutoPtr<IDeviceObject>, STDAllocatorRawMem<RefCntAutoPtr<IDeviceObject>> >  m_PendingBarrierObjects;
 
     ShaderDescriptorHeaps m_BoundDescriptorHeaps;
     

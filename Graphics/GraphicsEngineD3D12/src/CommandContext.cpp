@@ -22,10 +22,13 @@
  */
 
 #include "pch.h"
+#include "d3dx12_win.h"
 #include "CommandContext.h"
 #include "TextureD3D12Impl.h"
 #include "BufferD3D12Impl.h"
 #include "CommandListManager.h"
+#include "D3D12TypeConversions.h"
+
 
 namespace Diligent
 {
@@ -34,12 +37,9 @@ CommandContext::CommandContext( CommandListManager& CmdListManager) :
 	m_pCurGraphicsRootSignature (nullptr),
 	m_pCurPipelineState         (nullptr),
 	m_pCurComputeRootSignature  (nullptr),
-    m_PendingResourceBarriers( STD_ALLOCATOR_RAW_MEM(D3D12_RESOURCE_BARRIER, GetRawAllocator(), "Allocator for vector<D3D12_RESOURCE_BARRIER>") ),
-    m_PendingBarrierObjects( STD_ALLOCATOR_RAW_MEM(RefCntAutoPtr<IDeviceObject>, GetRawAllocator(), "Allocator for vector<RefCntAutoPtr<IDeviceObject>>") )
+    m_PendingResourceBarriers( STD_ALLOCATOR_RAW_MEM(D3D12_RESOURCE_BARRIER, GetRawAllocator(), "Allocator for vector<D3D12_RESOURCE_BARRIER>") )
 {
     m_PendingResourceBarriers.reserve(MaxPendingBarriers);
-    m_PendingBarrierObjects.reserve(MaxPendingBarriers);
-
     CmdListManager.CreateNewCommandList(&m_pCommandList, &m_pCurrentAllocator);
 }
 
@@ -66,7 +66,6 @@ void CommandContext::Reset( CommandListManager& CmdListManager )
 	m_pCurGraphicsRootSignature = nullptr;
 	m_pCurComputeRootSignature = nullptr;
 	m_PendingResourceBarriers.clear();
-    m_PendingBarrierObjects.clear();
     m_BoundDescriptorHeaps = ShaderDescriptorHeaps();
     
     m_DynamicGPUDescriptorAllocators = nullptr;
@@ -101,8 +100,9 @@ void GraphicsContext::SetRenderTargets( UINT NumRTVs, ITextureViewD3D12** ppRTVs
         auto *pRTV = ppRTVs[i];
         if( pRTV )
         {
-            auto *pTexture = ValidatedCast<TextureD3D12Impl>( pRTV->GetTexture() );
-	        TransitionResource(pTexture, D3D12_RESOURCE_STATE_RENDER_TARGET);
+            auto* pTexture = ValidatedCast<TextureD3D12Impl>( pRTV->GetTexture() );
+            if (pTexture->IsInKnownState() && !pTexture->CheckState(RESOURCE_STATE_RENDER_TARGET))
+	            TransitionResource(pTexture, RESOURCE_STATE_RENDER_TARGET);
 		    RTVHandles[i] = pRTV->GetCPUDescriptorHandle();
             VERIFY_EXPR(RTVHandles[i].ptr != 0);
         }
@@ -110,7 +110,7 @@ void GraphicsContext::SetRenderTargets( UINT NumRTVs, ITextureViewD3D12** ppRTVs
 
 	if (pDSV)
 	{
-        auto *pTexture = ValidatedCast<TextureD3D12Impl>( pDSV->GetTexture() );
+        auto* pTexture = ValidatedCast<TextureD3D12Impl>( pDSV->GetTexture() );
 		//if (bReadOnlyDepth)
 		//{
 		//	TransitionResource(*pTexture, D3D12_RESOURCE_STATE_DEPTH_READ);
@@ -118,7 +118,8 @@ void GraphicsContext::SetRenderTargets( UINT NumRTVs, ITextureViewD3D12** ppRTVs
 		//}
 		//else
 		{
-			TransitionResource(pTexture, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+            if (pTexture->IsInKnownState() && !pTexture->CheckState(RESOURCE_STATE_DEPTH_WRITE))
+			    TransitionResource(pTexture, RESOURCE_STATE_DEPTH_WRITE);
             auto DSVHandle = pDSV->GetCPUDescriptorHandle();
             VERIFY_EXPR(DSVHandle.ptr != 0);
 			m_pCommandList->OMSetRenderTargets( NumRTVs, RTVHandles, FALSE, &DSVHandle );
@@ -132,9 +133,10 @@ void GraphicsContext::SetRenderTargets( UINT NumRTVs, ITextureViewD3D12** ppRTVs
 
 void CommandContext::ClearUAVFloat( ITextureViewD3D12* pTexView, const float* Color )
 {
-    auto *pTexture = ValidatedCast<TextureD3D12Impl>( pTexView->GetTexture() );
-	TransitionResource(pTexture, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, true);
-
+    auto* pTexture = ValidatedCast<TextureD3D12Impl>( pTexView->GetTexture() );
+    if (pTexture->IsInKnownState() && !pTexture->CheckState(RESOURCE_STATE_UNORDERED_ACCESS))
+	    TransitionResource(pTexture, RESOURCE_STATE_UNORDERED_ACCESS);
+    FlushResourceBarriers();
 	// After binding a UAV, we can get a GPU handle that is required to clear it as a UAV (because it essentially runs
 	// a shader to set all of the values).
     UNSUPPORTED("Not yet implemented");
@@ -144,15 +146,16 @@ void CommandContext::ClearUAVFloat( ITextureViewD3D12* pTexView, const float* Co
 
 void CommandContext::ClearUAVUint( ITextureViewD3D12* pTexView, const UINT* Color  )
 {
-    auto *pTexture = ValidatedCast<TextureD3D12Impl>( pTexView->GetTexture() );
-	TransitionResource(pTexture, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, true);
+    auto* pTexture = ValidatedCast<TextureD3D12Impl>( pTexView->GetTexture() );
+    if (pTexture->IsInKnownState() && !pTexture->CheckState(RESOURCE_STATE_UNORDERED_ACCESS))
+	    TransitionResource(pTexture, RESOURCE_STATE_UNORDERED_ACCESS);
 
 	// After binding a UAV, we can get a GPU handle that is required to clear it as a UAV (because it essentially runs
 	// a shader to set all of the values).
     UNSUPPORTED("Not yet implemented");
     D3D12_GPU_DESCRIPTOR_HANDLE GpuVisibleHandle = {};//m_DynamicDescriptorHeap.UploadDirect(Target.GetUAV());
 	//CD3DX12_RECT ClearRect(0, 0, (LONG)Target.GetWidth(), (LONG)Target.GetHeight());
-
+    FlushResourceBarriers();
 	//TODO: My Nvidia card is not clearing UAVs with either Float or Uint variants.
 	m_pCommandList->ClearUnorderedAccessViewUint(GpuVisibleHandle, pTexView->GetCPUDescriptorHandle(), pTexture->GetD3D12Resource(), Color, 0, nullptr/*1, &ClearRect*/);
 }
@@ -161,124 +164,181 @@ void CommandContext::ClearUAVUint( ITextureViewD3D12* pTexView, const UINT* Colo
 void GraphicsContext::ClearRenderTarget( ITextureViewD3D12* pRTV, const float* Color )
 {
     auto *pTexture = ValidatedCast<TextureD3D12Impl>( pRTV->GetTexture() );
-	TransitionResource(pTexture, D3D12_RESOURCE_STATE_RENDER_TARGET, true);
+    if (pTexture->IsInKnownState() && !pTexture->CheckState(RESOURCE_STATE_RENDER_TARGET))
+	    TransitionResource(pTexture, RESOURCE_STATE_RENDER_TARGET);
+    FlushResourceBarriers();
 	m_pCommandList->ClearRenderTargetView(pRTV->GetCPUDescriptorHandle(), Color, 0, nullptr);
 }
 
 void GraphicsContext::ClearDepthStencil( ITextureViewD3D12* pDSV, D3D12_CLEAR_FLAGS ClearFlags, float Depth, UINT8 Stencil )
 {
     auto *pTexture = ValidatedCast<TextureD3D12Impl>( pDSV->GetTexture() );
-	TransitionResource( pTexture, D3D12_RESOURCE_STATE_DEPTH_WRITE, true);
+    if (pTexture->IsInKnownState() && !pTexture->CheckState(RESOURCE_STATE_DEPTH_WRITE))
+	    TransitionResource( pTexture, RESOURCE_STATE_DEPTH_WRITE);
+    FlushResourceBarriers();
 	m_pCommandList->ClearDepthStencilView(pDSV->GetCPUDescriptorHandle(), ClearFlags, Depth, Stencil, 0, nullptr);
 }
 
 
-void CommandContext::TransitionResource(ITextureD3D12* pTexture, D3D12_RESOURCE_STATES NewState, bool FlushImmediate)
+void CommandContext::TransitionResource(ITextureD3D12* pTexture, RESOURCE_STATE NewState)
 {
     VERIFY_EXPR( pTexture != nullptr );
-    auto *pTexD3D12 = ValidatedCast<TextureD3D12Impl>(pTexture);
-    TransitionResource(*pTexD3D12, *pTexD3D12, NewState, FlushImmediate);
+    auto* pTexD3D12 = ValidatedCast<TextureD3D12Impl>(pTexture);
+    VERIFY(pTexD3D12->IsInKnownState(), "Texture state can't be unknown");
+    StateTransitionDesc TextureBarrier(pTexture, RESOURCE_STATE_UNKNOWN, NewState, true);
+    TransitionResource(TextureBarrier);
 }
 
-void CommandContext::TransitionResource(IBufferD3D12* pBuffer, D3D12_RESOURCE_STATES NewState, bool FlushImmediate)
+void CommandContext::TransitionResource(IBufferD3D12* pBuffer, RESOURCE_STATE NewState)
 {
     VERIFY_EXPR( pBuffer != nullptr );
-    auto *pBuffD3D12 = ValidatedCast<BufferD3D12Impl>(pBuffer);
-
-#ifdef _DEBUG
-    // Dynamic buffers wtih no SRV/UAV bind flags are suballocated in 
-    // the upload heap when Map() is called and must always be in 
-    // D3D12_RESOURCE_STATE_GENERIC_READ state
-    if(pBuffD3D12->GetDesc().Usage == USAGE_DYNAMIC && (pBuffD3D12->GetDesc().BindFlags & (BIND_SHADER_RESOURCE|BIND_UNORDERED_ACCESS)) == 0)
-    {
-        VERIFY(pBuffD3D12->GetState() == D3D12_RESOURCE_STATE_GENERIC_READ, "Dynamic buffers that cannot be bound as SRV or UAV are expected to always be in D3D12_RESOURCE_STATE_GENERIC_READ state");
-        VERIFY( (NewState & D3D12_RESOURCE_STATE_GENERIC_READ) == NewState, "Dynamic buffers can only transition to one of D3D12_RESOURCE_STATE_GENERIC_READ states");
-    }
-#endif
-
-    TransitionResource(*pBuffD3D12, *pBuffD3D12, NewState, FlushImmediate);
-
-#ifdef _DEBUG
-    if(pBuffD3D12->GetDesc().Usage == USAGE_DYNAMIC && (pBuffD3D12->GetDesc().BindFlags & (BIND_SHADER_RESOURCE|BIND_UNORDERED_ACCESS)) == 0)
-        VERIFY(pBuffD3D12->GetState() == D3D12_RESOURCE_STATE_GENERIC_READ, "Dynamic buffers without SRV/UAV bind flag are expected to never transition from D3D12_RESOURCE_STATE_GENERIC_READ state");
-#endif
+    auto* pBuffD3D12 = ValidatedCast<BufferD3D12Impl>(pBuffer);
+    VERIFY(pBuffD3D12->IsInKnownState(), "Buffer state can't be unknown");
+    StateTransitionDesc BufferBarrier(pBuffer, RESOURCE_STATE_UNKNOWN, NewState, true);
+    TransitionResource(BufferBarrier);
 }
 
-void CommandContext::TransitionResource(D3D12ResourceBase& Resource, IDeviceObject& Object, D3D12_RESOURCE_STATES NewState, bool FlushImmediate)
-{
-	D3D12_RESOURCE_STATES OldState = Resource.GetState();
-
-    // Check if required state is already set
-	if ( (OldState & NewState) != NewState || NewState == 0 && OldState != 0 )
-	{
-        // If both old state and new state are read-only states, combine the two
-        if( (OldState & D3D12_RESOURCE_STATE_GENERIC_READ) == OldState &&
-            (NewState & D3D12_RESOURCE_STATE_GENERIC_READ) == NewState )
-            NewState |= OldState;
-        
-        m_PendingResourceBarriers.emplace_back();
-        m_PendingBarrierObjects.emplace_back(&Object);
-		D3D12_RESOURCE_BARRIER& BarrierDesc = m_PendingResourceBarriers.back();
-
-		BarrierDesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-		BarrierDesc.Transition.pResource = Resource.GetD3D12Resource();
-		BarrierDesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-		BarrierDesc.Transition.StateBefore = OldState;
-		BarrierDesc.Transition.StateAfter = NewState;
-
-		// Check to see if we already started the transition
-#if 0
-		if (NewState == Resource.m_TransitioningState)
-		{
-			BarrierDesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_END_ONLY;
-			Resource.m_TransitioningState = (D3D12_RESOURCE_STATES)-1;
-		}
-		else
-#endif
-			BarrierDesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-
-		Resource.SetState( NewState );
-	}
-	else if (NewState == D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
-		InsertUAVBarrier(Resource, Object, FlushImmediate);
-
-	if (FlushImmediate || m_PendingResourceBarriers.size() >= MaxPendingBarriers)
-        FlushResourceBarriers();
-}
-
-void CommandContext::FlushResourceBarriers()
-{
-	if (m_PendingResourceBarriers.empty())
-    {
-        VERIFY_EXPR(m_PendingBarrierObjects.empty());
-		return;
-    }
-
-	m_pCommandList->ResourceBarrier(static_cast<UINT>(m_PendingResourceBarriers.size()), m_PendingResourceBarriers.data());
-	m_PendingResourceBarriers.clear();
-    m_PendingBarrierObjects.clear();
-}
-
-
-void CommandContext::InsertUAVBarrier(D3D12ResourceBase& Resource, IDeviceObject& Object, bool FlushImmediate)
+void CommandContext::InsertUAVBarrier(ID3D12Resource* pd3d12Resource)
 {
     m_PendingResourceBarriers.emplace_back();
-    m_PendingBarrierObjects.emplace_back(&Object);
 	D3D12_RESOURCE_BARRIER& BarrierDesc = m_PendingResourceBarriers.back();
-
+    // UAV barrier indicates that all UAV accesses (reads or writes) to a particular resource
+    // must complete before any future UAV accesses (read or write) can begin.
 	BarrierDesc.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
 	BarrierDesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-	BarrierDesc.UAV.pResource = Resource.GetD3D12Resource();
+	BarrierDesc.UAV.pResource = pd3d12Resource;
+}
 
-	if (FlushImmediate)
+
+void CommandContext::TransitionResource(const StateTransitionDesc& Barrier)
+{
+    DEV_CHECK_ERR( (Barrier.pTexture != nullptr) ^ (Barrier.pBuffer != nullptr), "Exactly one of pTexture or pBuffer must not be null");
+   
+    DEV_CHECK_ERR(Barrier.NewState != RESOURCE_STATE_UNKNOWN, "New resource state can't be unknown");
+    RESOURCE_STATE    OldState          = RESOURCE_STATE_UNKNOWN;
+    ID3D12Resource*   pd3d12Resource    = nullptr;
+    TextureD3D12Impl* pTextureD3D12Impl = nullptr;
+    BufferD3D12Impl*  pBufferD3D12Impl  = nullptr;
+    if (Barrier.pTexture)
+    {
+        pTextureD3D12Impl = ValidatedCast<TextureD3D12Impl>(Barrier.pTexture);
+        pd3d12Resource = pTextureD3D12Impl->GetD3D12Resource();
+        OldState = pTextureD3D12Impl->GetState();
+    }
+    else
+    {
+        VERIFY_EXPR(Barrier.pBuffer != nullptr);
+        pBufferD3D12Impl = ValidatedCast<BufferD3D12Impl>(Barrier.pBuffer);
+        pd3d12Resource = pBufferD3D12Impl->GetD3D12Resource();
+        OldState = pBufferD3D12Impl->GetState();
+
+#ifdef DEVELOPMENT
+        // Dynamic buffers wtih no SRV/UAV bind flags are suballocated in 
+        // the upload heap when Map() is called and must always be in 
+        // D3D12_RESOURCE_STATE_GENERIC_READ state
+        if (pBufferD3D12Impl->GetDesc().Usage == USAGE_DYNAMIC && (pBufferD3D12Impl->GetDesc().BindFlags & (BIND_SHADER_RESOURCE|BIND_UNORDERED_ACCESS)) == 0)
+        {
+            DEV_CHECK_ERR(pBufferD3D12Impl->GetState() == D3D12_RESOURCE_STATE_GENERIC_READ, "Dynamic buffers that cannot be bound as SRV or UAV are expected to always be in D3D12_RESOURCE_STATE_GENERIC_READ state");
+            VERIFY( (Barrier.NewState & RESOURCE_STATE_GENERIC_READ) == Barrier.NewState, "Dynamic buffers can only transition to one of RESOURCE_STATE_GENERIC_READ states");
+        }
+#endif
+    }
+
+    if (OldState == RESOURCE_STATE_UNKNOWN)
+    {
+        DEV_CHECK_ERR(Barrier.OldState != RESOURCE_STATE_UNKNOWN, "When resource state is unknown (which means it is managed by the app), OldState member must not be RESOURCE_STATE_UNKNOWN");
+        OldState = Barrier.OldState;
+    }
+    else
+    {
+        DEV_CHECK_ERR(Barrier.OldState == RESOURCE_STATE_UNKNOWN || Barrier.OldState == OldState, "Resource state is known (", OldState, ") and does not match OldState (", Barrier.OldState, ") specified in resource barrier. Set OldState member to RESOURCE_STATE_UNKNOWN to make the engine use current resource state");
+    }
+
+    // Check if required state is already set
+    if ((OldState & Barrier.NewState) != Barrier.NewState)
+    {
+        auto NewState = Barrier.NewState;
+        // If both old state and new state are read-only states, combine the two
+        if( (OldState & RESOURCE_STATE_GENERIC_READ) == OldState &&
+            (NewState & RESOURCE_STATE_GENERIC_READ) == NewState )
+            NewState = static_cast<RESOURCE_STATE>(OldState | NewState);
+
+	    D3D12_RESOURCE_BARRIER BarrierDesc;
+		BarrierDesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+        BarrierDesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+		BarrierDesc.Transition.pResource   = pd3d12Resource;
+		BarrierDesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+        BarrierDesc.Transition.StateBefore = ResourceStateFlagsToD3D12ResourceStates(OldState);
+        BarrierDesc.Transition.StateAfter  = ResourceStateFlagsToD3D12ResourceStates(NewState);
+
+        if (pTextureD3D12Impl)
+        {
+            const auto& TexDesc = pTextureD3D12Impl->GetDesc();
+#ifdef DEVELOPMENT
+            {
+                DEV_CHECK_ERR(Barrier.FirstMipLevel < TexDesc.MipLevels, "First mip level (", Barrier.FirstMipLevel, ") specified by the barrier is "
+                             "out of range. Texture \'", TexDesc.Name, "\' has only ", TexDesc.MipLevels, " mip level(s)");
+                DEV_CHECK_ERR(Barrier.MipLevelsCount == StateTransitionDesc::AllMipLevels || Barrier.FirstMipLevel + Barrier.MipLevelsCount < TexDesc.MipLevels,
+                              "Mip level range ", Barrier.FirstMipLevel, "..", Barrier.FirstMipLevel+Barrier.MipLevelsCount-1, " "
+                              "specified by the barrier is out of range. Texture \'", TexDesc.Name, "\' has only ", TexDesc.MipLevels, " mip level(s)");
+
+                DEV_CHECK_ERR(Barrier.FirstArraySlice < TexDesc.ArraySize, "First array slice (", Barrier.FirstArraySlice, ") specified by the barrier is "
+                              "out of range. Array size of texture \'", TexDesc.Name, "\' is ", TexDesc.ArraySize);
+                DEV_CHECK_ERR(Barrier.ArraySliceCount == StateTransitionDesc::AllArraySlices || Barrier.FirstArraySlice + Barrier.ArraySliceCount < TexDesc.ArraySize,
+                              "Array slice range ", Barrier.FirstArraySlice, "..", Barrier.FirstArraySlice+Barrier.ArraySliceCount-1, " "
+                              "specified by the barrier is out of range. Array size of texture \'", TexDesc.Name, "\' is ", TexDesc.ArraySize);
+            }
+#endif
+            if (Barrier.FirstMipLevel   == 0 && (Barrier.MipLevelsCount  == StateTransitionDesc::AllMipLevels   || Barrier.MipLevelsCount  == TexDesc.MipLevels) &&
+                Barrier.FirstArraySlice == 0 && (Barrier.ArraySliceCount == StateTransitionDesc::AllArraySlices || Barrier.ArraySliceCount == TexDesc.ArraySize))
+            {
+                BarrierDesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+                m_PendingResourceBarriers.emplace_back(BarrierDesc);
+            }
+            else
+            {
+                Uint32 EndMip   = Barrier.MipLevelsCount  == StateTransitionDesc::AllMipLevels   ? TexDesc.MipLevels : Barrier.FirstMipLevel   + Barrier.MipLevelsCount;
+                Uint32 EndSlice = Barrier.ArraySliceCount == StateTransitionDesc::AllArraySlices ? TexDesc.ArraySize : Barrier.FirstArraySlice + Barrier.ArraySliceCount;
+                for(Uint32 mip = Barrier.FirstMipLevel; mip < EndMip; ++mip)
+                {
+                    for(Uint32 slice = Barrier.FirstArraySlice; slice < EndSlice; ++slice)
+                    {
+                        BarrierDesc.Transition.Subresource = D3D12CalcSubresource(mip, slice, 0, TexDesc.MipLevels, TexDesc.ArraySize);
+                        m_PendingResourceBarriers.emplace_back(BarrierDesc);
+                    }
+                }
+            }
+        }
+        else
+            m_PendingResourceBarriers.emplace_back(BarrierDesc);
+
+        if (pTextureD3D12Impl)
+        {
+            pTextureD3D12Impl->SetState(Barrier.UpdateResourceState ? NewState : RESOURCE_STATE_UNKNOWN);
+        }
+        else
+        {
+            VERIFY_EXPR(pBufferD3D12Impl);
+
+            pBufferD3D12Impl->SetState(Barrier.UpdateResourceState ? NewState : RESOURCE_STATE_UNKNOWN);
+
+            if (pBufferD3D12Impl->GetDesc().Usage == USAGE_DYNAMIC && (pBufferD3D12Impl->GetDesc().BindFlags & (BIND_SHADER_RESOURCE|BIND_UNORDERED_ACCESS)) == 0)
+                VERIFY(pBufferD3D12Impl->GetState() == RESOURCE_STATE_GENERIC_READ, "Dynamic buffers without SRV/UAV bind flag are expected to never transition from RESOURCE_STATE_GENERIC_READ state");
+        }
+    }
+
+    if (OldState == RESOURCE_STATE_UNORDERED_ACCESS && Barrier.NewState == RESOURCE_STATE_UNORDERED_ACCESS)
+    {
+        InsertUAVBarrier(pd3d12Resource);
+    }
+
+	if (m_PendingResourceBarriers.size() >= MaxPendingBarriers)
         FlushResourceBarriers();
 }
 
-void CommandContext::InsertAliasBarrier(D3D12ResourceBase& Before, D3D12ResourceBase& After, IDeviceObject& BeforeObj, IDeviceObject& AfterObj, bool FlushImmediate)
+void CommandContext::InsertAliasBarrier(D3D12ResourceBase& Before, D3D12ResourceBase& After, bool FlushImmediate)
 {
     m_PendingResourceBarriers.emplace_back();
-    m_PendingBarrierObjects.emplace_back(&BeforeObj);
-    m_PendingBarrierObjects.emplace_back(&AfterObj);
 	D3D12_RESOURCE_BARRIER& BarrierDesc = m_PendingResourceBarriers.back();
 
 	BarrierDesc.Type = D3D12_RESOURCE_BARRIER_TYPE_ALIASING;

@@ -44,6 +44,7 @@ public:
     Texture3D_D3D11(IReferenceCounters*          pRefCounters, 
                     FixedBlockMemoryAllocator&   TexViewObjAllocator, 
                     class RenderDeviceD3D11Impl* pDeviceD3D11, 
+                    RESOURCE_STATE               InitialState,
                     ID3D11Texture3D*             pd3d11Texture);
     ~Texture3D_D3D11();
 

@@ -27,6 +27,7 @@
 /// Implementation of the Diligent::BufferBase template class
 
 #include "Buffer.h"
+#include "GraphicsTypes.h"
 #include "DeviceObjectBase.h"
 #include "GraphicsAccessories.h"
 #include "STDAllocator.h"
@@ -140,6 +141,28 @@ public:
     /// The function calls CreateViewInternal().
     void CreateDefaultViews();
 
+    virtual void SetState(RESOURCE_STATE State)override final
+    {
+        this->m_State = State;
+    }
+
+    virtual RESOURCE_STATE GetState() const override final
+    {
+        return this->m_State;
+    }
+
+    bool IsInKnownState() const 
+    {
+        return this->m_State != RESOURCE_STATE_UNKNOWN;
+    }
+
+    bool CheckState(RESOURCE_STATE State)const
+    {
+        VERIFY((State & (State-1)) == 0, "Single state is expected");
+        VERIFY(IsInKnownState(), "Buffer state is unknown");
+        return (this->m_State & State) == State;
+    }
+
 protected:
 
     /// Pure virtual function that creates buffer view for the specific engine implementation.
@@ -151,6 +174,8 @@ protected:
 #ifdef _DEBUG
     TBuffViewObjAllocator& m_dbgBuffViewAllocator;
 #endif
+
+    RESOURCE_STATE m_State = RESOURCE_STATE_UNKNOWN;
 
     /// Default UAV addressing the entire buffer
     std::unique_ptr<BufferViewImplType, STDDeleter<BufferViewImplType, TBuffViewObjAllocator> > m_pDefaultUAV;

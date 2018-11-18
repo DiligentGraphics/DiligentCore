@@ -64,6 +64,7 @@ public:
                     FixedBlockMemoryAllocator&   BuffViewObjMemAllocator,
                     class RenderDeviceD3D11Impl* pDeviceD3D11, 
                     const BufferDesc&            BuffDesc, 
+                    RESOURCE_STATE               InitialState,
                     ID3D11Buffer*                pd3d11Buffer);
 
     ~BufferD3D11Impl();

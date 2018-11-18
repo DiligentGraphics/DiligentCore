@@ -439,11 +439,14 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*         pRefCounters,
                              FixedBlockMemoryAllocator&  TexViewObjAllocator,
                              RenderDeviceVkImpl*         pDeviceVk, 
                              const TextureDesc&          TexDesc,
+                             RESOURCE_STATE              InitialState,
                              VkImage                     VkImageHandle) :
     TTextureBase(pRefCounters, TexViewObjAllocator, pDeviceVk, TexDesc),
     m_VulkanImage(VkImageHandle)
 {
+    SetState(InitialState);
 }
+
 IMPLEMENT_QUERY_INTERFACE( TextureVkImpl, IID_TextureVk, TTextureBase )
 
 void TextureVkImpl::CreateViewInternal( const struct TextureViewDesc &ViewDesc, ITextureView **ppView, bool bIsDefaultView )

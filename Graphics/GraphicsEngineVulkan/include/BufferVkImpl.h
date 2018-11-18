@@ -59,6 +59,7 @@ public:
                  FixedBlockMemoryAllocator& BuffViewObjMemAllocator, 
                  class RenderDeviceVkImpl*  pDeviceVk, 
                  const BufferDesc&          BuffDesc, 
+                 RESOURCE_STATE             InitialState,
                  VkBuffer                   vkBuffer);
     ~BufferVkImpl();
 

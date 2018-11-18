@@ -161,6 +161,8 @@ public:
 
     virtual void FinishFrame()override final;
 
+    virtual void TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers)override final;
+
     VkDescriptorSet AllocateDynamicDescriptorSet(VkDescriptorSetLayout SetLayout)
     {
         // Descriptor pools are externally synchronized, meaning that the application must not allocate 

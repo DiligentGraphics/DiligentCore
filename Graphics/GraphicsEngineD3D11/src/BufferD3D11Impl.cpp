@@ -162,10 +162,12 @@ BufferD3D11Impl :: BufferD3D11Impl(IReferenceCounters*          pRefCounters,
                                    FixedBlockMemoryAllocator&   BuffViewObjMemAllocator,
                                    class RenderDeviceD3D11Impl* pDeviceD3D11, 
                                    const BufferDesc&            BuffDesc, 
+                                   RESOURCE_STATE               InitialState,
                                    ID3D11Buffer*                pd3d11Buffer) : 
     TBufferBase(pRefCounters, BuffViewObjMemAllocator, pDeviceD3D11, BuffDescFromD3D11Buffer(pd3d11Buffer, BuffDesc), false)
 {
     m_pd3d11Buffer = pd3d11Buffer;
+    SetState(InitialState);
 }
 
 BufferD3D11Impl :: ~BufferD3D11Impl()

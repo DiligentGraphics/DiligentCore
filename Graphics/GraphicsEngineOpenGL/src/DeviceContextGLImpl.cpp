@@ -1010,4 +1010,9 @@ namespace Diligent
         m_ContextState.SetCurrentGLContext(NativeGLContext);
         return true;
     }
+
+    void DeviceContextGLImpl::TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers)
+    {
+
+    }
 }

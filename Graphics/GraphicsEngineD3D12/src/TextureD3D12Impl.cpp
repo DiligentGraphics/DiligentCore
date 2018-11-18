@@ -156,11 +156,11 @@ TextureD3D12Impl :: TextureD3D12Impl(IReferenceCounters*        pRefCounters,
     }
 
     bool bInitializeTexture = (InitData.pSubResources != nullptr && InitData.NumSubresources > 0);
-    if(bInitializeTexture)
-        m_UsageState = D3D12_RESOURCE_STATE_COPY_DEST;
-
+    auto InitialState = bInitializeTexture ? RESOURCE_STATE_COPY_DEST : RESOURCE_STATE_UNDEFINED;
+    SetState(InitialState);
+    auto D3D12State = ResourceStateFlagsToD3D12ResourceStates(InitialState);
     auto hr = pd3d12Device->CreateCommittedResource( &HeapProps, D3D12_HEAP_FLAG_NONE,
-		&Desc, m_UsageState, pClearValue, __uuidof(m_pd3d12Resource), reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&m_pd3d12Resource)) );
+		&Desc, D3D12State, pClearValue, __uuidof(m_pd3d12Resource), reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&m_pd3d12Resource)) );
     if(FAILED(hr))
         LOG_ERROR_AND_THROW("Failed to create D3D12 texture");
 
@@ -204,7 +204,7 @@ TextureD3D12Impl :: TextureD3D12Impl(IReferenceCounters*        pRefCounters,
 
         auto InitContext = pRenderDeviceD3D12->AllocateCommandContext();
 	    // copy data to the intermediate upload heap and then schedule a copy from the upload heap to the default texture
-        VERIFY_EXPR(m_UsageState == D3D12_RESOURCE_STATE_COPY_DEST);
+        VERIFY_EXPR(CheckState(RESOURCE_STATE_COPY_DEST));
         std::vector<D3D12_SUBRESOURCE_DATA, STDAllocatorRawMem<D3D12_SUBRESOURCE_DATA> > D3D12SubResData(InitData.NumSubresources, D3D12_SUBRESOURCE_DATA(), STD_ALLOCATOR_RAW_MEM(D3D12_SUBRESOURCE_DATA, GetRawAllocator(), "Allocator for vector<D3D12_SUBRESOURCE_DATA>") );
         for(size_t subres=0; subres < D3D12SubResData.size(); ++subres)
         {
@@ -333,10 +333,12 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
                                    FixedBlockMemoryAllocator& TexViewObjAllocator,
                                    RenderDeviceD3D12Impl*     pDeviceD3D12, 
                                    const TextureDesc&         TexDesc, 
+                                   RESOURCE_STATE             InitialState,
                                    ID3D12Resource*            pTexture) : 
     TTextureBase(pRefCounters, TexViewObjAllocator, pDeviceD3D12, InitTexDescFromD3D12Resource(pTexture, TexDesc))
 {
     m_pd3d12Resource = pTexture;
+    SetState(InitialState);
 }
 IMPLEMENT_QUERY_INTERFACE( TextureD3D12Impl, IID_TextureD3D12, TTextureBase )
 
@@ -600,6 +602,11 @@ void TextureD3D12Impl::CreateUAV( TextureViewDesc& UAVDesc, D3D12_CPU_DESCRIPTOR
 
     auto *pDeviceD3D12 = static_cast<RenderDeviceD3D12Impl*>(GetDevice())->GetD3D12Device();
     pDeviceD3D12->CreateUnorderedAccessView( m_pd3d12Resource, nullptr, &D3D12_UAVDesc, UAVHandle );
+}
+
+void TextureD3D12Impl::SetD3D12ResourceState(D3D12_RESOURCE_STATES state)
+{
+    SetState(D3D12ResourceStatesToResourceStateFlags(state));
 }
 
 }

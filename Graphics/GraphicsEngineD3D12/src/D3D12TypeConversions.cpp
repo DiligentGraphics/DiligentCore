@@ -22,12 +22,16 @@
  */
 
 #include "pch.h"
+
+#include <array>
+
 #include "D3D12TypeConversions.h"
 #include "DXGITypeConversions.h"
 
 #include "D3D12TypeDefinitions.h"
 #include "D3DTypeConversionImpl.h"
 #include "D3DViewDescConversionImpl.h"
+#include "PlatformMisc.h"
 
 namespace Diligent
 {
@@ -301,6 +305,142 @@ D3D12_STATIC_BORDER_COLOR BorderColorToD3D12StaticBorderColor(const Float32 Bord
         LOG_ERROR_MESSAGE("Static samplers only allow transparent black (0,0,0,0), opaque black (0,0,0,1) or opaque white (1,1,1,1) as border colors.");
     }
     return StaticBorderColor;
+}
+
+
+static D3D12_RESOURCE_STATES ResourceStateFlagToD3D12ResourceState(RESOURCE_STATE StateFlag)
+{
+    static_assert(RESOURCE_STATE_MAX_BIT == 0x8000, "This function must be updated to handle new resource state flag");
+    VERIFY((StateFlag & (StateFlag-1)) == 0, "Only single bit must be set");
+    switch(StateFlag)
+    {
+        case RESOURCE_STATE_UNDEFINED:         return D3D12_RESOURCE_STATE_COMMON;
+        case RESOURCE_STATE_VERTEX_BUFFER:     return D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+        case RESOURCE_STATE_CONSTANT_BUFFER:   return D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+        case RESOURCE_STATE_INDEX_BUFFER:      return D3D12_RESOURCE_STATE_INDEX_BUFFER;
+        case RESOURCE_STATE_RENDER_TARGET:     return D3D12_RESOURCE_STATE_RENDER_TARGET;
+        case RESOURCE_STATE_UNORDERED_ACCESS:  return D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+        case RESOURCE_STATE_DEPTH_WRITE:       return D3D12_RESOURCE_STATE_DEPTH_WRITE;
+        case RESOURCE_STATE_DEPTH_READ:        return D3D12_RESOURCE_STATE_DEPTH_READ;
+        case RESOURCE_STATE_SHADER_RESOURCE:   return D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+        case RESOURCE_STATE_STREAM_OUT:        return D3D12_RESOURCE_STATE_STREAM_OUT;
+        case RESOURCE_STATE_INDIRECT_ARGUMENT: return D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT;
+        case RESOURCE_STATE_COPY_DEST:         return D3D12_RESOURCE_STATE_COPY_DEST;
+        case RESOURCE_STATE_COPY_SOURCE:       return D3D12_RESOURCE_STATE_COPY_SOURCE;
+        case RESOURCE_STATE_RESOLVE_DEST:      return D3D12_RESOURCE_STATE_RESOLVE_DEST;
+        case RESOURCE_STATE_RESOLVE_SOURCE:    return D3D12_RESOURCE_STATE_RESOLVE_SOURCE;
+        case RESOURCE_STATE_PRESENT:           return D3D12_RESOURCE_STATE_PRESENT;
+        default:
+            UNEXPECTED("Unexpected resource state flag");
+            return static_cast<D3D12_RESOURCE_STATES>(0);
+    }
+}
+
+class StateFlagBitPosToD3D12ResourceState
+{
+public:
+    StateFlagBitPosToD3D12ResourceState()
+    {
+        static_assert( (1 << MaxFlagBitPos) == RESOURCE_STATE_MAX_BIT, "This function must be updated to handle new resource state flag");
+        for (Uint32 bit=0; bit <= MaxFlagBitPos; ++bit)
+        {
+            FlagBitPosToResStateMap[bit] = ResourceStateFlagToD3D12ResourceState(static_cast<RESOURCE_STATE>(1<<bit));
+        }
+    }
+
+    D3D12_RESOURCE_STATES operator()(Uint32 BitPos)const
+    {
+        VERIFY(BitPos <= MaxFlagBitPos, "Resource state flag bit position (", BitPos, ") exceeds max bit position (", MaxFlagBitPos, ")");
+        return FlagBitPosToResStateMap[BitPos];
+    }
+
+private:
+    static constexpr Uint32 MaxFlagBitPos = 15;
+    std::array<D3D12_RESOURCE_STATES, MaxFlagBitPos + 1> FlagBitPosToResStateMap;
+};
+
+D3D12_RESOURCE_STATES ResourceStateFlagsToD3D12ResourceStates(RESOURCE_STATE StateFlags)
+{
+    VERIFY(StateFlags < (RESOURCE_STATE_MAX_BIT<<1), "Resource state flags are out of range");
+    static const StateFlagBitPosToD3D12ResourceState BitPosToD3D12ResState;
+    Uint32 D3D12ResourceStates = 0;
+    Uint32 Bits = StateFlags;
+    while(Bits != 0)
+    {
+        auto lsb = PlatformMisc::GetLSB(Bits);
+        D3D12ResourceStates |= BitPosToD3D12ResState(lsb);
+        Bits &= ~(1<<lsb);
+    }
+    return static_cast<D3D12_RESOURCE_STATES>(D3D12ResourceStates);
+}
+
+
+static RESOURCE_STATE D3D12ResourceStateToResourceStateFlags(D3D12_RESOURCE_STATES state)
+{
+    static_assert(RESOURCE_STATE_MAX_BIT == 0x8000, "This function must be updated to handle new resource state flag");
+    VERIFY((state & (state-1)) == 0, "Only single state must be set");
+    switch(state)
+    {
+        //case D3D12_RESOURCE_STATE_COMMON:
+        case D3D12_RESOURCE_STATE_PRESENT:                    return RESOURCE_STATE_PRESENT;
+        case D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER: return static_cast<RESOURCE_STATE>(RESOURCE_STATE_VERTEX_BUFFER | RESOURCE_STATE_CONSTANT_BUFFER);
+        case D3D12_RESOURCE_STATE_INDEX_BUFFER:               return RESOURCE_STATE_INDEX_BUFFER;
+        case D3D12_RESOURCE_STATE_RENDER_TARGET:              return RESOURCE_STATE_RENDER_TARGET;
+        case D3D12_RESOURCE_STATE_UNORDERED_ACCESS:           return RESOURCE_STATE_UNORDERED_ACCESS;
+        case D3D12_RESOURCE_STATE_DEPTH_WRITE:                return RESOURCE_STATE_DEPTH_WRITE;
+        case D3D12_RESOURCE_STATE_DEPTH_READ:                 return RESOURCE_STATE_DEPTH_READ;
+        case D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE:  return RESOURCE_STATE_SHADER_RESOURCE;
+        case D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE:      return RESOURCE_STATE_SHADER_RESOURCE;
+        case D3D12_RESOURCE_STATE_STREAM_OUT:                 return RESOURCE_STATE_STREAM_OUT;
+        case D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT:          return RESOURCE_STATE_INDIRECT_ARGUMENT;
+        case D3D12_RESOURCE_STATE_COPY_DEST:                  return RESOURCE_STATE_COPY_DEST;
+        case D3D12_RESOURCE_STATE_COPY_SOURCE:                return RESOURCE_STATE_COPY_SOURCE;
+        case D3D12_RESOURCE_STATE_RESOLVE_DEST:               return RESOURCE_STATE_RESOLVE_DEST;
+        case D3D12_RESOURCE_STATE_RESOLVE_SOURCE:             return RESOURCE_STATE_RESOLVE_SOURCE;
+        default:
+            UNEXPECTED("Unexpected D3D12 resource state");
+            return RESOURCE_STATE_UNKNOWN;
+    }
+}
+
+
+class D3D12StateFlagBitPosToResourceState
+{
+public:
+    D3D12StateFlagBitPosToResourceState()
+    {
+        for (Uint32 bit=0; bit <= MaxFlagBitPos; ++bit)
+        {
+            FlagBitPosToResStateMap[bit] = D3D12ResourceStateToResourceStateFlags(static_cast<D3D12_RESOURCE_STATES>(1<<bit));
+        }
+    }
+
+    RESOURCE_STATE operator()(Uint32 BitPos)const
+    {
+        VERIFY(BitPos <= MaxFlagBitPos, "Resource state flag bit position (", BitPos, ") exceeds max bit position (", MaxFlagBitPos, ")");
+        return FlagBitPosToResStateMap[BitPos];
+    }
+
+private:
+    static constexpr Uint32 MaxFlagBitPos = 13;
+    std::array<RESOURCE_STATE, MaxFlagBitPos + 1> FlagBitPosToResStateMap;
+};
+
+RESOURCE_STATE D3D12ResourceStatesToResourceStateFlags(D3D12_RESOURCE_STATES StateFlags)
+{
+    if (StateFlags == D3D12_RESOURCE_STATE_PRESENT)
+        return RESOURCE_STATE_PRESENT;
+
+    static const D3D12StateFlagBitPosToResourceState BitPosToResState;
+    Uint32 ResourceStates = 0;
+    Uint32 Bits = StateFlags;
+    while(Bits != 0)
+    {
+        auto lsb = PlatformMisc::GetLSB(Bits);
+        ResourceStates |= BitPosToResState(lsb);
+        Bits &= ~(1<<lsb);
+    }
+    return static_cast<RESOURCE_STATE>(ResourceStates);
 }
 
 }

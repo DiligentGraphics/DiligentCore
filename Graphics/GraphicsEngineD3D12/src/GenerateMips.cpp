@@ -105,15 +105,16 @@ namespace Diligent
 
     void GenerateMipsHelper::GenerateMips(RenderDeviceD3D12Impl* pRenderDeviceD3D12, TextureViewD3D12Impl* pTexView, CommandContext& Ctx)const
     {
-        auto &ComputeCtx = Ctx.AsComputeContext();
+        auto& ComputeCtx = Ctx.AsComputeContext();
         ComputeCtx.SetRootSignature(m_pGenerateMipsRS);
-        auto *pTexture = pTexView->GetTexture();
-        auto *pTexD3D12 = ValidatedCast<TextureD3D12Impl>( pTexture );
-        auto &TexDesc = pTexture->GetDesc();
+        auto* pTexture = pTexView->GetTexture();
+        auto* pTexD3D12 = ValidatedCast<TextureD3D12Impl>( pTexture );
+        auto& TexDesc = pTexture->GetDesc();
         auto SRVDescriptorHandle = pTexD3D12->GetTexArraySRV();
 
-	    Ctx.TransitionResource(pTexD3D12, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-        auto *pd3d12Device = pRenderDeviceD3D12->GetD3D12Device();
+        if (pTexD3D12->IsInKnownState() && !pTexD3D12->CheckState(RESOURCE_STATE_UNORDERED_ACCESS))
+	        Ctx.TransitionResource(pTexD3D12, RESOURCE_STATE_UNORDERED_ACCESS);
+        auto* pd3d12Device = pRenderDeviceD3D12->GetD3D12Device();
 
         const auto &ViewDesc = pTexView->GetDesc();
         for (uint32_t TopMip = 0; TopMip < TexDesc.MipLevels - 1; )
@@ -184,7 +185,7 @@ namespace Diligent
 
             ComputeCtx.Dispatch((DstWidth + 7) / 8, (DstHeight + 7) / 8, ViewDesc.NumArraySlices);
 
-            Ctx.InsertUAVBarrier(*pTexD3D12, *pTexD3D12);
+            Ctx.InsertUAVBarrier(pTexD3D12->GetD3D12Resource());
 
             TopMip += NumMips;
         }

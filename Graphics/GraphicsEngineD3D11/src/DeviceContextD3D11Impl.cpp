@@ -1567,6 +1567,11 @@ namespace Diligent
         m_CommittedPrimitiveTopology = PRIMITIVE_TOPOLOGY_UNDEFINED;
     }
 
+    void DeviceContextD3D11Impl::TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers)
+    {
+
+    }
+
 #ifdef VERIFY_CONTEXT_BINDINGS
     void DeviceContextD3D11Impl::dbgVerifyRenderTargetFormats()
     {

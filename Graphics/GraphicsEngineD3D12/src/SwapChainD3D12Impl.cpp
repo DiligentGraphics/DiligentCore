@@ -74,7 +74,7 @@ void SwapChainD3D12Impl::InitBuffersAndViews()
         BackBufferDesc.Name = Name.c_str();
 
         RefCntAutoPtr<TextureD3D12Impl> pBackBufferTex;
-        m_pRenderDevice.RawPtr<RenderDeviceD3D12Impl>()->CreateTexture(BackBufferDesc, pBackBuffer, &pBackBufferTex);
+        m_pRenderDevice.RawPtr<RenderDeviceD3D12Impl>()->CreateTexture(BackBufferDesc, pBackBuffer, RESOURCE_STATE_UNDEFINED, &pBackBufferTex);
         TextureViewDesc RTVDesc;
         RTVDesc.ViewType = TEXTURE_VIEW_RENDER_TARGET;
         RefCntAutoPtr<ITextureView> pRTV;
@@ -117,12 +117,11 @@ void SwapChainD3D12Impl::Present(Uint32 SyncInterval)
         return;
     }
 
-    auto* pImmediateCtx = pDeviceContext.RawPtr();
-    auto* pImmediateCtxD3D12 = ValidatedCast<DeviceContextD3D12Impl>( pImmediateCtx );
+    auto* pImmediateCtxD3D12 = pDeviceContext.RawPtr<DeviceContextD3D12Impl>();
 
     auto& CmdCtx = pImmediateCtxD3D12->GetCmdContext();
     auto* pBackBuffer = ValidatedCast<TextureD3D12Impl>( GetCurrentBackBufferRTV()->GetTexture() );
-    CmdCtx.TransitionResource( pBackBuffer, D3D12_RESOURCE_STATE_PRESENT);
+    CmdCtx.TransitionResource(pBackBuffer, RESOURCE_STATE_PRESENT);
 
     pImmediateCtxD3D12->Flush();
 

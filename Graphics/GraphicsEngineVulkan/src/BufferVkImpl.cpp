@@ -264,6 +264,7 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters*        pRefCounters,
                              FixedBlockMemoryAllocator& BuffViewObjMemAllocator, 
                              RenderDeviceVkImpl*        pRenderDeviceVk, 
                              const BufferDesc&          BuffDesc, 
+                             RESOURCE_STATE             InitialState,
                              VkBuffer                   vkBuffer) : 
     TBufferBase(pRefCounters, BuffViewObjMemAllocator, pRenderDeviceVk, BuffDesc, false),
     m_AccessFlags(0),
@@ -273,6 +274,7 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters*        pRefCounters,
     m_DynamicAllocations(STD_ALLOCATOR_RAW_MEM(VulkanDynamicAllocation, GetRawAllocator(), "Allocator for vector<VulkanDynamicAllocation>")),
     m_VulkanBuffer(vkBuffer)
 {
+    SetState(InitialState);
 }
 
 BufferVkImpl :: ~BufferVkImpl()

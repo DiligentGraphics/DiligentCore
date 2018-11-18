@@ -61,10 +61,10 @@ public:
 
     ID3D11Device* GetD3D11Device()override final{return m_pd3d11Device;}
 
-    virtual void CreateBufferFromD3DResource(ID3D11Buffer* pd3d11Buffer, const BufferDesc& BuffDesc, IBuffer** ppBuffer)override final;
-    virtual void CreateTextureFromD3DResource(ID3D11Texture1D* pd3d11Texture, ITexture** ppTexture)override final;
-    virtual void CreateTextureFromD3DResource(ID3D11Texture2D* pd3d11Texture, ITexture** ppTexture)override final;
-    virtual void CreateTextureFromD3DResource(ID3D11Texture3D* pd3d11Texture, ITexture** ppTexture)override final;
+    virtual void CreateBufferFromD3DResource(ID3D11Buffer* pd3d11Buffer, const BufferDesc& BuffDesc, RESOURCE_STATE InitialState, IBuffer** ppBuffer)override final;
+    virtual void CreateTextureFromD3DResource(ID3D11Texture1D* pd3d11Texture, RESOURCE_STATE InitialState, ITexture** ppTexture)override final;
+    virtual void CreateTextureFromD3DResource(ID3D11Texture2D* pd3d11Texture, RESOURCE_STATE InitialState, ITexture** ppTexture)override final;
+    virtual void CreateTextureFromD3DResource(ID3D11Texture3D* pd3d11Texture, RESOURCE_STATE InitialState, ITexture** ppTexture)override final;
 
     virtual void ReleaseStaleResources(bool ForceRelease = false)override final {}
 

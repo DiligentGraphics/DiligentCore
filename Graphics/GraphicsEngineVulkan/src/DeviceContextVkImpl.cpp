@@ -1519,4 +1519,9 @@ namespace Diligent
 #endif
         return DynAlloc;
     }
+
+    void DeviceContextVkImpl::TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers)
+    {
+
+    }
 }

@@ -55,33 +55,41 @@ public:
 
     /// Creates a texture object from native Vulkan image
 
-    /// \param [in]  vkImage - Vulkan image handle
-    /// \param [in]  TexDesc - Texture description. Vulkan provides no means to retrieve any 
-    ///                        image properties from the image handle, so complete texture
-    ///                        description must be provided
-    /// \param [out] ppTexture - Address of the memory location where the pointer to the
-    ///                          texture interface will be stored. 
-    ///                          The function calls AddRef(), so that the new object will contain 
-    ///                          one refernce.
+    /// \param [in]  vkImage      - Vulkan image handle
+    /// \param [in]  TexDesc      - Texture description. Vulkan provides no means to retrieve any 
+    ///                             image properties from the image handle, so complete texture
+    ///                             description must be provided
+    /// \param [in]  InitialState - Initial texture state. See Diligent::RESOURCE_STATE.
+    /// \param [out] ppTexture    - Address of the memory location where the pointer to the
+    ///                             texture interface will be stored. 
+    ///                             The function calls AddRef(), so that the new object will contain 
+    ///                             one refernce.
     /// \note  Created texture object does not take ownership of the Vulkan image and will not
     ///        destroy it once released. The application must not destroy the image while it is 
     ///        in use by the engine.
-    virtual void CreateTextureFromVulkanImage(VkImage vkImage, const TextureDesc& TexDesc, ITexture** ppTexture) = 0;
+    virtual void CreateTextureFromVulkanImage(VkImage            vkImage,
+                                              const TextureDesc& TexDesc,
+                                              RESOURCE_STATE     InitialState,
+                                              ITexture** ppTexture) = 0;
 
     /// Creates a buffer object from native Vulkan resource
 
-    /// \param [in] vkBuffer - Vulkan buffer handle
-    /// \param [in] BuffDesc - Buffer description. Vulkan provides no means to retrieve any 
-    ///                        buffer properties from the buffer handle, so complete buffer
-    ///                        description must be provided
-    /// \param [out] ppBuffer - Address of the memory location where the pointer to the
-    ///                         buffer interface will be stored. 
-    ///                         The function calls AddRef(), so that the new object will contain 
-    ///                         one reference.
+    /// \param [in] vkBuffer      - Vulkan buffer handle
+    /// \param [in] BuffDesc      - Buffer description. Vulkan provides no means to retrieve any 
+    ///                             buffer properties from the buffer handle, so complete buffer
+    ///                             description must be provided
+    /// \param [in]  InitialState - Initial buffer state. See Diligent::RESOURCE_STATE.
+    /// \param [out] ppBuffer     - Address of the memory location where the pointer to the
+    ///                             buffer interface will be stored. 
+    ///                             The function calls AddRef(), so that the new object will contain 
+    ///                             one reference.
     /// \note  Created buffer object does not take ownership of the Vulkan buffer and will not
     ///        destroy it once released. The application must not destroy Vulkan buffer while it is 
     ///        in use by the engine.
-    virtual void CreateBufferFromVulkanResource(VkBuffer vkBuffer, const BufferDesc& BuffDesc, IBuffer** ppBuffer) = 0;
+    virtual void CreateBufferFromVulkanResource(VkBuffer          vkBuffer,
+                                                const BufferDesc& BuffDesc,
+                                                RESOURCE_STATE    InitialState,
+                                                IBuffer**         ppBuffer) = 0;
 };
 
 }

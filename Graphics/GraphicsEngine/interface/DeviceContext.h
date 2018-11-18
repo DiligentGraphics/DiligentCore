@@ -519,6 +519,16 @@ public:
     ///       have been executed through immediate context.\n
     ///       The method does not Flush() the context.
     virtual void FinishFrame() = 0;
+
+
+    /// Transitions resource states
+
+    /// \param [in] BarrierCount      - Number of barriers in pResourceBarriers array
+    /// \param [in] pResourceBarriers - Pointer to the array of resource barriers
+    /// \remarks When both old and new states are RESOURCE_STATE_UNORDERED_ACCESS, the engine
+    ///          executes UAV barrier on the resource. The barrier makes sure that all UAV accesses 
+    ///          (reads or writes) are complete before any future UAV accesses (read or write) can begin.
+    virtual void TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers) = 0;
 };
 
 }

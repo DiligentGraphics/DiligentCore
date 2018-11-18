@@ -664,8 +664,6 @@ void RootSignature::InitResourceCache(RenderDeviceD3D12Impl*    pDeviceD3D12Impl
     ResourceCache.SetDescriptorHeapSpace(std::move(CbcSrvUavHeapSpace), std::move(SamplerHeapSpace));
 }
 
-const D3D12_RESOURCE_STATES D3D12_RESOURCE_STATE_SHADER_RESOURCE  = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-
 __forceinline
 void TransitionResource(CommandContext&                     Ctx, 
                         ShaderResourceCacheD3D12::Resource& Res,
@@ -677,49 +675,57 @@ void TransitionResource(CommandContext&                     Ctx,
         {
             VERIFY(RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_CBV, "Unexpected descriptor range type");
             // Not using QueryInterface() for the sake of efficiency
-            auto *pBuffToTransition = Res.pObject.RawPtr<BufferD3D12Impl>();
-            if( !pBuffToTransition->CheckAllStates(D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER) )
-                Ctx.TransitionResource(pBuffToTransition, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER );
+            auto* pBuffToTransition = Res.pObject.RawPtr<BufferD3D12Impl>();
+            if (pBuffToTransition->IsInKnownState() && !pBuffToTransition->CheckState(RESOURCE_STATE_CONSTANT_BUFFER))
+                Ctx.TransitionResource(pBuffToTransition, RESOURCE_STATE_CONSTANT_BUFFER);
         }
         break;
 
         case CachedResourceType::BufSRV:
         {
             VERIFY(RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_SRV, "Unexpected descriptor range type");
-            auto *pBuffViewD3D12 = Res.pObject.RawPtr<BufferViewD3D12Impl>();
-            auto *pBuffToTransition = ValidatedCast<BufferD3D12Impl>(pBuffViewD3D12->GetBuffer());
-            if( !pBuffToTransition->CheckAllStates(D3D12_RESOURCE_STATE_SHADER_RESOURCE) )
-                Ctx.TransitionResource(pBuffToTransition, D3D12_RESOURCE_STATE_SHADER_RESOURCE );
+            auto* pBuffViewD3D12 = Res.pObject.RawPtr<BufferViewD3D12Impl>();
+            auto* pBuffToTransition = ValidatedCast<BufferD3D12Impl>(pBuffViewD3D12->GetBuffer());
+            if (pBuffToTransition->IsInKnownState() && !pBuffToTransition->CheckState(RESOURCE_STATE_SHADER_RESOURCE))
+                Ctx.TransitionResource(pBuffToTransition, RESOURCE_STATE_SHADER_RESOURCE );
         }
         break;
 
         case CachedResourceType::BufUAV:
         {
             VERIFY(RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_UAV, "Unexpected descriptor range type");
-            auto *pBuffViewD3D12 = Res.pObject.RawPtr<BufferViewD3D12Impl>();
-            auto *pBuffToTransition = ValidatedCast<BufferD3D12Impl>(pBuffViewD3D12->GetBuffer());
-            if( !pBuffToTransition->CheckAllStates(D3D12_RESOURCE_STATE_UNORDERED_ACCESS) )
-                Ctx.TransitionResource(pBuffToTransition, D3D12_RESOURCE_STATE_UNORDERED_ACCESS );
+            auto* pBuffViewD3D12 = Res.pObject.RawPtr<BufferViewD3D12Impl>();
+            auto* pBuffToTransition = ValidatedCast<BufferD3D12Impl>(pBuffViewD3D12->GetBuffer());
+            if (pBuffToTransition->IsInKnownState())
+            {
+                // We must always call TransitionResource() even when the state is already 
+                // RESOURCE_STATE_UNORDERED_ACCESS as in this case UAV barrier must be executed
+                Ctx.TransitionResource(pBuffToTransition, RESOURCE_STATE_UNORDERED_ACCESS);
+            }
         }
         break;
 
         case CachedResourceType::TexSRV:
         {
             VERIFY(RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_SRV, "Unexpected descriptor range type");
-            auto *pTexViewD3D12 = Res.pObject.RawPtr<TextureViewD3D12Impl>();
-            auto *pTexToTransition = ValidatedCast<TextureD3D12Impl>(pTexViewD3D12->GetTexture());
-            if( !pTexToTransition->CheckAllStates(D3D12_RESOURCE_STATE_SHADER_RESOURCE) )
-                Ctx.TransitionResource(pTexToTransition, D3D12_RESOURCE_STATE_SHADER_RESOURCE );
+            auto* pTexViewD3D12 = Res.pObject.RawPtr<TextureViewD3D12Impl>();
+            auto* pTexToTransition = ValidatedCast<TextureD3D12Impl>(pTexViewD3D12->GetTexture());
+            if (pTexToTransition->IsInKnownState() && !pTexToTransition->CheckState(RESOURCE_STATE_SHADER_RESOURCE))
+                Ctx.TransitionResource(pTexToTransition, RESOURCE_STATE_SHADER_RESOURCE );
         }
         break;
 
         case CachedResourceType::TexUAV:
         {
             VERIFY(RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_UAV, "Unexpected descriptor range type");
-            auto *pTexViewD3D12 = Res.pObject.RawPtr<TextureViewD3D12Impl>();
-            auto *pTexToTransition = ValidatedCast<TextureD3D12Impl>(pTexViewD3D12->GetTexture());
-            if( !pTexToTransition->CheckAllStates(D3D12_RESOURCE_STATE_UNORDERED_ACCESS) )
-                Ctx.TransitionResource(pTexToTransition, D3D12_RESOURCE_STATE_UNORDERED_ACCESS );
+            auto* pTexViewD3D12 = Res.pObject.RawPtr<TextureViewD3D12Impl>();
+            auto* pTexToTransition = ValidatedCast<TextureD3D12Impl>(pTexViewD3D12->GetTexture());
+            if (pTexToTransition->IsInKnownState())
+            {
+                // We must always call TransitionResource() even when the state is already 
+                // RESOURCE_STATE_UNORDERED_ACCESS as in this case UAV barrier must be executed
+                Ctx.TransitionResource(pTexToTransition, RESOURCE_STATE_UNORDERED_ACCESS );
+            }
         }
         break;
 
@@ -745,54 +751,49 @@ void DbgVerifyResourceState(ShaderResourceCacheD3D12::Resource& Res,
         {
             VERIFY(RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_CBV, "Unexpected descriptor range type");
             // Not using QueryInterface() for the sake of efficiency
-            auto *pBuffToTransition = Res.pObject.RawPtr<BufferD3D12Impl>();
-            auto State = pBuffToTransition->GetState();
-            if( (State & D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER) != D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER )
-                LOG_ERROR_MESSAGE("Resource \"", pBuffToTransition->GetDesc().Name, "\" is not in D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER state. Did you forget to call TransitionShaderResources() or specify COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag in a call to CommitShaderResources()?" );
+            auto* pBufferD3D12 = Res.pObject.RawPtr<BufferD3D12Impl>();
+            if (pBufferD3D12->IsInKnownState() && !pBufferD3D12->CheckState(RESOURCE_STATE_CONSTANT_BUFFER))
+                LOG_ERROR_MESSAGE("Resource \"", pBufferD3D12->GetDesc().Name, "\" is not in RESOURCE_STATE_CONSTANT_BUFFER state. Did you forget to call TransitionShaderResources() or specify COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag in a call to CommitShaderResources()?" );
         }
         break;
 
         case CachedResourceType::BufSRV:
         {
             VERIFY(RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_SRV, "Unexpected descriptor range type");
-            auto *pBuffViewD3D12 = Res.pObject.RawPtr<BufferViewD3D12Impl>();
-            auto *pBuffToTransition = ValidatedCast<BufferD3D12Impl>(pBuffViewD3D12->GetBuffer());
-            auto State = pBuffToTransition->GetState();
-            if( (State & D3D12_RESOURCE_STATE_SHADER_RESOURCE) != D3D12_RESOURCE_STATE_SHADER_RESOURCE )
-                LOG_ERROR_MESSAGE("Resource \"", pBuffToTransition->GetDesc().Name, "\" is not in correct state. Did you forget to call TransitionShaderResources() or specify COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag in a call to CommitShaderResources()?" );
+            auto* pBuffViewD3D12 = Res.pObject.RawPtr<BufferViewD3D12Impl>();
+            auto* pBufferD3D12 = ValidatedCast<BufferD3D12Impl>(pBuffViewD3D12->GetBuffer());
+            if (pBufferD3D12->IsInKnownState() && !pBufferD3D12->CheckState(RESOURCE_STATE_SHADER_RESOURCE))
+                LOG_ERROR_MESSAGE("Resource \"", pBufferD3D12->GetDesc().Name, "\" is not in RESOURCE_STATE_SHADER_RESOURCE state. Did you forget to call TransitionShaderResources() or specify COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag in a call to CommitShaderResources()?" );
         }
         break;
 
         case CachedResourceType::BufUAV:
         {
             VERIFY(RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_UAV, "Unexpected descriptor range type");
-            auto *pBuffViewD3D12 = Res.pObject.RawPtr<BufferViewD3D12Impl>();
-            auto *pBuffToTransition = ValidatedCast<BufferD3D12Impl>(pBuffViewD3D12->GetBuffer());
-            auto State = pBuffToTransition->GetState();
-            if( (State & D3D12_RESOURCE_STATE_UNORDERED_ACCESS) != D3D12_RESOURCE_STATE_UNORDERED_ACCESS )
-                LOG_ERROR_MESSAGE("Resource \"", pBuffToTransition->GetDesc().Name, "\" is not in D3D12_RESOURCE_STATE_UNORDERED_ACCESS state. Did you forget to call TransitionShaderResources() or specify COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag in a call to CommitShaderResources()?" );
+            auto* pBuffViewD3D12 = Res.pObject.RawPtr<BufferViewD3D12Impl>();
+            auto* pBufferD3D12 = ValidatedCast<BufferD3D12Impl>(pBuffViewD3D12->GetBuffer());
+            if (pBufferD3D12->IsInKnownState() && !pBufferD3D12->CheckState(RESOURCE_STATE_UNORDERED_ACCESS))
+                LOG_ERROR_MESSAGE("Resource \"", pBufferD3D12->GetDesc().Name, "\" is not in RESOURCE_STATE_UNORDERED_ACCESS state. Did you forget to call TransitionShaderResources() or specify COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag in a call to CommitShaderResources()?" );
         }
         break;
 
         case CachedResourceType::TexSRV:
         {
             VERIFY(RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_SRV, "Unexpected descriptor range type");
-            auto *pTexViewD3D12 = Res.pObject.RawPtr<TextureViewD3D12Impl>();
-            auto *pTexToTransition = ValidatedCast<TextureD3D12Impl>(pTexViewD3D12->GetTexture());
-            auto State = pTexToTransition->GetState();
-            if( (State & D3D12_RESOURCE_STATE_SHADER_RESOURCE) != D3D12_RESOURCE_STATE_SHADER_RESOURCE )
-                LOG_ERROR_MESSAGE("Resource \"", pTexToTransition->GetDesc().Name, "\" is not in correct state. Did you forget to call TransitionShaderResources() or specify COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag in a call to CommitShaderResources()?" );
+            auto* pTexViewD3D12 = Res.pObject.RawPtr<TextureViewD3D12Impl>();
+            auto* pTexD3D12 = ValidatedCast<TextureD3D12Impl>(pTexViewD3D12->GetTexture());
+            if (pTexD3D12->IsInKnownState() && !pTexD3D12->CheckState(RESOURCE_STATE_SHADER_RESOURCE))
+                LOG_ERROR_MESSAGE("Resource \"", pTexD3D12->GetDesc().Name, "\" is not in RESOURCE_STATE_SHADER_RESOURCE state. Did you forget to call TransitionShaderResources() or specify COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag in a call to CommitShaderResources()?" );
         }
         break;
 
         case CachedResourceType::TexUAV:
         {
             VERIFY(RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_UAV, "Unexpected descriptor range type");
-            auto *pTexViewD3D12 = Res.pObject.RawPtr<TextureViewD3D12Impl>();
-            auto *pTexToTransition = ValidatedCast<TextureD3D12Impl>(pTexViewD3D12->GetTexture());
-            auto State = pTexToTransition->GetState();
-            if( (State & D3D12_RESOURCE_STATE_UNORDERED_ACCESS) != D3D12_RESOURCE_STATE_UNORDERED_ACCESS )
-                LOG_ERROR_MESSAGE("Resource \"", pTexToTransition->GetDesc().Name, "\" is not in D3D12_RESOURCE_STATE_UNORDERED_ACCESS state. Did you forget to call TransitionShaderResources() or specify COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag in a call to CommitShaderResources()?" );
+            auto* pTexViewD3D12 = Res.pObject.RawPtr<TextureViewD3D12Impl>();
+            auto* pTexD3D12 = ValidatedCast<TextureD3D12Impl>(pTexViewD3D12->GetTexture());
+            if (pTexD3D12->IsInKnownState() && !pTexD3D12->CheckState(RESOURCE_STATE_UNORDERED_ACCESS))
+                LOG_ERROR_MESSAGE("Resource \"", pTexD3D12->GetDesc().Name, "\" is not in RESOURCE_STATE_UNORDERED_ACCESS state. Did you forget to call TransitionShaderResources() or specify COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag in a call to CommitShaderResources()?" );
         }
         break;
 
@@ -1055,8 +1056,8 @@ void RootSignature::CommitRootViews(ShaderResourceCacheD3D12& ResourceCache,
 
         auto& Res = ResourceCache.GetRootTable(RootInd).GetResource(0, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, dbgShaderType);
         auto *pBuffToTransition = Res.pObject.RawPtr<BufferD3D12Impl>();
-        if( !pBuffToTransition->CheckAllStates(D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER) )
-            Ctx.TransitionResource(pBuffToTransition, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+        if (pBuffToTransition->IsInKnownState() && !pBuffToTransition->CheckState(RESOURCE_STATE_CONSTANT_BUFFER) )
+            Ctx.TransitionResource(pBuffToTransition, RESOURCE_STATE_CONSTANT_BUFFER);
 
         D3D12_GPU_VIRTUAL_ADDRESS CBVAddress = pBuffToTransition->GetGPUAddress(pCtx);
         if(IsCompute)

@@ -80,6 +80,8 @@ public:
 
     virtual void FinishFrame()override final;
 
+    virtual void TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers)override final;
+
     virtual void FinishCommandList(class ICommandList **ppCommandList)override final;
 
     virtual void ExecuteCommandList(class ICommandList *pCommandList)override final;

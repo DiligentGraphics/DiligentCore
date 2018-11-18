@@ -106,13 +106,13 @@ void RenderDeviceD3D11Impl::TestTextureFormat( TEXTURE_FORMAT TexFormat )
 
 IMPLEMENT_QUERY_INTERFACE( RenderDeviceD3D11Impl, IID_RenderDeviceD3D11, TRenderDeviceBase )
 
-void RenderDeviceD3D11Impl :: CreateBufferFromD3DResource(ID3D11Buffer* pd3d11Buffer, const BufferDesc& BuffDesc, IBuffer** ppBuffer)
+void RenderDeviceD3D11Impl :: CreateBufferFromD3DResource(ID3D11Buffer* pd3d11Buffer, const BufferDesc& BuffDesc, RESOURCE_STATE InitialState, IBuffer** ppBuffer)
 {
     CreateDeviceObject("buffer", BuffDesc, ppBuffer, 
         [&]()
         {
             BufferD3D11Impl* pBufferD3D11( NEW_RC_OBJ(m_BufObjAllocator, "BufferD3D11Impl instance", BufferD3D11Impl)
-                                                     (m_BuffViewObjAllocator, this, BuffDesc, pd3d11Buffer ) );
+                                                     (m_BuffViewObjAllocator, this, BuffDesc, InitialState, pd3d11Buffer ) );
             pBufferD3D11->QueryInterface( IID_Buffer, reinterpret_cast<IObject**>(ppBuffer) );
             pBufferD3D11->CreateDefaultViews();
             OnCreateDeviceObject( pBufferD3D11 );
@@ -148,7 +148,7 @@ void RenderDeviceD3D11Impl :: CreateShader(const ShaderCreationAttribs& ShaderCr
     );
 }
 
-void RenderDeviceD3D11Impl::CreateTextureFromD3DResource(ID3D11Texture1D* pd3d11Texture, ITexture** ppTexture)
+void RenderDeviceD3D11Impl::CreateTextureFromD3DResource(ID3D11Texture1D* pd3d11Texture, RESOURCE_STATE InitialState, ITexture** ppTexture)
 {
     if (pd3d11Texture == nullptr)
         return;
@@ -159,7 +159,7 @@ void RenderDeviceD3D11Impl::CreateTextureFromD3DResource(ID3D11Texture1D* pd3d11
         [&]()
         {
             TextureBaseD3D11* pTextureD3D11 = NEW_RC_OBJ(m_TexObjAllocator, "Texture1D_D3D11 instance", Texture1D_D3D11)
-                                                        (m_TexViewObjAllocator, this, pd3d11Texture);
+                                                        (m_TexViewObjAllocator, this, InitialState, pd3d11Texture);
             pTextureD3D11->QueryInterface( IID_Texture, reinterpret_cast<IObject**>(ppTexture) );
             pTextureD3D11->CreateDefaultViews();
             OnCreateDeviceObject( pTextureD3D11 );
@@ -167,7 +167,7 @@ void RenderDeviceD3D11Impl::CreateTextureFromD3DResource(ID3D11Texture1D* pd3d11
     );
 }
 
-void RenderDeviceD3D11Impl::CreateTextureFromD3DResource(ID3D11Texture2D* pd3d11Texture, ITexture** ppTexture)
+void RenderDeviceD3D11Impl::CreateTextureFromD3DResource(ID3D11Texture2D* pd3d11Texture, RESOURCE_STATE InitialState, ITexture** ppTexture)
 {
     if (pd3d11Texture == nullptr)
         return;
@@ -178,7 +178,7 @@ void RenderDeviceD3D11Impl::CreateTextureFromD3DResource(ID3D11Texture2D* pd3d11
         [&]()
         {
             TextureBaseD3D11* pTextureD3D11 = NEW_RC_OBJ(m_TexObjAllocator, "Texture2D_D3D11 instance", Texture2D_D3D11)
-                                                        (m_TexViewObjAllocator, this, pd3d11Texture);
+                                                        (m_TexViewObjAllocator, this, InitialState, pd3d11Texture);
             pTextureD3D11->QueryInterface( IID_Texture, reinterpret_cast<IObject**>(ppTexture) );
             pTextureD3D11->CreateDefaultViews();
             OnCreateDeviceObject( pTextureD3D11 );
@@ -186,7 +186,7 @@ void RenderDeviceD3D11Impl::CreateTextureFromD3DResource(ID3D11Texture2D* pd3d11
     );
 }
 
-void RenderDeviceD3D11Impl::CreateTextureFromD3DResource(ID3D11Texture3D* pd3d11Texture, ITexture** ppTexture)
+void RenderDeviceD3D11Impl::CreateTextureFromD3DResource(ID3D11Texture3D* pd3d11Texture, RESOURCE_STATE InitialState, ITexture** ppTexture)
 {
     if (pd3d11Texture == nullptr)
         return;
@@ -197,7 +197,7 @@ void RenderDeviceD3D11Impl::CreateTextureFromD3DResource(ID3D11Texture3D* pd3d11
         [&]()
         {
             TextureBaseD3D11* pTextureD3D11 = NEW_RC_OBJ(m_TexObjAllocator, "Texture3D_D3D11 instance", Texture3D_D3D11)
-                                                        (m_TexViewObjAllocator, this, pd3d11Texture);
+                                                        (m_TexViewObjAllocator, this, InitialState, pd3d11Texture);
             pTextureD3D11->QueryInterface( IID_Texture, reinterpret_cast<IObject**>(ppTexture) );
             pTextureD3D11->CreateDefaultViews();
             OnCreateDeviceObject( pTextureD3D11 );
