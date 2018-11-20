@@ -87,26 +87,47 @@ public:
 
     virtual void Draw( DrawAttribs &DrawAttribs )override final;
 
-    virtual void DispatchCompute( const DispatchComputeAttribs &DispatchAttrs )override final;
+    virtual void DispatchCompute( const DispatchComputeAttribs& DispatchAttrs )override final;
 
     virtual void ClearDepthStencil( ITextureView* pView, Uint32 ClearFlags, float fDepth, Uint8 Stencil)override final;
 
-    virtual void ClearRenderTarget( ITextureView* pView, const float *RGBA )override final;
+    virtual void ClearRenderTarget( ITextureView* pView, const float* RGBA )override final;
 
     virtual void Flush()override final;
     
-    virtual void FinishCommandList(class ICommandList **ppCommandList)override final;
+    virtual void FinishCommandList(class ICommandList** ppCommandList)override final;
 
     virtual void ExecuteCommandList(class ICommandList* pCommandList)override final;
 
     virtual void SignalFence(IFence* pFence, Uint64 Value)override final;
 
-    void TransitionImageLayout(class TextureVkImpl &TextureVk, VkImageLayout NewLayout);
-    void TransitionImageLayout(class TextureVkImpl &TextureVk, VkImageLayout OldLayout, VkImageLayout NewLayout, const VkImageSubresourceRange& SubresRange);
+    // Transitions texture subresources from OldState to NewState, and optionally updates
+    // internal texture state.
+    // If OldState == RESOURCE_STATE_UNKNOWN, internal texture state is used as old state.
+    void TransitionTextureState(TextureVkImpl&           TextureVk,
+                                RESOURCE_STATE           OldState,
+                                RESOURCE_STATE           NewState,
+                                bool                     UpdateTextureState,
+                                VkImageSubresourceRange* pSubresRange = nullptr);
+
+    void TransitionImageLayout(TextureVkImpl&                 TextureVk,
+                               VkImageLayout                  OldLayout,
+                               VkImageLayout                  NewLayout,
+                               const VkImageSubresourceRange& SubresRange);
+
     virtual void TransitionImageLayout(ITexture* pTexture, VkImageLayout NewLayout)override final;
 
-    void BufferMemoryBarrier(class BufferVkImpl &BufferVk, VkAccessFlags NewAccessFlags);
+
+    // Transitions buffer state from OldState to NewState, and optionally updates
+    // internal buffer state.
+    // If OldState == RESOURCE_STATE_UNKNOWN, internal buffer state is used as old state.
+    void TransitionBufferState(BufferVkImpl&  BufferVk, 
+                               RESOURCE_STATE OldState,
+                               RESOURCE_STATE NewState,
+                               bool           UpdateBufferState);
+
     virtual void BufferMemoryBarrier(IBuffer* pBuffer, VkAccessFlags NewAccessFlags)override final;
+
 
     void AddWaitSemaphore(VkSemaphore Semaphore, VkPipelineStageFlags WaitDstStageMask)
     {
@@ -118,16 +139,16 @@ public:
         m_SignalSemaphores.push_back(Semaphore);
     }
 
-    void UpdateBufferRegion(class BufferVkImpl* pBuffVk, Uint64 DstOffset, Uint64 NumBytes, VkBuffer vkSrcBuffer, Uint64 SrcOffset);
-    void UpdateBufferRegion(class BufferVkImpl* pBuffVk, const void* pData, Uint64 DstOffset, Uint64 NumBytes);
+    void UpdateBufferRegion(BufferVkImpl* pBuffVk, Uint64 DstOffset, Uint64 NumBytes, VkBuffer vkSrcBuffer, Uint64 SrcOffset);
+    void UpdateBufferRegion(BufferVkImpl* pBuffVk, const void* pData, Uint64 DstOffset, Uint64 NumBytes);
 
-    void CopyBufferRegion(class BufferVkImpl* pSrcBuffVk, class BufferVkImpl* pDstBuffVk, Uint64 SrcOffset, Uint64 DstOffset, Uint64 NumBytes);
-    void CopyTextureRegion(class TextureVkImpl* pSrcTexture, class TextureVkImpl* pDstTexture, const VkImageCopy &CopyRegion);
+    void CopyBufferRegion(BufferVkImpl* pSrcBuffVk, BufferVkImpl* pDstBuffVk, Uint64 SrcOffset, Uint64 DstOffset, Uint64 NumBytes);
+    void CopyTextureRegion(TextureVkImpl* pSrcTexture, TextureVkImpl* pDstTexture, const VkImageCopy &CopyRegion);
 
     void UpdateTextureRegion(const void*          pSrcData,
                              Uint32               SrcStride,
                              Uint32               SrcDepthStride,
-                             class TextureVkImpl& TextureVk,
+                             TextureVkImpl& TextureVk,
                              Uint32               MipLevel,
                              Uint32               Slice,
                              const Box&           DstBox);

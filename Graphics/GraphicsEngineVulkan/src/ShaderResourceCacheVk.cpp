@@ -30,6 +30,7 @@
 #include "TextureViewVkImpl.h"
 #include "TextureVkImpl.h"
 #include "SamplerVkImpl.h"
+#include "VulkanTypeConversions.h"
 
 namespace Diligent
 {
@@ -109,19 +110,26 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl *pCtxVkImpl)
         {
             case SPIRVShaderResourceAttribs::ResourceType::UniformBuffer:
             {
-                auto *pBufferVk = Res.pObject.RawPtr<BufferVkImpl>();
-                VkAccessFlags RequiredAccessFlags = VK_ACCESS_UNIFORM_READ_BIT;
-                if (!pBufferVk->CheckAccessFlags(RequiredAccessFlags))
+                auto* pBufferVk = Res.pObject.RawPtr<BufferVkImpl>();
+                if (pBufferVk->IsInKnownState())
                 {
-                    if (VerifyOnly)
+                    RESOURCE_STATE RequiredState = RESOURCE_STATE_CONSTANT_BUFFER;
+                    VERIFY_EXPR((ResourceStateFlagsToVkAccessFlags(RequiredState) & VK_ACCESS_UNIFORM_READ_BIT) == VK_ACCESS_UNIFORM_READ_BIT);
+                    if (!pBufferVk->CheckState(RequiredState))
                     {
-                        LOG_ERROR_MESSAGE("State of buffer \"", pBufferVk->GetDesc().Name, "\" is incorrect. Required access flags: ",
-                                           VulkanUtilities::VkAccessFlagsToString(RequiredAccessFlags),  ". Actual access flags: ", 
-                                           VulkanUtilities::VkAccessFlagsToString(pBufferVk->GetAccessFlags()), 
-                                           ". Call TransitionShaderResources() or provide COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag to CommitShaderResources()");
+                        if (VerifyOnly)
+                        {
+                            LOG_ERROR_MESSAGE("State of buffer '", pBufferVk->GetDesc().Name, "' is incorrect. Required state: ",
+                                               GetResourceStateString(RequiredState),  ". Actual state: ", 
+                                               GetResourceStateString(pBufferVk->GetState()), 
+                                               ". Call TransitionShaderResources() or provide COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag to CommitShaderResources()");
+                        }
+                        else
+                        {
+                            pCtxVkImpl->TransitionBufferState(*pBufferVk, RESOURCE_STATE_UNKNOWN, RequiredState, true);
+                            VERIFY_EXPR(pBufferVk->CheckAccessFlags(VK_ACCESS_UNIFORM_READ_BIT));
+                        }
                     }
-                    else
-                        pCtxVkImpl->BufferMemoryBarrier(*pBufferVk, RequiredAccessFlags);
                 }
             }
             break;
@@ -130,23 +138,32 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl *pCtxVkImpl)
             case SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer:
             case SPIRVShaderResourceAttribs::ResourceType::StorageTexelBuffer:
             {
-                auto *pBuffViewVk = Res.pObject.RawPtr<BufferViewVkImpl>();
-                auto *pBufferVk = ValidatedCast<BufferVkImpl>(pBuffViewVk->GetBuffer());
-                VkAccessFlags RequiredAccessFlags =
-                    Res.Type == SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer ?
-                    VK_ACCESS_SHADER_READ_BIT :
-                    (VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
-                if (!pBufferVk->CheckAccessFlags(RequiredAccessFlags))
+                auto* pBuffViewVk = Res.pObject.RawPtr<BufferViewVkImpl>();
+                auto* pBufferVk = ValidatedCast<BufferVkImpl>(pBuffViewVk->GetBuffer());
+                if (pBufferVk->IsInKnownState())
                 {
-                    if (VerifyOnly)
+                    RESOURCE_STATE RequiredState = (Res.Type == SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer) ?
+                        RESOURCE_STATE_SHADER_RESOURCE : RESOURCE_STATE_UNORDERED_ACCESS;
+#ifdef _DEBUG
+                    VkAccessFlags RequiredAccessFlags = (Res.Type == SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer) ?
+                            VK_ACCESS_SHADER_READ_BIT : (VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
+                    VERIFY_EXPR( (ResourceStateFlagsToVkAccessFlags(RequiredState) & RequiredAccessFlags) == RequiredAccessFlags);
+#endif
+                    if (!pBufferVk->CheckState(RequiredState))
                     {
-                        LOG_ERROR_MESSAGE("State of buffer \"", pBufferVk->GetDesc().Name, "\" is incorrect. Required access flags: ",
-                                           VulkanUtilities::VkAccessFlagsToString(RequiredAccessFlags),  ". Actual access flags: ", 
-                                           VulkanUtilities::VkAccessFlagsToString(pBufferVk->GetAccessFlags()), 
-                                           ". Call TransitionShaderResources() or provide COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag to CommitShaderResources()");
+                        if (VerifyOnly)
+                        {
+                            LOG_ERROR_MESSAGE("State of buffer '", pBufferVk->GetDesc().Name, "' is incorrect. Required state: ",
+                                               GetResourceStateString(RequiredState),  ". Actual state: ", 
+                                               GetResourceStateString(pBufferVk->GetState()), 
+                                               ". Call TransitionShaderResources() or provide COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag to CommitShaderResources()");
+                        }
+                        else
+                        {
+                            pCtxVkImpl->TransitionBufferState(*pBufferVk, RESOURCE_STATE_UNKNOWN, RequiredState, true);
+                            VERIFY_EXPR(pBufferVk->CheckAccessFlags(RequiredAccessFlags));
+                        }
                     }
-                    else
-                        pCtxVkImpl->BufferMemoryBarrier(*pBufferVk, RequiredAccessFlags);
                 }
             }
             break;
@@ -155,41 +172,53 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl *pCtxVkImpl)
             case SPIRVShaderResourceAttribs::ResourceType::SampledImage:
             case SPIRVShaderResourceAttribs::ResourceType::StorageImage:
             {
-                auto *pTextureViewVk = Res.pObject.RawPtr<TextureViewVkImpl>();
-                auto *pTextureVk = ValidatedCast<TextureVkImpl>(pTextureViewVk->GetTexture());
+                auto* pTextureViewVk = Res.pObject.RawPtr<TextureViewVkImpl>();
+                auto* pTextureVk = ValidatedCast<TextureVkImpl>(pTextureViewVk->GetTexture());
+                if (pTextureVk->IsInKnownState())
+                {
+                    // The image subresources for a storage image must be in the VK_IMAGE_LAYOUT_GENERAL layout in 
+                    // order to access its data in a shader (13.1.1)
+                    // The image subresources for a sampled image or a combined image sampler must be in the 
+                    // VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 
+                    // or VK_IMAGE_LAYOUT_GENERAL layout in order to access its data in a shader (13.1.3, 13.1.4).
+                    RESOURCE_STATE RequiredState;
+                    if (Res.Type == SPIRVShaderResourceAttribs::ResourceType::StorageImage)
+                    {
+                        RequiredState = RESOURCE_STATE_UNORDERED_ACCESS;
+                        VERIFY_EXPR(ResourceStateToVkImageLayout(RequiredState) == VK_IMAGE_LAYOUT_GENERAL);
+                    }
+                    else
+                    {
+                        if (pTextureVk->GetDesc().BindFlags & BIND_DEPTH_STENCIL)
+                        {
+                            // VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL must only be used as a read - only depth / stencil attachment 
+                            // in a VkFramebuffer and/or as a read - only image in a shader (which can be read as a sampled image, combined 
+                            // image / sampler and /or input attachment). This layout is valid only for image subresources of images created 
+                            // with the VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT usage bit enabled. (11.4)
+                            RequiredState = RESOURCE_STATE_DEPTH_READ;
+                            VERIFY_EXPR(ResourceStateToVkImageLayout(RequiredState) == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
+                        }
+                        else
+                        {
+                            RequiredState = RESOURCE_STATE_SHADER_RESOURCE;
+                            VERIFY_EXPR(ResourceStateToVkImageLayout(RequiredState) == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+                        }
+                    }
 
-                // The image subresources for a storage image must be in the VK_IMAGE_LAYOUT_GENERAL layout in 
-                // order to access its data in a shader (13.1.1)
-                // The image subresources for a sampled image or a combined image sampler must be in the 
-                // VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 
-                // or VK_IMAGE_LAYOUT_GENERAL layout in order to access its data in a shader (13.1.3, 13.1.4).
-                VkImageLayout RequiredLayout;
-                if (Res.Type == SPIRVShaderResourceAttribs::ResourceType::StorageImage)
-                    RequiredLayout = VK_IMAGE_LAYOUT_GENERAL;
-                else
-                {
-                    if (pTextureVk->GetDesc().BindFlags & BIND_DEPTH_STENCIL)
+                    if (!pTextureVk->CheckState(RequiredState))
                     {
-                        // VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL must only be used as a read - only depth / stencil attachment 
-                        // in a VkFramebuffer and/or as a read - only image in a shader (which can be read as a sampled image, combined 
-                        // image / sampler and /or input attachment). This layout is valid only for image subresources of images created 
-                        // with the VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT usage bit enabled. (11.4)
-                        RequiredLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+                        if (VerifyOnly)
+                        {
+                            LOG_ERROR_MESSAGE("State of texture '", pTextureVk->GetDesc().Name, "' is incorrect. Required state: ",
+                                              GetResourceStateString(RequiredState), ". Actual state: ", 
+                                              GetResourceStateString(pTextureVk->GetState()), 
+                                              ". Call TransitionShaderResources() or specify COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag in a call to CommitShaderResources()");
+                        }
+                        else
+                        {
+                            pCtxVkImpl->TransitionTextureState(*pTextureVk, RESOURCE_STATE_UNKNOWN, RequiredState, true);
+                        }
                     }
-                    else
-                        RequiredLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-                }
-                if (pTextureVk->GetLayout() != RequiredLayout)
-                {
-                    if (VerifyOnly)
-                    {
-                        LOG_ERROR_MESSAGE("State of texture \"", pTextureVk->GetDesc().Name, "\" is incorrect. Required layout: ",
-                                          VulkanUtilities::VkImageLayoutToString(RequiredLayout), ". Actual layout: ", 
-                                          VulkanUtilities::VkImageLayoutToString(pTextureVk->GetLayout()), 
-                                          ". Call TransitionShaderResources() or specify COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag in a call to CommitShaderResources()");
-                    }
-                    else
-                        pCtxVkImpl->TransitionImageLayout(*pTextureVk, RequiredLayout);
                 }
             }
             break;
@@ -287,7 +316,7 @@ VkDescriptorImageInfo ShaderResourceCacheVk::Resource::GetImageDescriptorWriteIn
         }
         else
         {
-            LOG_ERROR_MESSAGE("No sampler assigned to texture view \"", pTexViewVk->GetDesc().Name, "\"");
+            LOG_ERROR_MESSAGE("No sampler assigned to texture view '", pTexViewVk->GetDesc().Name, "'");
         }
     }
     DescrImgInfo.imageView = pTexViewVk->GetVulkanImageView();

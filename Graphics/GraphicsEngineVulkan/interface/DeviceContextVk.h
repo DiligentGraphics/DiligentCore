@@ -44,12 +44,14 @@ public:
 
     /// \param [in] pTexture - texture to transition
     /// \param [in] NewLayout - Vulkan image layout this texture to transition to
+    /// \remarks The texture state must be known to the engine.
     virtual void TransitionImageLayout(ITexture *pTexture, VkImageLayout NewLayout) = 0;
 
     /// Transitions internal vulkan buffer object to a specified state
 
     /// \param [in] pBuffer - Buffer to transition
     /// \param [in] NewAccessFlags - Access flags to set for the buffer
+    /// \remarks The buffer state must be known to the engine.
     virtual void BufferMemoryBarrier(IBuffer *pBuffer, VkAccessFlags NewAccessFlags) = 0;
 };
 

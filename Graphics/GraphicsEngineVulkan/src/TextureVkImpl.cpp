@@ -137,8 +137,7 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters,
     // while using this layout, and the transition away from this layout will preserve that data. 
     // If it is VK_IMAGE_LAYOUT_UNDEFINED, then the contents of the data are considered to be undefined, 
     // and the transition away from this layout is not guaranteed to preserve that data.
-    m_CurrentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    ImageCI.initialLayout = m_CurrentLayout;
+    ImageCI.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
     bool bInitializeTexture = (InitData.pSubResources != nullptr && InitData.NumSubresources > 0);
 
@@ -190,8 +189,10 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters,
     SubresRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
     SubresRange.baseMipLevel = 0;
     SubresRange.levelCount = VK_REMAINING_MIP_LEVELS;
-    VulkanUtilities::VulkanCommandBuffer::TransitionImageLayout(vkCmdBuff, m_VulkanImage, m_CurrentLayout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, SubresRange);
-    m_CurrentLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    VulkanUtilities::VulkanCommandBuffer::TransitionImageLayout(vkCmdBuff, m_VulkanImage, ImageCI.initialLayout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, SubresRange);
+    SetState(RESOURCE_STATE_COPY_DEST);
+    const auto CurrentLayout = GetLayout();
+    VERIFY_EXPR(CurrentLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
     if(bInitializeTexture)
     {
@@ -334,7 +335,7 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters,
         // Copy commands MUST be recorded outside of a render pass instance. This is OK here
         // as copy will be the only command in the cmd buffer
         vkCmdCopyBufferToImage(vkCmdBuff, StagingBuffer, m_VulkanImage,
-            m_CurrentLayout, // dstImageLayout must be VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL or VK_IMAGE_LAYOUT_GENERAL (18.4)
+            CurrentLayout, // dstImageLayout must be VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL or VK_IMAGE_LAYOUT_GENERAL (18.4)
             static_cast<uint32_t>(Regions.size()), Regions.data());
 
         Uint32 QueueIndex = 0;
@@ -360,7 +361,7 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters,
             {
                 VkClearColorValue ClearColor = {};
                 vkCmdClearColorImage(vkCmdBuff, m_VulkanImage,
-                                m_CurrentLayout, // must be VK_IMAGE_LAYOUT_GENERAL or VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
+                                CurrentLayout, // must be VK_IMAGE_LAYOUT_GENERAL or VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
                                 &ClearColor, 1, &Subresource);
             }
         }
@@ -369,7 +370,7 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters,
         {
             VkClearDepthStencilValue ClearValue = {};
             vkCmdClearDepthStencilImage(vkCmdBuff, m_VulkanImage,
-                            m_CurrentLayout, // must be VK_IMAGE_LAYOUT_GENERAL or VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
+                            CurrentLayout, // must be VK_IMAGE_LAYOUT_GENERAL or VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
                             &ClearValue, 1, &Subresource);
         }
         else
@@ -433,6 +434,8 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters,
         }
         VERIFY_EXPR(m_MipLevelSRV.size() == m_Desc.MipLevels);
     }
+
+    VERIFY_EXPR(IsInKnownState());
 }
 
 TextureVkImpl::TextureVkImpl(IReferenceCounters*         pRefCounters,
@@ -750,6 +753,16 @@ VulkanUtilities::ImageViewWrapper TextureVkImpl::CreateImageView(TextureViewDesc
     ViewName += m_Desc.Name;
     ViewName += '\'';
     return LogicalDevice.CreateImageView(ImageViewCI, ViewName.c_str());
+}
+
+void TextureVkImpl::SetLayout(VkImageLayout Layout)
+{
+    SetState(VkImageLayoutToResourceState(Layout));
+}
+
+VkImageLayout TextureVkImpl::GetLayout()const
+{
+    return ResourceStateToVkImageLayout(GetState());
 }
 
 }

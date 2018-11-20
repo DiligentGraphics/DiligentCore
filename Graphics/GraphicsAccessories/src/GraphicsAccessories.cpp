@@ -773,6 +773,52 @@ String GetBufferDescString( const BufferDesc &Desc )
     return Str;
 }
 
+const Char* GetResourceStateFlagString( RESOURCE_STATE State )
+{
+    VERIFY((State & (State-1)) == 0, "Single state is expected");
+    switch(State)
+    {
+        case RESOURCE_STATE_UNKNOWN:           return "UNKNOWN";
+        case RESOURCE_STATE_UNDEFINED:         return "UNDEFINED";
+        case RESOURCE_STATE_VERTEX_BUFFER:     return "VERTEX_BUFFER";
+        case RESOURCE_STATE_CONSTANT_BUFFER:   return "CONSTANT_BUFFER";
+        case RESOURCE_STATE_INDEX_BUFFER:      return "INDEX_BUFFER";
+        case RESOURCE_STATE_RENDER_TARGET:     return "RENDER_TARGET";
+        case RESOURCE_STATE_UNORDERED_ACCESS:  return "UNORDERED_ACCESS";
+        case RESOURCE_STATE_DEPTH_WRITE:       return "DEPTH_WRITE";
+        case RESOURCE_STATE_DEPTH_READ:        return "DEPTH_READ";
+        case RESOURCE_STATE_SHADER_RESOURCE:   return "SHADER_RESOURCE";
+        case RESOURCE_STATE_STREAM_OUT:        return "STREAM_OUT";
+        case RESOURCE_STATE_INDIRECT_ARGUMENT: return "INDIRECT_ARGUMENT";
+        case RESOURCE_STATE_COPY_DEST:         return "COPY_DEST";
+        case RESOURCE_STATE_COPY_SOURCE:       return "COPY_SOURCE";
+        case RESOURCE_STATE_RESOLVE_DEST:      return "RESOLVE_DEST";
+        case RESOURCE_STATE_RESOLVE_SOURCE:    return "RESOLVE_SOURCE";
+        case RESOURCE_STATE_PRESENT:           return "PRESENT";
+        default:
+            UNEXPECTED("Unknown resource state");
+            return "UNKNOWN";
+    }
+}
+
+String GetResourceStateString( RESOURCE_STATE State )
+{
+    if(State == RESOURCE_STATE_UNKNOWN)
+        return "UNKNOWN";
+
+    String str;
+    while (State != 0)
+    {
+        if (!str.empty())
+            str.push_back('|');
+        
+        auto lsb = State & ~(State-1);
+        const auto* StateFlagString = GetResourceStateFlagString(static_cast<RESOURCE_STATE>(lsb));
+        str.append(StateFlagString);
+    }
+    return str;
+}
+
 Uint32 ComputeMipLevelsCount( Uint32 Width )
 {
     if (Width == 0)

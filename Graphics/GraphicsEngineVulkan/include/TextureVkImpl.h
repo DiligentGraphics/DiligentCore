@@ -81,9 +81,6 @@ public:
         auto vkImage = GetVkImage();
         return vkImage;
     }
-/*
-    virtual void SetVkResourceState(Vk_RESOURCE_STATES state)override final{ SetState(state); }
-    */
 
     void CopyData(IDeviceContext* pContext, 
                   ITexture* pSrcTexture, 
@@ -106,11 +103,11 @@ public:
         return m_MipLevelUAV[MipLevel].get();
     }
 
-    void SetLayout(VkImageLayout NewLayout){ m_CurrentLayout = NewLayout;}
-    VkImageLayout GetLayout()const{return m_CurrentLayout;}
+    
+    void SetLayout(VkImageLayout Layout)override final;
+    VkImageLayout GetLayout()const override final;
 
 protected:
-
     void CreateViewInternal( const struct TextureViewDesc& ViewDesc, ITextureView** ppView, bool bIsDefaultView )override;
     //void PrepareVkInitData(const TextureData &InitData, Uint32 NumSubresources, std::vector<Vk_SUBRESOURCE_DATA> &VkInitData);
     
@@ -118,7 +115,6 @@ protected:
 
     VulkanUtilities::ImageWrapper m_VulkanImage;
     VulkanUtilities::VulkanMemoryAllocation m_MemoryAllocation;
-    VkImageLayout m_CurrentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
     // Texture views needed for mipmap generation
     std::vector<std::unique_ptr<TextureViewVkImpl, STDDeleter<TextureViewVkImpl, FixedBlockMemoryAllocator> > > m_MipLevelSRV;

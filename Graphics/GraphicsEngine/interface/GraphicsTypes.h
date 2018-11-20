@@ -1651,8 +1651,8 @@ namespace Diligent
     /// Resource state transition barrier description
     struct StateTransitionDesc
     {
-        static constexpr const Uint32 AllMipLevels   = static_cast<Uint32>(-1);
-        static constexpr const Uint32 AllArraySlices = static_cast<Uint32>(-1);
+        static constexpr const Uint32 RemainingMipLevels   = static_cast<Uint32>(-1);
+        static constexpr const Uint32 RemainingArraySlices = static_cast<Uint32>(-1);
         
         /// Texture to transition.
         /// \note Exactly one of pTexture or pBuffer must be non-null.
@@ -1666,13 +1666,13 @@ namespace Diligent
         Uint32 FirstMipLevel     = 0;
 
         /// When transitioning a texture, number of mip levels of the subresource range to transition.
-        Uint32 MipLevelsCount    = AllMipLevels;
+        Uint32 MipLevelsCount    = RemainingMipLevels;
 
         /// When transitioning a texture, first array slice of the subresource range to transition.
         Uint32 FirstArraySlice   = 0;
 
         /// When transitioning a texture, number of array slices of the subresource range to transition.
-        Uint32 ArraySliceCount   = AllArraySlices;
+        Uint32 ArraySliceCount   = RemainingArraySlices;
 
         /// Resource state before transition. If this value is RESOURCE_STATE_UNKNOWN,
         /// internal resource state will be used, which must be defined in this case.
@@ -1696,9 +1696,9 @@ namespace Diligent
                             RESOURCE_STATE _OldState,
                             RESOURCE_STATE _NewState, 
                             Uint32         _FirstMipLevel   = 0,
-                            Uint32         _MipLevelsCount  = AllMipLevels,
+                            Uint32         _MipLevelsCount  = RemainingMipLevels,
                             Uint32         _FirstArraySlice = 0,
-                            Uint32         _ArraySliceCount = AllArraySlices,
+                            Uint32         _ArraySliceCount = RemainingArraySlices,
                             bool           _UpdateState     = false) : 
             pTexture            (_pTexture),
             FirstMipLevel       (_FirstMipLevel),
@@ -1714,7 +1714,7 @@ namespace Diligent
                             RESOURCE_STATE _OldState,
                             RESOURCE_STATE _NewState, 
                             bool           _UpdateState) :
-            StateTransitionDesc(_pTexture, _OldState, _NewState, 0, AllMipLevels, 0, AllArraySlices, _UpdateState)
+            StateTransitionDesc(_pTexture, _OldState, _NewState, 0, RemainingMipLevels, 0, RemainingArraySlices, _UpdateState)
         {}
 
         StateTransitionDesc(IBuffer*       _pBuffer, 

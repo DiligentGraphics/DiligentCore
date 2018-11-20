@@ -30,6 +30,7 @@
 #include "TextureVkImpl.h"
 #include "MapHelper.h"
 #include "PlatformMisc.h"
+#include "VulkanTypeConversions.h"
 #include "../../GraphicsTools/include/ShaderMacroHelper.h"
 #include "../../GraphicsTools/include/CommonlyUsedStates.h"
 
@@ -197,6 +198,12 @@ namespace Diligent
     void GenerateMipsVkHelper::GenerateMips(TextureViewVkImpl& TexView, DeviceContextVkImpl& Ctx, IShaderResourceBinding& SRB)
     {
         auto* pTexVk = TexView.GetTexture<TextureVkImpl>();
+        if (!pTexVk->IsInKnownState())
+        {
+            LOG_ERROR_MESSAGE("Unable to generate mips for texture '", pTexVk->GetDesc().Name, "' because texture state is unknown");
+            return;
+        }
+
         const auto& TexDesc = pTexVk->GetDesc();
         const auto& ViewDesc = TexView.GetDesc();
         auto* pSrcMipVar = SRB.GetVariable(SHADER_TYPE_COMPUTE, "SrcMip");
@@ -220,14 +227,16 @@ namespace Diligent
         SubresRange.baseArrayLayer = 0;
         SubresRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
         
-        auto CurrLayout = pTexVk->GetLayout();
+        const auto CurrState = pTexVk->GetState();
+        const auto CurrLayout = ResourceStateToVkImageLayout(CurrState);
 
         // Transition the lowest mip level to VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
         SubresRange.baseMipLevel = 0;
         SubresRange.levelCount = 1;
-        if (CurrLayout != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
-            Ctx.TransitionImageLayout(*pTexVk, CurrLayout, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, SubresRange);
-
+        if (CurrState != RESOURCE_STATE_SHADER_RESOURCE)
+            Ctx.TransitionTextureState(*pTexVk, CurrState, RESOURCE_STATE_SHADER_RESOURCE, false, &SubresRange);
+        VERIFY_EXPR(ResourceStateToVkImageLayout(RESOURCE_STATE_SHADER_RESOURCE) == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        
         for (uint32_t TopMip = 0; TopMip < TexDesc.MipLevels - 1; )
         {
             // In Vulkan all subresources of a view must be transitioned to the same layout, so
@@ -305,6 +314,7 @@ namespace Diligent
         }
 
         // All mip levels are now in VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL state
-        pTexVk->SetLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        pTexVk->SetState(RESOURCE_STATE_SHADER_RESOURCE);
+        VERIFY_EXPR(pTexVk->GetLayout() == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     }
 }

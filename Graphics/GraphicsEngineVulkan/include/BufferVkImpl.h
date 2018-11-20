@@ -99,17 +99,11 @@ public:
         return vkBuffer;
     }
 
-    virtual void SetAccessFlags(VkAccessFlags AccessFlags)override final
+    virtual void SetAccessFlags(VkAccessFlags AccessFlags)override final;
+    VkAccessFlags GetAccessFlags()const;
+    bool CheckAccessFlags(VkAccessFlags AccessFlags)const
     {
-        m_AccessFlags = AccessFlags;
-    }
-    bool CheckAccessFlags(VkAccessFlags Flags)const
-    {
-        return (m_AccessFlags & Flags) == Flags;
-    }
-    VkAccessFlags GetAccessFlags()const
-    {
-        return m_AccessFlags;
+        return (GetAccessFlags() & AccessFlags) == AccessFlags;
     }
 
 private:
@@ -118,7 +112,6 @@ private:
     virtual void CreateViewInternal( const struct BufferViewDesc& ViewDesc, IBufferView** ppView, bool bIsDefaultView )override;
 
     VulkanUtilities::BufferViewWrapper CreateView(struct BufferViewDesc &ViewDesc);
-    VkAccessFlags m_AccessFlags            = 0;
     Uint32        m_DynamicOffsetAlignment = 0;
 
 #ifdef DEVELOPMENT

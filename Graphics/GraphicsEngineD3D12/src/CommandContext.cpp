@@ -278,27 +278,27 @@ void CommandContext::TransitionResource(const StateTransitionDesc& Barrier)
             {
                 DEV_CHECK_ERR(Barrier.FirstMipLevel < TexDesc.MipLevels, "First mip level (", Barrier.FirstMipLevel, ") specified by the barrier is "
                              "out of range. Texture \'", TexDesc.Name, "\' has only ", TexDesc.MipLevels, " mip level(s)");
-                DEV_CHECK_ERR(Barrier.MipLevelsCount == StateTransitionDesc::AllMipLevels || Barrier.FirstMipLevel + Barrier.MipLevelsCount < TexDesc.MipLevels,
+                DEV_CHECK_ERR(Barrier.MipLevelsCount == StateTransitionDesc::RemainingMipLevels || Barrier.FirstMipLevel + Barrier.MipLevelsCount < TexDesc.MipLevels,
                               "Mip level range ", Barrier.FirstMipLevel, "..", Barrier.FirstMipLevel+Barrier.MipLevelsCount-1, " "
                               "specified by the barrier is out of range. Texture \'", TexDesc.Name, "\' has only ", TexDesc.MipLevels, " mip level(s)");
 
                 DEV_CHECK_ERR(Barrier.FirstArraySlice < TexDesc.ArraySize, "First array slice (", Barrier.FirstArraySlice, ") specified by the barrier is "
                               "out of range. Array size of texture \'", TexDesc.Name, "\' is ", TexDesc.ArraySize);
-                DEV_CHECK_ERR(Barrier.ArraySliceCount == StateTransitionDesc::AllArraySlices || Barrier.FirstArraySlice + Barrier.ArraySliceCount < TexDesc.ArraySize,
+                DEV_CHECK_ERR(Barrier.ArraySliceCount == StateTransitionDesc::RemainingArraySlices || Barrier.FirstArraySlice + Barrier.ArraySliceCount < TexDesc.ArraySize,
                               "Array slice range ", Barrier.FirstArraySlice, "..", Barrier.FirstArraySlice+Barrier.ArraySliceCount-1, " "
                               "specified by the barrier is out of range. Array size of texture \'", TexDesc.Name, "\' is ", TexDesc.ArraySize);
             }
 #endif
-            if (Barrier.FirstMipLevel   == 0 && (Barrier.MipLevelsCount  == StateTransitionDesc::AllMipLevels   || Barrier.MipLevelsCount  == TexDesc.MipLevels) &&
-                Barrier.FirstArraySlice == 0 && (Barrier.ArraySliceCount == StateTransitionDesc::AllArraySlices || Barrier.ArraySliceCount == TexDesc.ArraySize))
+            if (Barrier.FirstMipLevel   == 0 && (Barrier.MipLevelsCount  == StateTransitionDesc::RemainingMipLevels   || Barrier.MipLevelsCount  == TexDesc.MipLevels) &&
+                Barrier.FirstArraySlice == 0 && (Barrier.ArraySliceCount == StateTransitionDesc::RemainingArraySlices || Barrier.ArraySliceCount == TexDesc.ArraySize))
             {
                 BarrierDesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
                 m_PendingResourceBarriers.emplace_back(BarrierDesc);
             }
             else
             {
-                Uint32 EndMip   = Barrier.MipLevelsCount  == StateTransitionDesc::AllMipLevels   ? TexDesc.MipLevels : Barrier.FirstMipLevel   + Barrier.MipLevelsCount;
-                Uint32 EndSlice = Barrier.ArraySliceCount == StateTransitionDesc::AllArraySlices ? TexDesc.ArraySize : Barrier.FirstArraySlice + Barrier.ArraySliceCount;
+                Uint32 EndMip   = Barrier.MipLevelsCount  == StateTransitionDesc::RemainingMipLevels   ? TexDesc.MipLevels : Barrier.FirstMipLevel   + Barrier.MipLevelsCount;
+                Uint32 EndSlice = Barrier.ArraySliceCount == StateTransitionDesc::RemainingArraySlices ? TexDesc.ArraySize : Barrier.FirstArraySlice + Barrier.ArraySliceCount;
                 for(Uint32 mip = Barrier.FirstMipLevel; mip < EndMip; ++mip)
                 {
                     for(Uint32 slice = Barrier.FirstArraySlice; slice < EndSlice; ++slice)

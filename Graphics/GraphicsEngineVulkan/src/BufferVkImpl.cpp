@@ -42,7 +42,6 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters*        pRefCounters,
                              const BufferDesc&          BuffDesc, 
                              const BufferData&          BuffData /*= BufferData()*/) : 
     TBufferBase(pRefCounters, BuffViewObjMemAllocator, pRenderDeviceVk, BuffDesc, false),
-    m_AccessFlags(0),
 #ifdef DEVELOPMENT
     m_DvpMapType(1 + pRenderDeviceVk->GetNumDeferredContexts()),
 #endif
@@ -142,12 +141,26 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters*        pRefCounters,
     {
         // Dynamic constant/vertex/index buffers are suballocated in the upload heap when Map() is called.
         // Dynamic buffers with SRV or UAV flags need to be allocated in GPU-only memory
-        m_AccessFlags = VK_ACCESS_INDIRECT_COMMAND_READ_BIT | 
-                        VK_ACCESS_INDEX_READ_BIT            | 
-                        VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT | 
-                        VK_ACCESS_UNIFORM_READ_BIT          | 
-                        VK_ACCESS_SHADER_READ_BIT           |
-                        VK_ACCESS_TRANSFER_READ_BIT;
+        constexpr RESOURCE_STATE State = static_cast<RESOURCE_STATE>(
+                 RESOURCE_STATE_VERTEX_BUFFER   | 
+                 RESOURCE_STATE_INDEX_BUFFER    |
+                 RESOURCE_STATE_CONSTANT_BUFFER |
+                 RESOURCE_STATE_SHADER_RESOURCE |
+                 RESOURCE_STATE_COPY_SOURCE     |
+                 RESOURCE_STATE_INDIRECT_ARGUMENT);
+        SetState(State);
+
+#ifdef _DEBUG
+        {
+            VkAccessFlags AccessFlags = VK_ACCESS_INDIRECT_COMMAND_READ_BIT | 
+                                        VK_ACCESS_INDEX_READ_BIT            | 
+                                        VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT | 
+                                        VK_ACCESS_UNIFORM_READ_BIT          | 
+                                        VK_ACCESS_SHADER_READ_BIT           |
+                                        VK_ACCESS_TRANSFER_READ_BIT;
+            VERIFY_EXPR(ResourceStateFlagsToVkAccessFlags(State) == AccessFlags);
+        }
+#endif
     }
     else
     {
@@ -176,6 +189,7 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters*        pRefCounters,
         CHECK_VK_ERROR_AND_THROW(err, "Failed to bind buffer memory");
 
         bool bInitializeBuffer = (BuffData.pData != nullptr && BuffData.DataSize > 0);
+        RESOURCE_STATE InitialState = RESOURCE_STATE_UNDEFINED;
         if( bInitializeBuffer )
         {
             VkBufferCreateInfo VkStaginBuffCI = VkBuffCI;
@@ -210,8 +224,10 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters*        pRefCounters,
             pRenderDeviceVk->AllocateTransientCmdPool(CmdPool, vkCmdBuff, "Transient command pool to copy staging data to a device buffer");
 
             VulkanUtilities::VulkanCommandBuffer::BufferMemoryBarrier(vkCmdBuff, StagingBuffer, 0, VK_ACCESS_TRANSFER_READ_BIT);
-            m_AccessFlags = VK_ACCESS_TRANSFER_WRITE_BIT;
-            VulkanUtilities::VulkanCommandBuffer::BufferMemoryBarrier(vkCmdBuff, m_VulkanBuffer, 0, m_AccessFlags);
+            InitialState = RESOURCE_STATE_COPY_DEST;
+            VkAccessFlags AccessFlags = ResourceStateFlagsToVkAccessFlags(InitialState);
+            VERIFY_EXPR(AccessFlags == VK_ACCESS_TRANSFER_WRITE_BIT);
+            VulkanUtilities::VulkanCommandBuffer::BufferMemoryBarrier(vkCmdBuff, m_VulkanBuffer, 0, AccessFlags);
 
             // Copy commands MUST be recorded outside of a render pass instance. This is OK here
             // as copy will be the only command in the cmd buffer
@@ -252,11 +268,11 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters*        pRefCounters,
             pRenderDeviceVk->SafeReleaseDeviceObject(std::move(StagingBuffer),           Uint64{1} << Uint64{QueueIndex});
             pRenderDeviceVk->SafeReleaseDeviceObject(std::move(StagingMemoryAllocation), Uint64{1} << Uint64{QueueIndex});
         }
-        else
-        {
-            m_AccessFlags = 0;
-        }
+
+        SetState(InitialState);
     }
+
+    VERIFY_EXPR(IsInKnownState());
 }
 
 
@@ -267,7 +283,6 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters*        pRefCounters,
                              RESOURCE_STATE             InitialState,
                              VkBuffer                   vkBuffer) : 
     TBufferBase(pRefCounters, BuffViewObjMemAllocator, pRenderDeviceVk, BuffDesc, false),
-    m_AccessFlags(0),
 #ifdef DEVELOPMENT
     m_DvpMapType(1 + pRenderDeviceVk->GetNumDeferredContexts()),
 #endif
@@ -525,6 +540,16 @@ VkBuffer BufferVkImpl::GetVkBuffer()const
         VERIFY(m_Desc.Usage == USAGE_DYNAMIC, "Dynamic buffer expected");
         return m_pDevice->GetDynamicMemoryManager().GetVkBuffer();
     }
+}
+
+void BufferVkImpl::SetAccessFlags(VkAccessFlags AccessFlags)
+{
+    SetState(VkAccessFlagsToResourceStates(AccessFlags));
+}
+
+VkAccessFlags BufferVkImpl::GetAccessFlags()const
+{
+    return ResourceStateFlagsToVkAccessFlags(GetState());
 }
 
 #ifdef DEVELOPMENT

@@ -46,10 +46,15 @@ public:
     /// The application must not release the returned image
     virtual VkImage GetVkImage()const = 0;
 
-    /// Sets the texture usage state
+    /// Sets Vulkan image layout
 
-    /// \param [in] state - D3D12 resource state to be set for this texture
-    //virtual void SetD3D12ResourceState(D3D12_RESOURCE_STATES state) = 0;
+    /// \param [in] Layout - Vulkan image layout to set.
+    /// \note This function does not perform layout transition, but sets the
+    ///       internal texture state to match the given Vulkan layout.
+    virtual void SetLayout(VkImageLayout Layout) = 0;
+
+    /// Returns current Vulkan image layout. If the state is unknown to the engine, returns VK_IMAGE_LAYOUT_UNDEFINED
+    virtual VkImageLayout GetLayout()const = 0;
 };
 
 }

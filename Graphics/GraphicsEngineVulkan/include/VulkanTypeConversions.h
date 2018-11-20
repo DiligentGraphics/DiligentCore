@@ -61,4 +61,7 @@ VkBorderColor BorderColorToVkBorderColor(const Float32 BorderColor[]);
 VkAccessFlags ResourceStateFlagsToVkAccessFlags(RESOURCE_STATE StateFlags);
 VkImageLayout ResourceStateToVkImageLayout(RESOURCE_STATE StateFlag);
 
+RESOURCE_STATE VkAccessFlagsToResourceStates(VkAccessFlags AccessFlags);
+RESOURCE_STATE VkImageLayoutToResourceState(VkImageLayout Layout);
+
 }

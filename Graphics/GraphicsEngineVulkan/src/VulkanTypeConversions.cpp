@@ -1184,9 +1184,90 @@ VkAccessFlags ResourceStateFlagsToVkAccessFlags(RESOURCE_STATE StateFlags)
     return AccessFlags;
 }
 
+RESOURCE_STATE VkAccessFlagsToResourceStates(VkAccessFlagBits AccessFlagBit)
+{
+    VERIFY((AccessFlagBit & (AccessFlagBit-1)) == 0, "Single access flag bit is expected");
+
+    switch(AccessFlagBit)
+    {
+        case VK_ACCESS_INDIRECT_COMMAND_READ_BIT:                 return RESOURCE_STATE_INDIRECT_ARGUMENT;
+        case VK_ACCESS_INDEX_READ_BIT:                            return RESOURCE_STATE_INDEX_BUFFER;
+        case VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT:                 return RESOURCE_STATE_VERTEX_BUFFER;
+        case VK_ACCESS_UNIFORM_READ_BIT:                          return RESOURCE_STATE_CONSTANT_BUFFER;
+        case VK_ACCESS_INPUT_ATTACHMENT_READ_BIT:                 return RESOURCE_STATE_UNKNOWN;
+        case VK_ACCESS_SHADER_READ_BIT:                           return RESOURCE_STATE_SHADER_RESOURCE;
+        case VK_ACCESS_SHADER_WRITE_BIT:                          return RESOURCE_STATE_UNORDERED_ACCESS;
+        case VK_ACCESS_COLOR_ATTACHMENT_READ_BIT:                 return RESOURCE_STATE_RENDER_TARGET;
+        case VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT:                return RESOURCE_STATE_RENDER_TARGET;
+        case VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT:         return RESOURCE_STATE_DEPTH_READ;
+        case VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT:        return RESOURCE_STATE_DEPTH_WRITE;
+        case VK_ACCESS_TRANSFER_READ_BIT:                         return RESOURCE_STATE_COPY_SOURCE;
+        case VK_ACCESS_TRANSFER_WRITE_BIT:                        return RESOURCE_STATE_COPY_DEST;
+        case VK_ACCESS_HOST_READ_BIT:                             return RESOURCE_STATE_UNKNOWN;
+        case VK_ACCESS_HOST_WRITE_BIT:                            return RESOURCE_STATE_UNKNOWN;
+        case VK_ACCESS_MEMORY_READ_BIT:                           return RESOURCE_STATE_UNKNOWN;
+        case VK_ACCESS_MEMORY_WRITE_BIT:                          return RESOURCE_STATE_UNKNOWN;
+        case VK_ACCESS_TRANSFORM_FEEDBACK_WRITE_BIT_EXT:          return RESOURCE_STATE_UNKNOWN;
+        case VK_ACCESS_TRANSFORM_FEEDBACK_COUNTER_READ_BIT_EXT:   return RESOURCE_STATE_UNKNOWN;
+        case VK_ACCESS_TRANSFORM_FEEDBACK_COUNTER_WRITE_BIT_EXT:  return RESOURCE_STATE_UNKNOWN;
+        case VK_ACCESS_CONDITIONAL_RENDERING_READ_BIT_EXT:        return RESOURCE_STATE_UNKNOWN;
+        case VK_ACCESS_COMMAND_PROCESS_READ_BIT_NVX:              return RESOURCE_STATE_UNKNOWN;
+        case VK_ACCESS_COMMAND_PROCESS_WRITE_BIT_NVX:             return RESOURCE_STATE_UNKNOWN;
+        case VK_ACCESS_COLOR_ATTACHMENT_READ_NONCOHERENT_BIT_EXT: return RESOURCE_STATE_UNKNOWN;
+        case VK_ACCESS_SHADING_RATE_IMAGE_READ_BIT_NV:            return RESOURCE_STATE_UNKNOWN;
+        case VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_NVX:       return RESOURCE_STATE_UNKNOWN;
+        case VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_NVX:      return RESOURCE_STATE_UNKNOWN;
+        default:                                                  
+            UNEXPECTED("Unknown access flag");
+            return RESOURCE_STATE_UNKNOWN;
+    }
+}
+
+
+class VkAccessFlagBitPosToResourceState
+{
+public:
+    VkAccessFlagBitPosToResourceState()
+    {
+        for (Uint32 bit=0; bit < MaxFlagBitPos; ++bit)
+        {
+            FlagBitPosToResourceState[bit] = VkAccessFlagsToResourceStates(static_cast<VkAccessFlagBits>(1<<bit));
+        }
+    }
+
+    RESOURCE_STATE operator()(Uint32 BitPos)const
+    {
+        VERIFY(BitPos <= MaxFlagBitPos, "Resource state flag bit position (", BitPos, ") exceeds max bit position (", MaxFlagBitPos, ")");
+        return FlagBitPosToResourceState[BitPos];
+    }
+
+private:
+    static constexpr Uint32 MaxFlagBitPos = 20;
+    std::array<RESOURCE_STATE, MaxFlagBitPos + 1> FlagBitPosToResourceState;
+};
+
+
+RESOURCE_STATE VkAccessFlagsToResourceStates(VkAccessFlags AccessFlags)
+{
+    static const VkAccessFlagBitPosToResourceState BitPosToState;
+    Uint32 State = 0;
+    while (AccessFlags != 0)
+    {
+        auto lsb = PlatformMisc::GetLSB(AccessFlags);
+        State |= BitPosToState(lsb);
+        AccessFlags &= ~(1<<lsb);
+    }
+    return static_cast<RESOURCE_STATE>(State);
+}
+
+
 
 VkImageLayout ResourceStateToVkImageLayout(RESOURCE_STATE StateFlag)
 {
+    if(StateFlag == RESOURCE_STATE_UNKNOWN)
+    {
+        return VK_IMAGE_LAYOUT_UNDEFINED;
+    }
     // Currently not used:
     //VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL
     //VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL
@@ -1216,9 +1297,34 @@ VkImageLayout ResourceStateToVkImageLayout(RESOURCE_STATE StateFlag)
         case RESOURCE_STATE_PRESENT:           return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
         default:
-            UNEXPECTED("Unexpected resource state flag");
+            UNEXPECTED("Unexpected resource state flag (", StateFlag, ")");
             return VK_IMAGE_LAYOUT_UNDEFINED;
     }
 }
-    
+
+RESOURCE_STATE VkImageLayoutToResourceState(VkImageLayout Layout)
+{
+    static_assert(RESOURCE_STATE_MAX_BIT == 0x8000, "This function must be updated to handle new resource state flag");
+    switch(Layout)
+    {
+        case VK_IMAGE_LAYOUT_UNDEFINED:                                  return RESOURCE_STATE_UNDEFINED;
+        case VK_IMAGE_LAYOUT_GENERAL:                                    return RESOURCE_STATE_UNORDERED_ACCESS;
+        case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:                   return RESOURCE_STATE_RENDER_TARGET;
+        case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:           return RESOURCE_STATE_DEPTH_WRITE;
+        case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:            return RESOURCE_STATE_DEPTH_READ;
+        case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:                   return RESOURCE_STATE_SHADER_RESOURCE;
+        case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:                       return RESOURCE_STATE_COPY_SOURCE;
+        case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:                       return RESOURCE_STATE_COPY_DEST;
+        case VK_IMAGE_LAYOUT_PREINITIALIZED:                             UNEXPECTED("This layout is not supported"); return RESOURCE_STATE_UNDEFINED;
+        case VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL: UNEXPECTED("This layout is not supported"); return RESOURCE_STATE_UNDEFINED;
+        case VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL: UNEXPECTED("This layout is not supported"); return RESOURCE_STATE_UNDEFINED;
+        case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:                            return RESOURCE_STATE_PRESENT;
+        case VK_IMAGE_LAYOUT_SHARED_PRESENT_KHR:                         UNEXPECTED("This layout is not supported"); return RESOURCE_STATE_UNDEFINED;
+        case VK_IMAGE_LAYOUT_SHADING_RATE_OPTIMAL_NV:                    UNEXPECTED("This layout is not supported"); return RESOURCE_STATE_UNDEFINED;
+        default:
+            UNEXPECTED("Unknown image layout (", Layout, ")");
+            return RESOURCE_STATE_UNDEFINED;
+    }
+}
+
 }

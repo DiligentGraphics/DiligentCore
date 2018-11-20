@@ -295,8 +295,14 @@ namespace Diligent
         {
             auto& CurrStream = m_VertexStreams[Buff];
             auto* pBufferVk = CurrStream.pBuffer.RawPtr();
-            if (pBufferVk != nullptr && !pBufferVk->CheckAccessFlags(VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT))
-                BufferMemoryBarrier(*pBufferVk, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT);
+            if (pBufferVk != nullptr && pBufferVk->IsInKnownState())
+            {
+                if (!pBufferVk->CheckState(RESOURCE_STATE_VERTEX_BUFFER))
+                {
+                    TransitionBufferState(*pBufferVk, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_VERTEX_BUFFER, true);
+                }
+                VERIFY_EXPR(pBufferVk->CheckAccessFlags(VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT));
+            }
         }
     }
 
@@ -323,8 +329,14 @@ namespace Diligent
                     pBufferVk->DvpVerifyDynamicAllocation(this);
 #endif
                 }
-                if (!pBufferVk->CheckAccessFlags(VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT))
-                    BufferMemoryBarrier(*pBufferVk, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT);
+                if (pBufferVk->IsInKnownState())
+                {
+                    if (!pBufferVk->CheckState(RESOURCE_STATE_VERTEX_BUFFER))
+                    {
+                        TransitionBufferState(*pBufferVk, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_VERTEX_BUFFER, true);
+                    }
+                    VERIFY_EXPR(pBufferVk->CheckAccessFlags(VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT));
+                }
             
                 // Device context keeps strong references to all vertex buffers.
 
@@ -408,8 +420,14 @@ namespace Diligent
 #endif
 
             BufferVkImpl *pBuffVk = m_pIndexBuffer.RawPtr<BufferVkImpl>();
-            if (!pBuffVk->CheckAccessFlags(VK_ACCESS_INDEX_READ_BIT))
-                BufferMemoryBarrier(*pBuffVk, VK_ACCESS_INDEX_READ_BIT);
+            if (pBuffVk->IsInKnownState())
+            {
+                if (!pBuffVk->CheckState(RESOURCE_STATE_INDEX_BUFFER))
+                {
+                    TransitionBufferState(*pBuffVk, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_INDEX_BUFFER, true);
+                }
+                VERIFY_EXPR(pBuffVk->CheckAccessFlags(VK_ACCESS_INDEX_READ_BIT));
+            }
 
             DEV_CHECK_ERR(drawAttribs.IndexType == VT_UINT16 || drawAttribs.IndexType == VT_UINT32, "Unsupported index format. Only R16_UINT and R32_UINT are allowed.");
             VkIndexType vkIndexType = drawAttribs.IndexType == VT_UINT16 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32;
@@ -437,8 +455,14 @@ namespace Diligent
         if (pIndirectDrawAttribsVk != nullptr)
         {
             // Buffer memory barries must be executed outside of render pass
-            if (!pIndirectDrawAttribsVk->CheckAccessFlags(VK_ACCESS_INDIRECT_COMMAND_READ_BIT))
-                BufferMemoryBarrier(*pIndirectDrawAttribsVk, VK_ACCESS_INDIRECT_COMMAND_READ_BIT);
+            if (pIndirectDrawAttribsVk->IsInKnownState())
+            {
+                if (!pIndirectDrawAttribsVk->CheckState(RESOURCE_STATE_INDIRECT_ARGUMENT))
+                {
+                    TransitionBufferState(*pIndirectDrawAttribsVk, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_INDIRECT_ARGUMENT, true);
+                }
+                VERIFY_EXPR(pIndirectDrawAttribsVk->CheckAccessFlags(VK_ACCESS_INDIRECT_COMMAND_READ_BIT));
+            }
         }
 
 #ifdef DEVELOPMENT
@@ -456,8 +480,14 @@ namespace Diligent
             if (pIndirectDrawAttribsVk->GetDesc().Usage == USAGE_DYNAMIC)
                 pIndirectDrawAttribsVk->DvpVerifyDynamicAllocation(this);
 #endif
-            if (!pIndirectDrawAttribsVk->CheckAccessFlags(VK_ACCESS_INDIRECT_COMMAND_READ_BIT))
-                BufferMemoryBarrier(*pIndirectDrawAttribsVk, VK_ACCESS_INDIRECT_COMMAND_READ_BIT);
+            if (pIndirectDrawAttribsVk->IsInKnownState())
+            {
+                if (!pIndirectDrawAttribsVk->CheckState(RESOURCE_STATE_INDIRECT_ARGUMENT))
+                {
+                    TransitionBufferState(*pIndirectDrawAttribsVk, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_INDIRECT_ARGUMENT, true);
+                }
+                VERIFY_EXPR(pIndirectDrawAttribsVk->CheckAccessFlags(VK_ACCESS_INDIRECT_COMMAND_READ_BIT));
+            }
 
             if ( drawAttribs.IsIndexed )
                 m_CommandBuffer.DrawIndexedIndirect(pIndirectDrawAttribsVk->GetVkBuffer(), pIndirectDrawAttribsVk->GetDynamicOffset(m_ContextId, this) + drawAttribs.IndirectDrawArgsOffset, 1, 0);
@@ -510,8 +540,14 @@ namespace Diligent
 #endif
 
                 // Buffer memory barries must be executed outside of render pass
-                if (!pBufferVk->CheckAccessFlags(VK_ACCESS_INDIRECT_COMMAND_READ_BIT))
-                    BufferMemoryBarrier(*pBufferVk, VK_ACCESS_INDIRECT_COMMAND_READ_BIT);
+                if (pBufferVk->IsInKnownState())
+                {
+                    if (!pBufferVk->CheckState(RESOURCE_STATE_INDIRECT_ARGUMENT))
+                    {
+                        TransitionBufferState(*pBufferVk, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_INDIRECT_ARGUMENT, true);
+                    }
+                    VERIFY_EXPR(pBufferVk->CheckAccessFlags(VK_ACCESS_INDIRECT_COMMAND_READ_BIT));
+                }
 
                 m_CommandBuffer.DispatchIndirect(pBufferVk->GetVkBuffer(), pBufferVk->GetDynamicOffset(m_ContextId, this) + DispatchAttrs.DispatchArgsByteOffset);
             }
@@ -594,7 +630,15 @@ namespace Diligent
             auto* pTextureVk = ValidatedCast<TextureVkImpl>(pTexture);
 
             // Image layout must be VK_IMAGE_LAYOUT_GENERAL or VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL (17.1)
-            TransitionImageLayout(pTexture, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+            if (pTextureVk->IsInKnownState())
+            {
+                if (!pTextureVk->CheckState(RESOURCE_STATE_COPY_DEST))
+                {
+                    TransitionTextureState(*pTextureVk, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_DEST, true);
+                }
+                VERIFY_EXPR(pTextureVk->GetLayout() == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+            }
+            
             VkClearDepthStencilValue ClearValue;
             ClearValue.depth = fDepth;
             ClearValue.stencil = Stencil;
@@ -721,7 +765,14 @@ namespace Diligent
             auto* pTextureVk = ValidatedCast<TextureVkImpl>(pTexture);
 
             // Image layout must be VK_IMAGE_LAYOUT_GENERAL or VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL (17.1)
-            TransitionImageLayout(pTexture, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+            if (pTextureVk->IsInKnownState())
+            {
+                if (!pTextureVk->CheckState(RESOURCE_STATE_COPY_DEST))
+                {
+                    TransitionTextureState(*pTextureVk, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_DEST, true);
+                }
+                VERIFY_EXPR(pTextureVk->GetLayout() == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+            }
             auto ClearValue = ClearValueToVkClearValue(RGBA, ViewDesc.Format);
             VkImageSubresourceRange Subresource;
             Subresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -962,8 +1013,15 @@ namespace Diligent
                 if (m_pBoundDepthStencil)
                 {
                     auto* pDSVVk = m_pBoundDepthStencil.RawPtr<TextureViewVkImpl>();
-                    auto* pDepthBuffer = pDSVVk->GetTexture();
-                    TransitionImageLayout(pDepthBuffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+                    auto* pDepthBufferVk = ValidatedCast<TextureVkImpl>(pDSVVk->GetTexture());
+                    if (pDepthBufferVk->IsInKnownState())
+                    {
+                        if (!pDepthBufferVk->CheckState(RESOURCE_STATE_DEPTH_WRITE))
+                        {
+                            TransitionTextureState(*pDepthBufferVk, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_DEPTH_WRITE, true);
+                        }
+                        VERIFY_EXPR(pDepthBufferVk->GetLayout() == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+                    }
                 }
 
                 for (Uint32 rt=0; rt < m_NumBoundRenderTargets; ++rt)
@@ -971,8 +1029,15 @@ namespace Diligent
                     if (ITextureView* pRTV = m_pBoundRenderTargets[rt])
                     {
                         auto* pRTVVk = ValidatedCast<TextureViewVkImpl>(pRTV);
-                        auto* pRenderTarget = pRTVVk->GetTexture();
-                        TransitionImageLayout(pRenderTarget, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+                        auto* pRenderTargetVk = ValidatedCast<TextureVkImpl>(pRTVVk->GetTexture());
+                        if (pRenderTargetVk->IsInKnownState())
+                        {
+                            if (!pRenderTargetVk->CheckState(RESOURCE_STATE_RENDER_TARGET))
+                            {
+                                TransitionTextureState(*pRenderTargetVk, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_RENDER_TARGET, true);
+                            }
+                            VERIFY_EXPR(pRenderTargetVk->GetLayout() == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+                        }
                     }
                 }
                 m_CommandBuffer.BeginRenderPass(m_RenderPass, m_Framebuffer, m_FramebufferWidth, m_FramebufferHeight);
@@ -1057,9 +1122,13 @@ namespace Diligent
 #endif
 
         EnsureVkCmdBuffer();
-        if (!pBuffVk->CheckAccessFlags(VK_ACCESS_TRANSFER_WRITE_BIT))
+        if (pBuffVk->IsInKnownState())
         {
-            BufferMemoryBarrier(*pBuffVk, VK_ACCESS_TRANSFER_WRITE_BIT);
+            if (!pBuffVk->CheckState(RESOURCE_STATE_COPY_DEST))
+            {
+                TransitionBufferState(*pBuffVk, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_DEST, true);
+            }
+            VERIFY_EXPR(pBuffVk->CheckAccessFlags(VK_ACCESS_TRANSFER_WRITE_BIT));
         }
         VkBufferCopy CopyRegion;
         CopyRegion.srcOffset = SrcOffset;
@@ -1101,10 +1170,23 @@ namespace Diligent
 #endif
 
         EnsureVkCmdBuffer();
-        if (!pSrcBuffVk->CheckAccessFlags(VK_ACCESS_TRANSFER_READ_BIT))
-            BufferMemoryBarrier(*pSrcBuffVk, VK_ACCESS_TRANSFER_READ_BIT);
-        if (!pDstBuffVk->CheckAccessFlags(VK_ACCESS_TRANSFER_WRITE_BIT))
-            BufferMemoryBarrier(*pDstBuffVk, VK_ACCESS_TRANSFER_WRITE_BIT);
+        if (pSrcBuffVk->IsInKnownState())
+        {
+            if (!pSrcBuffVk->CheckState(RESOURCE_STATE_COPY_SOURCE))
+            {
+                TransitionBufferState(*pSrcBuffVk, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, true);
+            }
+            VERIFY_EXPR(pSrcBuffVk->CheckAccessFlags(VK_ACCESS_TRANSFER_READ_BIT));
+        }
+        if (pDstBuffVk->IsInKnownState())
+        {
+            if (!pDstBuffVk->CheckState(RESOURCE_STATE_COPY_DEST))
+            {
+                TransitionBufferState(*pDstBuffVk, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_DEST, true);
+            }
+            VERIFY_EXPR(pDstBuffVk->CheckAccessFlags(VK_ACCESS_TRANSFER_WRITE_BIT));
+        }
+
         VkBufferCopy CopyRegion;
         CopyRegion.srcOffset = SrcOffset + pSrcBuffVk->GetDynamicOffset(m_ContextId, this);
         CopyRegion.dstOffset = DstOffset;
@@ -1118,13 +1200,21 @@ namespace Diligent
     void DeviceContextVkImpl::CopyTextureRegion(TextureVkImpl *pSrcTexture, TextureVkImpl *pDstTexture, const VkImageCopy &CopyRegion)
     {
         EnsureVkCmdBuffer();
-        if (pSrcTexture->GetLayout() != VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
+        if (pSrcTexture->IsInKnownState())
         {
-            TransitionImageLayout(*pSrcTexture, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+            if (!pSrcTexture->CheckState(RESOURCE_STATE_COPY_SOURCE))
+            {
+                TransitionTextureState(*pSrcTexture, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, true);
+            }
+            VERIFY_EXPR(pSrcTexture->GetLayout() == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
         }
-        if (pDstTexture->GetLayout() != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+        if (pDstTexture->IsInKnownState())
         {
-            TransitionImageLayout(*pDstTexture, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+            if (!pDstTexture->CheckState(RESOURCE_STATE_COPY_DEST))
+            {
+                TransitionTextureState(*pDstTexture, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_DEST, true);
+            }
+            VERIFY_EXPR(pDstTexture->GetLayout() == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
         }
         // srcImageLayout must be VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL or VK_IMAGE_LAYOUT_GENERAL
         // dstImageLayout must be VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL or VK_IMAGE_LAYOUT_GENERAL (18.3)
@@ -1174,7 +1264,7 @@ namespace Diligent
         CopyInfo.Stride = Align(CopyInfo.RowSize, static_cast<Uint32>(DeviceLimits.optimalBufferCopyRowPitchAlignment));
         if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
         {
-            // If the calling command�s VkImage parameter is a compressed image,
+            // If the calling command's VkImage parameter is a compressed image,
             // bufferRowLength must be a multiple of the compressed texel block width
             // In texels (not even in compressed blocks!)
             CopyInfo.StrideInTexels = CopyInfo.Stride / Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.BlockWidth};
@@ -1260,9 +1350,13 @@ namespace Diligent
                                                   Uint32           ArraySlice)
     {
         EnsureVkCmdBuffer();
-        if (TextureVk.GetLayout() != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+        if (TextureVk.IsInKnownState())
         {
-            TransitionImageLayout(TextureVk, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+            if (!TextureVk.CheckState(RESOURCE_STATE_COPY_DEST))
+            {
+                TransitionTextureState(TextureVk, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_DEST, true);
+            }
+            VERIFY_EXPR(TextureVk.GetLayout() == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
         }
 
         VkBufferImageCopy CopyRegion = {};
@@ -1443,45 +1537,92 @@ namespace Diligent
         m_PendingFences.emplace_back( std::make_pair(Value, pFence) );
     };
 
-    void DeviceContextVkImpl::TransitionImageLayout(ITexture *pTexture, VkImageLayout NewLayout)
+    void DeviceContextVkImpl::TransitionImageLayout(ITexture* pTexture, VkImageLayout NewLayout)
     {
         VERIFY_EXPR(pTexture != nullptr);
         auto pTextureVk = ValidatedCast<TextureVkImpl>(pTexture);
-        if (pTextureVk->GetLayout() != NewLayout)
+        if (!pTextureVk->IsInKnownState())
         {
-            TransitionImageLayout(*pTextureVk, NewLayout);
+            LOG_ERROR_MESSAGE("Failed to transition layout for texture '", pTextureVk->GetDesc().Name, "' because the texture state is unknown");
+            return;
+        }
+        auto NewState = VkImageLayoutToResourceState(NewLayout);
+        if (!pTextureVk->CheckState(NewState))
+        {
+            TransitionTextureState(*pTextureVk, RESOURCE_STATE_UNKNOWN, NewState, true);
         }
     }
 
-    void DeviceContextVkImpl::TransitionImageLayout(TextureVkImpl& TextureVk, VkImageLayout NewLayout)
+    void DeviceContextVkImpl::TransitionTextureState(TextureVkImpl&           TextureVk,
+                                                     RESOURCE_STATE           OldState,
+                                                     RESOURCE_STATE           NewState,
+                                                     bool                     UpdateTextureState,
+                                                     VkImageSubresourceRange* pSubresRange/* = nullptr*/)
     {
-        VERIFY(TextureVk.GetLayout() != NewLayout, "The texture is already transitioned to correct layout");
-        EnsureVkCmdBuffer();
-        
-        auto vkImg = TextureVk.GetVkImage();
-        const auto& TexDesc = TextureVk.GetDesc();
-        const auto& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
-        VkImageSubresourceRange SubresRange;
-        if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH)
-            SubresRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-        else if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
+        if (OldState == RESOURCE_STATE_UNKNOWN)
         {
-            // If image has a depth / stencil format with both depth and stencil components, then the 
-            // aspectMask member of subresourceRange must include both VK_IMAGE_ASPECT_DEPTH_BIT and 
-            // VK_IMAGE_ASPECT_STENCIL_BIT (6.7.3)
-            SubresRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+            if (TextureVk.IsInKnownState())
+            {
+                OldState = TextureVk.GetState();
+            }
+            else
+            {
+                LOG_ERROR_MESSAGE("Failed to transition the state of texture '", TextureVk.GetDesc().Name, "' because the texture state is unknown and is not explicitly specified");
+                return;
+            }
         }
         else
-            SubresRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        SubresRange.baseArrayLayer = 0;
-        SubresRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
-        SubresRange.baseMipLevel = 0;
-        SubresRange.levelCount = VK_REMAINING_MIP_LEVELS;
-        m_CommandBuffer.TransitionImageLayout(vkImg, TextureVk.GetLayout(), NewLayout, SubresRange);
-        TextureVk.SetLayout(NewLayout);
+        {
+            if (TextureVk.IsInKnownState() && TextureVk.GetState() != OldState)
+            {
+                LOG_ERROR_MESSAGE("The state ", GetResourceStateString(TextureVk.GetState()), " of texture '",
+                                   TextureVk.GetDesc().Name, "' does not match the old state ", GetResourceStateString(OldState),
+                                   " specified by the barrier");
+            }
+        }
+
+        EnsureVkCmdBuffer();
+
+        auto vkImg = TextureVk.GetVkImage();
+        VkImageSubresourceRange FullSubresRange;
+        if (pSubresRange == nullptr)
+        {
+            pSubresRange = &FullSubresRange;
+            FullSubresRange.aspectMask     = 0;
+            FullSubresRange.baseArrayLayer = 0;
+            FullSubresRange.layerCount     = VK_REMAINING_ARRAY_LAYERS;
+            FullSubresRange.baseMipLevel   = 0;
+            FullSubresRange.levelCount     = VK_REMAINING_MIP_LEVELS;
+        }
+
+        if (pSubresRange->aspectMask == 0)
+        {
+            const auto& TexDesc = TextureVk.GetDesc();
+            const auto& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
+            if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH)
+                pSubresRange->aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+            else if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
+            {
+                // If image has a depth / stencil format with both depth and stencil components, then the 
+                // aspectMask member of subresourceRange must include both VK_IMAGE_ASPECT_DEPTH_BIT and 
+                // VK_IMAGE_ASPECT_STENCIL_BIT (6.7.3)
+                pSubresRange->aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+            }
+            else
+                pSubresRange->aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        }
+
+        auto OldLayout = ResourceStateToVkImageLayout(OldState);
+        auto NewLayout = ResourceStateToVkImageLayout(NewState);
+        m_CommandBuffer.TransitionImageLayout(vkImg, OldLayout, NewLayout, *pSubresRange);
+        if(UpdateTextureState)
+        {
+            TextureVk.SetState(NewState);
+            VERIFY_EXPR(TextureVk.GetLayout() == NewLayout);
+        }
     }
 
-    void DeviceContextVkImpl::TransitionImageLayout(TextureVkImpl &TextureVk, VkImageLayout OldLayout, VkImageLayout NewLayout, const VkImageSubresourceRange& SubresRange)
+    void DeviceContextVkImpl::TransitionImageLayout(TextureVkImpl& TextureVk, VkImageLayout OldLayout, VkImageLayout NewLayout, const VkImageSubresourceRange& SubresRange)
     {
         VERIFY(TextureVk.GetLayout() != NewLayout, "The texture is already transitioned to correct layout");
         EnsureVkCmdBuffer();
@@ -1489,26 +1630,59 @@ namespace Diligent
         m_CommandBuffer.TransitionImageLayout(vkImg, OldLayout, NewLayout, SubresRange);
     }
 
-    void DeviceContextVkImpl::BufferMemoryBarrier(IBuffer *pBuffer, VkAccessFlags NewAccessFlags)
+    void DeviceContextVkImpl::BufferMemoryBarrier(IBuffer* pBuffer, VkAccessFlags NewAccessFlags)
     {
         VERIFY_EXPR(pBuffer != nullptr);
         auto pBuffVk = ValidatedCast<BufferVkImpl>(pBuffer);
-        if (!pBuffVk->CheckAccessFlags(NewAccessFlags))
+        if (!pBuffVk->IsInKnownState())
         {
-            BufferMemoryBarrier(*pBuffVk, NewAccessFlags);
+            LOG_ERROR_MESSAGE("Failed to execute buffer memory barrier for buffer '", pBuffVk->GetDesc().Name, "' because the buffer state is unknown");
+            return;
+        }
+        auto NewState = VkAccessFlagsToResourceStates(NewAccessFlags);
+        if ((pBuffVk->GetState() & NewState) != NewState)
+        {
+            TransitionBufferState(*pBuffVk, RESOURCE_STATE_UNKNOWN, NewState, true);
         }
     }
 
-    void DeviceContextVkImpl::BufferMemoryBarrier(BufferVkImpl &BufferVk, VkAccessFlags NewAccessFlags)
+    void DeviceContextVkImpl::TransitionBufferState(BufferVkImpl& BufferVk, RESOURCE_STATE OldState, RESOURCE_STATE NewState, bool UpdateBufferState)
     {
-        VERIFY(!BufferVk.CheckAccessFlags(NewAccessFlags), "The buffer already has requested access flags");
-        EnsureVkCmdBuffer();
-
-        VERIFY(BufferVk.m_VulkanBuffer != VK_NULL_HANDLE, "Cannot transition suballocated buffer");
+        DEV_CHECK_ERR(BufferVk.m_VulkanBuffer != VK_NULL_HANDLE, "Cannot transition suballocated buffer");
         VERIFY_EXPR(BufferVk.GetDynamicOffset(m_ContextId, this) == 0);
+
+        EnsureVkCmdBuffer();
+        if (OldState == RESOURCE_STATE_UNKNOWN)
+        {
+            if (BufferVk.IsInKnownState())
+            {
+                OldState = BufferVk.GetState();
+            }
+            else
+            {
+                LOG_ERROR_MESSAGE("Failed to transition the state of buffer '", BufferVk.GetDesc().Name, "' because the buffer state is unknown and is not explicitly specified");
+                return;
+            }
+        }
+        else
+        {
+            if (BufferVk.IsInKnownState() && BufferVk.GetState() != OldState)
+            {
+                LOG_ERROR_MESSAGE("The state ", GetResourceStateString(BufferVk.GetState()), " of buffer '",
+                                   BufferVk.GetDesc().Name, "' does not match the old state ", GetResourceStateString(OldState),
+                                   " specified by the barrier");
+            }
+        }
+        DEV_CHECK_ERR((OldState & NewState) != NewState, "The buffer is already in requested state");
+
         auto vkBuff = BufferVk.GetVkBuffer();
-        m_CommandBuffer.BufferMemoryBarrier(vkBuff, BufferVk.m_AccessFlags, NewAccessFlags);
-        BufferVk.SetAccessFlags(NewAccessFlags);
+        auto OldAccessFlags = ResourceStateFlagsToVkAccessFlags(OldState);
+        auto NewAccessFlags = ResourceStateFlagsToVkAccessFlags(NewState);
+        m_CommandBuffer.BufferMemoryBarrier(vkBuff, OldAccessFlags, NewAccessFlags);
+        if (UpdateBufferState)
+        {
+            BufferVk.SetState(NewState);
+        }
     }
 
     VulkanDynamicAllocation DeviceContextVkImpl::AllocateDynamicSpace(Uint32 SizeInBytes, Uint32 Alignment)
@@ -1522,6 +1696,50 @@ namespace Diligent
 
     void DeviceContextVkImpl::TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers)
     {
+        if(BarrierCount == 0)
+            return;
 
+        EnsureVkCmdBuffer();
+
+        for(Uint32 i=0; i < BarrierCount; ++i)
+        {
+            const auto& Barrier = pResourceBarriers[i];
+            DEV_CHECK_ERR( (Barrier.pTexture != nullptr) ^ (Barrier.pBuffer != nullptr), "Exactly one of pTexture or pBuffer must not be null");
+            DEV_CHECK_ERR(Barrier.NewState != RESOURCE_STATE_UNKNOWN, "New resource state can't be unknown");
+            if (Barrier.pTexture)
+            {
+                auto* pTextureVkImpl = ValidatedCast<TextureVkImpl>(Barrier.pTexture);
+#ifdef DEVELOPMENT
+                {
+                    const auto& TexDesc = pTextureVkImpl->GetDesc();
+                    DEV_CHECK_ERR(Barrier.FirstMipLevel < TexDesc.MipLevels, "First mip level (", Barrier.FirstMipLevel, ") specified by the barrier is "
+                                 "out of range. Texture \'", TexDesc.Name, "\' has only ", TexDesc.MipLevels, " mip level(s)");
+                    DEV_CHECK_ERR(Barrier.MipLevelsCount == StateTransitionDesc::RemainingMipLevels || Barrier.FirstMipLevel + Barrier.MipLevelsCount < TexDesc.MipLevels,
+                                  "Mip level range ", Barrier.FirstMipLevel, "..", Barrier.FirstMipLevel+Barrier.MipLevelsCount-1, " "
+                                  "specified by the barrier is out of range. Texture \'", TexDesc.Name, "\' has only ", TexDesc.MipLevels, " mip level(s)");
+
+                    DEV_CHECK_ERR(Barrier.FirstArraySlice < TexDesc.ArraySize, "First array slice (", Barrier.FirstArraySlice, ") specified by the barrier is "
+                                  "out of range. Array size of texture \'", TexDesc.Name, "\' is ", TexDesc.ArraySize);
+                    DEV_CHECK_ERR(Barrier.ArraySliceCount == StateTransitionDesc::RemainingArraySlices || Barrier.FirstArraySlice + Barrier.ArraySliceCount < TexDesc.ArraySize,
+                                  "Array slice range ", Barrier.FirstArraySlice, "..", Barrier.FirstArraySlice+Barrier.ArraySliceCount-1, " "
+                                  "specified by the barrier is out of range. Array size of texture \'", TexDesc.Name, "\' is ", TexDesc.ArraySize);
+                }
+#endif
+
+                VkImageSubresourceRange SubResRange;
+                SubResRange.aspectMask     = 0;
+                SubResRange.baseMipLevel   = Barrier.FirstMipLevel;
+                SubResRange.levelCount     = (Barrier.MipLevelsCount == StateTransitionDesc::RemainingMipLevels) ? VK_REMAINING_MIP_LEVELS : Barrier.MipLevelsCount;
+                SubResRange.baseArrayLayer = Barrier.FirstArraySlice;
+                SubResRange.layerCount     = (Barrier.ArraySliceCount == StateTransitionDesc::RemainingArraySlices) ? VK_REMAINING_ARRAY_LAYERS : Barrier.ArraySliceCount;
+                TransitionTextureState(*pTextureVkImpl, Barrier.OldState, Barrier.NewState, Barrier.UpdateResourceState, &SubResRange);
+            }
+            else
+            {
+                VERIFY_EXPR(Barrier.pBuffer != nullptr);
+                auto* pBufferVkImpl = ValidatedCast<BufferVkImpl>(Barrier.pBuffer);
+                TransitionBufferState(*pBufferVkImpl, Barrier.OldState, Barrier.NewState, Barrier.UpdateResourceState);
+            }
+        }
     }
 }
