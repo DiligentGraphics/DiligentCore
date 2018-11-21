@@ -161,8 +161,8 @@ public:
     Int64 GetCurrentFrameNumber()const {return m_ContextFrameNumber; }
 
 private:
-    void CommitD3D12IndexBuffer(VALUE_TYPE IndexType);
-    void CommitD3D12VertexBuffers(class GraphicsContext &GraphCtx);
+    void CommitD3D12IndexBuffer(VALUE_TYPE IndexType, bool TransitionBuffer);
+    void CommitD3D12VertexBuffers(class GraphicsContext &GraphCtx, bool TransitionBuffers);
     void TransitionD3D12VertexBuffers(class GraphicsContext &GraphCtx);
     void CommitRenderTargets();
     void CommitViewports();

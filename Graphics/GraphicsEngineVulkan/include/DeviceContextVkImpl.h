@@ -198,7 +198,7 @@ public:
 
 private:
     void CommitRenderPassAndFramebuffer();
-    void CommitVkVertexBuffers();
+    void CommitVkVertexBuffers(bool TransitionBuffers);
     void TransitionVkVertexBuffers();
     void CommitViewports();
     void CommitScissorRects();

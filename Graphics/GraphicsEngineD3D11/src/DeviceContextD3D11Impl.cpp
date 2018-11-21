@@ -653,7 +653,7 @@ namespace Diligent
         }
     }
 
-    void DeviceContextD3D11Impl::CommitD3D11IndexBuffer(VALUE_TYPE IndexType)
+    void DeviceContextD3D11Impl::CommitD3D11IndexBuffer(VALUE_TYPE IndexType, bool TransitionBuffer)
     {
         if( !m_pIndexBuffer )
         {
@@ -662,11 +662,25 @@ namespace Diligent
         }
 
         BufferD3D11Impl* pBuffD3D11 = m_pIndexBuffer.RawPtr<BufferD3D11Impl>();
-        if( pBuffD3D11->IsInKnownState() && pBuffD3D11->CheckState(RESOURCE_STATE_UNORDERED_ACCESS) )
+        if (TransitionBuffer)
         {
-            UnbindResourceFromUAV(pBuffD3D11, pBuffD3D11->m_pd3d11Buffer);
-            pBuffD3D11->ClearState(RESOURCE_STATE_UNORDERED_ACCESS);
+            if( pBuffD3D11->IsInKnownState() && pBuffD3D11->CheckState(RESOURCE_STATE_UNORDERED_ACCESS) )
+            {
+                UnbindResourceFromUAV(pBuffD3D11, pBuffD3D11->m_pd3d11Buffer);
+                pBuffD3D11->ClearState(RESOURCE_STATE_UNORDERED_ACCESS);
+            }
         }
+#ifdef DEVELOPMENT
+        else
+        {
+            if( pBuffD3D11->IsInKnownState() && pBuffD3D11->CheckState(RESOURCE_STATE_UNORDERED_ACCESS) )
+            {
+                LOG_ERROR_MESSAGE("Buffer '", pBuffD3D11->GetDesc().Name, "' used as index buffer is in RESOURCE_STATE_UNORDERED_ACCESS state."
+                                  " Use DRAW_FLAG_TRANSITION_INDEX_BUFFER flag or explicitly transition the buffer to RESOURCE_STATE_INDEX_BUFFER state.");
+
+            }
+        }
+#endif
 
         if( m_CommittedD3D11IndexBuffer != pBuffD3D11->m_pd3d11Buffer ||
             m_CommittedIBFormat != IndexType ||
@@ -693,7 +707,7 @@ namespace Diligent
         m_bCommittedD3D11IBUpToDate = true;
     }
 
-    void DeviceContextD3D11Impl::CommitD3D11VertexBuffers(PipelineStateD3D11Impl* pPipelineStateD3D11)
+    void DeviceContextD3D11Impl::CommitD3D11VertexBuffers(PipelineStateD3D11Impl* pPipelineStateD3D11, bool TransitionBuffers)
     {
         VERIFY( m_NumVertexStreams <= MaxBufferSlots, "Too many buffers are being set" );
         UINT NumBuffersToSet = std::max(m_NumVertexStreams, m_NumCommittedD3D11VBs );
@@ -709,11 +723,24 @@ namespace Diligent
             auto Stride = Strides[Slot];
             auto Offset = CurrStream.Offset;
 
-            if(pBuffD3D11Impl != nullptr && pBuffD3D11Impl->IsInKnownState() && pBuffD3D11Impl->CheckState(RESOURCE_STATE_UNORDERED_ACCESS))
+            if (TransitionBuffers)
             {
-                UnbindResourceFromUAV(pBuffD3D11Impl, pd3d11Buffer);
-                pBuffD3D11Impl->ClearState(RESOURCE_STATE_UNORDERED_ACCESS);
+                if (pBuffD3D11Impl != nullptr && pBuffD3D11Impl->IsInKnownState() && pBuffD3D11Impl->CheckState(RESOURCE_STATE_UNORDERED_ACCESS))
+                {
+                    UnbindResourceFromUAV(pBuffD3D11Impl, pd3d11Buffer);
+                    pBuffD3D11Impl->ClearState(RESOURCE_STATE_UNORDERED_ACCESS);
+                }
             }
+#ifdef DEVELOPMENT
+            else
+            {
+                if (pBuffD3D11Impl != nullptr && pBuffD3D11Impl->IsInKnownState() && pBuffD3D11Impl->CheckState(RESOURCE_STATE_UNORDERED_ACCESS))
+                {
+                    LOG_ERROR_MESSAGE("Buffer '", pBuffD3D11Impl->GetDesc().Name, "' used as vertex buffer at slot ", Slot, " is in RESOURCE_STATE_UNORDERED_ACCESS state. "
+                                      "Use DRAW_FLAG_TRANSITION_VERTEX_BUFFER flag or explicitly transition the buffer to RESOURCE_STATE_VERTEX_BUFFER state.");
+                }
+            }
+#endif
 
             // It is safe to perform raw pointer check because device context keeps
             // all buffers alive.
@@ -761,7 +788,7 @@ namespace Diligent
         if( pd3d11InputLayout != nullptr && !m_bCommittedD3D11VBsUpToDate )
         {
             VERIFY( m_NumVertexStreams >= m_pPipelineState->GetNumBufferSlotsUsed(), "Currently bound pipeline state \"", m_pPipelineState->GetDesc().Name, "\" expects ", m_pPipelineState->GetNumBufferSlotsUsed(), " input buffer slots, but only ", m_NumVertexStreams, " is bound");
-            CommitD3D11VertexBuffers(m_pPipelineState);
+            CommitD3D11VertexBuffers(m_pPipelineState, drawAttribs.Flags & DRAW_FLAG_TRANSITION_VERTEX_BUFFERS);
         }
 
         if( drawAttribs.IsIndexed )
@@ -770,7 +797,7 @@ namespace Diligent
                 m_bCommittedD3D11IBUpToDate = false;
             if(!m_bCommittedD3D11IBUpToDate)
             {
-                CommitD3D11IndexBuffer(drawAttribs.IndexType);
+                CommitD3D11IndexBuffer(drawAttribs.IndexType, drawAttribs.Flags & DRAW_FLAG_TRANSITION_INDEX_BUFFER);
             }
         }
         

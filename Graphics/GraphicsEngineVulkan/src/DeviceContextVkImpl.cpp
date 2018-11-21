@@ -306,7 +306,7 @@ namespace Diligent
         }
     }
 
-    void DeviceContextVkImpl::CommitVkVertexBuffers()
+    void DeviceContextVkImpl::CommitVkVertexBuffers(bool TransitionBuffers)
     {
 #ifdef DEVELOPMENT
         if (m_NumVertexStreams < m_pPipelineState->GetNumBufferSlotsUsed())
@@ -329,15 +329,31 @@ namespace Diligent
                     pBufferVk->DvpVerifyDynamicAllocation(this);
 #endif
                 }
-                if (pBufferVk->IsInKnownState())
+
+                if (TransitionBuffers)
                 {
-                    if (!pBufferVk->CheckState(RESOURCE_STATE_VERTEX_BUFFER))
+                    if (pBufferVk->IsInKnownState())
                     {
-                        TransitionBufferState(*pBufferVk, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_VERTEX_BUFFER, true);
+                        if (!pBufferVk->CheckState(RESOURCE_STATE_VERTEX_BUFFER))
+                        {
+                            TransitionBufferState(*pBufferVk, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_VERTEX_BUFFER, true);
+                        }
+                        VERIFY_EXPR(pBufferVk->CheckAccessFlags(VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT));
                     }
-                    VERIFY_EXPR(pBufferVk->CheckAccessFlags(VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT));
                 }
-            
+#ifdef DEVELOPMENT
+                else
+                {
+                    if (pBufferVk->IsInKnownState() && !pBufferVk->CheckState(RESOURCE_STATE_VERTEX_BUFFER))
+                    {
+                        LOG_ERROR_MESSAGE("Buffer '", pBufferVk->GetDesc().Name, "' used as vertex buffer at slot ", slot, " must be in "
+                                          "RESOURCE_STATE_VERTEX_BUFFER state. Actual buffer state: ", GetResourceStateString(pBufferVk->GetState()), 
+                                          ". Use DRAW_FLAG_TRANSITION_VERTEX_BUFFERS flag or explicitly transition the buffer to the required state.");
+
+                    }
+                }
+#endif
+
                 // Device context keeps strong references to all vertex buffers.
 
                 vkVertexBuffers[slot] = pBufferVk->GetVkBuffer();
@@ -400,7 +416,7 @@ namespace Diligent
         LOG_ERROR_MESSAGE(ss.str());
     }
 
-    void DeviceContextVkImpl::Draw( DrawAttribs &drawAttribs )
+    void DeviceContextVkImpl::Draw( DrawAttribs& drawAttribs )
     {
 #ifdef DEVELOPMENT
         if (!DvpVerifyDrawArguments(drawAttribs))
@@ -420,25 +436,62 @@ namespace Diligent
 #endif
 
             BufferVkImpl *pBuffVk = m_pIndexBuffer.RawPtr<BufferVkImpl>();
-            if (pBuffVk->IsInKnownState())
+            if (drawAttribs.Flags & DRAW_FLAG_TRANSITION_INDEX_BUFFER)
             {
-                if (!pBuffVk->CheckState(RESOURCE_STATE_INDEX_BUFFER))
+                if (pBuffVk->IsInKnownState())
                 {
-                    TransitionBufferState(*pBuffVk, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_INDEX_BUFFER, true);
+                    if (!pBuffVk->CheckState(RESOURCE_STATE_INDEX_BUFFER))
+                    {
+                        TransitionBufferState(*pBuffVk, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_INDEX_BUFFER, true);
+                    }
+                    VERIFY_EXPR(pBuffVk->CheckAccessFlags(VK_ACCESS_INDEX_READ_BIT));
                 }
-                VERIFY_EXPR(pBuffVk->CheckAccessFlags(VK_ACCESS_INDEX_READ_BIT));
             }
+#ifdef DEVELOPMENT
+            else
+            {
+                if (pBuffVk->IsInKnownState() && !pBuffVk->CheckState(RESOURCE_STATE_INDEX_BUFFER))
+                {
+                    LOG_ERROR_MESSAGE("Buffer '", pBuffVk->GetDesc().Name, "' used as index buffer must be in RESOURCE_STATE_INDEX_BUFFER "
+                                       "state. Actual buffer state: ", GetResourceStateString(pBuffVk->GetState()), 
+                                       ". Use DRAW_FLAG_TRANSITION_INDEX_BUFFER flag or explicitly transition the buffer to the required state.");
+                }
+            }
+#endif
 
             DEV_CHECK_ERR(drawAttribs.IndexType == VT_UINT16 || drawAttribs.IndexType == VT_UINT32, "Unsupported index format. Only R16_UINT and R32_UINT are allowed.");
             VkIndexType vkIndexType = drawAttribs.IndexType == VT_UINT16 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32;
             m_CommandBuffer.BindIndexBuffer(pBuffVk->GetVkBuffer(), m_IndexDataStartOffset + pBuffVk->GetDynamicOffset(m_ContextId, this), vkIndexType);
         }
 
+        auto TransitionVertexBuffers = (drawAttribs.Flags & DRAW_FLAG_TRANSITION_VERTEX_BUFFERS) != 0;
         if (m_State.CommittedVBsUpToDate)
-            TransitionVkVertexBuffers();
+        {
+            if (TransitionVertexBuffers)
+            {
+                TransitionVkVertexBuffers();
+            }
+#ifdef DEVELOPMENT
+            else
+            {
+                for (Uint32 slot = 0; slot < m_NumVertexStreams; ++slot )
+                {
+                    auto& CurrStream = m_VertexStreams[slot];
+                    auto* pBufferVk = CurrStream.pBuffer.RawPtr();
+                    if (pBufferVk != nullptr && pBufferVk->IsInKnownState() && !pBufferVk->CheckState(RESOURCE_STATE_VERTEX_BUFFER))
+                    {
+                        LOG_ERROR_MESSAGE("Buffer '", pBufferVk->GetDesc().Name, "' used as vertex buffer at slot ", slot, " must be in "
+                                          "RESOURCE_STATE_VERTEX_BUFFER state. Actual buffer state: ", GetResourceStateString(pBufferVk->GetState()), 
+                                          ". Use DRAW_FLAG_TRANSITION_VERTEX_BUFFERS flag or explicitly transition the buffer to the required state.");
+                    }
+                }
+            }
+#endif
+        }
         else
-            CommitVkVertexBuffers();
-
+        {
+            CommitVkVertexBuffers(TransitionVertexBuffers);
+        }
         if (m_DescrSetBindInfo.DynamicOffsetCount != 0)
             m_pPipelineState->BindDescriptorSetsWithDynamicOffsets(this, m_DescrSetBindInfo);
 #if 0
@@ -455,14 +508,28 @@ namespace Diligent
         if (pIndirectDrawAttribsVk != nullptr)
         {
             // Buffer memory barries must be executed outside of render pass
-            if (pIndirectDrawAttribsVk->IsInKnownState())
+            if(drawAttribs.Flags & DRAW_FLAG_TRANSITION_INDIRECT_ARGS_BUFFER)
             {
-                if (!pIndirectDrawAttribsVk->CheckState(RESOURCE_STATE_INDIRECT_ARGUMENT))
+                if (pIndirectDrawAttribsVk->IsInKnownState())
                 {
-                    TransitionBufferState(*pIndirectDrawAttribsVk, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_INDIRECT_ARGUMENT, true);
+                    if (!pIndirectDrawAttribsVk->CheckState(RESOURCE_STATE_INDIRECT_ARGUMENT))
+                    {
+                        TransitionBufferState(*pIndirectDrawAttribsVk, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_INDIRECT_ARGUMENT, true);
+                    }
+                    VERIFY_EXPR(pIndirectDrawAttribsVk->CheckAccessFlags(VK_ACCESS_INDIRECT_COMMAND_READ_BIT));
                 }
-                VERIFY_EXPR(pIndirectDrawAttribsVk->CheckAccessFlags(VK_ACCESS_INDIRECT_COMMAND_READ_BIT));
             }
+#ifdef DEVELOPMENT
+            else
+            {
+                if (pIndirectDrawAttribsVk->IsInKnownState() && !pIndirectDrawAttribsVk->CheckState(RESOURCE_STATE_INDIRECT_ARGUMENT))
+                {
+                    LOG_ERROR_MESSAGE("Buffer '", pIndirectDrawAttribsVk->GetDesc().Name, "' used as indirect draw arguments buffer must be in RESOURCE_STATE_INDIRECT_ARGUMENT "
+                                       "state. Actual buffer state: ", GetResourceStateString(pIndirectDrawAttribsVk->GetState()), 
+                                       ". Use DRAW_FLAG_TRANSITION_INDIRECT_ARGS_BUFFER flag or explicitly transition the buffer to the required state.");
+                }
+            }
+#endif
         }
 
 #ifdef DEVELOPMENT
@@ -480,14 +547,6 @@ namespace Diligent
             if (pIndirectDrawAttribsVk->GetDesc().Usage == USAGE_DYNAMIC)
                 pIndirectDrawAttribsVk->DvpVerifyDynamicAllocation(this);
 #endif
-            if (pIndirectDrawAttribsVk->IsInKnownState())
-            {
-                if (!pIndirectDrawAttribsVk->CheckState(RESOURCE_STATE_INDIRECT_ARGUMENT))
-                {
-                    TransitionBufferState(*pIndirectDrawAttribsVk, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_INDIRECT_ARGUMENT, true);
-                }
-                VERIFY_EXPR(pIndirectDrawAttribsVk->CheckAccessFlags(VK_ACCESS_INDIRECT_COMMAND_READ_BIT));
-            }
 
             if ( drawAttribs.IsIndexed )
                 m_CommandBuffer.DrawIndexedIndirect(pIndirectDrawAttribsVk->GetVkBuffer(), pIndirectDrawAttribsVk->GetDynamicOffset(m_ContextId, this) + drawAttribs.IndirectDrawArgsOffset, 1, 0);
@@ -539,15 +598,29 @@ namespace Diligent
                     pBufferVk->DvpVerifyDynamicAllocation(this);
 #endif
 
-                // Buffer memory barries must be executed outside of render pass
-                if (pBufferVk->IsInKnownState())
+                if(DispatchAttrs.Flags & DISPATCH_FLAG_TRANSITION_INDIRECT_ARGS_BUFFER)
                 {
-                    if (!pBufferVk->CheckState(RESOURCE_STATE_INDIRECT_ARGUMENT))
+                    // Buffer memory barries must be executed outside of render pass
+                    if (pBufferVk->IsInKnownState())
                     {
-                        TransitionBufferState(*pBufferVk, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_INDIRECT_ARGUMENT, true);
+                        if (!pBufferVk->CheckState(RESOURCE_STATE_INDIRECT_ARGUMENT))
+                        {
+                            TransitionBufferState(*pBufferVk, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_INDIRECT_ARGUMENT, true);
+                        }
+                        VERIFY_EXPR(pBufferVk->CheckAccessFlags(VK_ACCESS_INDIRECT_COMMAND_READ_BIT));
                     }
-                    VERIFY_EXPR(pBufferVk->CheckAccessFlags(VK_ACCESS_INDIRECT_COMMAND_READ_BIT));
                 }
+#ifdef DEVELOPMENT
+                else
+                {
+                    if (pBufferVk->IsInKnownState() && !pBufferVk->CheckState(RESOURCE_STATE_INDIRECT_ARGUMENT))
+                    {
+                        LOG_ERROR_MESSAGE("Buffer '", pBufferVk->GetDesc().Name, "' used as indirect dispatch arguments buffer must be in RESOURCE_STATE_INDIRECT_ARGUMENT "
+                                           "state. Actual buffer state: ", GetResourceStateString(pBufferVk->GetState()), 
+                                           ". Use DISPATCH_FLAG_TRANSITION_INDIRECT_ARGS_BUFFER flag or explicitly transition the buffer to the required state.");
+                    }
+                }
+#endif
 
                 m_CommandBuffer.DispatchIndirect(pBufferVk->GetVkBuffer(), pBufferVk->GetDynamicOffset(m_ContextId, this) + DispatchAttrs.DispatchArgsByteOffset);
             }

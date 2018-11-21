@@ -257,7 +257,7 @@ namespace Diligent
         }
     }
 
-    void DeviceContextD3D12Impl::CommitD3D12IndexBuffer(VALUE_TYPE IndexType)
+    void DeviceContextD3D12Impl::CommitD3D12IndexBuffer(VALUE_TYPE IndexType, bool TransitionBuffer)
     {
         VERIFY( m_pIndexBuffer != nullptr, "Index buffer is not set up for indexed draw command" );
 
@@ -287,8 +287,24 @@ namespace Diligent
             pBuffD3D12->DvpVerifyDynamicAllocation(this);
 #endif
         auto& GraphicsCtx = GetCmdContext().AsGraphicsContext();
-        if (pBuffD3D12->IsInKnownState() && !pBuffD3D12->CheckState(RESOURCE_STATE_INDEX_BUFFER))
-            GraphicsCtx.TransitionResource(pBuffD3D12, RESOURCE_STATE_INDEX_BUFFER);
+
+        if (TransitionBuffer)
+        {
+            if (pBuffD3D12->IsInKnownState() && !pBuffD3D12->CheckState(RESOURCE_STATE_INDEX_BUFFER))
+                GraphicsCtx.TransitionResource(pBuffD3D12, RESOURCE_STATE_INDEX_BUFFER);
+        }
+#ifdef DEVELOPMENT
+        else
+        {
+            if (pBuffD3D12->IsInKnownState() && !pBuffD3D12->CheckState(RESOURCE_STATE_INDEX_BUFFER))
+            {
+                LOG_ERROR_MESSAGE("Buffer '", pBuffD3D12->GetDesc().Name, "' used as index buffer must be in RESOURCE_STATE_INDEX_BUFFER "
+                                  "state. Actual buffer state: ", GetResourceStateString(pBuffD3D12->GetState()), 
+                                  ". Use DRAW_FLAG_TRANSITION_INDEX_BUFFER flag or explicitly transition the buffer to the required state.");
+
+            }
+        }
+#endif
 
         size_t BuffDataStartByteOffset;
         auto *pd3d12Buff = pBuffD3D12->GetD3D12Buffer(BuffDataStartByteOffset, this);
@@ -311,7 +327,7 @@ namespace Diligent
 
     void DeviceContextD3D12Impl::TransitionD3D12VertexBuffers(GraphicsContext& GraphCtx)
     {
-        for( UINT Buff = 0; Buff < m_NumVertexStreams; ++Buff )
+        for( Uint32 Buff = 0; Buff < m_NumVertexStreams; ++Buff )
         {
             auto& CurrStream = m_VertexStreams[Buff];
             auto* pBufferD3D12 = CurrStream.pBuffer.RawPtr();
@@ -320,7 +336,7 @@ namespace Diligent
         }
     }
 
-    void DeviceContextD3D12Impl::CommitD3D12VertexBuffers(GraphicsContext& GraphCtx)
+    void DeviceContextD3D12Impl::CommitD3D12VertexBuffers(GraphicsContext& GraphCtx, bool TransitionBuffers)
     {
         // Do not initialize array with zeroes for performance reasons
         D3D12_VERTEX_BUFFER_VIEW VBViews[MaxBufferSlots];// = {}
@@ -342,8 +358,22 @@ namespace Diligent
 #endif
                 }
 
-                if (pBufferD3D12->IsInKnownState() && !pBufferD3D12->CheckState(RESOURCE_STATE_VERTEX_BUFFER))
-                    GraphCtx.TransitionResource(pBufferD3D12, RESOURCE_STATE_VERTEX_BUFFER);
+                if (TransitionBuffers)
+                {
+                    if (pBufferD3D12->IsInKnownState() && !pBufferD3D12->CheckState(RESOURCE_STATE_VERTEX_BUFFER))
+                        GraphCtx.TransitionResource(pBufferD3D12, RESOURCE_STATE_VERTEX_BUFFER);
+                }
+#ifdef DEVELOPMENT
+                else
+                {
+                    if (pBufferD3D12->IsInKnownState() && !pBufferD3D12->CheckState(RESOURCE_STATE_VERTEX_BUFFER))
+                    {
+                        LOG_ERROR_MESSAGE("Buffer '", pBufferD3D12->GetDesc().Name, "' used as vertex buffer at slot ", Buff, " must be in "
+                                          "RESOURCE_STATE_VERTEX_BUFFER state. Actual buffer state: ", GetResourceStateString(pBufferD3D12->GetState()), 
+                                          ". Use DRAW_FLAG_TRANSITION_VERTEX_BUFFERS flag or explicitly transition the buffer to the required state.");
+                    }
+                }
+#endif
             
                 // Device context keeps strong references to all vertex buffers.
                 // When a buffer is unbound, a reference to D3D12 resource is added to the context,
@@ -382,20 +412,61 @@ namespace Diligent
             if( m_State.CommittedIBFormat != drawAttribs.IndexType )
                 m_State.bCommittedD3D12IBUpToDate = false;
 
+            bool TransitionIndexBuffer = (drawAttribs.Flags & DRAW_FLAG_TRANSITION_INDEX_BUFFER) != 0;
             if (m_State.bCommittedD3D12IBUpToDate)
             {
                 BufferD3D12Impl *pBuffD3D12 = static_cast<BufferD3D12Impl *>(m_pIndexBuffer.RawPtr());
-                if (pBuffD3D12->IsInKnownState() && !pBuffD3D12->CheckState(RESOURCE_STATE_INDEX_BUFFER))
-                    GraphCtx.TransitionResource(pBuffD3D12, RESOURCE_STATE_INDEX_BUFFER);
+                if(TransitionIndexBuffer)
+                {
+                    if (pBuffD3D12->IsInKnownState() && !pBuffD3D12->CheckState(RESOURCE_STATE_INDEX_BUFFER))
+                        GraphCtx.TransitionResource(pBuffD3D12, RESOURCE_STATE_INDEX_BUFFER);
+                }
+#ifdef DEVELOPMENT
+                else
+                {
+                    if (pBuffD3D12->IsInKnownState() && !pBuffD3D12->CheckState(RESOURCE_STATE_INDEX_BUFFER))
+                    {
+                        LOG_ERROR_MESSAGE("Buffer '", pBuffD3D12->GetDesc().Name, "' used as index buffer must be in RESOURCE_STATE_INDEX_BUFFER "
+                                           "state. Actual buffer state: ", GetResourceStateString(pBuffD3D12->GetState()), 
+                                           ". Use DRAW_FLAG_TRANSITION_INDEX_BUFFER flag or explicitly transition the buffer to the required state.");
+                    }
+                }
+#endif
             }
             else
-                CommitD3D12IndexBuffer(drawAttribs.IndexType);
+            {
+                CommitD3D12IndexBuffer(drawAttribs.IndexType, TransitionIndexBuffer);
+            }
         }
 
+        bool TransitionVertexBuffers = (drawAttribs.Flags & DRAW_FLAG_TRANSITION_VERTEX_BUFFERS) != 0;
         if (m_State.bCommittedD3D12VBsUpToDate)
-            TransitionD3D12VertexBuffers(GraphCtx);
+        {
+            if (TransitionVertexBuffers)
+            {
+                TransitionD3D12VertexBuffers(GraphCtx);
+            }
+#ifdef DEVELOPMENT
+            else
+            {
+                for( Uint32 Buff = 0; Buff < m_NumVertexStreams; ++Buff )
+                {
+                    auto& CurrStream = m_VertexStreams[Buff];
+                    auto* pBufferD3D12 = CurrStream.pBuffer.RawPtr();
+                    if (pBufferD3D12 != nullptr && pBufferD3D12->IsInKnownState() && !pBufferD3D12->CheckState(RESOURCE_STATE_VERTEX_BUFFER))
+                    {
+                        LOG_ERROR_MESSAGE("Buffer '", pBufferD3D12->GetDesc().Name, "' used as vertex buffer at slot ", Buff, " must be in "
+                                          "RESOURCE_STATE_VERTEX_BUFFER state. Actual buffer state: ", GetResourceStateString(pBufferD3D12->GetState()), 
+                                          ". Use DRAW_FLAG_TRANSITION_VERTEX_BUFFERS flag or explicitly transition the buffer to the required state.");
+                    }
+                }
+            }
+#endif
+        }
         else
-            CommitD3D12VertexBuffers(GraphCtx);
+        {
+            CommitD3D12VertexBuffers(GraphCtx, TransitionVertexBuffers);
+        }
 
         GraphCtx.SetRootSignature( m_pPipelineState->GetD3D12RootSignature() );
 
@@ -420,8 +491,23 @@ namespace Diligent
                 pIndirectDrawAttribsD3D12->DvpVerifyDynamicAllocation(this);
 #endif
 
-            if (pIndirectDrawAttribsD3D12->IsInKnownState() && !pIndirectDrawAttribsD3D12->CheckState(RESOURCE_STATE_INDIRECT_ARGUMENT))
-                GraphCtx.TransitionResource(pIndirectDrawAttribsD3D12, RESOURCE_STATE_INDIRECT_ARGUMENT);
+            if (drawAttribs.Flags & DRAW_FLAG_TRANSITION_INDIRECT_ARGS_BUFFER)
+            {
+                if (pIndirectDrawAttribsD3D12->IsInKnownState() && !pIndirectDrawAttribsD3D12->CheckState(RESOURCE_STATE_INDIRECT_ARGUMENT))
+                    GraphCtx.TransitionResource(pIndirectDrawAttribsD3D12, RESOURCE_STATE_INDIRECT_ARGUMENT);
+            }
+#ifdef DEVELOPMENT
+            else
+            {
+                if (pIndirectDrawAttribsD3D12->IsInKnownState() && !pIndirectDrawAttribsD3D12->CheckState(RESOURCE_STATE_INDIRECT_ARGUMENT))
+                {
+                    LOG_ERROR_MESSAGE("Buffer '", pIndirectDrawAttribsD3D12->GetDesc().Name, "' used as indirect draw arguments buffer must be in RESOURCE_STATE_INDIRECT_ARGUMENT "
+                                       "state. Actual buffer state: ", GetResourceStateString(pIndirectDrawAttribsD3D12->GetState()), 
+                                       ". Use DRAW_FLAG_TRANSITION_INDIRECT_ARGS_BUFFER flag or explicitly transition the buffer to the required state.");
+                }
+            }
+#endif
+
             size_t BuffDataStartByteOffset;
             ID3D12Resource *pd3d12ArgsBuff = pIndirectDrawAttribsD3D12->GetD3D12Buffer(BuffDataStartByteOffset, this);
             GraphCtx.ExecuteIndirect(drawAttribs.IsIndexed ? m_pDrawIndexedIndirectSignature : m_pDrawIndirectSignature, pd3d12ArgsBuff, drawAttribs.IndirectDrawArgsOffset + BuffDataStartByteOffset);
@@ -467,8 +553,23 @@ namespace Diligent
                     pBufferD3D12->DvpVerifyDynamicAllocation(this);
 #endif
 
-                if (pBufferD3D12->IsInKnownState() && !pBufferD3D12->CheckState(RESOURCE_STATE_INDIRECT_ARGUMENT))
-                    ComputeCtx.TransitionResource(pBufferD3D12, RESOURCE_STATE_INDIRECT_ARGUMENT);
+                if (DispatchAttrs.Flags & DISPATCH_FLAG_TRANSITION_INDIRECT_ARGS_BUFFER)
+                {
+                    if (pBufferD3D12->IsInKnownState() && !pBufferD3D12->CheckState(RESOURCE_STATE_INDIRECT_ARGUMENT))
+                        ComputeCtx.TransitionResource(pBufferD3D12, RESOURCE_STATE_INDIRECT_ARGUMENT);
+                }
+#ifdef DEVELOPMENT
+                else
+                {
+                    if (pBufferD3D12->IsInKnownState() && !pBufferD3D12->CheckState(RESOURCE_STATE_INDIRECT_ARGUMENT))
+                    {
+                        LOG_ERROR_MESSAGE("Buffer '", pBufferD3D12->GetDesc().Name, "' used as indirect dispatch arguments buffer must be in RESOURCE_STATE_INDIRECT_ARGUMENT "
+                                           "state. Actual buffer state: ", GetResourceStateString(pBufferD3D12->GetState()), 
+                                           ". Use DISPATCH_FLAG_TRANSITION_INDIRECT_ARGS_BUFFER flag or explicitly transition the buffer to the required state.");
+                    }
+                }
+#endif
+
                 size_t BuffDataStartByteOffset;
                 ID3D12Resource *pd3d12ArgsBuff = pBufferD3D12->GetD3D12Buffer(BuffDataStartByteOffset, this);
                 ComputeCtx.ExecuteIndirect(m_pDispatchIndirectSignature, pd3d12ArgsBuff, DispatchAttrs.DispatchArgsByteOffset + BuffDataStartByteOffset);

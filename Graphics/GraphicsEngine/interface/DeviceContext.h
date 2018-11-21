@@ -51,6 +51,25 @@ namespace Diligent
 static constexpr INTERFACE_ID IID_DeviceContext =
 { 0xdc92711b, 0xa1be, 0x4319, { 0xb2, 0xbd, 0xc6, 0x62, 0xd1, 0xcc, 0x19, 0xe4 } };
 
+/// Draw command flags
+enum DRAW_FLAGS : Uint8
+{
+    /// Perform no state transitions
+    DRAW_FLAG_NONE                            = 0x00,
+
+    /// Transition vertex buffers to RESOURCE_STATE_VERTEX_BUFFER state (see Diligent::RESOURCE_STATE).
+    /// Vertex buffers in unknown state will not be transitioned.
+    DRAW_FLAG_TRANSITION_VERTEX_BUFFERS       = 0x01,
+
+    /// Transition index buffer to RESOURCE_STATE_INDEX_BUFFER state (see Diligent::RESOURCE_STATE).
+    /// If the index buffer is in unknown state, this flag has no effect.
+    DRAW_FLAG_TRANSITION_INDEX_BUFFER         = 0x02,
+
+    /// Transition indirect draw arguments buffer to RESOURCE_STATE_INDIRECT_ARGUMENT state (see Diligent::RESOURCE_STATE).
+    /// If the buffer is in unknown state, this flag has no effect.
+    DRAW_FLAG_TRANSITION_INDIRECT_ARGS_BUFFER = 0x04
+};
+
 /// Defines the draw command attributes
 
 /// This structure is used by IRenderDevice::Draw()
@@ -71,6 +90,9 @@ struct DrawAttribs
     /// For an indexed draw call, type of elements in the index buffer.
     /// Allowed values: VT_UINT16 and VT_UINT32. Ignored if DrawAttribs::IsIndexed is False.
     VALUE_TYPE IndexType = VT_UNDEFINED;
+
+    /// Additional flags controlling the draw command behavior, see Diligent::DRAW_FLAGS.
+    Uint8 Flags = DRAW_FLAG_NONE;
 
     /// Number of instances to draw. If more than one instance is specified,
     /// instanced draw call will be performed.
@@ -111,6 +133,7 @@ struct DrawAttribs
     /// NumVertices             | 0
     /// IsIndexed               | False
     /// IndexType               | VT_UNDEFINED
+    /// Flags                   | DRAW_FLAG_NONE
     /// NumInstances            | 1
     /// BaseVertex              | 0
     /// IndirectDrawArgsOffset  | 0
@@ -127,6 +150,18 @@ enum CLEAR_DEPTH_STENCIL_FLAGS : Int32
 {
     CLEAR_DEPTH_FLAG   = 0x01,  ///< Clear depth part of the buffer
     CLEAR_STENCIL_FLAG = 0x02   ///< Clear stencil part of the buffer
+};
+
+
+/// Dispatch compute command flags
+enum DISPATCH_FLAGS : Uint8
+{
+    /// Perform no state transitions
+    DISPATCH_FLAG_FLAG_NONE                       = 0x00,
+        
+    /// Transition indirect dispatch arguments buffer to RESOURCE_STATE_INDIRECT_ARGUMENT state (see Diligent::RESOURCE_STATE).
+    /// If the buffer is in unknown state, this flag has no effect.
+    DISPATCH_FLAG_TRANSITION_INDIRECT_ARGS_BUFFER = 0x01
 };
 
 /// Describes dispatch command arguments.
@@ -148,6 +183,9 @@ struct DispatchComputeAttribs
     /// If pIndirectDispatchAttribs is not nullptr, indicates offset from the beginning
     /// of the buffer to the dispatch command arguments. Ignored otherwise
     Uint32  DispatchArgsByteOffset;
+
+    /// Flags controlling the dispatch command behavior, see Diligent::DISPATCH_FLAGS.
+    Uint8 Flags = DISPATCH_FLAG_FLAG_NONE;
 
     /// Initializes the structure to perform non-indirect dispatch command
     

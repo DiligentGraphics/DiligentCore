@@ -117,10 +117,10 @@ public:
 private:
     
     /// Commits d3d11 index buffer to the d3d11 device context.
-    void CommitD3D11IndexBuffer(VALUE_TYPE IndexType);
+    void CommitD3D11IndexBuffer(VALUE_TYPE IndexType, bool TransitionBuffer);
 
     /// Commits d3d11 vertex buffers to the d3d11 device context.
-    void CommitD3D11VertexBuffers(class PipelineStateD3D11Impl* pPipelineStateD3D11);
+    void CommitD3D11VertexBuffers(class PipelineStateD3D11Impl* pPipelineStateD3D11, bool TransitionBuffers);
 
     /// Helper template function used to facilitate resource unbinding
     template<typename TD3D11ResourceViewType,
