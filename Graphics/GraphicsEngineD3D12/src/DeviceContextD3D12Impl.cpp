@@ -1120,7 +1120,12 @@ namespace Diligent
     {
         auto& CmdCtx = GetCmdContext();
         for(Uint32 i = 0; i < BarrierCount; ++i)
+        {
+#ifdef DEVELOPMENT
+            DvpVerifyStateTransitionDesc(pResourceBarriers[i]);
+#endif
             CmdCtx.TransitionResource(pResourceBarriers[i]);
+        }
     }
 
     void DeviceContextD3D12Impl::TransitionTextureState(ITexture *pTexture, D3D12_RESOURCE_STATES State)

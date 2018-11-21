@@ -815,6 +815,7 @@ String GetResourceStateString( RESOURCE_STATE State )
         auto lsb = State & ~(State-1);
         const auto* StateFlagString = GetResourceStateFlagString(static_cast<RESOURCE_STATE>(lsb));
         str.append(StateFlagString);
+        State = static_cast<RESOURCE_STATE>(State & ~lsb);
     }
     return str;
 }
@@ -839,6 +840,62 @@ Uint32 ComputeMipLevelsCount( Uint32 Width, Uint32 Height )
 Uint32 ComputeMipLevelsCount( Uint32 Width, Uint32 Height, Uint32 Depth )
 {
     return ComputeMipLevelsCount( std::max(std::max( Width, Height ), Depth) );
+}
+
+bool VerifyResourceStates(RESOURCE_STATE State, bool IsTexture)
+{
+    static_assert(RESOURCE_STATE_MAX_BIT == 0x8000, "Please update this function to handle the new resource state");
+
+#define VERIFY_EXCLUSIVE_STATE(ExclusiveState)\
+if ( (State & ExclusiveState) != 0 && (State & ~ExclusiveState) != 0 )\
+{\
+    LOG_ERROR_MESSAGE("State ", GetResourceStateString(State), " is invalid: " #ExclusiveState " can't be combined with any other state");\
+    return false;\
+}
+
+    VERIFY_EXCLUSIVE_STATE(RESOURCE_STATE_UNDEFINED);
+    VERIFY_EXCLUSIVE_STATE(RESOURCE_STATE_UNORDERED_ACCESS);
+    VERIFY_EXCLUSIVE_STATE(RESOURCE_STATE_RENDER_TARGET);
+    VERIFY_EXCLUSIVE_STATE(RESOURCE_STATE_DEPTH_WRITE);
+    VERIFY_EXCLUSIVE_STATE(RESOURCE_STATE_COPY_DEST);
+    VERIFY_EXCLUSIVE_STATE(RESOURCE_STATE_RESOLVE_DEST);
+    VERIFY_EXCLUSIVE_STATE(RESOURCE_STATE_PRESENT);
+#undef VERIFY_EXCLUSIVE_STATE
+
+    if (IsTexture)
+    {
+        if (State &
+            (RESOURCE_STATE_VERTEX_BUFFER   |
+             RESOURCE_STATE_CONSTANT_BUFFER |
+             RESOURCE_STATE_INDEX_BUFFER    |
+             RESOURCE_STATE_STREAM_OUT      |
+             RESOURCE_STATE_INDIRECT_ARGUMENT))
+        {
+            LOG_ERROR_MESSAGE("State ", GetResourceStateString(State), " is invalid: states RESOURCE_STATE_VERTEX_BUFFER, "
+                              "RESOURCE_STATE_CONSTANT_BUFFER, RESOURCE_STATE_INDEX_BUFFER, RESOURCE_STATE_STREAM_OUT, "
+                              "RESOURCE_STATE_INDIRECT_ARGUMENT are not applicable to a texture");
+            return false;
+        }
+    }
+    else
+    {
+        if (State &
+            (RESOURCE_STATE_RENDER_TARGET  |
+             RESOURCE_STATE_DEPTH_WRITE    |
+             RESOURCE_STATE_DEPTH_READ     |
+             RESOURCE_STATE_RESOLVE_SOURCE |
+             RESOURCE_STATE_RESOLVE_DEST   |
+             RESOURCE_STATE_PRESENT))
+        {
+            LOG_ERROR_MESSAGE("State ", GetResourceStateString(State), " is invalid: states RESOURCE_STATE_RENDER_TARGET, "
+                              "RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_DEPTH_READ, RESOURCE_STATE_RESOLVE_SOURCE, "
+                              "RESOURCE_STATE_RESOLVE_DEST, RESOURCE_STATE_PRESENT are not applicable to a buffer");
+            return false;
+
+        }
+    }
+    
+    return true;
 }
 
 }

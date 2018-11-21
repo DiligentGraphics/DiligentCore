@@ -41,6 +41,7 @@ TextureBaseD3D11 :: TextureBaseD3D11(IReferenceCounters*        pRefCounters,
 {
     if( TexDesc.Usage == USAGE_STATIC && InitData.pSubResources == nullptr )
         LOG_ERROR_AND_THROW("Static Texture must be initialized with data at creation time");
+    SetState(RESOURCE_STATE_UNDEFINED);
 }
 
 IMPLEMENT_QUERY_INTERFACE( TextureBaseD3D11, IID_TextureD3D11, TTextureBase )

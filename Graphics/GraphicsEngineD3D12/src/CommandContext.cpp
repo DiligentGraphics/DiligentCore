@@ -238,7 +238,7 @@ void CommandContext::TransitionResource(const StateTransitionDesc& Barrier)
         // D3D12_RESOURCE_STATE_GENERIC_READ state
         if (pBufferD3D12Impl->GetDesc().Usage == USAGE_DYNAMIC && (pBufferD3D12Impl->GetDesc().BindFlags & (BIND_SHADER_RESOURCE|BIND_UNORDERED_ACCESS)) == 0)
         {
-            DEV_CHECK_ERR(pBufferD3D12Impl->GetState() == D3D12_RESOURCE_STATE_GENERIC_READ, "Dynamic buffers that cannot be bound as SRV or UAV are expected to always be in D3D12_RESOURCE_STATE_GENERIC_READ state");
+            DEV_CHECK_ERR(pBufferD3D12Impl->GetState() == RESOURCE_STATE_GENERIC_READ, "Dynamic buffers that cannot be bound as SRV or UAV are expected to always be in D3D12_RESOURCE_STATE_GENERIC_READ state");
             VERIFY( (Barrier.NewState & RESOURCE_STATE_GENERIC_READ) == Barrier.NewState, "Dynamic buffers can only transition to one of RESOURCE_STATE_GENERIC_READ states");
         }
 #endif
@@ -274,21 +274,13 @@ void CommandContext::TransitionResource(const StateTransitionDesc& Barrier)
         if (pTextureD3D12Impl)
         {
             const auto& TexDesc = pTextureD3D12Impl->GetDesc();
-#ifdef DEVELOPMENT
-            {
-                DEV_CHECK_ERR(Barrier.FirstMipLevel < TexDesc.MipLevels, "First mip level (", Barrier.FirstMipLevel, ") specified by the barrier is "
-                             "out of range. Texture \'", TexDesc.Name, "\' has only ", TexDesc.MipLevels, " mip level(s)");
-                DEV_CHECK_ERR(Barrier.MipLevelsCount == StateTransitionDesc::RemainingMipLevels || Barrier.FirstMipLevel + Barrier.MipLevelsCount < TexDesc.MipLevels,
-                              "Mip level range ", Barrier.FirstMipLevel, "..", Barrier.FirstMipLevel+Barrier.MipLevelsCount-1, " "
-                              "specified by the barrier is out of range. Texture \'", TexDesc.Name, "\' has only ", TexDesc.MipLevels, " mip level(s)");
+            VERIFY(Barrier.FirstMipLevel < TexDesc.MipLevels, "First mip level is out of range");
+            VERIFY(Barrier.MipLevelsCount == StateTransitionDesc::RemainingMipLevels || Barrier.FirstMipLevel + Barrier.MipLevelsCount < TexDesc.MipLevels,
+                   "Invalid mip level range ");
+            VERIFY(Barrier.FirstArraySlice < TexDesc.ArraySize, "First array slice is out of range");
+            VERIFY(Barrier.ArraySliceCount == StateTransitionDesc::RemainingArraySlices || Barrier.FirstArraySlice + Barrier.ArraySliceCount < TexDesc.ArraySize,
+                   "Invalid array slice range ");
 
-                DEV_CHECK_ERR(Barrier.FirstArraySlice < TexDesc.ArraySize, "First array slice (", Barrier.FirstArraySlice, ") specified by the barrier is "
-                              "out of range. Array size of texture \'", TexDesc.Name, "\' is ", TexDesc.ArraySize);
-                DEV_CHECK_ERR(Barrier.ArraySliceCount == StateTransitionDesc::RemainingArraySlices || Barrier.FirstArraySlice + Barrier.ArraySliceCount < TexDesc.ArraySize,
-                              "Array slice range ", Barrier.FirstArraySlice, "..", Barrier.FirstArraySlice+Barrier.ArraySliceCount-1, " "
-                              "specified by the barrier is out of range. Array size of texture \'", TexDesc.Name, "\' is ", TexDesc.ArraySize);
-            }
-#endif
             if (Barrier.FirstMipLevel   == 0 && (Barrier.MipLevelsCount  == StateTransitionDesc::RemainingMipLevels   || Barrier.MipLevelsCount  == TexDesc.MipLevels) &&
                 Barrier.FirstArraySlice == 0 && (Barrier.ArraySliceCount == StateTransitionDesc::RemainingArraySlices || Barrier.ArraySliceCount == TexDesc.ArraySize))
             {

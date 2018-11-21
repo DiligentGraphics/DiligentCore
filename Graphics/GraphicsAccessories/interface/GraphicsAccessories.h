@@ -282,4 +282,6 @@ inline bool IsAnisotropicFilter(FILTER_TYPE FilterType)
            FilterType == FILTER_TYPE_MAXIMUM_ANISOTROPIC;
 }
 
+bool VerifyResourceStates(RESOURCE_STATE State, bool IsTexture);
+
 }

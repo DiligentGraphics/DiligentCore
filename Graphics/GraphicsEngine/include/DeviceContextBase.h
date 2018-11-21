@@ -146,6 +146,7 @@ protected:
 #ifdef DEVELOPMENT
     bool DvpVerifyDrawArguments(const DrawAttribs& drawAttribs);
     bool DvpVerifyDispatchArguments(const DispatchComputeAttribs &DispatchAttrs);
+    void DvpVerifyStateTransitionDesc(const StateTransitionDesc& Barrier);
 #endif
 
     /// Strong reference to the device.
@@ -691,6 +692,51 @@ inline bool DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType
     }
 
     return true;
+}
+
+template<typename BaseInterface, typename BufferImplType, typename TextureViewImplType, typename PipelineStateImplType>
+void DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType, PipelineStateImplType> :: DvpVerifyStateTransitionDesc(const StateTransitionDesc& Barrier)
+{
+    DEV_CHECK_ERR((Barrier.pTexture != nullptr) ^ (Barrier.pBuffer != nullptr), "Exactly one of pTexture or pBuffer members of StateTransitionDesc must not be null");
+    DEV_CHECK_ERR(Barrier.NewState != RESOURCE_STATE_UNKNOWN, "New resource state can't be unknown");
+    if (Barrier.pTexture)
+    {
+        const auto& TexDesc = Barrier.pTexture->GetDesc();
+        
+        DEV_CHECK_ERR(VerifyResourceStates(Barrier.NewState, true), "Invlaid new state specified for texture '", TexDesc.Name, "'");
+        auto OldState = Barrier.OldState != RESOURCE_STATE_UNKNOWN ? Barrier.OldState : Barrier.pTexture->GetState();
+        DEV_CHECK_ERR(OldState != RESOURCE_STATE_UNKNOWN, "The state of texture '", TexDesc.Name, "' is unknown to the engine and is not explicitly specified in the barrier");
+        DEV_CHECK_ERR(VerifyResourceStates(OldState, true), "Invlaid old state specified for texture '", TexDesc.Name, "'");
+
+        DEV_CHECK_ERR(Barrier.FirstMipLevel < TexDesc.MipLevels, "First mip level (", Barrier.FirstMipLevel, ") specified by the barrier is "
+                      "out of range. Texture '", TexDesc.Name, "' has only ", TexDesc.MipLevels, " mip level(s)");
+        DEV_CHECK_ERR(Barrier.MipLevelsCount == StateTransitionDesc::RemainingMipLevels || Barrier.FirstMipLevel + Barrier.MipLevelsCount < TexDesc.MipLevels,
+                      "Mip level range ", Barrier.FirstMipLevel, "..", Barrier.FirstMipLevel+Barrier.MipLevelsCount-1, " "
+                      "specified by the barrier is out of range. Texture '", TexDesc.Name, "' has only ", TexDesc.MipLevels, " mip level(s)");
+
+        DEV_CHECK_ERR(Barrier.FirstArraySlice < TexDesc.ArraySize, "First array slice (", Barrier.FirstArraySlice, ") specified by the barrier is "
+                      "out of range. Array size of texture '", TexDesc.Name, "' is ", TexDesc.ArraySize);
+        DEV_CHECK_ERR(Barrier.ArraySliceCount == StateTransitionDesc::RemainingArraySlices || Barrier.FirstArraySlice + Barrier.ArraySliceCount < TexDesc.ArraySize,
+                      "Array slice range ", Barrier.FirstArraySlice, "..", Barrier.FirstArraySlice+Barrier.ArraySliceCount-1, " "
+                      "specified by the barrier is out of range. Array size of texture '", TexDesc.Name, "' is ", TexDesc.ArraySize);
+        
+        auto DevType = m_pDevice->GetDeviceCaps().DevType;
+        if (DevType != DeviceType::D3D12 && DevType != DeviceType::Vulkan)
+        {
+            DEV_CHECK_ERR(Barrier.FirstMipLevel == 0 && (Barrier.MipLevelsCount == StateTransitionDesc::RemainingMipLevels || Barrier.MipLevelsCount == TexDesc.MipLevels),
+                          "Failed to transition texture '", TexDesc.Name, "': only whole resources can be transitioned on this device");
+            DEV_CHECK_ERR(Barrier.FirstArraySlice == 0 && (Barrier.ArraySliceCount == StateTransitionDesc::RemainingArraySlices || Barrier.ArraySliceCount == TexDesc.ArraySize),
+                          "Failed to transition texture '", TexDesc.Name, "': only whole resources can be transitioned on this device");
+        }
+    }
+    else
+    {
+        const auto& BuffDesc = Barrier.pBuffer->GetDesc();
+        DEV_CHECK_ERR(VerifyResourceStates(Barrier.NewState, false), "Invlaid new state specified for buffer '", BuffDesc.Name, "'");
+        auto OldState = Barrier.OldState != RESOURCE_STATE_UNKNOWN ? Barrier.OldState : Barrier.pBuffer->GetState();
+        DEV_CHECK_ERR(OldState != RESOURCE_STATE_UNKNOWN, "The state of buffer '", BuffDesc.Name, "' is unknown to the engine and is not explicitly specified in the barrier");
+        DEV_CHECK_ERR(VerifyResourceStates(OldState, false), "Invlaid old state specified for buffer '", BuffDesc.Name, "'");
+    }
 }
 
 #endif

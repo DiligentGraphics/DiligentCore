@@ -103,6 +103,8 @@ BufferD3D11Impl :: BufferD3D11Impl(IReferenceCounters*        pRefCounters,
         auto hr = m_pd3d11Buffer->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen(m_Desc.Name)), m_Desc.Name);
         DEV_CHECK_ERR(SUCCEEDED(hr), "Failed to set buffer name");
     }
+
+    SetState(RESOURCE_STATE_UNDEFINED);
 }
 
 static BufferDesc BuffDescFromD3D11Buffer(ID3D11Buffer *pd3d11Buffer, BufferDesc BuffDesc)

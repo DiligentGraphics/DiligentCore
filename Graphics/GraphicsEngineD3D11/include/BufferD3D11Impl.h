@@ -37,17 +37,6 @@ namespace Diligent
 
 class FixedBlockMemoryAllocator;
 
-enum class D3D11BufferState
-{
-    Undefined       = 0x00,
-    ShaderResource  = 0x01,
-    ConstantBuffer  = 0x02,
-    VertexBuffer    = 0x04,
-    IndexBuffer     = 0x08,
-    UnorderedAccess = 0x10,
-    AnyInput = ShaderResource | ConstantBuffer | VertexBuffer | IndexBuffer
-};
-
 /// Implementation of the Diligent::IBufferD3D11 interface
 class BufferD3D11Impl final : public BufferBase<IBufferD3D11, RenderDeviceD3D11Impl, BufferViewD3D11Impl, FixedBlockMemoryAllocator>
 {
@@ -79,10 +68,8 @@ public:
 
     virtual void* GetNativeHandle()override final { return GetD3D11Buffer(); }
 
-    void ResetState(D3D11BufferState State){m_State = static_cast<Uint32>(State);}
-    void AddState(D3D11BufferState State)  {m_State |= static_cast<Uint32>(State);}
-    void ClearState(D3D11BufferState State){m_State &= ~static_cast<Uint32>(State);}
-    bool CheckState(D3D11BufferState State){return (m_State & static_cast<Uint32>(State)) ? true : false;}
+    void AddState  (RESOURCE_STATE State){m_State = static_cast<RESOURCE_STATE>(m_State | State);}
+    void ClearState(RESOURCE_STATE State){m_State = static_cast<RESOURCE_STATE>(m_State & ~static_cast<Uint32>(State));}
 
 private:
     virtual void CreateViewInternal( const struct BufferViewDesc &ViewDesc, IBufferView **ppView, bool bIsDefaultView )override;
@@ -92,8 +79,6 @@ private:
 
     friend class DeviceContextD3D11Impl;
     CComPtr<ID3D11Buffer> m_pd3d11Buffer; ///< D3D11 buffer object
-
-    Uint32 m_State = static_cast<Uint32>(D3D11BufferState::Undefined);
 };
 
 }

@@ -244,38 +244,38 @@ namespace Diligent
                     // individually, or not rely on the state and check current context bindings
                     if(TransitionResources)
                     {
-                        if ( auto* pTexture = const_cast<TextureBaseD3D11*>(UAVRes.pTexture) )
+                        if ( auto* pTexture = ValidatedCast<TextureBaseD3D11>(UAVRes.pTexture) )
                         {
-                            if( !pTexture->CheckState(D3D11TextureState::UnorderedAccess) )
+                            if( pTexture->IsInKnownState() && !pTexture->CheckState(RESOURCE_STATE_UNORDERED_ACCESS) )
                             {
-                                if( pTexture->CheckState(D3D11TextureState::ShaderResource) )
+                                if( pTexture->CheckState(RESOURCE_STATE_SHADER_RESOURCE) )
                                     UnbindTextureFromInput( pTexture, UAVRes.pd3d11Resource );
-                                pTexture->ResetState(D3D11TextureState::UnorderedAccess);
+                                pTexture->SetState(RESOURCE_STATE_UNORDERED_ACCESS);
                             }
                         }
-                        else if( auto* pBuffer = const_cast<BufferD3D11Impl*>(UAVRes.pBuffer) )
+                        else if( auto* pBuffer = ValidatedCast<BufferD3D11Impl>(UAVRes.pBuffer) )
                         {
-                            if( !pBuffer->CheckState(D3D11BufferState::UnorderedAccess) )
+                            if( pBuffer->IsInKnownState() && !pBuffer->CheckState(RESOURCE_STATE_UNORDERED_ACCESS) )
                             {
-                                if( pBuffer->CheckState(D3D11BufferState::AnyInput) )
+                                if( (pBuffer->GetState() & RESOURCE_STATE_GENERIC_READ) != 0 )
                                     UnbindBufferFromInput( pBuffer, UAVRes.pd3d11Resource );
-                                pBuffer->ResetState(D3D11BufferState::UnorderedAccess);
+                                pBuffer->SetState(RESOURCE_STATE_UNORDERED_ACCESS);
                             }
                         }
                     }
 #ifdef DEVELOPMENT
                     else
                     {
-                        if ( auto* pTexture = const_cast<TextureBaseD3D11*>(UAVRes.pTexture) )
+                        if ( auto* pTexture = ValidatedCast<TextureBaseD3D11>(UAVRes.pTexture) )
                         {
-                            if( !pTexture->CheckState(D3D11TextureState::UnorderedAccess) )
+                            if( pTexture->IsInKnownState () && !pTexture->CheckState(RESOURCE_STATE_UNORDERED_ACCESS) )
                             {
                                 LOG_ERROR_MESSAGE("Texture \"", pTexture->GetDesc().Name, "\" has not been transitioned to Unordered Access state. Did you forget to call TransitionResources()?");
                             }
                         }
-                        else if( auto* pBuffer = const_cast<BufferD3D11Impl*>(UAVRes.pBuffer) )
+                        else if( auto* pBuffer = ValidatedCast<BufferD3D11Impl>(UAVRes.pBuffer) )
                         {
-                            if( !pBuffer->CheckState(D3D11BufferState::UnorderedAccess) )
+                            if( pBuffer->IsInKnownState() && !pBuffer->CheckState(RESOURCE_STATE_UNORDERED_ACCESS) )
                             {
                                 LOG_ERROR_MESSAGE("Buffer \"", pBuffer->GetDesc().Name, "\" has not been transitioned to Unordered Access state. Did you forget to call TransitionResources()?");
                             }
@@ -384,23 +384,23 @@ namespace Diligent
                     if(TransitionResources)
                     {
                         auto &CB = CachedCBs[cb];
-                        if( auto* pBuff = const_cast<BufferD3D11Impl*>(CB.pBuff.RawPtr()) )
+                        if( auto* pBuff = CB.pBuff.RawPtr<BufferD3D11Impl>() )
                         {
                             // WARNING! This code is not thread-safe. If several threads change
                             // the buffer state, the results will be undefined.
                             // The solution may be to keep track of the state for each thread
                             // individually, or not rely on the state and check current context bindings
-                            if(!pBuff->CheckState(D3D11BufferState::ConstantBuffer))
+                            if(pBuff->IsInKnownState() && !pBuff->CheckState(RESOURCE_STATE_CONSTANT_BUFFER))
                             {
-                                if( pBuff->CheckState(D3D11BufferState::UnorderedAccess) )
+                                if( pBuff->CheckState(RESOURCE_STATE_UNORDERED_ACCESS) )
                                 {
                                     // Even though we have unbound resources from UAV, we only checked shader
                                     // stages active in current PSO, so we still may need to unbind the resource
                                     // from UAV (for instance, unbind resource from CS UAV when running draw command).
                                     UnbindResourceFromUAV( pBuff, d3d11CBs[cb] );
-                                    pBuff->ClearState(D3D11BufferState::UnorderedAccess);
+                                    pBuff->ClearState(RESOURCE_STATE_UNORDERED_ACCESS);
                                 }
-                                pBuff->AddState(D3D11BufferState::ConstantBuffer);
+                                pBuff->AddState(RESOURCE_STATE_CONSTANT_BUFFER);
                             }
                         }
                     }
@@ -409,9 +409,9 @@ namespace Diligent
                     {
                         VERIFY_EXPR(CommitResources);
                         auto &CB = CachedCBs[cb];
-                        if( auto* pBuff = const_cast<BufferD3D11Impl*>(CB.pBuff.RawPtr()) )
+                        if( auto* pBuff = CB.pBuff.RawPtr<BufferD3D11Impl>() )
                         {
-                            if (!pBuff->CheckState(D3D11BufferState::ConstantBuffer))
+                            if (pBuff->IsInKnownState() && !pBuff->CheckState(RESOURCE_STATE_CONSTANT_BUFFER))
                             {
                                 LOG_ERROR_MESSAGE("Buffer \"", pBuff->GetDesc().Name, "\" has not been transitioned to Constant Buffer state. Did you forget to call TransitionResources()?");
                             }
@@ -472,33 +472,34 @@ namespace Diligent
                     {
                         if (auto* pTexture = const_cast<TextureBaseD3D11*>(SRVRes.pTexture))
                         {
-                            if( !pTexture->CheckState(D3D11TextureState::ShaderResource) )
+                            if( pTexture->IsInKnownState() && !pTexture->CheckState(RESOURCE_STATE_SHADER_RESOURCE) )
                             {
-                                if( pTexture->CheckState(D3D11TextureState::UnorderedAccess) )
+                                if( pTexture->CheckState(RESOURCE_STATE_UNORDERED_ACCESS) )
                                 {
                                     // Even though we have unbound resources from UAV, we only checked shader
                                     // stages active in current PSO, so we still may need to unbind the resource
                                     // from UAV (for instance, unbind resource from CS UAV when running draw command).
                                     UnbindResourceFromUAV(pTexture, SRVRes.pd3d11Resource);
-                                    pTexture->ClearState(D3D11TextureState::UnorderedAccess);
+                                    pTexture->ClearState(RESOURCE_STATE_UNORDERED_ACCESS);
                                 }
-                                if( pTexture->CheckState(D3D11TextureState::RenderTarget) )
+                                // Clearing RESOURCE_STATE_UNORDERED_ACCESS flag may result in RESOURCE_STATE_UNKNOWN state
+                                if( pTexture->IsInKnownState() && pTexture->CheckState(RESOURCE_STATE_RENDER_TARGET) )
                                     UnbindTextureFromRenderTarget(pTexture);
-                                if( pTexture->CheckState(D3D11TextureState::DepthStencil) )
+                                if( pTexture->IsInKnownState() && pTexture->CheckState(RESOURCE_STATE_DEPTH_WRITE) )
                                     UnbindTextureFromDepthStencil(pTexture);
-                                pTexture->ResetState(D3D11TextureState::ShaderResource);
+                                pTexture->SetState(RESOURCE_STATE_SHADER_RESOURCE);
                             }
                         }
-                        else if(auto* pBuffer = const_cast<BufferD3D11Impl*>(SRVRes.pBuffer))
+                        else if(auto* pBuffer = ValidatedCast<BufferD3D11Impl>(SRVRes.pBuffer))
                         {
-                            if( !pBuffer->CheckState(D3D11BufferState::ShaderResource) )
+                            if( pBuffer->IsInKnownState() && !pBuffer->CheckState(RESOURCE_STATE_SHADER_RESOURCE) )
                             {
-                                if( pBuffer->CheckState(D3D11BufferState::UnorderedAccess) )
+                                if( pBuffer->CheckState(RESOURCE_STATE_UNORDERED_ACCESS) )
                                 {
                                     UnbindResourceFromUAV( pBuffer, SRVRes.pd3d11Resource );
-                                    pBuffer->ClearState(D3D11BufferState::UnorderedAccess);
+                                    pBuffer->ClearState(RESOURCE_STATE_UNORDERED_ACCESS);
                                 }
-                                pBuffer->AddState(D3D11BufferState::ShaderResource);
+                                pBuffer->AddState(RESOURCE_STATE_SHADER_RESOURCE);
                             }
                         }
                     }
@@ -506,16 +507,16 @@ namespace Diligent
                     else
                     {
                         VERIFY_EXPR(CommitResources);
-                        if (auto* pTexture = const_cast<TextureBaseD3D11*>(SRVRes.pTexture))
+                        if (auto* pTexture = ValidatedCast<TextureBaseD3D11>(SRVRes.pTexture))
                         {
-                            if( !pTexture->CheckState(D3D11TextureState::ShaderResource) )
+                            if( pTexture->IsInKnownState() && !pTexture->CheckState(RESOURCE_STATE_SHADER_RESOURCE) )
                             {
                                 LOG_ERROR_MESSAGE("Texture \"", pTexture->GetDesc().Name, "\" has not been transitioned to Shader Resource state. Did you forget to call TransitionResources()?");
                             }
                         }
-                        else if(auto* pBuffer = const_cast<BufferD3D11Impl*>(SRVRes.pBuffer))
+                        else if(auto* pBuffer = ValidatedCast<BufferD3D11Impl>(SRVRes.pBuffer))
                         {
-                            if( !pBuffer->CheckState(D3D11BufferState::ShaderResource) )
+                            if( pBuffer->IsInKnownState() && !pBuffer->CheckState(RESOURCE_STATE_SHADER_RESOURCE) )
                             {
                                 LOG_ERROR_MESSAGE("Texture \"", pBuffer->GetDesc().Name, "\" has not been transitioned to Shader Resource state. Did you forget to call TransitionResources()?");
                             }
@@ -661,10 +662,10 @@ namespace Diligent
         }
 
         BufferD3D11Impl* pBuffD3D11 = m_pIndexBuffer.RawPtr<BufferD3D11Impl>();
-        if( pBuffD3D11->CheckState( D3D11BufferState::UnorderedAccess ) )
+        if( pBuffD3D11->IsInKnownState() && pBuffD3D11->CheckState(RESOURCE_STATE_UNORDERED_ACCESS) )
         {
             UnbindResourceFromUAV(pBuffD3D11, pBuffD3D11->m_pd3d11Buffer);
-            pBuffD3D11->ClearState( D3D11BufferState::UnorderedAccess );
+            pBuffD3D11->ClearState(RESOURCE_STATE_UNORDERED_ACCESS);
         }
 
         if( m_CommittedD3D11IndexBuffer != pBuffD3D11->m_pd3d11Buffer ||
@@ -688,7 +689,7 @@ namespace Diligent
             m_pd3d11DeviceContext->IASetIndexBuffer( pBuffD3D11->m_pd3d11Buffer, D3D11IndexFmt, m_IndexDataStartOffset );
         }
 
-        pBuffD3D11->AddState(D3D11BufferState::IndexBuffer);
+        pBuffD3D11->AddState(RESOURCE_STATE_INDEX_BUFFER);
         m_bCommittedD3D11IBUpToDate = true;
     }
 
@@ -708,10 +709,10 @@ namespace Diligent
             auto Stride = Strides[Slot];
             auto Offset = CurrStream.Offset;
 
-            if(pBuffD3D11Impl != nullptr && pBuffD3D11Impl->CheckState( D3D11BufferState::UnorderedAccess ))
+            if(pBuffD3D11Impl != nullptr && pBuffD3D11Impl->IsInKnownState() && pBuffD3D11Impl->CheckState(RESOURCE_STATE_UNORDERED_ACCESS))
             {
                 UnbindResourceFromUAV(pBuffD3D11Impl, pd3d11Buffer);
-                pBuffD3D11Impl->ClearState( D3D11BufferState::UnorderedAccess );
+                pBuffD3D11Impl->ClearState(RESOURCE_STATE_UNORDERED_ACCESS);
             }
 
             // It is safe to perform raw pointer check because device context keeps
@@ -727,7 +728,7 @@ namespace Diligent
                 m_CommittedD3D11VBOffsets[Slot] = Offset;
 
                 if (pBuffD3D11Impl)
-                    pBuffD3D11Impl->AddState( D3D11BufferState::VertexBuffer );
+                    pBuffD3D11Impl->AddState(RESOURCE_STATE_VERTEX_BUFFER);
             }
         }
 
@@ -1147,21 +1148,21 @@ namespace Diligent
         if( !pTexture )return;
 
         UnbindResourceView( m_CommittedD3D11SRVs, m_CommittedD3D11SRVResources, m_NumCommittedSRVs, pd3d11Resource, SetSRVMethods );
-        pTexture->ClearState(D3D11TextureState::ShaderResource);
+        pTexture->ClearState(RESOURCE_STATE_SHADER_RESOURCE);
     }
 
     void DeviceContextD3D11Impl::UnbindBufferFromInput( BufferD3D11Impl* pBuffer, ID3D11Resource* pd3d11Buffer )
     {
         VERIFY( pBuffer, "Null buffer provided" );
-        if( !pBuffer )return;
-
-        if( pBuffer->CheckState(D3D11BufferState::ShaderResource) )
+        if( !pBuffer || !pBuffer->IsInKnownState())return;
+        
+        if( pBuffer->CheckState(RESOURCE_STATE_SHADER_RESOURCE) )
         {
             UnbindResourceView( m_CommittedD3D11SRVs, m_CommittedD3D11SRVResources, m_NumCommittedSRVs, pd3d11Buffer, SetSRVMethods );
-            pBuffer->ClearState( D3D11BufferState::ShaderResource );
+            pBuffer->ClearState(RESOURCE_STATE_SHADER_RESOURCE);
         }
         
-        if( pBuffer->CheckState(D3D11BufferState::IndexBuffer) )
+        if( pBuffer->IsInKnownState() && pBuffer->CheckState(RESOURCE_STATE_INDEX_BUFFER) )
         {
             auto pd3d11IndBuffer = ValidatedCast<BufferD3D11Impl>( pBuffer )->GetD3D11Buffer();
             if( pd3d11IndBuffer == m_CommittedD3D11IndexBuffer )
@@ -1178,10 +1179,10 @@ namespace Diligent
             {
                 dbgVerifyCommittedIndexBuffer();
             }
-            pBuffer->ClearState( D3D11BufferState::IndexBuffer );
+            pBuffer->ClearState(RESOURCE_STATE_INDEX_BUFFER);
         }
 
-        if( pBuffer->CheckState( D3D11BufferState::VertexBuffer ) )
+        if( pBuffer->IsInKnownState() && pBuffer->CheckState(RESOURCE_STATE_VERTEX_BUFFER) )
         {
             auto pd3d11VB = ValidatedCast<BufferD3D11Impl>( pBuffer )->GetD3D11Buffer();
             for( Uint32 Slot = 0; Slot < m_NumCommittedD3D11VBs; ++Slot )
@@ -1204,10 +1205,10 @@ namespace Diligent
             {
                 dbgVerifyCommittedVertexBuffers();
             }
-            pBuffer->ClearState( D3D11BufferState::VertexBuffer );
+            pBuffer->ClearState(RESOURCE_STATE_VERTEX_BUFFER);
         }
 
-        if( pBuffer->CheckState( D3D11BufferState::ConstantBuffer ) )
+        if( pBuffer->IsInKnownState() && pBuffer->CheckState(RESOURCE_STATE_CONSTANT_BUFFER) )
         {
             for( Int32 ShaderTypeInd = 0; ShaderTypeInd < NumShaderTypes; ++ShaderTypeInd )
             {
@@ -1228,7 +1229,7 @@ namespace Diligent
             {
                 dbgVerifyCommittedCBs();
             }
-            pBuffer->ClearState( D3D11BufferState::ConstantBuffer );
+            pBuffer->ClearState(RESOURCE_STATE_CONSTANT_BUFFER);
         }
     }
 
@@ -1266,7 +1267,7 @@ namespace Diligent
             CommitRenderTargets();
         }
 
-        pTexture->ClearState(D3D11TextureState::RenderTarget);
+        pTexture->ClearState(RESOURCE_STATE_RENDER_TARGET);
     }
 
     void DeviceContextD3D11Impl::UnbindTextureFromDepthStencil(TextureBaseD3D11* pTexD3D11)
@@ -1279,7 +1280,7 @@ namespace Diligent
             m_pBoundDepthStencil.Release();
             CommitRenderTargets();
         }
-        pTexD3D11->ClearState(D3D11TextureState::DepthStencil);
+        pTexD3D11->ClearState(RESOURCE_STATE_DEPTH_WRITE);
     }
 
     void DeviceContextD3D11Impl::ResetRenderTargets()
@@ -1297,13 +1298,15 @@ namespace Diligent
                 {
                     auto* pTex = ValidatedCast<TextureBaseD3D11>(ppRenderTargets[RT]->GetTexture());
                     UnbindTextureFromInput( pTex, pTex->GetD3D11Texture() );
-                    pTex->ResetState(D3D11TextureState::RenderTarget);
+                    if (pTex->IsInKnownState())
+                        pTex->SetState(RESOURCE_STATE_RENDER_TARGET);
                 }
             if( pDepthStencil )
             {
                 auto* pTex = ValidatedCast<TextureBaseD3D11>(pDepthStencil->GetTexture());
                 UnbindTextureFromInput( pTex, pTex->GetD3D11Texture() );
-                pTex->ResetState(D3D11TextureState::DepthStencil);
+                if (pTex->IsInKnownState())
+                    pTex->SetState(RESOURCE_STATE_DEPTH_WRITE);
             }
 
             CommitRenderTargets();
@@ -1569,7 +1572,111 @@ namespace Diligent
 
     void DeviceContextD3D11Impl::TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers)
     {
+        for(Uint32 i=0; i < BarrierCount; ++i)
+        {
+            const auto& Barrier = pResourceBarriers[i];
+#ifdef DEVELOPMENT
+            DvpVerifyStateTransitionDesc(Barrier);
+#endif
+            DEV_CHECK_ERR((Barrier.pTexture != nullptr) ^ (Barrier.pBuffer != nullptr), "Exactly one of pTexture or pBuffer must not be null");
+            DEV_CHECK_ERR(Barrier.NewState != RESOURCE_STATE_UNKNOWN, "New resource state can't be unknown");
 
+            if (Barrier.pTexture)
+            {
+                auto* pTextureD3D11Impl = ValidatedCast<TextureBaseD3D11>(Barrier.pTexture);
+                auto OldState = Barrier.OldState;
+                if (OldState == RESOURCE_STATE_UNKNOWN)
+                {
+                    if (pTextureD3D11Impl->IsInKnownState())
+                    {
+                        OldState = pTextureD3D11Impl->GetState();
+                    }
+                    else
+                    {
+                        LOG_ERROR_MESSAGE("Failed to transition the state of texture '", pTextureD3D11Impl->GetDesc().Name, "' because the buffer state is unknown and is not explicitly specified");
+                        continue;
+                    }
+                }
+                else
+                {
+                    if (pTextureD3D11Impl->IsInKnownState() && pTextureD3D11Impl->GetState() != OldState)
+                    {
+                        LOG_ERROR_MESSAGE("The state ", GetResourceStateString(pTextureD3D11Impl->GetState()), " of texture '",
+                                           pTextureD3D11Impl->GetDesc().Name, "' does not match the old state ", GetResourceStateString(OldState),
+                                           " specified by the barrier");
+                    }
+                }
+
+                if ((Barrier.NewState & RESOURCE_STATE_UNORDERED_ACCESS) != 0)
+                {
+                    DEV_CHECK_ERR((Barrier.NewState & RESOURCE_STATE_GENERIC_READ) == 0, "Unordered access state is not compatible with any input state");
+                    UnbindTextureFromInput(pTextureD3D11Impl, pTextureD3D11Impl->GetD3D11Texture());
+                }
+
+                if ((Barrier.NewState & RESOURCE_STATE_GENERIC_READ) != 0)
+                {
+                    if ((OldState & RESOURCE_STATE_RENDER_TARGET) !=0 )
+                        UnbindTextureFromRenderTarget(pTextureD3D11Impl);
+
+                    if ((OldState & RESOURCE_STATE_DEPTH_WRITE) !=0 )
+                        UnbindTextureFromDepthStencil(pTextureD3D11Impl);
+
+                    if ((OldState & RESOURCE_STATE_UNORDERED_ACCESS) != 0)
+                    {
+                        UnbindResourceFromUAV(pTextureD3D11Impl, pTextureD3D11Impl->GetD3D11Texture());
+                        pTextureD3D11Impl->ClearState(RESOURCE_STATE_UNORDERED_ACCESS);
+                    }
+                }
+
+                if (Barrier.UpdateResourceState)
+                {
+                    pTextureD3D11Impl->SetState(Barrier.NewState);
+                }
+            }
+            else
+            {
+                VERIFY_EXPR(Barrier.pBuffer);
+                auto* pBufferD3D11Impl = ValidatedCast<BufferD3D11Impl>(Barrier.pBuffer);
+                auto OldState = Barrier.OldState;
+                if (OldState == RESOURCE_STATE_UNKNOWN)
+                {
+                    if (pBufferD3D11Impl->IsInKnownState())
+                    {
+                        OldState = pBufferD3D11Impl->GetState();
+                    }
+                    else
+                    {
+                        LOG_ERROR_MESSAGE("Failed to transition the state of buffer '", pBufferD3D11Impl->GetDesc().Name, "' because the buffer state is unknown and is not explicitly specified");
+                        continue;
+                    }
+                }
+                else
+                {
+                    if (pBufferD3D11Impl->IsInKnownState() && pBufferD3D11Impl->GetState() != OldState)
+                    {
+                        LOG_ERROR_MESSAGE("The state ", GetResourceStateString(pBufferD3D11Impl->GetState()), " of buffer '",
+                                           pBufferD3D11Impl->GetDesc().Name, "' does not match the old state ", GetResourceStateString(OldState),
+                                           " specified by the barrier");
+                    }
+                }
+
+                if ((Barrier.NewState & RESOURCE_STATE_UNORDERED_ACCESS) != 0)
+                {
+                    DEV_CHECK_ERR((Barrier.NewState & RESOURCE_STATE_GENERIC_READ) == 0, "Unordered access state is not compatible with any input state");
+                    UnbindBufferFromInput(pBufferD3D11Impl, pBufferD3D11Impl->m_pd3d11Buffer);
+                }
+
+                if ((Barrier.NewState & RESOURCE_STATE_GENERIC_READ) != 0)
+                {
+                    UnbindResourceFromUAV(pBufferD3D11Impl, pBufferD3D11Impl->m_pd3d11Buffer);
+                }
+
+                if (Barrier.UpdateResourceState)
+                {
+                    pBufferD3D11Impl->SetState(Barrier.NewState);
+                }
+            }
+        }
     }
 
 #ifdef VERIFY_CONTEXT_BINDINGS

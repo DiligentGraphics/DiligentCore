@@ -37,16 +37,6 @@ namespace Diligent
 
 class FixedBlockMemoryAllocator;
 
-enum class D3D11TextureState
-{
-    Undefined       = 0x0,
-    ShaderResource  = 0x1,
-    RenderTarget    = 0x2,
-    DepthStencil    = 0x4,
-    UnorderedAccess = 0x8,
-    Output = RenderTarget | DepthStencil | UnorderedAccess
-};
-
 /// Base implementation of the Diligent::ITextureD3D11 interface
 class TextureBaseD3D11 : public TextureBase<ITextureD3D11, RenderDeviceD3D11Impl, TextureViewD3D11Impl, FixedBlockMemoryAllocator>
 {
@@ -90,10 +80,8 @@ public:
                   Uint32          DstY,
                   Uint32          DstZ);
 
-    void ResetState(D3D11TextureState State){m_State = static_cast<Uint32>(State);}
-    void AddState(D3D11TextureState State)  {m_State |= static_cast<Uint32>(State);}
-    void ClearState(D3D11TextureState State){m_State &= ~static_cast<Uint32>(State);}
-    bool CheckState(D3D11TextureState State){return (m_State & static_cast<Uint32>(State)) ? true : false;}
+    void AddState  (RESOURCE_STATE State){m_State = static_cast<RESOURCE_STATE>(m_State | State);}
+    void ClearState(RESOURCE_STATE State){m_State = static_cast<RESOURCE_STATE>(m_State & ~static_cast<Uint32>(State));}
 
 protected:
     void CreateViewInternal( const struct TextureViewDesc &ViewDesc, ITextureView **ppView, bool bIsDefaultView )override final;
@@ -108,8 +96,6 @@ protected:
     friend class RenderDeviceD3D11Impl;
     /// D3D11 texture
     CComPtr<ID3D11Resource> m_pd3d11Texture;
-
-    Uint32 m_State = static_cast<Uint32>(D3D11TextureState::Undefined);
 };
 
 }
