@@ -1164,7 +1164,7 @@ public:
     }
 
 private:
-    static constexpr Uint32 MaxFlagBitPos = 15;
+    static const Uint32 MaxFlagBitPos = 15;
     std::array<VkAccessFlags, MaxFlagBitPos + 1> FlagBitPosToVkAccessFlagsMap;
 };
 
@@ -1242,7 +1242,7 @@ public:
     }
 
 private:
-    static constexpr Uint32 MaxFlagBitPos = 20;
+    static const Uint32 MaxFlagBitPos = 20;
     std::array<RESOURCE_STATE, MaxFlagBitPos + 1> FlagBitPosToResourceState;
 };
 
