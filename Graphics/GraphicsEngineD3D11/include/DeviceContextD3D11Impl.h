@@ -64,25 +64,25 @@ public:
 
     virtual void SetBlendFactors(const float* pBlendFactors = nullptr)override final;
 
-    virtual void SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer **ppBuffers, Uint32* pOffsets, Uint32 Flags )override final;
+    virtual void SetVertexBuffers(Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer** ppBuffers, Uint32* pOffsets, Uint32 Flags)override final;
     
     virtual void InvalidateState()override final;
 
-    virtual void SetIndexBuffer( IBuffer* pIndexBuffer, Uint32 ByteOffset )override final;
+    virtual void SetIndexBuffer(IBuffer* pIndexBuffer, Uint32 ByteOffset)override final;
 
-    virtual void SetViewports( Uint32 NumViewports, const Viewport* pViewports, Uint32 RTWidth, Uint32 RTHeight )override final;
+    virtual void SetViewports(Uint32 NumViewports, const Viewport* pViewports, Uint32 RTWidth, Uint32 RTHeight)override final;
 
-    virtual void SetScissorRects( Uint32 NumRects, const Rect* pRects, Uint32 RTWidth, Uint32 RTHeight )override final;
+    virtual void SetScissorRects(Uint32 NumRects, const Rect* pRects, Uint32 RTWidth, Uint32 RTHeight)override final;
 
-    virtual void SetRenderTargets( Uint32 NumRenderTargets, ITextureView* ppRenderTargets[], ITextureView* pDepthStencil )override final;
+    virtual void SetRenderTargets(Uint32 NumRenderTargets, ITextureView* ppRenderTargets[], ITextureView* pDepthStencil)override final;
 
-    virtual void Draw( DrawAttribs &DrawAttribs )override final;
+    virtual void Draw(DrawAttribs& DrawAttribs)override final;
 
-    virtual void DispatchCompute( const DispatchComputeAttribs &DispatchAttrs )override final;
+    virtual void DispatchCompute(const DispatchComputeAttribs& DispatchAttrs)override final;
 
-    virtual void ClearDepthStencil( ITextureView* pView, Uint32 ClearFlags, float fDepth, Uint8 Stencil)override final;
+    virtual void ClearDepthStencil(ITextureView* pView, Uint32 ClearFlags, float fDepth, Uint8 Stencil)override final;
 
-    virtual void ClearRenderTarget( ITextureView* pView, const float *RGBA )override final;
+    virtual void ClearRenderTarget(ITextureView* pView, const float* RGBA)override final;
 
     virtual void Flush()override final;
 
@@ -90,17 +90,17 @@ public:
 
     virtual void TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers)override final;
     
-    void FinishCommandList(class ICommandList **ppCommandList)override final;
+    void FinishCommandList(class ICommandList** ppCommandList)override final;
 
     virtual void ExecuteCommandList(class ICommandList* pCommandList)override final;
 
     virtual void SignalFence(IFence* pFence, Uint64 Value)override final;
 
-    ID3D11DeviceContext* GetD3D11DeviceContext(){ return m_pd3d11DeviceContext; }
+    virtual ID3D11DeviceContext* GetD3D11DeviceContext()override final { return m_pd3d11DeviceContext; }
     
     void CommitRenderTargets();
 
-    /// Clears the committed shader resource cache. This function 
+    /// Clears committed shader resource cache. This function 
     /// is called once per frame (before present) to release all 
     /// outstanding objects that are only kept alive by references 
     /// in the cache. The function does not release cached vertex and
@@ -116,10 +116,10 @@ public:
 
 private:
     
-    /// Commits d3d11 index buffer to the d3d11 device context.
+    /// Commits d3d11 index buffer to d3d11 device context.
     void CommitD3D11IndexBuffer(VALUE_TYPE IndexType, bool TransitionBuffer);
 
-    /// Commits d3d11 vertex buffers to the d3d11 device context.
+    /// Commits d3d11 vertex buffers to d3d11 device context.
     void CommitD3D11VertexBuffers(class PipelineStateD3D11Impl* pPipelineStateD3D11, bool TransitionBuffers);
 
     /// Helper template function used to facilitate resource unbinding
@@ -132,19 +132,19 @@ private:
                             ID3D11Resource*        pd3d11ResToUndind,
                             TSetD3D11View          SetD3D11ViewMethods[]);
 
-    /// Unbinds a texture from the shader resource view slots.
+    /// Unbinds a texture from shader resource view slots.
     /// \note The function only unbinds the texture from d3d11 device
     ///       context. All shader bindings are retained.
     void UnbindTextureFromInput(TextureBaseD3D11* pTexture, ID3D11Resource* pd3d11Resource);
 
-    /// Unbinds a buffer from the input (shader resource views slots, index 
+    /// Unbinds a buffer from input (shader resource views slots, index 
     /// and vertex buffer slots).
     /// \note The function only unbinds the buffer from d3d11 device
     ///       context. All shader bindings are retained.
     void UnbindBufferFromInput(BufferD3D11Impl* pBuffer, ID3D11Resource* pd3d11Buffer);
 
-    /// Unbinds a resource from the UAV slots.
-    /// \note The function only unbinds the texture from the device
+    /// Unbinds a resource from UAV slots.
+    /// \note The function only unbinds the resource from d3d11 device
     ///       context. All shader bindings are retained.
     void UnbindResourceFromUAV(IDeviceObject* pResource, ID3D11Resource* pd3d11Resource);
 
@@ -162,77 +162,77 @@ private:
 
     CComPtr<ID3D11DeviceContext> m_pd3d11DeviceContext; ///< D3D11 device context
 
-    /// An array of D3D11 constant buffers committed to the D3D11 device context,
-    /// for each shader type. Device context addref's all bound resources, so we do 
-    /// not need to keep strong references
-    ID3D11Buffer*              m_CommittedD3D11CBs     [NumShaderTypes][D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT];
+    /// An array of D3D11 constant buffers committed to D3D11 device context,
+    /// for each shader type. The context addref's all bound resources, so we do 
+    /// not need to keep strong references.
+    ID3D11Buffer*              m_CommittedD3D11CBs     [NumShaderTypes][D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT] = {};
     
-    /// An array of D3D11 shader resource views committed to the D3D11 device context,
-    /// for each shader type. Device context addref's all bound resources, so we do 
-    /// not need to keep strong references
-    ID3D11ShaderResourceView*  m_CommittedD3D11SRVs    [NumShaderTypes][D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT];
+    /// An array of D3D11 shader resource views committed to D3D11 device context,
+    /// for each shader type. The context addref's all bound resources, so we do 
+    /// not need to keep strong references.
+    ID3D11ShaderResourceView*  m_CommittedD3D11SRVs    [NumShaderTypes][D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT] = {};
     
-    /// An array of D3D11 samplers committed to the D3D11 device context,
-    /// for each shader type. Device context addref's all bound resources, so we do 
-    /// not need to keep strong references
-    ID3D11SamplerState*        m_CommittedD3D11Samplers[NumShaderTypes][D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT];
+    /// An array of D3D11 samplers committed to D3D11 device context,
+    /// for each shader type. The context addref's all bound resources, so we do 
+    /// not need to keep strong references.
+    ID3D11SamplerState*        m_CommittedD3D11Samplers[NumShaderTypes][D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT] = {};
     
-    /// An array of D3D11 UAVs committed to the D3D11 device context,
-    /// for each shader type. Device context addref's all bound resources, so we do 
-    /// not need to keep strong references
-    ID3D11UnorderedAccessView* m_CommittedD3D11UAVs    [NumShaderTypes][D3D11_PS_CS_UAV_REGISTER_COUNT];
+    /// An array of D3D11 UAVs committed to D3D11 device context,
+    /// for each shader type. The context addref's all bound resources, so we do 
+    /// not need to keep strong references.
+    ID3D11UnorderedAccessView* m_CommittedD3D11UAVs    [NumShaderTypes][D3D11_PS_CS_UAV_REGISTER_COUNT] = {};
 
-    /// An array of D3D11 resources commited as SRV to the D3D11 device context,
-    /// for each shader type. Device context addref's all bound resources, so we do 
-    /// not need to keep strong references
-    ID3D11Resource*  m_CommittedD3D11SRVResources    [NumShaderTypes][D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT];
+    /// An array of D3D11 resources commited as SRV to D3D11 device context,
+    /// for each shader type. The context addref's all bound resources, so we do 
+    /// not need to keep strong references.
+    ID3D11Resource*  m_CommittedD3D11SRVResources      [NumShaderTypes][D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT] = {};
 
-    /// An array of D3D11 resources commited as UAV to the D3D11 device context,
-    /// for each shader type. Device context addref's all bound resources, so we do 
-    /// not need to keep strong references
-    ID3D11Resource*  m_CommittedD3D11UAVResources    [NumShaderTypes][D3D11_PS_CS_UAV_REGISTER_COUNT];
+    /// An array of D3D11 resources commited as UAV to D3D11 device context,
+    /// for each shader type. The context addref's all bound resources, so we do 
+    /// not need to keep strong references.
+    ID3D11Resource*  m_CommittedD3D11UAVResources      [NumShaderTypes][D3D11_PS_CS_UAV_REGISTER_COUNT] = {};
 
-    Uint8 m_NumCommittedCBs[NumShaderTypes] = {};
-    Uint8 m_NumCommittedSRVs[NumShaderTypes]= {};
-    Uint8 m_NumCommittedSamplers[NumShaderTypes]= {};
-    Uint8 m_NumCommittedUAVs[NumShaderTypes]= {};
+    Uint8 m_NumCommittedCBs     [NumShaderTypes] = {};
+    Uint8 m_NumCommittedSRVs    [NumShaderTypes] = {};
+    Uint8 m_NumCommittedSamplers[NumShaderTypes] = {};
+    Uint8 m_NumCommittedUAVs    [NumShaderTypes] = {};
 
-    /// An array of D3D11 vertex buffers committed to the D3D device context
+    /// An array of D3D11 vertex buffers committed to D3D device context.
     /// There is no need to keep strong references because D3D11 device context 
     /// already does. Buffers cannot be destroyed while bound to the context.
     /// We only mirror all bindings.
-    ID3D11Buffer*  m_CommittedD3D11VertexBuffers[MaxBufferSlots] = {};
+    ID3D11Buffer* m_CommittedD3D11VertexBuffers[MaxBufferSlots] = {};
     /// An array of strides of committed vertex buffers
-    UINT m_CommittedD3D11VBStrides[MaxBufferSlots];
+    UINT m_CommittedD3D11VBStrides [MaxBufferSlots] = {};
     /// An array of offsets of committed vertex buffers
-    UINT m_CommittedD3D11VBOffsets[MaxBufferSlots];
+    UINT m_CommittedD3D11VBOffsets [MaxBufferSlots] = {};
     /// Number committed vertex buffers
-    UINT m_NumCommittedD3D11VBs;
+    UINT m_NumCommittedD3D11VBs = 0;
     /// Flag indicating if currently committed D3D11 vertex buffers are up to date
     bool m_bCommittedD3D11VBsUpToDate = false;
 
-    /// D3D11 input layout committed to the device object.
-    /// Device context keeps the layout alive, so there is no need
-    /// to keep strong reference
-    ID3D11InputLayout *m_CommittedD3D11InputLayout = nullptr;
+    /// D3D11 input layout committed to device context.
+    /// The context keeps the layout alive, so there is no need
+    /// to keep strong reference.
+    ID3D11InputLayout* m_CommittedD3D11InputLayout = nullptr;
 
-    /// Strong reference to the D3D11 buffer committed as index buffer 
-    /// to the D3D device context
+    /// Strong reference to D3D11 buffer committed as index buffer 
+    /// to D3D device context.
     CComPtr<ID3D11Buffer>  m_CommittedD3D11IndexBuffer;
     /// Format of the committed D3D11 index buffer
-    VALUE_TYPE m_CommittedIBFormat;
+    VALUE_TYPE m_CommittedIBFormat = VT_UNDEFINED;
     /// Offset of the committed D3D11 index buffer
-    Uint32 m_CommittedD3D11IndexDataStartOffset;
+    Uint32 m_CommittedD3D11IndexDataStartOffset = 0;
     /// Flag indicating if currently committed D3D11 index buffer is up to date
     bool m_bCommittedD3D11IBUpToDate = false;
 
     D3D11_PRIMITIVE_TOPOLOGY m_CommittedD3D11PrimTopology = D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED;
-    PRIMITIVE_TOPOLOGY m_CommittedPrimitiveTopology = PRIMITIVE_TOPOLOGY_UNDEFINED;
+    PRIMITIVE_TOPOLOGY       m_CommittedPrimitiveTopology = PRIMITIVE_TOPOLOGY_UNDEFINED;
 
-    /// Strong references to the committed D3D11 shaders
+    /// Strong references to committed D3D11 shaders
     CComPtr<ID3D11DeviceChild> m_CommittedD3DShaders[NumShaderTypes];
 
-    Uint32 m_DebugFlags;
+    const Uint32 m_DebugFlags;
 
     FixedBlockMemoryAllocator m_CmdListAllocator;
 
@@ -257,33 +257,33 @@ private:
                                   SHADER_TYPE     ShaderType);
 
     /// Debug function that verifies that SRVs cached in m_CommittedD3D11SRVs 
-    /// array comply with resources actually committed to the D3D11 device context
+    /// array comply with resources actually committed to D3D11 device context
     void dbgVerifyCommittedSRVs(SHADER_TYPE ShaderType = SHADER_TYPE_UNKNOWN);
 
     /// Debug function that verifies that UAVs cached in m_CommittedD3D11UAVs 
-    /// array comply with resources actually committed to the D3D11 device context
+    /// array comply with resources actually committed to D3D11 device context
     void dbgVerifyCommittedUAVs(SHADER_TYPE ShaderType = SHADER_TYPE_UNKNOWN);
 
     /// Debug function that verifies that samplers cached in m_CommittedD3D11Samplers
-    /// array comply with resources actually committed to the D3D11 device context
+    /// array comply with resources actually committed to D3D11 device context
     void dbgVerifyCommittedSamplers(SHADER_TYPE ShaderType = SHADER_TYPE_UNKNOWN);
 
     /// Debug function that verifies that constant buffers cached in m_CommittedD3D11CBs 
-    /// array comply with buffers actually committed to the D3D11 device context
+    /// array comply with buffers actually committed to D3D11 device context
     void dbgVerifyCommittedCBs(SHADER_TYPE ShaderType = SHADER_TYPE_UNKNOWN);
 
-    /// Debug function that verifies that the index buffer cached in 
-    /// m_CommittedD3D11IndexBuffer is the buffer actually committed to the D3D11 
+    /// Debug function that verifies that index buffer cached in 
+    /// m_CommittedD3D11IndexBuffer is the buffer actually committed to D3D11 
     /// device context
     void dbgVerifyCommittedIndexBuffer();
 
     /// Debug function that verifies that vertex buffers cached in 
-    /// m_CommittedD3D11VertexBuffers are the buffers actually committed to the D3D11 
+    /// m_CommittedD3D11VertexBuffers are the buffers actually committed to D3D11 
     /// device context
     void dbgVerifyCommittedVertexBuffers();
 
     /// Debug function that verifies that shaders cached in 
-    /// m_CommittedD3DShaders are the shaders actually committed to the D3D11 
+    /// m_CommittedD3DShaders are the shaders actually committed to D3D11 
     /// device context
     void dbgVerifyCommittedShaders();
 
@@ -296,8 +296,7 @@ private:
     #define dbgVerifyCommittedIndexBuffer(...)
     #define dbgVerifyCommittedVertexBuffers(...)
     #define dbgVerifyCommittedShaders(...)
-
-#endif
+#endif // VERIFY_CONTEXT_BINDINGS
 };
 
 }

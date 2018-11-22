@@ -80,13 +80,18 @@ public:
                   Uint32          DstY,
                   Uint32          DstZ);
 
-    void AddState  (RESOURCE_STATE State){m_State = static_cast<RESOURCE_STATE>(m_State | State);}
+    void AddState  (RESOURCE_STATE State)
+    {
+        m_State = static_cast<RESOURCE_STATE>(m_State & ~static_cast<Uint32>(RESOURCE_STATE_UNDEFINED));
+        m_State = static_cast<RESOURCE_STATE>(m_State | State);
+    }
+
     void ClearState(RESOURCE_STATE State)
     {
         VERIFY_EXPR(IsInKnownState());
         m_State = static_cast<RESOURCE_STATE>(m_State & ~static_cast<Uint32>(State));
-        if (!IsInKnownState())
-            SetState(RESOURCE_STATE_UNDEFINED);
+        if (m_State == RESOURCE_STATE_UNKNOWN)
+            m_State = RESOURCE_STATE_UNDEFINED;
     }
 
 protected:
