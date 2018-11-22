@@ -1159,12 +1159,12 @@ public:
 
     VkAccessFlags operator()(Uint32 BitPos)const
     {
-        VERIFY(BitPos <= MaxFlagBitPos, "Resource state flag bit position (", BitPos, ") exceeds max bit position (", MaxFlagBitPos, ")");
+        VERIFY(BitPos <= MaxFlagBitPos, "Resource state flag bit position (", BitPos, ") exceeds max bit position (", Uint32{MaxFlagBitPos}, ")");
         return FlagBitPosToVkAccessFlagsMap[BitPos];
     }
 
 private:
-    static const Uint32 MaxFlagBitPos = 15;
+    static constexpr const Uint32 MaxFlagBitPos = 15;
     std::array<VkAccessFlags, MaxFlagBitPos + 1> FlagBitPosToVkAccessFlagsMap;
 };
 
@@ -1237,12 +1237,12 @@ public:
 
     RESOURCE_STATE operator()(Uint32 BitPos)const
     {
-        VERIFY(BitPos <= MaxFlagBitPos, "Resource state flag bit position (", BitPos, ") exceeds max bit position (", MaxFlagBitPos, ")");
+        VERIFY(BitPos <= MaxFlagBitPos, "Resource state flag bit position (", BitPos, ") exceeds max bit position (", Uint32{MaxFlagBitPos}, ")");
         return FlagBitPosToResourceState[BitPos];
     }
 
 private:
-    static const Uint32 MaxFlagBitPos = 20;
+    static constexpr const Uint32 MaxFlagBitPos = 20;
     std::array<RESOURCE_STATE, MaxFlagBitPos + 1> FlagBitPosToResourceState;
 };
 
