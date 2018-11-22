@@ -69,7 +69,13 @@ public:
     virtual void* GetNativeHandle()override final { return GetD3D11Buffer(); }
 
     void AddState  (RESOURCE_STATE State){m_State = static_cast<RESOURCE_STATE>(m_State | State);}
-    void ClearState(RESOURCE_STATE State){m_State = static_cast<RESOURCE_STATE>(m_State & ~static_cast<Uint32>(State));}
+    void ClearState(RESOURCE_STATE State)
+    {
+        VERIFY_EXPR(IsInKnownState());
+        m_State = static_cast<RESOURCE_STATE>(m_State & ~static_cast<Uint32>(State));
+        if (!IsInKnownState())
+            SetState(RESOURCE_STATE_UNDEFINED);
+    }
 
 private:
     virtual void CreateViewInternal( const struct BufferViewDesc &ViewDesc, IBufferView **ppView, bool bIsDefaultView )override;

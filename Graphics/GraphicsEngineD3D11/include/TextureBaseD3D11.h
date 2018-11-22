@@ -81,7 +81,13 @@ public:
                   Uint32          DstZ);
 
     void AddState  (RESOURCE_STATE State){m_State = static_cast<RESOURCE_STATE>(m_State | State);}
-    void ClearState(RESOURCE_STATE State){m_State = static_cast<RESOURCE_STATE>(m_State & ~static_cast<Uint32>(State));}
+    void ClearState(RESOURCE_STATE State)
+    {
+        VERIFY_EXPR(IsInKnownState());
+        m_State = static_cast<RESOURCE_STATE>(m_State & ~static_cast<Uint32>(State));
+        if (!IsInKnownState())
+            SetState(RESOURCE_STATE_UNDEFINED);
+    }
 
 protected:
     void CreateViewInternal( const struct TextureViewDesc &ViewDesc, ITextureView **ppView, bool bIsDefaultView )override final;
