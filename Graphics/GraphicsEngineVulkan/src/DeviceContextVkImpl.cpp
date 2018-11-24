@@ -1237,9 +1237,9 @@ namespace Diligent
         // pages will be discarded
     }
 
-    void DeviceContextVkImpl::CopyBuffer(IBuffer* pSrcBuffer, IBuffer* pDstBuffer, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size)
+    void DeviceContextVkImpl::CopyBuffer(IBuffer* pSrcBuffer, Uint32 SrcOffset, IBuffer* pDstBuffer, Uint32 DstOffset, Uint32 Size)
     {
-        TDeviceContextBase::CopyBuffer(pSrcBuffer, pDstBuffer, SrcOffset, DstOffset, Size);
+        TDeviceContextBase::CopyBuffer(pSrcBuffer, SrcOffset, pDstBuffer, DstOffset, Size);
 
         auto *pSrcBuffVk = ValidatedCast<BufferVkImpl>(pSrcBuffer);
         auto *pDstBuffVk = ValidatedCast<BufferVkImpl>(pDstBuffer);

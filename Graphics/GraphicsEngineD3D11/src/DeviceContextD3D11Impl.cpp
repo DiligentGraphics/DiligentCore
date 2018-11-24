@@ -955,9 +955,9 @@ namespace Diligent
         m_pd3d11DeviceContext->UpdateSubresource(pBufferD3D11Impl->m_pd3d11Buffer, 0, pDstBox, pData, 0, 0);
     }
 
-    void DeviceContextD3D11Impl::CopyBuffer(IBuffer *pSrcBuffer, IBuffer *pDstBuffer, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size)
+    void DeviceContextD3D11Impl::CopyBuffer(IBuffer *pSrcBuffer, Uint32 SrcOffset, IBuffer *pDstBuffer, Uint32 DstOffset, Uint32 Size)
     {
-        TDeviceContextBase::CopyBuffer(pSrcBuffer, pDstBuffer, SrcOffset, DstOffset, Size);
+        TDeviceContextBase::CopyBuffer(pSrcBuffer, SrcOffset, pDstBuffer, DstOffset, Size);
 
         auto* pSrcBufferD3D11Impl = ValidatedCast<BufferD3D11Impl>( pSrcBuffer );
         auto* pDstBufferD3D11Impl = ValidatedCast<BufferD3D11Impl>( pDstBuffer );

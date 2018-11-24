@@ -140,16 +140,16 @@ struct TextureViewDesc : DeviceObjectAttribs
     {
                // Name is primarily used for debug purposes and does not affect the view.
                // It is ignored in comparison operation.
-        return //strcmp(Name, RHS.Name) == 0      &&
-               ViewType     == RHS.ViewType     &&
-               TextureDim  == RHS.TextureDim  &&
-               Format       == RHS.Format       &&
+        return //strcmp(Name, RHS.Name) == 0            &&
+               ViewType        == RHS.ViewType        &&
+               TextureDim      == RHS.TextureDim      &&
+               Format          == RHS.Format          &&
                MostDetailedMip == RHS.MostDetailedMip &&
                NumMipLevels    == RHS.NumMipLevels    &&
                FirstArraySlice == RHS.FirstArraySlice &&
                FirstDepthSlice == RHS.FirstDepthSlice &&
                NumArraySlices  == RHS.NumArraySlices  &&
-               NumDepthSlices  == RHS.NumDepthSlices &&
+               NumDepthSlices  == RHS.NumDepthSlices  &&
                AccessFlags     == RHS.AccessFlags;
     }
 };

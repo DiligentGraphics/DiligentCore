@@ -912,9 +912,9 @@ namespace Diligent
         UpdateBufferRegion(pBuffD3D12, TmpSpace, Offset, Size);
     }
 
-    void DeviceContextD3D12Impl::CopyBuffer(IBuffer* pSrcBuffer, IBuffer* pDstBuffer, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size)
+    void DeviceContextD3D12Impl::CopyBuffer(IBuffer* pSrcBuffer, Uint32 SrcOffset, IBuffer* pDstBuffer, Uint32 DstOffset, Uint32 Size)
     {
-        TDeviceContextBase::CopyBuffer(pSrcBuffer, pDstBuffer, SrcOffset, DstOffset, Size);
+        TDeviceContextBase::CopyBuffer(pSrcBuffer, SrcOffset, pDstBuffer, DstOffset, Size);
 
         auto* pSrcBuffD3D12 = ValidatedCast<BufferD3D12Impl>(pSrcBuffer);
         auto* pDstBuffD3D12 = ValidatedCast<BufferD3D12Impl>(pDstBuffer);

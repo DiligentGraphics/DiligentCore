@@ -538,12 +538,12 @@ public:
     /// Copies the data from one buffer to another
 
     /// \param [in] pSrcBuffer - Source buffer to copy data from.
-    /// \param [in] pDstBuffer - Destination buffer to copy data to.
     /// \param [in] SrcOffset  - Offset in bytes from the beginning of the source buffer to the beginning of data to copy.
+    /// \param [in] pDstBuffer - Destination buffer to copy data to.
     /// \param [in] DstOffset  - Offset in bytes from the beginning of the destination buffer to the beginning 
     ///                          of the destination region.
     /// \param [in] Size       - Size in bytes of data to copy.
-    virtual void CopyBuffer(IBuffer* pSrcBuffer, IBuffer* pDstBuffer, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size) = 0;
+    virtual void CopyBuffer(IBuffer* pSrcBuffer, Uint32 SrcOffset, IBuffer* pDstBuffer, Uint32 DstOffset, Uint32 Size) = 0;
 
 
     /// Updates the data in the texture
