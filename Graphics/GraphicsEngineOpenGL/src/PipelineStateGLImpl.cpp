@@ -152,11 +152,13 @@ void PipelineStateGLImpl::BindShaderResources(IResourceMapping *pResourceMapping
     }
 }
 
-void PipelineStateGLImpl::CreateShaderResourceBinding(IShaderResourceBinding **ppShaderResourceBinding)
+void PipelineStateGLImpl::CreateShaderResourceBinding(IShaderResourceBinding **ppShaderResourceBinding, bool InitStaticResources)
 {
     auto *pRenderDeviceGL = ValidatedCast<RenderDeviceGLImpl>( GetDevice() );
     auto &SRBAllocator = pRenderDeviceGL->GetSRBAllocator();
     auto pResBinding = NEW_RC_OBJ( SRBAllocator, "ShaderResourceBindingGLImpl instance", ShaderResourceBindingGLImpl)(this);
+    if (InitStaticResources)
+        pResBinding->InitializeStaticResources(nullptr);
     pResBinding->QueryInterface(IID_ShaderResourceBinding, reinterpret_cast<IObject**>(ppShaderResourceBinding));
 }
 

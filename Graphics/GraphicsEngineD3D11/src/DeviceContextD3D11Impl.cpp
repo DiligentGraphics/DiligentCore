@@ -175,17 +175,22 @@ namespace Diligent
         }
 #endif
 
-        if(!pShaderResBindingD3D11->IsStaticResourcesBound())
-            pShaderResBindingD3D11->BindStaticShaderResources();
-        
         auto NumShaders = pShaderResBindingD3D11->GetNumActiveShaders();
         VERIFY(NumShaders == pdbgPipelineStateD3D11->GetNumShaders(), "Number of active shaders in shader resource binding is not consistent with the number of shaders in the pipeline state");
 
 #ifdef DEVELOPMENT
+        bool StaticResourcesPresent = false;
         for (Uint32 s = 0; s < NumShaders; ++s)
         {
             pShaderResBindingD3D11->GetResourceLayout(s).dvpVerifyBindings();
             // Static resource bindings are verified in BindStaticShaderResources()
+            auto* pShaderD3D11 = ValidatedCast<ShaderD3D11Impl>(ppdbgShaders[s]);
+            if (pShaderD3D11->GetStaticResourceLayout().GetTotalResourceCount() > 0)
+                StaticResourcesPresent = true;
+        }
+        if (StaticResourcesPresent && !pShaderResBindingD3D11->IsStaticResourcesBound())
+        {
+            LOG_ERROR_MESSAGE("Static resources have not been initialized in the shader resource binding object. Please call IShaderResourceBinding::InitializeStaticResources().");
         }
 #endif
 
@@ -767,7 +772,7 @@ namespace Diligent
         auto* pd3d11InputLayout = m_pPipelineState->GetD3D11InputLayout();
         if (pd3d11InputLayout != nullptr && !m_bCommittedD3D11VBsUpToDate)
         {
-            VERIFY( m_NumVertexStreams >= m_pPipelineState->GetNumBufferSlotsUsed(), "Currently bound pipeline state '", m_pPipelineState->GetDesc().Name, "' expects ", m_pPipelineState->GetNumBufferSlotsUsed(), " input buffer slots, but only ", m_NumVertexStreams, " is bound");
+            DEV_CHECK_ERR( m_NumVertexStreams >= m_pPipelineState->GetNumBufferSlotsUsed(), "Currently bound pipeline state '", m_pPipelineState->GetDesc().Name, "' expects ", m_pPipelineState->GetNumBufferSlotsUsed(), " input buffer slots, but only ", m_NumVertexStreams, " is bound");
             CommitD3D11VertexBuffers(m_pPipelineState, drawAttribs.Flags & DRAW_FLAG_TRANSITION_VERTEX_BUFFERS);
         }
 

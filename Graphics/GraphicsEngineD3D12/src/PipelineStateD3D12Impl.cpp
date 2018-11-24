@@ -224,6 +224,7 @@ PipelineStateD3D12Impl :: PipelineStateD3D12Impl(IReferenceCounters*      pRefCo
         auto& SRBAllocator = pDeviceD3D12->GetSRBAllocator();
         // Default shader resource binding must be initialized after resource layouts are parsed!
         m_pDefaultShaderResBinding.reset( NEW_RC_OBJ(SRBAllocator, "ShaderResourceBindingD3D12Impl instance", ShaderResourceBindingD3D12Impl, this)(this, true) );
+        m_pDefaultShaderResBinding->InitializeStaticResources(this);
     }
 
     m_ShaderResourceLayoutHash = m_RootSig.GetHash();
@@ -245,10 +246,12 @@ PipelineStateD3D12Impl::~PipelineStateD3D12Impl()
 IMPLEMENT_QUERY_INTERFACE( PipelineStateD3D12Impl, IID_PipelineStateD3D12, TPipelineStateBase )
 
 
-void PipelineStateD3D12Impl::CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding)
+void PipelineStateD3D12Impl::CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding, bool InitStaticResources )
 {
     auto& SRBAllocator = m_pDevice->GetSRBAllocator();
     auto pResBindingD3D12 = NEW_RC_OBJ(SRBAllocator, "ShaderResourceBindingD3D12Impl instance", ShaderResourceBindingD3D12Impl)(this, false);
+    if (InitStaticResources)
+        pResBindingD3D12->InitializeStaticResources(nullptr);
     pResBindingD3D12->QueryInterface(IID_ShaderResourceBinding, reinterpret_cast<IObject**>(ppShaderResourceBinding));
 }
 
@@ -341,13 +344,13 @@ ShaderResourceCacheD3D12* PipelineStateD3D12Impl::CommitAndTransitionShaderResou
             return nullptr;
         }
     }
-#endif
 
-    // First time only, copy static shader resources to the cache
-    if(!pResBindingD3D12Impl->StaticResourcesInitialized())
-        pResBindingD3D12Impl->InitializeStaticResources(this);
+    if( (m_RootSig.GetTotalSrvCbvUavSlots(SHADER_VARIABLE_TYPE_STATIC) != 0 || 
+         m_RootSig.GetTotalRootViews(SHADER_VARIABLE_TYPE_STATIC) != 0) && !pResBindingD3D12Impl->StaticResourcesInitialized() )
+    {
+        LOG_ERROR_MESSAGE("Static resources have not been initialized in the shader resource binding object. Please call IShaderResourceBinding::InitializeStaticResources().");
+    }
 
-#ifdef DEVELOPMENT
     pResBindingD3D12Impl->dvpVerifyResourceBindings(this);
 #endif
 

@@ -58,10 +58,11 @@ public:
 
     virtual IShaderVariable* GetVariable(SHADER_TYPE ShaderType, Uint32 Index)override final;
 
+    virtual void InitializeStaticResources(const IPipelineState* pPipelineState)override final;
+
     ShaderResourceCacheD3D11&  GetResourceCache (Uint32 Ind){VERIFY_EXPR(Ind < m_NumActiveShaders); return m_pBoundResourceCaches[Ind];}
     ShaderResourceLayoutD3D11& GetResourceLayout(Uint32 Ind){VERIFY_EXPR(Ind < m_NumActiveShaders); return m_pResourceLayouts[Ind];}
 
-    void BindStaticShaderResources();
     inline bool IsStaticResourcesBound(){return m_bIsStaticResourcesBound;}
 
     Uint32 GetNumActiveShaders()

@@ -58,6 +58,8 @@ public:
     virtual Uint32 GetVariableCount(SHADER_TYPE ShaderType) const override final;
 
     virtual IShaderVariable* GetVariable(SHADER_TYPE ShaderType, Uint32 Index)override final;
+
+    virtual void InitializeStaticResources(const IPipelineState* pPipelineState)override final;
     
     ShaderResourceCacheD3D12& GetResourceCache(){return m_ShaderResourceCache;}
 
@@ -66,7 +68,6 @@ public:
 #endif
 
     bool StaticResourcesInitialized()const{return m_bStaticResourcesInitialized;}
-    void InitializeStaticResources(const PipelineStateD3D12Impl* pPSO);
 
 private:
 

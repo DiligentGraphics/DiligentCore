@@ -113,4 +113,9 @@ GLProgramResources &ShaderResourceBindingGLImpl::GetProgramResources(SHADER_TYPE
     return m_DynamicProgResources[ShaderInd];
 }
 
+void ShaderResourceBindingGLImpl::InitializeStaticResources(const IPipelineState* pPipelineState)
+{
+
+}
+
 }

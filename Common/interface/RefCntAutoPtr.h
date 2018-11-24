@@ -204,9 +204,9 @@ public:
     const T* RawPtr()const{ return m_pObject; }
     
     template<typename DstType>
-          DstType* RawPtr()      { return ValidatedCast<DstType>(m_pObject); }
+    DstType* RawPtr()      { return ValidatedCast<DstType>(m_pObject); }
     template<typename DstType>
-    const DstType* RawPtr()const { return ValidatedCast<DstType>(m_pObject); }
+    DstType* RawPtr()const { return ValidatedCast<DstType>(m_pObject); }
 
     operator       T* ()      { return RawPtr(); }
     operator const T* ()const { return RawPtr(); }

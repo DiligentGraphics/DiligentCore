@@ -226,7 +226,7 @@ public:
     // Copies static resources from SrcResourceCache defined by SrcLayout
     // to DstResourceCache defined by this layout
     void InitializeStaticResources(const ShaderResourceLayoutVk& SrcLayout, 
-                                   ShaderResourceCacheVk&        SrcResourceCache,
+                                   const ShaderResourceCacheVk&  SrcResourceCache,
                                    ShaderResourceCacheVk&        DstResourceCache)const;
 
 #ifdef DEVELOPMENT

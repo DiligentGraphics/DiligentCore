@@ -58,10 +58,11 @@ public:
 
     virtual IShaderVariable* GetVariable(SHADER_TYPE ShaderType, Uint32 Index)override final;
 
-    ShaderResourceCacheVk& GetResourceCache(){return m_ShaderResourceCache;}
+    virtual void InitializeStaticResources(const IPipelineState* pPipelineState)override final;
 
-    bool StaticResourcesInitialized()const{return m_bStaticResourcesInitialized;}
-    void SetStaticResourcesInitialized(){m_bStaticResourcesInitialized = true;}
+    ShaderResourceCacheVk& GetResourceCache() { return m_ShaderResourceCache; }
+
+    bool StaticResourcesInitialized() const { return m_bStaticResourcesInitialized; }
 
 private:
 

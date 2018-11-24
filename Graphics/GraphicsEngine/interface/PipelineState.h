@@ -190,7 +190,10 @@ public:
 
     /// \param [out] ppShaderResourceBinding - memory location where pointer to the new shader resource
     ///                                        binding object is written.
-    virtual void CreateShaderResourceBinding( IShaderResourceBinding **ppShaderResourceBinding ) = 0;
+    /// \param [in] InitStaticResources      - if set to true, the method will initialize static resources in
+    ///                                        the created object, which has the exact same effect as calling 
+    ///                                        IShaderResourceBinding::InitializeStaticResources().
+    virtual void CreateShaderResourceBinding( IShaderResourceBinding **ppShaderResourceBinding, bool InitStaticResources = false ) = 0;
 
     /// Checks if this pipeline state object is compatible with another PSO
 

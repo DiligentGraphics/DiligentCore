@@ -56,7 +56,7 @@ public:
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject** ppInterface );
    
-    virtual void CreateShaderResourceBinding( IShaderResourceBinding **ppShaderResourceBinding )override final;
+    virtual void CreateShaderResourceBinding( IShaderResourceBinding **ppShaderResourceBinding, bool InitStaticResources )override final;
 
     virtual bool IsCompatibleWith(const IPipelineState* pPSO)const override final;
 

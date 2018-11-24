@@ -86,8 +86,8 @@ public:
     {
         std::vector<VkDescriptorSet> vkSets;
         std::vector<uint32_t>        DynamicOffsets;
-        ShaderResourceCacheVk*       pResourceCache = nullptr;
-        VkPipelineBindPoint          BindPoint      = VK_PIPELINE_BIND_POINT_MAX_ENUM;
+        const ShaderResourceCacheVk* pResourceCache     = nullptr;
+        VkPipelineBindPoint          BindPoint          = VK_PIPELINE_BIND_POINT_MAX_ENUM;
         Uint32                       SetCout            = 0;
         Uint32                       DynamicOffsetCount = 0;
 #ifdef _DEBUG
@@ -120,11 +120,11 @@ public:
     // may not be possible until draw command time because dynamic offsets are 
     // set by the same Vulkan command. If there are no dynamic descriptors, this
     // function also binds descriptor sets rightaway.
-    void PrepareDescriptorSets(DeviceContextVkImpl*    pCtxVkImpl,
-                               bool                    IsCompute,
-                               ShaderResourceCacheVk&  ResourceCache,
-                               DescriptorSetBindInfo&  BindInfo,
-                               VkDescriptorSet         VkDynamicDescrSet)const;
+    void PrepareDescriptorSets(DeviceContextVkImpl*          pCtxVkImpl,
+                               bool                          IsCompute,
+                               const ShaderResourceCacheVk&  ResourceCache,
+                               DescriptorSetBindInfo&        BindInfo,
+                               VkDescriptorSet               VkDynamicDescrSet)const;
 
     // Computes dynamic offsets and binds descriptor sets
     void BindDescriptorSetsWithDynamicOffsets(DeviceContextVkImpl*    pCtxVkImpl,

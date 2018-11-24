@@ -129,7 +129,7 @@ ShaderVkImpl::~ShaderVkImpl()
 }
 
 #ifdef DEVELOPMENT
-void ShaderVkImpl::DvpVerifyStaticResourceBindings()
+void ShaderVkImpl::DvpVerifyStaticResourceBindings()const
 {
     m_StaticResLayout.dvpVerifyBindings(m_StaticResCache);
 }

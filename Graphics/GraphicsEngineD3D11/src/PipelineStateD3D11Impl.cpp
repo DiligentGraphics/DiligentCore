@@ -129,6 +129,7 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*      pRefCoun
 
     auto &SRBAllocator = pRenderDeviceD3D11->GetSRBAllocator();
     m_pDefaultShaderResBinding.reset( NEW_RC_OBJ(SRBAllocator, "ShaderResourceBindingD3D11Impl instance", ShaderResourceBindingD3D11Impl, this)(this, true) );
+    m_pDefaultShaderResBinding->InitializeStaticResources(nullptr);
 }
 
 
@@ -159,11 +160,13 @@ ID3D11InputLayout* PipelineStateD3D11Impl::GetD3D11InputLayout()
     return m_pd3d11InputLayout;
 }
 
-void PipelineStateD3D11Impl::CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding)
+void PipelineStateD3D11Impl::CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding, bool InitStaticResources)
 {
     auto* pRenderDeviceD3D11 = ValidatedCast<RenderDeviceD3D11Impl>( GetDevice() );
     auto &SRBAllocator = pRenderDeviceD3D11->GetSRBAllocator();
     auto pShaderResBinding = NEW_RC_OBJ(SRBAllocator, "ShaderResourceBindingD3D11Impl instance", ShaderResourceBindingD3D11Impl)(this, false);
+    if (InitStaticResources)
+        pShaderResBinding->InitializeStaticResources(nullptr);
     pShaderResBinding->QueryInterface(IID_ShaderResourceBinding, reinterpret_cast<IObject**>(static_cast<IShaderResourceBinding**>(ppShaderResourceBinding)));
 }
 

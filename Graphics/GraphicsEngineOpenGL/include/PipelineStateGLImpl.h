@@ -50,7 +50,7 @@ public:
 
     virtual void BindShaderResources( IResourceMapping *pResourceMapping, Uint32 Flags )override final;
     
-    virtual void CreateShaderResourceBinding( IShaderResourceBinding **ppShaderResourceBinding )override final;
+    virtual void CreateShaderResourceBinding( IShaderResourceBinding **ppShaderResourceBinding, bool InitStaticResources )override final;
 
     virtual bool IsCompatibleWith(const IPipelineState *pPSO)const override final;
 

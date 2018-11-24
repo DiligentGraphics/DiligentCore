@@ -58,7 +58,7 @@ public:
     ///                           Any combination of Diligent::SHADER_TYPE may be specified.
     /// \param [in] pResMapping - Shader resource mapping, where required resources will be looked up 
     /// \param [in] Flags - Additional flags. See Diligent::BIND_SHADER_RESOURCES_FLAGS.
-    virtual void BindResources(Uint32 ShaderFlags, IResourceMapping *pResMapping, Uint32 Flags) = 0;
+    virtual void BindResources(Uint32 ShaderFlags, IResourceMapping* pResMapping, Uint32 Flags) = 0;
 
     /// Returns variable
 
@@ -84,6 +84,24 @@ public:
     /// \remark Only mutable and dynamic variables can be accessed through this method.
     ///         Static variables are accessed through the Shader object.
     virtual IShaderVariable* GetVariable(SHADER_TYPE ShaderType, Uint32 Index) = 0;
+
+
+    /// Initializes static resources
+
+    /// If shaders in the pipeline state contain static resources 
+    /// (see Diligent::SHADER_VARIABLE_TYPE_STATIC), this method must be called 
+    /// once to initialize static resources in this shader resource binding object.
+    /// The method must be called after all static variables are initialized
+    /// in the shaders.
+    /// \param [in] pPipelineState - Pipeline state to copy static shader resource
+    ///                              bindings from. The pipeline state must be compatible
+    ///                              with this shader resource binding object.
+    ///                              If null pointer is provided, the pipeline state
+    ///                              that this SRB object was created from is used.
+    /// \note The method must be called exactly once. If static resources have
+    ///       already been initialized and the method is called again, it will have
+    ///       no effect and a warning messge will be displayed.
+    virtual void InitializeStaticResources(const IPipelineState* pPipelineState = nullptr) = 0;
 };
 
 }

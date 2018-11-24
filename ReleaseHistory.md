@@ -7,10 +7,14 @@
     index and indirect draw arguments buffers
   * Added `Uint8 Flags` member to `DrawAttribs` structure (values from `DRAW_FLAGS`)
   * Added `Uint8 Flags` member to `DispatchComputeAttribs` structure (values from `DISPATCH_FLAGS`)
-  * Added `RESOURCE_STATE` enum
+  * Added `RESOURCE_STATE` enum that defines the resource state
   * Added `StateTransitionDesc` structure that describes resource state transition
   * Added `IDeviceContext::TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers)` method
   * Added `IBuffer::SetState()`, `IBuffer::GetState()`, `ITexture::SetState()`, `ITexture::GetState()` methods
+  * Added `IShaderResourceBinding::InitializeStaticResources()` to explicitly initialize static resource and
+    avoid problems in multi-threaded environments
+  * Added `InitStaticResources` parameter to `IPipelineState::CreateShaderResourceBinding()` method to allow
+    immediate initialization of static resources in a SRB
 
 ## v2.3.b
 

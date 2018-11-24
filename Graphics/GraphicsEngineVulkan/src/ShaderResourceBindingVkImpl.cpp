@@ -137,4 +137,37 @@ IShaderVariable* ShaderResourceBindingVkImpl::GetVariable(SHADER_TYPE ShaderType
     return m_pShaderVarMgrs[ResLayoutInd].GetVariable(Index);
 }
 
+void ShaderResourceBindingVkImpl::InitializeStaticResources(const IPipelineState* pPipelineState)
+{
+    if (StaticResourcesInitialized())
+    {
+        LOG_WARNING_MESSAGE("Static resources have already been initialized in this shader resource binding object. The operation will be ignored.");
+        return;
+    }
+
+    if (pPipelineState == nullptr)
+    {
+        pPipelineState = GetPipelineState();
+    }
+    else
+    {
+        DEV_CHECK_ERR(pPipelineState->IsCompatibleWith(GetPipelineState()), "The pipeline state is not compatible with this SRB");
+    }
+
+    auto* pPSOVK = ValidatedCast<const PipelineStateVkImpl>(pPipelineState);
+    for (Uint32 s = 0; s < m_NumShaders; ++s)
+    {
+        const auto* pShaderVk = pPSOVK->GetShader<const ShaderVkImpl>(s);
+#ifdef DEVELOPMENT
+        pShaderVk->DvpVerifyStaticResourceBindings();
+#endif
+        const auto& StaticResLayout = pShaderVk->GetStaticResLayout();
+        const auto& StaticResCache = pShaderVk->GetStaticResCache();
+        const auto& ShaderResourceLayouts = pPSOVK->GetShaderResLayout(s);
+        ShaderResourceLayouts.InitializeStaticResources(StaticResLayout, StaticResCache, m_ShaderResourceCache);
+    }
+
+    m_bStaticResourcesInitialized = true;
+}
+
 }

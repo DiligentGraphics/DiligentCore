@@ -77,13 +77,13 @@ public:
     }
 
     const std::shared_ptr<const SPIRVShaderResources>& GetShaderResources()const{return m_pShaderResources;}
-    const ShaderResourceLayoutVk& GetStaticResLayout()const{return m_StaticResLayout;}
-    ShaderResourceCacheVk& GetStaticResCache(){return m_StaticResCache;}
+    const ShaderResourceLayoutVk& GetStaticResLayout()const { return m_StaticResLayout; }
+    const ShaderResourceCacheVk&  GetStaticResCache() const { return m_StaticResCache;  }
 
     const char* GetEntryPoint() const { return m_EntryPoint.c_str(); }
 
 #ifdef DEVELOPMENT
-    void DvpVerifyStaticResourceBindings();
+    void DvpVerifyStaticResourceBindings()const;
 #endif
     
 private:

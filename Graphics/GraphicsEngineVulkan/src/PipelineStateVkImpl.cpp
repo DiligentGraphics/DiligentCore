@@ -427,6 +427,7 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters*      pRefCounters
         auto& SRBAllocator = pDeviceVk->GetSRBAllocator();
         // Default shader resource binding must be initialized after resource layouts are parsed!
         m_pDefaultShaderResBinding.reset( NEW_RC_OBJ(SRBAllocator, "ShaderResourceBindingVkImpl instance", ShaderResourceBindingVkImpl, this)(this, true) );
+        m_pDefaultShaderResBinding->InitializeStaticResources(this);
     }
 
     m_ShaderResourceLayoutHash = m_PipelineLayout.GetHash();
@@ -460,10 +461,12 @@ PipelineStateVkImpl::~PipelineStateVkImpl()
 IMPLEMENT_QUERY_INTERFACE( PipelineStateVkImpl, IID_PipelineStateVk, TPipelineStateBase )
 
 
-void PipelineStateVkImpl::CreateShaderResourceBinding(IShaderResourceBinding **ppShaderResourceBinding)
+void PipelineStateVkImpl::CreateShaderResourceBinding(IShaderResourceBinding **ppShaderResourceBinding, bool InitStaticResources)
 {
     auto& SRBAllocator = m_pDevice->GetSRBAllocator();
     auto pResBindingVk = NEW_RC_OBJ(SRBAllocator, "ShaderResourceBindingVkImpl instance", ShaderResourceBindingVkImpl)(this, false);
+    if (InitStaticResources)
+        pResBindingVk->InitializeStaticResources(nullptr);
     pResBindingVk->QueryInterface(IID_ShaderResourceBinding, reinterpret_cast<IObject**>(ppShaderResourceBinding));
 }
 
@@ -545,25 +548,14 @@ void PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBind
             return;
         }
     }
+
+    if (m_HasStaticResources && !pResBindingVkImpl->StaticResourcesInitialized())
+    {
+        LOG_ERROR_MESSAGE("Static resources have not been initialized in the shader resource binding object. Please call IShaderResourceBinding::InitializeStaticResources().");
+    }
 #endif
 
     auto& ResourceCache = pResBindingVkImpl->GetResourceCache();
-
-    // First time only, copy static shader resources to the cache
-    if (!pResBindingVkImpl->StaticResourcesInitialized())
-    {
-        for (Uint32 s = 0; s < m_NumShaders; ++s)
-        {
-            auto* pShaderVk = GetShader<ShaderVkImpl>(s);
-#ifdef DEVELOPMENT
-            pShaderVk->DvpVerifyStaticResourceBindings();
-#endif
-            auto& StaticResLayout = pShaderVk->GetStaticResLayout();
-            auto& StaticResCache = pShaderVk->GetStaticResCache();
-            m_ShaderResourceLayouts[s].InitializeStaticResources(StaticResLayout, StaticResCache, ResourceCache);
-        }
-        pResBindingVkImpl->SetStaticResourcesInitialized();
-    }
 
 #ifdef DEVELOPMENT
     for (Uint32 s = 0; s < m_NumShaders; ++s)

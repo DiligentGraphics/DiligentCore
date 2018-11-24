@@ -111,15 +111,24 @@ void ShaderResourceBindingD3D11Impl::BindResources(Uint32 ShaderFlags, IResource
     }
 }
 
-void ShaderResourceBindingD3D11Impl::BindStaticShaderResources()
+void ShaderResourceBindingD3D11Impl::InitializeStaticResources(const IPipelineState* pPipelineState)
 {
     if (m_bIsStaticResourcesBound)
     {
-        LOG_ERROR("Static resources already bound");
+        LOG_WARNING_MESSAGE("Static resources have already been initialized in this shader resource binding object. The operation will be ignored.");
         return;
     }
 
-    auto *pPSOD3D11 = ValidatedCast<PipelineStateD3D11Impl>(GetPipelineState());
+    if (pPipelineState == nullptr)
+    {
+        pPipelineState = GetPipelineState();
+    }
+    else
+    {
+        DEV_CHECK_ERR(pPipelineState->IsCompatibleWith(GetPipelineState()), "The pipeline state is not compatible with this SRB");
+    }
+
+    const auto *pPSOD3D11 = ValidatedCast<const PipelineStateD3D11Impl>(pPipelineState);
     auto ppShaders = pPSOD3D11->GetShaders();
     auto NumShaders = pPSOD3D11->GetNumShaders();
     VERIFY_EXPR(NumShaders == m_NumActiveShaders);

@@ -111,7 +111,7 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl *pCtxVkImpl)
             case SPIRVShaderResourceAttribs::ResourceType::UniformBuffer:
             {
                 auto* pBufferVk = Res.pObject.RawPtr<BufferVkImpl>();
-                if (pBufferVk->IsInKnownState())
+                if (pBufferVk != nullptr && pBufferVk->IsInKnownState())
                 {
                     RESOURCE_STATE RequiredState = RESOURCE_STATE_CONSTANT_BUFFER;
                     VERIFY_EXPR((ResourceStateFlagsToVkAccessFlags(RequiredState) & VK_ACCESS_UNIFORM_READ_BIT) == VK_ACCESS_UNIFORM_READ_BIT);
@@ -139,8 +139,8 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl *pCtxVkImpl)
             case SPIRVShaderResourceAttribs::ResourceType::StorageTexelBuffer:
             {
                 auto* pBuffViewVk = Res.pObject.RawPtr<BufferViewVkImpl>();
-                auto* pBufferVk = ValidatedCast<BufferVkImpl>(pBuffViewVk->GetBuffer());
-                if (pBufferVk->IsInKnownState())
+                auto* pBufferVk = pBuffViewVk != nullptr ? ValidatedCast<BufferVkImpl>(pBuffViewVk->GetBuffer()) : nullptr;
+                if (pBufferVk != nullptr && pBufferVk->IsInKnownState())
                 {
                     RESOURCE_STATE RequiredState = (Res.Type == SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer) ?
                         RESOURCE_STATE_SHADER_RESOURCE : RESOURCE_STATE_UNORDERED_ACCESS;
@@ -173,8 +173,8 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl *pCtxVkImpl)
             case SPIRVShaderResourceAttribs::ResourceType::StorageImage:
             {
                 auto* pTextureViewVk = Res.pObject.RawPtr<TextureViewVkImpl>();
-                auto* pTextureVk = ValidatedCast<TextureVkImpl>(pTextureViewVk->GetTexture());
-                if (pTextureVk->IsInKnownState())
+                auto* pTextureVk = pTextureViewVk != nullptr ? ValidatedCast<TextureVkImpl>(pTextureViewVk->GetTexture()) : nullptr;
+                if (pTextureVk != nullptr && pTextureVk->IsInKnownState())
                 {
                     // The image subresources for a storage image must be in the VK_IMAGE_LAYOUT_GENERAL layout in 
                     // order to access its data in a shader (13.1.1)
@@ -390,7 +390,7 @@ Uint32 ShaderResourceCacheVk::GetDynamicBufferOffsets(DeviceContextVkImpl *pCtxV
                 break;
 
             const auto* pBufferVk = Res.pObject.RawPtr<const BufferVkImpl>();
-            auto Offset = pBufferVk->GetDynamicOffset(CtxId, pCtxVkImpl);
+            auto Offset = pBufferVk != nullptr ? pBufferVk->GetDynamicOffset(CtxId, pCtxVkImpl) : 0;
             Offsets[OffsetInd++] = Offset;
 
             ++res;
@@ -403,8 +403,8 @@ Uint32 ShaderResourceCacheVk::GetDynamicBufferOffsets(DeviceContextVkImpl *pCtxV
                 break;
 
             const auto* pBufferVkView = Res.pObject.RawPtr<const BufferViewVkImpl>();
-            const auto* pBufferVk = pBufferVkView->GetBufferVk();
-            auto Offset = pBufferVk->GetDynamicOffset(CtxId, pCtxVkImpl);
+            const auto* pBufferVk = pBufferVkView != nullptr ? pBufferVkView->GetBufferVk() : 0;
+            auto Offset = pBufferVk != nullptr ? pBufferVk->GetDynamicOffset(CtxId, pCtxVkImpl) : 0;
             Offsets[OffsetInd++] = Offset;
 
             ++res;

@@ -1055,15 +1055,17 @@ void RootSignature::CommitRootViews(ShaderResourceCacheD3D12& ResourceCache,
 #endif
 
         auto& Res = ResourceCache.GetRootTable(RootInd).GetResource(0, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, dbgShaderType);
-        auto *pBuffToTransition = Res.pObject.RawPtr<BufferD3D12Impl>();
-        if (pBuffToTransition->IsInKnownState() && !pBuffToTransition->CheckState(RESOURCE_STATE_CONSTANT_BUFFER) )
-            Ctx.TransitionResource(pBuffToTransition, RESOURCE_STATE_CONSTANT_BUFFER);
+        if (auto* pBuffToTransition = Res.pObject.RawPtr<BufferD3D12Impl>())
+        {
+            if (pBuffToTransition->IsInKnownState() && !pBuffToTransition->CheckState(RESOURCE_STATE_CONSTANT_BUFFER) )
+                Ctx.TransitionResource(pBuffToTransition, RESOURCE_STATE_CONSTANT_BUFFER);
 
-        D3D12_GPU_VIRTUAL_ADDRESS CBVAddress = pBuffToTransition->GetGPUAddress(pCtx);
-        if(IsCompute)
-            Ctx.GetCommandList()->SetComputeRootConstantBufferView(RootInd, CBVAddress);
-        else
-            Ctx.GetCommandList()->SetGraphicsRootConstantBufferView(RootInd, CBVAddress);
+            D3D12_GPU_VIRTUAL_ADDRESS CBVAddress = pBuffToTransition->GetGPUAddress(pCtx);
+            if(IsCompute)
+                Ctx.GetCommandList()->SetComputeRootConstantBufferView(RootInd, CBVAddress);
+            else
+                Ctx.GetCommandList()->SetGraphicsRootConstantBufferView(RootInd, CBVAddress);
+        }
     }
 }
 

@@ -55,6 +55,8 @@ public:
 
     virtual IShaderVariable* GetVariable(SHADER_TYPE ShaderType, Uint32 Index)override final;
 
+    virtual void InitializeStaticResources(const IPipelineState* pPipelineState)override final;
+
     GLProgramResources &GetProgramResources(SHADER_TYPE ShaderType, PipelineStateGLImpl *pdbgPSO);
 
 private:

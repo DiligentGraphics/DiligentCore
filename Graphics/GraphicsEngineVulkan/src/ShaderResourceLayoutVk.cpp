@@ -683,7 +683,7 @@ bool ShaderResourceLayoutVk::VkResource::IsBound(Uint32 ArrayIndex, const Shader
 
 
 void ShaderResourceLayoutVk::InitializeStaticResources(const ShaderResourceLayoutVk& SrcLayout,
-                                                       ShaderResourceCacheVk&        SrcResourceCache,
+                                                       const ShaderResourceCacheVk&  SrcResourceCache,
                                                        ShaderResourceCacheVk&        DstResourceCache)const
 {
     auto NumStaticResources = m_NumResources[SHADER_VARIABLE_TYPE_STATIC];
@@ -706,7 +706,9 @@ void ShaderResourceLayoutVk::InitializeStaticResources(const ShaderResourceLayou
         for (Uint32 ArrInd = 0; ArrInd < DstRes.SpirvAttribs.ArraySize; ++ArrInd)
         {
             auto SrcOffset = SrcRes.CacheOffset + ArrInd;
-            IDeviceObject* pObject = SrcResourceCache.GetDescriptorSet(SrcRes.DescriptorSet).GetResource(SrcOffset).pObject;
+            const auto& SrcCachedSet = SrcResourceCache.GetDescriptorSet(SrcRes.DescriptorSet);
+            const auto& SrcCachedRes = SrcCachedSet.GetResource(SrcOffset);
+            IDeviceObject* pObject = SrcCachedRes.pObject.RawPtr<IDeviceObject>();
             if (!pObject)
                 LOG_ERROR_MESSAGE("No resource assigned to static shader variable '", SrcRes.SpirvAttribs.GetPrintName(ArrInd), "' in shader '", GetShaderName(), "'.");
             

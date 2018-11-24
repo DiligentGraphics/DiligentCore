@@ -421,11 +421,11 @@ void PipelineLayout::InitResourceCache(RenderDeviceVkImpl* pDeviceVkImpl, Shader
     }
 }
 
-void PipelineLayout::PrepareDescriptorSets(DeviceContextVkImpl*    pCtxVkImpl,
-                                           bool                    IsCompute,
-                                           ShaderResourceCacheVk&  ResourceCache,
-                                           DescriptorSetBindInfo&  BindInfo,
-                                           VkDescriptorSet         VkDynamicDescrSet)const
+void PipelineLayout::PrepareDescriptorSets(DeviceContextVkImpl*          pCtxVkImpl,
+                                           bool                          IsCompute,
+                                           const ShaderResourceCacheVk&  ResourceCache,
+                                           DescriptorSetBindInfo&        BindInfo,
+                                           VkDescriptorSet               VkDynamicDescrSet)const
 {
 #ifdef _DEBUG
     BindInfo.vkSets.clear();

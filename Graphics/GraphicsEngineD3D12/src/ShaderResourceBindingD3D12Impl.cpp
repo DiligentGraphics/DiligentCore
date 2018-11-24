@@ -154,13 +154,26 @@ void ShaderResourceBindingD3D12Impl::dvpVerifyResourceBindings(const PipelineSta
 #endif
 
 
-void ShaderResourceBindingD3D12Impl::InitializeStaticResources(const PipelineStateD3D12Impl* pPSO)
+void ShaderResourceBindingD3D12Impl::InitializeStaticResources(const IPipelineState* pPSO)
 {
-    VERIFY(!StaticResourcesInitialized(), "Static resources have already been initialized");
-    VERIFY(pPSO->IsCompatibleWith(GetPipelineState()), "Currently bound pipeline state is not compatible with this SRB");
+    if (StaticResourcesInitialized())
+    {
+        LOG_WARNING_MESSAGE("Static resources have already been initialized in this shader resource binding object. The operation will be ignored.");
+        return;
+    }
 
-    auto NumShaders = pPSO->GetNumShaders();
-    auto ppShaders = pPSO->GetShaders();
+    if (pPSO == nullptr)
+    {
+        pPSO = GetPipelineState();
+    }
+    else
+    {
+        DEV_CHECK_ERR(pPSO->IsCompatibleWith(GetPipelineState()), "The pipeline state is not compatible with this SRB");
+    }
+
+    auto* pPSO12 = ValidatedCast<const PipelineStateD3D12Impl>(pPSO);
+    auto NumShaders = pPSO12->GetNumShaders();
+    auto ppShaders = pPSO12->GetShaders();
     // Copy static resources
     for (Uint32 s = 0; s < NumShaders; ++s)
     {
@@ -168,7 +181,7 @@ void ShaderResourceBindingD3D12Impl::InitializeStaticResources(const PipelineSta
 #ifdef DEVELOPMENT
         pShader->DvpVerifyStaticResourceBindings();
 #endif
-        const auto& ShaderResLayout = pPSO->GetShaderResLayout(s);
+        const auto& ShaderResLayout = pPSO12->GetShaderResLayout(s);
         auto& StaticResLayout = pShader->GetStaticResLayout();
         auto& StaticResCache = pShader->GetStaticResCache();
         StaticResLayout.CopyStaticResourceDesriptorHandles(StaticResCache, ShaderResLayout, m_ShaderResourceCache);
