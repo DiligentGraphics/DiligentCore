@@ -72,8 +72,6 @@ public:
 
     virtual bool IsCompatibleWith(const IPipelineState *pPSO)const override final;
 
-    class ShaderResourceBindingD3D11Impl* GetDefaultResourceBinding(){return m_pDefaultShaderResBinding.get();}
-    
     SRBMemoryAllocator& GetSRBMemoryAllocator()
     {
         return m_SRBMemAllocator;
@@ -87,10 +85,6 @@ private:
 
     // SRB memory allocator must be defined before the default shader res binding
     SRBMemoryAllocator m_SRBMemAllocator;
-
-    // Do not use strong reference to avoid cyclic references
-    // Must be declared after the data allocators
-    std::unique_ptr<class ShaderResourceBindingD3D11Impl, STDDeleter<ShaderResourceBindingD3D11Impl, FixedBlockMemoryAllocator> > m_pDefaultShaderResBinding;
 };
 
 }

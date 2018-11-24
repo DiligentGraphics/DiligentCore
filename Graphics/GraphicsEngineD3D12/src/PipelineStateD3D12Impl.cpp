@@ -64,8 +64,7 @@ PipelineStateD3D12Impl :: PipelineStateD3D12Impl(IReferenceCounters*      pRefCo
                                                  RenderDeviceD3D12Impl*   pDeviceD3D12,
                                                  const PipelineStateDesc& PipelineDesc) : 
     TPipelineStateBase(pRefCounters, pDeviceD3D12, PipelineDesc),
-    m_SRBMemAllocator(GetRawAllocator()),
-    m_pDefaultShaderResBinding(nullptr, STDDeleter<ShaderResourceBindingD3D12Impl, FixedBlockMemoryAllocator>(pDeviceD3D12->GetSRBAllocator()) )
+    m_SRBMemAllocator(GetRawAllocator())
 {
     auto pd3d12Device = pDeviceD3D12->GetD3D12Device();
     
@@ -194,9 +193,9 @@ PipelineStateD3D12Impl :: PipelineStateD3D12Impl(IReferenceCounters*      pRefCo
     if (*m_Desc.Name != 0)
     {
         m_pd3d12PSO->SetName(WidenString(m_Desc.Name).c_str());
-        String RootSignatureDesc("Root signature for PSO \"");
+        String RootSignatureDesc("Root signature for PSO '");
         RootSignatureDesc.append(m_Desc.Name);
-        RootSignatureDesc.push_back('\"');
+        RootSignatureDesc.push_back('\'');
         m_RootSig.GetD3D12RootSignature()->SetName(WidenString(RootSignatureDesc).c_str());
     }
 
@@ -212,19 +211,6 @@ PipelineStateD3D12Impl :: PipelineStateD3D12Impl(IReferenceCounters*      pRefCo
 
         auto CacheMemorySize = m_RootSig.GetResourceCacheRequiredMemSize();
         m_SRBMemAllocator.Initialize(PipelineDesc.SRBAllocationGranularity, m_NumShaders, ShaderVarMgrDataSizes.data(), 1, &CacheMemorySize);
-    }
-
-    // If pipeline state contains only static resources, create default SRB
-    if( (m_RootSig.GetTotalSrvCbvUavSlots(SHADER_VARIABLE_TYPE_STATIC) != 0 || m_RootSig.GetTotalRootViews(SHADER_VARIABLE_TYPE_STATIC) != 0 ) &&
-        m_RootSig.GetTotalSrvCbvUavSlots(SHADER_VARIABLE_TYPE_MUTABLE) == 0 &&
-        m_RootSig.GetTotalSrvCbvUavSlots(SHADER_VARIABLE_TYPE_DYNAMIC) == 0 &&
-        m_RootSig.GetTotalRootViews(SHADER_VARIABLE_TYPE_MUTABLE) == 0 &&
-        m_RootSig.GetTotalRootViews(SHADER_VARIABLE_TYPE_DYNAMIC) == 0)
-    {
-        auto& SRBAllocator = pDeviceD3D12->GetSRBAllocator();
-        // Default shader resource binding must be initialized after resource layouts are parsed!
-        m_pDefaultShaderResBinding.reset( NEW_RC_OBJ(SRBAllocator, "ShaderResourceBindingD3D12Impl instance", ShaderResourceBindingD3D12Impl, this)(this, true) );
-        m_pDefaultShaderResBinding->InitializeStaticResources(this);
     }
 
     m_ShaderResourceLayoutHash = m_RootSig.GetHash();
@@ -309,23 +295,16 @@ ShaderResourceCacheD3D12* PipelineStateD3D12Impl::CommitAndTransitionShaderResou
                                                                                      bool                    TransitionResources)const
 {
 #ifdef DEVELOPMENT
-    if (pShaderResourceBinding == nullptr &&
-        (m_RootSig.GetTotalSrvCbvUavSlots(SHADER_VARIABLE_TYPE_MUTABLE) != 0 ||
-         m_RootSig.GetTotalSrvCbvUavSlots(SHADER_VARIABLE_TYPE_DYNAMIC) != 0 ||
-         m_RootSig.GetTotalRootViews(SHADER_VARIABLE_TYPE_MUTABLE) != 0 ||
-         m_RootSig.GetTotalRootViews(SHADER_VARIABLE_TYPE_DYNAMIC) != 0) )
+    if (pShaderResourceBinding == nullptr && dbgContainsShaderResources())
     {
-        LOG_ERROR_MESSAGE("Pipeline state \"", m_Desc.Name, "\" contains mutable/dynamic shader variables and requires shader resource binding to commit all resources, but none is provided.");
+        LOG_ERROR_MESSAGE("Pipeline state '", m_Desc.Name, "' requires shader resource binding object to commit resources, but none is provided.");
     }
 #endif
 
-    // If the shaders contain no resources or static resources only, shader resource binding may be null. 
-    // In this case use special internal SRB object
-    auto* pResBindingD3D12Impl = pShaderResourceBinding ? ValidatedCast<ShaderResourceBindingD3D12Impl>(pShaderResourceBinding) : m_pDefaultShaderResBinding.get();
+    auto* pResBindingD3D12Impl = ValidatedCast<ShaderResourceBindingD3D12Impl>(pShaderResourceBinding);
     if (pResBindingD3D12Impl == nullptr)
     {
-        VERIFY_EXPR(!dbgContainsShaderResources());
-        if(CommitResources)
+        if (CommitResources)
         {
             if(m_Desc.IsComputePipeline)
                 Ctx.AsComputeContext().SetRootSignature( GetD3D12RootSignature() );
@@ -340,7 +319,7 @@ ShaderResourceCacheD3D12* PipelineStateD3D12Impl::CommitAndTransitionShaderResou
         auto* pRefPSO = pResBindingD3D12Impl->GetPipelineState();
         if ( IsIncompatibleWith(pRefPSO) )
         {
-            LOG_ERROR_MESSAGE("Shader resource binding is incompatible with the pipeline state \"", m_Desc.Name, "\". Operation will be ignored.");
+            LOG_ERROR_MESSAGE("Shader resource binding is incompatible with the pipeline state '", m_Desc.Name, "'. Operation will be ignored.");
             return nullptr;
         }
     }

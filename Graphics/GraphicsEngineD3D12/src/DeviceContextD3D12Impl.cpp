@@ -342,7 +342,7 @@ namespace Diligent
         D3D12_VERTEX_BUFFER_VIEW VBViews[MaxBufferSlots];// = {}
         VERIFY( m_NumVertexStreams <= MaxBufferSlots, "Too many buffers are being set" );
         const auto *Strides = m_pPipelineState->GetBufferStrides();
-        DEV_CHECK_ERR( m_NumVertexStreams >= m_pPipelineState->GetNumBufferSlotsUsed(), "Currently bound pipeline state \"", m_pPipelineState->GetDesc().Name, "\" expects ", m_pPipelineState->GetNumBufferSlotsUsed(), " input buffer slots, but only ", m_NumVertexStreams, " is bound");
+        DEV_CHECK_ERR( m_NumVertexStreams >= m_pPipelineState->GetNumBufferSlotsUsed(), "Currently bound pipeline state '", m_pPipelineState->GetDesc().Name, "' expects ", m_pPipelineState->GetNumBufferSlotsUsed(), " input buffer slots, but only ", m_NumVertexStreams, " is bound");
         bool DynamicBufferPresent = false;
         for( UINT Buff = 0; Buff < m_NumVertexStreams; ++Buff )
         {
@@ -478,7 +478,7 @@ namespace Diligent
         else
         {
             if( m_pPipelineState->dbgContainsShaderResources() )
-                LOG_ERROR_MESSAGE("Pipeline state \"", m_pPipelineState->GetDesc().Name, "\" contains shader resources, but IDeviceContext::CommitShaderResources() was not called" );
+                LOG_ERROR_MESSAGE("Pipeline state '", m_pPipelineState->GetDesc().Name, "' contains shader resources, but IDeviceContext::CommitShaderResources() was not called" );
         }
 #endif
         
@@ -540,7 +540,7 @@ namespace Diligent
         else
         {
             if( m_pPipelineState->dbgContainsShaderResources() )
-                LOG_ERROR_MESSAGE("Pipeline state \"", m_pPipelineState->GetDesc().Name, "\" contains shader resources, but IDeviceContext::CommitShaderResources() was not called" );
+                LOG_ERROR_MESSAGE("Pipeline state '", m_pPipelineState->GetDesc().Name, "' contains shader resources, but IDeviceContext::CommitShaderResources() was not called" );
         }
 #endif
 

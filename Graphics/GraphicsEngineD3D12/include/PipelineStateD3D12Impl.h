@@ -87,10 +87,6 @@ private:
     SRBMemoryAllocator m_SRBMemAllocator;
 
     ShaderResourceLayoutD3D12* m_pShaderResourceLayouts;
-
-    // Do not use strong reference to avoid cyclic references
-    // Default SRB must be defined after m_SRBMemAllocator
-    std::unique_ptr<class ShaderResourceBindingD3D12Impl, STDDeleter<ShaderResourceBindingD3D12Impl, FixedBlockMemoryAllocator> > m_pDefaultShaderResBinding;
 };
 
 }

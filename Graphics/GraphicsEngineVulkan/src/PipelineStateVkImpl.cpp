@@ -147,8 +147,7 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters*      pRefCounters
                                            RenderDeviceVkImpl*      pDeviceVk,
                                            const PipelineStateDesc& PipelineDesc) : 
     TPipelineStateBase(pRefCounters, pDeviceVk, PipelineDesc),
-    m_SRBMemAllocator(GetRawAllocator()),
-    m_pDefaultShaderResBinding(nullptr, STDDeleter<ShaderResourceBindingVkImpl, FixedBlockMemoryAllocator>(pDeviceVk->GetSRBAllocator()) )
+    m_SRBMemAllocator(GetRawAllocator())
 {
     const auto& LogicalDevice = pDeviceVk->GetLogicalDevice();
 
@@ -421,15 +420,6 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters*      pRefCounters
             m_HasNonStaticResources = true;
     }
 
-    // If there are only static resources, create default shader resource binding
-    if (m_HasStaticResources && !m_HasNonStaticResources)
-    {
-        auto& SRBAllocator = pDeviceVk->GetSRBAllocator();
-        // Default shader resource binding must be initialized after resource layouts are parsed!
-        m_pDefaultShaderResBinding.reset( NEW_RC_OBJ(SRBAllocator, "ShaderResourceBindingVkImpl instance", ShaderResourceBindingVkImpl, this)(this, true) );
-        m_pDefaultShaderResBinding->InitializeStaticResources(this);
-    }
-
     m_ShaderResourceLayoutHash = m_PipelineLayout.GetHash();
 }
 
@@ -446,11 +436,7 @@ PipelineStateVkImpl::~PipelineStateVkImpl()
         }
     }
 
-    // Default SRB must be destroyed before SRB allocators
-    m_pDefaultShaderResBinding.reset();
-
     auto& RawAllocator = GetRawAllocator();
-
     for (Uint32 s=0; s < m_NumShaders; ++s)
     {
         m_ShaderResourceLayouts[s].~ShaderResourceLayoutVk();
@@ -529,22 +515,21 @@ void PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBind
         return;
 
 #ifdef DEVELOPMENT
-    if (pShaderResourceBinding == nullptr && m_HasNonStaticResources)
+    if (pShaderResourceBinding == nullptr)
     {
-        LOG_ERROR_MESSAGE("Pipeline state \"", m_Desc.Name, "\" contains mutable/dynamic shader variables and requires shader resource binding to commit all resources, but none is provided.");
+        LOG_ERROR_MESSAGE("Pipeline state '", m_Desc.Name, "' requires shader resource binding object to commit its resources, but none is provided.");
+        return;
     }
 #endif
 
-    // If the shaders contain no resources or static resources only, shader resource binding may be null. 
-    // In this case use special internal SRB object
-    auto* pResBindingVkImpl = pShaderResourceBinding ? ValidatedCast<ShaderResourceBindingVkImpl>(pShaderResourceBinding) : m_pDefaultShaderResBinding.get();
-    
+    auto* pResBindingVkImpl = ValidatedCast<ShaderResourceBindingVkImpl>(pShaderResourceBinding);
+   
 #ifdef DEVELOPMENT
     {
         auto* pRefPSO = pResBindingVkImpl->GetPipelineState();
-        if ( IsIncompatibleWith(pRefPSO) )
+        if (IsIncompatibleWith(pRefPSO))
         {
-            LOG_ERROR_MESSAGE("Shader resource binding is incompatible with the pipeline state \"", m_Desc.Name, "\". Operation will be ignored.");
+            LOG_ERROR_MESSAGE("Shader resource binding is incompatible with the pipeline state '", m_Desc.Name, "'. Operation will be ignored.");
             return;
         }
     }

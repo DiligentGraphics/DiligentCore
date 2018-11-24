@@ -147,10 +147,10 @@ namespace Diligent
     };
 
     // http://diligentgraphics.com/diligent-engine/architecture/d3d11/committing-shader-resources-to-the-gpu-pipeline/
-    template<bool TransitionResources,
-             bool CommitResources>
+    template<bool TransitionResources, bool CommitResources>
     void DeviceContextD3D11Impl::TransitionAndCommitShaderResources(IPipelineState* pPSO, IShaderResourceBinding* pShaderResourceBinding)
     {
+        VERIFY_EXPR(pPSO != nullptr);
         static_assert(TransitionResources || CommitResources, "At least one of TransitionResources or CommitResources flags is expected to be true");
 
 #ifdef DEVELOPMENT
@@ -158,20 +158,32 @@ namespace Diligent
         auto ppdbgShaders = pdbgPipelineStateD3D11->GetShaders();
 #endif
 
-        auto pShaderResBindingD3D11 = ValidatedCast<ShaderResourceBindingD3D11Impl>(pShaderResourceBinding);
-        if (!pShaderResBindingD3D11)
+        if (pShaderResourceBinding == nullptr)
         {
-            auto pPipelineStateD3D11 = ValidatedCast<PipelineStateD3D11Impl>( pPSO );
-            pShaderResBindingD3D11 = pPipelineStateD3D11->GetDefaultResourceBinding();
-        }
 #ifdef DEVELOPMENT
-        else
-        {
-            if (pdbgPipelineStateD3D11->IsIncompatibleWith(pShaderResourceBinding->GetPipelineState()))
+            bool ResourcesPresent = false;
+            for (Uint32 s = 0; s < pdbgPipelineStateD3D11->GetNumShaders(); ++s)
             {
-                LOG_ERROR_MESSAGE("Shader resource binding does not match Pipeline State");
-                return;
+                auto* pShaderD3D11 = ValidatedCast<ShaderD3D11Impl>(ppdbgShaders[s]);
+                if (pShaderD3D11->GetResources()->GetTotalResources() > 0)
+                    ResourcesPresent = true;
             }
+            
+            if (ResourcesPresent)
+            {
+                LOG_ERROR_MESSAGE("Pipeline state '", pPSO->GetDesc().Name, "' requires shader resource binding object to commit resources, but none is provided.");
+            }
+#endif
+            return;
+        }
+
+
+        auto pShaderResBindingD3D11 = ValidatedCast<ShaderResourceBindingD3D11Impl>(pShaderResourceBinding);
+#ifdef DEVELOPMENT
+        if (pdbgPipelineStateD3D11->IsIncompatibleWith(pShaderResourceBinding->GetPipelineState()))
+        {
+            LOG_ERROR_MESSAGE("Shader resource binding does not match Pipeline State");
+            return;
         }
 #endif
 
@@ -188,6 +200,7 @@ namespace Diligent
             if (pShaderD3D11->GetStaticResourceLayout().GetTotalResourceCount() > 0)
                 StaticResourcesPresent = true;
         }
+        // Static resource bindings are verified in BindStaticShaderResources()
         if (StaticResourcesPresent && !pShaderResBindingD3D11->IsStaticResourcesBound())
         {
             LOG_ERROR_MESSAGE("Static resources have not been initialized in the shader resource binding object. Please call IShaderResourceBinding::InitializeStaticResources().");
@@ -598,6 +611,8 @@ namespace Diligent
 
     void DeviceContextD3D11Impl::TransitionShaderResources(IPipelineState* pPipelineState, IShaderResourceBinding* pShaderResourceBinding)
     {
+        DEV_CHECK_ERR(pPipelineState != nullptr, "Pipeline state must not be null");
+        DEV_CHECK_ERR(pShaderResourceBinding != nullptr, "Shader resource binding must not be null");
         TransitionAndCommitShaderResources<true, false>(pPipelineState, pShaderResourceBinding);
     }
 

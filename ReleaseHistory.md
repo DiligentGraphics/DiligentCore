@@ -15,6 +15,7 @@
     avoid problems in multi-threaded environments
   * Added `InitStaticResources` parameter to `IPipelineState::CreateShaderResourceBinding()` method to allow
     immediate initialization of static resources in a SRB
+  * Removed default SRB object
 
 ## v2.3.b
 

@@ -35,8 +35,7 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*      pRefCoun
                                                RenderDeviceD3D11Impl*   pRenderDeviceD3D11,
                                                const PipelineStateDesc& PipelineDesc) : 
     TPipelineStateBase(pRefCounters, pRenderDeviceD3D11, PipelineDesc),
-    m_SRBMemAllocator(GetRawAllocator()),
-    m_pDefaultShaderResBinding( nullptr, STDDeleter<ShaderResourceBindingD3D11Impl, FixedBlockMemoryAllocator>(pRenderDeviceD3D11->GetSRBAllocator()) )
+    m_SRBMemAllocator(GetRawAllocator())
 {
     if (PipelineDesc.IsComputePipeline)
     {
@@ -126,10 +125,6 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*      pRefCoun
 
         m_SRBMemAllocator.Initialize(PipelineDesc.SRBAllocationGranularity, m_NumShaders, ShaderResLayoutDataSizes.data(), m_NumShaders, ShaderResCacheDataSizes.data());
     }
-
-    auto &SRBAllocator = pRenderDeviceD3D11->GetSRBAllocator();
-    m_pDefaultShaderResBinding.reset( NEW_RC_OBJ(SRBAllocator, "ShaderResourceBindingD3D11Impl instance", ShaderResourceBindingD3D11Impl, this)(this, true) );
-    m_pDefaultShaderResBinding->InitializeStaticResources(nullptr);
 }
 
 

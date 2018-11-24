@@ -106,10 +106,6 @@ private:
     
     std::array<VulkanUtilities::ShaderModuleWrapper, MaxShadersInPipeline> m_ShaderModules;
 
-    // Do not use strong reference to avoid cyclic references
-    // Default SRB must be defined after allocators
-    std::unique_ptr<class ShaderResourceBindingVkImpl, STDDeleter<ShaderResourceBindingVkImpl, FixedBlockMemoryAllocator> > m_pDefaultShaderResBinding;
-
     VkRenderPass m_RenderPass = VK_NULL_HANDLE; // Render passes are managed by the render device
     VulkanUtilities::PipelineWrapper m_Pipeline;
     PipelineLayout                   m_PipelineLayout;

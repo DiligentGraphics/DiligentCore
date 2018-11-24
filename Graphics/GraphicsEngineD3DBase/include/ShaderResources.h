@@ -302,12 +302,13 @@ public:
     
     ~ShaderResources();
     
-    Uint32 GetNumCBs()     const noexcept{ return (m_TexSRVOffset   - 0);                }
-    Uint32 GetNumTexSRV()  const noexcept{ return (m_TexUAVOffset   - m_TexSRVOffset);   }
-    Uint32 GetNumTexUAV()  const noexcept{ return (m_BufSRVOffset   - m_TexUAVOffset);   }
-    Uint32 GetNumBufSRV()  const noexcept{ return (m_BufUAVOffset   - m_BufSRVOffset);   }
-    Uint32 GetNumBufUAV()  const noexcept{ return (m_SamplersOffset - m_BufUAVOffset);   }
-    Uint32 GetNumSamplers()const noexcept{ return (m_TotalResources - m_SamplersOffset); }
+    Uint32 GetNumCBs()        const noexcept{ return (m_TexSRVOffset   - 0);                }
+    Uint32 GetNumTexSRV()     const noexcept{ return (m_TexUAVOffset   - m_TexSRVOffset);   }
+    Uint32 GetNumTexUAV()     const noexcept{ return (m_BufSRVOffset   - m_TexUAVOffset);   }
+    Uint32 GetNumBufSRV()     const noexcept{ return (m_BufUAVOffset   - m_BufSRVOffset);   }
+    Uint32 GetNumBufUAV()     const noexcept{ return (m_SamplersOffset - m_BufUAVOffset);   }
+    Uint32 GetNumSamplers()   const noexcept{ return (m_TotalResources - m_SamplersOffset); }
+    Uint32 GetTotalResources()const noexcept{ return  m_TotalResources;                     }
 
     const D3DShaderResourceAttribs& GetCB     (Uint32 n)const noexcept{ return GetResAttribs(n, GetNumCBs(),                   0); }
     const D3DShaderResourceAttribs& GetTexSRV (Uint32 n)const noexcept{ return GetResAttribs(n, GetNumTexSRV(),   m_TexSRVOffset); }
