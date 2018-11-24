@@ -161,10 +161,10 @@ void ShaderResourceBindingVkImpl::InitializeStaticResources(const IPipelineState
 #ifdef DEVELOPMENT
         if (!pShaderVk->DvpVerifyStaticResourceBindings())
         {
-            LOG_ERROR_MESSAGE("Static resources in a SRB of PSO '", pPSOVK->GetDesc().Name, "' will not be successfully initialized "
+            LOG_ERROR_MESSAGE("Static resources in SRB of PSO '", pPSOVK->GetDesc().Name, "' will not be successfully initialized "
                               "because not all static resource bindings in shader '", pShaderVk->GetDesc().Name, "' are valid. "
-                              "Please make sure you bind all static resources to the shader before calling InitializeStaticResources() or "
-                              "before creating a SRB via CreateShaderResourceBinding() method with InitStaticResources=true.");
+                              "Please make sure you bind all static resources to the shader before calling InitializeStaticResources() "
+                              "directly or indirectly by passing InitStaticResources=true to CreateShaderResourceBinding() method.");
         }
 #endif
         const auto& StaticResLayout = pShaderVk->GetStaticResLayout();

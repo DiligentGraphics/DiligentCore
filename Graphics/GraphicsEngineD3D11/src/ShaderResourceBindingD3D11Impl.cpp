@@ -139,10 +139,10 @@ void ShaderResourceBindingD3D11Impl::InitializeStaticResources(const IPipelineSt
 #ifdef DEVELOPMENT
         if (!pShaderD3D11->GetStaticResourceLayout().dvpVerifyBindings())
         {
-            LOG_ERROR_MESSAGE("Static resources in a SRB of PSO '", pPSOD3D11->GetDesc().Name, "' will not be successfully initialized "
+            LOG_ERROR_MESSAGE("Static resources in SRB of PSO '", pPSOD3D11->GetDesc().Name, "' will not be successfully initialized "
                               "because not all static resource bindings in shader '", pShaderD3D11->GetDesc().Name, "' are valid. "
-                              "Please make sure you bind all static resources to the shader before calling InitializeStaticResources() or "
-                              "before creating a SRB via CreateShaderResourceBinding() method with InitStaticResources=true.");
+                              "Please make sure you bind all static resources to the shader before calling InitializeStaticResources() "
+                              "directly or indirectly by passing InitStaticResources=true to CreateShaderResourceBinding() method.");
         }
 #endif
 

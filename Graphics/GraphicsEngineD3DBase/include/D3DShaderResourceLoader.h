@@ -232,7 +232,7 @@ namespace Diligent
             }
             if(!VariableFound)
             {
-                LOG_WARNING_MESSAGE("Variable \"", VarName, "\" not found in shader \"", ShdrDesc.Name, '\"');
+                LOG_WARNING_MESSAGE("Variable '", VarName, "' is not found in shader '", ShdrDesc.Name, '\'');
             }
         }
 

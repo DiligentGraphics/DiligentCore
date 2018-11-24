@@ -457,7 +457,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator,
             }
             if (!VariableFound)
             {
-                LOG_WARNING_MESSAGE("Variable '", VarName, "' labeled as ", GetShaderVariableTypeLiteralName(VarType), " not found in shader '", shaderDesc.Name, "'");
+                LOG_WARNING_MESSAGE("Variable '", VarName, "' labeled as ", GetShaderVariableTypeLiteralName(VarType), " is not found in shader '", shaderDesc.Name, "'");
             }
         }
     }
@@ -495,7 +495,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator,
 
             if (!SamplerFound)
             {
-                LOG_WARNING_MESSAGE("Static sampler '", SamName, "' not found in shader '", shaderDesc.Name, "'");
+                LOG_WARNING_MESSAGE("Static sampler '", SamName, "' is not found in shader '", shaderDesc.Name, "'");
             }
         }
     }
