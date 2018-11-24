@@ -171,7 +171,8 @@ namespace Diligent
             
             if (ResourcesPresent)
             {
-                LOG_ERROR_MESSAGE("Pipeline state '", pPSO->GetDesc().Name, "' requires shader resource binding object to commit resources, but none is provided.");
+                LOG_ERROR_MESSAGE("Pipeline state '", pPSO->GetDesc().Name, "' requires shader resource binding object to ", 
+                                  (CommitResources ? "commit" : "transition"), " resources, but none is provided.");
             }
 #endif
             return;

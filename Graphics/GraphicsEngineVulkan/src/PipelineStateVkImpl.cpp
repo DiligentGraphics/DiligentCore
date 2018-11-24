@@ -517,7 +517,8 @@ void PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBind
 #ifdef DEVELOPMENT
     if (pShaderResourceBinding == nullptr)
     {
-        LOG_ERROR_MESSAGE("Pipeline state '", m_Desc.Name, "' requires shader resource binding object to commit its resources, but none is provided.");
+        LOG_ERROR_MESSAGE("Pipeline state '", m_Desc.Name, "' requires shader resource binding object to ",
+                         (CommitResources ? "commit" : "transition"), " resources, but none is provided.");
         return;
     }
 #endif
