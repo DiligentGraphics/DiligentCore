@@ -16,6 +16,8 @@
   * Added `InitStaticResources` parameter to `IPipelineState::CreateShaderResourceBinding()` method to allow
     immediate initialization of static resources in a SRB
   * Removed default SRB object
+  * Moved/renamed `IBuffer::UpdateData()` to `IDeviceContext::UpdateBuffer()`
+  * Moved/renamed `IBuffer::CopyData()` to `IDeviceContext::CopyBuffer()`
 
 ## v2.3.b
 

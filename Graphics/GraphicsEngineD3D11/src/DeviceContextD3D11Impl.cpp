@@ -938,6 +938,41 @@ namespace Diligent
         m_pd3d11DeviceContext->Flush();
     }
 
+    void DeviceContextD3D11Impl::UpdateBuffer(IBuffer* pBuffer, Uint32 Offset, Uint32 Size, const PVoid pData)
+    {
+        TDeviceContextBase::UpdateBuffer(pBuffer, Offset, Size, pData);
+
+        auto* pBufferD3D11Impl = ValidatedCast<BufferD3D11Impl>( pBuffer );
+
+        D3D11_BOX DstBox;
+        DstBox.left   = Offset;
+        DstBox.right  = Offset + Size;
+        DstBox.top    = 0;
+        DstBox.bottom = 1;
+        DstBox.front  = 0;
+        DstBox.back   = 1;
+        auto* pDstBox = (Offset == 0 && Size == pBufferD3D11Impl->GetDesc().uiSizeInBytes) ? nullptr : &DstBox;
+        m_pd3d11DeviceContext->UpdateSubresource(pBufferD3D11Impl->m_pd3d11Buffer, 0, pDstBox, pData, 0, 0);
+    }
+
+    void DeviceContextD3D11Impl::CopyBuffer(IBuffer *pSrcBuffer, IBuffer *pDstBuffer, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size)
+    {
+        TDeviceContextBase::CopyBuffer(pSrcBuffer, pDstBuffer, SrcOffset, DstOffset, Size);
+
+        auto* pSrcBufferD3D11Impl = ValidatedCast<BufferD3D11Impl>( pSrcBuffer );
+        auto* pDstBufferD3D11Impl = ValidatedCast<BufferD3D11Impl>( pDstBuffer );
+    
+        D3D11_BOX SrcBox;
+        SrcBox.left = SrcOffset;
+        SrcBox.right = SrcOffset + Size;
+        SrcBox.top = 0;
+        SrcBox.bottom = 1;
+        SrcBox.front = 0;
+        SrcBox.back = 1;
+        m_pd3d11DeviceContext->CopySubresourceRegion(pDstBufferD3D11Impl->m_pd3d11Buffer, 0, DstOffset, 0, 0, pSrcBufferD3D11Impl->m_pd3d11Buffer, 0, &SrcBox);
+    }
+
+
     void DeviceContextD3D11Impl::FinishFrame()
     {
     }

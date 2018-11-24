@@ -304,22 +304,6 @@ BufferD3D12Impl :: ~BufferD3D12Impl()
 
 IMPLEMENT_QUERY_INTERFACE( BufferD3D12Impl, IID_BufferD3D12, TBufferBase )
 
-void BufferD3D12Impl::UpdateData( IDeviceContext* pContext, Uint32 Offset, Uint32 Size, const PVoid pData )
-{
-    TBufferBase::UpdateData( pContext, Offset, Size, pData );
-
-    // We must use cmd context from the device context provided, otherwise there will
-    // be resource barrier issues in the cmd list in the device context
-    auto *pDeviceContextD3D12 = ValidatedCast<DeviceContextD3D12Impl>(pContext);
-    pDeviceContextD3D12->UpdateBufferRegion(this, pData, Offset, Size);
-}
-
-void BufferD3D12Impl :: CopyData(IDeviceContext* pContext, IBuffer *pSrcBuffer, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size)
-{
-    TBufferBase::CopyData( pContext, pSrcBuffer, SrcOffset, DstOffset, Size );
-    auto *pDeviceContextD3D12 = ValidatedCast<DeviceContextD3D12Impl>(pContext);
-    pDeviceContextD3D12->CopyBufferRegion(ValidatedCast<BufferD3D12Impl>(pSrcBuffer), this, SrcOffset, DstOffset, Size);
-}
 
 void BufferD3D12Impl :: Map(IDeviceContext* pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid &pMappedData)
 {

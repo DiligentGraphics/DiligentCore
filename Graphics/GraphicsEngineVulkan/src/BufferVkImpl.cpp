@@ -303,22 +303,6 @@ BufferVkImpl :: ~BufferVkImpl()
 
 IMPLEMENT_QUERY_INTERFACE( BufferVkImpl, IID_BufferVk, TBufferBase )
 
-void BufferVkImpl::UpdateData( IDeviceContext *pContext, Uint32 Offset, Uint32 Size, const PVoid pData )
-{
-    TBufferBase::UpdateData( pContext, Offset, Size, pData );
-
-    // We must use cmd context from the device context provided, otherwise there will
-    // be resource barrier issues in the cmd list in the device context
-    auto *pDeviceContextVk = ValidatedCast<DeviceContextVkImpl>(pContext);
-    pDeviceContextVk->UpdateBufferRegion(this, pData, Offset, Size);
-}
-
-void BufferVkImpl :: CopyData(IDeviceContext* pContext, IBuffer* pSrcBuffer, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size)
-{
-    TBufferBase::CopyData( pContext, pSrcBuffer, SrcOffset, DstOffset, Size );
-    auto *pDeviceContextVk = ValidatedCast<DeviceContextVkImpl>(pContext);
-    pDeviceContextVk->CopyBufferRegion(ValidatedCast<BufferVkImpl>(pSrcBuffer), this, SrcOffset, DstOffset, Size);
-}
 
 void BufferVkImpl :: Map(IDeviceContext* pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid& pMappedData)
 {

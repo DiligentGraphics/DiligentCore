@@ -184,18 +184,14 @@ BufferGLImpl::~BufferGLImpl()
 
 IMPLEMENT_QUERY_INTERFACE( BufferGLImpl, IID_BufferGL, TBufferBase )
 
-void BufferGLImpl :: UpdateData(IDeviceContext *pContext, Uint32 Offset, Uint32 Size, const PVoid pData)
+void BufferGLImpl :: UpdateData(GLContextState& CtxState, Uint32 Offset, Uint32 Size, const PVoid pData)
 {
-    TBufferBase::UpdateData( pContext, Offset, Size, pData );
-
-    auto *pDeviceContextGL = ValidatedCast<DeviceContextGLImpl>(pContext);
-
     BufferMemoryBarrier(
         GL_BUFFER_UPDATE_BARRIER_BIT,// Reads or writes to buffer objects via any OpenGL API functions that allow 
                                      // modifying their contents will reflect data written by shaders prior to the barrier. 
                                      // Additionally, writes via these commands issued after the barrier will wait on 
                                      // the completion of any shader writes to the same memory initiated prior to the barrier.
-        pDeviceContextGL->GetContextState());
+        CtxState);
     
     glBindBuffer(GL_ARRAY_BUFFER, m_GlBuffer);
     // All buffer bind targets (GL_ARRAY_BUFFER, GL_ELEMENT_ARRAY_BUFFER etc.) relate to the same 
@@ -206,21 +202,17 @@ void BufferGLImpl :: UpdateData(IDeviceContext *pContext, Uint32 Offset, Uint32 
 }
 
 
-void BufferGLImpl :: CopyData(IDeviceContext *pContext, IBuffer *pSrcBuffer, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size)
+void BufferGLImpl :: CopyData(GLContextState& CtxState, BufferGLImpl& SrcBufferGL, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size)
 {
-    TBufferBase::CopyData( pContext, pSrcBuffer, SrcOffset, DstOffset, Size );
-
-    auto *pDeviceContextGL = ValidatedCast<DeviceContextGLImpl>(pContext);
-    auto *pSrcBufferGL = static_cast<BufferGLImpl*>( pSrcBuffer );
     BufferMemoryBarrier(
         GL_BUFFER_UPDATE_BARRIER_BIT,// Reads or writes to buffer objects via any OpenGL API functions that allow 
                                      // modifying their contents will reflect data written by shaders prior to the barrier. 
                                      // Additionally, writes via these commands issued after the barrier will wait on 
                                      // the completion of any shader writes to the same memory initiated prior to the barrier.
-        pDeviceContextGL->GetContextState());
-    pSrcBufferGL->BufferMemoryBarrier(
+        CtxState);
+    SrcBufferGL.BufferMemoryBarrier(
         GL_BUFFER_UPDATE_BARRIER_BIT,
-        pDeviceContextGL->GetContextState() );
+        CtxState);
 
     // Whilst glCopyBufferSubData() can be used to copy data between buffers bound to any two targets, 
     // the targets GL_COPY_READ_BUFFER and GL_COPY_WRITE_BUFFER are provided specifically for this purpose. 
@@ -228,7 +220,7 @@ void BufferGLImpl :: CopyData(IDeviceContext *pContext, IBuffer *pSrcBuffer, Uin
     // the purposes of copying or staging data without disturbing OpenGL state or needing to keep track of 
     // what was bound to the target before your copy.
     glBindBuffer(GL_COPY_WRITE_BUFFER, m_GlBuffer);
-    glBindBuffer(GL_COPY_READ_BUFFER, pSrcBufferGL->m_GlBuffer);
+    glBindBuffer(GL_COPY_READ_BUFFER, SrcBufferGL.m_GlBuffer);
     glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, SrcOffset, DstOffset, Size);
     CHECK_GL_ERROR("glCopyBufferSubData() failed");
     glBindBuffer(GL_COPY_READ_BUFFER, 0);

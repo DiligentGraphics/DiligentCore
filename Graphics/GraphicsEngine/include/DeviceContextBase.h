@@ -108,6 +108,12 @@ public:
     /// from the cached value and false otherwise.
     inline bool SetRenderTargets( Uint32 NumRenderTargets, ITextureView* ppRenderTargets[], ITextureView* pDepthStencil, Uint32 Dummy = 0 );
 
+    /// Base implementation of IDeviceContext::UpdateBuffer(); validates input parameters.
+    virtual void UpdateBuffer(IBuffer *pBuffer, Uint32 Offset, Uint32 Size, const PVoid pData)override = 0;
+
+    /// Base implementation of IDeviceContext::CopyBuffer(); validates input parameters.
+    virtual void CopyBuffer(IBuffer *pSrcBuffer, IBuffer *pDstBuffer, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size)override = 0;
+
     /// Sets the strong pointer to the swap chain
     virtual void SetSwapChain( ISwapChain* pSwapChain )override final { m_pSwapChain = pSwapChain; }
 
@@ -627,6 +633,29 @@ inline void DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType
     m_pBoundDepthStencil.Release();
 }
 
+
+template<typename BaseInterface, typename BufferImplType, typename TextureViewImplType, typename PipelineStateImplType>
+inline void DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType, PipelineStateImplType> :: UpdateBuffer(IBuffer* pBuffer, Uint32 Offset, Uint32 Size, const PVoid pData)
+{
+    VERIFY(pBuffer != nullptr, "Buffer must not be null");
+    const auto& BuffDesc = ValidatedCast<BufferImplType>(pBuffer)->GetDesc();
+    DEV_CHECK_ERR(BuffDesc.Usage == USAGE_DEFAULT, "Unable to update buffer '", BuffDesc.Name, "': only USAGE_DEFAULT buffers can be updated with UpdateData()");
+    DEV_CHECK_ERR(Offset < BuffDesc.uiSizeInBytes, "Unable to update buffer '", BuffDesc.Name, "': offset (", Offset, ") exceeds the buffer size (", BuffDesc.uiSizeInBytes, ")" );
+    DEV_CHECK_ERR(Size + Offset <= BuffDesc.uiSizeInBytes, "Unable to update buffer '", BuffDesc.Name, "': Update region [", Offset, ",", Size + Offset, ") is out of buffer bounds [0,", BuffDesc.uiSizeInBytes, ")" );
+}
+
+template<typename BaseInterface, typename BufferImplType, typename TextureViewImplType, typename PipelineStateImplType>
+inline void DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType, PipelineStateImplType> :: CopyBuffer(IBuffer *pSrcBuffer, IBuffer *pDstBuffer, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size)
+{
+    VERIFY(pSrcBuffer != nullptr, "Source buffer must not be null");
+    VERIFY(pDstBuffer != nullptr, "Destination buffer must not be null");
+    const auto& SrcBufferDesc = ValidatedCast<BufferImplType>(pSrcBuffer)->GetDesc();
+    const auto& DstBufferDesc = ValidatedCast<BufferImplType>(pDstBuffer)->GetDesc();
+    DEV_CHECK_ERR( DstOffset + Size <= DstBufferDesc.uiSizeInBytes, "Failed to copy buffer '", SrcBufferDesc.Name, "' to '", DstBufferDesc.Name, "': Destination range [", DstOffset, ",", DstOffset + Size, ") is out of buffer bounds [0,", DstBufferDesc.uiSizeInBytes, ")" );
+    DEV_CHECK_ERR( SrcOffset + Size <= SrcBufferDesc.uiSizeInBytes, "Failed to copy buffer '", SrcBufferDesc.Name, "' to '", DstBufferDesc.Name, "': Source range [", SrcOffset, ",", SrcOffset + Size, ") is out of buffer bounds [0,", SrcBufferDesc.uiSizeInBytes, ")" );
+}
+
+
 #ifdef DEVELOPMENT
 template<typename BaseInterface, typename BufferImplType, typename TextureViewImplType, typename PipelineStateImplType>
 inline bool DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType, PipelineStateImplType> :: DvpVerifyDrawArguments(const DrawAttribs& drawAttribs)
@@ -739,7 +768,7 @@ void DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType, Pipel
     }
 }
 
-#endif
+#endif // DEVELOPMENT
 
 
 }

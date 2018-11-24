@@ -1011,6 +1011,23 @@ namespace Diligent
         return true;
     }
 
+    void DeviceContextGLImpl::UpdateBuffer(IBuffer* pBuffer, Uint32 Offset, Uint32 Size, const PVoid pData)
+    {
+        TDeviceContextBase::UpdateBuffer(pBuffer, Offset, Size, pData);
+
+        auto* pBufferGL = ValidatedCast<BufferGLImpl>(pBuffer);
+        pBufferGL->UpdateData(m_ContextState, Offset, Size, pData);
+    }
+
+    void DeviceContextGLImpl::CopyBuffer(IBuffer *pSrcBuffer, IBuffer *pDstBuffer, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size)
+    {
+        TDeviceContextBase::CopyBuffer(pSrcBuffer, pDstBuffer, SrcOffset, DstOffset, Size);
+
+        auto* pSrcBufferGL = ValidatedCast<BufferGLImpl>(pSrcBuffer);
+        auto* pDstBufferGL = ValidatedCast<BufferGLImpl>(pDstBuffer);
+        pDstBufferGL->CopyData(m_ContextState, *pSrcBufferGL, SrcOffset, DstOffset, Size);
+    }
+
     void DeviceContextGLImpl::TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers)
     {
 

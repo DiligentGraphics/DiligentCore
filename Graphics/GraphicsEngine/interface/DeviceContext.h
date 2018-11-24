@@ -526,6 +526,26 @@ public:
     /// Flushes the command buffer
     virtual void Flush() = 0;
 
+
+    /// Updates the data in the buffer
+
+    /// \param [in] pBuffer - Pointer to the buffer to updates.
+    /// \param [in] Offset  - Offset in bytes from the beginning of the buffer to the update region.
+    /// \param [in] Size    - Size in bytes of the data region to update.
+    /// \param [in] pData   - Pointer to the data to write to the buffer.
+    virtual void UpdateBuffer(IBuffer *pBuffer, Uint32 Offset, Uint32 Size, const PVoid pData) = 0;
+
+    /// Copies the data from one buffer to another
+
+    /// \param [in] pSrcBuffer - Source buffer to copy data from.
+    /// \param [in] pSrcBuffer - Destination buffer to copy data to.
+    /// \param [in] SrcOffset  - Offset in bytes from the beginning of the source buffer to the beginning of data to copy.
+    /// \param [in] DstOffset  - Offset in bytes from the beginning of the destination buffer to the beginning 
+    ///                          of the destination region.
+    /// \param [in] Size       - Size in bytes of data to copy.
+    virtual void CopyBuffer(IBuffer *pSrcBuffer, IBuffer *pDstBuffer, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size) = 0;
+
+
     /// Sets the swap chain in the device context
 
     /// The swap chain is used by the device context to work with the

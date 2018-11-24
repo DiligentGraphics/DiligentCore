@@ -30,6 +30,7 @@
 #include "BaseInterfacesGL.h"
 #include "BufferViewGLImpl.h"
 #include "RenderDeviceGLImpl.h"
+#include "GLContextState.h"
 
 namespace Diligent
 {
@@ -59,8 +60,8 @@ public:
     /// Queries the specific interface, see IObject::QueryInterface() for details
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
 
-    virtual void UpdateData(IDeviceContext *pContext, Uint32 Offset, Uint32 Size, const PVoid pData)override;
-    virtual void CopyData( IDeviceContext *pContext, IBuffer *pSrcBuffer, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size )override;
+    void UpdateData(GLContextState& CtxState, Uint32 Offset, Uint32 Size, const PVoid pData);
+    void CopyData(GLContextState& CtxState, BufferGLImpl& SrcBufferGL, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size);
     virtual void Map( IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid &pMappedData )override;
     virtual void Unmap( IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags )override;
 

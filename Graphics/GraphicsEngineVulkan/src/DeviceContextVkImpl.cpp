@@ -1212,8 +1212,14 @@ namespace Diligent
         ++m_State.NumCommands;
     }
 
-    void DeviceContextVkImpl::UpdateBufferRegion(BufferVkImpl *pBuffVk, const void *pData, Uint64 DstOffset, Uint64 NumBytes)
+    void DeviceContextVkImpl::UpdateBuffer(IBuffer* pBuffer, Uint32 Offset, Uint32 Size, const PVoid pData)
     {
+        TDeviceContextBase::UpdateBuffer(pBuffer, Offset, Size, pData);
+
+        // We must use cmd context from the device context provided, otherwise there will
+        // be resource barrier issues in the cmd list in the device context
+        auto* pBuffVk = ValidatedCast<BufferVkImpl>(pBuffer);
+
 #ifdef DEVELOPMENT
         if (pBuffVk->GetDesc().Usage == USAGE_DYNAMIC)
         {
@@ -1222,18 +1228,22 @@ namespace Diligent
         }
 #endif
 
-        VERIFY_EXPR( static_cast<size_t>(NumBytes) == NumBytes );
         constexpr size_t Alignment = 4;
         // Source buffer offset must be multiple of 4 (18.4)
-        auto TmpSpace = m_UploadHeap.Allocate(static_cast<size_t>(NumBytes), Alignment);
-	    memcpy(TmpSpace.CPUAddress, pData, static_cast<size_t>(NumBytes));
-        UpdateBufferRegion(pBuffVk, DstOffset, NumBytes, TmpSpace.vkBuffer, TmpSpace.AlignedOffset);
+        auto TmpSpace = m_UploadHeap.Allocate(Size, Alignment);
+	    memcpy(TmpSpace.CPUAddress, pData, Size);
+        UpdateBufferRegion(pBuffVk, Offset, Size, TmpSpace.vkBuffer, TmpSpace.AlignedOffset);
         // The allocation will stay in the upload heap until the end of the frame at which point all upload
         // pages will be discarded
     }
 
-    void DeviceContextVkImpl::CopyBufferRegion(BufferVkImpl *pSrcBuffVk, BufferVkImpl *pDstBuffVk, Uint64 SrcOffset, Uint64 DstOffset, Uint64 NumBytes)
+    void DeviceContextVkImpl::CopyBuffer(IBuffer* pSrcBuffer, IBuffer* pDstBuffer, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size)
     {
+        TDeviceContextBase::CopyBuffer(pSrcBuffer, pDstBuffer, SrcOffset, DstOffset, Size);
+
+        auto *pSrcBuffVk = ValidatedCast<BufferVkImpl>(pSrcBuffer);
+        auto *pDstBuffVk = ValidatedCast<BufferVkImpl>(pDstBuffer);
+
 #ifdef DEVELOPMENT
         if (pDstBuffVk->GetDesc().Usage == USAGE_DYNAMIC)
         {
@@ -1263,7 +1273,7 @@ namespace Diligent
         VkBufferCopy CopyRegion;
         CopyRegion.srcOffset = SrcOffset + pSrcBuffVk->GetDynamicOffset(m_ContextId, this);
         CopyRegion.dstOffset = DstOffset;
-        CopyRegion.size = NumBytes;
+        CopyRegion.size = Size;
         VERIFY(pDstBuffVk->m_VulkanBuffer != VK_NULL_HANDLE, "Copy destination buffer must not be suballocated");
         VERIFY_EXPR(pDstBuffVk->GetDynamicOffset(m_ContextId, this) == 0);
         m_CommandBuffer.CopyBuffer(pSrcBuffVk->GetVkBuffer(), pDstBuffVk->GetVkBuffer(), 1, &CopyRegion);

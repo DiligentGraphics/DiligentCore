@@ -153,31 +153,13 @@ public:
     /// Returns the buffer description used to create the object
     virtual const BufferDesc& GetDesc()const = 0;
     
-    /// Updates the data in the buffer
-
-    /// \param [in] pContext - Pointer to the device context interface to be used to perform the operation.
-    /// \param [in] Offset - Offset in bytes from the beginning of the buffer to the update region.
-    /// \param [in] Size - Size in bytes of the data region to update.
-    /// \param [in] pData - Pointer to the data to store in the buffer.
-    virtual void UpdateData( class IDeviceContext *pContext, Uint32 Offset, Uint32 Size, const PVoid pData) = 0;
-
-    /// Copies the data from other buffer
-
-    /// \param [in] pContext - Pointer to the device context interface to be used to perform the operation.
-    /// \param [in] pSrcBuffer - Source buffer to copy data from.
-    /// \param [in] SrcOffset - Offset in bytes from the beginning of the source buffer to the beginning of data to copy.
-    /// \param [in] DstOffset - Offset in bytes from the beginning of the destination buffer to the beginning 
-    ///                         of the destination region.
-    /// \param [in] Size    - Size in bytes of data to copy.
-    virtual void CopyData( IDeviceContext *pContext, IBuffer *pSrcBuffer, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size ) = 0;
-    
     /// Maps the buffer
 
     /// \param [in] pContext - Pointer to the device context interface to be used to perform the operation.
     /// \param [in] MapType - Type of the map operation. See Diligent::MAP_TYPE.
     /// \param [in] MapFlags - Special map flags. See Diligent::MAP_FLAGS.
     /// \param [out] pMappedData - Reference to the void pointer to store the address of the mapped region.
-    virtual void Map( IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid &pMappedData ) = 0;
+    virtual void Map( class IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid &pMappedData ) = 0;
 
     /// Unmaps the previously mapped buffer
     /// \param [in] pContext - Pointer to the device context interface to be used to perform the operation.

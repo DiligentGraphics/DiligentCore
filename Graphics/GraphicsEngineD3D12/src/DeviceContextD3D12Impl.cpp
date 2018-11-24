@@ -898,18 +898,27 @@ namespace Diligent
         ++m_State.NumCommands;
     }
 
-    void DeviceContextD3D12Impl::UpdateBufferRegion(BufferD3D12Impl* pBuffD3D12, const void* pData, Uint64 DstOffset, Uint64 NumBytes)
+    void DeviceContextD3D12Impl::UpdateBuffer(IBuffer* pBuffer, Uint32 Offset, Uint32 Size, const PVoid pData)
     {
+        TDeviceContextBase::UpdateBuffer(pBuffer, Offset, Size, pData);
+
+        // We must use cmd context from the device context provided, otherwise there will
+        // be resource barrier issues in the cmd list in the device context
+        auto* pBuffD3D12 = ValidatedCast<BufferD3D12Impl>(pBuffer);
         VERIFY(pBuffD3D12->GetDesc().Usage != USAGE_DYNAMIC, "Dynamic buffers must be updated via Map()");
-        VERIFY_EXPR( static_cast<size_t>(NumBytes) == NumBytes );
         constexpr size_t DefaultAlginment = 16;
-        auto TmpSpace = m_DynamicHeap.Allocate(static_cast<size_t>(NumBytes), DefaultAlginment, m_ContextFrameNumber);
-	    memcpy(TmpSpace.CPUAddress, pData, static_cast<size_t>(NumBytes));
-        UpdateBufferRegion(pBuffD3D12, TmpSpace, DstOffset, NumBytes);
+        auto TmpSpace = m_DynamicHeap.Allocate(Size, DefaultAlginment, m_ContextFrameNumber);
+	    memcpy(TmpSpace.CPUAddress, pData, Size);
+        UpdateBufferRegion(pBuffD3D12, TmpSpace, Offset, Size);
     }
 
-    void DeviceContextD3D12Impl::CopyBufferRegion(BufferD3D12Impl* pSrcBuffD3D12, BufferD3D12Impl* pDstBuffD3D12, Uint64 SrcOffset, Uint64 DstOffset, Uint64 NumBytes)
+    void DeviceContextD3D12Impl::CopyBuffer(IBuffer* pSrcBuffer, IBuffer* pDstBuffer, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size)
     {
+        TDeviceContextBase::CopyBuffer(pSrcBuffer, pDstBuffer, SrcOffset, DstOffset, Size);
+
+        auto* pSrcBuffD3D12 = ValidatedCast<BufferD3D12Impl>(pSrcBuffer);
+        auto* pDstBuffD3D12 = ValidatedCast<BufferD3D12Impl>(pDstBuffer);
+
         VERIFY(pDstBuffD3D12->GetDesc().Usage != USAGE_DYNAMIC, "Dynamic buffers cannot be copy destinations");
 
         auto& CmdCtx = GetCmdContext();
@@ -924,7 +933,7 @@ namespace Diligent
         size_t SrcDataStartByteOffset;
         auto* pd3d12SrcBuff = pSrcBuffD3D12->GetD3D12Buffer(SrcDataStartByteOffset, this);
         CmdCtx.FlushResourceBarriers();
-        CmdCtx.GetCommandList()->CopyBufferRegion( pd3d12DstBuff, DstOffset + DstDataStartByteOffset, pd3d12SrcBuff, SrcOffset+SrcDataStartByteOffset, NumBytes);
+        CmdCtx.GetCommandList()->CopyBufferRegion( pd3d12DstBuff, DstOffset + DstDataStartByteOffset, pd3d12SrcBuff, SrcOffset+SrcDataStartByteOffset, Size);
         ++m_State.NumCommands;
     }
 

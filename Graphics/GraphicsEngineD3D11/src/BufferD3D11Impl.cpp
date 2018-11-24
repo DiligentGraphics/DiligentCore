@@ -178,40 +178,6 @@ BufferD3D11Impl :: ~BufferD3D11Impl()
 
 IMPLEMENT_QUERY_INTERFACE( BufferD3D11Impl, IID_BufferD3D11, TBufferBase )
 
-void BufferD3D11Impl::UpdateData( IDeviceContext *pContext, Uint32 Offset, Uint32 Size, const PVoid pData )
-{
-    TBufferBase::UpdateData( pContext, Offset, Size, pData );
-
-    auto *pd3d11DeviceContext = static_cast<DeviceContextD3D11Impl*>(pContext)->GetD3D11DeviceContext();
-
-    D3D11_BOX DstBox;
-    DstBox.left = Offset;
-    DstBox.right = Offset + Size;
-    DstBox.top = 0;
-    DstBox.bottom = 1;
-    DstBox.front = 0;
-    DstBox.back = 1;
-    auto *pDstBox = (Offset == 0 && Size == m_Desc.uiSizeInBytes) ? nullptr : &DstBox;
-    pd3d11DeviceContext->UpdateSubresource(m_pd3d11Buffer, 0, pDstBox, pData, 0, 0);
-}
-
-void BufferD3D11Impl :: CopyData(IDeviceContext *pContext, IBuffer *pSrcBuffer, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size)
-{
-    TBufferBase::CopyData( pContext, pSrcBuffer, SrcOffset, DstOffset, Size );
-
-    auto *pd3d11DeviceContext = static_cast<DeviceContextD3D11Impl*>(pContext)->GetD3D11DeviceContext();
-    auto *pSrBufferD3D11Impl = static_cast<BufferD3D11Impl*>( pSrcBuffer );
-    
-    D3D11_BOX SrcBox;
-    SrcBox.left = SrcOffset;
-    SrcBox.right = SrcOffset + Size;
-    SrcBox.top = 0;
-    SrcBox.bottom = 1;
-    SrcBox.front = 0;
-    SrcBox.back = 1;
-    pd3d11DeviceContext->CopySubresourceRegion(m_pd3d11Buffer, 0, DstOffset, 0, 0, pSrBufferD3D11Impl->m_pd3d11Buffer, 0, &SrcBox);
-}
-
 void BufferD3D11Impl :: Map(IDeviceContext* pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid& pMappedData)
 {
     TBufferBase::Map( pContext, MapType, MapFlags, pMappedData );
