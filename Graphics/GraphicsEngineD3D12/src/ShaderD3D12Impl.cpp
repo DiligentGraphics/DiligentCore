@@ -62,9 +62,9 @@ ShaderD3D12Impl::~ShaderD3D12Impl()
 IMPLEMENT_QUERY_INTERFACE( ShaderD3D12Impl, IID_ShaderD3D12, TShaderBase )
 
 #ifdef DEVELOPMENT
-void ShaderD3D12Impl::DvpVerifyStaticResourceBindings()
+bool ShaderD3D12Impl::DvpVerifyStaticResourceBindings()
 {
-    m_StaticResLayout.dvpVerifyBindings(m_StaticResCache);
+    return m_StaticResLayout.dvpVerifyBindings(m_StaticResCache);
 }
 #endif
 

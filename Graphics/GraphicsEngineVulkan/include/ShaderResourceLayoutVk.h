@@ -230,7 +230,7 @@ public:
                                    ShaderResourceCacheVk&        DstResourceCache)const;
 
 #ifdef DEVELOPMENT
-    void dvpVerifyBindings(const ShaderResourceCacheVk& ResourceCache)const;
+    bool dvpVerifyBindings(const ShaderResourceCacheVk& ResourceCache)const;
 #endif
 
     Uint32 GetResourceCount(SHADER_VARIABLE_TYPE VarType)const

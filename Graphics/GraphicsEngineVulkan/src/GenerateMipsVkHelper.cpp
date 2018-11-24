@@ -183,7 +183,7 @@ namespace Diligent
     {
         // All PSOs are compatible
         auto& PSO = FindPSOs(TEX_FORMAT_RGBA8_UNORM);
-        PSO[0]->CreateShaderResourceBinding(ppSRB);
+        PSO[0]->CreateShaderResourceBinding(ppSRB, true);
     }
 
     std::array<RefCntAutoPtr<IPipelineState>, 4>& GenerateMipsVkHelper::FindPSOs(TEXTURE_FORMAT Fmt)

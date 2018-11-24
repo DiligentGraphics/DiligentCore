@@ -184,11 +184,11 @@ public:
 
     virtual void TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers)override final;
 
-    VkDescriptorSet AllocateDynamicDescriptorSet(VkDescriptorSetLayout SetLayout)
+    VkDescriptorSet AllocateDynamicDescriptorSet(VkDescriptorSetLayout SetLayout, const char* DebugName = "")
     {
         // Descriptor pools are externally synchronized, meaning that the application must not allocate 
         // and/or free descriptor sets from the same pool in multiple threads simultaneously (13.2.3)
-        return m_DynamicDescrSetAllocator.Allocate(SetLayout, "");
+        return m_DynamicDescrSetAllocator.Allocate(SetLayout, DebugName);
     }
 
     VulkanDynamicAllocation AllocateDynamicSpace(Uint32 SizeInBytes, Uint32 Alignment);

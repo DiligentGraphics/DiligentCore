@@ -198,7 +198,7 @@ public:
 
     ~DescriptorSetAllocator();
 
-    DescriptorSetAllocation Allocate(Uint64 CommandQueueMask, VkDescriptorSetLayout SetLayout);
+    DescriptorSetAllocation Allocate(Uint64 CommandQueueMask, VkDescriptorSetLayout SetLayout, const char* DebugName = "");
 
 #ifdef DEVELOPMENT
     int32_t GetAllocatedDescriptorSetCounter()const{return m_AllocatedSetCounter;}

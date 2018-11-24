@@ -83,7 +83,7 @@ public:
     const char* GetEntryPoint() const { return m_EntryPoint.c_str(); }
 
 #ifdef DEVELOPMENT
-    void DvpVerifyStaticResourceBindings()const;
+    bool DvpVerifyStaticResourceBindings()const;
 #endif
     
 private:

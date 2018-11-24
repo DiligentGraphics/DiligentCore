@@ -404,7 +404,10 @@ std::array<Uint32, 2> PipelineLayout::GetDescriptorSetSizes(Uint32& NumSets)cons
     return SetSizes;
 }
 
-void PipelineLayout::InitResourceCache(RenderDeviceVkImpl* pDeviceVkImpl, ShaderResourceCacheVk& ResourceCache, IMemoryAllocator& CacheMemAllocator)const
+void PipelineLayout::InitResourceCache(RenderDeviceVkImpl*    pDeviceVkImpl,
+                                       ShaderResourceCacheVk& ResourceCache,
+                                       IMemoryAllocator&      CacheMemAllocator,
+                                       const char*            DbgPipelineName)const
 {
     Uint32 NumSets = 0;
     auto SetSizes = GetDescriptorSetSizes(NumSets);
@@ -413,10 +416,16 @@ void PipelineLayout::InitResourceCache(RenderDeviceVkImpl* pDeviceVkImpl, Shader
     // Resources are initialized by source layout when shader resource binding objects are created
     ResourceCache.InitializeSets(CacheMemAllocator, NumSets, SetSizes.data());
 
-    const auto &StaticAndMutSet = m_LayoutMgr.GetDescriptorSet(SHADER_VARIABLE_TYPE_STATIC);
+    const auto& StaticAndMutSet = m_LayoutMgr.GetDescriptorSet(SHADER_VARIABLE_TYPE_STATIC);
     if (StaticAndMutSet.SetIndex >= 0)
     {
-        DescriptorSetAllocation SetAllocation = pDeviceVkImpl->AllocateDescriptorSet(~Uint64{0}, StaticAndMutSet.VkLayout);
+        const char* DescrSetName = "Static/Mutable Descriptor Set";
+#ifdef DEVELOPMENT
+        std::string _DescrSetName(DbgPipelineName);
+        _DescrSetName.append(" - static/mutable set");
+        DescrSetName = _DescrSetName.c_str();
+#endif
+        DescriptorSetAllocation SetAllocation = pDeviceVkImpl->AllocateDescriptorSet(~Uint64{0}, StaticAndMutSet.VkLayout, DescrSetName);
         ResourceCache.GetDescriptorSet(StaticAndMutSet.SetIndex).AssignDescriptorSetAllocation(std::move(SetAllocation));
     }
 }

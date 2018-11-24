@@ -38,13 +38,13 @@ namespace Diligent
 
 class RenderDeviceVkImpl;
 class DeviceContextVkImpl;
-
+class ShaderResourceCacheVk;
 
 /// Implementation of the Diligent::PipelineLayout class
 class PipelineLayout
 {
 public:
-    static VkDescriptorType GetVkDescriptorType(const SPIRVShaderResourceAttribs &Res);
+    static VkDescriptorType GetVkDescriptorType(const SPIRVShaderResourceAttribs& Res);
 
     PipelineLayout();
     void Release(RenderDeviceVkImpl* pDeviceVkImpl, Uint64 CommandQueueMask);
@@ -52,7 +52,10 @@ public:
 
     VkPipelineLayout GetVkPipelineLayout()const{return m_LayoutMgr.GetVkPipelineLayout();}
     std::array<Uint32, 2> GetDescriptorSetSizes(Uint32& NumSets)const;
-    void InitResourceCache(RenderDeviceVkImpl* pDeviceVkImpl, class ShaderResourceCacheVk& ResourceCache, IMemoryAllocator& CacheMemAllocator)const;
+    void InitResourceCache(RenderDeviceVkImpl*    pDeviceVkImpl,
+                           ShaderResourceCacheVk& ResourceCache,
+                           IMemoryAllocator&      CacheMemAllocator,
+                           const char*            DbgPipelineName)const;
 
     void AllocateResourceSlot(const SPIRVShaderResourceAttribs& ResAttribs, 
                               VkSampler                         vkStaticSampler,

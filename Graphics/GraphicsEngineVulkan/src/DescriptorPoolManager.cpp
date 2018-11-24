@@ -149,7 +149,7 @@ DescriptorSetAllocator::~DescriptorSetAllocator()
     DEV_CHECK_ERR(m_AllocatedSetCounter == 0, m_AllocatedSetCounter, " descriptor set(s) have not been returned to the allocator. If there are outstanding references to the sets in release queues, the app will crash when DescriptorSetAllocator::FreeDescriptorSet() is called");
 }
 
-DescriptorSetAllocation DescriptorSetAllocator::Allocate(Uint64 CommandQueueMask, VkDescriptorSetLayout SetLayout)
+DescriptorSetAllocation DescriptorSetAllocator::Allocate(Uint64 CommandQueueMask, VkDescriptorSetLayout SetLayout, const char* DebugName)
 {
     // Descriptor pools are externally synchronized, meaning that the application must not allocate 
     // and/or free descriptor sets from the same pool in multiple threads simultaneously (13.2.3)
@@ -160,7 +160,7 @@ DescriptorSetAllocation DescriptorSetAllocator::Allocate(Uint64 CommandQueueMask
     for(auto it = m_Pools.begin(); it != m_Pools.end(); ++it)
     {
         auto& Pool = *it;
-        auto Set = AllocateDescriptorSet(LogicalDevice, Pool, SetLayout, "Descriptor set");
+        auto Set = AllocateDescriptorSet(LogicalDevice, Pool, SetLayout, DebugName);
         if (Set != VK_NULL_HANDLE)
         {
             // Move the pool to the front
@@ -181,7 +181,7 @@ DescriptorSetAllocation DescriptorSetAllocator::Allocate(Uint64 CommandQueueMask
     m_Pools.emplace_front(CreateDescriptorPool("Descriptor pool"));
 
     auto& NewPool = m_Pools.front();
-    auto Set = AllocateDescriptorSet(LogicalDevice, NewPool, SetLayout, "");
+    auto Set = AllocateDescriptorSet(LogicalDevice, NewPool, SetLayout, DebugName);
     DEV_CHECK_ERR(Set != VK_NULL_HANDLE, "Failed to allocate descriptor set");
 
 #ifdef DEVELOPMENT

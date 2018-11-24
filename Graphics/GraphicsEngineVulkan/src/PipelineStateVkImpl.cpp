@@ -536,7 +536,7 @@ void PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBind
 
     if (m_HasStaticResources && !pResBindingVkImpl->StaticResourcesInitialized())
     {
-        LOG_ERROR_MESSAGE("Static resources have not been initialized in the shader resource binding object. Please call IShaderResourceBinding::InitializeStaticResources().");
+        LOG_ERROR_MESSAGE("Static resources have not been initialized in the shader resource binding object being committed for PSO '", m_Desc.Name,"'. Please call IShaderResourceBinding::InitializeStaticResources().");
     }
 #endif
 
@@ -564,8 +564,14 @@ void PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBind
         auto DynamicDescriptorSetVkLayout = m_PipelineLayout.GetDynamicDescriptorSetVkLayout();
         if (DynamicDescriptorSetVkLayout != VK_NULL_HANDLE)
         {
+            const char* DynamicDescrSetName = "Dynamic Descriptor Set";
+#ifdef DEVELOPMENT
+            std::string _DynamicDescrSetName(m_Desc.Name);
+            _DynamicDescrSetName.append(" - dynamic set");
+            DynamicDescrSetName = _DynamicDescrSetName.c_str();
+#endif
             // Allocate vulkan descriptor set for dynamic resources
-            DynamicDescrSet = pCtxVkImpl->AllocateDynamicDescriptorSet(DynamicDescriptorSetVkLayout);
+            DynamicDescrSet = pCtxVkImpl->AllocateDynamicDescriptorSet(DynamicDescriptorSetVkLayout, DynamicDescrSetName);
             // Commit all dynamic resource descriptors
             for (Uint32 s=0; s < m_NumShaders; ++s)
             {

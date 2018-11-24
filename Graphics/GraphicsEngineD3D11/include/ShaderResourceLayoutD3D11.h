@@ -199,7 +199,7 @@ public:
     void BindResources( IResourceMapping* pResourceMapping, Uint32 Flags, const ShaderResourceCacheD3D11& dbgResourceCache );
 
 #ifdef DEVELOPMENT
-    void dvpVerifyBindings()const;
+    bool dvpVerifyBindings()const;
 #endif
 
     IShaderVariable* GetShaderVariable( const Char* Name );

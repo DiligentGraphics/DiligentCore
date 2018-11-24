@@ -99,9 +99,9 @@ public:
 
     virtual void ReleaseStaleResources(bool ForceRelease = false)override final;
 
-    DescriptorSetAllocation AllocateDescriptorSet(Uint64 CommandQueueMask, VkDescriptorSetLayout SetLayout)
+    DescriptorSetAllocation AllocateDescriptorSet(Uint64 CommandQueueMask, VkDescriptorSetLayout SetLayout, const char* DebugName = "")
     {
-        return m_DescriptorSetAllocator.Allocate(CommandQueueMask, SetLayout);
+        return m_DescriptorSetAllocator.Allocate(CommandQueueMask, SetLayout, DebugName);
     }
     DescriptorPoolManager& GetDynamicDescriptorPool(){return m_DynamicDescriptorPool;}
 

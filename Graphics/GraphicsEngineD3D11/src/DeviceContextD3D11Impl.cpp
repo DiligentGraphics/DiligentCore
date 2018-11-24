@@ -203,7 +203,7 @@ namespace Diligent
         // Static resource bindings are verified in BindStaticShaderResources()
         if (StaticResourcesPresent && !pShaderResBindingD3D11->IsStaticResourcesBound())
         {
-            LOG_ERROR_MESSAGE("Static resources have not been initialized in the shader resource binding object. Please call IShaderResourceBinding::InitializeStaticResources().");
+            LOG_ERROR_MESSAGE("Static resources have not been initialized in the shader resource binding object being committed for PSO '", pPSO->GetDesc().Name,"'. Please call IShaderResourceBinding::InitializeStaticResources().");
         }
 #endif
 

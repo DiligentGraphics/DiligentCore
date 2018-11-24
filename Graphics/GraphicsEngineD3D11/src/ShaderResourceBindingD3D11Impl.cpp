@@ -128,16 +128,22 @@ void ShaderResourceBindingD3D11Impl::InitializeStaticResources(const IPipelineSt
         DEV_CHECK_ERR(pPipelineState->IsCompatibleWith(GetPipelineState()), "The pipeline state is not compatible with this SRB");
     }
 
-    const auto *pPSOD3D11 = ValidatedCast<const PipelineStateD3D11Impl>(pPipelineState);
+    const auto* pPSOD3D11 = ValidatedCast<const PipelineStateD3D11Impl>(pPipelineState);
     auto ppShaders = pPSOD3D11->GetShaders();
     auto NumShaders = pPSOD3D11->GetNumShaders();
     VERIFY_EXPR(NumShaders == m_NumActiveShaders);
 
     for (Uint32 shader = 0; shader < NumShaders; ++shader)
     {
-        auto *pShaderD3D11 = ValidatedCast<ShaderD3D11Impl>( ppShaders[shader] );
+        auto* pShaderD3D11 = ValidatedCast<ShaderD3D11Impl>(ppShaders[shader]);
 #ifdef DEVELOPMENT
-        pShaderD3D11->GetStaticResourceLayout().dvpVerifyBindings();
+        if (!pShaderD3D11->GetStaticResourceLayout().dvpVerifyBindings())
+        {
+            LOG_ERROR_MESSAGE("Static resources in a SRB of PSO '", pPSOD3D11->GetDesc().Name, "' will not be successfully initialized "
+                              "because not all static resource bindings in shader '", pShaderD3D11->GetDesc().Name, "' are valid. "
+                              "Please make sure you bind all static resources to the shader before calling InitializeStaticResources() or "
+                              "before creating a SRB via CreateShaderResourceBinding() method with InitStaticResources=true.");
+        }
 #endif
 
 #ifdef _DEBUG

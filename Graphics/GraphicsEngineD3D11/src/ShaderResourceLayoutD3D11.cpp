@@ -956,7 +956,7 @@ IShaderVariable* ShaderResourceLayoutD3D11::GetShaderVariable( Uint32 Index )
 
 
 #ifdef DEVELOPMENT
-void ShaderResourceLayoutD3D11::dvpVerifyBindings()const
+bool ShaderResourceLayoutD3D11::dvpVerifyBindings()const
 {
 
 #define LOG_MISSING_BINDING(VarType, Attrs, BindPt)\
@@ -969,6 +969,7 @@ do{                                                \
 
     m_pResourceCache->dbgVerifyCacheConsistency();
     
+    bool BindingsOK = true;
     // Use const_cast to avoid duplication of the HandleResources() function
     // The function actually changes nothing
     const_cast<ShaderResourceLayoutD3D11*>(this)->HandleResources(
@@ -977,7 +978,10 @@ do{                                                \
             for (Uint32 BindPoint = cb.Attribs.BindPoint; BindPoint < Uint32{cb.Attribs.BindPoint} + cb.Attribs.BindCount; ++BindPoint)
             {
                 if (!m_pResourceCache->IsCBBound(BindPoint))
+                {
                     LOG_MISSING_BINDING("constant buffer", cb.Attribs, BindPoint);
+                    BindingsOK  = false;
+                }
             }
         },
 
@@ -986,7 +990,10 @@ do{                                                \
             for (Uint32 BindPoint = ts.Attribs.BindPoint; BindPoint < Uint32{ts.Attribs.BindPoint} + ts.Attribs.BindCount; ++BindPoint)
             {
                 if (!m_pResourceCache->IsSRVBound(BindPoint, true))
+                {
                     LOG_MISSING_BINDING("texture", ts.Attribs, BindPoint);
+                    BindingsOK  = false;
+                }
 
                 if (ts.ValidSamplerAssigned())
                 {
@@ -1012,7 +1019,9 @@ do{                                                \
                             auto* pTexView = CachedResource.pView.RawPtr<ITextureView>();
                             auto* pSampler = pTexView->GetSampler();
                             if (pSampler != nullptr && pSampler != CachedSampler.pSampler.RawPtr())
+                            {
                                 LOG_ERROR_MESSAGE( "All elements of texture array '", ts.Attribs.Name, "' in shader '", GetShaderName(), "' share the same sampler. However, the sampler set in view for element ", BindPoint - ts.Attribs.BindPoint, " does not match bound sampler. This may cause incorrect behavior on GL platform."  );
+                            }
                         }
                     }
                 }
@@ -1024,7 +1033,10 @@ do{                                                \
             for (Uint32 BindPoint = uav.Attribs.BindPoint; BindPoint < Uint32{uav.Attribs.BindPoint} + uav.Attribs.BindCount; ++BindPoint)
             {
                 if (!m_pResourceCache->IsUAVBound(BindPoint, true))
+                {
                     LOG_MISSING_BINDING("texture UAV", uav.Attribs, BindPoint);
+                    BindingsOK  = false;
+                }
             }
         },
 
@@ -1033,7 +1045,10 @@ do{                                                \
             for (Uint32 BindPoint = buf.Attribs.BindPoint; BindPoint < Uint32{buf.Attribs.BindPoint} + buf.Attribs.BindCount; ++BindPoint)
             {
                 if (!m_pResourceCache->IsSRVBound(BindPoint, false))
+                {
                     LOG_MISSING_BINDING("buffer", buf.Attribs, BindPoint);
+                    BindingsOK  = false;
+                }
             }
         },
 
@@ -1042,7 +1057,10 @@ do{                                                \
             for (Uint32 BindPoint = uav.Attribs.BindPoint; BindPoint < Uint32{uav.Attribs.BindPoint} + uav.Attribs.BindCount; ++BindPoint)
             {
                 if (!m_pResourceCache->IsUAVBound(BindPoint, false))
+                {
                     LOG_MISSING_BINDING("buffer UAV", uav.Attribs, BindPoint);
+                    BindingsOK  = false;
+                }
             }
         },
 
@@ -1051,11 +1069,16 @@ do{                                                \
             for (Uint32 BindPoint = sam.Attribs.BindPoint; BindPoint < Uint32{sam.Attribs.BindPoint} + sam.Attribs.BindCount; ++BindPoint)
             {
                 if (!m_pResourceCache->IsSamplerBound(BindPoint))
+                {
                     LOG_MISSING_BINDING("sampler", sam.Attribs, BindPoint);
+                    BindingsOK  = false;
+                }
             }
         }
     );
 #undef LOG_MISSING_BINDING
+
+    return BindingsOK;
 }
 
 #endif

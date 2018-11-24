@@ -78,7 +78,7 @@ public:
     const ShaderResourceCacheD3D12&                    GetStaticResCache() const { return m_StaticResCache;   }
 
 #ifdef DEVELOPMENT
-    void DvpVerifyStaticResourceBindings();
+    bool DvpVerifyStaticResourceBindings();
 #endif
 
 private:

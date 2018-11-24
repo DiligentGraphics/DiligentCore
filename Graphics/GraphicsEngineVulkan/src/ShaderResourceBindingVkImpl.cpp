@@ -42,7 +42,7 @@ ShaderResourceBindingVkImpl::ShaderResourceBindingVkImpl( IReferenceCounters* pR
     // This will only allocate memory and initialize descriptor sets in the resource cache
     // Resources will be initialized by InitializeResourceMemoryInCache()
     auto& ResourceCacheDataAllocator = pPSO->GetSRBMemoryAllocator().GetResourceCacheDataAllocator(0);
-    pPSO->GetPipelineLayout().InitResourceCache(pRenderDeviceVkImpl, m_ShaderResourceCache, ResourceCacheDataAllocator);
+    pPSO->GetPipelineLayout().InitResourceCache(pRenderDeviceVkImpl, m_ShaderResourceCache, ResourceCacheDataAllocator, pPSO->GetDesc().Name);
     
     auto *pVarMgrsRawMem = ALLOCATE(GetRawAllocator(), "Raw memory for ShaderVariableManagerVk", m_NumShaders * sizeof(ShaderVariableManagerVk));
     m_pShaderVarMgrs = reinterpret_cast<ShaderVariableManagerVk*>(pVarMgrsRawMem);
@@ -159,7 +159,13 @@ void ShaderResourceBindingVkImpl::InitializeStaticResources(const IPipelineState
     {
         const auto* pShaderVk = pPSOVK->GetShader<const ShaderVkImpl>(s);
 #ifdef DEVELOPMENT
-        pShaderVk->DvpVerifyStaticResourceBindings();
+        if (!pShaderVk->DvpVerifyStaticResourceBindings())
+        {
+            LOG_ERROR_MESSAGE("Static resources in a SRB of PSO '", pPSOVK->GetDesc().Name, "' will not be successfully initialized "
+                              "because not all static resource bindings in shader '", pShaderVk->GetDesc().Name, "' are valid. "
+                              "Please make sure you bind all static resources to the shader before calling InitializeStaticResources() or "
+                              "before creating a SRB via CreateShaderResourceBinding() method with InitStaticResources=true.");
+        }
 #endif
         const auto& StaticResLayout = pShaderVk->GetStaticResLayout();
         const auto& StaticResCache = pShaderVk->GetStaticResCache();

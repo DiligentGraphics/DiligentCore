@@ -478,7 +478,7 @@ namespace Diligent
         else
         {
             if( m_pPipelineState->dbgContainsShaderResources() )
-                LOG_ERROR_MESSAGE("Pipeline state '", m_pPipelineState->GetDesc().Name, "' contains shader resources, but IDeviceContext::CommitShaderResources() was not called" );
+                LOG_ERROR_MESSAGE("Pipeline state '", m_pPipelineState->GetDesc().Name, "' contains shader resources, but IDeviceContext::CommitShaderResources() was not called with non-null SRB" );
         }
 #endif
         
@@ -540,7 +540,7 @@ namespace Diligent
         else
         {
             if( m_pPipelineState->dbgContainsShaderResources() )
-                LOG_ERROR_MESSAGE("Pipeline state '", m_pPipelineState->GetDesc().Name, "' contains shader resources, but IDeviceContext::CommitShaderResources() was not called" );
+                LOG_ERROR_MESSAGE("Pipeline state '", m_pPipelineState->GetDesc().Name, "' contains shader resources, but IDeviceContext::CommitShaderResources() was not called with non-null SRB" );
         }
 #endif
 

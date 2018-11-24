@@ -725,8 +725,9 @@ void ShaderResourceLayoutVk::InitializeStaticResources(const ShaderResourceLayou
 
 
 #ifdef DEVELOPMENT
-void ShaderResourceLayoutVk::dvpVerifyBindings(const ShaderResourceCacheVk& ResourceCache)const
+bool ShaderResourceLayoutVk::dvpVerifyBindings(const ShaderResourceCacheVk& ResourceCache)const
 {
+    bool BindingsOK = true;
     for(SHADER_VARIABLE_TYPE VarType = SHADER_VARIABLE_TYPE_STATIC; VarType < SHADER_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_VARIABLE_TYPE>(VarType+1))
     {
         for(Uint32 r=0; r < m_NumResources[VarType]; ++r)
@@ -742,6 +743,7 @@ void ShaderResourceLayoutVk::dvpVerifyBindings(const ShaderResourceCacheVk& Reso
                    !(Res.SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler && Res.SpirvAttribs.IsImmutableSamplerAssigned()))
                 {
                     LOG_ERROR_MESSAGE("No resource is bound to ", GetShaderVariableTypeLiteralName(Res.SpirvAttribs.VarType), " variable '", Res.SpirvAttribs.GetPrintName(ArrInd), "' in shader '", GetShaderName(), "'");
+                    BindingsOK = false;
                 }
 #ifdef _DEBUG
                 auto vkDescSet = CachedDescrSet.GetVkDescriptorSet();
@@ -765,6 +767,7 @@ void ShaderResourceLayoutVk::dvpVerifyBindings(const ShaderResourceCacheVk& Reso
             }
         }
     }
+    return BindingsOK;
 }
 #endif
 
