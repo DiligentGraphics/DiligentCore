@@ -176,7 +176,7 @@ void ValidateTextureRegion(const TextureDesc& TexDesc, Uint32 MipLevel, Uint32 S
 #endif
 }
 
-void ValidateUpdateDataParams( const TextureDesc& TexDesc, Uint32 MipLevel, Uint32 Slice, const Box& DstBox, const TextureSubResData& SubresData )
+void ValidateUpdateTextureParams( const TextureDesc& TexDesc, Uint32 MipLevel, Uint32 Slice, const Box& DstBox, const TextureSubResData& SubresData )
 {
     VERIFY((SubresData.pData != nullptr) ^ (SubresData.pSrcBuffer != nullptr), "Either CPU data pointer (pData) or GPU buffer (pSrcBuffer) must not be null, but not both");
     ValidateTextureRegion(TexDesc, MipLevel, Slice, DstBox);
@@ -214,7 +214,7 @@ void ValidateUpdateDataParams( const TextureDesc& TexDesc, Uint32 MipLevel, Uint
 #endif
 }
 
-void VliadateCopyTextureDataParams( const TextureDesc &SrcTexDesc, Uint32 SrcMipLevel, Uint32 SrcSlice, const Box *pSrcBox,
+void ValidateCopyTextureParams( const TextureDesc &SrcTexDesc, Uint32 SrcMipLevel, Uint32 SrcSlice, const Box *pSrcBox,
                                     const TextureDesc &DstTexDesc, Uint32 DstMipLevel, Uint32 DstSlice,
                                     Uint32 DstX, Uint32 DstY, Uint32 DstZ )
 {

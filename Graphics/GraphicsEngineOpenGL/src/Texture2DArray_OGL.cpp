@@ -90,7 +90,7 @@ Texture2DArray_OGL::Texture2DArray_OGL( IReferenceCounters *pRefCounters,
                         // we will get into TextureBaseGL::UpdateData(), because instance of Texture2DArray_OGL
                         // is not fully constructed yet.
                         // To call the required function, we need to explicitly specify the class: 
-                        Texture2DArray_OGL::UpdateData(pDeviceContext, Mip, Slice, DstBox, InitData.pSubResources[Slice*m_Desc.MipLevels + Mip]);
+                        Texture2DArray_OGL::UpdateData(ContextState, Mip, Slice, DstBox, InitData.pSubResources[Slice*m_Desc.MipLevels + Mip]);
                     }
                 }
             }
@@ -121,10 +121,9 @@ Texture2DArray_OGL::~Texture2DArray_OGL()
 {
 }
 
-void Texture2DArray_OGL::UpdateData(IDeviceContext *pContext, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData)
+void Texture2DArray_OGL::UpdateData(GLContextState &ContextState, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData)
 {
-    auto &ContextState = ValidatedCast<DeviceContextGLImpl>(pContext)->GetContextState();
-    TextureBaseGL::UpdateData(ContextState, pContext, MipLevel, Slice, DstBox, SubresData);
+    TextureBaseGL::UpdateData(ContextState, MipLevel, Slice, DstBox, SubresData);
 
     ContextState.BindTexture(-1, m_BindTarget, m_GlTexture);
 

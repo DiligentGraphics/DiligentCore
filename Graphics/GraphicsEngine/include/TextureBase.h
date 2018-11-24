@@ -37,10 +37,10 @@ namespace Diligent
 {
 
 void ValidateTextureDesc(const TextureDesc& TexDesc);
-void ValidateUpdateDataParams( const TextureDesc &TexDesc, Uint32 MipLevel, Uint32 Slice, const Box& DstBox, const TextureSubResData& SubresData );
-void VliadateCopyTextureDataParams( const TextureDesc& SrcTexDesc, Uint32 SrcMipLevel, Uint32 SrcSlice, const Box* pSrcBox,
-                                    const TextureDesc& DstTexDesc, Uint32 DstMipLevel, Uint32 DstSlice,
-                                    Uint32 DstX, Uint32 DstY, Uint32 DstZ );
+void ValidateUpdateTextureParams( const TextureDesc &TexDesc, Uint32 MipLevel, Uint32 Slice, const Box& DstBox, const TextureSubResData& SubresData );
+void ValidateCopyTextureParams( const TextureDesc& SrcTexDesc, Uint32 SrcMipLevel, Uint32 SrcSlice, const Box* pSrcBox,
+                                const TextureDesc& DstTexDesc, Uint32 DstMipLevel, Uint32 DstSlice,
+                                Uint32 DstX, Uint32 DstY, Uint32 DstZ );
 void ValidateMapTextureParams(const TextureDesc&        TexDesc,
                               Uint32                    MipLevel,
                               Uint32                    ArraySlice,
@@ -140,21 +140,6 @@ public:
 
         CreateViewInternal( ViewDesc, ppView, false );
     }
-
-    /// Base implementaiton of ITexture::UpdateData(); validates input parameters
-    virtual void UpdateData( IDeviceContext* pContext, Uint32 MipLevel, Uint32 Slice, const Box& DstBox, const TextureSubResData& SubresData )override = 0;
-
-    /// Base implementaiton of ITexture::CopyData(); validates input parameters
-    virtual void CopyData( IDeviceContext* pContext,
-                           ITexture* pSrcTexture,
-                           Uint32 SrcMipLevel,
-                           Uint32 SrcSlice,
-                           const Box *pSrcBox,
-                           Uint32 DstMipLevel,
-                           Uint32 DstSlice,
-                           Uint32 DstX,
-                           Uint32 DstY,
-                           Uint32 DstZ )override = 0;
 
     /// Base implementaiton of ITexture::Map()
     virtual void Map(IDeviceContext*           pContext,
@@ -500,32 +485,6 @@ void TextureBase<BaseInterface, TRenderDeviceImpl, TTextureViewImpl, TTexViewObj
         m_pDefaultUAV.reset( static_cast<TTextureViewImpl*>(pUAV) );
         VERIFY( m_pDefaultUAV->GetDesc().ViewType == TEXTURE_VIEW_UNORDERED_ACCESS, "Unexpected view type" );
    }
-}
-
-
-template<class BaseInterface, class TRenderDeviceImpl,class TTextureViewImpl, class TTexViewObjAllocator>
-void TextureBase<BaseInterface, TRenderDeviceImpl, TTextureViewImpl, TTexViewObjAllocator> :: UpdateData( IDeviceContext* pContext, Uint32 MipLevel, Uint32 Slice, const Box& DstBox, const TextureSubResData& SubresData )
-{
-    ValidateUpdateDataParams( this->m_Desc, MipLevel, Slice, DstBox, SubresData );
-}
-
-template<class BaseInterface, class TRenderDeviceImpl,class TTextureViewImpl, class TTexViewObjAllocator>
-void TextureBase<BaseInterface, TRenderDeviceImpl, TTextureViewImpl, TTexViewObjAllocator> :: CopyData(
-                                                                IDeviceContext* pContext,
-                                                                ITexture* pSrcTexture,
-                                                                Uint32 SrcMipLevel,
-                                                                Uint32 SrcSlice,
-                                                                const Box *pSrcBox,
-                                                                Uint32 DstMipLevel,
-                                                                Uint32 DstSlice,
-                                                                Uint32 DstX,
-                                                                Uint32 DstY,
-                                                                Uint32 DstZ )
-{
-    VERIFY( pContext, "pContext is null" );
-    VERIFY( pSrcTexture, "pSrcTexture is null" );
-    VliadateCopyTextureDataParams( pSrcTexture->GetDesc(), SrcMipLevel, SrcSlice, pSrcBox,
-                                   this->GetDesc(), DstMipLevel, DstSlice, DstX, DstY, DstZ );
 }
 
 template<class BaseInterface, class TRenderDeviceImpl,class TTextureViewImpl, class TTexViewObjAllocator>

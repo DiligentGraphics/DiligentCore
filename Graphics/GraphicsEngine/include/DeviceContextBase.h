@@ -36,6 +36,7 @@
 #include "SwapChain.h"
 #include "ValidatedCast.h"
 #include "GraphicsAccessories.h"
+#include "TextureBase.h"
 
 namespace Diligent
 {
@@ -113,6 +114,22 @@ public:
 
     /// Base implementation of IDeviceContext::CopyBuffer(); validates input parameters.
     virtual void CopyBuffer(IBuffer *pSrcBuffer, IBuffer *pDstBuffer, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size)override = 0;
+
+    /// Base implementaiton of IDeviceContext::UpdateData(); validates input parameters
+    virtual void UpdateTexture( ITexture* pTexture, Uint32 MipLevel, Uint32 Slice, const Box& DstBox, const TextureSubResData& SubresData )override = 0;
+
+    /// Base implementaiton of IDeviceContext::CopyTexture(); validates input parameters
+    virtual void CopyTexture( ITexture* pSrcTexture,
+                              Uint32 SrcMipLevel,
+                              Uint32 SrcSlice,
+                              const Box *pSrcBox,
+                              ITexture* pDstTexture,
+                              Uint32 DstMipLevel,
+                              Uint32 DstSlice,
+                              Uint32 DstX,
+                              Uint32 DstY,
+                              Uint32 DstZ )override = 0;
+
 
     /// Sets the strong pointer to the swap chain
     virtual void SetSwapChain( ISwapChain* pSwapChain )override final { m_pSwapChain = pSwapChain; }
@@ -635,7 +652,8 @@ inline void DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType
 
 
 template<typename BaseInterface, typename BufferImplType, typename TextureViewImplType, typename PipelineStateImplType>
-inline void DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType, PipelineStateImplType> :: UpdateBuffer(IBuffer* pBuffer, Uint32 Offset, Uint32 Size, const PVoid pData)
+inline void DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType, PipelineStateImplType> ::
+            UpdateBuffer(IBuffer* pBuffer, Uint32 Offset, Uint32 Size, const PVoid pData)
 {
     VERIFY(pBuffer != nullptr, "Buffer must not be null");
     const auto& BuffDesc = ValidatedCast<BufferImplType>(pBuffer)->GetDesc();
@@ -645,7 +663,8 @@ inline void DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType
 }
 
 template<typename BaseInterface, typename BufferImplType, typename TextureViewImplType, typename PipelineStateImplType>
-inline void DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType, PipelineStateImplType> :: CopyBuffer(IBuffer *pSrcBuffer, IBuffer *pDstBuffer, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size)
+inline void DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType, PipelineStateImplType> ::
+            CopyBuffer(IBuffer *pSrcBuffer, IBuffer *pDstBuffer, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size)
 {
     VERIFY(pSrcBuffer != nullptr, "Source buffer must not be null");
     VERIFY(pDstBuffer != nullptr, "Destination buffer must not be null");
@@ -656,9 +675,38 @@ inline void DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType
 }
 
 
+template<typename BaseInterface, typename BufferImplType, typename TextureViewImplType, typename PipelineStateImplType>
+inline void DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType, PipelineStateImplType> :: 
+            UpdateTexture( ITexture* pTexture, Uint32 MipLevel, Uint32 Slice, const Box& DstBox, const TextureSubResData& SubresData )
+{
+    VERIFY( pTexture != nullptr, "pTexture must not be null" );
+    ValidateUpdateTextureParams( pTexture->GetDesc(), MipLevel, Slice, DstBox, SubresData );
+}
+
+template<typename BaseInterface, typename BufferImplType, typename TextureViewImplType, typename PipelineStateImplType>
+inline void DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType, PipelineStateImplType> ::
+            CopyTexture( ITexture*  pSrcTexture,
+                         Uint32     SrcMipLevel,
+                         Uint32     SrcSlice,
+                         const Box* pSrcBox,
+                         ITexture*  pDstTexture,
+                         Uint32     DstMipLevel,
+                         Uint32     DstSlice,
+                         Uint32     DstX,
+                         Uint32     DstY,
+                         Uint32     DstZ )
+{
+    VERIFY( pSrcTexture, "pSrcTexture must not be null" );
+    VERIFY( pDstTexture, "pSrcTexture must not be null" );
+    ValidateCopyTextureParams( pSrcTexture->GetDesc(), SrcMipLevel, SrcSlice, pSrcBox,
+                               pDstTexture->GetDesc(), DstMipLevel, DstSlice, DstX, DstY, DstZ );
+}
+
+
 #ifdef DEVELOPMENT
 template<typename BaseInterface, typename BufferImplType, typename TextureViewImplType, typename PipelineStateImplType>
-inline bool DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType, PipelineStateImplType> :: DvpVerifyDrawArguments(const DrawAttribs& drawAttribs)
+inline bool DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType, PipelineStateImplType> ::
+            DvpVerifyDrawArguments(const DrawAttribs& drawAttribs)
 {
     if (!m_pPipelineState)
     {
@@ -694,7 +742,8 @@ inline bool DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType
 }
 
 template<typename BaseInterface, typename BufferImplType, typename TextureViewImplType, typename PipelineStateImplType>
-inline bool DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType, PipelineStateImplType> :: DvpVerifyDispatchArguments(const DispatchComputeAttribs &DispatchAttrs)
+inline bool DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType, PipelineStateImplType> ::
+            DvpVerifyDispatchArguments(const DispatchComputeAttribs& DispatchAttrs)
 {
     if (!m_pPipelineState)
     {
@@ -724,7 +773,8 @@ inline bool DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType
 }
 
 template<typename BaseInterface, typename BufferImplType, typename TextureViewImplType, typename PipelineStateImplType>
-void DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType, PipelineStateImplType> :: DvpVerifyStateTransitionDesc(const StateTransitionDesc& Barrier)
+void DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType, PipelineStateImplType> ::
+     DvpVerifyStateTransitionDesc(const StateTransitionDesc& Barrier)
 {
     DEV_CHECK_ERR((Barrier.pTexture != nullptr) ^ (Barrier.pBuffer != nullptr), "Exactly one of pTexture or pBuffer members of StateTransitionDesc must not be null");
     DEV_CHECK_ERR(Barrier.NewState != RESOURCE_STATE_UNKNOWN, "New resource state can't be unknown");

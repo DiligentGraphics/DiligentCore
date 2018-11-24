@@ -31,6 +31,8 @@
 namespace Diligent
 {
 
+class IDeviceContext;
+
 // {A64B0E60-1B5E-4CFD-B880-663A1ADCBE98}
 static constexpr INTERFACE_ID IID_Texture =
 { 0xa64b0e60, 0x1b5e, 0x4cfd, { 0xb8, 0x80, 0x66, 0x3a, 0x1a, 0xdc, 0xbe, 0x98 } };
@@ -301,41 +303,6 @@ public:
     /// \note The function does not increase the reference counter for the returned interface, so
     ///       Release() must *NOT* be called.
     virtual ITextureView* GetDefaultView( TEXTURE_VIEW_TYPE ViewType ) = 0;
-
-    /// Updates the data in the texture
-
-    /// \param [in] pContext - Pointer to the device context interface to be used to perform the operation.
-    /// \param [in] MipLevel - Mip level of the texture subresource to update.
-    /// \param [in] Slice - Array slice. Should be 0 for non-array textures.
-    /// \param [in] DstBox - Destination region on the texture to update.
-    /// \param [in] SubresData - Source data to copy to the texture.
-    virtual void UpdateData( class IDeviceContext *pContext, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData ) = 0;
-
-    /// Copies data from another texture
-
-    /// \param [in] pContext - Pointer to the device context interface to be used to perform the operation.
-    /// \param [in] pSrcTexture - Source texture for the copy operation
-    /// \param [in] SrcMipLevel - Mip level of the source texture to copy data from.
-    /// \param [in] SrcSlice - Array slice of the source texture to copy data from. 
-    ///                        Should be 0 for non-array textures.
-    /// \param [in] pSrcBox - Source region to copy.
-    ///                       Use nullptr to copy the entire subresource.
-    /// \param [in] DstMipLevel - Mip level to copy data to.
-    /// \param [in] DstSlice - Array slice to copy data to. 
-    ///                        Must be 0 for non-array textures.
-    /// \param [in] DstX - X offset on the destination subresource
-    /// \param [in] DstY - Y offset on the destination subresource
-    /// \param [in] DstZ - Z offset on the destination subresource
-    virtual void CopyData(IDeviceContext *pContext, 
-                          ITexture *pSrcTexture, 
-                          Uint32 SrcMipLevel,
-                          Uint32 SrcSlice,
-                          const Box *pSrcBox,
-                          Uint32 DstMipLevel,
-                          Uint32 DstSlice,
-                          Uint32 DstX,
-                          Uint32 DstY,
-                          Uint32 DstZ) = 0;
 
     /// Map the texture
 

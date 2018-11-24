@@ -1280,6 +1280,84 @@ namespace Diligent
         ++m_State.NumCommands;
     }
 
+    void DeviceContextVkImpl::UpdateTexture(ITexture* pTexture, Uint32 MipLevel, Uint32 Slice, const Box& DstBox, const TextureSubResData& SubresData)
+    {
+        TDeviceContextBase::UpdateTexture( pTexture, MipLevel, Slice, DstBox, SubresData );
+
+        auto* pTexVk = ValidatedCast<TextureVkImpl>(pTexture);
+        // OpenGL backend uses UpdateData() to initialize textures, so we can't check the usage in ValidateUpdateTextureParams()
+        DEV_CHECK_ERR( pTexVk->GetDesc().Usage == USAGE_DEFAULT, "Only USAGE_DEFAULT textures should be updated with UpdateData()" );
+
+        //pCtxVk->CopyTextureRegion(SubresData.pSrcBuffer, SubresData.Stride, SubresData.DepthStride, this, DstSubResIndex, DstBox);
+        UpdateTextureRegion(SubresData.pData, SubresData.Stride, SubresData.DepthStride, *pTexVk, MipLevel, Slice, DstBox);
+    }
+
+    void DeviceContextVkImpl::CopyTexture(ITexture*  pSrcTexture, 
+                                          Uint32     SrcMipLevel,
+                                          Uint32     SrcSlice,
+                                          const Box* pSrcBox,
+                                          ITexture*  pDstTexture, 
+                                          Uint32     DstMipLevel,
+                                          Uint32     DstSlice,
+                                          Uint32     DstX,
+                                          Uint32     DstY,
+                                          Uint32     DstZ)
+    {
+        TDeviceContextBase::CopyTexture( pSrcTexture, SrcMipLevel, SrcSlice, pSrcBox,
+                                         pDstTexture, DstMipLevel, DstSlice, DstX, DstY, DstZ );
+
+        auto* pSrcTexVk = ValidatedCast<TextureVkImpl>( pSrcTexture );
+        auto* pDstTexVk = ValidatedCast<TextureVkImpl>( pDstTexture );
+        const auto& DstTexDesc = pDstTexVk->GetDesc();
+        VkImageCopy CopyRegion = {};
+        if( pSrcBox )
+        {
+            CopyRegion.srcOffset.x = pSrcBox->MinX;
+            CopyRegion.srcOffset.y = pSrcBox->MinY;
+            CopyRegion.srcOffset.z = pSrcBox->MinZ;
+            CopyRegion.extent.width  = pSrcBox->MaxX - pSrcBox->MinX;
+            CopyRegion.extent.height = std::max(pSrcBox->MaxY - pSrcBox->MinY, 1u);
+            CopyRegion.extent.depth  = std::max(pSrcBox->MaxZ - pSrcBox->MinZ, 1u);
+        }
+        else
+        {
+            CopyRegion.srcOffset = VkOffset3D{0,0,0};
+            CopyRegion.extent.width  = std::max(DstTexDesc.Width  >> SrcMipLevel, 1u);
+            CopyRegion.extent.height = std::max(DstTexDesc.Height >> SrcMipLevel, 1u);
+            if(DstTexDesc.Type == RESOURCE_DIM_TEX_3D)
+                CopyRegion.extent.depth = std::max(DstTexDesc.Depth >> SrcMipLevel, 1u);
+            else
+                CopyRegion.extent.depth = 1;
+        }
+
+        const auto& FmtAttribs = GetDevice()->GetTextureFormatInfo(DstTexDesc.Format);
+        VkImageAspectFlags aspectMask = 0;
+        if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH)
+            aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+        else if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
+        {
+            aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+        }
+        else
+            aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+        CopyRegion.srcSubresource.baseArrayLayer = SrcSlice;
+        CopyRegion.srcSubresource.layerCount     = 1;
+        CopyRegion.srcSubresource.mipLevel       = SrcMipLevel;
+        CopyRegion.srcSubresource.aspectMask     = aspectMask;
+    
+        CopyRegion.dstSubresource.baseArrayLayer = DstSlice;
+        CopyRegion.dstSubresource.layerCount     = 1;
+        CopyRegion.dstSubresource.mipLevel       = DstMipLevel;
+        CopyRegion.dstSubresource.aspectMask     = aspectMask;
+
+        CopyRegion.dstOffset.x = DstX;
+        CopyRegion.dstOffset.y = DstY;
+        CopyRegion.dstOffset.z = DstZ;
+
+        CopyTextureRegion(pSrcTexVk, pDstTexVk, CopyRegion);
+    }
+
     void DeviceContextVkImpl::CopyTextureRegion(TextureVkImpl *pSrcTexture, TextureVkImpl *pDstTexture, const VkImageCopy &CopyRegion)
     {
         EnsureVkCmdBuffer();

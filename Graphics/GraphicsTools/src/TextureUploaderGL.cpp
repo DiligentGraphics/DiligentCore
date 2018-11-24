@@ -206,7 +206,7 @@ namespace Diligent
                         const auto &TexDesc = OperationInfo.pDstTexture->GetDesc();
                         DstBox.MaxX = TexDesc.Width;
                         DstBox.MaxY = TexDesc.Height;
-                        OperationInfo.pDstTexture->UpdateData(pContext, OperationInfo.DstMip, OperationInfo.DstSlice, DstBox, SubResData);
+                        pContext->UpdateTexture(OperationInfo.pDstTexture, OperationInfo.DstMip, OperationInfo.DstSlice, DstBox, SubResData);
                         pBuffer->SignalCopyScheduled();
                     }
                     break;

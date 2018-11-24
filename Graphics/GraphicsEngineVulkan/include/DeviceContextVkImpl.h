@@ -99,6 +99,19 @@ public:
 
     virtual void CopyBuffer(IBuffer *pSrcBuffer, IBuffer *pDstBuffer, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size)override final;
 
+    virtual void UpdateTexture(ITexture* pTexture, Uint32 MipLevel, Uint32 Slice, const Box& DstBox, const TextureSubResData& SubresData)override final;
+
+    virtual void CopyTexture(ITexture*  pSrcTexture, 
+                             Uint32     SrcMipLevel,
+                             Uint32     SrcSlice,
+                             const Box* pSrcBox,
+                             ITexture*  pDstTexture, 
+                             Uint32     DstMipLevel,
+                             Uint32     DstSlice,
+                             Uint32     DstX,
+                             Uint32     DstY,
+                             Uint32     DstZ)override final;
+
     virtual void FinishCommandList(class ICommandList** ppCommandList)override final;
 
     virtual void ExecuteCommandList(class ICommandList* pCommandList)override final;

@@ -937,6 +937,84 @@ namespace Diligent
         ++m_State.NumCommands;
     }
 
+    void DeviceContextD3D12Impl::UpdateTexture(ITexture* pTexture, Uint32 MipLevel, Uint32 Slice, const Box& DstBox, const TextureSubResData& SubresData)
+    {
+        TDeviceContextBase::UpdateTexture( pTexture, MipLevel, Slice, DstBox, SubresData );
+
+        auto* pTexD3D12 = ValidatedCast<TextureD3D12Impl>(pTexture);
+        const auto& Desc = pTexD3D12->GetDesc();
+        // OpenGL backend uses UpdateData() to initialize textures, so we can't check the usage in ValidateUpdateTextureParams()
+        DEV_CHECK_ERR( Desc.Usage == USAGE_DEFAULT, "Only USAGE_DEFAULT textures should be updated with UpdateData()" );
+
+        Box BlockAlignedBox;
+        const auto& FmtAttribs = GetTextureFormatAttribs(Desc.Format);
+        const Box* pBox = nullptr;
+        if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
+        {
+            // Align update region by the compressed block size
+
+            VERIFY( (DstBox.MinX % FmtAttribs.BlockWidth) == 0, "Update region min X coordinate (", DstBox.MinX, ") must be multiple of a compressed block width (", Uint32{FmtAttribs.BlockWidth}, ")");
+            BlockAlignedBox.MinX = DstBox.MinX;
+            VERIFY( (FmtAttribs.BlockWidth & (FmtAttribs.BlockWidth-1)) == 0, "Compressed block width (", Uint32{FmtAttribs.BlockWidth}, ") is expected to be power of 2");
+            BlockAlignedBox.MaxX = (DstBox.MaxX + FmtAttribs.BlockWidth-1) & ~(FmtAttribs.BlockWidth-1);
+ 
+            VERIFY( (DstBox.MinY % FmtAttribs.BlockHeight) == 0, "Update region min Y coordinate (", DstBox.MinY, ") must be multiple of a compressed block height (", Uint32{FmtAttribs.BlockHeight}, ")");
+            BlockAlignedBox.MinY = DstBox.MinY;
+            VERIFY( (FmtAttribs.BlockHeight & (FmtAttribs.BlockHeight-1)) == 0, "Compressed block height (", Uint32{FmtAttribs.BlockHeight}, ") is expected to be power of 2");
+            BlockAlignedBox.MaxY = (DstBox.MaxY + FmtAttribs.BlockHeight-1) & ~(FmtAttribs.BlockHeight-1);
+
+            BlockAlignedBox.MinZ = DstBox.MinZ;
+            BlockAlignedBox.MaxZ = DstBox.MaxZ;
+
+            pBox = &BlockAlignedBox;
+        }
+        else
+        {
+            pBox = &DstBox;
+        }
+        auto DstSubResIndex = D3D12CalcSubresource(MipLevel, Slice, 0, Desc.MipLevels, Desc.ArraySize);
+        if (SubresData.pSrcBuffer == nullptr)
+            UpdateTextureRegion(SubresData.pData, SubresData.Stride, SubresData.DepthStride, *pTexD3D12, DstSubResIndex, *pBox);
+        else
+            CopyTextureRegion(SubresData.pSrcBuffer, 0, SubresData.Stride, SubresData.DepthStride, *pTexD3D12, DstSubResIndex, *pBox);
+    }
+
+    void DeviceContextD3D12Impl::CopyTexture(ITexture*  pSrcTexture, 
+                                             Uint32     SrcMipLevel,
+                                             Uint32     SrcSlice,
+                                             const Box* pSrcBox,
+                                             ITexture*  pDstTexture, 
+                                             Uint32     DstMipLevel,
+                                             Uint32     DstSlice,
+                                             Uint32     DstX,
+                                             Uint32     DstY,
+                                             Uint32     DstZ)
+    {
+        TDeviceContextBase::CopyTexture( pSrcTexture, SrcMipLevel, SrcSlice, pSrcBox,
+                                         pDstTexture, DstMipLevel, DstSlice, DstX, DstY, DstZ );
+
+        auto* pSrcTexD3D12 = ValidatedCast<TextureD3D12Impl>( pSrcTexture );
+        auto* pDstTexD3D12 = ValidatedCast<TextureD3D12Impl>( pDstTexture );
+        const auto& SrcTexDesc = pSrcTexD3D12->GetDesc();
+        const auto& DstTexDesc = pDstTexD3D12->GetDesc();
+
+        D3D12_BOX D3D12SrcBox, *pD3D12SrcBox = nullptr;
+        if( pSrcBox )
+        {
+            D3D12SrcBox.left    = pSrcBox->MinX;
+            D3D12SrcBox.right   = pSrcBox->MaxX;
+            D3D12SrcBox.top     = pSrcBox->MinY;
+            D3D12SrcBox.bottom  = pSrcBox->MaxY;
+            D3D12SrcBox.front   = pSrcBox->MinZ;
+            D3D12SrcBox.back    = pSrcBox->MaxZ;
+            pD3D12SrcBox = &D3D12SrcBox;
+        }
+
+        auto DstSubResIndex = D3D12CalcSubresource(DstMipLevel, DstSlice, 0, DstTexDesc.MipLevels, DstTexDesc.ArraySize);
+        auto SrcSubResIndex = D3D12CalcSubresource(SrcMipLevel, SrcSlice, 0, SrcTexDesc.MipLevels, SrcTexDesc.ArraySize);
+        CopyTextureRegion(pSrcTexD3D12, SrcSubResIndex, pD3D12SrcBox, pDstTexD3D12, DstSubResIndex, DstX, DstY, DstZ);
+    }
+
     void DeviceContextD3D12Impl::CopyTextureRegion(TextureD3D12Impl* pSrcTexture, Uint32 SrcSubResIndex, const D3D12_BOX* pD3D12SrcBox,
                                                    TextureD3D12Impl* pDstTexture, Uint32 DstSubResIndex, Uint32 DstX, Uint32 DstY, Uint32 DstZ)
     {

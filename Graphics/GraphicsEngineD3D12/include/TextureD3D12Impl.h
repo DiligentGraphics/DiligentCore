@@ -61,9 +61,6 @@ public:
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
 
-    virtual void UpdateData( IDeviceContext *pContext, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData )override final;
-
-    //virtual void CopyData(CTexture *pSrcTexture, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size);
     virtual void Map( IDeviceContext*           pContext,
                       Uint32                    MipLevel,
                       Uint32                    ArraySlice,
@@ -79,17 +76,6 @@ public:
 
     virtual void SetD3D12ResourceState(D3D12_RESOURCE_STATES state)override final;
 
-    void CopyData(IDeviceContext* pContext, 
-                  ITexture*       pSrcTexture, 
-                  Uint32          SrcMipLevel,
-                  Uint32          SrcSlice,
-                  const Box*      pSrcBox,
-                  Uint32          DstMipLevel,
-                  Uint32          DstSlice,
-                  Uint32          DstX,
-                  Uint32          DstY,
-                  Uint32          DstZ);
-    
     D3D12_CPU_DESCRIPTOR_HANDLE GetMipLevelUAV(Uint32 Mip)
     {
         return m_MipUAVs.GetCpuHandle(Mip);

@@ -1028,6 +1028,31 @@ namespace Diligent
         pDstBufferGL->CopyData(m_ContextState, *pSrcBufferGL, SrcOffset, DstOffset, Size);
     }
 
+    void DeviceContextGLImpl::UpdateTexture(ITexture* pTexture, Uint32 MipLevel, Uint32 Slice, const Box& DstBox, const TextureSubResData& SubresData)
+    {
+        TDeviceContextBase::UpdateTexture( pTexture, MipLevel, Slice, DstBox, SubresData );
+        auto* pTexGL = ValidatedCast<TextureBaseGL>(pTexture);
+        pTexGL->UpdateData(m_ContextState, MipLevel, Slice, DstBox, SubresData);
+    }
+
+    void DeviceContextGLImpl::CopyTexture(ITexture*  pSrcTexture, 
+                                          Uint32     SrcMipLevel,
+                                          Uint32     SrcSlice,
+                                          const Box* pSrcBox,
+                                          ITexture*  pDstTexture, 
+                                          Uint32     DstMipLevel,
+                                          Uint32     DstSlice,
+                                          Uint32     DstX,
+                                          Uint32     DstY,
+                                          Uint32     DstZ)
+    {
+        TDeviceContextBase::CopyTexture( pSrcTexture, SrcMipLevel, SrcSlice, pSrcBox,
+                                         pDstTexture, DstMipLevel, DstSlice, DstX, DstY, DstZ );
+        auto* pSrcTexGL = ValidatedCast<TextureBaseGL>(pSrcTexture);
+        auto* pDstTexGL = ValidatedCast<TextureBaseGL>(pDstTexture);
+        pDstTexGL->CopyData(this, pSrcTexGL, SrcMipLevel, SrcSlice, pSrcBox, DstMipLevel, DstSlice, DstX, DstY, DstZ);
+    }
+
     void DeviceContextGLImpl::TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers)
     {
 

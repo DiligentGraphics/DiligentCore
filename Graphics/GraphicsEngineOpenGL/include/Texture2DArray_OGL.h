@@ -48,7 +48,7 @@ public:
 				        bool bIsDeviceInternal = false);
     ~Texture2DArray_OGL();
 
-    virtual void UpdateData( IDeviceContext *pContext, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData )override final;
+    virtual void UpdateData( class GLContextState &CtxState, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData )override final;
     virtual void AttachToFramebuffer( const struct TextureViewDesc& ViewDesc, GLenum AttachmentPoint )override final;
 
 private:

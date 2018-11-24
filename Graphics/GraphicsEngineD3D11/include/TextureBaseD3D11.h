@@ -52,9 +52,6 @@ public:
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
 
-    virtual void UpdateData( IDeviceContext *pContext, Uint32 MipLevel, Uint32 Slice, const Box& DstBox, const TextureSubResData& SubresData )override final;
-
-    //virtual void CopyData(CTexture *pSrcTexture, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size);
     virtual void Map( IDeviceContext*           pContext,
                       Uint32                    MipLevel,
                       Uint32                    ArraySlice,
@@ -68,17 +65,6 @@ public:
     virtual ID3D11Resource* GetD3D11Texture()override final{ return m_pd3d11Texture; }
 
     virtual void* GetNativeHandle()override final { return GetD3D11Texture(); }
-
-    void CopyData(IDeviceContext* pContext, 
-                  ITexture*       pSrcTexture, 
-                  Uint32          SrcMipLevel,
-                  Uint32          SrcSlice,
-                  const Box*      pSrcBox,
-                  Uint32          DstMipLevel,
-                  Uint32          DstSlice,
-                  Uint32          DstX,
-                  Uint32          DstY,
-                  Uint32          DstZ);
 
     void AddState  (RESOURCE_STATE State)
     {

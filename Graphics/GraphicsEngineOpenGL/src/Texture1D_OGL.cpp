@@ -70,7 +70,7 @@ Texture1D_OGL::Texture1D_OGL( IReferenceCounters *pRefCounters,
                 // we will get into TextureBaseGL::UpdateData(), because instance of Texture1D_OGL
                 // is not fully constructed yet.
                 // To call the required function, we need to explicitly specify the class: 
-                Texture1D_OGL::UpdateData( pDeviceContext, Mip, 0, DstBox, InitData.pSubResources[Mip] );
+                Texture1D_OGL::UpdateData( ContextState, Mip, 0, DstBox, InitData.pSubResources[Mip] );
             }
         }
         else
@@ -97,10 +97,9 @@ Texture1D_OGL::~Texture1D_OGL()
 {
 }
 
-void Texture1D_OGL::UpdateData( IDeviceContext *pContext, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData )
+void Texture1D_OGL::UpdateData( GLContextState &ContextState, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData )
 {
-    auto &ContextState = ValidatedCast<DeviceContextGLImpl>(pContext)->GetContextState();
-    TextureBaseGL::UpdateData(ContextState, pContext, MipLevel, Slice, DstBox, SubresData);
+    TextureBaseGL::UpdateData(ContextState, MipLevel, Slice, DstBox, SubresData);
 
     ContextState.BindTexture( -1, m_BindTarget, m_GlTexture );
 

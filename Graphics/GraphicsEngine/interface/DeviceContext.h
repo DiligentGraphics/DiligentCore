@@ -533,17 +533,53 @@ public:
     /// \param [in] Offset  - Offset in bytes from the beginning of the buffer to the update region.
     /// \param [in] Size    - Size in bytes of the data region to update.
     /// \param [in] pData   - Pointer to the data to write to the buffer.
-    virtual void UpdateBuffer(IBuffer *pBuffer, Uint32 Offset, Uint32 Size, const PVoid pData) = 0;
+    virtual void UpdateBuffer(IBuffer* pBuffer, Uint32 Offset, Uint32 Size, const PVoid pData) = 0;
 
     /// Copies the data from one buffer to another
 
     /// \param [in] pSrcBuffer - Source buffer to copy data from.
-    /// \param [in] pSrcBuffer - Destination buffer to copy data to.
+    /// \param [in] pDstBuffer - Destination buffer to copy data to.
     /// \param [in] SrcOffset  - Offset in bytes from the beginning of the source buffer to the beginning of data to copy.
     /// \param [in] DstOffset  - Offset in bytes from the beginning of the destination buffer to the beginning 
     ///                          of the destination region.
     /// \param [in] Size       - Size in bytes of data to copy.
-    virtual void CopyBuffer(IBuffer *pSrcBuffer, IBuffer *pDstBuffer, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size) = 0;
+    virtual void CopyBuffer(IBuffer* pSrcBuffer, IBuffer* pDstBuffer, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size) = 0;
+
+
+    /// Updates the data in the texture
+
+    /// \param [in] pTexture   - Pointer to the device context interface to be used to perform the operation.
+    /// \param [in] MipLevel   - Mip level of the texture subresource to update.
+    /// \param [in] Slice      - Array slice. Should be 0 for non-array textures.
+    /// \param [in] DstBox     - Destination region on the texture to update.
+    /// \param [in] SubresData - Source data to copy to the texture.
+    virtual void UpdateTexture(ITexture* pTexture, Uint32 MipLevel, Uint32 Slice, const Box& DstBox, const TextureSubResData& SubresData) = 0;
+
+    /// Copies data from one texture to another
+
+    /// \param [in] pSrcTexture - Source texture to copy data from
+    /// \param [in] SrcMipLevel - Mip level of the source texture to copy data from.
+    /// \param [in] SrcSlice    - Array slice of the source texture to copy data from. 
+    ///                           Should be 0 for non-array textures.
+    /// \param [in] pSrcBox     - Source region to copy.
+    ///                           Use nullptr to copy the entire subresource.
+    /// \param [in] pDstTexture - Destination texture to copy data to
+    /// \param [in] DstMipLevel - Mip level to copy data to.
+    /// \param [in] DstSlice    - Array slice to copy data to. 
+    ///                           Must be 0 for non-array textures.
+    /// \param [in] DstX        - X offset on the destination subresource
+    /// \param [in] DstY        - Y offset on the destination subresource
+    /// \param [in] DstZ        - Z offset on the destination subresource
+    virtual void CopyTexture(ITexture* pSrcTexture, 
+                             Uint32 SrcMipLevel,
+                             Uint32 SrcSlice,
+                             const Box *pSrcBox,
+                             ITexture* pDstTexture, 
+                             Uint32 DstMipLevel,
+                             Uint32 DstSlice,
+                             Uint32 DstX,
+                             Uint32 DstY,
+                             Uint32 DstZ) = 0;
 
 
     /// Sets the swap chain in the device context

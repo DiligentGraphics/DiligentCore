@@ -77,7 +77,7 @@ TextureCube_OGL::TextureCube_OGL( IReferenceCounters *pRefCounters,
                     // we will get into TextureBaseGL::UpdateData(), because instance of TextureCube_OGL
                     // is not fully constructed yet.
                     // To call the required function, we need to explicitly specify the class: 
-                    TextureCube_OGL::UpdateData( pDeviceContext, Mip, Face, DstBox, InitData.pSubResources[Face*m_Desc.MipLevels + Mip] );
+                    TextureCube_OGL::UpdateData( ContextState, Mip, Face, DstBox, InitData.pSubResources[Face*m_Desc.MipLevels + Mip] );
                 }
             }
         }
@@ -117,10 +117,9 @@ static const GLenum CubeMapFaces[6] =
     GL_TEXTURE_CUBE_MAP_NEGATIVE_Z
 };
 
-void TextureCube_OGL::UpdateData( IDeviceContext *pContext, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData )
+void TextureCube_OGL::UpdateData( GLContextState &ContextState, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData )
 {
-    auto &ContextState = ValidatedCast<DeviceContextGLImpl>(pContext)->GetContextState();
-    TextureBaseGL::UpdateData(ContextState, pContext, MipLevel, Slice, DstBox, SubresData);
+    TextureBaseGL::UpdateData(ContextState, MipLevel, Slice, DstBox, SubresData);
 
     // Texture must be bound as GL_TEXTURE_CUBE_MAP, but glTexSubImage2D() 
     // then takes one of GL_TEXTURE_CUBE_MAP_POSITIVE_X ... GL_TEXTURE_CUBE_MAP_NEGATIVE_Z

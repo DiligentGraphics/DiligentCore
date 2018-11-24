@@ -973,6 +973,83 @@ namespace Diligent
     }
 
 
+    void DeviceContextD3D11Impl::UpdateTexture(ITexture*                pTexture,
+                                               Uint32                   MipLevel,
+                                               Uint32                   Slice,
+                                               const Box&               DstBox,
+                                               const TextureSubResData& SubresData)
+    {
+        TDeviceContextBase::UpdateTexture( pTexture, MipLevel, Slice, DstBox, SubresData );
+
+        auto* pTexD3D11 = ValidatedCast<TextureBaseD3D11>(pTexture);
+        const auto& Desc = pTexD3D11->GetDesc();
+
+        // OpenGL backend uses UpdateData() to initialize textures, so we can't check the usage in ValidateUpdateTextureParams()
+        DEV_CHECK_ERR( Desc.Usage == USAGE_DEFAULT, "Only USAGE_DEFAULT textures should be updated with UpdateData()" );
+
+        if (SubresData.pSrcBuffer != nullptr)
+        {
+            LOG_ERROR("D3D11 does not support updating texture subresource from a GPU buffer");
+            return;
+        }
+
+        D3D11_BOX D3D11Box;
+        D3D11Box.left   = DstBox.MinX;
+        D3D11Box.right  = DstBox.MaxX;
+        D3D11Box.top    = DstBox.MinY;
+        D3D11Box.bottom = DstBox.MaxY;
+        D3D11Box.front  = DstBox.MinZ;
+        D3D11Box.back   = DstBox.MaxZ;
+        const auto& FmtAttribs = GetTextureFormatAttribs(Desc.Format);
+        if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
+        {
+            // Align update region by the compressed block size
+            VERIFY( (D3D11Box.left % FmtAttribs.BlockWidth) == 0, "Update region min X coordinate (", D3D11Box.left, ") must be multiple of a compressed block width (", Uint32{FmtAttribs.BlockWidth}, ")");
+            VERIFY( (FmtAttribs.BlockWidth & (FmtAttribs.BlockWidth-1)) == 0, "Compressed block width (", Uint32{FmtAttribs.BlockWidth}, ") is expected to be power of 2");
+            D3D11Box.right = (D3D11Box.right + FmtAttribs.BlockWidth-1) & ~(FmtAttribs.BlockWidth-1);
+ 
+            VERIFY( (D3D11Box.top % FmtAttribs.BlockHeight) == 0, "Update region min Y coordinate (", D3D11Box.top, ") must be multiple of a compressed block height (", Uint32{FmtAttribs.BlockHeight}, ")");
+            VERIFY( (FmtAttribs.BlockHeight & (FmtAttribs.BlockHeight-1)) == 0, "Compressed block height (", Uint32{FmtAttribs.BlockHeight}, ") is expected to be power of 2");
+            D3D11Box.bottom = (D3D11Box.bottom + FmtAttribs.BlockHeight-1) & ~(FmtAttribs.BlockHeight-1);
+        }
+        auto SubresIndex = D3D11CalcSubresource(MipLevel, Slice, Desc.MipLevels);
+        m_pd3d11DeviceContext->UpdateSubresource(pTexD3D11->GetD3D11Texture(), SubresIndex, &D3D11Box, SubresData.pData, SubresData.Stride, SubresData.DepthStride);
+    }
+
+    void DeviceContextD3D11Impl::CopyTexture(ITexture*  pSrcTexture, 
+                                             Uint32     SrcMipLevel,
+                                             Uint32     SrcSlice,
+                                             const Box* pSrcBox,
+                                             ITexture*  pDstTexture, 
+                                             Uint32     DstMipLevel,
+                                             Uint32     DstSlice,
+                                             Uint32     DstX,
+                                             Uint32     DstY,
+                                             Uint32     DstZ)
+    {
+        TDeviceContextBase::CopyTexture( pSrcTexture, SrcMipLevel, SrcSlice, pSrcBox,
+                                         pDstTexture, DstMipLevel, DstSlice, DstX, DstY, DstZ );
+
+        auto* pSrcTexD3D11 = ValidatedCast<TextureBaseD3D11>( pSrcTexture );
+        auto* pDstTexD3D11 = ValidatedCast<TextureBaseD3D11>( pDstTexture );
+    
+        D3D11_BOX D3D11SrcBox,* pD3D11SrcBox = nullptr;
+        if( pSrcBox )
+        {
+            D3D11SrcBox.left    = pSrcBox->MinX;
+            D3D11SrcBox.right   = pSrcBox->MaxX;
+            D3D11SrcBox.top     = pSrcBox->MinY;
+            D3D11SrcBox.bottom  = pSrcBox->MaxY;
+            D3D11SrcBox.front   = pSrcBox->MinZ;
+            D3D11SrcBox.back    = pSrcBox->MaxZ;
+            pD3D11SrcBox = &D3D11SrcBox;
+        }
+        auto SrcSubRes = D3D11CalcSubresource(SrcMipLevel, SrcSlice, pSrcTexD3D11->GetDesc().MipLevels);
+        auto DstSubRes = D3D11CalcSubresource(DstMipLevel, DstSlice, pDstTexD3D11->GetDesc().MipLevels);
+        m_pd3d11DeviceContext->CopySubresourceRegion(pDstTexD3D11->GetD3D11Texture(), DstSubRes, DstX, DstY, DstZ, pSrcTexD3D11->GetD3D11Texture(), SrcSubRes, pD3D11SrcBox);
+    }
+
+
     void DeviceContextD3D11Impl::FinishFrame()
     {
     }

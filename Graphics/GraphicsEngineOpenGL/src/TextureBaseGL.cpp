@@ -341,10 +341,8 @@ void TextureBaseGL::CreateViewInternal( const struct TextureViewDesc &OrigViewDe
 }
 
 
-void TextureBaseGL::UpdateData(  GLContextState &CtxState, IDeviceContext *pContext, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData )
+void TextureBaseGL::UpdateData(  GLContextState& CtxState,  Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData )
 {
-    TTextureBase::UpdateData(pContext, MipLevel, Slice, DstBox, SubresData);
-
     // GL_TEXTURE_UPDATE_BARRIER_BIT:
     //      Writes to a texture via glTex( Sub )Image*, glCopyTex( Sub )Image*, glClearTex*Image, 
     //      glCompressedTex( Sub )Image*, and reads via glTexImage() after the barrier will reflect 
@@ -364,19 +362,17 @@ void TextureBaseGL::UpdateData(  GLContextState &CtxState, IDeviceContext *pCont
 //}
 //
 
-void TextureBaseGL :: CopyData(IDeviceContext *pContext, 
-                                ITexture *pSrcTexture, 
-                                Uint32 SrcMipLevel,
-                                Uint32 SrcSlice,
-                                const Box *pSrcBox,
-                                Uint32 DstMipLevel,
-                                Uint32 DstSlice,
-                                Uint32 DstX,
-                                Uint32 DstY,
-                                Uint32 DstZ)
+void TextureBaseGL :: CopyData(DeviceContextGLImpl *pDeviceCtxGL, 
+                               TextureBaseGL *pSrcTextureGL, 
+                               Uint32 SrcMipLevel,
+                               Uint32 SrcSlice,
+                               const Box *pSrcBox,
+                               Uint32 DstMipLevel,
+                               Uint32 DstSlice,
+                               Uint32 DstX,
+                               Uint32 DstY,
+                               Uint32 DstZ)
 {
-    auto *pDeviceCtxGL = ValidatedCast<DeviceContextGLImpl>( pContext );
-    auto *pSrcTextureGL = ValidatedCast<TextureBaseGL>( pSrcTexture );
     const auto& SrcTexDesc = pSrcTextureGL->GetDesc();
 
     Box SrcBox;
@@ -395,9 +391,6 @@ void TextureBaseGL :: CopyData(IDeviceContext *pContext,
             SrcBox.MaxZ = 1;
         pSrcBox = &SrcBox;
     }
-
-    TTextureBase::CopyData( pContext, pSrcTexture, SrcMipLevel, SrcSlice, pSrcBox,
-                            DstMipLevel, DstSlice, DstX, DstY, DstZ );
 
 #if GL_ARB_copy_image
     if( glCopyImageSubData )

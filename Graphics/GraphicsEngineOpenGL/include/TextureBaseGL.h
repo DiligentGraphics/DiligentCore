@@ -64,8 +64,6 @@ public:
     
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
 
-    virtual void UpdateData( class GLContextState &CtxState, IDeviceContext *pContext, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData );
-
     //virtual void CopyData(CTexture *pSrcTexture, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size);
     virtual void Map(IDeviceContext*           pContext,
                      Uint32                    MipLevel,
@@ -84,19 +82,21 @@ public:
 
     virtual void AttachToFramebuffer(const struct TextureViewDesc& ViewDesc, GLenum AttachmentPoint) = 0;
 
-    virtual void CopyData(IDeviceContext *pContext, 
-                          ITexture *pSrcTexture, 
-                          Uint32 SrcMipLevel,
-                          Uint32 SrcSlice,
-                          const Box *pSrcBox,
-                          Uint32 DstMipLevel,
-                          Uint32 DstSlice,
-                          Uint32 DstX,
-                          Uint32 DstY,
-                          Uint32 DstZ)override;
+    void CopyData(DeviceContextGLImpl *pDeviceCtxGL, 
+                  TextureBaseGL *pSrcTextureGL, 
+                  Uint32 SrcMipLevel,
+                  Uint32 SrcSlice,
+                  const Box *pSrcBox,
+                  Uint32 DstMipLevel,
+                  Uint32 DstSlice,
+                  Uint32 DstX,
+                  Uint32 DstY,
+                  Uint32 DstZ);
 
     virtual GLuint GetGLTextureHandle()override final { return GetGLHandle(); }
     virtual void* GetNativeHandle()override final { return reinterpret_cast<void*>(static_cast<size_t>(GetGLTextureHandle())); }
+
+    virtual void UpdateData( class GLContextState &CtxState, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData ) = 0;
 
 protected:
     virtual void CreateViewInternal( const struct TextureViewDesc &ViewDesc, class ITextureView **ppView, bool bIsDefaultView )override;

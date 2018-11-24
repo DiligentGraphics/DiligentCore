@@ -79,7 +79,7 @@ TextureCubeArray_OGL::TextureCubeArray_OGL( IReferenceCounters *pRefCounters,
                     // we will get into TextureBaseGL::UpdateData(), because instance of TextureCubeArray_OGL
                     // is not fully constructed yet.
                     // To call the required function, we need to explicitly specify the class: 
-                    TextureCubeArray_OGL::UpdateData(pDeviceContext, Mip, Slice, DstBox, InitData.pSubResources[Slice*m_Desc.MipLevels + Mip]);
+                    TextureCubeArray_OGL::UpdateData(ContextState, Mip, Slice, DstBox, InitData.pSubResources[Slice*m_Desc.MipLevels + Mip]);
                 }
             }
         }
@@ -107,10 +107,9 @@ TextureCubeArray_OGL::~TextureCubeArray_OGL()
 {
 }
 
-void TextureCubeArray_OGL::UpdateData( IDeviceContext *pContext, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData )
+void TextureCubeArray_OGL::UpdateData( GLContextState &ContextState, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData )
 {
-    auto &ContextState = ValidatedCast<DeviceContextGLImpl>(pContext)->GetContextState();
-    TextureBaseGL::UpdateData(ContextState, pContext, MipLevel, Slice, DstBox, SubresData);
+    TextureBaseGL::UpdateData(ContextState, MipLevel, Slice, DstBox, SubresData);
 
     ContextState.BindTexture(-1, m_BindTarget, m_GlTexture);
 
