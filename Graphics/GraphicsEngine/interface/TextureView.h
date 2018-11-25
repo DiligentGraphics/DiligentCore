@@ -56,6 +56,9 @@ enum UAV_ACCESS_FLAG : Int32
 /// Texture view description
 struct TextureViewDesc : DeviceObjectAttribs
 {
+    static constexpr Uint32 RemainingMipLevels   = static_cast<Uint32>(-1);
+    static constexpr Uint32 RemainingArraySlices = static_cast<Uint32>(-1);
+
     /// Describes the texture view type, see Diligent::TEXTURE_VIEW_TYPE for details.
     TEXTURE_VIEW_TYPE ViewType;
 
@@ -111,7 +114,7 @@ struct TextureViewDesc : DeviceObjectAttribs
     /// Member              | Default value
     /// --------------------|--------------
     /// ViewType            | TEXTURE_VIEW_UNDEFINED
-    /// TextureDim         | RESOURCE_DIM_UNDEFINED
+    /// TextureDim          | RESOURCE_DIM_UNDEFINED
     /// Format              | TEX_FORMAT_UNKNOWN
     /// MostDetailedMip     | 0
     /// NumMipLevels        | 0

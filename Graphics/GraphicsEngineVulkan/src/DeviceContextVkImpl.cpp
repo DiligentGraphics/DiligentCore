@@ -1318,7 +1318,7 @@ namespace Diligent
             }
             else if (BuffDesc.Usage == USAGE_DYNAMIC)
             {
-                DEV_CHECK_ERR((MapFlags & (MAP_FLAG_DISCARD | MAP_FLAG_DO_NOT_SYNCHRONIZE)) == 0,  "Failed to map buffer '",
+                DEV_CHECK_ERR((MapFlags & (MAP_FLAG_DISCARD | MAP_FLAG_DO_NOT_SYNCHRONIZE)) != 0,  "Failed to map buffer '",
                                BuffDesc.Name, "': Vk buffer must be mapped for writing with MAP_FLAG_DISCARD or MAP_FLAG_DO_NOT_SYNCHRONIZE flag. Context Id: ", m_ContextId);
 
                 auto& DynAllocation = pBufferVk->m_DynamicAllocations[m_ContextId];
