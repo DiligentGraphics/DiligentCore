@@ -153,22 +153,6 @@ public:
     /// Returns the buffer description used to create the object
     virtual const BufferDesc& GetDesc()const = 0;
     
-    /// Maps the buffer
-
-    /// \param [in] pContext - Pointer to the device context interface to be used to perform the operation.
-    /// \param [in] MapType - Type of the map operation. See Diligent::MAP_TYPE.
-    /// \param [in] MapFlags - Special map flags. See Diligent::MAP_FLAGS.
-    /// \param [out] pMappedData - Reference to the void pointer to store the address of the mapped region.
-    virtual void Map( class IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid &pMappedData ) = 0;
-
-    /// Unmaps the previously mapped buffer
-    /// \param [in] pContext - Pointer to the device context interface to be used to perform the operation.
-    /// \param [in] MapType - Type of the map operation. This parameter must match the type that was 
-    ///                       provided to the Map() method. 
-    /// \param [in] MapFlags - Map flags. This parameter must match the flags that were provided to 
-    ///                        the Map() method. 
-    virtual void Unmap( IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags ) = 0;
-
     /// Creates a new buffer view
 
     /// \param [in] ViewDesc - View description. See Diligent::BufferViewDesc for details.

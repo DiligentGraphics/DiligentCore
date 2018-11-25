@@ -178,30 +178,6 @@ BufferD3D11Impl :: ~BufferD3D11Impl()
 
 IMPLEMENT_QUERY_INTERFACE( BufferD3D11Impl, IID_BufferD3D11, TBufferBase )
 
-void BufferD3D11Impl :: Map(IDeviceContext* pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid& pMappedData)
-{
-    TBufferBase::Map( pContext, MapType, MapFlags, pMappedData );
-
-    auto *pd3d11DeviceContext = static_cast<DeviceContextD3D11Impl*>(pContext)->GetD3D11DeviceContext();
-    D3D11_MAP d3d11MapType = static_cast<D3D11_MAP>(0);
-    UINT d3d11MapFlags = 0;
-    MapParamsToD3D11MapParams(MapType, MapFlags, d3d11MapType, d3d11MapFlags);
-
-    D3D11_MAPPED_SUBRESOURCE MappedBuff;
-    HRESULT hr = pd3d11DeviceContext->Map(m_pd3d11Buffer, 0, d3d11MapType, d3d11MapFlags, &MappedBuff);
-
-    pMappedData = SUCCEEDED(hr) ? MappedBuff.pData : nullptr;
-
-    VERIFY( pMappedData || (MapFlags & MAP_FLAG_DO_NOT_WAIT) && (hr == DXGI_ERROR_WAS_STILL_DRAWING), "Map failed" );
-}
-
-void BufferD3D11Impl::Unmap( IDeviceContext* pContext, MAP_TYPE MapType, Uint32 MapFlags )
-{
-    TBufferBase::Unmap( pContext, MapType, MapFlags );
-
-    auto *pd3d11DeviceContext = static_cast<DeviceContextD3D11Impl*>(pContext)->GetD3D11DeviceContext();
-    pd3d11DeviceContext->Unmap(m_pd3d11Buffer, 0);
-}
 
 void BufferD3D11Impl::CreateViewInternal( const BufferViewDesc& OrigViewDesc, IBufferView** ppView, bool bIsDefaultView )
 {

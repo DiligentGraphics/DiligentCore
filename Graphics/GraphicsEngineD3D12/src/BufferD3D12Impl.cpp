@@ -48,14 +48,6 @@ BufferD3D12Impl :: BufferD3D12Impl(IReferenceCounters*          pRefCounters,
         BuffDesc,
         false
     },
-#ifdef _DEBUG
-    m_DbgMapType
-    {
-        1 + pRenderDeviceD3D12->GetNumDeferredContexts(),
-        std::make_pair(static_cast<MAP_TYPE>(-1), static_cast<Uint32>(-1)),
-        STD_ALLOCATOR_RAW_MEM(D3D12DynamicAllocation, GetRawAllocator(), "Allocator for vector<pair<MAP_TYPE,Uint32>>")
-    },
-#endif
     m_DynamicData
     {
         BuffDesc.Usage == USAGE_DYNAMIC ? (1 + pRenderDeviceD3D12->GetNumDeferredContexts()) : 0,
@@ -276,9 +268,6 @@ BufferD3D12Impl :: BufferD3D12Impl(IReferenceCounters*        pRefCounters,
         BufferDescFromD3D12Resource(BuffDesc, pd3d12Buffer),
         false
     },
-#ifdef _DEBUG
-    m_DbgMapType(1 + pRenderDeviceD3D12->GetNumDeferredContexts(), std::make_pair(static_cast<MAP_TYPE>(-1), static_cast<Uint32>(-1)), STD_ALLOCATOR_RAW_MEM(D3D12DynamicAllocation, GetRawAllocator(), "Allocator for vector<pair<MAP_TYPE,Uint32>>")),
-#endif
     m_DynamicData
     {
         BuffDesc.Usage == USAGE_DYNAMIC ? (1 + pRenderDeviceD3D12->GetNumDeferredContexts()) : 0,
@@ -304,116 +293,6 @@ BufferD3D12Impl :: ~BufferD3D12Impl()
 
 IMPLEMENT_QUERY_INTERFACE( BufferD3D12Impl, IID_BufferD3D12, TBufferBase )
 
-
-void BufferD3D12Impl :: Map(IDeviceContext* pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid &pMappedData)
-{
-    TBufferBase::Map( pContext, MapType, MapFlags, pMappedData );
-    auto *pDeviceContextD3D12 = ValidatedCast<DeviceContextD3D12Impl>(pContext);
-#ifdef _DEBUG
-    if(pDeviceContextD3D12 != nullptr)
-        m_DbgMapType[pDeviceContextD3D12->GetContextId()] = std::make_pair(MapType, MapFlags);
-#endif
-    if (MapType == MAP_READ )
-    {
-        LOG_WARNING_MESSAGE_ONCE("Mapping CPU buffer for reading on D3D12 currently requires flushing context and idling GPU");
-        pDeviceContextD3D12->Flush();
-        auto *pDeviceD3D12 = ValidatedCast<RenderDeviceD3D12Impl>(GetDevice());
-        pDeviceD3D12->IdleGPU();
-
-        VERIFY(m_Desc.Usage == USAGE_CPU_ACCESSIBLE, "Buffer must be created as USAGE_CPU_ACCESSIBLE to be mapped for reading");
-        D3D12_RANGE MapRange;
-        MapRange.Begin = 0;
-        MapRange.End = m_Desc.uiSizeInBytes;
-        m_pd3d12Resource->Map(0, &MapRange, &pMappedData);
-    }
-    else if(MapType == MAP_WRITE)
-    {
-        if (m_Desc.Usage == USAGE_CPU_ACCESSIBLE)
-        {
-            VERIFY(m_pd3d12Resource != nullptr, "USAGE_CPU_ACCESSIBLE buffer mapped for writing must intialize D3D12 resource");
-            if (MapFlags & MAP_FLAG_DISCARD)
-            {
-                
-            }
-            m_pd3d12Resource->Map(0, nullptr, &pMappedData);
-        }
-        else if (m_Desc.Usage == USAGE_DYNAMIC)
-        {
-            VERIFY( (MapFlags & (MAP_FLAG_DISCARD | MAP_FLAG_DO_NOT_SYNCHRONIZE)) != 0, "D3D12 buffer must be mapped for writing with MAP_FLAG_DISCARD or MAP_FLAG_DO_NOT_SYNCHRONIZE flag");
-            
-            auto *pCtxD3D12 = ValidatedCast<DeviceContextD3D12Impl>(pContext);
-            auto ContextId = pDeviceContextD3D12->GetContextId();
-            if ((MapFlags & MAP_FLAG_DISCARD) != 0 || m_DynamicData[ContextId].CPUAddress == nullptr) 
-            {
-                size_t Alignment = (m_Desc.BindFlags & BIND_UNIFORM_BUFFER) ? D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT : 16;
-                m_DynamicData[ContextId] = pCtxD3D12->AllocateDynamicSpace(m_Desc.uiSizeInBytes, Alignment);
-            }
-            else
-            {
-                VERIFY_EXPR(MapFlags & MAP_FLAG_DO_NOT_SYNCHRONIZE);
-                // Reuse previously mapped region
-            }
-            pMappedData = m_DynamicData[ContextId].CPUAddress;
-        }
-        else
-        {
-            LOG_ERROR("Only USAGE_DYNAMIC and USAGE_CPU_ACCESSIBLE D3D12 buffers can be mapped for writing");
-        }
-    }
-    else if(MapType == MAP_READ_WRITE)
-    {
-        LOG_ERROR("MAP_READ_WRITE is not supported on D3D12");
-    }
-    else
-    {
-        LOG_ERROR("Only MAP_WRITE_DISCARD and MAP_READ are currently implemented in D3D12");
-    }
-}
-
-void BufferD3D12Impl::Unmap( IDeviceContext* pContext, MAP_TYPE MapType, Uint32 MapFlags )
-{
-    TBufferBase::Unmap( pContext, MapType, MapFlags );
-    auto *pDeviceContextD3D12 = ValidatedCast<DeviceContextD3D12Impl>(pContext);
-    Uint32 CtxId = pDeviceContextD3D12 != nullptr ? pDeviceContextD3D12->GetContextId() : static_cast<Uint32>(-1);
-#ifdef _DEBUG
-    if (pDeviceContextD3D12 != nullptr)
-    {
-        VERIFY(m_DbgMapType[CtxId].first == MapType, "Map type does not match the type provided to Map()");
-        VERIFY(m_DbgMapType[CtxId].second == MapFlags, "Map flags do not match the flags provided to Map()");
-    }
-#endif
-
-    if (MapType == MAP_READ )
-    {
-        D3D12_RANGE MapRange;
-        // It is valid to specify the CPU didn't write any data by passing a range where End is less than or equal to Begin.
-        MapRange.Begin = 1;
-        MapRange.End = 0;
-        m_pd3d12Resource->Unmap(0, &MapRange);
-    }
-    else if(MapType == MAP_WRITE)
-    {
-        if (m_Desc.Usage == USAGE_CPU_ACCESSIBLE)
-        {
-            VERIFY(m_pd3d12Resource != nullptr, "USAGE_CPU_ACCESSIBLE buffer mapped for writing must intialize D3D12 resource");
-            m_pd3d12Resource->Unmap(0, nullptr);
-        }
-        else if (m_Desc.Usage == USAGE_DYNAMIC)
-        {
-            VERIFY(MapFlags & (MAP_FLAG_DISCARD | MAP_FLAG_DO_NOT_SYNCHRONIZE), "D3D12 buffer must be mapped for writing with MAP_FLAG_DISCARD or MAP_FLAG_DO_NOT_SYNCHRONIZE flag");
-            // Copy data into the resource
-            if (m_pd3d12Resource)
-            {
-                pDeviceContextD3D12->UpdateBufferRegion(this, m_DynamicData[CtxId], 0, m_Desc.uiSizeInBytes);
-            }
-        }
-    }
-
-#ifdef _DEBUG
-    if(pDeviceContextD3D12 != nullptr)
-        m_DbgMapType[CtxId] = std::make_pair(static_cast<MAP_TYPE>(-1), static_cast<Uint32>(-1));
-#endif
-}
 
 void BufferD3D12Impl::CreateViewInternal( const BufferViewDesc& OrigViewDesc, IBufferView** ppView, bool bIsDefaultView )
 {

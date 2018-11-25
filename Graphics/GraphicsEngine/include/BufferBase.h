@@ -74,7 +74,7 @@ public:
         m_pDefaultSRV(nullptr, STDDeleter<BufferViewImplType, TBuffViewObjAllocator>(BuffViewObjAllocator) )
     {
 #ifdef DEVELOPMENT
-#   define VERIFY_BUFFER(Expr, ...) if (!(Expr)) LOG_ERROR("Buffer \"",  this->m_Desc.Name ? this->m_Desc.Name : "", "\": ", ##__VA_ARGS__)
+#   define VERIFY_BUFFER(Expr, ...) if (!(Expr)) LOG_ERROR("Buffer '",  this->m_Desc.Name ? this->m_Desc.Name : "", "': ", ##__VA_ARGS__)
 #else
 #   define VERIFY_BUFFER(...)do{}while(false)
 #endif
@@ -112,12 +112,6 @@ public:
     }
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE( IID_Buffer, TDeviceObjectBase )
-
-    /// Base implementation of IBuffer::Map(); validates input parameters.
-    virtual void Map( IDeviceContext* pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid& pMappedData )override;
-
-    /// Base implementation of IBuffer::Unmap()
-    virtual void Unmap( IDeviceContext* pContext, MAP_TYPE MapType, Uint32 MapFlags  )override = 0;
 
     /// Implementation of IBuffer::CreateView(); calls CreateViewInternal() virtual function
     /// that creates buffer view for the specific engine implementation.
@@ -179,51 +173,6 @@ protected:
 };
 
 
-template<class BaseInterface, class RenderDeviceImplType, class BufferViewImplType, class TBuffViewObjAllocator>
-void BufferBase<BaseInterface, RenderDeviceImplType, BufferViewImplType, TBuffViewObjAllocator> :: Map( IDeviceContext* pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid& pMappedData )
-{
-    pMappedData = nullptr;
-    switch( MapType )
-    {
-    case MAP_READ:
-        VERIFY_BUFFER( this->m_Desc.Usage == USAGE_CPU_ACCESSIBLE,      "Only buffers with usage USAGE_CPU_ACCESSIBLE can be read from" );
-        VERIFY_BUFFER( (this->m_Desc.CPUAccessFlags & CPU_ACCESS_READ), "Buffer being mapped for reading was not created with CPU_ACCESS_READ flag" );
-        VERIFY_BUFFER( (MapFlags & MAP_FLAG_DISCARD) == 0, "MAP_FLAG_DISCARD is not valid when mapping buffer for reading" );
-        break;
-
-    case MAP_WRITE:
-        VERIFY_BUFFER( this->m_Desc.Usage == USAGE_DYNAMIC || this->m_Desc.Usage == USAGE_CPU_ACCESSIBLE, "Only buffers with usage USAGE_CPU_ACCESSIBLE or USAGE_DYNAMIC can be mapped for writing" );
-        VERIFY_BUFFER( (this->m_Desc.CPUAccessFlags & CPU_ACCESS_WRITE), "Buffer being mapped for writing was not created with CPU_ACCESS_WRITE flag" );
-        break;
-
-    case MAP_READ_WRITE:
-        VERIFY_BUFFER( this->m_Desc.Usage == USAGE_CPU_ACCESSIBLE,       "Only buffers with usage USAGE_CPU_ACCESSIBLE can be mapped for reading and writing" );
-        VERIFY_BUFFER( (this->m_Desc.CPUAccessFlags & CPU_ACCESS_WRITE), "Buffer being mapped for reading & writing was not created with CPU_ACCESS_WRITE flag" );
-        VERIFY_BUFFER( (this->m_Desc.CPUAccessFlags & CPU_ACCESS_READ),  "Buffer being mapped for reading & writing was not created with CPU_ACCESS_READ flag" );
-        VERIFY_BUFFER( (MapFlags & MAP_FLAG_DISCARD) == 0, "MAP_FLAG_DISCARD is not valid when mapping buffer for reading and writing" );
-        break;
-
-    default: UNEXPECTED( "Unknown map type" );
-    }
-    
-    if (this->m_Desc.Usage == USAGE_DYNAMIC)
-    {
-        VERIFY_BUFFER((MapFlags & (MAP_FLAG_DISCARD | MAP_FLAG_DO_NOT_SYNCHRONIZE)) != 0 && MapType == MAP_WRITE, "Dynamic buffers can only be mapped for writing with MAP_FLAG_DISCARD or MAP_FLAG_DO_NOT_SYNCHRONIZE flag");
-        VERIFY_BUFFER((MapFlags & (MAP_FLAG_DISCARD | MAP_FLAG_DO_NOT_SYNCHRONIZE)) != (MAP_FLAG_DISCARD | MAP_FLAG_DO_NOT_SYNCHRONIZE), "When mapping dynamic buffer, only one of MAP_FLAG_DISCARD or MAP_FLAG_DO_NOT_SYNCHRONIZE flags must be specified");
-    }
-
-    if ( (MapFlags & MAP_FLAG_DISCARD) != 0 )
-    {
-        VERIFY_BUFFER( this->m_Desc.Usage == USAGE_DYNAMIC || this->m_Desc.Usage == USAGE_CPU_ACCESSIBLE, "Only dynamic and staging buffers can be mapped with discard flag" );
-        VERIFY_BUFFER( MapType == MAP_WRITE, "MAP_FLAG_DISCARD is only valid when mapping buffer for writing" );
-    }
-}
-
-template<class BaseInterface, class RenderDeviceImplType, class BufferViewImplType, class TBuffViewObjAllocator>
-void BufferBase<BaseInterface, RenderDeviceImplType, BufferViewImplType, TBuffViewObjAllocator> :: Unmap( IDeviceContext* pContext, MAP_TYPE MapType, Uint32 MapFlags  )
-{
-
-}
 
 
 template<class BaseInterface, class RenderDeviceImplType, class BufferViewImplType, class TBuffViewObjAllocator>

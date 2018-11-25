@@ -114,7 +114,7 @@ public:
         auto &BuffDesc = pBuffer->GetDesc();
         VERIFY(sizeof(DataType) <= BuffDesc.uiSizeInBytes, "Data type size exceeds buffer size");
 #endif
-        pBuffer->Map(pContext, MapType, MapFlags, (PVoid&)m_pMappedData);
+        pContext->MapBuffer(pBuffer, MapType, MapFlags, (PVoid&)m_pMappedData);
         if(m_pMappedData != nullptr)
         {
             m_pContext = pContext;
@@ -129,7 +129,7 @@ public:
     {
         if( m_pBuffer )
         {
-            m_pBuffer->Unmap(m_pContext, m_MapType, m_MapFlags);
+            m_pContext->UnmapBuffer(m_pBuffer);
             m_pBuffer = nullptr;
             m_MapType = static_cast<MAP_TYPE>(-1);
             m_MapFlags = static_cast<Uint32>(-1);

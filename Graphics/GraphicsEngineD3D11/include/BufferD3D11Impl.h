@@ -60,8 +60,6 @@ public:
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
 
-    virtual void Map( IDeviceContext* pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid &pMappedData )override final;
-    virtual void Unmap( IDeviceContext* pContext, MAP_TYPE MapType, Uint32 MapFlags )override final;
     virtual ID3D11Buffer* GetD3D11Buffer()override final{ return m_pd3d11Buffer; }
 
     virtual void* GetNativeHandle()override final { return GetD3D11Buffer(); }

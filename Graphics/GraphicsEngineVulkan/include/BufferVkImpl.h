@@ -65,9 +65,6 @@ public:
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject** ppInterface )override;
 
-    virtual void Map( IDeviceContext* pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid& pMappedData )override;
-    virtual void Unmap( IDeviceContext* pContext, MAP_TYPE MapType, Uint32 MapFlags )override;
-
 #ifdef DEVELOPMENT
     void DvpVerifyDynamicAllocation(DeviceContextVkImpl* pCtx)const;
 #endif
@@ -111,10 +108,6 @@ private:
 
     VulkanUtilities::BufferViewWrapper CreateView(struct BufferViewDesc &ViewDesc);
     Uint32        m_DynamicOffsetAlignment = 0;
-
-#ifdef DEVELOPMENT
-    std::vector< std::pair<MAP_TYPE, Uint32> > m_DvpMapType;
-#endif
 
     std::vector<VulkanDynamicAllocation, STDAllocatorRawMem<VulkanDynamicAllocation> > m_DynamicAllocations;
 

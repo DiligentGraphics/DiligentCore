@@ -18,6 +18,9 @@
   * Removed default SRB object
   * Renamed/moved `IBuffer::UpdateData()` to `IDeviceContext::UpdateBuffer()`
   * Renamed/moved `IBuffer::CopyData()` to `IDeviceContext::CopyBuffer()`
+  * Renamed/moved `IBuffer::Map()` to `IDeviceContext::MapBuffer()`
+  * Renamed/moved `IBuffer::Unmap()` to `IDeviceContext::UnmapBuffer()`
+    * Removed MapType and MapFlags parameters
   * Renamed/moved `ITexture::UpdateData()` to `IDeviceContext::UpdateTexture()`
   * Renamed/moved `ITexture::CopyData()` to `IDeviceContext::CopyTexture()`
   * Renamed/moved `ITexture::Map()` to `IDeviceContext::MapTextureSubresource()`

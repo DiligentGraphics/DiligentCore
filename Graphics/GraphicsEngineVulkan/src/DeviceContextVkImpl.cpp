@@ -864,6 +864,17 @@ namespace Diligent
 
     void DeviceContextVkImpl::FinishFrame()
     {
+#ifdef DEVELOPMENT
+        for(const auto& MappedBuffIt : m_MappedBuffers)
+        {
+            const auto& BuffDesc = MappedBuffIt.first->GetDesc();
+            if (BuffDesc.Usage == USAGE_DYNAMIC)
+            {
+                LOG_WARNING_MESSAGE("Dynamic buffer '", BuffDesc.Name, "' is still mapped when finishing the frame. The contents of the buffer and mapped address will become invalid");
+            }
+        }
+#endif
+
         if(GetNumCommandsInCtx() != 0)
         {
             LOG_ERROR_MESSAGE(m_bIsDeferred ? 
@@ -1278,6 +1289,114 @@ namespace Diligent
         VERIFY_EXPR(pDstBuffVk->GetDynamicOffset(m_ContextId, this) == 0);
         m_CommandBuffer.CopyBuffer(pSrcBuffVk->GetVkBuffer(), pDstBuffVk->GetVkBuffer(), 1, &CopyRegion);
         ++m_State.NumCommands;
+    }
+
+    void DeviceContextVkImpl::MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, Uint32 MapFlags, PVoid& pMappedData)
+    {
+        TDeviceContextBase::MapBuffer(pBuffer, MapType, MapFlags, pMappedData);
+        auto* pBufferVk = ValidatedCast<BufferVkImpl>(pBuffer);
+        const auto& BuffDesc = pBufferVk->GetDesc();
+
+#ifdef DEVELOPMENT
+        if (m_MappedBuffers.find(pBufferVk) != m_MappedBuffers.end())
+        {
+            LOG_ERROR_MESSAGE("Buffer '", BuffDesc.Name, "' has already been mapped");
+        }
+#endif
+
+        if (MapType == MAP_READ )
+        {
+            LOG_ERROR("Mapping buffer for reading is not yet imlemented in Vulkan backend");
+            UNSUPPORTED("Mapping buffer for reading is not yet imlemented in Vulkan backend");
+        }
+        else if(MapType == MAP_WRITE)
+        {
+            if (BuffDesc.Usage == USAGE_CPU_ACCESSIBLE)
+            {
+                LOG_ERROR("Not implemented");
+                UNSUPPORTED("Not implemented");
+            }
+            else if (BuffDesc.Usage == USAGE_DYNAMIC)
+            {
+                DEV_CHECK_ERR((MapFlags & (MAP_FLAG_DISCARD | MAP_FLAG_DO_NOT_SYNCHRONIZE)) == 0,  "Failed to map buffer '",
+                               BuffDesc.Name, "': Vk buffer must be mapped for writing with MAP_FLAG_DISCARD or MAP_FLAG_DO_NOT_SYNCHRONIZE flag. Context Id: ", m_ContextId);
+
+                auto& DynAllocation = pBufferVk->m_DynamicAllocations[m_ContextId];
+                if ( (MapFlags & MAP_FLAG_DISCARD) != 0 || DynAllocation.pDynamicMemMgr == nullptr )
+                {
+                    DynAllocation = AllocateDynamicSpace(BuffDesc.uiSizeInBytes, pBufferVk->m_DynamicOffsetAlignment);
+                }
+                else
+                {
+                    VERIFY_EXPR(MapFlags & MAP_FLAG_DO_NOT_SYNCHRONIZE);
+                    // Reuse the same allocation
+                }
+
+                if (DynAllocation.pDynamicMemMgr != nullptr)
+                {
+                    auto* CPUAddress = DynAllocation.pDynamicMemMgr->GetCPUAddress();
+                    pMappedData = CPUAddress + DynAllocation.AlignedOffset;
+                }
+                else
+                {
+                    pMappedData = nullptr;
+                }
+            }
+            else
+            {
+                LOG_ERROR("Only USAGE_DYNAMIC and USAGE_CPU_ACCESSIBLE Vk buffers can be mapped for writing");
+            }
+        }
+        else if(MapType == MAP_READ_WRITE)
+        {
+            LOG_ERROR("MAP_READ_WRITE is not supported on Vk");
+        }
+        else
+        {
+            LOG_ERROR("Only MAP_WRITE_DISCARD and MAP_READ are currently implemented in Vk");
+        }
+        m_MappedBuffers[pBufferVk] = MappedBufferInfo{MapType};
+    }
+
+    void DeviceContextVkImpl::UnmapBuffer(IBuffer* pBuffer)
+    {
+        TDeviceContextBase::UnmapBuffer(pBuffer);
+        auto* pBufferVk = ValidatedCast<BufferVkImpl>(pBuffer);
+        
+        auto MappedBufferIt = m_MappedBuffers.find(pBufferVk);
+        if (MappedBufferIt == m_MappedBuffers.end())
+        {
+            LOG_ERROR_MESSAGE("Buffer '", pBufferVk->GetDesc().Name, "' has not been mapped.");
+            return;
+        }
+        const auto& MapInfo = MappedBufferIt->second;
+        const auto& BuffDesc = pBufferVk->GetDesc();
+        auto MapType = MapInfo.MapType;
+        
+        if (MapType == MAP_READ )
+        {
+            LOG_ERROR("This map type is not yet supported");
+            UNSUPPORTED("This map type is not yet supported");
+        }
+        else if(MapType == MAP_WRITE)
+        {
+            if (BuffDesc.Usage == USAGE_CPU_ACCESSIBLE)
+            {
+                LOG_ERROR("This map type is not yet supported");
+                UNSUPPORTED("This map type is not yet supported");
+            }
+            else if (BuffDesc.Usage == USAGE_DYNAMIC)
+            {
+                if (pBufferVk->m_VulkanBuffer != VK_NULL_HANDLE)
+                {
+                    auto& DynAlloc = pBufferVk->m_DynamicAllocations[m_ContextId];
+                    auto vkSrcBuff = DynAlloc.pDynamicMemMgr->GetVkBuffer();
+                    UpdateBufferRegion(pBufferVk, 0, BuffDesc.uiSizeInBytes, vkSrcBuff, DynAlloc.AlignedOffset);
+                }
+            }
+        }
+
+        m_MappedBuffers.erase(MappedBufferIt);
     }
 
     void DeviceContextVkImpl::UpdateTexture(ITexture* pTexture, Uint32 MipLevel, Uint32 Slice, const Box& DstBox, const TextureSubResData& SubresData)

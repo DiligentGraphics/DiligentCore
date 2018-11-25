@@ -546,6 +546,24 @@ public:
     virtual void CopyBuffer(IBuffer* pSrcBuffer, Uint32 SrcOffset, IBuffer* pDstBuffer, Uint32 DstOffset, Uint32 Size) = 0;
 
 
+    /// Maps the buffer
+
+    /// \param [in] pBuffer - Pointer to the buffer to map.
+    /// \param [in] MapType - Type of the map operation. See Diligent::MAP_TYPE.
+    /// \param [in] MapFlags - Special map flags. See Diligent::MAP_FLAGS.
+    /// \param [out] pMappedData - Reference to the void pointer to store the address of the mapped region.
+    virtual void MapBuffer( IBuffer* pBuffer, MAP_TYPE MapType, Uint32 MapFlags, PVoid &pMappedData ) = 0;
+
+    /// Unmaps the previously mapped buffer
+
+    /// \param [in] pBuffer - Pointer to the buffer to unmap.
+    /// \param [in] MapType - Type of the map operation. This parameter must match the type that was 
+    ///                       provided to the Map() method. 
+    /// \param [in] MapFlags - Map flags. This parameter must match the flags that were provided to 
+    ///                        the Map() method. 
+    virtual void UnmapBuffer( IBuffer* pBuffer ) = 0;
+
+
     /// Updates the data in the texture
 
     /// \param [in] pTexture   - Pointer to the device context interface to be used to perform the operation.

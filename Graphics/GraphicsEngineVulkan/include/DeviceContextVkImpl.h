@@ -99,6 +99,10 @@ public:
 
     virtual void CopyBuffer(IBuffer *pSrcBuffer, Uint32 SrcOffset, IBuffer *pDstBuffer, Uint32 DstOffset, Uint32 Size)override final;
 
+    virtual void MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, Uint32 MapFlags, PVoid& pMappedData)override final;
+
+    virtual void UnmapBuffer(IBuffer* pBuffer)override final;
+
     virtual void UpdateTexture(ITexture* pTexture, Uint32 MipLevel, Uint32 Slice, const Box& DstBox, const TextureSubResData& SubresData)override final;
 
     virtual void CopyTexture(ITexture*  pSrcTexture, 
@@ -317,6 +321,11 @@ private:
     };
     std::unordered_map<MappedTextureKey, MappedTexture, MappedTextureKey::Hasher> m_MappedTextures;
 
+    struct MappedBufferInfo
+    {
+        MAP_TYPE MapType;
+    };
+    std::unordered_map<BufferVkImpl*, MappedBufferInfo> m_MappedBuffers;
 
     VulkanUtilities::VulkanCommandBufferPool m_CmdPool;
     VulkanUploadHeap                         m_UploadHeap;

@@ -60,9 +60,6 @@ public:
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
 
-    virtual void Map( IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid &pMappedData )override;
-    virtual void Unmap( IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags )override;
-
 #ifdef DEVELOPMENT
     void DvpVerifyDynamicAllocation(class DeviceContextD3D12Impl* pCtx)const;
 #endif
@@ -92,12 +89,9 @@ private:
     void CreateCBV( D3D12_CPU_DESCRIPTOR_HANDLE CBVDescriptor );
     DescriptorHeapAllocation m_CBVDescriptorAllocation;
 
-#ifdef _DEBUG
-    std::vector< std::pair<MAP_TYPE, Uint32>, STDAllocatorRawMem<std::pair<MAP_TYPE, Uint32>> > m_DbgMapType;
-#endif
-
     friend class DeviceContextD3D12Impl;
     // Array of dynamic allocations for every device context
+    // sizeof(D3D12DynamicAllocation) == 40 (x64)
     std::vector<D3D12DynamicAllocation,  STDAllocatorRawMem<D3D12DynamicAllocation> > m_DynamicData;
 };
 

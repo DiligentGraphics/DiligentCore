@@ -1028,6 +1028,20 @@ namespace Diligent
         pDstBufferGL->CopyData(m_ContextState, *pSrcBufferGL, SrcOffset, DstOffset, Size);
     }
 
+    void DeviceContextGLImpl::MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, Uint32 MapFlags, PVoid& pMappedData)
+    {
+        TDeviceContextBase::MapBuffer(pBuffer, MapType, MapFlags, pMappedData);
+        auto* pBufferGL = ValidatedCast<BufferGLImpl>(pBuffer);
+        pBufferGL->Map(m_ContextState, MapType, MapFlags, pMappedData);
+    }
+
+    void DeviceContextGLImpl::UnmapBuffer(IBuffer* pBuffer)
+    {
+        TDeviceContextBase::UnmapBuffer(pBuffer);
+        auto* pBufferGL = ValidatedCast<BufferGLImpl>(pBuffer);
+        pBufferGL->Unmap();
+    }
+
     void DeviceContextGLImpl::UpdateTexture(ITexture* pTexture, Uint32 MipLevel, Uint32 Slice, const Box& DstBox, const TextureSubResData& SubresData)
     {
         TDeviceContextBase::UpdateTexture( pTexture, MipLevel, Slice, DstBox, SubresData );

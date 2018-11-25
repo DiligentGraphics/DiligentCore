@@ -693,6 +693,16 @@ namespace Diligent
 
     void DeviceContextD3D12Impl::FinishFrame()
     {
+#ifdef DEVELOPMENT
+        for(const auto& MappedBuffIt : m_MappedBuffers)
+        {
+            const auto& BuffDesc = MappedBuffIt.first->GetDesc();
+            if (BuffDesc.Usage == USAGE_DYNAMIC)
+            {
+                LOG_WARNING_MESSAGE("Dynamic buffer '", BuffDesc.Name, "' is still mapped when finishing the frame. The contents of the buffer and mapped address will become invalid");
+            }
+        }
+#endif
         if (GetNumCommandsInCtx() != 0)
         {
             LOG_ERROR_MESSAGE(m_bIsDeferred ? 
@@ -935,6 +945,117 @@ namespace Diligent
         CmdCtx.FlushResourceBarriers();
         CmdCtx.GetCommandList()->CopyBufferRegion( pd3d12DstBuff, DstOffset + DstDataStartByteOffset, pd3d12SrcBuff, SrcOffset+SrcDataStartByteOffset, Size);
         ++m_State.NumCommands;
+    }
+
+    void DeviceContextD3D12Impl::MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, Uint32 MapFlags, PVoid& pMappedData)
+    {
+        TDeviceContextBase::MapBuffer(pBuffer, MapType, MapFlags, pMappedData);
+        auto* pBufferD3D12 = ValidatedCast<BufferD3D12Impl>(pBuffer);
+        const auto& BuffDesc = pBufferD3D12->GetDesc();
+        auto* pd3d12Resource = pBufferD3D12->m_pd3d12Resource.p;
+
+#ifdef DEVELOPMENT
+        if (m_MappedBuffers.find(pBufferD3D12) != m_MappedBuffers.end())
+        {
+            LOG_ERROR_MESSAGE("Buffer '", BuffDesc.Name, "' has already been mapped");
+        }
+#endif
+
+        if (MapType == MAP_READ)
+        {
+            LOG_WARNING_MESSAGE_ONCE("Mapping CPU buffer for reading on D3D12 currently requires flushing context and idling GPU");
+            Flush();
+            m_pDevice.RawPtr<RenderDeviceD3D12Impl>()->IdleGPU();
+            VERIFY(BuffDesc.Usage == USAGE_CPU_ACCESSIBLE, "Buffer must be created as USAGE_CPU_ACCESSIBLE to be mapped for reading");
+            D3D12_RANGE MapRange;
+            MapRange.Begin = 0;
+            MapRange.End = BuffDesc.uiSizeInBytes;
+            pd3d12Resource->Map(0, &MapRange, &pMappedData);
+        }
+        else if(MapType == MAP_WRITE)
+        {
+            if (BuffDesc.Usage == USAGE_CPU_ACCESSIBLE)
+            {
+                VERIFY(pd3d12Resource != nullptr, "USAGE_CPU_ACCESSIBLE buffer mapped for writing must intialize D3D12 resource");
+                if (MapFlags & MAP_FLAG_DISCARD)
+                {
+                
+                }
+                pd3d12Resource->Map(0, nullptr, &pMappedData);
+            }
+            else if (BuffDesc.Usage == USAGE_DYNAMIC)
+            {
+                VERIFY( (MapFlags & (MAP_FLAG_DISCARD | MAP_FLAG_DO_NOT_SYNCHRONIZE)) != 0, "D3D12 buffer must be mapped for writing with MAP_FLAG_DISCARD or MAP_FLAG_DO_NOT_SYNCHRONIZE flag");
+                auto& DynamicData = pBufferD3D12->m_DynamicData[m_ContextId];
+                if ((MapFlags & MAP_FLAG_DISCARD) != 0 || DynamicData.CPUAddress == nullptr) 
+                {
+                    size_t Alignment = (BuffDesc.BindFlags & BIND_UNIFORM_BUFFER) ? D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT : 16;
+                    DynamicData = AllocateDynamicSpace(BuffDesc.uiSizeInBytes, Alignment);
+                }
+                else
+                {
+                    VERIFY_EXPR(MapFlags & MAP_FLAG_DO_NOT_SYNCHRONIZE);
+                    // Reuse previously mapped region
+                }
+                pMappedData = DynamicData.CPUAddress;
+            }
+            else
+            {
+                LOG_ERROR("Only USAGE_DYNAMIC and USAGE_CPU_ACCESSIBLE D3D12 buffers can be mapped for writing");
+            }
+        }
+        else if(MapType == MAP_READ_WRITE)
+        {
+            LOG_ERROR("MAP_READ_WRITE is not supported in D3D12");
+        }
+        else
+        {
+            LOG_ERROR("Only MAP_WRITE_DISCARD and MAP_READ are currently implemented in D3D12");
+        }
+        m_MappedBuffers[pBufferD3D12] = MappedBufferInfo{MapType};
+    }
+
+    void DeviceContextD3D12Impl::UnmapBuffer(IBuffer* pBuffer)
+    {
+        TDeviceContextBase::UnmapBuffer(pBuffer);
+        auto* pBufferD3D12 = ValidatedCast<BufferD3D12Impl>(pBuffer);
+        auto MappedBufferIt = m_MappedBuffers.find(pBufferD3D12);
+        if (MappedBufferIt == m_MappedBuffers.end())
+        {
+            LOG_ERROR_MESSAGE("Buffer '", pBufferD3D12->GetDesc().Name, "' has not been mapped.");
+            return;
+        }
+        const auto& MapInfo = MappedBufferIt->second;
+        const auto& BuffDesc = pBufferD3D12->GetDesc();
+        auto* pd3d12Resource = pBufferD3D12->m_pd3d12Resource.p;
+
+        auto MapType = MapInfo.MapType;
+        if (MapType == MAP_READ )
+        {
+            D3D12_RANGE MapRange;
+            // It is valid to specify the CPU didn't write any data by passing a range where End is less than or equal to Begin.
+            MapRange.Begin = 1;
+            MapRange.End = 0;
+            pd3d12Resource->Unmap(0, &MapRange);
+        }
+        else if(MapType == MAP_WRITE)
+        {
+            if (BuffDesc.Usage == USAGE_CPU_ACCESSIBLE)
+            {
+                VERIFY(pd3d12Resource != nullptr, "USAGE_CPU_ACCESSIBLE buffer mapped for writing must intialize D3D12 resource");
+                pd3d12Resource->Unmap(0, nullptr);
+            }
+            else if (BuffDesc.Usage == USAGE_DYNAMIC)
+            {
+                // Copy data into the resource
+                if (pd3d12Resource)
+                {
+                    UpdateBufferRegion(pBufferD3D12, pBufferD3D12->m_DynamicData[m_ContextId], 0, BuffDesc.uiSizeInBytes);
+                }
+            }
+        }
+
+        m_MappedBuffers.erase(MappedBufferIt);
     }
 
     void DeviceContextD3D12Impl::UpdateTexture(ITexture* pTexture, Uint32 MipLevel, Uint32 Slice, const Box& DstBox, const TextureSubResData& SubresData)

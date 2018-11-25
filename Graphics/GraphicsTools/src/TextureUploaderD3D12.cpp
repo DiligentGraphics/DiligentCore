@@ -60,7 +60,10 @@ namespace Diligent
 
         ~UploadBufferD3D12()
         {
-            m_pStagingBuffer->Unmap(nullptr, MAP_WRITE, 0);
+            RefCntAutoPtr<IBufferD3D12> pBufferD3D12(m_pStagingBuffer, IID_BufferD3D12);
+            size_t DataStartOffset;
+            auto* pd3d12Buff = pBufferD3D12->GetD3D12Buffer(DataStartOffset, nullptr);
+            pd3d12Buff->Unmap(0, nullptr);
             LOG_INFO_MESSAGE("Releasing staging buffer of size ", m_pStagingBuffer->GetDesc().uiSizeInBytes);
         }
           
@@ -237,7 +240,10 @@ namespace Diligent
             m_pDevice->CreateBuffer(BuffDesc, BufferData(), &pStagingBuffer);
 
             PVoid CpuVirtualAddress = nullptr;
-            pStagingBuffer->Map(nullptr, MAP_WRITE, 0, CpuVirtualAddress);
+            RefCntAutoPtr<IBufferD3D12> pStagingBufferD3D12(pStagingBuffer, IID_BufferD3D12);
+            size_t DataStartOffset;
+            auto* pd3d12Buff = pStagingBufferD3D12->GetD3D12Buffer(DataStartOffset, nullptr);
+            pd3d12Buff->Map(0, nullptr, &CpuVirtualAddress);
             if (CpuVirtualAddress == nullptr)
             {
                 LOG_ERROR_MESSAGE("Failed to map upload buffer");

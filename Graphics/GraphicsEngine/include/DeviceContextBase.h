@@ -110,10 +110,16 @@ public:
     inline bool SetRenderTargets( Uint32 NumRenderTargets, ITextureView* ppRenderTargets[], ITextureView* pDepthStencil, Uint32 Dummy = 0 );
 
     /// Base implementation of IDeviceContext::UpdateBuffer(); validates input parameters.
-    virtual void UpdateBuffer(IBuffer *pBuffer, Uint32 Offset, Uint32 Size, const PVoid pData)override = 0;
+    virtual void UpdateBuffer(IBuffer* pBuffer, Uint32 Offset, Uint32 Size, const PVoid pData)override = 0;
 
     /// Base implementation of IDeviceContext::CopyBuffer(); validates input parameters.
     virtual void CopyBuffer(IBuffer *pSrcBuffer, Uint32 SrcOffset, IBuffer *pDstBuffer, Uint32 DstOffset, Uint32 Size)override = 0;
+
+    /// Base implementation of IDeviceContext::MapBuffer(); validates input parameters.
+    virtual void MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, Uint32 MapFlags, PVoid& pMappedData)override = 0;
+
+    /// Base implementation of IDeviceContext::UnmapBuffer()
+    virtual void UnmapBuffer(IBuffer* pBuffer)override = 0;
 
     /// Base implementaiton of IDeviceContext::UpdateData(); validates input parameters
     virtual void UpdateTexture( ITexture* pTexture, Uint32 MipLevel, Uint32 Slice, const Box& DstBox, const TextureSubResData& SubresData )override = 0;
@@ -687,10 +693,62 @@ inline void DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType
     DEV_CHECK_ERR( SrcOffset + Size <= SrcBufferDesc.uiSizeInBytes, "Failed to copy buffer '", SrcBufferDesc.Name, "' to '", DstBufferDesc.Name, "': Source range [", SrcOffset, ",", SrcOffset + Size, ") is out of buffer bounds [0,", SrcBufferDesc.uiSizeInBytes, ")" );
 }
 
+template<typename BaseInterface, typename BufferImplType, typename TextureViewImplType, typename PipelineStateImplType>
+inline void DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType, PipelineStateImplType> ::
+            MapBuffer( IBuffer* pBuffer, MAP_TYPE MapType, Uint32 MapFlags, PVoid& pMappedData )
+{
+    VERIFY(pBuffer, "pBuffer must not be null");
+    
+    const auto& BuffDesc = pBuffer->GetDesc();
+
+    pMappedData = nullptr;
+    switch( MapType )
+    {
+    case MAP_READ:
+        DEV_CHECK_ERR( BuffDesc.Usage == USAGE_CPU_ACCESSIBLE,      "Only buffers with usage USAGE_CPU_ACCESSIBLE can be read from" );
+        DEV_CHECK_ERR( (BuffDesc.CPUAccessFlags & CPU_ACCESS_READ), "Buffer being mapped for reading was not created with CPU_ACCESS_READ flag" );
+        DEV_CHECK_ERR( (MapFlags & MAP_FLAG_DISCARD) == 0, "MAP_FLAG_DISCARD is not valid when mapping buffer for reading" );
+        break;
+
+    case MAP_WRITE:
+        DEV_CHECK_ERR( BuffDesc.Usage == USAGE_DYNAMIC || BuffDesc.Usage == USAGE_CPU_ACCESSIBLE, "Only buffers with usage USAGE_CPU_ACCESSIBLE or USAGE_DYNAMIC can be mapped for writing" );
+        DEV_CHECK_ERR( (BuffDesc.CPUAccessFlags & CPU_ACCESS_WRITE), "Buffer being mapped for writing was not created with CPU_ACCESS_WRITE flag" );
+        break;
+
+    case MAP_READ_WRITE:
+        DEV_CHECK_ERR( BuffDesc.Usage == USAGE_CPU_ACCESSIBLE,       "Only buffers with usage USAGE_CPU_ACCESSIBLE can be mapped for reading and writing" );
+        DEV_CHECK_ERR( (BuffDesc.CPUAccessFlags & CPU_ACCESS_WRITE), "Buffer being mapped for reading & writing was not created with CPU_ACCESS_WRITE flag" );
+        DEV_CHECK_ERR( (BuffDesc.CPUAccessFlags & CPU_ACCESS_READ),  "Buffer being mapped for reading & writing was not created with CPU_ACCESS_READ flag" );
+        DEV_CHECK_ERR( (MapFlags & MAP_FLAG_DISCARD) == 0, "MAP_FLAG_DISCARD is not valid when mapping buffer for reading and writing" );
+        break;
+
+    default: UNEXPECTED( "Unknown map type" );
+    }
+    
+    if (BuffDesc.Usage == USAGE_DYNAMIC)
+    {
+        DEV_CHECK_ERR((MapFlags & (MAP_FLAG_DISCARD | MAP_FLAG_DO_NOT_SYNCHRONIZE)) != 0 && MapType == MAP_WRITE, "Dynamic buffers can only be mapped for writing with MAP_FLAG_DISCARD or MAP_FLAG_DO_NOT_SYNCHRONIZE flag");
+        DEV_CHECK_ERR((MapFlags & (MAP_FLAG_DISCARD | MAP_FLAG_DO_NOT_SYNCHRONIZE)) != (MAP_FLAG_DISCARD | MAP_FLAG_DO_NOT_SYNCHRONIZE), "When mapping dynamic buffer, only one of MAP_FLAG_DISCARD or MAP_FLAG_DO_NOT_SYNCHRONIZE flags must be specified");
+    }
+
+    if ( (MapFlags & MAP_FLAG_DISCARD) != 0 )
+    {
+        DEV_CHECK_ERR( BuffDesc.Usage == USAGE_DYNAMIC || BuffDesc.Usage == USAGE_CPU_ACCESSIBLE, "Only dynamic and staging buffers can be mapped with discard flag" );
+        DEV_CHECK_ERR( MapType == MAP_WRITE, "MAP_FLAG_DISCARD is only valid when mapping buffer for writing" );
+    }
+}
+
+template<typename BaseInterface, typename BufferImplType, typename TextureViewImplType, typename PipelineStateImplType>
+inline void DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType, PipelineStateImplType> ::
+            UnmapBuffer(IBuffer* pBuffer)
+{
+    VERIFY(pBuffer, "pBuffer must not be null");
+}
+
 
 template<typename BaseInterface, typename BufferImplType, typename TextureViewImplType, typename PipelineStateImplType>
 inline void DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType, PipelineStateImplType> :: 
-            UpdateTexture( ITexture* pTexture, Uint32 MipLevel, Uint32 Slice, const Box& DstBox, const TextureSubResData& SubresData )
+            UpdateTexture(ITexture* pTexture, Uint32 MipLevel, Uint32 Slice, const Box& DstBox, const TextureSubResData& SubresData)
 {
     VERIFY( pTexture != nullptr, "pTexture must not be null" );
     ValidateUpdateTextureParams( pTexture->GetDesc(), MipLevel, Slice, DstBox, SubresData );

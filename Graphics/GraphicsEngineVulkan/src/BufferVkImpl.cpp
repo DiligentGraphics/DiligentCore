@@ -42,9 +42,6 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters*        pRefCounters,
                              const BufferDesc&          BuffDesc, 
                              const BufferData&          BuffData /*= BufferData()*/) : 
     TBufferBase(pRefCounters, BuffViewObjMemAllocator, pRenderDeviceVk, BuffDesc, false),
-#ifdef DEVELOPMENT
-    m_DvpMapType(1 + pRenderDeviceVk->GetNumDeferredContexts()),
-#endif
     m_DynamicAllocations(STD_ALLOCATOR_RAW_MEM(VulkanDynamicAllocation, GetRawAllocator(), "Allocator for vector<VulkanDynamicAllocation>"))
 {
 #define LOG_BUFFER_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Buffer \"", BuffDesc.Name ? BuffDesc.Name : "", "\": ", ##__VA_ARGS__);
@@ -283,9 +280,6 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters*        pRefCounters,
                              RESOURCE_STATE             InitialState,
                              VkBuffer                   vkBuffer) : 
     TBufferBase(pRefCounters, BuffViewObjMemAllocator, pRenderDeviceVk, BuffDesc, false),
-#ifdef DEVELOPMENT
-    m_DvpMapType(1 + pRenderDeviceVk->GetNumDeferredContexts()),
-#endif
     m_DynamicAllocations(STD_ALLOCATOR_RAW_MEM(VulkanDynamicAllocation, GetRawAllocator(), "Allocator for vector<VulkanDynamicAllocation>")),
     m_VulkanBuffer(vkBuffer)
 {
@@ -303,155 +297,6 @@ BufferVkImpl :: ~BufferVkImpl()
 
 IMPLEMENT_QUERY_INTERFACE( BufferVkImpl, IID_BufferVk, TBufferBase )
 
-
-void BufferVkImpl :: Map(IDeviceContext* pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid& pMappedData)
-{
-    TBufferBase::Map( pContext, MapType, MapFlags, pMappedData );
-
-    auto* pDeviceContextVk = ValidatedCast<DeviceContextVkImpl>(pContext);
-#ifdef DEVELOPMENT
-    if(pDeviceContextVk != nullptr)
-        m_DvpMapType[pDeviceContextVk->GetContextId()] = std::make_pair(MapType, MapFlags);
-#endif
-    if (MapType == MAP_READ )
-    {
-        LOG_ERROR("Mapping buffer for reading is not yet imlemented");
-        UNSUPPORTED("Mapping buffer for reading is not yet imlemented");
-#if 0
-        LOG_WARNING_MESSAGE_ONCE("Mapping CPU buffer for reading on Vk currently requires flushing context and idling GPU");
-        pDeviceContextVk->Flush();
-        m_pDevice->IdleGPU(false);
-
-        VERIFY(m_Desc.Usage == USAGE_CPU_ACCESSIBLE, "Buffer must be created as USAGE_CPU_ACCESSIBLE to be mapped for reading");
-        Vk_RANGE MapRange;
-        MapRange.Begin = 0;
-        MapRange.End = m_Desc.uiSizeInBytes;
-        m_pVkResource->Map(0, &MapRange, &pMappedData);
-#endif
-    }
-    else if(MapType == MAP_WRITE)
-    {
-        if (m_Desc.Usage == USAGE_CPU_ACCESSIBLE)
-        {
-            LOG_ERROR("Not implemented");
-            UNSUPPORTED("Not implemented");
-#if 0
-            VERIFY(m_pVkResource != nullptr, "USAGE_CPU_ACCESSIBLE buffer mapped for writing must intialize Vk resource");
-            if (MapFlags & MAP_FLAG_DISCARD)
-            {
-                
-            }
-            m_pVkResource->Map(0, nullptr, &pMappedData);
-#endif
-        }
-        else if (m_Desc.Usage == USAGE_DYNAMIC)
-        {
-#ifdef DEVELOPMENT
-            if( (MapFlags & (MAP_FLAG_DISCARD | MAP_FLAG_DO_NOT_SYNCHRONIZE)) == 0 )
-            {
-                LOG_ERROR_MESSAGE("Failed to map buffer '", m_Desc.Name, "': Vk buffer must be mapped for writing with MAP_FLAG_DISCARD or MAP_FLAG_DO_NOT_SYNCHRONIZE flag. Context Id: ", pDeviceContextVk->GetContextId());
-                return;
-            }
-#endif
-
-            auto& DynAllocation = m_DynamicAllocations[pDeviceContextVk->GetContextId()];
-            if ( (MapFlags & MAP_FLAG_DISCARD) != 0 || DynAllocation.pDynamicMemMgr == nullptr )
-            {
-                DynAllocation = pDeviceContextVk->AllocateDynamicSpace(m_Desc.uiSizeInBytes, m_DynamicOffsetAlignment);
-            }
-            else
-            {
-                VERIFY_EXPR(MapFlags & MAP_FLAG_DO_NOT_SYNCHRONIZE);
-                // Reuse the same allocation
-            }
-
-            if (DynAllocation.pDynamicMemMgr != nullptr)
-            {
-                auto* CPUAddress = DynAllocation.pDynamicMemMgr->GetCPUAddress();
-                pMappedData = CPUAddress + DynAllocation.AlignedOffset;
-            }
-            else
-            {
-                pMappedData = nullptr;
-            }
-        }
-        else
-        {
-            LOG_ERROR("Only USAGE_DYNAMIC and USAGE_CPU_ACCESSIBLE Vk buffers can be mapped for writing");
-        }
-    }
-    else if(MapType == MAP_READ_WRITE)
-    {
-        LOG_ERROR("MAP_READ_WRITE is not supported on Vk");
-    }
-    else
-    {
-        LOG_ERROR("Only MAP_WRITE_DISCARD and MAP_READ are currently implemented in Vk");
-    }
-}
-
-void BufferVkImpl::Unmap( IDeviceContext* pContext, MAP_TYPE MapType, Uint32 MapFlags )
-{
-    TBufferBase::Unmap( pContext, MapType, MapFlags );
-
-    auto *pDeviceContextVk = ValidatedCast<DeviceContextVkImpl>(pContext);
-    Uint32 CtxId = pDeviceContextVk != nullptr ? pDeviceContextVk->GetContextId() : static_cast<Uint32>(-1);
-#ifdef DEVELOPMENT
-    if (pDeviceContextVk != nullptr)
-    {
-        if (m_DvpMapType[CtxId].first != MapType)
-        {
-            LOG_ERROR_MESSAGE("Failed to unmap buffer '", m_Desc.Name, "': Map type (", GetMapTypeString(MapType), ") does not match the type provided to Map() (", GetMapTypeString(m_DvpMapType[CtxId].first), "). Context Id: ", CtxId);
-            return;
-        }
-        if (m_DvpMapType[CtxId].second != MapFlags)
-        {
-            LOG_ERROR_MESSAGE("Failed to unmap buffer '", m_Desc.Name, "': Map flags (", MapFlags, ") do not match the flags provided to Map() (", m_DvpMapType[CtxId].second, "). Context Id: ", CtxId);
-            return;
-        }
-    }
-#endif
-
-    if (MapType == MAP_READ )
-    {
-        LOG_ERROR("This map type is not yet supported");
-        UNSUPPORTED("This map type is not yet supported");
-#if 0
-        Vk_RANGE MapRange;
-        // It is valid to specify the CPU didn't write any data by passing a range where End is less than or equal to Begin.
-        MapRange.Begin = 1;
-        MapRange.End = 0;
-        m_pVkResource->Unmap(0, &MapRange);
-#endif
-    }
-    else if(MapType == MAP_WRITE)
-    {
-        if (m_Desc.Usage == USAGE_CPU_ACCESSIBLE)
-        {
-            LOG_ERROR("This map type is not yet supported");
-            UNSUPPORTED("This map type is not yet supported");
-#if 0
-            VERIFY(m_pVkResource != nullptr, "USAGE_CPU_ACCESSIBLE buffer mapped for writing must intialize Vk resource");
-            m_pVkResource->Unmap(0, nullptr);
-#endif
-        }
-        else if (m_Desc.Usage == USAGE_DYNAMIC)
-        {
-            VERIFY( MapFlags & (MAP_FLAG_DISCARD | MAP_FLAG_DO_NOT_SYNCHRONIZE), "Vk buffer must be mapped for writing with MAP_FLAG_DISCARD or MAP_FLAG_DO_NOT_SYNCHRONIZE flag");
-            if (m_VulkanBuffer != VK_NULL_HANDLE)
-            {
-                auto& DynAlloc = m_DynamicAllocations[CtxId];
-                auto vkSrcBuff = DynAlloc.pDynamicMemMgr->GetVkBuffer();
-                pDeviceContextVk->UpdateBufferRegion(this, 0, m_Desc.uiSizeInBytes, vkSrcBuff, DynAlloc.AlignedOffset);
-            }
-        }
-    }
-
-#ifdef DEVELOPMENT
-    if(pDeviceContextVk != nullptr)
-        m_DvpMapType[CtxId] = std::make_pair(static_cast<MAP_TYPE>(-1), static_cast<Uint32>(-1));
-#endif
-}
 
 void BufferVkImpl::CreateViewInternal( const BufferViewDesc& OrigViewDesc, IBufferView** ppView, bool bIsDefaultView )
 {

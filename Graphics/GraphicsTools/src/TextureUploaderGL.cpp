@@ -191,7 +191,7 @@ namespace Diligent
                         }
 
                         PVoid CpuAddress = nullptr;
-                        pBuffer->m_pStagingBuffer->Map(pContext, MAP_WRITE, MAP_FLAG_DISCARD, CpuAddress);
+                        pContext->MapBuffer(pBuffer->m_pStagingBuffer, MAP_WRITE, MAP_FLAG_DISCARD, CpuAddress);
                         pBuffer->SetDataPtr(CpuAddress, RowStride, 0);
                     
                         pBuffer->SignalMapped();
@@ -200,7 +200,7 @@ namespace Diligent
 
                     case InternalData::PendingBufferOperation::Copy:
                     {
-                        pBuffer->m_pStagingBuffer->Unmap(pContext, MAP_WRITE, MAP_FLAG_DISCARD);
+                        pContext->UnmapBuffer(pBuffer->m_pStagingBuffer);
                         TextureSubResData SubResData(pBuffer->m_pStagingBuffer, static_cast<Uint32>(pBuffer->GetRowStride()));
                         Box DstBox;
                         const auto &TexDesc = OperationInfo.pDstTexture->GetDesc();

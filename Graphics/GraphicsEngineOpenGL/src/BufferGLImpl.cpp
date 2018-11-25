@@ -227,17 +227,15 @@ void BufferGLImpl :: CopyData(GLContextState& CtxState, BufferGLImpl& SrcBufferG
     glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
 }
 
-void BufferGLImpl :: Map(IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags, PVoid &pMappedData)
+void BufferGLImpl :: Map(GLContextState& CtxState, MAP_TYPE MapType, Uint32 MapFlags, PVoid &pMappedData)
 {
-    TBufferBase::Map( pContext, MapType, MapFlags, pMappedData );
     VERIFY( m_uiMapTarget == 0, "Buffer is already mapped");
 
-    auto *pDeviceContextGL = ValidatedCast<DeviceContextGLImpl>(pContext);
     BufferMemoryBarrier(
         GL_CLIENT_MAPPED_BUFFER_BARRIER_BIT,// Access by the client to persistent mapped regions of buffer 
                                             // objects will reflect data written by shaders prior to the barrier. 
                                             // Note that this may cause additional synchronization operations.
-        pDeviceContextGL->GetContextState());
+        CtxState);
 
     m_uiMapTarget = ( MapType == MAP_READ ) ? GL_COPY_READ_BUFFER : GL_COPY_WRITE_BUFFER;
     glBindBuffer(m_uiMapTarget, m_GlBuffer);
@@ -310,10 +308,8 @@ void BufferGLImpl :: Map(IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapF
     glBindBuffer(m_uiMapTarget, 0);
 }
 
-void BufferGLImpl::Unmap( IDeviceContext *pContext, MAP_TYPE MapType, Uint32 MapFlags )
+void BufferGLImpl::Unmap()
 {
-    TBufferBase::Unmap(pContext, MapType, MapFlags);
-
     glBindBuffer(m_uiMapTarget, m_GlBuffer);
     auto Result = glUnmapBuffer(m_uiMapTarget);
     // glUnmapBuffer() returns TRUE unless data values in the buffer's data store have

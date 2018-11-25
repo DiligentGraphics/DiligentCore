@@ -973,6 +973,28 @@ namespace Diligent
     }
 
 
+    void DeviceContextD3D11Impl::MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, Uint32 MapFlags, PVoid& pMappedData)
+    {
+        TDeviceContextBase::MapBuffer(pBuffer, MapType, MapFlags, pMappedData);
+
+        auto* pBufferD3D11 = ValidatedCast<BufferD3D11Impl>(pBuffer);
+        D3D11_MAP d3d11MapType = static_cast<D3D11_MAP>(0);
+        UINT d3d11MapFlags = 0;
+        MapParamsToD3D11MapParams(MapType, MapFlags, d3d11MapType, d3d11MapFlags);
+
+        D3D11_MAPPED_SUBRESOURCE MappedBuff;
+        HRESULT hr = m_pd3d11DeviceContext->Map(pBufferD3D11->m_pd3d11Buffer, 0, d3d11MapType, d3d11MapFlags, &MappedBuff);
+        DEV_CHECK_ERR(SUCCEEDED(hr), "Failed to map buffer '", pBufferD3D11->GetDesc().Name, "'");
+        pMappedData = SUCCEEDED(hr) ? MappedBuff.pData : nullptr;
+    }
+
+    void DeviceContextD3D11Impl::UnmapBuffer(IBuffer* pBuffer)
+    {
+        TDeviceContextBase::UnmapBuffer(pBuffer);
+        auto* pBufferD3D11 = ValidatedCast<BufferD3D11Impl>(pBuffer);
+        m_pd3d11DeviceContext->Unmap(pBufferD3D11->m_pd3d11Buffer, 0);
+    }
+
     void DeviceContextD3D11Impl::UpdateTexture(ITexture*                pTexture,
                                                Uint32                   MipLevel,
                                                Uint32                   Slice,
