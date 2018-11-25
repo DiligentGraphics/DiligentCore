@@ -46,16 +46,4 @@ TextureViewD3D12Impl::TextureViewD3D12Impl( IReferenceCounters*        pRefCount
 
 IMPLEMENT_QUERY_INTERFACE( TextureViewD3D12Impl, IID_TextureViewD3D12, TTextureViewBase )
 
-void TextureViewD3D12Impl::GenerateMips( IDeviceContext *pContext )
-{
-    VERIFY( m_Desc.ViewType == TEXTURE_VIEW_SHADER_RESOURCE, "GenerateMips() is allowed for shader resource views only, ", GetTexViewTypeLiteralName(m_Desc.ViewType), " is not allowed." );
-    if( m_Desc.ViewType != TEXTURE_VIEW_SHADER_RESOURCE )
-    {
-        LOG_ERROR("GenerateMips() is allowed for shader resource views only, ", GetTexViewTypeLiteralName(m_Desc.ViewType), " is not allowed.");
-        return;
-    }
-    auto *pDeviceCtxD3D12 = ValidatedCast<DeviceContextD3D12Impl>( pContext );
-    pDeviceCtxD3D12->GenerateMips(this);
-}
-
 }

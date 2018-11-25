@@ -71,15 +71,4 @@ namespace Diligent
             return static_cast<TextureBaseGL*>(pTexture)->GetBindTarget();
         }
     }
-
-    void TextureViewGLImpl::GenerateMips( IDeviceContext *pContext )
-    {
-        auto pCtxGL = ValidatedCast<DeviceContextGLImpl>( pContext );
-        auto &GLState = pCtxGL->GetContextState();
-        auto BindTarget = GetBindTarget();
-        GLState.BindTexture( -1, BindTarget, GetHandle() );
-        glGenerateMipmap( BindTarget );
-        CHECK_GL_ERROR( "Failed to generate mip maps" );
-        GLState.BindTexture( -1, BindTarget, GLObjectWrappers::GLTextureObj(false) );
-    }
 }

@@ -106,6 +106,10 @@ public:
 
     virtual void UnmapTextureSubresource(ITexture* pTexture, Uint32 MipLevel, Uint32 ArraySlice)override final;
 
+    
+    virtual void GenerateMips( ITextureView *pTexView )override;
+
+
     virtual void FinishFrame()override final;
 
     virtual void TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers)override final;

@@ -142,6 +142,7 @@ public:
     /// Base implementaiton of IDeviceContext::UnmapTextureSubresource()
     virtual void UnmapTextureSubresource(ITexture* pTexture, Uint32 MipLevel, Uint32 ArraySlice)override = 0;
 
+    virtual void GenerateMips(ITextureView* pTexView)override = 0;
 
     /// Sets the strong pointer to the swap chain
     virtual void SetSwapChain( ISwapChain* pSwapChain )override final { m_pSwapChain = pSwapChain; }
@@ -737,6 +738,16 @@ inline void DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType
     DEV_CHECK_ERR(ArraySlice < pTexture->GetDesc().ArraySize, "Array slice is out of range");
 }
 
+template<typename BaseInterface, typename BufferImplType, typename TextureViewImplType, typename PipelineStateImplType>
+inline void DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType, PipelineStateImplType> ::
+            GenerateMips(ITextureView* pTexView)
+{
+    VERIFY(pTexView != nullptr, "pTexView must not be null");
+#ifdef DEVELOPMENT
+    const auto& ViewDesc = pTexView->GetDesc();
+    DEV_CHECK_ERR( ViewDesc.ViewType == TEXTURE_VIEW_SHADER_RESOURCE, "GenerateMips() is allowed for shader resource views only, ", GetTexViewTypeLiteralName(ViewDesc.ViewType), " is not allowed." );
+#endif
+}
 
 #ifdef DEVELOPMENT
 template<typename BaseInterface, typename BufferImplType, typename TextureViewImplType, typename PipelineStateImplType>

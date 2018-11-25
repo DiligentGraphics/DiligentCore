@@ -54,8 +54,6 @@ public:
     GLenum GetBindTarget();
     void SetBindTarget(GLenum ViewTexBindTarget) { m_ViewTexBindTarget = ViewTexBindTarget; }
 
-    void GenerateMips( IDeviceContext *pContext )override;
-
 protected:
     GLObjectWrappers::GLTextureObj m_ViewTexGLHandle;
     GLenum  m_ViewTexBindTarget;

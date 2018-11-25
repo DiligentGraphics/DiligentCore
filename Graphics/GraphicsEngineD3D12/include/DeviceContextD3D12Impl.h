@@ -158,7 +158,7 @@ public:
                              Uint32                  DstSubResIndex,
                              const Box&              DstBox);
 
-    void GenerateMips(class TextureViewD3D12Impl *pTexView);
+    virtual void GenerateMips(ITextureView *pTexView)override final;
 
     D3D12DynamicAllocation AllocateDynamicSpace(size_t NumBytes, size_t Alignment);
     

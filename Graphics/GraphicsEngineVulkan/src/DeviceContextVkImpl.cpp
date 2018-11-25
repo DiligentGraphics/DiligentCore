@@ -1502,6 +1502,12 @@ namespace Diligent
                             Slice);
     }
 
+    void DeviceContextVkImpl::GenerateMips(ITextureView* pTexView)
+    {
+        TDeviceContextBase::GenerateMips(pTexView);
+        m_GenerateMipsHelper->GenerateMips(*ValidatedCast<TextureViewVkImpl>(pTexView), *this, *m_GenerateMipsSRB);
+    }
+
     void DeviceContextVkImpl::CopyBufferToTexture(VkBuffer         vkBuffer,
                                                   Uint32           BufferOffset,
                                                   Uint32           BufferRowStrideInTexels,

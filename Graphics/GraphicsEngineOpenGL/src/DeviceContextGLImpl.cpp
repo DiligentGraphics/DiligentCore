@@ -1073,6 +1073,17 @@ namespace Diligent
         LOG_ERROR_MESSAGE("Texture mapping is not supported in OpenGL");
     }
 
+    void DeviceContextGLImpl::GenerateMips( ITextureView *pTexView )
+    {
+        TDeviceContextBase::GenerateMips(pTexView);
+        auto* pTexViewGL = ValidatedCast<TextureViewGLImpl>(pTexView);
+        auto BindTarget = pTexViewGL->GetBindTarget();
+        m_ContextState.BindTexture( -1, BindTarget, pTexViewGL->GetHandle() );
+        glGenerateMipmap( BindTarget );
+        CHECK_GL_ERROR( "Failed to generate mip maps" );
+        m_ContextState.BindTexture( -1, BindTarget, GLObjectWrappers::GLTextureObj(false) );
+    }
+
     void DeviceContextGLImpl::TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers)
     {
 

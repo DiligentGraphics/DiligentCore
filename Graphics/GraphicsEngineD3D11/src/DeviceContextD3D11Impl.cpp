@@ -1092,6 +1092,13 @@ namespace Diligent
         m_pd3d11DeviceContext->Unmap(pTexD3D11->GetD3D11Texture(), Subresource);
     }
 
+    void DeviceContextD3D11Impl::GenerateMips(ITextureView* pTextureView)
+    {
+        TDeviceContextBase::GenerateMips(pTextureView);
+        auto& TexViewD3D11 = *ValidatedCast<TextureViewD3D11Impl>(pTextureView);
+        auto* pd3d11SRV = static_cast<ID3D11ShaderResourceView*>( TexViewD3D11.GetD3D11View() );
+        m_pd3d11DeviceContext->GenerateMips(pd3d11SRV);
+    }
 
     void DeviceContextD3D11Impl::FinishFrame()
     {

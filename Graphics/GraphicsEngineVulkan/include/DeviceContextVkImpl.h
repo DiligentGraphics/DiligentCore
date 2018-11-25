@@ -180,10 +180,7 @@ public:
                              Uint32          Slice,
                              const Box&      DstBox);
 
-    void GenerateMips(class TextureViewVkImpl& TexView)
-    {
-        m_GenerateMipsHelper->GenerateMips(TexView, *this, *m_GenerateMipsSRB);
-    }
+    virtual void GenerateMips(ITextureView* pTexView)override final;
 
     Uint32 GetContextId()const{return m_ContextId;}
 

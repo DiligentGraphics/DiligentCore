@@ -1284,10 +1284,11 @@ namespace Diligent
     }
 
 
-    void DeviceContextD3D12Impl::GenerateMips(TextureViewD3D12Impl* pTexView)
+    void DeviceContextD3D12Impl::GenerateMips(ITextureView* pTexView)
     {
+        TDeviceContextBase::GenerateMips(pTexView);
         auto& Ctx = GetCmdContext();
-        m_MipsGenerator.GenerateMips(m_pDevice.RawPtr<RenderDeviceD3D12Impl>(), pTexView, Ctx);
+        m_MipsGenerator.GenerateMips(m_pDevice.RawPtr<RenderDeviceD3D12Impl>(), ValidatedCast<TextureViewD3D12Impl>(pTexView), Ctx);
         ++m_State.NumCommands;
     }
 

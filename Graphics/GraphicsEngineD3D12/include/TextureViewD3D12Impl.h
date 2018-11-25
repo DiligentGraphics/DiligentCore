@@ -51,8 +51,6 @@ public:
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
 
-    void GenerateMips( IDeviceContext *pContext )override;
-    
     virtual D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle()override{return m_Descriptor.GetCpuHandle();}
 
 protected:

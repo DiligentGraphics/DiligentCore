@@ -56,8 +56,6 @@ public:
         return m_pD3D11View;
     }
    
-    void GenerateMips( IDeviceContext *pContext )override final;
-
 protected:
     /// D3D11 view
     CComPtr<ID3D11View> m_pD3D11View;

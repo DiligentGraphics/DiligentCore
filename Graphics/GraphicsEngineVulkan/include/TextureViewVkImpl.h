@@ -52,8 +52,6 @@ public:
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID& IID, IObject** ppInterface )override;
 
-    void GenerateMips( IDeviceContext* pContext )override;
-    
     VkImageView GetVulkanImageView()const override final{return m_ImageView;}
 
 protected:

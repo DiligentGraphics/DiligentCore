@@ -607,6 +607,15 @@ public:
     /// Unmaps the texture subresource
     virtual void UnmapTextureSubresource(ITexture* pTexture, Uint32 MipLevel, Uint32 ArraySlice) = 0;
 
+    
+    /// Generates a mipmap chain.
+
+    /// \param [in] pTextureView - Texture view to generate mip maps for.
+    /// \remarks This function can only be called for a shader resource view.
+    ///          The texture must be created with MISC_TEXTURE_FLAG_GENERATE_MIPS flag.
+    virtual void GenerateMips(ITextureView* pTextureView) = 0;
+
+
     /// Sets the swap chain in the device context
 
     /// The swap chain is used by the device context to work with the

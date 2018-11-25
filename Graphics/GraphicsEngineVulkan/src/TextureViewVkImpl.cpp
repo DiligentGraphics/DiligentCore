@@ -49,16 +49,4 @@ TextureViewVkImpl::~TextureViewVkImpl()
 
 IMPLEMENT_QUERY_INTERFACE( TextureViewVkImpl, IID_TextureViewVk, TTextureViewBase )
 
-void TextureViewVkImpl::GenerateMips( IDeviceContext *pContext )
-{
-    VERIFY( m_Desc.ViewType == TEXTURE_VIEW_SHADER_RESOURCE, "GenerateMips() is allowed for shader resource views only, ", GetTexViewTypeLiteralName(m_Desc.ViewType), " is not allowed." );
-    if( m_Desc.ViewType != TEXTURE_VIEW_SHADER_RESOURCE )
-    {
-        LOG_ERROR("GenerateMips() is allowed for shader resource views only, ", GetTexViewTypeLiteralName(m_Desc.ViewType), " is not allowed.");
-        return;
-    }
-    auto* pDeviceCtxVk = ValidatedCast<DeviceContextVkImpl>( pContext );
-    pDeviceCtxVk->GenerateMips(*this);
-}
-
 }

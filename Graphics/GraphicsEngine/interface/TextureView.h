@@ -189,12 +189,6 @@ public:
     /// The method does *NOT* call AddRef() on the returned interface, 
     /// so Release() must not be called.
     virtual class ITexture* GetTexture() = 0;
-
-    /// Generates a mipmap chain 
-
-    /// \remarks This function can only be called for a shader resource view
-    ///          The texture must be created with MISC_TEXTURE_FLAG_GENERATE_MIPS flag
-    virtual void GenerateMips(IDeviceContext *pContext ) = 0;
 };
 
 }

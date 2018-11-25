@@ -22,6 +22,7 @@
   * Renamed/moved `ITexture::CopyData()` to `IDeviceContext::CopyTexture()`
   * Renamed/moved `ITexture::Map()` to `IDeviceContext::MapTextureSubresource()`
   * Renamed/moved `ITexture::Unmap()` to `IDeviceContext::UnmapTextureSubresource()`
+  * Moved `ITextureView::GenerateMips()` to `IDeviceContext::GenerateMips()`
 
 ## v2.3.b
 
