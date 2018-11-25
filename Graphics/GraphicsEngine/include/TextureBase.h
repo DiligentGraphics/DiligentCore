@@ -214,16 +214,16 @@ protected:
 template<class BaseInterface, class TRenderDeviceImpl,class TTextureViewImpl, class TTexViewObjAllocator>
 void TextureBase<BaseInterface, TRenderDeviceImpl, TTextureViewImpl, TTexViewObjAllocator> :: CorrectTextureViewDesc(struct TextureViewDesc& ViewDesc)
 {
-#define TEX_VIEW_VALIDATION_ERROR(...) LOG_ERROR_AND_THROW( "Texture view '", ViewDesc.Name ? ViewDesc.Name : "", "': ", ##__VA_ARGS__ )
+#define TEX_VIEW_VALIDATION_ERROR(...) LOG_ERROR_AND_THROW( "\n                 Failed to create texture view '", (ViewDesc.Name ? ViewDesc.Name : ""), "' for texture '", this->m_Desc.Name, "': ", ##__VA_ARGS__ )
 
     if( !(ViewDesc.ViewType > TEXTURE_VIEW_UNDEFINED && ViewDesc.ViewType < TEXTURE_VIEW_NUM_VIEWS) )
         TEX_VIEW_VALIDATION_ERROR( "Texture view type is not specified" );
 
     if( ViewDesc.MostDetailedMip >= this->m_Desc.MipLevels )
-        TEX_VIEW_VALIDATION_ERROR( "Most detailed mip (", ViewDesc.MostDetailedMip, ") is out of range. Texture '", this->m_Desc.Name, "' has only ", this->m_Desc.MipLevels, " mip ", (this->m_Desc.MipLevels >= 1 ? "levels." : "level."));
+        TEX_VIEW_VALIDATION_ERROR( "Most detailed mip (", ViewDesc.MostDetailedMip, ") is out of range. The texture has only ", this->m_Desc.MipLevels, " mip ", (this->m_Desc.MipLevels > 1 ? "levels." : "level."));
 
     if( ViewDesc.NumMipLevels != TextureViewDesc::RemainingMipLevels && ViewDesc.MostDetailedMip + ViewDesc.NumMipLevels > this->m_Desc.MipLevels )
-        TEX_VIEW_VALIDATION_ERROR( "Most detailed mip (", ViewDesc.MostDetailedMip, ") and number of mip levels in the view (", ViewDesc.NumMipLevels, ") is out of range. Texture '", this->m_Desc.Name, "' has only ", this->m_Desc.MipLevels, " mip ", (this->m_Desc.MipLevels >= 1 ? "levels." : "level."));
+        TEX_VIEW_VALIDATION_ERROR( "Most detailed mip (", ViewDesc.MostDetailedMip, ") and number of mip levels in the view (", ViewDesc.NumMipLevels, ") is out of range. The texture has only ", this->m_Desc.MipLevels, " mip ", (this->m_Desc.MipLevels > 1 ? "levels." : "level."));
 
     if( ViewDesc.Format == TEX_FORMAT_UNKNOWN )
         ViewDesc.Format = GetDefaultTextureViewFormat( this->m_Desc.Format, ViewDesc.ViewType, this->m_Desc.BindFlags );
@@ -353,7 +353,7 @@ void TextureBase<BaseInterface, TRenderDeviceImpl, TTextureViewImpl, TTexViewObj
         if(ViewDesc.ViewType != TEXTURE_VIEW_SHADER_RESOURCE )
             TEX_VIEW_VALIDATION_ERROR( "Unexpected view type: SRV is expected");
         if(ViewDesc.NumArraySlices != TextureViewDesc::RemainingArraySlices && (ViewDesc.NumArraySlices % 6) != 0)
-            TEX_VIEW_VALIDATION_ERROR( "Number of slices in texture cube array SRV is expected to be multiple of 6. ", ViewDesc.NumArraySlices, " slices provided." );
+            TEX_VIEW_VALIDATION_ERROR( "Number of slices in texture cube array SRV is expected to be multiple of 6. ", ViewDesc.NumArraySlices, " slices is provided." );
     }
 
     if (ViewDesc.TextureDim == RESOURCE_DIM_TEX_1D ||
