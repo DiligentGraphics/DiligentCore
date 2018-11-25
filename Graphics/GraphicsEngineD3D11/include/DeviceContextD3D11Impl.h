@@ -103,6 +103,17 @@ public:
                              Uint32     DstY,
                              Uint32     DstZ)override final;
 
+    virtual void MapTextureSubresource( ITexture*                 pTexture,
+                                        Uint32                    MipLevel,
+                                        Uint32                    ArraySlice,
+                                        MAP_TYPE                  MapType,
+                                        Uint32                    MapFlags,
+                                        const Box*                pMapRegion,
+                                        MappedTextureSubresource& MappedData )override final;
+
+
+    virtual void UnmapTextureSubresource(ITexture* pTexture, Uint32 MipLevel, Uint32 ArraySlice)override final;
+
     virtual void FinishFrame()override final;
 
     virtual void TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers)override final;

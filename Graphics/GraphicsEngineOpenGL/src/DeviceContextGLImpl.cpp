@@ -1053,6 +1053,26 @@ namespace Diligent
         pDstTexGL->CopyData(this, pSrcTexGL, SrcMipLevel, SrcSlice, pSrcBox, DstMipLevel, DstSlice, DstX, DstY, DstZ);
     }
 
+    void DeviceContextGLImpl::MapTextureSubresource( ITexture*                 pTexture,
+                                                     Uint32                    MipLevel,
+                                                     Uint32                    ArraySlice,
+                                                     MAP_TYPE                  MapType,
+                                                     Uint32                    MapFlags,
+                                                     const Box*                pMapRegion,
+                                                     MappedTextureSubresource& MappedData )
+    {
+        TDeviceContextBase::MapTextureSubresource(pTexture, MipLevel, ArraySlice, MapType, MapFlags, pMapRegion, MappedData);
+        LOG_ERROR_MESSAGE("Texture mapping is not supported in OpenGL");
+        MappedData = MappedTextureSubresource{};
+    }
+
+
+    void DeviceContextGLImpl::UnmapTextureSubresource(ITexture* pTexture, Uint32 MipLevel, Uint32 ArraySlice)
+    {
+        TDeviceContextBase::UnmapTextureSubresource( pTexture, MipLevel, ArraySlice);
+        LOG_ERROR_MESSAGE("Texture mapping is not supported in OpenGL");
+    }
+
     void DeviceContextGLImpl::TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers)
     {
 

@@ -1212,16 +1212,40 @@ namespace Diligent
                           DstBox);
     }
 
-    void DeviceContextD3D12Impl::MapTexture( TextureD3D12Impl&         TextureD3D12,
-                                             Uint32                    MipLevel,
-                                             Uint32                    ArraySlice,
-                                             MAP_TYPE                  MapType,
-                                             Uint32                    MapFlags,
-                                             const Box&                MapRegion,
-                                             MappedTextureSubresource& MappedData )
+    void DeviceContextD3D12Impl::MapTextureSubresource( ITexture*                 pTexture,
+                                                        Uint32                    MipLevel,
+                                                        Uint32                    ArraySlice,
+                                                        MAP_TYPE                  MapType,
+                                                        Uint32                    MapFlags,
+                                                        const Box*                pMapRegion,
+                                                        MappedTextureSubresource& MappedData )
     {
+        TDeviceContextBase::MapTextureSubresource(pTexture, MipLevel, ArraySlice, MapType, MapFlags, pMapRegion, MappedData);
+
+        if (MapType != MAP_WRITE)
+        {
+            LOG_ERROR("Textures can currently only be mapped for writing in D3D12 backend");
+            MappedData = MappedTextureSubresource{};
+            return;
+        }
+
+        if( (MapFlags & (MAP_FLAG_DISCARD | MAP_FLAG_DO_NOT_SYNCHRONIZE)) != 0 )
+            LOG_WARNING_MESSAGE_ONCE("Mapping textures with flags MAP_FLAG_DISCARD or MAP_FLAG_DO_NOT_SYNCHRONIZE has no effect in D3D12 backend");
+
+        auto& TextureD3D12 = *ValidatedCast<TextureD3D12Impl>(pTexture);
         const auto& TexDesc = TextureD3D12.GetDesc();
-        auto UploadSpace = AllocateTextureUploadSpace(TexDesc.Format, MapRegion);
+
+        Box FullExtentBox;
+        if (pMapRegion == nullptr)
+        {
+            FullExtentBox.MaxX = std::max(TexDesc.Width  >> MipLevel, 1u);
+            FullExtentBox.MaxY = std::max(TexDesc.Height >> MipLevel, 1u);
+            if (TexDesc.Type == RESOURCE_DIM_TEX_3D)
+                FullExtentBox.MaxZ = std::max(TexDesc.Depth >> MipLevel, 1u);
+            pMapRegion = &FullExtentBox;
+        }
+
+        auto UploadSpace = AllocateTextureUploadSpace(TexDesc.Format, *pMapRegion);
         MappedData.pData       = reinterpret_cast<Uint8*>(UploadSpace.Allocation.CPUAddress) + (UploadSpace.AlignedOffset - UploadSpace.Allocation.Offset);
         MappedData.Stride      = UploadSpace.Stride;
         MappedData.DepthStride = UploadSpace.DepthStride;
@@ -1232,10 +1256,11 @@ namespace Diligent
             LOG_ERROR_MESSAGE("Mip level ", MipLevel, ", slice ", ArraySlice, " of texture '", TexDesc.Name, "' has already been mapped");
     }
 
-    void DeviceContextD3D12Impl::UnmapTexture( TextureD3D12Impl& TextureD3D12,
-                                               Uint32            MipLevel,
-                                               Uint32            ArraySlice)
+    void DeviceContextD3D12Impl::UnmapTextureSubresource(ITexture* pTexture, Uint32 MipLevel, Uint32 ArraySlice)
     {
+        TDeviceContextBase::UnmapTextureSubresource( pTexture, MipLevel, ArraySlice);
+
+        TextureD3D12Impl& TextureD3D12 = *ValidatedCast<TextureD3D12Impl>(pTexture);
         const auto& TexDesc = TextureD3D12.GetDesc();
         auto Subres = D3D12CalcSubresource(MipLevel, ArraySlice, 0, TexDesc.MipLevels, TexDesc.ArraySize);
         auto UploadSpaceIt = m_MappedTextures.find(MappedTextureKey{&TextureD3D12, Subres});

@@ -130,6 +130,18 @@ public:
                               Uint32 DstY,
                               Uint32 DstZ )override = 0;
 
+    /// Base implementaiton of IDeviceContext::MapTextureSubresource()
+    virtual void MapTextureSubresource(ITexture*                 pTexture,
+                                       Uint32                    MipLevel,
+                                       Uint32                    ArraySlice,
+                                       MAP_TYPE                  MapType,
+                                       Uint32                    MapFlags,
+                                       const Box*                pMapRegion,
+                                       MappedTextureSubresource& MappedData)override = 0;
+
+    /// Base implementaiton of IDeviceContext::UnmapTextureSubresource()
+    virtual void UnmapTextureSubresource(ITexture* pTexture, Uint32 MipLevel, Uint32 ArraySlice)override = 0;
+
 
     /// Sets the strong pointer to the swap chain
     virtual void SetSwapChain( ISwapChain* pSwapChain )override final { m_pSwapChain = pSwapChain; }
@@ -700,6 +712,29 @@ inline void DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType
     VERIFY( pDstTexture, "pSrcTexture must not be null" );
     ValidateCopyTextureParams( pSrcTexture->GetDesc(), SrcMipLevel, SrcSlice, pSrcBox,
                                pDstTexture->GetDesc(), DstMipLevel, DstSlice, DstX, DstY, DstZ );
+}
+
+template<typename BaseInterface, typename BufferImplType, typename TextureViewImplType, typename PipelineStateImplType>
+inline void DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType, PipelineStateImplType> ::
+            MapTextureSubresource(ITexture*                 pTexture,
+                                  Uint32                    MipLevel,
+                                  Uint32                    ArraySlice,
+                                  MAP_TYPE                  MapType,
+                                  Uint32                    MapFlags,
+                                  const Box*                pMapRegion,
+                                  MappedTextureSubresource& MappedData)
+{
+    VERIFY(pTexture, "pTexture must not be null");
+    ValidateMapTextureParams(pTexture->GetDesc(), MipLevel, ArraySlice, MapType, MapFlags, pMapRegion);
+}
+
+template<typename BaseInterface, typename BufferImplType, typename TextureViewImplType, typename PipelineStateImplType>
+inline void DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType, PipelineStateImplType> ::
+            UnmapTextureSubresource(ITexture* pTexture, Uint32 MipLevel, Uint32 ArraySlice)
+{
+    VERIFY(pTexture, "pTexture must not be null");
+    DEV_CHECK_ERR(MipLevel < pTexture->GetDesc().MipLevels, "Mip level is out of range");
+    DEV_CHECK_ERR(ArraySlice < pTexture->GetDesc().ArraySize, "Array slice is out of range");
 }
 
 

@@ -582,6 +582,31 @@ public:
                              Uint32 DstZ) = 0;
 
 
+    /// Maps the texture subresource
+
+    /// \param [in] pTexture    - Pointer to the texture to map.
+    /// \param [in] MipLevel    - Mip level to map.
+    /// \param [in] ArraySlice  - Array slice to map. This parameter must be 0 for non-array textures.
+    /// \param [in] MapType     - Type of the map operation. See Diligent::MAP_TYPE.
+    /// \param [in] MapFlags    - Special map flags. See Diligent::MAP_FLAGS.
+    /// \param [in] pMapRegion  - Texture region to map. If this parameter is null, the entire subresource is mapped.
+    /// \param [out] MappedData - Mapped texture region data
+    ///
+    /// \remarks This method is supported in D3D11, D3D12 and Vulkan backends. In D3D11 backend, only the entire 
+    ///          subresource can be mapped, so pMapRegion must either be null, or cover the entire subresource.
+    ///          In D3D11 and Vulkan backends, dynamic textures are no different from non-dynamic textures, and mapping 
+    ///          with MAP_FLAG_DISCARD has exactly the same behavior
+    virtual void MapTextureSubresource( ITexture*                 pTexture,
+                                        Uint32                    MipLevel,
+                                        Uint32                    ArraySlice,
+                                        MAP_TYPE                  MapType,
+                                        Uint32                    MapFlags,
+                                        const Box*                pMapRegion,
+                                        MappedTextureSubresource& MappedData ) = 0;
+
+    /// Unmaps the texture subresource
+    virtual void UnmapTextureSubresource(ITexture* pTexture, Uint32 MipLevel, Uint32 ArraySlice) = 0;
+
     /// Sets the swap chain in the device context
 
     /// The swap chain is used by the device context to work with the

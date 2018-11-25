@@ -304,30 +304,6 @@ public:
     ///       Release() must *NOT* be called.
     virtual ITextureView* GetDefaultView( TEXTURE_VIEW_TYPE ViewType ) = 0;
 
-    /// Map the texture
-
-    /// \param [in] pContext    - Pointer to the device context interface to be used to perform the operation.
-    /// \param [in] MipLevel    - Mip level to map.
-    /// \param [in] ArraySlice  - Array slice to map. This parameter must be 0 for non-array textures.
-    /// \param [in] MapType     - Type of the map operation. See Diligent::MAP_TYPE.
-    /// \param [in] MapFlags    - Special map flags. See Diligent::MAP_FLAGS.
-    /// \param [in] pMapRegion  - Texture region to map. If this parameter is null, the entire subresource is mapped.
-    /// \param [out] MappedData - Mapped texture region data
-    ///
-    /// \remarks This method is supported in D3D11, D3D12 and Vulkan backends. In D3D11 backend, only the entire 
-    ///          subresource can be mapped, so pMapRegion must either be null, or cover the entire subresource.
-    ///          In D3D11 and Vulkan backends, dynamic textures are no different from non-dynamic textures, and mapping 
-    ///          with MAP_FLAG_DISCARD has exactly the same behavior
-    virtual void Map( IDeviceContext*           pContext,
-                      Uint32                    MipLevel,
-                      Uint32                    ArraySlice,
-                      MAP_TYPE                  MapType,
-                      Uint32                    MapFlags,
-                      const Box*                pMapRegion,
-                      MappedTextureSubresource& MappedData ) = 0;
-
-    /// Unmap the textute
-    virtual void Unmap(IDeviceContext *pContext, Uint32 MipLevel, Uint32 ArraySlice) = 0;
 
     /// Returns native texture handle specific to the underlying graphics API
 

@@ -141,18 +141,6 @@ public:
         CreateViewInternal( ViewDesc, ppView, false );
     }
 
-    /// Base implementaiton of ITexture::Map()
-    virtual void Map(IDeviceContext*           pContext,
-                     Uint32                    MipLevel,
-                     Uint32                    ArraySlice,
-                     MAP_TYPE                  MapType,
-                     Uint32                    MapFlags,
-                     const Box*                pMapRegion,
-                     MappedTextureSubresource& MappedData)override = 0;
-
-    /// Base implementaiton of ITexture::Unmap()
-    virtual void Unmap( IDeviceContext* pContext, Uint32 MipLevel, Uint32 ArraySlice)override = 0;
-
     /// Creates default texture views.
 
     ///
@@ -485,24 +473,6 @@ void TextureBase<BaseInterface, TRenderDeviceImpl, TTextureViewImpl, TTexViewObj
         m_pDefaultUAV.reset( static_cast<TTextureViewImpl*>(pUAV) );
         VERIFY( m_pDefaultUAV->GetDesc().ViewType == TEXTURE_VIEW_UNORDERED_ACCESS, "Unexpected view type" );
    }
-}
-
-template<class BaseInterface, class TRenderDeviceImpl,class TTextureViewImpl, class TTexViewObjAllocator>
-void TextureBase<BaseInterface, TRenderDeviceImpl, TTextureViewImpl, TTexViewObjAllocator> :: Map(
-                             IDeviceContext*           pContext,
-                             Uint32                    MipLevel,
-                             Uint32                    ArraySlice,
-                             MAP_TYPE                  MapType,
-                             Uint32                    MapFlags,
-                             const Box*                pMapRegion,
-                             MappedTextureSubresource& MappedData)
-{
-    ValidateMapTextureParams(this->GetDesc(), MipLevel, ArraySlice, MapType, MapFlags, pMapRegion);
-}
-
-template<class BaseInterface, class TRenderDeviceImpl,class TTextureViewImpl, class TTexViewObjAllocator>
-void TextureBase<BaseInterface, TRenderDeviceImpl, TTextureViewImpl, TTexViewObjAllocator> :: Unmap(IDeviceContext* pContext, Uint32 MipLevel, Uint32 ArraySlice)
-{
 }
 
 }

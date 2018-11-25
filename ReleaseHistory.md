@@ -19,7 +19,9 @@
   * Renamed/moved `IBuffer::UpdateData()` to `IDeviceContext::UpdateBuffer()`
   * Renamed/moved `IBuffer::CopyData()` to `IDeviceContext::CopyBuffer()`
   * Renamed/moved `ITexture::UpdateData()` to `IDeviceContext::UpdateTexture()`
-  * Renamed/moved `IBuffer::CopyData()` to `IDeviceContext::CopyTexture()`
+  * Renamed/moved `ITexture::CopyData()` to `IDeviceContext::CopyTexture()`
+  * Renamed/moved `ITexture::Map()` to `IDeviceContext::MapTextureSubresource()`
+  * Renamed/moved `ITexture::Unmap()` to `IDeviceContext::UnmapTextureSubresource()`
 
 ## v2.3.b
 

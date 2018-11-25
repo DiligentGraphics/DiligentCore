@@ -112,6 +112,17 @@ public:
                              Uint32     DstY,
                              Uint32     DstZ)override final;
 
+    virtual void MapTextureSubresource( ITexture*                 pTexture,
+                                        Uint32                    MipLevel,
+                                        Uint32                    ArraySlice,
+                                        MAP_TYPE                  MapType,
+                                        Uint32                    MapFlags,
+                                        const Box*                pMapRegion,
+                                        MappedTextureSubresource& MappedData )override final;
+
+
+    virtual void UnmapTextureSubresource(ITexture* pTexture, Uint32 MipLevel, Uint32 ArraySlice)override final;
+
     virtual void FinishCommandList(class ICommandList** ppCommandList)override final;
 
     virtual void ExecuteCommandList(class ICommandList* pCommandList)override final;
@@ -157,30 +168,17 @@ public:
     }
 
     void UpdateBufferRegion(BufferVkImpl* pBuffVk, Uint64 DstOffset, Uint64 NumBytes, VkBuffer vkSrcBuffer, Uint64 SrcOffset);
-    void UpdateBufferRegion(BufferVkImpl* pBuffVk, const void* pData, Uint64 DstOffset, Uint64 NumBytes);
 
     void CopyBufferRegion(BufferVkImpl* pSrcBuffVk, BufferVkImpl* pDstBuffVk, Uint64 SrcOffset, Uint64 DstOffset, Uint64 NumBytes);
     void CopyTextureRegion(TextureVkImpl* pSrcTexture, TextureVkImpl* pDstTexture, const VkImageCopy &CopyRegion);
 
-    void UpdateTextureRegion(const void*          pSrcData,
-                             Uint32               SrcStride,
-                             Uint32               SrcDepthStride,
-                             TextureVkImpl& TextureVk,
-                             Uint32               MipLevel,
-                             Uint32               Slice,
-                             const Box&           DstBox);
-
-    void MapTexture(TextureVkImpl&            TextureVk,
-                    Uint32                    MipLevel,
-                    Uint32                    ArraySlice,
-                    MAP_TYPE                  MapType,
-                    Uint32                    MapFlags,
-                    const Box&                MapRegion,
-                    MappedTextureSubresource& MappedData);
-
-    void UnmapTexture(TextureVkImpl& TextureVk,
-                      Uint32         MipLevel,
-                      Uint32         ArraySlice);
+    void UpdateTextureRegion(const void*     pSrcData,
+                             Uint32          SrcStride,
+                             Uint32          SrcDepthStride,
+                             TextureVkImpl&  TextureVk,
+                             Uint32          MipLevel,
+                             Uint32          Slice,
+                             const Box&      DstBox);
 
     void GenerateMips(class TextureViewVkImpl& TexView)
     {

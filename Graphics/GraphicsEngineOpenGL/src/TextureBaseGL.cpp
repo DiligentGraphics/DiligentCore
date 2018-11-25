@@ -487,25 +487,6 @@ void TextureBaseGL :: CopyData(DeviceContextGLImpl *pDeviceCtxGL,
 }
 
 
-void TextureBaseGL :: Map(IDeviceContext*           pContext,
-                          Uint32                    MipLevel,
-                          Uint32                    ArraySlice,
-                          MAP_TYPE                  MapType,
-                          Uint32                    MapFlags,
-                          const Box*                pMapRegion,
-                          MappedTextureSubresource& MappedData)
-{
-    TTextureBase::Map(pContext, MipLevel, ArraySlice, MapType, MapFlags, pMapRegion, MappedData);
-    LOG_ERROR_MESSAGE("Texture mapping is not supported in OpenGL");
-    MappedData = MappedTextureSubresource{};
-}
-
-void TextureBaseGL::Unmap(IDeviceContext* pContext, Uint32 MipLevel, Uint32 ArraySlice)
-{
-    TTextureBase::Unmap(pContext, MipLevel, ArraySlice);
-    LOG_ERROR_MESSAGE("Texture mapping is not supported in OpenGL");
-}
-
 void TextureBaseGL::TextureMemoryBarrier( Uint32 RequiredBarriers, GLContextState &GLContextState )
 {
 #if GL_ARB_shader_image_load_store

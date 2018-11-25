@@ -61,15 +61,6 @@ public:
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
 
-    virtual void Map( IDeviceContext*           pContext,
-                      Uint32                    MipLevel,
-                      Uint32                    ArraySlice,
-                      MAP_TYPE                  MapType,
-                      Uint32                    MapFlags,
-                      const Box*                pMapRegion,
-                      MappedTextureSubresource& MappedData )override final;
-    virtual void Unmap( IDeviceContext *pContext, Uint32 MipLevel, Uint32 ArraySlice)override final;
-
     virtual ID3D12Resource* GetD3D12Texture(){ return GetD3D12Resource(); }
 
     virtual void* GetNativeHandle()override final { return GetD3D12Texture(); }

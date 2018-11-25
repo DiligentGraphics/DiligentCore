@@ -142,49 +142,8 @@ void TextureBaseD3D11 :: PrepareD3D11InitData(const TextureData& InitData, Uint3
     }
 }
 
-
 TextureBaseD3D11 :: ~TextureBaseD3D11()
 {
-}
-
-void TextureBaseD3D11 :: Map(IDeviceContext*           pContext,
-                             Uint32                    MipLevel,
-                             Uint32                    ArraySlice,
-                             MAP_TYPE                  MapType,
-                             Uint32                    MapFlags,
-                             const Box*                pMapRegion,
-                             MappedTextureSubresource& MappedData)
-{
-    TTextureBase::Map(pContext, MipLevel, ArraySlice, MapType, MapFlags, pMapRegion, MappedData);
-
-    auto* pd3d11DeviceContext = static_cast<DeviceContextD3D11Impl*>(pContext)->GetD3D11DeviceContext();
-    D3D11_MAP d3d11MapType = static_cast<D3D11_MAP>(0);
-    UINT d3d11MapFlags = 0;
-    MapParamsToD3D11MapParams(MapType, MapFlags, d3d11MapType, d3d11MapFlags);
-
-    auto Subresource = D3D11CalcSubresource(MipLevel, ArraySlice, m_Desc.MipLevels);
-    D3D11_MAPPED_SUBRESOURCE MappedTex;
-    auto hr = pd3d11DeviceContext->Map(m_pd3d11Texture, Subresource, d3d11MapType, d3d11MapFlags, &MappedTex);
-    if( FAILED(hr) )
-    {
-        VERIFY_EXPR( hr == DXGI_ERROR_WAS_STILL_DRAWING  );
-        MappedData = MappedTextureSubresource();
-    }
-    else
-    {
-        MappedData.pData = MappedTex.pData;
-        MappedData.Stride = MappedTex.RowPitch;
-        MappedData.DepthStride = MappedTex.DepthPitch;
-    }
-}
-
-void TextureBaseD3D11::Unmap( IDeviceContext* pContext, Uint32 MipLevel, Uint32 ArraySlice)
-{
-    TTextureBase::Unmap( pContext, MipLevel, ArraySlice);
-
-    auto* pd3d11DeviceContext = static_cast<DeviceContextD3D11Impl*>(pContext)->GetD3D11DeviceContext();
-    auto Subresource = D3D11CalcSubresource(MipLevel, ArraySlice, m_Desc.MipLevels);
-    pd3d11DeviceContext->Unmap(m_pd3d11Texture, Subresource);
 }
 
 }

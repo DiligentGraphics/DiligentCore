@@ -105,6 +105,16 @@ public:
                              Uint32     DstY,
                              Uint32     DstZ)override final;
 
+    virtual void MapTextureSubresource( ITexture*                 pTexture,
+                                        Uint32                    MipLevel,
+                                        Uint32                    ArraySlice,
+                                        MAP_TYPE                  MapType,
+                                        Uint32                    MapFlags,
+                                        const Box*                pMapRegion,
+                                        MappedTextureSubresource& MappedData )override final;
+
+    virtual void UnmapTextureSubresource(ITexture* pTexture, Uint32 MipLevel, Uint32 ArraySlice)override final;
+
     virtual void FinishFrame()override final;
 
     virtual void TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers)override final;
@@ -119,17 +129,10 @@ public:
 
     virtual void TransitionBufferState(IBuffer *pBuffer, D3D12_RESOURCE_STATES State)override final;
 
-    ///// Clears the state caches. This function is called once per frame
-    ///// (before present) to release all outstanding objects
-    ///// that are only kept alive by references in the cache
-    //void ClearShaderStateCache();
-
     ///// Number of different shader types (Vertex, Pixel, Geometry, Domain, Hull, Compute)
     //static constexpr int NumShaderTypes = 6;
 
     void UpdateBufferRegion(class BufferD3D12Impl *pBuffD3D12, D3D12DynamicAllocation& Allocation, Uint64 DstOffset, Uint64 NumBytes);
-    void UpdateBufferRegion(class BufferD3D12Impl *pBuffD3D12, const void *pData, Uint64 DstOffset, Uint64 NumBytes);
-    void CopyBufferRegion(class BufferD3D12Impl *pSrcBuffD3D12, class BufferD3D12Impl *pDstBuffD3D12, Uint64 SrcOffset, Uint64 DstOffset, Uint64 NumBytes);
     void CopyTextureRegion(class TextureD3D12Impl *pSrcTexture, Uint32 SrcSubResIndex, const D3D12_BOX* pD3D12SrcBox,
                            class TextureD3D12Impl *pDstTexture, Uint32 DstSubResIndex, Uint32 DstX, Uint32 DstY, Uint32 DstZ);
     void CopyTextureRegion(IBuffer*                 pSrcBuffer,
@@ -154,18 +157,6 @@ public:
                              class TextureD3D12Impl& TextureD3D12,
                              Uint32                  DstSubResIndex,
                              const Box&              DstBox);
-
-    void MapTexture( class TextureD3D12Impl&   TextureD3D12,
-                     Uint32                    MipLevel,
-                     Uint32                    ArraySlice,
-                     MAP_TYPE                  MapType,
-                     Uint32                    MapFlags,
-                     const Box&                MapRegion,
-                     MappedTextureSubresource& MappedData );
-
-    void UnmapTexture( class TextureD3D12Impl&   TextureD3D12,
-                       Uint32                    MipLevel,
-                       Uint32                    ArraySlice);
 
     void GenerateMips(class TextureViewD3D12Impl *pTexView);
 

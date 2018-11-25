@@ -63,16 +63,6 @@ public:
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID& IID, IObject** ppInterface )override;
 
-    //virtual void CopyData(CTexture* pSrcTexture, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size);
-    virtual void Map(IDeviceContext*           pContext,
-                     Uint32                    MipLevel,
-                     Uint32                    ArraySlice,
-                     MAP_TYPE                  MapType,
-                     Uint32                    MapFlags,
-                     const Box*                pMapRegion,
-                     MappedTextureSubresource& MappedData)override;
-    virtual void Unmap(IDeviceContext* pContext, Uint32 MipLevel, Uint32 ArraySlice)override;
-
     virtual VkImage GetVkImage()const override final{ return m_VulkanImage; }
     virtual void* GetNativeHandle()override final
     {

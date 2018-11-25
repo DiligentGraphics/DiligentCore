@@ -1458,7 +1458,7 @@ namespace Diligent
         const auto& DeviceLimits = m_pDevice.RawPtr<const RenderDeviceVkImpl>()->GetPhysicalDevice().GetProperties().limits;
         // Source buffer offset must be multiple of 4 (18.4)
         auto BufferOffsetAlignment = std::max(DeviceLimits.optimalBufferCopyOffsetAlignment, VkDeviceSize{4});
-        // If the calling command�s VkImage parameter is a compressed image, bufferOffset must be a multiple of 
+        // If the calling command's VkImage parameter is a compressed image, bufferOffset must be a multiple of 
         // the compressed texel block size in bytes (18.4)
         const auto& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
         if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
@@ -1579,20 +1579,44 @@ namespace Diligent
             &CopyRegion);
     }
 
-    void DeviceContextVkImpl::MapTexture( TextureVkImpl&            TextureVk,
-                                          Uint32                    MipLevel,
-                                          Uint32                    ArraySlice,
-                                          MAP_TYPE                  MapType,
-                                          Uint32                    MapFlags,
-                                          const Box&                MapRegion,
-                                          MappedTextureSubresource& MappedData )
+    void DeviceContextVkImpl::MapTextureSubresource( ITexture*                 pTexture,
+                                                     Uint32                    MipLevel,
+                                                     Uint32                    ArraySlice,
+                                                     MAP_TYPE                  MapType,
+                                                     Uint32                    MapFlags,
+                                                     const Box*                pMapRegion,
+                                                     MappedTextureSubresource& MappedData )
     {
+        TDeviceContextBase::MapTextureSubresource(pTexture, MipLevel, ArraySlice, MapType, MapFlags, pMapRegion, MappedData);
+
+        TextureVkImpl& TextureVk = *ValidatedCast<TextureVkImpl>(pTexture);
         const auto& TexDesc = TextureVk.GetDesc();
-        auto CopyInfo = GetBufferToTextureCopyInfo(TexDesc, MipLevel, MapRegion);
+
+        if (MapType != MAP_WRITE)
+        {
+            LOG_ERROR("Textures can currently only be mapped for writing in Vulkan backend");
+            MappedData = MappedTextureSubresource{};
+            return;
+        }
+
+        if ((MapFlags & (MAP_FLAG_DISCARD | MAP_FLAG_DO_NOT_SYNCHRONIZE)) != 0)
+            LOG_WARNING_MESSAGE_ONCE("Mapping textures with flags MAP_FLAG_DISCARD or MAP_FLAG_DO_NOT_SYNCHRONIZE has no effect in Vulkan backend");
+
+        Box FullExtentBox;
+        if (pMapRegion == nullptr)
+        {
+            FullExtentBox.MaxX = std::max(TexDesc.Width  >> MipLevel, 1u);
+            FullExtentBox.MaxY = std::max(TexDesc.Height >> MipLevel, 1u);
+            if (TexDesc.Type == RESOURCE_DIM_TEX_3D)
+                FullExtentBox.MaxZ = std::max(TexDesc.Depth >> MipLevel, 1u);
+            pMapRegion = &FullExtentBox;
+        }
+        
+        auto CopyInfo = GetBufferToTextureCopyInfo(TexDesc, MipLevel, *pMapRegion);
         const auto& DeviceLimits = m_pDevice.RawPtr<RenderDeviceVkImpl>()->GetPhysicalDevice().GetProperties().limits;
         // Source buffer offset must be multiple of 4 (18.4)
         auto Alignment = std::max(DeviceLimits.optimalBufferCopyOffsetAlignment, VkDeviceSize{4});
-        // If the calling command�s VkImage parameter is a compressed image, bufferOffset must be a multiple of 
+        // If the calling command's VkImage parameter is a compressed image, bufferOffset must be a multiple of 
         // the compressed texel block size in bytes (18.4)
         const auto& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
         if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
@@ -1610,10 +1634,13 @@ namespace Diligent
             LOG_ERROR_MESSAGE("Mip level ", MipLevel, ", slice ", ArraySlice, " of texture '", TexDesc.Name, "' has already been mapped");
     }
 
-    void DeviceContextVkImpl::UnmapTexture( TextureVkImpl& TextureVk,
-                                            Uint32         MipLevel,
-                                            Uint32         ArraySlice)
+    void DeviceContextVkImpl::UnmapTextureSubresource(ITexture* pTexture,
+                                                      Uint32    MipLevel,
+                                                      Uint32    ArraySlice)
     {
+        TDeviceContextBase::UnmapTextureSubresource( pTexture, MipLevel, ArraySlice);
+
+        TextureVkImpl& TextureVk = *ValidatedCast<TextureVkImpl>(pTexture);
         const auto& TexDesc = TextureVk.GetDesc();
         auto UploadSpaceIt = m_MappedTextures.find(MappedTextureKey{&TextureVk, MipLevel, ArraySlice});
         if(UploadSpaceIt != m_MappedTextures.end())

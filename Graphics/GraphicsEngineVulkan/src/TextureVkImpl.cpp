@@ -494,48 +494,6 @@ TextureVkImpl :: ~TextureVkImpl()
     m_pDevice->SafeReleaseDeviceObject(std::move(m_MemoryAllocation), m_Desc.CommandQueueMask);
 }
 
-void TextureVkImpl :: Map(IDeviceContext*           pContext,
-                          Uint32                    MipLevel,
-                          Uint32                    ArraySlice,
-                          MAP_TYPE                  MapType,
-                          Uint32                    MapFlags,
-                          const Box*                pMapRegion,
-                          MappedTextureSubresource& MappedData)
-{
-    TTextureBase::Map(pContext, MipLevel, ArraySlice, MapType, MapFlags, pMapRegion, MappedData);
-    
-    auto* pDeviceContextVk = ValidatedCast<DeviceContextVkImpl>(pContext);
-    MappedData = MappedTextureSubresource{};
-
-    Box FullExtentBox;
-    if (pMapRegion == nullptr)
-    {
-        FullExtentBox.MaxX = std::max(m_Desc.Width  >> MipLevel, 1u);
-        FullExtentBox.MaxY = std::max(m_Desc.Height >> MipLevel, 1u);
-        if (m_Desc.Type == RESOURCE_DIM_TEX_3D)
-            FullExtentBox.MaxZ = std::max(m_Desc.Depth >> MipLevel, 1u);
-        pMapRegion = &FullExtentBox;
-    }
-
-    if(MapType == MAP_WRITE)
-    {
-        if( (MapFlags & (MAP_FLAG_DISCARD | MAP_FLAG_DO_NOT_SYNCHRONIZE)) != 0 )
-            LOG_WARNING_MESSAGE_ONCE("Mapping textures with flags MAP_FLAG_DISCARD or MAP_FLAG_DO_NOT_SYNCHRONIZE has no effect in Vulkan backend");
-        pDeviceContextVk->MapTexture(*this, MipLevel, ArraySlice, MapType, MapFlags, *pMapRegion, MappedData);
-    }
-    else
-    {
-        LOG_ERROR("Textures can currently only be mapped for writing in D3D12 backend");
-    }
-}
-
-void TextureVkImpl::Unmap(IDeviceContext *pContext, Uint32 MipLevel, Uint32 ArraySlice)
-{
-    TTextureBase::Unmap(pContext, MipLevel, ArraySlice);
-    auto* pDeviceContextVk = ValidatedCast<DeviceContextVkImpl>(pContext);
-    pDeviceContextVk->UnmapTexture(*this, MipLevel, ArraySlice);
-}
-
 VulkanUtilities::ImageViewWrapper TextureVkImpl::CreateImageView(TextureViewDesc& ViewDesc)
 {
     VERIFY(ViewDesc.ViewType == TEXTURE_VIEW_SHADER_RESOURCE ||

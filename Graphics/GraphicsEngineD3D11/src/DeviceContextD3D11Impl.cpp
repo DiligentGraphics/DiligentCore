@@ -1050,6 +1050,49 @@ namespace Diligent
     }
 
 
+    void DeviceContextD3D11Impl::MapTextureSubresource( ITexture*                 pTexture,
+                                                        Uint32                    MipLevel,
+                                                        Uint32                    ArraySlice,
+                                                        MAP_TYPE                  MapType,
+                                                        Uint32                    MapFlags,
+                                                        const Box*                pMapRegion,
+                                                        MappedTextureSubresource& MappedData )
+    {
+        TDeviceContextBase::MapTextureSubresource(pTexture, MipLevel, ArraySlice, MapType, MapFlags, pMapRegion, MappedData);
+
+        auto* pTexD3D11 = ValidatedCast<TextureBaseD3D11>(pTexture);
+        const auto& TexDesc = pTexD3D11->GetDesc();
+        D3D11_MAP d3d11MapType = static_cast<D3D11_MAP>(0);
+        UINT d3d11MapFlags = 0;
+        MapParamsToD3D11MapParams(MapType, MapFlags, d3d11MapType, d3d11MapFlags);
+
+        auto Subresource = D3D11CalcSubresource(MipLevel, ArraySlice, TexDesc.MipLevels);
+        D3D11_MAPPED_SUBRESOURCE MappedTex;
+        auto hr = m_pd3d11DeviceContext->Map(pTexD3D11->GetD3D11Texture(), Subresource, d3d11MapType, d3d11MapFlags, &MappedTex);
+        if( FAILED(hr) )
+        {
+            VERIFY_EXPR( hr == DXGI_ERROR_WAS_STILL_DRAWING  );
+            MappedData = MappedTextureSubresource();
+        }
+        else
+        {
+            MappedData.pData = MappedTex.pData;
+            MappedData.Stride = MappedTex.RowPitch;
+            MappedData.DepthStride = MappedTex.DepthPitch;
+        }
+    }
+
+    void DeviceContextD3D11Impl::UnmapTextureSubresource(ITexture* pTexture, Uint32 MipLevel, Uint32 ArraySlice)
+    {
+        TDeviceContextBase::UnmapTextureSubresource( pTexture, MipLevel, ArraySlice);
+
+        auto* pTexD3D11 = ValidatedCast<TextureBaseD3D11>(pTexture);
+        const auto& TexDesc = pTexD3D11->GetDesc();
+        auto Subresource = D3D11CalcSubresource(MipLevel, ArraySlice, TexDesc.MipLevels);
+        m_pd3d11DeviceContext->Unmap(pTexD3D11->GetD3D11Texture(), Subresource);
+    }
+
+
     void DeviceContextD3D11Impl::FinishFrame()
     {
     }
