@@ -219,7 +219,7 @@ public:
                                             ShaderResourceCacheD3D12&        DstCache)const;
 
 #ifdef DEVELOPMENT
-    bool dvpVerifyBindings(ShaderResourceCacheD3D12& ResourceCache)const;
+    bool dvpVerifyBindings(const ShaderResourceCacheD3D12& ResourceCache)const;
 #endif
 
     IObject& GetOwner(){return m_Owner;}

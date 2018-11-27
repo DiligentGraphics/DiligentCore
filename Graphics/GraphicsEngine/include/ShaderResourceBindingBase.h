@@ -63,6 +63,18 @@ public:
         return m_pPSO;
     }
 
+    template<typename PSOType>
+    PSOType* GetPipelineState()
+    {
+        return ValidatedCast<PSOType>(m_pPSO);
+    }
+
+    template<typename PSOType>
+    PSOType* GetPipelineState()const
+    {
+        return ValidatedCast<PSOType>(m_pPSO);
+    }
+
 protected:
 
     /// Strong reference to PSO. We must use strong reference, because

@@ -60,7 +60,8 @@ public:
     ShaderResourceCacheD3D12* CommitAndTransitionShaderResources(IShaderResourceBinding* pShaderResourceBinding, 
                                                                  class CommandContext&   Ctx,
                                                                  bool                    CommitResources,
-                                                                 bool                    TransitionResources)const;
+                                                                 bool                    TransitionResources,
+                                                                 bool                    ValidateStates)const;
     
     const RootSignature& GetRootSignature()const{return m_RootSig;}
     

@@ -313,12 +313,14 @@ public:
     void (RootSignature::*CommitDescriptorHandles)(class RenderDeviceD3D12Impl*  pRenderDeviceD3D12, 
                                                    ShaderResourceCacheD3D12&     ResourceCache, 
                                                    class CommandContext&         Ctx, 
-                                                   bool                          IsCompute)const = nullptr;
+                                                   bool                          IsCompute,
+                                                   bool                          ValidateStates)const = nullptr;
 
     void (RootSignature::*TransitionAndCommitDescriptorHandles)(class RenderDeviceD3D12Impl* pRenderDeviceD3D12, 
                                                                 ShaderResourceCacheD3D12&    ResourceCache, 
                                                                 class CommandContext&        Ctx, 
-                                                                bool                         IsCompute)const = nullptr;
+                                                                bool                         IsCompute,
+                                                                bool                         ValidateStates)const = nullptr;
 
     void TransitionResources(ShaderResourceCacheD3D12&  ResourceCache, 
                              class CommandContext&      Ctx)const;
@@ -474,13 +476,15 @@ private:
     void CommitDescriptorHandlesInternal_SM(class RenderDeviceD3D12Impl* pRenderDeviceD3D12, 
                                             ShaderResourceCacheD3D12&    ResourceCache, 
                                             class CommandContext&        Ctx, 
-                                            bool                         IsCompute)const;
+                                            bool                         IsCompute,
+                                            bool                         ValidateStates)const;
     template<bool PerformResourceTransitions>
     // Commits descriptor handles for static, mutable, and dynamic variables
     void CommitDescriptorHandlesInternal_SMD(class RenderDeviceD3D12Impl*  pRenderDeviceD3D12, 
                                              ShaderResourceCacheD3D12&     ResourceCache, 
                                              class CommandContext&         Ctx, 
-                                             bool                          IsCompute)const;
+                                             bool                          IsCompute,
+                                             bool                          ValidateStates)const;
 };
 
 }

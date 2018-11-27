@@ -236,9 +236,9 @@ public:
 
     // Returns CPU descriptor handle of a shader visible descriptor heap allocation
     template<D3D12_DESCRIPTOR_HEAP_TYPE HeapType>
-    D3D12_CPU_DESCRIPTOR_HANDLE GetShaderVisibleTableCPUDescriptorHandle(Uint32 RootParamInd, Uint32 OffsetFromTableStart = 0)
+    D3D12_CPU_DESCRIPTOR_HANDLE GetShaderVisibleTableCPUDescriptorHandle(Uint32 RootParamInd, Uint32 OffsetFromTableStart = 0) const
     {
-        auto &RootParam = GetRootTable(RootParamInd);
+        const auto& RootParam = GetRootTable(RootParamInd);
         VERIFY(HeapType == RootParam.DbgGetHeapType(), "Invalid descriptor heap type");
 
         D3D12_CPU_DESCRIPTOR_HANDLE CPUDescriptorHandle = {0};
@@ -269,9 +269,9 @@ public:
 
     // Returns GPU descriptor handle of a shader visible descriptor table
     template<D3D12_DESCRIPTOR_HEAP_TYPE HeapType>
-    D3D12_GPU_DESCRIPTOR_HANDLE GetShaderVisibleTableGPUDescriptorHandle(Uint32 RootParamInd, Uint32 OffsetFromTableStart = 0)
+    D3D12_GPU_DESCRIPTOR_HANDLE GetShaderVisibleTableGPUDescriptorHandle(Uint32 RootParamInd, Uint32 OffsetFromTableStart = 0) const
     {
-        auto &RootParam = GetRootTable(RootParamInd);
+        const auto& RootParam = GetRootTable(RootParamInd);
         VERIFY(RootParam.m_TableStartOffset != InvalidDescriptorOffset, "GPU descriptor handle must never be requested for dynamic resources");
         VERIFY(OffsetFromTableStart < RootParam.m_NumResources, "Offset is out of range");
 

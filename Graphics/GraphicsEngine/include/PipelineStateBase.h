@@ -229,9 +229,9 @@ public:
 
     // This function only compares shader resource layout hashes, so
     // it can potentially give false negatives
-    bool IsIncompatibleWith(IPipelineState* pPSO)const
+    bool IsIncompatibleWith(const IPipelineState* pPSO)const
     {
-        return m_ShaderResourceLayoutHash != ValidatedCast<PipelineStateBase>(pPSO)->m_ShaderResourceLayoutHash;
+        return m_ShaderResourceLayoutHash != ValidatedCast<const PipelineStateBase>(pPSO)->m_ShaderResourceLayoutHash;
     }
 
     virtual void BindShaderResources( IResourceMapping* pResourceMapping, Uint32 Flags )override

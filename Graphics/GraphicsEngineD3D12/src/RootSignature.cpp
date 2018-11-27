@@ -685,7 +685,7 @@ void TransitionResource(CommandContext&                     Ctx,
         {
             VERIFY(RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_SRV, "Unexpected descriptor range type");
             auto* pBuffViewD3D12 = Res.pObject.RawPtr<BufferViewD3D12Impl>();
-            auto* pBuffToTransition = ValidatedCast<BufferD3D12Impl>(pBuffViewD3D12->GetBuffer());
+            auto* pBuffToTransition = pBuffViewD3D12->GetBuffer<BufferD3D12Impl>();
             if (pBuffToTransition->IsInKnownState() && !pBuffToTransition->CheckState(RESOURCE_STATE_SHADER_RESOURCE))
                 Ctx.TransitionResource(pBuffToTransition, RESOURCE_STATE_SHADER_RESOURCE );
         }
@@ -695,7 +695,7 @@ void TransitionResource(CommandContext&                     Ctx,
         {
             VERIFY(RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_UAV, "Unexpected descriptor range type");
             auto* pBuffViewD3D12 = Res.pObject.RawPtr<BufferViewD3D12Impl>();
-            auto* pBuffToTransition = ValidatedCast<BufferD3D12Impl>(pBuffViewD3D12->GetBuffer());
+            auto* pBuffToTransition = pBuffViewD3D12->GetBuffer<BufferD3D12Impl>();
             if (pBuffToTransition->IsInKnownState())
             {
                 // We must always call TransitionResource() even when the state is already 
@@ -709,7 +709,7 @@ void TransitionResource(CommandContext&                     Ctx,
         {
             VERIFY(RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_SRV, "Unexpected descriptor range type");
             auto* pTexViewD3D12 = Res.pObject.RawPtr<TextureViewD3D12Impl>();
-            auto* pTexToTransition = ValidatedCast<TextureD3D12Impl>(pTexViewD3D12->GetTexture());
+            auto* pTexToTransition = pTexViewD3D12->GetTexture<TextureD3D12Impl>();
             if (pTexToTransition->IsInKnownState() && !pTexToTransition->CheckState(RESOURCE_STATE_SHADER_RESOURCE))
                 Ctx.TransitionResource(pTexToTransition, RESOURCE_STATE_SHADER_RESOURCE );
         }
@@ -719,7 +719,7 @@ void TransitionResource(CommandContext&                     Ctx,
         {
             VERIFY(RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_UAV, "Unexpected descriptor range type");
             auto* pTexViewD3D12 = Res.pObject.RawPtr<TextureViewD3D12Impl>();
-            auto* pTexToTransition = ValidatedCast<TextureD3D12Impl>(pTexViewD3D12->GetTexture());
+            auto* pTexToTransition = pTexViewD3D12->GetTexture<TextureD3D12Impl>();
             if (pTexToTransition->IsInKnownState())
             {
                 // We must always call TransitionResource() even when the state is already 
@@ -741,9 +741,9 @@ void TransitionResource(CommandContext&                     Ctx,
 }
 
 
-#ifdef _DEBUG
-void DbgVerifyResourceState(ShaderResourceCacheD3D12::Resource& Res,
-                            D3D12_DESCRIPTOR_RANGE_TYPE         RangeType)
+#ifdef DEVELOPMENT
+void DvpVerifyResourceState(const ShaderResourceCacheD3D12::Resource& Res,
+                            D3D12_DESCRIPTOR_RANGE_TYPE               RangeType)
 {
     switch (Res.Type)
     {
@@ -751,49 +751,49 @@ void DbgVerifyResourceState(ShaderResourceCacheD3D12::Resource& Res,
         {
             VERIFY(RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_CBV, "Unexpected descriptor range type");
             // Not using QueryInterface() for the sake of efficiency
-            auto* pBufferD3D12 = Res.pObject.RawPtr<BufferD3D12Impl>();
+            const auto* pBufferD3D12 = Res.pObject.RawPtr<const BufferD3D12Impl>();
             if (pBufferD3D12->IsInKnownState() && !pBufferD3D12->CheckState(RESOURCE_STATE_CONSTANT_BUFFER))
-                LOG_ERROR_MESSAGE("Resource \"", pBufferD3D12->GetDesc().Name, "\" is not in RESOURCE_STATE_CONSTANT_BUFFER state. Did you forget to call TransitionShaderResources() or specify COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag in a call to CommitShaderResources()?" );
+                LOG_ERROR_MESSAGE("Resource '", pBufferD3D12->GetDesc().Name, "' is not in RESOURCE_STATE_CONSTANT_BUFFER state. Did you forget to call TransitionShaderResources() or specify COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag in a call to CommitShaderResources()?" );
         }
         break;
 
         case CachedResourceType::BufSRV:
         {
             VERIFY(RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_SRV, "Unexpected descriptor range type");
-            auto* pBuffViewD3D12 = Res.pObject.RawPtr<BufferViewD3D12Impl>();
-            auto* pBufferD3D12 = ValidatedCast<BufferD3D12Impl>(pBuffViewD3D12->GetBuffer());
+            const auto* pBuffViewD3D12 = Res.pObject.RawPtr<const BufferViewD3D12Impl>();
+            const auto* pBufferD3D12 = pBuffViewD3D12->GetBuffer<const BufferD3D12Impl>();
             if (pBufferD3D12->IsInKnownState() && !pBufferD3D12->CheckState(RESOURCE_STATE_SHADER_RESOURCE))
-                LOG_ERROR_MESSAGE("Resource \"", pBufferD3D12->GetDesc().Name, "\" is not in RESOURCE_STATE_SHADER_RESOURCE state. Did you forget to call TransitionShaderResources() or specify COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag in a call to CommitShaderResources()?" );
+                LOG_ERROR_MESSAGE("Resource '", pBufferD3D12->GetDesc().Name, "' is not in RESOURCE_STATE_SHADER_RESOURCE state. Did you forget to call TransitionShaderResources() or specify COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag in a call to CommitShaderResources()?" );
         }
         break;
 
         case CachedResourceType::BufUAV:
         {
             VERIFY(RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_UAV, "Unexpected descriptor range type");
-            auto* pBuffViewD3D12 = Res.pObject.RawPtr<BufferViewD3D12Impl>();
-            auto* pBufferD3D12 = ValidatedCast<BufferD3D12Impl>(pBuffViewD3D12->GetBuffer());
+            const auto* pBuffViewD3D12 = Res.pObject.RawPtr<const BufferViewD3D12Impl>();
+            const auto* pBufferD3D12 = pBuffViewD3D12->GetBuffer<const BufferD3D12Impl>();
             if (pBufferD3D12->IsInKnownState() && !pBufferD3D12->CheckState(RESOURCE_STATE_UNORDERED_ACCESS))
-                LOG_ERROR_MESSAGE("Resource \"", pBufferD3D12->GetDesc().Name, "\" is not in RESOURCE_STATE_UNORDERED_ACCESS state. Did you forget to call TransitionShaderResources() or specify COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag in a call to CommitShaderResources()?" );
+                LOG_ERROR_MESSAGE("Resource '", pBufferD3D12->GetDesc().Name, "' is not in RESOURCE_STATE_UNORDERED_ACCESS state. Did you forget to call TransitionShaderResources() or specify COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag in a call to CommitShaderResources()?" );
         }
         break;
 
         case CachedResourceType::TexSRV:
         {
             VERIFY(RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_SRV, "Unexpected descriptor range type");
-            auto* pTexViewD3D12 = Res.pObject.RawPtr<TextureViewD3D12Impl>();
-            auto* pTexD3D12 = ValidatedCast<TextureD3D12Impl>(pTexViewD3D12->GetTexture());
+            const auto* pTexViewD3D12 = Res.pObject.RawPtr<const TextureViewD3D12Impl>();
+            const auto* pTexD3D12 = pTexViewD3D12->GetTexture<TextureD3D12Impl>();
             if (pTexD3D12->IsInKnownState() && !pTexD3D12->CheckState(RESOURCE_STATE_SHADER_RESOURCE))
-                LOG_ERROR_MESSAGE("Resource \"", pTexD3D12->GetDesc().Name, "\" is not in RESOURCE_STATE_SHADER_RESOURCE state. Did you forget to call TransitionShaderResources() or specify COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag in a call to CommitShaderResources()?" );
+                LOG_ERROR_MESSAGE("Resource '", pTexD3D12->GetDesc().Name, "' is not in RESOURCE_STATE_SHADER_RESOURCE state. Did you forget to call TransitionShaderResources() or specify COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag in a call to CommitShaderResources()?" );
         }
         break;
 
         case CachedResourceType::TexUAV:
         {
             VERIFY(RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_UAV, "Unexpected descriptor range type");
-            auto* pTexViewD3D12 = Res.pObject.RawPtr<TextureViewD3D12Impl>();
-            auto* pTexD3D12 = ValidatedCast<TextureD3D12Impl>(pTexViewD3D12->GetTexture());
+            const auto* pTexViewD3D12 = Res.pObject.RawPtr<const TextureViewD3D12Impl>();
+            const auto* pTexD3D12 = pTexViewD3D12->GetTexture<const TextureD3D12Impl>();
             if (pTexD3D12->IsInKnownState() && !pTexD3D12->CheckState(RESOURCE_STATE_UNORDERED_ACCESS))
-                LOG_ERROR_MESSAGE("Resource \"", pTexD3D12->GetDesc().Name, "\" is not in RESOURCE_STATE_UNORDERED_ACCESS state. Did you forget to call TransitionShaderResources() or specify COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag in a call to CommitShaderResources()?" );
+                LOG_ERROR_MESSAGE("Resource '", pTexD3D12->GetDesc().Name, "' is not in RESOURCE_STATE_UNORDERED_ACCESS state. Did you forget to call TransitionShaderResources() or specify COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag in a call to CommitShaderResources()?" );
         }
         break;
 
@@ -807,7 +807,7 @@ void DbgVerifyResourceState(ShaderResourceCacheD3D12::Resource& Res,
             VERIFY(Res.pObject == nullptr && Res.CPUDescriptorHandle.ptr == 0, "Bound resource is unexpected");
     }
 }
-#endif
+#endif // DEVELOPMENT
 
 template<class TOperation>
 __forceinline void RootSignature::RootParamsManager::ProcessRootTables(TOperation Operation)const
@@ -825,7 +825,7 @@ __forceinline void RootSignature::RootParamsManager::ProcessRootTables(TOperatio
         bool IsResourceTable = d3d12Table.pDescriptorRanges[0].RangeType != D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
         D3D12_DESCRIPTOR_HEAP_TYPE dbgHeapType = D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES;
 #ifdef _DEBUG
-            dbgHeapType = IsResourceTable ? D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV : D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
+        dbgHeapType = IsResourceTable ? D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV : D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
 #endif
         Operation(RootInd, RootTable, D3D12Param, IsResourceTable, dbgHeapType);
     }
@@ -861,33 +861,34 @@ template<bool PerformResourceTransitions>
 void RootSignature::CommitDescriptorHandlesInternal_SMD(RenderDeviceD3D12Impl*    pRenderDeviceD3D12, 
                                                         ShaderResourceCacheD3D12& ResourceCache, 
                                                         CommandContext&           Ctx, 
-                                                        bool                      IsCompute)const
+                                                        bool                      IsCompute,
+                                                        bool                      ValidateStates)const
 {
     auto *pd3d12Device = pRenderDeviceD3D12->GetD3D12Device();
 
     Uint32 NumDynamicCbvSrvUavDescriptors = m_TotalSrvCbvUavSlots[SHADER_VARIABLE_TYPE_DYNAMIC];
-    Uint32 NumDynamicSamplerDescriptors = m_TotalSamplerSlots[SHADER_VARIABLE_TYPE_DYNAMIC];
+    Uint32 NumDynamicSamplerDescriptors   = m_TotalSamplerSlots  [SHADER_VARIABLE_TYPE_DYNAMIC];
     VERIFY_EXPR(NumDynamicCbvSrvUavDescriptors > 0 || NumDynamicSamplerDescriptors > 0);
 
     DescriptorHeapAllocation DynamicCbvSrvUavDescriptors, DynamicSamplerDescriptors;
-    if(NumDynamicCbvSrvUavDescriptors)
+    if (NumDynamicCbvSrvUavDescriptors)
         DynamicCbvSrvUavDescriptors = Ctx.AllocateDynamicGPUVisibleDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, NumDynamicCbvSrvUavDescriptors);
-    if(NumDynamicSamplerDescriptors)
+    if (NumDynamicSamplerDescriptors)
         DynamicSamplerDescriptors = Ctx.AllocateDynamicGPUVisibleDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, NumDynamicSamplerDescriptors);
 
     CommandContext::ShaderDescriptorHeaps Heaps(ResourceCache.GetSrvCbvUavDescriptorHeap(), ResourceCache.GetSamplerDescriptorHeap());
-    if(Heaps.pSamplerHeap == nullptr)
+    if (Heaps.pSamplerHeap == nullptr)
         Heaps.pSamplerHeap = DynamicSamplerDescriptors.GetDescriptorHeap();
 
-    if(Heaps.pSrvCbvUavHeap == nullptr)
+    if (Heaps.pSrvCbvUavHeap == nullptr)
         Heaps.pSrvCbvUavHeap = DynamicCbvSrvUavDescriptors.GetDescriptorHeap();
 
-    if(NumDynamicCbvSrvUavDescriptors)
+    if (NumDynamicCbvSrvUavDescriptors)
         VERIFY(DynamicCbvSrvUavDescriptors.GetDescriptorHeap() == Heaps.pSrvCbvUavHeap, "Inconsistent CbvSrvUav descriptor heaps" );
-    if(NumDynamicSamplerDescriptors)
+    if (NumDynamicSamplerDescriptors)
         VERIFY(DynamicSamplerDescriptors.GetDescriptorHeap() == Heaps.pSamplerHeap, "Inconsistent Sampler descriptor heaps" );
 
-    if(Heaps)
+    if (Heaps)
         Ctx.SetDescriptorHeaps(Heaps);
 
     // Offset to the beginning of the current dynamic CBV_SRV_UAV/SAMPLER table from 
@@ -896,7 +897,7 @@ void RootSignature::CommitDescriptorHandlesInternal_SMD(RenderDeviceD3D12Impl*  
     Uint32 DynamicSamplerTblOffset = 0;
 
     m_RootParams.ProcessRootTables(
-        [&](Uint32 RootInd, const RootParameter &RootTable, const D3D12_ROOT_PARAMETER& D3D12Param, bool IsResourceTable, D3D12_DESCRIPTOR_HEAP_TYPE dbgHeapType )
+        [&](Uint32 RootInd, const RootParameter& RootTable, const D3D12_ROOT_PARAMETER& D3D12Param, bool IsResourceTable, D3D12_DESCRIPTOR_HEAP_TYPE dbgHeapType)
         {
             D3D12_GPU_DESCRIPTOR_HANDLE RootTableGPUDescriptorHandle;
             bool IsDynamicTable = RootTable.GetShaderVariableType() == SHADER_VARIABLE_TYPE_DYNAMIC;
@@ -921,16 +922,16 @@ void RootSignature::CommitDescriptorHandlesInternal_SMD(RenderDeviceD3D12Impl*  
                 Ctx.GetCommandList()->SetGraphicsRootDescriptorTable(RootInd, RootTableGPUDescriptorHandle);
 
             ProcessCachedTableResources(RootInd, D3D12Param, ResourceCache, dbgHeapType, 
-                [&](UINT OffsetFromTableStart, const D3D12_DESCRIPTOR_RANGE &range, ShaderResourceCacheD3D12::Resource &Res)
+                [&](UINT OffsetFromTableStart, const D3D12_DESCRIPTOR_RANGE& range, ShaderResourceCacheD3D12::Resource& Res)
                 {
                     if(PerformResourceTransitions)
                     {
                         TransitionResource(Ctx, Res, range.RangeType);
                     }
-#ifdef _DEBUG
-                    else
+#ifdef DEVELOPMENT
+                    else if(ValidateStates)
                     {
-                        DbgVerifyResourceState(Res, range.RangeType);
+                        DvpVerifyResourceState(Res, range.RangeType);
                     }
 #endif
 
@@ -940,7 +941,7 @@ void RootSignature::CommitDescriptorHandlesInternal_SMD(RenderDeviceD3D12Impl*  
                         {
                             VERIFY( DynamicCbvSrvUavTblOffset < NumDynamicCbvSrvUavDescriptors, "Not enough space in the descriptor heap allocation");
 
-                            if( Res.CPUDescriptorHandle.ptr != 0 )
+                            if (Res.CPUDescriptorHandle.ptr != 0)
                                 pd3d12Device->CopyDescriptorsSimple(1, DynamicCbvSrvUavDescriptors.GetCpuHandle(DynamicCbvSrvUavTblOffset), Res.CPUDescriptorHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
                             else
                                 LOG_ERROR_MESSAGE("No valid CbvSrvUav descriptor handle found for root parameter ", RootInd, ", descriptor slot ", OffsetFromTableStart);
@@ -951,7 +952,7 @@ void RootSignature::CommitDescriptorHandlesInternal_SMD(RenderDeviceD3D12Impl*  
                         {
                             VERIFY( DynamicSamplerTblOffset < NumDynamicSamplerDescriptors, "Not enough space in the descriptor heap allocation");
 
-                            if( Res.CPUDescriptorHandle.ptr != 0 )
+                            if (Res.CPUDescriptorHandle.ptr != 0)
                                 pd3d12Device->CopyDescriptorsSimple(1, DynamicSamplerDescriptors.GetCpuHandle(DynamicSamplerTblOffset), Res.CPUDescriptorHandle, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
                             else
                                 LOG_ERROR_MESSAGE("No valid sampler descriptor handle found for root parameter ", RootInd, ", descriptor slot ", OffsetFromTableStart);
@@ -972,7 +973,8 @@ template<bool PerformResourceTransitions>
 void RootSignature::CommitDescriptorHandlesInternal_SM(RenderDeviceD3D12Impl*    pRenderDeviceD3D12, 
                                                        ShaderResourceCacheD3D12& ResourceCache, 
                                                        CommandContext&           Ctx, 
-                                                       bool                      IsCompute)const
+                                                       bool                      IsCompute,
+                                                       bool                      ValidateStates)const
 {
     VERIFY_EXPR(m_TotalSrvCbvUavSlots[SHADER_VARIABLE_TYPE_DYNAMIC] == 0 && m_TotalSamplerSlots[SHADER_VARIABLE_TYPE_DYNAMIC] == 0);
 
@@ -981,7 +983,7 @@ void RootSignature::CommitDescriptorHandlesInternal_SM(RenderDeviceD3D12Impl*   
         Ctx.SetDescriptorHeaps(Heaps);
 
     m_RootParams.ProcessRootTables(
-        [&](Uint32 RootInd, const RootParameter &RootTable, const D3D12_ROOT_PARAMETER& D3D12Param, bool IsResourceTable, D3D12_DESCRIPTOR_HEAP_TYPE dbgHeapType )
+        [&](Uint32 RootInd, const RootParameter& RootTable, const D3D12_ROOT_PARAMETER& D3D12Param, bool IsResourceTable, D3D12_DESCRIPTOR_HEAP_TYPE dbgHeapType )
         {
             VERIFY(RootTable.GetShaderVariableType() != SHADER_VARIABLE_TYPE_DYNAMIC, "Unexpected dynamic resource");
 
@@ -990,7 +992,7 @@ void RootSignature::CommitDescriptorHandlesInternal_SM(RenderDeviceD3D12Impl*   
                 ResourceCache.GetShaderVisibleTableGPUDescriptorHandle<D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER>(RootInd);
             VERIFY(RootTableGPUDescriptorHandle.ptr != 0, "Unexpected null GPU descriptor handle");
 
-            if(IsCompute)
+            if (IsCompute)
                 Ctx.GetCommandList()->SetComputeRootDescriptorTable(RootInd, RootTableGPUDescriptorHandle);
             else
                 Ctx.GetCommandList()->SetGraphicsRootDescriptorTable(RootInd, RootTableGPUDescriptorHandle);
@@ -998,19 +1000,19 @@ void RootSignature::CommitDescriptorHandlesInternal_SM(RenderDeviceD3D12Impl*   
             if(PerformResourceTransitions)
             {
                 ProcessCachedTableResources(RootInd, D3D12Param, ResourceCache, dbgHeapType, 
-                    [&](UINT OffsetFromTableStart, const D3D12_DESCRIPTOR_RANGE &range, ShaderResourceCacheD3D12::Resource &Res)
+                    [&](UINT OffsetFromTableStart, const D3D12_DESCRIPTOR_RANGE& range, ShaderResourceCacheD3D12::Resource& Res)
                     {
                         TransitionResource(Ctx, Res, range.RangeType);
                     }
                 );
             }
-#ifdef _DEBUG
-            else
+#ifdef DEVELOPMENT
+            else if(ValidateStates)
             {
                 ProcessCachedTableResources(RootInd, D3D12Param, ResourceCache, dbgHeapType, 
-                    [&](UINT OffsetFromTableStart, const D3D12_DESCRIPTOR_RANGE &range, ShaderResourceCacheD3D12::Resource &Res)
+                    [&](UINT OffsetFromTableStart, const D3D12_DESCRIPTOR_RANGE& range, const ShaderResourceCacheD3D12::Resource &Res)
                     {
-                        DbgVerifyResourceState(Res, range.RangeType);
+                        DvpVerifyResourceState(Res, range.RangeType);
                     }
                 );
             }
@@ -1024,7 +1026,7 @@ void RootSignature::TransitionResources(ShaderResourceCacheD3D12& ResourceCache,
                                         CommandContext&           Ctx)const
 {
     m_RootParams.ProcessRootTables(
-        [&](Uint32 RootInd, const RootParameter &RootTable, const D3D12_ROOT_PARAMETER& D3D12Param, bool IsResourceTable, D3D12_DESCRIPTOR_HEAP_TYPE dbgHeapType )
+        [&](Uint32 RootInd, const RootParameter& RootTable, const D3D12_ROOT_PARAMETER& D3D12Param, bool IsResourceTable, D3D12_DESCRIPTOR_HEAP_TYPE dbgHeapType )
         {
             ProcessCachedTableResources(RootInd, D3D12Param, ResourceCache, dbgHeapType, 
                 [&](UINT OffsetFromTableStart, const D3D12_DESCRIPTOR_RANGE &range, ShaderResourceCacheD3D12::Resource &Res)
@@ -1042,7 +1044,7 @@ void RootSignature::CommitRootViews(ShaderResourceCacheD3D12& ResourceCache,
                                     bool                      IsCompute,
                                     DeviceContextD3D12Impl*   pCtx)const
 {
-    for(Uint32 rv = 0; rv < m_RootParams.GetNumRootViews(); ++rv)
+    for (Uint32 rv = 0; rv < m_RootParams.GetNumRootViews(); ++rv)
     {
         auto& RootView = m_RootParams.GetRootView(rv);
         auto RootInd = RootView.GetRootIndex();

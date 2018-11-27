@@ -67,7 +67,16 @@ enum DRAW_FLAGS : Uint8
 
     /// Transition indirect draw arguments buffer to RESOURCE_STATE_INDIRECT_ARGUMENT state (see Diligent::RESOURCE_STATE).
     /// If the buffer is in unknown state, this flag has no effect.
-    DRAW_FLAG_TRANSITION_INDIRECT_ARGS_BUFFER = 0x04
+    DRAW_FLAG_TRANSITION_INDIRECT_ARGS_BUFFER = 0x04,
+
+    /// Verify the sate of vertex, index or indirect args buffer if it is not being transitioned.
+    /// State verification is only performed in debug and development builds and the 
+    /// flag has no effect in release build.
+    /// If any of Diligent::DRAW_FLAG_TRANSITION_VERTEX_BUFFERS, Diligent::DRAW_FLAG_TRANSITION_INDEX_BUFFER 
+    /// or Diligent::DRAW_FLAG_TRANSITION_INDIRECT_ARGS_BUFFER flags is not set, it is recommended to set
+    /// Diligent::DRAW_FLAG_VERIFY_STATES flag unless the resources are used in multiple threads simultaneously and the 
+    /// application explicitly manages the states.
+    DRAW_FLAG_VERIFY_STATES                   = 0x08
 };
 
 /// Defines the draw command attributes
@@ -161,7 +170,12 @@ enum DISPATCH_FLAGS : Uint8
         
     /// Transition indirect dispatch arguments buffer to RESOURCE_STATE_INDIRECT_ARGUMENT state (see Diligent::RESOURCE_STATE).
     /// If the buffer is in unknown state, this flag has no effect.
-    DISPATCH_FLAG_TRANSITION_INDIRECT_ARGS_BUFFER = 0x01
+    DISPATCH_FLAG_TRANSITION_INDIRECT_ARGS_BUFFER = 0x01,
+
+    /// Verify the sate of indirect args buffer if it is not being transitioned.
+    /// State verification is only performed in debug and development builds and the 
+    /// flag has no effect in release build.
+    DISPATCH_FLAG_VERIFY_STATES                   = 0x02
 };
 
 /// Describes dispatch command arguments.
@@ -332,9 +346,16 @@ public:
     /// Transitions shader resources to the require states.
     /// \param [in] pPipelineState - Pipeline state object that was used to create the shader resource binding.
     /// \param [in] pShaderResourceBinding - Shader resource binding whose resources will be transitioned.
-    /// \remarks This method explicitly transitiones all resources to the correct states.
+    /// \remarks This method explicitly transitiones all resources to correct states.
     ///          If this method was called, there is no need to specify Diligent::COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES
     ///          when calling IDeviceContext::CommitShaderResources()
+    ///
+    /// \remarks Resource state transitioning is not thread safe. As the method may alter the states 
+    ///          of resources referenced by the shader resource binding, no other thread is allowed to read or 
+    ///          write these states.
+    ///
+    ///          If the application intends to use the same resources in other threads simultaneously, it needs to 
+    ///          explicitly manage the states using IDeviceContext::TransitionResourceStates() method.
     virtual void TransitionShaderResources(IPipelineState* pPipelineState, IShaderResourceBinding* pShaderResourceBinding) = 0;
 
     /// Commits shader resources to the device context
@@ -348,11 +369,36 @@ public:
     /// \remarks Pipeline state object that was used to create the shader resource binding must be bound 
     ///          to the pipeline when CommitShaderResources() is called. If no pipeline state object is bound
     ///          or the pipeline state object does not match shader resource binding, the method will fail.\n
-    ///          If Diligent::COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag is specified,
-    ///          the engine will also transition all shader resources to the correct state. If the flag
-    ///          is not specified, it is assumed that all resources are already in correct states.\n
-    ///          Resources can be explicitly transitioned to the required states by calling 
-    ///          IDeviceContext::TransitionShaderResources()
+    ///          If Diligent::COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag is set,
+    ///          the engine will also transition all shader resources to correct states. If the flag
+    ///          is not set, it is assumed that all resources are already in correct states.\n
+    ///          Resources can be explicitly transitioned to required states by calling 
+    ///          IDeviceContext::TransitionShaderResources() or IDeviceContext::TransitionResourceStates().\n
+    ///
+    /// \remarks Automatic resource state transitioning is not thread-safe.
+    ///
+    ///          - If Diligent::COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag is set, the method may alter the states 
+    ///            of resources referenced by the shader resource binding and no other thread is allowed to read or write these states.
+    ///
+    ///          - If Diligent::COMMIT_SHADER_RESOURCES_FLAG_VERIFY_STATES flag is set, the method will read the states, so no other thread
+    ///            should alter the states using any of the methods below:\n
+    ///            - IBuffer::SetState()\n
+    ///            - ITexture::SetState()\n
+    ///            - IDeviceContext::TransitionShaderResources()\n
+    ///            - IDeviceContext::TransitionResourceStates() when StateTransitionDesc::UpdateResourceState is set to true\n
+    ///            - IDeviceContext::CommitShaderResources() when Diligent::COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag is set\n
+    ///            - IDeviceContext::Draw() when any of Diligent::DRAW_FLAG_TRANSITION_VERTEX_BUFFERS,
+    ///              Diligent::DRAW_FLAG_TRANSITION_INDEX_BUFFER or Diligent::DRAW_FLAG_TRANSITION_INDIRECT_ARGS_BUFFER flags is set\n
+    ///            - IDeviceContext::Dispatch() when Diligent::DISPATCH_FLAG_TRANSITION_INDIRECT_ARGS_BUFFER flag is set\n
+    ///            It is safe for other threads to read the states.
+    ///
+    ///          - If none of Diligent::COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES  or 
+    ///            Diligent::COMMIT_SHADER_RESOURCES_FLAG_VERIFY_STATES flags is set, the method does not access the states of resources.
+    ///
+    ///          If the application intends to use the same resources in other threads simultaneously, it should manage the states
+    ///          manually by setting the state to Diligent::RESOURCE_STATE_UNKNOWN (which will disable automatic state 
+    ///          management) using IBuffer::SetState() or ITexture::SetState() and explicitly transitioning the states with 
+    ///          IDeviceContext::TransitionResourceStates(). See IDeviceContext::TransitionResourceStates() for details.
     virtual void CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, Uint32 Flags) = 0;
 
     /// Sets the stencil reference value
@@ -471,13 +517,29 @@ public:
 
     /// Executes a draw command
 
-    /// \param [in] DrawAttribs - Structure describing draw command attributes, see DrawAttribs for details.
+    /// \param [in] DrawAttribs - Structure describing draw command attributes, see Diligent::DrawAttribs for details.
+    ///
+    /// \remarks  If any of Diligent::DRAW_FLAG_TRANSITION_VERTEX_BUFFERS, Diligent::DRAW_FLAG_TRANSITION_INDEX_BUFFER 
+    ///           or Diligent::DRAW_FLAG_TRANSITION_INDIRECT_ARGS_BUFFER flags is set, the method may transition the 
+    ///           state of the corresponding resource. This is not a thread safe operation, so no other thread is allowed
+    ///           to read or write the state of the same resource.
+    ///
+    ///           If Diligent::DRAW_FLAG_VERIFY_STATES flag is set, the method reads the state of vertex/index/indirect
+    ///           draw args buffer, so no other threads are allowed to alter the states of the same resources.
+    ///           It is OK to read these states.
+    ///
+    ///           If none of Diligent::DRAW_FLAG_TRANSITION_VERTEX_BUFFERS, Diligent::DRAW_FLAG_TRANSITION_INDEX_BUFFER 
+    ///           or Diligent::DRAW_FLAG_TRANSITION_INDIRECT_ARGS_BUFFER or Diligent::DRAW_FLAG_VERIFY_STATES flags is
+    ///           specified, the method does not access the resource states and is safe to use simulateneously.
+    ///          
+    ///           If the application intends to use the same resources in other threads simultaneously, it needs to 
+    ///           explicitly manage the states using IDeviceContext::TransitionResourceStates() method.
     virtual void Draw(DrawAttribs &DrawAttribs) = 0;
     
     /// Executes a dispatch compute command
     
     /// \param [in] DispatchAttrs - Structure describing dispatch command attributes, 
-    ///                             see DispatchComputeAttribs for details.
+    ///                             see Diligent::DispatchComputeAttribs for details.
     virtual void DispatchCompute(const DispatchComputeAttribs &DispatchAttrs) = 0;
 
     /// Clears a depth-stencil view
@@ -673,7 +735,37 @@ public:
     /// \param [in] pResourceBarriers - Pointer to the array of resource barriers
     /// \remarks When both old and new states are RESOURCE_STATE_UNORDERED_ACCESS, the engine
     ///          executes UAV barrier on the resource. The barrier makes sure that all UAV accesses 
-    ///          (reads or writes) are complete before any future UAV accesses (read or write) can begin.
+    ///          (reads or writes) are complete before any future UAV accesses (read or write) can begin.\n
+    /// 
+    ///          There are two main usage scenarios for this method:
+    ///          1. An application knows specifics of resource state transitions not available to the engine.
+    ///             For example, only single mip level needs to be transitioned.
+    ///          2. An application manages resource states in multiple threads in parallel.
+    ///         
+    ///          The method always reads the states of all resources to transition. If the state of a resource is managed
+    ///          by multiple threads in parallel, the resource must first be transitioned to unknown state
+    ///          (Diligent::RESOURCE_STATE_UNKNOWN) to disable automatic state management in the engine.
+    ///          
+    ///          When StateTransitionDesc::UpdateResourceState is set to true, the method may update the state of the
+    ///          corresponding resource which is not thread safe. No other threads should read or write the sate of that 
+    ///          resource.
+
+    /// \note   The following methods modify resource states:
+    ///          - IBuffer::SetState()\n
+    ///          - ITexture::SetState()\n
+    ///          - IDeviceContext::TransitionShaderResources()\n
+    ///          - IDeviceContext::TransitionResourceStates() when StateTransitionDesc::UpdateResourceState is set to true\n
+    ///          - IDeviceContext::CommitShaderResources() when Diligent::COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag is set\n
+    ///          - IDeviceContext::Draw() when any of Diligent::DRAW_FLAG_TRANSITION_VERTEX_BUFFERS,
+    ///            Diligent::DRAW_FLAG_TRANSITION_INDEX_BUFFER or Diligent::DRAW_FLAG_TRANSITION_INDIRECT_ARGS_BUFFER flags is set\n
+    ///          - IDeviceContext::Dispatch() when Diligent::DISPATCH_FLAG_TRANSITION_INDIRECT_ARGS_BUFFER flag is set\n
+    ///
+    ///          The following methods read resource states:
+    ///          - IBuffer::GetState()\n
+    ///          - ITexture::GetState()\n
+    ///          - IDeviceContext::CommitShaderResources() when Diligent::COMMIT_SHADER_RESOURCES_FLAG_VERIFY_STATES flag is set\n
+    ///          - IDeviceContext::Draw() when Diligent::DRAW_FLAG_VERIFY_STATES flag is set\n
+    ///          - IDeviceContext::Dispatch() when Diligent::DISPATCH_FLAG_VERIFY_STATES flag is set\n
     virtual void TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers) = 0;
 };
 

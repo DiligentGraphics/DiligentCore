@@ -306,7 +306,7 @@ namespace Diligent
         }
     }
 
-    void DeviceContextVkImpl::CommitVkVertexBuffers(bool TransitionBuffers)
+    void DeviceContextVkImpl::CommitVkVertexBuffers(bool TransitionBuffers, bool VerifyStates)
     {
 #ifdef DEVELOPMENT
         if (m_NumVertexStreams < m_pPipelineState->GetNumBufferSlotsUsed())
@@ -342,7 +342,7 @@ namespace Diligent
                     }
                 }
 #ifdef DEVELOPMENT
-                else
+                else if (VerifyStates)
                 {
                     if (pBufferVk->IsInKnownState() && !pBufferVk->CheckState(RESOURCE_STATE_VERTEX_BUFFER))
                     {
@@ -379,9 +379,9 @@ namespace Diligent
     {
         std::stringstream ss;
         ss << "Active render pass is incomaptible with PSO '" << m_pPipelineState->GetDesc().Name << "'. "
-                "This indicates the mismatch between the number and/or format of bound render targets and/or depth stencil buffer "
-                "and the PSO. Vulkand requires exact match.\n"
-                "    Bound render targets (" << m_NumBoundRenderTargets << "):";
+              "This indicates the mismatch between the number and/or format of bound render targets and/or depth stencil buffer "
+              "and the PSO. Vulkand requires exact match.\n"
+              "    Bound render targets (" << m_NumBoundRenderTargets << "):";
         Uint32 SampleCount = 0;
         for (Uint32 rt = 0; rt < m_NumBoundRenderTargets; ++rt)
         {
@@ -425,6 +425,7 @@ namespace Diligent
 
         EnsureVkCmdBuffer();
 
+        const bool VerifyStates = drawAttribs.Flags & DRAW_FLAG_VERIFY_STATES;
         if ( drawAttribs.IsIndexed )
         {
 #ifdef DEVELOPMENT
@@ -448,7 +449,7 @@ namespace Diligent
                 }
             }
 #ifdef DEVELOPMENT
-            else
+            else if (VerifyStates)
             {
                 if (pBuffVk->IsInKnownState() && !pBuffVk->CheckState(RESOURCE_STATE_INDEX_BUFFER))
                 {
@@ -472,7 +473,7 @@ namespace Diligent
                 TransitionVkVertexBuffers();
             }
 #ifdef DEVELOPMENT
-            else
+            else if (VerifyStates)
             {
                 for (Uint32 slot = 0; slot < m_NumVertexStreams; ++slot )
                 {
@@ -490,7 +491,7 @@ namespace Diligent
         }
         else
         {
-            CommitVkVertexBuffers(TransitionVertexBuffers);
+            CommitVkVertexBuffers(TransitionVertexBuffers, VerifyStates);
         }
         if (m_DescrSetBindInfo.DynamicOffsetCount != 0)
             m_pPipelineState->BindDescriptorSetsWithDynamicOffsets(this, m_DescrSetBindInfo);
@@ -520,7 +521,7 @@ namespace Diligent
                 }
             }
 #ifdef DEVELOPMENT
-            else
+            else if (VerifyStates)
             {
                 if (pIndirectDrawAttribsVk->IsInKnownState() && !pIndirectDrawAttribsVk->CheckState(RESOURCE_STATE_INDIRECT_ARGUMENT))
                 {
@@ -598,7 +599,7 @@ namespace Diligent
                     pBufferVk->DvpVerifyDynamicAllocation(this);
 #endif
 
-                if(DispatchAttrs.Flags & DISPATCH_FLAG_TRANSITION_INDIRECT_ARGS_BUFFER)
+                if (DispatchAttrs.Flags & DISPATCH_FLAG_TRANSITION_INDIRECT_ARGS_BUFFER)
                 {
                     // Buffer memory barries must be executed outside of render pass
                     if (pBufferVk->IsInKnownState())
@@ -611,7 +612,7 @@ namespace Diligent
                     }
                 }
 #ifdef DEVELOPMENT
-                else
+                else if (DispatchAttrs.Flags & DISPATCH_FLAG_VERIFY_STATES)
                 {
                     if (pBufferVk->IsInKnownState() && !pBufferVk->CheckState(RESOURCE_STATE_INDIRECT_ARGUMENT))
                     {

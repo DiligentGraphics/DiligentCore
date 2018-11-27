@@ -121,12 +121,12 @@ namespace Diligent
         if (m_State.NumCommands != 0)
         {
             LOG_ERROR_MESSAGE(m_bIsDeferred ? 
-                                "There are outstanding commands in deferred context #", m_ContextId, " being destroyed, which indicates that FinishCommandList() has not been called." :
-                                "There are outstanding commands in the immediate context being destroyed, which indicates the context has not been Flush()'ed.",
+                              "There are outstanding commands in deferred context #", m_ContextId, " being destroyed, which indicates that FinishCommandList() has not been called." :
+                              "There are outstanding commands in the immediate context being destroyed, which indicates the context has not been Flush()'ed.",
                               " This is unexpected and may result in synchronization errors");
         }
 
-        if(m_bIsDeferred)
+        if (m_bIsDeferred)
         {
             if (m_CurrCmdCtx)
             {
@@ -171,7 +171,7 @@ namespace Diligent
 
         bool CommitStates = false;
         bool CommitScissor = false;
-        if(!m_pPipelineState)
+        if (!m_pPipelineState)
         {
             // If no pipeline state is bound, we are working with the fresh command
             // list. We have to commit the states set in the context that are not
@@ -228,8 +228,8 @@ namespace Diligent
         VERIFY_EXPR(pPipelineState != nullptr);
 
         auto& Ctx = GetCmdContext();
-        auto *pPipelineStateD3D12 = ValidatedCast<PipelineStateD3D12Impl>(pPipelineState);
-        pPipelineStateD3D12->CommitAndTransitionShaderResources(pShaderResourceBinding, Ctx, false, true);
+        auto* pPipelineStateD3D12 = ValidatedCast<PipelineStateD3D12Impl>(pPipelineState);
+        pPipelineStateD3D12->CommitAndTransitionShaderResources(pShaderResourceBinding, Ctx, false, true, false);
     }
 
     void DeviceContextD3D12Impl::CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, Uint32 Flags)
@@ -238,7 +238,7 @@ namespace Diligent
             return;
 
         auto& Ctx = GetCmdContext();
-        m_State.pCommittedResourceCache = m_pPipelineState->CommitAndTransitionShaderResources(pShaderResourceBinding, Ctx, true, (Flags & COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES)!=0);
+        m_State.pCommittedResourceCache = m_pPipelineState->CommitAndTransitionShaderResources(pShaderResourceBinding, Ctx, true, (Flags & COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES)!=0, (Flags & COMMIT_SHADER_RESOURCES_FLAG_VERIFY_STATES)!=0);
     }
 
     void DeviceContextD3D12Impl::SetStencilRef(Uint32 StencilRef)
@@ -257,7 +257,7 @@ namespace Diligent
         }
     }
 
-    void DeviceContextD3D12Impl::CommitD3D12IndexBuffer(VALUE_TYPE IndexType, bool TransitionBuffer)
+    void DeviceContextD3D12Impl::CommitD3D12IndexBuffer(VALUE_TYPE IndexType, bool TransitionBuffer, bool VerifyState)
     {
         VERIFY( m_pIndexBuffer != nullptr, "Index buffer is not set up for indexed draw command" );
 
@@ -294,7 +294,7 @@ namespace Diligent
                 GraphicsCtx.TransitionResource(pBuffD3D12, RESOURCE_STATE_INDEX_BUFFER);
         }
 #ifdef DEVELOPMENT
-        else
+        else if(VerifyState)
         {
             if (pBuffD3D12->IsInKnownState() && !pBuffD3D12->CheckState(RESOURCE_STATE_INDEX_BUFFER))
             {
@@ -336,7 +336,7 @@ namespace Diligent
         }
     }
 
-    void DeviceContextD3D12Impl::CommitD3D12VertexBuffers(GraphicsContext& GraphCtx, bool TransitionBuffers)
+    void DeviceContextD3D12Impl::CommitD3D12VertexBuffers(GraphicsContext& GraphCtx, bool TransitionBuffers, bool VerifyStates)
     {
         // Do not initialize array with zeroes for performance reasons
         D3D12_VERTEX_BUFFER_VIEW VBViews[MaxBufferSlots];// = {}
@@ -364,7 +364,7 @@ namespace Diligent
                         GraphCtx.TransitionResource(pBufferD3D12, RESOURCE_STATE_VERTEX_BUFFER);
                 }
 #ifdef DEVELOPMENT
-                else
+                else if (VerifyStates)
                 {
                     if (pBufferD3D12->IsInKnownState() && !pBufferD3D12->CheckState(RESOURCE_STATE_VERTEX_BUFFER))
                     {
@@ -406,23 +406,24 @@ namespace Diligent
             return;
 #endif
 
+        const bool VerifyStates = (drawAttribs.Flags & DRAW_FLAG_VERIFY_STATES) != 0;
         auto& GraphCtx = GetCmdContext().AsGraphicsContext();
-        if( drawAttribs.IsIndexed )
+        if (drawAttribs.IsIndexed)
         {
-            if( m_State.CommittedIBFormat != drawAttribs.IndexType )
+            if (m_State.CommittedIBFormat != drawAttribs.IndexType)
                 m_State.bCommittedD3D12IBUpToDate = false;
 
-            bool TransitionIndexBuffer = (drawAttribs.Flags & DRAW_FLAG_TRANSITION_INDEX_BUFFER) != 0;
+            const bool TransitionIndexBuffer = (drawAttribs.Flags & DRAW_FLAG_TRANSITION_INDEX_BUFFER) != 0;
             if (m_State.bCommittedD3D12IBUpToDate)
             {
                 BufferD3D12Impl *pBuffD3D12 = static_cast<BufferD3D12Impl *>(m_pIndexBuffer.RawPtr());
-                if(TransitionIndexBuffer)
+                if (TransitionIndexBuffer)
                 {
                     if (pBuffD3D12->IsInKnownState() && !pBuffD3D12->CheckState(RESOURCE_STATE_INDEX_BUFFER))
                         GraphCtx.TransitionResource(pBuffD3D12, RESOURCE_STATE_INDEX_BUFFER);
                 }
 #ifdef DEVELOPMENT
-                else
+                else if (VerifyStates)
                 {
                     if (pBuffD3D12->IsInKnownState() && !pBuffD3D12->CheckState(RESOURCE_STATE_INDEX_BUFFER))
                     {
@@ -435,11 +436,11 @@ namespace Diligent
             }
             else
             {
-                CommitD3D12IndexBuffer(drawAttribs.IndexType, TransitionIndexBuffer);
+                CommitD3D12IndexBuffer(drawAttribs.IndexType, TransitionIndexBuffer, VerifyStates);
             }
         }
 
-        bool TransitionVertexBuffers = (drawAttribs.Flags & DRAW_FLAG_TRANSITION_VERTEX_BUFFERS) != 0;
+        const bool TransitionVertexBuffers = (drawAttribs.Flags & DRAW_FLAG_TRANSITION_VERTEX_BUFFERS) != 0;
         if (m_State.bCommittedD3D12VBsUpToDate)
         {
             if (TransitionVertexBuffers)
@@ -447,7 +448,7 @@ namespace Diligent
                 TransitionD3D12VertexBuffers(GraphCtx);
             }
 #ifdef DEVELOPMENT
-            else
+            else if (VerifyStates)
             {
                 for( Uint32 Buff = 0; Buff < m_NumVertexStreams; ++Buff )
                 {
@@ -465,7 +466,7 @@ namespace Diligent
         }
         else
         {
-            CommitD3D12VertexBuffers(GraphCtx, TransitionVertexBuffers);
+            CommitD3D12VertexBuffers(GraphCtx, TransitionVertexBuffers, VerifyStates);
         }
 
         GraphCtx.SetRootSignature( m_pPipelineState->GetD3D12RootSignature() );
@@ -474,7 +475,7 @@ namespace Diligent
         {
             m_pPipelineState->GetRootSignature().CommitRootViews(*m_State.pCommittedResourceCache, GraphCtx, false, this);
         }
-#ifdef _DEBUG
+#ifdef DEVELOPMENT
         else
         {
             if( m_pPipelineState->dbgContainsShaderResources() )
@@ -483,7 +484,7 @@ namespace Diligent
 #endif
         
 
-        auto *pIndirectDrawAttribsD3D12 = ValidatedCast<BufferD3D12Impl>(drawAttribs.pIndirectDrawAttribs);
+        auto* pIndirectDrawAttribsD3D12 = ValidatedCast<BufferD3D12Impl>(drawAttribs.pIndirectDrawAttribs);
         if (pIndirectDrawAttribsD3D12 != nullptr)
         {
 #ifdef DEVELOPMENT
@@ -497,7 +498,7 @@ namespace Diligent
                     GraphCtx.TransitionResource(pIndirectDrawAttribsD3D12, RESOURCE_STATE_INDIRECT_ARGUMENT);
             }
 #ifdef DEVELOPMENT
-            else
+            else if (VerifyStates)
             {
                 if (pIndirectDrawAttribsD3D12->IsInKnownState() && !pIndirectDrawAttribsD3D12->CheckState(RESOURCE_STATE_INDIRECT_ARGUMENT))
                 {
@@ -559,7 +560,7 @@ namespace Diligent
                         ComputeCtx.TransitionResource(pBufferD3D12, RESOURCE_STATE_INDIRECT_ARGUMENT);
                 }
 #ifdef DEVELOPMENT
-                else
+                else if (DispatchAttrs.Flags & DISPATCH_FLAG_VERIFY_STATES)
                 {
                     if (pBufferD3D12->IsInKnownState() && !pBufferD3D12->CheckState(RESOURCE_STATE_INDIRECT_ARGUMENT))
                     {

@@ -64,7 +64,7 @@ public:
     ShaderResourceCacheD3D12& GetResourceCache(){return m_ShaderResourceCache;}
 
 #ifdef DEVELOPMENT
-    void dvpVerifyResourceBindings(const PipelineStateD3D12Impl* pPSO);
+    void dvpVerifyResourceBindings(const PipelineStateD3D12Impl* pPSO)const;
 #endif
 
     bool StaticResourcesInitialized()const{return m_bStaticResourcesInitialized;}

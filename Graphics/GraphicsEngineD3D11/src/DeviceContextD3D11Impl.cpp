@@ -148,7 +148,7 @@ namespace Diligent
 
     // http://diligentgraphics.com/diligent-engine/architecture/d3d11/committing-shader-resources-to-the-gpu-pipeline/
     template<bool TransitionResources, bool CommitResources>
-    void DeviceContextD3D11Impl::TransitionAndCommitShaderResources(IPipelineState* pPSO, IShaderResourceBinding* pShaderResourceBinding)
+    void DeviceContextD3D11Impl::TransitionAndCommitShaderResources(IPipelineState* pPSO, IShaderResourceBinding* pShaderResourceBinding, bool VerifyStates)
     {
         VERIFY_EXPR(pPSO != nullptr);
         static_assert(TransitionResources || CommitResources, "At least one of TransitionResources or CommitResources flags is expected to be true");
@@ -264,7 +264,7 @@ namespace Diligent
                         }
                     }
 #ifdef DEVELOPMENT
-                    else
+                    else if (VerifyStates)
                     {
                         if (const auto* pTexture = ValidatedCast<TextureBaseD3D11>(UAVRes.pTexture))
                         {
@@ -404,7 +404,7 @@ namespace Diligent
                         }
                     }
 #ifdef DEVELOPMENT
-                    else
+                    else if (VerifyStates)
                     {
                         VERIFY_EXPR(CommitResources);
                         const auto& CB = CachedCBs[cb];
@@ -503,7 +503,7 @@ namespace Diligent
                         }
                     }
 #ifdef DEVELOPMENT
-                    else
+                    else if (VerifyStates)
                     {
                         VERIFY_EXPR(CommitResources);
                         if (const auto* pTexture = ValidatedCast<TextureBaseD3D11>(SRVRes.pTexture))
@@ -614,7 +614,7 @@ namespace Diligent
     {
         DEV_CHECK_ERR(pPipelineState != nullptr, "Pipeline state must not be null");
         DEV_CHECK_ERR(pShaderResourceBinding != nullptr, "Shader resource binding must not be null");
-        TransitionAndCommitShaderResources<true, false>(pPipelineState, pShaderResourceBinding);
+        TransitionAndCommitShaderResources<true, false>(pPipelineState, pShaderResourceBinding, false);
     }
 
     void DeviceContextD3D11Impl::CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, Uint32 Flags)
@@ -623,9 +623,9 @@ namespace Diligent
             return;
 
         if (Flags & COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES)
-            TransitionAndCommitShaderResources<true, true>(m_pPipelineState, pShaderResourceBinding);
+            TransitionAndCommitShaderResources<true, true>(m_pPipelineState, pShaderResourceBinding, false);
         else
-            TransitionAndCommitShaderResources<false, true>(m_pPipelineState, pShaderResourceBinding);
+            TransitionAndCommitShaderResources<false, true>(m_pPipelineState, pShaderResourceBinding, Flags & COMMIT_SHADER_RESOURCES_FLAG_VERIFY_STATES);
     }
 
     void DeviceContextD3D11Impl::SetStencilRef(Uint32 StencilRef)
@@ -654,7 +654,7 @@ namespace Diligent
         }
     }
 
-    void DeviceContextD3D11Impl::CommitD3D11IndexBuffer(VALUE_TYPE IndexType, bool TransitionBuffer)
+    void DeviceContextD3D11Impl::CommitD3D11IndexBuffer(VALUE_TYPE IndexType, bool TransitionBuffer, bool VerifyState)
     {
         if (!m_pIndexBuffer)
         {
@@ -672,7 +672,7 @@ namespace Diligent
             }
         }
 #ifdef DEVELOPMENT
-        else
+        else if (VerifyState)
         {
             if (pBuffD3D11->IsInKnownState() && pBuffD3D11->CheckState(RESOURCE_STATE_UNORDERED_ACCESS))
             {
@@ -708,7 +708,7 @@ namespace Diligent
         m_bCommittedD3D11IBUpToDate = true;
     }
 
-    void DeviceContextD3D11Impl::CommitD3D11VertexBuffers(PipelineStateD3D11Impl* pPipelineStateD3D11, bool TransitionBuffers)
+    void DeviceContextD3D11Impl::CommitD3D11VertexBuffers(PipelineStateD3D11Impl* pPipelineStateD3D11, bool TransitionBuffers, bool VerifyStates)
     {
         VERIFY( m_NumVertexStreams <= MaxBufferSlots, "Too many buffers are being set" );
         UINT NumBuffersToSet = std::max(m_NumVertexStreams, m_NumCommittedD3D11VBs );
@@ -733,7 +733,7 @@ namespace Diligent
                 }
             }
 #ifdef DEVELOPMENT
-            else
+            else if (VerifyStates)
             {
                 if (pBuffD3D11Impl != nullptr && pBuffD3D11Impl->IsInKnownState() && pBuffD3D11Impl->CheckState(RESOURCE_STATE_UNORDERED_ACCESS))
                 {
@@ -784,12 +784,12 @@ namespace Diligent
         if (!DvpVerifyDrawArguments(drawAttribs))
             return;
 #endif
-
+        const bool VerifyStates = drawAttribs.Flags & DRAW_FLAG_VERIFY_STATES;
         auto* pd3d11InputLayout = m_pPipelineState->GetD3D11InputLayout();
         if (pd3d11InputLayout != nullptr && !m_bCommittedD3D11VBsUpToDate)
         {
             DEV_CHECK_ERR( m_NumVertexStreams >= m_pPipelineState->GetNumBufferSlotsUsed(), "Currently bound pipeline state '", m_pPipelineState->GetDesc().Name, "' expects ", m_pPipelineState->GetNumBufferSlotsUsed(), " input buffer slots, but only ", m_NumVertexStreams, " is bound");
-            CommitD3D11VertexBuffers(m_pPipelineState, drawAttribs.Flags & DRAW_FLAG_TRANSITION_VERTEX_BUFFERS);
+            CommitD3D11VertexBuffers(m_pPipelineState, drawAttribs.Flags & DRAW_FLAG_TRANSITION_VERTEX_BUFFERS, VerifyStates);
         }
 
         if (drawAttribs.IsIndexed)
@@ -798,7 +798,7 @@ namespace Diligent
                 m_bCommittedD3D11IBUpToDate = false;
             if (!m_bCommittedD3D11IBUpToDate)
             {
-                CommitD3D11IndexBuffer(drawAttribs.IndexType, drawAttribs.Flags & DRAW_FLAG_TRANSITION_INDEX_BUFFER);
+                CommitD3D11IndexBuffer(drawAttribs.IndexType, drawAttribs.Flags & DRAW_FLAG_TRANSITION_INDEX_BUFFER, VerifyStates);
             }
         }
         

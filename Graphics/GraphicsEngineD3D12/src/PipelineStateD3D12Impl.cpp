@@ -292,7 +292,8 @@ bool PipelineStateD3D12Impl::IsCompatibleWith(const IPipelineState* pPSO)const
 ShaderResourceCacheD3D12* PipelineStateD3D12Impl::CommitAndTransitionShaderResources(IShaderResourceBinding* pShaderResourceBinding, 
                                                                                      CommandContext&         Ctx,
                                                                                      bool                    CommitResources,
-                                                                                     bool                    TransitionResources)const
+                                                                                     bool                    TransitionResources,
+                                                                                     bool                    ValidateStates)const
 {
 #ifdef DEVELOPMENT
     if (pShaderResourceBinding == nullptr && dbgContainsShaderResources())
@@ -316,14 +317,12 @@ ShaderResourceCacheD3D12* PipelineStateD3D12Impl::CommitAndTransitionShaderResou
     }
 
 #ifdef DEVELOPMENT
+    if (IsIncompatibleWith(pResBindingD3D12Impl->GetPipelineState()))
     {
-        auto* pRefPSO = pResBindingD3D12Impl->GetPipelineState();
-        if ( IsIncompatibleWith(pRefPSO) )
-        {
-            LOG_ERROR_MESSAGE("Shader resource binding is incompatible with the pipeline state '", m_Desc.Name, "'. Operation will be ignored.");
-            return nullptr;
-        }
+        LOG_ERROR_MESSAGE("Shader resource binding is incompatible with the pipeline state '", m_Desc.Name, "'. Operation will be ignored.");
+        return nullptr;
     }
+
 
     if( (m_RootSig.GetTotalSrvCbvUavSlots(SHADER_VARIABLE_TYPE_STATIC) != 0 || 
          m_RootSig.GetTotalRootViews(SHADER_VARIABLE_TYPE_STATIC) != 0) && !pResBindingD3D12Impl->StaticResourcesInitialized() )
@@ -343,9 +342,9 @@ ShaderResourceCacheD3D12* PipelineStateD3D12Impl::CommitAndTransitionShaderResou
             Ctx.AsGraphicsContext().SetRootSignature( GetD3D12RootSignature() );
 
         if(TransitionResources)
-            (m_RootSig.*m_RootSig.TransitionAndCommitDescriptorHandles)(m_pDevice, ResourceCache, Ctx, m_Desc.IsComputePipeline);
+            (m_RootSig.*m_RootSig.TransitionAndCommitDescriptorHandles)(m_pDevice, ResourceCache, Ctx, m_Desc.IsComputePipeline, ValidateStates);
         else
-            (m_RootSig.*m_RootSig.CommitDescriptorHandles)(m_pDevice, ResourceCache, Ctx, m_Desc.IsComputePipeline);
+            (m_RootSig.*m_RootSig.CommitDescriptorHandles)(m_pDevice, ResourceCache, Ctx, m_Desc.IsComputePipeline, ValidateStates);
     }
     else
     {

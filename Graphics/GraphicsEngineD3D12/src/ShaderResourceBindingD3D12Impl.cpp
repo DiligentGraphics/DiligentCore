@@ -136,9 +136,9 @@ IShaderVariable* ShaderResourceBindingD3D12Impl::GetVariable(SHADER_TYPE ShaderT
 
 
 #ifdef DEVELOPMENT
-void ShaderResourceBindingD3D12Impl::dvpVerifyResourceBindings(const PipelineStateD3D12Impl* pPSO)
+void ShaderResourceBindingD3D12Impl::dvpVerifyResourceBindings(const PipelineStateD3D12Impl* pPSO)const
 {
-    auto* pRefPSO = ValidatedCast<PipelineStateD3D12Impl>(GetPipelineState());
+    auto* pRefPSO = GetPipelineState<const PipelineStateD3D12Impl>();
     if (pPSO->IsIncompatibleWith(pRefPSO))
     {
         LOG_ERROR("Shader resource binding is incompatible with the pipeline state \"", pPSO->GetDesc().Name, '\"');
