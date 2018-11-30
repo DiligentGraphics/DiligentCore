@@ -63,7 +63,7 @@ public:
 
     /// Initializes the object and maps the provided resource.
     /// See Map() for details.
-    MapHelper( IDeviceContext *pContext, IBuffer *pBuffer, MAP_TYPE MapType, Uint32 MapFlags ) :
+    MapHelper( IDeviceContext *pContext, IBuffer *pBuffer, MAP_TYPE MapType, MAP_FLAGS MapFlags ) :
         MapHelper()
     {
         Map(pContext, pBuffer, MapType, MapFlags);
@@ -106,7 +106,7 @@ public:
     /// \param pBuffer - Pointer to the buffer interface to map.
     /// \param MapType - Type of the map operation, see Diligent::MAP_TYPE for details.
     /// \param MapFlags - Additional map flags, see Diligent::MAP_FLAGS.
-    void Map( IDeviceContext *pContext, IBuffer *pBuffer, MAP_TYPE MapType, Uint32 MapFlags )
+    void Map( IDeviceContext *pContext, IBuffer *pBuffer, MAP_TYPE MapType, MAP_FLAGS MapFlags )
     {
         VERIFY(!m_pBuffer && !m_pMappedData && !m_pContext, "Object already mapped");
         Unmap();

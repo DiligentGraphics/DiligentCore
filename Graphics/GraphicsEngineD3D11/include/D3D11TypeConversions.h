@@ -46,17 +46,17 @@ inline UINT BindFlagsToD3D11BindFlags(Uint32 BindFlags)
     return D3D11BindFlags;
 }
 
-inline Uint32 D3D11BindFlagsToBindFlags(UINT D3D11BindFlags)
+inline BIND_FLAGS D3D11BindFlagsToBindFlags(UINT D3D11BindFlags)
 {
-    Uint32 BindFlags = 0;
-    BindFlags = BindFlags | ((D3D11BindFlags & D3D11_BIND_VERTEX_BUFFER)     ? BIND_VERTEX_BUFFER    : 0);
-    BindFlags = BindFlags | ((D3D11BindFlags & D3D11_BIND_INDEX_BUFFER)      ? BIND_INDEX_BUFFER     : 0);
-    BindFlags = BindFlags | ((D3D11BindFlags & D3D11_BIND_CONSTANT_BUFFER)   ? BIND_UNIFORM_BUFFER   : 0);
-    BindFlags = BindFlags | ((D3D11BindFlags & D3D11_BIND_SHADER_RESOURCE)   ? BIND_SHADER_RESOURCE  : 0);
-    BindFlags = BindFlags | ((D3D11BindFlags & D3D11_BIND_STREAM_OUTPUT)     ? BIND_STREAM_OUTPUT    : 0);
-    BindFlags = BindFlags | ((D3D11BindFlags & D3D11_BIND_RENDER_TARGET)     ? BIND_RENDER_TARGET    : 0);
-    BindFlags = BindFlags | ((D3D11BindFlags & D3D11_BIND_DEPTH_STENCIL)     ? BIND_DEPTH_STENCIL    : 0);
-    BindFlags = BindFlags | ((D3D11BindFlags & D3D11_BIND_UNORDERED_ACCESS)  ? BIND_UNORDERED_ACCESS : 0);
+    BIND_FLAGS BindFlags = BIND_NONE;
+    BindFlags = BindFlags | ((D3D11BindFlags & D3D11_BIND_VERTEX_BUFFER)     ? BIND_VERTEX_BUFFER    : BIND_NONE);
+    BindFlags = BindFlags | ((D3D11BindFlags & D3D11_BIND_INDEX_BUFFER)      ? BIND_INDEX_BUFFER     : BIND_NONE);
+    BindFlags = BindFlags | ((D3D11BindFlags & D3D11_BIND_CONSTANT_BUFFER)   ? BIND_UNIFORM_BUFFER   : BIND_NONE);
+    BindFlags = BindFlags | ((D3D11BindFlags & D3D11_BIND_SHADER_RESOURCE)   ? BIND_SHADER_RESOURCE  : BIND_NONE);
+    BindFlags = BindFlags | ((D3D11BindFlags & D3D11_BIND_STREAM_OUTPUT)     ? BIND_STREAM_OUTPUT    : BIND_NONE);
+    BindFlags = BindFlags | ((D3D11BindFlags & D3D11_BIND_RENDER_TARGET)     ? BIND_RENDER_TARGET    : BIND_NONE);
+    BindFlags = BindFlags | ((D3D11BindFlags & D3D11_BIND_DEPTH_STENCIL)     ? BIND_DEPTH_STENCIL    : BIND_NONE);
+    BindFlags = BindFlags | ((D3D11BindFlags & D3D11_BIND_UNORDERED_ACCESS)  ? BIND_UNORDERED_ACCESS : BIND_NONE);
     VERIFY_EXPR( (D3D11BindFlags & 
                  (D3D11_BIND_VERTEX_BUFFER|D3D11_BIND_INDEX_BUFFER|D3D11_BIND_CONSTANT_BUFFER|
                   D3D11_BIND_SHADER_RESOURCE|D3D11_BIND_STREAM_OUTPUT|D3D11_BIND_RENDER_TARGET|
@@ -120,10 +120,6 @@ inline void MapParamsToD3D11MapParams(MAP_TYPE MapType, Uint32 MapFlags, D3D11_M
     d3d11MapFlags |= (MapFlags & MAP_FLAG_DO_NOT_WAIT) ? D3D11_MAP_FLAG_DO_NOT_WAIT : 0;
 }
 
-inline UINT MapFlagsToD3D11MapFlags(Uint32 MapFlags)
-{
-}
-
 inline UINT CPUAccessFlagsToD3D11CPUAccessFlags(Uint32 Flags)
 {
     UINT D3D11CPUAccessFlags = 0;
@@ -132,11 +128,11 @@ inline UINT CPUAccessFlagsToD3D11CPUAccessFlags(Uint32 Flags)
     return D3D11CPUAccessFlags;
 }
 
-inline Uint8 D3D11CPUAccessFlagsToCPUAccessFlags(UINT D3D11CPUAccessFlags)
+inline CPU_ACCESS_FLAGS D3D11CPUAccessFlagsToCPUAccessFlags(UINT D3D11CPUAccessFlags)
 {
-    Uint8 CPUAccessFlags = 0;
-    CPUAccessFlags |= (D3D11CPUAccessFlags & D3D11_CPU_ACCESS_READ)  ? CPU_ACCESS_READ  : 0;
-    CPUAccessFlags |= (D3D11CPUAccessFlags & D3D11_CPU_ACCESS_WRITE) ? CPU_ACCESS_WRITE : 0;
+    CPU_ACCESS_FLAGS CPUAccessFlags = CPU_ACCESS_NONE;
+    CPUAccessFlags |= (D3D11CPUAccessFlags & D3D11_CPU_ACCESS_READ)  ? CPU_ACCESS_READ  : CPU_ACCESS_NONE;
+    CPUAccessFlags |= (D3D11CPUAccessFlags & D3D11_CPU_ACCESS_WRITE) ? CPU_ACCESS_WRITE : CPU_ACCESS_NONE;
     VERIFY_EXPR(D3D11CPUAccessFlags == CPUAccessFlagsToD3D11CPUAccessFlags(CPUAccessFlags));
     return CPUAccessFlags;
 }
@@ -148,10 +144,10 @@ inline UINT MiscTextureFlagsToD3D11Flags(Uint32 Flags)
     return D3D11MiscFlags;
 }
 
-inline Uint32 D3D11MiscFlagsToMiscTextureFlags(UINT D3D11MiscFlags)
+inline MISC_TEXTURE_FLAGS D3D11MiscFlagsToMiscTextureFlags(UINT D3D11MiscFlags)
 {
-    Uint32 MiscFlags = 0;
-    MiscFlags |= (D3D11MiscFlags & D3D11_RESOURCE_MISC_GENERATE_MIPS) ? MISC_TEXTURE_FLAG_GENERATE_MIPS : 0;
+    MISC_TEXTURE_FLAGS MiscFlags = MISC_TEXTURE_FLAG_NONE;
+    MiscFlags |= (D3D11MiscFlags & D3D11_RESOURCE_MISC_GENERATE_MIPS) ? MISC_TEXTURE_FLAG_GENERATE_MIPS : MISC_TEXTURE_FLAG_NONE;
     return MiscFlags;
 }
 

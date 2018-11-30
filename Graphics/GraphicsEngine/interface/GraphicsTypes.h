@@ -28,6 +28,7 @@
 
 #include "../../../Primitives/interface/BasicTypes.h"
 #include "../../../Primitives/interface/DebugOutput.h"
+#include "../../../Primitives/interface/FlagEnum.h"
 
 /// Graphics engine namespace
 namespace Diligent
@@ -77,6 +78,7 @@ namespace Diligent
         BIND_UNORDERED_ACCESS	= 0x80L,///< A buffer or a texture can be bound as an unordered access view
         BIND_INDIRECT_DRAW_ARGS	= 0x100L///< A buffer can be bound as the source buffer for indirect draw commands
     };
+    DEFINE_FLAG_ENUM_OPERATORS(BIND_FLAGS)
 
     /// Resource usage
 
@@ -113,11 +115,13 @@ namespace Diligent
     /// - BufferDesc to describe CPU access mode for a buffer
     /// - TextureDesc to describe CPU access mode for a texture
     /// \note Only USAGE_DYNAMIC resources can be mapped
-    enum CPU_ACCESS_FLAG : Uint8
+    enum CPU_ACCESS_FLAGS : Uint8
     {
-        CPU_ACCESS_READ = 0x01, ///< A resource can be mapped for reading
-        CPU_ACCESS_WRITE = 0x02 ///< A resource can be mapped for writing
+        CPU_ACCESS_NONE  = 0x00, ///< No CPU access
+        CPU_ACCESS_READ  = 0x01, ///< A resource can be mapped for reading
+        CPU_ACCESS_WRITE = 0x02  ///< A resource can be mapped for writing
     };
+    DEFINE_FLAG_ENUM_OPERATORS(CPU_ACCESS_FLAGS)
 
     /// Resource mapping type
 
@@ -149,6 +153,8 @@ namespace Diligent
     /// - ITexture::Map to describe texture mapping flags
     enum MAP_FLAGS : Uint8
     {
+        MAP_FLAG_NONE       = 0x000,
+
         /// Specifies that map operation should not wait until previous command that
         /// using the same resource completes. Map returns null pointer if the resource
         /// is still in use.\n
@@ -167,6 +173,7 @@ namespace Diligent
         /// D3D11 counterpart:  D3D11_MAP_WRITE_NO_OVERWRITE. OpenGL counterpart: GL_MAP_UNSYNCHRONIZED_BIT
         MAP_FLAG_DO_NOT_SYNCHRONIZE = 0x004
     };
+    DEFINE_FLAG_ENUM_OPERATORS(MAP_FLAGS)
 
     /// Describes resource dimension
 
@@ -892,13 +899,16 @@ namespace Diligent
     /// Miscellaneous texture flags
 
     /// The enumeration is used by TextureDesc to describe misc texture flags
-    enum MISC_TEXTURE_FLAG : Uint8
+    enum MISC_TEXTURE_FLAGS : Uint8
     {
+        MISC_TEXTURE_FLAG_NONE          = 0x00,
+
         /// Allow automatic mipmap generation with ITextureView::GenerateMips()
 
         /// \note A texture must be created with BIND_RENDER_TARGET bind flag
         MISC_TEXTURE_FLAG_GENERATE_MIPS = 0x01
     };
+    DEFINE_FLAG_ENUM_OPERATORS(MISC_TEXTURE_FLAGS)
 
     /// Input primitive topology.
 

@@ -50,13 +50,13 @@ public:
 
     virtual void TransitionShaderResources(IPipelineState *pPipelineState, IShaderResourceBinding *pShaderResourceBinding)override final;
 
-    virtual void CommitShaderResources(IShaderResourceBinding *pShaderResourceBinding, Uint32 Flags)override final;
+    virtual void CommitShaderResources(IShaderResourceBinding *pShaderResourceBinding, COMMIT_SHADER_RESOURCES_FLAGS Flags)override final;
 
     virtual void SetStencilRef(Uint32 StencilRef)override final;
 
     virtual void SetBlendFactors(const float* pBlendFactors = nullptr)override final;
 
-    virtual void SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer **ppBuffers, Uint32 *pOffsets, Uint32 Flags )override final;
+    virtual void SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer **ppBuffers, Uint32 *pOffsets, SET_VERTEX_BUFFERS_FLAGS Flags )override final;
     
     virtual void InvalidateState()override final;
 
@@ -72,7 +72,7 @@ public:
 
     virtual void DispatchCompute( const DispatchComputeAttribs &DispatchAttrs )override final;
 
-    virtual void ClearDepthStencil( ITextureView *pView, Uint32 ClearFlags, float fDepth, Uint8 Stencil)override final;
+    virtual void ClearDepthStencil( ITextureView *pView, CLEAR_DEPTH_STENCIL_FLAGS ClearFlags, float fDepth, Uint8 Stencil)override final;
 
     virtual void ClearRenderTarget( ITextureView *pView, const float *RGBA )override final;
 
@@ -82,7 +82,7 @@ public:
 
     virtual void CopyBuffer(IBuffer *pSrcBuffer, Uint32 SrcOffset, IBuffer *pDstBuffer, Uint32 DstOffset, Uint32 Size)override final;
 
-    virtual void MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, Uint32 MapFlags, PVoid& pMappedData)override final;
+    virtual void MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_FLAGS MapFlags, PVoid& pMappedData)override final;
 
     virtual void UnmapBuffer(IBuffer* pBuffer)override final;
 
@@ -103,7 +103,7 @@ public:
                                         Uint32                    MipLevel,
                                         Uint32                    ArraySlice,
                                         MAP_TYPE                  MapType,
-                                        Uint32                    MapFlags,
+                                        MAP_FLAGS                 MapFlags,
                                         const Box*                pMapRegion,
                                         MappedTextureSubresource& MappedData )override final;
 

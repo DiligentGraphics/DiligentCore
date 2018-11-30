@@ -232,7 +232,7 @@ namespace Diligent
         pPipelineStateD3D12->CommitAndTransitionShaderResources(pShaderResourceBinding, Ctx, false, true, false);
     }
 
-    void DeviceContextD3D12Impl::CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, Uint32 Flags)
+    void DeviceContextD3D12Impl::CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, COMMIT_SHADER_RESOURCES_FLAGS Flags)
     {
         if (!DeviceContextBase::CommitShaderResources(pShaderResourceBinding, Flags, 0 /*Dummy*/))
             return;
@@ -585,7 +585,7 @@ namespace Diligent
         ++m_State.NumCommands;
     }
 
-    void DeviceContextD3D12Impl::ClearDepthStencil( ITextureView* pView, Uint32 ClearFlags, float fDepth, Uint8 Stencil )
+    void DeviceContextD3D12Impl::ClearDepthStencil( ITextureView* pView, CLEAR_DEPTH_STENCIL_FLAGS ClearFlags, float fDepth, Uint8 Stencil )
     {
         ITextureViewD3D12 *pDSVD3D12 = nullptr;
         if( pView != nullptr )
@@ -724,7 +724,7 @@ namespace Diligent
         EndFrame(*m_pDevice.RawPtr<RenderDeviceD3D12Impl>());
     }
 
-    void DeviceContextD3D12Impl::SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer** ppBuffers, Uint32* pOffsets, Uint32 Flags )
+    void DeviceContextD3D12Impl::SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer** ppBuffers, Uint32* pOffsets, SET_VERTEX_BUFFERS_FLAGS Flags )
     {
         TDeviceContextBase::SetVertexBuffers( StartSlot, NumBuffersSet, ppBuffers, pOffsets, Flags );
         m_State.bCommittedD3D12VBsUpToDate = false;
@@ -948,7 +948,7 @@ namespace Diligent
         ++m_State.NumCommands;
     }
 
-    void DeviceContextD3D12Impl::MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, Uint32 MapFlags, PVoid& pMappedData)
+    void DeviceContextD3D12Impl::MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_FLAGS MapFlags, PVoid& pMappedData)
     {
         TDeviceContextBase::MapBuffer(pBuffer, MapType, MapFlags, pMappedData);
         auto* pBufferD3D12 = ValidatedCast<BufferD3D12Impl>(pBuffer);
@@ -1338,7 +1338,7 @@ namespace Diligent
                                                         Uint32                    MipLevel,
                                                         Uint32                    ArraySlice,
                                                         MAP_TYPE                  MapType,
-                                                        Uint32                    MapFlags,
+                                                        MAP_FLAGS                 MapFlags,
                                                         const Box*                pMapRegion,
                                                         MappedTextureSubresource& MappedData )
     {

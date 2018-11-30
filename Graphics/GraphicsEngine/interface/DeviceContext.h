@@ -27,6 +27,7 @@
 /// Definition of the Diligent::IDeviceContext interface and related data structures
 
 #include "../../../Primitives/interface/Object.h"
+#include "../../../Primitives/interface/FlagEnum.h"
 #include "DeviceCaps.h"
 #include "Constants.h"
 #include "Buffer.h"
@@ -57,15 +58,15 @@ enum DRAW_FLAGS : Uint8
     /// Perform no state transitions
     DRAW_FLAG_NONE                            = 0x00,
 
-    /// Transition vertex buffers to RESOURCE_STATE_VERTEX_BUFFER state (see Diligent::RESOURCE_STATE).
+    /// Transition vertex buffers to Diligent::RESOURCE_STATE_VERTEX_BUFFER state (see Diligent::RESOURCE_STATE).
     /// Vertex buffers in unknown state will not be transitioned.
     DRAW_FLAG_TRANSITION_VERTEX_BUFFERS       = 0x01,
 
-    /// Transition index buffer to RESOURCE_STATE_INDEX_BUFFER state (see Diligent::RESOURCE_STATE).
+    /// Transition index buffer to Diligent::RESOURCE_STATE_INDEX_BUFFER state (see Diligent::RESOURCE_STATE).
     /// If the index buffer is in unknown state, this flag has no effect.
     DRAW_FLAG_TRANSITION_INDEX_BUFFER         = 0x02,
 
-    /// Transition indirect draw arguments buffer to RESOURCE_STATE_INDIRECT_ARGUMENT state (see Diligent::RESOURCE_STATE).
+    /// Transition indirect draw arguments buffer to Diligent::RESOURCE_STATE_INDIRECT_ARGUMENT state (see Diligent::RESOURCE_STATE).
     /// If the buffer is in unknown state, this flag has no effect.
     DRAW_FLAG_TRANSITION_INDIRECT_ARGS_BUFFER = 0x04,
 
@@ -78,6 +79,7 @@ enum DRAW_FLAGS : Uint8
     /// application explicitly manages the states.
     DRAW_FLAG_VERIFY_STATES                   = 0x08
 };
+DEFINE_FLAG_ENUM_OPERATORS(DRAW_FLAGS)
 
 /// Defines the draw command attributes
 
@@ -101,7 +103,7 @@ struct DrawAttribs
     VALUE_TYPE IndexType = VT_UNDEFINED;
 
     /// Additional flags controlling the draw command behavior, see Diligent::DRAW_FLAGS.
-    Uint8 Flags = DRAW_FLAG_NONE;
+    DRAW_FLAGS Flags = DRAW_FLAG_NONE;
 
     /// Number of instances to draw. If more than one instance is specified,
     /// instanced draw call will be performed.
@@ -155,12 +157,13 @@ struct DrawAttribs
 /// Defines which parts of the depth-stencil buffer to clear.
 
 /// These flags are used by IDeviceContext::ClearDepthStencil().
-enum CLEAR_DEPTH_STENCIL_FLAGS : Int32
+enum CLEAR_DEPTH_STENCIL_FLAGS : Uint32
 {
-    CLEAR_DEPTH_FLAG   = 0x01,  ///< Clear depth part of the buffer
-    CLEAR_STENCIL_FLAG = 0x02   ///< Clear stencil part of the buffer
+    CLEAR_DEPTH_FLAG_NONE = 0x00,  ///< Perform no clear
+    CLEAR_DEPTH_FLAG      = 0x01,  ///< Clear depth part of the buffer
+    CLEAR_STENCIL_FLAG    = 0x02   ///< Clear stencil part of the buffer
 };
-
+DEFINE_FLAG_ENUM_OPERATORS(CLEAR_DEPTH_STENCIL_FLAGS)
 
 /// Dispatch compute command flags
 enum DISPATCH_FLAGS : Uint8
@@ -177,6 +180,7 @@ enum DISPATCH_FLAGS : Uint8
     /// flag has no effect in release build.
     DISPATCH_FLAG_VERIFY_STATES                   = 0x02
 };
+DEFINE_FLAG_ENUM_OPERATORS(DISPATCH_FLAGS)
 
 /// Describes dispatch command arguments.
 
@@ -199,7 +203,7 @@ struct DispatchComputeAttribs
     Uint32  DispatchArgsByteOffset;
 
     /// Flags controlling the dispatch command behavior, see Diligent::DISPATCH_FLAGS.
-    Uint8 Flags = DISPATCH_FLAG_FLAG_NONE;
+    DISPATCH_FLAGS Flags = DISPATCH_FLAG_FLAG_NONE;
 
     /// Initializes the structure to perform non-indirect dispatch command
     
@@ -231,16 +235,23 @@ struct DispatchComputeAttribs
 };
 
 /// Defines allowed flags for IDeviceContext::SetVertexBuffers() function.
-enum SET_VERTEX_BUFFERS_FLAGS : Int32
+enum SET_VERTEX_BUFFERS_FLAGS : Uint8
 {
+    /// No extra operations
+    SET_VERTEX_BUFFERS_FLAG_NONE  = 0x00,
+
     /// Reset the vertex buffers to only the buffers specified in this
     /// call. All buffers previously bound to the pipeline will be unbound.
     SET_VERTEX_BUFFERS_FLAG_RESET = 0x01
 };
+DEFINE_FLAG_ENUM_OPERATORS(SET_VERTEX_BUFFERS_FLAGS)
 
 /// Defines allowed flags for IDeviceContext::CommitShaderResources() function.
-enum COMMIT_SHADER_RESOURCES_FLAG
+enum COMMIT_SHADER_RESOURCES_FLAGS : Uint8
 {
+    /// Perform no extra operations
+    COMMIT_SHADER_RESOURCES_FLAG_NONE                 = 0x00,
+
     /// Transition resources being committed
 
     /// If this flag is specified when IDeviceContext::CommitShaderResources() is called,
@@ -254,8 +265,9 @@ enum COMMIT_SHADER_RESOURCES_FLAG
     /// that all resources are transitioned to correct states when
     /// COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag is not set.
     /// No resource state validation is performed in release build.
-    COMMIT_SHADER_RESOURCES_FLAG_VERIFY_STATES = 0x02
+    COMMIT_SHADER_RESOURCES_FLAG_VERIFY_STATES        = 0x02
 };
+DEFINE_FLAG_ENUM_OPERATORS(COMMIT_SHADER_RESOURCES_FLAGS)
 
 
 /// Describes the viewport.
@@ -363,7 +375,7 @@ public:
     /// \param [in] pShaderResourceBinding - Shader resource binding whose resources will be committed.
     ///                                      If pipeline state contains no shader resources, this parameter
     ///                                      can be null.
-    /// \param [in] Flags - Additional flags for the operation. See Diligent::COMMIT_SHADER_RESOURCES_FLAG
+    /// \param [in] Flags - Additional flags for the operation. See Diligent::COMMIT_SHADER_RESOURCES_FLAGS
     ///                     for a list of allowed values.
     ///
     /// \remarks Pipeline state object that was used to create the shader resource binding must be bound 
@@ -399,7 +411,7 @@ public:
     ///          manually by setting the state to Diligent::RESOURCE_STATE_UNKNOWN (which will disable automatic state 
     ///          management) using IBuffer::SetState() or ITexture::SetState() and explicitly transitioning the states with 
     ///          IDeviceContext::TransitionResourceStates(). See IDeviceContext::TransitionResourceStates() for details.
-    virtual void CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, Uint32 Flags) = 0;
+    virtual void CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, COMMIT_SHADER_RESOURCES_FLAGS Flags) = 0;
 
     /// Sets the stencil reference value
 
@@ -435,11 +447,11 @@ public:
     ///          It is suggested to specify Diligent::SET_VERTEX_BUFFERS_FLAG_RESET flag
     ///          whenever possible. This will assure that no buffers from previous draw calls are
     ///          are bound to the pipeline.
-    virtual void SetVertexBuffers(Uint32    StartSlot, 
-                                  Uint32    NumBuffersSet, 
-                                  IBuffer** ppBuffers, 
-                                  Uint32*   pOffsets,
-                                  Uint32    Flags) = 0;
+    virtual void SetVertexBuffers(Uint32                    StartSlot, 
+                                  Uint32                    NumBuffersSet, 
+                                  IBuffer**                 ppBuffers, 
+                                  Uint32*                   pOffsets,
+                                  SET_VERTEX_BUFFERS_FLAGS  Flags) = 0;
 
     /// Invalidates the cached context state.
 
@@ -551,7 +563,7 @@ public:
     /// \param [in] Stencil - Value to clear stencil part of the view with.
     /// \remarks The full extent of the view is always cleared. Viewport and scissor settings are not applied.
     /// \note The depth-stencil view must be bound to the pipeline for clear operation to be performed.
-    virtual void ClearDepthStencil(ITextureView* pView, Uint32 ClearFlags = CLEAR_DEPTH_FLAG, float fDepth = 1.f, Uint8 Stencil = 0) = 0;
+    virtual void ClearDepthStencil(ITextureView* pView, CLEAR_DEPTH_STENCIL_FLAGS ClearFlags = CLEAR_DEPTH_FLAG, float fDepth = 1.f, Uint8 Stencil = 0) = 0;
 
     /// Clears a render target view
 
@@ -614,7 +626,7 @@ public:
     /// \param [in] MapType - Type of the map operation. See Diligent::MAP_TYPE.
     /// \param [in] MapFlags - Special map flags. See Diligent::MAP_FLAGS.
     /// \param [out] pMappedData - Reference to the void pointer to store the address of the mapped region.
-    virtual void MapBuffer( IBuffer* pBuffer, MAP_TYPE MapType, Uint32 MapFlags, PVoid &pMappedData ) = 0;
+    virtual void MapBuffer( IBuffer* pBuffer, MAP_TYPE MapType, MAP_FLAGS MapFlags, PVoid &pMappedData ) = 0;
 
     /// Unmaps the previously mapped buffer
 
@@ -680,7 +692,7 @@ public:
                                         Uint32                    MipLevel,
                                         Uint32                    ArraySlice,
                                         MAP_TYPE                  MapType,
-                                        Uint32                    MapFlags,
+                                        MAP_FLAGS                 MapFlags,
                                         const Box*                pMapRegion,
                                         MappedTextureSubresource& MappedData ) = 0;
 

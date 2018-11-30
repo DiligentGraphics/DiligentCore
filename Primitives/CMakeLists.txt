@@ -11,6 +11,7 @@ set(INTERFACE
     interface/BasicTypes.h
     interface/DataBlob.h
     interface/DebugOutput.h
+    interface/FlagEnum.h
     interface/Errors.h
     interface/FileStream.h
     interface/FormatString.h

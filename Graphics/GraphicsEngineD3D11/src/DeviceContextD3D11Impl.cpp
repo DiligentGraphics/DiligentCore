@@ -617,7 +617,7 @@ namespace Diligent
         TransitionAndCommitShaderResources<true, false>(pPipelineState, pShaderResourceBinding, false);
     }
 
-    void DeviceContextD3D11Impl::CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, Uint32 Flags)
+    void DeviceContextD3D11Impl::CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, COMMIT_SHADER_RESOURCES_FLAGS Flags)
     {
         if (!DeviceContextBase::CommitShaderResources(pShaderResourceBinding, Flags, 0 /*Dummy*/))
             return;
@@ -872,7 +872,7 @@ namespace Diligent
             m_pd3d11DeviceContext->Dispatch( DispatchAttrs.ThreadGroupCountX, DispatchAttrs.ThreadGroupCountY, DispatchAttrs.ThreadGroupCountZ );
     }
 
-    void DeviceContextD3D11Impl::ClearDepthStencil( ITextureView* pView, Uint32 ClearFlags, float fDepth, Uint8 Stencil )
+    void DeviceContextD3D11Impl::ClearDepthStencil( ITextureView* pView, CLEAR_DEPTH_STENCIL_FLAGS ClearFlags, float fDepth, Uint8 Stencil )
     {
         if (pView == nullptr)
         {
@@ -973,7 +973,7 @@ namespace Diligent
     }
 
 
-    void DeviceContextD3D11Impl::MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, Uint32 MapFlags, PVoid& pMappedData)
+    void DeviceContextD3D11Impl::MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_FLAGS MapFlags, PVoid& pMappedData)
     {
         TDeviceContextBase::MapBuffer(pBuffer, MapType, MapFlags, pMappedData);
 
@@ -1076,7 +1076,7 @@ namespace Diligent
                                                         Uint32                    MipLevel,
                                                         Uint32                    ArraySlice,
                                                         MAP_TYPE                  MapType,
-                                                        Uint32                    MapFlags,
+                                                        MAP_FLAGS                 MapFlags,
                                                         const Box*                pMapRegion,
                                                         MappedTextureSubresource& MappedData )
     {
@@ -1126,7 +1126,7 @@ namespace Diligent
     {
     }
 
-    void DeviceContextD3D11Impl::SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer **ppBuffers, Uint32* pOffsets, Uint32 Flags )
+    void DeviceContextD3D11Impl::SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer **ppBuffers, Uint32* pOffsets, SET_VERTEX_BUFFERS_FLAGS Flags )
     {
         TDeviceContextBase::SetVertexBuffers( StartSlot, NumBuffersSet, ppBuffers, pOffsets, Flags );
         m_bCommittedD3D11VBsUpToDate = false;

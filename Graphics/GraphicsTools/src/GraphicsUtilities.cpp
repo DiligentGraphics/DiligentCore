@@ -33,13 +33,13 @@
 namespace Diligent
 {
 
-void CreateUniformBuffer( IRenderDevice *pDevice, Uint32 Size, const Char *Name, IBuffer **ppBuffer, USAGE Usage, Uint32 BindFlag, Uint8 CPUAccessFlags)
+void CreateUniformBuffer( IRenderDevice *pDevice, Uint32 Size, const Char *Name, IBuffer **ppBuffer, USAGE Usage, BIND_FLAGS BindFlags, CPU_ACCESS_FLAGS CPUAccessFlags)
 {
     BufferDesc CBDesc;
     CBDesc.Name = Name;
     CBDesc.uiSizeInBytes = Size;
     CBDesc.Usage = Usage;
-    CBDesc.BindFlags = BindFlag;
+    CBDesc.BindFlags = BindFlags;
     CBDesc.CPUAccessFlags = CPUAccessFlags;
     pDevice->CreateBuffer( CBDesc, BufferData(), ppBuffer );
 }

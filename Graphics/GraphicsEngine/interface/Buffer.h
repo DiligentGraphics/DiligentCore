@@ -75,14 +75,14 @@ struct BufferDesc : DeviceObjectAttribs
     /// Diligent::BIND_VERTEX_BUFFER, Diligent::BIND_INDEX_BUFFER, Diligent::BIND_UNIFORM_BUFFER,
     /// Diligent::BIND_SHADER_RESOURCE, Diligent::BIND_STREAM_OUTPUT, Diligent::BIND_UNORDERED_ACCESS,
     /// Diligent::BIND_INDIRECT_DRAW_ARGS
-    Uint32 BindFlags = 0;
+    BIND_FLAGS BindFlags = BIND_NONE;
 
     /// Buffer usage, see Diligent::USAGE for details
     USAGE Usage = USAGE_DEFAULT;
 
     /// CPU access flags or 0 if no CPU access is allowed, 
-    /// see Diligent::CPU_ACCESS_FLAG for details.
-    Uint8 CPUAccessFlags = 0;
+    /// see Diligent::CPU_ACCESS_FLAGS for details.
+    CPU_ACCESS_FLAGS CPUAccessFlags = CPU_ACCESS_NONE;
     
     /// Buffer mode, see Diligent::BUFFER_MODE
     BUFFER_MODE Mode = BUFFER_MODE_UNDEFINED;

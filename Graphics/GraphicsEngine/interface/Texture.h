@@ -119,14 +119,14 @@ struct TextureDesc : DeviceObjectAttribs
     /// Diligent::BIND_SHADER_RESOURCE, Diligent::BIND_RENDER_TARGET, Diligent::BIND_DEPTH_STENCIL,
     /// Diligent::and BIND_UNORDERED_ACCESS. \n
     /// Multisampled textures cannot have Diligent::BIND_UNORDERED_ACCESS flag set
-    Uint32 BindFlags = 0;
+    BIND_FLAGS BindFlags = BIND_NONE;
 
     /// CPU access flags or 0 if no CPU access is allowed, 
-    /// see Diligent::CPU_ACCESS_FLAG for details.
-    Uint32 CPUAccessFlags = 0;
+    /// see Diligent::CPU_ACCESS_FLAGS for details.
+    CPU_ACCESS_FLAGS CPUAccessFlags = CPU_ACCESS_NONE;
     
-    /// Miscellaneous flags, see Diligent::MISC_TEXTURE_FLAG for details.
-    Uint32 MiscFlags = 0;
+    /// Miscellaneous flags, see Diligent::MISC_TEXTURE_FLAGS for details.
+    MISC_TEXTURE_FLAGS MiscFlags = MISC_TEXTURE_FLAG_NONE;
     
     /// Optimized clear value
     OptimizedClearValue ClearValue;

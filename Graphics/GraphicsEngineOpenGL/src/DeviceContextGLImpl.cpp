@@ -130,7 +130,7 @@ namespace Diligent
 
     }
 
-    void DeviceContextGLImpl::CommitShaderResources(IShaderResourceBinding *pShaderResourceBinding, Uint32 Flags)
+    void DeviceContextGLImpl::CommitShaderResources(IShaderResourceBinding *pShaderResourceBinding, COMMIT_SHADER_RESOURCES_FLAGS Flags)
     {
         if(!DeviceContextBase::CommitShaderResources(pShaderResourceBinding, Flags, 0))
             return;
@@ -161,7 +161,7 @@ namespace Diligent
         }
     }
 
-    void DeviceContextGLImpl::SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer **ppBuffers, Uint32 *pOffsets, Uint32 Flags )
+    void DeviceContextGLImpl::SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer **ppBuffers, Uint32 *pOffsets, SET_VERTEX_BUFFERS_FLAGS Flags )
     {
         TDeviceContextBase::SetVertexBuffers( StartSlot, NumBuffersSet, ppBuffers, pOffsets, Flags );
         m_bVAOIsUpToDate = false;
@@ -866,7 +866,7 @@ namespace Diligent
 #endif
     }
 
-    void DeviceContextGLImpl::ClearDepthStencil( ITextureView *pView, Uint32 ClearFlags, float fDepth, Uint8 Stencil )
+    void DeviceContextGLImpl::ClearDepthStencil( ITextureView *pView, CLEAR_DEPTH_STENCIL_FLAGS ClearFlags, float fDepth, Uint8 Stencil )
     {
         // Unlike OpenGL, in D3D10+, the full extent of the resource view is always cleared. 
         // Viewport and scissor settings are not applied.
@@ -1028,7 +1028,7 @@ namespace Diligent
         pDstBufferGL->CopyData(m_ContextState, *pSrcBufferGL, SrcOffset, DstOffset, Size);
     }
 
-    void DeviceContextGLImpl::MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, Uint32 MapFlags, PVoid& pMappedData)
+    void DeviceContextGLImpl::MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_FLAGS MapFlags, PVoid& pMappedData)
     {
         TDeviceContextBase::MapBuffer(pBuffer, MapType, MapFlags, pMappedData);
         auto* pBufferGL = ValidatedCast<BufferGLImpl>(pBuffer);
@@ -1071,7 +1071,7 @@ namespace Diligent
                                                      Uint32                    MipLevel,
                                                      Uint32                    ArraySlice,
                                                      MAP_TYPE                  MapType,
-                                                     Uint32                    MapFlags,
+                                                     MAP_FLAGS                 MapFlags,
                                                      const Box*                pMapRegion,
                                                      MappedTextureSubresource& MappedData )
     {

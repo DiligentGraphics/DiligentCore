@@ -308,7 +308,7 @@ static TextureDesc InitTexDescFromD3D12Resource(ID3D12Resource* pTexture, const 
     TexDesc.SampleCount = ResourceDesc.SampleDesc.Count;
     
     TexDesc.Usage = USAGE_DEFAULT;
-    TexDesc.BindFlags = 0;
+    TexDesc.BindFlags = BIND_NONE;
     if( (ResourceDesc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET) != 0 )
         TexDesc.BindFlags |= BIND_RENDER_TARGET;
     if( (ResourceDesc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL) != 0 )

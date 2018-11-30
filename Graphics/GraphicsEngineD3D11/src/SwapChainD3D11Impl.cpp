@@ -86,8 +86,8 @@ void SwapChainD3D11Impl::CreateRTVandDSV()
     DepthBufferDesc.SampleCount = m_SwapChainDesc.SamplesCount;
     DepthBufferDesc.Usage = USAGE_DEFAULT;
     DepthBufferDesc.BindFlags = BIND_DEPTH_STENCIL;
-    DepthBufferDesc.CPUAccessFlags = 0;
-    DepthBufferDesc.MiscFlags = 0;
+    DepthBufferDesc.CPUAccessFlags = CPU_ACCESS_NONE;
+    DepthBufferDesc.MiscFlags = MISC_TEXTURE_FLAG_NONE;
     RefCntAutoPtr<ITexture> ptex2DDepthBuffer;
     m_pRenderDevice->CreateTexture(DepthBufferDesc, TextureData{}, &ptex2DDepthBuffer);
     auto pDSV = ptex2DDepthBuffer->GetDefaultView(TEXTURE_VIEW_DEPTH_STENCIL);

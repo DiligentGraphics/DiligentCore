@@ -89,12 +89,12 @@ public:
 
     /// Base implementation of IDeviceContext::SetVertexBuffers(); validates parameters and 
     /// caches references to the buffers.
-    inline virtual void SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer** ppBuffers, Uint32* pOffsets, Uint32 Flags )override = 0;
+    inline virtual void SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer** ppBuffers, Uint32* pOffsets, SET_VERTEX_BUFFERS_FLAGS Flags )override = 0;
 
     inline virtual void InvalidateState()override = 0;
 
     /// Base implementation of IDeviceContext::CommitShaderResources(); validates parameters.
-    inline bool CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, Uint32 Flags, int);
+    inline bool CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, COMMIT_SHADER_RESOURCES_FLAGS Flags, int);
 
     /// Base implementation of IDeviceContext::SetIndexBuffer(); caches the strong reference to the index buffer
     inline virtual void SetIndexBuffer( IBuffer* pIndexBuffer, Uint32 ByteOffset )override = 0;
@@ -116,7 +116,7 @@ public:
     virtual void CopyBuffer(IBuffer *pSrcBuffer, Uint32 SrcOffset, IBuffer *pDstBuffer, Uint32 DstOffset, Uint32 Size)override = 0;
 
     /// Base implementation of IDeviceContext::MapBuffer(); validates input parameters.
-    virtual void MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, Uint32 MapFlags, PVoid& pMappedData)override = 0;
+    virtual void MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_FLAGS MapFlags, PVoid& pMappedData)override = 0;
 
     /// Base implementation of IDeviceContext::UnmapBuffer()
     virtual void UnmapBuffer(IBuffer* pBuffer)override = 0;
@@ -141,7 +141,7 @@ public:
                                        Uint32                    MipLevel,
                                        Uint32                    ArraySlice,
                                        MAP_TYPE                  MapType,
-                                       Uint32                    MapFlags,
+                                       MAP_FLAGS                 MapFlags,
                                        const Box*                pMapRegion,
                                        MappedTextureSubresource& MappedData)override = 0;
 
@@ -257,7 +257,8 @@ protected:
 
 
 template<typename BaseInterface, typename BufferImplType, typename TextureViewImplType, typename PipelineStateImplType>
-inline void DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType, PipelineStateImplType> :: SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer** ppBuffers, Uint32* pOffsets, Uint32 Flags  )
+inline void DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType, PipelineStateImplType> :: 
+            SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer** ppBuffers, Uint32* pOffsets, SET_VERTEX_BUFFERS_FLAGS Flags  )
 {
 #ifdef DEVELOPMENT
     if ( StartSlot >= MaxBufferSlots )
@@ -314,7 +315,8 @@ inline void DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType
 }
 
 template<typename BaseInterface, typename BufferImplType, typename TextureViewImplType, typename PipelineStateImplType>
-inline bool DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType, PipelineStateImplType> :: CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, Uint32 Flags, int)
+inline bool DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType, PipelineStateImplType> :: 
+            CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, COMMIT_SHADER_RESOURCES_FLAGS Flags, int)
 {
 #ifdef DEVELOPMENT
     if (!m_pPipelineState)
@@ -695,7 +697,7 @@ inline void DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType
 
 template<typename BaseInterface, typename BufferImplType, typename TextureViewImplType, typename PipelineStateImplType>
 inline void DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType, PipelineStateImplType> ::
-            MapBuffer( IBuffer* pBuffer, MAP_TYPE MapType, Uint32 MapFlags, PVoid& pMappedData )
+            MapBuffer( IBuffer* pBuffer, MAP_TYPE MapType, MAP_FLAGS MapFlags, PVoid& pMappedData )
 {
     VERIFY(pBuffer, "pBuffer must not be null");
     
@@ -779,7 +781,7 @@ inline void DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType
                                   Uint32                    MipLevel,
                                   Uint32                    ArraySlice,
                                   MAP_TYPE                  MapType,
-                                  Uint32                    MapFlags,
+                                  MAP_FLAGS                 MapFlags,
                                   const Box*                pMapRegion,
                                   MappedTextureSubresource& MappedData)
 {
