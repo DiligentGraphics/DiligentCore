@@ -608,12 +608,9 @@ namespace Diligent
                 return;
             }
         }
-        D3D12_CLEAR_FLAGS d3d12ClearFlags = (D3D12_CLEAR_FLAGS)0;
-        if( ClearFlags & CLEAR_DEPTH_FLAG )   d3d12ClearFlags |= D3D12_CLEAR_FLAG_DEPTH;
-        if( ClearFlags & CLEAR_STENCIL_FLAG ) d3d12ClearFlags |= D3D12_CLEAR_FLAG_STENCIL;
         // The full extent of the resource view is always cleared. 
         // Viewport and scissor settings are not applied??
-        GetCmdContext().AsGraphicsContext().ClearDepthStencil( pDSVD3D12, d3d12ClearFlags, fDepth, Stencil );
+        GetCmdContext().AsGraphicsContext().ClearDepthStencil( pDSVD3D12, ClearFlags, fDepth, Stencil );
         ++m_State.NumCommands;
     }
 

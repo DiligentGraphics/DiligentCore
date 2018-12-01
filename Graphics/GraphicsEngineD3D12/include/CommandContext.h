@@ -175,7 +175,7 @@ class GraphicsContext : public CommandContext
 {
 public:
 	void ClearRenderTarget( ITextureViewD3D12 *pRTV, const float *Color, CLEAR_RENDER_TARGET_STATE_TRANSITION_MODE StateTransitionMode );
-	void ClearDepthStencil( ITextureViewD3D12 *pDSV, D3D12_CLEAR_FLAGS ClearFlags, float Depth, UINT8 Stencil );
+	void ClearDepthStencil( ITextureViewD3D12 *pDSV, CLEAR_DEPTH_STENCIL_FLAGS ClearFlags, float Depth, UINT8 Stencil );
 
 	void SetRootSignature( ID3D12RootSignature *pRootSig )
     {

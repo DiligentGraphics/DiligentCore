@@ -703,15 +703,30 @@ namespace Diligent
             auto* pTexture = pVkDSV->GetTexture();
             auto* pTextureVk = ValidatedCast<TextureVkImpl>(pTexture);
 
-            // Image layout must be VK_IMAGE_LAYOUT_GENERAL or VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL (17.1)
-            if (pTextureVk->IsInKnownState())
+            if (ClearFlags & CLEAR_DEPTH_STENCIL_TRANSITION_STATE_FLAG)
             {
-                if (!pTextureVk->CheckState(RESOURCE_STATE_COPY_DEST))
+                // Image layout must be VK_IMAGE_LAYOUT_GENERAL or VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL (17.1)
+                if (pTextureVk->IsInKnownState())
                 {
-                    TransitionTextureState(*pTextureVk, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_DEST, true);
+                    if (!pTextureVk->CheckState(RESOURCE_STATE_COPY_DEST))
+                    {
+                        TransitionTextureState(*pTextureVk, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_DEST, true);
+                    }
+                    VERIFY_EXPR(pTextureVk->GetLayout() == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
                 }
-                VERIFY_EXPR(pTextureVk->GetLayout() == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
             }
+#ifdef DEVELOPMENT
+            else if(ClearFlags & CLEAR_DEPTH_STENCIL_VERIFY_STATE_FLAG)
+            {
+                if (pTextureVk->IsInKnownState() && !pTextureVk->CheckState(RESOURCE_STATE_COPY_DEST))
+                {
+                    LOG_ERROR_MESSAGE("Depth-stencil buffer '", pTextureVk->GetDesc().Name, "' being cleared outside of render pass not transitioned to RESOURCE_STATE_COPY_DEST state. "
+                                      "Actual texture state: ", GetResourceStateString(pTexture->GetState()), ". "
+                                      "Use CLEAR_DEPTH_STENCIL_TRANSITION_STATE_FLAG flag or explicitly transition the resource using IDeviceContext::TransitionResourceStates() method.");
+                }
+            }
+#endif
+
             
             VkClearDepthStencilValue ClearValue;
             ClearValue.depth = fDepth;

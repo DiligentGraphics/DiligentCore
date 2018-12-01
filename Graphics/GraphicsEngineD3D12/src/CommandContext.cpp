@@ -214,13 +214,31 @@ void GraphicsContext::ClearRenderTarget( ITextureViewD3D12* pRTV, const float* C
 	m_pCommandList->ClearRenderTargetView(pRTV->GetCPUDescriptorHandle(), Color, 0, nullptr);
 }
 
-void GraphicsContext::ClearDepthStencil( ITextureViewD3D12* pDSV, D3D12_CLEAR_FLAGS ClearFlags, float Depth, UINT8 Stencil )
+void GraphicsContext::ClearDepthStencil( ITextureViewD3D12* pDSV, CLEAR_DEPTH_STENCIL_FLAGS ClearFlags, float Depth, UINT8 Stencil )
 {
     auto *pTexture = ValidatedCast<TextureD3D12Impl>( pDSV->GetTexture() );
-    if (pTexture->IsInKnownState() && !pTexture->CheckState(RESOURCE_STATE_DEPTH_WRITE))
-	    TransitionResource( pTexture, RESOURCE_STATE_DEPTH_WRITE);
+    if (ClearFlags & CLEAR_DEPTH_STENCIL_TRANSITION_STATE_FLAG)
+    {
+        if (pTexture->IsInKnownState() && !pTexture->CheckState(RESOURCE_STATE_DEPTH_WRITE))
+	        TransitionResource( pTexture, RESOURCE_STATE_DEPTH_WRITE);
+    }
+#ifdef DEVELOPMENT
+    else if(ClearFlags & CLEAR_DEPTH_STENCIL_VERIFY_STATE_FLAG)
+    {
+        if (pTexture->IsInKnownState() && !pTexture->CheckState(RESOURCE_STATE_DEPTH_WRITE))
+        {
+            LOG_ERROR_MESSAGE("Depth-stencil buffer '", pTexture->GetDesc().Name, "' being cleared is not transitioned to RESOURCE_STATE_DEPTH_WRITE state. "
+                              "Actual texture state: ", GetResourceStateString(pTexture->GetState()), ". "
+                              "Use CLEAR_DEPTH_STENCIL_TRANSITION_STATE_FLAG flag or explicitly transition the resource using IDeviceContext::TransitionResourceStates() method.");
+        }
+    }
+#endif
     FlushResourceBarriers();
-	m_pCommandList->ClearDepthStencilView(pDSV->GetCPUDescriptorHandle(), ClearFlags, Depth, Stencil, 0, nullptr);
+
+    D3D12_CLEAR_FLAGS d3d12ClearFlags = (D3D12_CLEAR_FLAGS)0;
+    if( ClearFlags & CLEAR_DEPTH_FLAG )   d3d12ClearFlags |= D3D12_CLEAR_FLAG_DEPTH;
+    if( ClearFlags & CLEAR_STENCIL_FLAG ) d3d12ClearFlags |= D3D12_CLEAR_FLAG_STENCIL;
+	m_pCommandList->ClearDepthStencilView(pDSV->GetCPUDescriptorHandle(), d3d12ClearFlags, Depth, Stencil, 0, nullptr);
 }
 
 

@@ -159,9 +159,11 @@ struct DrawAttribs
 /// These flags are used by IDeviceContext::ClearDepthStencil().
 enum CLEAR_DEPTH_STENCIL_FLAGS : Uint32
 {
-    CLEAR_DEPTH_FLAG_NONE = 0x00,  ///< Perform no clear
-    CLEAR_DEPTH_FLAG      = 0x01,  ///< Clear depth part of the buffer
-    CLEAR_STENCIL_FLAG    = 0x02   ///< Clear stencil part of the buffer
+    CLEAR_DEPTH_FLAG_NONE = 0x00,                      ///< Perform no clear no transitions
+    CLEAR_DEPTH_FLAG      = 0x01,                      ///< Clear depth part of the buffer
+    CLEAR_STENCIL_FLAG    = 0x02,                      ///< Clear stencil part of the buffer
+    CLEAR_DEPTH_STENCIL_TRANSITION_STATE_FLAG = 0x04,  ///< Transition depth-stencil buffer to required state
+    CLEAR_DEPTH_STENCIL_VERIFY_STATE_FLAG     = 0x08   ///< Verify the state is correct (debug and development builds only)
 };
 DEFINE_FLAG_ENUM_OPERATORS(CLEAR_DEPTH_STENCIL_FLAGS)
 
@@ -609,7 +611,10 @@ public:
     /// \param [in] Stencil - Value to clear stencil part of the view with.
     /// \remarks The full extent of the view is always cleared. Viewport and scissor settings are not applied.
     /// \note The depth-stencil view must be bound to the pipeline for clear operation to be performed.
-    virtual void ClearDepthStencil(ITextureView* pView, CLEAR_DEPTH_STENCIL_FLAGS ClearFlags = CLEAR_DEPTH_FLAG, float fDepth = 1.f, Uint8 Stencil = 0) = 0;
+    virtual void ClearDepthStencil(ITextureView*             pView,
+                                   CLEAR_DEPTH_STENCIL_FLAGS ClearFlags = CLEAR_DEPTH_FLAG | CLEAR_DEPTH_STENCIL_TRANSITION_STATE_FLAG,
+                                   float                     fDepth     = 1.f,
+                                   Uint8                     Stencil    = 0) = 0;
 
     /// Clears a render target view
 
@@ -617,6 +622,7 @@ public:
     ///                     Diligent::TEXTURE_VIEW_RENDER_TARGET.
     /// \param [in] RGBA - A 4-component array that represents the color to fill the render target with.
     ///                    If nullptr is provided, the default array {0,0,0,0} will be used.
+    /// \param [in] StateTransitionMode - Defines requires state transitions (see Diligent::CLEAR_RENDER_TARGET_STATE_TRANSITION_MODE)
     /// \remarks The full extent of the view is always cleared. Viewport and scissor settings are not applied.
     /// \note The render target view must be bound to the pipeline for clear operation to be performed.
     virtual void ClearRenderTarget(ITextureView* pView, const float* RGBA, CLEAR_RENDER_TARGET_STATE_TRANSITION_MODE StateTransitionMode) = 0;
