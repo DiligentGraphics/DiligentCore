@@ -902,7 +902,7 @@ namespace Diligent
         m_pd3d11DeviceContext->ClearDepthStencilView( pd3d11DSV, d3d11ClearFlags, fDepth, Stencil );
     }
 
-    void DeviceContextD3D11Impl::ClearRenderTarget( ITextureView* pView, const float *RGBA )
+    void DeviceContextD3D11Impl::ClearRenderTarget( ITextureView* pView, const float *RGBA, CLEAR_RENDER_TARGET_STATE_TRANSITION_MODE StateTransitionMode )
     {
         if (pView == nullptr)
         {

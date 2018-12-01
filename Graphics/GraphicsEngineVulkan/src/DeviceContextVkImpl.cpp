@@ -755,7 +755,7 @@ namespace Diligent
         return ClearValue;
     }
 
-    void DeviceContextVkImpl::ClearRenderTarget( ITextureView *pView, const float *RGBA )
+    void DeviceContextVkImpl::ClearRenderTarget( ITextureView *pView, const float *RGBA, CLEAR_RENDER_TARGET_STATE_TRANSITION_MODE StateTransitionMode )
     {
         ITextureViewVk* pVkRTV = nullptr;
         if ( pView != nullptr )
@@ -839,14 +839,28 @@ namespace Diligent
             auto* pTextureVk = ValidatedCast<TextureVkImpl>(pTexture);
 
             // Image layout must be VK_IMAGE_LAYOUT_GENERAL or VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL (17.1)
-            if (pTextureVk->IsInKnownState())
+            if (StateTransitionMode == CLEAR_RENDER_TARGET_TRANSITION_STATE)
             {
-                if (!pTextureVk->CheckState(RESOURCE_STATE_COPY_DEST))
+                if (pTextureVk->IsInKnownState())
                 {
-                    TransitionTextureState(*pTextureVk, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_DEST, true);
+                    if (!pTextureVk->CheckState(RESOURCE_STATE_COPY_DEST))
+                    {
+                        TransitionTextureState(*pTextureVk, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_DEST, true);
+                    }
+                    VERIFY_EXPR(pTextureVk->GetLayout() == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
                 }
-                VERIFY_EXPR(pTextureVk->GetLayout() == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
             }
+#ifdef DEVELOPMENT
+            else if (StateTransitionMode == CLEAR_RENDER_TARGET_VERIFY_STATE)
+            {
+                if (pTextureVk->IsInKnownState() && !pTextureVk->CheckState(RESOURCE_STATE_COPY_DEST))
+                {
+                    LOG_ERROR_MESSAGE("Render target '", pTextureVk->GetDesc().Name, "' being cleared outside of render pass not transitioned to RESOURCE_STATE_COPY_DEST state. "
+                                      "Actual texture state: ", GetResourceStateString(pTexture->GetState()), ". "
+                                      "Use CLEAR_RENDER_TARGET_TRANSITION_STATE mode or explicitly transition the resource using IDeviceContext::TransitionResourceStates() method.");
+                }
+            }
+#endif
             auto ClearValue = ClearValueToVkClearValue(RGBA, ViewDesc.Format);
             VkImageSubresourceRange Subresource;
             Subresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;

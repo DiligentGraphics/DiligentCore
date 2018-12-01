@@ -908,7 +908,7 @@ namespace Diligent
         m_ContextState.EnableScissorTest( ScissorTestEnabled );
     }
 
-    void DeviceContextGLImpl::ClearRenderTarget( ITextureView *pView, const float *RGBA )
+    void DeviceContextGLImpl::ClearRenderTarget( ITextureView *pView, const float *RGBA, CLEAR_RENDER_TARGET_STATE_TRANSITION_MODE StateTransitionMode )
     {
         // Unlike OpenGL, in D3D10+, the full extent of the resource view is always cleared. 
         // Viewport and scissor settings are not applied.

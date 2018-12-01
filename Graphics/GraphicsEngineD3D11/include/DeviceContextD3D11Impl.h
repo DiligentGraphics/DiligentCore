@@ -89,7 +89,7 @@ public:
 
     virtual void ClearDepthStencil(ITextureView* pView, CLEAR_DEPTH_STENCIL_FLAGS ClearFlags, float fDepth, Uint8 Stencil)override final;
 
-    virtual void ClearRenderTarget(ITextureView* pView, const float* RGBA)override final;
+    virtual void ClearRenderTarget(ITextureView* pView, const float* RGBA, CLEAR_RENDER_TARGET_STATE_TRANSITION_MODE StateTransitionMode)override final;
 
     virtual void Flush()override final;
 

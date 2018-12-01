@@ -617,7 +617,7 @@ namespace Diligent
         ++m_State.NumCommands;
     }
 
-    void DeviceContextD3D12Impl::ClearRenderTarget( ITextureView* pView, const float* RGBA )
+    void DeviceContextD3D12Impl::ClearRenderTarget( ITextureView* pView, const float* RGBA, CLEAR_RENDER_TARGET_STATE_TRANSITION_MODE StateTransitionMode )
     {
         ITextureViewD3D12 *pd3d12RTV = nullptr;
         if( pView != nullptr )
@@ -647,7 +647,7 @@ namespace Diligent
 
         // The full extent of the resource view is always cleared. 
         // Viewport and scissor settings are not applied??
-        GetCmdContext().AsGraphicsContext().ClearRenderTarget( pd3d12RTV, RGBA );
+        GetCmdContext().AsGraphicsContext().ClearRenderTarget( pd3d12RTV, RGBA, StateTransitionMode );
         ++m_State.NumCommands;
     }
 

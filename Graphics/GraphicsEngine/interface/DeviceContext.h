@@ -294,6 +294,26 @@ enum SET_RENDER_TARGETS_FLAGS
 };
 DEFINE_FLAG_ENUM_OPERATORS(SET_RENDER_TARGETS_FLAGS)
 
+/// Defines state transitions performed by IDeviceContext::ClearRenderTarget() command
+enum CLEAR_RENDER_TARGET_STATE_TRANSITION_MODE
+{
+    /// Perform no state transitions
+    CLEAR_RENDER_TARGET_NO_TRANSITION = 0,
+
+    /// Transition the render target to the required state.
+    /// \remarks In D3D12 backend, the render target must always be transitioned to
+    ///          Diligent::RESOURCE_STATE_RENDER_TARGET state. In Vulkan backend
+    ///          however this depends on whether the render pass has been started.
+    ///          To clear render target outside of render pass, it must be in
+    ///          Diligent::RESOURCE_STATE_COPY_DEST state. Inside a render pass it
+    ///          must be in Diligent::RESOURCE_STATE_RENDER_TARGET state.
+    CLEAR_RENDER_TARGET_TRANSITION_STATE,
+
+    /// Do not perform transition, but verify that the state is correct.
+    /// This flag only has effect in debug and development builds. No validation 
+    /// is performed in release build.
+    CLEAR_RENDER_TARGET_VERIFY_STATE
+};
 
 /// Describes the viewport.
 
@@ -599,7 +619,7 @@ public:
     ///                    If nullptr is provided, the default array {0,0,0,0} will be used.
     /// \remarks The full extent of the view is always cleared. Viewport and scissor settings are not applied.
     /// \note The render target view must be bound to the pipeline for clear operation to be performed.
-    virtual void ClearRenderTarget(ITextureView* pView, const float* RGBA = nullptr) = 0;
+    virtual void ClearRenderTarget(ITextureView* pView, const float* RGBA, CLEAR_RENDER_TARGET_STATE_TRANSITION_MODE StateTransitionMode) = 0;
 
     /// Finishes recording commands and generates a command list
     
