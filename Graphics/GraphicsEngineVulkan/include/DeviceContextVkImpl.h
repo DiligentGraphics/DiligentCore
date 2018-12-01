@@ -224,7 +224,8 @@ public:
     Int64 GetContextFrameNumber()const{return m_ContextFrameNumber;}
 
 private:
-    void CommitRenderPassAndFramebuffer(SET_RENDER_TARGETS_FLAGS Flags);
+    void TransitionRenderTargets(SET_RENDER_TARGETS_FLAGS Flags);
+    inline void CommitRenderPassAndFramebuffer();
     void CommitVkVertexBuffers(bool TransitionBuffers, bool VerifyStates);
     void TransitionVkVertexBuffers();
     void CommitViewports();

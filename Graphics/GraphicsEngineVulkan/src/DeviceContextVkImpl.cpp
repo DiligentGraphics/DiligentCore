@@ -242,7 +242,7 @@ namespace Diligent
             {
                 m_CommandBuffer.SetStencilReference(m_StencilRef);
                 m_CommandBuffer.SetBlendConstants(m_BlendFactors);
-                CommitRenderPassAndFramebuffer(SET_RENDER_TARGETS_FLAG_VERIFY_STATES);
+                CommitRenderPassAndFramebuffer();
                 CommitViewports();
             }
 
@@ -540,7 +540,7 @@ namespace Diligent
         }
 #endif
 
-        CommitRenderPassAndFramebuffer(SET_RENDER_TARGETS_FLAG_VERIFY_STATES);
+        CommitRenderPassAndFramebuffer();
 
         if (pIndirectDrawAttribsVk != nullptr)
         {
@@ -673,7 +673,7 @@ namespace Diligent
         {
             // Render pass may not be currently committed
             VERIFY_EXPR(m_RenderPass != VK_NULL_HANDLE && m_Framebuffer != VK_NULL_HANDLE);
-            CommitRenderPassAndFramebuffer(SET_RENDER_TARGETS_FLAG_VERIFY_STATES);
+            CommitRenderPassAndFramebuffer();
 
             VkClearAttachment ClearAttachment = {};
             ClearAttachment.aspectMask = 0;
@@ -808,7 +808,7 @@ namespace Diligent
         {
             // Render pass may not be currently committed
             VERIFY_EXPR(m_RenderPass != VK_NULL_HANDLE && m_Framebuffer != VK_NULL_HANDLE);
-            CommitRenderPassAndFramebuffer(SET_RENDER_TARGETS_FLAG_VERIFY_STATES);
+            CommitRenderPassAndFramebuffer();
 
             VkClearAttachment ClearAttachment = {};
             ClearAttachment.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -1084,7 +1084,69 @@ namespace Diligent
     }
 
 
-    void DeviceContextVkImpl::CommitRenderPassAndFramebuffer(SET_RENDER_TARGETS_FLAGS Flags)
+    void DeviceContextVkImpl::TransitionRenderTargets(SET_RENDER_TARGETS_FLAGS Flags)
+    {
+        if (m_pBoundDepthStencil)
+        {
+            auto* pDSVVk = m_pBoundDepthStencil.RawPtr<TextureViewVkImpl>();
+            auto* pDepthBufferVk = ValidatedCast<TextureVkImpl>(pDSVVk->GetTexture());
+            if (Flags & SET_RENDER_TARGETS_FLAG_TRANSITION_DEPTH)
+            {
+                if (pDepthBufferVk->IsInKnownState())
+                {
+                    if (!pDepthBufferVk->CheckState(RESOURCE_STATE_DEPTH_WRITE))
+                    {
+                        TransitionTextureState(*pDepthBufferVk, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_DEPTH_WRITE, true);
+                    }
+                    VERIFY_EXPR(pDepthBufferVk->GetLayout() == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+                }
+            }
+#ifdef DEVELOPMENT
+            else if (Flags & SET_RENDER_TARGETS_FLAG_VERIFY_STATES)
+            {
+                if (pDepthBufferVk->IsInKnownState() && !pDepthBufferVk->CheckState(RESOURCE_STATE_DEPTH_WRITE))
+                {
+                    LOG_ERROR_MESSAGE("Texture '", pDepthBufferVk->GetDesc().Name, "' being set as depth-stencil buffer is not transitioned to RESOURCE_STATE_DEPTH_WRITE state. "
+                                        "Actual texture state: ", GetResourceStateString(pDepthBufferVk->GetState()), ". "
+                                        "Use SET_RENDER_TARGETS_FLAG_TRANSITION_DEPTH flag or explicitly transition the resource using IDeviceContext::TransitionResourceStates() method.");
+                }
+            }
+#endif
+        }
+
+        for (Uint32 rt=0; rt < m_NumBoundRenderTargets; ++rt)
+        {
+            if (ITextureView* pRTV = m_pBoundRenderTargets[rt])
+            {
+                auto* pRTVVk = ValidatedCast<TextureViewVkImpl>(pRTV);
+                auto* pRenderTargetVk = ValidatedCast<TextureVkImpl>(pRTVVk->GetTexture());
+                if (Flags & SET_RENDER_TARGETS_FLAG_TRANSITION_COLOR)
+                {
+                    if (pRenderTargetVk->IsInKnownState())
+                    {
+                        if (!pRenderTargetVk->CheckState(RESOURCE_STATE_RENDER_TARGET))
+                        {
+                            TransitionTextureState(*pRenderTargetVk, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_RENDER_TARGET, true);
+                        }
+                        VERIFY_EXPR(pRenderTargetVk->GetLayout() == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+                    }
+                }
+#ifdef DEVELOPMENT
+                else if (Flags & SET_RENDER_TARGETS_FLAG_VERIFY_STATES)
+                {
+                    if (pRenderTargetVk->IsInKnownState() && !pRenderTargetVk->CheckState(RESOURCE_STATE_RENDER_TARGET))
+                    {
+                        LOG_ERROR_MESSAGE("Texture '", pRenderTargetVk->GetDesc().Name, "' being set as render target at slot ", rt, " is not transitioned to RESOURCE_STATE_RENDER_TARGET state. "
+                                            "Actual texture state: ", GetResourceStateString(pRenderTargetVk->GetState()), ". "
+                                            "Use SET_RENDER_TARGETS_FLAG_TRANSITION_COLOR flag or explicitly transition the resource using IDeviceContext::TransitionResourceStates() method.");
+                    }
+                }
+#endif
+            }
+        }
+    }
+
+    inline void DeviceContextVkImpl::CommitRenderPassAndFramebuffer()
     {
         const auto& CmdBufferState = m_CommandBuffer.GetState();
         if (CmdBufferState.Framebuffer != m_Framebuffer)
@@ -1095,64 +1157,9 @@ namespace Diligent
             if (m_Framebuffer != VK_NULL_HANDLE)
             {
                 VERIFY_EXPR(m_RenderPass != VK_NULL_HANDLE);
-                if (m_pBoundDepthStencil)
-                {
-                    auto* pDSVVk = m_pBoundDepthStencil.RawPtr<TextureViewVkImpl>();
-                    auto* pDepthBufferVk = ValidatedCast<TextureVkImpl>(pDSVVk->GetTexture());
-                    if (Flags & SET_RENDER_TARGETS_FLAG_TRANSITION_DEPTH)
-                    {
-                        if (pDepthBufferVk->IsInKnownState())
-                        {
-                            if (!pDepthBufferVk->CheckState(RESOURCE_STATE_DEPTH_WRITE))
-                            {
-                                TransitionTextureState(*pDepthBufferVk, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_DEPTH_WRITE, true);
-                            }
-                            VERIFY_EXPR(pDepthBufferVk->GetLayout() == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
-                        }
-                    }
 #ifdef DEVELOPMENT
-                    else if (Flags & SET_RENDER_TARGETS_FLAG_VERIFY_STATES)
-                    {
-                        if (pDepthBufferVk->IsInKnownState() && !pDepthBufferVk->CheckState(RESOURCE_STATE_DEPTH_WRITE))
-                        {
-                            LOG_ERROR_MESSAGE("Texture '", pDepthBufferVk->GetDesc().Name, "' being set as depth-stencil buffer is not transitioned to RESOURCE_STATE_DEPTH_WRITE state. "
-                                              "Actual texture state: ", GetResourceStateString(pDepthBufferVk->GetState()), ". "
-                                              "Use SET_RENDER_TARGETS_FLAG_TRANSITION_DEPTH flag or explicitly transition the resource using IDeviceContext::TransitionResourceStates() method.");
-                        }
-                    }
+                TransitionRenderTargets(SET_RENDER_TARGETS_FLAG_VERIFY_STATES);
 #endif
-                }
-
-                for (Uint32 rt=0; rt < m_NumBoundRenderTargets; ++rt)
-                {
-                    if (ITextureView* pRTV = m_pBoundRenderTargets[rt])
-                    {
-                        auto* pRTVVk = ValidatedCast<TextureViewVkImpl>(pRTV);
-                        auto* pRenderTargetVk = ValidatedCast<TextureVkImpl>(pRTVVk->GetTexture());
-                        if (Flags & SET_RENDER_TARGETS_FLAG_TRANSITION_COLOR)
-                        {
-                            if (pRenderTargetVk->IsInKnownState())
-                            {
-                                if (!pRenderTargetVk->CheckState(RESOURCE_STATE_RENDER_TARGET))
-                                {
-                                    TransitionTextureState(*pRenderTargetVk, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_RENDER_TARGET, true);
-                                }
-                                VERIFY_EXPR(pRenderTargetVk->GetLayout() == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-                            }
-                        }
-#ifdef DEVELOPMENT
-                        else if (Flags & SET_RENDER_TARGETS_FLAG_VERIFY_STATES)
-                        {
-                            if (pRenderTargetVk->IsInKnownState() && !pRenderTargetVk->CheckState(RESOURCE_STATE_RENDER_TARGET))
-                            {
-                                LOG_ERROR_MESSAGE("Texture '", pRenderTargetVk->GetDesc().Name, "' being set as render target at slot ", rt, " is not transitioned to RESOURCE_STATE_RENDER_TARGET state. "
-                                                  "Actual texture state: ", GetResourceStateString(pRenderTargetVk->GetState()), ". "
-                                                  "Use SET_RENDER_TARGETS_FLAG_TRANSITION_COLOR flag or explicitly transition the resource using IDeviceContext::TransitionResourceStates() method.");
-                            }
-                        }
-#endif
-                    }
-                }
                 m_CommandBuffer.BeginRenderPass(m_RenderPass, m_Framebuffer, m_FramebufferWidth, m_FramebufferHeight);
             }
         }
@@ -1214,8 +1221,11 @@ namespace Diligent
             SetViewports(1, nullptr, 0, 0);
         }
 
-        EnsureVkCmdBuffer();
-        CommitRenderPassAndFramebuffer(Flags);
+        // Layout transitions can only be performed outside of render pass, so defer
+        // CommitRenderPassAndFramebuffer() until draw call, otherwise we may have to
+        // to end render pass and begin it again if we need to transition any resource 
+        // (for instance when CommitShaderResources() is called after SetRenderTargets())
+        TransitionRenderTargets(Flags);
     }
 
     void DeviceContextVkImpl::ResetRenderTargets()
