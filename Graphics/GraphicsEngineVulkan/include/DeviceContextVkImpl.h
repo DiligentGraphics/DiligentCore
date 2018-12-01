@@ -73,7 +73,11 @@ public:
 
     virtual void SetBlendFactors(const float* pBlendFactors = nullptr)override final;
 
-    virtual void SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer **ppBuffers, Uint32* pOffsets, SET_VERTEX_BUFFERS_FLAGS Flags )override final;
+    virtual void SetVertexBuffers( Uint32                   StartSlot,
+                                   Uint32                   NumBuffersSet,
+                                   IBuffer**                ppBuffers,
+                                   Uint32*                  pOffsets,
+                                   SET_VERTEX_BUFFERS_FLAGS Flags )override final;
     
     virtual void InvalidateState()override final;
 
@@ -83,7 +87,10 @@ public:
 
     virtual void SetScissorRects( Uint32 NumRects, const Rect* pRects, Uint32 RTWidth, Uint32 RTHeight )override final;
 
-    virtual void SetRenderTargets( Uint32 NumRenderTargets, ITextureView* ppRenderTargets[], ITextureView* pDepthStencil )override final;
+    virtual void SetRenderTargets( Uint32                   NumRenderTargets,
+                                   ITextureView*            ppRenderTargets[],
+                                   ITextureView*            pDepthStencil,
+                                   SET_RENDER_TARGETS_FLAGS Flags )override final;
 
     virtual void Draw( DrawAttribs &DrawAttribs )override final;
 
@@ -97,13 +104,17 @@ public:
     
     virtual void UpdateBuffer(IBuffer *pBuffer, Uint32 Offset, Uint32 Size, const PVoid pData)override final;
 
-    virtual void CopyBuffer(IBuffer *pSrcBuffer, Uint32 SrcOffset, IBuffer *pDstBuffer, Uint32 DstOffset, Uint32 Size)override final;
+    virtual void CopyBuffer(IBuffer* pSrcBuffer, Uint32 SrcOffset, IBuffer* pDstBuffer, Uint32 DstOffset, Uint32 Size)override final;
 
     virtual void MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_FLAGS MapFlags, PVoid& pMappedData)override final;
 
     virtual void UnmapBuffer(IBuffer* pBuffer)override final;
 
-    virtual void UpdateTexture(ITexture* pTexture, Uint32 MipLevel, Uint32 Slice, const Box& DstBox, const TextureSubResData& SubresData)override final;
+    virtual void UpdateTexture(ITexture*                pTexture,
+                               Uint32                   MipLevel,
+                               Uint32                   Slice,
+                               const Box&               DstBox,
+                               const TextureSubResData& SubresData)override final;
 
     virtual void CopyTexture(ITexture*  pSrcTexture, 
                              Uint32     SrcMipLevel,
@@ -213,7 +224,7 @@ public:
     Int64 GetContextFrameNumber()const{return m_ContextFrameNumber;}
 
 private:
-    void CommitRenderPassAndFramebuffer();
+    void CommitRenderPassAndFramebuffer(SET_RENDER_TARGETS_FLAGS Flags);
     void CommitVkVertexBuffers(bool TransitionBuffers, bool VerifyStates);
     void TransitionVkVertexBuffers();
     void CommitViewports();

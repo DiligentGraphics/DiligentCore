@@ -182,7 +182,7 @@ void SwapChainD3D11Impl::UpdateSwapChain(bool CreateNew)
             if (bIsDefaultFBBound)
             {
                 // Set default render target and viewport
-                pImmediateCtxD3D11->SetRenderTargets(0, nullptr, nullptr);
+                pImmediateCtxD3D11->SetRenderTargets(0, nullptr, nullptr, SET_RENDER_TARGETS_FLAG_TRANSITION_ALL);
                 pImmediateCtxD3D11->SetViewports(1, nullptr, 0, 0);
             }
         }

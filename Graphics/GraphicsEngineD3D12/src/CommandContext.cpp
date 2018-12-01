@@ -91,7 +91,7 @@ ID3D12GraphicsCommandList* CommandContext::Close(CComPtr<ID3D12CommandAllocator>
     return m_pCommandList;
 }
 
-void GraphicsContext::SetRenderTargets( UINT NumRTVs, ITextureViewD3D12** ppRTVs, ITextureViewD3D12* pDSV )
+void GraphicsContext::SetRenderTargets( UINT NumRTVs, ITextureViewD3D12** ppRTVs, ITextureViewD3D12* pDSV, SET_RENDER_TARGETS_FLAGS Flags )
 {
     D3D12_CPU_DESCRIPTOR_HANDLE RTVHandles[8]; // Do not waste time initializing array to zero
 
@@ -101,8 +101,23 @@ void GraphicsContext::SetRenderTargets( UINT NumRTVs, ITextureViewD3D12** ppRTVs
         if( pRTV )
         {
             auto* pTexture = ValidatedCast<TextureD3D12Impl>( pRTV->GetTexture() );
-            if (pTexture->IsInKnownState() && !pTexture->CheckState(RESOURCE_STATE_RENDER_TARGET))
-	            TransitionResource(pTexture, RESOURCE_STATE_RENDER_TARGET);
+            if (Flags & SET_RENDER_TARGETS_FLAG_TRANSITION_COLOR)
+            {
+                if (pTexture->IsInKnownState() && !pTexture->CheckState(RESOURCE_STATE_RENDER_TARGET))
+	                TransitionResource(pTexture, RESOURCE_STATE_RENDER_TARGET);
+            }
+#ifdef DEVELOPMENT
+            else if (Flags & SET_RENDER_TARGETS_FLAG_VERIFY_STATES)
+            {
+                if (pTexture->IsInKnownState() && !pTexture->CheckState(RESOURCE_STATE_RENDER_TARGET))
+                {
+                    LOG_ERROR_MESSAGE("Texture '", pTexture->GetDesc().Name, "' being set as render target at slot ", i, " is not transitioned to RESOURCE_STATE_RENDER_TARGET state. "
+                                      "Actual texture state: ", GetResourceStateString(pTexture->GetState()), ". "
+                                      "Use SET_RENDER_TARGETS_FLAG_TRANSITION_COLOR flag or explicitly transition the resource using IDeviceContext::TransitionResourceStates() method.");
+                }
+            }
+#endif
+
 		    RTVHandles[i] = pRTV->GetCPUDescriptorHandle();
             VERIFY_EXPR(RTVHandles[i].ptr != 0);
         }
@@ -118,8 +133,23 @@ void GraphicsContext::SetRenderTargets( UINT NumRTVs, ITextureViewD3D12** ppRTVs
 		//}
 		//else
 		{
-            if (pTexture->IsInKnownState() && !pTexture->CheckState(RESOURCE_STATE_DEPTH_WRITE))
-			    TransitionResource(pTexture, RESOURCE_STATE_DEPTH_WRITE);
+            if (Flags & SET_RENDER_TARGETS_FLAG_TRANSITION_DEPTH)
+            {
+                if (pTexture->IsInKnownState() && !pTexture->CheckState(RESOURCE_STATE_DEPTH_WRITE))
+			        TransitionResource(pTexture, RESOURCE_STATE_DEPTH_WRITE);
+            }
+#ifdef DEVELOPMENT
+            else if (Flags & SET_RENDER_TARGETS_FLAG_VERIFY_STATES)
+            {
+                if (pTexture->IsInKnownState() && !pTexture->CheckState(RESOURCE_STATE_DEPTH_WRITE))
+                {
+                    LOG_ERROR_MESSAGE("Texture '", pTexture->GetDesc().Name, "' being set as depth-stencil buffer is not transitioned to RESOURCE_STATE_DEPTH_WRITE state. "
+                                      "Actual texture state: ", GetResourceStateString(pTexture->GetState()), ". "
+                                      "Use SET_RENDER_TARGETS_FLAG_TRANSITION_DEPTH flag or explicitly transition the resource using IDeviceContext::TransitionResourceStates() method.");
+                }
+
+            }
+#endif
             auto DSVHandle = pDSV->GetCPUDescriptorHandle();
             VERIFY_EXPR(DSVHandle.ptr != 0);
 			m_pCommandList->OMSetRenderTargets( NumRTVs, RTVHandles, FALSE, &DSVHandle );

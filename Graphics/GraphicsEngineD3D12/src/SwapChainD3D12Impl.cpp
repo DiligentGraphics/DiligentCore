@@ -199,7 +199,7 @@ void SwapChainD3D12Impl::UpdateSwapChain(bool CreateNew)
             if (bIsDefaultFBBound)
             {
                 // Set default render target and viewport
-                pDeviceContext->SetRenderTargets(0, nullptr, nullptr);
+                pDeviceContext->SetRenderTargets(0, nullptr, nullptr, SET_RENDER_TARGETS_FLAG_TRANSITION_ALL);
                 pDeviceContext->SetViewports(1, nullptr, 0, 0);
             }
         }

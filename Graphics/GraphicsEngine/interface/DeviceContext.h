@@ -269,6 +269,31 @@ enum COMMIT_SHADER_RESOURCES_FLAGS : Uint8
 };
 DEFINE_FLAG_ENUM_OPERATORS(COMMIT_SHADER_RESOURCES_FLAGS)
 
+/// Additional flags for IDeviceContext::SetRenderTargets() command that define
+/// which resources need to be transitioned by the command.
+enum SET_RENDER_TARGETS_FLAGS
+{
+    /// Perform no state transitions
+    SET_RENDER_TARGETS_FLAG_NONE              = 0x00,
+
+    /// Transition color targets to Diligent::RESOURCE_STATE_RENDER_TARGET state (see Diligent::RESOURCE_STATE).
+    /// Textures in unknown state will not be transitioned.
+    SET_RENDER_TARGETS_FLAG_TRANSITION_COLOR  = 0x01,
+
+    /// Transition depth buffer to Diligent::RESOURCE_STATE_DEPTH_WRITE state (see Diligent::RESOURCE_STATE).
+    /// If the texture is in unknown state, the flag will have no effect.
+    SET_RENDER_TARGETS_FLAG_TRANSITION_DEPTH  = 0x02,
+
+    /// Transition all color targets and depth buffer
+    SET_RENDER_TARGETS_FLAG_TRANSITION_ALL    = (SET_RENDER_TARGETS_FLAG_TRANSITION_COLOR | SET_RENDER_TARGETS_FLAG_TRANSITION_DEPTH),
+    
+    /// Verify the state of color/depth targets not being transitioned. This flag
+    /// only has effect in debug and development builds. No validation is performed
+    /// in release build and the flag is ignored.
+    SET_RENDER_TARGETS_FLAG_VERIFY_STATES     = 0x04
+};
+DEFINE_FLAG_ENUM_OPERATORS(SET_RENDER_TARGETS_FLAGS)
+
 
 /// Describes the viewport.
 
@@ -516,6 +541,7 @@ public:
     /// \param [in] pDepthStencil - Pointer to the ITextureView that represents the depth stencil to 
     ///                             bind to the device. The view type must be
     ///                             Diligent::TEXTURE_VIEW_DEPTH_STENCIL.
+    /// \param [in] Flags         - Flags defining required resource transitions.
     /// \remarks
     /// The device context will keep strong references to all bound render target 
     /// and depth-stencil views. Thus these views (and consequently referenced textures) 
@@ -525,7 +551,7 @@ public:
     /// following call:
     ///
     ///     pContext->SetRenderTargets(0, nullptr, nullptr);
-    virtual void SetRenderTargets(Uint32 NumRenderTargets, ITextureView* ppRenderTargets[], ITextureView* pDepthStencil) = 0;
+    virtual void SetRenderTargets(Uint32 NumRenderTargets, ITextureView* ppRenderTargets[], ITextureView* pDepthStencil, SET_RENDER_TARGETS_FLAGS Flags) = 0;
 
     /// Executes a draw command
 

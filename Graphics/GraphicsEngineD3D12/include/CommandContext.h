@@ -185,7 +185,7 @@ public:
         }
     }
 
-	void SetRenderTargets( UINT NumRTVs, ITextureViewD3D12** ppRTVs, ITextureViewD3D12* pDSV );
+	void SetRenderTargets( UINT NumRTVs, ITextureViewD3D12** ppRTVs, ITextureViewD3D12* pDSV, SET_RENDER_TARGETS_FLAGS Flags );
 
 	void SetViewports( UINT NumVPs, const D3D12_VIEWPORT* pVPs )
     {

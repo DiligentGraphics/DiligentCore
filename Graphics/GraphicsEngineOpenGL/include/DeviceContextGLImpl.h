@@ -66,7 +66,7 @@ public:
 
     virtual void SetScissorRects( Uint32 NumRects, const Rect *pRects, Uint32 RTWidth, Uint32 RTHeight )override final;
 
-    virtual void SetRenderTargets( Uint32 NumRenderTargets, ITextureView *ppRenderTargets[], ITextureView *pDepthStencil )override final;
+    virtual void SetRenderTargets( Uint32 NumRenderTargets, ITextureView *ppRenderTargets[], ITextureView *pDepthStencil, SET_RENDER_TARGETS_FLAGS Flags )override final;
 
     virtual void Draw( DrawAttribs &DrawAttribs )override final;
 

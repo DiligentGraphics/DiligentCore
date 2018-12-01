@@ -128,7 +128,7 @@ void EngineFactoryOpenGLImpl::CreateDeviceAndSwapChainGL(const EngineGLAttribs& 
 
         pDeviceContextOpenGL->SetSwapChain(pSwapChainGL);
         // Bind default framebuffer and viewport
-        pDeviceContextOpenGL->SetRenderTargets( 0, nullptr, nullptr );
+        pDeviceContextOpenGL->SetRenderTargets( 0, nullptr, nullptr, SET_RENDER_TARGETS_FLAG_TRANSITION_ALL );
         pDeviceContextOpenGL->SetViewports( 1, nullptr, 0, 0 );
     }
     catch( const std::runtime_error & )

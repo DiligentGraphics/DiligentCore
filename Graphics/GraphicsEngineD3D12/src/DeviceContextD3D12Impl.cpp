@@ -211,7 +211,7 @@ namespace Diligent
             {
                 GraphicsCtx.SetStencilRef(m_StencilRef);
                 GraphicsCtx.SetBlendFactor(m_BlendFactors);
-                CommitRenderTargets();
+                CommitRenderTargets(SET_RENDER_TARGETS_FLAG_VERIFY_STATES);
                 CommitViewports();
             }
 
@@ -846,7 +846,7 @@ namespace Diligent
     }
 
 
-    void DeviceContextD3D12Impl::CommitRenderTargets()
+    void DeviceContextD3D12Impl::CommitRenderTargets(SET_RENDER_TARGETS_FLAGS Flags)
     {
         const Uint32 MaxD3D12RTs = D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT;
         Uint32 NumRenderTargets = m_NumBoundRenderTargets;
@@ -876,14 +876,14 @@ namespace Diligent
                 ppRTVs[rt] = m_pBoundRenderTargets[rt].RawPtr<ITextureViewD3D12>();
             pDSV = m_pBoundDepthStencil.RawPtr<ITextureViewD3D12>();
         }
-        GetCmdContext().AsGraphicsContext().SetRenderTargets(NumRenderTargets, ppRTVs, pDSV);
+        GetCmdContext().AsGraphicsContext().SetRenderTargets(NumRenderTargets, ppRTVs, pDSV, Flags);
     }
 
-    void DeviceContextD3D12Impl::SetRenderTargets( Uint32 NumRenderTargets, ITextureView *ppRenderTargets[], ITextureView *pDepthStencil )
+    void DeviceContextD3D12Impl::SetRenderTargets( Uint32 NumRenderTargets, ITextureView *ppRenderTargets[], ITextureView *pDepthStencil, SET_RENDER_TARGETS_FLAGS Flags )
     {
         if( TDeviceContextBase::SetRenderTargets( NumRenderTargets, ppRenderTargets, pDepthStencil ) )
         {
-            CommitRenderTargets();
+            CommitRenderTargets(Flags);
 
             // Set the viewport to match the render target size
             SetViewports(1, nullptr, 0, 0);

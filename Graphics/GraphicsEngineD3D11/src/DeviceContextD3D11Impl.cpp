@@ -1507,27 +1507,55 @@ namespace Diligent
         m_pd3d11DeviceContext->OMSetRenderTargets(0, nullptr, nullptr);
     }
 
-    void DeviceContextD3D11Impl::SetRenderTargets( Uint32 NumRenderTargets, ITextureView* ppRenderTargets[], ITextureView* pDepthStencil )
+    void DeviceContextD3D11Impl::SetRenderTargets( Uint32 NumRenderTargets, ITextureView* ppRenderTargets[], ITextureView* pDepthStencil, SET_RENDER_TARGETS_FLAGS Flags )
     {
-        if (TDeviceContextBase::SetRenderTargets( NumRenderTargets, ppRenderTargets, pDepthStencil ))
+        if (TDeviceContextBase::SetRenderTargets( NumRenderTargets, ppRenderTargets, pDepthStencil))
         {
             for (Uint32 RT = 0; RT < NumRenderTargets; ++RT)
             {
                 if (ppRenderTargets[RT])
                 {
                     auto* pTex = ValidatedCast<TextureBaseD3D11>(ppRenderTargets[RT]->GetTexture());
-                    UnbindTextureFromInput( pTex, pTex->GetD3D11Texture() );
-                    if (pTex->IsInKnownState())
-                        pTex->SetState(RESOURCE_STATE_RENDER_TARGET);
+                    if (Flags & SET_RENDER_TARGETS_FLAG_TRANSITION_COLOR)
+                    {
+                        UnbindTextureFromInput( pTex, pTex->GetD3D11Texture() );
+                        if (pTex->IsInKnownState())
+                            pTex->SetState(RESOURCE_STATE_RENDER_TARGET);
+                    }
+#ifdef DEVELOPMENT
+                    else if (Flags & SET_RENDER_TARGETS_FLAG_VERIFY_STATES)
+                    {
+                        if (pTex->IsInKnownState() && !pTex->CheckState(RESOURCE_STATE_RENDER_TARGET))
+                        {
+                            LOG_ERROR_MESSAGE("Texture '", pTex->GetDesc().Name, "' being set as render target at slot ", RT, " is not transitioned to RESOURCE_STATE_RENDER_TARGET state. "
+                                              "Actual texture state: ", GetResourceStateString(pTex->GetState()), ". "
+                                              "Use SET_RENDER_TARGETS_FLAG_TRANSITION_COLOR flag or explicitly transition the resource using IDeviceContext::TransitionResourceStates() method.");
+                        }
+                    }
+#endif
                 }
             }
 
             if (pDepthStencil)
             {
                 auto* pTex = ValidatedCast<TextureBaseD3D11>(pDepthStencil->GetTexture());
-                UnbindTextureFromInput( pTex, pTex->GetD3D11Texture() );
-                if (pTex->IsInKnownState())
-                    pTex->SetState(RESOURCE_STATE_DEPTH_WRITE);
+                if (Flags & SET_RENDER_TARGETS_FLAG_TRANSITION_DEPTH)
+                {
+                    UnbindTextureFromInput( pTex, pTex->GetD3D11Texture() );
+                    if (pTex->IsInKnownState())
+                        pTex->SetState(RESOURCE_STATE_DEPTH_WRITE);
+                }
+#ifdef DEVELOPMENT
+                else if(Flags & SET_RENDER_TARGETS_FLAG_VERIFY_STATES)
+                {
+                    if (pTex->IsInKnownState() && !pTex->CheckState(RESOURCE_STATE_DEPTH_WRITE))
+                    {
+                        LOG_ERROR_MESSAGE("Texture '", pTex->GetDesc().Name, "' being set as depth-stencil buffer is not transitioned to RESOURCE_STATE_DEPTH_WRITE state. "
+                                          "Actual texture state: ", GetResourceStateString(pTex->GetState()), ". "
+                                          "Use SET_RENDER_TARGETS_FLAG_TRANSITION_DEPTH flag or explicitly transition the resource using IDeviceContext::TransitionResourceStates() method.");
+                    }
+                }
+#endif
             }
 
             CommitRenderTargets();

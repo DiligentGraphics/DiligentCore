@@ -499,7 +499,7 @@ void SwapChainVkImpl::Present(Uint32 SyncInterval)
         {
             // If default framebuffer is bound, we need to call SetRenderTargets()
             // to bind new back buffer RTV
-            pImmediateCtxVk->SetRenderTargets(0, nullptr, nullptr);
+            pImmediateCtxVk->SetRenderTargets(0, nullptr, nullptr, SET_RENDER_TARGETS_FLAG_TRANSITION_ALL);
         }
     }
 }
@@ -551,7 +551,7 @@ void SwapChainVkImpl::Resize( Uint32 NewWidth, Uint32 NewHeight )
                 if( bIsDefaultFBBound )
                 {
                     // Set default render target and viewport
-                    pDeviceContext->SetRenderTargets( 0, nullptr, nullptr );
+                    pDeviceContext->SetRenderTargets( 0, nullptr, nullptr, SET_RENDER_TARGETS_FLAG_TRANSITION_ALL );
                     pDeviceContext->SetViewports( 1, nullptr, 0, 0 );
                 }
             }

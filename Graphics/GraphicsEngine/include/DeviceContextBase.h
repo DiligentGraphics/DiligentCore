@@ -107,7 +107,7 @@ public:
 
     /// Caches the render target and depth stencil views. Returns true if any view is different
     /// from the cached value and false otherwise.
-    inline bool SetRenderTargets( Uint32 NumRenderTargets, ITextureView* ppRenderTargets[], ITextureView* pDepthStencil, Uint32 Dummy = 0 );
+    inline bool SetRenderTargets( Uint32 NumRenderTargets, ITextureView* ppRenderTargets[], ITextureView* pDepthStencil);
 
     /// Base implementation of IDeviceContext::UpdateBuffer(); validates input parameters.
     virtual void UpdateBuffer(IBuffer* pBuffer, Uint32 Offset, Uint32 Size, const PVoid pData)override = 0;
@@ -462,7 +462,8 @@ inline void DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType
 }
 
 template<typename BaseInterface, typename BufferImplType, typename TextureViewImplType, typename PipelineStateImplType>
-inline bool DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType, PipelineStateImplType> :: SetRenderTargets( Uint32 NumRenderTargets, ITextureView* ppRenderTargets[], ITextureView* pDepthStencil, Uint32 Dummy )
+inline bool DeviceContextBase<BaseInterface, BufferImplType, TextureViewImplType, PipelineStateImplType> ::
+            SetRenderTargets( Uint32 NumRenderTargets, ITextureView* ppRenderTargets[], ITextureView* pDepthStencil )
 {
     bool bBindRenderTargets = false;
     m_FramebufferWidth  = 0;

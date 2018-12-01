@@ -329,7 +329,7 @@ namespace Diligent
         SetViewports(1, nullptr, 0, 0);
     }
 
-    void DeviceContextGLImpl::SetRenderTargets( Uint32 NumRenderTargets, ITextureView *ppRenderTargets[], ITextureView *pDepthStencil )
+    void DeviceContextGLImpl::SetRenderTargets( Uint32 NumRenderTargets, ITextureView *ppRenderTargets[], ITextureView *pDepthStencil, SET_RENDER_TARGETS_FLAGS Flags )
     {
         if( TDeviceContextBase::SetRenderTargets( NumRenderTargets, ppRenderTargets, pDepthStencil ) )
             CommitRenderTargets();
