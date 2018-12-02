@@ -938,9 +938,13 @@ namespace Diligent
         m_pd3d11DeviceContext->Flush();
     }
 
-    void DeviceContextD3D11Impl::UpdateBuffer(IBuffer* pBuffer, Uint32 Offset, Uint32 Size, const PVoid pData)
+    void DeviceContextD3D11Impl::UpdateBuffer(IBuffer*                       pBuffer,
+                                              Uint32                         Offset,
+                                              Uint32                         Size,
+                                              const PVoid                    pData,
+                                              RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
     {
-        TDeviceContextBase::UpdateBuffer(pBuffer, Offset, Size, pData);
+        TDeviceContextBase::UpdateBuffer(pBuffer, Offset, Size, pData, StateTransitionMode);
 
         auto* pBufferD3D11Impl = ValidatedCast<BufferD3D11Impl>( pBuffer );
 
@@ -995,13 +999,15 @@ namespace Diligent
         m_pd3d11DeviceContext->Unmap(pBufferD3D11->m_pd3d11Buffer, 0);
     }
 
-    void DeviceContextD3D11Impl::UpdateTexture(ITexture*                pTexture,
-                                               Uint32                   MipLevel,
-                                               Uint32                   Slice,
-                                               const Box&               DstBox,
-                                               const TextureSubResData& SubresData)
+    void DeviceContextD3D11Impl::UpdateTexture(ITexture*                      pTexture,
+                                               Uint32                         MipLevel,
+                                               Uint32                         Slice,
+                                               const Box&                     DstBox,
+                                               const TextureSubResData&       SubresData,
+                                               RESOURCE_STATE_TRANSITION_MODE SrcBufferTransitionMode,
+                                               RESOURCE_STATE_TRANSITION_MODE DstTextureTransitionMode)
     {
-        TDeviceContextBase::UpdateTexture( pTexture, MipLevel, Slice, DstBox, SubresData );
+        TDeviceContextBase::UpdateTexture( pTexture, MipLevel, Slice, DstBox, SubresData, SrcBufferTransitionMode, DstTextureTransitionMode );
 
         auto* pTexD3D11 = ValidatedCast<TextureBaseD3D11>(pTexture);
         const auto& Desc = pTexD3D11->GetDesc();
@@ -1525,12 +1531,7 @@ namespace Diligent
 #ifdef DEVELOPMENT
                     else if (Flags & SET_RENDER_TARGETS_FLAG_VERIFY_STATES)
                     {
-                        if (pTex->IsInKnownState() && !pTex->CheckState(RESOURCE_STATE_RENDER_TARGET))
-                        {
-                            LOG_ERROR_MESSAGE("Texture '", pTex->GetDesc().Name, "' being set as render target at slot ", RT, " is not transitioned to RESOURCE_STATE_RENDER_TARGET state. "
-                                              "Actual texture state: ", GetResourceStateString(pTex->GetState()), ". "
-                                              "Use SET_RENDER_TARGETS_FLAG_TRANSITION_COLOR flag or explicitly transition the resource using IDeviceContext::TransitionResourceStates() method.");
-                        }
+                        DvpVerifyTextureState(*pTex, RESOURCE_STATE_RENDER_TARGET, "Setting render targets (DeviceContextD3D11Impl::SetRenderTargets)");
                     }
 #endif
                 }
@@ -1548,12 +1549,7 @@ namespace Diligent
 #ifdef DEVELOPMENT
                 else if(Flags & SET_RENDER_TARGETS_FLAG_VERIFY_STATES)
                 {
-                    if (pTex->IsInKnownState() && !pTex->CheckState(RESOURCE_STATE_DEPTH_WRITE))
-                    {
-                        LOG_ERROR_MESSAGE("Texture '", pTex->GetDesc().Name, "' being set as depth-stencil buffer is not transitioned to RESOURCE_STATE_DEPTH_WRITE state. "
-                                          "Actual texture state: ", GetResourceStateString(pTex->GetState()), ". "
-                                          "Use SET_RENDER_TARGETS_FLAG_TRANSITION_DEPTH flag or explicitly transition the resource using IDeviceContext::TransitionResourceStates() method.");
-                    }
+                    DvpVerifyTextureState(*pTex, RESOURCE_STATE_DEPTH_WRITE, "Setting depth-stencil buffer (DeviceContextD3D11Impl::SetRenderTargets)");
                 }
 #endif
             }

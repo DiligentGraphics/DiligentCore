@@ -30,7 +30,7 @@
 #include "DeviceContextBase.h"
 #include "ShaderD3D11Impl.h"
 #include "BufferD3D11Impl.h"
-#include "TextureViewD3D11Impl.h"
+#include "TextureBaseD3D11.h"
 #include "PipelineStateD3D11Impl.h"
 
 #ifdef _DEBUG
@@ -41,10 +41,10 @@ namespace Diligent
 {
 
 /// Implementation of the Diligent::IDeviceContextD3D11 interface
-class DeviceContextD3D11Impl final : public DeviceContextBase<IDeviceContextD3D11, BufferD3D11Impl, TextureViewD3D11Impl, PipelineStateD3D11Impl>
+class DeviceContextD3D11Impl final : public DeviceContextBase<IDeviceContextD3D11, BufferD3D11Impl, TextureBaseD3D11, PipelineStateD3D11Impl>
 {
 public:
-    using TDeviceContextBase = DeviceContextBase<IDeviceContextD3D11, BufferD3D11Impl, TextureViewD3D11Impl, PipelineStateD3D11Impl>;
+    using TDeviceContextBase = DeviceContextBase<IDeviceContextD3D11, BufferD3D11Impl, TextureBaseD3D11, PipelineStateD3D11Impl>;
 
     DeviceContextD3D11Impl(IReferenceCounters*              pRefCounters,
                            IMemoryAllocator&                Allocator,
@@ -93,7 +93,11 @@ public:
 
     virtual void Flush()override final;
 
-    virtual void UpdateBuffer(IBuffer* pBuffer, Uint32 Offset, Uint32 Size, const PVoid pData)override final;
+    virtual void UpdateBuffer(IBuffer*                       pBuffer,
+                              Uint32                         Offset,
+                              Uint32                         Size,
+                              const PVoid                    pData,
+                              RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)override final;
 
     virtual void CopyBuffer(IBuffer* pSrcBuffer, Uint32 SrcOffset, IBuffer* pDstBuffer, Uint32 DstOffset, Uint32 Size)override final;
 
@@ -101,11 +105,13 @@ public:
 
     virtual void UnmapBuffer(IBuffer* pBuffer)override final;
 
-    virtual void UpdateTexture(ITexture*                pTexture,
-                               Uint32                   MipLevel,
-                               Uint32                   Slice,
-                               const Box&               DstBox,
-                               const TextureSubResData& SubresData)override final;
+    virtual void UpdateTexture(ITexture*                      pTexture,
+                               Uint32                         MipLevel,
+                               Uint32                         Slice,
+                               const Box&                     DstBox,
+                               const TextureSubResData&       SubresData,
+                               RESOURCE_STATE_TRANSITION_MODE SrcBufferTransitionMode,
+                               RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)override final;
 
     virtual void CopyTexture(ITexture*  pSrcTexture, 
                              Uint32     SrcMipLevel,

@@ -42,6 +42,7 @@ class TextureBaseGL : public TextureBase<ITextureGL, RenderDeviceGLImpl, Texture
 {
 public:
     using TTextureBase = TextureBase<ITextureGL, RenderDeviceGLImpl, TextureViewGLImpl, FixedBlockMemoryAllocator>;
+    using ViewImplType = TextureViewGLImpl;
 
     TextureBaseGL(IReferenceCounters *pRefCounters, 
                   FixedBlockMemoryAllocator& TexViewObjAllocator, 

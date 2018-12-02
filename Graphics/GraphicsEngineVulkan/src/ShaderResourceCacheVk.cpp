@@ -100,7 +100,7 @@ ShaderResourceCacheVk::~ShaderResourceCacheVk()
 }
 
 template<bool VerifyOnly>
-void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl *pCtxVkImpl)
+void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl* pCtxVkImpl)
 {
     auto *pResources = GetFirstResourcePtr();
     for (Uint32 res = 0; res < m_TotalResources; ++res)

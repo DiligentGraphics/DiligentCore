@@ -344,13 +344,7 @@ namespace Diligent
 #ifdef DEVELOPMENT
                 else if (VerifyStates)
                 {
-                    if (pBufferVk->IsInKnownState() && !pBufferVk->CheckState(RESOURCE_STATE_VERTEX_BUFFER))
-                    {
-                        LOG_ERROR_MESSAGE("Buffer '", pBufferVk->GetDesc().Name, "' used as vertex buffer at slot ", slot, " must be in "
-                                          "RESOURCE_STATE_VERTEX_BUFFER state. Actual buffer state: ", GetResourceStateString(pBufferVk->GetState()), 
-                                          ". Use DRAW_FLAG_TRANSITION_VERTEX_BUFFERS flag or explicitly transition the buffer to the required state.");
-
-                    }
+                    DvpVerifyBufferState(*pBufferVk, RESOURCE_STATE_VERTEX_BUFFER, "Binding vertex buffers (DeviceContextVkImpl::CommitVkVertexBuffers)");
                 }
 #endif
 
@@ -451,12 +445,7 @@ namespace Diligent
 #ifdef DEVELOPMENT
             else if (VerifyStates)
             {
-                if (pBuffVk->IsInKnownState() && !pBuffVk->CheckState(RESOURCE_STATE_INDEX_BUFFER))
-                {
-                    LOG_ERROR_MESSAGE("Buffer '", pBuffVk->GetDesc().Name, "' used as index buffer must be in RESOURCE_STATE_INDEX_BUFFER "
-                                       "state. Actual buffer state: ", GetResourceStateString(pBuffVk->GetState()), 
-                                       ". Use DRAW_FLAG_TRANSITION_INDEX_BUFFER flag or explicitly transition the buffer to the required state.");
-                }
+                DvpVerifyBufferState(*pBuffVk, RESOURCE_STATE_INDEX_BUFFER, "Indexed draw call (DeviceContextVkImpl::Draw)");
             }
 #endif
 
@@ -479,11 +468,9 @@ namespace Diligent
                 {
                     auto& CurrStream = m_VertexStreams[slot];
                     auto* pBufferVk = CurrStream.pBuffer.RawPtr();
-                    if (pBufferVk != nullptr && pBufferVk->IsInKnownState() && !pBufferVk->CheckState(RESOURCE_STATE_VERTEX_BUFFER))
+                    if (pBufferVk != nullptr)
                     {
-                        LOG_ERROR_MESSAGE("Buffer '", pBufferVk->GetDesc().Name, "' used as vertex buffer at slot ", slot, " must be in "
-                                          "RESOURCE_STATE_VERTEX_BUFFER state. Actual buffer state: ", GetResourceStateString(pBufferVk->GetState()), 
-                                          ". Use DRAW_FLAG_TRANSITION_VERTEX_BUFFERS flag or explicitly transition the buffer to the required state.");
+                        DvpVerifyBufferState(*pBufferVk, RESOURCE_STATE_VERTEX_BUFFER, "Using vertex buffers (DeviceContextVkImpl::Draw)");
                     }
                 }
             }
@@ -523,12 +510,7 @@ namespace Diligent
 #ifdef DEVELOPMENT
             else if (VerifyStates)
             {
-                if (pIndirectDrawAttribsVk->IsInKnownState() && !pIndirectDrawAttribsVk->CheckState(RESOURCE_STATE_INDIRECT_ARGUMENT))
-                {
-                    LOG_ERROR_MESSAGE("Buffer '", pIndirectDrawAttribsVk->GetDesc().Name, "' used as indirect draw arguments buffer must be in RESOURCE_STATE_INDIRECT_ARGUMENT "
-                                       "state. Actual buffer state: ", GetResourceStateString(pIndirectDrawAttribsVk->GetState()), 
-                                       ". Use DRAW_FLAG_TRANSITION_INDIRECT_ARGS_BUFFER flag or explicitly transition the buffer to the required state.");
-                }
+                DvpVerifyBufferState(*pIndirectDrawAttribsVk, RESOURCE_STATE_INDIRECT_ARGUMENT, "Indirect draw (DeviceContextVkImpl::Draw)");
             }
 #endif
         }
@@ -614,12 +596,7 @@ namespace Diligent
 #ifdef DEVELOPMENT
                 else if (DispatchAttrs.Flags & DISPATCH_FLAG_VERIFY_STATES)
                 {
-                    if (pBufferVk->IsInKnownState() && !pBufferVk->CheckState(RESOURCE_STATE_INDIRECT_ARGUMENT))
-                    {
-                        LOG_ERROR_MESSAGE("Buffer '", pBufferVk->GetDesc().Name, "' used as indirect dispatch arguments buffer must be in RESOURCE_STATE_INDIRECT_ARGUMENT "
-                                           "state. Actual buffer state: ", GetResourceStateString(pBufferVk->GetState()), 
-                                           ". Use DISPATCH_FLAG_TRANSITION_INDIRECT_ARGS_BUFFER flag or explicitly transition the buffer to the required state.");
-                    }
+                    DvpVerifyBufferState(*pBufferVk, RESOURCE_STATE_INDIRECT_ARGUMENT, "Indirect dispatch (DeviceContextVkImpl::DispatchCompute)");
                 }
 #endif
 
@@ -718,12 +695,7 @@ namespace Diligent
 #ifdef DEVELOPMENT
             else if(ClearFlags & CLEAR_DEPTH_STENCIL_VERIFY_STATE_FLAG)
             {
-                if (pTextureVk->IsInKnownState() && !pTextureVk->CheckState(RESOURCE_STATE_COPY_DEST))
-                {
-                    LOG_ERROR_MESSAGE("Depth-stencil buffer '", pTextureVk->GetDesc().Name, "' being cleared outside of render pass not transitioned to RESOURCE_STATE_COPY_DEST state. "
-                                      "Actual texture state: ", GetResourceStateString(pTexture->GetState()), ". "
-                                      "Use CLEAR_DEPTH_STENCIL_TRANSITION_STATE_FLAG flag or explicitly transition the resource using IDeviceContext::TransitionResourceStates() method.");
-                }
+                DvpVerifyTextureState(*pTextureVk, RESOURCE_STATE_COPY_DEST, "Clearing depth-stencil buffer outside of render pass (DeviceContextVkImpl::ClearDepthStencil)");
             }
 #endif
 
@@ -868,12 +840,7 @@ namespace Diligent
 #ifdef DEVELOPMENT
             else if (StateTransitionMode == CLEAR_RENDER_TARGET_VERIFY_STATE)
             {
-                if (pTextureVk->IsInKnownState() && !pTextureVk->CheckState(RESOURCE_STATE_COPY_DEST))
-                {
-                    LOG_ERROR_MESSAGE("Render target '", pTextureVk->GetDesc().Name, "' being cleared outside of render pass not transitioned to RESOURCE_STATE_COPY_DEST state. "
-                                      "Actual texture state: ", GetResourceStateString(pTexture->GetState()), ". "
-                                      "Use CLEAR_RENDER_TARGET_TRANSITION_STATE mode or explicitly transition the resource using IDeviceContext::TransitionResourceStates() method.");
-                }
+                DvpVerifyTextureState(*pTextureVk, RESOURCE_STATE_COPY_DEST, "Clearing render target outside of render pass (DeviceContextVkImpl::ClearRenderTarget)");
             }
 #endif
             auto ClearValue = ClearValueToVkClearValue(RGBA, ViewDesc.Format);
@@ -1133,12 +1100,7 @@ namespace Diligent
 #ifdef DEVELOPMENT
             else if (Flags & SET_RENDER_TARGETS_FLAG_VERIFY_STATES)
             {
-                if (pDepthBufferVk->IsInKnownState() && !pDepthBufferVk->CheckState(RESOURCE_STATE_DEPTH_WRITE))
-                {
-                    LOG_ERROR_MESSAGE("Texture '", pDepthBufferVk->GetDesc().Name, "' being set as depth-stencil buffer is not transitioned to RESOURCE_STATE_DEPTH_WRITE state. "
-                                        "Actual texture state: ", GetResourceStateString(pDepthBufferVk->GetState()), ". "
-                                        "Use SET_RENDER_TARGETS_FLAG_TRANSITION_DEPTH flag or explicitly transition the resource using IDeviceContext::TransitionResourceStates() method.");
-                }
+                DvpVerifyTextureState(*pDepthBufferVk, RESOURCE_STATE_DEPTH_WRITE, "Binding depth-stencil buffer (DeviceContextVkImpl::TransitionRenderTargets)");
             }
 #endif
         }
@@ -1163,12 +1125,7 @@ namespace Diligent
 #ifdef DEVELOPMENT
                 else if (Flags & SET_RENDER_TARGETS_FLAG_VERIFY_STATES)
                 {
-                    if (pRenderTargetVk->IsInKnownState() && !pRenderTargetVk->CheckState(RESOURCE_STATE_RENDER_TARGET))
-                    {
-                        LOG_ERROR_MESSAGE("Texture '", pRenderTargetVk->GetDesc().Name, "' being set as render target at slot ", rt, " is not transitioned to RESOURCE_STATE_RENDER_TARGET state. "
-                                            "Actual texture state: ", GetResourceStateString(pRenderTargetVk->GetState()), ". "
-                                            "Use SET_RENDER_TARGETS_FLAG_TRANSITION_COLOR flag or explicitly transition the resource using IDeviceContext::TransitionResourceStates() method.");
-                    }
+                    DvpVerifyTextureState(*pRenderTargetVk, RESOURCE_STATE_RENDER_TARGET, "Binding render targets (DeviceContextVkImpl::TransitionRenderTargets)");
                 }
 #endif
             }
@@ -1264,7 +1221,12 @@ namespace Diligent
         m_Framebuffer = VK_NULL_HANDLE;
     }
 
-    void DeviceContextVkImpl::UpdateBufferRegion(BufferVkImpl* pBuffVk, Uint64 DstOffset, Uint64 NumBytes, VkBuffer vkSrcBuffer, Uint64 SrcOffset)
+    void DeviceContextVkImpl::UpdateBufferRegion(BufferVkImpl*                  pBuffVk,
+                                                 Uint64                         DstOffset,
+                                                 Uint64                         NumBytes,
+                                                 VkBuffer                       vkSrcBuffer,
+                                                 Uint64                         SrcOffset,
+                                                 RESOURCE_STATE_TRANSITION_MODE TransitionMode)
     {
 #ifdef DEVELOPMENT
         if (DstOffset + NumBytes > pBuffVk->GetDesc().uiSizeInBytes)
@@ -1274,14 +1236,23 @@ namespace Diligent
 #endif
 
         EnsureVkCmdBuffer();
-        if (pBuffVk->IsInKnownState())
+        if (TransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
         {
-            if (!pBuffVk->CheckState(RESOURCE_STATE_COPY_DEST))
+            if (pBuffVk->IsInKnownState())
             {
-                TransitionBufferState(*pBuffVk, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_DEST, true);
+                if (!pBuffVk->CheckState(RESOURCE_STATE_COPY_DEST))
+                {
+                    TransitionBufferState(*pBuffVk, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_DEST, true);
+                }
+                VERIFY_EXPR(pBuffVk->CheckAccessFlags(VK_ACCESS_TRANSFER_WRITE_BIT));
             }
-            VERIFY_EXPR(pBuffVk->CheckAccessFlags(VK_ACCESS_TRANSFER_WRITE_BIT));
         }
+#ifdef DEVELOPMENT
+        else if (TransitionMode == RESOURCE_STATE_TRANSITION_MODE_VERIFY)
+        {
+            DvpVerifyBufferState(*pBuffVk, RESOURCE_STATE_COPY_DEST, "Updating buffer (DeviceContextVkImpl::UpdateBufferRegion)");
+        }
+#endif
         VkBufferCopy CopyRegion;
         CopyRegion.srcOffset = SrcOffset;
         CopyRegion.dstOffset = DstOffset;
@@ -1291,9 +1262,13 @@ namespace Diligent
         ++m_State.NumCommands;
     }
 
-    void DeviceContextVkImpl::UpdateBuffer(IBuffer* pBuffer, Uint32 Offset, Uint32 Size, const PVoid pData)
+    void DeviceContextVkImpl::UpdateBuffer(IBuffer*                       pBuffer,
+                                           Uint32                         Offset,
+                                           Uint32                         Size,
+                                           const PVoid                    pData,
+                                           RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
     {
-        TDeviceContextBase::UpdateBuffer(pBuffer, Offset, Size, pData);
+        TDeviceContextBase::UpdateBuffer(pBuffer, Offset, Size, pData, StateTransitionMode);
 
         // We must use cmd context from the device context provided, otherwise there will
         // be resource barrier issues in the cmd list in the device context
@@ -1311,7 +1286,7 @@ namespace Diligent
         // Source buffer offset must be multiple of 4 (18.4)
         auto TmpSpace = m_UploadHeap.Allocate(Size, Alignment);
 	    memcpy(TmpSpace.CPUAddress, pData, Size);
-        UpdateBufferRegion(pBuffVk, Offset, Size, TmpSpace.vkBuffer, TmpSpace.AlignedOffset);
+        UpdateBufferRegion(pBuffVk, Offset, Size, TmpSpace.vkBuffer, TmpSpace.AlignedOffset, StateTransitionMode);
         // The allocation will stay in the upload heap until the end of the frame at which point all upload
         // pages will be discarded
     }
@@ -1459,7 +1434,7 @@ namespace Diligent
                 {
                     auto& DynAlloc = pBufferVk->m_DynamicAllocations[m_ContextId];
                     auto vkSrcBuff = DynAlloc.pDynamicMemMgr->GetVkBuffer();
-                    UpdateBufferRegion(pBufferVk, 0, BuffDesc.uiSizeInBytes, vkSrcBuff, DynAlloc.AlignedOffset);
+                    UpdateBufferRegion(pBufferVk, 0, BuffDesc.uiSizeInBytes, vkSrcBuff, DynAlloc.AlignedOffset, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
                 }
             }
         }
@@ -1467,16 +1442,29 @@ namespace Diligent
         m_MappedBuffers.erase(MappedBufferIt);
     }
 
-    void DeviceContextVkImpl::UpdateTexture(ITexture* pTexture, Uint32 MipLevel, Uint32 Slice, const Box& DstBox, const TextureSubResData& SubresData)
+    void DeviceContextVkImpl::UpdateTexture(ITexture*                      pTexture,
+                                            Uint32                         MipLevel,
+                                            Uint32                         Slice,
+                                            const Box&                     DstBox,
+                                            const TextureSubResData&       SubresData,
+                                            RESOURCE_STATE_TRANSITION_MODE SrcBufferStateTransitionMode,
+                                            RESOURCE_STATE_TRANSITION_MODE TextureStateTransitionModee)
     {
-        TDeviceContextBase::UpdateTexture( pTexture, MipLevel, Slice, DstBox, SubresData );
+        TDeviceContextBase::UpdateTexture( pTexture, MipLevel, Slice, DstBox, SubresData, SrcBufferStateTransitionMode, TextureStateTransitionModee );
 
         auto* pTexVk = ValidatedCast<TextureVkImpl>(pTexture);
         // OpenGL backend uses UpdateData() to initialize textures, so we can't check the usage in ValidateUpdateTextureParams()
         DEV_CHECK_ERR( pTexVk->GetDesc().Usage == USAGE_DEFAULT, "Only USAGE_DEFAULT textures should be updated with UpdateData()" );
 
-        //pCtxVk->CopyTextureRegion(SubresData.pSrcBuffer, SubresData.Stride, SubresData.DepthStride, this, DstSubResIndex, DstBox);
-        UpdateTextureRegion(SubresData.pData, SubresData.Stride, SubresData.DepthStride, *pTexVk, MipLevel, Slice, DstBox);
+        if (SubresData.pSrcBuffer != nullptr)
+        {
+            UNSUPPORTED("Copying buffer to texture is not implemented");
+        }
+        else
+        {
+            UpdateTextureRegion(SubresData.pData, SubresData.Stride, SubresData.DepthStride, *pTexVk,
+                                MipLevel, Slice, DstBox, TextureStateTransitionModee);
+        }
     }
 
     void DeviceContextVkImpl::CopyTexture(ITexture*  pSrcTexture, 
@@ -1628,13 +1616,14 @@ namespace Diligent
     }
 
 
-    void DeviceContextVkImpl::UpdateTextureRegion(const void*    pSrcData,
-                                                  Uint32         SrcStride,
-                                                  Uint32         SrcDepthStride,
-                                                  TextureVkImpl& TextureVk,
-                                                  Uint32         MipLevel,
-                                                  Uint32         Slice,
-                                                  const Box&     DstBox)
+    void DeviceContextVkImpl::UpdateTextureRegion(const void*                    pSrcData,
+                                                  Uint32                         SrcStride,
+                                                  Uint32                         SrcDepthStride,
+                                                  TextureVkImpl&                 TextureVk,
+                                                  Uint32                         MipLevel,
+                                                  Uint32                         Slice,
+                                                  const Box&                     DstBox,
+                                                  RESOURCE_STATE_TRANSITION_MODE TextureTransitionMode)
     {
         const auto& TexDesc = TextureVk.GetDesc();
         VERIFY(TexDesc.SampleCount == 1, "Only single-sample textures can be updated with vkCmdCopyBufferToImage()");
@@ -1686,7 +1675,8 @@ namespace Diligent
                             CopyInfo.Region,
                             TextureVk,
                             MipLevel,
-                            Slice);
+                            Slice,
+                            TextureTransitionMode);
     }
 
     void DeviceContextVkImpl::GenerateMips(ITextureView* pTexView)
@@ -1695,23 +1685,33 @@ namespace Diligent
         m_GenerateMipsHelper->GenerateMips(*ValidatedCast<TextureViewVkImpl>(pTexView), *this, *m_GenerateMipsSRB);
     }
 
-    void DeviceContextVkImpl::CopyBufferToTexture(VkBuffer         vkBuffer,
-                                                  Uint32           BufferOffset,
-                                                  Uint32           BufferRowStrideInTexels,
-                                                  const Box&       Region,
-                                                  TextureVkImpl&   TextureVk,
-                                                  Uint32           MipLevel,
-                                                  Uint32           ArraySlice)
+    void DeviceContextVkImpl::CopyBufferToTexture(VkBuffer                       vkBuffer,
+                                                  Uint32                         BufferOffset,
+                                                  Uint32                         BufferRowStrideInTexels,
+                                                  const Box&                     Region,
+                                                  TextureVkImpl&                 TextureVk,
+                                                  Uint32                         MipLevel,
+                                                  Uint32                         ArraySlice,
+                                                  RESOURCE_STATE_TRANSITION_MODE TextureTransitionMode)
     {
         EnsureVkCmdBuffer();
-        if (TextureVk.IsInKnownState())
+        if (TextureTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
         {
-            if (!TextureVk.CheckState(RESOURCE_STATE_COPY_DEST))
+            if (TextureVk.IsInKnownState())
             {
-                TransitionTextureState(TextureVk, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_DEST, true);
+                if (!TextureVk.CheckState(RESOURCE_STATE_COPY_DEST))
+                {
+                    TransitionTextureState(TextureVk, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_DEST, true);
+                }
+                VERIFY_EXPR(TextureVk.GetLayout() == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
             }
-            VERIFY_EXPR(TextureVk.GetLayout() == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
         }
+#ifdef DEVELOPMENT
+        else if (TextureTransitionMode == RESOURCE_STATE_TRANSITION_MODE_VERIFY)
+        {
+            DvpVerifyTextureState(TextureVk, RESOURCE_STATE_COPY_DEST, "Using texture as copy destination (DeviceContextVkImpl::CopyBufferToTexture)");
+        }
+#endif
 
         VkBufferImageCopy CopyRegion = {};
         VERIFY( (BufferOffset % 4) == 0, "Source buffer offset must be multiple of 4 (18.4)");
@@ -1845,7 +1845,8 @@ namespace Diligent
                                 MappedTex.CopyInfo.Region,
                                 TextureVk,
                                 MipLevel,
-                                ArraySlice);
+                                ArraySlice,
+                                RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
             m_MappedTextures.erase(UploadSpaceIt);
         }
         else
@@ -1933,7 +1934,7 @@ namespace Diligent
             TransitionTextureState(*pTextureVk, RESOURCE_STATE_UNKNOWN, NewState, true);
         }
     }
-
+    
     void DeviceContextVkImpl::TransitionTextureState(TextureVkImpl&           TextureVk,
                                                      RESOURCE_STATE           OldState,
                                                      RESOURCE_STATE           NewState,
@@ -1948,7 +1949,7 @@ namespace Diligent
             }
             else
             {
-                LOG_ERROR_MESSAGE("Failed to transition the state of texture '", TextureVk.GetDesc().Name, "' because the texture state is unknown and is not explicitly specified");
+                LOG_ERROR_MESSAGE("Failed to transition the state of texture '", TextureVk.GetDesc().Name, "' because the state is unknown and is not explicitly specified.");
                 return;
             }
         }
@@ -1957,8 +1958,8 @@ namespace Diligent
             if (TextureVk.IsInKnownState() && TextureVk.GetState() != OldState)
             {
                 LOG_ERROR_MESSAGE("The state ", GetResourceStateString(TextureVk.GetState()), " of texture '",
-                                   TextureVk.GetDesc().Name, "' does not match the old state ", GetResourceStateString(OldState),
-                                   " specified by the barrier");
+                                  TextureVk.GetDesc().Name, "' does not match the old state ", GetResourceStateString(OldState),
+                                  " specified by the barrier");
             }
         }
 
@@ -2047,8 +2048,8 @@ namespace Diligent
             if (BufferVk.IsInKnownState() && BufferVk.GetState() != OldState)
             {
                 LOG_ERROR_MESSAGE("The state ", GetResourceStateString(BufferVk.GetState()), " of buffer '",
-                                   BufferVk.GetDesc().Name, "' does not match the old state ", GetResourceStateString(OldState),
-                                   " specified by the barrier");
+                                  BufferVk.GetDesc().Name, "' does not match the old state ", GetResourceStateString(OldState),
+                                  " specified by the barrier");
             }
         }
 

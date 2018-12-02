@@ -39,7 +39,7 @@
 #include "PipelineLayout.h"
 #include "GenerateMipsVkHelper.h"
 #include "BufferVkImpl.h"
-#include "TextureViewVkImpl.h"
+#include "TextureVkImpl.h"
 #include "PipelineStateVkImpl.h"
 #include "HashUtils.h"
 
@@ -47,10 +47,10 @@ namespace Diligent
 {
 
 /// Implementation of the Diligent::IDeviceContext interface
-class DeviceContextVkImpl final : public DeviceContextNextGenBase< DeviceContextBase<IDeviceContextVk, BufferVkImpl, TextureViewVkImpl, PipelineStateVkImpl> >
+class DeviceContextVkImpl final : public DeviceContextNextGenBase< DeviceContextBase<IDeviceContextVk, BufferVkImpl, TextureVkImpl, PipelineStateVkImpl> >
 {
 public:
-    using TDeviceContextBase = DeviceContextNextGenBase< DeviceContextBase<IDeviceContextVk, BufferVkImpl, TextureViewVkImpl, PipelineStateVkImpl> >;
+    using TDeviceContextBase = DeviceContextNextGenBase< DeviceContextBase<IDeviceContextVk, BufferVkImpl, TextureVkImpl, PipelineStateVkImpl> >;
 
     DeviceContextVkImpl(IReferenceCounters*                   pRefCounters,
                         class RenderDeviceVkImpl*             pDevice,
@@ -102,7 +102,11 @@ public:
 
     virtual void Flush()override final;
     
-    virtual void UpdateBuffer(IBuffer *pBuffer, Uint32 Offset, Uint32 Size, const PVoid pData)override final;
+    virtual void UpdateBuffer(IBuffer*                       pBuffer,
+                              Uint32                         Offset,
+                              Uint32                         Size,
+                              const PVoid                    pData,
+                              RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)override final;
 
     virtual void CopyBuffer(IBuffer* pSrcBuffer, Uint32 SrcOffset, IBuffer* pDstBuffer, Uint32 DstOffset, Uint32 Size)override final;
 
@@ -110,11 +114,13 @@ public:
 
     virtual void UnmapBuffer(IBuffer* pBuffer)override final;
 
-    virtual void UpdateTexture(ITexture*                pTexture,
-                               Uint32                   MipLevel,
-                               Uint32                   Slice,
-                               const Box&               DstBox,
-                               const TextureSubResData& SubresData)override final;
+    virtual void UpdateTexture(ITexture*                      pTexture,
+                               Uint32                         MipLevel,
+                               Uint32                         Slice,
+                               const Box&                     DstBox,
+                               const TextureSubResData&       SubresData,
+                               RESOURCE_STATE_TRANSITION_MODE SrcBufferStateTransitionMode,
+                               RESOURCE_STATE_TRANSITION_MODE TextureStateTransitionModee)override final;
 
     virtual void CopyTexture(ITexture*  pSrcTexture, 
                              Uint32     SrcMipLevel,
@@ -152,7 +158,7 @@ public:
                                 RESOURCE_STATE           NewState,
                                 bool                     UpdateTextureState,
                                 VkImageSubresourceRange* pSubresRange = nullptr);
-
+    
     void TransitionImageLayout(TextureVkImpl&                 TextureVk,
                                VkImageLayout                  OldLayout,
                                VkImageLayout                  NewLayout,
@@ -182,18 +188,24 @@ public:
         m_SignalSemaphores.push_back(Semaphore);
     }
 
-    void UpdateBufferRegion(BufferVkImpl* pBuffVk, Uint64 DstOffset, Uint64 NumBytes, VkBuffer vkSrcBuffer, Uint64 SrcOffset);
+    void UpdateBufferRegion(BufferVkImpl*                  pBuffVk,
+                            Uint64                         DstOffset,
+                            Uint64                         NumBytes,
+                            VkBuffer                       vkSrcBuffer,
+                            Uint64                         SrcOffset,
+                            RESOURCE_STATE_TRANSITION_MODE TransitionMode);
 
     void CopyBufferRegion(BufferVkImpl* pSrcBuffVk, BufferVkImpl* pDstBuffVk, Uint64 SrcOffset, Uint64 DstOffset, Uint64 NumBytes);
     void CopyTextureRegion(TextureVkImpl* pSrcTexture, TextureVkImpl* pDstTexture, const VkImageCopy &CopyRegion);
 
-    void UpdateTextureRegion(const void*     pSrcData,
-                             Uint32          SrcStride,
-                             Uint32          SrcDepthStride,
-                             TextureVkImpl&  TextureVk,
-                             Uint32          MipLevel,
-                             Uint32          Slice,
-                             const Box&      DstBox);
+    void UpdateTextureRegion(const void*                    pSrcData,
+                             Uint32                         SrcStride,
+                             Uint32                         SrcDepthStride,
+                             TextureVkImpl&                 TextureVk,
+                             Uint32                         MipLevel,
+                             Uint32                         Slice,
+                             const Box&                     DstBox,
+                             RESOURCE_STATE_TRANSITION_MODE TextureTransitionMode);
 
     virtual void GenerateMips(ITextureView* pTexView)override final;
 
@@ -260,13 +272,14 @@ private:
                                                        Uint32             MipLevel,
                                                        const Box&         Region)const;
 
-    void CopyBufferToTexture(VkBuffer         vkBuffer,
-                             Uint32           BufferOffset,
-                             Uint32           BufferRowStrideInTexels,
-                             const Box&       Region,
-                             TextureVkImpl&   TextureVk,
-                             Uint32           MipLevel,
-                             Uint32           ArraySlice);
+    void CopyBufferToTexture(VkBuffer                       vkBuffer,
+                             Uint32                         BufferOffset,
+                             Uint32                         BufferRowStrideInTexels,
+                             const Box&                     Region,
+                             TextureVkImpl&                 TextureVk,
+                             Uint32                         MipLevel,
+                             Uint32                         ArraySlice,
+                             RESOURCE_STATE_TRANSITION_MODE TextureTransitionMode);
 
 
     void DvpLogRenderPass_PSOMismatch();

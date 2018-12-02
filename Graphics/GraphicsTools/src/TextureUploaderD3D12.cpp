@@ -184,7 +184,8 @@ namespace Diligent
                         Box DstBox;
                         DstBox.MaxX = TexDesc.Width;
                         DstBox.MaxY = TexDesc.Height;
-                        pContext->UpdateTexture(OperationInfo.pDstTexture, OperationInfo.DstMip, OperationInfo.DstSlice, DstBox, SubResData);
+                        pContext->UpdateTexture(OperationInfo.pDstTexture, OperationInfo.DstMip, OperationInfo.DstSlice, DstBox,
+                                                SubResData, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
                         pBuffer->SignalCopyScheduled();
                     }
                     break;

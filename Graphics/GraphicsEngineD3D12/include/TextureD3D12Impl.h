@@ -43,6 +43,7 @@ class TextureD3D12Impl final : public TextureBase<ITextureD3D12, RenderDeviceD3D
 {
 public:
     using TTextureBase = TextureBase<ITextureD3D12, RenderDeviceD3D12Impl, TextureViewD3D12Impl, FixedBlockMemoryAllocator>;
+    using ViewImplType = TextureViewD3D12Impl;
 
     // Creates a new D3D12 resource
     TextureD3D12Impl(IReferenceCounters*            pRefCounters,

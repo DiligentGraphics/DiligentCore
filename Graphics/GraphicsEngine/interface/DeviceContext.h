@@ -312,9 +312,25 @@ enum CLEAR_RENDER_TARGET_STATE_TRANSITION_MODE
     CLEAR_RENDER_TARGET_TRANSITION_STATE,
 
     /// Do not perform transition, but verify that the state is correct.
-    /// This flag only has effect in debug and development builds. No validation 
+    /// This mode only has effect in debug and development builds. No validation 
     /// is performed in release build.
     CLEAR_RENDER_TARGET_VERIFY_STATE
+};
+
+/// Defines resource state transitions performed by various commands
+enum RESOURCE_STATE_TRANSITION_MODE
+{
+    /// Perform no state transitions
+    RESOURCE_STATE_TRANSITION_MODE_NONE = 0,
+    
+    /// Transition resource to the state required by the command
+    RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
+
+    /// Do not transition, but verify that the state is correct.
+    /// No validation is performed if the state is unknown to the engine.
+    /// This mode only has effect in debug and development builds. No validation 
+    /// is performed in release build.
+    RESOURCE_STATE_TRANSITION_MODE_VERIFY
 };
 
 /// Describes the viewport.
@@ -655,11 +671,16 @@ public:
 
     /// Updates the data in the buffer
 
-    /// \param [in] pBuffer - Pointer to the buffer to updates.
-    /// \param [in] Offset  - Offset in bytes from the beginning of the buffer to the update region.
-    /// \param [in] Size    - Size in bytes of the data region to update.
-    /// \param [in] pData   - Pointer to the data to write to the buffer.
-    virtual void UpdateBuffer(IBuffer* pBuffer, Uint32 Offset, Uint32 Size, const PVoid pData) = 0;
+    /// \param [in] pBuffer             - Pointer to the buffer to updates.
+    /// \param [in] Offset              - Offset in bytes from the beginning of the buffer to the update region.
+    /// \param [in] Size                - Size in bytes of the data region to update.
+    /// \param [in] pData               - Pointer to the data to write to the buffer.
+    /// \param [in] StateTransitionMode - Buffer state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE)
+    virtual void UpdateBuffer(IBuffer*                       pBuffer,
+                              Uint32                         Offset,
+                              Uint32                         Size,
+                              const PVoid                    pData,
+                              RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) = 0;
 
     /// Copies the data from one buffer to another
 
@@ -692,12 +713,22 @@ public:
 
     /// Updates the data in the texture
 
-    /// \param [in] pTexture   - Pointer to the device context interface to be used to perform the operation.
-    /// \param [in] MipLevel   - Mip level of the texture subresource to update.
-    /// \param [in] Slice      - Array slice. Should be 0 for non-array textures.
-    /// \param [in] DstBox     - Destination region on the texture to update.
-    /// \param [in] SubresData - Source data to copy to the texture.
-    virtual void UpdateTexture(ITexture* pTexture, Uint32 MipLevel, Uint32 Slice, const Box& DstBox, const TextureSubResData& SubresData) = 0;
+    /// \param [in] pTexture    - Pointer to the device context interface to be used to perform the operation.
+    /// \param [in] MipLevel    - Mip level of the texture subresource to update.
+    /// \param [in] Slice       - Array slice. Should be 0 for non-array textures.
+    /// \param [in] DstBox      - Destination region on the texture to update.
+    /// \param [in] SubresData  - Source data to copy to the texture.
+    /// \param [in] SrcBufferTransitionMode - If pSrcBuffer member of TextureSubResData structure is not null, this 
+    ///                                       parameter defines state transition mode of the source buffer. 
+    ///                                       If pSrcBuffer is null, this parameter is ignored.
+    /// \param [in] TextureTransitionMode   - Texture state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE)
+    virtual void UpdateTexture(ITexture*                      pTexture,
+                               Uint32                         MipLevel,
+                               Uint32                         Slice,
+                               const Box&                     DstBox,
+                               const TextureSubResData&       SubresData,
+                               RESOURCE_STATE_TRANSITION_MODE SrcBufferTransitionMode,
+                               RESOURCE_STATE_TRANSITION_MODE TextureTransitionMode) = 0;
 
     /// Copies data from one texture to another
 

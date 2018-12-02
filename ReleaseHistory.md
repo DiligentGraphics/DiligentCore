@@ -26,6 +26,8 @@
   * Renamed/moved `ITexture::Map()` to `IDeviceContext::MapTextureSubresource()`
   * Renamed/moved `ITexture::Unmap()` to `IDeviceContext::UnmapTextureSubresource()`
   * Moved `ITextureView::GenerateMips()` to `IDeviceContext::GenerateMips()`
+  * Added `RESOURCE_STATE_TRANSITION_MODE` enum that controls resource state transition mode
+  * Added state transition mode parameters to `IDeviceContext::UpdateBuffer()` and `IDeviceContext::UpdateTexture()` methods
 
 ## v2.3.b
 

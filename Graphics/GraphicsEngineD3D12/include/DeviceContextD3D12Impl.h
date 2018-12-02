@@ -33,7 +33,7 @@
 #include "DeviceContextNextGenBase.h"
 #include "GenerateMips.h"
 #include "BufferD3D12Impl.h"
-#include "TextureViewD3D12Impl.h"
+#include "TextureD3D12Impl.h"
 #include "PipelineStateD3D12Impl.h"
 #include "D3D12DynamicHeap.h"
 
@@ -41,10 +41,10 @@ namespace Diligent
 {
 
 /// Implementation of the Diligent::IDeviceContext interface
-class DeviceContextD3D12Impl final : public DeviceContextNextGenBase< DeviceContextBase<IDeviceContextD3D12, BufferD3D12Impl, TextureViewD3D12Impl, PipelineStateD3D12Impl> >
+class DeviceContextD3D12Impl final : public DeviceContextNextGenBase< DeviceContextBase<IDeviceContextD3D12, BufferD3D12Impl, TextureD3D12Impl, PipelineStateD3D12Impl> >
 {
 public:
-    using TDeviceContextBase = DeviceContextNextGenBase< DeviceContextBase<IDeviceContextD3D12, BufferD3D12Impl, TextureViewD3D12Impl, PipelineStateD3D12Impl> >;
+    using TDeviceContextBase = DeviceContextNextGenBase< DeviceContextBase<IDeviceContextD3D12, BufferD3D12Impl, TextureD3D12Impl, PipelineStateD3D12Impl> >;
 
     DeviceContextD3D12Impl(IReferenceCounters*          pRefCounters, 
                            class RenderDeviceD3D12Impl* pDevice, 
@@ -95,7 +95,11 @@ public:
 
     virtual void Flush()override final;
 
-    virtual void UpdateBuffer(IBuffer* pBuffer, Uint32 Offset, Uint32 Size, const PVoid pData)override final;
+    virtual void UpdateBuffer(IBuffer*                       pBuffer,
+                              Uint32                         Offset,
+                              Uint32                         Size,
+                              const PVoid                    pData,
+                              RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)override final;
 
     virtual void CopyBuffer(IBuffer* pSrcBuffer, Uint32 SrcOffset, IBuffer* pDstBuffer, Uint32 DstOffset, Uint32 Size)override final;
 
@@ -103,11 +107,13 @@ public:
 
     virtual void UnmapBuffer(IBuffer* pBuffer)override final;
 
-    virtual void UpdateTexture(ITexture*                pTexture,
-                               Uint32                   MipLevel,
-                               Uint32                   Slice,
-                               const Box&               DstBox,
-                               const TextureSubResData& SubresData)override final;
+    virtual void UpdateTexture(ITexture*                      pTexture,
+                               Uint32                         MipLevel,
+                               Uint32                         Slice,
+                               const Box&                     DstBox,
+                               const TextureSubResData&       SubresData,
+                               RESOURCE_STATE_TRANSITION_MODE SrcBufferTransitionMode,
+                               RESOURCE_STATE_TRANSITION_MODE TextureTransitionMode)override final;
 
     virtual void CopyTexture(ITexture*  pSrcTexture, 
                              Uint32     SrcMipLevel,
@@ -147,31 +153,39 @@ public:
     ///// Number of different shader types (Vertex, Pixel, Geometry, Domain, Hull, Compute)
     //static constexpr int NumShaderTypes = 6;
 
-    void UpdateBufferRegion(class BufferD3D12Impl *pBuffD3D12, D3D12DynamicAllocation& Allocation, Uint64 DstOffset, Uint64 NumBytes);
+    void UpdateBufferRegion(class BufferD3D12Impl*                pBuffD3D12,
+                            D3D12DynamicAllocation&               Allocation,
+                            Uint64                                DstOffset,
+                            Uint64                                NumBytes,
+                            RESOURCE_STATE_TRANSITION_MODE StateTransitionMode);
     void CopyTextureRegion(class TextureD3D12Impl *pSrcTexture, Uint32 SrcSubResIndex, const D3D12_BOX* pD3D12SrcBox,
                            class TextureD3D12Impl *pDstTexture, Uint32 DstSubResIndex, Uint32 DstX, Uint32 DstY, Uint32 DstZ);
-    void CopyTextureRegion(IBuffer*                 pSrcBuffer,
-                           Uint32                   SrcOffset,
-                           Uint32                   SrcStride,
-                           Uint32                   SrcDepthStride,
-                           class TextureD3D12Impl&  TextureD3D12,
-                           Uint32 DstSubResIndex,
-                           const Box& DstBox);
-    void CopyTextureRegion(ID3D12Resource*         pd3d12Buffer,
-                           Uint32                  SrcOffset,
-                           Uint32                  SrcStride,
-                           Uint32                  SrcDepthStride,
-                           Uint32                  BufferSize,
-                           class TextureD3D12Impl& TextureD3D12,
-                           Uint32                  DstSubResIndex,
-                           const Box&              DstBox);
+    void CopyTextureRegion(IBuffer*                       pSrcBuffer,
+                           Uint32                         SrcOffset,
+                           Uint32                         SrcStride,
+                           Uint32                         SrcDepthStride,
+                           class TextureD3D12Impl&        TextureD3D12,
+                           Uint32                         DstSubResIndex,
+                           const Box&                     DstBox,
+                           RESOURCE_STATE_TRANSITION_MODE BufferTransitionMode,
+                           RESOURCE_STATE_TRANSITION_MODE TextureTransitionMode);
+    void CopyTextureRegion(ID3D12Resource*                pd3d12Buffer,
+                           Uint32                         SrcOffset,
+                           Uint32                         SrcStride,
+                           Uint32                         SrcDepthStride,
+                           Uint32                         BufferSize,
+                           class TextureD3D12Impl&        TextureD3D12,
+                           Uint32                         DstSubResIndex,
+                           const Box&                     DstBox,
+                           RESOURCE_STATE_TRANSITION_MODE TextureTransitionMode);
 
-    void UpdateTextureRegion(const void*             pSrcData,
-                             Uint32                  SrcStride,
-                             Uint32                  SrcDepthStride,
-                             class TextureD3D12Impl& TextureD3D12,
-                             Uint32                  DstSubResIndex,
-                             const Box&              DstBox);
+    void UpdateTextureRegion(const void*                    pSrcData,
+                             Uint32                         SrcStride,
+                             Uint32                         SrcDepthStride,
+                             class TextureD3D12Impl&        TextureD3D12,
+                             Uint32                         DstSubResIndex,
+                             const Box&                     DstBox,
+                             RESOURCE_STATE_TRANSITION_MODE TextureTransitionMode);
 
     virtual void GenerateMips(ITextureView *pTexView)override final;
 

@@ -43,6 +43,7 @@ class TextureVkImpl final : public TextureBase<ITextureVk, RenderDeviceVkImpl, T
 {
 public:
     using TTextureBase = TextureBase<ITextureVk, RenderDeviceVkImpl, TextureViewVkImpl, FixedBlockMemoryAllocator>;
+    using ViewImplType = TextureViewVkImpl;
 
     // Creates a new Vk resource
     TextureVkImpl(IReferenceCounters*        pRefCounters,

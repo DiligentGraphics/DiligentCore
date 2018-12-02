@@ -1011,9 +1011,13 @@ namespace Diligent
         return true;
     }
 
-    void DeviceContextGLImpl::UpdateBuffer(IBuffer* pBuffer, Uint32 Offset, Uint32 Size, const PVoid pData)
+    void DeviceContextGLImpl::UpdateBuffer(IBuffer*                       pBuffer,
+                                           Uint32                         Offset,
+                                           Uint32                         Size,
+                                           const PVoid                    pData,
+                                           RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
     {
-        TDeviceContextBase::UpdateBuffer(pBuffer, Offset, Size, pData);
+        TDeviceContextBase::UpdateBuffer(pBuffer, Offset, Size, pData, StateTransitionMode);
 
         auto* pBufferGL = ValidatedCast<BufferGLImpl>(pBuffer);
         pBufferGL->UpdateData(m_ContextState, Offset, Size, pData);
@@ -1042,9 +1046,15 @@ namespace Diligent
         pBufferGL->Unmap();
     }
 
-    void DeviceContextGLImpl::UpdateTexture(ITexture* pTexture, Uint32 MipLevel, Uint32 Slice, const Box& DstBox, const TextureSubResData& SubresData)
+    void DeviceContextGLImpl::UpdateTexture(ITexture*                      pTexture,
+                                            Uint32                         MipLevel,
+                                            Uint32                         Slice,
+                                            const Box&                     DstBox,
+                                            const TextureSubResData&       SubresData,
+                                            RESOURCE_STATE_TRANSITION_MODE SrcBufferStateTransitionMode,
+                                            RESOURCE_STATE_TRANSITION_MODE TextureStateTransitionMode)
     {
-        TDeviceContextBase::UpdateTexture( pTexture, MipLevel, Slice, DstBox, SubresData );
+        TDeviceContextBase::UpdateTexture( pTexture, MipLevel, Slice, DstBox, SubresData, SrcBufferStateTransitionMode, TextureStateTransitionMode );
         auto* pTexGL = ValidatedCast<TextureBaseGL>(pTexture);
         pTexGL->UpdateData(m_ContextState, MipLevel, Slice, DstBox, SubresData);
     }

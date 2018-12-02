@@ -29,17 +29,17 @@
 #include "GLContextState.h"
 #include "GLObjectWrapper.h"
 #include "BufferGLImpl.h"
-#include "TextureViewGLImpl.h"
+#include "TextureBaseGL.h"
 #include "PipelineStateGLImpl.h"
 
 namespace Diligent
 {
 
 /// Implementation of the Diligent::IDeviceContextGL interface
-class DeviceContextGLImpl final : public DeviceContextBase<IDeviceContextGL, BufferGLImpl, TextureViewGLImpl, PipelineStateGLImpl>
+class DeviceContextGLImpl final : public DeviceContextBase<IDeviceContextGL, BufferGLImpl, TextureBaseGL, PipelineStateGLImpl>
 {
 public:
-    using TDeviceContextBase = DeviceContextBase<IDeviceContextGL, BufferGLImpl, TextureViewGLImpl, PipelineStateGLImpl>;
+    using TDeviceContextBase = DeviceContextBase<IDeviceContextGL, BufferGLImpl, TextureBaseGL, PipelineStateGLImpl>;
 
     DeviceContextGLImpl( IReferenceCounters *pRefCounters, class RenderDeviceGLImpl *pDeviceGL, bool bIsDeferred );
 
@@ -78,7 +78,11 @@ public:
 
     virtual void Flush()override final;
 
-    virtual void UpdateBuffer(IBuffer *pBuffer, Uint32 Offset, Uint32 Size, const PVoid pData)override final;
+    virtual void UpdateBuffer(IBuffer*                       pBuffer,
+                              Uint32                         Offset,
+                              Uint32                         Size,
+                              const PVoid                    pData,
+                              RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)override final;
 
     virtual void CopyBuffer(IBuffer *pSrcBuffer, Uint32 SrcOffset, IBuffer *pDstBuffer, Uint32 DstOffset, Uint32 Size)override final;
 
@@ -86,7 +90,13 @@ public:
 
     virtual void UnmapBuffer(IBuffer* pBuffer)override final;
 
-    virtual void UpdateTexture(ITexture* pTexture, Uint32 MipLevel, Uint32 Slice, const Box& DstBox, const TextureSubResData& SubresData)override final;
+    virtual void UpdateTexture(ITexture*                      pTexture,
+                               Uint32                         MipLevel,
+                               Uint32                         Slice,
+                               const Box&                     DstBox,
+                               const TextureSubResData&       SubresData,
+                               RESOURCE_STATE_TRANSITION_MODE SrcBufferStateTransitionMode,
+                               RESOURCE_STATE_TRANSITION_MODE TextureStateTransitionMode)override final;
 
     virtual void CopyTexture(ITexture*  pSrcTexture, 
                              Uint32     SrcMipLevel,

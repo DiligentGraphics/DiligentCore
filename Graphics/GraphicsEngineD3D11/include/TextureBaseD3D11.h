@@ -41,7 +41,8 @@ class FixedBlockMemoryAllocator;
 class TextureBaseD3D11 : public TextureBase<ITextureD3D11, RenderDeviceD3D11Impl, TextureViewD3D11Impl, FixedBlockMemoryAllocator>
 {
 public:
-    typedef TextureBase<ITextureD3D11, RenderDeviceD3D11Impl, TextureViewD3D11Impl, FixedBlockMemoryAllocator> TTextureBase;
+    using TTextureBase = TextureBase<ITextureD3D11, RenderDeviceD3D11Impl, TextureViewD3D11Impl, FixedBlockMemoryAllocator>;
+    using ViewImplType = TextureViewD3D11Impl;
 
     TextureBaseD3D11(IReferenceCounters*          pRefCounters,
                      FixedBlockMemoryAllocator&   TexViewObjAllocator, 
