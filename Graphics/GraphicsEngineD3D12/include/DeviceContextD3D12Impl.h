@@ -105,7 +105,7 @@ public:
 
     virtual void MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_FLAGS MapFlags, PVoid& pMappedData)override final;
 
-    virtual void UnmapBuffer(IBuffer* pBuffer)override final;
+    virtual void UnmapBuffer(IBuffer* pBuffer, MAP_TYPE MapType)override final;
 
     virtual void UpdateTexture(ITexture*                      pTexture,
                                Uint32                         MipLevel,
@@ -284,12 +284,6 @@ private:
         };
     };
     std::unordered_map<MappedTextureKey, TextureUploadSpace, MappedTextureKey::Hasher> m_MappedTextures;
-
-    struct MappedBufferInfo
-    {
-        MAP_TYPE MapType;
-    };
-    std::unordered_map<BufferD3D12Impl*, MappedBufferInfo> m_MappedBuffers;
 };
 
 }

@@ -200,7 +200,7 @@ namespace Diligent
 
                     case InternalData::PendingBufferOperation::Copy:
                     {
-                        pContext->UnmapBuffer(pBuffer->m_pStagingBuffer);
+                        pContext->UnmapBuffer(pBuffer->m_pStagingBuffer, MAP_WRITE);
                         TextureSubResData SubResData(pBuffer->m_pStagingBuffer, static_cast<Uint32>(pBuffer->GetRowStride()));
                         Box DstBox;
                         const auto &TexDesc = OperationInfo.pDstTexture->GetDesc();

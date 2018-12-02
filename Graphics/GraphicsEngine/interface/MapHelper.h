@@ -129,7 +129,7 @@ public:
     {
         if( m_pBuffer )
         {
-            m_pContext->UnmapBuffer(m_pBuffer);
+            m_pContext->UnmapBuffer(m_pBuffer, m_MapType);
             m_pBuffer = nullptr;
             m_MapType = static_cast<MAP_TYPE>(-1);
             m_MapFlags = static_cast<Uint32>(-1);

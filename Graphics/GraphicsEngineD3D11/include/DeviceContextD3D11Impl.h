@@ -103,7 +103,7 @@ public:
 
     virtual void MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_FLAGS MapFlags, PVoid& pMappedData)override final;
 
-    virtual void UnmapBuffer(IBuffer* pBuffer)override final;
+    virtual void UnmapBuffer(IBuffer* pBuffer, MAP_TYPE MapType)override final;
 
     virtual void UpdateTexture(ITexture*                      pTexture,
                                Uint32                         MipLevel,

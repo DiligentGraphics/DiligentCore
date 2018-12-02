@@ -1039,9 +1039,9 @@ namespace Diligent
         pBufferGL->Map(m_ContextState, MapType, MapFlags, pMappedData);
     }
 
-    void DeviceContextGLImpl::UnmapBuffer(IBuffer* pBuffer)
+    void DeviceContextGLImpl::UnmapBuffer(IBuffer* pBuffer, MAP_TYPE MapType)
     {
-        TDeviceContextBase::UnmapBuffer(pBuffer);
+        TDeviceContextBase::UnmapBuffer(pBuffer, MapType);
         auto* pBufferGL = ValidatedCast<BufferGLImpl>(pBuffer);
         pBufferGL->Unmap();
     }

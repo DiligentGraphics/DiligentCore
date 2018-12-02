@@ -861,8 +861,8 @@ namespace Diligent
 
     void DeviceContextVkImpl::FinishFrame()
     {
-#ifdef DEVELOPMENT
-        for(const auto& MappedBuffIt : m_MappedBuffers)
+#ifdef _DEBUG
+        for(const auto& MappedBuffIt : m_DbgMappedBuffers)
         {
             const auto& BuffDesc = MappedBuffIt.first->GetDesc();
             if (BuffDesc.Usage == USAGE_DYNAMIC)
@@ -1340,13 +1340,6 @@ namespace Diligent
         auto* pBufferVk = ValidatedCast<BufferVkImpl>(pBuffer);
         const auto& BuffDesc = pBufferVk->GetDesc();
 
-#ifdef DEVELOPMENT
-        if (m_MappedBuffers.find(pBufferVk) != m_MappedBuffers.end())
-        {
-            LOG_ERROR_MESSAGE("Buffer '", BuffDesc.Name, "' has already been mapped");
-        }
-#endif
-
         if (MapType == MAP_READ )
         {
             LOG_ERROR("Mapping buffer for reading is not yet imlemented in Vulkan backend");
@@ -1398,23 +1391,13 @@ namespace Diligent
         {
             LOG_ERROR("Only MAP_WRITE_DISCARD and MAP_READ are currently implemented in Vk");
         }
-        m_MappedBuffers[pBufferVk] = MappedBufferInfo{MapType};
     }
 
-    void DeviceContextVkImpl::UnmapBuffer(IBuffer* pBuffer)
+    void DeviceContextVkImpl::UnmapBuffer(IBuffer* pBuffer, MAP_TYPE MapType)
     {
-        TDeviceContextBase::UnmapBuffer(pBuffer);
+        TDeviceContextBase::UnmapBuffer(pBuffer, MapType);
         auto* pBufferVk = ValidatedCast<BufferVkImpl>(pBuffer);
-        
-        auto MappedBufferIt = m_MappedBuffers.find(pBufferVk);
-        if (MappedBufferIt == m_MappedBuffers.end())
-        {
-            LOG_ERROR_MESSAGE("Buffer '", pBufferVk->GetDesc().Name, "' has not been mapped.");
-            return;
-        }
-        const auto& MapInfo = MappedBufferIt->second;
         const auto& BuffDesc = pBufferVk->GetDesc();
-        auto MapType = MapInfo.MapType;
         
         if (MapType == MAP_READ )
         {
@@ -1438,8 +1421,6 @@ namespace Diligent
                 }
             }
         }
-
-        m_MappedBuffers.erase(MappedBufferIt);
     }
 
     void DeviceContextVkImpl::UpdateTexture(ITexture*                      pTexture,

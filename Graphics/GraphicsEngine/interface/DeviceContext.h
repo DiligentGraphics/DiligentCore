@@ -706,9 +706,7 @@ public:
     /// \param [in] pBuffer - Pointer to the buffer to unmap.
     /// \param [in] MapType - Type of the map operation. This parameter must match the type that was 
     ///                       provided to the Map() method. 
-    /// \param [in] MapFlags - Map flags. This parameter must match the flags that were provided to 
-    ///                        the Map() method. 
-    virtual void UnmapBuffer( IBuffer* pBuffer ) = 0;
+    virtual void UnmapBuffer( IBuffer* pBuffer, MAP_TYPE MapType ) = 0;
 
 
     /// Updates the data in the texture

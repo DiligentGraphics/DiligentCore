@@ -663,8 +663,8 @@ namespace Diligent
 
     void DeviceContextD3D12Impl::FinishFrame()
     {
-#ifdef DEVELOPMENT
-        for(const auto& MappedBuffIt : m_MappedBuffers)
+#ifdef _DEBUG
+        for(const auto& MappedBuffIt : m_DbgMappedBuffers)
         {
             const auto& BuffDesc = MappedBuffIt.first->GetDesc();
             if (BuffDesc.Usage == USAGE_DYNAMIC)
@@ -941,13 +941,6 @@ namespace Diligent
         const auto& BuffDesc = pBufferD3D12->GetDesc();
         auto* pd3d12Resource = pBufferD3D12->m_pd3d12Resource.p;
 
-#ifdef DEVELOPMENT
-        if (m_MappedBuffers.find(pBufferD3D12) != m_MappedBuffers.end())
-        {
-            LOG_ERROR_MESSAGE("Buffer '", BuffDesc.Name, "' has already been mapped");
-        }
-#endif
-
         if (MapType == MAP_READ)
         {
             LOG_WARNING_MESSAGE_ONCE("Mapping CPU buffer for reading on D3D12 currently requires flushing context and idling GPU");
@@ -999,24 +992,14 @@ namespace Diligent
         {
             LOG_ERROR("Only MAP_WRITE_DISCARD and MAP_READ are currently implemented in D3D12");
         }
-        m_MappedBuffers[pBufferD3D12] = MappedBufferInfo{MapType};
     }
 
-    void DeviceContextD3D12Impl::UnmapBuffer(IBuffer* pBuffer)
+    void DeviceContextD3D12Impl::UnmapBuffer(IBuffer* pBuffer, MAP_TYPE MapType)
     {
-        TDeviceContextBase::UnmapBuffer(pBuffer);
+        TDeviceContextBase::UnmapBuffer(pBuffer, MapType);
         auto* pBufferD3D12 = ValidatedCast<BufferD3D12Impl>(pBuffer);
-        auto MappedBufferIt = m_MappedBuffers.find(pBufferD3D12);
-        if (MappedBufferIt == m_MappedBuffers.end())
-        {
-            LOG_ERROR_MESSAGE("Buffer '", pBufferD3D12->GetDesc().Name, "' has not been mapped.");
-            return;
-        }
-        const auto& MapInfo = MappedBufferIt->second;
         const auto& BuffDesc = pBufferD3D12->GetDesc();
         auto* pd3d12Resource = pBufferD3D12->m_pd3d12Resource.p;
-
-        auto MapType = MapInfo.MapType;
         if (MapType == MAP_READ )
         {
             D3D12_RANGE MapRange;
@@ -1041,8 +1024,6 @@ namespace Diligent
                 }
             }
         }
-
-        m_MappedBuffers.erase(MappedBufferIt);
     }
 
     void DeviceContextD3D12Impl::UpdateTexture(ITexture*                      pTexture,

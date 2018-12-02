@@ -120,7 +120,7 @@ public:
     virtual void MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_FLAGS MapFlags, PVoid& pMappedData)override = 0;
 
     /// Base implementation of IDeviceContext::UnmapBuffer()
-    virtual void UnmapBuffer(IBuffer* pBuffer)override = 0;
+    virtual void UnmapBuffer(IBuffer* pBuffer, MAP_TYPE MapType)override = 0;
 
     /// Base implementaiton of IDeviceContext::UpdateData(); validates input parameters
     virtual void UpdateTexture( ITexture* pTexture, Uint32 MipLevel, Uint32 Slice, const Box& DstBox, const TextureSubResData& SubresData,
@@ -263,6 +263,16 @@ protected:
     RefCntAutoPtr<TextureViewImplType> m_pBoundDepthStencil;
 
     const bool m_bIsDeferred = false;
+
+#ifdef _DEBUG
+    // std::unordered_map is unbelievably slow. Keeping track of mapped buffers 
+    // in release builds is not feasible
+    struct DbgMappedBufferInfo
+    {
+        MAP_TYPE MapType;
+    };
+    std::unordered_map<IBuffer*, DbgMappedBufferInfo> m_DbgMappedBuffers;
+#endif
 };
 
 
@@ -714,6 +724,11 @@ inline void DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, Pi
     
     const auto& BuffDesc = pBuffer->GetDesc();
 
+#ifdef _DEBUG
+    VERIFY(m_DbgMappedBuffers.find(pBuffer) == m_DbgMappedBuffers.end(), "Buffer '", BuffDesc.Name, "' has already been mapped");
+    m_DbgMappedBuffers[pBuffer] = DbgMappedBufferInfo{MapType};
+#endif
+
     pMappedData = nullptr;
     switch( MapType )
     {
@@ -753,9 +768,15 @@ inline void DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, Pi
 
 template<typename BaseInterface, typename BufferImplType, typename TextureImplType, typename PipelineStateImplType>
 inline void DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, PipelineStateImplType> ::
-            UnmapBuffer(IBuffer* pBuffer)
+            UnmapBuffer(IBuffer* pBuffer, MAP_TYPE MapType)
 {
     VERIFY(pBuffer, "pBuffer must not be null");
+#ifdef _DEBUG
+    auto MappedBufferIt = m_DbgMappedBuffers.find(pBuffer);
+    VERIFY(MappedBufferIt != m_DbgMappedBuffers.end(), "Buffer '", pBuffer->GetDesc().Name, "' has not been mapped.");
+    VERIFY(MappedBufferIt->second.MapType == MapType, "MapType (", MapType, ") does not match the map type that was used to map the buffer ", MappedBufferIt->second.MapType);
+    m_DbgMappedBuffers.erase(MappedBufferIt);
+#endif
 }
 
 

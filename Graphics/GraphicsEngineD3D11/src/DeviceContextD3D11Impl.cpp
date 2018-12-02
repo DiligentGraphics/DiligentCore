@@ -992,9 +992,9 @@ namespace Diligent
         pMappedData = SUCCEEDED(hr) ? MappedBuff.pData : nullptr;
     }
 
-    void DeviceContextD3D11Impl::UnmapBuffer(IBuffer* pBuffer)
+    void DeviceContextD3D11Impl::UnmapBuffer(IBuffer* pBuffer, MAP_TYPE MapType)
     {
-        TDeviceContextBase::UnmapBuffer(pBuffer);
+        TDeviceContextBase::UnmapBuffer(pBuffer, MapType);
         auto* pBufferD3D11 = ValidatedCast<BufferD3D11Impl>(pBuffer);
         m_pd3d11DeviceContext->Unmap(pBufferD3D11->m_pd3d11Buffer, 0);
     }

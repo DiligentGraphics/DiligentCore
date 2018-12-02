@@ -112,7 +112,7 @@ public:
 
     virtual void MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_FLAGS MapFlags, PVoid& pMappedData)override final;
 
-    virtual void UnmapBuffer(IBuffer* pBuffer)override final;
+    virtual void UnmapBuffer(IBuffer* pBuffer, MAP_TYPE MapType)override final;
 
     virtual void UpdateTexture(ITexture*                      pTexture,
                                Uint32                         MipLevel,
@@ -345,12 +345,6 @@ private:
         VulkanDynamicAllocation Allocation;
     };
     std::unordered_map<MappedTextureKey, MappedTexture, MappedTextureKey::Hasher> m_MappedTextures;
-
-    struct MappedBufferInfo
-    {
-        MAP_TYPE MapType;
-    };
-    std::unordered_map<BufferVkImpl*, MappedBufferInfo> m_MappedBuffers;
 
     VulkanUtilities::VulkanCommandBufferPool m_CmdPool;
     VulkanUploadHeap                         m_UploadHeap;
