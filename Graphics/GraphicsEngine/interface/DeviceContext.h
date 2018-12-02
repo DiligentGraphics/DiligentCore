@@ -296,27 +296,6 @@ enum SET_RENDER_TARGETS_FLAGS
 };
 DEFINE_FLAG_ENUM_OPERATORS(SET_RENDER_TARGETS_FLAGS)
 
-/// Defines state transitions performed by IDeviceContext::ClearRenderTarget() command
-enum CLEAR_RENDER_TARGET_STATE_TRANSITION_MODE
-{
-    /// Perform no state transitions
-    CLEAR_RENDER_TARGET_NO_TRANSITION = 0,
-
-    /// Transition the render target to the required state.
-    /// \remarks In D3D12 backend, the render target must always be transitioned to
-    ///          Diligent::RESOURCE_STATE_RENDER_TARGET state. In Vulkan backend
-    ///          however this depends on whether the render pass has been started.
-    ///          To clear render target outside of render pass, it must be in
-    ///          Diligent::RESOURCE_STATE_COPY_DEST state. Inside a render pass it
-    ///          must be in Diligent::RESOURCE_STATE_RENDER_TARGET state.
-    CLEAR_RENDER_TARGET_TRANSITION_STATE,
-
-    /// Do not perform transition, but verify that the state is correct.
-    /// This mode only has effect in debug and development builds. No validation 
-    /// is performed in release build.
-    CLEAR_RENDER_TARGET_VERIFY_STATE
-};
-
 /// Defines resource state transitions performed by various commands
 enum RESOURCE_STATE_TRANSITION_MODE
 {
@@ -399,6 +378,60 @@ struct Rect
     Rect(){}
 };
 
+
+/// Defines copy texture command attributes
+
+/// This structure is used by IDeviceContext::CopyTexture()
+struct CopyTextureAttribs
+{
+    /// Source texture to copy data from.
+    ITexture*                      pSrcTexture              = nullptr;  
+
+    /// Mip level of the source texture to copy data from.
+    Uint32                         SrcMipLevel              = 0;
+
+    /// Array slice of the source texture to copy data from. Must be 0 for non-array textures.
+    Uint32                         SrcSlice                 = 0;
+    
+    /// Source region to copy. Use nullptr to copy the entire subresource.
+    const Box*                     pSrcBox                  = nullptr;  
+    
+    /// Source texture state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
+    RESOURCE_STATE_TRANSITION_MODE SrcTextureTransitionMode = RESOURCE_STATE_TRANSITION_MODE_NONE;
+
+    /// Destination texture to copy data to.
+    ITexture*                      pDstTexture              = nullptr;
+
+    /// Mip level to copy data to.
+    Uint32                         DstMipLevel              = 0;
+
+    /// Array slice to copy data to. Must be 0 for non-array textures.
+    Uint32                         DstSlice                 = 0;
+
+    /// X offset on the destination subresource.
+    Uint32                         DstX                     = 0;
+
+    /// Y offset on the destination subresource.
+    Uint32                         DstY                     = 0;
+
+    /// Z offset on the destination subresource
+    Uint32                         DstZ                     = 0;
+
+    /// Destination texture state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
+    RESOURCE_STATE_TRANSITION_MODE DstTextureTransitionMode = RESOURCE_STATE_TRANSITION_MODE_NONE;
+
+    CopyTextureAttribs(){}
+
+    CopyTextureAttribs(ITexture*                      _pSrcTexture,
+                       RESOURCE_STATE_TRANSITION_MODE _SrcTextureTransitionMode,
+                       ITexture*                      _pDstTexture,
+                       RESOURCE_STATE_TRANSITION_MODE _DstTextureTransitionMode) :
+        pSrcTexture             (_pSrcTexture),
+        SrcTextureTransitionMode(_SrcTextureTransitionMode),
+        pDstTexture             (_pDstTexture),
+        DstTextureTransitionMode(_DstTextureTransitionMode)
+    {}
+};
 
 /// Device context interface
 
@@ -638,10 +671,16 @@ public:
     ///                     Diligent::TEXTURE_VIEW_RENDER_TARGET.
     /// \param [in] RGBA - A 4-component array that represents the color to fill the render target with.
     ///                    If nullptr is provided, the default array {0,0,0,0} will be used.
-    /// \param [in] StateTransitionMode - Defines requires state transitions (see Diligent::CLEAR_RENDER_TARGET_STATE_TRANSITION_MODE)
+    /// \param [in] StateTransitionMode - Defines requires state transitions (see Diligent::RESOURCE_STATE_TRANSITION_MODE)
     /// \remarks The full extent of the view is always cleared. Viewport and scissor settings are not applied.
-    /// \note The render target view must be bound to the pipeline for clear operation to be performed.
-    virtual void ClearRenderTarget(ITextureView* pView, const float* RGBA, CLEAR_RENDER_TARGET_STATE_TRANSITION_MODE StateTransitionMode) = 0;
+    /// \note The render target view must be bound to the pipeline for clear operation to be performed in OpenGL backend.
+    /// \remarks In D3D12 backend clearing render targets requires textures to always be transitioned to 
+    ///          Diligent::RESOURCE_STATE_RENDER_TARGET state. In Vulkan backend however this depends on whether a 
+    ///          render pass has been started. To clear render target outside of a render pass, the texture must be transitioned to
+    ///          Diligent::RESOURCE_STATE_COPY_DEST state. Inside a render pass it must be in Diligent::RESOURCE_STATE_RENDER_TARGET
+    ///          state. When using Diligent::RESOURCE_STATE_TRANSITION_TRANSITION mode, the engine takes care of proper
+    ///          resource state transition, otherwise it is the responsibility of the application.
+    virtual void ClearRenderTarget(ITextureView* pView, const float* RGBA, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) = 0;
 
     /// Finishes recording commands and generates a command list
     
@@ -684,13 +723,21 @@ public:
 
     /// Copies the data from one buffer to another
 
-    /// \param [in] pSrcBuffer - Source buffer to copy data from.
-    /// \param [in] SrcOffset  - Offset in bytes from the beginning of the source buffer to the beginning of data to copy.
-    /// \param [in] pDstBuffer - Destination buffer to copy data to.
-    /// \param [in] DstOffset  - Offset in bytes from the beginning of the destination buffer to the beginning 
-    ///                          of the destination region.
-    /// \param [in] Size       - Size in bytes of data to copy.
-    virtual void CopyBuffer(IBuffer* pSrcBuffer, Uint32 SrcOffset, IBuffer* pDstBuffer, Uint32 DstOffset, Uint32 Size) = 0;
+    /// \param [in] pSrcBuffer              - Source buffer to copy data from.
+    /// \param [in] SrcOffset               - Offset in bytes from the beginning of the source buffer to the beginning of data to copy.
+    /// \param [in] SrcBufferTransitionMode - State transition mode of the source buffer (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
+    /// \param [in] pDstBuffer              - Destination buffer to copy data to.
+    /// \param [in] DstOffset               - Offset in bytes from the beginning of the destination buffer to the beginning 
+    ///                                       of the destination region.
+    /// \param [in] Size                    - Size in bytes of data to copy.
+    /// \param [in] DstBufferTransitionMode - State transition mode of the destination buffer (see Diligent::RESOURCE_STATE_TRANSITION_MODE)
+    virtual void CopyBuffer(IBuffer*                       pSrcBuffer,
+                            Uint32                         SrcOffset,
+                            RESOURCE_STATE_TRANSITION_MODE SrcBufferTransitionMode,
+                            IBuffer*                       pDstBuffer,
+                            Uint32                         DstOffset,
+                            Uint32                         Size,
+                            RESOURCE_STATE_TRANSITION_MODE DstBufferTransitionMode) = 0;
 
 
     /// Maps the buffer
@@ -730,29 +777,8 @@ public:
 
     /// Copies data from one texture to another
 
-    /// \param [in] pSrcTexture - Source texture to copy data from
-    /// \param [in] SrcMipLevel - Mip level of the source texture to copy data from.
-    /// \param [in] SrcSlice    - Array slice of the source texture to copy data from. 
-    ///                           Should be 0 for non-array textures.
-    /// \param [in] pSrcBox     - Source region to copy.
-    ///                           Use nullptr to copy the entire subresource.
-    /// \param [in] pDstTexture - Destination texture to copy data to
-    /// \param [in] DstMipLevel - Mip level to copy data to.
-    /// \param [in] DstSlice    - Array slice to copy data to. 
-    ///                           Must be 0 for non-array textures.
-    /// \param [in] DstX        - X offset on the destination subresource
-    /// \param [in] DstY        - Y offset on the destination subresource
-    /// \param [in] DstZ        - Z offset on the destination subresource
-    virtual void CopyTexture(ITexture* pSrcTexture, 
-                             Uint32 SrcMipLevel,
-                             Uint32 SrcSlice,
-                             const Box *pSrcBox,
-                             ITexture* pDstTexture, 
-                             Uint32 DstMipLevel,
-                             Uint32 DstSlice,
-                             Uint32 DstX,
-                             Uint32 DstY,
-                             Uint32 DstZ) = 0;
+    /// \param [in] CopyAttribs - Structure describing copy command attributes, see Diligent::CopyTextureAttribs for details.
+    virtual void CopyTexture(const CopyTextureAttribs& CopyAttribs) = 0;
 
 
     /// Maps the texture subresource

@@ -114,7 +114,13 @@ public:
     virtual void UpdateBuffer(IBuffer* pBuffer, Uint32 Offset, Uint32 Size, const PVoid pData, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)override = 0;
 
     /// Base implementation of IDeviceContext::CopyBuffer(); validates input parameters.
-    virtual void CopyBuffer(IBuffer *pSrcBuffer, Uint32 SrcOffset, IBuffer *pDstBuffer, Uint32 DstOffset, Uint32 Size)override = 0;
+    virtual void CopyBuffer(IBuffer*                       pSrcBuffer,
+                            Uint32                         SrcOffset,
+                            RESOURCE_STATE_TRANSITION_MODE SrcBufferTransitionMode,
+                            IBuffer*                       pDstBuffer,
+                            Uint32                         DstOffset,
+                            Uint32                         Size,
+                            RESOURCE_STATE_TRANSITION_MODE DstBufferTransitionMode)override = 0;
 
     /// Base implementation of IDeviceContext::MapBuffer(); validates input parameters.
     virtual void MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_FLAGS MapFlags, PVoid& pMappedData)override = 0;
@@ -127,16 +133,7 @@ public:
                                 RESOURCE_STATE_TRANSITION_MODE SrcBufferTransitionMode, RESOURCE_STATE_TRANSITION_MODE TextureTransitionMode )override = 0;
 
     /// Base implementaiton of IDeviceContext::CopyTexture(); validates input parameters
-    virtual void CopyTexture( ITexture* pSrcTexture,
-                              Uint32 SrcMipLevel,
-                              Uint32 SrcSlice,
-                              const Box *pSrcBox,
-                              ITexture* pDstTexture,
-                              Uint32 DstMipLevel,
-                              Uint32 DstSlice,
-                              Uint32 DstX,
-                              Uint32 DstY,
-                              Uint32 DstZ )override = 0;
+    virtual void CopyTexture( const CopyTextureAttribs& CopyAttribs )override = 0;
 
     /// Base implementaiton of IDeviceContext::MapTextureSubresource()
     virtual void MapTextureSubresource(ITexture*                 pTexture,
@@ -706,7 +703,13 @@ inline void DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, Pi
 
 template<typename BaseInterface, typename BufferImplType, typename TextureImplType, typename PipelineStateImplType>
 inline void DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, PipelineStateImplType> ::
-            CopyBuffer(IBuffer *pSrcBuffer, Uint32 SrcOffset, IBuffer *pDstBuffer, Uint32 DstOffset, Uint32 Size)
+            CopyBuffer(IBuffer*                       pSrcBuffer,
+                       Uint32                         SrcOffset,
+                       RESOURCE_STATE_TRANSITION_MODE SrcBufferTransitionMode,
+                       IBuffer*                       pDstBuffer,
+                       Uint32                         DstOffset,
+                       Uint32                         Size,
+                       RESOURCE_STATE_TRANSITION_MODE DstBufferTransitionMode)
 {
     VERIFY(pSrcBuffer != nullptr, "Source buffer must not be null");
     VERIFY(pDstBuffer != nullptr, "Destination buffer must not be null");
@@ -791,21 +794,11 @@ inline void DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, Pi
 
 template<typename BaseInterface, typename BufferImplType, typename TextureImplType, typename PipelineStateImplType>
 inline void DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, PipelineStateImplType> ::
-            CopyTexture( ITexture*  pSrcTexture,
-                         Uint32     SrcMipLevel,
-                         Uint32     SrcSlice,
-                         const Box* pSrcBox,
-                         ITexture*  pDstTexture,
-                         Uint32     DstMipLevel,
-                         Uint32     DstSlice,
-                         Uint32     DstX,
-                         Uint32     DstY,
-                         Uint32     DstZ )
+            CopyTexture( const CopyTextureAttribs& CopyAttribs )
 {
-    VERIFY( pSrcTexture, "pSrcTexture must not be null" );
-    VERIFY( pDstTexture, "pSrcTexture must not be null" );
-    ValidateCopyTextureParams( pSrcTexture->GetDesc(), SrcMipLevel, SrcSlice, pSrcBox,
-                               pDstTexture->GetDesc(), DstMipLevel, DstSlice, DstX, DstY, DstZ );
+    VERIFY( CopyAttribs.pSrcTexture, "Src texture must not be null" );
+    VERIFY( CopyAttribs.pDstTexture, "Dst texture must not be null" );
+    ValidateCopyTextureParams( CopyAttribs );
 }
 
 template<typename BaseInterface, typename BufferImplType, typename TextureImplType, typename PipelineStateImplType>

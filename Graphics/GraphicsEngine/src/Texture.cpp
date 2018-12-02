@@ -214,37 +214,39 @@ void ValidateUpdateTextureParams( const TextureDesc& TexDesc, Uint32 MipLevel, U
 #endif
 }
 
-void ValidateCopyTextureParams( const TextureDesc &SrcTexDesc, Uint32 SrcMipLevel, Uint32 SrcSlice, const Box *pSrcBox,
-                                    const TextureDesc &DstTexDesc, Uint32 DstMipLevel, Uint32 DstSlice,
-                                    Uint32 DstX, Uint32 DstY, Uint32 DstZ )
+void ValidateCopyTextureParams(const CopyTextureAttribs& CopyAttribs )
 {
+    VERIFY_EXPR(CopyAttribs.pSrcTexture != nullptr && CopyAttribs.pDstTexture != nullptr);
     Box SrcBox;
+    const auto& SrcTexDesc = CopyAttribs.pSrcTexture->GetDesc();
+    const auto& DstTexDesc = CopyAttribs.pDstTexture->GetDesc();
+    auto pSrcBox = CopyAttribs.pSrcBox;
     if( pSrcBox == nullptr )
     {
-        SrcBox.MaxX = std::max( SrcTexDesc.Width >> SrcMipLevel, 1u );
+        SrcBox.MaxX = std::max( SrcTexDesc.Width >> CopyAttribs.SrcMipLevel, 1u );
         if( SrcTexDesc.Type == RESOURCE_DIM_TEX_1D || 
             SrcTexDesc.Type == RESOURCE_DIM_TEX_1D_ARRAY )
             SrcBox.MaxY = 1;
         else
-            SrcBox.MaxY = std::max( SrcTexDesc.Height >> SrcMipLevel, 1u );
+            SrcBox.MaxY = std::max( SrcTexDesc.Height >> CopyAttribs.SrcMipLevel, 1u );
 
         if( SrcTexDesc.Type == RESOURCE_DIM_TEX_3D )
-            SrcBox.MaxZ = std::max( SrcTexDesc.Depth >> SrcMipLevel, 1u );
+            SrcBox.MaxZ = std::max( SrcTexDesc.Depth >> CopyAttribs.SrcMipLevel, 1u );
         else
             SrcBox.MaxZ = 1;
 
         pSrcBox = &SrcBox;
     }
-    ValidateTextureRegion(SrcTexDesc, SrcMipLevel, SrcSlice, *pSrcBox);
+    ValidateTextureRegion(SrcTexDesc, CopyAttribs.SrcMipLevel, CopyAttribs.SrcSlice, *pSrcBox);
 
     Box DstBox;
-    DstBox.MinX = DstX;
+    DstBox.MinX = CopyAttribs.DstX;
     DstBox.MaxX = DstBox.MinX + (pSrcBox->MaxX - pSrcBox->MinX);
-    DstBox.MinY = DstY;
+    DstBox.MinY = CopyAttribs.DstY;
     DstBox.MaxY = DstBox.MinY + (pSrcBox->MaxY - pSrcBox->MinY);
-    DstBox.MinZ = DstZ;
+    DstBox.MinZ = CopyAttribs.DstZ;
     DstBox.MaxZ = DstBox.MinZ + (pSrcBox->MaxZ - pSrcBox->MinZ);
-    ValidateTextureRegion(DstTexDesc, DstMipLevel, DstSlice, DstBox);
+    ValidateTextureRegion(DstTexDesc, CopyAttribs.DstMipLevel, CopyAttribs.DstSlice, DstBox);
 }
 
 void ValidateMapTextureParams(const TextureDesc& TexDesc,

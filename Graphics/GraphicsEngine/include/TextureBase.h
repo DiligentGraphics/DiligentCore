@@ -38,9 +38,7 @@ namespace Diligent
 
 void ValidateTextureDesc(const TextureDesc& TexDesc);
 void ValidateUpdateTextureParams( const TextureDesc &TexDesc, Uint32 MipLevel, Uint32 Slice, const Box& DstBox, const TextureSubResData& SubresData );
-void ValidateCopyTextureParams( const TextureDesc& SrcTexDesc, Uint32 SrcMipLevel, Uint32 SrcSlice, const Box* pSrcBox,
-                                const TextureDesc& DstTexDesc, Uint32 DstMipLevel, Uint32 DstSlice,
-                                Uint32 DstX, Uint32 DstY, Uint32 DstZ );
+void ValidateCopyTextureParams( const CopyTextureAttribs& CopyAttribs );
 void ValidateMapTextureParams(const TextureDesc&        TexDesc,
                               Uint32                    MipLevel,
                               Uint32                    ArraySlice,

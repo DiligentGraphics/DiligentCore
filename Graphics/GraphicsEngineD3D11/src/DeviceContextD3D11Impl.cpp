@@ -902,7 +902,7 @@ namespace Diligent
         m_pd3d11DeviceContext->ClearDepthStencilView( pd3d11DSV, d3d11ClearFlags, fDepth, Stencil );
     }
 
-    void DeviceContextD3D11Impl::ClearRenderTarget( ITextureView* pView, const float *RGBA, CLEAR_RENDER_TARGET_STATE_TRANSITION_MODE StateTransitionMode )
+    void DeviceContextD3D11Impl::ClearRenderTarget( ITextureView* pView, const float *RGBA, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode )
     {
         if (pView == nullptr)
         {
@@ -959,9 +959,15 @@ namespace Diligent
         m_pd3d11DeviceContext->UpdateSubresource(pBufferD3D11Impl->m_pd3d11Buffer, 0, pDstBox, pData, 0, 0);
     }
 
-    void DeviceContextD3D11Impl::CopyBuffer(IBuffer *pSrcBuffer, Uint32 SrcOffset, IBuffer *pDstBuffer, Uint32 DstOffset, Uint32 Size)
+    void DeviceContextD3D11Impl::CopyBuffer(IBuffer*                       pSrcBuffer,
+                                            Uint32                         SrcOffset,
+                                            RESOURCE_STATE_TRANSITION_MODE SrcBufferTransitionMode,
+                                            IBuffer*                       pDstBuffer,
+                                            Uint32                         DstOffset,
+                                            Uint32                         Size,
+                                            RESOURCE_STATE_TRANSITION_MODE DstBufferTransitionMode)
     {
-        TDeviceContextBase::CopyBuffer(pSrcBuffer, SrcOffset, pDstBuffer, DstOffset, Size);
+        TDeviceContextBase::CopyBuffer(pSrcBuffer, SrcOffset, SrcBufferTransitionMode, pDstBuffer, DstOffset, Size, DstBufferTransitionMode);
 
         auto* pSrcBufferD3D11Impl = ValidatedCast<BufferD3D11Impl>( pSrcBuffer );
         auto* pDstBufferD3D11Impl = ValidatedCast<BufferD3D11Impl>( pDstBuffer );
@@ -1044,25 +1050,15 @@ namespace Diligent
         m_pd3d11DeviceContext->UpdateSubresource(pTexD3D11->GetD3D11Texture(), SubresIndex, &D3D11Box, SubresData.pData, SubresData.Stride, SubresData.DepthStride);
     }
 
-    void DeviceContextD3D11Impl::CopyTexture(ITexture*  pSrcTexture, 
-                                             Uint32     SrcMipLevel,
-                                             Uint32     SrcSlice,
-                                             const Box* pSrcBox,
-                                             ITexture*  pDstTexture, 
-                                             Uint32     DstMipLevel,
-                                             Uint32     DstSlice,
-                                             Uint32     DstX,
-                                             Uint32     DstY,
-                                             Uint32     DstZ)
+    void DeviceContextD3D11Impl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
     {
-        TDeviceContextBase::CopyTexture( pSrcTexture, SrcMipLevel, SrcSlice, pSrcBox,
-                                         pDstTexture, DstMipLevel, DstSlice, DstX, DstY, DstZ );
+        TDeviceContextBase::CopyTexture( CopyAttribs );
 
-        auto* pSrcTexD3D11 = ValidatedCast<TextureBaseD3D11>( pSrcTexture );
-        auto* pDstTexD3D11 = ValidatedCast<TextureBaseD3D11>( pDstTexture );
+        auto* pSrcTexD3D11 = ValidatedCast<TextureBaseD3D11>( CopyAttribs.pSrcTexture );
+        auto* pDstTexD3D11 = ValidatedCast<TextureBaseD3D11>( CopyAttribs.pDstTexture );
     
         D3D11_BOX D3D11SrcBox,* pD3D11SrcBox = nullptr;
-        if( pSrcBox )
+        if (const auto* pSrcBox = CopyAttribs.pSrcBox)
         {
             D3D11SrcBox.left    = pSrcBox->MinX;
             D3D11SrcBox.right   = pSrcBox->MaxX;
@@ -1072,9 +1068,10 @@ namespace Diligent
             D3D11SrcBox.back    = pSrcBox->MaxZ;
             pD3D11SrcBox = &D3D11SrcBox;
         }
-        auto SrcSubRes = D3D11CalcSubresource(SrcMipLevel, SrcSlice, pSrcTexD3D11->GetDesc().MipLevels);
-        auto DstSubRes = D3D11CalcSubresource(DstMipLevel, DstSlice, pDstTexD3D11->GetDesc().MipLevels);
-        m_pd3d11DeviceContext->CopySubresourceRegion(pDstTexD3D11->GetD3D11Texture(), DstSubRes, DstX, DstY, DstZ, pSrcTexD3D11->GetD3D11Texture(), SrcSubRes, pD3D11SrcBox);
+        auto SrcSubRes = D3D11CalcSubresource(CopyAttribs.SrcMipLevel, CopyAttribs.SrcSlice, pSrcTexD3D11->GetDesc().MipLevels);
+        auto DstSubRes = D3D11CalcSubresource(CopyAttribs.DstMipLevel, CopyAttribs.DstSlice, pDstTexD3D11->GetDesc().MipLevels);
+        m_pd3d11DeviceContext->CopySubresourceRegion(pDstTexD3D11->GetD3D11Texture(), DstSubRes, CopyAttribs.DstX, CopyAttribs.DstY, CopyAttribs.DstZ,
+                                                     pSrcTexD3D11->GetD3D11Texture(), SrcSubRes, pD3D11SrcBox);
     }
 
 

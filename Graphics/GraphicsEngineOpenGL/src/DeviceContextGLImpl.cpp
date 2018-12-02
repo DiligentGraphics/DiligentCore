@@ -908,7 +908,7 @@ namespace Diligent
         m_ContextState.EnableScissorTest( ScissorTestEnabled );
     }
 
-    void DeviceContextGLImpl::ClearRenderTarget( ITextureView *pView, const float *RGBA, CLEAR_RENDER_TARGET_STATE_TRANSITION_MODE StateTransitionMode )
+    void DeviceContextGLImpl::ClearRenderTarget( ITextureView *pView, const float *RGBA, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode )
     {
         // Unlike OpenGL, in D3D10+, the full extent of the resource view is always cleared. 
         // Viewport and scissor settings are not applied.
@@ -1023,9 +1023,15 @@ namespace Diligent
         pBufferGL->UpdateData(m_ContextState, Offset, Size, pData);
     }
 
-    void DeviceContextGLImpl::CopyBuffer(IBuffer *pSrcBuffer, Uint32 SrcOffset, IBuffer *pDstBuffer, Uint32 DstOffset, Uint32 Size)
+    void DeviceContextGLImpl::CopyBuffer(IBuffer*                       pSrcBuffer,
+                                         Uint32                         SrcOffset,
+                                         RESOURCE_STATE_TRANSITION_MODE SrcBufferTransitionMode,
+                                         IBuffer*                       pDstBuffer,
+                                         Uint32                         DstOffset,
+                                         Uint32                         Size,
+                                         RESOURCE_STATE_TRANSITION_MODE DstBufferTransitionMode)
     {
-        TDeviceContextBase::CopyBuffer(pSrcBuffer, SrcOffset, pDstBuffer, DstOffset, Size);
+        TDeviceContextBase::CopyBuffer(pSrcBuffer, SrcOffset, SrcBufferTransitionMode, pDstBuffer, DstOffset, Size, DstBufferTransitionMode);
 
         auto* pSrcBufferGL = ValidatedCast<BufferGLImpl>(pSrcBuffer);
         auto* pDstBufferGL = ValidatedCast<BufferGLImpl>(pDstBuffer);
@@ -1059,22 +1065,13 @@ namespace Diligent
         pTexGL->UpdateData(m_ContextState, MipLevel, Slice, DstBox, SubresData);
     }
 
-    void DeviceContextGLImpl::CopyTexture(ITexture*  pSrcTexture, 
-                                          Uint32     SrcMipLevel,
-                                          Uint32     SrcSlice,
-                                          const Box* pSrcBox,
-                                          ITexture*  pDstTexture, 
-                                          Uint32     DstMipLevel,
-                                          Uint32     DstSlice,
-                                          Uint32     DstX,
-                                          Uint32     DstY,
-                                          Uint32     DstZ)
+    void DeviceContextGLImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
     {
-        TDeviceContextBase::CopyTexture( pSrcTexture, SrcMipLevel, SrcSlice, pSrcBox,
-                                         pDstTexture, DstMipLevel, DstSlice, DstX, DstY, DstZ );
-        auto* pSrcTexGL = ValidatedCast<TextureBaseGL>(pSrcTexture);
-        auto* pDstTexGL = ValidatedCast<TextureBaseGL>(pDstTexture);
-        pDstTexGL->CopyData(this, pSrcTexGL, SrcMipLevel, SrcSlice, pSrcBox, DstMipLevel, DstSlice, DstX, DstY, DstZ);
+        TDeviceContextBase::CopyTexture( CopyAttribs );
+        auto* pSrcTexGL = ValidatedCast<TextureBaseGL>(CopyAttribs.pSrcTexture);
+        auto* pDstTexGL = ValidatedCast<TextureBaseGL>(CopyAttribs.pDstTexture);
+        pDstTexGL->CopyData(this, pSrcTexGL, CopyAttribs.SrcMipLevel, CopyAttribs.SrcSlice, CopyAttribs.pSrcBox,
+                            CopyAttribs.DstMipLevel, CopyAttribs.DstSlice, CopyAttribs.DstX, CopyAttribs.DstY, CopyAttribs.DstZ);
     }
 
     void DeviceContextGLImpl::MapTextureSubresource( ITexture*                 pTexture,

@@ -98,7 +98,7 @@ public:
 
     virtual void ClearDepthStencil( ITextureView* pView, CLEAR_DEPTH_STENCIL_FLAGS ClearFlags, float fDepth, Uint8 Stencil)override final;
 
-    virtual void ClearRenderTarget( ITextureView* pView, const float* RGBA, CLEAR_RENDER_TARGET_STATE_TRANSITION_MODE StateTransitionMode )override final;
+    virtual void ClearRenderTarget( ITextureView* pView, const float* RGBA, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode )override final;
 
     virtual void Flush()override final;
     
@@ -108,7 +108,13 @@ public:
                               const PVoid                    pData,
                               RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)override final;
 
-    virtual void CopyBuffer(IBuffer* pSrcBuffer, Uint32 SrcOffset, IBuffer* pDstBuffer, Uint32 DstOffset, Uint32 Size)override final;
+    virtual void CopyBuffer(IBuffer*                       pSrcBuffer,
+                            Uint32                         SrcOffset,
+                            RESOURCE_STATE_TRANSITION_MODE SrcBufferTransitionMode,
+                            IBuffer*                       pDstBuffer,
+                            Uint32                         DstOffset,
+                            Uint32                         Size,
+                            RESOURCE_STATE_TRANSITION_MODE DstBufferTransitionMode)override final;
 
     virtual void MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_FLAGS MapFlags, PVoid& pMappedData)override final;
 
@@ -122,16 +128,7 @@ public:
                                RESOURCE_STATE_TRANSITION_MODE SrcBufferStateTransitionMode,
                                RESOURCE_STATE_TRANSITION_MODE TextureStateTransitionModee)override final;
 
-    virtual void CopyTexture(ITexture*  pSrcTexture, 
-                             Uint32     SrcMipLevel,
-                             Uint32     SrcSlice,
-                             const Box* pSrcBox,
-                             ITexture*  pDstTexture, 
-                             Uint32     DstMipLevel,
-                             Uint32     DstSlice,
-                             Uint32     DstX,
-                             Uint32     DstY,
-                             Uint32     DstZ)override final;
+    virtual void CopyTexture(const CopyTextureAttribs& CopyAttribs)override final;
 
     virtual void MapTextureSubresource( ITexture*                 pTexture,
                                         Uint32                    MipLevel,
@@ -195,8 +192,11 @@ public:
                             Uint64                         SrcOffset,
                             RESOURCE_STATE_TRANSITION_MODE TransitionMode);
 
-    void CopyBufferRegion(BufferVkImpl* pSrcBuffVk, BufferVkImpl* pDstBuffVk, Uint64 SrcOffset, Uint64 DstOffset, Uint64 NumBytes);
-    void CopyTextureRegion(TextureVkImpl* pSrcTexture, TextureVkImpl* pDstTexture, const VkImageCopy &CopyRegion);
+    void CopyTextureRegion(TextureVkImpl*                 pSrcTexture,
+                           RESOURCE_STATE_TRANSITION_MODE SrcTextureTransitionMode,
+                           TextureVkImpl*                 pDstTexture,
+                           RESOURCE_STATE_TRANSITION_MODE DstTextureTransitionMode,
+                           const VkImageCopy&             CopyRegion);
 
     void UpdateTextureRegion(const void*                    pSrcData,
                              Uint32                         SrcStride,
@@ -243,6 +243,19 @@ private:
     void CommitViewports();
     void CommitScissorRects();
     
+    inline void TransitionOrVerifyBufferState(BufferVkImpl&                  Buffer,
+                                              RESOURCE_STATE_TRANSITION_MODE TransitionMode,
+                                              RESOURCE_STATE                 RequiredState,
+                                              VkAccessFlagBits               ExpectedAccessFlags,
+                                              const char*                    OperationName);
+
+    inline void TransitionOrVerifyTextureState(TextureVkImpl&                 Texture,
+                                               RESOURCE_STATE_TRANSITION_MODE TransitionMode,
+                                               RESOURCE_STATE                 RequiredState,
+                                               VkImageLayout                  ExpectedLayout,
+                                               const char*                    OperationName);
+
+
     inline void EnsureVkCmdBuffer()
     {
         // Make sure that the number of commands in the context is at least one,

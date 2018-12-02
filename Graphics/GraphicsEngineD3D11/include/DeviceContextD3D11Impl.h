@@ -89,7 +89,7 @@ public:
 
     virtual void ClearDepthStencil(ITextureView* pView, CLEAR_DEPTH_STENCIL_FLAGS ClearFlags, float fDepth, Uint8 Stencil)override final;
 
-    virtual void ClearRenderTarget(ITextureView* pView, const float* RGBA, CLEAR_RENDER_TARGET_STATE_TRANSITION_MODE StateTransitionMode)override final;
+    virtual void ClearRenderTarget(ITextureView* pView, const float* RGBA, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)override final;
 
     virtual void Flush()override final;
 
@@ -99,7 +99,13 @@ public:
                               const PVoid                    pData,
                               RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)override final;
 
-    virtual void CopyBuffer(IBuffer* pSrcBuffer, Uint32 SrcOffset, IBuffer* pDstBuffer, Uint32 DstOffset, Uint32 Size)override final;
+    virtual void CopyBuffer(IBuffer*                       pSrcBuffer,
+                            Uint32                         SrcOffset,
+                            RESOURCE_STATE_TRANSITION_MODE SrcBufferTransitionMode,
+                            IBuffer*                       pDstBuffer,
+                            Uint32                         DstOffset,
+                            Uint32                         Size,
+                            RESOURCE_STATE_TRANSITION_MODE DstBufferTransitionMode)override final;
 
     virtual void MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_FLAGS MapFlags, PVoid& pMappedData)override final;
 
@@ -113,16 +119,7 @@ public:
                                RESOURCE_STATE_TRANSITION_MODE SrcBufferTransitionMode,
                                RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)override final;
 
-    virtual void CopyTexture(ITexture*  pSrcTexture, 
-                             Uint32     SrcMipLevel,
-                             Uint32     SrcSlice,
-                             const Box* pSrcBox,
-                             ITexture*  pDstTexture, 
-                             Uint32     DstMipLevel,
-                             Uint32     DstSlice,
-                             Uint32     DstX,
-                             Uint32     DstY,
-                             Uint32     DstZ)override final;
+    virtual void CopyTexture(const CopyTextureAttribs& CopyAttribs)override final;
 
     virtual void MapTextureSubresource( ITexture*                 pTexture,
                                         Uint32                    MipLevel,

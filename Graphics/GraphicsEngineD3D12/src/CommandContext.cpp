@@ -191,22 +191,22 @@ void CommandContext::ClearUAVUint( ITextureViewD3D12* pTexView, const UINT* Colo
 }
 
 
-void GraphicsContext::ClearRenderTarget( ITextureViewD3D12* pRTV, const float* Color, CLEAR_RENDER_TARGET_STATE_TRANSITION_MODE StateTransitionMode )
+void GraphicsContext::ClearRenderTarget( ITextureViewD3D12* pRTV, const float* Color, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode )
 {
     auto *pTexture = ValidatedCast<TextureD3D12Impl>( pRTV->GetTexture() );
-    if (StateTransitionMode == CLEAR_RENDER_TARGET_TRANSITION_STATE)
+    if (StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
     {
         if (pTexture->IsInKnownState() && !pTexture->CheckState(RESOURCE_STATE_RENDER_TARGET))
 	        TransitionResource(pTexture, RESOURCE_STATE_RENDER_TARGET);
     }
 #ifdef DEVELOPMENT
-    else if (StateTransitionMode == CLEAR_RENDER_TARGET_VERIFY_STATE)
+    else if (StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_VERIFY)
     {
         if (pTexture->IsInKnownState() && !pTexture->CheckState(RESOURCE_STATE_RENDER_TARGET))
         {
             LOG_ERROR_MESSAGE("Render target '", pTexture->GetDesc().Name, "' being cleared is not transitioned to RESOURCE_STATE_RENDER_TARGET state. "
                               "Actual texture state: ", GetResourceStateString(pTexture->GetState()), ". "
-                              "Use CLEAR_RENDER_TARGET_TRANSITION_STATE mode or explicitly transition the resource using IDeviceContext::TransitionResourceStates() method.");
+                              "Use RESOURCE_STATE_TRANSITION_MODE_TRANSITION mode or explicitly transition the resource using IDeviceContext::TransitionResourceStates() method.");
         }
     }
 #endif
