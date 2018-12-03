@@ -46,11 +46,18 @@
 namespace Diligent
 {
 
+struct DeviceContextVkImplTraits
+{
+    using BufferType        = BufferVkImpl;
+    using TextureType       = TextureVkImpl;
+    using PipelineStateType = PipelineStateVkImpl;
+};
+
 /// Implementation of the Diligent::IDeviceContext interface
-class DeviceContextVkImpl final : public DeviceContextNextGenBase< DeviceContextBase<IDeviceContextVk, BufferVkImpl, TextureVkImpl, PipelineStateVkImpl> >
+class DeviceContextVkImpl final : public DeviceContextNextGenBase< DeviceContextBase<IDeviceContextVk, DeviceContextVkImplTraits> >
 {
 public:
-    using TDeviceContextBase = DeviceContextNextGenBase< DeviceContextBase<IDeviceContextVk, BufferVkImpl, TextureVkImpl, PipelineStateVkImpl> >;
+    using TDeviceContextBase = DeviceContextNextGenBase< DeviceContextBase<IDeviceContextVk, DeviceContextVkImplTraits> >;
 
     DeviceContextVkImpl(IReferenceCounters*                   pRefCounters,
                         class RenderDeviceVkImpl*             pDevice,

@@ -55,22 +55,21 @@ struct VertexStreamInfo
 /// Base implementation of the device context.
 
 /// \tparam BaseInterface         - base interface that this class will inheret.
-/// \tparam BufferImplType        - buffer implemenation type (BufferVkImpl, BufferD3D12Impl, etc.)
-/// \tparam TextureImplType       - texture implemenation type (TextureVkImpl, TextureD3D12Impl, etc.)
-/// \tparam PipelineStateImplType - pipeline state implementation type (PipelineStateVkImpl, PipelineStateD3D12Impl, etc.)
+/// \tparam ImplementationTraits  - implementation traits that define specific implementation details 
+///                                 (texture implemenation type, buffer implementation type, etc.)
 /// \remarks Device context keeps strong references to all objects currently bound to 
 ///          the pipeline: buffers, states, samplers, shaders, etc.
 ///          The context also keeps strong references to the device and
 ///          the swap chain.
-template<typename BaseInterface, 
-         typename BufferImplType,
-         typename TextureImplType,
-         typename PipelineStateImplType>
+template<typename BaseInterface, typename ImplementationTraits>
 class DeviceContextBase : public ObjectBase<BaseInterface>
 {
 public:
-    using TObjectBase         = ObjectBase<BaseInterface>;
-    using TextureViewImplType = typename TextureImplType::ViewImplType;
+    using TObjectBase           = ObjectBase<BaseInterface>;
+    using BufferImplType        = typename ImplementationTraits::BufferType;
+    using TextureImplType       = typename ImplementationTraits::TextureType;
+    using PipelineStateImplType = typename ImplementationTraits::PipelineStateType;
+    using TextureViewImplType   = typename TextureImplType::ViewImplType;
 
     /// \param pRefCounters - reference counters object that controls the lifetime of this device context.
     /// \param pRenderDevice - render device.
@@ -275,8 +274,8 @@ protected:
 };
 
 
-template<typename BaseInterface, typename BufferImplType, typename TextureImplType, typename PipelineStateImplType>
-inline void DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, PipelineStateImplType> :: 
+template<typename BaseInterface, typename ImplementationTraits>
+inline void DeviceContextBase<BaseInterface,ImplementationTraits> :: 
             SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer** ppBuffers, Uint32* pOffsets, SET_VERTEX_BUFFERS_FLAGS Flags  )
 {
 #ifdef DEVELOPMENT
@@ -327,14 +326,14 @@ inline void DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, Pi
         m_VertexStreams[m_NumVertexStreams--] = VertexStreamInfo<BufferImplType>{};
 }
 
-template<typename BaseInterface, typename BufferImplType, typename TextureImplType, typename PipelineStateImplType>
-inline void DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, PipelineStateImplType> :: SetPipelineState(PipelineStateImplType* pPipelineState, int /*Dummy*/)
+template<typename BaseInterface, typename ImplementationTraits>
+inline void DeviceContextBase<BaseInterface,ImplementationTraits> :: SetPipelineState(PipelineStateImplType* pPipelineState, int /*Dummy*/)
 {
     m_pPipelineState = pPipelineState;
 }
 
-template<typename BaseInterface, typename BufferImplType, typename TextureImplType, typename PipelineStateImplType>
-inline bool DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, PipelineStateImplType> :: 
+template<typename BaseInterface, typename ImplementationTraits>
+inline bool DeviceContextBase<BaseInterface,ImplementationTraits> :: 
             CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode, int)
 {
 #ifdef DEVELOPMENT
@@ -356,15 +355,15 @@ inline bool DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, Pi
     return true;
 }
 
-template<typename BaseInterface, typename BufferImplType, typename TextureImplType, typename PipelineStateImplType>
-inline void DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, PipelineStateImplType> :: InvalidateState()
+template<typename BaseInterface, typename ImplementationTraits>
+inline void DeviceContextBase<BaseInterface,ImplementationTraits> :: InvalidateState()
 {
-    DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, PipelineStateImplType> :: ClearStateCache();
+    DeviceContextBase<BaseInterface,ImplementationTraits> :: ClearStateCache();
     m_IsDefaultFramebufferBound = false;
 }
 
-template<typename BaseInterface, typename BufferImplType, typename TextureImplType, typename PipelineStateImplType>
-inline void DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, PipelineStateImplType> :: SetIndexBuffer( IBuffer* pIndexBuffer, Uint32 ByteOffset )
+template<typename BaseInterface, typename ImplementationTraits>
+inline void DeviceContextBase<BaseInterface,ImplementationTraits> :: SetIndexBuffer( IBuffer* pIndexBuffer, Uint32 ByteOffset )
 {
     m_pIndexBuffer = ValidatedCast<BufferImplType>(pIndexBuffer);
     m_IndexDataStartOffset = ByteOffset;
@@ -378,8 +377,8 @@ inline void DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, Pi
 }
 
 
-template<typename BaseInterface, typename BufferImplType, typename TextureImplType, typename PipelineStateImplType>
-inline void DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, PipelineStateImplType> :: GetPipelineState(IPipelineState** ppPSO, float* BlendFactors, Uint32& StencilRef)
+template<typename BaseInterface, typename ImplementationTraits>
+inline void DeviceContextBase<BaseInterface,ImplementationTraits> :: GetPipelineState(IPipelineState** ppPSO, float* BlendFactors, Uint32& StencilRef)
 { 
     VERIFY( ppPSO != nullptr, "Null pointer provided null" );
     VERIFY(* ppPSO == nullptr, "Memory address contains a pointer to a non-null blend state" );
@@ -397,8 +396,8 @@ inline void DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, Pi
     StencilRef = m_StencilRef;
 };
 
-template<typename BaseInterface, typename BufferImplType, typename TextureImplType, typename PipelineStateImplType>
-inline bool DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, PipelineStateImplType> ::SetBlendFactors(const float* BlendFactors, int)
+template<typename BaseInterface, typename ImplementationTraits>
+inline bool DeviceContextBase<BaseInterface,ImplementationTraits> :: SetBlendFactors(const float* BlendFactors, int)
 {
     bool FactorsDiffer = false;
     for( Uint32 f = 0; f < 4; ++f )
@@ -410,8 +409,8 @@ inline bool DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, Pi
     return FactorsDiffer;
 }
 
-template<typename BaseInterface, typename BufferImplType, typename TextureImplType, typename PipelineStateImplType>
-inline bool DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, PipelineStateImplType> :: SetStencilRef(Uint32 StencilRef, int)
+template<typename BaseInterface, typename ImplementationTraits>
+inline bool DeviceContextBase<BaseInterface,ImplementationTraits> :: SetStencilRef(Uint32 StencilRef, int)
 {
     if (m_StencilRef != StencilRef)
     {
@@ -421,8 +420,9 @@ inline bool DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, Pi
     return false;
 }
 
-template<typename BaseInterface, typename BufferImplType, typename TextureImplType, typename PipelineStateImplType>
-inline void DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, PipelineStateImplType> :: SetViewports( Uint32 NumViewports, const Viewport* pViewports, Uint32& RTWidth, Uint32& RTHeight )
+template<typename BaseInterface, typename ImplementationTraits>
+inline void DeviceContextBase<BaseInterface,ImplementationTraits> :: 
+            SetViewports( Uint32 NumViewports, const Viewport* pViewports, Uint32& RTWidth, Uint32& RTHeight )
 {
     if ( RTWidth == 0 || RTHeight == 0 )
     {
@@ -449,8 +449,8 @@ inline void DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, Pi
     }
 }
 
-template<typename BaseInterface, typename BufferImplType, typename TextureImplType, typename PipelineStateImplType>
-inline void DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, PipelineStateImplType> :: GetViewports( Uint32 &NumViewports, Viewport* pViewports )
+template<typename BaseInterface, typename ImplementationTraits>
+inline void DeviceContextBase<BaseInterface,ImplementationTraits> :: GetViewports( Uint32 &NumViewports, Viewport* pViewports )
 {
     NumViewports = m_NumViewports;
     if ( pViewports )
@@ -460,8 +460,9 @@ inline void DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, Pi
     }
 }
 
-template<typename BaseInterface, typename BufferImplType, typename TextureImplType, typename PipelineStateImplType>
-inline void DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, PipelineStateImplType> :: SetScissorRects( Uint32 NumRects, const Rect* pRects, Uint32& RTWidth, Uint32& RTHeight )
+template<typename BaseInterface, typename ImplementationTraits>
+inline void DeviceContextBase<BaseInterface,ImplementationTraits> :: 
+            SetScissorRects( Uint32 NumRects, const Rect* pRects, Uint32& RTWidth, Uint32& RTHeight )
 {
     if ( RTWidth == 0 || RTHeight == 0 )
     {
@@ -480,8 +481,8 @@ inline void DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, Pi
     }
 }
 
-template<typename BaseInterface, typename BufferImplType, typename TextureImplType, typename PipelineStateImplType>
-inline bool DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, PipelineStateImplType> ::
+template<typename BaseInterface, typename ImplementationTraits>
+inline bool DeviceContextBase<BaseInterface,ImplementationTraits> ::
             SetRenderTargets( Uint32 NumRenderTargets, ITextureView* ppRenderTargets[], ITextureView* pDepthStencil )
 {
     bool bBindRenderTargets = false;
@@ -603,8 +604,9 @@ inline bool DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, Pi
     return bBindRenderTargets;
 }
 
-template<typename BaseInterface, typename BufferImplType, typename TextureImplType, typename PipelineStateImplType>
-inline void DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, PipelineStateImplType> :: GetRenderTargets( Uint32 &NumRenderTargets, ITextureView** ppRTVs, ITextureView** ppDSV )
+template<typename BaseInterface, typename ImplementationTraits>
+inline void DeviceContextBase<BaseInterface,ImplementationTraits> ::
+            GetRenderTargets( Uint32 &NumRenderTargets, ITextureView** ppRTVs, ITextureView** ppDSV )
 {
     NumRenderTargets = m_NumBoundRenderTargets;
 
@@ -636,8 +638,8 @@ inline void DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, Pi
     }
 }
 
-template<typename BaseInterface, typename BufferImplType, typename TextureImplType, typename PipelineStateImplType>
-inline void DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, PipelineStateImplType> :: ClearStateCache()
+template<typename BaseInterface, typename ImplementationTraits>
+inline void DeviceContextBase<BaseInterface,ImplementationTraits> :: ClearStateCache()
 {
     for(Uint32 stream=0; stream < m_NumVertexStreams; ++stream)
         m_VertexStreams[stream] = VertexStreamInfo<BufferImplType>{};
@@ -671,8 +673,8 @@ inline void DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, Pi
     ResetRenderTargets();
 }
 
-template<typename BaseInterface, typename BufferImplType, typename TextureImplType, typename PipelineStateImplType>
-inline void DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, PipelineStateImplType> :: ResetRenderTargets()
+template<typename BaseInterface, typename ImplementationTraits>
+inline void DeviceContextBase<BaseInterface,ImplementationTraits> :: ResetRenderTargets()
 {
     for (Uint32 rt = 0; rt < m_NumBoundRenderTargets; ++rt)
         m_pBoundRenderTargets[rt].Release();
@@ -692,8 +694,8 @@ inline void DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, Pi
 }
 
 
-template<typename BaseInterface, typename BufferImplType, typename TextureImplType, typename PipelineStateImplType>
-inline void DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, PipelineStateImplType> ::
+template<typename BaseInterface, typename ImplementationTraits>
+inline void DeviceContextBase<BaseInterface,ImplementationTraits> ::
             UpdateBuffer(IBuffer* pBuffer, Uint32 Offset, Uint32 Size, const PVoid pData, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
     VERIFY(pBuffer != nullptr, "Buffer must not be null");
@@ -703,8 +705,8 @@ inline void DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, Pi
     DEV_CHECK_ERR(Size + Offset <= BuffDesc.uiSizeInBytes, "Unable to update buffer '", BuffDesc.Name, "': Update region [", Offset, ",", Size + Offset, ") is out of buffer bounds [0,", BuffDesc.uiSizeInBytes, ")" );
 }
 
-template<typename BaseInterface, typename BufferImplType, typename TextureImplType, typename PipelineStateImplType>
-inline void DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, PipelineStateImplType> ::
+template<typename BaseInterface, typename ImplementationTraits>
+inline void DeviceContextBase<BaseInterface,ImplementationTraits> ::
             CopyBuffer(IBuffer*                       pSrcBuffer,
                        Uint32                         SrcOffset,
                        RESOURCE_STATE_TRANSITION_MODE SrcBufferTransitionMode,
@@ -721,8 +723,8 @@ inline void DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, Pi
     DEV_CHECK_ERR( SrcOffset + Size <= SrcBufferDesc.uiSizeInBytes, "Failed to copy buffer '", SrcBufferDesc.Name, "' to '", DstBufferDesc.Name, "': Source range [", SrcOffset, ",", SrcOffset + Size, ") is out of buffer bounds [0,", SrcBufferDesc.uiSizeInBytes, ")" );
 }
 
-template<typename BaseInterface, typename BufferImplType, typename TextureImplType, typename PipelineStateImplType>
-inline void DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, PipelineStateImplType> ::
+template<typename BaseInterface, typename ImplementationTraits>
+inline void DeviceContextBase<BaseInterface,ImplementationTraits> ::
             MapBuffer( IBuffer* pBuffer, MAP_TYPE MapType, MAP_FLAGS MapFlags, PVoid& pMappedData )
 {
     VERIFY(pBuffer, "pBuffer must not be null");
@@ -771,8 +773,8 @@ inline void DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, Pi
     }
 }
 
-template<typename BaseInterface, typename BufferImplType, typename TextureImplType, typename PipelineStateImplType>
-inline void DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, PipelineStateImplType> ::
+template<typename BaseInterface, typename ImplementationTraits>
+inline void DeviceContextBase<BaseInterface,ImplementationTraits> ::
             UnmapBuffer(IBuffer* pBuffer, MAP_TYPE MapType)
 {
     VERIFY(pBuffer, "pBuffer must not be null");
@@ -785,8 +787,8 @@ inline void DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, Pi
 }
 
 
-template<typename BaseInterface, typename BufferImplType, typename TextureImplType, typename PipelineStateImplType>
-inline void DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, PipelineStateImplType> :: 
+template<typename BaseInterface, typename ImplementationTraits>
+inline void DeviceContextBase<BaseInterface,ImplementationTraits> :: 
             UpdateTexture(ITexture* pTexture, Uint32 MipLevel, Uint32 Slice, const Box& DstBox, const TextureSubResData& SubresData,
                           RESOURCE_STATE_TRANSITION_MODE SrcBufferTransitionMode, RESOURCE_STATE_TRANSITION_MODE TextureTransitionMode)
 {
@@ -794,8 +796,8 @@ inline void DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, Pi
     ValidateUpdateTextureParams( pTexture->GetDesc(), MipLevel, Slice, DstBox, SubresData );
 }
 
-template<typename BaseInterface, typename BufferImplType, typename TextureImplType, typename PipelineStateImplType>
-inline void DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, PipelineStateImplType> ::
+template<typename BaseInterface, typename ImplementationTraits>
+inline void DeviceContextBase<BaseInterface,ImplementationTraits> ::
             CopyTexture( const CopyTextureAttribs& CopyAttribs )
 {
     VERIFY( CopyAttribs.pSrcTexture, "Src texture must not be null" );
@@ -803,8 +805,8 @@ inline void DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, Pi
     ValidateCopyTextureParams( CopyAttribs );
 }
 
-template<typename BaseInterface, typename BufferImplType, typename TextureImplType, typename PipelineStateImplType>
-inline void DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, PipelineStateImplType> ::
+template<typename BaseInterface, typename ImplementationTraits>
+inline void DeviceContextBase<BaseInterface,ImplementationTraits> ::
             MapTextureSubresource(ITexture*                 pTexture,
                                   Uint32                    MipLevel,
                                   Uint32                    ArraySlice,
@@ -817,8 +819,8 @@ inline void DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, Pi
     ValidateMapTextureParams(pTexture->GetDesc(), MipLevel, ArraySlice, MapType, MapFlags, pMapRegion);
 }
 
-template<typename BaseInterface, typename BufferImplType, typename TextureImplType, typename PipelineStateImplType>
-inline void DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, PipelineStateImplType> ::
+template<typename BaseInterface, typename ImplementationTraits>
+inline void DeviceContextBase<BaseInterface,ImplementationTraits> ::
             UnmapTextureSubresource(ITexture* pTexture, Uint32 MipLevel, Uint32 ArraySlice)
 {
     VERIFY(pTexture, "pTexture must not be null");
@@ -826,8 +828,8 @@ inline void DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, Pi
     DEV_CHECK_ERR(ArraySlice < pTexture->GetDesc().ArraySize, "Array slice is out of range");
 }
 
-template<typename BaseInterface, typename BufferImplType, typename TextureImplType, typename PipelineStateImplType>
-inline void DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, PipelineStateImplType> ::
+template<typename BaseInterface, typename ImplementationTraits>
+inline void DeviceContextBase<BaseInterface,ImplementationTraits> ::
             GenerateMips(ITextureView* pTexView)
 {
     VERIFY(pTexView != nullptr, "pTexView must not be null");
@@ -838,8 +840,8 @@ inline void DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, Pi
 }
 
 #ifdef DEVELOPMENT
-template<typename BaseInterface, typename BufferImplType, typename TextureImplType, typename PipelineStateImplType>
-inline bool DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, PipelineStateImplType> ::
+template<typename BaseInterface, typename ImplementationTraits>
+inline bool DeviceContextBase<BaseInterface,ImplementationTraits> ::
             DvpVerifyDrawArguments(const DrawAttribs& drawAttribs)
 {
     if (!m_pPipelineState)
@@ -875,8 +877,8 @@ inline bool DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, Pi
     return true;
 }
 
-template<typename BaseInterface, typename BufferImplType, typename TextureImplType, typename PipelineStateImplType>
-inline bool DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, PipelineStateImplType> ::
+template<typename BaseInterface, typename ImplementationTraits>
+inline bool DeviceContextBase<BaseInterface,ImplementationTraits> ::
             DvpVerifyDispatchArguments(const DispatchComputeAttribs& DispatchAttrs)
 {
     if (!m_pPipelineState)
@@ -906,8 +908,8 @@ inline bool DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, Pi
     return true;
 }
 
-template<typename BaseInterface, typename BufferImplType, typename TextureImplType, typename PipelineStateImplType>
-void DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, PipelineStateImplType> ::
+template<typename BaseInterface, typename ImplementationTraits>
+void DeviceContextBase<BaseInterface,ImplementationTraits> ::
      DvpVerifyStateTransitionDesc(const StateTransitionDesc& Barrier)
 {
     DEV_CHECK_ERR((Barrier.pTexture != nullptr) ^ (Barrier.pBuffer != nullptr), "Exactly one of pTexture or pBuffer members of StateTransitionDesc must not be null");
@@ -952,8 +954,8 @@ void DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, PipelineS
     }
 }
 
-template<typename BaseInterface, typename BufferImplType, typename TextureImplType, typename PipelineStateImplType>
-bool DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, PipelineStateImplType> ::
+template<typename BaseInterface, typename ImplementationTraits>
+bool DeviceContextBase<BaseInterface,ImplementationTraits> ::
      DvpVerifyTextureState(const TextureImplType& Texture, RESOURCE_STATE RequiredState, const char* OperationName)
 {
     if (Texture.IsInKnownState() && !Texture.CheckState(RequiredState))
@@ -967,9 +969,9 @@ bool DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, PipelineS
     return true;
 }
 
-template<typename BaseInterface, typename BufferImplType, typename TextureImplType, typename PipelineStateImplType>
-bool DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, PipelineStateImplType> ::
-     DvpVerifyBufferState (const BufferImplType&  Buffer,  RESOURCE_STATE RequiredState, const char* OperationName)
+template<typename BaseInterface, typename ImplementationTraits>
+bool DeviceContextBase<BaseInterface,ImplementationTraits> :: 
+     DvpVerifyBufferState(const BufferImplType& Buffer,  RESOURCE_STATE RequiredState, const char* OperationName)
 {
     if (Buffer.IsInKnownState() && !Buffer.CheckState(RequiredState))
     {

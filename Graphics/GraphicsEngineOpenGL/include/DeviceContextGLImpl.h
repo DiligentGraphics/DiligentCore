@@ -35,11 +35,18 @@
 namespace Diligent
 {
 
+struct DeviceContextGLImplTraits
+{
+    using BufferType        = BufferGLImpl;
+    using TextureType       = TextureBaseGL;
+    using PipelineStateType = PipelineStateGLImpl;
+};
+
 /// Implementation of the Diligent::IDeviceContextGL interface
-class DeviceContextGLImpl final : public DeviceContextBase<IDeviceContextGL, BufferGLImpl, TextureBaseGL, PipelineStateGLImpl>
+class DeviceContextGLImpl final : public DeviceContextBase<IDeviceContextGL, DeviceContextGLImplTraits>
 {
 public:
-    using TDeviceContextBase = DeviceContextBase<IDeviceContextGL, BufferGLImpl, TextureBaseGL, PipelineStateGLImpl>;
+    using TDeviceContextBase = DeviceContextBase<IDeviceContextGL, DeviceContextGLImplTraits>;
 
     DeviceContextGLImpl( IReferenceCounters *pRefCounters, class RenderDeviceGLImpl *pDeviceGL, bool bIsDeferred );
 
