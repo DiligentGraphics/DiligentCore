@@ -559,12 +559,12 @@ namespace Diligent
 
     void DeviceContextD3D12Impl::ClearDepthStencil( ITextureView* pView, CLEAR_DEPTH_STENCIL_FLAGS ClearFlags, float fDepth, Uint8 Stencil )
     {
-        ITextureViewD3D12 *pDSVD3D12 = nullptr;
+        ITextureViewD3D12* pViewD3D12 = nullptr;
         if( pView != nullptr )
         {
-            pDSVD3D12 = ValidatedCast<ITextureViewD3D12>(pView);
+            pViewD3D12 = ValidatedCast<ITextureViewD3D12>(pView);
 #ifdef _DEBUG
-            const auto& ViewDesc = pDSVD3D12->GetDesc();
+            const auto& ViewDesc = pViewD3D12->GetDesc();
             VERIFY( ViewDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL, "Incorrect view type: depth stencil is expected" );
 #endif
         }
@@ -572,7 +572,7 @@ namespace Diligent
         {
             if (m_pSwapChain)
             {
-                pDSVD3D12 = ValidatedCast<ITextureViewD3D12>(m_pSwapChain.RawPtr<ISwapChainD3D12>()->GetDepthBufferDSV());
+                pViewD3D12 = ValidatedCast<ITextureViewD3D12>(m_pSwapChain.RawPtr<ISwapChainD3D12>()->GetDepthBufferDSV());
             }
             else
             {
@@ -580,28 +580,43 @@ namespace Diligent
                 return;
             }
         }
+
+        auto* pTextureD3D12 = ValidatedCast<TextureD3D12Impl>( pViewD3D12->GetTexture() );
+        auto& CmdCtx = GetCmdContext();
+        auto TransitionMode =
+            (ClearFlags & CLEAR_DEPTH_STENCIL_TRANSITION_STATE_FLAG) ? 
+                RESOURCE_STATE_TRANSITION_MODE_TRANSITION :
+                ((ClearFlags & CLEAR_DEPTH_STENCIL_VERIFY_STATE_FLAG) ? 
+                    RESOURCE_STATE_TRANSITION_MODE_VERIFY : 
+                    RESOURCE_STATE_TRANSITION_MODE_NONE);
+        TransitionOrVerifyTextureState(CmdCtx, *pTextureD3D12, TransitionMode, RESOURCE_STATE_DEPTH_WRITE, "Clearing depth-stencil buffer (DeviceContextD3D12Impl::ClearDepthStencil)");
+
+        D3D12_CLEAR_FLAGS d3d12ClearFlags = (D3D12_CLEAR_FLAGS)0;
+        if( ClearFlags & CLEAR_DEPTH_FLAG )   d3d12ClearFlags |= D3D12_CLEAR_FLAG_DEPTH;
+        if( ClearFlags & CLEAR_STENCIL_FLAG ) d3d12ClearFlags |= D3D12_CLEAR_FLAG_STENCIL;
+
         // The full extent of the resource view is always cleared. 
         // Viewport and scissor settings are not applied??
-        GetCmdContext().AsGraphicsContext().ClearDepthStencil( pDSVD3D12, ClearFlags, fDepth, Stencil );
+        GetCmdContext().AsGraphicsContext().ClearDepthStencil( pViewD3D12->GetCPUDescriptorHandle(), d3d12ClearFlags, fDepth, Stencil );
         ++m_State.NumCommands;
     }
 
     void DeviceContextD3D12Impl::ClearRenderTarget( ITextureView* pView, const float* RGBA, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode )
     {
-        ITextureViewD3D12 *pd3d12RTV = nullptr;
+        ITextureViewD3D12* pViewD3D12 = nullptr;
         if( pView != nullptr )
         {
 #ifdef _DEBUG
             const auto& ViewDesc = pView->GetDesc();
             VERIFY( ViewDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET, "Incorrect view type: render target is expected" );
 #endif
-            pd3d12RTV = ValidatedCast<ITextureViewD3D12>(pView);
+            pViewD3D12 = ValidatedCast<ITextureViewD3D12>(pView);
         }
         else
         {
             if (m_pSwapChain)
             {
-                pd3d12RTV = ValidatedCast<ITextureViewD3D12>(m_pSwapChain.RawPtr<ISwapChainD3D12>()->GetCurrentBackBufferRTV());
+                pViewD3D12 = ValidatedCast<ITextureViewD3D12>(m_pSwapChain.RawPtr<ISwapChainD3D12>()->GetCurrentBackBufferRTV());
             }
             else
             {
@@ -614,9 +629,13 @@ namespace Diligent
         if( RGBA == nullptr )
             RGBA = Zero;
 
+        auto* pTextureD3D12 = ValidatedCast<TextureD3D12Impl>( pViewD3D12->GetTexture() );
+        auto& CmdCtx = GetCmdContext();
+        TransitionOrVerifyTextureState(CmdCtx, *pTextureD3D12, StateTransitionMode, RESOURCE_STATE_RENDER_TARGET, "Clearing render target (DeviceContextD3D12Impl::ClearRenderTarget)");
+
         // The full extent of the resource view is always cleared. 
         // Viewport and scissor settings are not applied??
-        GetCmdContext().AsGraphicsContext().ClearRenderTarget( pd3d12RTV, RGBA, StateTransitionMode );
+        CmdCtx.AsGraphicsContext().ClearRenderTarget( pViewD3D12->GetCPUDescriptorHandle(), RGBA );
         ++m_State.NumCommands;
     }
 
@@ -814,7 +833,6 @@ namespace Diligent
         }
     }
 
-
     void DeviceContextD3D12Impl::CommitRenderTargets(SET_RENDER_TARGETS_FLAGS Flags)
     {
         const Uint32 MaxD3D12RTs = D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT;
@@ -822,8 +840,8 @@ namespace Diligent
         VERIFY( NumRenderTargets <= MaxD3D12RTs, "D3D12 only allows 8 simultaneous render targets" );
         NumRenderTargets = std::min( MaxD3D12RTs, NumRenderTargets );
 
-        ITextureViewD3D12 *ppRTVs[MaxD3D12RTs]; // Do not initialize with zeroes!
-        ITextureViewD3D12 *pDSV = nullptr;
+        ITextureViewD3D12* ppRTVs[MaxD3D12RTs]; // Do not initialize with zeroes!
+        ITextureViewD3D12* pDSV = nullptr;
         if( m_IsDefaultFramebufferBound )
         {
             if (m_pSwapChain)
@@ -845,7 +863,50 @@ namespace Diligent
                 ppRTVs[rt] = m_pBoundRenderTargets[rt].RawPtr<ITextureViewD3D12>();
             pDSV = m_pBoundDepthStencil.RawPtr<ITextureViewD3D12>();
         }
-        GetCmdContext().AsGraphicsContext().SetRenderTargets(NumRenderTargets, ppRTVs, pDSV, Flags);
+
+        auto& CmdCtx = GetCmdContext();
+        D3D12_CPU_DESCRIPTOR_HANDLE RTVHandles[8]; // Do not waste time initializing array to zero
+        D3D12_CPU_DESCRIPTOR_HANDLE DSVHandle = {};
+	    for (UINT i = 0; i < NumRenderTargets; ++i)
+	    {
+            if( auto* pRTV = ppRTVs[i] )
+            {
+                auto* pTexture = ValidatedCast<TextureD3D12Impl>( pRTV->GetTexture() );
+                auto RTTransitionMode = (Flags & SET_RENDER_TARGETS_FLAG_TRANSITION_COLOR) ? 
+                    RESOURCE_STATE_TRANSITION_MODE_TRANSITION : 
+                    ((Flags & SET_RENDER_TARGETS_FLAG_VERIFY_STATES) ?
+                        RESOURCE_STATE_TRANSITION_MODE_VERIFY : 
+                        RESOURCE_STATE_TRANSITION_MODE_NONE);
+                TransitionOrVerifyTextureState(CmdCtx, *pTexture, RTTransitionMode, RESOURCE_STATE_RENDER_TARGET, "Setting render targets (DeviceContextD3D12Impl::CommitRenderTargets)");
+		        RTVHandles[i] = pRTV->GetCPUDescriptorHandle();
+                VERIFY_EXPR(RTVHandles[i].ptr != 0);
+            }
+	    }
+
+	    if (pDSV)
+	    {
+            auto* pTexture = ValidatedCast<TextureD3D12Impl>( pDSV->GetTexture() );
+		    //if (bReadOnlyDepth)
+		    //{
+		    //	TransitionResource(*pTexture, D3D12_RESOURCE_STATE_DEPTH_READ);
+		    //	m_pCommandList->OMSetRenderTargets( NumRTVs, RTVHandles, FALSE, &DSV->GetDSV_DepthReadOnly() );
+		    //}
+		    //else
+		    {
+                auto DepthTransitionMode = (Flags & SET_RENDER_TARGETS_FLAG_TRANSITION_DEPTH) ? 
+                    RESOURCE_STATE_TRANSITION_MODE_TRANSITION : 
+                    ((Flags & SET_RENDER_TARGETS_FLAG_VERIFY_STATES) ? 
+                        RESOURCE_STATE_TRANSITION_MODE_VERIFY : 
+                        RESOURCE_STATE_TRANSITION_MODE_NONE);
+                TransitionOrVerifyTextureState(CmdCtx, *pTexture, DepthTransitionMode, RESOURCE_STATE_DEPTH_WRITE, "Setting depth-stencil buffer (DeviceContextD3D12Impl::CommitRenderTargets)");
+                DSVHandle = pDSV->GetCPUDescriptorHandle();
+                VERIFY_EXPR(DSVHandle.ptr != 0);
+		    }
+	    }
+
+        VERIFY_EXPR(NumRenderTargets > 0 || DSVHandle.ptr != 0);
+        // No need to flush resource barriers as this is a CPU-side command
+        CmdCtx.AsGraphicsContext().GetCommandList()->OMSetRenderTargets( NumRenderTargets, RTVHandles, FALSE, DSVHandle.ptr != 0 ? &DSVHandle : nullptr );
     }
 
     void DeviceContextD3D12Impl::SetRenderTargets( Uint32 NumRenderTargets, ITextureView *ppRenderTargets[], ITextureView *pDepthStencil, SET_RENDER_TARGETS_FLAGS Flags )

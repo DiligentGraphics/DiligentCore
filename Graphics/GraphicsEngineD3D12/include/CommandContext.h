@@ -75,8 +75,17 @@ public:
 	class GraphicsContext& AsGraphicsContext();
     class ComputeContext& AsComputeContext();
 
-	void ClearUAVFloat( ITextureViewD3D12 *pTexView, const float* Color );
-	void ClearUAVUint( ITextureViewD3D12 *pTexView, const UINT *Color  );
+	void ClearUAVFloat( D3D12_GPU_DESCRIPTOR_HANDLE GpuHandle, D3D12_CPU_DESCRIPTOR_HANDLE CpuHandle, ID3D12Resource* pd3d12Resource, const float* Color )
+    {
+        FlushResourceBarriers();
+        m_pCommandList->ClearUnorderedAccessViewFloat(GpuHandle, CpuHandle, pd3d12Resource, Color, 0, nullptr);
+    }
+
+	void ClearUAVUint( D3D12_GPU_DESCRIPTOR_HANDLE GpuHandle, D3D12_CPU_DESCRIPTOR_HANDLE CpuHandle, ID3D12Resource* pd3d12Resource,  const UINT* Color  )
+    {
+        FlushResourceBarriers();
+        m_pCommandList->ClearUnorderedAccessViewUint(GpuHandle, CpuHandle, pd3d12Resource, Color, 0, nullptr);
+    }
 
     void CopyResource(ID3D12Resource *pDstRes, ID3D12Resource *pSrcRes)
     {
@@ -174,8 +183,17 @@ protected:
 class GraphicsContext : public CommandContext
 {
 public:
-	void ClearRenderTarget( ITextureViewD3D12 *pRTV, const float *Color, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode );
-	void ClearDepthStencil( ITextureViewD3D12 *pDSV, CLEAR_DEPTH_STENCIL_FLAGS ClearFlags, float Depth, UINT8 Stencil );
+	void ClearRenderTarget( D3D12_CPU_DESCRIPTOR_HANDLE RTV, const float *Color )
+    {
+        FlushResourceBarriers();
+	    m_pCommandList->ClearRenderTargetView(RTV, Color, 0, nullptr);
+    }
+
+	void ClearDepthStencil( D3D12_CPU_DESCRIPTOR_HANDLE DSV, D3D12_CLEAR_FLAGS ClearFlags, float Depth, UINT8 Stencil )
+    {
+        FlushResourceBarriers();
+        m_pCommandList->ClearDepthStencilView(DSV, ClearFlags, Depth, Stencil, 0, nullptr);
+    }
 
 	void SetRootSignature( ID3D12RootSignature *pRootSig )
     {
