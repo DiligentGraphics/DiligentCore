@@ -58,28 +58,29 @@ enum DRAW_FLAGS : Uint8
     /// Perform no state transitions
     DRAW_FLAG_NONE                            = 0x00,
 
-    /// Transition vertex buffers to Diligent::RESOURCE_STATE_VERTEX_BUFFER state (see Diligent::RESOURCE_STATE).
-    /// Vertex buffers in unknown state will not be transitioned.
-    DRAW_FLAG_TRANSITION_VERTEX_BUFFERS       = 0x01,
-
-    /// Transition index buffer to Diligent::RESOURCE_STATE_INDEX_BUFFER state (see Diligent::RESOURCE_STATE).
-    /// If the index buffer is in unknown state, this flag has no effect.
-    DRAW_FLAG_TRANSITION_INDEX_BUFFER         = 0x02,
-
-    /// Transition indirect draw arguments buffer to Diligent::RESOURCE_STATE_INDIRECT_ARGUMENT state (see Diligent::RESOURCE_STATE).
-    /// If the buffer is in unknown state, this flag has no effect.
-    DRAW_FLAG_TRANSITION_INDIRECT_ARGS_BUFFER = 0x04,
-
-    /// Verify the sate of vertex, index or indirect args buffer if it is not being transitioned.
-    /// State verification is only performed in debug and development builds and the 
-    /// flag has no effect in release build.
-    /// If any of Diligent::DRAW_FLAG_TRANSITION_VERTEX_BUFFERS, Diligent::DRAW_FLAG_TRANSITION_INDEX_BUFFER 
-    /// or Diligent::DRAW_FLAG_TRANSITION_INDIRECT_ARGS_BUFFER flags is not set, it is recommended to set
-    /// Diligent::DRAW_FLAG_VERIFY_STATES flag unless the resources are used in multiple threads simultaneously and the 
-    /// application explicitly manages the states.
-    DRAW_FLAG_VERIFY_STATES                   = 0x08
+    /// Verify the sate of vertex and index buffers. State verification is only performed in 
+    /// debug and development builds and the flag has no effect in release build.
+    DRAW_FLAG_VERIFY_STATES                   = 0x01
 };
 DEFINE_FLAG_ENUM_OPERATORS(DRAW_FLAGS)
+
+
+/// Defines resource state transitions performed by various commands
+enum RESOURCE_STATE_TRANSITION_MODE : Uint8
+{
+    /// Perform no state transitions
+    RESOURCE_STATE_TRANSITION_MODE_NONE = 0,
+    
+    /// Transition resources to states required by the command.
+    /// Resources in unknown state are ignored.
+    RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
+
+    /// Do not transition, but verify that states are correct.
+    /// No validation is performed if the state is unknown to the engine.
+    /// This mode only has effect in debug and development builds. No validation 
+    /// is performed in release build.
+    RESOURCE_STATE_TRANSITION_MODE_VERIFY
+};
 
 /// Defines the draw command attributes
 
@@ -104,6 +105,9 @@ struct DrawAttribs
 
     /// Additional flags controlling the draw command behavior, see Diligent::DRAW_FLAGS.
     DRAW_FLAGS Flags = DRAW_FLAG_NONE;
+
+    /// State transition mode for indirect draw arguments buffer. This member is ignored if pIndirectDrawAttribs member is null.
+    RESOURCE_STATE_TRANSITION_MODE IndirectAttribsBufferStateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_NONE;
 
     /// Number of instances to draw. If more than one instance is specified,
     /// instanced draw call will be performed.
@@ -167,23 +171,6 @@ enum CLEAR_DEPTH_STENCIL_FLAGS : Uint32
 };
 DEFINE_FLAG_ENUM_OPERATORS(CLEAR_DEPTH_STENCIL_FLAGS)
 
-/// Dispatch compute command flags
-enum DISPATCH_FLAGS : Uint8
-{
-    /// Perform no state transitions
-    DISPATCH_FLAG_FLAG_NONE                       = 0x00,
-        
-    /// Transition indirect dispatch arguments buffer to RESOURCE_STATE_INDIRECT_ARGUMENT state (see Diligent::RESOURCE_STATE).
-    /// If the buffer is in unknown state, this flag has no effect.
-    DISPATCH_FLAG_TRANSITION_INDIRECT_ARGS_BUFFER = 0x01,
-
-    /// Verify the sate of indirect args buffer if it is not being transitioned.
-    /// State verification is only performed in debug and development builds and the 
-    /// flag has no effect in release build.
-    DISPATCH_FLAG_VERIFY_STATES                   = 0x02
-};
-DEFINE_FLAG_ENUM_OPERATORS(DISPATCH_FLAGS)
-
 /// Describes dispatch command arguments.
 
 /// [Dispatch]: https://msdn.microsoft.com/en-us/library/windows/desktop/ff476405(v=vs.85).aspx
@@ -204,8 +191,8 @@ struct DispatchComputeAttribs
     /// of the buffer to the dispatch command arguments. Ignored otherwise
     Uint32  DispatchArgsByteOffset;
 
-    /// Flags controlling the dispatch command behavior, see Diligent::DISPATCH_FLAGS.
-    DISPATCH_FLAGS Flags = DISPATCH_FLAG_FLAG_NONE;
+    /// State transition mode for indirect dispatch attributes buffer. This member is ignored if pIndirectDispatchAttribs member is null.
+    RESOURCE_STATE_TRANSITION_MODE IndirectAttribsBufferStateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_NONE;
 
     /// Initializes the structure to perform non-indirect dispatch command
     
@@ -274,22 +261,6 @@ enum SET_RENDER_TARGETS_FLAGS : Uint32
 };
 DEFINE_FLAG_ENUM_OPERATORS(SET_RENDER_TARGETS_FLAGS)
 
-/// Defines resource state transitions performed by various commands
-enum RESOURCE_STATE_TRANSITION_MODE : Uint8
-{
-    /// Perform no state transitions
-    RESOURCE_STATE_TRANSITION_MODE_NONE = 0,
-    
-    /// Transition resources to states required by the command.
-    /// Resources in unknown state are ignored.
-    RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
-
-    /// Do not transition, but verify that states are correct.
-    /// No validation is performed if the state is unknown to the engine.
-    /// This mode only has effect in debug and development builds. No validation 
-    /// is performed in release build.
-    RESOURCE_STATE_TRANSITION_MODE_VERIFY
-};
 
 /// Describes the viewport.
 
@@ -467,15 +438,7 @@ public:
     ///            of resources referenced by the shader resource binding and no other thread is allowed to read or write these states.
     ///
     ///          - If Diligent::RESOURCE_STATE_TRANSITION_MODE_VERIFY mode is used, the method will read the states, so no other thread
-    ///            should alter the states using any of the methods below:\n
-    ///            - IBuffer::SetState()\n
-    ///            - ITexture::SetState()\n
-    ///            - IDeviceContext::TransitionShaderResources()\n
-    ///            - IDeviceContext::TransitionResourceStates() when StateTransitionDesc::UpdateResourceState is set to true\n
-    ///            - IDeviceContext::CommitShaderResources() when Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION mode is used\n
-    ///            - IDeviceContext::Draw() when any of Diligent::DRAW_FLAG_TRANSITION_VERTEX_BUFFERS,
-    ///              Diligent::DRAW_FLAG_TRANSITION_INDEX_BUFFER or Diligent::DRAW_FLAG_TRANSITION_INDIRECT_ARGS_BUFFER flags is set\n
-    ///            - IDeviceContext::Dispatch() when Diligent::DISPATCH_FLAG_TRANSITION_INDIRECT_ARGS_BUFFER flag is set\n
+    ///            should alter the states using any of the method that use Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION mode.
     ///            It is safe for other threads to read the states.
     ///
     ///          - If none of Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION  or 
@@ -514,6 +477,7 @@ public:
     ///                         in the vertex-buffer array. Each offset is the number of bytes between 
     ///                         the first element of a vertex buffer and the first element that will be 
     ///                         used. If this parameter is nullptr, zero offsets for all buffers will be used.
+    /// \param [in] StateTransitionMode - State transition mode for buffers being set (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
     /// \param [in] Flags     - Additional flags for the operation. See Diligent::SET_VERTEX_BUFFERS_FLAGS
     ///                         for a list of allowed values.      
     /// \remarks The device context keeps strong references to all bound vertex buffers.
@@ -521,11 +485,20 @@ public:
     ///          It is suggested to specify Diligent::SET_VERTEX_BUFFERS_FLAG_RESET flag
     ///          whenever possible. This will assure that no buffers from previous draw calls are
     ///          are bound to the pipeline.
-    virtual void SetVertexBuffers(Uint32                    StartSlot, 
-                                  Uint32                    NumBuffersSet, 
-                                  IBuffer**                 ppBuffers, 
-                                  Uint32*                   pOffsets,
-                                  SET_VERTEX_BUFFERS_FLAGS  Flags) = 0;
+    ///
+    /// \remarks When StateTransitionMode is Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION, the method will 
+    ///          transition all buffers in known state to Diligent::RESOURCE_STATE_VERTEX_BUFFER. Resource state 
+    ///          transitioning is not thread safe, so no other thread is allowed to read or write the states of 
+    ///          these buffers.
+    ///
+    ///          If the application intends to use the same resources in other threads simultaneously, it needs to 
+    ///          explicitly manage the states using IDeviceContext::TransitionResourceStates() method.
+    virtual void SetVertexBuffers(Uint32                         StartSlot, 
+                                  Uint32                         NumBuffersSet, 
+                                  IBuffer**                      ppBuffers, 
+                                  Uint32*                        pOffsets,
+                                  RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
+                                  SET_VERTEX_BUFFERS_FLAGS       Flags) = 0;
 
     /// Invalidates the cached context state.
 
@@ -536,14 +509,23 @@ public:
 
     /// Binds an index buffer to the pipeline
     
-    /// \param [in] pIndexBuffer - Pointer to the index buffer. The buffer must have been created 
-    ///                            with the Diligent::BIND_INDEX_BUFFER flag.
-    /// \param [in] ByteOffset - Offset from the beginning of the buffer to 
-    ///                          the start of index data.
+    /// \param [in] pIndexBuffer   - Pointer to the index buffer. The buffer must have been created 
+    ///                              with the Diligent::BIND_INDEX_BUFFER flag.
+    /// \param [in] ByteOffset     - Offset from the beginning of the buffer to 
+    ///                              the start of index data.
+    /// \param [in] StateTransitionMode - State transiton mode for the index buffer to bind (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
     /// \remarks The device context keeps strong reference to the index buffer.
     ///          Thus an index buffer object cannot be released until it is unbound 
     ///          from the context.
-    virtual void SetIndexBuffer(IBuffer* pIndexBuffer, Uint32 ByteOffset) = 0;
+    ///
+    /// \remarks When StateTransitionMode is Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION, the method will 
+    ///          transition the buffer to Diligent::RESOURCE_STATE_INDEX_BUFFER (if its state is not unknown). Resource 
+    ///          state transitioning is not thread safe, so no other thread is allowed to read or write the states of 
+    ///          the buffer.
+    ///
+    ///          If the application intends to use the same resource in other threads simultaneously, it needs to 
+    ///          explicitly manage the states using IDeviceContext::TransitionResourceStates() method.
+    virtual void SetIndexBuffer(IBuffer* pIndexBuffer, Uint32 ByteOffset, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) = 0;
 
 
     /// Sets an array of viewports
@@ -600,24 +582,22 @@ public:
     /// following call:
     ///
     ///     pContext->SetRenderTargets(0, nullptr, nullptr);
-    virtual void SetRenderTargets(Uint32 NumRenderTargets, ITextureView* ppRenderTargets[], ITextureView* pDepthStencil, SET_RENDER_TARGETS_FLAGS Flags) = 0;
+    virtual void SetRenderTargets(Uint32                   NumRenderTargets,
+                                  ITextureView*            ppRenderTargets[],
+                                  ITextureView*            pDepthStencil,
+                                  SET_RENDER_TARGETS_FLAGS Flags) = 0;
 
     /// Executes a draw command
 
     /// \param [in] DrawAttribs - Structure describing draw command attributes, see Diligent::DrawAttribs for details.
     ///
-    /// \remarks  If any of Diligent::DRAW_FLAG_TRANSITION_VERTEX_BUFFERS, Diligent::DRAW_FLAG_TRANSITION_INDEX_BUFFER 
-    ///           or Diligent::DRAW_FLAG_TRANSITION_INDIRECT_ARGS_BUFFER flags is set, the method may transition the 
-    ///           state of the corresponding resource. This is not a thread safe operation, so no other thread is allowed
-    ///           to read or write the state of the same resource.
+    /// \remarks  If IndirectAttribsBufferStateTransitionMode member is Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
+    ///           the method may transition the state of indirect draw arguments buffer. This is not a thread safe operation, 
+    ///           so no other thread is allowed to read or write the state of the same resource.
     ///
-    ///           If Diligent::DRAW_FLAG_VERIFY_STATES flag is set, the method reads the state of vertex/index/indirect
-    ///           draw args buffer, so no other threads are allowed to alter the states of the same resources.
+    ///           If Diligent::DRAW_FLAG_VERIFY_STATES flag is set, the method reads the state of vertex/index
+    ///           buffers, so no other threads are allowed to alter the states of the same resources.
     ///           It is OK to read these states.
-    ///
-    ///           If none of Diligent::DRAW_FLAG_TRANSITION_VERTEX_BUFFERS, Diligent::DRAW_FLAG_TRANSITION_INDEX_BUFFER 
-    ///           or Diligent::DRAW_FLAG_TRANSITION_INDIRECT_ARGS_BUFFER or Diligent::DRAW_FLAG_VERIFY_STATES flags is
-    ///           specified, the method does not access the resource states and is safe to use simulateneously.
     ///          
     ///           If the application intends to use the same resources in other threads simultaneously, it needs to 
     ///           explicitly manage the states using IDeviceContext::TransitionResourceStates() method.
@@ -627,6 +607,13 @@ public:
     
     /// \param [in] DispatchAttrs - Structure describing dispatch command attributes, 
     ///                             see Diligent::DispatchComputeAttribs for details.
+    ///
+    /// \remarks  If IndirectAttribsBufferStateTransitionMode member is Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
+    ///           the method may transition the state of indirect dispatch arguments buffer. This is not a thread safe operation, 
+    ///           so no other thread is allowed to read or write the state of the same resource.
+    ///          
+    ///           If the application intends to use the same resources in other threads simultaneously, it needs to 
+    ///           explicitly manage the states using IDeviceContext::TransitionResourceStates() method.
     virtual void DispatchCompute(const DispatchComputeAttribs &DispatchAttrs) = 0;
 
     /// Clears a depth-stencil view
@@ -650,9 +637,19 @@ public:
     /// \param [in] RGBA - A 4-component array that represents the color to fill the render target with.
     ///                    If nullptr is provided, the default array {0,0,0,0} will be used.
     /// \param [in] StateTransitionMode - Defines requires state transitions (see Diligent::RESOURCE_STATE_TRANSITION_MODE)
+    ///
     /// \remarks The full extent of the view is always cleared. Viewport and scissor settings are not applied.
-    /// \note The render target view must be bound to the pipeline for clear operation to be performed in OpenGL backend.
-    /// \remarks In D3D12 backend clearing render targets requires textures to always be transitioned to 
+    ///
+    ///          The render target view must be bound to the pipeline for clear operation to be performed in OpenGL backend.
+    ///
+    /// \remarks When StateTransitionMode is Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION, the method will 
+    ///          transition all textures to required state. Resource state transitioning is not thread safe, so no 
+    ///          other thread is allowed to read or write the states of the same textures.
+    ///
+    ///          If the application intends to use the same resource in other threads simultaneously, it needs to 
+    ///          explicitly manage the states using IDeviceContext::TransitionResourceStates() method.
+    ///
+    /// \note    In D3D12 backend clearing render targets requires textures to always be transitioned to 
     ///          Diligent::RESOURCE_STATE_RENDER_TARGET state. In Vulkan backend however this depends on whether a 
     ///          render pass has been started. To clear render target outside of a render pass, the texture must be transitioned to
     ///          Diligent::RESOURCE_STATE_COPY_DEST state. Inside a render pass it must be in Diligent::RESOURCE_STATE_RENDER_TARGET
@@ -847,22 +844,11 @@ public:
     ///          corresponding resource which is not thread safe. No other threads should read or write the sate of that 
     ///          resource.
 
-    /// \note   The following methods modify resource states:
-    ///          - IBuffer::SetState()\n
-    ///          - ITexture::SetState()\n
-    ///          - IDeviceContext::TransitionShaderResources()\n
-    ///          - IDeviceContext::TransitionResourceStates() when StateTransitionDesc::UpdateResourceState is set to true\n
-    ///          - IDeviceContext::CommitShaderResources() when Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION mode is used\n
-    ///          - IDeviceContext::Draw() when any of Diligent::DRAW_FLAG_TRANSITION_VERTEX_BUFFERS,
-    ///            Diligent::DRAW_FLAG_TRANSITION_INDEX_BUFFER or Diligent::DRAW_FLAG_TRANSITION_INDIRECT_ARGS_BUFFER flags is set\n
-    ///          - IDeviceContext::Dispatch() when Diligent::DISPATCH_FLAG_TRANSITION_INDIRECT_ARGS_BUFFER flag is set\n
-    ///
-    ///          The following methods read resource states:
-    ///          - IBuffer::GetState()\n
-    ///          - ITexture::GetState()\n
-    ///          - IDeviceContext::CommitShaderResources() when Diligent::RESOURCE_STATE_TRANSITION_MODE_VERIFY mode is used\n
-    ///          - IDeviceContext::Draw() when Diligent::DRAW_FLAG_VERIFY_STATES flag is set\n
-    ///          - IDeviceContext::Dispatch() when Diligent::DISPATCH_FLAG_VERIFY_STATES flag is set\n
+    /// \note    Any method that uses Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION mode may alter
+    ///          the state of resources it works with. Diligent::RESOURCE_STATE_TRANSITION_MODE_VERIFY mode
+    ///          makes the method read the states, but not write them. When Diligent::RESOURCE_STATE_TRANSITION_MODE_NONE
+    ///          is used, the method assumes the states are guaranteed to be correct and does not read or write them.
+    ///          It is the responsibility of the application to make sure this is indeed true.
     virtual void TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers) = 0;
 };
 

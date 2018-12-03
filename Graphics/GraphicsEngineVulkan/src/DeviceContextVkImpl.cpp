@@ -289,24 +289,7 @@ namespace Diligent
         }
     }
 
-    void DeviceContextVkImpl::TransitionVkVertexBuffers()
-    {
-        for ( Uint32 Buff = 0; Buff < m_NumVertexStreams; ++Buff )
-        {
-            auto& CurrStream = m_VertexStreams[Buff];
-            auto* pBufferVk = CurrStream.pBuffer.RawPtr();
-            if (pBufferVk != nullptr && pBufferVk->IsInKnownState())
-            {
-                if (!pBufferVk->CheckState(RESOURCE_STATE_VERTEX_BUFFER))
-                {
-                    TransitionBufferState(*pBufferVk, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_VERTEX_BUFFER, true);
-                }
-                VERIFY_EXPR(pBufferVk->CheckAccessFlags(VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT));
-            }
-        }
-    }
-
-    void DeviceContextVkImpl::CommitVkVertexBuffers(bool TransitionBuffers, bool VerifyStates)
+    void DeviceContextVkImpl::CommitVkVertexBuffers()
     {
 #ifdef DEVELOPMENT
         if (m_NumVertexStreams < m_pPipelineState->GetNumBufferSlotsUsed())
@@ -329,24 +312,6 @@ namespace Diligent
                     pBufferVk->DvpVerifyDynamicAllocation(this);
 #endif
                 }
-
-                if (TransitionBuffers)
-                {
-                    if (pBufferVk->IsInKnownState())
-                    {
-                        if (!pBufferVk->CheckState(RESOURCE_STATE_VERTEX_BUFFER))
-                        {
-                            TransitionBufferState(*pBufferVk, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_VERTEX_BUFFER, true);
-                        }
-                        VERIFY_EXPR(pBufferVk->CheckAccessFlags(VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT));
-                    }
-                }
-#ifdef DEVELOPMENT
-                else if (VerifyStates)
-                {
-                    DvpVerifyBufferState(*pBufferVk, RESOURCE_STATE_VERTEX_BUFFER, "Binding vertex buffers (DeviceContextVkImpl::CommitVkVertexBuffers)");
-                }
-#endif
 
                 // Device context keeps strong references to all vertex buffers.
 
@@ -423,63 +388,33 @@ namespace Diligent
         if ( drawAttribs.IsIndexed )
         {
 #ifdef DEVELOPMENT
-            if (m_pIndexBuffer == nullptr)
+            if (VerifyStates)
             {
-                LOG_ERROR("Index buffer is not set up for indexed draw command");
-                return;
+                DvpVerifyBufferState(*m_pIndexBuffer, RESOURCE_STATE_INDEX_BUFFER, "Indexed draw call (DeviceContextVkImpl::Draw)");
             }
 #endif
-
-            BufferVkImpl *pBuffVk = m_pIndexBuffer.RawPtr<BufferVkImpl>();
-            if (drawAttribs.Flags & DRAW_FLAG_TRANSITION_INDEX_BUFFER)
-            {
-                if (pBuffVk->IsInKnownState())
-                {
-                    if (!pBuffVk->CheckState(RESOURCE_STATE_INDEX_BUFFER))
-                    {
-                        TransitionBufferState(*pBuffVk, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_INDEX_BUFFER, true);
-                    }
-                    VERIFY_EXPR(pBuffVk->CheckAccessFlags(VK_ACCESS_INDEX_READ_BIT));
-                }
-            }
-#ifdef DEVELOPMENT
-            else if (VerifyStates)
-            {
-                DvpVerifyBufferState(*pBuffVk, RESOURCE_STATE_INDEX_BUFFER, "Indexed draw call (DeviceContextVkImpl::Draw)");
-            }
-#endif
-
             DEV_CHECK_ERR(drawAttribs.IndexType == VT_UINT16 || drawAttribs.IndexType == VT_UINT32, "Unsupported index format. Only R16_UINT and R32_UINT are allowed.");
             VkIndexType vkIndexType = drawAttribs.IndexType == VT_UINT16 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32;
-            m_CommandBuffer.BindIndexBuffer(pBuffVk->GetVkBuffer(), m_IndexDataStartOffset + pBuffVk->GetDynamicOffset(m_ContextId, this), vkIndexType);
+            m_CommandBuffer.BindIndexBuffer(m_pIndexBuffer->GetVkBuffer(), m_IndexDataStartOffset + m_pIndexBuffer->GetDynamicOffset(m_ContextId, this), vkIndexType);
         }
 
-        auto TransitionVertexBuffers = (drawAttribs.Flags & DRAW_FLAG_TRANSITION_VERTEX_BUFFERS) != 0;
-        if (m_State.CommittedVBsUpToDate)
+        if (!m_State.CommittedVBsUpToDate)
         {
-            if (TransitionVertexBuffers)
-            {
-                TransitionVkVertexBuffers();
-            }
+            CommitVkVertexBuffers();
+        }
 #ifdef DEVELOPMENT
-            else if (VerifyStates)
+        if (VerifyStates)
+        {
+            for (Uint32 slot = 0; slot < m_NumVertexStreams; ++slot )
             {
-                for (Uint32 slot = 0; slot < m_NumVertexStreams; ++slot )
+                if (auto* pBufferVk = m_VertexStreams[slot].pBuffer.RawPtr())
                 {
-                    auto& CurrStream = m_VertexStreams[slot];
-                    auto* pBufferVk = CurrStream.pBuffer.RawPtr();
-                    if (pBufferVk != nullptr)
-                    {
-                        DvpVerifyBufferState(*pBufferVk, RESOURCE_STATE_VERTEX_BUFFER, "Using vertex buffers (DeviceContextVkImpl::Draw)");
-                    }
+                    DvpVerifyBufferState(*pBufferVk, RESOURCE_STATE_VERTEX_BUFFER, "Using vertex buffers (DeviceContextVkImpl::Draw)");
                 }
             }
+        }
 #endif
-        }
-        else
-        {
-            CommitVkVertexBuffers(TransitionVertexBuffers, VerifyStates);
-        }
+
         if (m_DescrSetBindInfo.DynamicOffsetCount != 0)
             m_pPipelineState->BindDescriptorSetsWithDynamicOffsets(this, m_DescrSetBindInfo);
 #if 0
@@ -496,13 +431,7 @@ namespace Diligent
         if (pIndirectDrawAttribsVk != nullptr)
         {
             // Buffer memory barries must be executed outside of render pass
-            auto TransitionMode = 
-                (drawAttribs.Flags & DRAW_FLAG_TRANSITION_INDIRECT_ARGS_BUFFER) ?
-                    RESOURCE_STATE_TRANSITION_MODE_TRANSITION : 
-                    (VerifyStates ?
-                        RESOURCE_STATE_TRANSITION_MODE_VERIFY :
-                        RESOURCE_STATE_TRANSITION_MODE_NONE);
-            TransitionOrVerifyBufferState(*pIndirectDrawAttribsVk, TransitionMode, RESOURCE_STATE_INDIRECT_ARGUMENT,
+            TransitionOrVerifyBufferState(*pIndirectDrawAttribsVk, drawAttribs.IndirectAttribsBufferStateTransitionMode, RESOURCE_STATE_INDIRECT_ARGUMENT,
                                           VK_ACCESS_INDIRECT_COMMAND_READ_BIT, "Indirect draw (DeviceContextVkImpl::Draw)");
         }
 
@@ -538,7 +467,7 @@ namespace Diligent
         ++m_State.NumCommands;
     }
 
-    void DeviceContextVkImpl::DispatchCompute( const DispatchComputeAttribs &DispatchAttrs )
+    void DeviceContextVkImpl::DispatchCompute( const DispatchComputeAttribs& DispatchAttrs )
     {
 #ifdef DEVELOPMENT
         if (!DvpVerifyDispatchArguments(DispatchAttrs))
@@ -573,13 +502,7 @@ namespace Diligent
 #endif
 
                 // Buffer memory barries must be executed outside of render pass
-                auto TransitionMode =
-                    (DispatchAttrs.Flags & DISPATCH_FLAG_TRANSITION_INDIRECT_ARGS_BUFFER) ?
-                        RESOURCE_STATE_TRANSITION_MODE_TRANSITION : 
-                        ((DispatchAttrs.Flags & DISPATCH_FLAG_VERIFY_STATES) ?
-                            RESOURCE_STATE_TRANSITION_MODE_VERIFY :
-                            RESOURCE_STATE_TRANSITION_MODE_NONE);
-                TransitionOrVerifyBufferState(*pBufferVk, TransitionMode, RESOURCE_STATE_INDIRECT_ARGUMENT,
+                TransitionOrVerifyBufferState(*pBufferVk, DispatchAttrs.IndirectAttribsBufferStateTransitionMode, RESOURCE_STATE_INDIRECT_ARGUMENT,
                                               VK_ACCESS_INDIRECT_COMMAND_READ_BIT, "Indirect dispatch (DeviceContextVkImpl::DispatchCompute)");
 
                 m_CommandBuffer.DispatchIndirect(pBufferVk->GetVkBuffer(), pBufferVk->GetDynamicOffset(m_ContextId, this) + DispatchAttrs.DispatchArgsByteOffset);
@@ -922,9 +845,23 @@ namespace Diligent
         m_pPipelineState = nullptr;
     }
 
-    void DeviceContextVkImpl::SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer **ppBuffers, Uint32 *pOffsets, SET_VERTEX_BUFFERS_FLAGS Flags )
+    void DeviceContextVkImpl::SetVertexBuffers( Uint32                         StartSlot,
+                                                Uint32                         NumBuffersSet,
+                                                IBuffer**                      ppBuffers,
+                                                Uint32*                        pOffsets,
+                                                RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
+                                                SET_VERTEX_BUFFERS_FLAGS       Flags )
     {
-        TDeviceContextBase::SetVertexBuffers( StartSlot, NumBuffersSet, ppBuffers, pOffsets, Flags );
+        TDeviceContextBase::SetVertexBuffers( StartSlot, NumBuffersSet, ppBuffers, pOffsets, StateTransitionMode, Flags );
+        for ( Uint32 Buff = 0; Buff < m_NumVertexStreams; ++Buff )
+        {
+            auto& CurrStream = m_VertexStreams[Buff];
+            if(auto* pBufferVk = CurrStream.pBuffer.RawPtr())
+            {
+                TransitionOrVerifyBufferState(*pBufferVk, StateTransitionMode, RESOURCE_STATE_VERTEX_BUFFER, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, 
+                                              "Setting vertex buffers (DeviceContextVkImpl::SetVertexBuffers)");
+            }
+        }
         m_State.CommittedVBsUpToDate = false;
     }
 
@@ -942,9 +879,13 @@ namespace Diligent
         m_CommandBuffer.Reset();
     }
 
-    void DeviceContextVkImpl::SetIndexBuffer( IBuffer *pIndexBuffer, Uint32 ByteOffset )
+    void DeviceContextVkImpl::SetIndexBuffer( IBuffer *pIndexBuffer, Uint32 ByteOffset, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode )
     {
-        TDeviceContextBase::SetIndexBuffer( pIndexBuffer, ByteOffset );
+        TDeviceContextBase::SetIndexBuffer( pIndexBuffer, ByteOffset, StateTransitionMode );
+        if (m_pIndexBuffer)
+        {
+            TransitionOrVerifyBufferState(*m_pIndexBuffer, StateTransitionMode, RESOURCE_STATE_INDEX_BUFFER, VK_ACCESS_INDEX_READ_BIT, "Binding buffer as index buffer  (DeviceContextVkImpl::SetIndexBuffer)" );
+        }
         m_State.CommittedIBUpToDate = false;
     }
 

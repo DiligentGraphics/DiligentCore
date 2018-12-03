@@ -260,13 +260,12 @@ namespace Diligent
         }
     }
 
-    void DeviceContextD3D12Impl::CommitD3D12IndexBuffer(VALUE_TYPE IndexType, bool TransitionBuffer, bool VerifyState)
+    void DeviceContextD3D12Impl::CommitD3D12IndexBuffer(VALUE_TYPE IndexType)
     {
         VERIFY( m_pIndexBuffer != nullptr, "Index buffer is not set up for indexed draw command" );
 
         D3D12_INDEX_BUFFER_VIEW IBView;
-        BufferD3D12Impl *pBuffD3D12 = static_cast<BufferD3D12Impl *>(m_pIndexBuffer.RawPtr());
-        IBView.BufferLocation = pBuffD3D12->GetGPUAddress(this) + m_IndexDataStartOffset;
+        IBView.BufferLocation = m_pIndexBuffer->GetGPUAddress(this) + m_IndexDataStartOffset;
         if( IndexType == VT_UINT32 )
             IBView.Format = DXGI_FORMAT_R32_UINT;
         else
@@ -275,7 +274,7 @@ namespace Diligent
             IBView.Format = DXGI_FORMAT_R16_UINT;
         }
         // Note that for a dynamic buffer, what we use here is the size of the buffer itself, not the upload heap buffer!
-        IBView.SizeInBytes = pBuffD3D12->GetDesc().uiSizeInBytes - m_IndexDataStartOffset;
+        IBView.SizeInBytes = m_pIndexBuffer->GetDesc().uiSizeInBytes - m_IndexDataStartOffset;
 
         // Device context keeps strong reference to bound index buffer.
         // When the buffer is unbound, the reference to the D3D12 resource
@@ -284,36 +283,24 @@ namespace Diligent
         //auto *pd3d12Resource = pBuffD3D12->GetD3D12Buffer();
         //GraphicsCtx.AddReferencedObject(pd3d12Resource);
 
-        bool IsDynamic = pBuffD3D12->GetDesc().Usage == USAGE_DYNAMIC;
+        bool IsDynamic = m_pIndexBuffer->GetDesc().Usage == USAGE_DYNAMIC;
 #ifdef DEVELOPMENT
         if(IsDynamic)
-            pBuffD3D12->DvpVerifyDynamicAllocation(this);
+            m_pIndexBuffer->DvpVerifyDynamicAllocation(this);
 #endif
-        auto& GraphicsCtx = GetCmdContext().AsGraphicsContext();
-
-        if (TransitionBuffer)
-        {
-            if (pBuffD3D12->IsInKnownState() && !pBuffD3D12->CheckState(RESOURCE_STATE_INDEX_BUFFER))
-                GraphicsCtx.TransitionResource(pBuffD3D12, RESOURCE_STATE_INDEX_BUFFER);
-        }
-#ifdef DEVELOPMENT
-        else if(VerifyState)
-        {
-            DvpVerifyBufferState(*pBuffD3D12, RESOURCE_STATE_INDEX_BUFFER, "Indexed draw (DeviceContextD3D12Impl::CommitD3D12IndexBuffer())");
-        }
-#endif
-
+        
         size_t BuffDataStartByteOffset;
-        auto *pd3d12Buff = pBuffD3D12->GetD3D12Buffer(BuffDataStartByteOffset, this);
+        auto *pd3d12Buff = m_pIndexBuffer->GetD3D12Buffer(BuffDataStartByteOffset, this);
 
         if( IsDynamic || 
             m_State.CommittedD3D12IndexBuffer          != pd3d12Buff ||
             m_State.CommittedIBFormat                  != IndexType  ||
             m_State.CommittedD3D12IndexDataStartOffset != m_IndexDataStartOffset + BuffDataStartByteOffset)
         {
-            m_State.CommittedD3D12IndexBuffer = pd3d12Buff;
-            m_State.CommittedIBFormat = IndexType;
+            m_State.CommittedD3D12IndexBuffer          = pd3d12Buff;
+            m_State.CommittedIBFormat                  = IndexType;
             m_State.CommittedD3D12IndexDataStartOffset = m_IndexDataStartOffset + static_cast<Uint32>(BuffDataStartByteOffset);
+            auto& GraphicsCtx = GetCmdContext().AsGraphicsContext();
             GraphicsCtx.SetIndexBuffer( IBView );
         }
         
@@ -322,18 +309,7 @@ namespace Diligent
         m_State.bCommittedD3D12IBUpToDate = !IsDynamic;
     }
 
-    void DeviceContextD3D12Impl::TransitionD3D12VertexBuffers(GraphicsContext& GraphCtx)
-    {
-        for( Uint32 Buff = 0; Buff < m_NumVertexStreams; ++Buff )
-        {
-            auto& CurrStream = m_VertexStreams[Buff];
-            auto* pBufferD3D12 = CurrStream.pBuffer.RawPtr();
-            if (pBufferD3D12 != nullptr && pBufferD3D12->IsInKnownState() && !pBufferD3D12->CheckState(RESOURCE_STATE_VERTEX_BUFFER))
-                GraphCtx.TransitionResource(pBufferD3D12, RESOURCE_STATE_VERTEX_BUFFER);
-        }
-    }
-
-    void DeviceContextD3D12Impl::CommitD3D12VertexBuffers(GraphicsContext& GraphCtx, bool TransitionBuffers, bool VerifyStates)
+    void DeviceContextD3D12Impl::CommitD3D12VertexBuffers(GraphicsContext& GraphCtx)
     {
         // Do not initialize array with zeroes for performance reasons
         D3D12_VERTEX_BUFFER_VIEW VBViews[MaxBufferSlots];// = {}
@@ -355,18 +331,6 @@ namespace Diligent
 #endif
                 }
 
-                if (TransitionBuffers)
-                {
-                    if (pBufferD3D12->IsInKnownState() && !pBufferD3D12->CheckState(RESOURCE_STATE_VERTEX_BUFFER))
-                        GraphCtx.TransitionResource(pBufferD3D12, RESOURCE_STATE_VERTEX_BUFFER);
-                }
-#ifdef DEVELOPMENT
-                else if (VerifyStates)
-                {
-                    DvpVerifyBufferState(*pBufferD3D12, RESOURCE_STATE_VERTEX_BUFFER, "Using vertex buffers (DeviceContextD3D12Impl::CommitD3D12VertexBuffers())");
-                }
-#endif
-            
                 // Device context keeps strong references to all vertex buffers.
                 // When a buffer is unbound, a reference to D3D12 resource is added to the context,
                 // so there is no need to reference the resource here
@@ -404,56 +368,37 @@ namespace Diligent
         {
             if (m_State.CommittedIBFormat != drawAttribs.IndexType)
                 m_State.bCommittedD3D12IBUpToDate = false;
-
-            const bool TransitionIndexBuffer = (drawAttribs.Flags & DRAW_FLAG_TRANSITION_INDEX_BUFFER) != 0;
-            if (m_State.bCommittedD3D12IBUpToDate)
+            if (!m_State.bCommittedD3D12IBUpToDate)
             {
-                BufferD3D12Impl *pBuffD3D12 = static_cast<BufferD3D12Impl *>(m_pIndexBuffer.RawPtr());
-                if (TransitionIndexBuffer)
-                {
-                    if (pBuffD3D12->IsInKnownState() && !pBuffD3D12->CheckState(RESOURCE_STATE_INDEX_BUFFER))
-                        GraphCtx.TransitionResource(pBuffD3D12, RESOURCE_STATE_INDEX_BUFFER);
-                }
-#ifdef DEVELOPMENT
-                else if (VerifyStates)
-                {
-                    DvpVerifyBufferState(*pBuffD3D12, RESOURCE_STATE_INDEX_BUFFER, "Indexed draw (DeviceContextD3D12Impl::Draw())");
-                }
-#endif
-            }
-            else
-            {
-                CommitD3D12IndexBuffer(drawAttribs.IndexType, TransitionIndexBuffer, VerifyStates);
-            }
-        }
-
-        const bool TransitionVertexBuffers = (drawAttribs.Flags & DRAW_FLAG_TRANSITION_VERTEX_BUFFERS) != 0;
-        if (m_State.bCommittedD3D12VBsUpToDate)
-        {
-            if (TransitionVertexBuffers)
-            {
-                TransitionD3D12VertexBuffers(GraphCtx);
+                CommitD3D12IndexBuffer(drawAttribs.IndexType);
             }
 #ifdef DEVELOPMENT
-            else if (VerifyStates)
+            if (VerifyStates)
             {
-                for( Uint32 Buff = 0; Buff < m_NumVertexStreams; ++Buff )
-                {
-                    const auto& CurrStream = m_VertexStreams[Buff];
-                    const auto* pBufferD3D12 = CurrStream.pBuffer.RawPtr();
-                    if (pBufferD3D12 != nullptr)
-                    {
-                        DvpVerifyBufferState(*pBufferD3D12, RESOURCE_STATE_VERTEX_BUFFER, "Using vertex buffers (DeviceContextD3D12Impl::Draw())");
-                    }
-                }
+                DvpVerifyBufferState(*m_pIndexBuffer, RESOURCE_STATE_INDEX_BUFFER, "Indexed draw (DeviceContextD3D12Impl::Draw())");
             }
 #endif
         }
-        else
+
+        if (!m_State.bCommittedD3D12VBsUpToDate)
         {
-            CommitD3D12VertexBuffers(GraphCtx, TransitionVertexBuffers, VerifyStates);
+            CommitD3D12VertexBuffers(GraphCtx);
         }
 
+#ifdef DEVELOPMENT
+        if (VerifyStates)
+        {
+            for( Uint32 Buff = 0; Buff < m_NumVertexStreams; ++Buff )
+            {
+                const auto& CurrStream = m_VertexStreams[Buff];
+                const auto* pBufferD3D12 = CurrStream.pBuffer.RawPtr();
+                if (pBufferD3D12 != nullptr)
+                {
+                    DvpVerifyBufferState(*pBufferD3D12, RESOURCE_STATE_VERTEX_BUFFER, "Using vertex buffers (DeviceContextD3D12Impl::Draw())");
+                }
+            }
+        }
+#endif
         GraphCtx.SetRootSignature( m_pPipelineState->GetD3D12RootSignature() );
 
         if (m_State.pCommittedResourceCache != nullptr)
@@ -477,17 +422,8 @@ namespace Diligent
                 pIndirectDrawAttribsD3D12->DvpVerifyDynamicAllocation(this);
 #endif
 
-            if (drawAttribs.Flags & DRAW_FLAG_TRANSITION_INDIRECT_ARGS_BUFFER)
-            {
-                if (pIndirectDrawAttribsD3D12->IsInKnownState() && !pIndirectDrawAttribsD3D12->CheckState(RESOURCE_STATE_INDIRECT_ARGUMENT))
-                    GraphCtx.TransitionResource(pIndirectDrawAttribsD3D12, RESOURCE_STATE_INDIRECT_ARGUMENT);
-            }
-#ifdef DEVELOPMENT
-            else if (VerifyStates)
-            {
-                DvpVerifyBufferState(*pIndirectDrawAttribsD3D12, RESOURCE_STATE_INDIRECT_ARGUMENT, "Indirect draw (DeviceContextD3D12Impl::Draw)");
-            }
-#endif
+            TransitionOrVerifyBufferState(GraphCtx, *pIndirectDrawAttribsD3D12, drawAttribs.IndirectAttribsBufferStateTransitionMode,
+                                          RESOURCE_STATE_INDIRECT_ARGUMENT, "Indirect draw (DeviceContextD3D12Impl::Draw)");
 
             size_t BuffDataStartByteOffset;
             ID3D12Resource *pd3d12ArgsBuff = pIndirectDrawAttribsD3D12->GetD3D12Buffer(BuffDataStartByteOffset, this);
@@ -527,33 +463,19 @@ namespace Diligent
 
         if( DispatchAttrs.pIndirectDispatchAttribs )
         {
-            if( auto *pBufferD3D12 = ValidatedCast<BufferD3D12Impl>(DispatchAttrs.pIndirectDispatchAttribs) )
-            {
+            auto* pBufferD3D12 = ValidatedCast<BufferD3D12Impl>(DispatchAttrs.pIndirectDispatchAttribs);
+
 #ifdef DEVELOPMENT
-                if(pBufferD3D12->GetDesc().Usage == USAGE_DYNAMIC)
-                    pBufferD3D12->DvpVerifyDynamicAllocation(this);
+            if(pBufferD3D12->GetDesc().Usage == USAGE_DYNAMIC)
+                pBufferD3D12->DvpVerifyDynamicAllocation(this);
 #endif
 
-                if (DispatchAttrs.Flags & DISPATCH_FLAG_TRANSITION_INDIRECT_ARGS_BUFFER)
-                {
-                    if (pBufferD3D12->IsInKnownState() && !pBufferD3D12->CheckState(RESOURCE_STATE_INDIRECT_ARGUMENT))
-                        ComputeCtx.TransitionResource(pBufferD3D12, RESOURCE_STATE_INDIRECT_ARGUMENT);
-                }
-#ifdef DEVELOPMENT
-                else if (DispatchAttrs.Flags & DISPATCH_FLAG_VERIFY_STATES)
-                {
-                    DvpVerifyBufferState(*pBufferD3D12, RESOURCE_STATE_INDIRECT_ARGUMENT, "Indirect dispatch (DeviceContextD3D12Impl::DispatchCompute)");
-                }
-#endif
+            TransitionOrVerifyBufferState(ComputeCtx, *pBufferD3D12, DispatchAttrs.IndirectAttribsBufferStateTransitionMode,
+                                           RESOURCE_STATE_INDIRECT_ARGUMENT, "Indirect dispatch (DeviceContextD3D12Impl::DispatchCompute)");
 
-                size_t BuffDataStartByteOffset;
-                ID3D12Resource *pd3d12ArgsBuff = pBufferD3D12->GetD3D12Buffer(BuffDataStartByteOffset, this);
-                ComputeCtx.ExecuteIndirect(m_pDispatchIndirectSignature, pd3d12ArgsBuff, DispatchAttrs.DispatchArgsByteOffset + BuffDataStartByteOffset);
-            }
-            else
-            {
-                LOG_ERROR_MESSAGE("Valid pIndirectDrawAttribs must be provided for indirect dispatch command");
-            }
+            size_t BuffDataStartByteOffset;
+            ID3D12Resource *pd3d12ArgsBuff = pBufferD3D12->GetD3D12Buffer(BuffDataStartByteOffset, this);
+            ComputeCtx.ExecuteIndirect(m_pDispatchIndirectSignature, pd3d12ArgsBuff, DispatchAttrs.DispatchArgsByteOffset + BuffDataStartByteOffset);
         }
         else
             ComputeCtx.Dispatch(DispatchAttrs.ThreadGroupCountX, DispatchAttrs.ThreadGroupCountY, DispatchAttrs.ThreadGroupCountZ);
@@ -715,9 +637,23 @@ namespace Diligent
         EndFrame(*m_pDevice.RawPtr<RenderDeviceD3D12Impl>());
     }
 
-    void DeviceContextD3D12Impl::SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer** ppBuffers, Uint32* pOffsets, SET_VERTEX_BUFFERS_FLAGS Flags )
+    void DeviceContextD3D12Impl::SetVertexBuffers( Uint32                         StartSlot,
+                                                   Uint32                         NumBuffersSet,
+                                                   IBuffer**                      ppBuffers,
+                                                   Uint32*                        pOffsets,
+                                                   RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
+                                                   SET_VERTEX_BUFFERS_FLAGS       Flags )
     {
-        TDeviceContextBase::SetVertexBuffers( StartSlot, NumBuffersSet, ppBuffers, pOffsets, Flags );
+        TDeviceContextBase::SetVertexBuffers( StartSlot, NumBuffersSet, ppBuffers, pOffsets, StateTransitionMode, Flags );
+
+        auto& CmdCtx = GetCmdContext();
+        for( Uint32 Buff = 0; Buff < m_NumVertexStreams; ++Buff )
+        {
+            auto& CurrStream = m_VertexStreams[Buff];
+            if (auto* pBufferD3D12 = CurrStream.pBuffer.RawPtr())
+                TransitionOrVerifyBufferState(CmdCtx, *pBufferD3D12, StateTransitionMode, RESOURCE_STATE_VERTEX_BUFFER, "Setting vertex buffers (DeviceContextD3D12Impl::SetVertexBuffers)");
+        }
+
         m_State.bCommittedD3D12VBsUpToDate = false;
     }
 
@@ -730,9 +666,14 @@ namespace Diligent
         m_State = State{};
     }
 
-    void DeviceContextD3D12Impl::SetIndexBuffer( IBuffer* pIndexBuffer, Uint32 ByteOffset )
+    void DeviceContextD3D12Impl::SetIndexBuffer( IBuffer* pIndexBuffer, Uint32 ByteOffset, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode )
     {
-        TDeviceContextBase::SetIndexBuffer( pIndexBuffer, ByteOffset );
+        TDeviceContextBase::SetIndexBuffer( pIndexBuffer, ByteOffset, StateTransitionMode );
+        if (m_pIndexBuffer)
+        {
+            auto& CmdCtx = GetCmdContext();
+            TransitionOrVerifyBufferState(CmdCtx, *m_pIndexBuffer, StateTransitionMode, RESOURCE_STATE_INDEX_BUFFER, "Setting index buffer (DeviceContextD3D12Impl::SetIndexBuffer)");
+        }
         m_State.bCommittedD3D12IBUpToDate = false;
     }
 

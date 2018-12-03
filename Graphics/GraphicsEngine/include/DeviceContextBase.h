@@ -89,7 +89,12 @@ public:
 
     /// Base implementation of IDeviceContext::SetVertexBuffers(); validates parameters and 
     /// caches references to the buffers.
-    inline virtual void SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer** ppBuffers, Uint32* pOffsets, SET_VERTEX_BUFFERS_FLAGS Flags )override = 0;
+    inline virtual void SetVertexBuffers( Uint32                         StartSlot,
+                                          Uint32                         NumBuffersSet,
+                                          IBuffer**                      ppBuffers,
+                                          Uint32*                        pOffsets, 
+                                          RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
+                                          SET_VERTEX_BUFFERS_FLAGS       Flags )override = 0;
 
     inline virtual void InvalidateState()override = 0;
 
@@ -99,7 +104,7 @@ public:
                                       int);
 
     /// Base implementation of IDeviceContext::SetIndexBuffer(); caches the strong reference to the index buffer
-    inline virtual void SetIndexBuffer( IBuffer* pIndexBuffer, Uint32 ByteOffset )override = 0;
+    inline virtual void SetIndexBuffer( IBuffer* pIndexBuffer, Uint32 ByteOffset, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode )override = 0;
 
     /// Caches the viewports
     inline void SetViewports( Uint32 NumViewports, const Viewport* pViewports, Uint32& RTWidth, Uint32& RTHeight );
@@ -276,7 +281,12 @@ protected:
 
 template<typename BaseInterface, typename ImplementationTraits>
 inline void DeviceContextBase<BaseInterface,ImplementationTraits> :: 
-            SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer** ppBuffers, Uint32* pOffsets, SET_VERTEX_BUFFERS_FLAGS Flags  )
+            SetVertexBuffers( Uint32                         StartSlot,
+                              Uint32                         NumBuffersSet,
+                              IBuffer**                      ppBuffers,
+                              Uint32*                        pOffsets,
+                              RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
+                              SET_VERTEX_BUFFERS_FLAGS       Flags  )
 {
 #ifdef DEVELOPMENT
     if ( StartSlot >= MaxBufferSlots )
@@ -316,7 +326,7 @@ inline void DeviceContextBase<BaseInterface,ImplementationTraits> ::
             const auto &BuffDesc = CurrStream.pBuffer->GetDesc();
             if ( !(BuffDesc.BindFlags & BIND_VERTEX_BUFFER) )
             {
-                LOG_ERROR_MESSAGE( "Buffer \"", BuffDesc.Name ? BuffDesc.Name : "", "\" being bound as vertex buffer to slot ", Buff," was not created with BIND_VERTEX_BUFFER flag" );
+                LOG_ERROR_MESSAGE( "Buffer '", BuffDesc.Name ? BuffDesc.Name : "", "' being bound as vertex buffer to slot ", Buff," was not created with BIND_VERTEX_BUFFER flag" );
             }
         }
 #endif
@@ -363,15 +373,19 @@ inline void DeviceContextBase<BaseInterface,ImplementationTraits> :: InvalidateS
 }
 
 template<typename BaseInterface, typename ImplementationTraits>
-inline void DeviceContextBase<BaseInterface,ImplementationTraits> :: SetIndexBuffer( IBuffer* pIndexBuffer, Uint32 ByteOffset )
+inline void DeviceContextBase<BaseInterface,ImplementationTraits> ::
+            SetIndexBuffer( IBuffer* pIndexBuffer, Uint32 ByteOffset, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode )
 {
     m_pIndexBuffer = ValidatedCast<BufferImplType>(pIndexBuffer);
     m_IndexDataStartOffset = ByteOffset;
 #ifdef DEVELOPMENT
-    const auto& BuffDesc = m_pIndexBuffer->GetDesc();
-    if ( !(BuffDesc.BindFlags & BIND_INDEX_BUFFER) )
+    if (m_pIndexBuffer)
     {
-        LOG_ERROR_MESSAGE( "Buffer \"", BuffDesc.Name ? BuffDesc.Name : "", "\" being bound as index buffer was not created with BIND_INDEX_BUFFER flag" );
+        const auto& BuffDesc = m_pIndexBuffer->GetDesc();
+        if ( !(BuffDesc.BindFlags & BIND_INDEX_BUFFER) )
+        {
+            LOG_ERROR_MESSAGE( "Buffer '", BuffDesc.Name ? BuffDesc.Name : "", "' being bound as index buffer was not created with BIND_INDEX_BUFFER flag" );
+        }
     }
 #endif
 }
@@ -526,7 +540,7 @@ inline bool DeviceContextBase<BaseInterface,ImplementationTraits> ::
             const auto &RTVDesc = pRTView->GetDesc();
 #ifdef DEVELOPMENT
             if (RTVDesc.ViewType != TEXTURE_VIEW_RENDER_TARGET)
-                LOG_ERROR("Texture view object named \"", RTVDesc.Name ? RTVDesc.Name : "", "\" has incorrect view type (", GetTexViewTypeLiteralName(RTVDesc.ViewType), "). Render target view is expected" );
+                LOG_ERROR("Texture view object named '", RTVDesc.Name ? RTVDesc.Name : "", "' has incorrect view type (", GetTexViewTypeLiteralName(RTVDesc.ViewType), "). Render target view is expected" );
 #endif
             // Use this RTV to set the render target size
             if (m_FramebufferWidth == 0)
@@ -566,7 +580,7 @@ inline bool DeviceContextBase<BaseInterface,ImplementationTraits> ::
         const auto &DSVDesc = pDepthStencil->GetDesc();
 #ifdef DEVELOPMENT
         if (DSVDesc.ViewType != TEXTURE_VIEW_DEPTH_STENCIL)
-            LOG_ERROR("Texture view object named \"", DSVDesc.Name ? DSVDesc.Name : "", "\" has incorrect view type (", GetTexViewTypeLiteralName(DSVDesc.ViewType), "). Depth stencil view is expected" );
+            LOG_ERROR("Texture view object named '", DSVDesc.Name ? DSVDesc.Name : "", "' has incorrect view type (", GetTexViewTypeLiteralName(DSVDesc.ViewType), "). Depth stencil view is expected" );
 #endif
 
         // Use depth stencil size to set render target size
@@ -856,7 +870,7 @@ inline bool DeviceContextBase<BaseInterface,ImplementationTraits> ::
         return false;
     }
 
-    if(drawAttribs.pIndirectDrawAttribs == nullptr)
+    if (drawAttribs.pIndirectDrawAttribs == nullptr)
     {
         if (drawAttribs.NumIndices == 0)
             LOG_WARNING_MESSAGE(drawAttribs.IsIndexed ? "Number of indices to draw is zero" : "Number of vertices to draw is zero");
@@ -874,6 +888,12 @@ inline bool DeviceContextBase<BaseInterface,ImplementationTraits> ::
         return false;
     }
     
+    if (drawAttribs.IsIndexed && !m_pIndexBuffer)
+    {
+        LOG_ERROR("No index buffer is bound for indexed draw command");
+        return false;
+    }
+
     return true;
 }
 

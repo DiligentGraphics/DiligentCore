@@ -654,7 +654,7 @@ namespace Diligent
         }
     }
 
-    void DeviceContextD3D11Impl::CommitD3D11IndexBuffer(VALUE_TYPE IndexType, bool TransitionBuffer, bool VerifyState)
+    void DeviceContextD3D11Impl::CommitD3D11IndexBuffer(VALUE_TYPE IndexType)
     {
         if (!m_pIndexBuffer)
         {
@@ -663,26 +663,6 @@ namespace Diligent
         }
 
         BufferD3D11Impl* pBuffD3D11 = m_pIndexBuffer.RawPtr<BufferD3D11Impl>();
-        if (TransitionBuffer)
-        {
-            if (pBuffD3D11->IsInKnownState() && pBuffD3D11->CheckState(RESOURCE_STATE_UNORDERED_ACCESS))
-            {
-                UnbindResourceFromUAV(pBuffD3D11, pBuffD3D11->m_pd3d11Buffer);
-                pBuffD3D11->ClearState(RESOURCE_STATE_UNORDERED_ACCESS);
-            }
-        }
-#ifdef DEVELOPMENT
-        else if (VerifyState)
-        {
-            if (pBuffD3D11->IsInKnownState() && pBuffD3D11->CheckState(RESOURCE_STATE_UNORDERED_ACCESS))
-            {
-                LOG_ERROR_MESSAGE("Buffer '", pBuffD3D11->GetDesc().Name, "' used as index buffer is in RESOURCE_STATE_UNORDERED_ACCESS state."
-                                  " Use DRAW_FLAG_TRANSITION_INDEX_BUFFER flag or explicitly transition the buffer to RESOURCE_STATE_INDEX_BUFFER state.");
-
-            }
-        }
-#endif
-
         if( m_CommittedD3D11IndexBuffer          != pBuffD3D11->m_pd3d11Buffer ||
             m_CommittedIBFormat                  != IndexType                  ||
             m_CommittedD3D11IndexDataStartOffset != m_IndexDataStartOffset )
@@ -708,7 +688,7 @@ namespace Diligent
         m_bCommittedD3D11IBUpToDate = true;
     }
 
-    void DeviceContextD3D11Impl::CommitD3D11VertexBuffers(PipelineStateD3D11Impl* pPipelineStateD3D11, bool TransitionBuffers, bool VerifyStates)
+    void DeviceContextD3D11Impl::CommitD3D11VertexBuffers(PipelineStateD3D11Impl* pPipelineStateD3D11)
     {
         VERIFY( m_NumVertexStreams <= MaxBufferSlots, "Too many buffers are being set" );
         UINT NumBuffersToSet = std::max(m_NumVertexStreams, m_NumCommittedD3D11VBs );
@@ -723,25 +703,6 @@ namespace Diligent
             ID3D11Buffer* pd3d11Buffer = pBuffD3D11Impl ? pBuffD3D11Impl->m_pd3d11Buffer : nullptr;
             auto Stride = Strides[Slot];
             auto Offset = CurrStream.Offset;
-
-            if (TransitionBuffers)
-            {
-                if (pBuffD3D11Impl != nullptr && pBuffD3D11Impl->IsInKnownState() && pBuffD3D11Impl->CheckState(RESOURCE_STATE_UNORDERED_ACCESS))
-                {
-                    UnbindResourceFromUAV(pBuffD3D11Impl, pd3d11Buffer);
-                    pBuffD3D11Impl->ClearState(RESOURCE_STATE_UNORDERED_ACCESS);
-                }
-            }
-#ifdef DEVELOPMENT
-            else if (VerifyStates)
-            {
-                if (pBuffD3D11Impl != nullptr && pBuffD3D11Impl->IsInKnownState() && pBuffD3D11Impl->CheckState(RESOURCE_STATE_UNORDERED_ACCESS))
-                {
-                    LOG_ERROR_MESSAGE("Buffer '", pBuffD3D11Impl->GetDesc().Name, "' used as vertex buffer at slot ", Slot, " is in RESOURCE_STATE_UNORDERED_ACCESS state. "
-                                      "Use DRAW_FLAG_TRANSITION_VERTEX_BUFFER flag or explicitly transition the buffer to RESOURCE_STATE_VERTEX_BUFFER state.");
-                }
-            }
-#endif
 
             // It is safe to perform raw pointer check because device context keeps
             // all buffers alive.
@@ -789,17 +750,45 @@ namespace Diligent
         if (pd3d11InputLayout != nullptr && !m_bCommittedD3D11VBsUpToDate)
         {
             DEV_CHECK_ERR( m_NumVertexStreams >= m_pPipelineState->GetNumBufferSlotsUsed(), "Currently bound pipeline state '", m_pPipelineState->GetDesc().Name, "' expects ", m_pPipelineState->GetNumBufferSlotsUsed(), " input buffer slots, but only ", m_NumVertexStreams, " is bound");
-            CommitD3D11VertexBuffers(m_pPipelineState, drawAttribs.Flags & DRAW_FLAG_TRANSITION_VERTEX_BUFFERS, VerifyStates);
+            CommitD3D11VertexBuffers(m_pPipelineState);
         }
 
+#ifdef DEVELOPMENT
+        if (VerifyStates)
+        {
+            for (UINT Slot = 0; Slot < m_NumVertexStreams; ++Slot)
+            {
+                if (auto* pBuffD3D11Impl = m_VertexStreams[Slot].pBuffer.RawPtr())
+                {
+                    if (pBuffD3D11Impl->IsInKnownState() && pBuffD3D11Impl->CheckState(RESOURCE_STATE_UNORDERED_ACCESS))
+                    {
+                        LOG_ERROR_MESSAGE("Buffer '", pBuffD3D11Impl->GetDesc().Name, "' used as vertex buffer at slot ", Slot, " is in RESOURCE_STATE_UNORDERED_ACCESS state. "
+                                          "Use appropriate transition mode or explicitly transition the buffer to RESOURCE_STATE_VERTEX_BUFFER state.");
+                    }
+                }
+            }
+        }
+#endif
+      
         if (drawAttribs.IsIndexed)
         {
             if (m_CommittedIBFormat != drawAttribs.IndexType)
                 m_bCommittedD3D11IBUpToDate = false;
             if (!m_bCommittedD3D11IBUpToDate)
             {
-                CommitD3D11IndexBuffer(drawAttribs.IndexType, drawAttribs.Flags & DRAW_FLAG_TRANSITION_INDEX_BUFFER, VerifyStates);
+                CommitD3D11IndexBuffer(drawAttribs.IndexType);
             }
+#ifdef DEVELOPMENT
+            if (VerifyStates)
+            {
+                if (m_pIndexBuffer->IsInKnownState() && m_pIndexBuffer->CheckState(RESOURCE_STATE_UNORDERED_ACCESS))
+                {
+                    LOG_ERROR_MESSAGE("Buffer '", m_pIndexBuffer->GetDesc().Name, "' used as index buffer is in RESOURCE_STATE_UNORDERED_ACCESS state."
+                                      " Use appropriate state transition mode or explicitly transition the buffer to RESOURCE_STATE_INDEX_BUFFER state.");
+
+                }
+            }
+#endif
         }
         
 #ifdef DEVELOPMENT
@@ -1129,15 +1118,70 @@ namespace Diligent
     {
     }
 
-    void DeviceContextD3D11Impl::SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer **ppBuffers, Uint32* pOffsets, SET_VERTEX_BUFFERS_FLAGS Flags )
+    void DeviceContextD3D11Impl::SetVertexBuffers( Uint32                         StartSlot,
+                                                   Uint32                         NumBuffersSet,
+                                                   IBuffer**                      ppBuffers,
+                                                   Uint32*                        pOffsets,
+                                                   RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
+                                                   SET_VERTEX_BUFFERS_FLAGS       Flags )
     {
-        TDeviceContextBase::SetVertexBuffers( StartSlot, NumBuffersSet, ppBuffers, pOffsets, Flags );
+        TDeviceContextBase::SetVertexBuffers( StartSlot, NumBuffersSet, ppBuffers, pOffsets, StateTransitionMode, Flags );
+        for (UINT Slot = 0; Slot < m_NumVertexStreams; ++Slot)
+        {
+            auto& CurrStream = m_VertexStreams[Slot];
+            if (auto* pBuffD3D11Impl = CurrStream.pBuffer.RawPtr())
+            {
+                if (StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
+                {
+                    if (pBuffD3D11Impl->IsInKnownState() && pBuffD3D11Impl->CheckState(RESOURCE_STATE_UNORDERED_ACCESS))
+                    {
+                        UnbindResourceFromUAV(pBuffD3D11Impl, pBuffD3D11Impl->m_pd3d11Buffer);
+                        pBuffD3D11Impl->ClearState(RESOURCE_STATE_UNORDERED_ACCESS);
+                    }
+                }
+#ifdef DEVELOPMENT
+                else if (StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_VERIFY)
+                {
+                    if (pBuffD3D11Impl->IsInKnownState() && pBuffD3D11Impl->CheckState(RESOURCE_STATE_UNORDERED_ACCESS))
+                    {
+                        LOG_ERROR_MESSAGE("Buffer '", pBuffD3D11Impl->GetDesc().Name, "' used as vertex buffer at slot ", Slot, " is in RESOURCE_STATE_UNORDERED_ACCESS state. "
+                                          "Use RESOURCE_STATE_TRANSITION_MODE_TRANSITION mode or explicitly transition the buffer to RESOURCE_STATE_VERTEX_BUFFER state.");
+                    }
+                }
+#endif
+            }
+        }
+
         m_bCommittedD3D11VBsUpToDate = false;
     }
 
-    void DeviceContextD3D11Impl::SetIndexBuffer( IBuffer* pIndexBuffer, Uint32 ByteOffset )
+    void DeviceContextD3D11Impl::SetIndexBuffer( IBuffer* pIndexBuffer, Uint32 ByteOffset, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode )
     {
-        TDeviceContextBase::SetIndexBuffer( pIndexBuffer, ByteOffset );
+        TDeviceContextBase::SetIndexBuffer( pIndexBuffer, ByteOffset, StateTransitionMode );
+
+        if (m_pIndexBuffer)
+        {
+            if (StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
+            {
+                if (m_pIndexBuffer->IsInKnownState() && m_pIndexBuffer->CheckState(RESOURCE_STATE_UNORDERED_ACCESS))
+                {
+                    UnbindResourceFromUAV(m_pIndexBuffer, m_pIndexBuffer->m_pd3d11Buffer);
+                    m_pIndexBuffer->ClearState(RESOURCE_STATE_UNORDERED_ACCESS);
+                }
+            }
+#ifdef DEVELOPMENT
+            else if (StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_VERIFY)
+            {
+                if (m_pIndexBuffer->IsInKnownState() && m_pIndexBuffer->CheckState(RESOURCE_STATE_UNORDERED_ACCESS))
+                {
+                    LOG_ERROR_MESSAGE("Buffer '", m_pIndexBuffer->GetDesc().Name, "' used as index buffer is in RESOURCE_STATE_UNORDERED_ACCESS state."
+                                      " Use RESOURCE_STATE_TRANSITION_MODE_TRANSITION mode or explicitly transition the buffer to RESOURCE_STATE_INDEX_BUFFER state.");
+
+                }
+            }
+#endif
+        }
+
         m_bCommittedD3D11IBUpToDate = false;
     }
 

@@ -161,9 +161,14 @@ namespace Diligent
         }
     }
 
-    void DeviceContextGLImpl::SetVertexBuffers( Uint32 StartSlot, Uint32 NumBuffersSet, IBuffer **ppBuffers, Uint32 *pOffsets, SET_VERTEX_BUFFERS_FLAGS Flags )
+    void DeviceContextGLImpl::SetVertexBuffers( Uint32                         StartSlot,
+                                                Uint32                         NumBuffersSet,
+                                                IBuffer**                      ppBuffers,
+                                                Uint32*                        pOffsets,
+                                                RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
+                                                SET_VERTEX_BUFFERS_FLAGS       Flags )
     {
-        TDeviceContextBase::SetVertexBuffers( StartSlot, NumBuffersSet, ppBuffers, pOffsets, Flags );
+        TDeviceContextBase::SetVertexBuffers( StartSlot, NumBuffersSet, ppBuffers, pOffsets, StateTransitionMode, Flags );
         m_bVAOIsUpToDate = false;
     }
 
@@ -177,9 +182,9 @@ namespace Diligent
         m_bVAOIsUpToDate = false;
     }
 
-    void DeviceContextGLImpl::SetIndexBuffer( IBuffer *pIndexBuffer, Uint32 ByteOffset )
+    void DeviceContextGLImpl::SetIndexBuffer( IBuffer *pIndexBuffer, Uint32 ByteOffset, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode )
     {
-        TDeviceContextBase::SetIndexBuffer( pIndexBuffer, ByteOffset );
+        TDeviceContextBase::SetIndexBuffer( pIndexBuffer, ByteOffset, StateTransitionMode );
         m_bVAOIsUpToDate = false;
     }
 

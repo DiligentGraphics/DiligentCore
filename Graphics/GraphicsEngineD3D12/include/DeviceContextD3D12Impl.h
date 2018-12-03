@@ -73,15 +73,16 @@ public:
 
     virtual void SetBlendFactors(const float* pBlendFactors = nullptr)override final;
 
-    virtual void SetVertexBuffers( Uint32                   StartSlot,
-                                   Uint32                   NumBuffersSet,
-                                   IBuffer**                ppBuffers,
-                                   Uint32*                  pOffsets,
-                                   SET_VERTEX_BUFFERS_FLAGS Flags )override final;
+    virtual void SetVertexBuffers( Uint32                         StartSlot,
+                                   Uint32                         NumBuffersSet,
+                                   IBuffer**                      ppBuffers,
+                                   Uint32*                        pOffsets,
+                                   RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
+                                   SET_VERTEX_BUFFERS_FLAGS       Flags )override final;
     
     virtual void InvalidateState()override final;
 
-    virtual void SetIndexBuffer( IBuffer* pIndexBuffer, Uint32 ByteOffset )override final;
+    virtual void SetIndexBuffer( IBuffer* pIndexBuffer, Uint32 ByteOffset, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode )override final;
 
     virtual void SetViewports( Uint32 NumViewports, const Viewport* pViewports, Uint32 RTWidth, Uint32 RTHeight )override final;
 
@@ -212,9 +213,8 @@ public:
     Int64 GetCurrentFrameNumber()const {return m_ContextFrameNumber; }
 
 private:
-    void CommitD3D12IndexBuffer(VALUE_TYPE IndexType, bool TransitionBuffer, bool VerifyState);
-    void CommitD3D12VertexBuffers(class GraphicsContext &GraphCtx, bool TransitionBuffers, bool VerifyStates);
-    void TransitionD3D12VertexBuffers(class GraphicsContext &GraphCtx);
+    void CommitD3D12IndexBuffer(VALUE_TYPE IndexType);
+    void CommitD3D12VertexBuffers(class GraphicsContext& GraphCtx);
     void CommitRenderTargets(SET_RENDER_TARGETS_FLAGS Flags);
     void CommitViewports();
     void CommitScissorRects(class GraphicsContext &GraphCtx, bool ScissorEnable);

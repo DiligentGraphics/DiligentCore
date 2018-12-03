@@ -71,15 +71,16 @@ public:
 
     virtual void SetBlendFactors(const float* pBlendFactors = nullptr)override final;
 
-    virtual void SetVertexBuffers(Uint32                   StartSlot,
-                                  Uint32                   NumBuffersSet,
-                                  IBuffer**                ppBuffers,
-                                  Uint32*                  pOffsets,
-                                  SET_VERTEX_BUFFERS_FLAGS Flags)override final;
+    virtual void SetVertexBuffers(Uint32                         StartSlot,
+                                  Uint32                         NumBuffersSet,
+                                  IBuffer**                      ppBuffers,
+                                  Uint32*                        pOffsets,
+                                  RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
+                                  SET_VERTEX_BUFFERS_FLAGS       Flags)override final;
     
     virtual void InvalidateState()override final;
 
-    virtual void SetIndexBuffer(IBuffer* pIndexBuffer, Uint32 ByteOffset)override final;
+    virtual void SetIndexBuffer(IBuffer* pIndexBuffer, Uint32 ByteOffset, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)override final;
 
     virtual void SetViewports(Uint32 NumViewports, const Viewport* pViewports, Uint32 RTWidth, Uint32 RTHeight)override final;
 
@@ -172,10 +173,10 @@ public:
 private:
     
     /// Commits d3d11 index buffer to d3d11 device context.
-    void CommitD3D11IndexBuffer(VALUE_TYPE IndexType, bool TransitionBuffer, bool VerifyState);
+    void CommitD3D11IndexBuffer(VALUE_TYPE IndexType);
 
     /// Commits d3d11 vertex buffers to d3d11 device context.
-    void CommitD3D11VertexBuffers(class PipelineStateD3D11Impl* pPipelineStateD3D11, bool TransitionBuffers, bool VerifyStates);
+    void CommitD3D11VertexBuffers(class PipelineStateD3D11Impl* pPipelineStateD3D11);
 
     /// Helper template function used to facilitate resource unbinding
     template<typename TD3D11ResourceViewType,
