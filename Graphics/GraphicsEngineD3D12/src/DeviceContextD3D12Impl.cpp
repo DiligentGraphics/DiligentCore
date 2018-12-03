@@ -232,13 +232,16 @@ namespace Diligent
         pPipelineStateD3D12->CommitAndTransitionShaderResources(pShaderResourceBinding, Ctx, false, true, false);
     }
 
-    void DeviceContextD3D12Impl::CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, COMMIT_SHADER_RESOURCES_FLAGS Flags)
+    void DeviceContextD3D12Impl::CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
     {
-        if (!DeviceContextBase::CommitShaderResources(pShaderResourceBinding, Flags, 0 /*Dummy*/))
+        if (!DeviceContextBase::CommitShaderResources(pShaderResourceBinding, StateTransitionMode, 0 /*Dummy*/))
             return;
 
         auto& Ctx = GetCmdContext();
-        m_State.pCommittedResourceCache = m_pPipelineState->CommitAndTransitionShaderResources(pShaderResourceBinding, Ctx, true, (Flags & COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES)!=0, (Flags & COMMIT_SHADER_RESOURCES_FLAG_VERIFY_STATES)!=0);
+        m_State.pCommittedResourceCache =
+            m_pPipelineState->CommitAndTransitionShaderResources(pShaderResourceBinding, Ctx, true,
+                    StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
+                    StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_VERIFY);
     }
 
     void DeviceContextD3D12Impl::SetStencilRef(Uint32 StencilRef)

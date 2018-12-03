@@ -753,7 +753,7 @@ void DvpVerifyResourceState(const ShaderResourceCacheD3D12::Resource& Res,
             // Not using QueryInterface() for the sake of efficiency
             const auto* pBufferD3D12 = Res.pObject.RawPtr<const BufferD3D12Impl>();
             if (pBufferD3D12->IsInKnownState() && !pBufferD3D12->CheckState(RESOURCE_STATE_CONSTANT_BUFFER))
-                LOG_ERROR_MESSAGE("Resource '", pBufferD3D12->GetDesc().Name, "' is not in RESOURCE_STATE_CONSTANT_BUFFER state. Did you forget to call TransitionShaderResources() or specify COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag in a call to CommitShaderResources()?" );
+                LOG_ERROR_MESSAGE("Resource '", pBufferD3D12->GetDesc().Name, "' is not in RESOURCE_STATE_CONSTANT_BUFFER state. Did you forget to call TransitionShaderResources() or specify RESOURCE_STATE_TRANSITION_MODE_TRANSITION mode in a call to CommitShaderResources()?" );
         }
         break;
 
@@ -763,7 +763,7 @@ void DvpVerifyResourceState(const ShaderResourceCacheD3D12::Resource& Res,
             const auto* pBuffViewD3D12 = Res.pObject.RawPtr<const BufferViewD3D12Impl>();
             const auto* pBufferD3D12 = pBuffViewD3D12->GetBuffer<const BufferD3D12Impl>();
             if (pBufferD3D12->IsInKnownState() && !pBufferD3D12->CheckState(RESOURCE_STATE_SHADER_RESOURCE))
-                LOG_ERROR_MESSAGE("Resource '", pBufferD3D12->GetDesc().Name, "' is not in RESOURCE_STATE_SHADER_RESOURCE state. Did you forget to call TransitionShaderResources() or specify COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag in a call to CommitShaderResources()?" );
+                LOG_ERROR_MESSAGE("Resource '", pBufferD3D12->GetDesc().Name, "' is not in RESOURCE_STATE_SHADER_RESOURCE state. Did you forget to call TransitionShaderResources() or specify RESOURCE_STATE_TRANSITION_MODE_TRANSITION mode in a call to CommitShaderResources()?" );
         }
         break;
 
@@ -773,7 +773,7 @@ void DvpVerifyResourceState(const ShaderResourceCacheD3D12::Resource& Res,
             const auto* pBuffViewD3D12 = Res.pObject.RawPtr<const BufferViewD3D12Impl>();
             const auto* pBufferD3D12 = pBuffViewD3D12->GetBuffer<const BufferD3D12Impl>();
             if (pBufferD3D12->IsInKnownState() && !pBufferD3D12->CheckState(RESOURCE_STATE_UNORDERED_ACCESS))
-                LOG_ERROR_MESSAGE("Resource '", pBufferD3D12->GetDesc().Name, "' is not in RESOURCE_STATE_UNORDERED_ACCESS state. Did you forget to call TransitionShaderResources() or specify COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag in a call to CommitShaderResources()?" );
+                LOG_ERROR_MESSAGE("Resource '", pBufferD3D12->GetDesc().Name, "' is not in RESOURCE_STATE_UNORDERED_ACCESS state. Did you forget to call TransitionShaderResources() or specify RESOURCE_STATE_TRANSITION_MODE_TRANSITION mode in a call to CommitShaderResources()?" );
         }
         break;
 
@@ -783,7 +783,7 @@ void DvpVerifyResourceState(const ShaderResourceCacheD3D12::Resource& Res,
             const auto* pTexViewD3D12 = Res.pObject.RawPtr<const TextureViewD3D12Impl>();
             const auto* pTexD3D12 = pTexViewD3D12->GetTexture<TextureD3D12Impl>();
             if (pTexD3D12->IsInKnownState() && !pTexD3D12->CheckState(RESOURCE_STATE_SHADER_RESOURCE))
-                LOG_ERROR_MESSAGE("Resource '", pTexD3D12->GetDesc().Name, "' is not in RESOURCE_STATE_SHADER_RESOURCE state. Did you forget to call TransitionShaderResources() or specify COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag in a call to CommitShaderResources()?" );
+                LOG_ERROR_MESSAGE("Resource '", pTexD3D12->GetDesc().Name, "' is not in RESOURCE_STATE_SHADER_RESOURCE state. Did you forget to call TransitionShaderResources() or specify RESOURCE_STATE_TRANSITION_MODE_TRANSITION mode in a call to CommitShaderResources()?" );
         }
         break;
 
@@ -793,7 +793,7 @@ void DvpVerifyResourceState(const ShaderResourceCacheD3D12::Resource& Res,
             const auto* pTexViewD3D12 = Res.pObject.RawPtr<const TextureViewD3D12Impl>();
             const auto* pTexD3D12 = pTexViewD3D12->GetTexture<const TextureD3D12Impl>();
             if (pTexD3D12->IsInKnownState() && !pTexD3D12->CheckState(RESOURCE_STATE_UNORDERED_ACCESS))
-                LOG_ERROR_MESSAGE("Resource '", pTexD3D12->GetDesc().Name, "' is not in RESOURCE_STATE_UNORDERED_ACCESS state. Did you forget to call TransitionShaderResources() or specify COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag in a call to CommitShaderResources()?" );
+                LOG_ERROR_MESSAGE("Resource '", pTexD3D12->GetDesc().Name, "' is not in RESOURCE_STATE_UNORDERED_ACCESS state. Did you forget to call TransitionShaderResources() or specify RESOURCE_STATE_TRANSITION_MODE_TRANSITION mode in a call to CommitShaderResources()?" );
         }
         break;
 

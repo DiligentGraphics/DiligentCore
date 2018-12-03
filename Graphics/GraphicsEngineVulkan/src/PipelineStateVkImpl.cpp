@@ -508,7 +508,7 @@ bool PipelineStateVkImpl::IsCompatibleWith(const IPipelineState *pPSO)const
 void PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBinding*                pShaderResourceBinding, 
                                                              DeviceContextVkImpl*                   pCtxVkImpl,
                                                              bool                                   CommitResources,
-                                                             Uint32                                 Flags,
+                                                             RESOURCE_STATE_TRANSITION_MODE         StateTransitionMode,
                                                              PipelineLayout::DescriptorSetBindInfo* pDescrSetBindInfo)const
 {
     if (!m_HasStaticResources && !m_HasNonStaticResources)
@@ -552,14 +552,14 @@ void PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBind
 
     if (CommitResources)
     {
-        if (Flags & COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES)
+        if (StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
             ResourceCache.TransitionResources<false>(pCtxVkImpl);
-        else if (Flags & COMMIT_SHADER_RESOURCES_FLAG_VERIFY_STATES)
-        {
 #ifdef DEVELOPMENT
+        else if (StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_VERIFY)
+        {
             ResourceCache.TransitionResources<true>(pCtxVkImpl);
-#endif
         }
+#endif
 
         VkDescriptorSet DynamicDescrSet = VK_NULL_HANDLE;
         auto DynamicDescriptorSetVkLayout = m_PipelineLayout.GetDynamicDescriptorSetVkLayout();
@@ -589,7 +589,7 @@ void PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBind
     }
     else
     {
-        VERIFY( (Flags & COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES) != 0 , "Resources should be transitioned or committed or both");
+        VERIFY(StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION, "Resources should be transitioned or committed or both");
         ResourceCache.TransitionResources<false>(pCtxVkImpl);
     }
 }

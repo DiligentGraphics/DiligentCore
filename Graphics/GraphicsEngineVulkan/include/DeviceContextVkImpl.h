@@ -67,7 +67,7 @@ public:
 
     virtual void TransitionShaderResources(IPipelineState* pPipelineState, IShaderResourceBinding* pShaderResourceBinding)override final;
 
-    virtual void CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, COMMIT_SHADER_RESOURCES_FLAGS Flags)override final;
+    virtual void CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)override final;
 
     virtual void SetStencilRef(Uint32 StencilRef)override final;
 

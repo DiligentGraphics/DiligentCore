@@ -304,7 +304,7 @@ namespace Diligent
             if (CurrLayout != VK_IMAGE_LAYOUT_GENERAL)
                 Ctx.TransitionImageLayout(*pTexVk, CurrLayout, VK_IMAGE_LAYOUT_GENERAL, SubresRange);
 
-            Ctx.CommitShaderResources(&SRB, COMMIT_SHADER_RESOURCES_FLAG_NONE);
+            Ctx.CommitShaderResources(&SRB, RESOURCE_STATE_TRANSITION_MODE_NONE);
             DispatchComputeAttribs DispatchAttrs((DstWidth + 7) / 8, (DstHeight + 7) / 8, ViewDesc.NumArraySlices);
             Ctx.DispatchCompute(DispatchAttrs);
 

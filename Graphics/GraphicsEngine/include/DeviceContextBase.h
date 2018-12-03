@@ -95,7 +95,9 @@ public:
     inline virtual void InvalidateState()override = 0;
 
     /// Base implementation of IDeviceContext::CommitShaderResources(); validates parameters.
-    inline bool CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, COMMIT_SHADER_RESOURCES_FLAGS Flags, int);
+    inline bool CommitShaderResources(IShaderResourceBinding*        pShaderResourceBinding,
+                                      RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
+                                      int);
 
     /// Base implementation of IDeviceContext::SetIndexBuffer(); caches the strong reference to the index buffer
     inline virtual void SetIndexBuffer( IBuffer* pIndexBuffer, Uint32 ByteOffset )override = 0;
@@ -333,7 +335,7 @@ inline void DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, Pi
 
 template<typename BaseInterface, typename BufferImplType, typename TextureImplType, typename PipelineStateImplType>
 inline bool DeviceContextBase<BaseInterface, BufferImplType, TextureImplType, PipelineStateImplType> :: 
-            CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, COMMIT_SHADER_RESOURCES_FLAGS Flags, int)
+            CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode, int)
 {
 #ifdef DEVELOPMENT
     if (!m_pPipelineState)

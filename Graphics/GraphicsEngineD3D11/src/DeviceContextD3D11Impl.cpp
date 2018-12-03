@@ -270,14 +270,14 @@ namespace Diligent
                         {
                             if (pTexture->IsInKnownState () && !pTexture->CheckState(RESOURCE_STATE_UNORDERED_ACCESS))
                             {
-                                LOG_ERROR_MESSAGE("Texture '", pTexture->GetDesc().Name, "' has not been transitioned to Unordered Access state. Call TransitionShaderResources(), use COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag or explicitly transition the texture to required state.");
+                                LOG_ERROR_MESSAGE("Texture '", pTexture->GetDesc().Name, "' has not been transitioned to Unordered Access state. Call TransitionShaderResources(), use RESOURCE_STATE_TRANSITION_MODE_TRANSITION mode or explicitly transition the texture to required state.");
                             }
                         }
                         else if (const auto* pBuffer = ValidatedCast<BufferD3D11Impl>(UAVRes.pBuffer))
                         {
                             if (pBuffer->IsInKnownState() && !pBuffer->CheckState(RESOURCE_STATE_UNORDERED_ACCESS))
                             {
-                                LOG_ERROR_MESSAGE("Buffer '", pBuffer->GetDesc().Name, "' has not been transitioned to Unordered Access state. Call TransitionShaderResources(), use COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag or explicitly transition the buffer to required state.");
+                                LOG_ERROR_MESSAGE("Buffer '", pBuffer->GetDesc().Name, "' has not been transitioned to Unordered Access state. Call TransitionShaderResources(), use RESOURCE_STATE_TRANSITION_MODE_TRANSITION mode or explicitly transition the buffer to required state.");
                             }
                         }
                     }
@@ -412,7 +412,7 @@ namespace Diligent
                         {
                             if (pBuff->IsInKnownState() && !pBuff->CheckState(RESOURCE_STATE_CONSTANT_BUFFER))
                             {
-                                LOG_ERROR_MESSAGE("Buffer '", pBuff->GetDesc().Name, "' has not been transitioned to Constant Buffer state. Call TransitionShaderResources(), use COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag or explicitly transition the buffer to required state.");
+                                LOG_ERROR_MESSAGE("Buffer '", pBuff->GetDesc().Name, "' has not been transitioned to Constant Buffer state. Call TransitionShaderResources(), use RESOURCE_STATE_TRANSITION_MODE_TRANSITION mode or explicitly transition the buffer to required state.");
                             }
                         }
                     }
@@ -510,14 +510,14 @@ namespace Diligent
                         {
                             if (pTexture->IsInKnownState() && !pTexture->CheckState(RESOURCE_STATE_SHADER_RESOURCE))
                             {
-                                LOG_ERROR_MESSAGE("Texture '", pTexture->GetDesc().Name, "' has not been transitioned to Shader Resource state. Call TransitionShaderResources(), use COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag or explicitly transition the texture to required state.");
+                                LOG_ERROR_MESSAGE("Texture '", pTexture->GetDesc().Name, "' has not been transitioned to Shader Resource state. Call TransitionShaderResources(), use RESOURCE_STATE_TRANSITION_MODE_TRANSITION mode or explicitly transition the texture to required state.");
                             }
                         }
                         else if (const auto* pBuffer = ValidatedCast<BufferD3D11Impl>(SRVRes.pBuffer))
                         {
                             if (pBuffer->IsInKnownState() && !pBuffer->CheckState(RESOURCE_STATE_SHADER_RESOURCE))
                             {
-                                LOG_ERROR_MESSAGE("Buffer '", pBuffer->GetDesc().Name, "' has not been transitioned to Shader Resource state. Call TransitionShaderResources(), use COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag or explicitly transition the buffer to required state.");
+                                LOG_ERROR_MESSAGE("Buffer '", pBuffer->GetDesc().Name, "' has not been transitioned to Shader Resource state. Call TransitionShaderResources(), use RESOURCE_STATE_TRANSITION_MODE_TRANSITION mode or explicitly transition the buffer to required state.");
                             }
                         }
                     }
@@ -617,15 +617,15 @@ namespace Diligent
         TransitionAndCommitShaderResources<true, false>(pPipelineState, pShaderResourceBinding, false);
     }
 
-    void DeviceContextD3D11Impl::CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, COMMIT_SHADER_RESOURCES_FLAGS Flags)
+    void DeviceContextD3D11Impl::CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
     {
-        if (!DeviceContextBase::CommitShaderResources(pShaderResourceBinding, Flags, 0 /*Dummy*/))
+        if (!DeviceContextBase::CommitShaderResources(pShaderResourceBinding, StateTransitionMode, 0 /*Dummy*/))
             return;
 
-        if (Flags & COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES)
+        if (StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
             TransitionAndCommitShaderResources<true, true>(m_pPipelineState, pShaderResourceBinding, false);
         else
-            TransitionAndCommitShaderResources<false, true>(m_pPipelineState, pShaderResourceBinding, Flags & COMMIT_SHADER_RESOURCES_FLAG_VERIFY_STATES);
+            TransitionAndCommitShaderResources<false, true>(m_pPipelineState, pShaderResourceBinding, StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_VERIFY);
     }
 
     void DeviceContextD3D11Impl::SetStencilRef(Uint32 StencilRef)

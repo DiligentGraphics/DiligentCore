@@ -260,15 +260,15 @@ namespace Diligent
         VERIFY_EXPR(pPipelineState != nullptr);
 
         auto *pPipelineStateVk = ValidatedCast<PipelineStateVkImpl>(pPipelineState);
-        pPipelineStateVk->CommitAndTransitionShaderResources(pShaderResourceBinding, this, false, COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES, nullptr);
+        pPipelineStateVk->CommitAndTransitionShaderResources(pShaderResourceBinding, this, false, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, nullptr);
     }
 
-    void DeviceContextVkImpl::CommitShaderResources(IShaderResourceBinding *pShaderResourceBinding, COMMIT_SHADER_RESOURCES_FLAGS Flags)
+    void DeviceContextVkImpl::CommitShaderResources(IShaderResourceBinding *pShaderResourceBinding, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
     {
-        if (!DeviceContextBase::CommitShaderResources(pShaderResourceBinding, Flags, 0 /*Dummy*/))
+        if (!DeviceContextBase::CommitShaderResources(pShaderResourceBinding, StateTransitionMode, 0 /*Dummy*/))
             return;
 
-        m_pPipelineState->CommitAndTransitionShaderResources(pShaderResourceBinding, this, true, Flags, &m_DescrSetBindInfo);
+        m_pPipelineState->CommitAndTransitionShaderResources(pShaderResourceBinding, this, true, StateTransitionMode, &m_DescrSetBindInfo);
     }
 
     void DeviceContextVkImpl::SetStencilRef(Uint32 StencilRef)

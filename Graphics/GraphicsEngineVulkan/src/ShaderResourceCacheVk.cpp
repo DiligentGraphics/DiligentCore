@@ -122,7 +122,7 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl* pCtxVkImpl)
                             LOG_ERROR_MESSAGE("State of buffer '", pBufferVk->GetDesc().Name, "' is incorrect. Required state: ",
                                                GetResourceStateString(RequiredState),  ". Actual state: ", 
                                                GetResourceStateString(pBufferVk->GetState()), 
-                                               ". Call TransitionShaderResources() or provide COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag to CommitShaderResources()");
+                                               ". Call TransitionShaderResources() or provide RESOURCE_STATE_TRANSITION_MODE_TRANSITION flag to CommitShaderResources()");
                         }
                         else
                         {
@@ -156,7 +156,7 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl* pCtxVkImpl)
                             LOG_ERROR_MESSAGE("State of buffer '", pBufferVk->GetDesc().Name, "' is incorrect. Required state: ",
                                                GetResourceStateString(RequiredState),  ". Actual state: ", 
                                                GetResourceStateString(pBufferVk->GetState()), 
-                                               ". Call TransitionShaderResources() or provide COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag to CommitShaderResources()");
+                                               ". Call TransitionShaderResources() or provide RESOURCE_STATE_TRANSITION_MODE_TRANSITION flag to CommitShaderResources()");
                         }
                         else
                         {
@@ -212,7 +212,7 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl* pCtxVkImpl)
                             LOG_ERROR_MESSAGE("State of texture '", pTextureVk->GetDesc().Name, "' is incorrect. Required state: ",
                                               GetResourceStateString(RequiredState), ". Actual state: ", 
                                               GetResourceStateString(pTextureVk->GetState()), 
-                                              ". Call TransitionShaderResources() or specify COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES flag in a call to CommitShaderResources()");
+                                              ". Call TransitionShaderResources() or specify RESOURCE_STATE_TRANSITION_MODE_TRANSITION flag in a call to CommitShaderResources()");
                         }
                         else
                         {

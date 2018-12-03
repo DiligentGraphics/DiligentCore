@@ -214,7 +214,7 @@ namespace Diligent
         // Technically resetting static varaibles is not allowed, but in GL this is OK
         auto SrcTexVar = m_pFragmentShaders[FSInd]->GetShaderVariable( "gSourceTex" );
         SrcTexVar->Set( pSrcSRV );
-        pCtxGL->CommitShaderResources(nullptr, COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES);
+        pCtxGL->CommitShaderResources(nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
         DrawAttribs DrawAttrs;
         DrawAttrs.NumVertices = 4;

@@ -130,9 +130,9 @@ namespace Diligent
 
     }
 
-    void DeviceContextGLImpl::CommitShaderResources(IShaderResourceBinding *pShaderResourceBinding, COMMIT_SHADER_RESOURCES_FLAGS Flags)
+    void DeviceContextGLImpl::CommitShaderResources(IShaderResourceBinding *pShaderResourceBinding, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
     {
-        if(!DeviceContextBase::CommitShaderResources(pShaderResourceBinding, Flags, 0))
+        if(!DeviceContextBase::CommitShaderResources(pShaderResourceBinding, StateTransitionMode, 0))
             return;
 
         if(m_CommitedResourcesTentativeBarriers != 0)

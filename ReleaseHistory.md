@@ -29,6 +29,7 @@
   * Added `RESOURCE_STATE_TRANSITION_MODE` enum that controls resource state transition mode
   * Added state transition mode parameters to `IDeviceContext::UpdateBuffer()`, `IDeviceContext::UpdateTexture()`,
     `IDeviceContext::CopyBuffer()`, and `IDeviceContext::CopyTexture()` methods
+  * Replaced `COMMIT_SHADER_RESOURCES_FLAGS` enum with `RESOURCE_STATE_TRANSITION_MODE`
 
 ## v2.3.b
 
