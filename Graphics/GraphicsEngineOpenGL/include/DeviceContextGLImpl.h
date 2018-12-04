@@ -78,13 +78,20 @@ public:
 
     virtual void SetScissorRects( Uint32 NumRects, const Rect *pRects, Uint32 RTWidth, Uint32 RTHeight )override final;
 
-    virtual void SetRenderTargets( Uint32 NumRenderTargets, ITextureView *ppRenderTargets[], ITextureView *pDepthStencil, SET_RENDER_TARGETS_FLAGS Flags )override final;
+    virtual void SetRenderTargets( Uint32                         NumRenderTargets,
+                                   ITextureView*                  ppRenderTargets[],
+                                   ITextureView*                  pDepthStencil,
+                                   RESOURCE_STATE_TRANSITION_MODE StateTransitionMode )override final;
 
     virtual void Draw( DrawAttribs &DrawAttribs )override final;
 
     virtual void DispatchCompute( const DispatchComputeAttribs &DispatchAttrs )override final;
 
-    virtual void ClearDepthStencil( ITextureView *pView, CLEAR_DEPTH_STENCIL_FLAGS ClearFlags, float fDepth, Uint8 Stencil)override final;
+    virtual void ClearDepthStencil(ITextureView*                  pView,
+                                   CLEAR_DEPTH_STENCIL_FLAGS      ClearFlags,
+                                   float                          fDepth,
+                                   Uint8                          Stencil,
+                                   RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)override final;
 
     virtual void ClearRenderTarget( ITextureView *pView, const float *RGBA, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode )override final;
 

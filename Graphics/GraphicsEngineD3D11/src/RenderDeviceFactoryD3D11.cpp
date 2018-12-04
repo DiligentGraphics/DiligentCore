@@ -324,7 +324,7 @@ void EngineFactoryD3D11Impl::CreateSwapChainD3D11( IRenderDevice*            pDe
 
         pDeviceContextD3D11->SetSwapChain(pSwapChainD3D11);
         // Bind default render target
-        pDeviceContextD3D11->SetRenderTargets( 0, nullptr, nullptr, SET_RENDER_TARGETS_FLAG_TRANSITION_ALL );
+        pDeviceContextD3D11->SetRenderTargets( 0, nullptr, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION );
         // Set default viewport
         pDeviceContextD3D11->SetViewports( 1, nullptr, 0, 0 );
 

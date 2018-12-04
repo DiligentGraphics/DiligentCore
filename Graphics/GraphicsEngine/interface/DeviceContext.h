@@ -163,11 +163,9 @@ struct DrawAttribs
 /// These flags are used by IDeviceContext::ClearDepthStencil().
 enum CLEAR_DEPTH_STENCIL_FLAGS : Uint32
 {
-    CLEAR_DEPTH_FLAG_NONE = 0x00,                      ///< Perform no clear no transitions
-    CLEAR_DEPTH_FLAG      = 0x01,                      ///< Clear depth part of the buffer
-    CLEAR_STENCIL_FLAG    = 0x02,                      ///< Clear stencil part of the buffer
-    CLEAR_DEPTH_STENCIL_TRANSITION_STATE_FLAG = 0x04,  ///< Transition depth-stencil buffer to required state
-    CLEAR_DEPTH_STENCIL_VERIFY_STATE_FLAG     = 0x08   ///< Verify the state is correct (debug and development builds only)
+    CLEAR_DEPTH_FLAG_NONE = 0x00,  ///< Perform no clear no transitions
+    CLEAR_DEPTH_FLAG      = 0x01,  ///< Clear depth part of the buffer
+    CLEAR_STENCIL_FLAG    = 0x02   ///< Clear stencil part of the buffer
 };
 DEFINE_FLAG_ENUM_OPERATORS(CLEAR_DEPTH_STENCIL_FLAGS)
 
@@ -234,32 +232,6 @@ enum SET_VERTEX_BUFFERS_FLAGS : Uint8
     SET_VERTEX_BUFFERS_FLAG_RESET = 0x01
 };
 DEFINE_FLAG_ENUM_OPERATORS(SET_VERTEX_BUFFERS_FLAGS)
-
-
-/// Additional flags for IDeviceContext::SetRenderTargets() command that define
-/// which resources need to be transitioned by the command.
-enum SET_RENDER_TARGETS_FLAGS : Uint32
-{
-    /// Perform no state transitions
-    SET_RENDER_TARGETS_FLAG_NONE              = 0x00,
-
-    /// Transition color targets to Diligent::RESOURCE_STATE_RENDER_TARGET state (see Diligent::RESOURCE_STATE).
-    /// Textures in unknown state will not be transitioned.
-    SET_RENDER_TARGETS_FLAG_TRANSITION_COLOR  = 0x01,
-
-    /// Transition depth buffer to Diligent::RESOURCE_STATE_DEPTH_WRITE state (see Diligent::RESOURCE_STATE).
-    /// If the texture is in unknown state, the flag will have no effect.
-    SET_RENDER_TARGETS_FLAG_TRANSITION_DEPTH  = 0x02,
-
-    /// Transition all color targets and depth buffer
-    SET_RENDER_TARGETS_FLAG_TRANSITION_ALL    = (SET_RENDER_TARGETS_FLAG_TRANSITION_COLOR | SET_RENDER_TARGETS_FLAG_TRANSITION_DEPTH),
-    
-    /// Verify the state of color/depth targets not being transitioned. This flag
-    /// only has effect in debug and development builds. No validation is performed
-    /// in release build and the flag is ignored.
-    SET_RENDER_TARGETS_FLAG_VERIFY_STATES     = 0x04
-};
-DEFINE_FLAG_ENUM_OPERATORS(SET_RENDER_TARGETS_FLAGS)
 
 
 /// Describes the viewport.
@@ -565,27 +537,27 @@ public:
     /// Binds one or more render targets and the depth-stencil buffer to the pipeline. It also
     /// sets the viewport to match the first non-null render target or depth-stencil buffer.
 
-    /// \param [in] NumRenderTargets - Number of render targets to bind.
-    /// \param [in] ppRenderTargets - Array of pointers to ITextureView that represent the render 
-    ///                               targets to bind to the device. The type of each view in the 
-    ///                               array must be Diligent::TEXTURE_VIEW_RENDER_TARGET.
-    /// \param [in] pDepthStencil - Pointer to the ITextureView that represents the depth stencil to 
-    ///                             bind to the device. The view type must be
-    ///                             Diligent::TEXTURE_VIEW_DEPTH_STENCIL.
-    /// \param [in] Flags         - Flags defining required resource transitions.
-    /// \remarks
-    /// The device context will keep strong references to all bound render target 
-    /// and depth-stencil views. Thus these views (and consequently referenced textures) 
-    /// cannot be released until they are unbound from the context.\n
-    /// Any render targets not defined by this call are set to nullptr.\n\n
-    /// You can set the default render target and depth stencil using the
-    /// following call:
+    /// \param [in] NumRenderTargets    - Number of render targets to bind.
+    /// \param [in] ppRenderTargets     - Array of pointers to ITextureView that represent the render 
+    ///                                   targets to bind to the device. The type of each view in the 
+    ///                                   array must be Diligent::TEXTURE_VIEW_RENDER_TARGET.
+    /// \param [in] pDepthStencil       - Pointer to the ITextureView that represents the depth stencil to 
+    ///                                   bind to the device. The view type must be
+    ///                                   Diligent::TEXTURE_VIEW_DEPTH_STENCIL.
+    /// \param [in] StateTransitionMode - State transition mode of the render targets and depth stencil buffer being set (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
+    /// 
+    /// \remarks     The device context will keep strong references to all bound render target 
+    ///              and depth-stencil views. Thus these views (and consequently referenced textures) 
+    ///              cannot be released until they are unbound from the context.\n
+    ///              Any render targets not defined by this call are set to nullptr.\n\n
+    ///              You can set the default render target and depth stencil using the
+    ///              following call:
     ///
     ///     pContext->SetRenderTargets(0, nullptr, nullptr);
-    virtual void SetRenderTargets(Uint32                   NumRenderTargets,
-                                  ITextureView*            ppRenderTargets[],
-                                  ITextureView*            pDepthStencil,
-                                  SET_RENDER_TARGETS_FLAGS Flags) = 0;
+    virtual void SetRenderTargets(Uint32                         NumRenderTargets,
+                                  ITextureView*                  ppRenderTargets[],
+                                  ITextureView*                  pDepthStencil,
+                                  RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) = 0;
 
     /// Executes a draw command
 
@@ -620,15 +592,17 @@ public:
     
     /// \param [in] pView - Pointer to ITextureView interface to clear. The view type must be 
     ///                     Diligent::TEXTURE_VIEW_DEPTH_STENCIL.
+    /// \param [in] StateTransitionMode - state transition mode of the depth-stencil buffer to clear.
     /// \param [in] ClearFlags - Idicates which parts of the buffer to clear, see Diligent::CLEAR_DEPTH_STENCIL_FLAGS.
     /// \param [in] fDepth - Value to clear depth part of the view with.
     /// \param [in] Stencil - Value to clear stencil part of the view with.
     /// \remarks The full extent of the view is always cleared. Viewport and scissor settings are not applied.
     /// \note The depth-stencil view must be bound to the pipeline for clear operation to be performed.
-    virtual void ClearDepthStencil(ITextureView*             pView,
-                                   CLEAR_DEPTH_STENCIL_FLAGS ClearFlags = CLEAR_DEPTH_FLAG | CLEAR_DEPTH_STENCIL_TRANSITION_STATE_FLAG,
-                                   float                     fDepth     = 1.f,
-                                   Uint8                     Stencil    = 0) = 0;
+    virtual void ClearDepthStencil(ITextureView*                  pView,
+                                   CLEAR_DEPTH_STENCIL_FLAGS      ClearFlags,
+                                   float                          fDepth,
+                                   Uint8                          Stencil,
+                                   RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) = 0;
 
     /// Clears a render target view
 

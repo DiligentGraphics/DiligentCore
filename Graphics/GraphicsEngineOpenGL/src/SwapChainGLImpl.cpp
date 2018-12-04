@@ -105,7 +105,7 @@ void SwapChainGLImpl::Resize( Uint32 NewWidth, Uint32 NewHeight )
             if( bIsDefaultFBBound )
             {
                 // Update framebuffer size and viewport
-                pImmediateCtxGL->SetRenderTargets(0, nullptr, nullptr, SET_RENDER_TARGETS_FLAG_TRANSITION_ALL);
+                pImmediateCtxGL->SetRenderTargets(0, nullptr, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
                 pImmediateCtxGL->SetViewports( 1, nullptr, 0, 0 );
             }
         }

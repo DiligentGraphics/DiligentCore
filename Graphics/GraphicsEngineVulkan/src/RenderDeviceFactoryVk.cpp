@@ -315,7 +315,7 @@ void EngineFactoryVkImpl::CreateSwapChainVk( IRenderDevice*       pDevice,
 
         pDeviceContextVk->SetSwapChain(pSwapChainVk);
         // Bind default render target
-        pDeviceContextVk->SetRenderTargets( 0, nullptr, nullptr, SET_RENDER_TARGETS_FLAG_TRANSITION_ALL );
+        pDeviceContextVk->SetRenderTargets( 0, nullptr, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION );
         // Set default viewport
         pDeviceContextVk->SetViewports( 1, nullptr, 0, 0 );
         

@@ -861,7 +861,11 @@ namespace Diligent
             m_pd3d11DeviceContext->Dispatch( DispatchAttrs.ThreadGroupCountX, DispatchAttrs.ThreadGroupCountY, DispatchAttrs.ThreadGroupCountZ );
     }
 
-    void DeviceContextD3D11Impl::ClearDepthStencil( ITextureView* pView, CLEAR_DEPTH_STENCIL_FLAGS ClearFlags, float fDepth, Uint8 Stencil )
+    void DeviceContextD3D11Impl::ClearDepthStencil(ITextureView*                  pView,
+                                                   CLEAR_DEPTH_STENCIL_FLAGS      ClearFlags,
+                                                   float                          fDepth,
+                                                   Uint8                          Stencil,
+                                                   RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
     {
         if (pView == nullptr)
         {
@@ -1554,7 +1558,10 @@ namespace Diligent
         m_pd3d11DeviceContext->OMSetRenderTargets(0, nullptr, nullptr);
     }
 
-    void DeviceContextD3D11Impl::SetRenderTargets( Uint32 NumRenderTargets, ITextureView* ppRenderTargets[], ITextureView* pDepthStencil, SET_RENDER_TARGETS_FLAGS Flags )
+    void DeviceContextD3D11Impl::SetRenderTargets(Uint32                         NumRenderTargets,
+                                                  ITextureView*                  ppRenderTargets[],
+                                                  ITextureView*                  pDepthStencil,
+                                                  RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
     {
         if (TDeviceContextBase::SetRenderTargets( NumRenderTargets, ppRenderTargets, pDepthStencil))
         {
@@ -1563,14 +1570,14 @@ namespace Diligent
                 if (ppRenderTargets[RT])
                 {
                     auto* pTex = ValidatedCast<TextureBaseD3D11>(ppRenderTargets[RT]->GetTexture());
-                    if (Flags & SET_RENDER_TARGETS_FLAG_TRANSITION_COLOR)
+                    if (StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
                     {
                         UnbindTextureFromInput( pTex, pTex->GetD3D11Texture() );
                         if (pTex->IsInKnownState())
                             pTex->SetState(RESOURCE_STATE_RENDER_TARGET);
                     }
 #ifdef DEVELOPMENT
-                    else if (Flags & SET_RENDER_TARGETS_FLAG_VERIFY_STATES)
+                    else if (StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_VERIFY)
                     {
                         DvpVerifyTextureState(*pTex, RESOURCE_STATE_RENDER_TARGET, "Setting render targets (DeviceContextD3D11Impl::SetRenderTargets)");
                     }
@@ -1581,14 +1588,14 @@ namespace Diligent
             if (pDepthStencil)
             {
                 auto* pTex = ValidatedCast<TextureBaseD3D11>(pDepthStencil->GetTexture());
-                if (Flags & SET_RENDER_TARGETS_FLAG_TRANSITION_DEPTH)
+                if (StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
                 {
                     UnbindTextureFromInput( pTex, pTex->GetD3D11Texture() );
                     if (pTex->IsInKnownState())
                         pTex->SetState(RESOURCE_STATE_DEPTH_WRITE);
                 }
 #ifdef DEVELOPMENT
-                else if(Flags & SET_RENDER_TARGETS_FLAG_VERIFY_STATES)
+                else if(StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_VERIFY)
                 {
                     DvpVerifyTextureState(*pTex, RESOURCE_STATE_DEPTH_WRITE, "Setting depth-stencil buffer (DeviceContextD3D11Impl::SetRenderTargets)");
                 }

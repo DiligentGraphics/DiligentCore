@@ -334,7 +334,10 @@ namespace Diligent
         SetViewports(1, nullptr, 0, 0);
     }
 
-    void DeviceContextGLImpl::SetRenderTargets( Uint32 NumRenderTargets, ITextureView *ppRenderTargets[], ITextureView *pDepthStencil, SET_RENDER_TARGETS_FLAGS Flags )
+    void DeviceContextGLImpl::SetRenderTargets( Uint32                         NumRenderTargets,
+                                                ITextureView*                  ppRenderTargets[],
+                                                ITextureView*                  pDepthStencil,
+                                                RESOURCE_STATE_TRANSITION_MODE StateTransitionMode )
     {
         if( TDeviceContextBase::SetRenderTargets( NumRenderTargets, ppRenderTargets, pDepthStencil ) )
             CommitRenderTargets();
@@ -871,7 +874,11 @@ namespace Diligent
 #endif
     }
 
-    void DeviceContextGLImpl::ClearDepthStencil( ITextureView *pView, CLEAR_DEPTH_STENCIL_FLAGS ClearFlags, float fDepth, Uint8 Stencil )
+    void DeviceContextGLImpl::ClearDepthStencil(ITextureView*                  pView,
+                                                CLEAR_DEPTH_STENCIL_FLAGS      ClearFlags,
+                                                float                          fDepth,
+                                                Uint8                          Stencil,
+                                                RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
     {
         // Unlike OpenGL, in D3D10+, the full extent of the resource view is always cleared. 
         // Viewport and scissor settings are not applied.

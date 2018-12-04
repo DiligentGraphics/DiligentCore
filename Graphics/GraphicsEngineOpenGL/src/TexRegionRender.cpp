@@ -162,7 +162,7 @@ namespace Diligent
 
     void TexRegionRender::RestoreStates( DeviceContextGLImpl *pCtxGL )
     {
-        pCtxGL->SetRenderTargets( m_NumRenderTargets, m_pOrigRTVs, m_pOrigDSV, SET_RENDER_TARGETS_FLAG_TRANSITION_ALL );
+        pCtxGL->SetRenderTargets( m_NumRenderTargets, m_pOrigRTVs, m_pOrigDSV, RESOURCE_STATE_TRANSITION_MODE_TRANSITION );
         for( Uint32 rt = 0; rt < _countof( m_pOrigRTVs ); ++rt )
         {
             if( m_pOrigRTVs[rt] )

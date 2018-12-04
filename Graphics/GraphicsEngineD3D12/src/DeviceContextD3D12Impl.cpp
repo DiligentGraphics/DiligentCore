@@ -211,7 +211,7 @@ namespace Diligent
             {
                 GraphicsCtx.SetStencilRef(m_StencilRef);
                 GraphicsCtx.SetBlendFactor(m_BlendFactors);
-                CommitRenderTargets(SET_RENDER_TARGETS_FLAG_VERIFY_STATES);
+                CommitRenderTargets(RESOURCE_STATE_TRANSITION_MODE_VERIFY);
                 CommitViewports();
             }
 
@@ -482,7 +482,11 @@ namespace Diligent
         ++m_State.NumCommands;
     }
 
-    void DeviceContextD3D12Impl::ClearDepthStencil( ITextureView* pView, CLEAR_DEPTH_STENCIL_FLAGS ClearFlags, float fDepth, Uint8 Stencil )
+    void DeviceContextD3D12Impl::ClearDepthStencil(ITextureView*                  pView,
+                                                   CLEAR_DEPTH_STENCIL_FLAGS      ClearFlags,
+                                                   float                          fDepth,
+                                                   Uint8                          Stencil,
+                                                   RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
     {
         ITextureViewD3D12* pViewD3D12 = nullptr;
         if( pView != nullptr )
@@ -508,13 +512,7 @@ namespace Diligent
 
         auto* pTextureD3D12 = ValidatedCast<TextureD3D12Impl>( pViewD3D12->GetTexture() );
         auto& CmdCtx = GetCmdContext();
-        auto TransitionMode =
-            (ClearFlags & CLEAR_DEPTH_STENCIL_TRANSITION_STATE_FLAG) ? 
-                RESOURCE_STATE_TRANSITION_MODE_TRANSITION :
-                ((ClearFlags & CLEAR_DEPTH_STENCIL_VERIFY_STATE_FLAG) ? 
-                    RESOURCE_STATE_TRANSITION_MODE_VERIFY : 
-                    RESOURCE_STATE_TRANSITION_MODE_NONE);
-        TransitionOrVerifyTextureState(CmdCtx, *pTextureD3D12, TransitionMode, RESOURCE_STATE_DEPTH_WRITE, "Clearing depth-stencil buffer (DeviceContextD3D12Impl::ClearDepthStencil)");
+        TransitionOrVerifyTextureState(CmdCtx, *pTextureD3D12, StateTransitionMode, RESOURCE_STATE_DEPTH_WRITE, "Clearing depth-stencil buffer (DeviceContextD3D12Impl::ClearDepthStencil)");
 
         D3D12_CLEAR_FLAGS d3d12ClearFlags = (D3D12_CLEAR_FLAGS)0;
         if( ClearFlags & CLEAR_DEPTH_FLAG )   d3d12ClearFlags |= D3D12_CLEAR_FLAG_DEPTH;
@@ -777,7 +775,7 @@ namespace Diligent
         }
     }
 
-    void DeviceContextD3D12Impl::CommitRenderTargets(SET_RENDER_TARGETS_FLAGS Flags)
+    void DeviceContextD3D12Impl::CommitRenderTargets(RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
     {
         const Uint32 MaxD3D12RTs = D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT;
         Uint32 NumRenderTargets = m_NumBoundRenderTargets;
@@ -816,12 +814,7 @@ namespace Diligent
             if( auto* pRTV = ppRTVs[i] )
             {
                 auto* pTexture = ValidatedCast<TextureD3D12Impl>( pRTV->GetTexture() );
-                auto RTTransitionMode = (Flags & SET_RENDER_TARGETS_FLAG_TRANSITION_COLOR) ? 
-                    RESOURCE_STATE_TRANSITION_MODE_TRANSITION : 
-                    ((Flags & SET_RENDER_TARGETS_FLAG_VERIFY_STATES) ?
-                        RESOURCE_STATE_TRANSITION_MODE_VERIFY : 
-                        RESOURCE_STATE_TRANSITION_MODE_NONE);
-                TransitionOrVerifyTextureState(CmdCtx, *pTexture, RTTransitionMode, RESOURCE_STATE_RENDER_TARGET, "Setting render targets (DeviceContextD3D12Impl::CommitRenderTargets)");
+                TransitionOrVerifyTextureState(CmdCtx, *pTexture, StateTransitionMode, RESOURCE_STATE_RENDER_TARGET, "Setting render targets (DeviceContextD3D12Impl::CommitRenderTargets)");
 		        RTVHandles[i] = pRTV->GetCPUDescriptorHandle();
                 VERIFY_EXPR(RTVHandles[i].ptr != 0);
             }
@@ -837,12 +830,7 @@ namespace Diligent
 		    //}
 		    //else
 		    {
-                auto DepthTransitionMode = (Flags & SET_RENDER_TARGETS_FLAG_TRANSITION_DEPTH) ? 
-                    RESOURCE_STATE_TRANSITION_MODE_TRANSITION : 
-                    ((Flags & SET_RENDER_TARGETS_FLAG_VERIFY_STATES) ? 
-                        RESOURCE_STATE_TRANSITION_MODE_VERIFY : 
-                        RESOURCE_STATE_TRANSITION_MODE_NONE);
-                TransitionOrVerifyTextureState(CmdCtx, *pTexture, DepthTransitionMode, RESOURCE_STATE_DEPTH_WRITE, "Setting depth-stencil buffer (DeviceContextD3D12Impl::CommitRenderTargets)");
+                TransitionOrVerifyTextureState(CmdCtx, *pTexture, StateTransitionMode, RESOURCE_STATE_DEPTH_WRITE, "Setting depth-stencil buffer (DeviceContextD3D12Impl::CommitRenderTargets)");
                 DSVHandle = pDSV->GetCPUDescriptorHandle();
                 VERIFY_EXPR(DSVHandle.ptr != 0);
 		    }
@@ -853,11 +841,14 @@ namespace Diligent
         CmdCtx.AsGraphicsContext().GetCommandList()->OMSetRenderTargets( NumRenderTargets, RTVHandles, FALSE, DSVHandle.ptr != 0 ? &DSVHandle : nullptr );
     }
 
-    void DeviceContextD3D12Impl::SetRenderTargets( Uint32 NumRenderTargets, ITextureView *ppRenderTargets[], ITextureView *pDepthStencil, SET_RENDER_TARGETS_FLAGS Flags )
+    void DeviceContextD3D12Impl::SetRenderTargets( Uint32                         NumRenderTargets,
+                                                   ITextureView*                  ppRenderTargets[],
+                                                   ITextureView*                  pDepthStencil,
+                                                   RESOURCE_STATE_TRANSITION_MODE StateTransitionMode )
     {
         if( TDeviceContextBase::SetRenderTargets( NumRenderTargets, ppRenderTargets, pDepthStencil ) )
         {
-            CommitRenderTargets(Flags);
+            CommitRenderTargets(StateTransitionMode);
 
             // Set the viewport to match the render target size
             SetViewports(1, nullptr, 0, 0);

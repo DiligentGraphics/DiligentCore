@@ -468,7 +468,7 @@ void TextureBaseGL :: CopyData(DeviceContextGLImpl *pDeviceCtxGL,
                 );
 
             ITextureView *pRTVs[] = { &RTV };
-            pDeviceCtxGL->SetRenderTargets( _countof( pRTVs ), pRTVs, nullptr, SET_RENDER_TARGETS_FLAG_TRANSITION_ALL );
+            pDeviceCtxGL->SetRenderTargets( _countof( pRTVs ), pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION );
 
             // No need to set up the viewport as SetRenderTargets() does that
 
