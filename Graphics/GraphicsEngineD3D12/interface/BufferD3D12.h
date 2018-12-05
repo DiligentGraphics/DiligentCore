@@ -57,6 +57,11 @@ public:
 
     /// \param [in] state - D3D12 resource state to be set for this buffer
     virtual void SetD3D12ResourceState(D3D12_RESOURCE_STATES state) = 0;
+
+    /// Returns current D3D12 buffer state. 
+    /// If the state is unknown to the engine (Diligent::RESOURCE_STATE_UNKNOWN), 
+    /// returns D3D12_RESOURCE_STATE_COMMON (0).
+    virtual D3D12_RESOURCE_STATES GetD3D12ResourceState()const = 0;
 };
 
 }

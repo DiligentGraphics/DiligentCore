@@ -363,7 +363,7 @@ D3D12_RESOURCE_STATES ResourceStateFlagsToD3D12ResourceStates(RESOURCE_STATE Sta
 {
     VERIFY(StateFlags < (RESOURCE_STATE_MAX_BIT<<1), "Resource state flags are out of range");
     static const StateFlagBitPosToD3D12ResourceState BitPosToD3D12ResState;
-    Uint32 D3D12ResourceStates = 0;
+    D3D12_RESOURCE_STATES D3D12ResourceStates = static_cast<D3D12_RESOURCE_STATES>(0);
     Uint32 Bits = StateFlags;
     while(Bits != 0)
     {
@@ -371,7 +371,7 @@ D3D12_RESOURCE_STATES ResourceStateFlagsToD3D12ResourceStates(RESOURCE_STATE Sta
         D3D12ResourceStates |= BitPosToD3D12ResState(lsb);
         Bits &= ~(1<<lsb);
     }
-    return static_cast<D3D12_RESOURCE_STATES>(D3D12ResourceStates);
+    return D3D12ResourceStates;
 }
 
 

@@ -95,7 +95,7 @@ public:
     }
 
     virtual void SetAccessFlags(VkAccessFlags AccessFlags)override final;
-    VkAccessFlags GetAccessFlags()const;
+    virtual VkAccessFlags GetAccessFlags()const override final;
     bool CheckAccessFlags(VkAccessFlags AccessFlags)const
     {
         return (GetAccessFlags() & AccessFlags) == AccessFlags;

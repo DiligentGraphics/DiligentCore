@@ -420,4 +420,9 @@ void BufferD3D12Impl::SetD3D12ResourceState(D3D12_RESOURCE_STATES state)
     SetState(D3D12ResourceStatesToResourceStateFlags(state));
 }
 
+D3D12_RESOURCE_STATES BufferD3D12Impl::GetD3D12ResourceState()const
+{
+    return ResourceStateFlagsToD3D12ResourceStates(GetState());
+}
+
 }

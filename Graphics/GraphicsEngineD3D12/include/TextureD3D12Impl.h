@@ -68,6 +68,8 @@ public:
 
     virtual void SetD3D12ResourceState(D3D12_RESOURCE_STATES state)override final;
 
+    virtual D3D12_RESOURCE_STATES GetD3D12ResourceState()const override final;
+
     D3D12_CPU_DESCRIPTOR_HANDLE GetMipLevelUAV(Uint32 Mip)
     {
         return m_MipUAVs.GetCpuHandle(Mip);

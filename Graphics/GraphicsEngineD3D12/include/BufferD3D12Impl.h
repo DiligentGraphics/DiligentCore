@@ -77,6 +77,8 @@ public:
 
     virtual void SetD3D12ResourceState(D3D12_RESOURCE_STATES state)override final;
 
+    virtual D3D12_RESOURCE_STATES GetD3D12ResourceState()const override final;
+
     D3D12_GPU_VIRTUAL_ADDRESS GetGPUAddress(class DeviceContextD3D12Impl* pCtx);
 
     D3D12_CPU_DESCRIPTOR_HANDLE GetCBVHandle(){return m_CBVDescriptorAllocation.GetCpuHandle();}
