@@ -317,7 +317,7 @@ namespace Diligent
             VERIFY(NumRenderTargets < static_cast<Uint32>(CtxCaps.m_iMaxDrawBuffers), "This device only supports ", CtxCaps.m_iMaxDrawBuffers, " draw buffers, but ", NumRenderTargets, " are being set");
             NumRenderTargets = std::min(NumRenderTargets, static_cast<Uint32>(CtxCaps.m_iMaxDrawBuffers));
 
-            ITextureView *pBoundRTVs[MaxRenderTargets] = {};
+            ITextureView* pBoundRTVs[MaxRenderTargets] = {};
             for (Uint32 rt = 0; rt < NumRenderTargets; ++rt)
                 pBoundRTVs[rt] = m_pBoundRenderTargets[rt];
 

@@ -1263,21 +1263,13 @@ namespace Diligent
         {
             for (Uint32 rt = 0; rt < NumRenderTargets; ++rt)
             {
-                auto* pView = m_pBoundRenderTargets[rt].RawPtr();
-                if (pView)
-                {
-                    auto* pViewD3D11 = ValidatedCast<TextureViewD3D11Impl>(pView);
-                    pd3d11RTs[rt] = static_cast<ID3D11RenderTargetView*>(pViewD3D11->GetD3D11View());
-                }
-                else
-                    pd3d11RTs[rt] = nullptr;
+                auto* pViewD3D11 = m_pBoundRenderTargets[rt].RawPtr();
+                pd3d11RTs[rt] = pViewD3D11 != nullptr ? static_cast<ID3D11RenderTargetView*>(pViewD3D11->GetD3D11View()) : nullptr;
             }
 
-            auto* pDepthStencil = m_pBoundDepthStencil.RawPtr();
-            if (pDepthStencil != nullptr)
+            if (m_pBoundDepthStencil != nullptr)
             {
-                auto* pViewD3D11 = ValidatedCast<TextureViewD3D11Impl>(pDepthStencil);
-                pd3d11DSV = static_cast<ID3D11DepthStencilView*>(pViewD3D11->GetD3D11View());
+                pd3d11DSV = static_cast<ID3D11DepthStencilView*>(m_pBoundDepthStencil->GetD3D11View());
             }
         }
 
@@ -1518,7 +1510,7 @@ namespace Diligent
         bool bCommitRenderTargets = false;
         for (Uint32 rt = 0; rt < m_NumBoundRenderTargets; ++rt)
         {
-            if (auto pTexView = m_pBoundRenderTargets[rt])
+            if (auto* pTexView = m_pBoundRenderTargets[rt].RawPtr())
             {
                 if (pTexView->GetTexture() == pTexture)
                 {
@@ -2008,7 +2000,7 @@ namespace Diligent
             NumBoundRTVs = m_NumBoundRenderTargets;
             for (Uint32 rt = 0; rt < NumBoundRTVs; ++rt)
             {
-                if (auto pRT = m_pBoundRenderTargets[rt])
+                if (auto* pRT = m_pBoundRenderTargets[rt].RawPtr())
                     BoundRTVFormats[rt] = pRT->GetDesc().Format;
                 else
                     BoundRTVFormats[rt] = TEX_FORMAT_UNKNOWN;

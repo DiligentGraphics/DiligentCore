@@ -102,10 +102,10 @@ ShaderResourceCacheVk::~ShaderResourceCacheVk()
 template<bool VerifyOnly>
 void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl* pCtxVkImpl)
 {
-    auto *pResources = GetFirstResourcePtr();
+    auto* pResources = GetFirstResourcePtr();
     for (Uint32 res = 0; res < m_TotalResources; ++res)
     {
-        auto &Res = pResources[res];
+        auto& Res = pResources[res];
         switch (Res.Type)
         {
             case SPIRVShaderResourceAttribs::ResourceType::UniformBuffer:
@@ -113,7 +113,7 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl* pCtxVkImpl)
                 auto* pBufferVk = Res.pObject.RawPtr<BufferVkImpl>();
                 if (pBufferVk != nullptr && pBufferVk->IsInKnownState())
                 {
-                    RESOURCE_STATE RequiredState = RESOURCE_STATE_CONSTANT_BUFFER;
+                    constexpr RESOURCE_STATE RequiredState = RESOURCE_STATE_CONSTANT_BUFFER;
                     VERIFY_EXPR((ResourceStateFlagsToVkAccessFlags(RequiredState) & VK_ACCESS_UNIFORM_READ_BIT) == VK_ACCESS_UNIFORM_READ_BIT);
                     if (!pBufferVk->CheckState(RequiredState))
                     {
@@ -122,7 +122,9 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl* pCtxVkImpl)
                             LOG_ERROR_MESSAGE("State of buffer '", pBufferVk->GetDesc().Name, "' is incorrect. Required state: ",
                                                GetResourceStateString(RequiredState),  ". Actual state: ", 
                                                GetResourceStateString(pBufferVk->GetState()), 
-                                               ". Call TransitionShaderResources() or provide RESOURCE_STATE_TRANSITION_MODE_TRANSITION flag to CommitShaderResources()");
+                                               ". Call IDeviceContext::TransitionShaderResources(), use RESOURCE_STATE_TRANSITION_MODE_TRANSITION "
+                                               "when calling IDeviceContext::CommitShaderResources() or explicitly transition the buffer state "
+                                               "with IDeviceContext::TransitionResourceStates().");
                         }
                         else
                         {
@@ -142,10 +144,10 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl* pCtxVkImpl)
                 auto* pBufferVk = pBuffViewVk != nullptr ? ValidatedCast<BufferVkImpl>(pBuffViewVk->GetBuffer()) : nullptr;
                 if (pBufferVk != nullptr && pBufferVk->IsInKnownState())
                 {
-                    RESOURCE_STATE RequiredState = (Res.Type == SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer) ?
+                    const RESOURCE_STATE RequiredState = (Res.Type == SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer) ?
                         RESOURCE_STATE_SHADER_RESOURCE : RESOURCE_STATE_UNORDERED_ACCESS;
 #ifdef _DEBUG
-                    VkAccessFlags RequiredAccessFlags = (Res.Type == SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer) ?
+                    const VkAccessFlags RequiredAccessFlags = (Res.Type == SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer) ?
                             VK_ACCESS_SHADER_READ_BIT : (VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
                     VERIFY_EXPR( (ResourceStateFlagsToVkAccessFlags(RequiredState) & RequiredAccessFlags) == RequiredAccessFlags);
 #endif
@@ -156,7 +158,9 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl* pCtxVkImpl)
                             LOG_ERROR_MESSAGE("State of buffer '", pBufferVk->GetDesc().Name, "' is incorrect. Required state: ",
                                                GetResourceStateString(RequiredState),  ". Actual state: ", 
                                                GetResourceStateString(pBufferVk->GetState()), 
-                                               ". Call TransitionShaderResources() or provide RESOURCE_STATE_TRANSITION_MODE_TRANSITION flag to CommitShaderResources()");
+                                               ". Call IDeviceContext::TransitionShaderResources(), use RESOURCE_STATE_TRANSITION_MODE_TRANSITION "
+                                               "when calling IDeviceContext::CommitShaderResources() or explicitly transition the buffer state "
+                                               "with IDeviceContext::TransitionResourceStates().");
                         }
                         else
                         {
@@ -212,7 +216,9 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl* pCtxVkImpl)
                             LOG_ERROR_MESSAGE("State of texture '", pTextureVk->GetDesc().Name, "' is incorrect. Required state: ",
                                               GetResourceStateString(RequiredState), ". Actual state: ", 
                                               GetResourceStateString(pTextureVk->GetState()), 
-                                              ". Call TransitionShaderResources() or specify RESOURCE_STATE_TRANSITION_MODE_TRANSITION flag in a call to CommitShaderResources()");
+                                              ". Call IDeviceContext::TransitionShaderResources(), use RESOURCE_STATE_TRANSITION_MODE_TRANSITION "
+                                               "when calling IDeviceContext::CommitShaderResources() or explicitly transition the texture state "
+                                               "with IDeviceContext::TransitionResourceStates().");
                         }
                         else
                         {

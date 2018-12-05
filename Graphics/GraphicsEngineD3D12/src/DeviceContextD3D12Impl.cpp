@@ -120,10 +120,16 @@ namespace Diligent
     {
         if (m_State.NumCommands != 0)
         {
-            LOG_ERROR_MESSAGE(m_bIsDeferred ? 
-                              "There are outstanding commands in deferred context #", m_ContextId, " being destroyed, which indicates that FinishCommandList() has not been called." :
-                              "There are outstanding commands in the immediate context being destroyed, which indicates the context has not been Flush()'ed.",
-                              " This is unexpected and may result in synchronization errors");
+            if (m_bIsDeferred)
+            {
+                LOG_ERROR_MESSAGE("There are outstanding commands in deferred context #", m_ContextId, " being destroyed, which indicates that FinishCommandList() has not been called."
+                                  " This may cause synchronization issues.");
+            }
+            else
+            {
+                LOG_ERROR_MESSAGE("There are outstanding commands in the immediate context being destroyed, which indicates the context has not been Flush()'ed.",
+                                  " This may cause synchronization issues.");
+            }
         }
 
         if (m_bIsDeferred)
@@ -802,8 +808,8 @@ namespace Diligent
         else
         {
             for( Uint32 rt = 0; rt < NumRenderTargets; ++rt )
-                ppRTVs[rt] = m_pBoundRenderTargets[rt].RawPtr<ITextureViewD3D12>();
-            pDSV = m_pBoundDepthStencil.RawPtr<ITextureViewD3D12>();
+                ppRTVs[rt] = m_pBoundRenderTargets[rt].RawPtr();
+            pDSV = m_pBoundDepthStencil.RawPtr();
         }
 
         auto& CmdCtx = GetCmdContext();

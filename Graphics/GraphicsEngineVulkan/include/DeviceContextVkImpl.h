@@ -249,7 +249,7 @@ public:
 
 private:
     void TransitionRenderTargets(RESOURCE_STATE_TRANSITION_MODE StateTransitionMode);
-    inline void CommitRenderPassAndFramebuffer();
+    inline void CommitRenderPassAndFramebuffer(bool VerifyStates);
     void CommitVkVertexBuffers();
     void CommitViewports();
     void CommitScissorRects();
@@ -380,7 +380,7 @@ private:
     RefCntAutoPtr<IShaderResourceBinding> m_GenerateMipsSRB;
 
     // In Vulkan we can't bind null vertex buffer, so we have to create a dummy VB
-    RefCntAutoPtr<IBuffer> m_DummyVB;
+    RefCntAutoPtr<BufferVkImpl> m_DummyVB;
 };
 
 }

@@ -511,6 +511,8 @@ void PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBind
                                                              RESOURCE_STATE_TRANSITION_MODE         StateTransitionMode,
                                                              PipelineLayout::DescriptorSetBindInfo* pDescrSetBindInfo)const
 {
+    VERIFY(CommitResources || StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION, "Resources should be transitioned or committed or both");
+
     if (!m_HasStaticResources && !m_HasNonStaticResources)
         return;
 
@@ -518,7 +520,7 @@ void PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBind
     if (pShaderResourceBinding == nullptr)
     {
         LOG_ERROR_MESSAGE("Pipeline state '", m_Desc.Name, "' requires shader resource binding object to ",
-                         (CommitResources ? "commit" : "transition"), " resources, but none is provided.");
+                          (CommitResources ? "commit" : "transition"), " resources, but none is provided.");
         return;
     }
 #endif
@@ -550,17 +552,19 @@ void PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBind
     }
 #endif
 
-    if (CommitResources)
+    if (StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
     {
-        if (StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
-            ResourceCache.TransitionResources<false>(pCtxVkImpl);
+        ResourceCache.TransitionResources<false>(pCtxVkImpl);
+    }
 #ifdef DEVELOPMENT
-        else if (StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_VERIFY)
-        {
-            ResourceCache.TransitionResources<true>(pCtxVkImpl);
-        }
+    else if (StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_VERIFY)
+    {
+        ResourceCache.TransitionResources<true>(pCtxVkImpl);
+    }
 #endif
 
+    if (CommitResources)
+    {
         VkDescriptorSet DynamicDescrSet = VK_NULL_HANDLE;
         auto DynamicDescriptorSetVkLayout = m_PipelineLayout.GetDynamicDescriptorSetVkLayout();
         if (DynamicDescriptorSetVkLayout != VK_NULL_HANDLE)
@@ -586,11 +590,6 @@ void PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBind
         m_PipelineLayout.PrepareDescriptorSets(pCtxVkImpl, m_Desc.IsComputePipeline, ResourceCache, *pDescrSetBindInfo, DynamicDescrSet);
         // Dynamic descriptor sets are not released individually. Instead, all dynamic descriptor pools 
         // are released at the end of the frame by DeviceContextVkImpl::FinishFrame().
-    }
-    else
-    {
-        VERIFY(StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION, "Resources should be transitioned or committed or both");
-        ResourceCache.TransitionResources<false>(pCtxVkImpl);
     }
 }
 

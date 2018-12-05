@@ -61,7 +61,7 @@ namespace Diligent
             bIsDeferred ? std::numeric_limits<decltype(m_NumCommandsToFlush)>::max() : Attribs.NumCommandsToFlushCmdBuffer,
             bIsDeferred
         },
-        m_CmdListAllocator  { GetRawAllocator(), sizeof(CommandListVkImpl), 64 },
+        m_CmdListAllocator { GetRawAllocator(), sizeof(CommandListVkImpl), 64 },
         // Command pools must be thread safe because command buffers are returned into pools by release queues
         // potentially running in another thread
         m_CmdPool
@@ -97,17 +97,25 @@ namespace Diligent
         DummyVBDesc.BindFlags     = BIND_VERTEX_BUFFER;
         DummyVBDesc.Usage         = USAGE_DEFAULT;
         DummyVBDesc.uiSizeInBytes = 32;
-        m_pDevice->CreateBuffer(DummyVBDesc, BufferData{}, &m_DummyVB);
+        RefCntAutoPtr<IBuffer> pDummyVB;
+        m_pDevice->CreateBuffer(DummyVBDesc, BufferData{}, &pDummyVB);
+        m_DummyVB = pDummyVB.RawPtr<BufferVkImpl>();
     }
 
     DeviceContextVkImpl::~DeviceContextVkImpl()
     {
         if (m_State.NumCommands != 0)
         {
-            LOG_ERROR_MESSAGE(m_bIsDeferred ? 
-                                "There are outstanding commands in deferred context #", m_ContextId, " being destroyed, which indicates that FinishCommandList() has not been called." :
-                                "There are outstanding commands in the immediate context being destroyed, which indicates the context has not been Flush()'ed.",
-                              " This is unexpected and may result in synchronization errors");
+            if (m_bIsDeferred)
+            {
+                LOG_ERROR_MESSAGE("There are outstanding commands in deferred context #", m_ContextId, " being destroyed, which indicates that FinishCommandList() has not been called."
+                                  " This may cause synchronization issues.");
+            }
+            else
+            {
+                LOG_ERROR_MESSAGE("There are outstanding commands in the immediate context being destroyed, which indicates the context has not been Flush()'ed.",
+                                  " This may cause synchronization issues.");
+            }
         }
 
         if (!m_bIsDeferred)
@@ -242,7 +250,7 @@ namespace Diligent
             {
                 m_CommandBuffer.SetStencilReference(m_StencilRef);
                 m_CommandBuffer.SetBlendConstants(m_BlendFactors);
-                CommitRenderPassAndFramebuffer();
+                CommitRenderPassAndFramebuffer(true);
                 CommitViewports();
             }
 
@@ -293,9 +301,9 @@ namespace Diligent
     {
 #ifdef DEVELOPMENT
         if (m_NumVertexStreams < m_pPipelineState->GetNumBufferSlotsUsed())
-            LOG_ERROR("Currently bound pipeline state \"", m_pPipelineState->GetDesc().Name, "\" expects ", m_pPipelineState->GetNumBufferSlotsUsed(), " input buffer slots, but only ", m_NumVertexStreams, " is bound");
+            LOG_ERROR("Currently bound pipeline state '", m_pPipelineState->GetDesc().Name, "' expects ", m_pPipelineState->GetNumBufferSlotsUsed(), " input buffer slots, but only ", m_NumVertexStreams, " is bound");
 #endif
-        // Do not initialize array with zeroes for performance reasons
+        // Do not initialize array with zeros for performance reasons
         VkBuffer vkVertexBuffers[MaxBufferSlots];// = {}
         VkDeviceSize Offsets[MaxBufferSlots];
         VERIFY( m_NumVertexStreams <= MaxBufferSlots, "Too many buffers are being set" );
@@ -321,7 +329,7 @@ namespace Diligent
             else
             {
                 // We can't bind null vertex buffer in Vulkan and have to use a dummy one
-                vkVertexBuffers[slot] = m_DummyVB.RawPtr<BufferVkImpl>()->GetVkBuffer();
+                vkVertexBuffers[slot] = m_DummyVB->GetVkBuffer();
                 Offsets[slot] = 0;
             }
         }
@@ -422,7 +430,7 @@ namespace Diligent
         else
         {
             if ( m_pPipelineState->dbgContainsShaderResources() )
-                LOG_ERROR_MESSAGE("Pipeline state \"", m_pPipelineState->GetDesc().Name, "\" contains shader resources, but IDeviceContext::CommitShaderResources() was not called" );
+                LOG_ERROR_MESSAGE("Pipeline state '", m_pPipelineState->GetDesc().Name, "' contains shader resources, but IDeviceContext::CommitShaderResources() was not called" );
         }
 #endif
 #endif
@@ -442,7 +450,7 @@ namespace Diligent
         }
 #endif
 
-        CommitRenderPassAndFramebuffer();
+        CommitRenderPassAndFramebuffer(VerifyStates);
 
         if (pIndirectDrawAttribsVk != nullptr)
         {
@@ -487,30 +495,25 @@ namespace Diligent
         else
         {
             if ( m_pPipelineState->dbgContainsShaderResources() )
-                LOG_ERROR_MESSAGE("Pipeline state \"", m_pPipelineState->GetDesc().Name, "\" contains shader resources, but IDeviceContext::CommitShaderResources() was not called" );
+                LOG_ERROR_MESSAGE("Pipeline state '", m_pPipelineState->GetDesc().Name, "' contains shader resources, but IDeviceContext::CommitShaderResources() was not called" );
         }
 #endif
 #endif
 
-        if ( DispatchAttrs.pIndirectDispatchAttribs )
+        if (DispatchAttrs.pIndirectDispatchAttribs != nullptr)
         {
-            if ( auto *pBufferVk = ValidatedCast<BufferVkImpl>(DispatchAttrs.pIndirectDispatchAttribs) )
-            {
+            auto *pBufferVk = ValidatedCast<BufferVkImpl>(DispatchAttrs.pIndirectDispatchAttribs);
+            
 #ifdef DEVELOPMENT
-                if (pBufferVk->GetDesc().Usage == USAGE_DYNAMIC)
-                    pBufferVk->DvpVerifyDynamicAllocation(this);
+            if (pBufferVk->GetDesc().Usage == USAGE_DYNAMIC)
+                pBufferVk->DvpVerifyDynamicAllocation(this);
 #endif
 
-                // Buffer memory barries must be executed outside of render pass
-                TransitionOrVerifyBufferState(*pBufferVk, DispatchAttrs.IndirectAttribsBufferStateTransitionMode, RESOURCE_STATE_INDIRECT_ARGUMENT,
-                                              VK_ACCESS_INDIRECT_COMMAND_READ_BIT, "Indirect dispatch (DeviceContextVkImpl::DispatchCompute)");
+            // Buffer memory barries must be executed outside of render pass
+            TransitionOrVerifyBufferState(*pBufferVk, DispatchAttrs.IndirectAttribsBufferStateTransitionMode, RESOURCE_STATE_INDIRECT_ARGUMENT,
+                                            VK_ACCESS_INDIRECT_COMMAND_READ_BIT, "Indirect dispatch (DeviceContextVkImpl::DispatchCompute)");
 
-                m_CommandBuffer.DispatchIndirect(pBufferVk->GetVkBuffer(), pBufferVk->GetDynamicOffset(m_ContextId, this) + DispatchAttrs.DispatchArgsByteOffset);
-            }
-            else
-            {
-                LOG_ERROR_MESSAGE("Valid pIndirectDrawAttribs must be provided for indirect dispatch command");
-            }
+            m_CommandBuffer.DispatchIndirect(pBufferVk->GetVkBuffer(), pBufferVk->GetDynamicOffset(m_ContextId, this) + DispatchAttrs.DispatchArgsByteOffset);
         }
         else
             m_CommandBuffer.Dispatch(DispatchAttrs.ThreadGroupCountX, DispatchAttrs.ThreadGroupCountY, DispatchAttrs.ThreadGroupCountZ);
@@ -559,7 +562,9 @@ namespace Diligent
         {
             // Render pass may not be currently committed
             VERIFY_EXPR(m_RenderPass != VK_NULL_HANDLE && m_Framebuffer != VK_NULL_HANDLE);
-            CommitRenderPassAndFramebuffer();
+            TransitionRenderTargets(StateTransitionMode);
+            // No need to verify states again
+            CommitRenderPassAndFramebuffer(false);
 
             VkClearAttachment ClearAttachment = {};
             ClearAttachment.aspectMask = 0;
@@ -688,7 +693,9 @@ namespace Diligent
         {
             // Render pass may not be currently committed
             VERIFY_EXPR(m_RenderPass != VK_NULL_HANDLE && m_Framebuffer != VK_NULL_HANDLE);
-            CommitRenderPassAndFramebuffer();
+            TransitionRenderTargets(StateTransitionMode);
+            // No need to verify states again
+            CommitRenderPassAndFramebuffer(false);
 
             VkClearAttachment ClearAttachment = {};
             ClearAttachment.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -981,17 +988,15 @@ namespace Diligent
     {
         if (m_pBoundDepthStencil)
         {
-            auto* pDSVVk = m_pBoundDepthStencil.RawPtr<TextureViewVkImpl>();
-            auto* pDepthBufferVk = ValidatedCast<TextureVkImpl>(pDSVVk->GetTexture());
+            auto* pDepthBufferVk = ValidatedCast<TextureVkImpl>(m_pBoundDepthStencil->GetTexture());
             TransitionOrVerifyTextureState(*pDepthBufferVk, StateTransitionMode, RESOURCE_STATE_DEPTH_WRITE, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
                                            "Binding depth-stencil buffer (DeviceContextVkImpl::TransitionRenderTargets)");
         }
 
         for (Uint32 rt=0; rt < m_NumBoundRenderTargets; ++rt)
         {
-            if (ITextureView* pRTV = m_pBoundRenderTargets[rt])
+            if (ITextureView* pRTVVk = m_pBoundRenderTargets[rt].RawPtr())
             {
-                auto* pRTVVk = ValidatedCast<TextureViewVkImpl>(pRTV);
                 auto* pRenderTargetVk = ValidatedCast<TextureVkImpl>(pRTVVk->GetTexture());
                 TransitionOrVerifyTextureState(*pRenderTargetVk, StateTransitionMode, RESOURCE_STATE_RENDER_TARGET, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                                                "Binding render targets (DeviceContextVkImpl::TransitionRenderTargets)");
@@ -999,7 +1004,7 @@ namespace Diligent
         }
     }
 
-    inline void DeviceContextVkImpl::CommitRenderPassAndFramebuffer()
+    inline void DeviceContextVkImpl::CommitRenderPassAndFramebuffer(bool VerifyStates)
     {
         const auto& CmdBufferState = m_CommandBuffer.GetState();
         if (CmdBufferState.Framebuffer != m_Framebuffer)
@@ -1011,7 +1016,10 @@ namespace Diligent
             {
                 VERIFY_EXPR(m_RenderPass != VK_NULL_HANDLE);
 #ifdef DEVELOPMENT
-                TransitionRenderTargets(RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+                if (VerifyStates)
+                {
+                    TransitionRenderTargets(RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+                }
 #endif
                 m_CommandBuffer.BeginRenderPass(m_RenderPass, m_Framebuffer, m_FramebufferWidth, m_FramebufferHeight);
             }
@@ -1029,10 +1037,9 @@ namespace Diligent
             RenderPassCache::RenderPassCacheKey RenderPassKey;
             if (m_pBoundDepthStencil)
             {
-                auto* pDSVVk = m_pBoundDepthStencil.RawPtr<TextureViewVkImpl>();
-                auto* pDepthBuffer = pDSVVk->GetTexture();
-                FBKey.DSV = pDSVVk->GetVulkanImageView();
-                RenderPassKey.DSVFormat = pDSVVk->GetDesc().Format;
+                auto* pDepthBuffer = m_pBoundDepthStencil->GetTexture();
+                FBKey.DSV = m_pBoundDepthStencil->GetVulkanImageView();
+                RenderPassKey.DSVFormat = m_pBoundDepthStencil->GetDesc().Format;
                 RenderPassKey.SampleCount = static_cast<Uint8>(pDepthBuffer->GetDesc().SampleCount);
             }
             else
@@ -1046,9 +1053,8 @@ namespace Diligent
 
             for (Uint32 rt=0; rt < m_NumBoundRenderTargets; ++rt)
             {
-                if (ITextureView* pRTV = m_pBoundRenderTargets[rt])
+                if (auto* pRTVVk = m_pBoundRenderTargets[rt].RawPtr())
                 {
-                    auto* pRTVVk = ValidatedCast<TextureViewVkImpl>(pRTV);
                     auto* pRenderTarget = pRTVVk->GetTexture();
                     FBKey.RTVs[rt] = pRTVVk->GetVulkanImageView();
                     RenderPassKey.RTVFormats[rt] = pRenderTarget->GetDesc().Format;

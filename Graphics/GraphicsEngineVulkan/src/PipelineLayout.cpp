@@ -449,7 +449,7 @@ void PipelineLayout::PrepareDescriptorSets(DeviceContextVkImpl*          pCtxVkI
     BindInfo.SetCout = 0;
     for(SHADER_VARIABLE_TYPE VarType = SHADER_VARIABLE_TYPE_MUTABLE; VarType <= SHADER_VARIABLE_TYPE_DYNAMIC; VarType = static_cast<SHADER_VARIABLE_TYPE>(VarType+1))
     {
-        const auto &Set = m_LayoutMgr.GetDescriptorSet(VarType);
+        const auto& Set = m_LayoutMgr.GetDescriptorSet(VarType);
         if (Set.SetIndex >= 0)
         {
             BindInfo.SetCout = std::max(BindInfo.SetCout, static_cast<Uint32>(Set.SetIndex + 1));

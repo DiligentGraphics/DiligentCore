@@ -732,12 +732,12 @@ bool ShaderResourceLayoutVk::dvpVerifyBindings(const ShaderResourceCacheVk& Reso
     {
         for(Uint32 r=0; r < m_NumResources[VarType]; ++r)
         {
-            const auto &Res = GetResource(VarType, r);
+            const auto& Res = GetResource(VarType, r);
             VERIFY(Res.SpirvAttribs.VarType == VarType, "Unexpected variable type");
             for(Uint32 ArrInd = 0; ArrInd < Res.SpirvAttribs.ArraySize; ++ArrInd)
             {
-                auto &CachedDescrSet = ResourceCache.GetDescriptorSet(Res.DescriptorSet);
-                const auto &CachedRes = CachedDescrSet.GetResource(Res.CacheOffset + ArrInd);
+                const auto& CachedDescrSet = ResourceCache.GetDescriptorSet(Res.DescriptorSet);
+                const auto& CachedRes = CachedDescrSet.GetResource(Res.CacheOffset + ArrInd);
                 VERIFY(CachedRes.Type == Res.SpirvAttribs.Type, "Inconsistent types");
                 if (CachedRes.pObject == nullptr && 
                    !(Res.SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler && Res.SpirvAttribs.IsImmutableSamplerAssigned()))
@@ -858,7 +858,7 @@ void ShaderResourceLayoutVk::CommitDynamicResources(const ShaderResourceCacheVk&
         else
             VERIFY(DynamicDescrSetIndex == Res.DescriptorSet, "Inconsistent dynamic resource desriptor set index");
 #endif
-        auto& SetResources = ResourceCache.GetDescriptorSet(Res.DescriptorSet);
+        const auto& SetResources = ResourceCache.GetDescriptorSet(Res.DescriptorSet);
         WriteDescrSetIt->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         WriteDescrSetIt->pNext = nullptr;
         VERIFY(SetResources.GetVkDescriptorSet() == VK_NULL_HANDLE, "Dynamic descriptor set must not be assigned to the resource cache");
