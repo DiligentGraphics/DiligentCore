@@ -320,10 +320,12 @@ VkDescriptorImageInfo ShaderResourceCacheVk::Resource::GetImageDescriptorWriteIn
             // object (13.2.4)
             DescrImgInfo.sampler = pSamplerVk->GetVkSampler();
         }
+#ifdef DEVELOPMENT
         else
         {
             LOG_ERROR_MESSAGE("No sampler assigned to texture view '", pTexViewVk->GetDesc().Name, "'");
         }
+#endif
     }
     DescrImgInfo.imageView = pTexViewVk->GetVulkanImageView();
     

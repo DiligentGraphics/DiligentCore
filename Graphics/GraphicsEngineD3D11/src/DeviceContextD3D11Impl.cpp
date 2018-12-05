@@ -384,7 +384,7 @@ namespace Diligent
                     
                     if (TransitionResources)
                     {
-                        auto &CB = CachedCBs[cb];
+                        auto& CB = CachedCBs[cb];
                         if (auto* pBuff = CB.pBuff.RawPtr<BufferD3D11Impl>())
                         {
                             // WARNING! This code is not thread-safe. It is up to the application to make 

@@ -200,7 +200,7 @@ namespace Diligent
 
         auto& CmdCtx = GetCmdContext();
         
-        auto *pd3d12PSO = pPipelineStateD3D12->GetD3D12PipelineState();
+        auto* pd3d12PSO = pPipelineStateD3D12->GetD3D12PipelineState();
         if (PSODesc.IsComputePipeline)
         {
             CmdCtx.AsComputeContext().SetPipelineState(pd3d12PSO);
@@ -467,7 +467,7 @@ namespace Diligent
         }
 #endif
 
-        if( DispatchAttrs.pIndirectDispatchAttribs )
+        if (DispatchAttrs.pIndirectDispatchAttribs != nullptr)
         {
             auto* pBufferD3D12 = ValidatedCast<BufferD3D12Impl>(DispatchAttrs.pIndirectDispatchAttribs);
 
@@ -477,7 +477,7 @@ namespace Diligent
 #endif
 
             TransitionOrVerifyBufferState(ComputeCtx, *pBufferD3D12, DispatchAttrs.IndirectAttribsBufferStateTransitionMode,
-                                           RESOURCE_STATE_INDIRECT_ARGUMENT, "Indirect dispatch (DeviceContextD3D12Impl::DispatchCompute)");
+                                          RESOURCE_STATE_INDIRECT_ARGUMENT, "Indirect dispatch (DeviceContextD3D12Impl::DispatchCompute)");
 
             size_t BuffDataStartByteOffset;
             ID3D12Resource *pd3d12ArgsBuff = pBufferD3D12->GetD3D12Buffer(BuffDataStartByteOffset, this);
@@ -495,7 +495,7 @@ namespace Diligent
                                                    RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
     {
         ITextureViewD3D12* pViewD3D12 = nullptr;
-        if( pView != nullptr )
+        if (pView != nullptr)
         {
             pViewD3D12 = ValidatedCast<ITextureViewD3D12>(pView);
 #ifdef _DEBUG
@@ -533,7 +533,7 @@ namespace Diligent
     void DeviceContextD3D12Impl::ClearRenderTarget( ITextureView* pView, const float* RGBA, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode )
     {
         ITextureViewD3D12* pViewD3D12 = nullptr;
-        if( pView != nullptr )
+        if (pView != nullptr)
         {
 #ifdef _DEBUG
             const auto& ViewDesc = pView->GetDesc();
@@ -651,7 +651,7 @@ namespace Diligent
         TDeviceContextBase::SetVertexBuffers( StartSlot, NumBuffersSet, ppBuffers, pOffsets, StateTransitionMode, Flags );
 
         auto& CmdCtx = GetCmdContext();
-        for( Uint32 Buff = 0; Buff < m_NumVertexStreams; ++Buff )
+        for (Uint32 Buff = 0; Buff < m_NumVertexStreams; ++Buff)
         {
             auto& CurrStream = m_VertexStreams[Buff];
             if (auto* pBufferD3D12 = CurrStream.pBuffer.RawPtr())
@@ -790,7 +790,7 @@ namespace Diligent
 
         ITextureViewD3D12* ppRTVs[MaxD3D12RTs]; // Do not initialize with zeroes!
         ITextureViewD3D12* pDSV = nullptr;
-        if( m_IsDefaultFramebufferBound )
+        if (m_IsDefaultFramebufferBound)
         {
             if (m_pSwapChain)
             {
@@ -817,7 +817,7 @@ namespace Diligent
         D3D12_CPU_DESCRIPTOR_HANDLE DSVHandle = {};
 	    for (UINT i = 0; i < NumRenderTargets; ++i)
 	    {
-            if( auto* pRTV = ppRTVs[i] )
+            if (auto* pRTV = ppRTVs[i])
             {
                 auto* pTexture = ValidatedCast<TextureD3D12Impl>( pRTV->GetTexture() );
                 TransitionOrVerifyTextureState(CmdCtx, *pTexture, StateTransitionMode, RESOURCE_STATE_RENDER_TARGET, "Setting render targets (DeviceContextD3D12Impl::CommitRenderTargets)");
@@ -876,7 +876,7 @@ namespace Diligent
         VERIFY_EXPR( static_cast<size_t>(NumBytes) == NumBytes );
         TransitionOrVerifyBufferState(CmdCtx, *pBuffD3D12, StateTransitionMode, RESOURCE_STATE_COPY_DEST, "Updating buffer (DeviceContextD3D12Impl::UpdateBufferRegion)");
         size_t DstBuffDataStartByteOffset;
-        auto *pd3d12Buff = pBuffD3D12->GetD3D12Buffer(DstBuffDataStartByteOffset, this);
+        auto* pd3d12Buff = pBuffD3D12->GetD3D12Buffer(DstBuffDataStartByteOffset, this);
         VERIFY(DstBuffDataStartByteOffset == 0, "Dst buffer must not be suballocated");
         CmdCtx.FlushResourceBarriers();
         CmdCtx.GetCommandList()->CopyBufferRegion( pd3d12Buff, DstOffset + DstBuffDataStartByteOffset, Allocation.pBuffer, Allocation.Offset, NumBytes);

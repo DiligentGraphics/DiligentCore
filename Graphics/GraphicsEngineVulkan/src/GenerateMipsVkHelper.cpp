@@ -198,13 +198,14 @@ namespace Diligent
     void GenerateMipsVkHelper::GenerateMips(TextureViewVkImpl& TexView, DeviceContextVkImpl& Ctx, IShaderResourceBinding& SRB)
     {
         auto* pTexVk = TexView.GetTexture<TextureVkImpl>();
+        const auto& TexDesc = pTexVk->GetDesc();
+
         if (!pTexVk->IsInKnownState())
         {
-            LOG_ERROR_MESSAGE("Unable to generate mips for texture '", pTexVk->GetDesc().Name, "' because texture state is unknown");
+            LOG_ERROR_MESSAGE("Unable to generate mips for texture '", TexDesc.Name, "' because the texture state is unknown");
             return;
         }
 
-        const auto& TexDesc = pTexVk->GetDesc();
         const auto& ViewDesc = TexView.GetDesc();
         auto* pSrcMipVar = SRB.GetVariable(SHADER_TYPE_COMPUTE, "SrcMip");
         auto* pOutMipVar = SRB.GetVariable(SHADER_TYPE_COMPUTE, "OutMip");

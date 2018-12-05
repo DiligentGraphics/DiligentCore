@@ -753,7 +753,11 @@ void DvpVerifyResourceState(const ShaderResourceCacheD3D12::Resource& Res,
             // Not using QueryInterface() for the sake of efficiency
             const auto* pBufferD3D12 = Res.pObject.RawPtr<const BufferD3D12Impl>();
             if (pBufferD3D12->IsInKnownState() && !pBufferD3D12->CheckState(RESOURCE_STATE_CONSTANT_BUFFER))
-                LOG_ERROR_MESSAGE("Resource '", pBufferD3D12->GetDesc().Name, "' is not in RESOURCE_STATE_CONSTANT_BUFFER state. Did you forget to call TransitionShaderResources() or specify RESOURCE_STATE_TRANSITION_MODE_TRANSITION mode in a call to CommitShaderResources()?" );
+                LOG_ERROR_MESSAGE("Buffer '", pBufferD3D12->GetDesc().Name, "' must be in RESOURCE_STATE_CONSTANT_BUFFER state. Actual state: ",
+                                   GetResourceStateString(pBufferD3D12->GetState()), 
+                                   ". Call IDeviceContext::TransitionShaderResources(), use RESOURCE_STATE_TRANSITION_MODE_TRANSITION "
+                                   "when calling IDeviceContext::CommitShaderResources() or explicitly transition the buffer state "
+                                   "with IDeviceContext::TransitionResourceStates()." );
         }
         break;
 
@@ -763,7 +767,11 @@ void DvpVerifyResourceState(const ShaderResourceCacheD3D12::Resource& Res,
             const auto* pBuffViewD3D12 = Res.pObject.RawPtr<const BufferViewD3D12Impl>();
             const auto* pBufferD3D12 = pBuffViewD3D12->GetBuffer<const BufferD3D12Impl>();
             if (pBufferD3D12->IsInKnownState() && !pBufferD3D12->CheckState(RESOURCE_STATE_SHADER_RESOURCE))
-                LOG_ERROR_MESSAGE("Resource '", pBufferD3D12->GetDesc().Name, "' is not in RESOURCE_STATE_SHADER_RESOURCE state. Did you forget to call TransitionShaderResources() or specify RESOURCE_STATE_TRANSITION_MODE_TRANSITION mode in a call to CommitShaderResources()?" );
+                LOG_ERROR_MESSAGE("Buffer '", pBufferD3D12->GetDesc().Name, "' must be in RESOURCE_STATE_SHADER_RESOURCE state.  Actual state: ",
+                                   GetResourceStateString(pBufferD3D12->GetState()), 
+                                   ". Call IDeviceContext::TransitionShaderResources(), use RESOURCE_STATE_TRANSITION_MODE_TRANSITION "
+                                   "when calling IDeviceContext::CommitShaderResources() or explicitly transition the buffer state "
+                                   "with IDeviceContext::TransitionResourceStates()." );
         }
         break;
 
@@ -773,7 +781,11 @@ void DvpVerifyResourceState(const ShaderResourceCacheD3D12::Resource& Res,
             const auto* pBuffViewD3D12 = Res.pObject.RawPtr<const BufferViewD3D12Impl>();
             const auto* pBufferD3D12 = pBuffViewD3D12->GetBuffer<const BufferD3D12Impl>();
             if (pBufferD3D12->IsInKnownState() && !pBufferD3D12->CheckState(RESOURCE_STATE_UNORDERED_ACCESS))
-                LOG_ERROR_MESSAGE("Resource '", pBufferD3D12->GetDesc().Name, "' is not in RESOURCE_STATE_UNORDERED_ACCESS state. Did you forget to call TransitionShaderResources() or specify RESOURCE_STATE_TRANSITION_MODE_TRANSITION mode in a call to CommitShaderResources()?" );
+                LOG_ERROR_MESSAGE("Buffer '", pBufferD3D12->GetDesc().Name, "' must be in RESOURCE_STATE_UNORDERED_ACCESS state. Actual state: ",
+                                   GetResourceStateString(pBufferD3D12->GetState()), 
+                                   ". Call IDeviceContext::TransitionShaderResources(), use RESOURCE_STATE_TRANSITION_MODE_TRANSITION "
+                                   "when calling IDeviceContext::CommitShaderResources() or explicitly transition the buffer state "
+                                   "with IDeviceContext::TransitionResourceStates()." );
         }
         break;
 
@@ -783,7 +795,11 @@ void DvpVerifyResourceState(const ShaderResourceCacheD3D12::Resource& Res,
             const auto* pTexViewD3D12 = Res.pObject.RawPtr<const TextureViewD3D12Impl>();
             const auto* pTexD3D12 = pTexViewD3D12->GetTexture<TextureD3D12Impl>();
             if (pTexD3D12->IsInKnownState() && !pTexD3D12->CheckState(RESOURCE_STATE_SHADER_RESOURCE))
-                LOG_ERROR_MESSAGE("Resource '", pTexD3D12->GetDesc().Name, "' is not in RESOURCE_STATE_SHADER_RESOURCE state. Did you forget to call TransitionShaderResources() or specify RESOURCE_STATE_TRANSITION_MODE_TRANSITION mode in a call to CommitShaderResources()?" );
+                LOG_ERROR_MESSAGE("Texture '", pTexD3D12->GetDesc().Name, "' must be in RESOURCE_STATE_SHADER_RESOURCE state. Actual state: ",
+                                   GetResourceStateString(pTexD3D12->GetState()), 
+                                   ". Call IDeviceContext::TransitionShaderResources(), use RESOURCE_STATE_TRANSITION_MODE_TRANSITION "
+                                   "when calling IDeviceContext::CommitShaderResources() or explicitly transition the texture state "
+                                   "with IDeviceContext::TransitionResourceStates()." );
         }
         break;
 
@@ -793,7 +809,11 @@ void DvpVerifyResourceState(const ShaderResourceCacheD3D12::Resource& Res,
             const auto* pTexViewD3D12 = Res.pObject.RawPtr<const TextureViewD3D12Impl>();
             const auto* pTexD3D12 = pTexViewD3D12->GetTexture<const TextureD3D12Impl>();
             if (pTexD3D12->IsInKnownState() && !pTexD3D12->CheckState(RESOURCE_STATE_UNORDERED_ACCESS))
-                LOG_ERROR_MESSAGE("Resource '", pTexD3D12->GetDesc().Name, "' is not in RESOURCE_STATE_UNORDERED_ACCESS state. Did you forget to call TransitionShaderResources() or specify RESOURCE_STATE_TRANSITION_MODE_TRANSITION mode in a call to CommitShaderResources()?" );
+                LOG_ERROR_MESSAGE("Texture '", pTexD3D12->GetDesc().Name, "' must be in RESOURCE_STATE_UNORDERED_ACCESS state. Actual state: ",
+                                   GetResourceStateString(pTexD3D12->GetState()), 
+                                   ". Call IDeviceContext::TransitionShaderResources(), use RESOURCE_STATE_TRANSITION_MODE_TRANSITION "
+                                   "when calling IDeviceContext::CommitShaderResources() or explicitly transition the texture state "
+                                   "with IDeviceContext::TransitionResourceStates()." );
         }
         break;
 
@@ -942,9 +962,15 @@ void RootSignature::CommitDescriptorHandlesInternal_SMD(RenderDeviceD3D12Impl*  
                             VERIFY( DynamicCbvSrvUavTblOffset < NumDynamicCbvSrvUavDescriptors, "Not enough space in the descriptor heap allocation");
 
                             if (Res.CPUDescriptorHandle.ptr != 0)
+                            {
                                 pd3d12Device->CopyDescriptorsSimple(1, DynamicCbvSrvUavDescriptors.GetCpuHandle(DynamicCbvSrvUavTblOffset), Res.CPUDescriptorHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+                            }
+#ifdef DEVELOPMENT
                             else
+                            {
                                 LOG_ERROR_MESSAGE("No valid CbvSrvUav descriptor handle found for root parameter ", RootInd, ", descriptor slot ", OffsetFromTableStart);
+                            }
+#endif
 
                             ++DynamicCbvSrvUavTblOffset;
                         }
@@ -953,9 +979,15 @@ void RootSignature::CommitDescriptorHandlesInternal_SMD(RenderDeviceD3D12Impl*  
                             VERIFY( DynamicSamplerTblOffset < NumDynamicSamplerDescriptors, "Not enough space in the descriptor heap allocation");
 
                             if (Res.CPUDescriptorHandle.ptr != 0)
+                            {
                                 pd3d12Device->CopyDescriptorsSimple(1, DynamicSamplerDescriptors.GetCpuHandle(DynamicSamplerTblOffset), Res.CPUDescriptorHandle, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+                            }
+#ifdef DEVELOPMENT
                             else
+                            {
                                 LOG_ERROR_MESSAGE("No valid sampler descriptor handle found for root parameter ", RootInd, ", descriptor slot ", OffsetFromTableStart);
+                            }
+#endif
                                                         
                             ++DynamicSamplerTblOffset;
                         }
@@ -1051,9 +1083,11 @@ void RootSignature::CommitRootViews(ShaderResourceCacheD3D12& ResourceCache,
        
         SHADER_TYPE dbgShaderType = SHADER_TYPE_UNKNOWN;
 #ifdef _DEBUG
-        auto& Param = static_cast<const D3D12_ROOT_PARAMETER&>( RootView );
-        VERIFY_EXPR(Param.ParameterType == D3D12_ROOT_PARAMETER_TYPE_CBV);
-        dbgShaderType = ShaderTypeFromShaderVisibility(Param.ShaderVisibility);
+        {
+            auto& Param = static_cast<const D3D12_ROOT_PARAMETER&>( RootView );
+            VERIFY_EXPR(Param.ParameterType == D3D12_ROOT_PARAMETER_TYPE_CBV);
+            dbgShaderType = ShaderTypeFromShaderVisibility(Param.ShaderVisibility);
+        }
 #endif
 
         auto& Res = ResourceCache.GetRootTable(RootInd).GetResource(0, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, dbgShaderType);

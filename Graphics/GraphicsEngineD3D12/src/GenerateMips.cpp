@@ -112,6 +112,12 @@ namespace Diligent
         auto& TexDesc = pTexture->GetDesc();
         auto SRVDescriptorHandle = pTexD3D12->GetTexArraySRV();
 
+        if (!pTexD3D12->IsInKnownState())
+        {
+            LOG_ERROR_MESSAGE("Unable to generate mips for texture '", TexDesc.Name, "' because the texture state is unknown");
+            return;
+        }
+
         if (pTexD3D12->IsInKnownState() && !pTexD3D12->CheckState(RESOURCE_STATE_UNORDERED_ACCESS))
 	        Ctx.TransitionResource(pTexD3D12, RESOURCE_STATE_UNORDERED_ACCESS);
         auto* pd3d12Device = pRenderDeviceD3D12->GetD3D12Device();
