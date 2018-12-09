@@ -115,9 +115,10 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl* pCtxVkImpl)
                 {
                     constexpr RESOURCE_STATE RequiredState = RESOURCE_STATE_CONSTANT_BUFFER;
                     VERIFY_EXPR((ResourceStateFlagsToVkAccessFlags(RequiredState) & VK_ACCESS_UNIFORM_READ_BIT) == VK_ACCESS_UNIFORM_READ_BIT);
-                    if (!pBufferVk->CheckState(RequiredState))
+                    const bool IsInRequiredState = pBufferVk->CheckState(RequiredState);
+                    if (VerifyOnly)
                     {
-                        if (VerifyOnly)
+                        if (!IsInRequiredState)
                         {
                             LOG_ERROR_MESSAGE("State of buffer '", pBufferVk->GetDesc().Name, "' is incorrect. Required state: ",
                                                GetResourceStateString(RequiredState),  ". Actual state: ", 
@@ -126,11 +127,14 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl* pCtxVkImpl)
                                                "when calling IDeviceContext::CommitShaderResources() or explicitly transition the buffer state "
                                                "with IDeviceContext::TransitionResourceStates().");
                         }
-                        else
+                    }
+                    else
+                    {
+                        if (!IsInRequiredState)
                         {
                             pCtxVkImpl->TransitionBufferState(*pBufferVk, RESOURCE_STATE_UNKNOWN, RequiredState, true);
-                            VERIFY_EXPR(pBufferVk->CheckAccessFlags(VK_ACCESS_UNIFORM_READ_BIT));
                         }
+                        VERIFY_EXPR(pBufferVk->CheckAccessFlags(VK_ACCESS_UNIFORM_READ_BIT));
                     }
                 }
             }
@@ -151,9 +155,11 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl* pCtxVkImpl)
                             VK_ACCESS_SHADER_READ_BIT : (VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
                     VERIFY_EXPR( (ResourceStateFlagsToVkAccessFlags(RequiredState) & RequiredAccessFlags) == RequiredAccessFlags);
 #endif
-                    if (!pBufferVk->CheckState(RequiredState))
+                    const bool IsInRequiredState = pBufferVk->CheckState(RequiredState);
+
+                    if (VerifyOnly)
                     {
-                        if (VerifyOnly)
+                        if (!IsInRequiredState)
                         {
                             LOG_ERROR_MESSAGE("State of buffer '", pBufferVk->GetDesc().Name, "' is incorrect. Required state: ",
                                                GetResourceStateString(RequiredState),  ". Actual state: ", 
@@ -162,11 +168,16 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl* pCtxVkImpl)
                                                "when calling IDeviceContext::CommitShaderResources() or explicitly transition the buffer state "
                                                "with IDeviceContext::TransitionResourceStates().");
                         }
-                        else
+                    }
+                    else
+                    {
+                        // When both old and new states are RESOURCE_STATE_UNORDERED_ACCESS, we need to execute UAV barrier
+                        // to make sure that all UAV writes are complete and visible.
+                        if (!IsInRequiredState || RequiredState == RESOURCE_STATE_UNORDERED_ACCESS)
                         {
                             pCtxVkImpl->TransitionBufferState(*pBufferVk, RESOURCE_STATE_UNKNOWN, RequiredState, true);
-                            VERIFY_EXPR(pBufferVk->CheckAccessFlags(RequiredAccessFlags));
                         }
+                        VERIFY_EXPR(pBufferVk->CheckAccessFlags(RequiredAccessFlags));
                     }
                 }
             }
@@ -208,10 +219,11 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl* pCtxVkImpl)
                             VERIFY_EXPR(ResourceStateToVkImageLayout(RequiredState) == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
                         }
                     }
+                    const bool IsInRequiredState = pTextureVk->CheckState(RequiredState);
 
-                    if (!pTextureVk->CheckState(RequiredState))
+                    if (VerifyOnly)
                     {
-                        if (VerifyOnly)
+                        if (!IsInRequiredState)
                         {
                             LOG_ERROR_MESSAGE("State of texture '", pTextureVk->GetDesc().Name, "' is incorrect. Required state: ",
                                               GetResourceStateString(RequiredState), ". Actual state: ", 
@@ -220,7 +232,12 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl* pCtxVkImpl)
                                                "when calling IDeviceContext::CommitShaderResources() or explicitly transition the texture state "
                                                "with IDeviceContext::TransitionResourceStates().");
                         }
-                        else
+                    }
+                    else
+                    {
+                        // When both old and new states are RESOURCE_STATE_UNORDERED_ACCESS, we need to execute UAV barrier
+                        // to make sure that all UAV writes are complete and visible.
+                        if (!IsInRequiredState || RequiredState == RESOURCE_STATE_UNORDERED_ACCESS)
                         {
                             pCtxVkImpl->TransitionTextureState(*pTextureVk, RESOURCE_STATE_UNKNOWN, RequiredState, true);
                         }

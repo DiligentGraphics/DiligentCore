@@ -1796,6 +1796,8 @@ namespace Diligent
                 pSubresRange->aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         }
 
+        // Note that when both old and new states are RESOURCE_STATE_UNORDERED_ACCESS, we need to execute UAV barrier
+        // to make sure that all UAV writes are complete and visible.
         auto OldLayout = ResourceStateToVkImageLayout(OldState);
         auto NewLayout = ResourceStateToVkImageLayout(NewState);
         m_CommandBuffer.TransitionImageLayout(vkImg, OldLayout, NewLayout, *pSubresRange);
@@ -1880,7 +1882,9 @@ namespace Diligent
             }
         }
 
-        if ((OldState & NewState) != NewState)
+        // When both old and new states are RESOURCE_STATE_UNORDERED_ACCESS, we need to execute UAV barrier
+        // to make sure that all UAV writes are complete and visible.
+        if (((OldState & NewState) != NewState) || NewState == RESOURCE_STATE_UNORDERED_ACCESS)
         {
             DEV_CHECK_ERR(BufferVk.m_VulkanBuffer != VK_NULL_HANDLE, "Cannot transition suballocated buffer");
             VERIFY_EXPR(BufferVk.GetDynamicOffset(m_ContextId, this) == 0);
