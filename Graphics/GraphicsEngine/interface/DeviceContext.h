@@ -55,23 +55,27 @@ static constexpr INTERFACE_ID IID_DeviceContext =
 /// Draw command flags
 enum DRAW_FLAGS : Uint8
 {
-    /// Perform no state transitions
+    /// No flags.
     DRAW_FLAG_NONE                            = 0x00,
 
-    /// Verify the sate of vertex and index buffers. State verification is only performed in 
-    /// debug and development builds and the flag has no effect in release build.
+    /// Verify the sate of index and vertex buffers (if any) used by the draw 
+    /// command. State validation is only performed in debug and development builds 
+    /// and the flag has no effect in release build.
     DRAW_FLAG_VERIFY_STATES                   = 0x01
 };
 DEFINE_FLAG_ENUM_OPERATORS(DRAW_FLAGS)
 
 
-/// Defines resource state transitions performed by various commands
+/// Defines resource state transition mode performed by various commands
+
+/// Refer to http://diligentgraphics.com/2018/12/09/resource-state-management/ for detailed explanation
+/// of resource state management system in Diligent Engine.
 enum RESOURCE_STATE_TRANSITION_MODE : Uint8
 {
-    /// Perform no state transitions
+    /// Perform no state transitions and no state validation.
     RESOURCE_STATE_TRANSITION_MODE_NONE = 0,
     
-    /// Transition resources to states required by the command.
+    /// Transition resources to the states required by the command.
     /// Resources in unknown state are ignored.
     RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
 
@@ -103,10 +107,10 @@ struct DrawAttribs
     /// Allowed values: VT_UINT16 and VT_UINT32. Ignored if DrawAttribs::IsIndexed is False.
     VALUE_TYPE IndexType = VT_UNDEFINED;
 
-    /// Additional flags controlling the draw command behavior, see Diligent::DRAW_FLAGS.
+    /// Additional flags, see Diligent::DRAW_FLAGS.
     DRAW_FLAGS Flags = DRAW_FLAG_NONE;
 
-    /// State transition mode for indirect draw arguments buffer. This member is ignored if pIndirectDrawAttribs member is null.
+    /// State transition mode for indirect draw arguments buffer. Ignored if pIndirectDrawAttribs member is null.
     RESOURCE_STATE_TRANSITION_MODE IndirectAttribsBufferStateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_NONE;
 
     /// Number of instances to draw. If more than one instance is specified,
@@ -143,18 +147,19 @@ struct DrawAttribs
     /// Initializes the structure members with default values
 
     /// Default values:
-    /// Member                  | Default value
-    /// ------------------------|--------------
-    /// NumVertices             | 0
-    /// IsIndexed               | False
-    /// IndexType               | VT_UNDEFINED
-    /// Flags                   | DRAW_FLAG_NONE
-    /// NumInstances            | 1
-    /// BaseVertex              | 0
-    /// IndirectDrawArgsOffset  | 0
-    /// StartVertexLocation     | 0
-    /// FirstInstanceLocation   | 0
-    /// pIndirectDrawAttribs    | nullptr
+    /// Member                                   | Default value
+    /// -----------------------------------------|--------------------------------------
+    /// NumVertices                              | 0
+    /// IsIndexed                                | False
+    /// IndexType                                | VT_UNDEFINED
+    /// IndirectAttribsBufferStateTransitionMode | RESOURCE_STATE_TRANSITION_MODE_NONE
+    /// Flags                                    | DRAW_FLAG_NONE
+    /// NumInstances                             | 1
+    /// BaseVertex                               | 0
+    /// IndirectDrawArgsOffset                   | 0
+    /// StartVertexLocation                      | 0
+    /// FirstInstanceLocation                    | 0
+    /// pIndirectDrawAttribs                     | nullptr
     DrawAttribs()noexcept{}
 };
 
@@ -163,9 +168,14 @@ struct DrawAttribs
 /// These flags are used by IDeviceContext::ClearDepthStencil().
 enum CLEAR_DEPTH_STENCIL_FLAGS : Uint32
 {
-    CLEAR_DEPTH_FLAG_NONE = 0x00,  ///< Perform no clear no transitions
-    CLEAR_DEPTH_FLAG      = 0x01,  ///< Clear depth part of the buffer
-    CLEAR_STENCIL_FLAG    = 0x02   ///< Clear stencil part of the buffer
+    /// Perform no clear
+    CLEAR_DEPTH_FLAG_NONE = 0x00,  
+
+    /// Clear depth part of the buffer
+    CLEAR_DEPTH_FLAG      = 0x01,  
+
+    /// Clear stencil part of the buffer
+    CLEAR_STENCIL_FLAG    = 0x02   
 };
 DEFINE_FLAG_ENUM_OPERATORS(CLEAR_DEPTH_STENCIL_FLAGS)
 
@@ -280,8 +290,8 @@ struct Viewport
 /// This structure is used by IDeviceContext::SetScissorRects().
 ///
 /// \remarks When defining a viewport, Windows convention is used:
-///         window coordinate systems originates in the LEFT TOP corner
-///         of the screen with Y axis pointing down.
+///          window coordinate systems originates in the LEFT TOP corner
+///          of the screen with Y axis pointing down.
 struct Rect
 {
     Int32 left   = 0;  ///< X coordinate of the left boundary of the viewport.
@@ -321,13 +331,13 @@ struct CopyTextureAttribs
     /// Source texture state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
     RESOURCE_STATE_TRANSITION_MODE SrcTextureTransitionMode = RESOURCE_STATE_TRANSITION_MODE_NONE;
 
-    /// Destination texture to copy data to.
+    /// Destination texture.
     ITexture*                      pDstTexture              = nullptr;
 
-    /// Mip level to copy data to.
+    /// Destination mip level.
     Uint32                         DstMipLevel              = 0;
 
-    /// Array slice to copy data to. Must be 0 for non-array textures.
+    /// Destination array slice. Must be 0 for non-array textures.
     Uint32                         DstSlice                 = 0;
 
     /// X offset on the destination subresource.
@@ -374,8 +384,9 @@ public:
 
 
     /// Transitions shader resources to the require states.
-    /// \param [in] pPipelineState - Pipeline state object that was used to create the shader resource binding.
+    /// \param [in] pPipelineState         - Pipeline state object that was used to create the shader resource binding.
     /// \param [in] pShaderResourceBinding - Shader resource binding whose resources will be transitioned.
+    ///
     /// \remarks This method explicitly transitiones all resources to correct states.
     ///          If this method was called, there is no need to use Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION
     ///          when calling IDeviceContext::CommitShaderResources()
@@ -386,6 +397,8 @@ public:
     ///
     ///          If the application intends to use the same resources in other threads simultaneously, it needs to 
     ///          explicitly manage the states using IDeviceContext::TransitionResourceStates() method.
+    ///          Refer to http://diligentgraphics.com/2018/12/09/resource-state-management/ for detailed explanation
+    ///          of resource state management system in Diligent Engine.
     virtual void TransitionShaderResources(IPipelineState* pPipelineState, IShaderResourceBinding* pShaderResourceBinding) = 0;
 
     /// Commits shader resources to the device context
@@ -397,7 +410,7 @@ public:
     ///
     /// \remarks Pipeline state object that was used to create the shader resource binding must be bound 
     ///          to the pipeline when CommitShaderResources() is called. If no pipeline state object is bound
-    ///          or the pipeline state object does not match shader resource binding, the method will fail.\n
+    ///          or the pipeline state object does not match the shader resource binding, the method will fail.\n
     ///          If Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION mode is used,
     ///          the engine will also transition all shader resources to correct states. If the flag
     ///          is not set, it is assumed that all resources are already in correct states.\n
@@ -410,16 +423,17 @@ public:
     ///            of resources referenced by the shader resource binding and no other thread is allowed to read or write these states.
     ///
     ///          - If Diligent::RESOURCE_STATE_TRANSITION_MODE_VERIFY mode is used, the method will read the states, so no other thread
-    ///            should alter the states using any of the method that use Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION mode.
+    ///            should alter the states using any of the methods that use Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION mode.
     ///            It is safe for other threads to read the states.
     ///
-    ///          - If none of Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION  or 
-    ///            Diligent::RESOURCE_STATE_TRANSITION_MODE_VERIFY modes are used, the method does not access the states of resources.
+    ///          - If Diligent::RESOURCE_STATE_TRANSITION_MODE_NONE mode is used, the method does not access the states of resources.
     ///
     ///          If the application intends to use the same resources in other threads simultaneously, it should manage the states
     ///          manually by setting the state to Diligent::RESOURCE_STATE_UNKNOWN (which will disable automatic state 
     ///          management) using IBuffer::SetState() or ITexture::SetState() and explicitly transitioning the states with 
-    ///          IDeviceContext::TransitionResourceStates(). See IDeviceContext::TransitionResourceStates() for details.
+    ///          IDeviceContext::TransitionResourceStates().
+    ///          Refer to http://diligentgraphics.com/2018/12/09/resource-state-management/ for detailed explanation
+    ///          of resource state management system in Diligent Engine.
     virtual void CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) = 0;
 
     /// Sets the stencil reference value
@@ -439,23 +453,23 @@ public:
 
     /// Binds vertex buffers to the pipeline.
 
-    /// \param [in] StartSlot - The first input slot for binding. The first vertex buffer is 
-    ///                         explicitly bound to the start slot; each additional vertex buffer 
-    ///                         in the array is implicitly bound to each subsequent input slot. 
-    /// \param [in] NumBuffersSet - The number of vertex buffers in the array.
-    /// \param [in] ppBuffers - A pointer to an array of vertex buffers. 
-    //                          The vertex buffers must have been created with the Diligent::BIND_VERTEX_BUFFER flag.
-    /// \param [in] pOffsets  - Pointer to an array of offset values; one offset value for each buffer 
-    ///                         in the vertex-buffer array. Each offset is the number of bytes between 
-    ///                         the first element of a vertex buffer and the first element that will be 
-    ///                         used. If this parameter is nullptr, zero offsets for all buffers will be used.
+    /// \param [in] StartSlot           - The first input slot for binding. The first vertex buffer is 
+    ///                                   explicitly bound to the start slot; each additional vertex buffer 
+    ///                                   in the array is implicitly bound to each subsequent input slot. 
+    /// \param [in] NumBuffersSet       - The number of vertex buffers in the array.
+    /// \param [in] ppBuffers           - A pointer to an array of vertex buffers. 
+    ///                                   The buffers must have been created with the Diligent::BIND_VERTEX_BUFFER flag.
+    /// \param [in] pOffsets            - Pointer to an array of offset values; one offset value for each buffer 
+    ///                                   in the vertex-buffer array. Each offset is the number of bytes between 
+    ///                                   the first element of a vertex buffer and the first element that will be 
+    ///                                   used. If this parameter is nullptr, zero offsets for all buffers will be used.
     /// \param [in] StateTransitionMode - State transition mode for buffers being set (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
-    /// \param [in] Flags     - Additional flags for the operation. See Diligent::SET_VERTEX_BUFFERS_FLAGS
-    ///                         for a list of allowed values.      
+    /// \param [in] Flags               - Additional flags. See Diligent::SET_VERTEX_BUFFERS_FLAGS for a list of allowed values.
+    ///                                   
     /// \remarks The device context keeps strong references to all bound vertex buffers.
     ///          Thus a buffer cannot be released until it is unbound from the context.\n
     ///          It is suggested to specify Diligent::SET_VERTEX_BUFFERS_FLAG_RESET flag
-    ///          whenever possible. This will assure that no buffers from previous draw calls are
+    ///          whenever possible. This will assure that no buffers from previous draw calls
     ///          are bound to the pipeline.
     ///
     /// \remarks When StateTransitionMode is Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION, the method will 
@@ -465,6 +479,8 @@ public:
     ///
     ///          If the application intends to use the same resources in other threads simultaneously, it needs to 
     ///          explicitly manage the states using IDeviceContext::TransitionResourceStates() method.
+    ///          Refer to http://diligentgraphics.com/2018/12/09/resource-state-management/ for detailed explanation
+    ///          of resource state management system in Diligent Engine.
     virtual void SetVertexBuffers(Uint32                         StartSlot, 
                                   Uint32                         NumBuffersSet, 
                                   IBuffer**                      ppBuffers, 
@@ -481,31 +497,35 @@ public:
 
     /// Binds an index buffer to the pipeline
     
-    /// \param [in] pIndexBuffer   - Pointer to the index buffer. The buffer must have been created 
-    ///                              with the Diligent::BIND_INDEX_BUFFER flag.
-    /// \param [in] ByteOffset     - Offset from the beginning of the buffer to 
-    ///                              the start of index data.
+    /// \param [in] pIndexBuffer        - Pointer to the index buffer. The buffer must have been created 
+    ///                                   with the Diligent::BIND_INDEX_BUFFER flag.
+    /// \param [in] ByteOffset          - Offset from the beginning of the buffer to 
+    ///                                   the start of index data.
     /// \param [in] StateTransitionMode - State transiton mode for the index buffer to bind (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
+    ///
     /// \remarks The device context keeps strong reference to the index buffer.
     ///          Thus an index buffer object cannot be released until it is unbound 
     ///          from the context.
     ///
     /// \remarks When StateTransitionMode is Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION, the method will 
     ///          transition the buffer to Diligent::RESOURCE_STATE_INDEX_BUFFER (if its state is not unknown). Resource 
-    ///          state transitioning is not thread safe, so no other thread is allowed to read or write the states of 
+    ///          state transitioning is not thread safe, so no other thread is allowed to read or write the state of 
     ///          the buffer.
     ///
     ///          If the application intends to use the same resource in other threads simultaneously, it needs to 
     ///          explicitly manage the states using IDeviceContext::TransitionResourceStates() method.
+    ///          Refer to http://diligentgraphics.com/2018/12/09/resource-state-management/ for detailed explanation
+    ///          of resource state management system in Diligent Engine.
     virtual void SetIndexBuffer(IBuffer* pIndexBuffer, Uint32 ByteOffset, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) = 0;
 
 
     /// Sets an array of viewports
 
     /// \param [in] NumViewports - Number of viewports to set.
-    /// \param [in] pViewports - An array of Viewport structures describing the viewports to bind.
-    /// \param [in] RTWidth - Render target width. If 0 is provided, width of the currently bound render target will be used.
-    /// \param [in] RTHeight- Render target height. If 0 is provided, height of the currently bound render target will be used.
+    /// \param [in] pViewports   - An array of Viewport structures describing the viewports to bind.
+    /// \param [in] RTWidth      - Render target width. If 0 is provided, width of the currently bound render target will be used.
+    /// \param [in] RTHeight     - Render target height. If 0 is provided, height of the currently bound render target will be used.
+    ///
     /// \remarks
     /// DirectX and OpenGL use different window coordinate systems. In DirectX, the coordinate system origin
     /// is in the left top corner of the screen with Y axis pointing down. In OpenGL, the origin
@@ -522,9 +542,10 @@ public:
     /// Sets active scissor rects
 
     /// \param [in] NumRects - Number of scissor rectangles to set.
-    /// \param [in] pRects - An array of Rect structures describing the scissor rectangles to bind.
-    /// \param [in] RTWidth - Render target width. If 0 is provided, width of the currently bound render target will be used.
+    /// \param [in] pRects   - An array of Rect structures describing the scissor rectangles to bind.
+    /// \param [in] RTWidth  - Render target width. If 0 is provided, width of the currently bound render target will be used.
     /// \param [in] RTHeight - Render target height. If 0 is provided, height of the currently bound render target will be used.
+    ///
     /// \remarks
     /// DirectX and OpenGL use different window coordinate systems. In DirectX, the coordinate system origin
     /// is in the left top corner of the screen with Y axis pointing down. In OpenGL, the origin
@@ -554,6 +575,17 @@ public:
     ///              following call:
     ///
     ///     pContext->SetRenderTargets(0, nullptr, nullptr);
+    ///
+    /// \remarks When StateTransitionMode is Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION, the method will 
+    ///          transition all render targets in know states to Diligent::RESOURCE_STATE_REDER_TARGET.
+    ///          and the depth-stencil buffer to Diligent::RESOURCE_STATE_DEPTH_WRITE state.
+    ///          Resource state transitioning is not thread safe, so no other thread is allowed to read or write 
+    ///          the state of resources used by the command.
+    ///
+    ///          If the application intends to use the same resource in other threads simultaneously, it needs to 
+    ///          explicitly manage the states using IDeviceContext::TransitionResourceStates() method.
+    ///          Refer to http://diligentgraphics.com/2018/12/09/resource-state-management/ for detailed explanation
+    ///          of resource state management system in Diligent Engine.
     virtual void SetRenderTargets(Uint32                         NumRenderTargets,
                                   ITextureView*                  ppRenderTargets[],
                                   ITextureView*                  pDepthStencil,
@@ -565,7 +597,7 @@ public:
     ///
     /// \remarks  If IndirectAttribsBufferStateTransitionMode member is Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
     ///           the method may transition the state of indirect draw arguments buffer. This is not a thread safe operation, 
-    ///           so no other thread is allowed to read or write the state of the same resource.
+    ///           so no other thread is allowed to read or write the state of the buffer.
     ///
     ///           If Diligent::DRAW_FLAG_VERIFY_STATES flag is set, the method reads the state of vertex/index
     ///           buffers, so no other threads are allowed to alter the states of the same resources.
@@ -590,14 +622,24 @@ public:
 
     /// Clears a depth-stencil view
     
-    /// \param [in] pView - Pointer to ITextureView interface to clear. The view type must be 
-    ///                     Diligent::TEXTURE_VIEW_DEPTH_STENCIL.
+    /// \param [in] pView               - Pointer to ITextureView interface to clear. The view type must be 
+    ///                                   Diligent::TEXTURE_VIEW_DEPTH_STENCIL.
     /// \param [in] StateTransitionMode - state transition mode of the depth-stencil buffer to clear.
-    /// \param [in] ClearFlags - Idicates which parts of the buffer to clear, see Diligent::CLEAR_DEPTH_STENCIL_FLAGS.
-    /// \param [in] fDepth - Value to clear depth part of the view with.
-    /// \param [in] Stencil - Value to clear stencil part of the view with.
+    /// \param [in] ClearFlags          - Idicates which parts of the buffer to clear, see Diligent::CLEAR_DEPTH_STENCIL_FLAGS.
+    /// \param [in] fDepth              - Value to clear depth part of the view with.
+    /// \param [in] Stencil             - Value to clear stencil part of the view with.
+    ///
     /// \remarks The full extent of the view is always cleared. Viewport and scissor settings are not applied.
     /// \note The depth-stencil view must be bound to the pipeline for clear operation to be performed.
+    ///
+    /// \remarks When StateTransitionMode is Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION, the method will 
+    ///          transition the state of the texture to the state required for clear operation. 
+    ///          In Direct3D12, this satate is always Diligent::RESOURCE_STATE_DEPTH_WRITE, however in Vulkan
+    ///          the state depends on whether the depth buffer is bound to the pipeline.
+    ///          Resource state transitioning is not thread safe, so no other thread is allowed to read or write 
+    ///          the state of resources used by the command.
+    ///          Refer to http://diligentgraphics.com/2018/12/09/resource-state-management/ for detailed explanation
+    ///          of resource state management system in Diligent Engine.
     virtual void ClearDepthStencil(ITextureView*                  pView,
                                    CLEAR_DEPTH_STENCIL_FLAGS      ClearFlags,
                                    float                          fDepth,
@@ -606,10 +648,10 @@ public:
 
     /// Clears a render target view
 
-    /// \param [in] pView - Pointer to ITextureView interface to clear. The view type must be 
-    ///                     Diligent::TEXTURE_VIEW_RENDER_TARGET.
-    /// \param [in] RGBA - A 4-component array that represents the color to fill the render target with.
-    ///                    If nullptr is provided, the default array {0,0,0,0} will be used.
+    /// \param [in] pView               - Pointer to ITextureView interface to clear. The view type must be 
+    ///                                   Diligent::TEXTURE_VIEW_RENDER_TARGET.
+    /// \param [in] RGBA                - A 4-component array that represents the color to fill the render target with.
+    ///                                   If nullptr is provided, the default array {0,0,0,0} will be used.
     /// \param [in] StateTransitionMode - Defines requires state transitions (see Diligent::RESOURCE_STATE_TRANSITION_MODE)
     ///
     /// \remarks The full extent of the view is always cleared. Viewport and scissor settings are not applied.
@@ -617,8 +659,8 @@ public:
     ///          The render target view must be bound to the pipeline for clear operation to be performed in OpenGL backend.
     ///
     /// \remarks When StateTransitionMode is Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION, the method will 
-    ///          transition all textures to required state. Resource state transitioning is not thread safe, so no 
-    ///          other thread is allowed to read or write the states of the same textures.
+    ///          transition all textures to the state required by the command. Resource state transitioning is not 
+    ///          thread safe, so no other thread is allowed to read or write the states of the same textures.
     ///
     ///          If the application intends to use the same resource in other threads simultaneously, it needs to 
     ///          explicitly manage the states using IDeviceContext::TransitionResourceStates() method.
@@ -648,6 +690,7 @@ public:
     ///       and the fence will be signalled only when the command context is flushed next time.
     ///       If an application needs to wait for the fence in a loop, it must flush the context
     ///       after signalling the fence.
+    ///
     /// \param [in] pFence - The fence to signal
     /// \param [in] Value  - The value to set the fence to. This value must be greater than the
     ///                      previously signalled value on the same fence.
@@ -679,7 +722,7 @@ public:
     /// \param [in] DstOffset               - Offset in bytes from the beginning of the destination buffer to the beginning 
     ///                                       of the destination region.
     /// \param [in] Size                    - Size in bytes of data to copy.
-    /// \param [in] DstBufferTransitionMode - State transition mode of the destination buffer (see Diligent::RESOURCE_STATE_TRANSITION_MODE)
+    /// \param [in] DstBufferTransitionMode - State transition mode of the destination buffer (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
     virtual void CopyBuffer(IBuffer*                       pSrcBuffer,
                             Uint32                         SrcOffset,
                             RESOURCE_STATE_TRANSITION_MODE SrcBufferTransitionMode,
@@ -691,11 +734,11 @@ public:
 
     /// Maps the buffer
 
-    /// \param [in] pBuffer - Pointer to the buffer to map.
-    /// \param [in] MapType - Type of the map operation. See Diligent::MAP_TYPE.
-    /// \param [in] MapFlags - Special map flags. See Diligent::MAP_FLAGS.
+    /// \param [in] pBuffer      - Pointer to the buffer to map.
+    /// \param [in] MapType      - Type of the map operation. See Diligent::MAP_TYPE.
+    /// \param [in] MapFlags     - Special map flags. See Diligent::MAP_FLAGS.
     /// \param [out] pMappedData - Reference to the void pointer to store the address of the mapped region.
-    virtual void MapBuffer( IBuffer* pBuffer, MAP_TYPE MapType, MAP_FLAGS MapFlags, PVoid &pMappedData ) = 0;
+    virtual void MapBuffer( IBuffer* pBuffer, MAP_TYPE MapType, MAP_FLAGS MapFlags, PVoid& pMappedData ) = 0;
 
     /// Unmaps the previously mapped buffer
 
@@ -823,6 +866,9 @@ public:
     ///          makes the method read the states, but not write them. When Diligent::RESOURCE_STATE_TRANSITION_MODE_NONE
     ///          is used, the method assumes the states are guaranteed to be correct and does not read or write them.
     ///          It is the responsibility of the application to make sure this is indeed true.
+    ///
+    ///          Refer to http://diligentgraphics.com/2018/12/09/resource-state-management/ for detailed explanation
+    ///          of resource state management system in Diligent Engine.
     virtual void TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers) = 0;
 };
 

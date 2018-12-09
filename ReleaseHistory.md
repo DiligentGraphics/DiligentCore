@@ -1,5 +1,5 @@
 
-## v2.3.c (in progress)
+## v2.4
 
 * Implemented explicit resource state transitions
 * API Changes
@@ -8,7 +8,7 @@
   * Added `DRAW_FLAGS` enum that controls state validation performed by Draw command
   * Added `Flags` member to `DrawAttribs` structure (values from `DRAW_FLAGS`)
   * Added `IndirectAttribsBufferStateTransitionMode` member to `DrawAttribs` and `DispatchComputeAttribs` structures (values from `RESOURCE_STATE_TRANSITION_MODE`)
-  * Added `StateTransitionDesc` structure that describes resource state transition
+  * Added `StateTransitionDesc` structure that describes resource state transition barrier
   * Added `IDeviceContext::TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers)` method
   * Added `IBuffer::SetState()`, `IBuffer::GetState()`, `ITexture::SetState()`, `ITexture::GetState()` methods
   * Added `IShaderResourceBinding::InitializeStaticResources()` to explicitly initialize static resources and
@@ -32,6 +32,7 @@
   * Replaced `COMMIT_SHADER_RESOURCES_FLAGS` enum with `RESOURCE_STATE_TRANSITION_MODE`
   * Added `ITextureD3D12::GetD3D12ResourceState()`, `IBufferD3D12::GetD3D12ResourceState()`,
 	`IBufferVk::GetAccessFlags()`, and `ITextureVk::GetLayout()` methods
+  * Added `CopyTextureAttribs` structure that combines all paramters of `IDeviceContext::CopyTexture()` method
 
 ## v2.3.b
 

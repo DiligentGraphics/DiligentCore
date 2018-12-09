@@ -7,11 +7,11 @@ so it must always be handled first.
 
 | Platform             | Build Status  |
 | ---------------------| ------------- |
-| <img src="media/windows-logo.png" width=24 valign="middle"> Win32                | [![Build Status](https://ci.appveyor.com/api/projects/status/github/DiligentGraphics/DiligentCore?svg=true)](https://ci.appveyor.com/project/DiligentGraphics/diligentcore) |
-|<img src="media/uwindows-logo.png" width=24 valign="middle"> Universal Windows    | [![Build Status](https://ci.appveyor.com/api/projects/status/github/DiligentGraphics/DiligentCore?svg=true)](https://ci.appveyor.com/project/DiligentGraphics/diligentcore) |
-| <img src="media/linux-logo.png" width=24 valign="middle"> Linux                | [![Build Status](https://travis-ci.org/DiligentGraphics/DiligentCore.svg?branch=master)](https://travis-ci.org/DiligentGraphics/DiligentCore)      |
-| <img src="media/macos-logo.png" width=24 valign="middle"> MacOS                | [![Build Status](https://travis-ci.org/DiligentGraphics/DiligentCore.svg?branch=master)](https://travis-ci.org/DiligentGraphics/DiligentCore)      |
-|<img src="media/apple-logo.png" width=24 valign="middle"> iOS                  | [![Build Status](https://travis-ci.org/DiligentGraphics/DiligentCore.svg?branch=master)](https://travis-ci.org/DiligentGraphics/DiligentCore)      |
+|<img src="media/windows-logo.png" width=24 valign="middle"> Win32               | [![Build Status](https://ci.appveyor.com/api/projects/status/github/DiligentGraphics/DiligentCore?svg=true)](https://ci.appveyor.com/project/DiligentGraphics/diligentcore) |
+|<img src="media/uwindows-logo.png" width=24 valign="middle"> Universal Windows  | [![Build Status](https://ci.appveyor.com/api/projects/status/github/DiligentGraphics/DiligentCore?svg=true)](https://ci.appveyor.com/project/DiligentGraphics/diligentcore) |
+|<img src="media/linux-logo.png" width=24 valign="middle"> Linux                 | [![Build Status](https://travis-ci.org/DiligentGraphics/DiligentCore.svg?branch=master)](https://travis-ci.org/DiligentGraphics/DiligentCore)      |
+|<img src="media/macos-logo.png" width=24 valign="middle"> MacOS                 | [![Build Status](https://travis-ci.org/DiligentGraphics/DiligentCore.svg?branch=master)](https://travis-ci.org/DiligentGraphics/DiligentCore)      |
+|<img src="media/apple-logo.png" width=24 valign="middle"> iOS                   | [![Build Status](https://travis-ci.org/DiligentGraphics/DiligentCore.svg?branch=master)](https://travis-ci.org/DiligentGraphics/DiligentCore)      |
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](License.txt)
 [![Chat on gitter](https://badges.gitter.im/gitterHQ/gitter.png)](https://gitter.im/diligent-engine)
@@ -226,7 +226,7 @@ The following code creates a uniform (constant) buffer:
 
 ```cpp
 BufferDesc BuffDesc;
-BufferDesc.Name = "Uniform buffer";
+BuffDesc.Name = "Uniform buffer";
 BuffDesc.BindFlags = BIND_UNIFORM_BUFFER;
 BuffDesc.Usage = USAGE_DYNAMIC;
 BuffDesc.uiSizeInBytes = sizeof(ShaderConstants);
@@ -514,18 +514,25 @@ be bound to the device context:
 ```cpp
 // Clear render target
 const float zero[4] = {0, 0, 0, 0};
-m_pContext->ClearRenderTarget(nullptr, zero);
+m_pContext->ClearRenderTarget(nullptr, zero, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
 // Set vertex and index buffers
 IBuffer *buffer[] = {m_pVertexBuffer};
 Uint32 offsets[] = {0};
-m_pContext->SetVertexBuffers(0, 1, buffer, offsets, SET_VERTEX_BUFFERS_FLAG_RESET);
-m_pContext->SetIndexBuffer(m_pIndexBuffer, 0);
+m_pContext->SetVertexBuffers(0, 1, buffer, offsets, SET_VERTEX_BUFFERS_FLAG_RESET, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+m_pContext->SetIndexBuffer(m_pIndexBuffer, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
 m_pContext->SetPipelineState(m_pPSO);
 ```
 
-Also, all shader resources must be committed to the device context. This is accomplished by
+All methods that may need to perform resource state transitions, take `RESOURCE_STATE_TRANSITION_MODE` enum
+as the parameter. The enum defines the following modes:
+
+* `RESOURCE_STATE_TRANSITION_MODE_NONE` - Perform no resource state transitions.
+* `RESOURCE_STATE_TRANSITION_MODE_TRANSITION` - Transition resources to the states required by the command.
+* `RESOURCE_STATE_TRANSITION_MODE_VERIFY` - Do not transition, but verify that states are correct.
+
+The final step is to committ shader resources to the device context. This is accomplished by
 the `IDeviceContext::CommitShaderResources()` method:
 
 ```cpp
@@ -556,8 +563,12 @@ DrawAttribs attrs;
 attrs.IsIndexed = true;
 attrs.IndexType = VT_UINT16;
 attrs.NumIndices = 36;
+attrs.Flags = DRAW_FLAG_VERIFY_STATES;
 pContext->Draw(attrs);
 ```
+
+`DRAW_FLAG_VERIFY_STATES` flag instructs the engine to verify that vertex and index buffers used by the
+draw command are transitioned to proper states.
 
 `DispatchCompute()` takes DispatchComputeAttribs structure that defines compute grid dimensions:
 

@@ -1689,7 +1689,7 @@ namespace Diligent
         RESOURCE_STATE OldState = RESOURCE_STATE_UNKNOWN;
 
         /// Resource state after transition.
-        RESOURCE_STATE NewState  = RESOURCE_STATE_UNKNOWN;
+        RESOURCE_STATE NewState = RESOURCE_STATE_UNKNOWN;
 
         /// If set to true, the internal resource state will be set to NewState and the engine
         /// will be able to take the resource state management. In this case it is the 
