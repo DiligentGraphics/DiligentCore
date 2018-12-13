@@ -1,11 +1,11 @@
 if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS)
     
     function(copy_required_dlls TARGET_NAME)
-        set(ENGINE_DLLS 
-            GraphicsEngineD3D11-shared 
-        )
+        if(D3D11_SUPPORTED)
+            list(APPEND ENGINE_DLLS GraphicsEngineD3D11-shared)
+        endif()
         if(D3D12_SUPPORTED)
-            list(APPEND ENGINE_DLLS GraphicsEngineD3D12-shared )
+            list(APPEND ENGINE_DLLS GraphicsEngineD3D12-shared)
         endif()
         if(GL_SUPPORTED)
             list(APPEND ENGINE_DLLS GraphicsEngineOpenGL-shared)

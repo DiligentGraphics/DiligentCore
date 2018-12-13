@@ -29,6 +29,8 @@ PUBLIC
     BuildSettings 
     BasicPlatform
     PlatformInterface
+PRIVATE
+    Shlwapi.lib
 )
 
 source_group("src" FILES ${SOURCE})

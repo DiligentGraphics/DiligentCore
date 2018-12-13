@@ -22,6 +22,7 @@
  */
 
 #include "pch.h"
+#include <Shlwapi.h>
 #include "Win32FileSystem.h"
 #include "Errors.h"
 #include "../../Common/interface/StringTools.h"
