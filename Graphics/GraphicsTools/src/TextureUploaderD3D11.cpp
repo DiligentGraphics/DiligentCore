@@ -35,7 +35,7 @@
 #include "DeviceContextD3D11.h"
 #include "TextureD3D11.h"
 #include "DXGITypeConversions.h"
-#include "Signal.h"
+#include "ThreadSignal.h"
 
 namespace Diligent
 {

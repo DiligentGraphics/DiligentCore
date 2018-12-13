@@ -27,7 +27,7 @@
 #include <unordered_map>
 #include <vector>
 #include "TextureUploaderGL.h"
-#include "Signal.h"
+#include "ThreadSignal.h"
 
 namespace Diligent
 {

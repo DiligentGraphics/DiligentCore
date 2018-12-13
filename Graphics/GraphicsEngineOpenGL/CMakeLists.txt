@@ -138,7 +138,7 @@ add_library(GraphicsEngineOpenGL-static STATIC
 add_library(GraphicsEngineOpenGL-shared SHARED 
     readme.md
 )
-if(PLATFORM_WIN32)
+if(PLATFORM_WIN32 AND MSVC)
     target_sources(GraphicsEngineOpenGL-shared 
     PRIVATE	
         src/DLLMain.cpp

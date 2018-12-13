@@ -42,7 +42,9 @@
 #   endif
 #   include "GL/glew.h"
     // Glew includes <windows.h>
-#   define NOMINMAX
+#   ifndef NOMINMAX
+#       define NOMINMAX
+#   endif
 #   include "GL/wglew.h"
 #   include <GL/GL.h>
 

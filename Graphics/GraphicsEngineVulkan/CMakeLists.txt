@@ -152,7 +152,7 @@ add_library(GraphicsEngineVk-shared SHARED
     readme.md
 )
 
-if(PLATFORM_WIN32)
+if(PLATFORM_WIN32 AND MSVC)
     target_sources(GraphicsEngineVk-shared PRIVATE
         src/DLLMain.cpp
         src/GraphicsEngineVk.def

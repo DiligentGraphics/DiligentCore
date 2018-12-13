@@ -66,10 +66,16 @@ endif(WIN32)
 add_library(BuildSettings INTERFACE)
 
 if(PLATFORM_WIN32)
-    set(D3D11_SUPPORTED TRUE CACHE INTERNAL "D3D11 is supported on Win32 platform")
-    if(NOT CMAKE_SYSTEM_VERSION STREQUAL "8.1")
-        set(D3D12_SUPPORTED TRUE CACHE INTERNAL "D3D12 is supported on Win32 platform")
+    if(MSVC)
+        set(D3D11_SUPPORTED TRUE CACHE INTERNAL "D3D11 is supported on Win32 platform")
+        if(NOT CMAKE_SYSTEM_VERSION STREQUAL "8.1")
+            set(D3D12_SUPPORTED TRUE CACHE INTERNAL "D3D12 is supported on Win32 platform")
+        endif()
+    else()
+        set(D3D11_SUPPORTED FALSE CACHE INTERNAL "D3D11 requires compiling with MSVC")
+        set(D3D12_SUPPORTED FALSE CACHE INTERNAL "D3D12 requires compiling with MSVC")
     endif()
+
     set(GL_SUPPORTED TRUE CACHE INTERNAL "OpenGL is supported on Win32 platform")
 	if(${ARCH} EQUAL 64)
         set(VULKAN_SUPPORTED TRUE CACHE INTERNAL "Vulkan is supported on Win64 platform")
@@ -163,13 +169,13 @@ else()
 endif(MSVC)
 
 if(PLATFORM_LINUX)
-    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-        # Without -fPIC option GCC fails to link static libraries into dynamic library:
-        #  -fPIC  
-        #      If supported for the target machine, emit position-independent code, suitable for 
-        #      dynamic linking and avoiding any limit on the size of the global offset table.
-        target_compile_options(BuildSettings INTERFACE -fPIC)
-    endif()
+	if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+		# Without -fPIC option GCC fails to link static libraries into dynamic library:
+		#  -fPIC  
+		#      If supported for the target machine, emit position-independent code, suitable for 
+		#      dynamic linking and avoiding any limit on the size of the global offset table.
+		target_compile_options(BuildSettings INTERFACE -fPIC)
+	endif()
 endif()
 
 
