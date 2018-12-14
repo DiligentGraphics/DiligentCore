@@ -1,4 +1,8 @@
 
+## Current Progress
+
+* Added MinGW build support
+
 ## v2.4
 
 * Implemented explicit resource state transitions
