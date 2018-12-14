@@ -1,7 +1,7 @@
 
 ## Current Progress
 
-* Added MinGW build support
+* Enabled MinGW build
 
 ## v2.4
 
