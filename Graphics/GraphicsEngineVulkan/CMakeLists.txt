@@ -152,7 +152,7 @@ add_library(GraphicsEngineVk-shared SHARED
     readme.md
 )
 
-if(PLATFORM_WIN32 AND MSVC)
+if(MSVC)
     target_sources(GraphicsEngineVk-shared PRIVATE
         src/DLLMain.cpp
         src/GraphicsEngineVk.def
@@ -202,12 +202,15 @@ if(PLATFORM_WIN32)
 elseif(PLATFORM_LINUX)
     set(PRIVATE_COMPILE_DEFINITIONS VK_USE_PLATFORM_XCB_KHR=1)
 else()
-    message(FATAL_ERROR "Unknwon platform")
+    message(FATAL_ERROR "Unknown platform")
 endif()
 target_compile_definitions(GraphicsEngineVk-shared PRIVATE ${PRIVATE_COMPILE_DEFINITIONS})
 target_compile_definitions(GraphicsEngineVk-static PRIVATE ${PRIVATE_COMPILE_DEFINITIONS})
 
 if(PLATFORM_WIN32)
+
+    # Do not add 'lib' prefix when building with MinGW
+    set_target_properties(GraphicsEngineVk-shared PROPERTIES PREFIX "")
 
     # Set output name to GraphicsEngineVk_{32|64}{r|d}
     set_dll_output_name(GraphicsEngineVk-shared GraphicsEngineVk)

@@ -138,7 +138,7 @@ add_library(GraphicsEngineOpenGL-static STATIC
 add_library(GraphicsEngineOpenGL-shared SHARED 
     readme.md
 )
-if(PLATFORM_WIN32 AND MSVC)
+if(MSVC)
     target_sources(GraphicsEngineOpenGL-shared 
     PRIVATE	
         src/DLLMain.cpp
@@ -199,6 +199,9 @@ target_link_libraries(GraphicsEngineOpenGL-shared PUBLIC GraphicsEngineOpenGL-st
 target_compile_definitions(GraphicsEngineOpenGL-shared PUBLIC ENGINE_DLL=1)
 
 if(PLATFORM_WIN32)
+
+    # Do not add 'lib' prefix when building with MinGW
+    set_target_properties(GraphicsEngineOpenGL-shared PROPERTIES PREFIX "")
 
     # Set output name to GraphicsEngineOpenGL_{32|64}{r|d}
     set_dll_output_name(GraphicsEngineOpenGL-shared GraphicsEngineOpenGL)
