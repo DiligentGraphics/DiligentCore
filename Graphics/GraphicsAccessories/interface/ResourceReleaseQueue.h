@@ -120,13 +120,13 @@ public:
         };
     }
 
-    DynamicStaleResourceWrapper(DynamicStaleResourceWrapper&& rhs)noexcept :
+    DynamicStaleResourceWrapper(DynamicStaleResourceWrapper&& rhs) noexcept :
         m_pStaleResource(std::move(rhs.m_pStaleResource))
     {
         rhs.m_pStaleResource = nullptr;
     }
 
-    DynamicStaleResourceWrapper (const DynamicStaleResourceWrapper& rhs)noexcept :
+    DynamicStaleResourceWrapper (const DynamicStaleResourceWrapper& rhs) noexcept :
         m_pStaleResource(rhs.m_pStaleResource)
     {
     }
@@ -175,11 +175,11 @@ public:
         return StaticStaleResourceWrapper{std::move(Resource)};
     }
 
-    StaticStaleResourceWrapper(StaticStaleResourceWrapper&& rhs)noexcept :
+    StaticStaleResourceWrapper(StaticStaleResourceWrapper&& rhs) noexcept :
         m_StaleResource(std::move(rhs.m_StaleResource))
     {}
 
-    StaticStaleResourceWrapper& operator = (StaticStaleResourceWrapper&& rhs)noexcept
+    StaticStaleResourceWrapper& operator = (StaticStaleResourceWrapper&& rhs) noexcept
     {
         m_StaleResource = std::move(rhs.m_StaleResource);
         return *this;

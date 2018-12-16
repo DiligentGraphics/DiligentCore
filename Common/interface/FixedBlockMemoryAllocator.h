@@ -92,18 +92,18 @@ private:
             FillWithDebugPattern(m_pPageStart, NewPageMemPattern, PageSize);
         }
 
-        MemoryPage(MemoryPage&& Page) : 
-            m_NumFreeBlocks(Page.m_NumFreeBlocks),
+        MemoryPage(MemoryPage&& Page) noexcept : 
+            m_NumFreeBlocks       (Page.m_NumFreeBlocks),
             m_NumInitializedBlocks(Page.m_NumInitializedBlocks),
-            m_pPageStart(Page.m_pPageStart),
-            m_pNextFreeBlock(Page.m_pNextFreeBlock),
-            m_pOwnerAllocator(Page.m_pOwnerAllocator)
+            m_pPageStart          (Page.m_pPageStart),
+            m_pNextFreeBlock      (Page.m_pNextFreeBlock),
+            m_pOwnerAllocator     (Page.m_pOwnerAllocator)
         {
-            Page.m_NumFreeBlocks = 0;
+            Page.m_NumFreeBlocks        = 0;
             Page.m_NumInitializedBlocks = 0;
-            Page.m_pPageStart = nullptr;
-            Page.m_pNextFreeBlock = nullptr;
-            Page.m_pOwnerAllocator = nullptr;
+            Page.m_pPageStart           = nullptr;
+            Page.m_pNextFreeBlock       = nullptr;
+            Page.m_pOwnerAllocator      = nullptr;
         }
 
         ~MemoryPage() 

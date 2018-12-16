@@ -61,7 +61,7 @@ namespace Diligent
         }
 
         // = default causes compiler error when instantiating std::vector::emplace_back() in Visual Studio 2015 (Version 14.0.23107.0 D14REL)
-        VariableSizeGPUAllocationsManager(VariableSizeGPUAllocationsManager&& rhs) : 
+        VariableSizeGPUAllocationsManager(VariableSizeGPUAllocationsManager&& rhs) noexcept : 
             VariableSizeAllocationsManager(std::move(rhs)),
             m_StaleAllocations(std::move(rhs.m_StaleAllocations)),
 			m_StaleAllocationsSize(rhs.m_StaleAllocationsSize)

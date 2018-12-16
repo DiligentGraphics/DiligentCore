@@ -71,14 +71,14 @@ template <typename T>
 class RefCntAutoPtr
 {
 public:
-    explicit RefCntAutoPtr(T* pObj = nullptr) : 
+    explicit RefCntAutoPtr(T* pObj = nullptr) noexcept : 
         m_pObject(pObj)
     {
         if( m_pObject )
             m_pObject->AddRef();
     }
 
-    RefCntAutoPtr(IObject* pObj, const INTERFACE_ID& IID) :
+    RefCntAutoPtr(IObject* pObj, const INTERFACE_ID& IID) noexcept :
         m_pObject(nullptr)
     {
         if(pObj)
@@ -86,7 +86,7 @@ public:
     }
 
     // Copy constructor must not be template!
-    RefCntAutoPtr(const RefCntAutoPtr& AutoPtr) : 
+    RefCntAutoPtr(const RefCntAutoPtr& AutoPtr) noexcept : 
         m_pObject(AutoPtr.m_pObject)
     {
         if(m_pObject)
@@ -94,13 +94,13 @@ public:
     }
 
     template<typename DerivedType, typename = typename std::enable_if<std::is_base_of<T, DerivedType>::value>::type>
-    RefCntAutoPtr(const RefCntAutoPtr<DerivedType>& AutoPtr) : 
+    RefCntAutoPtr(const RefCntAutoPtr<DerivedType>& AutoPtr) noexcept : 
         RefCntAutoPtr<T>(AutoPtr.m_pObject)
     {
     }
 
     // Non-template move constructor
-    RefCntAutoPtr(RefCntAutoPtr&& AutoPtr) : 
+    RefCntAutoPtr(RefCntAutoPtr&& AutoPtr) noexcept : 
         m_pObject(std::move(AutoPtr.m_pObject))
     {
         //Make sure original pointer has no references to the object
@@ -108,7 +108,7 @@ public:
     }
 
     template<typename DerivedType, typename = typename std::enable_if<std::is_base_of<T, DerivedType>::value>::type>
-    RefCntAutoPtr(RefCntAutoPtr<DerivedType>&& AutoPtr) : 
+    RefCntAutoPtr(RefCntAutoPtr<DerivedType>&& AutoPtr) noexcept : 
         m_pObject(std::move(AutoPtr.m_pObject))
     {
         //Make sure original pointer has no references to the object
@@ -120,25 +120,25 @@ public:
         Release();
     }
 
-    void swap(RefCntAutoPtr& AutoPtr)
+    void swap(RefCntAutoPtr& AutoPtr) noexcept
     {
         std::swap(m_pObject, AutoPtr.m_pObject);
     }
 
-    void Attach(T* pObj)
+    void Attach(T* pObj) noexcept
     {
         Release();
         m_pObject = pObj;
     }
 
-    T* Detach()
+    T* Detach() noexcept
     {
         T* pObj = m_pObject;
         m_pObject = nullptr;
         return pObj;
     }
 
-    void Release()
+    void Release() noexcept
     {
         if( m_pObject )
         {
@@ -147,7 +147,7 @@ public:
         }
     }
 
-    RefCntAutoPtr& operator = (T* pObj)
+    RefCntAutoPtr& operator = (T* pObj) noexcept
     {
         if (m_pObject != pObj)
         {
@@ -160,18 +160,18 @@ public:
         return *this;
     }
 
-    RefCntAutoPtr& operator = (const RefCntAutoPtr& AutoPtr)
+    RefCntAutoPtr& operator = (const RefCntAutoPtr& AutoPtr) noexcept
     {
         return *this = AutoPtr.m_pObject;
     }
 
     template<typename DerivedType, typename = typename std::enable_if<std::is_base_of<T, DerivedType>::value>::type>
-    RefCntAutoPtr& operator = (const RefCntAutoPtr<DerivedType>& AutoPtr)
+    RefCntAutoPtr& operator = (const RefCntAutoPtr<DerivedType>& AutoPtr) noexcept
     {
         return *this = static_cast<T*>(AutoPtr.m_pObject);
     }
 
-    RefCntAutoPtr& operator = (RefCntAutoPtr&& AutoPtr)
+    RefCntAutoPtr& operator = (RefCntAutoPtr&& AutoPtr) noexcept
     {
         if (m_pObject != AutoPtr.m_pObject)
             Attach(AutoPtr.Detach());
@@ -180,7 +180,7 @@ public:
      }
 
     template<typename DerivedType, typename = typename std::enable_if<std::is_base_of<T, DerivedType>::value>::type>
-    RefCntAutoPtr& operator = (RefCntAutoPtr<DerivedType>&& AutoPtr)
+    RefCntAutoPtr& operator = (RefCntAutoPtr<DerivedType>&& AutoPtr) noexcept
     {
         if (m_pObject != AutoPtr.m_pObject)
             Attach(AutoPtr.Detach());
@@ -191,28 +191,28 @@ public:
     // All the access functions do not require locking reference counters pointer because if it is valid,
     // the smart pointer holds strong reference to the object and it thus cannot be released by 
     // ohter thread
-    bool operator    ! ()                      const{return m_pObject == nullptr;}
-         operator bool ()                      const{return m_pObject != nullptr;} 
-    bool operator == (const RefCntAutoPtr& Ptr)const{return m_pObject == Ptr.m_pObject;}
-    bool operator != (const RefCntAutoPtr& Ptr)const{return m_pObject != Ptr.m_pObject;}
-    bool operator <  (const RefCntAutoPtr& Ptr)const{return static_cast<const T*>(*this) < static_cast<const T*>(Ptr);}
+    bool operator    ! ()                       const noexcept {return m_pObject == nullptr;}
+         operator bool ()                       const noexcept {return m_pObject != nullptr;} 
+    bool operator == (const RefCntAutoPtr& Ptr) const noexcept {return m_pObject == Ptr.m_pObject;}
+    bool operator != (const RefCntAutoPtr& Ptr) const noexcept {return m_pObject != Ptr.m_pObject;}
+    bool operator <  (const RefCntAutoPtr& Ptr) const noexcept {return static_cast<const T*>(*this) < static_cast<const T*>(Ptr);}
 
-          T& operator * ()      { return *m_pObject; }
-    const T& operator * ()const { return *m_pObject; }
+          T& operator * ()       noexcept { return *m_pObject; }
+    const T& operator * () const noexcept { return *m_pObject; }
 
-          T* RawPtr()     { return m_pObject; }
-    const T* RawPtr()const{ return m_pObject; }
+          T* RawPtr()       noexcept { return m_pObject; }
+    const T* RawPtr() const noexcept { return m_pObject; }
     
     template<typename DstType>
-    DstType* RawPtr()      { return ValidatedCast<DstType>(m_pObject); }
-    template<typename DstType>
-    DstType* RawPtr()const { return ValidatedCast<DstType>(m_pObject); }
+    DstType* RawPtr()       noexcept { return ValidatedCast<DstType>(m_pObject); }
+    template<typename DstType>      
+    DstType* RawPtr() const noexcept { return ValidatedCast<DstType>(m_pObject); }
 
-    operator       T* ()      { return RawPtr(); }
-    operator const T* ()const { return RawPtr(); }
+    operator       T* ()       noexcept { return RawPtr(); }
+    operator const T* () const noexcept { return RawPtr(); }
 
-		  T* operator -> ()     { return m_pObject; }
-    const T* operator -> ()const{ return m_pObject; }
+		  T* operator -> ()       noexcept { return m_pObject; }
+    const T* operator -> () const noexcept { return m_pObject; }
 
 private:
     // Note that the DoublePtrHelper is a private class, and can be created only by RefCntWeakPtr
@@ -221,13 +221,13 @@ private:
     class DoublePtrHelper
     {
     public:
-        DoublePtrHelper(RefCntAutoPtr& AutoPtr) : 
+        DoublePtrHelper(RefCntAutoPtr& AutoPtr) noexcept: 
             NewRawPtr( static_cast<T*>(AutoPtr) ),
             m_pAutoPtr( std::addressof(AutoPtr) )
         {
         }
 
-        DoublePtrHelper(DoublePtrHelper&& Helper) : 
+        DoublePtrHelper(DoublePtrHelper&& Helper) noexcept: 
             NewRawPtr(Helper.NewRawPtr),
             m_pAutoPtr(Helper.m_pAutoPtr)
         {
@@ -243,11 +243,11 @@ private:
             }
         }
 
-        T*& operator*(){return NewRawPtr;}
-        const T* operator*()const{return NewRawPtr;}
+        T*& operator*() noexcept {return NewRawPtr;}
+        const T* operator*()const noexcept {return NewRawPtr;}
 
-        operator T**(){return &NewRawPtr;}
-        operator const T**()const{return &NewRawPtr;}
+        operator       T**()       noexcept {return &NewRawPtr;}
+        operator const T**() const noexcept {return &NewRawPtr;}
     private:
         T* NewRawPtr;
         RefCntAutoPtr* m_pAutoPtr;
@@ -267,8 +267,8 @@ public:
         return DoublePtrHelper(*this);
     }
 
-          T** GetRawDblPtr()     {return &m_pObject;}
-    const T** GetRawDblPtr()const{return &m_pObject;}
+          T** GetRawDblPtr()       {return &m_pObject;}
+    const T** GetRawDblPtr() const {return &m_pObject;}
 
 private:
     template<typename OtherType>
@@ -282,7 +282,7 @@ template <typename T>
 class RefCntWeakPtr
 {
 public:
-    explicit RefCntWeakPtr(T* pObj = nullptr) : 
+    explicit RefCntWeakPtr(T* pObj = nullptr) noexcept: 
         m_pRefCounters(nullptr),
         m_pObject(pObj)
     {
@@ -298,7 +298,7 @@ public:
         Release();
     }
 
-    RefCntWeakPtr(const RefCntWeakPtr& WeakPtr) :
+    RefCntWeakPtr(const RefCntWeakPtr& WeakPtr) noexcept:
         m_pRefCounters(WeakPtr.m_pRefCounters),
         m_pObject(WeakPtr.m_pObject)
     {
@@ -306,7 +306,7 @@ public:
             m_pRefCounters->AddWeakRef();
     }
 
-    RefCntWeakPtr(RefCntWeakPtr&& WeakPtr) :
+    RefCntWeakPtr(RefCntWeakPtr&& WeakPtr) noexcept:
         m_pRefCounters(std::move(WeakPtr.m_pRefCounters)),
         m_pObject(std::move(WeakPtr.m_pObject))
     {
@@ -314,7 +314,7 @@ public:
         WeakPtr.m_pObject = nullptr;
     }
 
-    explicit RefCntWeakPtr(RefCntAutoPtr<T>& AutoPtr) :
+    explicit RefCntWeakPtr(RefCntAutoPtr<T>& AutoPtr) noexcept:
         m_pRefCounters(AutoPtr ? ValidatedCast<RefCountersImpl>( AutoPtr->GetReferenceCounters() ) : nullptr),
         m_pObject( static_cast<T*>(AutoPtr) )
     {
@@ -322,7 +322,7 @@ public:
             m_pRefCounters->AddWeakRef();
     }
 
-    RefCntWeakPtr& operator = (const RefCntWeakPtr& WeakPtr)
+    RefCntWeakPtr& operator = (const RefCntWeakPtr& WeakPtr) noexcept
     {
         if( *this == WeakPtr )
             return *this;
@@ -335,12 +335,12 @@ public:
         return *this;
     }
 
-    RefCntWeakPtr& operator = (T* pObj)
+    RefCntWeakPtr& operator = (T* pObj) noexcept
     {
         return operator= (RefCntWeakPtr(pObj));
     }
 
-    RefCntWeakPtr& operator = (RefCntWeakPtr&& WeakPtr)
+    RefCntWeakPtr& operator = (RefCntWeakPtr&& WeakPtr) noexcept
     {
         if( *this == WeakPtr )
             return *this;
@@ -353,7 +353,7 @@ public:
         return *this;
     }
 
-    RefCntWeakPtr& operator = (RefCntAutoPtr<T>& AutoPtr)
+    RefCntWeakPtr& operator = (RefCntAutoPtr<T>& AutoPtr) noexcept
     {
         Release();
         m_pObject = static_cast<T*>( AutoPtr );
@@ -363,7 +363,7 @@ public:
         return *this;
     }
 
-    void Release()
+    void Release() noexcept
     {
         if( m_pRefCounters )
             m_pRefCounters->ReleaseWeakRef();
@@ -374,7 +374,7 @@ public:
     /// \note This method may not be reliable in a multithreaded environment.
     ///       However, when false is returned, the strong pointer created from
     ///       this weak pointer will reliably be empty.
-    bool IsValid()
+    bool IsValid() const noexcept
     {
         return m_pObject != nullptr && m_pRefCounters != nullptr && m_pRefCounters->GetNumStrongRefs() > 0;
     }
@@ -407,8 +407,8 @@ public:
         return spObj;
     }
 
-    bool operator == (const RefCntWeakPtr& Ptr)const{return m_pRefCounters == Ptr.m_pRefCounters;}
-    bool operator != (const RefCntWeakPtr& Ptr)const{return m_pRefCounters != Ptr.m_pRefCounters;}
+    bool operator == (const RefCntWeakPtr& Ptr) const noexcept {return m_pRefCounters == Ptr.m_pRefCounters;}
+    bool operator != (const RefCntWeakPtr& Ptr) const noexcept {return m_pRefCounters != Ptr.m_pRefCounters;}
 
 protected:
     RefCountersImpl* m_pRefCounters;

@@ -120,7 +120,7 @@ namespace Diligent
             MakeCopy( Str.c_str() );
         }
 
-        HashMapStringKey(HashMapStringKey &&Key) :
+        HashMapStringKey(HashMapStringKey &&Key)noexcept :
             StringBuff( std::move(Key.StringBuff) ),
             StrPtr( std::move(Key.StrPtr) ),
             Hash(0)

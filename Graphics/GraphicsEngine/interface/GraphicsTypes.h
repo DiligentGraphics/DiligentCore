@@ -1519,32 +1519,34 @@ namespace Diligent
         Uint8 BlockHeight;
 
         /// Initializes the structure
-        explicit TextureFormatAttribs( const Char *_Name,
+        explicit TextureFormatAttribs( const Char*    _Name,
                                        TEXTURE_FORMAT _Format, 
-                                       Uint8 _ComponentSize,
-                                       Uint8 _NumComponents,
+                                       Uint8          _ComponentSize,
+                                       Uint8          _NumComponents,
                                        COMPONENT_TYPE _ComponentType,
-                                       bool _IsTypeless,
-                                       Uint8 _BlockWidth,
-                                       Uint8 _BlockHeight) : 
-            Name(_Name),
-            Format(_Format),
+                                       bool           _IsTypeless,
+                                       Uint8          _BlockWidth,
+                                       Uint8          _BlockHeight) : 
+            Name         (_Name),
+            Format       (_Format),
             ComponentSize(_ComponentSize),
             NumComponents(_NumComponents),
             ComponentType(_ComponentType),
-            IsTypeless(_IsTypeless),
-            BlockWidth(_BlockWidth),
-            BlockHeight(_BlockHeight)
+            IsTypeless   (_IsTypeless),
+            BlockWidth   (_BlockWidth),
+            BlockHeight  (_BlockHeight)
         {
         }
 
         TextureFormatAttribs() : 
-            Name("TEX_FORMAT_UNKNOWN"),
-            Format(TEX_FORMAT_UNKNOWN),
+            Name         ("TEX_FORMAT_UNKNOWN"),
+            Format       (TEX_FORMAT_UNKNOWN),
             ComponentSize(0),
             NumComponents(0),
             ComponentType(COMPONENT_TYPE_UNDEFINED),
-            IsTypeless(false)
+            IsTypeless   (false),
+            BlockWidth   (0),
+            BlockHeight  (0)
         {}
     };
 

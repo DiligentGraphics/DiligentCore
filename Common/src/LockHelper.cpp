@@ -27,7 +27,7 @@
 namespace ThreadingTools
 {
 
-void LockHelper::YieldThread()
+void LockHelper::YieldThread()noexcept
 {
     std::this_thread::yield();
 }

@@ -33,7 +33,7 @@ class LockFlag
 {
 public:
     enum {LOCK_FLAG_UNLOCKED = 0, LOCK_FLAG_LOCKED = 1};
-    LockFlag(Atomics::Long InitFlag = LOCK_FLAG_UNLOCKED)
+    LockFlag(Atomics::Long InitFlag = LOCK_FLAG_UNLOCKED)noexcept
     {
         //m_Flag.store(InitFlag);
         m_Flag = InitFlag;
@@ -45,28 +45,30 @@ private:
     friend class LockHelper;
     Atomics::AtomicLong m_Flag;
 };
-   
+  
+// Spinlock implementation. This kind of lock should be used in scenarios
+// where simultaneous access is uncommon but possible.
 class LockHelper
 {
 public:
     
-    LockHelper() :
+    LockHelper()noexcept :
         m_pLockFlag(nullptr)
     {
     }
-    LockHelper(LockFlag &LockFlag) :
+    LockHelper(LockFlag& LockFlag)noexcept :
         m_pLockFlag(nullptr)
     {
         Lock(LockFlag);
     }
 
-    LockHelper( LockHelper &&LockHelper ) :
+    LockHelper( LockHelper&& LockHelper )noexcept :
         m_pLockFlag( std::move(LockHelper.m_pLockFlag) )
     {
         LockHelper.m_pLockFlag = nullptr;
     }
 
-    const LockHelper& operator = (LockHelper &&LockHelper)
+    const LockHelper& operator = (LockHelper&& LockHelper)noexcept
     {
         m_pLockFlag = std::move( LockHelper.m_pLockFlag );
         LockHelper.m_pLockFlag = nullptr;
@@ -78,14 +80,14 @@ public:
         Unlock();
     }
 
-    static bool UnsafeTryLock(LockFlag &LockFlag)
+    static bool UnsafeTryLock(LockFlag& LockFlag)noexcept
     {
         return Atomics::AtomicCompareExchange( LockFlag.m_Flag, 
                                                static_cast<Atomics::Long>( LockFlag::LOCK_FLAG_LOCKED ), 
                                                static_cast<Atomics::Long>( LockFlag::LOCK_FLAG_UNLOCKED) ) == LockFlag::LOCK_FLAG_UNLOCKED;
     }
 
-    bool TryLock(LockFlag &LockFlag)
+    bool TryLock(LockFlag& LockFlag)noexcept
     {
         if( UnsafeTryLock( LockFlag) )
         {
@@ -96,9 +98,9 @@ public:
             return false;
     }
     
-    static constexpr const int SpinCountToYield = 256;
+    static constexpr const int DefaultSpinCountToYield = 256;
 
-    static void UnsafeLock(LockFlag &LockFlag)
+    static void UnsafeLock(LockFlag& LockFlag, int SpinCountToYield = DefaultSpinCountToYield)noexcept
     {
         int SpinCount = 0;
         while( !UnsafeTryLock( LockFlag ) )
@@ -112,7 +114,7 @@ public:
         }
     }
 
-    void Lock(LockFlag &LockFlag)
+    void Lock(LockFlag& LockFlag, int SpinCountToYield = DefaultSpinCountToYield)noexcept
     {
         VERIFY( m_pLockFlag == NULL, "Object already locked" );
         // Wait for the flag to become unlocked and lock it
@@ -128,12 +130,12 @@ public:
         }
     }
 
-    static void UnsafeUnlock(LockFlag &LockFlag)
+    static void UnsafeUnlock(LockFlag& LockFlag)noexcept
     {
         LockFlag.m_Flag = LockFlag::LOCK_FLAG_UNLOCKED;
     }
 
-    void Unlock()
+    void Unlock()noexcept
     {
         if( m_pLockFlag )
             UnsafeUnlock(*m_pLockFlag);
@@ -141,11 +143,11 @@ public:
     }
 
 private:
-    static void YieldThread();
+    static void YieldThread()noexcept;
 
-    LockFlag *m_pLockFlag;
-    LockHelper( const LockHelper &LockHelper );
-    const LockHelper& operator = ( const LockHelper &LockHelper );
+    LockFlag* m_pLockFlag;
+    LockHelper( const LockHelper& LockHelper );
+    const LockHelper& operator = ( const LockHelper& LockHelper );
 };
 
 }
