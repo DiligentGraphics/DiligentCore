@@ -132,3 +132,56 @@ function(set_directory_root_folder _DIRECTORY _ROOT_FOLDER)
         endif()
     endforeach()
 endfunction()
+
+
+# Returns default backend library type (static/dynamic) for the current platform
+function(get_backend_libraries_type _LIB_TYPE)
+    if(PLATFORM_WIN32)
+        if(MSVC)
+            set(LIB_TYPE "shared")
+        else()
+		    # Link against static libraries on MinGW
+            set(LIB_TYPE "static")
+        endif()
+    elseif(PLATFORM_LINUX OR PLATFORM_ANDROID OR PLATFORM_MACOS)
+        set(LIB_TYPE "shared")
+    elseif(PLATFORM_UNIVERSAL_WINDOWS)
+        set(LIB_TYPE "static")
+    elseif(PLATFORM_IOS)
+        # Statically link with the engine on iOS.
+        # It is also possible to link dynamically by
+        # putting the library into the framework.
+        set(LIB_TYPE "static")
+    else()
+        message(FATAL_ERROR "Undefined platform")
+    endif()
+    set(${_LIB_TYPE} ${LIB_TYPE} PARENT_SCOPE)
+endfunction()
+
+
+# Adds the list of supported backend targets to variable ${_TARGETS} in parent scope.
+# Second argument to the function may override the target type (static/dynamic). If It
+# is not given, default target type for the platform is used.
+function(get_supported_backends _TARGETS)
+    if(${ARGC} GREATER 1)
+        set(LIB_TYPE ${ARGV1})
+    else()
+        get_backend_libraries_type(LIB_TYPE)
+    endif()
+
+    if(D3D11_SUPPORTED)
+	    list(APPEND BACKENDS GraphicsEngineD3D11-${LIB_TYPE})
+    endif()
+    if(D3D12_SUPPORTED)
+	    list(APPEND BACKENDS GraphicsEngineD3D12-${LIB_TYPE})
+    endif()
+    if(GL_SUPPORTED OR GLES_SUPPORTED)
+	    list(APPEND BACKENDS GraphicsEngineOpenGL-${LIB_TYPE})
+    endif()
+    if(VULKAN_SUPPORTED)
+	    list(APPEND BACKENDS GraphicsEngineVk-${LIB_TYPE})
+    endif()
+    # ${_TARGETS} == ENGINE_LIBRARIES
+    # ${${_TARGETS}} == ${ENGINE_LIBRARIES}
+    set(${_TARGETS} ${${_TARGETS}} ${BACKENDS} PARENT_SCOPE)
+endfunction()
