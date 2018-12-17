@@ -25,7 +25,7 @@
 
 #include "../../Basic/interface/BasicPlatformMisc.h"
 #include "../../../Platforms/Basic/interface/DebugUtilities.h"
-#include "../../Linux/include/LinuxPlatformMisc.h"
+#include "../../Linux/interface/LinuxPlatformMisc.h"
 
 struct AppleMisc : public LinuxMisc
 {
