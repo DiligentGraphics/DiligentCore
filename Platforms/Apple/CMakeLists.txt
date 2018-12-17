@@ -2,12 +2,12 @@ cmake_minimum_required (VERSION 3.6)
 
 project(ApplePlatform CXX)
 
-set(INCLUDE
-    include/CFObjectWrapper.h
-    include/AppleDebug.h
-    include/AppleFileSystem.h
-    include/ApplePlatformDefinitions.h
-    include/ApplePlatformMisc.h
+set(INTERFACE
+    interface/CFObjectWrapper.h
+    interface/AppleDebug.h
+    interface/AppleFileSystem.h
+    interface/ApplePlatformDefinitions.h
+    interface/ApplePlatformMisc.h
 )
 
 set(SOURCE 
@@ -16,12 +16,12 @@ set(SOURCE
 )
 
 
-add_library(ApplePlatform ${SOURCE} ${INCLUDE} ${PLATFORM_INTERFACE_HEADERS})
+add_library(ApplePlatform ${SOURCE} ${INTERFACE} ${PLATFORM_INTERFACE_HEADERS})
 set_common_target_properties(ApplePlatform)
 
 target_include_directories(ApplePlatform
 PUBLIC
-    include
+    interface
 )
 
 target_link_libraries(ApplePlatform
@@ -51,3 +51,5 @@ source_group("interface" FILES ${PLATFORM_INTERFACE_HEADERS})
 set_target_properties(ApplePlatform PROPERTIES
     FOLDER Core/Platforms
 )
+
+install_core_lib(ApplePlatform)

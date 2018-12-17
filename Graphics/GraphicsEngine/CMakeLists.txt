@@ -80,3 +80,5 @@ source_group("interface" FILES ${INTERFACE})
 set_target_properties(GraphicsEngine PROPERTIES
     FOLDER Core/Graphics
 )
+
+install_core_lib(GraphicsEngine)

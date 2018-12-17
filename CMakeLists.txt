@@ -215,6 +215,10 @@ elseif(PLATFORM_IOS)
     endif()
 endif()
 
+if(NOT ${DILIGENT_CORE_INSTALL_DIR})
+    set(DILIGENT_CORE_INSTALL_DIR "DiligentCore")
+endif()
+
 include(BuildUtils.cmake)
 
 add_subdirectory(Utilities)

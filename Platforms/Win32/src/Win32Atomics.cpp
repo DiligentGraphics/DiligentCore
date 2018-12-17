@@ -21,7 +21,6 @@
  *  of the possibility of such damages.
  */
 
-#include "pch.h"
 #include "Win32Atomics.h"
 
 #include <Windows.h>

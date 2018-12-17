@@ -76,3 +76,5 @@ source_group("generated" FILES include/GLSLDefinitions_inc.h)
 set_target_properties(HLSL2GLSLConverterLib PROPERTIES
     FOLDER Core/Graphics
 )
+
+install_core_lib(HLSL2GLSLConverterLib)

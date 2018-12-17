@@ -27,31 +27,31 @@
 
 #if PLATFORM_WIN32
 
-    #include "../Win32/include/Win32FileSystem.h"
+    #include "../Win32/interface/Win32FileSystem.h"
     typedef WindowsFileSystem FileSystem;
     typedef WindowsFile       CFile;
 
 #elif PLATFORM_UNIVERSAL_WINDOWS
 
-    #include "../UWP/include/UWPFileSystem.h"
+    #include "../UWP/interface/UWPFileSystem.h"
     typedef WindowsStoreFileSystem FileSystem;
     typedef WindowsStoreFile       CFile;
 
 #elif PLATFORM_ANDROID
 
-    #include "../Android/include/AndroidFileSystem.h"
+    #include "../Android/interface/AndroidFileSystem.h"
     typedef AndroidFileSystem FileSystem;
     typedef AndroidFile       CFile;
 
 #elif PLATFORM_LINUX
 
-    #include "../Linux/include/LinuxFileSystem.h"
+    #include "../Linux/interface/LinuxFileSystem.h"
     typedef LinuxFileSystem FileSystem;
     typedef LinuxFile       CFile;
 
 #elif PLATFORM_MACOS || PLATFORM_IOS
 
-    #include "../Apple/include/AppleFileSystem.h"
+    #include "../Apple/interface/AppleFileSystem.h"
     typedef AppleFileSystem FileSystem;
     typedef AppleFile       CFile;
 

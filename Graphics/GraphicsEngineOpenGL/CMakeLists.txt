@@ -236,3 +236,6 @@ set_target_properties(GraphicsEngineOpenGL-shared PROPERTIES
 set_source_files_properties(
     readme.md PROPERTIES HEADER_FILE_ONLY TRUE
 )
+
+install_core_lib(GraphicsEngineOpenGL-shared)
+install_core_lib(GraphicsEngineOpenGL-static)

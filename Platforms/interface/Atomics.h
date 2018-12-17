@@ -27,7 +27,7 @@
 
 #if PLATFORM_WIN32 || PLATFORM_UNIVERSAL_WINDOWS
 
-    #include "../Win32/include/Win32Atomics.h"
+    #include "../Win32/interface/Win32Atomics.h"
     typedef WindowsAtomics Atomics;
 
 #else

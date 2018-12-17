@@ -68,3 +68,5 @@ source_group("interface" FILES ${INTERFACE})
 set_target_properties(GraphicsTools PROPERTIES
     FOLDER Core/Graphics
 )
+
+install_core_lib(GraphicsTools)

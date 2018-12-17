@@ -21,7 +21,6 @@
  *  of the possibility of such damages.
  */
 
-#include "pch.h"
 #include "UWPFileSystem.h"
 #include "Errors.h"
 #include "../../Common/interface/StringTools.h"

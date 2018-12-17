@@ -256,3 +256,6 @@ set_source_files_properties(
 set_target_properties(ProcessGenerateMipsVkShader PROPERTIES
     FOLDER Core/Graphics/Helper
 )
+
+install_core_lib(GraphicsEngineVk-shared)
+install_core_lib(GraphicsEngineVk-static)

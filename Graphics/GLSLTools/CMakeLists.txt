@@ -63,3 +63,5 @@ source_group("interface" FILES ${INTERFACE})
 set_target_properties(GLSLTools PROPERTIES
     FOLDER Core/Graphics
 )
+
+install_core_lib(GLSLTools)

@@ -42,3 +42,5 @@ source_group("src" FILES ${SOURCE})
 set_target_properties(Primitives PROPERTIES
     FOLDER Core
 )
+
+install_core_lib(Primitives)

@@ -38,3 +38,5 @@ source_group("interface" FILES ${INTERFACE})
 set_target_properties(GraphicsAccessories PROPERTIES
     FOLDER Core/Graphics
 )
+
+install_core_lib(GraphicsAccessories)

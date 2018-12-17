@@ -2,12 +2,11 @@ cmake_minimum_required (VERSION 3.8)
 
 project(UniversalWindowsPlatform CXX)
 
-set(INCLUDE 
-    include/UWPDebug.h
-    include/UWPFileSystem.h
-    include/UWPDefinitions.h
-    include/pch.h
-    ../Win32/include/Win32Atomics.h
+set(INTERFACE 
+    interface/UWPDebug.h
+    interface/UWPFileSystem.h
+    interface/UWPDefinitions.h
+    ../Win32/interface/Win32Atomics.h
 )
 
 set(SOURCE 
@@ -16,13 +15,13 @@ set(SOURCE
     ../Win32/src/Win32Atomics.cpp
 )
 
-add_library(UniversalWindowsPlatform ${SOURCE} ${INCLUDE} ${PLATFORM_INTERFACE_HEADERS})
+add_library(UniversalWindowsPlatform ${SOURCE} ${INTERFACE} ${PLATFORM_INTERFACE_HEADERS})
 set_common_target_properties(UniversalWindowsPlatform)
 
 target_include_directories(UniversalWindowsPlatform 
 PUBLIC
-    ../Win32/include
-    include
+    ../Win32/interface
+    interface
 )
 
 target_link_libraries(UniversalWindowsPlatform 
@@ -39,3 +38,5 @@ source_group("interface" FILES ${PLATFORM_INTERFACE_HEADERS})
 set_target_properties(UniversalWindowsPlatform PROPERTIES
     FOLDER Core/Platforms
 )
+
+install_core_lib(UniversalWindowsPlatform)

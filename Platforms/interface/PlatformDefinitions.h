@@ -44,7 +44,7 @@
 #       error Conflicting platform macros
 #   endif
 
-#   include "../Win32/include/Win32PlatformDefinitions.h"
+#   include "../Win32/interface/Win32PlatformDefinitions.h"
 
 #elif PLATFORM_UNIVERSAL_WINDOWS
 
@@ -52,7 +52,7 @@
 #       error Conflicting platform macros
 #   endif
 
-#   include "../UWP/include/UWPDefinitions.h"
+#   include "../UWP/interface/UWPDefinitions.h"
 
 #elif PLATFORM_ANDROID
 
@@ -60,7 +60,7 @@
 #       error Conflicting platform macros
 #   endif
 
-#   include "../Android/include/AndroidPlatformDefinitions.h"
+#   include "../Android/interface/AndroidPlatformDefinitions.h"
 
 #elif PLATFORM_LINUX
 
@@ -68,7 +68,7 @@
 #       error Conflicting platform macros
 #   endif
 
-#   include "../Linux/include/LinuxPlatformDefinitions.h"
+#   include "../Linux/interface/LinuxPlatformDefinitions.h"
 
 #elif PLATFORM_MACOS
 
@@ -76,7 +76,7 @@
 #       error Conflicting platform macros
 #   endif
 
-#   include "../Apple/include/ApplePlatformDefinitions.h"
+#   include "../Apple/interface/ApplePlatformDefinitions.h"
 
 #elif PLATFORM_IOS
 
@@ -84,7 +84,7 @@
 #       error Conflicting platform macros
 #   endif
 
-#   include "../Apple/include/ApplePlatformDefinitions.h"
+#   include "../Apple/interface/ApplePlatformDefinitions.h"
 
 #else
 

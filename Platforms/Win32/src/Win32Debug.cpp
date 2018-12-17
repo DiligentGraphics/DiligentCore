@@ -21,8 +21,6 @@
  *  of the possibility of such damages.
  */
 
-#include "pch.h"
-
 #include "Win32Debug.h"
 #include "FormatString.h"
 #include <csignal>

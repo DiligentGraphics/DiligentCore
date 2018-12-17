@@ -185,3 +185,27 @@ function(get_supported_backends _TARGETS)
     # ${${_TARGETS}} == ${ENGINE_LIBRARIES}
     set(${_TARGETS} ${${_TARGETS}} ${BACKENDS} PARENT_SCOPE)
 endfunction()
+
+
+# Returns path to the library relative to the DiligentCore root
+function(get_core_library_relative_dir _TARGET _DIR)
+    # Use the directory of Primitives (the first target processed) as reference
+    get_target_property(PRIMITIVES_SOURCE_DIR Primitives SOURCE_DIR)
+    get_target_property(TARGET_SOURCE_DIR ${_TARGET} SOURCE_DIR)
+    file(RELATIVE_PATH TARGET_RELATIVE_PATH "${PRIMITIVES_SOURCE_DIR}/.." "${TARGET_SOURCE_DIR}")
+    set(${_DIR} ${TARGET_RELATIVE_PATH} PARENT_SCOPE)
+endfunction()
+
+# Performs installation steps for the core library
+function(install_core_lib _TARGET)
+    get_core_library_relative_dir(${_TARGET} TARGET_RELATIVE_PATH)
+    install(TARGETS     ${_TARGET}
+            DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/bin"
+    )
+    
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/interface")
+        install(DIRECTORY    interface
+                DESTINATION  "${DILIGENT_CORE_INSTALL_DIR}/headers/${TARGET_RELATIVE_PATH}/"
+        )
+    endif()
+endfunction()

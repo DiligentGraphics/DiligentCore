@@ -26,23 +26,23 @@
 #include "PlatformDefinitions.h"
 
 #if PLATFORM_WIN32
-    #include "../Win32/include/Win32Debug.h"
+    #include "../Win32/interface/Win32Debug.h"
     typedef WindowsDebug PlatformDebug;
 
 #elif PLATFORM_UNIVERSAL_WINDOWS
-    #include "../UWP/include/UWPDebug.h"
+    #include "../UWP/interface/UWPDebug.h"
     typedef WindowsStoreDebug PlatformDebug;
 
 #elif PLATFORM_ANDROID
-    #include "../Android/include/AndroidDebug.h"
+    #include "../Android/interface/AndroidDebug.h"
     typedef AndroidDebug PlatformDebug;
 
 #elif PLATFORM_LINUX
-    #include "../Linux/include/LinuxDebug.h"
+    #include "../Linux/interface/LinuxDebug.h"
     typedef LinuxDebug PlatformDebug;
 
 #elif PLATFORM_MACOS || PLATFORM_IOS
-    #include "../Apple/include/AppleDebug.h"
+    #include "../Apple/interface/AppleDebug.h"
     typedef AppleDebug PlatformDebug;
 
 #else

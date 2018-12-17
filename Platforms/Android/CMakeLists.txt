@@ -2,11 +2,11 @@ cmake_minimum_required (VERSION 3.6)
 
 project(AndroidPlatform CXX)
 
-set(INCLUDE 
-    include/AndroidDebug.h
-    include/AndroidFileSystem.h
-    include/AndroidPlatformDefinitions.h
-    include/AndroidPlatformMisc.h
+set(INTERFACE 
+    interface/AndroidDebug.h
+    interface/AndroidFileSystem.h
+    interface/AndroidPlatformDefinitions.h
+    interface/AndroidPlatformMisc.h
 )
 
 set(SOURCE 
@@ -14,12 +14,12 @@ set(SOURCE
     src/AndroidFileSystem.cpp
 )
 
-add_library(AndroidPlatform ${SOURCE} ${INCLUDE} ${PLATFORM_INTERFACE_HEADERS})
+add_library(AndroidPlatform ${SOURCE} ${INTERFACE} ${PLATFORM_INTERFACE_HEADERS})
 set_common_target_properties(AndroidPlatform)
 
 target_include_directories(AndroidPlatform 
 PUBLIC
-    include
+    interface
 )
 
 target_link_libraries(AndroidPlatform 
@@ -39,3 +39,5 @@ source_group("interface" FILES ${PLATFORM_INTERFACE_HEADERS})
 set_target_properties(AndroidPlatform PROPERTIES
     FOLDER Core/Platforms
 )
+
+install_core_lib(AndroidPlatform)

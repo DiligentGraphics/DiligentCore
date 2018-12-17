@@ -142,3 +142,6 @@ set_target_properties(GraphicsEngineD3D11-shared PROPERTIES
 set_source_files_properties(
     readme.md PROPERTIES HEADER_FILE_ONLY TRUE
 )
+
+install_core_lib(GraphicsEngineD3D11-shared)
+install_core_lib(GraphicsEngineD3D11-static)

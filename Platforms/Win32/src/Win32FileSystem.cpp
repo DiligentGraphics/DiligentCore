@@ -21,7 +21,6 @@
  *  of the possibility of such damages.
  */
 
-#include "pch.h"
 #include <Shlwapi.h>
 #include "Win32FileSystem.h"
 #include "Errors.h"
