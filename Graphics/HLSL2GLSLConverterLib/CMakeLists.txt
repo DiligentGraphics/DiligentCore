@@ -77,4 +77,6 @@ set_target_properties(HLSL2GLSLConverterLib PROPERTIES
     FOLDER Core/Graphics
 )
 
-install_core_lib(HLSL2GLSLConverterLib)
+if(INSTALL_DILIGENT_CORE)
+    install_core_lib(HLSL2GLSLConverterLib)
+endif()

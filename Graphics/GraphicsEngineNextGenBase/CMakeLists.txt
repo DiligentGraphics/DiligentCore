@@ -36,4 +36,6 @@ set_target_properties(GraphicsEngineNextGenBase PROPERTIES
     FOLDER Core/Graphics
 )
 
-install_core_lib(GraphicsEngineNextGenBase)
+if(INSTALL_DILIGENT_CORE)
+    install_core_lib(GraphicsEngineNextGenBase)
+endif()

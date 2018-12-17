@@ -178,5 +178,7 @@ set_source_files_properties(
     readme.md PROPERTIES HEADER_FILE_ONLY TRUE
 )
 
-install_core_lib(GraphicsEngineD3D12-shared)
-install_core_lib(GraphicsEngineD3D12-static)
+if(INSTALL_DILIGENT_CORE)
+    install_core_lib(GraphicsEngineD3D12-shared)
+    install_core_lib(GraphicsEngineD3D12-static)
+endif()

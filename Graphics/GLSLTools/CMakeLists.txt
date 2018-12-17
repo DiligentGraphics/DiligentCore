@@ -64,4 +64,6 @@ set_target_properties(GLSLTools PROPERTIES
     FOLDER Core/Graphics
 )
 
-install_core_lib(GLSLTools)
+if(INSTALL_DILIGENT_CORE)
+    install_core_lib(GLSLTools)
+endif()

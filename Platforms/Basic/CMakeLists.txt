@@ -41,8 +41,11 @@ set_target_properties(BasicPlatform PROPERTIES
     FOLDER Core/Platforms
 )
 
-install_core_lib(BasicPlatform)
-get_core_library_relative_dir(BasicPlatform BASIC_PLATFORM_DIR)
-install(DIRECTORY    "../interface"
-        DESTINATION  "${DILIGENT_CORE_INSTALL_DIR}/headers/${BASIC_PLATFORM_DIR}/../"
-)
+
+if(INSTALL_DILIGENT_CORE)
+    install_core_lib(BasicPlatform)
+    get_core_library_relative_dir(BasicPlatform BASIC_PLATFORM_DIR)
+    install(DIRECTORY    "../interface"
+            DESTINATION  "${DILIGENT_CORE_INSTALL_DIR}/headers/${BASIC_PLATFORM_DIR}/../"
+    )
+endif()

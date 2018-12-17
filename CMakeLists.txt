@@ -215,6 +215,10 @@ elseif(PLATFORM_IOS)
     endif()
 endif()
 
+if(PLATFORM_WIN32 OR PLATFORM_LINUX)
+    option(INSTALL_DILIGENT_CORE "Enable engine core installation" ON)
+endif()
+
 if(NOT DILIGENT_CORE_INSTALL_DIR)
     set(DILIGENT_CORE_INSTALL_DIR "DiligentCore")
 endif()

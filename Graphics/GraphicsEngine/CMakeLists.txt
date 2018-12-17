@@ -81,4 +81,6 @@ set_target_properties(GraphicsEngine PROPERTIES
     FOLDER Core/Graphics
 )
 
-install_core_lib(GraphicsEngine)
+if(INSTALL_DILIGENT_CORE)
+    install_core_lib(GraphicsEngine)
+endif()

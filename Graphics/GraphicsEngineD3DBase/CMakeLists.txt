@@ -76,4 +76,6 @@ set_target_properties(ProcessHLSLDefinitions PROPERTIES
     FOLDER Core/Graphics/Helper
 )
 
-install_core_lib(GraphicsEngineD3DBase)
+if(INSTALL_DILIGENT_CORE)
+    install_core_lib(GraphicsEngineD3DBase)
+endif()

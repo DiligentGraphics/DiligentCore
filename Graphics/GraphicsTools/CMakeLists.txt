@@ -69,4 +69,6 @@ set_target_properties(GraphicsTools PROPERTIES
     FOLDER Core/Graphics
 )
 
-install_core_lib(GraphicsTools)
+if(INSTALL_DILIGENT_CORE)
+    install_core_lib(GraphicsTools)
+endif()

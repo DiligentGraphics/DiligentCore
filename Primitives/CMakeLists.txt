@@ -43,4 +43,6 @@ set_target_properties(Primitives PROPERTIES
     FOLDER Core
 )
 
-install_core_lib(Primitives)
+if(INSTALL_DILIGENT_CORE)
+    install_core_lib(Primitives)
+endif()

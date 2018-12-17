@@ -41,4 +41,6 @@ set_target_properties(Win32Platform PROPERTIES
     FOLDER Core/Platforms
 )
 
-install_core_lib(Win32Platform)
+if(INSTALL_DILIGENT_CORE)
+    install_core_lib(Win32Platform)
+endif()

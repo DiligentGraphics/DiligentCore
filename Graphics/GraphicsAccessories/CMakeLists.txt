@@ -39,4 +39,6 @@ set_target_properties(GraphicsAccessories PROPERTIES
     FOLDER Core/Graphics
 )
 
-install_core_lib(GraphicsAccessories)
+if(INSTALL_DILIGENT_CORE)
+    install_core_lib(GraphicsAccessories)
+endif()

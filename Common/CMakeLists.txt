@@ -63,4 +63,6 @@ set_target_properties(Common PROPERTIES
     FOLDER Core
 )
 
-install_core_lib(Common)
+if(INSTALL_DILIGENT_CORE)
+    install_core_lib(Common)
+endif()
