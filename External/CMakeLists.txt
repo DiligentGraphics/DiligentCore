@@ -2,6 +2,13 @@ cmake_minimum_required (VERSION 3.6)
 
 if(PLATFORM_WIN32 OR PLATFORM_LINUX OR PLATFORM_MACOS)
 	add_subdirectory(glew)
+    if(INSTALL_DILIGENT_CORE)
+        install(TARGETS glew-static
+                ARCHIVE DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/lib"
+                LIBRARY DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/lib"
+                RUNTIME DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/bin"
+        )
+    endif()
 endif()
 
 if(PLATFORM_ANDROID)
@@ -41,5 +48,16 @@ if(PLATFORM_WIN32 OR PLATFORM_LINUX)
     set_target_properties(SPIRVCross PROPERTIES
         FOLDER Core/External
     )
+
+    if(INSTALL_DILIGENT_CORE)
+        install(TARGETS 
+                    glslang OGLCompiler OSDependent SPIRV HLSL 
+                    SPIRV-Tools SPIRV-Tools-opt
+                    SPIRVCross
+                ARCHIVE DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/lib"
+                LIBRARY DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/lib"
+                RUNTIME DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/bin"
+        )
+    endif()
 
 endif()
