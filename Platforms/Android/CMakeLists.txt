@@ -40,4 +40,6 @@ set_target_properties(AndroidPlatform PROPERTIES
     FOLDER Core/Platforms
 )
 
-install_core_lib(AndroidPlatform)
+if(INSTALL_DILIGENT_CORE)
+    install_core_lib(AndroidPlatform)
+endif()

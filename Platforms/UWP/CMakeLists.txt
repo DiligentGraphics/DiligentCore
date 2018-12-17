@@ -39,4 +39,6 @@ set_target_properties(UniversalWindowsPlatform PROPERTIES
     FOLDER Core/Platforms
 )
 
-install_core_lib(UniversalWindowsPlatform)
+if(INSTALL_DILIGENT_CORE)
+    install_core_lib(UniversalWindowsPlatform)
+endif()

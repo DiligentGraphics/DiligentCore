@@ -52,4 +52,6 @@ set_target_properties(ApplePlatform PROPERTIES
     FOLDER Core/Platforms
 )
 
-install_core_lib(ApplePlatform)
+if(INSTALL_DILIGENT_CORE)
+    install_core_lib(ApplePlatform)
+endif()

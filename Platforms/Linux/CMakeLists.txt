@@ -37,4 +37,6 @@ set_target_properties(LinuxPlatform PROPERTIES
     FOLDER Core/Platforms
 )
 
-install_core_lib(LinuxPlatform)
+if(INSTALL_DILIGENT_CORE)
+    install_core_lib(LinuxPlatform)
+endif()
