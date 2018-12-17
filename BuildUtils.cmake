@@ -200,7 +200,9 @@ endfunction()
 function(install_core_lib _TARGET)
     get_core_library_relative_dir(${_TARGET} TARGET_RELATIVE_PATH)
     install(TARGETS     ${_TARGET}
-            DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/bin"
+            ARCHIVE DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/lib"
+            LIBRARY DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/lib"
+            RUNTIME DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/bin"
     )
     
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/interface")
