@@ -21,7 +21,6 @@
  *  of the possibility of such damages.
  */
 
-#include <Shlwapi.h>
 #include "Win32FileSystem.h"
 #include "Errors.h"
 #include "../../Common/interface/StringTools.h"
@@ -31,20 +30,20 @@
 
 // Windows.h defines CreateDirectory and DeleteFile as macros.
 // So we need to do some tricks to avoid name mess.
-bool CreateDirectoryImpl( const Diligent::Char *strPath );
+static bool CreateDirectoryImpl( const Diligent::Char *strPath );
 bool WindowsFileSystem::CreateDirectory( const Diligent::Char *strPath )
 {
     return CreateDirectoryImpl(strPath);
 }
 
-void DeleteFileImpl( const Diligent::Char *strPath );
+static void DeleteFileImpl( const Diligent::Char *strPath );
 void WindowsFileSystem::DeleteFile( const Diligent::Char *strPath )
 {
    DeleteFileImpl(strPath);
 }
 
 #include <Windows.h>
-#include "Shlwapi.h"
+#include <Shlwapi.h>
 #pragma comment(lib, "Shlwapi.lib")
 
 using namespace Diligent;
@@ -122,7 +121,7 @@ bool WindowsFileSystem::FileExists( const Char *strFilePath )
     return Exists;
 }
 
-bool CreateDirectoryImpl( const Char *strPath )
+static bool CreateDirectoryImpl( const Char *strPath )
 {
     // Test all parent directories 
     std::string DirectoryPath = strPath;
@@ -174,7 +173,7 @@ void WindowsFileSystem::ClearDirectory( const Char *strPath )
 }
 
 
-void DeleteFileImpl( const Char *strPath )
+static void DeleteFileImpl( const Char *strPath )
 {
      DeleteFileA(strPath);
 }

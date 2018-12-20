@@ -186,8 +186,8 @@ template <class T> struct Vector2
         return reinterpret_cast<const T*>(this)[index];
     }
 
-    explicit
-    Vector2(T _x = 0, T _y = 0) : x(_x), y(_y) { }
+    Vector2() : x(0), y(0) { }
+    Vector2(T _x, T _y) : x(_x), y(_y) { }
 };
 
 template <class T>
@@ -359,8 +359,8 @@ template <class T> struct Vector3
         return reinterpret_cast<const T*>(this)[index];
     }
 
-    explicit
-    Vector3(T _x = 0, T _y = 0, T _z = 0) : x(_x), y(_y), z(_z) { }
+    Vector3() : x(0), y(0), z(0) {}
+    Vector3(T _x, T _y, T _z) : x(_x), y(_y), z(_z) { }
 
     operator Vector2<T>()const{return Vector2<T>(x,y);}
 };
@@ -553,8 +553,8 @@ template <class T> struct Vector4
         return reinterpret_cast<const T*>(this)[index];
     }
 
-    explicit
-    Vector4(T _x = 0, T _y = 0, T _z = 0, T _w = 0) : x(_x), y(_y), z(_z), w(_w) { }
+    Vector4() : x(0), y(0), z(0), w(0) { }
+    Vector4(T _x, T _y, T _z, T _w) : x(_x), y(_y), z(_z), w(_w) { }
 };
 
 
