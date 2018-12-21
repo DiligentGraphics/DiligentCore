@@ -582,14 +582,15 @@ template <class T> struct Matrix2x2
     };
 
     explicit
-        Matrix2x2(T value = 0)
+    Matrix2x2(T value)
     {
         _11 = _12 = value;
         _21 = _22 = value;
     }
 
-    explicit
-        Matrix2x2(
+    Matrix2x2() : Matrix2x2(0) {}
+
+    Matrix2x2(
             T i11, T i12,
             T i21, T i22)
     {
@@ -651,14 +652,15 @@ template <class T> struct Matrix3x3
     };
 
     explicit
-    Matrix3x3(T value = 0)
+    Matrix3x3(T value)
     {
         _11 = _12 = _13 =value;
         _21 = _22 = _23 =value;
         _31 = _32 = _33 =value;
     }
 
-    explicit
+    Matrix3x3() : Matrix3x3(0) {}
+
     Matrix3x3(
         T i11, T i12, T i13,
         T i21, T i22, T i23,
@@ -724,7 +726,7 @@ template <class T> struct Matrix4x4
     };
 
     explicit
-    Matrix4x4(T value = 0)
+    Matrix4x4(T value)
     {
         _11 = _12 = _13 = _14 = value;
         _21 = _22 = _23 = _24 = value;
@@ -732,7 +734,8 @@ template <class T> struct Matrix4x4
         _41 = _42 = _43 = _44 = value;
     }
 
-    explicit
+    Matrix4x4() : Matrix4x4(0) {}
+
     Matrix4x4(
         T i11, T i12, T i13, T i14,
         T i21, T i22, T i23, T i24,
