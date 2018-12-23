@@ -213,11 +213,11 @@ struct DrawAttribs
     DrawAttribs(IBuffer*                       _pIndirectDrawAttribs,
                 DRAW_FLAGS                     _Flags,
                 RESOURCE_STATE_TRANSITION_MODE _IndirectAttribsBufferStateTransitionMode,
-                Uint32                         _IndirectDrawArgsOffset = 0)noexcept : 
-        pIndirectDrawAttribs                    (_pIndirectDrawAttribs),
+                Uint32                         _IndirectDrawArgsOffset = 0)noexcept :
         Flags                                   (_Flags),
         IndirectAttribsBufferStateTransitionMode(_IndirectAttribsBufferStateTransitionMode),
-        IndirectDrawArgsOffset                  (_IndirectDrawArgsOffset)
+        IndirectDrawArgsOffset                  (_IndirectDrawArgsOffset),
+        pIndirectDrawAttribs                    (_pIndirectDrawAttribs)
     {}
 
     /// Initializes the structure to perform indirect indexed draw call.
@@ -228,10 +228,10 @@ struct DrawAttribs
                 Uint32                         _IndirectDrawArgsOffset = 0)noexcept : 
         IsIndexed                               (true),
         IndexType                               (_IndexType),
-        pIndirectDrawAttribs                    (_pIndirectDrawAttribs),
         Flags                                   (_Flags),
         IndirectAttribsBufferStateTransitionMode(_IndirectAttribsBufferStateTransitionMode),
-        IndirectDrawArgsOffset                  (_IndirectDrawArgsOffset)
+        IndirectDrawArgsOffset                  (_IndirectDrawArgsOffset),
+        pIndirectDrawAttribs                    (_pIndirectDrawAttribs)
     {}
 };
 
