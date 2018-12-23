@@ -863,6 +863,37 @@ Vector4<T> abs(const Vector4<T> &a)
 }
 
 
+template<typename T>
+T clamp(T val, T _min, T _max)
+{
+    return val < _min ? _min : (val > _max ? _max : val);
+}
+
+template <class T>
+Vector2<T> clamp(const Vector2<T> &a, const Vector2<T> &_min, const Vector2<T> &_max)
+{
+    return Vector2<T>( clamp(a.x, _min.x, _max.x),
+                       clamp(a.y, _min.y, _max.y));
+}
+
+template <class T>
+Vector3<T> clamp(const Vector3<T> &a, const Vector3<T> &_min, const Vector3<T> &_max)
+{
+    return Vector3<T>( clamp(a.x, _min.x, _max.x),
+                       clamp(a.y, _min.y, _max.y),
+                       clamp(a.z, _min.z, _max.z));
+}
+
+template <class T>
+Vector4<T> clamp(const Vector4<T> &a, const Vector4<T> &_min, const Vector4<T> &_max)
+{
+    return Vector4<T>( clamp(a.x, _min.x, _max.x),
+                       clamp(a.y, _min.y, _max.y),
+                       clamp(a.z, _min.z, _max.z),
+                       clamp(a.w, _min.w, _max.w));
+}
+
+
 template <class T>
 Vector3<T> cross(const Vector3<T> &a, const Vector3<T> &b)
 {
