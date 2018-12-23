@@ -1659,6 +1659,24 @@ namespace Diligent
                                               RESOURCE_STATE_COPY_SOURCE
     };
 
+    /// State transition barrier type
+    enum STATE_TRANSITION_TYPE : Uint8
+    {
+        /// Perform state transition immediately.
+        STATE_TRANSITION_TYPE_IMMEDIATE = 0,
+
+        /// Begin split barrier. This mode only has effect in Direct3D12 backend, and corresponds to
+        /// [D3D12_RESOURCE_BARRIER_FLAG_BEGIN_ONLY](https://docs.microsoft.com/en-us/windows/desktop/api/d3d12/ne-d3d12-d3d12_resource_barrier_flags)
+        /// flag. See https://docs.microsoft.com/en-us/windows/desktop/direct3d12/using-resource-barriers-to-synchronize-resource-states-in-direct3d-12#split-barriers.
+        /// In other backends, begin-split barriers are ignored.
+        STATE_TRANSITION_TYPE_BEGIN,
+
+        /// End split barrier. This mode only has effect in Direct3D12 backend, and corresponds to
+        /// [D3D12_RESOURCE_BARRIER_FLAG_END_ONLY](https://docs.microsoft.com/en-us/windows/desktop/api/d3d12/ne-d3d12-d3d12_resource_barrier_flags)
+        /// flag. See https://docs.microsoft.com/en-us/windows/desktop/direct3d12/using-resource-barriers-to-synchronize-resource-states-in-direct3d-12#split-barriers.
+        /// In other backends, this mode is similar to STATE_TRANSITION_TYPE_IMMEDIATE.
+        STATE_TRANSITION_TYPE_END
+    };
 
     /// Resource state transition barrier description
     struct StateTransitionDesc
@@ -1693,25 +1711,31 @@ namespace Diligent
         /// Resource state after transition.
         RESOURCE_STATE NewState = RESOURCE_STATE_UNKNOWN;
 
+        /// State transition type, see Diligent::STATE_TRANSITION_TYPE.
+
+        /// \note When issuing UAV barrier (i.e. OldState and NewState equal RESOURCE_STATE_UNORDERED_ACCESS),
+        ///       TransitionType must be STATE_TRANSITION_TYPE_IMMEDIATE.
+        STATE_TRANSITION_TYPE TransitionType = STATE_TRANSITION_TYPE_IMMEDIATE;
+
         /// If set to true, the internal resource state will be set to NewState and the engine
-        /// will be able to take the resource state management. In this case it is the 
+        /// will be able to take over the resource state management. In this case it is the 
         /// responsibility of the application to make sure that all subresources are indeed in
         /// designated state.
-        /// If set to false, internal resource state will be set to RESOURCE_STATE_UNKNOWN, and the 
-        /// engine will not manage or check the resource state in all further operations until the
-        /// state is set to a known value.
+        /// If set to false, internal resource state will be unchanged.
+        /// \note When TransitionType is STATE_TRANSITION_TYPE_BEGIN, this member must be false.
         bool UpdateResourceState = false;
 
         StateTransitionDesc(){}
 
-        StateTransitionDesc(ITexture*      _pTexture, 
-                            RESOURCE_STATE _OldState,
-                            RESOURCE_STATE _NewState, 
-                            Uint32         _FirstMipLevel   = 0,
-                            Uint32         _MipLevelsCount  = RemainingMipLevels,
-                            Uint32         _FirstArraySlice = 0,
-                            Uint32         _ArraySliceCount = RemainingArraySlices,
-                            bool           _UpdateState     = false) : 
+        StateTransitionDesc(ITexture*             _pTexture, 
+                            RESOURCE_STATE        _OldState,
+                            RESOURCE_STATE        _NewState, 
+                            Uint32                _FirstMipLevel   = 0,
+                            Uint32                _MipLevelsCount  = RemainingMipLevels,
+                            Uint32                _FirstArraySlice = 0,
+                            Uint32                _ArraySliceCount = RemainingArraySlices,
+                            STATE_TRANSITION_TYPE _TransitionType  = STATE_TRANSITION_TYPE_IMMEDIATE,
+                            bool                  _UpdateState     = false) : 
             pTexture            (_pTexture),
             FirstMipLevel       (_FirstMipLevel),
             MipLevelsCount      (_MipLevelsCount),
@@ -1719,6 +1743,7 @@ namespace Diligent
             ArraySliceCount     (_ArraySliceCount),
             OldState            (_OldState),
             NewState            (_NewState),
+            TransitionType      (_TransitionType),
             UpdateResourceState (_UpdateState)
         {}
 
@@ -1726,7 +1751,7 @@ namespace Diligent
                             RESOURCE_STATE _OldState,
                             RESOURCE_STATE _NewState, 
                             bool           _UpdateState) :
-            StateTransitionDesc(_pTexture, _OldState, _NewState, 0, RemainingMipLevels, 0, RemainingArraySlices, _UpdateState)
+            StateTransitionDesc(_pTexture, _OldState, _NewState, 0, RemainingMipLevels, 0, RemainingArraySlices, STATE_TRANSITION_TYPE_IMMEDIATE, _UpdateState)
         {}
 
         StateTransitionDesc(IBuffer*       _pBuffer, 

@@ -2,6 +2,8 @@
 ## Current Progress
 
 * Enabled MinGW build
+* Implemented split barriers (https://github.com/DiligentGraphics/DiligentCore/issues/43)
+  * Added `STATE_TRANSITION_TYPE` enum and `STATE_TRANSITION_TYPE TransitionType` member to `StateTransitionDesc` structure
 
 ## v2.4
 

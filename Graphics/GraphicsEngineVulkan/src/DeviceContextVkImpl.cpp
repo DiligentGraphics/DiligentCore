@@ -1859,7 +1859,6 @@ namespace Diligent
 
     void DeviceContextVkImpl::TransitionBufferState(BufferVkImpl& BufferVk, RESOURCE_STATE OldState, RESOURCE_STATE NewState, bool UpdateBufferState)
     {
-        EnsureVkCmdBuffer();
         if (OldState == RESOURCE_STATE_UNKNOWN)
         {
             if (BufferVk.IsInKnownState())
@@ -1889,6 +1888,7 @@ namespace Diligent
             DEV_CHECK_ERR(BufferVk.m_VulkanBuffer != VK_NULL_HANDLE, "Cannot transition suballocated buffer");
             VERIFY_EXPR(BufferVk.GetDynamicOffset(m_ContextId, this) == 0);
 
+            EnsureVkCmdBuffer();
             auto vkBuff = BufferVk.GetVkBuffer();
             auto OldAccessFlags = ResourceStateFlagsToVkAccessFlags(OldState);
             auto NewAccessFlags = ResourceStateFlagsToVkAccessFlags(NewState);
@@ -1936,7 +1936,7 @@ namespace Diligent
 
     void DeviceContextVkImpl::TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers)
     {
-        if(BarrierCount == 0)
+        if (BarrierCount == 0)
             return;
 
         EnsureVkCmdBuffer();
@@ -1947,6 +1947,14 @@ namespace Diligent
 #ifdef DEVELOPMENT
             DvpVerifyStateTransitionDesc(Barrier);
 #endif
+            if (Barrier.TransitionType == STATE_TRANSITION_TYPE_BEGIN)
+            {
+                // Skip begin-split barriers
+                VERIFY(!Barrier.UpdateResourceState, "Resource state can't be updated in begin-split barrier");
+                continue;
+            }
+            VERIFY(Barrier.TransitionType == STATE_TRANSITION_TYPE_IMMEDIATE || Barrier.TransitionType == STATE_TRANSITION_TYPE_END, "Unexpected barrier type");
+
             if (Barrier.pTexture)
             {
                 auto* pTextureVkImpl = ValidatedCast<TextureVkImpl>(Barrier.pTexture);

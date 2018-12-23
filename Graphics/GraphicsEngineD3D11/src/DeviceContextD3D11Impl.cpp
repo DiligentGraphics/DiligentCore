@@ -1871,6 +1871,14 @@ namespace Diligent
             DEV_CHECK_ERR((Barrier.pTexture != nullptr) ^ (Barrier.pBuffer != nullptr), "Exactly one of pTexture or pBuffer must not be null");
             DEV_CHECK_ERR(Barrier.NewState != RESOURCE_STATE_UNKNOWN, "New resource state can't be unknown");
 
+            if (Barrier.TransitionType == STATE_TRANSITION_TYPE_BEGIN)
+            {
+                // Skip begin-split barriers
+                VERIFY(!Barrier.UpdateResourceState, "Resource state can't be updated in begin-split barrier");
+                continue;
+            }
+            VERIFY(Barrier.TransitionType == STATE_TRANSITION_TYPE_IMMEDIATE || Barrier.TransitionType == STATE_TRANSITION_TYPE_END, "Unexpected barrier type");
+
             if (Barrier.pTexture)
             {
                 auto* pTextureD3D11Impl = ValidatedCast<TextureBaseD3D11>(Barrier.pTexture);

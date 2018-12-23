@@ -934,12 +934,13 @@ void DeviceContextBase<BaseInterface,ImplementationTraits> ::
 {
     DEV_CHECK_ERR((Barrier.pTexture != nullptr) ^ (Barrier.pBuffer != nullptr), "Exactly one of pTexture or pBuffer members of StateTransitionDesc must not be null");
     DEV_CHECK_ERR(Barrier.NewState != RESOURCE_STATE_UNKNOWN, "New resource state can't be unknown");
+    RESOURCE_STATE OldState = RESOURCE_STATE_UNKNOWN;
     if (Barrier.pTexture)
     {
         const auto& TexDesc = Barrier.pTexture->GetDesc();
         
         DEV_CHECK_ERR(VerifyResourceStates(Barrier.NewState, true), "Invlaid new state specified for texture '", TexDesc.Name, "'");
-        auto OldState = Barrier.OldState != RESOURCE_STATE_UNKNOWN ? Barrier.OldState : Barrier.pTexture->GetState();
+        OldState = Barrier.OldState != RESOURCE_STATE_UNKNOWN ? Barrier.OldState : Barrier.pTexture->GetState();
         DEV_CHECK_ERR(OldState != RESOURCE_STATE_UNKNOWN, "The state of texture '", TexDesc.Name, "' is unknown to the engine and is not explicitly specified in the barrier");
         DEV_CHECK_ERR(VerifyResourceStates(OldState, true), "Invlaid old state specified for texture '", TexDesc.Name, "'");
 
@@ -968,9 +969,19 @@ void DeviceContextBase<BaseInterface,ImplementationTraits> ::
     {
         const auto& BuffDesc = Barrier.pBuffer->GetDesc();
         DEV_CHECK_ERR(VerifyResourceStates(Barrier.NewState, false), "Invlaid new state specified for buffer '", BuffDesc.Name, "'");
-        auto OldState = Barrier.OldState != RESOURCE_STATE_UNKNOWN ? Barrier.OldState : Barrier.pBuffer->GetState();
+        OldState = Barrier.OldState != RESOURCE_STATE_UNKNOWN ? Barrier.OldState : Barrier.pBuffer->GetState();
         DEV_CHECK_ERR(OldState != RESOURCE_STATE_UNKNOWN, "The state of buffer '", BuffDesc.Name, "' is unknown to the engine and is not explicitly specified in the barrier");
         DEV_CHECK_ERR(VerifyResourceStates(OldState, false), "Invlaid old state specified for buffer '", BuffDesc.Name, "'");
+    }
+
+    if (OldState == RESOURCE_STATE_UNORDERED_ACCESS && Barrier.NewState == RESOURCE_STATE_UNORDERED_ACCESS)
+    {
+        DEV_CHECK_ERR(Barrier.TransitionType == STATE_TRANSITION_TYPE_IMMEDIATE, "For UAV barriers, transition type must be STATE_TRANSITION_TYPE_IMMEDIATE");
+    }
+
+    if (Barrier.TransitionType == STATE_TRANSITION_TYPE_BEGIN)
+    {
+        DEV_CHECK_ERR(!Barrier.UpdateResourceState, "Resource state can't be updated in begin-split barrier");
     }
 }
 

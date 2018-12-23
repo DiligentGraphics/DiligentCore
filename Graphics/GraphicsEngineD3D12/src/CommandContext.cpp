@@ -120,6 +120,24 @@ void CommandContext::InsertUAVBarrier(ID3D12Resource* pd3d12Resource)
 	BarrierDesc.UAV.pResource = pd3d12Resource;
 }
 
+static D3D12_RESOURCE_BARRIER_FLAGS TransitionTypeToD3D12ResourceBarrierFlag(STATE_TRANSITION_TYPE TransitionType)
+{
+    switch(TransitionType)
+    {
+        case STATE_TRANSITION_TYPE_IMMEDIATE:
+            return D3D12_RESOURCE_BARRIER_FLAG_NONE;
+
+        case STATE_TRANSITION_TYPE_BEGIN:
+            return D3D12_RESOURCE_BARRIER_FLAG_BEGIN_ONLY;
+
+        case STATE_TRANSITION_TYPE_END:
+            return D3D12_RESOURCE_BARRIER_FLAG_END_ONLY;
+
+        default:
+            UNEXPECTED("Unexpected state transition type");
+            return D3D12_RESOURCE_BARRIER_FLAG_NONE;
+    }
+}
 
 void CommandContext::TransitionResource(const StateTransitionDesc& Barrier)
 {
@@ -175,8 +193,8 @@ void CommandContext::TransitionResource(const StateTransitionDesc& Barrier)
             NewState = static_cast<RESOURCE_STATE>(OldState | NewState);
 
 	    D3D12_RESOURCE_BARRIER BarrierDesc;
-		BarrierDesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-        BarrierDesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+		BarrierDesc.Type  = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+        BarrierDesc.Flags = TransitionTypeToD3D12ResourceBarrierFlag(Barrier.TransitionType);
 		BarrierDesc.Transition.pResource   = pd3d12Resource;
 		BarrierDesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
         BarrierDesc.Transition.StateBefore = ResourceStateFlagsToD3D12ResourceStates(OldState);
@@ -217,13 +235,21 @@ void CommandContext::TransitionResource(const StateTransitionDesc& Barrier)
 
         if (pTextureD3D12Impl)
         {
-            pTextureD3D12Impl->SetState(Barrier.UpdateResourceState ? NewState : RESOURCE_STATE_UNKNOWN);
+            VERIFY(!Barrier.UpdateResourceState || (Barrier.TransitionType == STATE_TRANSITION_TYPE_IMMEDIATE || Barrier.TransitionType == STATE_TRANSITION_TYPE_END), "Texture state can't be updated in begin-split barrier");
+            if (Barrier.UpdateResourceState)
+            {
+                pTextureD3D12Impl->SetState(NewState);
+            }
         }
         else
         {
             VERIFY_EXPR(pBufferD3D12Impl);
 
-            pBufferD3D12Impl->SetState(Barrier.UpdateResourceState ? NewState : RESOURCE_STATE_UNKNOWN);
+            VERIFY(!Barrier.UpdateResourceState || (Barrier.TransitionType == STATE_TRANSITION_TYPE_IMMEDIATE || Barrier.TransitionType == STATE_TRANSITION_TYPE_END), "Buffer state can't be updated in begin-split barrier");
+            if (Barrier.UpdateResourceState)
+            {
+                pBufferD3D12Impl->SetState(NewState);
+            }
 
             if (pBufferD3D12Impl->GetDesc().Usage == USAGE_DYNAMIC && (pBufferD3D12Impl->GetDesc().BindFlags & (BIND_SHADER_RESOURCE|BIND_UNORDERED_ACCESS)) == 0)
                 VERIFY(pBufferD3D12Impl->GetState() == RESOURCE_STATE_GENERIC_READ, "Dynamic buffers without SRV/UAV bind flag are expected to never transition from RESOURCE_STATE_GENERIC_READ state");
@@ -232,6 +258,7 @@ void CommandContext::TransitionResource(const StateTransitionDesc& Barrier)
 
     if (OldState == RESOURCE_STATE_UNORDERED_ACCESS && Barrier.NewState == RESOURCE_STATE_UNORDERED_ACCESS)
     {
+        DEV_CHECK_ERR(Barrier.TransitionType == STATE_TRANSITION_TYPE_IMMEDIATE, "UAV barriers must not be split");
         InsertUAVBarrier(pd3d12Resource);
     }
 
