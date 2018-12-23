@@ -512,10 +512,14 @@ inline bool DeviceContextBase<BaseInterface,ImplementationTraits> ::
     {
         VERIFY(m_pSwapChain, "Swap chain is not initialized in the device context");
 
-        NumRenderTargets = 1;
-        pDefaultRTV = m_pSwapChain->GetCurrentBackBufferRTV();
-        ppRenderTargets = &pDefaultRTV;
+        pDefaultRTV   = m_pSwapChain->GetCurrentBackBufferRTV();
         pDepthStencil = m_pSwapChain->GetDepthBufferDSV();
+        // In OpenGL, default RTV and DSV are null
+        if (pDefaultRTV != nullptr)
+        {
+            NumRenderTargets = 1;
+            ppRenderTargets = &pDefaultRTV;
+        }
 
         const auto &SwapChainDesc = m_pSwapChain->GetDesc();
         m_FramebufferWidth  = SwapChainDesc.Width;
@@ -523,7 +527,7 @@ inline bool DeviceContextBase<BaseInterface,ImplementationTraits> ::
         m_FramebufferSlices = 1;
     }
 
-    if ( NumRenderTargets != m_NumBoundRenderTargets )
+    if (NumRenderTargets != m_NumBoundRenderTargets)
     {
         bBindRenderTargets = true;
         for(Uint32 rt = NumRenderTargets; rt < m_NumBoundRenderTargets; ++rt )
@@ -532,7 +536,7 @@ inline bool DeviceContextBase<BaseInterface,ImplementationTraits> ::
         m_NumBoundRenderTargets = NumRenderTargets;
     }
 
-    for( Uint32 rt = 0; rt < NumRenderTargets; ++rt )
+    for (Uint32 rt = 0; rt < NumRenderTargets; ++rt)
     {
         auto* pRTView = ppRenderTargets[rt];
         if ( pRTView )
@@ -568,14 +572,14 @@ inline bool DeviceContextBase<BaseInterface,ImplementationTraits> ::
         // Here both views are certainly live objects, since we store
         // strong references to all bound render targets. So we
         // can safely compare pointers.
-        if ( m_pBoundRenderTargets[rt] != pRTView )
+        if (m_pBoundRenderTargets[rt] != pRTView)
         {
             m_pBoundRenderTargets[rt] = ValidatedCast<TextureViewImplType>(pRTView);
             bBindRenderTargets = true;
         }
     }
 
-    if ( pDepthStencil )
+    if (pDepthStencil != nullptr)
     {
         const auto &DSVDesc = pDepthStencil->GetDesc();
 #ifdef DEVELOPMENT
