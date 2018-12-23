@@ -16,6 +16,32 @@ so it must always be handled first.
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](License.txt)
 [![Chat on gitter](https://badges.gitter.im/gitterHQ/gitter.png)](https://gitter.im/diligent-engine)
 
+# Table of Contents
+
+- [Clonning the Repository](#clonning)
+- [API Basics](#api_basics)
+  - [Initializing the Engine](#initialization)
+    - [Win32](#initialization_win32)
+    - [Universal Windows Platform](#initialization_uwp)
+    - [Linux](#initialization_linux)
+    - [MacOS](#initialization_macos)
+    - [iOS](#initialization_ios)
+    - [Attaching to Already Initialized Graphics API](#initialization_attaching)
+    - [Destroying the Engine](#initialization_destroying)
+  - [Initializing Pipeline State](#initializing_pso)
+    - [Creating Shaders](#creating_shaders)
+    - [Creating Pipeline State Object](#creating_pso)
+  - [Creating Resources](#creating_resources)
+  - [Binding Shader Resources](#binding_resources)
+  - [Setting the Pipeline State and Invoking Draw Command](#draw_command)
+- [Low-level API interoperability](#low_level_api_interoperability)
+- [Repository structure](#repository_structure)
+- [Contributing](#contributing)
+- [References](#references)
+- [Release History](#release_history)
+
+
+<a name="clonning"></a>
 # Clonning the Repository
 
 To get the repository and all submodules, use the following command:
@@ -26,12 +52,15 @@ To build the module, see
 [build instructions](https://github.com/DiligentGraphics/DiligentEngine/blob/master/README.md#build-and-run-instructions) 
 in the master repository.
  
+<a name="api_basics"></a>
 # API Basics
 
+<a name="initialization"></a>
 ## Initializing the Engine
 
 Before you can use any functionality provided by the engine, you need to create a render device, an immediate context and a swap chain.
 
+<a name="initialization_win32"></a>
 ### Win32
 On Win32 platform, you can create OpenGL, Direct3D11, Direct3D12 or Vulkan device as shown below:
 
@@ -149,6 +178,7 @@ For more details, take a look at
 [Tutorial00_HelloWin32.cpp](https://github.com/DiligentGraphics/DiligentSamples/blob/master/Tutorials/Tutorial00_HelloWin32/src/Tutorial00_HelloWin32.cpp) 
 file.
 
+<a name="initialization_uwp"></a>
 ### Universal Windows Platform
 
 On Universal Windows Platform, you can create Direct3D11 or Direct3D12 device. Only static linking is
@@ -160,6 +190,7 @@ Please look at
 [SampleAppUWP.cpp](https://github.com/DiligentGraphics/DiligentSamples/blob/master/Samples/SampleBase/src/UWP/SampleAppUWP.cpp) 
 file for more details.
 
+<a name="initialization_linux"></a>
 ### Linux
 
 On Linux platform, the engine supports OpenGL and Vulkan backends. Initialization of GL context on Linux is tightly
@@ -167,6 +198,7 @@ coupled with window creation. As a result, Diligent Engine does not initialize t
 attaches to the one initialized by the app. An example of the engine initialization on Linux can be found in
 [Tutorial00_HelloLinux.cpp](https://github.com/DiligentGraphics/DiligentSamples/blob/master/Tutorials/Tutorial00_HelloLinux/src/Tutorial00_HelloLinux.cpp).
 
+<a name="initialization_macos"></a>
 ### MacOS
 
 On MacOS the only API currently supported by Diligent Engine is OpenGL. Initialization of GL context on MacOS is
@@ -174,6 +206,7 @@ performed by the application, and the engine attaches to the context initialized
 [GLView.m](https://github.com/DiligentGraphics/DiligentEngine/blob/master/Common/NativeApp/Apple/Source/Classes/OSX/GLView.m)
 for details.
 
+<a name="initialization_android"></a>
 ### Android
 
 On Android, you can only create OpenGLES device. The following code snippet shows an example:
@@ -201,6 +234,7 @@ static
 }
 ```
 
+<a name="initialization_ios"></a>
 ### iOS
 
 iOS implementation only supports OpenGLES backend. Initialization of GL context on iOS is
@@ -208,15 +242,18 @@ performed by the application, and the engine attaches to the context initialized
 [EAGLView.m](https://github.com/DiligentGraphics/DiligentEngine/blob/master/Common/NativeApp/Apple/Source/Classes/iOS/EAGLView.m)
 for details.
 
+<a name="initialization_attaching"></a>
 ### Attaching to Already Initialized Graphics API
 
 An alternative way to initialize the engine is to attach to existing D3D11/D3D12 device or OpenGL/GLES context.
 Refer to [Native API interoperability](http://diligentgraphics.com/diligent-engine/native-api-interoperability/) for more details.
 
+<a name="initialization_destroying"></a>
 ### Destroying the Engine
 
 The engine performs automatic reference counting and shuts down when the last reference to an engine object is released.
 
+<a name="creating_resources"></a>
 ## Creating Resources
 
 Device resources are created by the render device. The two main resource types are buffers,
@@ -259,12 +296,14 @@ default view from the texture, use `ITexture::GetDefaultView()` function. Note t
 reference counter on the returned interface. You can create additional texture views using `ITexture::CreateView()`.
 Use `IBuffer::CreateView()` to create additional views of a buffer.
 
+<a name="initializing_pso"></a>
 ## Initializing Pipeline State
 
 Diligent Engine follows Direct3D12 style to configure the graphics/compute pipeline. One big Pipelines State Object (PSO)
 encompasses all required states (all shader stages, input layout description, depth stencil, rasterizer and blend state
 descriptions etc.)
 
+<a name="creating_shaders"></a>
 ### Creating Shaders
 
 To create a shader, populate `ShaderCreationAttribs` structure. There are two ways to create a shader.
@@ -342,6 +381,7 @@ RefCntAutoPtr<IShader> pShader;
 m_pDevice->CreateShader( Attrs, &pShader );
 ```
 
+<a name="creating_pso"></a>
 ### Creating Pipeline State Object
 
 To create a pipeline state object, define instance of `PipelineStateDesc` structure:
@@ -426,6 +466,7 @@ PSODesc.Name = "My pipeline state";
 m_pDev->CreatePipelineState(PSODesc, &m_pPSO);
 ```
 
+<a name="binding_resources"></a>
 ## Binding Shader Resources
 
 [Shader resource binding in Diligent Engine](http://diligentgraphics.com/2016/03/23/resource-binding-model-in-diligent-engine-2-0/)
@@ -506,6 +547,7 @@ However, it is recommended to use one large resource mapping as the size of the 
 The engine performs run-time checks to verify that correct resources are being bound. For example, if you try to bind
 a constant buffer to a shader resource view variable, an error will be output to the debug console.
 
+<a name="draw_command"></a>
 ## Setting the Pipeline State and Invoking Draw Command
 
 Before any draw command can be invoked, all required vertex and index buffers as well as the pipeline state should
@@ -582,7 +624,9 @@ m_pContext->DispatchCompute(DispatchAttrs);
 You can learn more about the engine API by looking at the [engine samples' source code](https://github.com/DiligentGraphics/DiligentSamples) and the [API Reference][1].
 
 
+<a name="low_level_api_interoperability"></a>
 # Low-level API interoperability
+
 Diligent Engine extensively supports interoperability with underlying low-level APIs. The engine can be initialized
 by attaching to existing D3D11/D3D12 device or OpenGL/GLES context and provides access to the underlying native API
 objects. Refer to the following pages for more information:
@@ -594,6 +638,7 @@ objects. Refer to the following pages for more information:
 [OpenGL/GLES Interoperability](http://diligentgraphics.com/diligent-engine/native-api-interoperability/openglgles-interoperability/)
 
 
+<a name="repository_structure"></a>
 # Repository structure
 
  The repository contains the following projects:
@@ -619,7 +664,15 @@ objects. Refer to the following pages for more information:
  | [Platforms/Linux](https://github.com/DiligentGraphics/DiligentCore/tree/master/Platforms/Linux)      | Implementation of platform-specific routines on Linux platform |
  | External | Third-party libraries and modules |
 
+<a name="contributing"></a>
+# Contributing
 
+To contribute your code, submit a [Pull Request](https://github.com/DiligentGraphics/DiligentCore/pulls) 
+to this repository. **Diligent Engine** is licensed under the [Apache 2.0 license](License.txt) that guarantees 
+that code in the **DiligentCore** repository is free of Intellectual Property encumbrances. In submitting code to
+this repository, you are agreeing that the code is free of any Intellectual Property claims.  
+
+<a name="references"></a>
 # References
 
 [Diligent Engine Architecture](http://diligentgraphics.com/diligent-engine/architecture/)
@@ -628,6 +681,7 @@ objects. Refer to the following pages for more information:
 
 [API Reference][1]
 
+<a name="release_history"></a>
 # Release History
 
 See [Release History](ReleaseHistory.md)
