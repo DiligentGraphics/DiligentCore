@@ -62,10 +62,10 @@ struct VulkanUploadAllocation
                            VkDeviceSize _Size,
                            VkDeviceSize _AlignedOffset,
                            VkBuffer     _vkBuffer) noexcept :
+        vkBuffer     (_vkBuffer),
         CPUAddress   (_CPUAddress),
         Size         (_Size),
-        AlignedOffset(_AlignedOffset),
-        vkBuffer     (_vkBuffer)
+        AlignedOffset(_AlignedOffset)
     {}
     VulkanUploadAllocation             (const VulkanUploadAllocation&)  = delete;
     VulkanUploadAllocation& operator = (const VulkanUploadAllocation&)  = delete;

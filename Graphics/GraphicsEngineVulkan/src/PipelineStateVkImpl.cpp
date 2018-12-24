@@ -172,7 +172,7 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters*      pRefCounters
         std::array<size_t, MaxShadersInPipeline> ShaderVariableDataSizes = {};
         for (Uint32 s = 0; s < m_NumShaders; ++s)
         {
-            std::array<SHADER_VARIABLE_TYPE, 2> AllowedVarTypes = { SHADER_VARIABLE_TYPE_MUTABLE, SHADER_VARIABLE_TYPE_DYNAMIC };
+            std::array<SHADER_VARIABLE_TYPE, 2> AllowedVarTypes = { {SHADER_VARIABLE_TYPE_MUTABLE, SHADER_VARIABLE_TYPE_DYNAMIC} };
             Uint32 UnusedNumVars = 0;
             ShaderVariableDataSizes[s] = ShaderVariableManagerVk::GetRequiredMemorySize(m_ShaderResourceLayouts[s], AllowedVarTypes.data(), static_cast<Uint32>(AllowedVarTypes.size()), UnusedNumVars);
         }
@@ -350,8 +350,8 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters*      pRefCounters
         MSStateCI.pSampleMask = SampleMask; // an array of static coverage information that is ANDed with 
                                             // the coverage information generated during rasterization (25.3)
         MSStateCI.alphaToCoverageEnable = VK_FALSE; // whether a temporary coverage value is generated based on 
-                                                    // the alpha component of the fragment’s first color output
-        MSStateCI.alphaToOneEnable = VK_FALSE; // whether the alpha component of the fragment’s first color output is replaced with one
+                                                    // the alpha component of the fragmentï¿½s first color output
+        MSStateCI.alphaToOneEnable = VK_FALSE; // whether the alpha component of the fragmentï¿½s first color output is replaced with one
         PipelineCI.pMultisampleState = &MSStateCI;
 
         VkPipelineDepthStencilStateCreateInfo DepthStencilStateCI = 

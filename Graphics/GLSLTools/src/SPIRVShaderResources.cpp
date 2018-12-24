@@ -527,7 +527,7 @@ void SPIRVShaderResources::Initialize(IMemoryAllocator&       Allocator,
         CurrentOffset += NumResources;
         return Offset;
     };
-  
+
     auto UniformBufferOffset = AdvanceOffset(Counters.NumUBs); UniformBufferOffset; // To suppress warning
     m_StorageBufferOffset    = AdvanceOffset(Counters.NumSBs);
     m_StorageImageOffset     = AdvanceOffset(Counters.NumImgs);

@@ -218,8 +218,8 @@ bool PipelineLayout::DescriptorSetLayoutManager::DescriptorSetLayout::operator =
             B0.stageFlags      != B1.stageFlags)
             return false;
 
-        if ( B0.pImmutableSamplers != nullptr && B1.pImmutableSamplers == nullptr || 
-             B0.pImmutableSamplers == nullptr && B1.pImmutableSamplers != nullptr)
+        if ( (B0.pImmutableSamplers != nullptr && B1.pImmutableSamplers == nullptr) ||
+             (B0.pImmutableSamplers == nullptr && B1.pImmutableSamplers != nullptr) )
             return false;
         // Static samplers themselves should not affect compatibility
     }

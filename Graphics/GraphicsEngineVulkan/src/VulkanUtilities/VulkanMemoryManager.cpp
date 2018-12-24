@@ -82,7 +82,7 @@ VulkanMemoryAllocation VulkanMemoryPage::Allocate(VkDeviceSize size, VkDeviceSiz
     {
         // Offset may not necessarily be aligned, but the allocation is guaranteed to be large enough
         // to accomodate requested alignment
-        VERIFY_EXPR( Diligent::Align(Allocation.UnalignedOffset, alignment) - Allocation.UnalignedOffset + size <= Allocation.Size );
+        VERIFY_EXPR( Diligent::Align(VkDeviceSize{Allocation.UnalignedOffset}, alignment) - Allocation.UnalignedOffset + size <= Allocation.Size );
         return VulkanMemoryAllocation{this, Allocation.UnalignedOffset, Allocation.Size};
     }
     else

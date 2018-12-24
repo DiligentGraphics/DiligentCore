@@ -47,7 +47,7 @@ struct VulkanMemoryAllocation
     VulkanMemoryAllocation            (const VulkanMemoryAllocation&) = delete;
     VulkanMemoryAllocation& operator= (const VulkanMemoryAllocation&) = delete;
 
-	VulkanMemoryAllocation(VulkanMemoryPage* _Page, size_t _UnalignedOffset, size_t _Size)noexcept : 
+	VulkanMemoryAllocation(VulkanMemoryPage* _Page, VkDeviceSize _UnalignedOffset, VkDeviceSize _Size)noexcept : 
         Page           (_Page), 
         UnalignedOffset(_UnalignedOffset), 
         Size           (_Size)
@@ -81,8 +81,8 @@ struct VulkanMemoryAllocation
     ~VulkanMemoryAllocation();
     
     VulkanMemoryPage* Page             = nullptr;	// Memory page that contains this allocation
-	size_t            UnalignedOffset  = 0;         // Unaligned offset from the start of the memory
-	size_t            Size             = 0;	        // Reserved size of this allocation
+	VkDeviceSize      UnalignedOffset  = 0;         // Unaligned offset from the start of the memory
+	VkDeviceSize      Size             = 0;	        // Reserved size of this allocation
 };
 
 class VulkanMemoryPage

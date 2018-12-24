@@ -179,7 +179,7 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters*        pRefCounters,
         VERIFY( IsPowerOfTwo(MemReqs.alignment), "Alignment is not power of 2!");
         m_MemoryAllocation = pRenderDeviceVk->AllocateMemory(MemReqs, BufferMemoryFlags);
 
-        auto AlignedOffset = Align(m_MemoryAllocation.UnalignedOffset, MemReqs.alignment);
+        auto AlignedOffset = Align(VkDeviceSize{m_MemoryAllocation.UnalignedOffset}, MemReqs.alignment);
         VERIFY(m_MemoryAllocation.Size >= MemReqs.size + (AlignedOffset - m_MemoryAllocation.UnalignedOffset), "Size of memory allocation is too small");
         auto Memory = m_MemoryAllocation.Page->GetVkMemory();
         auto err = LogicalDevice.BindBufferMemory(m_VulkanBuffer, Memory, AlignedOffset);
@@ -205,14 +205,14 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters*        pRefCounters,
             // to the host (10.2)
             auto StagingMemoryAllocation = pRenderDeviceVk->AllocateMemory(StagingBufferMemReqs, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
             auto StagingBufferMemory = StagingMemoryAllocation.Page->GetVkMemory();
-            auto AlignedStagingMemOffset = Align(StagingMemoryAllocation.UnalignedOffset, StagingBufferMemReqs.alignment);
+            auto AlignedStagingMemOffset = Align(VkDeviceSize{StagingMemoryAllocation.UnalignedOffset}, StagingBufferMemReqs.alignment);
             VERIFY_EXPR(StagingMemoryAllocation.Size >= StagingBufferMemReqs.size + (AlignedStagingMemOffset - StagingMemoryAllocation.UnalignedOffset));
 
             auto* StagingData = reinterpret_cast<uint8_t*>(StagingMemoryAllocation.Page->GetCPUMemory());
             if (StagingData == nullptr)
                 LOG_BUFFER_ERROR_AND_THROW("Failed to allocate staging data");
             memcpy(StagingData + AlignedStagingMemOffset, BuffData.pData, BuffData.DataSize);
-            
+
             err = LogicalDevice.BindBufferMemory(StagingBuffer, StagingBufferMemory, AlignedStagingMemOffset);
             CHECK_VK_ERROR_AND_THROW(err, "Failed to bind staging bufer memory");
 

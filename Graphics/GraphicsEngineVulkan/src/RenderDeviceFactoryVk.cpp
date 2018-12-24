@@ -185,7 +185,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk( const EngineVkAttribs& Crea
         auto &RawMemAllocator = GetRawAllocator();
         pCmdQueueVk = NEW_RC_OBJ(RawMemAllocator, "CommandQueueVk instance", CommandQueueVkImpl)(LogicalDevice, QueueInfo.queueFamilyIndex);
 
-        std::array<ICommandQueueVk*, 1> CommandQueues = {pCmdQueueVk};
+        std::array<ICommandQueueVk*, 1> CommandQueues = {{pCmdQueueVk}};
         AttachToVulkanDevice(Instance, std::move(PhysicalDevice), LogicalDevice, CommandQueues.size(), CommandQueues.data(), CreationAttribs, ppDevice, ppContexts, NumDeferredContexts);
 
         FenceDesc Desc;

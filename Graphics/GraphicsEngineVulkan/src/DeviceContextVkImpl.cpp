@@ -760,9 +760,19 @@ namespace Diligent
 
         if(GetNumCommandsInCtx() != 0)
         {
-            LOG_ERROR_MESSAGE(m_bIsDeferred ? 
-                "There are outstanding commands in deferred device context #", m_ContextId, " when finishing the frame. This is an error and may cause unpredicted behaviour. Close all deferred contexts and execute them before finishing the frame" :
-                "There are outstanding commands in the immediate device context when finishing the frame. This is an error and may cause unpredicted behaviour. Call Flush() to submit all commands for execution before finishing the frame");
+            if (m_bIsDeferred)
+            {
+                LOG_ERROR_MESSAGE("There are outstanding commands in deferred device context #", m_ContextId,
+                                  " when finishing the frame. This is an error and may cause unpredicted behaviour."
+                                  " Close all deferred contexts and execute them before finishing the frame.");
+
+            }
+            else
+            {
+                LOG_ERROR_MESSAGE("There are outstanding commands in the immediate device context when finishing the frame."
+                                  " This is an error and may cause unpredicted behaviour. Call Flush() to submit all commands"
+                                  " for execution before finishing the frame.");
+            }
         }
 
         if (!m_MappedTextures.empty())

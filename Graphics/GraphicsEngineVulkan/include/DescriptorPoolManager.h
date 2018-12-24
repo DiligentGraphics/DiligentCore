@@ -60,13 +60,13 @@ public:
 
     DescriptorSetAllocation(DescriptorSetAllocation&& rhs)noexcept : 
         Set              (rhs.Set),
-        CmdQueueMask     (rhs.CmdQueueMask),
         Pool             (rhs.Pool),
+        CmdQueueMask     (rhs.CmdQueueMask),
         DescrSetAllocator(rhs.DescrSetAllocator)
     {
         rhs.Reset();
     }
-    
+
     DescriptorSetAllocation& operator = (DescriptorSetAllocation&& rhs)noexcept
     {
         Release();
@@ -100,7 +100,7 @@ public:
     {
         Release();
     }
-    
+
     VkDescriptorSet GetVkDescriptorSet()const {return Set;}
 
 private:

@@ -52,7 +52,7 @@ public:
                       bool                                 bIsDefaultView);
     ~BufferViewVkImpl();
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject** ppInterface );
+    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject** ppInterface )override final;
 
     virtual VkBufferView GetVkBufferView()const override final{return m_BuffView;}
 
@@ -60,7 +60,7 @@ public:
           BufferVkImpl* GetBufferVk();
 
 protected:
-    
+
     VulkanUtilities::BufferViewWrapper m_BuffView;
 };
 

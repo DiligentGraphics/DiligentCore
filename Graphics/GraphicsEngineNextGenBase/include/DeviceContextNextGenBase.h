@@ -48,8 +48,8 @@ public:
               bIsDeferred),
         m_ContextId                   (ContextId),
         m_CommandQueueId              (CommandQueueId),
-        m_ContextFrameNumber          (0),
         m_NumCommandsToFlush          (NumCommandsToFlush),
+        m_ContextFrameNumber          (0),
         m_SubmittedBuffersCmdQueueMask(bIsDeferred ? 0 : Uint64{1} << Uint64{CommandQueueId})
     {
     }

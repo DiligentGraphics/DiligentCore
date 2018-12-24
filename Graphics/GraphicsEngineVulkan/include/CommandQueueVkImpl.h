@@ -73,11 +73,8 @@ public:
     void SetFence(RefCntAutoPtr<FenceVkImpl> pFence){m_pFence = std::move(pFence);}
 
 private:
-    // A value that will be signaled by the command queue next
-    Atomics::AtomicInt64 m_NextFenceValue;
-
     std::shared_ptr<VulkanUtilities::VulkanLogicalDevice> m_LogicalDevice;
-   
+
     const VkQueue m_VkQueue;
     const uint32_t m_QueueFamilyIndex;
     // Fence is signaled right after a command buffer has been 
@@ -85,6 +82,9 @@ private:
     // All command buffers with fence value less than or equal to the signaled value
     // are guaranteed to be finished by the GPU
     RefCntAutoPtr<FenceVkImpl> m_pFence;
+
+    // A value that will be signaled by the command queue next
+    Atomics::AtomicInt64 m_NextFenceValue;
 
     std::mutex m_QueueMutex;
 };

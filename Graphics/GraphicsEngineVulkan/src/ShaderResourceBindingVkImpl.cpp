@@ -64,7 +64,7 @@ ShaderResourceBindingVkImpl::ShaderResourceBindingVkImpl( IReferenceCounters* pR
         
         // Initialize vars manager to reference mutable and dynamic variables
         // Note that the cache has space for all variable types
-        std::array<SHADER_VARIABLE_TYPE, 2> VarTypes = {SHADER_VARIABLE_TYPE_MUTABLE, SHADER_VARIABLE_TYPE_DYNAMIC};
+        std::array<SHADER_VARIABLE_TYPE, 2> VarTypes = {{SHADER_VARIABLE_TYPE_MUTABLE, SHADER_VARIABLE_TYPE_DYNAMIC}};
         m_pShaderVarMgrs[s].Initialize(SrcLayout, VarDataAllocator, VarTypes.data(), static_cast<Uint32>(VarTypes.size()), m_ShaderResourceCache);
         
         m_ResourceLayoutIndex[ShaderInd] = static_cast<Int8>(s);

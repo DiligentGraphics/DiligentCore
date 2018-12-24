@@ -289,8 +289,7 @@ namespace Diligent
                     static_cast<Int32>(NumMips),
                     static_cast<Int32>(ViewDesc.FirstArraySlice),
                     0,
-                    1.0f / static_cast<float>(DstWidth),
-                    1.0f / static_cast<float>(DstHeight)
+                    {1.0f / static_cast<float>(DstWidth), 1.0f / static_cast<float>(DstHeight)}
                 };
             }
 

@@ -184,8 +184,8 @@ public:
                Type             == Attribs.Type             &&
                VarType          == Attribs.VarType          && 
                SepSmplrOrImgInd == Attribs.SepSmplrOrImgInd &&
-               ( IsImmutableSamplerAssigned() &&  Attribs.IsImmutableSamplerAssigned() ||
-                !IsImmutableSamplerAssigned() && !Attribs.IsImmutableSamplerAssigned());
+               ( (IsImmutableSamplerAssigned() &&  Attribs.IsImmutableSamplerAssigned()) ||
+                (!IsImmutableSamplerAssigned() && !Attribs.IsImmutableSamplerAssigned()) );
     }
 };
 static_assert(sizeof(SPIRVShaderResourceAttribs) % sizeof(void*) == 0, "Size of SPIRVShaderResourceAttribs struct must be multiple of sizeof(void*)" );
