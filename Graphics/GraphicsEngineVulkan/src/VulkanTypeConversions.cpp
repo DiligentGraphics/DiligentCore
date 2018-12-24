@@ -656,7 +656,7 @@ VkPipelineRasterizationStateCreateInfo RasterizerStateDesc_To_VkRasterizationSta
     RSStateCI.pNext = nullptr;
     RSStateCI.flags = 0; // Reserved for future use.
 
-    // If depth clamping is enabled, before the incoming fragment�s zf is compared to za, zf is clamped to 
+    // If depth clamping is enabled, before the incoming fragment's zf is compared to za, zf is clamped to 
     // [min(n,f), max(n,f)], where n and f are the minDepth and maxDepth depth range values of the viewport 
     // used by this fragment, respectively (25.10)
     // This value is the opposite of clip enable
@@ -673,7 +673,7 @@ VkPipelineRasterizationStateCreateInfo RasterizerStateDesc_To_VkRasterizationSta
                                                       // that relates to the usable resolution of the depth buffer
     RSStateCI.depthBiasClamp = RasterizerDesc.DepthBiasClamp; // maximum (or minimum) depth bias of a fragment.
     RSStateCI.depthBiasSlopeFactor = 
-        RasterizerDesc.SlopeScaledDepthBias; //  a scalar factor applied to a fragment�s slope in depth bias calculations.
+        RasterizerDesc.SlopeScaledDepthBias; //  a scalar factor applied to a fragment's slope in depth bias calculations.
     RSStateCI.lineWidth = 1.f; // If the wide lines feature is not enabled, and no element of the pDynamicStates member of 
                                // pDynamicState is VK_DYNAMIC_STATE_LINE_WIDTH, the lineWidth member of 
                                // pRasterizationState must be 1.0 (9.2)

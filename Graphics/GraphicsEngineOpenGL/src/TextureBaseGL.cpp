@@ -493,13 +493,13 @@ void TextureBaseGL :: CopyData(DeviceContextGLImpl *pDeviceCtxGL,
 void TextureBaseGL::TextureMemoryBarrier( Uint32 RequiredBarriers, GLContextState &GLContextState )
 {
 #if GL_ARB_shader_image_load_store
-    #ifdef DEBUG
+    #ifdef _DEBUG
     {
         constexpr Uint32 TextureBarriers =
-            GL_TEXTURE_FETCH_BARRIER_BIT |
+            GL_TEXTURE_FETCH_BARRIER_BIT       |
             GL_SHADER_IMAGE_ACCESS_BARRIER_BIT |
-            GL_PIXEL_BUFFER_BARRIER_BIT |
-            GL_TEXTURE_UPDATE_BARRIER_BIT |
+            GL_PIXEL_BUFFER_BARRIER_BIT        |
+            GL_TEXTURE_UPDATE_BARRIER_BIT      |
             GL_FRAMEBUFFER_BARRIER_BIT;
         VERIFY( (RequiredBarriers & TextureBarriers) != 0, "At least one texture memory barrier flag should be set" );
         VERIFY( (RequiredBarriers & ~TextureBarriers) == 0, "Inappropriate texture memory barrier flag" );

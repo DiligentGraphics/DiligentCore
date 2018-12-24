@@ -350,8 +350,8 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters*      pRefCounters
         MSStateCI.pSampleMask = SampleMask; // an array of static coverage information that is ANDed with 
                                             // the coverage information generated during rasterization (25.3)
         MSStateCI.alphaToCoverageEnable = VK_FALSE; // whether a temporary coverage value is generated based on 
-                                                    // the alpha component of the fragment�s first color output
-        MSStateCI.alphaToOneEnable = VK_FALSE; // whether the alpha component of the fragment�s first color output is replaced with one
+                                                    // the alpha component of the fragment's first color output
+        MSStateCI.alphaToOneEnable = VK_FALSE; // whether the alpha component of the fragment's first color output is replaced with one
         PipelineCI.pMultisampleState = &MSStateCI;
 
         VkPipelineDepthStencilStateCreateInfo DepthStencilStateCI = 
