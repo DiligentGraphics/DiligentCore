@@ -643,7 +643,9 @@ uvec2  _ToUvec( vec2  f2 ){ return _ToUvec2( f2.x, f2.y ); }
 uvec3  _ToUvec( vec3  f3 ){ return _ToUvec3( f3.x, f3.y, f3.z ); }
 uvec4  _ToUvec( vec4  f4 ){ return _ToUvec4( f4.x, f4.y, f4.z, f4.w ); }
 
-
+// https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/frexp.xhtml
+// https://www.khronos.org/registry/OpenGL-Refpages/es3.1/html/frexp.xhtml
+#if defined(GL_ES) && (__VERSION__>=310) || !defined(GL_ES) && (__VERSION__>=400)
 // We have to redefine 'float frexp(float, int)' as 'float frexp(float, float)'
 float _frexp(float f1, out float fexp1)
 {
@@ -674,6 +676,7 @@ vec4 _frexp(vec4 f4, out vec4 fexp4)
     return sig4;
 }
 #define frexp _frexp
+#endif
 
 
 // TEXTURE FUNCTION STUB MACROS
