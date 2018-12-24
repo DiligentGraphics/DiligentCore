@@ -178,6 +178,8 @@ set(PRIVATE_DEPENDENCIES
 
 if(PLATFORM_WIN32)
     find_library(Vulkan_LIBRARY NAMES vulkan-1 vulkan PATHS "../../External/vulkan/libs")
+elseif(PLATFORM_MACOS)
+    find_library(Vulkan_LIBRARY NAMES MoltenVK PATHS "../../External/vulkan/libs/macOS" REQUIRED)
 else()
     find_library(Vulkan_LIBRARY NAMES vulkan HINTS "$ENV{VULKAN_SDK}/lib" "../../External/vulkan/libs" REQUIRED)
 endif()
@@ -197,10 +199,22 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR
     set_target_properties(GraphicsEngineVk-shared PROPERTIES CXX_VISIBILITY_PRESET hidden) # -fvisibility=hidden
 endif()
 
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    # Disable the following clang warning
+    #    '<function name>' hides overloaded virtual function
+    # as hiding is intended
+    target_compile_options(GraphicsEngineVk-static PRIVATE -Wno-overloaded-virtual)
+    target_compile_options(GraphicsEngineVk-shared PRIVATE -Wno-overloaded-virtual)
+endif()
+
 if(PLATFORM_WIN32)
     set(PRIVATE_COMPILE_DEFINITIONS VK_USE_PLATFORM_WIN32_KHR=1 NOMINMAX)
 elseif(PLATFORM_LINUX)
     set(PRIVATE_COMPILE_DEFINITIONS VK_USE_PLATFORM_XCB_KHR=1)
+elseif(PLATFORM_MACOS)
+    set(PRIVATE_COMPILE_DEFINITIONS VK_USE_PLATFORM_MACOS_MVK=1)
+elseif(PLATFORM_IOS)
+    set(PRIVATE_COMPILE_DEFINITIONS VK_USE_PLATFORM_IOS_MVK=1)
 else()
     message(FATAL_ERROR "Unknown platform")
 endif()
