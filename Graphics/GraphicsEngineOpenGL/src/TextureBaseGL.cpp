@@ -427,10 +427,13 @@ void TextureBaseGL :: CopyData(DeviceContextGLImpl *pDeviceCtxGL,
             return;
         }
 
-        auto *pRenderDeviceGL = ValidatedCast<RenderDeviceGLImpl>(GetDevice());
-        auto &TexViewObjAllocator = pRenderDeviceGL->GetTexViewObjAllocator();
-        VERIFY( &TexViewObjAllocator == &m_dbgTexViewObjAllocator, "Texture view allocator does not match allocator provided during texture initialization" );
-
+        auto* pRenderDeviceGL = ValidatedCast<RenderDeviceGLImpl>(GetDevice());
+#ifdef _DEBUG
+        {
+            auto& TexViewObjAllocator = pRenderDeviceGL->GetTexViewObjAllocator();
+            VERIFY( &TexViewObjAllocator == &m_dbgTexViewObjAllocator, "Texture view allocator does not match allocator provided during texture initialization" );
+        }
+#endif
         auto &TexRegionRender = pRenderDeviceGL->m_TexRegionRender;
         TexRegionRender.SetStates(pDeviceCtxGL);
 
@@ -490,15 +493,19 @@ void TextureBaseGL :: CopyData(DeviceContextGLImpl *pDeviceCtxGL,
 void TextureBaseGL::TextureMemoryBarrier( Uint32 RequiredBarriers, GLContextState &GLContextState )
 {
 #if GL_ARB_shader_image_load_store
-    const Uint32 TextureBarriers =
-        GL_TEXTURE_FETCH_BARRIER_BIT |
-        GL_SHADER_IMAGE_ACCESS_BARRIER_BIT |
-        GL_PIXEL_BUFFER_BARRIER_BIT |
-        GL_TEXTURE_UPDATE_BARRIER_BIT |
-        GL_FRAMEBUFFER_BARRIER_BIT;
-    VERIFY( (RequiredBarriers & TextureBarriers) != 0, "At least one texture memory barrier flag should be set" );
-    VERIFY( (RequiredBarriers & ~TextureBarriers) == 0, "Inappropriate texture memory barrier flag" );
-
+    #ifdef DEBUG
+    {
+        constexpr Uint32 TextureBarriers =
+            GL_TEXTURE_FETCH_BARRIER_BIT |
+            GL_SHADER_IMAGE_ACCESS_BARRIER_BIT |
+            GL_PIXEL_BUFFER_BARRIER_BIT |
+            GL_TEXTURE_UPDATE_BARRIER_BIT |
+            GL_FRAMEBUFFER_BARRIER_BIT;
+        VERIFY( (RequiredBarriers & TextureBarriers) != 0, "At least one texture memory barrier flag should be set" );
+        VERIFY( (RequiredBarriers & ~TextureBarriers) == 0, "Inappropriate texture memory barrier flag" );
+    }
+    #endif
+    
     GLContextState.EnsureMemoryBarrier( RequiredBarriers, this );
 #endif
 }

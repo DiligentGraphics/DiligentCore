@@ -55,7 +55,7 @@ void StandardFile::Read(Diligent::IDataBlob *pData)
     auto FileSize = GetSize();
     pData->Resize(FileSize);
     auto Res = Read(pData->GetDataPtr(), pData->GetSize());
-    VERIFY(Res, "Failed to read ", FileSize, " bytes from file");
+    VERIFY(Res, "Failed to read ", FileSize, " bytes from file"); (void)Res;
 }
 
 bool StandardFile::Read(void *Data, size_t BufferSize)

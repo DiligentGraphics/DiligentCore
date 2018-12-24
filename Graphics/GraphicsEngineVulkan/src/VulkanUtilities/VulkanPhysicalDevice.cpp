@@ -56,7 +56,7 @@ namespace VulkanUtilities
         {
             m_SupportedExtensions.resize(ExtensionCount);
             auto res = vkEnumerateDeviceExtensionProperties(m_VkDevice, nullptr, &ExtensionCount, m_SupportedExtensions.data());
-            VERIFY_EXPR(res == VK_SUCCESS);
+            VERIFY_EXPR(res == VK_SUCCESS); (void)res;
             VERIFY_EXPR(ExtensionCount == m_SupportedExtensions.size());
         }
     }
@@ -110,13 +110,15 @@ namespace VulkanUtilities
         {
             if (QueueFlags & (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT))
             {
-                const auto &Props = m_QueueFamilyProperties[FamilyInd];
+#ifdef _DEBUG
+                const auto& Props = m_QueueFamilyProperties[FamilyInd];
                 // Queues supporting graphics and/or compute operations must report (1,1,1) 
                 // in minImageTransferGranularity, meaning that there are no additional restrictions 
                 // on the granularity of image transfer operations for these queues (4.1).
                 VERIFY_EXPR(Props.minImageTransferGranularity.width  == 1 &&
                             Props.minImageTransferGranularity.height == 1 &&
                             Props.minImageTransferGranularity.depth  == 1);
+#endif
             }
         }
         else

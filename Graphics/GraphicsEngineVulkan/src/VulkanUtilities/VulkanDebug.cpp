@@ -128,7 +128,9 @@ namespace VulkanUtilities
         // We return VK_FALSE as we DON'T want Vulkan calls that cause a validation message 
         // (and return a VkResult) to abort
         return VK_FALSE;
-    }
+    }
+
+
     void SetupDebugging(VkInstance                           instance,
                         VkDebugUtilsMessageSeverityFlagsEXT  messageSeverity,
                         VkDebugUtilsMessageTypeFlagsEXT      messageType,
@@ -147,7 +149,7 @@ namespace VulkanUtilities
         DbgMessenger_CI.pfnUserCallback = DebugMessengerCallback;
         DbgMessenger_CI.pUserData       = pUserData;
         VkResult err = CreateDebugUtilsMessengerEXT(instance, &DbgMessenger_CI, nullptr, &DbgMessenger);
-        VERIFY(err == VK_SUCCESS, "Failed to create debug utils messenger");
+        VERIFY(err == VK_SUCCESS, "Failed to create debug utils messenger"); (void)err;
 
         // Load function pointers
         SetDebugUtilsObjectNameEXT = reinterpret_cast<PFN_vkSetDebugUtilsObjectNameEXT>(vkGetInstanceProcAddr(instance, "vkSetDebugUtilsObjectNameEXT"));
@@ -249,10 +251,10 @@ namespace VulkanUtilities
             ObjectNameInfo.objectHandle = objectHandle;
             ObjectNameInfo.pObjectName = name;
             VkResult res = SetDebugUtilsObjectNameEXT(device, &ObjectNameInfo);
-            VERIFY_EXPR(res == VK_SUCCESS);
+            VERIFY_EXPR(res == VK_SUCCESS); (void)res;
         }
     }
-    
+
     void SetObjectTag(VkDevice device, uint64_t objectHandle, VkObjectType objectType, uint64_t name, size_t tagSize, const void* tag)
     {
         // Check for valid function pointer (may not be present if not running in a debugging application)

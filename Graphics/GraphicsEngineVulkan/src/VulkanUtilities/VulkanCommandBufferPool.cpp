@@ -67,7 +67,7 @@ namespace VulkanUtilities
                     0 // VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT -  specifies that most or all memory resources currently 
                       // owned by the command buffer should be returned to the parent command pool.
                 );
-                DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to reset command buffer");
+                DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to reset command buffer"); (void)err;
                 m_CmdBuffers.pop_front();
             }
         }
@@ -94,7 +94,7 @@ namespace VulkanUtilities
                                                                               // and recorded again between each submission.
         CmdBuffBeginInfo.pInheritanceInfo = nullptr; // Ignored for a primary command buffer
         auto err = vkBeginCommandBuffer(CmdBuffer, &CmdBuffBeginInfo);
-        DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to begin command buffer");
+        DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to begin command buffer"); (void)err;
 #ifdef DEVELOPMENT
         ++m_BuffCounter;
 #endif

@@ -208,13 +208,13 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters,
         {
             for(Uint32 mip = 0; mip < ImageCI.mipLevels; ++mip)
             {
-                const auto &SubResData = InitData.pSubResources[subres];
-                auto &CopyRegion = Regions[subres];
+                const auto& SubResData = InitData.pSubResources[subres]; (void)SubResData;
+                auto& CopyRegion = Regions[subres];
 
                 auto MipWidth  = std::max(m_Desc.Width  >> mip, 1u);
                 auto MipHeight = std::max(m_Desc.Height >> mip, 1u);
                 auto MipDepth  = (m_Desc.Type == RESOURCE_DIM_TEX_3D) ? std::max(m_Desc.Depth >> mip, 1u) : 1u;
-                
+
                 CopyRegion.bufferOffset = uploadBufferSize; // offset in bytes from the start of the buffer object
                 // bufferRowLength and bufferImageHeight specify the data in buffer memory as a subregion 
                 // of a larger two- or three-dimensional image, and control the addressing calculations of 
@@ -225,7 +225,7 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters,
                 // For block-compression formats, all parameters are still specified in texels rather than compressed texel blocks (18.4.1)
                 CopyRegion.imageOffset = VkOffset3D{0, 0, 0};
                 CopyRegion.imageExtent = VkExtent3D{MipWidth, MipHeight, MipDepth};
-                
+
                 CopyRegion.imageSubresource.aspectMask = aspectMask;
                 CopyRegion.imageSubresource.mipLevel = mip;
                 CopyRegion.imageSubresource.baseArrayLayer = layer;
@@ -246,7 +246,7 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters,
                 auto MipSize = RowSize * MipHeight * MipDepth;
                 VERIFY(SubResData.Stride == 0 || SubResData.Stride >= RowSize, "Stride is too small");
                 VERIFY(SubResData.DepthStride == 0 || SubResData.DepthStride >= RowSize * MipHeight, "Depth stride is too small");
-                
+
                 // bufferOffset must be a multiple of 4 (18.4)
                 // If the calling command's VkImage parameter is a compressed image, bufferOffset 
                 // must be a multiple of the compressed texel block size in bytes (18.4). This

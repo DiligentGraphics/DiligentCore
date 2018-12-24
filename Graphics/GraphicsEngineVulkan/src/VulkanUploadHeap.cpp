@@ -75,7 +75,7 @@ VulkanUploadHeap::UploadPageInfo VulkanUploadHeap::CreateNewPage(VkDeviceSize Si
 
     auto AlignedOffset = (MemAllocation.UnalignedOffset + (MemReqs.alignment-1)) & ~(MemReqs.alignment-1);
     auto err = LogicalDevice.BindBufferMemory(NewBuffer, MemAllocation.Page->GetVkMemory(), AlignedOffset);
-    DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to bind buffer memory");
+    DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to bind buffer memory"); (void)err;
     auto CPUAddress = reinterpret_cast<Uint8*>(MemAllocation.Page->GetCPUMemory()) + AlignedOffset;
 
     return UploadPageInfo{std::move(MemAllocation), std::move(NewBuffer), CPUAddress};

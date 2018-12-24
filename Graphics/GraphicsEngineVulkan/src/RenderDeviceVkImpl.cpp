@@ -181,7 +181,7 @@ void RenderDeviceVkImpl::AllocateTransientCmdPool(VulkanUtilities::CommandPoolWr
                                                                           // and recorded again between each submission.
     CmdBuffBeginInfo.pInheritanceInfo = nullptr; // Ignored for a primary command buffer
     auto err = vkBeginCommandBuffer(vkCmdBuff, &CmdBuffBeginInfo);
-    DEV_CHECK_ERR(err == VK_SUCCESS, "vkBeginCommandBuffer() failed");
+    DEV_CHECK_ERR(err == VK_SUCCESS, "vkBeginCommandBuffer() failed"); (void)err;
 }
 
 
@@ -190,7 +190,7 @@ void RenderDeviceVkImpl::ExecuteAndDisposeTransientCmdBuff(Uint32 QueueIndex, Vk
     VERIFY_EXPR(vkCmdBuff != VK_NULL_HANDLE);
 
     auto err = vkEndCommandBuffer(vkCmdBuff);
-    DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to end command buffer");
+    DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to end command buffer"); (void)err;
 
     VkSubmitInfo SubmitInfo = {};
     SubmitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;

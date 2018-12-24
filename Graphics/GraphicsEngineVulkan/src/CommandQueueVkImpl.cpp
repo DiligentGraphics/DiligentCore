@@ -64,7 +64,7 @@ Uint64 CommandQueueVkImpl::Submit(const VkSubmitInfo& SubmitInfo)
          SubmitInfo.signalSemaphoreCount != 0) ? 
         1 : 0;
     auto err = vkQueueSubmit(m_VkQueue, SubmitCount, &SubmitInfo, vkFence);
-    DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to submit command buffer to the command queue");
+    DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to submit command buffer to the command queue"); (void)err;
 
     // We must atomically place the (value, fence) pair into the deque
     m_pFence->AddPendingFence(std::move(vkFence), FenceValue);
@@ -116,7 +116,7 @@ void CommandQueueVkImpl::SignalFence(VkFence vkFence)
 {
     std::lock_guard<std::mutex> Lock(m_QueueMutex);
     auto err = vkQueueSubmit(m_VkQueue, 0, nullptr, vkFence);
-    DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to submit command buffer to the command queue");
+    DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to submit command buffer to the command queue"); (void)err;
 }
 
 VkResult CommandQueueVkImpl::Present(const VkPresentInfoKHR& PresentInfo)

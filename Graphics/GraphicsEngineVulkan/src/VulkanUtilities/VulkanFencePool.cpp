@@ -34,10 +34,12 @@ namespace VulkanUtilities
 
     VulkanFencePool::~VulkanFencePool()
     {
+#ifdef DEVELOPMENT
         for (const auto& fence : m_Fences)
         {
             DEV_CHECK_ERR(m_LogicalDevice->GetFenceStatus(fence) == VK_SUCCESS, "Destroying a fence that has not been signaled");
         }
+#endif
         m_Fences.clear();
     }
 

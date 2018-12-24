@@ -189,21 +189,27 @@ const GLObjectWrappers::GLFrameBufferObj& FBOCache::GetFBO( Uint32 NumRenderTarg
             if( ViewDesc.Format == TEX_FORMAT_D32_FLOAT || 
                 ViewDesc.Format == TEX_FORMAT_D16_UNORM )
             {
-                auto GLTexFmt = pTexGL->GetGLTexFormat();
-                VERIFY( GLTexFmt == GL_DEPTH_COMPONENT32F || GLTexFmt == GL_DEPTH_COMPONENT16, 
-                        "Inappropriate internal texture format (", GLTexFmt, ") for depth attachment. "
-                        "GL_DEPTH_COMPONENT32F or GL_DEPTH_COMPONENT16 is expected");
-
+#ifdef _DEBUG
+                {
+                    const auto GLTexFmt = pTexGL->GetGLTexFormat();
+                    VERIFY( GLTexFmt == GL_DEPTH_COMPONENT32F || GLTexFmt == GL_DEPTH_COMPONENT16,
+                            "Inappropriate internal texture format (", GLTexFmt, ") for depth attachment. "
+                            "GL_DEPTH_COMPONENT32F or GL_DEPTH_COMPONENT16 is expected");
+                }
+#endif
                 AttachmentPoint = GL_DEPTH_ATTACHMENT;
             }
             else if( ViewDesc.Format == TEX_FORMAT_D32_FLOAT_S8X24_UINT ||
                      ViewDesc.Format == TEX_FORMAT_D24_UNORM_S8_UINT )
             {
-                auto GLTexFmt = pTexGL->GetGLTexFormat();
-                VERIFY( GLTexFmt == GL_DEPTH24_STENCIL8 || GLTexFmt == GL_DEPTH32F_STENCIL8, 
-                        "Inappropriate internal texture format (", GLTexFmt, ") for depth-stencil attachment. "
-                        "GL_DEPTH24_STENCIL8 or GL_DEPTH32F_STENCIL8 is expected");
-
+#ifdef _DEBUG
+                {
+                    const auto GLTexFmt = pTexGL->GetGLTexFormat();
+                    VERIFY( GLTexFmt == GL_DEPTH24_STENCIL8 || GLTexFmt == GL_DEPTH32F_STENCIL8,
+                            "Inappropriate internal texture format (", GLTexFmt, ") for depth-stencil attachment. "
+                            "GL_DEPTH24_STENCIL8 or GL_DEPTH32F_STENCIL8 is expected");
+                }
+#endif
                 AttachmentPoint = GL_DEPTH_STENCIL_ATTACHMENT;
             }
             else

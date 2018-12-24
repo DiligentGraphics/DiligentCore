@@ -90,7 +90,7 @@ VkFramebuffer FramebufferCache::GetFramebuffer(const FramebufferCacheKey& Key, u
         VkFramebuffer fb = Framebuffer;
 
         auto new_it = m_Cache.insert(std::make_pair(Key, std::move(Framebuffer)));
-        VERIFY(new_it.second, "New framebuffer must be inserted into the map");
+        VERIFY(new_it.second, "New framebuffer must be inserted into the map"); (void)new_it;
 
         m_RenderPassToKeyMap.emplace(Key.Pass, Key);
         if (Key.DSV != VK_NULL_HANDLE)

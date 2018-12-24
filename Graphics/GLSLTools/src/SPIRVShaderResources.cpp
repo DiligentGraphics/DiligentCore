@@ -55,7 +55,7 @@ static uint32_t GetDecorationOffset(const spirv_cross::Compiler& Compiler,
     VERIFY(Compiler.has_decoration(Res.id, Decoration), "Res \'", Res.name, "\' has no requested decoration");
     uint32_t offset = 0;
     auto declared = Compiler.get_binary_offset_for_decoration(Res.id, Decoration, offset);
-    VERIFY(declared, "Requested decoration is not declared");
+    VERIFY(declared, "Requested decoration is not declared"); (void)declared;
     return offset;
 }
 
@@ -396,11 +396,13 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator,
                                            SamplerInd);
             if (pNewSepImg->IsValidSepSamplerAssigned())
             {
+#ifdef DEVELOPMENT
                 const auto& SepSmplr = GetSepSmplr(pNewSepImg->GetAssignedSepSamplerInd());
                 DEV_CHECK_ERR(SepSmplr.ArraySize == 1 || SepSmplr.ArraySize == pNewSepImg->ArraySize,
                               "Array size (", SepSmplr.ArraySize,") of separate sampler variable '",
                               SepSmplr.Name, "' must be equal to 1 or be the same as the array size (", pNewSepImg->ArraySize,
                               ") of separate image variable '", pNewSepImg->Name, "' it is assigned to");
+#endif
             }
         }
         VERIFY_EXPR(CurrSepImg == GetNumSepImgs());
@@ -522,13 +524,13 @@ void SPIRVShaderResources::Initialize(IMemoryAllocator&       Allocator,
     constexpr Uint32 MaxOffset = std::numeric_limits<OffsetType>::max();
     auto AdvanceOffset = [&CurrentOffset, MaxOffset](Uint32 NumResources)
     {
-        VERIFY(CurrentOffset <= MaxOffset, "Current offser (", CurrentOffset, ") exceeds max allowed value (", MaxOffset, ")");
+        VERIFY(CurrentOffset <= MaxOffset, "Current offser (", CurrentOffset, ") exceeds max allowed value (", MaxOffset, ")"); (void)MaxOffset;
         auto Offset = static_cast<OffsetType>(CurrentOffset);
         CurrentOffset += NumResources;
         return Offset;
     };
 
-    auto UniformBufferOffset = AdvanceOffset(Counters.NumUBs); UniformBufferOffset; // To suppress warning
+    auto UniformBufferOffset = AdvanceOffset(Counters.NumUBs); (void)UniformBufferOffset;
     m_StorageBufferOffset    = AdvanceOffset(Counters.NumSBs);
     m_StorageImageOffset     = AdvanceOffset(Counters.NumImgs);
     m_SampledImageOffset     = AdvanceOffset(Counters.NumSmpldImgs);
@@ -603,7 +605,7 @@ SPIRVShaderResources::~SPIRVShaderResources()
 SPIRVShaderResources::ResourceCounters  SPIRVShaderResources::CountResources(const SHADER_VARIABLE_TYPE* AllowedVarTypes,
                                                                              Uint32 NumAllowedTypes)const noexcept
 {
-    Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
+    Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes); (void)AllowedTypeBits;
     ResourceCounters Counters;
 
     ProcessResources(

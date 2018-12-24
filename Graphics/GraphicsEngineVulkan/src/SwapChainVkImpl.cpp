@@ -406,7 +406,7 @@ void SwapChainVkImpl::AcquireNextImage(DeviceContextVkImpl* pDeviceCtxVk)
     const auto& LogicalDevice = pDeviceVk->GetLogicalDevice();
 
     auto res = vkAcquireNextImageKHR(LogicalDevice.GetVkDevice(), m_VkSwapChain, UINT64_MAX, m_ImageAcquiredSemaphores[m_SemaphoreIndex], (VkFence)nullptr, &m_BackBufferIndex);
-    VERIFY(res == VK_SUCCESS, "Failed to acquire next swap chain image");
+    VERIFY(res == VK_SUCCESS, "Failed to acquire next swap chain image"); (void)res;
 
     // Next command in the device context must wait for the next image to be acquired
     // Unlike fences or events, the act of waiting for a semaphore also unsignals that semaphore (6.4.2)

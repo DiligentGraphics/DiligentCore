@@ -612,7 +612,7 @@ void RenderDeviceGLImpl::TestTextureFormat( TEXTURE_FORMAT TexFormat )
                     {
                         glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, TestTextureDim, TestTextureDim);
                     } );
-                    VERIFY( Success, "Failed to create dummy render target texture" );
+                    VERIFY( Success, "Failed to create dummy render target texture" ); (void)Success;
                     glFramebufferTexture2D( GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, ColorTex, 0 );
                     CHECK_GL_ERROR( "Failed to set bind dummy render target to framebuffer" );
 

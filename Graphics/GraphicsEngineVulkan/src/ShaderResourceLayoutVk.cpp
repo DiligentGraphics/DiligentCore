@@ -59,11 +59,11 @@ void ShaderResourceLayoutVk::AllocateMemory(std::shared_ptr<const SPIRVShaderRes
     VERIFY(!m_ResourceBuffer, "Memory has already been initialized");
     VERIFY_EXPR(!m_pResources);
     VERIFY_EXPR(pSrcResources);
-    
+
     m_pResources = std::move(pSrcResources);
 
-    Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
-    
+    Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes); (void)AllowedTypeBits;
+
     // Count number of resources to allocate all needed memory
     m_pResources->ProcessResources(
         AllowedVarTypes, NumAllowedTypes,

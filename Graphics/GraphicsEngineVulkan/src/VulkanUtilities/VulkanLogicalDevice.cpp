@@ -65,7 +65,7 @@ namespace VulkanUtilities
     void VulkanLogicalDevice::WaitIdle()const
     {
         auto err = vkDeviceWaitIdle(m_VkDevice);
-        DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to idle device");
+        DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to idle device"); (void)err;
     }
 
     template<typename VkObjectType, typename VkCreateObjectFuncType, typename VkObjectCreateInfoType>
@@ -80,7 +80,7 @@ namespace VulkanUtilities
         VkObjectType VkObject = VK_NULL_HANDLE;
         auto err = VkCreateObject(m_VkDevice, &CreateInfo, m_VkAllocator, &VkObject);
         CHECK_VK_ERROR_AND_THROW(err, "Failed to create Vulkan ", ObjectType, " '", DebugName, '\'');
-        
+
         if (DebugName != nullptr && *DebugName != 0)
             SetVulkanObjectName(m_VkDevice, VkObject, DebugName);
 
@@ -242,7 +242,7 @@ namespace VulkanUtilities
 
         VkCommandBuffer CmdBuff = VK_NULL_HANDLE;
         auto err = vkAllocateCommandBuffers(m_VkDevice, &AllocInfo, &CmdBuff);
-        DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to allocate command buffer '", DebugName, '\'');
+        DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to allocate command buffer '", DebugName, '\''); (void)err;
 
         if (DebugName != nullptr && *DebugName != 0)
             SetCommandBufferName(m_VkDevice, CmdBuff, DebugName);

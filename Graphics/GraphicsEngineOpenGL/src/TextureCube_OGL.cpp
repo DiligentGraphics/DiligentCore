@@ -64,7 +64,7 @@ TextureCube_OGL::TextureCube_OGL( IReferenceCounters *pRefCounters,
 
     if( InitData.pSubResources )
     {
-        auto ExpectedSubresources = m_Desc.MipLevels*6;
+        const auto ExpectedSubresources = m_Desc.MipLevels*6;
         if( m_Desc.MipLevels*6 == InitData.NumSubresources )
         {
             for(Uint32 Face = 0; Face < 6; ++Face)
@@ -83,7 +83,7 @@ TextureCube_OGL::TextureCube_OGL( IReferenceCounters *pRefCounters,
         }
         else
         {
-            UNEXPECTED("Incorrect number of subresources. ", InitData.NumSubresources, " while ", ExpectedSubresources," is expected" );
+            UNEXPECTED("Incorrect number of subresources. ", InitData.NumSubresources, " while ", ExpectedSubresources," is expected" ); (void)ExpectedSubresources;
         }
     }
 
@@ -152,10 +152,14 @@ void TextureCube_OGL::UpdateData( GLContextState &ContextState, Uint32 MipLevel,
                 ((DstBox.MaxX % 4) == 0 || DstBox.MaxX == MipWidth) && 
                 ((DstBox.MaxY % 4) == 0 || DstBox.MaxY == MipHeight), 
                 "Compressed texture update region must be 4 pixel-aligned" );
-        const auto &FmtAttribs = GetTextureFormatAttribs(m_Desc.Format);
-        auto BlockBytesInRow = ((DstBox.MaxX - DstBox.MinX + 3)/4) * Uint32{FmtAttribs.ComponentSize};
-        VERIFY( SubresData.Stride == BlockBytesInRow, 
-                "Compressed data stride (", SubresData.Stride, " must match the size of a row of compressed blocks (", BlockBytesInRow, ")" );
+#ifdef _DEBUG
+        {
+            const auto &FmtAttribs = GetTextureFormatAttribs(m_Desc.Format);
+            auto BlockBytesInRow = ((DstBox.MaxX - DstBox.MinX + 3)/4) * Uint32{FmtAttribs.ComponentSize};
+            VERIFY( SubresData.Stride == BlockBytesInRow,
+                    "Compressed data stride (", SubresData.Stride, " must match the size of a row of compressed blocks (", BlockBytesInRow, ")" );
+        }
+#endif
         
         //glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
         //glPixelStorei(GL_UNPACK_COMPRESSED_BLOCK_WIDTH, 0);

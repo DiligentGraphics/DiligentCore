@@ -132,7 +132,7 @@ if(MSVC)
     # - disable w4189 - local variable is initialized but not referenced
     # - Enable AVX2 instruction set (/arch:AVX2)
     # - Disable RTTI (/GR-)
-    # - Enable whole program optimizaion (/GL)
+    # - Enable whole program optimization (/GL)
     # - Enable string pooling (/GF)
     set(MSVC_ALL_RELEASE_COMPILE_OPTIONS /arch:AVX2 /wd4189 /GR- /GL /GF)
     #target_compile_options(BuildSettings INTERFACE "$<$<CONFIG:RELEASE>:/arch:AVX2 /wd4189 /Ot")

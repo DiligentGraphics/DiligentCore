@@ -320,7 +320,7 @@ void BufferGLImpl::Unmap()
     // occur only during the periods that a buffer's data store is mapped. If such corruption
     // has occurred, glUnmapBuffer() returns FALSE, and the contents of the buffer's
     // data store become undefined.
-    VERIFY( Result != GL_FALSE, "Failed to unmap buffer. The data may have been corrupted" );
+    VERIFY( Result != GL_FALSE, "Failed to unmap buffer. The data may have been corrupted" ); (void)Result;
     glBindBuffer(m_uiMapTarget, 0);
     m_uiMapTarget = 0;
 }
@@ -328,18 +328,22 @@ void BufferGLImpl::Unmap()
 void BufferGLImpl::BufferMemoryBarrier( Uint32 RequiredBarriers, GLContextState &GLContextState )
 {
 #if GL_ARB_shader_image_load_store
-    const Uint32 BufferBarriers = 
-        GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT | 
-        GL_ELEMENT_ARRAY_BARRIER_BIT | 
-        GL_UNIFORM_BARRIER_BIT | 
-        GL_COMMAND_BARRIER_BIT | 
-        GL_BUFFER_UPDATE_BARRIER_BIT |
-        GL_CLIENT_MAPPED_BUFFER_BARRIER_BIT | 
-        GL_SHADER_STORAGE_BARRIER_BIT | 
-        GL_TEXTURE_FETCH_BARRIER_BIT;
-    VERIFY( (RequiredBarriers & BufferBarriers) !=0,   "At least one buffer memory barrier flag should be set" );
-    VERIFY( (RequiredBarriers & ~BufferBarriers) == 0, "Inappropriate buffer memory barrier flag" );
-
+    #ifdef _DEBUG
+    {
+        constexpr Uint32 BufferBarriers =
+            GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT  |
+            GL_ELEMENT_ARRAY_BARRIER_BIT        |
+            GL_UNIFORM_BARRIER_BIT              |
+            GL_COMMAND_BARRIER_BIT              |
+            GL_BUFFER_UPDATE_BARRIER_BIT        |
+            GL_CLIENT_MAPPED_BUFFER_BARRIER_BIT |
+            GL_SHADER_STORAGE_BARRIER_BIT       |
+            GL_TEXTURE_FETCH_BARRIER_BIT;
+        VERIFY( (RequiredBarriers & BufferBarriers) !=0,   "At least one buffer memory barrier flag should be set" );
+        VERIFY( (RequiredBarriers & ~BufferBarriers) == 0, "Inappropriate buffer memory barrier flag" );
+    }
+    #endif
+    
     GLContextState.EnsureMemoryBarrier( RequiredBarriers, this );
 #endif
 }
