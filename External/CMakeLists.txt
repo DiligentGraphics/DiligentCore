@@ -27,6 +27,7 @@ if(PLATFORM_WIN32 OR PLATFORM_LINUX OR PLATFORM_MACOS)
     set(SPIRV_SKIP_EXECUTABLES ON CACHE BOOL "Skip building SPIRV executable and tests along with the library")
     set(SKIP_SPIRV_TOOLS_INSTALL ON CACHE BOOL "Skip SPIRV tools installation")
     set(SPIRV_WERROR OFF CACHE BOOL "Do not enable error on warning")
+    set(CMAKE_MACOSX_RPATH TRUE)
     add_subdirectory(SPIRV-Tools)
     set_directory_root_folder("SPIRV-Tools" "Core/External/SPIRV-Tools")
     # We only need SPIRV-Tools-opt for glslang that also depends on SPIRV-Tools.
