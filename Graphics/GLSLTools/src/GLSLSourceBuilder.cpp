@@ -51,8 +51,14 @@ String BuildGLSLSourceString(const ShaderCreationAttribs& CreationAttribs, Targe
 #       error Unexpected platform
 #   endif
 #elif PLATFORM_MACOS
+    if (TargetCompiler == TargetGLSLCompiler::glslang)
+        GLSLSource.append("#version 430 core\n");
+    else if (TargetCompiler == TargetGLSLCompiler::driver)
+        GLSLSource.append("#version 410 core\n");
+    else
+        UNEXPECTED("Unexpected target GLSL compiler");
+
     GLSLSource.append(
-        "#version 410 core\n"
         "#define DESKTOP_GL 1\n"
         "#define PLATFORM_MACOS 1\n"
     );
