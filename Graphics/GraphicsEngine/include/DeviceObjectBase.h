@@ -55,7 +55,7 @@ public:
 		// Do not keep strong reference to the device if the object is an internal device object
 		m_spDevice      (bIsDeviceInternal ? nullptr : pDevice),
         m_pDevice       (pDevice),
-        m_ObjectNameCopy(ObjDesc.Name ? ObjDesc.Name : ThisToString()),
+        m_ObjectNameCopy(ObjDesc.Name ? String{ObjDesc.Name} : ThisToString()),
         m_Desc          (ObjDesc)
     {
         m_Desc.Name = m_ObjectNameCopy.c_str();

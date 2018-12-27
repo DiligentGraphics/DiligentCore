@@ -75,37 +75,48 @@ Texture2D_D3D11 :: Texture2D_D3D11(IReferenceCounters*        pRefCounters,
     }
 }
 
-static TextureDesc TexDescFromD3D11Texture2D(ID3D11Texture2D *pd3d11Texture)
+namespace
 {
-    D3D11_TEXTURE2D_DESC D3D11TexDesc;
-    pd3d11Texture->GetDesc(&D3D11TexDesc);
 
-    TextureDesc TexDesc;
-    UINT DataSize = 0;
-    pd3d11Texture->GetPrivateData(WKPDID_D3DDebugObjectName, &DataSize, nullptr);
-    std::vector<char> ObjectName;
-    if (DataSize > 0)
+class TexDescFromD3D11Texture2D
+{
+public:
+    TextureDesc operator ()(ID3D11Texture2D* pd3d11Texture)
     {
-        ObjectName.resize(DataSize+1); // Null terminator is not reported in DataSize
-        pd3d11Texture->GetPrivateData(WKPDID_D3DDebugObjectName, &DataSize, ObjectName.data());
-        TexDesc.Name = ObjectName.data();
+        D3D11_TEXTURE2D_DESC D3D11TexDesc;
+        pd3d11Texture->GetDesc(&D3D11TexDesc);
+
+        TextureDesc TexDesc;
+        UINT DataSize = 0;
+        pd3d11Texture->GetPrivateData(WKPDID_D3DDebugObjectName, &DataSize, nullptr);
+        if (DataSize > 0)
+        {
+            ObjectName.resize(DataSize+1); // Null terminator is not reported in DataSize
+            pd3d11Texture->GetPrivateData(WKPDID_D3DDebugObjectName, &DataSize, ObjectName.data());
+            TexDesc.Name = ObjectName.data();
+        }
+        else
+            TexDesc.Name = "Texture2D_D3D11 from native d3d11 texture";
+
+        TexDesc.Type           = D3D11TexDesc.ArraySize > 1 ? RESOURCE_DIM_TEX_2D_ARRAY : RESOURCE_DIM_TEX_2D;
+        TexDesc.Width          = Uint32{D3D11TexDesc.Width};
+        TexDesc.Height         = Uint32{D3D11TexDesc.Height};
+        TexDesc.ArraySize      = Uint32{D3D11TexDesc.ArraySize};
+        TexDesc.Format         = DXGI_FormatToTexFormat(D3D11TexDesc.Format);
+        TexDesc.MipLevels      = Uint32{D3D11TexDesc.MipLevels};
+        TexDesc.SampleCount    = Uint32{D3D11TexDesc.SampleDesc.Count};
+        TexDesc.Usage          = D3D11UsageToUsage(D3D11TexDesc.Usage);
+        TexDesc.BindFlags      = D3D11BindFlagsToBindFlags(D3D11TexDesc.BindFlags);
+        TexDesc.CPUAccessFlags = D3D11CPUAccessFlagsToCPUAccessFlags(D3D11TexDesc.CPUAccessFlags);
+        TexDesc.MiscFlags      = D3D11MiscFlagsToMiscTextureFlags(D3D11TexDesc.MiscFlags);
+
+        return TexDesc;
     }
-    else
-        TexDesc.Name = "Texture2D_D3D11 from native d3d11 texture";
 
-    TexDesc.Type           = D3D11TexDesc.ArraySize > 1 ? RESOURCE_DIM_TEX_2D_ARRAY : RESOURCE_DIM_TEX_2D;
-    TexDesc.Width          = Uint32{D3D11TexDesc.Width};
-    TexDesc.Height         = Uint32{D3D11TexDesc.Height};
-    TexDesc.ArraySize      = Uint32{D3D11TexDesc.ArraySize};
-    TexDesc.Format         = DXGI_FormatToTexFormat(D3D11TexDesc.Format);
-    TexDesc.MipLevels      = Uint32{D3D11TexDesc.MipLevels};
-    TexDesc.SampleCount    = Uint32{ D3D11TexDesc.SampleDesc.Count };
-    TexDesc.Usage          = D3D11UsageToUsage(D3D11TexDesc.Usage);
-    TexDesc.BindFlags      = D3D11BindFlagsToBindFlags(D3D11TexDesc.BindFlags);
-    TexDesc.CPUAccessFlags = D3D11CPUAccessFlagsToCPUAccessFlags(D3D11TexDesc.CPUAccessFlags);
-    TexDesc.MiscFlags      = D3D11MiscFlagsToMiscTextureFlags(D3D11TexDesc.MiscFlags);
+private:
+    std::vector<char> ObjectName;
+};
 
-    return TexDesc;
 }
 
 Texture2D_D3D11 :: Texture2D_D3D11(IReferenceCounters*        pRefCounters, 
@@ -113,7 +124,7 @@ Texture2D_D3D11 :: Texture2D_D3D11(IReferenceCounters*        pRefCounters,
                                    RenderDeviceD3D11Impl*     pDeviceD3D11, 
                                    RESOURCE_STATE             InitialState,
                                    ID3D11Texture2D*           pd3d11Texture) : 
-    TextureBaseD3D11(pRefCounters, TexViewObjAllocator, pDeviceD3D11, TexDescFromD3D11Texture2D(pd3d11Texture), TextureData())
+    TextureBaseD3D11(pRefCounters, TexViewObjAllocator, pDeviceD3D11, TexDescFromD3D11Texture2D{}(pd3d11Texture), TextureData{})
 {
     m_pd3d11Texture = pd3d11Texture;
     SetState(InitialState);
