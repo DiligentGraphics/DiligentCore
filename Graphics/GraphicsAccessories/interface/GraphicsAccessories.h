@@ -26,12 +26,12 @@
 /// \file
 /// Defines graphics engine utilities
 
-#include "GraphicsTypes.h"
-#include "Shader.h"
-#include "Texture.h"
-#include "Buffer.h"
-#include "RenderDevice.h"
-#include "DebugUtilities.h"
+#include "../../GraphicsEngine/interface/GraphicsTypes.h"
+#include "../../GraphicsEngine/interface/Shader.h"
+#include "../../GraphicsEngine/interface/Texture.h"
+#include "../../GraphicsEngine/interface/Buffer.h"
+#include "../../GraphicsEngine/interface/RenderDevice.h"
+#include "../../../Platforms/Basic/interface/DebugUtilities.h"
 
 namespace Diligent
 {
