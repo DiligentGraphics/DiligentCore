@@ -201,10 +201,11 @@ attaches to the one initialized by the app. An example of the engine initializat
 <a name="initialization_macos"></a>
 ### MacOS
 
-On MacOS the only API currently supported by Diligent Engine is OpenGL. Initialization of GL context on MacOS is
-performed by the application, and the engine attaches to the context initialized by the app; see
+On MacOS, Diligent Engine supports OpenGL and Vulkan backends. Initialization of GL context on MacOS is
+performed by the application, and the engine attaches to the context created by the app; see
 [GLView.m](https://github.com/DiligentGraphics/DiligentEngine/blob/master/Common/NativeApp/Apple/Source/Classes/OSX/GLView.m)
-for details.
+for details. Vulkan backend is initialized similar to other platforms. See 
+[MTKRenderer.mm](https://github.com/DiligentGraphics/DiligentEngine/blob/master/Common/NativeApp/Apple/Source/Classes/OSX/MTKRenderer.mm).
 
 <a name="initialization_android"></a>
 ### Android
