@@ -15,7 +15,7 @@ if(PLATFORM_ANDROID)
 	add_subdirectory(Android)
 endif()
 
-if(PLATFORM_WIN32 OR PLATFORM_LINUX OR PLATFORM_MACOS)
+if(PLATFORM_WIN32 OR PLATFORM_LINUX OR PLATFORM_MACOS OR PLATFORM_IOS)
     # We only need to have SPIRV-Headers folder, but we
     # do not really need any target from the project.
     #add_subdirectory(SPIRV-Headers)
