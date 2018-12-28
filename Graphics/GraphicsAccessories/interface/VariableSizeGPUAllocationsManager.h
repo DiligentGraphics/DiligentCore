@@ -29,7 +29,6 @@
 
 #include <deque>
 #include "VariableSizeAllocationsManager.h"
-#include "STDAllocator.h"
 
 namespace Diligent
 {

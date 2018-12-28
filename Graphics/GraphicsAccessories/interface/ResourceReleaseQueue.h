@@ -32,10 +32,10 @@
 #include <mutex>
 #include <deque>
 
-#include "MemoryAllocator.h"
-#include "STDAllocator.h"
-#include "DebugUtilities.h"
-#include "Atomics.h"
+#include "../../../Primitives/interface/MemoryAllocator.h"
+#include "../../../Common/interface/STDAllocator.h"
+#include "../../../Platforms/interface/Atomics.h"
+#include "../../../Platforms/Basic/interface/DebugUtilities.h"
 
 namespace Diligent
 {

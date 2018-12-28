@@ -28,10 +28,10 @@
 
 
 #include <deque>
-#include "MemoryAllocator.h"
-#include "STDAllocator.h"
-#include "DebugUtilities.h"
-#include "Align.h"
+#include "../../../Primitives/interface/MemoryAllocator.h"
+#include "../../../Platforms/Basic/interface/DebugUtilities.h"
+#include "../../../Common/interface/Align.h"
+#include "../../../Common/interface/STDAllocator.h"
 
 namespace Diligent
 {

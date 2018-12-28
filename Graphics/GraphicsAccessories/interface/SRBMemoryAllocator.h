@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "FixedBlockMemoryAllocator.h"
+#include "../../../Common/interface/FixedBlockMemoryAllocator.h"
 
 namespace Diligent
 {
