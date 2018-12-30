@@ -27,6 +27,8 @@
 /// Implementation of the Diligent::PipelineStateBase template class
 
 #include <array>
+#include <vector>
+
 #include "PipelineState.h"
 #include "DeviceObjectBase.h"
 #include "STDAllocator.h"

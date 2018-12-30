@@ -34,11 +34,12 @@ namespace Diligent
     enum class DeviceType : Int32
     {
         Undefined = 0,  ///< Undefined device
-        D3D11,      ///< D3D11 device
-        D3D12,      ///< D3D12 device
-        OpenGL,     ///< OpenGL device 
-        OpenGLES,   ///< OpenGLES device
-        Vulkan      ///< Vulkan device
+        D3D11,          ///< D3D11 device
+        D3D12,          ///< D3D12 device
+        OpenGL,         ///< OpenGL device 
+        OpenGLES,       ///< OpenGLES device
+        Vulkan,         ///< Vulkan device
+        Metal           ///< Metal device (not yet implemented)
     };
 
     /// Texture sampler capabilities

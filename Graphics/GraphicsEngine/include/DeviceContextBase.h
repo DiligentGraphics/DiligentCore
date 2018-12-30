@@ -26,6 +26,8 @@
 /// \file
 /// Implementation of the Diligent::DeviceContextBase template class and related structures
 
+#include <unordered_map>
+
 #include "DeviceContext.h"
 #include "DeviceObjectBase.h"
 #include "Defines.h"

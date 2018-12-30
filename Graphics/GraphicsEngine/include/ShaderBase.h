@@ -26,6 +26,8 @@
 /// \file
 /// Implementation of the Diligent::ShaderBase template class
 
+#include <vector>
+
 #include "Shader.h"
 #include "DeviceObjectBase.h"
 #include "STDAllocator.h"

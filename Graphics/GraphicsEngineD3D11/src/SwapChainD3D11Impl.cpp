@@ -27,8 +27,6 @@
 #include "DeviceContextD3D11Impl.h"
 #include <dxgi1_2.h>
 
-using namespace Diligent;
-
 namespace Diligent
 {
 

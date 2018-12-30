@@ -45,4 +45,8 @@ if(GL_SUPPORTED OR GLES_SUPPORTED OR VULKAN_SUPPORTED)
     add_subdirectory(GraphicsEngineOpenGL)
 endif()
 
+if(METAL_SUPPORTED)
+    add_subdirectory(GraphicsEngineMetal)
+endif()
+
 add_subdirectory(GraphicsTools)

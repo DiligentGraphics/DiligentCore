@@ -1,0 +1,251 @@
+/*     Copyright 2015-2018 Egor Yusov
+ *  
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ * 
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ *  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ *  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ *  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF ANY PROPRIETARY RIGHTS.
+ *
+ *  In no event and under no legal theory, whether in tort (including negligence), 
+ *  contract, or otherwise, unless required by applicable law (such as deliberate 
+ *  and grossly negligent acts) or agreed to in writing, shall any Contributor be
+ *  liable for any damages, including any direct, indirect, special, incidental, 
+ *  or consequential damages of any character arising as a result of this License or 
+ *  out of the use or inability to use the software (including but not limited to damages 
+ *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and 
+ *  all other commercial damages or losses), even if such Contributor has been advised 
+ *  of the possibility of such damages.
+ */
+
+/// \file
+/// Routines that initialize Mtl-based engine implementation
+
+#include "RenderDeviceFactoryMtl.h"
+#include "RenderDeviceMtlImpl.h"
+#include "DeviceContextMtlImpl.h"
+#include "SwapChainMtlImpl.h"
+#include "MtlTypeConversions.h"
+#include "EngineMemory.h"
+
+namespace Diligent
+{
+
+/// Engine factory for Mtl implementation
+class EngineFactoryMtlImpl : public IEngineFactoryMtl
+{
+public:
+    static EngineFactoryMtlImpl* GetInstance()
+    {
+        static EngineFactoryMtlImpl TheFactory;
+        return &TheFactory;
+    }
+
+    void CreateDeviceAndContextsMtl( const EngineMtlAttribs&   EngineAttribs, 
+                                     IRenderDevice**           ppDevice, 
+                                     IDeviceContext**          ppContexts,
+                                     Uint32                    NumDeferredContexts )override final;
+
+   void CreateSwapChainMtl( IRenderDevice*            pDevice, 
+                            IDeviceContext*           pImmediateContext, 
+                            const SwapChainDesc&      SCDesc, 
+                            const FullScreenModeDesc& FSDesc,
+                            void*                     pView, 
+                            ISwapChain**              ppSwapChain )override final;
+
+   void AttachToMtlDevice(void*                    pMtlNativeDevice, 
+                          const EngineMtlAttribs&  EngineAttribs, 
+                          IRenderDevice**          ppDevice, 
+                          IDeviceContext**         ppContexts,
+                          Uint32                   NumDeferredContexts)override final;
+};
+
+
+/// Creates render device and device contexts for Metal-based engine implementation
+
+/// \param [in] EngineAttribs - Engine creation attributes.
+/// \param [out] ppDevice - Address of the memory location where pointer to 
+///                         the created device will be written
+/// \param [out] ppContexts - Address of the memory location where pointers to 
+///                           the contexts will be written. Pointer to the immediate 
+///                           context goes at position 0. If NumDeferredContexts > 0,
+///                           pointers to the deferred contexts go afterwards.
+/// \param [in] NumDeferredContexts - Number of deferred contexts. If non-zero number
+///                                   of deferred contexts is requested, pointers to the
+///                                   contexts are written to ppContexts array starting 
+///                                   at position 1
+void EngineFactoryMtlImpl::CreateDeviceAndContextsMtl( const EngineMtlAttribs&   EngineAttribs, 
+                                                       IRenderDevice**           ppDevice, 
+                                                       IDeviceContext**          ppContexts, 
+                                                       Uint32                    NumDeferredContexts )
+{
+    if (EngineAttribs.DebugMessageCallback != nullptr)
+        SetDebugMessageCallback(EngineAttribs.DebugMessageCallback);
+
+    VERIFY( ppDevice && ppContexts, "Null pointer provided" );
+    if( !ppDevice || !ppContexts )
+        return;
+
+    *ppDevice = nullptr;
+    memset(ppContexts, 0, sizeof(*ppContexts) * (1+NumDeferredContexts));
+
+    void* pMtlDevice = nullptr;
+    AttachToMtlDevice(pMtlDevice, EngineAttribs, ppDevice, ppContexts, NumDeferredContexts);
+}
+
+
+/// Attaches to existing Mtl render device and immediate context
+
+/// \param [in] pMtlNativeDevice - pointer to native Mtl device
+/// \param [in] pMtlImmediateContext - pointer to native Mtl immediate context
+/// \param [in] EngineAttribs - Engine creation attributes.
+/// \param [out] ppDevice - Address of the memory location where pointer to 
+///                         the created device will be written
+/// \param [out] ppContexts - Address of the memory location where pointers to 
+///                           the contexts will be written. Pointer to the immediate 
+///                           context goes at position 0. If NumDeferredContexts > 0,
+///                           pointers to deferred contexts go afterwards.
+/// \param [in] NumDeferredContexts - Number of deferred contexts. If non-zero number
+///                                   of deferred contexts is requested, pointers to the
+///                                   contexts are written to ppContexts array starting 
+///                                   at position 1
+void EngineFactoryMtlImpl::AttachToMtlDevice(void*                     pMtlNativeDevice, 
+                                             const EngineMtlAttribs&   EngineAttribs, 
+                                             IRenderDevice**           ppDevice, 
+                                             IDeviceContext**          ppContexts,
+                                             Uint32                    NumDeferredContexts)
+{
+    if (EngineAttribs.DebugMessageCallback != nullptr)
+        SetDebugMessageCallback(EngineAttribs.DebugMessageCallback);
+
+    VERIFY( ppDevice && ppContexts, "Null pointer provided" );
+    if( !ppDevice || !ppContexts )
+        return;
+
+    try
+    {
+        SetRawAllocator(EngineAttribs.pRawMemAllocator);
+        auto &RawAlloctor = GetRawAllocator();
+        RenderDeviceMtlImpl *pRenderDeviceMtl(NEW_RC_OBJ(RawAlloctor, "RenderDeviceMtlImpl instance", RenderDeviceMtlImpl)
+                                                        (RawAlloctor, EngineAttribs, pMtlNativeDevice, NumDeferredContexts));
+        pRenderDeviceMtl->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice));
+
+        RefCntAutoPtr<DeviceContextMtlImpl> pDeviceContextMtl(NEW_RC_OBJ(RawAlloctor, "DeviceContextMtlImpl instance", DeviceContextMtlImpl)
+                                                                        (RawAlloctor, pRenderDeviceMtl, EngineAttribs, false));
+        
+        // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceMtl will
+        // keep a weak reference to the context
+        pDeviceContextMtl->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppContexts));
+        pRenderDeviceMtl->SetImmediateContext(pDeviceContextMtl);
+
+        for (Uint32 DeferredCtx = 0; DeferredCtx < NumDeferredContexts; ++DeferredCtx)
+        {
+            RefCntAutoPtr<DeviceContextMtlImpl> pDeferredCtxMtl(
+                NEW_RC_OBJ(RawAlloctor, "DeviceContextMtlImpl instance", DeviceContextMtlImpl)
+                          (RawAlloctor, pRenderDeviceMtl, EngineAttribs, true));
+            // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceD3D12 will
+            // keep a weak reference to the context
+            pDeferredCtxMtl->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppContexts + 1 + DeferredCtx));
+            pRenderDeviceMtl->SetDeferredContext(DeferredCtx, pDeferredCtxMtl);
+        }
+    }
+    catch( const std::runtime_error & )
+    {
+        if( *ppDevice )
+        {
+            (*ppDevice)->Release();
+            *ppDevice = nullptr;
+        }
+        for(Uint32 ctx=0; ctx < 1 + NumDeferredContexts; ++ctx)
+        {
+            if( ppContexts[ctx] != nullptr )
+            {
+                ppContexts[ctx]->Release();
+                ppContexts[ctx] = nullptr;
+            }
+        }
+
+        LOG_ERROR( "Failed to initialize Mtl device and contexts" );
+    }
+}
+
+/// Creates a swap chain for Direct3D11-based engine implementation
+
+/// \param [in] pDevice - Pointer to the render device
+/// \param [in] pImmediateContext - Pointer to the immediate device context
+/// \param [in] SCDesc - Swap chain description
+/// \param [in] FSDesc - Fullscreen mode description
+/// \param [in] pNativeWndHandle - Platform-specific native handle of the window 
+///                                the swap chain will be associated with:
+///                                * On Win32 platform, this should be window handle (HWND)
+///                                * On Universal Windows Platform, this should be reference to the 
+///                                  core window (Windows::UI::Core::CoreWindow)
+///                                
+/// \param [out] ppSwapChain    - Address of the memory location where pointer to the new 
+///                               swap chain will be written
+void EngineFactoryMtlImpl::CreateSwapChainMtl( IRenderDevice*            pDevice, 
+                                                   IDeviceContext*           pImmediateContext, 
+                                                   const SwapChainDesc&      SCDesc, 
+                                                   const FullScreenModeDesc& FSDesc,
+                                                   void*                     pView, 
+                                                   ISwapChain**              ppSwapChain )
+{
+    VERIFY( ppSwapChain, "Null pointer provided" );
+    if( !ppSwapChain )
+        return;
+
+    *ppSwapChain = nullptr;
+
+    try
+    {
+        auto *pDeviceMtl = ValidatedCast<RenderDeviceMtlImpl>( pDevice );
+        auto *pDeviceContextMtl = ValidatedCast<DeviceContextMtlImpl>(pImmediateContext);
+        auto &RawMemAllocator = GetRawAllocator();
+
+        auto *pSwapChainMtl = NEW_RC_OBJ(RawMemAllocator,  "SwapChainMtlImpl instance", SwapChainMtlImpl)
+                                          (SCDesc, FSDesc, pDeviceMtl, pDeviceContextMtl, pView);
+        pSwapChainMtl->QueryInterface( IID_SwapChain, reinterpret_cast<IObject**>(ppSwapChain) );
+
+        pDeviceContextMtl->SetSwapChain(pSwapChainMtl);
+        // Bind default render target
+        pDeviceContextMtl->SetRenderTargets( 0, nullptr, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION );
+        // Set default viewport
+        pDeviceContextMtl->SetViewports( 1, nullptr, 0, 0 );
+
+        auto NumDeferredCtx = pDeviceMtl->GetNumDeferredContexts();
+        for (size_t ctx = 0; ctx < NumDeferredCtx; ++ctx)
+        {
+            if (auto pDeferredCtx = pDeviceMtl->GetDeferredContext(ctx))
+            {
+                auto *pDeferredCtxMtl = pDeferredCtx.RawPtr<DeviceContextMtlImpl>();
+                pDeferredCtxMtl->SetSwapChain(pSwapChainMtl);
+                // Do not bind default render target and viewport to be
+                // consistent with D3D12
+                //// Bind default render target
+                //pDeferredCtxMtl->SetRenderTargets( 0, nullptr, nullptr );
+                //// Set default viewport
+                //pDeferredCtxMtl->SetViewports( 1, nullptr, 0, 0 );
+            }
+        }
+    }
+    catch( const std::runtime_error & )
+    {
+        if( *ppSwapChain )
+        {
+            (*ppSwapChain)->Release();
+            *ppSwapChain = nullptr;
+        }
+
+        LOG_ERROR( "Failed to create the swap chain" );
+    }
+}
+
+IEngineFactoryMtl* GetEngineFactoryMtl()
+{
+    return EngineFactoryMtlImpl::GetInstance();
+}
+
+}

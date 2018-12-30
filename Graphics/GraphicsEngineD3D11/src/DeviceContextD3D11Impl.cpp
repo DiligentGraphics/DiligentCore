@@ -40,8 +40,6 @@
 #include "RenderDeviceD3D11Impl.h"
 #include "FenceD3D11Impl.h"
 
-using namespace Diligent;
-
 namespace Diligent
 {
     DeviceContextD3D11Impl::DeviceContextD3D11Impl( IReferenceCounters*              pRefCounters,
@@ -1130,7 +1128,7 @@ namespace Diligent
                                                    SET_VERTEX_BUFFERS_FLAGS       Flags )
     {
         TDeviceContextBase::SetVertexBuffers( StartSlot, NumBuffersSet, ppBuffers, pOffsets, StateTransitionMode, Flags );
-        for (UINT Slot = 0; Slot < m_NumVertexStreams; ++Slot)
+        for (Uint32 Slot = 0; Slot < m_NumVertexStreams; ++Slot)
         {
             auto& CurrStream = m_VertexStreams[Slot];
             if (auto* pBuffD3D11Impl = CurrStream.pBuffer.RawPtr())
