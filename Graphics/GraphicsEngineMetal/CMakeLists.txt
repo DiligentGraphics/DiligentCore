@@ -76,8 +76,9 @@ add_library(GraphicsEngineMetal-shared SHARED
     readme.md
 )
 
-# Set output name to GraphicsEngineMetal_{32|64}{r|d}
-set_dll_output_name(GraphicsEngineMetal-shared GraphicsEngineMetal)
+set_target_properties(GraphicsEngineMetal-shared PROPERTIES
+    OUTPUT_NAME GraphicsEngineMetal
+)
 
 set_common_target_properties(GraphicsEngineMetal-shared)
 set_common_target_properties(GraphicsEngineMetal-static)
@@ -87,18 +88,39 @@ PRIVATE
     include
 )
 
+find_library(METAL_FRAMEWORK Metal)
+if (NOT METAL_FRAMEWORK)
+    message(FATAL_ERROR "Metal framework is not found")
+endif()
+
 target_link_libraries(GraphicsEngineMetal-static
 PRIVATE
     BuildSettings 
     TargetPlatform
     Common
     GraphicsEngine
+    ${METAL_FRAMEWORK}
 PUBLIC
     GraphicsEngineMetalInterface
 )
 
 target_link_libraries(GraphicsEngineMetal-shared PUBLIC GraphicsEngineMetal-static)
 target_compile_definitions(GraphicsEngineMetal-shared PUBLIC ENGINE_DLL=1)
+
+
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR 
+    CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    set_target_properties(GraphicsEngineMetal-shared PROPERTIES CXX_VISIBILITY_PRESET hidden) # -fvisibility=hidden
+endif()
+
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    # Disable the following clang warning
+    #    '<function name>' hides overloaded virtual function
+    # as hiding is intended
+    target_compile_options(GraphicsEngineMetal-static PRIVATE -Wno-overloaded-virtual)
+    target_compile_options(GraphicsEngineMetal-shared PRIVATE -Wno-overloaded-virtual)
+endif()
+
 
 source_group("src" FILES ${SRC} )
 source_group("include" FILES ${INCLUDE})
