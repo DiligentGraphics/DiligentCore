@@ -52,8 +52,7 @@ public:
    void CreateSwapChainMtl( IRenderDevice*            pDevice, 
                             IDeviceContext*           pImmediateContext, 
                             const SwapChainDesc&      SCDesc, 
-                            const FullScreenModeDesc& FSDesc,
-                            void*                     pView, 
+                            void*                     pView,
                             ISwapChain**              ppSwapChain )override final;
 
    void AttachToMtlDevice(void*                    pMtlNativeDevice, 
@@ -189,7 +188,6 @@ void EngineFactoryMtlImpl::AttachToMtlDevice(void*                     pMtlNativ
 void EngineFactoryMtlImpl::CreateSwapChainMtl( IRenderDevice*            pDevice, 
                                                    IDeviceContext*           pImmediateContext, 
                                                    const SwapChainDesc&      SCDesc, 
-                                                   const FullScreenModeDesc& FSDesc,
                                                    void*                     pView, 
                                                    ISwapChain**              ppSwapChain )
 {
@@ -206,7 +204,7 @@ void EngineFactoryMtlImpl::CreateSwapChainMtl( IRenderDevice*            pDevice
         auto &RawMemAllocator = GetRawAllocator();
 
         auto *pSwapChainMtl = NEW_RC_OBJ(RawMemAllocator,  "SwapChainMtlImpl instance", SwapChainMtlImpl)
-                                          (SCDesc, FSDesc, pDeviceMtl, pDeviceContextMtl, pView);
+                                          (SCDesc, pDeviceMtl, pDeviceContextMtl, pView);
         pSwapChainMtl->QueryInterface( IID_SwapChain, reinterpret_cast<IObject**>(ppSwapChain) );
 
         pDeviceContextMtl->SetSwapChain(pSwapChainMtl);

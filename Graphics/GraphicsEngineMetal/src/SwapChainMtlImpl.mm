@@ -30,7 +30,6 @@ namespace Diligent
 
 SwapChainMtlImpl::SwapChainMtlImpl(IReferenceCounters*       pRefCounters,
                                    const SwapChainDesc&      SCDesc, 
-                                   const FullScreenModeDesc& FSDesc,
                                    RenderDeviceMtlImpl*      pRenderDeviceMtl, 
                                    DeviceContextMtlImpl*     pDeviceContextMtl, 
                                    void*                     pNativeWndHandle) : 
@@ -69,13 +68,13 @@ void SwapChainMtlImpl::SetWindowedMode()
     LOG_ERROR_MESSAGE("SwapChainMtlImpl::SetWindowedMode() is not implemented");
 }
 
-ITextureView* GetCurrentBackBufferRTV()
+ITextureView* SwapChainMtlImpl::GetCurrentBackBufferRTV()
 {
     LOG_ERROR_MESSAGE("SwapChainMtlImpl::GetCurrentBackBufferRTV() is not implemented");
     return nullptr;
 }
 
-ITextureView* GetDepthBufferDSV()
+ITextureView* SwapChainMtlImpl::GetDepthBufferDSV()
 {
     LOG_ERROR_MESSAGE("SwapChainMtlImpl::GetDepthBufferDSV() is not implemented");
     return nullptr;

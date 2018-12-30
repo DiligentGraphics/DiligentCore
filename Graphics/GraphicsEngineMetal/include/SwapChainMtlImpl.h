@@ -41,7 +41,6 @@ public:
 
     SwapChainMtlImpl(IReferenceCounters*           pRefCounters,
                        const SwapChainDesc&        SCDesc, 
-                       const FullScreenModeDesc&   FSDesc,
                        class RenderDeviceMtlImpl*  pRenderDeviceMtl,
                        class DeviceContextMtlImpl* pDeviceContextMtl,
                        void*                       pView);

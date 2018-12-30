@@ -287,12 +287,19 @@ namespace Diligent
         LOG_ERROR_MESSAGE("DeviceContextMtlImpl::FinishFrame() is not implemented");
     }
 
+    void DeviceContextMtlImpl::InvalidateState()
+    {
+        TDeviceContextBase::InvalidateState();
+
+        LOG_ERROR_MESSAGE("DeviceContextMtlImpl::InvalidateState() is not implemented");
+    }
+
     void DeviceContextMtlImpl::SetVertexBuffers( Uint32                         StartSlot,
-                                                   Uint32                         NumBuffersSet,
-                                                   IBuffer**                      ppBuffers,
-                                                   Uint32*                        pOffsets,
-                                                   RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
-                                                   SET_VERTEX_BUFFERS_FLAGS       Flags )
+                                                 Uint32                         NumBuffersSet,
+                                                 IBuffer**                      ppBuffers,
+                                                 Uint32*                        pOffsets,
+                                                 RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
+                                                 SET_VERTEX_BUFFERS_FLAGS       Flags )
     {
         TDeviceContextBase::SetVertexBuffers( StartSlot, NumBuffersSet, ppBuffers, pOffsets, StateTransitionMode, Flags );
 
@@ -322,7 +329,7 @@ namespace Diligent
     void DeviceContextMtlImpl::SetViewports( Uint32 NumViewports, const Viewport* pViewports, Uint32 RTWidth, Uint32 RTHeight  )
     {
         TDeviceContextBase::SetViewports( NumViewports, pViewports, RTWidth, RTHeight );
-        
+
         LOG_ERROR_MESSAGE("DeviceContextMtlImpl::SetViewports() is not implemented");
     }
 
@@ -332,7 +339,18 @@ namespace Diligent
 
         LOG_ERROR_MESSAGE("DeviceContextMtlImpl::SetScissorRects() is not implemented");
     }
-         
+
+    void DeviceContextMtlImpl::SetRenderTargets(Uint32                         NumRenderTargets,
+                                                ITextureView*                  ppRenderTargets[],
+                                                ITextureView*                  pDepthStencil,
+                                                RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
+    {
+        if( TDeviceContextBase::SetRenderTargets( NumRenderTargets, ppRenderTargets, pDepthStencil ) )
+        {
+            LOG_ERROR_MESSAGE("DeviceContextMtlImpl::SetRenderTargets() is not implemented");
+        }
+    }
+
     void DeviceContextMtlImpl::FinishCommandList(ICommandList **ppCommandList)
     {
         LOG_ERROR_MESSAGE("DeviceContextMtlImpl::FinishCommandList() is not implemented");

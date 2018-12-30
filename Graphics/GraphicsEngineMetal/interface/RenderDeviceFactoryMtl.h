@@ -50,7 +50,6 @@ public:
    virtual void CreateSwapChainMtl( IRenderDevice*            pDevice, 
                                     IDeviceContext*           pImmediateContext, 
                                     const SwapChainDesc&      SCDesc, 
-                                    const FullScreenModeDesc& FSDesc,
                                     void*                     pView, 
                                     ISwapChain**              ppSwapChain ) = 0;
 

@@ -181,6 +181,9 @@ function(get_supported_backends _TARGETS)
     if(VULKAN_SUPPORTED)
 	    list(APPEND BACKENDS GraphicsEngineVk-${LIB_TYPE})
     endif()
+    if(METAL_SUPPORTED)
+	    list(APPEND BACKENDS GraphicsEngineMetal-${LIB_TYPE})
+    endif()
     # ${_TARGETS} == ENGINE_LIBRARIES
     # ${${_TARGETS}} == ${ENGINE_LIBRARIES}
     set(${_TARGETS} ${${_TARGETS}} ${BACKENDS} PARENT_SCOPE)
@@ -204,7 +207,7 @@ function(install_core_lib _TARGET)
             LIBRARY DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/lib"
             RUNTIME DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/bin"
     )
-    
+
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/interface")
         install(DIRECTORY    interface
                 DESTINATION  "${DILIGENT_CORE_INSTALL_DIR}/headers/${TARGET_RELATIVE_PATH}/"
