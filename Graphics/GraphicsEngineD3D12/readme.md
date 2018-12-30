@@ -1,11 +1,11 @@
 
 # GraphicsEngineD3D12
 
-Implementation of Diligent Engine API using Direct3D12
+Implementation of Direct3D12 back-end
 
 # Initialization
 
-The following code snippet shows how to initialize diligent engine in D3D12 mode.
+The following code snippet shows how to initialize Diligent Engine in D3D12 mode.
 
 ```cpp
 #include "RenderDeviceFactoryD3D12.h"
@@ -69,9 +69,9 @@ Below are some of the methods that provide access to internal D3D12 objects:
 
 ## Creating Diligent Engine Objects from D3D12 Resources
 
-* `void IRenderDeviceD3D12::CreateTextureFromD3DResource(ID3D12Resource *pd3d12Texture, ITexture **ppTexture)` -
+* `void IRenderDeviceD3D12::CreateTextureFromD3DResource(ID3D12Resource *pd3d12Texture, RESOURCE_STATE InitialState, ITexture **ppTexture)` -
    creates a diligent engine texture object from native D3D12 resource.
-* `void IRenderDeviceD3D12::CreateBufferFromD3DResource(ID3D12Resource *pd3d12Buffer, const BufferDesc& BuffDesc, IBuffer **ppBuffer)` -
+* `void IRenderDeviceD3D12::CreateBufferFromD3DResource(ID3D12Resource *pd3d12Buffer, const BufferDesc& BuffDesc, RESOURCE_STATE InitialState, IBuffer **ppBuffer)` -
    creates a diligent engine buffer object from native D3D12 resource.
    The method takes a pointer to the native d3d12 resiyrce pd3d12Buffer, buffer description BuffDesc and writes a pointer to the IBuffer
    interface at the memory location pointed to by ppBuffer. The system can recover buffer size, but the rest of the fields of

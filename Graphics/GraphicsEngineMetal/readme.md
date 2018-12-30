@@ -1,6 +1,6 @@
 
 # GraphicsEngineMetal
 
-Implementation of Diligent Engine API using Metal.
+Implementation of Metal back-end.
 
 This backend is not yet implemented.

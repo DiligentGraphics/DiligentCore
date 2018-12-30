@@ -37,3 +37,5 @@ Release
 *.json
 *.db
 *.sqlite
+/build
+/cmk_build

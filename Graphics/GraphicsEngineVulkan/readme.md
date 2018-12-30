@@ -1,7 +1,7 @@
 
 # GraphicsEngineVulkan
 
-Implementation of Diligent Engine API using Vulkan
+Implementation of Vulkan back-end
 
 
 

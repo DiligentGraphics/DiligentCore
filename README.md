@@ -46,7 +46,9 @@ so it must always be handled first.
 
 To get the repository and all submodules, use the following command:
 
- git clone --recursive https://github.com/DiligentGraphics/DiligentCore.git
+```
+git clone --recursive https://github.com/DiligentGraphics/DiligentCore.git
+```
 
 To build the module, see 
 [build instructions](https://github.com/DiligentGraphics/DiligentEngine/blob/master/README.md#build-and-run-instructions) 
@@ -169,10 +171,11 @@ Also, enable Diligent namespace:
 using namespace Diligent;
 ```
 
-`IEngineFactoryD3D11::CreateDeviceAndContextsD3D11()`, `IEngineFactoryD3D12::CreateDeviceAndContextsD3D12()`, and functions can
-`IEngineFactoryVk::CreateDeviceAndContextsVk()` also create a specified number of deferred contexts, which can be used for multi-threaded command recording.
-Deferred contexts can only be created during the initialization of the engine. The function populates an array of pointers
-to the contexts, where the immediate context goes at position 0, followed by all deferred contexts.
+`IEngineFactoryD3D11::CreateDeviceAndContextsD3D11()`, `IEngineFactoryD3D12::CreateDeviceAndContextsD3D12()`, and 
+`IEngineFactoryVk::CreateDeviceAndContextsVk()` functions can also create a specified number of deferred contexts, which 
+can be used for multi-threaded command recording. Deferred contexts can only be created during the initialization of the 
+engine. The function populates an array of pointers to the contexts, where the immediate context goes at position 0,
+followed by all deferred contexts.
 
 For more details, take a look at 
 [Tutorial00_HelloWin32.cpp](https://github.com/DiligentGraphics/DiligentSamples/blob/master/Tutorials/Tutorial00_HelloWin32/src/Tutorial00_HelloWin32.cpp) 
@@ -264,10 +267,10 @@ The following code creates a uniform (constant) buffer:
 
 ```cpp
 BufferDesc BuffDesc;
-BuffDesc.Name = "Uniform buffer";
-BuffDesc.BindFlags = BIND_UNIFORM_BUFFER;
-BuffDesc.Usage = USAGE_DYNAMIC;
-BuffDesc.uiSizeInBytes = sizeof(ShaderConstants);
+BuffDesc.Name           = "Uniform buffer";
+BuffDesc.BindFlags      = BIND_UNIFORM_BUFFER;
+BuffDesc.Usage          = USAGE_DYNAMIC;
+BuffDesc.uiSizeInBytes  = sizeof(ShaderConstants);
 BuffDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
 m_pDevice->CreateBuffer( BuffDesc, BufferData(), &m_pConstantBuffer );
 ```
@@ -276,12 +279,12 @@ Similar, to create a texture, populate `TextureDesc` structure and call `IRender
 
 ```cpp
 TextureDesc TexDesc;
-TexDesc.Name = "My texture 2D";
-TexDesc.Type = TEXTURE_TYPE_2D;
-TexDesc.Width = 1024;
-TexDesc.Height = 1024;
-TexDesc.Format = TEX_FORMAT_RGBA8_UNORM;
-TexDesc.Usage = USAGE_DEFAULT;
+TexDesc.Name      = "My texture 2D";
+TexDesc.Type      = TEXTURE_TYPE_2D;
+TexDesc.Width     = 1024;
+TexDesc.Height    = 1024;
+TexDesc.Format    = TEX_FORMAT_RGBA8_UNORM;
+TexDesc.Usage     = USAGE_DEFAULT;
 TexDesc.BindFlags = BIND_SHADER_RESOURCE | BIND_RENDER_TARGET | BIND_UNORDERED_ACCESS;
 TexDesc.Name = "Sample 2D Texture";
 m_pRenderDevice->CreateTexture( TexDesc, TextureData(), &m_pTestTex );
@@ -293,14 +296,14 @@ array size and all other parameters are specified by the members of the `Texture
 For every bind flag specified during the texture creation time, the texture object creates a default view.
 Default shader resource view addresses the entire texture, default render target and depth stencil views reference
 all array slices in the most detailed mip level, and unordered access view references the entire texture. To get a
-default view from the texture, use `ITexture::GetDefaultView()` function. Note that this function does not increase
-reference counter on the returned interface. You can create additional texture views using `ITexture::CreateView()`.
+default view from the texture, use `ITexture::GetDefaultView()` function. Note that this function does not increment
+the reference counter on the returned interface. You can create additional texture views using `ITexture::CreateView()`.
 Use `IBuffer::CreateView()` to create additional views of a buffer.
 
 <a name="initializing_pso"></a>
 ## Initializing Pipeline State
 
-Diligent Engine follows Direct3D12 style to configure the graphics/compute pipeline. One big Pipelines State Object (PSO)
+Diligent Engine follows Direct3D12/Vulkan style to configure the graphics/compute pipeline. One big Pipelines State Object (PSO)
 encompasses all required states (all shader stages, input layout description, depth stencil, rasterizer and blend state
 descriptions etc.)
 
@@ -319,15 +322,16 @@ supported platform that should be sufficient in most cases. You can however defi
 An important member is `ShaderCreationAttribs::SourceLanguage`. The following are valid values for this member:
 
 * `SHADER_SOURCE_LANGUAGE_DEFAULT` - The shader source format matches the underlying graphics API: HLSL for D3D11 or D3D12 mode, and GLSL for OpenGL, OpenGLES, and Vulkan modes.
-* `SHADER_SOURCE_LANGUAGE_HLSL`    - The shader source is in HLSL. For OpenGL and OpenGLES modes, the source code will be converted to GLSL. See shader converter for details.
-* `SHADER_SOURCE_LANGUAGE_GLSL`    - The shader source is in GLSL. There is currently no GLSL to HLSL converter.
+* `SHADER_SOURCE_LANGUAGE_HLSL`    - The shader source is in HLSL. For OpenGL and OpenGLES modes, the source code will be 
+                                     converted to GLSL. In Vulkan back-end, the code will be compiled to SPIRV directly.
+* `SHADER_SOURCE_LANGUAGE_GLSL`    - The shader source is in GLSL.
 
 To allow grouping of resources based on the frequency of expected change, Diligent Engine introduces
 classification of shader variables:
 
-* Static variables (`SHADER_VARIABLE_TYPE_STATIC`) are variables that are expected to be set only once. They may not be changed once a resource is bound to the variable. Such variables are intended to hold global constants such as camera attributes or global light attributes constant buffers.
-* Mutable variables (`SHADER_VARIABLE_TYPE_MUTABLE`) define resources that are expected to change on a per-material frequency. Examples may include diffuse textures, normal maps etc.
-* Dynamic variables (`SHADER_VARIABLE_TYPE_DYNAMIC`) are expected to change frequently and randomly.
+* **Static variables** (`SHADER_VARIABLE_TYPE_STATIC`) are variables that are expected to be set only once. They may not be changed once a resource is bound to the variable. Such variables are intended to hold global constants such as camera attributes or global light attributes constant buffers.
+* **Mutable variables** (`SHADER_VARIABLE_TYPE_MUTABLE`) define resources that are expected to change on a per-material frequency. Examples may include diffuse textures, normal maps etc.
+* **Dynamic variables** (`SHADER_VARIABLE_TYPE_DYNAMIC`) are expected to change frequently and randomly.
 
 [This post](http://diligentgraphics.com/2016/03/23/resource-binding-model-in-diligent-engine-2-0) gives more details about the
 resource binding model in Diligent Engine. To define variable types, prepare an array of `ShaderVariableDesc` structures and
@@ -345,30 +349,30 @@ shader entry point and other parameters. The following is an example of shader i
 
 ```cpp
 ShaderCreationAttribs Attrs;
-Attrs.Desc.Name = "MyPixelShader";
-Attrs.FilePath = "MyShaderFile.fx";
+Attrs.Desc.Name         = "MyPixelShader";
+Attrs.FilePath          = "MyShaderFile.fx";
 Attrs.SearchDirectories = "shaders;shaders\\inc;";
-Attrs.EntryPoint = "MyPixelShader";
-Attrs.Desc.ShaderType = SHADER_TYPE_PIXEL;
-Attrs.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
+Attrs.EntryPoint        = "MyPixelShader";
+Attrs.Desc.ShaderType   = SHADER_TYPE_PIXEL;
+Attrs.SourceLanguage    = SHADER_SOURCE_LANGUAGE_HLSL;
 BasicShaderSourceStreamFactory BasicSSSFactory(Attrs.SearchDirectories);
 Attrs.pShaderSourceStreamFactory = &BasicSSSFactory;
 
 ShaderVariableDesc ShaderVars[] =
 {
-    {"g_StaticTexture", SHADER_VARIABLE_TYPE_STATIC},
+    {"g_StaticTexture",  SHADER_VARIABLE_TYPE_STATIC},
     {"g_MutableTexture", SHADER_VARIABLE_TYPE_MUTABLE},
     {"g_DynamicTexture", SHADER_VARIABLE_TYPE_DYNAMIC}
 };
-Attrs.Desc.VariableDesc = ShaderVars;
-Attrs.Desc.NumVariables = _countof(ShaderVars);
+Attrs.Desc.VariableDesc        = ShaderVars;
+Attrs.Desc.NumVariables        = _countof(ShaderVars);
 Attrs.Desc.DefaultVariableType = SHADER_VARIABLE_TYPE_STATIC;
 
 StaticSamplerDesc StaticSampler;
 StaticSampler.Desc.MinFilter = FILTER_TYPE_LINEAR;
 StaticSampler.Desc.MagFilter = FILTER_TYPE_LINEAR;
 StaticSampler.Desc.MipFilter = FILTER_TYPE_LINEAR;
-StaticSampler.TextureName = "g_MutableTexture";
+StaticSampler.TextureName    = "g_MutableTexture";
 Attrs.Desc.NumStaticSamplers = 1;
 Attrs.Desc.StaticSamplers = &StaticSampler;
 
@@ -396,19 +400,20 @@ of render targets as well as depth-stencil format:
 
 ```cpp
 // This is a graphics pipeline
-PSODesc.IsComputePipeline = false;
+PSODesc.IsComputePipeline                 = false;
 PSODesc.GraphicsPipeline.NumRenderTargets = 1;
-PSODesc.GraphicsPipeline.RTVFormats[0] = TEX_FORMAT_RGBA8_UNORM_SRGB;
-PSODesc.GraphicsPipeline.DSVFormat = TEX_FORMAT_D32_FLOAT;
+PSODesc.GraphicsPipeline.RTVFormats[0]    = TEX_FORMAT_RGBA8_UNORM_SRGB;
+PSODesc.GraphicsPipeline.DSVFormat        = TEX_FORMAT_D32_FLOAT;
 ```
 
-Initialize depth-stencil state description structure DepthStencilStateDesc. Note that the constructor initializes the members with default values and you can only set the ones that are different from default.
+Initialize depth-stencil state description structure DepthStencilStateDesc. Note that the constructor initializes
+the members with default values and you may only set the ones that are different from default.
 
 ```cpp
 // Init depth-stencil state
 DepthStencilStateDesc &DepthStencilDesc = PSODesc.GraphicsPipeline.DepthStencilDesc;
-DepthStencilDesc.DepthEnable = true;
-DepthStencilDesc.DepthWriteEnable = true;
+DepthStencilDesc.DepthEnable            = true;
+DepthStencilDesc.DepthWriteEnable       = true;
 ```
 
 Initialize blend state description structure `BlendStateDesc`:
@@ -418,14 +423,14 @@ Initialize blend state description structure `BlendStateDesc`:
 BlendStateDesc &BSDesc = PSODesc.GraphicsPipeline.BlendDesc;
 BSDesc.IndependentBlendEnable = False;
 auto &RT0 = BSDesc.RenderTargets[0];
-RT0.BlendEnable = True;
+RT0.BlendEnable           = True;
 RT0.RenderTargetWriteMask = COLOR_MASK_ALL;
-RT0.SrcBlend    = BLEND_FACTOR_SRC_ALPHA;
-RT0.DestBlend   = BLEND_FACTOR_INV_SRC_ALPHA;
-RT0.BlendOp     =  BLEND_OPERATION_ADD;
-RT0.SrcBlendAlpha   = BLEND_FACTOR_SRC_ALPHA;
-RT0.DestBlendAlpha  = BLEND_FACTOR_INV_SRC_ALPHA;
-RT0.BlendOpAlpha    = BLEND_OPERATION_ADD;
+RT0.SrcBlend              = BLEND_FACTOR_SRC_ALPHA;
+RT0.DestBlend             = BLEND_FACTOR_INV_SRC_ALPHA;
+RT0.BlendOp               = BLEND_OPERATION_ADD;
+RT0.SrcBlendAlpha         = BLEND_FACTOR_SRC_ALPHA;
+RT0.DestBlendAlpha        = BLEND_FACTOR_INV_SRC_ALPHA;
+RT0.BlendOpAlpha          = BLEND_OPERATION_ADD;
 ```
 
 Initialize rasterizer state description structure `RasterizerStateDesc`:
@@ -433,10 +438,10 @@ Initialize rasterizer state description structure `RasterizerStateDesc`:
 ```cpp
 // Init rasterizer state
 RasterizerStateDesc &RasterizerDesc = PSODesc.GraphicsPipeline.RasterizerDesc;
-RasterizerDesc.FillMode = FILL_MODE_SOLID;
-RasterizerDesc.CullMode = CULL_MODE_NONE;
+RasterizerDesc.FillMode              = FILL_MODE_SOLID;
+RasterizerDesc.CullMode              = CULL_MODE_NONE;
 RasterizerDesc.FrontCounterClockwise = True;
-RasterizerDesc.ScissorEnable = True;
+RasterizerDesc.ScissorEnable         = True;
 RasterizerDesc.AntialiasedLineEnable = False;
 ```
 
@@ -448,7 +453,7 @@ InputLayoutDesc &Layout = PSODesc.GraphicsPipeline.InputLayout;
 LayoutElement TextLayoutElems[] =
 {
     LayoutElement( 0, 0, 3, VT_FLOAT32, False ),
-    LayoutElement( 1, 0, 4, VT_UINT8, True ),
+    LayoutElement( 1, 0, 4, VT_UINT8,   True ),
     LayoutElement( 2, 0, 2, VT_FLOAT32, False ),
 };
 Layout.LayoutElements = TextLayoutElems;
@@ -503,9 +508,10 @@ An alternative way to bind shader resources is to create `IResourceMapping` inte
 actual resources:
 
 ```cpp
-ResourceMappingEntry Entries[] = {
+ResourceMappingEntry Entries[] =
+{
     { "g_Texture", pTexture->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE)},
-    ResourceMappingEntry()
+    ResourceMappingEntry{}
 };
 ResourceMappingDesc ResMappingDesc;
 ResMappingDesc.pEntries= Entries;
@@ -540,7 +546,7 @@ The last parameter to all `BindResources()` functions defines how resources shou
    Note that if none of `BIND_SHADER_RESOURCES_UPDATE_STATIC`, `BIND_SHADER_RESOURCES_UPDATE_MUTABLE`, and 
    `BIND_SHADER_RESOURCES_UPDATE_DYNAMIC` flags are set, all variable types are updated as if `BIND_SHADER_RESOURCES_UPDATE_ALL` was specified.
 * `BIND_SHADER_RESOURCES_KEEP_EXISTING` - If this flag is specified, only unresolved bindings will be updated. All existing bindings will keep their original values. If this flag is not specified, every shader variable will be updated if the mapping contains corresponding resource.
-* `BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED`      - If this flag is specified, all shader bindings are expected be resolved after the call. If this is not the case, debug error will be displayed.
+* `BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED` - If this flag is specified, all shader bindings are expected be resolved after the call. If this is not the case, an error will be reported.
 
 `BindResources()` may be called several times with different resource mappings to bind resources.
 However, it is recommended to use one large resource mapping as the size of the mapping does not affect element search time.
@@ -562,14 +568,15 @@ m_pContext->ClearRenderTarget(nullptr, zero, RESOURCE_STATE_TRANSITION_MODE_TRAN
 // Set vertex and index buffers
 IBuffer *buffer[] = {m_pVertexBuffer};
 Uint32 offsets[] = {0};
-m_pContext->SetVertexBuffers(0, 1, buffer, offsets, SET_VERTEX_BUFFERS_FLAG_RESET, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+m_pContext->SetVertexBuffers(0, 1, buffer, offsets, SET_VERTEX_BUFFERS_FLAG_RESET,
+                             RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 m_pContext->SetIndexBuffer(m_pIndexBuffer, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
 m_pContext->SetPipelineState(m_pPSO);
 ```
 
 All methods that may need to perform resource state transitions, take `RESOURCE_STATE_TRANSITION_MODE` enum
-as the parameter. The enum defines the following modes:
+as parameter. The enum defines the following modes:
 
 * `RESOURCE_STATE_TRANSITION_MODE_NONE` - Perform no resource state transitions.
 * `RESOURCE_STATE_TRANSITION_MODE_TRANSITION` - Transition resources to the states required by the command.
@@ -585,7 +592,7 @@ m_pContext->CommitShaderResources(m_pSRB, COMMIT_SHADER_RESOURCES_FLAG_TRANSITIO
 If the method is not called, the engine will detect that resources are not committed and output
 debug message. Note that `CommitShaderResources()` must be called after the right pipeline state has been
 bound to the context. Note that the last parameter tells the system to transition resources to correct states.
-If this flag is not specified, the resources must be explicitly transitioned to right states by a call to
+If this flag is not specified, the resources must be explicitly transitioned to required states by a call to
 `IDeviceContext::TransitionShaderResources()`:
 
 ```cpp
@@ -603,10 +610,9 @@ if draw call is indirect or not, etc.). For example:
 
 ```cpp
 DrawAttribs attrs;
-attrs.IsIndexed = true;
-attrs.IndexType = VT_UINT16;
+attrs.IndexType  = VT_UINT16;
 attrs.NumIndices = 36;
-attrs.Flags = DRAW_FLAG_VERIFY_STATES;
+attrs.Flags      = DRAW_FLAG_VERIFY_STATES;
 pContext->Draw(attrs);
 ```
 
@@ -655,6 +661,7 @@ objects. Refer to the following pages for more information:
  | [Graphics/GraphicsEngineD3D12](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngineD3D12)     | Implementation of Direct3D12 rendering backend |
  | [Graphics/GraphicsEngineOpenGL](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngineOpenGL)   | Implementation of OpenGL/GLES rendering backend |
  | [Graphics/GraphicsEngineVulkan](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngineVulkan)   | Implementation of Vulkan rendering backend |
+ | [Graphics/GraphicsEngineMetal](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngineMetal)     | Implementation of Metal rendering backend |
  | [Graphics/GraphicsTools](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsTools)                 | Graphics utilities build on top of core interfaces (definitions of commonly used states, texture uploaders, etc.) |
  | [Graphics/HLSL2GLSLConverterLib](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/HLSL2GLSLConverterLib) | HLSL to GLSL source code converter library |
  | [Platforms/Basic](https://github.com/DiligentGraphics/DiligentCore/tree/master/Platforms/Basic)      | Interface for platform-specific routines and implementation of some common functionality |
