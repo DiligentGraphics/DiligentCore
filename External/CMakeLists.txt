@@ -32,10 +32,9 @@ if(PLATFORM_WIN32 OR PLATFORM_LINUX OR PLATFORM_MACOS OR PLATFORM_IOS)
     set_directory_root_folder("SPIRV-Tools" "Core/External/SPIRV-Tools")
     # We only need SPIRV-Tools-opt for glslang that also depends on SPIRV-Tools.
     # Exclude all other targets from build to save build time
-    find_targets_in_directory(SPIRV_Tools_Targets "SPIRV-Tools")
-    list(REMOVE_ITEM SPIRV_Tools_Targets SPIRV-Tools SPIRV-Tools-opt)
-    set_target_properties(${SPIRV_Tools_Targets} PROPERTIES EXCLUDE_FROM_ALL 1 EXCLUDE_FROM_DEFAULT_BUILD 1)
-
+    set(SPIRV_TOOLS_EXCLUDE_TARGETS SPIRV-Tools-link SPIRV-Tools-reduce SPIRV-Tools-shared)
+    set_target_properties(${SPIRV_TOOLS_EXCLUDE_TARGETS} PROPERTIES EXCLUDE_FROM_ALL 1 EXCLUDE_FROM_DEFAULT_BUILD 1)
+    
     set(ENABLE_GLSLANG_BINARIES OFF CACHE BOOL "Do not build glslang binaries")
     set(ENABLE_SPVREMAPPER OFF CACHE BOOL "Do not build SPIRV remapper")
     set(SKIP_GLSLANG_INSTALL ON CACHE BOOL "Skip glslang installation")
