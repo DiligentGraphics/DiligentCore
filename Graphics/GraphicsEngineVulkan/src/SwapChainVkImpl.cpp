@@ -97,7 +97,8 @@ SwapChainVkImpl::SwapChainVkImpl(IReferenceCounters*    pRefCounters,
 
     CreateVulkanSwapChain();
     InitBuffersAndViews();
-    AcquireNextImage(pDeviceContextVk);
+    auto res = AcquireNextImage(pDeviceContextVk);
+    DEV_CHECK_ERR(res == VK_SUCCESS, "Failed to acquire next image for the newly created swap chain"); (void)res;
 }
 
 void SwapChainVkImpl::CreateVulkanSwapChain()
@@ -400,24 +401,27 @@ void SwapChainVkImpl::InitBuffersAndViews()
     m_pDepthBufferDSV = RefCntAutoPtr<ITextureViewVk>(pDSV, IID_TextureViewVk);
 }
 
-void SwapChainVkImpl::AcquireNextImage(DeviceContextVkImpl* pDeviceCtxVk)
+VkResult SwapChainVkImpl::AcquireNextImage(DeviceContextVkImpl* pDeviceCtxVk)
 {
     auto* pDeviceVk = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
     const auto& LogicalDevice = pDeviceVk->GetLogicalDevice();
 
     auto res = vkAcquireNextImageKHR(LogicalDevice.GetVkDevice(), m_VkSwapChain, UINT64_MAX, m_ImageAcquiredSemaphores[m_SemaphoreIndex], (VkFence)nullptr, &m_BackBufferIndex);
-    VERIFY(res == VK_SUCCESS, "Failed to acquire next swap chain image"); (void)res;
-
-    // Next command in the device context must wait for the next image to be acquired
-    // Unlike fences or events, the act of waiting for a semaphore also unsignals that semaphore (6.4.2)
-    pDeviceCtxVk->AddWaitSemaphore(m_ImageAcquiredSemaphores[m_SemaphoreIndex], VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
-    if (!m_SwapChainImagesInitialized[m_BackBufferIndex])
+    if (res == VK_SUCCESS)
     {
-        // Vulkan validation layers do not like uninitialized memory.
-        // Clear back buffer first time we acquire it. This will use vkCmdClearColorImage()
-        pDeviceCtxVk->ClearRenderTarget(GetCurrentBackBufferRTV(), nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
-        m_SwapChainImagesInitialized[m_BackBufferIndex] = true;
+        // Next command in the device context must wait for the next image to be acquired
+        // Unlike fences or events, the act of waiting for a semaphore also unsignals that semaphore (6.4.2)
+        pDeviceCtxVk->AddWaitSemaphore(m_ImageAcquiredSemaphores[m_SemaphoreIndex], VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+        if (!m_SwapChainImagesInitialized[m_BackBufferIndex])
+        {
+            // Vulkan validation layers do not like uninitialized memory.
+            // Clear back buffer first time we acquire it. This will use vkCmdClearColorImage()
+            pDeviceCtxVk->ClearRenderTarget(GetCurrentBackBufferRTV(), nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+            m_SwapChainImagesInitialized[m_BackBufferIndex] = true;
+        }
     }
+    
+    return res;
 }
 
 IMPLEMENT_QUERY_INTERFACE( SwapChainVkImpl, IID_SwapChainVk, TSwapChainBase )
@@ -489,7 +493,14 @@ void SwapChainVkImpl::Present(Uint32 SyncInterval)
         if (m_SemaphoreIndex >= m_SwapChainDesc.BufferCount)
             m_SemaphoreIndex = 0;
 
-        AcquireNextImage(pImmediateCtxVk);
+        auto res = AcquireNextImage(pImmediateCtxVk);
+        if (res == VK_SUBOPTIMAL_KHR || res == VK_ERROR_OUT_OF_DATE_KHR)
+        {
+            RecreateVulkanSwapchain(pImmediateCtxVk);
+            m_SemaphoreIndex = m_SwapChainDesc.BufferCount-1; // To start with 0 index when acquire next image
+            res = AcquireNextImage(pImmediateCtxVk);
+        }
+        DEV_CHECK_ERR(res == VK_SUCCESS, "Failed to acquire next swap chain image");
 
         if (IsDefaultFBBound)
         {
@@ -542,7 +553,8 @@ void SwapChainVkImpl::Resize( Uint32 NewWidth, Uint32 NewHeight )
                 bool bIsDefaultFBBound = pImmediateCtxVk->IsDefaultFBBound();
                 RecreateVulkanSwapchain(pImmediateCtxVk);
 
-                AcquireNextImage(pImmediateCtxVk);
+                auto res = AcquireNextImage(pImmediateCtxVk);
+                DEV_CHECK_ERR(res == VK_SUCCESS, "Failed to acquire next image for the just resized swap chain"); (void)res;
 
                 if( bIsDefaultFBBound )
                 {

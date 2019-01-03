@@ -71,7 +71,7 @@ public:
 private:
     void CreateVulkanSwapChain();
     void InitBuffersAndViews();
-    void AcquireNextImage(DeviceContextVkImpl* pDeviceCtxVk);
+    VkResult AcquireNextImage(DeviceContextVkImpl* pDeviceCtxVk);
     void RecreateVulkanSwapchain(DeviceContextVkImpl* pImmediateCtxVk);
 
     std::shared_ptr<const VulkanUtilities::VulkanInstance> m_VulkanInstance;
