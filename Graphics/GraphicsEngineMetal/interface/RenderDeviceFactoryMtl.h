@@ -24,7 +24,7 @@
 #pragma once
 
 /// \file
-/// Declaration of functions that initialize Direct3D11-based engine implementation
+/// Declaration of functions that initialize Vulkan-based engine implementation
 
 #include <sstream>
 
@@ -34,7 +34,7 @@
 #include "EngineMtlAttribs.h"
 
 // https://gcc.gnu.org/wiki/Visibility
-#define API_QUALIFIER //__attribute__((visibility("default")))
+#define API_QUALIFIER __attribute__((visibility("default")))
 
 namespace Diligent
 {
