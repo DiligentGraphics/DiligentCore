@@ -34,8 +34,8 @@
 #endif
 
 
-#if !D3D11_SUPPORTED && !D3D12_SUPPORTED && !GL_SUPPORTED && !GLES_SUPPORTED
-    #error No API is supported on this platform. Did you define at least one of D3D11_SUPPORTED, D3D12_SUPPORTED, GL_SUPPORTED or GLES_SUPPORTED macros as 1?
+#if !D3D11_SUPPORTED && !D3D12_SUPPORTED && !GL_SUPPORTED && !GLES_SUPPORTED && !VULKAN_SUPPORTED && !METAL_SUPPORTED
+    #error No API is supported on this platform. Did you define at least one of D3D11_SUPPORTED, D3D12_SUPPORTED, GL_SUPPORTED, GLES_SUPPORTED, VULKAN_SUPPORTED, or METAL_SUPPORTED macros as 1?
 #endif
 
 #if PLATFORM_WIN32

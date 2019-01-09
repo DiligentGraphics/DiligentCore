@@ -40,7 +40,7 @@ if(VULKAN_SUPPORTED)
     add_subdirectory(GraphicsEngineVulkan)
 endif()
 
-if(GL_SUPPORTED OR GLES_SUPPORTED OR VULKAN_SUPPORTED)
+if(GL_SUPPORTED OR GLES_SUPPORTED)
     add_subdirectory(HLSL2GLSLConverterLib)
     add_subdirectory(GraphicsEngineOpenGL)
 endif()
