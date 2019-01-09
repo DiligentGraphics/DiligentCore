@@ -29,7 +29,10 @@
 #include "RenderDeviceVkImpl.h"
 #include "DataBlobImpl.h"
 #include "GLSLSourceBuilder.h"
+
+#if !NO_GLSLANG
 #include "SPIRVUtils.h"
+#endif
 
 namespace Diligent
 {
@@ -42,6 +45,9 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl*
 {
     if (CreationAttribs.Source != nullptr || CreationAttribs.FilePath != nullptr)
     {
+#if NO_GLSLANG
+        LOG_ERROR_AND_THROW("Diligent engine was not linked with glslang and can only consume compiled SPIRV bytecode.");
+#else
         DEV_CHECK_ERR(CreationAttribs.ByteCode == nullptr, "'ByteCode' must be null when shader is created from source code or a file");
         DEV_CHECK_ERR(CreationAttribs.ByteCodeSize == 0, "'ByteCodeSize' must be 0 when shader is created from source code or a file");
 
@@ -59,6 +65,7 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl*
         {
             LOG_ERROR_AND_THROW("Failed to compile shader");
         }
+#endif
     }
     else if (CreationAttribs.ByteCode != nullptr)
     {

@@ -26,7 +26,11 @@
 #include "VulkanErrors.h"
 #include "VulkanUtilities/VulkanInstance.h"
 #include "VulkanUtilities/VulkanDebug.h"
+
+#if !NO_GLSLANG
 #include "SPIRVUtils.h"
+#endif
+
 #include "PlatformDefinitions.h"
 
 namespace VulkanUtilities
@@ -193,8 +197,9 @@ namespace VulkanUtilities
             CHECK_VK_ERROR(err, "Failed to enumerate physical devices");
             VERIFY_EXPR(m_PhysicalDevices.size() == PhysicalDeviceCount);
         }
-
+#if !NO_GLSLANG
         Diligent::InitializeGlslang();
+#endif
     }
 
     VulkanInstance::~VulkanInstance()
@@ -205,7 +210,9 @@ namespace VulkanUtilities
         }
         vkDestroyInstance(m_VkInstance, m_pVkAllocator);
 
+#if !NO_GLSLANG
         Diligent::FinalizeGlslang();
+#endif
     }
 
     VkPhysicalDevice VulkanInstance::SelectPhysicalDevice()const

@@ -21,6 +21,8 @@ if(PLATFORM_WIN32 OR PLATFORM_LINUX OR PLATFORM_MACOS OR PLATFORM_IOS)
     #add_subdirectory(SPIRV-Headers)
     #set_directory_root_folder("SPIRV-Headers" "Core/External/SPIRV-Headers")
 
+    option(NO_GLSLANG "Do NOT build glslang compiler" OFF)
+    
     set(SPIRV-Headers_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/SPIRV-Headers")
     set(SPIRV_SKIP_TESTS ON CACHE BOOL "Skip SPIRV tests")
     set(SPIRV_BUILD_COMPRESSION OFF CACHE BOOL "Do not build SPIRV compressing codec")
@@ -34,15 +36,23 @@ if(PLATFORM_WIN32 OR PLATFORM_LINUX OR PLATFORM_MACOS OR PLATFORM_IOS)
     # Exclude all other targets from build to save build time
     set(SPIRV_TOOLS_EXCLUDE_TARGETS SPIRV-Tools-link SPIRV-Tools-reduce SPIRV-Tools-shared)
     set_target_properties(${SPIRV_TOOLS_EXCLUDE_TARGETS} PROPERTIES EXCLUDE_FROM_ALL 1 EXCLUDE_FROM_DEFAULT_BUILD 1)
-    
-    set(ENABLE_GLSLANG_BINARIES OFF CACHE BOOL "Do not build glslang binaries")
-    set(ENABLE_SPVREMAPPER OFF CACHE BOOL "Do not build SPIRV remapper")
-    set(SKIP_GLSLANG_INSTALL ON CACHE BOOL "Skip glslang installation")
-    add_subdirectory(glslang)
-    set_directory_root_folder("glslang" "Core/External/glslang")
 
-    # glslang "kindly" sets global CMAKE_DEBUG_POSTFIX to "d", which we have to unset now
-    unset(CMAKE_DEBUG_POSTFIX CACHE)
+    set(INSTALL_TARGETS SPIRV-Tools SPIRV-Tools-opt)
+
+    if(NOT ${NO_GLSLANG})    
+        set(ENABLE_GLSLANG_BINARIES OFF CACHE BOOL "Do not build glslang binaries")
+        set(ENABLE_SPVREMAPPER OFF CACHE BOOL "Do not build SPIRV remapper")
+        set(SKIP_GLSLANG_INSTALL ON CACHE BOOL "Skip glslang installation")
+        add_subdirectory(glslang)
+        set_directory_root_folder("glslang" "Core/External/glslang")
+
+        # glslang "kindly" sets global CMAKE_DEBUG_POSTFIX to "d", which we have to unset now
+        unset(CMAKE_DEBUG_POSTFIX CACHE)
+
+        list(APPEND INSTALL_TARGETS glslang OGLCompiler OSDependent SPIRV HLSL)
+    endif()
+
+    list(APPEND INSTALL_TARGETS SPIRVCross)
 
     add_subdirectory(SPIRV-Cross)
     set_target_properties(SPIRVCross PROPERTIES
@@ -50,10 +60,7 @@ if(PLATFORM_WIN32 OR PLATFORM_LINUX OR PLATFORM_MACOS OR PLATFORM_IOS)
     )
 
     if(INSTALL_DILIGENT_CORE)
-        install(TARGETS 
-                    glslang OGLCompiler OSDependent SPIRV HLSL 
-                    SPIRV-Tools SPIRV-Tools-opt
-                    SPIRVCross
+        install(TARGETS ${INSTALL_TARGETS}
                 ARCHIVE DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/lib"
                 LIBRARY DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/lib"
                 RUNTIME DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/bin"

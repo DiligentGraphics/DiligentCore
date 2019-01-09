@@ -13,12 +13,19 @@ set(SOURCE
 if(VULKAN_SUPPORTED)
     list(APPEND SOURCE 
         src/SPIRVShaderResources.cpp
-        src/SPIRVUtils.cpp
     )
     list(APPEND INCLUDE 
         include/SPIRVShaderResources.h
-        include/SPIRVUtils.h
     )
+
+    if (NOT ${NO_GLSLANG})
+        list(APPEND SOURCE 
+            src/SPIRVUtils.cpp
+        )
+        list(APPEND INCLUDE 
+            include/SPIRVUtils.h
+        )
+    endif()
 endif()
 
 add_library(GLSLTools STATIC ${SOURCE} ${INCLUDE})
@@ -44,14 +51,21 @@ PUBLIC
 if(VULKAN_SUPPORTED)
     target_link_libraries(GLSLTools 
     PRIVATE
-        glslang
-        SPIRV
         SPIRVCross
     )
-    target_include_directories(GLSLTools 
-    PRIVATE
-        ../../External/glslang
-    )
+
+    if (NOT ${NO_GLSLANG})
+        target_link_libraries(GLSLTools 
+        PRIVATE
+            glslang
+            SPIRV
+        )
+
+        target_include_directories(GLSLTools 
+        PRIVATE
+            ../../External/glslang
+        )
+    endif()
 endif()
 
 set_common_target_properties(GLSLTools)

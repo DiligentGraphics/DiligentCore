@@ -190,9 +190,7 @@ set(PUBLIC_DEPENDENCIES
 )
 
 target_link_libraries(GraphicsEngineVk-static PRIVATE ${PRIVATE_DEPENDENCIES} PUBLIC ${PUBLIC_DEPENDENCIES})
-
 target_link_libraries(GraphicsEngineVk-shared PUBLIC GraphicsEngineVk-static)
-target_compile_definitions(GraphicsEngineVk-shared PUBLIC ENGINE_DLL=1)
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR 
 	CMAKE_CXX_COMPILER_ID MATCHES "GNU")
@@ -218,8 +216,13 @@ elseif(PLATFORM_IOS)
 else()
     message(FATAL_ERROR "Unknown platform")
 endif()
-target_compile_definitions(GraphicsEngineVk-shared PRIVATE ${PRIVATE_COMPILE_DEFINITIONS})
-target_compile_definitions(GraphicsEngineVk-static PRIVATE ${PRIVATE_COMPILE_DEFINITIONS})
+
+if (${NO_GLSLANG})
+    message("GLSLang is not being built. Vulkan backend will only be able to consume SPIRV byte code.")
+endif()
+
+target_compile_definitions(GraphicsEngineVk-shared PRIVATE ${PRIVATE_COMPILE_DEFINITIONS} ENGINE_DLL=1)
+target_compile_definitions(GraphicsEngineVk-static PRIVATE ${PRIVATE_COMPILE_DEFINITIONS} NO_GLSLANG=$<BOOL:${NO_GLSLANG}>)
 
 if(PLATFORM_WIN32)
 
