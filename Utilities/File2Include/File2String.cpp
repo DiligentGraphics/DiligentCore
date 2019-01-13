@@ -39,12 +39,12 @@ int main(int argc, char* argv[])
     char SpecialChars[] = "\'\"\\";
     while( !feof( pSrcFile ) )
     {
-        auto Line = fgets( Buff, sizeof( Buff )/sizeof(Buff[0]) , pSrcFile );
+        auto* Line = fgets( Buff, sizeof( Buff )/sizeof(Buff[0]) , pSrcFile );
         if( Line == nullptr )
             break;
         fputc( '\"', pDstFile );
-        auto CurrChar = Line;
-        while( CurrChar && *CurrChar != '\n' )
+        auto* CurrChar = Line;
+        while( *CurrChar != 0 && *CurrChar != '\n' )
         {
             if( strchr( SpecialChars, *CurrChar) )
                 fputc( '\\', pDstFile );
