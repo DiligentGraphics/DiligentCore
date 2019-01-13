@@ -45,7 +45,7 @@ struct ViewFrustumExt : public ViewFrustum
 
 // For OpenGL, matrix is still considered row-major. The only difference is that
 // near clip plane is at -1, not 0.
-inline void ExtractViewFrustumPlanesFromMatrix(const float4x4 &Matrix, ViewFrustum &Frustum, bool bIsDirectX)
+inline void ExtractViewFrustumPlanesFromMatrix(const float4x4 &Matrix, ViewFrustum &Frustum, bool bIsOpenGL)
 {
     // For more details, see Gribb G., Hartmann K., "Fast Extraction of Viewing Frustum Planes from the 
     // World-View-Projection Matrix" (the paper is available at 
@@ -76,21 +76,21 @@ inline void ExtractViewFrustumPlanesFromMatrix(const float4x4 &Matrix, ViewFrust
 	Frustum.BottomPlane.Distance = Matrix._44 + Matrix._42;
 
     // Near clipping plane 
-    if( bIsDirectX )
-    {
-        // 0 <= z <= w
-        Frustum.NearPlane.Normal.x = Matrix._13;
-        Frustum.NearPlane.Normal.y = Matrix._23;
-        Frustum.NearPlane.Normal.z = Matrix._33;
-        Frustum.NearPlane.Distance = Matrix._43;
-    }
-    else
+    if( bIsOpenGL )
     {
         // -w <= z <= w
 	    Frustum.NearPlane.Normal.x = Matrix._14 + Matrix._13;
 	    Frustum.NearPlane.Normal.y = Matrix._24 + Matrix._23;
 	    Frustum.NearPlane.Normal.z = Matrix._34 + Matrix._33;
 	    Frustum.NearPlane.Distance = Matrix._44 + Matrix._43;
+    }
+    else
+    {
+        // 0 <= z <= w
+        Frustum.NearPlane.Normal.x = Matrix._13;
+        Frustum.NearPlane.Normal.y = Matrix._23;
+        Frustum.NearPlane.Normal.z = Matrix._33;
+        Frustum.NearPlane.Distance = Matrix._43;
     }
 
 	// Far clipping plane 
@@ -100,14 +100,14 @@ inline void ExtractViewFrustumPlanesFromMatrix(const float4x4 &Matrix, ViewFrust
 	Frustum.FarPlane.Distance = Matrix._44 - Matrix._43;
 }
 
-inline void ExtractViewFrustumPlanesFromMatrix(const float4x4 &Matrix, ViewFrustumExt &FrustumExt, bool bIsDirectX)
+inline void ExtractViewFrustumPlanesFromMatrix(const float4x4 &Matrix, ViewFrustumExt &FrustumExt, bool bIsOpenGL)
 {
-    ExtractViewFrustumPlanesFromMatrix(Matrix, static_cast<ViewFrustum&>(FrustumExt), bIsDirectX);
+    ExtractViewFrustumPlanesFromMatrix(Matrix, static_cast<ViewFrustum&>(FrustumExt), bIsOpenGL);
 
     // Compute frustum corners
     float4x4 InvMatrix = inverseMatrix(Matrix);
     
-    float nearClipZ = bIsDirectX ? 0.f : -1.f;
+    float nearClipZ = bIsOpenGL ? -1.f : 0.f;
     static const float3 ProjSpaceCorners[] = 
     {
         float3(-1,-1, nearClipZ),

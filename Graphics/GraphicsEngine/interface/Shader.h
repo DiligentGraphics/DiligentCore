@@ -229,7 +229,7 @@ struct ShaderCreationAttribs
 
     /// The factory is used to load the shader source file if FilePath is not null.
 	/// It is also used to create additional input streams for shader include files
-    IShaderSourceInputStreamFactory *pShaderSourceStreamFactory = nullptr;
+    IShaderSourceInputStreamFactory* pShaderSourceStreamFactory = nullptr;
 
     /// HLSL->GLSL conversion stream
     
@@ -242,7 +242,7 @@ struct ShaderCreationAttribs
     /// the first time and will use it in all subsequent times. 
     /// For all subsequent conversions, FilePath member must be the same, or 
     /// new stream will be crated and warning message will be displayed.
-    class IHLSL2GLSLConversionStream **ppConversionStream = nullptr;
+    class IHLSL2GLSLConversionStream** ppConversionStream = nullptr;
 
 	/// Shader source
 
@@ -258,7 +258,7 @@ struct ShaderCreationAttribs
     ///        The bytecode must contain reflection information. If shaders were compiled 
     ///        using fxc, make sure that /Qstrip_reflect option is *not* specified.
     ///        Also, shaders need to be compiled against 4.0 profile or higher.
-    const void *ByteCode = nullptr;
+    const void* ByteCode = nullptr;
 
     /// Size of the compiled shader bytecode
 
@@ -273,7 +273,7 @@ struct ShaderCreationAttribs
 	/// Shader macros
 
     /// This member is ignored if ByteCode is not null
-    const ShaderMacro *Macros = nullptr;
+    const ShaderMacro* Macros = nullptr;
 
     /// If set to true, textures will be combined with texture samplers.
     /// The CombinedSamplerSuffix member defines the suffix added to the texture variable
@@ -301,7 +301,7 @@ struct ShaderCreationAttribs
     /// The buffer contains two null-terminated strings. The first one is the compiler
     /// output message. The second one is the full shader source code including definitions added
     /// by the engine. Data blob object must be released by the client.
-    IDataBlob **ppCompilerOutput = nullptr;
+    IDataBlob** ppCompilerOutput = nullptr;
 };
 
 
@@ -314,7 +314,7 @@ public:
     /// \remark The method performs run-time correctness checks.
     ///         For instance, shader resource view cannot
     ///         be assigned to a constant buffer variable.
-    virtual void Set(IDeviceObject *pObject) = 0;
+    virtual void Set(IDeviceObject* pObject) = 0;
 
     /// Sets the variable array
 
@@ -349,7 +349,7 @@ public:
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface ) = 0;
     
     /// Returns the shader description
-    virtual const ShaderDesc &GetDesc()const = 0;
+    virtual const ShaderDesc& GetDesc()const = 0;
 
     /// Binds shader resources.
     /// \param [in] pResourceMapping - Pointer to IResourceMapping interface to 
