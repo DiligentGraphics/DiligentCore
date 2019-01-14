@@ -3885,7 +3885,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessDomainShaderArguments( Tok
                         auto VarName = BuildParameterName(MemberStack, '_', "_dsin_");
                         auto InputVarName = VarName + (IsPatch ? "[i]" : "");
                         // User-defined inputs can be declared as unbounded arrays
-                        DefineInterfaceVar( inLocation++, RequiresFlatQualifier(Param.Type) ? "flat out" : "in", Param.Type, VarName + (IsPatch ? "[]" : ""), InterfaceVarsInSS );
+                        DefineInterfaceVar( inLocation++, RequiresFlatQualifier(Param.Type) ? "flat in" : "in", Param.Type, VarName + (IsPatch ? "[]" : ""), InterfaceVarsInSS );
                         InitVariable( FullIndexedParamName, InputVarName, PrologueSS );
                     }
                     else
