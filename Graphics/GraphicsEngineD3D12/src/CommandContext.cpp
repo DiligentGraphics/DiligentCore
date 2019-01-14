@@ -204,10 +204,10 @@ void CommandContext::TransitionResource(const StateTransitionDesc& Barrier)
         {
             const auto& TexDesc = pTextureD3D12Impl->GetDesc();
             VERIFY(Barrier.FirstMipLevel < TexDesc.MipLevels, "First mip level is out of range");
-            VERIFY(Barrier.MipLevelsCount == StateTransitionDesc::RemainingMipLevels || Barrier.FirstMipLevel + Barrier.MipLevelsCount < TexDesc.MipLevels,
+            VERIFY(Barrier.MipLevelsCount == StateTransitionDesc::RemainingMipLevels || Barrier.FirstMipLevel + Barrier.MipLevelsCount <= TexDesc.MipLevels,
                    "Invalid mip level range ");
             VERIFY(Barrier.FirstArraySlice < TexDesc.ArraySize, "First array slice is out of range");
-            VERIFY(Barrier.ArraySliceCount == StateTransitionDesc::RemainingArraySlices || Barrier.FirstArraySlice + Barrier.ArraySliceCount < TexDesc.ArraySize,
+            VERIFY(Barrier.ArraySliceCount == StateTransitionDesc::RemainingArraySlices || Barrier.FirstArraySlice + Barrier.ArraySliceCount <= TexDesc.ArraySize,
                    "Invalid array slice range ");
 
             if (Barrier.FirstMipLevel   == 0 && (Barrier.MipLevelsCount  == StateTransitionDesc::RemainingMipLevels   || Barrier.MipLevelsCount  == TexDesc.MipLevels) &&

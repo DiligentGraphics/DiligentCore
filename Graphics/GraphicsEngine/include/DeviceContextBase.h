@@ -956,13 +956,13 @@ void DeviceContextBase<BaseInterface,ImplementationTraits> ::
 
         DEV_CHECK_ERR(Barrier.FirstMipLevel < TexDesc.MipLevels, "First mip level (", Barrier.FirstMipLevel, ") specified by the barrier is "
                       "out of range. Texture '", TexDesc.Name, "' has only ", TexDesc.MipLevels, " mip level(s)");
-        DEV_CHECK_ERR(Barrier.MipLevelsCount == StateTransitionDesc::RemainingMipLevels || Barrier.FirstMipLevel + Barrier.MipLevelsCount < TexDesc.MipLevels,
+        DEV_CHECK_ERR(Barrier.MipLevelsCount == StateTransitionDesc::RemainingMipLevels || Barrier.FirstMipLevel + Barrier.MipLevelsCount <= TexDesc.MipLevels,
                       "Mip level range ", Barrier.FirstMipLevel, "..", Barrier.FirstMipLevel+Barrier.MipLevelsCount-1, " "
                       "specified by the barrier is out of range. Texture '", TexDesc.Name, "' has only ", TexDesc.MipLevels, " mip level(s)");
 
         DEV_CHECK_ERR(Barrier.FirstArraySlice < TexDesc.ArraySize, "First array slice (", Barrier.FirstArraySlice, ") specified by the barrier is "
                       "out of range. Array size of texture '", TexDesc.Name, "' is ", TexDesc.ArraySize);
-        DEV_CHECK_ERR(Barrier.ArraySliceCount == StateTransitionDesc::RemainingArraySlices || Barrier.FirstArraySlice + Barrier.ArraySliceCount < TexDesc.ArraySize,
+        DEV_CHECK_ERR(Barrier.ArraySliceCount == StateTransitionDesc::RemainingArraySlices || Barrier.FirstArraySlice + Barrier.ArraySliceCount <= TexDesc.ArraySize,
                       "Array slice range ", Barrier.FirstArraySlice, "..", Barrier.FirstArraySlice+Barrier.ArraySliceCount-1, " "
                       "specified by the barrier is out of range. Array size of texture '", TexDesc.Name, "' is ", TexDesc.ArraySize);
         
