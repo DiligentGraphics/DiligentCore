@@ -38,22 +38,25 @@ namespace Diligent
     struct ResourceMappingEntry
     {
         /// Object name
-        const Char* Name;
+        const Char* Name       = nullptr;
 
         /// Pointer to the object's interface
-        IDeviceObject *pObject;
+        IDeviceObject *pObject = nullptr;
 
-        Uint32 ArrayIndex;
+        Uint32 ArrayIndex      = 0;
+
         /// Initializes the structure members
 
-        /// \param [in] _Name - Object name. Default value is nullptr
-        /// \param [in] _pObject - Pointer to the object. Default value is nullptr
+        /// \param [in] _Name       - Object name.
+        /// \param [in] _pObject    - Pointer to the object.
         /// \param [in] _ArrayIndex - For array resources, index in the array
-        ResourceMappingEntry( const Char* _Name = nullptr, IDeviceObject *_pObject = nullptr, Uint32 _ArrayIndex = 0) : 
-            Name( _Name ), 
-            pObject( _pObject ),
+        ResourceMappingEntry (const Char* _Name, IDeviceObject* _pObject, Uint32 _ArrayIndex = 0) : 
+            Name      ( _Name     ), 
+            pObject   ( _pObject  ),
             ArrayIndex(_ArrayIndex)
         {}
+
+        ResourceMappingEntry(){}
     };
 
     /// Resource mapping description
@@ -62,14 +65,14 @@ namespace Diligent
         /// Pointer to the array of resource mapping entries.
         /// The last element in the array must be default value
         /// created by ResourceMappingEntry::ResourceMappingEntry()
-        ResourceMappingEntry *pEntries;
+        ResourceMappingEntry* pEntries;
 
         /// Initializes the structure members with default values
 
         /// Member                | Default value
         /// ----------------------|--------------
         /// pEntries              | nullptr
-        ResourceMappingDesc() : pEntries( nullptr ){}
+        ResourceMappingDesc() : pEntries(nullptr){}
     };
 
     /// Resouce mapping
@@ -81,7 +84,7 @@ namespace Diligent
     {
     public:
         /// Queries the specific interface, see IObject::QueryInterface() for details
-        virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface ) = 0;
+        virtual void QueryInterface (const INTERFACE_ID& IID, IObject** ppInterface) = 0;
 
         /// Adds a resource to the mapping.
 
@@ -93,7 +96,7 @@ namespace Diligent
         ///
         /// \remarks Resource mapping increases the reference counter for referenced objects. So an 
         ///          object will not be released as long as it is in the resource mapping.
-        virtual void AddResource( const Char *Name, IDeviceObject *pObject, bool bIsUnique ) = 0;
+        virtual void AddResource (const Char* Name, IDeviceObject* pObject, bool bIsUnique) = 0;
 
 
         /// Adds resource array to the mapping.
@@ -108,14 +111,14 @@ namespace Diligent
         ///
         /// \remarks Resource mapping increases the reference counter for referenced objects. So an 
         ///          object will not be released as long as it is in the resource mapping.
-        virtual void AddResourceArray( const Char *Name, Uint32 StartIndex, IDeviceObject* const* ppObjects, Uint32 NumElements, bool bIsUnique ) = 0;
+        virtual void AddResourceArray (const Char* Name, Uint32 StartIndex, IDeviceObject* const* ppObjects, Uint32 NumElements, bool bIsUnique) = 0;
 
 
         /// Removes a resource from the mapping using its literal name.
 
         /// \param [in] Name - Name of the resource to remove.
         /// \param [in] ArrayIndex - For array resources, index in the array
-        virtual void RemoveResourceByName( const Char *Name, Uint32 ArrayIndex = 0 ) = 0;
+        virtual void RemoveResourceByName (const Char *Name, Uint32 ArrayIndex = 0) = 0;
 
         /// Finds a resource in the mapping.
 
@@ -126,7 +129,7 @@ namespace Diligent
         ///                           If no object is found, nullptr will be written.
         /// \remarks The method increases the reference counter
         ///          of the returned object, so Release() must be called.
-        virtual void GetResource( const Char *Name, IDeviceObject **ppResource, Uint32 ArrayIndex = 0 ) = 0;
+        virtual void GetResource (const Char *Name, IDeviceObject **ppResource, Uint32 ArrayIndex = 0) = 0;
 
         /// Returns the size of the resource mapping, i.e. the number of objects.
         virtual size_t GetSize() = 0;
