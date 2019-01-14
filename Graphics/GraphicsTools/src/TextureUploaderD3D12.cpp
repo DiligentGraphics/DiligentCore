@@ -179,11 +179,12 @@ namespace Diligent
                 {
                     case InternalData::PendingBufferOperation::Copy:
                     {
-                        TextureSubResData SubResData(pBuffer->GetStagingBuffer(), static_cast<Uint32>(pBuffer->GetRowStride()));
+                        TextureSubResData SubResData(pBuffer->GetStagingBuffer(), 0, static_cast<Uint32>(pBuffer->GetRowStride()));
                         const auto &TexDesc = OperationInfo.pDstTexture->GetDesc();
                         Box DstBox;
                         DstBox.MaxX = TexDesc.Width;
                         DstBox.MaxY = TexDesc.Height;
+                        // UpdateTexture() transitions dst subresource to COPY_DEST state and then transitions back to original state
                         pContext->UpdateTexture(OperationInfo.pDstTexture, OperationInfo.DstMip, OperationInfo.DstSlice, DstBox,
                                                 SubResData, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
                         pBuffer->SignalCopyScheduled();
