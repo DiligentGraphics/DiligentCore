@@ -207,7 +207,7 @@ void ShaderVariableManagerVk::BindResources( IResourceMapping* pResourceMapping,
             else
             {
                 if( (Flags & BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED) && !Res.IsBound(ArrInd, *m_pResourceCache) )
-                    LOG_ERROR_MESSAGE( "Cannot bind resource to shader variable \"", Res.SpirvAttribs.GetPrintName(ArrInd), "\": resource view not found in the resource mapping" );
+                    LOG_ERROR_MESSAGE( "Unable to bind resource to shader variable '", Res.SpirvAttribs.GetPrintName(ArrInd), "': resource is not found in the resource mapping" );
             }
         }
     }

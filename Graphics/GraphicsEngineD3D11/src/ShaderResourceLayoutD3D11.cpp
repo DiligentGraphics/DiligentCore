@@ -716,7 +716,7 @@ public:
             else
             {
                 if ( (Flags & BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED) && !Res.IsBound(elem) )
-                    LOG_ERROR_MESSAGE( "Cannot bind resource to shader variable '", VarName, "': resource view not found in the resource mapping" );
+                    LOG_ERROR_MESSAGE( "Unable to bind resource to shader variable '", VarName, "': resource is not found in the resource mapping" );
             }
         }
     }

@@ -196,7 +196,7 @@ void ShaderVariableManagerD3D12::BindResources( IResourceMapping* pResourceMappi
             else
             {
                 if( (Flags & BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED) && !Res.IsBound(ArrInd, *m_pResourceCache) )
-                    LOG_ERROR_MESSAGE( "Cannot bind resource to shader variable \"", Res.Attribs.GetPrintName(ArrInd), "\": resource view not found in the resource mapping" );
+                    LOG_ERROR_MESSAGE( "Unable to bind resource to shader variable '", Res.Attribs.GetPrintName(ArrInd), "': resource is not found in the resource mapping" );
             }
         }
     }
