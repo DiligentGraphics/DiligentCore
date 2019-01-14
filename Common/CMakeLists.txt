@@ -17,6 +17,7 @@ set(INTERFACE
     interface/FixedBlockMemoryAllocator.h
     interface/HashUtils.h
     interface/LockHelper.h 
+    interface/MemoryFileStream.h 
     interface/ObjectBase.h
     interface/RefCntAutoPtr.h
     interface/RefCountedObjectImpl.h
@@ -36,6 +37,7 @@ set(SOURCE
     src/DefaultRawMemoryAllocator.cpp
     src/FixedBlockMemoryAllocator.cpp
     src/LockHelper.cpp
+    src/MemoryFileStream.cpp
     src/Timer.cpp
 )
 

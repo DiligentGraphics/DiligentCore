@@ -40,8 +40,9 @@ class StringDataBlobImpl : public Diligent::ObjectBase<IDataBlob>
 public:
     typedef Diligent::ObjectBase<IDataBlob> TBase;
 
-    StringDataBlobImpl( IReferenceCounters* pRefCounters, const String &str ) : TBase(pRefCounters), m_String(str) {}
-    StringDataBlobImpl( IReferenceCounters* pRefCounters, String &&str ) : TBase(pRefCounters), m_String( std::move(str) ) {}
+    StringDataBlobImpl( IReferenceCounters* pRefCounters, const char* str )   : TBase(pRefCounters), m_String(str) {}
+    StringDataBlobImpl( IReferenceCounters* pRefCounters, const String& str ) : TBase(pRefCounters), m_String(str) {}
+    StringDataBlobImpl( IReferenceCounters* pRefCounters, String&& str )      : TBase(pRefCounters), m_String( std::move(str) ) {}
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE( IID_DataBlob, TBase )
 

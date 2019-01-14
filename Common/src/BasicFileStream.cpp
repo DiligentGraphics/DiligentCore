@@ -26,9 +26,9 @@
 
 namespace Diligent
 {
-    BasicFileStream::BasicFileStream(IReferenceCounters *pRefCounters,
-                                     const Diligent::Char *Path, 
-                                     EFileAccessMode Access/* = EFileAccessMode::Read*/) :
+    BasicFileStream::BasicFileStream(IReferenceCounters* pRefCounters,
+                                     const Char*         Path, 
+                                     EFileAccessMode     Access/* = EFileAccessMode::Read*/) :
         TBase(pRefCounters),
         m_FileWrpr(Path, Access)
     {
@@ -36,17 +36,17 @@ namespace Diligent
 
     IMPLEMENT_QUERY_INTERFACE(BasicFileStream, IID_FileStream, TBase)
 
-    bool BasicFileStream::Read(void *Data, size_t BufferSize)
+    bool BasicFileStream::Read(void* Data, size_t Size)
     {
-        return m_FileWrpr->Read( Data, BufferSize );
+        return m_FileWrpr->Read( Data, Size );
     }
 
-    void BasicFileStream::Read( Diligent::IDataBlob *pData )
+    void BasicFileStream::Read( Diligent::IDataBlob* pData )
     {
         return m_FileWrpr->Read( pData );
     }
 
-    bool BasicFileStream::Write(const void *Data, size_t Size)
+    bool BasicFileStream::Write(const void* Data, size_t Size)
     {
         return m_FileWrpr->Write( Data, Size );
     }

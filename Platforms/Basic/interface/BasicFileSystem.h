@@ -58,8 +58,6 @@ public:
     BasicFile( const FileOpenAttribs &OpenAttribs, Diligent::Char SlashSymbol );
     virtual ~BasicFile();
 
-    size_t GetSize();
-
     const Diligent::String& GetPath(){ return m_Path; }
     
 protected:
