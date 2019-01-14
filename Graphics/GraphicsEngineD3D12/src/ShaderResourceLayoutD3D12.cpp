@@ -675,7 +675,9 @@ bool ShaderResourceLayoutD3D12::D3D12Resource::IsBound(Uint32 ArrayIndex, const 
         const auto& RootTable = ResourceCache.GetRootTable(RootIndex);
         if(OffsetFromTableStart + ArrayIndex < RootTable.GetSize())
         {
-            const auto& CachedRes = RootTable.GetResource(OffsetFromTableStart + ArrayIndex, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, ParentResLayout.m_pResources->GetShaderType());
+            const auto& CachedRes = RootTable.GetResource(OffsetFromTableStart + ArrayIndex, 
+                GetResType() == CachedResourceType::Sampler ? D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER : D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
+                ParentResLayout.m_pResources->GetShaderType());
             if( CachedRes.pObject != nullptr )
             {
                 VERIFY(CachedRes.CPUDescriptorHandle.ptr != 0 || CachedRes.pObject.RawPtr<BufferD3D12Impl>()->GetDesc().Usage == USAGE_DYNAMIC, "No relevant descriptor handle");
