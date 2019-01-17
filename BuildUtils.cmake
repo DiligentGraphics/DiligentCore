@@ -202,11 +202,16 @@ endfunction()
 # Performs installation steps for the core library
 function(install_core_lib _TARGET)
     get_core_library_relative_dir(${_TARGET} TARGET_RELATIVE_PATH)
-    install(TARGETS     ${_TARGET}
-            ARCHIVE DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/lib"
-            LIBRARY DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/lib"
-            RUNTIME DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/bin"
-    )
+
+    get_target_property(TARGET_TYPE ${_TARGET} TYPE)
+    if(TARGET_TYPE STREQUAL STATIC_LIBRARY)
+        list(APPEND DILIGENT_CORE_INSTALL_LIBS_LIST ${_TARGET})
+        set(DILIGENT_CORE_INSTALL_LIBS_LIST ${DILIGENT_CORE_INSTALL_LIBS_LIST} CACHE INTERNAL "Core libraries installation list")
+    elseif(TARGET_TYPE STREQUAL SHARED_LIBRARY)
+        install(TARGETS     ${_TARGET}
+                RUNTIME DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/bin"
+        )
+    endif()
 
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/interface")
         install(DIRECTORY    interface

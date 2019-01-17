@@ -259,6 +259,7 @@ if(NOT DILIGENT_CORE_INSTALL_DIR)
     set(DILIGENT_CORE_INSTALL_DIR "DiligentCore")
 endif()
 
+SET(DILIGENT_CORE_INSTALL_LIBS_LIST "" CACHE INTERNAL "Core libraries installation list")
 include(BuildUtils.cmake)
 
 add_subdirectory(Utilities)
@@ -267,3 +268,36 @@ add_subdirectory(Platforms)
 add_subdirectory(External)
 add_subdirectory(Common)
 add_subdirectory(Graphics)
+
+
+# Installation instructions
+
+foreach(CORE_LIB ${DILIGENT_CORE_INSTALL_LIBS_LIST})
+    list(APPEND CORE_LIB_TARGET_FILES $<TARGET_FILE:${CORE_LIB}>)
+endforeach(CORE_LIB)
+
+set(COMBINED_CORE_LIB_NAME "${CMAKE_STATIC_LIBRARY_PREFIX}DiligentCore${CMAKE_STATIC_LIBRARY_SUFFIX}")
+
+if(MSVC)
+	find_program(LIB_EXE NAMES lib.exe)
+	if(LIB_EXE)
+		add_custom_target(DiligentCore-static ALL
+			COMMAND ${LIB_EXE} /OUT:"${COMBINED_CORE_LIB_NAME}" ${CORE_LIB_TARGET_FILES}
+			DEPENDS ${DILIGENT_CORE_INSTALL_LIBS_LIST}
+			COMMENT "Combining core libs..."
+		)
+	else()
+		message("Unable to find lib.exe")
+	endif()
+else()
+
+endif()
+
+if(TARGET DiligentCore-static)
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${COMBINED_CORE_LIB_NAME}"
+            DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/lib/"
+    )
+    set_target_properties(DiligentCore-static PROPERTIES
+        FOLDER Core
+    )
+endif()
