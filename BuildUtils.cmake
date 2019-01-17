@@ -208,7 +208,9 @@ function(install_core_lib _TARGET)
         list(APPEND DILIGENT_CORE_INSTALL_LIBS_LIST ${_TARGET})
         set(DILIGENT_CORE_INSTALL_LIBS_LIST ${DILIGENT_CORE_INSTALL_LIBS_LIST} CACHE INTERNAL "Core libraries installation list")
     elseif(TARGET_TYPE STREQUAL SHARED_LIBRARY)
-        install(TARGETS     ${_TARGET}
+        install(TARGETS				 ${_TARGET}
+                ARCHIVE DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/lib"
+                LIBRARY DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/lib"
                 RUNTIME DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/bin"
         )
     endif()
