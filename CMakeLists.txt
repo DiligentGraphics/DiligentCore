@@ -249,7 +249,7 @@ elseif(PLATFORM_IOS)
     endif()
 endif()
 
-if(PLATFORM_WIN32 OR PLATFORM_LINUX)
+if(PLATFORM_WIN32 OR PLATFORM_LINUX OR PLATFORM_MACOS)
     option(INSTALL_DILIGENT_CORE "Enable engine core installation" ON)
 else()
     set(INSTALL_DILIGENT_CORE OFF)
@@ -271,54 +271,56 @@ add_subdirectory(Graphics)
 
 
 # Installation instructions
-set(COMBINED_CORE_LIB_NAME "${CMAKE_STATIC_LIBRARY_PREFIX}DiligentCore${CMAKE_STATIC_LIBRARY_SUFFIX}")
+if(INSTALL_DILIGENT_CORE)
+    set(COMBINED_CORE_LIB_NAME "${CMAKE_STATIC_LIBRARY_PREFIX}DiligentCore${CMAKE_STATIC_LIBRARY_SUFFIX}")
 
-foreach(CORE_LIB ${DILIGENT_CORE_INSTALL_LIBS_LIST})
-    list(APPEND CORE_LIB_TARGET_FILES $<TARGET_FILE:${CORE_LIB}>)
-endforeach(CORE_LIB)
+    foreach(CORE_LIB ${DILIGENT_CORE_INSTALL_LIBS_LIST})
+        list(APPEND CORE_LIB_TARGET_FILES $<TARGET_FILE:${CORE_LIB}>)
+    endforeach(CORE_LIB)
 
-if(MSVC)
-	find_program(LIB_EXE NAMES lib.exe)
-	if(LIB_EXE)
-		add_custom_command(
-            OUTPUT ${COMBINED_CORE_LIB_NAME}
-			COMMAND ${LIB_EXE} /OUT:${COMBINED_CORE_LIB_NAME} ${CORE_LIB_TARGET_FILES}
-			DEPENDS ${DILIGENT_CORE_INSTALL_LIBS_LIST}
-			COMMENT "Combining core libraries..."
-		)
-        add_custom_target(DiligentCore-static ALL DEPENDS ${COMBINED_CORE_LIB_NAME})
-	else()
-		message("Unable to find lib.exe")
-	endif()
-else()
-
-    if(PLATFORM_WIN32)
-        # do NOT use stock ar on MinGW
-        find_program(AR NAMES x86_64-w64-mingw32-gcc-ar)
+    if(MSVC)
+        find_program(LIB_EXE NAMES lib.exe)
+        if(LIB_EXE)
+            add_custom_command(
+                OUTPUT ${COMBINED_CORE_LIB_NAME}
+                COMMAND ${LIB_EXE} /OUT:${COMBINED_CORE_LIB_NAME} ${CORE_LIB_TARGET_FILES}
+                DEPENDS ${DILIGENT_CORE_INSTALL_LIBS_LIST}
+                COMMENT "Combining core libraries..."
+            )
+            add_custom_target(DiligentCore-static ALL DEPENDS ${COMBINED_CORE_LIB_NAME})
+        else()
+            message("Unable to find lib.exe")
+        endif()
     else()
-        set(AR ${CMAKE_AR})
+
+        if(PLATFORM_WIN32)
+            # do NOT use stock ar on MinGW
+            find_program(AR NAMES x86_64-w64-mingw32-gcc-ar)
+        else()
+            set(AR ${CMAKE_AR})
+        endif()
+
+        if(AR)
+            add_custom_command(
+                OUTPUT ${COMBINED_CORE_LIB_NAME}
+                COMMAND ${AR} -crs ${COMBINED_CORE_LIB_NAME} ${CORE_LIB_TARGET_FILES}
+                DEPENDS ${DILIGENT_CORE_INSTALL_LIBS_LIST}
+                COMMENT "Combining core libraries..."
+            )
+            add_custom_target(DiligentCore-static ALL DEPENDS ${COMBINED_CORE_LIB_NAME})
+        else()
+            message("ar command is not found")
+        endif()
     endif()
 
-    if(AR)
-        add_custom_command(
-            OUTPUT ${COMBINED_CORE_LIB_NAME}
-            COMMAND ${AR} -crs ${COMBINED_CORE_LIB_NAME} ${CORE_LIB_TARGET_FILES}
-			DEPENDS ${DILIGENT_CORE_INSTALL_LIBS_LIST}
-			COMMENT "Combining core libraries..."
-		)
-        add_custom_target(DiligentCore-static ALL DEPENDS ${COMBINED_CORE_LIB_NAME})
+    if(TARGET DiligentCore-static)
+        install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${COMBINED_CORE_LIB_NAME}"
+                DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/lib/"
+        )
+        set_target_properties(DiligentCore-static PROPERTIES
+            FOLDER Core
+        )
     else()
-        message("ar command is not found")
+        message("Unable to find librarian tool. Combined DiligentCore static library will not be produced.")
     endif()
-endif()
-
-if(TARGET DiligentCore-static)
-    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${COMBINED_CORE_LIB_NAME}"
-            DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/lib/"
-    )
-    set_target_properties(DiligentCore-static PROPERTIES
-        FOLDER Core
-    )
-else()
-	message("Unable to find librarian tool. Combined DiligentCore static library will not be produced.")
-endif()
+endif(INSTALL_DILIGENT_CORE)
