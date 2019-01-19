@@ -279,18 +279,13 @@ if(INSTALL_DILIGENT_CORE)
     endforeach(CORE_LIB)
 
     if(MSVC)
-        find_program(LIB_EXE NAMES lib.exe)
-        if(LIB_EXE)
-            add_custom_command(
-                OUTPUT ${COMBINED_CORE_LIB_NAME}
-                COMMAND ${LIB_EXE} /OUT:${COMBINED_CORE_LIB_NAME} ${CORE_LIB_TARGET_FILES}
-                DEPENDS ${DILIGENT_CORE_INSTALL_LIBS_LIST}
-                COMMENT "Combining core libraries..."
-            )
-            add_custom_target(DiligentCore-static ALL DEPENDS ${COMBINED_CORE_LIB_NAME})
-        else()
-            message("Unable to find lib.exe")
-        endif()
+        add_custom_command(
+            OUTPUT ${COMBINED_CORE_LIB_NAME}
+            COMMAND lib.exe /OUT:${COMBINED_CORE_LIB_NAME} ${CORE_LIB_TARGET_FILES}
+            DEPENDS ${DILIGENT_CORE_INSTALL_LIBS_LIST}
+            COMMENT "Combining core libraries..."
+        )
+        add_custom_target(DiligentCore-static ALL DEPENDS ${COMBINED_CORE_LIB_NAME})
     else()
 
         if(PLATFORM_WIN32)
