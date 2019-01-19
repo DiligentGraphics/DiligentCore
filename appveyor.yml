@@ -15,7 +15,7 @@ environment:
     # Win32/x64/Debug
     - platform: x64
       configuration: Debug
-      cmake_args: -D CMAKE_INSTALL_PREFIX=install
+      cmake_args: -D CMAKE_INSTALL_PREFIX="%APPVEYOR_BUILD_FOLDER%\install"
       
     # Win32/x64/Release
     - platform: x64
@@ -25,27 +25,27 @@ environment:
     # UWP/x64/Debug
     - platform: x64
       configuration: Debug
-      cmake_args: -D CMAKE_INSTALL_PREFIX=install -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0
+      cmake_args: -D CMAKE_INSTALL_PREFIX="%APPVEYOR_BUILD_FOLDER%\install" -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0
   
     # UWP/x64/Release
     - platform: x64
       configuration: Release
-      cmake_args: -D CMAKE_INSTALL_PREFIX=install -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0
+      cmake_args: -D CMAKE_INSTALL_PREFIX="%APPVEYOR_BUILD_FOLDER%\install" -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0
       
     # Win32/x86/Release
     - platform: Win32
       configuration: Release
-      cmake_args: -D CMAKE_INSTALL_PREFIX=install
+      cmake_args: -D CMAKE_INSTALL_PREFIX="%APPVEYOR_BUILD_FOLDER%\install"
   
     # UWP/x86/Release
     - platform: Win32
       configuration: Release
-      cmake_args: -D CMAKE_INSTALL_PREFIX=install -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0
+      cmake_args: -D CMAKE_INSTALL_PREFIX="%APPVEYOR_BUILD_FOLDER%\install" -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0
       
     # Win32-8.1SDK/x64/Release
     - platform: x64
       configuration: Release
-      cmake_args: -D CMAKE_INSTALL_PREFIX=install -D CMAKE_SYSTEM_VERSION=8.1
+      cmake_args: -D CMAKE_INSTALL_PREFIX="%APPVEYOR_BUILD_FOLDER%\install" -D CMAKE_SYSTEM_VERSION=8.1
   
 # clone directory
 clone_folder: c:\projects\DiligentCore
