@@ -15,7 +15,7 @@ environment:
     # Win32/x64/Debug
     - platform: x64
       configuration: Debug
-      cmake_args:
+      cmake_args: -D CMAKE_INSTALL_PREFIX=install
       
     # Win32/x64/Release
     - platform: x64
@@ -25,27 +25,27 @@ environment:
     # UWP/x64/Debug
     - platform: x64
       configuration: Debug
-      cmake_args: -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0
+      cmake_args: -D CMAKE_INSTALL_PREFIX=install -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0
   
     # UWP/x64/Release
     - platform: x64
       configuration: Release
-      cmake_args: -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0
+      cmake_args: -D CMAKE_INSTALL_PREFIX=install -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0
       
     # Win32/x86/Release
     - platform: Win32
       configuration: Release
-      cmake_args:
+      cmake_args: -D CMAKE_INSTALL_PREFIX=install
   
     # UWP/x86/Release
     - platform: Win32
       configuration: Release
-      cmake_args: -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0
+      cmake_args: -D CMAKE_INSTALL_PREFIX=install -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0
       
     # Win32-8.1SDK/x64/Release
     - platform: x64
       configuration: Release
-      cmake_args: -D CMAKE_SYSTEM_VERSION=8.1
+      cmake_args: -D CMAKE_INSTALL_PREFIX=install -D CMAKE_SYSTEM_VERSION=8.1
   
 # clone directory
 clone_folder: c:\projects\DiligentCore
@@ -71,6 +71,15 @@ before_build:
   - cmake %cmake_args% -H. -B./cmk_build -G %generator%
 
 build:
-  project: c:\projects\DiligentCore\cmk_build\Project.sln
+  project: c:\projects\DiligentCore\cmk_build\INSTALL.vcxproj
   verbosity: minimal
   parallel: true
+
+after_test:
+  - cd install
+  - 7z a DiligentCore-"%PLATFORM%"-"%CONFIGURATION%".zip
+    DiligentCore\*
+
+artifacts:
+  - path: cmk_build\install\*.zip
+    name: artifacts-zip
