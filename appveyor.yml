@@ -81,5 +81,5 @@ after_test:
     DiligentCore\*
 
 artifacts:
-  - path: cmk_build\install\*.zip
+  - path: install\*.zip
     name: artifacts-zip
