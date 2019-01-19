@@ -10,11 +10,9 @@ notifications:
 before_install:
   - |
     if [ "$TRAVIS_OS_NAME" = "osx" ];  then
-      if brew ls --versions cmake > /dev/null; then
-        echo cmake already installed.
-      else
-        brew install cmake
-      fi;
+      wget --no-check-certificate https://github.com/Kitware/CMake/releases/download/v3.13.2/cmake-3.13.2-Darwin-x86_64.tar.gz
+      tar -xzf cmake-3.13.2-Darwin-x86_64.tar.gz
+      export PATH=$PWD/cmake-3.13.2-Darwin-x86_64/CMake.app/Contents/bin:$PATH
       cmake --version
     fi
   - |
