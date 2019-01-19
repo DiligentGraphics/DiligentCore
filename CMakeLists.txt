@@ -303,10 +303,29 @@ if(INSTALL_DILIGENT_CORE)
         if(AR)
             add_custom_command(
                 OUTPUT ${COMBINED_CORE_LIB_NAME}
-                COMMAND ${AR} -crs ${COMBINED_CORE_LIB_NAME} ${CORE_LIB_TARGET_FILES}
+                # Delete all object files from current directory
+                COMMAND ${CMAKE_COMMAND} -E remove "*${CMAKE_C_OUTPUT_EXTENSION}"
                 DEPENDS ${DILIGENT_CORE_INSTALL_LIBS_LIST}
                 COMMENT "Combining core libraries..."
             )
+
+            # Unpack all object files from all targets to current directory
+            foreach(CORE_LIB_TARGET ${CORE_LIB_TARGET_FILES})
+                add_custom_command(
+                    OUTPUT ${COMBINED_CORE_LIB_NAME}
+                    COMMAND ${AR} -x ${CORE_LIB_TARGET}
+                    APPEND
+                )
+            endforeach()
+
+            # Pack object files to a combined library and delete them
+            add_custom_command(
+                OUTPUT ${COMBINED_CORE_LIB_NAME}
+                COMMAND ${AR} -crs ${COMBINED_CORE_LIB_NAME} "*${CMAKE_C_OUTPUT_EXTENSION}"
+                COMMAND ${CMAKE_COMMAND} -E remove "*${CMAKE_C_OUTPUT_EXTENSION}"
+                APPEND
+            )
+
             add_custom_target(DiligentCore-static ALL DEPENDS ${COMBINED_CORE_LIB_NAME})
         else()
             message("ar command is not found")
