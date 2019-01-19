@@ -15,37 +15,45 @@ environment:
     # Win32/x64/Debug
     - platform: x64
       configuration: Debug
-      cmake_args: -D CMAKE_INSTALL_PREFIX="%APPVEYOR_BUILD_FOLDER%\install"
+      cmake_args: -D CMAKE_INSTALL_PREFIX=install
+      platform_name: Windows
+
       
     # Win32/x64/Release
     - platform: x64
       configuration: Release
-      cmake_args:
+      cmake_args: -D CMAKE_INSTALL_PREFIX=install
+      platform_name: Windows
       
     # UWP/x64/Debug
     - platform: x64
       configuration: Debug
-      cmake_args: -D CMAKE_INSTALL_PREFIX="%APPVEYOR_BUILD_FOLDER%\install" -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0
+      cmake_args: -D CMAKE_INSTALL_PREFIX=install -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0
+      platform_name: UWP
   
     # UWP/x64/Release
     - platform: x64
       configuration: Release
-      cmake_args: -D CMAKE_INSTALL_PREFIX="%APPVEYOR_BUILD_FOLDER%\install" -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0
+      cmake_args: -D CMAKE_INSTALL_PREFIX=install -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0
+      platform_name: UWP
       
     # Win32/x86/Release
     - platform: Win32
       configuration: Release
-      cmake_args: -D CMAKE_INSTALL_PREFIX="%APPVEYOR_BUILD_FOLDER%\install"
-  
+      cmake_args: -D CMAKE_INSTALL_PREFIX=install
+      platform_name: Windows
+
     # UWP/x86/Release
     - platform: Win32
       configuration: Release
-      cmake_args: -D CMAKE_INSTALL_PREFIX="%APPVEYOR_BUILD_FOLDER%\install" -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0
+      cmake_args: -D CMAKE_INSTALL_PREFIX=install -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0
+      platform_name: UWP
       
     # Win32-8.1SDK/x64/Release
     - platform: x64
       configuration: Release
-      cmake_args: -D CMAKE_INSTALL_PREFIX="%APPVEYOR_BUILD_FOLDER%\install" -D CMAKE_SYSTEM_VERSION=8.1
+      cmake_args: -D CMAKE_INSTALL_PREFIX=install -D CMAKE_SYSTEM_VERSION=8.1
+      platform_name: Windows8.1
   
 # clone directory
 clone_folder: c:\projects\DiligentCore
@@ -77,7 +85,7 @@ build:
 
 after_test:
   - cd install
-  - 7z a DiligentCore-"%PLATFORM%"-"%CONFIGURATION%".zip
+  - 7z a DiligentCore-"%platform_name"-"%PLATFORM%"-"%CONFIGURATION%".zip
     DiligentCore\*
 
 artifacts:
