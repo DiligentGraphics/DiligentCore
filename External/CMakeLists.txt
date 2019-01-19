@@ -21,7 +21,7 @@ if(VULKAN_SUPPORTED)
     #add_subdirectory(SPIRV-Headers)
     #set_directory_root_folder("SPIRV-Headers" "Core/External/SPIRV-Headers")
 
-    option(NO_GLSLANG "Do NOT build glslang compiler" OFF)
+    option(DILIGENT_NO_GLSLANG "Do NOT build glslang compiler" OFF)
     
     set(SPIRV-Headers_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/SPIRV-Headers")
     set(SPIRV_SKIP_TESTS ON CACHE BOOL "Skip SPIRV tests")
@@ -39,7 +39,7 @@ if(VULKAN_SUPPORTED)
 
     set(INSTALL_TARGETS SPIRV-Tools SPIRV-Tools-opt)
 
-    if(NOT ${NO_GLSLANG})    
+    if(NOT ${DILIGENT_NO_GLSLANG})    
         set(ENABLE_GLSLANG_BINARIES OFF CACHE BOOL "Do not build glslang binaries")
         set(ENABLE_SPVREMAPPER OFF CACHE BOOL "Do not build SPIRV remapper")
         set(SKIP_GLSLANG_INSTALL ON CACHE BOOL "Skip glslang installation")

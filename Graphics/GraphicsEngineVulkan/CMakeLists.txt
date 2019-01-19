@@ -217,12 +217,12 @@ else()
     message(FATAL_ERROR "Unknown platform")
 endif()
 
-if (${NO_GLSLANG})
+if (${DILIGENT_NO_GLSLANG})
     message("GLSLang is not being built. Vulkan backend will only be able to consume SPIRV byte code.")
 endif()
 
 target_compile_definitions(GraphicsEngineVk-shared PRIVATE ${PRIVATE_COMPILE_DEFINITIONS} ENGINE_DLL=1)
-target_compile_definitions(GraphicsEngineVk-static PRIVATE ${PRIVATE_COMPILE_DEFINITIONS} NO_GLSLANG=$<BOOL:${NO_GLSLANG}>)
+target_compile_definitions(GraphicsEngineVk-static PRIVATE ${PRIVATE_COMPILE_DEFINITIONS} NO_GLSLANG=$<BOOL:${DILIGENT_NO_GLSLANG}>)
 
 if(PLATFORM_WIN32)
 

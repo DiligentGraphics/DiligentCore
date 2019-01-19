@@ -18,7 +18,7 @@ if(VULKAN_SUPPORTED)
         include/SPIRVShaderResources.h
     )
 
-    if (NOT ${NO_GLSLANG})
+    if (NOT ${DILIGENT_NO_GLSLANG})
         list(APPEND SOURCE 
             src/SPIRVUtils.cpp
         )
@@ -54,7 +54,7 @@ if(VULKAN_SUPPORTED)
         SPIRVCross
     )
 
-    if (NOT ${NO_GLSLANG})
+    if (NOT ${DILIGENT_NO_GLSLANG})
         target_link_libraries(GLSLTools 
         PRIVATE
             glslang
