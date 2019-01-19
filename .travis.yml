@@ -84,15 +84,21 @@ script:
   - cd cmk_build
   - |
     if [ "$TRAVIS_OS_NAME" = "linux" ]; then 
-      cmake .. -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=${CONFIG}
-      cmake --build .
+      cmake .. -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=${CONFIG} -DCMAKE_INSTALL_PREFIX=install
+      cmake --build . --target install
     fi
   - |
     if [ "$TRAVIS_OS_NAME" = "osx" ]; then 
       if [ "$IOS" = "true" ]; then 
-        cmake .. -DCMAKE_TOOLCHAIN_FILE=../DiligentCore/ios.toolchain.cmake -DIOS_PLATFORM=OS64 -G "Xcode"
+        cmake .. -DCMAKE_TOOLCHAIN_FILE=../DiligentCore/ios.toolchain.cmake -DIOS_PLATFORM=OS64 -DCMAKE_INSTALL_PREFIX=install -G "Xcode"
       else
         cmake .. -G "Xcode"
       fi
-      cmake --build . --config ${CONFIG}
+      cmake --build . --target install --config ${CONFIG}
     fi
+
+after_success:
+    
+  - cd ../install
+  - export ZIP_NAME=DiligentCore-${TRAVIS_OS_NAME}-${GLSLANG_BUILD_TYPE}.zip;
+  - zip ${ZIP_NAME} ./*
