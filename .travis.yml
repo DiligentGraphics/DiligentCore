@@ -101,4 +101,4 @@ after_success:
     
   - cd ../cmk_build/install
   - export ZIP_NAME=DiligentCore-${TRAVIS_OS_NAME}-${GLSLANG_BUILD_TYPE}.zip;
-  - zip ${ZIP_NAME} ./*
+  - zip ${ZIP_NAME} .
