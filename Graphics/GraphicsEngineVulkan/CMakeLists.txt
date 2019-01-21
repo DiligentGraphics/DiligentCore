@@ -189,15 +189,19 @@ set(PUBLIC_DEPENDENCIES
     GraphicsEngineVkInterface
 )
 
-target_link_libraries(GraphicsEngineVk-static PRIVATE ${PRIVATE_DEPENDENCIES} PUBLIC ${PUBLIC_DEPENDENCIES})
-target_link_libraries(GraphicsEngineVk-shared PRIVATE BuildSettings PUBLIC ${PUBLIC_DEPENDENCIES})
-
-if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR 
-	CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-    target_link_libraries(GraphicsEngineVk-shared PRIVATE -Wl,--whole-archive GraphicsEngineVk-static -Wl,--no-whole-archive)
-else()
-    target_link_libraries(GraphicsEngineVk-shared PRIVATE GraphicsEngineVk-static)
-endif()
+target_link_libraries(GraphicsEngineVk-static
+PRIVATE
+    ${PRIVATE_DEPENDENCIES}
+PUBLIC
+    ${PUBLIC_DEPENDENCIES}
+)
+target_link_libraries(GraphicsEngineVk-shared
+PRIVATE
+    BuildSettings
+    ${WHOLE_ARCHIVE_FLAG} GraphicsEngineVk-static ${NO_WHOLE_ARCHIVE_FLAG}
+PUBLIC
+    ${PUBLIC_DEPENDENCIES}
+)
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     # Disable the following clang warning
