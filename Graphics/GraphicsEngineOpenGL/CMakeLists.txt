@@ -159,11 +159,11 @@ set(PRIVATE_DEPENDENCIES
     TargetPlatform
     GraphicsEngine
     GLSLTools
+    HLSL2GLSLConverterLib
 )
 
 set(PUBLIC_DEPENDENCIES 
     GraphicsEngineOpenGLInterface
-	HLSL2GLSLConverterLib
 )
 
 if(PLATFORM_WIN32)
@@ -181,11 +181,6 @@ else()
     message(FATAL_ERROR "Unknown platform")
 endif()
 
-if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR 
-	CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-    set_target_properties(GraphicsEngineOpenGL-shared PROPERTIES CXX_VISIBILITY_PRESET hidden) # -fvisibility=hidden
-endif()
-
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     # Disable the following clang warning
     #    '<function name>' hides overloaded virtual function
@@ -195,7 +190,14 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 target_link_libraries(GraphicsEngineOpenGL-static PRIVATE ${PRIVATE_DEPENDENCIES} PUBLIC ${PUBLIC_DEPENDENCIES})
-target_link_libraries(GraphicsEngineOpenGL-shared PUBLIC GraphicsEngineOpenGL-static)
+target_link_libraries(GraphicsEngineOpenGL-shared PRIVATE BuildSettings PUBLIC ${PUBLIC_DEPENDENCIES})
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR 
+	CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    target_link_libraries(GraphicsEngineOpenGL-shared PRIVATE -Wl,--whole-archive GraphicsEngineOpenGL-static -Wl,--no-whole-archive)
+else()
+    target_link_libraries(GraphicsEngineOpenGL-shared PRIVATE GraphicsEngineOpenGL-static)
+endif()
+
 target_compile_definitions(GraphicsEngineOpenGL-shared PUBLIC ENGINE_DLL=1)
 
 if(PLATFORM_WIN32)

@@ -144,7 +144,13 @@ PUBLIC
     GraphicsEngineD3D12Interface
 )
 
-target_link_libraries(GraphicsEngineD3D12-shared PUBLIC GraphicsEngineD3D12-static)
+target_link_libraries(GraphicsEngineD3D12-shared
+PRIVATE
+    BuildSettings
+    GraphicsEngineD3D12-static
+PUBLIC
+    GraphicsEngineD3D12Interface
+)
 target_compile_definitions(GraphicsEngineD3D12-shared PUBLIC ENGINE_DLL=1)
 
 # Set output name to GraphicsEngineD3D12_{32|64}{r|d}

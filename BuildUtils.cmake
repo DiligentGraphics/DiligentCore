@@ -92,6 +92,12 @@ function(set_common_target_properties TARGET)
                 endforeach()
             endif()
         endif()
+    else()
+        set_target_properties(${TARGET} PROPERTIES
+            CXX_VISIBILITY_PRESET hidden # -fvisibility=hidden
+            C_VISIBILITY_PRESET hidden # -fvisibility=hidden
+            VISIBILITY_INLINES_HIDDEN TRUE
+        )
     endif()
 
     if(PLATFORM_ANDROID)
@@ -136,14 +142,7 @@ endfunction()
 
 # Returns default backend library type (static/dynamic) for the current platform
 function(get_backend_libraries_type _LIB_TYPE)
-    if(PLATFORM_WIN32)
-        if(MSVC)
-            set(LIB_TYPE "shared")
-        else()
-		    # Link against static libraries on MinGW
-            set(LIB_TYPE "static")
-        endif()
-    elseif(PLATFORM_LINUX OR PLATFORM_ANDROID OR PLATFORM_MACOS)
+    if(PLATFORM_WIN32 OR PLATFORM_LINUX OR PLATFORM_ANDROID OR PLATFORM_MACOS)
         set(LIB_TYPE "shared")
     elseif(PLATFORM_UNIVERSAL_WINDOWS)
         set(LIB_TYPE "static")
