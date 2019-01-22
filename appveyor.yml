@@ -83,10 +83,10 @@ build:
   parallel: true
 
 after_test:
-  - cd cmk_build\install
+  - cd install
   - 7z a DiligentCore-"%platform_name%"-"%PLATFORM%"-"%CONFIGURATION%".zip
     DiligentCore\*
 
 artifacts:
-  - path: cmk_build\install\*.zip
+  - path: install\*.zip
     name: artifacts-zip
