@@ -18,25 +18,24 @@ environment:
       cmake_args: -D CMAKE_INSTALL_PREFIX=install
       platform_name: Windows
 
-      
     # Win32/x64/Release
     - platform: x64
       configuration: Release
       cmake_args: -D CMAKE_INSTALL_PREFIX=install
       platform_name: Windows
-      
+
     # UWP/x64/Debug
     - platform: x64
       configuration: Debug
       cmake_args: -D CMAKE_INSTALL_PREFIX=install -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0
       platform_name: UWP
-  
+
     # UWP/x64/Release
     - platform: x64
       configuration: Release
       cmake_args: -D CMAKE_INSTALL_PREFIX=install -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0
       platform_name: UWP
-      
+
     # Win32/x86/Release
     - platform: Win32
       configuration: Release
@@ -48,13 +47,13 @@ environment:
       configuration: Release
       cmake_args: -D CMAKE_INSTALL_PREFIX=install -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0
       platform_name: UWP
-      
+
     # Win32-8.1SDK/x64/Release
     - platform: x64
       configuration: Release
       cmake_args: -D CMAKE_INSTALL_PREFIX=install -D CMAKE_SYSTEM_VERSION=8.1
       platform_name: Windows8.1
-  
+
 # clone directory
 clone_folder: c:\projects\DiligentCore
 
@@ -71,7 +70,7 @@ install:
   - cmake --version
   - echo %PLATFORM%
   - if "%PLATFORM%"=="x64" ( set generator="Visual Studio 15 2017 Win64" ) else ( set generator="Visual Studio 15 2017" )
-  
+
 before_build:
   - cd c:\projects\DiligentCore
   - echo %generator%
@@ -84,10 +83,10 @@ build:
   parallel: true
 
 after_test:
-  - cd install
+  - cd cmk_build\install
   - 7z a DiligentCore-"%platform_name%"-"%PLATFORM%"-"%CONFIGURATION%".zip
     DiligentCore\*
 
 artifacts:
-  - path: install\*.zip
+  - path: cmk_build\install\*.zip
     name: artifacts-zip

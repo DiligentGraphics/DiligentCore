@@ -209,7 +209,7 @@ function(install_core_lib _TARGET)
     elseif(TARGET_TYPE STREQUAL SHARED_LIBRARY)
         install(TARGETS				 ${_TARGET}
                 ARCHIVE DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/lib"
-                LIBRARY DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/lib"
+                LIBRARY DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/bin"
                 RUNTIME DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/bin"
         )
     endif()

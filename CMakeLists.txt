@@ -267,10 +267,16 @@ else()
 endif()
 
 if(NOT DILIGENT_CORE_INSTALL_DIR)
-    set(DILIGENT_CORE_INSTALL_DIR "DiligentCore")
+    set(DILIGENT_CORE_INSTALL_DIR "DiligentCore" CACHE INTERNAL "DiligentCore installation directory")
 endif()
 
 SET(DILIGENT_CORE_INSTALL_LIBS_LIST "" CACHE INTERNAL "Core libraries installation list")
+# CMAKE_INSTALL_PREFIX must be absolute otherwise rpath won't work
+if(NOT IS_ABSOLUTE ${CMAKE_INSTALL_PREFIX})
+    set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_PREFIX}" CACHE FILEPATH "Installation path" FORCE)
+    message("Transformed CMAKE_INSTALL_PREFIX into absolute path: " ${CMAKE_INSTALL_PREFIX})
+endif()
+
 include(BuildUtils.cmake)
 
 add_subdirectory(Utilities)

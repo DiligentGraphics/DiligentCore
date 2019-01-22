@@ -181,7 +181,7 @@ if(PLATFORM_WIN32)
 elseif(PLATFORM_MACOS)
     find_library(Vulkan_LIBRARY NAMES MoltenVK PATHS "../../External/vulkan/libs/macOS")
 else()
-    find_library(Vulkan_LIBRARY NAMES vulkan HINTS "$ENV{VULKAN_SDK}/lib" "../../External/vulkan/libs")
+    find_library(Vulkan_LIBRARY NAMES vulkan HINTS "$ENV{VULKAN_SDK}/lib" "../../External/vulkan/libs/linux")
 endif()
 list(APPEND PRIVATE_DEPENDENCIES ${Vulkan_LIBRARY})
 
@@ -241,6 +241,13 @@ if(PLATFORM_WIN32)
 else()
     set_target_properties(GraphicsEngineVk-shared PROPERTIES
         OUTPUT_NAME GraphicsEngineVk
+    )
+endif()
+
+if(PLATFORM_LINUX)
+    get_filename_component(VULKAN_LIBRARY_PATH ${Vulkan_LIBRARY} DIRECTORY)
+    set_target_properties(GraphicsEngineVk-shared PROPERTIES
+        INSTALL_RPATH "${VULKAN_LIBRARY_PATH}"
     )
 endif()
 
