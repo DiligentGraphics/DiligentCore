@@ -3110,7 +3110,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessGeometryShaderArguments( T
     // void SelectArraySliceGS(triangle QuadVSOut In[3], 
     // ^
 
-    std::unordered_map<HashMapStringKey, String> Attributes;
+    std::unordered_map<HashMapStringKey, String, HashMapStringKey::Hasher> Attributes;
     ProcessShaderAttributes(Token, Attributes);
     auto MaxVertexCountIt = Attributes.find("maxvertexcount");
     if (MaxVertexCountIt == Attributes.end())
@@ -3462,8 +3462,8 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessHullShaderConstantFunction
     ProcessReturnStatements( Token, bIsVoid, EntryPoint, ReturnMacroName );
 }
 
-void HLSL2GLSLConverterImpl::ConversionStream::ProcessShaderAttributes(TokenListType::iterator &Token,
-                                                                       std::unordered_map<HashMapStringKey, String>& Attributes)
+void HLSL2GLSLConverterImpl::ConversionStream::ProcessShaderAttributes(TokenListType::iterator&                                                Token,
+                                                                       std::unordered_map<HashMapStringKey, String, HashMapStringKey::Hasher>& Attributes)
 {
     VERIFY_EXPR(Token->IsBuiltInType() || Token->Type == TokenType::Identifier);
     // [patchconstantfunc("ConstantHS")]
@@ -3556,7 +3556,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessHullShaderArguments( Token
         triangle_ccw
     }topology = OutputTopology::undefined;
     
-    std::unordered_map<HashMapStringKey, String> Attributes;
+    std::unordered_map<HashMapStringKey, String, HashMapStringKey::Hasher> Attributes;
     ProcessShaderAttributes(Token, Attributes);
 
     auto DomainIt = Attributes.find("domain");
@@ -3723,7 +3723,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessHullShaderArguments( Token
     Globals = GlobalsSS.str() + InterfaceVarsInSS.str() + InterfaceVarsOutSS.str();
 }
 
-void ParseAttributesInComment(const String &Comment, std::unordered_map<HashMapStringKey, String> &Attributes)
+void ParseAttributesInComment(const String &Comment, std::unordered_map<HashMapStringKey, String, HashMapStringKey::Hasher> &Attributes)
 {
     auto Pos = Comment.begin();
     //    /* partitioning = fractional_even, outputtopology = triangle_cw */
@@ -3798,7 +3798,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessDomainShaderArguments( Tok
     // DSOut main( HS_CONSTANT_DATA_OUTPUT input, 
     // ^
     
-    std::unordered_map<HashMapStringKey, String> Attributes;
+    std::unordered_map<HashMapStringKey, String, HashMapStringKey::Hasher> Attributes;
     ParseAttributesInComment(TypeToken->Delimiter, Attributes);
     ProcessShaderAttributes(Token, Attributes);
 

@@ -70,17 +70,14 @@ namespace Diligent
         HashMapStringKey Object;
         HashMapStringKey Function;
         Uint32 NumArguments;
-    };
-}
 
-namespace std
-{
-    template<>struct hash < Diligent::FunctionStubHashKey >
-    {
-        size_t operator()( const Diligent::FunctionStubHashKey &Key ) const
+        struct Hasher
         {
-            return ComputeHash(Key.Object, Key.Function, Key.NumArguments);
-        }
+            size_t operator()( const Diligent::FunctionStubHashKey &Key ) const
+            {
+                return ComputeHash(Key.Object.GetHash(), Key.Function.GetHash(), Key.NumArguments);
+            }
+        };
     };
 }
 
@@ -137,7 +134,7 @@ namespace Diligent
             ObjectsTypeHashType(ObjectsTypeHashType&) = delete;
             ObjectsTypeHashType& operator = (ObjectsTypeHashType&) = delete;
 
-            std::unordered_map<HashMapStringKey, HLSLObjectInfo> m;
+            std::unordered_map<HashMapStringKey, HLSLObjectInfo, HashMapStringKey::Hasher> m;
         };
         
         struct GLSLStubInfo
@@ -152,7 +149,7 @@ namespace Diligent
         // Hash map that maps GLSL object, method and number of arguments
         // passed to the original function, to the GLSL stub function
         // Example: {"sampler2D", "Sample", 2} -> {"Sample_2", "_SWIZZLE"}
-        std::unordered_map<FunctionStubHashKey, GLSLStubInfo> m_GLSLStubs;
+        std::unordered_map<FunctionStubHashKey, GLSLStubInfo, FunctionStubHashKey::Hasher> m_GLSLStubs;
 
         enum class TokenType
         {
@@ -244,29 +241,29 @@ namespace Diligent
 
             void ProcessRWTextures(const TokenListType::iterator &ScopeStart, const TokenListType::iterator &ScopeEnd);
 
-            void ProcessAtomics(const TokenListType::iterator &ScopeStart, 
-                                const TokenListType::iterator &ScopeEnd);
+            void ProcessAtomics(const TokenListType::iterator&  ScopeStart, 
+                                const TokenListType::iterator&  ScopeEnd);
 
-            void RegisterStruct(TokenListType::iterator &Token);
+            void RegisterStruct(TokenListType::iterator&    Token);
 
-            void ProcessConstantBuffer(TokenListType::iterator &Token);
-            void ProcessStructuredBuffer(TokenListType::iterator &Token);
-            void ParseSamplers(TokenListType::iterator &ScopeStart, SamplerHashType &SamplersHash);
-            void ProcessTextureDeclaration(TokenListType::iterator &Token, const std::vector<SamplerHashType> &SamplersHash, ObjectsTypeHashType &Objects, const char* SamplerSuffix);
-            bool ProcessObjectMethod(TokenListType::iterator &Token, const TokenListType::iterator &ScopeStart, const TokenListType::iterator &ScopeEnd);
-            Uint32 CountFunctionArguments(TokenListType::iterator &Token, const TokenListType::iterator &ScopeEnd);
-            bool ProcessRWTextureStore(TokenListType::iterator &Token, const TokenListType::iterator &ScopeEnd);
-            void RemoveFlowControlAttribute(TokenListType::iterator &Token);
+            void ProcessConstantBuffer(TokenListType::iterator& Token);
+            void ProcessStructuredBuffer(TokenListType::iterator& Token);
+            void ParseSamplers(TokenListType::iterator& ScopeStart, SamplerHashType& SamplersHash);
+            void ProcessTextureDeclaration(TokenListType::iterator& Token, const std::vector<SamplerHashType>& SamplersHash, ObjectsTypeHashType& Objects, const char* SamplerSuffix);
+            bool ProcessObjectMethod(TokenListType::iterator& Token, const TokenListType::iterator& ScopeStart, const TokenListType::iterator& ScopeEnd);
+            Uint32 CountFunctionArguments(TokenListType::iterator& Token, const TokenListType::iterator& ScopeEnd);
+            bool ProcessRWTextureStore(TokenListType::iterator& Token, const TokenListType::iterator& ScopeEnd);
+            void RemoveFlowControlAttribute(TokenListType::iterator& Token);
             void RemoveSemantics();
             void RemoveSpecialShaderAttributes();
-            void RemoveSemanticsFromBlock(TokenListType::iterator &Token, TokenType OpenBracketType, TokenType ClosingBracketType);
+            void RemoveSemanticsFromBlock(TokenListType::iterator& Token, TokenType OpenBracketType, TokenType ClosingBracketType);
         
             // IteratorType may be String::iterator or String::const_iterator.
             // While iterator is convertible to const_iterator, 
             // iterator& cannot be converted to const_iterator& (Microsoft compiler allows
             // such conversion, while gcc does not)
             template<typename IteratorType>
-            String PrintTokenContext(IteratorType &TargetToken, Int32 NumAdjacentLines);
+            String PrintTokenContext(IteratorType& TargetToken, Int32 NumAdjacentLines);
 
             struct ShaderParameterInfo
             {
@@ -328,61 +325,80 @@ namespace Diligent
                     storageQualifier(StorageQualifier::Unknown)
                 {}
             };
-            void ParseShaderParameter(TokenListType::iterator &Token, ShaderParameterInfo &ParamInfo);
-            void ProcessFunctionParameters( TokenListType::iterator &Token, std::vector<ShaderParameterInfo>& Params, bool &bIsVoid );
+            void ParseShaderParameter(TokenListType::iterator&  Token,
+                                      ShaderParameterInfo&      ParamInfo);
+            void ProcessFunctionParameters( TokenListType::iterator&          Token,
+                                            std::vector<ShaderParameterInfo>& Params,
+                                            bool&                             bIsVoid );
             bool RequiresFlatQualifier(const String& Type);
             void ProcessFragmentShaderArguments( std::vector<ShaderParameterInfo>& Params,
-                                                 String &GlobalVariables,
-                                                 std::stringstream &ReturnHandlerSS,
-                                                 String &Prologue );
+                                                 String&                           GlobalVariables,
+                                                 std::stringstream&                ReturnHandlerSS,
+                                                 String&                           Prologue );
         
-            String BuildParameterName(const std::vector<const ShaderParameterInfo*>& MemberStack, Char Separator, const Char* Prefix = "", const Char *SubstituteInstName = "", const Char *Index = "");
+            String BuildParameterName(const std::vector<const ShaderParameterInfo*>& MemberStack,
+                                      Char                                           Separator,
+                                      const Char*                                    Prefix             = "",
+                                      const Char*                                    SubstituteInstName = "",
+                                      const Char*                                    Index              = "");
 
             template<typename THandler>
-            void ProcessScope(TokenListType::iterator &Token, TokenListType::iterator ScopeEnd, TokenType OpenParenType, TokenType ClosingParenType, THandler Handler);
+            void ProcessScope(TokenListType::iterator&  Token,
+                              TokenListType::iterator   ScopeEnd,
+                              TokenType                 OpenParenType,
+                              TokenType                 ClosingParenType,
+                              THandler                  Handler);
 
             template<typename TArgHandler>
-            void ProcessShaderArgument( const ShaderParameterInfo &Param,
-                                        int ShaderInd,
-                                        int IsOutVar,
-                                        std::stringstream &PrologueSS,
-                                        TArgHandler ArgHandler);
+            void ProcessShaderArgument( const ShaderParameterInfo&  Param,
+                                        int                         ShaderInd,
+                                        int                         IsOutVar,
+                                        std::stringstream&          PrologueSS,
+                                        TArgHandler                 ArgHandler);
 
             void ProcessVertexShaderArguments( std::vector<ShaderParameterInfo>& Params,
-                                               String &Globals,
-                                               std::stringstream &ReturnHandlerSS,
-                                               String &Prologue );
+                                               String&                           Globals,
+                                               std::stringstream&                ReturnHandlerSS,
+                                               String&                           Prologue );
 
-            void ProcessGeometryShaderArguments( TokenListType::iterator &TypeToken,
-                                                 std::vector<ShaderParameterInfo>& Params,
-                                                 String &Globals,
-                                                 String &Prologue );
+            void ProcessGeometryShaderArguments( TokenListType::iterator&           TypeToken,
+                                                 std::vector<ShaderParameterInfo>&  Params,
+                                                 String&                            Globals,
+                                                 String&                            Prologue );
         
-            void ProcessHullShaderConstantFunction( const Char *FuncName, bool &bTakesInputPatch );
+            void ProcessHullShaderConstantFunction( const Char* FuncName, bool& bTakesInputPatch );
 
-            void ProcessShaderAttributes( TokenListType::iterator &TypeToken,
-                                          std::unordered_map<HashMapStringKey, String>& Attributes);
+            void ProcessShaderAttributes( TokenListType::iterator&                                               TypeToken,
+                                          std::unordered_map<HashMapStringKey, String, HashMapStringKey::Hasher>& Attributes);
 
-            void ProcessHullShaderArguments( TokenListType::iterator &TypeToken,
-                                             std::vector<ShaderParameterInfo>& Params,
-                                             String &Globals,
-                                             std::stringstream &ReturnHandlerSS,
-                                             String &Prologue );
-            void ProcessDomainShaderArguments( TokenListType::iterator &TypeToken,
-                                               std::vector<ShaderParameterInfo>& Params,
-                                               String &Globals,
-                                               std::stringstream &ReturnHandlerSS,
-                                               String &Prologue );
-            void ProcessComputeShaderArguments( TokenListType::iterator &TypeToken,
-                                                std::vector<ShaderParameterInfo>& Params,
-                                                String &Globals,
-                                                String &Prologue );
+            void ProcessHullShaderArguments( TokenListType::iterator&           TypeToken,
+                                             std::vector<ShaderParameterInfo>&  Params,
+                                             String&                            Globals,
+                                             std::stringstream&                 ReturnHandlerSS,
+                                             String&                            Prologue );
+            void ProcessDomainShaderArguments( TokenListType::iterator&             TypeToken,
+                                               std::vector<ShaderParameterInfo>&    Params,
+                                               String&                              Globals,
+                                               std::stringstream&                   ReturnHandlerSS,
+                                               String&                              Prologue );
+            void ProcessComputeShaderArguments( TokenListType::iterator&            TypeToken,
+                                                std::vector<ShaderParameterInfo>&   Params,
+                                                String&                             Globals,
+                                                String&                             Prologue );
 
-            void FindClosingBracket( TokenListType::iterator &Token, const TokenListType::iterator &ScopeEnd, TokenType OpenBracketType, TokenType ClosingBracketType );
+            void FindClosingBracket( TokenListType::iterator&       Token,
+                                     const TokenListType::iterator& ScopeEnd,
+                                     TokenType                      OpenBracketType,
+                                     TokenType                      ClosingBracketType );
 
-            void ProcessReturnStatements( TokenListType::iterator &Token, bool IsVoid, const Char *EntryPoint, const Char *MacroName );
+            void ProcessReturnStatements( TokenListType::iterator&  Token,
+                                          bool                      IsVoid,
+                                          const Char*               EntryPoint,
+                                          const Char*               MacroName );
 
-            void ProcessGSOutStreamOperations( TokenListType::iterator &Token, const String &OutStreamName, const char *EntryPoint );
+            void ProcessGSOutStreamOperations( TokenListType::iterator&     Token,
+                                               const String&                OutStreamName,
+                                               const char*                  EntryPoint );
 
             String BuildGLSLSource();
 
@@ -390,7 +406,7 @@ namespace Diligent
             TokenListType m_Tokens;
 
             // List of tokens defining structs
-            std::unordered_map<HashMapStringKey, TokenListType::iterator> m_StructDefinitions;
+            std::unordered_map<HashMapStringKey, TokenListType::iterator, HashMapStringKey::Hasher> m_StructDefinitions;
 
             // Stack of parsed objects, for every scope level.
             // There are currently only two levels: 
@@ -410,20 +426,20 @@ namespace Diligent
         
         // HLSL keyword->token info hash map
         // Example: "Texture2D" -> TokenInfo(TokenType::Texture2D, "Texture2D")
-        std::unordered_map<HashMapStringKey, TokenInfo> m_HLSLKeywords;
+        std::unordered_map<HashMapStringKey, TokenInfo, HashMapStringKey::Hasher> m_HLSLKeywords;
 
         // Set of all GLSL image types (image1D, uimage1D, iimage1D, image2D, ... )
-        std::unordered_set<HashMapStringKey> m_ImageTypes;
+        std::unordered_set<HashMapStringKey, HashMapStringKey::Hasher> m_ImageTypes;
 
         // Set of all HLSL atomic operations (InterlockedAdd, InterlockedOr, ...)
-        std::unordered_set<HashMapStringKey> m_AtomicOperations;
+        std::unordered_set<HashMapStringKey, HashMapStringKey::Hasher> m_AtomicOperations;
 
         // HLSL semantic -> glsl variable, for every shader stage and input/output type (in == 0, out == 1)
         // Example: [vertex, output] SV_Position -> gl_Position
         //          [fragment, input] SV_Position -> gl_FragCoord
         static constexpr int InVar = 0;
         static constexpr int OutVar = 1;
-        std::unordered_map<HashMapStringKey, String> m_HLSLSemanticToGLSLVar[6][2];
+        std::unordered_map<HashMapStringKey, String, HashMapStringKey::Hasher> m_HLSLSemanticToGLSLVar[6][2];
     };
 }
 

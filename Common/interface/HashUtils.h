@@ -113,17 +113,17 @@ namespace Diligent
         }
         
         explicit // Make this constructor explicit to avoid unintentional string copies 
-        HashMapStringKey(const String &Str) :
+        HashMapStringKey(const String& Str) :
             StrPtr( nullptr ),
             Hash(0)
         {
             MakeCopy( Str.c_str() );
         }
 
-        HashMapStringKey(HashMapStringKey &&Key)noexcept :
-            StringBuff( std::move(Key.StringBuff) ),
-            StrPtr( std::move(Key.StrPtr) ),
-            Hash(0)
+        HashMapStringKey(HashMapStringKey&& Key)noexcept :
+            StringBuff(std::move(Key.StringBuff)),
+            StrPtr    (std::move(Key.StrPtr)),
+            Hash      (0)
         {
             Key.StrPtr = nullptr;
             Key.Hash = 0;
@@ -165,6 +165,14 @@ namespace Diligent
             return Hash;
         }
 
+        struct Hasher
+        {
+            size_t operator()( const HashMapStringKey &Key ) const
+            {
+                return Key.GetHash();
+            }                  
+        };
+
         const Char* GetStr()const{ return StrPtr; }
 
     private:
@@ -183,17 +191,5 @@ namespace Diligent
         std::unique_ptr< Char[] > StringBuff; // Must be declared first
         const Char* StrPtr;// Must be declared after StringBuff
         mutable size_t Hash;
-    };
-}
-
-namespace std
-{
-    template<>
-    struct hash<Diligent::HashMapStringKey>
-    {
-        size_t operator()( const Diligent::HashMapStringKey &Key ) const
-        {
-            return Key.GetHash();
-        }                  
     };
 }
