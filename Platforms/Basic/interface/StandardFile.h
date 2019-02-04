@@ -31,14 +31,14 @@
 class StandardFile : public BasicFile
 {
 public:
-    StandardFile( const FileOpenAttribs &OpenAttribs, Diligent::Char SlashSymbol );
+    StandardFile(const FileOpenAttribs& OpenAttribs, Diligent::Char SlashSymbol);
     virtual ~StandardFile()override;
 
-    void Read(Diligent::IDataBlob *pData);
+    void Read(Diligent::IDataBlob* pData);
 
-    bool Read(void *Data, size_t BufferSize);
+    bool Read(void* Data, size_t Size);
 
-    bool Write(const void *Data, size_t BufferSize);
+    bool Write(const void* Data, size_t Size);
 
     size_t GetSize();
 
@@ -47,5 +47,5 @@ public:
     void SetPos(size_t Offset, FilePosOrigin Origin);
     
 protected:
-    FILE * m_pFile;
+    FILE* m_pFile = nullptr;
 };
