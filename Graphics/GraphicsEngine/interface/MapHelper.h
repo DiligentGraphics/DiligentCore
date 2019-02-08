@@ -53,17 +53,17 @@ public:
 
     /// Initializes the class member with null values
     MapHelper() :
-        m_pBuffer(nullptr),
-        m_pContext(nullptr),
-        m_pMappedData(nullptr),
-        m_MapType(static_cast<MAP_TYPE>(-1)),
-        m_MapFlags(static_cast<Uint32>(-1))
+        m_pBuffer       (nullptr),
+        m_pContext      (nullptr),
+        m_pMappedData   (nullptr),
+        m_MapType       (static_cast<MAP_TYPE>(-1)),
+        m_MapFlags      (static_cast<Uint32>(-1))
     {
     }
 
     /// Initializes the object and maps the provided resource.
     /// See Map() for details.
-    MapHelper( IDeviceContext *pContext, IBuffer *pBuffer, MAP_TYPE MapType, MAP_FLAGS MapFlags ) :
+    MapHelper( IDeviceContext* pContext, IBuffer* pBuffer, MAP_TYPE MapType, MAP_FLAGS MapFlags ) :
         MapHelper()
     {
         Map(pContext, pBuffer, MapType, MapFlags);
@@ -71,32 +71,32 @@ public:
 
     /// Move constructor: takes over resource ownership from Helper
     MapHelper(MapHelper&& Helper) :
-        m_pBuffer( std::move(Helper.m_pBuffer) ),
-        m_pMappedData( std::move(Helper.m_pMappedData) ),
-        m_pContext( std::move(Helper.m_pContext) ),
-        m_MapType( std::move(Helper.m_MapType) ),
-        m_MapFlags( std::move(Helper.m_MapFlags) )
+        m_pBuffer       (std::move(Helper.m_pBuffer)),
+        m_pMappedData   (std::move(Helper.m_pMappedData)),
+        m_pContext      (std::move(Helper.m_pContext)),
+        m_MapType       (std::move(Helper.m_MapType)),
+        m_MapFlags      (std::move(Helper.m_MapFlags))
     {
-        Helper.m_pBuffer = nullptr;
-        Helper.m_pContext = nullptr;
-        Helper.m_pMappedData = nullptr;
-        Helper.m_MapType = static_cast<MAP_TYPE>(-1);
-        Helper.m_MapFlags = static_cast<Uint32>(-1);
+        Helper.m_pBuffer        = nullptr;
+        Helper.m_pContext       = nullptr;
+        Helper.m_pMappedData    = nullptr;
+        Helper.m_MapType        = static_cast<MAP_TYPE>(-1);
+        Helper.m_MapFlags       = static_cast<Uint32>(-1);
     }
 
     /// Move-assignement operator: takes over resource ownership from Helper
     MapHelper& operator = (MapHelper&& Helper)
     {
-        m_pBuffer = std::move(Helper.m_pBuffer);
-        m_pMappedData = std::move(Helper.m_pMappedData);
-        m_pContext = std::move( Helper.m_pContext );
-        m_MapType = std::move(Helper.m_MapType);
-        m_MapFlags = std::move(Helper.m_MapFlags);
-        Helper.m_pBuffer = nullptr;
-        Helper.m_pContext = nullptr;
-        Helper.m_pMappedData = nullptr;
-        Helper.m_MapType = static_cast<MAP_TYPE>(-1);
-        Helper.m_MapFlags = static_cast<Uint32>(-1);
+        m_pBuffer       =  std::move(Helper.m_pBuffer);
+        m_pMappedData   = std::move(Helper.m_pMappedData);
+        m_pContext      = std::move( Helper.m_pContext );
+        m_MapType       = std::move(Helper.m_MapType);
+        m_MapFlags      = std::move(Helper.m_MapFlags);
+        Helper.m_pBuffer        = nullptr;
+        Helper.m_pContext       = nullptr;
+        Helper.m_pMappedData    = nullptr;
+        Helper.m_MapType        = static_cast<MAP_TYPE>(-1);
+        Helper.m_MapFlags       = static_cast<Uint32>(-1);
         return *this;
     }
 
@@ -106,7 +106,7 @@ public:
     /// \param pBuffer - Pointer to the buffer interface to map.
     /// \param MapType - Type of the map operation, see Diligent::MAP_TYPE for details.
     /// \param MapFlags - Additional map flags, see Diligent::MAP_FLAGS.
-    void Map( IDeviceContext *pContext, IBuffer *pBuffer, MAP_TYPE MapType, MAP_FLAGS MapFlags )
+    void Map( IDeviceContext* pContext, IBuffer* pBuffer, MAP_TYPE MapType, MAP_FLAGS MapFlags )
     {
         VERIFY(!m_pBuffer && !m_pMappedData && !m_pContext, "Object already mapped");
         Unmap();
@@ -130,12 +130,12 @@ public:
         if( m_pBuffer )
         {
             m_pContext->UnmapBuffer(m_pBuffer, m_MapType);
-            m_pBuffer = nullptr;
-            m_MapType = static_cast<MAP_TYPE>(-1);
-            m_MapFlags = static_cast<Uint32>(-1);
+            m_pBuffer   = nullptr;
+            m_MapType   = static_cast<MAP_TYPE>(-1);
+            m_MapFlags  = static_cast<Uint32>(-1);
         }
-        m_pContext = nullptr;
-        m_pMappedData = nullptr;
+        m_pContext      = nullptr;
+        m_pMappedData   = nullptr;
     }
     
     /// Converts mapped data pointer to DataType*
@@ -182,7 +182,7 @@ private:
     typename PtrTypeSelector<IDeviceContext, KeepStrongReferences>::Type m_pContext;
 
     /// Pointer to the mapped data
-    DataType *m_pMappedData;
+    DataType* m_pMappedData;
 
     MAP_TYPE m_MapType;
 

@@ -1070,37 +1070,32 @@ namespace Diligent
     struct DeviceObjectAttribs
     {
         /// Object name
-        const Char* Name;
-
-        /// Constructor intializes the structure members with default values
-        DeviceObjectAttribs() : 
-            Name(nullptr)
-        {}
+        const Char* Name = nullptr;
     };
 
     /// Hardware adapter attributes
     struct HardwareAdapterAttribs
     {
         /// A string that contains the adapter description
-        char Description[128];
+        char Description[128]           = {};
 
         /// Dedicated video memory, in bytes
-        size_t DedicatedVideoMemory;
+        size_t DedicatedVideoMemory     = 0;
 
         /// Dedicated system memory, in bytes
-        size_t DedicatedSystemMemory;
+        size_t DedicatedSystemMemory    = 0;
 
         /// Dedicated shared memory, in bytes
-        size_t SharedSystemMemory;
+        size_t SharedSystemMemory       = 0;
 
         /// The PCI ID of the hardware vendor
-        Uint32 VendorId;
+        Uint32 VendorId                 = 0;
 
         /// The PCI ID of the hardware device
-        Uint32 DeviceId;
+        Uint32 DeviceId                 = 0;
 
         /// Number of outputs this device has
-        Uint32 NumOutputs;
+        Uint32 NumOutputs               = 0;
     };
 
 
@@ -1147,65 +1142,53 @@ namespace Diligent
         };
         
         /// Display resolution width
-        Uint32 Width = 0;
+        Uint32 Width                    = 0;
 
         /// Display resolution height
-        Uint32 Height = 0;
+        Uint32 Height                   = 0;
 
         /// Display format
-        TEXTURE_FORMAT Format = TEX_FORMAT_UNKNOWN;
+        TEXTURE_FORMAT Format           = TEX_FORMAT_UNKNOWN;
 
         /// Refresh rate numerator
-        Uint32 RefreshRateNumerator = 0;
+        Uint32 RefreshRateNumerator     = 0;
 
         /// Refresh rate denominator
-        Uint32 RefreshRateDenominator = 0;
+        Uint32 RefreshRateDenominator   = 0;
 
         /// The scanline drawing mode. 
-        SCALING Scaling = SCALING_UNSPECIFIED;
+        SCALING Scaling                 = SCALING_UNSPECIFIED;
 
         /// The scaling mode. 
-        SCANLINE_ORDER ScanlineOrder = SCANLINE_ORDER_UNSPECIFIED;
+        SCANLINE_ORDER ScanlineOrder    = SCANLINE_ORDER_UNSPECIFIED;
     };
 
     /// Swap chain description
     struct SwapChainDesc
     {
         /// The swap chain width. Default value is 0
-        Uint32 Width;
+        Uint32 Width                        = 0;
 
         /// The swap chain height. Default value is 0
-        Uint32 Height;
+        Uint32 Height                       = 0;
         
-        /// Back buffer format. Default value is TEX_FORMAT_RGBA8_UNORM_SRGB
-        TEXTURE_FORMAT ColorBufferFormat;
+        /// Back buffer format. Default value is Diligent::TEX_FORMAT_RGBA8_UNORM_SRGB
+        TEXTURE_FORMAT ColorBufferFormat    = TEX_FORMAT_RGBA8_UNORM_SRGB;
         
-        /// Depth buffer format. Default value is TEX_FORMAT_D32_FLOAT
-        TEXTURE_FORMAT DepthBufferFormat;
+        /// Depth buffer format. Default value is Diligent::TEX_FORMAT_D32_FLOAT
+        TEXTURE_FORMAT DepthBufferFormat    = TEX_FORMAT_D32_FLOAT;
 
         /// Sample count. Default value is 1
-        Uint32 SamplesCount;
+        Uint32 SamplesCount                 = 1;
 
         /// Number of buffers int the swap chain
-        Uint32 BufferCount;
+        Uint32 BufferCount                  = 2;
 
         /// Default depth value, which is used as optimized depth clear value in D3D12
-        Float32 DefaultDepthValue;
+        Float32 DefaultDepthValue           = 1.f;
 
         /// Default stencil value, which is used as optimized stencil clear value in D3D12
-        Uint8 DefaultStencilValue;
-
-        /// Constructor intializes the structure members with default values
-        SwapChainDesc() :
-            Width(0),
-            Height(0),
-            ColorBufferFormat( TEX_FORMAT_RGBA8_UNORM_SRGB ),
-            DepthBufferFormat( TEX_FORMAT_D32_FLOAT ),
-            SamplesCount( 1 ),
-            BufferCount( 2 ),
-            DefaultDepthValue(1.f),
-            DefaultStencilValue(0)
-        {}
+        Uint8 DefaultStencilValue           = 0;
     };
 
     /// Full screen mode description
@@ -1213,13 +1196,13 @@ namespace Diligent
     struct FullScreenModeDesc
     {
         /// A Boolean value that specifies whether the swap chain is in fullscreen mode.
-        Bool Fullscreen = False;
+        Bool Fullscreen                 = False;
 
         /// Refresh rate numerator
-        Uint32 RefreshRateNumerator = 0;
+        Uint32 RefreshRateNumerator     = 0;
 
         /// Refresh rate denominator
-        Uint32 RefreshRateDenominator = 0;
+        Uint32 RefreshRateDenominator   = 0;
 
         /// The scanline drawing mode. 
         DisplayModeAttribs::SCALING Scaling = DisplayModeAttribs::SCALING_UNSPECIFIED;
@@ -1233,7 +1216,7 @@ namespace Diligent
     {
         /// Pointer to the raw memory allocator that will be used for all memory allocation/deallocation
         /// operations in the engine
-        class IMemoryAllocator *pRawMemAllocator = nullptr;
+        class IMemoryAllocator* pRawMemAllocator      = nullptr;
 
         /// Pointer to the user-specified debug message callback function
         DebugMessageCallbackType DebugMessageCallback = nullptr;
@@ -1349,7 +1332,7 @@ namespace Diligent
             Uint32 NumUniformTexelBufferDescriptors = 0;
             Uint32 NumStorageTexelBufferDescriptors = 0;
 
-            DescriptorPoolSize() {}
+            DescriptorPoolSize()noexcept {}
 
             DescriptorPoolSize( Uint32 _MaxDescriptorSets,
                                 Uint32 _NumSeparateSamplerDescriptors,
@@ -1359,7 +1342,7 @@ namespace Diligent
                                 Uint32 _NumUniformBufferDescriptors,
                                 Uint32 _NumStorageBufferDescriptors,
                                 Uint32 _NumUniformTexelBufferDescriptors,
-                                Uint32 _NumStorageTexelBufferDescriptors) :
+                                Uint32 _NumStorageTexelBufferDescriptors)noexcept :
                 MaxDescriptorSets               (_MaxDescriptorSets               ),
                 NumSeparateSamplerDescriptors   (_NumSeparateSamplerDescriptors   ),
                 NumCombinedSamplerDescriptors   (_NumCombinedSamplerDescriptors   ),
@@ -1494,7 +1477,7 @@ namespace Diligent
     {
         /// Literal texture format name (for instance, for TEX_FORMAT_RGBA8_UNORM format, this
         /// will be "TEX_FORMAT_RGBA8_UNORM")
-        const Char *Name;
+        const Char* Name;
 
         /// Texture format, see Diligent::TEXTURE_FORMAT for a list of supported texture formats
         TEXTURE_FORMAT Format;
@@ -1519,14 +1502,14 @@ namespace Diligent
         Uint8 BlockHeight;
 
         /// Initializes the structure
-        explicit TextureFormatAttribs( const Char*    _Name,
-                                       TEXTURE_FORMAT _Format, 
-                                       Uint8          _ComponentSize,
-                                       Uint8          _NumComponents,
-                                       COMPONENT_TYPE _ComponentType,
-                                       bool           _IsTypeless,
-                                       Uint8          _BlockWidth,
-                                       Uint8          _BlockHeight) : 
+        TextureFormatAttribs( const Char*    _Name,
+                              TEXTURE_FORMAT _Format, 
+                              Uint8          _ComponentSize,
+                              Uint8          _NumComponents,
+                              COMPONENT_TYPE _ComponentType,
+                              bool           _IsTypeless,
+                              Uint8          _BlockWidth,
+                              Uint8          _BlockHeight)noexcept : 
             Name         (_Name),
             Format       (_Format),
             ComponentSize(_ComponentSize),
@@ -1538,7 +1521,7 @@ namespace Diligent
         {
         }
 
-        TextureFormatAttribs() : 
+        TextureFormatAttribs()noexcept : 
             Name         ("TEX_FORMAT_UNKNOWN"),
             Format       (TEX_FORMAT_UNKNOWN),
             ComponentSize(0),
@@ -1556,12 +1539,7 @@ namespace Diligent
     struct TextureFormatInfo : public TextureFormatAttribs
     {
         /// Indicates if the format is supported by the device
-        bool Supported;
-
-        /// Initializes the structure with default values
-        explicit TextureFormatInfo() :
-            Supported(false)
-        {}
+        bool Supported  = false;
     };
 
     /// Extended texture format description
@@ -1570,29 +1548,29 @@ namespace Diligent
     struct TextureFormatInfoExt : TextureFormatInfo
     {
         /// Indicates if the format can be filtered
-        bool Filterable = false;
+        bool Filterable         = false;
 
         /// Indicates if the format can be used as a render target format
-        bool ColorRenderable = false;
+        bool ColorRenderable    = false;
 
         /// Indicates if the format can be used as a depth format
-        bool DepthRenderable = false;
+        bool DepthRenderable    = false;
 
         /// Indicates if the format can be used to create a 1D texture 
-        bool Tex1DFmt = false;
+        bool Tex1DFmt           = false;
 
         /// Indicates if the format can be used to create a 2D texture 
-        bool Tex2DFmt = false;
+        bool Tex2DFmt           = false;
 
         /// Indicates if the format can be used to create a 3D texture 
-        bool Tex3DFmt = false;
+        bool Tex3DFmt           = false;
 
         /// Indicates if the format can be used to create a cube texture 
-        bool TexCubeFmt = false;
+        bool TexCubeFmt         = false;
 
         /// A bitmask specifying all the supported sample counts for this texture format.
         /// If the format supports n samples, then (SampleCounts & n) != 0
-        Uint32 SampleCounts = 0;
+        Uint32 SampleCounts     = 0;
     };
 
     /// Resource usage state
@@ -1725,7 +1703,7 @@ namespace Diligent
         /// \note When TransitionType is STATE_TRANSITION_TYPE_BEGIN, this member must be false.
         bool UpdateResourceState = false;
 
-        StateTransitionDesc(){}
+        StateTransitionDesc()noexcept{}
 
         StateTransitionDesc(ITexture*             _pTexture, 
                             RESOURCE_STATE        _OldState,
@@ -1735,7 +1713,7 @@ namespace Diligent
                             Uint32                _FirstArraySlice = 0,
                             Uint32                _ArraySliceCount = RemainingArraySlices,
                             STATE_TRANSITION_TYPE _TransitionType  = STATE_TRANSITION_TYPE_IMMEDIATE,
-                            bool                  _UpdateState     = false) : 
+                            bool                  _UpdateState     = false)noexcept : 
             pTexture            (_pTexture),
             FirstMipLevel       (_FirstMipLevel),
             MipLevelsCount      (_MipLevelsCount),
@@ -1750,14 +1728,14 @@ namespace Diligent
         StateTransitionDesc(ITexture*      _pTexture, 
                             RESOURCE_STATE _OldState,
                             RESOURCE_STATE _NewState, 
-                            bool           _UpdateState) :
+                            bool           _UpdateState)noexcept :
             StateTransitionDesc(_pTexture, _OldState, _NewState, 0, RemainingMipLevels, 0, RemainingArraySlices, STATE_TRANSITION_TYPE_IMMEDIATE, _UpdateState)
         {}
 
         StateTransitionDesc(IBuffer*       _pBuffer, 
                             RESOURCE_STATE _OldState,
                             RESOURCE_STATE _NewState,
-                            bool           _UpdateState) : 
+                            bool           _UpdateState)noexcept : 
             pBuffer             (_pBuffer),
             OldState            (_OldState),
             NewState            (_NewState),

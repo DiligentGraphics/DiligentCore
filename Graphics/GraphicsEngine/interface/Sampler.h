@@ -52,47 +52,61 @@ static constexpr INTERFACE_ID IID_Sampler =
 struct SamplerDesc : DeviceObjectAttribs
 {
     /// Texture minification filter, see Diligent::FILTER_TYPE for details.
-    FILTER_TYPE MinFilter;
+    /// Default value: Diligent::FILTER_TYPE_LINEAR.
+    FILTER_TYPE MinFilter               = FILTER_TYPE_LINEAR;
     
     /// Texture magnification filter, see Diligent::FILTER_TYPE for details.
-    FILTER_TYPE MagFilter;
+    /// Default value: Diligent::FILTER_TYPE_LINEAR.
+    FILTER_TYPE MagFilter               = FILTER_TYPE_LINEAR;
 
     /// Mip filter, see Diligent::FILTER_TYPE for details. 
     /// Only FILTER_TYPE_POINT, FILTER_TYPE_LINEAR, FILTER_TYPE_ANISOTROPIC, and 
     /// FILTER_TYPE_COMPARISON_ANISOTROPIC are allowed.
-    FILTER_TYPE MipFilter;
+    /// Default value: Diligent::FILTER_TYPE_LINEAR.
+    FILTER_TYPE MipFilter               = FILTER_TYPE_LINEAR;
 
     /// Texture address mode for U coordinate, see Diligent::TEXTURE_ADDRESS_MODE for details
-    TEXTURE_ADDRESS_MODE AddressU;
+    /// Default value: Diligent::TEXTURE_ADDRESS_CLAMP.
+    TEXTURE_ADDRESS_MODE AddressU       = TEXTURE_ADDRESS_CLAMP;
     
     /// Texture address mode for V coordinate, see Diligent::TEXTURE_ADDRESS_MODE for details
-    TEXTURE_ADDRESS_MODE AddressV;
+    /// Default value: Diligent::TEXTURE_ADDRESS_CLAMP.
+    TEXTURE_ADDRESS_MODE AddressV       = TEXTURE_ADDRESS_CLAMP;
 
     /// Texture address mode for W coordinate, see Diligent::TEXTURE_ADDRESS_MODE for details
-    TEXTURE_ADDRESS_MODE AddressW;
+    /// Default value: Diligent::TEXTURE_ADDRESS_CLAMP.
+    TEXTURE_ADDRESS_MODE AddressW       = TEXTURE_ADDRESS_CLAMP;
 
     /// Offset from the calculated mipmap level. For example, if a sampler calculates that a texture 
     /// should be sampled at mipmap level 1.2 and MipLODBias is 2.3, then the texture will be sampled at 
-    /// mipmap level 3.5.
-    Float32 MipLODBias;
+    /// mipmap level 3.5. Default value: 0.
+    Float32 MipLODBias                  = 0;
 
-    /// Maximum anisotropy level for the anisotropic filter.
-    Uint32 MaxAnisotropy;
+    /// Maximum anisotropy level for the anisotropic filter. Default value: 0.
+    Uint32 MaxAnisotropy                = 0;
 
     /// A function that compares sampled data against existing sampled data when comparsion
-    /// filter is used.
-    COMPARISON_FUNCTION ComparisonFunc;
+    /// filter is used. Default value: Diligent::COMPARISON_FUNC_NEVER.
+    COMPARISON_FUNCTION ComparisonFunc  = COMPARISON_FUNC_NEVER;
 
     /// Border color to use if TEXTURE_ADDRESS_BORDER is specified for AddressU, AddressV, or AddressW. 
-    Float32 BorderColor[4];
+    /// Default value: {0,0,0,0}
+    Float32 BorderColor[4]              = {0, 0, 0, 0};
 
     /// Specifies the minimum value that LOD is clamped to before accessing the texture MIP levels.
     /// Must be less than or equal to MaxLOD.
-    float MinLOD;
+    /// Default value: 0.
+    float MinLOD                        = 0;
 
     /// Specifies the maximum value that LOD is clamped to before accessing the texture MIP levels.
     /// Must be greater than or equal to MinLOD.
-    float MaxLOD;
+    /// Default value: +FLT_MAX.
+    float MaxLOD                        = +3.402823466e+38F;
+
+    SamplerDesc()noexcept{}
+
+
+    // Constructor is required because SamplerDesc is not POD.
 
     /// Initializes the structure members
 
@@ -110,9 +124,9 @@ struct SamplerDesc : DeviceObjectAttribs
     /// BorderColor         | (0,0,0,0)
     /// MinLOD              | 0
     /// MaxLOD              | +FLT_MAX
-    SamplerDesc(FILTER_TYPE          _MinFilter      = FILTER_TYPE_LINEAR,
-                FILTER_TYPE          _MagFilter      = FILTER_TYPE_LINEAR,
-                FILTER_TYPE          _MipFilter      = FILTER_TYPE_LINEAR,
+    SamplerDesc(FILTER_TYPE          _MinFilter,
+                FILTER_TYPE          _MagFilter,
+                FILTER_TYPE          _MipFilter,
                 TEXTURE_ADDRESS_MODE _AddressU       = TEXTURE_ADDRESS_CLAMP,
                 TEXTURE_ADDRESS_MODE _AddressV       = TEXTURE_ADDRESS_CLAMP,
                 TEXTURE_ADDRESS_MODE _AddressW       = TEXTURE_ADDRESS_CLAMP,
@@ -120,27 +134,21 @@ struct SamplerDesc : DeviceObjectAttribs
                 Uint32               _MaxAnisotropy  = 0,
                 COMPARISON_FUNCTION  _ComparisonFunc = COMPARISON_FUNC_NEVER,
                 float                _MinLOD         = 0,
-                float                _MaxLOD         = +FLT_MAX) : 
-        MinFilter(_MinFilter),
-        MagFilter(_MagFilter),
-        MipFilter(_MipFilter),
-        AddressU(_AddressU),
-        AddressV(_AddressV),
-        AddressW(_AddressW),
-        MipLODBias(_MipLODBias),
-        MaxAnisotropy(_MaxAnisotropy),
-        ComparisonFunc(_ComparisonFunc),
-        MinLOD(_MinLOD),
-        MaxLOD(_MaxLOD)
+                float                _MaxLOD         = +3.402823466e+38F) : 
+        MinFilter       (_MinFilter),
+        MagFilter       (_MagFilter),
+        MipFilter       (_MipFilter),
+        AddressU        (_AddressU),
+        AddressV        (_AddressV),
+        AddressW        (_AddressW),
+        MipLODBias      (_MipLODBias),
+        MaxAnisotropy   (_MaxAnisotropy),
+        ComparisonFunc  (_ComparisonFunc),
+        MinLOD          (_MinLOD),
+        MaxLOD          (_MaxLOD)
     {
         BorderColor[0] = BorderColor[1] = BorderColor[2] = BorderColor[3] = 0;
     }
-
-    SamplerDesc(const SamplerDesc&) = default;
-    SamplerDesc(SamplerDesc&&) = default;
-    SamplerDesc& operator = (const SamplerDesc&) = default;
-    SamplerDesc& operator = (SamplerDesc&&) = default;
-
     /// Tests if two structures are equivalent
 
     /// \param [in] RHS - reference to the structure to perform comparison with
@@ -149,7 +157,7 @@ struct SamplerDesc : DeviceObjectAttribs
     /// - False otherwise.
     /// The operator ignores DeviceObjectAttribs::Name field as it does not affect 
     /// the sampler state.
-    bool operator ==(const SamplerDesc& RHS)const
+    bool operator == (const SamplerDesc& RHS)const
     {
                 // Name is primarily used for debug purposes and does not affect the state.
                 // It is ignored in comparison operation.
@@ -181,7 +189,7 @@ class ISampler : public IDeviceObject
 {
 public:
     /// Queries the specific interface, see IObject::QueryInterface() for details
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface ) = 0;
+    virtual void QueryInterface( const Diligent::INTERFACE_ID& IID, IObject** ppInterface ) = 0;
 
     /// Returns the sampler description used to create the object
     virtual const SamplerDesc& GetDesc()const = 0;

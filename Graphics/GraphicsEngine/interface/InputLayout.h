@@ -37,36 +37,36 @@ static constexpr Uint32 iMaxLayoutElements = 16;
 struct LayoutElement
 {
     /// Input index of the element, which is specified in the vertex shader.
-    Uint32 InputIndex;
+    Uint32 InputIndex       = 0;
 
     /// Buffer slot index that this element is read from.
-    Uint32 BufferSlot;
+    Uint32 BufferSlot       = 0;
 
     /// Number of components in the element. Allowed values are 1, 2, 3, and 4.
-    Uint32 NumComponents;
+    Uint32 NumComponents    = 0;
 
     /// Type of the element components, see Diligent::VALUE_TYPE for details.
-    VALUE_TYPE ValueType;
+    VALUE_TYPE ValueType    = VT_FLOAT32;
 
     /// For signed and unsigned integer value types 
     /// (VT_INT8, VT_INT16, VT_INT32, VT_UINT8, VT_UINT16, VT_UINT32)
     /// indicates if the value should be normalized to [-1,+1] or 
     /// [0, 1] range respectively. For floating point types
     /// (VT_FLOAT16 and VT_FLOAT32), this member is ignored.
-    Bool IsNormalized;
+    Bool IsNormalized       = True;
 
     /// Relative offset, in bytes, to the element bits.
     /// If this value is zero, the offset will be computed automatically assuming 
     /// that all previous elements in the same buffer slot are tightly packed.
     /// Overlapping elements are not allowed.
-    Uint32 RelativeOffset;
+    Uint32 RelativeOffset   = 0;
 
     /// Stride, in bytes, between two elements, for this buffer slot.
     /// If this value is zero, stride will be computed automatically assuming
     /// that all elements in the same buffer slot are tightly packed.
     /// If buffer slot contains multiple layout elements, they all must use
     /// the same stride or zero.
-    Uint32 Stride;
+    Uint32 Stride           = 0;
 
     /// Input frequency
     enum FREQUENCY : Int32
@@ -82,22 +82,25 @@ struct LayoutElement
 
         /// Helper value that stores the total number of frequencies in the enumeration.
         FREQUENCY_NUM_FREQUENCIES
-    }Frequency;
+    };
+    FREQUENCY Frequency         = FREQUENCY_PER_VERTEX;
     
     /// The number of instances to draw using the same per-instance data before advancing 
     /// in the buffer by one element.
-    Uint32 InstanceDataStepRate;
+    Uint32 InstanceDataStepRate = 1;
+
+    LayoutElement()noexcept{}
 
     /// Initializes the structure
-    LayoutElement(Uint32     _InputIndex           = 0, 
-                  Uint32     _BufferSlot           = 0, 
-                  Uint32     _NumComponents        = 0, 
-                  VALUE_TYPE _ValueType            = VT_FLOAT32,
+    LayoutElement(Uint32     _InputIndex, 
+                  Uint32     _BufferSlot, 
+                  Uint32     _NumComponents, 
+                  VALUE_TYPE _ValueType,
                   Bool       _IsNormalized         = True, 
                   Uint32     _RelativeOffset       = 0,
                   Uint32     _Stride               = 0,
                   FREQUENCY  _Frequency            = FREQUENCY_PER_VERTEX,
-                  Uint32     _InstanceDataStepRate = 1) : 
+                  Uint32     _InstanceDataStepRate = 1)noexcept : 
         InputIndex(_InputIndex),
         BufferSlot(_BufferSlot),
         NumComponents(_NumComponents),
@@ -116,13 +119,9 @@ struct LayoutElement
 struct InputLayoutDesc 
 {
     /// Array of layout elements
-    const LayoutElement *LayoutElements;
+    const LayoutElement*  LayoutElements = nullptr;
     /// Number of layout elements
-    Uint32 NumElements;
-    InputLayoutDesc() : 
-        LayoutElements(nullptr),
-        NumElements(0)
-    {}
+    Uint32 NumElements                   = 0;
 };
 
 }

@@ -92,33 +92,20 @@ enum STENCIL_OP : Int8
 struct StencilOpDesc
 {
     /// The stencil operation to perform when stencil testing fails.
-    STENCIL_OP          StencilFailOp;
+    /// Default value: Diligent::STENCIL_OP_KEEP.
+    STENCIL_OP          StencilFailOp       = STENCIL_OP_KEEP;
 
     /// The stencil operation to perform when stencil testing passes and depth testing fails.
-    STENCIL_OP          StencilDepthFailOp;
+    /// Default value: Diligent::STENCIL_OP_KEEP.
+    STENCIL_OP          StencilDepthFailOp  = STENCIL_OP_KEEP;
 
     /// The stencil operation to perform when stencil testing and depth testing both pass.
-    STENCIL_OP          StencilPassOp;
+    /// Default value: Diligent::STENCIL_OP_KEEP.
+    STENCIL_OP          StencilPassOp       = STENCIL_OP_KEEP;
 
-    /// A function that compares stencil data against existing stencil data. See 
-    /// Diligent::COMPARISON_FUNCTION.
-    COMPARISON_FUNCTION StencilFunc;
-
-    /// Initializes the structure members with default values
-
-    /// Default values:
-    /// Member              | Default value
-    /// --------------------|--------------
-    /// StencilFailOp       | Diligent::STENCIL_OP_KEEP
-    /// StencilDepthFailOp  | Diligent::STENCIL_OP_KEEP
-    /// StencilPassOp       | Diligent::STENCIL_OP_KEEP
-    /// StencilFunc         | Diligent::COMPARISON_FUNC_ALWAYS
-    StencilOpDesc() : 
-        StencilFailOp     ( STENCIL_OP_KEEP ),
-        StencilDepthFailOp( STENCIL_OP_KEEP ),
-        StencilPassOp     ( STENCIL_OP_KEEP ),
-        StencilFunc       ( COMPARISON_FUNC_ALWAYS )
-    {}
+    /// A function that compares stencil data against existing stencil data. 
+    /// Default value: Diligent::COMPARISON_FUNC_ALWAYS. See Diligent::COMPARISON_FUNCTION.
+    COMPARISON_FUNCTION StencilFunc         = COMPARISON_FUNC_ALWAYS;
 
     /// Tests if two structures are equivalent
 
@@ -146,24 +133,27 @@ struct DepthStencilStateDesc
 {
     /// Enable depth-stencil operations. When it is set to False, 
     /// depth test always passes, depth writes are disabled,
-    /// and no stencil operations are performed
-    Bool                DepthEnable;
+    /// and no stencil operations are performed. Default value: True.
+    Bool                DepthEnable         = True;
 
-    /// Enable or disable writes to a depth buffer
-    Bool                DepthWriteEnable;
+    /// Enable or disable writes to a depth buffer. Default value: True.
+    Bool                DepthWriteEnable    = True;
 
     /// A function that compares depth data against existing depth data. 
     /// See Diligent::COMPARISON_FUNCTION for details.
-    COMPARISON_FUNCTION DepthFunc;
+    /// Default value: Diligent::COMPARISON_FUNC_LESS.
+    COMPARISON_FUNCTION DepthFunc           = COMPARISON_FUNC_LESS;
 
-    /// Enable stencil opertaions.
-    Bool                StencilEnable;
+    /// Enable stencil opertaions. Default value: False.
+    Bool                StencilEnable       = False;
     
     /// Identify which bits of the depth-stencil buffer are accessed when reading stencil data.
-    Uint8               StencilReadMask;
+    /// Default value: 0xFF.
+    Uint8               StencilReadMask     = 0xFF;
     
     /// Identify which bits of the depth-stencil buffer are accessed when writing stencil data.
-    Uint8               StencilWriteMask;
+    /// Default value: 0xFF.
+    Uint8               StencilWriteMask    = 0xFF;
 
     /// Identify stencil operations for the front-facing triangles, see Diligent::StencilOpDesc.
     StencilOpDesc      FrontFace;
@@ -171,33 +161,6 @@ struct DepthStencilStateDesc
     /// Identify stencil operations for the back-facing triangles, see Diligent::StencilOpDesc.
     StencilOpDesc      BackFace;
 
-    /// Initializes the structure members
-
-    /// Default values:
-    /// Member              | Default value
-    /// --------------------|--------------
-    /// DepthEnable         | True
-    /// DepthWriteEnable    | True
-    /// DepthFunc           | Diligent::COMPARISON_FUNC_LESS
-    /// StencilEnable       | False
-    /// StencilReadMask     | 0xFF
-    /// StencilWriteMask    | 0xFF
-    /// 
-    /// Members of FrontFace and BackFace
-    /// are initialized by StencilOpDesc::StencilOpDesc()
-    DepthStencilStateDesc(Bool                _DepthEnable      = True,
-                          Bool                _DepthWriteEnable = True,
-                          COMPARISON_FUNCTION _DepthFunc        = COMPARISON_FUNC_LESS,
-                          Bool                _StencilEnable    = False,
-                          Uint8               _StencilReadMask  = 0xFF,
-                          Uint8               _StencilWriteMask = 0xFF) : 
-        DepthEnable     ( _DepthEnable ),
-        DepthWriteEnable( _DepthWriteEnable ),
-        DepthFunc       ( _DepthFunc ),
-        StencilEnable   ( _StencilEnable ),
-        StencilReadMask ( _StencilReadMask ),
-        StencilWriteMask( _StencilWriteMask )
-    {}
 
     /// Tests if two structures are equivalent
 

@@ -114,29 +114,29 @@ struct DrawAttribs
     };
 
     /// Indicates if index buffer will be used to index input vertices.
-    Bool IsIndexed = False;
+    Bool IsIndexed                  = False;
 
     /// For an indexed draw call, type of elements in the index buffer.
     /// Allowed values: VT_UINT16 and VT_UINT32. Ignored if DrawAttribs::IsIndexed is False.
-    VALUE_TYPE IndexType = VT_UNDEFINED;
+    VALUE_TYPE IndexType            = VT_UNDEFINED;
 
     /// Additional flags, see Diligent::DRAW_FLAGS.
-    DRAW_FLAGS Flags = DRAW_FLAG_NONE;
+    DRAW_FLAGS Flags                = DRAW_FLAG_NONE;
 
     /// State transition mode for indirect draw arguments buffer. Ignored if pIndirectDrawAttribs member is null.
     RESOURCE_STATE_TRANSITION_MODE IndirectAttribsBufferStateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_NONE;
 
     /// Number of instances to draw. If more than one instance is specified,
     /// instanced draw call will be performed.
-    Uint32 NumInstances = 1;
+    Uint32 NumInstances             = 1;
 
     /// For indexed rendering, a constant which is added to each index before 
     /// accessing the vertex buffer.
-    Uint32 BaseVertex = 0; 
+    Uint32 BaseVertex               = 0; 
 
     /// For indirect rendering, offset from the beginning of the buffer to the location
     /// of draw command attributes. Ignored if DrawAttribs::pIndirectDrawAttribs is null.
-    Uint32 IndirectDrawArgsOffset = 0;
+    Uint32 IndirectDrawArgsOffset   = 0;
 
     union
     {
@@ -257,21 +257,23 @@ DEFINE_FLAG_ENUM_OPERATORS(CLEAR_DEPTH_STENCIL_FLAGS)
 /// This structure is used by IDeviceContext::DispatchCompute().
 struct DispatchComputeAttribs
 {
-    Uint32 ThreadGroupCountX; ///< Number of groups dispatched in X direction.
-    Uint32 ThreadGroupCountY; ///< Number of groups dispatched in Y direction.
-    Uint32 ThreadGroupCountZ; ///< Number of groups dispatched in Z direction.
+    Uint32 ThreadGroupCountX = 1; ///< Number of groups dispatched in X direction.
+    Uint32 ThreadGroupCountY = 1; ///< Number of groups dispatched in Y direction.
+    Uint32 ThreadGroupCountZ = 1; ///< Number of groups dispatched in Z direction.
 
     /// Pointer to the buffer containing dispatch arguments.
     /// If not nullptr, then indirect dispatch command is executed, and
     /// ThreadGroupCountX, ThreadGroupCountY, and ThreadGroupCountZ are ignored.
-    IBuffer* pIndirectDispatchAttribs;
+    IBuffer* pIndirectDispatchAttribs = nullptr;
     
     /// If pIndirectDispatchAttribs is not nullptr, indicates offset from the beginning
     /// of the buffer to the dispatch command arguments. Ignored otherwise.
-    Uint32  DispatchArgsByteOffset;
+    Uint32  DispatchArgsByteOffset    = 0;
 
     /// State transition mode for indirect dispatch attributes buffer. This member is ignored if pIndirectDispatchAttribs member is null.
     RESOURCE_STATE_TRANSITION_MODE IndirectAttribsBufferStateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_NONE;
+
+    DispatchComputeAttribs()noexcept{}
 
     /// Initializes the structure to perform non-indirect dispatch command.
     
@@ -279,7 +281,7 @@ struct DispatchComputeAttribs
     /// \param [in] GroupsY - Number of groups dispatched in Y direction. Default value is 1.
     /// \param [in] GroupsZ - Number of groups dispatched in Z direction. Default value is 1.
     explicit
-    DispatchComputeAttribs(Uint32 GroupsX = 1, Uint32 GroupsY = 1, Uint32 GroupsZ = 1) :
+    DispatchComputeAttribs(Uint32 GroupsX, Uint32 GroupsY = 1, Uint32 GroupsZ = 1)noexcept :
         ThreadGroupCountX       (GroupsX),
         ThreadGroupCountY       (GroupsY),
         ThreadGroupCountZ       (GroupsZ),
@@ -323,25 +325,25 @@ DEFINE_FLAG_ENUM_OPERATORS(SET_VERTEX_BUFFERS_FLAGS)
 struct Viewport
 {
     /// X coordinate of the left boundary of the viewport.
-    Float32 TopLeftX = 0.f;
+    Float32 TopLeftX    = 0.f;
 
     /// Y coordinate of the top boundary of the viewport.
     /// When defining a viewport, DirectX convention is used:
     /// window coordinate systems originates in the LEFT TOP corner
     /// of the screen with Y axis pointing down.
-    Float32 TopLeftY = 0.f;
+    Float32 TopLeftY    = 0.f;
 
     /// Viewport width.
-    Float32 Width  = 0.f;
+    Float32 Width       = 0.f;
 
     /// Viewport Height.
-    Float32 Height = 0.f;
+    Float32 Height      = 0.f;
 
     /// Minimum depth of the viewport. Ranges between 0 and 1.
-    Float32 MinDepth = 0.f;
+    Float32 MinDepth    = 0.f;
 
     /// Maximum depth of the viewport. Ranges between 0 and 1.
-    Float32 MaxDepth = 1.f;
+    Float32 MaxDepth    = 1.f;
 
     /// Initializes the structure.
     Viewport(Float32 _TopLeftX,     Float32 _TopLeftY,
@@ -373,14 +375,14 @@ struct Rect
     Int32 bottom = 0;  ///< Y coordinate of the bottom boundary of the viewport.
 
     /// Initializes the structure
-    Rect(Int32 _left, Int32 _top, Int32 _right, Int32 _bottom) : 
+    Rect(Int32 _left, Int32 _top, Int32 _right, Int32 _bottom)noexcept : 
         left  ( _left   ),
         top   ( _top    ),
         right ( _right  ),
         bottom( _bottom )
     {}
 
-    Rect(){}
+    Rect()noexcept{}
 };
 
 
@@ -425,12 +427,12 @@ struct CopyTextureAttribs
     /// Destination texture state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
     RESOURCE_STATE_TRANSITION_MODE DstTextureTransitionMode = RESOURCE_STATE_TRANSITION_MODE_NONE;
 
-    CopyTextureAttribs(){}
+    CopyTextureAttribs()noexcept{}
 
     CopyTextureAttribs(ITexture*                      _pSrcTexture,
                        RESOURCE_STATE_TRANSITION_MODE _SrcTextureTransitionMode,
                        ITexture*                      _pDstTexture,
-                       RESOURCE_STATE_TRANSITION_MODE _DstTextureTransitionMode) :
+                       RESOURCE_STATE_TRANSITION_MODE _DstTextureTransitionMode)noexcept :
         pSrcTexture             (_pSrcTexture),
         SrcTextureTransitionMode(_SrcTextureTransitionMode),
         pDstTexture             (_pDstTexture),
@@ -448,7 +450,7 @@ class IDeviceContext : public IObject
 {
 public:
     /// Queries the specific interface, see IObject::QueryInterface() for details.
-    virtual void QueryInterface(const Diligent::INTERFACE_ID &IID, IObject** ppInterface) = 0;
+    virtual void QueryInterface(const Diligent::INTERFACE_ID& IID, IObject** ppInterface) = 0;
 
     /// Sets the pipeline state.
 

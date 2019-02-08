@@ -113,7 +113,7 @@ namespace Diligent
         CSCreateAttribs.Desc.ShaderType = SHADER_TYPE_COMPUTE;
         CSCreateAttribs.Desc.DefaultVariableType = SHADER_VARIABLE_TYPE_DYNAMIC;
         
-        ShaderVariableDesc VarDesc("CB", SHADER_VARIABLE_TYPE_STATIC);
+        ShaderVariableDesc VarDesc{"CB", SHADER_VARIABLE_TYPE_STATIC};
         CSCreateAttribs.Desc.VariableDesc = &VarDesc;
         CSCreateAttribs.Desc.NumVariables = 1;
 

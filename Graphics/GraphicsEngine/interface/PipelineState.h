@@ -44,15 +44,10 @@ namespace Diligent
 struct SampleDesc
 {
     /// Sample count
-    Uint8 Count;
+    Uint8 Count     = 1;
 
     /// Quality
-    Uint8 Quality;
-
-    SampleDesc() : 
-        Count(1),
-        Quality(0)
-    {}
+    Uint8 Quality   = 0;
 };
 
 
@@ -107,10 +102,10 @@ struct GraphicsPipelineDesc
     Uint8 NumRenderTargets = 0;
 
     /// Render target formats
-    TEXTURE_FORMAT RTVFormats[8];
+    TEXTURE_FORMAT RTVFormats[8] = {};
 
     /// Depth-stencil format
-    TEXTURE_FORMAT DSVFormat;
+    TEXTURE_FORMAT DSVFormat = TEX_FORMAT_UNKNOWN;
 
     /// Multisampling parameters
     SampleDesc SmplDesc;
@@ -120,13 +115,6 @@ struct GraphicsPipelineDesc
 
     //D3D12_CACHED_PIPELINE_STATE CachedPSO;
     //D3D12_PIPELINE_STATE_FLAGS Flags;
-
-    GraphicsPipelineDesc()
-    {
-        for(size_t rt = 0; rt < _countof(RTVFormats); ++rt)
-            RTVFormats[rt] = TEX_FORMAT_UNKNOWN;
-        DSVFormat = TEX_FORMAT_UNKNOWN;
-    };
 };
 
 
@@ -143,7 +131,7 @@ struct ComputePipelineDesc
 struct PipelineStateDesc : DeviceObjectAttribs
 {
     /// Flag indicating if pipeline state is a compute pipeline state
-    bool IsComputePipeline = false;
+    bool IsComputePipeline          = false;
 
     /// Shader resource binding allocation granularity
 
@@ -152,7 +140,7 @@ struct PipelineStateDesc : DeviceObjectAttribs
     Uint32 SRBAllocationGranularity = 1;
 
     /// Defines which command queues this pipeline state can be used with
-    Uint64 CommandQueueMask = 1;
+    Uint64 CommandQueueMask         = 1;
 
     /// Graphics pipeline state description. This memeber is ignored if IsComputePipeline == True
     GraphicsPipelineDesc GraphicsPipeline;
@@ -172,7 +160,7 @@ class IPipelineState : public IDeviceObject
 {
 public:
     /// Queries the specific interface, see IObject::QueryInterface() for details
-    virtual void QueryInterface( const INTERFACE_ID &IID, IObject **ppInterface ) = 0;
+    virtual void QueryInterface( const INTERFACE_ID& IID, IObject** ppInterface ) = 0;
 
     /// Returns the blend state description used to create the object
     virtual const PipelineStateDesc& GetDesc()const = 0;
@@ -184,7 +172,7 @@ public:
     /// \remarks For older OpenGL devices that do not support program pipelines 
     ///          (OpenGL4.1-, OpenGLES3.0-). This function is the only way to bind
     ///          shader resources.
-    virtual void BindShaderResources( IResourceMapping *pResourceMapping, Uint32 Flags ) = 0;
+    virtual void BindShaderResources( IResourceMapping* pResourceMapping, Uint32 Flags ) = 0;
 
     /// Creates a shader resource binding object
 
@@ -193,7 +181,7 @@ public:
     /// \param [in] InitStaticResources      - if set to true, the method will initialize static resources in
     ///                                        the created object, which has the exact same effect as calling 
     ///                                        IShaderResourceBinding::InitializeStaticResources().
-    virtual void CreateShaderResourceBinding( IShaderResourceBinding **ppShaderResourceBinding, bool InitStaticResources = false ) = 0;
+    virtual void CreateShaderResourceBinding( IShaderResourceBinding** ppShaderResourceBinding, bool InitStaticResources = false ) = 0;
 
     /// Checks if this pipeline state object is compatible with another PSO
 
@@ -209,7 +197,7 @@ public:
     ///             to commit resources for the second pipeline, a runtime error will occur.\n
     ///             The function only checks compatibility of shader resource layouts. It does not take
     ///             into account vertex shader input layout, number of outputs, etc.
-    virtual bool IsCompatibleWith(const IPipelineState *pPSO)const = 0;
+    virtual bool IsCompatibleWith(const IPipelineState* pPSO)const = 0;
 };
 
 }

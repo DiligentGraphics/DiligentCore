@@ -32,14 +32,14 @@ namespace Diligent
 {
     /// Maximum number of input buffer slots.
     /// D3D11_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT == 32
-    static constexpr Uint32 MaxBufferSlots = 32;
+    static constexpr Uint32 MaxBufferSlots          = 32;
 
     /// Maximum number of simultaneous render targets.
-    static constexpr Uint32 MaxRenderTargets = 8;
+    static constexpr Uint32 MaxRenderTargets        = 8;
 
     /// Maximum number of viewports.
-    static constexpr Uint32 MaxViewports = 16;
+    static constexpr Uint32 MaxViewports            = 16;
 
     /// Maximum number of shader stages in a pipeline.
-    static constexpr Uint32 MaxShadersInPipeline = 5;
+    static constexpr Uint32 MaxShadersInPipeline    = 5;
 }

@@ -137,14 +137,10 @@ enum BIND_SHADER_RESOURCES_FLAGS : Uint32
 struct ShaderVariableDesc
 {
     /// Shader variable name
-    const Char *Name;
+    const Char* Name            = nullptr;
 
     /// Shader variable type. See Diligent::SHADER_VARIABLE_TYPE for a list of allowed types
-    SHADER_VARIABLE_TYPE Type;
-    ShaderVariableDesc(const Char *_Name = nullptr, SHADER_VARIABLE_TYPE _Type = SHADER_VARIABLE_TYPE_STATIC) : 
-        Name(_Name),
-        Type(_Type)
-    {}
+    SHADER_VARIABLE_TYPE Type   = SHADER_VARIABLE_TYPE_STATIC;
 };
 
 
@@ -158,8 +154,8 @@ struct StaticSamplerDesc
     /// Sampler description
     SamplerDesc Desc;
 
-    StaticSamplerDesc(){}
-    StaticSamplerDesc(const Char* _SamplerOrTextureName, const SamplerDesc& _Desc) : 
+    StaticSamplerDesc()noexcept{}
+    StaticSamplerDesc(const Char* _SamplerOrTextureName, const SamplerDesc& _Desc)noexcept : 
         SamplerOrTextureName(_SamplerOrTextureName),
         Desc                (_Desc)
     {}
@@ -169,38 +165,27 @@ struct StaticSamplerDesc
 struct ShaderDesc : DeviceObjectAttribs
 {
 	/// Shader type. See Diligent::SHADER_TYPE
-    SHADER_TYPE ShaderType;
+    SHADER_TYPE ShaderType                      = SHADER_TYPE_VERTEX;
 
-    Bool bCacheCompiledShader;
-    SHADER_PROFILE TargetProfile;
+    Bool bCacheCompiledShader                   = False;
+    SHADER_PROFILE TargetProfile                = SHADER_PROFILE_DEFAULT;
 
     /// Default shader variable type. This type will be used if shader 
     /// variable description is not found in array VariableDesc points to
     /// or if VariableDesc == nullptr
-    SHADER_VARIABLE_TYPE DefaultVariableType;
+    SHADER_VARIABLE_TYPE DefaultVariableType    = SHADER_VARIABLE_TYPE_STATIC;
 
     /// Array of shader variable descriptions
-    const ShaderVariableDesc *VariableDesc;
+    const ShaderVariableDesc* VariableDesc      = nullptr;
 
     /// Number of elements in VariableDesc array
-    Uint32 NumVariables;
+    Uint32 NumVariables                         = 0;
 
     /// Number of static samplers in StaticSamplers array
-    Uint32 NumStaticSamplers;
+    Uint32 NumStaticSamplers                    = 0;
     
     /// Array of static sampler descriptions
-    const StaticSamplerDesc *StaticSamplers;
-
-    ShaderDesc() : 
-        ShaderType(SHADER_TYPE_VERTEX),
-        bCacheCompiledShader(False),
-        TargetProfile(SHADER_PROFILE_DEFAULT),
-        DefaultVariableType(SHADER_VARIABLE_TYPE_STATIC),
-        VariableDesc(nullptr),
-        NumVariables(0),
-        NumStaticSamplers(0),
-        StaticSamplers(nullptr)
-    {}
+    const StaticSamplerDesc* StaticSamplers     = nullptr;
 };
 
 /// Shader source stream factory interface
@@ -212,9 +197,14 @@ public:
 
 struct ShaderMacro
 {
-    const Char* Name;
-    const Char* Definition;
-    ShaderMacro(const Char* _Name, const Char* _Def) : Name( _Name ), Definition( _Def ) {}
+    const Char* Name        = nullptr;
+    const Char* Definition  = nullptr;
+    
+    ShaderMacro()noexcept{}
+    ShaderMacro(const Char* _Name, const Char* _Def)noexcept :
+        Name      ( _Name ),
+        Definition( _Def )
+    {}
 };
 
 /// Shader creation attributes

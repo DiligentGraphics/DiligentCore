@@ -60,33 +60,33 @@ struct TextureViewDesc : DeviceObjectAttribs
     static constexpr Uint32 RemainingArraySlices = static_cast<Uint32>(-1);
 
     /// Describes the texture view type, see Diligent::TEXTURE_VIEW_TYPE for details.
-    TEXTURE_VIEW_TYPE ViewType;
+    TEXTURE_VIEW_TYPE ViewType      = TEXTURE_VIEW_UNDEFINED;
 
     /// View interpretation of the original texture. For instance, 
     /// one slice of a 2D texture array can be viewed as a 2D texture.
     /// See Diligent::RESOURCE_DIMENSION for a list of texture types.
     /// If default value Diligent::RESOURCE_DIM_UNDEFINED is provided,
     /// the view type will match the type of the referenced texture.
-    RESOURCE_DIMENSION TextureDim;
+    RESOURCE_DIMENSION TextureDim   = RESOURCE_DIM_UNDEFINED;
 
     /// View format. If default value Diligent::TEX_FORMAT_UNKNOWN is provided,
     /// the view format will match the referenced texture format.
-    TEXTURE_FORMAT Format;
+    TEXTURE_FORMAT Format           = TEX_FORMAT_UNKNOWN;
     
     /// Most detailed mip level to use
-    Uint32 MostDetailedMip;
+    Uint32 MostDetailedMip          = 0;
 
     /// Total number of mip levels for the view of the texture.
     /// Render target and depth stencil views can address only one mip level.
     /// If 0 is provided, then for a shader resource view all mip levels will be
     /// referenced, and for a render target or a depth stencil view, one mip level 
     /// will be referenced.
-    Uint32 NumMipLevels;
+    Uint32 NumMipLevels             = 0;
 
     union
     {
         /// For a texture array, first array slice to address in the view
-        Uint32 FirstArraySlice;
+        Uint32 FirstArraySlice      = 0;
 
         /// For a 3D texture, first depth slice to address the view
         Uint32 FirstDepthSlice;
@@ -96,7 +96,7 @@ struct TextureViewDesc : DeviceObjectAttribs
     {
         /// For a texture array, number of array slices to address in the view.
         /// Set to 0 to address all array slices.
-        Uint32 NumArraySlices;
+        Uint32 NumArraySlices       = 0;
         
         /// For a 3D texture, number of depth slices to address in the view
         /// Set to 0 to address all depth slices.
@@ -105,33 +105,8 @@ struct TextureViewDesc : DeviceObjectAttribs
 
     /// For an unordered access view, allowed access flags. See Diligent::UAV_ACCESS_FLAG
     /// for details.
-    Uint32 AccessFlags;
+    Uint32 AccessFlags              = 0;
 
-
-    /// Initializes the structure members with default values
-
-    /// Default values:
-    /// Member              | Default value
-    /// --------------------|--------------
-    /// ViewType            | TEXTURE_VIEW_UNDEFINED
-    /// TextureDim          | RESOURCE_DIM_UNDEFINED
-    /// Format              | TEX_FORMAT_UNKNOWN
-    /// MostDetailedMip     | 0
-    /// NumMipLevels        | 0
-    /// FirstArraySlice     | 0
-    /// NumArraySlices      | 0
-    /// AccessFlags         | 0
-    TextureViewDesc() : 
-        ViewType( TEXTURE_VIEW_UNDEFINED ),
-        TextureDim( RESOURCE_DIM_UNDEFINED ),
-        Format(TEX_FORMAT_UNKNOWN),
-        MostDetailedMip(0),
-        NumMipLevels(0),
-        FirstArraySlice(0),
-        NumArraySlices(0),
-        AccessFlags(0)
-    {
-    }
 
     /// Tests if two structures are equivalent
 

@@ -44,7 +44,7 @@ class IShaderResourceBinding : public IObject
 {
 public:
     /// Queries the specific interface, see IObject::QueryInterface() for details
-    virtual void QueryInterface( const INTERFACE_ID &IID, IObject **ppInterface ) = 0;
+    virtual void QueryInterface( const INTERFACE_ID& IID, IObject** ppInterface ) = 0;
 
     /// Returns pointer to the referenced buffer object.
 

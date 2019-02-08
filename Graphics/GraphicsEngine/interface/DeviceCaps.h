@@ -46,35 +46,35 @@ namespace Diligent
     struct SamplerCaps
     {
         /// Indicates if device supports border texture addressing mode
-        Bool bBorderSamplingModeSupported = True;
+        Bool bBorderSamplingModeSupported   = True;
 
         /// Indicates if device supports anisotrpoic filtering
         Bool bAnisotropicFilteringSupported = True;
 
         /// Indicates if device supports MIP load bias
-        Bool bLODBiasSupported = True;
+        Bool bLODBiasSupported              = True;
     };
 
     /// Texture capabilities
     struct TextureCaps
     {
         /// Indicates if device supports 1D textures
-        Bool bTexture1DSupported = True;
+        Bool bTexture1DSupported        = True;
 
         /// Indicates if device supports 1D texture arrays
-        Bool bTexture1DArraySupported = True;
+        Bool bTexture1DArraySupported   = True;
 
         /// Indicates if device supports 2D multisampled textures
-        Bool bTexture2DMSSupported = True;
+        Bool bTexture2DMSSupported      = True;
 
         /// Indicates if device supports 2D multisampled texture arrays
         Bool bTexture2DMSArraySupported = True;
 
         /// Indicates if device supports texture views
-        Bool bTextureViewSupported = True;
+        Bool bTextureViewSupported      = True;
 
         /// Indicates if device supports cubemap arrays
-        Bool bCubemapArraysSupported = True;
+        Bool bCubemapArraysSupported    = True;
     };
     
     /// Device capabilities

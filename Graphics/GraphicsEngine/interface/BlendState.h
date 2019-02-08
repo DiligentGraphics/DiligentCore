@@ -262,66 +262,47 @@ enum LOGIC_OPERATION : Int8
 /// blend states for render targets
 struct RenderTargetBlendDesc
 {
-    /// Enable or disable blending for this render target.
-    Bool            BlendEnable;
+    /// Enable or disable blending for this render target. Default value: False.
+    Bool            BlendEnable           = False;
 
-    /// Enable or disable a logical operation for this render target.
-	Bool			LogicOperationEnable;
+    /// Enable or disable a logical operation for this render target. Default value: False.
+	Bool			LogicOperationEnable  = False;
 
     /// Specifies the blend factor to apply to the RGB value output from the pixel shader
-    BLEND_FACTOR    SrcBlend;
+    /// Default value: Diligent::BLEND_FACTOR_ONE.
+    BLEND_FACTOR    SrcBlend              = BLEND_FACTOR_ONE;
 
     /// Specifies the blend factor to apply to the RGB value in the render target
-    BLEND_FACTOR    DestBlend;
+    /// Default value: Diligent::BLEND_FACTOR_ZERO.
+    BLEND_FACTOR    DestBlend             = BLEND_FACTOR_ZERO;
 
     /// Defines how to combine the source and destination RGB values
     /// after applying the SrcBlend and DestBlend factors.
-    BLEND_OPERATION BlendOp;
+    /// Default value: Diligent::BLEND_OPERATION_ADD.
+    BLEND_OPERATION BlendOp               = BLEND_OPERATION_ADD;
 
     /// Specifies the blend factor to apply to the alpha value output from the pixel shader.
     /// Blend factors that end in _COLOR are not allowed. 
-    BLEND_FACTOR    SrcBlendAlpha;
+    /// Default value: Diligent::BLEND_FACTOR_ONE.
+    BLEND_FACTOR    SrcBlendAlpha         = BLEND_FACTOR_ONE;
 
     /// Specifies the blend factor to apply to the alpha value in the render target.
     /// Blend factors that end in _COLOR are not allowed. 
-    BLEND_FACTOR    DestBlendAlpha;
+    /// Default value: Diligent::BLEND_FACTOR_ZERO.
+    BLEND_FACTOR    DestBlendAlpha        = BLEND_FACTOR_ZERO;
 
     /// Defines how to combine the source and destination alpha values
     /// after applying the SrcBlendAlpha and DestBlendAlpha factors.
-    BLEND_OPERATION BlendOpAlpha;
+    /// Default value: Diligent::BLEND_OPERATION_ADD.
+    BLEND_OPERATION BlendOpAlpha          = BLEND_OPERATION_ADD;
 
     /// Defines logical operation for the render target.
-	LOGIC_OPERATION LogicOp;
+    /// Default value: Diligent::LOGIC_OP_NOOP.
+	LOGIC_OPERATION LogicOp               = LOGIC_OP_NOOP;
 
-    /// Render target write mask
-    Uint8           RenderTargetWriteMask;
-
-    /// Constructor initializes structure members with default values
-
-    /// Member                | Default value
-    /// ----------------------|--------------
-    /// BlendEnable           | False
-	/// LogicOperationEnable  | False
-    /// SrcBlend              | Diligent::BLEND_FACTOR_ONE
-    /// DestBlend             | Diligent::BLEND_FACTOR_ZERO
-    /// BlendOp               | Diligent::BLEND_OPERATION_ADD
-    /// SrcBlendAlpha         | Diligent::BLEND_FACTOR_ONE
-    /// DestBlendAlpha        | Diligent::BLEND_FACTOR_ZERO
-    /// BlendOpAlpha          | Diligent::BLEND_OPERATION_ADD
-	/// LogicOp				  | Diligent::LOGIC_OP_NOOP
-    /// RenderTargetWriteMask | Diligent::COLOR_MASK_ALL
-    RenderTargetBlendDesc() :
-        BlendEnable     ( False ),
-		LogicOperationEnable(False),
-        SrcBlend        ( BLEND_FACTOR_ONE ),
-        DestBlend       ( BLEND_FACTOR_ZERO ),
-        BlendOp         ( BLEND_OPERATION_ADD ),
-        SrcBlendAlpha   ( BLEND_FACTOR_ONE ),
-        DestBlendAlpha  ( BLEND_FACTOR_ZERO ),
-        BlendOpAlpha    ( BLEND_OPERATION_ADD ),
-		LogicOp			( LOGIC_OP_NOOP ),
-        RenderTargetWriteMask( COLOR_MASK_ALL )
-    {}
+    /// Render target write mask.
+    /// Default value: Diligent::COLOR_MASK_ALL.
+    Uint8           RenderTargetWriteMask = COLOR_MASK_ALL;
 
 
     /// Comparison operator tests if two structures are equivalent
@@ -352,11 +333,11 @@ struct BlendStateDesc
 {
     /// Specifies whether to use alpha-to-coverage as a multisampling technique 
     /// when setting a pixel to a render target. Default value: False.
-    Bool AlphaToCoverageEnable;
+    Bool AlphaToCoverageEnable = False;
 
     /// Specifies whether to enable independent blending in simultaneous render targets. 
     /// If set to False, only RenderTargets[0] is used. Default value: False.
-    Bool IndependentBlendEnable;
+    Bool IndependentBlendEnable = False;
 
     /// Constant member defining the maximum number of render targets
     static constexpr int MaxRenderTargets = 8;
@@ -365,21 +346,7 @@ struct BlendStateDesc
     /// states for render targets
     RenderTargetBlendDesc RenderTargets[MaxRenderTargets];
 
-    /// Constructor initializes structure members with default values
 
-    /// Member                | Default value
-    /// ----------------------|--------------
-    /// AlphaToCoverageEnable | False
-    /// IndependentBlendEnable| False
-    /// 
-    /// Members of RenderTargets[] are initialized with default values by 
-    /// RenderTargetBlendDesc::RenderTargetBlendDesc()
-    BlendStateDesc() : 
-        AlphaToCoverageEnable(False),
-        IndependentBlendEnable(False)
-    {
-    }
-    
     /// Comparison operator tests if two structures are equivalent
 
     /// \param [in] RHS - reference to the structure to perform comparison with
