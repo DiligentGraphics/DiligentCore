@@ -52,6 +52,21 @@ struct BufferFormat
     /// (VT_FLOAT16 and VT_FLOAT32), this member is ignored.
     Bool IsNormalized       = False;
 
+
+    // We have to explicitly define constructors because otherwise Apple's clang fails to compile the following legitimate code:
+    //     BufferFormat{VT_FLOAT32, 4}
+    
+    BufferFormat()noexcept{}
+
+    BufferFormat(VALUE_TYPE _ValueType,
+                 Uint8      _NumComponents,
+                 Bool       _IsNormalized   = BufferFormat{}.IsNormalized)noexcept : 
+        ValueType       (_ValueType),
+        NumComponents   (_NumComponents),
+        IsNormalized    (_IsNormalized)
+    {}
+
+
     /// Tests if two structures are equivalent
     bool operator == (const BufferFormat& RHS)const
     {
@@ -78,6 +93,20 @@ struct BufferViewDesc : DeviceObjectAttribs
 
     /// Size in bytes of the referenced buffer region
     Uint32 ByteWidth        = 0;
+
+
+    BufferViewDesc()noexcept{}
+
+    explicit
+    BufferViewDesc(BUFFER_VIEW_TYPE _ViewType,
+                   BufferFormat     _Format     = BufferViewDesc{}.Format,
+                   Uint32           _ByteOffset = BufferViewDesc{}.ByteOffset,
+                   Uint32           _ByteWidth  = BufferViewDesc{}.ByteWidth)noexcept :
+        ViewType    (_ViewType),
+        Format      (_Format),
+        ByteOffset  (_ByteOffset),
+        ByteWidth   (_ByteWidth)
+    {}
 
     /// Comparison operator tests if two structures are equivalent
 

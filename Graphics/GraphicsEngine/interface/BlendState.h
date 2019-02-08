@@ -304,6 +304,33 @@ struct RenderTargetBlendDesc
     /// Default value: Diligent::COLOR_MASK_ALL.
     Uint8           RenderTargetWriteMask = COLOR_MASK_ALL;
 
+    // We have to explicitly define constructors because otherwise Apple's clang fails to compile the following legitimate code:
+    //     RenderTargetBlendDesc{False, False}
+
+    RenderTargetBlendDesc()noexcept{}
+
+    explicit
+    RenderTargetBlendDesc(Bool            _BlendEnable,
+                          Bool			  _LogicOperationEnable  = RenderTargetBlendDesc{}.LogicOperationEnable ,
+                          BLEND_FACTOR    _SrcBlend              = RenderTargetBlendDesc{}.SrcBlend,
+                          BLEND_FACTOR    _DestBlend             = RenderTargetBlendDesc{}.DestBlend,
+                          BLEND_OPERATION _BlendOp               = RenderTargetBlendDesc{}.BlendOp,
+                          BLEND_FACTOR    _SrcBlendAlpha         = RenderTargetBlendDesc{}.SrcBlendAlpha,
+                          BLEND_FACTOR    _DestBlendAlpha        = RenderTargetBlendDesc{}.DestBlendAlpha,
+                          BLEND_OPERATION _BlendOpAlpha          = RenderTargetBlendDesc{}.BlendOpAlpha,
+                          LOGIC_OPERATION _LogicOp               = RenderTargetBlendDesc{}.LogicOp,
+                          Uint8           _RenderTargetWriteMask = RenderTargetBlendDesc{}.RenderTargetWriteMask) :
+        BlendEnable          (_BlendEnable),
+		LogicOperationEnable (_LogicOperationEnable),
+        SrcBlend             (_SrcBlend),
+        DestBlend            (_DestBlend),
+        BlendOp              (_BlendOp),
+        SrcBlendAlpha        (_SrcBlendAlpha),
+        DestBlendAlpha       (_DestBlendAlpha),
+        BlendOpAlpha         (_BlendOpAlpha),
+		LogicOp			     (_LogicOp),
+        RenderTargetWriteMask(_RenderTargetWriteMask)
+    {}
 
     /// Comparison operator tests if two structures are equivalent
 
@@ -346,6 +373,19 @@ struct BlendStateDesc
     /// states for render targets
     RenderTargetBlendDesc RenderTargets[MaxRenderTargets];
 
+    // We have to explicitly define constructors because otherwise Apple's clang fails to compile the following legitimate code:
+    //     BlendStateDesc{False, False}
+
+    BlendStateDesc()noexcept{}
+
+    BlendStateDesc(Bool _AlphaToCoverageEnable,
+                   Bool _IndependentBlendEnable,
+                   const RenderTargetBlendDesc& RT0 = RenderTargetBlendDesc{})noexcept : 
+        AlphaToCoverageEnable   (_AlphaToCoverageEnable),
+        IndependentBlendEnable  (_IndependentBlendEnable),
+        RenderTargets           {RT0}
+    {
+    }
 
     /// Comparison operator tests if two structures are equivalent
 

@@ -141,6 +141,14 @@ struct ShaderVariableDesc
 
     /// Shader variable type. See Diligent::SHADER_VARIABLE_TYPE for a list of allowed types
     SHADER_VARIABLE_TYPE Type   = SHADER_VARIABLE_TYPE_STATIC;
+
+    ShaderVariableDesc()noexcept{}
+
+    ShaderVariableDesc(const Char*          _Name,
+                       SHADER_VARIABLE_TYPE _Type) : 
+        Name(_Name),
+        Type(_Type)
+    {}
 };
 
 
@@ -155,7 +163,8 @@ struct StaticSamplerDesc
     SamplerDesc Desc;
 
     StaticSamplerDesc()noexcept{}
-    StaticSamplerDesc(const Char* _SamplerOrTextureName, const SamplerDesc& _Desc)noexcept : 
+    StaticSamplerDesc(const Char*        _SamplerOrTextureName,    
+                      const SamplerDesc& _Desc)noexcept : 
         SamplerOrTextureName(_SamplerOrTextureName),
         Desc                (_Desc)
     {}
@@ -168,6 +177,7 @@ struct ShaderDesc : DeviceObjectAttribs
     SHADER_TYPE ShaderType                      = SHADER_TYPE_VERTEX;
 
     Bool bCacheCompiledShader                   = False;
+
     SHADER_PROFILE TargetProfile                = SHADER_PROFILE_DEFAULT;
 
     /// Default shader variable type. This type will be used if shader 
@@ -201,7 +211,8 @@ struct ShaderMacro
     const Char* Definition  = nullptr;
     
     ShaderMacro()noexcept{}
-    ShaderMacro(const Char* _Name, const Char* _Def)noexcept :
+    ShaderMacro(const Char* _Name,
+                const Char* _Def)noexcept :
         Name      ( _Name ),
         Definition( _Def )
     {}

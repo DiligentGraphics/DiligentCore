@@ -99,6 +99,29 @@ struct BufferDesc : DeviceObjectAttribs
     /// Defines which command queues this buffer can be used with
     Uint64 CommandQueueMask         = 1;
 
+
+    // We have to explicitly define constructors because otherwise the following initialization fails on Apple's clang:
+    //      BufferDesc{1024, BIND_UNIFORM_BUFFER, USAGE_DEFAULT}
+
+    BufferDesc()noexcept{}
+
+    explicit 
+    BufferDesc(Uint32           _uiSizeInBytes, 
+               BIND_FLAGS       _BindFlags,
+               USAGE            _Usage             = BufferDesc{}.Usage,
+               CPU_ACCESS_FLAGS _CPUAccessFlags    = BufferDesc{}.CPUAccessFlags,
+               BUFFER_MODE      _Mode              = BufferDesc{}.Mode,
+               Uint32           _ElementByteStride = BufferDesc{}.ElementByteStride,
+               Uint64           _CommandQueueMask  = BufferDesc{}.CommandQueueMask)noexcept :
+        uiSizeInBytes       (_uiSizeInBytes),
+        BindFlags           (_BindFlags),
+        Usage               (_Usage),
+        Mode                (_Mode),
+        ElementByteStride   (_ElementByteStride),
+        CommandQueueMask    (_CommandQueueMask)
+    {
+    }
+
     /// Tests if two structures are equivalent
 
     /// \param [in] RHS - reference to the structure to perform comparison with
@@ -127,6 +150,18 @@ struct BufferData
 
     /// Data size, in bytes
     Uint32 DataSize     = 0;
+
+
+    // We have to explicitly define constructors because otherwise Apple's clang fails to compile the following legitimate code:
+    //     BufferData{nullptr, 0}
+
+    BufferData()noexcept{}
+
+    BufferData(const void* _pData, 
+               Uint32      _DataSize):
+        pData   (_pData),
+        DataSize(_DataSize)
+    {}
 };
 
 /// Buffer interface

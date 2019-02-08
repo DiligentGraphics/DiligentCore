@@ -96,19 +96,19 @@ struct LayoutElement
                   Uint32     _BufferSlot, 
                   Uint32     _NumComponents, 
                   VALUE_TYPE _ValueType,
-                  Bool       _IsNormalized         = True, 
-                  Uint32     _RelativeOffset       = 0,
-                  Uint32     _Stride               = 0,
-                  FREQUENCY  _Frequency            = FREQUENCY_PER_VERTEX,
-                  Uint32     _InstanceDataStepRate = 1)noexcept : 
-        InputIndex(_InputIndex),
-        BufferSlot(_BufferSlot),
-        NumComponents(_NumComponents),
-        ValueType(_ValueType),
-        IsNormalized(_IsNormalized),
-        RelativeOffset(_RelativeOffset),
-        Stride(_Stride),
-        Frequency(_Frequency),
+                  Bool       _IsNormalized         = LayoutElement{}.IsNormalized, 
+                  Uint32     _RelativeOffset       = LayoutElement{}.RelativeOffset,
+                  Uint32     _Stride               = LayoutElement{}.Stride,
+                  FREQUENCY  _Frequency            = LayoutElement{}.Frequency,
+                  Uint32     _InstanceDataStepRate = LayoutElement{}.InstanceDataStepRate)noexcept : 
+        InputIndex          (_InputIndex),
+        BufferSlot          (_BufferSlot),
+        NumComponents       (_NumComponents),
+        ValueType           (_ValueType),
+        IsNormalized        (_IsNormalized),
+        RelativeOffset      (_RelativeOffset),
+        Stride              (_Stride),
+        Frequency           (_Frequency),
         InstanceDataStepRate(_InstanceDataStepRate)
     {}
 };
@@ -122,6 +122,14 @@ struct InputLayoutDesc
     const LayoutElement*  LayoutElements = nullptr;
     /// Number of layout elements
     Uint32 NumElements                   = 0;
+
+    InputLayoutDesc()noexcept{}
+
+    InputLayoutDesc(const LayoutElement* _LayoutElements, 
+                    Uint32               _NumElements)noexcept :
+        LayoutElements(_LayoutElements),
+        NumElements   (_NumElements)
+    {}
 };
 
 }

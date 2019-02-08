@@ -107,6 +107,25 @@ struct TextureViewDesc : DeviceObjectAttribs
     /// for details.
     Uint32 AccessFlags              = 0;
 
+    TextureViewDesc()noexcept{}
+
+    TextureViewDesc(TEXTURE_VIEW_TYPE  _ViewType,
+                    RESOURCE_DIMENSION _TextureDim,
+                    TEXTURE_FORMAT     _Format                 = TextureViewDesc{}.Format,
+                    Uint32             _MostDetailedMip        = TextureViewDesc{}.MostDetailedMip,
+                    Uint32             _NumMipLevels           = TextureViewDesc{}.NumMipLevels,
+                    Uint32             _FirstArrayOrDepthSlice = TextureViewDesc{}.FirstArraySlice,
+                    Uint32             _NumArrayOrDepthSlices  = TextureViewDesc{}.NumArraySlices,
+                    Uint32             _AccessFlags            = TextureViewDesc{}.AccessFlags)noexcept :
+        ViewType        (_ViewType),
+        TextureDim      (_TextureDim),
+        Format          (_Format),
+        MostDetailedMip (_MostDetailedMip),
+        NumMipLevels    (_NumMipLevels),
+        FirstArraySlice (_FirstArrayOrDepthSlice),
+        NumArraySlices  (_NumArrayOrDepthSlices),
+        AccessFlags     (_AccessFlags)
+    {}
 
     /// Tests if two structures are equivalent
 

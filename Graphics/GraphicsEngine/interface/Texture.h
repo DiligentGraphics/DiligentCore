@@ -44,6 +44,17 @@ struct DepthStencilClearValue
     Float32 Depth   = 1.f;
     /// Stencil clear value
     Uint8 Stencil   = 0;
+
+    // We have to explicitly define constructors because otherwise Apple's clang fails to compile the following legitimate code:
+    //     DepthStencilClearValue{1, 0}
+
+    DepthStencilClearValue()noexcept{}
+
+    DepthStencilClearValue(Float32 _Depth,
+                           Uint8   _Stencil)noexcept : 
+        Depth   (_Depth),
+        Stencil (_Stencil)
+    {}
 };
 
 /// Defines optimized clear value.
@@ -125,6 +136,35 @@ struct TextureDesc : DeviceObjectAttribs
     /// Defines which command queues this texture can be used with
     Uint64 CommandQueueMask         = 1;
 
+    TextureDesc()noexcept{}
+
+    TextureDesc(RESOURCE_DIMENSION  _Type, 
+                Uint32              _Width,
+                Uint32              _Height,
+                Uint32              _ArraySizeOrDepth,
+                TEXTURE_FORMAT      _Format,
+                Uint32              _MipLevels        = TextureDesc{}.MipLevels,
+                Uint32              _SampleCount      = TextureDesc{}.SampleCount,
+                USAGE               _Usage            = TextureDesc{}.Usage,
+                BIND_FLAGS          _BindFlags        = TextureDesc{}.BindFlags,
+                CPU_ACCESS_FLAGS    _CPUAccessFlags   = TextureDesc{}.CPUAccessFlags,
+                MISC_TEXTURE_FLAGS  _MiscFlags        = TextureDesc{}.MiscFlags,
+                OptimizedClearValue _ClearValue       = TextureDesc{}.ClearValue,
+                Uint64              _CommandQueueMask = TextureDesc{}.CommandQueueMask) : 
+        Type             (_Type), 
+        Width            (_Width),
+        Height           (_Height),
+        ArraySize        (_ArraySizeOrDepth),
+        Format           (_Format),
+        MipLevels        (_MipLevels),
+        SampleCount      (_SampleCount),
+        Usage            (_Usage),
+        BindFlags        (_BindFlags),
+        CPUAccessFlags   (_CPUAccessFlags),
+        MiscFlags        (_MiscFlags),
+        ClearValue       (_ClearValue),
+        CommandQueueMask (_CommandQueueMask)
+    {}
 
     /// Tests if two structures are equivalent
 

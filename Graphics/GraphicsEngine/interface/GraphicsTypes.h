@@ -1071,6 +1071,15 @@ namespace Diligent
     {
         /// Object name
         const Char* Name = nullptr;
+
+        // We have to explicitly define constructors because otherwise Apple's clang fails to compile the following legitimate code:
+        //     DeviceObjectAttribs{"Name"}
+
+        DeviceObjectAttribs()noexcept{}
+
+        explicit DeviceObjectAttribs(const Char* _Name) : 
+            Name(_Name)
+        {}
     };
 
     /// Hardware adapter attributes
@@ -1189,6 +1198,27 @@ namespace Diligent
 
         /// Default stencil value, which is used as optimized stencil clear value in D3D12
         Uint8 DefaultStencilValue           = 0;
+
+        SwapChainDesc()noexcept{}
+
+        /// Constructor intializes the structure members with default values
+        SwapChainDesc(Uint32         _Width,
+                      Uint32         _Height,
+                      TEXTURE_FORMAT _ColorBufferFormat,
+                      TEXTURE_FORMAT _DepthBufferFormat,
+                      Uint32         _SamplesCount        = SwapChainDesc{}.SamplesCount,
+                      Uint32         _BufferCount         = SwapChainDesc{}.BufferCount,
+                      Float32        _DefaultDepthValue   = SwapChainDesc{}.DefaultDepthValue,
+                      Uint8          _DefaultStencilValue = SwapChainDesc{}.DefaultStencilValue) :
+            Width               (_Width),
+            Height              (_Height),
+            ColorBufferFormat   (_ColorBufferFormat),
+            DepthBufferFormat   (_DepthBufferFormat),
+            SamplesCount        (_SamplesCount),
+            BufferCount         (_BufferCount),
+            DefaultDepthValue   (_DefaultDepthValue),
+            DefaultStencilValue(_DefaultStencilValue)
+        {}
     };
 
     /// Full screen mode description

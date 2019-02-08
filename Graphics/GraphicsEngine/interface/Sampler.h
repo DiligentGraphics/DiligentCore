@@ -104,48 +104,29 @@ struct SamplerDesc : DeviceObjectAttribs
     float MaxLOD                        = +3.402823466e+38F;
 
     SamplerDesc()noexcept{}
-
-
-    // Constructor is required because SamplerDesc is not POD.
-
-    /// Initializes the structure members
-
-    /// Member              | Default value
-    /// --------------------|--------------
-    /// MinFilter           | FILTER_TYPE_LINEAR
-    /// MagFilter           | FILTER_TYPE_LINEAR
-    /// MipFilter           | FILTER_TYPE_LINEAR
-    /// AddressU            | TEXTURE_ADDRESS_CLAMP
-    /// AddressV            | TEXTURE_ADDRESS_CLAMP
-    /// AddressW            | TEXTURE_ADDRESS_CLAMP
-    /// MipLODBias          | 0
-    /// MaxAnisotropy       | 0
-    /// ComparisonFunc      | COMPARISON_FUNC_NEVER
-    /// BorderColor         | (0,0,0,0)
-    /// MinLOD              | 0
-    /// MaxLOD              | +FLT_MAX
+     
     SamplerDesc(FILTER_TYPE          _MinFilter,
                 FILTER_TYPE          _MagFilter,
                 FILTER_TYPE          _MipFilter,
-                TEXTURE_ADDRESS_MODE _AddressU       = TEXTURE_ADDRESS_CLAMP,
-                TEXTURE_ADDRESS_MODE _AddressV       = TEXTURE_ADDRESS_CLAMP,
-                TEXTURE_ADDRESS_MODE _AddressW       = TEXTURE_ADDRESS_CLAMP,
-                Float32              _MipLODBias     = 0,
-                Uint32               _MaxAnisotropy  = 0,
-                COMPARISON_FUNCTION  _ComparisonFunc = COMPARISON_FUNC_NEVER,
-                float                _MinLOD         = 0,
-                float                _MaxLOD         = +3.402823466e+38F) : 
-        MinFilter       (_MinFilter),
-        MagFilter       (_MagFilter),
-        MipFilter       (_MipFilter),
-        AddressU        (_AddressU),
-        AddressV        (_AddressV),
-        AddressW        (_AddressW),
-        MipLODBias      (_MipLODBias),
-        MaxAnisotropy   (_MaxAnisotropy),
-        ComparisonFunc  (_ComparisonFunc),
-        MinLOD          (_MinLOD),
-        MaxLOD          (_MaxLOD)
+                TEXTURE_ADDRESS_MODE _AddressU       = SamplerDesc{}.AddressU,
+                TEXTURE_ADDRESS_MODE _AddressV       = SamplerDesc{}.AddressV,
+                TEXTURE_ADDRESS_MODE _AddressW       = SamplerDesc{}.AddressW,
+                Float32              _MipLODBias     = SamplerDesc{}.MipLODBias,
+                Uint32               _MaxAnisotropy  = SamplerDesc{}.MaxAnisotropy,
+                COMPARISON_FUNCTION  _ComparisonFunc = SamplerDesc{}.ComparisonFunc,
+                float                _MinLOD         = SamplerDesc{}.MinLOD,
+                float                _MaxLOD         = SamplerDesc{}.MaxLOD) : 
+        MinFilter      (_MinFilter),
+        MagFilter      (_MagFilter),
+        MipFilter      (_MipFilter),
+        AddressU       (_AddressU),
+        AddressV       (_AddressV),
+        AddressW       (_AddressW),
+        MipLODBias     (_MipLODBias),
+        MaxAnisotropy  (_MaxAnisotropy),
+        ComparisonFunc (_ComparisonFunc),
+        MinLOD         (_MinLOD),
+        MaxLOD         (_MaxLOD)
     {
         BorderColor[0] = BorderColor[1] = BorderColor[2] = BorderColor[3] = 0;
     }

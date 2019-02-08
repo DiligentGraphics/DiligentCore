@@ -107,6 +107,22 @@ struct StencilOpDesc
     /// Default value: Diligent::COMPARISON_FUNC_ALWAYS. See Diligent::COMPARISON_FUNCTION.
     COMPARISON_FUNCTION StencilFunc         = COMPARISON_FUNC_ALWAYS;
 
+
+    // We have to explicitly define constructors because otherwise Apple's clang fails to compile the following legitimate code:
+    //     StencilOpDesc{STENCIL_OP_KEEP, STENCIL_OP_KEEP, STENCIL_OP_KEEP, COMPARISON_FUNC_ALWAYS}
+
+    StencilOpDesc()noexcept{}
+
+    StencilOpDesc(STENCIL_OP          _StencilFailOp,
+                  STENCIL_OP          _StencilDepthFailOp,
+                  STENCIL_OP          _StencilPassOp,
+                  COMPARISON_FUNCTION _StencilFunc)noexcept : 
+        StencilFailOp      (_StencilFailOp),
+        StencilDepthFailOp (_StencilDepthFailOp),
+        StencilPassOp      (_StencilPassOp),
+        StencilFunc        (_StencilFunc)
+    {}
+
     /// Tests if two structures are equivalent
 
     /// \param [in] rhs - reference to the structure to perform comparison with
@@ -161,6 +177,25 @@ struct DepthStencilStateDesc
     /// Identify stencil operations for the back-facing triangles, see Diligent::StencilOpDesc.
     StencilOpDesc      BackFace;
 
+
+    // We have to explicitly define constructors because otherwise Apple's clang fails to compile the following legitimate code:
+    //     DepthStencilStateDesc{False, False}
+
+    DepthStencilStateDesc()noexcept{}
+
+    DepthStencilStateDesc(Bool                _DepthEnable,
+                          Bool                _DepthWriteEnable,
+                          COMPARISON_FUNCTION _DepthFunc        = DepthStencilStateDesc{}.DepthFunc,
+                          Bool                _StencilEnable    = DepthStencilStateDesc{}.StencilEnable,
+                          Uint8               _StencilReadMask  = DepthStencilStateDesc{}.StencilReadMask,
+                          Uint8               _StencilWriteMask = DepthStencilStateDesc{}.StencilWriteMask)noexcept : 
+        DepthEnable     ( _DepthEnable ),
+        DepthWriteEnable( _DepthWriteEnable ),
+        DepthFunc       ( _DepthFunc ),
+        StencilEnable   ( _StencilEnable ),
+        StencilReadMask ( _StencilReadMask ),
+        StencilWriteMask( _StencilWriteMask )
+    {}
 
     /// Tests if two structures are equivalent
 

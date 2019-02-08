@@ -130,7 +130,32 @@ struct RasterizerStateDesc
     /// Scalar that scales the given pixel's slope before adding to the pixel's depth.
     /// Default value: 0.
     Float32   SlopeScaledDepthBias  = 0.f;
-  
+
+    // We have to explicitly define constructors because otherwise Apple's clang fails to compile the following legitimate code:
+    //     RasterizerStateDesc{FILL_MODE_SOLID, CULL_MODE_BACK}
+
+    RasterizerStateDesc()noexcept{}
+
+    RasterizerStateDesc(FILL_MODE _FillMode,
+                        CULL_MODE _CullMode,
+                        Bool      _FrontCounterClockwise = RasterizerStateDesc{}.FrontCounterClockwise,
+                        Bool      _DepthClipEnable       = RasterizerStateDesc{}.DepthClipEnable,
+                        Bool      _ScissorEnable         = RasterizerStateDesc{}.ScissorEnable,
+                        Bool      _AntialiasedLineEnable = RasterizerStateDesc{}.AntialiasedLineEnable,
+                        Int32     _DepthBias             = RasterizerStateDesc{}.DepthBias,
+                        Float32   _DepthBiasClamp        = RasterizerStateDesc{}.DepthBiasClamp,
+                        Float32   _SlopeScaledDepthBias  = RasterizerStateDesc{}.SlopeScaledDepthBias)noexcept : 
+        FillMode             ( _FillMode ),
+        CullMode             ( _CullMode ),
+        FrontCounterClockwise( _FrontCounterClockwise ),
+        DepthClipEnable      ( _DepthClipEnable ),
+        ScissorEnable        ( _ScissorEnable ),
+        AntialiasedLineEnable( _AntialiasedLineEnable ),
+        DepthBias            ( _DepthBias ),
+        DepthBiasClamp       ( _DepthBiasClamp ),
+        SlopeScaledDepthBias ( _SlopeScaledDepthBias )
+    {
+    }
 
     /// Tests if two structures are equivalent
 

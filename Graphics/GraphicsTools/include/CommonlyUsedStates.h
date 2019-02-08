@@ -67,17 +67,16 @@ namespace Diligent
     {
         False, // AlphaToCoverageEnable
         False, // IndependentBlendEnable
-	    {      // RenderTagets
-		    {
-			    True,                       // BlendEnable
-                False,                      // LogicOperationEnable
-                BLEND_FACTOR_SRC_ALPHA,     // SrcBlend
-                BLEND_FACTOR_INV_SRC_ALPHA, // DestBlend
-			    BLEND_OPERATION_ADD,        // BlendOp
-                BLEND_FACTOR_SRC_ALPHA,     // SrcBlendAlpha
-                BLEND_FACTOR_INV_SRC_ALPHA, // DestBlendAlpha
-			    BLEND_OPERATION_ADD         // BlendOpAlpha
-		    }
+	    RenderTargetBlendDesc// RT0
+        {
+			True,                       // BlendEnable
+            False,                      // LogicOperationEnable
+            BLEND_FACTOR_SRC_ALPHA,     // SrcBlend
+            BLEND_FACTOR_INV_SRC_ALPHA, // DestBlend
+			BLEND_OPERATION_ADD,        // BlendOp
+            BLEND_FACTOR_SRC_ALPHA,     // SrcBlendAlpha
+            BLEND_FACTOR_INV_SRC_ALPHA, // DestBlendAlpha
+			BLEND_OPERATION_ADD         // BlendOpAlpha
 	    }
     };
 

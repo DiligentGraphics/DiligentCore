@@ -48,6 +48,14 @@ struct SampleDesc
 
     /// Quality
     Uint8 Quality   = 0;
+
+    SampleDesc()noexcept{}
+
+    SampleDesc(Uint8 _Count, 
+               Uint8 _Quality) : 
+        Count   (_Count),
+        Quality (_Quality)
+    {}
 };
 
 
