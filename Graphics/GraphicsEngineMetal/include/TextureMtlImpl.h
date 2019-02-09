@@ -44,11 +44,11 @@ public:
     using TTextureBase = TextureBase<ITextureMtl, RenderDeviceMtlImpl, TextureViewMtlImpl, FixedBlockMemoryAllocator>;
     using ViewImplType = TextureViewMtlImpl;
 
-    TextureMtlImpl(IReferenceCounters*          pRefCounters,
+    TextureMtlImpl(IReferenceCounters*            pRefCounters,
                      FixedBlockMemoryAllocator&   TexViewObjAllocator, 
-                     class RenderDeviceMtlImpl* pDeviceMtl, 
+                     class RenderDeviceMtlImpl*   pDeviceMtl, 
                      const TextureDesc&           TexDesc, 
-                     const TextureData&           InitData = TextureData());
+                     const TextureData*           pInitData = nullptr);
     ~TextureMtlImpl();
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;

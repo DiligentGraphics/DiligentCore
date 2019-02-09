@@ -36,7 +36,7 @@ BufferMtlImpl :: BufferMtlImpl(IReferenceCounters*        pRefCounters,
                                FixedBlockMemoryAllocator& BuffViewObjMemAllocator,
                                RenderDeviceMtlImpl*       pRenderDeviceMtl, 
                                const BufferDesc&          BuffDesc, 
-                               const BufferData&          BuffData /*= BufferData()*/) : 
+                               const BufferData*          pBuffData /*= nullptr*/) : 
     TBufferBase(pRefCounters, BuffViewObjMemAllocator, pRenderDeviceMtl, BuffDesc, false)
 {
     LOG_ERROR_AND_THROW("Buffers are not implemented in Metal backend");

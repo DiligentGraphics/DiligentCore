@@ -47,7 +47,7 @@ public:
                   FixedBlockMemoryAllocator&  BuffViewObjMemAllocator,
                   class RenderDeviceMtlImpl*  pDeviceMtl, 
                   const BufferDesc&           BuffDesc, 
-                  const BufferData&           BuffData = BufferData());
+                  const BufferData*           pBuffData = nullptr);
 
     BufferMtlImpl(IReferenceCounters*        pRefCounters,
                   FixedBlockMemoryAllocator& BuffViewObjMemAllocator,

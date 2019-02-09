@@ -78,13 +78,13 @@ void RenderDeviceMtlImpl::TestTextureFormat( TEXTURE_FORMAT TexFormat )
 
 IMPLEMENT_QUERY_INTERFACE( RenderDeviceMtlImpl, IID_RenderDeviceMtl, TRenderDeviceBase )
 
-void RenderDeviceMtlImpl :: CreateBuffer(const BufferDesc& BuffDesc, const BufferData& BuffData, IBuffer** ppBuffer)
+void RenderDeviceMtlImpl :: CreateBuffer(const BufferDesc& BuffDesc, const BufferData* pBuffData, IBuffer** ppBuffer)
 {
     CreateDeviceObject("buffer", BuffDesc, ppBuffer, 
         [&]()
         {
             BufferMtlImpl* pBufferMtl( NEW_RC_OBJ(m_BufObjAllocator, "BufferMtlImpl instance", BufferMtlImpl)
-                                                 (m_BuffViewObjAllocator, this, BuffDesc, BuffData ) );
+                                                 (m_BuffViewObjAllocator, this, BuffDesc, pBuffData ) );
             pBufferMtl->QueryInterface( IID_Buffer, reinterpret_cast<IObject**>(ppBuffer) );
             pBufferMtl->CreateDefaultViews();
             OnCreateDeviceObject( pBufferMtl );
@@ -108,12 +108,12 @@ void RenderDeviceMtlImpl :: CreateShader(const ShaderCreationAttribs& ShaderCrea
 
 
 
-void RenderDeviceMtlImpl :: CreateTexture(const TextureDesc& TexDesc, const TextureData& Data, ITexture** ppTexture)
+void RenderDeviceMtlImpl :: CreateTexture(const TextureDesc& TexDesc, const TextureData* pData, ITexture** ppTexture)
 {
     CreateDeviceObject( "texture", TexDesc, ppTexture, 
         [&]()
         {
-            TextureMtlImpl *pTextureMtl = NEW_RC_OBJ(m_TexObjAllocator, "TextureMtlImpl instance", TextureMtlImpl)(m_TexViewObjAllocator, this, TexDesc, Data );
+            TextureMtlImpl *pTextureMtl = NEW_RC_OBJ(m_TexObjAllocator, "TextureMtlImpl instance", TextureMtlImpl)(m_TexViewObjAllocator, this, TexDesc, pData );
 
             pTextureMtl->QueryInterface( IID_Texture, reinterpret_cast<IObject**>(ppTexture) );
             pTextureMtl->CreateDefaultViews();

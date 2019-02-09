@@ -35,12 +35,12 @@ TextureMtlImpl :: TextureMtlImpl(IReferenceCounters*        pRefCounters,
                                  FixedBlockMemoryAllocator& TexViewObjAllocator,
                                  RenderDeviceMtlImpl*       pRenderDeviceMtl,
                                  const TextureDesc&         TexDesc,
-                                 const TextureData&         InitData /*= TextureData()*/) : 
+                                 const TextureData*         pInitData /*= nullptr*/) : 
     TTextureBase(pRefCounters, TexViewObjAllocator, pRenderDeviceMtl, TexDesc)
 {
     LOG_ERROR_AND_THROW("Textures are not implemented in Metal backend");
 
-    if( TexDesc.Usage == USAGE_STATIC && InitData.pSubResources == nullptr )
+    if( TexDesc.Usage == USAGE_STATIC && pInitData == nullptr || pInitData->pSubResources == nullptr )
         LOG_ERROR_AND_THROW("Static Texture must be initialized with data at creation time");
     SetState(RESOURCE_STATE_UNDEFINED);
 }

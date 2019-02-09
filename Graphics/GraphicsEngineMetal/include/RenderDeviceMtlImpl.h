@@ -44,14 +44,14 @@ public:
                          IMemoryAllocator&       RawMemAllocator,
                          const EngineMtlAttribs& EngineAttribs,
                          void*                   pMtlDevice,
-                         Uint32                   NumDeferredContexts );
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
+                         Uint32                  NumDeferredContexts );
+    virtual void QueryInterface( const INTERFACE_ID& IID, IObject **ppInterface )override final;
 
-    virtual void CreateBuffer(const BufferDesc& BuffDesc, const BufferData& BuffData, IBuffer** ppBuffer)override final;
+    virtual void CreateBuffer(const BufferDesc& BuffDesc, const BufferData* pBuffData, IBuffer** ppBuffer)override final;
 
     virtual void CreateShader(const ShaderCreationAttribs& ShaderCreationAttribs, IShader** ppShader)override final;
 
-    virtual void CreateTexture(const TextureDesc& TexDesc, const TextureData& Data, ITexture** ppTexture)override final;
+    virtual void CreateTexture(const TextureDesc& TexDesc, const TextureData* pData, ITexture** ppTexture)override final;
     
     virtual void CreateSampler(const SamplerDesc& SamplerDesc, ISampler** ppSampler)override final;
 
