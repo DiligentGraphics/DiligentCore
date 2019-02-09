@@ -59,7 +59,7 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters*        pRefCounters,
 
         if (m_Desc.CPUAccessFlags == CPU_ACCESS_WRITE)
         {
-            if (pBuffData != nullptr )
+            if (pBuffData != nullptr && pBuffData->pData != nullptr)
                 LOG_BUFFER_ERROR_AND_THROW("CPU-writable staging buffers must be updated via map")
         }
     }

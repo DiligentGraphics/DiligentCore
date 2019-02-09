@@ -99,7 +99,6 @@ Texture2DArray_OGL::Texture2DArray_OGL( IReferenceCounters*         pRefCounters
                 UNEXPECTED("Incorrect number of subresources");
             }
         }
-
     }
 
     ContextState.BindTexture( -1, m_BindTarget, GLObjectWrappers::GLTextureObj(false) );

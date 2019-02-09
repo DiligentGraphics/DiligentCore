@@ -62,7 +62,7 @@ Texture2D_OGL::Texture2D_OGL( IReferenceCounters*           pRefCounters,
 
         SetDefaultGLParameters();
 
-        VERIFY( pInitData == nullptr, "Multisampled textures cannot be modified directly" );
+        VERIFY(pInitData == nullptr || pInitData->pSubResources == nullptr, "Multisampled textures cannot be modified directly" );
 #else
         LOG_ERROR_AND_THROW("Multisampled textures are not supported");
 #endif
