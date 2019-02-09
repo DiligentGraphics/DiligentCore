@@ -188,13 +188,17 @@ struct DepthStencilStateDesc
                           COMPARISON_FUNCTION _DepthFunc        = DepthStencilStateDesc{}.DepthFunc,
                           Bool                _StencilEnable    = DepthStencilStateDesc{}.StencilEnable,
                           Uint8               _StencilReadMask  = DepthStencilStateDesc{}.StencilReadMask,
-                          Uint8               _StencilWriteMask = DepthStencilStateDesc{}.StencilWriteMask)noexcept : 
-        DepthEnable     ( _DepthEnable ),
-        DepthWriteEnable( _DepthWriteEnable ),
-        DepthFunc       ( _DepthFunc ),
-        StencilEnable   ( _StencilEnable ),
-        StencilReadMask ( _StencilReadMask ),
-        StencilWriteMask( _StencilWriteMask )
+                          Uint8               _StencilWriteMask = DepthStencilStateDesc{}.StencilWriteMask,
+                          StencilOpDesc       _FrontFace        = StencilOpDesc{},
+                          StencilOpDesc       _BackFace         = StencilOpDesc{})noexcept : 
+        DepthEnable     (_DepthEnable),
+        DepthWriteEnable(_DepthWriteEnable),
+        DepthFunc       (_DepthFunc),
+        StencilEnable   (_StencilEnable),
+        StencilReadMask (_StencilReadMask),
+        StencilWriteMask(_StencilWriteMask),
+        FrontFace       (_FrontFace),
+        BackFace        (_BackFace)
     {}
 
     /// Tests if two structures are equivalent
