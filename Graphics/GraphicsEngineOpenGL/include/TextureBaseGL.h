@@ -44,26 +44,26 @@ public:
     using TTextureBase = TextureBase<ITextureGL, RenderDeviceGLImpl, TextureViewGLImpl, FixedBlockMemoryAllocator>;
     using ViewImplType = TextureViewGLImpl;
 
-    TextureBaseGL(IReferenceCounters *pRefCounters, 
-                  FixedBlockMemoryAllocator& TexViewObjAllocator, 
-                  RenderDeviceGLImpl *pDeviceGL, 
-                  const TextureDesc &TexDesc, 
-                  GLenum BindTarget,
-                  const TextureData &InitData = TextureData(), 
-                  bool bIsDeviceInternal = false);
+    TextureBaseGL(IReferenceCounters*           pRefCounters, 
+                  FixedBlockMemoryAllocator&    TexViewObjAllocator, 
+                  RenderDeviceGLImpl*           pDeviceGL, 
+                  const TextureDesc&            TexDesc, 
+                  GLenum                        BindTarget,
+                  const TextureData*            pInitData         = nullptr, 
+                  bool                          bIsDeviceInternal = false);
 
-    TextureBaseGL(IReferenceCounters *pRefCounters, 
-                  FixedBlockMemoryAllocator& TexViewObjAllocator, 
-                  class RenderDeviceGLImpl *pDeviceGL, 
-                  class DeviceContextGLImpl *pDeviceContext, 
-                  const TextureDesc& TexDesc, 
-                  GLuint GLTextureHandle,
-                  GLenum BindTarget,
-                  bool bIsDeviceInternal);
+    TextureBaseGL(IReferenceCounters*           pRefCounters, 
+                  FixedBlockMemoryAllocator&    TexViewObjAllocator, 
+                  class RenderDeviceGLImpl*     pDeviceGL, 
+                  class DeviceContextGLImpl*    pDeviceContext, 
+                  const TextureDesc&            TexDesc, 
+                  GLuint                        GLTextureHandle,
+                  GLenum                        BindTarget,
+                  bool                          bIsDeviceInternal);
 
     ~TextureBaseGL();
     
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
+    virtual void QueryInterface( const INTERFACE_ID& IID, IObject** ppInterface )override;
 
     const GLObjectWrappers::GLTextureObj& GetGLHandle()const{ return m_GlTexture; }
     virtual GLenum GetBindTarget()const override final{return m_BindTarget;}
@@ -73,16 +73,16 @@ public:
 
     virtual void AttachToFramebuffer(const struct TextureViewDesc& ViewDesc, GLenum AttachmentPoint) = 0;
 
-    void CopyData(DeviceContextGLImpl *pDeviceCtxGL, 
-                  TextureBaseGL *pSrcTextureGL, 
-                  Uint32 SrcMipLevel,
-                  Uint32 SrcSlice,
-                  const Box *pSrcBox,
-                  Uint32 DstMipLevel,
-                  Uint32 DstSlice,
-                  Uint32 DstX,
-                  Uint32 DstY,
-                  Uint32 DstZ);
+    void CopyData(DeviceContextGLImpl*  pDeviceCtxGL, 
+                  TextureBaseGL*        pSrcTextureGL, 
+                  Uint32                SrcMipLevel,
+                  Uint32                SrcSlice,
+                  const Box*            pSrcBox,
+                  Uint32                DstMipLevel,
+                  Uint32                DstSlice,
+                  Uint32                DstX,
+                  Uint32                DstY,
+                  Uint32                DstZ);
 
     virtual GLuint GetGLTextureHandle()override final { return GetGLHandle(); }
     virtual void* GetNativeHandle()override final { return reinterpret_cast<void*>(static_cast<size_t>(GetGLTextureHandle())); }

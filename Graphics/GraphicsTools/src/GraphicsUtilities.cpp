@@ -41,7 +41,7 @@ void CreateUniformBuffer( IRenderDevice *pDevice, Uint32 Size, const Char *Name,
     CBDesc.Usage = Usage;
     CBDesc.BindFlags = BindFlags;
     CBDesc.CPUAccessFlags = CPUAccessFlags;
-    pDevice->CreateBuffer( CBDesc, BufferData(), ppBuffer );
+    pDevice->CreateBuffer( CBDesc, nullptr, ppBuffer );
 }
 
 template<class TConverter>

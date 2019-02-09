@@ -50,7 +50,7 @@ public:
                      FixedBlockMemoryAllocator&     TexViewObjAllocator,
                      RenderDeviceD3D12Impl*         pDeviceD3D12, 
                      const TextureDesc&             TexDesc, 
-                     const TextureData&             InitData = TextureData());
+                     const TextureData*             pInitData = nullptr);
     // Attaches to an existing D3D12 resource
     TextureD3D12Impl(IReferenceCounters*            pRefCounters,
                      FixedBlockMemoryAllocator&     TexViewObjAllocator,

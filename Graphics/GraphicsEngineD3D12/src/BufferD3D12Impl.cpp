@@ -39,7 +39,7 @@ BufferD3D12Impl :: BufferD3D12Impl(IReferenceCounters*          pRefCounters,
                                    FixedBlockMemoryAllocator&   BuffViewObjMemAllocator, 
                                    RenderDeviceD3D12Impl*       pRenderDeviceD3D12, 
                                    const BufferDesc&            BuffDesc, 
-                                   const BufferData&            BuffData /*= BufferData()*/) : 
+                                   const BufferData*            pBuffData /*= nullptr*/) : 
     TBufferBase
     {
         pRefCounters,
@@ -57,10 +57,10 @@ BufferD3D12Impl :: BufferD3D12Impl(IReferenceCounters*          pRefCounters,
 {
 #define LOG_BUFFER_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Buffer \"", BuffDesc.Name ? BuffDesc.Name : "", "\": ", ##__VA_ARGS__);
 
-    if( m_Desc.Usage == USAGE_STATIC && BuffData.pData == nullptr )
+    if( m_Desc.Usage == USAGE_STATIC && (pBuffData == nullptr || pBuffData->pData == nullptr))
         LOG_BUFFER_ERROR_AND_THROW("Static buffer must be initialized with data at creation time")
 
-    if( m_Desc.Usage == USAGE_DYNAMIC && BuffData.pData != nullptr )
+    if( m_Desc.Usage == USAGE_DYNAMIC && pBuffData != nullptr && pBuffData->pData != nullptr )
         LOG_BUFFER_ERROR_AND_THROW("Dynamic buffer must be initialized via Map()")
 
     Uint32 AlignmentMask = 1;
@@ -74,7 +74,7 @@ BufferD3D12Impl :: BufferD3D12Impl(IReferenceCounters*          pRefCounters,
 
         if (m_Desc.CPUAccessFlags == CPU_ACCESS_WRITE)
         {
-            if(BuffData.pData != nullptr )
+            if (pBuffData != nullptr && pBuffData->pData != nullptr)
                 LOG_BUFFER_ERROR_AND_THROW("CPU-writable staging buffers must be updated via map")
 
             AlignmentMask = D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1;
@@ -131,7 +131,7 @@ BufferD3D12Impl :: BufferD3D12Impl(IReferenceCounters*          pRefCounters,
 	    HeapProps.CreationNodeMask = 1;
 	    HeapProps.VisibleNodeMask  = 1;
 
-        bool bInitializeBuffer = (BuffData.pData != nullptr && BuffData.DataSize > 0);
+        bool bInitializeBuffer = (pBuffData != nullptr && pBuffData->pData != nullptr && pBuffData->DataSize > 0);
         if(bInitializeBuffer)
             SetState(RESOURCE_STATE_COPY_DEST);
 
@@ -168,7 +168,7 @@ BufferD3D12Impl :: BufferD3D12Impl(IReferenceCounters*          pRefCounters,
 	        hr = UploadBuffer->Map(0, nullptr, &DestAddress);
             if(FAILED(hr))
                 LOG_ERROR_AND_THROW("Failed to map uload buffer");
-	        memcpy(DestAddress, BuffData.pData, BuffData.DataSize);
+	        memcpy(DestAddress, pBuffData->pData, pBuffData->DataSize);
 	        UploadBuffer->Unmap(0, nullptr);
 
             auto InitContext = pRenderDeviceD3D12->AllocateCommandContext();

@@ -53,7 +53,7 @@ public:
                  FixedBlockMemoryAllocator& BuffViewObjMemAllocator, 
                  RenderDeviceVkImpl*        pDeviceVk, 
                  const BufferDesc&          BuffDesc, 
-                 const BufferData&          BuffData = BufferData());
+                 const BufferData*          pBuffData = nullptr);
 
     BufferVkImpl(IReferenceCounters*        pRefCounters, 
                  FixedBlockMemoryAllocator& BuffViewObjMemAllocator, 

@@ -62,10 +62,9 @@ public:
     /// Creates a new buffer object
 
     /// \param [in] BuffDesc   - Buffer description, see Diligent::BufferDesc for details.
-    /// \param [in] BuffData   - Reference to a Diligent::BufferData structure that describes
-    ///                          the initialization data. To allocate space only, provide default value 
-    ///                          BufferData(). Static buffers (USAGE_STATIC) must be initialized
-    ///                          at creation time.
+    /// \param [in] pBuffData  - Pointer to Diligent::BufferData structure that describes
+    ///                          initial buffer data or nullptr if no data is provided.
+    ///                          Static buffers (USAGE_STATIC) must be initialized at creation time.
     /// \param [out] ppBuffer  - Address of the memory location where the pointer to the
     ///                          buffer interface will be stored. The function calls AddRef(),
     ///                          so that the new buffer will contain one refernce and must be
@@ -76,7 +75,7 @@ public:
     /// Stride of a formatted buffer will be computed automatically from the format if
     /// ElementByteStride member of buffer description is set to default value (0).
     virtual void CreateBuffer(const BufferDesc& BuffDesc, 
-                              const BufferData& BuffData, 
+                              const BufferData* pBuffData, 
                               IBuffer**         ppBuffer) = 0;
 
     /// Creates a new shader object
@@ -93,10 +92,10 @@ public:
     /// Creates a new texture object
 
     /// \param [in] TexDesc - Texture description, see Diligent::TextureDesc for details.
-    /// \param [in] Data    -  Reference to a Diligent::TextureData structure that describes
-    ///                        the initialization data. To allocate space only, provide default value 
-    ///                        TextureData(). Static textures (USAGE_STATIC) must be initialized
-    ///                        at creation time.
+    /// \param [in] pData   - Pointer to Diligent::TextureData structure that describes
+    ///                       initial texture data or nullptr if no data is provided.
+    ///                       Static textures (USAGE_STATIC) must be initialized at creation time.
+    ///                        
     /// \param [out] ppTexture - Address of the memory location where the pointer to the
     ///                          texture interface will be stored. 
     ///                          The function calls AddRef(), so that the new object will contain 
@@ -113,7 +112,7 @@ public:
     /// For a 15 x 6 x 4 3D texture, the following array of subresources should be provided:\n
     /// 15x6x4, 7x3x2, 3x1x1, 1x1x1
     virtual void CreateTexture(const TextureDesc& TexDesc, 
-                               const TextureData& Data, 
+                               const TextureData* pData, 
                                ITexture**         ppTexture) = 0;
 
     /// Creates a new sampler object

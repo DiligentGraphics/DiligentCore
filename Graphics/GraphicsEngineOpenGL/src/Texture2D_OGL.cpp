@@ -33,14 +33,14 @@
 namespace Diligent
 {
 
-Texture2D_OGL::Texture2D_OGL( IReferenceCounters *pRefCounters, 
-                              FixedBlockMemoryAllocator& TexViewObjAllocator,
-                              RenderDeviceGLImpl *pDeviceGL, 
-                              DeviceContextGLImpl *pDeviceContext, 
-                              const TextureDesc& TexDesc, 
-                              const TextureData &InitData /*= TextureData()*/,
-							  bool bIsDeviceInternal /*= false*/) : 
-    TextureBaseGL(pRefCounters, TexViewObjAllocator, pDeviceGL, TexDesc, TexDesc.SampleCount > 1 ? GL_TEXTURE_2D_MULTISAMPLE : GL_TEXTURE_2D, InitData, bIsDeviceInternal)
+Texture2D_OGL::Texture2D_OGL( IReferenceCounters*           pRefCounters, 
+                              FixedBlockMemoryAllocator&    TexViewObjAllocator,
+                              RenderDeviceGLImpl*           pDeviceGL, 
+                              DeviceContextGLImpl*          pDeviceContext, 
+                              const TextureDesc&            TexDesc, 
+                              const TextureData*            pInitData         /*= nullptr*/,
+							  bool                          bIsDeviceInternal /*= false*/) : 
+    TextureBaseGL(pRefCounters, TexViewObjAllocator, pDeviceGL, TexDesc, TexDesc.SampleCount > 1 ? GL_TEXTURE_2D_MULTISAMPLE : GL_TEXTURE_2D, pInitData, bIsDeviceInternal)
 {
     auto &ContextState = pDeviceContext->GetContextState();
     ContextState.BindTexture(-1, m_BindTarget, m_GlTexture);
@@ -62,7 +62,7 @@ Texture2D_OGL::Texture2D_OGL( IReferenceCounters *pRefCounters,
 
         SetDefaultGLParameters();
 
-        VERIFY( InitData.pSubResources == nullptr, "Multisampled textures cannot be modified directly" );
+        VERIFY( pInitData == nullptr, "Multisampled textures cannot be modified directly" );
 #else
         LOG_ERROR_AND_THROW("Multisampled textures are not supported");
 #endif
@@ -82,9 +82,9 @@ Texture2D_OGL::Texture2D_OGL( IReferenceCounters *pRefCounters,
 
         SetDefaultGLParameters();
 
-        if( InitData.pSubResources )
+        if (pInitData != nullptr && pInitData->pSubResources != nullptr)
         {
-            if(  m_Desc.MipLevels == InitData.NumSubresources )
+            if (m_Desc.MipLevels == pInitData->NumSubresources)
             {
                 for(Uint32 Mip = 0; Mip < m_Desc.MipLevels; ++Mip)
                 {
@@ -94,7 +94,7 @@ Texture2D_OGL::Texture2D_OGL( IReferenceCounters *pRefCounters,
                     // we will get into TextureBaseGL::UpdateData(), because instance of Texture2D_OGL
                     // is not fully constructed yet.
                     // To call the required function, we need to explicitly specify the class: 
-                    Texture2D_OGL::UpdateData( ContextState, Mip, 0, DstBox, InitData.pSubResources[Mip] );
+                    Texture2D_OGL::UpdateData( ContextState, Mip, 0, DstBox, pInitData->pSubResources[Mip] );
                 }
             }
             else
@@ -123,7 +123,11 @@ Texture2D_OGL::~Texture2D_OGL()
 {
 }
 
-void Texture2D_OGL::UpdateData( GLContextState &ContextState, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData )
+void Texture2D_OGL::UpdateData( GLContextState&           ContextState,
+                                Uint32                    MipLevel,
+                                Uint32                    Slice,
+                                const Box&                DstBox,
+                                const TextureSubResData&  SubresData )
 {
     TextureBaseGL::UpdateData(ContextState, MipLevel, Slice, DstBox, SubresData);
 

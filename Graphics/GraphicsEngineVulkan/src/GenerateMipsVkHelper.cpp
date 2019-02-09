@@ -171,7 +171,7 @@ namespace Diligent
         ConstantsCBDesc.Usage = USAGE_DYNAMIC;
         ConstantsCBDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
         ConstantsCBDesc.uiSizeInBytes = 32;
-        DeviceVkImpl.CreateBuffer(ConstantsCBDesc, BufferData(), &m_ConstantsCB);
+        DeviceVkImpl.CreateBuffer(ConstantsCBDesc, nullptr, &m_ConstantsCB);
 
         FindPSOs(TEX_FORMAT_RGBA8_UNORM);
         FindPSOs(TEX_FORMAT_BGRA8_UNORM);

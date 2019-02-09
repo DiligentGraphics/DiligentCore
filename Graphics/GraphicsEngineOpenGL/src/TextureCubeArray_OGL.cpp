@@ -33,14 +33,14 @@
 namespace Diligent
 {
 
-TextureCubeArray_OGL::TextureCubeArray_OGL( IReferenceCounters *pRefCounters, 
-                                            FixedBlockMemoryAllocator& TexViewObjAllocator,
-                                            RenderDeviceGLImpl *pDeviceGL, 
-                                            DeviceContextGLImpl *pDeviceContext, 
-                                            const TextureDesc& TexDesc, 
-                                            const TextureData &InitData /*= TextureData()*/,
-									        bool bIsDeviceInternal /*= false*/) : 
-    TextureBaseGL(pRefCounters, TexViewObjAllocator, pDeviceGL, TexDesc, GL_TEXTURE_CUBE_MAP_ARRAY, InitData, bIsDeviceInternal)
+TextureCubeArray_OGL::TextureCubeArray_OGL( IReferenceCounters*         pRefCounters, 
+                                            FixedBlockMemoryAllocator&  TexViewObjAllocator,
+                                            RenderDeviceGLImpl*         pDeviceGL, 
+                                            DeviceContextGLImpl*        pDeviceContext, 
+                                            const TextureDesc&          TexDesc, 
+                                            const TextureData*          pInitData         /*= nullptr*/,
+									        bool                        bIsDeviceInternal /*= false*/) : 
+    TextureBaseGL(pRefCounters, TexViewObjAllocator, pDeviceGL, TexDesc, GL_TEXTURE_CUBE_MAP_ARRAY, pInitData, bIsDeviceInternal)
 {
     VERIFY(m_Desc.SampleCount == 1, "Multisampled texture cube arrays are not supported");
     
@@ -64,10 +64,10 @@ TextureCubeArray_OGL::TextureCubeArray_OGL( IReferenceCounters *pRefCounters,
 
     SetDefaultGLParameters();
 
-    if( InitData.pSubResources )
+    if (pInitData != nullptr && pInitData->pSubResources != nullptr)
     {
         VERIFY( (m_Desc.ArraySize % 6) == 0, "Array size must be multiple of 6");
-        if(  m_Desc.MipLevels * m_Desc.ArraySize == InitData.NumSubresources )
+        if (m_Desc.MipLevels * m_Desc.ArraySize == pInitData->NumSubresources)
         {
             for(Uint32 Slice = 0; Slice < m_Desc.ArraySize; ++Slice)
             {
@@ -79,7 +79,7 @@ TextureCubeArray_OGL::TextureCubeArray_OGL( IReferenceCounters *pRefCounters,
                     // we will get into TextureBaseGL::UpdateData(), because instance of TextureCubeArray_OGL
                     // is not fully constructed yet.
                     // To call the required function, we need to explicitly specify the class: 
-                    TextureCubeArray_OGL::UpdateData(ContextState, Mip, Slice, DstBox, InitData.pSubResources[Slice*m_Desc.MipLevels + Mip]);
+                    TextureCubeArray_OGL::UpdateData(ContextState, Mip, Slice, DstBox, pInitData->pSubResources[Slice*m_Desc.MipLevels + Mip]);
                 }
             }
         }
@@ -107,7 +107,11 @@ TextureCubeArray_OGL::~TextureCubeArray_OGL()
 {
 }
 
-void TextureCubeArray_OGL::UpdateData( GLContextState &ContextState, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData )
+void TextureCubeArray_OGL::UpdateData( GLContextState&           ContextState,
+                                       Uint32                    MipLevel,
+                                       Uint32                    Slice,
+                                       const Box&                DstBox,
+                                       const TextureSubResData&  SubresData )
 {
     TextureBaseGL::UpdateData(ContextState, MipLevel, Slice, DstBox, SubresData);
 

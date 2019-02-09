@@ -47,7 +47,7 @@ public:
                     FixedBlockMemoryAllocator&   BuffViewObjMemAllocator,
                     class RenderDeviceD3D11Impl* pDeviceD3D11, 
                     const BufferDesc&            BuffDesc, 
-                    const BufferData&            BuffData = BufferData());
+                    const BufferData*            pBuffData = nullptr);
 
     BufferD3D11Impl(IReferenceCounters*          pRefCounters,
                     FixedBlockMemoryAllocator&   BuffViewObjMemAllocator,

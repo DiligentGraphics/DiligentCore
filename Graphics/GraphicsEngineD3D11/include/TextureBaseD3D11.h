@@ -48,7 +48,7 @@ public:
                      FixedBlockMemoryAllocator&   TexViewObjAllocator, 
                      class RenderDeviceD3D11Impl* pDeviceD3D11, 
                      const TextureDesc&           TexDesc, 
-                     const TextureData&           InitData = TextureData());
+                     const TextureData*           pInitData = nullptr);
     ~TextureBaseD3D11();
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
@@ -73,8 +73,9 @@ public:
 
 protected:
     void CreateViewInternal( const struct TextureViewDesc &ViewDesc, ITextureView **ppView, bool bIsDefaultView )override final;
-    void PrepareD3D11InitData(const TextureData &InitData, Uint32 NumSubresources, 
-                              std::vector<D3D11_SUBRESOURCE_DATA, STDAllocatorRawMem<D3D11_SUBRESOURCE_DATA> > &D3D11InitData);
+    void PrepareD3D11InitData(const TextureData*                                                                pInitData,
+                              Uint32                                                                            NumSubresources, 
+                              std::vector<D3D11_SUBRESOURCE_DATA, STDAllocatorRawMem<D3D11_SUBRESOURCE_DATA> >& D3D11InitData);
 
     virtual void CreateSRV( TextureViewDesc& SRVDesc, ID3D11ShaderResourceView**  ppD3D11SRV ) = 0;
     virtual void CreateRTV( TextureViewDesc& RTVDesc, ID3D11RenderTargetView**    ppD3D11RTV ) = 0;

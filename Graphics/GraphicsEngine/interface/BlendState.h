@@ -378,9 +378,9 @@ struct BlendStateDesc
 
     BlendStateDesc()noexcept{}
 
-    BlendStateDesc(Bool _AlphaToCoverageEnable,
-                   Bool _IndependentBlendEnable,
-                   const RenderTargetBlendDesc& RT0 = RenderTargetBlendDesc{})noexcept : 
+    BlendStateDesc(Bool                         _AlphaToCoverageEnable,
+                   Bool                         _IndependentBlendEnable,
+                   const RenderTargetBlendDesc& RT0                     = RenderTargetBlendDesc{})noexcept : 
         AlphaToCoverageEnable   (_AlphaToCoverageEnable),
         IndependentBlendEnable  (_IndependentBlendEnable),
         RenderTargets           {RT0}

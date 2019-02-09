@@ -65,9 +65,9 @@ namespace Diligent
 
     static const BlendStateDesc BS_AlphaBlend = 
     {
-        False, // AlphaToCoverageEnable
-        False, // IndependentBlendEnable
-	    RenderTargetBlendDesc// RT0
+        False,                  // AlphaToCoverageEnable
+        False,                  // IndependentBlendEnable
+	    RenderTargetBlendDesc   // Render Target 0
         {
 			True,                       // BlendEnable
             False,                      // LogicOperationEnable

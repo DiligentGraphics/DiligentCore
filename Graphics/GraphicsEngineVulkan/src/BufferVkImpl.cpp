@@ -40,16 +40,16 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters*        pRefCounters,
                              FixedBlockMemoryAllocator& BuffViewObjMemAllocator, 
                              RenderDeviceVkImpl*        pRenderDeviceVk, 
                              const BufferDesc&          BuffDesc, 
-                             const BufferData&          BuffData /*= BufferData()*/) : 
+                             const BufferData*          pBuffData /*= nullptr*/) : 
     TBufferBase(pRefCounters, BuffViewObjMemAllocator, pRenderDeviceVk, BuffDesc, false),
     m_DynamicAllocations(STD_ALLOCATOR_RAW_MEM(VulkanDynamicAllocation, GetRawAllocator(), "Allocator for vector<VulkanDynamicAllocation>"))
 {
 #define LOG_BUFFER_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Buffer \"", BuffDesc.Name ? BuffDesc.Name : "", "\": ", ##__VA_ARGS__);
 
-    if( m_Desc.Usage == USAGE_STATIC && BuffData.pData == nullptr )
+    if( m_Desc.Usage == USAGE_STATIC && (pBuffData == nullptr || pBuffData->pData == nullptr) )
         LOG_BUFFER_ERROR_AND_THROW("Static buffer must be initialized with data at creation time")
 
-    if( m_Desc.Usage == USAGE_DYNAMIC && BuffData.pData != nullptr )
+    if( m_Desc.Usage == USAGE_DYNAMIC && pBuffData != nullptr && pBuffData->pData != nullptr )
         LOG_BUFFER_ERROR_AND_THROW("Dynamic buffer must be initialized via Map()")
 
     if (m_Desc.Usage == USAGE_CPU_ACCESSIBLE)
@@ -59,7 +59,7 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters*        pRefCounters,
 
         if (m_Desc.CPUAccessFlags == CPU_ACCESS_WRITE)
         {
-            if(BuffData.pData != nullptr )
+            if (pBuffData != nullptr )
                 LOG_BUFFER_ERROR_AND_THROW("CPU-writable staging buffers must be updated via map")
         }
     }
@@ -185,7 +185,7 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters*        pRefCounters,
         auto err = LogicalDevice.BindBufferMemory(m_VulkanBuffer, Memory, AlignedOffset);
         CHECK_VK_ERROR_AND_THROW(err, "Failed to bind buffer memory");
 
-        bool bInitializeBuffer = (BuffData.pData != nullptr && BuffData.DataSize > 0);
+        bool bInitializeBuffer = (pBuffData != nullptr && pBuffData->pData != nullptr && pBuffData->DataSize > 0);
         RESOURCE_STATE InitialState = RESOURCE_STATE_UNDEFINED;
         if( bInitializeBuffer )
         {
@@ -211,7 +211,7 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters*        pRefCounters,
             auto* StagingData = reinterpret_cast<uint8_t*>(StagingMemoryAllocation.Page->GetCPUMemory());
             if (StagingData == nullptr)
                 LOG_BUFFER_ERROR_AND_THROW("Failed to allocate staging data");
-            memcpy(StagingData + AlignedStagingMemOffset, BuffData.pData, BuffData.DataSize);
+            memcpy(StagingData + AlignedStagingMemOffset, pBuffData->pData, pBuffData->DataSize);
 
             err = LogicalDevice.BindBufferMemory(StagingBuffer, StagingBufferMemory, AlignedStagingMemOffset);
             CHECK_VK_ERROR_AND_THROW(err, "Failed to bind staging bufer memory");

@@ -32,15 +32,15 @@
 namespace Diligent
 {
 
-Texture1DArray_OGL::Texture1DArray_OGL( IReferenceCounters *pRefCounters, 
-                                        FixedBlockMemoryAllocator& TexViewObjAllocator,
-                                        RenderDeviceGLImpl *pDeviceGL, 
-                                        DeviceContextGLImpl *pDeviceContext, 
-                                        const TextureDesc& TexDesc, 
-                                        const TextureData &InitData /*= TextureData()*/, 
-									    bool bIsDeviceInternal /*= false*/) : 
+Texture1DArray_OGL::Texture1DArray_OGL( IReferenceCounters*         pRefCounters, 
+                                        FixedBlockMemoryAllocator&  TexViewObjAllocator,
+                                        RenderDeviceGLImpl*         pDeviceGL, 
+                                        DeviceContextGLImpl*        pDeviceContext, 
+                                        const TextureDesc&          TexDesc, 
+                                        const TextureData*          pInitData         /*= nullptr*/, 
+									    bool                        bIsDeviceInternal /*= false*/) : 
     TextureBaseGL(pRefCounters, TexViewObjAllocator, pDeviceGL, TexDesc,
-                  GL_TEXTURE_1D_ARRAY, InitData, bIsDeviceInternal)
+                  GL_TEXTURE_1D_ARRAY, pInitData, bIsDeviceInternal)
 {
     auto &ContextState = pDeviceContext->GetContextState();
     
@@ -58,9 +58,9 @@ Texture1DArray_OGL::Texture1DArray_OGL( IReferenceCounters *pRefCounters,
 
     SetDefaultGLParameters();
 
-    if( InitData.pSubResources )
+    if (pInitData != nullptr && pInitData->pSubResources != nullptr)
     {
-        if(  m_Desc.MipLevels * m_Desc.ArraySize == InitData.NumSubresources )
+        if (m_Desc.MipLevels * m_Desc.ArraySize == pInitData->NumSubresources)
         {
             for(Uint32 Slice = 0; Slice < m_Desc.ArraySize; ++Slice )
             {
@@ -72,7 +72,7 @@ Texture1DArray_OGL::Texture1DArray_OGL( IReferenceCounters *pRefCounters,
                     // we will get into TextureBaseGL::UpdateData(), because instance of Texture1DArray_OGL
                     // is not fully constructed yet.
                     // To call the required function, we need to explicitly specify the class: 
-                    Texture1DArray_OGL::UpdateData(ContextState, Mip, Slice, DstBox, InitData.pSubResources[Slice*m_Desc.MipLevels + Mip]);
+                    Texture1DArray_OGL::UpdateData(ContextState, Mip, Slice, DstBox, pInitData->pSubResources[Slice*m_Desc.MipLevels + Mip]);
                 }
             }
         }
@@ -85,13 +85,13 @@ Texture1DArray_OGL::Texture1DArray_OGL( IReferenceCounters *pRefCounters,
     ContextState.BindTexture( -1, m_BindTarget, GLObjectWrappers::GLTextureObj( false ) );
 }
 
-Texture1DArray_OGL::Texture1DArray_OGL( IReferenceCounters *pRefCounters, 
-                                        FixedBlockMemoryAllocator& TexViewObjAllocator,     
-                                        RenderDeviceGLImpl *pDeviceGL, 
-                                        DeviceContextGLImpl *pDeviceContext,
-                                        const TextureDesc& TexDesc, 
-                                        GLuint GLTextureHandle,
-                                        bool bIsDeviceInternal)  : 
+Texture1DArray_OGL::Texture1DArray_OGL( IReferenceCounters*         pRefCounters, 
+                                        FixedBlockMemoryAllocator&  TexViewObjAllocator,     
+                                        RenderDeviceGLImpl*         pDeviceGL, 
+                                        DeviceContextGLImpl*        pDeviceContext,
+                                        const TextureDesc&          TexDesc, 
+                                        GLuint                      GLTextureHandle,
+                                        bool                        bIsDeviceInternal) :
     TextureBaseGL(pRefCounters, TexViewObjAllocator, pDeviceGL, pDeviceContext, TexDesc, GLTextureHandle, GL_TEXTURE_1D_ARRAY, bIsDeviceInternal)
 {
 }
@@ -100,7 +100,11 @@ Texture1DArray_OGL::~Texture1DArray_OGL()
 {
 }
 
-void Texture1DArray_OGL::UpdateData( GLContextState &ContextState, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData )
+void Texture1DArray_OGL::UpdateData( GLContextState&          ContextState,
+                                     Uint32                   MipLevel,
+                                     Uint32                   Slice,
+                                     const Box&               DstBox,
+                                     const TextureSubResData& SubresData )
 {
     TextureBaseGL::UpdateData(ContextState, MipLevel, Slice, DstBox, SubresData);
 

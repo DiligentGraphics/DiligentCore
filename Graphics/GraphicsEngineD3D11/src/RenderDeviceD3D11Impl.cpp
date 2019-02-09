@@ -120,13 +120,13 @@ void RenderDeviceD3D11Impl :: CreateBufferFromD3DResource(ID3D11Buffer* pd3d11Bu
     );
 }
 
-void RenderDeviceD3D11Impl :: CreateBuffer(const BufferDesc& BuffDesc, const BufferData& BuffData, IBuffer** ppBuffer)
+void RenderDeviceD3D11Impl :: CreateBuffer(const BufferDesc& BuffDesc, const BufferData* pBuffData, IBuffer** ppBuffer)
 {
     CreateDeviceObject("buffer", BuffDesc, ppBuffer, 
         [&]()
         {
             BufferD3D11Impl* pBufferD3D11( NEW_RC_OBJ(m_BufObjAllocator, "BufferD3D11Impl instance", BufferD3D11Impl)
-                                                     (m_BuffViewObjAllocator, this, BuffDesc, BuffData ) );
+                                                     (m_BuffViewObjAllocator, this, BuffDesc, pBuffData ) );
             pBufferD3D11->QueryInterface( IID_Buffer, reinterpret_cast<IObject**>(ppBuffer) );
             pBufferD3D11->CreateDefaultViews();
             OnCreateDeviceObject( pBufferD3D11 );
@@ -206,7 +206,7 @@ void RenderDeviceD3D11Impl::CreateTextureFromD3DResource(ID3D11Texture3D* pd3d11
 }
 
 
-void RenderDeviceD3D11Impl :: CreateTexture(const TextureDesc& TexDesc, const TextureData& Data, ITexture** ppTexture)
+void RenderDeviceD3D11Impl :: CreateTexture(const TextureDesc& TexDesc, const TextureData* pData, ITexture** ppTexture)
 {
     CreateDeviceObject( "texture", TexDesc, ppTexture, 
         [&]()
@@ -217,7 +217,7 @@ void RenderDeviceD3D11Impl :: CreateTexture(const TextureDesc& TexDesc, const Te
                 case RESOURCE_DIM_TEX_1D:
                 case RESOURCE_DIM_TEX_1D_ARRAY:
                     pTextureD3D11 = NEW_RC_OBJ(m_TexObjAllocator, "Texture1D_D3D11 instance", Texture1D_D3D11)
-                                              (m_TexViewObjAllocator, this, TexDesc, Data );
+                                              (m_TexViewObjAllocator, this, TexDesc, pData );
                 break;
 
                 case RESOURCE_DIM_TEX_2D:
@@ -225,12 +225,12 @@ void RenderDeviceD3D11Impl :: CreateTexture(const TextureDesc& TexDesc, const Te
                 case RESOURCE_DIM_TEX_CUBE:
                 case RESOURCE_DIM_TEX_CUBE_ARRAY:
                     pTextureD3D11 = NEW_RC_OBJ(m_TexObjAllocator, "Texture2D_D3D11 instance", Texture2D_D3D11)
-                                              (m_TexViewObjAllocator, this, TexDesc, Data );
+                                              (m_TexViewObjAllocator, this, TexDesc, pData );
                 break;
 
                 case RESOURCE_DIM_TEX_3D:
                     pTextureD3D11 = NEW_RC_OBJ(m_TexObjAllocator, "Texture3D_D3D11 instance", Texture3D_D3D11)
-                                              (m_TexViewObjAllocator, this, TexDesc, Data );
+                                              (m_TexViewObjAllocator, this, TexDesc, pData );
                 break;
 
                 default: LOG_ERROR_AND_THROW( "Unknown texture type. (Did you forget to initialize the Type member of TextureDesc structure?)" );
