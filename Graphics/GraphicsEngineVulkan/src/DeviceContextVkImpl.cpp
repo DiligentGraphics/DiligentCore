@@ -136,6 +136,10 @@ namespace Diligent
 
         auto VkCmdPool = m_CmdPool.Release();
         pDeviceVkImpl->SafeReleaseDeviceObject(std::move(VkCmdPool), ~Uint64{0});
+        
+        pDeviceVkImpl->SafeReleaseDeviceObject(std::move(m_GenerateMipsHelper), ~Uint64{0});
+        pDeviceVkImpl->SafeReleaseDeviceObject(std::move(m_GenerateMipsSRB),    ~Uint64{0});
+        pDeviceVkImpl->SafeReleaseDeviceObject(std::move(m_DummyVB),            ~Uint64{0});
 
         // The main reason we need to idle the GPU is because we need to make sure that all command buffers are returned to the
         // pool. Upload heap, dynamic heap and dynamic descriptor manager return their resources to global managers and

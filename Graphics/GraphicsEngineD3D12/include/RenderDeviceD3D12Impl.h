@@ -34,6 +34,7 @@
 #include "D3D12DynamicHeap.h"
 #include "Atomics.h"
 #include "CommandQueueD3D12.h"
+#include "GenerateMips.h"
 
 namespace Diligent
 {
@@ -98,6 +99,8 @@ public:
         VERIFY_EXPR(Type == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV || Type == D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
         return m_GPUDescriptorHeaps[Type];
     }
+
+    const GenerateMipsHelper& GetMipsGenerator()const {return m_MipsGenerator;}
     
 private:
     virtual void TestTextureFormat( TEXTURE_FORMAT TexFormat )override final;
@@ -120,6 +123,9 @@ private:
 #endif
 
     D3D12DynamicMemoryManager m_DynamicMemoryManager;
+
+    // Note: mips generator must be released after the device has been idled
+    GenerateMipsHelper m_MipsGenerator;
 };
 
 }

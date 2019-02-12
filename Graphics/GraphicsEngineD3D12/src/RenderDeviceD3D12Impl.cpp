@@ -77,7 +77,8 @@ RenderDeviceD3D12Impl :: RenderDeviceD3D12Impl(IReferenceCounters*          pRef
         {RawMemAllocator, *this, CreationAttribs.GPUDescriptorHeapSize[1], CreationAttribs.GPUDescriptorHeapDynamicSize[1], D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER,     D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE}
     },
     m_ContextPool(STD_ALLOCATOR_RAW_MEM(PooledCommandContext, GetRawAllocator(), "Allocator for vector<PooledCommandContext>")),
-    m_DynamicMemoryManager(GetRawAllocator(), *this, CreationAttribs.NumDynamicHeapPagesToReserve, CreationAttribs.DynamicHeapPageSize)
+    m_DynamicMemoryManager(GetRawAllocator(), *this, CreationAttribs.NumDynamicHeapPagesToReserve, CreationAttribs.DynamicHeapPageSize),
+    m_MipsGenerator(pd3d12Device)
 {
     m_DeviceCaps.DevType = DeviceType::D3D12;
     m_DeviceCaps.MajorVersion = 12;

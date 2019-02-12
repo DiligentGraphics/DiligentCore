@@ -31,7 +31,6 @@
 #include "DeviceContextD3D12.h"
 #include "DeviceContextBase.h"
 #include "DeviceContextNextGenBase.h"
-#include "GenerateMips.h"
 #include "BufferD3D12Impl.h"
 #include "TextureD3D12Impl.h"
 #include "PipelineStateD3D12Impl.h"
@@ -281,8 +280,6 @@ private:
     CComPtr<ID3D12CommandSignature> m_pDrawIndexedIndirectSignature;
     CComPtr<ID3D12CommandSignature> m_pDispatchIndirectSignature;
     
-    GenerateMipsHelper m_MipsGenerator;
-
     D3D12DynamicHeap m_DynamicHeap;
     
     // Every context must use its own allocator that maintains individual list of retired descriptor heaps to 

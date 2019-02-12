@@ -103,7 +103,7 @@ namespace Diligent
 	    CreatePSO(m_pGenerateMipsGammaPSO[3], g_pGenerateMipsGammaOddCS);
     }
 
-    void GenerateMipsHelper::GenerateMips(RenderDeviceD3D12Impl* pRenderDeviceD3D12, TextureViewD3D12Impl* pTexView, CommandContext& Ctx)const
+    void GenerateMipsHelper::GenerateMips(ID3D12Device* pd3d12Device, TextureViewD3D12Impl* pTexView, CommandContext& Ctx)const
     {
         auto& ComputeCtx = Ctx.AsComputeContext();
         ComputeCtx.SetRootSignature(m_pGenerateMipsRS);
@@ -120,7 +120,6 @@ namespace Diligent
 
         if (pTexD3D12->IsInKnownState() && !pTexD3D12->CheckState(RESOURCE_STATE_UNORDERED_ACCESS))
 	        Ctx.TransitionResource(pTexD3D12, RESOURCE_STATE_UNORDERED_ACCESS);
-        auto* pd3d12Device = pRenderDeviceD3D12->GetD3D12Device();
 
         const auto &ViewDesc = pTexView->GetDesc();
         for (uint32_t TopMip = 0; TopMip < TexDesc.MipLevels - 1; )

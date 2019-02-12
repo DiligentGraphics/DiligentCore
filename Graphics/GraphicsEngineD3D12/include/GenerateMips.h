@@ -50,9 +50,9 @@ namespace Diligent
     class GenerateMipsHelper
     {
     public:
-        GenerateMipsHelper(ID3D12Device *pd3d12Device);
+        GenerateMipsHelper(ID3D12Device* pd3d12Device);
 
-        void GenerateMips(class RenderDeviceD3D12Impl *pRenderDeviceD3D12, class TextureViewD3D12Impl *pTexView, class CommandContext &Ctx)const;
+        void GenerateMips(ID3D12Device* pd3d12Device, class TextureViewD3D12Impl* pTexView, class CommandContext& Ctx)const;
 
     private:
         CComPtr<ID3D12RootSignature> m_pGenerateMipsRS;

@@ -87,7 +87,6 @@ namespace Diligent
                 GetContextObjectName("SAMPLER     dynamic descriptor allocator", bIsDeferred, ContextId)
             }
         },
-        m_MipsGenerator(pDeviceD3D12Impl->GetD3D12Device()),
         m_CmdListAllocator(GetRawAllocator(), sizeof(CommandListD3D12Impl), 64 )
     {
         RequestCommandContext(pDeviceD3D12Impl);
@@ -1412,7 +1411,9 @@ namespace Diligent
     {
         TDeviceContextBase::GenerateMips(pTexView);
         auto& Ctx = GetCmdContext();
-        m_MipsGenerator.GenerateMips(m_pDevice.RawPtr<RenderDeviceD3D12Impl>(), ValidatedCast<TextureViewD3D12Impl>(pTexView), Ctx);
+        auto& DeviceD3D12Impl = *m_pDevice.RawPtr<RenderDeviceD3D12Impl>();
+        const auto& MipsGenerator = DeviceD3D12Impl.GetMipsGenerator();
+        MipsGenerator.GenerateMips(DeviceD3D12Impl.GetD3D12Device(), ValidatedCast<TextureViewD3D12Impl>(pTexView), Ctx);
         ++m_State.NumCommands;
     }
 
