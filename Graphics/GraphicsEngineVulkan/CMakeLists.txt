@@ -176,12 +176,23 @@ set(PRIVATE_DEPENDENCIES
     SPIRV-Tools-opt
 )
 
+if(PLATFORM_ANDROID)
+    # Wrong vulkan library makes incompitible linker error.
+    if(ANDROID_PLATFORM_LEVEL)
+        # if you want to use specific target sdk version, set this variable in build.gradle or .mk file.
+        set(VULKAN_LIB_PATH "${ANDROID_NDK}/platforms/android-${ANDROID_PLATFORM_LEVEL}/arch-arm64/usr/lib")
+    else()
+        # Minimum requirement of android sdk version is 24 ( android 7.0 )
+        set(VULKAN_LIB_PATH "${ANDROID_NDK}/platforms/android-24/arch-arm64/usr/lib")
+    endif()
+endif()
+
 if(PLATFORM_WIN32)
     find_library(Vulkan_LIBRARY NAMES vulkan-1 vulkan PATHS "../../External/vulkan/libs")
 elseif(PLATFORM_MACOS)
     find_library(Vulkan_LIBRARY NAMES MoltenVK PATHS "../../External/vulkan/libs/macOS")
 else()
-    find_library(Vulkan_LIBRARY NAMES vulkan HINTS "$ENV{VULKAN_SDK}/lib" "../../External/vulkan/libs")
+    find_library(Vulkan_LIBRARY NAMES vulkan PATHS "${VULKAN_LIB_PATH}")
 endif()
 list(APPEND PRIVATE_DEPENDENCIES ${Vulkan_LIBRARY})
 
@@ -213,6 +224,8 @@ elseif(PLATFORM_MACOS)
     set(PRIVATE_COMPILE_DEFINITIONS VK_USE_PLATFORM_MACOS_MVK=1)
 elseif(PLATFORM_IOS)
     set(PRIVATE_COMPILE_DEFINITIONS VK_USE_PLATFORM_IOS_MVK=1)
+elseif(PLATFORM_ANDROID)
+    set(PRIVATE_COMPILE_DEFINITIONS VK_USE_PLATFORM_ANDROID_KHR=1)
 else()
     message(FATAL_ERROR "Unknown platform")
 endif()

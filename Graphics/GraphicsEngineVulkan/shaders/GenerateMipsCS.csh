@@ -89,7 +89,7 @@ void main()
     uvec3 GlobalInd = gl_GlobalInvocationID;
     
     ivec3 SrcMipSize = textureSize(SrcMip, 0); // SrcMip is the view of the source mip level
-    bool IsValidThread = GlobalInd.x < SrcMipSize.x && GlobalInd.y < SrcMipSize.y;
+    bool IsValidThread = (int(GlobalInd.x) < SrcMipSize.x) && (int(GlobalInd.y) < SrcMipSize.y);
     int ArraySlice = FirstArraySlice + int(GlobalInd.z);
 
     vec4 Src1 = vec4(0.0, 0.0, 0.0, 0.0);
@@ -151,61 +151,61 @@ void main()
     // This guarantees all LDS writes are complete and that all threads have
     // executed all instructions so far (and therefore have issued their LDS
     // write instructions.)
-	GroupMemoryBarrierWithGroupSync();
-
-    if( IsValidThread )
-    {
-        // With low three bits for X and high three bits for Y, this bit mask
-        // (binary: 001001) checks that X and Y are even.
-        if ((LocalInd & 0x9) == 0)
-        {
-            vec4 Src2 = LoadColor(LocalInd + 0x01);
-            vec4 Src3 = LoadColor(LocalInd + 0x08);
-            vec4 Src4 = LoadColor(LocalInd + 0x09);
-            Src1 = 0.25 * (Src1 + Src2 + Src3 + Src4);
-
-            imageStore(OutMip[1], ivec3(GlobalInd.xy / 2, ArraySlice), PackColor(Src1));
-            StoreColor(LocalInd, Src1);
-        }
-    }
-
-    if (NumMipLevels == 2)
-        return;
-
-	GroupMemoryBarrierWithGroupSync();
-
-    if( IsValidThread )
-    {
-        // This bit mask (binary: 011011) checks that X and Y are multiples of four.
-        if ((LocalInd & 0x1B) == 0)
-        {
-            vec4 Src2 = LoadColor(LocalInd + 0x02);
-            vec4 Src3 = LoadColor(LocalInd + 0x10);
-            vec4 Src4 = LoadColor(LocalInd + 0x12);
-            Src1 = 0.25 * (Src1 + Src2 + Src3 + Src4);
-
-            imageStore(OutMip[2], ivec3(GlobalInd.xy / 4, ArraySlice), PackColor(Src1));
-            StoreColor(LocalInd, Src1);
-        }
-    }
-
-    if (NumMipLevels == 3)
-        return;
-
-	GroupMemoryBarrierWithGroupSync();
-
-    if( IsValidThread )
-    {
-        // This bit mask would be 111111 (X & Y multiples of 8), but only one
-        // thread fits that criteria.
-        if (LocalInd == 0)
-        {
-            vec4 Src2 = LoadColor(LocalInd + 0x04);
-            vec4 Src3 = LoadColor(LocalInd + 0x20);
-            vec4 Src4 = LoadColor(LocalInd + 0x24);
-            Src1 = 0.25 * (Src1 + Src2 + Src3 + Src4);
-
-            imageStore(OutMip[3], ivec3(GlobalInd.xy / 8, ArraySlice), PackColor(Src1));
-        }
-    }
+//	GroupMemoryBarrierWithGroupSync();
+//
+//    if( IsValidThread )
+//    {
+//        // With low three bits for X and high three bits for Y, this bit mask
+//        // (binary: 001001) checks that X and Y are even.
+//        if ((LocalInd & 0x9u) == 0u)
+//        {
+//            vec4 Src2 = LoadColor(LocalInd + 0x01u);
+//            vec4 Src3 = LoadColor(LocalInd + 0x08u);
+//            vec4 Src4 = LoadColor(LocalInd + 0x09u);
+//            Src1 = 0.25 * (Src1 + Src2 + Src3 + Src4);
+//
+//            imageStore(OutMip[1], ivec3(GlobalInd.xy / 2, ArraySlice), PackColor(Src1));
+//            StoreColor(LocalInd, Src1);
+//        }
+//    }
+//
+//    if (NumMipLevels == 2)
+//        return;
+//
+//	GroupMemoryBarrierWithGroupSync();
+//
+//    if( IsValidThread )
+//    {
+//        // This bit mask (binary: 011011) checks that X and Y are multiples of four.
+//        if ((LocalInd & 0x1Bu) == 0u)
+//        {
+//            vec4 Src2 = LoadColor(LocalInd + 0x02u);
+//            vec4 Src3 = LoadColor(LocalInd + 0x10u);
+//            vec4 Src4 = LoadColor(LocalInd + 0x12u);
+//            Src1 = 0.25 * (Src1 + Src2 + Src3 + Src4);
+//
+//            imageStore(OutMip[2], ivec3(GlobalInd.xy / 4, ArraySlice), PackColor(Src1));
+//            StoreColor(LocalInd, Src1);
+//        }
+//    }
+//
+//    if (NumMipLevels == 3)
+//        return;
+//
+//	GroupMemoryBarrierWithGroupSync();
+//
+//    if( IsValidThread )
+//    {
+//        // This bit mask would be 111111 (X & Y multiples of 8), but only one
+//        // thread fits that criteria.
+//        if (LocalInd == 0u)
+//        {
+//            vec4 Src2 = LoadColor(LocalInd + 0x04u);
+//            vec4 Src3 = LoadColor(LocalInd + 0x20u);
+//            vec4 Src4 = LoadColor(LocalInd + 0x24u);
+//            Src1 = 0.25 * (Src1 + Src2 + Src3 + Src4);
+//
+//            imageStore(OutMip[3], ivec3(GlobalInd.xy / 8, ArraySlice), PackColor(Src1));
+//        }
+//    }
 }

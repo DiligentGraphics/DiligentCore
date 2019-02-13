@@ -29,6 +29,7 @@
 #if PLATFORM_ANDROID
     // Android specific include files.
 #   include <unordered_map>
+#	include "SPIRV/GlslangToSpv.h"
 
     // Header files.
 #   include <android_native_app_glue.h>
@@ -56,16 +57,16 @@ namespace Diligent
 
 void InitializeGlslang()
 {
-#if !PLATFORM_ANDROID
+//#if !PLATFORM_ANDROID
     glslang::InitializeProcess();
-#endif
+//#endif
 }
 
 void FinalizeGlslang()
 {
-#if !PLATFORM_ANDROID
+//#if !PLATFORM_ANDROID
     glslang::FinalizeProcess();
-#endif
+//#endif
 }
 
 EShLanguage ShaderTypeToShLanguage(SHADER_TYPE ShaderType)

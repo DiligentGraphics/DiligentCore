@@ -64,8 +64,19 @@ if(VULKAN_SUPPORTED)
         target_include_directories(GLSLTools 
         PRIVATE
             ../../External/glslang
+
         )
     endif()
+endif()
+
+if(PLATFORM_ANDROID)
+    target_include_directories(GLSLTools
+            PRIVATE
+            ${ANDROID_NDK}/sources/android/native_app_glue
+            ${ANDROID_NDK}/sources/third_party/shaderc/include
+            # if you can't find shaderc lib, refer this page
+            # https://developer.android.com/ndk/guides/graphics/getting-started?hl=en
+            )
 endif()
 
 set_common_target_properties(GLSLTools)
