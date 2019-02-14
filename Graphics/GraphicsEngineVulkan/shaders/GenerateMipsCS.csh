@@ -89,12 +89,12 @@ void main()
     uvec3 GlobalInd = gl_GlobalInvocationID;
     
     ivec3 SrcMipSize = textureSize(SrcMip, 0); // SrcMip is the view of the source mip level
-    bool IsValidThread = GlobalInd.x < SrcMipSize.x && GlobalInd.y < SrcMipSize.y;
+    bool IsValidThread = GlobalInd.x < uint(SrcMipSize.x) && GlobalInd.y < uint(SrcMipSize.y);
     int ArraySlice = FirstArraySlice + int(GlobalInd.z);
 
     vec4 Src1 = vec4(0.0, 0.0, 0.0, 0.0);
     float fSrcMipLevel = 0.0; // SrcMip is the view of the source mip level
-    if( IsValidThread )
+    if (IsValidThread)
     {
         // One bilinear sample is insufficient when scaling down by more than 2x.
         // You will slightly undersample in the case where the source dimension
@@ -103,7 +103,7 @@ void main()
         // will force this shader to be slower and more complicated as it will
         // have to take more source texture samples.
 #if NON_POWER_OF_TWO == 0
-        vec2 UV = TexelSize * (vec2(GlobalInd.xy) + 0.5);
+        vec2 UV = TexelSize * (vec2(GlobalInd.xy) + vec2(0.5, 0.5));
         Src1 = textureLod(SrcMip, vec3(UV, ArraySlice), fSrcMipLevel);
 #elif NON_POWER_OF_TWO == 1
         // > 2:1 in X dimension
@@ -141,7 +141,7 @@ void main()
     if (NumMipLevels == 1)
         return;
 
-    if( IsValidThread )
+    if (IsValidThread)
     {
         // Without lane swizzle operations, the only way to share data with other
         // threads is through LDS.
@@ -153,18 +153,18 @@ void main()
     // write instructions.)
 	GroupMemoryBarrierWithGroupSync();
 
-    if( IsValidThread )
+    if (IsValidThread)
     {
         // With low three bits for X and high three bits for Y, this bit mask
         // (binary: 001001) checks that X and Y are even.
-        if ((LocalInd & 0x9) == 0)
+        if ((LocalInd & 0x9u) == 0u)
         {
-            vec4 Src2 = LoadColor(LocalInd + 0x01);
-            vec4 Src3 = LoadColor(LocalInd + 0x08);
-            vec4 Src4 = LoadColor(LocalInd + 0x09);
+            vec4 Src2 = LoadColor(LocalInd + 0x01u);
+            vec4 Src3 = LoadColor(LocalInd + 0x08u);
+            vec4 Src4 = LoadColor(LocalInd + 0x09u);
             Src1 = 0.25 * (Src1 + Src2 + Src3 + Src4);
 
-            imageStore(OutMip[1], ivec3(GlobalInd.xy / 2, ArraySlice), PackColor(Src1));
+            imageStore(OutMip[1], ivec3(GlobalInd.xy / 2u, ArraySlice), PackColor(Src1));
             StoreColor(LocalInd, Src1);
         }
     }
@@ -177,14 +177,14 @@ void main()
     if( IsValidThread )
     {
         // This bit mask (binary: 011011) checks that X and Y are multiples of four.
-        if ((LocalInd & 0x1B) == 0)
+        if ((LocalInd & 0x1Bu) == 0u)
         {
-            vec4 Src2 = LoadColor(LocalInd + 0x02);
-            vec4 Src3 = LoadColor(LocalInd + 0x10);
-            vec4 Src4 = LoadColor(LocalInd + 0x12);
+            vec4 Src2 = LoadColor(LocalInd + 0x02u);
+            vec4 Src3 = LoadColor(LocalInd + 0x10u);
+            vec4 Src4 = LoadColor(LocalInd + 0x12u);
             Src1 = 0.25 * (Src1 + Src2 + Src3 + Src4);
 
-            imageStore(OutMip[2], ivec3(GlobalInd.xy / 4, ArraySlice), PackColor(Src1));
+            imageStore(OutMip[2], ivec3(GlobalInd.xy / 4u, ArraySlice), PackColor(Src1));
             StoreColor(LocalInd, Src1);
         }
     }
@@ -198,14 +198,14 @@ void main()
     {
         // This bit mask would be 111111 (X & Y multiples of 8), but only one
         // thread fits that criteria.
-        if (LocalInd == 0)
+        if (LocalInd == 0u)
         {
-            vec4 Src2 = LoadColor(LocalInd + 0x04);
-            vec4 Src3 = LoadColor(LocalInd + 0x20);
-            vec4 Src4 = LoadColor(LocalInd + 0x24);
+            vec4 Src2 = LoadColor(LocalInd + 0x04u);
+            vec4 Src3 = LoadColor(LocalInd + 0x20u);
+            vec4 Src4 = LoadColor(LocalInd + 0x24u);
             Src1 = 0.25 * (Src1 + Src2 + Src3 + Src4);
 
-            imageStore(OutMip[3], ivec3(GlobalInd.xy / 8, ArraySlice), PackColor(Src1));
+            imageStore(OutMip[3], ivec3(GlobalInd.xy / 8u, ArraySlice), PackColor(Src1));
         }
     }
 }
