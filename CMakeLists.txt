@@ -1,5 +1,7 @@
 cmake_minimum_required (VERSION 3.6)
 
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
 set(DEBUG_CONFIGURATIONS DEBUG CACHE INTERNAL "Debug configurations")
 set(RELEASE_CONFIGURATIONS RELEASE RELWITHDEBINFO MINSIZEREL CACHE INTERNAL "Release configurations")
 
@@ -112,25 +114,25 @@ else()
 endif()
 
 
-option(NO_DIRECT3D11 "Disable Direct3D11 backend" OFF)
-option(NO_DIRECT3D12 "Disable Direct3D12 backend" OFF)
-option(NO_OPENGL "Disable OpenGL/GLES backend" OFF)
-option(NO_VULKAN "Disable Vulkan backend" OFF)
-option(NO_METAL "Disable Metal backend" OFF)
-if(${NO_DIRECT3D11})
+option(DILIGENT_NO_DIRECT3D11 "Disable Direct3D11 backend" OFF)
+option(DILIGENT_NO_DIRECT3D12 "Disable Direct3D12 backend" OFF)
+option(DILIGENT_NO_OPENGL "Disable OpenGL/GLES backend" OFF)
+option(DILIGENT_NO_VULKAN "Disable Vulkan backend" OFF)
+option(DILIGENT_NO_METAL "Disable Metal backend" OFF)
+if(${DILIGENT_NO_DIRECT3D11})
     set(D3D11_SUPPORTED FALSE CACHE INTERNAL "D3D11 backend is forcibly disabled")
 endif()
-if(${NO_DIRECT3D12})
+if(${DILIGENT_NO_DIRECT3D12})
     set(D3D12_SUPPORTED FALSE CACHE INTERNAL "D3D12 backend is forcibly disabled")
 endif()
-if(${NO_OPENGL})
+if(${DILIGENT_NO_OPENGL})
     set(GL_SUPPORTED FALSE CACHE INTERNAL "OpenGL backend is forcibly disabled")
     set(GLES_SUPPORTED FALSE CACHE INTERNAL "OpenGLES backend is forcibly disabled")
 endif()
-if(${NO_VULKAN})
+if(${DILIGENT_NO_VULKAN})
     set(VULKAN_SUPPORTED FALSE CACHE INTERNAL "Vulkan backend is forcibly disabled")
 endif()
-if(${NO_METAL})
+if(${DILIGENT_NO_METAL})
     set(METAL_SUPPORTED FALSE CACHE INTERNAL "Metal backend is forcibly disabled")
 endif()
 
@@ -203,16 +205,27 @@ else()
 
 endif(MSVC)
 
-if(PLATFORM_LINUX)
-	if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-		# Without -fPIC option GCC fails to link static libraries into dynamic library:
-		#  -fPIC  
-		#      If supported for the target machine, emit position-independent code, suitable for 
-		#      dynamic linking and avoiding any limit on the size of the global offset table.
-		target_compile_options(BuildSettings INTERFACE -fPIC)
-	endif()
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    # Without -fPIC option GCC fails to link static libraries into dynamic library:
+    #  -fPIC  
+    #      If supported for the target machine, emit position-independent code, suitable for 
+    #      dynamic linking and avoiding any limit on the size of the global offset table.
+    target_compile_options(BuildSettings INTERFACE -fPIC)
 endif()
 
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR
+    CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    if(PLATFORM_MACOS OR PLATFORM_IOS)
+        set(WHOLE_ARCHIVE_FLAG "-Wl,-all_load")
+        set(NO_WHOLE_ARCHIVE_FLAG "-Wl,-noall_load")
+    else()
+        set(WHOLE_ARCHIVE_FLAG "-Wl,--whole-archive")
+        set(NO_WHOLE_ARCHIVE_FLAG "-Wl,--no-whole-archive")
+    endif()
+else()
+    set(WHOLE_ARCHIVE_FLAG "")
+    set(NO_WHOLE_ARCHIVE_FLAG "")
+endif()
 
 if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS OR PLATFORM_MACOS)
 
@@ -250,14 +263,21 @@ elseif(PLATFORM_IOS)
     endif()
 endif()
 
-if(PLATFORM_WIN32 OR PLATFORM_LINUX)
+if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS OR PLATFORM_LINUX OR PLATFORM_MACOS OR PLATFORM_IOS)
     option(INSTALL_DILIGENT_CORE "Enable engine core installation" ON)
 else()
     set(INSTALL_DILIGENT_CORE OFF)
 endif()
 
 if(NOT DILIGENT_CORE_INSTALL_DIR)
-    set(DILIGENT_CORE_INSTALL_DIR "DiligentCore")
+    set(DILIGENT_CORE_INSTALL_DIR "DiligentCore" CACHE INTERNAL "DiligentCore installation directory")
+endif()
+
+SET(DILIGENT_CORE_INSTALL_LIBS_LIST "" CACHE INTERNAL "Core libraries installation list")
+# CMAKE_INSTALL_PREFIX must be absolute otherwise rpath won't work
+if(NOT IS_ABSOLUTE ${CMAKE_INSTALL_PREFIX})
+    set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_PREFIX}" CACHE FILEPATH "Installation path" FORCE)
+    message("Transformed CMAKE_INSTALL_PREFIX into absolute path: " ${CMAKE_INSTALL_PREFIX})
 endif()
 
 include(BuildUtils.cmake)
@@ -268,3 +288,73 @@ add_subdirectory(Platforms)
 add_subdirectory(External)
 add_subdirectory(Common)
 add_subdirectory(Graphics)
+
+
+# Installation instructions
+if(INSTALL_DILIGENT_CORE)
+    set(COMBINED_CORE_LIB_NAME "${CMAKE_STATIC_LIBRARY_PREFIX}DiligentCore${CMAKE_STATIC_LIBRARY_SUFFIX}")
+
+    foreach(CORE_LIB ${DILIGENT_CORE_INSTALL_LIBS_LIST})
+        list(APPEND CORE_LIB_TARGET_FILES $<TARGET_FILE:${CORE_LIB}>)
+    endforeach(CORE_LIB)
+
+    if(MSVC)
+        add_custom_command(
+            OUTPUT ${COMBINED_CORE_LIB_NAME}
+            COMMAND lib.exe /OUT:${COMBINED_CORE_LIB_NAME} ${CORE_LIB_TARGET_FILES}
+            DEPENDS ${DILIGENT_CORE_INSTALL_LIBS_LIST}
+            COMMENT "Combining core libraries..."
+        )
+        add_custom_target(DiligentCore-static ALL DEPENDS ${COMBINED_CORE_LIB_NAME})
+    else()
+
+        if(PLATFORM_WIN32)
+            # do NOT use stock ar on MinGW
+            find_program(AR NAMES x86_64-w64-mingw32-gcc-ar)
+        else()
+            set(AR ${CMAKE_AR})
+        endif()
+
+        if(AR)
+            add_custom_command(
+                OUTPUT ${COMBINED_CORE_LIB_NAME}
+                # Delete all object files from current directory
+                COMMAND ${CMAKE_COMMAND} -E remove "*${CMAKE_C_OUTPUT_EXTENSION}"
+                DEPENDS ${DILIGENT_CORE_INSTALL_LIBS_LIST}
+                COMMENT "Combining core libraries..."
+            )
+
+            # Unpack all object files from all targets to current directory
+            foreach(CORE_LIB_TARGET ${CORE_LIB_TARGET_FILES})
+                add_custom_command(
+                    OUTPUT ${COMBINED_CORE_LIB_NAME}
+                    COMMAND ${AR} -x ${CORE_LIB_TARGET}
+                    APPEND
+                )
+            endforeach()
+
+            # Pack object files to a combined library and delete them
+            add_custom_command(
+                OUTPUT ${COMBINED_CORE_LIB_NAME}
+                COMMAND ${AR} -crs ${COMBINED_CORE_LIB_NAME} "*${CMAKE_C_OUTPUT_EXTENSION}"
+                COMMAND ${CMAKE_COMMAND} -E remove "*${CMAKE_C_OUTPUT_EXTENSION}"
+                APPEND
+            )
+
+            add_custom_target(DiligentCore-static ALL DEPENDS ${COMBINED_CORE_LIB_NAME})
+        else()
+            message("ar command is not found")
+        endif()
+    endif()
+
+    if(TARGET DiligentCore-static)
+        install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${COMBINED_CORE_LIB_NAME}"
+                DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/lib/"
+        )
+        set_target_properties(DiligentCore-static PROPERTIES
+            FOLDER Core
+        )
+    else()
+        message("Unable to find librarian tool. Combined DiligentCore static library will not be produced.")
+    endif()
+endif(INSTALL_DILIGENT_CORE)

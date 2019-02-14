@@ -33,14 +33,14 @@
 namespace Diligent
 {
 
-Texture2DArray_OGL::Texture2DArray_OGL( IReferenceCounters *pRefCounters, 
-                                        FixedBlockMemoryAllocator& TexViewObjAllocator,
-                                        RenderDeviceGLImpl *pDeviceGL, 
-                                        DeviceContextGLImpl *pDeviceContext, 
-                                        const TextureDesc& TexDesc, 
-                                        const TextureData &InitData /*= TextureData()*/,
-									    bool bIsDeviceInternal /*= false*/) : 
-    TextureBaseGL(pRefCounters, TexViewObjAllocator, pDeviceGL, TexDesc, TexDesc.SampleCount > 1 ? GL_TEXTURE_2D_MULTISAMPLE_ARRAY : GL_TEXTURE_2D_ARRAY, InitData, bIsDeviceInternal)
+Texture2DArray_OGL::Texture2DArray_OGL( IReferenceCounters*         pRefCounters, 
+                                        FixedBlockMemoryAllocator&  TexViewObjAllocator,
+                                        RenderDeviceGLImpl*         pDeviceGL, 
+                                        DeviceContextGLImpl*        pDeviceContext, 
+                                        const TextureDesc&          TexDesc, 
+                                        const TextureData*          pInitData         /*= nullptr*/,
+									    bool                        bIsDeviceInternal /*= false*/) : 
+    TextureBaseGL(pRefCounters, TexViewObjAllocator, pDeviceGL, TexDesc, TexDesc.SampleCount > 1 ? GL_TEXTURE_2D_MULTISAMPLE_ARRAY : GL_TEXTURE_2D_ARRAY, pInitData, bIsDeviceInternal)
 {
     auto &ContextState = pDeviceContext->GetContextState();
     ContextState.BindTexture(-1, m_BindTarget, m_GlTexture);
@@ -76,9 +76,9 @@ Texture2DArray_OGL::Texture2DArray_OGL( IReferenceCounters *pRefCounters,
 
         SetDefaultGLParameters();
 
-        if( InitData.pSubResources )
+        if (pInitData != nullptr && pInitData->pSubResources != nullptr)
         {
-            if(  m_Desc.MipLevels * m_Desc.ArraySize == InitData.NumSubresources )
+            if(  m_Desc.MipLevels * m_Desc.ArraySize == pInitData->NumSubresources )
             {
                 for(Uint32 Slice = 0; Slice < m_Desc.ArraySize; ++Slice)
                 {
@@ -90,7 +90,7 @@ Texture2DArray_OGL::Texture2DArray_OGL( IReferenceCounters *pRefCounters,
                         // we will get into TextureBaseGL::UpdateData(), because instance of Texture2DArray_OGL
                         // is not fully constructed yet.
                         // To call the required function, we need to explicitly specify the class: 
-                        Texture2DArray_OGL::UpdateData(ContextState, Mip, Slice, DstBox, InitData.pSubResources[Slice*m_Desc.MipLevels + Mip]);
+                        Texture2DArray_OGL::UpdateData(ContextState, Mip, Slice, DstBox, pInitData->pSubResources[Slice*m_Desc.MipLevels + Mip]);
                     }
                 }
             }
@@ -99,19 +99,18 @@ Texture2DArray_OGL::Texture2DArray_OGL( IReferenceCounters *pRefCounters,
                 UNEXPECTED("Incorrect number of subresources");
             }
         }
-
     }
 
     ContextState.BindTexture( -1, m_BindTarget, GLObjectWrappers::GLTextureObj(false) );
 }
 
-Texture2DArray_OGL::Texture2DArray_OGL( IReferenceCounters *pRefCounters, 
-                                        FixedBlockMemoryAllocator& TexViewObjAllocator,     
-                                        RenderDeviceGLImpl *pDeviceGL, 
-                                        DeviceContextGLImpl *pDeviceContext,
-                                        const TextureDesc& TexDesc, 
-                                        GLuint GLTextureHandle,
-                                        bool bIsDeviceInternal)  : 
+Texture2DArray_OGL::Texture2DArray_OGL( IReferenceCounters*         pRefCounters, 
+                                        FixedBlockMemoryAllocator&  TexViewObjAllocator,     
+                                        RenderDeviceGLImpl*         pDeviceGL, 
+                                        DeviceContextGLImpl*        pDeviceContext,
+                                        const TextureDesc&          TexDesc, 
+                                        GLuint                      GLTextureHandle,
+                                        bool                        bIsDeviceInternal) :
     TextureBaseGL(pRefCounters, TexViewObjAllocator, pDeviceGL, pDeviceContext, TexDesc, GLTextureHandle, 
                   TexDesc.SampleCount > 1 ? GL_TEXTURE_2D_MULTISAMPLE_ARRAY : GL_TEXTURE_2D_ARRAY, bIsDeviceInternal)
 {
@@ -121,7 +120,11 @@ Texture2DArray_OGL::~Texture2DArray_OGL()
 {
 }
 
-void Texture2DArray_OGL::UpdateData(GLContextState &ContextState, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData)
+void Texture2DArray_OGL::UpdateData(GLContextState&             ContextState,
+                                    Uint32                      MipLevel,
+                                    Uint32                      Slice,
+                                    const Box&                  DstBox,
+                                    const TextureSubResData&    SubresData)
 {
     TextureBaseGL::UpdateData(ContextState, MipLevel, Slice, DstBox, SubresData);
 

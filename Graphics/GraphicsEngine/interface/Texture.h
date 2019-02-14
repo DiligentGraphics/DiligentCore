@@ -41,12 +41,19 @@ static constexpr INTERFACE_ID IID_Texture =
 struct DepthStencilClearValue
 {
     /// Depth clear value
-    Float32 Depth;
+    Float32 Depth   = 1.f;
     /// Stencil clear value
-    Uint8 Stencil;
-    DepthStencilClearValue() : 
-        Depth(1.f),
-        Stencil(0)
+    Uint8 Stencil   = 0;
+
+    // We have to explicitly define constructors because otherwise Apple's clang fails to compile the following legitimate code:
+    //     DepthStencilClearValue{1, 0}
+
+    DepthStencilClearValue()noexcept{}
+
+    DepthStencilClearValue(Float32 _Depth,
+                           Uint8   _Stencil)noexcept : 
+        Depth   (_Depth),
+        Stencil (_Stencil)
     {}
 };
 
@@ -54,19 +61,13 @@ struct DepthStencilClearValue
 struct OptimizedClearValue
 {
     /// Format
-    TEXTURE_FORMAT Format;
+    TEXTURE_FORMAT Format = TEX_FORMAT_UNKNOWN;
+
     /// Render target clear value
-    Float32 Color[ 4 ];
+    Float32 Color[4]     = {0, 0, 0, 0};
+
     /// Depth stencil clear value
     DepthStencilClearValue DepthStencil;
-    OptimizedClearValue() : 
-        Format(TEX_FORMAT_UNKNOWN)
-    {
-        Color[0] = 0;
-        Color[1] = 0;
-        Color[2] = 0;
-        Color[3] = 0;
-    }
 
     bool operator == (const OptimizedClearValue& rhs)const
     {
@@ -87,71 +88,83 @@ struct TextureDesc : DeviceObjectAttribs
     RESOURCE_DIMENSION Type = RESOURCE_DIM_UNDEFINED;
 
     /// Texture width, in pixels.
-    Uint32 Width = 0;
+    Uint32 Width            = 0;
 
     /// Texture height, in pixels.
-    Uint32 Height = 0;
+    Uint32 Height           = 0;
+
     union
     {
         /// For a 1D array or 2D array, number of array slices
-        Uint32 ArraySize = 1;
+        Uint32 ArraySize    = 1;
 
         /// For a 3D texture, number of depth slices
         Uint32 Depth;
     };
 
     /// Texture format, see Diligent::TEXTURE_FORMAT.
-    TEXTURE_FORMAT Format = TEX_FORMAT_UNKNOWN;
+    TEXTURE_FORMAT Format   = TEX_FORMAT_UNKNOWN;
 
     /// Number of Mip levels in the texture. Multisampled textures can only have 1 Mip level.
     /// Specify 0 to generate full mipmap chain.
-    Uint32 MipLevels = 1;
+    Uint32 MipLevels        = 1;
 
     /// Number of samples.\n
     /// Only 2D textures or 2D texture arrays can be multisampled.
-    Uint32 SampleCount = 1;
+    Uint32 SampleCount      = 1;
 
     /// Texture usage. See Diligent::USAGE for details.
-    USAGE Usage = USAGE_DEFAULT;
+    USAGE Usage             = USAGE_DEFAULT;
 
     /// Bind flags, see Diligent::BIND_FLAGS for details. \n
     /// The following bind flags are allowed:
     /// Diligent::BIND_SHADER_RESOURCE, Diligent::BIND_RENDER_TARGET, Diligent::BIND_DEPTH_STENCIL,
     /// Diligent::and BIND_UNORDERED_ACCESS. \n
     /// Multisampled textures cannot have Diligent::BIND_UNORDERED_ACCESS flag set
-    BIND_FLAGS BindFlags = BIND_NONE;
+    BIND_FLAGS BindFlags    = BIND_NONE;
 
     /// CPU access flags or 0 if no CPU access is allowed, 
     /// see Diligent::CPU_ACCESS_FLAGS for details.
     CPU_ACCESS_FLAGS CPUAccessFlags = CPU_ACCESS_NONE;
     
     /// Miscellaneous flags, see Diligent::MISC_TEXTURE_FLAGS for details.
-    MISC_TEXTURE_FLAGS MiscFlags = MISC_TEXTURE_FLAG_NONE;
+    MISC_TEXTURE_FLAGS MiscFlags    = MISC_TEXTURE_FLAG_NONE;
     
     /// Optimized clear value
     OptimizedClearValue ClearValue;
 
     /// Defines which command queues this texture can be used with
-    Uint64 CommandQueueMask = 1;
+    Uint64 CommandQueueMask         = 1;
 
-    /// Initializes the structure members with default values
+    TextureDesc()noexcept{}
 
-    /// Default values:
-    /// Member          | Default value
-    /// ----------------|--------------
-    /// Type            | RESOURCE_DIM_UNDEFINED
-    /// Width           | 0
-    /// Height          | 0
-    /// ArraySize       | 1
-    /// Format          | TEX_FORMAT_UNKNOWN
-    /// MipLevels       | 1
-    /// SampleCount     | 1
-    /// Usage           | USAGE_DEFAULT
-    /// BindFlags       | 0
-    /// CPUAccessFlags  | 0
-    /// MiscFlags       | 0
-    /// CommandQueueMask| 1
-    TextureDesc() {}
+    TextureDesc(RESOURCE_DIMENSION  _Type, 
+                Uint32              _Width,
+                Uint32              _Height,
+                Uint32              _ArraySizeOrDepth,
+                TEXTURE_FORMAT      _Format,
+                Uint32              _MipLevels        = TextureDesc{}.MipLevels,
+                Uint32              _SampleCount      = TextureDesc{}.SampleCount,
+                USAGE               _Usage            = TextureDesc{}.Usage,
+                BIND_FLAGS          _BindFlags        = TextureDesc{}.BindFlags,
+                CPU_ACCESS_FLAGS    _CPUAccessFlags   = TextureDesc{}.CPUAccessFlags,
+                MISC_TEXTURE_FLAGS  _MiscFlags        = TextureDesc{}.MiscFlags,
+                OptimizedClearValue _ClearValue       = TextureDesc{}.ClearValue,
+                Uint64              _CommandQueueMask = TextureDesc{}.CommandQueueMask) : 
+        Type             (_Type), 
+        Width            (_Width),
+        Height           (_Height),
+        ArraySize        (_ArraySizeOrDepth),
+        Format           (_Format),
+        MipLevels        (_MipLevels),
+        SampleCount      (_SampleCount),
+        Usage            (_Usage),
+        BindFlags        (_BindFlags),
+        CPUAccessFlags   (_CPUAccessFlags),
+        MiscFlags        (_MiscFlags),
+        ClearValue       (_ClearValue),
+        CommandQueueMask (_CommandQueueMask)
+    {}
 
     /// Tests if two structures are equivalent
 
@@ -187,22 +200,22 @@ struct TextureSubResData
 {
     /// Pointer to the subresource data in CPU memory.
     /// If provided, pSrcBuffer must be null
-    const void* pData = nullptr;
+    const void* pData           = nullptr;
 
     /// Pointer to the GPU buffer that contains subresource data.
     /// If provided, pData must be null
-    class IBuffer* pSrcBuffer = nullptr;
+    class IBuffer* pSrcBuffer   = nullptr;
 
     /// When updating data from the buffer (pSrcBuffer is not null),
     /// offset from the beginning of the buffer to the data start
-    Uint32 SrcOffset = 0;
+    Uint32 SrcOffset            = 0;
 
     /// For 2D and 3D textures, row stride in bytes
-    Uint32 Stride = 0;
+    Uint32 Stride               = 0;
 
     /// For 3D textures, depth slice stride in bytes
     /// \note On OpenGL, this must be a mutliple of Stride
-    Uint32 DepthStride = 0;
+    Uint32 DepthStride          = 0;
 
     /// Initializes the structure members with default values
 
@@ -213,10 +226,10 @@ struct TextureSubResData
     /// SrcOffset       | 0
     /// Stride          | 0
     /// DepthStride     | 0
-    TextureSubResData(){}
+    TextureSubResData()noexcept{}
     
     /// Initializes the structure members to perform copy from the CPU memory
-    TextureSubResData(void *_pData, Uint32 _Stride, Uint32 _DepthStride = 0) :
+    TextureSubResData(void *_pData, Uint32 _Stride, Uint32 _DepthStride = 0)noexcept :
         pData       (_pData),
         pSrcBuffer  (nullptr),
         SrcOffset   (0),
@@ -225,7 +238,7 @@ struct TextureSubResData
     {}
 
     /// Initializes the structure members to perform copy from the GPU buffer
-    TextureSubResData(IBuffer *_pBuffer, Uint32 _SrcOffset, Uint32 _Stride, Uint32 _DepthStride = 0) :
+    TextureSubResData(IBuffer *_pBuffer, Uint32 _SrcOffset, Uint32 _Stride, Uint32 _DepthStride = 0)noexcept :
         pData       (nullptr),
         pSrcBuffer  (_pBuffer),
         SrcOffset   (_SrcOffset),
@@ -245,16 +258,7 @@ struct TextureData
     /// NumSubresources must exactly match the number
     /// of subresources in the texture. Otherwise an error
     /// occurs.
-    Uint32 NumSubresources = 0;
-
-    /// Initializes the structure members with default values
-
-    /// Default values:
-    /// Member          | Default value
-    /// ----------------|--------------
-    /// pSubResources   | nullptr
-    /// NumSubresources | 0
-    TextureData(){}
+    Uint32 NumSubresources           = 0;
 };
 
 struct MappedTextureSubresource

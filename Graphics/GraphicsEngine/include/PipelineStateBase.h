@@ -62,7 +62,7 @@ public:
                        const PipelineStateDesc& PSODesc,
                        bool                     bIsDeviceInternal = false ) :
         TDeviceObjectBase( pRefCounters, pDevice, PSODesc, bIsDeviceInternal ),
-        m_LayoutElements( PSODesc.GraphicsPipeline.InputLayout.NumElements, LayoutElement(), STD_ALLOCATOR_RAW_MEM(LayoutElement, GetRawAllocator(), "Allocator for vector<LayoutElement>" ) ),
+        m_LayoutElements( PSODesc.GraphicsPipeline.InputLayout.NumElements, LayoutElement{}, STD_ALLOCATOR_RAW_MEM(LayoutElement, GetRawAllocator(), "Allocator for vector<LayoutElement>" ) ),
         m_NumShaders(0)
     {
         if (this->m_Desc.IsComputePipeline)

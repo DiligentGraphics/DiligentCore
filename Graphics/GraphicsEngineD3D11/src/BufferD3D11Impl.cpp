@@ -39,12 +39,12 @@ BufferD3D11Impl :: BufferD3D11Impl(IReferenceCounters*        pRefCounters,
                                    FixedBlockMemoryAllocator& BuffViewObjMemAllocator,
                                    RenderDeviceD3D11Impl*     pRenderDeviceD3D11, 
                                    const BufferDesc&          BuffDesc, 
-                                   const BufferData&          BuffData /*= BufferData()*/) : 
+                                   const BufferData*          pBuffData /*= nullptr*/) : 
     TBufferBase(pRefCounters, BuffViewObjMemAllocator, pRenderDeviceD3D11, BuffDesc, false)
 {
 #define LOG_BUFFER_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Buffer \"", m_Desc.Name ? m_Desc.Name : "", "\": ", ##__VA_ARGS__);
 
-    if( m_Desc.Usage == USAGE_STATIC && BuffData.pData == nullptr )
+    if( m_Desc.Usage == USAGE_STATIC && (pBuffData == nullptr || pBuffData->pData == nullptr))
         LOG_BUFFER_ERROR_AND_THROW("Static buffer must be initialized with data at creation time");
 
     if (m_Desc.BindFlags & BIND_UNIFORM_BUFFER)
@@ -90,8 +90,8 @@ BufferD3D11Impl :: BufferD3D11Impl(IReferenceCounters*        pRefCounters,
     D3D11BuffDesc.CPUAccessFlags = CPUAccessFlagsToD3D11CPUAccessFlags( m_Desc.CPUAccessFlags );
 
     D3D11_SUBRESOURCE_DATA InitData;
-    InitData.pSysMem = BuffData.pData;
-    InitData.SysMemPitch = BuffData.DataSize;
+    InitData.pSysMem          = pBuffData ? pBuffData->pData    : nullptr;
+    InitData.SysMemPitch      = pBuffData ? pBuffData->DataSize : 0;
     InitData.SysMemSlicePitch = 0;
 
     auto *pDeviceD3D11 = pRenderDeviceD3D11->GetD3D11Device();

@@ -40,11 +40,11 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters,
                                FixedBlockMemoryAllocator&   TexViewObjAllocator,
                                RenderDeviceVkImpl*          pRenderDeviceVk, 
                                const TextureDesc&           TexDesc, 
-                               const TextureData&           InitData /*= TextureData()*/) : 
+                               const TextureData*           pInitData /*= nullptr*/) : 
     TTextureBase(pRefCounters, TexViewObjAllocator, pRenderDeviceVk, TexDesc)
 {
-    if( m_Desc.Usage == USAGE_STATIC && InitData.pSubResources == nullptr )
-        LOG_ERROR_AND_THROW("Static Texture must be initialized with data at creation time");
+    if( m_Desc.Usage == USAGE_STATIC && (pInitData == nullptr || pInitData->pSubResources == nullptr) )
+        LOG_ERROR_AND_THROW("Static textures must be initialized with data at creation time");
     
     const auto& LogicalDevice = pRenderDeviceVk->GetLogicalDevice();
 
@@ -139,7 +139,7 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters,
     // and the transition away from this layout is not guaranteed to preserve that data.
     ImageCI.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-    bool bInitializeTexture = (InitData.pSubResources != nullptr && InitData.NumSubresources > 0);
+    bool bInitializeTexture = (pInitData != nullptr && pInitData->pSubResources != nullptr && pInitData->NumSubresources > 0);
 
     m_VulkanImage = LogicalDevice.CreateImage(ImageCI, m_Desc.Name);
 
@@ -197,10 +197,10 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters,
     if(bInitializeTexture)
     {
         Uint32 ExpectedNumSubresources = ImageCI.mipLevels * ImageCI.arrayLayers;
-        if( InitData.NumSubresources != ExpectedNumSubresources )
-            LOG_ERROR_AND_THROW("Incorrect number of subresources in init data. ", ExpectedNumSubresources, " expected, while ", InitData.NumSubresources, " provided");
+        if (pInitData->NumSubresources != ExpectedNumSubresources )
+            LOG_ERROR_AND_THROW("Incorrect number of subresources in init data. ", ExpectedNumSubresources, " expected, while ", pInitData->NumSubresources, " provided");
 
-        std::vector<VkBufferImageCopy> Regions(InitData.NumSubresources);
+        std::vector<VkBufferImageCopy> Regions(pInitData->NumSubresources);
 
         Uint64 uploadBufferSize = 0;
         Uint32 subres = 0;
@@ -208,7 +208,7 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters,
         {
             for(Uint32 mip = 0; mip < ImageCI.mipLevels; ++mip)
             {
-                const auto& SubResData = InitData.pSubResources[subres]; (void)SubResData;
+                const auto& SubResData = pInitData->pSubResources[subres]; (void)SubResData;
                 auto& CopyRegion = Regions[subres];
 
                 auto MipWidth  = std::max(m_Desc.Width  >> mip, 1u);
@@ -255,7 +255,7 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters,
                 ++subres;
             }
         }
-        VERIFY_EXPR(subres == InitData.NumSubresources);
+        VERIFY_EXPR(subres == pInitData->NumSubresources);
 
         VkBufferCreateInfo VkStaginBuffCI = {};
         VkStaginBuffCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -291,7 +291,7 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters,
         {
             for(Uint32 mip = 0; mip < ImageCI.mipLevels; ++mip)
             {
-                const auto &SubResData = InitData.pSubResources[subres];
+                const auto &SubResData = pInitData->pSubResources[subres];
                 const auto &CopyRegion = Regions[subres];
 
                 auto MipWidth  = CopyRegion.imageExtent.width;
@@ -325,7 +325,7 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters,
                 ++subres;
             }
         }
-        VERIFY_EXPR(subres == InitData.NumSubresources);
+        VERIFY_EXPR(subres == pInitData->NumSubresources);
 
         err = LogicalDevice.BindBufferMemory(StagingBuffer, StagingBufferMemory, AlignedStagingMemOffset);
         CHECK_VK_ERROR_AND_THROW(err, "Failed to bind staging bufer memory");

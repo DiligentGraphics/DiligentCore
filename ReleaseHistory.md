@@ -2,6 +2,8 @@
 ## Current progress
 
 * Added cmake options to disable specific back-ends and glslang
+* Updated `IRenderDevice::CreateTexture()` and `IRenderDevice::CreateBuffer()` to take pointer
+  to initialization data rather than references.
 
 ## v2.4.a
 

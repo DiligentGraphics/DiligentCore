@@ -36,23 +36,23 @@ TextureBaseD3D11 :: TextureBaseD3D11(IReferenceCounters*        pRefCounters,
                                      FixedBlockMemoryAllocator& TexViewObjAllocator,
                                      RenderDeviceD3D11Impl*     pRenderDeviceD3D11,
                                      const TextureDesc&         TexDesc,
-                                     const TextureData&         InitData /*= TextureData()*/) : 
+                                     const TextureData*         pInitData /*= nullptr*/) : 
     TTextureBase(pRefCounters, TexViewObjAllocator, pRenderDeviceD3D11, TexDesc)
 {
-    if( TexDesc.Usage == USAGE_STATIC && InitData.pSubResources == nullptr )
-        LOG_ERROR_AND_THROW("Static Texture must be initialized with data at creation time");
+    if( TexDesc.Usage == USAGE_STATIC && (pInitData == nullptr || pInitData->pSubResources == nullptr))
+        LOG_ERROR_AND_THROW("Static textures must be initialized with data at creation time");
     SetState(RESOURCE_STATE_UNDEFINED);
 }
 
 IMPLEMENT_QUERY_INTERFACE( TextureBaseD3D11, IID_TextureD3D11, TTextureBase )
 
-void TextureBaseD3D11::CreateViewInternal( const struct TextureViewDesc &ViewDesc, ITextureView **ppView, bool bIsDefaultView )
+void TextureBaseD3D11::CreateViewInternal( const struct TextureViewDesc& ViewDesc, ITextureView** ppView, bool bIsDefaultView )
 {
     VERIFY( ppView != nullptr, "View pointer address is null" );
     if( !ppView )return;
     VERIFY(* ppView == nullptr, "Overwriting reference to existing object may cause memory leaks" );
     
-   * ppView = nullptr;
+   *ppView = nullptr;
 
     try
     {
@@ -121,24 +121,27 @@ void TextureBaseD3D11::CreateViewInternal( const struct TextureViewDesc &ViewDes
     }
 }
 
-void TextureBaseD3D11 :: PrepareD3D11InitData(const TextureData& InitData, Uint32 NumSubresources, 
-                                              std::vector<D3D11_SUBRESOURCE_DATA, STDAllocatorRawMem<D3D11_SUBRESOURCE_DATA> >  &D3D11InitData)
+void TextureBaseD3D11 :: PrepareD3D11InitData(const TextureData*                                                                 pInitData,
+                                              Uint32                                                                             NumSubresources, 
+                                              std::vector<D3D11_SUBRESOURCE_DATA, STDAllocatorRawMem<D3D11_SUBRESOURCE_DATA> > & D3D11InitData)
 {
-    if( InitData.pSubResources )
+    if (pInitData != nullptr && pInitData->pSubResources != nullptr)
     {
-        if( NumSubresources == InitData.NumSubresources )
+        if( NumSubresources == pInitData->NumSubresources )
         {
             D3D11InitData.resize(NumSubresources);
             for(UINT Subres=0; Subres < NumSubresources; ++Subres)
             {
-                auto &CurrSubres = InitData.pSubResources[Subres];
+                auto &CurrSubres = pInitData->pSubResources[Subres];
                 D3D11InitData[Subres].pSysMem = CurrSubres.pData;
                 D3D11InitData[Subres].SysMemPitch = CurrSubres.Stride;
                 D3D11InitData[Subres].SysMemSlicePitch = CurrSubres.DepthStride;
             }
         }
         else
+        {
             UNEXPECTED( "Incorrect number of subrsources" );
+        }
     }
 }
 

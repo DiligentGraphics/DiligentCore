@@ -26,6 +26,9 @@
 #include "BasicMath.h"
 #include "../../Platforms/interface/PlatformDefinitions.h"
 
+namespace Diligent
+{
+
 // Structure describing a plane
 struct Plane3D
 {
@@ -314,35 +317,38 @@ inline bool operator == (const ViewFrustumExt &f1, const ViewFrustumExt &f2)
     return true;
 }
 
+
+} // namespace Diligent
+
 namespace std
 {
     template<>
-    struct hash<Plane3D>
+    struct hash<Diligent::Plane3D>
     {
-        size_t operator()( const Plane3D &Plane ) const
+        size_t operator()( const Diligent::Plane3D &Plane ) const
         {
             return Diligent::ComputeHash(Plane.Normal, Plane.Distance);
         }
     };
 
     template<>
-    struct hash<ViewFrustum>
+    struct hash<Diligent::ViewFrustum>
     {
-        size_t operator()( const ViewFrustum &Frustum ) const
+        size_t operator()( const Diligent::ViewFrustum &Frustum ) const
         {
             return Diligent::ComputeHash(Frustum.LeftPlane, Frustum.RightPlane, Frustum.BottomPlane, Frustum.TopPlane, Frustum.NearPlane, Frustum.FarPlane);
         }
     };
 
     template<>
-    struct hash<ViewFrustumExt>
+    struct hash<Diligent::ViewFrustumExt>
     {
-        size_t operator()( const ViewFrustumExt &Frustum ) const
+        size_t operator()( const Diligent::ViewFrustumExt &Frustum ) const
         {
-            auto Seed = Diligent::ComputeHash(static_cast<const ViewFrustum&>(Frustum));
+            auto Seed = Diligent::ComputeHash(static_cast<const Diligent::ViewFrustum&>(Frustum));
             for (int Corner = 0; Corner < _countof(Frustum.FrustumCorners); ++Corner)
                 Diligent::HashCombine(Seed, Frustum.FrustumCorners[Corner]);
             return Seed;
         }
     };
-}
+} // namespace std

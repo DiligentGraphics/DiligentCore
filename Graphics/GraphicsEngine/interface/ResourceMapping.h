@@ -50,13 +50,13 @@ namespace Diligent
         /// \param [in] _Name       - Object name.
         /// \param [in] _pObject    - Pointer to the object.
         /// \param [in] _ArrayIndex - For array resources, index in the array
-        ResourceMappingEntry (const Char* _Name, IDeviceObject* _pObject, Uint32 _ArrayIndex = 0) : 
+        ResourceMappingEntry (const Char* _Name, IDeviceObject* _pObject, Uint32 _ArrayIndex = 0)noexcept : 
             Name      ( _Name     ), 
             pObject   ( _pObject  ),
             ArrayIndex(_ArrayIndex)
         {}
 
-        ResourceMappingEntry(){}
+        ResourceMappingEntry()noexcept{}
     };
 
     /// Resource mapping description
@@ -65,14 +65,13 @@ namespace Diligent
         /// Pointer to the array of resource mapping entries.
         /// The last element in the array must be default value
         /// created by ResourceMappingEntry::ResourceMappingEntry()
-        ResourceMappingEntry* pEntries;
+        ResourceMappingEntry* pEntries = nullptr;
 
-        /// Initializes the structure members with default values
+        ResourceMappingDesc()noexcept{}
 
-        /// Member                | Default value
-        /// ----------------------|--------------
-        /// pEntries              | nullptr
-        ResourceMappingDesc() : pEntries(nullptr){}
+        explicit ResourceMappingDesc(ResourceMappingEntry* _pEntries)noexcept : 
+            pEntries(_pEntries)
+        {}
     };
 
     /// Resouce mapping

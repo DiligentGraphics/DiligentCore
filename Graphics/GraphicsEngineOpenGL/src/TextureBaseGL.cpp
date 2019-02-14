@@ -35,12 +35,13 @@
 namespace Diligent
 {
 
-TextureBaseGL::TextureBaseGL(IReferenceCounters *pRefCounters, 
-                             FixedBlockMemoryAllocator& TexViewObjAllocator, 
-                             RenderDeviceGLImpl *pDeviceGL, 
-                             const TextureDesc& TexDesc, 
-                             GLenum BindTarget,
-                             const TextureData &InitData /*= TextureData()*/, bool bIsDeviceInternal /*= false*/) : 
+TextureBaseGL::TextureBaseGL(IReferenceCounters*            pRefCounters, 
+                             FixedBlockMemoryAllocator&     TexViewObjAllocator, 
+                             RenderDeviceGLImpl*            pDeviceGL, 
+                             const TextureDesc&             TexDesc, 
+                             GLenum                         BindTarget,
+                             const TextureData*             pInitData         /*= nullptr*/,
+                             bool                           bIsDeviceInternal /*= false*/) : 
     TTextureBase( pRefCounters, TexViewObjAllocator, pDeviceGL, TexDesc, bIsDeviceInternal ),
     m_GlTexture(true), // Create Texture immediately
     m_BindTarget(BindTarget),
@@ -48,7 +49,7 @@ TextureBaseGL::TextureBaseGL(IReferenceCounters *pRefCounters,
     //m_uiMapTarget(0)
 {
     VERIFY( m_GLTexFormat != 0, "Unsupported texture format" );
-    if( TexDesc.Usage == USAGE_STATIC && InitData.pSubResources == nullptr )
+    if( TexDesc.Usage == USAGE_STATIC && pInitData == nullptr )
         LOG_ERROR_AND_THROW("Static Texture must be initialized with data at creation time");
 }
 

@@ -35,42 +35,160 @@
 namespace Diligent
 {
     // Common depth-stencil states
-    const DepthStencilStateDesc DSS_DisableDepth(False, False);
-    
-    // Common rasterizer states
-    const RasterizerStateDesc RS_SolidFillNoCull(FILL_MODE_SOLID, CULL_MODE_NONE);
+    static const DepthStencilStateDesc DSS_Default{};
 
-    const RasterizerStateDesc RS_WireFillNoCull(FILL_MODE_WIREFRAME, CULL_MODE_NONE, false, 1, 0.f, 1.f);
+    static const DepthStencilStateDesc DSS_DisableDepth
+    {
+        False, // DepthEnable
+        False  // DepthWriteEnable
+    };
+    
+
+    // Common rasterizer states
+    static const RasterizerStateDesc RS_Default{};
+
+    static const RasterizerStateDesc RS_SolidFillNoCull
+    {
+        FILL_MODE_SOLID,
+        CULL_MODE_NONE
+    };
+
+    static const RasterizerStateDesc RS_WireFillNoCull
+    {
+        FILL_MODE_WIREFRAME,
+        CULL_MODE_NONE
+    };
+
+
+    // Blend states
+    static const BlendStateDesc BS_Default{};
+
+    static const BlendStateDesc BS_AlphaBlend = 
+    {
+        False,                  // AlphaToCoverageEnable
+        False,                  // IndependentBlendEnable
+	    RenderTargetBlendDesc   // Render Target 0
+        {
+			True,                       // BlendEnable
+            False,                      // LogicOperationEnable
+            BLEND_FACTOR_SRC_ALPHA,     // SrcBlend
+            BLEND_FACTOR_INV_SRC_ALPHA, // DestBlend
+			BLEND_OPERATION_ADD,        // BlendOp
+            BLEND_FACTOR_SRC_ALPHA,     // SrcBlendAlpha
+            BLEND_FACTOR_INV_SRC_ALPHA, // DestBlendAlpha
+			BLEND_OPERATION_ADD         // BlendOpAlpha
+	    }
+    };
 
 
     // Common sampler states
-    const SamplerDesc Sam_LinearClamp(FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR, 
-                                      TEXTURE_ADDRESS_CLAMP, TEXTURE_ADDRESS_CLAMP, TEXTURE_ADDRESS_CLAMP);
+    static const SamplerDesc Sam_LinearClamp
+    {
+        FILTER_TYPE_LINEAR,
+        FILTER_TYPE_LINEAR,
+        FILTER_TYPE_LINEAR, 
+        TEXTURE_ADDRESS_CLAMP,
+        TEXTURE_ADDRESS_CLAMP,
+        TEXTURE_ADDRESS_CLAMP
+    };
 
-    const SamplerDesc Sam_PointClamp(FILTER_TYPE_POINT, FILTER_TYPE_POINT, FILTER_TYPE_POINT, 
-                                     TEXTURE_ADDRESS_CLAMP, TEXTURE_ADDRESS_CLAMP, TEXTURE_ADDRESS_CLAMP);
+    static const SamplerDesc Sam_PointClamp
+    {
+        FILTER_TYPE_POINT,
+        FILTER_TYPE_POINT,
+        FILTER_TYPE_POINT, 
+        TEXTURE_ADDRESS_CLAMP,
+        TEXTURE_ADDRESS_CLAMP,
+        TEXTURE_ADDRESS_CLAMP
+    };
 
-    const SamplerDesc Sam_LinearMirror(FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR, 
-                                       TEXTURE_ADDRESS_MIRROR, TEXTURE_ADDRESS_MIRROR, TEXTURE_ADDRESS_MIRROR);
+    static const SamplerDesc Sam_LinearMirror
+    {
+        FILTER_TYPE_LINEAR,
+        FILTER_TYPE_LINEAR,
+        FILTER_TYPE_LINEAR, 
+        TEXTURE_ADDRESS_MIRROR,
+        TEXTURE_ADDRESS_MIRROR,
+        TEXTURE_ADDRESS_MIRROR
+    };
 
-    const SamplerDesc Sam_PointWrap(FILTER_TYPE_POINT, FILTER_TYPE_POINT, FILTER_TYPE_POINT, 
-                                     TEXTURE_ADDRESS_WRAP, TEXTURE_ADDRESS_WRAP, TEXTURE_ADDRESS_WRAP);
+    static const SamplerDesc Sam_PointWrap
+    {
+        FILTER_TYPE_POINT,
+        FILTER_TYPE_POINT,
+        FILTER_TYPE_POINT, 
+        TEXTURE_ADDRESS_WRAP,
+        TEXTURE_ADDRESS_WRAP,
+        TEXTURE_ADDRESS_WRAP
+    };
 
-    const SamplerDesc Sam_LinearWrap(FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR, 
-                                     TEXTURE_ADDRESS_WRAP, TEXTURE_ADDRESS_WRAP, TEXTURE_ADDRESS_WRAP);
+    static const SamplerDesc Sam_LinearWrap
+    {
+        FILTER_TYPE_LINEAR,
+        FILTER_TYPE_LINEAR,
+        FILTER_TYPE_LINEAR, 
+        TEXTURE_ADDRESS_WRAP,
+        TEXTURE_ADDRESS_WRAP,
+        TEXTURE_ADDRESS_WRAP
+    };
 
-    const SamplerDesc Sam_Aniso2xClamp(FILTER_TYPE_ANISOTROPIC, FILTER_TYPE_ANISOTROPIC, FILTER_TYPE_ANISOTROPIC, 
-                                       TEXTURE_ADDRESS_CLAMP, TEXTURE_ADDRESS_CLAMP, TEXTURE_ADDRESS_CLAMP, 0.f, 2);
+    static const SamplerDesc Sam_Aniso2xClamp
+    {
+        FILTER_TYPE_ANISOTROPIC,
+        FILTER_TYPE_ANISOTROPIC,
+        FILTER_TYPE_ANISOTROPIC, 
+        TEXTURE_ADDRESS_CLAMP,
+        TEXTURE_ADDRESS_CLAMP,
+        TEXTURE_ADDRESS_CLAMP,
+        0.f, // MipLODBias
+        2    // MaxAnisotropy
+    };
 
-    const SamplerDesc Sam_Aniso4xClamp(FILTER_TYPE_ANISOTROPIC, FILTER_TYPE_ANISOTROPIC, FILTER_TYPE_ANISOTROPIC, 
-                                       TEXTURE_ADDRESS_CLAMP, TEXTURE_ADDRESS_CLAMP, TEXTURE_ADDRESS_CLAMP, 0.f, 4);
+    static const SamplerDesc Sam_Aniso4xClamp
+    {
+        FILTER_TYPE_ANISOTROPIC,
+        FILTER_TYPE_ANISOTROPIC,
+        FILTER_TYPE_ANISOTROPIC, 
+        TEXTURE_ADDRESS_CLAMP,
+        TEXTURE_ADDRESS_CLAMP,
+        TEXTURE_ADDRESS_CLAMP,
+        0.f, // MipLODBias
+        4    // MaxAnisotropy
+    };
 
-    const SamplerDesc Sam_Aniso8xClamp(FILTER_TYPE_ANISOTROPIC, FILTER_TYPE_ANISOTROPIC, FILTER_TYPE_ANISOTROPIC, 
-                                       TEXTURE_ADDRESS_CLAMP, TEXTURE_ADDRESS_CLAMP, TEXTURE_ADDRESS_CLAMP, 0.f, 8);
+    static const SamplerDesc Sam_Aniso8xClamp
+    {
+        FILTER_TYPE_ANISOTROPIC,
+        FILTER_TYPE_ANISOTROPIC,
+        FILTER_TYPE_ANISOTROPIC, 
+        TEXTURE_ADDRESS_CLAMP,
+        TEXTURE_ADDRESS_CLAMP,
+        TEXTURE_ADDRESS_CLAMP,
+        0.f, // MipLODBias
+        8    // MaxAnisotropy
+    };
 
-    const SamplerDesc Sam_Aniso16xClamp(FILTER_TYPE_ANISOTROPIC, FILTER_TYPE_ANISOTROPIC, FILTER_TYPE_ANISOTROPIC, 
-                                        TEXTURE_ADDRESS_CLAMP, TEXTURE_ADDRESS_CLAMP, TEXTURE_ADDRESS_CLAMP, 0.f, 16);
+    static const SamplerDesc Sam_Aniso16xClamp
+    {
+        FILTER_TYPE_ANISOTROPIC,
+        FILTER_TYPE_ANISOTROPIC,
+        FILTER_TYPE_ANISOTROPIC, 
+        TEXTURE_ADDRESS_CLAMP,
+        TEXTURE_ADDRESS_CLAMP,
+        TEXTURE_ADDRESS_CLAMP,
+        0.f,  // MipLODBias
+        16    // MaxAnisotropy
+    };
 
-    const SamplerDesc Sam_Aniso8xWrap(FILTER_TYPE_ANISOTROPIC, FILTER_TYPE_ANISOTROPIC, FILTER_TYPE_ANISOTROPIC, 
-                                      TEXTURE_ADDRESS_WRAP, TEXTURE_ADDRESS_WRAP, TEXTURE_ADDRESS_WRAP, 0.f, 8);
+    static const SamplerDesc Sam_Aniso8xWrap
+    {
+        FILTER_TYPE_ANISOTROPIC,
+        FILTER_TYPE_ANISOTROPIC,
+        FILTER_TYPE_ANISOTROPIC, 
+        TEXTURE_ADDRESS_WRAP,
+        TEXTURE_ADDRESS_WRAP,
+        TEXTURE_ADDRESS_WRAP,
+        0.f,  // MipLODBias
+        8     // MaxAnisotropy
+    };
 }

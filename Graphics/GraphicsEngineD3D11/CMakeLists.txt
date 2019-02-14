@@ -119,7 +119,13 @@ PUBLIC
     GraphicsEngineD3D11Interface
 )
 
-target_link_libraries(GraphicsEngineD3D11-shared PUBLIC GraphicsEngineD3D11-static)
+target_link_libraries(GraphicsEngineD3D11-shared
+PRIVATE
+    BuildSettings 
+    GraphicsEngineD3D11-static
+PUBLIC
+    GraphicsEngineD3D11Interface
+)
 target_compile_definitions(GraphicsEngineD3D11-shared PUBLIC ENGINE_DLL=1)
 
 source_group("src" FILES ${SRC} )

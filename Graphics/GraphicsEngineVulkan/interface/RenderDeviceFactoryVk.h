@@ -48,31 +48,33 @@
 namespace Diligent
 {
 
-    class IEngineFactoryVk
-    {
-    public:
-        virtual void CreateDeviceAndContextsVk(const EngineVkAttribs& CreationAttribs,
-            IRenderDevice **ppDevice,
-            IDeviceContext **ppContexts,
-            Uint32 NumDeferredContexts) = 0;
+class IEngineFactoryVk
+{
+public:
+    virtual void CreateDeviceAndContextsVk(const EngineVkAttribs& CreationAttribs,
+        IRenderDevice **ppDevice,
+        IDeviceContext **ppContexts,
+        Uint32 NumDeferredContexts) = 0;
 
-        //virtual void AttachToVulkanDevice(void *pVkNativeDevice, 
-        //                                 class ICommandQueueVk *pCommandQueue,
-        //                                 const EngineVkAttribs& EngineAttribs, 
-        //                                 IRenderDevice **ppDevice, 
-        //                                 IDeviceContext **ppContexts,
-        //                                 Uint32 NumDeferredContexts) = 0;
+    //virtual void AttachToVulkanDevice(void *pVkNativeDevice, 
+    //                                 class ICommandQueueVk *pCommandQueue,
+    //                                 const EngineVkAttribs& EngineAttribs, 
+    //                                 IRenderDevice **ppDevice, 
+    //                                 IDeviceContext **ppContexts,
+    //                                 Uint32 NumDeferredContexts) = 0;
 
-        virtual void CreateSwapChainVk(IRenderDevice *pDevice,
-            IDeviceContext *pImmediateContext,
-            const SwapChainDesc& SwapChainDesc,
-            void* pNativeWndHandle,
-            ISwapChain **ppSwapChain) = 0;
+    virtual void CreateSwapChainVk(IRenderDevice *pDevice,
+        IDeviceContext *pImmediateContext,
+        const SwapChainDesc& SwapChainDesc,
+        void* pNativeWndHandle,
+        ISwapChain **ppSwapChain) = 0;
 
-    };
+};
 
 
-#if ENGINE_DLL && PLATFORM_WIN32
+#if ENGINE_DLL && PLATFORM_WIN32 && defined(_MSC_VER)
+
+#   define EXPLICITLY_LOAD_ENGINE_VK_DLL 1
 
     typedef IEngineFactoryVk* (*GetEngineFactoryVkType)();
 
@@ -81,17 +83,17 @@ namespace Diligent
         GetFactoryFunc = nullptr;
         std::string LibName = "GraphicsEngineVk_";
 
-#if _WIN64
+#   if _WIN64
         LibName += "64";
-#else
+#   else
         LibName += "32";
-#endif
+#   endif
 
-#ifdef _DEBUG
+#   ifdef _DEBUG
         LibName += "d";
-#else
+#   else
         LibName += "r";
-#endif
+#   endif
 
         LibName += ".dll";
         auto hModule = LoadLibraryA(LibName.c_str());
@@ -115,6 +117,7 @@ namespace Diligent
 
         return true;
     }
+
 #else
 
     API_QUALIFIER

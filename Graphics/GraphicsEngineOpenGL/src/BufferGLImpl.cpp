@@ -67,32 +67,32 @@ static GLenum GetBufferBindTarget(const BufferDesc& Desc)
     
     return Target;
 }
-BufferGLImpl::BufferGLImpl(IReferenceCounters *pRefCounters, 
-                           FixedBlockMemoryAllocator &BuffViewObjMemAllocator, 
-                           RenderDeviceGLImpl *pDeviceGL, 
-                           const BufferDesc& BuffDesc, 
-                           const BufferData &BuffData /*= BufferData()*/,
-                           bool bIsDeviceInternal) : 
+BufferGLImpl::BufferGLImpl(IReferenceCounters*          pRefCounters, 
+                           FixedBlockMemoryAllocator&   BuffViewObjMemAllocator, 
+                           RenderDeviceGLImpl*          pDeviceGL, 
+                           const BufferDesc&            BuffDesc, 
+                           const BufferData*            pBuffData /*= nullptr*/,
+                           bool                         bIsDeviceInternal) : 
     TBufferBase( pRefCounters, BuffViewObjMemAllocator, pDeviceGL, BuffDesc, bIsDeviceInternal),
     m_GlBuffer(true), // Create buffer immediately
     m_uiMapTarget(0),
     m_GLUsageHint(UsageToGLUsage(BuffDesc.Usage)),
     m_bUseMapWriteDiscardBugWA(GetUseMapWriteDiscardBugWA(pDeviceGL))
 {
-    if( BuffDesc.Usage == USAGE_STATIC && BuffData.pData == nullptr )
+    if( BuffDesc.Usage == USAGE_STATIC && (pBuffData == nullptr || pBuffData->pData == nullptr) )
         LOG_ERROR_AND_THROW("Static buffer must be initialized with data at creation time");
 
     auto Target = GetBufferBindTarget(BuffDesc);
     // TODO: find out if it affects performance if the buffer is originally bound to one target
     // and then bound to another (such as first to GL_ARRAY_BUFFER and then to GL_UNIFORM_BUFFER)
     glBindBuffer(Target, m_GlBuffer);
-    VERIFY(BuffData.pData == nullptr || BuffData.DataSize >= BuffDesc.uiSizeInBytes, "Data pointer is null or data size is not consistent with buffer size" );
+    VERIFY(pBuffData == nullptr || pBuffData->pData == nullptr || pBuffData->DataSize >= BuffDesc.uiSizeInBytes, "Data pointer is null or data size is not consistent with buffer size" );
     GLsizeiptr DataSize = BuffDesc.uiSizeInBytes;
  	const GLvoid *pData = nullptr;
-    if( BuffData.pData && BuffData.DataSize >= BuffDesc.uiSizeInBytes )
+    if( pBuffData != nullptr && pBuffData->pData != nullptr && pBuffData->DataSize >= BuffDesc.uiSizeInBytes )
     {
-        pData = BuffData.pData;
-        DataSize = BuffData.DataSize;
+        pData    = pBuffData->pData;
+        DataSize = pBuffData->DataSize;
     }
     // Create and initialize a buffer object's data store
 
@@ -162,12 +162,12 @@ static BufferDesc GetBufferDescFromGLHandle(BufferDesc BuffDesc, GLuint BufferHa
     return BuffDesc;
 }
 
-BufferGLImpl::BufferGLImpl(IReferenceCounters *pRefCounters, 
-                           FixedBlockMemoryAllocator &BuffViewObjMemAllocator, 
-                           RenderDeviceGLImpl *pDeviceGL, 
-                           const BufferDesc& BuffDesc, 
-                           GLuint GLHandle,
-                           bool bIsDeviceInternal) :
+BufferGLImpl::BufferGLImpl(IReferenceCounters*          pRefCounters, 
+                           FixedBlockMemoryAllocator&   BuffViewObjMemAllocator, 
+                           RenderDeviceGLImpl*          pDeviceGL, 
+                           const BufferDesc&            BuffDesc, 
+                           GLuint                       GLHandle,
+                           bool                         bIsDeviceInternal) :
     TBufferBase( pRefCounters, BuffViewObjMemAllocator, pDeviceGL, GetBufferDescFromGLHandle(BuffDesc, GLHandle), bIsDeviceInternal),
     // Attach to external buffer handle
     m_GlBuffer(true, GLObjectWrappers::GLBufferObjCreateReleaseHelper(GLHandle)),

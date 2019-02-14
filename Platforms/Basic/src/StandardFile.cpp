@@ -27,7 +27,7 @@
 
 StandardFile::StandardFile(const FileOpenAttribs &OpenAttribs, Diligent::Char SlashSymbol) : 
     BasicFile(OpenAttribs, SlashSymbol),
-    m_pFile(nullptr)
+    m_pFile  (nullptr)
 {
 #if PLATFORM_LINUX || PLATFORM_MACOS || PLATFORM_IOS
     auto OpenModeStr = GetOpenModeStr();
@@ -49,7 +49,7 @@ StandardFile::~StandardFile()
     }
 }
 
-void StandardFile::Read(Diligent::IDataBlob *pData)
+void StandardFile::Read(Diligent::IDataBlob* pData)
 {
     VERIFY_EXPR(pData != nullptr);
     auto FileSize = GetSize();
@@ -58,24 +58,24 @@ void StandardFile::Read(Diligent::IDataBlob *pData)
     VERIFY(Res, "Failed to read ", FileSize, " bytes from file"); (void)Res;
 }
 
-bool StandardFile::Read(void *Data, size_t BufferSize)
+bool StandardFile::Read(void* Data, size_t Size)
 {
     VERIFY(m_pFile, "File is not opened");
     if (!m_pFile)
-        return 0;
-    auto BytesRead = fread(Data, 1, BufferSize, m_pFile);
+        return false;
+    auto BytesRead = fread(Data, 1, Size, m_pFile);
 
-    return BytesRead == BufferSize;
+    return BytesRead == Size;
 }
 
-bool StandardFile::Write(const void *Data, size_t BufferSize)
+bool StandardFile::Write(const void* Data, size_t Size)
 {
     VERIFY(m_pFile, "File is not opened");
     if (!m_pFile)
-        return 0;
-    auto BytesWritten = fwrite(Data, 1, BufferSize, m_pFile);
+        return false;
+    auto BytesWritten = fwrite(Data, 1, Size, m_pFile);
 
-    return BytesWritten == BufferSize;
+    return BytesWritten == Size;
 }
 
 size_t StandardFile::GetSize()

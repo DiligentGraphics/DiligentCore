@@ -33,8 +33,8 @@ Texture1D_D3D11 :: Texture1D_D3D11(IReferenceCounters*        pRefCounters,
                                    FixedBlockMemoryAllocator& TexViewObjAllocator, 
                                    RenderDeviceD3D11Impl*     pRenderDeviceD3D11, 
                                    const TextureDesc&         TexDesc, 
-                                   const TextureData&         InitData /*= TextureData()*/) : 
-    TextureBaseD3D11(pRefCounters, TexViewObjAllocator, pRenderDeviceD3D11, TexDesc, InitData)
+                                   const TextureData*         pInitData /*= nullptr*/) : 
+    TextureBaseD3D11(pRefCounters, TexViewObjAllocator, pRenderDeviceD3D11, TexDesc, pInitData)
 {
     auto D3D11TexFormat = TexFormatToDXGI_Format(m_Desc.Format, m_Desc.BindFlags);
     auto D3D11BindFlags = BindFlagsToD3D11BindFlags(m_Desc.BindFlags);
@@ -56,7 +56,7 @@ Texture1D_D3D11 :: Texture1D_D3D11(IReferenceCounters*        pRefCounters,
     };
 
     std::vector<D3D11_SUBRESOURCE_DATA, STDAllocatorRawMem<D3D11_SUBRESOURCE_DATA>> D3D11InitData( STD_ALLOCATOR_RAW_MEM(D3D11_SUBRESOURCE_DATA, GetRawAllocator(), "Allocator for vector<D3D11_SUBRESOURCE_DATA>") );
-    PrepareD3D11InitData(InitData, Tex1DDesc.ArraySize * Tex1DDesc.MipLevels, D3D11InitData);
+    PrepareD3D11InitData(pInitData, Tex1DDesc.ArraySize * Tex1DDesc.MipLevels, D3D11InitData);
 
     ID3D11Texture1D *ptex1D = nullptr;
     HRESULT hr = pDeviceD3D11->CreateTexture1D(&Tex1DDesc, D3D11InitData.size() ? D3D11InitData.data() : nullptr, &ptex1D);
@@ -120,7 +120,7 @@ Texture1D_D3D11 :: Texture1D_D3D11(IReferenceCounters*        pRefCounters,
                                    RenderDeviceD3D11Impl*     pDeviceD3D11, 
                                    RESOURCE_STATE             InitialState,
                                    ID3D11Texture1D*           pd3d11Texture) : 
-    TextureBaseD3D11(pRefCounters, TexViewObjAllocator, pDeviceD3D11, TexDescFromD3D11Texture1D{}(pd3d11Texture), TextureData{})
+    TextureBaseD3D11(pRefCounters, TexViewObjAllocator, pDeviceD3D11, TexDescFromD3D11Texture1D{}(pd3d11Texture), nullptr)
 {
     m_pd3d11Texture = pd3d11Texture;
     SetState(InitialState);

@@ -90,58 +90,61 @@ enum CULL_MODE : Int8
 struct RasterizerStateDesc
 {
     /// Determines traingle fill mode, see Diligent::FILL_MODE for details.
-    FILL_MODE FillMode;
+    /// Default value: Diligent::FILL_MODE_SOLID.
+    FILL_MODE FillMode              = FILL_MODE_SOLID;
 
     /// Determines traingle cull mode, see Diligent::CULL_MODE for details.
-    CULL_MODE CullMode;
+    /// Default value: Diligent::CULL_MODE_BACK.
+    CULL_MODE CullMode              = CULL_MODE_BACK;
 
     /// Determines if a triangle is front- or back-facing. If this parameter is True, 
     /// a triangle will be considered front-facing if its vertices are counter-clockwise 
     /// on the render target and considered back-facing if they are clockwise. 
     /// If this parameter is False, the opposite is true.
-    Bool      FrontCounterClockwise;
+    /// Default value: False.
+    Bool      FrontCounterClockwise = False;
 
     /// Enable clipping based on distance.
     /// \warning On DirectX this only disables clipping against far clipping plane,
     ///          while on OpenGL this disables clipping against both far and near clip planes.
-    Bool      DepthClipEnable;
+    /// Default value: True.
+    Bool      DepthClipEnable       = True;
 
     /// Enable scissor-rectangle culling. All pixels outside an active scissor rectangle are culled.
-    Bool      ScissorEnable;
+    /// Default value: False.
+    Bool      ScissorEnable         = False;
 
     /// Specifies whether to enable line antialiasing.
-    Bool      AntialiasedLineEnable;
+    /// Default value: False.
+    Bool      AntialiasedLineEnable = False;
 
     /// Constant value added to the depth of a given pixel.
-    Int32     DepthBias;
+    /// Default value: 0.
+    Int32     DepthBias             = 0;
 
     /// Maximum depth bias of a pixel.
     /// \warning Depth bias clamp is not available in OpenGL
-    Float32   DepthBiasClamp;
+    /// Default value: 0.
+    Float32   DepthBiasClamp        = 0.f;
 
     /// Scalar that scales the given pixel's slope before adding to the pixel's depth.
-    Float32   SlopeScaledDepthBias;
+    /// Default value: 0.
+    Float32   SlopeScaledDepthBias  = 0.f;
 
-    /// Member                | Default value
-    /// ----------------------|--------------
-    /// FillMode              | FILL_MODE_SOLID
-    /// CullMode              | CULL_MODE_BACK
-    /// FrontCounterClockwise | False
-    /// DepthBias             | 0
-    /// DepthBiasClamp        | 0.f
-    /// SlopeScaledDepthBias  | 0.f
-    /// DepthClipEnable       | True
-    /// ScissorEnable         | False
-    /// AntialiasedLineEnable | False
-    RasterizerStateDesc(FILL_MODE _FillMode              = FILL_MODE_SOLID,
-                        CULL_MODE _CullMode              = CULL_MODE_BACK,
-                        Bool      _FrontCounterClockwise = False,
-                        Int32     _DepthBias             = 0,
-                        Float32   _DepthBiasClamp        = 0.f,
-                        Float32   _SlopeScaledDepthBias  = 0.f,
-                        Bool      _DepthClipEnable       = True,
-                        Bool      _ScissorEnable         = False,
-                        Bool      _AntialiasedLineEnable = False) : 
+    // We have to explicitly define constructors because otherwise Apple's clang fails to compile the following legitimate code:
+    //     RasterizerStateDesc{FILL_MODE_SOLID, CULL_MODE_BACK}
+
+    RasterizerStateDesc()noexcept{}
+
+    RasterizerStateDesc(FILL_MODE _FillMode,
+                        CULL_MODE _CullMode,
+                        Bool      _FrontCounterClockwise = RasterizerStateDesc{}.FrontCounterClockwise,
+                        Bool      _DepthClipEnable       = RasterizerStateDesc{}.DepthClipEnable,
+                        Bool      _ScissorEnable         = RasterizerStateDesc{}.ScissorEnable,
+                        Bool      _AntialiasedLineEnable = RasterizerStateDesc{}.AntialiasedLineEnable,
+                        Int32     _DepthBias             = RasterizerStateDesc{}.DepthBias,
+                        Float32   _DepthBiasClamp        = RasterizerStateDesc{}.DepthBiasClamp,
+                        Float32   _SlopeScaledDepthBias  = RasterizerStateDesc{}.SlopeScaledDepthBias)noexcept : 
         FillMode             ( _FillMode ),
         CullMode             ( _CullMode ),
         FrontCounterClockwise( _FrontCounterClockwise ),
@@ -153,7 +156,6 @@ struct RasterizerStateDesc
         SlopeScaledDepthBias ( _SlopeScaledDepthBias )
     {
     }
-    
 
     /// Tests if two structures are equivalent
 

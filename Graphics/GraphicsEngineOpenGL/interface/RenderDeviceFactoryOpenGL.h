@@ -68,7 +68,9 @@ public:
 };
 
 
-#if ENGINE_DLL && (PLATFORM_WIN32 || PLATFORM_UNIVERSAL_WINDOWS)
+#if ENGINE_DLL && PLATFORM_WIN32 && defined(_MSC_VER)
+
+#   define EXPLICITLY_LOAD_ENGINE_GL_DLL 1
 
     typedef IEngineFactoryOpenGL* (*GetEngineFactoryOpenGLType)();
 
@@ -77,17 +79,17 @@ public:
         GetFactoryFunc = nullptr;
         std::string LibName = "GraphicsEngineOpenGL_";
 
-#if _WIN64
+#   if _WIN64
         LibName += "64";
-#else
+#   else
         LibName += "32";
-#endif
+#   endif
 
-#ifdef _DEBUG
+#   ifdef _DEBUG
         LibName += "d";
-#else
+#   else
         LibName += "r";
-#endif
+#   endif
 
         LibName += ".dll";
         auto hModule = LoadLibraryA( LibName.c_str() );

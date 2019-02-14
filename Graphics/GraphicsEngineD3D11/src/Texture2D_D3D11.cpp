@@ -33,14 +33,17 @@ Texture2D_D3D11 :: Texture2D_D3D11(IReferenceCounters*        pRefCounters,
                                    FixedBlockMemoryAllocator& TexViewObjAllocator, 
                                    RenderDeviceD3D11Impl*     pRenderDeviceD3D11, 
                                    const TextureDesc&         TexDesc, 
-                                   const TextureData&         InitData /*= TextureData()*/) : 
-    TextureBaseD3D11(pRefCounters, TexViewObjAllocator, pRenderDeviceD3D11, TexDesc, InitData)
+                                   const TextureData*         pInitData /*= nullptr*/) : 
+    TextureBaseD3D11(pRefCounters, TexViewObjAllocator, pRenderDeviceD3D11, TexDesc, pInitData)
 {
     auto D3D11TexFormat = TexFormatToDXGI_Format(m_Desc.Format, m_Desc.BindFlags);
     auto D3D11BindFlags = BindFlagsToD3D11BindFlags(m_Desc.BindFlags);
     auto D3D11CPUAccessFlags = CPUAccessFlagsToD3D11CPUAccessFlags(m_Desc.CPUAccessFlags);
     auto D3D11Usage = UsageToD3D11Usage(m_Desc.Usage);
     UINT MiscFlags = MiscTextureFlagsToD3D11Flags(m_Desc.MiscFlags);
+    if (MiscFlags & D3D11_RESOURCE_MISC_GENERATE_MIPS)
+        D3D11BindFlags |= D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
+
     if(m_Desc.Type == RESOURCE_DIM_TEX_CUBE || m_Desc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY)
         MiscFlags |= D3D11_RESOURCE_MISC_TEXTURECUBE;
     DXGI_SAMPLE_DESC D3D11SampleDesc = {m_Desc.SampleCount, 0};
@@ -61,7 +64,7 @@ Texture2D_D3D11 :: Texture2D_D3D11(IReferenceCounters*        pRefCounters,
     };
     
     std::vector<D3D11_SUBRESOURCE_DATA, STDAllocatorRawMem<D3D11_SUBRESOURCE_DATA>> D3D11InitData( STD_ALLOCATOR_RAW_MEM(D3D11_SUBRESOURCE_DATA, GetRawAllocator(), "Allocator for vector<D3D11_SUBRESOURCE_DATA>") );
-    PrepareD3D11InitData(InitData, Tex2DDesc.ArraySize * Tex2DDesc.MipLevels, D3D11InitData);
+    PrepareD3D11InitData(pInitData, Tex2DDesc.ArraySize * Tex2DDesc.MipLevels, D3D11InitData);
 
     ID3D11Texture2D *ptex2D = nullptr;
     HRESULT hr = pDeviceD3D11->CreateTexture2D(&Tex2DDesc, D3D11InitData.size() ? D3D11InitData.data() : nullptr, &ptex2D);
@@ -124,7 +127,7 @@ Texture2D_D3D11 :: Texture2D_D3D11(IReferenceCounters*        pRefCounters,
                                    RenderDeviceD3D11Impl*     pDeviceD3D11, 
                                    RESOURCE_STATE             InitialState,
                                    ID3D11Texture2D*           pd3d11Texture) : 
-    TextureBaseD3D11(pRefCounters, TexViewObjAllocator, pDeviceD3D11, TexDescFromD3D11Texture2D{}(pd3d11Texture), TextureData{})
+    TextureBaseD3D11(pRefCounters, TexViewObjAllocator, pDeviceD3D11, TexDescFromD3D11Texture2D{}(pd3d11Texture), nullptr)
 {
     m_pd3d11Texture = pd3d11Texture;
     SetState(InitialState);

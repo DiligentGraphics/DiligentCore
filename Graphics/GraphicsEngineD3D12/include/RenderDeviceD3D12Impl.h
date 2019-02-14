@@ -57,13 +57,13 @@ public:
 
     virtual void CreatePipelineState( const PipelineStateDesc &PipelineDesc, IPipelineState **ppPipelineState )override final;
 
-    virtual void CreateBuffer(const BufferDesc& BuffDesc, const BufferData &BuffData, IBuffer **ppBuffer)override final;
+    virtual void CreateBuffer(const BufferDesc& BuffDesc, const BufferData* pBuffData, IBuffer **ppBuffer)override final;
 
-    virtual void CreateShader(const ShaderCreationAttribs &ShaderCreationAttribs, IShader **ppShader)override final;
+    virtual void CreateShader(const ShaderCreationAttribs& ShaderCreationAttribs, IShader **ppShader)override final;
 
-    virtual void CreateTexture(const TextureDesc& TexDesc, const TextureData &Data, ITexture **ppTexture)override final;
+    virtual void CreateTexture(const TextureDesc& TexDesc, const TextureData* pData, ITexture **ppTexture)override final;
     
-    void CreateTexture(const TextureDesc& TexDesc, ID3D12Resource *pd3d12Texture, RESOURCE_STATE InitialState, class TextureD3D12Impl **ppTexture);
+    void CreateTexture(const TextureDesc& TexDesc, ID3D12Resource* pd3d12Texture, RESOURCE_STATE InitialState, class TextureD3D12Impl **ppTexture);
     
     virtual void CreateSampler(const SamplerDesc& SamplerDesc, ISampler **ppSampler)override final;
 
@@ -71,9 +71,9 @@ public:
 
     virtual ID3D12Device* GetD3D12Device()override final{return m_pd3d12Device;}
     
-    virtual void CreateTextureFromD3DResource(ID3D12Resource *pd3d12Texture, RESOURCE_STATE InitialState, ITexture **ppTexture)override final;
+    virtual void CreateTextureFromD3DResource(ID3D12Resource* pd3d12Texture, RESOURCE_STATE InitialState, ITexture** ppTexture)override final;
 
-    virtual void CreateBufferFromD3DResource(ID3D12Resource *pd3d12Buffer, const BufferDesc& BuffDesc, RESOURCE_STATE InitialState, IBuffer **ppBuffer)override final;
+    virtual void CreateBufferFromD3DResource(ID3D12Resource* pd3d12Buffer, const BufferDesc& BuffDesc, RESOURCE_STATE InitialState, IBuffer **ppBuffer)override final;
 
     DescriptorHeapAllocation AllocateDescriptor( D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count = 1 );
     DescriptorHeapAllocation AllocateGPUDescriptors( D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count = 1 );

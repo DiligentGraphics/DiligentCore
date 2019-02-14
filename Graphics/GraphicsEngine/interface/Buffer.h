@@ -67,7 +67,7 @@ enum BUFFER_MODE : Uint8
 struct BufferDesc : DeviceObjectAttribs
 {
     /// Size of the buffer, in bytes. For a uniform buffer, this must be multiple of 16.
-    Uint32 uiSizeInBytes = 0;
+    Uint32 uiSizeInBytes            = 0;
 
     /// Buffer bind flags, see Diligent::BIND_FLAGS for details
 
@@ -75,17 +75,17 @@ struct BufferDesc : DeviceObjectAttribs
     /// Diligent::BIND_VERTEX_BUFFER, Diligent::BIND_INDEX_BUFFER, Diligent::BIND_UNIFORM_BUFFER,
     /// Diligent::BIND_SHADER_RESOURCE, Diligent::BIND_STREAM_OUTPUT, Diligent::BIND_UNORDERED_ACCESS,
     /// Diligent::BIND_INDIRECT_DRAW_ARGS
-    BIND_FLAGS BindFlags = BIND_NONE;
+    BIND_FLAGS BindFlags            = BIND_NONE;
 
     /// Buffer usage, see Diligent::USAGE for details
-    USAGE Usage = USAGE_DEFAULT;
+    USAGE Usage                     = USAGE_DEFAULT;
 
     /// CPU access flags or 0 if no CPU access is allowed, 
     /// see Diligent::CPU_ACCESS_FLAGS for details.
     CPU_ACCESS_FLAGS CPUAccessFlags = CPU_ACCESS_NONE;
     
     /// Buffer mode, see Diligent::BUFFER_MODE
-    BUFFER_MODE Mode = BUFFER_MODE_UNDEFINED;
+    BUFFER_MODE Mode                = BUFFER_MODE_UNDEFINED;
 
     /// Buffer element stride, in bytes.
 
@@ -94,10 +94,33 @@ struct BufferDesc : DeviceObjectAttribs
     /// (BufferDesc::Mode equals Diligent::BUFFER_MODE_FORMATTED) and optionally for a raw buffer 
     /// (Diligent::BUFFER_MODE_RAW), this member defines the size of the format that will be used for views 
     /// created for this buffer.
-    Uint32 ElementByteStride = 0;
+    Uint32 ElementByteStride        = 0;
 
     /// Defines which command queues this buffer can be used with
-    Uint64 CommandQueueMask = 1;
+    Uint64 CommandQueueMask         = 1;
+
+
+    // We have to explicitly define constructors because otherwise the following initialization fails on Apple's clang:
+    //      BufferDesc{1024, BIND_UNIFORM_BUFFER, USAGE_DEFAULT}
+
+    BufferDesc()noexcept{}
+
+    explicit 
+    BufferDesc(Uint32           _uiSizeInBytes, 
+               BIND_FLAGS       _BindFlags,
+               USAGE            _Usage             = BufferDesc{}.Usage,
+               CPU_ACCESS_FLAGS _CPUAccessFlags    = BufferDesc{}.CPUAccessFlags,
+               BUFFER_MODE      _Mode              = BufferDesc{}.Mode,
+               Uint32           _ElementByteStride = BufferDesc{}.ElementByteStride,
+               Uint64           _CommandQueueMask  = BufferDesc{}.CommandQueueMask)noexcept :
+        uiSizeInBytes       (_uiSizeInBytes),
+        BindFlags           (_BindFlags),
+        Usage               (_Usage),
+        Mode                (_Mode),
+        ElementByteStride   (_ElementByteStride),
+        CommandQueueMask    (_CommandQueueMask)
+    {
+    }
 
     /// Tests if two structures are equivalent
 
@@ -123,21 +146,21 @@ struct BufferDesc : DeviceObjectAttribs
 struct BufferData
 {
     /// Pointer to the data
-    const void* pData;
+    const void* pData   = nullptr;
 
     /// Data size, in bytes
-    Uint32 DataSize;
+    Uint32 DataSize     = 0;
 
-    /// Initializes the structure members with default values
 
-    /// Default values:
-    /// Member              | Default value
-    /// --------------------|--------------
-    /// pData               | nullptr
-    /// DataSize            | 0
-    BufferData() : 
-        pData(nullptr),
-        DataSize(0)
+    // We have to explicitly define constructors because otherwise Apple's clang fails to compile the following legitimate code:
+    //     BufferData{nullptr, 0}
+
+    BufferData()noexcept{}
+
+    BufferData(const void* _pData, 
+               Uint32      _DataSize):
+        pData   (_pData),
+        DataSize(_DataSize)
     {}
 };
 
@@ -148,7 +171,7 @@ class IBuffer : public IDeviceObject
 {
 public:
     /// Queries the specific interface, see IObject::QueryInterface() for details
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface ) = 0;
+    virtual void QueryInterface( const Diligent::INTERFACE_ID& IID, IObject** ppInterface ) = 0;
 
     /// Returns the buffer description used to create the object
     virtual const BufferDesc& GetDesc()const = 0;
@@ -164,7 +187,7 @@ public:
     ///          until all views are released.\n
     ///          The function calls AddRef() for the created interface, so it must be released by
     ///          a call to Release() when it is no longer needed.
-    virtual void CreateView( const struct BufferViewDesc &ViewDesc, class IBufferView **ppView ) = 0;
+    virtual void CreateView( const struct BufferViewDesc& ViewDesc, class IBufferView** ppView ) = 0;
 
     /// Returns the pointer to the default view.
     

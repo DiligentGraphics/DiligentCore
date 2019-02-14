@@ -92,6 +92,12 @@ function(set_common_target_properties TARGET)
                 endforeach()
             endif()
         endif()
+    else()
+        set_target_properties(${TARGET} PROPERTIES
+            CXX_VISIBILITY_PRESET hidden # -fvisibility=hidden
+            C_VISIBILITY_PRESET hidden # -fvisibility=hidden
+            VISIBILITY_INLINES_HIDDEN TRUE
+        )
     endif()
 
     if(PLATFORM_ANDROID)
@@ -136,16 +142,9 @@ endfunction()
 
 # Returns default backend library type (static/dynamic) for the current platform
 function(get_backend_libraries_type _LIB_TYPE)
-    if(PLATFORM_WIN32)
-        if(MSVC)
-            set(LIB_TYPE "shared")
-        else()
-		    # Link against static libraries on MinGW
-            set(LIB_TYPE "static")
-        endif()
-    elseif(PLATFORM_LINUX OR PLATFORM_ANDROID OR PLATFORM_MACOS)
+    if(PLATFORM_WIN32 OR PLATFORM_LINUX OR PLATFORM_ANDROID)
         set(LIB_TYPE "shared")
-    elseif(PLATFORM_UNIVERSAL_WINDOWS)
+    elseif(PLATFORM_UNIVERSAL_WINDOWS OR PLATFORM_MACOS)
         set(LIB_TYPE "static")
     elseif(PLATFORM_IOS)
         # Statically link with the engine on iOS.
@@ -202,11 +201,18 @@ endfunction()
 # Performs installation steps for the core library
 function(install_core_lib _TARGET)
     get_core_library_relative_dir(${_TARGET} TARGET_RELATIVE_PATH)
-    install(TARGETS     ${_TARGET}
-            ARCHIVE DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/lib"
-            LIBRARY DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/lib"
-            RUNTIME DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/bin"
-    )
+
+    get_target_property(TARGET_TYPE ${_TARGET} TYPE)
+    if(TARGET_TYPE STREQUAL STATIC_LIBRARY)
+        list(APPEND DILIGENT_CORE_INSTALL_LIBS_LIST ${_TARGET})
+        set(DILIGENT_CORE_INSTALL_LIBS_LIST ${DILIGENT_CORE_INSTALL_LIBS_LIST} CACHE INTERNAL "Core libraries installation list")
+    elseif(TARGET_TYPE STREQUAL SHARED_LIBRARY)
+        install(TARGETS				 ${_TARGET}
+                ARCHIVE DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/lib"
+                LIBRARY DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/bin"
+                RUNTIME DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/bin"
+        )
+    endif()
 
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/interface")
         install(DIRECTORY    interface

@@ -7,14 +7,16 @@ notifications:
     on_success: never
     on_failure: always
 
+env:
+  global:
+    - CMAKE_VERSION=3.13.2
+
 before_install:
   - |
     if [ "$TRAVIS_OS_NAME" = "osx" ];  then
-      if brew ls --versions cmake > /dev/null; then
-        echo cmake already installed.
-      else
-        brew install cmake
-      fi;
+      wget --no-check-certificate https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-Darwin-x86_64.tar.gz
+      tar -xzf cmake-${CMAKE_VERSION}-Darwin-x86_64.tar.gz
+      export PATH=$PWD/cmake-${CMAKE_VERSION}-Darwin-x86_64/CMake.app/Contents/bin:$PATH
       cmake --version
     fi
   - |
@@ -31,9 +33,9 @@ before_install:
       # Download a recent cmake
       mkdir $HOME/usr
       export PATH="$HOME/usr/bin:$PATH"
-      wget https://github.com/Kitware/CMake/releases/download/v3.13.2/cmake-3.13.2-Linux-x86_64.sh
-      chmod +x cmake-3.13.2-Linux-x86_64.sh
-      ./cmake-3.13.2-Linux-x86_64.sh --prefix=$HOME/usr --exclude-subdir --skip-license
+      wget https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-Linux-x86_64.sh
+      chmod +x cmake-${CMAKE_VERSION}-Linux-x86_64.sh
+      ./cmake-${CMAKE_VERSION}-Linux-x86_64.sh --prefix=$HOME/usr --exclude-subdir --skip-license
       cmake --version
     fi
 
@@ -82,15 +84,21 @@ script:
   - cd cmk_build
   - |
     if [ "$TRAVIS_OS_NAME" = "linux" ]; then 
-      cmake .. -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=${CONFIG}
-      cmake --build .
+      cmake .. -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=${CONFIG} -DCMAKE_INSTALL_PREFIX=install
+      cmake --build . --target install
     fi
   - |
     if [ "$TRAVIS_OS_NAME" = "osx" ]; then 
       if [ "$IOS" = "true" ]; then 
-        cmake .. -DCMAKE_TOOLCHAIN_FILE=../DiligentCore/ios.toolchain.cmake -DIOS_PLATFORM=OS64 -G "Xcode"
+        cmake .. -DCMAKE_TOOLCHAIN_FILE=../DiligentCore/ios.toolchain.cmake -DIOS_PLATFORM=OS64 -DCMAKE_INSTALL_PREFIX=install -G "Xcode"
       else
-        cmake .. -G "Xcode"
+        cmake .. -DCMAKE_INSTALL_PREFIX=install -G "Xcode"
       fi
-      cmake --build . --config ${CONFIG}
+      cmake --build . --target install --config ${CONFIG}
     fi
+
+after_success:
+    
+  - cd ../cmk_build/install
+  - export ZIP_NAME=DiligentCore-${TRAVIS_OS_NAME}-${GLSLANG_BUILD_TYPE}.zip;
+  - zip -r ${ZIP_NAME} .

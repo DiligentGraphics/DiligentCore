@@ -98,7 +98,7 @@ namespace Diligent
         DummyVBDesc.Usage         = USAGE_DEFAULT;
         DummyVBDesc.uiSizeInBytes = 32;
         RefCntAutoPtr<IBuffer> pDummyVB;
-        m_pDevice->CreateBuffer(DummyVBDesc, BufferData{}, &pDummyVB);
+        m_pDevice->CreateBuffer(DummyVBDesc, nullptr, &pDummyVB);
         m_DummyVB = pDummyVB.RawPtr<BufferVkImpl>();
     }
 

@@ -32,14 +32,14 @@
 namespace Diligent
 {
 
-Texture1D_OGL::Texture1D_OGL( IReferenceCounters *pRefCounters, 
-                              FixedBlockMemoryAllocator& TexViewObjAllocator,     
-                              RenderDeviceGLImpl *pDeviceGL, 
-                              DeviceContextGLImpl *pDeviceContext, 
-                              const TextureDesc& TexDesc, 
-                              const TextureData &InitData /*= TextureData()*/, 
-							  bool bIsDeviceInternal /*= false*/) : 
-    TextureBaseGL(pRefCounters, TexViewObjAllocator, pDeviceGL, TexDesc, GL_TEXTURE_1D, InitData, bIsDeviceInternal)
+Texture1D_OGL::Texture1D_OGL( IReferenceCounters*         pRefCounters, 
+                              FixedBlockMemoryAllocator&  TexViewObjAllocator,     
+                              RenderDeviceGLImpl*         pDeviceGL, 
+                              DeviceContextGLImpl*        pDeviceContext, 
+                              const TextureDesc&          TexDesc, 
+                              const TextureData*          pInitData         /*= nullptr*/, 
+							  bool                        bIsDeviceInternal /*= false*/) : 
+    TextureBaseGL(pRefCounters, TexViewObjAllocator, pDeviceGL, TexDesc, GL_TEXTURE_1D, pInitData, bIsDeviceInternal)
 {
     auto *pDeviceContextGL = ValidatedCast<DeviceContextGLImpl>(pDeviceContext);
     auto &ContextState = pDeviceContextGL->GetContextState();
@@ -58,9 +58,9 @@ Texture1D_OGL::Texture1D_OGL( IReferenceCounters *pRefCounters,
 
     SetDefaultGLParameters();
 
-    if( InitData.pSubResources )
+    if (pInitData != nullptr && pInitData->pSubResources != nullptr)
     {
-        if(  m_Desc.MipLevels == InitData.NumSubresources )
+        if (m_Desc.MipLevels == pInitData->NumSubresources)
         {
             for(Uint32 Mip = 0; Mip < m_Desc.MipLevels; ++Mip)
             {
@@ -70,7 +70,7 @@ Texture1D_OGL::Texture1D_OGL( IReferenceCounters *pRefCounters,
                 // we will get into TextureBaseGL::UpdateData(), because instance of Texture1D_OGL
                 // is not fully constructed yet.
                 // To call the required function, we need to explicitly specify the class: 
-                Texture1D_OGL::UpdateData( ContextState, Mip, 0, DstBox, InitData.pSubResources[Mip] );
+                Texture1D_OGL::UpdateData( ContextState, Mip, 0, DstBox, pInitData->pSubResources[Mip] );
             }
         }
         else
@@ -82,13 +82,13 @@ Texture1D_OGL::Texture1D_OGL( IReferenceCounters *pRefCounters,
     ContextState.BindTexture(-1, m_BindTarget, GLObjectWrappers::GLTextureObj(false) );
 }
 
-Texture1D_OGL::Texture1D_OGL( IReferenceCounters *pRefCounters, 
-                              FixedBlockMemoryAllocator& TexViewObjAllocator,     
-                              RenderDeviceGLImpl *pDeviceGL, 
-                              DeviceContextGLImpl *pDeviceContext,
-                              const TextureDesc& TexDesc,
-                              GLuint GLTextureHandle,
-                              bool bIsDeviceInternal)  : 
+Texture1D_OGL::Texture1D_OGL( IReferenceCounters*           pRefCounters, 
+                              FixedBlockMemoryAllocator&    TexViewObjAllocator,     
+                              RenderDeviceGLImpl*           pDeviceGL, 
+                              DeviceContextGLImpl*          pDeviceContext,
+                              const TextureDesc&            TexDesc,
+                              GLuint                        GLTextureHandle,
+                              bool                          bIsDeviceInternal)  : 
     TextureBaseGL(pRefCounters, TexViewObjAllocator, pDeviceGL, pDeviceContext, TexDesc, GLTextureHandle, GL_TEXTURE_1D, bIsDeviceInternal)
 {
 }
@@ -97,7 +97,11 @@ Texture1D_OGL::~Texture1D_OGL()
 {
 }
 
-void Texture1D_OGL::UpdateData( GLContextState &ContextState, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData )
+void Texture1D_OGL::UpdateData( GLContextState&           ContextState,
+                                Uint32                    MipLevel,
+                                Uint32                    Slice,
+                                const Box&                DstBox,
+                                const TextureSubResData&  SubresData )
 {
     TextureBaseGL::UpdateData(ContextState, MipLevel, Slice, DstBox, SubresData);
 

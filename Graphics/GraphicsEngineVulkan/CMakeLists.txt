@@ -200,13 +200,19 @@ set(PUBLIC_DEPENDENCIES
     GraphicsEngineVkInterface
 )
 
-target_link_libraries(GraphicsEngineVk-static PRIVATE ${PRIVATE_DEPENDENCIES} PUBLIC ${PUBLIC_DEPENDENCIES})
-target_link_libraries(GraphicsEngineVk-shared PUBLIC GraphicsEngineVk-static)
-
-if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR 
-	CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-    set_target_properties(GraphicsEngineVk-shared PROPERTIES CXX_VISIBILITY_PRESET hidden) # -fvisibility=hidden
-endif()
+target_link_libraries(GraphicsEngineVk-static
+PRIVATE
+    ${PRIVATE_DEPENDENCIES}
+PUBLIC
+    ${PUBLIC_DEPENDENCIES}
+)
+target_link_libraries(GraphicsEngineVk-shared
+PRIVATE
+    BuildSettings
+    ${WHOLE_ARCHIVE_FLAG} GraphicsEngineVk-static ${NO_WHOLE_ARCHIVE_FLAG}
+PUBLIC
+    ${PUBLIC_DEPENDENCIES}
+)
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     # Disable the following clang warning
@@ -230,12 +236,12 @@ else()
     message(FATAL_ERROR "Unknown platform")
 endif()
 
-if (${NO_GLSLANG})
+if (${DILIGENT_NO_GLSLANG})
     message("GLSLang is not being built. Vulkan backend will only be able to consume SPIRV byte code.")
 endif()
 
+target_compile_definitions(GraphicsEngineVk-static PRIVATE ${PRIVATE_COMPILE_DEFINITIONS} NO_GLSLANG=$<BOOL:${DILIGENT_NO_GLSLANG}>)
 target_compile_definitions(GraphicsEngineVk-shared PRIVATE ${PRIVATE_COMPILE_DEFINITIONS} ENGINE_DLL=1)
-target_compile_definitions(GraphicsEngineVk-static PRIVATE ${PRIVATE_COMPILE_DEFINITIONS} NO_GLSLANG=$<BOOL:${NO_GLSLANG}>)
 
 if(PLATFORM_WIN32)
 
@@ -248,6 +254,13 @@ if(PLATFORM_WIN32)
 else()
     set_target_properties(GraphicsEngineVk-shared PROPERTIES
         OUTPUT_NAME GraphicsEngineVk
+    )
+endif()
+
+if(PLATFORM_LINUX)
+    get_filename_component(VULKAN_LIBRARY_PATH ${Vulkan_LIBRARY} DIRECTORY)
+    set_target_properties(GraphicsEngineVk-shared PROPERTIES
+        INSTALL_RPATH "${VULKAN_LIBRARY_PATH}"
     )
 endif()
 

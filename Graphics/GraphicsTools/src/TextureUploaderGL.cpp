@@ -187,7 +187,7 @@ namespace Diligent
 
                             BuffDesc.uiSizeInBytes = Desc.Height * RowStride;
                             RefCntAutoPtr<IBuffer> pStagingBuffer;
-                            m_pDevice->CreateBuffer(BuffDesc, BufferData(), &pBuffer->m_pStagingBuffer);
+                            m_pDevice->CreateBuffer(BuffDesc, nullptr, &pBuffer->m_pStagingBuffer);
                         }
 
                         PVoid CpuAddress = nullptr;

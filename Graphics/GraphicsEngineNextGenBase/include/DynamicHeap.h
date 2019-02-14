@@ -131,7 +131,7 @@ public:
             StaleMasterBlock            (const StaleMasterBlock&)  = delete;
             StaleMasterBlock& operator= (const StaleMasterBlock&)  = delete;
             StaleMasterBlock& operator= (      StaleMasterBlock&&) = delete;
-            
+
             StaleMasterBlock(StaleMasterBlock&& rhs)noexcept : 
                 Block (std::move(rhs.Block)),
                 Mgr   (rhs.Mgr)
@@ -154,6 +154,7 @@ public:
         };
         for(auto& Block : Blocks)
         {
+            DEV_CHECK_ERR(Block.IsValid(), "Attempting to release invalid master block");
             Device.SafeReleaseDeviceObject(StaleMasterBlock{std::move(Block), this}, CmdQueueMask);
         }
     }
@@ -169,10 +170,14 @@ protected:
     MasterBlock AllocateMasterBlock(OffsetType SizeInBytes, OffsetType Alignment)
     {
         std::lock_guard<std::mutex> Lock(m_AllocationsMgrMtx);
+        auto NewBlock = m_AllocationsMgr.Allocate(SizeInBytes, Alignment);
 #ifdef DEVELOPMENT
-        ++m_MasterBlockCounter;
+        if (NewBlock.IsValid())
+        {
+            ++m_MasterBlockCounter;
+        }
 #endif
-        return m_AllocationsMgr.Allocate(SizeInBytes, Alignment);
+        return NewBlock;
     }
 
 private:

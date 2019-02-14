@@ -39,7 +39,7 @@ public:
                     FixedBlockMemoryAllocator&   TexViewObjAllocator, 
                     class RenderDeviceD3D11Impl* pDeviceD3D11, 
                     const TextureDesc&           TexDesc, 
-                    const TextureData&           InitData = TextureData());
+                    const TextureData*           pInitData = nullptr);
 
     Texture1D_D3D11(IReferenceCounters*          pRefCounters, 
                     FixedBlockMemoryAllocator&   TexViewObjAllocator, 

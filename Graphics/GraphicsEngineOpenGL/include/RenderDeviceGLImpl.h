@@ -59,14 +59,14 @@ public:
     ~RenderDeviceGLImpl();
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
     
-	void CreateBuffer(const BufferDesc& BuffDesc, const BufferData &BuffData, IBuffer **ppBufferLayout, bool bIsDeviceInternal);
-    virtual void CreateBuffer(const BufferDesc& BuffDesc, const BufferData &BuffData, IBuffer **ppBufferLayout)override final;
+	void CreateBuffer(const BufferDesc& BuffDesc, const BufferData* pBuffData, IBuffer **ppBufferLayout, bool bIsDeviceInternal);
+    virtual void CreateBuffer(const BufferDesc& BuffDesc, const BufferData* BuffData, IBuffer **ppBufferLayout)override final;
 
 	void CreateShader(const ShaderCreationAttribs &ShaderCreationAttribs, IShader **ppShader, bool bIsDeviceInternal );
     virtual void CreateShader(const ShaderCreationAttribs &ShaderCreationAttribs, IShader **ppShader)override final;
 
-	void CreateTexture(const TextureDesc& TexDesc, const TextureData &Data, ITexture **ppTexture, bool bIsDeviceInternal);
-    virtual void CreateTexture(const TextureDesc& TexDesc, const TextureData &Data, ITexture **ppTexture)override final;
+	void CreateTexture(const TextureDesc& TexDesc, const TextureData* pData, ITexture **ppTexture, bool bIsDeviceInternal);
+    virtual void CreateTexture(const TextureDesc& TexDesc, const TextureData* Data, ITexture **ppTexture)override final;
     
 	void CreateSampler(const SamplerDesc& SamplerDesc, ISampler **ppSampler, bool bIsDeviceInternal);
     virtual void CreateSampler(const SamplerDesc& SamplerDesc, ISampler **ppSampler)override final;

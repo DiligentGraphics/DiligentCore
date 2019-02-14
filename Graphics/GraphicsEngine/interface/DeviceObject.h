@@ -41,7 +41,7 @@ class IDeviceObject : public IObject
 {
 public:
     /// Queries the specific interface, see IObject::QueryInterface() for details
-    virtual void QueryInterface( const INTERFACE_ID &IID, IObject **ppInterface ) = 0;
+    virtual void QueryInterface( const INTERFACE_ID& IID, IObject** ppInterface ) = 0;
 
     /// Returns the buffer object description
     virtual const DeviceObjectAttribs& GetDesc()const = 0;

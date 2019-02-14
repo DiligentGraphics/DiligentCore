@@ -92,7 +92,7 @@ namespace Diligent
         CBDesc.Usage = USAGE_DYNAMIC;
         CBDesc.BindFlags = BIND_UNIFORM_BUFFER;
         CBDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
-        pDeviceGL->CreateBuffer( CBDesc, BufferData(), &m_pConstantBuffer, 
+        pDeviceGL->CreateBuffer( CBDesc, nullptr, &m_pConstantBuffer, 
 								 true // We must indicate the buffer is internal device object
 							   );
 

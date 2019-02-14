@@ -31,28 +31,31 @@ namespace Diligent
 class TextureCubeArray_OGL final : public TextureBaseGL
 {
 public:
-    TextureCubeArray_OGL( IReferenceCounters *pRefCounters, 
-                          FixedBlockMemoryAllocator& TexViewObjAllocator,
-                          class RenderDeviceGLImpl *pDeviceGL, 
-                          class DeviceContextGLImpl *pDeviceContext, 
-                          const TextureDesc& TexDesc, 
-                          const TextureData& InitData = TextureData(), 
-						  bool bIsDeviceInternal = false );
+    TextureCubeArray_OGL( IReferenceCounters*          pRefCounters, 
+                          FixedBlockMemoryAllocator&   TexViewObjAllocator,
+                          class RenderDeviceGLImpl*    pDeviceGL, 
+                          class DeviceContextGLImpl*   pDeviceContext, 
+                          const TextureDesc&           TexDesc, 
+                          const TextureData*           pInitData         = nullptr, 
+				          bool                         bIsDeviceInternal = false );
 
-    TextureCubeArray_OGL( IReferenceCounters *pRefCounters, 
-                          FixedBlockMemoryAllocator& TexViewObjAllocator,     
-                          class RenderDeviceGLImpl *pDeviceGL, 
-                          class DeviceContextGLImpl *pDeviceContext, 
-                          const TextureDesc& TexDesc, 
-                          GLuint GLTextureHandle,
-				          bool bIsDeviceInternal = false);
+    TextureCubeArray_OGL( IReferenceCounters*          pRefCounters, 
+                          FixedBlockMemoryAllocator&   TexViewObjAllocator,     
+                          class RenderDeviceGLImpl*    pDeviceGL, 
+                          class DeviceContextGLImpl*   pDeviceContext, 
+                          const TextureDesc&           TexDesc, 
+                          GLuint                       GLTextureHandle,
+				          bool                         bIsDeviceInternal = false);
     ~TextureCubeArray_OGL();
 
-    virtual void UpdateData( class GLContextState &CtxState, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData )override final;
-    virtual void AttachToFramebuffer( const struct TextureViewDesc& ViewDesc, GLenum AttachmentPoint )override final;
+    virtual void UpdateData(class GLContextState&    CtxState,
+                            Uint32                   MipLevel,
+                            Uint32                   Slice,
+                            const Box&               DstBox,
+                            const TextureSubResData& SubresData)override final;
 
-private:
-
+    virtual void AttachToFramebuffer( const struct TextureViewDesc& ViewDesc,
+                                      GLenum                        AttachmentPoint )override final;
 };
 
 }

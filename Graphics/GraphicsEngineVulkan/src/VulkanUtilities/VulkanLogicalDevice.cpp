@@ -94,7 +94,7 @@ namespace VulkanUtilities
         return CreateVulkanObject<VkCommandPool>(vkCreateCommandPool, CmdPoolCI, DebugName, "command pool");
     }
 
-    BufferWrapper VulkanLogicalDevice::CreateBuffer(const VkBufferCreateInfo &BufferCI, 
+    BufferWrapper VulkanLogicalDevice::CreateBuffer(const VkBufferCreateInfo& BufferCI, 
                                                     const char* DebugName)const
     {
         VERIFY_EXPR(BufferCI.sType == VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO);

@@ -39,6 +39,9 @@
 
 #define PI_F 3.1415927f
 
+namespace Diligent
+{
+
 // Template Vector & Matrix Classes
 template <class T> struct Matrix4x4;
 template <class T> struct Vector4;
@@ -1421,21 +1424,23 @@ inline float4x4 inverseMatrix(const float4x4& m)
     return inv;
 }
 
+} // namespace Diligent
+
 namespace std
 {
     template<typename T>
-    Vector2<T> max( const Vector2<T> &Left, const Vector2<T> &Right )
+    Diligent::Vector2<T> max( const Diligent::Vector2<T> &Left, const Diligent::Vector2<T> &Right )
     {
-        return Vector2<T>( 
+        return Diligent::Vector2<T>( 
             std::max( Left.x, Right.x ), 
             std::max( Left.y, Right.y ) 
             );
     }
 
     template<typename T>
-    Vector3<T> max( const Vector3<T> &Left, const Vector3<T> &Right )
+    Diligent::Vector3<T> max( const Diligent::Vector3<T> &Left, const Diligent::Vector3<T> &Right )
     {
-        return Vector3<T>( 
+        return Diligent::Vector3<T>( 
             std::max( Left.x, Right.x ), 
             std::max( Left.y, Right.y ),
             std::max( Left.z, Right.z )
@@ -1443,9 +1448,9 @@ namespace std
     }
 
     template<typename T>
-    Vector4<T> max( const Vector4<T> &Left, const Vector4<T> &Right )
+    Diligent::Vector4<T> max( const Diligent::Vector4<T> &Left, const Diligent::Vector4<T> &Right )
     {
-        return Vector4<T>( 
+        return Diligent::Vector4<T>( 
             std::max( Left.x, Right.x ), 
             std::max( Left.y, Right.y ),
             std::max( Left.z, Right.z ),
@@ -1455,18 +1460,18 @@ namespace std
 
 
     template<typename T>
-    Vector2<T> min( const Vector2<T> &Left, const Vector2<T> &Right )
+    Diligent::Vector2<T> min( const Diligent::Vector2<T> &Left, const Diligent::Vector2<T> &Right )
     {
-        return Vector2<T>( 
+        return Diligent::Vector2<T>( 
             std::min( Left.x, Right.x ), 
             std::min( Left.y, Right.y ) 
             );
     }
 
     template<typename T>
-    Vector3<T> min( const Vector3<T> &Left, const Vector3<T> &Right )
+    Diligent::Vector3<T> min( const Diligent::Vector3<T> &Left, const Diligent::Vector3<T> &Right )
     {
-        return Vector3<T>( 
+        return Diligent::Vector3<T>( 
             std::min( Left.x, Right.x ), 
             std::min( Left.y, Right.y ),
             std::min( Left.z, Right.z )
@@ -1474,9 +1479,9 @@ namespace std
     }
 
     template<typename T>
-    Vector4<T> min( const Vector4<T> &Left, const Vector4<T> &Right )
+    Diligent::Vector4<T> min( const Diligent::Vector4<T> &Left, const Diligent::Vector4<T> &Right )
     {
-        return Vector4<T>( 
+        return Diligent::Vector4<T>( 
             std::min( Left.x, Right.x ), 
             std::min( Left.y, Right.y ),
             std::min( Left.z, Right.z ),
@@ -1486,36 +1491,36 @@ namespace std
 
 
     template<typename T>
-    struct hash<Vector2<T>>
+    struct hash<Diligent::Vector2<T>>
     {
-        size_t operator()( const Vector2<T> &v2 ) const
+        size_t operator()( const Diligent::Vector2<T> &v2 ) const
         {
             return Diligent::ComputeHash(v2.x, v2.y);
         }
     };
 
     template<typename T>
-    struct hash<Vector3<T>>
+    struct hash<Diligent::Vector3<T>>
     {
-        size_t operator()( const Vector3<T> &v3 ) const
+        size_t operator()( const Diligent::Vector3<T> &v3 ) const
         {
             return Diligent::ComputeHash(v3.x, v3.y, v3.z);
         }
     };
 
     template<typename T>
-    struct hash<Vector4<T>>
+    struct hash<Diligent::Vector4<T>>
     {
-        size_t operator()( const Vector4<T> &v4 ) const
+        size_t operator()( const Diligent::Vector4<T> &v4 ) const
         {
             return Diligent::ComputeHash(v4.x, v4.y, v4.z, v4.w);
         }
     };
 
     template<typename T>
-    struct hash<Matrix2x2<T>>
+    struct hash<Diligent::Matrix2x2<T>>
     {
-        size_t operator()(const Matrix2x2<T> &m) const
+        size_t operator()(const Diligent::Matrix2x2<T> &m) const
         {
             return Diligent::ComputeHash(
                 m._m00, m._m01,
@@ -1525,9 +1530,9 @@ namespace std
     };
 
     template<typename T>
-    struct hash<Matrix3x3<T>>
+    struct hash<Diligent::Matrix3x3<T>>
     {
-        size_t operator()( const Matrix3x3<T> &m ) const
+        size_t operator()( const Diligent::Matrix3x3<T> &m ) const
         {
             return Diligent::ComputeHash(            
                 m._m00,  m._m01,  m._m02,
@@ -1538,9 +1543,9 @@ namespace std
     };
 
     template<typename T>
-    struct hash<Matrix4x4<T>>
+    struct hash<Diligent::Matrix4x4<T>>
     {
-        size_t operator()( const Matrix4x4<T> &m ) const
+        size_t operator()( const Diligent::Matrix4x4<T> &m ) const
         {
             return Diligent::ComputeHash(            
                 m._m00,  m._m01,  m._m02,  m._m03,
@@ -1550,7 +1555,7 @@ namespace std
             );
         }
     };
-}
+} // namespace std
 
 #ifdef _MSC_VER
 #   pragma warning(pop)

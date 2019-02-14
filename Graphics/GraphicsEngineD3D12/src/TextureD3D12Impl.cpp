@@ -75,11 +75,11 @@ TextureD3D12Impl :: TextureD3D12Impl(IReferenceCounters*        pRefCounters,
                                      FixedBlockMemoryAllocator& TexViewObjAllocator,
                                      RenderDeviceD3D12Impl*     pRenderDeviceD3D12, 
                                      const TextureDesc&         TexDesc, 
-                                     const TextureData&         InitData /*= TextureData()*/) : 
+                                     const TextureData*         pInitData /*= nullptr*/) : 
     TTextureBase(pRefCounters, TexViewObjAllocator, pRenderDeviceD3D12, TexDesc)
 {
-    if( m_Desc.Usage == USAGE_STATIC && InitData.pSubResources == nullptr )
-        LOG_ERROR_AND_THROW("Static Texture must be initialized with data at creation time");
+    if( m_Desc.Usage == USAGE_STATIC && (pInitData == nullptr || pInitData->pSubResources == nullptr))
+        LOG_ERROR_AND_THROW("Static textures must be initialized with data at creation time");
 
 	D3D12_RESOURCE_DESC Desc = {};
 	Desc.Alignment = 0;
@@ -155,7 +155,7 @@ TextureD3D12Impl :: TextureD3D12Impl(IReferenceCounters*        pRefCounters,
         pClearValue = &ClearValue;
     }
 
-    bool bInitializeTexture = (InitData.pSubResources != nullptr && InitData.NumSubresources > 0);
+    bool bInitializeTexture = (pInitData != nullptr && pInitData->pSubResources != nullptr && pInitData->NumSubresources > 0);
     auto InitialState = bInitializeTexture ? RESOURCE_STATE_COPY_DEST : RESOURCE_STATE_UNDEFINED;
     SetState(InitialState);
     auto D3D12State = ResourceStateFlagsToD3D12ResourceStates(InitialState);
@@ -170,10 +170,10 @@ TextureD3D12Impl :: TextureD3D12Impl(IReferenceCounters*        pRefCounters,
     if(bInitializeTexture)
     {
         Uint32 ExpectedNumSubresources = static_cast<Uint32>(Desc.MipLevels * (Desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D ? 1 : Desc.DepthOrArraySize) );
-        if( InitData.NumSubresources != ExpectedNumSubresources )
-            LOG_ERROR_AND_THROW("Incorrect number of subresources in init data. ", ExpectedNumSubresources, " expected, while ", InitData.NumSubresources, " provided");
+        if( pInitData->NumSubresources != ExpectedNumSubresources )
+            LOG_ERROR_AND_THROW("Incorrect number of subresources in init data. ", ExpectedNumSubresources, " expected, while ", pInitData->NumSubresources, " provided");
 
-	    UINT64 uploadBufferSize = GetRequiredIntermediateSize(m_pd3d12Resource, 0, InitData.NumSubresources);
+	    UINT64 uploadBufferSize = GetRequiredIntermediateSize(m_pd3d12Resource, 0, pInitData->NumSubresources);
 
         D3D12_HEAP_PROPERTIES UploadHeapProps;
 	    UploadHeapProps.Type = D3D12_HEAP_TYPE_UPLOAD;
@@ -205,14 +205,14 @@ TextureD3D12Impl :: TextureD3D12Impl(IReferenceCounters*        pRefCounters,
         auto InitContext = pRenderDeviceD3D12->AllocateCommandContext();
 	    // copy data to the intermediate upload heap and then schedule a copy from the upload heap to the default texture
         VERIFY_EXPR(CheckState(RESOURCE_STATE_COPY_DEST));
-        std::vector<D3D12_SUBRESOURCE_DATA, STDAllocatorRawMem<D3D12_SUBRESOURCE_DATA> > D3D12SubResData(InitData.NumSubresources, D3D12_SUBRESOURCE_DATA(), STD_ALLOCATOR_RAW_MEM(D3D12_SUBRESOURCE_DATA, GetRawAllocator(), "Allocator for vector<D3D12_SUBRESOURCE_DATA>") );
+        std::vector<D3D12_SUBRESOURCE_DATA, STDAllocatorRawMem<D3D12_SUBRESOURCE_DATA> > D3D12SubResData(pInitData->NumSubresources, D3D12_SUBRESOURCE_DATA(), STD_ALLOCATOR_RAW_MEM(D3D12_SUBRESOURCE_DATA, GetRawAllocator(), "Allocator for vector<D3D12_SUBRESOURCE_DATA>") );
         for(size_t subres=0; subres < D3D12SubResData.size(); ++subres)
         {
-            D3D12SubResData[subres].pData = InitData.pSubResources[subres].pData;
-            D3D12SubResData[subres].RowPitch = InitData.pSubResources[subres].Stride;
-            D3D12SubResData[subres].SlicePitch = InitData.pSubResources[subres].DepthStride;
+            D3D12SubResData[subres].pData      = pInitData->pSubResources[subres].pData;
+            D3D12SubResData[subres].RowPitch   = pInitData->pSubResources[subres].Stride;
+            D3D12SubResData[subres].SlicePitch = pInitData->pSubResources[subres].DepthStride;
         }
-	    auto UploadedSize = UpdateSubresources(InitContext->GetCommandList(), m_pd3d12Resource, UploadBuffer, 0, 0, InitData.NumSubresources, D3D12SubResData.data());
+	    auto UploadedSize = UpdateSubresources(InitContext->GetCommandList(), m_pd3d12Resource, UploadBuffer, 0, 0, pInitData->NumSubresources, D3D12SubResData.data());
         VERIFY(UploadedSize == uploadBufferSize, "Incorrect uploaded data size (", UploadedSize, "). ", uploadBufferSize, " is expected");
 
         // Command list fence should only be signaled when submitting cmd list

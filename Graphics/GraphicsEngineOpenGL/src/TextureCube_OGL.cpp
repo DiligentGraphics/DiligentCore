@@ -33,14 +33,14 @@
 namespace Diligent
 {
 
-TextureCube_OGL::TextureCube_OGL( IReferenceCounters *pRefCounters, 
-                                  FixedBlockMemoryAllocator& TexViewObjAllocator,
-                                  class RenderDeviceGLImpl *pDeviceGL, 
-                                  class DeviceContextGLImpl *pDeviceContext, 
-                                  const TextureDesc& TexDesc, 
-                                  const TextureData &InitData /*= TextureData()*/,
-							      bool bIsDeviceInternal /*= false*/) : 
-    TextureBaseGL(pRefCounters, TexViewObjAllocator, pDeviceGL, TexDesc, GL_TEXTURE_CUBE_MAP, InitData, bIsDeviceInternal)
+TextureCube_OGL::TextureCube_OGL( IReferenceCounters*           pRefCounters, 
+                                  FixedBlockMemoryAllocator&    TexViewObjAllocator,
+                                  class RenderDeviceGLImpl*     pDeviceGL, 
+                                  class DeviceContextGLImpl*    pDeviceContext, 
+                                  const TextureDesc&            TexDesc, 
+                                  const TextureData*            pInitData         /*= nullptr*/,
+							      bool                          bIsDeviceInternal /*= false*/) : 
+    TextureBaseGL(pRefCounters, TexViewObjAllocator, pDeviceGL, TexDesc, GL_TEXTURE_CUBE_MAP, pInitData, bIsDeviceInternal)
 {
     VERIFY(m_Desc.SampleCount == 1, "Multisampled cubemap textures are not supported");
     
@@ -62,10 +62,10 @@ TextureCube_OGL::TextureCube_OGL( IReferenceCounters *pRefCounters,
     //}
     SetDefaultGLParameters();
 
-    if( InitData.pSubResources )
+    if (pInitData != nullptr && pInitData->pSubResources != nullptr)
     {
         const auto ExpectedSubresources = m_Desc.MipLevels*6;
-        if( m_Desc.MipLevels*6 == InitData.NumSubresources )
+        if( m_Desc.MipLevels*6 == pInitData->NumSubresources )
         {
             for(Uint32 Face = 0; Face < 6; ++Face)
             {
@@ -77,13 +77,13 @@ TextureCube_OGL::TextureCube_OGL( IReferenceCounters *pRefCounters,
                     // we will get into TextureBaseGL::UpdateData(), because instance of TextureCube_OGL
                     // is not fully constructed yet.
                     // To call the required function, we need to explicitly specify the class: 
-                    TextureCube_OGL::UpdateData( ContextState, Mip, Face, DstBox, InitData.pSubResources[Face*m_Desc.MipLevels + Mip] );
+                    TextureCube_OGL::UpdateData( ContextState, Mip, Face, DstBox, pInitData->pSubResources[Face*m_Desc.MipLevels + Mip] );
                 }
             }
         }
         else
         {
-            UNEXPECTED("Incorrect number of subresources. ", InitData.NumSubresources, " while ", ExpectedSubresources," is expected" ); (void)ExpectedSubresources;
+            UNEXPECTED("Incorrect number of subresources. ", pInitData->NumSubresources, " while ", ExpectedSubresources," is expected" ); (void)ExpectedSubresources;
         }
     }
 
@@ -117,7 +117,11 @@ static const GLenum CubeMapFaces[6] =
     GL_TEXTURE_CUBE_MAP_NEGATIVE_Z
 };
 
-void TextureCube_OGL::UpdateData( GLContextState &ContextState, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData )
+void TextureCube_OGL::UpdateData( GLContextState&           ContextState,
+                                  Uint32                    MipLevel,
+                                  Uint32                    Slice,
+                                  const Box&                DstBox,
+                                  const TextureSubResData&  SubresData )
 {
     TextureBaseGL::UpdateData(ContextState, MipLevel, Slice, DstBox, SubresData);
 

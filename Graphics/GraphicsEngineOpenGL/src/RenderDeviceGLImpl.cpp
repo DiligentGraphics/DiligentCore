@@ -102,13 +102,13 @@ RenderDeviceGLImpl :: ~RenderDeviceGLImpl()
 
 IMPLEMENT_QUERY_INTERFACE( RenderDeviceGLImpl, IID_RenderDeviceGL, TRenderDeviceBase )
 
-void RenderDeviceGLImpl :: CreateBuffer(const BufferDesc& BuffDesc, const BufferData& BuffData, IBuffer **ppBuffer, bool bIsDeviceInternal)
+void RenderDeviceGLImpl :: CreateBuffer(const BufferDesc& BuffDesc, const BufferData* pBuffData, IBuffer **ppBuffer, bool bIsDeviceInternal)
 {
     CreateDeviceObject( "buffer", BuffDesc, ppBuffer, 
         [&]()
         {
             BufferGLImpl *pBufferOGL( NEW_RC_OBJ(m_BufObjAllocator, "BufferGLImpl instance", BufferGLImpl)
-                                                (m_BuffViewObjAllocator, this, BuffDesc, BuffData, bIsDeviceInternal ) );
+                                                (m_BuffViewObjAllocator, this, BuffDesc, pBuffData, bIsDeviceInternal ) );
             pBufferOGL->QueryInterface( IID_Buffer, reinterpret_cast<IObject**>(ppBuffer) );
             pBufferOGL->CreateDefaultViews();
             OnCreateDeviceObject( pBufferOGL );
@@ -116,7 +116,7 @@ void RenderDeviceGLImpl :: CreateBuffer(const BufferDesc& BuffDesc, const Buffer
     );
 }
 
-void RenderDeviceGLImpl :: CreateBuffer(const BufferDesc& BuffDesc, const BufferData& BuffData, IBuffer **ppBuffer)
+void RenderDeviceGLImpl :: CreateBuffer(const BufferDesc& BuffDesc, const BufferData* BuffData, IBuffer **ppBuffer)
 {
 	CreateBuffer(BuffDesc, BuffData, ppBuffer, false);
 }
@@ -155,7 +155,7 @@ void RenderDeviceGLImpl :: CreateShader(const ShaderCreationAttribs& ShaderCreat
 	CreateShader(ShaderCreationAttribs, ppShader, false);
 }
 
-void RenderDeviceGLImpl :: CreateTexture(const TextureDesc& TexDesc, const TextureData& Data, ITexture **ppTexture, bool bIsDeviceInternal)
+void RenderDeviceGLImpl :: CreateTexture(const TextureDesc& TexDesc, const TextureData* pData, ITexture **ppTexture, bool bIsDeviceInternal)
 {
     CreateDeviceObject( "texture", TexDesc, ppTexture, 
         [&]()
@@ -174,37 +174,37 @@ void RenderDeviceGLImpl :: CreateTexture(const TextureDesc& TexDesc, const Textu
             {
                 case RESOURCE_DIM_TEX_1D:
                     pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture1D_OGL instance", Texture1D_OGL)
-                                            (m_TexViewObjAllocator, this, pDeviceContext, TexDesc, Data, bIsDeviceInternal);
+                                            (m_TexViewObjAllocator, this, pDeviceContext, TexDesc, pData, bIsDeviceInternal);
                     break;
         
                 case RESOURCE_DIM_TEX_1D_ARRAY:
                     pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture1DArray_OGL instance", Texture1DArray_OGL)
-                                            (m_TexViewObjAllocator, this, pDeviceContext, TexDesc, Data, bIsDeviceInternal);
+                                            (m_TexViewObjAllocator, this, pDeviceContext, TexDesc, pData, bIsDeviceInternal);
                     break;
 
                 case RESOURCE_DIM_TEX_2D:
                     pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture2D_OGL instance", Texture2D_OGL)
-                                            (m_TexViewObjAllocator, this, pDeviceContext, TexDesc, Data, bIsDeviceInternal);
+                                            (m_TexViewObjAllocator, this, pDeviceContext, TexDesc, pData, bIsDeviceInternal);
                     break;
         
                 case RESOURCE_DIM_TEX_2D_ARRAY:
                     pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture2DArray_OGL instance", Texture2DArray_OGL)
-                                            (m_TexViewObjAllocator, this, pDeviceContext, TexDesc, Data, bIsDeviceInternal);
+                                            (m_TexViewObjAllocator, this, pDeviceContext, TexDesc, pData, bIsDeviceInternal);
                     break;
 
                 case RESOURCE_DIM_TEX_3D:
                     pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture3D_OGL instance", Texture3D_OGL)
-                                            (m_TexViewObjAllocator, this, pDeviceContext, TexDesc, Data, bIsDeviceInternal);
+                                            (m_TexViewObjAllocator, this, pDeviceContext, TexDesc, pData, bIsDeviceInternal);
                     break;
 
                 case RESOURCE_DIM_TEX_CUBE:
                     pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "TextureCube_OGL instance", TextureCube_OGL)
-                                            (m_TexViewObjAllocator, this, pDeviceContext, TexDesc, Data, bIsDeviceInternal);
+                                            (m_TexViewObjAllocator, this, pDeviceContext, TexDesc, pData, bIsDeviceInternal);
                     break;
 
                 case RESOURCE_DIM_TEX_CUBE_ARRAY:
                     pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "TextureCubeArray_OGL instance", TextureCubeArray_OGL)
-                                            (m_TexViewObjAllocator, this, pDeviceContext, TexDesc, Data, bIsDeviceInternal);
+                                            (m_TexViewObjAllocator, this, pDeviceContext, TexDesc, pData, bIsDeviceInternal);
                     break;
 
                 default: LOG_ERROR_AND_THROW( "Unknown texture type. (Did you forget to initialize the Type member of TextureDesc structure?)" );
@@ -217,7 +217,7 @@ void RenderDeviceGLImpl :: CreateTexture(const TextureDesc& TexDesc, const Textu
     );
 }
 
-void RenderDeviceGLImpl::CreateTexture(const TextureDesc& TexDesc, const TextureData& Data, ITexture **ppTexture)
+void RenderDeviceGLImpl::CreateTexture(const TextureDesc& TexDesc, const TextureData* Data, ITexture **ppTexture)
 {
 	CreateTexture(TexDesc, Data, ppTexture, false);
 }

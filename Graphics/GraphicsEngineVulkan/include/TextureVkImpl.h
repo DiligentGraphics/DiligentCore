@@ -50,7 +50,7 @@ public:
                   FixedBlockMemoryAllocator& TexViewObjAllocator,
                   RenderDeviceVkImpl*        pDeviceVk, 
                   const TextureDesc&         TexDesc, 
-                  const TextureData&         InitData = TextureData());
+                  const TextureData*         pInitData = nullptr);
     
     // Attaches to an existing Vk resource
     TextureVkImpl(IReferenceCounters*         pRefCounters,
