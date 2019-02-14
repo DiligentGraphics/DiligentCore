@@ -94,7 +94,7 @@ void main()
 
     vec4 Src1 = vec4(0.0, 0.0, 0.0, 0.0);
     float fSrcMipLevel = 0.0; // SrcMip is the view of the source mip level
-    if( IsValidThread )
+    if (IsValidThread)
     {
         // One bilinear sample is insufficient when scaling down by more than 2x.
         // You will slightly undersample in the case where the source dimension
@@ -103,7 +103,7 @@ void main()
         // will force this shader to be slower and more complicated as it will
         // have to take more source texture samples.
 #if NON_POWER_OF_TWO == 0
-        vec2 UV = TexelSize * (vec2(GlobalInd.xy) + 0.5);
+        vec2 UV = TexelSize * (vec2(GlobalInd.xy) + vec2(0.5, 0.5));
         Src1 = textureLod(SrcMip, vec3(UV, ArraySlice), fSrcMipLevel);
 #elif NON_POWER_OF_TWO == 1
         // > 2:1 in X dimension
@@ -141,7 +141,7 @@ void main()
     if (NumMipLevels == 1)
         return;
 
-    if( IsValidThread )
+    if (IsValidThread)
     {
         // Without lane swizzle operations, the only way to share data with other
         // threads is through LDS.
@@ -153,7 +153,7 @@ void main()
     // write instructions.)
 	GroupMemoryBarrierWithGroupSync();
 
-    if( IsValidThread )
+    if (IsValidThread)
     {
         // With low three bits for X and high three bits for Y, this bit mask
         // (binary: 001001) checks that X and Y are even.
