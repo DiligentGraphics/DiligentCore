@@ -176,23 +176,20 @@ set(PRIVATE_DEPENDENCIES
     SPIRV-Tools-opt
 )
 
-if(PLATFORM_ANDROID)
-    # Wrong vulkan library makes incompitible linker error.
-    if(ANDROID_PLATFORM_LEVEL)
-        # if you want to use specific target sdk version, set this variable in build.gradle or .mk file.
-        set(VULKAN_LIB_PATH "${ANDROID_NDK}/platforms/android-${ANDROID_PLATFORM_LEVEL}/arch-arm64/usr/lib")
-    else()
-        # Minimum requirement of android sdk version is 24 ( android 7.0 )
-        set(VULKAN_LIB_PATH "${ANDROID_NDK}/platforms/android-24/arch-arm64/usr/lib")
-    endif()
-endif()
+# Minimum requirement of android sdk version to support vulkan is 24 ( android 7.0 )
+# Wrong vulkan library may makes incompitible linker error. ( Escpecially, wrong ABI )
+# Basically CMake doesn't support compileSdkVersion and targetSdkVersion in android.
+# if you want to use specific sdk version, set ANDROID_PLATFORM same as targetSDKVersion in your android project.
+# e.g. -DANDROID_PLATFORM=android-28
 
 if(PLATFORM_WIN32)
     find_library(Vulkan_LIBRARY NAMES vulkan-1 vulkan PATHS "../../External/vulkan/libs")
 elseif(PLATFORM_MACOS)
     find_library(Vulkan_LIBRARY NAMES MoltenVK PATHS "../../External/vulkan/libs/macOS")
+elseif(PLATFORM_LINUX)
+    find_library(Vulkan_LIBRARY NAMES vulkan HINTS "$ENV{VULKAN_SDK}/lib" "../../External/vulkan/libs/linux")
 else()
-    find_library(Vulkan_LIBRARY NAMES vulkan PATHS "${VULKAN_LIB_PATH}")
+    find_library(Vulkan_LIBRARY NAMES vulkan HINTS "../../External/vulkan/libs/android/${ANDROID_PLATFORM}")
 endif()
 list(APPEND PRIVATE_DEPENDENCIES ${Vulkan_LIBRARY})
 
