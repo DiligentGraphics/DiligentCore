@@ -22,6 +22,7 @@
  */
 
 #include "pch.h"
+#include <utility>
 
 #include "GLContextAndroid.h"
 #include "EngineGLAttribs.h"
@@ -131,23 +132,26 @@ namespace Diligent
 
     bool GLContext::InitEGLContext()
     {
-        major_version_ = 3;
-        minor_version_ = 1;
-
-        const EGLint context_attribs[] = 
-        { 
-            EGL_CONTEXT_CLIENT_VERSION, major_version_,
-            EGL_CONTEXT_MINOR_VERSION_KHR, minor_version_,
-            EGL_NONE 
-        };
-
-        LOG_INFO_MESSAGE( "contextAttribs: ", context_attribs[0], ' ', context_attribs[1], '\n' );
-        LOG_INFO_MESSAGE( "contextAttribs: ", context_attribs[2], ' ', context_attribs[3], '\n' );
-
-        context_ = eglCreateContext( display_, config_, NULL, context_attribs );
-        if( context_ == EGL_NO_CONTEXT )
+        std::pair<int,int> es_versions[] = {{3,2}, {3,1}, {3,0}};
+        for(size_t i=0; i < _countof(es_versions) && context_ == EGL_NO_CONTEXT; ++i)
         {
-            LOG_ERROR_AND_THROW( "Failed to create EGLContext" );
+            const auto& version = es_versions[i];
+            major_version_ = version.first;
+            minor_version_ = version.second;
+
+            const EGLint context_attribs[] = 
+            { 
+                EGL_CONTEXT_CLIENT_VERSION,    major_version_,
+                EGL_CONTEXT_MINOR_VERSION_KHR, minor_version_,
+                EGL_NONE 
+            };
+
+            context_ = eglCreateContext( display_, config_, NULL, context_attribs );
+        }
+
+        if (context_ == EGL_NO_CONTEXT)
+        {
+            LOG_ERROR_AND_THROW("Failed to create EGLContext");
         }
 
         if( eglMakeCurrent( display_, surface_, surface_, context_ ) == EGL_FALSE )
@@ -155,6 +159,7 @@ namespace Diligent
             LOG_ERROR_AND_THROW( "Unable to eglMakeCurrent" );
         }
 
+        LOG_INFO_MESSAGE("Created OpenGLES Context ", major_version_, '.', minor_version_);
         context_valid_ = true;
         return true;
     }
@@ -237,41 +242,6 @@ namespace Diligent
         Init( NativeWindow );
 
         FillDeviceCaps(DeviceCaps);
-#if 0
-        // Creates table of supported extensions strings
-        extensions.clear();
-        string tmp;
-        sint32 begin, end;
-        tmp = string( (char*)glGetString( GL_EXTENSIONS ) );
-
-        begin = 0;
-        end = tmp.find( ' ', 0 );
-
-        DEBUG_PRINT( _L( "Checking Extensions" ) );
-
-        while( end != string::npos )
-        {
-            DEBUG_PRINT( (_L( "extension %s" )), tmp.substr( begin, end - begin ).c_str() );
-            extensions.insert( extensions.end(), tmp.substr( begin, end - begin ) );
-            begin = end + 1;
-            end = tmp.find( ' ', begin );
-        }
-
-        if( supportExtension( "GL_INTEL_tessellation" ) )
-        {
-            glPatchParameteri = (PFNGLPATCHPARAMETERIPROC)eglGetProcAddress( "glPatchParameteri" );
-            DEBUG_PRINT( _L( "%s = %p" ), "glPatchParameteri", (void*)glPatchParameteri );
-            glPatchParameterfv = (PFNGLPATCHPARAMETERFVPROC)eglGetProcAddress( "glPatchParameterfv" );
-            DEBUG_PRINT( _L( "%s = %p" ), "glPatchParameterfv", (void*)glPatchParameterfv );
-        }
-        //if(supportExtension("GL_INTEL_compute_shader"))
-        {
-            glDispatchCompute = (PFNGLDISPATCHCOMPUTEPROC)eglGetProcAddress( "glDispatchCompute" );
-            DEBUG_PRINT( _L( "%s = %p" ), "glDispatchCompute", (void*)glDispatchCompute );
-            glBindImageTexture = (PFNGLBINDIMAGETEXTUREPROC)eglGetProcAddress( "glBindImageTexture" );
-            DEBUG_PRINT( _L( "%s = %p" ), "glBindImageTexture", (void*)glBindImageTexture );
-        }
-#endif
     }
 
     GLContext::~GLContext()
@@ -417,25 +387,34 @@ namespace Diligent
 
     void GLContext::FillDeviceCaps( DeviceCaps &DeviceCaps )
     {
+        const auto* Extensions = (char*)glGetString(GL_EXTENSIONS);
+        LOG_INFO_MESSAGE( "Supported extensions: \n", Extensions);
+
         DeviceCaps.DevType = DeviceType::OpenGLES;
         DeviceCaps.MajorVersion = major_version_;
         DeviceCaps.MinorVersion = minor_version_;
         bool IsGLES31OrAbove = (major_version_ >= 4 || (major_version_ == 3 && minor_version_ >= 1) );
-        DeviceCaps.bSeparableProgramSupported      = IsGLES31OrAbove;
-        DeviceCaps.bIndirectRenderingSupported     = IsGLES31OrAbove;
+        bool IsGLES32OrAbove = (major_version_ >= 4 || (major_version_ == 3 && minor_version_ >= 2) );
+        DeviceCaps.bSeparableProgramSupported   = IsGLES31OrAbove || strstr(Extensions, "separate_shader_objects");
+        DeviceCaps.bIndirectRenderingSupported  = IsGLES31OrAbove || strstr(Extensions, "draw_indirect");
+
+        DeviceCaps.bComputeShadersSupported  = IsGLES31OrAbove || strstr(Extensions, "compute_shader");
+        DeviceCaps.bGeometryShadersSupported = IsGLES32OrAbove || strstr(Extensions, "geometry_shader");
+        DeviceCaps.bTessellationSupported    = IsGLES32OrAbove || strstr(Extensions, "tessellation_shader");
 
         auto &SamCaps = DeviceCaps.SamCaps;
-        SamCaps.bBorderSamplingModeSupported   = GL_TEXTURE_BORDER_COLOR       && IsGLES31OrAbove;
-        SamCaps.bAnisotropicFilteringSupported = GL_TEXTURE_MAX_ANISOTROPY_EXT && IsGLES31OrAbove;
+        SamCaps.bBorderSamplingModeSupported   = GL_TEXTURE_BORDER_COLOR       && (IsGLES32OrAbove || strstr(Extensions, "texture_border_clamp"));
+        SamCaps.bAnisotropicFilteringSupported = GL_TEXTURE_MAX_ANISOTROPY_EXT && (IsGLES31OrAbove || strstr(Extensions, "texture_filter_anisotropic"));
         SamCaps.bLODBiasSupported              = GL_TEXTURE_LOD_BIAS           && IsGLES31OrAbove;
 
         auto &TexCaps = DeviceCaps.TexCaps;
-        TexCaps.bTexture1DSupported            = False;     // Not supported in GLES 3.1
-        TexCaps.bTexture1DArraySupported       = False;     // Not supported in GLES 3.1
-        TexCaps.bTexture2DMSSupported          = IsGLES31OrAbove;
-        TexCaps.bTexture2DMSArraySupported     = False;     // Not supported in GLES 3.1
-        TexCaps.bTextureViewSupported          = False;     // Not supported in GLES 3.1
-        TexCaps.bCubemapArraysSupported        = False;     // Not supported in GLES 3.1
+        TexCaps.bTexture1DSupported            = False;     // Not supported in GLES 3.2
+        TexCaps.bTexture1DArraySupported       = False;     // Not supported in GLES 3.2
+        TexCaps.bTexture2DMSSupported          = IsGLES31OrAbove || strstr(Extensions, "texture_storage_multisample");
+        TexCaps.bTexture2DMSArraySupported     = IsGLES32OrAbove || strstr(Extensions, "texture_storage_multisample_2d_array");
+        TexCaps.bTextureViewSupported          = IsGLES31OrAbove || strstr(Extensions, "texture_view");
+        TexCaps.bCubemapArraysSupported        = IsGLES32OrAbove || strstr(Extensions, "texture_cube_map_array");
+
         DeviceCaps.bMultithreadedResourceCreationSupported = False;
     }
 }

@@ -37,7 +37,9 @@
 namespace Diligent
 {
 
-ShaderVkImpl::ShaderVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl* pRenderDeviceVk, const ShaderCreationAttribs& CreationAttribs) : 
+ShaderVkImpl::ShaderVkImpl(IReferenceCounters*          pRefCounters,
+                           RenderDeviceVkImpl*          pRenderDeviceVk,
+                           const ShaderCreationAttribs& CreationAttribs) : 
     TShaderBase       (pRefCounters, pRenderDeviceVk, CreationAttribs.Desc),
     m_StaticResLayout (*this, pRenderDeviceVk->GetLogicalDevice()),
     m_StaticResCache  (ShaderResourceCacheVk::DbgCacheContentType::StaticShaderResources),
@@ -57,7 +59,7 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl*
         }
         else
         {
-            auto GLSLSource = BuildGLSLSourceString(CreationAttribs, TargetGLSLCompiler::glslang, "#define TARGET_API_VULKAN 1\n");
+            auto GLSLSource = BuildGLSLSourceString(CreationAttribs, pRenderDeviceVk->GetDeviceCaps(), TargetGLSLCompiler::glslang, "#define TARGET_API_VULKAN 1\n");
             m_SPIRV = GLSLtoSPIRV(m_Desc.ShaderType, GLSLSource.c_str(), static_cast<int>(GLSLSource.length()), CreationAttribs.ppCompilerOutput);
         }
     

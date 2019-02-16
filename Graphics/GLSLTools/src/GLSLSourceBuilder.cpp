@@ -22,6 +22,7 @@
  */
 
 #include <cstring>
+#include <sstream>
 
 #include "GLSLSourceBuilder.h"
 #include "DebugUtilities.h"
@@ -32,7 +33,10 @@
 namespace Diligent
 {
 
-String BuildGLSLSourceString(const ShaderCreationAttribs& CreationAttribs, TargetGLSLCompiler TargetCompiler, const char* ExtraDefinitions)
+String BuildGLSLSourceString(const ShaderCreationAttribs& CreationAttribs,
+                             const DeviceCaps&            deviceCaps,
+                             TargetGLSLCompiler           TargetCompiler,
+                             const char*                  ExtraDefinitions)
 {
     String GLSLSource;
 
@@ -62,48 +66,17 @@ String BuildGLSLSourceString(const ShaderCreationAttribs& CreationAttribs, Targe
         "#define DESKTOP_GL 1\n"
         "#define PLATFORM_MACOS 1\n"
     );
-#elif PLATFORM_IOS
-    GLSLSource.append(
-        "#version 300 es\n"
-        "#extension GL_EXT_separate_shader_objects : enable\n"
-        "#ifndef GL_ES\n"
-        "#  define GL_ES 1\n"
-        "#endif\n"
 
-        "#define PLATFORM_IOS 1\n"
+#elif PLATFORM_ANDROID || PLATFORM_IOS
+    std::stringstream versionss;
+    versionss << "#version " << deviceCaps.MajorVersion << deviceCaps.MinorVersion << "0 es\n";
+    GLSLSource.append(versionss.str());
 
-        "precision highp float;\n"
-        "precision highp int;\n"
-        //"precision highp uint;\n"
+    if (deviceCaps.bSeparableProgramSupported)
+        GLSLSource.append("#extension GL_EXT_separate_shader_objects : enable\n");
 
-        "precision highp sampler2D;\n"
-        "precision highp sampler3D;\n"
-        "precision highp samplerCube;\n"
-        "precision highp samplerCubeShadow;\n"
-        "precision highp sampler2DShadow;\n"
-        "precision highp sampler2DArray;\n"
-        "precision highp sampler2DArrayShadow;\n"
-
-        "precision highp isampler2D;\n"
-        "precision highp isampler3D;\n"
-        "precision highp isamplerCube;\n"
-        "precision highp isampler2DArray;\n"
-
-        "precision highp usampler2D;\n"
-        "precision highp usampler3D;\n"
-        "precision highp usamplerCube;\n"
-        "precision highp usampler2DArray;\n"
-    );
-
-    // Built-in variable 'gl_Position' must be redeclared before use, with separate shader objects.
-    if (ShaderType == SHADER_TYPE_VERTEX)
-        GLSLSource.append("out vec4 gl_Position;\n");
-
-#elif PLATFORM_ANDROID
-    GLSLSource.append(
-        "#version 310 es\n"
-        "#extension GL_EXT_texture_cube_map_array : enable\n"
-    );
+    if (deviceCaps.TexCaps.bCubemapArraysSupported)
+        GLSLSource.append("#extension GL_EXT_texture_cube_map_array : enable\n");
 
     if (ShaderType == SHADER_TYPE_GEOMETRY)
         GLSLSource.append("#extension GL_EXT_geometry_shader : enable\n");
@@ -115,9 +88,17 @@ String BuildGLSLSourceString(const ShaderCreationAttribs& CreationAttribs, Targe
         "#ifndef GL_ES\n"
         "#  define GL_ES 1\n"
         "#endif\n"
+    );
 
-        "#define PLATFORM_ANDROID 1\n"
+#if PLATFORM_ANDROID
+    GLSLSource.append("#define PLATFORM_ANDROID 1\n");
+#elif PLATFORM_IOS
+    GLSLSource.append("#define PLATFORM_IOS 1\n");
+#else
+#   error "Unexpected platform"
+#endif
 
+    GLSLSource.append(
         "precision highp float;\n"
         "precision highp int;\n"
         //"precision highp uint;\n"  // This line causes shader compilation error on NVidia!
@@ -125,46 +106,70 @@ String BuildGLSLSourceString(const ShaderCreationAttribs& CreationAttribs, Targe
         "precision highp sampler2D;\n"
         "precision highp sampler3D;\n"
         "precision highp samplerCube;\n"
-        "precision highp samplerCubeArray;\n"
         "precision highp samplerCubeShadow;\n"
-        "precision highp samplerCubeArrayShadow;\n"
+
         "precision highp sampler2DShadow;\n"
         "precision highp sampler2DArray;\n"
         "precision highp sampler2DArrayShadow;\n"
-        "precision highp sampler2DMS;\n"       // ES3.1
 
         "precision highp isampler2D;\n"
         "precision highp isampler3D;\n"
         "precision highp isamplerCube;\n"
-        "precision highp isamplerCubeArray;\n"
         "precision highp isampler2DArray;\n"
-        "precision highp isampler2DMS;\n"      // ES3.1
 
         "precision highp usampler2D;\n"
         "precision highp usampler3D;\n"
         "precision highp usamplerCube;\n"
-        "precision highp usamplerCubeArray;\n"
         "precision highp usampler2DArray;\n"
-        "precision highp usampler2DMS;\n"      // ES3.1
-
-        "precision highp image2D;\n"
-        "precision highp image3D;\n"
-        "precision highp imageCube;\n"
-        "precision highp image2DArray;\n"
-
-        "precision highp iimage2D;\n"
-        "precision highp iimage3D;\n"
-        "precision highp iimageCube;\n"
-        "precision highp iimage2DArray;\n"
-
-        "precision highp uimage2D;\n"
-        "precision highp uimage3D;\n"
-        "precision highp uimageCube;\n"
-        "precision highp uimage2DArray;\n"
     );
+
+    if (deviceCaps.TexCaps.bCubemapArraysSupported)
+    {
+        GLSLSource.append(
+            "precision highp samplerCubeArray;\n"
+            "precision highp samplerCubeArrayShadow;\n"
+            "precision highp isamplerCubeArray;\n"
+            "precision highp usamplerCubeArray;\n"
+        );
+    }
+
+    if (deviceCaps.TexCaps.bTexture2DMSSupported)
+    {
+        GLSLSource.append(
+            "precision highp sampler2DMS;\n"
+            "precision highp isampler2DMS;\n"
+            "precision highp usampler2DMS;\n"
+        );
+    }
+
+    if (deviceCaps.bComputeShadersSupported)
+    {
+        GLSLSource.append(
+            "precision highp image2D;\n"
+            "precision highp image3D;\n"
+            "precision highp imageCube;\n"
+            "precision highp image2DArray;\n"
+
+            "precision highp iimage2D;\n"
+            "precision highp iimage3D;\n"
+            "precision highp iimageCube;\n"
+            "precision highp iimage2DArray;\n"
+
+            "precision highp uimage2D;\n"
+            "precision highp uimage3D;\n"
+            "precision highp uimageCube;\n"
+            "precision highp uimage2DArray;\n"
+        );
+    }
+
+    // Built-in variable 'gl_Position' must be redeclared before use, with separate shader objects.
+    if (deviceCaps.bSeparableProgramSupported && ShaderType == SHADER_TYPE_VERTEX)
+        GLSLSource.append("out vec4 gl_Position;\n");
+
 #elif
 #   error "Undefined platform"
 #endif
+
     // It would be much more convenient to use row_major matrices.
     // But unfortunatelly on NVIDIA, the following directive 
     // layout(std140, row_major) uniform;
@@ -175,7 +180,7 @@ String BuildGLSLSourceString(const ShaderCreationAttribs& CreationAttribs, Targe
         "layout(std140) uniform;\n"
     );
 
-    if(ShaderType == SHADER_TYPE_VERTEX && TargetCompiler == TargetGLSLCompiler::glslang)
+    if (ShaderType == SHADER_TYPE_VERTEX && TargetCompiler == TargetGLSLCompiler::glslang)
     {
         // https://github.com/KhronosGroup/GLSL/blob/master/extensions/khr/GL_KHR_vulkan_glsl.txt
         GLSLSource.append("#define gl_VertexID gl_VertexIndex\n"
