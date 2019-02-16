@@ -152,6 +152,34 @@
     DECLARE_GL_FUNCTION( glGetTexLevelParameteriv, PFNGLGETTEXLEVELPARAMETERIVPROC, GLenum target, GLint level, GLenum pname, GLint *params )
 #endif
 
+#ifdef LOAD_GL_TEX_STORAGE_3D_MULTISAMPLE
+    DECLARE_GL_FUNCTION( glTexStorage3DMultisample, PFNGLTEXSTORAGE3DMULTISAMPLEPROC, GLenum target, GLsizei samples, GLenum internalformat, GLsizei width, GLsizei height, GLsizei depth, GLboolean fixedsamplelocations )
+#endif
+
+#ifdef LOAD_GL_TEXTURE_VIEW
+    DECLARE_GL_FUNCTION( glTextureView, PFNGLTEXTUREVIEWPROC, GLuint texture, GLenum target, GLuint origtexture, GLenum internalformat, GLuint minlevel, GLuint numlevels, GLuint minlayer, GLuint numlayers)
+#endif
+
+#ifdef LOAD_GL_DRAW_ELEMENTS_INSTANCED_BASE_VERTEX_BASE_INSTANCE
+    DECLARE_GL_FUNCTION( glDrawElementsInstancedBaseVertexBaseInstance, PFNGLDRAWELEMENTSINSTANCEDBASEVERTEXBASEINSTANCEPROC, GLenum mode, GLsizei count, GLenum type, const void *indices, GLsizei instancecount, GLint basevertex, GLuint baseinstance)
+#endif
+
+#ifdef LOAD_GL_DRAW_ELEMENTS_INSTANCED_BASE_VERTEX
+    DECLARE_GL_FUNCTION( glDrawElementsInstancedBaseVertex, PFNGLDRAWELEMENTSINSTANCEDBASEVERTEXPROC, GLenum mode, GLsizei count, GLenum type, const void *indices, GLsizei instancecount, GLint basevertex)
+#endif
+
+#ifdef LOAD_GL_DRAW_ELEMENTS_INSTANCED_BASE_INSTANCE
+    DECLARE_GL_FUNCTION( glDrawElementsInstancedBaseInstance, PFNGLDRAWELEMENTSINSTANCEDBASEINSTANCEPROC, GLenum mode, GLsizei count, GLenum type, const void *indices, GLsizei instancecount, GLuint baseinstance)
+#endif
+
+#ifdef LOAD_GL_DRAW_ARRAYS_INSTANCED_BASE_INSTANCE
+    DECLARE_GL_FUNCTION( glDrawArraysInstancedBaseInstance, PFNGLDRAWARRAYSINSTANCEDBASEINSTANCEPROC, GLenum mode, GLint first, GLsizei count, GLsizei instancecount, GLuint baseinstance)
+#endif
+
+#ifdef LOAD_GL_DRAW_ELEMENTS_BASE_VERTEX
+    DECLARE_GL_FUNCTION( glDrawElementsBaseVertex, PFNGLDRAWELEMENTSBASEVERTEXPROC, GLenum mode, GLsizei count, GLenum type, const void *indices, GLint basevertex)
+#endif
+
 
 void LoadGLFunctions()
 {
@@ -279,5 +307,33 @@ Func = (FuncType)eglGetProcAddress( #Func );\
 
 #ifdef LOAD_GET_TEX_LEVEL_PARAMETER_IV
     LOAD_GL_FUNCTION(glGetTexLevelParameteriv, PFNGLGETTEXLEVELPARAMETERIVPROC)
+#endif
+
+#ifdef LOAD_GL_TEX_STORAGE_3D_MULTISAMPLE
+    LOAD_GL_FUNCTION(glTexStorage3DMultisample, PFNGLTEXSTORAGE3DMULTISAMPLEPROC)
+#endif
+
+#ifdef LOAD_GL_TEXTURE_VIEW
+    LOAD_GL_FUNCTION( glTextureView, PFNGLTEXTUREVIEWPROC)
+#endif
+
+#ifdef LOAD_GL_DRAW_ELEMENTS_INSTANCED_BASE_VERTEX_BASE_INSTANCE
+    LOAD_GL_FUNCTION( glDrawElementsInstancedBaseVertexBaseInstance, PFNGLDRAWELEMENTSINSTANCEDBASEVERTEXBASEINSTANCEPROC)
+#endif
+
+#ifdef LOAD_GL_DRAW_ELEMENTS_INSTANCED_BASE_VERTEX
+    LOAD_GL_FUNCTION( glDrawElementsInstancedBaseVertex, PFNGLDRAWELEMENTSINSTANCEDBASEVERTEXPROC)
+#endif
+
+#ifdef LOAD_GL_DRAW_ELEMENTS_INSTANCED_BASE_INSTANCE
+    LOAD_GL_FUNCTION( glDrawElementsInstancedBaseInstance, PFNGLDRAWELEMENTSINSTANCEDBASEINSTANCEPROC)
+#endif
+
+#ifdef LOAD_GL_DRAW_ARRAYS_INSTANCED_BASE_INSTANCE
+    LOAD_GL_FUNCTION( glDrawArraysInstancedBaseInstance, PFNGLDRAWARRAYSINSTANCEDBASEINSTANCEPROC)
+#endif
+
+#ifdef LOAD_GL_DRAW_ELEMENTS_BASE_VERTEX
+    LOAD_GL_FUNCTION( glDrawElementsBaseVertex, PFNGLDRAWELEMENTSBASEVERTEXPROC)
 #endif
 }
