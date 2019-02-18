@@ -68,6 +68,8 @@ if(VULKAN_SUPPORTED)
     endif()
 endif()
 
+# Without this, SPIRVUitls.cpp make build error
+# I'm not sure this is correct place. Need feedback.
 if(PLATFORM_ANDROID)
     target_include_directories(GLSLTools
             PRIVATE
