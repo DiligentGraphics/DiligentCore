@@ -176,7 +176,6 @@ set(PRIVATE_DEPENDENCIES
     SPIRV-Tools-opt
 )
 
-# Minimum requirement of android sdk version to support vulkan is 24 ( android 7.0 )
 # Wrong vulkan library may makes incompitible linker error. ( Escpecially, wrong ABI )
 # Basically CMake doesn't support compileSdkVersion and targetSdkVersion in android.
 # if you want to use specific sdk version, set ANDROID_PLATFORM same as targetSDKVersion in your android project.
