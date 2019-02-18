@@ -181,6 +181,7 @@ set(PRIVATE_DEPENDENCIES
 # if you want to use specific sdk version, set ANDROID_PLATFORM same as targetSDKVersion in your android project.
 # e.g. -DANDROID_PLATFORM=android-28
 
+message("${ANDROID_ARCH_ABI}")
 if(PLATFORM_WIN32)
     find_library(Vulkan_LIBRARY NAMES vulkan-1 vulkan PATHS "../../External/vulkan/libs")
 elseif(PLATFORM_MACOS)
@@ -188,10 +189,10 @@ elseif(PLATFORM_MACOS)
 elseif(PLATFORM_LINUX)
     find_library(Vulkan_LIBRARY NAMES vulkan HINTS "$ENV{VULKAN_SDK}/lib" "../../External/vulkan/libs/linux")
 else()
-    find_library(Vulkan_LIBRARY NAMES vulkan HINTS "../../External/vulkan/libs/android/${ANDROID_PLATFORM}")
+    find_library(Vulkan_LIBRARY NAMES vulkan HINTS "../../External/vulkan/libs/android/${ANDROID_ABI}/${ANDROID_PLATFORM}")
 endif()
 list(APPEND PRIVATE_DEPENDENCIES ${Vulkan_LIBRARY})
-
+message("${Vulkan_LIBRARY}")
 set(PUBLIC_DEPENDENCIES 
     GraphicsEngineVkInterface
 )
