@@ -178,7 +178,7 @@ set(PRIVATE_DEPENDENCIES
 
 # Wrong vulkan library may makes incompitible linker error. ( Escpecially, wrong ABI )
 # Basically CMake doesn't support compileSdkVersion and targetSdkVersion in android.
-# if you want to use specific sdk version, set ANDROID_PLATFORM same as targetSDKVersion in your android project.
+# if you want to use specific sdk version, set ANDROID_PLATFORM in your android project manually.
 # e.g. -DANDROID_PLATFORM=android-28
 
 if(PLATFORM_WIN32)
@@ -192,6 +192,7 @@ else()
     find_library(Vulkan_LIBRARY NAMES vulkan HINTS "../../External/vulkan/libs/android/${ANDROID_ABI}/${ANDROID_PLATFORM}")
 endif()
 list(APPEND PRIVATE_DEPENDENCIES ${Vulkan_LIBRARY})
+
 set(PUBLIC_DEPENDENCIES
     GraphicsEngineVkInterface
 )
