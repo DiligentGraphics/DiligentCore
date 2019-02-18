@@ -148,6 +148,8 @@ namespace VulkanUtilities
         VkResult ResetDescriptorPool(VkDescriptorPool           descriptorPool,
                                      VkDescriptorPoolResetFlags flags = 0)const;
 
+        VkPipelineStageFlags GetEnabledGraphicsShaderStages()const { return m_EnabledGraphicsShaderStages; }
+
     private:
         VulkanLogicalDevice(VkPhysicalDevice vkPhysicalDevice, 
                             const VkDeviceCreateInfo &DeviceCI, 
@@ -160,6 +162,7 @@ namespace VulkanUtilities
                                                              const char*                   ObjectType)const;
 
         VkDevice m_VkDevice = VK_NULL_HANDLE;
-        const VkAllocationCallbacks* const m_VkAllocator; 
+        const VkAllocationCallbacks* const m_VkAllocator;
+        VkPipelineStageFlags m_EnabledGraphicsShaderStages = 0;
     };
 }

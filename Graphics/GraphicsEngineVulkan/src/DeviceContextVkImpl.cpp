@@ -61,6 +61,7 @@ namespace Diligent
             bIsDeferred ? std::numeric_limits<decltype(m_NumCommandsToFlush)>::max() : Attribs.NumCommandsToFlushCmdBuffer,
             bIsDeferred
         },
+        m_CommandBuffer { pDeviceVkImpl->GetLogicalDevice().GetEnabledGraphicsShaderStages() },
         m_CmdListAllocator { GetRawAllocator(), sizeof(CommandListVkImpl), 64 },
         // Command pools must be thread safe because command buffers are returned into pools by release queues
         // potentially running in another thread
