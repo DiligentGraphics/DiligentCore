@@ -175,11 +175,11 @@ public:
             if (It->Stride == LayoutElement::AutoStride)
                 It->Stride = m_Strides[BuffSlot];
         }
-        // Set strides for unused slots to 0
-        for (Uint32 slot = 0; slot < m_BufferSlotsUsed; ++slot)
+        // Set strides for all unused slots to 0
+        for (auto& Stride : m_Strides)
         {
-            if (m_Strides[slot] == LayoutElement::AutoStride)
-                m_Strides[slot] = 0;
+            if (Stride == LayoutElement::AutoStride)
+                Stride = 0;
         }
 
         Uint64 DeviceQueuesMask = pDevice->GetCommandQueueMask();
