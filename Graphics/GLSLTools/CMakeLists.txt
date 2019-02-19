@@ -68,16 +68,6 @@ if(VULKAN_SUPPORTED)
     endif()
 endif()
 
-# Without this, SPIRVUitls.cpp make build error
-# I'm not sure this is correct place. Need feedback.
-if(PLATFORM_ANDROID)
-    target_include_directories(GLSLTools
-            PRIVATE
-            ${ANDROID_NDK}/sources/android/native_app_glue
-            ${ANDROID_NDK}/sources/third_party/shaderc/include
-            )
-endif()
-
 set_common_target_properties(GLSLTools)
 
 source_group("src" FILES ${SOURCE})
