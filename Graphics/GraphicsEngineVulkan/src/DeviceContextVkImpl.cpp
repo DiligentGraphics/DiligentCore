@@ -411,7 +411,7 @@ namespace Diligent
             m_CommandBuffer.BindIndexBuffer(m_pIndexBuffer->GetVkBuffer(), m_IndexDataStartOffset + m_pIndexBuffer->GetDynamicOffset(m_ContextId, this), vkIndexType);
         }
 
-        if (!m_State.CommittedVBsUpToDate)
+        if (!m_State.CommittedVBsUpToDate && m_pPipelineState->GetNumBufferSlotsUsed() > 0)
         {
             CommitVkVertexBuffers();
         }
