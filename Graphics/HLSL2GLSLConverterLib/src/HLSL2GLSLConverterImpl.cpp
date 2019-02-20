@@ -2973,7 +2973,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessFragmentShaderArguments(st
                         PrologueSS << "    " << Getter << '(' << FullParamName << ");\n";
                     else
                     {
-                        auto InputVarName = BuildParameterName(MemberStack, '_', m_bUseInOutLocationQualifiers ? "_in_" : "_");
+                        auto InputVarName = BuildParameterName(MemberStack, '_', m_bUseInOutLocationQualifiers ? "_psin_" : "_");
                         DefineInterfaceVar(m_bUseInOutLocationQualifiers ? InLocation++ : -1,
                                            RequiresFlatQualifier(Param.Type) ? "flat in" : "in",
                                            Param.Type, InputVarName, InterfaceVarsSS );
