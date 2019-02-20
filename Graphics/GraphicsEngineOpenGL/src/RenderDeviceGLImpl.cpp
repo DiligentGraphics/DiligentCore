@@ -464,8 +464,8 @@ void RenderDeviceGLImpl::FlagSupportedTexFormats()
     bool bGL43OrAbove = DeviceCaps.DevType == DeviceType::OpenGL &&  
                         (DeviceCaps.MajorVersion >= 5 || (DeviceCaps.MajorVersion == 4 && DeviceCaps.MinorVersion >= 3) );
 
-    const int TestTextureDim = 32;
-    const int MaxTexelSize = 16;
+    constexpr int TestTextureDim = 8;
+    constexpr int MaxTexelSize   = 16;
     std::vector<Uint8> ZeroData(TestTextureDim * TestTextureDim * MaxTexelSize);
     
     // Go through all formats and try to create small 2D texture to check if the format is supported
@@ -493,28 +493,52 @@ void RenderDeviceGLImpl::FlagSupportedTexFormats()
 #endif
 
         // Check that the format is indeed supported
-        if( FmtInfo->Supported )
+        if (FmtInfo->Supported)
         {
             GLObjectWrappers::GLTextureObj TestGLTex( true );
-            // Immediate context is not created yet, so use raw GL functions
+            // Immediate context has not been created yet, so use raw GL functions
             glBindTexture( GL_TEXTURE_2D, TestGLTex );
             CHECK_GL_ERROR( "Failed to bind texture" );
             glTexStorage2D( GL_TEXTURE_2D, 1, GLFmt, TestTextureDim, TestTextureDim );
-            CHECK_GL_ERROR( "Failed to allocate storage for the test texture. Test format: ", FmtInfo->Name);
-
-            // It turned out it is not enough to only allocate texture storage
-            // For some reason glTexStorage2D() may succeed, but upload operation
-            // will later fail. So we need to additionally try to upload some
-            // data to the texture
-            const auto& TransferAttribs = GetNativePixelTransferAttribs( FmtInfo->Format );
-            if( FmtInfo->ComponentType != COMPONENT_TYPE_COMPRESSED )
+            if (glGetError() == GL_NO_ERROR)
             {
-                glTexSubImage2D( GL_TEXTURE_2D, 0,  // mip level
-                    0, 0, TestTextureDim, TestTextureDim,
-                    TransferAttribs.PixelFormat, TransferAttribs.DataType,
-                    ZeroData.data() );
+                // It turned out it is not enough to only allocate texture storage
+                // For some reason glTexStorage2D() may succeed, but upload operation
+                // will later fail. So we need to additionally try to upload some
+                // data to the texture
+                const auto& TransferAttribs = GetNativePixelTransferAttribs(FmtInfo->Format);
+                if (TransferAttribs.IsCompressed)
+                {
+                    const auto& FmtAttribs = GetTextureFormatAttribs(FmtInfo->Format);
+                    static_assert( (TestTextureDim & (TestTextureDim-1)) == 0, "Test texture dim must be power of two!");
+                    auto BlockBytesInRow = (TestTextureDim/int{FmtAttribs.BlockWidth}) * int{FmtAttribs.ComponentSize};
+                    glCompressedTexSubImage2D(GL_TEXTURE_2D, 0,  // mip level
+                        0, 0, TestTextureDim, TestTextureDim,
+                        GLFmt,
+                        (TestTextureDim/int{FmtAttribs.BlockHeight}) * BlockBytesInRow,
+                        ZeroData.data() );
+                }
+                else
+                {
+                    glTexSubImage2D( GL_TEXTURE_2D, 0,  // mip level
+                        0, 0, TestTextureDim, TestTextureDim,
+                        TransferAttribs.PixelFormat, TransferAttribs.DataType,
+                        ZeroData.data() );
+                }
+
+                if (glGetError() != GL_NO_ERROR)
+                {
+                    LOG_WARNING_MESSAGE("Failed to upload data to a test ", TestTextureDim, "x", TestTextureDim, " ", FmtInfo->Name, " texture. "
+                                        "This likely indicates that the format is not supported despite being reported so by the device.");
+                    FmtInfo->Supported = false;
+                }
             }
-            CHECK_GL_ERROR( "Failed to upload data to the test texture. Test format: ", FmtInfo->Name);
+            else
+            {
+                LOG_WARNING_MESSAGE( "Failed to allocate storage for a test ", TestTextureDim, "x", TestTextureDim, " ", FmtInfo->Name, " texture. "
+                                     "This likely indicates that the format is not supported despite being reported so by the device.");
+                FmtInfo->Supported = false;
+            }
             glBindTexture( GL_TEXTURE_2D, 0 );
         }
     }
