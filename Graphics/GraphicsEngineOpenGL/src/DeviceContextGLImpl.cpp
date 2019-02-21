@@ -63,7 +63,7 @@ namespace Diligent
     IMPLEMENT_QUERY_INTERFACE( DeviceContextGLImpl, IID_DeviceContextGL, TDeviceContextBase )
 
 
-    void DeviceContextGLImpl::SetPipelineState(IPipelineState *pPipelineState)
+    void DeviceContextGLImpl::SetPipelineState(IPipelineState* pPipelineState)
     {
         auto* pPipelineStateGLImpl = ValidatedCast<PipelineStateGLImpl>(pPipelineState);
         TDeviceContextBase::SetPipelineState(pPipelineStateGLImpl, 0 /*Dummy*/);
@@ -425,9 +425,9 @@ namespace Diligent
 #define LOG_MISSING_BINDING(VarType, Res, ArrInd)\
                             do{                                      \
                                 if(Res->pResources.size()>1)         \
-                                    LOG_ERROR_MESSAGE( "No ", VarType, " is bound to \"", Res->Name, '[', ArrInd, "]\" variable in shader \"", pShaderGL->GetDesc().Name, "\"" );\
+                                    LOG_ERROR_MESSAGE( "No ", VarType, " is bound to '", Res->Name, '[', ArrInd, "]' variable in shader '", pShaderGL->GetDesc().Name, "'" );\
                                 else                                 \
-                                    LOG_ERROR_MESSAGE( "No ", VarType, " is bound to \"", Res->Name, "\" variable in shader \"", pShaderGL->GetDesc().Name, "\"" );\
+                                    LOG_ERROR_MESSAGE( "No ", VarType, " is bound to '", Res->Name, "' variable in shader '", pShaderGL->GetDesc().Name, "'" );\
                             }while(false)
 
                             LOG_MISSING_BINDING("uniform buffer", it, ArrInd);

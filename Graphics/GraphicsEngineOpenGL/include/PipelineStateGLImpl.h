@@ -42,20 +42,23 @@ class PipelineStateGLImpl final : public PipelineStateBase<IPipelineStateGL, Ren
 public:
     using TPipelineStateBase = PipelineStateBase<IPipelineStateGL, RenderDeviceGLImpl>;
 
-    PipelineStateGLImpl(IReferenceCounters *pRefCounters, RenderDeviceGLImpl *pDeviceGL, const PipelineStateDesc& PipelineDesc, bool IsDeviceInternal = false);
+    PipelineStateGLImpl(IReferenceCounters*      pRefCounters,
+                        RenderDeviceGLImpl*      pDeviceGL,
+                        const PipelineStateDesc& PipelineDesc,
+                        bool                     IsDeviceInternal = false);
     ~PipelineStateGLImpl();
     
     /// Queries the specific interface, see IObject::QueryInterface() for details
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
+    virtual void QueryInterface( const INTERFACE_ID& IID, IObject** ppInterface )override;
 
-    virtual void BindShaderResources( IResourceMapping *pResourceMapping, Uint32 Flags )override final;
+    virtual void BindShaderResources( IResourceMapping* pResourceMapping, Uint32 Flags )override final;
     
-    virtual void CreateShaderResourceBinding( IShaderResourceBinding **ppShaderResourceBinding, bool InitStaticResources )override final;
+    virtual void CreateShaderResourceBinding( IShaderResourceBinding** ppShaderResourceBinding, bool InitStaticResources )override final;
 
-    virtual bool IsCompatibleWith(const IPipelineState *pPSO)const override final;
+    virtual bool IsCompatibleWith(const IPipelineState* pPSO)const override final;
 
-    GLProgram &GetGLProgram(){return m_GLProgram;}
-    GLObjectWrappers::GLPipelineObj &GetGLProgramPipeline(GLContext::NativeGLContextType Context);
+    GLProgram& GetGLProgram(){return m_GLProgram;}
+    GLObjectWrappers::GLPipelineObj& GetGLProgramPipeline(GLContext::NativeGLContextType Context);
 
 private:
     void LinkGLProgram(bool bIsProgramPipelineSupported);

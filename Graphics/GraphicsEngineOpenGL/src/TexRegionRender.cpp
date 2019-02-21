@@ -59,12 +59,12 @@ namespace Diligent
     TexRegionRender::TexRegionRender( class RenderDeviceGLImpl *pDeviceGL )
     {
         ShaderCreationAttribs ShaderAttrs;
-        ShaderAttrs.Desc.Name = "TexRegionRender : Vertex shader";
-        ShaderAttrs.Desc.ShaderType = SHADER_TYPE_VERTEX;
-        ShaderAttrs.Source = VertexShaderSource;
-        pDeviceGL->CreateShader( ShaderAttrs, &m_pVertexShader, 
-							     true // We must indicate the shader is internal device object
-							   );
+        ShaderAttrs.Desc.Name                = "TexRegionRender : Vertex shader";
+        ShaderAttrs.Desc.ShaderType          = SHADER_TYPE_VERTEX;
+        ShaderAttrs.Desc.DefaultVariableType = SHADER_VARIABLE_TYPE_DYNAMIC;
+        ShaderAttrs.Source                   = VertexShaderSource;
+        constexpr bool IsInternalDeviceObject = true;
+        pDeviceGL->CreateShader(ShaderAttrs, &m_pVertexShader, IsInternalDeviceObject);
 
         static const char* SamplerType[RESOURCE_DIM_NUM_DIMENSIONS] = {};
         SamplerType[RESOURCE_DIM_TEX_1D]           = "sampler1D";
@@ -87,64 +87,65 @@ namespace Diligent
         //CoordDim[RESOURCE_DIM_TEX_CUBE_ARRAY]   = "ivec2(gl_FragCoord.xy)";
 
         BufferDesc CBDesc;
-        CBDesc.Name = "TexRegionRender: FS constants CB";
-        CBDesc.uiSizeInBytes = sizeof(Int32)*4;
-        CBDesc.Usage = USAGE_DYNAMIC;
-        CBDesc.BindFlags = BIND_UNIFORM_BUFFER;
+        CBDesc.Name           = "TexRegionRender: FS constants CB";
+        CBDesc.uiSizeInBytes  = sizeof(Int32)*4;
+        CBDesc.Usage          = USAGE_DYNAMIC;
+        CBDesc.BindFlags      = BIND_UNIFORM_BUFFER;
         CBDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
-        pDeviceGL->CreateBuffer( CBDesc, nullptr, &m_pConstantBuffer, 
-								 true // We must indicate the buffer is internal device object
-							   );
+        pDeviceGL->CreateBuffer(CBDesc, nullptr, &m_pConstantBuffer, IsInternalDeviceObject);
 
         PipelineStateDesc PSODesc;
-        auto &GraphicsPipeline = PSODesc.GraphicsPipeline;
+        auto& GraphicsPipeline = PSODesc.GraphicsPipeline;
         GraphicsPipeline.RasterizerDesc.CullMode = CULL_MODE_NONE;
         GraphicsPipeline.RasterizerDesc.FillMode = FILL_MODE_SOLID;
 
-        GraphicsPipeline.DepthStencilDesc.DepthEnable = false;
-        GraphicsPipeline.DepthStencilDesc.DepthWriteEnable = false;
-        GraphicsPipeline.pVS = m_pVertexShader;
+        GraphicsPipeline.DepthStencilDesc.DepthEnable      = False;
+        GraphicsPipeline.DepthStencilDesc.DepthWriteEnable = False;
+        GraphicsPipeline.pVS               = m_pVertexShader;
         GraphicsPipeline.PrimitiveTopology = PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
 
         static const char* CmpTypePrefix[3] = { "", "i", "u" };
-        for( Int32 Dim = RESOURCE_DIM_TEX_2D; Dim <= RESOURCE_DIM_TEX_3D; ++Dim )
+        for (Int32 Dim = RESOURCE_DIM_TEX_2D; Dim <= RESOURCE_DIM_TEX_3D; ++Dim)
         {
-            const auto *SamplerDim = SamplerType[Dim];
-            const auto *SrcLocation = SrcLocations[Dim];
+            const auto* SamplerDim  = SamplerType[Dim];
+            const auto* SrcLocation = SrcLocations[Dim];
             for( Int32 Fmt = 0; Fmt < 3; ++Fmt )
             {
                 const auto *Prefix = CmpTypePrefix[Fmt];
                 String Name = "TexRegionRender : Pixel shader ";
-                Name.append( Prefix );
-                Name.append( SamplerDim );
-                ShaderAttrs.Desc.Name = Name.c_str();
+                Name.append(Prefix);
+                Name.append(SamplerDim);
+                ShaderAttrs.Desc.Name       = Name.c_str();
                 ShaderAttrs.Desc.ShaderType = SHADER_TYPE_PIXEL;
-                
+                ShaderVariableDesc Vars[] = 
+                {
+                    {"cbConstants", SHADER_VARIABLE_TYPE_MUTABLE}
+                };
+                ShaderAttrs.Desc.NumVariables = _countof(Vars);
+                ShaderAttrs.Desc.VariableDesc = Vars;
+
                 std::stringstream SourceSS;
                 SourceSS << "uniform " << Prefix << SamplerDim << " gSourceTex;\n"
-                         << "layout( location = 0 ) out " << Prefix << "vec4 Out;\n"
-                         << "uniform cbConstants\n"
-                         << "{\n"
-	                     << "    ivec4 Constants;\n"
-                         << "};\n"
-                         << "void main()\n"
-                         << "{\n"
-                         << "    Out = texelFetch( gSourceTex, " << SrcLocation << ", Constants.w );\n"
-                         << "}\n";
+                            "layout(location = 0) out " << Prefix << "vec4 Out;\n"
+                            "uniform cbConstants\n"
+                            "{\n"
+	                        "    ivec4 Constants;\n"
+                            "};\n"
+                            "void main()\n"
+                            "{\n"
+                            "    Out = texelFetch( gSourceTex, " << SrcLocation << ", Constants.w );\n"
+                            "}\n";
 
                 auto Source = SourceSS.str();
                 ShaderAttrs.Source = Source.c_str();
                 auto &FragmetShader = m_pFragmentShaders[Dim*3 + Fmt];
-                pDeviceGL->CreateShader( ShaderAttrs, &FragmetShader, 
-										 true // We must indicate the shader is an internal device object
-									   );
+                pDeviceGL->CreateShader(ShaderAttrs, &FragmetShader, IsInternalDeviceObject);
                 GraphicsPipeline.pPS = FragmetShader;
-                pDeviceGL->CreatePipelineState( PSODesc, &m_pPSO[Dim*3 + Fmt], 
-										        true // We must indicate the PSO is an internal device object
-									           );
-
-                FragmetShader->GetShaderVariable( "cbConstants" )->Set( m_pConstantBuffer );
+                pDeviceGL->CreatePipelineState(PSODesc, &m_pPSO[Dim*3 + Fmt], IsInternalDeviceObject);
             }
+            m_pPSO[RESOURCE_DIM_TEX_2D*3]->CreateShaderResourceBinding(&m_pSRB);
+            m_pSRB->GetVariable(SHADER_TYPE_PIXEL, "cbConstants")->Set(m_pConstantBuffer);
+            m_pSrcTexVar = m_pSRB->GetVariable(SHADER_TYPE_PIXEL, "gSourceTex");
         }
     }
 
@@ -163,7 +164,7 @@ namespace Diligent
     void TexRegionRender::RestoreStates( DeviceContextGLImpl *pCtxGL )
     {
         pCtxGL->SetRenderTargets( m_NumRenderTargets, m_pOrigRTVs, m_pOrigDSV, RESOURCE_STATE_TRANSITION_MODE_TRANSITION );
-        for( Uint32 rt = 0; rt < _countof( m_pOrigRTVs ); ++rt )
+        for (Uint32 rt = 0; rt < _countof( m_pOrigRTVs ); ++rt)
         {
             if( m_pOrigRTVs[rt] )
                 m_pOrigRTVs[rt]->Release();
@@ -171,55 +172,55 @@ namespace Diligent
         }
         m_pOrigDSV.Release();
 
-        pCtxGL->SetViewports( (Uint32)m_OrigViewports.size(), m_OrigViewports.data(), 0, 0 );
+        pCtxGL->SetViewports((Uint32)m_OrigViewports.size(), m_OrigViewports.data(), 0, 0);
 
-        if(m_pOrigPSO)
+        if (m_pOrigPSO)
             pCtxGL->SetPipelineState( m_pOrigPSO );
         m_pOrigPSO.Release();
         pCtxGL->SetStencilRef(m_OrigStencilRef);
         pCtxGL->SetBlendFactors(m_OrigBlendFactors);
     }
 
-    void TexRegionRender::Render( DeviceContextGLImpl *pCtxGL,
-                                   ITextureView *pSrcSRV,
-                                   RESOURCE_DIMENSION TexType,
-                                   TEXTURE_FORMAT TexFormat,
-                                   Int32 DstToSrcXOffset,
-                                   Int32 DstToSrcYOffset,
-                                   Int32 SrcZ,
-                                   Int32 SrcMipLevel)
+    void TexRegionRender::Render( DeviceContextGLImpl*  pCtxGL,
+                                   ITextureView*        pSrcSRV,
+                                   RESOURCE_DIMENSION   TexType,
+                                   TEXTURE_FORMAT       TexFormat,
+                                   Int32                DstToSrcXOffset,
+                                   Int32                DstToSrcYOffset,
+                                   Int32                SrcZ,
+                                   Int32                SrcMipLevel)
     {
         {
-            MapHelper< int > pConstant( pCtxGL, m_pConstantBuffer, MAP_WRITE, MAP_FLAG_DISCARD );
+            MapHelper<int> pConstant(pCtxGL, m_pConstantBuffer, MAP_WRITE, MAP_FLAG_DISCARD);
             pConstant[0] = DstToSrcXOffset;
             pConstant[1] = DstToSrcYOffset;
             pConstant[2] = SrcZ;
             pConstant[3] = SrcMipLevel;
         }
 
-        const auto &TexFmtAttribs = GetTextureFormatAttribs(TexFormat);
+        const auto& TexFmtAttribs = GetTextureFormatAttribs(TexFormat);
         Uint32 FSInd = TexType * 3;
-        if( TexFmtAttribs.ComponentType == COMPONENT_TYPE_SINT )
+        if (TexFmtAttribs.ComponentType == COMPONENT_TYPE_SINT)
             FSInd += 1;
-        else if( TexFmtAttribs.ComponentType == COMPONENT_TYPE_UINT )
+        else if (TexFmtAttribs.ComponentType == COMPONENT_TYPE_UINT)
             FSInd += 2;
 
-        if( TexFmtAttribs.ComponentType == COMPONENT_TYPE_SNORM )
+        if (TexFmtAttribs.ComponentType == COMPONENT_TYPE_SNORM)
         {
             LOG_WARNING_MESSAGE("CopyData() is performed by rendering to texture.\n"
                                 "There might be an issue in OpenGL driver on NVidia hardware: when rendering to SNORM textures, all negative values are clamped to zero.");
         }
 
+        DEV_CHECK_ERR(m_pPSO[FSInd], "TexRegionRender does not support this combination of texture dimension/format");
+
         pCtxGL->SetPipelineState(m_pPSO[FSInd]);
-        // Technically resetting static varaibles is not allowed, but in GL this is OK
-        auto SrcTexVar = m_pFragmentShaders[FSInd]->GetShaderVariable( "gSourceTex" );
-        SrcTexVar->Set( pSrcSRV );
-        pCtxGL->CommitShaderResources(nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        m_pSrcTexVar->Set( pSrcSRV );
+        pCtxGL->CommitShaderResources(m_pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
         DrawAttribs DrawAttrs;
         DrawAttrs.NumVertices = 4;
-        pCtxGL->Draw( DrawAttrs );
+        pCtxGL->Draw(DrawAttrs);
 
-        SrcTexVar->Set( nullptr );
+        m_pSrcTexVar->Set(nullptr);
     }
 }
