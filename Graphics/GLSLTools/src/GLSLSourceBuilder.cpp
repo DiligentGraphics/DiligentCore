@@ -78,8 +78,8 @@ String BuildGLSLSourceString(const ShaderCreationAttribs& CreationAttribs,
     }
     else if (deviceCaps.DevType == DeviceType::OpenGLES)
     {
-        IsES31OrAbove = deviceCaps.MajorVersion > 3 || deviceCaps.MajorVersion == 3 && deviceCaps.MinorVersion >= 1;
-        IsES32OrAbove = deviceCaps.MajorVersion > 3 || deviceCaps.MajorVersion == 3 && deviceCaps.MinorVersion >= 2;
+        IsES31OrAbove = deviceCaps.MajorVersion > 3 || (deviceCaps.MajorVersion == 3 && deviceCaps.MinorVersion >= 1);
+        IsES32OrAbove = deviceCaps.MajorVersion > 3 || (deviceCaps.MajorVersion == 3 && deviceCaps.MinorVersion >= 2);
         std::stringstream versionss;
         versionss << "#version " << deviceCaps.MajorVersion << deviceCaps.MinorVersion << "0 es\n";
         GLSLSource.append(versionss.str());
