@@ -68,20 +68,37 @@ String BuildGLSLSourceString(const ShaderCreationAttribs& CreationAttribs,
     );
 
 #elif PLATFORM_ANDROID || PLATFORM_IOS
-    std::stringstream versionss;
-    versionss << "#version " << deviceCaps.MajorVersion << deviceCaps.MinorVersion << "0 es\n";
-    GLSLSource.append(versionss.str());
+    bool IsES31OrAbove = false;
+    bool IsES32OrAbove = false;
+    if (deviceCaps.DevType == DeviceType::Vulkan)
+    {
+        IsES31OrAbove = true;
+        IsES32OrAbove = false;
+        GLSLSource.append("#version 310 es\n");
+    }
+    else if (deviceCaps.DevType == DeviceType::OpenGLES)
+    {
+        IsES31OrAbove = deviceCaps.MajorVersion > 3 || deviceCaps.MajorVersion == 3 && deviceCaps.MinorVersion >= 1;
+        IsES32OrAbove = deviceCaps.MajorVersion > 3 || deviceCaps.MajorVersion == 3 && deviceCaps.MinorVersion >= 2;
+        std::stringstream versionss;
+        versionss << "#version " << deviceCaps.MajorVersion << deviceCaps.MinorVersion << "0 es\n";
+        GLSLSource.append(versionss.str());
+    }
+    else
+    {
+        UNEXPECTED("Unexpected device type");
+    }
 
-    if (deviceCaps.bSeparableProgramSupported)
+    if (deviceCaps.bSeparableProgramSupported && !IsES31OrAbove)
         GLSLSource.append("#extension GL_EXT_separate_shader_objects : enable\n");
 
-    if (deviceCaps.TexCaps.bCubemapArraysSupported)
+    if (deviceCaps.TexCaps.bCubemapArraysSupported && !IsES32OrAbove)
         GLSLSource.append("#extension GL_EXT_texture_cube_map_array : enable\n");
 
-    if (ShaderType == SHADER_TYPE_GEOMETRY)
+    if (ShaderType == SHADER_TYPE_GEOMETRY && !IsES32OrAbove)
         GLSLSource.append("#extension GL_EXT_geometry_shader : enable\n");
 
-    if (ShaderType == SHADER_TYPE_HULL || ShaderType == SHADER_TYPE_DOMAIN)
+    if ((ShaderType == SHADER_TYPE_HULL || ShaderType == SHADER_TYPE_DOMAIN) && !IsES32OrAbove)
         GLSLSource.append("#extension GL_EXT_tessellation_shader : enable\n");
 
     GLSLSource.append(
