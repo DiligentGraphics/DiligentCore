@@ -248,15 +248,20 @@ String BuildGLSLSourceString(const ShaderCreationAttribs& CreationAttribs,
         // Convert HLSL to GLSL
         const auto &Converter = HLSL2GLSLConverterImpl::GetInstance();
         HLSL2GLSLConverterImpl::ConversionAttribs Attribs;
-        Attribs.pSourceStreamFactory = CreationAttribs.pShaderSourceStreamFactory;
-        Attribs.ppConversionStream = CreationAttribs.ppConversionStream;
-        Attribs.HLSLSource = ShaderSource;
-        Attribs.NumSymbols = SourceLen;
-        Attribs.EntryPoint = CreationAttribs.EntryPoint;
-        Attribs.ShaderType = CreationAttribs.Desc.ShaderType;
-        Attribs.IncludeDefinitions = true;
-        Attribs.InputFileName = CreationAttribs.FilePath;
-        Attribs.SamplerSuffix = CreationAttribs.CombinedSamplerSuffix;
+        Attribs.pSourceStreamFactory       = CreationAttribs.pShaderSourceStreamFactory;
+        Attribs.ppConversionStream         = CreationAttribs.ppConversionStream;
+        Attribs.HLSLSource                 = ShaderSource;
+        Attribs.NumSymbols                 = SourceLen;
+        Attribs.EntryPoint                 = CreationAttribs.EntryPoint;
+        Attribs.ShaderType                 = CreationAttribs.Desc.ShaderType;
+        Attribs.IncludeDefinitions         = true;
+        Attribs.InputFileName              = CreationAttribs.FilePath;
+        Attribs.SamplerSuffix              = CreationAttribs.CombinedSamplerSuffix;
+        // Separate shader objects extension also allows input/output layout qualifiers for
+        // all shader stages.
+        // https://www.khronos.org/registry/OpenGL/extensions/ARB/ARB_separate_shader_objects.txt
+        // (search for "Input Layout Qualifiers" and "Output Layout Qualifiers").
+        Attribs.UseInOutLocationQualifiers = deviceCaps.bSeparableProgramSupported;
         auto ConvertedSource = Converter.Convert(Attribs);
         
         GLSLSource.append(ConvertedSource);
