@@ -89,36 +89,37 @@ namespace Diligent
         static const HLSL2GLSLConverterImpl& GetInstance();
         struct ConversionAttribs
         {
-            IShaderSourceInputStreamFactory *pSourceStreamFactory = nullptr;
-            IHLSL2GLSLConversionStream **ppConversionStream = nullptr;
-            const Char* HLSLSource = nullptr;
-            size_t NumSymbols = 0;
-            const Char* EntryPoint = nullptr;
-            SHADER_TYPE ShaderType = SHADER_TYPE_UNKNOWN;
-            bool IncludeDefinitions = false;
-            const Char* InputFileName = nullptr;
-            const Char* SamplerSuffix = "_sampler";
+            IShaderSourceInputStreamFactory*    pSourceStreamFactory       = nullptr;
+            IHLSL2GLSLConversionStream**        ppConversionStream         = nullptr;
+            const Char*                         HLSLSource                 = nullptr;
+            size_t                              NumSymbols                 = 0;
+            const Char*                         EntryPoint                 = nullptr;
+            SHADER_TYPE                         ShaderType                 = SHADER_TYPE_UNKNOWN;
+            bool                                IncludeDefinitions         = false;
+            const Char*                         InputFileName              = nullptr;
+            const Char*                         SamplerSuffix              = "_sampler";
+            bool                                UseInOutLocationQualifiers = true;
         };
 
-        String Convert(ConversionAttribs &Attribs)const;
-        void CreateStream(const Char* InputFileName,
-                          IShaderSourceInputStreamFactory *pSourceStreamFactory, 
-                          const Char* HLSLSource, 
-                          size_t NumSymbols, 
-                          IHLSL2GLSLConversionStream **ppStream)const;
+        String Convert(ConversionAttribs&                  Attribs)const;
+        void CreateStream(const Char*                      InputFileName,
+                          IShaderSourceInputStreamFactory* pSourceStreamFactory, 
+                          const Char*                      HLSLSource, 
+                          size_t                           NumSymbols, 
+                          IHLSL2GLSLConversionStream**     ppStream)const;
 
     private:
         HLSL2GLSLConverterImpl();
 
         struct HLSLObjectInfo
         {
-            String GLSLType; // sampler2D, sampler2DShadow, image2D, etc.
+            String GLSLType;      // sampler2D, sampler2DShadow, image2D, etc.
             Uint32 NumComponents; // 0,1,2,3 or 4
                                   // Texture2D<float4>  -> 4
                                   // Texture2D<uint>    -> 1
                                   // Texture2D          -> 0
             HLSLObjectInfo( const String& Type, Uint32 NComp ) :
-                GLSLType( Type ),
+                GLSLType     ( Type ),
                 NumComponents( NComp )
             {}
         };
@@ -131,8 +132,8 @@ namespace Diligent
                 m(std::move(rhs.m))
             {}
             ObjectsTypeHashType& operator = (ObjectsTypeHashType&&) = delete;
-            ObjectsTypeHashType(ObjectsTypeHashType&) = delete;
-            ObjectsTypeHashType& operator = (ObjectsTypeHashType&) = delete;
+            ObjectsTypeHashType             (ObjectsTypeHashType&)  = delete;
+            ObjectsTypeHashType& operator = (ObjectsTypeHashType&)  = delete;
 
             std::unordered_map<HashMapStringKey, HLSLObjectInfo, HashMapStringKey::Hasher> m;
         };
@@ -213,16 +214,26 @@ namespace Diligent
         {
         public:
             typedef ObjectBase<IHLSL2GLSLConversionStream> TBase;
-            ConversionStream(IReferenceCounters *pRefCounters, 
-                             const HLSL2GLSLConverterImpl &Converter, 
-                             const char* InputFileName,
+            ConversionStream(IReferenceCounters*              pRefCounters, 
+                             const HLSL2GLSLConverterImpl&    Converter, 
+                             const char*                      InputFileName,
                              IShaderSourceInputStreamFactory* pInputStreamFactory, 
-                             const Char* HLSLSource, 
-                             size_t NumSymbols,
-                             bool bPreserveTokens);
+                             const Char*                      HLSLSource, 
+                             size_t                           NumSymbols,
+                             bool                             bPreserveTokens);
 
-            String Convert(const Char* EntryPoint, SHADER_TYPE ShaderType, bool IncludeDefintions, const char* SamplerSuffix);
-            virtual void Convert(const Char* EntryPoint, SHADER_TYPE ShaderType, bool IncludeDefintions, const char* SamplerSuffix, IDataBlob **ppGLSLSource)override;
+            String Convert(const Char* EntryPoint,
+                           SHADER_TYPE ShaderType,
+                           bool        IncludeDefintions,
+                           const char* SamplerSuffix,
+                           bool        UseInOutLocationQualifiers);
+
+            virtual void Convert(const Char* EntryPoint,
+                                 SHADER_TYPE ShaderType,
+                                 bool        IncludeDefintions,
+                                 const char* SamplerSuffix,
+                                 bool        UseInOutLocationQualifiers,
+                                 IDataBlob** ppGLSLSource)override final;
             
             IMPLEMENT_QUERY_INTERFACE_IN_PLACE( IID_HLSL2GLSLConversionStream, TBase )
 
@@ -233,13 +244,13 @@ namespace Diligent
 
             typedef std::unordered_map<String, bool> SamplerHashType;
 
-            const HLSLObjectInfo *FindHLSLObject(const String &Name );
+            const HLSLObjectInfo *FindHLSLObject(const String& Name);
 
             void ProcessShaderDeclaration(TokenListType::iterator EntryPointToken, SHADER_TYPE ShaderType);
 
-            void ProcessObjectMethods(const TokenListType::iterator &ScopeStart, const TokenListType::iterator &ScopeEnd);
+            void ProcessObjectMethods(const TokenListType::iterator& ScopeStart, const TokenListType::iterator& ScopeEnd);
 
-            void ProcessRWTextures(const TokenListType::iterator &ScopeStart, const TokenListType::iterator &ScopeEnd);
+            void ProcessRWTextures(const TokenListType::iterator& ScopeStart, const TokenListType::iterator& ScopeEnd);
 
             void ProcessAtomics(const TokenListType::iterator&  ScopeStart, 
                                 const TokenListType::iterator&  ScopeEnd);
@@ -417,7 +428,9 @@ namespace Diligent
             std::vector< ObjectsTypeHashType > m_Objects;
           
             const bool m_bPreserveTokens;
-            const HLSL2GLSLConverterImpl &m_Converter;
+            bool m_bUseInOutLocationQualifiers = true;
+
+            const HLSL2GLSLConverterImpl& m_Converter;
 
             // This member is only used to compare input name
             // when subsequent shaders are converted from already tokenized source

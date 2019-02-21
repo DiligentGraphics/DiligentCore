@@ -27,7 +27,8 @@
 namespace VulkanUtilities
 {
 
-static VkPipelineStageFlags PipelineStageFromAccessFlags(VkAccessFlags AccessFlags)
+static VkPipelineStageFlags PipelineStageFromAccessFlags(      VkAccessFlags        AccessFlags,
+                                                         const VkPipelineStageFlags EnabledGraphicsShaderStages)
 {
     // 6.1.3
     VkPipelineStageFlags Stages = 0;
@@ -37,13 +38,6 @@ static VkPipelineStageFlags PipelineStageFromAccessFlags(VkAccessFlags AccessFla
         VkAccessFlagBits AccessFlag = static_cast<VkAccessFlagBits>( AccessFlags & (~(AccessFlags-1)));
         VERIFY_EXPR( AccessFlag != 0 && (AccessFlag & (AccessFlag-1)) == 0 );
         AccessFlags &= ~AccessFlag;
-
-        static constexpr VkPipelineStageFlags ALL_GRAPHICS_SHADER_STAGES_BITS =
-            VK_PIPELINE_STAGE_VERTEX_SHADER_BIT                  |
-            VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT    |
-            VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT |
-            VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT                |
-            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
 
         // An application MUST NOT specify an access flag in a synchronization command if it does not include a 
         // pipeline stage in the corresponding stage mask that is able to perform accesses of that type.
@@ -67,7 +61,7 @@ static VkPipelineStageFlags PipelineStageFromAccessFlags(VkAccessFlags AccessFla
 
             // Read access to a uniform buffer
             case VK_ACCESS_UNIFORM_READ_BIT:
-                Stages |= ALL_GRAPHICS_SHADER_STAGES_BITS | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+                Stages |= EnabledGraphicsShaderStages | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
             break;
 
             // Read access to an input attachment within a render pass during fragment shading
@@ -77,12 +71,12 @@ static VkPipelineStageFlags PipelineStageFromAccessFlags(VkAccessFlags AccessFla
 
             // Read access to a storage buffer, uniform texel buffer, storage texel buffer, sampled image, or storage image
             case VK_ACCESS_SHADER_READ_BIT:
-                Stages |= ALL_GRAPHICS_SHADER_STAGES_BITS | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+                Stages |= EnabledGraphicsShaderStages | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
             break;
 
             // Write access to a storage buffer, storage texel buffer, or storage image
             case VK_ACCESS_SHADER_WRITE_BIT:
-                Stages |= ALL_GRAPHICS_SHADER_STAGES_BITS | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+                Stages |= EnabledGraphicsShaderStages | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
             break;
 
             // Read access to a color attachment, such as via blending, logic operations, or via certain subpass load operations
@@ -143,11 +137,106 @@ static VkPipelineStageFlags PipelineStageFromAccessFlags(VkAccessFlags AccessFla
     return Stages;
 }
 
+
+static VkPipelineStageFlags AccessMaskFromImageLayout(VkImageLayout Layout,
+                                                      bool          IsDstMask // false - source mask
+                                                                              // true  - destination mask
+                                                      )
+{
+    VkPipelineStageFlags AccessMask = 0;
+    switch (Layout) 
+    {
+        // does not support device access. This layout must only be used as the initialLayout member 
+        // of VkImageCreateInfo or VkAttachmentDescription, or as the oldLayout in an image transition. 
+        // When transitioning out of this layout, the contents of the memory are not guaranteed to be preserved (11.4)
+        case VK_IMAGE_LAYOUT_UNDEFINED:
+            if (IsDstMask)
+            {
+                UNEXPECTED("The new layout used in a transition must not be VK_IMAGE_LAYOUT_UNDEFINED. "
+                           "This layout must only be used as the initialLayout member of VkImageCreateInfo " 
+                           "or VkAttachmentDescription, or as the oldLayout in an image transition. (11.4)");
+            }
+        break;
+
+        // supports all types of device access
+        case VK_IMAGE_LAYOUT_GENERAL:
+            // VK_IMAGE_LAYOUT_GENERAL must be used for image load/store operations (13.1.1, 13.2.4)
+            AccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+        break;
+
+        // must only be used as a color or resolve attachment in a VkFramebuffer (11.4)
+        case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+            AccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        break;
+
+        // must only be used as a depth/stencil attachment in a VkFramebuffer (11.4)
+        case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+            AccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+        break;
+
+        // must only be used as a read-only depth/stencil attachment in a VkFramebuffer and/or as a read-only image in a shader (11.4)
+        case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
+            AccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+        break;
+
+        // must only be used as a read-only image in a shader (which can be read as a sampled image, 
+        // combined image/sampler and/or input attachment) (11.4)
+        case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+            AccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
+        break;
+
+        //  must only be used as a source image of a transfer command (11.4)
+        case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
+            AccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+        break;
+
+        // must only be used as a destination image of a transfer command (11.4)
+        case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+            AccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        break;
+
+        // does not support device access. This layout must only be used as the initialLayout member
+        // of VkImageCreateInfo or VkAttachmentDescription, or as the oldLayout in an image transition.
+        // When transitioning out of this layout, the contents of the memory are preserved. (11.4)
+        case VK_IMAGE_LAYOUT_PREINITIALIZED:
+            if (!IsDstMask)
+            {
+                AccessMask = VK_ACCESS_HOST_WRITE_BIT;
+            }
+            else
+            {
+               UNEXPECTED("The new layout used in a transition must not be VK_IMAGE_LAYOUT_PREINITIALIZED. "
+                           "This layout must only be used as the initialLayout member of VkImageCreateInfo " 
+                           "or VkAttachmentDescription, or as the oldLayout in an image transition. (11.4)");
+            }
+        break;
+
+        case VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL:
+            AccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+        break;
+
+        case VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL:
+            AccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+        break;
+
+        case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
+            AccessMask = VK_ACCESS_MEMORY_READ_BIT;
+        break;
+
+        default:
+            UNEXPECTED("Unexpected image layout");
+        break;
+    }
+
+    return AccessMask;
+}
+
 void VulkanCommandBuffer::TransitionImageLayout(VkCommandBuffer                CmdBuffer,
                                                 VkImage                        Image,
                                                 VkImageLayout                  OldLayout,
                                                 VkImageLayout                  NewLayout,
                                                 const VkImageSubresourceRange& SubresRange,
+                                                VkPipelineStageFlags           EnabledGraphicsShaderStages,
                                                 VkPipelineStageFlags           SrcStages, 
                                                 VkPipelineStageFlags           DestStages)
 {
@@ -164,136 +253,8 @@ void VulkanCommandBuffer::TransitionImageLayout(VkCommandBuffer                C
     ImgBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED; // destination queue family for a queue family ownership transfer.
     ImgBarrier.image = Image;
     ImgBarrier.subresourceRange = SubresRange;
-
-    switch (OldLayout) 
-    {
-        // does not support device access. This layout must only be used as the initialLayout member 
-        // of VkImageCreateInfo or VkAttachmentDescription, or as the oldLayout in an image transition. 
-        // When transitioning out of this layout, the contents of the memory are not guaranteed to be preserved (11.4)
-        case VK_IMAGE_LAYOUT_UNDEFINED:
-        break;
-
-        // supports all types of device access
-        case VK_IMAGE_LAYOUT_GENERAL:
-            // VK_IMAGE_LAYOUT_GENERAL must be used for image load/store operations (13.1.1, 13.2.4)
-            ImgBarrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-        break;
-
-        // must only be used as a color or resolve attachment in a VkFramebuffer (11.4)
-        case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-            ImgBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-        break;
-
-        // must only be used as a depth/stencil attachment in a VkFramebuffer (11.4)
-        case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
-            ImgBarrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-        break;
-
-        // must only be used as a read-only depth/stencil attachment in a VkFramebuffer and/or as a read-only image in a shader (11.4)
-        case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
-            ImgBarrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
-        break;
-
-        // must only be used as a read-only image in a shader (which can be read as a sampled image, 
-        // combined image/sampler and/or input attachment) (11.4)
-        case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-            ImgBarrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-        break;
-
-        //  must only be used as a source image of a transfer command (11.4)
-        case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
-            ImgBarrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-        break;
-
-        // must only be used as a destination image of a transfer command (11.4)
-        case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
-            ImgBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        break;
-
-        // does not support device access. This layout must only be used as the initialLayout member
-        // of VkImageCreateInfo or VkAttachmentDescription, or as the oldLayout in an image transition.
-        // When transitioning out of this layout, the contents of the memory are preserved. (11.4)
-        case VK_IMAGE_LAYOUT_PREINITIALIZED:
-            ImgBarrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
-        break;
-
-        case VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL:
-            ImgBarrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
-        break;
-
-        case VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL:
-            ImgBarrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
-        break;
-
-        case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
-            ImgBarrier.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-        break;
-
-        default:
-            UNEXPECTED("Unexpected image layout");
-        break;
-    }
-
-
-    switch (NewLayout) 
-    {
-        case VK_IMAGE_LAYOUT_UNDEFINED:
-            UNEXPECTED("The new layout used in a transition must not be VK_IMAGE_LAYOUT_UNDEFINED. "
-                       "This layout must only be used as the initialLayout member of VkImageCreateInfo " 
-                       "or VkAttachmentDescription, or as the oldLayout in an image transition. (11.4)");
-        break;
-
-        case VK_IMAGE_LAYOUT_GENERAL:
-            // VK_IMAGE_LAYOUT_GENERAL must be used for image load/store operations (13.1.1, 13.2.4)
-            ImgBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-        break;
-
-        case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-            ImgBarrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-        break;
-
-        case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
-            ImgBarrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-        break;
-
-        case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
-            ImgBarrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
-        break;
-
-        case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-            ImgBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
-        break;
-
-        case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
-            ImgBarrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-        break;
-
-        case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
-            ImgBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        break;
-
-        case VK_IMAGE_LAYOUT_PREINITIALIZED:
-           UNEXPECTED("The new layout used in a transition must not be VK_IMAGE_LAYOUT_PREINITIALIZED. "
-                       "This layout must only be used as the initialLayout member of VkImageCreateInfo " 
-                       "or VkAttachmentDescription, or as the oldLayout in an image transition. (11.4)");
-        break;
-
-        case VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL:
-            ImgBarrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
-        break;
-
-        case VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL:
-            ImgBarrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
-        break;
-
-        case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
-            ImgBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-        break;
-
-        default:
-            UNEXPECTED("Unexpected image layout");
-        break;
-    }
+    ImgBarrier.srcAccessMask = AccessMaskFromImageLayout(OldLayout, false);
+    ImgBarrier.dstAccessMask = AccessMaskFromImageLayout(NewLayout, true);
 
     if (SrcStages == 0)
     {
@@ -303,7 +264,7 @@ void VulkanCommandBuffer::TransitionImageLayout(VkCommandBuffer                C
         }
         else if (ImgBarrier.srcAccessMask != 0)
         {
-            SrcStages = PipelineStageFromAccessFlags(ImgBarrier.srcAccessMask); 
+            SrcStages = PipelineStageFromAccessFlags(ImgBarrier.srcAccessMask, EnabledGraphicsShaderStages); 
         }
         else
         {
@@ -321,7 +282,7 @@ void VulkanCommandBuffer::TransitionImageLayout(VkCommandBuffer                C
         }
         else if (ImgBarrier.dstAccessMask != 0)
         {
-            DestStages = PipelineStageFromAccessFlags(ImgBarrier.dstAccessMask);
+            DestStages = PipelineStageFromAccessFlags(ImgBarrier.dstAccessMask, EnabledGraphicsShaderStages);
         }
         else
         {
@@ -362,6 +323,7 @@ void VulkanCommandBuffer::BufferMemoryBarrier(VkCommandBuffer      CmdBuffer,
                                               VkBuffer             Buffer, 
                                               VkAccessFlags        srcAccessMask,
                                               VkAccessFlags        dstAccessMask,
+                                              VkPipelineStageFlags EnabledGraphicsShaderStages,
                                               VkPipelineStageFlags SrcStages, 
                                               VkPipelineStageFlags DestStages)
 {
@@ -378,7 +340,7 @@ void VulkanCommandBuffer::BufferMemoryBarrier(VkCommandBuffer      CmdBuffer,
     if (SrcStages == 0)
     {
         if (BuffBarrier.srcAccessMask != 0)
-            SrcStages = PipelineStageFromAccessFlags(BuffBarrier.srcAccessMask);
+            SrcStages = PipelineStageFromAccessFlags(BuffBarrier.srcAccessMask, EnabledGraphicsShaderStages);
         else
         {
             // An execution dependency with only VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT in the source stage 
@@ -390,7 +352,7 @@ void VulkanCommandBuffer::BufferMemoryBarrier(VkCommandBuffer      CmdBuffer,
     if (DestStages == 0)
     {
         VERIFY(BuffBarrier.dstAccessMask != 0, "Dst access mask must not be zero");
-        DestStages = PipelineStageFromAccessFlags(BuffBarrier.dstAccessMask);
+        DestStages = PipelineStageFromAccessFlags(BuffBarrier.dstAccessMask, EnabledGraphicsShaderStages);
     }
 
     vkCmdPipelineBarrier(CmdBuffer,

@@ -923,15 +923,8 @@ void UnsupportedGLFunctionStub( const T &Name )
     LOG_ERROR_MESSAGE( Name, "() is not supported in this API!\n" );
 }
 
-#define glDrawElementsInstancedBaseVertexBaseInstance(...) UnsupportedGLFunctionStub("glDrawElementsInstancedBaseVertexBaseInstance")
-#define glDrawElementsInstancedBaseVertex(...) UnsupportedGLFunctionStub("glDrawElementsInstancedBaseVertex")
-#define glDrawElementsInstancedBaseInstance(...) UnsupportedGLFunctionStub("glDrawElementsInstancedBaseInstance")
-#define glDrawArraysInstancedBaseInstance(...) UnsupportedGLFunctionStub("glDrawArraysInstancedBaseInstance")
-#define glDrawElementsBaseVertex(...) UnsupportedGLFunctionStub("glDrawElementsBaseVertex")
-#define glTextureView(...) UnsupportedGLFunctionStub("glTextureView")
 #define glTexStorage1D(...) UnsupportedGLFunctionStub("glTexStorage1D")
 #define glTexSubImage1D(...) UnsupportedGLFunctionStub("glTexSubImage1D")
-#define glTexStorage3DMultisample(...) UnsupportedGLFunctionStub("glTexStorage3DMultisample")
 
 #ifndef GL_ES_VERSION_3_1
 
@@ -1048,5 +1041,34 @@ extern PFNGLFRAMEBUFFERTEXTURE3DPROC glFramebufferTexture3D;
 #define LOAD_GL_COPY_IMAGE_SUB_DATA
 typedef void (GL_APIENTRY* PFNGLCOPYIMAGESUBDATAPROC) (GLuint srcName, GLenum srcTarget, GLint srcLevel, GLint srcX, GLint srcY, GLint srcZ, GLuint dstName, GLenum dstTarget, GLint dstLevel, GLint dstX, GLint dstY, GLint dstZ, GLsizei srcWidth, GLsizei srcHeight, GLsizei srcDepth);
 extern PFNGLCOPYIMAGESUBDATAPROC glCopyImageSubData;
+
+#define LOAD_GL_TEX_STORAGE_3D_MULTISAMPLE
+typedef void (GL_APIENTRY* PFNGLTEXSTORAGE3DMULTISAMPLEPROC) (GLenum target, GLsizei samples, GLenum internalformat, GLsizei width, GLsizei height, GLsizei depth, GLboolean fixedsamplelocations);
+extern PFNGLTEXSTORAGE3DMULTISAMPLEPROC glTexStorage3DMultisample;
+
+#define LOAD_GL_TEXTURE_VIEW
+typedef void (GL_APIENTRY* PFNGLTEXTUREVIEWPROC) (GLuint texture, GLenum target, GLuint origtexture, GLenum internalformat, GLuint minlevel, GLuint numlevels, GLuint minlayer, GLuint numlayers);
+extern PFNGLTEXTUREVIEWPROC glTextureView;
+
+
+#define LOAD_GL_DRAW_ELEMENTS_INSTANCED_BASE_VERTEX_BASE_INSTANCE
+typedef void (GL_APIENTRY* PFNGLDRAWELEMENTSINSTANCEDBASEVERTEXBASEINSTANCEPROC) (GLenum mode, GLsizei count, GLenum type, const void *indices, GLsizei instancecount, GLint basevertex, GLuint baseinstance);
+extern PFNGLDRAWELEMENTSINSTANCEDBASEVERTEXBASEINSTANCEPROC glDrawElementsInstancedBaseVertexBaseInstance;
+
+#define LOAD_GL_DRAW_ELEMENTS_INSTANCED_BASE_VERTEX
+typedef void (GL_APIENTRY* PFNGLDRAWELEMENTSINSTANCEDBASEVERTEXPROC) (GLenum mode, GLsizei count, GLenum type, const void *indices, GLsizei instancecount, GLint basevertex);
+extern PFNGLDRAWELEMENTSINSTANCEDBASEVERTEXPROC glDrawElementsInstancedBaseVertex;
+
+#define LOAD_GL_DRAW_ELEMENTS_INSTANCED_BASE_INSTANCE
+typedef void (GL_APIENTRY* PFNGLDRAWELEMENTSINSTANCEDBASEINSTANCEPROC) (GLenum mode, GLsizei count, GLenum type, const void *indices, GLsizei instancecount, GLuint baseinstance);
+extern PFNGLDRAWELEMENTSINSTANCEDBASEINSTANCEPROC glDrawElementsInstancedBaseInstance;
+
+#define LOAD_GL_DRAW_ARRAYS_INSTANCED_BASE_INSTANCE
+typedef void (GL_APIENTRY* PFNGLDRAWARRAYSINSTANCEDBASEINSTANCEPROC) (GLenum mode, GLint first, GLsizei count, GLsizei instancecount, GLuint baseinstance);
+extern PFNGLDRAWARRAYSINSTANCEDBASEINSTANCEPROC glDrawArraysInstancedBaseInstance;
+
+#define LOAD_GL_DRAW_ELEMENTS_BASE_VERTEX
+typedef void (GL_APIENTRY* PFNGLDRAWELEMENTSBASEVERTEXPROC) (GLenum mode, GLsizei count, GLenum type, const void *indices, GLint basevertex);
+extern PFNGLDRAWELEMENTSBASEVERTEXPROC glDrawElementsBaseVertex;
 
 void LoadGLFunctions();

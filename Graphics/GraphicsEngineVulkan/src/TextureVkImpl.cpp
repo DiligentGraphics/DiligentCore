@@ -189,7 +189,8 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters,
     SubresRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
     SubresRange.baseMipLevel = 0;
     SubresRange.levelCount = VK_REMAINING_MIP_LEVELS;
-    VulkanUtilities::VulkanCommandBuffer::TransitionImageLayout(vkCmdBuff, m_VulkanImage, ImageCI.initialLayout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, SubresRange);
+    auto EnabledGraphicsShaderStages = LogicalDevice.GetEnabledGraphicsShaderStages();
+    VulkanUtilities::VulkanCommandBuffer::TransitionImageLayout(vkCmdBuff, m_VulkanImage, ImageCI.initialLayout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, SubresRange, EnabledGraphicsShaderStages);
     SetState(RESOURCE_STATE_COPY_DEST);
     const auto CurrentLayout = GetLayout();
     VERIFY_EXPR(CurrentLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
@@ -330,7 +331,7 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters,
         err = LogicalDevice.BindBufferMemory(StagingBuffer, StagingBufferMemory, AlignedStagingMemOffset);
         CHECK_VK_ERROR_AND_THROW(err, "Failed to bind staging bufer memory");
 
-        VulkanUtilities::VulkanCommandBuffer::BufferMemoryBarrier(vkCmdBuff, StagingBuffer, 0, VK_ACCESS_TRANSFER_READ_BIT);
+        VulkanUtilities::VulkanCommandBuffer::BufferMemoryBarrier(vkCmdBuff, StagingBuffer, 0, VK_ACCESS_TRANSFER_READ_BIT, EnabledGraphicsShaderStages);
 
         // Copy commands MUST be recorded outside of a render pass instance. This is OK here
         // as copy will be the only command in the cmd buffer

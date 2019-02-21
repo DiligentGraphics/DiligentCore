@@ -31,7 +31,10 @@ namespace VulkanUtilities
     class VulkanCommandBuffer
     {
     public:
-        VulkanCommandBuffer()noexcept{}
+        VulkanCommandBuffer(VkPipelineStageFlags EnabledGraphicsShaderStages)noexcept : 
+            m_EnabledGraphicsShaderStages(EnabledGraphicsShaderStages)
+        {}
+
         VulkanCommandBuffer             (const VulkanCommandBuffer&)  = delete;
         VulkanCommandBuffer             (      VulkanCommandBuffer&&) = delete;
         VulkanCommandBuffer& operator = (const VulkanCommandBuffer&)  = delete;
@@ -269,8 +272,9 @@ namespace VulkanUtilities
                                           VkImage                        Image, 
                                           VkImageLayout                  OldLayout,
                                           VkImageLayout                  NewLayout,
-                                          const VkImageSubresourceRange& SubresRange, 
-                                          VkPipelineStageFlags           SrcStages  = 0, 
+                                          const VkImageSubresourceRange& SubresRange,
+                                          VkPipelineStageFlags           EnabledGraphicsShaderStages,
+                                          VkPipelineStageFlags           SrcStages  = 0,
                                           VkPipelineStageFlags           DestStages = 0);
 
         void TransitionImageLayout(VkImage                        Image, 
@@ -287,7 +291,7 @@ namespace VulkanUtilities
                 // dependencies between attachments
                 EndRenderPass();
             }
-            TransitionImageLayout(m_VkCmdBuffer, Image, OldLayout, NewLayout, SubresRange, SrcStages, DestStages);
+            TransitionImageLayout(m_VkCmdBuffer, Image, OldLayout, NewLayout, SubresRange, m_EnabledGraphicsShaderStages, SrcStages, DestStages);
         }
 
 
@@ -295,6 +299,7 @@ namespace VulkanUtilities
                                         VkBuffer             Buffer, 
                                         VkAccessFlags        srcAccessMask,
                                         VkAccessFlags        dstAccessMask,
+                                        VkPipelineStageFlags EnabledGraphicsShaderStages,
                                         VkPipelineStageFlags SrcStages  = 0,
                                         VkPipelineStageFlags DestStages = 0);
 
@@ -311,7 +316,7 @@ namespace VulkanUtilities
                 // dependencies between attachments
                 EndRenderPass();
             }
-            BufferMemoryBarrier(m_VkCmdBuffer, Buffer, srcAccessMask, dstAccessMask, SrcStages, DestStages);
+            BufferMemoryBarrier(m_VkCmdBuffer, Buffer, srcAccessMask, dstAccessMask, m_EnabledGraphicsShaderStages, SrcStages, DestStages);
         }
 
         void BindDescriptorSets(VkPipelineBindPoint     pipelineBindPoint,
@@ -399,5 +404,6 @@ namespace VulkanUtilities
     private:
         StateCache m_State;
         VkCommandBuffer m_VkCmdBuffer = VK_NULL_HANDLE;
+        const VkPipelineStageFlags m_EnabledGraphicsShaderStages;
     };
 }

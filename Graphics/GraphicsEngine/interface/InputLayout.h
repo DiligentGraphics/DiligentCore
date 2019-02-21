@@ -36,6 +36,9 @@ static constexpr Uint32 iMaxLayoutElements = 16;
 /// Description of a single element of the input layout
 struct LayoutElement
 {
+    static constexpr Uint32 AutoOffset = static_cast<Uint32>(-1);
+    static constexpr Uint32 AutoStride = static_cast<Uint32>(-1);
+
     /// Input index of the element, which is specified in the vertex shader.
     Uint32 InputIndex       = 0;
 
@@ -56,17 +59,16 @@ struct LayoutElement
     Bool IsNormalized       = True;
 
     /// Relative offset, in bytes, to the element bits.
-    /// If this value is zero, the offset will be computed automatically assuming 
-    /// that all previous elements in the same buffer slot are tightly packed.
-    /// Overlapping elements are not allowed.
-    Uint32 RelativeOffset   = 0;
+    /// If this value is set to LayoutElement::AutoOffset (default value), the offset will
+    /// be computed automatically by placing the element right after the previous one.
+    Uint32 RelativeOffset   = AutoOffset;
 
     /// Stride, in bytes, between two elements, for this buffer slot.
-    /// If this value is zero, stride will be computed automatically assuming
-    /// that all elements in the same buffer slot are tightly packed.
-    /// If buffer slot contains multiple layout elements, they all must use
-    /// the same stride or zero.
-    Uint32 Stride           = 0;
+    /// If this value is set to LayoutElement::AutoStride, the stride will be
+    /// computed automatically assuming that all elements in the same buffer slot are
+    /// packed one after another. If the buffer slot contains multiple layout elements,
+    /// they all must specify the same stride or use AutoStride value.
+    Uint32 Stride           = AutoOffset;
 
     /// Input frequency
     enum FREQUENCY : Int32

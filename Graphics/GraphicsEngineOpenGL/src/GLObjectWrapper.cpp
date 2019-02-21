@@ -29,7 +29,7 @@ namespace GLObjectWrappers
     const char *GLBufferObjCreateReleaseHelper  :: Name = "buffer";
     const char *GLProgramObjCreateReleaseHelper :: Name = "program";
     const char *GLShaderObjCreateReleaseHelper  :: Name = "shader";
-    const char *GLPipelineObjCreateReleaseHelper:: Name = "piepline";
+    const char *GLPipelineObjCreateReleaseHelper:: Name = "pipeline";
     const char *GLVAOCreateReleaseHelper        :: Name = "vertex array";
     const char *GLTextureCreateReleaseHelper    :: Name = "texture";
     const char *GLSamplerCreateReleaseHelper    :: Name = "sampler";

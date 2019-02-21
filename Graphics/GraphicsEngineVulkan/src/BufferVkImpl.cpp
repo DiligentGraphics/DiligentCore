@@ -220,11 +220,12 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters*        pRefCounters,
             VkCommandBuffer vkCmdBuff;
             pRenderDeviceVk->AllocateTransientCmdPool(CmdPool, vkCmdBuff, "Transient command pool to copy staging data to a device buffer");
 
-            VulkanUtilities::VulkanCommandBuffer::BufferMemoryBarrier(vkCmdBuff, StagingBuffer, 0, VK_ACCESS_TRANSFER_READ_BIT);
+            auto EnabledGraphicsShaderStages = LogicalDevice.GetEnabledGraphicsShaderStages();
+            VulkanUtilities::VulkanCommandBuffer::BufferMemoryBarrier(vkCmdBuff, StagingBuffer, 0, VK_ACCESS_TRANSFER_READ_BIT, EnabledGraphicsShaderStages);
             InitialState = RESOURCE_STATE_COPY_DEST;
             VkAccessFlags AccessFlags = ResourceStateFlagsToVkAccessFlags(InitialState);
             VERIFY_EXPR(AccessFlags == VK_ACCESS_TRANSFER_WRITE_BIT);
-            VulkanUtilities::VulkanCommandBuffer::BufferMemoryBarrier(vkCmdBuff, m_VulkanBuffer, 0, AccessFlags);
+            VulkanUtilities::VulkanCommandBuffer::BufferMemoryBarrier(vkCmdBuff, m_VulkanBuffer, 0, AccessFlags, EnabledGraphicsShaderStages);
 
             // Copy commands MUST be recorded outside of a render pass instance. This is OK here
             // as copy will be the only command in the cmd buffer

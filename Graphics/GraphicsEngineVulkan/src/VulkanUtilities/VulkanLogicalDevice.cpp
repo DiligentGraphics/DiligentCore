@@ -49,6 +49,12 @@ namespace VulkanUtilities
     {
         auto res = vkCreateDevice(vkPhysicalDevice, &DeviceCI, vkAllocator, &m_VkDevice);
         CHECK_VK_ERROR_AND_THROW(res, "Failed to create logical device");
+
+        m_EnabledGraphicsShaderStages = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        if (DeviceCI.pEnabledFeatures->geometryShader)
+            m_EnabledGraphicsShaderStages = VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT;
+        if (DeviceCI.pEnabledFeatures->tessellationShader)
+            m_EnabledGraphicsShaderStages = VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT | VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT;
     }
 
     VkQueue VulkanLogicalDevice::GetQueue(uint32_t queueFamilyIndex, uint32_t queueIndex)

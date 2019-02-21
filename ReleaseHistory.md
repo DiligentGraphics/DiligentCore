@@ -4,6 +4,8 @@
 * Added cmake options to disable specific back-ends and glslang
 * Updated `IRenderDevice::CreateTexture()` and `IRenderDevice::CreateBuffer()` to take pointer
   to initialization data rather than references.
+* Added `LayoutElement::AutoOffset` and `LayoutElement::AutoOffset` values to use instead of 0 when
+  automatically computing input layout elements offset and strides.
 
 ## v2.4.a
 
