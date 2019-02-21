@@ -70,19 +70,21 @@ namespace Diligent
         DeviceCaps.MajorVersion = MajorVersion;
         DeviceCaps.MinorVersion = MinorVersion;
         DeviceCaps.bMultithreadedResourceCreationSupported = False;
-        DeviceCaps.bIndirectRenderingSupported = False;
-        DeviceCaps.bGeometryShadersSupported = False;
-        DeviceCaps.bTessellationSupported = False;
-        DeviceCaps.bWireframeFillSupported = False;
-        DeviceCaps.bComputeShadersSupported = False;
-        DeviceCaps.SamCaps.bLODBiasSupported = False;
+        DeviceCaps.bIndirectRenderingSupported             = False;
+        DeviceCaps.bGeometryShadersSupported               = False;
+        DeviceCaps.bTessellationSupported                  = False;
+        DeviceCaps.bWireframeFillSupported                 = False;
+        DeviceCaps.bComputeShadersSupported                = False;
+
+        DeviceCaps.SamCaps.bLODBiasSupported            = False;
         DeviceCaps.SamCaps.bBorderSamplingModeSupported = False;
-        DeviceCaps.TexCaps.bTexture1DSupported = False;
-        DeviceCaps.TexCaps.bCubemapArraysSupported = False;
-        DeviceCaps.TexCaps.bTexture1DSupported = False;
-        DeviceCaps.TexCaps.bTexture1DArraySupported = False;
-        DeviceCaps.TexCaps.bTextureViewSupported = False;
-        DeviceCaps.TexCaps.bTexture2DMSSupported = False;
+        
+        DeviceCaps.TexCaps.bTexture1DSupported        = False;
+        DeviceCaps.TexCaps.bCubemapArraysSupported    = False;
+        DeviceCaps.TexCaps.bTexture1DSupported        = False;
+        DeviceCaps.TexCaps.bTexture1DArraySupported   = False;
+        DeviceCaps.TexCaps.bTextureViewSupported      = False;
+        DeviceCaps.TexCaps.bTexture2DMSSupported      = False;
         DeviceCaps.TexCaps.bTexture2DMSArraySupported = False;
     }
 

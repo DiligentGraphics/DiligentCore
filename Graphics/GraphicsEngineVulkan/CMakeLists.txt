@@ -188,8 +188,7 @@ elseif(PLATFORM_MACOS)
 elseif(PLATFORM_LINUX)
     find_library(Vulkan_LIBRARY NAMES vulkan HINTS "$ENV{VULKAN_SDK}/lib" "../../External/vulkan/libs/linux")
 else()
-# In most of case, NDK has it's own vulkan libs for various platforms and ABIs. That detected first.
-    find_library(Vulkan_LIBRARY NAMES vulkan HINTS "../../External/vulkan/libs/android/${ANDROID_ABI}")
+    find_library(Vulkan_LIBRARY NAMES vulkan)
 endif()
 list(APPEND PRIVATE_DEPENDENCIES ${Vulkan_LIBRARY})
 

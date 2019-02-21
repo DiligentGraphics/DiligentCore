@@ -132,6 +132,19 @@ namespace Diligent
         TEXTURE_ADDRESS_WRAP
     };
 
+    static const SamplerDesc Sam_ComparsionLinearClamp
+    {
+        FILTER_TYPE_COMPARISON_LINEAR,
+        FILTER_TYPE_COMPARISON_LINEAR,
+        FILTER_TYPE_COMPARISON_LINEAR, 
+        TEXTURE_ADDRESS_CLAMP,
+        TEXTURE_ADDRESS_CLAMP,
+        TEXTURE_ADDRESS_CLAMP,
+        SamplerDesc{}.MipLODBias,
+        SamplerDesc{}.MaxAnisotropy,
+        COMPARISON_FUNC_LESS
+    };
+
     static const SamplerDesc Sam_Aniso2xClamp
     {
         FILTER_TYPE_ANISOTROPIC,

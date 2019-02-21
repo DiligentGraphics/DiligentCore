@@ -385,7 +385,7 @@ namespace Diligent
 #endif
         }
 
-        if (!m_State.bCommittedD3D12VBsUpToDate)
+        if (!m_State.bCommittedD3D12VBsUpToDate && m_pPipelineState->GetNumBufferSlotsUsed() > 0)
         {
             CommitD3D12VertexBuffers(GraphCtx);
         }

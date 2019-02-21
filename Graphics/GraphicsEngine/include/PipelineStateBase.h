@@ -61,8 +61,8 @@ public:
                        RenderDeviceImplType*    pDevice,
                        const PipelineStateDesc& PSODesc,
                        bool                     bIsDeviceInternal = false ) :
-        TDeviceObjectBase( pRefCounters, pDevice, PSODesc, bIsDeviceInternal ),
-        m_LayoutElements( PSODesc.GraphicsPipeline.InputLayout.NumElements, LayoutElement{}, STD_ALLOCATOR_RAW_MEM(LayoutElement, GetRawAllocator(), "Allocator for vector<LayoutElement>" ) ),
+        TDeviceObjectBase (pRefCounters, pDevice, PSODesc, bIsDeviceInternal),
+        m_LayoutElements (PSODesc.GraphicsPipeline.InputLayout.NumElements, LayoutElement{}, STD_ALLOCATOR_RAW_MEM(LayoutElement, GetRawAllocator(), "Allocator for vector<LayoutElement>")),
         m_NumShaders(0)
     {
         if (this->m_Desc.IsComputePipeline)
@@ -86,7 +86,7 @@ public:
         }
         else
         {
-            const auto &GraphicsPipeline = PSODesc.GraphicsPipeline;
+            const auto& GraphicsPipeline = PSODesc.GraphicsPipeline;
 
             VALIDATE_SHADER_TYPE(GraphicsPipeline.pVS, SHADER_TYPE_VERTEX,   "vertex")
             VALIDATE_SHADER_TYPE(GraphicsPipeline.pPS, SHADER_TYPE_PIXEL,    "pixel")
@@ -101,71 +101,85 @@ public:
             m_pDS = GraphicsPipeline.pDS;
             m_pHS = GraphicsPipeline.pHS;
 
-            if( GraphicsPipeline.pVS )m_ppShaders[m_NumShaders++] = GraphicsPipeline.pVS;
-            if( GraphicsPipeline.pPS )m_ppShaders[m_NumShaders++] = GraphicsPipeline.pPS;
-            if( GraphicsPipeline.pGS )m_ppShaders[m_NumShaders++] = GraphicsPipeline.pGS;
-            if( GraphicsPipeline.pHS )m_ppShaders[m_NumShaders++] = GraphicsPipeline.pHS;
-            if( GraphicsPipeline.pDS )m_ppShaders[m_NumShaders++] = GraphicsPipeline.pDS;
+            if (GraphicsPipeline.pVS) m_ppShaders[m_NumShaders++] = GraphicsPipeline.pVS;
+            if (GraphicsPipeline.pPS) m_ppShaders[m_NumShaders++] = GraphicsPipeline.pPS;
+            if (GraphicsPipeline.pGS) m_ppShaders[m_NumShaders++] = GraphicsPipeline.pGS;
+            if (GraphicsPipeline.pHS) m_ppShaders[m_NumShaders++] = GraphicsPipeline.pHS;
+            if (GraphicsPipeline.pDS) m_ppShaders[m_NumShaders++] = GraphicsPipeline.pDS;
         }
 
-        const auto &InputLayout = PSODesc.GraphicsPipeline.InputLayout;
-        for( size_t Elem = 0; Elem < InputLayout.NumElements; ++Elem )
+        const auto& InputLayout = PSODesc.GraphicsPipeline.InputLayout;
+        for (size_t Elem = 0; Elem < InputLayout.NumElements; ++Elem)
             m_LayoutElements[Elem] = InputLayout.LayoutElements[Elem];
         this->m_Desc.GraphicsPipeline.InputLayout.LayoutElements = m_LayoutElements.data();
         
+        // Set all strides to an invalid value because an application may want to use 0 stride
+        for (auto& Stride : m_Strides)
+            Stride = LayoutElement::AutoStride;
+
         // Correct description and compute offsets and tight strides
         decltype(m_Strides) TightStrides = {};
-        for( auto It = m_LayoutElements.begin(); It != m_LayoutElements.end(); ++It )
+        for (auto It = m_LayoutElements.begin(); It != m_LayoutElements.end(); ++It)
         {
             if( It->ValueType == VT_FLOAT32 || It->ValueType == VT_FLOAT16 )
                 It->IsNormalized = false; // Floating point values cannot be normalized
 
             auto BuffSlot = It->BufferSlot;
-            if( BuffSlot >= m_Strides.size() )
+            if (BuffSlot >= m_Strides.size())
             {
-                UNEXPECTED("Buffer slot (", BuffSlot, ") exceeds the limit (", m_Strides.size(), ")");
+                UNEXPECTED("Buffer slot (", BuffSlot, ") exceeds maximum allowed value (", m_Strides.size()-1, ")");
                 continue;
             }
             m_BufferSlotsUsed = std::max(m_BufferSlotsUsed, BuffSlot + 1);
 
-            auto &CurrStride = TightStrides[BuffSlot];
-            if( It->RelativeOffset < CurrStride )
+            auto& CurrAutoStride = TightStrides[BuffSlot];
+            // If offset is not explicitly specified, use current auto stride value
+            if (It->RelativeOffset == LayoutElement::AutoOffset)
             {
-                if( It->RelativeOffset == 0 )
-                    It->RelativeOffset = CurrStride;
-                else
-                    UNEXPECTED( "Overlapping layout elements" );
+                It->RelativeOffset = CurrAutoStride;
             }
 
-            if(It->Stride != 0)
+            // If stride is explicitly specified, use it for the current buffer slot
+            if (It->Stride != LayoutElement::AutoStride)
             {
-                if(m_Strides[BuffSlot] != 0)
+                // Verify that the value is consistent with the previously specified stride, if any
+                if (m_Strides[BuffSlot] != LayoutElement::AutoStride && m_Strides[BuffSlot] != It->Stride)
                 {
-                    if (m_Strides[BuffSlot] != It->Stride)
-                        LOG_ERROR_AND_THROW("Inconsistent strides specified for buffer slot ", BuffSlot,
-                                            ". Current value: ", m_Strides[BuffSlot], ". New value: ", It->Stride);
+                    LOG_ERROR_MESSAGE("Inconsistent strides are specified for buffer slot ", BuffSlot, ". "
+                                      "Input element at index ", It->InputIndex, " explicitly specifies stride ", It->Stride, ", "
+                                      "while current value is ", m_Strides[BuffSlot], ". Specify consistent strides or use "
+                                      "LayoutElement::AutoStride to allow the engine compute strides automatically.");
                 }
                 m_Strides[BuffSlot] = It->Stride;
             }
 
-            CurrStride += It->NumComponents * GetValueSize( It->ValueType );
+            CurrAutoStride = std::max(CurrAutoStride, It->RelativeOffset + It->NumComponents * GetValueSize(It->ValueType));
         }
 
-        for( auto It = m_LayoutElements.begin(); It != m_LayoutElements.end(); ++It )
+        for (auto It = m_LayoutElements.begin(); It != m_LayoutElements.end(); ++It)
         {
             auto BuffSlot = It->BufferSlot;
-            if(m_Strides[BuffSlot] == 0)
+            // If no input elements explicitly specified stride for this buffer slot, use automatic stride
+            if (m_Strides[BuffSlot] == LayoutElement::AutoStride)
             {
                 m_Strides[BuffSlot] = TightStrides[BuffSlot];
             }
             else
             {
-                VERIFY(m_Strides[BuffSlot] >= TightStrides[BuffSlot], "Stride (", m_Strides[BuffSlot], ") explicitly specified for slot ", BuffSlot, " is smaller than the total element size (", TightStrides[BuffSlot], ")");
+                if (m_Strides[BuffSlot] < TightStrides[BuffSlot])
+                {
+                    LOG_ERROR_MESSAGE("Stride ", m_Strides[BuffSlot], " explicitly specified for slot ", BuffSlot, " is smaller than the "
+                                      "minimum stride ", TightStrides[BuffSlot], " required to accomodate all input elements.");
+                }
             }
-            if(It->Stride == 0)
+            if (It->Stride == LayoutElement::AutoStride)
                 It->Stride = m_Strides[BuffSlot];
-            else
-                VERIFY(m_Strides[BuffSlot] == It->Stride, "Incosistent stride");
+        }
+        // Set strides for all unused slots to 0
+        for (auto& Stride : m_Strides)
+        {
+            if (Stride == LayoutElement::AutoStride)
+                Stride = 0;
         }
 
         Uint64 DeviceQueuesMask = pDevice->GetCommandQueueMask();

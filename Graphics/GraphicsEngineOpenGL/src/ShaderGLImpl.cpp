@@ -33,12 +33,15 @@ using namespace Diligent;
 namespace Diligent
 {
 
-ShaderGLImpl::ShaderGLImpl(IReferenceCounters *pRefCounters, RenderDeviceGLImpl *pDeviceGL, const ShaderCreationAttribs &CreationAttribs, bool bIsDeviceInternal) : 
+ShaderGLImpl::ShaderGLImpl(IReferenceCounters*          pRefCounters,
+                           RenderDeviceGLImpl*          pDeviceGL,
+                           const ShaderCreationAttribs& CreationAttribs,
+                           bool bIsDeviceInternal) : 
     TShaderBase( pRefCounters, pDeviceGL, CreationAttribs.Desc, bIsDeviceInternal ),
     m_GlProgObj(false),
     m_GLShaderObj( false, GLObjectWrappers::GLShaderObjCreateReleaseHelper( GetGLShaderType( m_Desc.ShaderType ) ) )
 {
-    auto GLSLSource = BuildGLSLSourceString(CreationAttribs, TargetGLSLCompiler::driver);
+    auto GLSLSource = BuildGLSLSourceString(CreationAttribs, pDeviceGL->GetDeviceCaps(), TargetGLSLCompiler::driver);
 
     // Note: there is a simpler way to create the program:
     //m_uiShaderSeparateProg = glCreateShaderProgramv(GL_VERTEX_SHADER, _countof(ShaderStrings), ShaderStrings);

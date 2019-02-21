@@ -2845,9 +2845,13 @@ void InitVariable(const String& Name, const String &InitValue, std::stringstream
     OutSS << "    " << Name <<" = " << InitValue << ";\n";
 }
 
-void DefineInterfaceVar( int location, const char *inout, const String& ParamType, const String& ParamName, std::stringstream &OutSS )
+void DefineInterfaceVar(int location, const char* inout, const String& ParamType, const String& ParamName, std::stringstream& OutSS)
 {
-    OutSS << "layout(location = " << location << ") " << inout << ' ' << ParamType << ' ' << ParamName << ";\n";
+    if (location >= 0)
+    {
+        OutSS << "layout(location = " << location << ") ";
+    }
+    OutSS << inout << ' ' << ParamType << ' ' << ParamName << ";\n";
 }
 
 String HLSL2GLSLConverterImpl::ConversionStream::BuildParameterName(const std::vector<const ShaderParameterInfo*>& MemberStack, Char Separator, const Char* Prefix, const Char *SubstituteInstName, const Char *Index )
@@ -2951,9 +2955,9 @@ bool HLSL2GLSLConverterImpl::ConversionStream::RequiresFlatQualifier(const Strin
 }
 
 void HLSL2GLSLConverterImpl::ConversionStream::ProcessFragmentShaderArguments(std::vector<ShaderParameterInfo>& Params,
-                                                                              String &GlobalVariables,
-                                                                              std::stringstream &ReturnHandlerSS,
-                                                                              String &Prologue)
+                                                                              String&                           GlobalVariables,
+                                                                              std::stringstream&                ReturnHandlerSS,
+                                                                              String&                           Prologue)
 {
     stringstream GlobalVarsSS, PrologueSS, InterfaceVarsSS;
     int InLocation = 0;
@@ -2969,8 +2973,10 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessFragmentShaderArguments(st
                         PrologueSS << "    " << Getter << '(' << FullParamName << ");\n";
                     else
                     {
-                        auto InputVarName = BuildParameterName(MemberStack, '_', "_in_");
-                        DefineInterfaceVar(InLocation++, RequiresFlatQualifier(Param.Type) ? "flat in" : "in", Param.Type, InputVarName, InterfaceVarsSS );
+                        auto InputVarName = BuildParameterName(MemberStack, '_', m_bUseInOutLocationQualifiers ? "_psin_" : "_");
+                        DefineInterfaceVar(m_bUseInOutLocationQualifiers ? InLocation++ : -1,
+                                           RequiresFlatQualifier(Param.Type) ? "flat in" : "in",
+                                           Param.Type, InputVarName, InterfaceVarsSS );
                         InitVariable(FullParamName, InputVarName, PrologueSS );
                     }
                 }
@@ -3007,6 +3013,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessFragmentShaderArguments(st
 
                         if( RTIndex >= 0 && RTIndex < MaxRenderTargets )
                         {
+                            // Layout location qualifiers are allowed on FS outputs even in GLES3.0
                             String OutVarName = BuildParameterName(MemberStack, '_', "_psout_");
                             DefineInterfaceVar(RTIndex, "out", Param.Type, OutVarName, GlobalVarsSS );   
                             ReturnHandlerSS << OutVarName << " = " << FullParamName << ";\\\n";
@@ -3068,6 +3075,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessVertexShaderArguments( std
                         }
                         LocationToSemantic[InputLocation] = Semantic.c_str();
                         auto InputVarName = BuildParameterName(MemberStack, '_', "_vsin_");
+                        // Layout location qualifiers are allowed on VS inputs even in GLES3.0
                         DefineInterfaceVar( InputLocation, "in", Param.Type, InputVarName, GlobalVarsSS );
                         InitVariable( FullParamName, InputVarName, PrologueSS );
                         AutoInputLocation++;
@@ -3086,8 +3094,10 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessVertexShaderArguments( std
                         ReturnHandlerSS << Setter << '(' << FullParamName << ");\\\n";
                     else
                     {
-                        auto OutputVarName =  BuildParameterName(MemberStack, '_', "_vsout_");
-                        DefineInterfaceVar( OutLocation++, RequiresFlatQualifier(Param.Type) ? "flat out" : "out", Param.Type, OutputVarName, InterfaceVarsSS );
+                        auto OutputVarName =  BuildParameterName(MemberStack, '_', m_bUseInOutLocationQualifiers ? "_vsout_" : "_");
+                        DefineInterfaceVar( m_bUseInOutLocationQualifiers ? OutLocation++ : -1,
+                                            RequiresFlatQualifier(Param.Type) ? "flat out" : "out",
+                                            Param.Type, OutputVarName, InterfaceVarsSS );
                         ReturnHandlerSS << OutputVarName << " = " << FullParamName << ";\\\n";
                     }
                 }
@@ -3157,9 +3167,11 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessGeometryShaderArguments( T
                         PrologueSS << "    " << Getter << '(' << FullIndexedParamName << ");\n";
                     else
                     {
-                        auto VarName = BuildParameterName(MemberStack, '_', "_gsin_");
+                        auto VarName = BuildParameterName(MemberStack, '_', m_bUseInOutLocationQualifiers ? "_gsin_" : "_");
                         auto InputVarName = VarName+"[i]";
-                        DefineInterfaceVar( inLocation++, RequiresFlatQualifier(Param.Type) ? "flat in" : "in", Param.Type, VarName + "[]", InterfaceVarsInSS );
+                        DefineInterfaceVar( m_bUseInOutLocationQualifiers ? inLocation++ : -1,
+                                            RequiresFlatQualifier(Param.Type) ? "flat in" : "in",
+                                            Param.Type, VarName + "[]", InterfaceVarsInSS );
                         InitVariable( FullIndexedParamName, InputVarName, PrologueSS );
                     }
                 }
@@ -3196,8 +3208,10 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessGeometryShaderArguments( T
                         // For SV_RenderTargetArrayIndex semantic, we also need to define output
                         // variable that fragment shader will read.
                         // Note that gl_Layer is available in fragment shader, but only starting with GL4.3+
-                        auto OutputVarName =  BuildParameterName(MemberStack, '_', "_gsout_");
-                        DefineInterfaceVar( outLocation++, RequiresFlatQualifier(Param.Type) ? "flat out" : "out", Param.Type, OutputVarName, InterfaceVarsOutSS );
+                        auto OutputVarName =  BuildParameterName(MemberStack, '_', m_bUseInOutLocationQualifiers ? "_gsout_" : "_");
+                        DefineInterfaceVar( m_bUseInOutLocationQualifiers ? outLocation++ : -1,
+                                            RequiresFlatQualifier(Param.Type) ? "flat out" : "out",
+                                            Param.Type, OutputVarName, InterfaceVarsOutSS );
                         EmitVertexDefineSS << OutputVarName << " = " << MacroArgumentName << ";\\\n";
                     }
                 }
@@ -3676,10 +3690,12 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessHullShaderArguments( Token
                         PrologueSS << "    " << Getter << '(' << FullIndexedParamName << ");\n";
                     else
                     {
-                        auto VarName = BuildParameterName(MemberStack, '_', "_hsin_");
+                        auto VarName = BuildParameterName(MemberStack, '_', m_bUseInOutLocationQualifiers ? "_hsin_" : "_");
                         auto InputVarName = VarName + (IsPatch ? "[i]" : "");
                         // User-defined inputs can be declared as unbounded arrays
-                        DefineInterfaceVar( inLocation++, RequiresFlatQualifier(Param.Type) ? "flat in" : "in", Param.Type, VarName + (IsPatch ? "[]" : ""), InterfaceVarsInSS );
+                        DefineInterfaceVar(m_bUseInOutLocationQualifiers ? inLocation++ : -1,
+                                           RequiresFlatQualifier(Param.Type) ? "flat in" : "in",
+                                           Param.Type, VarName + (IsPatch ? "[]" : ""), InterfaceVarsInSS );
                         InitVariable( FullIndexedParamName, InputVarName, PrologueSS );
                     }
                 }
@@ -3706,10 +3722,12 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessHullShaderArguments( Token
                         ReturnHandlerSS << Setter << '(' << SrcParamName << ");\\\n";
                     else
                     {
-                        auto OutputVarName =  BuildParameterName(MemberStack, '_', "_hsout_");
+                        auto OutputVarName =  BuildParameterName(MemberStack, '_', m_bUseInOutLocationQualifiers ? "_hsout_" : "_");
                         // Per-vertex outputs are aggregated into arrays.
                         // https://www.khronos.org/opengl/wiki/Tessellation_Control_Shader#Outputs
-                        DefineInterfaceVar( outLocation++, RequiresFlatQualifier(Param.Type) ? "flat out" : "out", Param.Type, OutputVarName + "[]", InterfaceVarsOutSS );
+                        DefineInterfaceVar( m_bUseInOutLocationQualifiers ? outLocation++ : -1,
+                                            RequiresFlatQualifier(Param.Type) ? "flat out" : "out",
+                                            Param.Type, OutputVarName + "[]", InterfaceVarsOutSS );
                         // A TCS can only ever write to the per-vertex output variable that corresponds to their invocation,
                         // so writes to per-vertex outputs must be of the form vertexTexCoord[gl_InvocationID]
                         ReturnHandlerSS << OutputVarName << "[gl_InvocationID] = " << SrcParamName << ";\\\n";
@@ -3882,10 +3900,12 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessDomainShaderArguments( Tok
                         PrologueSS<<"    ";
                     if(Getter.empty())
                     {
-                        auto VarName = BuildParameterName(MemberStack, '_', "_dsin_");
+                        auto VarName = BuildParameterName(MemberStack, '_', m_bUseInOutLocationQualifiers ? "_dsin_" : "_");
                         auto InputVarName = VarName + (IsPatch ? "[i]" : "");
                         // User-defined inputs can be declared as unbounded arrays
-                        DefineInterfaceVar( inLocation++, RequiresFlatQualifier(Param.Type) ? "flat in" : "in", Param.Type, VarName + (IsPatch ? "[]" : ""), InterfaceVarsInSS );
+                        DefineInterfaceVar( m_bUseInOutLocationQualifiers ? inLocation++ : -1,
+                                            RequiresFlatQualifier(Param.Type) ? "flat in" : "in",
+                                            Param.Type, VarName + (IsPatch ? "[]" : ""), InterfaceVarsInSS );
                         InitVariable( FullIndexedParamName, InputVarName, PrologueSS );
                     }
                     else
@@ -3908,10 +3928,12 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessDomainShaderArguments( Tok
                     String SrcParamName = BuildParameterName(MemberStack, '.', "", Param.storageQualifier == ShaderParameterInfo::StorageQualifier::Ret ? "_RET_VAL_" : "");
                     if(Setter.empty())
                     {
-                        auto OutputVarName =  BuildParameterName(MemberStack, '_', "_hsout_");
+                        auto OutputVarName =  BuildParameterName(MemberStack, '_', m_bUseInOutLocationQualifiers ? "_dsout_" : "_");
                         // Per-vertex outputs are aggregated into arrays.
                         // https://www.khronos.org/opengl/wiki/Tessellation_Control_Shader#Outputs
-                        DefineInterfaceVar( outLocation++, RequiresFlatQualifier(Param.Type) ? "flat out" : "out", Param.Type, OutputVarName, InterfaceVarsOutSS );
+                        DefineInterfaceVar( m_bUseInOutLocationQualifiers ? outLocation++ : -1,
+                                            RequiresFlatQualifier(Param.Type) ? "flat out" : "out",
+                                            Param.Type, OutputVarName, InterfaceVarsOutSS );
                         // A TCS can only ever write to the per-vertex output variable that corresponds to their invocation,
                         // so writes to per-vertex outputs must be of the form vertexTexCoord[gl_InvocationID]
                         ReturnHandlerSS << OutputVarName << " = " << SrcParamName << ";\\\n";
@@ -4348,17 +4370,17 @@ String HLSL2GLSLConverterImpl::ConversionStream::BuildGLSLSource()
     return Output;
 }
 
-HLSL2GLSLConverterImpl::ConversionStream::ConversionStream(IReferenceCounters *pRefCounters, 
-                                                           const HLSL2GLSLConverterImpl &Converter, 
-                                                           const char* InputFileName,
+HLSL2GLSLConverterImpl::ConversionStream::ConversionStream(IReferenceCounters*              pRefCounters, 
+                                                           const HLSL2GLSLConverterImpl&    Converter, 
+                                                           const char*                      InputFileName,
                                                            IShaderSourceInputStreamFactory* pInputStreamFactory, 
-                                                           const Char* HLSLSource, 
-                                                           size_t NumSymbols,
-                                                           bool bPreserveTokens) :
-    TBase(pRefCounters),
-    m_bPreserveTokens(bPreserveTokens),
-    m_Converter(Converter),
-    m_InputFileName(InputFileName != nullptr ? InputFileName : "<Unknown>")
+                                                           const Char*                      HLSLSource, 
+                                                           size_t                           NumSymbols,
+                                                           bool                             bPreserveTokens) :
+    TBase                         (pRefCounters),
+    m_bPreserveTokens             (bPreserveTokens),
+    m_Converter                   (Converter),
+    m_InputFileName               (InputFileName != nullptr ? InputFileName : "<Unknown>")
 {
     String Source(HLSLSource, NumSymbols);
 
@@ -4368,43 +4390,43 @@ HLSL2GLSLConverterImpl::ConversionStream::ConversionStream(IReferenceCounters *p
 }
 
 
-String HLSL2GLSLConverterImpl::Convert(ConversionAttribs &Attribs)const
+String HLSL2GLSLConverterImpl::Convert(ConversionAttribs& Attribs)const
 {
-        if(Attribs.ppConversionStream == nullptr)
+    if (Attribs.ppConversionStream == nullptr)
+    {
+        ConversionStream Stream(nullptr, *this, Attribs.InputFileName, Attribs.pSourceStreamFactory, Attribs.HLSLSource, Attribs.NumSymbols, false);
+        return Stream.Convert(Attribs.EntryPoint, Attribs.ShaderType, Attribs.IncludeDefinitions, Attribs.SamplerSuffix, Attribs.UseInOutLocationQualifiers);
+    }
+    else
+    {
+        ConversionStream* pStream = nullptr;
+        if (*Attribs.ppConversionStream != nullptr)
         {
-            ConversionStream Stream(nullptr, *this, Attribs.InputFileName, Attribs.pSourceStreamFactory, Attribs.HLSLSource, Attribs.NumSymbols, false);
-            return Stream.Convert(Attribs.EntryPoint, Attribs.ShaderType, Attribs.IncludeDefinitions, Attribs.SamplerSuffix);
+            pStream = ValidatedCast<ConversionStream>(*Attribs.ppConversionStream);
+            const auto &FileNameFromStream = pStream->GetInputFileName();
+            if (FileNameFromStream != Attribs.InputFileName)
+            {
+                LOG_WARNING_MESSAGE("Input stream was initialized for input file \"", FileNameFromStream, "\" that does not match the name of the file to be converted \"", Attribs.InputFileName, "\". New stream will be created");
+                (*Attribs.ppConversionStream)->Release();
+                *Attribs.ppConversionStream = nullptr;
+            }
         }
-        else
+
+        if (*Attribs.ppConversionStream == nullptr)
         {
-            ConversionStream *pStream = nullptr;
-            if (*Attribs.ppConversionStream != nullptr)
-            {
-                pStream = ValidatedCast<ConversionStream>(*Attribs.ppConversionStream);
-                const auto &FileNameFromStream = pStream->GetInputFileName();
-                if (FileNameFromStream != Attribs.InputFileName)
-                {
-                    LOG_WARNING_MESSAGE("Input stream was initialized for input file \"", FileNameFromStream, "\" that does not match the name of the file to be converted \"", Attribs.InputFileName, "\". New stream will be created");
-                    (*Attribs.ppConversionStream)->Release();
-                    *Attribs.ppConversionStream = nullptr;
-                }
-            }
-
-            if (*Attribs.ppConversionStream == nullptr)
-            {
-                CreateStream(Attribs.InputFileName, Attribs.pSourceStreamFactory, Attribs.HLSLSource, Attribs.NumSymbols, Attribs.ppConversionStream);
-                pStream = ValidatedCast<ConversionStream>(*Attribs.ppConversionStream);
-            }
-
-            return pStream->Convert(Attribs.EntryPoint, Attribs.ShaderType, Attribs.IncludeDefinitions, Attribs.SamplerSuffix);
+            CreateStream(Attribs.InputFileName, Attribs.pSourceStreamFactory, Attribs.HLSLSource, Attribs.NumSymbols, Attribs.ppConversionStream);
+            pStream = ValidatedCast<ConversionStream>(*Attribs.ppConversionStream);
         }
+
+        return pStream->Convert(Attribs.EntryPoint, Attribs.ShaderType, Attribs.IncludeDefinitions, Attribs.SamplerSuffix, Attribs.UseInOutLocationQualifiers);
+    }
 }
 
-void HLSL2GLSLConverterImpl::CreateStream(const Char* InputFileName,
-                                          IShaderSourceInputStreamFactory *pSourceStreamFactory, 
-                                          const Char* HLSLSource, 
-                                          size_t NumSymbols, 
-                                          IHLSL2GLSLConversionStream **ppStream)const
+void HLSL2GLSLConverterImpl::CreateStream(const Char*                       InputFileName,
+                                          IShaderSourceInputStreamFactory*  pSourceStreamFactory, 
+                                          const Char*                       HLSLSource, 
+                                          size_t                            NumSymbols, 
+                                          IHLSL2GLSLConversionStream**      ppStream)const
 {
     try
     {
@@ -4417,11 +4439,16 @@ void HLSL2GLSLConverterImpl::CreateStream(const Char* InputFileName,
     }
 }
 
-void HLSL2GLSLConverterImpl::ConversionStream::Convert(const Char* EntryPoint, SHADER_TYPE ShaderType, bool IncludeDefintions, const char* SamplerSuffix, IDataBlob **ppGLSLSource)
+void HLSL2GLSLConverterImpl::ConversionStream::Convert(const Char* EntryPoint,
+                                                       SHADER_TYPE ShaderType,
+                                                       bool        IncludeDefintions,
+                                                       const char* SamplerSuffix,
+                                                       bool        UseInOutLocationQualifiers,
+                                                       IDataBlob** ppGLSLSource)
 {
     try
     {
-        auto GLSLSource = Convert(EntryPoint, ShaderType, IncludeDefintions, SamplerSuffix);
+        auto GLSLSource = Convert(EntryPoint, ShaderType, IncludeDefintions, SamplerSuffix, UseInOutLocationQualifiers);
         StringDataBlobImpl *pDataBlob = MakeNewRCObj<StringDataBlobImpl>()( std::move(GLSLSource) );
         pDataBlob->QueryInterface( IID_DataBlob, reinterpret_cast<IObject**>(ppGLSLSource) );
     }
@@ -4431,8 +4458,13 @@ void HLSL2GLSLConverterImpl::ConversionStream::Convert(const Char* EntryPoint, S
     }
 }
 
-String HLSL2GLSLConverterImpl::ConversionStream::Convert( const Char* EntryPoint, SHADER_TYPE ShaderType, bool IncludeDefintions, const char* SamplerSuffix )
+String HLSL2GLSLConverterImpl::ConversionStream::Convert(const Char* EntryPoint,
+                                                         SHADER_TYPE ShaderType,
+                                                         bool        IncludeDefintions,
+                                                         const char* SamplerSuffix,
+                                                         bool        UseInOutLocationQualifiers )
 {
+    m_bUseInOutLocationQualifiers = UseInOutLocationQualifiers;
     TokenListType TokensCopy(m_bPreserveTokens ? m_Tokens : TokenListType());
 
     std::unordered_map<String, bool> SamplersHash;

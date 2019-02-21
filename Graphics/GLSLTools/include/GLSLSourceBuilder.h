@@ -24,17 +24,21 @@
 #pragma once
 
 #include "BasicTypes.h"
+#include "DeviceCaps.h"
 #include "Shader.h"
 
 namespace Diligent
 {
-    
+
 enum TargetGLSLCompiler
 {
     glslang,
     driver
 };
 
-String BuildGLSLSourceString(const ShaderCreationAttribs& CreationAttribs, TargetGLSLCompiler TargetCompiler, const char* ExtraDefinitions = nullptr);
+String BuildGLSLSourceString(const ShaderCreationAttribs& CreationAttribs,
+                             const DeviceCaps&            deviceCaps,
+                             TargetGLSLCompiler           TargetCompiler,
+                             const char*                  ExtraDefinitions = nullptr);
 
 }
