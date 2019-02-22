@@ -97,7 +97,7 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*          pRefCounters,
         if (CreationAttribs.ppCompilerOutput != nullptr)
         {
             // infoLogLen accounts for null terminator
-            auto *pOutputDataBlob = MakeNewRCObj<DataBlobImpl>()(infoLogLen + FullSource.length() + 1);
+            auto* pOutputDataBlob = MakeNewRCObj<DataBlobImpl>()(infoLogLen + FullSource.length() + 1);
             char* DataPtr = reinterpret_cast<char*>(pOutputDataBlob->GetDataPtr());
             if (infoLogLen > 0)
                 memcpy(DataPtr, infoLog.data(), infoLogLen);
@@ -182,40 +182,60 @@ void ShaderGLImpl::BindResources( IResourceMapping* pResourceMapping, Uint32 Fla
     }
     else
     {
-        static bool FirstTime = true;
-        if( FirstTime )
+        LOG_WARNING_MESSAGE_ONCE( "IShader::BindResources() effectively does nothing when separable programs are not supported by the device." );
+    }
+}
+
+IShaderVariable* ShaderGLImpl::GetShaderVariable(const Char* Name)
+{
+    return GetShaderVariable(Name, true);
+}
+
+IShaderVariable* ShaderGLImpl::GetShaderVariable(const Char* Name, bool CreatePlaceholder)
+{
+    if( m_GlProgObj )
+        return m_GlProgObj.GetConstantResources().GetShaderVariable(Name);
+    else
+    {
+        for (auto& Res : m_StaticResources)
         {
-            LOG_WARNING_MESSAGE( "IShader::BindResources() effectively does nothing when separable programs are not supported by the device. Use IDeviceContext::BindShaderResources() instead." );
-            FirstTime = false;
+            if( strcmp(Res->GetName(), Name) == 0)
+                return Res;
+        }
+
+        if (CreatePlaceholder)
+        {
+            auto* pNewVar = MakeNewRCObj<StaticVarPlaceholder>()(Name, static_cast<Uint32>(m_StaticResources.size()));
+            m_StaticResources.emplace_back(pNewVar);
+            return pNewVar;
+        }
+        else
+        {
+            return nullptr;
         }
     }
 }
 
-IShaderVariable* ShaderGLImpl::GetShaderVariable( const Char* Name )
-{
-    DEV_CHECK_ERR(m_GlProgObj, "Shader variable queries are currently supported for separable programs only");
-    if( m_GlProgObj )
-        return m_GlProgObj.GetConstantResources().GetShaderVariable(Name);
-    else
-        return nullptr;
-}
-
 Uint32 ShaderGLImpl::GetVariableCount() const
 {
-    DEV_CHECK_ERR(m_GlProgObj, "Shader variable queries are currently supported for separable programs only");
     if( m_GlProgObj )
         return m_GlProgObj.GetConstantResources().GetVariableCount();
     else
-        return 0;
+    {
+        LOG_WARNING_MESSAGE("When separate shader objects are unavailable, GetVariableCount() returns the number of resources being set so far "
+                            "rather than the total number of static shader resources.");
+        return static_cast<Uint32>(m_StaticResources.size());
+    }
 }
 
 IShaderVariable* ShaderGLImpl::GetShaderVariable(Uint32 Index)
 {
-    DEV_CHECK_ERR(m_GlProgObj, "Shader variable queries are currently supported for separable programs only");
     if( m_GlProgObj )
         return m_GlProgObj.GetConstantResources().GetShaderVariable(Index);
     else
-        return 0;
+    {
+        return Index < m_StaticResources.size() ? m_StaticResources[Index].RawPtr() : nullptr;
+    }
 }
 
 }

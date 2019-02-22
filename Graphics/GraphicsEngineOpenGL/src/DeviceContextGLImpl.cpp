@@ -388,9 +388,10 @@ namespace Diligent
             GLProgramObj.dbgVerifyBindingCompleteness(pDynamicResources, m_pPipelineState);
 #endif
 
-            for(int BindDynamicResources = 0; BindDynamicResources < (pShaderResBindingGL ? 2 : 1); ++BindDynamicResources)
+            // When program pipelines are not supported, all resources are dynamic resources
+            for (int BindDynamicResources = (ProgramPipelineSupported ? 0 : 1); BindDynamicResources < (pShaderResBindingGL ? 2 : 1); ++BindDynamicResources)
             {
-                GLProgramResources &ProgResources = BindDynamicResources ? *pDynamicResources : GLProgramObj.GetConstantResources();
+                GLProgramResources& ProgResources = BindDynamicResources ? *pDynamicResources : GLProgramObj.GetConstantResources();
 
 #ifdef VERIFY_RESOURCE_BINDINGS
                 ProgResources.dbgVerifyResourceBindings();

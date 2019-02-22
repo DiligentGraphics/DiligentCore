@@ -127,7 +127,78 @@ GLProgramResources& ShaderResourceBindingGLImpl::GetProgramResources(SHADER_TYPE
 
 void ShaderResourceBindingGLImpl::InitializeStaticResources(const IPipelineState* pPipelineState)
 {
+    if (!IsUsingSeparatePrograms())
+    {
+        class ResourceMappingProxy final : public IResourceMapping
+        {
+        public:
+            ResourceMappingProxy(const PipelineStateGLImpl& PSO) :
+                m_PSO(PSO)
+            {
+            }
+            virtual void QueryInterface (const INTERFACE_ID& IID, IObject** ppInterface)override final
+            {
+                UNEXPECTED("This method should never be called");
+            }
+            virtual CounterValueType AddRef()override final
+            {
+                UNEXPECTED("This method should never be called");
+                return 0;
+            }
+            virtual CounterValueType Release()override final
+            {
+                UNEXPECTED("This method should never be called");
+                return 0;
+            }
+            virtual IReferenceCounters* GetReferenceCounters()const override final
+            {
+                UNEXPECTED("This method should never be called");
+                return nullptr;
+            }
+            virtual void AddResource (const Char* Name, IDeviceObject* pObject, bool bIsUnique)override final
+            {
+                UNEXPECTED("This method should never be called");
+            }
+            virtual void AddResourceArray (const Char* Name, Uint32 StartIndex, IDeviceObject* const* ppObjects, Uint32 NumElements, bool bIsUnique)override final
+            {
+                UNEXPECTED("This method should never be called");
+            }
+            virtual void RemoveResourceByName (const Char* Name, Uint32 ArrayIndex = 0)
+            {
+                UNEXPECTED("This method should never be called");
+            }
+            virtual void GetResource (const Char* Name, IDeviceObject** ppResource, Uint32 ArrayIndex = 0)
+            {
+                auto NumShaders = m_PSO.GetNumShaders();
+                for (Uint32 s=0; s < NumShaders; ++s)
+                {
+                    auto* pShader = m_PSO.GetShader<ShaderGLImpl>(s);
+                    auto* pVar = pShader->GetShaderVariable(Name, false);
+                    if (pVar != nullptr)
+                    {
+                        auto* pStaticVarPlaceholder = ValidatedCast<ShaderGLImpl::StaticVarPlaceholder>(pVar);
+                        *ppResource = pStaticVarPlaceholder->Get(ArrayIndex);
+                        if (*ppResource != nullptr)
+                            (*ppResource)->AddRef();
+                    }
+                }
+            }
+            virtual size_t GetSize()
+            {
+                UNEXPECTED("This method should never be called");
+                return 0;
+            }
+        private:
+            const PipelineStateGLImpl& m_PSO;
+        };
 
+        if (pPipelineState != nullptr)
+        {
+            const auto* PSOGL = ValidatedCast<const PipelineStateGLImpl>(pPipelineState);
+            ResourceMappingProxy StaticResMapping(*PSOGL);
+            m_DynamicProgResources[0].BindResources(&StaticResMapping, 0);
+        }
+    }
 }
 
 }
