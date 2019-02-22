@@ -4110,7 +4110,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessShaderDeclaration( TokenLi
     std::stringstream ReturnHandlerSS;
     const Char *ReturnMacroName = "_RETURN_";
     // Some GLES compilers cannot properly handle macros with empty argument lists, such as _RETURN_().
-    // Also, some compilers generate an error if there is no whitespace after the macro witout arguments: _RET_VAL_{
+    // Also, some compilers generate an error if there is no whitespace after the macro witout arguments: _RETURN_{
     ReturnHandlerSS << "#define " << ReturnMacroName << (bIsVoid ? "" : "(_RET_VAL_)") << " {\\\n";
 
     String GlobalVariables, Prologue;
