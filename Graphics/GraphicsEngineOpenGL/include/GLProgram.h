@@ -30,34 +30,35 @@ namespace Diligent
     class GLProgram : public GLObjectWrappers::GLProgramObj
     {
     public:
-        GLProgram( bool CreateObject );
-        GLProgram( GLProgram&& Program );
+        GLProgram(bool CreateObject);
+        GLProgram(GLProgram&& Program);
 
-        void InitResources(RenderDeviceGLImpl* pDeviceGLImpl, 
-                           SHADER_VARIABLE_TYPE DefaultVariableType, 
-                           const ShaderVariableDesc *VariableDesc, 
-                           Uint32 NumVars, 
-                           const StaticSamplerDesc *StaticSamplers,
-                           Uint32 NumStaticSamplers,
-                           IObject &Owner);
+        GLProgram             (const GLProgram&)  = delete;
+        GLProgram& operator = (const GLProgram&)  = delete;
+        GLProgram& operator = (      GLProgram&&) = delete;
 
-        void BindConstantResources(IResourceMapping *pResourceMapping, Uint32 Flags);
+        void InitResources(RenderDeviceGLImpl*       pDeviceGLImpl, 
+                           SHADER_VARIABLE_TYPE      DefaultVariableType, 
+                           const ShaderVariableDesc* VariableDesc, 
+                           Uint32                    NumVars, 
+                           const StaticSamplerDesc*  StaticSamplers,
+                           Uint32                    NumStaticSamplers,
+                           IObject&                  Owner);
 
-        const GLProgramResources& GetAllResources()const{return m_AllResources;}
+        void BindConstantResources(IResourceMapping* pResourceMapping, Uint32 Flags);
+
+        const GLProgramResources& GetAllResources()     const{return m_AllResources;}
               GLProgramResources& GetConstantResources()     {return m_ConstantResources;}
         const GLProgramResources& GetConstantResources()const{return m_ConstantResources;}
         
 
 #ifdef VERIFY_RESOURCE_BINDINGS
         template<typename TResArrayType>
-        void dbgVerifyBindingCompletenessHelper(TResArrayType &ResArr, GLProgramResources *pDynamicResources);
-        void dbgVerifyBindingCompleteness(GLProgramResources *pDynamicResources, class PipelineStateGLImpl *pPSO);
+        void dbgVerifyBindingCompletenessHelper(TResArrayType& ResArr, GLProgramResources* pDynamicResources);
+        void dbgVerifyBindingCompleteness(GLProgramResources* pDynamicResources, class PipelineStateGLImpl* pPSO);
 #endif
 
     private:
-        GLProgram( const GLProgram& Program );
-        const GLProgram& operator = (const GLProgram& Program);
-
         GLProgramResources m_AllResources;
         GLProgramResources m_ConstantResources;
         // When adding new member DO NOT FORGET TO UPDATE GLProgram( GLProgram&& Program )!!!

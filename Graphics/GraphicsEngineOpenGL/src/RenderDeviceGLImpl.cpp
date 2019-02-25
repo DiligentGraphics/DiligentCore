@@ -136,7 +136,7 @@ void RenderDeviceGLImpl :: CreateBufferFromGLHandle(Uint32 GLHandle, const Buffe
     );
 }
 
-void RenderDeviceGLImpl :: CreateShader(const ShaderCreationAttribs& ShaderCreationAttribs, IShader **ppShader, bool bIsDeviceInternal)
+void RenderDeviceGLImpl :: CreateShader(const ShaderCreationAttribs& ShaderCreationAttribs, IShader** ppShader, bool bIsDeviceInternal)
 {
     CreateDeviceObject( "shader", ShaderCreationAttribs.Desc, ppShader, 
         [&]()

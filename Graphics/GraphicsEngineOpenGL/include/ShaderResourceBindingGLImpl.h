@@ -36,18 +36,20 @@ namespace Diligent
 {
 
 class FixedBlockMemoryAllocator;
+class PipelineStateGLImpl;
+
 /// Implementation of the Diligent::IShaderResourceBindingGL interface
 class ShaderResourceBindingGLImpl final : public ShaderResourceBindingBase<IShaderResourceBindingGL>
 {
 public:
     using TBase = ShaderResourceBindingBase<IShaderResourceBindingGL>;
 
-    ShaderResourceBindingGLImpl(IReferenceCounters *pRefCounters, class PipelineStateGLImpl *pPSO);
+    ShaderResourceBindingGLImpl(IReferenceCounters* pRefCounters, PipelineStateGLImpl* pPSO);
     ~ShaderResourceBindingGLImpl();
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
+    virtual void QueryInterface( const INTERFACE_ID& IID, IObject** ppInterface )override final;
 
-    virtual void BindResources(Uint32 ShaderFlags, IResourceMapping *pResMapping, Uint32 Flags)override final;
+    virtual void BindResources(Uint32 ShaderFlags, IResourceMapping* pResMapping, Uint32 Flags)override final;
 
     virtual IShaderVariable* GetVariable(SHADER_TYPE ShaderType, const char *Name)override final;
 
@@ -57,11 +59,12 @@ public:
 
     virtual void InitializeStaticResources(const IPipelineState* pPipelineState)override final;
 
-    GLProgramResources &GetProgramResources(SHADER_TYPE ShaderType, PipelineStateGLImpl *pdbgPSO);
+    GLProgramResources& GetProgramResources(SHADER_TYPE ShaderType, PipelineStateGLImpl* pdbgPSO);
 
 private:
+    bool IsUsingSeparatePrograms()const;
+
     GLProgramResources m_DynamicProgResources[6];
-    RefCntWeakPtr<PipelineStateGLImpl> m_wpPSO;
 };
 
 }

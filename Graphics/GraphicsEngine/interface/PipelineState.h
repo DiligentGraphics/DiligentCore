@@ -177,9 +177,6 @@ public:
 
     /// \param [in] pResourceMapping - Pointer to the resource mapping interface.
     /// \param [in] Flags - Additional flags. See Diligent::BIND_SHADER_RESOURCES_FLAGS.
-    /// \remarks For older OpenGL devices that do not support program pipelines 
-    ///          (OpenGL4.1-, OpenGLES3.0-). This function is the only way to bind
-    ///          shader resources.
     virtual void BindShaderResources( IResourceMapping* pResourceMapping, Uint32 Flags ) = 0;
 
     /// Creates a shader resource binding object

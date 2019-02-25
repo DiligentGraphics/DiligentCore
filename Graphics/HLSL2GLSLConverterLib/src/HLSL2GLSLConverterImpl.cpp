@@ -3359,7 +3359,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessScope(TokenListType::itera
 }
 
 
-void HLSL2GLSLConverterImpl::ConversionStream::ProcessHullShaderConstantFunction(const Char *FuncName, bool &bTakesInputPatch)
+void HLSL2GLSLConverterImpl::ConversionStream::ProcessHullShaderConstantFunction(const Char* FuncName, bool& bTakesInputPatch)
 {
     // Search for the function in the global scope
     auto EntryPointToken = m_Tokens.end();
@@ -3396,10 +3396,11 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessHullShaderConstantFunction
     //                                                       ArgsListEndToken
 
     std::stringstream PrologueSS, ReturnHandlerSS;
-    const Char *ReturnMacroName = "_CONST_FUNC_RETURN_";
-    // Some GLES compilers cannot properly handle macros with empty argument lists, such as _CONST_FUNC_RETURN_()
-    ReturnHandlerSS << "#define " << ReturnMacroName << (bIsVoid ? "" : "(_RET_VAL_)") << "{\\\n";
-
+    const Char* ReturnMacroName = "_CONST_FUNC_RETURN_";
+    // Some GLES compilers cannot properly handle macros with empty argument lists, such as _CONST_FUNC_RETURN_().
+    // Also, some compilers generate an error if there is no whitespace after the macro without arguments: _CONST_FUNC_RETURN_{
+    ReturnHandlerSS << "#define " << ReturnMacroName << (bIsVoid ? "" : "(_RET_VAL_)") << " {\\\n";
+    
     bTakesInputPatch = false;
     for( const auto &TopLevelParam : Params )
     {
@@ -4108,8 +4109,9 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessShaderDeclaration( TokenLi
 
     std::stringstream ReturnHandlerSS;
     const Char *ReturnMacroName = "_RETURN_";
-    // Some GLES compilers cannot properly handle macros with empty argument lists, such as _RETURN_()
-    ReturnHandlerSS << "#define " << ReturnMacroName << (bIsVoid ? "" : "(_RET_VAL_)") << "{\\\n";
+    // Some GLES compilers cannot properly handle macros with empty argument lists, such as _RETURN_().
+    // Also, some compilers generate an error if there is no whitespace after the macro without arguments: _RETURN_{
+    ReturnHandlerSS << "#define " << ReturnMacroName << (bIsVoid ? "" : "(_RET_VAL_)") << " {\\\n";
 
     String GlobalVariables, Prologue;
     try

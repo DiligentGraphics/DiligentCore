@@ -558,6 +558,12 @@ template <class T> struct Vector4
 
     Vector4() : x(0), y(0), z(0), w(0) { }
     Vector4(T _x, T _y, T _z, T _w) : x(_x), y(_y), z(_z), w(_w) { }
+    Vector4(const Vector3<T>& v3, T _w) :  x(v3.x), y(v3.y), z(v3.z), w(_w) { }
+
+    operator Vector3<T>() const
+    {
+        return Vector3<T>(x, y, z);
+    }
 };
 
 
@@ -1026,15 +1032,22 @@ Matrix2x2<T> operator* (const Matrix2x2<T> &m1, const Matrix2x2<T> &m2)
 }
 // Common HLSL-compatible vector typedefs
 
-typedef unsigned int uint;
+using uint  = uint32_t;
+using uint2 = Vector2<uint>;
+using uint3 = Vector3<uint>;
+using uint4 = Vector4<uint>;
 
-typedef Vector2<float> float2;
-typedef Vector3<float> float3;
-typedef Vector4<float> float4;
+using int2 = Vector2<int32_t>;
+using int3 = Vector3<int32_t>;
+using int4 = Vector4<int32_t>;
 
-typedef Matrix4x4<float> float4x4;
-typedef Matrix3x3<float> float3x3;
-typedef Matrix2x2<float> float2x2;
+using float2 = Vector2<float>;
+using float3 = Vector3<float>;
+using float4 = Vector4<float>;
+
+using float4x4 = Matrix4x4<float>;
+using float3x3 = Matrix3x3<float>;
+using float2x2 = Matrix2x2<float>;
 
 // Standard Matrix Intializers
 

@@ -68,16 +68,19 @@ String BuildGLSLSourceString(const ShaderCreationAttribs& CreationAttribs,
     );
 
 #elif PLATFORM_ANDROID || PLATFORM_IOS
+    bool IsES30        = false;
     bool IsES31OrAbove = false;
     bool IsES32OrAbove = false;
     if (deviceCaps.DevType == DeviceType::Vulkan)
     {
+        IsES30        = false;
         IsES31OrAbove = true;
         IsES32OrAbove = false;
         GLSLSource.append("#version 310 es\n");
     }
     else if (deviceCaps.DevType == DeviceType::OpenGLES)
     {
+        IsES30        =                                 deviceCaps.MajorVersion == 3 && deviceCaps.MinorVersion == 0;
         IsES31OrAbove = deviceCaps.MajorVersion > 3 || (deviceCaps.MajorVersion == 3 && deviceCaps.MinorVersion >= 1);
         IsES32OrAbove = deviceCaps.MajorVersion > 3 || (deviceCaps.MajorVersion == 3 && deviceCaps.MinorVersion >= 2);
         std::stringstream versionss;
@@ -179,9 +182,32 @@ String BuildGLSLSourceString(const ShaderCreationAttribs& CreationAttribs,
         );
     }
 
-    // Built-in variable 'gl_Position' must be redeclared before use, with separate shader objects.
-    if (deviceCaps.bSeparableProgramSupported && ShaderType == SHADER_TYPE_VERTEX)
+    if (IsES30 && deviceCaps.bSeparableProgramSupported && ShaderType == SHADER_TYPE_VERTEX)
+    {
+        // From https://www.khronos.org/registry/OpenGL/extensions/EXT/EXT_separate_shader_objects.gles.txt:
+        //
+        // When using GLSL ES 3.00 shaders in separable programs, gl_Position and 
+        // gl_PointSize built-in outputs must be redeclared according to Section 7.5 
+        // of the OpenGL Shading Language Specification...
+        //   
+        // add to GLSL ES 3.00 new section 7.5, Built-In Redeclaration and 
+        // Separable Programs:
+        // 
+        // "The following vertex shader outputs may be redeclared at global scope to
+        // specify a built-in output interface, with or without special qualifiers:
+        // 
+        //     gl_Position
+        //     gl_PointSize
+        //
+        //   When compiling shaders using either of the above variables, both such
+        //   variables must be redeclared prior to use.  ((Note:  This restriction
+        //   applies only to shaders using version 300 that enable the
+        //   EXT_separate_shader_objects extension; shaders not enabling the
+        //   extension do not have this requirement.))  A separable program object
+        //   will fail to link if any attached shader uses one of the above variables
+        //   without redeclaration."
         GLSLSource.append("out vec4 gl_Position;\n");
+    }
 
 #elif
 #   error "Undefined platform"

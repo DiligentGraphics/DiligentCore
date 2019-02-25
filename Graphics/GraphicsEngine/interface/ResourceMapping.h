@@ -117,7 +117,7 @@ namespace Diligent
 
         /// \param [in] Name - Name of the resource to remove.
         /// \param [in] ArrayIndex - For array resources, index in the array
-        virtual void RemoveResourceByName (const Char *Name, Uint32 ArrayIndex = 0) = 0;
+        virtual void RemoveResourceByName (const Char* Name, Uint32 ArrayIndex = 0) = 0;
 
         /// Finds a resource in the mapping.
 
@@ -128,7 +128,7 @@ namespace Diligent
         ///                           If no object is found, nullptr will be written.
         /// \remarks The method increases the reference counter
         ///          of the returned object, so Release() must be called.
-        virtual void GetResource (const Char *Name, IDeviceObject **ppResource, Uint32 ArrayIndex = 0) = 0;
+        virtual void GetResource (const Char* Name, IDeviceObject** ppResource, Uint32 ArrayIndex = 0) = 0;
 
         /// Returns the size of the resource mapping, i.e. the number of objects.
         virtual size_t GetSize() = 0;

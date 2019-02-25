@@ -30,31 +30,33 @@ namespace Diligent
 class TexRegionRender
 {
 public:
-    TexRegionRender(class RenderDeviceGLImpl *pDeviceGL);
-    void SetStates(class DeviceContextGLImpl *pCtxGL);
-    void RestoreStates(class DeviceContextGLImpl *pCtxGL);
-    void Render(class DeviceContextGLImpl *pCtxGL,
-                ITextureView *pSrcSRV,
-                RESOURCE_DIMENSION TexType,
-                TEXTURE_FORMAT TexFormat,
-                Int32 DstToSrcXOffset, 
-                Int32 DstToSrcYOffset,
-                Int32 SrcZ,
-                Int32 SrcMipLevel);
+    TexRegionRender(class RenderDeviceGLImpl*   pDeviceGL);
+    void SetStates(class DeviceContextGLImpl*   pCtxGL);
+    void RestoreStates(class DeviceContextGLImpl*   pCtxGL);
+    void Render(class DeviceContextGLImpl*  pCtxGL,
+                ITextureView*               pSrcSRV,
+                RESOURCE_DIMENSION          TexType,
+                TEXTURE_FORMAT              TexFormat,
+                Int32                       DstToSrcXOffset, 
+                Int32                       DstToSrcYOffset,
+                Int32                       SrcZ,
+                Int32                       SrcMipLevel);
 
 private:
-    Diligent::RefCntAutoPtr<IShader> m_pVertexShader;
-    Diligent::RefCntAutoPtr<IShader> m_pFragmentShaders[RESOURCE_DIM_NUM_DIMENSIONS * 3];
-    Diligent::RefCntAutoPtr<IBuffer> m_pConstantBuffer;
-    Diligent::RefCntAutoPtr<IPipelineState> m_pPSO[RESOURCE_DIM_NUM_DIMENSIONS * 3];
+    RefCntAutoPtr<IShader> m_pVertexShader;
+    RefCntAutoPtr<IShader> m_pFragmentShaders[RESOURCE_DIM_NUM_DIMENSIONS * 3];
+    RefCntAutoPtr<IBuffer> m_pConstantBuffer;
+    RefCntAutoPtr<IPipelineState>         m_pPSO[RESOURCE_DIM_NUM_DIMENSIONS * 3];
+    RefCntAutoPtr<IShaderResourceBinding> m_pSRB;
+    IShaderVariable*                      m_pSrcTexVar = nullptr;
 
-    Diligent::RefCntAutoPtr<IPipelineState> m_pOrigPSO;
-    Uint32 m_OrigStencilRef = 0;
-    float m_OrigBlendFactors[4] = {};
-    Uint32 m_NumRenderTargets = 0;
-    ITextureView *m_pOrigRTVs[MaxRenderTargets] = {};
-    Diligent::RefCntAutoPtr<ITextureView> m_pOrigDSV;
-    std::vector<Viewport> m_OrigViewports;
+    RefCntAutoPtr<IPipelineState> m_pOrigPSO;
+    Uint32                      m_OrigStencilRef              = 0;
+    float                       m_OrigBlendFactors[4]         = {};
+    Uint32                      m_NumRenderTargets            = 0;
+    ITextureView*               m_pOrigRTVs[MaxRenderTargets] = {};
+    RefCntAutoPtr<ITextureView> m_pOrigDSV;
+    std::vector<Viewport>       m_OrigViewports;
 };
 
 }

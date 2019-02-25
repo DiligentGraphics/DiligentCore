@@ -63,7 +63,7 @@ namespace Diligent
     IMPLEMENT_QUERY_INTERFACE( DeviceContextGLImpl, IID_DeviceContextGL, TDeviceContextBase )
 
 
-    void DeviceContextGLImpl::SetPipelineState(IPipelineState *pPipelineState)
+    void DeviceContextGLImpl::SetPipelineState(IPipelineState* pPipelineState)
     {
         auto* pPipelineStateGLImpl = ValidatedCast<PipelineStateGLImpl>(pPipelineState);
         TDeviceContextBase::SetPipelineState(pPipelineStateGLImpl, 0 /*Dummy*/);
@@ -388,9 +388,10 @@ namespace Diligent
             GLProgramObj.dbgVerifyBindingCompleteness(pDynamicResources, m_pPipelineState);
 #endif
 
-            for(int BindDynamicResources = 0; BindDynamicResources < (pShaderResBindingGL ? 2 : 1); ++BindDynamicResources)
+            // When program pipelines are not supported, all resources are dynamic resources
+            for (int BindDynamicResources = (ProgramPipelineSupported ? 0 : 1); BindDynamicResources < (pShaderResBindingGL ? 2 : 1); ++BindDynamicResources)
             {
-                GLProgramResources &ProgResources = BindDynamicResources ? *pDynamicResources : GLProgramObj.GetConstantResources();
+                GLProgramResources& ProgResources = BindDynamicResources ? *pDynamicResources : GLProgramObj.GetConstantResources();
 
 #ifdef VERIFY_RESOURCE_BINDINGS
                 ProgResources.dbgVerifyResourceBindings();
@@ -425,9 +426,9 @@ namespace Diligent
 #define LOG_MISSING_BINDING(VarType, Res, ArrInd)\
                             do{                                      \
                                 if(Res->pResources.size()>1)         \
-                                    LOG_ERROR_MESSAGE( "No ", VarType, " is bound to \"", Res->Name, '[', ArrInd, "]\" variable in shader \"", pShaderGL->GetDesc().Name, "\"" );\
+                                    LOG_ERROR_MESSAGE( "No ", VarType, " is bound to '", Res->Name, '[', ArrInd, "]' variable in shader '", pShaderGL->GetDesc().Name, "'" );\
                                 else                                 \
-                                    LOG_ERROR_MESSAGE( "No ", VarType, " is bound to \"", Res->Name, "\" variable in shader \"", pShaderGL->GetDesc().Name, "\"" );\
+                                    LOG_ERROR_MESSAGE( "No ", VarType, " is bound to '", Res->Name, "' variable in shader '", pShaderGL->GetDesc().Name, "'" );\
                             }while(false)
 
                             LOG_MISSING_BINDING("uniform buffer", it, ArrInd);
