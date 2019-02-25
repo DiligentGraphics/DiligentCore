@@ -558,6 +558,7 @@ template <class T> struct Vector4
 
     Vector4() : x(0), y(0), z(0), w(0) { }
     Vector4(T _x, T _y, T _z, T _w) : x(_x), y(_y), z(_z), w(_w) { }
+    Vector4(const Vector3<T>& v3, T _w) :  x(v3.x), y(v3.y), z(v3.z), w(_w) { }
 
     operator Vector3<T>() const
     {
