@@ -1031,15 +1031,22 @@ Matrix2x2<T> operator* (const Matrix2x2<T> &m1, const Matrix2x2<T> &m2)
 }
 // Common HLSL-compatible vector typedefs
 
-typedef unsigned int uint;
+using uint  = uint32_t;
+using uint2 = Vector2<uint>;
+using uint3 = Vector3<uint>;
+using uint4 = Vector4<uint>;
 
-typedef Vector2<float> float2;
-typedef Vector3<float> float3;
-typedef Vector4<float> float4;
+using int2 = Vector2<int32_t>;
+using int3 = Vector3<int32_t>;
+using int4 = Vector4<int32_t>;
 
-typedef Matrix4x4<float> float4x4;
-typedef Matrix3x3<float> float3x3;
-typedef Matrix2x2<float> float2x2;
+using float2 = Vector2<float>;
+using float3 = Vector3<float>;
+using float4 = Vector4<float>;
+
+using float4x4 = Matrix4x4<float>;
+using float3x3 = Matrix3x3<float>;
+using float2x2 = Matrix2x2<float>;
 
 // Standard Matrix Intializers
 
