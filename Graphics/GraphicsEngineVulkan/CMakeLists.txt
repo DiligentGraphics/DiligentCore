@@ -176,16 +176,23 @@ set(PRIVATE_DEPENDENCIES
     SPIRV-Tools-opt
 )
 
+# Wrong vulkan library may makes incompitible linker error. ( Escpecially, wrong ABI )
+# Basically CMake doesn't support compileSdkVersion and targetSdkVersion in android.
+# if you want to use specific sdk version, set ANDROID_PLATFORM in your android project manually.
+# e.g. -DANDROID_PLATFORM=android-28
+
 if(PLATFORM_WIN32)
     find_library(Vulkan_LIBRARY NAMES vulkan-1 vulkan PATHS "../../External/vulkan/libs")
 elseif(PLATFORM_MACOS)
     find_library(Vulkan_LIBRARY NAMES MoltenVK PATHS "../../External/vulkan/libs/macOS")
-else()
+elseif(PLATFORM_LINUX)
     find_library(Vulkan_LIBRARY NAMES vulkan HINTS "$ENV{VULKAN_SDK}/lib" "../../External/vulkan/libs/linux")
+else()
+    find_library(Vulkan_LIBRARY NAMES vulkan)
 endif()
 list(APPEND PRIVATE_DEPENDENCIES ${Vulkan_LIBRARY})
 
-set(PUBLIC_DEPENDENCIES 
+set(PUBLIC_DEPENDENCIES
     GraphicsEngineVkInterface
 )
 
@@ -219,6 +226,8 @@ elseif(PLATFORM_MACOS)
     set(PRIVATE_COMPILE_DEFINITIONS VK_USE_PLATFORM_MACOS_MVK=1)
 elseif(PLATFORM_IOS)
     set(PRIVATE_COMPILE_DEFINITIONS VK_USE_PLATFORM_IOS_MVK=1)
+elseif(PLATFORM_ANDROID)
+    set(PRIVATE_COMPILE_DEFINITIONS VK_USE_PLATFORM_ANDROID_KHR=1)
 else()
     message(FATAL_ERROR "Unknown platform")
 endif()
