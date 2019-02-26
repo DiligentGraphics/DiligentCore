@@ -38,11 +38,11 @@ namespace Diligent
 class DataBlobImpl : public Diligent::ObjectBase<IDataBlob>
 {
 public:
-    typedef Diligent::ObjectBase<IDataBlob> TBase;
+    typedef ObjectBase<IDataBlob> TBase;
 
-    DataBlobImpl( IReferenceCounters *pRefCounters, size_t InitialSize = 0 );
+    DataBlobImpl(IReferenceCounters* pRefCounters, size_t InitialSize = 0);
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
+    virtual void QueryInterface(const INTERFACE_ID &IID, IObject** ppInterface )override;
 
     /// Sets the size of the internal data buffer
     virtual void Resize( size_t NewSize )override;
@@ -54,7 +54,7 @@ public:
     virtual void* GetDataPtr()override;
 
 private:
-    std::vector<Diligent::Uint8> m_DataBuff;
+    std::vector<Uint8> m_DataBuff;
 };
 
 }

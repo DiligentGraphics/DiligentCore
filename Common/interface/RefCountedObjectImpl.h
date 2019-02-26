@@ -193,7 +193,7 @@ public:
             // The only other two methods that lock the object are ReleaseStrongRef()
             // and ReleaseWeakRef(), which are never called by QueryInterface()
             auto *pWrapper = reinterpret_cast<ObjectWrapperBase*>(m_ObjectWrapperBuffer);
-            pWrapper->QueryInterface(Diligent::IID_Unknown, ppObject);
+            pWrapper->QueryInterface(IID_Unknown, ppObject);
         }
         Atomics::AtomicDecrement(m_lNumStrongReferences);
     }
@@ -225,7 +225,7 @@ private:
     {
     public:
         virtual void DestroyObject() = 0;
-        virtual void QueryInterface( const Diligent::INTERFACE_ID &iid, IObject **ppInterface )=0;
+        virtual void QueryInterface(const INTERFACE_ID& iid, IObject** ppInterface)=0;
     };
 
     template<typename ObjectType, typename AllocatorType>
@@ -248,7 +248,7 @@ private:
                 delete m_pObject;
             }
         }
-        virtual void QueryInterface( const Diligent::INTERFACE_ID &iid, IObject **ppInterface )override final
+        virtual void QueryInterface(const INTERFACE_ID& iid, IObject** ppInterface)override final
         {
             return m_pObject->QueryInterface(iid, ppInterface);
         }

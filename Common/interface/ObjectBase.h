@@ -49,11 +49,11 @@ namespace Diligent
 }
 
 #define IMPLEMENT_QUERY_INTERFACE(ClassName, InterfaceID, ParentClassName) \
-    void ClassName :: QueryInterface(const Diligent::INTERFACE_ID &IID, IObject **ppInterface) \
+    void ClassName :: QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) \
     IMPLEMENT_QUERY_INTERFACE_BODY(InterfaceID, ParentClassName)
 
 #define IMPLEMENT_QUERY_INTERFACE_IN_PLACE(InterfaceID, ParentClassName) \
-    virtual void QueryInterface(const Diligent::INTERFACE_ID &IID, IObject **ppInterface)override \
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override \
     IMPLEMENT_QUERY_INTERFACE_BODY(InterfaceID, ParentClassName)
 
 
@@ -62,17 +62,17 @@ template<typename BaseInterface>
 class ObjectBase : public RefCountedObject<BaseInterface>
 {
 public:
-    ObjectBase(IReferenceCounters *pRefCounters) : 
-        RefCountedObject<BaseInterface>( pRefCounters )
+    ObjectBase(IReferenceCounters* pRefCounters) : 
+        RefCountedObject<BaseInterface>(pRefCounters)
     {}
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)
     {
-        if( ppInterface == nullptr )
+        if (ppInterface == nullptr)
             return;
 
         *ppInterface = nullptr;
-        if( IID == Diligent::IID_Unknown )
+        if (IID == IID_Unknown)
         {
             *ppInterface = this;
             (*ppInterface)->AddRef();

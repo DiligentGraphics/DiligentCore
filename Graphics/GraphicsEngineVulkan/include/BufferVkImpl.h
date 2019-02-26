@@ -63,7 +63,7 @@ public:
                  VkBuffer                   vkBuffer);
     ~BufferVkImpl();
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject** ppInterface )override;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override;
 
 #ifdef DEVELOPMENT
     void DvpVerifyDynamicAllocation(DeviceContextVkImpl* pCtx)const;
@@ -104,14 +104,14 @@ public:
 private:
     friend class DeviceContextVkImpl;
 
-    virtual void CreateViewInternal( const struct BufferViewDesc& ViewDesc, IBufferView** ppView, bool bIsDefaultView )override;
+    virtual void CreateViewInternal(const struct BufferViewDesc& ViewDesc, IBufferView** ppView, bool bIsDefaultView)override;
 
     VulkanUtilities::BufferViewWrapper CreateView(struct BufferViewDesc &ViewDesc);
     Uint32        m_DynamicOffsetAlignment = 0;
 
     std::vector<VulkanDynamicAllocation, STDAllocatorRawMem<VulkanDynamicAllocation> > m_DynamicAllocations;
 
-    VulkanUtilities::BufferWrapper m_VulkanBuffer;
+    VulkanUtilities::BufferWrapper          m_VulkanBuffer;
     VulkanUtilities::VulkanMemoryAllocation m_MemoryAllocation;
 };
 
