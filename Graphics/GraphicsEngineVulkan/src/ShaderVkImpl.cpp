@@ -37,13 +37,10 @@
 namespace Diligent
 {
 
-ShaderVkImpl::ShaderVkImpl(IReferenceCounters*          pRefCounters,
-                           RenderDeviceVkImpl*          pRenderDeviceVk,
-                           const ShaderCreationAttribs& CreationAttribs) : 
-    TShaderBase       (pRefCounters, pRenderDeviceVk, CreationAttribs.Desc),
-    m_StaticResLayout (*this, pRenderDeviceVk->GetLogicalDevice()),
-    m_StaticResCache  (ShaderResourceCacheVk::DbgCacheContentType::StaticShaderResources),
-    m_StaticVarsMgr   (*this)
+ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
+                           RenderDeviceVkImpl*     pRenderDeviceVk,
+                           const ShaderCreateInfo& CreationAttribs) : 
+    TShaderBase(pRefCounters, pRenderDeviceVk, CreationAttribs.Desc)
 {
     if (CreationAttribs.Source != nullptr || CreationAttribs.FilePath != nullptr)
     {
@@ -95,10 +92,6 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*          pRefCounters,
     {
         MapHLSLVertexShaderInputs();
     }
-
-    m_StaticResLayout.InitializeStaticResourceLayout(m_pShaderResources, GetRawAllocator(), m_StaticResCache);
-    // m_StaticResLayout only contains static resources, so reference all of them
-    m_StaticVarsMgr.Initialize(m_StaticResLayout, GetRawAllocator(), nullptr, 0, m_StaticResCache);
 }
 
 void ShaderVkImpl::MapHLSLVertexShaderInputs()
@@ -134,14 +127,6 @@ void ShaderVkImpl::MapHLSLVertexShaderInputs()
 
 ShaderVkImpl::~ShaderVkImpl()
 {
-    m_StaticVarsMgr.Destroy(GetRawAllocator());
 }
-
-#ifdef DEVELOPMENT
-bool ShaderVkImpl::DvpVerifyStaticResourceBindings()const
-{
-    return m_StaticResLayout.dvpVerifyBindings(m_StaticResCache);
-}
-#endif
 
 }
