@@ -30,17 +30,15 @@
 //
 //   m_MemoryBuffer                                                                                                              m_TotalResources
 //    |                                                                                                                             |
-//    | Uniform Buffers | Storage Buffers | Storage Images | Sampled Images | Atomic Counters | Separate Samplers | Separate Images |  Immutable Samplers  |   Stage Inputs   |   Resource Names   |
+//    | Uniform Buffers | Storage Buffers | Storage Images | Sampled Images | Atomic Counters | Separate Samplers | Separate Images |   Stage Inputs   |   Resource Names   |
 
 #include <memory>
 #include <vector>
 #include <sstream>
 
 #include "Shader.h"
-#include "Sampler.h"
 #include "RenderDevice.h"
 #include "STDAllocator.h"
-#include "HashUtils.h"
 #include "RefCntAutoPtr.h"
 #include "StringPool.h"
 
@@ -52,22 +50,6 @@ struct Resource;
 
 namespace Diligent
 {
-
-inline bool IsAllowedType(SHADER_VARIABLE_TYPE VarType, Uint32 AllowedTypeBits)noexcept
-{
-    return ((1 << VarType) & AllowedTypeBits) != 0;
-}
-
-inline Uint32 GetAllowedTypeBits(const SHADER_VARIABLE_TYPE* AllowedVarTypes, Uint32 NumAllowedTypes)noexcept
-{
-    if(AllowedVarTypes == nullptr)
-        return 0xFFFFFFFF;
-
-    Uint32 AllowedTypeBits = 0;
-    for(Uint32 i=0; i < NumAllowedTypes; ++i)
-        AllowedTypeBits |= 1 << AllowedVarTypes[i];
-    return AllowedTypeBits;
-}
 
 // sizeof(SPIRVShaderResourceAttribs) == 24, msvc x64
 struct SPIRVShaderResourceAttribs
@@ -86,21 +68,12 @@ struct SPIRVShaderResourceAttribs
         NumResourceTypes
     };
 
-    static constexpr const Uint32 ResourceTypeBits = 4;
-    static constexpr const Uint32 VarTypeBits      = 4;
-    static_assert(SHADER_VARIABLE_TYPE_NUM_TYPES < (1 << VarTypeBits),       "Not enough bits to represent SHADER_VARIABLE_TYPE");
-    static_assert(ResourceType::NumResourceTypes < (1 << ResourceTypeBits),  "Not enough bits to represent ResourceType");
-
-    static constexpr const Uint32 InvalidSepSmplrOrImgInd = static_cast<Uint32>(-1);
+    static constexpr const Uint32   InvalidSepSmplrOrImgInd = static_cast<Uint32>(-1);
 
 /* 0  */const char* const           Name;
 /* 8  */const Uint16                ArraySize;
-/*10.0*/const ResourceType          Type            : ResourceTypeBits;
-/*10.4*/const SHADER_VARIABLE_TYPE  VarType         : VarTypeBits;
+/*10  */const ResourceType          Type;
 private:
-      static constexpr const Uint8  InvalidImmutableSamplerInd = static_cast<Uint8>(-1);
-/*11*/const Uint8                   ImmutableSamplerInd;
-
       // Defines mapping between separate samplers and seperate images when HLSL-style
       // combined texture samplers are in use (i.e. texture2D g_Tex + sampler g_Tex_sampler).
 /*12*/      Uint32                  SepSmplrOrImgInd        = InvalidSepSmplrOrImgInd;
@@ -110,13 +83,11 @@ public:
 /*20*/const uint32_t DescriptorSetDecorationOffset;
 
 
-    SPIRVShaderResourceAttribs(const spirv_cross::Compiler& Compiler, 
-                               const spirv_cross::Resource& Res, 
-                               const char*                  _Name,
-                               ResourceType                 _Type, 
-                               SHADER_VARIABLE_TYPE         _VarType,
-                               Int32                        _ImmutableSamplerInd = -1,
-                               Uint32                       _SamplerOrSepImgInd = InvalidSepSmplrOrImgInd)noexcept;
+    SPIRVShaderResourceAttribs(const spirv_cross::Compiler&  Compiler, 
+                               const spirv_cross::Resource&  Res, 
+                               const char*                   _Name,
+                               ResourceType                  _Type, 
+                               Uint32                        _SamplerOrSepImgInd = InvalidSepSmplrOrImgInd) noexcept;
 
     bool IsValidSepSamplerAssigned() const
     {
@@ -154,17 +125,6 @@ public:
         SepSmplrOrImgInd = SepImageInd;
     }
 
-    bool IsImmutableSamplerAssigned() const
-    {
-        return ImmutableSamplerInd != InvalidImmutableSamplerInd;
-    }
-
-    Uint32 GetImmutableSamplerInd()const
-    {
-        VERIFY(Type == ResourceType::SampledImage || Type == ResourceType::SeparateSampler, "Only sampled images and separate samplers can be assigned immutable samplers");
-        return ImmutableSamplerInd;
-    }
-
     String GetPrintName(Uint32 ArrayInd)const
     {
         VERIFY_EXPR(ArrayInd < ArraySize);
@@ -182,10 +142,7 @@ public:
     {
         return ArraySize        == Attribs.ArraySize        && 
                Type             == Attribs.Type             &&
-               VarType          == Attribs.VarType          && 
-               SepSmplrOrImgInd == Attribs.SepSmplrOrImgInd &&
-               ( (IsImmutableSamplerAssigned() &&  Attribs.IsImmutableSamplerAssigned()) ||
-                (!IsImmutableSamplerAssigned() && !Attribs.IsImmutableSamplerAssigned()) );
+               SepSmplrOrImgInd == Attribs.SepSmplrOrImgInd;
     }
 };
 static_assert(sizeof(SPIRVShaderResourceAttribs) % sizeof(void*) == 0, "Size of SPIRVShaderResourceAttribs struct must be multiple of sizeof(void*)" );
@@ -221,8 +178,6 @@ public:
     
     ~SPIRVShaderResources();
     
-    using SamplerPtrType = RefCntAutoPtr<ISampler>;
-
     Uint32 GetNumUBs      ()const noexcept{ return (m_StorageBufferOffset   - 0);                      }
     Uint32 GetNumSBs      ()const noexcept{ return (m_StorageImageOffset    - m_StorageBufferOffset);  }
     Uint32 GetNumImgs     ()const noexcept{ return (m_SampledImageOffset    - m_StorageImageOffset);   }
@@ -231,7 +186,6 @@ public:
     Uint32 GetNumSepSmplrs()const noexcept{ return (m_SeparateImageOffset   - m_SeparateSamplerOffset);}
     Uint32 GetNumSepImgs  ()const noexcept{ return (m_TotalResources        - m_SeparateImageOffset);  }
     Uint32 GetTotalResources()      const noexcept { return m_TotalResources; }
-    Uint32 GetNumImmutableSamplers()const noexcept { return m_NumImmutableSamplers; }
     Uint32 GetNumShaderStageInputs()const noexcept { return m_NumShaderStageInputs; }
 
     const SPIRVShaderResourceAttribs& GetUB      (Uint32 n)const noexcept{ return GetResAttribs(n, GetNumUBs(),         0                      ); }
@@ -243,23 +197,11 @@ public:
     const SPIRVShaderResourceAttribs& GetSepImg  (Uint32 n)const noexcept{ return GetResAttribs(n, GetNumSepImgs(),     m_SeparateImageOffset  ); }
     const SPIRVShaderResourceAttribs& GetResource(Uint32 n)const noexcept{ return GetResAttribs(n, GetTotalResources(), 0                      ); }
     
-    ISampler* GetImmutableSampler(const SPIRVShaderResourceAttribs& ResAttribs)const noexcept
-    { 
-        if (!ResAttribs.IsImmutableSamplerAssigned())
-            return nullptr;
-
-        auto ImmutableSamplerInd = ResAttribs.GetImmutableSamplerInd();
-        VERIFY(ImmutableSamplerInd < m_NumImmutableSamplers, "Static sampler index (", ImmutableSamplerInd, ") is out of range. Array size: ", m_NumImmutableSamplers);
-        auto* ResourceMemoryEnd = reinterpret_cast<SPIRVShaderResourceAttribs*>(m_MemoryBuffer.get()) + m_TotalResources;
-        return reinterpret_cast<SamplerPtrType*>(ResourceMemoryEnd)[ImmutableSamplerInd];
-    }
-
     const SPIRVShaderStageInputAttribs& GetShaderStageInputAttribs(Uint32 n)const noexcept
     {
         VERIFY(n < m_NumShaderStageInputs, "Shader stage input index (", n, ") is out of range. Total input count: ", m_NumShaderStageInputs);
         auto* ResourceMemoryEnd = reinterpret_cast<const SPIRVShaderResourceAttribs*>(m_MemoryBuffer.get()) + m_TotalResources;
-        auto* ImmutableSamplerMemoryEnd = reinterpret_cast<const SamplerPtrType*>(ResourceMemoryEnd) + m_NumImmutableSamplers;
-        return reinterpret_cast<const SPIRVShaderStageInputAttribs*>(ImmutableSamplerMemoryEnd)[n];
+        return reinterpret_cast<const SPIRVShaderStageInputAttribs*>(ResourceMemoryEnd)[n];
     }
 
     struct ResourceCounters
@@ -272,8 +214,6 @@ public:
         Uint32 NumSepSmplrs = 0;
         Uint32 NumSepImgs   = 0;
     };
-    ResourceCounters CountResources(const SHADER_VARIABLE_TYPE* AllowedVarTypes, 
-                                    Uint32                      NumAllowedTypes)const noexcept;
 
     SHADER_TYPE GetShaderType()const noexcept{return m_ShaderType;}
 
@@ -285,80 +225,64 @@ public:
              typename THandleAC,
              typename THandleSepSmpl,
              typename THandleSepImg>
-    void ProcessResources(const SHADER_VARIABLE_TYPE*   AllowedVarTypes, 
-                          Uint32                        NumAllowedTypes,
-                          THandleUB                     HandleUB,
-                          THandleSB                     HandleSB,
-                          THandleImg                    HandleImg,
-                          THandleSmplImg                HandleSmplImg,
-                          THandleAC                     HandleAC,
-                          THandleSepSmpl                HandleSepSmpl,
-                          THandleSepImg                 HandleSepImg)const
+    void ProcessResources(THandleUB      HandleUB,
+                          THandleSB      HandleSB,
+                          THandleImg     HandleImg,
+                          THandleSmplImg HandleSmplImg,
+                          THandleAC      HandleAC,
+                          THandleSepSmpl HandleSepSmpl,
+                          THandleSepImg  HandleSepImg)const
     {
-        Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
-
         for(Uint32 n=0; n < GetNumUBs(); ++n)
         {
             const auto& UB = GetUB(n);
-            if( IsAllowedType(UB.VarType, AllowedTypeBits) )
-                HandleUB(UB, n);
+            HandleUB(UB, n);
         }
 
         for (Uint32 n = 0; n < GetNumSBs(); ++n)
         {
             const auto& SB = GetSB(n);
-            if (IsAllowedType(SB.VarType, AllowedTypeBits))
-                HandleSB(SB, n);
+            HandleSB(SB, n);
         }
 
         for (Uint32 n = 0; n < GetNumImgs(); ++n)
         {
             const auto& Img = GetImg(n);
-            if (IsAllowedType(Img.VarType, AllowedTypeBits))
-                HandleImg(Img, n);
+            HandleImg(Img, n);
         }
 
         for (Uint32 n = 0; n < GetNumSmpldImgs(); ++n)
         {
             const auto& SmplImg = GetSmpldImg(n);
-            if (IsAllowedType(SmplImg.VarType, AllowedTypeBits))
-                HandleSmplImg(SmplImg, n);
+            HandleSmplImg(SmplImg, n);
         }
 
         for (Uint32 n = 0; n < GetNumACs(); ++n)
         {
             const auto& AC = GetAC(n);
-            if (IsAllowedType(AC.VarType, AllowedTypeBits))
-                HandleAC(AC, n);
+            HandleAC(AC, n);
         }
 
         for (Uint32 n = 0; n < GetNumSepSmplrs(); ++n)
         {
             const auto& SepSmpl = GetSepSmplr(n);
-            if (IsAllowedType(SepSmpl.VarType, AllowedTypeBits))
-                HandleSepSmpl(SepSmpl, n);
+            HandleSepSmpl(SepSmpl, n);
         }
 
         for (Uint32 n = 0; n < GetNumSepImgs(); ++n)
         {
             const auto& SepImg = GetSepImg(n);
-            if (IsAllowedType(SepImg.VarType, AllowedTypeBits))
-                HandleSepImg(SepImg, n);
+            HandleSepImg(SepImg, n);
         }
     }
 
     template<typename THandler>
-    void ProcessResources(const SHADER_VARIABLE_TYPE* AllowedVarTypes, 
-                          Uint32                      NumAllowedTypes,
-                          THandler                    Handler)const
+    void ProcessResources(THandler Handler)const
     {
-        Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
-
         for(Uint32 n=0; n < GetTotalResources(); ++n)
         {
             const auto& Res = GetResource(n);
-            if( IsAllowedType(Res.VarType, AllowedTypeBits) )
-                Handler(Res, n);
+            Handler(Res, n);
         }
     }
 
@@ -375,7 +299,6 @@ public:
 private:
     void Initialize(IMemoryAllocator&       Allocator, 
                     const ResourceCounters& Counters,
-                    Uint32                  NumImmutableSamplers,
                     Uint32                  NumShaderStageInputs,
                     size_t                  ResourceNamesPoolSize);
 
@@ -402,20 +325,13 @@ private:
     SPIRVShaderResourceAttribs& GetSepImg  (Uint32 n)noexcept{ return GetResAttribs(n, GetNumSepImgs(),     m_SeparateImageOffset  ); }
     SPIRVShaderResourceAttribs& GetResource(Uint32 n)noexcept{ return GetResAttribs(n, GetTotalResources(), 0                      ); }
 
-    SamplerPtrType& GetImmutableSampler(Uint32 n)noexcept
-    {
-        VERIFY(n < m_NumImmutableSamplers, "Immutable sampler index (", n, ") is out of range. Total immutable sampler count: ", m_NumImmutableSamplers);
-        auto* ResourceMemoryEnd = reinterpret_cast<SPIRVShaderResourceAttribs*>(m_MemoryBuffer.get()) + m_TotalResources;
-        return reinterpret_cast<SamplerPtrType*>(ResourceMemoryEnd)[n];
-    }
-
     SPIRVShaderStageInputAttribs& GetShaderStageInputAttribs(Uint32 n)noexcept
     {
         return const_cast<SPIRVShaderStageInputAttribs&>(const_cast<const SPIRVShaderResources*>(this)->GetShaderStageInputAttribs(n));
     }
 
     // Memory buffer that holds all resources as continuous chunk of memory:
-    // |  UBs  |  SBs  |  StrgImgs  |  SmplImgs  |  ACs  |  SepSamplers  |  SepImgs  | Immutable Samplers | Stage Inputs | Resource Names |
+    // |  UBs  |  SBs  |  StrgImgs  |  SmplImgs  |  ACs  |  SepSamplers  |  SepImgs  | Stage Inputs | Resource Names |
     std::unique_ptr< void, STDDeleterRawMem<void> > m_MemoryBuffer;
     StringPool m_ResourceNames;
 
@@ -429,7 +345,6 @@ private:
     OffsetType m_SeparateSamplerOffset = 0;
     OffsetType m_SeparateImageOffset   = 0;
     OffsetType m_TotalResources        = 0;
-    OffsetType m_NumImmutableSamplers  = 0;
     OffsetType m_NumShaderStageInputs  = 0;
 
     SHADER_TYPE m_ShaderType = SHADER_TYPE_UNKNOWN;
@@ -437,25 +352,3 @@ private:
 
 }
 
-namespace std
-{
-#if 0
-    template<>
-    struct hash<Diligent::D3DShaderResourceAttribs>
-    {
-        size_t operator()(const Diligent::D3DShaderResourceAttribs &Attribs) const
-        {
-            return Attribs.GetHash();
-        }
-    };
-
-    template<>
-    struct hash<Diligent::ShaderResources>
-    {
-        size_t operator()(const Diligent::ShaderResources &Res) const
-        {
-            return Res.GetHash();
-        }
-    };
-#endif
-}
