@@ -48,7 +48,7 @@ static void  glDrawElementsInstancedBaseVertexBaseInstance_stub(GLenum mode, GLs
 
 namespace Diligent
 {
-    GLContext::GLContext( const EngineGLAttribs &InitAttribs, DeviceCaps &DeviceCaps )
+    GLContext::GLContext(const EngineGLAttribs& InitAttribs, DeviceCaps& DeviceCaps, const struct SwapChainDesc* /*pSCDesc*/)
     {
         if (GetCurrentNativeGLContext() == nullptr)
         {

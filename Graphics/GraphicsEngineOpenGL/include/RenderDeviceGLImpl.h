@@ -55,41 +55,44 @@ class RenderDeviceGLImpl : public RenderDeviceBase<IGLDeviceBaseInterface>
 public:
     using TRenderDeviceBase = RenderDeviceBase<IGLDeviceBaseInterface>;
 
-    RenderDeviceGLImpl( IReferenceCounters *pRefCounters, IMemoryAllocator &RawMemAllocator, const EngineGLAttribs &InitAttribs );
+    RenderDeviceGLImpl(IReferenceCounters*    pRefCounters,
+                       IMemoryAllocator&      RawMemAllocator,
+                       const EngineGLAttribs& InitAttribs,
+                       const SwapChainDesc*   pSCDesc = nullptr);
     ~RenderDeviceGLImpl();
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override;
     
-	void CreateBuffer(const BufferDesc& BuffDesc, const BufferData* pBuffData, IBuffer **ppBufferLayout, bool bIsDeviceInternal);
-    virtual void CreateBuffer(const BufferDesc& BuffDesc, const BufferData* BuffData, IBuffer **ppBufferLayout)override final;
+	void CreateBuffer(const BufferDesc& BuffDesc, const BufferData* pBuffData, IBuffer** ppBufferLayout, bool bIsDeviceInternal);
+    virtual void CreateBuffer(const BufferDesc& BuffDesc, const BufferData* BuffData, IBuffer** ppBufferLayout)override final;
 
-	void CreateShader(const ShaderCreationAttribs &ShaderCreationAttribs, IShader **ppShader, bool bIsDeviceInternal );
-    virtual void CreateShader(const ShaderCreationAttribs &ShaderCreationAttribs, IShader **ppShader)override final;
+	void CreateShader(const ShaderCreationAttribs& ShaderCreationAttribs, IShader** ppShader, bool bIsDeviceInternal );
+    virtual void CreateShader(const ShaderCreationAttribs& ShaderCreationAttribs, IShader** ppShader)override final;
 
-	void CreateTexture(const TextureDesc& TexDesc, const TextureData* pData, ITexture **ppTexture, bool bIsDeviceInternal);
-    virtual void CreateTexture(const TextureDesc& TexDesc, const TextureData* Data, ITexture **ppTexture)override final;
+	void CreateTexture(const TextureDesc& TexDesc, const TextureData* pData, ITexture** ppTexture, bool bIsDeviceInternal);
+    virtual void CreateTexture(const TextureDesc& TexDesc, const TextureData* Data, ITexture** ppTexture)override final;
     
-	void CreateSampler(const SamplerDesc& SamplerDesc, ISampler **ppSampler, bool bIsDeviceInternal);
-    virtual void CreateSampler(const SamplerDesc& SamplerDesc, ISampler **ppSampler)override final;
+	void CreateSampler(const SamplerDesc& SamplerDesc, ISampler** ppSampler, bool bIsDeviceInternal);
+    virtual void CreateSampler(const SamplerDesc& SamplerDesc, ISampler** ppSampler)override final;
 
-    void CreatePipelineState( const PipelineStateDesc &PipelineDesc, IPipelineState **ppPipelineState, bool bIsDeviceInternal);
-    virtual void CreatePipelineState( const PipelineStateDesc &PipelineDesc, IPipelineState **ppPipelineState )override final;
+    void CreatePipelineState( const PipelineStateDesc& PipelineDesc, IPipelineState** ppPipelineState, bool bIsDeviceInternal);
+    virtual void CreatePipelineState( const PipelineStateDesc& PipelineDesc, IPipelineState** ppPipelineState )override final;
     
     virtual void CreateFence(const FenceDesc& Desc, IFence** ppFence)override final;
 
-    virtual void CreateTextureFromGLHandle(Uint32 GLHandle, const TextureDesc &TexDesc, RESOURCE_STATE InitialState, ITexture **ppTexture)override final;
+    virtual void CreateTextureFromGLHandle(Uint32 GLHandle, const TextureDesc& TexDesc, RESOURCE_STATE InitialState, ITexture** ppTexture)override final;
 
-    virtual void CreateBufferFromGLHandle(Uint32 GLHandle, const BufferDesc &BuffDesc, RESOURCE_STATE InitialState, IBuffer **ppBuffer)override final;
+    virtual void CreateBufferFromGLHandle(Uint32 GLHandle, const BufferDesc& BuffDesc, RESOURCE_STATE InitialState, IBuffer** ppBuffer)override final;
 
     virtual void ReleaseStaleResources(bool ForceRelease = false)override final {}
 
     const GPUInfo& GetGPUInfo(){ return m_GPUInfo; }
 
     FBOCache& GetFBOCache(GLContext::NativeGLContextType Context);
-    void OnReleaseTexture(ITexture *pTexture);
+    void OnReleaseTexture(ITexture* pTexture);
 
     VAOCache& GetVAOCache(GLContext::NativeGLContextType Context);
-    void OnDestroyPSO(IPipelineState *pPSO);
-    void OnDestroyBuffer(IBuffer *pBuffer);
+    void OnDestroyPSO(IPipelineState* pPSO);
+    void OnDestroyBuffer(IBuffer* pBuffer);
 
     size_t GetCommandQueueCount()const { return 1; }
     Uint64 GetCommandQueueMask()const { return Uint64{1};}
@@ -121,7 +124,7 @@ protected:
     
 private:
     virtual void TestTextureFormat( TEXTURE_FORMAT TexFormat )override final;
-    bool CheckExtension(const Char *ExtensionString);
+    bool CheckExtension(const Char* ExtensionString);
     void FlagSupportedTexFormats();
     void QueryDeviceCaps();
 };

@@ -84,7 +84,7 @@ namespace Diligent
         LOG_INFO_MESSAGE( MessageSS.str().c_str() );
     }
 
-    GLContext::GLContext( const EngineGLAttribs &InitAttribs, DeviceCaps &DeviceCaps ) :
+    GLContext::GLContext(const EngineGLAttribs& InitAttribs, DeviceCaps& DeviceCaps, const struct SwapChainDesc* /*pSCDesc*/) :
 		m_Context(0),
 		m_pNativeWindow(InitAttribs.pNativeWndHandle),
         m_pDisplay(InitAttribs.pDisplay)

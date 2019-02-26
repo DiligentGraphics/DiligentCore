@@ -27,6 +27,7 @@
 #include "DeviceCaps.h"
 #include "GLTypeConversions.h"
 #include "EngineGLAttribs.h"
+#include "GraphicsAccessories.h"
 
 namespace Diligent
 {
@@ -89,7 +90,7 @@ namespace Diligent
         LOG_INFO_MESSAGE( MessageSS.str().c_str() );
     }
 
-    GLContext::GLContext(const EngineGLAttribs &InitAttribs, DeviceCaps &DeviceCaps ) :
+    GLContext::GLContext(const EngineGLAttribs& InitAttribs, DeviceCaps& DeviceCaps, const SwapChainDesc* pSCDesc) :
 		m_Context(0),
 		m_WindowHandleToDeviceContext(0)
     {
@@ -106,10 +107,53 @@ namespace Diligent
 			pfd.nVersion = 1;
 			pfd.dwFlags = PFD_DOUBLEBUFFER | PFD_SUPPORT_OPENGL | PFD_DRAW_TO_WINDOW;
 			pfd.iPixelType = PFD_TYPE_RGBA;
-			pfd.cColorBits = 32;
-			pfd.cDepthBits = 32;
-			pfd.iLayerType = PFD_MAIN_PLANE;
+            if (pSCDesc != nullptr)
+            {
+                auto ColorFmt = pSCDesc->ColorBufferFormat;
+                if (ColorFmt == TEX_FORMAT_RGBA8_UNORM || ColorFmt == TEX_FORMAT_RGBA8_UNORM_SRGB || 
+                    ColorFmt == TEX_FORMAT_BGRA8_UNORM || ColorFmt == TEX_FORMAT_BGRA8_UNORM_SRGB)
+                {
+                    pfd.cColorBits = 32;
+                }
+                else
+                {
+                    LOG_WARNING_MESSAGE("Unsupported color buffer format ", GetTextureFormatAttribs(ColorFmt).Name, ". "
+                                        "OpenGL only supports 32-bit UNORM color buffer formats.");
+                    pfd.cColorBits = 32;
+                }
 
+                auto DepthFmt = pSCDesc->DepthBufferFormat;
+                switch(DepthFmt)
+                {
+                    case TEX_FORMAT_D32_FLOAT_S8X24_UINT:
+                        pfd.cDepthBits   = 32;
+                        pfd.cStencilBits = 8;
+                    break;
+
+                    case TEX_FORMAT_D32_FLOAT:
+                        pfd.cDepthBits = 32;
+                    break;
+
+                    case TEX_FORMAT_D24_UNORM_S8_UINT:
+                        pfd.cDepthBits   = 24;
+                        pfd.cStencilBits = 8;
+                    break;
+
+                    case TEX_FORMAT_D16_UNORM:
+                        pfd.cDepthBits = 16;
+                    break;
+
+                    default:
+                        LOG_ERROR_MESSAGE("Unsupported depth buffer format ", GetTextureFormatAttribs(DepthFmt).Name);
+                        pfd.cDepthBits = 32;
+                }
+            }
+            else
+            {
+    			pfd.cColorBits = 32;
+	    		pfd.cDepthBits = 32;
+            }
+			pfd.iLayerType = PFD_MAIN_PLANE;
 
 			m_WindowHandleToDeviceContext = GetDC( hWnd );
 			int nPixelFormat = ChoosePixelFormat( m_WindowHandleToDeviceContext, &pfd );
@@ -131,30 +175,40 @@ namespace Diligent
 			if( GLEW_OK != err )
 				LOG_ERROR_AND_THROW( "Failed to initialize GLEW" );
         
-			if( wglewIsSupported( "WGL_ARB_create_context" ) == 1 )
+			if (wglewIsSupported( "WGL_ARB_create_context" ) == 1)
 			{
-				MajorVersion = 4;
-				MinorVersion = 4;
-				// Setup attributes for a new OpenGL rendering context
-				int attribs[] =
-				{
-					WGL_CONTEXT_MAJOR_VERSION_ARB, MajorVersion,
-					WGL_CONTEXT_MINOR_VERSION_ARB, MinorVersion,
-					WGL_CONTEXT_FLAGS_ARB, WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB,
-					GL_CONTEXT_PROFILE_MASK, GL_CONTEXT_CORE_PROFILE_BIT,
-					0, 0
-				};
+                std::pair<int,int> gl_versions[] = {{4,4}, {4,3}, {4,2}};
+                for(size_t i=0; i < _countof(gl_versions) && m_Context == NULL; ++i)
+                {
+                    const auto& version = gl_versions[i];
+				    MajorVersion = version.first;
+				    MinorVersion = version.second;
+				    // Setup attributes for a new OpenGL rendering context
+				    int attribs[] =
+				    {
+					    WGL_CONTEXT_MAJOR_VERSION_ARB, MajorVersion,
+					    WGL_CONTEXT_MINOR_VERSION_ARB, MinorVersion,
+					    WGL_CONTEXT_FLAGS_ARB, WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB,
+					    GL_CONTEXT_PROFILE_MASK, GL_CONTEXT_CORE_PROFILE_BIT,
+					    0, 0
+				    };
 
 #ifdef _DEBUG
-				attribs[5] |= WGL_CONTEXT_DEBUG_BIT_ARB;
+				    attribs[5] |= WGL_CONTEXT_DEBUG_BIT_ARB;
 #endif 
 
-				// Create new rendering context
-				// In order to create new OpenGL rendering context we have to call function wglCreateContextAttribsARB(), 
-				// which is an OpenGL function and requires OpenGL to be active when it is called. 
-				// The only way is to create an old context, activate it, and while it is active create a new one. 
-				// Very inconsistent, but we have to live with it!
-				m_Context = wglCreateContextAttribsARB( m_WindowHandleToDeviceContext, 0, attribs );
+				    // Create new rendering context
+				    // In order to create new OpenGL rendering context we have to call function wglCreateContextAttribsARB(), 
+				    // which is an OpenGL function and requires OpenGL to be active when it is called. 
+				    // The only way is to create an old context, activate it, and while it is active create a new one. 
+				    // Very inconsistent, but we have to live with it!
+				    m_Context = wglCreateContextAttribsARB( m_WindowHandleToDeviceContext, 0, attribs );
+                }
+
+                if (m_Context == NULL)
+                {
+                    LOG_ERROR_AND_THROW("Failed to initialize OpenGL context.");
+                }
 
 				// Delete tempContext
 				wglMakeCurrent( NULL, NULL );

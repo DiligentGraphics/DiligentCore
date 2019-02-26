@@ -32,7 +32,7 @@
 
 namespace Diligent
 {
-    GLContext::GLContext( const EngineGLAttribs &Info, DeviceCaps &DeviceCaps )
+    GLContext::GLContext(const EngineGLAttribs& Info, DeviceCaps& DeviceCaps, const struct SwapChainDesc* /*pSCDesc*/)
     {
         if (GetCurrentNativeGLContext() == nullptr)
         {

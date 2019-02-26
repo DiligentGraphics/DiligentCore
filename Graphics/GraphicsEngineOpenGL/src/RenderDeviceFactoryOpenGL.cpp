@@ -67,17 +67,17 @@ public:
         return &TheFactory;
     }
 
-    virtual void CreateDeviceAndSwapChainGL(const EngineGLAttribs& CreationAttribs,
-                                            IRenderDevice **ppDevice,
-                                            IDeviceContext **ppImmediateContext,
-                                            const SwapChainDesc& SCDesc, 
-                                            ISwapChain **ppSwapChain )override final;
+    virtual void CreateDeviceAndSwapChainGL(const EngineGLAttribs&  CreationAttribs,
+                                            IRenderDevice**         ppDevice,
+                                            IDeviceContext**        ppImmediateContext,
+                                            const SwapChainDesc&    SCDesc, 
+                                            ISwapChain**            ppSwapChain )override final;
 
-    virtual void CreateHLSL2GLSLConverter(IHLSL2GLSLConverter **ppConverter)override final;
+    virtual void CreateHLSL2GLSLConverter(IHLSL2GLSLConverter** ppConverter)override final;
 
     virtual void AttachToActiveGLContext( const EngineGLAttribs& CreationAttribs,
-                                          IRenderDevice **ppDevice,
-                                          IDeviceContext **ppImmediateContext )override final;
+                                          IRenderDevice**        ppDevice,
+                                          IDeviceContext**       ppImmediateContext )override final;
 };
 
 
@@ -93,10 +93,10 @@ public:
 /// \param [out] ppSwapChain    - Address of the memory location where pointer to the new 
 ///                               swap chain will be written.
 void EngineFactoryOpenGLImpl::CreateDeviceAndSwapChainGL(const EngineGLAttribs& CreationAttribs,
-                                                         IRenderDevice **ppDevice,
-                                                         IDeviceContext **ppImmediateContext,
-                                                         const SwapChainDesc& SCDesc, 
-                                                         ISwapChain **ppSwapChain )
+                                                         IRenderDevice**        ppDevice,
+                                                         IDeviceContext**       ppImmediateContext,
+                                                         const SwapChainDesc&   SCDesc, 
+                                                         ISwapChain**           ppSwapChain)
 {
     if (CreationAttribs.DebugMessageCallback != nullptr)
         SetDebugMessageCallback(CreationAttribs.DebugMessageCallback);
@@ -114,10 +114,10 @@ void EngineFactoryOpenGLImpl::CreateDeviceAndSwapChainGL(const EngineGLAttribs& 
         SetRawAllocator(CreationAttribs.pRawMemAllocator);
         auto &RawMemAllocator = GetRawAllocator();
 
-        RenderDeviceGLImpl *pRenderDeviceOpenGL( NEW_RC_OBJ(RawMemAllocator, "TRenderDeviceGLImpl instance", TRenderDeviceGLImpl)(RawMemAllocator, CreationAttribs) );
+        RenderDeviceGLImpl* pRenderDeviceOpenGL( NEW_RC_OBJ(RawMemAllocator, "TRenderDeviceGLImpl instance", TRenderDeviceGLImpl)(RawMemAllocator, CreationAttribs, &SCDesc) );
         pRenderDeviceOpenGL->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice) );
 
-        DeviceContextGLImpl *pDeviceContextOpenGL( NEW_RC_OBJ(RawMemAllocator, "DeviceContextGLImpl instance", DeviceContextGLImpl)(pRenderDeviceOpenGL, false ) );
+        DeviceContextGLImpl* pDeviceContextOpenGL( NEW_RC_OBJ(RawMemAllocator, "DeviceContextGLImpl instance", DeviceContextGLImpl)(pRenderDeviceOpenGL, false ) );
         // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceOpenGL will
         // keep a weak reference to the context
         pDeviceContextOpenGL->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppImmediateContext) );
@@ -164,8 +164,8 @@ void EngineFactoryOpenGLImpl::CreateDeviceAndSwapChainGL(const EngineGLAttribs& 
 /// \param [out] ppImmediateContext - Address of the memory location where pointers to 
 ///                                   the immediate context will be written.
 void EngineFactoryOpenGLImpl::AttachToActiveGLContext( const EngineGLAttribs& CreationAttribs,
-                                                       IRenderDevice **ppDevice,
-                                                       IDeviceContext **ppImmediateContext )
+                                                       IRenderDevice**        ppDevice,
+                                                       IDeviceContext**       ppImmediateContext )
 {
     if (CreationAttribs.DebugMessageCallback != nullptr)
         SetDebugMessageCallback(CreationAttribs.DebugMessageCallback);
@@ -182,10 +182,10 @@ void EngineFactoryOpenGLImpl::AttachToActiveGLContext( const EngineGLAttribs& Cr
         SetRawAllocator(CreationAttribs.pRawMemAllocator);
         auto &RawMemAllocator = GetRawAllocator();
 
-        RenderDeviceGLImpl *pRenderDeviceOpenGL( NEW_RC_OBJ(RawMemAllocator, "TRenderDeviceGLImpl instance", TRenderDeviceGLImpl)(RawMemAllocator, CreationAttribs) );
+        RenderDeviceGLImpl* pRenderDeviceOpenGL( NEW_RC_OBJ(RawMemAllocator, "TRenderDeviceGLImpl instance", TRenderDeviceGLImpl)(RawMemAllocator, CreationAttribs) );
         pRenderDeviceOpenGL->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice) );
 
-        DeviceContextGLImpl *pDeviceContextOpenGL( NEW_RC_OBJ(RawMemAllocator, "DeviceContextGLImpl instance", DeviceContextGLImpl)(pRenderDeviceOpenGL, false ) );
+        DeviceContextGLImpl* pDeviceContextOpenGL( NEW_RC_OBJ(RawMemAllocator, "DeviceContextGLImpl instance", DeviceContextGLImpl)(pRenderDeviceOpenGL, false ) );
         // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceOpenGL will
         // keep a weak reference to the context
         pDeviceContextOpenGL->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppImmediateContext) );

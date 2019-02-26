@@ -30,7 +30,7 @@ namespace Diligent
     public:
         typedef void* NativeGLContextType; // EAGLContext*
 
-        GLContext(const struct EngineGLAttribs &InitAttribs, struct DeviceCaps &DeviceCaps);
+        GLContext(const struct EngineGLAttribs& InitAttribs, struct DeviceCaps& DeviceCaps, const struct SwapChainDesc* pSCDesc);
 
         NativeGLContextType GetCurrentNativeGLContext();
     };

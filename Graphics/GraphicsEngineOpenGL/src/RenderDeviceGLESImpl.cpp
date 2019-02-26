@@ -27,8 +27,11 @@
 
 namespace Diligent
 {
-    RenderDeviceGLESImpl::RenderDeviceGLESImpl( IReferenceCounters *pRefCounters, IMemoryAllocator &RawMemAllocator, const EngineGLAttribs &InitAttribs ) :
-        RenderDeviceGLImpl( pRefCounters, RawMemAllocator, InitAttribs )
+    RenderDeviceGLESImpl::RenderDeviceGLESImpl(IReferenceCounters*      pRefCounters,
+                                               IMemoryAllocator&        RawMemAllocator,
+                                               const EngineGLAttribs&   InitAttribs,
+                                               const SwapChainDesc*     pSCDesc) :
+        RenderDeviceGLImpl(pRefCounters, RawMemAllocator, InitAttribs, pSCDesc)
     {
     }
 

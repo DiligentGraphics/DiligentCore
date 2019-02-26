@@ -30,7 +30,7 @@ namespace Diligent
     public:
         typedef GLXContext NativeGLContextType;
 
-        GLContext(const struct EngineGLAttribs &InitAttribs, struct DeviceCaps &DeviceCaps);
+        GLContext(const struct EngineGLAttribs& InitAttribs, struct DeviceCaps& DeviceCaps, const struct SwapChainDesc* pSCDesc);
         ~GLContext();
         void SwapBuffers();
 

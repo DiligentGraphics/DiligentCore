@@ -229,7 +229,7 @@ namespace Diligent
         return true;
     }
 
-    GLContext::GLContext( const EngineGLAttribs &InitAttribs, DeviceCaps &DeviceCaps ) :
+    GLContext::GLContext(const EngineGLAttribs& InitAttribs, DeviceCaps& DeviceCaps, const struct SwapChainDesc* /*pSCDesc*/) :
         display_( EGL_NO_DISPLAY ),
         surface_( EGL_NO_SURFACE ),
         context_( EGL_NO_CONTEXT ),

@@ -31,9 +31,12 @@ namespace Diligent
 class RenderDeviceGLESImpl final : public RenderDeviceGLImpl
 {
 public:
-    RenderDeviceGLESImpl( IReferenceCounters *pRefCounters, IMemoryAllocator &RawMemAllocator, const EngineGLAttribs &InitAttribs );
-
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface );
+    RenderDeviceGLESImpl( IReferenceCounters*    pRefCounters,
+                          IMemoryAllocator&      RawMemAllocator,
+                          const EngineGLAttribs& InitAttribs,
+                          const SwapChainDesc*   pSCDesc = nullptr);
+     
+    virtual void QueryInterface( const INTERFACE_ID& IID, IObject** ppInterface );
 
     virtual bool Invalidate();
 

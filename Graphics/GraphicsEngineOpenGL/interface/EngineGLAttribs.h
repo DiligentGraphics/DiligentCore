@@ -38,11 +38,11 @@ namespace Diligent
         /// * On Win32 platform, this is a window handle (HWND)
         /// * On Android platform, this is a pointer to the native window (ANativeWindow*)
         /// * On Linux, this is the native window (Window)
-        void *pNativeWndHandle = nullptr;
+        void* pNativeWndHandle = nullptr;
 
 #if PLATFORM_LINUX
         /// For linux platform only, this is the pointer to the display
-        void *pDisplay = nullptr;
+        void* pDisplay = nullptr;
 #endif
     };
 }
