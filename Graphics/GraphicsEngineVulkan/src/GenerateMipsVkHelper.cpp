@@ -104,16 +104,16 @@ namespace Diligent
 
     std::array<RefCntAutoPtr<IPipelineState>, 4> GenerateMipsVkHelper::CreatePSOs(TEXTURE_FORMAT Fmt)
     {
-        ShaderCreationAttribs CSCreateAttribs;
+        ShaderCreateInfo CSCreateAttribs;
         std::array<RefCntAutoPtr<IPipelineState>, 4> PSOs;
         
         CSCreateAttribs.Source = g_GenerateMipsCSSource;
         CSCreateAttribs.EntryPoint = "main";
         CSCreateAttribs.SourceLanguage = SHADER_SOURCE_LANGUAGE_GLSL;
         CSCreateAttribs.Desc.ShaderType = SHADER_TYPE_COMPUTE;
-        CSCreateAttribs.Desc.DefaultVariableType = SHADER_VARIABLE_TYPE_DYNAMIC;
+        CSCreateAttribs.Desc.DefaultVariableType = SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC;
         
-        ShaderVariableDesc VarDesc{"CB", SHADER_VARIABLE_TYPE_STATIC};
+        ShaderResourceVariableDesc VarDesc{"CB", SHADER_RESOURCE_VARIABLE_TYPE_STATIC};
         CSCreateAttribs.Desc.VariableDesc = &VarDesc;
         CSCreateAttribs.Desc.NumVariables = 1;
 

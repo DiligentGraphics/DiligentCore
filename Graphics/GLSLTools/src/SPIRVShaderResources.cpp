@@ -392,6 +392,18 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator,
     VERIFY(m_ResourceNames.GetRemainingSize() == 0, "Names pool must be empty");
 
     //LOG_INFO_MESSAGE(DumpResources());
+
+#ifdef DEVELOPMENT
+    if (CombinedSamplerSuffix != nullptr)
+    {
+        for (Uint32 n=0; n < GetNumSepSmplrs(); ++n)
+        {
+            const auto& SepSmplr = GetSepSmplr(n);
+            if (!SepSmplr.IsValidSepImageAssigned())
+                LOG_ERROR_MESSAGE("Shader '", shaderDesc.Name, "' uses combined texture samplers, but separate sampler '", SepSmplr.Name, "' is not assigned to any texture");
+        }
+    }
+#endif
 }
 
 void SPIRVShaderResources::Initialize(IMemoryAllocator&       Allocator, 

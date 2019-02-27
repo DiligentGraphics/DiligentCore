@@ -411,7 +411,7 @@ private:
     std::unordered_map<IncludeResult*, RefCntAutoPtr<IDataBlob>> m_DataBlobs;
 };
 
-std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreationAttribs& Attribs, IDataBlob** ppCompilerOutput)
+std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& Attribs, IDataBlob** ppCompilerOutput)
 {
     EShLanguage ShLang = ShaderTypeToShLanguage(Attribs.Desc.ShaderType);
     glslang::TShader Shader(ShLang);

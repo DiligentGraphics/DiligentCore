@@ -185,13 +185,13 @@ const Char *GetShaderTypeLiteralName(SHADER_TYPE ShaderType);
 
 
 /// Returns the literal name of a shader variable type. For instance,
-/// for SHADER_VARIABLE_TYPE_STATIC, if bGetFullName == true, "SHADER_VARIABLE_TYPE_STATIC" will be returned;
+/// for SHADER_RESOURCE_VARIABLE_TYPE_STATIC, if bGetFullName == true, "SHADER_RESOURCE_VARIABLE_TYPE_STATIC" will be returned;
 /// if bGetFullName == false, "static" will be returned
 
 /// \param [in] VarType - Variable type.
 /// \param [in] bGetFullName - Whether to return string representation of the enum value
 /// \return Literal name of the shader variable type.
-const Char *GetShaderVariableTypeLiteralName(SHADER_VARIABLE_TYPE VarType, bool bGetFullName = false);
+const Char *GetShaderVariableTypeLiteralName(SHADER_RESOURCE_VARIABLE_TYPE VarType, bool bGetFullName = false);
 
 /// Overloaded function that returns the literal name of a texture view type.
 /// see GetTexViewTypeLiteralName().

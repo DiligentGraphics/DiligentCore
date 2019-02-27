@@ -45,7 +45,7 @@ public:
     ///                            If the interface is not supported, null pointer will be returned.
     /// \remark The method increments the number of strong references by 1. The interface must be 
     ///         released by a call to Release() method when it is no longer needed.
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface ) = 0;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) = 0;
 
 
     /// Increments the number of strong references by 1.
