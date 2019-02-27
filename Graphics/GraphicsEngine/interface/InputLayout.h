@@ -68,7 +68,7 @@ struct LayoutElement
     /// computed automatically assuming that all elements in the same buffer slot are
     /// packed one after another. If the buffer slot contains multiple layout elements,
     /// they all must specify the same stride or use AutoStride value.
-    Uint32 Stride           = AutoOffset;
+    Uint32 Stride           = AutoStride;
 
     /// Input frequency
     enum FREQUENCY : Int32
