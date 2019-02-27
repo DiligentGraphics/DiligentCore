@@ -73,11 +73,11 @@ public:
     {}
     ~ShaderVariableManagerVk();
 
-    void Initialize(const ShaderResourceLayoutVk& Layout, 
-                    IMemoryAllocator&             Allocator,
-                    const SHADER_VARIABLE_TYPE*   AllowedVarTypes, 
-                    Uint32                        NumAllowedTypes, 
-                    ShaderResourceCacheVk&        ResourceCache);
+    void Initialize(const ShaderResourceLayoutVk&          Layout, 
+                    IMemoryAllocator&                      Allocator,
+                    const SHADER_RESOURCE_VARIABLE_TYPE*   AllowedVarTypes, 
+                    Uint32                                 NumAllowedTypes, 
+                    ShaderResourceCacheVk&                 ResourceCache);
     void Destroy(IMemoryAllocator& Allocator);
 
     ShaderVariableVkImpl* GetVariable(const Char* Name);
@@ -85,10 +85,10 @@ public:
 
     void BindResources( IResourceMapping* pResourceMapping, Uint32 Flags);
 
-    static size_t GetRequiredMemorySize(const ShaderResourceLayoutVk& Layout, 
-                                        const SHADER_VARIABLE_TYPE*   AllowedVarTypes, 
-                                        Uint32                        NumAllowedTypes,
-                                        Uint32&                       NumVariables);
+    static size_t GetRequiredMemorySize(const ShaderResourceLayoutVk&          Layout, 
+                                        const SHADER_RESOURCE_VARIABLE_TYPE*   AllowedVarTypes, 
+                                        Uint32                                 NumAllowedTypes,
+                                        Uint32&                                NumVariables);
 
     Uint32 GetVariableCount()const { return m_NumVariables; }
 
@@ -117,7 +117,7 @@ private:
 };
 
 // sizeof(ShaderVariableVkImpl) == 24 (x64)
-class ShaderVariableVkImpl final : public IShaderVariable
+class ShaderVariableVkImpl final : public IShaderResourceVariable
 {
 public:
     ShaderVariableVkImpl(ShaderVariableManagerVk& ParentManager,
@@ -153,16 +153,16 @@ public:
             return;
 
         *ppInterface = nullptr;
-        if (IID == IID_ShaderVariable || IID == IID_Unknown)
+        if (IID == IID_ShaderResourceVariable || IID == IID_Unknown)
         {
             *ppInterface = this;
             (*ppInterface)->AddRef();
         }
     }
 
-    virtual SHADER_VARIABLE_TYPE GetType()const override final
+    virtual SHADER_RESOURCE_VARIABLE_TYPE GetType()const override final
     {
-        return m_Resource.SpirvAttribs.VarType;
+        return m_Resource.GetVariableType();
     }
 
     virtual void Set(IDeviceObject *pObject)override final 

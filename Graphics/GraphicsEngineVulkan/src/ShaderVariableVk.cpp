@@ -24,18 +24,19 @@
 #include "pch.h"
 
 #include "ShaderVariableVk.h"
+#include "ShaderResourceVariableBase.h"
 
 namespace Diligent
 {
 
 size_t ShaderVariableManagerVk::GetRequiredMemorySize(const ShaderResourceLayoutVk& Layout, 
-                                                      const SHADER_VARIABLE_TYPE*   AllowedVarTypes, 
+                                                      const SHADER_RESOURCE_VARIABLE_TYPE*   AllowedVarTypes, 
                                                       Uint32                        NumAllowedTypes,
                                                       Uint32&                       NumVariables)
 {
     NumVariables = 0;
     Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
-    for(SHADER_VARIABLE_TYPE VarType = SHADER_VARIABLE_TYPE_STATIC; VarType < SHADER_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_VARIABLE_TYPE>(VarType+1))
+    for(SHADER_RESOURCE_VARIABLE_TYPE VarType = SHADER_RESOURCE_VARIABLE_TYPE_STATIC; VarType < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(VarType+1))
     {
         if (IsAllowedType(VarType, AllowedTypeBits))
         {
@@ -61,7 +62,7 @@ size_t ShaderVariableManagerVk::GetRequiredMemorySize(const ShaderResourceLayout
 // Creates shader variable for every resource from SrcLayout whose type is one AllowedVarTypes
 void ShaderVariableManagerVk::Initialize(const ShaderResourceLayoutVk& SrcLayout, 
                                          IMemoryAllocator&             Allocator,
-                                         const SHADER_VARIABLE_TYPE*   AllowedVarTypes, 
+                                         const SHADER_RESOURCE_VARIABLE_TYPE*   AllowedVarTypes, 
                                          Uint32                        NumAllowedTypes, 
                                          ShaderResourceCacheVk&        ResourceCache)
 {
@@ -82,7 +83,7 @@ void ShaderVariableManagerVk::Initialize(const ShaderResourceLayoutVk& SrcLayout
     m_pVariables = reinterpret_cast<ShaderVariableVkImpl*>(pRawMem);
 
     Uint32 VarInd = 0;
-    for(SHADER_VARIABLE_TYPE VarType = SHADER_VARIABLE_TYPE_STATIC; VarType < SHADER_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_VARIABLE_TYPE>(VarType+1))
+    for(SHADER_RESOURCE_VARIABLE_TYPE VarType = SHADER_RESOURCE_VARIABLE_TYPE_STATIC; VarType < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(VarType+1))
     {
         if (!IsAllowedType(VarType, AllowedTypeBits))
             continue;
@@ -186,10 +187,10 @@ void ShaderVariableManagerVk::BindResources( IResourceMapping* pResourceMapping,
         const auto& Res = Var.m_Resource;
         
         // Skip immutable separate samplers
-        if (Res.SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler && Res.SpirvAttribs.IsImmutableSamplerAssigned())
+        if (Res.SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler && Res.IsImmutableSamplerAssigned())
             continue;
 
-        if ( (Flags & (1 << Res.SpirvAttribs.VarType)) == 0 )
+        if ( (Flags & (1 << Res.GetVariableType())) == 0 )
             continue;
 
         for (Uint32 ArrInd = 0; ArrInd < Res.SpirvAttribs.ArraySize; ++ArrInd)
