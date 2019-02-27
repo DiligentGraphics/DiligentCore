@@ -26,16 +26,7 @@
 #include <memory>
 #include <array>
 
-#if PLATFORM_ANDROID
-    // Android specific include files.
-#   include <unordered_map>
-
-    // Header files.
-#   include <android_native_app_glue.h>
-#   include "shaderc/shaderc.hpp"
-    // Static variable that keeps ANativeWindow and asset manager instances.
-    //static android_app *Android_application = nullptr;
-#elif (defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
+#if (defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
 #	include <MoltenGLSLToSPIRVConverter/GLSLToSPIRVConverter.h>
 #else
 #	include "SPIRV/GlslangToSpv.h"
@@ -56,16 +47,12 @@ namespace Diligent
 
 void InitializeGlslang()
 {
-#if !PLATFORM_ANDROID
     glslang::InitializeProcess();
-#endif
 }
 
 void FinalizeGlslang()
 {
-#if !PLATFORM_ANDROID
     glslang::FinalizeProcess();
-#endif
 }
 
 EShLanguage ShaderTypeToShLanguage(SHADER_TYPE ShaderType)
