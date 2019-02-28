@@ -338,7 +338,7 @@ void ShaderResourceLayoutVk::Initialize(IRenderDevice*                          
         }
 
         auto& ShaderSPIRV = SPIRVs[ShaderInd];
-        PipelineLayout.AllocateResourceSlot(Attribs, vkImmutableSampler, Resources.GetShaderType(), DescriptorSet, Binding, CacheOffset, ShaderSPIRV);
+        PipelineLayout.AllocateResourceSlot(Attribs, VarType, vkImmutableSampler, Resources.GetShaderType(), DescriptorSet, Binding, CacheOffset, ShaderSPIRV);
         VERIFY(DescriptorSet <= std::numeric_limits<decltype(VkResource::DescriptorSet)>::max(), "Descriptor set (", DescriptorSet, ") excceeds max representable value");
         VERIFY(Binding <= std::numeric_limits<decltype(VkResource::Binding)>::max(), "Binding (", Binding, ") excceeds max representable value");
 

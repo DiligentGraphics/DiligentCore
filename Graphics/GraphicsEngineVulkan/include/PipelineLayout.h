@@ -58,6 +58,7 @@ public:
                            const char*            DbgPipelineName)const;
 
     void AllocateResourceSlot(const SPIRVShaderResourceAttribs& ResAttribs, 
+                              SHADER_RESOURCE_VARIABLE_TYPE     VariableType,
                               VkSampler                         vkStaticSampler,
                               SHADER_TYPE                       ShaderType, 
                               Uint32&                           DescriptorSet, 
@@ -65,9 +66,9 @@ public:
                               Uint32&                           OffsetInCache,
                               std::vector<uint32_t>&            SPIRV);
 
-    Uint32 GetTotalDescriptors(SHADER_VARIABLE_TYPE VarType)const
+    Uint32 GetTotalDescriptors(SHADER_RESOURCE_VARIABLE_TYPE VarType)const
     {
-        VERIFY_EXPR(VarType >= 0 && VarType < SHADER_VARIABLE_TYPE_NUM_TYPES);
+        VERIFY_EXPR(VarType >= 0 && VarType < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES);
         return m_LayoutMgr.GetDescriptorSet(VarType).TotalDescriptors;
     }
 
@@ -82,7 +83,7 @@ public:
 
     VkDescriptorSetLayout GetDynamicDescriptorSetVkLayout()const
     {
-        return m_LayoutMgr.GetDescriptorSet(SHADER_VARIABLE_TYPE_DYNAMIC).VkLayout;
+        return m_LayoutMgr.GetDescriptorSet(SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC).VkLayout;
     }
 
     struct DescriptorSetBindInfo
@@ -178,8 +179,8 @@ private:
         void Finalize(const VulkanUtilities::VulkanLogicalDevice &LogicalDevice);
         void Release(RenderDeviceVkImpl* pRenderDeviceVk, Uint64 CommandQueueMask);
 
-              DescriptorSetLayout& GetDescriptorSet(SHADER_VARIABLE_TYPE VarType)      { return m_DescriptorSetLayouts[VarType == SHADER_VARIABLE_TYPE_DYNAMIC ? 1 : 0]; }
-        const DescriptorSetLayout& GetDescriptorSet(SHADER_VARIABLE_TYPE VarType)const { return m_DescriptorSetLayouts[VarType == SHADER_VARIABLE_TYPE_DYNAMIC ? 1 : 0]; }
+              DescriptorSetLayout& GetDescriptorSet(SHADER_RESOURCE_VARIABLE_TYPE VarType)      { return m_DescriptorSetLayouts[VarType == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC ? 1 : 0]; }
+        const DescriptorSetLayout& GetDescriptorSet(SHADER_RESOURCE_VARIABLE_TYPE VarType)const { return m_DescriptorSetLayouts[VarType == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC ? 1 : 0]; }
 
         bool operator == (const DescriptorSetLayoutManager& rhs)const;
         bool operator != (const DescriptorSetLayoutManager& rhs)const {return !(*this == rhs);}
@@ -187,6 +188,7 @@ private:
         VkPipelineLayout GetVkPipelineLayout()const{return m_VkPipelineLayout;}
 
         void AllocateResourceSlot(const SPIRVShaderResourceAttribs& ResAttribs,
+                                  SHADER_RESOURCE_VARIABLE_TYPE     VariableType,
                                   VkSampler                         vkStaticSampler,
                                   SHADER_TYPE                       ShaderType,
                                   Uint32&                           DescriptorSet,
