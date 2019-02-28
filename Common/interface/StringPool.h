@@ -51,7 +51,7 @@ public:
         }
     }
 
-    void Reserve(size_t Size, IMemoryAllocator &Allocator)
+    void Reserve(size_t Size, IMemoryAllocator& Allocator)
     {
         VERIFY(m_ReservedSize == 0, "Pool is already initialized");
         m_pAllocator = &Allocator;

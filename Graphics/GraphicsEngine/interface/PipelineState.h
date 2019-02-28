@@ -34,6 +34,8 @@
 #include "DepthStencilState.h"
 #include "InputLayout.h"
 #include "ShaderResourceBinding.h"
+#include "ShaderResourceVariable.h"
+#include "Shader.h"
 
 namespace Diligent
 {
@@ -51,11 +53,79 @@ struct SampleDesc
 
     SampleDesc()noexcept{}
 
-    SampleDesc(Uint8 _Count, 
-               Uint8 _Quality) : 
+    SampleDesc(Uint8 _Count, Uint8 _Quality) noexcept : 
         Count   (_Count),
         Quality (_Quality)
     {}
+};
+
+
+/// Describes shader variable
+struct ShaderResourceVariableDesc
+{
+    /// Shader stages this resources variable applies to. More than one shader stage can be specified.
+    SHADER_TYPE                   ShaderStages = SHADER_TYPE_UNKNOWN;
+
+    /// Shader variable name
+    const Char*                   Name         = nullptr;
+
+    /// Shader variable type. See Diligent::SHADER_RESOURCE_VARIABLE_TYPE for a list of allowed types
+    SHADER_RESOURCE_VARIABLE_TYPE Type         = SHADER_RESOURCE_VARIABLE_TYPE_STATIC;
+
+    ShaderResourceVariableDesc()noexcept{}
+
+    ShaderResourceVariableDesc(SHADER_TYPE _ShaderStages, const Char* _Name, SHADER_RESOURCE_VARIABLE_TYPE _Type)noexcept : 
+        ShaderStages(_ShaderStages),
+        Name        (_Name),
+        Type        (_Type)
+    {}
+};
+
+
+/// Static sampler description
+struct StaticSamplerDesc
+{
+    /// Shader stages that this static sampler applies to. More than one shader stage can be specified.
+    SHADER_TYPE ShaderStages         = SHADER_TYPE_UNKNOWN;
+
+    /// The name of the sampler itself or the name of the texture variable that 
+    /// this static sampler is assigned to if combined texture samplers are used.
+    const Char* SamplerOrTextureName = nullptr;
+
+    /// Sampler description
+    SamplerDesc Desc;
+
+    StaticSamplerDesc()noexcept{}
+
+    StaticSamplerDesc(SHADER_TYPE        _ShaderStages,
+                      const Char*        _SamplerOrTextureName,
+                      const SamplerDesc& _Desc)noexcept : 
+        ShaderStages        (_ShaderStages),
+        SamplerOrTextureName(_SamplerOrTextureName),
+        Desc                (_Desc)
+    {}
+};
+
+
+/// Pipeline layout description
+struct PipelineLayoutDesc
+{
+    /// Default shader resource variable type. This type will be used if shader
+    /// variable description is not found in the Variables array
+    /// or if Variables == nullptr
+    SHADER_RESOURCE_VARIABLE_TYPE       DefaultVariableType = SHADER_RESOURCE_VARIABLE_TYPE_STATIC;
+
+    /// Number of elements in Variables array            
+    Uint32                              NumVariables        = 0;
+
+    /// Array of shader resource variable descriptions               
+    const ShaderResourceVariableDesc*   Variables           = nullptr;
+                                                            
+    /// Number of static samplers in StaticSamplers array   
+    Uint32                              NumStaticSamplers   = 0;
+                                                            
+    /// Array of static sampler descriptions                
+    const StaticSamplerDesc*            StaticSamplers      = nullptr;
 };
 
 
@@ -150,6 +220,9 @@ struct PipelineStateDesc : DeviceObjectAttribs
     /// Defines which command queues this pipeline state can be used with
     Uint64 CommandQueueMask         = 1;
 
+    /// Pipeline layout description
+    PipelineLayoutDesc Layout;
+
     /// Graphics pipeline state description. This memeber is ignored if IsComputePipeline == True
     GraphicsPipelineDesc GraphicsPipeline;
 
@@ -170,14 +243,49 @@ public:
     /// Queries the specific interface, see IObject::QueryInterface() for details
     virtual void QueryInterface( const INTERFACE_ID& IID, IObject** ppInterface ) = 0;
 
+
     /// Returns the blend state description used to create the object
     virtual const PipelineStateDesc& GetDesc()const = 0;
+
 
     /// Binds resources for all shaders in the pipeline state
 
     /// \param [in] pResourceMapping - Pointer to the resource mapping interface.
     /// \param [in] Flags - Additional flags. See Diligent::BIND_SHADER_RESOURCES_FLAGS.
-    virtual void BindShaderResources( IResourceMapping* pResourceMapping, Uint32 Flags ) = 0;
+    virtual void BindStaticResources(IResourceMapping* pResourceMapping, Uint32 Flags) = 0;
+
+
+    /// Returns the number of static shader resource variables.
+
+    /// \param [in] ShaderType - Type of the shader.
+    /// \remark Only static variables (that can be accessed directly through the PSO) are counted.
+    ///         Mutable and dynamic variables are accessed through Shader Resource Binding object.
+    virtual Uint32 GetStaticVariableCount(SHADER_TYPE ShaderType) const = 0;
+
+
+    /// Returns static shader resource variable. If the variable is not found,
+    /// returns nullptr.
+    
+    /// \param [in] ShaderType - Type of the shader to look up the variable. 
+    ///                          Must be one of Diligent::SHADER_TYPE.
+    /// \param [in] Name - Name of the variable.
+    /// \remark The method does not increment the reference counter
+    ///         of the returned interface.
+    virtual IShaderResourceVariable* GetStaticShaderVariable(SHADER_TYPE ShaderType, const Char* Name) = 0;
+
+
+    /// Returns static shader resource variable by its index.
+
+    /// \param [in] ShaderType - Type of the shader to look up the variable. 
+    ///                          Must be one of Diligent::SHADER_TYPE.
+    /// \param [in] Index - Shader variable index. The index must be between
+    ///                     0 and the total number of variables returned by 
+    ///                     GetStaticVariableCount().
+    /// \remark Only static shader resource variables can be accessed through this method.
+    ///         Mutable and dynamic variables are accessed through Shader Resource 
+    ///         Binding object
+    virtual IShaderResourceVariable* GetStaticShaderVariable(SHADER_TYPE ShaderType, Uint32 Index) = 0;
+
 
     /// Creates a shader resource binding object
 
@@ -186,7 +294,8 @@ public:
     /// \param [in] InitStaticResources      - if set to true, the method will initialize static resources in
     ///                                        the created object, which has the exact same effect as calling 
     ///                                        IShaderResourceBinding::InitializeStaticResources().
-    virtual void CreateShaderResourceBinding( IShaderResourceBinding** ppShaderResourceBinding, bool InitStaticResources = false ) = 0;
+    virtual void CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding, bool InitStaticResources = false) = 0;
+
 
     /// Checks if this pipeline state object is compatible with another PSO
 
