@@ -33,6 +33,7 @@
 #include "PipelineStateBase.h"
 #include "PipelineLayout.h"
 #include "ShaderResourceLayoutVk.h"
+#include "ShaderVariableVk.h"
 #include "FixedBlockMemoryAllocator.h"
 #include "SRBMemoryAllocator.h"
 #include "VulkanUtilities/VulkanObjectWrappers.h"
@@ -44,6 +45,7 @@ namespace Diligent
 {
 
 class FixedBlockMemoryAllocator;
+class ShaderVariableManagerVk;
 
 /// Implementation of the Diligent::IRenderDeviceVk interface
 class PipelineStateVkImpl final : public PipelineStateBase<IPipelineStateVk, RenderDeviceVkImpl>
@@ -54,15 +56,23 @@ public:
     PipelineStateVkImpl( IReferenceCounters* pRefCounters, RenderDeviceVkImpl* pDeviceVk, const PipelineStateDesc &PipelineDesc );
     ~PipelineStateVkImpl();
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject** ppInterface )override final;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
    
-    virtual void CreateShaderResourceBinding( IShaderResourceBinding **ppShaderResourceBinding, bool InitStaticResources )override final;
+    virtual void CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding, bool InitStaticResources)override final;
 
     virtual bool IsCompatibleWith(const IPipelineState* pPSO)const override final;
 
     virtual VkRenderPass GetVkRenderPass()const override final{return m_RenderPass;}
 
     virtual VkPipeline GetVkPipeline()const override final { return m_Pipeline; }
+
+    virtual void BindStaticResources(IResourceMapping* pResourceMapping, Uint32 Flags)override final;
+
+    virtual Uint32 GetStaticVariableCount(SHADER_TYPE ShaderType) const override final;
+
+    virtual IShaderResourceVariable* GetStaticShaderVariable(SHADER_TYPE ShaderType, const Char* Name) override final;
+
+    virtual IShaderResourceVariable* GetStaticShaderVariable(SHADER_TYPE ShaderType, Uint32 Index) override final;
 
     void CommitAndTransitionShaderResources(IShaderResourceBinding*                 pShaderResourceBinding, 
                                             DeviceContextVkImpl*                    pCtxVkImpl,
@@ -98,9 +108,31 @@ public:
                                                           VkSubpassDescription&                                    SubpassDesc);
 
 
+    void InitializeStaticSRBResources(ShaderResourceCacheVk& ResourceCache)const;
+
 private:
-    ShaderResourceLayoutVk*    m_ShaderResourceLayouts  = nullptr;
-    
+    const ShaderResourceLayoutVk& GetStaticShaderResLayout(Uint32 ShaderInd)const
+    {
+        VERIFY_EXPR(ShaderInd < m_NumShaders);
+        return m_ShaderResourceLayouts[m_NumShaders + ShaderInd];
+    }
+
+    const ShaderResourceCacheVk& GetStaticResCache(Uint32 ShaderInd)const
+    {
+        VERIFY_EXPR(ShaderInd < m_NumShaders);
+        return m_StaticResCaches[ShaderInd];
+    }
+
+    ShaderVariableManagerVk& GetStaticVarMgr(Uint32 ShaderInd)const
+    {
+        VERIFY_EXPR(ShaderInd < m_NumShaders);
+        return m_StaticVarsMgrs[ShaderInd];
+    }
+
+    ShaderResourceLayoutVk*  m_ShaderResourceLayouts  = nullptr;
+    ShaderResourceCacheVk*   m_StaticResCaches        = nullptr;
+    ShaderVariableManagerVk* m_StaticVarsMgrs         = nullptr;
+
     // SRB memory allocator must be declared before m_pDefaultShaderResBinding
     SRBMemoryAllocator m_SRBMemAllocator;
     
@@ -109,6 +141,8 @@ private:
     VkRenderPass m_RenderPass = VK_NULL_HANDLE; // Render passes are managed by the render device
     VulkanUtilities::PipelineWrapper m_Pipeline;
     PipelineLayout                   m_PipelineLayout;
+
+    Int8 m_ResourceLayoutIndex[6] = {-1, -1, -1, -1, -1, -1};
     bool m_HasStaticResources    = false;
     bool m_HasNonStaticResources = false;
 };

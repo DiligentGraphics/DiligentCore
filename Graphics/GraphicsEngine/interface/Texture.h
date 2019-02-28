@@ -273,7 +273,7 @@ class ITexture : public IDeviceObject
 {
 public:
     /// Queries the specific interface, see IObject::QueryInterface() for details
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface ) = 0;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) = 0;
 
     /// Returns the texture description used to create the object
     virtual const TextureDesc& GetDesc()const = 0;
@@ -297,7 +297,7 @@ public:
     ///          until all views are released.\n
     ///          The function calls AddRef() for the created interface, so it must be released by
     ///          a call to Release() when it is no longer needed.
-    virtual void CreateView(const struct TextureViewDesc &ViewDesc, class ITextureView **ppView) = 0;
+    virtual void CreateView(const struct TextureViewDesc& ViewDesc, class ITextureView** ppView) = 0;
 
     /// Returns the pointer to the default view.
     
@@ -306,7 +306,7 @@ public:
     ///
     /// \note The function does not increase the reference counter for the returned interface, so
     ///       Release() must *NOT* be called.
-    virtual ITextureView* GetDefaultView( TEXTURE_VIEW_TYPE ViewType ) = 0;
+    virtual ITextureView* GetDefaultView(TEXTURE_VIEW_TYPE ViewType) = 0;
 
 
     /// Returns native texture handle specific to the underlying graphics API

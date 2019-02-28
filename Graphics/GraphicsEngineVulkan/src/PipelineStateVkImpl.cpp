@@ -60,12 +60,12 @@ VkRenderPassCreateInfo PipelineStateVkImpl::GetRenderPassCreateInfo(
     {
         auto& DepthAttachment = Attachments[AttachmentInd];
 
-        DepthAttachment.flags = 0; // Allowed value VK_ATTACHMENT_DESCRIPTION_MAY_ALIAS_BIT
-        DepthAttachment.format = TexFormatToVkFormat(DSVFormat);
+        DepthAttachment.flags   = 0; // Allowed value VK_ATTACHMENT_DESCRIPTION_MAY_ALIAS_BIT
+        DepthAttachment.format  = TexFormatToVkFormat(DSVFormat);
         DepthAttachment.samples = SampleCountFlags;
-        DepthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD; // previous contents of the image within the render area 
-                                                             // will be preserved. For attachments with a depth/stencil format, 
-                                                             // this uses the access type VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT.
+        DepthAttachment.loadOp  = VK_ATTACHMENT_LOAD_OP_LOAD; // previous contents of the image within the render area 
+                                                              // will be preserved. For attachments with a depth/stencil format, 
+                                                              // this uses the access type VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT.
         DepthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE; // the contents generated during the render pass and within the render 
                                                                 // area are written to memory. For attachments with a depth/stencil format,
                                                                 // this uses the access type VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT. 
@@ -113,12 +113,12 @@ VkRenderPassCreateInfo PipelineStateVkImpl::GetRenderPassCreateInfo(
                                          // dependencies between pairs of subpasses, or NULL if dependencyCount is zero.
 
 
-    SubpassDesc.flags = 0; // All bits for this type are defined by extensions
-    SubpassDesc.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS; // Currently, only graphics subpasses are supported.
-    SubpassDesc.inputAttachmentCount = 0;
-    SubpassDesc.pInputAttachments    = nullptr;
-    SubpassDesc.colorAttachmentCount = NumRenderTargets;
-    SubpassDesc.pColorAttachments    = pColorAttachmentsReference;
+    SubpassDesc.flags                   = 0; // All bits for this type are defined by extensions
+    SubpassDesc.pipelineBindPoint       = VK_PIPELINE_BIND_POINT_GRAPHICS; // Currently, only graphics subpasses are supported.
+    SubpassDesc.inputAttachmentCount    = 0;
+    SubpassDesc.pInputAttachments       = nullptr;
+    SubpassDesc.colorAttachmentCount    = NumRenderTargets;
+    SubpassDesc.pColorAttachments       = pColorAttachmentsReference;
     SubpassDesc.pResolveAttachments     = nullptr;
     SubpassDesc.pDepthStencilAttachment = pDepthAttachmentReference;
     SubpassDesc.preserveAttachmentCount = 0;
@@ -147,7 +147,7 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters*      pRefCounters
                                            RenderDeviceVkImpl*      pDeviceVk,
                                            const PipelineStateDesc& PipelineDesc) : 
     TPipelineStateBase(pRefCounters, pDeviceVk, PipelineDesc),
-    m_SRBMemAllocator(GetRawAllocator())
+    m_SRBMemAllocator (GetRawAllocator())
 {
     const auto& LogicalDevice = pDeviceVk->GetLogicalDevice();
 
@@ -155,16 +155,32 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters*      pRefCounters
     auto& ShaderResLayoutAllocator = GetRawAllocator();
     std::array<std::shared_ptr<const SPIRVShaderResources>, MaxShadersInPipeline> ShaderResources;
     std::array<std::vector<uint32_t>,                       MaxShadersInPipeline> ShaderSPIRVs;
-    auto* pResLayoutRawMem = ALLOCATE(ShaderResLayoutAllocator, "Raw memory for ShaderResourceLayoutVk", sizeof(ShaderResourceLayoutVk) * m_NumShaders);
+    auto* pResLayoutRawMem      = ALLOCATE(ShaderResLayoutAllocator, "Raw memory for ShaderResourceLayoutVk", sizeof(ShaderResourceLayoutVk) * m_NumShaders * 2);
+    auto* pStaticResCacheRawMem = ALLOCATE(GetRawAllocator(), "Raw memory for ShaderResourceCacheVk", sizeof(ShaderResourceCacheVk) * m_NumShaders);
+    auto* pStaticVarMgrRawMem   = ALLOCATE(GetRawAllocator(), "Raw memory for ShaderVariableManagerVk", sizeof(ShaderVariableManagerVk) * m_NumShaders);
     m_ShaderResourceLayouts = reinterpret_cast<ShaderResourceLayoutVk*>(pResLayoutRawMem);
+    m_StaticResCaches       = reinterpret_cast<ShaderResourceCacheVk*>(pStaticResCacheRawMem);
+    m_StaticVarsMgrs        = reinterpret_cast<ShaderVariableManagerVk*>(pStaticVarMgrRawMem);
     for (Uint32 s=0; s < m_NumShaders; ++s)
     {
         new (m_ShaderResourceLayouts + s) ShaderResourceLayoutVk(*this, LogicalDevice);
         auto* pShaderVk = GetShader<const ShaderVkImpl>(s);
         ShaderResources[s] = pShaderVk->GetShaderResources();
         ShaderSPIRVs[s] = pShaderVk->GetSPIRV();
+
+        const auto ShaderType = pShaderVk->GetDesc().ShaderType;
+        const auto ShaderTypeInd = GetShaderTypeIndex(ShaderType);
+        m_ResourceLayoutIndex[ShaderTypeInd] = static_cast<Int8>(s);
+
+        auto* pStaticResLayout = new (m_ShaderResourceLayouts + m_NumShaders + s) ShaderResourceLayoutVk(*this, LogicalDevice);
+        auto* pStaticResCache  = new (m_StaticResCaches + s) ShaderResourceCacheVk(ShaderResourceCacheVk::DbgCacheContentType::StaticShaderResources);
+        pStaticResLayout->InitializeStaticResourceLayout(ShaderResources[s], ShaderResLayoutAllocator, PipelineDesc.Layout, m_StaticResCaches[s]);
+
+        auto* pStaticVarMgr = new (m_StaticVarsMgrs + s) ShaderVariableManagerVk(*this);
+        pStaticVarMgr->Initialize(*pStaticResLayout, GetRawAllocator(), nullptr, 0, *pStaticResCache);
     }
-    ShaderResourceLayoutVk::Initialize(m_NumShaders, m_ShaderResourceLayouts, ShaderResources.data(), GetRawAllocator(), ShaderSPIRVs.data(), m_PipelineLayout);
+    ShaderResourceLayoutVk::Initialize(pDeviceVk, m_NumShaders, m_ShaderResourceLayouts, ShaderResources.data(), GetRawAllocator(),
+                                       PipelineDesc.Layout, ShaderSPIRVs.data(), m_PipelineLayout);
     m_PipelineLayout.Finalize(LogicalDevice);
 
     if (PipelineDesc.SRBAllocationGranularity > 1)
@@ -172,7 +188,7 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters*      pRefCounters
         std::array<size_t, MaxShadersInPipeline> ShaderVariableDataSizes = {};
         for (Uint32 s = 0; s < m_NumShaders; ++s)
         {
-            std::array<SHADER_VARIABLE_TYPE, 2> AllowedVarTypes = { {SHADER_VARIABLE_TYPE_MUTABLE, SHADER_VARIABLE_TYPE_DYNAMIC} };
+            std::array<SHADER_RESOURCE_VARIABLE_TYPE, 2> AllowedVarTypes = { {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC} };
             Uint32 UnusedNumVars = 0;
             ShaderVariableDataSizes[s] = ShaderVariableManagerVk::GetRequiredMemorySize(m_ShaderResourceLayouts[s], AllowedVarTypes.data(), static_cast<Uint32>(AllowedVarTypes.size()), UnusedNumVars);
         }
@@ -412,11 +428,11 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters*      pRefCounters
     for (Uint32 s=0; s < m_NumShaders; ++s)
     {
         const auto& Layout = m_ShaderResourceLayouts[s];
-        if (Layout.GetResourceCount(SHADER_VARIABLE_TYPE_STATIC) != 0)
+        if (Layout.GetResourceCount(SHADER_RESOURCE_VARIABLE_TYPE_STATIC) != 0)
             m_HasStaticResources = true;
 
-        if (Layout.GetResourceCount(SHADER_VARIABLE_TYPE_MUTABLE) != 0 ||
-            Layout.GetResourceCount(SHADER_VARIABLE_TYPE_DYNAMIC) != 0)
+        if (Layout.GetResourceCount(SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE) != 0 ||
+            Layout.GetResourceCount(SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC) != 0)
             m_HasNonStaticResources = true;
     }
 
@@ -440,8 +456,13 @@ PipelineStateVkImpl::~PipelineStateVkImpl()
     for (Uint32 s=0; s < m_NumShaders; ++s)
     {
         m_ShaderResourceLayouts[s].~ShaderResourceLayoutVk();
+        m_StaticResCaches[s].~ShaderResourceCacheVk();
+        m_StaticVarsMgrs[s].Destroy(GetRawAllocator());
+        m_StaticVarsMgrs[s].~ShaderVariableManagerVk();
     }
     RawAllocator.Free(m_ShaderResourceLayouts);
+    RawAllocator.Free(m_StaticResCaches);
+    RawAllocator.Free(m_StaticVarsMgrs);
 }
 
 IMPLEMENT_QUERY_INTERFACE( PipelineStateVkImpl, IID_PipelineStateVk, TPipelineStateBase )
@@ -581,7 +602,7 @@ void PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBind
             for (Uint32 s=0; s < m_NumShaders; ++s)
             {
                 const auto& Layout = m_ShaderResourceLayouts[s];
-                if (Layout.GetResourceCount(SHADER_VARIABLE_TYPE_DYNAMIC) != 0)
+                if (Layout.GetResourceCount(SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC) != 0)
                     Layout.CommitDynamicResources(ResourceCache, DynamicDescrSet);
             }
         }
@@ -590,6 +611,67 @@ void PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBind
         m_PipelineLayout.PrepareDescriptorSets(pCtxVkImpl, m_Desc.IsComputePipeline, ResourceCache, *pDescrSetBindInfo, DynamicDescrSet);
         // Dynamic descriptor sets are not released individually. Instead, all dynamic descriptor pools 
         // are released at the end of the frame by DeviceContextVkImpl::FinishFrame().
+    }
+}
+
+void PipelineStateVkImpl::BindStaticResources(IResourceMapping* pResourceMapping, Uint32 Flags)
+{
+    for (Uint32 s=0; s < m_NumShaders; ++s)
+    {
+        auto& StaticVarMgr = GetStaticVarMgr(s);
+        StaticVarMgr.BindResources(pResourceMapping, Flags);
+    }
+}
+
+Uint32 PipelineStateVkImpl::GetStaticVariableCount(SHADER_TYPE ShaderType) const
+{
+    const auto ShaderTypeInd = GetShaderTypeIndex(ShaderType);
+    if (ShaderTypeInd < 0)
+        return 0;
+
+    auto& StaticVarMgr = GetStaticVarMgr(ShaderTypeInd);
+    return StaticVarMgr.GetVariableCount();
+}
+
+IShaderResourceVariable* PipelineStateVkImpl::GetStaticShaderVariable(SHADER_TYPE ShaderType, const Char* Name)
+{
+    const auto ShaderTypeInd = GetShaderTypeIndex(ShaderType);
+    if (ShaderTypeInd < 0)
+        return nullptr;
+
+    auto& StaticVarMgr = GetStaticVarMgr(ShaderTypeInd);
+    return StaticVarMgr.GetVariable(Name);
+}
+
+IShaderResourceVariable* PipelineStateVkImpl::GetStaticShaderVariable(SHADER_TYPE ShaderType, Uint32 Index)
+{
+    const auto ShaderTypeInd = GetShaderTypeIndex(ShaderType);
+    if (ShaderTypeInd < 0)
+        return nullptr;
+
+    auto& StaticVarMgr = GetStaticVarMgr(ShaderTypeInd);
+    return StaticVarMgr.GetVariable(Index);
+}
+
+
+void PipelineStateVkImpl::InitializeStaticSRBResources(ShaderResourceCacheVk& ResourceCache)const
+{
+    for (Uint32 s = 0; s < m_NumShaders; ++s)
+    {
+        const auto& StaticResLayout = GetStaticShaderResLayout(s);
+#ifdef DEVELOPMENT
+        if (!StaticResLayout.dvpVerifyBindings(ResourceCache))
+        {
+            const auto* pShaderVk = GetShader<const ShaderVkImpl>(s);
+            LOG_ERROR_MESSAGE("Static resources in SRB of PSO '", GetDesc().Name, "' will not be successfully initialized "
+                              "because not all static resource bindings in shader '", pShaderVk->GetDesc().Name, "' are valid. "
+                              "Please make sure you bind all static resources to the shader before calling InitializeStaticResources() "
+                              "directly or indirectly by passing InitStaticResources=true to CreateShaderResourceBinding() method.");
+        }
+#endif
+        const auto& StaticResCache = GetStaticResCache(s);
+        const auto& ShaderResourceLayouts = GetShaderResLayout(s);
+        ShaderResourceLayouts.InitializeStaticResources(StaticResLayout, StaticResCache, ResourceCache);
     }
 }
 

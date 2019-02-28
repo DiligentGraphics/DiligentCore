@@ -433,12 +433,12 @@ void RenderDeviceVkImpl :: CreateBuffer(const BufferDesc& BuffDesc, const Buffer
 }
 
 
-void RenderDeviceVkImpl :: CreateShader(const ShaderCreationAttribs &ShaderCreationAttribs, IShader **ppShader)
+void RenderDeviceVkImpl :: CreateShader(const ShaderCreateInfo& ShaderCI, IShader **ppShader)
 {
-    CreateDeviceObject( "shader", ShaderCreationAttribs.Desc, ppShader, 
+    CreateDeviceObject( "shader", ShaderCI.Desc, ppShader, 
         [&]()
         {
-            ShaderVkImpl *pShaderVk( NEW_RC_OBJ(m_ShaderObjAllocator, "ShaderVkImpl instance", ShaderVkImpl)(this, ShaderCreationAttribs ) );
+            ShaderVkImpl *pShaderVk( NEW_RC_OBJ(m_ShaderObjAllocator, "ShaderVkImpl instance", ShaderVkImpl)(this, ShaderCI) );
             pShaderVk->QueryInterface( IID_Shader, reinterpret_cast<IObject**>(ppShader) );
 
             OnCreateDeviceObject( pShaderVk );
