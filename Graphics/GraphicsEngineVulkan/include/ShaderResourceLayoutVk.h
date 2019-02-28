@@ -142,7 +142,7 @@ public:
                            std::vector<uint32_t>                        SPIRVs[],
                            class PipelineLayout&                        PipelineLayout);
 
-    // sizeof(VkResource) == 24 (x64) - TODO: Verify
+    // sizeof(VkResource) == 24 (x64)
     struct VkResource
     {
         VkResource             (const VkResource&)  = delete;

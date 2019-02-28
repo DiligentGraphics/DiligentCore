@@ -154,7 +154,8 @@ void ShaderResourceLayoutVk::AllocateMemory(std::shared_ptr<const SPIRVShaderRes
     for(Uint32 s=0; s < m_NumImmutableSamplers; ++s)
     {
         // We need to initialize immutable samplers
-        new(&GetImmutableSampler(s)) ImmutableSamplerPtrType;
+        auto& UninitializedImmutableSampler = GetImmutableSampler(s);
+        new(std::addressof(UninitializedImmutableSampler)) ImmutableSamplerPtrType;
     }
 }
 
@@ -171,8 +172,8 @@ void ShaderResourceLayoutVk::InitializeStaticResourceLayout(std::shared_ptr<cons
     Uint32 StaticResCacheSize = 0;
 
     const Uint32 AllowedTypeBits = GetAllowedTypeBits(&AllowedVarType, 1);
-    const auto ShaderType = pSrcResources->GetShaderType();
-    const auto* CombinedSamplerSuffix = pSrcResources->GetCombinedSamplerSuffix();
+    const auto ShaderType = m_pResources->GetShaderType();
+    const auto* CombinedSamplerSuffix = m_pResources->GetCombinedSamplerSuffix();
 
     m_pResources->ProcessResources(
         [&](const SPIRVShaderResourceAttribs& Attribs, Uint32)

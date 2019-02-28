@@ -79,7 +79,7 @@ public:
             for (Uint32 i=0; i < SrcLayout.NumStaticSamplers; ++i)
                 StringPoolSize += strlen(SrcLayout.StaticSamplers[i].SamplerOrTextureName) + 1;
         }
-        m_StringPool.Allocate(StringPoolSize);
+        m_StringPool.Reserve(StringPoolSize, GetRawAllocator());
 
         auto& DstLayout = this->m_Desc.Layout;
         if (SrcLayout.Variables != nullptr)
@@ -164,6 +164,7 @@ public:
             if (GraphicsPipeline.pHS) m_ppShaders[m_NumShaders++] = GraphicsPipeline.pHS;
             if (GraphicsPipeline.pDS) m_ppShaders[m_NumShaders++] = GraphicsPipeline.pDS;
         }
+        VERIFY(m_NumShaders > 0, "There must be at least one shader in the Pipeline State");
 
         const auto& InputLayout = PSODesc.GraphicsPipeline.InputLayout;
         for (size_t Elem = 0; Elem < InputLayout.NumElements; ++Elem)
