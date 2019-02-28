@@ -27,6 +27,7 @@
 /// Definition of the Diligent::IShader interface and related data structures
 
 #include "../../../Primitives/interface/FileStream.h"
+#include "../../../Primitives/interface/FlagEnum.h"
 #include "DeviceObject.h"
 
 namespace Diligent
@@ -47,6 +48,7 @@ enum SHADER_TYPE : Uint32
     SHADER_TYPE_DOMAIN      = 0x010, ///< Domain (tessellation evaluation) shader
     SHADER_TYPE_COMPUTE     = 0x020  ///< Compute shader
 };
+DEFINE_FLAG_ENUM_OPERATORS(SHADER_TYPE);
 
 enum SHADER_PROFILE : Uint8
 {

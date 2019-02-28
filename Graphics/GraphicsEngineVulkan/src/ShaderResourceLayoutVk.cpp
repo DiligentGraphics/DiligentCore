@@ -225,6 +225,11 @@ void ShaderResourceLayoutVk::Initialize(IRenderDevice*                          
     {
         bool VariableFound = false;
         const auto& VarDesc = LayoutDesc.Variables[v];
+        if (VarDesc.ShaderStages == SHADER_TYPE_UNKNOWN)
+        {
+            LOG_WARNING_MESSAGE("No allowed shader stages specified for variable '", VarDesc.Name, "' labeled as ", GetShaderVariableTypeLiteralName(VarDesc.Type), ".");
+        }
+
         for(Uint32 s=0; s < NumShaders && !VariableFound; ++s)
         {
             const auto& Resources = *pShaderResources[s];
@@ -239,17 +244,25 @@ void ShaderResourceLayoutVk::Initialize(IRenderDevice*                          
         }
         if (!VariableFound)
         {
-            LOG_WARNING_MESSAGE("Variable '", VarDesc.Name, "' labeled as ", GetShaderVariableTypeLiteralName(VarDesc.Type), " is not found in any of shader stages");
+            LOG_WARNING_MESSAGE("Variable '", VarDesc.Name, "' labeled as ", GetShaderVariableTypeLiteralName(VarDesc.Type), " is not found in any of the specified shader stages: ", GetShaderStagesString(VarDesc.ShaderStages));
         }
     }
 
     for (Uint32 sam = 0; sam < LayoutDesc.NumStaticSamplers; ++sam)
     {
         const auto& StSamDesc = LayoutDesc.StaticSamplers[sam];
+        if (StSamDesc.ShaderStages == SHADER_TYPE_UNKNOWN)
+        {
+            LOG_WARNING_MESSAGE("No allowed shader stages specified for static sampler '", StSamDesc.SamplerOrTextureName, ".");
+        }
+
         bool SamplerFound = false;
         for(Uint32 s=0; s < NumShaders && !SamplerFound; ++s)
         {
             const auto& Resources = *pShaderResources[s];
+            if ( (StSamDesc.ShaderStages & Resources.GetShaderType()) == 0 )
+                continue;
+
             // Irrespective of whether HLSL-style combined image samplers are used,
             // a static sampler can be assigned to GLSL sampled image (i.e. sampler2D g_tex)
             for (Uint32 i = 0; i < Resources.GetNumSmpldImgs() && !SamplerFound; ++i)
@@ -276,7 +289,7 @@ void ShaderResourceLayoutVk::Initialize(IRenderDevice*                          
 
         if (!SamplerFound)
         {
-            LOG_WARNING_MESSAGE("Static sampler '", StSamDesc.SamplerOrTextureName, "' is not found in any of shader stages");
+            LOG_WARNING_MESSAGE("Static sampler '", StSamDesc.SamplerOrTextureName, "' is not found in any of the specified shader stages: ", GetShaderStagesString(StSamDesc.ShaderStages));
         }
     }
 #endif

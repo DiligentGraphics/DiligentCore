@@ -471,8 +471,26 @@ const Char *GetShaderTypeLiteralName( SHADER_TYPE ShaderType )
         RETURN_SHADER_TYPE_NAME( SHADER_TYPE_COMPUTE )
 #undef  RETURN_SHADER_TYPE_NAME
 
-        default: UNEXPECTED( "Unknown shader type" ); return "<Unknown shader type>";
+        default: UNEXPECTED( "Unknown shader type constant ", Uint32{ShaderType} ); return "<Unknown shader type>";
     }
+}
+
+String GetShaderStagesString(SHADER_TYPE ShaderStages)
+{
+    String StagesStr;
+    while(ShaderStages != 0)
+    for( Uint32 Stage = SHADER_TYPE_VERTEX; ShaderStages != 0 && Stage <= SHADER_TYPE_COMPUTE; Stage <<= 1 )
+    {
+        if( ShaderStages&Stage )
+        {
+            if( StagesStr.length() )
+                StagesStr += ", ";
+            StagesStr += GetShaderTypeLiteralName( static_cast<SHADER_TYPE>(Stage));
+            ShaderStages &= ~static_cast<SHADER_TYPE>(Stage);
+        }
+    }
+    VERIFY_EXPR( ShaderStages == 0);
+    return StagesStr;
 }
 
 const Char *GetShaderVariableTypeLiteralName(SHADER_RESOURCE_VARIABLE_TYPE VarType, bool bGetFullName)
