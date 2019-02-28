@@ -453,9 +453,13 @@ PipelineStateVkImpl::~PipelineStateVkImpl()
     }
 
     auto& RawAllocator = GetRawAllocator();
-    for (Uint32 s=0; s < m_NumShaders; ++s)
+    for (Uint32 s=0; s < m_NumShaders*2; ++s)
     {
         m_ShaderResourceLayouts[s].~ShaderResourceLayoutVk();
+    }
+
+    for (Uint32 s=0; s < m_NumShaders; ++s)
+    {
         m_StaticResCaches[s].~ShaderResourceCacheVk();
         m_StaticVarsMgrs[s].Destroy(GetRawAllocator());
         m_StaticVarsMgrs[s].~ShaderVariableManagerVk();
