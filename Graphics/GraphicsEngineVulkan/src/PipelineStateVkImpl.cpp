@@ -163,7 +163,7 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters*      pRefCounters
     m_StaticVarsMgrs        = reinterpret_cast<ShaderVariableManagerVk*>(pStaticVarMgrRawMem);
     for (Uint32 s=0; s < m_NumShaders; ++s)
     {
-        new (m_ShaderResourceLayouts + s) ShaderResourceLayoutVk(*this, LogicalDevice);
+        new (m_ShaderResourceLayouts + s) ShaderResourceLayoutVk(LogicalDevice);
         auto* pShaderVk = GetShader<const ShaderVkImpl>(s);
         ShaderResources[s] = pShaderVk->GetShaderResources();
         ShaderSPIRVs[s] = pShaderVk->GetSPIRV();
@@ -172,7 +172,7 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters*      pRefCounters
         const auto ShaderTypeInd = GetShaderTypeIndex(ShaderType);
         m_ResourceLayoutIndex[ShaderTypeInd] = static_cast<Int8>(s);
 
-        auto* pStaticResLayout = new (m_ShaderResourceLayouts + m_NumShaders + s) ShaderResourceLayoutVk(*this, LogicalDevice);
+        auto* pStaticResLayout = new (m_ShaderResourceLayouts + m_NumShaders + s) ShaderResourceLayoutVk(LogicalDevice);
         auto* pStaticResCache  = new (m_StaticResCaches + s) ShaderResourceCacheVk(ShaderResourceCacheVk::DbgCacheContentType::StaticShaderResources);
         pStaticResLayout->InitializeStaticResourceLayout(ShaderResources[s], ShaderResLayoutAllocator, PipelineDesc.Layout, m_StaticResCaches[s]);
 

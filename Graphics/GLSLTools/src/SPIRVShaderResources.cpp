@@ -191,6 +191,8 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator,
         ResourceNamesPoolSize += strlen(CombinedSamplerSuffix) + 1;
     }
 
+    ResourceNamesPoolSize += strlen(shaderDesc.Name) + 1;
+
     Uint32 NumShaderStageInputs = 0;
 
     if (resources.stage_inputs.empty())
@@ -373,6 +375,8 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator,
     {
         m_CombinedSamplerSuffix = m_ResourceNames.CopyString(CombinedSamplerSuffix);
     }
+
+    m_ShaderName = m_ResourceNames.CopyString(shaderDesc.Name);
 
     if (LoadShaderStageInputs)
     {

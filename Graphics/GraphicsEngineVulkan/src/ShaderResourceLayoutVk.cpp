@@ -90,13 +90,6 @@ static SHADER_RESOURCE_VARIABLE_TYPE GetShaderVariableType(SHADER_TYPE          
 }
 
 
-ShaderResourceLayoutVk::ShaderResourceLayoutVk(IObject&                                    Owner, 
-                                               const VulkanUtilities::VulkanLogicalDevice& LogicalDevice) :
-    m_Owner(Owner),
-    m_LogicalDevice(LogicalDevice)
-{
-}
-
 ShaderResourceLayoutVk::~ShaderResourceLayoutVk()
 {
     auto* Resources = reinterpret_cast<VkResource*>(m_ResourceBuffer.get());
@@ -521,14 +514,16 @@ bool ShaderResourceLayoutVk::VkResource::UpdateCachedResource(ShaderResourceCach
     // We cannot use ValidatedCast<> here as the resource retrieved from the
     // resource mapping can be of wrong type
     RefCntAutoPtr<IDeviceObject> pResource(pObject, InterfaceId);
-    if(pResource)
+    if (pResource)
     {
         if (GetVariableType() != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC && DstRes.pObject != nullptr)
         {
             if (DstRes.pObject != pResource)
             {
                 auto VarTypeStr = GetShaderVariableTypeLiteralName(GetVariableType());
-                LOG_ERROR_MESSAGE("Non-null resource is already bound to ", VarTypeStr, " shader variable '", SpirvAttribs.GetPrintName(ArrayInd), "' in shader '", ParentResLayout.GetShaderName(), "'. Attempring to bind another resource is an error and will be ignored. Use another shader resource binding instance or label the variable as dynamic.");
+                LOG_ERROR_MESSAGE("Non-null resource is already bound to ", VarTypeStr, " shader variable '", SpirvAttribs.GetPrintName(ArrayInd),
+                                  "' in shader '", ParentResLayout.GetShaderName(), "'. Attempring to bind another resource is an error and will be ignored. "
+                                  "Use another shader resource binding instance or label the variable as dynamic.");
             }
 
             // Do not update resource if one is already bound unless it is dynamic. This may be 
@@ -931,30 +926,6 @@ bool ShaderResourceLayoutVk::dvpVerifyBindings(const ShaderResourceCacheVk& Reso
     return BindingsOK;
 }
 #endif
-
-
-const Char* ShaderResourceLayoutVk::GetShaderName()const
-{
-    RefCntAutoPtr<IPipelineState> pPSO(&m_Owner, IID_PipelineState);
-    if (pPSO)
-    {
-        auto* pPSOVk = pPSO.RawPtr<PipelineStateVkImpl>();
-        auto* ppShaders = pPSOVk->GetShaders();
-        auto NumShaders = pPSOVk->GetNumShaders();
-        for (Uint32 s = 0; s < NumShaders; ++s)
-        {
-            const auto& ShaderDesc = ppShaders[s]->GetDesc();
-            if (ShaderDesc.ShaderType == m_pResources->GetShaderType())
-                return ShaderDesc.Name;
-        }
-        UNEXPECTED("Shader not found");
-    }
-    else
-    {
-        UNEXPECTED("Shader resource layout owner must be a shader or a pipeline state");
-    }
-    return "";
-}
 
 void ShaderResourceLayoutVk::InitializeResourceMemoryInCache(ShaderResourceCacheVk& ResourceCache)const
 {

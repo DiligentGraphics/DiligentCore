@@ -107,12 +107,15 @@ namespace Diligent
 {
 
 /// Diligent::ShaderResourceLayoutVk class
-// sizeof(ShaderResourceLayoutVk)==64 (MS compiler, x64) - TODO: verify
+// sizeof(ShaderResourceLayoutVk)==56 (MS compiler, x64) - TODO: verify
 class ShaderResourceLayoutVk
 {
 public:
-    ShaderResourceLayoutVk(IObject&                                    Owner, 
-                           const VulkanUtilities::VulkanLogicalDevice& LogicalDevice);
+    ShaderResourceLayoutVk(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice) : 
+            m_LogicalDevice(LogicalDevice)
+    {
+    }
+
 
     ShaderResourceLayoutVk              (const ShaderResourceLayoutVk&) = delete;
     ShaderResourceLayoutVk              (ShaderResourceLayoutVk&&)      = delete;
@@ -271,7 +274,10 @@ public:
     void CommitDynamicResources(const ShaderResourceCacheVk& ResourceCache,
                                 VkDescriptorSet              vkDynamicDescriptorSet)const;
 
-    const Char* GetShaderName()const;
+    const Char* GetShaderName()const
+    {
+        return m_pResources->GetShaderName();
+    }
 
     const VkResource& GetResource(SHADER_RESOURCE_VARIABLE_TYPE VarType, Uint32 r)const
     {
@@ -329,7 +335,6 @@ private:
         return reinterpret_cast<ImmutableSamplerPtrType*>(ResourceMemoryEnd)[n];
     }
 
-    IObject&                                            m_Owner;
     const VulkanUtilities::VulkanLogicalDevice&         m_LogicalDevice;
     std::unique_ptr<void, STDDeleterRawMem<void> >      m_ResourceBuffer;
 

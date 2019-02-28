@@ -293,6 +293,7 @@ public:
     //size_t GetHash()const;
 
     const char* GetCombinedSamplerSuffix() const { return m_CombinedSamplerSuffix; } 
+    const char* GetShaderName()            const { return m_ShaderName; } 
     bool        IsUsingCombinedSamplers()  const { return m_CombinedSamplerSuffix != nullptr; }
 
 
@@ -336,6 +337,7 @@ private:
     StringPool m_ResourceNames;
 
     const char* m_CombinedSamplerSuffix = nullptr;
+    const char* m_ShaderName            = nullptr;
 
     using OffsetType = Uint16;
     OffsetType m_StorageBufferOffset   = 0;
