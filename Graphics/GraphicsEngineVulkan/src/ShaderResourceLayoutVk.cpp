@@ -40,7 +40,7 @@ namespace Diligent
 {
  
 static Int32 FindImmutableSampler(SHADER_TYPE                       ShaderType,
-                                  const PipelineLayoutDesc&         LayoutDesc,
+                                  const PipelineResourceLayoutDesc& ResourceLayoutDesc,
                                   const SPIRVShaderResourceAttribs& Attribs,
                                   const char*                       SamplerSuffix)
 {
@@ -58,9 +58,9 @@ static Int32 FindImmutableSampler(SHADER_TYPE                       ShaderType,
         return -1;
     }
 
-    for (Uint32 s=0; s < LayoutDesc.NumStaticSamplers; ++s)
+    for (Uint32 s=0; s < ResourceLayoutDesc.NumStaticSamplers; ++s)
     {
-        const auto& StSam = LayoutDesc.StaticSamplers[s];
+        const auto& StSam = ResourceLayoutDesc.StaticSamplers[s];
         if ( ((StSam.ShaderStages & ShaderType) != 0) && StreqSuff(Attribs.Name, StSam.SamplerOrTextureName, SamplerSuffix) )
             return s;
     }
@@ -70,14 +70,14 @@ static Int32 FindImmutableSampler(SHADER_TYPE                       ShaderType,
 
 static SHADER_RESOURCE_VARIABLE_TYPE GetShaderVariableType(SHADER_TYPE                       ShaderType,
                                                            const SPIRVShaderResourceAttribs& Attribs,
-                                                           const PipelineLayoutDesc&         LayoutDesc,
+                                                           const PipelineResourceLayoutDesc& ResourceLayoutDesc,
                                                            const char*                       CombinedSamplerSuffix)
 {
     if (Attribs.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler)
     {
         // Use texture or sampler name to derive separate sampler type
         // When HLSL-style combined image samplers are not used, CombinedSamplerSuffix is null
-        return GetShaderVariableType(ShaderType, LayoutDesc.DefaultVariableType, LayoutDesc.Variables, LayoutDesc.NumVariables,
+        return GetShaderVariableType(ShaderType, ResourceLayoutDesc.DefaultVariableType, ResourceLayoutDesc.Variables, ResourceLayoutDesc.NumVariables,
                                      [&](const char* VarName)
                                      {
                                          return StreqSuff(Attribs.Name, VarName, CombinedSamplerSuffix);
@@ -85,7 +85,7 @@ static SHADER_RESOURCE_VARIABLE_TYPE GetShaderVariableType(SHADER_TYPE          
     }
     else
     {
-        return GetShaderVariableType(ShaderType, Attribs.Name, LayoutDesc);
+        return GetShaderVariableType(ShaderType, Attribs.Name, ResourceLayoutDesc);
     }
 }
 
@@ -102,7 +102,7 @@ ShaderResourceLayoutVk::~ShaderResourceLayoutVk()
 
 void ShaderResourceLayoutVk::AllocateMemory(std::shared_ptr<const SPIRVShaderResources>  pSrcResources, 
                                             IMemoryAllocator&                            Allocator,
-                                            const PipelineLayoutDesc&                    LayoutDesc,
+                                            const PipelineResourceLayoutDesc&            ResourceLayoutDesc,
                                             const SHADER_RESOURCE_VARIABLE_TYPE*         AllowedVarTypes,
                                             Uint32                                       NumAllowedTypes)
 {
@@ -119,7 +119,7 @@ void ShaderResourceLayoutVk::AllocateMemory(std::shared_ptr<const SPIRVShaderRes
     m_pResources->ProcessResources(
         [&](const SPIRVShaderResourceAttribs& ResAttribs, Uint32)
         {
-            auto VarType = GetShaderVariableType(ShaderType, ResAttribs, LayoutDesc, CombinedSamplerSuffix);
+            auto VarType = GetShaderVariableType(ShaderType, ResAttribs, ResourceLayoutDesc, CombinedSamplerSuffix);
             if (IsAllowedType(VarType, AllowedTypeBits))
             {
                 VERIFY( Uint32{m_NumResources[VarType]} + 1 <= Uint32{std::numeric_limits<Uint16>::max()}, "Number of resources exceeds max representable value");
@@ -137,9 +137,9 @@ void ShaderResourceLayoutVk::AllocateMemory(std::shared_ptr<const SPIRVShaderRes
     m_NumResources[SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES] = static_cast<Uint16>(TotalResources);
 
     m_NumImmutableSamplers = 0;
-    for(Uint32 s=0; s < LayoutDesc.NumStaticSamplers; ++s)
+    for(Uint32 s=0; s < ResourceLayoutDesc.NumStaticSamplers; ++s)
     {
-        const auto& StSamDesc = LayoutDesc.StaticSamplers[s];
+        const auto& StSamDesc = ResourceLayoutDesc.StaticSamplers[s];
         if ((StSamDesc.ShaderStages & ShaderType) != 0)
             ++m_NumImmutableSamplers;
     }
@@ -162,11 +162,11 @@ void ShaderResourceLayoutVk::AllocateMemory(std::shared_ptr<const SPIRVShaderRes
 
 void ShaderResourceLayoutVk::InitializeStaticResourceLayout(std::shared_ptr<const SPIRVShaderResources> pSrcResources,
                                                             IMemoryAllocator&                           LayoutDataAllocator,
-                                                            const PipelineLayoutDesc&                   LayoutDesc,
+                                                            const PipelineResourceLayoutDesc&           ResourceLayoutDesc,
                                                             ShaderResourceCacheVk&                      StaticResourceCache)
 {
     auto AllowedVarType = SHADER_RESOURCE_VARIABLE_TYPE_STATIC;
-    AllocateMemory(std::move(pSrcResources), LayoutDataAllocator, LayoutDesc, &AllowedVarType, 1);
+    AllocateMemory(std::move(pSrcResources), LayoutDataAllocator, ResourceLayoutDesc, &AllowedVarType, 1);
 
     std::array<Uint32, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES> CurrResInd = {};
     Uint32 StaticResCacheSize = 0;
@@ -178,7 +178,7 @@ void ShaderResourceLayoutVk::InitializeStaticResourceLayout(std::shared_ptr<cons
     m_pResources->ProcessResources(
         [&](const SPIRVShaderResourceAttribs& Attribs, Uint32)
         {
-            auto VarType = GetShaderVariableType(ShaderType, Attribs, LayoutDesc, CombinedSamplerSuffix);
+            auto VarType = GetShaderVariableType(ShaderType, Attribs, ResourceLayoutDesc, CombinedSamplerSuffix);
             if (!IsAllowedType(VarType, AllowedTypeBits))
                 return;
 
@@ -216,15 +216,15 @@ void ShaderResourceLayoutVk::Initialize(IRenderDevice*                          
                                         ShaderResourceLayoutVk                       Layouts[],
                                         std::shared_ptr<const SPIRVShaderResources>  pShaderResources[],
                                         IMemoryAllocator&                            LayoutDataAllocator,
-                                        const PipelineLayoutDesc&                    LayoutDesc,
+                                        const PipelineResourceLayoutDesc&            ResourceLayoutDesc,
                                         std::vector<uint32_t>                        SPIRVs[],
                                         class PipelineLayout&                        PipelineLayout)
 {
 #ifdef DEVELOPMENT
-    for (Uint32 v = 0; v < LayoutDesc.NumVariables; ++v)
+    for (Uint32 v = 0; v < ResourceLayoutDesc.NumVariables; ++v)
     {
         bool VariableFound = false;
-        const auto& VarDesc = LayoutDesc.Variables[v];
+        const auto& VarDesc = ResourceLayoutDesc.Variables[v];
         if (VarDesc.ShaderStages == SHADER_TYPE_UNKNOWN)
         {
             LOG_WARNING_MESSAGE("No allowed shader stages specified for variable '", VarDesc.Name, "' labeled as ", GetShaderVariableTypeLiteralName(VarDesc.Type), ".");
@@ -248,9 +248,9 @@ void ShaderResourceLayoutVk::Initialize(IRenderDevice*                          
         }
     }
 
-    for (Uint32 sam = 0; sam < LayoutDesc.NumStaticSamplers; ++sam)
+    for (Uint32 sam = 0; sam < ResourceLayoutDesc.NumStaticSamplers; ++sam)
     {
-        const auto& StSamDesc = LayoutDesc.StaticSamplers[sam];
+        const auto& StSamDesc = ResourceLayoutDesc.StaticSamplers[sam];
         if (StSamDesc.ShaderStages == SHADER_TYPE_UNKNOWN)
         {
             LOG_WARNING_MESSAGE("No allowed shader stages specified for static sampler '", StSamDesc.SamplerOrTextureName, ".");
@@ -301,7 +301,7 @@ void ShaderResourceLayoutVk::Initialize(IRenderDevice*                          
 
     for (Uint32 s=0; s < NumShaders; ++s)
     {
-        Layouts[s].AllocateMemory(std::move(pShaderResources[s]), LayoutDataAllocator, LayoutDesc, AllowedVarTypes, NumAllowedTypes);
+        Layouts[s].AllocateMemory(std::move(pShaderResources[s]), LayoutDataAllocator, ResourceLayoutDesc, AllowedVarTypes, NumAllowedTypes);
     }
     
     VERIFY_EXPR(NumShaders <= MaxShadersInPipeline);
@@ -320,7 +320,7 @@ void ShaderResourceLayoutVk::Initialize(IRenderDevice*                          
         Uint32 DescriptorSet = 0;
         Uint32 CacheOffset = 0;
         const auto ShaderType = Resources.GetShaderType();
-        const SHADER_RESOURCE_VARIABLE_TYPE VarType = GetShaderVariableType(ShaderType, Attribs, LayoutDesc, Resources.GetCombinedSamplerSuffix());
+        const SHADER_RESOURCE_VARIABLE_TYPE VarType = GetShaderVariableType(ShaderType, Attribs, ResourceLayoutDesc, Resources.GetCombinedSamplerSuffix());
         if (!IsAllowedType(VarType, AllowedTypeBits))
             return;
 
@@ -333,13 +333,13 @@ void ShaderResourceLayoutVk::Initialize(IRenderDevice*                          
             SamplerInd = ResLayout.FindAssignedSampler(Attribs, CurrResInd[ShaderInd][VarType], VarType);
         }
 
-        Int32 SrcImmutableSamplerInd = FindImmutableSampler(ShaderType, LayoutDesc, Attribs, Resources.GetCombinedSamplerSuffix());
+        Int32 SrcImmutableSamplerInd = FindImmutableSampler(ShaderType, ResourceLayoutDesc, Attribs, Resources.GetCombinedSamplerSuffix());
         VkSampler vkImmutableSampler = VK_NULL_HANDLE;
         if (SrcImmutableSamplerInd >= 0)
         {
             auto& ImmutableSampler = ResLayout.GetImmutableSampler(CurrImmutableSamplerInd[ShaderInd]++);
             VERIFY(!ImmutableSampler, "Immutable sampler has already been initialized!");
-            const auto& ImmutableSamplerDesc = LayoutDesc.StaticSamplers[SrcImmutableSamplerInd].Desc;
+            const auto& ImmutableSamplerDesc = ResourceLayoutDesc.StaticSamplers[SrcImmutableSamplerInd].Desc;
             pRenderDevice->CreateSampler(ImmutableSamplerDesc, &ImmutableSampler);
             vkImmutableSampler = ImmutableSampler.RawPtr<SamplerVkImpl>()->GetVkSampler();
         }
@@ -372,7 +372,7 @@ void ShaderResourceLayoutVk::Initialize(IRenderDevice*                          
         for (Uint32 n = 0; n < Resources.GetNumUBs(); ++n)
         {
             const auto& UB = Resources.GetUB(n);
-            auto VarType = GetShaderVariableType(Resources.GetShaderType(), UB.Name, LayoutDesc);
+            auto VarType = GetShaderVariableType(Resources.GetShaderType(), UB.Name, ResourceLayoutDesc);
             if (IsAllowedType(VarType, AllowedTypeBits))
             {
                 AddResource(s, Layout, Resources, UB);
@@ -388,7 +388,7 @@ void ShaderResourceLayoutVk::Initialize(IRenderDevice*                          
         for (Uint32 n = 0; n < Resources.GetNumSBs(); ++n)
         {
             const auto& SB = Resources.GetSB(n);
-            auto VarType = GetShaderVariableType(Resources.GetShaderType(), SB.Name, LayoutDesc);
+            auto VarType = GetShaderVariableType(Resources.GetShaderType(), SB.Name, ResourceLayoutDesc);
             if (IsAllowedType(VarType, AllowedTypeBits))
             {
                 AddResource(s, Layout, Resources, SB);

@@ -128,7 +128,7 @@ public:
     // shader resource layout and the cache
     void InitializeStaticResourceLayout(std::shared_ptr<const SPIRVShaderResources> pSrcResources, 
                                         IMemoryAllocator&                           LayoutDataAllocator,
-                                        const PipelineLayoutDesc&                   LayoutDesc,
+                                        const PipelineResourceLayoutDesc&           ResourceLayoutDesc,
                                         ShaderResourceCacheVk&                      StaticResourceCache);
 
     // This method is called by PipelineStateVkImpl class instance to initialize resource
@@ -138,7 +138,7 @@ public:
                            ShaderResourceLayoutVk                       Layouts[],
                            std::shared_ptr<const SPIRVShaderResources>  pShaderResources[],
                            IMemoryAllocator&                            LayoutDataAllocator,
-                           const PipelineLayoutDesc&                    LayoutDesc,
+                           const PipelineResourceLayoutDesc&            ResourceLayoutDesc,
                            std::vector<uint32_t>                        SPIRVs[],
                            class PipelineLayout&                        PipelineLayout);
 
@@ -319,7 +319,7 @@ private:
 
     void AllocateMemory(std::shared_ptr<const SPIRVShaderResources> pSrcResources, 
                         IMemoryAllocator&                           Allocator,
-                        const PipelineLayoutDesc&                   LayoutDesc,
+                        const PipelineResourceLayoutDesc&           ResourceLayoutDesc,
                         const SHADER_RESOURCE_VARIABLE_TYPE*        AllowedVarTypes,
                         Uint32                                      NumAllowedTypes);
 

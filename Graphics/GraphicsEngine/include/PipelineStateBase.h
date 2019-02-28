@@ -66,7 +66,7 @@ public:
         m_LayoutElements (PSODesc.GraphicsPipeline.InputLayout.NumElements, LayoutElement{}, STD_ALLOCATOR_RAW_MEM(LayoutElement, GetRawAllocator(), "Allocator for vector<LayoutElement>")),
         m_NumShaders(0)
     {
-        const auto& SrcLayout = PSODesc.Layout;
+        const auto& SrcLayout = PSODesc.ResourceLayout;
         size_t StringPoolSize = 0;
         if (SrcLayout.Variables != nullptr)
         {
@@ -81,7 +81,7 @@ public:
         }
         m_StringPool.Reserve(StringPoolSize, GetRawAllocator());
 
-        auto& DstLayout = this->m_Desc.Layout;
+        auto& DstLayout = this->m_Desc.ResourceLayout;
         if (SrcLayout.Variables != nullptr)
         {
             ShaderResourceVariableDesc* Variables =
@@ -266,10 +266,10 @@ public:
         */
 
         auto& RawAllocator = GetRawAllocator();
-        if (this->m_Desc.Layout.Variables != nullptr)
-            RawAllocator.Free(const_cast<ShaderResourceVariableDesc*>(this->m_Desc.Layout.Variables));
-        if (this->m_Desc.Layout.StaticSamplers != nullptr)
-            RawAllocator.Free(const_cast<StaticSamplerDesc*>(this->m_Desc.Layout.StaticSamplers));
+        if (this->m_Desc.ResourceLayout.Variables != nullptr)
+            RawAllocator.Free(const_cast<ShaderResourceVariableDesc*>(this->m_Desc.ResourceLayout.Variables));
+        if (this->m_Desc.ResourceLayout.StaticSamplers != nullptr)
+            RawAllocator.Free(const_cast<StaticSamplerDesc*>(this->m_Desc.ResourceLayout.StaticSamplers));
     }
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE( IID_PipelineState, TDeviceObjectBase )

@@ -174,13 +174,13 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters*      pRefCounters
 
         auto* pStaticResLayout = new (m_ShaderResourceLayouts + m_NumShaders + s) ShaderResourceLayoutVk(LogicalDevice);
         auto* pStaticResCache  = new (m_StaticResCaches + s) ShaderResourceCacheVk(ShaderResourceCacheVk::DbgCacheContentType::StaticShaderResources);
-        pStaticResLayout->InitializeStaticResourceLayout(ShaderResources[s], ShaderResLayoutAllocator, PipelineDesc.Layout, m_StaticResCaches[s]);
+        pStaticResLayout->InitializeStaticResourceLayout(ShaderResources[s], ShaderResLayoutAllocator, PipelineDesc.ResourceLayout, m_StaticResCaches[s]);
 
         auto* pStaticVarMgr = new (m_StaticVarsMgrs + s) ShaderVariableManagerVk(*this);
         pStaticVarMgr->Initialize(*pStaticResLayout, GetRawAllocator(), nullptr, 0, *pStaticResCache);
     }
     ShaderResourceLayoutVk::Initialize(pDeviceVk, m_NumShaders, m_ShaderResourceLayouts, ShaderResources.data(), GetRawAllocator(),
-                                       PipelineDesc.Layout, ShaderSPIRVs.data(), m_PipelineLayout);
+                                       PipelineDesc.ResourceLayout, ShaderSPIRVs.data(), m_PipelineLayout);
     m_PipelineLayout.Finalize(LogicalDevice);
 
     if (PipelineDesc.SRBAllocationGranularity > 1)

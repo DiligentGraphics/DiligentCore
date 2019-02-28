@@ -108,7 +108,7 @@ struct StaticSamplerDesc
 
 
 /// Pipeline layout description
-struct PipelineLayoutDesc
+struct PipelineResourceLayoutDesc
 {
     /// Default shader resource variable type. This type will be used if shader
     /// variable description is not found in the Variables array
@@ -221,7 +221,7 @@ struct PipelineStateDesc : DeviceObjectAttribs
     Uint64 CommandQueueMask         = 1;
 
     /// Pipeline layout description
-    PipelineLayoutDesc Layout;
+    PipelineResourceLayoutDesc ResourceLayout;
 
     /// Graphics pipeline state description. This memeber is ignored if IsComputePipeline == True
     GraphicsPipelineDesc GraphicsPipeline;

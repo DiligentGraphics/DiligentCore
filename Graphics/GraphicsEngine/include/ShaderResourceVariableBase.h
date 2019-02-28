@@ -66,9 +66,9 @@ inline SHADER_RESOURCE_VARIABLE_TYPE GetShaderVariableType(SHADER_TYPE          
     );
 }
 
-inline SHADER_RESOURCE_VARIABLE_TYPE GetShaderVariableType(SHADER_TYPE               ShaderStage,
-                                                           const Char*               Name,
-                                                           const PipelineLayoutDesc& LayoutDesc)
+inline SHADER_RESOURCE_VARIABLE_TYPE GetShaderVariableType(SHADER_TYPE                       ShaderStage,
+                                                           const Char*                       Name,
+                                                           const PipelineResourceLayoutDesc& LayoutDesc)
 {
     return GetShaderVariableType(ShaderStage, Name, LayoutDesc.DefaultVariableType, LayoutDesc.Variables, LayoutDesc.NumVariables);
 }
@@ -87,9 +87,9 @@ inline SHADER_RESOURCE_VARIABLE_TYPE GetShaderVariableType(SHADER_TYPE          
     );
 }
 
-inline SHADER_RESOURCE_VARIABLE_TYPE GetShaderVariableType(SHADER_TYPE               ShaderStage,
-                                                           const String&             Name,
-                                                           const PipelineLayoutDesc& LayoutDesc)
+inline SHADER_RESOURCE_VARIABLE_TYPE GetShaderVariableType(SHADER_TYPE                       ShaderStage,
+                                                           const String&                     Name,
+                                                           const PipelineResourceLayoutDesc& LayoutDesc)
 {
     return GetShaderVariableType(ShaderStage, Name, LayoutDesc.DefaultVariableType, LayoutDesc.Variables, LayoutDesc.NumVariables);
 }

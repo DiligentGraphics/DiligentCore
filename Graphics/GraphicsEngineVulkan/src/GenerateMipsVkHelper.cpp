@@ -147,14 +147,14 @@ namespace Diligent
             PSODesc.Name = name.c_str();
             PSODesc.ComputePipeline.pCS = pCS;
 
-            PSODesc.Layout.DefaultVariableType = SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC;
+            PSODesc.ResourceLayout.DefaultVariableType = SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC;
             ShaderResourceVariableDesc VarDesc{SHADER_TYPE_COMPUTE, "CB", SHADER_RESOURCE_VARIABLE_TYPE_STATIC};
-            PSODesc.Layout.Variables    = &VarDesc;
-            PSODesc.Layout.NumVariables = 1;
+            PSODesc.ResourceLayout.Variables    = &VarDesc;
+            PSODesc.ResourceLayout.NumVariables = 1;
 
             const StaticSamplerDesc StaticSampler(SHADER_TYPE_COMPUTE, "SrcMip", Sam_LinearClamp);
-            PSODesc.Layout.StaticSamplers    = &StaticSampler;
-            PSODesc.Layout.NumStaticSamplers = 1;
+            PSODesc.ResourceLayout.StaticSamplers    = &StaticSampler;
+            PSODesc.ResourceLayout.NumStaticSamplers = 1;
             
             m_DeviceVkImpl.CreatePipelineState(PSODesc, &PSOs[NonPowOfTwo]);
             PSOs[NonPowOfTwo]->GetStaticShaderVariable(SHADER_TYPE_COMPUTE, "CB")->Set(m_ConstantsCB);
