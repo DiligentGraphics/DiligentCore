@@ -373,6 +373,9 @@ void PipelineLayout::AllocateResourceSlot(const SPIRVShaderResourceAttribs& ResA
                                           Uint32&                           OffsetInCache,
                                           std::vector<uint32_t>&            SPIRV)
 {
+    VERIFY( (ResAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SampledImage || 
+             ResAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler) || vkStaticSampler == VK_NULL_HANDLE,
+            "Immutable sampler should only be specified for combined image samplers or separate samplers");
     m_LayoutMgr.AllocateResourceSlot(ResAttribs, VariableType,vkStaticSampler, ShaderType, DescriptorSet, Binding, OffsetInCache);
     SPIRV[ResAttribs.BindingDecorationOffset] = Binding;
     SPIRV[ResAttribs.DescriptorSetDecorationOffset] = DescriptorSet;

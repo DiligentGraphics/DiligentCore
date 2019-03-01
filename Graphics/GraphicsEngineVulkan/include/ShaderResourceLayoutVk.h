@@ -208,7 +208,10 @@ public:
 
         bool IsImmutableSamplerAssigned() const
         {
-            VERIFY_EXPR(SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateImage);
+            VERIFY(ImmutableSamplerAssigned == 0 ||
+                   SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SampledImage || 
+                   SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler,
+                   "Immutable sampler can only be assigned to a sampled image or separate sampler");
             return ImmutableSamplerAssigned != 0;
         }
 

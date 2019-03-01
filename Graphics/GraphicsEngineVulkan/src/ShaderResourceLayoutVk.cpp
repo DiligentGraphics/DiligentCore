@@ -44,7 +44,7 @@ static Int32 FindImmutableSampler(SHADER_TYPE                       ShaderType,
                                   const SPIRVShaderResourceAttribs& Attribs,
                                   const char*                       SamplerSuffix)
 {
-    if (Attribs.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateImage)
+    if (Attribs.Type == SPIRVShaderResourceAttribs::ResourceType::SampledImage)
     {
         SamplerSuffix = nullptr;
     }
@@ -55,6 +55,7 @@ static Int32 FindImmutableSampler(SHADER_TYPE                       ShaderType,
     }
     else
     {
+        UNEXPECTED("Immutable sampler can only be assigned to a sampled image or separate sampler");
         return -1;
     }
 
@@ -182,6 +183,14 @@ void ShaderResourceLayoutVk::InitializeStaticResourceLayout(std::shared_ptr<cons
             if (!IsAllowedType(VarType, AllowedTypeBits))
                 return;
 
+            Int32 SrcImmutableSamplerInd = -1;
+            if (Attribs.Type == SPIRVShaderResourceAttribs::ResourceType::SampledImage || 
+                Attribs.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler)
+            {
+                // Only search for the immutable sampler for combined image samplers and separate samplers
+                SrcImmutableSamplerInd = FindImmutableSampler(ShaderType, ResourceLayoutDesc, Attribs, CombinedSamplerSuffix);
+            }
+
             //TODO: how to handle static samplers?
 
             Uint32 Binding       = Attribs.Type;
@@ -196,7 +205,7 @@ void ShaderResourceLayoutVk::InitializeStaticResourceLayout(std::shared_ptr<cons
                 // assigned to this separate image must have been already created.
                 SamplerInd = FindAssignedSampler(Attribs, CurrResInd[VarType], VarType);
             }
-            ::new (&GetResource(VarType, CurrResInd[VarType]++)) VkResource(*this, Attribs, VarType, Binding, DescriptorSet, CacheOffset, SamplerInd);
+            ::new (&GetResource(VarType, CurrResInd[VarType]++)) VkResource(*this, Attribs, VarType, Binding, DescriptorSet, CacheOffset, SamplerInd, SrcImmutableSamplerInd >= 0);
         }
     );
 
@@ -227,7 +236,8 @@ void ShaderResourceLayoutVk::Initialize(IRenderDevice*                          
         const auto& VarDesc = ResourceLayoutDesc.Variables[v];
         if (VarDesc.ShaderStages == SHADER_TYPE_UNKNOWN)
         {
-            LOG_WARNING_MESSAGE("No allowed shader stages specified for variable '", VarDesc.Name, "' labeled as ", GetShaderVariableTypeLiteralName(VarDesc.Type), ".");
+            LOG_WARNING_MESSAGE("No allowed shader stages are specified for variable '", VarDesc.Name, "' labeled as ", GetShaderVariableTypeLiteralName(VarDesc.Type), ".");
+            continue;
         }
 
         for(Uint32 s=0; s < NumShaders && !VariableFound; ++s)
@@ -253,7 +263,8 @@ void ShaderResourceLayoutVk::Initialize(IRenderDevice*                          
         const auto& StSamDesc = ResourceLayoutDesc.StaticSamplers[sam];
         if (StSamDesc.ShaderStages == SHADER_TYPE_UNKNOWN)
         {
-            LOG_WARNING_MESSAGE("No allowed shader stages specified for static sampler '", StSamDesc.SamplerOrTextureName, ".");
+            LOG_WARNING_MESSAGE("No allowed shader stages are specified for static sampler '", StSamDesc.SamplerOrTextureName, ".");
+            continue;
         }
 
         bool SamplerFound = false;
@@ -333,17 +344,22 @@ void ShaderResourceLayoutVk::Initialize(IRenderDevice*                          
             SamplerInd = ResLayout.FindAssignedSampler(Attribs, CurrResInd[ShaderInd][VarType], VarType);
         }
 
-        Int32 SrcImmutableSamplerInd = FindImmutableSampler(ShaderType, ResourceLayoutDesc, Attribs, Resources.GetCombinedSamplerSuffix());
         VkSampler vkImmutableSampler = VK_NULL_HANDLE;
-        if (SrcImmutableSamplerInd >= 0)
+        if (Attribs.Type == SPIRVShaderResourceAttribs::ResourceType::SampledImage || 
+            Attribs.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler)
         {
-            auto& ImmutableSampler = ResLayout.GetImmutableSampler(CurrImmutableSamplerInd[ShaderInd]++);
-            VERIFY(!ImmutableSampler, "Immutable sampler has already been initialized!");
-            const auto& ImmutableSamplerDesc = ResourceLayoutDesc.StaticSamplers[SrcImmutableSamplerInd].Desc;
-            pRenderDevice->CreateSampler(ImmutableSamplerDesc, &ImmutableSampler);
-            vkImmutableSampler = ImmutableSampler.RawPtr<SamplerVkImpl>()->GetVkSampler();
+            // Only search for the immutable sampler for combined image samplers and separate samplers
+            Int32 SrcImmutableSamplerInd = FindImmutableSampler(ShaderType, ResourceLayoutDesc, Attribs, Resources.GetCombinedSamplerSuffix());
+            if (SrcImmutableSamplerInd >= 0)
+            {
+                auto& ImmutableSampler = ResLayout.GetImmutableSampler(CurrImmutableSamplerInd[ShaderInd]++);
+                VERIFY(!ImmutableSampler, "Immutable sampler has already been initialized!");
+                const auto& ImmutableSamplerDesc = ResourceLayoutDesc.StaticSamplers[SrcImmutableSamplerInd].Desc;
+                pRenderDevice->CreateSampler(ImmutableSamplerDesc, &ImmutableSampler);
+                vkImmutableSampler = ImmutableSampler.RawPtr<SamplerVkImpl>()->GetVkSampler();
+            }
         }
-
+        
         auto& ShaderSPIRV = SPIRVs[ShaderInd];
         PipelineLayout.AllocateResourceSlot(Attribs, VarType, vkImmutableSampler, Resources.GetShaderType(), DescriptorSet, Binding, CacheOffset, ShaderSPIRV);
         VERIFY(DescriptorSet <= std::numeric_limits<decltype(VkResource::DescriptorSet)>::max(), "Descriptor set (", DescriptorSet, ") excceeds max representable value");
@@ -693,7 +709,7 @@ void ShaderResourceLayoutVk::VkResource::CacheImage(IDeviceObject*              
         {
             if(pTexViewVk->GetSampler() == nullptr)
             {
-                LOG_RESOURCE_BINDING_ERROR("resource", pTexView, SpirvAttribs.GetPrintName(ArrayInd), ParentResLayout.GetShaderName(), "No sampler assigned to texture view '", pTexViewVk->GetDesc().Name, "'");
+                LOG_RESOURCE_BINDING_ERROR("resource", pTexView, SpirvAttribs.GetPrintName(ArrayInd), ParentResLayout.GetShaderName(), "No sampler is assigned to texture view '", pTexViewVk->GetDesc().Name, "'");
             }
         }
 #endif
@@ -712,15 +728,19 @@ void ShaderResourceLayoutVk::VkResource::CacheImage(IDeviceObject*              
             VERIFY_EXPR(!IsImmutableSamplerAssigned());
             auto* pSampler = pTexViewVk->GetSampler();
             const auto& SamplerAttribs = ParentResLayout.GetResource(GetVariableType(), SamplerInd);
-            if (pSampler != nullptr)
+            VERIFY_EXPR(SamplerAttribs.SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler);
+            if (!SamplerAttribs.IsImmutableSamplerAssigned())
             {
-                CacheSampler(SamplerAttribs, pSampler);
-            }
-            else
-            {
-                LOG_ERROR_MESSAGE( "Failed to bind sampler to sampler variable '", SamplerAttribs.SpirvAttribs.Name,
-                                   "' assigned to separate image '", SpirvAttribs.GetPrintName(ArrayInd), "' in shader '",
-                                   ParentResLayout.GetShaderName(), "': no sampler is set in texture view '", pTexViewVk->GetDesc().Name, '\'');                    \
+                if (pSampler != nullptr)
+                {
+                    CacheSampler(SamplerAttribs, pSampler);
+                }
+                else
+                {
+                    LOG_ERROR_MESSAGE( "Failed to bind sampler to sampler variable '", SamplerAttribs.SpirvAttribs.Name,
+                                       "' assigned to separate image '", SpirvAttribs.GetPrintName(ArrayInd), "' in shader '",
+                                       ParentResLayout.GetShaderName(), "': no sampler is set in texture view '", pTexViewVk->GetDesc().Name, '\'');                    \
+                }
             }
         }
     }

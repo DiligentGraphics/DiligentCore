@@ -104,13 +104,13 @@ namespace Diligent
 
     std::array<RefCntAutoPtr<IPipelineState>, 4> GenerateMipsVkHelper::CreatePSOs(TEXTURE_FORMAT Fmt)
     {
-        ShaderCreateInfo CSCreateAttribs;
+        ShaderCreateInfo CSCreateInfo;
         std::array<RefCntAutoPtr<IPipelineState>, 4> PSOs;
         
-        CSCreateAttribs.Source = g_GenerateMipsCSSource;
-        CSCreateAttribs.EntryPoint = "main";
-        CSCreateAttribs.SourceLanguage  = SHADER_SOURCE_LANGUAGE_GLSL;
-        CSCreateAttribs.Desc.ShaderType = SHADER_TYPE_COMPUTE;
+        CSCreateInfo.Source                      = g_GenerateMipsCSSource;
+        CSCreateInfo.EntryPoint                  = "main";
+        CSCreateInfo.SourceLanguage              = SHADER_SOURCE_LANGUAGE_GLSL;
+        CSCreateInfo.Desc.ShaderType             = SHADER_TYPE_COMPUTE;
 
         const auto& FmtAttribs = GetTextureFormatAttribs(Fmt);
         bool IsGamma = FmtAttribs.ComponentType == COMPONENT_TYPE_UNORM_SRGB;
@@ -125,7 +125,7 @@ namespace Diligent
             Macros.AddShaderMacro("IMG_FORMAT", GlFmt.data());
 
             Macros.Finalize();
-            CSCreateAttribs.Macros = Macros;
+            CSCreateInfo.Macros = Macros;
 
             std::stringstream name_ss;
             name_ss << "Generate mips " << GlFmt.data();
@@ -138,10 +138,10 @@ namespace Diligent
                 default: UNEXPECTED("Unexpected value");
             }
             auto name = name_ss.str();
-            CSCreateAttribs.Desc.Name = name.c_str();
+            CSCreateInfo.Desc.Name = name.c_str();
             RefCntAutoPtr<IShader> pCS;
 
-            m_DeviceVkImpl.CreateShader(CSCreateAttribs, &pCS);
+            m_DeviceVkImpl.CreateShader(CSCreateInfo, &pCS);
             PipelineStateDesc PSODesc;
             PSODesc.IsComputePipeline = true;
             PSODesc.Name = name.c_str();

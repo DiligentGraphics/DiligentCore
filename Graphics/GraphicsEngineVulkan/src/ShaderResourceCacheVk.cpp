@@ -324,6 +324,8 @@ VkDescriptorImageInfo ShaderResourceCacheVk::Resource::GetImageDescriptorWriteIn
 
     VkDescriptorImageInfo DescrImgInfo;
     DescrImgInfo.sampler = VK_NULL_HANDLE;
+    VERIFY(Type == SPIRVShaderResourceAttribs::ResourceType::SampledImage || !IsImmutableSampler,
+           "Immutable sampler can't be assigned to separarate image or storage image");
     if (Type == SPIRVShaderResourceAttribs::ResourceType::SampledImage && !IsImmutableSampler)
     {
         // Immutable samplers are permanently bound into the set layout; later binding a sampler 
@@ -340,7 +342,7 @@ VkDescriptorImageInfo ShaderResourceCacheVk::Resource::GetImageDescriptorWriteIn
 #ifdef DEVELOPMENT
         else
         {
-            LOG_ERROR_MESSAGE("No sampler assigned to texture view '", pTexViewVk->GetDesc().Name, "'");
+            LOG_ERROR_MESSAGE("No sampler is assigned to texture view '", pTexViewVk->GetDesc().Name, "'");
         }
 #endif
     }

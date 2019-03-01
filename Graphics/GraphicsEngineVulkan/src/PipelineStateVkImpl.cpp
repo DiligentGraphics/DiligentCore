@@ -663,8 +663,9 @@ void PipelineStateVkImpl::InitializeStaticSRBResources(ShaderResourceCacheVk& Re
     for (Uint32 s = 0; s < m_NumShaders; ++s)
     {
         const auto& StaticResLayout = GetStaticShaderResLayout(s);
+        const auto& StaticResCache = GetStaticResCache(s);
 #ifdef DEVELOPMENT
-        if (!StaticResLayout.dvpVerifyBindings(ResourceCache))
+        if (!StaticResLayout.dvpVerifyBindings(StaticResCache))
         {
             const auto* pShaderVk = GetShader<const ShaderVkImpl>(s);
             LOG_ERROR_MESSAGE("Static resources in SRB of PSO '", GetDesc().Name, "' will not be successfully initialized "
@@ -673,7 +674,6 @@ void PipelineStateVkImpl::InitializeStaticSRBResources(ShaderResourceCacheVk& Re
                               "directly or indirectly by passing InitStaticResources=true to CreateShaderResourceBinding() method.");
         }
 #endif
-        const auto& StaticResCache = GetStaticResCache(s);
         const auto& ShaderResourceLayouts = GetShaderResLayout(s);
         ShaderResourceLayouts.InitializeStaticResources(StaticResLayout, StaticResCache, ResourceCache);
     }
