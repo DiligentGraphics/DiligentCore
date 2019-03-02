@@ -36,6 +36,7 @@
 #include "ShaderResourceBinding.h"
 #include "ShaderResourceVariable.h"
 #include "Shader.h"
+#include "Sampler.h"
 
 namespace Diligent
 {
