@@ -52,7 +52,7 @@ static uint32_t GetDecorationOffset(const spirv_cross::Compiler& Compiler,
                                     const spirv_cross::Resource& Res,
                                     spv::Decoration              Decoration)
 {
-    VERIFY(Compiler.has_decoration(Res.id, Decoration), "Res \'", Res.name, "\' has no requested decoration");
+    VERIFY(Compiler.has_decoration(Res.id, Decoration), "Resource \'", Res.name, "\' has no requested decoration");
     uint32_t offset = 0;
     auto declared = Compiler.get_binary_offset_for_decoration(Res.id, Decoration, offset);
     VERIFY(declared, "Requested decoration is not declared"); (void)declared;
@@ -71,8 +71,9 @@ SPIRVShaderResourceAttribs::SPIRVShaderResourceAttribs(const spirv_cross::Compil
     BindingDecorationOffset      (GetDecorationOffset(Compiler, Res, spv::Decoration::DecorationBinding)),
     DescriptorSetDecorationOffset(GetDecorationOffset(Compiler, Res, spv::Decoration::DecorationDescriptorSet))
 {
-    VERIFY(_SepSmplrOrImgInd == SPIRVShaderResourceAttribs::InvalidSepSmplrOrImgInd || _Type == ResourceType::SeparateSampler ||
-           _Type == ResourceType::SeparateImage, "Only separate images or separate samplers can be assinged valid SepSmplrOrImgInd value");
+    VERIFY(_SepSmplrOrImgInd == SPIRVShaderResourceAttribs::InvalidSepSmplrOrImgInd ||
+           (_Type == ResourceType::SeparateSampler || _Type == ResourceType::SeparateImage),
+           "Only separate images or separate samplers can be assinged valid SepSmplrOrImgInd value");
 }
 
 
@@ -170,9 +171,9 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator,
     spirv_cross::ShaderResources resources = Compiler.get_shader_resources();
     
     size_t ResourceNamesPoolSize = 0;
-    for(const auto &ub : resources.uniform_buffers)
+    for (const auto& ub : resources.uniform_buffers)
         ResourceNamesPoolSize += GetUBName(Compiler, ub, ParsedIRSource).length() + 1;
-    for(auto *pResType : 
+    for (auto* pResType : 
         {
             &resources.storage_buffers,
             &resources.storage_images,
@@ -182,7 +183,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator,
             &resources.separate_samplers
         })
     {
-        for(const auto &res : *pResType)
+        for(const auto& res : *pResType)
             ResourceNamesPoolSize += res.name.length() + 1;
     }
 
@@ -191,6 +192,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator,
         ResourceNamesPoolSize += strlen(CombinedSamplerSuffix) + 1;
     }
 
+    VERIFY_EXPR(shaderDesc.Name != nullptr);
     ResourceNamesPoolSize += strlen(shaderDesc.Name) + 1;
 
     Uint32 NumShaderStageInputs = 0;
@@ -246,10 +248,10 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator,
 
     {
         Uint32 CurrUB = 0;
-        for (const auto &UB : resources.uniform_buffers)
+        for (const auto& UB : resources.uniform_buffers)
         {
             const auto& name = GetUBName(Compiler, UB, ParsedIRSource);
-            new (&GetUB(CurrUB++)) 
+            new (&GetUB(CurrUB++))
                 SPIRVShaderResourceAttribs(Compiler, 
                                            UB, 
                                            m_ResourceNames.CopyString(name), 
@@ -260,7 +262,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator,
 
     {
         Uint32 CurrSB = 0;
-        for (const auto &SB : resources.storage_buffers)
+        for (const auto& SB : resources.storage_buffers)
         {
             new (&GetSB(CurrSB++))
                 SPIRVShaderResourceAttribs(Compiler, 
@@ -273,13 +275,13 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator,
 
     {
         Uint32 CurrSmplImg = 0;
-        for (const auto &SmplImg : resources.sampled_images)
+        for (const auto& SmplImg : resources.sampled_images)
         {
             const auto& type = Compiler.get_type(SmplImg.type_id);
             auto ResType = type.image.dim == spv::DimBuffer ?
                 SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer :
                 SPIRVShaderResourceAttribs::ResourceType::SampledImage;
-            new (&GetSmpldImg(CurrSmplImg++)) 
+            new (&GetSmpldImg(CurrSmplImg++))
                 SPIRVShaderResourceAttribs(Compiler, 
                                            SmplImg, 
                                            m_ResourceNames.CopyString(SmplImg.name), 
@@ -296,7 +298,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator,
             auto ResType = type.image.dim == spv::DimBuffer ?
                 SPIRVShaderResourceAttribs::ResourceType::StorageTexelBuffer :
                 SPIRVShaderResourceAttribs::ResourceType::StorageImage;
-            new (&GetImg(CurrImg++)) 
+            new (&GetImg(CurrImg++))
                 SPIRVShaderResourceAttribs(Compiler, 
                                            Img, 
                                            m_ResourceNames.CopyString(Img.name), 
@@ -386,7 +388,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator,
             if (Compiler.has_decoration(Input.id, spv::Decoration::DecorationHlslSemanticGOOGLE))
             {
                 const auto& Semantic = Compiler.get_decoration_string(Input.id, spv::Decoration::DecorationHlslSemanticGOOGLE);
-                new (&GetShaderStageInputAttribs(CurrStageInput++)) 
+                new (&GetShaderStageInputAttribs(CurrStageInput++))
                     SPIRVShaderStageInputAttribs(m_ResourceNames.CopyString(Semantic), GetDecorationOffset(Compiler, Input, spv::Decoration::DecorationLocation));
             }
         }
@@ -419,7 +421,7 @@ void SPIRVShaderResources::Initialize(IMemoryAllocator&       Allocator,
     constexpr Uint32 MaxOffset = std::numeric_limits<OffsetType>::max();
     auto AdvanceOffset = [&CurrentOffset, MaxOffset](Uint32 NumResources)
     {
-        VERIFY(CurrentOffset <= MaxOffset, "Current offser (", CurrentOffset, ") exceeds max allowed value (", MaxOffset, ")"); (void)MaxOffset;
+        VERIFY(CurrentOffset <= MaxOffset, "Current offset (", CurrentOffset, ") exceeds max allowed value (", MaxOffset, ")"); (void)MaxOffset;
         auto Offset = static_cast<OffsetType>(CurrentOffset);
         CurrentOffset += NumResources;
         return Offset;
@@ -493,10 +495,10 @@ SPIRVShaderResources::~SPIRVShaderResources()
 std::string SPIRVShaderResources::DumpResources()
 {
     std::stringstream ss;
-    ss << "Resource counters (" << GetTotalResources() << " total):" << std::endl << "UBs: " << GetNumUBs() << "; SBs: " 
-        << GetNumSBs() << "; Imgs: " << GetNumImgs() << "; Smpl Imgs: " << GetNumSmpldImgs() << "; ACs: " << GetNumACs() 
-        << "; Sep Imgs: " << GetNumSepImgs() << "; Sep Smpls: " << GetNumSepSmplrs() << '.' << std::endl
-        << "Resources:";
+    ss << "Shader '" << m_ShaderName << "' resource stats: total resources: " << GetTotalResources() << ":" << std::endl
+       << "UBs: " << GetNumUBs() << "; SBs: " << GetNumSBs() << "; Imgs: " << GetNumImgs() << "; Smpl Imgs: " << GetNumSmpldImgs()
+       << "; ACs: " << GetNumACs() << "; Sep Imgs: " << GetNumSepImgs() << "; Sep Smpls: " << GetNumSepSmplrs() << '.' << std::endl
+       << "Resources:";
     
     Uint32 ResNum = 0;
     auto DumpResource = [&ss, &ResNum](const SPIRVShaderResourceAttribs& Res)
@@ -521,7 +523,7 @@ std::string SPIRVShaderResources::DumpResources()
     };
 
     ProcessResources(
-        [&](const SPIRVShaderResourceAttribs &UB, Uint32)
+        [&](const SPIRVShaderResourceAttribs& UB, Uint32)
         {
             VERIFY(UB.Type == SPIRVShaderResourceAttribs::ResourceType::UniformBuffer, "Unexpected resource type");
             ss << std::endl << std::setw(3) << ResNum << " Uniform Buffer  ";
@@ -533,9 +535,9 @@ std::string SPIRVShaderResources::DumpResources()
             ss << std::endl << std::setw(3) << ResNum << " Storage Buffer  ";
             DumpResource(SB);
         },
-        [&](const SPIRVShaderResourceAttribs &Img, Uint32)
+        [&](const SPIRVShaderResourceAttribs& Img, Uint32)
         {
-            if(Img.Type == SPIRVShaderResourceAttribs::ResourceType::StorageImage)
+            if (Img.Type == SPIRVShaderResourceAttribs::ResourceType::StorageImage)
                 ss << std::endl << std::setw(3) << ResNum << " Storage Image   ";
             else if(Img.Type == SPIRVShaderResourceAttribs::ResourceType::StorageTexelBuffer)
                 ss << std::endl << std::setw(3) << ResNum << " Storage Txl Buff";
@@ -543,7 +545,7 @@ std::string SPIRVShaderResources::DumpResources()
                 UNEXPECTED("Unexpected resource type");
             DumpResource(Img);
         },
-        [&](const SPIRVShaderResourceAttribs &SmplImg, Uint32)
+        [&](const SPIRVShaderResourceAttribs& SmplImg, Uint32)
         {
             if (SmplImg.Type == SPIRVShaderResourceAttribs::ResourceType::SampledImage)
                 ss << std::endl << std::setw(3) << ResNum << " Sampled Image   ";
@@ -553,19 +555,19 @@ std::string SPIRVShaderResources::DumpResources()
                 UNEXPECTED("Unexpected resource type");
             DumpResource(SmplImg);
         },
-        [&](const SPIRVShaderResourceAttribs &AC, Uint32)
+        [&](const SPIRVShaderResourceAttribs& AC, Uint32)
         {
             VERIFY(AC.Type == SPIRVShaderResourceAttribs::ResourceType::AtomicCounter, "Unexpected resource type");
             ss << std::endl << std::setw(3) << ResNum << " Atomic Cntr     ";
             DumpResource(AC);
         },
-        [&](const SPIRVShaderResourceAttribs &SepSmpl, Uint32)
+        [&](const SPIRVShaderResourceAttribs& SepSmpl, Uint32)
         {
             VERIFY(SepSmpl.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler, "Unexpected resource type");
             ss << std::endl << std::setw(3) << ResNum << " Separate Smpl   ";
             DumpResource(SepSmpl);
         },
-        [&](const SPIRVShaderResourceAttribs &SepImg, Uint32)
+        [&](const SPIRVShaderResourceAttribs& SepImg, Uint32)
         {
             VERIFY(SepImg.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateImage, "Unexpected resource type");
             ss << std::endl << std::setw(3) << ResNum << " Separate Img    ";

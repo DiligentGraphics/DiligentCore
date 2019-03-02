@@ -70,18 +70,19 @@ struct SPIRVShaderResourceAttribs
 
     static constexpr const Uint32   InvalidSepSmplrOrImgInd = static_cast<Uint32>(-1);
 
-/* 0  */const char* const           Name;
-/* 8  */const Uint16                ArraySize;
-/*10  */const ResourceType          Type;
+/*  0 */const char* const           Name;
+/*  8 */const Uint16                ArraySize;
+/* 10 */const ResourceType          Type;
+/* 11 */ // unused
 private:
-      // Defines mapping between separate samplers and seperate images when HLSL-style
+      // Defines the mapping between separate samplers and seperate images when HLSL-style
       // combined texture samplers are in use (i.e. texture2D g_Tex + sampler g_Tex_sampler).
-/*12*/      Uint32                  SepSmplrOrImgInd        = InvalidSepSmplrOrImgInd;
+/* 12 */      Uint32                SepSmplrOrImgInd        = InvalidSepSmplrOrImgInd;
 public:
       // Offset in SPIRV words (uint32_t) of binding & descriptor set decorations in SPIRV binary
-/*16*/const uint32_t BindingDecorationOffset;
-/*20*/const uint32_t DescriptorSetDecorationOffset;
-
+/* 16 */const uint32_t              BindingDecorationOffset;
+/* 20 */const uint32_t              DescriptorSetDecorationOffset;
+/* 24 */ // End of structure
 
     SPIRVShaderResourceAttribs(const spirv_cross::Compiler&  Compiler, 
                                const spirv_cross::Resource&  Res, 
@@ -147,6 +148,7 @@ public:
 };
 static_assert(sizeof(SPIRVShaderResourceAttribs) % sizeof(void*) == 0, "Size of SPIRVShaderResourceAttribs struct must be multiple of sizeof(void*)" );
 
+// sizeof(SPIRVShaderResourceAttribs) == 16, msvc x64
 struct SPIRVShaderStageInputAttribs
 {
     SPIRVShaderStageInputAttribs(const char* _Semantic, uint32_t _LocationDecorationOffset) :
@@ -290,8 +292,6 @@ public:
 
     bool IsCompatibleWith(const SPIRVShaderResources& Resources)const;
     
-    //size_t GetHash()const;
-
     const char* GetCombinedSamplerSuffix() const { return m_CombinedSamplerSuffix; } 
     const char* GetShaderName()            const { return m_ShaderName; } 
     bool        IsUsingCombinedSamplers()  const { return m_CombinedSamplerSuffix != nullptr; }
