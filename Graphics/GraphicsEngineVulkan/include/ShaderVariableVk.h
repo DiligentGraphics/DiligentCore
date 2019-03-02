@@ -30,7 +30,7 @@
 //  * ShaderVariableManagerVk keeps list of variables of specific types
 //  * Every ShaderVariableVkImpl references VkResource from ShaderResourceLayoutVk
 //  * ShaderVariableManagerVk keeps pointer to ShaderResourceCacheVk
-//  * ShaderVariableManagerVk is used by ShaderVkImpl to manage static resources and by
+//  * ShaderVariableManagerVk is used by PipelineStateVkImpl to manage static resources and by
 //    ShaderResourceBindingVkImpl to manage mutable and dynamic resources
 //
 //          __________________________                   __________________________________________________________________________
@@ -83,7 +83,7 @@ public:
     ShaderVariableVkImpl* GetVariable(const Char* Name);
     ShaderVariableVkImpl* GetVariable(Uint32 Index);
 
-    void BindResources( IResourceMapping* pResourceMapping, Uint32 Flags);
+    void BindResources(IResourceMapping* pResourceMapping, Uint32 Flags);
 
     static size_t GetRequiredMemorySize(const ShaderResourceLayoutVk&          Layout, 
                                         const SHADER_RESOURCE_VARIABLE_TYPE*   AllowedVarTypes, 
@@ -98,10 +98,10 @@ private:
     Uint32 GetVariableIndex(const ShaderVariableVkImpl& Variable);
 
     IObject&                      m_Owner;
-    // Variable mgr is owned by either Shader object (in which case m_pResourceLayout points to
-    // static resource layout owned by the same shader object), or by SRB object (in which case 
+    // Variable mgr is owned by either Pipeline state object (in which case m_pResourceLayout points to
+    // static resource layout owned by the same PSO object), or by SRB object (in which case 
     // m_pResourceLayout points to corresponding layout in pipeline state). Since SRB keeps strong 
-    // reference to PSO, the layout is guaranteed be alive while SRB is alive
+    // reference to PSO, the layout is guaranteed to be alive while SRB is alive
     const ShaderResourceLayoutVk* m_pResourceLayout= nullptr;
     ShaderResourceCacheVk*        m_pResourceCache = nullptr;
 
@@ -147,7 +147,7 @@ public:
         return m_ParentManager.m_Owner.Release();
     }
 
-    void QueryInterface(const INTERFACE_ID &IID, IObject **ppInterface)override final
+    void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final
     {
         if (ppInterface == nullptr)
             return;
@@ -165,7 +165,7 @@ public:
         return m_Resource.GetVariableType();
     }
 
-    virtual void Set(IDeviceObject *pObject)override final 
+    virtual void Set(IDeviceObject* pObject)override final 
     {
         VERIFY_EXPR(m_ParentManager.m_pResourceCache != nullptr);
         m_Resource.BindResource(pObject, 0, *m_ParentManager.m_pResourceCache); 
