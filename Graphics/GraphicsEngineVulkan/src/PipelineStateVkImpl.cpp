@@ -49,11 +49,12 @@ VkRenderPassCreateInfo PipelineStateVkImpl::GetRenderPassCreateInfo(
 
     // Prepare render pass create info (7.1)
     VkRenderPassCreateInfo RenderPassCI = {};
-    RenderPassCI.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    RenderPassCI.pNext = nullptr;
-    RenderPassCI.flags = 0; // reserved for future use
+    RenderPassCI.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    RenderPassCI.pNext           = nullptr;
+    RenderPassCI.flags           = 0; // reserved for future use
     RenderPassCI.attachmentCount = (DSVFormat != TEX_FORMAT_UNKNOWN ? 1 : 0) + NumRenderTargets;
-    uint32_t AttachmentInd = 0;
+
+    uint32_t AttachmentInd  = 0;
     VkSampleCountFlagBits SampleCountFlags = static_cast<VkSampleCountFlagBits>(1 << (SampleCount - 1));
     VkAttachmentReference* pDepthAttachmentReference = nullptr;
     if (DSVFormat != TEX_FORMAT_UNKNOWN)
@@ -86,12 +87,12 @@ VkRenderPassCreateInfo PipelineStateVkImpl::GetRenderPassCreateInfo(
     {
         auto& ColorAttachment = Attachments[AttachmentInd];
 
-        ColorAttachment.flags = 0; // Allowed value VK_ATTACHMENT_DESCRIPTION_MAY_ALIAS_BIT
-        ColorAttachment.format = TexFormatToVkFormat(RTVFormats[rt]);
+        ColorAttachment.flags   = 0; // Allowed value VK_ATTACHMENT_DESCRIPTION_MAY_ALIAS_BIT
+        ColorAttachment.format  = TexFormatToVkFormat(RTVFormats[rt]);
         ColorAttachment.samples = SampleCountFlags;
-        ColorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD; // previous contents of the image within the render area 
-                                                             // will be preserved. For attachments with a depth/stencil format, 
-                                                             // this uses the access type VK_ACCESS_COLOR_ATTACHMENT_READ_BIT.
+        ColorAttachment.loadOp  = VK_ATTACHMENT_LOAD_OP_LOAD; // previous contents of the image within the render area 
+                                                              // will be preserved. For attachments with a depth/stencil format, 
+                                                              // this uses the access type VK_ACCESS_COLOR_ATTACHMENT_READ_BIT.
         ColorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE; // the contents generated during the render pass and within the render
                                                                 // area are written to memory. For attachments with a color format,
                                                                 // this uses the access type VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT. 
@@ -102,15 +103,15 @@ VkRenderPassCreateInfo PipelineStateVkImpl::GetRenderPassCreateInfo(
 
         auto& ColorAttachmentRef = AttachmentReferences[AttachmentInd];
         ColorAttachmentRef.attachment = AttachmentInd;
-        ColorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        ColorAttachmentRef.layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     }
 
-    RenderPassCI.pAttachments = Attachments.data();
-    RenderPassCI.subpassCount = 1;
-    RenderPassCI.pSubpasses = &SubpassDesc;
+    RenderPassCI.pAttachments    = Attachments.data();
+    RenderPassCI.subpassCount    = 1;
+    RenderPassCI.pSubpasses      = &SubpassDesc;
     RenderPassCI.dependencyCount = 0; // the number of dependencies between pairs of subpasses, or zero indicating no dependencies.
-    RenderPassCI.pDependencies = nullptr; // an array of dependencyCount number of VkSubpassDependency structures describing 
-                                         // dependencies between pairs of subpasses, or NULL if dependencyCount is zero.
+    RenderPassCI.pDependencies   = nullptr; // an array of dependencyCount number of VkSubpassDependency structures describing 
+                                           // dependencies between pairs of subpasses, or NULL if dependencyCount is zero.
 
 
     SubpassDesc.flags                   = 0; // All bits for this type are defined by extensions
@@ -166,7 +167,7 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters*      pRefCounters
         new (m_ShaderResourceLayouts + s) ShaderResourceLayoutVk(LogicalDevice);
         auto* pShaderVk = GetShader<const ShaderVkImpl>(s);
         ShaderResources[s] = pShaderVk->GetShaderResources();
-        ShaderSPIRVs[s] = pShaderVk->GetSPIRV();
+        ShaderSPIRVs[s]    = pShaderVk->GetSPIRV();
 
         const auto ShaderType = pShaderVk->GetDesc().ShaderType;
         const auto ShaderTypeInd = GetShaderTypeIndex(ShaderType);
@@ -187,9 +188,9 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters*      pRefCounters
         std::array<size_t, MaxShadersInPipeline> ShaderVariableDataSizes = {};
         for (Uint32 s = 0; s < m_NumShaders; ++s)
         {
-            std::array<SHADER_RESOURCE_VARIABLE_TYPE, 2> AllowedVarTypes = { {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC} };
+            const SHADER_RESOURCE_VARIABLE_TYPE AllowedVarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
             Uint32 UnusedNumVars = 0;
-            ShaderVariableDataSizes[s] = ShaderVariableManagerVk::GetRequiredMemorySize(m_ShaderResourceLayouts[s], AllowedVarTypes.data(), static_cast<Uint32>(AllowedVarTypes.size()), UnusedNumVars);
+            ShaderVariableDataSizes[s] = ShaderVariableManagerVk::GetRequiredMemorySize(m_ShaderResourceLayouts[s], AllowedVarTypes, _countof(AllowedVarTypes), UnusedNumVars);
         }
 
         Uint32 NumSets = 0;
@@ -246,7 +247,7 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters*      pRefCounters
         m_ShaderModules[s] = LogicalDevice.CreateShaderModule(ShaderModuleCI, pShaderVk->GetDesc().Name);
 
         StageCI.module = m_ShaderModules[s];
-        StageCI.pName = pShaderVk->GetEntryPoint();
+        StageCI.pName  = pShaderVk->GetEntryPoint();
         StageCI.pSpecializationInfo = nullptr;
     }
 
@@ -265,9 +266,9 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters*      pRefCounters
         PipelineCI.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
 #endif  
         PipelineCI.basePipelineHandle = VK_NULL_HANDLE; // a pipeline to derive from
-        PipelineCI.basePipelineIndex = 0; // an index into the pCreateInfos parameter to use as a pipeline to derive from
+        PipelineCI.basePipelineIndex  = 0; // an index into the pCreateInfos parameter to use as a pipeline to derive from
 
-        PipelineCI.stage = ShaderStages[0];
+        PipelineCI.stage  = ShaderStages[0];
         PipelineCI.layout = m_PipelineLayout.GetVkPipelineLayout();
         
         m_Pipeline = LogicalDevice.CreateComputePipeline(PipelineCI, VK_NULL_HANDLE, m_Desc.Name);
@@ -294,11 +295,11 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters*      pRefCounters
 #endif  
 
         PipelineCI.stageCount = m_NumShaders;
-        PipelineCI.pStages = ShaderStages.data();
-        PipelineCI.layout = m_PipelineLayout.GetVkPipelineLayout();
+        PipelineCI.pStages    = ShaderStages.data();
+        PipelineCI.layout     = m_PipelineLayout.GetVkPipelineLayout();
         
         VkPipelineVertexInputStateCreateInfo VertexInputStateCI = {};
-        std::array<VkVertexInputBindingDescription, iMaxLayoutElements> BindingDescriptions;
+        std::array<VkVertexInputBindingDescription,   iMaxLayoutElements> BindingDescriptions;
         std::array<VkVertexInputAttributeDescription, iMaxLayoutElements> AttributeDescription;
         InputLayoutDesc_To_VkVertexInputStateCI(GraphicsPipeline.InputLayout, VertexInputStateCI, BindingDescriptions, AttributeDescription);
         PipelineCI.pVertexInputState = &VertexInputStateCI;
@@ -487,7 +488,7 @@ bool PipelineStateVkImpl::IsCompatibleWith(const IPipelineState *pPSO)const
     if (pPSO == this)
         return true;
 
-    const PipelineStateVkImpl *pPSOVk = ValidatedCast<const PipelineStateVkImpl>(pPSO);
+    const PipelineStateVkImpl* pPSOVk = ValidatedCast<const PipelineStateVkImpl>(pPSO);
     if (m_ShaderResourceLayoutHash != pPSOVk->m_ShaderResourceLayoutHash)
         return false;
 

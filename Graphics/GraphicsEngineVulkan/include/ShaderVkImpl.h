@@ -44,7 +44,7 @@ class ShaderVkImpl final : public ShaderBase<IShaderVk, RenderDeviceVkImpl>
 public:
     using TShaderBase = ShaderBase<IShaderVk, RenderDeviceVkImpl>;
 
-    ShaderVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl* pRenderDeviceVk, const ShaderCreateInfo &CreationAttribs);
+    ShaderVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl* pRenderDeviceVk, const ShaderCreateInfo& CreationAttribs);
     ~ShaderVkImpl();
     
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ShaderVk, TShaderBase);

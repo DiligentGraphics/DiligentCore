@@ -53,7 +53,7 @@ class PipelineStateVkImpl final : public PipelineStateBase<IPipelineStateVk, Ren
 public:
     using TPipelineStateBase = PipelineStateBase<IPipelineStateVk, RenderDeviceVkImpl>;
 
-    PipelineStateVkImpl( IReferenceCounters* pRefCounters, RenderDeviceVkImpl* pDeviceVk, const PipelineStateDesc &PipelineDesc );
+    PipelineStateVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl* pDeviceVk, const PipelineStateDesc& PipelineDesc);
     ~PipelineStateVkImpl();
 
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
@@ -62,9 +62,9 @@ public:
 
     virtual bool IsCompatibleWith(const IPipelineState* pPSO)const override final;
 
-    virtual VkRenderPass GetVkRenderPass()const override final{return m_RenderPass;}
+    virtual VkRenderPass GetVkRenderPass()const override final { return m_RenderPass; }
 
-    virtual VkPipeline GetVkPipeline()const override final { return m_Pipeline; }
+    virtual VkPipeline   GetVkPipeline()  const override final { return m_Pipeline; }
 
     virtual void BindStaticResources(IResourceMapping* pResourceMapping, Uint32 Flags)override final;
 
@@ -143,8 +143,8 @@ private:
     PipelineLayout                   m_PipelineLayout;
 
     Int8 m_ResourceLayoutIndex[6] = {-1, -1, -1, -1, -1, -1};
-    bool m_HasStaticResources    = false;
-    bool m_HasNonStaticResources = false;
+    bool m_HasStaticResources     = false;
+    bool m_HasNonStaticResources  = false;
 };
 
 }

@@ -62,7 +62,7 @@ ShaderResourceBindingVkImpl::ShaderResourceBindingVkImpl(IReferenceCounters* pRe
         // Create shader variable manager in place
         // Initialize vars manager to reference mutable and dynamic variables
         // Note that the cache has space for all variable types
-        SHADER_RESOURCE_VARIABLE_TYPE VarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
+        const SHADER_RESOURCE_VARIABLE_TYPE VarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
         new (m_pShaderVarMgrs + s) ShaderVariableManagerVk(*this, SrcLayout, VarDataAllocator, VarTypes, _countof(VarTypes), m_ShaderResourceCache);
     }
 }
