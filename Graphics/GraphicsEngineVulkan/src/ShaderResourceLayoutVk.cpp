@@ -263,7 +263,7 @@ void ShaderResourceLayoutVk::Initialize(IRenderDevice*                          
         const auto& StSamDesc = ResourceLayoutDesc.StaticSamplers[sam];
         if (StSamDesc.ShaderStages == SHADER_TYPE_UNKNOWN)
         {
-            LOG_WARNING_MESSAGE("No allowed shader stages are specified for static sampler '", StSamDesc.SamplerOrTextureName, ".");
+            LOG_WARNING_MESSAGE("No allowed shader stages are specified for static sampler '", StSamDesc.SamplerOrTextureName, "'.");
             continue;
         }
 
