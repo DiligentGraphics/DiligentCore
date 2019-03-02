@@ -83,7 +83,7 @@ public:
     ~ShaderResourceCacheVk();
 
     static size_t GetRequiredMemorySize(Uint32 NumSets, Uint32 SetSizes[]);
-    void InitializeSets(IMemoryAllocator &MemAllocator, Uint32 NumSets, Uint32 SetSizes[]);
+    void InitializeSets(IMemoryAllocator& MemAllocator, Uint32 NumSets, Uint32 SetSizes[]);
     void InitializeResources(Uint32 Set, Uint32 Offset, Uint32 ArraySize, SPIRVShaderResourceAttribs::ResourceType Type);
 
     // sizeof(Resource) == 16 (x64, msvc, Release)
@@ -93,13 +93,14 @@ public:
             Type(_Type)
         {}
 
-        Resource(const Resource&)              = delete;
-        Resource(Resource&&)                   = delete;
+        Resource             (const Resource&) = delete;
+        Resource             (Resource&&)      = delete;
         Resource& operator = (const Resource&) = delete;
         Resource& operator = (Resource&&)      = delete;
 
-        const SPIRVShaderResourceAttribs::ResourceType  Type;
-        RefCntAutoPtr<IDeviceObject>                    pObject;
+/* 0 */ const SPIRVShaderResourceAttribs::ResourceType  Type;
+/*1-7*/ // Unused
+/* 8 */ RefCntAutoPtr<IDeviceObject>                    pObject;
 
         VkDescriptorBufferInfo GetUniformBufferDescriptorWriteInfo ()                const;
         VkDescriptorBufferInfo GetStorageBufferDescriptorWriteInfo ()                const;
@@ -117,8 +118,8 @@ public:
             m_pResources    (pResources)
         {}
 
-        DescriptorSet(const DescriptorSet&)              = delete;
-        DescriptorSet(DescriptorSet&&)                   = delete;
+        DescriptorSet             (const DescriptorSet&) = delete;
+        DescriptorSet             (DescriptorSet&&)      = delete;
         DescriptorSet& operator = (const DescriptorSet&) = delete;
         DescriptorSet& operator = (DescriptorSet&&)      = delete;
 
