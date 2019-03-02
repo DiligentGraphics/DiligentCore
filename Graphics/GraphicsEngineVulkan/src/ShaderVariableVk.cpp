@@ -61,18 +61,19 @@ size_t ShaderVariableManagerVk::GetRequiredMemorySize(const ShaderResourceLayout
 }
 
 // Creates shader variable for every resource from SrcLayout whose type is one AllowedVarTypes
-void ShaderVariableManagerVk::Initialize(const ShaderResourceLayoutVk&          SrcLayout, 
-                                         IMemoryAllocator&                      Allocator,
-                                         const SHADER_RESOURCE_VARIABLE_TYPE*   AllowedVarTypes, 
-                                         Uint32                                 NumAllowedTypes, 
-                                         ShaderResourceCacheVk&                 ResourceCache)
-{
-    m_pResourceLayout = &SrcLayout;
-    m_pResourceCache  = &ResourceCache;
+ShaderVariableManagerVk::ShaderVariableManagerVk(IObject&                               Owner,
+                                                 const ShaderResourceLayoutVk&          SrcLayout, 
+                                                 IMemoryAllocator&                      Allocator,
+                                                 const SHADER_RESOURCE_VARIABLE_TYPE*   AllowedVarTypes, 
+                                                 Uint32                                 NumAllowedTypes, 
+                                                 ShaderResourceCacheVk&                 ResourceCache) :
+    m_Owner(Owner),
+    m_ResourceLayout(SrcLayout),
+    m_ResourceCache(ResourceCache)
 #ifdef _DEBUG
-    m_pDbgAllocator = &Allocator;
+  , m_DbgAllocator(Allocator)
 #endif
-
+{
     const Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
     VERIFY_EXPR(m_NumVariables == 0);
     auto MemSize = GetRequiredMemorySize(SrcLayout, AllowedVarTypes, NumAllowedTypes, m_NumVariables);
@@ -108,12 +109,12 @@ void ShaderVariableManagerVk::Initialize(const ShaderResourceLayoutVk&          
 
 ShaderVariableManagerVk::~ShaderVariableManagerVk()
 {
-    VERIFY(m_pVariables == nullptr, "Destroy() has not been called");
+    VERIFY(m_pVariables == nullptr, "DestroyVariables() has not been called");
 }
 
-void ShaderVariableManagerVk::Destroy(IMemoryAllocator &Allocator)
+void ShaderVariableManagerVk::DestroyVariables(IMemoryAllocator& Allocator)
 {
-    VERIFY(m_pDbgAllocator == &Allocator, "Incosistent alloctor");
+    VERIFY(&m_DbgAllocator == &Allocator, "Incosistent alloctor");
 
     if (m_pVariables != nullptr)
     {
@@ -174,8 +175,6 @@ Uint32 ShaderVariableManagerVk::GetVariableIndex(const ShaderVariableVkImpl& Var
 
 void ShaderVariableManagerVk::BindResources(IResourceMapping* pResourceMapping, Uint32 Flags)
 {
-    VERIFY_EXPR(m_pResourceCache != nullptr);
-
     if (!pResourceMapping)
     {
         LOG_ERROR_MESSAGE( "Failed to bind resources: resource mapping is null" );
@@ -199,7 +198,7 @@ void ShaderVariableManagerVk::BindResources(IResourceMapping* pResourceMapping, 
 
         for (Uint32 ArrInd = 0; ArrInd < Res.SpirvAttribs.ArraySize; ++ArrInd)
         {
-            if ( (Flags & BIND_SHADER_RESOURCES_KEEP_EXISTING) && Res.IsBound(ArrInd, *m_pResourceCache) )
+            if ( (Flags & BIND_SHADER_RESOURCES_KEEP_EXISTING) && Res.IsBound(ArrInd, m_ResourceCache) )
                 continue;
 
             const auto* VarName = Res.SpirvAttribs.Name;
@@ -207,11 +206,11 @@ void ShaderVariableManagerVk::BindResources(IResourceMapping* pResourceMapping, 
             pResourceMapping->GetResource( VarName, &pObj, ArrInd );
             if (pObj)
             {
-                Res.BindResource(pObj, ArrInd, *m_pResourceCache);
+                Res.BindResource(pObj, ArrInd, m_ResourceCache);
             }
             else
             {
-                if ( (Flags & BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED) && !Res.IsBound(ArrInd, *m_pResourceCache) )
+                if ( (Flags & BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED) && !Res.IsBound(ArrInd, m_ResourceCache) )
                     LOG_ERROR_MESSAGE( "Unable to bind resource to shader variable '", Res.SpirvAttribs.GetPrintName(ArrInd), "': resource is not found in the resource mapping. "
                                        "Do not use BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED flag to suppress the message if this is not an issue." );
             }

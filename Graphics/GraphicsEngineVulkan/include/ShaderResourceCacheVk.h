@@ -109,7 +109,7 @@ public:
         VkDescriptorImageInfo  GetSamplerDescriptorWriteInfo()                       const;
     };
 
-    // sizeof(DescriptorSet) == 40 (x64, msvc, Release)
+    // sizeof(DescriptorSet) == 48 (x64, msvc, Release)
     class DescriptorSet
     {
     public:
@@ -147,11 +147,12 @@ public:
             m_DescriptorSetAllocation = std::move(Allocation);
         }
 
-        const Uint32 m_NumResources = 0;
+/* 0 */ const Uint32 m_NumResources = 0;
 
     private:
-        Resource* const m_pResources = nullptr;
-        DescriptorSetAllocation m_DescriptorSetAllocation;
+/* 8 */ Resource* const m_pResources = nullptr;
+/*16 */ DescriptorSetAllocation m_DescriptorSetAllocation;
+/*48 */ // End of structure
     };
 
     inline DescriptorSet& GetDescriptorSet(Uint32 Index)

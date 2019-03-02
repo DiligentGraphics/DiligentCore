@@ -176,8 +176,7 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters*      pRefCounters
         auto* pStaticResCache  = new (m_StaticResCaches + s) ShaderResourceCacheVk(ShaderResourceCacheVk::DbgCacheContentType::StaticShaderResources);
         pStaticResLayout->InitializeStaticResourceLayout(ShaderResources[s], ShaderResLayoutAllocator, PipelineDesc.ResourceLayout, m_StaticResCaches[s]);
 
-        auto* pStaticVarMgr = new (m_StaticVarsMgrs + s) ShaderVariableManagerVk(*this);
-        pStaticVarMgr->Initialize(*pStaticResLayout, GetRawAllocator(), nullptr, 0, *pStaticResCache);
+        new (m_StaticVarsMgrs + s) ShaderVariableManagerVk(*this, *pStaticResLayout, GetRawAllocator(), nullptr, 0, *pStaticResCache);
     }
     ShaderResourceLayoutVk::Initialize(pDeviceVk, m_NumShaders, m_ShaderResourceLayouts, ShaderResources.data(), GetRawAllocator(),
                                        PipelineDesc.ResourceLayout, ShaderSPIRVs.data(), m_PipelineLayout);
@@ -461,7 +460,7 @@ PipelineStateVkImpl::~PipelineStateVkImpl()
     for (Uint32 s=0; s < m_NumShaders; ++s)
     {
         m_StaticResCaches[s].~ShaderResourceCacheVk();
-        m_StaticVarsMgrs[s].Destroy(GetRawAllocator());
+        m_StaticVarsMgrs[s].DestroyVariables(GetRawAllocator());
         m_StaticVarsMgrs[s].~ShaderVariableManagerVk();
     }
     RawAllocator.Free(m_ShaderResourceLayouts);
