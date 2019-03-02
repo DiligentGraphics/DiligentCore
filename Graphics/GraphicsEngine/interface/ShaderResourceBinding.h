@@ -27,7 +27,9 @@
 /// Definition of the Diligent::IShaderResourceBinding interface and related data structures
 
 #include "../../../Primitives/interface/Object.h"
+#include "Shader.h"
 #include "ShaderResourceVariable.h"
+#include "ResourceMapping.h"
 
 namespace Diligent
 {
