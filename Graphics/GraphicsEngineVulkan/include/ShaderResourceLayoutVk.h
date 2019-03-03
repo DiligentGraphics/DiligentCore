@@ -263,6 +263,9 @@ public:
 
 #ifdef DEVELOPMENT
     bool dvpVerifyBindings(const ShaderResourceCacheVk& ResourceCache)const;
+    static void dvpVerifyResourceLayoutDesc(Uint32                                             NumShaders,
+                                            const std::shared_ptr<const SPIRVShaderResources>  pShaderResources[],
+                                            const PipelineResourceLayoutDesc&                  ResourceLayoutDesc);
 #endif
 
     Uint32 GetResourceCount(SHADER_RESOURCE_VARIABLE_TYPE VarType)const
@@ -324,7 +327,8 @@ private:
                         IMemoryAllocator&                           Allocator,
                         const PipelineResourceLayoutDesc&           ResourceLayoutDesc,
                         const SHADER_RESOURCE_VARIABLE_TYPE*        AllowedVarTypes,
-                        Uint32                                      NumAllowedTypes);
+                        Uint32                                      NumAllowedTypes,
+                        bool                                        AllocateImmutableSamplers);
 
     Uint32 FindAssignedSampler(const SPIRVShaderResourceAttribs& SepImg,
                                Uint32                            CurrResourceCount,
