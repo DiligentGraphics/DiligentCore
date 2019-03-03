@@ -49,17 +49,12 @@ public:
     
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ShaderVk, TShaderBase);
 
-    virtual Uint32 GetResourceCount()const
+    virtual Uint32 GetResourceCount()const override final
     {
-        UNSUPPORTED("Not yet implemented");
-        return 0;
+        return m_pShaderResources->GetTotalResources();
     }
 
-    virtual const ShaderResourceDesc* GetResources()const
-    {
-        UNSUPPORTED("Not yet implemented");
-        return nullptr;
-    }
+    virtual ShaderResourceDesc GetResource(Uint32 Index)const override final;
 
     virtual const std::vector<uint32_t>& GetSPIRV()const override final
     {
