@@ -69,10 +69,10 @@ static Int32 FindImmutableSampler(SHADER_TYPE                       ShaderType,
     return -1;
 }
 
-static SHADER_RESOURCE_VARIABLE_TYPE GetShaderVariableType(SHADER_TYPE                       ShaderType,
-                                                           const SPIRVShaderResourceAttribs& Attribs,
-                                                           const PipelineResourceLayoutDesc& ResourceLayoutDesc,
-                                                           const char*                       CombinedSamplerSuffix)
+static SHADER_RESOURCE_VARIABLE_TYPE FindShaderVariableType(SHADER_TYPE                       ShaderType,
+                                                            const SPIRVShaderResourceAttribs& Attribs,
+                                                            const PipelineResourceLayoutDesc& ResourceLayoutDesc,
+                                                            const char*                       CombinedSamplerSuffix)
 {
     if (Attribs.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler)
     {
@@ -120,7 +120,7 @@ void ShaderResourceLayoutVk::AllocateMemory(std::shared_ptr<const SPIRVShaderRes
     m_pResources->ProcessResources(
         [&](const SPIRVShaderResourceAttribs& ResAttribs, Uint32)
         {
-            auto VarType = GetShaderVariableType(ShaderType, ResAttribs, ResourceLayoutDesc, CombinedSamplerSuffix);
+            auto VarType = FindShaderVariableType(ShaderType, ResAttribs, ResourceLayoutDesc, CombinedSamplerSuffix);
             if (IsAllowedType(VarType, AllowedTypeBits))
             {
                 // For immutable separate samplers we still allocate VkResource instances, but they are never exposed to the app
@@ -187,7 +187,7 @@ void ShaderResourceLayoutVk::InitializeStaticResourceLayout(std::shared_ptr<cons
     m_pResources->ProcessResources(
         [&](const SPIRVShaderResourceAttribs& Attribs, Uint32)
         {
-            auto VarType = GetShaderVariableType(ShaderType, Attribs, ResourceLayoutDesc, CombinedSamplerSuffix);
+            auto VarType = FindShaderVariableType(ShaderType, Attribs, ResourceLayoutDesc, CombinedSamplerSuffix);
             if (!IsAllowedType(VarType, AllowedTypeBits))
                 return;
 
@@ -345,7 +345,7 @@ void ShaderResourceLayoutVk::Initialize(IRenderDevice*                          
                            const SPIRVShaderResourceAttribs& Attribs)
     {
         const auto ShaderType = Resources.GetShaderType();
-        const SHADER_RESOURCE_VARIABLE_TYPE VarType = GetShaderVariableType(ShaderType, Attribs, ResourceLayoutDesc, Resources.GetCombinedSamplerSuffix());
+        const SHADER_RESOURCE_VARIABLE_TYPE VarType = FindShaderVariableType(ShaderType, Attribs, ResourceLayoutDesc, Resources.GetCombinedSamplerSuffix());
         if (!IsAllowedType(VarType, AllowedTypeBits))
             return;
 
