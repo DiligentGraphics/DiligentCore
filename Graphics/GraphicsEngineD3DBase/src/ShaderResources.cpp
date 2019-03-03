@@ -96,53 +96,6 @@ ShaderResources::ShaderResources(SHADER_TYPE ShaderType):
 {
 }
 
-D3DShaderResourceCounters ShaderResources::CountResources(const SHADER_VARIABLE_TYPE* AllowedVarTypes,
-                                                          Uint32                      NumAllowedTypes)const noexcept
-{
-    auto AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
-
-    D3DShaderResourceCounters Counters;
-    ProcessResources(
-        AllowedVarTypes, NumAllowedTypes,
-
-        [&](const D3DShaderResourceAttribs& CB, Uint32)
-        {
-            VERIFY_EXPR(CB.IsAllowedType(AllowedTypeBits));
-            ++Counters.NumCBs;
-        },
-        [&](const D3DShaderResourceAttribs& Sam, Uint32)
-        {
-            VERIFY_EXPR(Sam.IsAllowedType(AllowedTypeBits));
-            // Skip static samplers
-            if (!Sam.IsStaticSampler())
-                ++Counters.NumSamplers;
-        },
-        [&](const D3DShaderResourceAttribs& TexSRV, Uint32)
-        {
-            VERIFY_EXPR(TexSRV.IsAllowedType(AllowedTypeBits));
-            ++Counters.NumTexSRVs;
-        },
-        [&](const D3DShaderResourceAttribs& TexUAV, Uint32)
-        {
-            VERIFY_EXPR(TexUAV.IsAllowedType(AllowedTypeBits));
-            ++Counters.NumTexUAVs;
-        },
-        [&](const D3DShaderResourceAttribs& BufSRV, Uint32)
-        {
-            VERIFY_EXPR(BufSRV.IsAllowedType(AllowedTypeBits));
-            ++Counters.NumBufSRVs;
-        },
-        [&](const D3DShaderResourceAttribs& BufUAV, Uint32)
-        {
-            VERIFY_EXPR(BufUAV.IsAllowedType(AllowedTypeBits));
-            ++Counters.NumBufUAVs;
-        }
-    );
-
-    return Counters;
-}
-
-
 Uint32 ShaderResources::FindAssignedSamplerId(const D3DShaderResourceAttribs& TexSRV, const char* SamplerSuffix)const
 {
     VERIFY_EXPR(SamplerSuffix != nullptr && *SamplerSuffix != 0);
@@ -153,10 +106,6 @@ Uint32 ShaderResources::FindAssignedSamplerId(const D3DShaderResourceAttribs& Te
         const auto& Sampler = GetSampler(s);
         if ( StreqSuff(Sampler.Name, TexSRV.Name, SamplerSuffix) )
         {
-            DEV_CHECK_ERR(Sampler.GetVariableType() == TexSRV.GetVariableType(),
-                            "The type (", GetShaderVariableTypeLiteralName(TexSRV.GetVariableType()),") of texture SRV variable '", TexSRV.Name,
-                            "' is not consistent with the type (", GetShaderVariableTypeLiteralName(Sampler.GetVariableType()),
-                            ") of the sampler '", Sampler.Name, "' that is assigned to it");
             DEV_CHECK_ERR(Sampler.BindCount == TexSRV.BindCount || Sampler.BindCount == 1, "Sampler '", Sampler.Name, "' assigned to texture '", TexSRV.Name, "' must be scalar or have the same array dimension (", TexSRV.BindCount, "). Actual sampler array dimension : ",  Sampler.BindCount);
             return s;
         }
@@ -176,8 +125,6 @@ bool ShaderResources::IsCompatibleWith(const ShaderResources &Res)const
 
     bool IsCompatible = true;
     ProcessResources(
-        nullptr, 0,
-
         [&](const D3DShaderResourceAttribs& CB, Uint32 n)
         {
             if (!CB.IsCompatibleWith(Res.GetCB(n)))
@@ -216,7 +163,6 @@ size_t ShaderResources::GetHash()const
 {
     size_t hash = ComputeHash(GetNumCBs(), GetNumTexSRV(), GetNumTexUAV(), GetNumBufSRV(), GetNumBufUAV(), GetNumSamplers());
     ProcessResources(
-        nullptr, 0,
         [&](const D3DShaderResourceAttribs& CB, Uint32)
         {
             HashCombine(hash, CB);

@@ -41,13 +41,13 @@ static const Char* g_HLSLDefinitions =
 class D3DIncludeImpl : public ID3DInclude
 {
 public:
-    D3DIncludeImpl(IShaderSourceInputStreamFactory *pStreamFactory) : 
+    D3DIncludeImpl(IShaderSourceInputStreamFactory* pStreamFactory) : 
         m_pStreamFactory(pStreamFactory)
     {
 
     }
 
-    STDMETHOD( Open )(THIS_ D3D_INCLUDE_TYPE IncludeType, LPCSTR pFileName, LPCVOID pParentData, LPCVOID *ppData, UINT *pBytes)
+    STDMETHOD( Open )(THIS_ D3D_INCLUDE_TYPE IncludeType, LPCSTR pFileName, LPCVOID pParentData, LPCVOID* ppData, UINT* pBytes)
     {
         RefCntAutoPtr<IFileStream> pSourceStream;
         m_pStreamFactory->CreateInputStream( pFileName, &pSourceStream );
@@ -78,13 +78,13 @@ private:
     std::unordered_map< LPCVOID, RefCntAutoPtr<IDataBlob> > m_DataBlobs;
 };
 
-HRESULT CompileShader( const char* Source,
-                       LPCSTR strFunctionName,
-                       const D3D_SHADER_MACRO* pDefines, 
-                       IShaderSourceInputStreamFactory *pIncludeStreamFactory,
-                       LPCSTR profile, 
-                       ID3DBlob **ppBlobOut,
-                       ID3DBlob **ppCompilerOutput)
+static HRESULT CompileShader(const char*                        Source,
+                             LPCSTR                             strFunctionName,
+                             const D3D_SHADER_MACRO*            pDefines, 
+                             IShaderSourceInputStreamFactory*   pIncludeStreamFactory,
+                             LPCSTR                             profile, 
+                             ID3DBlob**                         ppBlobOut,
+                             ID3DBlob**                         ppCompilerOutput)
 {
     DWORD dwShaderFlags = D3DCOMPILE_ENABLE_STRICTNESS;
 #if defined( DEBUG ) || defined( _DEBUG )
@@ -133,15 +133,15 @@ const char* DXShaderProfileToString(SHADER_PROFILE DXProfile)
     }
 }
 
-ShaderD3DBase::ShaderD3DBase(const ShaderCreationAttribs &CreationAttribs)
+ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI)
 {
-    if (CreationAttribs.Source || CreationAttribs.FilePath)
+    if (ShaderCI.Source || ShaderCI.FilePath)
     {
-        DEV_CHECK_ERR(CreationAttribs.ByteCode == nullptr, "'ByteCode' must be null when shader is created from the source code or a file");
-        DEV_CHECK_ERR(CreationAttribs.ByteCodeSize == 0, "'ByteCodeSize' must be 0 when shader is created from the source code or a file");
+        DEV_CHECK_ERR(ShaderCI.ByteCode == nullptr, "'ByteCode' must be null when shader is created from the source code or a file");
+        DEV_CHECK_ERR(ShaderCI.ByteCodeSize == 0, "'ByteCodeSize' must be 0 when shader is created from the source code or a file");
 
         std::string strShaderProfile;
-        switch(CreationAttribs.Desc.ShaderType)
+        switch (ShaderCI.Desc.ShaderType)
         {
             case SHADER_TYPE_VERTEX:  strShaderProfile="vs"; break;
             case SHADER_TYPE_PIXEL:   strShaderProfile="ps"; break;
@@ -153,20 +153,20 @@ ShaderD3DBase::ShaderD3DBase(const ShaderCreationAttribs &CreationAttribs)
             default: UNEXPECTED( "Unknown shader type" );
         }
         strShaderProfile += "_";
-        auto *pProfileSuffix = DXShaderProfileToString(CreationAttribs.Desc.TargetProfile);
+        auto *pProfileSuffix = DXShaderProfileToString(ShaderCI.Desc.TargetProfile);
         strShaderProfile += pProfileSuffix;
 
         String ShaderSource(g_HLSLDefinitions);
-        if (CreationAttribs.Source)
+        if (ShaderCI.Source)
         {
-            DEV_CHECK_ERR(CreationAttribs.FilePath == nullptr, "'FilePath' is expected to be null when shader source code is provided");
-            ShaderSource.append(CreationAttribs.Source);
+            DEV_CHECK_ERR(ShaderCI.FilePath == nullptr, "'FilePath' is expected to be null when shader source code is provided");
+            ShaderSource.append(ShaderCI.Source);
         }
         else
         {
-            DEV_CHECK_ERR(CreationAttribs.pShaderSourceStreamFactory, "Input stream factory is null");
+            DEV_CHECK_ERR(ShaderCI.pShaderSourceStreamFactory, "Input stream factory is null");
             RefCntAutoPtr<IFileStream> pSourceStream;
-            CreationAttribs.pShaderSourceStreamFactory->CreateInputStream(CreationAttribs.FilePath, &pSourceStream);
+            ShaderCI.pShaderSourceStreamFactory->CreateInputStream(ShaderCI.FilePath, &pSourceStream);
             RefCntAutoPtr<IDataBlob> pFileData(MakeNewRCObj<DataBlobImpl>()(0));
             if (pSourceStream == nullptr)
                 LOG_ERROR_AND_THROW("Failed to open shader source file");
@@ -179,9 +179,9 @@ ShaderD3DBase::ShaderD3DBase(const ShaderCreationAttribs &CreationAttribs)
 
         const D3D_SHADER_MACRO *pDefines = nullptr;
         std::vector<D3D_SHADER_MACRO> D3DMacros;
-        if (CreationAttribs.Macros)
+        if (ShaderCI.Macros)
         {
-            for (auto* pCurrMacro = CreationAttribs.Macros; pCurrMacro->Name && pCurrMacro->Definition; ++pCurrMacro)
+            for (auto* pCurrMacro = ShaderCI.Macros; pCurrMacro->Name && pCurrMacro->Definition; ++pCurrMacro)
             {
                 D3DMacros.push_back({ pCurrMacro->Name, pCurrMacro->Definition });
             }
@@ -189,39 +189,39 @@ ShaderD3DBase::ShaderD3DBase(const ShaderCreationAttribs &CreationAttribs)
             pDefines = D3DMacros.data();
         }
 
-        DEV_CHECK_ERR(CreationAttribs.EntryPoint != nullptr, "Entry point must not be null");
+        DEV_CHECK_ERR(ShaderCI.EntryPoint != nullptr, "Entry point must not be null");
         CComPtr<ID3DBlob> errors;
-        auto hr = CompileShader(ShaderSource.c_str(), CreationAttribs.EntryPoint, pDefines, CreationAttribs.pShaderSourceStreamFactory, strShaderProfile.c_str(), &m_pShaderByteCode, &errors);
+        auto hr = CompileShader(ShaderSource.c_str(), ShaderCI.EntryPoint, pDefines, ShaderCI.pShaderSourceStreamFactory, strShaderProfile.c_str(), &m_pShaderByteCode, &errors);
 
-        const char *CompilerMsg = errors ? reinterpret_cast<const char*>(errors->GetBufferPointer()) : nullptr;
-        if(CompilerMsg != nullptr && CreationAttribs.ppCompilerOutput != nullptr)
+        const char* CompilerMsg = errors ? reinterpret_cast<const char*>(errors->GetBufferPointer()) : nullptr;
+        if (CompilerMsg != nullptr && ShaderCI.ppCompilerOutput != nullptr)
         {
             auto ErrorMsgLen = strlen(CompilerMsg);
             auto *pOutputDataBlob = MakeNewRCObj<DataBlobImpl>()(ErrorMsgLen + 1 + ShaderSource.length() + 1);
             char* DataPtr = reinterpret_cast<char*>(pOutputDataBlob->GetDataPtr());
             memcpy(DataPtr, CompilerMsg, ErrorMsgLen+1);
             memcpy(DataPtr + ErrorMsgLen + 1, ShaderSource.data(), ShaderSource.length() + 1);
-            pOutputDataBlob->QueryInterface(IID_DataBlob, reinterpret_cast<IObject**>(CreationAttribs.ppCompilerOutput));
+            pOutputDataBlob->QueryInterface(IID_DataBlob, reinterpret_cast<IObject**>(ShaderCI.ppCompilerOutput));
         }
 
-        if(FAILED(hr))
+        if (FAILED(hr))
         {
             ComErrorDesc ErrDesc(hr);
-            if(CreationAttribs.ppCompilerOutput != nullptr)
+            if(ShaderCI.ppCompilerOutput != nullptr)
             {
-                LOG_ERROR_AND_THROW("Failed to compile D3D shader \"",  (CreationAttribs.Desc.Name != nullptr ? CreationAttribs.Desc.Name : ""), "\" (", ErrDesc.Get(), ").");
+                LOG_ERROR_AND_THROW("Failed to compile D3D shader \"",  (ShaderCI.Desc.Name != nullptr ? ShaderCI.Desc.Name : ""), "\" (", ErrDesc.Get(), ").");
             }
             else
             {
-                LOG_ERROR_AND_THROW("Failed to compile D3D shader \"", (CreationAttribs.Desc.Name != nullptr ? CreationAttribs.Desc.Name : ""), "\" (", ErrDesc.Get(), "):\n", (CompilerMsg != nullptr ? CompilerMsg : "<no compiler log available>") );
+                LOG_ERROR_AND_THROW("Failed to compile D3D shader \"", (ShaderCI.Desc.Name != nullptr ? ShaderCI.Desc.Name : ""), "\" (", ErrDesc.Get(), "):\n", (CompilerMsg != nullptr ? CompilerMsg : "<no compiler log available>") );
             }
         }
     }
-    else if (CreationAttribs.ByteCode)
+    else if (ShaderCI.ByteCode)
     {
-        DEV_CHECK_ERR(CreationAttribs.ByteCodeSize != 0, "ByteCode size must be greater than 0");
-        CHECK_D3D_RESULT_THROW(D3DCreateBlob(CreationAttribs.ByteCodeSize, &m_pShaderByteCode), "Failed to create D3D blob");
-        memcpy(m_pShaderByteCode->GetBufferPointer(), CreationAttribs.ByteCode, CreationAttribs.ByteCodeSize);
+        DEV_CHECK_ERR(ShaderCI.ByteCodeSize != 0, "ByteCode size must be greater than 0");
+        CHECK_D3D_RESULT_THROW(D3DCreateBlob(ShaderCI.ByteCodeSize, &m_pShaderByteCode), "Failed to create D3D blob");
+        memcpy(m_pShaderByteCode->GetBufferPointer(), ShaderCI.ByteCode, ShaderCI.ByteCodeSize);
     }
     else
     {

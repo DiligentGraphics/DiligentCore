@@ -57,17 +57,13 @@ namespace Diligent
              typename TOnNewSampler,
              typename TOnNewTexSRV>
     void LoadD3DShaderResources(ID3DBlob*           pShaderByteCode, 
-
                                 TOnResourcesCounted OnResourcesCounted, 
                                 TOnNewCB            OnNewCB, 
                                 TOnNewTexUAV        OnNewTexUAV, 
                                 TOnNewBuffUAV       OnNewBuffUAV, 
                                 TOnNewBuffSRV       OnNewBuffSRV,
                                 TOnNewSampler       OnNewSampler,
-                                TOnNewTexSRV        OnNewTexSRV, 
-
-                                const ShaderDesc&   ShdrDesc,
-                                const Char*         SamplerSuffix)
+                                TOnNewTexSRV        OnNewTexSRV)
     {
         CComPtr<TShaderReflection> pShaderReflection;
         auto hr = D3DReflect( pShaderByteCode->GetBufferPointer(), pShaderByteCode->GetBufferSize(), __uuidof(pShaderReflection), reinterpret_cast<void**>(static_cast<TShaderReflection**>(&pShaderReflection)));
@@ -80,13 +76,11 @@ namespace Diligent
         Resources.reserve(shaderDesc.BoundResources);
         std::unordered_set<std::string> ResourceNamesTmpPool;
         
-        const bool UseCombinedTextureSamplers = SamplerSuffix != nullptr;
-
         D3DShaderResourceCounters RC;
         size_t ResourceNamesPoolSize = 0;
         // Number of resources to skip (used for array resources)
         UINT SkipCount = 1;
-        for( UINT Res = 0; Res < shaderDesc.BoundResources; Res += SkipCount )
+        for (UINT Res = 0; Res < shaderDesc.BoundResources; Res += SkipCount)
         {
             D3D_SHADER_INPUT_BIND_DESC BindingDesc = {};
             pShaderReflection->GetResourceBindingDesc( Res, &BindingDesc );
@@ -128,7 +122,7 @@ namespace Diligent
                     VERIFY(Name.compare(ExistingRes.Name) != 0, "Resource with the same name has already been enumerated. All array elements are expected to be enumerated one after another");
                 }
 #endif
-                for( UINT ArrElem = Res+1; ArrElem < shaderDesc.BoundResources; ++ArrElem)
+                for (UINT ArrElem = Res+1; ArrElem < shaderDesc.BoundResources; ++ArrElem)
                 {
                     D3D_SHADER_INPUT_BIND_DESC ArrElemBindingDesc = {};
                     pShaderReflection->GetResourceBindingDesc( ArrElem, &ArrElemBindingDesc );
@@ -156,32 +150,6 @@ namespace Diligent
                 }
             }
 
-
-            SHADER_VARIABLE_TYPE VarType = SHADER_VARIABLE_TYPE_NUM_TYPES;
-            bool IsStaticSampler = false;
-            if (BindingDesc.Type == D3D_SIT_SAMPLER)
-            {
-                for (Uint32 s = 0; s < ShdrDesc.NumStaticSamplers; ++s)
-                {
-                    if (StreqSuff(Name.c_str(), ShdrDesc.StaticSamplers[s].SamplerOrTextureName, SamplerSuffix))
-                    {
-                        IsStaticSampler = true;
-                        break;
-                    }
-                }
-                // Use texture or sampler name to derive sampler type
-                VarType = GetShaderVariableType(ShdrDesc.DefaultVariableType, ShdrDesc.VariableDesc, ShdrDesc.NumVariables,
-                                                [&](const char* VarName)
-                                                {
-                                                    return StreqSuff(Name.c_str(), VarName, SamplerSuffix);
-                                                });
-            }
-            else
-            {
-                VarType = GetShaderVariableType(Name, ShdrDesc.DefaultVariableType, ShdrDesc.VariableDesc, ShdrDesc.NumVariables);
-            }
-
-
             switch( BindingDesc.Type )
             {
                 case D3D_SIT_CBUFFER:                       ++RC.NumCBs;                                                                           break;
@@ -205,68 +173,17 @@ namespace Diligent
                 BindingDesc.BindPoint, 
                 BindCount, 
                 BindingDesc.Type, 
-                VarType, 
                 BindingDesc.Dimension, 
-                D3DShaderResourceAttribs::InvalidSamplerId, 
-                IsStaticSampler
+                D3DShaderResourceAttribs::InvalidSamplerId
             );
         }
-
-
-#ifdef DEVELOPMENT
-        for (Uint32 v = 0; v < ShdrDesc.NumVariables; ++v)
-        {
-            bool VariableFound = false;
-            const auto* VarName = ShdrDesc.VariableDesc[v].Name;
-
-            for (const auto& Res : Resources)
-            {
-                // Skip samplers if combined texture samplers are used as 
-                // in this case they are not treated as independent variables
-                if (UseCombinedTextureSamplers && Res.GetInputType() == D3D_SIT_SAMPLER)
-                    continue;
-
-                VariableFound = (strcmp(Res.Name, VarName) == 0);
-                if (VariableFound)
-                    break;
-            }
-            if(!VariableFound)
-            {
-                LOG_WARNING_MESSAGE("Variable '", VarName, "' is not found in shader '", ShdrDesc.Name, '\'');
-            }
-        }
-
-        for (Uint32 s = 0; s < ShdrDesc.NumStaticSamplers; ++s)
-        {
-            const auto* TexOrSamName = ShdrDesc.StaticSamplers[s].SamplerOrTextureName;
-
-            bool TextureOrSamplerFound = false;
-            for (const auto& Res : Resources)
-            {
-                if( UseCombinedTextureSamplers && Res.GetInputType() == D3D_SIT_TEXTURE && Res.GetSRVDimension() != D3D_SRV_DIMENSION_BUFFER ||
-                    !UseCombinedTextureSamplers && Res.GetInputType() == D3D_SIT_SAMPLER)
-                {
-                    TextureOrSamplerFound = (strcmp(Res.Name, TexOrSamName) == 0);
-                    if (TextureOrSamplerFound)
-                        break;
-                }
-            }
-            if (!TextureOrSamplerFound)
-            {
-                if (UseCombinedTextureSamplers)
-                    LOG_WARNING_MESSAGE("Static sampler specifies a texture '", TexOrSamName, "' that is not found in shader '", ShdrDesc.Name, '\'');
-                else
-                    LOG_WARNING_MESSAGE("Static sampler '", TexOrSamName, "' is not found in shader '", ShdrDesc.Name, '\'');
-            }
-        }
-#endif
 
         OnResourcesCounted(RC, ResourceNamesPoolSize);
 
         std::vector<size_t, STDAllocatorRawMem<size_t> > TexSRVInds( STD_ALLOCATOR_RAW_MEM(size_t, GetRawAllocator(), "Allocator for vector<size_t>") );
         TexSRVInds.reserve(RC.NumTexSRVs);
 
-        for(size_t ResInd = 0; ResInd < Resources.size(); ++ResInd)
+        for (size_t ResInd = 0; ResInd < Resources.size(); ++ResInd)
         {
             const auto& Res = Resources[ResInd];
             switch (Res.GetInputType())
@@ -368,7 +285,7 @@ namespace Diligent
         // Process texture SRVs. We need to do this after all samplers are initialized
         for (auto TexSRVInd : TexSRVInds)
         {
-            OnNewTexSRV( Resources[TexSRVInd] );
+            OnNewTexSRV(Resources[TexSRVInd]);
         }
     }
 }
