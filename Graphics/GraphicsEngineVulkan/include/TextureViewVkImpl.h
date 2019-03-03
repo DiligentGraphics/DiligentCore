@@ -50,7 +50,7 @@ public:
                        bool                                bIsDefaultView);
     ~TextureViewVkImpl();
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID& IID, IObject** ppInterface )override;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
 
     VkImageView GetVulkanImageView()const override final{return m_ImageView;}
 

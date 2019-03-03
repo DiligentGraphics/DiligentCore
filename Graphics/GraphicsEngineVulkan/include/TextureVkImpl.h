@@ -62,7 +62,7 @@ public:
 
     ~TextureVkImpl();
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID& IID, IObject** ppInterface )override;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
 
     virtual VkImage GetVkImage()const override final{ return m_VulkanImage; }
     virtual void* GetNativeHandle()override final

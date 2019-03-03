@@ -48,7 +48,7 @@ public:
                            const PipelineStateDesc&     PipelineDesc);
     ~PipelineStateD3D11Impl();
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
     
     /// Implementation of the IPipelineStateD3D11::GetD3D11BlendState() method.
     virtual ID3D11BlendState* GetD3D11BlendState()override final;
@@ -77,11 +77,28 @@ public:
         return m_SRBMemAllocator;
     }
 
+    const ShaderResourceLayoutD3D11& GetStaticResourceLayout(Uint32 s)const
+    {
+        VERIFY_EXPR(s < m_NumShaders);
+        return m_pStaticResourceLayouts[s];
+    }
+
+    ShaderResourceCacheD3D11& GetStaticResourceCache(Uint32 s)
+    {
+        VERIFY_EXPR(s < m_NumShaders);
+        return m_pStaticResourceCaches[s];
+    }
+
+
 private:
     CComPtr<ID3D11BlendState>        m_pd3d11BlendState;
     CComPtr<ID3D11RasterizerState>   m_pd3d11RasterizerState;
     CComPtr<ID3D11DepthStencilState> m_pd3d11DepthStencilState;
     CComPtr<ID3D11InputLayout>       m_pd3d11InputLayout;
+
+    // The caches are indexed by the shader order in the PSO, not shader index
+    ShaderResourceCacheD3D11*  m_pStaticResourceCaches = nullptr;
+    ShaderResourceLayoutD3D11* m_pStaticResourceLayouts= nullptr;
 
     // SRB memory allocator must be defined before the default shader res binding
     SRBMemoryAllocator m_SRBMemAllocator;

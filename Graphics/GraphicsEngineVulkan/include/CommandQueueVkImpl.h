@@ -48,7 +48,7 @@ public:
                        uint32_t                                              QueueFamilyIndex);
     ~CommandQueueVkImpl();
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID& IID, IObject** ppInterface )override;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
 
 	// Returns the fence value that will be signaled next time
     virtual Uint64 GetNextFenceValue()override final { return m_NextFenceValue; }

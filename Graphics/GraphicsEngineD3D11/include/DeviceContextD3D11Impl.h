@@ -59,7 +59,7 @@ public:
                            ID3D11DeviceContext*             pd3d11DeviceContext,
                            const struct EngineD3D11Attribs& EngineAttribs,
                            bool                             bIsDeferred);
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
 
     virtual void SetPipelineState(IPipelineState* pPipelineState)override final;
 

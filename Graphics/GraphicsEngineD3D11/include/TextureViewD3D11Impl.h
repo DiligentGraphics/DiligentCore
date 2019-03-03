@@ -49,7 +49,7 @@ public:
                           ID3D11View*            pD3D11View,
                           bool                   bIsDefaultView);
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
 
     virtual ID3D11View* GetD3D11View()override final
     {

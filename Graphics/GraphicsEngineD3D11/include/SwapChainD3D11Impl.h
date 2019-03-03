@@ -47,7 +47,7 @@ public:
                        void*                         pNativeWndHandle);
     ~SwapChainD3D11Impl();
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
 
     virtual void Present(Uint32 SyncInterval)override final;
     virtual void Resize( Uint32 NewWidth, Uint32 NewHeight )override final;

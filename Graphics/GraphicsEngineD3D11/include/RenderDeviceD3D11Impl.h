@@ -45,7 +45,7 @@ public:
                            const EngineD3D11Attribs& EngineAttribs,
                            ID3D11Device*             pd3d11Device,
                            Uint32                    NumDeferredContexts );
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
 
     virtual void CreateBuffer(const BufferDesc& BuffDesc, const BufferData* pBuffData, IBuffer** ppBuffer)override final;
 

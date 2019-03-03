@@ -51,7 +51,7 @@ public:
                      const TextureData*           pInitData = nullptr);
     ~TextureBaseD3D11();
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
 
     virtual ID3D11Resource* GetD3D11Texture()override final{ return m_pd3d11Texture; }
 

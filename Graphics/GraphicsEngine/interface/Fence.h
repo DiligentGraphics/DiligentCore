@@ -48,7 +48,7 @@ class IFence : public IDeviceObject
 {
 public:
     /// Queries the specific interface, see IObject::QueryInterface() for details
-    virtual void QueryInterface( const Diligent::INTERFACE_ID& IID, IObject** ppInterface ) = 0;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) = 0;
 
     /// Returns the fence description used to create the object
     virtual const FenceDesc& GetDesc()const = 0;

@@ -214,7 +214,7 @@ namespace Diligent
 
 #ifdef DEVELOPMENT
             auto* pShaderD3D11 = ValidatedCast<ShaderD3D11Impl>(ppdbgShaders[s]);
-            VERIFY_EXPR( ShaderTypeInd == static_cast<Int32>(pShaderD3D11->GetShaderTypeIndex()) );
+            VERIFY_EXPR( ShaderTypeInd == static_cast<Int32>(GetShaderTypeIndex(pShaderD3D11->GetDesc().ShaderType)) );
 #endif
 
             auto& Cache = pShaderResBindingD3D11->GetResourceCache(s);
@@ -360,7 +360,7 @@ namespace Diligent
 
 #ifdef DEVELOPMENT
             auto* pShaderD3D11 = ValidatedCast<ShaderD3D11Impl>(ppdbgShaders[s]);
-            VERIFY_EXPR( ShaderTypeInd == static_cast<Int32>(pShaderD3D11->GetShaderTypeIndex()) );
+            VERIFY_EXPR( ShaderTypeInd == static_cast<Int32>(GetShaderTypeIndex(pShaderD3D11->GetDesc().ShaderType)) );
 #endif
 
             auto& Cache = pShaderResBindingD3D11->GetResourceCache(s);
