@@ -68,7 +68,7 @@ public:
                         std::shared_ptr<GenerateMipsVkHelper> GenerateMipsHelper);
     ~DeviceContextVkImpl();
     
-    virtual void QueryInterface( const Diligent::INTERFACE_ID& IID, IObject** ppInterface )override final;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
 
     virtual void SetPipelineState(IPipelineState* pPipelineState)override final;
 
