@@ -113,8 +113,6 @@ public:
 
     const Char* GetShaderName() const { return m_ShaderName; }
     
-    void SetStaticSamplers(class ShaderResourceCacheD3D11& ResourceCache)const;
-
 private:
     using MaxBindPointType = Int8;
 
@@ -132,12 +130,6 @@ private:
     // ShaderResourcesD3D11 is part of the ShaderD3D11Impl object, so we can simply
     // reference shader name without the need to copy it
     const Char* const m_ShaderName;
-
-    using StaticSamplerAttribs = std::pair<const D3DShaderResourceAttribs&, RefCntAutoPtr<ISampler>>;
-    using StaticSamplerVector = std::vector<StaticSamplerAttribs, STDAllocatorRawMem<StaticSamplerAttribs>>;
-    void InitStaticSamplers(StaticSamplerVector&& StaticSamplers);
-
-    StaticSamplerVector m_StaticSamplers;
 };
 
 }

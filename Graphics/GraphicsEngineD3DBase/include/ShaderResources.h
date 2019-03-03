@@ -325,7 +325,7 @@ protected:
              typename TNewResourceHandler>
     void Initialize(ID3DBlob*           pShaderByteCode, 
                     TNewResourceHandler NewResHandler, 
-                    const ShaderDesc&   ShdrDesc,
+                    const Char*         ShaderName,
                     const Char*         SamplerSuffix);
 
 
@@ -382,8 +382,8 @@ template<typename D3D_SHADER_DESC,
          typename TShaderReflection, 
          typename TNewResourceHandler>
 void ShaderResources::Initialize(ID3DBlob*           pShaderByteCode, 
-                                 TNewResourceHandler NewResHandler, 
-                                 const ShaderDesc&   ShdrDesc,
+                                 TNewResourceHandler NewResHandler,
+                                 const Char*         ShaderName,
                                  const Char*         CombinedSamplerSuffix)
 {
     Uint32 CurrCB = 0, CurrTexSRV = 0, CurrTexUAV = 0, CurrBufSRV = 0, CurrBufUAV = 0, CurrSampler = 0;
@@ -446,10 +446,7 @@ void ShaderResources::Initialize(ID3DBlob*           pShaderByteCode,
             }
             ++CurrTexSRV;
             NewResHandler.OnNewTexSRV(*pNewTexSRV);
-        },
-
-        ShdrDesc,
-        CombinedSamplerSuffix);
+        });
 
     if (CombinedSamplerSuffix != nullptr)
     {
@@ -460,7 +457,7 @@ void ShaderResources::Initialize(ID3DBlob*           pShaderByteCode,
         {
             const auto& Sampler = GetSampler(n);
             if (!Sampler.ValidTexSRVAssigned())
-                LOG_ERROR_MESSAGE("Shader '", ShdrDesc.Name, "' uses combined texture samplers, but sampler '", Sampler.Name, "' is not assigned to any texture");
+                LOG_ERROR_MESSAGE("Shader '", ShaderName, "' uses combined texture samplers, but sampler '", Sampler.Name, "' is not assigned to any texture");
         }
 #endif
     }
