@@ -33,9 +33,12 @@ namespace Diligent
     template<typename TShaderResourceLayout>
     struct ShaderVariableD3DBase : public IShaderResourceVariable
     {
-        ShaderVariableD3DBase(TShaderResourceLayout& ParentResLayout, const D3DShaderResourceAttribs& ResourcesAttribs) : 
-            m_ParentResLayout(ParentResLayout),
-            Attribs(ResourcesAttribs)
+        ShaderVariableD3DBase(TShaderResourceLayout&            ParentResLayout,
+                              const D3DShaderResourceAttribs&   Attribs,
+                              SHADER_RESOURCE_VARIABLE_TYPE     VariableType) : 
+            m_ParentResLayout   (ParentResLayout),
+            m_Attribs           (Attribs),
+            m_VariableType      (VariableType)
         {
         }
 
@@ -60,7 +63,7 @@ namespace Diligent
                 return;
 
             *ppInterface = nullptr;
-            if( IID == IID_ShaderVariable || IID == IID_Unknown )
+            if( IID == IID_ShaderResourceVariable || IID == IID_Unknown )
             {
                 *ppInterface = this;
                 (*ppInterface)->AddRef();
@@ -69,17 +72,17 @@ namespace Diligent
 
         virtual SHADER_RESOURCE_VARIABLE_TYPE GetType()const override final
         {
-            return Attribs.GetVariableType();
+            return m_VariableType;
         }
 
         virtual Uint32 GetArraySize()const override final
         {
-            return Attribs.BindCount;
+            return m_Attribs.BindCount;
         }
 
         virtual const Char* GetName()const override final
         {
-            return Attribs.Name;
+            return m_Attribs.Name;
         }
 
         virtual Uint32 GetIndex()const override final
@@ -87,9 +90,10 @@ namespace Diligent
             return m_ParentResLayout.GetVariableIndex(*this);
         }
 
-        const D3DShaderResourceAttribs& Attribs;
+        const D3DShaderResourceAttribs&     m_Attribs;
 
     protected:
-        TShaderResourceLayout& m_ParentResLayout;
+        TShaderResourceLayout&              m_ParentResLayout;
+        const SHADER_RESOURCE_VARIABLE_TYPE m_VariableType;
     };
 }

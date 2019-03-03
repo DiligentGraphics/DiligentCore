@@ -54,11 +54,11 @@ public:
     ShaderResourceLayoutD3D11& operator = (      ShaderResourceLayoutD3D11&&) = delete;
 
     static size_t GetRequiredMemorySize(const ShaderResourcesD3D11& SrcResources, 
-                                        const SHADER_VARIABLE_TYPE* VarTypes, 
+                                        const SHADER_RESOURCE_VARIABLE_TYPE* VarTypes, 
                                         Uint32                      NumVarTypes);
 
     void Initialize(std::shared_ptr<const ShaderResourcesD3D11> pSrcResources,
-                    const SHADER_VARIABLE_TYPE*                 VarTypes, 
+                    const SHADER_RESOURCE_VARIABLE_TYPE*                 VarTypes, 
                     Uint32                                      NumVarTypes, 
                     ShaderResourceCacheD3D11&                   ResourceCache,
                     IMemoryAllocator&                           ResCacheDataAllocator,
@@ -71,8 +71,9 @@ public:
     struct ConstBuffBindInfo final : ShaderVariableD3D11Base
     {
         ConstBuffBindInfo( const D3DShaderResourceAttribs& ResourceAttribs,
-                           ShaderResourceLayoutD3D11&      ParentResLayout ) :
-            ShaderVariableD3D11Base(ParentResLayout, ResourceAttribs)
+                           ShaderResourceLayoutD3D11&      ParentResLayout,
+                           SHADER_RESOURCE_VARIABLE_TYPE   VariableType) :
+            ShaderVariableD3D11Base(ParentResLayout, ResourceAttribs, VariableType)
         {}
         // Non-virtual function
         __forceinline void BindResource(IDeviceObject* pObject, Uint32 ArrayIndex);
@@ -91,8 +92,9 @@ public:
     {
         TexSRVBindInfo( const D3DShaderResourceAttribs& _TextureAttribs, 
                         Uint32                          _SamplerIndex,
-                        ShaderResourceLayoutD3D11&      ParentResLayout) :
-            ShaderVariableD3D11Base(ParentResLayout, _TextureAttribs),
+                        ShaderResourceLayoutD3D11&      ParentResLayout,
+                        SHADER_RESOURCE_VARIABLE_TYPE   VariableType) :
+            ShaderVariableD3D11Base(ParentResLayout, _TextureAttribs, VariableType),
             SamplerIndex(_SamplerIndex)
         {}
 
@@ -117,8 +119,9 @@ public:
     struct TexUAVBindInfo final : ShaderVariableD3D11Base
     {
         TexUAVBindInfo( const D3DShaderResourceAttribs& ResourceAttribs,
-                        ShaderResourceLayoutD3D11&      ParentResLayout ) :
-            ShaderVariableD3D11Base(ParentResLayout, ResourceAttribs)
+                        ShaderResourceLayoutD3D11&      ParentResLayout,
+                        SHADER_RESOURCE_VARIABLE_TYPE   VariableType ) :
+            ShaderVariableD3D11Base(ParentResLayout, ResourceAttribs, VariableType)
         {}
 
         // Provide non-virtual function
@@ -137,8 +140,9 @@ public:
     struct BuffUAVBindInfo final : ShaderVariableD3D11Base
     {
         BuffUAVBindInfo( const D3DShaderResourceAttribs& ResourceAttribs,
-                         ShaderResourceLayoutD3D11&      ParentResLayout ) :
-            ShaderVariableD3D11Base(ParentResLayout, ResourceAttribs)
+                         ShaderResourceLayoutD3D11&      ParentResLayout,
+                         SHADER_RESOURCE_VARIABLE_TYPE   VariableType ) :
+            ShaderVariableD3D11Base(ParentResLayout, ResourceAttribs, VariableType)
         {}
 
         // Non-virtual function
@@ -157,8 +161,9 @@ public:
     struct BuffSRVBindInfo final : ShaderVariableD3D11Base
     {
         BuffSRVBindInfo( const D3DShaderResourceAttribs& ResourceAttribs,
-                         ShaderResourceLayoutD3D11&      ParentResLayout ) :
-            ShaderVariableD3D11Base(ParentResLayout, ResourceAttribs)
+                         ShaderResourceLayoutD3D11&      ParentResLayout,
+                         SHADER_RESOURCE_VARIABLE_TYPE   VariableType ) :
+            ShaderVariableD3D11Base(ParentResLayout, ResourceAttribs, VariableType)
         {}
 
         // Non-virtual function
@@ -177,8 +182,9 @@ public:
     struct SamplerBindInfo final : ShaderVariableD3D11Base
     {
         SamplerBindInfo( const D3DShaderResourceAttribs& ResourceAttribs,
-                         ShaderResourceLayoutD3D11&      ParentResLayout ) :
-            ShaderVariableD3D11Base(ParentResLayout, ResourceAttribs)
+                         ShaderResourceLayoutD3D11&      ParentResLayout,
+                         SHADER_RESOURCE_VARIABLE_TYPE   VariableType ) :
+            ShaderVariableD3D11Base(ParentResLayout, ResourceAttribs, VariableType)
         {}
 
         // Non-virtual function
@@ -202,8 +208,8 @@ public:
     bool dvpVerifyBindings()const;
 #endif
 
-    IShaderVariable* GetShaderVariable( const Char* Name );
-    IShaderVariable* GetShaderVariable( Uint32 Index );
+    IShaderResourceVariable* GetShaderVariable( const Char* Name );
+    IShaderResourceVariable* GetShaderVariable( Uint32 Index );
     __forceinline SHADER_TYPE GetShaderType()const{return m_pResources->GetShaderType();}
 
     IObject& GetOwner(){return m_Owner;}
@@ -280,7 +286,7 @@ private:
     }
     
     template<typename ResourceType>
-    IShaderVariable* GetResourceByName( const Char* Name );
+    IShaderResourceVariable* GetResourceByName( const Char* Name );
 
     template<typename THandleCB,
              typename THandleTexSRV,
