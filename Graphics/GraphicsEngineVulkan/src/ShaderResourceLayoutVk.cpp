@@ -93,9 +93,8 @@ static SHADER_RESOURCE_VARIABLE_TYPE GetShaderVariableType(SHADER_TYPE          
 
 ShaderResourceLayoutVk::~ShaderResourceLayoutVk()
 {
-    auto* Resources = reinterpret_cast<VkResource*>(m_ResourceBuffer.get());
     for (Uint32 r=0; r < GetTotalResourceCount(); ++r)
-        Resources[r].~VkResource();
+        GetResource(r).~VkResource();
 
     for(Uint32 s=0; s < m_NumImmutableSamplers; ++s)
         GetImmutableSampler(s).~ImmutableSamplerPtrType();
@@ -116,14 +115,17 @@ void ShaderResourceLayoutVk::AllocateMemory(std::shared_ptr<const SPIRVShaderRes
     const Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
     const auto ShaderType = m_pResources->GetShaderType();
     const auto* CombinedSamplerSuffix = m_pResources->GetCombinedSamplerSuffix();
-    // Count number of resources to allocate all needed memory
+    // Count the number of resources to allocate all needed memory
     m_pResources->ProcessResources(
         [&](const SPIRVShaderResourceAttribs& ResAttribs, Uint32)
         {
             auto VarType = GetShaderVariableType(ShaderType, ResAttribs, ResourceLayoutDesc, CombinedSamplerSuffix);
             if (IsAllowedType(VarType, AllowedTypeBits))
             {
-                VERIFY( Uint32{m_NumResources[VarType]} + 1 <= Uint32{std::numeric_limits<Uint16>::max()}, "Number of resources exceeds max representable value");
+                // For immutable separate samplers we still allocate VkResource instances, but they are never used
+                // or exposed to the app
+
+                VERIFY( Uint32{m_NumResources[VarType]} + 1 <= Uint32{std::numeric_limits<Uint16>::max()}, "Number of resources exceeds maximum representable value");
                 ++m_NumResources[VarType];
             }
         }
@@ -134,11 +136,11 @@ void ShaderResourceLayoutVk::AllocateMemory(std::shared_ptr<const SPIRVShaderRes
     {
         TotalResources += m_NumResources[VarType];
     }
-    VERIFY(TotalResources <= Uint32{std::numeric_limits<Uint16>::max()}, "Total number of resources exceeds Uint16 max representable value" );
+    VERIFY(TotalResources <= Uint32{std::numeric_limits<Uint16>::max()}, "Total number of resources exceeds Uint16 maximum representable value" );
     m_NumResources[SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES] = static_cast<Uint16>(TotalResources);
 
     m_NumImmutableSamplers = 0;
-    for(Uint32 s=0; s < ResourceLayoutDesc.NumStaticSamplers; ++s)
+    for (Uint32 s=0; s < ResourceLayoutDesc.NumStaticSamplers; ++s)
     {
         const auto& StSamDesc = ResourceLayoutDesc.StaticSamplers[s];
         if ((StSamDesc.ShaderStages & ShaderType) != 0)
@@ -152,7 +154,7 @@ void ShaderResourceLayoutVk::AllocateMemory(std::shared_ptr<const SPIRVShaderRes
 
     auto* pRawMem = ALLOCATE(Allocator, "Raw memory buffer for shader resource layout resources", MemSize);
     m_ResourceBuffer = std::unique_ptr<void, STDDeleterRawMem<void> >(pRawMem, Allocator);
-    for(Uint32 s=0; s < m_NumImmutableSamplers; ++s)
+    for (Uint32 s=0; s < m_NumImmutableSamplers; ++s)
     {
         // We need to initialize immutable samplers
         auto& UninitializedImmutableSampler = GetImmutableSampler(s);
@@ -189,9 +191,9 @@ void ShaderResourceLayoutVk::InitializeStaticResourceLayout(std::shared_ptr<cons
             {
                 // Only search for the immutable sampler for combined image samplers and separate samplers
                 SrcImmutableSamplerInd = FindImmutableSampler(ShaderType, ResourceLayoutDesc, Attribs, CombinedSamplerSuffix);
+                // For immutable separate samplers we allocate VkResource instances, but it is never used
+                // or exposed to the app
             }
-
-            //TODO: how to handle static samplers?
 
             Uint32 Binding       = Attribs.Type;
             Uint32 DescriptorSet = 0;
@@ -218,6 +220,9 @@ void ShaderResourceLayoutVk::InitializeStaticResourceLayout(std::shared_ptr<cons
 
     StaticResourceCache.InitializeSets(GetRawAllocator(), 1, &StaticResCacheSize);
     InitializeResourceMemoryInCache(StaticResourceCache);
+#ifdef _DEBUG
+    StaticResourceCache.DbgVerifyResourceInitialization();
+#endif
 }
 
 void ShaderResourceLayoutVk::Initialize(IRenderDevice*                               pRenderDevice,
@@ -362,8 +367,8 @@ void ShaderResourceLayoutVk::Initialize(IRenderDevice*                          
         
         auto& ShaderSPIRV = SPIRVs[ShaderInd];
         PipelineLayout.AllocateResourceSlot(Attribs, VarType, vkImmutableSampler, Resources.GetShaderType(), DescriptorSet, Binding, CacheOffset, ShaderSPIRV);
-        VERIFY(DescriptorSet <= std::numeric_limits<decltype(VkResource::DescriptorSet)>::max(), "Descriptor set (", DescriptorSet, ") excceeds max representable value");
-        VERIFY(Binding <= std::numeric_limits<decltype(VkResource::Binding)>::max(), "Binding (", Binding, ") excceeds max representable value");
+        VERIFY(DescriptorSet <= std::numeric_limits<decltype(VkResource::DescriptorSet)>::max(), "Descriptor set (", DescriptorSet, ") excceeds maximum representable value");
+        VERIFY(Binding       <= std::numeric_limits<decltype(VkResource::Binding)>      ::max(), "Binding (",        Binding,       ") excceeds maximum representable value");
 
 #ifdef _DEBUG
         // Verify that bindings and cache offsets monotonically increase in every descriptor set
@@ -904,7 +909,7 @@ void ShaderResourceLayoutVk::InitializeStaticResources(const ShaderResourceLayou
             
             auto DstOffset = DstRes.CacheOffset + ArrInd;
             IDeviceObject* pCachedResource = DstResourceCache.GetDescriptorSet(DstRes.DescriptorSet).GetResource(DstOffset).pObject;
-            if(pCachedResource != pObject)
+            if (pCachedResource != pObject)
             {
                 VERIFY(pCachedResource == nullptr, "Static resource has already been initialized, and the resource to be assigned from the shader does not match previously assigned resource");
                 DstRes.BindResource(pObject, ArrInd, DstResourceCache);

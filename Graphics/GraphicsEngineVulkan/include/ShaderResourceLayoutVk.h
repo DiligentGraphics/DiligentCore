@@ -107,7 +107,7 @@ namespace Diligent
 {
 
 /// Diligent::ShaderResourceLayoutVk class
-// sizeof(ShaderResourceLayoutVk)==56 (MS compiler, x64) - TODO: verify
+// sizeof(ShaderResourceLayoutVk)==56 (MS compiler, x64)
 class ShaderResourceLayoutVk
 {
 public:
@@ -338,15 +338,16 @@ private:
         return reinterpret_cast<ImmutableSamplerPtrType*>(ResourceMemoryEnd)[n];
     }
 
-    const VulkanUtilities::VulkanLogicalDevice&         m_LogicalDevice;
-    std::unique_ptr<void, STDDeleterRawMem<void> >      m_ResourceBuffer;
+/* 0 */ const VulkanUtilities::VulkanLogicalDevice&         m_LogicalDevice;
+/* 8 */ std::unique_ptr<void, STDDeleterRawMem<void> >      m_ResourceBuffer;
 
-    // We must use shared_ptr to reference ShaderResources instance, because
-    // there may be multiple objects referencing the same set of resources
-    std::shared_ptr<const SPIRVShaderResources>         m_pResources;
+        // We must use shared_ptr to reference ShaderResources instance, because
+        // there may be multiple objects referencing the same set of resources
+/*24 */ std::shared_ptr<const SPIRVShaderResources>         m_pResources;
 
-    std::array<Uint16, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES+1>  m_NumResources = {};
-    Uint32 m_NumImmutableSamplers = 0;
+/*40 */ std::array<Uint16, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES+1>  m_NumResources = {};
+/*48 */ Uint32 m_NumImmutableSamplers = 0;
+/*56*/  // End of class
 };
 
 }

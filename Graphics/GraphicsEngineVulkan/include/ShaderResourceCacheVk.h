@@ -49,6 +49,7 @@
 // Descriptor set for static and mutable resources is assigned during cache initialization
 // Descriptor set for dynamic resources is assigned at every draw call
 
+#include <vector>
 #include "DescriptorPoolManager.h"
 #include "SPIRVShaderResources.h"
 
@@ -171,6 +172,7 @@ public:
 #ifdef _DEBUG
     // Only for debug purposes: indicates what types of resources are stored in the cache
     DbgCacheContentType DbgGetContentType()const{return m_DbgContentType;}
+    void DbgVerifyResourceInitialization()const;
 #endif
 
     template<bool VerifyOnly>
@@ -192,7 +194,9 @@ private:
 
 #ifdef _DEBUG
     // Only for debug purposes: indicates what types of resources are stored in the cache
-    const DbgCacheContentType m_DbgContentType;
+    const DbgCacheContentType      m_DbgContentType;
+    // Debug array that stores flags indicating if resources in the cache have been initialized
+    std::vector<std::vector<bool>> m_DbgInitializedResources;
 #endif
 };
 

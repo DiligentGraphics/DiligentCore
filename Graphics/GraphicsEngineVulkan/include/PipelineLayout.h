@@ -59,7 +59,7 @@ public:
 
     void AllocateResourceSlot(const SPIRVShaderResourceAttribs& ResAttribs, 
                               SHADER_RESOURCE_VARIABLE_TYPE     VariableType,
-                              VkSampler                         vkStaticSampler,
+                              VkSampler                         vkImmutableSampler,
                               SHADER_TYPE                       ShaderType, 
                               Uint32&                           DescriptorSet, 
                               Uint32&                           Binding,
@@ -189,7 +189,7 @@ private:
 
         void AllocateResourceSlot(const SPIRVShaderResourceAttribs& ResAttribs,
                                   SHADER_RESOURCE_VARIABLE_TYPE     VariableType,
-                                  VkSampler                         vkStaticSampler,
+                                  VkSampler                         vkImmutableSampler,
                                   SHADER_TYPE                       ShaderType,
                                   Uint32&                           DescriptorSet,
                                   Uint32&                           Binding, 

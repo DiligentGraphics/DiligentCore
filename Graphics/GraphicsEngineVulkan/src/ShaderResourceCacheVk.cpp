@@ -57,13 +57,16 @@ void ShaderResourceCacheVk::InitializeSets(IMemoryAllocator& MemAllocator, Uint3
     //  Ns = m_NumSets
 
     VERIFY(m_pAllocator == nullptr && m_pMemory == nullptr, "Cache already initialized");
-    m_pAllocator = &MemAllocator;
-    m_NumSets = NumSets;
+    m_pAllocator     = &MemAllocator;
+    m_NumSets        = NumSets;
     m_TotalResources = 0;
     for (Uint32 t=0; t < NumSets; ++t)
         m_TotalResources += SetSizes[t];
     auto MemorySize = NumSets * sizeof(DescriptorSet) + m_TotalResources * sizeof(Resource);
     VERIFY_EXPR(MemorySize == GetRequiredMemorySize(NumSets, SetSizes));
+#ifdef _DEBUG
+    m_DbgInitializedResources.resize(m_NumSets);
+#endif
     if (MemorySize > 0)
     {
         m_pMemory = ALLOCATE( *m_pAllocator, "Memory for shader resource cache data", MemorySize);
@@ -73,6 +76,9 @@ void ShaderResourceCacheVk::InitializeSets(IMemoryAllocator& MemAllocator, Uint3
         {
             new(&GetDescriptorSet(t)) DescriptorSet(SetSizes[t], SetSizes[t] > 0 ? pCurrResPtr : nullptr);
             pCurrResPtr += SetSizes[t];
+#ifdef _DEBUG
+            m_DbgInitializedResources[t].resize(SetSizes[t]);
+#endif
         }
         VERIFY_EXPR((char*)pCurrResPtr == (char*)m_pMemory + MemorySize);
     }
@@ -82,8 +88,24 @@ void ShaderResourceCacheVk::InitializeResources(Uint32 Set, Uint32 Offset, Uint3
 {
     auto& DescrSet = GetDescriptorSet(Set);
     for (Uint32 res = 0; res < ArraySize; ++res)
+    {
         new(&DescrSet.GetResource(Offset + res)) Resource{Type};
+#ifdef _DEBUG
+        m_DbgInitializedResources[Set][Offset + res] = true;
+#endif
+    }
 }
+
+#ifdef _DEBUG
+void ShaderResourceCacheVk::DbgVerifyResourceInitialization()const
+{
+    for (const auto &SetFlags : m_DbgInitializedResources)
+    {
+        for (auto ResInitialized : SetFlags)
+            VERIFY(ResInitialized, "Not all resources in the cache have been initialized. This is a bug.");
+    }
+}
+#endif
 
 ShaderResourceCacheVk::~ShaderResourceCacheVk()
 {

@@ -316,7 +316,7 @@ size_t PipelineLayout::DescriptorSetLayoutManager::GetHash()const
 
 void PipelineLayout::DescriptorSetLayoutManager::AllocateResourceSlot(const SPIRVShaderResourceAttribs& ResAttribs,
                                                                       SHADER_RESOURCE_VARIABLE_TYPE     VariableType,
-                                                                      VkSampler                         vkStaticSampler,
+                                                                      VkSampler                         vkImmutableSampler,
                                                                       SHADER_TYPE                       ShaderType,
                                                                       Uint32&                           DescriptorSet,
                                                                       Uint32&                           Binding,
@@ -336,15 +336,15 @@ void PipelineLayout::DescriptorSetLayoutManager::AllocateResourceSlot(const SPIR
     VkBinding.descriptorCount = ResAttribs.ArraySize;
     // There are no limitations on what combinations of stages can use a descriptor binding (13.2.1)
     VkBinding.stageFlags = ShaderTypeToVkShaderStageFlagBit(ShaderType);
-    if (vkStaticSampler != VK_NULL_HANDLE)
+    if (vkImmutableSampler != VK_NULL_HANDLE)
     {
         // If descriptorType is VK_DESCRIPTOR_TYPE_SAMPLER or VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, and 
         // descriptorCount is not 0 and pImmutableSamplers is not NULL, pImmutableSamplers must be a valid pointer 
         // to an array of descriptorCount valid VkSampler handles (13.2.1)
-        auto *pStaticSamplers = reinterpret_cast<VkSampler*>(ALLOCATE(m_MemAllocator, "Memory buffer for immutable samplers", sizeof(VkSampler) * VkBinding.descriptorCount));
+        auto *pImmutableSamplers = reinterpret_cast<VkSampler*>(ALLOCATE(m_MemAllocator, "Memory buffer for immutable samplers", sizeof(VkSampler) * VkBinding.descriptorCount));
         for(uint32_t s=0; s < VkBinding.descriptorCount; ++s)
-            pStaticSamplers[s] = vkStaticSampler;
-        VkBinding.pImmutableSamplers = pStaticSamplers;
+            pImmutableSamplers[s] = vkImmutableSampler;
+        VkBinding.pImmutableSamplers = pImmutableSamplers;
     }
     else
         VkBinding.pImmutableSamplers = nullptr;
@@ -366,7 +366,7 @@ void PipelineLayout::Release(RenderDeviceVkImpl *pDeviceVkImpl, Uint64 CommandQu
 
 void PipelineLayout::AllocateResourceSlot(const SPIRVShaderResourceAttribs& ResAttribs,
                                           SHADER_RESOURCE_VARIABLE_TYPE     VariableType,
-                                          VkSampler                         vkStaticSampler,
+                                          VkSampler                         vkImmutableSampler,
                                           SHADER_TYPE                       ShaderType,
                                           Uint32&                           DescriptorSet, // Output parameter
                                           Uint32&                           Binding, // Output parameter
@@ -374,9 +374,9 @@ void PipelineLayout::AllocateResourceSlot(const SPIRVShaderResourceAttribs& ResA
                                           std::vector<uint32_t>&            SPIRV)
 {
     VERIFY( (ResAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SampledImage || 
-             ResAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler) || vkStaticSampler == VK_NULL_HANDLE,
+             ResAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler) || vkImmutableSampler == VK_NULL_HANDLE,
             "Immutable sampler should only be specified for combined image samplers or separate samplers");
-    m_LayoutMgr.AllocateResourceSlot(ResAttribs, VariableType,vkStaticSampler, ShaderType, DescriptorSet, Binding, OffsetInCache);
+    m_LayoutMgr.AllocateResourceSlot(ResAttribs, VariableType ,vkImmutableSampler, ShaderType, DescriptorSet, Binding, OffsetInCache);
     SPIRV[ResAttribs.BindingDecorationOffset] = Binding;
     SPIRV[ResAttribs.DescriptorSetDecorationOffset] = DescriptorSet;
 }
