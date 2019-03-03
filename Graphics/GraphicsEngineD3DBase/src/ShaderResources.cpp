@@ -26,9 +26,29 @@
 #include "StringTools.h"
 #include "ShaderResources.h"
 #include "HashUtils.h"
+#include "ShaderResourceVariableBase.h"
 
 namespace Diligent
 {
+
+SHADER_RESOURCE_VARIABLE_TYPE D3DShaderResourceAttribs::FindVariableType(SHADER_TYPE                       ShaderType,
+                                                                         const PipelineResourceLayoutDesc& ResourceLayoutDesc,
+                                                                         const char*                       CombinedSamplerSuffix)const
+{
+    if (GetInputType() == D3D_SIT_SAMPLER)
+    {
+        // Only use CombinedSamplerSuffix when looking for the sampler variable type
+        return GetShaderVariableType(ShaderType, ResourceLayoutDesc.DefaultVariableType, ResourceLayoutDesc.Variables, ResourceLayoutDesc.NumVariables,
+                                     [&](const char* VarName)
+                                     {
+                                         return StreqSuff(Name, VarName, CombinedSamplerSuffix);
+                                     });
+    }
+    else
+    {
+        return GetShaderVariableType(ShaderType, Name, ResourceLayoutDesc);
+    }
+}
 
 ShaderResources::~ShaderResources()
 {
@@ -95,6 +115,64 @@ ShaderResources::ShaderResources(SHADER_TYPE ShaderType):
     m_ShaderType(ShaderType)
 {
 }
+
+
+D3DShaderResourceCounters ShaderResources::CountResources(const PipelineResourceLayoutDesc&    ResourceLayout,
+                                                          SHADER_TYPE                          ShaderStage,
+                                                          const char*                          CombinedSamplerSuffix,
+                                                          const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes,
+                                                          Uint32                               NumAllowedTypes)const noexcept
+{
+    auto AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
+
+    D3DShaderResourceCounters Counters;
+    ProcessResources(
+        [&](const D3DShaderResourceAttribs& CB, Uint32)
+        {
+            auto VarType = CB.FindVariableType(ShaderStage, ResourceLayout, CombinedSamplerSuffix);
+            if (IsAllowedType(VarType, AllowedTypeBits))
+                ++Counters.NumCBs;
+        },
+        [&](const D3DShaderResourceAttribs& Sam, Uint32)
+        {
+            auto VarType = Sam.FindVariableType(ShaderStage, ResourceLayout, CombinedSamplerSuffix);
+            if (IsAllowedType(VarType, AllowedTypeBits))
+            {
+                // Skip static samplers
+                //if (!Sam.IsStaticSampler())
+                    ++Counters.NumSamplers;
+            }
+        },
+        [&](const D3DShaderResourceAttribs& TexSRV, Uint32)
+        {
+            auto VarType = TexSRV.FindVariableType(ShaderStage, ResourceLayout, CombinedSamplerSuffix);
+            if (IsAllowedType(VarType, AllowedTypeBits))
+                ++Counters.NumTexSRVs;
+        },
+        [&](const D3DShaderResourceAttribs& TexUAV, Uint32)
+        {
+            auto VarType = TexUAV.FindVariableType(ShaderStage, ResourceLayout, CombinedSamplerSuffix);
+            if (IsAllowedType(VarType, AllowedTypeBits))
+                ++Counters.NumTexUAVs;
+        },
+        [&](const D3DShaderResourceAttribs& BufSRV, Uint32)
+        {
+            auto VarType = BufSRV.FindVariableType(ShaderStage, ResourceLayout, CombinedSamplerSuffix);
+            if (IsAllowedType(VarType, AllowedTypeBits))
+                ++Counters.NumBufSRVs;
+        },
+        [&](const D3DShaderResourceAttribs& BufUAV, Uint32)
+        {
+            auto VarType = BufUAV.FindVariableType(ShaderStage, ResourceLayout, CombinedSamplerSuffix);
+            if (IsAllowedType(VarType, AllowedTypeBits))
+                ++Counters.NumBufUAVs;
+        }
+    );
+
+    return Counters;
+}
+
+
 
 Uint32 ShaderResources::FindAssignedSamplerId(const D3DShaderResourceAttribs& TexSRV, const char* SamplerSuffix)const
 {

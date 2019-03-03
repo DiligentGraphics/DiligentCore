@@ -62,6 +62,7 @@
 #include "HashUtils.h"
 #include "StringPool.h"
 #include "D3DShaderResourceLoader.h"
+#include "PipelineState.h"
 
 namespace Diligent
 {
@@ -223,6 +224,10 @@ public:
                SamplerOrTexSRVId  == Attribs.SamplerOrTexSRVId;
     }
 
+    SHADER_RESOURCE_VARIABLE_TYPE FindVariableType(SHADER_TYPE                       ShaderType,
+                                                   const PipelineResourceLayoutDesc& ResourceLayoutDesc,
+                                                   const char*                       CombinedSamplerSuffix)const;
+
     size_t GetHash()const
     {
         return ComputeHash(BindPoint, BindCount, InputType, SRVDimension, SamplerOrTexSRVId);
@@ -317,6 +322,12 @@ public:
     const char* GetCombinedSamplerSuffix()       const { return m_SamplerSuffix; }
 
     size_t GetHash()const;
+
+    D3DShaderResourceCounters CountResources(const PipelineResourceLayoutDesc&    ResourceLayout,
+                                             SHADER_TYPE                          ShaderStage,
+                                             const char*                          CombinedSamplerSuffix,
+                                             const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes,
+                                             Uint32                               NumAllowedTypes)const noexcept;
 
 protected:
     template<typename D3D_SHADER_DESC, 

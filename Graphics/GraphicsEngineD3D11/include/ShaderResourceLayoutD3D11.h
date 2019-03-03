@@ -53,9 +53,10 @@ public:
     ShaderResourceLayoutD3D11             (      ShaderResourceLayoutD3D11&&) = default;
     ShaderResourceLayoutD3D11& operator = (      ShaderResourceLayoutD3D11&&) = delete;
 
-    static size_t GetRequiredMemorySize(const ShaderResourcesD3D11& SrcResources, 
-                                        const SHADER_RESOURCE_VARIABLE_TYPE* VarTypes, 
-                                        Uint32                      NumVarTypes);
+    static size_t GetRequiredMemorySize(const ShaderResourcesD3D11&          SrcResources, 
+                                        const PipelineResourceLayoutDesc&    ResourceLayout,
+                                        const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes,
+                                        Uint32                               NumAllowedTypes);
 
     void Initialize(std::shared_ptr<const ShaderResourcesD3D11> pSrcResources,
                     const SHADER_RESOURCE_VARIABLE_TYPE*                 VarTypes, 
@@ -198,6 +199,12 @@ public:
         }
 
         __forceinline bool IsBound(Uint32 ArrayIndex)const;
+        
+        bool IsStaticSampler()const
+        {
+            UNEXPECTED("Not implemented");
+            return false;
+        }
     };
 
     // dbgResourceCache is only used for sanity check and as a remainder that the resource cache must be alive
