@@ -67,33 +67,35 @@
 namespace Diligent
 {
 
+// sizeof(D3DShaderResourceAttribs) == 16 (x64)
 struct D3DShaderResourceAttribs 
 {
-    const char* const Name;
+/* 0 */ const char* const Name;
 
-    const Uint16 BindPoint;
-    const Uint16 BindCount;
+/* 8 */ const Uint16 BindPoint;
+/*10 */ const Uint16 BindCount;
 
 private:
     //            4               4                 24           
     // bit | 0  1  2  3   |  4  5  6  7  |  8   9  10   ...   31  |   
     //     |              |              |                        |
     //     |  InputType   |   SRV Dim    | SamplerOrTexSRVIdBits  |
-    static constexpr const Uint32 ShaderInputTypeBits    = 4;
-    static constexpr const Uint32 SRVDimBits             = 4;
-    static constexpr const Uint32 SamplerOrTexSRVIdBits = 24;
+    static constexpr const Uint32 ShaderInputTypeBits    =  4;
+    static constexpr const Uint32 SRVDimBits             =  4;
+    static constexpr const Uint32 SamplerOrTexSRVIdBits  = 24;
     static_assert(ShaderInputTypeBits + SRVDimBits + SamplerOrTexSRVIdBits == 32, "Attributes are better be packed into 32 bits");
 
     static_assert(D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER < (1 << ShaderInputTypeBits), "Not enough bits to represent D3D_SHADER_INPUT_TYPE");
     static_assert(D3D_SRV_DIMENSION_BUFFEREX            < (1 << SRVDimBits),          "Not enough bits to represent D3D_SRV_DIMENSION");
 
-    // We need to use Uint32 instead of the actual type for reliability and correctness.
-    // There originally was a problem when the type of InputType was D3D_SHADER_INPUT_TYPE:
-    // the value of D3D_SIT_UAV_RWBYTEADDRESS (8) was interpreted as -8 (as the underlying enum type 
-    // is signed) causing errors
-    const Uint32  InputType          : ShaderInputTypeBits;     // Max value: D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER == 11
-    const Uint32  SRVDimension       : SRVDimBits;              // Max value: D3D_SRV_DIMENSION_BUFFEREX == 11
-          Uint32  SamplerOrTexSRVId  : SamplerOrTexSRVIdBits;   // Max value: 1048575
+         // We need to use Uint32 instead of the actual type for reliability and correctness.
+         // There originally was a problem when the type of InputType was D3D_SHADER_INPUT_TYPE:
+         // the value of D3D_SIT_UAV_RWBYTEADDRESS (8) was interpreted as -8 (as the underlying enum type 
+         // is signed) causing errors
+/*12.0*/ const Uint32  InputType          : ShaderInputTypeBits;     // Max value: D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER == 11
+/*12.4*/ const Uint32  SRVDimension       : SRVDimBits;              // Max value: D3D_SRV_DIMENSION_BUFFEREX == 11
+/*13.0*/       Uint32  SamplerOrTexSRVId  : SamplerOrTexSRVIdBits;   // Max value: 2^24-1
+/*16  */ // End of structure
 
 public:
     static constexpr const Uint32 InvalidSamplerId = (1 << SamplerOrTexSRVIdBits) - 1;
@@ -224,10 +226,6 @@ public:
                SamplerOrTexSRVId  == Attribs.SamplerOrTexSRVId;
     }
 
-    SHADER_RESOURCE_VARIABLE_TYPE FindVariableType(SHADER_TYPE                       ShaderType,
-                                                   const PipelineResourceLayoutDesc& ResourceLayoutDesc,
-                                                   const char*                       CombinedSamplerSuffix)const;
-
     size_t GetHash()const
     {
         return ComputeHash(BindPoint, BindCount, InputType, SRVDimension, SamplerOrTexSRVId);
@@ -240,33 +238,37 @@ static_assert(sizeof(D3DShaderResourceAttribs) == sizeof(void*) + sizeof(Uint32)
 class ShaderResources
 {
 public:
-    ShaderResources(SHADER_TYPE ShaderType);
+    ShaderResources(SHADER_TYPE ShaderType)noexcept :
+        m_ShaderType(ShaderType)
+    {
+    }
 
-    ShaderResources             (const ShaderResources&) = delete;
-    ShaderResources             (ShaderResources&&)      = delete;
-    ShaderResources& operator = (const ShaderResources&) = delete;
-    ShaderResources& operator = (ShaderResources&&)      = delete;
+    ShaderResources             (const ShaderResources&)  = delete;
+    ShaderResources             (      ShaderResources&&) = delete;
+    ShaderResources& operator = (const ShaderResources&)  = delete;
+    ShaderResources& operator = (      ShaderResources&&) = delete;
     
     ~ShaderResources();
     
-    Uint32 GetNumCBs()        const noexcept{ return (m_TexSRVOffset   - 0);                }
-    Uint32 GetNumTexSRV()     const noexcept{ return (m_TexUAVOffset   - m_TexSRVOffset);   }
-    Uint32 GetNumTexUAV()     const noexcept{ return (m_BufSRVOffset   - m_TexUAVOffset);   }
-    Uint32 GetNumBufSRV()     const noexcept{ return (m_BufUAVOffset   - m_BufSRVOffset);   }
-    Uint32 GetNumBufUAV()     const noexcept{ return (m_SamplersOffset - m_BufUAVOffset);   }
-    Uint32 GetNumSamplers()   const noexcept{ return (m_TotalResources - m_SamplersOffset); }
-    Uint32 GetTotalResources()const noexcept{ return  m_TotalResources;                     }
+    Uint32 GetNumCBs()        const noexcept { return (m_TexSRVOffset   - 0);                }
+    Uint32 GetNumTexSRV()     const noexcept { return (m_TexUAVOffset   - m_TexSRVOffset);   }
+    Uint32 GetNumTexUAV()     const noexcept { return (m_BufSRVOffset   - m_TexUAVOffset);   }
+    Uint32 GetNumBufSRV()     const noexcept { return (m_BufUAVOffset   - m_BufSRVOffset);   }
+    Uint32 GetNumBufUAV()     const noexcept { return (m_SamplersOffset - m_BufUAVOffset);   }
+    Uint32 GetNumSamplers()   const noexcept { return (m_TotalResources - m_SamplersOffset); }
+    Uint32 GetTotalResources()const noexcept { return  m_TotalResources;                     }
 
-    const D3DShaderResourceAttribs& GetCB     (Uint32 n)const noexcept{ return GetResAttribs(n, GetNumCBs(),                   0); }
-    const D3DShaderResourceAttribs& GetTexSRV (Uint32 n)const noexcept{ return GetResAttribs(n, GetNumTexSRV(),   m_TexSRVOffset); }
-    const D3DShaderResourceAttribs& GetTexUAV (Uint32 n)const noexcept{ return GetResAttribs(n, GetNumTexUAV(),   m_TexUAVOffset); }
-    const D3DShaderResourceAttribs& GetBufSRV (Uint32 n)const noexcept{ return GetResAttribs(n, GetNumBufSRV(),   m_BufSRVOffset); }
-    const D3DShaderResourceAttribs& GetBufUAV (Uint32 n)const noexcept{ return GetResAttribs(n, GetNumBufUAV(),   m_BufUAVOffset); }
-    const D3DShaderResourceAttribs& GetSampler(Uint32 n)const noexcept{ return GetResAttribs(n, GetNumSamplers(), m_SamplersOffset); }
+    const D3DShaderResourceAttribs& GetCB     (Uint32 n)const noexcept { return GetResAttribs(n, GetNumCBs(),                   0);   }
+    const D3DShaderResourceAttribs& GetTexSRV (Uint32 n)const noexcept { return GetResAttribs(n, GetNumTexSRV(),   m_TexSRVOffset);   }
+    const D3DShaderResourceAttribs& GetTexUAV (Uint32 n)const noexcept { return GetResAttribs(n, GetNumTexUAV(),   m_TexUAVOffset);   }
+    const D3DShaderResourceAttribs& GetBufSRV (Uint32 n)const noexcept { return GetResAttribs(n, GetNumBufSRV(),   m_BufSRVOffset);   }
+    const D3DShaderResourceAttribs& GetBufUAV (Uint32 n)const noexcept { return GetResAttribs(n, GetNumBufUAV(),   m_BufUAVOffset);   }
+    const D3DShaderResourceAttribs& GetSampler(Uint32 n)const noexcept { return GetResAttribs(n, GetNumSamplers(), m_SamplersOffset); }
 
     SHADER_TYPE GetShaderType()const noexcept{return m_ShaderType;}
 
-    // Processes only resources listed in AllowedVarTypes
+    ShaderResourceDesc GetShaderResourceDesc(Uint32 Index)const;
+
     template<typename THandleCB,
              typename THandleSampler,
              typename THandleTexSRV,
@@ -320,14 +322,22 @@ public:
     bool        IsCompatibleWith(const ShaderResources& Resources) const;
     bool        IsUsingCombinedTextureSamplers() const { return m_SamplerSuffix != nullptr; }
     const char* GetCombinedSamplerSuffix()       const { return m_SamplerSuffix; }
+    const Char* GetShaderName()                  const { return m_ShaderName; }
 
     size_t GetHash()const;
 
+    SHADER_RESOURCE_VARIABLE_TYPE FindVariableType(const D3DShaderResourceAttribs&   ResourceAttribs,
+                                                   const PipelineResourceLayoutDesc& ResourceLayout)const;
+
+    Int32 FindStaticSampler(const D3DShaderResourceAttribs&   ResourceAttribs,
+                            const PipelineResourceLayoutDesc& ResourceLayoutDesc)const;
+
     D3DShaderResourceCounters CountResources(const PipelineResourceLayoutDesc&    ResourceLayout,
-                                             SHADER_TYPE                          ShaderStage,
-                                             const char*                          CombinedSamplerSuffix,
                                              const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes,
                                              Uint32                               NumAllowedTypes)const noexcept;
+#ifdef DEVELOPMENT
+    void DvpVerifyResourceLayout(const PipelineResourceLayoutDesc& ResourceLayout)const;
+#endif
 
 protected:
     template<typename D3D_SHADER_DESC, 
@@ -373,7 +383,8 @@ private:
     std::unique_ptr< void, STDDeleterRawMem<void> > m_MemoryBuffer;
 
     StringPool  m_ResourceNames;
-    const char* m_SamplerSuffix = nullptr; // The suffix is put into the m_ResourceNames
+    const char* m_SamplerSuffix = nullptr; // The suffix and the shader name 
+    const char* m_ShaderName    = nullptr; // are put into the m_ResourceNames
 
     // Offsets in elements of D3DShaderResourceAttribs
     typedef Uint16 OffsetType;
@@ -384,7 +395,7 @@ private:
     OffsetType m_SamplersOffset = 0;
     OffsetType m_TotalResources = 0;
 
-    SHADER_TYPE m_ShaderType = SHADER_TYPE_UNKNOWN;
+    const SHADER_TYPE m_ShaderType;
 };
 
 
@@ -403,6 +414,9 @@ void ShaderResources::Initialize(ID3DBlob*           pShaderByteCode,
 
         [&](const D3DShaderResourceCounters& ResCounters, size_t ResourceNamesPoolSize)
         {
+            VERIFY_EXPR(ShaderName != nullptr);
+            ResourceNamesPoolSize += strlen(ShaderName)+1;
+
             if (CombinedSamplerSuffix != nullptr)
                 ResourceNamesPoolSize += strlen(CombinedSamplerSuffix)+1;
 
@@ -459,6 +473,8 @@ void ShaderResources::Initialize(ID3DBlob*           pShaderByteCode,
             NewResHandler.OnNewTexSRV(*pNewTexSRV);
         });
 
+    m_ShaderName = m_ResourceNames.CopyString(ShaderName);
+
     if (CombinedSamplerSuffix != nullptr)
     {
         m_SamplerSuffix = m_ResourceNames.CopyString(CombinedSamplerSuffix);
@@ -504,4 +520,3 @@ namespace std
         }
     };
 }
-

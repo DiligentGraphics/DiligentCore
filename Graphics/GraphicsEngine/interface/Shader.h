@@ -241,7 +241,7 @@ public:
     virtual Uint32 GetResourceCount()const = 0;
 
     /// Returns the pointer to the array of shader resources
-    virtual const ShaderResourceDesc* GetResources()const = 0;
+    virtual ShaderResourceDesc GetResource(Uint32 Index)const = 0;
 };
 
 }

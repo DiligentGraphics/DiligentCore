@@ -28,7 +28,7 @@
 
 
 //  ShaderResourcesD3D11 are created by ShaderD3D11Impl instances. They are then referenced by ShaderResourceLayoutD3D11 objects, which are in turn
-//  created by instances of ShaderResourceBindingsD3D11Impl (and ShaderD3D11Impl too)
+//  created by instances of ShaderResourceBindingsD3D11Impl and PipelineStateD3D11Impl
 //
 //    _________________
 //   |                 |
@@ -64,13 +64,17 @@
 //   |                 |  shared_ptr    |                      | shared_ptr|    |                           |      |                                |
 //   | ShaderD3D11Impl |--------------->| ShaderResourcesD3D11 |<---------------| ShaderResourceLayoutD3D11 |<-----| ShaderResourceBindingD3D11Impl |
 //   |_________________|                |______________________|           |    |___________________________|      |________________________________|
-//              |                                   A                      |
-//              V                                   |                      |
-//   ____<m_StaticResLayout>____                    |                      |     ____<m_pResourceLayouts>___        ________________________________ 
+//                                                  A                      |
+//                                                  |                      |
+//   _____<StaticResLayout>_____                    |                      |     ____<m_pResourceLayouts>___        ________________________________ 
 //  |                           |   shared_ptr      |                      |    |                           |      |                                |
 //  | ShaderResourceLayoutD3D11 |-------------------                        ----| ShaderResourceLayoutD3D11 |<-----| ShaderResourceBindingD3D11Impl |
 //  |___________________________|                                               |___________________________|      |________________________________|
-//
+//              A
+//   ___________|______________
+//  |                          |
+//  |  PipelineStateD3D11Impl  |
+//  |__________________________|
 //
 
 #include <vector>
@@ -111,8 +115,7 @@ public:
                                      class ShaderResourceCacheD3D11& ResourceCache)const;
 #endif
 
-    const Char* GetShaderName() const { return m_ShaderName; }
-    
+   
 private:
     using MaxBindPointType = Int8;
 
@@ -126,10 +129,6 @@ private:
     static_assert(D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT-1      <= MaxAllowedBindPoint, "Not enough bits to represent max SRV slot");
     static_assert(D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT-1             <= MaxAllowedBindPoint, "Not enough bits to represent max Sampler slot");
     static_assert(D3D11_PS_CS_UAV_REGISTER_COUNT-1                    <= MaxAllowedBindPoint, "Not enough bits to represent max UAV slot");
-
-    // ShaderResourcesD3D11 is part of the ShaderD3D11Impl object, so we can simply
-    // reference shader name without the need to copy it
-    const Char* const m_ShaderName;
 };
 
 }

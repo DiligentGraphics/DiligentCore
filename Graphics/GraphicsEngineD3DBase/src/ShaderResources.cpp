@@ -31,25 +31,6 @@
 namespace Diligent
 {
 
-SHADER_RESOURCE_VARIABLE_TYPE D3DShaderResourceAttribs::FindVariableType(SHADER_TYPE                       ShaderType,
-                                                                         const PipelineResourceLayoutDesc& ResourceLayoutDesc,
-                                                                         const char*                       CombinedSamplerSuffix)const
-{
-    if (GetInputType() == D3D_SIT_SAMPLER)
-    {
-        // Only use CombinedSamplerSuffix when looking for the sampler variable type
-        return GetShaderVariableType(ShaderType, ResourceLayoutDesc.DefaultVariableType, ResourceLayoutDesc.Variables, ResourceLayoutDesc.NumVariables,
-                                     [&](const char* VarName)
-                                     {
-                                         return StreqSuff(Name, VarName, CombinedSamplerSuffix);
-                                     });
-    }
-    else
-    {
-        return GetShaderVariableType(ShaderType, Name, ResourceLayoutDesc);
-    }
-}
-
 ShaderResources::~ShaderResources()
 {
     for(Uint32 n=0; n < GetNumCBs(); ++n)
@@ -85,7 +66,7 @@ void ShaderResources::AllocateMemory(IMemoryAllocator&                Allocator,
         return Offset;
     };
 
-    auto CBOffset    = AdvanceOffset(ResCounters.NumCBs);       CBOffset; // To suppress warning
+    auto CBOffset    = AdvanceOffset(ResCounters.NumCBs);       (void)CBOffset; // To suppress warning
     m_TexSRVOffset   = AdvanceOffset(ResCounters.NumTexSRVs);
     m_TexUAVOffset   = AdvanceOffset(ResCounters.NumTexUAVs);
     m_BufSRVOffset   = AdvanceOffset(ResCounters.NumBufSRVs);
@@ -111,15 +92,41 @@ void ShaderResources::AllocateMemory(IMemoryAllocator&                Allocator,
     }    
 }
 
-ShaderResources::ShaderResources(SHADER_TYPE ShaderType):
-    m_ShaderType(ShaderType)
+SHADER_RESOURCE_VARIABLE_TYPE ShaderResources::FindVariableType(const D3DShaderResourceAttribs&   ResourceAttribs,
+                                                                const PipelineResourceLayoutDesc& ResourceLayout)const
 {
+    if (ResourceAttribs.GetInputType() == D3D_SIT_SAMPLER)
+    {
+        // Only use CombinedSamplerSuffix when looking for the sampler variable type
+        return GetShaderVariableType(m_ShaderType, ResourceLayout.DefaultVariableType, ResourceLayout.Variables, ResourceLayout.NumVariables,
+                                     [&](const char* VarName)
+                                     {
+                                         return StreqSuff(ResourceAttribs.Name, VarName, m_SamplerSuffix);
+                                     });
+    }
+    else
+    {
+        return GetShaderVariableType(m_ShaderType, ResourceAttribs.Name, ResourceLayout);
+    }
+}
+
+Int32 ShaderResources::FindStaticSampler(const D3DShaderResourceAttribs&   ResourceAttribs,
+                                         const PipelineResourceLayoutDesc& ResourceLayoutDesc)const
+{
+    VERIFY(ResourceAttribs.GetInputType() == D3D_SIT_SAMPLER, "Sampler is expected");
+
+    for (Uint32 s=0; s < ResourceLayoutDesc.NumStaticSamplers; ++s)
+    {
+        const auto& StSam = ResourceLayoutDesc.StaticSamplers[s];
+        if ( ((StSam.ShaderStages & m_ShaderType) != 0) && StreqSuff(ResourceAttribs.Name, StSam.SamplerOrTextureName, m_SamplerSuffix) )
+            return s;
+    }
+
+    return -1;
 }
 
 
 D3DShaderResourceCounters ShaderResources::CountResources(const PipelineResourceLayoutDesc&    ResourceLayout,
-                                                          SHADER_TYPE                          ShaderStage,
-                                                          const char*                          CombinedSamplerSuffix,
                                                           const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes,
                                                           Uint32                               NumAllowedTypes)const noexcept
 {
@@ -129,41 +136,37 @@ D3DShaderResourceCounters ShaderResources::CountResources(const PipelineResource
     ProcessResources(
         [&](const D3DShaderResourceAttribs& CB, Uint32)
         {
-            auto VarType = CB.FindVariableType(ShaderStage, ResourceLayout, CombinedSamplerSuffix);
+            auto VarType = FindVariableType(CB, ResourceLayout);
             if (IsAllowedType(VarType, AllowedTypeBits))
                 ++Counters.NumCBs;
         },
         [&](const D3DShaderResourceAttribs& Sam, Uint32)
         {
-            auto VarType = Sam.FindVariableType(ShaderStage, ResourceLayout, CombinedSamplerSuffix);
+            auto VarType = FindVariableType(Sam, ResourceLayout);
             if (IsAllowedType(VarType, AllowedTypeBits))
-            {
-                // Skip static samplers
-                //if (!Sam.IsStaticSampler())
                     ++Counters.NumSamplers;
-            }
         },
         [&](const D3DShaderResourceAttribs& TexSRV, Uint32)
         {
-            auto VarType = TexSRV.FindVariableType(ShaderStage, ResourceLayout, CombinedSamplerSuffix);
+            auto VarType = FindVariableType(TexSRV, ResourceLayout);
             if (IsAllowedType(VarType, AllowedTypeBits))
                 ++Counters.NumTexSRVs;
         },
         [&](const D3DShaderResourceAttribs& TexUAV, Uint32)
         {
-            auto VarType = TexUAV.FindVariableType(ShaderStage, ResourceLayout, CombinedSamplerSuffix);
+            auto VarType = FindVariableType(TexUAV, ResourceLayout);
             if (IsAllowedType(VarType, AllowedTypeBits))
                 ++Counters.NumTexUAVs;
         },
         [&](const D3DShaderResourceAttribs& BufSRV, Uint32)
         {
-            auto VarType = BufSRV.FindVariableType(ShaderStage, ResourceLayout, CombinedSamplerSuffix);
+            auto VarType = FindVariableType(BufSRV, ResourceLayout);
             if (IsAllowedType(VarType, AllowedTypeBits))
                 ++Counters.NumBufSRVs;
         },
         [&](const D3DShaderResourceAttribs& BufUAV, Uint32)
         {
-            auto VarType = BufUAV.FindVariableType(ShaderStage, ResourceLayout, CombinedSamplerSuffix);
+            auto VarType = FindVariableType(BufUAV, ResourceLayout);
             if (IsAllowedType(VarType, AllowedTypeBits))
                 ++Counters.NumBufUAVs;
         }
@@ -172,6 +175,82 @@ D3DShaderResourceCounters ShaderResources::CountResources(const PipelineResource
     return Counters;
 }
 
+#ifdef DEVELOPMENT
+void ShaderResources::DvpVerifyResourceLayout(const PipelineResourceLayoutDesc& ResourceLayout)const
+{
+    const auto UseCombinedTextureSamplers = IsUsingCombinedTextureSamplers();
+    for (Uint32 v = 0; v < ResourceLayout.NumVariables; ++v)
+    {
+        const auto& VarDesc = ResourceLayout.Variables[v];
+        if (VarDesc.ShaderStages == SHADER_TYPE_UNKNOWN)
+        {
+            LOG_WARNING_MESSAGE("No allowed shader stages are specified for ", GetShaderVariableTypeLiteralName(VarDesc.Type), " variable '", VarDesc.Name, "'.");
+            continue;
+        }
+
+        if( (VarDesc.ShaderStages & m_ShaderType) == 0)
+            continue;
+
+        bool VariableFound = false;
+        for (Uint32 n=0; n < m_TotalResources && !VariableFound; ++n)
+        {
+            const auto& Res = GetResAttribs(n, m_TotalResources, 0);
+
+            // Skip samplers if combined texture samplers are used as 
+            // in this case they are not treated as independent variables
+            if (UseCombinedTextureSamplers && Res.GetInputType() == D3D_SIT_SAMPLER)
+                continue;
+
+            VariableFound = (strcmp(Res.Name, VarDesc.Name) == 0);
+        }
+
+        if(!VariableFound)
+        {
+            LOG_WARNING_MESSAGE("Variable '", VarDesc.Name, "' is not found in shader '", m_ShaderName, '\'');
+        }
+    }
+
+    for (Uint32 s = 0; s < ResourceLayout.NumStaticSamplers; ++s)
+    {
+        const auto& StSamDesc = ResourceLayout.StaticSamplers[s];
+        if (StSamDesc.ShaderStages == SHADER_TYPE_UNKNOWN)
+        {
+            LOG_WARNING_MESSAGE("No allowed shader stages are specified for static sampler '", StSamDesc.SamplerOrTextureName, "'.");
+            continue;
+        }
+
+        if ( (StSamDesc.ShaderStages & m_ShaderType) == 0)
+            continue;
+
+        const auto* TexOrSamName = StSamDesc.SamplerOrTextureName;
+
+        if (UseCombinedTextureSamplers)
+        {
+            bool TextureFound = false;
+            for(Uint32 n=0; n < GetNumTexSRV() && !TextureFound; ++n)
+            {
+                const auto& TexSRV = GetTexSRV(n);
+                TextureFound = (strcmp(TexSRV.Name, TexOrSamName) == 0);
+            }
+            if (!TextureFound)
+            {
+                LOG_WARNING_MESSAGE("Static sampler specifies a texture '", TexOrSamName, "' that is not found in shader '", m_ShaderName, '\'');
+            }
+        }
+        else
+        {
+            bool SamplerFound = false;
+            for(Uint32 n=0; n < GetNumSamplers() && !SamplerFound; ++n)
+            {
+                const auto& Sampler = GetSampler(n);
+                SamplerFound = (strcmp(Sampler.Name, TexOrSamName) == 0);
+            }
+            if (!SamplerFound)
+                LOG_WARNING_MESSAGE("Static sampler '", TexOrSamName, "' is not found in shader '", m_ShaderName, '\'');
+        }
+    }
+}
+#endif
 
 
 Uint32 ShaderResources::FindAssignedSamplerId(const D3DShaderResourceAttribs& TexSRV, const char* SamplerSuffix)const
@@ -237,35 +316,66 @@ bool ShaderResources::IsCompatibleWith(const ShaderResources &Res)const
     return IsCompatible;
 }
 
+ShaderResourceDesc ShaderResources::GetShaderResourceDesc(Uint32 Index)const
+{
+    DEV_CHECK_ERR(Index < m_TotalResources, "Resource index (", Index, ") is out of range");
+    ShaderResourceDesc ResourceDesc;
+    if (Index < m_TotalResources)
+    {
+        const auto& Res = GetResAttribs(Index, 0, m_TotalResources);
+        ResourceDesc.Name      = Res.Name;
+        ResourceDesc.ArraySize = Res.BindCount;
+        switch(Res.GetInputType())
+        {
+            case D3D_SIT_CBUFFER:
+                ResourceDesc.Type = SHADER_RESOURCE_TYPE_CONSTANT_BUFFER;
+            break;
+
+            case D3D_SIT_TBUFFER:
+                UNSUPPORTED( "TBuffers are not supported" ); 
+                ResourceDesc.Type = SHADER_RESOURCE_TYPE_UNKNOWN;
+            break;
+
+            case D3D_SIT_TEXTURE:
+                ResourceDesc.Type = (Res.GetSRVDimension() == D3D_SRV_DIMENSION_BUFFER ? SHADER_RESOURCE_TYPE_BUFFER_SRV : SHADER_RESOURCE_TYPE_TEXTURE_SRV);
+            break;
+
+            case D3D_SIT_SAMPLER:
+                ResourceDesc.Type = SHADER_RESOURCE_TYPE_SAMPLER;
+            break;
+
+            case D3D_SIT_UAV_RWTYPED:
+                ResourceDesc.Type = (Res.GetSRVDimension() == D3D_SRV_DIMENSION_BUFFER ? SHADER_RESOURCE_TYPE_BUFFER_UAV : SHADER_RESOURCE_TYPE_TEXTURE_UAV);
+            break;
+
+            case D3D_SIT_STRUCTURED:
+            case D3D_SIT_BYTEADDRESS:
+                ResourceDesc.Type = SHADER_RESOURCE_TYPE_BUFFER_SRV;
+            break;
+
+            case D3D_SIT_UAV_RWSTRUCTURED:
+            case D3D_SIT_UAV_RWBYTEADDRESS:
+            case D3D_SIT_UAV_APPEND_STRUCTURED:
+            case D3D_SIT_UAV_CONSUME_STRUCTURED:
+            case D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER:
+                ResourceDesc.Type = SHADER_RESOURCE_TYPE_BUFFER_UAV;
+            break;
+
+            default:
+                UNEXPECTED("Unknown input type");
+        }
+    }
+    return ResourceDesc;
+}
+
 size_t ShaderResources::GetHash()const
 {
     size_t hash = ComputeHash(GetNumCBs(), GetNumTexSRV(), GetNumTexUAV(), GetNumBufSRV(), GetNumBufUAV(), GetNumSamplers());
-    ProcessResources(
-        [&](const D3DShaderResourceAttribs& CB, Uint32)
-        {
-            HashCombine(hash, CB);
-        },
-        [&](const D3DShaderResourceAttribs& Sam, Uint32)
-        {
-            HashCombine(hash, Sam);
-        },
-        [&](const D3DShaderResourceAttribs& TexSRV, Uint32)
-        {
-            HashCombine(hash, TexSRV);
-        },
-        [&](const D3DShaderResourceAttribs& TexUAV, Uint32)
-        {
-            HashCombine(hash, TexUAV);
-        },
-        [&](const D3DShaderResourceAttribs& BufSRV, Uint32)
-        {
-            HashCombine(hash, BufSRV);
-        },
-        [&](const D3DShaderResourceAttribs& BufUAV, Uint32)
-        {
-            HashCombine(hash, BufUAV);
-        }
-    );
+    for (Uint32 n=0; n < m_TotalResources; ++n)
+    {
+        const auto& Res = GetResAttribs(n, m_TotalResources, 0);
+        HashCombine(hash, Res);
+    }
 
     return hash;
 }

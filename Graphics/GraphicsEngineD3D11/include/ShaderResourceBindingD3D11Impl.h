@@ -48,15 +48,15 @@ public:
                                    bool                          IsInternal);
     ~ShaderResourceBindingD3D11Impl();
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject** ppInterface )override final;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
 
     virtual void BindResources(Uint32 ShaderFlags, IResourceMapping* pResMapping, Uint32 Flags)override final;
 
-    virtual IShaderVariable* GetVariable(SHADER_TYPE ShaderType, const char *Name)override final;
+    virtual IShaderResourceVariable* GetVariable(SHADER_TYPE ShaderType, const char *Name)override final;
 
     virtual Uint32 GetVariableCount(SHADER_TYPE ShaderType) const override final;
 
-    virtual IShaderVariable* GetVariable(SHADER_TYPE ShaderType, Uint32 Index)override final;
+    virtual IShaderResourceVariable* GetVariable(SHADER_TYPE ShaderType, Uint32 Index)override final;
 
     virtual void InitializeStaticResources(const IPipelineState* pPipelineState)override final;
 
@@ -74,14 +74,14 @@ public:
 
 private:
     // The caches are indexed by the shader order in the PSO, not shader index
-    ShaderResourceCacheD3D11* m_pBoundResourceCaches = nullptr;
-    ShaderResourceLayoutD3D11* m_pResourceLayouts    = nullptr;
+    ShaderResourceCacheD3D11*  m_pBoundResourceCaches = nullptr;
+    ShaderResourceLayoutD3D11* m_pResourceLayouts     = nullptr;
     
-    Int8 m_ShaderTypeIndex[6] = {};
+    Int8  m_ShaderTypeIndex[6]     = {};
 
     // Resource layout index in m_ResourceLayouts[] array for every shader stage
-    Int8 m_ResourceLayoutIndex[6];
-    Uint8 m_NumActiveShaders = 0;
+    Int8  m_ResourceLayoutIndex[6] = {-1, -1, -1, -1, -1, -1};
+    Uint8 m_NumActiveShaders       = 0;
     
     bool m_bIsStaticResourcesBound = false;
 };

@@ -55,6 +55,16 @@ public:
     
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ShaderD3D11, TShaderBase);
 
+    virtual Uint32 GetResourceCount()const override final
+    {
+        return m_pShaderResources->GetTotalResources();
+    }
+
+    virtual ShaderResourceDesc GetResource(Uint32 Index)const override final
+    {
+        return m_pShaderResources->GetShaderResourceDesc(Index);
+    }
+
     virtual ID3D11DeviceChild* GetD3D11Shader()override final
     {
         return m_pShader;
@@ -62,13 +72,15 @@ public:
 
     ID3DBlob* GetBytecode(){return m_pShaderByteCode;}
 
-    Uint32 GetShaderTypeIndex()const{return m_ShaderTypeIndex;}
+    const std::shared_ptr<const ShaderResourcesD3D11>& GetD3D11Resources()const{return m_pShaderResources;}
 
 private:
     /// D3D11 shader
     CComPtr<ID3D11DeviceChild> m_pShader;
     
-    Uint32 m_ShaderTypeIndex; // VS == 0, PS == 1, GS == 2, HS == 3, DS == 4, CS == 5
+    // ShaderResources class instance must be referenced through the shared pointer, because 
+    // it is referenced by ShaderResourceLayoutD3D11 class instances
+    std::shared_ptr<const ShaderResourcesD3D11> m_pShaderResources;
 };
 
 }

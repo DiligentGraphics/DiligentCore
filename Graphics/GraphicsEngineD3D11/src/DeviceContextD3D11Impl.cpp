@@ -151,19 +151,16 @@ namespace Diligent
         VERIFY_EXPR(pPSO != nullptr);
         static_assert(TransitionResources || CommitResources, "At least one of TransitionResources or CommitResources flags is expected to be true");
 
-#ifdef DEVELOPMENT
-        auto pdbgPipelineStateD3D11 = ValidatedCast<PipelineStateD3D11Impl>( pPSO );
-        auto ppdbgShaders = pdbgPipelineStateD3D11->GetShaders();
-#endif
+        auto* pPipelineStateD3D11 = ValidatedCast<PipelineStateD3D11Impl>(pPSO);
 
         if (pShaderResourceBinding == nullptr)
         {
 #ifdef DEVELOPMENT
             bool ResourcesPresent = false;
-            for (Uint32 s = 0; s < pdbgPipelineStateD3D11->GetNumShaders(); ++s)
+            for (Uint32 s = 0; s < pPipelineStateD3D11->GetNumShaders(); ++s)
             {
-                auto* pShaderD3D11 = ValidatedCast<ShaderD3D11Impl>(ppdbgShaders[s]);
-                if (pShaderD3D11->GetResources()->GetTotalResources() > 0)
+                auto* pShaderD3D11 = pPipelineStateD3D11->GetShader<ShaderD3D11Impl>(s);
+                if (pShaderD3D11->GetD3D11Resources()->GetTotalResources() > 0)
                     ResourcesPresent = true;
             }
             
@@ -179,7 +176,7 @@ namespace Diligent
 
         auto pShaderResBindingD3D11 = ValidatedCast<ShaderResourceBindingD3D11Impl>(pShaderResourceBinding);
 #ifdef DEVELOPMENT
-        if (pdbgPipelineStateD3D11->IsIncompatibleWith(pShaderResourceBinding->GetPipelineState()))
+        if (pPipelineStateD3D11->IsIncompatibleWith(pShaderResourceBinding->GetPipelineState()))
         {
             LOG_ERROR_MESSAGE("Shader resource binding does not match Pipeline State");
             return;
@@ -187,16 +184,14 @@ namespace Diligent
 #endif
 
         auto NumShaders = pShaderResBindingD3D11->GetNumActiveShaders();
-        VERIFY(NumShaders == pdbgPipelineStateD3D11->GetNumShaders(), "Number of active shaders in shader resource binding is not consistent with the number of shaders in the pipeline state");
+        VERIFY(NumShaders == pPipelineStateD3D11->GetNumShaders(), "Number of active shaders in shader resource binding is not consistent with the number of shaders in the pipeline state");
 
 #ifdef DEVELOPMENT
         bool StaticResourcesPresent = false;
         for (Uint32 s = 0; s < NumShaders; ++s)
         {
-            pShaderResBindingD3D11->GetResourceLayout(s).dvpVerifyBindings();
-            // Static resource bindings are verified in BindStaticShaderResources()
-            auto* pShaderD3D11 = ValidatedCast<ShaderD3D11Impl>(ppdbgShaders[s]);
-            if (pShaderD3D11->GetStaticResourceLayout().GetTotalResourceCount() > 0)
+            const auto& StaticResLayout = pPipelineStateD3D11->GetStaticResourceLayout(s);
+            if (StaticResLayout.GetTotalResourceCount() > 0)
                 StaticResourcesPresent = true;
         }
         // Static resource bindings are verified in BindStaticShaderResources()
@@ -213,7 +208,7 @@ namespace Diligent
             auto ShaderTypeInd = pShaderResBindingD3D11->GetActiveShaderTypeIndex(s);
 
 #ifdef DEVELOPMENT
-            auto* pShaderD3D11 = ValidatedCast<ShaderD3D11Impl>(ppdbgShaders[s]);
+            auto* pShaderD3D11 = pPipelineStateD3D11->GetShader<ShaderD3D11Impl>(s);
             VERIFY_EXPR( ShaderTypeInd == static_cast<Int32>(GetShaderTypeIndex(pShaderD3D11->GetDesc().ShaderType)) );
 #endif
 
@@ -359,7 +354,7 @@ namespace Diligent
             auto ShaderTypeInd = pShaderResBindingD3D11->GetActiveShaderTypeIndex(s); 
 
 #ifdef DEVELOPMENT
-            auto* pShaderD3D11 = ValidatedCast<ShaderD3D11Impl>(ppdbgShaders[s]);
+            auto* pShaderD3D11 = pPipelineStateD3D11->GetShader<ShaderD3D11Impl>(s);
             VERIFY_EXPR( ShaderTypeInd == static_cast<Int32>(GetShaderTypeIndex(pShaderD3D11->GetDesc().ShaderType)) );
 #endif
 
@@ -595,7 +590,7 @@ namespace Diligent
             if (CommitResources && (m_DebugFlags & (Uint32)EngineD3D11DebugFlags::VerifyCommittedShaderResources) != 0)
             {
                 // Use full resource layout to verify that all required resources are committed
-                pShaderD3D11->GetResources()->dvpVerifyCommittedResources(
+                pShaderD3D11->GetD3D11Resources()->dvpVerifyCommittedResources(
                             m_CommittedD3D11CBs[ShaderTypeInd], 
                             m_CommittedD3D11SRVs[ShaderTypeInd], 
                             m_CommittedD3D11SRVResources[ShaderTypeInd], 

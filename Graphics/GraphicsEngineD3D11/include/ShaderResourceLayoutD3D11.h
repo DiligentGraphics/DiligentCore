@@ -41,10 +41,19 @@ class IMemoryAllocator;
 
 /// Diligent::ShaderResourceLayoutD3D11 class
 /// http://diligentgraphics.com/diligent-engine/architecture/d3d11/shader-resource-layout/
+// sizeof(ShaderResourceLayoutD3D11) == 64 (x64)
 class ShaderResourceLayoutD3D11
 {
 public:
-    ShaderResourceLayoutD3D11(IObject& Owner);
+    ShaderResourceLayoutD3D11(IObject& Owner,
+                              IRenderDevice*                              pRenderDevice,
+                              std::shared_ptr<const ShaderResourcesD3D11> pSrcResources,
+                              const PipelineResourceLayoutDesc&           ResourceLayout,
+                              const SHADER_RESOURCE_VARIABLE_TYPE*        VarTypes, 
+                              Uint32                                      NumVarTypes, 
+                              ShaderResourceCacheD3D11&                   ResourceCache,
+                              IMemoryAllocator&                           ResCacheDataAllocator,
+                              IMemoryAllocator&                           ResLayoutDataAllocator);
     ~ShaderResourceLayoutD3D11();
 
     // No copies, only moves are allowed
@@ -58,14 +67,7 @@ public:
                                         const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes,
                                         Uint32                               NumAllowedTypes);
 
-    void Initialize(std::shared_ptr<const ShaderResourcesD3D11> pSrcResources,
-                    const SHADER_RESOURCE_VARIABLE_TYPE*                 VarTypes, 
-                    Uint32                                      NumVarTypes, 
-                    ShaderResourceCacheD3D11&                   ResourceCache,
-                    IMemoryAllocator&                           ResCacheDataAllocator,
-                    IMemoryAllocator&                           ResLayoutDataAllocator);
-
-    void CopyResources(ShaderResourceCacheD3D11& DstCache);
+    void CopyResources(ShaderResourceCacheD3D11& DstCache)const;
 
     using ShaderVariableD3D11Base = ShaderVariableD3DBase<ShaderResourceLayoutD3D11>;
 
@@ -86,7 +88,7 @@ public:
                 BindResource(ppObjects[elem], FirstElement+elem);
         }
 
-        __forceinline bool IsBound(Uint32 ArrayIndex);
+        __forceinline bool IsBound(Uint32 ArrayIndex)const;
     };
     
     struct TexSRVBindInfo final : ShaderVariableD3D11Base
@@ -184,8 +186,10 @@ public:
     {
         SamplerBindInfo( const D3DShaderResourceAttribs& ResourceAttribs,
                          ShaderResourceLayoutD3D11&      ParentResLayout,
-                         SHADER_RESOURCE_VARIABLE_TYPE   VariableType ) :
-            ShaderVariableD3D11Base(ParentResLayout, ResourceAttribs, VariableType)
+                         SHADER_RESOURCE_VARIABLE_TYPE   VariableType,
+                         RefCntAutoPtr<ISampler>         _pStaticSampler) :
+            ShaderVariableD3D11Base(ParentResLayout, ResourceAttribs, VariableType),
+            pStaticSampler(std::move(_pStaticSampler))
         {}
 
         // Non-virtual function
@@ -199,17 +203,15 @@ public:
         }
 
         __forceinline bool IsBound(Uint32 ArrayIndex)const;
-        
-        bool IsStaticSampler()const
-        {
-            UNEXPECTED("Not implemented");
-            return false;
-        }
+
+        RefCntAutoPtr<ISampler> pStaticSampler;
     };
 
     // dbgResourceCache is only used for sanity check and as a remainder that the resource cache must be alive
     // while Layout is alive
     void BindResources( IResourceMapping* pResourceMapping, Uint32 Flags, const ShaderResourceCacheD3D11& dbgResourceCache );
+    
+    void SetStaticSamplers(ShaderResourceCacheD3D11& ResourceCache)const;
 
 #ifdef DEVELOPMENT
     bool dvpVerifyBindings()const;
@@ -246,28 +248,34 @@ public:
     template<> Uint32 GetNumResources<BuffUAVBindInfo>  () const { return GetNumBufUAVs();  }
     template<> Uint32 GetNumResources<SamplerBindInfo>  () const { return GetNumSamplers(); }
 
-private:
-
     const Char* GetShaderName()const
     {
         return m_pResources->GetShaderName();
     }
 
-    // No need to use shared pointer, as the resource cache is either part of the same
-    // ShaderD3D11Impl object, or ShaderResourceBindingD3D11Impl object
-    ShaderResourceCacheD3D11* m_pResourceCache = nullptr;
+private:
 
-    std::unique_ptr<void, STDDeleterRawMem<void> > m_ResourceBuffer;
+/* 0 */ IObject&                                       m_Owner;
+/* 8 */ std::shared_ptr<const ShaderResourcesD3D11>    m_pResources;
 
-    // Offsets in bytes
-    using OffsetType = Uint16;
-    OffsetType m_TexSRVsOffset  = 0;
-    OffsetType m_TexUAVsOffset  = 0;
-    OffsetType m_BuffSRVsOffset = 0;
-    OffsetType m_BuffUAVsOffset = 0;
-    OffsetType m_SamplerOffset  = 0;
-    OffsetType m_MemorySize     = 0;
+       // No need to use shared pointer, as the resource cache is either part of the same
+       // ShaderD3D11Impl object, or ShaderResourceBindingD3D11Impl object
+/*24*/ ShaderResourceCacheD3D11&                      m_ResourceCache;
+
+/*32*/ std::unique_ptr<void, STDDeleterRawMem<void> > m_ResourceBuffer;
     
+       // Offsets in bytes
+       using OffsetType = Uint16;
+/*48*/ OffsetType m_TexSRVsOffset  = 0;
+/*50*/ OffsetType m_TexUAVsOffset  = 0;
+/*52*/ OffsetType m_BuffSRVsOffset = 0;
+/*54*/ OffsetType m_BuffUAVsOffset = 0;
+/*56*/ OffsetType m_SamplerOffset  = 0;
+/*58*/ OffsetType m_MemorySize     = 0;
+/*60 - 64*/    
+/*64*/ // End of data
+
+
     template<typename ResourceType> OffsetType GetResourceOffset()const;
     template<> OffsetType GetResourceOffset<ConstBuffBindInfo>() const { return 0;                }
     template<> OffsetType GetResourceOffset<TexSRVBindInfo>   () const { return m_TexSRVsOffset;  }
@@ -327,8 +335,37 @@ private:
             HandleSampler(GetResource<SamplerBindInfo>(s));
     }
 
-    std::shared_ptr<const ShaderResourcesD3D11> m_pResources;
-    IObject& m_Owner;
+    template<typename THandleCB,
+             typename THandleTexSRV,
+             typename THandleTexUAV,
+             typename THandleBufSRV,
+             typename THandleBufUAV,
+             typename THandleSampler>
+    void HandleConstResources(THandleCB      HandleCB,
+                              THandleTexSRV  HandleTexSRV,
+                              THandleTexUAV  HandleTexUAV,
+                              THandleBufSRV  HandleBufSRV,
+                              THandleBufUAV  HandleBufUAV,
+                              THandleSampler HandleSampler)const
+    {
+        for (Uint32 cb = 0; cb < GetNumResources<ConstBuffBindInfo>(); ++cb)
+            HandleCB(GetConstResource<ConstBuffBindInfo>(cb));
+
+        for (Uint32 t = 0; t < GetNumResources<TexSRVBindInfo>(); ++t)
+            HandleTexSRV(GetConstResource<TexSRVBindInfo>(t));
+
+        for (Uint32 u = 0; u < GetNumResources<TexUAVBindInfo>(); ++u)
+            HandleTexUAV(GetConstResource<TexUAVBindInfo>(u));
+
+        for (Uint32 s = 0; s < GetNumResources<BuffSRVBindInfo>(); ++s)
+            HandleBufSRV(GetConstResource<BuffSRVBindInfo>(s));
+
+        for (Uint32 u = 0; u < GetNumResources<BuffUAVBindInfo>(); ++u)
+            HandleBufUAV(GetConstResource<BuffUAVBindInfo>(u));
+
+        for (Uint32 s = 0; s < GetNumResources<SamplerBindInfo>(); ++s)
+            HandleSampler(GetConstResource<SamplerBindInfo>(s));
+    }
 
     friend class ShaderVariableIndexLocator;
     friend class ShaderVariableLocator;

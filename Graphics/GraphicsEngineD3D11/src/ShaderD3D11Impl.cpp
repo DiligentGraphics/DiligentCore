@@ -34,8 +34,7 @@ ShaderD3D11Impl::ShaderD3D11Impl(IReferenceCounters*          pRefCounters,
                                  RenderDeviceD3D11Impl*       pRenderDeviceD3D11,
                                  const ShaderCreateInfo&      ShaderCI) : 
     TShaderBase(pRefCounters, pRenderDeviceD3D11, ShaderCI.Desc),
-    ShaderD3DBase(ShaderCI),
-    m_ShaderTypeIndex(Diligent::GetShaderTypeIndex(ShaderCI.Desc.ShaderType))
+    ShaderD3DBase(ShaderCI)
 {
     auto *pDeviceD3D11 = pRenderDeviceD3D11->GetD3D11Device();
     switch (ShaderCI.Desc.ShaderType)
@@ -73,6 +72,12 @@ ShaderD3D11Impl::ShaderD3D11Impl(IReferenceCounters*          pRefCounters,
         auto hr = m_pShader->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen(m_Desc.Name)), m_Desc.Name);
         DEV_CHECK_ERR(SUCCEEDED(hr), "Failed to set shader name");
     }
+
+    // Load shader resources
+    auto& Allocator = GetRawAllocator();
+    auto* pRawMem = ALLOCATE(Allocator, "Allocator for ShaderResources", sizeof(ShaderResourcesD3D11));
+    auto* pResources = new (pRawMem) ShaderResourcesD3D11(pRenderDeviceD3D11, m_pShaderByteCode, m_Desc, ShaderCI.UseCombinedTextureSamplers ? ShaderCI.CombinedSamplerSuffix : nullptr);
+    m_pShaderResources.reset(pResources, STDDeleterRawMem<ShaderResourcesD3D11>(Allocator));
 
     // Byte code is only required for the vertex shader to create input layout
     if( ShaderCI.Desc.ShaderType != SHADER_TYPE_VERTEX )

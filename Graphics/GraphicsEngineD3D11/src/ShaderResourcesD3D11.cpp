@@ -37,8 +37,7 @@ ShaderResourcesD3D11::ShaderResourcesD3D11(RenderDeviceD3D11Impl* pDeviceD3D11Im
                                            ID3DBlob*              pShaderBytecode,
                                            const ShaderDesc&      ShdrDesc,
                                            const char*            CombinedSamplerSuffix) :
-    ShaderResources(ShdrDesc.ShaderType),
-    m_ShaderName(ShdrDesc.Name)
+    ShaderResources(ShdrDesc.ShaderType)
 {
     class NewResourceHandler
     {
