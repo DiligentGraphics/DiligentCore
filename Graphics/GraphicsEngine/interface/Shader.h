@@ -232,7 +232,7 @@ class IShader : public IDeviceObject
 {
 public:
     /// Queries the specific interface, see IObject::QueryInterface() for details
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) = 0;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override = 0;
     
     /// Returns the shader description
     virtual const ShaderDesc& GetDesc()const = 0;

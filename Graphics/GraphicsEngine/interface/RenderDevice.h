@@ -57,7 +57,7 @@ class IRenderDevice : public IObject
 {
 public:
     /// Queries the specific interface, see IObject::QueryInterface() for details
-    virtual void QueryInterface( const INTERFACE_ID& IID, IObject** ppInterface ) = 0;
+    virtual void QueryInterface( const INTERFACE_ID& IID, IObject** ppInterface )override = 0;
 
     /// Creates a new buffer object
 
