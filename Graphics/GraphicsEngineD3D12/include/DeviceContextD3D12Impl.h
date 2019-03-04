@@ -60,7 +60,7 @@ public:
                            Uint32                       CommandQueueId);
     ~DeviceContextD3D12Impl();
     
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
 
     virtual void SetPipelineState(IPipelineState* pPipelineState)override final;
 

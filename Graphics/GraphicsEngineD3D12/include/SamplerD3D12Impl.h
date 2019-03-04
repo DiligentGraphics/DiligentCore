@@ -47,7 +47,7 @@ public:
                      const SamplerDesc&      SamplerDesc);
     ~SamplerD3D12Impl();
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
 
     virtual D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle()override{ return m_Descriptor.GetCpuHandle(); }
 

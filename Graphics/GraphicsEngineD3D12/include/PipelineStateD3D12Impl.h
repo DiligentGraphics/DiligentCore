@@ -47,7 +47,7 @@ public:
     PipelineStateD3D12Impl( IReferenceCounters *pRefCounters, RenderDeviceD3D12Impl *pDeviceD3D12, const PipelineStateDesc &PipelineDesc );
     ~PipelineStateD3D12Impl();
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface );
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
    
     virtual ID3D12PipelineState *GetD3D12PipelineState()const override final{return m_pd3d12PSO;}
     
