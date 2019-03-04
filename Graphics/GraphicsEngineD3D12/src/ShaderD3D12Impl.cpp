@@ -32,40 +32,23 @@
 namespace Diligent
 {
 
-ShaderD3D12Impl::ShaderD3D12Impl(IReferenceCounters*          pRefCounters,
-                                 RenderDeviceD3D12Impl*       pRenderDeviceD3D12,
-                                 const ShaderCreationAttribs& ShaderCreationAttribs) : 
-    TShaderBase(pRefCounters, pRenderDeviceD3D12, ShaderCreationAttribs.Desc),
-    ShaderD3DBase(ShaderCreationAttribs),
-    m_StaticResLayout(*this),
-    m_StaticResCache(ShaderResourceCacheD3D12::DbgCacheContentType::StaticShaderResources),
-    m_StaticVarsMgr(*this)
+ShaderD3D12Impl::ShaderD3D12Impl(IReferenceCounters*       pRefCounters,
+                                 RenderDeviceD3D12Impl*    pRenderDeviceD3D12,
+                                 const ShaderCreateInfo&   ShaderCI) : 
+    TShaderBase(pRefCounters, pRenderDeviceD3D12, ShaderCI.Desc),
+    ShaderD3DBase(ShaderCI)
 {
     // Load shader resources
     auto& Allocator = GetRawAllocator();
     auto* pRawMem = ALLOCATE(Allocator, "Allocator for ShaderResources", sizeof(ShaderResourcesD3D12));
-    auto* pResources = new (pRawMem) ShaderResourcesD3D12(m_pShaderByteCode, m_Desc, ShaderCreationAttribs.UseCombinedTextureSamplers ? ShaderCreationAttribs.CombinedSamplerSuffix : nullptr);
+    auto* pResources = new (pRawMem) ShaderResourcesD3D12(m_pShaderByteCode, m_Desc, ShaderCI.UseCombinedTextureSamplers ? ShaderCI.CombinedSamplerSuffix : nullptr);
     m_pShaderResources.reset(pResources, STDDeleterRawMem<ShaderResourcesD3D12>(Allocator));
-
-    // Clone only static resources that will be set directly in the shader
-    // http://diligentgraphics.com/diligent-engine/architecture/d3d12/shader-resource-layout#Initializing-Special-Resource-Layout-for-Managing-Static-Shader-Resources
-    SHADER_VARIABLE_TYPE VarTypes[] = {SHADER_VARIABLE_TYPE_STATIC};
-    m_StaticResLayout.Initialize(pRenderDeviceD3D12->GetD3D12Device(), m_pShaderResources, GetRawAllocator(), VarTypes, _countof(VarTypes), &m_StaticResCache, nullptr);
-    m_StaticVarsMgr.Initialize(m_StaticResLayout, GetRawAllocator(), nullptr, 0, m_StaticResCache);
 }
 
 ShaderD3D12Impl::~ShaderD3D12Impl()
 {
-    m_StaticVarsMgr.Destroy(GetRawAllocator());
 }
 
 IMPLEMENT_QUERY_INTERFACE( ShaderD3D12Impl, IID_ShaderD3D12, TShaderBase )
-
-#ifdef DEVELOPMENT
-bool ShaderD3D12Impl::DvpVerifyStaticResourceBindings()const
-{
-    return m_StaticResLayout.dvpVerifyBindings(m_StaticResCache);
-}
-#endif
 
 }

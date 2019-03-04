@@ -24,18 +24,19 @@
 #include "pch.h"
 
 #include "ShaderVariableD3D12.h"
+#include "ShaderResourceVariableBase.h"
 
 namespace Diligent
 {
 
-size_t ShaderVariableManagerD3D12::GetRequiredMemorySize(const ShaderResourceLayoutD3D12& Layout, 
-                                                         const SHADER_VARIABLE_TYPE*      AllowedVarTypes, 
-                                                         Uint32                           NumAllowedTypes,
-                                                         Uint32&                          NumVariables)
+size_t ShaderVariableManagerD3D12::GetRequiredMemorySize(const ShaderResourceLayoutD3D12&      Layout, 
+                                                         const SHADER_RESOURCE_VARIABLE_TYPE*  AllowedVarTypes, 
+                                                         Uint32                                NumAllowedTypes,
+                                                         Uint32&                               NumVariables)
 {
     NumVariables = 0;
     Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
-    for (SHADER_VARIABLE_TYPE VarType = SHADER_VARIABLE_TYPE_STATIC; VarType < SHADER_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_VARIABLE_TYPE>(VarType+1))
+    for (SHADER_RESOURCE_VARIABLE_TYPE VarType = SHADER_RESOURCE_VARIABLE_TYPE_STATIC; VarType < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(VarType+1))
     {
         if (IsAllowedType(VarType, AllowedTypeBits))
         {
@@ -49,11 +50,11 @@ size_t ShaderVariableManagerD3D12::GetRequiredMemorySize(const ShaderResourceLay
 }
 
 // Creates shader variable for every resource from SrcLayout whose type is one AllowedVarTypes
-void ShaderVariableManagerD3D12::Initialize(const ShaderResourceLayoutD3D12& SrcLayout, 
-                                            IMemoryAllocator&                Allocator,
-                                            const SHADER_VARIABLE_TYPE*      AllowedVarTypes, 
-                                            Uint32                           NumAllowedTypes, 
-                                            ShaderResourceCacheD3D12&        ResourceCache)
+void ShaderVariableManagerD3D12::Initialize(const ShaderResourceLayoutD3D12&        SrcLayout, 
+                                            IMemoryAllocator&                       Allocator,
+                                            const SHADER_RESOURCE_VARIABLE_TYPE*    AllowedVarTypes, 
+                                            Uint32                                  NumAllowedTypes, 
+                                            ShaderResourceCacheD3D12&               ResourceCache)
 {
     m_pResourceLayout = &SrcLayout;
     m_pResourceCache  = &ResourceCache;
@@ -72,7 +73,7 @@ void ShaderVariableManagerD3D12::Initialize(const ShaderResourceLayoutD3D12& Src
     m_pVariables = reinterpret_cast<ShaderVariableD3D12Impl*>(pRawMem);
 
     Uint32 VarInd = 0;
-    for (SHADER_VARIABLE_TYPE VarType = SHADER_VARIABLE_TYPE_STATIC; VarType < SHADER_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_VARIABLE_TYPE>(VarType+1))
+    for (SHADER_RESOURCE_VARIABLE_TYPE VarType = SHADER_RESOURCE_VARIABLE_TYPE_STATIC; VarType < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(VarType+1))
     {
         if (!IsAllowedType(VarType, AllowedTypeBits))
             continue;
@@ -177,7 +178,7 @@ void ShaderVariableManagerD3D12::BindResources( IResourceMapping* pResourceMappi
         auto &Var = m_pVariables[v];
         const auto& Res = Var.m_Resource;
         
-        if ( (Flags & (1 << Res.Attribs.GetVariableType())) == 0 )
+        if ( (Flags & (1 << Res.GetVariableType())) == 0 )
             continue;
 
         for (Uint32 ArrInd = 0; ArrInd < Res.Attribs.BindCount; ++ArrInd)

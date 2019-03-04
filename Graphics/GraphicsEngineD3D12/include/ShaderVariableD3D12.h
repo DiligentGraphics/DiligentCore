@@ -30,7 +30,7 @@
 //  * ShaderVariableManagerD3D12 keeps list of variables of specific types
 //  * Every ShaderVariableD3D12Impl references D3D12Resource from ShaderResourceLayoutD3D12
 //  * ShaderVariableManagerD3D12 keeps pointer to ShaderResourceCacheD3D12
-//  * ShaderVariableManagerD3D12 is used by ShaderD3D12Impl to manage static resources and by
+//  * ShaderVariableManagerD3D12 is used by PipelineStateD3D12Impl to manage static resources and by
 //    ShaderResourceBindingD3D12Impl to manage mutable and dynamic resources
 //
 //          _____________________________                   ________________________________________________________________________________
@@ -75,11 +75,11 @@ public:
     {}
     ~ShaderVariableManagerD3D12();
 
-    void Initialize(const ShaderResourceLayoutD3D12& Layout, 
-                    IMemoryAllocator&                Allocator,
-                    const SHADER_VARIABLE_TYPE*      AllowedVarTypes, 
-                    Uint32                           NumAllowedTypes, 
-                    ShaderResourceCacheD3D12&        ResourceCache);
+    void Initialize(const ShaderResourceLayoutD3D12&       Layout, 
+                    IMemoryAllocator&                      Allocator,
+                    const SHADER_RESOURCE_VARIABLE_TYPE*   AllowedVarTypes, 
+                    Uint32                                 NumAllowedTypes, 
+                    ShaderResourceCacheD3D12&              ResourceCache);
     void Destroy(IMemoryAllocator& Allocator);
 
     ShaderVariableD3D12Impl* GetVariable(const Char* Name);
@@ -87,10 +87,10 @@ public:
 
     void BindResources( IResourceMapping* pResourceMapping, Uint32 Flags);
 
-    static size_t GetRequiredMemorySize(const ShaderResourceLayoutD3D12& Layout, 
-                                        const SHADER_VARIABLE_TYPE*      AllowedVarTypes, 
-                                        Uint32                           NumAllowedTypes,
-                                        Uint32&                          NumVariables);
+    static size_t GetRequiredMemorySize(const ShaderResourceLayoutD3D12&      Layout, 
+                                        const SHADER_RESOURCE_VARIABLE_TYPE*  AllowedVarTypes, 
+                                        Uint32                                NumAllowedTypes,
+                                        Uint32&                               NumVariables);
 
     Uint32 GetVariableCount()const { return m_NumVariables; }
 
@@ -119,7 +119,7 @@ private:
 };
 
 // sizeof(ShaderVariableD3D12Impl) == 24 (x64)
-class ShaderVariableD3D12Impl final : public IShaderVariable
+class ShaderVariableD3D12Impl final : public IShaderResourceVariable
 {
 public:
     ShaderVariableD3D12Impl(ShaderVariableManagerD3D12& ParentManager,
@@ -154,16 +154,16 @@ public:
             return;
 
         *ppInterface = nullptr;
-        if (IID == IID_ShaderVariable || IID == IID_Unknown)
+        if (IID == IID_ShaderResourceVariable || IID == IID_Unknown)
         {
             *ppInterface = this;
             (*ppInterface)->AddRef();
         }
     }
 
-    virtual SHADER_VARIABLE_TYPE GetType()const override final
+    virtual SHADER_RESOURCE_VARIABLE_TYPE GetType()const override final
     {
-        return m_Resource.Attribs.GetVariableType();
+        return m_Resource.GetVariableType();
     }
 
     virtual void Set(IDeviceObject *pObject)override final 

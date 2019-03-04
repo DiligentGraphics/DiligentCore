@@ -204,7 +204,7 @@ PipelineStateD3D12Impl :: PipelineStateD3D12Impl(IReferenceCounters*      pRefCo
         std::array<size_t, MaxShadersInPipeline> ShaderVarMgrDataSizes = {};
         for (Uint32 s = 0; s < m_NumShaders; ++s)
         {
-            std::array<SHADER_VARIABLE_TYPE, 2> AllowedVarTypes = { SHADER_VARIABLE_TYPE_MUTABLE, SHADER_VARIABLE_TYPE_DYNAMIC };
+            std::array<SHADER_RESOURCE_VARIABLE_TYPE, 2> AllowedVarTypes = { SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC };
             Uint32 NumVariablesUnused = 0;
             ShaderVarMgrDataSizes[s] = ShaderVariableManagerD3D12::GetRequiredMemorySize(m_pShaderResourceLayouts[s], AllowedVarTypes.data(), static_cast<Uint32>(AllowedVarTypes.size()), NumVariablesUnused);
         }
@@ -324,8 +324,8 @@ ShaderResourceCacheD3D12* PipelineStateD3D12Impl::CommitAndTransitionShaderResou
     }
 
 
-    if( (m_RootSig.GetTotalSrvCbvUavSlots(SHADER_VARIABLE_TYPE_STATIC) != 0 || 
-         m_RootSig.GetTotalRootViews(SHADER_VARIABLE_TYPE_STATIC) != 0) && !pResBindingD3D12Impl->StaticResourcesInitialized() )
+    if( (m_RootSig.GetTotalSrvCbvUavSlots(SHADER_RESOURCE_VARIABLE_TYPE_STATIC) != 0 || 
+         m_RootSig.GetTotalRootViews(SHADER_RESOURCE_VARIABLE_TYPE_STATIC) != 0) && !pResBindingD3D12Impl->StaticResourcesInitialized() )
     {
         LOG_ERROR_MESSAGE("Static resources have not been initialized in the shader resource binding object being committed for PSO '", m_Desc.Name,"'. Please call IShaderResourceBinding::InitializeStaticResources().");
     }
@@ -357,7 +357,7 @@ ShaderResourceCacheD3D12* PipelineStateD3D12Impl::CommitAndTransitionShaderResou
 
 bool PipelineStateD3D12Impl::dbgContainsShaderResources()const
 {
-    for(auto VarType = SHADER_VARIABLE_TYPE_STATIC; VarType < SHADER_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_VARIABLE_TYPE>(VarType+1))
+    for(auto VarType = SHADER_RESOURCE_VARIABLE_TYPE_STATIC; VarType < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(VarType+1))
     {
         if (m_RootSig.GetTotalSrvCbvUavSlots(VarType) != 0 || 
             m_RootSig.GetTotalRootViews     (VarType) != 0)

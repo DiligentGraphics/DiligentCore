@@ -58,7 +58,7 @@ ShaderResourceBindingD3D12Impl::ShaderResourceBindingD3D12Impl(IReferenceCounter
         auto& VarDataAllocator = pPSO->GetSRBMemoryAllocator().GetShaderVariableDataAllocator(s);
 
         // http://diligentgraphics.com/diligent-engine/architecture/d3d12/shader-resource-layout#Initializing-Resource-Layouts-in-a-Shader-Resource-Binding-Object
-        std::array<SHADER_VARIABLE_TYPE, 2> AllowedVarTypes = { SHADER_VARIABLE_TYPE_MUTABLE, SHADER_VARIABLE_TYPE_DYNAMIC };
+        std::array<SHADER_RESOURCE_VARIABLE_TYPE, 2> AllowedVarTypes = { SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC };
         const auto& SrcLayout = pPSO->GetShaderResLayout(s);
         m_pShaderVarMgrs[s].Initialize(SrcLayout, VarDataAllocator, AllowedVarTypes.data(), static_cast<Uint32>(AllowedVarTypes.size()), m_ShaderResourceCache);
 
@@ -96,7 +96,7 @@ void ShaderResourceBindingD3D12Impl::BindResources(Uint32 ShaderFlags, IResource
     }
 }
 
-IShaderVariable *ShaderResourceBindingD3D12Impl::GetVariable(SHADER_TYPE ShaderType, const char *Name)
+IShaderResourceVariable *ShaderResourceBindingD3D12Impl::GetVariable(SHADER_TYPE ShaderType, const char *Name)
 {
     auto ShaderInd = GetShaderTypeIndex(ShaderType);
     auto ResLayoutInd = m_ResourceLayoutIndex[ShaderInd];
@@ -121,7 +121,7 @@ Uint32 ShaderResourceBindingD3D12Impl::GetVariableCount(SHADER_TYPE ShaderType) 
     return m_pShaderVarMgrs[ResLayoutInd].GetVariableCount();
 }
 
-IShaderVariable* ShaderResourceBindingD3D12Impl::GetVariable(SHADER_TYPE ShaderType, Uint32 Index)
+IShaderResourceVariable* ShaderResourceBindingD3D12Impl::GetVariable(SHADER_TYPE ShaderType, Uint32 Index)
 {
     auto ShaderInd = GetShaderTypeIndex(ShaderType);
     auto ResLayoutInd = m_ResourceLayoutIndex[ShaderInd];

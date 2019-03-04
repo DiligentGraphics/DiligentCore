@@ -100,17 +100,17 @@ void RootSignature::RootParamsManager::AddRootView(D3D12_ROOT_PARAMETER_TYPE Par
                                                    Uint32                    RootIndex,
                                                    UINT                      Register,
                                                    D3D12_SHADER_VISIBILITY   Visibility,
-                                                   SHADER_VARIABLE_TYPE      VarType)
+                                                   SHADER_RESOURCE_VARIABLE_TYPE      VarType)
 {
     auto *pRangePtr = Extend(0, 1, 0);
     VERIFY_EXPR((char*)pRangePtr == (char*)m_pMemory.get() + GetRequiredMemorySize(0, 0, 0));
     new(m_pRootViews + m_NumRootViews-1) RootParameter(ParameterType, RootIndex, Register, 0u, Visibility, VarType);
 }
 
-void RootSignature::RootParamsManager::AddRootTable(Uint32                  RootIndex,
-                                                    D3D12_SHADER_VISIBILITY Visibility,
-                                                    SHADER_VARIABLE_TYPE    VarType,
-                                                    Uint32                  NumRangesInNewTable)
+void RootSignature::RootParamsManager::AddRootTable(Uint32                         RootIndex,
+                                                    D3D12_SHADER_VISIBILITY        Visibility,
+                                                    SHADER_RESOURCE_VARIABLE_TYPE  VarType,
+                                                    Uint32                         NumRangesInNewTable)
 {
     auto *pRangePtr = Extend(1, 0, NumRangesInNewTable);
     VERIFY_EXPR( (char*)(pRangePtr + NumRangesInNewTable) == (char*)m_pMemory.get() + GetRequiredMemorySize(0, 0, 0));
@@ -304,8 +304,8 @@ void RootSignature::AllocateResourceSlot(SHADER_TYPE                     ShaderT
     else
     {
         // Use the same table for static and mutable resources. Treat both as static
-        auto RootTableType = (ShaderResAttribs.GetVariableType() == SHADER_VARIABLE_TYPE_DYNAMIC) ? SHADER_VARIABLE_TYPE_DYNAMIC : SHADER_VARIABLE_TYPE_STATIC;
-        auto TableIndKey = ShaderInd * SHADER_VARIABLE_TYPE_NUM_TYPES + RootTableType;
+        auto RootTableType = (ShaderResAttribs.GetVariableType() == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC) ? SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC : SHADER_RESOURCE_VARIABLE_TYPE_STATIC;
+        auto TableIndKey = ShaderInd * SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES + RootTableType;
         // Get the table array index (this is not the root index!)
         auto& RootTableArrayInd = (( RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER ) ? m_SamplerRootTablesMap : m_SrvCbvUavRootTablesMap)[ TableIndKey ];
         if (RootTableArrayInd == InvalidRootTableIndex)
@@ -397,17 +397,17 @@ void RootSignature::dbgVerifyRootParameters()const
     }
 
     VERIFY(dbgTotalSrvCbvUavSlots == 
-                m_TotalSrvCbvUavSlots[SHADER_VARIABLE_TYPE_STATIC] + 
-                m_TotalSrvCbvUavSlots[SHADER_VARIABLE_TYPE_MUTABLE] + 
-                m_TotalSrvCbvUavSlots[SHADER_VARIABLE_TYPE_DYNAMIC], "Unexpected number of SRV CBV UAV resource slots");
+                m_TotalSrvCbvUavSlots[SHADER_RESOURCE_VARIABLE_TYPE_STATIC] + 
+                m_TotalSrvCbvUavSlots[SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE] + 
+                m_TotalSrvCbvUavSlots[SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC], "Unexpected number of SRV CBV UAV resource slots");
     VERIFY(dbgTotalSamplerSlots == 
-                m_TotalSamplerSlots[SHADER_VARIABLE_TYPE_STATIC] +
-                m_TotalSamplerSlots[SHADER_VARIABLE_TYPE_MUTABLE] + 
-                m_TotalSamplerSlots[SHADER_VARIABLE_TYPE_DYNAMIC], "Unexpected number of sampler slots");
+                m_TotalSamplerSlots[SHADER_RESOURCE_VARIABLE_TYPE_STATIC] +
+                m_TotalSamplerSlots[SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE] + 
+                m_TotalSamplerSlots[SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC], "Unexpected number of sampler slots");
     VERIFY(dbgTotalRootViews == 
-                m_TotalRootViews[SHADER_VARIABLE_TYPE_STATIC] +
-                m_TotalRootViews[SHADER_VARIABLE_TYPE_MUTABLE] + 
-                m_TotalRootViews[SHADER_VARIABLE_TYPE_DYNAMIC], "Unexpected number of root views");
+                m_TotalRootViews[SHADER_RESOURCE_VARIABLE_TYPE_STATIC] +
+                m_TotalRootViews[SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE] + 
+                m_TotalRootViews[SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC], "Unexpected number of root views");
 }
 #endif
 
@@ -530,7 +530,7 @@ void RootSignature::Finalize(ID3D12Device* pd3d12Device)
     hr = pd3d12Device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), __uuidof(m_pd3d12RootSignature), reinterpret_cast<void**>( static_cast<ID3D12RootSignature**>(&m_pd3d12RootSignature)));
     CHECK_D3D_RESULT_THROW(hr, "Failed to create root signature");
 
-    bool bHasDynamicDescriptors = m_TotalSrvCbvUavSlots[SHADER_VARIABLE_TYPE_DYNAMIC] != 0 || m_TotalSamplerSlots[SHADER_VARIABLE_TYPE_DYNAMIC] != 0;
+    bool bHasDynamicDescriptors = m_TotalSrvCbvUavSlots[SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC] != 0 || m_TotalSamplerSlots[SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC] != 0;
     if(bHasDynamicDescriptors)
     {
         CommitDescriptorHandles = &RootSignature::CommitDescriptorHandlesInternal_SMD<false>;
@@ -581,11 +581,11 @@ void RootSignature::InitResourceCache(RenderDeviceD3D12Impl*    pDeviceD3D12Impl
 
     // Allocate space in GPU-visible descriptor heap for static and mutable variables only
     Uint32 TotalSrvCbvUavDescriptors =
-                m_TotalSrvCbvUavSlots[SHADER_VARIABLE_TYPE_STATIC] + 
-                m_TotalSrvCbvUavSlots[SHADER_VARIABLE_TYPE_MUTABLE];
+                m_TotalSrvCbvUavSlots[SHADER_RESOURCE_VARIABLE_TYPE_STATIC] + 
+                m_TotalSrvCbvUavSlots[SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE];
     Uint32 TotalSamplerDescriptors =
-                m_TotalSamplerSlots[SHADER_VARIABLE_TYPE_STATIC] +
-                m_TotalSamplerSlots[SHADER_VARIABLE_TYPE_MUTABLE];
+                m_TotalSamplerSlots[SHADER_RESOURCE_VARIABLE_TYPE_STATIC] +
+                m_TotalSamplerSlots[SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE];
 
     DescriptorHeapAllocation CbcSrvUavHeapSpace, SamplerHeapSpace;
     if(TotalSrvCbvUavDescriptors)
@@ -624,7 +624,7 @@ void RootSignature::InitResourceCache(RenderDeviceD3D12Impl*    pDeviceD3D12Impl
 #endif
 
         // Space for dynamic variables is allocated at every draw call
-        if( RootParam.GetShaderVariableType() != SHADER_VARIABLE_TYPE_DYNAMIC )
+        if( RootParam.GetShaderVariableType() != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC )
         {
             if( HeapType == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV )
             {
@@ -886,8 +886,8 @@ void RootSignature::CommitDescriptorHandlesInternal_SMD(RenderDeviceD3D12Impl*  
 {
     auto *pd3d12Device = pRenderDeviceD3D12->GetD3D12Device();
 
-    Uint32 NumDynamicCbvSrvUavDescriptors = m_TotalSrvCbvUavSlots[SHADER_VARIABLE_TYPE_DYNAMIC];
-    Uint32 NumDynamicSamplerDescriptors   = m_TotalSamplerSlots  [SHADER_VARIABLE_TYPE_DYNAMIC];
+    Uint32 NumDynamicCbvSrvUavDescriptors = m_TotalSrvCbvUavSlots[SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC];
+    Uint32 NumDynamicSamplerDescriptors   = m_TotalSamplerSlots  [SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC];
     VERIFY_EXPR(NumDynamicCbvSrvUavDescriptors > 0 || NumDynamicSamplerDescriptors > 0);
 
     DescriptorHeapAllocation DynamicCbvSrvUavDescriptors, DynamicSamplerDescriptors;
@@ -920,7 +920,7 @@ void RootSignature::CommitDescriptorHandlesInternal_SMD(RenderDeviceD3D12Impl*  
         [&](Uint32 RootInd, const RootParameter& RootTable, const D3D12_ROOT_PARAMETER& D3D12Param, bool IsResourceTable, D3D12_DESCRIPTOR_HEAP_TYPE dbgHeapType)
         {
             D3D12_GPU_DESCRIPTOR_HANDLE RootTableGPUDescriptorHandle;
-            bool IsDynamicTable = RootTable.GetShaderVariableType() == SHADER_VARIABLE_TYPE_DYNAMIC;
+            bool IsDynamicTable = RootTable.GetShaderVariableType() == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC;
             if (IsDynamicTable)
             {
                 if( IsResourceTable )
@@ -1008,7 +1008,7 @@ void RootSignature::CommitDescriptorHandlesInternal_SM(RenderDeviceD3D12Impl*   
                                                        bool                      IsCompute,
                                                        bool                      ValidateStates)const
 {
-    VERIFY_EXPR(m_TotalSrvCbvUavSlots[SHADER_VARIABLE_TYPE_DYNAMIC] == 0 && m_TotalSamplerSlots[SHADER_VARIABLE_TYPE_DYNAMIC] == 0);
+    VERIFY_EXPR(m_TotalSrvCbvUavSlots[SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC] == 0 && m_TotalSamplerSlots[SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC] == 0);
 
     CommandContext::ShaderDescriptorHeaps Heaps(ResourceCache.GetSrvCbvUavDescriptorHeap(), ResourceCache.GetSamplerDescriptorHeap());
     if(Heaps)
@@ -1017,7 +1017,7 @@ void RootSignature::CommitDescriptorHandlesInternal_SM(RenderDeviceD3D12Impl*   
     m_RootParams.ProcessRootTables(
         [&](Uint32 RootInd, const RootParameter& RootTable, const D3D12_ROOT_PARAMETER& D3D12Param, bool IsResourceTable, D3D12_DESCRIPTOR_HEAP_TYPE dbgHeapType )
         {
-            VERIFY(RootTable.GetShaderVariableType() != SHADER_VARIABLE_TYPE_DYNAMIC, "Unexpected dynamic resource");
+            VERIFY(RootTable.GetShaderVariableType() != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC, "Unexpected dynamic resource");
 
             D3D12_GPU_DESCRIPTOR_HANDLE RootTableGPUDescriptorHandle = IsResourceTable ? 
                 ResourceCache.GetShaderVisibleTableGPUDescriptorHandle<D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV>(RootInd) : 

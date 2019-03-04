@@ -37,14 +37,14 @@
 //      |  SRV/CBV/UAV - STATIC   |  SRV/CBV/UAV - MUTABLE  |   SRV/CBV/UAV - DYNAMIC  |   Samplers - STATIC      |  Samplers - MUTABLE         |   Samplers - DYNAMIC                                           ||
 //      |                         |                         |                          |             
 //
-//      s == NumCbvSrvUav[SHADER_VARIABLE_TYPE_STATIC]
-//      m == NumCbvSrvUav[SHADER_VARIABLE_TYPE_MUTABLE]
-//      d == NumCbvSrvUav[SHADER_VARIABLE_TYPE_DYNAMIC]
+//      s == NumCbvSrvUav[SHADER_RESOURCE_VARIABLE_TYPE_STATIC]
+//      m == NumCbvSrvUav[SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE]
+//      d == NumCbvSrvUav[SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC]
 //      smd = s+m+d
 //
-//      s' == NumSamplers[SHADER_VARIABLE_TYPE_STATIC]
-//      m' == NumSamplers[SHADER_VARIABLE_TYPE_MUTABLE]
-//      d' == NumSamplers[SHADER_VARIABLE_TYPE_DYNAMIC]
+//      s' == NumSamplers[SHADER_RESOURCE_VARIABLE_TYPE_STATIC]
+//      m' == NumSamplers[SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE]
+//      d' == NumSamplers[SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC]
 //
 //   Every D3D12Resource structure holds a reference to D3DShaderResourceAttribs structure from ShaderResourcesD3D12.
 //   ShaderResourceLayoutD3D12 holds shared pointer to ShaderResourcesD3D12 instance. Note that ShaderResourcesD3D12::SamplerId 
@@ -86,14 +86,13 @@
 //      ** These resource layouts are used as reference layouts for shader resource binding objects
 //      ** All variable types are preserved
 //      ** Root indices and descriptor table offsets are assigned during the initialization
-//    * Every shader object (ShaderD3D12Impl) contains shader resource layout that facilitates management of static shader resources
+//    * Every pipeline state object also contains shader resource layout that facilitates management of static shader resources
 //      ** The resource layout defines artificial layout where root index matches the resource type (CBV/SRV/UAV/SAM)
 //      ** Only static variables are referenced
 //
 //    * Every shader resource binding object (ShaderResourceBindingD3D12Impl) encompasses shader variable 
 //      manager (ShaderVariableManagerD3D12) for every active shader stage in the parent pipeline state that
 //      handles mutable and dynamic resources
-//    * Every shader object (ShaderD3D12Impl) constains shader variable manager that handles static resources
 
 #include <array>
 
@@ -118,16 +117,16 @@ public:
     
     ~ShaderResourceLayoutD3D12();
 
-    //  The method is called by
-    //  - ShaderD3D12Impl class instance to initialize static resource layout and initialize shader resource cache
-    //    to hold static resources
-    //  - PipelineStateD3D12Impl class instance to reference all types of resources (static, mutable, dynamic). 
+    //  The method is called to
+    //  - initialize static resource layout and initialize shader resource cache to hold static resources
+    //  - initialize reference layouts that address all types of resources (static, mutable, dynamic). 
     //    Root indices and descriptor table offsets are assigned during the initialization; 
     //    no shader resource cache is provided
     void Initialize(ID3D12Device*                               pd3d12Device,
+                    const PipelineResourceLayoutDesc&           ResourceLayout,
                     std::shared_ptr<const ShaderResourcesD3D12> pSrcResources,
                     IMemoryAllocator&                           LayoutDataAllocator,
-                    const SHADER_VARIABLE_TYPE*                 VarTypes,
+                    const SHADER_RESOURCE_VARIABLE_TYPE* const  VarTypes,
                     Uint32                                      NumAllowedTypes,
                     ShaderResourceCacheD3D12*                   pResourceCache,
                     class RootSignature*                        pRootSig);
@@ -141,7 +140,8 @@ public:
         D3D12Resource& operator = (      D3D12Resource&&) = delete;
 
         static constexpr const Uint32 ResourceTypeBits = 3;
-        static constexpr const Uint32 RootIndexBits    = 16 - ResourceTypeBits;
+        static constexpr const Uint32 VariableTypeBits = 2;
+        static constexpr const Uint32 RootIndexBits    = 16 - ResourceTypeBits - VariableTypeBits;
 
         static constexpr const Uint32 InvalidRootIndex = (1 << RootIndexBits) - 1;
         static constexpr const Uint32 MaxRootIndex     = InvalidRootIndex - 1;
@@ -150,24 +150,29 @@ public:
         static constexpr const Uint32 MaxSamplerId     = InvalidSamplerId-1;
         static constexpr const Uint32 InvalidOffset    = static_cast<Uint32>(-1);
 
+        static_assert( SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES < (1 << VariableTypeBits), "2 bits is not enough to store SHADER_RESOURCE_VARIABLE_TYPE");
         static_assert( static_cast<int>(CachedResourceType::NumTypes) < (1 << ResourceTypeBits), "3 bits is not enough to store CachedResourceType");
     
-        const ShaderResourceLayoutD3D12& ParentResLayout;
-        const D3DShaderResourceAttribs&  Attribs;
-        const Uint32                     OffsetFromTableStart;
-        const Uint16                     ResourceType : ResourceTypeBits; // | 0 1 2 |
-        const Uint16                     RootIndex    : RootIndexBits;    //         | 3 4 5 ... 15 |
-        const Uint16                     SamplerId;
+/* 0  */ const ShaderResourceLayoutD3D12& ParentResLayout;
+/* 8  */ const D3DShaderResourceAttribs&  Attribs;
+/*16  */ const Uint32                     OffsetFromTableStart;
+/*20.0*/ const Uint16                     ResourceType : ResourceTypeBits; // | 0 1 2 |
+/*20.3*/ const Uint16                     VariableType : VariableTypeBits; //         | 3 4 |
+/*20.5*/ const Uint16                     RootIndex    : RootIndexBits;    //               | 5 6 7 ... 15 |
+/*22  */ const Uint16                     SamplerId;
+/*24  */ // End of data
 
         D3D12Resource(const ShaderResourceLayoutD3D12& _ParentLayout, 
-                      const D3DShaderResourceAttribs&  _Attribs, 
-                      CachedResourceType               _ResType, 
+                      const D3DShaderResourceAttribs&  _Attribs,
+                      SHADER_RESOURCE_VARIABLE_TYPE    _VariableType,
+                      CachedResourceType               _ResType,
                       Uint32                           _RootIndex, 
                       Uint32                           _OffsetFromTableStart, 
                       Uint32                           _SamplerId)noexcept :
             ParentResLayout     (_ParentLayout),
             Attribs             (_Attribs),
             ResourceType        (static_cast<Uint16>(_ResType)),
+            VariableType        (static_cast<Uint16>(_VariableType)),
             RootIndex           (static_cast<Uint16>(_RootIndex)),
             SamplerId           (static_cast<Uint16>(_SamplerId)),
             OffsetFromTableStart( _OffsetFromTableStart )
@@ -175,6 +180,7 @@ public:
             VERIFY(IsValidOffset(),    "Offset must be valid");
             VERIFY(IsValidRootIndex(), "Root index must be valid");
             VERIFY(_RootIndex <= MaxRootIndex, "Root index (", _RootIndex, ") exceeds max allowed value (", MaxRootIndex, ")" );
+            VERIFY(_VariableType < (1 << VariableTypeBits), "Variable type is out of representable range");
             VERIFY(_SamplerId == InvalidSamplerId || _SamplerId <= MaxSamplerId, "Sampler id (", _SamplerId, ") exceeds max allowed value (", MaxSamplerId, ")" );
             VERIFY(_SamplerId == InvalidSamplerId || GetResType() == CachedResourceType::TexSRV, "A sampler can only be assigned to a Texture SRV");
         }
@@ -191,6 +197,7 @@ public:
         bool IsValidOffset()       const { return OffsetFromTableStart != InvalidOffset;    }
 
         CachedResourceType GetResType() const { return static_cast<CachedResourceType>( ResourceType ); }
+        SHADER_RESOURCE_VARIABLE_TYPE GetVariableType() const { return static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(VariableType); }
 
     private:
         void CacheCB(IDeviceObject*                      pBuffer, 
@@ -224,21 +231,21 @@ public:
 
     IObject& GetOwner(){return m_Owner;}
 
-    Uint32 GetCbvSrvUavCount(SHADER_VARIABLE_TYPE VarType)const
+    Uint32 GetCbvSrvUavCount(SHADER_RESOURCE_VARIABLE_TYPE VarType)const
     {
         return m_CbvSrvUavOffsets[VarType + 1] - m_CbvSrvUavOffsets[VarType];
     }
-    Uint32 GetSamplerCount(SHADER_VARIABLE_TYPE VarType)const
+    Uint32 GetSamplerCount(SHADER_RESOURCE_VARIABLE_TYPE VarType)const
     {
         return m_SamplersOffsets[VarType + 1] - m_SamplersOffsets[VarType];
     }
 
-    const D3D12Resource& GetSrvCbvUav(SHADER_VARIABLE_TYPE VarType, Uint32 r)const
+    const D3D12Resource& GetSrvCbvUav(SHADER_RESOURCE_VARIABLE_TYPE VarType, Uint32 r)const
     {
         VERIFY_EXPR( r < GetCbvSrvUavCount(VarType) );
         return GetResource(GetSrvCbvUavOffset(VarType,r));
     }
-    const D3D12Resource& GetSampler(SHADER_VARIABLE_TYPE VarType, Uint32 s)const
+    const D3D12Resource& GetSampler(SHADER_RESOURCE_VARIABLE_TYPE VarType, Uint32 s)const
     {
         VERIFY_EXPR( s < GetSamplerCount(VarType) );
         return GetResource(GetSamplerOffset(VarType,s));
@@ -250,20 +257,24 @@ private:
     const D3D12Resource& GetAssignedSampler(const D3D12Resource& TexSrv)const;
           D3D12Resource& GetAssignedSampler(const D3D12Resource& TexSrv);
 
-    const Char* GetShaderName()const;
+    const Char* GetShaderName()const
+    {
+        return m_pResources->GetShaderName();
+    }
+
 
     Uint32 GetTotalSrvCbvUavCount()const
     {
         VERIFY_EXPR(m_CbvSrvUavOffsets[0] == 0);
-        return m_CbvSrvUavOffsets[SHADER_VARIABLE_TYPE_NUM_TYPES];
+        return m_CbvSrvUavOffsets[SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES];
     }
     Uint32 GetTotalSamplerCount()const
     {
-        return m_SamplersOffsets[SHADER_VARIABLE_TYPE_NUM_TYPES] - m_SamplersOffsets[0];
+        return m_SamplersOffsets[SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES] - m_SamplersOffsets[0];
     }
     Uint32 GetTotalResourceCount()const
     {
-        return m_SamplersOffsets[SHADER_VARIABLE_TYPE_NUM_TYPES];
+        return m_SamplersOffsets[SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES];
     }
 
     D3D12Resource& GetResource(Uint32 r)
@@ -279,25 +290,25 @@ private:
         return Resource[r];
     }
 
-    Uint32 GetSrvCbvUavOffset(SHADER_VARIABLE_TYPE VarType, Uint32 r)const
+    Uint32 GetSrvCbvUavOffset(SHADER_RESOURCE_VARIABLE_TYPE VarType, Uint32 r)const
     {
         Uint32 Offset = m_CbvSrvUavOffsets[VarType] + r;
         VERIFY_EXPR( Offset < m_CbvSrvUavOffsets[VarType+1] );
         return Offset;
     }
-    D3D12Resource& GetSrvCbvUav(SHADER_VARIABLE_TYPE VarType, Uint32 r)
+    D3D12Resource& GetSrvCbvUav(SHADER_RESOURCE_VARIABLE_TYPE VarType, Uint32 r)
     {
         VERIFY_EXPR( r < GetCbvSrvUavCount(VarType) );
         return GetResource(GetSrvCbvUavOffset(VarType,r));
     }
 
-    Uint32 GetSamplerOffset(SHADER_VARIABLE_TYPE VarType, Uint32 s)const
+    Uint32 GetSamplerOffset(SHADER_RESOURCE_VARIABLE_TYPE VarType, Uint32 s)const
     {
         auto Offset = m_SamplersOffsets[VarType] + s;
         VERIFY_EXPR( Offset < m_SamplersOffsets[VarType+1] );
         return Offset;
     }
-    D3D12Resource& GetSampler(SHADER_VARIABLE_TYPE VarType, Uint32 s)
+    D3D12Resource& GetSampler(SHADER_RESOURCE_VARIABLE_TYPE VarType, Uint32 s)
     {
         VERIFY_EXPR( s < GetSamplerCount(VarType) );
         return GetResource(GetSamplerOffset(VarType,s));
@@ -309,12 +320,12 @@ private:
     }
 
     void AllocateMemory(IMemoryAllocator&                                         Allocator,
-                        const std::array<Uint32, SHADER_VARIABLE_TYPE_NUM_TYPES>& CbvSrvUavCount,
-                        const std::array<Uint32, SHADER_VARIABLE_TYPE_NUM_TYPES>& SamplerCount);
+                        const std::array<Uint32, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES>& CbvSrvUavCount,
+                        const std::array<Uint32, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES>& SamplerCount);
 
     std::unique_ptr<void, STDDeleterRawMem<void> > m_ResourceBuffer;
-    std::array<Uint16, SHADER_VARIABLE_TYPE_NUM_TYPES + 1> m_CbvSrvUavOffsets = {};
-    std::array<Uint16, SHADER_VARIABLE_TYPE_NUM_TYPES + 1> m_SamplersOffsets  = {};
+    std::array<Uint16, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES + 1> m_CbvSrvUavOffsets = {};
+    std::array<Uint16, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES + 1> m_SamplersOffsets  = {};
 
     CComPtr<ID3D12Device>                       m_pd3d12Device;
     IObject&                                    m_Owner;

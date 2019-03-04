@@ -53,11 +53,11 @@ public:
 
     virtual void BindResources(Uint32 ShaderFlags, IResourceMapping* pResMapping, Uint32 Flags)override;
 
-    virtual IShaderVariable* GetVariable(SHADER_TYPE ShaderType, const char* Name)override;
+    virtual IShaderResourceVariable* GetVariable(SHADER_TYPE ShaderType, const char* Name)override;
 
     virtual Uint32 GetVariableCount(SHADER_TYPE ShaderType) const override final;
 
-    virtual IShaderVariable* GetVariable(SHADER_TYPE ShaderType, Uint32 Index)override final;
+    virtual IShaderResourceVariable* GetVariable(SHADER_TYPE ShaderType, Uint32 Index)override final;
 
     virtual void InitializeStaticResources(const IPipelineState* pPipelineState)override final;
     
