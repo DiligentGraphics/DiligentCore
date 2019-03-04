@@ -36,7 +36,8 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*      pRefCoun
                                                RenderDeviceD3D11Impl*   pRenderDeviceD3D11,
                                                const PipelineStateDesc& PipelineDesc) : 
     TPipelineStateBase(pRefCounters, pRenderDeviceD3D11, PipelineDesc),
-    m_SRBMemAllocator(GetRawAllocator())
+    m_SRBMemAllocator(GetRawAllocator()),
+    m_StaticSamplers(STD_ALLOCATOR_RAW_MEM(StaticSamplerInfo, GetRawAllocator(), "Allocator for vector<StaticSamplerInfo>"))
 {
     if (PipelineDesc.IsComputePipeline)
     {
@@ -131,7 +132,7 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*      pRefCoun
     }
 #endif
 
-    decltype(m_StaticSamplers) StaticSamplers;
+    decltype(m_StaticSamplers) StaticSamplers(STD_ALLOCATOR_RAW_MEM(StaticSamplerInfo, GetRawAllocator(), "Allocator for vector<StaticSamplerInfo>"));
     std::array<size_t, MaxShadersInPipeline> ShaderResLayoutDataSizes = {};
     std::array<size_t, MaxShadersInPipeline> ShaderResCacheDataSizes  = {};
     for (Uint32 s = 0; s < m_NumShaders; ++s)
@@ -362,8 +363,8 @@ void PipelineStateD3D11Impl::SetStaticSamplers(ShaderResourceCacheD3D11& Resourc
     for (Uint32 s = m_StaticSamplerOffsets[ShaderInd]; s < m_StaticSamplerOffsets[ShaderInd+1]; ++s)
     {
         auto& SamplerInfo = m_StaticSamplers[s];
-        const auto& SamAttribs = SamplerInfo.first;
-        auto* pSamplerD3D11Impl = SamplerInfo.second.RawPtr<SamplerD3D11Impl>();
+        const auto& SamAttribs = SamplerInfo.Attribs;
+        auto* pSamplerD3D11Impl = SamplerInfo.pSampler.RawPtr<SamplerD3D11Impl>();
         // Limiting EndBindPoint is required when initializing static samplers in a Shader's static cache
         auto EndBindPoint = std::min( static_cast<Uint32>(SamAttribs.BindPoint) + SamAttribs.BindCount, NumCachedSamplers);
         for (Uint32 BindPoint = SamAttribs.BindPoint; BindPoint < EndBindPoint; ++BindPoint )

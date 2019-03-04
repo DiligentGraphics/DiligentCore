@@ -116,7 +116,17 @@ private:
     Int8  m_ResourceLayoutIndex[6] = {-1, -1, -1, -1, -1, -1};
 
     Uint16 m_StaticSamplerOffsets[MaxShadersInPipeline+1] = {};
-    std::vector< std::pair< const D3DShaderResourceAttribs&, RefCntAutoPtr<ISampler> > > m_StaticSamplers;
+    struct StaticSamplerInfo
+    {
+        const D3DShaderResourceAttribs& Attribs;
+        RefCntAutoPtr<ISampler>         pSampler;
+        StaticSamplerInfo(const D3DShaderResourceAttribs& _Attribs,
+                          RefCntAutoPtr<ISampler>         _pSampler) : 
+            Attribs  (_Attribs),
+            pSampler (std::move(_pSampler))
+        {}
+    };
+    std::vector< StaticSamplerInfo, STDAllocatorRawMem<StaticSamplerInfo> > m_StaticSamplers;
 };
 
 }
