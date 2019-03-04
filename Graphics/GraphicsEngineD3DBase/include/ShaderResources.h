@@ -334,9 +334,12 @@ public:
 
     D3DShaderResourceCounters CountResources(const PipelineResourceLayoutDesc&    ResourceLayout,
                                              const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes,
-                                             Uint32                               NumAllowedTypes)const noexcept;
+                                             Uint32                               NumAllowedTypes,
+                                             bool                                 CountStaticSamplers)const noexcept;
 #ifdef DEVELOPMENT
-    void DvpVerifyResourceLayout(const PipelineResourceLayoutDesc& ResourceLayout)const;
+    static void DvpVerifyResourceLayout(const PipelineResourceLayoutDesc& ResourceLayout,
+                                        const ShaderResources* const      pShaderResources[],
+                                        Uint32                            NumShaders);
 #endif
 
 protected:

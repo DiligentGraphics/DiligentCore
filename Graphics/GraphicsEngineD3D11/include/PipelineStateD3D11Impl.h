@@ -97,8 +97,10 @@ public:
         return m_pStaticResourceCaches[s];
     }
 
+    void SetStaticSamplers(ShaderResourceCacheD3D11& ResourceCache, Uint32 ShaderInd)const;
 
 private:
+    
     CComPtr<ID3D11BlendState>        m_pd3d11BlendState;
     CComPtr<ID3D11RasterizerState>   m_pd3d11RasterizerState;
     CComPtr<ID3D11DepthStencilState> m_pd3d11DepthStencilState;
@@ -112,6 +114,9 @@ private:
     SRBMemoryAllocator m_SRBMemAllocator;
 
     Int8  m_ResourceLayoutIndex[6] = {-1, -1, -1, -1, -1, -1};
+
+    Uint16 m_StaticSamplerOffsets[MaxShadersInPipeline+1] = {};
+    std::vector< std::pair< const D3DShaderResourceAttribs&, RefCntAutoPtr<ISampler> > > m_StaticSamplers;
 };
 
 }

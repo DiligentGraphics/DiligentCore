@@ -80,7 +80,9 @@ size_t ShaderResourceLayoutD3D11::GetRequiredMemorySize(const ShaderResourcesD3D
                                                         const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes,
                                                         Uint32                               NumAllowedTypes)
 {
-    auto ResCounters = SrcResources.CountResources(ResourceLayout, AllowedVarTypes, NumAllowedTypes);
+    // Skip static samplers as they are initialized directly in the resource cache by the PSO
+    constexpr bool CountStaticSamplers = false; 
+    auto ResCounters = SrcResources.CountResources(ResourceLayout, AllowedVarTypes, NumAllowedTypes, CountStaticSamplers);
     auto MemSize = ResCounters.NumCBs      * sizeof(ConstBuffBindInfo) +
                    ResCounters.NumTexSRVs  * sizeof(TexSRVBindInfo)    +
                    ResCounters.NumTexUAVs  * sizeof(TexUAVBindInfo)    +
@@ -92,7 +94,6 @@ size_t ShaderResourceLayoutD3D11::GetRequiredMemorySize(const ShaderResourcesD3D
 
 
 ShaderResourceLayoutD3D11::ShaderResourceLayoutD3D11(IObject&                                    Owner,
-                                                     IRenderDevice*                              pRenderDevice,
                                                      std::shared_ptr<const ShaderResourcesD3D11> pSrcResources,
                                                      const PipelineResourceLayoutDesc&           ResourceLayout,
                                                      const SHADER_RESOURCE_VARIABLE_TYPE*        VarTypes, 
@@ -109,7 +110,9 @@ ShaderResourceLayoutD3D11::ShaderResourceLayoutD3D11(IObject&                   
     const auto AllowedTypeBits = GetAllowedTypeBits(VarTypes, NumVarTypes);
 
     // Count total number of resources of allowed types
-    auto ResCounters = m_pResources->CountResources(ResourceLayout, VarTypes, NumVarTypes);
+    // Skip static samplers as they are initialized directly in the resource cache by the PSO
+    constexpr bool CountStaticSamplers = false; 
+    auto ResCounters = m_pResources->CountResources(ResourceLayout, VarTypes, NumVarTypes, CountStaticSamplers);
 
     // Initialize offsets
     size_t CurrentOffset = 0;
@@ -175,14 +178,13 @@ ShaderResourceLayoutD3D11::ShaderResourceLayoutD3D11(IObject&                   
             if (IsAllowedType(VarType, AllowedTypeBits))
             {
                 auto StaticSamplerInd = m_pResources->FindStaticSampler(Sampler, ResourceLayout);
-                RefCntAutoPtr<ISampler> pStaticSampler;
                 if (StaticSamplerInd >= 0)
                 {
-                    const auto& StaticSamplerDesc = ResourceLayout.StaticSamplers[StaticSamplerInd];
-                    pRenderDevice->CreateSampler(StaticSamplerDesc.Desc, &pStaticSampler);
+                    // Skip static samplers as they are initialized directly in the resource cache by the PSO
+                    return;
                 }
                 // Initialize current sampler in place, increment sampler counter
-                new (&GetResource<SamplerBindInfo>(sam++)) SamplerBindInfo(Sampler, *this, VarType, std::move(pStaticSampler));
+                new (&GetResource<SamplerBindInfo>(sam++)) SamplerBindInfo(Sampler, *this, VarType);
                 NumSamplerSlots = std::max(NumSamplerSlots, Uint32{Sampler.BindPoint} + Uint32{Sampler.BindCount});
             }
         },
@@ -207,21 +209,33 @@ ShaderResourceLayoutD3D11::ShaderResourceLayoutD3D11(IObject&                   
                                ") of the sampler '", AssignedSamplerAttribs.Name, "' that is assigned to it");
                 
                 bool SamplerFound = false;
-                for (AssignedSamplerIndex = 0; AssignedSamplerIndex < NumSamplers && !SamplerFound; ++AssignedSamplerIndex)
+                for (AssignedSamplerIndex = 0; AssignedSamplerIndex < NumSamplers; ++AssignedSamplerIndex)
                 {
                     const auto& Sampler = GetResource<SamplerBindInfo>(AssignedSamplerIndex);
                     SamplerFound = strcmp(Sampler.m_Attribs.Name, AssignedSamplerAttribs.Name) == 0;
                     if (SamplerFound)
-                    {
-                        if (Sampler.pStaticSampler)
-                        {
-                            // Do not assign static samplers to texture SRV
-                            AssignedSamplerIndex = TexSRVBindInfo::InvalidSamplerIndex;
-                            break;
-                        }
-                    }
+                        break; // Otherwise AssignedSamplerIndex will be incremented
                 }
-                VERIFY(SamplerFound, "Unable to find sampler assigned to texture SRV '", TexSRV.Name, "'");
+
+                if (!SamplerFound)
+                {
+                    AssignedSamplerIndex = TexSRVBindInfo::InvalidSamplerIndex;
+#ifdef _DEBUG
+                    if (m_pResources->FindStaticSampler(AssignedSamplerAttribs, ResourceLayout) < 0)
+                    {
+                        LOG_ERROR("Unable to find non-static sampler assigned to texture SRV '", TexSRV.Name, "'. This seems to be a bug.");
+                    }
+#endif
+                }
+                else
+                {
+#ifdef _DEBUG
+                    if (m_pResources->FindStaticSampler(AssignedSamplerAttribs, ResourceLayout) >= 0)
+                    {
+                        LOG_ERROR("Static sampler '", AssignedSamplerAttribs.Name, "' is assigned to texture SRV '", TexSRV.Name, "'. This seems to be a bug.");
+                    }
+#endif
+                }
             }
 
             // Initialize tex SRV in place, increment counter of tex SRVs
@@ -318,7 +332,7 @@ void ShaderResourceLayoutD3D11::CopyResources(ShaderResourceCacheD3D11& DstCache
     HandleConstResources(
         [&](const ConstBuffBindInfo& cb)
         {
-            for(auto CBSlot = cb.m_Attribs.BindPoint; CBSlot < cb.m_Attribs.BindPoint+cb.m_Attribs.BindCount; ++CBSlot)
+            for (auto CBSlot = cb.m_Attribs.BindPoint; CBSlot < cb.m_Attribs.BindPoint+cb.m_Attribs.BindCount; ++CBSlot)
             {
                 VERIFY_EXPR(CBSlot < m_ResourceCache.GetCBCount() && CBSlot < DstCache.GetCBCount());
                 DstCBs     [CBSlot] = CachedCBs[CBSlot];
@@ -328,7 +342,7 @@ void ShaderResourceLayoutD3D11::CopyResources(ShaderResourceCacheD3D11& DstCache
 
         [&](const TexSRVBindInfo& ts)
         {
-            for(auto SRVSlot = ts.m_Attribs.BindPoint; SRVSlot < ts.m_Attribs.BindPoint + ts.m_Attribs.BindCount; ++SRVSlot)
+            for (auto SRVSlot = ts.m_Attribs.BindPoint; SRVSlot < ts.m_Attribs.BindPoint + ts.m_Attribs.BindCount; ++SRVSlot)
             {
                 VERIFY_EXPR(SRVSlot < m_ResourceCache.GetSRVCount() && SRVSlot < DstCache.GetSRVCount());
                 DstSRVResources[SRVSlot] = CachedSRVResources[SRVSlot];
@@ -338,7 +352,7 @@ void ShaderResourceLayoutD3D11::CopyResources(ShaderResourceCacheD3D11& DstCache
 
         [&](const TexUAVBindInfo& uav)
         {
-            for(auto UAVSlot = uav.m_Attribs.BindPoint; UAVSlot < uav.m_Attribs.BindPoint + uav.m_Attribs.BindCount; ++UAVSlot)
+            for (auto UAVSlot = uav.m_Attribs.BindPoint; UAVSlot < uav.m_Attribs.BindPoint + uav.m_Attribs.BindCount; ++UAVSlot)
             {
                 VERIFY_EXPR(UAVSlot < m_ResourceCache.GetUAVCount() && UAVSlot < DstCache.GetUAVCount());
                 DstUAVResources[UAVSlot] = CachedUAVResources[UAVSlot];
@@ -348,7 +362,7 @@ void ShaderResourceLayoutD3D11::CopyResources(ShaderResourceCacheD3D11& DstCache
 
         [&](const BuffSRVBindInfo& srv)
         {
-            for(auto SRVSlot = srv.m_Attribs.BindPoint; SRVSlot < srv.m_Attribs.BindPoint + srv.m_Attribs.BindCount; ++SRVSlot)
+            for (auto SRVSlot = srv.m_Attribs.BindPoint; SRVSlot < srv.m_Attribs.BindPoint + srv.m_Attribs.BindCount; ++SRVSlot)
             {
                 VERIFY_EXPR(SRVSlot < m_ResourceCache.GetSRVCount() && SRVSlot < DstCache.GetSRVCount());
                 DstSRVResources[SRVSlot] = CachedSRVResources[SRVSlot];
@@ -358,7 +372,7 @@ void ShaderResourceLayoutD3D11::CopyResources(ShaderResourceCacheD3D11& DstCache
 
         [&](const BuffUAVBindInfo& uav)
         {
-            for(auto UAVSlot = uav.m_Attribs.BindPoint; UAVSlot < uav.m_Attribs.BindPoint + uav.m_Attribs.BindCount; ++UAVSlot)
+            for (auto UAVSlot = uav.m_Attribs.BindPoint; UAVSlot < uav.m_Attribs.BindPoint + uav.m_Attribs.BindCount; ++UAVSlot)
             {
                 VERIFY_EXPR(UAVSlot < m_ResourceCache.GetUAVCount() && UAVSlot < DstCache.GetUAVCount());
                 DstUAVResources[UAVSlot] = CachedUAVResources[UAVSlot];
@@ -368,8 +382,8 @@ void ShaderResourceLayoutD3D11::CopyResources(ShaderResourceCacheD3D11& DstCache
 
         [&](const SamplerBindInfo& sam)
         {
-            VERIFY(!sam.pStaticSampler, "Variables are not created for static samplers");
-            for(auto SamSlot = sam.m_Attribs.BindPoint; SamSlot < sam.m_Attribs.BindPoint + sam.m_Attribs.BindCount; ++SamSlot)
+            //VERIFY(!sam.IsStaticSampler, "Variables are not created for static samplers");
+            for (auto SamSlot = sam.m_Attribs.BindPoint; SamSlot < sam.m_Attribs.BindPoint + sam.m_Attribs.BindCount; ++SamSlot)
             {
                 VERIFY_EXPR(SamSlot < m_ResourceCache.GetSamplerCount() && SamSlot < DstCache.GetSamplerCount());
                 DstSamplers     [SamSlot] = CachedSamplers[SamSlot];
@@ -377,24 +391,6 @@ void ShaderResourceLayoutD3D11::CopyResources(ShaderResourceCacheD3D11& DstCache
             }
         }
     );
-}
-
-void ShaderResourceLayoutD3D11::SetStaticSamplers(ShaderResourceCacheD3D11& ResourceCache)const
-{
-    auto NumCachedSamplers = ResourceCache.GetSamplerCount();
-    for (Uint32 s = 0; s < GetNumResources<SamplerBindInfo>(); ++s)
-    {
-        auto& Sampler = GetConstResource<SamplerBindInfo>(s);
-        if (Sampler.pStaticSampler)
-        {
-            const auto& SamAttribs = Sampler.m_Attribs;
-            auto* pSamplerD3D11Impl = const_cast<SamplerD3D11Impl*>(Sampler.pStaticSampler.RawPtr<SamplerD3D11Impl>());
-            // Limiting EndBindPoint is required when initializing static samplers in a Shader's static cache
-            auto EndBindPoint = std::min( static_cast<Uint32>(SamAttribs.BindPoint) + SamAttribs.BindCount, NumCachedSamplers);
-            for (Uint32 BindPoint = SamAttribs.BindPoint; BindPoint < EndBindPoint; ++BindPoint )
-                ResourceCache.SetSampler(BindPoint, pSamplerD3D11Impl);
-        }
-    }
 }
 
 #define LOG_RESOURCE_BINDING_ERROR(ResType, pResource, Attribs, ArrayInd, ShaderName, ...)\
@@ -507,7 +503,7 @@ void ShaderResourceLayoutD3D11::TexSRVBindInfo::BindResource(IDeviceObject* pVie
     if (ValidSamplerAssigned())
     {
         auto& Sampler = m_ParentResLayout.GetResource<SamplerBindInfo>(SamplerIndex);
-        VERIFY(!Sampler.pStaticSampler, "Static samplers are not assigned to texture SRVs as they are initialized directly in the shader resource cache");
+        //VERIFY(!Sampler.IsStaticSampler, "Static samplers are not assigned to texture SRVs as they are initialized directly in the shader resource cache");
         VERIFY_EXPR(Sampler.m_Attribs.BindCount == m_Attribs.BindCount || Sampler.m_Attribs.BindCount == 1);
         auto SamplerBindPoint = Sampler.m_Attribs.BindPoint + (Sampler.m_Attribs.BindCount != 1 ? ArrayIndex : 0);
 
@@ -547,7 +543,7 @@ void ShaderResourceLayoutD3D11::SamplerBindInfo::BindResource(IDeviceObject* pSa
 {
     DEV_CHECK_ERR(ArrayIndex < m_Attribs.BindCount, "Array index (", ArrayIndex, ") is out of range for variable '", m_Attribs.Name, "'. Max allowed index: ", m_Attribs.BindCount);
     auto& ResourceCache = m_ParentResLayout.m_ResourceCache;
-    VERIFY(!pStaticSampler, "Cannot bind sampler to a static sampler");
+    //VERIFY(!IsStaticSampler, "Cannot bind sampler to a static sampler");
 
     // We cannot use ValidatedCast<> here as the resource retrieved from the
     // resource mapping can be of wrong type
@@ -807,33 +803,26 @@ IShaderResourceVariable* ShaderResourceLayoutD3D11::GetResourceByName( const Cha
 
 IShaderResourceVariable* ShaderResourceLayoutD3D11::GetShaderVariable(const Char* Name)
 {
-    if(auto* pCB = GetResourceByName<ConstBuffBindInfo>(Name))
+    if (auto* pCB = GetResourceByName<ConstBuffBindInfo>(Name))
         return pCB;
 
-    if(auto* pTexSRV = GetResourceByName<TexSRVBindInfo>(Name))
+    if (auto* pTexSRV = GetResourceByName<TexSRVBindInfo>(Name))
         return pTexSRV;
 
-    if(auto* pTexUAV = GetResourceByName<TexUAVBindInfo>(Name))
+    if (auto* pTexUAV = GetResourceByName<TexUAVBindInfo>(Name))
         return pTexUAV;
 
-    if(auto* pBuffSRV = GetResourceByName<BuffSRVBindInfo>(Name))
+    if (auto* pBuffSRV = GetResourceByName<BuffSRVBindInfo>(Name))
         return pBuffSRV;
 
-    if(auto* pBuffUAV = GetResourceByName<BuffUAVBindInfo>(Name))
+    if (auto* pBuffUAV = GetResourceByName<BuffUAVBindInfo>(Name))
         return pBuffUAV;
 
     if (!m_pResources->IsUsingCombinedTextureSamplers())
     {
-        auto NumSamplers = GetNumResources<SamplerBindInfo>();
-        for (Uint32 s = 0; s < NumSamplers; ++s)
-        {
-            auto& Sampler = GetResource<SamplerBindInfo>(s);
-            if (strcmp(Sampler.m_Attribs.Name, Name) == 0)
-            {
-                // Do not return static samplers
-                return Sampler.pStaticSampler ? nullptr : &Sampler;
-            }
-        }
+        // Static samplers are never created in the resource layout
+        if (auto* pSampler = GetResourceByName<SamplerBindInfo>(Name))
+            return pSampler;
     }
 
     return nullptr;

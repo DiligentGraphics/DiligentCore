@@ -128,7 +128,8 @@ Int32 ShaderResources::FindStaticSampler(const D3DShaderResourceAttribs&   Resou
 
 D3DShaderResourceCounters ShaderResources::CountResources(const PipelineResourceLayoutDesc&    ResourceLayout,
                                                           const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes,
-                                                          Uint32                               NumAllowedTypes)const noexcept
+                                                          Uint32                               NumAllowedTypes,
+                                                          bool                                 CountStaticSamplers)const noexcept
 {
     auto AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
 
@@ -144,7 +145,14 @@ D3DShaderResourceCounters ShaderResources::CountResources(const PipelineResource
         {
             auto VarType = FindVariableType(Sam, ResourceLayout);
             if (IsAllowedType(VarType, AllowedTypeBits))
-                    ++Counters.NumSamplers;
+            {
+                if (!CountStaticSamplers)
+                {
+                    if (FindStaticSampler(Sam, ResourceLayout) >= 0)
+                        return; // Skip static sampler if requested
+                }
+                ++Counters.NumSamplers;
+            }
         },
         [&](const D3DShaderResourceAttribs& TexSRV, Uint32)
         {
@@ -176,9 +184,10 @@ D3DShaderResourceCounters ShaderResources::CountResources(const PipelineResource
 }
 
 #ifdef DEVELOPMENT
-void ShaderResources::DvpVerifyResourceLayout(const PipelineResourceLayoutDesc& ResourceLayout)const
+void ShaderResources::DvpVerifyResourceLayout(const PipelineResourceLayoutDesc& ResourceLayout,
+                                              const ShaderResources* const      pShaderResources[],
+                                              Uint32                            NumShaders)
 {
-    const auto UseCombinedTextureSamplers = IsUsingCombinedTextureSamplers();
     for (Uint32 v = 0; v < ResourceLayout.NumVariables; ++v)
     {
         const auto& VarDesc = ResourceLayout.Variables[v];
@@ -188,65 +197,75 @@ void ShaderResources::DvpVerifyResourceLayout(const PipelineResourceLayoutDesc& 
             continue;
         }
 
-        if( (VarDesc.ShaderStages & m_ShaderType) == 0)
-            continue;
-
         bool VariableFound = false;
-        for (Uint32 n=0; n < m_TotalResources && !VariableFound; ++n)
+        for (Uint32 s = 0; s < NumShaders && !VariableFound; ++s)
         {
-            const auto& Res = GetResAttribs(n, m_TotalResources, 0);
-
-            // Skip samplers if combined texture samplers are used as 
-            // in this case they are not treated as independent variables
-            if (UseCombinedTextureSamplers && Res.GetInputType() == D3D_SIT_SAMPLER)
+            const auto& Resources = *pShaderResources[s];
+            if( (VarDesc.ShaderStages & Resources.GetShaderType()) == 0)
                 continue;
+            
+            const auto UseCombinedTextureSamplers = Resources.IsUsingCombinedTextureSamplers();
+            for (Uint32 n=0; n < Resources.m_TotalResources && !VariableFound; ++n)
+            {
+                const auto& Res = Resources.GetResAttribs(n, Resources.m_TotalResources, 0);
 
-            VariableFound = (strcmp(Res.Name, VarDesc.Name) == 0);
+                // Skip samplers if combined texture samplers are used as 
+                // in this case they are not treated as independent variables
+                if (UseCombinedTextureSamplers && Res.GetInputType() == D3D_SIT_SAMPLER)
+                    continue;
+
+                VariableFound = (strcmp(Res.Name, VarDesc.Name) == 0);
+            }
         }
 
-        if(!VariableFound)
+        if (!VariableFound)
         {
-            LOG_WARNING_MESSAGE("Variable '", VarDesc.Name, "' is not found in shader '", m_ShaderName, '\'');
+            LOG_WARNING_MESSAGE("Variable '", VarDesc.Name, "' is not found in of the designated shader stages "
+                                "(", GetShaderStagesString(VarDesc.ShaderStages), ")");
         }
     }
 
-    for (Uint32 s = 0; s < ResourceLayout.NumStaticSamplers; ++s)
+    for (Uint32 sam = 0; sam < ResourceLayout.NumStaticSamplers; ++sam)
     {
-        const auto& StSamDesc = ResourceLayout.StaticSamplers[s];
+        const auto& StSamDesc = ResourceLayout.StaticSamplers[sam];
         if (StSamDesc.ShaderStages == SHADER_TYPE_UNKNOWN)
         {
             LOG_WARNING_MESSAGE("No allowed shader stages are specified for static sampler '", StSamDesc.SamplerOrTextureName, "'.");
             continue;
         }
 
-        if ( (StSamDesc.ShaderStages & m_ShaderType) == 0)
-            continue;
-
         const auto* TexOrSamName = StSamDesc.SamplerOrTextureName;
-
-        if (UseCombinedTextureSamplers)
+        
+        bool TextureOrSamplerFound = false;
+        for (Uint32 s = 0; s < NumShaders && !TextureOrSamplerFound; ++s)
         {
-            bool TextureFound = false;
-            for(Uint32 n=0; n < GetNumTexSRV() && !TextureFound; ++n)
+            const auto& Resources = *pShaderResources[s];
+            if ( (StSamDesc.ShaderStages & Resources.GetShaderType()) == 0)
+                continue;
+
+            const auto UseCombinedTextureSamplers = Resources.IsUsingCombinedTextureSamplers();
+            if (UseCombinedTextureSamplers)
             {
-                const auto& TexSRV = GetTexSRV(n);
-                TextureFound = (strcmp(TexSRV.Name, TexOrSamName) == 0);
+                for(Uint32 n=0; n < Resources.GetNumTexSRV() && !TextureOrSamplerFound; ++n)
+                {
+                    const auto& TexSRV = Resources.GetTexSRV(n);
+                    TextureOrSamplerFound = (strcmp(TexSRV.Name, TexOrSamName) == 0);
+                }
             }
-            if (!TextureFound)
+            else
             {
-                LOG_WARNING_MESSAGE("Static sampler specifies a texture '", TexOrSamName, "' that is not found in shader '", m_ShaderName, '\'');
+                for(Uint32 n=0; n < Resources.GetNumSamplers() && !TextureOrSamplerFound; ++n)
+                {
+                    const auto& Sampler = Resources.GetSampler(n);
+                    TextureOrSamplerFound = (strcmp(Sampler.Name, TexOrSamName) == 0);
+                }
             }
         }
-        else
+
+        if (!TextureOrSamplerFound)
         {
-            bool SamplerFound = false;
-            for(Uint32 n=0; n < GetNumSamplers() && !SamplerFound; ++n)
-            {
-                const auto& Sampler = GetSampler(n);
-                SamplerFound = (strcmp(Sampler.Name, TexOrSamName) == 0);
-            }
-            if (!SamplerFound)
-                LOG_WARNING_MESSAGE("Static sampler '", TexOrSamName, "' is not found in shader '", m_ShaderName, '\'');
+            LOG_WARNING_MESSAGE("Static sampler '", TexOrSamName, "' is not found in any of the designated shader stages "
+                                "(", GetShaderStagesString(StSamDesc.ShaderStages), ")");
         }
     }
 }

@@ -46,7 +46,6 @@ class ShaderResourceLayoutD3D11
 {
 public:
     ShaderResourceLayoutD3D11(IObject& Owner,
-                              IRenderDevice*                              pRenderDevice,
                               std::shared_ptr<const ShaderResourcesD3D11> pSrcResources,
                               const PipelineResourceLayoutDesc&           ResourceLayout,
                               const SHADER_RESOURCE_VARIABLE_TYPE*        VarTypes, 
@@ -186,10 +185,8 @@ public:
     {
         SamplerBindInfo( const D3DShaderResourceAttribs& ResourceAttribs,
                          ShaderResourceLayoutD3D11&      ParentResLayout,
-                         SHADER_RESOURCE_VARIABLE_TYPE   VariableType,
-                         RefCntAutoPtr<ISampler>         _pStaticSampler) :
-            ShaderVariableD3D11Base(ParentResLayout, ResourceAttribs, VariableType),
-            pStaticSampler(std::move(_pStaticSampler))
+                         SHADER_RESOURCE_VARIABLE_TYPE   VariableType) :
+            ShaderVariableD3D11Base(ParentResLayout, ResourceAttribs, VariableType)
         {}
 
         // Non-virtual function
@@ -203,16 +200,12 @@ public:
         }
 
         __forceinline bool IsBound(Uint32 ArrayIndex)const;
-
-        RefCntAutoPtr<ISampler> pStaticSampler;
     };
 
     // dbgResourceCache is only used for sanity check and as a remainder that the resource cache must be alive
     // while Layout is alive
     void BindResources( IResourceMapping* pResourceMapping, Uint32 Flags, const ShaderResourceCacheD3D11& dbgResourceCache );
     
-    void SetStaticSamplers(ShaderResourceCacheD3D11& ResourceCache)const;
-
 #ifdef DEVELOPMENT
     bool dvpVerifyBindings()const;
 #endif

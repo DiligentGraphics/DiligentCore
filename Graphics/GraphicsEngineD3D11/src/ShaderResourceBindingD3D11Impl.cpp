@@ -45,7 +45,6 @@ ShaderResourceBindingD3D11Impl::ShaderResourceBindingD3D11Impl( IReferenceCounte
     auto* pResCacheRawMem = ALLOCATE(GetRawAllocator(), "Raw memory for ShaderResourceCacheD3D11", m_NumActiveShaders * sizeof(ShaderResourceCacheD3D11));
     m_pBoundResourceCaches = reinterpret_cast<ShaderResourceCacheD3D11*>(pResCacheRawMem);
     
-    auto* pRenderDevice = pPSO->GetDevice();
     const auto& PSODesc = pPSO->GetDesc();
 
     // Reserve memory for resource layouts
@@ -71,7 +70,6 @@ ShaderResourceBindingD3D11Impl::ShaderResourceBindingD3D11Impl( IReferenceCounte
             ShaderResourceLayoutD3D11
             {
                 *this,
-                pRenderDevice,
                 pShaderD3D11->GetD3D11Resources(),
                 PSODesc.ResourceLayout,
                 VarTypes,
@@ -80,9 +78,6 @@ ShaderResourceBindingD3D11Impl::ShaderResourceBindingD3D11Impl( IReferenceCounte
                 ResCacheDataAllocator,
                 ResLayoutDataAllocator
             };
-
-        m_pResourceLayouts[s].SetStaticSamplers(m_pBoundResourceCaches[s]);
-        pPSO->GetStaticResourceLayout(s).SetStaticSamplers(m_pBoundResourceCaches[s]);
 
         m_ResourceLayoutIndex[ShaderInd] = s;
         m_ShaderTypeIndex[s] = static_cast<Int8>(ShaderInd);
@@ -163,7 +158,7 @@ void ShaderResourceBindingD3D11Impl::InitializeStaticResources(const IPipelineSt
         VERIFY_EXPR(ResourceLayoutInd == static_cast<Int8>(shader) );
 #endif
         StaticResLayout.CopyResources(m_pBoundResourceCaches[shader]);
-        //StaticResLayout.SetStaticSamplers(m_pBoundResourceCaches[shader]);
+        pPSOD3D11->SetStaticSamplers(m_pBoundResourceCaches[shader], shader);
     }
 
     m_bIsStaticResourcesBound = true;
