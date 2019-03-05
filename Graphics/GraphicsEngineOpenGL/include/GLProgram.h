@@ -37,30 +37,16 @@ namespace Diligent
         GLProgram& operator = (const GLProgram&)  = delete;
         GLProgram& operator = (      GLProgram&&) = delete;
 
-        void InitResources(RenderDeviceGLImpl*       pDeviceGLImpl, 
-                           SHADER_RESOURCE_VARIABLE_TYPE      DefaultVariableType, 
-                           const ShaderResourceVariableDesc* VariableDesc, 
-                           Uint32                    NumVars, 
-                           const StaticSamplerDesc*  StaticSamplers,
-                           Uint32                    NumStaticSamplers,
-                           IObject&                  Owner);
+        void InitResources(RenderDeviceGLImpl*  pDeviceGLImpl, 
+                           SHADER_TYPE          ShaderStage,
+                           IObject&             Owner);
 
         void BindConstantResources(IResourceMapping* pResourceMapping, Uint32 Flags);
 
-        const GLProgramResources& GetAllResources()     const{return m_AllResources;}
-              GLProgramResources& GetConstantResources()     {return m_ConstantResources;}
-        const GLProgramResources& GetConstantResources()const{return m_ConstantResources;}
-        
-
-#ifdef VERIFY_RESOURCE_BINDINGS
-        template<typename TResArrayType>
-        void dbgVerifyBindingCompletenessHelper(TResArrayType& ResArr, GLProgramResources* pDynamicResources);
-        void dbgVerifyBindingCompleteness(GLProgramResources* pDynamicResources, class PipelineStateGLImpl* pPSO);
-#endif
+        const GLProgramResources& GetResources() const { return m_AllResources; }
 
     private:
         GLProgramResources m_AllResources;
-        GLProgramResources m_ConstantResources;
         // When adding new member DO NOT FORGET TO UPDATE GLProgram( GLProgram&& Program )!!!
     };
 }

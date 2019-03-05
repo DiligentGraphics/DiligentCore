@@ -33,10 +33,10 @@ using namespace Diligent;
 namespace Diligent
 {
 
-ShaderGLImpl::ShaderGLImpl(IReferenceCounters*          pRefCounters,
-                           RenderDeviceGLImpl*          pDeviceGL,
-                           const ShaderCreateInfo& CreationAttribs,
-                           bool bIsDeviceInternal) : 
+ShaderGLImpl::ShaderGLImpl(IReferenceCounters*      pRefCounters,
+                           RenderDeviceGLImpl*      pDeviceGL,
+                           const ShaderCreateInfo&  CreationAttribs,
+                           bool                     bIsDeviceInternal) : 
     TShaderBase( pRefCounters, pDeviceGL, CreationAttribs.Desc, bIsDeviceInternal ),
     m_GlProgObj(false),
     m_GLShaderObj( false, GLObjectWrappers::GLShaderObjCreateReleaseHelper( GetGLShaderType( m_Desc.ShaderType ) ) )
@@ -160,7 +160,7 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*          pRefCounters,
         // boolean status bit DELETE_STATUS is set to true
         ShaderObj.Release();
 
-        m_GlProgObj.InitResources(pDeviceGL, m_Desc.DefaultVariableType, m_Desc.VariableDesc, m_Desc.NumVariables, m_Desc.StaticSamplers, m_Desc.NumStaticSamplers, *this);
+        m_GlProgObj.InitResources(pDeviceGL, m_Desc.ShaderType, *this);
     }
     else
     {
@@ -174,68 +174,33 @@ ShaderGLImpl::~ShaderGLImpl()
 
 IMPLEMENT_QUERY_INTERFACE( ShaderGLImpl, IID_ShaderGL, TShaderBase )
 
-void ShaderGLImpl::BindResources( IResourceMapping* pResourceMapping, Uint32 Flags )
+Uint32 ShaderGLImpl::GetResourceCount()const 
 {
-    if( static_cast<GLuint>(m_GlProgObj) )
+    Uint32 ResCount = 0;
+    if (m_GlProgObj)
     {
-        m_GlProgObj.BindConstantResources( pResourceMapping, Flags );
+        return m_GlProgObj.GetResources().GetVariableCount();
     }
     else
     {
-        LOG_WARNING_MESSAGE_ONCE( "IShader::BindResources() effectively does nothing when separable programs are not supported by the device." );
+        LOG_WARNING_MESSAGE("Shader resource queries are not available when separate shader objects are unsupported");
     }
+    return ResCount;
 }
 
-IShaderResourceVariable* ShaderGLImpl::GetShaderVariable(const Char* Name)
+ShaderResourceDesc ShaderGLImpl::GetResource(Uint32 Index)const
 {
-    return GetShaderVariable(Name, true);
-}
-
-IShaderResourceVariable* ShaderGLImpl::GetShaderVariable(const Char* Name, bool CreatePlaceholder)
-{
-    if( m_GlProgObj )
-        return m_GlProgObj.GetConstantResources().GetShaderVariable(Name);
+    ShaderResourceDesc ResourceDesc;
+    if (m_GlProgObj)
+    {
+        DEV_CHECK_ERR(Index < GetResourceCount(), "Index is out of range");
+        ResourceDesc = m_GlProgObj.GetResources().GetShaderVariable(Index)->GetResourceDesc();
+    }
     else
     {
-        for (auto& Res : m_StaticResources)
-        {
-            if( strcmp(Res->GetName(), Name) == 0)
-                return Res;
-        }
-
-        if (CreatePlaceholder)
-        {
-            auto* pNewVar = MakeNewRCObj<StaticVarPlaceholder>()(Name, static_cast<Uint32>(m_StaticResources.size()));
-            m_StaticResources.emplace_back(pNewVar);
-            return pNewVar;
-        }
-        else
-        {
-            return nullptr;
-        }
+        LOG_WARNING_MESSAGE("Shader resource queries are not available when separate shader objects are unsupported");
     }
-}
-
-Uint32 ShaderGLImpl::GetVariableCount() const
-{
-    if( m_GlProgObj )
-        return m_GlProgObj.GetConstantResources().GetVariableCount();
-    else
-    {
-        LOG_WARNING_MESSAGE("When separate shader objects are unavailable, GetVariableCount() returns the number of resources being set so far "
-                            "rather than the total number of static shader resources.");
-        return static_cast<Uint32>(m_StaticResources.size());
-    }
-}
-
-IShaderResourceVariable* ShaderGLImpl::GetShaderVariable(Uint32 Index)
-{
-    if( m_GlProgObj )
-        return m_GlProgObj.GetConstantResources().GetShaderVariable(Index);
-    else
-    {
-        return Index < m_StaticResources.size() ? m_StaticResources[Index].RawPtr() : nullptr;
-    }
+    return ResourceDesc;
 }
 
 }

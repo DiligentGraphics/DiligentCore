@@ -247,4 +247,25 @@ GLObjectWrappers::GLPipelineObj& PipelineStateGLImpl::GetGLProgramPipeline(GLCon
     }
 }
 
+
+void PipelineStateGLImpl::BindStaticResources(Uint32 ShaderFlags, IResourceMapping* pResourceMapping, Uint32 Flags)
+{
+
+}
+    
+Uint32 PipelineStateGLImpl::GetStaticVariableCount(SHADER_TYPE ShaderType) const
+{
+
+}
+
+IShaderResourceVariable* PipelineStateGLImpl::GetStaticShaderVariable(SHADER_TYPE ShaderType, const Char* Name)
+{
+
+}
+
+IShaderResourceVariable* GetStaticShaderVariable(SHADER_TYPE ShaderType, Uint32 Index)
+{
+
+}
+
 }

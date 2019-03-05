@@ -45,27 +45,23 @@ namespace Diligent
         GLProgramResources& operator = (const GLProgramResources&)  = delete;
         GLProgramResources& operator = (      GLProgramResources&&) = delete;
 
-        void LoadUniforms(class RenderDeviceGLImpl*  pDeviceGLImpl,
-                          GLuint                     GLProgram, 
-                          const SHADER_RESOURCE_VARIABLE_TYPE DefaultVariableType, 
-                          const ShaderResourceVariableDesc*  VariableDesc, 
-                          Uint32                     NumVars,
-                          const StaticSamplerDesc*   StaticSamplers,
-                          Uint32                     NumStaticSamplers);
-
-        void Clone(const GLProgramResources& SrcLayout, 
-                   SHADER_RESOURCE_VARIABLE_TYPE*     VarTypes, 
-                   Uint32                    NumVarTypes,
-                   IObject&                  Owner);
+        void LoadUniforms(class RenderDeviceGLImpl*             pDeviceGLImpl,
+                          SHADER_TYPE                           ShaderStage,
+                          GLuint                                GLProgram, 
+                          const PipelineResourceLayoutDesc*     pResourceLayout,
+                          const SHADER_RESOURCE_VARIABLE_TYPE*  AllowedVarTypes, 
+                          Uint32                                NumAllowedTypes);
 
         struct GLProgramVariableBase
         {
-            GLProgramVariableBase(String               _Name, 
-                                  size_t               _ArraySize,
-                                  SHADER_RESOURCE_VARIABLE_TYPE _VarType) :
-                Name      ( std::move(_Name) ),
-                pResources(_ArraySize),
-                VarType   (_VarType)
+            GLProgramVariableBase(String                        _Name, 
+                                  size_t                        _ArraySize,
+                                  SHADER_RESOURCE_VARIABLE_TYPE _VarType,
+                                  SHADER_RESOURCE_TYPE          _ResourceType) :
+                Name        ( std::move(_Name) ),
+                pResources  (_ArraySize),
+                VarType     (_VarType),
+                ResourceType(_ResourceType)
             {
                 VERIFY_EXPR(_ArraySize >= 1);
             }
@@ -81,18 +77,29 @@ namespace Diligent
                 return ComputeHash(static_cast<Int32>(VarType), pResources.size());
             }
 
+            ShaderResourceDesc GetResourceDesc()const
+            {
+                ShaderResourceDesc ResourceDesc;
+                ResourceDesc.Name      = Name.c_str();
+                ResourceDesc.ArraySize = static_cast<Uint32>(pResources.size());
+                ResourceDesc.Type      = ResourceType;
+                return ResourceDesc;
+            }
+
             String                                      Name;
             std::vector< RefCntAutoPtr<IDeviceObject> > pResources;
-            const SHADER_RESOURCE_VARIABLE_TYPE                  VarType;
+            const SHADER_RESOURCE_VARIABLE_TYPE         VarType;
+            const SHADER_RESOURCE_TYPE                  ResourceType;
         };
 
         struct UniformBufferInfo : GLProgramVariableBase
         {
-            UniformBufferInfo(String               _Name,
-                              size_t               _ArraySize,
+            UniformBufferInfo(String                        _Name,
+                              size_t                        _ArraySize,
                               SHADER_RESOURCE_VARIABLE_TYPE _VarType,
-                              GLint                _Index) :
-                GLProgramVariableBase(std::move(_Name), _ArraySize, _VarType),
+                              SHADER_RESOURCE_TYPE          _ResourceType,
+                              GLint                         _Index) :
+                GLProgramVariableBase(std::move(_Name), _ArraySize, _VarType, _ResourceType),
                 Index(_Index)
             {}
 
@@ -113,13 +120,14 @@ namespace Diligent
 
         struct SamplerInfo : GLProgramVariableBase
         {
-            SamplerInfo(String               _Name,
-                        size_t               _ArraySize,
+            SamplerInfo(String                        _Name,
+                        size_t                        _ArraySize,
                         SHADER_RESOURCE_VARIABLE_TYPE _VarType,
-                        GLint                _Location,
-                        GLenum               _Type,
-                        class SamplerGLImpl* _pStaticSampler) :
-                GLProgramVariableBase(std::move(_Name), _ArraySize, _VarType),
+                        SHADER_RESOURCE_TYPE          _ResourceType,
+                        GLint                         _Location,
+                        GLenum                        _Type,
+                        class SamplerGLImpl*          _pStaticSampler) :
+                GLProgramVariableBase(std::move(_Name), _ArraySize, _VarType, _ResourceType),
                 Location      (_Location),
                 Type          (_Type),
                 pStaticSampler(_pStaticSampler)
@@ -145,12 +153,13 @@ namespace Diligent
         
         struct ImageInfo : GLProgramVariableBase
         {
-            ImageInfo(String               _Name,
-                      size_t               _ArraySize,
+            ImageInfo(String                        _Name,
+                      size_t                        _ArraySize,
                       SHADER_RESOURCE_VARIABLE_TYPE _VarType,
-                      GLint                _BindingPoint,
-                      GLenum               _Type) :
-                GLProgramVariableBase(std::move(_Name), _ArraySize, _VarType),
+                      SHADER_RESOURCE_TYPE          _ResourceType,
+                      GLint                         _BindingPoint,
+                      GLenum                        _Type) :
+                GLProgramVariableBase(std::move(_Name), _ArraySize, _VarType, _ResourceType),
                 BindingPoint(_BindingPoint),
                 Type        (_Type)
             {}
@@ -174,11 +183,12 @@ namespace Diligent
 
         struct StorageBlockInfo : GLProgramVariableBase
         {
-            StorageBlockInfo(String               _Name,
-                             size_t               _ArraySize,
+            StorageBlockInfo(String                        _Name,
+                             size_t                        _ArraySize,
                              SHADER_RESOURCE_VARIABLE_TYPE _VarType,
-                             GLint                _Binding) :
-                GLProgramVariableBase(std::move(_Name), _ArraySize, _VarType),
+                            SHADER_RESOURCE_TYPE           _ResourceType,
+                             GLint                         _Binding) :
+                GLProgramVariableBase(std::move(_Name), _ArraySize, _VarType, _ResourceType),
                 Binding(_Binding)
             {}
 
@@ -237,6 +247,10 @@ namespace Diligent
                 return VariableIndex;
             }
 
+            ShaderResourceDesc GetResourceDesc() const 
+            {
+                return ProgramVar.GetResourceDesc();
+            }
         private:
             GLProgramVariableBase& ProgramVar;
             const Uint32 VariableIndex;
@@ -248,8 +262,12 @@ namespace Diligent
         void dbgVerifyResourceBindings();
 #endif
 
-        IShaderResourceVariable* GetShaderVariable(const Char* Name);
-        IShaderResourceVariable* GetShaderVariable(Uint32 Index)
+        CGLShaderVariable* GetShaderVariable(const Char* Name);
+        CGLShaderVariable* GetShaderVariable(Uint32 Index)
+        {
+            return Index < m_VariablesByIndex.size() ? m_VariablesByIndex[Index] : nullptr;
+        }
+        const CGLShaderVariable* GetShaderVariable(Uint32 Index)const
         {
             return Index < m_VariablesByIndex.size() ? m_VariablesByIndex[Index] : nullptr;
         }
@@ -264,9 +282,9 @@ namespace Diligent
         bool IsCompatibleWith(const GLProgramResources& Res)const;
         size_t GetHash()const;
 
-    private:
         void InitVariables(IObject &Owner);
 
+    private:
         std::vector<UniformBufferInfo> m_UniformBlocks;
         std::vector<SamplerInfo>       m_Samplers;
         std::vector<ImageInfo>         m_Images;

@@ -24,6 +24,7 @@
 #include "pch.h"
 #include "GLProgramResources.h"
 #include "RenderDeviceGLImpl.h"
+#include "ShaderResourceBindingBase.h"
 
 namespace Diligent
 {
@@ -44,15 +45,16 @@ namespace Diligent
             *OpenBacketPtr = 0;
     }
 
-    void GLProgramResources::LoadUniforms(RenderDeviceGLImpl *pDeviceGLImpl,
-                                          GLuint GLProgram, 
-                                          const SHADER_RESOURCE_VARIABLE_TYPE DefaultVariableType, 
-                                          const ShaderResourceVariableDesc *VariableDesc, 
-                                          Uint32 NumVars,
-                                          const StaticSamplerDesc *StaticSamplers,
-                                          Uint32 NumStaticSamplers)
+    void GLProgramResources::LoadUniforms(RenderDeviceGLImpl*                   pDeviceGLImpl,
+                                          SHADER_TYPE                           ShaderStage,
+                                          GLuint                                GLProgram, 
+                                          const PipelineResourceLayoutDesc*     pResourceLayout,
+                                          const SHADER_RESOURCE_VARIABLE_TYPE*  AllowedVarTypes, 
+                                          Uint32                                NumAllowedTypes)
     {
         VERIFY(GLProgram != 0, "Null GL program");
+
+        const Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
 
         GLint numActiveUniforms = 0;
         glGetProgramiv( GLProgram, GL_ACTIVE_UNIFORMS, &numActiveUniforms );
@@ -176,18 +178,23 @@ namespace Diligent
                     // The latter is only available in GL 4.4 and GLES 3.1
 
                     RemoveArrayBrackets(Name.data());
-                    auto VarType = GetShaderVariableType(Name.data(), DefaultVariableType, VariableDesc, NumVars);
+                    SHADER_RESOURCE_VARIABLE_TYPE VarType = SHADER_RESOURCE_VARIABLE_TYPE_STATIC;
 
                     RefCntAutoPtr<SamplerGLImpl> pStaticSampler;
-                    for (Uint32 s = 0; s < NumStaticSamplers; ++s)
+                    if (pResourceLayout != nullptr)
                     {
-                        if (strcmp(Name.data(), StaticSamplers[s].SamplerOrTextureName) == 0)
+                        VarType = GetShaderVariableType(ShaderStage, Name.data(), *pResourceLayout);
+                        for (Uint32 s = 0; s < pResourceLayout->NumStaticSamplers; ++s)
                         {
-                            pDeviceGLImpl->CreateSampler(StaticSamplers[s].Desc, reinterpret_cast<ISampler**>(static_cast<SamplerGLImpl**>(&pStaticSampler)) );
-                            break;
+                            const auto& StSam = pResourceLayout->StaticSamplers[s];
+                            if (strcmp(Name.data(), StSam.SamplerOrTextureName) == 0)
+                            {
+                                pDeviceGLImpl->CreateSampler(StSam.Desc, reinterpret_cast<ISampler**>(static_cast<SamplerGLImpl**>(&pStaticSampler)) );
+                                break;
+                            }
                         }
                     }
-                    m_Samplers.emplace_back( Name.data(), size, VarType, UniformLocation, dataType, pStaticSampler );
+                    m_Samplers.emplace_back( Name.data(), size, VarType, SHADER_RESOURCE_TYPE_TEXTURE_SRV, UniformLocation, dataType, pStaticSampler );
                     break;
                 }
 
@@ -235,8 +242,10 @@ namespace Diligent
                     VERIFY( BindingPoint >= 0, "Incorrect binding point" );
 
                     RemoveArrayBrackets(Name.data());
-                    auto VarType = GetShaderVariableType(Name.data(), DefaultVariableType, VariableDesc, NumVars);
-                    m_Images.emplace_back( Name.data(), size, VarType, BindingPoint, dataType );
+                    SHADER_RESOURCE_VARIABLE_TYPE VarType = (pResourceLayout != nullptr) ? 
+                        GetShaderVariableType(ShaderStage, Name.data(), *pResourceLayout) :
+                        SHADER_RESOURCE_VARIABLE_TYPE_STATIC;
+                    m_Images.emplace_back( Name.data(), size, VarType, SHADER_RESOURCE_TYPE_TEXTURE_UAV, BindingPoint, dataType );
                     break;
                 }
 #endif
@@ -293,8 +302,10 @@ namespace Diligent
             }
 
             
-            auto VarType = GetShaderVariableType(Name.data(), DefaultVariableType, VariableDesc, NumVars);
-            m_UniformBlocks.emplace_back( Name.data(), ArraySize, VarType, UniformBlockIndex );
+            SHADER_RESOURCE_VARIABLE_TYPE VarType = (pResourceLayout != nullptr) ? 
+                GetShaderVariableType(ShaderStage, Name.data(), *pResourceLayout) :
+                SHADER_RESOURCE_VARIABLE_TYPE_STATIC;
+            m_UniformBlocks.emplace_back( Name.data(), ArraySize, VarType, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, UniformBlockIndex );
         }
 
 #if GL_ARB_shader_storage_buffer_object
@@ -341,8 +352,10 @@ namespace Diligent
                 }
             }
 
-            auto VarType = GetShaderVariableType(Name.data(), DefaultVariableType, VariableDesc, NumVars);
-            m_StorageBlocks.emplace_back( Name.data(), ArraySize, VarType, Binding );
+            SHADER_RESOURCE_VARIABLE_TYPE VarType = (pResourceLayout != nullptr) ? 
+                GetShaderVariableType(ShaderStage, Name.data(), *pResourceLayout) :
+                SHADER_RESOURCE_VARIABLE_TYPE_STATIC;
+            m_StorageBlocks.emplace_back( Name.data(), ArraySize, VarType, SHADER_RESOURCE_TYPE_BUFFER_UAV, Binding );
         }
 #endif
 
@@ -357,39 +370,7 @@ namespace Diligent
         return false;
     }
 
-    void GLProgramResources::Clone(const GLProgramResources& SrcLayout, 
-                                   SHADER_RESOURCE_VARIABLE_TYPE*     VarTypes, 
-                                   Uint32                    NumVarTypes,
-                                   IObject&                  Owner)
-    {
-        for (auto& ub : SrcLayout.m_UniformBlocks)
-        {
-            if(CheckType(ub.VarType, VarTypes, NumVarTypes))
-                m_UniformBlocks.emplace_back( ub.Name, ub.pResources.size(), ub.VarType, ub.Index );
-        }
-
-        for (auto& sam : SrcLayout.m_Samplers)
-        {
-            if(CheckType(sam.VarType, VarTypes, NumVarTypes))
-                m_Samplers.emplace_back( sam.Name, sam.pResources.size(), sam.VarType, sam.Location, sam.Type, const_cast<SamplerGLImpl*>(sam.pStaticSampler.RawPtr()) );
-        }
-
-        for (auto& img : SrcLayout.m_Images)
-        {
-            if(CheckType(img.VarType, VarTypes, NumVarTypes))
-                m_Images.emplace_back( img.Name, img.pResources.size(), img.VarType, img.BindingPoint, img.Type );
-        }
-
-        for (auto& sb : SrcLayout.m_StorageBlocks)
-        {
-            if(CheckType(sb.VarType, VarTypes, NumVarTypes))
-                m_StorageBlocks.emplace_back( sb.Name, sb.pResources.size(), sb.VarType, sb.Binding );
-        }
-
-        InitVariables(Owner);
-    }
-
-    void GLProgramResources::InitVariables(IObject &Owner)
+    void GLProgramResources::InitVariables(IObject& Owner)
     {
         // After all program resources are loaded, we can populate shader variable hash map.
         // The map contains raw pointers, but none of the arrays will ever change.
@@ -414,7 +395,7 @@ namespace Diligent
 #undef STORE_SHADER_VARIABLES
     }
 
-    IShaderResourceVariable* GLProgramResources::GetShaderVariable( const Char* Name )
+    GLProgramResources::CGLShaderVariable* GLProgramResources::GetShaderVariable( const Char* Name )
     {
         // Name will be implicitly converted to HashMapStringKey without making a copy
         auto it = m_VariableHash.find( Name );
