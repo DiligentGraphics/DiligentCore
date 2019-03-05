@@ -39,10 +39,9 @@ set(INTERFACE
     interface/BufferGL.h
     interface/BufferViewGL.h
     interface/DeviceContextGL.h
-    interface/EngineGLAttribs.h
+    interface/EngineFactoryOpenGL.h
     interface/FenceGL.h
     interface/PipelineStateGL.h
-    interface/RenderDeviceFactoryOpenGL.h
     interface/RenderDeviceGL.h
     interface/SamplerGL.h
     interface/ShaderGL.h
@@ -56,6 +55,7 @@ set(SOURCE
     src/BufferGLImpl.cpp
     src/BufferViewGLImpl.cpp
     src/DeviceContextGLImpl.cpp
+    src/EngineFactoryOpenGL.cpp
     src/FBOCache.cpp
     src/FenceGLImpl.cpp
     src/GLContextState.cpp
@@ -64,7 +64,6 @@ set(SOURCE
     src/GLProgramResources.cpp
     src/GLTypeConversions.cpp
     src/PipelineStateGLImpl.cpp
-	src/RenderDeviceFactoryOpenGL.cpp
     src/RenderDeviceGLImpl.cpp
     src/SamplerGLImpl.cpp
     src/ShaderGLImpl.cpp

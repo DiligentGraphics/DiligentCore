@@ -1253,6 +1253,23 @@ namespace Diligent
     };
 
 
+    /// Attributes of the OpenGL-based engine implementation
+    struct EngineGLCreateInfo : public EngineCreateInfo
+    {
+        /// Native window handle
+
+        /// * On Win32 platform, this is a window handle (HWND)
+        /// * On Android platform, this is a pointer to the native window (ANativeWindow*)
+        /// * On Linux, this is the native window (Window)
+        void* pNativeWndHandle = nullptr;
+
+#if PLATFORM_LINUX
+        /// For linux platform only, this is the pointer to the display
+        void* pDisplay = nullptr;
+#endif
+    };
+
+
     /// Debug flags that can be specified when creating Direct3D11-based engine implementation.
     ///
     /// \sa CreateDeviceAndContextsD3D11Type, CreateSwapChainD3D11Type, LoadGraphicsEngineD3D11
