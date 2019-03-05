@@ -40,11 +40,11 @@
 namespace Diligent
 {
 
-RenderDeviceD3D11Impl :: RenderDeviceD3D11Impl(IReferenceCounters*       pRefCounters,
-                                               IMemoryAllocator&         RawMemAllocator,
-                                               const EngineD3D11Attribs& EngineAttribs,
-                                               ID3D11Device*             pd3d11Device,
-                                               Uint32                    NumDeferredContexts) : 
+RenderDeviceD3D11Impl :: RenderDeviceD3D11Impl(IReferenceCounters*          pRefCounters,
+                                               IMemoryAllocator&            RawMemAllocator,
+                                               const EngineD3D11CreateInfo& EngineAttribs,
+                                               ID3D11Device*                pd3d11Device,
+                                               Uint32                       NumDeferredContexts) : 
     TRenderDeviceBase
     {
         pRefCounters,

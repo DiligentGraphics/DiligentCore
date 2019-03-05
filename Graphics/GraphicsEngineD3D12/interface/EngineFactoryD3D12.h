@@ -42,18 +42,18 @@ namespace Diligent
 class IEngineFactoryD3D12
 {
 public:
-    virtual void CreateDeviceAndContextsD3D12( const EngineD3D12Attribs& CreationAttribs, 
-                                               IRenderDevice**           ppDevice, 
-                                               IDeviceContext**          ppContexts,
-                                               Uint32                    NumDeferredContexts) = 0;
+    virtual void CreateDeviceAndContextsD3D12(const EngineD3D12CreateInfo& EngineCI, 
+                                              IRenderDevice**              ppDevice, 
+                                              IDeviceContext**             ppContexts,
+                                              Uint32                       NumDeferredContexts) = 0;
 
-    virtual void AttachToD3D12Device(void*                      pd3d12NativeDevice, 
-                                     size_t                     CommandQueueCount,
-                                     class ICommandQueueD3D12** ppCommandQueues,
-                                     const EngineD3D12Attribs&  EngineAttribs, 
-                                     IRenderDevice**            ppDevice, 
-                                     IDeviceContext**           ppContexts,
-                                     Uint32                     NumDeferredContexts) = 0;
+    virtual void AttachToD3D12Device(void*                         pd3d12NativeDevice, 
+                                     size_t                        CommandQueueCount,
+                                     class ICommandQueueD3D12**    ppCommandQueues,
+                                     const EngineD3D12CreateInfo&  EngineCI, 
+                                     IRenderDevice**               ppDevice, 
+                                     IDeviceContext**              ppContexts,
+                                     Uint32                        NumDeferredContexts) = 0;
 
     virtual void CreateSwapChainD3D12( IRenderDevice*            pDevice, 
                                        IDeviceContext*           pImmediateContext, 

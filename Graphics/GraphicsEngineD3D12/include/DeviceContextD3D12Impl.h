@@ -52,12 +52,12 @@ class DeviceContextD3D12Impl final : public DeviceContextNextGenBase< DeviceCont
 public:
     using TDeviceContextBase = DeviceContextNextGenBase< DeviceContextBase<IDeviceContextD3D12, DeviceContextD3D12ImplTraits> >;
 
-    DeviceContextD3D12Impl(IReferenceCounters*          pRefCounters, 
-                           class RenderDeviceD3D12Impl* pDevice, 
-                           bool                         bIsDeferred, 
-                           const EngineD3D12Attribs&    Attribs, 
-                           Uint32                       ContextId,
-                           Uint32                       CommandQueueId);
+    DeviceContextD3D12Impl(IReferenceCounters*           pRefCounters, 
+                           class RenderDeviceD3D12Impl*  pDevice, 
+                           bool                          bIsDeferred, 
+                           const EngineD3D12CreateInfo&  EngineCI, 
+                           Uint32                        ContextId,
+                           Uint32                        CommandQueueId);
     ~DeviceContextD3D12Impl();
     
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;

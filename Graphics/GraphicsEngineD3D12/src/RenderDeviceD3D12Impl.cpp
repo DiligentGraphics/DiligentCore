@@ -37,13 +37,13 @@
 namespace Diligent
 {
 
-RenderDeviceD3D12Impl :: RenderDeviceD3D12Impl(IReferenceCounters*          pRefCounters,
-                                               IMemoryAllocator&            RawMemAllocator,
-                                               const EngineD3D12Attribs&    CreationAttribs,
-                                               ID3D12Device*                pd3d12Device,
-                                               size_t                       CommandQueueCount,
-                                               ICommandQueueD3D12**         ppCmdQueues, 
-                                               Uint32                       NumDeferredContexts) : 
+RenderDeviceD3D12Impl :: RenderDeviceD3D12Impl(IReferenceCounters*           pRefCounters,
+                                               IMemoryAllocator&             RawMemAllocator,
+                                               const EngineD3D12CreateInfo&  EngineCI,
+                                               ID3D12Device*                 pd3d12Device,
+                                               size_t                        CommandQueueCount,
+                                               ICommandQueueD3D12**          ppCmdQueues, 
+                                               Uint32                        NumDeferredContexts) : 
     TRenderDeviceBase
     {
         pRefCounters,
@@ -62,22 +62,22 @@ RenderDeviceD3D12Impl :: RenderDeviceD3D12Impl(IReferenceCounters*          pRef
         sizeof(FenceD3D12Impl)
     },
     m_pd3d12Device  (pd3d12Device),
-    m_EngineAttribs (CreationAttribs),
+    m_EngineAttribs (EngineCI),
     m_CmdListManager(*this),
     m_CPUDescriptorHeaps
     {
-        {RawMemAllocator, *this, CreationAttribs.CPUDescriptorHeapAllocationSize[0], D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE},
-        {RawMemAllocator, *this, CreationAttribs.CPUDescriptorHeapAllocationSize[1], D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER,     D3D12_DESCRIPTOR_HEAP_FLAG_NONE},
-        {RawMemAllocator, *this, CreationAttribs.CPUDescriptorHeapAllocationSize[2], D3D12_DESCRIPTOR_HEAP_TYPE_RTV,         D3D12_DESCRIPTOR_HEAP_FLAG_NONE},
-        {RawMemAllocator, *this, CreationAttribs.CPUDescriptorHeapAllocationSize[3], D3D12_DESCRIPTOR_HEAP_TYPE_DSV,         D3D12_DESCRIPTOR_HEAP_FLAG_NONE}
+        {RawMemAllocator, *this, EngineCI.CPUDescriptorHeapAllocationSize[0], D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE},
+        {RawMemAllocator, *this, EngineCI.CPUDescriptorHeapAllocationSize[1], D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER,     D3D12_DESCRIPTOR_HEAP_FLAG_NONE},
+        {RawMemAllocator, *this, EngineCI.CPUDescriptorHeapAllocationSize[2], D3D12_DESCRIPTOR_HEAP_TYPE_RTV,         D3D12_DESCRIPTOR_HEAP_FLAG_NONE},
+        {RawMemAllocator, *this, EngineCI.CPUDescriptorHeapAllocationSize[3], D3D12_DESCRIPTOR_HEAP_TYPE_DSV,         D3D12_DESCRIPTOR_HEAP_FLAG_NONE}
     },
     m_GPUDescriptorHeaps
     {
-        {RawMemAllocator, *this, CreationAttribs.GPUDescriptorHeapSize[0], CreationAttribs.GPUDescriptorHeapDynamicSize[0], D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE},
-        {RawMemAllocator, *this, CreationAttribs.GPUDescriptorHeapSize[1], CreationAttribs.GPUDescriptorHeapDynamicSize[1], D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER,     D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE}
+        {RawMemAllocator, *this, EngineCI.GPUDescriptorHeapSize[0], EngineCI.GPUDescriptorHeapDynamicSize[0], D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE},
+        {RawMemAllocator, *this, EngineCI.GPUDescriptorHeapSize[1], EngineCI.GPUDescriptorHeapDynamicSize[1], D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER,     D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE}
     },
     m_ContextPool(STD_ALLOCATOR_RAW_MEM(PooledCommandContext, GetRawAllocator(), "Allocator for vector<PooledCommandContext>")),
-    m_DynamicMemoryManager(GetRawAllocator(), *this, CreationAttribs.NumDynamicHeapPagesToReserve, CreationAttribs.DynamicHeapPageSize),
+    m_DynamicMemoryManager(GetRawAllocator(), *this, EngineCI.NumDynamicHeapPagesToReserve, EngineCI.DynamicHeapPageSize),
     m_MipsGenerator(pd3d12Device)
 {
     m_DeviceCaps.DevType = DeviceType::D3D12;

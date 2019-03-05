@@ -1242,7 +1242,7 @@ namespace Diligent
     };
 
     /// Engine creation attibutes
-    struct EngineCreationAttribs
+    struct EngineCreateInfo
     {
         /// Pointer to the raw memory allocator that will be used for all memory allocation/deallocation
         /// operations in the engine
@@ -1252,8 +1252,47 @@ namespace Diligent
         DebugMessageCallbackType DebugMessageCallback = nullptr;
     };
 
+
+    /// Debug flags that can be specified when creating Direct3D11-based engine implementation.
+    ///
+    /// \sa CreateDeviceAndContextsD3D11Type, CreateSwapChainD3D11Type, LoadGraphicsEngineD3D11
+    enum class EngineD3D11DebugFlags : Uint32
+    {
+        /// Before executing draw/dispatch command, verify that
+        /// all required shader resources are bound to the device context
+        VerifyCommittedShaderResources = 0x01,
+
+        /// Verify that all committed cotext resources are relevant,
+        /// i.e. they are consistent with the committed resource cache.
+        /// This is very expensive operation and should generally not be 
+        /// necessary.
+        VerifyCommittedResourceRelevance = 0x02
+    };
+
+    /// Attributes specific to D3D11 engine
+    struct EngineD3D11CreateInfo : public EngineCreateInfo
+    {
+        static constexpr Uint32 DefaultAdapterId = 0xFFFFFFFF;
+        
+        /// Id of the hardware adapter the engine should be initialized on
+        Uint32 AdapterId = DefaultAdapterId;
+
+        /// Debug flags. See Diligent::EngineD3D11DebugFlags for a list of allowed values.
+        ///
+        /// \sa CreateDeviceAndContextsD3D11Type, CreateSwapChainD3D11Type, LoadGraphicsEngineD3D11
+        Uint32 DebugFlags;
+
+        EngineD3D11CreateInfo() :
+            DebugFlags(0)
+        {
+#ifdef _DEBUG
+            DebugFlags = static_cast<Uint32>(EngineD3D11DebugFlags::VerifyCommittedShaderResources);
+#endif
+        }
+    };
+
     /// Attributes specific to D3D12 engine
-    struct EngineD3D12Attribs : public EngineCreationAttribs
+    struct EngineD3D12CreateInfo : public EngineCreateInfo
     {
         static constexpr Uint32 DefaultAdapterId = 0xFFFFFFFF;
 
@@ -1310,7 +1349,7 @@ namespace Diligent
     };
 
     /// Attributes specific to Vulkan engine
-    struct EngineVkAttribs : public EngineCreationAttribs
+    struct EngineVkCreateInfo : public EngineCreateInfo
     {
         /// Enable validation layers. Validation is always enabled in Debug mode
         bool EnableValidation = false;

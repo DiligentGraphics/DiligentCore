@@ -34,7 +34,6 @@
 #include "PipelineStateD3D11Impl.h"
 #include "SwapChainD3D11.h"
 #include "ShaderResourceBindingD3D11Impl.h"
-#include "EngineD3D11Attribs.h"
 #include "EngineD3D11Defines.h"
 #include "CommandListD3D11Impl.h"
 #include "RenderDeviceD3D11Impl.h"
@@ -42,12 +41,12 @@
 
 namespace Diligent
 {
-    DeviceContextD3D11Impl::DeviceContextD3D11Impl( IReferenceCounters*              pRefCounters,
-                                                    IMemoryAllocator&                Allocator,
-                                                    IRenderDevice*                   pDevice,
-                                                    ID3D11DeviceContext*             pd3d11DeviceContext,
-                                                    const struct EngineD3D11Attribs& EngineAttribs,
-                                                    bool                             bIsDeferred ) :
+    DeviceContextD3D11Impl::DeviceContextD3D11Impl( IReferenceCounters*                 pRefCounters,
+                                                    IMemoryAllocator&                   Allocator,
+                                                    IRenderDevice*                      pDevice,
+                                                    ID3D11DeviceContext*                pd3d11DeviceContext,
+                                                    const struct EngineD3D11CreateInfo& EngineAttribs,
+                                                    bool                                bIsDeferred ) :
         TDeviceContextBase(pRefCounters, pDevice, bIsDeferred),
         m_pd3d11DeviceContext( pd3d11DeviceContext ),
         m_DebugFlags(EngineAttribs.DebugFlags),

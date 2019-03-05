@@ -749,7 +749,7 @@ void ShaderResourceLayoutD3D12::CopyStaticResourceDesriptorHandles(const ShaderR
             // D3D12_DESCRIPTOR_RANGE_TYPE_CBV = 2
             const auto& SrcRes = SrcCache.GetRootTable(RangeType).GetResource(BindPoint, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, m_pResources->GetShaderType());
             if( !SrcRes.pObject )
-                LOG_ERROR_MESSAGE( "No resource assigned to static shader variable '", res.Attribs.GetPrintName(ArrInd), "' in shader '", GetShaderName(), "'." );
+                LOG_ERROR_MESSAGE( "No resource is assigned to static shader variable '", res.Attribs.GetPrintName(ArrInd), "' in shader '", GetShaderName(), "'." );
             // Destination resource is at the root index and offset defined by the resource layout
             auto& DstRes = DstCache.GetRootTable(res.RootIndex).GetResource(res.OffsetFromTableStart + ArrInd, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, m_pResources->GetShaderType());
         

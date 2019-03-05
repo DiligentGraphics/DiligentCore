@@ -8,7 +8,7 @@ Implementation of Direct3D12 back-end
 The following code snippet shows how to initialize Diligent Engine in D3D12 mode.
 
 ```cpp
-#include "RenderDeviceFactoryD3D12.h"
+#include "EngineFactoryD3D12.h"
 using namespace Diligent;
 
 // ...

@@ -55,11 +55,11 @@ class RenderDeviceVkImpl final : public RenderDeviceNextGenBase<RenderDeviceBase
 public:
     using TRenderDeviceBase = RenderDeviceNextGenBase<RenderDeviceBase<IRenderDeviceVk>, ICommandQueueVk>;
 
-    RenderDeviceVkImpl( IReferenceCounters*     pRefCounters, 
-                        IMemoryAllocator&       RawMemAllocator, 
-                        const EngineVkAttribs&  CreationAttribs, 
-                        size_t                  CommandQueueCount,
-                        ICommandQueueVk**       pCmdQueues, 
+    RenderDeviceVkImpl( IReferenceCounters*        pRefCounters, 
+                        IMemoryAllocator&          RawMemAllocator, 
+                        const EngineVkCreateInfo&  EngineCI, 
+                        size_t                     CommandQueueCount,
+                        ICommandQueueVk**          pCmdQueues, 
                         std::shared_ptr<VulkanUtilities::VulkanInstance>        Instance,
                         std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice>  PhysicalDevice,
                         std::shared_ptr<VulkanUtilities::VulkanLogicalDevice>   LogicalDevice,
@@ -134,7 +134,7 @@ private:
     std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice>  m_PhysicalDevice;
     std::shared_ptr<VulkanUtilities::VulkanLogicalDevice>   m_LogicalVkDevice;
 
-    EngineVkAttribs m_EngineAttribs;
+    EngineVkCreateInfo m_EngineAttribs;
 
     FramebufferCache       m_FramebufferCache;
     RenderPassCache        m_RenderPassCache;

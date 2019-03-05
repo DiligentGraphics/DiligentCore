@@ -62,7 +62,7 @@ public:
     DeviceContextVkImpl(IReferenceCounters*                   pRefCounters,
                         class RenderDeviceVkImpl*             pDevice,
                         bool                                  bIsDeferred,
-                        const EngineVkAttribs&                Attribs,
+                        const EngineVkCreateInfo&             EngineCI,
                         Uint32                                ContextId,
                         Uint32                                CommandQueueId,
                         std::shared_ptr<GenerateMipsVkHelper> GenerateMipsHelper);

@@ -920,7 +920,7 @@ void ShaderResourceLayoutVk::InitializeStaticResources(const ShaderResourceLayou
             const auto& SrcCachedRes = SrcCachedSet.GetResource(SrcOffset);
             IDeviceObject* pObject = SrcCachedRes.pObject.RawPtr<IDeviceObject>();
             if (!pObject)
-                LOG_ERROR_MESSAGE("No resource assigned to static shader variable '", SrcRes.SpirvAttribs.GetPrintName(ArrInd), "' in shader '", GetShaderName(), "'.");
+                LOG_ERROR_MESSAGE("No resource is assigned to static shader variable '", SrcRes.SpirvAttribs.GetPrintName(ArrInd), "' in shader '", GetShaderName(), "'.");
             
             auto DstOffset = DstRes.CacheOffset + ArrInd;
             IDeviceObject* pCachedResource = DstResourceCache.GetDescriptorSet(DstRes.DescriptorSet).GetResource(DstOffset).pObject;

@@ -8,7 +8,7 @@ Implementation of Direct3D11 back-end
 The following code snippet shows how to initialize Diligent Engine in D3D11 mode.
 
 ```cpp
-#include "RenderDeviceFactoryD3D11.h"
+#include "EngineFactoryD3D11.h"
 using namespace Diligent;
 
 // ...
