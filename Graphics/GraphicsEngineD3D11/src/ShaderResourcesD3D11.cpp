@@ -252,9 +252,9 @@ void ShaderResourcesD3D11::dvpVerifyCommittedResources(ID3D11Buffer*            
                 }
             }
 
-            if (tex.ValidSamplerAssigned())
+            if (tex.IsCombinedWithSampler())
             {
-                const auto& SamAttribs = GetSampler( tex.GetSamplerId() );
+                const auto& SamAttribs = GetCombinedSampler(tex);
                 VERIFY_EXPR(SamAttribs.IsValidBindPoint());
                 VERIFY_EXPR(SamAttribs.BindCount == 1 || SamAttribs.BindCount == tex.BindCount);
             }

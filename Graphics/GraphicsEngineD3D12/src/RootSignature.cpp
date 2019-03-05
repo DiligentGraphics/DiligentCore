@@ -267,8 +267,8 @@ void RootSignature::InitStaticSampler(SHADER_TYPE                     ShaderType
             StreqSuff(SamplerName, StSmplr.SamplerDesc.SamplerOrTextureName, SamplerSuffix))
         {
             StSmplr.ShaderRegister = SamplerAttribs.BindPoint;
-            StSmplr.ArraySize = SamplerAttribs.BindCount;
-            StSmplr.RegisterSpace = 0;
+            StSmplr.ArraySize      = SamplerAttribs.BindCount;
+            StSmplr.RegisterSpace  = 0;
             SamplerFound = true;
             break;
         }
@@ -283,6 +283,7 @@ void RootSignature::InitStaticSampler(SHADER_TYPE                     ShaderType
 // http://diligentgraphics.com/diligent-engine/architecture/d3d12/shader-resource-layout#Initializing-Shader-Resource-Layouts-and-Root-Signature-in-a-Pipeline-State-Object
 void RootSignature::AllocateResourceSlot(SHADER_TYPE                     ShaderType, 
                                          const D3DShaderResourceAttribs& ShaderResAttribs, 
+                                         SHADER_RESOURCE_VARIABLE_TYPE   VariableType,
                                          D3D12_DESCRIPTOR_RANGE_TYPE     RangeType, 
                                          Uint32&                         RootIndex, // Output parameter
                                          Uint32&                         OffsetFromTableStart // Output parameter
@@ -299,12 +300,12 @@ void RootSignature::AllocateResourceSlot(SHADER_TYPE                     ShaderT
         OffsetFromTableStart = 0;
 
         // Add new root view to existing root parameters
-        m_RootParams.AddRootView(D3D12_ROOT_PARAMETER_TYPE_CBV, RootIndex, ShaderResAttribs.BindPoint, ShaderVisibility, ShaderResAttribs.GetVariableType());
+        m_RootParams.AddRootView(D3D12_ROOT_PARAMETER_TYPE_CBV, RootIndex, ShaderResAttribs.BindPoint, ShaderVisibility, VariableType);
     }
     else
     {
         // Use the same table for static and mutable resources. Treat both as static
-        auto RootTableType = (ShaderResAttribs.GetVariableType() == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC) ? SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC : SHADER_RESOURCE_VARIABLE_TYPE_STATIC;
+        auto RootTableType = (VariableType == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC) ? SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC : SHADER_RESOURCE_VARIABLE_TYPE_STATIC;
         auto TableIndKey = ShaderInd * SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES + RootTableType;
         // Get the table array index (this is not the root index!)
         auto& RootTableArrayInd = (( RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER ) ? m_SamplerRootTablesMap : m_SrvCbvUavRootTablesMap)[ TableIndKey ];
@@ -411,23 +412,22 @@ void RootSignature::dbgVerifyRootParameters()const
 }
 #endif
 
-void RootSignature::AllocateStaticSamplers(IShader* const* ppShaders, Uint32 NumShaders)
+void RootSignature::AllocateStaticSamplers(const PipelineResourceLayoutDesc& ResourceLayout)
 {
-    Uint32 TotalSamplers = 0;
-    for(Uint32 s=0;s < NumShaders; ++s)
-        TotalSamplers += ppShaders[s]->GetDesc().NumStaticSamplers;
-    if (TotalSamplers > 0)
+    if (ResourceLayout.NumStaticSamplers > 0)
     {
-        m_StaticSamplers.reserve(TotalSamplers);
-        for(Uint32 sh=0;sh < NumShaders; ++sh)
+        m_StaticSamplers.reserve(ResourceLayout.NumStaticSamplers);
+        for(Uint32 sam=0; sam < ResourceLayout.NumStaticSamplers; ++sam)
         {
-            const auto& Desc = ppShaders[sh]->GetDesc();
-            for(Uint32 sam=0; sam < Desc.NumStaticSamplers; ++sam)
+            const auto& StSamDesc = ResourceLayout.StaticSamplers[sam];
+            Uint32 ShaderStages = StSamDesc.ShaderStages;
+            while (ShaderStages != 0)
             {
-                m_StaticSamplers.emplace_back(Desc.StaticSamplers[sam], GetShaderVisibility(Desc.ShaderType));
+                auto Stage = ShaderStages & ~(ShaderStages-1);
+                m_StaticSamplers.emplace_back(StSamDesc, GetShaderVisibility(static_cast<SHADER_TYPE>(Stage)));
+                ShaderStages &= ~Stage;
             }
         }
-        VERIFY_EXPR(m_StaticSamplers.size() == TotalSamplers);
     }
 }
 

@@ -50,18 +50,20 @@ size_t ShaderVariableManagerD3D12::GetRequiredMemorySize(const ShaderResourceLay
 }
 
 // Creates shader variable for every resource from SrcLayout whose type is one AllowedVarTypes
-void ShaderVariableManagerD3D12::Initialize(const ShaderResourceLayoutD3D12&        SrcLayout, 
-                                            IMemoryAllocator&                       Allocator,
-                                            const SHADER_RESOURCE_VARIABLE_TYPE*    AllowedVarTypes, 
-                                            Uint32                                  NumAllowedTypes, 
-                                            ShaderResourceCacheD3D12&               ResourceCache)
-{
-    m_pResourceLayout = &SrcLayout;
-    m_pResourceCache  = &ResourceCache;
+ShaderVariableManagerD3D12::ShaderVariableManagerD3D12(IObject&                               Owner,
+                                                       const ShaderResourceLayoutD3D12&       SrcLayout, 
+                                                       IMemoryAllocator&                      Allocator,
+                                                       const SHADER_RESOURCE_VARIABLE_TYPE*   AllowedVarTypes, 
+                                                       Uint32                                 NumAllowedTypes, 
+                                                       ShaderResourceCacheD3D12&              ResourceCache) : 
+    m_Owner          (Owner),
+    m_ResourceLayout (SrcLayout),
+    m_ResourceCache  (ResourceCache)
 #ifdef _DEBUG
-    m_pDbgAllocator = &Allocator;
+  , m_DbgAllocator(Allocator)
 #endif
 
+{
     const Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
     VERIFY_EXPR(m_NumVariables == 0);
     auto MemSize = GetRequiredMemorySize(SrcLayout, AllowedVarTypes, NumAllowedTypes, m_NumVariables);
@@ -107,7 +109,7 @@ ShaderVariableManagerD3D12::~ShaderVariableManagerD3D12()
 
 void ShaderVariableManagerD3D12::Destroy(IMemoryAllocator &Allocator)
 {
-    VERIFY(m_pDbgAllocator == &Allocator, "Incosistent alloctor");
+    VERIFY(&m_DbgAllocator == &Allocator, "Incosistent alloctor");
 
     if(m_pVariables != nullptr)
     {
@@ -167,7 +169,6 @@ Uint32 ShaderVariableManagerD3D12::GetVariableIndex(const ShaderVariableD3D12Imp
 
 void ShaderVariableManagerD3D12::BindResources( IResourceMapping* pResourceMapping, Uint32 Flags)
 {
-    VERIFY_EXPR(m_pResourceCache != nullptr);
     DEV_CHECK_ERR(pResourceMapping != nullptr, "Failed to bind resources: resource mapping is null");
     
     if ( (Flags & BIND_SHADER_RESOURCES_UPDATE_ALL) == 0 )
@@ -183,7 +184,7 @@ void ShaderVariableManagerD3D12::BindResources( IResourceMapping* pResourceMappi
 
         for (Uint32 ArrInd = 0; ArrInd < Res.Attribs.BindCount; ++ArrInd)
         {
-            if( (Flags & BIND_SHADER_RESOURCES_KEEP_EXISTING) && Res.IsBound(ArrInd, *m_pResourceCache) )
+            if( (Flags & BIND_SHADER_RESOURCES_KEEP_EXISTING) && Res.IsBound(ArrInd, m_ResourceCache) )
                 continue;
 
             RefCntAutoPtr<IDeviceObject> pObj;
@@ -192,11 +193,11 @@ void ShaderVariableManagerD3D12::BindResources( IResourceMapping* pResourceMappi
             if ( pObj )
             {
                 //  Call non-virtual function
-                Res.BindResource(pObj, ArrInd, *m_pResourceCache);
+                Res.BindResource(pObj, ArrInd, m_ResourceCache);
             }
             else
             {
-                if( (Flags & BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED) && !Res.IsBound(ArrInd, *m_pResourceCache) )
+                if( (Flags & BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED) && !Res.IsBound(ArrInd, m_ResourceCache) )
                     LOG_ERROR_MESSAGE( "Unable to bind resource to shader variable '", Res.Attribs.GetPrintName(ArrInd), "': resource is not found in the resource mapping" );
             }
         }

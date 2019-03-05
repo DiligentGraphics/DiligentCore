@@ -67,17 +67,87 @@ PipelineStateD3D12Impl :: PipelineStateD3D12Impl(IReferenceCounters*      pRefCo
     m_SRBMemAllocator(GetRawAllocator())
 {
     auto pd3d12Device = pDeviceD3D12->GetD3D12Device();
-    
-    m_RootSig.AllocateStaticSamplers( GetShaders(), GetNumShaders() );
+    const auto& ResourceLayout = m_Desc.ResourceLayout;
+    m_RootSig.AllocateStaticSamplers(ResourceLayout);
 
-    auto& ShaderResLayoutAllocator = GetRawAllocator();
-    auto* pShaderResLayoutRawMem = ALLOCATE(ShaderResLayoutAllocator, "Raw memory for ShaderResourceLayoutD3D12", sizeof(ShaderResourceLayoutD3D12) * m_NumShaders);
-    m_pShaderResourceLayouts = reinterpret_cast<ShaderResourceLayoutD3D12*>(pShaderResLayoutRawMem);
+    {
+        auto& ShaderResLayoutAllocator = GetRawAllocator();
+        auto* pShaderResLayoutRawMem = ALLOCATE(ShaderResLayoutAllocator, "Raw memory for ShaderResourceLayoutD3D12", sizeof(ShaderResourceLayoutD3D12) * m_NumShaders * 2);
+        m_pShaderResourceLayouts = reinterpret_cast<ShaderResourceLayoutD3D12*>(pShaderResLayoutRawMem);
+    }
+
+    {
+        auto& ShaderResCacheAllocator = GetRawAllocator();
+        auto* pShaderResCacheRawMem = ALLOCATE(ShaderResCacheAllocator, "Raw memory for ShaderResourceCacheD3D12", sizeof(ShaderResourceCacheD3D12) * m_NumShaders);
+        m_pStaticResourceCaches = reinterpret_cast<ShaderResourceCacheD3D12*>(pShaderResCacheRawMem);
+    }
+
+    {
+        auto& ShaderVarMgrAllocator = GetRawAllocator();
+        auto* pStaticVarsMgrRawMem = ALLOCATE(ShaderVarMgrAllocator, "Raw memory for ShaderVariableManagerD3D12", sizeof(ShaderVariableManagerD3D12) * m_NumShaders);
+        m_pStaticVarManagers = reinterpret_cast<ShaderVariableManagerD3D12*>(pStaticVarsMgrRawMem);
+    }
+
+#ifdef DEVELOPMENT
+    {
+        const ShaderResources* pResources[MaxShadersInPipeline] = {};
+        for (Uint32 s = 0; s < m_NumShaders; ++s)
+        {
+            const auto* pShader = GetShader<const ShaderD3D12Impl>(s);
+            pResources[s] = &(*pShader->GetShaderResources());
+        }
+        ShaderResources::DvpVerifyResourceLayout(ResourceLayout, pResources, m_NumShaders);
+    }
+#endif
+
     for (Uint32 s=0; s < m_NumShaders; ++s)
     {
         auto* pShaderD3D12 = GetShader<ShaderD3D12Impl>(s);
-        new (m_pShaderResourceLayouts+s) ShaderResourceLayoutD3D12(*this);
-        m_pShaderResourceLayouts[s].Initialize(pDeviceD3D12->GetD3D12Device(), pShaderD3D12->GetShaderResources(), GetRawAllocator(), nullptr, 0, nullptr, &m_RootSig);
+        auto ShaderType = pShaderD3D12->GetDesc().ShaderType;
+        auto ShaderInd = GetShaderTypeIndex(ShaderType);
+        m_ResourceLayoutIndex[ShaderInd] = static_cast<Int8>(s);
+        
+        new (m_pShaderResourceLayouts+s)
+            ShaderResourceLayoutD3D12
+            {
+                *this,
+                pDeviceD3D12->GetD3D12Device(),
+                ResourceLayout,
+                pShaderD3D12->GetShaderResources(),
+                GetRawAllocator(),
+                nullptr,
+                0,
+                nullptr,
+                &m_RootSig
+            };
+
+        new (m_pStaticResourceCaches+s) ShaderResourceCacheD3D12{ShaderResourceCacheD3D12::DbgCacheContentType::StaticShaderResources};
+
+        const SHADER_RESOURCE_VARIABLE_TYPE StaticVarType[] = {SHADER_RESOURCE_VARIABLE_TYPE_STATIC};
+        new (m_pShaderResourceLayouts + m_NumShaders + s)
+            ShaderResourceLayoutD3D12
+            {
+                *this,
+                pDeviceD3D12->GetD3D12Device(),
+                ResourceLayout,
+                pShaderD3D12->GetShaderResources(),
+                GetRawAllocator(),
+                StaticVarType,
+                _countof(StaticVarType),
+                m_pStaticResourceCaches+s,
+                nullptr
+            };
+
+        new (m_pStaticVarManagers+s)
+            ShaderVariableManagerD3D12
+            {
+                *this,
+                GetStaticShaderResLayout(s),
+                GetRawAllocator(),
+                nullptr,
+                0,
+                GetStaticShaderResCache(s)
+            };
     }
     m_RootSig.Finalize(pd3d12Device);
 
@@ -221,8 +291,14 @@ PipelineStateD3D12Impl::~PipelineStateD3D12Impl()
     auto& ShaderResLayoutAllocator = GetRawAllocator();
     for(Uint32 s = 0; s < m_NumShaders; ++s)
     {
+        m_pStaticVarManagers[s].Destroy(GetRawAllocator());
+        m_pStaticVarManagers[s].~ShaderVariableManagerD3D12();
+        m_pStaticResourceCaches [s].~ShaderResourceCacheD3D12();
         m_pShaderResourceLayouts[s].~ShaderResourceLayoutD3D12();
+        m_pShaderResourceLayouts[m_NumShaders+s].~ShaderResourceLayoutD3D12();
     }
+    ShaderResLayoutAllocator.Free(m_pStaticVarManagers);
+    ShaderResLayoutAllocator.Free(m_pStaticResourceCaches);
     ShaderResLayoutAllocator.Free(m_pShaderResourceLayouts);
 
     // D3D12 object can only be destroyed when it is no longer used by the GPU
@@ -364,6 +440,41 @@ bool PipelineStateD3D12Impl::dbgContainsShaderResources()const
             return true;
     }
     return false;
+}
+
+void PipelineStateD3D12Impl::BindStaticResources(IResourceMapping* pResourceMapping, Uint32 Flags)
+{
+    for (Uint32 s=0; s < m_NumShaders; ++s)
+    {
+        m_pStaticVarManagers[s].BindResources(pResourceMapping, Flags);
+    }
+}
+
+Uint32 PipelineStateD3D12Impl::GetStaticVariableCount(SHADER_TYPE ShaderType) const
+{
+    const auto LayoutInd = m_ResourceLayoutIndex[GetShaderTypeIndex(ShaderType)];
+    if (LayoutInd < 0)
+        return 0;
+
+    return m_pStaticVarManagers[LayoutInd].GetVariableCount();
+}
+
+IShaderResourceVariable* PipelineStateD3D12Impl::GetStaticShaderVariable(SHADER_TYPE ShaderType, const Char* Name)
+{
+    const auto LayoutInd = m_ResourceLayoutIndex[GetShaderTypeIndex(ShaderType)];
+    if (LayoutInd < 0)
+        return nullptr;
+
+    return m_pStaticVarManagers[LayoutInd].GetVariable(Name);
+}
+
+IShaderResourceVariable* PipelineStateD3D12Impl::GetStaticShaderVariable(SHADER_TYPE ShaderType, Uint32 Index)
+{
+    const auto LayoutInd = m_ResourceLayoutIndex[GetShaderTypeIndex(ShaderType)];
+    if (LayoutInd < 0)
+        return nullptr;
+
+    return m_pStaticVarManagers[LayoutInd].GetVariable(Index);
 }
 
 }

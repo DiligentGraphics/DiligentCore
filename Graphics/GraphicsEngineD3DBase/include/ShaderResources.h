@@ -126,7 +126,7 @@ public:
         VERIFY(_SamplerId    < (1 << SamplerOrTexSRVIdBits), "SamplerOrTexSRVId is out of representable range");
 
         if (_InputType == D3D_SIT_TEXTURE && _SRVDimension != D3D_SRV_DIMENSION_BUFFER)
-            VERIFY_EXPR(GetSamplerId() == _SamplerId);
+            VERIFY_EXPR(GetCombinedSamplerId() == _SamplerId);
         else
             VERIFY(_SamplerId == InvalidSamplerId, "Only texture SRV can be assigned a valid texture sampler");
 #endif
@@ -174,33 +174,14 @@ public:
         return static_cast<D3D_SRV_DIMENSION>(SRVDimension);
     }
 
-    Uint32 GetSamplerId()const
+    bool IsCombinedWithSampler()const
     {
-        VERIFY(GetInputType() == D3D_SIT_TEXTURE && GetSRVDimension() != D3D_SRV_DIMENSION_BUFFER, "Invalid input type: D3D_SIT_TEXTURE is expected" );
-        return SamplerOrTexSRVId;
+        return GetCombinedSamplerId() != InvalidSamplerId;
     }
 
-    void SetTexSRVId(Uint32 TexSRVId)
+    bool IsCombinedWithTexSRV()const
     {
-        VERIFY(GetInputType() == D3D_SIT_SAMPLER, "Invalid input type: D3D_SIT_SAMPLER is expected" );
-        VERIFY(TexSRVId < (1 << SamplerOrTexSRVIdBits), "TexSRVId (", TexSRVId, ") is out of representable range");
-        SamplerOrTexSRVId = TexSRVId;
-    }
-
-    Uint32 GetTexSRVId()const
-    {
-        VERIFY(GetInputType() == D3D_SIT_SAMPLER, "Invalid input type: D3D_SIT_SAMPLER is expected" );
-        return SamplerOrTexSRVId;
-    }
-
-    bool ValidSamplerAssigned()const
-    {
-        return GetSamplerId() != InvalidSamplerId;
-    }
-
-    bool ValidTexSRVAssigned()const
-    {
-        return GetTexSRVId() != InvalidTexSRVId;
+        return GetCombinedTexSRVId() != InvalidTexSRVId;
     }
 
     bool IsValidBindPoint()const
@@ -229,6 +210,29 @@ public:
     size_t GetHash()const
     {
         return ComputeHash(BindPoint, BindCount, InputType, SRVDimension, SamplerOrTexSRVId);
+    }
+
+
+private:
+    friend class ShaderResources;
+
+    Uint32 GetCombinedSamplerId()const
+    {
+        VERIFY(GetInputType() == D3D_SIT_TEXTURE && GetSRVDimension() != D3D_SRV_DIMENSION_BUFFER, "Invalid input type: D3D_SIT_TEXTURE is expected" );
+        return SamplerOrTexSRVId;
+    }
+
+    void SetTexSRVId(Uint32 TexSRVId)
+    {
+        VERIFY(GetInputType() == D3D_SIT_SAMPLER, "Invalid input type: D3D_SIT_SAMPLER is expected" );
+        VERIFY(TexSRVId < (1 << SamplerOrTexSRVIdBits), "TexSRVId (", TexSRVId, ") is out of representable range");
+        SamplerOrTexSRVId = TexSRVId;
+    }
+
+    Uint32 GetCombinedTexSRVId()const
+    {
+        VERIFY(GetInputType() == D3D_SIT_SAMPLER, "Invalid input type: D3D_SIT_SAMPLER is expected" );
+        return SamplerOrTexSRVId;
     }
 };
 static_assert(sizeof(D3DShaderResourceAttribs) == sizeof(void*) + sizeof(Uint32)*2, "Unexpected sizeof(D3DShaderResourceAttribs)");
@@ -264,6 +268,18 @@ public:
     const D3DShaderResourceAttribs& GetBufSRV (Uint32 n)const noexcept { return GetResAttribs(n, GetNumBufSRV(),   m_BufSRVOffset);   }
     const D3DShaderResourceAttribs& GetBufUAV (Uint32 n)const noexcept { return GetResAttribs(n, GetNumBufUAV(),   m_BufUAVOffset);   }
     const D3DShaderResourceAttribs& GetSampler(Uint32 n)const noexcept { return GetResAttribs(n, GetNumSamplers(), m_SamplersOffset); }
+
+    const D3DShaderResourceAttribs& GetCombinedSampler(const D3DShaderResourceAttribs& TexSRV)const noexcept
+    {
+        VERIFY(TexSRV.IsCombinedWithSampler(), "This texture SRV is not combined with any sampler");
+        return GetSampler(TexSRV.GetCombinedSamplerId());
+    }
+
+    const D3DShaderResourceAttribs& GetCombinedTextureSRV(const D3DShaderResourceAttribs& Sampler)const noexcept
+    {
+        VERIFY(Sampler.IsCombinedWithTexSRV(), "This sampler is not combined with any texture SRV");
+        return GetTexSRV(Sampler.GetCombinedTexSRVId());
+    }
 
     SHADER_TYPE GetShaderType()const noexcept{return m_ShaderType;}
 
@@ -486,7 +502,7 @@ void ShaderResources::Initialize(ID3DBlob*           pShaderByteCode,
         for (Uint32 n=0; n < GetNumSamplers(); ++n)
         {
             const auto& Sampler = GetSampler(n);
-            if (!Sampler.ValidTexSRVAssigned())
+            if (!Sampler.IsCombinedWithTexSRV())
                 LOG_ERROR_MESSAGE("Shader '", ShaderName, "' uses combined texture samplers, but sampler '", Sampler.Name, "' is not assigned to any texture");
         }
 #endif

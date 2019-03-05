@@ -318,12 +318,12 @@ void RenderDeviceD3D12Impl :: CreateBuffer(const BufferDesc& BuffDesc, const Buf
 }
 
 
-void RenderDeviceD3D12Impl :: CreateShader(const ShaderCreationAttribs& ShaderCreationAttribs, IShader** ppShader)
+void RenderDeviceD3D12Impl :: CreateShader(const ShaderCreateInfo& ShaderCI, IShader** ppShader)
 {
-    CreateDeviceObject( "shader", ShaderCreationAttribs.Desc, ppShader, 
+    CreateDeviceObject( "shader", ShaderCI.Desc, ppShader, 
         [&]()
         {
-            ShaderD3D12Impl *pShaderD3D12( NEW_RC_OBJ(m_ShaderObjAllocator, "ShaderD3D12Impl instance", ShaderD3D12Impl)(this, ShaderCreationAttribs ) );
+            ShaderD3D12Impl *pShaderD3D12( NEW_RC_OBJ(m_ShaderObjAllocator, "ShaderD3D12Impl instance", ShaderD3D12Impl)(this, ShaderCI ) );
             pShaderD3D12->QueryInterface( IID_Shader, reinterpret_cast<IObject**>(ppShader) );
 
             OnCreateDeviceObject( pShaderD3D12 );

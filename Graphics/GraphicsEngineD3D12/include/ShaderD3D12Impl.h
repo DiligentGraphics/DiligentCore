@@ -52,6 +52,16 @@ public:
     
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
 
+    virtual Uint32 GetResourceCount()const override final
+    {
+        return m_pShaderResources->GetTotalResources();
+    }
+
+    virtual ShaderResourceDesc GetResource(Uint32 Index)const override final
+    {
+        return m_pShaderResources->GetShaderResourceDesc(Index);
+    }
+
     ID3DBlob* GetShaderByteCode(){return m_pShaderByteCode;}
     const std::shared_ptr<const ShaderResourcesD3D12>& GetShaderResources()const { return m_pShaderResources; }
 

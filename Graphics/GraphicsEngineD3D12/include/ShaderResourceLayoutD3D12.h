@@ -108,7 +108,21 @@ namespace Diligent
 class ShaderResourceLayoutD3D12 final
 {
 public:
-    ShaderResourceLayoutD3D12(IObject& Owner);
+
+    // There are two modes a layout can be constructed:
+    //  - initialize static resource layout and initialize shader resource cache to hold static resources
+    //  - initialize reference layouts that address all types of resources (static, mutable, dynamic). 
+    //    Root indices and descriptor table offsets are assigned during the initialization; 
+    //    no shader resource cache is provided
+    ShaderResourceLayoutD3D12(IObject&                                    Owner,
+                              ID3D12Device*                               pd3d12Device,
+                              const PipelineResourceLayoutDesc&           ResourceLayout,
+                              std::shared_ptr<const ShaderResourcesD3D12> pSrcResources,
+                              IMemoryAllocator&                           LayoutDataAllocator,
+                              const SHADER_RESOURCE_VARIABLE_TYPE* const  VarTypes,
+                              Uint32                                      NumAllowedTypes,
+                              ShaderResourceCacheD3D12*                   pResourceCache,
+                              class RootSignature*                        pRootSig);
 
     ShaderResourceLayoutD3D12            (const ShaderResourceLayoutD3D12&) = delete;
     ShaderResourceLayoutD3D12            (ShaderResourceLayoutD3D12&&)      = delete;
@@ -116,20 +130,6 @@ public:
     ShaderResourceLayoutD3D12& operator =(ShaderResourceLayoutD3D12&&)      = delete;
     
     ~ShaderResourceLayoutD3D12();
-
-    //  The method is called to
-    //  - initialize static resource layout and initialize shader resource cache to hold static resources
-    //  - initialize reference layouts that address all types of resources (static, mutable, dynamic). 
-    //    Root indices and descriptor table offsets are assigned during the initialization; 
-    //    no shader resource cache is provided
-    void Initialize(ID3D12Device*                               pd3d12Device,
-                    const PipelineResourceLayoutDesc&           ResourceLayout,
-                    std::shared_ptr<const ShaderResourcesD3D12> pSrcResources,
-                    IMemoryAllocator&                           LayoutDataAllocator,
-                    const SHADER_RESOURCE_VARIABLE_TYPE* const  VarTypes,
-                    Uint32                                      NumAllowedTypes,
-                    ShaderResourceCacheD3D12*                   pResourceCache,
-                    class RootSignature*                        pRootSig);
 
     // sizeof(D3D12Resource) == 24 (x64)
     struct D3D12Resource final
@@ -327,8 +327,8 @@ private:
     std::array<Uint16, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES + 1> m_CbvSrvUavOffsets = {};
     std::array<Uint16, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES + 1> m_SamplersOffsets  = {};
 
-    CComPtr<ID3D12Device>                       m_pd3d12Device;
     IObject&                                    m_Owner;
+    CComPtr<ID3D12Device>                       m_pd3d12Device;
     // We must use shared_ptr to reference ShaderResources instance, because
     // there may be multiple objects referencing the same set of resources
     std::shared_ptr<const ShaderResourcesD3D12> m_pResources;

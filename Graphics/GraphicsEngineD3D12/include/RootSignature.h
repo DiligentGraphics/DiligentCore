@@ -288,9 +288,9 @@ class RootSignature
 public:
     RootSignature();
 
-    void AllocateStaticSamplers(IShader* const *ppShaders, Uint32 NumShaders);
+    void AllocateStaticSamplers(const PipelineResourceLayoutDesc& ResourceLayout);
 
-    void Finalize(ID3D12Device *pd3d12Device);
+    void Finalize(ID3D12Device* pd3d12Device);
 
     ID3D12RootSignature* GetD3D12RootSignature()const{return m_pd3d12RootSignature;}
 
@@ -305,6 +305,7 @@ public:
 
     void AllocateResourceSlot(SHADER_TYPE                      ShaderType, 
                               const D3DShaderResourceAttribs&  ShaderResAttribs, 
+                              SHADER_RESOURCE_VARIABLE_TYPE    VariableType,
                               D3D12_DESCRIPTOR_RANGE_TYPE      RangeType, 
                               Uint32&                          RootIndex,
                               Uint32&                          OffsetFromTableStart);

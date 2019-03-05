@@ -33,6 +33,7 @@
 #include "ShaderResourceLayoutD3D12.h"
 #include "SRBMemoryAllocator.h"
 #include "RenderDeviceD3D12Impl.h"
+#include "ShaderVariableD3D12.h"
 
 namespace Diligent
 {
@@ -49,11 +50,19 @@ public:
 
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
    
-    virtual ID3D12PipelineState *GetD3D12PipelineState()const override final{return m_pd3d12PSO;}
-    
+    virtual void BindStaticResources(IResourceMapping* pResourceMapping, Uint32 Flags)override final;
+
+    virtual Uint32 GetStaticVariableCount(SHADER_TYPE ShaderType) const override final;
+
+    virtual IShaderResourceVariable* GetStaticShaderVariable(SHADER_TYPE ShaderType, const Char* Name) override final;
+
+    virtual IShaderResourceVariable* GetStaticShaderVariable(SHADER_TYPE ShaderType, Uint32 Index) override final;
+
     virtual void CreateShaderResourceBinding( IShaderResourceBinding **ppShaderResourceBinding, bool InitStaticResources )override final;
 
     virtual bool IsCompatibleWith(const IPipelineState *pPSO)const override final;
+
+    virtual ID3D12PipelineState *GetD3D12PipelineState()const override final{return m_pd3d12PSO;}
 
     virtual ID3D12RootSignature *GetD3D12RootSignature()const override final{return m_RootSig.GetD3D12RootSignature(); }
 
@@ -70,7 +79,19 @@ public:
         VERIFY_EXPR(ShaderInd < m_NumShaders);
         return m_pShaderResourceLayouts[ShaderInd];
     }
+
+    const ShaderResourceLayoutD3D12& GetStaticShaderResLayout(Uint32 ShaderInd)const
+    {
+        VERIFY_EXPR(ShaderInd < m_NumShaders);
+        return m_pShaderResourceLayouts[m_NumShaders + ShaderInd];
+    }
     
+    ShaderResourceCacheD3D12& GetStaticShaderResCache(Uint32 ShaderInd)const
+    {
+        VERIFY_EXPR(ShaderInd < m_NumShaders);
+        return m_pStaticResourceCaches[ShaderInd];
+    }
+
     bool dbgContainsShaderResources()const;
 
     SRBMemoryAllocator& GetSRBMemoryAllocator()
@@ -87,7 +108,11 @@ private:
     // Must be defined before default SRB
     SRBMemoryAllocator m_SRBMemAllocator;
 
-    ShaderResourceLayoutD3D12* m_pShaderResourceLayouts;
+    ShaderResourceLayoutD3D12*   m_pShaderResourceLayouts = nullptr;
+    ShaderResourceCacheD3D12*    m_pStaticResourceCaches  = nullptr;
+    ShaderVariableManagerD3D12*  m_pStaticVarManagers     = nullptr;
+    // Resource layout index in m_ResourceLayouts[] array for every shader stage
+    Int8 m_ResourceLayoutIndex[6] = {-1, -1, -1, -1, -1, -1};
 };
 
 }

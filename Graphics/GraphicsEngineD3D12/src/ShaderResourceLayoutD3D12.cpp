@@ -38,11 +38,6 @@
 namespace Diligent
 {
  
-ShaderResourceLayoutD3D12::ShaderResourceLayoutD3D12(IObject& Owner) : 
-    m_Owner(Owner)
-{
-}
-
 ShaderResourceLayoutD3D12::~ShaderResourceLayoutD3D12()
 {
     for(Uint32 r=0; r < GetTotalResourceCount(); ++r)
@@ -111,18 +106,19 @@ void ShaderResourceLayoutD3D12::AllocateMemory(IMemoryAllocator&                
 
 // http://diligentgraphics.com/diligent-engine/architecture/d3d12/shader-resource-layout#Initializing-Shader-Resource-Layouts-and-Root-Signature-in-a-Pipeline-State-Object
 // http://diligentgraphics.com/diligent-engine/architecture/d3d12/shader-resource-cache#Initializing-Shader-Resource-Layouts-in-a-Pipeline-State
-void ShaderResourceLayoutD3D12::Initialize(ID3D12Device*                               pd3d12Device,
-                                           const PipelineResourceLayoutDesc&           ResourceLayout,
-                                           std::shared_ptr<const ShaderResourcesD3D12> pSrcResources, 
-                                           IMemoryAllocator&                           LayoutDataAllocator,
-                                           const SHADER_RESOURCE_VARIABLE_TYPE* const  AllowedVarTypes, 
-                                           Uint32                                      NumAllowedTypes, 
-                                           ShaderResourceCacheD3D12*                   pResourceCache,
-                                           RootSignature*                              pRootSig)
+ShaderResourceLayoutD3D12::ShaderResourceLayoutD3D12(IObject&                                    Owner,
+                                                     ID3D12Device*                               pd3d12Device,
+                                                     const PipelineResourceLayoutDesc&           ResourceLayout,
+                                                     std::shared_ptr<const ShaderResourcesD3D12> pSrcResources, 
+                                                     IMemoryAllocator&                           LayoutDataAllocator,
+                                                     const SHADER_RESOURCE_VARIABLE_TYPE* const  AllowedVarTypes, 
+                                                     Uint32                                      NumAllowedTypes, 
+                                                     ShaderResourceCacheD3D12*                   pResourceCache,
+                                                     RootSignature*                              pRootSig) : 
+    m_Owner        (Owner),
+    m_pd3d12Device (pd3d12Device),
+    m_pResources   (std::move(pSrcResources))
 {
-    m_pResources = std::move(pSrcResources);
-    m_pd3d12Device = pd3d12Device;
-
     VERIFY_EXPR( (pResourceCache != nullptr) ^ (pRootSig != nullptr) );
 
     const Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
@@ -155,10 +151,9 @@ void ShaderResourceLayoutD3D12::Initialize(ID3D12Device*                        
             if (IsAllowedType(VarType, AllowedTypeBits))
             {
                 ++CbvSrvUavCount[VarType];
-                if (TexSRV.ValidSamplerAssigned())
+                if (TexSRV.IsCombinedWithSampler())
                 {
-                    auto SamplerId = TexSRV.GetSamplerId();
-                    const auto& SamplerAttribs = m_pResources->GetSampler(SamplerId);
+                    const auto& SamplerAttribs = m_pResources->GetCombinedSampler(TexSRV);
                     auto SamplerVarType = m_pResources->FindVariableType(SamplerAttribs, ResourceLayout);
                     DEV_CHECK_ERR(SamplerVarType == VarType,
                                   "The type (", GetShaderVariableTypeLiteralName(VarType),") of texture SRV variable '", TexSRV.Name,
@@ -203,7 +198,7 @@ void ShaderResourceLayoutD3D12::Initialize(ID3D12Device*                        
         D3D12_DESCRIPTOR_RANGE_TYPE DescriptorRangeType = GetDescriptorRangeType(ResType);
         if (pRootSig)
         {
-            pRootSig->AllocateResourceSlot(m_pResources->GetShaderType(), Attribs, DescriptorRangeType, RootIndex, Offset );
+            pRootSig->AllocateResourceSlot(m_pResources->GetShaderType(), Attribs, VarType, DescriptorRangeType, RootIndex, Offset );
             VERIFY(RootIndex <= D3D12Resource::MaxRootIndex, "Root index excceeds allowed limit");
         }
         else
@@ -268,9 +263,9 @@ void ShaderResourceLayoutD3D12::Initialize(ID3D12Device*                        
                 VERIFY(CurrSampler[SHADER_RESOURCE_VARIABLE_TYPE_STATIC] + CurrSampler[SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE] + CurrSampler[SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC] == GetTotalSamplerCount(), "All samplers must be initialized before texture SRVs");
             
                 Uint32 SamplerId = D3D12Resource::InvalidSamplerId;
-                if (TexSRV.ValidSamplerAssigned())
+                if (TexSRV.IsCombinedWithSampler())
                 {
-                    const auto& SamplerAttribs = m_pResources->GetSampler(TexSRV.GetSamplerId());
+                    const auto& SamplerAttribs = m_pResources->GetCombinedSampler(TexSRV);
                     auto SamplerVarType = m_pResources->FindVariableType(SamplerAttribs, ResourceLayout);
                     DEV_CHECK_ERR(SamplerVarType == VarType,
                                   "The type (", GetShaderVariableTypeLiteralName(VarType),") of texture SRV variable '", TexSRV.Name,
@@ -283,9 +278,9 @@ void ShaderResourceLayoutD3D12::Initialize(ID3D12Device*                        
                         // Static samplers are never copied, and SamplerId == InvalidSamplerId
 #ifdef _DEBUG
                         auto SamplerCount = GetTotalSamplerCount();
-                        for (SamplerId = 0; SamplerId < SamplerCount; ++SamplerId)
+                        for (Uint32 s = 0; s < SamplerCount; ++s)
                         {
-                            const auto& Sampler = GetSampler(SamplerId);
+                            const auto& Sampler = GetSampler(s);
                             if (strcmp(Sampler.Attribs.Name, SamplerAttribs.Name) == 0)
                                 LOG_ERROR("Static sampler '", Sampler.Attribs.Name, "' was found among resources. This seems to be a bug");
                         }
@@ -294,14 +289,16 @@ void ShaderResourceLayoutD3D12::Initialize(ID3D12Device*                        
                     else
                     {
                         auto SamplerCount = GetTotalSamplerCount();
+                        bool SamplerFound = false;
                         for (SamplerId = 0; SamplerId < SamplerCount; ++SamplerId)
                         {
                             const auto& Sampler = GetSampler(SamplerId);
-                            if (strcmp(Sampler.Attribs.Name, SamplerAttribs.Name) == 0)
+                            SamplerFound = strcmp(Sampler.Attribs.Name, SamplerAttribs.Name) == 0;
+                            if (SamplerFound)
                                 break;
                         }
 
-                        if (SamplerId == SamplerCount)
+                        if (!SamplerFound)
                         {
                             LOG_ERROR("Unable to find sampler '", SamplerAttribs.Name, "' assigned to texture SRV '", TexSRV.Name, "' in the list of already created resources. This seems to be a bug.");
                             SamplerId = D3D12Resource::InvalidSamplerId;

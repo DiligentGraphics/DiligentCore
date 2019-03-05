@@ -199,9 +199,9 @@ ShaderResourceLayoutD3D11::ShaderResourceLayoutD3D11(IObject&                   
             VERIFY(sam == NumSamplers, "All samplers must be initialized before texture SRVs");
 
             Uint32 AssignedSamplerIndex = TexSRVBindInfo::InvalidSamplerIndex;
-            if (TexSRV.ValidSamplerAssigned())
+            if (TexSRV.IsCombinedWithSampler())
             {
-                const auto& AssignedSamplerAttribs = m_pResources->GetSampler(TexSRV.GetSamplerId());
+                const auto& AssignedSamplerAttribs = m_pResources->GetCombinedSampler(TexSRV);
                 auto AssignedSamplerType = m_pResources->FindVariableType(AssignedSamplerAttribs, ResourceLayout);
                 DEV_CHECK_ERR(AssignedSamplerType == VarType,
                               "The type (", GetShaderVariableTypeLiteralName(VarType),") of texture SRV variable '", TexSRV.Name,
@@ -553,9 +553,9 @@ void ShaderResourceLayoutD3D11::SamplerBindInfo::BindResource(IDeviceObject* pSa
     if (pSampler && !pSamplerD3D11)
         LOG_RESOURCE_BINDING_ERROR("sampler", pSampler, m_Attribs, ArrayIndex, m_ParentResLayout.GetShaderName(), "Incorect resource type: sampler is expected.");
 
-    if (m_Attribs.ValidTexSRVAssigned())
+    if (m_Attribs.IsCombinedWithTexSRV())
     {
-        auto* TexSRVName = m_ParentResLayout.m_pResources->GetTexSRV(m_Attribs.GetTexSRVId()).Name;
+        auto* TexSRVName = m_ParentResLayout.m_pResources->GetCombinedTextureSRV(m_Attribs).Name;
         LOG_WARNING_MESSAGE("Texture sampler sampler '", m_Attribs.Name, "' is assigned to texture SRV '", TexSRVName, "' and should not be accessed directly. The sampler is initialized when texture SRV is set to '", TexSRVName, "' variable.");
     }
 
