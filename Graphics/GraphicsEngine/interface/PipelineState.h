@@ -251,9 +251,11 @@ public:
 
     /// Binds resources for all shaders in the pipeline state
 
+    /// \param [in] ShaderFlags - Flags that specify shader stages, for which resources will be bound.
+    ///                           Any combination of Diligent::SHADER_TYPE may be used.
     /// \param [in] pResourceMapping - Pointer to the resource mapping interface.
     /// \param [in] Flags - Additional flags. See Diligent::BIND_SHADER_RESOURCES_FLAGS.
-    virtual void BindStaticResources(IResourceMapping* pResourceMapping, Uint32 Flags) = 0;
+    virtual void BindStaticResources(Uint32 ShaderFlags, IResourceMapping* pResourceMapping, Uint32 Flags) = 0;
 
 
     /// Returns the number of static shader resource variables.

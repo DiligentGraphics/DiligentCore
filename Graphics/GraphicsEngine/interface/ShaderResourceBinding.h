@@ -56,8 +56,8 @@ public:
 
     /// Binds mutable and dynamice resources using the resource mapping
 
-    /// \param [in] ShaderFlags - Flags for the shader stages, for which resources will be bound.
-    ///                           Any combination of Diligent::SHADER_TYPE may be specified.
+    /// \param [in] ShaderFlags - Flags that specify shader stages, for which resources will be bound.
+    ///                           Any combination of Diligent::SHADER_TYPE may be used.
     /// \param [in] pResMapping - Shader resource mapping, where required resources will be looked up 
     /// \param [in] Flags       - Additional flags. See Diligent::BIND_SHADER_RESOURCES_FLAGS.
     virtual void BindResources(Uint32 ShaderFlags, IResourceMapping* pResMapping, Uint32 Flags) = 0;

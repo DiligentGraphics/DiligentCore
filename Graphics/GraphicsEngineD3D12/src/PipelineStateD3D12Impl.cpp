@@ -442,11 +442,13 @@ bool PipelineStateD3D12Impl::dbgContainsShaderResources()const
     return false;
 }
 
-void PipelineStateD3D12Impl::BindStaticResources(IResourceMapping* pResourceMapping, Uint32 Flags)
+void PipelineStateD3D12Impl::BindStaticResources(Uint32 ShaderFlags, IResourceMapping* pResourceMapping, Uint32 Flags)
 {
     for (Uint32 s=0; s < m_NumShaders; ++s)
     {
-        m_pStaticVarManagers[s].BindResources(pResourceMapping, Flags);
+        auto ShaderType = GetStaticShaderResLayout(s).GetShaderType();
+        if ((ShaderFlags & ShaderType) != 0)
+            m_pStaticVarManagers[s].BindResources(pResourceMapping, Flags);
     }
 }
 

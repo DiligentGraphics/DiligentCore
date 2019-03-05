@@ -66,7 +66,7 @@ public:
 
     virtual VkPipeline   GetVkPipeline()  const override final { return m_Pipeline; }
 
-    virtual void BindStaticResources(IResourceMapping* pResourceMapping, Uint32 Flags)override final;
+    virtual void BindStaticResources(Uint32 ShaderFlags, IResourceMapping* pResourceMapping, Uint32 Flags)override final;
 
     virtual Uint32 GetStaticVariableCount(SHADER_TYPE ShaderType) const override final;
 

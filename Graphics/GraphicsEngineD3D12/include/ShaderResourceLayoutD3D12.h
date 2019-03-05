@@ -252,6 +252,8 @@ public:
     }
 
     const bool IsUsingSeparateSamplers() const {return !m_pResources->IsUsingCombinedTextureSamplers();}
+    
+    SHADER_TYPE GetShaderType() const {return m_pResources->GetShaderType();}
 
 private:
     const D3D12Resource& GetAssignedSampler(const D3D12Resource& TexSrv)const;

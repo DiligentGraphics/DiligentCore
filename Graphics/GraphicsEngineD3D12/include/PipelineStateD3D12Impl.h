@@ -50,7 +50,7 @@ public:
 
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
    
-    virtual void BindStaticResources(IResourceMapping* pResourceMapping, Uint32 Flags)override final;
+    virtual void BindStaticResources(Uint32 ShaderFlags, IResourceMapping* pResourceMapping, Uint32 Flags)override final;
 
     virtual Uint32 GetStaticVariableCount(SHADER_TYPE ShaderType) const override final;
 

@@ -618,12 +618,16 @@ void PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBind
     }
 }
 
-void PipelineStateVkImpl::BindStaticResources(IResourceMapping* pResourceMapping, Uint32 Flags)
+void PipelineStateVkImpl::BindStaticResources(Uint32 ShaderFlags, IResourceMapping* pResourceMapping, Uint32 Flags)
 {
     for (Uint32 s=0; s < m_NumShaders; ++s)
     {
-        auto& StaticVarMgr = GetStaticVarMgr(s);
-        StaticVarMgr.BindResources(pResourceMapping, Flags);
+        auto ShaderType = GetStaticShaderResLayout(s).GetShaderType();
+        if ((ShaderType & ShaderFlags) != 0)
+        {
+            auto& StaticVarMgr = GetStaticVarMgr(s);
+            StaticVarMgr.BindResources(pResourceMapping, Flags);
+        }
     }
 }
 

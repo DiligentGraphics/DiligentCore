@@ -322,11 +322,13 @@ ID3D11ComputeShader* PipelineStateD3D11Impl::GetD3D11ComputeShader()
 }
 
 
-void PipelineStateD3D11Impl::BindStaticResources(IResourceMapping* pResourceMapping, Uint32 Flags)
+void PipelineStateD3D11Impl::BindStaticResources(Uint32 ShaderFlags, IResourceMapping* pResourceMapping, Uint32 Flags)
 {
     for (Uint32 s=0; s < m_NumShaders; ++s)
     {
-        m_pStaticResourceLayouts[s].BindResources(pResourceMapping, Flags, m_pStaticResourceCaches[s]);
+        auto& StaticResLayout = m_pStaticResourceLayouts[s];
+        if ( (ShaderFlags & StaticResLayout.GetShaderType()) != 0 )
+            StaticResLayout.BindResources(pResourceMapping, Flags, m_pStaticResourceCaches[s]);
     }
 }
 

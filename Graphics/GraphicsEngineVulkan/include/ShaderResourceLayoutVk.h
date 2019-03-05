@@ -285,6 +285,11 @@ public:
         return m_pResources->GetShaderName();
     }
 
+    SHADER_TYPE GetShaderType()const
+    {
+        return m_pResources->GetShaderType();
+    }
+
     const VkResource& GetResource(SHADER_RESOURCE_VARIABLE_TYPE VarType, Uint32 r)const
     {
         VERIFY_EXPR( r < m_NumResources[VarType] );
