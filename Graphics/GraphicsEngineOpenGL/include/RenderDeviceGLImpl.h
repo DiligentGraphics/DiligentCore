@@ -56,7 +56,7 @@ public:
 
     RenderDeviceGLImpl( IReferenceCounters *pRefCounters, IMemoryAllocator &RawMemAllocator, const EngineGLCreateInfo &InitAttribs );
     ~RenderDeviceGLImpl();
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface )override final;
     
 	void CreateBuffer(const BufferDesc& BuffDesc, const BufferData* pBuffData, IBuffer **ppBufferLayout, bool bIsDeviceInternal);
     virtual void CreateBuffer(const BufferDesc& BuffDesc, const BufferData* BuffData, IBuffer **ppBufferLayout)override final;

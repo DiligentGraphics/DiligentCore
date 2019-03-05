@@ -48,7 +48,7 @@ public:
                       bool bIsDefaultView );
     ~TextureViewGLImpl();
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface )override final;
 
     const GLObjectWrappers::GLTextureObj& GetHandle();
     GLenum GetBindTarget();

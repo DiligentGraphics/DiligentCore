@@ -51,7 +51,7 @@ public:
     DeviceContextGLImpl( IReferenceCounters *pRefCounters, class RenderDeviceGLImpl *pDeviceGL, bool bIsDeferred );
 
     /// Queries the specific interface, see IObject::QueryInterface() for details.
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface )override final;
 
     virtual void SetPipelineState(IPipelineState *pPipelineState)override final;
 
