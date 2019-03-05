@@ -51,7 +51,7 @@ public:
     /// Queries the specific interface, see IObject::QueryInterface() for details
     virtual void QueryInterface( const INTERFACE_ID& IID, IObject** ppInterface )override;
 
-    virtual void BindShaderResources( IResourceMapping* pResourceMapping, Uint32 Flags )override final;
+    virtual void BindStaticResources(Uint32 ShaderFlags, IResourceMapping* pResourceMapping, Uint32 Flags)override final;
     
     virtual void CreateShaderResourceBinding( IShaderResourceBinding** ppShaderResourceBinding, bool InitStaticResources )override final;
 

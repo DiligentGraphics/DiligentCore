@@ -28,7 +28,6 @@
 #include "GLContextMacOS.h"
 #include "DeviceCaps.h"
 #include "GLTypeConversions.h"
-#include "EngineGLAttribs.h"
 
 static void glDrawArraysInstancedBaseInstance_stub(GLenum mode, GLint first, GLsizei count, GLsizei primcount, GLuint baseinstance)
 {
@@ -48,7 +47,7 @@ static void  glDrawElementsInstancedBaseVertexBaseInstance_stub(GLenum mode, GLs
 
 namespace Diligent
 {
-    GLContext::GLContext( const EngineGLAttribs &InitAttribs, DeviceCaps &DeviceCaps )
+    GLContext::GLContext( const EngineGLCreateInfo &InitAttribs, DeviceCaps &DeviceCaps )
     {
         if (GetCurrentNativeGLContext() == nullptr)
         {

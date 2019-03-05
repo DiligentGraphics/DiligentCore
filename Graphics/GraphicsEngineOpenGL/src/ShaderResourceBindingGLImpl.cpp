@@ -35,7 +35,7 @@ ShaderResourceBindingGLImpl::ShaderResourceBindingGLImpl(IReferenceCounters* pRe
 {
     if (IsUsingSeparatePrograms())
     {
-        SHADER_VARIABLE_TYPE VarTypes[] = {SHADER_VARIABLE_TYPE_MUTABLE, SHADER_VARIABLE_TYPE_DYNAMIC};
+        SHADER_RESOURCE_VARIABLE_TYPE VarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
 #define INIT_SHADER(SN)\
         if(auto p##SN = ValidatedCast<ShaderGLImpl>( pPSO->Get##SN() ))     \
         {                                                                   \
@@ -54,7 +54,7 @@ ShaderResourceBindingGLImpl::ShaderResourceBindingGLImpl(IReferenceCounters* pRe
     else
     {
         // Clone all variable types
-        SHADER_VARIABLE_TYPE VarTypes[] = {SHADER_VARIABLE_TYPE_STATIC, SHADER_VARIABLE_TYPE_MUTABLE, SHADER_VARIABLE_TYPE_DYNAMIC};
+        SHADER_RESOURCE_VARIABLE_TYPE VarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_STATIC, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
         m_DynamicProgResources[0].Clone(pPSO->GetGLProgram().GetAllResources(), VarTypes, _countof(VarTypes), *this);
     }
 }
@@ -94,7 +94,7 @@ void ShaderResourceBindingGLImpl::BindResources(Uint32 ShaderFlags, IResourceMap
     }
 }
 
-IShaderVariable* ShaderResourceBindingGLImpl::GetVariable(SHADER_TYPE ShaderType, const char* Name)
+IShaderResourceVariable* ShaderResourceBindingGLImpl::GetVariable(SHADER_TYPE ShaderType, const char* Name)
 {
     auto ShaderInd = IsUsingSeparatePrograms() ? GetShaderTypeIndex(ShaderType) : 0;
     return m_DynamicProgResources[ShaderInd].GetShaderVariable(Name);
@@ -106,7 +106,7 @@ Uint32 ShaderResourceBindingGLImpl::GetVariableCount(SHADER_TYPE ShaderType) con
     return m_DynamicProgResources[ShaderInd].GetVariableCount();
 }
 
-IShaderVariable* ShaderResourceBindingGLImpl::GetVariable(SHADER_TYPE ShaderType, Uint32 Index)
+IShaderResourceVariable* ShaderResourceBindingGLImpl::GetVariable(SHADER_TYPE ShaderType, Uint32 Index)
 {
     auto ShaderInd = IsUsingSeparatePrograms() ? GetShaderTypeIndex(ShaderType) : 0;
     return m_DynamicProgResources[ShaderInd].GetShaderVariable(Index);

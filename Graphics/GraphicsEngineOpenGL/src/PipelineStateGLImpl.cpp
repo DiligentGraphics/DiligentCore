@@ -99,9 +99,9 @@ void PipelineStateGLImpl::LinkGLProgram(bool bIsProgramPipelineSupported)
             CHECK_GL_ERROR("glDetachShader() failed");
         }
 
-        std::vector<ShaderVariableDesc> MergedVarTypesArray;
+        std::vector<ShaderResourceVariableDesc> MergedVarTypesArray;
         std::vector<StaticSamplerDesc> MergedStSamArray;
-        SHADER_VARIABLE_TYPE DefaultVarType = SHADER_VARIABLE_TYPE_STATIC;
+        SHADER_RESOURCE_VARIABLE_TYPE DefaultVarType = SHADER_RESOURCE_VARIABLE_TYPE_STATIC;
         for (Uint32 Shader = 0; Shader < m_NumShaders; ++Shader)
         {
             auto* pCurrShader = GetShader<ShaderGLImpl>(Shader);

@@ -23,7 +23,6 @@
 
 #pragma once
 
-#include "EngineGLAttribs.h"
 #include "SwapChainGL.h"
 #include "SwapChainBase.h"
 #include "GLObjectWrapper.h"
@@ -38,11 +37,11 @@ class SwapChainGLImpl final : public SwapChainBase<ISwapChainGL>
 public:
     using TSwapChainBase = SwapChainBase<ISwapChainGL>;
 
-    SwapChainGLImpl(IReferenceCounters *pRefCounters,
-                    const EngineGLAttribs &InitAttribs,
-                    const SwapChainDesc& SwapChainDesc, 
-                    class RenderDeviceGLImpl* pRenderDeviceGL,
-                    class DeviceContextGLImpl* pImmediateContextGL);
+    SwapChainGLImpl(IReferenceCounters*         pRefCounters,
+                    const EngineGLCreateInfo&   InitAttribs,
+                    const SwapChainDesc&        SwapChainDesc, 
+                    class RenderDeviceGLImpl*   pRenderDeviceGL,
+                    class DeviceContextGLImpl*  pImmediateContextGL);
     ~SwapChainGLImpl();
 
     virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;

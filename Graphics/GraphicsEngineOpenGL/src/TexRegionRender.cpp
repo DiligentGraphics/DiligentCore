@@ -58,10 +58,10 @@ namespace Diligent
 
     TexRegionRender::TexRegionRender( class RenderDeviceGLImpl *pDeviceGL )
     {
-        ShaderCreationAttribs ShaderAttrs;
+        ShaderCreateInfo ShaderAttrs;
         ShaderAttrs.Desc.Name                = "TexRegionRender : Vertex shader";
         ShaderAttrs.Desc.ShaderType          = SHADER_TYPE_VERTEX;
-        ShaderAttrs.Desc.DefaultVariableType = SHADER_VARIABLE_TYPE_DYNAMIC;
+        ShaderAttrs.Desc.DefaultVariableType = SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC;
         ShaderAttrs.Source                   = VertexShaderSource;
         constexpr bool IsInternalDeviceObject = true;
         pDeviceGL->CreateShader(ShaderAttrs, &m_pVertexShader, IsInternalDeviceObject);
@@ -117,9 +117,9 @@ namespace Diligent
                 Name.append(SamplerDim);
                 ShaderAttrs.Desc.Name       = Name.c_str();
                 ShaderAttrs.Desc.ShaderType = SHADER_TYPE_PIXEL;
-                ShaderVariableDesc Vars[] = 
+                ShaderResourceVariableDesc Vars[] = 
                 {
-                    {"cbConstants", SHADER_VARIABLE_TYPE_MUTABLE}
+                    {"cbConstants", SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE}
                 };
                 ShaderAttrs.Desc.NumVariables = _countof(Vars);
                 ShaderAttrs.Desc.VariableDesc = Vars;

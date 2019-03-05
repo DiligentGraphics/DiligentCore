@@ -38,8 +38,8 @@ namespace Diligent
         GLProgram& operator = (      GLProgram&&) = delete;
 
         void InitResources(RenderDeviceGLImpl*       pDeviceGLImpl, 
-                           SHADER_VARIABLE_TYPE      DefaultVariableType, 
-                           const ShaderVariableDesc* VariableDesc, 
+                           SHADER_RESOURCE_VARIABLE_TYPE      DefaultVariableType, 
+                           const ShaderResourceVariableDesc* VariableDesc, 
                            Uint32                    NumVars, 
                            const StaticSamplerDesc*  StaticSamplers,
                            Uint32                    NumStaticSamplers,

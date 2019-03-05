@@ -30,7 +30,7 @@ namespace Diligent
     public:
         typedef HGLRC NativeGLContextType;
 
-        GLContext( const struct EngineGLAttribs &InitAttribs, struct DeviceCaps &DeviceCaps );
+        GLContext( const struct EngineGLCreateInfo &InitAttribs, struct DeviceCaps &DeviceCaps );
         ~GLContext();
         void SwapBuffers();
 

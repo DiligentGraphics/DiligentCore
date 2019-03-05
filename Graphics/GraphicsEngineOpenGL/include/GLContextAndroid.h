@@ -33,7 +33,7 @@ namespace Diligent
     public:
         typedef EGLContext NativeGLContextType;
 
-        GLContext( const struct EngineGLAttribs &InitAttribs, DeviceCaps &DeviceCaps );
+        GLContext( const struct EngineGLCreateInfo &InitAttribs, DeviceCaps &DeviceCaps );
         ~GLContext();
 
         bool Init( ANativeWindow* window );

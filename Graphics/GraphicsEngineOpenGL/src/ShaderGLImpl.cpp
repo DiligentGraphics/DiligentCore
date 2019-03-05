@@ -35,7 +35,7 @@ namespace Diligent
 
 ShaderGLImpl::ShaderGLImpl(IReferenceCounters*          pRefCounters,
                            RenderDeviceGLImpl*          pDeviceGL,
-                           const ShaderCreationAttribs& CreationAttribs,
+                           const ShaderCreateInfo& CreationAttribs,
                            bool bIsDeviceInternal) : 
     TShaderBase( pRefCounters, pDeviceGL, CreationAttribs.Desc, bIsDeviceInternal ),
     m_GlProgObj(false),
@@ -186,12 +186,12 @@ void ShaderGLImpl::BindResources( IResourceMapping* pResourceMapping, Uint32 Fla
     }
 }
 
-IShaderVariable* ShaderGLImpl::GetShaderVariable(const Char* Name)
+IShaderResourceVariable* ShaderGLImpl::GetShaderVariable(const Char* Name)
 {
     return GetShaderVariable(Name, true);
 }
 
-IShaderVariable* ShaderGLImpl::GetShaderVariable(const Char* Name, bool CreatePlaceholder)
+IShaderResourceVariable* ShaderGLImpl::GetShaderVariable(const Char* Name, bool CreatePlaceholder)
 {
     if( m_GlProgObj )
         return m_GlProgObj.GetConstantResources().GetShaderVariable(Name);
@@ -228,7 +228,7 @@ Uint32 ShaderGLImpl::GetVariableCount() const
     }
 }
 
-IShaderVariable* ShaderGLImpl::GetShaderVariable(Uint32 Index)
+IShaderResourceVariable* ShaderGLImpl::GetShaderVariable(Uint32 Index)
 {
     if( m_GlProgObj )
         return m_GlProgObj.GetConstantResources().GetShaderVariable(Index);

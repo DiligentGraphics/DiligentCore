@@ -27,6 +27,7 @@
 #include "ShaderBase.h"
 #include "SamplerGLImpl.h"
 #include "HashUtils.h"
+#include "ShaderResourceVariableBase.h"
 
 #ifdef _DEBUG
 #   define VERIFY_RESOURCE_BINDINGS
@@ -46,14 +47,14 @@ namespace Diligent
 
         void LoadUniforms(class RenderDeviceGLImpl*  pDeviceGLImpl,
                           GLuint                     GLProgram, 
-                          const SHADER_VARIABLE_TYPE DefaultVariableType, 
-                          const ShaderVariableDesc*  VariableDesc, 
+                          const SHADER_RESOURCE_VARIABLE_TYPE DefaultVariableType, 
+                          const ShaderResourceVariableDesc*  VariableDesc, 
                           Uint32                     NumVars,
                           const StaticSamplerDesc*   StaticSamplers,
                           Uint32                     NumStaticSamplers);
 
         void Clone(const GLProgramResources& SrcLayout, 
-                   SHADER_VARIABLE_TYPE*     VarTypes, 
+                   SHADER_RESOURCE_VARIABLE_TYPE*     VarTypes, 
                    Uint32                    NumVarTypes,
                    IObject&                  Owner);
 
@@ -61,7 +62,7 @@ namespace Diligent
         {
             GLProgramVariableBase(String               _Name, 
                                   size_t               _ArraySize,
-                                  SHADER_VARIABLE_TYPE _VarType) :
+                                  SHADER_RESOURCE_VARIABLE_TYPE _VarType) :
                 Name      ( std::move(_Name) ),
                 pResources(_ArraySize),
                 VarType   (_VarType)
@@ -82,14 +83,14 @@ namespace Diligent
 
             String                                      Name;
             std::vector< RefCntAutoPtr<IDeviceObject> > pResources;
-            const SHADER_VARIABLE_TYPE                  VarType;
+            const SHADER_RESOURCE_VARIABLE_TYPE                  VarType;
         };
 
         struct UniformBufferInfo : GLProgramVariableBase
         {
             UniformBufferInfo(String               _Name,
                               size_t               _ArraySize,
-                              SHADER_VARIABLE_TYPE _VarType,
+                              SHADER_RESOURCE_VARIABLE_TYPE _VarType,
                               GLint                _Index) :
                 GLProgramVariableBase(std::move(_Name), _ArraySize, _VarType),
                 Index(_Index)
@@ -114,7 +115,7 @@ namespace Diligent
         {
             SamplerInfo(String               _Name,
                         size_t               _ArraySize,
-                        SHADER_VARIABLE_TYPE _VarType,
+                        SHADER_RESOURCE_VARIABLE_TYPE _VarType,
                         GLint                _Location,
                         GLenum               _Type,
                         class SamplerGLImpl* _pStaticSampler) :
@@ -146,7 +147,7 @@ namespace Diligent
         {
             ImageInfo(String               _Name,
                       size_t               _ArraySize,
-                      SHADER_VARIABLE_TYPE _VarType,
+                      SHADER_RESOURCE_VARIABLE_TYPE _VarType,
                       GLint                _BindingPoint,
                       GLenum               _Type) :
                 GLProgramVariableBase(std::move(_Name), _ArraySize, _VarType),
@@ -175,7 +176,7 @@ namespace Diligent
         {
             StorageBlockInfo(String               _Name,
                              size_t               _ArraySize,
-                             SHADER_VARIABLE_TYPE _VarType,
+                             SHADER_RESOURCE_VARIABLE_TYPE _VarType,
                              GLint                _Binding) :
                 GLProgramVariableBase(std::move(_Name), _ArraySize, _VarType),
                 Binding(_Binding)
@@ -216,7 +217,7 @@ namespace Diligent
                     ProgramVar.pResources[FirstElement + i] = ppObjects[i];
             }
 
-            virtual SHADER_VARIABLE_TYPE GetType()const override final
+            virtual SHADER_RESOURCE_VARIABLE_TYPE GetType()const override final
             {
                 return ProgramVar.VarType;
             }
@@ -247,8 +248,8 @@ namespace Diligent
         void dbgVerifyResourceBindings();
 #endif
 
-        IShaderVariable* GetShaderVariable(const Char* Name);
-        IShaderVariable* GetShaderVariable(Uint32 Index)
+        IShaderResourceVariable* GetShaderVariable(const Char* Name);
+        IShaderResourceVariable* GetShaderVariable(Uint32 Index)
         {
             return Index < m_VariablesByIndex.size() ? m_VariablesByIndex[Index] : nullptr;
         }

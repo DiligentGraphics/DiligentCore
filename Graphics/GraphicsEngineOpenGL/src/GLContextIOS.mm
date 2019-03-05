@@ -28,11 +28,10 @@
 #include "GLContextIOS.h"
 #include "DeviceCaps.h"
 #include "GLTypeConversions.h"
-#include "EngineGLAttribs.h"
 
 namespace Diligent
 {
-    GLContext::GLContext( const EngineGLAttribs &Info, DeviceCaps &DeviceCaps )
+    GLContext::GLContext( const EngineGLCreateInfo &Info, DeviceCaps &DeviceCaps )
     {
         if (GetCurrentNativeGLContext() == nullptr)
         {

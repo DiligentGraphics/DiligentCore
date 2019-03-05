@@ -39,8 +39,8 @@ namespace Diligent
     {}
 
     void GLProgram::InitResources(RenderDeviceGLImpl* pDeviceGLImpl, 
-                                  const SHADER_VARIABLE_TYPE DefaultVariableType, 
-                                  const ShaderVariableDesc *VariableDesc, 
+                                  const SHADER_RESOURCE_VARIABLE_TYPE DefaultVariableType, 
+                                  const ShaderResourceVariableDesc *VariableDesc, 
                                   Uint32 NumVars, 
                                   const StaticSamplerDesc *StaticSamplers,
                                   Uint32 NumStaticSamplers,
@@ -49,7 +49,7 @@ namespace Diligent
         GLuint GLProgram = static_cast<GLuint>(*this);
         m_AllResources.LoadUniforms(pDeviceGLImpl, GLProgram, DefaultVariableType, VariableDesc, NumVars, StaticSamplers, NumStaticSamplers);
 
-        SHADER_VARIABLE_TYPE VarTypes[] = {SHADER_VARIABLE_TYPE_STATIC};
+        SHADER_RESOURCE_VARIABLE_TYPE VarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_STATIC};
         m_ConstantResources.Clone(m_AllResources, VarTypes, _countof(VarTypes), Owner);
     }
 

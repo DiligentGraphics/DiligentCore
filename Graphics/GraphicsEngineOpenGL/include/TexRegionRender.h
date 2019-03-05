@@ -48,7 +48,7 @@ private:
     RefCntAutoPtr<IBuffer> m_pConstantBuffer;
     RefCntAutoPtr<IPipelineState>         m_pPSO[RESOURCE_DIM_NUM_DIMENSIONS * 3];
     RefCntAutoPtr<IShaderResourceBinding> m_pSRB;
-    IShaderVariable*                      m_pSrcTexVar = nullptr;
+    IShaderResourceVariable*              m_pSrcTexVar = nullptr;
 
     RefCntAutoPtr<IPipelineState> m_pOrigPSO;
     Uint32                      m_OrigStencilRef              = 0;

@@ -29,7 +29,7 @@
 namespace Diligent
 {
 SwapChainGLImpl::SwapChainGLImpl(IReferenceCounters *pRefCounters,
-                                 const EngineGLAttribs &InitAttribs,
+                                 const EngineGLCreateInfo &InitAttribs,
                                  const SwapChainDesc& SCDesc, 
                                  RenderDeviceGLImpl* pRenderDeviceGL, 
                                  DeviceContextGLImpl* pImmediateContextGL) : 

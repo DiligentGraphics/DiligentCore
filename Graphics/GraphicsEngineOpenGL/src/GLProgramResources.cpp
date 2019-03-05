@@ -46,8 +46,8 @@ namespace Diligent
 
     void GLProgramResources::LoadUniforms(RenderDeviceGLImpl *pDeviceGLImpl,
                                           GLuint GLProgram, 
-                                          const SHADER_VARIABLE_TYPE DefaultVariableType, 
-                                          const ShaderVariableDesc *VariableDesc, 
+                                          const SHADER_RESOURCE_VARIABLE_TYPE DefaultVariableType, 
+                                          const ShaderResourceVariableDesc *VariableDesc, 
                                           Uint32 NumVars,
                                           const StaticSamplerDesc *StaticSamplers,
                                           Uint32 NumStaticSamplers)
@@ -348,7 +348,7 @@ namespace Diligent
 
     }
 
-    static bool CheckType(SHADER_VARIABLE_TYPE Type, SHADER_VARIABLE_TYPE* AllowedTypes, Uint32 NumAllowedTypes)
+    static bool CheckType(SHADER_RESOURCE_VARIABLE_TYPE Type, SHADER_RESOURCE_VARIABLE_TYPE* AllowedTypes, Uint32 NumAllowedTypes)
     {
         for(Uint32 i=0; i < NumAllowedTypes; ++i)
             if(Type == AllowedTypes[i])
@@ -358,7 +358,7 @@ namespace Diligent
     }
 
     void GLProgramResources::Clone(const GLProgramResources& SrcLayout, 
-                                   SHADER_VARIABLE_TYPE*     VarTypes, 
+                                   SHADER_RESOURCE_VARIABLE_TYPE*     VarTypes, 
                                    Uint32                    NumVarTypes,
                                    IObject&                  Owner)
     {
@@ -414,7 +414,7 @@ namespace Diligent
 #undef STORE_SHADER_VARIABLES
     }
 
-    IShaderVariable* GLProgramResources::GetShaderVariable( const Char* Name )
+    IShaderResourceVariable* GLProgramResources::GetShaderVariable( const Char* Name )
     {
         // Name will be implicitly converted to HashMapStringKey without making a copy
         auto it = m_VariableHash.find( Name );
@@ -446,7 +446,7 @@ namespace Diligent
 
                 if (pNewRes != nullptr)
                 {
-                    if(res.VarType == SHADER_VARIABLE_TYPE_STATIC && CurrResource !=  nullptr && CurrResource != pNewRes )
+                    if(res.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC && CurrResource !=  nullptr && CurrResource != pNewRes )
                         LOG_ERROR_MESSAGE( "Updating binding for static variable \"", Name, "\" is invalid and may result in an undefined behavior" );
                     CurrResource = pNewRes;
                 }

@@ -25,7 +25,6 @@
 #include <utility>
 
 #include "GLContextAndroid.h"
-#include "EngineGLAttribs.h"
 
 #ifndef EGL_CONTEXT_MINOR_VERSION_KHR
 #define EGL_CONTEXT_MINOR_VERSION_KHR 0x30FB
@@ -229,7 +228,7 @@ namespace Diligent
         return true;
     }
 
-    GLContext::GLContext( const EngineGLAttribs &InitAttribs, DeviceCaps &DeviceCaps ) :
+    GLContext::GLContext( const EngineGLCreateInfo &InitAttribs, DeviceCaps &DeviceCaps ) :
         display_( EGL_NO_DISPLAY ),
         surface_( EGL_NO_SURFACE ),
         context_( EGL_NO_CONTEXT ),

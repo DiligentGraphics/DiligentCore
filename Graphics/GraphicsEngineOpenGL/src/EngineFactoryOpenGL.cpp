@@ -25,7 +25,7 @@
 /// Routines that initialize OpenGL/GLES-based engine implementation
 
 #include "pch.h"
-#include "RenderDeviceFactoryOpenGL.h"
+#include "EngineFactoryOpenGL.h"
 #include "RenderDeviceGLImpl.h"
 #include "DeviceContextGLImpl.h"
 #include "EngineMemory.h"

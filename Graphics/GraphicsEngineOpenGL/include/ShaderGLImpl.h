@@ -70,7 +70,7 @@ class ShaderGLImpl final : public ShaderBase<IShaderGL, RenderDeviceGLImpl>
 public:
     using TShaderBase = ShaderBase<IShaderGL, RenderDeviceGLImpl>;
 
-    ShaderGLImpl( IReferenceCounters *pRefCounters, RenderDeviceGLImpl *pDeviceGL, const ShaderCreationAttribs &ShaderCreationAttribs, bool bIsDeviceInternal = false );
+    ShaderGLImpl( IReferenceCounters *pRefCounters, RenderDeviceGLImpl *pDeviceGL, const ShaderCreateInfo &ShaderCreateInfo, bool bIsDeviceInternal = false );
     ~ShaderGLImpl();
 
     virtual void BindResources( IResourceMapping* pResourceMapping, Uint32 Flags  )override final;
@@ -79,21 +79,21 @@ public:
 
     // If separate shaders are not available, the method can optionally create
     // a placeholder for static resource variable
-    IShaderVariable* GetShaderVariable(const Char* Name, bool CreatePlaceholder);
-    virtual IShaderVariable* GetShaderVariable(const Char* Name)override final;
+    IShaderResourceVariable* GetShaderVariable(const Char* Name, bool CreatePlaceholder);
+    virtual IShaderResourceVariable* GetShaderVariable(const Char* Name)override final;
 
     virtual Uint32 GetVariableCount() const override final;
 
-    virtual IShaderVariable* GetShaderVariable(Uint32 Index) override final;
+    virtual IShaderResourceVariable* GetShaderVariable(Uint32 Index) override final;
 
     GLProgram& GetGlProgram(){return m_GlProgObj;}
 
     // This class is used to keep references to static resources when separate shaders are not available
-    class StaticVarPlaceholder final : public ObjectBase<IShaderVariable>
+    class StaticVarPlaceholder final : public ObjectBase<IShaderResourceVariable>
     {
     public:
         StaticVarPlaceholder(IReferenceCounters* pRefCounters, String Name, Uint32 Index) :
-            ObjectBase<IShaderVariable>(pRefCounters),
+            ObjectBase<IShaderResourceVariable>(pRefCounters),
             m_Name  (std::move(Name)),
             m_Index (Index)
         {}
@@ -109,9 +109,9 @@ public:
             for (Uint32 i=0; i < NumElements; ++i)
                 m_Objects[FirstElement + i] = ppObjects[i];
         }
-        virtual SHADER_VARIABLE_TYPE GetType()const override final
+        virtual SHADER_RESOURCE_VARIABLE_TYPE GetType()const override final
         {
-            return SHADER_VARIABLE_TYPE_STATIC;
+            return SHADER_RESOURCE_VARIABLE_TYPE_STATIC;
         }
         virtual Uint32 GetArraySize()const override final
         {
