@@ -31,7 +31,6 @@
 #include "../../GraphicsEngine/interface/RenderDevice.h"
 #include "../../GraphicsEngine/interface/DeviceContext.h"
 #include "../../GraphicsEngine/interface/SwapChain.h"
-#include "EngineMtlAttribs.h"
 
 // https://gcc.gnu.org/wiki/Visibility
 #define API_QUALIFIER __attribute__((visibility("default")))
