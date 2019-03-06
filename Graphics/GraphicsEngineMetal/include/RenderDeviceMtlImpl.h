@@ -29,7 +29,6 @@
 #include "RenderDeviceMtl.h"
 #include "RenderDeviceBase.h"
 #include "DeviceContextMtl.h"
-#include "EngineMtlAttribs.h"
 
 namespace Diligent
 {
