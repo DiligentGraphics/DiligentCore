@@ -199,7 +199,7 @@ Uint32 PipelineStateGLImpl::GetStaticVariableCount(SHADER_TYPE ShaderType) const
 {
     if (m_GLProgram)
     {
-        return m_StaticResources[0].GetVariableCount();
+        return (m_StaticResources[0].GetShaderStages() & ShaderType) != 0 ? m_StaticResources[0].GetVariableCount() : 0;
     }
     else
     {
@@ -212,7 +212,7 @@ IShaderResourceVariable* PipelineStateGLImpl::GetStaticShaderVariable(SHADER_TYP
 {
     if (m_GLProgram)
     {
-        return m_StaticResources[0].GetVariable(Name);
+        return (m_StaticResources[0].GetShaderStages() & ShaderType) != 0 ? m_StaticResources[0].GetVariable(Name) : nullptr;
     }
     else
     {
@@ -225,7 +225,7 @@ IShaderResourceVariable* PipelineStateGLImpl::GetStaticShaderVariable(SHADER_TYP
 {
     if (m_GLProgram)
     {
-        return m_StaticResources[0].GetVariable(Index);
+        return (m_StaticResources[0].GetShaderStages() & ShaderType) != 0 ? m_StaticResources[0].GetVariable(Index) : nullptr;
     }
     else
     {

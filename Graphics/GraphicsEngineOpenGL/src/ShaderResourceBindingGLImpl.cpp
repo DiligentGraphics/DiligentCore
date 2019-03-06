@@ -75,20 +75,41 @@ void ShaderResourceBindingGLImpl::BindResources(Uint32 ShaderFlags, IResourceMap
 
 IShaderResourceVariable* ShaderResourceBindingGLImpl::GetVariable(SHADER_TYPE ShaderType, const char* Name)
 {
-    auto ShaderInd = IsUsingSeparatePrograms() ? m_ResourceIndex[GetShaderTypeIndex(ShaderType)] : 0;
-    return ShaderInd >= 0 ? m_Resources[ShaderInd].GetVariable(Name) : nullptr;
+    if (IsUsingSeparatePrograms())
+    {
+        auto ShaderInd =  m_ResourceIndex[GetShaderTypeIndex(ShaderType)];
+        return ShaderInd >= 0 ? m_Resources[ShaderInd].GetVariable(Name) : nullptr;
+    }
+    else
+    {
+        return (m_Resources[0].GetShaderStages() & ShaderType) != 0 ? m_Resources[0].GetVariable(Name) : nullptr;
+    }
 }
 
 Uint32 ShaderResourceBindingGLImpl::GetVariableCount(SHADER_TYPE ShaderType) const
 {
-    auto ShaderInd = IsUsingSeparatePrograms() ? m_ResourceIndex[GetShaderTypeIndex(ShaderType)] : 0;
-    return ShaderInd >= 0 ? m_Resources[ShaderInd].GetVariableCount() : 0;
+    if (IsUsingSeparatePrograms())
+    {
+        auto ShaderInd =  m_ResourceIndex[GetShaderTypeIndex(ShaderType)];
+        return ShaderInd >= 0 ? m_Resources[ShaderInd].GetVariableCount() : 0;
+    }
+    else
+    {
+        return (m_Resources[0].GetShaderStages() & ShaderType) != 0 ? m_Resources[0].GetVariableCount() : 0;
+    }
 }
 
 IShaderResourceVariable* ShaderResourceBindingGLImpl::GetVariable(SHADER_TYPE ShaderType, Uint32 Index)
 {
-    auto ShaderInd = IsUsingSeparatePrograms() ? m_ResourceIndex[GetShaderTypeIndex(ShaderType)] : 0;
-    return ShaderInd >= 0 ? m_Resources[ShaderInd].GetVariable(Index) : 0;
+    if (IsUsingSeparatePrograms())
+    {
+        auto ShaderInd =  m_ResourceIndex[GetShaderTypeIndex(ShaderType)];
+        return ShaderInd >= 0 ? m_Resources[ShaderInd].GetVariable(Index) : 0;
+    }
+    else
+    {
+        return (m_Resources[0].GetShaderStages() & ShaderType) != 0 ? m_Resources[0].GetVariable(Index) : nullptr;
+    }
 }
 
 static GLProgramResources NullProgramResources;
