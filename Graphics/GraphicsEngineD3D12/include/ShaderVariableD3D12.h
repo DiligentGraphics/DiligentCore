@@ -101,7 +101,8 @@ private:
 
     // Variable mgr is owned by either Pipeline state object (in which case m_ResourceCache references
     // static resource cache owned by the same PSO object), or by SRB object (in which case 
-    // m_ResourceCache references the cache in the SRB). Thus the cache is guaranteed to be alive.
+    // m_ResourceCache references the cache in the SRB). Thus the cache and the resource layout
+    // (which the variables reference) are guaranteed to be alive while the manager is alive.
     ShaderResourceCacheD3D12&        m_ResourceCache;
 
     // Memory is allocated through the allocator provided by the pipeline state. If allocation granularity > 1, fixed block
