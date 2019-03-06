@@ -56,11 +56,10 @@ ShaderVariableManagerD3D12::ShaderVariableManagerD3D12(IObject&                 
                                                        const SHADER_RESOURCE_VARIABLE_TYPE*   AllowedVarTypes, 
                                                        Uint32                                 NumAllowedTypes, 
                                                        ShaderResourceCacheD3D12&              ResourceCache) : 
-    m_Owner          (Owner),
-    m_ResourceLayout (SrcLayout),
-    m_ResourceCache  (ResourceCache)
+    m_Owner         (Owner),
+    m_ResourceCache (ResourceCache)
 #ifdef _DEBUG
-  , m_DbgAllocator(Allocator)
+  , m_DbgAllocator  (Allocator)
 #endif
 
 {

@@ -66,7 +66,7 @@ namespace Diligent
 
 class ShaderVariableD3D12Impl;
 
-// sizeof(ShaderVariableManagerD3D12) == 40 (x64, msvc, Release)
+// sizeof(ShaderVariableManagerD3D12) == 32 (x64, msvc, Release)
 class ShaderVariableManagerD3D12
 {
 public:
@@ -99,11 +99,9 @@ private:
 
     IObject&                         m_Owner;
 
-    // Variable mgr is owned by either PSO object (in which case m_pResourceLayout points to
-    // static resource layout owned by the same PSO object), or by SRB object (in which case 
-    // m_pResourceLayout points to corresponding layout in pipeline state). Since SRB keeps strong 
-    // reference to PSO, the layout is guaranteed be alive while SRB is alive
-    const ShaderResourceLayoutD3D12& m_ResourceLayout;
+    // Variable mgr is owned by either Pipeline state object (in which case m_ResourceCache references
+    // static resource cache owned by the same PSO object), or by SRB object (in which case 
+    // m_ResourceCache references the cache in the SRB). Thus the cache is guaranteed to be alive.
     ShaderResourceCacheD3D12&        m_ResourceCache;
 
     // Memory is allocated through the allocator provided by the pipeline state. If allocation granularity > 1, fixed block

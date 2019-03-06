@@ -68,7 +68,6 @@ ShaderVariableManagerVk::ShaderVariableManagerVk(IObject&                       
                                                  Uint32                                 NumAllowedTypes, 
                                                  ShaderResourceCacheVk&                 ResourceCache) :
     m_Owner(Owner),
-    m_ResourceLayout(SrcLayout),
     m_ResourceCache(ResourceCache)
 #ifdef _DEBUG
   , m_DbgAllocator(Allocator)

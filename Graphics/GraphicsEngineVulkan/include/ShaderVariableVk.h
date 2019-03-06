@@ -64,7 +64,7 @@ namespace Diligent
 
 class ShaderVariableVkImpl;
 
-// sizeof(ShaderVariableManagerVk) == 40 (x64, msvc, Release)
+// sizeof(ShaderVariableManagerVk) == 32 (x64, msvc, Release)
 class ShaderVariableManagerVk
 {
 public:
@@ -97,11 +97,9 @@ private:
     Uint32 GetVariableIndex(const ShaderVariableVkImpl& Variable);
 
     IObject&                      m_Owner;
-    // Variable mgr is owned by either Pipeline state object (in which case m_pResourceLayout points to
-    // static resource layout owned by the same PSO object), or by SRB object (in which case 
-    // m_pResourceLayout points to corresponding layout in pipeline state). Since SRB keeps strong 
-    // reference to PSO, the layout is guaranteed to be alive while SRB is alive
-    const ShaderResourceLayoutVk& m_ResourceLayout;
+    // Variable mgr is owned by either Pipeline state object (in which case m_ResourceCache references
+    // static resource cache owned by the same PSO object), or by SRB object (in which case 
+    // m_ResourceCache references the cache in the SRB). Thus the cache is guaranteed to be alive.
     ShaderResourceCacheVk&        m_ResourceCache;
 
     // Memory is allocated through the allocator provided by the pipeline state. If allocation granularity > 1, fixed block

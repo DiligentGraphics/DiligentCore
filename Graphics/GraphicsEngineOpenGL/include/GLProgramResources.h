@@ -148,7 +148,7 @@ namespace Diligent
             }
         };
 
-        struct UniformBufferInfo : GLProgramVariableBase
+        struct UniformBufferInfo final : GLProgramVariableBase
         {
             UniformBufferInfo            (const UniformBufferInfo&)  = delete;
             UniformBufferInfo& operator= (const UniformBufferInfo&)  = delete;
@@ -183,7 +183,7 @@ namespace Diligent
         static_assert( (sizeof(UniformBufferInfo) % sizeof(void*)) == 0, "sizeof(UniformBufferInfo) must be multiple of sizeof(void*)");
 
 
-        struct SamplerInfo : GLProgramVariableBase
+        struct SamplerInfo final : GLProgramVariableBase
         {
             SamplerInfo            (const SamplerInfo&)  = delete;
             SamplerInfo& operator= (const SamplerInfo&)  = delete;
@@ -225,7 +225,7 @@ namespace Diligent
         static_assert( (sizeof(SamplerInfo) % sizeof(void*)) == 0, "sizeof(SamplerInfo) must be multiple of sizeof(void*)");
 
                 
-        struct ImageInfo : GLProgramVariableBase
+        struct ImageInfo final : GLProgramVariableBase
         {
             ImageInfo            (const ImageInfo&)  = delete;
             ImageInfo& operator= (const ImageInfo&)  = delete;
@@ -264,7 +264,7 @@ namespace Diligent
         static_assert( (sizeof(ImageInfo) % sizeof(void*)) == 0, "sizeof(ImageInfo) must be multiple of sizeof(void*)");
 
 
-        struct StorageBlockInfo : GLProgramVariableBase
+        struct StorageBlockInfo final : GLProgramVariableBase
         {
             StorageBlockInfo            (const StorageBlockInfo&)  = delete;
             StorageBlockInfo& operator= (const StorageBlockInfo&)  = delete;
