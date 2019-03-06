@@ -37,9 +37,12 @@ namespace Diligent
         GLProgram& operator = (const GLProgram&)  = delete;
         GLProgram& operator = (      GLProgram&&) = delete;
 
-        void InitResources(RenderDeviceGLImpl*  pDeviceGLImpl, 
-                           SHADER_TYPE          ShaderStage,
-                           IObject&             Owner);
+        void InitResources(RenderDeviceGLImpl*                   pDeviceGLImpl, 
+                           SHADER_TYPE                           ShaderStage,
+                           IObject&                              Owner,
+                           const PipelineResourceLayoutDesc*     pResourceLayout,
+                           const SHADER_RESOURCE_VARIABLE_TYPE*  AllowedVarTypes, 
+                           Uint32                                NumAllowedTypes);
 
         void BindConstantResources(IResourceMapping* pResourceMapping, Uint32 Flags);
 

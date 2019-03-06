@@ -46,11 +46,19 @@ namespace Diligent
         GLProgramResources& operator = (      GLProgramResources&&) = delete;
 
         void LoadUniforms(class RenderDeviceGLImpl*             pDeviceGLImpl,
-                          SHADER_TYPE                           ShaderStage,
+                          SHADER_TYPE                           ShaderStages,
                           GLuint                                GLProgram, 
                           const PipelineResourceLayoutDesc*     pResourceLayout,
                           const SHADER_RESOURCE_VARIABLE_TYPE*  AllowedVarTypes, 
                           Uint32                                NumAllowedTypes);
+
+
+        void Clone(class RenderDeviceGLImpl*             pDeviceGLImpl, 
+                   IObject&                              Owner,
+                   const GLProgramResources&             SrcResources, 
+                   const PipelineResourceLayoutDesc&     ResourceLayout,
+                   const SHADER_RESOURCE_VARIABLE_TYPE*  AllowedVarTypes, 
+                   Uint32                                NumAllowedTypes);
 
         struct GLProgramVariableBase
         {
@@ -284,7 +292,12 @@ namespace Diligent
 
         void InitVariables(IObject &Owner);
 
+        SHADER_TYPE GetShaderStages() const {return m_ShaderStages;}
+
     private:
+        // There could be more than one stage is using non-separable programs
+        SHADER_TYPE                    m_ShaderStages = SHADER_TYPE_UNKNOWN; 
+
         std::vector<UniformBufferInfo> m_UniformBlocks;
         std::vector<SamplerInfo>       m_Samplers;
         std::vector<ImageInfo>         m_Images;

@@ -23,6 +23,7 @@
 
 #pragma once
 
+#include <vector>
 #include "PipelineStateGL.h"
 #include "PipelineStateBase.h"
 #include "RenderDevice.h"
@@ -66,12 +67,19 @@ public:
     GLProgram& GetGLProgram(){return m_GLProgram;}
     GLObjectWrappers::GLPipelineObj& GetGLProgramPipeline(GLContext::NativeGLContextType Context);
 
+    GLProgramResources& GetStaticResources(Uint32 s)
+    {
+        return m_StaticResources[s];
+    }
+
 private:
     void LinkGLProgram(bool bIsProgramPipelineSupported);
 
     GLProgram m_GLProgram;
     ThreadingTools::LockFlag m_ProgPipelineLockFlag;
-    std::unordered_map<GLContext::NativeGLContextType, GLObjectWrappers::GLPipelineObj> m_GLProgPipelines;
+    std::vector< std::pair<GLContext::NativeGLContextType, GLObjectWrappers::GLPipelineObj > > m_GLProgPipelines;
+    std::vector<GLProgramResources> m_StaticResources;
+    Int8 m_ResourceLayoutIndex[6] = {-1, -1, -1, -1, -1, -1};
 };
 
 }

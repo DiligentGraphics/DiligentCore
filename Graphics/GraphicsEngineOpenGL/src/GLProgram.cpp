@@ -37,14 +37,15 @@ namespace Diligent
         m_AllResources                (std::move(Program.m_AllResources))
     {}
 
-    void GLProgram::InitResources(RenderDeviceGLImpl*  pDeviceGLImpl, 
-                                  SHADER_TYPE          ShaderStage,
-                                  IObject&             Owner)
+    void GLProgram::InitResources(RenderDeviceGLImpl*                   pDeviceGLImpl, 
+                                  SHADER_TYPE                           ShaderStage,
+                                  IObject&                              Owner,
+                                  const PipelineResourceLayoutDesc*     pResourceLayout,
+                                  const SHADER_RESOURCE_VARIABLE_TYPE*  AllowedVarTypes, 
+                                  Uint32                                NumAllowedTypes)
     {
         GLuint GLProgram = static_cast<GLuint>(*this);
-        m_AllResources.LoadUniforms(pDeviceGLImpl, ShaderStage, GLProgram, nullptr, nullptr, 0);
+        m_AllResources.LoadUniforms(pDeviceGLImpl, ShaderStage, GLProgram, pResourceLayout, AllowedVarTypes, NumAllowedTypes);
         m_AllResources.InitVariables(Owner);
     }
-
-
 }

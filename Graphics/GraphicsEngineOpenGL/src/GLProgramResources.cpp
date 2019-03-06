@@ -46,7 +46,7 @@ namespace Diligent
     }
 
     void GLProgramResources::LoadUniforms(RenderDeviceGLImpl*                   pDeviceGLImpl,
-                                          SHADER_TYPE                           ShaderStage,
+                                          SHADER_TYPE                           ShaderStages,
                                           GLuint                                GLProgram, 
                                           const PipelineResourceLayoutDesc*     pResourceLayout,
                                           const SHADER_RESOURCE_VARIABLE_TYPE*  AllowedVarTypes, 
@@ -54,6 +54,7 @@ namespace Diligent
     {
         VERIFY(GLProgram != 0, "Null GL program");
 
+        m_ShaderStages = ShaderStages;
         const Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
 
         GLint numActiveUniforms = 0;
@@ -183,7 +184,7 @@ namespace Diligent
                     RefCntAutoPtr<SamplerGLImpl> pStaticSampler;
                     if (pResourceLayout != nullptr)
                     {
-                        VarType = GetShaderVariableType(ShaderStage, Name.data(), *pResourceLayout);
+                        VarType = GetShaderVariableType(ShaderStages, Name.data(), *pResourceLayout);
                         for (Uint32 s = 0; s < pResourceLayout->NumStaticSamplers; ++s)
                         {
                             const auto& StSam = pResourceLayout->StaticSamplers[s];
@@ -243,7 +244,7 @@ namespace Diligent
 
                     RemoveArrayBrackets(Name.data());
                     SHADER_RESOURCE_VARIABLE_TYPE VarType = (pResourceLayout != nullptr) ? 
-                        GetShaderVariableType(ShaderStage, Name.data(), *pResourceLayout) :
+                        GetShaderVariableType(ShaderStages, Name.data(), *pResourceLayout) :
                         SHADER_RESOURCE_VARIABLE_TYPE_STATIC;
                     m_Images.emplace_back( Name.data(), size, VarType, SHADER_RESOURCE_TYPE_TEXTURE_UAV, BindingPoint, dataType );
                     break;
@@ -301,9 +302,9 @@ namespace Diligent
                 }
             }
 
-            
+
             SHADER_RESOURCE_VARIABLE_TYPE VarType = (pResourceLayout != nullptr) ? 
-                GetShaderVariableType(ShaderStage, Name.data(), *pResourceLayout) :
+                GetShaderVariableType(ShaderStages, Name.data(), *pResourceLayout) :
                 SHADER_RESOURCE_VARIABLE_TYPE_STATIC;
             m_UniformBlocks.emplace_back( Name.data(), ArraySize, VarType, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, UniformBlockIndex );
         }
@@ -353,21 +354,71 @@ namespace Diligent
             }
 
             SHADER_RESOURCE_VARIABLE_TYPE VarType = (pResourceLayout != nullptr) ? 
-                GetShaderVariableType(ShaderStage, Name.data(), *pResourceLayout) :
+                GetShaderVariableType(ShaderStages, Name.data(), *pResourceLayout) :
                 SHADER_RESOURCE_VARIABLE_TYPE_STATIC;
             m_StorageBlocks.emplace_back( Name.data(), ArraySize, VarType, SHADER_RESOURCE_TYPE_BUFFER_UAV, Binding );
         }
 #endif
-
     }
 
-    static bool CheckType(SHADER_RESOURCE_VARIABLE_TYPE Type, SHADER_RESOURCE_VARIABLE_TYPE* AllowedTypes, Uint32 NumAllowedTypes)
+
+    void GLProgramResources::Clone(RenderDeviceGLImpl*                   pDeviceGLImpl, 
+                                   IObject&                              Owner,
+                                   const GLProgramResources&             SrcResources, 
+                                   const PipelineResourceLayoutDesc&     ResourceLayout,
+                                   const SHADER_RESOURCE_VARIABLE_TYPE*  AllowedVarTypes, 
+                                   Uint32                                NumAllowedTypes)
     {
-        for(Uint32 i=0; i < NumAllowedTypes; ++i)
-            if(Type == AllowedTypes[i])
-                return true;
-    
-        return false;
+        m_ShaderStages = SrcResources.m_ShaderStages;
+        const Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
+
+        for (auto& ub : SrcResources.m_UniformBlocks)
+        {
+            auto VarType = GetShaderVariableType(m_ShaderStages, ub.Name.data(), ResourceLayout);
+            if (IsAllowedType(VarType, VarType))
+            {
+                m_UniformBlocks.emplace_back(ub.Name, ub.pResources.size(), ub.VarType, ub.ResourceType, ub.Index);
+            }
+        }
+
+        for (auto& sam : SrcResources.m_Samplers)
+        {
+            auto VarType = GetShaderVariableType(m_ShaderStages, sam.Name.data(), ResourceLayout);
+            if (IsAllowedType(VarType, VarType))
+            {
+                RefCntAutoPtr<ISampler> pStaticSampler;
+                for (Uint32 s = 0; s < ResourceLayout.NumStaticSamplers; ++s)
+                {
+                    const auto& StSam = ResourceLayout.StaticSamplers[s];
+                    if (strcmp(sam.Name.data(), StSam.SamplerOrTextureName) == 0)
+                    {
+                        pDeviceGLImpl->CreateSampler(StSam.Desc, &pStaticSampler);
+                        break;
+                    }
+                }
+                m_Samplers.emplace_back(sam.Name, sam.pResources.size(), sam.VarType, sam.ResourceType, sam.Location, sam.Type, pStaticSampler.RawPtr<SamplerGLImpl>());
+            }
+        }
+
+        for (auto& img : SrcResources.m_Images)
+        {
+            auto VarType = GetShaderVariableType(m_ShaderStages, img.Name.data(), ResourceLayout);
+            if (IsAllowedType(VarType, VarType))
+            {
+                m_Images.emplace_back(img.Name, img.pResources.size(), img.VarType, img.ResourceType, img.BindingPoint, img.Type);
+            }
+        }
+
+        for (auto& sb : SrcResources.m_StorageBlocks)
+        {
+            auto VarType = GetShaderVariableType(m_ShaderStages, sb.Name.data(), ResourceLayout);
+            if (IsAllowedType(VarType, VarType))
+            {
+                m_StorageBlocks.emplace_back(sb.Name, sb.pResources.size(), sb.VarType, sb.ResourceType, sb.Binding);
+            }
+        }
+
+        InitVariables(Owner);
     }
 
     void GLProgramResources::InitVariables(IObject& Owner)

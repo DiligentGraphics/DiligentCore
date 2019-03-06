@@ -160,7 +160,7 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*      pRefCounters,
         // boolean status bit DELETE_STATUS is set to true
         ShaderObj.Release();
 
-        m_GlProgObj.InitResources(pDeviceGL, m_Desc.ShaderType, *this);
+        m_GlProgObj.InitResources(pDeviceGL, m_Desc.ShaderType, *this, nullptr, nullptr, 0);
     }
     else
     {
