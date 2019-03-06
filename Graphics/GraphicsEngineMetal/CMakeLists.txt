@@ -9,7 +9,7 @@ set(INCLUDE
     include/CommandListMtlImpl.h
     include/MtlTypeConversions.h
     include/DeviceContextMtlImpl.h
-	include/FenceMtlImpl.h
+    include/FenceMtlImpl.h
     include/PipelineStateMtlImpl.h
     include/RenderDeviceMtlImpl.h
     include/SamplerMtlImpl.h
@@ -24,11 +24,10 @@ set(INTERFACE
     interface/BufferMtl.h
     interface/BufferViewMtl.h
     interface/DeviceContextMtl.h
-    interface/EngineMtlAttribs.h
+    interface/EngineFactoryMtl.h
     interface/FenceMtl.h
     interface/PipelineStateMtl.h
     interface/RenderDeviceMtl.h
-    interface/RenderDeviceFactoryMtl.h
     interface/SamplerMtl.h
     interface/ShaderMtl.h
     interface/ShaderResourceBindingMtl.h
@@ -44,10 +43,10 @@ set(SRC
     src/CommandListMtlImpl.mm
     src/MtlTypeConversions.mm
     src/DeviceContextMtlImpl.mm
+    src/EngineFactoryMtl.mm
     src/FenceMtlImpl.mm
     src/PipelineStateMtlImpl.mm
     src/RenderDeviceMtlImpl.mm
-    src/RenderDeviceFactoryMtl.mm
     src/SamplerMtlImpl.mm
     src/ShaderMtlImpl.mm
     src/ShaderResourceBindingMtlImpl.mm

@@ -1488,6 +1488,14 @@ namespace Diligent
         Uint32 DynamicHeapPageSize = 256 << 10;
     };
 
+
+    /// Attributes of the Metal-based engine implementation
+    struct EngineMtlCreateInfo : public EngineCreateInfo
+    {
+
+    };
+
+
     /// Box
     struct Box
     {

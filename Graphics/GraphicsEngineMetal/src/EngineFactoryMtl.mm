@@ -24,7 +24,7 @@
 /// \file
 /// Routines that initialize Mtl-based engine implementation
 
-#include "RenderDeviceFactoryMtl.h"
+#include "EngineFactoryMtl.h"
 #include "RenderDeviceMtlImpl.h"
 #include "DeviceContextMtlImpl.h"
 #include "SwapChainMtlImpl.h"
@@ -44,10 +44,10 @@ public:
         return &TheFactory;
     }
 
-    void CreateDeviceAndContextsMtl( const EngineMtlAttribs&   EngineAttribs, 
-                                     IRenderDevice**           ppDevice, 
-                                     IDeviceContext**          ppContexts,
-                                     Uint32                    NumDeferredContexts )override final;
+    void CreateDeviceAndContextsMtl(const EngineMtlCreateInfo&  EngineAttribs, 
+                                    IRenderDevice**             ppDevice, 
+                                    IDeviceContext**            ppContexts,
+                                    Uint32                      NumDeferredContexts )override final;
 
    void CreateSwapChainMtl( IRenderDevice*            pDevice, 
                             IDeviceContext*           pImmediateContext, 
@@ -55,11 +55,11 @@ public:
                             void*                     pView,
                             ISwapChain**              ppSwapChain )override final;
 
-   void AttachToMtlDevice(void*                    pMtlNativeDevice, 
-                          const EngineMtlAttribs&  EngineAttribs, 
-                          IRenderDevice**          ppDevice, 
-                          IDeviceContext**         ppContexts,
-                          Uint32                   NumDeferredContexts)override final;
+   void AttachToMtlDevice(void*                       pMtlNativeDevice, 
+                          const EngineMtlCreateInfo&  EngineAttribs, 
+                          IRenderDevice**             ppDevice, 
+                          IDeviceContext**            ppContexts,
+                          Uint32                      NumDeferredContexts)override final;
 };
 
 
@@ -76,10 +76,10 @@ public:
 ///                                   of deferred contexts is requested, pointers to the
 ///                                   contexts are written to ppContexts array starting 
 ///                                   at position 1
-void EngineFactoryMtlImpl::CreateDeviceAndContextsMtl( const EngineMtlAttribs&   EngineAttribs, 
-                                                       IRenderDevice**           ppDevice, 
-                                                       IDeviceContext**          ppContexts, 
-                                                       Uint32                    NumDeferredContexts )
+void EngineFactoryMtlImpl::CreateDeviceAndContextsMtl(const EngineMtlCreateInfo&  EngineAttribs, 
+                                                      IRenderDevice**             ppDevice, 
+                                                      IDeviceContext**            ppContexts, 
+                                                      Uint32                      NumDeferredContexts )
 {
     if (EngineAttribs.DebugMessageCallback != nullptr)
         SetDebugMessageCallback(EngineAttribs.DebugMessageCallback);
@@ -111,11 +111,11 @@ void EngineFactoryMtlImpl::CreateDeviceAndContextsMtl( const EngineMtlAttribs&  
 ///                                   of deferred contexts is requested, pointers to the
 ///                                   contexts are written to ppContexts array starting 
 ///                                   at position 1
-void EngineFactoryMtlImpl::AttachToMtlDevice(void*                     pMtlNativeDevice, 
-                                             const EngineMtlAttribs&   EngineAttribs, 
-                                             IRenderDevice**           ppDevice, 
-                                             IDeviceContext**          ppContexts,
-                                             Uint32                    NumDeferredContexts)
+void EngineFactoryMtlImpl::AttachToMtlDevice(void*                       pMtlNativeDevice, 
+                                             const EngineMtlCreateInfo&  EngineAttribs, 
+                                             IRenderDevice**			 ppDevice, 
+                                             IDeviceContext**			 ppContexts,
+                                             Uint32						 NumDeferredContexts)
 {
     if (EngineAttribs.DebugMessageCallback != nullptr)
         SetDebugMessageCallback(EngineAttribs.DebugMessageCallback);
@@ -185,11 +185,11 @@ void EngineFactoryMtlImpl::AttachToMtlDevice(void*                     pMtlNativ
 ///                                
 /// \param [out] ppSwapChain    - Address of the memory location where pointer to the new 
 ///                               swap chain will be written
-void EngineFactoryMtlImpl::CreateSwapChainMtl( IRenderDevice*            pDevice, 
-                                                   IDeviceContext*           pImmediateContext, 
-                                                   const SwapChainDesc&      SCDesc, 
-                                                   void*                     pView, 
-                                                   ISwapChain**              ppSwapChain )
+void EngineFactoryMtlImpl::CreateSwapChainMtl(IRenderDevice*            pDevice, 
+                                              IDeviceContext*           pImmediateContext, 
+                                              const SwapChainDesc&      SCDesc, 
+                                              void*                     pView, 
+                                              ISwapChain**              ppSwapChain )
 {
     VERIFY( ppSwapChain, "Null pointer provided" );
     if( !ppSwapChain )
