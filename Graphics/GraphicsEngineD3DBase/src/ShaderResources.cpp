@@ -27,6 +27,7 @@
 #include "ShaderResources.h"
 #include "HashUtils.h"
 #include "ShaderResourceVariableBase.h"
+#include "Align.h"
 
 namespace Diligent
 {
@@ -74,7 +75,8 @@ void ShaderResources::AllocateMemory(IMemoryAllocator&                Allocator,
     m_SamplersOffset = AdvanceOffset(ResCounters.NumSamplers);
     m_TotalResources = AdvanceOffset(0);
 
-    auto MemorySize = m_TotalResources * sizeof(D3DShaderResourceAttribs) + ResourceNamesPoolSize * sizeof(char);
+    auto AlignedResourceNamesPoolSize = Align(ResourceNamesPoolSize, sizeof(void*));
+    auto MemorySize = m_TotalResources * sizeof(D3DShaderResourceAttribs) + AlignedResourceNamesPoolSize * sizeof(char);
 
     VERIFY_EXPR(GetNumCBs()     == ResCounters.NumCBs);
     VERIFY_EXPR(GetNumTexSRV()  == ResCounters.NumTexSRVs);

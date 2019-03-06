@@ -399,6 +399,9 @@ private:
 
     // Memory buffer that holds all resources as continuous chunk of memory:
     // | CBs | TexSRVs | TexUAVs | BufSRVs | BufUAVs | Samplers |  Resource Names  |
+    //                                                                             |
+    //                                                              end of names data may not be aligned
+
     std::unique_ptr< void, STDDeleterRawMem<void> > m_MemoryBuffer;
 
     StringPool  m_ResourceNames;

@@ -30,7 +30,6 @@
 #include "PipelineStateMtlImpl.h"
 #include "SwapChainMtl.h"
 #include "ShaderResourceBindingMtlImpl.h"
-#include "EngineMtlAttribs.h"
 #include "CommandListMtlImpl.h"
 #include "RenderDeviceMtlImpl.h"
 #include "FenceMtlImpl.h"

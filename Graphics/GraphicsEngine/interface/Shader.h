@@ -190,7 +190,7 @@ struct ShaderCreateInfo
 };
 
 /// Describes shader resource type
-enum SHADER_RESOURCE_TYPE
+enum SHADER_RESOURCE_TYPE : Uint8
 {
     /// Shader resource type is unknown
     SHADER_RESOURCE_TYPE_UNKNOWN = 0,

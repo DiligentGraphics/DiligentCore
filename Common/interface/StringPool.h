@@ -43,6 +43,18 @@ public:
     StringPool             (const StringPool&) = delete;
     StringPool& operator = (const StringPool&) = delete;
 
+    StringPool (StringPool&& Pool) : 
+        m_pBuffer     (Pool.m_pBuffer     ),
+        m_pCurrPtr    (Pool.m_pCurrPtr    ),
+        m_ReservedSize(Pool.m_ReservedSize),
+        m_pAllocator  (Pool.m_pAllocator  )
+    {
+        Pool.m_pBuffer       = nullptr;
+        Pool.m_pCurrPtr      = nullptr;
+        Pool.m_ReservedSize  = 0;
+        Pool.m_pAllocator    = nullptr;
+    }
+
     ~StringPool()
     {
         if(m_pBuffer != nullptr && m_pAllocator != nullptr)

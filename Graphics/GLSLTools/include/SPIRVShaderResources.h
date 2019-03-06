@@ -28,8 +28,8 @@
 
 // SPIRVShaderResources class uses continuous chunk of memory to store all resources, as follows:
 //
-//   m_MemoryBuffer                                                                                                              m_TotalResources
-//    |                                                                                                                             |
+//   m_MemoryBuffer                                                                                                              m_TotalResources            end of names data may not be aligned
+//    |                                                                                                                             |                                       |
 //    | Uniform Buffers | Storage Buffers | Storage Images | Sampled Images | Atomic Counters | Separate Samplers | Separate Images |   Stage Inputs   |   Resource Names   |
 
 #include <memory>
@@ -333,6 +333,8 @@ private:
 
     // Memory buffer that holds all resources as continuous chunk of memory:
     // |  UBs  |  SBs  |  StrgImgs  |  SmplImgs  |  ACs  |  SepSamplers  |  SepImgs  | Stage Inputs | Resource Names |
+    //                                                                                                               |
+    //                                                                                                  end of names data may not be aligned
     std::unique_ptr< void, STDDeleterRawMem<void> > m_MemoryBuffer;
     StringPool m_ResourceNames;
 

@@ -28,6 +28,7 @@
 #include "ShaderBase.h"
 #include "GraphicsAccessories.h"
 #include "StringTools.h"
+#include "Align.h"
 
 namespace Diligent
 {
@@ -439,10 +440,12 @@ void SPIRVShaderResources::Initialize(IMemoryAllocator&       Allocator,
     VERIFY(NumShaderStageInputs <= MaxOffset, "Max offset exceeded");
     m_NumShaderStageInputs = static_cast<OffsetType>(NumShaderStageInputs);
 
+    auto AlignedResourceNamesPoolSize = Align(ResourceNamesPoolSize, sizeof(void*));
+
     static_assert(sizeof(SPIRVShaderResourceAttribs) % sizeof(void*) == 0, "Size of SPIRVShaderResourceAttribs struct must be multiple of sizeof(void*)");
-    auto MemorySize = m_TotalResources       * sizeof(SPIRVShaderResourceAttribs) + 
-                      m_NumShaderStageInputs * sizeof(SPIRVShaderStageInputAttribs) +
-                      ResourceNamesPoolSize  * sizeof(char);
+    auto MemorySize = m_TotalResources              * sizeof(SPIRVShaderResourceAttribs) + 
+                      m_NumShaderStageInputs        * sizeof(SPIRVShaderStageInputAttribs) +
+                      AlignedResourceNamesPoolSize  * sizeof(char);
 
     VERIFY_EXPR(GetNumUBs()       == Counters.NumUBs);
     VERIFY_EXPR(GetNumSBs()       == Counters.NumSBs);
