@@ -36,11 +36,11 @@
 
 namespace Diligent
 {
-    DeviceContextMtlImpl::DeviceContextMtlImpl( IReferenceCounters*            pRefCounters,
-                                                IMemoryAllocator&              Allocator,
-                                                IRenderDevice*                 pDevice,
-                                                const struct EngineMtlAttribs& EngineAttribs,
-                                                bool                           bIsDeferred ) :
+    DeviceContextMtlImpl::DeviceContextMtlImpl( IReferenceCounters*               pRefCounters,
+                                                IMemoryAllocator&                 Allocator,
+                                                IRenderDevice*                    pDevice,
+                                                const struct EngineMtlCreateInfo& EngineAttribs,
+                                                bool                              bIsDeferred ) :
         TDeviceContextBase(pRefCounters, pDevice, bIsDeferred)
     {
     }
