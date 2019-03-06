@@ -66,8 +66,7 @@ public:
 private:
     virtual void TestTextureFormat( TEXTURE_FORMAT TexFormat )override final;
 
-    EngineMtlAttribs m_EngineAttribs;
-
+    EngineMtlCreateInfo m_EngineAttribs;
 };
 
 }

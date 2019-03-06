@@ -54,6 +54,30 @@ public:
 
     virtual bool IsCompatibleWith(const IPipelineState *pPSO)const override final;
 
+    virtual void BindStaticResources(Uint32 ShaderFlags, IResourceMapping* pResourceMapping, Uint32 Flags)override final
+    {
+        LOG_ERROR_MESSAGE("PipelineStateMtlImpl::BindStaticResources() is not implemented");
+    }
+    
+    virtual Uint32 GetStaticVariableCount(SHADER_TYPE ShaderType) const override final
+    {
+        LOG_ERROR_MESSAGE("PipelineStateMtlImpl::GetStaticVariableCount() is not implemented");
+        return 0;
+    }
+
+    virtual IShaderResourceVariable* GetStaticShaderVariable(SHADER_TYPE ShaderType, const Char* Name) override final;
+    {
+        LOG_ERROR_MESSAGE("PipelineStateMtlImpl::GetStaticShaderVariable() is not implemented");
+        return nullptr;
+    }
+
+    virtual IShaderResourceVariable* GetStaticShaderVariable(SHADER_TYPE ShaderType, Uint32 Index) override final;
+    {
+        LOG_ERROR_MESSAGE("PipelineStateMtlImpl::GetStaticShaderVariable() is not implemented");
+        return nullptr;
+    }
+
+
 private:
 
 };

@@ -28,10 +28,10 @@
 namespace Diligent
 {
 
-ShaderMtlImpl::ShaderMtlImpl(IReferenceCounters*          pRefCounters,
-                             RenderDeviceMtlImpl*         pRenderDeviceMtl,
-                             const ShaderCreationAttribs& CreationAttribs) : 
-    TShaderBase(pRefCounters, pRenderDeviceMtl, CreationAttribs.Desc)
+ShaderMtlImpl::ShaderMtlImpl(IReferenceCounters*     pRefCounters,
+                             RenderDeviceMtlImpl*    pRenderDeviceMtl,
+                             const ShaderCreateInfo& ShaderCI) : 
+    TShaderBase(pRefCounters, pRenderDeviceMtl, ShaderCI.Desc)
 {
     LOG_ERROR_AND_THROW("Shaders are not implemented in Metal backend");
 }
