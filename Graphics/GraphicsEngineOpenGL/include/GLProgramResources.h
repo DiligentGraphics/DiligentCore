@@ -83,10 +83,10 @@ namespace Diligent
                                   RefCntAutoPtr<IDeviceObject>*   _pResources) :
                 ShaderVariableBase(_Owner),
                 Name              (_Name),
-                ArraySize         (_ArraySize),
                 VariableType      (_VariableType),
-                VariableIndex     (_VariableIndex),
                 ResourceType      (_ResourceType),
+                VariableIndex     (_VariableIndex),
+                ArraySize         (_ArraySize),
                 pResources       (_pResources)
             {
                 VERIFY_EXPR(_ArraySize >= 1);
