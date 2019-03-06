@@ -383,15 +383,15 @@ namespace Diligent
             auto* pShaderGL = m_pPipelineState->GetShader<ShaderGLImpl>(ProgNum);
             auto& GLProgramObj = ProgramPipelineSupported ? pShaderGL->m_GlProgObj : Prog;
 
-            GLProgramResources* pDynamicResources = pShaderResBindingGL ? &pShaderResBindingGL->GetProgramResources(pShaderGL->GetDesc().ShaderType, m_pPipelineState) : nullptr;
+            GLProgramResources* pSRBResources = pShaderResBindingGL ? &pShaderResBindingGL->GetResources(ProgNum, m_pPipelineState) : nullptr;
 #ifdef VERIFY_RESOURCE_BINDINGS
             //GLProgramObj.dbgVerifyBindingCompleteness(pDynamicResources, m_pPipelineState);
 #endif
 
             // When program pipelines are not supported, all resources are dynamic resources
-            for (int BindDynamicResources = 0; BindDynamicResources < (pShaderResBindingGL ? 2 : 1); ++BindDynamicResources)
+            for (int BindSRBResources = 0; BindSRBResources < (pShaderResBindingGL ? 2 : 1); ++BindSRBResources)
             {
-                GLProgramResources& ProgResources = BindDynamicResources ? *pDynamicResources : m_pPipelineState->GetStaticResources(ProgNum);
+                GLProgramResources& ProgResources = BindSRBResources ? *pSRBResources : m_pPipelineState->GetStaticResources(ProgNum);
 
 #ifdef VERIFY_RESOURCE_BINDINGS
                 ProgResources.dbgVerifyResourceBindings();

@@ -59,12 +59,13 @@ public:
 
     virtual void InitializeStaticResources(const IPipelineState* pPipelineState)override final;
 
-    GLProgramResources& GetProgramResources(SHADER_TYPE ShaderType, PipelineStateGLImpl* pdbgPSO);
+    GLProgramResources& GetResources(Uint32 Ind, PipelineStateGLImpl* pdbgPSO);
 
 private:
     bool IsUsingSeparatePrograms()const;
 
-    GLProgramResources m_DynamicProgResources[6];
+    Int8 m_ResourceIndex[6] = {-1, -1, -1, -1, -1, -1};
+    std::vector<GLProgramResources> m_Resources;
 };
 
 }

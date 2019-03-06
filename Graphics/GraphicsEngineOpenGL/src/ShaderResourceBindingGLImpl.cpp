@@ -31,30 +31,25 @@ namespace Diligent
 {
 
 ShaderResourceBindingGLImpl::ShaderResourceBindingGLImpl(IReferenceCounters* pRefCounters, PipelineStateGLImpl* pPSO) :
-    TBase  (pRefCounters, pPSO)
+    TBase  (pRefCounters, pPSO),
+    m_Resources(pPSO->GetGLProgram() == 0 ? pPSO->GetNumShaders() : 1)
 {
+    const SHADER_RESOURCE_VARIABLE_TYPE SRBVarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
     if (IsUsingSeparatePrograms())
     {
-        SHADER_RESOURCE_VARIABLE_TYPE VarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
-#define INIT_SHADER(SN)\
-        if(auto p##SN = ValidatedCast<ShaderGLImpl>( pPSO->Get##SN() ))     \
-        {                                                                   \
-            auto &GLProg = p##SN->GetGlProgram();                           \
-            m_DynamicProgResources[SN##Ind].Clone(pPSO->GetDevice(), *this, GLProg.GetResources(), pPSO->GetDesc().ResourceLayout, VarTypes, _countof(VarTypes)); \
+        
+        for (Uint32 s = 0; s < pPSO->GetNumShaders(); ++s)
+        {
+            auto* pShaderGL = pPSO->GetShader<ShaderGLImpl>(s);
+            m_Resources[s].Clone(pPSO->GetDevice(), *this, pShaderGL->GetGlProgram().GetResources(), pPSO->GetDesc().ResourceLayout, SRBVarTypes, _countof(SRBVarTypes));
+            const auto ShaderType = pShaderGL->GetDesc().ShaderType;
+            const auto ShaderTypeInd = GetShaderTypeIndex(ShaderType);
+            m_ResourceIndex[ShaderTypeInd] = static_cast<Int8>(s);
         }
-
-        INIT_SHADER(VS)
-        INIT_SHADER(PS)
-        INIT_SHADER(GS)
-        INIT_SHADER(HS)
-        INIT_SHADER(DS)
-        INIT_SHADER(CS)
-#undef INIT_SHADER
     }
     else
     {
-        SHADER_RESOURCE_VARIABLE_TYPE VarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
-        m_DynamicProgResources[0].Clone(pPSO->GetDevice(), *this, pPSO->GetGLProgram().GetResources(), pPSO->GetDesc().ResourceLayout, VarTypes, _countof(VarTypes));
+        m_Resources[0].Clone(pPSO->GetDevice(), *this, pPSO->GetGLProgram().GetResources(), pPSO->GetDesc().ResourceLayout, SRBVarTypes, _countof(SRBVarTypes));
     }
 }
 
@@ -71,48 +66,33 @@ bool ShaderResourceBindingGLImpl::IsUsingSeparatePrograms()const
 
 void ShaderResourceBindingGLImpl::BindResources(Uint32 ShaderFlags, IResourceMapping* pResMapping, Uint32 Flags)
 {
-    if (IsUsingSeparatePrograms())
+    for(auto& Resource : m_Resources)
     {
-        if(ShaderFlags & SHADER_TYPE_VERTEX)
-            m_DynamicProgResources[VSInd].BindResources(pResMapping, Flags);
-        if(ShaderFlags & SHADER_TYPE_PIXEL)                        
-            m_DynamicProgResources[PSInd].BindResources(pResMapping, Flags);
-        if(ShaderFlags & SHADER_TYPE_GEOMETRY)                     
-            m_DynamicProgResources[GSInd].BindResources(pResMapping, Flags);
-        if(ShaderFlags & SHADER_TYPE_HULL)                         
-            m_DynamicProgResources[HSInd].BindResources(pResMapping, Flags);
-        if(ShaderFlags & SHADER_TYPE_DOMAIN)                       
-            m_DynamicProgResources[DSInd].BindResources(pResMapping, Flags);
-        if(ShaderFlags & SHADER_TYPE_COMPUTE)                      
-            m_DynamicProgResources[CSInd].BindResources(pResMapping, Flags);
-    }
-    else
-    {
-        // Using non-separable program
-        m_DynamicProgResources[0].BindResources(pResMapping, Flags);
+        if ((Resource.GetShaderStages() & ShaderFlags)!=0)
+            Resource.BindResources(pResMapping, Flags);
     }
 }
 
 IShaderResourceVariable* ShaderResourceBindingGLImpl::GetVariable(SHADER_TYPE ShaderType, const char* Name)
 {
-    auto ShaderInd = IsUsingSeparatePrograms() ? GetShaderTypeIndex(ShaderType) : 0;
-    return m_DynamicProgResources[ShaderInd].GetVariable(Name);
+    auto ShaderInd = IsUsingSeparatePrograms() ? m_ResourceIndex[GetShaderTypeIndex(ShaderType)] : 0;
+    return ShaderInd >= 0 ? m_Resources[ShaderInd].GetVariable(Name) : nullptr;
 }
 
 Uint32 ShaderResourceBindingGLImpl::GetVariableCount(SHADER_TYPE ShaderType) const
 {
-    auto ShaderInd = IsUsingSeparatePrograms() ? GetShaderTypeIndex(ShaderType) : 0;
-    return m_DynamicProgResources[ShaderInd].GetVariableCount();
+    auto ShaderInd = IsUsingSeparatePrograms() ? m_ResourceIndex[GetShaderTypeIndex(ShaderType)] : 0;
+    return ShaderInd >= 0 ? m_Resources[ShaderInd].GetVariableCount() : 0;
 }
 
 IShaderResourceVariable* ShaderResourceBindingGLImpl::GetVariable(SHADER_TYPE ShaderType, Uint32 Index)
 {
-    auto ShaderInd = IsUsingSeparatePrograms() ? GetShaderTypeIndex(ShaderType) : 0;
-    return m_DynamicProgResources[ShaderInd].GetVariable(Index);
+    auto ShaderInd = IsUsingSeparatePrograms() ? m_ResourceIndex[GetShaderTypeIndex(ShaderType)] : 0;
+    return ShaderInd >= 0 ? m_Resources[ShaderInd].GetVariable(Index) : 0;
 }
 
 static GLProgramResources NullProgramResources;
-GLProgramResources& ShaderResourceBindingGLImpl::GetProgramResources(SHADER_TYPE ShaderType, PipelineStateGLImpl* pdbgPSO)
+GLProgramResources& ShaderResourceBindingGLImpl::GetResources(Uint32 Ind, PipelineStateGLImpl* pdbgPSO)
 {
 #ifdef _DEBUG
     if (pdbgPSO->IsIncompatibleWith(GetPipelineState()))
@@ -120,12 +100,12 @@ GLProgramResources& ShaderResourceBindingGLImpl::GetProgramResources(SHADER_TYPE
         LOG_ERROR("Shader resource binding is incompatible with the currently bound pipeline state.");
     }
 #endif
-    auto ShaderInd = IsUsingSeparatePrograms() ? GetShaderTypeIndex(ShaderType) : 0;
-    return m_DynamicProgResources[ShaderInd];
+    return m_Resources[Ind];
 }
 
 void ShaderResourceBindingGLImpl::InitializeStaticResources(const IPipelineState* pPipelineState)
 {
+    // Do nothing
 }
 
 }
