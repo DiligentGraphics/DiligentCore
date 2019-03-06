@@ -222,7 +222,7 @@ namespace Diligent
         glEnable(GL_FRAMEBUFFER_SRGB);
         if( glGetError() != GL_NO_ERROR )
             LOG_ERROR_MESSAGE("Failed to enable SRGB framebuffers");
-DeviceCaps.bSeparableProgramSupported  = false;
+
         DeviceCaps.DevType = DeviceType::OpenGL;
         DeviceCaps.MajorVersion = MajorVersion;
         DeviceCaps.MinorVersion = MinorVersion;
