@@ -235,7 +235,7 @@ public:
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override = 0;
     
     /// Returns the shader description
-    virtual const ShaderDesc& GetDesc()const = 0;
+    virtual const ShaderDesc& GetDesc()const override = 0;
 
     /// Returns the total number of shader resources
     virtual Uint32 GetResourceCount()const = 0;

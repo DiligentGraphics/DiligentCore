@@ -388,7 +388,6 @@ namespace Diligent
             //GLProgramObj.dbgVerifyBindingCompleteness(pDynamicResources, m_pPipelineState);
 #endif
 
-            // When program pipelines are not supported, all resources are dynamic resources
             for (int BindSRBResources = 0; BindSRBResources < (pShaderResBindingGL ? 2 : 1); ++BindSRBResources)
             {
                 GLProgramResources& ProgResources = BindSRBResources ? *pSRBResources : m_pPipelineState->GetStaticResources(ProgNum);

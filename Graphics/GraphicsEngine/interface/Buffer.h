@@ -174,7 +174,7 @@ public:
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) = 0;
 
     /// Returns the buffer description used to create the object
-    virtual const BufferDesc& GetDesc()const = 0;
+    virtual const BufferDesc& GetDesc()const override = 0;
     
     /// Creates a new buffer view
 

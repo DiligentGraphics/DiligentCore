@@ -246,7 +246,7 @@ public:
 
 
     /// Returns the blend state description used to create the object
-    virtual const PipelineStateDesc& GetDesc()const = 0;
+    virtual const PipelineStateDesc& GetDesc()const override = 0;
 
 
     /// Binds resources for all shaders in the pipeline state

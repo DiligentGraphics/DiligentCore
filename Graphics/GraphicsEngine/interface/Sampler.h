@@ -173,7 +173,7 @@ public:
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override = 0;
 
     /// Returns the sampler description used to create the object
-    virtual const SamplerDesc& GetDesc()const = 0;
+    virtual const SamplerDesc& GetDesc()const override = 0;
 };
 
 }
