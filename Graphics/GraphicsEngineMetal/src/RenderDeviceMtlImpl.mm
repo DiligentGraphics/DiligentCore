@@ -37,11 +37,11 @@
 namespace Diligent
 {
 
-RenderDeviceMtlImpl :: RenderDeviceMtlImpl(IReferenceCounters*     pRefCounters,
-                                           IMemoryAllocator&       RawMemAllocator,
-                                           const EngineMtlAttribs& EngineAttribs,
-                                           void*                   pMtlDevice,
-                                           Uint32                  NumDeferredContexts) : 
+RenderDeviceMtlImpl :: RenderDeviceMtlImpl(IReferenceCounters*        pRefCounters,
+                                           IMemoryAllocator&          RawMemAllocator,
+                                           const EngineMtlCreateInfo& EngineAttribs,
+                                           void*                      pMtlDevice,
+                                           Uint32                     NumDeferredContexts) : 
     TRenderDeviceBase
     {
         pRefCounters,
@@ -92,13 +92,13 @@ void RenderDeviceMtlImpl :: CreateBuffer(const BufferDesc& BuffDesc, const Buffe
     );
 }
 
-void RenderDeviceMtlImpl :: CreateShader(const ShaderCreationAttribs& ShaderCreationAttribs, IShader** ppShader)
+void RenderDeviceMtlImpl :: CreateShader(const ShaderCreateInfo& ShaderCI, IShader** ppShader)
 {
-    CreateDeviceObject( "shader", ShaderCreationAttribs.Desc, ppShader, 
+    CreateDeviceObject( "shader", ShaderCI.Desc, ppShader, 
         [&]()
         {
             ShaderMtlImpl* pShaderMtl( NEW_RC_OBJ(m_ShaderObjAllocator, "ShaderMtlImpl instance", ShaderMtlImpl)
-                                                 (this, ShaderCreationAttribs ) );
+                                                 (this, ShaderCI ) );
             pShaderMtl->QueryInterface( IID_Shader, reinterpret_cast<IObject**>(ppShader) );
 
             OnCreateDeviceObject( pShaderMtl );

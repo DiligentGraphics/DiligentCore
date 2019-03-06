@@ -39,16 +39,16 @@ class RenderDeviceMtlImpl final : public RenderDeviceBase<IRenderDeviceMtl>
 public:
     using TRenderDeviceBase = RenderDeviceBase<IRenderDeviceMtl>;
 
-    RenderDeviceMtlImpl( IReferenceCounters*     pRefCounters,
-                         IMemoryAllocator&       RawMemAllocator,
-                         const EngineMtlAttribs& EngineAttribs,
-                         void*                   pMtlDevice,
-                         Uint32                  NumDeferredContexts );
+    RenderDeviceMtlImpl( IReferenceCounters*        pRefCounters,
+                         IMemoryAllocator&          RawMemAllocator,
+                         const EngineMtlCreateInfo& EngineAttribs,
+                         void*                      pMtlDevice,
+                         Uint32                     NumDeferredContexts );
     virtual void QueryInterface( const INTERFACE_ID& IID, IObject **ppInterface )override final;
 
     virtual void CreateBuffer(const BufferDesc& BuffDesc, const BufferData* pBuffData, IBuffer** ppBuffer)override final;
 
-    virtual void CreateShader(const ShaderCreationAttribs& ShaderCreationAttribs, IShader** ppShader)override final;
+    virtual void CreateShader(const ShaderCreateInfo& ShaderCI, IShader** ppShader)override final;
 
     virtual void CreateTexture(const TextureDesc& TexDesc, const TextureData* pData, ITexture** ppTexture)override final;
     
