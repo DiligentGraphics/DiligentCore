@@ -73,11 +73,10 @@ public:
     ShaderGLImpl( IReferenceCounters *pRefCounters, RenderDeviceGLImpl *pDeviceGL, const ShaderCreateInfo &ShaderCreateInfo, bool bIsDeviceInternal = false );
     ~ShaderGLImpl();
 
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
+
     virtual Uint32 GetResourceCount()const override final;
     virtual ShaderResourceDesc GetResource(Uint32 Index)const override final;
-
-    virtual void QueryInterface( const INTERFACE_ID &IID, IObject **ppInterface )override final;
-
 
     GLProgram& GetGlProgram(){return m_GlProgObj;}
 

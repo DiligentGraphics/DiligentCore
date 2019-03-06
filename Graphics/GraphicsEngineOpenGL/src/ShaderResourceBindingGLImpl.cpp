@@ -53,8 +53,7 @@ ShaderResourceBindingGLImpl::ShaderResourceBindingGLImpl(IReferenceCounters* pRe
     }
     else
     {
-        // Clone all variable types
-        SHADER_RESOURCE_VARIABLE_TYPE VarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_STATIC, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
+        SHADER_RESOURCE_VARIABLE_TYPE VarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
         m_DynamicProgResources[0].Clone(pPSO->GetDevice(), *this, pPSO->GetGLProgram().GetResources(), pPSO->GetDesc().ResourceLayout, VarTypes, _countof(VarTypes));
     }
 }
@@ -97,7 +96,7 @@ void ShaderResourceBindingGLImpl::BindResources(Uint32 ShaderFlags, IResourceMap
 IShaderResourceVariable* ShaderResourceBindingGLImpl::GetVariable(SHADER_TYPE ShaderType, const char* Name)
 {
     auto ShaderInd = IsUsingSeparatePrograms() ? GetShaderTypeIndex(ShaderType) : 0;
-    return m_DynamicProgResources[ShaderInd].GetShaderVariable(Name);
+    return m_DynamicProgResources[ShaderInd].GetVariable(Name);
 }
 
 Uint32 ShaderResourceBindingGLImpl::GetVariableCount(SHADER_TYPE ShaderType) const
@@ -109,7 +108,7 @@ Uint32 ShaderResourceBindingGLImpl::GetVariableCount(SHADER_TYPE ShaderType) con
 IShaderResourceVariable* ShaderResourceBindingGLImpl::GetVariable(SHADER_TYPE ShaderType, Uint32 Index)
 {
     auto ShaderInd = IsUsingSeparatePrograms() ? GetShaderTypeIndex(ShaderType) : 0;
-    return m_DynamicProgResources[ShaderInd].GetShaderVariable(Index);
+    return m_DynamicProgResources[ShaderInd].GetVariable(Index);
 }
 
 static GLProgramResources NullProgramResources;
@@ -127,15 +126,6 @@ GLProgramResources& ShaderResourceBindingGLImpl::GetProgramResources(SHADER_TYPE
 
 void ShaderResourceBindingGLImpl::InitializeStaticResources(const IPipelineState* pPipelineState)
 {
-    if (!IsUsingSeparatePrograms())
-    {
-        //if (pPipelineState != nullptr)
-        //{
-        //    const auto* PSOGL = ValidatedCast<const PipelineStateGLImpl>(pPipelineState);
-        //    ResourceMappingProxy StaticResMapping(*PSOGL);
-        //    m_DynamicProgResources[0].BindResources(&StaticResMapping, 0);
-        //}
-    }
 }
 
 }

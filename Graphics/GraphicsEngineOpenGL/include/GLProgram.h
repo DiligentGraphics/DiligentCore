@@ -39,10 +39,7 @@ namespace Diligent
 
         void InitResources(RenderDeviceGLImpl*                   pDeviceGLImpl, 
                            SHADER_TYPE                           ShaderStage,
-                           IObject&                              Owner,
-                           const PipelineResourceLayoutDesc*     pResourceLayout,
-                           const SHADER_RESOURCE_VARIABLE_TYPE*  AllowedVarTypes, 
-                           Uint32                                NumAllowedTypes);
+                           IObject&                              Owner);
 
         void BindConstantResources(IResourceMapping* pResourceMapping, Uint32 Flags);
 

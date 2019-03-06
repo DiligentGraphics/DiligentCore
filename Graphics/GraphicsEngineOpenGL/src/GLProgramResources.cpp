@@ -22,20 +22,37 @@
  */
 
 #include "pch.h"
+#include <unordered_set>
 #include "GLProgramResources.h"
 #include "RenderDeviceGLImpl.h"
 #include "ShaderResourceBindingBase.h"
+#include "Align.h"
 
 namespace Diligent
 {
-    GLProgramResources::GLProgramResources( GLProgramResources&& Program )noexcept :
-        m_UniformBlocks   (std::move(Program.m_UniformBlocks)),
-        m_Samplers        (std::move(Program.m_Samplers)     ),
-        m_Images          (std::move(Program.m_Images)       ),
-        m_StorageBlocks   (std::move(Program.m_StorageBlocks)),
-        m_VariableHash    (std::move(Program.m_VariableHash) ),
-        m_VariablesByIndex(std::move(Program.m_VariablesByIndex) )
+    GLProgramResources::GLProgramResources(GLProgramResources&& Program)noexcept :
+        m_ShaderStages   (Program.m_ShaderStages),
+        m_UniformBuffers (Program.m_UniformBuffers),
+        m_Samplers       (Program.m_Samplers),
+        m_Images         (Program.m_Images),
+        m_StorageBlocks  (Program.m_StorageBlocks),
+        m_ResourceCache  (Program.m_ResourceCache),
+        m_StringPool     (std::move(Program.m_StringPool)),
+        m_NumUniformBuffers(Program.m_NumUniformBuffers),
+        m_NumSamplers      (Program.m_NumSamplers),
+        m_NumImages        (Program.m_NumImages),        
+        m_NumStorageBlocks (Program.m_NumStorageBlocks)
     {
+        Program.m_UniformBuffers = nullptr;
+        Program.m_Samplers       = nullptr;
+        Program.m_Images         = nullptr;
+        Program.m_StorageBlocks  = nullptr;
+        Program.m_ResourceCache  = nullptr;
+
+        Program.m_NumUniformBuffers = 0;
+        Program.m_NumSamplers       = 0;
+        Program.m_NumImages         = 0;
+        Program.m_NumStorageBlocks  = 0;
     }
 
     inline void RemoveArrayBrackets(char *Str)
@@ -45,17 +62,237 @@ namespace Diligent
             *OpenBacketPtr = 0;
     }
 
-    void GLProgramResources::LoadUniforms(RenderDeviceGLImpl*                   pDeviceGLImpl,
-                                          SHADER_TYPE                           ShaderStages,
-                                          GLuint                                GLProgram, 
-                                          const PipelineResourceLayoutDesc*     pResourceLayout,
-                                          const SHADER_RESOURCE_VARIABLE_TYPE*  AllowedVarTypes, 
-                                          Uint32                                NumAllowedTypes)
+    void GLProgramResources::AllocateResources(IObject&                        Owner,
+                                               std::vector<UniformBufferInfo>& UniformBlocks,
+                                               std::vector<SamplerInfo>&       Samplers,
+                                               std::vector<ImageInfo>&         Images,
+                                               std::vector<StorageBlockInfo>&  StorageBlocks,
+                                               bool                            InitializeResourceCache)
     {
+        VERIFY(m_UniformBuffers == nullptr, "Resources have already been allocated!");
+
+        m_NumUniformBuffers = static_cast<Uint32>(UniformBlocks.size());
+        m_NumSamplers       = static_cast<Uint32>(Samplers.size());
+        m_NumImages         = static_cast<Uint32>(Images.size());
+        m_NumStorageBlocks  = static_cast<Uint32>(StorageBlocks.size());
+
+        size_t StringPoolDataSize = 0;
+        size_t ResourceCacheSize = 0;
+        for (const auto& ub : UniformBlocks)
+        {
+            StringPoolDataSize += strlen(ub.Name) + 1;
+            ResourceCacheSize  += ub.ArraySize;
+        }
+
+        for (const auto& sam : Samplers)
+        {
+            StringPoolDataSize += strlen(sam.Name) + 1;
+            ResourceCacheSize  += sam.ArraySize;
+        }
+
+        for (const auto& img : Images)
+        {
+            StringPoolDataSize += strlen(img.Name) + 1;
+            ResourceCacheSize  += img.ArraySize;
+        }
+
+        for (const auto& sb : StorageBlocks)
+        {
+            StringPoolDataSize += strlen(sb.Name) + 1;
+            ResourceCacheSize  += sb.ArraySize;
+        }
+
+        auto AlignedStringPoolDataSize = Align(StringPoolDataSize, sizeof(void*));
+
+        size_t TotalMemorySize = 
+            m_NumUniformBuffers * sizeof(UniformBufferInfo) + 
+            m_NumSamplers       * sizeof(SamplerInfo) +
+            m_NumImages         * sizeof(ImageInfo) +
+            m_NumStorageBlocks  * sizeof(StorageBlockInfo);
+        
+        if (TotalMemorySize == 0)
+        {
+            m_UniformBuffers = nullptr;
+            m_Samplers       = nullptr;
+            m_Images         = nullptr;
+            m_StorageBlocks  = nullptr;
+            m_ResourceCache  = nullptr;
+
+            m_NumUniformBuffers = 0;
+            m_NumSamplers       = 0;
+            m_NumImages         = 0;
+            m_NumStorageBlocks  = 0;
+
+            return;
+        }
+
+        if (InitializeResourceCache)
+            TotalMemorySize += ResourceCacheSize * sizeof(RefCntAutoPtr<IDeviceObject>);
+        
+        TotalMemorySize += AlignedStringPoolDataSize * sizeof(Char);
+
+        auto& MemAllocator = GetRawAllocator();
+        void* RawMemory = ALLOCATE(MemAllocator, "Memory buffer for GLProgramResources", TotalMemorySize);
+
+        m_UniformBuffers = reinterpret_cast<UniformBufferInfo*>(RawMemory);
+        m_Samplers       = reinterpret_cast<SamplerInfo*>     (m_UniformBuffers + m_NumUniformBuffers);
+        m_Images         = reinterpret_cast<ImageInfo*>       (m_Samplers       + m_NumSamplers);
+        m_StorageBlocks  = reinterpret_cast<StorageBlockInfo*>(m_Images         + m_NumImages);
+        void* EndOfResourceData =                              m_StorageBlocks + m_NumStorageBlocks;
+        Char* StringPoolData = nullptr;
+        if (InitializeResourceCache)
+        {
+            m_ResourceCache = reinterpret_cast<RefCntAutoPtr<IDeviceObject>*>(EndOfResourceData);
+            StringPoolData = reinterpret_cast<Char*>(m_ResourceCache + ResourceCacheSize);
+            for (Uint32 res=0; res < ResourceCacheSize; ++res)
+                new (m_ResourceCache+res) RefCntAutoPtr<IDeviceObject>{};
+        }
+        else
+        {
+            m_ResourceCache = nullptr;
+            StringPoolData = reinterpret_cast<Char*>(EndOfResourceData);
+        }
+
+        m_StringPool.AssignMemory(StringPoolData, StringPoolDataSize);
+
+        Uint16 VariableIndex = 0;
+        auto* pCurrResource = m_ResourceCache;
+        for (Uint32 ub=0; ub < m_NumUniformBuffers; ++ub)
+        {
+            auto& SrcUB = UniformBlocks[ub];
+            new (m_UniformBuffers + ub) UniformBufferInfo
+            {
+                Owner,
+                m_StringPool.CopyString(SrcUB.Name),
+                SrcUB.VariableType,
+                SrcUB.ResourceType,
+                VariableIndex++,
+                SrcUB.ArraySize,
+                pCurrResource,
+                SrcUB.UBIndex
+            };
+            if (pCurrResource != nullptr)
+                pCurrResource += SrcUB.ArraySize;
+        }
+
+        for (Uint32 s=0; s < m_NumSamplers; ++s)
+        {
+            auto& SrcSam = Samplers[s];
+            new (m_Samplers + s) SamplerInfo
+            {
+                Owner,
+                m_StringPool.CopyString(SrcSam.Name),
+                SrcSam.VariableType,
+                SrcSam.ResourceType,
+                VariableIndex++,
+                SrcSam.ArraySize,
+                pCurrResource,
+                SrcSam.Location,
+                SrcSam.SamplerType,
+                SrcSam.pStaticSampler
+            };
+            if (pCurrResource != nullptr)
+                pCurrResource += SrcSam.ArraySize;
+        }
+
+        for (Uint32 img=0; img < m_NumImages; ++img)
+        {
+            auto& SrcImg = Images[img];
+            new (m_Images + img) ImageInfo
+            {
+                Owner,
+                m_StringPool.CopyString(SrcImg.Name),
+                SrcImg.VariableType,
+                SrcImg.ResourceType,
+                VariableIndex++,
+                SrcImg.ArraySize,
+                pCurrResource,
+                SrcImg.BindingPoint,
+                SrcImg.ImageType
+            };
+            if (pCurrResource != nullptr)
+                pCurrResource += SrcImg.ArraySize;
+        }
+
+        for (Uint32 sb=0; sb < m_NumStorageBlocks; ++sb)
+        {
+            auto& SrcSB = StorageBlocks[sb];
+            new (m_StorageBlocks + sb) StorageBlockInfo
+            {
+                Owner,
+                m_StringPool.CopyString(SrcSB.Name),
+                SrcSB.VariableType,
+                SrcSB.ResourceType,
+                VariableIndex++,
+                SrcSB.ArraySize,
+                pCurrResource,
+                SrcSB.Binding
+            };
+
+            if (pCurrResource != nullptr)
+                pCurrResource += SrcSB.ArraySize;
+        }
+
+        VERIFY_EXPR(VariableIndex == GetVariableCount());
+        VERIFY_EXPR(m_StringPool.GetRemainingSize() == 0);
+        VERIFY_EXPR(pCurrResource == nullptr || static_cast<size_t>(pCurrResource - m_ResourceCache) == ResourceCacheSize);
+    }
+
+    GLProgramResources::~GLProgramResources()
+    {
+        Uint32 ResourceCacheSize = 0;
+        ProcessResources(
+            [&](UniformBufferInfo& UB)
+            {
+                ResourceCacheSize += UB.ArraySize;
+                UB.~UniformBufferInfo();
+            },
+            [&](SamplerInfo& Sam)
+            {
+                ResourceCacheSize += Sam.ArraySize;
+                Sam.~SamplerInfo();
+            },
+            [&](ImageInfo& Img)
+            {
+                ResourceCacheSize += Img.ArraySize;
+                Img.~ImageInfo();
+            },
+            [&](StorageBlockInfo& SB)
+            {
+                ResourceCacheSize += SB.ArraySize;
+                SB.~StorageBlockInfo();
+            }
+        );
+
+        if (m_ResourceCache != nullptr)
+        {
+            for (Uint32 res=0; res < ResourceCacheSize; ++res)
+                m_ResourceCache[res].~RefCntAutoPtr();
+        }
+
+        void* RawMemory = m_UniformBuffers;
+        if (RawMemory != nullptr)
+        {
+            auto& MemAllocator = GetRawAllocator();
+            MemAllocator.Free(RawMemory);
+        }
+    }
+
+
+    void GLProgramResources::LoadUniforms(IObject&             Owner,
+                                          RenderDeviceGLImpl*  pDeviceGLImpl,
+                                          SHADER_TYPE          ShaderStages,
+                                          GLuint               GLProgram)
+    {
+        std::vector<UniformBufferInfo> UniformBlocks;
+        std::vector<SamplerInfo>       Samplers;
+        std::vector<ImageInfo>         Images;
+        std::vector<StorageBlockInfo>  StorageBlocks;
+        std::unordered_set<String>     NamesPool;
+
         VERIFY(GLProgram != 0, "Null GL program");
 
         m_ShaderStages = ShaderStages;
-        const Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
 
         GLint numActiveUniforms = 0;
         glGetProgramiv( GLProgram, GL_ACTIVE_UNIFORMS, &numActiveUniforms );
@@ -179,23 +416,19 @@ namespace Diligent
                     // The latter is only available in GL 4.4 and GLES 3.1
 
                     RemoveArrayBrackets(Name.data());
-                    SHADER_RESOURCE_VARIABLE_TYPE VarType = SHADER_RESOURCE_VARIABLE_TYPE_STATIC;
-
-                    RefCntAutoPtr<SamplerGLImpl> pStaticSampler;
-                    if (pResourceLayout != nullptr)
-                    {
-                        VarType = GetShaderVariableType(ShaderStages, Name.data(), *pResourceLayout);
-                        for (Uint32 s = 0; s < pResourceLayout->NumStaticSamplers; ++s)
-                        {
-                            const auto& StSam = pResourceLayout->StaticSamplers[s];
-                            if (strcmp(Name.data(), StSam.SamplerOrTextureName) == 0)
-                            {
-                                pDeviceGLImpl->CreateSampler(StSam.Desc, reinterpret_cast<ISampler**>(static_cast<SamplerGLImpl**>(&pStaticSampler)) );
-                                break;
-                            }
-                        }
-                    }
-                    m_Samplers.emplace_back( Name.data(), size, VarType, SHADER_RESOURCE_TYPE_TEXTURE_SRV, UniformLocation, dataType, pStaticSampler );
+                    
+                    Samplers.emplace_back(
+                        Owner,
+                        NamesPool.emplace(Name.data()).first->c_str(),
+                        SHADER_RESOURCE_VARIABLE_TYPE_STATIC, 
+                        SHADER_RESOURCE_TYPE_TEXTURE_SRV,
+                        Uint16{0xFFFF}, // Variable index is assigned by AllocateResources
+                        static_cast<Uint32>(size),
+                        nullptr,        // pResources
+                        UniformLocation, 
+                        dataType,
+                        nullptr
+                    );
                     break;
                 }
 
@@ -243,10 +476,17 @@ namespace Diligent
                     VERIFY( BindingPoint >= 0, "Incorrect binding point" );
 
                     RemoveArrayBrackets(Name.data());
-                    SHADER_RESOURCE_VARIABLE_TYPE VarType = (pResourceLayout != nullptr) ? 
-                        GetShaderVariableType(ShaderStages, Name.data(), *pResourceLayout) :
-                        SHADER_RESOURCE_VARIABLE_TYPE_STATIC;
-                    m_Images.emplace_back( Name.data(), size, VarType, SHADER_RESOURCE_TYPE_TEXTURE_UAV, BindingPoint, dataType );
+
+                    Images.emplace_back(
+                        Owner,
+                        NamesPool.emplace(Name.data()).first->c_str(),
+                        SHADER_RESOURCE_VARIABLE_TYPE_STATIC, 
+                        SHADER_RESOURCE_TYPE_TEXTURE_UAV,
+                        Uint16{0xFFFF}, // Variable index is assigned by AllocateResources
+                        static_cast<Uint32>(size),
+                        nullptr,        // pResources
+                        BindingPoint,
+                        dataType );
                     break;
                 }
 #endif
@@ -276,37 +516,42 @@ namespace Diligent
             
             GLint ArraySize = 1;
             auto* OpenBacketPtr = strchr(Name.data(), '[');
-            if(OpenBacketPtr != nullptr)
+            if (OpenBacketPtr != nullptr)
             {
                 auto Ind = atoi(OpenBacketPtr+1);
                 ArraySize = std::max(ArraySize, Ind+1);
                 *OpenBacketPtr = 0;
-                if (m_UniformBlocks.size() > 0)
+                if (UniformBlocks.size() > 0)
                 {
                     // Look at previous uniform block to check if it is the same array
-                    auto &LastBlock = m_UniformBlocks.back();
-                    if (LastBlock.Name.compare(Name.data()) == 0)
+                    auto& LastBlock = UniformBlocks.back();
+                    if ( strcmp(LastBlock.Name, Name.data()) == 0)
                     {
-                        ArraySize = std::max(ArraySize, static_cast<GLint>(LastBlock.pResources.size()));
-                        VERIFY(UniformBlockIndex == LastBlock.Index + Ind, "Uniform block indices are expected to be continuous");
-                        LastBlock.pResources.resize(ArraySize);
+                        ArraySize = std::max(ArraySize, static_cast<GLint>(LastBlock.ArraySize));
+                        VERIFY(UniformBlockIndex == LastBlock.UBIndex + Ind, "Uniform block indices are expected to be continuous");
+                        LastBlock.ArraySize = ArraySize;
                         continue;
                     }
                     else
                     {
 #ifdef _DEBUG
-                        for(const auto &ub : m_UniformBlocks)
-                            VERIFY(ub.Name.compare(Name.data()) != 0, "Uniform block with the name \"", ub.Name, "\" has already been enumerated");
+                        for(const auto& ub : UniformBlocks)
+                            VERIFY( strcmp(ub.Name, Name.data()) != 0, "Uniform block with the name \"", ub.Name, "\" has already been enumerated");
 #endif
                     }
                 }
             }
 
-
-            SHADER_RESOURCE_VARIABLE_TYPE VarType = (pResourceLayout != nullptr) ? 
-                GetShaderVariableType(ShaderStages, Name.data(), *pResourceLayout) :
-                SHADER_RESOURCE_VARIABLE_TYPE_STATIC;
-            m_UniformBlocks.emplace_back( Name.data(), ArraySize, VarType, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, UniformBlockIndex );
+            UniformBlocks.emplace_back(
+                Owner,
+                NamesPool.emplace(Name.data()).first->c_str(),
+                SHADER_RESOURCE_VARIABLE_TYPE_STATIC, 
+                SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,
+                Uint16{0xFFFF}, // Variable index is assigned by AllocateResources
+                static_cast<Uint32>(ArraySize),
+                nullptr,        // pResources
+                UniformBlockIndex
+            );
         }
 
 #if GL_ARB_shader_storage_buffer_object
@@ -332,33 +577,40 @@ namespace Diligent
                 auto Ind = atoi(OpenBacketPtr+1);
                 ArraySize = std::max(ArraySize, Ind+1);
                 *OpenBacketPtr = 0;
-                if (m_StorageBlocks.size() > 0)
+                if (StorageBlocks.size() > 0)
                 {
                     // Look at previous storage block to check if it is the same array
-                    auto &LastBlock = m_StorageBlocks.back();
-                    if (LastBlock.Name.compare(Name.data()) == 0)
+                    auto& LastBlock = StorageBlocks.back();
+                    if ( strcmp(LastBlock.Name, Name.data()) == 0)
                     {
-                        ArraySize = std::max(ArraySize, static_cast<GLint>(LastBlock.pResources.size()));
+                        ArraySize = std::max(ArraySize, static_cast<GLint>(LastBlock.ArraySize));
                         VERIFY(Binding == LastBlock.Binding + Ind, "Storage block bindings are expected to be continuous");
-                        LastBlock.pResources.resize(ArraySize);
+                        LastBlock.ArraySize = ArraySize;
                         continue;
                     }
                     else
                     {
 #ifdef _DEBUG
-                        for(const auto &sb : m_StorageBlocks)
-                            VERIFY(sb.Name.compare(Name.data()) != 0, "Storage block with the name \"", sb.Name, "\" has already been enumerated");
+                        for(const auto& sb : StorageBlocks)
+                            VERIFY( strcmp(sb.Name, Name.data()) != 0, "Storage block with the name \"", sb.Name, "\" has already been enumerated");
 #endif
                     }
                 }
             }
 
-            SHADER_RESOURCE_VARIABLE_TYPE VarType = (pResourceLayout != nullptr) ? 
-                GetShaderVariableType(ShaderStages, Name.data(), *pResourceLayout) :
-                SHADER_RESOURCE_VARIABLE_TYPE_STATIC;
-            m_StorageBlocks.emplace_back( Name.data(), ArraySize, VarType, SHADER_RESOURCE_TYPE_BUFFER_UAV, Binding );
+            StorageBlocks.emplace_back(
+                Owner,
+                NamesPool.emplace(Name.data()).first->c_str(),
+                SHADER_RESOURCE_VARIABLE_TYPE_STATIC, 
+                SHADER_RESOURCE_TYPE_BUFFER_UAV,
+                Uint16{0xFFFF}, // Variable index is assigned by AllocateResources
+                static_cast<Uint32>(ArraySize), 
+                nullptr,        // pResources
+                Binding
+            );
         }
 #endif
+        AllocateResources(Owner, UniformBlocks, Samplers, Images, StorageBlocks, false);
     }
 
 
@@ -369,129 +621,200 @@ namespace Diligent
                                    const SHADER_RESOURCE_VARIABLE_TYPE*  AllowedVarTypes, 
                                    Uint32                                NumAllowedTypes)
     {
+        std::vector<UniformBufferInfo> UniformBlocks;
+        std::vector<SamplerInfo>       Samplers;
+        std::vector<ImageInfo>         Images;
+        std::vector<StorageBlockInfo>  StorageBlocks;
+
         m_ShaderStages = SrcResources.m_ShaderStages;
         const Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
 
-        for (auto& ub : SrcResources.m_UniformBlocks)
+        for (Uint32 ub=0; ub < SrcResources.GetNumUniformBuffers(); ++ub)
         {
-            auto VarType = GetShaderVariableType(m_ShaderStages, ub.Name.data(), ResourceLayout);
-            if (IsAllowedType(VarType, VarType))
+            const auto& SrcUB = SrcResources.GetUniformBuffer(ub);
+            auto VarType = GetShaderVariableType(m_ShaderStages, SrcUB.Name, ResourceLayout);
+            if (IsAllowedType(VarType, AllowedTypeBits))
             {
-                m_UniformBlocks.emplace_back(ub.Name, ub.pResources.size(), ub.VarType, ub.ResourceType, ub.Index);
+                UniformBlocks.emplace_back(
+                    Owner,
+                    SrcUB.Name,
+                    VarType,
+                    SrcUB.ResourceType,
+                    Uint16{0xFFFF}, // Variable index is assigned by AllocateResources
+                    SrcUB.ArraySize,
+                    nullptr,        // pResources
+                    SrcUB.UBIndex
+                );
             }
         }
 
-        for (auto& sam : SrcResources.m_Samplers)
+        for (Uint32 sam = 0; sam < SrcResources.GetNumSamplers(); ++sam)
         {
-            auto VarType = GetShaderVariableType(m_ShaderStages, sam.Name.data(), ResourceLayout);
-            if (IsAllowedType(VarType, VarType))
+            const auto& SrcSam = SrcResources.GetSampler(sam);
+            auto VarType = GetShaderVariableType(m_ShaderStages, SrcSam.Name, ResourceLayout);
+            if (IsAllowedType(VarType, AllowedTypeBits))
             {
                 RefCntAutoPtr<ISampler> pStaticSampler;
                 for (Uint32 s = 0; s < ResourceLayout.NumStaticSamplers; ++s)
                 {
                     const auto& StSam = ResourceLayout.StaticSamplers[s];
-                    if (strcmp(sam.Name.data(), StSam.SamplerOrTextureName) == 0)
+                    if (strcmp(SrcSam.Name, StSam.SamplerOrTextureName) == 0)
                     {
                         pDeviceGLImpl->CreateSampler(StSam.Desc, &pStaticSampler);
                         break;
                     }
                 }
-                m_Samplers.emplace_back(sam.Name, sam.pResources.size(), sam.VarType, sam.ResourceType, sam.Location, sam.Type, pStaticSampler.RawPtr<SamplerGLImpl>());
+                Samplers.emplace_back(
+                    Owner,
+                    SrcSam.Name,
+                    VarType,
+                    SrcSam.ResourceType,
+                    Uint16{0xFFFF}, // Variable index is assigned by AllocateResources
+                    SrcSam.ArraySize,
+                    nullptr,        // pResources
+                    SrcSam.Location,
+                    SrcSam.SamplerType,
+                    pStaticSampler.RawPtr<SamplerGLImpl>()
+                );
             }
         }
 
-        for (auto& img : SrcResources.m_Images)
+        for (Uint32 img  = 0; img < SrcResources.GetNumImages(); ++img)
         {
-            auto VarType = GetShaderVariableType(m_ShaderStages, img.Name.data(), ResourceLayout);
-            if (IsAllowedType(VarType, VarType))
+            const auto& SrcImg = SrcResources.GetImage(img);
+            auto VarType = GetShaderVariableType(m_ShaderStages, SrcImg.Name, ResourceLayout);
+            if (IsAllowedType(VarType, AllowedTypeBits))
             {
-                m_Images.emplace_back(img.Name, img.pResources.size(), img.VarType, img.ResourceType, img.BindingPoint, img.Type);
+                Images.emplace_back(
+                    Owner,
+                    SrcImg.Name,
+                    VarType,
+                    SrcImg.ResourceType,
+                    Uint16{0xFFFF}, // Variable index is assigned by AllocateResources
+                    SrcImg.ArraySize,
+                    nullptr,        // pResources
+                    SrcImg.BindingPoint,
+                    SrcImg.ImageType
+                );
             }
         }
 
-        for (auto& sb : SrcResources.m_StorageBlocks)
+        for (Uint32 sb = 0; sb < SrcResources.GetNumStorageBlocks(); ++sb)
         {
-            auto VarType = GetShaderVariableType(m_ShaderStages, sb.Name.data(), ResourceLayout);
-            if (IsAllowedType(VarType, VarType))
+            const auto& SrcSB = SrcResources.GetStorageBlock(sb);
+            auto VarType = GetShaderVariableType(m_ShaderStages, SrcSB.Name, ResourceLayout);
+            if (IsAllowedType(VarType, AllowedTypeBits))
             {
-                m_StorageBlocks.emplace_back(sb.Name, sb.pResources.size(), sb.VarType, sb.ResourceType, sb.Binding);
+                StorageBlocks.emplace_back(
+                    Owner,
+                    SrcSB.Name,
+                    VarType,
+                    SrcSB.ResourceType,
+                    Uint16{0xFFFF}, // Variable index is assigned by AllocateResources
+                    SrcSB.ArraySize,
+                    nullptr,        // pResources
+                    SrcSB.Binding
+                );
             }
         }
 
-        InitVariables(Owner);
+        AllocateResources(Owner, UniformBlocks, Samplers, Images, StorageBlocks, true);
     }
 
-    void GLProgramResources::InitVariables(IObject& Owner)
-    {
-        // After all program resources are loaded, we can populate shader variable hash map.
-        // The map contains raw pointers, but none of the arrays will ever change.
-        auto TotalVars = m_UniformBlocks.size() + m_Samplers.size() + m_Images.size() + m_StorageBlocks.size();
-        m_VariablesByIndex.reserve(TotalVars);
-        m_VariableHash.reserve(TotalVars);
-#define STORE_SHADER_VARIABLES(ResArr)\
-        {                                                               \
-            for( auto& ProgVar : ResArr)                                \
-            {                                                           \
-                /* HashMapStringKey will make a copy of the string*/    \
-                auto it = m_VariableHash.insert( std::make_pair( Diligent::HashMapStringKey(ProgVar.Name), CGLShaderVariable(Owner, ProgVar, static_cast<Uint32>(m_VariablesByIndex.size())) ) ); \
-                VERIFY_EXPR(it.second);                                 \
-                m_VariablesByIndex.push_back(&it.first->second);        \
-            }                                                           \
-        }
 
-        STORE_SHADER_VARIABLES(m_UniformBlocks)
-        STORE_SHADER_VARIABLES(m_Samplers)
-        STORE_SHADER_VARIABLES(m_Images)
-        STORE_SHADER_VARIABLES(m_StorageBlocks)
-#undef STORE_SHADER_VARIABLES
-    }
 
-    GLProgramResources::CGLShaderVariable* GLProgramResources::GetShaderVariable( const Char* Name )
+    GLProgramResources::GLProgramVariableBase* GLProgramResources::GetVariable(const Char* Name)
     {
         // Name will be implicitly converted to HashMapStringKey without making a copy
-        auto it = m_VariableHash.find( Name );
-        if( it == m_VariableHash.end() )
+        for (Uint32 ub=0; ub < m_NumUniformBuffers; ++ub)
         {
-            return nullptr;
+            auto& UB = GetUniformBuffer(ub);
+            if (strcmp(UB.Name, Name) == 0)
+                return &UB;
         }
-        return &it->second;
+
+        for (Uint32 s=0; s < m_NumSamplers; ++s)
+        {
+            auto& Sam = GetSampler(s);
+            if (strcmp(Sam.Name, Name) == 0)
+                return &Sam;
+        }
+
+        for (Uint32 img=0; img < m_NumImages; ++img)
+        {
+            auto& Img = GetImage(img);
+            if (strcmp(Img.Name, Name) == 0)
+                return &Img;
+        }
+
+        for (Uint32 sb=0; sb < m_NumStorageBlocks; ++sb)
+        {
+            auto& SB = GetStorageBlock(sb);
+            if (strcmp(SB.Name, Name) == 0)
+                return &SB;
+        }
+
+        return nullptr;
     }
 
-    template<typename TResArrayType>
-    void BindResourcesHelper(TResArrayType &ResArr, IResourceMapping *pResourceMapping, Uint32 Flags)
+    const GLProgramResources::GLProgramVariableBase* GLProgramResources::GetVariable(Uint32 Index)const
     {
-        for (auto& res : ResArr)
+        if (Index < GetNumUniformBuffers())
+            return &GetUniformBuffer(Index);
+        else
+            Index -= GetNumUniformBuffers();
+
+        if (Index < GetNumSamplers())
+            return &GetSampler(Index);
+        else
+            Index -= GetNumSamplers();
+
+        if (Index < GetNumImages())
+            return &GetImage(Index);
+        else
+            Index -= GetNumImages();
+
+        if (Index < GetNumStorageBlocks())
+            return &GetStorageBlock(Index);
+        else
+            Index -= GetNumStorageBlocks();
+
+        return nullptr;
+    }
+
+
+    static void BindResourcesHelper(GLProgramResources::GLProgramVariableBase& res, IResourceMapping* pResourceMapping, Uint32 Flags)
+    {
+        if ( (Flags & (1 << res.VariableType)) == 0 )
+            return;
+
+        auto& Name = res.Name;
+        for(Uint32 ArrInd = 0; ArrInd < res.ArraySize; ++ArrInd)
         {
-            if ( (Flags & (1 << res.VarType)) == 0 )
-                continue;
+            auto& CurrResource = res.pResources[ArrInd];
 
-            auto &Name = res.Name;
-            for(Uint32 ArrInd = 0; ArrInd < res.pResources.size(); ++ArrInd)
+            if( (Flags & BIND_SHADER_RESOURCES_KEEP_EXISTING) != 0 && CurrResource )
+                continue; // Skip already resolved resources
+
+            RefCntAutoPtr<IDeviceObject> pNewRes;
+            pResourceMapping->GetResource( Name, static_cast<IDeviceObject**>(&pNewRes), ArrInd );
+
+            if (pNewRes != nullptr)
             {
-                auto &CurrResource = res.pResources[ArrInd];
-
-                if( (Flags & BIND_SHADER_RESOURCES_KEEP_EXISTING) && CurrResource )
-                    continue; // Skip already resolved resources
-
-                RefCntAutoPtr<IDeviceObject> pNewRes;
-                pResourceMapping->GetResource( Name.c_str(), static_cast<IDeviceObject**>(&pNewRes), ArrInd );
-
-                if (pNewRes != nullptr)
-                {
-                    if(res.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC && CurrResource !=  nullptr && CurrResource != pNewRes )
-                        LOG_ERROR_MESSAGE( "Updating binding for static variable \"", Name, "\" is invalid and may result in an undefined behavior" );
-                    CurrResource = pNewRes;
-                }
-                else
-                {
-                    if ( CurrResource == nullptr && (Flags & BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED) )
-                        LOG_ERROR_MESSAGE("Resource \"", Name, "\" is not found in the resource mapping");
-                }
+                if(res.VariableType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC && CurrResource !=  nullptr && CurrResource != pNewRes )
+                    LOG_ERROR_MESSAGE( "Updating binding for static variable \"", Name, "\" is invalid and may result in an undefined behavior" );
+                CurrResource = pNewRes;
+            }
+            else
+            {
+                if ( CurrResource == nullptr && (Flags & BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED) )
+                    LOG_ERROR_MESSAGE("Resource \"", Name, "\" is not found in the resource mapping");
             }
         }
     }
 
-    void GLProgramResources::BindResources( IResourceMapping *pResourceMapping, Uint32 Flags )
+
+    void GLProgramResources::BindResources(IResourceMapping* pResourceMapping, Uint32 Flags )
     {
         if( !pResourceMapping )
             return;
@@ -499,48 +822,63 @@ namespace Diligent
         if ( (Flags & BIND_SHADER_RESOURCES_UPDATE_ALL) == 0 )
             Flags |= BIND_SHADER_RESOURCES_UPDATE_ALL;
 
-        BindResourcesHelper( m_UniformBlocks, pResourceMapping, Flags );
-        BindResourcesHelper( m_Samplers,      pResourceMapping, Flags );
-        BindResourcesHelper( m_Images,        pResourceMapping, Flags );
-        BindResourcesHelper( m_StorageBlocks, pResourceMapping, Flags );
+        ProcessResources(
+            [&](UniformBufferInfo& UB)
+            {
+                BindResourcesHelper(UB, pResourceMapping, Flags);
+            },
+            [&](SamplerInfo& Sam)
+            {
+                BindResourcesHelper(Sam, pResourceMapping, Flags);
+            },
+            [&](ImageInfo& Img)
+            {
+                BindResourcesHelper(Img, pResourceMapping, Flags);
+            },
+            [&](StorageBlockInfo& SB)
+            {
+                BindResourcesHelper(SB, pResourceMapping, Flags);
+            }
+        );
     }
+
 
     bool GLProgramResources::IsCompatibleWith(const GLProgramResources& Res)const
     {
-        if (m_UniformBlocks.size() != Res.m_UniformBlocks.size() ||
-            m_Samplers.size()      != Res.m_Samplers.size()      ||
-            m_Images.size()        != Res.m_Images.size()        ||
-            m_StorageBlocks.size() != Res.m_StorageBlocks.size())
+        if (GetNumUniformBuffers() != Res.GetNumUniformBuffers() ||
+            GetNumSamplers()       != Res.GetNumSamplers()       ||
+            GetNumImages()         != Res.GetNumImages()         ||
+            GetNumStorageBlocks()  != Res.GetNumStorageBlocks())
             return false;
 
-        for (size_t ub = 0; ub < m_UniformBlocks.size(); ++ub)
+        for (Uint32 ub = 0; ub < GetNumUniformBuffers(); ++ub)
         {
-            const auto &UB0 = m_UniformBlocks[ub];
-            const auto &UB1 = Res.m_UniformBlocks[ub];
+            const auto& UB0 = GetUniformBuffer(ub);
+            const auto& UB1 = Res.GetUniformBuffer(ub);
             if(!UB0.IsCompatibleWith(UB1))
                 return false;
         }
 
-        for (size_t sam = 0; sam < m_Samplers.size(); ++sam)
+        for (Uint32 sam = 0; sam < GetNumSamplers(); ++sam)
         {
-            const auto &Sam0 = m_Samplers[sam];
-            const auto &Sam1 = Res.m_Samplers[sam];
+            const auto& Sam0 = GetSampler(sam);
+            const auto& Sam1 = Res.GetSampler(sam);
             if (!Sam0.IsCompatibleWith(Sam1))
                 return false;
         }
 
-        for (size_t img = 0; img < m_Images.size(); ++img)
+        for (Uint32 img = 0; img < GetNumImages(); ++img)
         {
-            const auto &Img0 = m_Images[img];
-            const auto &Img1 = Res.m_Images[img];
+            const auto& Img0 = GetImage(img);
+            const auto& Img1 = Res.GetImage(img);
             if (!Img0.IsCompatibleWith(Img1))
                 return false;
         }
 
-        for (size_t sb = 0; sb < m_StorageBlocks.size(); ++sb)
+        for (Uint32 sb = 0; sb < GetNumStorageBlocks(); ++sb)
         {
-            const auto &SB0 = m_StorageBlocks[sb];
-            const auto &SB1 = Res.m_StorageBlocks[sb];
+            const auto& SB0 = GetStorageBlock(sb);
+            const auto& SB1 = Res.GetStorageBlock(sb);
             if (!SB0.IsCompatibleWith(SB1))
                 return false;
         }
@@ -548,58 +886,68 @@ namespace Diligent
         return true;
     }
 
+
     size_t GLProgramResources::GetHash()const
     {
-        size_t hash = ComputeHash(m_UniformBlocks.size(), m_Samplers.size(), m_Images.size(), m_StorageBlocks.size());
+        size_t hash = ComputeHash(GetNumUniformBuffers(), GetNumSamplers(), GetNumImages(), GetNumStorageBlocks());
 
-        for (auto ub = m_UniformBlocks.begin(); ub != m_UniformBlocks.end(); ++ub)
-        {
-            HashCombine(hash, ub->GetHash());
-        }
-
-        for (auto sam = m_Samplers.begin(); sam != m_Samplers.end(); ++sam)
-        {
-            HashCombine(hash, sam->GetHash());
-        }
-
-        for (auto img = m_Images.begin(); img != m_Images.end(); ++img)
-        {
-            HashCombine(hash, img->GetHash());
-        }
-
-        for (auto sb = m_StorageBlocks.begin(); sb != m_StorageBlocks.end(); ++sb)
-        {
-            HashCombine(hash, sb->GetHash());
-        }
+        ProcessConstResources(
+            [&](const UniformBufferInfo& UB)
+            {
+                HashCombine(hash, UB.GetHash());
+            },
+            [&](const SamplerInfo& Sam)
+            {
+                HashCombine(hash, Sam.GetHash());
+            },
+            [&](const ImageInfo& Img)
+            {
+                HashCombine(hash, Img.GetHash());
+            },
+            [&](const StorageBlockInfo& SB)
+            {
+                HashCombine(hash, SB.GetHash());
+            }
+        );
 
         return hash;
     }
 
 #ifdef VERIFY_RESOURCE_BINDINGS
-    template<typename TResArrayType>
-    void dbgVerifyResourceBindingsHelper(TResArrayType &ResArr, const Char *VarType)
+    static void dbgVerifyResourceBindingsHelper(const GLProgramResources::GLProgramVariableBase& res, const Char* VarTypeName)
     {
-        for( auto res = ResArr.begin(); res != ResArr.end(); ++res )
+        for(Uint32 ArrInd = 0; ArrInd < res.ArraySize; ++ArrInd)
         {
-            for(Uint32 ArrInd = 0; ArrInd < res->pResources.size(); ++ArrInd)
+            if( !res.pResources[ArrInd] )
             {
-                if( !res->pResources[ArrInd] )
-                {
-                    if( res->pResources.size() > 1)
-                        LOG_ERROR_MESSAGE( "No resource is bound to ", VarType, " variable \"", res->Name, "[", ArrInd, "]\"" );
-                    else
-                        LOG_ERROR_MESSAGE( "No resource is bound to ", VarType, " variable \"", res->Name, "\"" );
-                }
+                if( res.ArraySize > 1)
+                    LOG_ERROR_MESSAGE( "No resource is bound to ", VarTypeName, " variable \"", res.Name, "[", ArrInd, "]\"" );
+                else
+                    LOG_ERROR_MESSAGE( "No resource is bound to ", VarTypeName, " variable \"", res.Name, "\"" );
             }
         }
     }
 
-    void GLProgramResources::dbgVerifyResourceBindings()
+    void GLProgramResources::dbgVerifyResourceBindings()const
     {
-        dbgVerifyResourceBindingsHelper( m_UniformBlocks, "uniform block" );
-        dbgVerifyResourceBindingsHelper( m_Samplers,      "sampler" );
-        dbgVerifyResourceBindingsHelper( m_Images,        "image" );
-        dbgVerifyResourceBindingsHelper( m_StorageBlocks, "shader storage block" );
+        ProcessConstResources(
+            [&](const UniformBufferInfo& UB)
+            {
+                dbgVerifyResourceBindingsHelper(UB, "uniform block");
+            },
+            [&](const SamplerInfo& Sam)
+            {
+                dbgVerifyResourceBindingsHelper(Sam, "sampler");
+            },
+            [&](const ImageInfo& Img)
+            {
+                dbgVerifyResourceBindingsHelper(Img, "image");
+            },
+            [&](const StorageBlockInfo& SB)
+            {
+                dbgVerifyResourceBindingsHelper(SB, "shader storage block");
+            }
+        );
     }
 #endif
 

@@ -116,7 +116,7 @@ void PipelineStateGLImpl::LinkGLProgram(bool bIsProgramPipelineSupported)
         }
 
         auto pDeviceGL = GetDevice();
-        m_GLProgram.InitResources(pDeviceGL, ShaderStages, *this, &m_Desc.ResourceLayout, nullptr, 0);
+        m_GLProgram.InitResources(pDeviceGL, ShaderStages, *this);
         
         m_StaticResources.resize(1);
         const SHADER_RESOURCE_VARIABLE_TYPE StaticVars[] = {SHADER_RESOURCE_VARIABLE_TYPE_STATIC};
@@ -212,12 +212,12 @@ IShaderResourceVariable* PipelineStateGLImpl::GetStaticShaderVariable(SHADER_TYP
 {
     if (m_GLProgram)
     {
-        return m_StaticResources[0].GetShaderVariable(Name);
+        return m_StaticResources[0].GetVariable(Name);
     }
     else
     {
         const auto LayoutInd = m_ResourceLayoutIndex[GetShaderTypeIndex(ShaderType)];
-        return LayoutInd >= 0 ? m_StaticResources[LayoutInd].GetShaderVariable(Name) : nullptr;
+        return LayoutInd >= 0 ? m_StaticResources[LayoutInd].GetVariable(Name) : nullptr;
     }
 }
 
@@ -225,12 +225,12 @@ IShaderResourceVariable* PipelineStateGLImpl::GetStaticShaderVariable(SHADER_TYP
 {
     if (m_GLProgram)
     {
-        return m_StaticResources[0].GetShaderVariable(Index);
+        return m_StaticResources[0].GetVariable(Index);
     }
     else
     {
         const auto LayoutInd = m_ResourceLayoutIndex[GetShaderTypeIndex(ShaderType)];
-        return LayoutInd >= 0 ? m_StaticResources[LayoutInd].GetShaderVariable(Index) : nullptr;
+        return LayoutInd >= 0 ? m_StaticResources[LayoutInd].GetVariable(Index) : nullptr;
     }
 }
 

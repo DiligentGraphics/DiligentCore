@@ -389,7 +389,7 @@ namespace Diligent
 #endif
 
             // When program pipelines are not supported, all resources are dynamic resources
-            for (int BindDynamicResources = (ProgramPipelineSupported ? 0 : 1); BindDynamicResources < (pShaderResBindingGL ? 2 : 1); ++BindDynamicResources)
+            for (int BindDynamicResources = 0; BindDynamicResources < (pShaderResBindingGL ? 2 : 1); ++BindDynamicResources)
             {
                 GLProgramResources& ProgResources = BindDynamicResources ? *pDynamicResources : m_pPipelineState->GetStaticResources(ProgNum);
 
@@ -398,12 +398,12 @@ namespace Diligent
 #endif
                 
                 GLuint GLProgID = GLProgramObj;
-                auto& UniformBlocks = ProgResources.GetUniformBlocks();
-                for (auto it = UniformBlocks.begin(); it != UniformBlocks.end(); ++it)
+                for (Uint32 ub = 0; ub < ProgResources.GetNumUniformBuffers(); ++ub)
                 {
-                    for(Uint32 ArrInd = 0; ArrInd < it->pResources.size(); ++ArrInd)
+                    auto& UB = ProgResources.GetUniformBuffer(ub);
+                    for(Uint32 ArrInd = 0; ArrInd < UB.ArraySize; ++ArrInd)
                     {
-                        auto& Resource = it->pResources[ArrInd];
+                        auto& Resource = UB.pResources[ArrInd];
                         if (Resource)
                         {
                             auto* pBufferOGL = Resource.RawPtr<BufferGLImpl>();
@@ -416,7 +416,7 @@ namespace Diligent
                             CHECK_GL_ERROR("Failed to bind uniform buffer");
                             //glBindBufferRange(GL_UNIFORM_BUFFER, it->Index, pBufferOGL->m_GlBuffer, 0, pBufferOGL->GetDesc().uiSizeInBytes);
 
-                            glUniformBlockBinding(GLProgID, it->Index + ArrInd, UniformBuffBindPoint);
+                            glUniformBlockBinding(GLProgID, UB.UBIndex + ArrInd, UniformBuffBindPoint);
                             CHECK_GL_ERROR("glUniformBlockBinding() failed");
 
                             ++UniformBuffBindPoint;
@@ -425,28 +425,28 @@ namespace Diligent
                         {
 #define LOG_MISSING_BINDING(VarType, Res, ArrInd)\
                             do{                                      \
-                                if(Res->pResources.size()>1)         \
-                                    LOG_ERROR_MESSAGE( "No ", VarType, " is bound to '", Res->Name, '[', ArrInd, "]' variable in shader '", pShaderGL->GetDesc().Name, "'" );\
+                                if(Res.ArraySize > 1)         \
+                                    LOG_ERROR_MESSAGE( "No ", VarType, " is bound to '", Res.Name, '[', ArrInd, "]' variable in shader '", pShaderGL->GetDesc().Name, "'" );\
                                 else                                 \
-                                    LOG_ERROR_MESSAGE( "No ", VarType, " is bound to '", Res->Name, "' variable in shader '", pShaderGL->GetDesc().Name, "'" );\
+                                    LOG_ERROR_MESSAGE( "No ", VarType, " is bound to '", Res.Name, "' variable in shader '", pShaderGL->GetDesc().Name, "'" );\
                             }while(false)
 
-                            LOG_MISSING_BINDING("uniform buffer", it, ArrInd);
+                            LOG_MISSING_BINDING("uniform buffer", UB, ArrInd);
                         }
                     }
                 }
 
-                auto& Samplers = ProgResources.GetSamplers();
-                for (auto it = Samplers.begin(); it != Samplers.end(); ++it)
+                for (Uint32 sam = 0; sam < ProgResources.GetNumSamplers(); ++sam)
                 {
-                    for (Uint32 ArrInd = 0; ArrInd < it->pResources.size(); ++ArrInd)
+                    auto& Sam = ProgResources.GetSampler(sam);
+                    for (Uint32 ArrInd = 0; ArrInd < Sam.ArraySize; ++ArrInd)
                     {
-                        auto& Resource = it->pResources[ArrInd];
+                        auto& Resource = Sam.pResources[ArrInd];
                         if (Resource)
                         {
-                            if (it->Type == GL_SAMPLER_BUFFER ||
-                                it->Type == GL_INT_SAMPLER_BUFFER ||
-                                it->Type == GL_UNSIGNED_INT_SAMPLER_BUFFER)
+                            if (Sam.SamplerType == GL_SAMPLER_BUFFER ||
+                                Sam.SamplerType == GL_INT_SAMPLER_BUFFER ||
+                                Sam.SamplerType == GL_UNSIGNED_INT_SAMPLER_BUFFER)
                             {
                                 auto* pBufViewOGL = Resource.RawPtr<BufferViewGLImpl>();
                                 auto* pBuffer = pBufViewOGL->GetBuffer();
@@ -473,9 +473,9 @@ namespace Diligent
                                     m_ContextState);
 
                                 SamplerGLImpl* pSamplerGL = nullptr;
-                                if (it->pStaticSampler)
+                                if (Sam.pStaticSampler)
                                 {
-                                    pSamplerGL = it->pStaticSampler;
+                                    pSamplerGL = Sam.pStaticSampler;
                                 }
                                 else
                                 {
@@ -494,12 +494,12 @@ namespace Diligent
                             if (ProgramPipelineSupported)
                             {
                                 // glProgramUniform1i does not require program to be bound to the pipeline
-                                glProgramUniform1i( GLProgramObj, it->Location + ArrInd, TextureIndex );
+                                glProgramUniform1i( GLProgramObj, Sam.Location + ArrInd, TextureIndex );
                             }
                             else
                             {
                                 // glUniform1i requires program to be bound to the pipeline
-                                glUniform1i(it->Location + ArrInd, TextureIndex);
+                                glUniform1i(Sam.Location + ArrInd, TextureIndex);
                             }
                             CHECK_GL_ERROR("Failed to bind sampler uniform to texture slot");
 
@@ -507,18 +507,18 @@ namespace Diligent
                         }
                         else
                         {
-                            LOG_MISSING_BINDING("texture sampler", it, ArrInd);
+                            LOG_MISSING_BINDING("texture sampler", Sam, ArrInd);
                         }
                     }
                 }
 
 #if GL_ARB_shader_image_load_store
-                auto& Images = ProgResources.GetImages();
-                for (auto it = Images.begin(); it != Images.end(); ++it)
+                for (Uint32 img = 0; img < ProgResources.GetNumImages(); ++img)
                 {
-                    for (Uint32 ArrInd = 0; ArrInd < it->pResources.size(); ++ArrInd)
+                    auto& Img = ProgResources.GetImage(img);
+                    for (Uint32 ArrInd = 0; ArrInd < Img.ArraySize; ++ArrInd)
                     {
-                        auto& Resource = it->pResources[ArrInd];
+                        auto& Resource = Img.pResources[ArrInd];
                         if (Resource)
                         {
                             auto* pTexViewOGL = Resource.RawPtr<TextureViewGLImpl>();
@@ -566,23 +566,23 @@ namespace Diligent
                             // That means that if an integer texture is being bound, its 
                             // GL_TEXTURE_MIN_FILTER and GL_TEXTURE_MAG_FILTER must be NEAREST,
                             // otherwise it will be incomplete
-                            m_ContextState.BindImage(it->BindingPoint + ArrInd, pTexViewOGL, ViewDesc.MostDetailedMip, Layered, Layer, GLAccess, GlTexFormat);
+                            m_ContextState.BindImage(Img.BindingPoint + ArrInd, pTexViewOGL, ViewDesc.MostDetailedMip, Layered, Layer, GLAccess, GlTexFormat);
                         }
                         else
                         {
-                            LOG_MISSING_BINDING("image", it, ArrInd);
+                            LOG_MISSING_BINDING("image", Img, ArrInd);
                         }
                     }
                 }
 #endif
 
 #if GL_ARB_shader_storage_buffer_object
-                auto& StorageBlocks = ProgResources.GetStorageBlocks();
-                for (auto it = StorageBlocks.begin(); it != StorageBlocks.end(); ++it)
+                for (Uint32 sb=0; sb < ProgResources.GetNumStorageBlocks(); ++sb)
                 {
-                    for (Uint32 ArrInd = 0; ArrInd < it->pResources.size(); ++ArrInd)
+                    auto& SB = ProgResources.GetStorageBlock(sb);
+                    for (Uint32 ArrInd = 0; ArrInd < SB.ArraySize; ++ArrInd)
                     {
-                        auto& Resource = it->pResources[ArrInd];
+                        auto& Resource = SB.pResources[ArrInd];
                         if (Resource)
                         {
                             auto* pBufferViewOGL = Resource.RawPtr<BufferViewGLImpl>();
@@ -595,7 +595,7 @@ namespace Diligent
                                                               // will reflect writes prior to the barrier
                                 m_ContextState);
 
-                            glBindBufferRange(GL_SHADER_STORAGE_BUFFER, it->Binding + ArrInd, pBufferOGL->m_GlBuffer, ViewDesc.ByteOffset, ViewDesc.ByteWidth);
+                            glBindBufferRange(GL_SHADER_STORAGE_BUFFER, SB.Binding + ArrInd, pBufferOGL->m_GlBuffer, ViewDesc.ByteOffset, ViewDesc.ByteWidth);
                             CHECK_GL_ERROR("Failed to bind shader storage buffer");
 
                             if (ViewDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS)
@@ -603,7 +603,7 @@ namespace Diligent
                         }
                         else
                         {
-                            LOG_MISSING_BINDING("shader storage block", it, ArrInd);
+                            LOG_MISSING_BINDING("shader storage block", SB, ArrInd);
                         }
                     }
                 }

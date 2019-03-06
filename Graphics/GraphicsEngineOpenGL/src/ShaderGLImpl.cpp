@@ -160,7 +160,7 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*      pRefCounters,
         // boolean status bit DELETE_STATUS is set to true
         ShaderObj.Release();
 
-        m_GlProgObj.InitResources(pDeviceGL, m_Desc.ShaderType, *this, nullptr, nullptr, 0);
+        m_GlProgObj.InitResources(pDeviceGL, m_Desc.ShaderType, *this);
     }
     else
     {
@@ -194,7 +194,7 @@ ShaderResourceDesc ShaderGLImpl::GetResource(Uint32 Index)const
     if (m_GlProgObj)
     {
         DEV_CHECK_ERR(Index < GetResourceCount(), "Index is out of range");
-        ResourceDesc = m_GlProgObj.GetResources().GetShaderVariable(Index)->GetResourceDesc();
+        ResourceDesc = m_GlProgObj.GetResources().GetVariable(Index)->GetResourceDesc();
     }
     else
     {
