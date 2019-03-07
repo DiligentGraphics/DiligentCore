@@ -319,7 +319,6 @@ namespace Diligent
         // Do not initialize array with zeroes for performance reasons
         D3D12_VERTEX_BUFFER_VIEW VBViews[MaxBufferSlots];// = {}
         VERIFY( m_NumVertexStreams <= MaxBufferSlots, "Too many buffers are being set" );
-        const auto *Strides = m_pPipelineState->GetBufferStrides();
         DEV_CHECK_ERR( m_NumVertexStreams >= m_pPipelineState->GetNumBufferSlotsUsed(), "Currently bound pipeline state '", m_pPipelineState->GetDesc().Name, "' expects ", m_pPipelineState->GetNumBufferSlotsUsed(), " input buffer slots, but only ", m_NumVertexStreams, " is bound");
         bool DynamicBufferPresent = false;
         for( UINT Buff = 0; Buff < m_NumVertexStreams; ++Buff )
@@ -342,7 +341,7 @@ namespace Diligent
                 //GraphicsCtx.AddReferencedObject(pd3d12Resource);
 
                 VBView.BufferLocation = pBufferD3D12->GetGPUAddress(this) + CurrStream.Offset;
-                VBView.StrideInBytes = Strides[Buff];
+                VBView.StrideInBytes = m_pPipelineState->GetBufferStride(Buff);
                 // Note that for a dynamic buffer, what we use here is the size of the buffer itself, not the upload heap buffer!
                 VBView.SizeInBytes = pBufferD3D12->GetDesc().uiSizeInBytes - CurrStream.Offset;
             }

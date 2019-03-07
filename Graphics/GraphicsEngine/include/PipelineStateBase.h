@@ -176,12 +176,13 @@ public:
         for (size_t Elem = 0; Elem < InputLayout.NumElements; ++Elem)
             pLayoutElements[Elem] = InputLayout.LayoutElements[Elem];
         
-        // Set all strides to an invalid value because an application may want to use 0 stride
-        for (auto& Stride : m_Strides)
-            Stride = LayoutElement::AutoStride;
 
         // Correct description and compute offsets and tight strides
-        decltype(m_Strides) TightStrides = {};
+        std::array<Uint32, MaxBufferSlots> Strides, TightStrides = {};
+        // Set all strides to an invalid value because an application may want to use 0 stride
+        for (auto& Stride : Strides)
+            Stride = LayoutElement::AutoStride;
+
         for (Uint32 i=0; i < InputLayout.NumElements; ++i)
         {
             auto& LayoutElem = pLayoutElements[i];
@@ -190,9 +191,9 @@ public:
                 LayoutElem.IsNormalized = false; // Floating point values cannot be normalized
 
             auto BuffSlot = LayoutElem.BufferSlot;
-            if (BuffSlot >= m_Strides.size())
+            if (BuffSlot >= Strides.size())
             {
-                UNEXPECTED("Buffer slot (", BuffSlot, ") exceeds maximum allowed value (", m_Strides.size()-1, ")");
+                UNEXPECTED("Buffer slot (", BuffSlot, ") exceeds maximum allowed value (", Strides.size()-1, ")");
                 continue;
             }
             m_BufferSlotsUsed = std::max(m_BufferSlotsUsed, BuffSlot + 1);
@@ -208,14 +209,14 @@ public:
             if (LayoutElem.Stride != LayoutElement::AutoStride)
             {
                 // Verify that the value is consistent with the previously specified stride, if any
-                if (m_Strides[BuffSlot] != LayoutElement::AutoStride && m_Strides[BuffSlot] != LayoutElem.Stride)
+                if (Strides[BuffSlot] != LayoutElement::AutoStride && Strides[BuffSlot] != LayoutElem.Stride)
                 {
                     LOG_ERROR_MESSAGE("Inconsistent strides are specified for buffer slot ", BuffSlot, ". "
                                       "Input element at index ", LayoutElem.InputIndex, " explicitly specifies stride ", LayoutElem.Stride, ", "
-                                      "while current value is ", m_Strides[BuffSlot], ". Specify consistent strides or use "
+                                      "while current value is ", Strides[BuffSlot], ". Specify consistent strides or use "
                                       "LayoutElement::AutoStride to allow the engine compute strides automatically.");
                 }
-                m_Strides[BuffSlot] = LayoutElem.Stride;
+                Strides[BuffSlot] = LayoutElem.Stride;
             }
 
             CurrAutoStride = std::max(CurrAutoStride, LayoutElem.RelativeOffset + LayoutElem.NumComponents * GetValueSize(LayoutElem.ValueType));
@@ -227,26 +228,33 @@ public:
 
             auto BuffSlot = LayoutElem.BufferSlot;
             // If no input elements explicitly specified stride for this buffer slot, use automatic stride
-            if (m_Strides[BuffSlot] == LayoutElement::AutoStride)
+            if (Strides[BuffSlot] == LayoutElement::AutoStride)
             {
-                m_Strides[BuffSlot] = TightStrides[BuffSlot];
+                Strides[BuffSlot] = TightStrides[BuffSlot];
             }
             else
             {
-                if (m_Strides[BuffSlot] < TightStrides[BuffSlot])
+                if (Strides[BuffSlot] < TightStrides[BuffSlot])
                 {
-                    LOG_ERROR_MESSAGE("Stride ", m_Strides[BuffSlot], " explicitly specified for slot ", BuffSlot, " is smaller than the "
+                    LOG_ERROR_MESSAGE("Stride ", Strides[BuffSlot], " explicitly specified for slot ", BuffSlot, " is smaller than the "
                                       "minimum stride ", TightStrides[BuffSlot], " required to accomodate all input elements.");
                 }
             }
             if (LayoutElem.Stride == LayoutElement::AutoStride)
-                LayoutElem.Stride = m_Strides[BuffSlot];
+                LayoutElem.Stride = Strides[BuffSlot];
         }
-        // Set strides for all unused slots to 0
-        for (auto& Stride : m_Strides)
+
+        if (m_BufferSlotsUsed > 0)
         {
-            if (Stride == LayoutElement::AutoStride)
-                Stride = 0;
+            auto* pStridesRawMem = ALLOCATE(GetRawAllocator(), "Raw memory for buffer strides", sizeof(Uint32) * m_BufferSlotsUsed);
+            m_pStrides = reinterpret_cast<Uint32*>(pStridesRawMem);
+
+            // Set strides for all unused slots to 0
+            for (Uint32 i=0; i < m_BufferSlotsUsed; ++i)
+            {
+                auto Stride = Strides[i];
+                m_pStrides[i] = Stride != LayoutElement::AutoStride ? Stride : 0;
+            }
         }
 
         Uint64 DeviceQueuesMask = pDevice->GetCommandQueueMask();
@@ -281,13 +289,15 @@ public:
             RawAllocator.Free(const_cast<StaticSamplerDesc*>(this->m_Desc.ResourceLayout.StaticSamplers));
         if (this->m_Desc.GraphicsPipeline.InputLayout.LayoutElements != nullptr)
             RawAllocator.Free(const_cast<LayoutElement*>(this->m_Desc.GraphicsPipeline.InputLayout.LayoutElements));
+        if (m_pStrides != nullptr)
+            RawAllocator.Free(m_pStrides);
     }
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE( IID_PipelineState, TDeviceObjectBase )
 
-    virtual const Uint32* GetBufferStrides()const
+    Uint32 GetBufferStride(Uint32 BufferSlot)const
     { 
-        return m_Strides.data();
+        return BufferSlot < m_BufferSlotsUsed ? m_pStrides[BufferSlot] : 0;
     }
 
     Uint32 GetNumBufferSlotsUsed()const
@@ -329,11 +339,7 @@ protected:
 
     Uint32 m_BufferSlotsUsed = 0;
     Uint32 m_NumShaders      = 0;      ///< Number of shaders that this PSO uses
-
-    // The size of this array must be equal to the
-    // maximum number of buffer slots, because a layout 
-    // element can refer to any input slot
-    std::array<Uint32, MaxBufferSlots> m_Strides = {}; // TODO: rework this
+    Uint32* m_pStrides       = nullptr;
 
     StringPool m_StringPool;
     RefCntAutoPtr<IShader> m_pVS; ///< Strong reference to the vertex shader
