@@ -343,7 +343,7 @@ ShaderResourceDesc ShaderResources::GetShaderResourceDesc(Uint32 Index)const
     ShaderResourceDesc ResourceDesc;
     if (Index < m_TotalResources)
     {
-        const auto& Res = GetResAttribs(Index, 0, m_TotalResources);
+        const auto& Res = GetResAttribs(Index, m_TotalResources, 0);
         ResourceDesc.Name      = Res.Name;
         ResourceDesc.ArraySize = Res.BindCount;
         switch(Res.GetInputType())
