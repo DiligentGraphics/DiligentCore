@@ -167,21 +167,21 @@ inline TEXTURE_FORMAT GetDefaultTextureViewFormat(const TextureDesc &TexDesc, TE
 
 /// \param [in] ViewType - Texture view type.
 /// \return Literal name of the texture view type.
-const Char *GetTexViewTypeLiteralName(TEXTURE_VIEW_TYPE ViewType);
+const Char* GetTexViewTypeLiteralName(TEXTURE_VIEW_TYPE ViewType);
 
 /// Returns the literal name of a buffer view type. For instance,
 /// for an unordered access view, "BUFFER_VIEW_UNORDERED_ACCESS" will be returned.
 
 /// \param [in] ViewType - Buffer view type.
 /// \return Literal name of the buffer view type.
-const Char *GetBufferViewTypeLiteralName(BUFFER_VIEW_TYPE ViewType);
+const Char* GetBufferViewTypeLiteralName(BUFFER_VIEW_TYPE ViewType);
 
 /// Returns the literal name of a shader type. For instance,
 /// for a pixel shader, "SHADER_TYPE_PIXEL" will be returned.
 
 /// \param [in] ShaderType - Shader type.
 /// \return Literal name of the shader type.
-const Char *GetShaderTypeLiteralName(SHADER_TYPE ShaderType);
+const Char* GetShaderTypeLiteralName(SHADER_TYPE ShaderType);
 
 /// \param [in] ShaderStages - Shader stages.
 /// \return The string representing the shader stages. For example, 
@@ -197,7 +197,16 @@ String GetShaderStagesString(SHADER_TYPE ShaderStages);
 /// \param [in] VarType - Variable type.
 /// \param [in] bGetFullName - Whether to return string representation of the enum value
 /// \return Literal name of the shader variable type.
-const Char *GetShaderVariableTypeLiteralName(SHADER_RESOURCE_VARIABLE_TYPE VarType, bool bGetFullName = false);
+const Char* GetShaderVariableTypeLiteralName(SHADER_RESOURCE_VARIABLE_TYPE VarType, bool bGetFullName = false);
+
+/// Returns the literal name of a shader resource type. For instance,
+/// for SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, if bGetFullName == true, "SHADER_RESOURCE_TYPE_CONSTANT_BUFFER" will be returned;
+/// if bGetFullName == false, "constant buffer" will be returned
+
+/// \param [in] ResourceType - Resource type.
+/// \param [in] bGetFullName - Whether to return string representation of the enum value
+/// \return Literal name of the shader resource type.
+const Char* GetShaderResourceTypeLiteralName(SHADER_RESOURCE_TYPE ResourceType, bool bGetFullName = false);
 
 /// Overloaded function that returns the literal name of a texture view type.
 /// see GetTexViewTypeLiteralName().

@@ -391,9 +391,9 @@ const TextureFormatAttribs& GetTextureFormatAttribs( TEXTURE_FORMAT Format )
 }
 
 
-const Char *GetTexViewTypeLiteralName( TEXTURE_VIEW_TYPE ViewType )
+const Char* GetTexViewTypeLiteralName( TEXTURE_VIEW_TYPE ViewType )
 {
-    static const Char *TexViewLiteralNames[TEXTURE_VIEW_NUM_VIEWS] = {};
+    static const Char* TexViewLiteralNames[TEXTURE_VIEW_NUM_VIEWS] = {};
     static bool bIsInit = false;
     // Note that this implementation is thread-safe
     // Even if two threads try to call the function at the same time,
@@ -424,9 +424,9 @@ const Char *GetTexViewTypeLiteralName( TEXTURE_VIEW_TYPE ViewType )
     }
 }
 
-const Char *GetBufferViewTypeLiteralName( BUFFER_VIEW_TYPE ViewType )
+const Char* GetBufferViewTypeLiteralName( BUFFER_VIEW_TYPE ViewType )
 {
-    static const Char *BuffViewLiteralNames[BUFFER_VIEW_NUM_VIEWS] = {};
+    static const Char* BuffViewLiteralNames[BUFFER_VIEW_NUM_VIEWS] = {};
     static bool bIsInit = false;
     // Note that this implementation is thread-safe
     // Even if two threads try to call the function at the same time,
@@ -455,7 +455,7 @@ const Char *GetBufferViewTypeLiteralName( BUFFER_VIEW_TYPE ViewType )
     }
 }
 
-const Char *GetShaderTypeLiteralName( SHADER_TYPE ShaderType )
+const Char* GetShaderTypeLiteralName( SHADER_TYPE ShaderType )
 {
     switch( ShaderType )
     {
@@ -493,7 +493,7 @@ String GetShaderStagesString(SHADER_TYPE ShaderStages)
     return StagesStr;
 }
 
-const Char *GetShaderVariableTypeLiteralName(SHADER_RESOURCE_VARIABLE_TYPE VarType, bool bGetFullName)
+const Char* GetShaderVariableTypeLiteralName(SHADER_RESOURCE_VARIABLE_TYPE VarType, bool bGetFullName)
 {
     static const Char* ShortVarTypeNameStrings[SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES];
     static const Char* FullVarTypeNameStrings[SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES];
@@ -517,6 +517,24 @@ const Char *GetShaderVariableTypeLiteralName(SHADER_RESOURCE_VARIABLE_TYPE VarTy
     {
         UNEXPECTED("Unknow shader variable type");
         return "unknow";
+    }
+}
+
+
+const Char* GetShaderResourceTypeLiteralName(SHADER_RESOURCE_TYPE ResourceType, bool bGetFullName)
+{
+    switch(ResourceType)
+    {
+        case SHADER_RESOURCE_TYPE_UNKNOWN:         return bGetFullName ?  "SHADER_RESOURCE_TYPE_UNKNOWN"         : "unknown";
+        case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER: return bGetFullName ?  "SHADER_RESOURCE_TYPE_CONSTANT_BUFFER" : "constant buffer";
+        case SHADER_RESOURCE_TYPE_TEXTURE_SRV:     return bGetFullName ?  "SHADER_RESOURCE_TYPE_TEXTURE_SRV"     : "texture SRV";
+        case SHADER_RESOURCE_TYPE_BUFFER_SRV:      return bGetFullName ?  "SHADER_RESOURCE_TYPE_BUFFER_SRV"      : "buffer SRV";
+        case SHADER_RESOURCE_TYPE_TEXTURE_UAV:     return bGetFullName ?  "SHADER_RESOURCE_TYPE_TEXTURE_UAV"     : "texture UAV";
+        case SHADER_RESOURCE_TYPE_BUFFER_UAV:      return bGetFullName ?  "SHADER_RESOURCE_TYPE_BUFFER_UAV"      : "buffer UAV";
+        case SHADER_RESOURCE_TYPE_SAMPLER:         return bGetFullName ?  "SHADER_RESOURCE_TYPE_SAMPLER"         : "sampler";
+        default:
+            UNEXPECTED("Unexepcted resource type (", Uint32{ResourceType}, ")");
+            return "UNKNOWN";
     }
 }
 
