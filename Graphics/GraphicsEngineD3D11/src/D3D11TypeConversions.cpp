@@ -72,10 +72,10 @@ void BlendStateDesc_To_D3D11_BLEND_DESC(const BlendStateDesc& BSDesc, D3D11_BLEN
     }
 }
 
-void LayoutElements_To_D3D11_INPUT_ELEMENT_DESCs(const std::vector<LayoutElement, STDAllocatorRawMem<LayoutElement> >& LayoutElements, 
+void LayoutElements_To_D3D11_INPUT_ELEMENT_DESCs(const InputLayoutDesc& InputLayout, 
                                                  std::vector<D3D11_INPUT_ELEMENT_DESC, STDAllocatorRawMem<D3D11_INPUT_ELEMENT_DESC> >& D3D11InputElements)
 {
-    LayoutElements_To_D3D_INPUT_ELEMENT_DESCs<D3D11_INPUT_ELEMENT_DESC>(LayoutElements, D3D11InputElements);
+    LayoutElements_To_D3D_INPUT_ELEMENT_DESCs<D3D11_INPUT_ELEMENT_DESC>(InputLayout, D3D11InputElements);
 }
 
 D3D11_PRIMITIVE_TOPOLOGY TopologyToD3D11Topology(PRIMITIVE_TOPOLOGY Topology)

@@ -218,9 +218,10 @@ PipelineStateD3D12Impl :: PipelineStateD3D12Impl(IReferenceCounters*      pRefCo
         DepthStencilStateDesc_To_D3D12_DEPTH_STENCIL_DESC(GraphicsPipeline.DepthStencilDesc, d3d12PSODesc.DepthStencilState);
 
         std::vector<D3D12_INPUT_ELEMENT_DESC, STDAllocatorRawMem<D3D12_INPUT_ELEMENT_DESC>> d312InputElements( STD_ALLOCATOR_RAW_MEM(D3D12_INPUT_ELEMENT_DESC, GetRawAllocator(), "Allocator for vector<D3D12_INPUT_ELEMENT_DESC>") );
-        if (m_LayoutElements.size() > 0)
+        const auto& InputLayout = m_Desc.GraphicsPipeline.InputLayout;
+        if (InputLayout.NumElements > 0) 
         {
-            LayoutElements_To_D3D12_INPUT_ELEMENT_DESCs(m_LayoutElements, d312InputElements);
+            LayoutElements_To_D3D12_INPUT_ELEMENT_DESCs(InputLayout, d312InputElements);
             d3d12PSODesc.InputLayout.NumElements = static_cast<UINT>(d312InputElements.size());
             d3d12PSODesc.InputLayout.pInputElementDescs = d312InputElements.data();
         }

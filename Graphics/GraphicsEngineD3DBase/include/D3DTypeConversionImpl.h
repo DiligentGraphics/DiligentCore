@@ -370,14 +370,14 @@ namespace Diligent
 
 
     template<typename D3D_INPUT_ELEMENT_DESC>
-    void LayoutElements_To_D3D_INPUT_ELEMENT_DESCs(const std::vector<LayoutElement, STDAllocatorRawMem<LayoutElement> > &LayoutElements, std::vector<D3D_INPUT_ELEMENT_DESC, STDAllocatorRawMem<D3D_INPUT_ELEMENT_DESC>> &D3DInputElements)
+    void LayoutElements_To_D3D_INPUT_ELEMENT_DESCs(const InputLayoutDesc& InputLayout, 
+                                                   std::vector<D3D_INPUT_ELEMENT_DESC, STDAllocatorRawMem<D3D_INPUT_ELEMENT_DESC>> &D3DInputElements)
     {
         // D3D12_INPUT_ELEMENT_DESC and D3D11_INPUT_ELEMENT_DESC are identical
-        auto NumElements = LayoutElements.size();
-        D3DInputElements.resize(NumElements);
-        for(Uint32 iElem=0; iElem < NumElements; ++iElem)
+        D3DInputElements.resize(InputLayout.NumElements);
+        for(Uint32 iElem=0; iElem < InputLayout.NumElements; ++iElem)
         {
-            const auto &CurrElem = LayoutElements[iElem];
+            const auto &CurrElem = InputLayout.LayoutElements[iElem];
             auto &D3DElem = D3DInputElements[iElem];
             D3DElem.SemanticName = "ATTRIB";
             D3DElem.SemanticIndex = CurrElem.InputIndex;

@@ -63,7 +63,6 @@ public:
                        const PipelineStateDesc& PSODesc,
                        bool                     bIsDeviceInternal = false ) :
         TDeviceObjectBase (pRefCounters, pDevice, PSODesc, bIsDeviceInternal),
-        m_LayoutElements (PSODesc.GraphicsPipeline.InputLayout.NumElements, LayoutElement{}, STD_ALLOCATOR_RAW_MEM(LayoutElement, GetRawAllocator(), "Allocator for vector<LayoutElement>")),
         m_NumShaders(0)
     {
         const auto& SrcLayout = PSODesc.ResourceLayout;
@@ -167,9 +166,15 @@ public:
         VERIFY(m_NumShaders > 0, "There must be at least one shader in the Pipeline State");
 
         const auto& InputLayout = PSODesc.GraphicsPipeline.InputLayout;
+        LayoutElement* pLayoutElements = nullptr;
+        if (InputLayout.NumElements > 0)
+        {
+            auto* pLayoutElementsRawMem = ALLOCATE(GetRawAllocator(), "Raw memory for input layout elements", sizeof(LayoutElement) * InputLayout.NumElements);
+            pLayoutElements = reinterpret_cast<LayoutElement*>(pLayoutElementsRawMem);
+        }
+        this->m_Desc.GraphicsPipeline.InputLayout.LayoutElements = pLayoutElements;
         for (size_t Elem = 0; Elem < InputLayout.NumElements; ++Elem)
-            m_LayoutElements[Elem] = InputLayout.LayoutElements[Elem];
-        this->m_Desc.GraphicsPipeline.InputLayout.LayoutElements = m_LayoutElements.data();
+            pLayoutElements[Elem] = InputLayout.LayoutElements[Elem];
         
         // Set all strides to an invalid value because an application may want to use 0 stride
         for (auto& Stride : m_Strides)
@@ -177,12 +182,14 @@ public:
 
         // Correct description and compute offsets and tight strides
         decltype(m_Strides) TightStrides = {};
-        for (auto It = m_LayoutElements.begin(); It != m_LayoutElements.end(); ++It)
+        for (Uint32 i=0; i < InputLayout.NumElements; ++i)
         {
-            if( It->ValueType == VT_FLOAT32 || It->ValueType == VT_FLOAT16 )
-                It->IsNormalized = false; // Floating point values cannot be normalized
+            auto& LayoutElem = pLayoutElements[i];
 
-            auto BuffSlot = It->BufferSlot;
+            if( LayoutElem.ValueType == VT_FLOAT32 || LayoutElem.ValueType == VT_FLOAT16 )
+                LayoutElem.IsNormalized = false; // Floating point values cannot be normalized
+
+            auto BuffSlot = LayoutElem.BufferSlot;
             if (BuffSlot >= m_Strides.size())
             {
                 UNEXPECTED("Buffer slot (", BuffSlot, ") exceeds maximum allowed value (", m_Strides.size()-1, ")");
@@ -192,31 +199,33 @@ public:
 
             auto& CurrAutoStride = TightStrides[BuffSlot];
             // If offset is not explicitly specified, use current auto stride value
-            if (It->RelativeOffset == LayoutElement::AutoOffset)
+            if (LayoutElem.RelativeOffset == LayoutElement::AutoOffset)
             {
-                It->RelativeOffset = CurrAutoStride;
+                LayoutElem.RelativeOffset = CurrAutoStride;
             }
 
             // If stride is explicitly specified, use it for the current buffer slot
-            if (It->Stride != LayoutElement::AutoStride)
+            if (LayoutElem.Stride != LayoutElement::AutoStride)
             {
                 // Verify that the value is consistent with the previously specified stride, if any
-                if (m_Strides[BuffSlot] != LayoutElement::AutoStride && m_Strides[BuffSlot] != It->Stride)
+                if (m_Strides[BuffSlot] != LayoutElement::AutoStride && m_Strides[BuffSlot] != LayoutElem.Stride)
                 {
                     LOG_ERROR_MESSAGE("Inconsistent strides are specified for buffer slot ", BuffSlot, ". "
-                                      "Input element at index ", It->InputIndex, " explicitly specifies stride ", It->Stride, ", "
+                                      "Input element at index ", LayoutElem.InputIndex, " explicitly specifies stride ", LayoutElem.Stride, ", "
                                       "while current value is ", m_Strides[BuffSlot], ". Specify consistent strides or use "
                                       "LayoutElement::AutoStride to allow the engine compute strides automatically.");
                 }
-                m_Strides[BuffSlot] = It->Stride;
+                m_Strides[BuffSlot] = LayoutElem.Stride;
             }
 
-            CurrAutoStride = std::max(CurrAutoStride, It->RelativeOffset + It->NumComponents * GetValueSize(It->ValueType));
+            CurrAutoStride = std::max(CurrAutoStride, LayoutElem.RelativeOffset + LayoutElem.NumComponents * GetValueSize(LayoutElem.ValueType));
         }
 
-        for (auto It = m_LayoutElements.begin(); It != m_LayoutElements.end(); ++It)
+        for (Uint32 i=0; i < InputLayout.NumElements; ++i)
         {
-            auto BuffSlot = It->BufferSlot;
+            auto& LayoutElem = pLayoutElements[i];
+
+            auto BuffSlot = LayoutElem.BufferSlot;
             // If no input elements explicitly specified stride for this buffer slot, use automatic stride
             if (m_Strides[BuffSlot] == LayoutElement::AutoStride)
             {
@@ -230,8 +239,8 @@ public:
                                       "minimum stride ", TightStrides[BuffSlot], " required to accomodate all input elements.");
                 }
             }
-            if (It->Stride == LayoutElement::AutoStride)
-                It->Stride = m_Strides[BuffSlot];
+            if (LayoutElem.Stride == LayoutElement::AutoStride)
+                LayoutElem.Stride = m_Strides[BuffSlot];
         }
         // Set strides for all unused slots to 0
         for (auto& Stride : m_Strides)
@@ -270,6 +279,8 @@ public:
             RawAllocator.Free(const_cast<ShaderResourceVariableDesc*>(this->m_Desc.ResourceLayout.Variables));
         if (this->m_Desc.ResourceLayout.StaticSamplers != nullptr)
             RawAllocator.Free(const_cast<StaticSamplerDesc*>(this->m_Desc.ResourceLayout.StaticSamplers));
+        if (this->m_Desc.GraphicsPipeline.InputLayout.LayoutElements != nullptr)
+            RawAllocator.Free(const_cast<LayoutElement*>(this->m_Desc.GraphicsPipeline.InputLayout.LayoutElements));
     }
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE( IID_PipelineState, TDeviceObjectBase )
@@ -315,8 +326,6 @@ public:
     }
 
 protected:
-    // TODO: rework this
-    std::vector<LayoutElement, STDAllocatorRawMem<LayoutElement> > m_LayoutElements;
 
     Uint32 m_BufferSlotsUsed = 0;
     Uint32 m_NumShaders      = 0;      ///< Number of shaders that this PSO uses
