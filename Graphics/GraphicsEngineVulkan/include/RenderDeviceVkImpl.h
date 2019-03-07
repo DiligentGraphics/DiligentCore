@@ -55,24 +55,24 @@ class RenderDeviceVkImpl final : public RenderDeviceNextGenBase<RenderDeviceBase
 public:
     using TRenderDeviceBase = RenderDeviceNextGenBase<RenderDeviceBase<IRenderDeviceVk>, ICommandQueueVk>;
 
-    RenderDeviceVkImpl( IReferenceCounters*     pRefCounters, 
-                        IMemoryAllocator&       RawMemAllocator, 
-                        const EngineVkAttribs&  CreationAttribs, 
-                        size_t                  CommandQueueCount,
-                        ICommandQueueVk**       pCmdQueues, 
+    RenderDeviceVkImpl( IReferenceCounters*        pRefCounters, 
+                        IMemoryAllocator&          RawMemAllocator, 
+                        const EngineVkCreateInfo&  EngineCI, 
+                        size_t                     CommandQueueCount,
+                        ICommandQueueVk**          pCmdQueues, 
                         std::shared_ptr<VulkanUtilities::VulkanInstance>        Instance,
                         std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice>  PhysicalDevice,
                         std::shared_ptr<VulkanUtilities::VulkanLogicalDevice>   LogicalDevice,
                         Uint32                  NumDeferredContexts );
     ~RenderDeviceVkImpl();
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject** ppInterface )override final;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface )override final;
 
-    virtual void CreatePipelineState( const PipelineStateDesc &PipelineDesc, IPipelineState** ppPipelineState )override final;
+    virtual void CreatePipelineState(const PipelineStateDesc& PipelineDesc, IPipelineState** ppPipelineState)override final;
 
     virtual void CreateBuffer(const BufferDesc& BuffDesc, const BufferData* pBuffData, IBuffer** ppBuffer)override final;
 
-    virtual void CreateShader(const ShaderCreationAttribs& ShaderCreationAttribs, IShader** ppShader)override final;
+    virtual void CreateShader(const ShaderCreateInfo& ShaderCreateInfo, IShader** ppShader)override final;
 
     virtual void CreateTexture(const TextureDesc& TexDesc, const TextureData* pData, ITexture** ppTexture)override final;
     
@@ -134,7 +134,7 @@ private:
     std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice>  m_PhysicalDevice;
     std::shared_ptr<VulkanUtilities::VulkanLogicalDevice>   m_LogicalVkDevice;
 
-    EngineVkAttribs m_EngineAttribs;
+    EngineVkCreateInfo m_EngineAttribs;
 
     FramebufferCache       m_FramebufferCache;
     RenderPassCache        m_RenderPassCache;

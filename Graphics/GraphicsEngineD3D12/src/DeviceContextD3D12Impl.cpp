@@ -51,39 +51,39 @@ namespace Diligent
         return ss.str();
     }
 
-    DeviceContextD3D12Impl::DeviceContextD3D12Impl( IReferenceCounters*       pRefCounters,
-                                                    RenderDeviceD3D12Impl*    pDeviceD3D12Impl,
-                                                    bool                      bIsDeferred,
-                                                    const EngineD3D12Attribs& Attribs,
-                                                    Uint32                    ContextId,
-                                                    Uint32                    CommandQueueId) :
+    DeviceContextD3D12Impl::DeviceContextD3D12Impl(IReferenceCounters*          pRefCounters,
+                                                   RenderDeviceD3D12Impl*       pDeviceD3D12Impl,
+                                                   bool                         bIsDeferred,
+                                                   const EngineD3D12CreateInfo& EngineCI,
+                                                   Uint32                       ContextId,
+                                                   Uint32                       CommandQueueId) :
         TDeviceContextBase
         {
             pRefCounters,
             pDeviceD3D12Impl,
             ContextId,
             CommandQueueId,
-            bIsDeferred ? std::numeric_limits<decltype(m_NumCommandsToFlush)>::max() : Attribs.NumCommandsToFlushCmdList,
+            bIsDeferred ? std::numeric_limits<decltype(m_NumCommandsToFlush)>::max() : EngineCI.NumCommandsToFlushCmdList,
             bIsDeferred
         },
         m_DynamicHeap
         {
             pDeviceD3D12Impl->GetDynamicMemoryManager(),
             GetContextObjectName("Dynamic heap", bIsDeferred, ContextId),
-            Attribs.DynamicHeapPageSize
+            EngineCI.DynamicHeapPageSize
         },
         m_DynamicGPUDescriptorAllocator
         {
             {
                 GetRawAllocator(),
                 pDeviceD3D12Impl->GetGPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV),
-        		Attribs.DynamicDescriptorAllocationChunkSize[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV],
+        		EngineCI.DynamicDescriptorAllocationChunkSize[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV],
                 GetContextObjectName("CBV_SRV_UAV dynamic descriptor allocator", bIsDeferred, ContextId)
             },
             {
                 GetRawAllocator(),
                 pDeviceD3D12Impl->GetGPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER),
-                Attribs.DynamicDescriptorAllocationChunkSize[D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER],
+                EngineCI.DynamicDescriptorAllocationChunkSize[D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER],
                 GetContextObjectName("SAMPLER     dynamic descriptor allocator", bIsDeferred, ContextId)
             }
         },

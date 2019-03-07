@@ -40,10 +40,10 @@ set(INTERFACE
     interface/BufferViewD3D12.h
     interface/CommandQueueD3D12.h
     interface/DeviceContextD3D12.h
+    interface/EngineFactoryD3D12.h
     interface/FenceD3D12.h
     interface/PipelineStateD3D12.h
     interface/RenderDeviceD3D12.h
-    interface/RenderDeviceFactoryD3D12.h
     interface/SamplerD3D12.h
     interface/ShaderD3D12.h
     interface/ShaderResourceBindingD3D12.h
@@ -64,11 +64,11 @@ set(SRC
     src/DescriptorHeap.cpp
     src/DeviceContextD3D12Impl.cpp
     src/D3D12DynamicHeap.cpp
+    src/EngineFactoryD3D12.cpp
     src/FenceD3D12Impl.cpp
     src/GenerateMips.cpp
     src/PipelineStateD3D12Impl.cpp
     src/RenderDeviceD3D12Impl.cpp
-    src/RenderDeviceFactoryD3D12.cpp
     src/RootSignature.cpp
     src/SamplerD3D12Impl.cpp
     src/ShaderD3D12Impl.cpp

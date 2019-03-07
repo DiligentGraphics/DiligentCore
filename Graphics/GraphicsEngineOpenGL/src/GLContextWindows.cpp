@@ -26,8 +26,6 @@
 #include "GLContextWindows.h"
 #include "DeviceCaps.h"
 #include "GLTypeConversions.h"
-#include "EngineGLAttribs.h"
-#include "GraphicsAccessories.h"
 
 namespace Diligent
 {
@@ -90,7 +88,7 @@ namespace Diligent
         LOG_INFO_MESSAGE( MessageSS.str().c_str() );
     }
 
-    GLContext::GLContext(const EngineGLAttribs& InitAttribs, DeviceCaps& DeviceCaps, const SwapChainDesc* pSCDesc) :
+    GLContext::GLContext(const EngineGLCreateInfo& InitAttribs, DeviceCaps& DeviceCaps, const SwapChainDesc* pSCDesc) :
 		m_Context(0),
 		m_WindowHandleToDeviceContext(0)
     {

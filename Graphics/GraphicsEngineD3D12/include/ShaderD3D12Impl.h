@@ -45,49 +45,30 @@ class ShaderD3D12Impl final : public ShaderBase<IShaderD3D12, RenderDeviceD3D12I
 public:
     using TShaderBase = ShaderBase<IShaderD3D12, RenderDeviceD3D12Impl>;
 
-    ShaderD3D12Impl(IReferenceCounters*           pRefCounters, 
-                    RenderDeviceD3D12Impl*        pRenderDeviceD3D12, 
-                    const ShaderCreationAttribs&  ShaderCreationAttribs);
+    ShaderD3D12Impl(IReferenceCounters*      pRefCounters, 
+                    RenderDeviceD3D12Impl*   pRenderDeviceD3D12, 
+                    const ShaderCreateInfo&  ShaderCI);
     ~ShaderD3D12Impl();
     
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
 
-    virtual void BindResources( IResourceMapping* pResourceMapping, Uint32 Flags )override final
+    virtual Uint32 GetResourceCount()const override final
     {
-       m_StaticVarsMgr.BindResources(pResourceMapping, Flags);
-    }
-    
-    virtual IShaderVariable* GetShaderVariable(const Char* Name)override final
-    {
-        return m_StaticVarsMgr.GetVariable(Name);
+        return m_pShaderResources->GetTotalResources();
     }
 
-    virtual Uint32 GetVariableCount() const override final
+    virtual ShaderResourceDesc GetResource(Uint32 Index)const override final
     {
-        return m_StaticVarsMgr.GetVariableCount();
-    }
-
-    virtual IShaderVariable* GetShaderVariable(Uint32 Index)override final
-    {
-        return m_StaticVarsMgr.GetVariable(Index);
+        return m_pShaderResources->GetShaderResourceDesc(Index);
     }
 
     ID3DBlob* GetShaderByteCode(){return m_pShaderByteCode;}
     const std::shared_ptr<const ShaderResourcesD3D12>& GetShaderResources()const { return m_pShaderResources; }
-    const ShaderResourceLayoutD3D12&                   GetStaticResLayout()const { return m_StaticResLayout;  }
-    const ShaderResourceCacheD3D12&                    GetStaticResCache() const { return m_StaticResCache;   }
-
-#ifdef DEVELOPMENT
-    bool DvpVerifyStaticResourceBindings()const;
-#endif
 
 private:
     // ShaderResources class instance must be referenced through the shared pointer, because 
     // it is referenced by ShaderResourceLayoutD3D12 class instances
     std::shared_ptr<const ShaderResourcesD3D12> m_pShaderResources;
-    ShaderResourceLayoutD3D12   m_StaticResLayout;
-    ShaderResourceCacheD3D12    m_StaticResCache;
-    ShaderVariableManagerD3D12  m_StaticVarsMgr;
 };
 
 }

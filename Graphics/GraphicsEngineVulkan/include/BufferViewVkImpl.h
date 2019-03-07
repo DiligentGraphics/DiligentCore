@@ -44,15 +44,15 @@ class BufferViewVkImpl final : public BufferViewBase<IBufferViewVk, RenderDevice
 public:
     using TBufferViewBase = BufferViewBase<IBufferViewVk, RenderDeviceVkImpl>;
 
-    BufferViewVkImpl( IReferenceCounters*                  pRefCounters,
-                      RenderDeviceVkImpl*                  pDevice, 
-                      const BufferViewDesc&                ViewDesc, 
-                      class IBuffer*                       pBuffer,
-                      VulkanUtilities::BufferViewWrapper&& BuffView,
-                      bool                                 bIsDefaultView);
+    BufferViewVkImpl(IReferenceCounters*                  pRefCounters,
+                     RenderDeviceVkImpl*                  pDevice, 
+                     const BufferViewDesc&                ViewDesc, 
+                     class IBuffer*                       pBuffer,
+                     VulkanUtilities::BufferViewWrapper&& BuffView,
+                     bool                                 bIsDefaultView);
     ~BufferViewVkImpl();
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject** ppInterface )override final;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
 
     virtual VkBufferView GetVkBufferView()const override final{return m_BuffView;}
 

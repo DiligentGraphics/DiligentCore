@@ -315,13 +315,14 @@ size_t PipelineLayout::DescriptorSetLayoutManager::GetHash()const
 }
 
 void PipelineLayout::DescriptorSetLayoutManager::AllocateResourceSlot(const SPIRVShaderResourceAttribs& ResAttribs,
-                                                                      VkSampler                         vkStaticSampler,
+                                                                      SHADER_RESOURCE_VARIABLE_TYPE     VariableType,
+                                                                      VkSampler                         vkImmutableSampler,
                                                                       SHADER_TYPE                       ShaderType,
                                                                       Uint32&                           DescriptorSet,
                                                                       Uint32&                           Binding,
                                                                       Uint32&                           OffsetInCache)
 {
-    auto& DescrSet = GetDescriptorSet(ResAttribs.VarType);
+    auto& DescrSet = GetDescriptorSet(VariableType);
     if (DescrSet.SetIndex < 0)
     {
         DescrSet.SetIndex = m_ActiveSets++;
@@ -335,16 +336,15 @@ void PipelineLayout::DescriptorSetLayoutManager::AllocateResourceSlot(const SPIR
     VkBinding.descriptorCount = ResAttribs.ArraySize;
     // There are no limitations on what combinations of stages can use a descriptor binding (13.2.1)
     VkBinding.stageFlags = ShaderTypeToVkShaderStageFlagBit(ShaderType);
-    if (ResAttribs.IsImmutableSamplerAssigned())
+    if (vkImmutableSampler != VK_NULL_HANDLE)
     {
-        VERIFY(vkStaticSampler != VK_NULL_HANDLE, "No static sampler provided");
         // If descriptorType is VK_DESCRIPTOR_TYPE_SAMPLER or VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, and 
         // descriptorCount is not 0 and pImmutableSamplers is not NULL, pImmutableSamplers must be a valid pointer 
         // to an array of descriptorCount valid VkSampler handles (13.2.1)
-        auto *pStaticSamplers = reinterpret_cast<VkSampler*>(ALLOCATE(m_MemAllocator, "Memory buffer for immutable samplers", sizeof(VkSampler) * VkBinding.descriptorCount));
+        auto *pImmutableSamplers = reinterpret_cast<VkSampler*>(ALLOCATE(m_MemAllocator, "Memory buffer for immutable samplers", sizeof(VkSampler) * VkBinding.descriptorCount));
         for(uint32_t s=0; s < VkBinding.descriptorCount; ++s)
-            pStaticSamplers[s] = vkStaticSampler;
-        VkBinding.pImmutableSamplers = pStaticSamplers;
+            pImmutableSamplers[s] = vkImmutableSampler;
+        VkBinding.pImmutableSamplers = pImmutableSamplers;
     }
     else
         VkBinding.pImmutableSamplers = nullptr;
@@ -365,14 +365,18 @@ void PipelineLayout::Release(RenderDeviceVkImpl *pDeviceVkImpl, Uint64 CommandQu
 }
 
 void PipelineLayout::AllocateResourceSlot(const SPIRVShaderResourceAttribs& ResAttribs,
-                                          VkSampler                         vkStaticSampler,
+                                          SHADER_RESOURCE_VARIABLE_TYPE     VariableType,
+                                          VkSampler                         vkImmutableSampler,
                                           SHADER_TYPE                       ShaderType,
                                           Uint32&                           DescriptorSet, // Output parameter
                                           Uint32&                           Binding, // Output parameter
                                           Uint32&                           OffsetInCache,
                                           std::vector<uint32_t>&            SPIRV)
 {
-    m_LayoutMgr.AllocateResourceSlot(ResAttribs, vkStaticSampler, ShaderType, DescriptorSet, Binding, OffsetInCache);
+    VERIFY( (ResAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SampledImage || 
+             ResAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler) || vkImmutableSampler == VK_NULL_HANDLE,
+            "Immutable sampler should only be specified for combined image samplers or separate samplers");
+    m_LayoutMgr.AllocateResourceSlot(ResAttribs, VariableType ,vkImmutableSampler, ShaderType, DescriptorSet, Binding, OffsetInCache);
     SPIRV[ResAttribs.BindingDecorationOffset] = Binding;
     SPIRV[ResAttribs.DescriptorSetDecorationOffset] = DescriptorSet;
 }
@@ -387,14 +391,14 @@ std::array<Uint32, 2> PipelineLayout::GetDescriptorSetSizes(Uint32& NumSets)cons
     NumSets = 0;
     std::array<Uint32, 2> SetSizes = {};
 
-    const auto &StaticAndMutSet = m_LayoutMgr.GetDescriptorSet(SHADER_VARIABLE_TYPE_STATIC);
+    const auto &StaticAndMutSet = m_LayoutMgr.GetDescriptorSet(SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
     if (StaticAndMutSet.SetIndex >= 0)
     {
         NumSets = std::max(NumSets, static_cast<Uint32>(StaticAndMutSet.SetIndex + 1));
         SetSizes[StaticAndMutSet.SetIndex] = StaticAndMutSet.TotalDescriptors;
     }
 
-    const auto &DynamicSet = m_LayoutMgr.GetDescriptorSet(SHADER_VARIABLE_TYPE_DYNAMIC);
+    const auto &DynamicSet = m_LayoutMgr.GetDescriptorSet(SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
     if (DynamicSet.SetIndex >= 0)
     {
         NumSets = std::max(NumSets, static_cast<Uint32>(DynamicSet.SetIndex + 1));
@@ -416,7 +420,7 @@ void PipelineLayout::InitResourceCache(RenderDeviceVkImpl*    pDeviceVkImpl,
     // Resources are initialized by source layout when shader resource binding objects are created
     ResourceCache.InitializeSets(CacheMemAllocator, NumSets, SetSizes.data());
 
-    const auto& StaticAndMutSet = m_LayoutMgr.GetDescriptorSet(SHADER_VARIABLE_TYPE_STATIC);
+    const auto& StaticAndMutSet = m_LayoutMgr.GetDescriptorSet(SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
     if (StaticAndMutSet.SetIndex >= 0)
     {
         const char* DescrSetName = "Static/Mutable Descriptor Set";
@@ -443,11 +447,11 @@ void PipelineLayout::PrepareDescriptorSets(DeviceContextVkImpl*          pCtxVkI
     // Do not use vector::resize for BindInfo.vkSets and BindInfo.DynamicOffsets as this 
     // causes unnecessary work to zero-initialize new elements
 
-    VERIFY(m_LayoutMgr.GetDescriptorSet(SHADER_VARIABLE_TYPE_STATIC).SetIndex == m_LayoutMgr.GetDescriptorSet(SHADER_VARIABLE_TYPE_MUTABLE).SetIndex, 
+    VERIFY(m_LayoutMgr.GetDescriptorSet(SHADER_RESOURCE_VARIABLE_TYPE_STATIC).SetIndex == m_LayoutMgr.GetDescriptorSet(SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE).SetIndex, 
            "Static and mutable variables are expected to share the same descriptor set");
     Uint32 TotalDynamicDescriptors = 0;
     BindInfo.SetCout = 0;
-    for(SHADER_VARIABLE_TYPE VarType = SHADER_VARIABLE_TYPE_MUTABLE; VarType <= SHADER_VARIABLE_TYPE_DYNAMIC; VarType = static_cast<SHADER_VARIABLE_TYPE>(VarType+1))
+    for(SHADER_RESOURCE_VARIABLE_TYPE VarType = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE; VarType <= SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC; VarType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(VarType+1))
     {
         const auto& Set = m_LayoutMgr.GetDescriptorSet(VarType);
         if (Set.SetIndex >= 0)
@@ -456,7 +460,7 @@ void PipelineLayout::PrepareDescriptorSets(DeviceContextVkImpl*          pCtxVkI
             if (BindInfo.SetCout > BindInfo.vkSets.size())
                 BindInfo.vkSets.resize(BindInfo.SetCout);
             VERIFY_EXPR(BindInfo.vkSets[Set.SetIndex] == VK_NULL_HANDLE);
-            if (VarType == SHADER_VARIABLE_TYPE_MUTABLE)
+            if (VarType == SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE)
                 BindInfo.vkSets[Set.SetIndex] = ResourceCache.GetDescriptorSet(Set.SetIndex).GetVkDescriptorSet();
             else
             {
@@ -506,7 +510,7 @@ void PipelineLayout::BindDescriptorSetsWithDynamicOffsets(DeviceContextVkImpl*  
     VERIFY_EXPR(BindInfo.pResourceCache != nullptr);
 #ifdef _DEBUG
     Uint32 TotalDynamicDescriptors = 0;
-    for (SHADER_VARIABLE_TYPE VarType = SHADER_VARIABLE_TYPE_MUTABLE; VarType <= SHADER_VARIABLE_TYPE_DYNAMIC; VarType = static_cast<SHADER_VARIABLE_TYPE>(VarType + 1))
+    for (SHADER_RESOURCE_VARIABLE_TYPE VarType = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE; VarType <= SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC; VarType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(VarType + 1))
     {
         const auto &Set = m_LayoutMgr.GetDescriptorSet(VarType);
         TotalDynamicDescriptors += Set.NumDynamicDescriptors;

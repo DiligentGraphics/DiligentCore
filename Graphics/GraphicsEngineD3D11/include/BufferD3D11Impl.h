@@ -58,7 +58,7 @@ public:
 
     ~BufferD3D11Impl();
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
 
     virtual ID3D11Buffer* GetD3D11Buffer()override final{ return m_pd3d11Buffer; }
 

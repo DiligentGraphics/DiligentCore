@@ -60,7 +60,7 @@ public:
                      ID3D12Resource*                pTexture);
     ~TextureD3D12Impl();
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
 
     virtual ID3D12Resource* GetD3D12Texture(){ return GetD3D12Resource(); }
 

@@ -30,7 +30,7 @@
 //  * ShaderVariableManagerD3D12 keeps list of variables of specific types
 //  * Every ShaderVariableD3D12Impl references D3D12Resource from ShaderResourceLayoutD3D12
 //  * ShaderVariableManagerD3D12 keeps pointer to ShaderResourceCacheD3D12
-//  * ShaderVariableManagerD3D12 is used by ShaderD3D12Impl to manage static resources and by
+//  * ShaderVariableManagerD3D12 is used by PipelineStateD3D12Impl to manage static resources and by
 //    ShaderResourceBindingD3D12Impl to manage mutable and dynamic resources
 //
 //          _____________________________                   ________________________________________________________________________________
@@ -66,20 +66,18 @@ namespace Diligent
 
 class ShaderVariableD3D12Impl;
 
-// sizeof(ShaderVariableManagerD3D12) == 40 (x64, msvc, Release)
+// sizeof(ShaderVariableManagerD3D12) == 32 (x64, msvc, Release)
 class ShaderVariableManagerD3D12
 {
 public:
-    ShaderVariableManagerD3D12(IObject &Owner) :
-        m_Owner(Owner)
-    {}
+    ShaderVariableManagerD3D12(IObject&                               Owner,
+                               const ShaderResourceLayoutD3D12&       Layout, 
+                               IMemoryAllocator&                      Allocator,
+                               const SHADER_RESOURCE_VARIABLE_TYPE*   AllowedVarTypes, 
+                               Uint32                                 NumAllowedTypes, 
+                               ShaderResourceCacheD3D12&              ResourceCache);
     ~ShaderVariableManagerD3D12();
 
-    void Initialize(const ShaderResourceLayoutD3D12& Layout, 
-                    IMemoryAllocator&                Allocator,
-                    const SHADER_VARIABLE_TYPE*      AllowedVarTypes, 
-                    Uint32                           NumAllowedTypes, 
-                    ShaderResourceCacheD3D12&        ResourceCache);
     void Destroy(IMemoryAllocator& Allocator);
 
     ShaderVariableD3D12Impl* GetVariable(const Char* Name);
@@ -87,10 +85,10 @@ public:
 
     void BindResources( IResourceMapping* pResourceMapping, Uint32 Flags);
 
-    static size_t GetRequiredMemorySize(const ShaderResourceLayoutD3D12& Layout, 
-                                        const SHADER_VARIABLE_TYPE*      AllowedVarTypes, 
-                                        Uint32                           NumAllowedTypes,
-                                        Uint32&                          NumVariables);
+    static size_t GetRequiredMemorySize(const ShaderResourceLayoutD3D12&      Layout, 
+                                        const SHADER_RESOURCE_VARIABLE_TYPE*  AllowedVarTypes, 
+                                        Uint32                                NumAllowedTypes,
+                                        Uint32&                               NumVariables);
 
     Uint32 GetVariableCount()const { return m_NumVariables; }
 
@@ -99,13 +97,13 @@ private:
 
     Uint32 GetVariableIndex(const ShaderVariableD3D12Impl& Variable);
 
-    IObject&                      m_Owner;
-    // Variable mgr is owned by either Shader object (in which case m_pResourceLayout points to
-    // static resource layout owned by the same shader object), or by SRB object (in which case 
-    // m_pResourceLayout points to corresponding layout in pipeline state). Since SRB keeps strong 
-    // reference to PSO, the layout is guaranteed be alive while SRB is alive
-    const ShaderResourceLayoutD3D12* m_pResourceLayout= nullptr;
-    ShaderResourceCacheD3D12*        m_pResourceCache = nullptr;
+    IObject&                         m_Owner;
+
+    // Variable mgr is owned by either Pipeline state object (in which case m_ResourceCache references
+    // static resource cache owned by the same PSO object), or by SRB object (in which case 
+    // m_ResourceCache references the cache in the SRB). Thus the cache and the resource layout
+    // (which the variables reference) are guaranteed to be alive while the manager is alive.
+    ShaderResourceCacheD3D12&        m_ResourceCache;
 
     // Memory is allocated through the allocator provided by the pipeline state. If allocation granularity > 1, fixed block
     // memory allocator is used. This ensures that all resources from different shader resource bindings reside in
@@ -114,12 +112,12 @@ private:
     Uint32                           m_NumVariables = 0;
 
 #ifdef _DEBUG
-    IMemoryAllocator*                m_pDbgAllocator = nullptr;
+    IMemoryAllocator&                m_DbgAllocator;
 #endif
 };
 
 // sizeof(ShaderVariableD3D12Impl) == 24 (x64)
-class ShaderVariableD3D12Impl final : public IShaderVariable
+class ShaderVariableD3D12Impl final : public IShaderResourceVariable
 {
 public:
     ShaderVariableD3D12Impl(ShaderVariableManagerD3D12& ParentManager,
@@ -154,29 +152,27 @@ public:
             return;
 
         *ppInterface = nullptr;
-        if (IID == IID_ShaderVariable || IID == IID_Unknown)
+        if (IID == IID_ShaderResourceVariable || IID == IID_Unknown)
         {
             *ppInterface = this;
             (*ppInterface)->AddRef();
         }
     }
 
-    virtual SHADER_VARIABLE_TYPE GetType()const override final
+    virtual SHADER_RESOURCE_VARIABLE_TYPE GetType()const override final
     {
-        return m_Resource.Attribs.GetVariableType();
+        return m_Resource.GetVariableType();
     }
 
     virtual void Set(IDeviceObject *pObject)override final 
     {
-        VERIFY_EXPR(m_ParentManager.m_pResourceCache != nullptr);
-        m_Resource.BindResource(pObject, 0, *m_ParentManager.m_pResourceCache); 
+        m_Resource.BindResource(pObject, 0, m_ParentManager.m_ResourceCache); 
     }
 
     virtual void SetArray(IDeviceObject* const* ppObjects, Uint32 FirstElement, Uint32 NumElements)override final
     {
-        VERIFY_EXPR(m_ParentManager.m_pResourceCache != nullptr);
         for (Uint32 Elem = 0; Elem < NumElements; ++Elem)
-            m_Resource.BindResource(ppObjects[Elem], FirstElement + Elem, *m_ParentManager.m_pResourceCache);
+            m_Resource.BindResource(ppObjects[Elem], FirstElement + Elem, m_ParentManager.m_ResourceCache);
     }
 
     virtual Uint32 GetArraySize()const override final

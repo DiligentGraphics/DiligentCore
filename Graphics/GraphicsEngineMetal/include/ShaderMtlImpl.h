@@ -44,34 +44,23 @@ public:
 
     ShaderMtlImpl(IReferenceCounters*          pRefCounters,
                   class RenderDeviceMtlImpl*   pRenderDeviceMtl,
-                  const ShaderCreationAttribs& CreationAttribs);
+                  const ShaderCreateInfo&      ShaderCI);
     ~ShaderMtlImpl();
     
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject** ppInterface )override final;
+    virtual void QueryInterface( const INTERFACE_ID& IID, IObject** ppInterface )override final;
 
-    virtual void BindResources( IResourceMapping* pResourceMapping, Uint32 Flags  )override final
+    virtual Uint32 GetResourceCount()const override final
     {
-        LOG_ERROR_MESSAGE("ShaderMtlImpl::BindResources() is not implemented");
-    }
-    
-    virtual IShaderVariable* GetShaderVariable( const Char* Name )override final
-    {
-        LOG_ERROR_MESSAGE("ShaderMtlImpl::GetShaderVariable() is not implemented");
-        return nullptr;
-    }
-
-    virtual Uint32 GetVariableCount() const override final
-    {
-        LOG_ERROR_MESSAGE("ShaderMtlImpl::GetVariableCount() is not implemented");
+        LOG_ERROR_MESSAGE("ShaderMtlImpl::GetResourceCount() is not implemented");
         return 0;
     }
 
-    virtual IShaderVariable* GetShaderVariable(Uint32 Index)override final
+    virtual ShaderResourceDesc GetResource(Uint32 Index)const override final
     {
-        LOG_ERROR_MESSAGE("ShaderMtlImpl::GetShaderVariable() is not implemented");
-        return nullptr;
+        LOG_ERROR_MESSAGE("ShaderMtlImpl::GetResource() is not implemented");
+        return ShaderResourceDesc{};
     }
-
+    
 private:
 
 };

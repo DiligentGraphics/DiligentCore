@@ -42,7 +42,7 @@ public:
     CommandQueueD3D12Impl(IReferenceCounters *pRefCounters, ID3D12CommandQueue *pd3d12NativeCmdQueue, ID3D12Fence *pd3d12Fence);
     ~CommandQueueD3D12Impl();
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
 
 	// Returns the fence value that will be signaled next time
     virtual Uint64 GetNextFenceValue()override final { return m_NextFenceValue; }

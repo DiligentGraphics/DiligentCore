@@ -57,7 +57,7 @@ class IRenderDevice : public IObject
 {
 public:
     /// Queries the specific interface, see IObject::QueryInterface() for details
-    virtual void QueryInterface( const INTERFACE_ID& IID, IObject** ppInterface ) = 0;
+    virtual void QueryInterface( const INTERFACE_ID& IID, IObject** ppInterface )override = 0;
 
     /// Creates a new buffer object
 
@@ -80,14 +80,13 @@ public:
 
     /// Creates a new shader object
 
-    /// \param [in] CreationAttribs - Shader creation attributes, see 
-    ///                               Diligent::ShaderCreationAttribs for details.
+    /// \param [in] ShaderCI  - Shader create info, see Diligent::ShaderCreateInfo for details.
     /// \param [out] ppShader - Address of the memory location where the pointer to the
     ///                         shader interface will be stored. 
     ///                         The function calls AddRef(), so that the new object will contain 
     ///                         one refernce.
-    virtual void CreateShader(const ShaderCreationAttribs& CreationAttribs, 
-                              IShader**                    ppShader) = 0;
+    virtual void CreateShader(const ShaderCreateInfo& ShaderCI, 
+                              IShader**               ppShader) = 0;
     
     /// Creates a new texture object
 

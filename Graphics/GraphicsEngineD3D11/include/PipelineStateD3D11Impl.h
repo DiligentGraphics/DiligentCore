@@ -48,8 +48,22 @@ public:
                            const PipelineStateDesc&     PipelineDesc);
     ~PipelineStateD3D11Impl();
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
     
+
+    virtual void BindStaticResources(Uint32 ShaderFlags, IResourceMapping* pResourceMapping, Uint32 Flags)override final;
+
+    virtual Uint32 GetStaticVariableCount(SHADER_TYPE ShaderType) const override final;
+
+    virtual IShaderResourceVariable* GetStaticShaderVariable(SHADER_TYPE ShaderType, const Char* Name) override final;
+
+    virtual IShaderResourceVariable* GetStaticShaderVariable(SHADER_TYPE ShaderType, Uint32 Index) override final;
+
+    virtual void CreateShaderResourceBinding( IShaderResourceBinding **ppShaderResourceBinding, bool InitStaticResources )override final;
+
+    virtual bool IsCompatibleWith(const IPipelineState *pPSO)const override final;
+
+
     /// Implementation of the IPipelineStateD3D11::GetD3D11BlendState() method.
     virtual ID3D11BlendState* GetD3D11BlendState()override final;
 
@@ -68,23 +82,54 @@ public:
     virtual ID3D11HullShader*     GetD3D11HullShader()override final;
     virtual ID3D11ComputeShader*  GetD3D11ComputeShader()override final;
 
-    virtual void CreateShaderResourceBinding( IShaderResourceBinding **ppShaderResourceBinding, bool InitStaticResources )override final;
-
-    virtual bool IsCompatibleWith(const IPipelineState *pPSO)const override final;
 
     SRBMemoryAllocator& GetSRBMemoryAllocator()
     {
         return m_SRBMemAllocator;
     }
 
+    const ShaderResourceLayoutD3D11& GetStaticResourceLayout(Uint32 s)const
+    {
+        VERIFY_EXPR(s < m_NumShaders);
+        return m_pStaticResourceLayouts[s];
+    }
+
+    ShaderResourceCacheD3D11& GetStaticResourceCache(Uint32 s)
+    {
+        VERIFY_EXPR(s < m_NumShaders);
+        return m_pStaticResourceCaches[s];
+    }
+
+    void SetStaticSamplers(ShaderResourceCacheD3D11& ResourceCache, Uint32 ShaderInd)const;
+
 private:
+    
     CComPtr<ID3D11BlendState>        m_pd3d11BlendState;
     CComPtr<ID3D11RasterizerState>   m_pd3d11RasterizerState;
     CComPtr<ID3D11DepthStencilState> m_pd3d11DepthStencilState;
     CComPtr<ID3D11InputLayout>       m_pd3d11InputLayout;
 
+    // The caches are indexed by the shader order in the PSO, not shader index
+    ShaderResourceCacheD3D11*  m_pStaticResourceCaches = nullptr;
+    ShaderResourceLayoutD3D11* m_pStaticResourceLayouts= nullptr;
+
     // SRB memory allocator must be defined before the default shader res binding
     SRBMemoryAllocator m_SRBMemAllocator;
+
+    Int8  m_ResourceLayoutIndex[6] = {-1, -1, -1, -1, -1, -1};
+
+    Uint16 m_StaticSamplerOffsets[MaxShadersInPipeline+1] = {};
+    struct StaticSamplerInfo
+    {
+        const D3DShaderResourceAttribs& Attribs;
+        RefCntAutoPtr<ISampler>         pSampler;
+        StaticSamplerInfo(const D3DShaderResourceAttribs& _Attribs,
+                          RefCntAutoPtr<ISampler>         _pSampler) : 
+            Attribs  (_Attribs),
+            pSampler (std::move(_pSampler))
+        {}
+    };
+    std::vector< StaticSamplerInfo, STDAllocatorRawMem<StaticSamplerInfo> > m_StaticSamplers;
 };
 
 }

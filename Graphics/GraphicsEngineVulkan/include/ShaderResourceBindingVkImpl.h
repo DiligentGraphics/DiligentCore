@@ -48,15 +48,15 @@ public:
     ShaderResourceBindingVkImpl(IReferenceCounters* pRefCounters, class PipelineStateVkImpl* pPSO, bool IsPSOInternal);
     ~ShaderResourceBindingVkImpl();
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID& IID, IObject** ppInterface )override final;
+    virtual void QueryInterface( const INTERFACE_ID& IID, IObject** ppInterface )override final;
 
     virtual void BindResources(Uint32 ShaderFlags, IResourceMapping* pResMapping, Uint32 Flags)override final;
 
-    virtual IShaderVariable* GetVariable(SHADER_TYPE ShaderType, const char* Name)override final;
+    virtual IShaderResourceVariable* GetVariable(SHADER_TYPE ShaderType, const char* Name)override final;
 
     virtual Uint32 GetVariableCount(SHADER_TYPE ShaderType) const override final;
 
-    virtual IShaderVariable* GetVariable(SHADER_TYPE ShaderType, Uint32 Index)override final;
+    virtual IShaderResourceVariable* GetVariable(SHADER_TYPE ShaderType, Uint32 Index)override final;
 
     virtual void InitializeStaticResources(const IPipelineState* pPipelineState)override final;
 
@@ -66,8 +66,9 @@ public:
 
 private:
 
-    ShaderResourceCacheVk m_ShaderResourceCache;
+    ShaderResourceCacheVk    m_ShaderResourceCache;
     ShaderVariableManagerVk* m_pShaderVarMgrs = nullptr;
+
     // Shader variable manager index in m_pShaderVarMgrs[] array for every shader stage
     Int8 m_ResourceLayoutIndex[6] = {-1, -1, -1, -1, -1, -1};
     bool m_bStaticResourcesInitialized = false;

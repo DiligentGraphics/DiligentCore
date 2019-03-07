@@ -45,22 +45,22 @@ class RenderDeviceD3D12Impl final : public RenderDeviceNextGenBase< RenderDevice
 public:
     using TRenderDeviceBase = RenderDeviceNextGenBase< RenderDeviceD3DBase<IRenderDeviceD3D12>, ICommandQueueD3D12 >;
 
-    RenderDeviceD3D12Impl( IReferenceCounters*       pRefCounters, 
-                           IMemoryAllocator&         RawMemAllocator, 
-                           const EngineD3D12Attribs& CreationAttribs, 
-                           ID3D12Device*             pD3D12Device, 
-                           size_t                    CommandQueueCount,
-                           ICommandQueueD3D12**      ppCmdQueues, 
-                           Uint32                    NumDeferredContexts );
+    RenderDeviceD3D12Impl( IReferenceCounters*          pRefCounters, 
+                           IMemoryAllocator&            RawMemAllocator, 
+                           const EngineD3D12CreateInfo& EngineCI, 
+                           ID3D12Device*                pD3D12Device, 
+                           size_t                       CommandQueueCount,
+                           ICommandQueueD3D12**         ppCmdQueues, 
+                           Uint32                       NumDeferredContexts );
     ~RenderDeviceD3D12Impl();
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
 
     virtual void CreatePipelineState( const PipelineStateDesc &PipelineDesc, IPipelineState **ppPipelineState )override final;
 
     virtual void CreateBuffer(const BufferDesc& BuffDesc, const BufferData* pBuffData, IBuffer **ppBuffer)override final;
 
-    virtual void CreateShader(const ShaderCreationAttribs& ShaderCreationAttribs, IShader **ppShader)override final;
+    virtual void CreateShader(const ShaderCreateInfo& ShaderCreateInfo, IShader **ppShader)override final;
 
     virtual void CreateTexture(const TextureDesc& TexDesc, const TextureData* pData, ITexture **ppTexture)override final;
     
@@ -108,7 +108,7 @@ private:
 
     CComPtr<ID3D12Device> m_pd3d12Device;
 
-    EngineD3D12Attribs m_EngineAttribs;
+    EngineD3D12CreateInfo m_EngineAttribs;
 
     CPUDescriptorHeap m_CPUDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
     GPUDescriptorHeap m_GPUDescriptorHeaps[2]; // D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV == 0

@@ -34,6 +34,7 @@
 #include "STDAllocator.h"
 #include "EngineMemory.h"
 #include "GraphicsAccessories.h"
+#include "StringPool.h"
 
 namespace Diligent
 {
@@ -65,6 +66,62 @@ public:
         m_LayoutElements (PSODesc.GraphicsPipeline.InputLayout.NumElements, LayoutElement{}, STD_ALLOCATOR_RAW_MEM(LayoutElement, GetRawAllocator(), "Allocator for vector<LayoutElement>")),
         m_NumShaders(0)
     {
+        const auto& SrcLayout = PSODesc.ResourceLayout;
+        size_t StringPoolSize = 0;
+        if (SrcLayout.Variables != nullptr)
+        {
+            for (Uint32 i=0; i < SrcLayout.NumVariables; ++i)
+                StringPoolSize += strlen(SrcLayout.Variables[i].Name) + 1;
+        }
+        
+        if (SrcLayout.StaticSamplers != nullptr)
+        {
+            for (Uint32 i=0; i < SrcLayout.NumStaticSamplers; ++i)
+                StringPoolSize += strlen(SrcLayout.StaticSamplers[i].SamplerOrTextureName) + 1;
+        }
+        m_StringPool.Reserve(StringPoolSize, GetRawAllocator());
+
+        auto& DstLayout = this->m_Desc.ResourceLayout;
+        if (SrcLayout.Variables != nullptr)
+        {
+            ShaderResourceVariableDesc* Variables =
+                reinterpret_cast<ShaderResourceVariableDesc*>(ALLOCATE(GetRawAllocator(), "Memory for ShaderResourceVariableDesc array", sizeof(ShaderResourceVariableDesc) * SrcLayout.NumVariables));
+            DstLayout.Variables = Variables;
+            for (Uint32 i=0; i < SrcLayout.NumVariables; ++i)
+            {
+                VERIFY(SrcLayout.Variables[i].Name != nullptr, "Variable name can't be null");
+                Variables[i] = SrcLayout.Variables[i];
+                Variables[i].Name = m_StringPool.CopyString(SrcLayout.Variables[i].Name);
+            }
+        }
+
+        if (SrcLayout.StaticSamplers != nullptr)
+        {
+            StaticSamplerDesc* StaticSamplers =
+                reinterpret_cast<StaticSamplerDesc*>(ALLOCATE(GetRawAllocator(), "Memory for StaticSamplerDesc array", sizeof(StaticSamplerDesc) * SrcLayout.NumStaticSamplers));
+            DstLayout.StaticSamplers = StaticSamplers;
+            for (Uint32 i=0; i < SrcLayout.NumStaticSamplers; ++i)
+            {
+                VERIFY(SrcLayout.StaticSamplers[i].SamplerOrTextureName != nullptr, "Static sampler or texture name can't be null");
+#ifdef DEVELOPMENT
+                const auto &BorderColor = SrcLayout.StaticSamplers[i].Desc.BorderColor;
+                if( !( (BorderColor[0] == 0 && BorderColor[1] == 0 && BorderColor[2] == 0 && BorderColor[3] == 0) ||
+                       (BorderColor[0] == 0 && BorderColor[1] == 0 && BorderColor[2] == 0 && BorderColor[3] == 1) ||
+                       (BorderColor[0] == 1 && BorderColor[1] == 1 && BorderColor[2] == 1 && BorderColor[3] == 1) ) )
+                {
+                    LOG_WARNING_MESSAGE("Static sampler for variable \"", SrcLayout.StaticSamplers[i].SamplerOrTextureName, "\" specifies border color (",
+                                        BorderColor[0], ", ", BorderColor[1], ", ",  BorderColor[2], ", ",  BorderColor[3], "). "
+                                        "D3D12 static samplers only allow transparent black (0,0,0,0), opaque black (0,0,0,1) or opaque white (1,1,1,1) as border colors");
+                }
+#endif
+
+                StaticSamplers[i] = SrcLayout.StaticSamplers[i];
+                StaticSamplers[i].SamplerOrTextureName = m_StringPool.CopyString(SrcLayout.StaticSamplers[i].SamplerOrTextureName);
+            }
+        }
+        VERIFY_EXPR(m_StringPool.GetRemainingSize() == 0);
+
+
         if (this->m_Desc.IsComputePipeline)
         {
             const auto &ComputePipeline = PSODesc.ComputePipeline;
@@ -107,6 +164,7 @@ public:
             if (GraphicsPipeline.pHS) m_ppShaders[m_NumShaders++] = GraphicsPipeline.pHS;
             if (GraphicsPipeline.pDS) m_ppShaders[m_NumShaders++] = GraphicsPipeline.pDS;
         }
+        VERIFY(m_NumShaders > 0, "There must be at least one shader in the Pipeline State");
 
         const auto& InputLayout = PSODesc.GraphicsPipeline.InputLayout;
         for (size_t Elem = 0; Elem < InputLayout.NumElements; ++Elem)
@@ -206,6 +264,12 @@ public:
         RasterizerStateRegistry.ReportDeletedObject();
         DSSRegistry.ReportDeletedObject();
         */
+
+        auto& RawAllocator = GetRawAllocator();
+        if (this->m_Desc.ResourceLayout.Variables != nullptr)
+            RawAllocator.Free(const_cast<ShaderResourceVariableDesc*>(this->m_Desc.ResourceLayout.Variables));
+        if (this->m_Desc.ResourceLayout.StaticSamplers != nullptr)
+            RawAllocator.Free(const_cast<StaticSamplerDesc*>(this->m_Desc.ResourceLayout.StaticSamplers));
     }
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE( IID_PipelineState, TDeviceObjectBase )
@@ -250,21 +314,19 @@ public:
         return m_ShaderResourceLayoutHash != ValidatedCast<const PipelineStateBase>(pPSO)->m_ShaderResourceLayoutHash;
     }
 
-    virtual void BindShaderResources( IResourceMapping* pResourceMapping, Uint32 Flags )override
-    {
-        for(Uint32 s=0; s < m_NumShaders; ++s)
-            m_ppShaders[s]->BindResources(pResourceMapping, Flags);
-    }
-
 protected:
+    // TODO: rework this
     std::vector<LayoutElement, STDAllocatorRawMem<LayoutElement> > m_LayoutElements;
 
     Uint32 m_BufferSlotsUsed = 0;
+    Uint32 m_NumShaders      = 0;      ///< Number of shaders that this PSO uses
+
     // The size of this array must be equal to the
     // maximum number of buffer slots, because a layout 
     // element can refer to any input slot
-    std::array<Uint32, MaxBufferSlots> m_Strides = {};
+    std::array<Uint32, MaxBufferSlots> m_Strides = {}; // TODO: rework this
 
+    StringPool m_StringPool;
     RefCntAutoPtr<IShader> m_pVS; ///< Strong reference to the vertex shader
     RefCntAutoPtr<IShader> m_pPS; ///< Strong reference to the pixel shader
     RefCntAutoPtr<IShader> m_pGS; ///< Strong reference to the geometry shader
@@ -272,7 +334,6 @@ protected:
     RefCntAutoPtr<IShader> m_pHS; ///< Strong reference to the hull shader
     RefCntAutoPtr<IShader> m_pCS; ///< Strong reference to the compute shader
     IShader* m_ppShaders[5] = {}; ///< Array of pointers to the shaders used by this PSO
-    Uint32 m_NumShaders = 0;      ///< Number of shaders that this PSO uses
     size_t m_ShaderResourceLayoutHash = 0;///< Hash computed from the shader resource layout
 };
 

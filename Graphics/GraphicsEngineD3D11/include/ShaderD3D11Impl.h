@@ -50,31 +50,20 @@ public:
 
     ShaderD3D11Impl(IReferenceCounters*          pRefCounters,
                     class RenderDeviceD3D11Impl* pRenderDeviceD3D11,
-                    const ShaderCreationAttribs& CreationAttribs);
+                    const ShaderCreateInfo&      ShaderCI);
     ~ShaderD3D11Impl();
     
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject** ppInterface )override final;
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ShaderD3D11, TShaderBase);
 
-    virtual void BindResources( IResourceMapping* pResourceMapping, Uint32 Flags  )override final
+    virtual Uint32 GetResourceCount()const override final
     {
-        m_StaticResLayout.BindResources(pResourceMapping, Flags, m_StaticResCache);
-    }
-    
-    virtual IShaderVariable* GetShaderVariable( const Char* Name )override final
-    {
-        return m_StaticResLayout.GetShaderVariable(Name);
+        return m_pShaderResources->GetTotalResources();
     }
 
-    virtual Uint32 GetVariableCount() const override final
+    virtual ShaderResourceDesc GetResource(Uint32 Index)const override final
     {
-        return m_StaticResLayout.GetTotalResourceCount();
+        return m_pShaderResources->GetShaderResourceDesc(Index);
     }
-
-    virtual IShaderVariable* GetShaderVariable(Uint32 Index)override final
-    {
-        return m_StaticResLayout.GetShaderVariable(Index);
-    }
-
 
     virtual ID3D11DeviceChild* GetD3D11Shader()override final
     {
@@ -83,9 +72,7 @@ public:
 
     ID3DBlob* GetBytecode(){return m_pShaderByteCode;}
 
-    ShaderResourceLayoutD3D11& GetStaticResourceLayout(){return m_StaticResLayout;}
-    const std::shared_ptr<const ShaderResourcesD3D11>& GetResources()const{return m_pShaderResources;}
-    Uint32 GetShaderTypeIndex()const{return m_ShaderTypeIndex;}
+    const std::shared_ptr<const ShaderResourcesD3D11>& GetD3D11Resources()const{return m_pShaderResources;}
 
 private:
     /// D3D11 shader
@@ -94,10 +81,6 @@ private:
     // ShaderResources class instance must be referenced through the shared pointer, because 
     // it is referenced by ShaderResourceLayoutD3D11 class instances
     std::shared_ptr<const ShaderResourcesD3D11> m_pShaderResources;
-
-    ShaderResourceCacheD3D11 m_StaticResCache;
-    ShaderResourceLayoutD3D11 m_StaticResLayout;
-    Uint32 m_ShaderTypeIndex; // VS == 0, PS == 1, GS == 2, HS == 3, DS == 4, CS == 5
 };
 
 }

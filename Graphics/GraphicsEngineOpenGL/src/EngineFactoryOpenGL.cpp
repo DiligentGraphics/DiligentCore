@@ -25,7 +25,7 @@
 /// Routines that initialize OpenGL/GLES-based engine implementation
 
 #include "pch.h"
-#include "RenderDeviceFactoryOpenGL.h"
+#include "EngineFactoryOpenGL.h"
 #include "RenderDeviceGLImpl.h"
 #include "DeviceContextGLImpl.h"
 #include "EngineMemory.h"
@@ -67,24 +67,24 @@ public:
         return &TheFactory;
     }
 
-    virtual void CreateDeviceAndSwapChainGL(const EngineGLAttribs&  CreationAttribs,
-                                            IRenderDevice**         ppDevice,
-                                            IDeviceContext**        ppImmediateContext,
-                                            const SwapChainDesc&    SCDesc, 
-                                            ISwapChain**            ppSwapChain )override final;
+    virtual void CreateDeviceAndSwapChainGL(const EngineGLCreateInfo& EngineCI,
+                                            IRenderDevice**           ppDevice,
+                                            IDeviceContext**          ppImmediateContext,
+                                            const SwapChainDesc&      SCDesc, 
+                                            ISwapChain**              ppSwapChain )override final;
 
     virtual void CreateHLSL2GLSLConverter(IHLSL2GLSLConverter** ppConverter)override final;
 
-    virtual void AttachToActiveGLContext( const EngineGLAttribs& CreationAttribs,
-                                          IRenderDevice**        ppDevice,
-                                          IDeviceContext**       ppImmediateContext )override final;
+    virtual void AttachToActiveGLContext(const EngineGLCreateInfo& EngineCI,
+                                         IRenderDevice**           ppDevice,
+                                         IDeviceContext**          ppImmediateContext )override final;
 };
 
 
 
 /// Creates render device, device context and swap chain for OpenGL/GLES-based engine implementation
 
-/// \param [in] CreationAttribs - Engine creation attributes.
+/// \param [in] EngineCI - Engine creation attributes.
 /// \param [out] ppDevice - Address of the memory location where pointer to 
 ///                         the created device will be written.
 /// \param [out] ppImmediateContext - Address of the memory location where pointers to 
@@ -92,14 +92,14 @@ public:
 /// \param [in] SCDesc - Swap chain description.
 /// \param [out] ppSwapChain    - Address of the memory location where pointer to the new 
 ///                               swap chain will be written.
-void EngineFactoryOpenGLImpl::CreateDeviceAndSwapChainGL(const EngineGLAttribs& CreationAttribs,
-                                                         IRenderDevice**        ppDevice,
-                                                         IDeviceContext**       ppImmediateContext,
-                                                         const SwapChainDesc&   SCDesc, 
-                                                         ISwapChain**           ppSwapChain)
+void EngineFactoryOpenGLImpl::CreateDeviceAndSwapChainGL(const EngineGLCreateInfo& EngineCI,
+                                                         IRenderDevice**           ppDevice,
+                                                         IDeviceContext**          ppImmediateContext,
+                                                         const SwapChainDesc&      SCDesc, 
+                                                         ISwapChain**              ppSwapChain)
 {
-    if (CreationAttribs.DebugMessageCallback != nullptr)
-        SetDebugMessageCallback(CreationAttribs.DebugMessageCallback);
+    if (EngineCI.DebugMessageCallback != nullptr)
+        SetDebugMessageCallback(EngineCI.DebugMessageCallback);
 
     VERIFY( ppDevice && ppImmediateContext && ppSwapChain, "Null pointer provided" );
     if( !ppDevice || !ppImmediateContext || !ppSwapChain )
@@ -111,10 +111,10 @@ void EngineFactoryOpenGLImpl::CreateDeviceAndSwapChainGL(const EngineGLAttribs& 
 
     try
     {
-        SetRawAllocator(CreationAttribs.pRawMemAllocator);
+        SetRawAllocator(EngineCI.pRawMemAllocator);
         auto &RawMemAllocator = GetRawAllocator();
 
-        RenderDeviceGLImpl* pRenderDeviceOpenGL( NEW_RC_OBJ(RawMemAllocator, "TRenderDeviceGLImpl instance", TRenderDeviceGLImpl)(RawMemAllocator, CreationAttribs, &SCDesc) );
+        RenderDeviceGLImpl *pRenderDeviceOpenGL( NEW_RC_OBJ(RawMemAllocator, "TRenderDeviceGLImpl instance", TRenderDeviceGLImpl)(RawMemAllocator, EngineCI, &SCDesc) );
         pRenderDeviceOpenGL->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice) );
 
         DeviceContextGLImpl* pDeviceContextOpenGL( NEW_RC_OBJ(RawMemAllocator, "DeviceContextGLImpl instance", DeviceContextGLImpl)(pRenderDeviceOpenGL, false ) );
@@ -123,7 +123,7 @@ void EngineFactoryOpenGLImpl::CreateDeviceAndSwapChainGL(const EngineGLAttribs& 
         pDeviceContextOpenGL->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppImmediateContext) );
         pRenderDeviceOpenGL->SetImmediateContext(pDeviceContextOpenGL);
 
-        TSwapChain *pSwapChainGL = NEW_RC_OBJ(RawMemAllocator, "SwapChainGLImpl instance", TSwapChain)(CreationAttribs, SCDesc, pRenderDeviceOpenGL, pDeviceContextOpenGL );
+        TSwapChain *pSwapChainGL = NEW_RC_OBJ(RawMemAllocator, "SwapChainGLImpl instance", TSwapChain)(EngineCI, SCDesc, pRenderDeviceOpenGL, pDeviceContextOpenGL );
         pSwapChainGL->QueryInterface(IID_SwapChain, reinterpret_cast<IObject**>(ppSwapChain) );
 
         pDeviceContextOpenGL->SetSwapChain(pSwapChainGL);
@@ -158,17 +158,17 @@ void EngineFactoryOpenGLImpl::CreateDeviceAndSwapChainGL(const EngineGLAttribs& 
 
 /// Creates render device, device context and attaches to existing GL context
 
-/// \param [in] CreationAttribs - Engine creation attributes.
+/// \param [in] EngineCI - Engine creation attributes.
 /// \param [out] ppDevice - Address of the memory location where pointer to 
 ///                         the created device will be written.
 /// \param [out] ppImmediateContext - Address of the memory location where pointers to 
 ///                                   the immediate context will be written.
-void EngineFactoryOpenGLImpl::AttachToActiveGLContext( const EngineGLAttribs& CreationAttribs,
-                                                       IRenderDevice**        ppDevice,
-                                                       IDeviceContext**       ppImmediateContext )
+void EngineFactoryOpenGLImpl::AttachToActiveGLContext(const EngineGLCreateInfo& EngineCI,
+                                                      IRenderDevice**           ppDevice,
+                                                      IDeviceContext**          ppImmediateContext )
 {
-    if (CreationAttribs.DebugMessageCallback != nullptr)
-        SetDebugMessageCallback(CreationAttribs.DebugMessageCallback);
+    if (EngineCI.DebugMessageCallback != nullptr)
+        SetDebugMessageCallback(EngineCI.DebugMessageCallback);
 
     VERIFY( ppDevice && ppImmediateContext, "Null pointer provided" );
     if( !ppDevice || !ppImmediateContext )
@@ -179,10 +179,10 @@ void EngineFactoryOpenGLImpl::AttachToActiveGLContext( const EngineGLAttribs& Cr
 
     try
     {
-        SetRawAllocator(CreationAttribs.pRawMemAllocator);
+        SetRawAllocator(EngineCI.pRawMemAllocator);
         auto &RawMemAllocator = GetRawAllocator();
 
-        RenderDeviceGLImpl* pRenderDeviceOpenGL( NEW_RC_OBJ(RawMemAllocator, "TRenderDeviceGLImpl instance", TRenderDeviceGLImpl)(RawMemAllocator, CreationAttribs) );
+        RenderDeviceGLImpl *pRenderDeviceOpenGL( NEW_RC_OBJ(RawMemAllocator, "TRenderDeviceGLImpl instance", TRenderDeviceGLImpl)(RawMemAllocator, EngineCI) );
         pRenderDeviceOpenGL->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice) );
 
         DeviceContextGLImpl* pDeviceContextOpenGL( NEW_RC_OBJ(RawMemAllocator, "DeviceContextGLImpl instance", DeviceContextGLImpl)(pRenderDeviceOpenGL, false ) );
@@ -228,7 +228,7 @@ void LoadGraphicsEngineOpenGL(GetEngineFactoryOpenGLType &GetFactoryFunc)
 }
 #endif
 
-void EngineFactoryOpenGLImpl::CreateHLSL2GLSLConverter(IHLSL2GLSLConverter **ppConverter)
+void EngineFactoryOpenGLImpl::CreateHLSL2GLSLConverter(IHLSL2GLSLConverter** ppConverter)
 {
     HLSL2GLSLConverterObject *pConverter( NEW_RC_OBJ(GetRawAllocator(), "HLSL2GLSLConverterObject instance", HLSL2GLSLConverterObject)() );
     pConverter->QueryInterface( IID_HLSL2GLSLConverter, reinterpret_cast<IObject**>(ppConverter) );

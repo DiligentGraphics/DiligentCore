@@ -49,6 +49,7 @@
 // Descriptor set for static and mutable resources is assigned during cache initialization
 // Descriptor set for dynamic resources is assigned at every draw call
 
+#include <vector>
 #include "DescriptorPoolManager.h"
 #include "SPIRVShaderResources.h"
 
@@ -83,7 +84,7 @@ public:
     ~ShaderResourceCacheVk();
 
     static size_t GetRequiredMemorySize(Uint32 NumSets, Uint32 SetSizes[]);
-    void InitializeSets(IMemoryAllocator &MemAllocator, Uint32 NumSets, Uint32 SetSizes[]);
+    void InitializeSets(IMemoryAllocator& MemAllocator, Uint32 NumSets, Uint32 SetSizes[]);
     void InitializeResources(Uint32 Set, Uint32 Offset, Uint32 ArraySize, SPIRVShaderResourceAttribs::ResourceType Type);
 
     // sizeof(Resource) == 16 (x64, msvc, Release)
@@ -93,13 +94,14 @@ public:
             Type(_Type)
         {}
 
-        Resource(const Resource&)              = delete;
-        Resource(Resource&&)                   = delete;
+        Resource             (const Resource&) = delete;
+        Resource             (Resource&&)      = delete;
         Resource& operator = (const Resource&) = delete;
         Resource& operator = (Resource&&)      = delete;
 
-        const SPIRVShaderResourceAttribs::ResourceType  Type;
-        RefCntAutoPtr<IDeviceObject>                    pObject;
+/* 0 */ const SPIRVShaderResourceAttribs::ResourceType  Type;
+/*1-7*/ // Unused
+/* 8 */ RefCntAutoPtr<IDeviceObject>                    pObject;
 
         VkDescriptorBufferInfo GetUniformBufferDescriptorWriteInfo ()                const;
         VkDescriptorBufferInfo GetStorageBufferDescriptorWriteInfo ()                const;
@@ -108,7 +110,7 @@ public:
         VkDescriptorImageInfo  GetSamplerDescriptorWriteInfo()                       const;
     };
 
-    // sizeof(DescriptorSet) == 40 (x64, msvc, Release)
+    // sizeof(DescriptorSet) == 48 (x64, msvc, Release)
     class DescriptorSet
     {
     public:
@@ -117,8 +119,8 @@ public:
             m_pResources    (pResources)
         {}
 
-        DescriptorSet(const DescriptorSet&)              = delete;
-        DescriptorSet(DescriptorSet&&)                   = delete;
+        DescriptorSet             (const DescriptorSet&) = delete;
+        DescriptorSet             (DescriptorSet&&)      = delete;
         DescriptorSet& operator = (const DescriptorSet&) = delete;
         DescriptorSet& operator = (DescriptorSet&&)      = delete;
 
@@ -146,11 +148,12 @@ public:
             m_DescriptorSetAllocation = std::move(Allocation);
         }
 
-        const Uint32 m_NumResources = 0;
+/* 0 */ const Uint32 m_NumResources = 0;
 
     private:
-        Resource* const m_pResources = nullptr;
-        DescriptorSetAllocation m_DescriptorSetAllocation;
+/* 8 */ Resource* const m_pResources = nullptr;
+/*16 */ DescriptorSetAllocation m_DescriptorSetAllocation;
+/*48 */ // End of structure
     };
 
     inline DescriptorSet& GetDescriptorSet(Uint32 Index)
@@ -169,6 +172,7 @@ public:
 #ifdef _DEBUG
     // Only for debug purposes: indicates what types of resources are stored in the cache
     DbgCacheContentType DbgGetContentType()const{return m_DbgContentType;}
+    void DbgVerifyResourceInitialization()const;
 #endif
 
     template<bool VerifyOnly>
@@ -190,7 +194,9 @@ private:
 
 #ifdef _DEBUG
     // Only for debug purposes: indicates what types of resources are stored in the cache
-    const DbgCacheContentType m_DbgContentType;
+    const DbgCacheContentType      m_DbgContentType;
+    // Debug array that stores flags indicating if resources in the cache have been initialized
+    std::vector<std::vector<bool>> m_DbgInitializedResources;
 #endif
 };
 

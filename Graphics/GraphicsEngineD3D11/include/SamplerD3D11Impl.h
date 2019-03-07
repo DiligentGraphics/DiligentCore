@@ -46,7 +46,7 @@ public:
                      const SamplerDesc&           SamplerDesc);
     ~SamplerD3D11Impl();
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject** ppInterface ) final;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     virtual ID3D11SamplerState* GetD3D11SamplerState()override final{ return m_pd3dSampler; }
 

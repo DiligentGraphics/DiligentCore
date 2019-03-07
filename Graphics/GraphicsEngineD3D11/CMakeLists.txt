@@ -34,11 +34,10 @@ set(INTERFACE
     interface/BufferD3D11.h
     interface/BufferViewD3D11.h
     interface/DeviceContextD3D11.h
-    interface/EngineD3D11Attribs.h
+    interface/EngineFactoryD3D11.h
     interface/FenceD3D11.h
     interface/PipelineStateD3D11.h
     interface/RenderDeviceD3D11.h
-    interface/RenderDeviceFactoryD3D11.h
     interface/SamplerD3D11.h
     interface/ShaderD3D11.h
     interface/ShaderResourceBindingD3D11.h
@@ -54,11 +53,11 @@ set(SRC
     src/CommandListD3D11Impl.cpp
     src/D3D11TypeConversions.cpp
     src/DeviceContextD3D11Impl.cpp
+    src/EngineFactoryD3D11.cpp
     src/FenceD3D11Impl.cpp
     src/GUIDDef.cpp
     src/PipelineStateD3D11Impl.cpp
     src/RenderDeviceD3D11Impl.cpp
-    src/RenderDeviceFactoryD3D11.cpp
     src/SamplerD3D11Impl.cpp
     src/ShaderD3D11Impl.cpp
     src/ShaderResourceBindingD3D11Impl.cpp

@@ -51,10 +51,10 @@ set(INTERFACE
     interface/BufferViewVk.h
     interface/CommandQueueVk.h
     interface/DeviceContextVk.h
+    interface/EngineFactoryVk.h
     interface/FenceVk.h
     interface/PipelineStateVk.h
     interface/RenderDeviceVk.h
-    interface/RenderDeviceFactoryVk.h
     interface/SamplerVk.h
     interface/ShaderVk.h
     interface/ShaderResourceBindingVk.h
@@ -71,6 +71,7 @@ set(SRC
     src/CommandQueueVkImpl.cpp
     src/DescriptorPoolManager.cpp
     src/DeviceContextVkImpl.cpp
+    src/EngineFactoryVk.cpp
     src/FenceVkImpl.cpp
     src/VulkanDynamicHeap.cpp
     src/FramebufferCache.cpp
@@ -79,7 +80,6 @@ set(SRC
     src/PipelineStateVkImpl.cpp
     src/RenderDeviceVkImpl.cpp
     src/RenderPassCache.cpp
-    src/RenderDeviceFactoryVk.cpp
     src/SamplerVkImpl.cpp
     src/ShaderVkImpl.cpp
     src/ShaderResourceBindingVkImpl.cpp

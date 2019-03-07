@@ -165,22 +165,22 @@ VulkanDynamicMemoryManager::MasterBlock VulkanDynamicMemoryManager::AllocateMast
             Block = TBase::AllocateMasterBlock(SizeInBytes, Alignment);
             if (!Block.IsValid())
             {
-                LOG_ERROR_MESSAGE("Space in dynamic heap is exausted! After idling for ", std::fixed, std::setprecision(1), IdleDuration.count()*1000.0, " ms still no space is available. Increase the size of the heap by setting EngineVkAttribs::DynamicHeapSize to a greater value or optimize dynamic resource usage");
+                LOG_ERROR_MESSAGE("Space in dynamic heap is exausted! After idling for ", std::fixed, std::setprecision(1), IdleDuration.count()*1000.0, " ms still no space is available. Increase the size of the heap by setting EngineVkCreateInfo::DynamicHeapSize to a greater value or optimize dynamic resource usage");
             }
             else
             {
-                LOG_WARNING_MESSAGE("Space in dynamic heap is almost exausted. Allocation forced idling the GPU. Increase the size of the heap by setting EngineVkAttribs::DynamicHeapSize to a greater value or optimize dynamic resource usage");
+                LOG_WARNING_MESSAGE("Space in dynamic heap is almost exausted. Allocation forced idling the GPU. Increase the size of the heap by setting EngineVkCreateInfo::DynamicHeapSize to a greater value or optimize dynamic resource usage");
             }
         }
         else
         {
             if(SleepIterations == 0)
             {
-                LOG_WARNING_MESSAGE("Space in dynamic heap is almost exausted forcing mid-frame shrinkage. Increase the size of the heap buffer by setting EngineVkAttribs::DynamicHeapSize to a greater value or optimize dynamic resource usage");
+                LOG_WARNING_MESSAGE("Space in dynamic heap is almost exausted forcing mid-frame shrinkage. Increase the size of the heap buffer by setting EngineVkCreateInfo::DynamicHeapSize to a greater value or optimize dynamic resource usage");
             }
             else
             {
-                LOG_WARNING_MESSAGE("Space in dynamic heap is almost exausted. Allocation forced wait time of ", std::fixed, std::setprecision(1), IdleDuration.count()*1000.0, " ms. Increase the size of the heap by setting EngineVkAttribs::DynamicHeapSize to a greater value or optimize dynamic resource usage");
+                LOG_WARNING_MESSAGE("Space in dynamic heap is almost exausted. Allocation forced wait time of ", std::fixed, std::setprecision(1), IdleDuration.count()*1000.0, " ms. Increase the size of the heap by setting EngineVkCreateInfo::DynamicHeapSize to a greater value or optimize dynamic resource usage");
             }
         }
     }

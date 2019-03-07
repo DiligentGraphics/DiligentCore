@@ -37,13 +37,10 @@
 namespace Diligent
 {
 
-ShaderVkImpl::ShaderVkImpl(IReferenceCounters*          pRefCounters,
-                           RenderDeviceVkImpl*          pRenderDeviceVk,
-                           const ShaderCreationAttribs& CreationAttribs) : 
-    TShaderBase       (pRefCounters, pRenderDeviceVk, CreationAttribs.Desc),
-    m_StaticResLayout (*this, pRenderDeviceVk->GetLogicalDevice()),
-    m_StaticResCache  (ShaderResourceCacheVk::DbgCacheContentType::StaticShaderResources),
-    m_StaticVarsMgr   (*this)
+ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
+                           RenderDeviceVkImpl*     pRenderDeviceVk,
+                           const ShaderCreateInfo& CreationAttribs) : 
+    TShaderBase(pRefCounters, pRenderDeviceVk, CreationAttribs.Desc)
 {
     if (CreationAttribs.Source != nullptr || CreationAttribs.FilePath != nullptr)
     {
@@ -95,10 +92,6 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*          pRefCounters,
     {
         MapHLSLVertexShaderInputs();
     }
-
-    m_StaticResLayout.InitializeStaticResourceLayout(m_pShaderResources, GetRawAllocator(), m_StaticResCache);
-    // m_StaticResLayout only contains static resources, so reference all of them
-    m_StaticVarsMgr.Initialize(m_StaticResLayout, GetRawAllocator(), nullptr, 0, m_StaticResCache);
 }
 
 void ShaderVkImpl::MapHLSLVertexShaderInputs()
@@ -134,14 +127,63 @@ void ShaderVkImpl::MapHLSLVertexShaderInputs()
 
 ShaderVkImpl::~ShaderVkImpl()
 {
-    m_StaticVarsMgr.Destroy(GetRawAllocator());
 }
 
-#ifdef DEVELOPMENT
-bool ShaderVkImpl::DvpVerifyStaticResourceBindings()const
+ShaderResourceDesc ShaderVkImpl::GetResource(Uint32 Index)const
 {
-    return m_StaticResLayout.dvpVerifyBindings(m_StaticResCache);
+    auto ResCount = GetResourceCount();
+    DEV_CHECK_ERR(Index < ResCount, "Resource index (", Index, ") is out of range");
+    ShaderResourceDesc ResourceDesc;
+    if (Index < ResCount)
+    {
+        const auto& SPIRVResource = m_pShaderResources->GetResource(Index);
+        ResourceDesc.Name      = SPIRVResource.Name;
+        ResourceDesc.ArraySize = SPIRVResource.ArraySize;
+        static_assert(SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes == 9, "Please update switch statement below");
+        switch (SPIRVResource.Type)
+        {
+            case SPIRVShaderResourceAttribs::ResourceType::UniformBuffer:
+                ResourceDesc.Type = SHADER_RESOURCE_TYPE_CONSTANT_BUFFER;
+            break;
+
+            case SPIRVShaderResourceAttribs::ResourceType::StorageBuffer:
+                ResourceDesc.Type = SHADER_RESOURCE_TYPE_BUFFER_UAV;
+            break;
+
+            case SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer:
+                ResourceDesc.Type = SHADER_RESOURCE_TYPE_BUFFER_SRV;
+            break;
+
+            case SPIRVShaderResourceAttribs::ResourceType::StorageTexelBuffer:
+                ResourceDesc.Type = SHADER_RESOURCE_TYPE_BUFFER_UAV;
+            break;
+
+            case SPIRVShaderResourceAttribs::ResourceType::StorageImage:
+                ResourceDesc.Type = SHADER_RESOURCE_TYPE_TEXTURE_UAV;
+            break;
+
+            case SPIRVShaderResourceAttribs::ResourceType::SampledImage:
+                ResourceDesc.Type = SHADER_RESOURCE_TYPE_TEXTURE_SRV;
+            break;
+
+            case SPIRVShaderResourceAttribs::ResourceType::AtomicCounter:
+                LOG_WARNING_MESSAGE("There is no appropriate shader resource type for atomic counter resource '", SPIRVResource.Name, "'");
+                ResourceDesc.Type = SHADER_RESOURCE_TYPE_BUFFER_UAV;
+            break;
+
+            case SPIRVShaderResourceAttribs::ResourceType::SeparateImage:
+                ResourceDesc.Type = SHADER_RESOURCE_TYPE_TEXTURE_SRV;
+            break;
+
+            case SPIRVShaderResourceAttribs::ResourceType::SeparateSampler:
+                ResourceDesc.Type = SHADER_RESOURCE_TYPE_SAMPLER;
+            break;
+
+            default:
+                UNEXPECTED("Unknown SPIRV resource type");
+        }
+    }
+    return ResourceDesc;
 }
-#endif
 
 }

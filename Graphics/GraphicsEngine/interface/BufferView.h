@@ -138,10 +138,10 @@ class IBufferView : public IDeviceObject
 {
 public:
     /// Queries the specific interface, see IObject::QueryInterface() for details
-    virtual void QueryInterface( const Diligent::INTERFACE_ID& IID, IObject** ppInterface ) = 0;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override = 0;
 
     /// Returns the buffer view description used to create the object
-    virtual const BufferViewDesc& GetDesc()const = 0;
+    virtual const BufferViewDesc& GetDesc()const override = 0;
 
     /// Returns pointer to the referenced buffer object.
 

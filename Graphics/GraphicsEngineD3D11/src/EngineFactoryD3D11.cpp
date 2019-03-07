@@ -25,7 +25,7 @@
 /// Routines that initialize D3D11-based engine implementation
 
 #include "pch.h"
-#include "RenderDeviceFactoryD3D11.h"
+#include "EngineFactoryD3D11.h"
 #include "RenderDeviceD3D11Impl.h"
 #include "DeviceContextD3D11Impl.h"
 #include "SwapChainD3D11Impl.h"
@@ -48,24 +48,24 @@ public:
         return &TheFactory;
     }
 
-    void CreateDeviceAndContextsD3D11( const EngineD3D11Attribs& EngineAttribs, 
-                                       IRenderDevice**           ppDevice, 
-                                       IDeviceContext**          ppContexts,
-                                       Uint32                    NumDeferredContexts )override final;
+    void CreateDeviceAndContextsD3D11(const EngineD3D11CreateInfo& EngineCI, 
+                                      IRenderDevice**              ppDevice, 
+                                      IDeviceContext**             ppContexts,
+                                      Uint32                       NumDeferredContexts)override final;
 
-   void CreateSwapChainD3D11( IRenderDevice*            pDevice, 
-                              IDeviceContext*           pImmediateContext, 
-                              const SwapChainDesc&      SCDesc, 
-                              const FullScreenModeDesc& FSDesc,
-                              void*                     pNativeWndHandle, 
-                              ISwapChain**              ppSwapChain )override final;
+   void CreateSwapChainD3D11(IRenderDevice*            pDevice, 
+                             IDeviceContext*           pImmediateContext, 
+                             const SwapChainDesc&      SCDesc, 
+                             const FullScreenModeDesc& FSDesc,
+                             void*                     pNativeWndHandle, 
+                             ISwapChain**              ppSwapChain)override final;
 
-   void AttachToD3D11Device(void*                     pd3d11NativeDevice, 
-                            void*                     pd3d11ImmediateContext,
-                            const EngineD3D11Attribs& EngineAttribs, 
-                            IRenderDevice**           ppDevice, 
-                            IDeviceContext**          ppContexts,
-                            Uint32                    NumDeferredContexts)override final;
+   void AttachToD3D11Device(void*                        pd3d11NativeDevice, 
+                            void*                        pd3d11ImmediateContext,
+                            const EngineD3D11CreateInfo& EngineCI, 
+                            IRenderDevice**              ppDevice, 
+                            IDeviceContext**             ppContexts,
+                            Uint32                       NumDeferredContexts)override final;
 };
 
 
@@ -92,7 +92,7 @@ inline bool SdkLayersAvailable()
 
 /// Creates render device and device contexts for Direct3D11-based engine implementation
 
-/// \param [in] EngineAttribs - Engine creation attributes.
+/// \param [in] EngineCI - Engine creation attributes.
 /// \param [out] ppDevice - Address of the memory location where pointer to 
 ///                         the created device will be written
 /// \param [out] ppContexts - Address of the memory location where pointers to 
@@ -103,13 +103,13 @@ inline bool SdkLayersAvailable()
 ///                                   of deferred contexts is requested, pointers to the
 ///                                   contexts are written to ppContexts array starting 
 ///                                   at position 1
-void EngineFactoryD3D11Impl::CreateDeviceAndContextsD3D11( const EngineD3D11Attribs& EngineAttribs, 
-                                                           IRenderDevice**           ppDevice, 
-                                                           IDeviceContext**          ppContexts, 
-                                                           Uint32                    NumDeferredContexts )
+void EngineFactoryD3D11Impl::CreateDeviceAndContextsD3D11(const EngineD3D11CreateInfo& EngineCI, 
+                                                          IRenderDevice**              ppDevice, 
+                                                          IDeviceContext**             ppContexts, 
+                                                          Uint32                       NumDeferredContexts )
 {
-    if (EngineAttribs.DebugMessageCallback != nullptr)
-        SetDebugMessageCallback(EngineAttribs.DebugMessageCallback);
+    if (EngineCI.DebugMessageCallback != nullptr)
+        SetDebugMessageCallback(EngineCI.DebugMessageCallback);
 
     VERIFY( ppDevice && ppContexts, "Null pointer provided" );
     if( !ppDevice || !ppContexts )
@@ -153,14 +153,14 @@ void EngineFactoryD3D11Impl::CreateDeviceAndContextsD3D11( const EngineD3D11Attr
 	CComPtr<ID3D11DeviceContext> pd3d11Context;
 
     CComPtr<IDXGIAdapter1> hardwareAdapter;
-    if(EngineAttribs.AdapterId != EngineD3D11Attribs::DefaultAdapterId)
+    if (EngineCI.AdapterId != EngineD3D11CreateInfo::DefaultAdapterId)
     {
         auto Adapters = FindCompatibleAdapters();
-        if (EngineAttribs.AdapterId < Adapters.size())
-            hardwareAdapter = Adapters[EngineAttribs.AdapterId];
+        if (EngineCI.AdapterId < Adapters.size())
+            hardwareAdapter = Adapters[EngineCI.AdapterId];
         else
         {
-            LOG_ERROR_AND_THROW(EngineAttribs.AdapterId, " is not a valid hardware adapter id. Total number of compatible adapters available on this system: ", Adapters.size());
+            LOG_ERROR_AND_THROW(EngineCI.AdapterId, " is not a valid hardware adapter id. Total number of compatible adapters available on this system: ", Adapters.size());
         }
     }
 
@@ -199,7 +199,7 @@ void EngineFactoryD3D11Impl::CreateDeviceAndContextsD3D11( const EngineD3D11Attr
         return;
 	}
 
-    AttachToD3D11Device(pd3d11Device, pd3d11Context, EngineAttribs, ppDevice, ppContexts, NumDeferredContexts);
+    AttachToD3D11Device(pd3d11Device, pd3d11Context, EngineCI, ppDevice, ppContexts, NumDeferredContexts);
 }
 
 
@@ -207,7 +207,7 @@ void EngineFactoryD3D11Impl::CreateDeviceAndContextsD3D11( const EngineD3D11Attr
 
 /// \param [in] pd3d11NativeDevice - pointer to native D3D11 device
 /// \param [in] pd3d11ImmediateContext - pointer to native D3D11 immediate context
-/// \param [in] EngineAttribs - Engine creation attributes.
+/// \param [in] EngineCI - Engine creation attributes.
 /// \param [out] ppDevice - Address of the memory location where pointer to 
 ///                         the created device will be written
 /// \param [out] ppContexts - Address of the memory location where pointers to 
@@ -218,15 +218,15 @@ void EngineFactoryD3D11Impl::CreateDeviceAndContextsD3D11( const EngineD3D11Attr
 ///                                   of deferred contexts is requested, pointers to the
 ///                                   contexts are written to ppContexts array starting 
 ///                                   at position 1
-void EngineFactoryD3D11Impl::AttachToD3D11Device(void*                     pd3d11NativeDevice, 
-                                                 void*                     pd3d11ImmediateContext,
-                                                 const EngineD3D11Attribs& EngineAttribs, 
-                                                 IRenderDevice**           ppDevice, 
-                                                 IDeviceContext**          ppContexts,
-                                                 Uint32                    NumDeferredContexts)
+void EngineFactoryD3D11Impl::AttachToD3D11Device(void*                        pd3d11NativeDevice, 
+                                                 void*                        pd3d11ImmediateContext,
+                                                 const EngineD3D11CreateInfo& EngineCI, 
+                                                 IRenderDevice**              ppDevice, 
+                                                 IDeviceContext**             ppContexts,
+                                                 Uint32                       NumDeferredContexts)
 {
-    if (EngineAttribs.DebugMessageCallback != nullptr)
-        SetDebugMessageCallback(EngineAttribs.DebugMessageCallback);
+    if (EngineCI.DebugMessageCallback != nullptr)
+        SetDebugMessageCallback(EngineCI.DebugMessageCallback);
 
     VERIFY( ppDevice && ppContexts, "Null pointer provided" );
     if( !ppDevice || !ppContexts )
@@ -237,14 +237,14 @@ void EngineFactoryD3D11Impl::AttachToD3D11Device(void*                     pd3d1
         ID3D11Device *pd3d11Device = reinterpret_cast<ID3D11Device *>(pd3d11NativeDevice);
         ID3D11DeviceContext *pd3d11ImmediateCtx = reinterpret_cast<ID3D11DeviceContext *>(pd3d11ImmediateContext);
 
-        SetRawAllocator(EngineAttribs.pRawMemAllocator);
+        SetRawAllocator(EngineCI.pRawMemAllocator);
         auto &RawAlloctor = GetRawAllocator();
         RenderDeviceD3D11Impl *pRenderDeviceD3D11(NEW_RC_OBJ(RawAlloctor, "RenderDeviceD3D11Impl instance", RenderDeviceD3D11Impl)
-            (RawAlloctor, EngineAttribs, pd3d11Device, NumDeferredContexts));
+            (RawAlloctor, EngineCI, pd3d11Device, NumDeferredContexts));
         pRenderDeviceD3D11->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice));
 
         RefCntAutoPtr<DeviceContextD3D11Impl> pDeviceContextD3D11(NEW_RC_OBJ(RawAlloctor, "DeviceContextD3D11Impl instance", DeviceContextD3D11Impl)
-            (RawAlloctor, pRenderDeviceD3D11, pd3d11ImmediateCtx, EngineAttribs, false));
+            (RawAlloctor, pRenderDeviceD3D11, pd3d11ImmediateCtx, EngineCI, false));
         // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceD3D11 will
         // keep a weak reference to the context
         pDeviceContextD3D11->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppContexts));
@@ -257,7 +257,7 @@ void EngineFactoryD3D11Impl::AttachToD3D11Device(void*                     pd3d1
             CHECK_D3D_RESULT_THROW(hr, "Failed to create D3D11 deferred context");
             RefCntAutoPtr<DeviceContextD3D11Impl> pDeferredCtxD3D11(
                 NEW_RC_OBJ(RawAlloctor, "DeviceContextD3D11Impl instance", DeviceContextD3D11Impl)
-                          (RawAlloctor, pRenderDeviceD3D11, pd3d11DeferredCtx, EngineAttribs, true));
+                          (RawAlloctor, pRenderDeviceD3D11, pd3d11DeferredCtx, EngineCI, true));
             // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceD3D12 will
             // keep a weak reference to the context
             pDeferredCtxD3D11->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppContexts + 1 + DeferredCtx));
@@ -299,12 +299,12 @@ void EngineFactoryD3D11Impl::AttachToD3D11Device(void*                     pd3d1
 ///                                
 /// \param [out] ppSwapChain    - Address of the memory location where pointer to the new 
 ///                               swap chain will be written
-void EngineFactoryD3D11Impl::CreateSwapChainD3D11( IRenderDevice*            pDevice, 
-                                                   IDeviceContext*           pImmediateContext, 
-                                                   const SwapChainDesc&      SCDesc, 
-                                                   const FullScreenModeDesc& FSDesc,
-                                                   void*                     pNativeWndHandle, 
-                                                   ISwapChain**              ppSwapChain )
+void EngineFactoryD3D11Impl::CreateSwapChainD3D11(IRenderDevice*            pDevice, 
+                                                  IDeviceContext*           pImmediateContext, 
+                                                  const SwapChainDesc&      SCDesc, 
+                                                  const FullScreenModeDesc& FSDesc,
+                                                  void*                     pNativeWndHandle, 
+                                                  ISwapChain**              ppSwapChain)
 {
     VERIFY( ppSwapChain, "Null pointer provided" );
     if( !ppSwapChain )

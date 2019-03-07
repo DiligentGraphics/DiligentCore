@@ -28,11 +28,10 @@
 #include "GLContextIOS.h"
 #include "DeviceCaps.h"
 #include "GLTypeConversions.h"
-#include "EngineGLAttribs.h"
 
 namespace Diligent
 {
-    GLContext::GLContext(const EngineGLAttribs& Info, DeviceCaps& DeviceCaps, const struct SwapChainDesc* /*pSCDesc*/)
+    GLContext::GLContext(const EngineGLCreateInfo& Info, DeviceCaps& deviceCaps, const struct SwapChainDesc* /*pSCDesc*/)
     {
         if (GetCurrentNativeGLContext() == nullptr)
         {
@@ -66,26 +65,26 @@ namespace Diligent
         //if( glGetError() != GL_NO_ERROR )
         //    LOG_ERROR_MESSAGE("Failed to enable SRGB framebuffers");
 
-        DeviceCaps.DevType = DeviceType::OpenGLES;
-        DeviceCaps.MajorVersion = MajorVersion;
-        DeviceCaps.MinorVersion = MinorVersion;
-        DeviceCaps.bMultithreadedResourceCreationSupported = False;
-        DeviceCaps.bIndirectRenderingSupported             = False;
-        DeviceCaps.bGeometryShadersSupported               = False;
-        DeviceCaps.bTessellationSupported                  = False;
-        DeviceCaps.bWireframeFillSupported                 = False;
-        DeviceCaps.bComputeShadersSupported                = False;
+        deviceCaps.DevType = DeviceType::OpenGLES;
+        deviceCaps.MajorVersion = MajorVersion;
+        deviceCaps.MinorVersion = MinorVersion;
+        deviceCaps.bMultithreadedResourceCreationSupported = False;
+        deviceCaps.bIndirectRenderingSupported             = False;
+        deviceCaps.bGeometryShadersSupported               = False;
+        deviceCaps.bTessellationSupported                  = False;
+        deviceCaps.bWireframeFillSupported                 = False;
+        deviceCaps.bComputeShadersSupported                = False;
 
-        DeviceCaps.SamCaps.bLODBiasSupported            = False;
-        DeviceCaps.SamCaps.bBorderSamplingModeSupported = False;
+        deviceCaps.SamCaps.bLODBiasSupported            = False;
+        deviceCaps.SamCaps.bBorderSamplingModeSupported = False;
         
-        DeviceCaps.TexCaps.bTexture1DSupported        = False;
-        DeviceCaps.TexCaps.bCubemapArraysSupported    = False;
-        DeviceCaps.TexCaps.bTexture1DSupported        = False;
-        DeviceCaps.TexCaps.bTexture1DArraySupported   = False;
-        DeviceCaps.TexCaps.bTextureViewSupported      = False;
-        DeviceCaps.TexCaps.bTexture2DMSSupported      = False;
-        DeviceCaps.TexCaps.bTexture2DMSArraySupported = False;
+        deviceCaps.TexCaps.bTexture1DSupported        = False;
+        deviceCaps.TexCaps.bCubemapArraysSupported    = False;
+        deviceCaps.TexCaps.bTexture1DSupported        = False;
+        deviceCaps.TexCaps.bTexture1DArraySupported   = False;
+        deviceCaps.TexCaps.bTextureViewSupported      = False;
+        deviceCaps.TexCaps.bTexture2DMSSupported      = False;
+        deviceCaps.TexCaps.bTexture2DMSArraySupported = False;
     }
 
     GLContext::NativeGLContextType GLContext::GetCurrentNativeGLContext()

@@ -43,7 +43,7 @@ public:
     SamplerGLImpl( IReferenceCounters *pRefCounters, RenderDeviceGLImpl *pDeviceGL, const SamplerDesc& SamplerDesc, bool bIsDeviceInternal = false );
     ~SamplerGLImpl();
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface );
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface )override final;
 
     const GLObjectWrappers::GLSamplerObj& GetHandle(){ return m_GlSampler; }
 

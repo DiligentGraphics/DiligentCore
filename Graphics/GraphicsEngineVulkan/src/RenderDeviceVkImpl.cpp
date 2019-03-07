@@ -39,7 +39,7 @@ namespace Diligent
 
 RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters*                                     pRefCounters, 
                                          IMemoryAllocator&                                       RawMemAllocator, 
-                                         const EngineVkAttribs&                                  CreationAttribs, 
+                                         const EngineVkCreateInfo&                               EngineCI, 
                                          size_t                                                  CommandQueueCount,
                                          ICommandQueueVk**                                       CmdQueues, 
                                          std::shared_ptr<VulkanUtilities::VulkanInstance>        Instance,
@@ -66,7 +66,7 @@ RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters*                    
     m_VulkanInstance(Instance),
     m_PhysicalDevice(std::move(PhysicalDevice)),
     m_LogicalVkDevice(std::move(LogicalDevice)),
-    m_EngineAttribs(CreationAttribs),
+    m_EngineAttribs(EngineCI),
     m_FramebufferCache(*this),
     m_RenderPassCache(*this),
     m_DescriptorSetAllocator
@@ -75,18 +75,18 @@ RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters*                    
         "Main descriptor pool",
         std::vector<VkDescriptorPoolSize>
         {
-            {VK_DESCRIPTOR_TYPE_SAMPLER,                CreationAttribs.MainDescriptorPoolSize.NumSeparateSamplerDescriptors},
-            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, CreationAttribs.MainDescriptorPoolSize.NumCombinedSamplerDescriptors},
-            {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,          CreationAttribs.MainDescriptorPoolSize.NumSampledImageDescriptors},
-            {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,          CreationAttribs.MainDescriptorPoolSize.NumStorageImageDescriptors},
-            {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,   CreationAttribs.MainDescriptorPoolSize.NumUniformTexelBufferDescriptors},
-            {VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,   CreationAttribs.MainDescriptorPoolSize.NumStorageTexelBufferDescriptors},
-            //{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         CreationAttribs.MainDescriptorPoolSize.NumUniformBufferDescriptors},
-            //{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,         CreationAttribs.MainDescriptorPoolSize.NumStorageBufferDescriptors},
-            {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, CreationAttribs.MainDescriptorPoolSize.NumUniformBufferDescriptors},
-            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, CreationAttribs.MainDescriptorPoolSize.NumStorageBufferDescriptors},
+            {VK_DESCRIPTOR_TYPE_SAMPLER,                EngineCI.MainDescriptorPoolSize.NumSeparateSamplerDescriptors},
+            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, EngineCI.MainDescriptorPoolSize.NumCombinedSamplerDescriptors},
+            {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,          EngineCI.MainDescriptorPoolSize.NumSampledImageDescriptors},
+            {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,          EngineCI.MainDescriptorPoolSize.NumStorageImageDescriptors},
+            {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,   EngineCI.MainDescriptorPoolSize.NumUniformTexelBufferDescriptors},
+            {VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,   EngineCI.MainDescriptorPoolSize.NumStorageTexelBufferDescriptors},
+            //{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         EngineCI.MainDescriptorPoolSize.NumUniformBufferDescriptors},
+            //{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,         EngineCI.MainDescriptorPoolSize.NumStorageBufferDescriptors},
+            {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, EngineCI.MainDescriptorPoolSize.NumUniformBufferDescriptors},
+            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, EngineCI.MainDescriptorPoolSize.NumStorageBufferDescriptors},
         },
-        CreationAttribs.MainDescriptorPoolSize.MaxDescriptorSets,
+        EngineCI.MainDescriptorPoolSize.MaxDescriptorSets,
         true
     },
     m_DynamicDescriptorPool
@@ -95,27 +95,27 @@ RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters*                    
         "Dynamic descriptor pool",
         std::vector<VkDescriptorPoolSize>
         {
-            {VK_DESCRIPTOR_TYPE_SAMPLER,                CreationAttribs.DynamicDescriptorPoolSize.NumSeparateSamplerDescriptors},
-            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, CreationAttribs.DynamicDescriptorPoolSize.NumCombinedSamplerDescriptors},
-            {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,          CreationAttribs.DynamicDescriptorPoolSize.NumSampledImageDescriptors},
-            {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,          CreationAttribs.DynamicDescriptorPoolSize.NumStorageImageDescriptors},
-            {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,   CreationAttribs.DynamicDescriptorPoolSize.NumUniformTexelBufferDescriptors},
-            {VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,   CreationAttribs.DynamicDescriptorPoolSize.NumStorageTexelBufferDescriptors},
-            //{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         CreationAttribs.DynamicDescriptorPoolSize.NumUniformBufferDescriptors},
-            //{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,         CreationAttribs.DynamicDescriptorPoolSize.NumStorageBufferDescriptors},
-            {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, CreationAttribs.DynamicDescriptorPoolSize.NumUniformBufferDescriptors},
-            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, CreationAttribs.DynamicDescriptorPoolSize.NumStorageBufferDescriptors},
+            {VK_DESCRIPTOR_TYPE_SAMPLER,                EngineCI.DynamicDescriptorPoolSize.NumSeparateSamplerDescriptors},
+            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, EngineCI.DynamicDescriptorPoolSize.NumCombinedSamplerDescriptors},
+            {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,          EngineCI.DynamicDescriptorPoolSize.NumSampledImageDescriptors},
+            {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,          EngineCI.DynamicDescriptorPoolSize.NumStorageImageDescriptors},
+            {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,   EngineCI.DynamicDescriptorPoolSize.NumUniformTexelBufferDescriptors},
+            {VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,   EngineCI.DynamicDescriptorPoolSize.NumStorageTexelBufferDescriptors},
+            //{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         EngineCI.DynamicDescriptorPoolSize.NumUniformBufferDescriptors},
+            //{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,         EngineCI.DynamicDescriptorPoolSize.NumStorageBufferDescriptors},
+            {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, EngineCI.DynamicDescriptorPoolSize.NumUniformBufferDescriptors},
+            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, EngineCI.DynamicDescriptorPoolSize.NumStorageBufferDescriptors},
         },
-        CreationAttribs.DynamicDescriptorPoolSize.MaxDescriptorSets,
+        EngineCI.DynamicDescriptorPoolSize.MaxDescriptorSets,
         false // Pools can only be reset
     },
     m_TransientCmdPoolMgr(*this, "Transient command buffer pool manager", CmdQueues[0]->GetQueueFamilyIndex(), VK_COMMAND_POOL_CREATE_TRANSIENT_BIT),
-    m_MemoryMgr("Global resource memory manager", *m_LogicalVkDevice, *m_PhysicalDevice, GetRawAllocator(), CreationAttribs.DeviceLocalMemoryPageSize, CreationAttribs.HostVisibleMemoryPageSize, CreationAttribs.DeviceLocalMemoryReserveSize, CreationAttribs.HostVisibleMemoryReserveSize),
+    m_MemoryMgr("Global resource memory manager", *m_LogicalVkDevice, *m_PhysicalDevice, GetRawAllocator(), EngineCI.DeviceLocalMemoryPageSize, EngineCI.HostVisibleMemoryPageSize, EngineCI.DeviceLocalMemoryReserveSize, EngineCI.HostVisibleMemoryReserveSize),
     m_DynamicMemoryManager
     {
         GetRawAllocator(),
         *this,
-        CreationAttribs.DynamicHeapSize,
+        EngineCI.DynamicHeapSize,
         ~Uint64{0}
     }
 {
@@ -433,12 +433,12 @@ void RenderDeviceVkImpl :: CreateBuffer(const BufferDesc& BuffDesc, const Buffer
 }
 
 
-void RenderDeviceVkImpl :: CreateShader(const ShaderCreationAttribs &ShaderCreationAttribs, IShader **ppShader)
+void RenderDeviceVkImpl :: CreateShader(const ShaderCreateInfo& ShaderCI, IShader **ppShader)
 {
-    CreateDeviceObject( "shader", ShaderCreationAttribs.Desc, ppShader, 
+    CreateDeviceObject( "shader", ShaderCI.Desc, ppShader, 
         [&]()
         {
-            ShaderVkImpl *pShaderVk( NEW_RC_OBJ(m_ShaderObjAllocator, "ShaderVkImpl instance", ShaderVkImpl)(this, ShaderCreationAttribs ) );
+            ShaderVkImpl *pShaderVk( NEW_RC_OBJ(m_ShaderObjAllocator, "ShaderVkImpl instance", ShaderVkImpl)(this, ShaderCI) );
             pShaderVk->QueryInterface( IID_Shader, reinterpret_cast<IObject**>(ppShader) );
 
             OnCreateDeviceObject( pShaderVk );

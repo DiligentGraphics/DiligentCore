@@ -25,7 +25,6 @@
 #include <utility>
 
 #include "GLContextAndroid.h"
-#include "EngineGLAttribs.h"
 
 #ifndef EGL_CONTEXT_MINOR_VERSION_KHR
 #define EGL_CONTEXT_MINOR_VERSION_KHR 0x30FB
@@ -229,7 +228,7 @@ namespace Diligent
         return true;
     }
 
-    GLContext::GLContext(const EngineGLAttribs& InitAttribs, DeviceCaps& DeviceCaps, const struct SwapChainDesc* /*pSCDesc*/) :
+    GLContext::GLContext(const EngineGLCreateInfo& InitAttribs, DeviceCaps& deviceCaps, const struct SwapChainDesc* /*pSCDesc*/) :
         display_( EGL_NO_DISPLAY ),
         surface_( EGL_NO_SURFACE ),
         context_( EGL_NO_CONTEXT ),
@@ -241,7 +240,7 @@ namespace Diligent
         auto *NativeWindow = reinterpret_cast<ANativeWindow*>(InitAttribs.pNativeWndHandle);
         Init( NativeWindow );
 
-        FillDeviceCaps(DeviceCaps);
+        FillDeviceCaps(deviceCaps);
     }
 
     GLContext::~GLContext()
@@ -385,29 +384,29 @@ namespace Diligent
         return true;
     }
 
-    void GLContext::FillDeviceCaps( DeviceCaps &DeviceCaps )
+    void GLContext::FillDeviceCaps( DeviceCaps& deviceCaps )
     {
         const auto* Extensions = (char*)glGetString(GL_EXTENSIONS);
         LOG_INFO_MESSAGE( "Supported extensions: \n", Extensions);
 
-        DeviceCaps.DevType = DeviceType::OpenGLES;
-        DeviceCaps.MajorVersion = major_version_;
-        DeviceCaps.MinorVersion = minor_version_;
+        deviceCaps.DevType = DeviceType::OpenGLES;
+        deviceCaps.MajorVersion = major_version_;
+        deviceCaps.MinorVersion = minor_version_;
         bool IsGLES31OrAbove = (major_version_ >= 4 || (major_version_ == 3 && minor_version_ >= 1) );
         bool IsGLES32OrAbove = (major_version_ >= 4 || (major_version_ == 3 && minor_version_ >= 2) );
-        DeviceCaps.bSeparableProgramSupported   = IsGLES31OrAbove || strstr(Extensions, "separate_shader_objects");
-        DeviceCaps.bIndirectRenderingSupported  = IsGLES31OrAbove || strstr(Extensions, "draw_indirect");
+        deviceCaps.bSeparableProgramSupported   = IsGLES31OrAbove || strstr(Extensions, "separate_shader_objects");
+        deviceCaps.bIndirectRenderingSupported  = IsGLES31OrAbove || strstr(Extensions, "draw_indirect");
 
-        DeviceCaps.bComputeShadersSupported  = IsGLES31OrAbove || strstr(Extensions, "compute_shader");
-        DeviceCaps.bGeometryShadersSupported = IsGLES32OrAbove || strstr(Extensions, "geometry_shader");
-        DeviceCaps.bTessellationSupported    = IsGLES32OrAbove || strstr(Extensions, "tessellation_shader");
+        deviceCaps.bComputeShadersSupported  = IsGLES31OrAbove || strstr(Extensions, "compute_shader");
+        deviceCaps.bGeometryShadersSupported = IsGLES32OrAbove || strstr(Extensions, "geometry_shader");
+        deviceCaps.bTessellationSupported    = IsGLES32OrAbove || strstr(Extensions, "tessellation_shader");
 
-        auto &SamCaps = DeviceCaps.SamCaps;
+        auto &SamCaps = deviceCaps.SamCaps;
         SamCaps.bBorderSamplingModeSupported   = GL_TEXTURE_BORDER_COLOR       && (IsGLES32OrAbove || strstr(Extensions, "texture_border_clamp"));
         SamCaps.bAnisotropicFilteringSupported = GL_TEXTURE_MAX_ANISOTROPY_EXT && (IsGLES31OrAbove || strstr(Extensions, "texture_filter_anisotropic"));
         SamCaps.bLODBiasSupported              = GL_TEXTURE_LOD_BIAS           && IsGLES31OrAbove;
 
-        auto &TexCaps = DeviceCaps.TexCaps;
+        auto &TexCaps = deviceCaps.TexCaps;
         TexCaps.bTexture1DSupported            = False;     // Not supported in GLES 3.2
         TexCaps.bTexture1DArraySupported       = False;     // Not supported in GLES 3.2
         TexCaps.bTexture2DMSSupported          = IsGLES31OrAbove || strstr(Extensions, "texture_storage_multisample");
@@ -415,6 +414,6 @@ namespace Diligent
         TexCaps.bTextureViewSupported          = IsGLES31OrAbove || strstr(Extensions, "texture_view");
         TexCaps.bCubemapArraysSupported        = IsGLES32OrAbove || strstr(Extensions, "texture_cube_map_array");
 
-        DeviceCaps.bMultithreadedResourceCreationSupported = False;
+        deviceCaps.bMultithreadedResourceCreationSupported = False;
     }
 }

@@ -47,10 +47,10 @@
 namespace Diligent
 {
 
-RenderDeviceGLImpl :: RenderDeviceGLImpl(IReferenceCounters*     pRefCounters,
-                                         IMemoryAllocator&       RawMemAllocator,
-                                         const EngineGLAttribs&  InitAttribs,
-                                         const SwapChainDesc*    pSCDesc):
+RenderDeviceGLImpl :: RenderDeviceGLImpl(IReferenceCounters*        pRefCounters,
+                                         IMemoryAllocator&          RawMemAllocator,
+                                         const EngineGLCreateInfo&  InitAttribs,
+                                         const SwapChainDesc*       pSCDesc):
     TRenderDeviceBase
     {
         pRefCounters,
@@ -139,13 +139,13 @@ void RenderDeviceGLImpl :: CreateBufferFromGLHandle(Uint32 GLHandle, const Buffe
     );
 }
 
-void RenderDeviceGLImpl :: CreateShader(const ShaderCreationAttribs& ShaderCreationAttribs, IShader** ppShader, bool bIsDeviceInternal)
+void RenderDeviceGLImpl :: CreateShader(const ShaderCreateInfo& ShaderCreateInfo, IShader** ppShader, bool bIsDeviceInternal)
 {
-    CreateDeviceObject( "shader", ShaderCreationAttribs.Desc, ppShader, 
+    CreateDeviceObject( "shader", ShaderCreateInfo.Desc, ppShader, 
         [&]()
         {
             ShaderGLImpl *pShaderOGL(NEW_RC_OBJ(m_ShaderObjAllocator, "ShaderGLImpl instance", ShaderGLImpl)
-                                               (this, ShaderCreationAttribs, bIsDeviceInternal));
+                                               (this, ShaderCreateInfo, bIsDeviceInternal));
             pShaderOGL->QueryInterface(IID_Shader, reinterpret_cast<IObject**>(ppShader) );
 
             OnCreateDeviceObject( pShaderOGL );
@@ -153,9 +153,9 @@ void RenderDeviceGLImpl :: CreateShader(const ShaderCreationAttribs& ShaderCreat
     );
 }
 
-void RenderDeviceGLImpl :: CreateShader(const ShaderCreationAttribs& ShaderCreationAttribs, IShader **ppShader)
+void RenderDeviceGLImpl :: CreateShader(const ShaderCreateInfo& ShaderCreateInfo, IShader **ppShader)
 {
-	CreateShader(ShaderCreationAttribs, ppShader, false);
+	CreateShader(ShaderCreateInfo, ppShader, false);
 }
 
 void RenderDeviceGLImpl :: CreateTexture(const TextureDesc& TexDesc, const TextureData* pData, ITexture **ppTexture, bool bIsDeviceInternal)

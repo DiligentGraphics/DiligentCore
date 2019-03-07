@@ -45,20 +45,20 @@ namespace Diligent
         return ss.str();
     }
 
-    DeviceContextVkImpl::DeviceContextVkImpl( IReferenceCounters*                   pRefCounters, 
-                                              RenderDeviceVkImpl*                   pDeviceVkImpl, 
-                                              bool                                  bIsDeferred, 
-                                              const EngineVkAttribs&                Attribs, 
-                                              Uint32                                ContextId,
-                                              Uint32                                CommandQueueId,
-                                              std::shared_ptr<GenerateMipsVkHelper> GenerateMipsHelper) :
+    DeviceContextVkImpl::DeviceContextVkImpl(IReferenceCounters*                   pRefCounters, 
+                                             RenderDeviceVkImpl*                   pDeviceVkImpl, 
+                                             bool                                  bIsDeferred, 
+                                             const EngineVkCreateInfo&             EngineCI, 
+                                             Uint32                                ContextId,
+                                             Uint32                                CommandQueueId,
+                                             std::shared_ptr<GenerateMipsVkHelper> GenerateMipsHelper) :
         TDeviceContextBase
         {
             pRefCounters,
             pDeviceVkImpl,
             ContextId,
             CommandQueueId,
-            bIsDeferred ? std::numeric_limits<decltype(m_NumCommandsToFlush)>::max() : Attribs.NumCommandsToFlushCmdBuffer,
+            bIsDeferred ? std::numeric_limits<decltype(m_NumCommandsToFlush)>::max() : EngineCI.NumCommandsToFlushCmdBuffer,
             bIsDeferred
         },
         m_CommandBuffer { pDeviceVkImpl->GetLogicalDevice().GetEnabledGraphicsShaderStages() },
@@ -76,13 +76,13 @@ namespace Diligent
         {
             *pDeviceVkImpl,
             GetContextObjectName("Upload heap", bIsDeferred, ContextId),
-            Attribs.UploadHeapPageSize
+            EngineCI.UploadHeapPageSize
         },
         m_DynamicHeap
         {
             pDeviceVkImpl->GetDynamicMemoryManager(),
             GetContextObjectName("Dynamic heap", bIsDeferred, ContextId),
-            Attribs.DynamicHeapPageSize
+            EngineCI.DynamicHeapPageSize
         },
         m_DynamicDescrSetAllocator
         {

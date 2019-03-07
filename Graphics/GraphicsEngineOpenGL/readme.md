@@ -23,7 +23,7 @@ RefCntAutoPtr<IDeviceContext> pImmediateContext;
 SwapChainDesc SCDesc;
 RefCntAutoPtr<ISwapChain> pSwapChain;
 auto *pFactoryOpenGL = GetEngineFactoryOpenGL();
-EngineGLAttribs CreationAttribs;
+EngineGLCreateInfo CreationAttribs;
 CreationAttribs.pNativeWndHandle = NativeWindowHandle;
 pFactoryOpenGL->CreateDeviceAndSwapChainGL(
     CreationAttribs, &pRenderDevice, &pImmediateContext, SCDesc, &pSwapChain);

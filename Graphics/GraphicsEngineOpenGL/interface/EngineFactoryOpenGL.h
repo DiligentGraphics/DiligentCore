@@ -34,7 +34,6 @@
 
 #include "../../HLSL2GLSLConverterLib/interface/HLSL2GLSLConverter.h"
 
-#include "EngineGLAttribs.h"
 
 #if PLATFORM_ANDROID || PLATFORM_LINUX || PLATFORM_MACOS || PLATFORM_IOS || (PLATFORM_WIN32 && !defined(_MSC_VER))
 
@@ -55,16 +54,16 @@ namespace Diligent
 class IEngineFactoryOpenGL
 {
 public:
-    virtual void CreateDeviceAndSwapChainGL(const EngineGLAttribs& CreationAttribs,
-                                            IRenderDevice **ppDevice,
-                                            IDeviceContext **ppImmediateContext,
-                                            const SwapChainDesc& SCDesc,
-                                            ISwapChain **ppSwapChain ) = 0;
-    virtual void CreateHLSL2GLSLConverter(IHLSL2GLSLConverter **ppConverter) = 0;
+    virtual void CreateDeviceAndSwapChainGL(const EngineGLCreateInfo& EngineCI,
+                                            IRenderDevice**           ppDevice,
+                                            IDeviceContext**          ppImmediateContext,
+                                            const SwapChainDesc&      SCDesc,
+                                            ISwapChain**              ppSwapChain ) = 0;
+    virtual void CreateHLSL2GLSLConverter(IHLSL2GLSLConverter**       ppConverter) = 0;
     
-    virtual void AttachToActiveGLContext( const EngineGLAttribs& CreationAttribs,
-                                          IRenderDevice **ppDevice,
-                                          IDeviceContext **ppImmediateContext ) = 0;
+    virtual void AttachToActiveGLContext(const EngineGLCreateInfo& EngineCI,
+                                         IRenderDevice**           ppDevice,
+                                          IDeviceContext**         ppImmediateContext) = 0;
 };
 
 
@@ -74,7 +73,7 @@ public:
 
     typedef IEngineFactoryOpenGL* (*GetEngineFactoryOpenGLType)();
 
-    static bool LoadGraphicsEngineOpenGL(GetEngineFactoryOpenGLType &GetFactoryFunc)
+    static bool LoadGraphicsEngineOpenGL(GetEngineFactoryOpenGLType& GetFactoryFunc)
     {
         GetFactoryFunc = nullptr;
         std::string LibName = "GraphicsEngineOpenGL_";

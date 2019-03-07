@@ -29,7 +29,6 @@
 #include "BaseInterfacesGL.h"
 #include "FBOCache.h"
 #include "TexRegionRender.h"
-#include "EngineGLAttribs.h"
 
 enum class GPU_VENDOR
 {
@@ -55,18 +54,18 @@ class RenderDeviceGLImpl : public RenderDeviceBase<IGLDeviceBaseInterface>
 public:
     using TRenderDeviceBase = RenderDeviceBase<IGLDeviceBaseInterface>;
 
-    RenderDeviceGLImpl(IReferenceCounters*    pRefCounters,
-                       IMemoryAllocator&      RawMemAllocator,
-                       const EngineGLAttribs& InitAttribs,
-                       const SwapChainDesc*   pSCDesc = nullptr);
+    RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
+                       IMemoryAllocator&         RawMemAllocator,
+                       const EngineGLCreateInfo& InitAttribs,
+                       const SwapChainDesc*      pSCDesc = nullptr);
     ~RenderDeviceGLImpl();
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override;
     
 	void CreateBuffer(const BufferDesc& BuffDesc, const BufferData* pBuffData, IBuffer** ppBufferLayout, bool bIsDeviceInternal);
     virtual void CreateBuffer(const BufferDesc& BuffDesc, const BufferData* BuffData, IBuffer** ppBufferLayout)override final;
 
-	void CreateShader(const ShaderCreationAttribs& ShaderCreationAttribs, IShader** ppShader, bool bIsDeviceInternal );
-    virtual void CreateShader(const ShaderCreationAttribs& ShaderCreationAttribs, IShader** ppShader)override final;
+	void CreateShader(const ShaderCreateInfo& ShaderCreateInfo, IShader **ppShader, bool bIsDeviceInternal );
+    virtual void CreateShader(const ShaderCreateInfo& ShaderCreateInfo, IShader **ppShader)override final;
 
 	void CreateTexture(const TextureDesc& TexDesc, const TextureData* pData, ITexture** ppTexture, bool bIsDeviceInternal);
     virtual void CreateTexture(const TextureDesc& TexDesc, const TextureData* Data, ITexture** ppTexture)override final;

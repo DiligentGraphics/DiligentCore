@@ -30,7 +30,7 @@
 //  * ShaderVariableManagerVk keeps list of variables of specific types
 //  * Every ShaderVariableVkImpl references VkResource from ShaderResourceLayoutVk
 //  * ShaderVariableManagerVk keeps pointer to ShaderResourceCacheVk
-//  * ShaderVariableManagerVk is used by ShaderVkImpl to manage static resources and by
+//  * ShaderVariableManagerVk is used by PipelineStateVkImpl to manage static resources and by
 //    ShaderResourceBindingVkImpl to manage mutable and dynamic resources
 //
 //          __________________________                   __________________________________________________________________________
@@ -64,31 +64,30 @@ namespace Diligent
 
 class ShaderVariableVkImpl;
 
-// sizeof(ShaderVariableManagerVk) == 40 (x64, msvc, Release)
+// sizeof(ShaderVariableManagerVk) == 32 (x64, msvc, Release)
 class ShaderVariableManagerVk
 {
 public:
-    ShaderVariableManagerVk(IObject &Owner) :
-        m_Owner(Owner)
-    {}
+    ShaderVariableManagerVk(IObject&                              Owner,
+                            const ShaderResourceLayoutVk&         SrcLayout, 
+                            IMemoryAllocator&                     Allocator,
+                            const SHADER_RESOURCE_VARIABLE_TYPE*  AllowedVarTypes, 
+                            Uint32                                NumAllowedTypes, 
+                            ShaderResourceCacheVk&                ResourceCache);
+
     ~ShaderVariableManagerVk();
 
-    void Initialize(const ShaderResourceLayoutVk& Layout, 
-                    IMemoryAllocator&             Allocator,
-                    const SHADER_VARIABLE_TYPE*   AllowedVarTypes, 
-                    Uint32                        NumAllowedTypes, 
-                    ShaderResourceCacheVk&        ResourceCache);
-    void Destroy(IMemoryAllocator& Allocator);
+    void DestroyVariables(IMemoryAllocator& Allocator);
 
     ShaderVariableVkImpl* GetVariable(const Char* Name);
     ShaderVariableVkImpl* GetVariable(Uint32 Index);
 
-    void BindResources( IResourceMapping* pResourceMapping, Uint32 Flags);
+    void BindResources(IResourceMapping* pResourceMapping, Uint32 Flags);
 
-    static size_t GetRequiredMemorySize(const ShaderResourceLayoutVk& Layout, 
-                                        const SHADER_VARIABLE_TYPE*   AllowedVarTypes, 
-                                        Uint32                        NumAllowedTypes,
-                                        Uint32&                       NumVariables);
+    static size_t GetRequiredMemorySize(const ShaderResourceLayoutVk&          Layout, 
+                                        const SHADER_RESOURCE_VARIABLE_TYPE*   AllowedVarTypes, 
+                                        Uint32                                 NumAllowedTypes,
+                                        Uint32&                                NumVariables);
 
     Uint32 GetVariableCount()const { return m_NumVariables; }
 
@@ -98,12 +97,11 @@ private:
     Uint32 GetVariableIndex(const ShaderVariableVkImpl& Variable);
 
     IObject&                      m_Owner;
-    // Variable mgr is owned by either Shader object (in which case m_pResourceLayout points to
-    // static resource layout owned by the same shader object), or by SRB object (in which case 
-    // m_pResourceLayout points to corresponding layout in pipeline state). Since SRB keeps strong 
-    // reference to PSO, the layout is guaranteed be alive while SRB is alive
-    const ShaderResourceLayoutVk* m_pResourceLayout= nullptr;
-    ShaderResourceCacheVk*        m_pResourceCache = nullptr;
+    // Variable mgr is owned by either Pipeline state object (in which case m_ResourceCache references
+    // static resource cache owned by the same PSO object), or by SRB object (in which case 
+    // m_ResourceCache references the cache in the SRB). Thus the cache and the resource layout
+    // (which the variables reference) are guaranteed to be alive while the manager is alive.
+    ShaderResourceCacheVk&        m_ResourceCache;
 
     // Memory is allocated through the allocator provided by the pipeline state. If allocation granularity > 1, fixed block
     // memory allocator is used. This ensures that all resources from different shader resource bindings reside in
@@ -112,12 +110,12 @@ private:
     Uint32                        m_NumVariables = 0;
 
 #ifdef _DEBUG
-    IMemoryAllocator*             m_pDbgAllocator = nullptr;
+    IMemoryAllocator&             m_DbgAllocator;
 #endif
 };
 
 // sizeof(ShaderVariableVkImpl) == 24 (x64)
-class ShaderVariableVkImpl final : public IShaderVariable
+class ShaderVariableVkImpl final : public IShaderResourceVariable
 {
 public:
     ShaderVariableVkImpl(ShaderVariableManagerVk& ParentManager,
@@ -147,35 +145,33 @@ public:
         return m_ParentManager.m_Owner.Release();
     }
 
-    void QueryInterface(const INTERFACE_ID &IID, IObject **ppInterface)override final
+    void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final
     {
         if (ppInterface == nullptr)
             return;
 
         *ppInterface = nullptr;
-        if (IID == IID_ShaderVariable || IID == IID_Unknown)
+        if (IID == IID_ShaderResourceVariable || IID == IID_Unknown)
         {
             *ppInterface = this;
             (*ppInterface)->AddRef();
         }
     }
 
-    virtual SHADER_VARIABLE_TYPE GetType()const override final
+    virtual SHADER_RESOURCE_VARIABLE_TYPE GetType()const override final
     {
-        return m_Resource.SpirvAttribs.VarType;
+        return m_Resource.GetVariableType();
     }
 
-    virtual void Set(IDeviceObject *pObject)override final 
+    virtual void Set(IDeviceObject* pObject)override final 
     {
-        VERIFY_EXPR(m_ParentManager.m_pResourceCache != nullptr);
-        m_Resource.BindResource(pObject, 0, *m_ParentManager.m_pResourceCache); 
+        m_Resource.BindResource(pObject, 0, m_ParentManager.m_ResourceCache); 
     }
 
     virtual void SetArray(IDeviceObject* const* ppObjects, Uint32 FirstElement, Uint32 NumElements)override final
     {
-        VERIFY_EXPR(m_ParentManager.m_pResourceCache != nullptr);
         for (Uint32 Elem = 0; Elem < NumElements; ++Elem)
-            m_Resource.BindResource(ppObjects[Elem], FirstElement + Elem, *m_ParentManager.m_pResourceCache);
+            m_Resource.BindResource(ppObjects[Elem], FirstElement + Elem, m_ParentManager.m_ResourceCache);
     }
 
     virtual Uint32 GetArraySize()const override final

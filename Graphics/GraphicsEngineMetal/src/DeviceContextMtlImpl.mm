@@ -30,18 +30,17 @@
 #include "PipelineStateMtlImpl.h"
 #include "SwapChainMtl.h"
 #include "ShaderResourceBindingMtlImpl.h"
-#include "EngineMtlAttribs.h"
 #include "CommandListMtlImpl.h"
 #include "RenderDeviceMtlImpl.h"
 #include "FenceMtlImpl.h"
 
 namespace Diligent
 {
-    DeviceContextMtlImpl::DeviceContextMtlImpl( IReferenceCounters*            pRefCounters,
-                                                IMemoryAllocator&              Allocator,
-                                                IRenderDevice*                 pDevice,
-                                                const struct EngineMtlAttribs& EngineAttribs,
-                                                bool                           bIsDeferred ) :
+    DeviceContextMtlImpl::DeviceContextMtlImpl( IReferenceCounters*               pRefCounters,
+                                                IMemoryAllocator&                 Allocator,
+                                                IRenderDevice*                    pDevice,
+                                                const struct EngineMtlCreateInfo& EngineAttribs,
+                                                bool                              bIsDeferred ) :
         TDeviceContextBase(pRefCounters, pDevice, bIsDeferred)
     {
     }

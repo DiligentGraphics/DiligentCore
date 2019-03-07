@@ -40,11 +40,11 @@
 namespace Diligent
 {
 
-RenderDeviceD3D11Impl :: RenderDeviceD3D11Impl(IReferenceCounters*       pRefCounters,
-                                               IMemoryAllocator&         RawMemAllocator,
-                                               const EngineD3D11Attribs& EngineAttribs,
-                                               ID3D11Device*             pd3d11Device,
-                                               Uint32                    NumDeferredContexts) : 
+RenderDeviceD3D11Impl :: RenderDeviceD3D11Impl(IReferenceCounters*          pRefCounters,
+                                               IMemoryAllocator&            RawMemAllocator,
+                                               const EngineD3D11CreateInfo& EngineAttribs,
+                                               ID3D11Device*                pd3d11Device,
+                                               Uint32                       NumDeferredContexts) : 
     TRenderDeviceBase
     {
         pRefCounters,
@@ -134,13 +134,13 @@ void RenderDeviceD3D11Impl :: CreateBuffer(const BufferDesc& BuffDesc, const Buf
     );
 }
 
-void RenderDeviceD3D11Impl :: CreateShader(const ShaderCreationAttribs& ShaderCreationAttribs, IShader** ppShader)
+void RenderDeviceD3D11Impl :: CreateShader(const ShaderCreateInfo& ShaderCI, IShader** ppShader)
 {
-    CreateDeviceObject( "shader", ShaderCreationAttribs.Desc, ppShader, 
+    CreateDeviceObject( "shader", ShaderCI.Desc, ppShader, 
         [&]()
         {
             ShaderD3D11Impl* pShaderD3D11( NEW_RC_OBJ(m_ShaderObjAllocator, "ShaderD3D11Impl instance", ShaderD3D11Impl)
-                                                     (this, ShaderCreationAttribs ) );
+                                                     (this, ShaderCI) );
             pShaderD3D11->QueryInterface( IID_Shader, reinterpret_cast<IObject**>(ppShader) );
 
             OnCreateDeviceObject( pShaderD3D11 );

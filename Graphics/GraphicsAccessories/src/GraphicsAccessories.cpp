@@ -471,29 +471,47 @@ const Char *GetShaderTypeLiteralName( SHADER_TYPE ShaderType )
         RETURN_SHADER_TYPE_NAME( SHADER_TYPE_COMPUTE )
 #undef  RETURN_SHADER_TYPE_NAME
 
-        default: UNEXPECTED( "Unknown shader type" ); return "<Unknown shader type>";
+        default: UNEXPECTED( "Unknown shader type constant ", Uint32{ShaderType} ); return "<Unknown shader type>";
     }
 }
 
-const Char *GetShaderVariableTypeLiteralName(SHADER_VARIABLE_TYPE VarType, bool bGetFullName)
+String GetShaderStagesString(SHADER_TYPE ShaderStages)
 {
-    static const Char* ShortVarTypeNameStrings[SHADER_VARIABLE_TYPE_NUM_TYPES];
-    static const Char* FullVarTypeNameStrings[SHADER_VARIABLE_TYPE_NUM_TYPES];
+    String StagesStr;
+    while(ShaderStages != 0)
+    for( Uint32 Stage = SHADER_TYPE_VERTEX; ShaderStages != 0 && Stage <= SHADER_TYPE_COMPUTE; Stage <<= 1 )
+    {
+        if( ShaderStages&Stage )
+        {
+            if( StagesStr.length() )
+                StagesStr += ", ";
+            StagesStr += GetShaderTypeLiteralName( static_cast<SHADER_TYPE>(Stage));
+            ShaderStages &= ~static_cast<SHADER_TYPE>(Stage);
+        }
+    }
+    VERIFY_EXPR( ShaderStages == 0);
+    return StagesStr;
+}
+
+const Char *GetShaderVariableTypeLiteralName(SHADER_RESOURCE_VARIABLE_TYPE VarType, bool bGetFullName)
+{
+    static const Char* ShortVarTypeNameStrings[SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES];
+    static const Char* FullVarTypeNameStrings[SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES];
     static bool bVarTypeStrsInit = false;
     if( !bVarTypeStrsInit )
     {
-        ShortVarTypeNameStrings[SHADER_VARIABLE_TYPE_STATIC]  = "static";
-        ShortVarTypeNameStrings[SHADER_VARIABLE_TYPE_MUTABLE] = "mutable";
-        ShortVarTypeNameStrings[SHADER_VARIABLE_TYPE_DYNAMIC] = "dynamic";
-        FullVarTypeNameStrings[SHADER_VARIABLE_TYPE_STATIC]  = "SHADER_VARIABLE_TYPE_STATIC";
-        FullVarTypeNameStrings[SHADER_VARIABLE_TYPE_MUTABLE] = "SHADER_VARIABLE_TYPE_MUTABLE";
-        FullVarTypeNameStrings[SHADER_VARIABLE_TYPE_DYNAMIC] = "SHADER_VARIABLE_TYPE_DYNAMIC";
+        ShortVarTypeNameStrings[SHADER_RESOURCE_VARIABLE_TYPE_STATIC]  = "static";
+        ShortVarTypeNameStrings[SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE] = "mutable";
+        ShortVarTypeNameStrings[SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC] = "dynamic";
+        FullVarTypeNameStrings[SHADER_RESOURCE_VARIABLE_TYPE_STATIC]  = "SHADER_RESOURCE_VARIABLE_TYPE_STATIC";
+        FullVarTypeNameStrings[SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE] = "SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE";
+        FullVarTypeNameStrings[SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC] = "SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC";
 
-        static_assert(SHADER_VARIABLE_TYPE_NUM_TYPES == SHADER_VARIABLE_TYPE_DYNAMIC + 1, "Not all shader variable types initialized.");
+        static_assert(SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC + 1, "Not all shader variable types initialized.");
 
         bVarTypeStrsInit = true;
     }
-    if( VarType >= SHADER_VARIABLE_TYPE_STATIC && VarType < SHADER_VARIABLE_TYPE_NUM_TYPES )
+    if( VarType >= SHADER_RESOURCE_VARIABLE_TYPE_STATIC && VarType < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES )
         return (bGetFullName ? FullVarTypeNameStrings : ShortVarTypeNameStrings)[VarType];
     else
     {

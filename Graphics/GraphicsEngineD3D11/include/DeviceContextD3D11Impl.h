@@ -53,13 +53,13 @@ class DeviceContextD3D11Impl final : public DeviceContextBase<IDeviceContextD3D1
 public:
     using TDeviceContextBase = DeviceContextBase<IDeviceContextD3D11, DeviceContextD3D11ImplTraits>;
 
-    DeviceContextD3D11Impl(IReferenceCounters*              pRefCounters,
-                           IMemoryAllocator&                Allocator,
-                           IRenderDevice*                   pDevice,
-                           ID3D11DeviceContext*             pd3d11DeviceContext,
-                           const struct EngineD3D11Attribs& EngineAttribs,
-                           bool                             bIsDeferred);
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
+    DeviceContextD3D11Impl(IReferenceCounters*                 pRefCounters,
+                           IMemoryAllocator&                   Allocator,
+                           IRenderDevice*                      pDevice,
+                           ID3D11DeviceContext*                pd3d11DeviceContext,
+                           const struct EngineD3D11CreateInfo& EngineAttribs,
+                           bool                                bIsDeferred);
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
 
     virtual void SetPipelineState(IPipelineState* pPipelineState)override final;
 

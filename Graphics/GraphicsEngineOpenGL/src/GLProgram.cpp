@@ -33,67 +33,15 @@ namespace Diligent
     {}
     
     GLProgram::GLProgram( GLProgram&& Program ):
-        GLObjectWrappers::GLProgramObj(std::move(Program )                   ),
-        m_AllResources                (std::move(Program.m_AllResources)     ),
-        m_ConstantResources           (std::move(Program.m_ConstantResources))
+        GLObjectWrappers::GLProgramObj(std::move(Program )              ),
+        m_AllResources                (std::move(Program.m_AllResources))
     {}
 
-    void GLProgram::InitResources(RenderDeviceGLImpl* pDeviceGLImpl, 
-                                  const SHADER_VARIABLE_TYPE DefaultVariableType, 
-                                  const ShaderVariableDesc *VariableDesc, 
-                                  Uint32 NumVars, 
-                                  const StaticSamplerDesc *StaticSamplers,
-                                  Uint32 NumStaticSamplers,
-                                  IObject &Owner)
+    void GLProgram::InitResources(RenderDeviceGLImpl*                   pDeviceGLImpl, 
+                                  SHADER_TYPE                           ShaderStage,
+                                  IObject&                              Owner)
     {
         GLuint GLProgram = static_cast<GLuint>(*this);
-        m_AllResources.LoadUniforms(pDeviceGLImpl, GLProgram, DefaultVariableType, VariableDesc, NumVars, StaticSamplers, NumStaticSamplers);
-
-        SHADER_VARIABLE_TYPE VarTypes[] = {SHADER_VARIABLE_TYPE_STATIC};
-        m_ConstantResources.Clone(m_AllResources, VarTypes, _countof(VarTypes), Owner);
+        m_AllResources.LoadUniforms(Owner, pDeviceGLImpl, ShaderStage, GLProgram);
     }
-
-    void GLProgram::BindConstantResources( IResourceMapping *pResourceMapping, Uint32 Flags )
-    {
-        if( !pResourceMapping )
-            return;
-
-        m_ConstantResources.BindResources(pResourceMapping, Flags);
-    }
-
-
-#ifdef VERIFY_RESOURCE_BINDINGS
-    template<typename TResArrayType>
-    void GLProgram::dbgVerifyBindingCompletenessHelper(TResArrayType &ResArr, GLProgramResources *pDynamicResources)
-    {
-        const auto &ConstVariables = m_ConstantResources.GetVariables();
-        for( auto res = ResArr.begin(); res != ResArr.end(); ++res )
-        {
-            auto ConstRes = ConstVariables.find(HashMapStringKey(res->Name.c_str()));
-            if (ConstRes == ConstVariables.end())
-            {
-                bool bVarFound = false;
-                if( pDynamicResources)
-                {
-                    const auto &DynamicVariables = pDynamicResources->GetVariables();
-                    auto DynRes = DynamicVariables.find(HashMapStringKey(res->Name.c_str()));
-                    bVarFound = (DynRes != DynamicVariables.end());
-                }
-
-                if(!bVarFound)
-                {
-                    LOG_ERROR_MESSAGE( "Incomplete binding: non-static shader variable \"", res->Name, "\" not found" );
-                }
-            }
-        }
-    }
-
-    void GLProgram::dbgVerifyBindingCompleteness(GLProgramResources *pDynamicResources, PipelineStateGLImpl *pPSO)
-    {
-        dbgVerifyBindingCompletenessHelper(m_AllResources.GetUniformBlocks(), pDynamicResources);
-        dbgVerifyBindingCompletenessHelper(m_AllResources.GetSamplers(),      pDynamicResources);
-        dbgVerifyBindingCompletenessHelper(m_AllResources.GetImages(),        pDynamicResources);
-        dbgVerifyBindingCompletenessHelper(m_AllResources.GetStorageBlocks(), pDynamicResources);
-    }
-#endif
 }

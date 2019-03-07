@@ -40,7 +40,7 @@ TextureMtlImpl :: TextureMtlImpl(IReferenceCounters*        pRefCounters,
 {
     LOG_ERROR_AND_THROW("Textures are not implemented in Metal backend");
 
-    if( TexDesc.Usage == USAGE_STATIC && pInitData == nullptr || pInitData->pSubResources == nullptr )
+    if( (TexDesc.Usage == USAGE_STATIC && pInitData == nullptr) || pInitData->pSubResources == nullptr )
         LOG_ERROR_AND_THROW("Static Texture must be initialized with data at creation time");
     SetState(RESOURCE_STATE_UNDEFINED);
 }

@@ -45,7 +45,7 @@ namespace Diligent
 
     typedef bool Bool;          ///< Boolean
     static constexpr Bool False = false;
-    static constexpr Bool True = true;
+    static constexpr Bool True  = true;
 
     typedef char Char;
     typedef std::basic_string<Char> String; ///< String variable

@@ -29,7 +29,6 @@
 #include "RenderDeviceD3D11.h"
 #include "RenderDeviceD3DBase.h"
 #include "DeviceContextD3D11.h"
-#include "EngineD3D11Attribs.h"
 
 namespace Diligent
 {
@@ -40,16 +39,16 @@ class RenderDeviceD3D11Impl final : public RenderDeviceD3DBase<IRenderDeviceD3D1
 public:
     using TRenderDeviceBase = RenderDeviceD3DBase<IRenderDeviceD3D11>;
 
-    RenderDeviceD3D11Impl( IReferenceCounters*       pRefCounters,
-                           IMemoryAllocator&         RawMemAllocator,
-                           const EngineD3D11Attribs& EngineAttribs,
-                           ID3D11Device*             pd3d11Device,
-                           Uint32                    NumDeferredContexts );
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
+    RenderDeviceD3D11Impl( IReferenceCounters*          pRefCounters,
+                           IMemoryAllocator&            RawMemAllocator,
+                           const EngineD3D11CreateInfo& EngineAttribs,
+                           ID3D11Device*                pd3d11Device,
+                           Uint32                       NumDeferredContexts );
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
 
     virtual void CreateBuffer(const BufferDesc& BuffDesc, const BufferData* pBuffData, IBuffer** ppBuffer)override final;
 
-    virtual void CreateShader(const ShaderCreationAttribs& ShaderCreationAttribs, IShader** ppShader)override final;
+    virtual void CreateShader(const ShaderCreateInfo& ShaderCI, IShader** ppShader)override final;
 
     virtual void CreateTexture(const TextureDesc& TexDesc, const TextureData* pData, ITexture** ppTexture)override final;
     
@@ -74,10 +73,11 @@ public:
 private:
     virtual void TestTextureFormat( TEXTURE_FORMAT TexFormat )override final;
 
-    EngineD3D11Attribs m_EngineAttribs;
+    EngineD3D11CreateInfo m_EngineAttribs;
 
     /// D3D11 device
     CComPtr<ID3D11Device> m_pd3d11Device;
 };
 
 }
+

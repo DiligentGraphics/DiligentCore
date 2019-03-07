@@ -48,7 +48,7 @@ ShaderResourcesD3D12::ShaderResourcesD3D12(ID3DBlob* pShaderBytecode, const Shad
     Initialize<D3D12_SHADER_DESC, D3D12_SHADER_INPUT_BIND_DESC, ID3D12ShaderReflection>(
         pShaderBytecode,
         NewResourceHandler{},
-        ShdrDesc,
+        ShdrDesc.Name,
         CombinedSamplerSuffix
     );
 }

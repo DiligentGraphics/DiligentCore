@@ -104,7 +104,7 @@ namespace Diligent
 
         ~ResourceMappingImpl();
 
-        virtual void QueryInterface( const Diligent::INTERFACE_ID& IID, IObject** ppInterface )override final;
+        virtual void QueryInterface( const INTERFACE_ID& IID, IObject** ppInterface )override final;
 
         /// Implementation of IResourceMapping::AddResource()
         virtual void AddResource( const Char* Name, IDeviceObject* pObject, bool bIsUnique )override final;

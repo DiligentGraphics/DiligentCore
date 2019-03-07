@@ -49,13 +49,13 @@ class DeviceContextMtlImpl final : public DeviceContextBase<IDeviceContextMtl, D
 public:
     using TDeviceContextBase = DeviceContextBase<IDeviceContextMtl, DeviceContextMtlImplTraits>;
 
-    DeviceContextMtlImpl(IReferenceCounters*            pRefCounters,
-                         IMemoryAllocator&              Allocator,
-                         IRenderDevice*                 pDevice,
-                         const struct EngineMtlAttribs& EngineAttribs,
-                         bool                           bIsDeferred);
+    DeviceContextMtlImpl(IReferenceCounters*               pRefCounters,
+                         IMemoryAllocator&                 Allocator,
+                         IRenderDevice*                    pDevice,
+                         const struct EngineMtlCreateInfo& EngineAttribs,
+                         bool                              bIsDeferred);
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
+    virtual void QueryInterface( const INTERFACE_ID &IID, IObject **ppInterface )override final;
 
     virtual void SetPipelineState(IPipelineState* pPipelineState)override final;
 

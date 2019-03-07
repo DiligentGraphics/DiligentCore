@@ -51,23 +51,23 @@ namespace Diligent
 class IEngineFactoryVk
 {
 public:
-    virtual void CreateDeviceAndContextsVk(const EngineVkAttribs& CreationAttribs,
+    virtual void CreateDeviceAndContextsVk(const EngineVkCreateInfo& EngineCI,
         IRenderDevice **ppDevice,
         IDeviceContext **ppContexts,
         Uint32 NumDeferredContexts) = 0;
 
     //virtual void AttachToVulkanDevice(void *pVkNativeDevice, 
     //                                 class ICommandQueueVk *pCommandQueue,
-    //                                 const EngineVkAttribs& EngineAttribs, 
+    //                                 const EngineVkCreateInfo& EngineCI, 
     //                                 IRenderDevice **ppDevice, 
     //                                 IDeviceContext **ppContexts,
     //                                 Uint32 NumDeferredContexts) = 0;
 
-    virtual void CreateSwapChainVk(IRenderDevice *pDevice,
-        IDeviceContext *pImmediateContext,
-        const SwapChainDesc& SwapChainDesc,
-        void* pNativeWndHandle,
-        ISwapChain **ppSwapChain) = 0;
+    virtual void CreateSwapChainVk(IRenderDevice*       pDevice,
+                                   IDeviceContext*      pImmediateContext,
+                                   const SwapChainDesc& SwapChainDesc,
+                                   void*                pNativeWndHandle,
+                                   ISwapChain**         ppSwapChain) = 0;
 
 };
 
@@ -78,7 +78,7 @@ public:
 
     typedef IEngineFactoryVk* (*GetEngineFactoryVkType)();
 
-    static bool LoadGraphicsEngineVk(GetEngineFactoryVkType &GetFactoryFunc)
+    static bool LoadGraphicsEngineVk(GetEngineFactoryVkType& GetFactoryFunc)
     {
         GetFactoryFunc = nullptr;
         std::string LibName = "GraphicsEngineVk_";

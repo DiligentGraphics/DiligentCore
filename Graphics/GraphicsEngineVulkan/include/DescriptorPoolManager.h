@@ -41,6 +41,7 @@ class RenderDeviceVkImpl;
 // This class manages descriptor set allocation. 
 // The class destructor calls DescriptorSetAllocator::FreeDescriptorSet() that moves
 // the set into the release queue.
+// sizeof(DescriptorSetAllocation) == 32 (x64)
 class DescriptorSetAllocation
 {
 public:

@@ -104,22 +104,13 @@ namespace Diligent
 
     std::array<RefCntAutoPtr<IPipelineState>, 4> GenerateMipsVkHelper::CreatePSOs(TEXTURE_FORMAT Fmt)
     {
-        ShaderCreationAttribs CSCreateAttribs;
+        ShaderCreateInfo CSCreateInfo;
         std::array<RefCntAutoPtr<IPipelineState>, 4> PSOs;
         
-        CSCreateAttribs.Source = g_GenerateMipsCSSource;
-        CSCreateAttribs.EntryPoint = "main";
-        CSCreateAttribs.SourceLanguage = SHADER_SOURCE_LANGUAGE_GLSL;
-        CSCreateAttribs.Desc.ShaderType = SHADER_TYPE_COMPUTE;
-        CSCreateAttribs.Desc.DefaultVariableType = SHADER_VARIABLE_TYPE_DYNAMIC;
-        
-        ShaderVariableDesc VarDesc{"CB", SHADER_VARIABLE_TYPE_STATIC};
-        CSCreateAttribs.Desc.VariableDesc = &VarDesc;
-        CSCreateAttribs.Desc.NumVariables = 1;
-
-        const StaticSamplerDesc StaticSampler("SrcMip", Sam_LinearClamp);
-        CSCreateAttribs.Desc.StaticSamplers = &StaticSampler;
-        CSCreateAttribs.Desc.NumStaticSamplers = 1;
+        CSCreateInfo.Source                      = g_GenerateMipsCSSource;
+        CSCreateInfo.EntryPoint                  = "main";
+        CSCreateInfo.SourceLanguage              = SHADER_SOURCE_LANGUAGE_GLSL;
+        CSCreateInfo.Desc.ShaderType             = SHADER_TYPE_COMPUTE;
 
         const auto& FmtAttribs = GetTextureFormatAttribs(Fmt);
         bool IsGamma = FmtAttribs.ComponentType == COMPONENT_TYPE_UNORM_SRGB;
@@ -134,7 +125,7 @@ namespace Diligent
             Macros.AddShaderMacro("IMG_FORMAT", GlFmt.data());
 
             Macros.Finalize();
-            CSCreateAttribs.Macros = Macros;
+            CSCreateInfo.Macros = Macros;
 
             std::stringstream name_ss;
             name_ss << "Generate mips " << GlFmt.data();
@@ -147,16 +138,26 @@ namespace Diligent
                 default: UNEXPECTED("Unexpected value");
             }
             auto name = name_ss.str();
-            CSCreateAttribs.Desc.Name = name.c_str();
+            CSCreateInfo.Desc.Name = name.c_str();
             RefCntAutoPtr<IShader> pCS;
 
-            m_DeviceVkImpl.CreateShader(CSCreateAttribs, &pCS);
+            m_DeviceVkImpl.CreateShader(CSCreateInfo, &pCS);
             PipelineStateDesc PSODesc;
             PSODesc.IsComputePipeline = true;
             PSODesc.Name = name.c_str();
             PSODesc.ComputePipeline.pCS = pCS;
-            pCS->GetShaderVariable("CB")->Set(m_ConstantsCB);
+
+            PSODesc.ResourceLayout.DefaultVariableType = SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC;
+            ShaderResourceVariableDesc VarDesc{SHADER_TYPE_COMPUTE, "CB", SHADER_RESOURCE_VARIABLE_TYPE_STATIC};
+            PSODesc.ResourceLayout.Variables    = &VarDesc;
+            PSODesc.ResourceLayout.NumVariables = 1;
+
+            const StaticSamplerDesc StaticSampler(SHADER_TYPE_COMPUTE, "SrcMip", Sam_LinearClamp);
+            PSODesc.ResourceLayout.StaticSamplers    = &StaticSampler;
+            PSODesc.ResourceLayout.NumStaticSamplers = 1;
+            
             m_DeviceVkImpl.CreatePipelineState(PSODesc, &PSOs[NonPowOfTwo]);
+            PSOs[NonPowOfTwo]->GetStaticShaderVariable(SHADER_TYPE_COMPUTE, "CB")->Set(m_ConstantsCB);
         }
 
         return PSOs;

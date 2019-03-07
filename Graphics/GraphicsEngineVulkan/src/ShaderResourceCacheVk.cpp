@@ -38,7 +38,7 @@ namespace Diligent
 size_t ShaderResourceCacheVk::GetRequiredMemorySize(Uint32 NumSets, Uint32 SetSizes[])
 {
     Uint32 TotalResources = 0;
-    for(Uint32 t=0; t < NumSets; ++t)
+    for (Uint32 t=0; t < NumSets; ++t)
         TotalResources += SetSizes[t];
     auto MemorySize = NumSets * sizeof(DescriptorSet) + TotalResources * sizeof(Resource);
     return MemorySize;
@@ -57,22 +57,28 @@ void ShaderResourceCacheVk::InitializeSets(IMemoryAllocator& MemAllocator, Uint3
     //  Ns = m_NumSets
 
     VERIFY(m_pAllocator == nullptr && m_pMemory == nullptr, "Cache already initialized");
-    m_pAllocator = &MemAllocator;
-    m_NumSets = NumSets;
+    m_pAllocator     = &MemAllocator;
+    m_NumSets        = NumSets;
     m_TotalResources = 0;
-    for(Uint32 t=0; t < NumSets; ++t)
+    for (Uint32 t=0; t < NumSets; ++t)
         m_TotalResources += SetSizes[t];
     auto MemorySize = NumSets * sizeof(DescriptorSet) + m_TotalResources * sizeof(Resource);
     VERIFY_EXPR(MemorySize == GetRequiredMemorySize(NumSets, SetSizes));
+#ifdef _DEBUG
+    m_DbgInitializedResources.resize(m_NumSets);
+#endif
     if (MemorySize > 0)
     {
         m_pMemory = ALLOCATE( *m_pAllocator, "Memory for shader resource cache data", MemorySize);
-        auto *pSets = reinterpret_cast<DescriptorSet*>(m_pMemory);
-        auto *pCurrResPtr = reinterpret_cast<Resource*>(pSets + m_NumSets);
+        auto* pSets = reinterpret_cast<DescriptorSet*>(m_pMemory);
+        auto* pCurrResPtr = reinterpret_cast<Resource*>(pSets + m_NumSets);
         for (Uint32 t = 0; t < NumSets; ++t)
         {
             new(&GetDescriptorSet(t)) DescriptorSet(SetSizes[t], SetSizes[t] > 0 ? pCurrResPtr : nullptr);
             pCurrResPtr += SetSizes[t];
+#ifdef _DEBUG
+            m_DbgInitializedResources[t].resize(SetSizes[t]);
+#endif
         }
         VERIFY_EXPR((char*)pCurrResPtr == (char*)m_pMemory + MemorySize);
     }
@@ -80,17 +86,33 @@ void ShaderResourceCacheVk::InitializeSets(IMemoryAllocator& MemAllocator, Uint3
 
 void ShaderResourceCacheVk::InitializeResources(Uint32 Set, Uint32 Offset, Uint32 ArraySize, SPIRVShaderResourceAttribs::ResourceType Type)
 {
-    auto &DescrSet = GetDescriptorSet(Set);
+    auto& DescrSet = GetDescriptorSet(Set);
     for (Uint32 res = 0; res < ArraySize; ++res)
+    {
         new(&DescrSet.GetResource(Offset + res)) Resource{Type};
+#ifdef _DEBUG
+        m_DbgInitializedResources[Set][Offset + res] = true;
+#endif
+    }
 }
+
+#ifdef _DEBUG
+void ShaderResourceCacheVk::DbgVerifyResourceInitialization()const
+{
+    for (const auto &SetFlags : m_DbgInitializedResources)
+    {
+        for (auto ResInitialized : SetFlags)
+            VERIFY(ResInitialized, "Not all resources in the cache have been initialized. This is a bug.");
+    }
+}
+#endif
 
 ShaderResourceCacheVk::~ShaderResourceCacheVk()
 {
     if (m_pMemory)
     {
-        auto *pResources = GetFirstResourcePtr();
-        for(Uint32 res=0; res < m_TotalResources; ++res)
+        auto* pResources = GetFirstResourcePtr();
+        for (Uint32 res=0; res < m_TotalResources; ++res)
             pResources[res].~Resource();
         for (Uint32 t = 0; t < m_NumSets; ++t)
             GetDescriptorSet(t).~DescriptorSet();
@@ -282,7 +304,7 @@ VkDescriptorBufferInfo ShaderResourceCacheVk::Resource::GetUniformBufferDescript
     // If descriptorType is VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER or VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, the offset member 
     // of each element of pBufferInfo must be a multiple of VkPhysicalDeviceLimits::minUniformBufferOffsetAlignment (13.2.4)
     DescrBuffInfo.offset = 0;
-    DescrBuffInfo.range = pBuffVk->GetDesc().uiSizeInBytes;
+    DescrBuffInfo.range  = pBuffVk->GetDesc().uiSizeInBytes;
     return DescrBuffInfo;
 }
 
@@ -324,11 +346,13 @@ VkDescriptorImageInfo ShaderResourceCacheVk::Resource::GetImageDescriptorWriteIn
 
     VkDescriptorImageInfo DescrImgInfo;
     DescrImgInfo.sampler = VK_NULL_HANDLE;
+    VERIFY(Type == SPIRVShaderResourceAttribs::ResourceType::SampledImage || !IsImmutableSampler,
+           "Immutable sampler can't be assigned to separarate image or storage image");
     if (Type == SPIRVShaderResourceAttribs::ResourceType::SampledImage && !IsImmutableSampler)
     {
         // Immutable samplers are permanently bound into the set layout; later binding a sampler 
         // into an immutable sampler slot in a descriptor set is not allowed (13.2.1)
-        auto *pSamplerVk = ValidatedCast<const SamplerVkImpl>(pTexViewVk->GetSampler());
+        auto* pSamplerVk = ValidatedCast<const SamplerVkImpl>(pTexViewVk->GetSampler());
         if (pSamplerVk != nullptr)
         {
             // If descriptorType is VK_DESCRIPTOR_TYPE_SAMPLER or VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 
@@ -340,7 +364,7 @@ VkDescriptorImageInfo ShaderResourceCacheVk::Resource::GetImageDescriptorWriteIn
 #ifdef DEVELOPMENT
         else
         {
-            LOG_ERROR_MESSAGE("No sampler assigned to texture view '", pTexViewVk->GetDesc().Name, "'");
+            LOG_ERROR_MESSAGE("No sampler is assigned to texture view '", pTexViewVk->GetDesc().Name, "'");
         }
 #endif
     }
@@ -384,8 +408,8 @@ VkDescriptorImageInfo ShaderResourceCacheVk::Resource::GetSamplerDescriptorWrite
     auto* pSamplerVk = pObject.RawPtr<const SamplerVkImpl>();
     VkDescriptorImageInfo DescrImgInfo;
     // For VK_DESCRIPTOR_TYPE_SAMPLER, only the sample member of each element of VkWriteDescriptorSet::pImageInfo is accessed (13.2.4)
-    DescrImgInfo.sampler = pSamplerVk->GetVkSampler();
-    DescrImgInfo.imageView = VK_NULL_HANDLE;
+    DescrImgInfo.sampler     = pSamplerVk->GetVkSampler();
+    DescrImgInfo.imageView   = VK_NULL_HANDLE;
     DescrImgInfo.imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     return DescrImgInfo;
 }
@@ -404,11 +428,11 @@ Uint32 ShaderResourceCacheVk::GetDynamicBufferOffsets(DeviceContextVkImpl *pCtxV
     // In each descriptor set, all uniform buffers for every shader stage come first,
     // followed by all storage buffers for every shader stage, followed by all other resources
     Uint32 OffsetInd = 0;
-    for(Uint32 set=0; set < m_NumSets; ++set)
+    for (Uint32 set=0; set < m_NumSets; ++set)
     {
         const auto& DescrSet = GetDescriptorSet(set);
         Uint32 res = 0;
-        while(res < DescrSet.GetSize())
+        while (res < DescrSet.GetSize())
         {
             const auto& Res = DescrSet.GetResource(res);
             if (Res.Type != SPIRVShaderResourceAttribs::ResourceType::UniformBuffer)

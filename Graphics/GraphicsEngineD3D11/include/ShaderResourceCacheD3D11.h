@@ -117,8 +117,8 @@ public:
 
     static size_t GetRequriedMemorySize(const class ShaderResourcesD3D11& Resources);
 
-    void Initialize(const class ShaderResourcesD3D11& Resources, class IMemoryAllocator &MemAllocator);
-    void Initialize(Uint32 CBCount, Uint32 SRVCount, Uint32 SamplerCount, Uint32 UAVCount, class IMemoryAllocator &MemAllocator);
+    void Initialize(const class ShaderResourcesD3D11& Resources, class IMemoryAllocator& MemAllocator);
+    void Initialize(Uint32 CBCount, Uint32 SRVCount, Uint32 SamplerCount, Uint32 UAVCount, class IMemoryAllocator& MemAllocator);
     void Destroy(class IMemoryAllocator& MemAllocator);
 
 

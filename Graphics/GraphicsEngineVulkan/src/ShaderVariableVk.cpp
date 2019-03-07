@@ -24,53 +24,55 @@
 #include "pch.h"
 
 #include "ShaderVariableVk.h"
+#include "ShaderResourceVariableBase.h"
 
 namespace Diligent
 {
 
-size_t ShaderVariableManagerVk::GetRequiredMemorySize(const ShaderResourceLayoutVk& Layout, 
-                                                      const SHADER_VARIABLE_TYPE*   AllowedVarTypes, 
-                                                      Uint32                        NumAllowedTypes,
-                                                      Uint32&                       NumVariables)
+size_t ShaderVariableManagerVk::GetRequiredMemorySize(const ShaderResourceLayoutVk&          Layout, 
+                                                      const SHADER_RESOURCE_VARIABLE_TYPE*   AllowedVarTypes, 
+                                                      Uint32                                 NumAllowedTypes,
+                                                      Uint32&                                NumVariables)
 {
     NumVariables = 0;
-    Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
-    for(SHADER_VARIABLE_TYPE VarType = SHADER_VARIABLE_TYPE_STATIC; VarType < SHADER_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_VARIABLE_TYPE>(VarType+1))
+    const Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
+    const bool UsingSeparateSamplers = Layout.IsUsingSeparateSamplers();
+    for (SHADER_RESOURCE_VARIABLE_TYPE VarType = SHADER_RESOURCE_VARIABLE_TYPE_STATIC; VarType < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(VarType+1))
     {
         if (IsAllowedType(VarType, AllowedTypeBits))
         {
             auto NumResources = Layout.GetResourceCount(VarType);
-            if (Layout.IsUsingSeparateSamplers())
-                NumVariables += NumResources;
-            else
+            for (Uint32 r=0; r < NumResources; ++r)
             {
-                // When using HLSL-style combined image samplers, we need to skip separate samplers
-                for( Uint32 r=0; r < NumResources; ++r )
-                {
-                    const auto& SrcRes = Layout.GetResource(VarType, r);
-                    if (SrcRes.SpirvAttribs.Type != SPIRVShaderResourceAttribs::ResourceType::SeparateSampler)
-                        ++NumVariables;
-                }
+                const auto& SrcRes = Layout.GetResource(VarType, r);
+
+                // When using HLSL-style combined image samplers, we need to skip separate samplers.
+                // Also always skip immutable separate samplers.
+                if (SrcRes.SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler && 
+                    (!UsingSeparateSamplers || SrcRes.IsImmutableSamplerAssigned()) )
+                    continue;
+
+                ++NumVariables;
             }
         }
     }
     
-    return NumVariables*sizeof(ShaderVariableVkImpl);
+    return NumVariables * sizeof(ShaderVariableVkImpl);
 }
 
 // Creates shader variable for every resource from SrcLayout whose type is one AllowedVarTypes
-void ShaderVariableManagerVk::Initialize(const ShaderResourceLayoutVk& SrcLayout, 
-                                         IMemoryAllocator&             Allocator,
-                                         const SHADER_VARIABLE_TYPE*   AllowedVarTypes, 
-                                         Uint32                        NumAllowedTypes, 
-                                         ShaderResourceCacheVk&        ResourceCache)
-{
-    m_pResourceLayout = &SrcLayout;
-    m_pResourceCache  = &ResourceCache;
+ShaderVariableManagerVk::ShaderVariableManagerVk(IObject&                               Owner,
+                                                 const ShaderResourceLayoutVk&          SrcLayout, 
+                                                 IMemoryAllocator&                      Allocator,
+                                                 const SHADER_RESOURCE_VARIABLE_TYPE*   AllowedVarTypes, 
+                                                 Uint32                                 NumAllowedTypes, 
+                                                 ShaderResourceCacheVk&                 ResourceCache) :
+    m_Owner(Owner),
+    m_ResourceCache(ResourceCache)
 #ifdef _DEBUG
-    m_pDbgAllocator = &Allocator;
+  , m_DbgAllocator(Allocator)
 #endif
-
+{
     const Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
     VERIFY_EXPR(m_NumVariables == 0);
     auto MemSize = GetRequiredMemorySize(SrcLayout, AllowedVarTypes, NumAllowedTypes, m_NumVariables);
@@ -78,23 +80,26 @@ void ShaderVariableManagerVk::Initialize(const ShaderResourceLayoutVk& SrcLayout
     if(m_NumVariables == 0)
         return;
     
-    auto *pRawMem = ALLOCATE(Allocator, "Raw memory buffer for shader variables", MemSize);
+    auto* pRawMem = ALLOCATE(Allocator, "Raw memory buffer for shader variables", MemSize);
     m_pVariables = reinterpret_cast<ShaderVariableVkImpl*>(pRawMem);
 
     Uint32 VarInd = 0;
-    for(SHADER_VARIABLE_TYPE VarType = SHADER_VARIABLE_TYPE_STATIC; VarType < SHADER_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_VARIABLE_TYPE>(VarType+1))
+    const bool UsingSeparateSamplers = SrcLayout.IsUsingSeparateSamplers();
+    for (SHADER_RESOURCE_VARIABLE_TYPE VarType = SHADER_RESOURCE_VARIABLE_TYPE_STATIC; VarType < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(VarType+1))
     {
         if (!IsAllowedType(VarType, AllowedTypeBits))
             continue;
 
         Uint32 NumResources = SrcLayout.GetResourceCount(VarType);
-        for( Uint32 r=0; r < NumResources; ++r )
+        for (Uint32 r=0; r < NumResources; ++r)
         {
             const auto& SrcRes = SrcLayout.GetResource(VarType, r);
-            if (!SrcLayout.IsUsingSeparateSamplers() && SrcRes.SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler)
+            // Skip separate samplers when using combined HLSL-style image samplers. Also always skip immutable separate samplers.
+            if (SrcRes.SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler && 
+                (!UsingSeparateSamplers || SrcRes.IsImmutableSamplerAssigned()) )
                 continue;
 
-            ::new (m_pVariables + VarInd) ShaderVariableVkImpl(*this, SrcRes );
+            ::new (m_pVariables + VarInd) ShaderVariableVkImpl(*this, SrcRes);
             ++VarInd;
         }
     }
@@ -103,16 +108,16 @@ void ShaderVariableManagerVk::Initialize(const ShaderResourceLayoutVk& SrcLayout
 
 ShaderVariableManagerVk::~ShaderVariableManagerVk()
 {
-    VERIFY(m_pVariables == nullptr, "Destroy() has not been called");
+    VERIFY(m_pVariables == nullptr, "DestroyVariables() has not been called");
 }
 
-void ShaderVariableManagerVk::Destroy(IMemoryAllocator &Allocator)
+void ShaderVariableManagerVk::DestroyVariables(IMemoryAllocator& Allocator)
 {
-    VERIFY(m_pDbgAllocator == &Allocator, "Incosistent alloctor");
+    VERIFY(&m_DbgAllocator == &Allocator, "Incosistent alloctor");
 
-    if(m_pVariables != nullptr)
+    if (m_pVariables != nullptr)
     {
-        for(Uint32 v=0; v < m_NumVariables; ++v)
+        for (Uint32 v=0; v < m_NumVariables; ++v)
             m_pVariables[v].~ShaderVariableVkImpl();
         Allocator.Free(m_pVariables);
         m_pVariables = nullptr;
@@ -124,7 +129,7 @@ ShaderVariableVkImpl* ShaderVariableManagerVk::GetVariable(const Char* Name)
     ShaderVariableVkImpl* pVar = nullptr;
     for (Uint32 v = 0; v < m_NumVariables; ++v)
     {
-        auto &Var = m_pVariables[v];
+        auto& Var = m_pVariables[v];
         const auto& Res = Var.m_Resource;
         if (strcmp(Res.SpirvAttribs.Name, Name) == 0)
         {
@@ -167,11 +172,9 @@ Uint32 ShaderVariableManagerVk::GetVariableIndex(const ShaderVariableVkImpl& Var
     }
 }
 
-void ShaderVariableManagerVk::BindResources( IResourceMapping* pResourceMapping, Uint32 Flags)
+void ShaderVariableManagerVk::BindResources(IResourceMapping* pResourceMapping, Uint32 Flags)
 {
-    VERIFY_EXPR(m_pResourceCache != nullptr);
-
-    if( !pResourceMapping )
+    if (!pResourceMapping)
     {
         LOG_ERROR_MESSAGE( "Failed to bind resources: resource mapping is null" );
         return;
@@ -180,34 +183,35 @@ void ShaderVariableManagerVk::BindResources( IResourceMapping* pResourceMapping,
     if ( (Flags & BIND_SHADER_RESOURCES_UPDATE_ALL) == 0 )
         Flags |= BIND_SHADER_RESOURCES_UPDATE_ALL;
 
-    for(Uint32 v=0; v < m_NumVariables; ++v)
+    for (Uint32 v=0; v < m_NumVariables; ++v)
     {
-        auto &Var = m_pVariables[v];
+        auto& Var = m_pVariables[v];
         const auto& Res = Var.m_Resource;
         
-        // Skip immutable separate samplers
-        if (Res.SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler && Res.SpirvAttribs.IsImmutableSamplerAssigned())
-            continue;
+        // There should be no immutable separate samplers
+        VERIFY(Res.SpirvAttribs.Type != SPIRVShaderResourceAttribs::ResourceType::SeparateSampler || !Res.IsImmutableSamplerAssigned(),
+               "There must be no shader resource variables for immutable separate samplers");
 
-        if ( (Flags & (1 << Res.SpirvAttribs.VarType)) == 0 )
+        if ( (Flags & (1 << Res.GetVariableType())) == 0 )
             continue;
 
         for (Uint32 ArrInd = 0; ArrInd < Res.SpirvAttribs.ArraySize; ++ArrInd)
         {
-            if( (Flags & BIND_SHADER_RESOURCES_KEEP_EXISTING) && Res.IsBound(ArrInd, *m_pResourceCache) )
+            if ( (Flags & BIND_SHADER_RESOURCES_KEEP_EXISTING) && Res.IsBound(ArrInd, m_ResourceCache) )
                 continue;
 
             const auto* VarName = Res.SpirvAttribs.Name;
             RefCntAutoPtr<IDeviceObject> pObj;
             pResourceMapping->GetResource( VarName, &pObj, ArrInd );
-            if( pObj )
+            if (pObj)
             {
-                Res.BindResource(pObj, ArrInd, *m_pResourceCache);
+                Res.BindResource(pObj, ArrInd, m_ResourceCache);
             }
             else
             {
-                if( (Flags & BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED) && !Res.IsBound(ArrInd, *m_pResourceCache) )
-                    LOG_ERROR_MESSAGE( "Unable to bind resource to shader variable '", Res.SpirvAttribs.GetPrintName(ArrInd), "': resource is not found in the resource mapping" );
+                if ( (Flags & BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED) && !Res.IsBound(ArrInd, m_ResourceCache) )
+                    LOG_ERROR_MESSAGE( "Unable to bind resource to shader variable '", Res.SpirvAttribs.GetPrintName(ArrInd), "': resource is not found in the resource mapping. "
+                                       "Do not use BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED flag to suppress the message if this is not an issue." );
             }
         }
     }

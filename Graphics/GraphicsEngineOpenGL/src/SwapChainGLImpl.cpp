@@ -28,11 +28,11 @@
 
 namespace Diligent
 {
-SwapChainGLImpl::SwapChainGLImpl(IReferenceCounters *pRefCounters,
-                                 const EngineGLAttribs &InitAttribs,
-                                 const SwapChainDesc& SCDesc, 
-                                 RenderDeviceGLImpl* pRenderDeviceGL, 
-                                 DeviceContextGLImpl* pImmediateContextGL) : 
+SwapChainGLImpl::SwapChainGLImpl(IReferenceCounters*        pRefCounters,
+                                 const EngineGLCreateInfo&  InitAttribs,
+                                 const SwapChainDesc&       SCDesc, 
+                                 RenderDeviceGLImpl*        pRenderDeviceGL, 
+                                 DeviceContextGLImpl*       pImmediateContextGL) : 
     TSwapChainBase( pRefCounters, pRenderDeviceGL, pImmediateContextGL, SCDesc)
 {
 #if PLATFORM_WIN32

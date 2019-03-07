@@ -58,7 +58,7 @@ public:
                     ID3D12Resource*              pd3d12Buffer);
     ~BufferD3D12Impl();
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
 
 #ifdef DEVELOPMENT
     void DvpVerifyDynamicAllocation(class DeviceContextD3D12Impl* pCtx)const;

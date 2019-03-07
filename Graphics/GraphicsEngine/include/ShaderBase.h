@@ -37,12 +37,12 @@
 namespace Diligent
 {
 
-inline SHADER_TYPE GetShaderTypeFromIndex( Int32 Index )
+inline SHADER_TYPE GetShaderTypeFromIndex(Int32 Index)
 {
     return static_cast<SHADER_TYPE>(1 << Index);
 }
 
-inline Int32 GetShaderTypeIndex( SHADER_TYPE Type )
+inline Int32 GetShaderTypeIndex(SHADER_TYPE Type)
 {
     Int32 ShaderIndex = PlatformMisc::GetLSB(Type);
 
@@ -70,100 +70,6 @@ static const int HSInd = GetShaderTypeIndex(SHADER_TYPE_HULL);
 static const int DSInd = GetShaderTypeIndex(SHADER_TYPE_DOMAIN);
 static const int CSInd = GetShaderTypeIndex(SHADER_TYPE_COMPUTE);
 
-template<typename TNameCompare>
-SHADER_VARIABLE_TYPE GetShaderVariableType(SHADER_VARIABLE_TYPE DefaultVariableType, const ShaderVariableDesc* VariableDesc, Uint32 NumVars, TNameCompare NameCompare)
-{
-    for (Uint32 v = 0; v < NumVars; ++v)
-    {
-        const auto &CurrVarDesc = VariableDesc[v];
-        if ( NameCompare(CurrVarDesc.Name) )
-        {
-            return CurrVarDesc.Type;
-        }
-    }
-    return DefaultVariableType;
-}
-
-inline SHADER_VARIABLE_TYPE GetShaderVariableType(const Char* Name, SHADER_VARIABLE_TYPE DefaultVariableType, const ShaderVariableDesc* VariableDesc, Uint32 NumVars)
-{
-    return GetShaderVariableType(DefaultVariableType, VariableDesc, NumVars, 
-        [&](const char *VarName)
-        {
-            return strcmp(VarName, Name) == 0;
-        }
-    );
-}
-
-inline SHADER_VARIABLE_TYPE GetShaderVariableType(const Char* Name, const ShaderDesc& ShdrDesc)
-{
-    return GetShaderVariableType(Name, ShdrDesc.DefaultVariableType, ShdrDesc.VariableDesc, ShdrDesc.NumVariables);
-}
-
-inline SHADER_VARIABLE_TYPE GetShaderVariableType(const String& Name, SHADER_VARIABLE_TYPE DefaultVariableType, const ShaderVariableDesc *VariableDesc, Uint32 NumVars)
-{
-    return GetShaderVariableType(DefaultVariableType, VariableDesc, NumVars, 
-        [&](const char *VarName)
-        {
-            return Name.compare(VarName) == 0;
-        }
-    );
-}
-
-inline SHADER_VARIABLE_TYPE GetShaderVariableType(const String& Name, const ShaderDesc& ShdrDesc)
-{
-    return GetShaderVariableType(Name, ShdrDesc.DefaultVariableType, ShdrDesc.VariableDesc, ShdrDesc.NumVariables);
-}
-
-
-/// Base implementation of a shader variable
-
-struct ShaderVariableBase : public IShaderVariable
-{
-    ShaderVariableBase(IObject& Owner) : 
-        // Shader variables are always created as part of the shader, or 
-        // shader resource binding, so we must provide owner pointer to 
-        // the base class constructor
-        m_Owner(Owner)
-    {
-    }
-
-    IObject& GetOwner()
-    {
-        return m_Owner;
-    }
-
-    virtual IReferenceCounters* GetReferenceCounters()const override final
-    {
-        return m_Owner.GetReferenceCounters();
-    }
-
-    virtual Atomics::Long AddRef()override final
-    {
-        return m_Owner.AddRef();
-    }
-
-    virtual Atomics::Long Release()override final
-    {
-        return m_Owner.Release();
-    }
-
-    virtual void QueryInterface( const INTERFACE_ID& IID, IObject** ppInterface )override final
-    {
-        if( ppInterface == nullptr )
-            return;
-
-        *ppInterface = nullptr;
-        if( IID == IID_ShaderVariable || IID == IID_Unknown )
-        {
-            *ppInterface = this;
-            (*ppInterface)->AddRef();
-        }
-    }
-
-protected:
-    IObject& m_Owner;
-};
-
 
 /// Template class implementing base functionality for a shader object
 
@@ -184,57 +90,12 @@ public:
 	/// \param ShdrDesc - shader description.
 	/// \param bIsDeviceInternal - flag indicating if the shader is an internal device object and 
 	///							   must not keep a strong reference to the device.
-    ShaderBase( IReferenceCounters* pRefCounters, RenderDeviceImplType* pDevice, const ShaderDesc& ShdrDesc, bool bIsDeviceInternal = false ) :
-        TDeviceObjectBase( pRefCounters, pDevice, ShdrDesc, bIsDeviceInternal ),
-        m_VariablesDesc (ShdrDesc.NumVariables, ShaderVariableDesc(), STD_ALLOCATOR_RAW_MEM(ShaderVariableDesc, GetRawAllocator(), "Allocator for vector<ShaderVariableDesc>") ),
-        m_StringPool    (ShdrDesc.NumVariables + ShdrDesc.NumStaticSamplers, String(), STD_ALLOCATOR_RAW_MEM(String, GetRawAllocator(), "Allocator for vector<String>")),
-        m_StaticSamplers(ShdrDesc.NumStaticSamplers, StaticSamplerDesc(), STD_ALLOCATOR_RAW_MEM(StaticSamplerDesc, GetRawAllocator(), "Allocator for vector<StaticSamplerDesc>") )
+    ShaderBase(IReferenceCounters* pRefCounters, RenderDeviceImplType* pDevice, const ShaderDesc& ShdrDesc, bool bIsDeviceInternal = false) :
+        TDeviceObjectBase(pRefCounters, pDevice, ShdrDesc, bIsDeviceInternal)
     {
-        auto Str = m_StringPool.begin();
-        if(this->m_Desc.VariableDesc)
-        {
-            for (Uint32 v = 0; v < this->m_Desc.NumVariables; ++v, ++Str)
-            {
-                m_VariablesDesc[v] = this->m_Desc.VariableDesc[v];
-                VERIFY(m_VariablesDesc[v].Name != nullptr, "Variable name not provided");
-                *Str = m_VariablesDesc[v].Name;
-                m_VariablesDesc[v].Name = Str->c_str();
-            }
-            this->m_Desc.VariableDesc = m_VariablesDesc.data();
-        }
-        if(this->m_Desc.StaticSamplers)
-        {
-            for (Uint32 s = 0; s < this->m_Desc.NumStaticSamplers; ++s, ++Str)
-            {
-                m_StaticSamplers[s] = this->m_Desc.StaticSamplers[s];
-                VERIFY(m_StaticSamplers[s].SamplerOrTextureName != nullptr, "Static sampler or texture name is not provided");
-                *Str = m_StaticSamplers[s].SamplerOrTextureName;
-                m_StaticSamplers[s].SamplerOrTextureName = Str->c_str();
-#ifdef DEVELOPMENT
-                const auto &BorderColor = m_StaticSamplers[s].Desc.BorderColor;
-                if( !( (BorderColor[0] == 0 && BorderColor[1] == 0 && BorderColor[2] == 0 && BorderColor[3] == 0) ||
-                       (BorderColor[0] == 0 && BorderColor[1] == 0 && BorderColor[2] == 0 && BorderColor[3] == 1) ||
-                       (BorderColor[0] == 1 && BorderColor[1] == 1 && BorderColor[2] == 1 && BorderColor[3] == 1) ) )
-                {
-                    LOG_WARNING_MESSAGE("Static sampler for variable \"", *Str , "\" specifies border color (", BorderColor[0], ", ", BorderColor[1], ", ",  BorderColor[2], ", ",  BorderColor[3], "). D3D12 static samplers only allow transparent black (0,0,0,0), opaque black (0,0,0,1) or opaque white (1,1,1,1) as border colors");
-                }
-#endif
-            }
-            this->m_Desc.StaticSamplers = m_StaticSamplers.data();
-        }
-
-        VERIFY_EXPR(Str == m_StringPool.end());
     }
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE( IID_Shader, TDeviceObjectBase )
-    
-protected:
-    /// Shader variable descriptions
-    std::vector<ShaderVariableDesc, STDAllocatorRawMem<ShaderVariableDesc> > m_VariablesDesc;
-    /// String pool that is used to hold copies of variable names and static sampler names
-    std::vector<String, STDAllocatorRawMem<String> > m_StringPool;
-    /// Static sampler descriptions
-    std::vector<StaticSamplerDesc, STDAllocatorRawMem<StaticSamplerDesc> > m_StaticSamplers;
 };
 
 }

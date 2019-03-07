@@ -18,6 +18,7 @@ set(INCLUDE
     include/SamplerBase.h
     include/ShaderBase.h
     include/ShaderResourceBindingBase.h
+    include/ShaderResourceVariableBase.h
     include/StateObjectsRegistry.h
     include/SwapChainBase.h
     include/TextureBase.h
@@ -45,6 +46,7 @@ set(INTERFACE
     interface/Sampler.h
     interface/Shader.h
     interface/ShaderResourceBinding.h
+    interface/ShaderResourceVariable.h
     interface/SwapChain.h
     interface/Texture.h
     interface/TextureView.h

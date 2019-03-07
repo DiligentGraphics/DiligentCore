@@ -30,15 +30,14 @@
 #include "DeviceContextGLImpl.h"
 #include "RenderDeviceGLImpl.h"
 #include "SwapChainGLIOS.h"
-#include "EngineGLAttribs.h"
 
 namespace Diligent
 {
-SwapChainGLIOS::SwapChainGLIOS(IReferenceCounters *pRefCounters,
-                               const EngineGLAttribs &InitAttribs,
-                               const SwapChainDesc& SCDesc,
-                               RenderDeviceGLImpl* pRenderDeviceGL,
-                               DeviceContextGLImpl* pImmediateContextGL) :
+SwapChainGLIOS::SwapChainGLIOS(IReferenceCounters*          pRefCounters,
+                               const EngineGLCreateInfo&    InitAttribs,
+                               const SwapChainDesc&         SCDesc,
+                               RenderDeviceGLImpl*          pRenderDeviceGL,
+                               DeviceContextGLImpl*         pImmediateContextGL) :
     TSwapChainBase( pRefCounters, pRenderDeviceGL, pImmediateContextGL, SCDesc),
     m_ColorRenderBuffer(false),
     m_DepthRenderBuffer(false),

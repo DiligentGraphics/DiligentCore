@@ -26,7 +26,7 @@
 
 #include "pch.h"
 #include <array>
-#include "RenderDeviceFactoryVk.h"
+#include "EngineFactoryVk.h"
 #include "RenderDeviceVkImpl.h"
 #include "DeviceContextVkImpl.h"
 #include "SwapChainVkImpl.h"
@@ -48,31 +48,31 @@ public:
         return &TheFactory;
     }
 
-    void CreateDeviceAndContextsVk( const EngineVkAttribs& CreationAttribs, 
-                                    IRenderDevice**        ppDevice, 
-                                    IDeviceContext**       ppContexts,
-                                    Uint32                 NumDeferredContexts)override final;
+    void CreateDeviceAndContextsVk(const EngineVkCreateInfo& EngineCI, 
+                                   IRenderDevice**           ppDevice, 
+                                   IDeviceContext**          ppContexts,
+                                   Uint32                    NumDeferredContexts)override final;
 
     void AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::VulkanInstance>       Instance,
                               std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice> PhysicalDevice,
                               std::shared_ptr<VulkanUtilities::VulkanLogicalDevice>  LogicalDevice,
-                              size_t                 CommandQueueCount,
-                              ICommandQueueVk**      ppCommandQueues,
-                              const EngineVkAttribs& EngineAttribs, 
-                              IRenderDevice**        ppDevice, 
-                              IDeviceContext**       ppContexts,
-                              Uint32                 NumDeferredContexts);//override final;
+                              size_t                    CommandQueueCount,
+                              ICommandQueueVk**         ppCommandQueues,
+                              const EngineVkCreateInfo& EngineCI, 
+                              IRenderDevice**           ppDevice, 
+                              IDeviceContext**          ppContexts,
+                              Uint32                    NumDeferredContexts);//override final;
 
-    void CreateSwapChainVk( IRenderDevice*       pDevice, 
-                            IDeviceContext*      pImmediateContext, 
-                            const SwapChainDesc& SwapChainDesc, 
-                            void*                pNativeWndHandle, 
-                            ISwapChain**         ppSwapChain )override final;
+    void CreateSwapChainVk(IRenderDevice*       pDevice, 
+                           IDeviceContext*      pImmediateContext, 
+                           const SwapChainDesc& SwapChainDesc, 
+                           void*                pNativeWndHandle, 
+                           ISwapChain**         ppSwapChain)override final;
 };
 
 /// Creates render device and device contexts for Vulkan backend
 
-/// \param [in] CreationAttribs - Engine creation attributes.
+/// \param [in] EngineCI - Engine creation attributes.
 /// \param [out] ppDevice - Address of the memory location where pointer to 
 ///                         the created device will be written
 /// \param [out] ppContexts - Address of the memory location where pointers to 
@@ -83,10 +83,10 @@ public:
 ///                                   of deferred contexts is requested, pointers to the
 ///                                   contexts are written to ppContexts array starting 
 ///                                   at position 1
-void EngineFactoryVkImpl::CreateDeviceAndContextsVk( const EngineVkAttribs& CreationAttribs, 
-                                                     IRenderDevice**        ppDevice, 
-                                                     IDeviceContext**       ppContexts,
-                                                     Uint32                 NumDeferredContexts)
+void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& EngineCI, 
+                                                    IRenderDevice**           ppDevice, 
+                                                    IDeviceContext**          ppContexts,
+                                                    Uint32                    NumDeferredContexts)
 {
     VERIFY( ppDevice && ppContexts, "Null pointer provided" );
     if( !ppDevice || !ppContexts )
@@ -95,7 +95,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk( const EngineVkAttribs& Crea
 #if 0
     for (Uint32 Type = Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV; Type < Vk_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++Type)
     {
-        auto CPUHeapAllocSize = CreationAttribs.CPUDescriptorHeapAllocationSize[Type];
+        auto CPUHeapAllocSize = EngineCI.CPUDescriptorHeapAllocationSize[Type];
         Uint32 MaxSize = 1 << 20;
         if (CPUHeapAllocSize > 1 << 20)
         {
@@ -111,7 +111,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk( const EngineVkAttribs& Crea
     }
 #endif
 
-    SetRawAllocator(CreationAttribs.pRawMemAllocator);
+    SetRawAllocator(EngineCI.pRawMemAllocator);
 
     *ppDevice = nullptr;
     memset(ppContexts, 0, sizeof(*ppContexts) * (1 + NumDeferredContexts));
@@ -119,10 +119,10 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk( const EngineVkAttribs& Crea
     try
     {
         auto Instance = VulkanUtilities::VulkanInstance::Create(
-            CreationAttribs.EnableValidation, 
-            CreationAttribs.GlobalExtensionCount, 
-            CreationAttribs.ppGlobalExtensionNames,
-            reinterpret_cast<VkAllocationCallbacks*>(CreationAttribs.pVkAllocator));
+            EngineCI.EnableValidation, 
+            EngineCI.GlobalExtensionCount, 
+            EngineCI.ppGlobalExtensionNames,
+            reinterpret_cast<VkAllocationCallbacks*>(EngineCI.pVkAllocator));
 
         auto vkDevice = Instance->SelectPhysicalDevice();
         auto PhysicalDevice = VulkanUtilities::VulkanPhysicalDevice::Create(vkDevice);
@@ -152,20 +152,20 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk( const EngineVkAttribs& Crea
         DeviceCreateInfo.queueCreateInfoCount = 1;
         DeviceCreateInfo.pQueueCreateInfos = &QueueInfo;
         VkPhysicalDeviceFeatures DeviceFeatures = {};
-        DeviceFeatures.depthBiasClamp                    = CreationAttribs.EnabledFeatures.depthBiasClamp                    ? VK_TRUE : VK_FALSE;
-        DeviceFeatures.fillModeNonSolid                  = CreationAttribs.EnabledFeatures.fillModeNonSolid                  ? VK_TRUE : VK_FALSE;
-        DeviceFeatures.depthClamp                        = CreationAttribs.EnabledFeatures.depthClamp                        ? VK_TRUE : VK_FALSE;
-        DeviceFeatures.independentBlend                  = CreationAttribs.EnabledFeatures.independentBlend                  ? VK_TRUE : VK_FALSE;
-        DeviceFeatures.samplerAnisotropy                 = CreationAttribs.EnabledFeatures.samplerAnisotropy                 ? VK_TRUE : VK_FALSE;
-        DeviceFeatures.geometryShader                    = CreationAttribs.EnabledFeatures.geometryShader                    ? VK_TRUE : VK_FALSE;
-        DeviceFeatures.tessellationShader                = CreationAttribs.EnabledFeatures.tessellationShader                ? VK_TRUE : VK_FALSE;
-        DeviceFeatures.dualSrcBlend                      = CreationAttribs.EnabledFeatures.dualSrcBlend                      ? VK_TRUE : VK_FALSE;
-        DeviceFeatures.multiViewport                     = CreationAttribs.EnabledFeatures.multiViewport                     ? VK_TRUE : VK_FALSE;
-        DeviceFeatures.imageCubeArray                    = CreationAttribs.EnabledFeatures.imageCubeArray                    ? VK_TRUE : VK_FALSE;
-        DeviceFeatures.textureCompressionBC              = CreationAttribs.EnabledFeatures.textureCompressionBC              ? VK_TRUE : VK_FALSE;
-        DeviceFeatures.vertexPipelineStoresAndAtomics    = CreationAttribs.EnabledFeatures.vertexPipelineStoresAndAtomics    ? VK_TRUE : VK_FALSE;
-        DeviceFeatures.fragmentStoresAndAtomics          = CreationAttribs.EnabledFeatures.fragmentStoresAndAtomics          ? VK_TRUE : VK_FALSE;
-        DeviceFeatures.shaderStorageImageExtendedFormats = CreationAttribs.EnabledFeatures.shaderStorageImageExtendedFormats ? VK_TRUE : VK_FALSE;
+        DeviceFeatures.depthBiasClamp                    = EngineCI.EnabledFeatures.depthBiasClamp                    ? VK_TRUE : VK_FALSE;
+        DeviceFeatures.fillModeNonSolid                  = EngineCI.EnabledFeatures.fillModeNonSolid                  ? VK_TRUE : VK_FALSE;
+        DeviceFeatures.depthClamp                        = EngineCI.EnabledFeatures.depthClamp                        ? VK_TRUE : VK_FALSE;
+        DeviceFeatures.independentBlend                  = EngineCI.EnabledFeatures.independentBlend                  ? VK_TRUE : VK_FALSE;
+        DeviceFeatures.samplerAnisotropy                 = EngineCI.EnabledFeatures.samplerAnisotropy                 ? VK_TRUE : VK_FALSE;
+        DeviceFeatures.geometryShader                    = EngineCI.EnabledFeatures.geometryShader                    ? VK_TRUE : VK_FALSE;
+        DeviceFeatures.tessellationShader                = EngineCI.EnabledFeatures.tessellationShader                ? VK_TRUE : VK_FALSE;
+        DeviceFeatures.dualSrcBlend                      = EngineCI.EnabledFeatures.dualSrcBlend                      ? VK_TRUE : VK_FALSE;
+        DeviceFeatures.multiViewport                     = EngineCI.EnabledFeatures.multiViewport                     ? VK_TRUE : VK_FALSE;
+        DeviceFeatures.imageCubeArray                    = EngineCI.EnabledFeatures.imageCubeArray                    ? VK_TRUE : VK_FALSE;
+        DeviceFeatures.textureCompressionBC              = EngineCI.EnabledFeatures.textureCompressionBC              ? VK_TRUE : VK_FALSE;
+        DeviceFeatures.vertexPipelineStoresAndAtomics    = EngineCI.EnabledFeatures.vertexPipelineStoresAndAtomics    ? VK_TRUE : VK_FALSE;
+        DeviceFeatures.fragmentStoresAndAtomics          = EngineCI.EnabledFeatures.fragmentStoresAndAtomics          ? VK_TRUE : VK_FALSE;
+        DeviceFeatures.shaderStorageImageExtendedFormats = EngineCI.EnabledFeatures.shaderStorageImageExtendedFormats ? VK_TRUE : VK_FALSE;
         DeviceCreateInfo.pEnabledFeatures = &DeviceFeatures; // NULL or a pointer to a VkPhysicalDeviceFeatures structure that contains 
                                                              // boolean indicators of all the features to be enabled.
 
@@ -186,7 +186,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk( const EngineVkAttribs& Crea
         pCmdQueueVk = NEW_RC_OBJ(RawMemAllocator, "CommandQueueVk instance", CommandQueueVkImpl)(LogicalDevice, QueueInfo.queueFamilyIndex);
 
         std::array<ICommandQueueVk*, 1> CommandQueues = {{pCmdQueueVk}};
-        AttachToVulkanDevice(Instance, std::move(PhysicalDevice), LogicalDevice, CommandQueues.size(), CommandQueues.data(), CreationAttribs, ppDevice, ppContexts, NumDeferredContexts);
+        AttachToVulkanDevice(Instance, std::move(PhysicalDevice), LogicalDevice, CommandQueues.size(), CommandQueues.data(), EngineCI, ppDevice, ppContexts, NumDeferredContexts);
 
         FenceDesc Desc;
         Desc.Name = "Command queue fence";
@@ -208,7 +208,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk( const EngineVkAttribs& Crea
 /// \param [in] PhysicalDevice - pointer to the object representing physical device
 /// \param [in] LogicalDevice - shared pointer to a VulkanUtilities::VulkanLogicalDevice object
 /// \param [in] pCommandQueue - pointer to the implementation of command queue
-/// \param [in] EngineAttribs - Engine creation attributes.
+/// \param [in] EngineCI - Engine creation attributes.
 /// \param [out] ppDevice - Address of the memory location where pointer to 
 ///                         the created device will be written
 /// \param [out] ppContexts - Address of the memory location where pointers to 
@@ -222,12 +222,12 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk( const EngineVkAttribs& Crea
 void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::VulkanInstance>       Instance,
                                                std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice> PhysicalDevice,
                                                std::shared_ptr<VulkanUtilities::VulkanLogicalDevice>  LogicalDevice,
-                                               size_t                 CommandQueueCount,
-                                               ICommandQueueVk**      ppCommandQueues,
-                                               const EngineVkAttribs& EngineAttribs, 
-                                               IRenderDevice**        ppDevice, 
-                                               IDeviceContext**       ppContexts,
-                                               Uint32                 NumDeferredContexts)
+                                               size_t                      CommandQueueCount,
+                                               ICommandQueueVk**           ppCommandQueues,
+                                               const EngineVkCreateInfo&   EngineCI, 
+                                               IRenderDevice**             ppDevice, 
+                                               IDeviceContext**            ppContexts,
+                                               Uint32                      NumDeferredContexts)
 {
     VERIFY( ppCommandQueues && ppDevice && ppContexts, "Null pointer provided" );
     if(!LogicalDevice || !ppCommandQueues || !ppDevice || !ppContexts )
@@ -239,12 +239,12 @@ void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::
     try
     {
         auto &RawMemAllocator = GetRawAllocator();
-        RenderDeviceVkImpl *pRenderDeviceVk( NEW_RC_OBJ(RawMemAllocator, "RenderDeviceVkImpl instance", RenderDeviceVkImpl)(RawMemAllocator, EngineAttribs, CommandQueueCount, ppCommandQueues, Instance, std::move(PhysicalDevice), LogicalDevice, NumDeferredContexts ) );
+        RenderDeviceVkImpl *pRenderDeviceVk( NEW_RC_OBJ(RawMemAllocator, "RenderDeviceVkImpl instance", RenderDeviceVkImpl)(RawMemAllocator, EngineCI, CommandQueueCount, ppCommandQueues, Instance, std::move(PhysicalDevice), LogicalDevice, NumDeferredContexts ) );
         pRenderDeviceVk->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice) );
 
         std::shared_ptr<GenerateMipsVkHelper> GenerateMipsHelper(new GenerateMipsVkHelper(*pRenderDeviceVk));
 
-        RefCntAutoPtr<DeviceContextVkImpl> pImmediateCtxVk( NEW_RC_OBJ(RawMemAllocator, "DeviceContextVkImpl instance", DeviceContextVkImpl)(pRenderDeviceVk, false, EngineAttribs, 0, 0, GenerateMipsHelper) );
+        RefCntAutoPtr<DeviceContextVkImpl> pImmediateCtxVk( NEW_RC_OBJ(RawMemAllocator, "DeviceContextVkImpl instance", DeviceContextVkImpl)(pRenderDeviceVk, false, EngineCI, 0, 0, GenerateMipsHelper) );
         // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceVk will
         // keep a weak reference to the context
         pImmediateCtxVk->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppContexts) );
@@ -252,7 +252,7 @@ void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::
 
         for (Uint32 DeferredCtx = 0; DeferredCtx < NumDeferredContexts; ++DeferredCtx)
         {
-            RefCntAutoPtr<DeviceContextVkImpl> pDeferredCtxVk( NEW_RC_OBJ(RawMemAllocator, "DeviceContextVkImpl instance", DeviceContextVkImpl)(pRenderDeviceVk, true, EngineAttribs, 1+DeferredCtx, 0, GenerateMipsHelper) );
+            RefCntAutoPtr<DeviceContextVkImpl> pDeferredCtxVk( NEW_RC_OBJ(RawMemAllocator, "DeviceContextVkImpl instance", DeviceContextVkImpl)(pRenderDeviceVk, true, EngineCI, 1+DeferredCtx, 0, GenerateMipsHelper) );
             // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceVk will
             // keep a weak reference to the context
             pDeferredCtxVk->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppContexts + 1 + DeferredCtx) );
@@ -293,11 +293,11 @@ void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::
 ///                                
 /// \param [out] ppSwapChain    - Address of the memory location where pointer to the new 
 ///                               swap chain will be written
-void EngineFactoryVkImpl::CreateSwapChainVk( IRenderDevice*       pDevice, 
-                                             IDeviceContext*      pImmediateContext, 
-                                             const SwapChainDesc& SCDesc, 
-                                             void*                pNativeWndHandle, 
-                                             ISwapChain**         ppSwapChain )
+void EngineFactoryVkImpl::CreateSwapChainVk(IRenderDevice*       pDevice, 
+                                            IDeviceContext*      pImmediateContext, 
+                                            const SwapChainDesc& SCDesc, 
+                                            void*                pNativeWndHandle, 
+                                            ISwapChain**         ppSwapChain)
 {
     VERIFY( ppSwapChain, "Null pointer provided" );
     if( !ppSwapChain )

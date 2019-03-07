@@ -23,6 +23,7 @@
 
 #pragma once
 
+#include <vector>
 #include "PipelineStateGL.h"
 #include "PipelineStateBase.h"
 #include "RenderDevice.h"
@@ -49,10 +50,16 @@ public:
     ~PipelineStateGLImpl();
     
     /// Queries the specific interface, see IObject::QueryInterface() for details
-    virtual void QueryInterface( const INTERFACE_ID& IID, IObject** ppInterface )override;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override;
 
-    virtual void BindShaderResources( IResourceMapping* pResourceMapping, Uint32 Flags )override final;
+    virtual void BindStaticResources(Uint32 ShaderFlags, IResourceMapping* pResourceMapping, Uint32 Flags)override final;
     
+    virtual Uint32 GetStaticVariableCount(SHADER_TYPE ShaderType) const override final;
+
+    virtual IShaderResourceVariable* GetStaticShaderVariable(SHADER_TYPE ShaderType, const Char* Name) override final;
+
+    virtual IShaderResourceVariable* GetStaticShaderVariable(SHADER_TYPE ShaderType, Uint32 Index) override final;
+
     virtual void CreateShaderResourceBinding( IShaderResourceBinding** ppShaderResourceBinding, bool InitStaticResources )override final;
 
     virtual bool IsCompatibleWith(const IPipelineState* pPSO)const override final;
@@ -60,12 +67,19 @@ public:
     GLProgram& GetGLProgram(){return m_GLProgram;}
     GLObjectWrappers::GLPipelineObj& GetGLProgramPipeline(GLContext::NativeGLContextType Context);
 
+    GLProgramResources& GetStaticResources(Uint32 s)
+    {
+        return m_StaticResources[s];
+    }
+
 private:
     void LinkGLProgram(bool bIsProgramPipelineSupported);
 
     GLProgram m_GLProgram;
     ThreadingTools::LockFlag m_ProgPipelineLockFlag;
-    std::unordered_map<GLContext::NativeGLContextType, GLObjectWrappers::GLPipelineObj> m_GLProgPipelines;
+    std::vector< std::pair<GLContext::NativeGLContextType, GLObjectWrappers::GLPipelineObj > > m_GLProgPipelines;
+    std::vector<GLProgramResources> m_StaticResources;
+    Int8 m_ResourceLayoutIndex[6] = {-1, -1, -1, -1, -1, -1};
 };
 
 }

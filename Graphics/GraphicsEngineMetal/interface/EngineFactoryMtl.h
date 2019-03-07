@@ -31,7 +31,6 @@
 #include "../../GraphicsEngine/interface/RenderDevice.h"
 #include "../../GraphicsEngine/interface/DeviceContext.h"
 #include "../../GraphicsEngine/interface/SwapChain.h"
-#include "EngineMtlAttribs.h"
 
 // https://gcc.gnu.org/wiki/Visibility
 #define API_QUALIFIER __attribute__((visibility("default")))
@@ -42,10 +41,10 @@ namespace Diligent
 class IEngineFactoryMtl
 {
 public:
-    virtual void CreateDeviceAndContextsMtl( const EngineMtlAttribs& Attribs, 
-                                             IRenderDevice**         ppDevice, 
-                                             IDeviceContext**        ppContexts,
-                                             Uint32                  NumDeferredContexts ) = 0;
+    virtual void CreateDeviceAndContextsMtl(const EngineMtlCreateInfo& Attribs, 
+                                            IRenderDevice**            ppDevice, 
+                                            IDeviceContext**           ppContexts,
+                                            Uint32                     NumDeferredContexts ) = 0;
 
    virtual void CreateSwapChainMtl( IRenderDevice*            pDevice, 
                                     IDeviceContext*           pImmediateContext, 
@@ -53,11 +52,11 @@ public:
                                     void*                     pView, 
                                     ISwapChain**              ppSwapChain ) = 0;
 
-   virtual void AttachToMtlDevice(void*                   pMtlNativeDevice, 
-                                  const EngineMtlAttribs& EngineAttribs, 
-                                  IRenderDevice**         ppDevice, 
-                                  IDeviceContext**        ppContexts,
-                                  Uint32                  NumDeferredContexts) = 0;
+   virtual void AttachToMtlDevice(void*                      pMtlNativeDevice, 
+                                  const EngineMtlCreateInfo& EngineAttribs, 
+                                  IRenderDevice**            ppDevice, 
+                                  IDeviceContext**           ppContexts,
+                                  Uint32                     NumDeferredContexts) = 0;
 };
 
 

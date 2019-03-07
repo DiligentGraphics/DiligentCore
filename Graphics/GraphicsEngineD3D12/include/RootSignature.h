@@ -40,12 +40,12 @@ class RootParameter
 {
 public:
 
-	RootParameter(D3D12_ROOT_PARAMETER_TYPE ParameterType, 
-                  Uint32                    RootIndex, 
-                  UINT                      Register, 
-                  UINT                      RegisterSpace, 
-                  D3D12_SHADER_VISIBILITY   Visibility, 
-                  SHADER_VARIABLE_TYPE      VarType)noexcept  : 
+	RootParameter(D3D12_ROOT_PARAMETER_TYPE      ParameterType, 
+                  Uint32                         RootIndex, 
+                  UINT                           Register, 
+                  UINT                           RegisterSpace, 
+                  D3D12_SHADER_VISIBILITY        Visibility, 
+                  SHADER_RESOURCE_VARIABLE_TYPE  VarType)noexcept  : 
         m_RootIndex    (RootIndex),
         m_ShaderVarType(VarType)
 	{
@@ -56,13 +56,13 @@ public:
 		m_RootParam.Descriptor.RegisterSpace  = RegisterSpace;
 	}
 
-	RootParameter(D3D12_ROOT_PARAMETER_TYPE ParameterType, 
-                  Uint32                    RootIndex, 
-                  UINT                      Register, 
-                  UINT                      RegisterSpace, 
-                  UINT                      NumDwords, 
-                  D3D12_SHADER_VISIBILITY   Visibility, 
-                  SHADER_VARIABLE_TYPE       VarType)noexcept : 
+	RootParameter(D3D12_ROOT_PARAMETER_TYPE     ParameterType, 
+                  Uint32                        RootIndex, 
+                  UINT                          Register, 
+                  UINT                          RegisterSpace, 
+                  UINT                          NumDwords, 
+                  D3D12_SHADER_VISIBILITY       Visibility, 
+                  SHADER_RESOURCE_VARIABLE_TYPE VarType)noexcept : 
         m_RootIndex    (RootIndex),
         m_ShaderVarType(VarType)
 	{
@@ -74,12 +74,12 @@ public:
 		m_RootParam.Constants.RegisterSpace  = RegisterSpace;
 	}
 
-	RootParameter(D3D12_ROOT_PARAMETER_TYPE ParameterType, 
-                  Uint32                    RootIndex, 
-                  UINT                      NumRanges, 
-                  D3D12_DESCRIPTOR_RANGE*   pRanges,
-                  D3D12_SHADER_VISIBILITY   Visibility, 
-                  SHADER_VARIABLE_TYPE      VarType)noexcept : 
+	RootParameter(D3D12_ROOT_PARAMETER_TYPE      ParameterType, 
+                  Uint32                         RootIndex, 
+                  UINT                           NumRanges, 
+                  D3D12_DESCRIPTOR_RANGE*        pRanges,
+                  D3D12_SHADER_VISIBILITY        Visibility, 
+                  SHADER_RESOURCE_VARIABLE_TYPE  VarType)noexcept : 
         m_RootIndex    (RootIndex),
         m_ShaderVarType(VarType)
 	{
@@ -158,7 +158,7 @@ public:
         m_DescriptorTableSize = std::max(m_DescriptorTableSize, OffsetFromTableStart + Count);
 	}
 
-    SHADER_VARIABLE_TYPE GetShaderVariableType()const{ return m_ShaderVarType; }
+    SHADER_RESOURCE_VARIABLE_TYPE GetShaderVariableType()const{ return m_ShaderVarType; }
     Uint32 GetDescriptorTableSize()const
     {
         VERIFY(m_RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, "Incorrect parameter table: descriptor table is expected");
@@ -274,10 +274,10 @@ public:
 
 private:
 
-    SHADER_VARIABLE_TYPE m_ShaderVarType = static_cast<SHADER_VARIABLE_TYPE>(-1);
-    D3D12_ROOT_PARAMETER m_RootParam = {};
-    Uint32 m_DescriptorTableSize = 0;
-    Uint32 m_RootIndex = static_cast<Uint32>(-1);
+    SHADER_RESOURCE_VARIABLE_TYPE m_ShaderVarType       = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(-1);
+    D3D12_ROOT_PARAMETER          m_RootParam           = {};
+    Uint32                        m_DescriptorTableSize = 0;
+    Uint32                        m_RootIndex           = static_cast<Uint32>(-1);
 };
 
 
@@ -288,9 +288,9 @@ class RootSignature
 public:
     RootSignature();
 
-    void AllocateStaticSamplers(IShader* const *ppShaders, Uint32 NumShaders);
+    void AllocateStaticSamplers(const PipelineResourceLayoutDesc& ResourceLayout);
 
-    void Finalize(ID3D12Device *pd3d12Device);
+    void Finalize(ID3D12Device* pd3d12Device);
 
     ID3D12RootSignature* GetD3D12RootSignature()const{return m_pd3d12RootSignature;}
 
@@ -305,6 +305,7 @@ public:
 
     void AllocateResourceSlot(SHADER_TYPE                      ShaderType, 
                               const D3DShaderResourceAttribs&  ShaderResAttribs, 
+                              SHADER_RESOURCE_VARIABLE_TYPE    VariableType,
                               D3D12_DESCRIPTOR_RANGE_TYPE      RangeType, 
                               Uint32&                          RootIndex,
                               Uint32&                          OffsetFromTableStart);
@@ -330,15 +331,15 @@ public:
                          bool                          IsCompute,
                          class DeviceContextD3D12Impl* pCtx)const;
 
-    Uint32 GetTotalSrvCbvUavSlots(SHADER_VARIABLE_TYPE VarType)const
+    Uint32 GetTotalSrvCbvUavSlots(SHADER_RESOURCE_VARIABLE_TYPE VarType)const
     {
         return m_TotalSrvCbvUavSlots[VarType];
     }
-    Uint32 GetTotalSamplerSlots(SHADER_VARIABLE_TYPE VarType)const
+    Uint32 GetTotalSamplerSlots(SHADER_RESOURCE_VARIABLE_TYPE VarType)const
     {
         return m_TotalSamplerSlots[VarType];
     }
-    Uint32 GetTotalRootViews(SHADER_VARIABLE_TYPE VarType)const
+    Uint32 GetTotalRootViews(SHADER_RESOURCE_VARIABLE_TYPE VarType)const
     {
         return m_TotalRootViews[VarType];
     }
@@ -359,9 +360,9 @@ private:
     
     std::vector<Uint32, STDAllocatorRawMem<Uint32> > GetCacheTableSizes()const;
 
-    std::array<Uint32, SHADER_VARIABLE_TYPE_NUM_TYPES> m_TotalSrvCbvUavSlots = {};
-    std::array<Uint32, SHADER_VARIABLE_TYPE_NUM_TYPES> m_TotalSamplerSlots   = {};
-    std::array<Uint32, SHADER_VARIABLE_TYPE_NUM_TYPES> m_TotalRootViews      = {};
+    std::array<Uint32, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES> m_TotalSrvCbvUavSlots = {};
+    std::array<Uint32, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES> m_TotalSamplerSlots   = {};
+    std::array<Uint32, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES> m_TotalRootViews      = {};
     
     CComPtr<ID3D12RootSignature> m_pd3d12RootSignature;
 
@@ -402,16 +403,16 @@ private:
             return m_pRootViews[ViewInd];
         }
 
-        void AddRootView(D3D12_ROOT_PARAMETER_TYPE ParameterType,
-                         Uint32                    RootIndex,
-                         UINT                      Register,
-                         D3D12_SHADER_VISIBILITY   Visibility,
-                         SHADER_VARIABLE_TYPE      VarType);
+        void AddRootView(D3D12_ROOT_PARAMETER_TYPE     ParameterType,
+                         Uint32                        RootIndex,
+                         UINT                          Register,
+                         D3D12_SHADER_VISIBILITY       Visibility,
+                         SHADER_RESOURCE_VARIABLE_TYPE VarType);
 
-        void AddRootTable(Uint32                  RootIndex,
-                          D3D12_SHADER_VISIBILITY Visibility,
-                          SHADER_VARIABLE_TYPE    VarType,
-                          Uint32                  NumRangesInNewTable = 1);
+        void AddRootTable(Uint32                         RootIndex,
+                          D3D12_SHADER_VISIBILITY        Visibility,
+                          SHADER_RESOURCE_VARIABLE_TYPE  VarType,
+                          Uint32                         NumRangesInNewTable = 1);
 
         void AddDescriptorRanges(Uint32 RootTableInd, Uint32 NumExtraRanges = 1);
 
@@ -446,9 +447,9 @@ private:
     // in m_RootParams (NOT the Root Index!), for every variable type 
     // (static, mutable, dynamic) and every shader type,
     // or -1, if the table is not yet assigned to the combination
-    std::array<Uint8, SHADER_VARIABLE_TYPE_NUM_TYPES * 6> m_SrvCbvUavRootTablesMap;
+    std::array<Uint8, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES * 6> m_SrvCbvUavRootTablesMap;
     // This array contains the same data for Sampler root table
-    std::array<Uint8, SHADER_VARIABLE_TYPE_NUM_TYPES * 6> m_SamplerRootTablesMap;
+    std::array<Uint8, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES * 6> m_SamplerRootTablesMap;
 
     RootParamsManager m_RootParams;
     

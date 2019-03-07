@@ -32,14 +32,12 @@ namespace Diligent
 
 ShaderD3D11Impl::ShaderD3D11Impl(IReferenceCounters*          pRefCounters,
                                  RenderDeviceD3D11Impl*       pRenderDeviceD3D11,
-                                 const ShaderCreationAttribs& CreationAttribs) : 
-    TShaderBase(pRefCounters, pRenderDeviceD3D11, CreationAttribs.Desc),
-    ShaderD3DBase(CreationAttribs),
-    m_StaticResLayout(*this),
-    m_ShaderTypeIndex(Diligent::GetShaderTypeIndex(CreationAttribs.Desc.ShaderType))
+                                 const ShaderCreateInfo&      ShaderCI) : 
+    TShaderBase(pRefCounters, pRenderDeviceD3D11, ShaderCI.Desc),
+    ShaderD3DBase(ShaderCI)
 {
     auto *pDeviceD3D11 = pRenderDeviceD3D11->GetD3D11Device();
-    switch(CreationAttribs.Desc.ShaderType)
+    switch (ShaderCI.Desc.ShaderType)
     {
 
 #define CREATE_SHADER(SHADER_NAME, ShaderName)\
@@ -76,29 +74,18 @@ ShaderD3D11Impl::ShaderD3D11Impl(IReferenceCounters*          pRefCounters,
     }
 
     // Load shader resources
-    auto &Allocator = GetRawAllocator();
-    auto *pRawMem = ALLOCATE(Allocator, "Allocator for ShaderResources", sizeof(ShaderResourcesD3D11));
-    auto *pResources = new (pRawMem) ShaderResourcesD3D11(pRenderDeviceD3D11, m_pShaderByteCode, m_Desc, CreationAttribs.UseCombinedTextureSamplers ? CreationAttribs.CombinedSamplerSuffix : nullptr);
+    auto& Allocator = GetRawAllocator();
+    auto* pRawMem = ALLOCATE(Allocator, "Allocator for ShaderResources", sizeof(ShaderResourcesD3D11));
+    auto* pResources = new (pRawMem) ShaderResourcesD3D11(pRenderDeviceD3D11, m_pShaderByteCode, m_Desc, ShaderCI.UseCombinedTextureSamplers ? ShaderCI.CombinedSamplerSuffix : nullptr);
     m_pShaderResources.reset(pResources, STDDeleterRawMem<ShaderResourcesD3D11>(Allocator));
 
-    // Clone only static resources that will be set directly in the shader
-    SHADER_VARIABLE_TYPE VarTypes[] = {SHADER_VARIABLE_TYPE_STATIC};
-    // The method will also initialize resource cache to have enough space to hold static variables only!
-    m_StaticResLayout.Initialize(m_pShaderResources, VarTypes, _countof(VarTypes), m_StaticResCache, GetRawAllocator(), GetRawAllocator());
-
-    // This is not required, but still...
-    m_pShaderResources->SetStaticSamplers(m_StaticResCache);
-
     // Byte code is only required for the vertex shader to create input layout
-    if( CreationAttribs.Desc.ShaderType != SHADER_TYPE_VERTEX )
+    if( ShaderCI.Desc.ShaderType != SHADER_TYPE_VERTEX )
         m_pShaderByteCode.Release();
 }
 
 ShaderD3D11Impl::~ShaderD3D11Impl()
 {
-    m_StaticResCache.Destroy(GetRawAllocator());
 }
-
-IMPLEMENT_QUERY_INTERFACE( ShaderD3D11Impl, IID_ShaderD3D11, TShaderBase )
 
 }

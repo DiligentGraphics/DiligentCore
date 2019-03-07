@@ -26,7 +26,7 @@
 
 #include "pch.h"
 #include <array>
-#include "RenderDeviceFactoryD3D12.h"
+#include "EngineFactoryD3D12.h"
 #include "RenderDeviceD3D12Impl.h"
 #include "DeviceContextD3D12Impl.h"
 #include "SwapChainD3D12Impl.h"
@@ -51,18 +51,18 @@ public:
         return &TheFactory;
     }
 
-    void CreateDeviceAndContextsD3D12( const EngineD3D12Attribs& CreationAttribs, 
-                                       IRenderDevice**           ppDevice, 
-                                       IDeviceContext**          ppContexts,
-                                       Uint32                    NumDeferredContexts)override final;
+    void CreateDeviceAndContextsD3D12(const EngineD3D12CreateInfo& EngineCI, 
+                                      IRenderDevice**              ppDevice, 
+                                      IDeviceContext**             ppContexts,
+                                      Uint32                       NumDeferredContexts)override final;
 
-    void AttachToD3D12Device(void*                     pd3d12NativeDevice, 
-                             size_t                    CommandQueueCount,
-                             ICommandQueueD3D12**      ppCommandQueues,
-                             const EngineD3D12Attribs& EngineAttribs, 
-                             IRenderDevice**           ppDevice, 
-                             IDeviceContext**          ppContexts,
-                             Uint32                    NumDeferredContexts)override final;
+    void AttachToD3D12Device(void*                        pd3d12NativeDevice, 
+                             size_t                       CommandQueueCount,
+                             ICommandQueueD3D12**         ppCommandQueues,
+                             const EngineD3D12CreateInfo& EngineCI, 
+                             IRenderDevice**              ppDevice, 
+                             IDeviceContext**             ppContexts,
+                             Uint32                       NumDeferredContexts)override final;
 
     void CreateSwapChainD3D12( IRenderDevice*            pDevice, 
                                IDeviceContext*           pImmediateContext, 
@@ -101,7 +101,7 @@ void GetHardwareAdapter(IDXGIFactory2* pFactory, IDXGIAdapter1** ppAdapter)
 
 /// Creates render device and device contexts for Direct3D12-based engine implementation
 
-/// \param [in] CreationAttribs - Engine creation attributes.
+/// \param [in] EngineCI - Engine creation attributes.
 /// \param [out] ppDevice - Address of the memory location where pointer to 
 ///                         the created device will be written
 /// \param [out] ppContexts - Address of the memory location where pointers to 
@@ -112,13 +112,13 @@ void GetHardwareAdapter(IDXGIFactory2* pFactory, IDXGIAdapter1** ppAdapter)
 ///                                   of deferred contexts is requested, pointers to the
 ///                                   contexts are written to ppContexts array starting 
 ///                                   at position 1
-void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12( const EngineD3D12Attribs& CreationAttribs, 
-                                                           IRenderDevice**           ppDevice, 
-                                                           IDeviceContext**          ppContexts,
-                                                           Uint32                    NumDeferredContexts)
+void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12CreateInfo& EngineCI, 
+                                                          IRenderDevice**              ppDevice, 
+                                                          IDeviceContext**             ppContexts,
+                                                          Uint32                       NumDeferredContexts)
 {
-    if (CreationAttribs.DebugMessageCallback != nullptr)
-        SetDebugMessageCallback(CreationAttribs.DebugMessageCallback);
+    if (EngineCI.DebugMessageCallback != nullptr)
+        SetDebugMessageCallback(EngineCI.DebugMessageCallback);
 
     VERIFY( ppDevice && ppContexts, "Null pointer provided" );
     if( !ppDevice || !ppContexts )
@@ -126,7 +126,7 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12( const EngineD3D12Attr
 
     for(Uint32 Type=D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV; Type < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++Type)
     {
-        auto CPUHeapAllocSize = CreationAttribs.CPUDescriptorHeapAllocationSize[Type];
+        auto CPUHeapAllocSize = EngineCI.CPUDescriptorHeapAllocationSize[Type];
         Uint32 MaxSize = 1 << 20;
         if( CPUHeapAllocSize > 1 << 20 )
         {
@@ -164,7 +164,7 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12( const EngineD3D12Attr
         CHECK_D3D_RESULT_THROW(hr, "Failed to create DXGI factory");
 
 	    CComPtr<IDXGIAdapter1> hardwareAdapter;
-        if(CreationAttribs.AdapterId == EngineD3D12Attribs::DefaultAdapterId)
+        if(EngineCI.AdapterId == EngineD3D12CreateInfo::DefaultAdapterId)
         {
 	        GetHardwareAdapter(factory, &hardwareAdapter);
             if(hardwareAdapter == nullptr)
@@ -173,11 +173,11 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12( const EngineD3D12Attr
         else
         {
             auto Adapters = FindCompatibleAdapters();
-            if(CreationAttribs.AdapterId < Adapters.size())
-                hardwareAdapter = Adapters[CreationAttribs.AdapterId];
+            if(EngineCI.AdapterId < Adapters.size())
+                hardwareAdapter = Adapters[EngineCI.AdapterId];
             else
             {
-                LOG_ERROR_AND_THROW(CreationAttribs.AdapterId, " is not a valid hardware adapter id. Total number of compatible adapters available on this system: ", Adapters.size());
+                LOG_ERROR_AND_THROW(EngineCI.AdapterId, " is not a valid hardware adapter id. Total number of compatible adapters available on this system: ", Adapters.size());
             }
         }
 
@@ -263,7 +263,7 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12( const EngineD3D12Attr
     }
         
     std::array<ICommandQueueD3D12*, 1> CmdQueues = {pCmdQueueD3D12};
-    AttachToD3D12Device(d3d12Device, CmdQueues.size(), CmdQueues.data(), CreationAttribs, ppDevice, ppContexts, NumDeferredContexts);
+    AttachToD3D12Device(d3d12Device, CmdQueues.size(), CmdQueues.data(), EngineCI, ppDevice, ppContexts, NumDeferredContexts);
 }
 
 
@@ -272,7 +272,7 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12( const EngineD3D12Attr
 /// \param [in] pd3d12NativeDevice - pointer to native D3D12 device
 /// \param [in] CommandQueueCount - Number of command queues
 /// \param [in] ppCommandQueues - pointer to the array of command queues
-/// \param [in] EngineAttribs - Engine creation attributes.
+/// \param [in] EngineCI - Engine creation attributes.
 /// \param [out] ppDevice - Address of the memory location where pointer to 
 ///                         the created device will be written
 /// \param [out] ppContexts - Address of the memory location where pointers to 
@@ -283,16 +283,16 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12( const EngineD3D12Attr
 ///                                   of deferred contexts is requested, pointers to the
 ///                                   contexts are written to ppContexts array starting 
 ///                                   at position 1
-void EngineFactoryD3D12Impl::AttachToD3D12Device(void*                     pd3d12NativeDevice, 
-                                                 size_t                    CommandQueueCount,
-                                                 ICommandQueueD3D12**      ppCommandQueues,
-                                                 const EngineD3D12Attribs& EngineAttribs, 
-                                                 IRenderDevice**           ppDevice, 
-                                                 IDeviceContext**          ppContexts,
-                                                 Uint32                    NumDeferredContexts)
+void EngineFactoryD3D12Impl::AttachToD3D12Device(void*                        pd3d12NativeDevice, 
+                                                 size_t                       CommandQueueCount,
+                                                 ICommandQueueD3D12**         ppCommandQueues,
+                                                 const EngineD3D12CreateInfo& EngineCI, 
+                                                 IRenderDevice**              ppDevice, 
+                                                 IDeviceContext**             ppContexts,
+                                                 Uint32                       NumDeferredContexts)
 {
-    if (EngineAttribs.DebugMessageCallback != nullptr)
-        SetDebugMessageCallback(EngineAttribs.DebugMessageCallback);
+    if (EngineCI.DebugMessageCallback != nullptr)
+        SetDebugMessageCallback(EngineCI.DebugMessageCallback);
 
     VERIFY( pd3d12NativeDevice && ppCommandQueues && ppDevice && ppContexts, "Null pointer provided" );
     if( !pd3d12NativeDevice || !ppCommandQueues || !ppDevice || !ppContexts )
@@ -303,13 +303,13 @@ void EngineFactoryD3D12Impl::AttachToD3D12Device(void*                     pd3d1
 
     try
     {
-        SetRawAllocator(EngineAttribs.pRawMemAllocator);
+        SetRawAllocator(EngineCI.pRawMemAllocator);
         auto &RawMemAllocator = GetRawAllocator();
         auto d3d12Device = reinterpret_cast<ID3D12Device*>(pd3d12NativeDevice);
-        RenderDeviceD3D12Impl *pRenderDeviceD3D12( NEW_RC_OBJ(RawMemAllocator, "RenderDeviceD3D12Impl instance", RenderDeviceD3D12Impl)(RawMemAllocator, EngineAttribs, d3d12Device, CommandQueueCount, ppCommandQueues, NumDeferredContexts ) );
+        RenderDeviceD3D12Impl *pRenderDeviceD3D12( NEW_RC_OBJ(RawMemAllocator, "RenderDeviceD3D12Impl instance", RenderDeviceD3D12Impl)(RawMemAllocator, EngineCI, d3d12Device, CommandQueueCount, ppCommandQueues, NumDeferredContexts ) );
         pRenderDeviceD3D12->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice) );
 
-        RefCntAutoPtr<DeviceContextD3D12Impl> pImmediateCtxD3D12( NEW_RC_OBJ(RawMemAllocator, "DeviceContextD3D12Impl instance", DeviceContextD3D12Impl)(pRenderDeviceD3D12, false, EngineAttribs, 0, 0) );
+        RefCntAutoPtr<DeviceContextD3D12Impl> pImmediateCtxD3D12( NEW_RC_OBJ(RawMemAllocator, "DeviceContextD3D12Impl instance", DeviceContextD3D12Impl)(pRenderDeviceD3D12, false, EngineCI, 0, 0) );
         // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceD3D12 will
         // keep a weak reference to the context
         pImmediateCtxD3D12->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppContexts) );
@@ -317,7 +317,7 @@ void EngineFactoryD3D12Impl::AttachToD3D12Device(void*                     pd3d1
 
         for (Uint32 DeferredCtx = 0; DeferredCtx < NumDeferredContexts; ++DeferredCtx)
         {
-            RefCntAutoPtr<DeviceContextD3D12Impl> pDeferredCtxD3D12( NEW_RC_OBJ(RawMemAllocator, "DeviceContextD3D12Impl instance", DeviceContextD3D12Impl)(pRenderDeviceD3D12, true, EngineAttribs, 1+DeferredCtx, 0) );
+            RefCntAutoPtr<DeviceContextD3D12Impl> pDeferredCtxD3D12( NEW_RC_OBJ(RawMemAllocator, "DeviceContextD3D12Impl instance", DeviceContextD3D12Impl)(pRenderDeviceD3D12, true, EngineCI, 1+DeferredCtx, 0) );
             // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceD3D12 will
             // keep a weak reference to the context
             pDeferredCtxD3D12->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppContexts + 1 + DeferredCtx) );
@@ -358,12 +358,12 @@ void EngineFactoryD3D12Impl::AttachToD3D12Device(void*                     pd3d1
 ///                                
 /// \param [out] ppSwapChain    - Address of the memory location where pointer to the new 
 ///                               swap chain will be written
-void EngineFactoryD3D12Impl::CreateSwapChainD3D12( IRenderDevice*            pDevice, 
-                                                   IDeviceContext*           pImmediateContext, 
-                                                   const SwapChainDesc&      SCDesc, 
-                                                   const FullScreenModeDesc& FSDesc,
-                                                   void*                     pNativeWndHandle, 
-                                                   ISwapChain**              ppSwapChain )
+void EngineFactoryD3D12Impl::CreateSwapChainD3D12(IRenderDevice*            pDevice, 
+                                                  IDeviceContext*           pImmediateContext, 
+                                                  const SwapChainDesc&      SCDesc, 
+                                                  const FullScreenModeDesc& FSDesc,
+                                                  void*                     pNativeWndHandle, 
+                                                  ISwapChain**              ppSwapChain )
 {
     VERIFY( ppSwapChain, "Null pointer provided" );
     if( !ppSwapChain )
@@ -390,7 +390,7 @@ void EngineFactoryD3D12Impl::CreateSwapChainD3D12( IRenderDevice*            pDe
         {
             if (auto pDeferredCtx = pDeviceD3D12->GetDeferredContext(ctx))
             {
-                auto *pDeferredCtxD3D12 = pDeferredCtx.RawPtr<DeviceContextD3D12Impl>();
+                auto* pDeferredCtxD3D12 = pDeferredCtx.RawPtr<DeviceContextD3D12Impl>();
                 pDeferredCtxD3D12->SetSwapChain(pSwapChainD3D12);
                 // We cannot bind default render target here because
                 // there is no guarantee that deferred context will be used
@@ -399,7 +399,7 @@ void EngineFactoryD3D12Impl::CreateSwapChainD3D12( IRenderDevice*            pDe
             }
         }
     }
-    catch( const std::runtime_error & )
+    catch( const std::runtime_error& )
     {
         if( *ppSwapChain )
         {
@@ -422,7 +422,7 @@ void EngineFactoryD3D12Impl::CreateSwapChainD3D12( IRenderDevice*            pDe
 ///         x86               | GraphicsEngineD3D12_32d.dll   |    GraphicsEngineD3D12_32r.dll
 ///         x64               | GraphicsEngineD3D12_64d.dll   |    GraphicsEngineD3D12_64r.dll
 ///
-void LoadGraphicsEngineD3D12(GetEngineFactoryD3D12Type &GetFactoryFunc)
+void LoadGraphicsEngineD3D12(GetEngineFactoryD3D12Type& GetFactoryFunc)
 {
     // This function is only required because DoxyGen refuses to generate documentation for a static function when SHOW_FILES==NO
     #error This function must never be compiled;    

@@ -52,15 +52,22 @@ ShaderResourceBindingD3D12Impl::ShaderResourceBindingD3D12Impl(IReferenceCounter
         auto ShaderType = pShader->GetDesc().ShaderType;
         auto ShaderInd = GetShaderTypeIndex(ShaderType);
 
-        // Create shader variable manager in place
-        new (m_pShaderVarMgrs + s) ShaderVariableManagerD3D12(*this);
-
         auto& VarDataAllocator = pPSO->GetSRBMemoryAllocator().GetShaderVariableDataAllocator(s);
 
         // http://diligentgraphics.com/diligent-engine/architecture/d3d12/shader-resource-layout#Initializing-Resource-Layouts-in-a-Shader-Resource-Binding-Object
-        std::array<SHADER_VARIABLE_TYPE, 2> AllowedVarTypes = { SHADER_VARIABLE_TYPE_MUTABLE, SHADER_VARIABLE_TYPE_DYNAMIC };
+        const SHADER_RESOURCE_VARIABLE_TYPE AllowedVarTypes[] = { SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC };
         const auto& SrcLayout = pPSO->GetShaderResLayout(s);
-        m_pShaderVarMgrs[s].Initialize(SrcLayout, VarDataAllocator, AllowedVarTypes.data(), static_cast<Uint32>(AllowedVarTypes.size()), m_ShaderResourceCache);
+        // Create shader variable manager in place
+        new (m_pShaderVarMgrs + s)
+            ShaderVariableManagerD3D12
+            {
+                *this,
+                SrcLayout,
+                VarDataAllocator,
+                AllowedVarTypes,
+                _countof(AllowedVarTypes),
+                m_ShaderResourceCache
+            };
 
         m_ResourceLayoutIndex[ShaderInd] = static_cast<Int8>(s);
     }
@@ -96,7 +103,7 @@ void ShaderResourceBindingD3D12Impl::BindResources(Uint32 ShaderFlags, IResource
     }
 }
 
-IShaderVariable *ShaderResourceBindingD3D12Impl::GetVariable(SHADER_TYPE ShaderType, const char *Name)
+IShaderResourceVariable *ShaderResourceBindingD3D12Impl::GetVariable(SHADER_TYPE ShaderType, const char *Name)
 {
     auto ShaderInd = GetShaderTypeIndex(ShaderType);
     auto ResLayoutInd = m_ResourceLayoutIndex[ShaderInd];
@@ -121,7 +128,7 @@ Uint32 ShaderResourceBindingD3D12Impl::GetVariableCount(SHADER_TYPE ShaderType) 
     return m_pShaderVarMgrs[ResLayoutInd].GetVariableCount();
 }
 
-IShaderVariable* ShaderResourceBindingD3D12Impl::GetVariable(SHADER_TYPE ShaderType, Uint32 Index)
+IShaderResourceVariable* ShaderResourceBindingD3D12Impl::GetVariable(SHADER_TYPE ShaderType, Uint32 Index)
 {
     auto ShaderInd = GetShaderTypeIndex(ShaderType);
     auto ResLayoutInd = m_ResourceLayoutIndex[ShaderInd];
@@ -173,23 +180,22 @@ void ShaderResourceBindingD3D12Impl::InitializeStaticResources(const IPipelineSt
 
     auto* pPSO12 = ValidatedCast<const PipelineStateD3D12Impl>(pPSO);
     auto NumShaders = pPSO12->GetNumShaders();
-    auto ppShaders = pPSO12->GetShaders();
     // Copy static resources
     for (Uint32 s = 0; s < NumShaders; ++s)
     {
-        auto* pShader = ValidatedCast<ShaderD3D12Impl>( ppShaders[s] );
+        const auto& ShaderResLayout = pPSO12->GetShaderResLayout(s);
+        auto& StaticResLayout = pPSO12->GetStaticShaderResLayout(s);
+        auto& StaticResCache = pPSO12->GetStaticShaderResCache(s);
 #ifdef DEVELOPMENT
-        if (!pShader->DvpVerifyStaticResourceBindings())
+        if (!StaticResLayout.dvpVerifyBindings(StaticResCache))
         {
+            auto* pShader = pPSO12->GetShader<ShaderD3D12Impl>(s);
             LOG_ERROR_MESSAGE("Static resources in SRB of PSO '", pPSO12->GetDesc().Name, "' will not be successfully initialized "
                               "because not all static resource bindings in shader '", pShader->GetDesc().Name, "' are valid. "
                               "Please make sure you bind all static resources to the shader before calling InitializeStaticResources() "
                               "directly or indirectly by passing InitStaticResources=true to CreateShaderResourceBinding() method.");
         }
 #endif
-        const auto& ShaderResLayout = pPSO12->GetShaderResLayout(s);
-        auto& StaticResLayout = pShader->GetStaticResLayout();
-        auto& StaticResCache = pShader->GetStaticResCache();
         StaticResLayout.CopyStaticResourceDesriptorHandles(StaticResCache, ShaderResLayout, m_ShaderResourceCache);
     }
 

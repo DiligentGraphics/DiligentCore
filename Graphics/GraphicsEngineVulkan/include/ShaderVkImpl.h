@@ -29,9 +29,7 @@
 #include "RenderDeviceVk.h"
 #include "ShaderVk.h"
 #include "ShaderBase.h"
-#include "ShaderResourceLayoutVk.h"
 #include "SPIRVShaderResources.h"
-#include "ShaderVariableVk.h"
 #include "RenderDeviceVkImpl.h"
 
 namespace Diligent
@@ -46,55 +44,32 @@ class ShaderVkImpl final : public ShaderBase<IShaderVk, RenderDeviceVkImpl>
 public:
     using TShaderBase = ShaderBase<IShaderVk, RenderDeviceVkImpl>;
 
-    ShaderVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl* pRenderDeviceVk, const ShaderCreationAttribs &CreationAttribs);
+    ShaderVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl* pRenderDeviceVk, const ShaderCreateInfo& CreationAttribs);
     ~ShaderVkImpl();
     
-    //virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override;
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ShaderVk, TShaderBase);
 
-    virtual void BindResources( IResourceMapping* pResourceMapping, Uint32 Flags )override
+    virtual Uint32 GetResourceCount()const override final
     {
-       m_StaticVarsMgr.BindResources(pResourceMapping, Flags);
+        return m_pShaderResources->GetTotalResources();
     }
 
-    virtual IShaderVariable* GetShaderVariable(const Char* Name)override
-    {
-        return m_StaticVarsMgr.GetVariable(Name);
-    }
-
-    virtual Uint32 GetVariableCount() const override final
-    {
-        return m_StaticVarsMgr.GetVariableCount();
-    }
-
-    virtual IShaderVariable* GetShaderVariable(Uint32 Index)override final
-    {
-        return m_StaticVarsMgr.GetVariable(Index);
-    }
+    virtual ShaderResourceDesc GetResource(Uint32 Index)const override final;
 
     virtual const std::vector<uint32_t>& GetSPIRV()const override final
     {
         return m_SPIRV;
     }
-
+    
     const std::shared_ptr<const SPIRVShaderResources>& GetShaderResources()const{return m_pShaderResources;}
-    const ShaderResourceLayoutVk& GetStaticResLayout()const { return m_StaticResLayout; }
-    const ShaderResourceCacheVk&  GetStaticResCache() const { return m_StaticResCache;  }
-
     const char* GetEntryPoint() const { return m_EntryPoint.c_str(); }
 
-#ifdef DEVELOPMENT
-    bool DvpVerifyStaticResourceBindings()const;
-#endif
-    
 private:
     void MapHLSLVertexShaderInputs();
 
-    // ShaderResources class instance must be referenced through the shared pointer, because 
+    // SPIRVShaderResources class instance must be referenced through the shared pointer, because 
     // it is referenced by ShaderResourceLayoutVk class instances
     std::shared_ptr<const SPIRVShaderResources> m_pShaderResources;
-    ShaderResourceLayoutVk  m_StaticResLayout;
-    ShaderResourceCacheVk   m_StaticResCache;
-    ShaderVariableManagerVk m_StaticVarsMgr;
 
     std::string           m_EntryPoint;
     std::vector<uint32_t> m_SPIRV;
