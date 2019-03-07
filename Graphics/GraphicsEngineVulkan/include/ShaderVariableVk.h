@@ -29,7 +29,7 @@
 // 
 //  * ShaderVariableManagerVk keeps list of variables of specific types
 //  * Every ShaderVariableVkImpl references VkResource from ShaderResourceLayoutVk
-//  * ShaderVariableManagerVk keeps pointer to ShaderResourceCacheVk
+//  * ShaderVariableManagerVk keeps reference to ShaderResourceCacheVk
 //  * ShaderVariableManagerVk is used by PipelineStateVkImpl to manage static resources and by
 //    ShaderResourceBindingVkImpl to manage mutable and dynamic resources
 //
@@ -37,10 +37,10 @@
 //         |                          |                 |                           |                            |                 |
 //    .----|  ShaderVariableManagerVk |---------------->|  ShaderVariableVkImpl[0]  |   ShaderVariableVkImpl[1]  |     ...         |
 //    |    |__________________________|                 |___________________________|____________________________|_________________|
-//    |                |                                                    \                          |
-//    |                |                                                    Ref                       Ref
-//    |                |                                                      \                        |
-//    |     ___________V_______________                  ______________________V_______________________V____________________________
+//    |                                                                     \                          |
+//    |                                                                     Ref                       Ref
+//    |                                                                       \                        |
+//    |     ___________________________                  ______________________V_______________________V____________________________
 //    |    |                           |   unique_ptr   |                   |                 |               |                     |
 //    |    | ShaderResourceLayoutVk    |--------------->|   VkResource[0]   |  VkResource[1]  |       ...     | VkResource[s+m+d-1] |
 //    |    |___________________________|                |___________________|_________________|_______________|_____________________|
@@ -118,7 +118,7 @@ private:
 class ShaderVariableVkImpl final : public IShaderResourceVariable
 {
 public:
-    ShaderVariableVkImpl(ShaderVariableManagerVk& ParentManager,
+    ShaderVariableVkImpl(ShaderVariableManagerVk&                  ParentManager,
                          const ShaderResourceLayoutVk::VkResource& Resource) :
         m_ParentManager(ParentManager),
         m_Resource(Resource)

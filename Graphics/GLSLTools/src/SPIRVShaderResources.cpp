@@ -78,6 +78,59 @@ SPIRVShaderResourceAttribs::SPIRVShaderResourceAttribs(const spirv_cross::Compil
 }
 
 
+ShaderResourceDesc SPIRVShaderResourceAttribs::GetResourceDesc() const
+{
+    ShaderResourceDesc ResourceDesc;
+    ResourceDesc.Name      = Name;
+    ResourceDesc.ArraySize = ArraySize;
+
+    static_assert(SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes == 9, "Please update switch statement below");
+    switch (Type)
+    {
+        case SPIRVShaderResourceAttribs::ResourceType::UniformBuffer:
+            ResourceDesc.Type = SHADER_RESOURCE_TYPE_CONSTANT_BUFFER;
+        break;
+
+        case SPIRVShaderResourceAttribs::ResourceType::StorageBuffer:
+            ResourceDesc.Type = SHADER_RESOURCE_TYPE_BUFFER_UAV;
+        break;
+
+        case SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer:
+            ResourceDesc.Type = SHADER_RESOURCE_TYPE_BUFFER_SRV;
+        break;
+
+        case SPIRVShaderResourceAttribs::ResourceType::StorageTexelBuffer:
+            ResourceDesc.Type = SHADER_RESOURCE_TYPE_BUFFER_UAV;
+        break;
+
+        case SPIRVShaderResourceAttribs::ResourceType::StorageImage:
+            ResourceDesc.Type = SHADER_RESOURCE_TYPE_TEXTURE_UAV;
+        break;
+
+        case SPIRVShaderResourceAttribs::ResourceType::SampledImage:
+            ResourceDesc.Type = SHADER_RESOURCE_TYPE_TEXTURE_SRV;
+        break;
+
+        case SPIRVShaderResourceAttribs::ResourceType::AtomicCounter:
+            LOG_WARNING_MESSAGE("There is no appropriate shader resource type for atomic counter resource '", Name, "'");
+            ResourceDesc.Type = SHADER_RESOURCE_TYPE_BUFFER_UAV;
+        break;
+
+        case SPIRVShaderResourceAttribs::ResourceType::SeparateImage:
+            ResourceDesc.Type = SHADER_RESOURCE_TYPE_TEXTURE_SRV;
+        break;
+
+        case SPIRVShaderResourceAttribs::ResourceType::SeparateSampler:
+            ResourceDesc.Type = SHADER_RESOURCE_TYPE_SAMPLER;
+        break;
+
+        default:
+            UNEXPECTED("Unknown SPIRV resource type");
+    }
+    return ResourceDesc;
+}
+
+
 static spv::ExecutionModel ShaderTypeToExecutionModel(SHADER_TYPE ShaderType)
 {
     switch(ShaderType)

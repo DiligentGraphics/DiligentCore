@@ -481,6 +481,8 @@ void ShaderResourceLayoutVk::Initialize(IRenderDevice*                          
         {
             VERIFY(CurrResInd[s][VarType] == Layout.m_NumResources[VarType], "Not all resources have been initialized, which will cause a crash when dtor is called. This is a bug.");
         }
+        // Some immutable samplers may never be initialized if they are not present in shaders
+        VERIFY_EXPR(CurrImmutableSamplerInd[s] <= Layout.m_NumImmutableSamplers);
     }
 #endif
 }
@@ -495,17 +497,19 @@ Uint32 ShaderResourceLayoutVk::FindAssignedSampler(const SPIRVShaderResourceAttr
     Uint32 SamplerInd = VkResource::InvalidSamplerInd;
     if (m_pResources->IsUsingCombinedSamplers() && SepImg.IsValidSepSamplerAssigned())
     {
-        const auto& SepSampler = m_pResources->GetSepSmplr(SepImg.GetAssignedSepSamplerInd());
+        const auto& SepSampler = m_pResources->GetAssignedSepSampler(SepImg);
         for (SamplerInd = 0; SamplerInd < CurrResourceCount; ++SamplerInd)
         {
             const auto& Res = GetResource(ImgVarType, SamplerInd);
             if (Res.SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler && 
                 strcmp(Res.SpirvAttribs.Name, SepSampler.Name) == 0)
             {
-                DEV_CHECK_ERR(ImgVarType == Res.GetVariableType(),
-                              "The type (", GetShaderVariableTypeLiteralName(ImgVarType),") of separate image variable '", SepImg.Name,
-                              "' is not consistent with the type (", GetShaderVariableTypeLiteralName(Res.GetVariableType()),
-                              ") of the separate sampler '", SepSampler.Name, "' that is assigned to it.");
+                VERIFY(ImgVarType == Res.GetVariableType(),
+                       "The type (", GetShaderVariableTypeLiteralName(ImgVarType),") of separate image variable '", SepImg.Name,
+                       "' is not consistent with the type (", GetShaderVariableTypeLiteralName(Res.GetVariableType()),
+                       ") of the separate sampler '", SepSampler.Name, "' that is assigned to it. "
+                       "This should never happen as when HLSL-style combined texture samplers are used, the type of the sampler "
+                       "is derived from the type of the corresponding separate image.");
                 break;
             }
         }
@@ -835,7 +839,7 @@ void ShaderResourceLayoutVk::VkResource::BindResource(IDeviceObject* pObj, Uint3
                 CacheImage(pObj, DstRes, vkDescrSet, ArrayIndex, 
                     [&](const VkResource& SeparateSampler, ISampler* pSampler)
                     {
-                        VERIFY(!SeparateSampler.IsImmutableSamplerAssigned(), "This separate sampler is assigned an immutable sampler '", SeparateSampler.SpirvAttribs.Name, "'");
+                        VERIFY(!SeparateSampler.IsImmutableSamplerAssigned(), "Separate sampler '", SeparateSampler.SpirvAttribs.Name, "' is assigned an immutable sampler");
                         VERIFY_EXPR(SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateImage);
                         DEV_CHECK_ERR(SeparateSampler.SpirvAttribs.ArraySize == 1 || SeparateSampler.SpirvAttribs.ArraySize == SpirvAttribs.ArraySize,
                                       "Array size (", SeparateSampler.SpirvAttribs.ArraySize,") of separate sampler variable '",
@@ -856,7 +860,7 @@ void ShaderResourceLayoutVk::VkResource::BindResource(IDeviceObject* pObj, Uint3
                 {
                     // Immutable samplers are permanently bound into the set layout; later binding a sampler 
                     // into an immutable sampler slot in a descriptor set is not allowed (13.2.1)
-                    LOG_ERROR_MESSAGE("Attempting to assign a sampler to a static sampler '", SpirvAttribs.Name, '\'');
+                    LOG_ERROR_MESSAGE("Attempting to assign a sampler to an immutable sampler '", SpirvAttribs.Name, '\'');
                 }
             break;
 
@@ -1011,9 +1015,9 @@ void ShaderResourceLayoutVk::CommitDynamicResources(const ShaderResourceCacheVk&
 #endif
 
     // Do not zero-initiaize arrays!
-    std::array<VkDescriptorImageInfo,  ImgUpdateBatchSize>       DescrImgInfoArr;
-    std::array<VkDescriptorBufferInfo, BuffUpdateBatchSize>      DescrBuffInfoArr;
-    std::array<VkBufferView,           TexelBuffUpdateBatchSize> DescrBuffViewArr;
+    std::array<VkDescriptorImageInfo,  ImgUpdateBatchSize>          DescrImgInfoArr;
+    std::array<VkDescriptorBufferInfo, BuffUpdateBatchSize>         DescrBuffInfoArr;
+    std::array<VkBufferView,           TexelBuffUpdateBatchSize>    DescrBuffViewArr;
     std::array<VkWriteDescriptorSet,   WriteDescriptorSetBatchSize> WriteDescrSetArr;
 
     Uint32 ResNum = 0, ArrElem = 0;

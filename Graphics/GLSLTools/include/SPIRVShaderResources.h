@@ -28,7 +28,7 @@
 
 // SPIRVShaderResources class uses continuous chunk of memory to store all resources, as follows:
 //
-//   m_MemoryBuffer                                                                                                              m_TotalResources            end of names data may not be aligned
+//   m_MemoryBuffer                                                                                                              m_TotalResources
 //    |                                                                                                                             |                                       |
 //    | Uniform Buffers | Storage Buffers | Storage Images | Sampled Images | Atomic Counters | Separate Samplers | Separate Images |   Stage Inputs   |   Resource Names   |
 
@@ -145,6 +145,8 @@ public:
                Type             == Attribs.Type             &&
                SepSmplrOrImgInd == Attribs.SepSmplrOrImgInd;
     }
+
+    ShaderResourceDesc GetResourceDesc() const;
 };
 static_assert(sizeof(SPIRVShaderResourceAttribs) % sizeof(void*) == 0, "Size of SPIRVShaderResourceAttribs struct must be multiple of sizeof(void*)" );
 
@@ -157,7 +159,7 @@ struct SPIRVShaderStageInputAttribs
     {}
 
     const char* const Semantic;
-    const uint32_t LocationDecorationOffset;
+    const uint32_t    LocationDecorationOffset;
 };
 static_assert(sizeof(SPIRVShaderStageInputAttribs) % sizeof(void*) == 0, "Size of SPIRVShaderStageInputAttribs struct must be multiple of sizeof(void*)" );
 
@@ -204,6 +206,13 @@ public:
         VERIFY(n < m_NumShaderStageInputs, "Shader stage input index (", n, ") is out of range. Total input count: ", m_NumShaderStageInputs);
         auto* ResourceMemoryEnd = reinterpret_cast<const SPIRVShaderResourceAttribs*>(m_MemoryBuffer.get()) + m_TotalResources;
         return reinterpret_cast<const SPIRVShaderStageInputAttribs*>(ResourceMemoryEnd)[n];
+    }
+
+    const SPIRVShaderResourceAttribs& GetAssignedSepSampler(const SPIRVShaderResourceAttribs& SepImg)const
+    {
+        VERIFY(SepImg.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateImage, "Separate samplers can only be assigned to separate images");
+        VERIFY(SepImg.IsValidSepSamplerAssigned(), "This separate image is not assigned a separate sampler");
+        return GetSepSmplr(SepImg.GetAssignedSepSamplerInd());
     }
 
     struct ResourceCounters
@@ -296,7 +305,6 @@ public:
     const char* GetShaderName()            const { return m_ShaderName; } 
     bool        IsUsingCombinedSamplers()  const { return m_CombinedSamplerSuffix != nullptr; }
 
-
 private:
     void Initialize(IMemoryAllocator&       Allocator, 
                     const ResourceCounters& Counters,
@@ -333,10 +341,9 @@ private:
 
     // Memory buffer that holds all resources as continuous chunk of memory:
     // |  UBs  |  SBs  |  StrgImgs  |  SmplImgs  |  ACs  |  SepSamplers  |  SepImgs  | Stage Inputs | Resource Names |
-    //                                                                                                               |
-    //                                                                                                  end of names data may not be aligned
     std::unique_ptr< void, STDDeleterRawMem<void> > m_MemoryBuffer;
-    StringPool m_ResourceNames;
+
+    StringPool  m_ResourceNames;
 
     const char* m_CombinedSamplerSuffix = nullptr;
     const char* m_ShaderName            = nullptr;

@@ -99,7 +99,7 @@ void ShaderResourceCacheVk::InitializeResources(Uint32 Set, Uint32 Offset, Uint3
 #ifdef _DEBUG
 void ShaderResourceCacheVk::DbgVerifyResourceInitialization()const
 {
-    for (const auto &SetFlags : m_DbgInitializedResources)
+    for (const auto& SetFlags : m_DbgInitializedResources)
     {
         for (auto ResInitialized : SetFlags)
             VERIFY(ResInitialized, "Not all resources in the cache have been initialized. This is a bug.");

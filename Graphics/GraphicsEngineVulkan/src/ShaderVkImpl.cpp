@@ -137,51 +137,7 @@ ShaderResourceDesc ShaderVkImpl::GetResource(Uint32 Index)const
     if (Index < ResCount)
     {
         const auto& SPIRVResource = m_pShaderResources->GetResource(Index);
-        ResourceDesc.Name      = SPIRVResource.Name;
-        ResourceDesc.ArraySize = SPIRVResource.ArraySize;
-        static_assert(SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes == 9, "Please update switch statement below");
-        switch (SPIRVResource.Type)
-        {
-            case SPIRVShaderResourceAttribs::ResourceType::UniformBuffer:
-                ResourceDesc.Type = SHADER_RESOURCE_TYPE_CONSTANT_BUFFER;
-            break;
-
-            case SPIRVShaderResourceAttribs::ResourceType::StorageBuffer:
-                ResourceDesc.Type = SHADER_RESOURCE_TYPE_BUFFER_UAV;
-            break;
-
-            case SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer:
-                ResourceDesc.Type = SHADER_RESOURCE_TYPE_BUFFER_SRV;
-            break;
-
-            case SPIRVShaderResourceAttribs::ResourceType::StorageTexelBuffer:
-                ResourceDesc.Type = SHADER_RESOURCE_TYPE_BUFFER_UAV;
-            break;
-
-            case SPIRVShaderResourceAttribs::ResourceType::StorageImage:
-                ResourceDesc.Type = SHADER_RESOURCE_TYPE_TEXTURE_UAV;
-            break;
-
-            case SPIRVShaderResourceAttribs::ResourceType::SampledImage:
-                ResourceDesc.Type = SHADER_RESOURCE_TYPE_TEXTURE_SRV;
-            break;
-
-            case SPIRVShaderResourceAttribs::ResourceType::AtomicCounter:
-                LOG_WARNING_MESSAGE("There is no appropriate shader resource type for atomic counter resource '", SPIRVResource.Name, "'");
-                ResourceDesc.Type = SHADER_RESOURCE_TYPE_BUFFER_UAV;
-            break;
-
-            case SPIRVShaderResourceAttribs::ResourceType::SeparateImage:
-                ResourceDesc.Type = SHADER_RESOURCE_TYPE_TEXTURE_SRV;
-            break;
-
-            case SPIRVShaderResourceAttribs::ResourceType::SeparateSampler:
-                ResourceDesc.Type = SHADER_RESOURCE_TYPE_SAMPLER;
-            break;
-
-            default:
-                UNEXPECTED("Unknown SPIRV resource type");
-        }
+        ResourceDesc = SPIRVResource.GetResourceDesc();
     }
     return ResourceDesc;
 }
