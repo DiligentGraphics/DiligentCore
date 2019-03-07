@@ -30,6 +30,7 @@
 #include "DeviceContextGLImpl.h"
 #include "EngineMemory.h"
 #include "HLSL2GLSLConverterObject.h"
+#include "EngineFactoryBase.h"
 
 #if PLATFORM_IOS
 #   include "SwapChainGLIOS.h"
@@ -58,14 +59,20 @@ namespace Diligent
 #endif
 
 /// Engine factory for OpenGL implementation
-class EngineFactoryOpenGLImpl : public IEngineFactoryOpenGL
+class EngineFactoryOpenGLImpl : public EngineFactoryBase<IEngineFactoryOpenGL>
 {
 public:
+
     static EngineFactoryOpenGLImpl* GetInstance()
     {
         static EngineFactoryOpenGLImpl TheFactory;
         return &TheFactory;
     }
+
+    using TBase = EngineFactoryBase<IEngineFactoryOpenGL>;
+    EngineFactoryOpenGLImpl() :
+        TBase(IID_EngineFactoryOpenGL)
+    {}
 
     virtual void CreateDeviceAndSwapChainGL(const EngineGLCreateInfo& EngineCI,
                                             IRenderDevice**           ppDevice,

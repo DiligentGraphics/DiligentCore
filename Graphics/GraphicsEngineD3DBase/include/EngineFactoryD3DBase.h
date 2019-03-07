@@ -24,6 +24,7 @@
 #pragma once
 
 #include "DXGITypeConversions.h"
+#include "EngineFactoryBase.h"
 
 /// \file
 /// Implementation of the Diligent::EngineFactoryD3DBase template class
@@ -32,9 +33,15 @@ namespace Diligent
 {
 
 template<typename BaseInterface, DeviceType DevType>
-class EngineFactoryD3DBase : public BaseInterface
+class EngineFactoryD3DBase : public EngineFactoryBase<BaseInterface>
 {
 public:
+    using TEngineFactoryBase = EngineFactoryBase<BaseInterface>;
+
+    EngineFactoryD3DBase(const INTERFACE_ID& FactoryIID) : 
+        TEngineFactoryBase(FactoryIID)
+    {}
+
     /// Enumerates hardware adapters available on this machine
 
     /// \param [in,out] NumAdapters - Number of adapters. If Adapters is null, this value

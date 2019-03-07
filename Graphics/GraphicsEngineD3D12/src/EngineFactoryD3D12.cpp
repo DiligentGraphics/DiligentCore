@@ -51,6 +51,12 @@ public:
         return &TheFactory;
     }
 
+    using TBase = EngineFactoryD3DBase<IEngineFactoryD3D12, DeviceType::D3D12>;
+
+    EngineFactoryD3D12Impl() :
+        TBase(IID_EngineFactoryD3D12)
+    {}
+
     void CreateDeviceAndContextsD3D12(const EngineD3D12CreateInfo& EngineCI, 
                                       IRenderDevice**              ppDevice, 
                                       IDeviceContext**             ppContexts,

@@ -9,6 +9,7 @@ set(INCLUDE
     include/Defines.h
     include/DeviceContextBase.h
     include/DeviceObjectBase.h
+    include/EngineFactoryBase.h
     include/EngineMemory.h
     include/FenceBase.h
     include/pch.h

@@ -28,6 +28,7 @@
 
 #include <sstream>
 
+#include "../../Primitives/interface/Object.h"
 #include "../../GraphicsEngine/interface/RenderDevice.h"
 #include "../../GraphicsEngine/interface/DeviceContext.h"
 #include "../../GraphicsEngine/interface/SwapChain.h"
@@ -51,7 +52,11 @@
 namespace Diligent
 {
 
-class IEngineFactoryOpenGL
+// {9BAAC767-02CC-4FFA-9E4B-E1340F572C49}
+static const INTERFACE_ID IID_EngineFactoryOpenGL = 
+{ 0x9baac767, 0x2cc, 0x4ffa, { 0x9e, 0x4b, 0xe1, 0x34, 0xf, 0x57, 0x2c, 0x49 } };
+
+class IEngineFactoryOpenGL : public IObject
 {
 public:
     virtual void CreateDeviceAndSwapChainGL(const EngineGLCreateInfo& EngineCI,

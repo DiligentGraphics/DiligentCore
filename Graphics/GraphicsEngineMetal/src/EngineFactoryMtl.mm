@@ -30,12 +30,13 @@
 #include "SwapChainMtlImpl.h"
 #include "MtlTypeConversions.h"
 #include "EngineMemory.h"
+#include "EngineFactoryBase.h"
 
 namespace Diligent
 {
 
 /// Engine factory for Mtl implementation
-class EngineFactoryMtlImpl : public IEngineFactoryMtl
+class EngineFactoryMtlImpl : public EngineFactoryBase<IEngineFactoryMtl>
 {
 public:
     static EngineFactoryMtlImpl* GetInstance()
@@ -43,6 +44,11 @@ public:
         static EngineFactoryMtlImpl TheFactory;
         return &TheFactory;
     }
+
+    using TBase = EngineFactoryBase<IEngineFactoryMtl>;
+    EngineFactoryMtlImpl() :
+        TBase(IID_EngineFactoryMtl)
+    {}
 
     void CreateDeviceAndContextsMtl(const EngineMtlCreateInfo&  EngineAttribs, 
                                     IRenderDevice**             ppDevice, 

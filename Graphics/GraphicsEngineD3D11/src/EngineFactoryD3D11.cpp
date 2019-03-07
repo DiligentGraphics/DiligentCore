@@ -47,6 +47,12 @@ public:
         static EngineFactoryD3D11Impl TheFactory;
         return &TheFactory;
     }
+    
+    using TBase = EngineFactoryD3DBase<IEngineFactoryD3D11, DeviceType::D3D11>;
+
+    EngineFactoryD3D11Impl() :
+        TBase(IID_EngineFactoryD3D11)
+    {}
 
     void CreateDeviceAndContextsD3D11(const EngineD3D11CreateInfo& EngineCI, 
                                       IRenderDevice**              ppDevice, 

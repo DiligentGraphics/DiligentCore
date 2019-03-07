@@ -34,12 +34,13 @@
 #include "CommandQueueVkImpl.h"
 #include "VulkanUtilities/VulkanInstance.h"
 #include "VulkanUtilities/VulkanPhysicalDevice.h"
+#include "EngineFactoryBase.h"
 
 namespace Diligent
 {
 
 /// Engine factory for Vk implementation
-class EngineFactoryVkImpl : public IEngineFactoryVk
+class EngineFactoryVkImpl : public EngineFactoryBase<IEngineFactoryVk>
 {
 public:
     static EngineFactoryVkImpl* GetInstance()
@@ -47,6 +48,11 @@ public:
         static EngineFactoryVkImpl TheFactory;
         return &TheFactory;
     }
+
+    using TBase = EngineFactoryBase<IEngineFactoryVk>;
+    EngineFactoryVkImpl() :
+        TBase(IID_EngineFactoryVk)
+    {}
 
     void CreateDeviceAndContextsVk(const EngineVkCreateInfo& EngineCI, 
                                    IRenderDevice**           ppDevice, 
