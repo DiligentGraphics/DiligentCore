@@ -26,6 +26,7 @@
 #include "GLContextWindows.h"
 #include "DeviceCaps.h"
 #include "GLTypeConversions.h"
+#include "GraphicsAccessories.h"
 
 namespace Diligent
 {
@@ -88,7 +89,7 @@ namespace Diligent
         LOG_INFO_MESSAGE( MessageSS.str().c_str() );
     }
 
-    GLContext::GLContext(const EngineGLCreateInfo& InitAttribs, DeviceCaps& DeviceCaps, const SwapChainDesc* pSCDesc) :
+    GLContext::GLContext(const EngineGLCreateInfo& InitAttribs, DeviceCaps& deviceCaps, const SwapChainDesc* pSCDesc) :
 		m_Context(0),
 		m_WindowHandleToDeviceContext(0)
     {
@@ -276,16 +277,16 @@ namespace Diligent
         if( glGetError() != GL_NO_ERROR )
             LOG_ERROR_MESSAGE("Failed to enable SRGB framebuffers");
 
-        DeviceCaps.DevType = DeviceType::OpenGL;
-        DeviceCaps.MajorVersion = MajorVersion;
-        DeviceCaps.MinorVersion = MinorVersion;
+        deviceCaps.DevType = DeviceType::OpenGL;
+        deviceCaps.MajorVersion = MajorVersion;
+        deviceCaps.MinorVersion = MinorVersion;
         bool IsGL43OrAbove = MajorVersion >= 5 || MajorVersion == 4 && MinorVersion >= 3;
-        auto &TexCaps = DeviceCaps.TexCaps;
+        auto &TexCaps = deviceCaps.TexCaps;
         TexCaps.bTexture2DMSSupported      = IsGL43OrAbove;
         TexCaps.bTexture2DMSArraySupported = IsGL43OrAbove;
         TexCaps.bTextureViewSupported      = IsGL43OrAbove;
         TexCaps.bCubemapArraysSupported    = IsGL43OrAbove;
-        DeviceCaps.bMultithreadedResourceCreationSupported = False;
+        deviceCaps.bMultithreadedResourceCreationSupported = False;
     }
 
     GLContext::~GLContext()
