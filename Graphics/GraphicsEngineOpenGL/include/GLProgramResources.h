@@ -50,10 +50,10 @@ namespace Diligent
         GLProgramResources& operator = (const GLProgramResources&)  = delete;
         GLProgramResources& operator = (      GLProgramResources&&) = delete;
 
-        void LoadUniforms(IObject&                              Owner,
-                          class RenderDeviceGLImpl*             pDeviceGLImpl,
-                          SHADER_TYPE                           ShaderStages,
-                          GLuint                                GLProgram);
+        void LoadUniforms(IObject&                      Owner,
+                          class RenderDeviceGLImpl*     pDeviceGLImpl,
+                          SHADER_TYPE                   ShaderStages,
+                          GLuint                        GLProgram);
 
 
         void Clone(class RenderDeviceGLImpl*             pDeviceGLImpl, 
@@ -66,12 +66,12 @@ namespace Diligent
         struct GLProgramVariableBase : ShaderVariableBase
         {
 /*  0 */    // ShaderVariableBase
-/* 16 */    const Char*                                 Name;
-/* 24 */    const SHADER_RESOURCE_VARIABLE_TYPE         VariableType;
-/* 25 */    const SHADER_RESOURCE_TYPE                  ResourceType;
-/* 26 */    const Uint16                                VariableIndex;
-/* 28 */          Uint32                                ArraySize;
-/* 32 */    RefCntAutoPtr<IDeviceObject>* const         pResources;
+/* 16 */    const Char*                             Name;
+/* 24 */    const SHADER_RESOURCE_VARIABLE_TYPE     VariableType;
+/* 25 */    const SHADER_RESOURCE_TYPE              ResourceType;
+/* 26 */    const Uint16                            VariableIndex;
+/* 28 */          Uint32                            ArraySize;
+/* 32 */    RefCntAutoPtr<IDeviceObject>* const     pResources;
 /* 40 */    //End of data
 
             GLProgramVariableBase(IObject&                        _Owner,
@@ -87,7 +87,7 @@ namespace Diligent
                 ResourceType      (_ResourceType),
                 VariableIndex     (_VariableIndex),
                 ArraySize         (_ArraySize),
-                pResources       (_pResources)
+                pResources        (_pResources)
             {
                 VERIFY_EXPR(_ArraySize >= 1);
             }
@@ -428,14 +428,13 @@ namespace Diligent
                 HandleSB(GetStorageBlock(sb));
         }
 
-        // There could be more than one stage is using non-separable programs
+        // There could be more than one stage if using non-separable programs
         SHADER_TYPE         m_ShaderStages = SHADER_TYPE_UNKNOWN; 
 
         // Memory layout:
         // 
         //  |  Uniform buffers  |   Samplers  |   Images   |   Storage Blocks   |   Resource Cache   |   String Pool Data   |
-        //                                                                                                                  |
-        //                                                                                             end of string pool data may not be aligned
+        //
 
         UniformBufferInfo*              m_UniformBuffers = nullptr;
         SamplerInfo*                    m_Samplers       = nullptr;

@@ -30,9 +30,9 @@
 // ShaderResources class uses continuous chunk of memory to store all resources, as follows:
 //
 //
-//       m_MemoryBuffer            m_TexSRVOffset                      m_TexUAVOffset                      m_BufSRVOffset                      m_BufUAVOffset                      m_SamplersOffset              m_MemorySize
-//        |                         |                                   |                                   |                                   |                                   |                             |
-//        |  CB[0]  ...  CB[Ncb-1]  |  TexSRV[0]  ...  TexSRV[Ntsrv-1]  |  TexUAV[0]  ...  TexUAV[Ntuav-1]  |  BufSRV[0]  ...  BufSRV[Nbsrv-1]  |  BufUAV[0]  ...  BufUAV[Nbuav-1]  |  Sam[0]  ...  Sam[Nsam-1]   |
+//       m_MemoryBuffer            m_TexSRVOffset                      m_TexUAVOffset                      m_BufSRVOffset                      m_BufUAVOffset                      m_SamplersOffset                            m_MemorySize
+//        |                         |                                   |                                   |                                   |                                   |                           |                  |
+//        |  CB[0]  ...  CB[Ncb-1]  |  TexSRV[0]  ...  TexSRV[Ntsrv-1]  |  TexUAV[0]  ...  TexUAV[Ntuav-1]  |  BufSRV[0]  ...  BufSRV[Nbsrv-1]  |  BufUAV[0]  ...  BufUAV[Nbuav-1]  |  Sam[0]  ...  Sam[Nsam-1] |  Resource Names  |
 //
 //  Ncb   - number of constant buffers
 //  Ntsrv - number of texture SRVs
@@ -200,11 +200,11 @@ public:
 
     bool IsCompatibleWith(const D3DShaderResourceAttribs& Attribs)const
     {
-        return BindPoint          == Attribs.BindPoint          &&
-               BindCount          == Attribs.BindCount          &&
-               InputType          == Attribs.InputType          &&
-               SRVDimension       == Attribs.SRVDimension       &&
-               SamplerOrTexSRVId  == Attribs.SamplerOrTexSRVId;
+        return BindPoint         == Attribs.BindPoint          &&
+               BindCount         == Attribs.BindCount          &&
+               InputType         == Attribs.InputType          &&
+               SRVDimension      == Attribs.SRVDimension       &&
+               SamplerOrTexSRVId == Attribs.SamplerOrTexSRVId;
     }
 
     size_t GetHash()const
@@ -291,44 +291,44 @@ public:
              typename THandleTexUAV,
              typename THandleBufSRV,
              typename THandleBufUAV>
-    void ProcessResources(THandleCB                   HandleCB,
-                          THandleSampler              HandleSampler,
-                          THandleTexSRV               HandleTexSRV,
-                          THandleTexUAV               HandleTexUAV,
-                          THandleBufSRV               HandleBufSRV,
-                          THandleBufUAV               HandleBufUAV)const
+    void ProcessResources(THandleCB           HandleCB,
+                          THandleSampler      HandleSampler,
+                          THandleTexSRV       HandleTexSRV,
+                          THandleTexUAV       HandleTexUAV,
+                          THandleBufSRV       HandleBufSRV,
+                          THandleBufUAV       HandleBufUAV)const
     {
-        for(Uint32 n=0; n < GetNumCBs(); ++n)
+        for (Uint32 n=0; n < GetNumCBs(); ++n)
         {
             const auto& CB = GetCB(n);
             HandleCB(CB, n);
         }
 
-        for(Uint32 n=0; n < GetNumSamplers(); ++n)
+        for (Uint32 n=0; n < GetNumSamplers(); ++n)
         {
             const auto& Sampler = GetSampler(n);
             HandleSampler(Sampler, n);
         }
 
-        for(Uint32 n=0; n < GetNumTexSRV(); ++n)
+        for (Uint32 n=0; n < GetNumTexSRV(); ++n)
         {
             const auto& TexSRV = GetTexSRV(n);
             HandleTexSRV(TexSRV, n);
         }
     
-        for(Uint32 n=0; n < GetNumTexUAV(); ++n)
+        for (Uint32 n=0; n < GetNumTexUAV(); ++n)
         {
             const auto& TexUAV = GetTexUAV(n);
             HandleTexUAV(TexUAV, n);
         }
 
-        for(Uint32 n=0; n < GetNumBufSRV(); ++n)
+        for (Uint32 n=0; n < GetNumBufSRV(); ++n)
         {
             const auto& BufSRV = GetBufSRV(n);
             HandleBufSRV(BufSRV, n);
         }
 
-        for(Uint32 n=0; n < GetNumBufUAV(); ++n)
+        for (Uint32 n=0; n < GetNumBufUAV(); ++n)
         {
             const auto& BufUAV = GetBufUAV(n);
             HandleBufUAV(BufUAV, n);
@@ -399,8 +399,7 @@ private:
 
     // Memory buffer that holds all resources as continuous chunk of memory:
     // | CBs | TexSRVs | TexUAVs | BufSRVs | BufUAVs | Samplers |  Resource Names  |
-    //                                                                             |
-    //                                                              end of names data may not be aligned
+    //
 
     std::unique_ptr< void, STDDeleterRawMem<void> > m_MemoryBuffer;
 

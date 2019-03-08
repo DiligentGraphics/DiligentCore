@@ -37,7 +37,6 @@ ShaderResourceBindingGLImpl::ShaderResourceBindingGLImpl(IReferenceCounters* pRe
     const SHADER_RESOURCE_VARIABLE_TYPE SRBVarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
     if (IsUsingSeparatePrograms())
     {
-        
         for (Uint32 s = 0; s < pPSO->GetNumShaders(); ++s)
         {
             auto* pShaderGL = pPSO->GetShader<ShaderGLImpl>(s);

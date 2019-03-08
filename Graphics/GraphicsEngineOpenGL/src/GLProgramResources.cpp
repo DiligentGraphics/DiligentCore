@@ -31,13 +31,13 @@
 namespace Diligent
 {
     GLProgramResources::GLProgramResources(GLProgramResources&& Program)noexcept :
-        m_ShaderStages   (Program.m_ShaderStages),
-        m_UniformBuffers (Program.m_UniformBuffers),
-        m_Samplers       (Program.m_Samplers),
-        m_Images         (Program.m_Images),
-        m_StorageBlocks  (Program.m_StorageBlocks),
-        m_ResourceCache  (Program.m_ResourceCache),
-        m_StringPool     (std::move(Program.m_StringPool)),
+        m_ShaderStages     (Program.m_ShaderStages),
+        m_UniformBuffers   (Program.m_UniformBuffers),
+        m_Samplers         (Program.m_Samplers),
+        m_Images           (Program.m_Images),
+        m_StorageBlocks    (Program.m_StorageBlocks),
+        m_ResourceCache    (Program.m_ResourceCache),
+        m_StringPool       (std::move(Program.m_StringPool)),
         m_NumUniformBuffers(Program.m_NumUniformBuffers),
         m_NumSamplers      (Program.m_NumSamplers),
         m_NumImages        (Program.m_NumImages),        
@@ -58,7 +58,7 @@ namespace Diligent
     inline void RemoveArrayBrackets(char *Str)
     {
         auto* OpenBacketPtr = strchr(Str, '[');
-        if ( OpenBacketPtr != nullptr )
+        if (OpenBacketPtr != nullptr)
             *OpenBacketPtr = 0;
     }
 
@@ -794,11 +794,11 @@ namespace Diligent
             return;
 
         auto& Name = res.Name;
-        for(Uint32 ArrInd = 0; ArrInd < res.ArraySize; ++ArrInd)
+        for (Uint32 ArrInd = 0; ArrInd < res.ArraySize; ++ArrInd)
         {
             auto& CurrResource = res.pResources[ArrInd];
 
-            if( (Flags & BIND_SHADER_RESOURCES_KEEP_EXISTING) != 0 && CurrResource )
+            if ( (Flags & BIND_SHADER_RESOURCES_KEEP_EXISTING) != 0 && CurrResource )
                 continue; // Skip already resolved resources
 
             RefCntAutoPtr<IDeviceObject> pNewRes;
@@ -860,7 +860,7 @@ namespace Diligent
         {
             const auto& UB0 = GetUniformBuffer(ub);
             const auto& UB1 = Res.GetUniformBuffer(ub);
-            if(!UB0.IsCompatibleWith(UB1))
+            if (!UB0.IsCompatibleWith(UB1))
                 return false;
         }
 
@@ -921,9 +921,9 @@ namespace Diligent
 #ifdef VERIFY_RESOURCE_BINDINGS
     static void dbgVerifyResourceBindingsHelper(const GLProgramResources::GLProgramVariableBase& res, const Char* VarTypeName)
     {
-        for(Uint32 ArrInd = 0; ArrInd < res.ArraySize; ++ArrInd)
+        for (Uint32 ArrInd = 0; ArrInd < res.ArraySize; ++ArrInd)
         {
-            if( !res.pResources[ArrInd] )
+            if (!res.pResources[ArrInd])
             {
                 if( res.ArraySize > 1)
                     LOG_ERROR_MESSAGE( "No resource is bound to ", VarTypeName, " variable \"", res.Name, "[", ArrInd, "]\"" );

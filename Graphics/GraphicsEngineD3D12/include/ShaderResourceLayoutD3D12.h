@@ -325,15 +325,16 @@ private:
                         const std::array<Uint32, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES>& CbvSrvUavCount,
                         const std::array<Uint32, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES>& SamplerCount);
 
-    std::unique_ptr<void, STDDeleterRawMem<void> > m_ResourceBuffer;
-    std::array<Uint16, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES + 1> m_CbvSrvUavOffsets = {};
-    std::array<Uint16, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES + 1> m_SamplersOffsets  = {};
+/*  0 */ std::unique_ptr<void, STDDeleterRawMem<void> > m_ResourceBuffer;
+/* 16 */ std::array<Uint16, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES + 1> m_CbvSrvUavOffsets = {};
+/* 24 */ std::array<Uint16, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES + 1> m_SamplersOffsets  = {};
 
-    IObject&                                    m_Owner;
-    CComPtr<ID3D12Device>                       m_pd3d12Device;
-    // We must use shared_ptr to reference ShaderResources instance, because
-    // there may be multiple objects referencing the same set of resources
-    std::shared_ptr<const ShaderResourcesD3D12> m_pResources;
+/* 32 */ IObject&                                    m_Owner;
+/* 48 */ CComPtr<ID3D12Device>                       m_pd3d12Device;
+         // We must use shared_ptr to reference ShaderResources instance, because
+         // there may be multiple objects referencing the same set of resources
+/* 48 */ std::shared_ptr<const ShaderResourcesD3D12> m_pResources;
+/* 64 */ // End of data
 };
 
 }

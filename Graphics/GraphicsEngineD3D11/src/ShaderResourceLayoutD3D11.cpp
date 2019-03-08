@@ -203,10 +203,12 @@ ShaderResourceLayoutD3D11::ShaderResourceLayoutD3D11(IObject&                   
             {
                 const auto& AssignedSamplerAttribs = m_pResources->GetCombinedSampler(TexSRV);
                 auto AssignedSamplerType = m_pResources->FindVariableType(AssignedSamplerAttribs, ResourceLayout);
-                DEV_CHECK_ERR(AssignedSamplerType == VarType,
-                              "The type (", GetShaderVariableTypeLiteralName(VarType),") of texture SRV variable '", TexSRV.Name,
-                              "' is not consistent with the type (", GetShaderVariableTypeLiteralName(AssignedSamplerType),
-                               ") of the sampler '", AssignedSamplerAttribs.Name, "' that is assigned to it");
+                VERIFY(AssignedSamplerType == VarType,
+                       "The type (", GetShaderVariableTypeLiteralName(VarType),") of texture SRV variable '", TexSRV.Name,
+                       "' is not consistent with the type (", GetShaderVariableTypeLiteralName(AssignedSamplerType),
+                       ") of the sampler '", AssignedSamplerAttribs.Name, "' that is assigned to it. "
+                       "This should never happen as when combined texture samplers are used, the type of the sampler "
+                       "is derived from the type of the texture it is assigned to SRV.");
                 
                 bool SamplerFound = false;
                 for (AssignedSamplerIndex = 0; AssignedSamplerIndex < NumSamplers; ++AssignedSamplerIndex)
@@ -223,7 +225,7 @@ ShaderResourceLayoutD3D11::ShaderResourceLayoutD3D11(IObject&                   
 #ifdef _DEBUG
                     if (m_pResources->FindStaticSampler(AssignedSamplerAttribs, ResourceLayout) < 0)
                     {
-                        LOG_ERROR("Unable to find non-static sampler assigned to texture SRV '", TexSRV.Name, "'. This seems to be a bug.");
+                        UNEXPECTED("Unable to find non-static sampler assigned to texture SRV '", TexSRV.Name, "'.");
                     }
 #endif
                 }
@@ -232,7 +234,7 @@ ShaderResourceLayoutD3D11::ShaderResourceLayoutD3D11(IObject&                   
 #ifdef _DEBUG
                     if (m_pResources->FindStaticSampler(AssignedSamplerAttribs, ResourceLayout) >= 0)
                     {
-                        LOG_ERROR("Static sampler '", AssignedSamplerAttribs.Name, "' is assigned to texture SRV '", TexSRV.Name, "'. This seems to be a bug.");
+                        UNEXPECTED("Static sampler '", AssignedSamplerAttribs.Name, "' is assigned to texture SRV '", TexSRV.Name, "'.");
                     }
 #endif
                 }
