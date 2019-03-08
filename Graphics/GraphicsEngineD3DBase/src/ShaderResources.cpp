@@ -222,7 +222,7 @@ void ShaderResources::DvpVerifyResourceLayout(const PipelineResourceLayoutDesc& 
 
         if (!VariableFound)
         {
-            LOG_WARNING_MESSAGE("Variable '", VarDesc.Name, "' is not found in of the designated shader stages "
+            LOG_WARNING_MESSAGE("Variable '", VarDesc.Name, "' is not found in any of the designated shader stages "
                                 "(", GetShaderStagesString(VarDesc.ShaderStages), ")");
         }
     }
