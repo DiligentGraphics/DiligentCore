@@ -75,14 +75,9 @@ namespace Diligent
             return m_VariableType;
         }
 
-        virtual Uint32 GetArraySize()const override final
+        virtual ShaderResourceDesc GetResourceDesc()const override final
         {
-            return m_Attribs.BindCount;
-        }
-
-        virtual const Char* GetName()const override final
-        {
-            return m_Attribs.Name;
+            return m_Attribs.GetHLSLResourceDesc();
         }
 
         virtual Uint32 GetIndex()const override final

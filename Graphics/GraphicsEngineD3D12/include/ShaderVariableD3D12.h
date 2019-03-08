@@ -175,14 +175,9 @@ public:
             m_Resource.BindResource(ppObjects[Elem], FirstElement + Elem, m_ParentManager.m_ResourceCache);
     }
 
-    virtual Uint32 GetArraySize()const override final
+    virtual ShaderResourceDesc GetResourceDesc()const override final
     {
-        return m_Resource.Attribs.BindCount;
-    }
-
-    virtual const Char* GetName()const override final
-    {
-        return m_Resource.Attribs.Name;
+        return m_Resource.Attribs.GetHLSLResourceDesc();
     }
 
     virtual Uint32 GetIndex()const override final

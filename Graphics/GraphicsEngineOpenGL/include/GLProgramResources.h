@@ -123,22 +123,12 @@ namespace Diligent
                 return VariableType;
             }
 
-            virtual Uint32 GetArraySize()const override final
-            {
-                return ArraySize;
-            }
-
-            virtual const Char* GetName()const override final
-            {
-                return Name;
-            }
-
             virtual Uint32 GetIndex()const override final
             {
                 return VariableIndex;
             }
 
-            ShaderResourceDesc GetResourceDesc()const
+            virtual ShaderResourceDesc GetResourceDesc()const override final
             {
                 ShaderResourceDesc ResourceDesc;
                 ResourceDesc.Name      = Name;

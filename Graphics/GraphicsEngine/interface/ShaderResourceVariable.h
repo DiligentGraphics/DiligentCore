@@ -29,6 +29,7 @@
 #include "../../../Primitives/interface/BasicTypes.h"
 #include "../../../Primitives/interface/Object.h"
 #include "DeviceObject.h"
+#include "Shader.h"
 
 namespace Diligent
 {
@@ -121,11 +122,8 @@ public:
     /// Returns the shader resource variable type
     virtual SHADER_RESOURCE_VARIABLE_TYPE GetType()const = 0;
 
-    /// Returns array size. For non-array variables returns one.
-    virtual Uint32 GetArraySize()const = 0;
-
-    /// Returns the variable name
-    virtual const Char* GetName()const = 0;
+    /// Returns shader resource description. See Diligent::ShaderResourceDesc.
+    virtual ShaderResourceDesc GetResourceDesc()const = 0;
 
     /// Returns the variable index that can be used to access the variable.
     virtual Uint32 GetIndex()const = 0;
