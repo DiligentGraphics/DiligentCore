@@ -24,27 +24,30 @@
 #pragma once
 
 /// \file
-/// Definition of the Diligent::IShaderD3D12 interface
+/// Definition of the Diligent::IShaderD3D interface and related data structures
 
-#include "../../GraphicsEngineD3DBase/interface/ShaderD3D.h"
+#include "../../GraphicsEngine/interface/Shader.h"
 
 namespace Diligent
 {
 
-// {C059B160-7F31-4029-943D-0996B98EE79A}
-static constexpr INTERFACE_ID IID_ShaderD3D12 =
-{ 0xc059b160, 0x7f31, 0x4029, { 0x94, 0x3d, 0x9, 0x96, 0xb9, 0x8e, 0xe7, 0x9a } };
+// {1EA0898C-1612-457F-B74E-808843D2CBE3}
+static constexpr INTERFACE_ID IID_ShaderD3D =
+{ 0x1ea0898c, 0x1612, 0x457f, { 0xb7, 0x4e, 0x80, 0x88, 0x43, 0xd2, 0xcb, 0xe3 } };
 
-/// Interface to the shader object implemented in D3D12
-class IShaderD3D12 : public IShaderD3D
+
+/// HLSL resource description
+struct HLSLShaderResourceDesc : ShaderResourceDesc
+{
+    Uint32 ShaderRegister = 0;
+};
+
+/// Interface to the Direct3D shader resource variable
+class IShaderD3D : public IShader
 {
 public:
-
-    /// Returns a pointer to the ID3D12DeviceChild interface of the internal Direct3D12 object.
-
-    /// The method does *NOT* call AddRef() on the returned interface,
-    /// so Release() must not be called.
-    //virtual ID3D12DeviceChild* GetD3D12Shader() = 0;
+    /// Returns HLSL shader resource description
+    virtual HLSLShaderResourceDesc GetHLSLResource(Uint32 Index)const = 0;
 };
 
 }

@@ -17,6 +17,10 @@ set(INCLUDE
     include/SwapChainD3DBase.h
 )
 
+set(INTERFACE
+    interface/ShaderD3D.h
+)
+
 set(SOURCE 
     src/DXGITypeConversions.cpp
     src/ShaderD3DBase.cpp
@@ -24,7 +28,7 @@ set(SOURCE
 )
 
 add_library(GraphicsEngineD3DBase STATIC 
-    ${SOURCE} ${INCLUDE} include/HLSLDefinitions_inc.fxh
+    ${SOURCE} ${INCLUDE} ${INTERFACE} include/HLSLDefinitions_inc.fxh
 )
 
 set_source_files_properties(
@@ -50,6 +54,10 @@ add_custom_command(TARGET ProcessHLSLDefinitions
 
 add_dependencies(GraphicsEngineD3DBase ProcessHLSLDefinitions)
 
+add_library(GraphicsEngineD3DBaseInterface INTERFACE)
+target_link_libraries(GraphicsEngineD3DBaseInterface INTERFACE GraphicsEngineInterface)
+target_include_directories(GraphicsEngineD3DBaseInterface INTERFACE interface)
+
 target_include_directories(GraphicsEngineD3DBase
 PUBLIC
     include
@@ -59,6 +67,7 @@ target_link_libraries(GraphicsEngineD3DBase
 PUBLIC
     BuildSettings 
     GraphicsEngine 
+    GraphicsEngineD3DBaseInterface
 )
 if(D3D12_SUPPORTED)
     target_link_libraries(GraphicsEngineD3DBase PRIVATE D3D12.lib)
@@ -67,6 +76,7 @@ set_common_target_properties(GraphicsEngineD3DBase)
 
 source_group("src" FILES ${SOURCE})
 source_group("include" FILES ${INCLUDE})
+source_group("interface" FILES ${INTERFACE})
 source_group("generated" FILES include/HLSLDefinitions_inc.fxh)
 
 set_target_properties(GraphicsEngineD3DBase PROPERTIES

@@ -109,7 +109,7 @@ INTERFACE
 )
 target_link_libraries(GraphicsEngineD3D12Interface 
 INTERFACE 
-    GraphicsEngineInterface
+    GraphicsEngineD3DBaseInterface
 )
 
 add_library(GraphicsEngineD3D12-static STATIC 

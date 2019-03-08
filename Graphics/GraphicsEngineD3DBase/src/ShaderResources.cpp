@@ -337,56 +337,65 @@ bool ShaderResources::IsCompatibleWith(const ShaderResources &Res)const
     return IsCompatible;
 }
 
-ShaderResourceDesc ShaderResources::GetShaderResourceDesc(Uint32 Index)const
+HLSLShaderResourceDesc D3DShaderResourceAttribs::GetHLSLResourceDesc()const
+{
+    HLSLShaderResourceDesc ResourceDesc;
+    ResourceDesc.Name           = Name;
+    ResourceDesc.ArraySize      = BindCount;
+    ResourceDesc.ShaderRegister = BindPoint;
+    switch(GetInputType())
+    {
+        case D3D_SIT_CBUFFER:
+            ResourceDesc.Type = SHADER_RESOURCE_TYPE_CONSTANT_BUFFER;
+        break;
+
+        case D3D_SIT_TBUFFER:
+            UNSUPPORTED( "TBuffers are not supported" ); 
+            ResourceDesc.Type = SHADER_RESOURCE_TYPE_UNKNOWN;
+        break;
+
+        case D3D_SIT_TEXTURE:
+            ResourceDesc.Type = (GetSRVDimension() == D3D_SRV_DIMENSION_BUFFER ? SHADER_RESOURCE_TYPE_BUFFER_SRV : SHADER_RESOURCE_TYPE_TEXTURE_SRV);
+        break;
+
+        case D3D_SIT_SAMPLER:
+            ResourceDesc.Type = SHADER_RESOURCE_TYPE_SAMPLER;
+        break;
+
+        case D3D_SIT_UAV_RWTYPED:
+            ResourceDesc.Type = (GetSRVDimension() == D3D_SRV_DIMENSION_BUFFER ? SHADER_RESOURCE_TYPE_BUFFER_UAV : SHADER_RESOURCE_TYPE_TEXTURE_UAV);
+        break;
+
+        case D3D_SIT_STRUCTURED:
+        case D3D_SIT_BYTEADDRESS:
+            ResourceDesc.Type = SHADER_RESOURCE_TYPE_BUFFER_SRV;
+        break;
+
+        case D3D_SIT_UAV_RWSTRUCTURED:
+        case D3D_SIT_UAV_RWBYTEADDRESS:
+        case D3D_SIT_UAV_APPEND_STRUCTURED:
+        case D3D_SIT_UAV_CONSUME_STRUCTURED:
+        case D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER:
+            ResourceDesc.Type = SHADER_RESOURCE_TYPE_BUFFER_UAV;
+        break;
+
+        default:
+            UNEXPECTED("Unknown input type");
+    }
+
+    return ResourceDesc;
+}
+
+HLSLShaderResourceDesc ShaderResources::GetHLSLShaderResourceDesc(Uint32 Index)const
 {
     DEV_CHECK_ERR(Index < m_TotalResources, "Resource index (", Index, ") is out of range");
-    ShaderResourceDesc ResourceDesc;
+    HLSLShaderResourceDesc HLSLResourceDesc = {};
     if (Index < m_TotalResources)
     {
         const auto& Res = GetResAttribs(Index, m_TotalResources, 0);
-        ResourceDesc.Name      = Res.Name;
-        ResourceDesc.ArraySize = Res.BindCount;
-        switch(Res.GetInputType())
-        {
-            case D3D_SIT_CBUFFER:
-                ResourceDesc.Type = SHADER_RESOURCE_TYPE_CONSTANT_BUFFER;
-            break;
-
-            case D3D_SIT_TBUFFER:
-                UNSUPPORTED( "TBuffers are not supported" ); 
-                ResourceDesc.Type = SHADER_RESOURCE_TYPE_UNKNOWN;
-            break;
-
-            case D3D_SIT_TEXTURE:
-                ResourceDesc.Type = (Res.GetSRVDimension() == D3D_SRV_DIMENSION_BUFFER ? SHADER_RESOURCE_TYPE_BUFFER_SRV : SHADER_RESOURCE_TYPE_TEXTURE_SRV);
-            break;
-
-            case D3D_SIT_SAMPLER:
-                ResourceDesc.Type = SHADER_RESOURCE_TYPE_SAMPLER;
-            break;
-
-            case D3D_SIT_UAV_RWTYPED:
-                ResourceDesc.Type = (Res.GetSRVDimension() == D3D_SRV_DIMENSION_BUFFER ? SHADER_RESOURCE_TYPE_BUFFER_UAV : SHADER_RESOURCE_TYPE_TEXTURE_UAV);
-            break;
-
-            case D3D_SIT_STRUCTURED:
-            case D3D_SIT_BYTEADDRESS:
-                ResourceDesc.Type = SHADER_RESOURCE_TYPE_BUFFER_SRV;
-            break;
-
-            case D3D_SIT_UAV_RWSTRUCTURED:
-            case D3D_SIT_UAV_RWBYTEADDRESS:
-            case D3D_SIT_UAV_APPEND_STRUCTURED:
-            case D3D_SIT_UAV_CONSUME_STRUCTURED:
-            case D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER:
-                ResourceDesc.Type = SHADER_RESOURCE_TYPE_BUFFER_UAV;
-            break;
-
-            default:
-                UNEXPECTED("Unknown input type");
-        }
+        return Res.GetHLSLResourceDesc();
     }
-    return ResourceDesc;
+    return HLSLResourceDesc;
 }
 
 size_t ShaderResources::GetHash()const

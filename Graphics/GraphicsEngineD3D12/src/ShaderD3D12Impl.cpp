@@ -49,6 +49,19 @@ ShaderD3D12Impl::~ShaderD3D12Impl()
 {
 }
 
-IMPLEMENT_QUERY_INTERFACE( ShaderD3D12Impl, IID_ShaderD3D12, TShaderBase )
+void ShaderD3D12Impl::QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)
+{
+    if (ppInterface == nullptr)
+        return;
+    if (IID == IID_ShaderD3D || IID == IID_ShaderD3D12)
+    {
+        *ppInterface = this;
+        (*ppInterface)->AddRef();
+    }
+    else
+    {
+        TShaderBase::QueryInterface( IID, ppInterface );
+    }
+}
 
 }

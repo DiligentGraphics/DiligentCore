@@ -88,4 +88,19 @@ ShaderD3D11Impl::~ShaderD3D11Impl()
 {
 }
 
+void ShaderD3D11Impl::QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)
+{
+    if (ppInterface == nullptr)
+        return;
+    if (IID == IID_ShaderD3D || IID == IID_ShaderD3D11)
+    {
+        *ppInterface = this;
+        (*ppInterface)->AddRef();
+    }
+    else
+    {
+        TShaderBase::QueryInterface( IID, ppInterface );
+    }
+}
+
 }

@@ -53,7 +53,7 @@ public:
                     const ShaderCreateInfo&      ShaderCI);
     ~ShaderD3D11Impl();
     
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ShaderD3D11, TShaderBase);
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
 
     virtual Uint32 GetResourceCount()const override final
     {
@@ -62,7 +62,12 @@ public:
 
     virtual ShaderResourceDesc GetResource(Uint32 Index)const override final
     {
-        return m_pShaderResources->GetShaderResourceDesc(Index);
+        return GetHLSLResource(Index);
+    }
+
+    virtual HLSLShaderResourceDesc GetHLSLResource(Uint32 Index)const override final
+    {
+        return m_pShaderResources->GetHLSLShaderResourceDesc(Index);
     }
 
     virtual ID3D11DeviceChild* GetD3D11Shader()override final

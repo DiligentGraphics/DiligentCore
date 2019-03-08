@@ -57,7 +57,7 @@
 #define NOMINMAX
 #include <d3dcommon.h>
 
-#include "Shader.h"
+#include "ShaderD3D.h"
 #include "STDAllocator.h"
 #include "HashUtils.h"
 #include "StringPool.h"
@@ -212,6 +212,7 @@ public:
         return ComputeHash(BindPoint, BindCount, InputType, SRVDimension, SamplerOrTexSRVId);
     }
 
+    HLSLShaderResourceDesc GetHLSLResourceDesc()const;
 
 private:
     friend class ShaderResources;
@@ -283,7 +284,7 @@ public:
 
     SHADER_TYPE GetShaderType()const noexcept{return m_ShaderType;}
 
-    ShaderResourceDesc GetShaderResourceDesc(Uint32 Index)const;
+    HLSLShaderResourceDesc GetHLSLShaderResourceDesc(Uint32 Index)const;
 
     template<typename THandleCB,
              typename THandleSampler,

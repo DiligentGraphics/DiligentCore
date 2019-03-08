@@ -79,7 +79,7 @@ INTERFACE
 )
 target_link_libraries(GraphicsEngineD3D11Interface 
 INTERFACE 
-    GraphicsEngineInterface
+    GraphicsEngineD3DBaseInterface
 )
 
 

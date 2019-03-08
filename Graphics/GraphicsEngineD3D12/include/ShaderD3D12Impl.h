@@ -59,7 +59,12 @@ public:
 
     virtual ShaderResourceDesc GetResource(Uint32 Index)const override final
     {
-        return m_pShaderResources->GetShaderResourceDesc(Index);
+        return GetHLSLResource(Index);
+    }
+
+    virtual HLSLShaderResourceDesc GetHLSLResource(Uint32 Index)const override final
+    {
+        return m_pShaderResources->GetHLSLShaderResourceDesc(Index);
     }
 
     ID3DBlob* GetShaderByteCode(){return m_pShaderByteCode;}
