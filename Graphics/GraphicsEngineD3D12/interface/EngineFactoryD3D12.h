@@ -28,7 +28,7 @@
 
 #include <sstream>
 
-#include "../../Primitives/interface/Object.h"
+#include "../../../Primitives/interface/Object.h"
 #include "../../GraphicsEngine/interface/RenderDevice.h"
 #include "../../GraphicsEngine/interface/DeviceContext.h"
 #include "../../GraphicsEngine/interface/SwapChain.h"

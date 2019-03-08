@@ -59,6 +59,7 @@
 
 #include <memory>
 
+#include "ShaderResourceVariableD3D.h"
 #include "ShaderResourceLayoutD3D12.h"
 
 namespace Diligent
@@ -117,7 +118,7 @@ private:
 };
 
 // sizeof(ShaderVariableD3D12Impl) == 24 (x64)
-class ShaderVariableD3D12Impl final : public IShaderResourceVariable
+class ShaderVariableD3D12Impl final : public IShaderResourceVariableD3D
 {
 public:
     ShaderVariableD3D12Impl(ShaderVariableManagerD3D12& ParentManager,
@@ -152,7 +153,7 @@ public:
             return;
 
         *ppInterface = nullptr;
-        if (IID == IID_ShaderResourceVariable || IID == IID_Unknown)
+        if (IID == IID_ShaderResourceVariableD3D || IID == IID_ShaderResourceVariable || IID == IID_Unknown)
         {
             *ppInterface = this;
             (*ppInterface)->AddRef();
@@ -176,6 +177,11 @@ public:
     }
 
     virtual ShaderResourceDesc GetResourceDesc()const override final
+    {
+        return GetHLSLResourceDesc();
+    }
+
+    virtual HLSLShaderResourceDesc GetHLSLResourceDesc()const override final
     {
         return m_Resource.Attribs.GetHLSLResourceDesc();
     }

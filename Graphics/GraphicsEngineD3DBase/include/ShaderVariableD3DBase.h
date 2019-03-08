@@ -23,7 +23,7 @@
 
 #pragma once
 
-#include "ShaderResourceVariable.h"
+#include "ShaderResourceVariableD3D.h"
 
 /// \file
 /// Declaration of Diligent::ShaderVariableD3DBase class
@@ -31,7 +31,7 @@
 namespace Diligent
 {
     template<typename TShaderResourceLayout>
-    struct ShaderVariableD3DBase : public IShaderResourceVariable
+    struct ShaderVariableD3DBase : public IShaderResourceVariableD3D
     {
         ShaderVariableD3DBase(TShaderResourceLayout&            ParentResLayout,
                               const D3DShaderResourceAttribs&   Attribs,
@@ -63,7 +63,7 @@ namespace Diligent
                 return;
 
             *ppInterface = nullptr;
-            if( IID == IID_ShaderResourceVariable || IID == IID_Unknown )
+            if( IID == IID_ShaderResourceVariableD3D || IID == IID_ShaderResourceVariable || IID == IID_Unknown )
             {
                 *ppInterface = this;
                 (*ppInterface)->AddRef();
@@ -76,6 +76,11 @@ namespace Diligent
         }
 
         virtual ShaderResourceDesc GetResourceDesc()const override final
+        {
+            return GetHLSLResourceDesc();
+        }
+
+        virtual HLSLShaderResourceDesc GetHLSLResourceDesc()const override final
         {
             return m_Attribs.GetHLSLResourceDesc();
         }
