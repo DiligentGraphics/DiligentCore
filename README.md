@@ -273,7 +273,7 @@ BuffDesc.BindFlags      = BIND_UNIFORM_BUFFER;
 BuffDesc.Usage          = USAGE_DYNAMIC;
 BuffDesc.uiSizeInBytes  = sizeof(ShaderConstants);
 BuffDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
-m_pDevice->CreateBuffer( BuffDesc, BufferData(), &m_pConstantBuffer );
+m_pDevice->CreateBuffer( BuffDesc, nullptr, &m_pConstantBuffer );
 ```
 
 Similar, to create a texture, populate `TextureDesc` structure and call `IRenderDevice::CreateTexture()` as in the following example:
@@ -288,7 +288,7 @@ TexDesc.Format    = TEX_FORMAT_RGBA8_UNORM;
 TexDesc.Usage     = USAGE_DEFAULT;
 TexDesc.BindFlags = BIND_SHADER_RESOURCE | BIND_RENDER_TARGET | BIND_UNORDERED_ACCESS;
 TexDesc.Name = "Sample 2D Texture";
-m_pRenderDevice->CreateTexture( TexDesc, TextureData(), &m_pTestTex );
+m_pRenderDevice->CreateTexture( TexDesc, nullptr, &m_pTestTex );
 ```
 
 There is only one function `CreateTexture()` that is capable of creating all types of textures. Type, format,
@@ -362,6 +362,7 @@ descriptions etc.). To create a pipeline state object, define instance of `Pipel
 
 ```cpp
 PipelineStateDesc PSODesc;
+PSODesc.Name = "My pipeline state";
 ```
 
 Describe the pipeline specifics such as if the pipeline is a compute pipeline, number and format
@@ -468,7 +469,7 @@ When creating a pipeline state, textures can be permanently assigned static samp
 it will always be used instead of the one initialized in the texture shader resource view. To define static samplers,
 prepare an array of `StaticSamplerDesc` structures and intialize `PSODesc.ResourceLayout.StaticSamplers` and
 `PSODesc.ResourceLayout.NumStaticSamplers` members. Notice that static samplers can be assigned to a texture variable of any type,
-not necessarily static, so that the texture binding can be chnaged at run-time, while the sampler will stay immutable.
+not necessarily static, so that the texture binding can be changed at run-time, while the sampler will stay immutable.
 It is highly recommended to use static samplers whenever possible.
 
 ```cpp
@@ -486,8 +487,7 @@ When all required fields of PSO description structure are set, call `IRenderDevi
 to create the PSO object:
 
 ```cpp
-PSODesc.Name = "My pipeline state";
-m_pDev->CreatePipelineState(PSODesc, &m_pPSO);
+m_pDevice->CreatePipelineState(PSODesc, &m_pPSO);
 ```
 
 <a name="binding_resources"></a>
