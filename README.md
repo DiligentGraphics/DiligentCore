@@ -209,7 +209,7 @@ On MacOS, Diligent Engine supports OpenGL and Vulkan backends. Initialization of
 performed by the application, and the engine attaches to the context created by the app; see
 [GLView.m](https://github.com/DiligentGraphics/DiligentEngine/blob/master/Common/NativeApp/Apple/Source/Classes/OSX/GLView.m)
 for details. Vulkan backend is initialized similar to other platforms. See 
-[MTKRenderer.mm](https://github.com/DiligentGraphics/DiligentEngine/blob/master/Common/NativeApp/Apple/Source/Classes/OSX/MTKRenderer.mm).
+[MetalView.mm](https://github.com/DiligentGraphics/DiligentEngine/blob/master/Common/NativeApp/Apple/Source/Classes/OSX/MetalView.mm).
 
 <a name="initialization_android"></a>
 ### Android
@@ -442,6 +442,7 @@ PSODesc.GraphicsPipeline.pPS = m_pPS;
 <a name="pipeline_resource_layout"></a>
 ### Pipeline Resource Layout
 
+Pipeline resource layout informs the engine how the application is going to use different shader resource variables.
 To allow grouping of resources based on the frequency of expected change, Diligent Engine introduces
 classification of shader variables:
 
@@ -493,7 +494,7 @@ m_pDevice->CreatePipelineState(PSODesc, &m_pPSO);
 <a name="binding_resources"></a>
 ## Binding Shader Resources
 
-[Shader resource binding in Diligent Engine](http://diligentgraphics.com/2016/03/23/resource-binding-model-in-diligent-engine-2-0/)
+As mentioned above, [shader resource binding in Diligent Engine](http://diligentgraphics.com/2016/03/23/resource-binding-model-in-diligent-engine-2-0/)
 is based on grouping variables in 3 different groups (static, mutable and dynamic). Static variables are variables that are
 expected to be set only once. They may not be changed once a resource is bound to the variable. Such variables are intended
 to hold global constants such as camera attributes or global light attributes constant buffers. They are bound directly to the
