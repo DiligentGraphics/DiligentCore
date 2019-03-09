@@ -29,9 +29,9 @@ so it must always be handled first.
     - [Attaching to Already Initialized Graphics API](#initialization_attaching)
     - [Destroying the Engine](#initialization_destroying)
   - [Creating Resources](#creating_resources)
+  - [Creating Shaders](#creating_shaders)
   - [Initializing Pipeline State](#initializing_pso)
-    - [Creating Shaders](#creating_shaders)
-    - [Creating Pipeline State Object](#creating_pso)
+    - [Pipeline Resource Layout](#pipeline_resource_layout)
   - [Binding Shader Resources](#binding_resources)
   - [Setting the Pipeline State and Invoking Draw Command](#draw_command)
 - [Low-level API interoperability](#low_level_api_interoperability)
@@ -76,14 +76,14 @@ void InitializeDiligentEngine(HWND NativeWindowHandle)
     {
         case DeviceType::D3D11:
         {
-            EngineD3D11Attribs DeviceAttribs;
+            EngineD3D11CreateInfo EngineCI;
 #if ENGINE_DLL
             GetEngineFactoryD3D11Type GetEngineFactoryD3D11 = nullptr;
             // Load the dll and import GetEngineFactoryD3D11() function
             LoadGraphicsEngineD3D11(GetEngineFactoryD3D11);
 #endif
             auto *pFactoryD3D11 = GetEngineFactoryD3D11();
-            pFactoryD3D11->CreateDeviceAndContextsD3D11(DeviceAttribs, &m_pDevice,
+            pFactoryD3D11->CreateDeviceAndContextsD3D11(EngineCI, &m_pDevice,
 			                                &m_pImmediateContext, NumDeferredCtx);
             pFactoryD3D11->CreateSwapChainD3D11(m_pDevice, m_pImmediateContext,
 			                        SCDesc, NativeWindowHandle, &m_pSwapChain);
@@ -97,9 +97,9 @@ void InitializeDiligentEngine(HWND NativeWindowHandle)
             // Load the dll and import GetEngineFactoryD3D12() function
             LoadGraphicsEngineD3D12(GetEngineFactoryD3D12);
 #endif
-            EngineD3D12Attribs EngD3D12Attribs;
+            EngineD3D12CreateInfo EngineCI;
             auto *pFactoryD3D12 = GetEngineFactoryD3D12();
-            pFactoryD3D12->CreateDeviceAndContextsD3D12(EngD3D12Attribs, &m_pDevice,
+            pFactoryD3D12->CreateDeviceAndContextsD3D12(EngineCI, &m_pDevice,
 			                                &m_pImmediateContext, NumDeferredCtx);
             pFactoryD3D12->CreateSwapChainD3D12(m_pDevice, m_pImmediateContext,
 			                        SCDesc, NativeWindowHandle, &m_pSwapChain);
@@ -116,10 +116,10 @@ void InitializeDiligentEngine(HWND NativeWindowHandle)
         LoadGraphicsEngineOpenGL(GetEngineFactoryOpenGL);
 #endif
         auto *pFactoryOpenGL = GetEngineFactoryOpenGL();
-        EngineGLAttribs CreationAttribs;
-        CreationAttribs.pNativeWndHandle = NativeWindowHandle;
+        EngineGLCreateInfo EngineCI;
+        EngineCI.pNativeWndHandle = NativeWindowHandle;
         pFactoryOpenGL->CreateDeviceAndSwapChainGL(
-            CreationAttribs, &m_pDevice, &m_pImmediateContext, SCDesc, &m_pSwapChain);
+            EngineCI, &m_pDevice, &m_pImmediateContext, SCDesc, &m_pSwapChain);
     }
     break;
 
@@ -130,9 +130,9 @@ void InitializeDiligentEngine(HWND NativeWindowHandle)
         // Load the dll and import GetEngineFactoryVk() function
         LoadGraphicsEngineVk(GetEngineFactoryVk);
 #endif
-        EngineVkAttribs EngVkAttribs;
+        EngineVkCreateInfo EngineCI;
         auto *pFactoryVk = GetEngineFactoryVk();
-        pFactoryVk->CreateDeviceAndContextsVk(EngVkAttribs, &m_pDevice,
+        pFactoryVk->CreateDeviceAndContextsVk(EngineCI, &m_pDevice,
                                               &m_pImmediateContext, NumDeferredCtx);
         pFactoryVk->CreateSwapChainVk(m_pDevice, m_pImmediateContext,
                                       SCDesc, NativeWindowHandle, &m_pSwapChain);
@@ -152,12 +152,13 @@ can be called directly. In the latter case, you need to load the DLL into the pr
 dynamic library and imports the functions required to initialize the engine. You need to include the following headers:
 
 ```cpp
-#include "RenderDeviceFactoryD3D11.h"
-#include "RenderDeviceFactoryD3D12.h"
-#include "RenderDeviceFactoryOpenGL.h"
-#include "RenderDeviceFactoryVk.h"
+#include "EngineFactoryD3D11.h"
+#include "EngineFactoryD3D12.h"
+#include "EngineFactoryOpenGL.h"
+#include "EngineFactoryVk.h"
 
 ```
+
 You also need to add the following directories to the include search paths:
 
 * diligentcore/Graphics/GraphicsEngineD3D11/interface
@@ -217,10 +218,10 @@ On Android, you can only create OpenGLES device. The following code snippet show
 
 ```cpp
 auto *pFactoryOpenGL = GetEngineFactoryOpenGL();
-EngineGLAttribs CreationAttribs;
-CreationAttribs.pNativeWndHandle = NativeWindowHandle;
+EngineGLCreateInfo EngineCI;
+EngineCI.pNativeWndHandle = NativeWindowHandle;
 pFactoryOpenGL->CreateDeviceAndSwapChainGL(
-    CreationAttribs, &m_pDevice, &m_pContext, SCDesc, &m_pSwapChain);
+    EngineCI, &m_pDevice, &m_pContext, SCDesc, &m_pSwapChain);
 IRenderDeviceGLES *pRenderDeviceOpenGLES;
 pRenderDevice->QueryInterface( IID_RenderDeviceGLES, reinterpret_cast<IObject**>(&pRenderDeviceOpenGLES) );
 ```
@@ -300,96 +301,64 @@ default view from the texture, use `ITexture::GetDefaultView()` function. Note t
 the reference counter on the returned interface. You can create additional texture views using `ITexture::CreateView()`.
 Use `IBuffer::CreateView()` to create additional views of a buffer.
 
-<a name="initializing_pso"></a>
-## Initializing Pipeline State
-
-Diligent Engine follows Direct3D12/Vulkan style to configure the graphics/compute pipeline. One big Pipelines State Object (PSO)
-encompasses all required states (all shader stages, input layout description, depth stencil, rasterizer and blend state
-descriptions etc.)
-
 <a name="creating_shaders"></a>
-### Creating Shaders
+## Creating Shaders
 
-To create a shader, populate `ShaderCreationAttribs` structure. There are two ways to create a shader.
-The first way is to provide a pointer to the shader source code through  `ShaderCreationAttribs::Source` member.
-The second way is to provide a file name. Graphics Engine is entirely decoupled from the platform. Since the host
-file system is platform-dependent, the structure exposes `ShaderCreationAttribs::pShaderSourceStreamFactory` member
-that is intended to provide the engine access to the file system. If you provided the source file name, you must
-also provide non-null pointer to the shader source stream factory. If the shader source contains any `#include` directives,
-the source stream factory will also be used to load these files. The engine provides default implementation for every
-supported platform that should be sufficient in most cases. You can however define your own implementation.
+To create a shader, populate `ShaderCreateInfo` structure:
 
-An important member is `ShaderCreationAttribs::SourceLanguage`. The following are valid values for this member:
+```cpp
+ShaderCreateInfo ShaderCI;
+```
+
+There are two ways to create a shader. The first way is to provide a pointer to the shader source code through 
+`ShaderCreateInfo::Source` member. The second way is to provide a file name. Graphics Engine is entirely decoupled
+from the platform. Since the host file system is platform-dependent, the structure exposes
+`ShaderCreateInfo::pShaderSourceStreamFactory` member that is intended to provide the engine access to the file system.
+If you provided the source file name, you must also provide non-null pointer to the shader source stream factory.
+If the shader source contains any `#include` directives, the source stream factory will also be used to load these
+files. The engine provides default implementation for every supported platform that should be sufficient in most cases.
+You can however define your own implementation.
+
+An important member is `ShaderCreateInfo::SourceLanguage`. The following are valid values for this member:
 
 * `SHADER_SOURCE_LANGUAGE_DEFAULT` - The shader source format matches the underlying graphics API: HLSL for D3D11 or D3D12 mode, and GLSL for OpenGL, OpenGLES, and Vulkan modes.
 * `SHADER_SOURCE_LANGUAGE_HLSL`    - The shader source is in HLSL. For OpenGL and OpenGLES modes, the source code will be 
                                      converted to GLSL. In Vulkan back-end, the code will be compiled to SPIRV directly.
 * `SHADER_SOURCE_LANGUAGE_GLSL`    - The shader source is in GLSL.
 
-To allow grouping of resources based on the frequency of expected change, Diligent Engine introduces
-classification of shader variables:
-
-* **Static variables** (`SHADER_VARIABLE_TYPE_STATIC`) are variables that are expected to be set only once. They may not be changed once a resource is bound to the variable. Such variables are intended to hold global constants such as camera attributes or global light attributes constant buffers.
-* **Mutable variables** (`SHADER_VARIABLE_TYPE_MUTABLE`) define resources that are expected to change on a per-material frequency. Examples may include diffuse textures, normal maps etc.
-* **Dynamic variables** (`SHADER_VARIABLE_TYPE_DYNAMIC`) are expected to change frequently and randomly.
-
-[This post](http://diligentgraphics.com/2016/03/23/resource-binding-model-in-diligent-engine-2-0) gives more details about the
-resource binding model in Diligent Engine. To define variable types, prepare an array of `ShaderVariableDesc` structures and
-initialize `ShaderCreationAttribs::Desc::VariableDesc` and `ShaderCreationAttribs::Desc::NumVariables`. Also
-`ShaderCreationAttribs::Desc::DefaultVariableType` can be used to set the type that will be used if variable name is not provided.
-
-When creating a shader, textures can be assigned static samplers. If static sampler is assigned, it will always be used instead
-of the one initialized in the texture shader resource view. To initialize static samplers, prepare an array of
-`StaticSamplerDesc` structures and intialize `ShaderCreationAttribs::Desc::StaticSamplers` and
-`ShaderCreationAttribs::Desc::NumStaticSamplers`. Notice that static samplers can be assigned to texture variable of any type,
-not necessarily static. It is highly recommended to use static samplers whenever possible.
-
-Other members of the `ShaderCreationAttribs` structure define shader include search directories, shader macro definitions,
-shader entry point and other parameters. The following is an example of shader initialization:
+Other members of the `ShaderCreateInfo` structure define shader include search directories, shader macro definitions,
+shader entry point and other parameters.
 
 ```cpp
-ShaderCreationAttribs Attrs;
-Attrs.Desc.Name         = "MyPixelShader";
-Attrs.FilePath          = "MyShaderFile.fx";
-Attrs.SearchDirectories = "shaders;shaders\\inc;";
-Attrs.EntryPoint        = "MyPixelShader";
-Attrs.Desc.ShaderType   = SHADER_TYPE_PIXEL;
-Attrs.SourceLanguage    = SHADER_SOURCE_LANGUAGE_HLSL;
-BasicShaderSourceStreamFactory BasicSSSFactory(Attrs.SearchDirectories);
-Attrs.pShaderSourceStreamFactory = &BasicSSSFactory;
-
-ShaderVariableDesc ShaderVars[] =
-{
-    {"g_StaticTexture",  SHADER_VARIABLE_TYPE_STATIC},
-    {"g_MutableTexture", SHADER_VARIABLE_TYPE_MUTABLE},
-    {"g_DynamicTexture", SHADER_VARIABLE_TYPE_DYNAMIC}
-};
-Attrs.Desc.VariableDesc        = ShaderVars;
-Attrs.Desc.NumVariables        = _countof(ShaderVars);
-Attrs.Desc.DefaultVariableType = SHADER_VARIABLE_TYPE_STATIC;
-
-StaticSamplerDesc StaticSampler;
-StaticSampler.Desc.MinFilter = FILTER_TYPE_LINEAR;
-StaticSampler.Desc.MagFilter = FILTER_TYPE_LINEAR;
-StaticSampler.Desc.MipFilter = FILTER_TYPE_LINEAR;
-StaticSampler.TextureName    = "g_MutableTexture";
-Attrs.Desc.NumStaticSamplers = 1;
-Attrs.Desc.StaticSamplers = &StaticSampler;
-
 ShaderMacroHelper Macros;
 Macros.AddShaderMacro("USE_SHADOWS", 1);
 Macros.AddShaderMacro("NUM_SHADOW_SAMPLES", 4);
 Macros.Finalize();
-Attrs.Macros = Macros;
-
-RefCntAutoPtr<IShader> pShader;
-m_pDevice->CreateShader( Attrs, &pShader );
+ShaderCI.Macros = Macros;
 ```
 
-<a name="creating_pso"></a>
-### Creating Pipeline State Object
+When everything is ready, call `IRenderDevice::CreateShader()` to create the shader object:
 
-To create a pipeline state object, define instance of `PipelineStateDesc` structure:
+```cpp
+ShaderCreateInfo ShaderCI;
+ShaderCI.Desc.Name         = "MyPixelShader";
+ShaderCI.FilePath          = "MyShaderFile.fx";
+ShaderCI.EntryPoint        = "MyPixelShader";
+ShaderCI.Desc.ShaderType   = SHADER_TYPE_PIXEL;
+ShaderCI.SourceLanguage    = SHADER_SOURCE_LANGUAGE_HLSL;
+const auto* SearchDirectories = "shaders;shaders\\inc;";
+BasicShaderSourceStreamFactory BasicSSSFactory(SearchDirectories);
+ShaderCI.pShaderSourceStreamFactory = &BasicSSSFactory;
+RefCntAutoPtr<IShader> pShader;
+m_pDevice->CreateShader(ShaderCI, &pShader);
+```
+
+<a name="initializing_pso"></a>
+## Initializing Pipeline State
+
+Diligent Engine follows Direct3D12/Vulkan style to configure the graphics/compute pipeline. One monolithic Pipelines State Object (PSO)
+encompasses all required states (all shader stages, input layout description, depth stencil, rasterizer and blend state
+descriptions etc.). To create a pipeline state object, define instance of `PipelineStateDesc` structure:
 
 ```cpp
 PipelineStateDesc PSODesc;
@@ -460,14 +429,63 @@ Layout.LayoutElements = TextLayoutElems;
 Layout.NumElements = _countof( TextLayoutElems );
 ```
 
-Finally, define primitive topology, set shaders and call `IRenderDevice::CreatePipelineState()` to create the PSO:
+Define primitive topology and set shader pointers:
 
 ```cpp
 // Define shader and primitive topology
 PSODesc.GraphicsPipeline.PrimitiveTopology = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-PSODesc.GraphicsPipeline.pVS = m_pTextVS;
-PSODesc.GraphicsPipeline.pPS = m_pTextPS;
+PSODesc.GraphicsPipeline.pVS = m_pVS;
+PSODesc.GraphicsPipeline.pPS = m_pPS;
+```
 
+<a name="pipeline_resource_layout"></a>
+### Pipeline Resource Layout
+
+To allow grouping of resources based on the frequency of expected change, Diligent Engine introduces
+classification of shader variables:
+
+* **Static variables** (`SHADER_RESOURCE_VARIABLE_TYPE_STATIC`) are variables that are expected to be set only once. They may not be changed once a resource is bound to the variable. Such variables are intended to hold global constants such as camera attributes or global light attributes constant buffers.
+* **Mutable variables** (`SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE`) define resources that are expected to change on a per-material frequency. Examples may include diffuse textures, normal maps etc.
+* **Dynamic variables** (`SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC`) are expected to change frequently and randomly.
+
+To define variable types, prepare an array of `ShaderResourceVariableDesc` structures and
+initialize `PSODesc.ResourceLayout.Variables` and `PSODesc.ResourceLayout.NumVariables` members. Also
+`PSODesc.ResourceLayout.DefaultVariableType` can be used to set the type that will be used if a variable name is not provided.
+
+```cpp
+ShaderResourceVariableDesc ShaderVars[] =
+{
+    {SHADER_TYPE_PIXEL, "g_StaticTexture",  SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
+    {SHADER_TYPE_PIXEL, "g_MutableTexture", SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
+    {SHADER_TYPE_PIXEL, "g_DynamicTexture", SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC}
+};
+PSODesc.ResourceLayout.Variables           = ShaderVars;
+PSODesc.ResourceLayout.NumVariables        = _countof(ShaderVars);
+PSODesc.ResourceLayout.DefaultVariableType = SHADER_RESOURCE_VARIABLE_TYPE_STATIC;
+```
+
+When creating a pipeline state, textures can be permanently assigned static samplers. If a static sampler is assigned to a texture,
+it will always be used instead of the one initialized in the texture shader resource view. To define static samplers,
+prepare an array of `StaticSamplerDesc` structures and intialize `PSODesc.ResourceLayout.StaticSamplers` and
+`PSODesc.ResourceLayout.NumStaticSamplers` members. Notice that static samplers can be assigned to a texture variable of any type,
+not necessarily static, so that the texture binding can be chnaged at run-time, while the sampler will stay immutable.
+It is highly recommended to use static samplers whenever possible.
+
+```cpp
+StaticSamplerDesc StaticSampler;
+StaticSampler.ShaderStages   = SHADER_TYPE_PIXEL;
+StaticSampler.Desc.MinFilter = FILTER_TYPE_LINEAR;
+StaticSampler.Desc.MagFilter = FILTER_TYPE_LINEAR;
+StaticSampler.Desc.MipFilter = FILTER_TYPE_LINEAR;
+StaticSampler.TextureName    = "g_MutableTexture";
+PSODesc.ResourceLayout.NumStaticSamplers = 1;
+PSODesc.ResourceLayout.StaticSamplers = &StaticSampler;
+```
+
+When all required fields of PSO description structure are set, call `IRenderDevice::CreatePipelineState()`
+to create the PSO object:
+
+```cpp
 PSODesc.Name = "My pipeline state";
 m_pDev->CreatePipelineState(PSODesc, &m_pPSO);
 ```
@@ -479,18 +497,21 @@ m_pDev->CreatePipelineState(PSODesc, &m_pPSO);
 is based on grouping variables in 3 different groups (static, mutable and dynamic). Static variables are variables that are
 expected to be set only once. They may not be changed once a resource is bound to the variable. Such variables are intended
 to hold global constants such as camera attributes or global light attributes constant buffers. They are bound directly to the
-shader object:
+Pipeline State Object:
 
 ```cpp
-PixelShader->GetShaderVariable( "g_tex2DShadowMap" )->Set( pShadowMapSRV );
+m_pPSO->GetStaticShaderVariable(SHADER_TYPE_PIXEL, "g_tex2DShadowMap")->Set(pShadowMapSRV);
 ```
 
 Mutable and dynamic variables are bound via a new object called Shader Resource Binding (SRB), which is created by the pipeline state
 (`IPipelineState::CreateShaderResourceBinding()`):
 
 ```cpp
-m_pPSO->CreateShaderResourceBinding(&m_pSRB);
+m_pPSO->CreateShaderResourceBinding(&m_pSRB, true);
 ```
+
+The second parameter tells the system to initialize internal structures in the SRB object
+that reference static variables in the PSO.
 
 Dynamic and mutable resources are then bound through SRB object:
 
@@ -501,7 +522,7 @@ m_pSRB->GetVariable(SHADER_TYPE_VERTEX, "cbRandomAttribs")->Set(pRandomAttrsCB);
 
 The difference between mutable and dynamic resources is that mutable ones can only be set once for every instance
 of a shader resource binding. Dynamic resources can be set multiple times. It is important to properly set the variable type as
-this may affect performance. Static variables are generally most efficient, followed by mutable. Dynamic variables are most expensive
+this affects performance. Static variables are generally most efficient, followed by mutable. Dynamic variables are most expensive
 from performance point of view.
 
 An alternative way to bind shader resources is to create `IResourceMapping` interface that maps resource literal names to the
