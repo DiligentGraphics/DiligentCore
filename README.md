@@ -82,7 +82,7 @@ void InitializeDiligentEngine(HWND NativeWindowHandle)
             // Load the dll and import GetEngineFactoryD3D11() function
             LoadGraphicsEngineD3D11(GetEngineFactoryD3D11);
 #endif
-            auto *pFactoryD3D11 = GetEngineFactoryD3D11();
+            auto* pFactoryD3D11 = GetEngineFactoryD3D11();
             pFactoryD3D11->CreateDeviceAndContextsD3D11(EngineCI, &m_pDevice,
 			                                &m_pImmediateContext, NumDeferredCtx);
             pFactoryD3D11->CreateSwapChainD3D11(m_pDevice, m_pImmediateContext,
@@ -98,7 +98,7 @@ void InitializeDiligentEngine(HWND NativeWindowHandle)
             LoadGraphicsEngineD3D12(GetEngineFactoryD3D12);
 #endif
             EngineD3D12CreateInfo EngineCI;
-            auto *pFactoryD3D12 = GetEngineFactoryD3D12();
+            auto* pFactoryD3D12 = GetEngineFactoryD3D12();
             pFactoryD3D12->CreateDeviceAndContextsD3D12(EngineCI, &m_pDevice,
 			                                &m_pImmediateContext, NumDeferredCtx);
             pFactoryD3D12->CreateSwapChainD3D12(m_pDevice, m_pImmediateContext,
@@ -115,7 +115,7 @@ void InitializeDiligentEngine(HWND NativeWindowHandle)
         // Load the dll and import GetEngineFactoryOpenGL() function
         LoadGraphicsEngineOpenGL(GetEngineFactoryOpenGL);
 #endif
-        auto *pFactoryOpenGL = GetEngineFactoryOpenGL();
+        auto* pFactoryOpenGL = GetEngineFactoryOpenGL();
         EngineGLCreateInfo EngineCI;
         EngineCI.pNativeWndHandle = NativeWindowHandle;
         pFactoryOpenGL->CreateDeviceAndSwapChainGL(
@@ -131,7 +131,7 @@ void InitializeDiligentEngine(HWND NativeWindowHandle)
         LoadGraphicsEngineVk(GetEngineFactoryVk);
 #endif
         EngineVkCreateInfo EngineCI;
-        auto *pFactoryVk = GetEngineFactoryVk();
+        auto* pFactoryVk = GetEngineFactoryVk();
         pFactoryVk->CreateDeviceAndContextsVk(EngineCI, &m_pDevice,
                                               &m_pImmediateContext, NumDeferredCtx);
         pFactoryVk->CreateSwapChainVk(m_pDevice, m_pImmediateContext,
@@ -161,10 +161,10 @@ dynamic library and imports the functions required to initialize the engine. You
 
 You also need to add the following directories to the include search paths:
 
-* diligentcore/Graphics/GraphicsEngineD3D11/interface
-* diligentcore/Graphics/GraphicsEngineD3D12/interface
-* diligentcore/Graphics/GraphicsEngineOpenGL/interface
-* diligentcore/Graphics/GraphicsEngineVulkan/interface
+* DiligentCore/Graphics/GraphicsEngineD3D11/interface
+* DiligentCore/Graphics/GraphicsEngineD3D12/interface
+* DiligentCore/Graphics/GraphicsEngineOpenGL/interface
+* DiligentCore/Graphics/GraphicsEngineVulkan/interface
 
 Also, enable Diligent namespace:
 
@@ -217,7 +217,7 @@ for details. Vulkan backend is initialized similar to other platforms. See
 On Android, you can only create OpenGLES device. The following code snippet shows an example:
 
 ```cpp
-auto *pFactoryOpenGL = GetEngineFactoryOpenGL();
+auto* pFactoryOpenGL = GetEngineFactoryOpenGL();
 EngineGLCreateInfo EngineCI;
 EngineCI.pNativeWndHandle = NativeWindowHandle;
 pFactoryOpenGL->CreateDeviceAndSwapChainGL(
@@ -313,8 +313,8 @@ ShaderCreateInfo ShaderCI;
 There are two ways to create a shader. The first way is to provide a pointer to the shader source code through 
 `ShaderCreateInfo::Source` member. The second way is to provide a file name. Graphics Engine is entirely decoupled
 from the platform. Since the host file system is platform-dependent, the structure exposes
-`ShaderCreateInfo::pShaderSourceStreamFactory` member that is intended to provide the engine access to the file system.
-If you provided the source file name, you must also provide non-null pointer to the shader source stream factory.
+`ShaderCreateInfo::pShaderSourceStreamFactory` member that is intended to give the engine access to the file system.
+If you provided the source file name, you must also provide a non-null pointer to the shader source stream factory.
 If the shader source contains any `#include` directives, the source stream factory will also be used to load these
 files. The engine provides default implementation for every supported platform that should be sufficient in most cases.
 You can however define your own implementation.
@@ -419,14 +419,14 @@ Initialize input layout description structure `InputLayoutDesc`:
 ```cpp
 // Define input layout
 InputLayoutDesc &Layout = PSODesc.GraphicsPipeline.InputLayout;
-LayoutElement TextLayoutElems[] =
+LayoutElement LayoutElems[] =
 {
     LayoutElement( 0, 0, 3, VT_FLOAT32, False ),
     LayoutElement( 1, 0, 4, VT_UINT8,   True ),
     LayoutElement( 2, 0, 2, VT_FLOAT32, False ),
 };
-Layout.LayoutElements = TextLayoutElems;
-Layout.NumElements = _countof( TextLayoutElems );
+Layout.LayoutElements = LayoutElems;
+Layout.NumElements    = _countof(LayoutElems);
 ```
 
 Define primitive topology and set shader pointers:
@@ -479,7 +479,7 @@ StaticSampler.Desc.MagFilter = FILTER_TYPE_LINEAR;
 StaticSampler.Desc.MipFilter = FILTER_TYPE_LINEAR;
 StaticSampler.TextureName    = "g_MutableTexture";
 PSODesc.ResourceLayout.NumStaticSamplers = 1;
-PSODesc.ResourceLayout.StaticSamplers = &StaticSampler;
+PSODesc.ResourceLayout.StaticSamplers    = &StaticSampler;
 ```
 
 When all required fields of PSO description structure are set, call `IRenderDevice::CreatePipelineState()`
