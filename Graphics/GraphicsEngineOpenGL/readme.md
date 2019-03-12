@@ -15,7 +15,7 @@ using namespace Diligent;
 
 #if ENGINE_DLL
     GetEngineFactoryOpenGLType GetEngineFactoryOpenGL;
-    if( !LoadGraphicsEngineOpenGL(GetEngineFactoryOpenGL) )
+    if(!LoadGraphicsEngineOpenGL(GetEngineFactoryOpenGL))
         return FALSE;
 #endif
 RefCntAutoPtr<IRenderDevice> pRenderDevice;
