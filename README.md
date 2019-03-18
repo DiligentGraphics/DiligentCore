@@ -205,7 +205,7 @@ On MacOS, Diligent Engine supports OpenGL and Vulkan backends. Initialization of
 performed by the application, and the engine attaches to the context created by the app; see
 [GLView.m](https://github.com/DiligentGraphics/DiligentEngine/blob/master/Common/NativeApp/Apple/Source/Classes/OSX/GLView.m)
 for details. Vulkan backend is initialized similar to other platforms. See 
-[MetalView.mm](https://github.com/DiligentGraphics/DiligentEngine/blob/master/Common/NativeApp/Apple/Source/Classes/OSX/MetalView.mm).
+[MetalView.m](https://github.com/DiligentGraphics/DiligentEngine/blob/master/Common/NativeApp/Apple/Source/Classes/OSX/MetalView.m).
 
 <a name="initialization_android"></a>
 ### Android
@@ -219,7 +219,7 @@ EngineCI.pNativeWndHandle = NativeWindowHandle;
 pFactoryOpenGL->CreateDeviceAndSwapChainGL(
     EngineCI, &m_pDevice, &m_pContext, SCDesc, &m_pSwapChain);
 IRenderDeviceGLES *pRenderDeviceOpenGLES;
-pRenderDevice->QueryInterface( IID_RenderDeviceGLES, reinterpret_cast<IObject**>(&pRenderDeviceOpenGLES) );
+pRenderDevice->QueryInterface(IID_RenderDeviceGLES, reinterpret_cast<IObject**>(&pRenderDeviceOpenGLES));
 ```
 
 If engine is built as dynamic library, the library needs to be loaded by the native activity. The following code shows one possible way:
@@ -269,7 +269,7 @@ BuffDesc.BindFlags      = BIND_UNIFORM_BUFFER;
 BuffDesc.Usage          = USAGE_DYNAMIC;
 BuffDesc.uiSizeInBytes  = sizeof(ShaderConstants);
 BuffDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
-m_pDevice->CreateBuffer( BuffDesc, nullptr, &m_pConstantBuffer );
+m_pDevice->CreateBuffer(BuffDesc, nullptr, &m_pConstantBuffer);
 ```
 
 Similar, to create a texture, populate `TextureDesc` structure and call `IRenderDevice::CreateTexture()` as in the following example:
@@ -284,7 +284,7 @@ TexDesc.Format    = TEX_FORMAT_RGBA8_UNORM;
 TexDesc.Usage     = USAGE_DEFAULT;
 TexDesc.BindFlags = BIND_SHADER_RESOURCE | BIND_RENDER_TARGET | BIND_UNORDERED_ACCESS;
 TexDesc.Name = "Sample 2D Texture";
-m_pRenderDevice->CreateTexture( TexDesc, nullptr, &m_pTestTex );
+m_pRenderDevice->CreateTexture(TexDesc, nullptr, &m_pTestTex);
 ```
 
 There is only one function `CreateTexture()` that is capable of creating all types of textures. Type, format,
@@ -377,7 +377,7 @@ the members with default values and you may only set the ones that are different
 
 ```cpp
 // Init depth-stencil state
-DepthStencilStateDesc &DepthStencilDesc = PSODesc.GraphicsPipeline.DepthStencilDesc;
+DepthStencilStateDesc& DepthStencilDesc = PSODesc.GraphicsPipeline.DepthStencilDesc;
 DepthStencilDesc.DepthEnable            = true;
 DepthStencilDesc.DepthWriteEnable       = true;
 ```
@@ -386,7 +386,7 @@ Initialize blend state description structure `BlendStateDesc`:
 
 ```cpp
 // Init blend state
-BlendStateDesc &BSDesc = PSODesc.GraphicsPipeline.BlendDesc;
+BlendStateDesc& BSDesc = PSODesc.GraphicsPipeline.BlendDesc;
 BSDesc.IndependentBlendEnable = False;
 auto &RT0 = BSDesc.RenderTargets[0];
 RT0.BlendEnable           = True;
@@ -403,7 +403,7 @@ Initialize rasterizer state description structure `RasterizerStateDesc`:
 
 ```cpp
 // Init rasterizer state
-RasterizerStateDesc &RasterizerDesc = PSODesc.GraphicsPipeline.RasterizerDesc;
+RasterizerStateDesc& RasterizerDesc = PSODesc.GraphicsPipeline.RasterizerDesc;
 RasterizerDesc.FillMode              = FILL_MODE_SOLID;
 RasterizerDesc.CullMode              = CULL_MODE_NONE;
 RasterizerDesc.FrontCounterClockwise = True;
@@ -415,7 +415,7 @@ Initialize input layout description structure `InputLayoutDesc`:
 
 ```cpp
 // Define input layout
-InputLayoutDesc &Layout = PSODesc.GraphicsPipeline.InputLayout;
+InputLayoutDesc& Layout = PSODesc.GraphicsPipeline.InputLayout;
 LayoutElement LayoutElems[] =
 {
     LayoutElement( 0, 0, 3, VT_FLOAT32, False ),
@@ -513,7 +513,7 @@ that reference static variables in the PSO.
 Dynamic and mutable resources are then bound through SRB object:
 
 ```cpp
-m_pSRB->GetVariable(SHADER_TYPE_VERTEX, "tex2DDiffuse")->Set(pDiffuseTexSRV);
+m_pSRB->GetVariable(SHADER_TYPE_PIXEL,  "tex2DDiffuse")->Set(pDiffuseTexSRV);
 m_pSRB->GetVariable(SHADER_TYPE_VERTEX, "cbRandomAttribs")->Set(pRandomAttrsCB);
 ```
 
@@ -528,7 +528,7 @@ actual resources:
 ```cpp
 ResourceMappingEntry Entries[] =
 {
-    { "g_Texture", pTexture->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE)},
+    {"g_Texture", pTexture->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE)},
     ResourceMappingEntry{}
 };
 ResourceMappingDesc ResMappingDesc;
@@ -537,22 +537,16 @@ RefCntAutoPtr<IResourceMapping> pResMapping;
 pRenderDevice->CreateResourceMapping( ResMappingDesc, &pResMapping );
 ```
 
-The resource mapping can then be used to bind all resources in a shader (`IShader::BindResources()`):
+The resource mapping can then be used to bind all static resources in a pipeline state (`IPipelineState::BindStaticResources()`):
 
 ```cpp
-pPixelShader->BindResources(pResMapping, BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED);
+m_pPSO->BindStaticResources(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, pResMapping, BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED);
 ```
 
-in a shader resource binding (`IShaderResourceBinding::BindResources()`):
+or all mutable and dynamic resources in a shader resource binding (`IShaderResourceBinding::BindResources()`):
 
 ```cpp
-m_pSRB->BindResources(SHADER_TYPE_VERTEX|SHADER_TYPE_PIXEL, pResMapping, BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED);
-```
-
-or in a pipeline state (`IPipelineState::BindShaderResources()`):
-
-```cpp
-m_pPSO->BindResources(pResMapping, BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED);
+m_pSRB->BindResources(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, pResMapping, BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED);
 ```
 
 The last parameter to all `BindResources()` functions defines how resources should be resolved:
@@ -584,7 +578,7 @@ const float zero[4] = {0, 0, 0, 0};
 m_pContext->ClearRenderTarget(nullptr, zero, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
 // Set vertex and index buffers
-IBuffer *buffer[] = {m_pVertexBuffer};
+IBuffer* buffer[] = {m_pVertexBuffer};
 Uint32 offsets[] = {0};
 m_pContext->SetVertexBuffers(0, 1, buffer, offsets, SET_VERTEX_BUFFERS_FLAG_RESET,
                              RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
@@ -593,7 +587,7 @@ m_pContext->SetIndexBuffer(m_pIndexBuffer, 0, RESOURCE_STATE_TRANSITION_MODE_TRA
 m_pContext->SetPipelineState(m_pPSO);
 ```
 
-All methods that may need to perform resource state transitions, take `RESOURCE_STATE_TRANSITION_MODE` enum
+All methods that may need to perform resource state transitions take `RESOURCE_STATE_TRANSITION_MODE` enum
 as parameter. The enum defines the following modes:
 
 * `RESOURCE_STATE_TRANSITION_MODE_NONE` - Perform no resource state transitions.

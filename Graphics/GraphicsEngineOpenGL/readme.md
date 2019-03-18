@@ -8,25 +8,25 @@ Implementation of OpenGL/GLES back-end
 The following code snippet shows how to initialize Diligent Engine in OpenGL/GLES mode.
 
 ```cpp
-#include "RenderDeviceFactoryOpenGL.h"
+#include "EngineFactoryOpenGL.h"
 using namespace Diligent;
 
 // ...
 
 #if ENGINE_DLL
     GetEngineFactoryOpenGLType GetEngineFactoryOpenGL;
-    if( !LoadGraphicsEngineOpenGL(GetEngineFactoryOpenGL) )
+    if(!LoadGraphicsEngineOpenGL(GetEngineFactoryOpenGL))
         return FALSE;
 #endif
 RefCntAutoPtr<IRenderDevice> pRenderDevice;
 RefCntAutoPtr<IDeviceContext> pImmediateContext;
 SwapChainDesc SCDesc;
 RefCntAutoPtr<ISwapChain> pSwapChain;
-auto *pFactoryOpenGL = GetEngineFactoryOpenGL();
-EngineGLCreateInfo CreationAttribs;
-CreationAttribs.pNativeWndHandle = NativeWindowHandle;
+auto* pFactoryOpenGL = GetEngineFactoryOpenGL();
+EngineGLCreateInfo EngineCI;
+EngineCI = NativeWindowHandle;
 pFactoryOpenGL->CreateDeviceAndSwapChainGL(
-    CreationAttribs, &pRenderDevice, &pImmediateContext, SCDesc, &pSwapChain);
+    EngineCI, &pRenderDevice, &pImmediateContext, SCDesc, &pSwapChain);
 ```
 
 Alternatively, the engine can be initialized by attaching to existing OpenGL context (see [below](#initializing-the-engine-by-attaching-to-existing-gl-context)).
@@ -50,13 +50,13 @@ Below are some of the methods that provide access to internal D3D11 objects:
 
 ## Creating Diligent Engine Objects from OpenGL Handles
 
-* `void IRenderDeviceGL::CreateTextureFromGLHandle(Uint32 GLHandle, const TextureDesc &TexDesc, RESOURCE_STATE InitialState, ITexture **ppTexture)` -
+* `void IRenderDeviceGL::CreateTextureFromGLHandle(Uint32 GLHandle, const TextureDesc& TexDesc, RESOURCE_STATE InitialState, ITexture** ppTexture)` -
     creates a diligent engine texture from OpenGL handle. The method takes OpenGL handle GLHandle, texture description TexDesc,
     and writes the pointer to the created texture object at the memory address pointed to by ppTexture. The engine can automatically
     set texture width, height, depth, mip levels count, and format, but the remaining field of TexDesc structure must be populated by
     the application. Note that diligent engine texture object does not take ownership of the GL resource, and the application must
     not destroy it while it is in use by the engine.
-* `void IRenderDeviceGL::CreateBufferFromGLHandle(Uint32 GLHandle, const BufferDesc &BuffDesc, RESOURCE_STATE InitialState, IBuffer **ppBuffer)` -
+* `void IRenderDeviceGL::CreateBufferFromGLHandle(Uint32 GLHandle, const BufferDesc& BuffDesc, RESOURCE_STATE InitialState, IBuffer** ppBuffer)` -
     creates a diligent engine buffer from OpenGL handle. The method takes OpenGL handle GLHandle, buffer description BuffDesc,
     and writes the pointer to the created buffer object at the memory address pointed to by ppBuffer. The engine can automatically
     set the buffer size, but the rest of the fields need to be set by the client. Note that diligent engine buffer object does not
@@ -67,7 +67,7 @@ Below are some of the methods that provide access to internal D3D11 objects:
 The code snippet below shows how diligent engine can be attached to existing GL context
 
 ```cpp
-auto *pFactoryGL = GetEngineFactoryOpenGL();
+auto* pFactoryGL = GetEngineFactoryOpenGL();
 EngineCreationAttribs Attribs;
 pFactoryGL->AttachToActiveGLContext(Attribs, &m_Device, &m_Context);
 ```
