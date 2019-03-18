@@ -108,19 +108,19 @@ VulkanMemoryAllocation VulkanMemoryManager::Allocate(const VkMemoryRequirements&
     if (MemoryProps == VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
     {
         // There must be at least one memory type with the DEVICE_LOCAL_BIT bit set
-        VERIFY(MemoryTypeIndex != VulkanUtilities::VulkanPhysicalDevice::InvalidMemoryTypeIndex,
-               "Vulkan spec requires that memoryTypeBits member always contains "
-               "at least one bit set corresponding to a VkMemoryType with a propertyFlags that has the "
-               "VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT bit set (11.6)");
+        DEV_CHECK_ERR(MemoryTypeIndex != VulkanUtilities::VulkanPhysicalDevice::InvalidMemoryTypeIndex,
+                      "Vulkan spec requires that memoryTypeBits member always contains "
+                      "at least one bit set corresponding to a VkMemoryType with a propertyFlags that has the "
+                      "VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT bit set (11.6)");
     }
     else if ( (MemoryProps & (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) == (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT))
     {
-        VERIFY(MemoryTypeIndex != VulkanUtilities::VulkanPhysicalDevice::InvalidMemoryTypeIndex,
-               "Vulkan spec requires that for a VkBuffer not created with the VK_BUFFER_CREATE_SPARSE_BINDING_BIT "
-               "bit set, or for a VkImage that was created with a VK_IMAGE_TILING_LINEAR value in the tiling member "
-               "of the VkImageCreateInfo structure passed to vkCreateImage, the memoryTypeBits member always contains "
-               "at least one bit set corresponding to a VkMemoryType with a propertyFlags that has both the "
-               "VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT bit AND the VK_MEMORY_PROPERTY_HOST_COHERENT_BIT bit set. (11.6)");
+        DEV_CHECK_ERR(MemoryTypeIndex != VulkanUtilities::VulkanPhysicalDevice::InvalidMemoryTypeIndex,
+                      "Vulkan spec requires that for a VkBuffer not created with the VK_BUFFER_CREATE_SPARSE_BINDING_BIT "
+                      "bit set, or for a VkImage that was created with a VK_IMAGE_TILING_LINEAR value in the tiling member "
+                      "of the VkImageCreateInfo structure passed to vkCreateImage, the memoryTypeBits member always contains "
+                      "at least one bit set corresponding to a VkMemoryType with a propertyFlags that has both the "
+                      "VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT bit AND the VK_MEMORY_PROPERTY_HOST_COHERENT_BIT bit set. (11.6)");
     }
     else if (MemoryTypeIndex == VulkanUtilities::VulkanPhysicalDevice::InvalidMemoryTypeIndex)
     {

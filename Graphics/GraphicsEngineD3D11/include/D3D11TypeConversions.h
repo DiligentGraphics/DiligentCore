@@ -70,10 +70,10 @@ inline D3D11_USAGE UsageToD3D11Usage(USAGE Usage)
 {
     switch(Usage)
     {
-        case USAGE_STATIC:         return D3D11_USAGE_IMMUTABLE;
-        case USAGE_DEFAULT:        return D3D11_USAGE_DEFAULT;
-        case USAGE_DYNAMIC:        return D3D11_USAGE_DYNAMIC;
-        case USAGE_CPU_ACCESSIBLE: return D3D11_USAGE_STAGING;
+        case USAGE_STATIC:      return D3D11_USAGE_IMMUTABLE;
+        case USAGE_DEFAULT:     return D3D11_USAGE_DEFAULT;
+        case USAGE_DYNAMIC:     return D3D11_USAGE_DYNAMIC;
+        case USAGE_STAGING:     return D3D11_USAGE_STAGING;
         default: UNEXPECTED("Unknow usage" ); return D3D11_USAGE_DEFAULT;
     }
 }
@@ -85,7 +85,7 @@ inline USAGE D3D11UsageToUsage(D3D11_USAGE D3D11Usage)
         case D3D11_USAGE_IMMUTABLE: return USAGE_STATIC;
         case D3D11_USAGE_DEFAULT:   return USAGE_DEFAULT;
         case D3D11_USAGE_DYNAMIC:   return USAGE_DYNAMIC;
-        case D3D11_USAGE_STAGING:   return USAGE_CPU_ACCESSIBLE;
+        case D3D11_USAGE_STAGING:   return USAGE_STAGING;
         default: UNEXPECTED("Unknow D3D11 usage" ); return USAGE_DEFAULT;
     }
 }

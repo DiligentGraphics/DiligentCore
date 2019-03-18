@@ -227,9 +227,9 @@ namespace Diligent
         if(*ppBuffer == nullptr)
         {
             BufferDesc BuffDesc;
-            BuffDesc.Name = "Staging buffer for UploadBufferD3D12";
+            BuffDesc.Name           = "Staging buffer for UploadBufferD3D12";
             BuffDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
-            BuffDesc.Usage = USAGE_CPU_ACCESSIBLE;
+            BuffDesc.Usage          = USAGE_STAGING;
 
             const auto &TexFmtInfo = m_pDevice->GetTextureFormatInfo(Desc.Format);
             Uint32 RowStride = Desc.Width * Uint32{TexFmtInfo.ComponentSize} * Uint32{TexFmtInfo.NumComponents};

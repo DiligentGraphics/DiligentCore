@@ -1215,7 +1215,7 @@ namespace Diligent
         }
         else if(MapType == MAP_WRITE)
         {
-            if (BuffDesc.Usage == USAGE_CPU_ACCESSIBLE)
+            if (BuffDesc.Usage == USAGE_STAGING)
             {
                 LOG_ERROR("Not implemented");
                 UNSUPPORTED("Not implemented");
@@ -1248,7 +1248,7 @@ namespace Diligent
             }
             else
             {
-                LOG_ERROR("Only USAGE_DYNAMIC and USAGE_CPU_ACCESSIBLE Vk buffers can be mapped for writing");
+                LOG_ERROR("Only USAGE_DYNAMIC and USAGE_STAGING Vk buffers can be mapped for writing");
             }
         }
         else if(MapType == MAP_READ_WRITE)
@@ -1274,7 +1274,7 @@ namespace Diligent
         }
         else if(MapType == MAP_WRITE)
         {
-            if (BuffDesc.Usage == USAGE_CPU_ACCESSIBLE)
+            if (BuffDesc.Usage == USAGE_STAGING)
             {
                 LOG_ERROR("This map type is not yet supported");
                 UNSUPPORTED("This map type is not yet supported");

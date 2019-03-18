@@ -5,6 +5,7 @@
 * Moved `NumDeferredContexts` parameter from factory functions `IEngineFactoryD3D11::CreateDeviceAndContextsD3D11`,
   `IEngineFactoryD3D12::CreateDeviceAndContextsD3D12` and `IEngineFactoryVk::CreateDeviceAndContextsVk` to
   `EngineCreateInfo` struct.
+* Renamed `USAGE_CPU_ACCESSIBLE` -> `USAGE_STAGING`
 
 ## v2.4.b
 

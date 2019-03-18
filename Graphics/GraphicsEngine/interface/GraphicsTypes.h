@@ -106,7 +106,7 @@ namespace Diligent
 
         /// A resource that facilitates transferring data from GPU to CPU. \n
         /// D3D11 Counterpart: D3D11_USAGE_STAGING. OpenGL counterpart: GL_DYNAMIC_READ
-        USAGE_CPU_ACCESSIBLE
+        USAGE_STAGING
     };
 
     /// Allowed CPU access mode flags when mapping a resource

@@ -67,7 +67,7 @@ BufferD3D12Impl :: BufferD3D12Impl(IReferenceCounters*          pRefCounters,
     if (m_Desc.BindFlags & BIND_UNIFORM_BUFFER)
         AlignmentMask = 255;
     
-    if (m_Desc.Usage == USAGE_CPU_ACCESSIBLE)
+    if (m_Desc.Usage == USAGE_STAGING)
     {
         if (m_Desc.CPUAccessFlags != CPU_ACCESS_WRITE && m_Desc.CPUAccessFlags != CPU_ACCESS_READ)
             LOG_BUFFER_ERROR_AND_THROW("Exactly one of the CPU_ACCESS_WRITE or CPU_ACCESS_READ flags must be specified for a cpu-accessible buffer")
@@ -117,7 +117,7 @@ BufferD3D12Impl :: BufferD3D12Impl(IReferenceCounters*          pRefCounters,
         auto *pd3d12Device = pRenderDeviceD3D12->GetD3D12Device();
 
         D3D12_HEAP_PROPERTIES HeapProps;
-        if (m_Desc.Usage == USAGE_CPU_ACCESSIBLE)
+        if (m_Desc.Usage == USAGE_STAGING)
             HeapProps.Type = m_Desc.CPUAccessFlags == CPU_ACCESS_READ ? D3D12_HEAP_TYPE_READBACK : D3D12_HEAP_TYPE_UPLOAD;
         else
             HeapProps.Type = D3D12_HEAP_TYPE_DEFAULT;

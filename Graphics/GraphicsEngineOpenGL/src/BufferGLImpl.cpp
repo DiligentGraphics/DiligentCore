@@ -62,7 +62,7 @@ static GLenum GetBufferBindTarget(const BufferDesc& Desc)
 #endif
         Target = GL_DRAW_INDIRECT_BUFFER;
     }
-    else if (Desc.Usage == USAGE_CPU_ACCESSIBLE && Desc.CPUAccessFlags == CPU_ACCESS_WRITE)
+    else if (Desc.Usage == USAGE_STAGING && Desc.CPUAccessFlags == CPU_ACCESS_WRITE)
         Target = GL_PIXEL_UNPACK_BUFFER;
     
     return Target;

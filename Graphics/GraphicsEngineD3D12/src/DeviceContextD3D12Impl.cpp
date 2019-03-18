@@ -941,7 +941,7 @@ namespace Diligent
             LOG_WARNING_MESSAGE_ONCE("Mapping CPU buffer for reading on D3D12 currently requires flushing context and idling GPU");
             Flush();
             m_pDevice.RawPtr<RenderDeviceD3D12Impl>()->IdleGPU();
-            VERIFY(BuffDesc.Usage == USAGE_CPU_ACCESSIBLE, "Buffer must be created as USAGE_CPU_ACCESSIBLE to be mapped for reading");
+            VERIFY(BuffDesc.Usage == USAGE_STAGING, "Buffer must be created as USAGE_STAGING to be mapped for reading");
             D3D12_RANGE MapRange;
             MapRange.Begin = 0;
             MapRange.End = BuffDesc.uiSizeInBytes;
@@ -949,9 +949,9 @@ namespace Diligent
         }
         else if(MapType == MAP_WRITE)
         {
-            if (BuffDesc.Usage == USAGE_CPU_ACCESSIBLE)
+            if (BuffDesc.Usage == USAGE_STAGING)
             {
-                VERIFY(pd3d12Resource != nullptr, "USAGE_CPU_ACCESSIBLE buffer mapped for writing must intialize D3D12 resource");
+                VERIFY(pd3d12Resource != nullptr, "USAGE_STAGING buffer mapped for writing must intialize D3D12 resource");
                 if (MapFlags & MAP_FLAG_DISCARD)
                 {
                 
@@ -976,7 +976,7 @@ namespace Diligent
             }
             else
             {
-                LOG_ERROR("Only USAGE_DYNAMIC and USAGE_CPU_ACCESSIBLE D3D12 buffers can be mapped for writing");
+                LOG_ERROR("Only USAGE_DYNAMIC and USAGE_STAGING D3D12 buffers can be mapped for writing");
             }
         }
         else if(MapType == MAP_READ_WRITE)
@@ -1005,9 +1005,9 @@ namespace Diligent
         }
         else if(MapType == MAP_WRITE)
         {
-            if (BuffDesc.Usage == USAGE_CPU_ACCESSIBLE)
+            if (BuffDesc.Usage == USAGE_STAGING)
             {
-                VERIFY(pd3d12Resource != nullptr, "USAGE_CPU_ACCESSIBLE buffer mapped for writing must intialize D3D12 resource");
+                VERIFY(pd3d12Resource != nullptr, "USAGE_STAGING buffer mapped for writing must intialize D3D12 resource");
                 pd3d12Resource->Unmap(0, nullptr);
             }
             else if (BuffDesc.Usage == USAGE_DYNAMIC)

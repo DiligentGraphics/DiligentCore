@@ -52,7 +52,7 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters*        pRefCounters,
     if( m_Desc.Usage == USAGE_DYNAMIC && pBuffData != nullptr && pBuffData->pData != nullptr )
         LOG_BUFFER_ERROR_AND_THROW("Dynamic buffer must be initialized via Map()")
 
-    if (m_Desc.Usage == USAGE_CPU_ACCESSIBLE)
+    if (m_Desc.Usage == USAGE_STAGING)
     {
         if (m_Desc.CPUAccessFlags != CPU_ACCESS_WRITE && m_Desc.CPUAccessFlags != CPU_ACCESS_READ)
             LOG_BUFFER_ERROR_AND_THROW("Exactly one of the CPU_ACCESS_WRITE or CPU_ACCESS_READ flags must be specified for a cpu-accessible buffer")
@@ -171,7 +171,7 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters*        pRefCounters,
         VkMemoryRequirements MemReqs = LogicalDevice.GetBufferMemoryRequirements(m_VulkanBuffer);
 
         VkMemoryPropertyFlags BufferMemoryFlags = 0;
-        if (m_Desc.Usage == USAGE_CPU_ACCESSIBLE)
+        if (m_Desc.Usage == USAGE_STAGING)
             BufferMemoryFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
         else
             BufferMemoryFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;

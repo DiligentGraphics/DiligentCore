@@ -175,9 +175,9 @@ namespace Diligent
                         {
                             const auto &Desc = pBuffer->GetDesc();
                             BufferDesc BuffDesc;
-                            BuffDesc.Name = "Staging buffer for UploadBufferGL";
+                            BuffDesc.Name           = "Staging buffer for UploadBufferGL";
                             BuffDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
-                            BuffDesc.Usage = USAGE_CPU_ACCESSIBLE;
+                            BuffDesc.Usage          = USAGE_STAGING;
 
                             const auto &TexFmtInfo = m_pDevice->GetTextureFormatInfo(Desc.Format);
                             RowStride = Desc.Width * Uint32{TexFmtInfo.ComponentSize} * Uint32{TexFmtInfo.NumComponents};

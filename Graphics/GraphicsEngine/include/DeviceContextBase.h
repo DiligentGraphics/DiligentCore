@@ -764,18 +764,18 @@ inline void DeviceContextBase<BaseInterface,ImplementationTraits> ::
     switch( MapType )
     {
     case MAP_READ:
-        DEV_CHECK_ERR( BuffDesc.Usage == USAGE_CPU_ACCESSIBLE,      "Only buffers with usage USAGE_CPU_ACCESSIBLE can be read from" );
+        DEV_CHECK_ERR( BuffDesc.Usage == USAGE_STAGING,      "Only buffers with usage USAGE_STAGING can be read from" );
         DEV_CHECK_ERR( (BuffDesc.CPUAccessFlags & CPU_ACCESS_READ), "Buffer being mapped for reading was not created with CPU_ACCESS_READ flag" );
         DEV_CHECK_ERR( (MapFlags & MAP_FLAG_DISCARD) == 0, "MAP_FLAG_DISCARD is not valid when mapping buffer for reading" );
         break;
 
     case MAP_WRITE:
-        DEV_CHECK_ERR( BuffDesc.Usage == USAGE_DYNAMIC || BuffDesc.Usage == USAGE_CPU_ACCESSIBLE, "Only buffers with usage USAGE_CPU_ACCESSIBLE or USAGE_DYNAMIC can be mapped for writing" );
+        DEV_CHECK_ERR( BuffDesc.Usage == USAGE_DYNAMIC || BuffDesc.Usage == USAGE_STAGING, "Only buffers with usage USAGE_STAGING or USAGE_DYNAMIC can be mapped for writing" );
         DEV_CHECK_ERR( (BuffDesc.CPUAccessFlags & CPU_ACCESS_WRITE), "Buffer being mapped for writing was not created with CPU_ACCESS_WRITE flag" );
         break;
 
     case MAP_READ_WRITE:
-        DEV_CHECK_ERR( BuffDesc.Usage == USAGE_CPU_ACCESSIBLE,       "Only buffers with usage USAGE_CPU_ACCESSIBLE can be mapped for reading and writing" );
+        DEV_CHECK_ERR( BuffDesc.Usage == USAGE_STAGING,       "Only buffers with usage USAGE_STAGING can be mapped for reading and writing" );
         DEV_CHECK_ERR( (BuffDesc.CPUAccessFlags & CPU_ACCESS_WRITE), "Buffer being mapped for reading & writing was not created with CPU_ACCESS_WRITE flag" );
         DEV_CHECK_ERR( (BuffDesc.CPUAccessFlags & CPU_ACCESS_READ),  "Buffer being mapped for reading & writing was not created with CPU_ACCESS_READ flag" );
         DEV_CHECK_ERR( (MapFlags & MAP_FLAG_DISCARD) == 0, "MAP_FLAG_DISCARD is not valid when mapping buffer for reading and writing" );
@@ -792,7 +792,7 @@ inline void DeviceContextBase<BaseInterface,ImplementationTraits> ::
 
     if ( (MapFlags & MAP_FLAG_DISCARD) != 0 )
     {
-        DEV_CHECK_ERR( BuffDesc.Usage == USAGE_DYNAMIC || BuffDesc.Usage == USAGE_CPU_ACCESSIBLE, "Only dynamic and staging buffers can be mapped with discard flag" );
+        DEV_CHECK_ERR( BuffDesc.Usage == USAGE_DYNAMIC || BuffDesc.Usage == USAGE_STAGING, "Only dynamic and staging buffers can be mapped with discard flag" );
         DEV_CHECK_ERR( MapType == MAP_WRITE, "MAP_FLAG_DISCARD is only valid when mapping buffer for writing" );
     }
 }

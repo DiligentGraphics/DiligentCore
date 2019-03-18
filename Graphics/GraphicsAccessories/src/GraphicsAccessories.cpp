@@ -563,11 +563,11 @@ const Char* GetUsageString( USAGE Usage )
         INIT_USGAGE_STR( USAGE_STATIC );
         INIT_USGAGE_STR( USAGE_DEFAULT );
         INIT_USGAGE_STR( USAGE_DYNAMIC );
-        INIT_USGAGE_STR( USAGE_CPU_ACCESSIBLE );
+        INIT_USGAGE_STR( USAGE_STAGING );
 #undef  INIT_USGAGE_STR
         bUsageStringsInit = true;
     }
-    if( Usage >= USAGE_STATIC && Usage <= USAGE_CPU_ACCESSIBLE )
+    if( Usage >= USAGE_STATIC && Usage <= USAGE_STAGING )
         return UsageStrings[Usage];
     else
     {

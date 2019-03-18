@@ -91,10 +91,10 @@ inline GLenum UsageToGLUsage(USAGE Usage)
     // http://www.informit.com/articles/article.aspx?p=2033340&seqNum=2
     switch(Usage)
     {
-        case USAGE_STATIC:       return GL_STATIC_DRAW;
-        case USAGE_DEFAULT:      return GL_DYNAMIC_DRAW;
-        case USAGE_DYNAMIC:      return GL_STREAM_DRAW;
-        case USAGE_CPU_ACCESSIBLE: return GL_DYNAMIC_READ;
+        case USAGE_STATIC:      return GL_STATIC_DRAW;
+        case USAGE_DEFAULT:     return GL_DYNAMIC_DRAW;
+        case USAGE_DYNAMIC:     return GL_STREAM_DRAW;
+        case USAGE_STAGING:     return GL_DYNAMIC_READ;
         default: UNEXPECTED( "Unknow usage" ); return 0;
     }
 }
