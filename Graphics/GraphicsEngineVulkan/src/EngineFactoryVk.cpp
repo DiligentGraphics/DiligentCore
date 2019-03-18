@@ -56,8 +56,7 @@ public:
 
     void CreateDeviceAndContextsVk(const EngineVkCreateInfo& EngineCI, 
                                    IRenderDevice**           ppDevice, 
-                                   IDeviceContext**          ppContexts,
-                                   Uint32                    NumDeferredContexts)override final;
+                                   IDeviceContext**          ppContexts)override final;
 
     void AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::VulkanInstance>       Instance,
                               std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice> PhysicalDevice,
@@ -66,8 +65,7 @@ public:
                               ICommandQueueVk**         ppCommandQueues,
                               const EngineVkCreateInfo& EngineCI, 
                               IRenderDevice**           ppDevice, 
-                              IDeviceContext**          ppContexts,
-                              Uint32                    NumDeferredContexts);//override final;
+                              IDeviceContext**          ppContexts);//override final;
 
     void CreateSwapChainVk(IRenderDevice*       pDevice, 
                            IDeviceContext*      pImmediateContext, 
@@ -82,17 +80,12 @@ public:
 /// \param [out] ppDevice - Address of the memory location where pointer to 
 ///                         the created device will be written
 /// \param [out] ppContexts - Address of the memory location where pointers to 
-///                           the contexts will be written. The new immediate 
-///                           context goes at position 0. If NumDeferredContexts > 0,
+///                           the contexts will be written. Immediate context goes at
+///                           position 0. If EngineCI.NumDeferredContexts > 0,
 ///                           pointers to the deferred contexts are written afterwards.
-/// \param [in] NumDeferredContexts - Number of deferred contexts. If non-zero number
-///                                   of deferred contexts is requested, pointers to the
-///                                   contexts are written to ppContexts array starting 
-///                                   at position 1
 void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& EngineCI, 
                                                     IRenderDevice**           ppDevice, 
-                                                    IDeviceContext**          ppContexts,
-                                                    Uint32                    NumDeferredContexts)
+                                                    IDeviceContext**          ppContexts)
 {
     VERIFY( ppDevice && ppContexts, "Null pointer provided" );
     if( !ppDevice || !ppContexts )
@@ -120,7 +113,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
     SetRawAllocator(EngineCI.pRawMemAllocator);
 
     *ppDevice = nullptr;
-    memset(ppContexts, 0, sizeof(*ppContexts) * (1 + NumDeferredContexts));
+    memset(ppContexts, 0, sizeof(*ppContexts) * (1 + EngineCI.NumDeferredContexts));
 
     try
     {
@@ -192,7 +185,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
         pCmdQueueVk = NEW_RC_OBJ(RawMemAllocator, "CommandQueueVk instance", CommandQueueVkImpl)(LogicalDevice, QueueInfo.queueFamilyIndex);
 
         std::array<ICommandQueueVk*, 1> CommandQueues = {{pCmdQueueVk}};
-        AttachToVulkanDevice(Instance, std::move(PhysicalDevice), LogicalDevice, CommandQueues.size(), CommandQueues.data(), EngineCI, ppDevice, ppContexts, NumDeferredContexts);
+        AttachToVulkanDevice(Instance, std::move(PhysicalDevice), LogicalDevice, CommandQueues.size(), CommandQueues.data(), EngineCI, ppDevice, ppContexts);
 
         FenceDesc Desc;
         Desc.Name = "Command queue fence";
@@ -218,13 +211,9 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
 /// \param [out] ppDevice - Address of the memory location where pointer to 
 ///                         the created device will be written
 /// \param [out] ppContexts - Address of the memory location where pointers to 
-///                           the contexts will be written. Pointer to the immediate 
-///                           context goes at position 0. If NumDeferredContexts > 0,
-///                           pointers to the deferred contexts go afterwards.
-/// \param [in] NumDeferredContexts - Number of deferred contexts. If non-zero number
-///                                   of deferred contexts is requested, pointers to the
-///                                   contexts are written to ppContexts array starting 
-///                                   at position 1
+///                           the contexts will be written. Immediate context goes at
+///                           position 0. If EngineCI.NumDeferredContexts > 0,
+///                           pointers to the deferred contexts are written afterwards.
 void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::VulkanInstance>       Instance,
                                                std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice> PhysicalDevice,
                                                std::shared_ptr<VulkanUtilities::VulkanLogicalDevice>  LogicalDevice,
@@ -232,20 +221,19 @@ void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::
                                                ICommandQueueVk**           ppCommandQueues,
                                                const EngineVkCreateInfo&   EngineCI, 
                                                IRenderDevice**             ppDevice, 
-                                               IDeviceContext**            ppContexts,
-                                               Uint32                      NumDeferredContexts)
+                                               IDeviceContext**            ppContexts)
 {
     VERIFY( ppCommandQueues && ppDevice && ppContexts, "Null pointer provided" );
     if(!LogicalDevice || !ppCommandQueues || !ppDevice || !ppContexts )
         return;
 
     *ppDevice = nullptr;
-    memset(ppContexts, 0, sizeof(*ppContexts) * (1+NumDeferredContexts));
+    memset(ppContexts, 0, sizeof(*ppContexts) * (1 + EngineCI.NumDeferredContexts));
 
     try
     {
         auto &RawMemAllocator = GetRawAllocator();
-        RenderDeviceVkImpl *pRenderDeviceVk( NEW_RC_OBJ(RawMemAllocator, "RenderDeviceVkImpl instance", RenderDeviceVkImpl)(RawMemAllocator, EngineCI, CommandQueueCount, ppCommandQueues, Instance, std::move(PhysicalDevice), LogicalDevice, NumDeferredContexts ) );
+        RenderDeviceVkImpl *pRenderDeviceVk( NEW_RC_OBJ(RawMemAllocator, "RenderDeviceVkImpl instance", RenderDeviceVkImpl)(RawMemAllocator, EngineCI, CommandQueueCount, ppCommandQueues, Instance, std::move(PhysicalDevice), LogicalDevice) );
         pRenderDeviceVk->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice) );
 
         std::shared_ptr<GenerateMipsVkHelper> GenerateMipsHelper(new GenerateMipsVkHelper(*pRenderDeviceVk));
@@ -256,7 +244,7 @@ void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::
         pImmediateCtxVk->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppContexts) );
         pRenderDeviceVk->SetImmediateContext(pImmediateCtxVk);
 
-        for (Uint32 DeferredCtx = 0; DeferredCtx < NumDeferredContexts; ++DeferredCtx)
+        for (Uint32 DeferredCtx = 0; DeferredCtx < EngineCI.NumDeferredContexts; ++DeferredCtx)
         {
             RefCntAutoPtr<DeviceContextVkImpl> pDeferredCtxVk( NEW_RC_OBJ(RawMemAllocator, "DeviceContextVkImpl instance", DeviceContextVkImpl)(pRenderDeviceVk, true, EngineCI, 1+DeferredCtx, 0, GenerateMipsHelper) );
             // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceVk will
@@ -272,7 +260,7 @@ void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::
             (*ppDevice)->Release();
             *ppDevice = nullptr;
         }
-        for(Uint32 ctx=0; ctx < 1 + NumDeferredContexts; ++ctx)
+        for(Uint32 ctx=0; ctx < 1 + EngineCI.NumDeferredContexts; ++ctx)
         {
             if( ppContexts[ctx] != nullptr )
             {

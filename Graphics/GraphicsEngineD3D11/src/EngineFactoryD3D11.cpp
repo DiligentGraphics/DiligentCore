@@ -56,8 +56,7 @@ public:
 
     void CreateDeviceAndContextsD3D11(const EngineD3D11CreateInfo& EngineCI, 
                                       IRenderDevice**              ppDevice, 
-                                      IDeviceContext**             ppContexts,
-                                      Uint32                       NumDeferredContexts)override final;
+                                      IDeviceContext**             ppContexts)override final;
 
    void CreateSwapChainD3D11(IRenderDevice*            pDevice, 
                              IDeviceContext*           pImmediateContext, 
@@ -70,8 +69,7 @@ public:
                             void*                        pd3d11ImmediateContext,
                             const EngineD3D11CreateInfo& EngineCI, 
                             IRenderDevice**              ppDevice, 
-                            IDeviceContext**             ppContexts,
-                            Uint32                       NumDeferredContexts)override final;
+                            IDeviceContext**             ppContexts)override final;
 };
 
 
@@ -102,17 +100,12 @@ inline bool SdkLayersAvailable()
 /// \param [out] ppDevice - Address of the memory location where pointer to 
 ///                         the created device will be written
 /// \param [out] ppContexts - Address of the memory location where pointers to 
-///                           the contexts will be written. Pointer to the immediate 
-///                           context goes at position 0. If NumDeferredContexts > 0,
-///                           pointers to the deferred contexts go afterwards.
-/// \param [in] NumDeferredContexts - Number of deferred contexts. If non-zero number
-///                                   of deferred contexts is requested, pointers to the
-///                                   contexts are written to ppContexts array starting 
-///                                   at position 1
+///                           the contexts will be written. Immediate context goes at
+///                           position 0. If EngineCI.NumDeferredContexts > 0,
+///                           pointers to the deferred contexts are written afterwards.
 void EngineFactoryD3D11Impl::CreateDeviceAndContextsD3D11(const EngineD3D11CreateInfo& EngineCI, 
                                                           IRenderDevice**              ppDevice, 
-                                                          IDeviceContext**             ppContexts, 
-                                                          Uint32                       NumDeferredContexts )
+                                                          IDeviceContext**             ppContexts)
 {
     if (EngineCI.DebugMessageCallback != nullptr)
         SetDebugMessageCallback(EngineCI.DebugMessageCallback);
@@ -122,7 +115,7 @@ void EngineFactoryD3D11Impl::CreateDeviceAndContextsD3D11(const EngineD3D11Creat
         return;
 
     *ppDevice = nullptr;
-    memset(ppContexts, 0, sizeof(*ppContexts) * (1+NumDeferredContexts));
+    memset(ppContexts, 0, sizeof(*ppContexts) * (1 + EngineCI.NumDeferredContexts));
 
 	// This flag adds support for surfaces with a different color channel ordering
 	// than the API default. It is required for compatibility with Direct2D.
@@ -205,7 +198,7 @@ void EngineFactoryD3D11Impl::CreateDeviceAndContextsD3D11(const EngineD3D11Creat
         return;
 	}
 
-    AttachToD3D11Device(pd3d11Device, pd3d11Context, EngineCI, ppDevice, ppContexts, NumDeferredContexts);
+    AttachToD3D11Device(pd3d11Device, pd3d11Context, EngineCI, ppDevice, ppContexts);
 }
 
 
@@ -217,19 +210,14 @@ void EngineFactoryD3D11Impl::CreateDeviceAndContextsD3D11(const EngineD3D11Creat
 /// \param [out] ppDevice - Address of the memory location where pointer to 
 ///                         the created device will be written
 /// \param [out] ppContexts - Address of the memory location where pointers to 
-///                           the contexts will be written. Pointer to the immediate 
-///                           context goes at position 0. If NumDeferredContexts > 0,
-///                           pointers to deferred contexts go afterwards.
-/// \param [in] NumDeferredContexts - Number of deferred contexts. If non-zero number
-///                                   of deferred contexts is requested, pointers to the
-///                                   contexts are written to ppContexts array starting 
-///                                   at position 1
+///                           the contexts will be written. Immediate context goes at
+///                           position 0. If EngineCI.NumDeferredContexts > 0,
+///                           pointers to the deferred contexts are written afterwards.
 void EngineFactoryD3D11Impl::AttachToD3D11Device(void*                        pd3d11NativeDevice, 
                                                  void*                        pd3d11ImmediateContext,
                                                  const EngineD3D11CreateInfo& EngineCI, 
                                                  IRenderDevice**              ppDevice, 
-                                                 IDeviceContext**             ppContexts,
-                                                 Uint32                       NumDeferredContexts)
+                                                 IDeviceContext**             ppContexts)
 {
     if (EngineCI.DebugMessageCallback != nullptr)
         SetDebugMessageCallback(EngineCI.DebugMessageCallback);
@@ -246,7 +234,7 @@ void EngineFactoryD3D11Impl::AttachToD3D11Device(void*                        pd
         SetRawAllocator(EngineCI.pRawMemAllocator);
         auto &RawAlloctor = GetRawAllocator();
         RenderDeviceD3D11Impl *pRenderDeviceD3D11(NEW_RC_OBJ(RawAlloctor, "RenderDeviceD3D11Impl instance", RenderDeviceD3D11Impl)
-            (RawAlloctor, EngineCI, pd3d11Device, NumDeferredContexts));
+            (RawAlloctor, EngineCI, pd3d11Device, EngineCI.NumDeferredContexts));
         pRenderDeviceD3D11->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice));
 
         RefCntAutoPtr<DeviceContextD3D11Impl> pDeviceContextD3D11(NEW_RC_OBJ(RawAlloctor, "DeviceContextD3D11Impl instance", DeviceContextD3D11Impl)
@@ -256,7 +244,7 @@ void EngineFactoryD3D11Impl::AttachToD3D11Device(void*                        pd
         pDeviceContextD3D11->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppContexts));
         pRenderDeviceD3D11->SetImmediateContext(pDeviceContextD3D11);
 
-        for (Uint32 DeferredCtx = 0; DeferredCtx < NumDeferredContexts; ++DeferredCtx)
+        for (Uint32 DeferredCtx = 0; DeferredCtx < EngineCI.NumDeferredContexts; ++DeferredCtx)
         {
             CComPtr<ID3D11DeviceContext> pd3d11DeferredCtx;
             HRESULT hr = pd3d11Device->CreateDeferredContext(0, &pd3d11DeferredCtx);
@@ -277,7 +265,7 @@ void EngineFactoryD3D11Impl::AttachToD3D11Device(void*                        pd
             (*ppDevice)->Release();
             *ppDevice = nullptr;
         }
-        for(Uint32 ctx=0; ctx < 1 + NumDeferredContexts; ++ctx)
+        for(Uint32 ctx=0; ctx < 1 + EngineCI.NumDeferredContexts; ++ctx)
         {
             if( ppContexts[ctx] != nullptr )
             {

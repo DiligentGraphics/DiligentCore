@@ -44,15 +44,14 @@ RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters*                    
                                          ICommandQueueVk**                                       CmdQueues, 
                                          std::shared_ptr<VulkanUtilities::VulkanInstance>        Instance,
                                          std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice>  PhysicalDevice,
-                                         std::shared_ptr<VulkanUtilities::VulkanLogicalDevice>   LogicalDevice,
-                                         Uint32                                                  NumDeferredContexts) : 
+                                         std::shared_ptr<VulkanUtilities::VulkanLogicalDevice>   LogicalDevice) : 
     TRenderDeviceBase
     {
         pRefCounters,
         RawMemAllocator,
         CommandQueueCount,
         CmdQueues,
-        NumDeferredContexts,
+        EngineCI.NumDeferredContexts,
         sizeof(TextureVkImpl),
         sizeof(TextureViewVkImpl),
         sizeof(BufferVkImpl),

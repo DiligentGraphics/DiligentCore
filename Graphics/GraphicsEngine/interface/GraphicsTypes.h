@@ -1250,6 +1250,13 @@ namespace Diligent
 
         /// Pointer to the user-specified debug message callback function
         DebugMessageCallbackType DebugMessageCallback = nullptr;
+
+        /// Number of deferred contexts to create when initializing the engine. If non-zero number 
+        /// is given, pointers to the contexts are written to ppContexts array by the engine factory 
+        /// functions (IEngineFactoryD3D11::CreateDeviceAndContextsD3D11,
+        /// IEngineFactoryD3D12::CreateDeviceAndContextsD3D12, and IEngineFactoryVk::CreateDeviceAndContextsVk)
+        /// starting at position 1.
+        Uint32                   NumDeferredContexts  = 0;
     };
 
 

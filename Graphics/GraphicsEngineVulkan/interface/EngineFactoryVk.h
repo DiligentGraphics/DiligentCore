@@ -57,16 +57,14 @@ class IEngineFactoryVk : public IObject
 {
 public:
     virtual void CreateDeviceAndContextsVk(const EngineVkCreateInfo& EngineCI,
-        IRenderDevice **ppDevice,
-        IDeviceContext **ppContexts,
-        Uint32 NumDeferredContexts) = 0;
+                                           IRenderDevice**           ppDevice,
+                                           IDeviceContext**          ppContexts) = 0;
 
     //virtual void AttachToVulkanDevice(void *pVkNativeDevice, 
     //                                 class ICommandQueueVk *pCommandQueue,
     //                                 const EngineVkCreateInfo& EngineCI, 
     //                                 IRenderDevice **ppDevice, 
-    //                                 IDeviceContext **ppContexts,
-    //                                 Uint32 NumDeferredContexts) = 0;
+    //                                 IDeviceContext **ppContexts) = 0;
 
     virtual void CreateSwapChainVk(IRenderDevice*       pDevice,
                                    IDeviceContext*      pImmediateContext,

@@ -112,6 +112,11 @@ void EngineFactoryOpenGLImpl::CreateDeviceAndSwapChainGL(const EngineGLCreateInf
     if( !ppDevice || !ppImmediateContext || !ppSwapChain )
         return;
 
+    if (EngineCI.NumDeferredContexts > 0)
+    {
+        LOG_WARNING_MESSAGE("OpenGL back-end does not support deferred contexts");
+    }
+
     *ppDevice = nullptr;
     *ppImmediateContext = nullptr;
     *ppSwapChain = nullptr;
@@ -180,6 +185,11 @@ void EngineFactoryOpenGLImpl::AttachToActiveGLContext(const EngineGLCreateInfo& 
     VERIFY( ppDevice && ppImmediateContext, "Null pointer provided" );
     if( !ppDevice || !ppImmediateContext )
         return;
+
+    if (EngineCI.NumDeferredContexts > 0)
+    {
+        LOG_WARNING_MESSAGE("OpenGL back-end does not support deferred contexts");
+    }
 
     *ppDevice = nullptr;
     *ppImmediateContext = nullptr;

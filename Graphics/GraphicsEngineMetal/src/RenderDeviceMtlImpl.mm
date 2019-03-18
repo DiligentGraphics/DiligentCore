@@ -40,13 +40,12 @@ namespace Diligent
 RenderDeviceMtlImpl :: RenderDeviceMtlImpl(IReferenceCounters*        pRefCounters,
                                            IMemoryAllocator&          RawMemAllocator,
                                            const EngineMtlCreateInfo& EngineAttribs,
-                                           void*                      pMtlDevice,
-                                           Uint32                     NumDeferredContexts) : 
+                                           void*                      pMtlDevice) : 
     TRenderDeviceBase
     {
         pRefCounters,
         RawMemAllocator,
-        NumDeferredContexts,
+        EngineAttribs.NumDeferredContexts,
         sizeof(TextureMtlImpl),
         sizeof(TextureViewMtlImpl),
         sizeof(BufferMtlImpl),

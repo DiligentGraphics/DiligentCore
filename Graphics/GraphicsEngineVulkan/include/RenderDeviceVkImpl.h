@@ -55,15 +55,14 @@ class RenderDeviceVkImpl final : public RenderDeviceNextGenBase<RenderDeviceBase
 public:
     using TRenderDeviceBase = RenderDeviceNextGenBase<RenderDeviceBase<IRenderDeviceVk>, ICommandQueueVk>;
 
-    RenderDeviceVkImpl( IReferenceCounters*        pRefCounters, 
-                        IMemoryAllocator&          RawMemAllocator, 
-                        const EngineVkCreateInfo&  EngineCI, 
-                        size_t                     CommandQueueCount,
-                        ICommandQueueVk**          pCmdQueues, 
-                        std::shared_ptr<VulkanUtilities::VulkanInstance>        Instance,
-                        std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice>  PhysicalDevice,
-                        std::shared_ptr<VulkanUtilities::VulkanLogicalDevice>   LogicalDevice,
-                        Uint32                  NumDeferredContexts );
+    RenderDeviceVkImpl(IReferenceCounters*        pRefCounters, 
+                       IMemoryAllocator&          RawMemAllocator, 
+                       const EngineVkCreateInfo&  EngineCI, 
+                       size_t                     CommandQueueCount,
+                       ICommandQueueVk**          pCmdQueues, 
+                       std::shared_ptr<VulkanUtilities::VulkanInstance>        Instance,
+                       std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice>  PhysicalDevice,
+                       std::shared_ptr<VulkanUtilities::VulkanLogicalDevice>   LogicalDevice);
     ~RenderDeviceVkImpl();
 
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface )override final;

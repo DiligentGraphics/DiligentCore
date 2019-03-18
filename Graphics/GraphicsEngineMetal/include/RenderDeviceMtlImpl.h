@@ -42,8 +42,8 @@ public:
     RenderDeviceMtlImpl( IReferenceCounters*        pRefCounters,
                          IMemoryAllocator&          RawMemAllocator,
                          const EngineMtlCreateInfo& EngineAttribs,
-                         void*                      pMtlDevice,
-                         Uint32                     NumDeferredContexts );
+                         void*                      pMtlDevice);
+
     virtual void QueryInterface( const INTERFACE_ID& IID, IObject **ppInterface )override final;
 
     virtual void CreateBuffer(const BufferDesc& BuffDesc, const BufferData* pBuffData, IBuffer** ppBuffer)override final;

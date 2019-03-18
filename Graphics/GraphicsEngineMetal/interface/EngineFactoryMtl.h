@@ -48,8 +48,7 @@ class IEngineFactoryMtl : public IObject
 public:
     virtual void CreateDeviceAndContextsMtl(const EngineMtlCreateInfo& Attribs, 
                                             IRenderDevice**            ppDevice, 
-                                            IDeviceContext**           ppContexts,
-                                            Uint32                     NumDeferredContexts ) = 0;
+                                            IDeviceContext**           ppContexts) = 0;
 
    virtual void CreateSwapChainMtl( IRenderDevice*            pDevice, 
                                     IDeviceContext*           pImmediateContext, 
@@ -60,8 +59,7 @@ public:
    virtual void AttachToMtlDevice(void*                      pMtlNativeDevice, 
                                   const EngineMtlCreateInfo& EngineAttribs, 
                                   IRenderDevice**            ppDevice, 
-                                  IDeviceContext**           ppContexts,
-                                  Uint32                     NumDeferredContexts) = 0;
+                                  IDeviceContext**           ppContexts) = 0;
 };
 
 

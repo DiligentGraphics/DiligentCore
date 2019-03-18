@@ -45,28 +45,27 @@ class RenderDeviceD3D12Impl final : public RenderDeviceNextGenBase< RenderDevice
 public:
     using TRenderDeviceBase = RenderDeviceNextGenBase< RenderDeviceD3DBase<IRenderDeviceD3D12>, ICommandQueueD3D12 >;
 
-    RenderDeviceD3D12Impl( IReferenceCounters*          pRefCounters, 
-                           IMemoryAllocator&            RawMemAllocator, 
-                           const EngineD3D12CreateInfo& EngineCI, 
-                           ID3D12Device*                pD3D12Device, 
-                           size_t                       CommandQueueCount,
-                           ICommandQueueD3D12**         ppCmdQueues, 
-                           Uint32                       NumDeferredContexts );
+    RenderDeviceD3D12Impl(IReferenceCounters*          pRefCounters, 
+                          IMemoryAllocator&            RawMemAllocator, 
+                          const EngineD3D12CreateInfo& EngineCI, 
+                          ID3D12Device*                pD3D12Device, 
+                          size_t                       CommandQueueCount,
+                          ICommandQueueD3D12**         ppCmdQueues);
     ~RenderDeviceD3D12Impl();
 
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
 
-    virtual void CreatePipelineState( const PipelineStateDesc &PipelineDesc, IPipelineState **ppPipelineState )override final;
+    virtual void CreatePipelineState(const PipelineStateDesc& PipelineDesc, IPipelineState** ppPipelineState)override final;
 
-    virtual void CreateBuffer(const BufferDesc& BuffDesc, const BufferData* pBuffData, IBuffer **ppBuffer)override final;
+    virtual void CreateBuffer(const BufferDesc& BuffDesc, const BufferData* pBuffData, IBuffer** ppBuffer)override final;
 
-    virtual void CreateShader(const ShaderCreateInfo& ShaderCreateInfo, IShader **ppShader)override final;
+    virtual void CreateShader(const ShaderCreateInfo& ShaderCreateInfo, IShader** ppShader)override final;
 
-    virtual void CreateTexture(const TextureDesc& TexDesc, const TextureData* pData, ITexture **ppTexture)override final;
+    virtual void CreateTexture(const TextureDesc& TexDesc, const TextureData* pData, ITexture** ppTexture)override final;
     
-    void CreateTexture(const TextureDesc& TexDesc, ID3D12Resource* pd3d12Texture, RESOURCE_STATE InitialState, class TextureD3D12Impl **ppTexture);
+    void CreateTexture(const TextureDesc& TexDesc, ID3D12Resource* pd3d12Texture, RESOURCE_STATE InitialState, class TextureD3D12Impl** ppTexture);
     
-    virtual void CreateSampler(const SamplerDesc& SamplerDesc, ISampler **ppSampler)override final;
+    virtual void CreateSampler(const SamplerDesc& SamplerDesc, ISampler** ppSampler)override final;
 
     virtual void CreateFence(const FenceDesc& Desc, IFence** ppFence)override final;
 
@@ -74,7 +73,7 @@ public:
     
     virtual void CreateTextureFromD3DResource(ID3D12Resource* pd3d12Texture, RESOURCE_STATE InitialState, ITexture** ppTexture)override final;
 
-    virtual void CreateBufferFromD3DResource(ID3D12Resource* pd3d12Buffer, const BufferDesc& BuffDesc, RESOURCE_STATE InitialState, IBuffer **ppBuffer)override final;
+    virtual void CreateBufferFromD3DResource(ID3D12Resource* pd3d12Buffer, const BufferDesc& BuffDesc, RESOURCE_STATE InitialState, IBuffer** ppBuffer)override final;
 
     DescriptorHeapAllocation AllocateDescriptor( D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count = 1 );
     DescriptorHeapAllocation AllocateGPUDescriptors( D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count = 1 );
@@ -82,7 +81,7 @@ public:
 	void IdleGPU();
 
     using PooledCommandContext = std::unique_ptr<CommandContext, STDDeleterRawMem<CommandContext> >;
-    PooledCommandContext AllocateCommandContext(const Char *ID = "");
+    PooledCommandContext AllocateCommandContext(const Char* ID = "");
     void CloseAndExecuteTransientCommandContext(Uint32 CommandQueueIndex, PooledCommandContext&& Ctx);
     Uint64 CloseAndExecuteCommandContext(Uint32 QueueIndex, PooledCommandContext&& Ctx, bool DiscardStaleObjects, std::vector<std::pair<Uint64, RefCntAutoPtr<IFence> > >* pSignalFences);
 

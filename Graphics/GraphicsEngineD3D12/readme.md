@@ -17,18 +17,18 @@ using namespace Diligent;
   // Load the dll and import GetEngineFactoryD3D12() function
   LoadGraphicsEngineD3D12(GetEngineFactoryD3D12);
 #endif
-auto *pFactoryD3D11 = GetEngineFactoryD3D12();
-EngineD3D12Attribs EngD3D12Attribs;
-EngD3D12Attribs.CPUDescriptorHeapAllocationSize[0] = 1024;
-EngD3D12Attribs.CPUDescriptorHeapAllocationSize[1] = 32;
-EngD3D12Attribs.CPUDescriptorHeapAllocationSize[2] = 16;
-EngD3D12Attribs.CPUDescriptorHeapAllocationSize[3] = 16;
-EngD3D12Attribs.NumCommandsToFlushCmdList = 64;
+auto* pFactoryD3D11 = GetEngineFactoryD3D12();
+EngineD3D12CreateInfo EngineCI;
+EngineCI.CPUDescriptorHeapAllocationSize[0] = 1024;
+EngineCI.CPUDescriptorHeapAllocationSize[1] = 32;
+EngineCI.CPUDescriptorHeapAllocationSize[2] = 16;
+EngineCI.CPUDescriptorHeapAllocationSize[3] = 16;
+EngineCI.NumCommandsToFlushCmdList = 64;
 RefCntAutoPtr<IRenderDevice> pRenderDevice;
 RefCntAutoPtr<IDeviceContext> pImmediateContext;
 SwapChainDesc SwapChainDesc;
 RefCntAutoPtr<ISwapChain> pSwapChain;
-pFactoryD3D11->CreateDeviceAndContextsD3D12( EngD3D12Attribs, &pRenderDevice, &pImmediateContext, 0 );
+pFactoryD3D11->CreateDeviceAndContextsD3D12( EngineCI, &pRenderDevice, &pImmediateContext );
 pFactoryD3D11->CreateSwapChainD3D12( pRenderDevice, pImmediateContext, SwapChainDesc, hWnd, &pSwapChain );
 ```
 
@@ -83,17 +83,16 @@ Below are some of the methods that provide access to internal D3D12 objects:
 To attach diligent engine to existing D3D12 device, use the following factory function:
 
 ```cpp
-void IEngineFactoryD3D12::AttachToD3D12Device(void *pd3d12NativeDevice,
-                                              class ICommandQueueD3D12 *pCommandQueue,
-                                              const EngineD3D12Attribs& EngineAttribs,
-                                              IRenderDevice **ppDevice,
-                                              IDeviceContext **ppContexts,
-                                              Uint32 NumDeferredContexts);
+void IEngineFactoryD3D12::AttachToD3D12Device(void*							pd3d12NativeDevice,
+                                              class ICommandQueueD3D12*		pCommandQueue,
+                                              const EngineD3D12CreateInfo&  EngineCI,
+                                              IRenderDevice**				ppDevice,
+                                              IDeviceContext**				ppContexts);
 ```
 
-The method takes a pointer to the native D3D12 device `pd3d12NativeDevice`, initialization parameters `EngineAttribs`,
+The method takes a pointer to the native D3D12 device `pd3d12NativeDevice`, initialization parameters `EngineCI`,
 and returns diligent engine device interface in `ppDevice`, and diligent engine contexts in `ppContexts`. Pointer to the
-immediate goes at position 0. If `NumDeferredContexts` > 0, pointers to deferred contexts go afterwards.
+immediate goes at position 0. If `EngineCI.NumDeferredContexts` > 0, pointers to deferred contexts go afterwards.
 The function also takes a pointer to the command queue object `pCommandQueue`, which needs to implement
 `ICommandQueueD3D12` interface.
 

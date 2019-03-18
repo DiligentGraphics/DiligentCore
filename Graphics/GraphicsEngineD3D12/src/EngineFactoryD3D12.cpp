@@ -59,16 +59,14 @@ public:
 
     void CreateDeviceAndContextsD3D12(const EngineD3D12CreateInfo& EngineCI, 
                                       IRenderDevice**              ppDevice, 
-                                      IDeviceContext**             ppContexts,
-                                      Uint32                       NumDeferredContexts)override final;
+                                      IDeviceContext**             ppContexts)override final;
 
     void AttachToD3D12Device(void*                        pd3d12NativeDevice, 
                              size_t                       CommandQueueCount,
                              ICommandQueueD3D12**         ppCommandQueues,
                              const EngineD3D12CreateInfo& EngineCI, 
                              IRenderDevice**              ppDevice, 
-                             IDeviceContext**             ppContexts,
-                             Uint32                       NumDeferredContexts)override final;
+                             IDeviceContext**             ppContexts)override final;
 
     void CreateSwapChainD3D12( IRenderDevice*            pDevice, 
                                IDeviceContext*           pImmediateContext, 
@@ -111,17 +109,12 @@ void GetHardwareAdapter(IDXGIFactory2* pFactory, IDXGIAdapter1** ppAdapter)
 /// \param [out] ppDevice - Address of the memory location where pointer to 
 ///                         the created device will be written
 /// \param [out] ppContexts - Address of the memory location where pointers to 
-///                           the contexts will be written. The new immediate 
-///                           context goes at position 0. If NumDeferredContexts > 0,
+///                           the contexts will be written. Immediate context goes at
+///                           position 0. If EngineCI.NumDeferredContexts > 0,
 ///                           pointers to the deferred contexts are written afterwards.
-/// \param [in] NumDeferredContexts - Number of deferred contexts. If non-zero number
-///                                   of deferred contexts is requested, pointers to the
-///                                   contexts are written to ppContexts array starting 
-///                                   at position 1
 void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12CreateInfo& EngineCI, 
                                                           IRenderDevice**              ppDevice, 
-                                                          IDeviceContext**             ppContexts,
-                                                          Uint32                       NumDeferredContexts)
+                                                          IDeviceContext**             ppContexts)
 {
     if (EngineCI.DebugMessageCallback != nullptr)
         SetDebugMessageCallback(EngineCI.DebugMessageCallback);
@@ -148,7 +141,7 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
     }
 
     *ppDevice = nullptr;
-    memset(ppContexts, 0, sizeof(*ppContexts) * (1+NumDeferredContexts));
+    memset(ppContexts, 0, sizeof(*ppContexts) * (1 + EngineCI.NumDeferredContexts));
 
     RefCntAutoPtr<CommandQueueD3D12Impl> pCmdQueueD3D12;
     CComPtr<ID3D12Device> d3d12Device;
@@ -269,7 +262,7 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
     }
         
     std::array<ICommandQueueD3D12*, 1> CmdQueues = {pCmdQueueD3D12};
-    AttachToD3D12Device(d3d12Device, CmdQueues.size(), CmdQueues.data(), EngineCI, ppDevice, ppContexts, NumDeferredContexts);
+    AttachToD3D12Device(d3d12Device, CmdQueues.size(), CmdQueues.data(), EngineCI, ppDevice, ppContexts);
 }
 
 
@@ -282,20 +275,15 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
 /// \param [out] ppDevice - Address of the memory location where pointer to 
 ///                         the created device will be written
 /// \param [out] ppContexts - Address of the memory location where pointers to 
-///                           the contexts will be written. Pointer to the immediate 
-///                           context goes at position 0. If NumDeferredContexts > 0,
-///                           pointers to the deferred contexts go afterwards.
-/// \param [in] NumDeferredContexts - Number of deferred contexts. If non-zero number
-///                                   of deferred contexts is requested, pointers to the
-///                                   contexts are written to ppContexts array starting 
-///                                   at position 1
+///                           the contexts will be written. Immediate context goes at
+///                           position 0. If EngineCI.NumDeferredContexts > 0,
+///                           pointers to the deferred contexts are written afterwards.
 void EngineFactoryD3D12Impl::AttachToD3D12Device(void*                        pd3d12NativeDevice, 
                                                  size_t                       CommandQueueCount,
                                                  ICommandQueueD3D12**         ppCommandQueues,
                                                  const EngineD3D12CreateInfo& EngineCI, 
                                                  IRenderDevice**              ppDevice, 
-                                                 IDeviceContext**             ppContexts,
-                                                 Uint32                       NumDeferredContexts)
+                                                 IDeviceContext**             ppContexts)
 {
     if (EngineCI.DebugMessageCallback != nullptr)
         SetDebugMessageCallback(EngineCI.DebugMessageCallback);
@@ -305,14 +293,14 @@ void EngineFactoryD3D12Impl::AttachToD3D12Device(void*                        pd
         return;
 
     *ppDevice = nullptr;
-    memset(ppContexts, 0, sizeof(*ppContexts) * (1+NumDeferredContexts));
+    memset(ppContexts, 0, sizeof(*ppContexts) * (1 + EngineCI.NumDeferredContexts));
 
     try
     {
         SetRawAllocator(EngineCI.pRawMemAllocator);
         auto &RawMemAllocator = GetRawAllocator();
         auto d3d12Device = reinterpret_cast<ID3D12Device*>(pd3d12NativeDevice);
-        RenderDeviceD3D12Impl *pRenderDeviceD3D12( NEW_RC_OBJ(RawMemAllocator, "RenderDeviceD3D12Impl instance", RenderDeviceD3D12Impl)(RawMemAllocator, EngineCI, d3d12Device, CommandQueueCount, ppCommandQueues, NumDeferredContexts ) );
+        RenderDeviceD3D12Impl *pRenderDeviceD3D12( NEW_RC_OBJ(RawMemAllocator, "RenderDeviceD3D12Impl instance", RenderDeviceD3D12Impl)(RawMemAllocator, EngineCI, d3d12Device, CommandQueueCount, ppCommandQueues) );
         pRenderDeviceD3D12->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice) );
 
         RefCntAutoPtr<DeviceContextD3D12Impl> pImmediateCtxD3D12( NEW_RC_OBJ(RawMemAllocator, "DeviceContextD3D12Impl instance", DeviceContextD3D12Impl)(pRenderDeviceD3D12, false, EngineCI, 0, 0) );
@@ -321,7 +309,7 @@ void EngineFactoryD3D12Impl::AttachToD3D12Device(void*                        pd
         pImmediateCtxD3D12->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppContexts) );
         pRenderDeviceD3D12->SetImmediateContext(pImmediateCtxD3D12);
 
-        for (Uint32 DeferredCtx = 0; DeferredCtx < NumDeferredContexts; ++DeferredCtx)
+        for (Uint32 DeferredCtx = 0; DeferredCtx < EngineCI.NumDeferredContexts; ++DeferredCtx)
         {
             RefCntAutoPtr<DeviceContextD3D12Impl> pDeferredCtxD3D12( NEW_RC_OBJ(RawMemAllocator, "DeviceContextD3D12Impl instance", DeviceContextD3D12Impl)(pRenderDeviceD3D12, true, EngineCI, 1+DeferredCtx, 0) );
             // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceD3D12 will
@@ -337,7 +325,7 @@ void EngineFactoryD3D12Impl::AttachToD3D12Device(void*                        pd
             (*ppDevice)->Release();
             *ppDevice = nullptr;
         }
-        for(Uint32 ctx=0; ctx < 1 + NumDeferredContexts; ++ctx)
+        for(Uint32 ctx=0; ctx < 1 + EngineCI.NumDeferredContexts; ++ctx)
         {
             if( ppContexts[ctx] != nullptr )
             {

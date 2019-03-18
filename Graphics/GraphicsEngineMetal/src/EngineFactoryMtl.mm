@@ -50,10 +50,9 @@ public:
         TBase(IID_EngineFactoryMtl)
     {}
 
-    void CreateDeviceAndContextsMtl(const EngineMtlCreateInfo&  EngineAttribs, 
+    void CreateDeviceAndContextsMtl(const EngineMtlCreateInfo&  EngineCI, 
                                     IRenderDevice**             ppDevice, 
-                                    IDeviceContext**            ppContexts,
-                                    Uint32                      NumDeferredContexts )override final;
+                                    IDeviceContext**            ppContexts)override final;
 
    void CreateSwapChainMtl( IRenderDevice*            pDevice, 
                             IDeviceContext*           pImmediateContext, 
@@ -62,43 +61,37 @@ public:
                             ISwapChain**              ppSwapChain )override final;
 
    void AttachToMtlDevice(void*                       pMtlNativeDevice, 
-                          const EngineMtlCreateInfo&  EngineAttribs, 
+                          const EngineMtlCreateInfo&  EngineCI, 
                           IRenderDevice**             ppDevice, 
-                          IDeviceContext**            ppContexts,
-                          Uint32                      NumDeferredContexts)override final;
+                          IDeviceContext**            ppContexts)override final;
 };
 
 
 /// Creates render device and device contexts for Metal-based engine implementation
 
-/// \param [in] EngineAttribs - Engine creation attributes.
+/// \param [in] EngineCI - Engine creation attributes.
 /// \param [out] ppDevice - Address of the memory location where pointer to 
 ///                         the created device will be written
 /// \param [out] ppContexts - Address of the memory location where pointers to 
-///                           the contexts will be written. Pointer to the immediate 
-///                           context goes at position 0. If NumDeferredContexts > 0,
+///                           the contexts will be written. Immediate context goes at 
+///                           position 0. If EngineCI.NumDeferredContexts > 0,
 ///                           pointers to the deferred contexts go afterwards.
-/// \param [in] NumDeferredContexts - Number of deferred contexts. If non-zero number
-///                                   of deferred contexts is requested, pointers to the
-///                                   contexts are written to ppContexts array starting 
-///                                   at position 1
-void EngineFactoryMtlImpl::CreateDeviceAndContextsMtl(const EngineMtlCreateInfo&  EngineAttribs, 
+void EngineFactoryMtlImpl::CreateDeviceAndContextsMtl(const EngineMtlCreateInfo&  EngineCI, 
                                                       IRenderDevice**             ppDevice, 
-                                                      IDeviceContext**            ppContexts, 
-                                                      Uint32                      NumDeferredContexts )
+                                                      IDeviceContext**            ppContexts)
 {
-    if (EngineAttribs.DebugMessageCallback != nullptr)
-        SetDebugMessageCallback(EngineAttribs.DebugMessageCallback);
+    if (EngineCI.DebugMessageCallback != nullptr)
+        SetDebugMessageCallback(EngineCI.DebugMessageCallback);
 
     VERIFY( ppDevice && ppContexts, "Null pointer provided" );
     if( !ppDevice || !ppContexts )
         return;
 
     *ppDevice = nullptr;
-    memset(ppContexts, 0, sizeof(*ppContexts) * (1+NumDeferredContexts));
+    memset(ppContexts, 0, sizeof(*ppContexts) * (1 + EngineCI.NumDeferredContexts));
 
     void* pMtlDevice = nullptr;
-    AttachToMtlDevice(pMtlDevice, EngineAttribs, ppDevice, ppContexts, NumDeferredContexts);
+    AttachToMtlDevice(pMtlDevice, EngineCI, ppDevice, ppContexts);
 }
 
 
@@ -106,25 +99,20 @@ void EngineFactoryMtlImpl::CreateDeviceAndContextsMtl(const EngineMtlCreateInfo&
 
 /// \param [in] pMtlNativeDevice - pointer to native Mtl device
 /// \param [in] pMtlImmediateContext - pointer to native Mtl immediate context
-/// \param [in] EngineAttribs - Engine creation attributes.
+/// \param [in] EngineCI - Engine creation attributes.
 /// \param [out] ppDevice - Address of the memory location where pointer to 
 ///                         the created device will be written
 /// \param [out] ppContexts - Address of the memory location where pointers to 
-///                           the contexts will be written. Pointer to the immediate 
-///                           context goes at position 0. If NumDeferredContexts > 0,
-///                           pointers to deferred contexts go afterwards.
-/// \param [in] NumDeferredContexts - Number of deferred contexts. If non-zero number
-///                                   of deferred contexts is requested, pointers to the
-///                                   contexts are written to ppContexts array starting 
-///                                   at position 1
+///                           the contexts will be written. Immediate context goes at 
+///                           position 0. If EngineCI.NumDeferredContexts > 0,
+///                           pointers to the deferred contexts go afterwards.
 void EngineFactoryMtlImpl::AttachToMtlDevice(void*                       pMtlNativeDevice, 
-                                             const EngineMtlCreateInfo&  EngineAttribs, 
+                                             const EngineMtlCreateInfo&  EngineCI, 
                                              IRenderDevice**			 ppDevice, 
-                                             IDeviceContext**			 ppContexts,
-                                             Uint32						 NumDeferredContexts)
+                                             IDeviceContext**			 ppContexts)
 {
-    if (EngineAttribs.DebugMessageCallback != nullptr)
-        SetDebugMessageCallback(EngineAttribs.DebugMessageCallback);
+    if (EngineCI.DebugMessageCallback != nullptr)
+        SetDebugMessageCallback(EngineCI.DebugMessageCallback);
 
     VERIFY( ppDevice && ppContexts, "Null pointer provided" );
     if( !ppDevice || !ppContexts )
@@ -132,25 +120,25 @@ void EngineFactoryMtlImpl::AttachToMtlDevice(void*                       pMtlNat
 
     try
     {
-        SetRawAllocator(EngineAttribs.pRawMemAllocator);
-        auto &RawAlloctor = GetRawAllocator();
-        RenderDeviceMtlImpl *pRenderDeviceMtl(NEW_RC_OBJ(RawAlloctor, "RenderDeviceMtlImpl instance", RenderDeviceMtlImpl)
-                                                        (RawAlloctor, EngineAttribs, pMtlNativeDevice, NumDeferredContexts));
+        SetRawAllocator(EngineCI.pRawMemAllocator);
+        auto& RawAlloctor = GetRawAllocator();
+        RenderDeviceMtlImpl* pRenderDeviceMtl(NEW_RC_OBJ(RawAlloctor, "RenderDeviceMtlImpl instance", RenderDeviceMtlImpl)
+                                                        (RawAlloctor, EngineCI, pMtlNativeDevice));
         pRenderDeviceMtl->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice));
 
         RefCntAutoPtr<DeviceContextMtlImpl> pDeviceContextMtl(NEW_RC_OBJ(RawAlloctor, "DeviceContextMtlImpl instance", DeviceContextMtlImpl)
-                                                                        (RawAlloctor, pRenderDeviceMtl, EngineAttribs, false));
+                                                                        (RawAlloctor, pRenderDeviceMtl, EngineCI, false));
         
         // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceMtl will
         // keep a weak reference to the context
         pDeviceContextMtl->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppContexts));
         pRenderDeviceMtl->SetImmediateContext(pDeviceContextMtl);
 
-        for (Uint32 DeferredCtx = 0; DeferredCtx < NumDeferredContexts; ++DeferredCtx)
+        for (Uint32 DeferredCtx = 0; DeferredCtx < EngineCI.NumDeferredContexts; ++DeferredCtx)
         {
             RefCntAutoPtr<DeviceContextMtlImpl> pDeferredCtxMtl(
                 NEW_RC_OBJ(RawAlloctor, "DeviceContextMtlImpl instance", DeviceContextMtlImpl)
-                          (RawAlloctor, pRenderDeviceMtl, EngineAttribs, true));
+                          (RawAlloctor, pRenderDeviceMtl, EngineCI, true));
             // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceD3D12 will
             // keep a weak reference to the context
             pDeferredCtxMtl->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppContexts + 1 + DeferredCtx));
@@ -164,7 +152,7 @@ void EngineFactoryMtlImpl::AttachToMtlDevice(void*                       pMtlNat
             (*ppDevice)->Release();
             *ppDevice = nullptr;
         }
-        for(Uint32 ctx=0; ctx < 1 + NumDeferredContexts; ++ctx)
+        for(Uint32 ctx=0; ctx < 1 + EngineCI.NumDeferredContexts; ++ctx)
         {
             if( ppContexts[ctx] != nullptr )
             {

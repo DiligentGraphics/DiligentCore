@@ -30,7 +30,7 @@ RefCntAutoPtr<IRenderDevice> pRenderDevice;
 RefCntAutoPtr<IDeviceContext> pImmediateContext;
 SwapChainDesc SwapChainDesc;
 RefCntAutoPtr<ISwapChain> pSwapChain;
-pFactoryD3D11->CreateDeviceAndContextsD3D11( DeviceAttribs, &pRenderDevice, &pImmediateContext, 0 );
+pFactoryD3D11->CreateDeviceAndContextsD3D11( DeviceAttribs, &pRenderDevice, &pImmediateContext );
 pFactoryD3D11->CreateSwapChainD3D11( pRenderDevice, pImmediateContext, SwapChainDesc, hWnd, &pSwapChain );
 ```
 

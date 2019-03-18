@@ -42,15 +42,14 @@ RenderDeviceD3D12Impl :: RenderDeviceD3D12Impl(IReferenceCounters*           pRe
                                                const EngineD3D12CreateInfo&  EngineCI,
                                                ID3D12Device*                 pd3d12Device,
                                                size_t                        CommandQueueCount,
-                                               ICommandQueueD3D12**          ppCmdQueues, 
-                                               Uint32                        NumDeferredContexts) : 
+                                               ICommandQueueD3D12**          ppCmdQueues) : 
     TRenderDeviceBase
     {
         pRefCounters,
         RawMemAllocator,
         CommandQueueCount,
         ppCmdQueues,
-        NumDeferredContexts,
+        EngineCI.NumDeferredContexts,
         sizeof(TextureD3D12Impl),
         sizeof(TextureViewD3D12Impl),
         sizeof(BufferD3D12Impl),

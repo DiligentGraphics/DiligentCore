@@ -49,22 +49,20 @@ class IEngineFactoryD3D11 : public IObject
 public:
     virtual void CreateDeviceAndContextsD3D11(const EngineD3D11CreateInfo& EngineCI, 
                                               IRenderDevice**              ppDevice, 
-                                              IDeviceContext**             ppContexts,
-                                              Uint32                       NumDeferredContexts ) = 0;
+                                              IDeviceContext**             ppContexts) = 0;
 
    virtual void CreateSwapChainD3D11( IRenderDevice*            pDevice, 
                                       IDeviceContext*           pImmediateContext, 
                                       const SwapChainDesc&      SCDesc, 
                                       const FullScreenModeDesc& FSDesc,
                                       void*                     pNativeWndHandle, 
-                                      ISwapChain**              ppSwapChain ) = 0;
+                                      ISwapChain**              ppSwapChain) = 0;
 
    virtual void AttachToD3D11Device(void*                        pd3d11NativeDevice, 
                                     void*                        pd3d11ImmediateContext,
                                     const EngineD3D11CreateInfo& EngineCI, 
                                     IRenderDevice**              ppDevice, 
-                                    IDeviceContext**             ppContexts,
-                                    Uint32                       NumDeferredContexts) = 0;
+                                    IDeviceContext**             ppContexts) = 0;
 
    virtual void EnumerateHardwareAdapters(Uint32&                 NumAdapters, 
                                           HardwareAdapterAttribs* Adapters) = 0;
