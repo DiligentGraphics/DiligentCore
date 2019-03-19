@@ -43,9 +43,13 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters,
                                const TextureData*           pInitData /*= nullptr*/) : 
     TTextureBase(pRefCounters, TexViewObjAllocator, pRenderDeviceVk, TexDesc)
 {
-    if( m_Desc.Usage == USAGE_STATIC && (pInitData == nullptr || pInitData->pSubResources == nullptr) )
-        LOG_ERROR_AND_THROW("Static textures must be initialized with data at creation time");
-    
+    if (m_Desc.Usage == USAGE_STATIC && (pInitData == nullptr || pInitData->pSubResources == nullptr))
+        LOG_ERROR_AND_THROW("Static textures must be initialized with data at creation time: pInitData can't be null");
+
+    const auto& FmtAttribs = GetTextureFormatAttribs(m_Desc.Format);
+    if ((m_Desc.MiscFlags & MISC_TEXTURE_FLAG_GENERATE_MIPS) != 0 && FmtAttribs.IsTypeless)
+        LOG_ERROR_AND_THROW("Textures created with MISC_TEXTURE_FLAG_GENERATE_MIPS flag can't use typeless formats. The following format was provided: ", FmtAttribs.Name, " when attempting to create texture '", m_Desc.Name, "'");
+
     const auto& LogicalDevice = pRenderDeviceVk->GetLogicalDevice();
 
     VkImageCreateInfo ImageCI = {};
@@ -54,7 +58,6 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters,
     ImageCI.flags = 0;
     if(m_Desc.Type == RESOURCE_DIM_TEX_CUBE || m_Desc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY)
         ImageCI.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
-    const auto &FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
     if(FmtAttribs.IsTypeless)
         ImageCI.flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT; // Specifies that the image can be used to create a 
                                                              // VkImageView with a different format from the image.

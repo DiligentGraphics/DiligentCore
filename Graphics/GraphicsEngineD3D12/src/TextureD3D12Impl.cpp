@@ -78,8 +78,12 @@ TextureD3D12Impl :: TextureD3D12Impl(IReferenceCounters*        pRefCounters,
                                      const TextureData*         pInitData /*= nullptr*/) : 
     TTextureBase(pRefCounters, TexViewObjAllocator, pRenderDeviceD3D12, TexDesc)
 {
-    if( m_Desc.Usage == USAGE_STATIC && (pInitData == nullptr || pInitData->pSubResources == nullptr))
-        LOG_ERROR_AND_THROW("Static textures must be initialized with data at creation time");
+    if (m_Desc.Usage == USAGE_STATIC && (pInitData == nullptr || pInitData->pSubResources == nullptr))
+        LOG_ERROR_AND_THROW("Static textures must be initialized with data at creation time: pInitData can't be null");
+
+    const auto& FmtAttribs = GetTextureFormatAttribs(m_Desc.Format);
+    if ((m_Desc.MiscFlags & MISC_TEXTURE_FLAG_GENERATE_MIPS) != 0 && FmtAttribs.IsTypeless)
+        LOG_ERROR_AND_THROW("Textures created with MISC_TEXTURE_FLAG_GENERATE_MIPS flag can't use typeless formats. The following format was provided: ", FmtAttribs.Name, " when attempting to create texture '", m_Desc.Name, "'");
 
 	D3D12_RESOURCE_DESC Desc = {};
 	Desc.Alignment = 0;
