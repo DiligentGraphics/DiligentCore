@@ -135,8 +135,16 @@ VulkanMemoryAllocation VulkanMemoryManager::Allocate(VkDeviceSize Size, VkDevice
 {
     VulkanMemoryAllocation Allocation;
 
+    // On integrated GPUs, there is no difference between host-visible and GPU-only
+    // memory, so MemoryTypeIndex is the same. As GPU-only pages do not have CPU address, 
+    // we need to use HostVisible flag to differentiate the two.
+    // It is likely a good idea to always keep staging pages separate to reduce fragmenation 
+    // even though on integrated GPUs same pages can be used for both GPU-only and staging 
+    // allocations. Staging allocations are short-living and will be released when upload is 
+    // complete, while GPU-only allocations are expected to be long-living.
+    MemoryPageIndex PageIdx{MemoryTypeIndex, HostVisible};
     std::lock_guard<std::mutex> Lock(m_PagesMtx);
-    auto range = m_Pages.equal_range(MemoryTypeIndex);
+    auto range = m_Pages.equal_range(PageIdx);
     for(auto page_it = range.first; page_it != range.second; ++page_it)
     {
         Allocation = page_it->second.Allocate(Size, Alignment);
@@ -154,7 +162,7 @@ VulkanMemoryAllocation VulkanMemoryManager::Allocate(VkDeviceSize Size, VkDevice
         m_CurrAllocatedSize[stat_ind] += PageSize;
         m_PeakAllocatedSize[stat_ind] = std::max(m_PeakAllocatedSize[stat_ind], m_CurrAllocatedSize[stat_ind]);
 
-        auto it = m_Pages.emplace(MemoryTypeIndex, VulkanMemoryPage{*this, PageSize, MemoryTypeIndex, HostVisible});
+        auto it = m_Pages.emplace(PageIdx, VulkanMemoryPage{*this, PageSize, MemoryTypeIndex, HostVisible});
         LOG_INFO_MESSAGE("VulkanMemoryManager '", m_MgrName, "': created new ", (HostVisible ? "host-visible" : "device-local"), 
                          " page. (", Diligent::FormatMemorySize(PageSize, 2), ", type idx: ", MemoryTypeIndex, 
                          "). Current allocated size: ", Diligent::FormatMemorySize(m_CurrAllocatedSize[stat_ind], 2));

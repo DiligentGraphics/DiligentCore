@@ -33,6 +33,7 @@
 #include "VulkanUtilities/VulkanPhysicalDevice.h"
 #include "VulkanUtilities/VulkanLogicalDevice.h"
 #include "VulkanUtilities/VulkanObjectWrappers.h"
+#include "HashUtils.h"
 
 namespace VulkanUtilities
 {
@@ -199,7 +200,32 @@ protected:
     Diligent::IMemoryAllocator& m_Allocator;
 
     std::mutex m_PagesMtx;
-    std::unordered_multimap<uint32_t, VulkanMemoryPage> m_Pages;
+    struct MemoryPageIndex
+    {
+        const uint32_t MemoryTypeIndex;
+        const bool     IsHostVisible;
+
+        MemoryPageIndex(uint32_t _MemoryTypeIndex,
+                        bool     _IsHostVisible) : 
+            MemoryTypeIndex(_MemoryTypeIndex),
+            IsHostVisible  (_IsHostVisible)
+        {}
+
+        bool operator == (const MemoryPageIndex& rhs)const
+        {
+            return MemoryTypeIndex == rhs.MemoryTypeIndex &&
+                   IsHostVisible   == rhs.IsHostVisible;
+        }
+
+        struct Hasher
+        {
+            size_t operator()(const MemoryPageIndex& PageIndex)const
+            {
+                return Diligent::ComputeHash(PageIndex.MemoryTypeIndex, PageIndex.IsHostVisible);
+            }
+        };
+    };
+    std::unordered_multimap<MemoryPageIndex, VulkanMemoryPage, MemoryPageIndex::Hasher> m_Pages;
     
     const VkDeviceSize m_DeviceLocalPageSize;
     const VkDeviceSize m_HostVisiblePageSize;
