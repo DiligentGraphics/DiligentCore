@@ -588,12 +588,22 @@ void RootSignature::InitResourceCache(RenderDeviceD3D12Impl*    pDeviceD3D12Impl
                 m_TotalSamplerSlots[SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE];
 
     DescriptorHeapAllocation CbcSrvUavHeapSpace, SamplerHeapSpace;
-    if(TotalSrvCbvUavDescriptors)
+    if (TotalSrvCbvUavDescriptors)
+    {
         CbcSrvUavHeapSpace = pDeviceD3D12Impl->AllocateGPUDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, TotalSrvCbvUavDescriptors);
+        DEV_CHECK_ERR(!CbcSrvUavHeapSpace.IsNull(), 
+                      "Failed to allocate ", TotalSrvCbvUavDescriptors, " GPU-visible CBV/SRV/UAV descriptor", (TotalSrvCbvUavDescriptors > 1 ? "s" : ""), ". "
+                      "Consider increasing GPUDescriptorHeapSize[0] in EngineD3D12CreateInfo.");
+    }
     VERIFY_EXPR(TotalSrvCbvUavDescriptors == 0 && CbcSrvUavHeapSpace.IsNull() || CbcSrvUavHeapSpace.GetNumHandles() == TotalSrvCbvUavDescriptors);
 
-    if(TotalSamplerDescriptors)
+    if (TotalSamplerDescriptors)
+    {
         SamplerHeapSpace = pDeviceD3D12Impl->AllocateGPUDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, TotalSamplerDescriptors);
+        DEV_CHECK_ERR(!SamplerHeapSpace.IsNull(), 
+                      "Failed to allocate ", TotalSamplerDescriptors, " GPU-visible Sampler descriptor", (TotalSamplerDescriptors > 1 ? "s" : ""), ". "
+                      "Consider using static samplers in the Pipeline State Object or increasing GPUDescriptorHeapSize[1] in EngineD3D12CreateInfo.");
+    }
     VERIFY_EXPR(TotalSamplerDescriptors == 0 && SamplerHeapSpace.IsNull() || SamplerHeapSpace.GetNumHandles() == TotalSamplerDescriptors);
 
     // Iterate through all root static/mutable tables and assign start offsets. The tables are tightly packed, so
@@ -891,10 +901,23 @@ void RootSignature::CommitDescriptorHandlesInternal_SMD(RenderDeviceD3D12Impl*  
     VERIFY_EXPR(NumDynamicCbvSrvUavDescriptors > 0 || NumDynamicSamplerDescriptors > 0);
 
     DescriptorHeapAllocation DynamicCbvSrvUavDescriptors, DynamicSamplerDescriptors;
-    if (NumDynamicCbvSrvUavDescriptors)
+    if (NumDynamicCbvSrvUavDescriptors > 0)
+    {
         DynamicCbvSrvUavDescriptors = Ctx.AllocateDynamicGPUVisibleDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, NumDynamicCbvSrvUavDescriptors);
-    if (NumDynamicSamplerDescriptors)
+        DEV_CHECK_ERR(DynamicCbvSrvUavDescriptors.GetDescriptorHeap() != nullptr, 
+                      "Failed to allocate ", NumDynamicCbvSrvUavDescriptors, " dynamic GPU-visible CBV/SRV/UAV descriptor", (NumDynamicCbvSrvUavDescriptors > 1 ? "s" : ""), ". "
+                      "Consider increasing GPUDescriptorHeapDynamicSize[0] in EngineD3D12CreateInfo "
+                      "or optimizing dynamic resource utilization by using static or mutable shader resource variables instead.");
+    }
+
+    if (NumDynamicSamplerDescriptors > 0)
+    {
         DynamicSamplerDescriptors = Ctx.AllocateDynamicGPUVisibleDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, NumDynamicSamplerDescriptors);
+        DEV_CHECK_ERR(DynamicSamplerDescriptors.GetDescriptorHeap() != nullptr, 
+                      "Failed to allocate ", NumDynamicSamplerDescriptors, " dynamic GPU-visible Sampler descriptor", (NumDynamicSamplerDescriptors > 1 ? "s" : ""), ". "
+                      "Consider using static samplers in the Pipeline State Object, increasing GPUDescriptorHeapDynamicSize[1] in "
+                      "EngineD3D12CreateInfo, or optimizing dynamic resource utilization by using static or mutable shader resource variables instead.");
+    }
 
     CommandContext::ShaderDescriptorHeaps Heaps(ResourceCache.GetSrvCbvUavDescriptorHeap(), ResourceCache.GetSamplerDescriptorHeap());
     if (Heaps.pSamplerHeap == nullptr)
@@ -903,9 +926,9 @@ void RootSignature::CommitDescriptorHandlesInternal_SMD(RenderDeviceD3D12Impl*  
     if (Heaps.pSrvCbvUavHeap == nullptr)
         Heaps.pSrvCbvUavHeap = DynamicCbvSrvUavDescriptors.GetDescriptorHeap();
 
-    if (NumDynamicCbvSrvUavDescriptors)
+    if (NumDynamicCbvSrvUavDescriptors > 0)
         VERIFY(DynamicCbvSrvUavDescriptors.GetDescriptorHeap() == Heaps.pSrvCbvUavHeap, "Inconsistent CbvSrvUav descriptor heaps" );
-    if (NumDynamicSamplerDescriptors)
+    if (NumDynamicSamplerDescriptors > 0)
         VERIFY(DynamicSamplerDescriptors.GetDescriptorHeap() == Heaps.pSamplerHeap, "Inconsistent Sampler descriptor heaps" );
 
     if (Heaps)

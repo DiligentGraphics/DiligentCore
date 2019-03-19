@@ -27,5 +27,4 @@
 namespace Diligent
 {
     const Char* GetD3D12DescriptorHeapTypeLiteralName(D3D12_DESCRIPTOR_HEAP_TYPE Type);
-
 }
