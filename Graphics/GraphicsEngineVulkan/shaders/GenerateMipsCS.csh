@@ -10,7 +10,10 @@
 #define IMG_FORMAT rgba8
 #endif
 
-layout(IMG_FORMAT) uniform writeonly image2DArray OutMip[4];
+layout(IMG_FORMAT) uniform writeonly image2DArray OutMip0;
+layout(IMG_FORMAT) uniform writeonly image2DArray OutMip1;
+layout(IMG_FORMAT) uniform writeonly image2DArray OutMip2;
+layout(IMG_FORMAT) uniform writeonly image2DArray OutMip3;
 
 uniform sampler2DArray SrcMip;
 
@@ -134,7 +137,7 @@ void main()
         Src1 *= 0.25;
 #endif
 
-        imageStore(OutMip[0], ivec3(GlobalInd.xy, ArraySlice), PackColor(Src1));
+        imageStore(OutMip0, ivec3(GlobalInd.xy, ArraySlice), PackColor(Src1));
     }
 
     // A scalar (constant) branch can exit all threads coherently.
@@ -164,7 +167,7 @@ void main()
             vec4 Src4 = LoadColor(LocalInd + 0x09u);
             Src1 = 0.25 * (Src1 + Src2 + Src3 + Src4);
 
-            imageStore(OutMip[1], ivec3(GlobalInd.xy / 2u, ArraySlice), PackColor(Src1));
+            imageStore(OutMip1, ivec3(GlobalInd.xy / 2u, ArraySlice), PackColor(Src1));
             StoreColor(LocalInd, Src1);
         }
     }
@@ -184,7 +187,7 @@ void main()
             vec4 Src4 = LoadColor(LocalInd + 0x12u);
             Src1 = 0.25 * (Src1 + Src2 + Src3 + Src4);
 
-            imageStore(OutMip[2], ivec3(GlobalInd.xy / 4u, ArraySlice), PackColor(Src1));
+            imageStore(OutMip2, ivec3(GlobalInd.xy / 4u, ArraySlice), PackColor(Src1));
             StoreColor(LocalInd, Src1);
         }
     }
@@ -205,7 +208,7 @@ void main()
             vec4 Src4 = LoadColor(LocalInd + 0x24u);
             Src1 = 0.25 * (Src1 + Src2 + Src3 + Src4);
 
-            imageStore(OutMip[3], ivec3(GlobalInd.xy / 8u, ArraySlice), PackColor(Src1));
+            imageStore(OutMip3, ivec3(GlobalInd.xy / 8u, ArraySlice), PackColor(Src1));
         }
     }
 }

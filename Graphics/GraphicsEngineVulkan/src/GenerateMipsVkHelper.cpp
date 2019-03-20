@@ -209,7 +209,13 @@ namespace Diligent
 
         const auto& ViewDesc = TexView.GetDesc();
         auto* pSrcMipVar = SRB.GetVariable(SHADER_TYPE_COMPUTE, "SrcMip");
-        auto* pOutMipVar = SRB.GetVariable(SHADER_TYPE_COMPUTE, "OutMip");
+        IShaderResourceVariable* pOutMipVar[4] =
+        {
+            SRB.GetVariable(SHADER_TYPE_COMPUTE, "OutMip0"),
+            SRB.GetVariable(SHADER_TYPE_COMPUTE, "OutMip1"),
+            SRB.GetVariable(SHADER_TYPE_COMPUTE, "OutMip2"),
+            SRB.GetVariable(SHADER_TYPE_COMPUTE, "OutMip3")
+        };
 
         auto& PSOs = FindPSOs(ViewDesc.Format);
 
@@ -295,10 +301,11 @@ namespace Diligent
             }
 
             constexpr const Uint32 MaxMipsHandledByCS = 4; // Max number of mip levels processed by one CS shader invocation
-            std::array<IDeviceObject*, MaxMipsHandledByCS> MipLevelUAVs;
             for (Uint32 u = 0; u < MaxMipsHandledByCS; ++u)
-                MipLevelUAVs[u] = pTexVk->GetMipLevelUAV(std::min(TopMip + u + 1, TexDesc.MipLevels - 1));
-            pOutMipVar->SetArray(MipLevelUAVs.data(), 0, MaxMipsHandledByCS);
+            {
+                auto* MipLevelUAV = pTexVk->GetMipLevelUAV(std::min(TopMip + u + 1, TexDesc.MipLevels - 1));
+                pOutMipVar[u]->Set(MipLevelUAV);
+            }
 
             SubresRange.baseMipLevel = TopMip + 1;
             SubresRange.levelCount = std::min(4u, TexDesc.MipLevels - (TopMip + 1));
