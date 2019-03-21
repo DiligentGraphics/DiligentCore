@@ -81,13 +81,15 @@ private:
 
     std::vector<VulkanUtilities::SemaphoreWrapper> m_ImageAcquiredSemaphores;
     std::vector<VulkanUtilities::SemaphoreWrapper> m_DrawCompleteSemaphores;
+    std::vector<VulkanUtilities::FenceWrapper>     m_ImageAcquiredFences;
     std::vector< RefCntAutoPtr<ITextureViewVk>, STDAllocatorRawMem<RefCntAutoPtr<ITextureViewVk>> > m_pBackBufferRTV;
     std::vector<bool, STDAllocatorRawMem<bool> > m_SwapChainImagesInitialized;
+    std::vector<bool, STDAllocatorRawMem<bool> > m_ImageAcquiredFenceSubmitted;
 
     RefCntAutoPtr<ITextureViewVk> m_pDepthBufferDSV;
-    Uint32 m_SemaphoreIndex = 0;
+    Uint32   m_SemaphoreIndex  = 0;
     uint32_t m_BackBufferIndex = 0;
-    bool m_IsMinimized = false;
+    bool     m_IsMinimized     = false;
 };
 
 }

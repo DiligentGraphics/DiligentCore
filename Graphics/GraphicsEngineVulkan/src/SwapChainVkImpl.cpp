@@ -37,10 +37,11 @@ SwapChainVkImpl::SwapChainVkImpl(IReferenceCounters*    pRefCounters,
                                  RenderDeviceVkImpl*    pRenderDeviceVk, 
                                  DeviceContextVkImpl*   pDeviceContextVk, 
                                  void*                  pNativeWndHandle) : 
-    TSwapChainBase(pRefCounters, pRenderDeviceVk, pDeviceContextVk, SCDesc),
-    m_VulkanInstance(pRenderDeviceVk->GetVulkanInstance()),
-    m_pBackBufferRTV(STD_ALLOCATOR_RAW_MEM(RefCntAutoPtr<ITextureView>, GetRawAllocator(), "Allocator for vector<RefCntAutoPtr<ITextureView>>")),
-    m_SwapChainImagesInitialized(STD_ALLOCATOR_RAW_MEM(bool, GetRawAllocator(), "Allocator for vector<bool>"))
+    TSwapChainBase               (pRefCounters, pRenderDeviceVk, pDeviceContextVk, SCDesc),
+    m_VulkanInstance             (pRenderDeviceVk->GetVulkanInstance()),
+    m_pBackBufferRTV             (STD_ALLOCATOR_RAW_MEM(RefCntAutoPtr<ITextureView>, GetRawAllocator(), "Allocator for vector<RefCntAutoPtr<ITextureView>>")),
+    m_SwapChainImagesInitialized (STD_ALLOCATOR_RAW_MEM(bool, GetRawAllocator(), "Allocator for vector<bool>")),
+    m_ImageAcquiredFenceSubmitted(STD_ALLOCATOR_RAW_MEM(bool, GetRawAllocator(), "Allocator for vector<bool>"))
 {
     // Create OS-specific surface
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
@@ -256,21 +257,21 @@ void SwapChainVkImpl::CreateVulkanSwapChain()
     auto oldSwapchain = m_VkSwapChain;
     m_VkSwapChain = VK_NULL_HANDLE;
     VkSwapchainCreateInfoKHR swapchain_ci = {};
-    swapchain_ci.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    swapchain_ci.pNext = NULL;
-    swapchain_ci.surface = m_VkSurface;
-    swapchain_ci.minImageCount = desiredNumberOfSwapChainImages;
-    swapchain_ci.imageFormat = m_VkColorFormat;
-    swapchain_ci.imageExtent.width = swapchainExtent.width;
+    swapchain_ci.sType              = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+    swapchain_ci.pNext              = NULL;
+    swapchain_ci.surface            = m_VkSurface;
+    swapchain_ci.minImageCount      = desiredNumberOfSwapChainImages;
+    swapchain_ci.imageFormat        = m_VkColorFormat;
+    swapchain_ci.imageExtent.width  = swapchainExtent.width;
     swapchain_ci.imageExtent.height = swapchainExtent.height;
-    swapchain_ci.preTransform = preTransform;
-    swapchain_ci.compositeAlpha = compositeAlpha;
-    swapchain_ci.imageArrayLayers = 1;
-    swapchain_ci.presentMode = swapchainPresentMode;
-    swapchain_ci.oldSwapchain = oldSwapchain;
-    swapchain_ci.clipped = VK_TRUE;
-    swapchain_ci.imageColorSpace = ColorSpace;
-    swapchain_ci.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    swapchain_ci.preTransform       = preTransform;
+    swapchain_ci.compositeAlpha     = compositeAlpha;
+    swapchain_ci.imageArrayLayers   = 1;
+    swapchain_ci.presentMode        = swapchainPresentMode;
+    swapchain_ci.oldSwapchain       = oldSwapchain;
+    swapchain_ci.clipped            = VK_TRUE;
+    swapchain_ci.imageColorSpace    = ColorSpace;
+    swapchain_ci.imageUsage         = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     // vkCmdClearColorImage() command requires the image to use VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL layout
     // that requires  VK_IMAGE_USAGE_TRANSFER_DST_BIT to be set
     swapchain_ci.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -309,6 +310,7 @@ void SwapChainVkImpl::CreateVulkanSwapChain()
 
     m_ImageAcquiredSemaphores.resize(swapchainImageCount);
     m_DrawCompleteSemaphores.resize(swapchainImageCount);
+    m_ImageAcquiredFences.resize(swapchainImageCount);
     for(uint32_t i = 0; i < swapchainImageCount; ++i)
     {
         VkSemaphoreCreateInfo SemaphoreCI = {};
@@ -316,7 +318,13 @@ void SwapChainVkImpl::CreateVulkanSwapChain()
         SemaphoreCI.pNext = nullptr;
         SemaphoreCI.flags = 0; // reserved for future use
         m_ImageAcquiredSemaphores[i] = LogicalDevice.CreateSemaphore(SemaphoreCI);
-        m_DrawCompleteSemaphores[i] = LogicalDevice.CreateSemaphore(SemaphoreCI);
+        m_DrawCompleteSemaphores[i]  = LogicalDevice.CreateSemaphore(SemaphoreCI);
+
+        VkFenceCreateInfo FenceCI = {};
+        FenceCI.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+        FenceCI.pNext = nullptr;
+        FenceCI.flags = 0;
+        m_ImageAcquiredFences[i] = LogicalDevice.CreateFence(FenceCI);
     }
 }
 
@@ -350,6 +358,7 @@ void SwapChainVkImpl::InitBuffersAndViews()
 
     m_pBackBufferRTV.resize(m_SwapChainDesc.BufferCount);
     m_SwapChainImagesInitialized.resize(m_pBackBufferRTV.size(), false);
+    m_ImageAcquiredFenceSubmitted.resize(m_pBackBufferRTV.size(), false);
 
     uint32_t swapchainImageCount = m_SwapChainDesc.BufferCount;
     std::vector<VkImage> swapchainImages(swapchainImageCount);
@@ -406,7 +415,42 @@ VkResult SwapChainVkImpl::AcquireNextImage(DeviceContextVkImpl* pDeviceCtxVk)
     auto* pDeviceVk = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
     const auto& LogicalDevice = pDeviceVk->GetLogicalDevice();
 
-    auto res = vkAcquireNextImageKHR(LogicalDevice.GetVkDevice(), m_VkSwapChain, UINT64_MAX, m_ImageAcquiredSemaphores[m_SemaphoreIndex], (VkFence)nullptr, &m_BackBufferIndex);
+    // Applications should not rely on vkAcquireNextImageKHR blocking in order to
+    // meter their rendering speed. The implementation may return from this function
+    // immediately regardless of how many presentation requests are queued, and regardless
+    // of when queued presentation requests will complete relative to the call. Instead,
+    // applications can use fence to meter their frame generation work to match the
+    // presentation rate.
+
+    // Explicitly make sure that there are no more pending frames in the command queue
+    // than the number of the swap chain images.
+    //
+    // Nsc = 3 - number of the swap chain images
+    //
+    //   N-Ns          N-2           N-1            N (Current frame)
+    //    |             |             |             |
+    //                  |
+    //          Wait for this fence
+    //
+    // When acquiring swap chain image for frame N, we need to make sure that
+    // frame N-Nsc has completed. To achieve that, we wait for the image acquire
+    // fence for frame N-Nsc-1. Thus we will have no more than Nsc frames in the queue.
+    auto OldestSubmittedImageFenceInd = (m_SemaphoreIndex+1u) % static_cast<Uint32>(m_ImageAcquiredFenceSubmitted.size());
+    if (m_ImageAcquiredFenceSubmitted[OldestSubmittedImageFenceInd])
+    {
+        VkFence OldestSubmittedFence = m_ImageAcquiredFences[OldestSubmittedImageFenceInd];
+        if (LogicalDevice.GetFenceStatus(OldestSubmittedFence) != VK_SUCCESS)
+        {
+            auto res = LogicalDevice.WaitForFences(1, &OldestSubmittedFence, VK_TRUE, UINT64_MAX);
+            VERIFY_EXPR(res == VK_SUCCESS); (void)res;
+        }
+        LogicalDevice.ResetFence(OldestSubmittedFence);
+    }
+
+    VkFence     ImageAcquiredFence     = m_ImageAcquiredFences    [m_SemaphoreIndex];
+    VkSemaphore ImageAcquiredSemaphore = m_ImageAcquiredSemaphores[m_SemaphoreIndex];
+    auto res = vkAcquireNextImageKHR(LogicalDevice.GetVkDevice(), m_VkSwapChain, UINT64_MAX, ImageAcquiredSemaphore, ImageAcquiredFence, &m_BackBufferIndex);
+    m_ImageAcquiredFenceSubmitted[m_SemaphoreIndex] = (res == VK_SUCCESS);
     if (res == VK_SUCCESS)
     {
         // Next command in the device context must wait for the next image to be acquired
@@ -420,7 +464,7 @@ VkResult SwapChainVkImpl::AcquireNextImage(DeviceContextVkImpl* pDeviceCtxVk)
             m_SwapChainImagesInitialized[m_BackBufferIndex] = true;
         }
     }
-    
+
     return res;
 }
 
@@ -519,6 +563,7 @@ void SwapChainVkImpl::RecreateVulkanSwapchain(DeviceContextVkImpl* pImmediateCtx
     // All references to the swap chain must be released before it can be resized
     m_pBackBufferRTV.clear();
     m_SwapChainImagesInitialized.clear();
+    m_ImageAcquiredFenceSubmitted.clear();
     m_pDepthBufferDSV.Release();
 
     RenderDeviceVkImpl* pDeviceVk = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
@@ -530,6 +575,7 @@ void SwapChainVkImpl::RecreateVulkanSwapchain(DeviceContextVkImpl* pImmediateCtx
     // are destroyed immediately
     m_ImageAcquiredSemaphores.clear();
     m_DrawCompleteSemaphores.clear();
+    m_ImageAcquiredFences.clear();
     m_SemaphoreIndex = 0;
 
     CreateVulkanSwapChain();
