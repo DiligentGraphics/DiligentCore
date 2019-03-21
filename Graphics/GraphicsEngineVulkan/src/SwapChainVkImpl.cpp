@@ -334,6 +334,12 @@ SwapChainVkImpl::~SwapChainVkImpl()
     {
         auto *pDeviceVkImpl = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
         pDeviceVkImpl->IdleGPU();
+
+        // We need to explicitly wait for all submitted Image Acquired Fences to signal.
+        // Just idling the GPU is not enough and results in validation warnings.
+        // As a matter of fact, it is only required to check the fence status.
+        WaitForImageAcquiredFences();
+
         vkDestroySwapchainKHR(pDeviceVkImpl->GetVkDevice(), m_VkSwapChain, NULL);
     }
     if (m_VkSurface != VK_NULL_HANDLE)
@@ -556,22 +562,10 @@ void SwapChainVkImpl::Present(Uint32 SyncInterval)
     }
 }
 
-void SwapChainVkImpl::RecreateVulkanSwapchain(DeviceContextVkImpl* pImmediateCtxVk)
+void SwapChainVkImpl::WaitForImageAcquiredFences()
 {
-    if (pImmediateCtxVk->IsDefaultFBBound())
-        pImmediateCtxVk->ResetRenderTargets();
-
-    RenderDeviceVkImpl* pDeviceVk = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
-    const auto& LogicalDevice = pDeviceVk->GetLogicalDevice();
-
-    // This will release references to Vk swap chain buffers hold by
-    // m_pBackBufferRTV[].
-    pDeviceVk->IdleGPU();
-
-    // We need to explicitly wait for all submitted Image Acquired Fences to signal.
-    // Just idling the GPU is not enough and results in validation warnings.
-    // As a matter of fact, it is only required to check the fence status.
-    for(size_t i=0; i < m_ImageAcquiredFences.size(); ++i)
+    const auto& LogicalDevice = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>()->GetLogicalDevice();
+    for (size_t i=0; i < m_ImageAcquiredFences.size(); ++i)
     {
         if (m_ImageAcquiredFenceSubmitted[i])
         {
@@ -580,6 +574,23 @@ void SwapChainVkImpl::RecreateVulkanSwapchain(DeviceContextVkImpl* pImmediateCtx
                 LogicalDevice.WaitForFences(1, &vkFence, VK_TRUE, UINT64_MAX);
         }
     }
+}
+
+void SwapChainVkImpl::RecreateVulkanSwapchain(DeviceContextVkImpl* pImmediateCtxVk)
+{
+    if (pImmediateCtxVk->IsDefaultFBBound())
+        pImmediateCtxVk->ResetRenderTargets();
+
+    RenderDeviceVkImpl* pDeviceVk = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
+    
+    // This will release references to Vk swap chain buffers hold by
+    // m_pBackBufferRTV[].
+    pDeviceVk->IdleGPU();
+
+    // We need to explicitly wait for all submitted Image Acquired Fences to signal.
+    // Just idling the GPU is not enough and results in validation warnings.
+    // As a matter of fact, it is only required to check the fence status.
+    WaitForImageAcquiredFences();
 
     // All references to the swap chain must be released before it can be resized
     m_pBackBufferRTV.clear();

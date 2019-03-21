@@ -73,6 +73,7 @@ private:
     void InitBuffersAndViews();
     VkResult AcquireNextImage(DeviceContextVkImpl* pDeviceCtxVk);
     void RecreateVulkanSwapchain(DeviceContextVkImpl* pImmediateCtxVk);
+    void WaitForImageAcquiredFences();
 
     std::shared_ptr<const VulkanUtilities::VulkanInstance> m_VulkanInstance;
     VkSurfaceKHR   m_VkSurface     = VK_NULL_HANDLE;
