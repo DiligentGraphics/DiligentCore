@@ -83,14 +83,13 @@ void FenceVkImpl :: Wait()
     const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
     for (auto& val_fence : m_PendingFences)
     {
-        while (LogicalDevice.GetFenceStatus(val_fence.second) == VK_NOT_READY)
+        auto status = LogicalDevice.GetFenceStatus(val_fence.second);
+        if (status == VK_NOT_READY)
         {
             VkFence FenceToWait = val_fence.second;
-            auto res = LogicalDevice.WaitForFences(1, &FenceToWait, VK_TRUE, UINT64_MAX);
-            VERIFY_EXPR(res == VK_SUCCESS); (void)res;
+            status = LogicalDevice.WaitForFences(1, &FenceToWait, VK_TRUE, UINT64_MAX);
         }
 
-        auto status = LogicalDevice.GetFenceStatus(val_fence.second);
         DEV_CHECK_ERR(status == VK_SUCCESS, "All pending fences must now be complete!"); (void)status;
         if (val_fence.first > m_LastCompletedFenceValue)
             m_LastCompletedFenceValue = val_fence.first;
