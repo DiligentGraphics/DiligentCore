@@ -344,7 +344,7 @@ SwapChainVkImpl::~SwapChainVkImpl()
 
 void SwapChainVkImpl::InitBuffersAndViews()
 {
-    auto *pDeviceVkImpl = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
+    auto* pDeviceVkImpl = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
     auto LogicalVkDevice = pDeviceVkImpl->GetVkDevice();
 
 #ifdef _DEBUG
@@ -435,7 +435,7 @@ VkResult SwapChainVkImpl::AcquireNextImage(DeviceContextVkImpl* pDeviceCtxVk)
     // When acquiring swap chain image for frame N, we need to make sure that
     // frame N-Nsc has completed. To achieve that, we wait for the image acquire
     // fence for frame N-Nsc-1. Thus we will have no more than Nsc frames in the queue.
-    auto OldestSubmittedImageFenceInd = (m_SemaphoreIndex+1u) % static_cast<Uint32>(m_ImageAcquiredFenceSubmitted.size());
+    auto OldestSubmittedImageFenceInd = (m_SemaphoreIndex + 1u) % static_cast<Uint32>(m_ImageAcquiredFenceSubmitted.size());
     if (m_ImageAcquiredFenceSubmitted[OldestSubmittedImageFenceInd])
     {
         VkFence OldestSubmittedFence = m_ImageAcquiredFences[OldestSubmittedImageFenceInd];
@@ -445,6 +445,7 @@ VkResult SwapChainVkImpl::AcquireNextImage(DeviceContextVkImpl* pDeviceCtxVk)
             VERIFY_EXPR(res == VK_SUCCESS); (void)res;
         }
         LogicalDevice.ResetFence(OldestSubmittedFence);
+        m_ImageAcquiredFenceSubmitted[OldestSubmittedImageFenceInd] = false;
     }
 
     VkFence     ImageAcquiredFence     = m_ImageAcquiredFences    [m_SemaphoreIndex];
@@ -560,16 +561,31 @@ void SwapChainVkImpl::RecreateVulkanSwapchain(DeviceContextVkImpl* pImmediateCtx
     if (pImmediateCtxVk->IsDefaultFBBound())
         pImmediateCtxVk->ResetRenderTargets();
 
+    RenderDeviceVkImpl* pDeviceVk = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
+    const auto& LogicalDevice = pDeviceVk->GetLogicalDevice();
+
+    // This will release references to Vk swap chain buffers hold by
+    // m_pBackBufferRTV[].
+    pDeviceVk->IdleGPU();
+
+    // We need to explicitly wait for all submitted Image Acquired Fences to signal.
+    // Just idling the GPU is not enough and results in validation warnings.
+    // As a matter of fact, it is only required to check the fence status.
+    for(size_t i=0; i < m_ImageAcquiredFences.size(); ++i)
+    {
+        if (m_ImageAcquiredFenceSubmitted[i])
+        {
+            VkFence vkFence = m_ImageAcquiredFences[i];
+            if (LogicalDevice.GetFenceStatus(vkFence) != VK_SUCCESS)
+                LogicalDevice.WaitForFences(1, &vkFence, VK_TRUE, UINT64_MAX);
+        }
+    }
+
     // All references to the swap chain must be released before it can be resized
     m_pBackBufferRTV.clear();
     m_SwapChainImagesInitialized.clear();
     m_ImageAcquiredFenceSubmitted.clear();
     m_pDepthBufferDSV.Release();
-
-    RenderDeviceVkImpl* pDeviceVk = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
-    // This will release references to Vk swap chain buffers hold by
-    // m_pBackBufferRTV[]
-    pDeviceVk->IdleGPU();
 
     // We must wait unitl GPU is idled before destroying semaphores as they
     // are destroyed immediately
