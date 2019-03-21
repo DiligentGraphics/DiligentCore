@@ -445,7 +445,7 @@ VkResult SwapChainVkImpl::AcquireNextImage(DeviceContextVkImpl* pDeviceCtxVk)
     if (m_ImageAcquiredFenceSubmitted[OldestSubmittedImageFenceInd])
     {
         VkFence OldestSubmittedFence = m_ImageAcquiredFences[OldestSubmittedImageFenceInd];
-        if (LogicalDevice.GetFenceStatus(OldestSubmittedFence) != VK_SUCCESS)
+        if (LogicalDevice.GetFenceStatus(OldestSubmittedFence) == VK_NOT_READY)
         {
             auto res = LogicalDevice.WaitForFences(1, &OldestSubmittedFence, VK_TRUE, UINT64_MAX);
             VERIFY_EXPR(res == VK_SUCCESS); (void)res;
@@ -570,7 +570,7 @@ void SwapChainVkImpl::WaitForImageAcquiredFences()
         if (m_ImageAcquiredFenceSubmitted[i])
         {
             VkFence vkFence = m_ImageAcquiredFences[i];
-            if (LogicalDevice.GetFenceStatus(vkFence) != VK_SUCCESS)
+            if (LogicalDevice.GetFenceStatus(vkFence) == VK_NOT_READY)
                 LogicalDevice.WaitForFences(1, &vkFence, VK_TRUE, UINT64_MAX);
         }
     }
