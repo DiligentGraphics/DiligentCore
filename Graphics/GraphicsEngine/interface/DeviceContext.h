@@ -383,6 +383,11 @@ struct Rect
     {}
 
     Rect()noexcept{}
+
+    bool IsValid() const
+    {
+        return right > left && bottom > top;
+    }
 };
 
 
