@@ -36,54 +36,60 @@ namespace VulkanUtilities
     {
         std::stringstream debugMessage;
 
-        // Ignore the following performance warnings:
-        // 64: vkCmdClearAttachments() issued on command buffer object 0x... prior to any Draw Cmds. It is recommended you use RenderPass LOAD_OP_CLEAR on Attachments prior to any Draw.
-        // 26: Vertex buffers are bound to command buffer (0x...) but no vertex buffers are attached to this Pipeline State Object (0x...).
-        if ((messageType & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT) && 
-            (callbackData->messageIdNumber == 64 || callbackData->messageIdNumber == 26))
-            return VK_FALSE;
+        // Ignore some validation messages
+        if ((messageType & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT))
+        {
+            {
+                // UNASSIGNED-CoreValidation-DrawState-ClearCmdBeforeDraw:
+                // vkCmdClearAttachments() issued on command buffer object 0x... prior to any Draw Cmds. It is recommended you use RenderPass LOAD_OP_CLEAR on Attachments prior to any Draw.
+                static const char* ClearCmdBeforeDrawIdName             = "UNASSIGNED-CoreValidation-DrawState-ClearCmdBeforeDraw";
+                constexpr int32_t  DeprecatedClearCmdBeforeDrawIdNumber = 64; // Starting with sdk version 1.1.85, messageIdNumber is 0 for all messages
+                if ((callbackData->pMessageIdName != nullptr && strcmp(callbackData->pMessageIdName, ClearCmdBeforeDrawIdName) == 0) || callbackData->messageIdNumber == DeprecatedClearCmdBeforeDrawIdNumber)
+                    return VK_FALSE;
+            }
+        }
             
-        debugMessage << "Vulkan debug message (";
-
         Diligent::DebugMessageSeverity MsgSeverity = Diligent::DebugMessageSeverity::Info;
         if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT)
         {
-            debugMessage << "verbose";
             MsgSeverity = Diligent::DebugMessageSeverity::Info;
         }
         else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT)
         {
-            debugMessage << "info";
             MsgSeverity = Diligent::DebugMessageSeverity::Info;
         }
         else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
         {
-            debugMessage << "WARNING";
             MsgSeverity = Diligent::DebugMessageSeverity::Warning;
         }
         else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
         {
-            debugMessage << "ERROR";
             MsgSeverity = Diligent::DebugMessageSeverity::Error;
         }
         else 
         {
-            debugMessage << "unknown severity";
             MsgSeverity = Diligent::DebugMessageSeverity::Info;
         }
 
+        debugMessage << "Vulkan debug message (";
         if (messageType & VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT)
-            debugMessage << ", general";
-        if (messageType & VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT)
-            debugMessage << ", validation";
-        if (messageType & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT)
-            debugMessage << ", perf";
-        
-        debugMessage << "): " << "Message Id: " << callbackData->messageIdNumber;
-        if (callbackData->pMessageIdName != nullptr)
         {
-            debugMessage << " | Message Name: " << callbackData->pMessageIdName;
+            debugMessage << "general";
+            if (messageType & (VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT))
+                debugMessage << ", ";
         }
+        if (messageType & VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT)
+        {
+            debugMessage << "validation";
+            if (messageType & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT)
+                debugMessage << ", ";
+        }
+        if (messageType & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT)
+            debugMessage << "performance";
+        debugMessage << "): ";
+
+        // callbackData->messageIdNumber is deprecated and starting with version 1.1.85 it is always 0
+        debugMessage << (callbackData->pMessageIdName != nullptr ? callbackData->pMessageIdName : "<Unknown name>");
         if (callbackData->pMessage != nullptr)
         {
             debugMessage << std::endl << "                 " << callbackData->pMessage;
