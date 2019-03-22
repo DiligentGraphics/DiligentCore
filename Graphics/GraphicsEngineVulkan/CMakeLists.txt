@@ -177,7 +177,7 @@ set(PRIVATE_DEPENDENCIES
 )
 
 if(PLATFORM_WIN32)
-    find_library(Vulkan_LIBRARY NAMES vulkan-1 vulkan PATHS "../../External/vulkan/libs")
+    find_library(Vulkan_LIBRARY NAMES vulkan-1 vulkan PATHS "../../External/vulkan/libs/windows")
 elseif(PLATFORM_MACOS)
     find_library(Vulkan_LIBRARY NAMES vulkan.1 vulkan PATHS "../../External/vulkan/libs/macOS")
 elseif(PLATFORM_LINUX)
