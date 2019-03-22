@@ -9,6 +9,7 @@
 */
 
 #include <sstream>
+#include <cstring>
 
 #include "VulkanUtilities/VulkanDebug.h"
 #include "Errors.h"
