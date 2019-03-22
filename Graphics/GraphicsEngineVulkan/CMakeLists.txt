@@ -179,7 +179,7 @@ set(PRIVATE_DEPENDENCIES
 if(PLATFORM_WIN32)
     find_library(Vulkan_LIBRARY NAMES vulkan-1 vulkan PATHS "../../External/vulkan/libs")
 elseif(PLATFORM_MACOS)
-    find_library(Vulkan_LIBRARY NAMES MoltenVK PATHS "../../External/vulkan/libs/macOS")
+    find_library(Vulkan_LIBRARY NAMES vulkan.1 vulkan PATHS "../../External/vulkan/libs/macOS")
 elseif(PLATFORM_LINUX)
     find_library(Vulkan_LIBRARY NAMES vulkan HINTS "$ENV{VULKAN_SDK}/lib" "../../External/vulkan/libs/linux")
 else()
