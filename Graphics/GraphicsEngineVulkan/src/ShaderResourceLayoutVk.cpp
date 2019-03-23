@@ -235,6 +235,24 @@ void ShaderResourceLayoutVk::dvpVerifyResourceLayoutDesc(Uint32                 
                                                          const std::shared_ptr<const SPIRVShaderResources>  pShaderResources[],
                                                          const PipelineResourceLayoutDesc&                  ResourceLayoutDesc)
 {
+    auto GetAllowedShadersString = [&](SHADER_TYPE ShaderStages)
+    {
+        std::string ShadersStr;
+        for (Uint32 s=0; s < NumShaders; ++s)
+        {
+            const auto& Resources = *pShaderResources[s];
+            if ((ShaderStages & Resources.GetShaderType()) != 0)
+            {
+                ShadersStr.append(ShadersStr.empty() ? "'" : ", '");
+                ShadersStr.append(Resources.GetShaderName());
+                ShadersStr.append("' (");
+                ShadersStr.append(GetShaderTypeLiteralName(Resources.GetShaderType()));
+                ShadersStr.push_back(')');
+            }
+        }
+        return ShadersStr;
+    };
+
     for (Uint32 v = 0; v < ResourceLayoutDesc.NumVariables; ++v)
     {
         const auto& VarDesc = ResourceLayoutDesc.Variables[v];
@@ -259,7 +277,9 @@ void ShaderResourceLayoutVk::dvpVerifyResourceLayoutDesc(Uint32                 
         }
         if (!VariableFound)
         {
-            LOG_WARNING_MESSAGE(GetShaderVariableTypeLiteralName(VarDesc.Type), " variable '", VarDesc.Name, "' is not found in any of the designated shader stages (", GetShaderStagesString(VarDesc.ShaderStages), ")");
+            LOG_WARNING_MESSAGE(GetShaderVariableTypeLiteralName(VarDesc.Type), " variable '", VarDesc.Name,
+                                "' is not found in any of the designated shader stages: ",
+                                GetAllowedShadersString(VarDesc.ShaderStages));
         }
     }
 
@@ -303,7 +323,9 @@ void ShaderResourceLayoutVk::dvpVerifyResourceLayoutDesc(Uint32                 
 
         if (!SamplerFound)
         {
-            LOG_WARNING_MESSAGE("Static sampler '", StSamDesc.SamplerOrTextureName, "' is not found in any of the designated shader stages (", GetShaderStagesString(StSamDesc.ShaderStages), ")");
+            LOG_WARNING_MESSAGE("Static sampler '", StSamDesc.SamplerOrTextureName,
+                                "' is not found in any of the designated shader stages: ",
+                                GetAllowedShadersString(StSamDesc.ShaderStages));
         }
     }
 }

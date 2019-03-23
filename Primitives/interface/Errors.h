@@ -51,7 +51,7 @@ void LogError( const char *Function, const char *FullFilePath, int Line, const A
     auto LastSlashPos = FileName.find_last_of("/\\");
     if(LastSlashPos != std::string::npos)
         FileName.erase(0, LastSlashPos+1);
-    auto Msg = Diligent::FormatString(Args...);
+    auto Msg = FormatString(Args...);
     if(DebugMessageCallback != nullptr)
     {
         DebugMessageCallback( bThrowException ? DebugMessageSeverity::FatalError : DebugMessageSeverity::Error, Msg.c_str(), Function, FileName.c_str(), Line);

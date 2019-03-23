@@ -190,6 +190,24 @@ void ShaderResources::DvpVerifyResourceLayout(const PipelineResourceLayoutDesc& 
                                               const ShaderResources* const      pShaderResources[],
                                               Uint32                            NumShaders)
 {
+    auto GetAllowedShadersString = [&](SHADER_TYPE ShaderStages)
+    {
+        std::string ShadersStr;
+        for (Uint32 s=0; s < NumShaders; ++s)
+        {
+            const auto& Resources = *pShaderResources[s];
+            if ((ShaderStages & Resources.GetShaderType()) != 0)
+            {
+                ShadersStr.append(ShadersStr.empty() ? "'" : ", '");
+                ShadersStr.append(Resources.GetShaderName());
+                ShadersStr.append("' (");
+                ShadersStr.append(GetShaderTypeLiteralName(Resources.GetShaderType()));
+                ShadersStr.push_back(')');
+            }
+        }
+        return ShadersStr;
+    };
+
     for (Uint32 v = 0; v < ResourceLayout.NumVariables; ++v)
     {
         const auto& VarDesc = ResourceLayout.Variables[v];
@@ -222,8 +240,9 @@ void ShaderResources::DvpVerifyResourceLayout(const PipelineResourceLayoutDesc& 
 
         if (!VariableFound)
         {
-            LOG_WARNING_MESSAGE("Variable '", VarDesc.Name, "' is not found in any of the designated shader stages "
-                                "(", GetShaderStagesString(VarDesc.ShaderStages), ")");
+            LOG_WARNING_MESSAGE(GetShaderVariableTypeLiteralName(VarDesc.Type), " variable '", VarDesc.Name,
+                                "' is not found in any of the designated shader stages: ",
+                                GetAllowedShadersString(VarDesc.ShaderStages));
         }
     }
 
@@ -238,36 +257,28 @@ void ShaderResources::DvpVerifyResourceLayout(const PipelineResourceLayoutDesc& 
 
         const auto* TexOrSamName = StSamDesc.SamplerOrTextureName;
         
-        bool TextureOrSamplerFound = false;
-        for (Uint32 s = 0; s < NumShaders && !TextureOrSamplerFound; ++s)
+        bool StaticSamplerFound = false;
+        for (Uint32 s = 0; s < NumShaders && !StaticSamplerFound; ++s)
         {
             const auto& Resources = *pShaderResources[s];
             if ( (StSamDesc.ShaderStages & Resources.GetShaderType()) == 0)
                 continue;
 
-            const auto UseCombinedTextureSamplers = Resources.IsUsingCombinedTextureSamplers();
-            if (UseCombinedTextureSamplers)
+            // Look for static sampler.
+            // In case HLSL-style combined image samplers are used, the condition is  Sampler.Name == "g_Texture" + "_sampler".
+            // Otherwise the condition is  Sampler.Name == "g_Texture_sampler" + "".
+            const auto* CombinedSamplerSuffix = Resources.GetCombinedSamplerSuffix();
+            for (Uint32 n=0; n < Resources.GetNumSamplers() && !StaticSamplerFound; ++n)
             {
-                for(Uint32 n=0; n < Resources.GetNumTexSRV() && !TextureOrSamplerFound; ++n)
-                {
-                    const auto& TexSRV = Resources.GetTexSRV(n);
-                    TextureOrSamplerFound = (strcmp(TexSRV.Name, TexOrSamName) == 0);
-                }
-            }
-            else
-            {
-                for(Uint32 n=0; n < Resources.GetNumSamplers() && !TextureOrSamplerFound; ++n)
-                {
-                    const auto& Sampler = Resources.GetSampler(n);
-                    TextureOrSamplerFound = (strcmp(Sampler.Name, TexOrSamName) == 0);
-                }
+                const auto& Sampler = Resources.GetSampler(n);
+                StaticSamplerFound = StreqSuff(Sampler.Name, TexOrSamName, CombinedSamplerSuffix);
             }
         }
 
-        if (!TextureOrSamplerFound)
+        if (!StaticSamplerFound)
         {
-            LOG_WARNING_MESSAGE("Static sampler '", TexOrSamName, "' is not found in any of the designated shader stages "
-                                "(", GetShaderStagesString(StSamDesc.ShaderStages), ")");
+            LOG_WARNING_MESSAGE("Static sampler '", TexOrSamName, "' is not found in any of the designated shader stages: ",
+                                GetAllowedShadersString(StSamDesc.ShaderStages));
         }
     }
 }
