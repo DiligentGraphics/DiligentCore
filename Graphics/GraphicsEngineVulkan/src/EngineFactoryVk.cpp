@@ -83,13 +83,15 @@ public:
 ///                           the contexts will be written. Immediate context goes at
 ///                           position 0. If EngineCI.NumDeferredContexts > 0,
 ///                           pointers to the deferred contexts are written afterwards.
-void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& EngineCI, 
+void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _EngineCI,
                                                     IRenderDevice**           ppDevice, 
                                                     IDeviceContext**          ppContexts)
 {
     VERIFY( ppDevice && ppContexts, "Null pointer provided" );
     if( !ppDevice || !ppContexts )
         return;
+
+    EngineVkCreateInfo EngineCI = _EngineCI;
 
 #if 0
     for (Uint32 Type = Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV; Type < Vk_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++Type)
@@ -125,6 +127,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
 
         auto vkDevice = Instance->SelectPhysicalDevice();
         auto PhysicalDevice = VulkanUtilities::VulkanPhysicalDevice::Create(vkDevice);
+        const auto& PhysicalDeviceFeatures = PhysicalDevice->GetFeatures();
 
         // If an implementation exposes any queue family that supports graphics operations, 
         // at least one queue family of at least one physical device exposed by the implementation 
@@ -151,20 +154,35 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
         DeviceCreateInfo.queueCreateInfoCount = 1;
         DeviceCreateInfo.pQueueCreateInfos = &QueueInfo;
         VkPhysicalDeviceFeatures DeviceFeatures = {};
-        DeviceFeatures.depthBiasClamp                    = EngineCI.EnabledFeatures.depthBiasClamp                    ? VK_TRUE : VK_FALSE;
-        DeviceFeatures.fillModeNonSolid                  = EngineCI.EnabledFeatures.fillModeNonSolid                  ? VK_TRUE : VK_FALSE;
-        DeviceFeatures.depthClamp                        = EngineCI.EnabledFeatures.depthClamp                        ? VK_TRUE : VK_FALSE;
-        DeviceFeatures.independentBlend                  = EngineCI.EnabledFeatures.independentBlend                  ? VK_TRUE : VK_FALSE;
-        DeviceFeatures.samplerAnisotropy                 = EngineCI.EnabledFeatures.samplerAnisotropy                 ? VK_TRUE : VK_FALSE;
-        DeviceFeatures.geometryShader                    = EngineCI.EnabledFeatures.geometryShader                    ? VK_TRUE : VK_FALSE;
-        DeviceFeatures.tessellationShader                = EngineCI.EnabledFeatures.tessellationShader                ? VK_TRUE : VK_FALSE;
-        DeviceFeatures.dualSrcBlend                      = EngineCI.EnabledFeatures.dualSrcBlend                      ? VK_TRUE : VK_FALSE;
-        DeviceFeatures.multiViewport                     = EngineCI.EnabledFeatures.multiViewport                     ? VK_TRUE : VK_FALSE;
-        DeviceFeatures.imageCubeArray                    = EngineCI.EnabledFeatures.imageCubeArray                    ? VK_TRUE : VK_FALSE;
-        DeviceFeatures.textureCompressionBC              = EngineCI.EnabledFeatures.textureCompressionBC              ? VK_TRUE : VK_FALSE;
-        DeviceFeatures.vertexPipelineStoresAndAtomics    = EngineCI.EnabledFeatures.vertexPipelineStoresAndAtomics    ? VK_TRUE : VK_FALSE;
-        DeviceFeatures.fragmentStoresAndAtomics          = EngineCI.EnabledFeatures.fragmentStoresAndAtomics          ? VK_TRUE : VK_FALSE;
-        DeviceFeatures.shaderStorageImageExtendedFormats = EngineCI.EnabledFeatures.shaderStorageImageExtendedFormats ? VK_TRUE : VK_FALSE;
+
+#define ENABLE_FEATURE(Feature)\
+        if (EngineCI.EnabledFeatures.Feature)\
+        {                                                   \
+            if (PhysicalDeviceFeatures.Feature)             \
+                DeviceFeatures.Feature = VK_TRUE;           \
+            else                                            \
+            {                                               \
+                LOG_WARNING_MESSAGE("Requested device feature " #Feature " is not supported by the physical device and will be disabled");\
+                EngineCI.EnabledFeatures.Feature = false;   \
+            }                                               \
+        }
+
+        ENABLE_FEATURE(depthBiasClamp)
+        ENABLE_FEATURE(fillModeNonSolid)
+        ENABLE_FEATURE(depthClamp)
+        ENABLE_FEATURE(independentBlend)
+        ENABLE_FEATURE(samplerAnisotropy)
+        ENABLE_FEATURE(geometryShader)
+        ENABLE_FEATURE(tessellationShader)
+        ENABLE_FEATURE(dualSrcBlend)
+        ENABLE_FEATURE(multiViewport)
+        ENABLE_FEATURE(imageCubeArray)
+        ENABLE_FEATURE(textureCompressionBC)
+        ENABLE_FEATURE(vertexPipelineStoresAndAtomics)
+        ENABLE_FEATURE(fragmentStoresAndAtomics)
+        ENABLE_FEATURE(shaderStorageImageExtendedFormats)
+#undef ENABLE_FEATURE
+
         DeviceCreateInfo.pEnabledFeatures = &DeviceFeatures; // NULL or a pointer to a VkPhysicalDeviceFeatures structure that contains 
                                                              // boolean indicators of all the features to be enabled.
 

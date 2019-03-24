@@ -47,6 +47,7 @@ namespace VulkanUtilities
         static constexpr uint32_t InvalidMemoryTypeIndex = static_cast<uint32_t>(-1);
         uint32_t GetMemoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags properties)const;
         const VkPhysicalDeviceProperties& GetProperties() const {return m_Properties;}
+        const VkPhysicalDeviceFeatures&   GetFeatures()   const {return m_Features;  }
 
     private:
         VulkanPhysicalDevice(VkPhysicalDevice vkDevice);

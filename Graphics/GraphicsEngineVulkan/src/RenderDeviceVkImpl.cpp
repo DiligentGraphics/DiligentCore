@@ -126,11 +126,8 @@ RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters*                    
     for(int fmt = 1; fmt < m_TextureFormatsInfo.size(); ++fmt)
         m_TextureFormatsInfo[fmt].Supported = true; // We will test every format on a specific hardware device
 
-#if PLATFORM_MACOS || PLATFORM_IOS
-    // MoltenVK does not support geometry shaders and tessellation
-    m_DeviceCaps.bGeometryShadersSupported = False;
-    m_DeviceCaps.bTessellationSupported    = False;
-#endif
+    m_DeviceCaps.bGeometryShadersSupported = EngineCI.EnabledFeatures.geometryShader;
+    m_DeviceCaps.bTessellationSupported    = EngineCI.EnabledFeatures.tessellationShader;
 }
 
 RenderDeviceVkImpl::~RenderDeviceVkImpl()
