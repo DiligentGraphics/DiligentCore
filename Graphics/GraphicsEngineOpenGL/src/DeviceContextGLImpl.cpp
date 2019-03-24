@@ -486,6 +486,10 @@ namespace Diligent
                                 {
                                     m_ContextState.BindSampler(TextureIndex, pSamplerGL->GetHandle());
                                 }
+                                else
+                                {
+                                    m_ContextState.BindSampler(TextureIndex, GLObjectWrappers::GLSamplerObj(false));
+                                }
                             }
 
                             // Texture is now bound to texture slot TextureIndex.
