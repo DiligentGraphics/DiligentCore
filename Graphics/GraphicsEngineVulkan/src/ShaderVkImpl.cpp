@@ -115,7 +115,7 @@ void ShaderVkImpl::MapHLSLVertexShaderInputs()
         }
 
         char* EndPtr = nullptr;
-        auto Location = strtol(s, &EndPtr, 10);
+        auto Location = static_cast<uint32_t>(strtol(s, &EndPtr, 10));
         if (*EndPtr != 0)
         {
             LOG_ERROR_MESSAGE("Unable to map semantic '", Input.Semantic, "' to input location: semantics must have 'ATTRIBx' format.");

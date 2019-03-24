@@ -1173,7 +1173,7 @@ private:
 
 VkAccessFlags ResourceStateFlagsToVkAccessFlags(RESOURCE_STATE StateFlags)
 {
-    VERIFY(StateFlags < (RESOURCE_STATE_MAX_BIT<<1), "Resource state flags are out of range");
+    VERIFY(Uint32{StateFlags} < (RESOURCE_STATE_MAX_BIT<<1), "Resource state flags are out of range");
     static const StateFlagBitPosToVkAccessFlags BitPosToAccessFlags;
     VkAccessFlags AccessFlags = 0;
     Uint32 Bits = StateFlags;

@@ -3061,7 +3061,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessVertexShaderArguments( std
                         if( SkipPrefix( "attrib", SemanticEndPos, Semantic.end() ) )
                         {
                             char* EndPtr = nullptr;
-                            auto AttribInd = strtol(&*SemanticEndPos, &EndPtr, 10);
+                            auto AttribInd = static_cast<int>(strtol(&*SemanticEndPos, &EndPtr, 10));
                             if( EndPtr != nullptr && *EndPtr == 0 )
                             {
                                 InputLocation = AttribInd;
