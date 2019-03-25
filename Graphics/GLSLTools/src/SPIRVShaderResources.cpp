@@ -22,7 +22,6 @@
  */
 
 #include <iomanip>
-#include <memory>
 #include "SPIRVShaderResources.h"
 #include "spirv_parser.hpp"
 #include "spirv_cross.hpp"
@@ -149,7 +148,7 @@ static spv::ExecutionModel ShaderTypeToExecutionModel(SHADER_TYPE ShaderType)
     }
 }
 
-const std::string& GetUBName(const spirv_cross::Compiler& Compiler, const spirv_cross::Resource& UB, const spirv_cross::ParsedIR::Source& IRSource)
+const std::string& GetUBName(spirv_cross::Compiler& Compiler, const spirv_cross::Resource& UB, const spirv_cross::ParsedIR::Source& IRSource)
 {
     // Consider the following HLSL constant buffer:
     //
@@ -195,11 +194,10 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator,
     m_ShaderType(shaderDesc.ShaderType)
 {
     // https://github.com/KhronosGroup/SPIRV-Cross/wiki/Reflection-API-user-guide
-	std::unique_ptr<spirv_cross::Parser> pParser(new spirv_cross::Parser(std::move(spirv_binary)));
-	pParser->parse();
-    auto ParsedIRSource = pParser->get_parsed_ir().source;
-    std::unique_ptr<spirv_cross::Compiler> pCompiler(new spirv_cross::Compiler(std::move(pParser->get_parsed_ir())));
-    const auto& Compiler = *pCompiler;
+	spirv_cross::Parser parser(move(spirv_binary));
+	parser.parse();
+    auto ParsedIRSource = parser.get_parsed_ir().source;
+    spirv_cross::Compiler Compiler(std::move(parser.get_parsed_ir()));
 
     spv::ExecutionModel ExecutionModel = ShaderTypeToExecutionModel(shaderDesc.ShaderType);
     auto EntryPoints = Compiler.get_entry_points_and_stages();
@@ -221,7 +219,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator,
     {
         LOG_ERROR_AND_THROW("Unable to find entry point of type ", GetShaderTypeLiteralName(shaderDesc.ShaderType), " in SPIRV binary for shader '", shaderDesc.Name, "'");
     }
-    pCompiler->set_entry_point(EntryPoint, ExecutionModel);
+    Compiler.set_entry_point(EntryPoint, ExecutionModel);
 
     // The SPIR-V is now parsed, and we can perform reflection on it.
     spirv_cross::ShaderResources resources = Compiler.get_shader_resources();
