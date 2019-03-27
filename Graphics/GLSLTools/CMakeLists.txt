@@ -51,7 +51,7 @@ PUBLIC
 if(VULKAN_SUPPORTED)
     target_link_libraries(GLSLTools 
     PRIVATE
-        SPIRVCross
+        spirv-cross-core
     )
 
     if (NOT ${DILIGENT_NO_GLSLANG})

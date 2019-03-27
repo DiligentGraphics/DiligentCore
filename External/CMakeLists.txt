@@ -52,12 +52,12 @@ if(VULKAN_SUPPORTED)
         list(APPEND INSTALL_TARGETS glslang OGLCompiler OSDependent SPIRV HLSL)
     endif()
 
-    list(APPEND INSTALL_TARGETS SPIRVCross)
-
+    set(SPIRV_CROSS_CLI OFF CACHE BOOL "Build the CLI binary. Requires SPIRV_CROSS_STATIC.")
+    set(SPIRV_CROSS_ENABLE_TESTS OFF CACHE BOOL "Enable SPIRV-Cross tests.")
     add_subdirectory(SPIRV-Cross)
-    set_target_properties(SPIRVCross PROPERTIES
-        FOLDER Core/External
-    )
+    set_directory_root_folder("SPIRV-Cross" "Core/External/SPIRV-Cross")
+
+    list(APPEND INSTALL_TARGETS spirv-cross-core)
 
     if(INSTALL_DILIGENT_CORE)
         install(TARGETS ${INSTALL_TARGETS}
