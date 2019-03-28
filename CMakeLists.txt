@@ -238,20 +238,6 @@ else()
 endif()
 
 
-if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS OR PLATFORM_MACOS)
-
-    # https://cmake.org/cmake/help/v3.8/prop_gbl/CMAKE_CXX_KNOWN_FEATURES.html#prop_gbl:CMAKE_CXX_KNOWN_FEATURES
-    target_compile_features(BuildSettings INTERFACE cxx_std_11) # Generates an error in gradle build on Android
-
-elseif(PLATFORM_ANDROID)
-
-    # LOCAL_CPP_FEATURES := exceptions rtti
-
-elseif(PLATFORM_IOS)
-
-    
-endif()
-
 if(PLATFORM_MACOS)
     find_library(APP_KIT AppKit)
     if (NOT APP_KIT)
