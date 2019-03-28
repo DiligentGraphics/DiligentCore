@@ -222,13 +222,6 @@ else()
 
 endif(MSVC)
 
-if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-    # Without -fPIC option GCC fails to link static libraries into dynamic library:
-    #  -fPIC  
-    #      If supported for the target machine, emit position-independent code, suitable for 
-    #      dynamic linking and avoiding any limit on the size of the global offset table.
-    target_compile_options(BuildSettings INTERFACE -fPIC)
-endif()
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR
     CMAKE_CXX_COMPILER_ID MATCHES "GNU")
@@ -243,6 +236,7 @@ else()
     set(WHOLE_ARCHIVE_FLAG "")
     set(NO_WHOLE_ARCHIVE_FLAG "")
 endif()
+
 
 if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS OR PLATFORM_MACOS)
 

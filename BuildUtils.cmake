@@ -97,21 +97,22 @@ function(set_common_target_properties TARGET)
             CXX_VISIBILITY_PRESET hidden # -fvisibility=hidden
             C_VISIBILITY_PRESET hidden # -fvisibility=hidden
             VISIBILITY_INLINES_HIDDEN TRUE
-        )
-    endif()
 
-    if(PLATFORM_ANDROID)
-        # target_compile_features(BuildSettings INTERFACE cxx_std_11) generates an error in gradle build on Android
-        # It is crucial to set CXX_STANDARD flag to only affect c++ files and avoid failures compiling c-files:
-        # error: invalid argument '-std=c++11' not allowed with 'C/ObjC'
-        set_target_properties(${TARGET} PROPERTIES CXX_STANDARD 11)
+            # Without -fPIC option GCC fails to link static libraries into dynamic library:
+            #  -fPIC  
+            #      If supported for the target machine, emit position-independent code, suitable for 
+            #      dynamic linking and avoiding any limit on the size of the global offset table.
+            POSITION_INDEPENDENT_CODE ON
+
+            # It is crucial to set CXX_STANDARD flag to only affect c++ files and avoid failures compiling c-files:
+            # error: invalid argument '-std=c++11' not allowed with 'C/ObjC'
+            CXX_STANDARD 11
+            CXX_STANDARD_REQUIRED ON
+            CXX_EXTENSIONS OFF
+        )
     endif()
     
     if(PLATFORM_IOS)
-        # Feature detection fails for iOS build, so we have to set CXX_STANDARD
-        # as a workaround
-        set_target_properties(${TARGET} PROPERTIES CXX_STANDARD 11)
-
         set_target_properties(${TARGET} PROPERTIES
             XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET 10.0
         )
