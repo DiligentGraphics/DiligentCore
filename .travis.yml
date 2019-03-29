@@ -18,6 +18,10 @@ before_install:
       tar -xzf cmake-${CMAKE_VERSION}-Darwin-x86_64.tar.gz
       export PATH=$PWD/cmake-${CMAKE_VERSION}-Darwin-x86_64/CMake.app/Contents/bin:$PATH
       cmake --version
+      if [ "$IOS" = "true" ];  then
+        wget --no-check-certificate https://vulkan.lunarg.com/sdk/home#sdk/downloadConfirm/latest/mac/vulkan-sdk.tar.gz
+        tar -xzf vulkan-sdk.tar.gz
+      fi
     fi
   - |
     if [ "$TRAVIS_OS_NAME" = "linux" ]; then
