@@ -97,7 +97,7 @@ script:
   - |
     if [ "$TRAVIS_OS_NAME" = "osx" ]; then 
       if [ "$IOS" = "true" ]; then 
-        cmake .. -DCMAKE_TOOLCHAIN_FILE=../DiligentCore/ios.toolchain.cmake -DIOS_PLATFORM=OS64 -DCMAKE_INSTALL_PREFIX=install -G "Xcode"
+        cmake .. -DCMAKE_TOOLCHAIN_FILE=../DiligentCore/ios.toolchain.cmake -DIOS_PLATFORM=OS64 -DIOS_ARCH=arm64 -DVULKAN_SDK="$VULKAN_SDK" -DCMAKE_INSTALL_PREFIX=install -G "Xcode"
       else
         cmake .. -DCMAKE_INSTALL_PREFIX=install -G "Xcode"
       fi
