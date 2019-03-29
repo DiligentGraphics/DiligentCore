@@ -19,8 +19,9 @@ before_install:
       export PATH=$PWD/cmake-${CMAKE_VERSION}-Darwin-x86_64/CMake.app/Contents/bin:$PATH
       cmake --version
       if [ "$IOS" = "true" ];  then
-        wget --no-check-certificate https://vulkan.lunarg.com/sdk/home#sdk/downloadConfirm/latest/mac/vulkan-sdk.tar.gz
-        tar -xzf vulkan-sdk.tar.gz
+        wget -O vulkansdk-macos-$VULKAN_SDK_VER.tar.gz https://sdk.lunarg.com/sdk/download/$VULKAN_SDK_VER/mac/vulkansdk-macos-$VULKAN_SDK_VER.tar.gz?Human=true &&
+        tar -xzf vulkansdk-macos-$VULKAN_SDK_VER.tar.gz
+        export VULKAN_SDK=$PWD/vulkansdk-macos-$VULKAN_SDK_VER
       fi
     fi
   - |
@@ -75,11 +76,13 @@ matrix:
     env: 
       - CONFIG=Release
       - IOS=true
+      - VULKAN_SDK_VER="1.1.101.0"
   - os: osx
     compiler: clang
     env: 
       - CONFIG=Debug
       - IOS=true
+      - VULKAN_SDK_VER="1.1.101.0"
     
 script:
 
