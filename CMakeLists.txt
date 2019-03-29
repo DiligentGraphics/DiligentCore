@@ -8,7 +8,7 @@ set(RELEASE_CONFIGURATIONS RELEASE RELWITHDEBINFO MINSIZEREL CACHE INTERNAL "Rel
 if(BUILD_CONFIGURATION_FILE)
     message("Using build configuration file " ${CUSTOM_BUILD_SCRIPT})
     include(${CMAKE_SOURCE_DIR}/${BUILD_CONFIGURATION_FILE})
-    
+
     if(COMMAND custom_configure_build)
         custom_configure_build()
     else()
@@ -114,8 +114,8 @@ elseif(PLATFORM_IOS)
     if(VULKAN_SDK)
         # iOS.toolchain.cmake currently configures cmake to only search iOS SDK for libraries,
         # thus find_library will be unable to find MoltenVK in VulkanSDK
-        # find_library(MoltenVK_LIBRARY MoltenVK PATHS "${VULKAN_SDK}/MoltenVK/iOS/static")
-        set(MoltenVK_LIBRARY "${VULKAN_SDK}/MoltenVK/iOS/static/libMoltenVK.a")
+        # find_library(MoltenVK_LIBRARY MoltenVK PATHS "${VULKAN_SDK}/MoltenVK/iOS/dynamic")
+        set(MoltenVK_LIBRARY "${VULKAN_SDK}/MoltenVK/iOS/dynamic/libMoltenVK.dylib")
         if(EXISTS ${MoltenVK_LIBRARY})
             set(VULKAN_SUPPORTED TRUE CACHE INTERNAL "Vulkan is enabled through MoltenVK on iOS platform")
         else()
