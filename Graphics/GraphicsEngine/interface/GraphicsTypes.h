@@ -1172,6 +1172,23 @@ namespace Diligent
         SCANLINE_ORDER ScanlineOrder    = SCANLINE_ORDER_UNSPECIFIED;
     };
 
+    /// Defines allowed swap chain usage flags
+    enum SWAP_CHAIN_USAGE_FLAGS : Uint32
+    {
+        /// No allowed usage
+        SWAP_CHAIN_USAGE_NONE           = 0x00L,
+        
+        /// Swap chain can be used as render target ouput
+        SWAP_CHAIN_USAGE_RENDER_TARGET  = 0x01L,
+
+        /// Swap chain images can be used as shader inputs
+        SWAP_CHAIN_USAGE_SHADER_INPUT   = 0x02L,
+
+        /// Swap chain images can be used as source of copy operation
+        SWAP_CHAIN_USAGE_COPY_SOURCE    = 0x04L
+    };
+    DEFINE_FLAG_ENUM_OPERATORS(SWAP_CHAIN_USAGE_FLAGS)
+
     /// Swap chain description
     struct SwapChainDesc
     {
@@ -1186,6 +1203,9 @@ namespace Diligent
         
         /// Depth buffer format. Default value is Diligent::TEX_FORMAT_D32_FLOAT
         TEXTURE_FORMAT DepthBufferFormat    = TEX_FORMAT_D32_FLOAT;
+
+        /// Swap chain usage flags. Default value is Diligent::SWAP_CHAIN_USAGE_RENDER_TARGET
+        SWAP_CHAIN_USAGE_FLAGS Usage        = SWAP_CHAIN_USAGE_RENDER_TARGET;
 
         /// Sample count. Default value is 1
         Uint32 SamplesCount                 = 1;

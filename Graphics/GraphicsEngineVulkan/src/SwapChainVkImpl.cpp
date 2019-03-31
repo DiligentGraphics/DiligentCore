@@ -271,7 +271,15 @@ void SwapChainVkImpl::CreateVulkanSwapChain()
     swapchain_ci.oldSwapchain       = oldSwapchain;
     swapchain_ci.clipped            = VK_TRUE;
     swapchain_ci.imageColorSpace    = ColorSpace;
-    swapchain_ci.imageUsage         = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    
+    DEV_CHECK_ERR(m_SwapChainDesc.Usage != 0, "No swap chain usage flags defined");
+    if (m_SwapChainDesc.Usage & SWAP_CHAIN_USAGE_RENDER_TARGET)
+        swapchain_ci.imageUsage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    if (m_SwapChainDesc.Usage & SWAP_CHAIN_USAGE_SHADER_INPUT)
+        swapchain_ci.imageUsage |= VK_IMAGE_USAGE_SAMPLED_BIT;
+    if (m_SwapChainDesc.Usage & SWAP_CHAIN_USAGE_COPY_SOURCE)
+        swapchain_ci.imageUsage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+
     // vkCmdClearColorImage() command requires the image to use VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL layout
     // that requires  VK_IMAGE_USAGE_TRANSFER_DST_BIT to be set
     swapchain_ci.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;

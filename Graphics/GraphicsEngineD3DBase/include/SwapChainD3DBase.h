@@ -87,7 +87,7 @@ namespace Diligent
             auto DXGIColorBuffFmt = TexFormatToDXGI_Format(m_SwapChainDesc.ColorBufferFormat);
 
             DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
-            swapChainDesc.Width = m_SwapChainDesc.Width;
+            swapChainDesc.Width  = m_SwapChainDesc.Width;
             swapChainDesc.Height = m_SwapChainDesc.Height;
             //  Flip model swapchains (DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL and DXGI_SWAP_EFFECT_FLIP_DISCARD) only support the following Formats: 
             //  - DXGI_FORMAT_R16G16B16A16_FLOAT 
@@ -96,13 +96,22 @@ namespace Diligent
             //  - DXGI_FORMAT_R10G10B10A2_UNORM
             // If RGBA8_UNORM_SRGB swap chain is required, we will create RGBA8_UNORM swap chain, but
             // create RGBA8_UNORM_SRGB render target view
-            swapChainDesc.Format = DXGIColorBuffFmt == DXGI_FORMAT_R8G8B8A8_UNORM_SRGB ? DXGI_FORMAT_R8G8B8A8_UNORM : DXGIColorBuffFmt;
-            swapChainDesc.Stereo = FALSE;
-            swapChainDesc.SampleDesc.Count = 1;
+            swapChainDesc.Format             = DXGIColorBuffFmt == DXGI_FORMAT_R8G8B8A8_UNORM_SRGB ? DXGI_FORMAT_R8G8B8A8_UNORM : DXGIColorBuffFmt;
+            swapChainDesc.Stereo             = FALSE;
+            swapChainDesc.SampleDesc.Count   = 1;
             swapChainDesc.SampleDesc.Quality = 0;
-            swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-            swapChainDesc.BufferCount = m_SwapChainDesc.BufferCount;
-            swapChainDesc.Scaling = DXGI_SCALING_NONE;
+            
+            DEV_CHECK_ERR(m_SwapChainDesc.Usage != 0, "No swap chain usage flags defined");
+            swapChainDesc.BufferUsage = 0;
+            if (m_SwapChainDesc.Usage & SWAP_CHAIN_USAGE_RENDER_TARGET)
+                swapChainDesc.BufferUsage |= DXGI_USAGE_RENDER_TARGET_OUTPUT;
+            if (m_SwapChainDesc.Usage & SWAP_CHAIN_USAGE_SHADER_INPUT)
+                swapChainDesc.BufferUsage |= DXGI_USAGE_SHADER_INPUT;
+            //if (m_SwapChainDesc.Usage & SWAP_CHAIN_USAGE_COPY_SOURCE)
+            //    ;
+
+            swapChainDesc.BufferCount        = m_SwapChainDesc.BufferCount;
+            swapChainDesc.Scaling            = DXGI_SCALING_NONE;
 
             // DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL is the flip presentation model, where the contents of the back 
             // buffer is preserved after the call to Present. This flag cannot be used with multisampling.
