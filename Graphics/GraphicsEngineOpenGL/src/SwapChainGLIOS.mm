@@ -48,7 +48,7 @@ SwapChainGLIOS::SwapChainGLIOS(IReferenceCounters*          pRefCounters,
 }
 
 IMPLEMENT_QUERY_INTERFACE( SwapChainGLIOS, IID_SwapChainGL, TSwapChainBase )
-    
+
 void SwapChainGLIOS::Present(Uint32 SyncInterval)
 {
     EAGLContext* context = [EAGLContext currentContext];
@@ -61,15 +61,15 @@ void SwapChainGLIOS::Present(Uint32 SyncInterval)
 void SwapChainGLIOS::InitRenderBuffers(bool InitFromDrawable, Uint32 &Width, Uint32 &Height)
 {
     EAGLContext* context = [EAGLContext currentContext];
-    
+
     m_DefaultFBO.Release();
     m_DefaultFBO.Create();
     glBindFramebuffer(GL_FRAMEBUFFER, m_DefaultFBO);
-    
+
     m_ColorRenderBuffer.Release();
     m_ColorRenderBuffer.Create();
     glBindRenderbuffer(GL_RENDERBUFFER, m_ColorRenderBuffer);
-    
+
     if(InitFromDrawable)
     {
         // This call associates the storage for the current render buffer with the
@@ -84,9 +84,9 @@ void SwapChainGLIOS::InitRenderBuffers(bool InitFromDrawable, Uint32 &Width, Uin
         CAEAGLLayer* layer = (__bridge CAEAGLLayer*)m_CALayer;
         [context renderbufferStorage:GL_RENDERBUFFER fromDrawable:layer];
     }
-    
+
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, m_ColorRenderBuffer);
-    
+
     // Get the drawable buffer's width and height so we can create a depth buffer for the FBO
     GLint backingWidth;
     GLint backingHeight;
@@ -94,24 +94,24 @@ void SwapChainGLIOS::InitRenderBuffers(bool InitFromDrawable, Uint32 &Width, Uin
     glGetRenderbufferParameteriv(GL_RENDERBUFFER, GL_RENDERBUFFER_HEIGHT, &backingHeight);
     Width = backingWidth;
     Height = backingHeight;
-    
+
     // Create a depth buffer to use with our drawable FBO
     m_DepthRenderBuffer.Release();
     m_DepthRenderBuffer.Create();
     glBindRenderbuffer(GL_RENDERBUFFER, m_DepthRenderBuffer);
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, backingWidth, backingHeight);
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_DepthRenderBuffer);
-    
+
     if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
     {
         LOG_ERROR_AND_THROW("Failed to make complete framebuffer object %x", glCheckFramebufferStatus(GL_FRAMEBUFFER));
     }
 }
-    
+
 void SwapChainGLIOS::Resize( Uint32 NewWidth, Uint32 NewHeight )
 {
     InitRenderBuffers(false, NewWidth, NewHeight);
-    
+
     if( TSwapChainBase::Resize( NewWidth, NewHeight ) )
     {
         auto pDeviceContext = m_wpDeviceContext.Lock();
@@ -120,11 +120,11 @@ void SwapChainGLIOS::Resize( Uint32 NewWidth, Uint32 NewHeight )
         {
             auto *pImmediateCtxGL = ValidatedCast<DeviceContextGLImpl>( pDeviceContext.RawPtr() );
             bool bIsDefaultFBBound = pImmediateCtxGL->IsDefaultFBBound();
-            
-            // To update the viewport is the only thing we need to do in OpenGL
+
             if( bIsDefaultFBBound )
             {
-                // Update viewport
+                // Reset render targets and update viewport
+                pImmediateCtxGL->SetRenderTargets(0, nullptr, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
                 pImmediateCtxGL->SetViewports( 1, nullptr, 0, 0 );
             }
         }
