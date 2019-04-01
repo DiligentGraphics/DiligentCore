@@ -7,6 +7,7 @@ set(INCLUDE
     include/CommonlyUsedStates.h
     include/GraphicsUtilities.h
     include/pch.h
+    include/ScreenCapture.h
     include/ShaderMacroHelper.h
     include/TextureUploader.h
     include/TextureUploaderBase.h
@@ -15,6 +16,7 @@ set(INCLUDE
 set(SOURCE 
     src/BasicShaderSourceStreamFactory.cpp
     src/GraphicsUtilities.cpp
+    src/ScreenCapture.cpp
     src/pch.cpp
     src/TextureUploader.cpp
 )
