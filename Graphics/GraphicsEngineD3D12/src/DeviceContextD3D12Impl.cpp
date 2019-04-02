@@ -1000,7 +1000,7 @@ namespace Diligent
             D3D12_RANGE MapRange;
             // It is valid to specify the CPU didn't write any data by passing a range where End is less than or equal to Begin.
             MapRange.Begin = 1;
-            MapRange.End = 0;
+            MapRange.End   = 0;
             pd3d12Resource->Unmap(0, &MapRange);
         }
         else if(MapType == MAP_WRITE)
@@ -1456,7 +1456,8 @@ namespace Diligent
             if (MapType == MAP_READ)
             {
                 // Resources on D3D12_HEAP_TYPE_READBACK heaps do not support persistent map.
-                InvalidateRange = D3D12_RANGE{Footprint.Offset, Footprint.Offset + TotalBytes};
+                InvalidateRange.Begin = static_cast<SIZE_T>(Footprint.Offset);
+                InvalidateRange.End   = static_cast<SIZE_T>(Footprint.Offset + TotalBytes);
             }
 
             // Nested Map() calls are supported and are ref-counted. The first call to Map() allocates
@@ -1526,7 +1527,8 @@ namespace Diligent
                   nullptr,
                   &TotalBytes
                 );
-                FlushRange = D3D12_RANGE{Footprint.Offset, Footprint.Offset + TotalBytes};
+                FlushRange.Begin = static_cast<SIZE_T>(Footprint.Offset);
+                FlushRange.End   = static_cast<SIZE_T>(Footprint.Offset + TotalBytes);
             }
 
             // Map and Unmap can be called by multiple threads safely. Nested Map calls are supported 
