@@ -1116,19 +1116,66 @@ namespace Diligent
                                                    RESOURCE_STATE_TRANSITION_MODE  DstTextureTransitionMode)
     {
         auto& CmdCtx = GetCmdContext();
+        if (pSrcTexture->GetDesc().Usage == USAGE_STAGING)
+        {
+            DEV_CHECK_ERR((pSrcTexture->GetDesc().CPUAccessFlags & CPU_ACCESS_WRITE) != 0, "Source staging texture must be created with CPU_ACCESS_WRITE flag");
+            DEV_CHECK_ERR(pSrcTexture->GetState() == RESOURCE_STATE_GENERIC_READ || !pSrcTexture->IsInKnownState(), "Staging texture must always be in RESOURCE_STATE_GENERIC_READ state");
+        }
         TransitionOrVerifyTextureState(CmdCtx, *pSrcTexture, SrcTextureTransitionMode, RESOURCE_STATE_COPY_SOURCE, "Using resource as copy source (DeviceContextD3D12Impl::CopyTextureRegion)");
-        TransitionOrVerifyTextureState(CmdCtx, *pDstTexture, DstTextureTransitionMode, RESOURCE_STATE_COPY_DEST,   "Using resource as copy destination (DeviceContextD3D12Impl::CopyTextureRegion)");
+
+        if (pDstTexture->GetDesc().Usage == USAGE_STAGING)
+        {
+            DEV_CHECK_ERR((pDstTexture->GetDesc().CPUAccessFlags & CPU_ACCESS_READ) != 0, "Destination staging texture must be created with CPU_ACCESS_READ flag");
+            DEV_CHECK_ERR(pDstTexture->GetState() == RESOURCE_STATE_COPY_DEST || !pDstTexture->IsInKnownState(), "Staging texture must always be in RESOURCE_STATE_COPY_DEST state");
+        }
+        TransitionOrVerifyTextureState(CmdCtx, *pDstTexture, DstTextureTransitionMode, RESOURCE_STATE_COPY_DEST, "Using resource as copy destination (DeviceContextD3D12Impl::CopyTextureRegion)");
 
         D3D12_TEXTURE_COPY_LOCATION DstLocation = {}, SrcLocation = {};
 
-        DstLocation.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-        DstLocation.pResource = pDstTexture->GetD3D12Resource();
-        DstLocation.SubresourceIndex = DstSubResIndex;
-
-        SrcLocation.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
         SrcLocation.pResource = pSrcTexture->GetD3D12Resource();
-        SrcLocation.SubresourceIndex = SrcSubResIndex;
-
+        if (pSrcTexture->GetDesc().Usage == USAGE_STAGING)
+        {
+            SrcLocation.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+            auto d3d12TexDesc = pSrcTexture->GetD3D12TextureDesc();
+            auto* pd3d12Device = m_pDevice.RawPtr<RenderDeviceD3D12Impl>()->GetD3D12Device();
+            pd3d12Device->GetCopyableFootprints(&d3d12TexDesc,
+              SrcSubResIndex,
+              1, // Num subresources
+              0, // The offset, in bytes, to the resource.
+              &DstLocation.PlacedFootprint,
+              nullptr,
+              nullptr,
+              nullptr
+            );
+        }
+        else
+        {
+            SrcLocation.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+            SrcLocation.SubresourceIndex = SrcSubResIndex;
+        }
+        
+        DstLocation.pResource = pDstTexture->GetD3D12Resource();
+        if (pDstTexture->GetDesc().Usage == USAGE_STAGING)
+        {
+            DstLocation.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+            auto d3d12TexDesc = pDstTexture->GetD3D12TextureDesc();
+            auto* pd3d12Device = m_pDevice.RawPtr<RenderDeviceD3D12Impl>()->GetD3D12Device();
+            pd3d12Device->GetCopyableFootprints(&d3d12TexDesc,
+              DstSubResIndex,
+              1, // Num subresources
+              0, // The offset, in bytes, to the resource.
+              &DstLocation.PlacedFootprint,
+              nullptr,
+              nullptr,
+              nullptr
+            );
+        }
+        else
+        {
+            DstLocation.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+            DstLocation.SubresourceIndex = DstSubResIndex;
+        }
+            
         CmdCtx.FlushResourceBarriers();
         CmdCtx.GetCommandList()->CopyTextureRegion( &DstLocation, DstX, DstY, DstZ, &SrcLocation, pD3D12SrcBox);
         ++m_State.NumCommands;
@@ -1343,38 +1390,89 @@ namespace Diligent
     {
         TDeviceContextBase::MapTextureSubresource(pTexture, MipLevel, ArraySlice, MapType, MapFlags, pMapRegion, MappedData);
 
-        if (MapType != MAP_WRITE)
-        {
-            LOG_ERROR("Textures can currently only be mapped for writing in D3D12 backend");
-            MappedData = MappedTextureSubresource{};
-            return;
-        }
-
-        if( (MapFlags & (MAP_FLAG_DISCARD | MAP_FLAG_DO_NOT_SYNCHRONIZE)) != 0 )
-            LOG_WARNING_MESSAGE_ONCE("Mapping textures with flags MAP_FLAG_DISCARD or MAP_FLAG_DO_NOT_SYNCHRONIZE has no effect in D3D12 backend");
-
         auto& TextureD3D12 = *ValidatedCast<TextureD3D12Impl>(pTexture);
         const auto& TexDesc = TextureD3D12.GetDesc();
-
-        Box FullExtentBox;
-        if (pMapRegion == nullptr)
-        {
-            FullExtentBox.MaxX = std::max(TexDesc.Width  >> MipLevel, 1u);
-            FullExtentBox.MaxY = std::max(TexDesc.Height >> MipLevel, 1u);
-            if (TexDesc.Type == RESOURCE_DIM_TEX_3D)
-                FullExtentBox.MaxZ = std::max(TexDesc.Depth >> MipLevel, 1u);
-            pMapRegion = &FullExtentBox;
-        }
-
-        auto UploadSpace = AllocateTextureUploadSpace(TexDesc.Format, *pMapRegion);
-        MappedData.pData       = reinterpret_cast<Uint8*>(UploadSpace.Allocation.CPUAddress) + (UploadSpace.AlignedOffset - UploadSpace.Allocation.Offset);
-        MappedData.Stride      = UploadSpace.Stride;
-        MappedData.DepthStride = UploadSpace.DepthStride;
-
         auto Subres = D3D12CalcSubresource(MipLevel, ArraySlice, 0, TexDesc.MipLevels, TexDesc.ArraySize);
-        auto it = m_MappedTextures.emplace(MappedTextureKey{&TextureD3D12, Subres}, std::move(UploadSpace));
-        if(!it.second)
-            LOG_ERROR_MESSAGE("Mip level ", MipLevel, ", slice ", ArraySlice, " of texture '", TexDesc.Name, "' has already been mapped");
+        if (TexDesc.Usage == USAGE_DEFAULT)
+        {
+            if (MapType != MAP_WRITE)
+            {
+                LOG_ERROR("USAGE_DEFAULT textures can only be mapped for writing");
+                MappedData = MappedTextureSubresource{};
+                return;
+            }
+
+            if( (MapFlags & (MAP_FLAG_DISCARD | MAP_FLAG_DO_NOT_SYNCHRONIZE)) != 0 )
+                LOG_WARNING_MESSAGE_ONCE("Mapping textures with flags MAP_FLAG_DISCARD or MAP_FLAG_DO_NOT_SYNCHRONIZE has no effect in D3D12 backend");
+
+            Box FullExtentBox;
+            if (pMapRegion == nullptr)
+            {
+                FullExtentBox.MaxX = std::max(TexDesc.Width  >> MipLevel, 1u);
+                FullExtentBox.MaxY = std::max(TexDesc.Height >> MipLevel, 1u);
+                if (TexDesc.Type == RESOURCE_DIM_TEX_3D)
+                    FullExtentBox.MaxZ = std::max(TexDesc.Depth >> MipLevel, 1u);
+                pMapRegion = &FullExtentBox;
+            }
+
+            auto UploadSpace = AllocateTextureUploadSpace(TexDesc.Format, *pMapRegion);
+            MappedData.pData       = reinterpret_cast<Uint8*>(UploadSpace.Allocation.CPUAddress) + (UploadSpace.AlignedOffset - UploadSpace.Allocation.Offset);
+            MappedData.Stride      = UploadSpace.Stride;
+            MappedData.DepthStride = UploadSpace.DepthStride;
+
+            auto it = m_MappedTextures.emplace(MappedTextureKey{&TextureD3D12, Subres}, std::move(UploadSpace));
+            if(!it.second)
+                LOG_ERROR_MESSAGE("Mip level ", MipLevel, ", slice ", ArraySlice, " of texture '", TexDesc.Name, "' has already been mapped");
+        }
+        else if (TexDesc.Usage == USAGE_STAGING)
+        {
+            if( (MapFlags & MAP_FLAG_DO_NOT_SYNCHRONIZE) == 0 )
+            {
+                LOG_WARNING_MESSAGE_ONCE("Mapping staging textures is never synchronized in D3D12 backend. "
+                                         "Application must use fences or other synchronization methods to explicitly synchronize "
+                                         "access and map texture with MAP_FLAG_DO_NOT_SYNCHRONIZE flag.");
+            }
+
+            auto d3d12TexDesc = TextureD3D12.GetD3D12TextureDesc();
+            auto* pd3d12Device = m_pDevice.RawPtr<RenderDeviceD3D12Impl>()->GetD3D12Device();
+            D3D12_PLACED_SUBRESOURCE_FOOTPRINT Footprint = {};
+            UINT64 TotalBytes = 0;
+            UINT NumRows = 0;
+            UINT64 RowStride = 0;
+            pd3d12Device->GetCopyableFootprints(&d3d12TexDesc,
+              Subres,
+              1, // Num subresources
+              0, // The offset, in bytes, to the resource.
+              &Footprint,
+              &NumRows,
+              &RowStride,
+              &TotalBytes
+            );
+            
+            // It is valid to specify the CPU won't read any data by passing a range where
+            // End is less than or equal to Begin.
+            // https://docs.microsoft.com/en-us/windows/desktop/api/d3d12/nf-d3d12-id3d12resource-map
+            D3D12_RANGE InvalidateRange = {1,0};
+            if (MapType == MAP_READ)
+            {
+                // Resources on D3D12_HEAP_TYPE_READBACK heaps do not support persistent map.
+                InvalidateRange = D3D12_RANGE{Footprint.Offset, Footprint.Offset + TotalBytes};
+            }
+
+            // Nested Map() calls are supported and are ref-counted. The first call to Map() allocates
+            // a CPU virtual address range for the resource. The last call to Unmap deallocates the CPU
+            // virtual address range. 
+
+            // Map() invalidates the CPU cache, when necessary, so that CPU reads to this address
+            // reflect any modifications made by the GPU.
+            TextureD3D12.GetD3D12Resource()->Map(0, &InvalidateRange, &MappedData.pData);
+            MappedData.Stride      = static_cast<Uint32>(RowStride);
+            MappedData.DepthStride = static_cast<Uint32>(RowStride * NumRows);
+        }
+        else
+        {
+            UNSUPPORTED(GetUsageString(TexDesc.Usage), " textures cannot currently be mapped in D3D12 back-end");
+        }
     }
 
     void DeviceContextD3D12Impl::UnmapTextureSubresource(ITexture* pTexture, Uint32 MipLevel, Uint32 ArraySlice)
@@ -1384,24 +1482,64 @@ namespace Diligent
         TextureD3D12Impl& TextureD3D12 = *ValidatedCast<TextureD3D12Impl>(pTexture);
         const auto& TexDesc = TextureD3D12.GetDesc();
         auto Subres = D3D12CalcSubresource(MipLevel, ArraySlice, 0, TexDesc.MipLevels, TexDesc.ArraySize);
-        auto UploadSpaceIt = m_MappedTextures.find(MappedTextureKey{&TextureD3D12, Subres});
-        if(UploadSpaceIt != m_MappedTextures.end())
+        if (TexDesc.Usage == USAGE_DEFAULT)
         {
-            auto& UploadSpace = UploadSpaceIt->second;
-            CopyTextureRegion(UploadSpace.Allocation.pBuffer,
-                              UploadSpace.AlignedOffset,
-                              UploadSpace.Stride,
-                              UploadSpace.DepthStride,
-                              static_cast<Uint32>(UploadSpace.Allocation.Size - (UploadSpace.AlignedOffset - UploadSpace.Allocation.Offset)),
-                              TextureD3D12,
-                              Subres,
-                              UploadSpace.Region,
-                              RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
-            m_MappedTextures.erase(UploadSpaceIt);
+            auto UploadSpaceIt = m_MappedTextures.find(MappedTextureKey{&TextureD3D12, Subres});
+            if(UploadSpaceIt != m_MappedTextures.end())
+            {
+                auto& UploadSpace = UploadSpaceIt->second;
+                CopyTextureRegion(UploadSpace.Allocation.pBuffer,
+                                  UploadSpace.AlignedOffset,
+                                  UploadSpace.Stride,
+                                  UploadSpace.DepthStride,
+                                  static_cast<Uint32>(UploadSpace.Allocation.Size - (UploadSpace.AlignedOffset - UploadSpace.Allocation.Offset)),
+                                  TextureD3D12,
+                                  Subres,
+                                  UploadSpace.Region,
+                                  RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+                m_MappedTextures.erase(UploadSpaceIt);
+            }
+            else
+            {
+                LOG_ERROR_MESSAGE("Failed to unmap mip level ", MipLevel, ", slice ", ArraySlice, " of texture '", TexDesc.Name, "'. The texture has either been unmapped already or has not been mapped");
+            }
+        }
+        else if (TexDesc.Usage == USAGE_STAGING)
+        {
+            // It is valid to specify the CPU didn't write any data by passing a range where 
+            // End is less than or equal to Begin.
+            // https://docs.microsoft.com/en-us/windows/desktop/api/d3d12/nf-d3d12-id3d12resource-unmap
+            D3D12_RANGE FlushRange = {1, 0};
+
+            if (TexDesc.CPUAccessFlags == CPU_ACCESS_WRITE)
+            {
+                auto d3d12TexDesc = TextureD3D12.GetD3D12TextureDesc();
+                auto* pd3d12Device = m_pDevice.RawPtr<RenderDeviceD3D12Impl>()->GetD3D12Device();
+                D3D12_PLACED_SUBRESOURCE_FOOTPRINT Footprint = {};
+                UINT64 TotalBytes = 0;
+                pd3d12Device->GetCopyableFootprints(&d3d12TexDesc,
+                  Subres,
+                  1, // Num subresources
+                  0, // The offset, in bytes, to the resource.
+                  &Footprint,
+                  nullptr,
+                  nullptr,
+                  &TotalBytes
+                );
+                FlushRange = D3D12_RANGE{Footprint.Offset, Footprint.Offset + TotalBytes};
+            }
+
+            // Map and Unmap can be called by multiple threads safely. Nested Map calls are supported 
+            // and are ref-counted. The first call to Map allocates a CPU virtual address range for the 
+            // resource. The last call to Unmap deallocates the CPU virtual address range. 
+
+            // Unmap() flushes the CPU cache, when necessary, so that GPU reads to this address reflect
+            // any modifications made by the CPU.
+            TextureD3D12.GetD3D12Resource()->Unmap(0, &FlushRange);
         }
         else
         {
-            LOG_ERROR_MESSAGE("Failed to unmap mip level ", MipLevel, ", slice ", ArraySlice, " of texture '", TexDesc.Name, "'. The texture has either been unmapped already or has not been mapped");
+            UNSUPPORTED(GetUsageString(TexDesc.Usage), " textures cannot currently be mapped in D3D12 back-end");
         }
     }
 

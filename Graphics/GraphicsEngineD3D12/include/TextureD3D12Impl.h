@@ -80,6 +80,8 @@ public:
         return m_TexArraySRV.GetCpuHandle();
     }
 
+    D3D12_RESOURCE_DESC GetD3D12TextureDesc()const;
+
 protected:
     void CreateViewInternal( const struct TextureViewDesc &ViewDesc, ITextureView **ppView, bool bIsDefaultView )override final;
     //void PrepareD3D12InitData(const TextureData &InitData, Uint32 NumSubresources, std::vector<D3D12_SUBRESOURCE_DATA> &D3D12InitData);
