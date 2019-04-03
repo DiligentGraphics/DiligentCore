@@ -137,7 +137,7 @@ TextureD3D12Impl :: TextureD3D12Impl(IReferenceCounters*        pRefCounters,
 	D3D12_RESOURCE_DESC Desc = GetD3D12TextureDesc();
 
     auto* pd3d12Device = pRenderDeviceD3D12->GetD3D12Device();
-    if (m_Desc.Usage == USAGE_STATIC || m_Desc.Usage == USAGE_DEFAULT)
+    if (m_Desc.Usage == USAGE_STATIC || m_Desc.Usage == USAGE_DEFAULT || m_Desc.Usage == USAGE_DYNAMIC)
     {
         D3D12_CLEAR_VALUE ClearValue;
         D3D12_CLEAR_VALUE* pClearValue = nullptr;
@@ -354,10 +354,6 @@ TextureD3D12Impl :: TextureD3D12Impl(IReferenceCounters*        pRefCounters,
 		    nullptr,  __uuidof(m_pd3d12Resource), reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&m_pd3d12Resource)));
         if(FAILED(hr))
             LOG_ERROR_AND_THROW("Failed to create staging buffer");
-    }
-    else if (m_Desc.Usage == USAGE_DYNAMIC)
-    {
-        LOG_ERROR_AND_THROW("Dynamic textures are not currently implemented in D3D12 back-end");
     }
     else
     {

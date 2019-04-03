@@ -1393,7 +1393,7 @@ namespace Diligent
         auto& TextureD3D12 = *ValidatedCast<TextureD3D12Impl>(pTexture);
         const auto& TexDesc = TextureD3D12.GetDesc();
         auto Subres = D3D12CalcSubresource(MipLevel, ArraySlice, 0, TexDesc.MipLevels, TexDesc.ArraySize);
-        if (TexDesc.Usage == USAGE_DEFAULT)
+        if (TexDesc.Usage == USAGE_DYNAMIC)
         {
             if (MapType != MAP_WRITE)
             {
@@ -1483,7 +1483,7 @@ namespace Diligent
         TextureD3D12Impl& TextureD3D12 = *ValidatedCast<TextureD3D12Impl>(pTexture);
         const auto& TexDesc = TextureD3D12.GetDesc();
         auto Subres = D3D12CalcSubresource(MipLevel, ArraySlice, 0, TexDesc.MipLevels, TexDesc.ArraySize);
-        if (TexDesc.Usage == USAGE_DEFAULT)
+        if (TexDesc.Usage == USAGE_DYNAMIC)
         {
             auto UploadSpaceIt = m_MappedTextures.find(MappedTextureKey{&TextureD3D12, Subres});
             if(UploadSpaceIt != m_MappedTextures.end())
