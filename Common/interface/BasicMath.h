@@ -1081,6 +1081,9 @@ inline float4x4 scaleMatrix(float x, float y, float z)
                     0, 0, 0, 1);
 }
 
+// D3D-style left-handed matrix that rotates a point around the x axis. Angle (in radians)
+// is measured clockwise when looking along the rotation axis toward the origin:
+// (x' y' z' 1) = (x y z 1) * rotationX
 inline float4x4 rotationX(float angleInRadians)
 {
     float sinAngle = sinf(angleInRadians);
@@ -1088,14 +1091,17 @@ inline float4x4 rotationX(float angleInRadians)
 
     float4x4 mOut;
 
-    mOut._11 = 1.0f; mOut._12 = 0.0f;     mOut._13 = 0.0f;      mOut._14 = 0.0f;
-    mOut._21 = 0.0f; mOut._22 = cosAngle; mOut._23 = -sinAngle; mOut._24 = 0.0f;
-    mOut._31 = 0.0f; mOut._32 = sinAngle; mOut._33 = cosAngle;  mOut._34 = 0.0f;
-    mOut._41 = 0.0f; mOut._42 = 0.0f;     mOut._43 = 0.0f;      mOut._44 = 1.0f;
+    mOut._11 = 1.0f; mOut._12 =  0.0f;      mOut._13 = 0.0f;     mOut._14 = 0.0f;
+    mOut._21 = 0.0f; mOut._22 =  cosAngle;  mOut._23 = sinAngle; mOut._24 = 0.0f;
+    mOut._31 = 0.0f; mOut._32 = -sinAngle;  mOut._33 = cosAngle; mOut._34 = 0.0f;
+    mOut._41 = 0.0f; mOut._42 =  0.0f;      mOut._43 = 0.0f;     mOut._44 = 1.0f;
 
     return mOut;
 }
 
+// D3D-style left-handed matrix that rotates a point around the y axis. Angle (in radians)
+// is measured clockwise when looking along the rotation axis toward the origin:
+// (x' y' z' 1) = (x y z 1) * rotationY
 inline float4x4 rotationY(float angleInRadians)
 {
     float sinAngle = sinf(angleInRadians);
@@ -1103,14 +1109,17 @@ inline float4x4 rotationY(float angleInRadians)
 
     float4x4 mOut;
 
-    mOut._11 = cosAngle;  mOut._12 = 0.0f; mOut._13 = sinAngle; mOut._14 = 0.0f;
-    mOut._21 = 0.0f;      mOut._22 = 1.0f; mOut._23 = 0.0f;     mOut._24 = 0.0f;
-    mOut._31 = -sinAngle; mOut._32 = 0.0f; mOut._33 = cosAngle; mOut._34 = 0.0f;
-    mOut._41 = 0.0f;      mOut._42 = 0.0f; mOut._43 = 0.0f;     mOut._44 = 1.0f;
+    mOut._11 = cosAngle;  mOut._12 = 0.0f; mOut._13 = -sinAngle; mOut._14 = 0.0f;
+    mOut._21 = 0.0f;      mOut._22 = 1.0f; mOut._23 =  0.0f;     mOut._24 = 0.0f;
+    mOut._31 = sinAngle;  mOut._32 = 0.0f; mOut._33 =  cosAngle; mOut._34 = 0.0f;
+    mOut._41 = 0.0f;      mOut._42 = 0.0f; mOut._43 =  0.0f;     mOut._44 = 1.0f;
 
     return mOut;
 }
 
+// D3D-style left-handed matrix that rotates a point around the z axis. Angle (in radians)
+// is measured clockwise when looking along the rotation axis toward the origin:
+// (x' y' z' 1) = (x y z 1) * rotationZ
 inline float4x4 rotationZ(float angleInRadians)
 {
     float sinAngle = sinf(angleInRadians);
@@ -1118,10 +1127,10 @@ inline float4x4 rotationZ(float angleInRadians)
 
     float4x4 mOut;
 
-    mOut._11 = cosAngle; mOut._12 = -sinAngle; mOut._13 = 0.0f; mOut._14 = 0.0f;
-    mOut._21 = sinAngle; mOut._22 = cosAngle;  mOut._23 = 0.0f; mOut._24 = 0.0f;
-    mOut._31 = 0.0f;     mOut._32 = 0.0f;      mOut._33 = 1.0f; mOut._34 = 0.0f;
-    mOut._41 = 0.0f;     mOut._42 = 0.0f;      mOut._43 = 0.0f; mOut._44 = 1.0f;
+    mOut._11 =  cosAngle; mOut._12 = sinAngle; mOut._13 = 0.0f; mOut._14 = 0.0f;
+    mOut._21 = -sinAngle; mOut._22 = cosAngle; mOut._23 = 0.0f; mOut._24 = 0.0f;
+    mOut._31 =  0.0f;     mOut._32 = 0.0f;     mOut._33 = 1.0f; mOut._34 = 0.0f;
+    mOut._41 =  0.0f;     mOut._42 = 0.0f;     mOut._43 = 0.0f; mOut._44 = 1.0f;
 
     return mOut;
 }
