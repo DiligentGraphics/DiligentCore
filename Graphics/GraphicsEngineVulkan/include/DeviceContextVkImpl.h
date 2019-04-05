@@ -296,14 +296,23 @@ private:
                                                        Uint32             MipLevel,
                                                        const Box&         Region)const;
 
-    void CopyBufferToTexture(VkBuffer                       vkBuffer,
-                             Uint32                         BufferOffset,
-                             Uint32                         BufferRowStrideInTexels,
-                             const Box&                     Region,
-                             TextureVkImpl&                 TextureVk,
-                             Uint32                         MipLevel,
-                             Uint32                         ArraySlice,
-                             RESOURCE_STATE_TRANSITION_MODE TextureTransitionMode);
+    void CopyBufferToTexture(VkBuffer                       vkSrcBuffer,
+                             Uint32                         SrcBufferOffset,
+                             Uint32                         SrcBufferRowStrideInTexels,
+                             TextureVkImpl&                 DstTextureVk,
+                             const Box&                     DstRegion,
+                             Uint32                         DstMipLevel,
+                             Uint32                         DstArraySlice,
+                             RESOURCE_STATE_TRANSITION_MODE DstTextureTransitionMode);
+
+    void CopyTextureToBuffer(TextureVkImpl&                 SrcTextureVk,
+                             const Box&                     SrcRegion,
+                             Uint32                         SrcMipLevel,
+                             Uint32                         SrcArraySlice,
+                             RESOURCE_STATE_TRANSITION_MODE SrcTextureTransitionMode,
+                             VkBuffer                       vkDstBuffer,
+                             Uint32                         DstBufferOffset,
+                             Uint32                         DstBufferRowStrideInTexels);
 
 
     void DvpLogRenderPass_PSOMismatch();

@@ -62,6 +62,7 @@ void ScreenCapture::Capture(ISwapChain* pSwapChain, IDeviceContext* pContext, Ui
     if (!pStagingTexture)
     {
         TextureDesc TexDesc;
+        TexDesc.Name           = "Staging texture for screen capture";
         TexDesc.Type           = RESOURCE_DIM_TEX_2D;
         TexDesc.Width          = SCDesc.Width;
         TexDesc.Height         = SCDesc.Height;

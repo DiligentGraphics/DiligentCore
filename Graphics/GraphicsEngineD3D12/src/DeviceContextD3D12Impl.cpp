@@ -1403,7 +1403,7 @@ namespace Diligent
             }
 
             if( (MapFlags & (MAP_FLAG_DISCARD | MAP_FLAG_DO_NOT_SYNCHRONIZE)) != 0 )
-                LOG_WARNING_MESSAGE_ONCE("Mapping textures with flags MAP_FLAG_DISCARD or MAP_FLAG_DO_NOT_SYNCHRONIZE has no effect in D3D12 backend");
+                LOG_INFO_MESSAGE_ONCE("Mapping textures with flags MAP_FLAG_DISCARD or MAP_FLAG_DO_NOT_SYNCHRONIZE has no effect in D3D12 backend");
 
             Box FullExtentBox;
             if (pMapRegion == nullptr)
@@ -1455,9 +1455,14 @@ namespace Diligent
             D3D12_RANGE InvalidateRange = {1,0};
             if (MapType == MAP_READ)
             {
+                DEV_CHECK_ERR((TexDesc.CPUAccessFlags & CPU_ACCESS_READ), "Texture '", TexDesc.Name, "' was not created with CPU_ACCESS_READ flag and can't be mapped for reading");
                 // Resources on D3D12_HEAP_TYPE_READBACK heaps do not support persistent map.
                 InvalidateRange.Begin = static_cast<SIZE_T>(Footprint.Offset);
                 InvalidateRange.End   = static_cast<SIZE_T>(Footprint.Offset + TotalBytes);
+            }
+            else if (MapType == MAP_WRITE)
+            {
+                DEV_CHECK_ERR((TexDesc.CPUAccessFlags & CPU_ACCESS_WRITE), "Texture '", TexDesc.Name, "' was not created with CPU_ACCESS_WRITE flag and can't be mapped for writing");
             }
 
             // Nested Map() calls are supported and are ref-counted. The first call to Map() allocates

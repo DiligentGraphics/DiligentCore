@@ -1322,54 +1322,119 @@ namespace Diligent
 
         auto* pSrcTexVk = ValidatedCast<TextureVkImpl>( CopyAttribs.pSrcTexture );
         auto* pDstTexVk = ValidatedCast<TextureVkImpl>( CopyAttribs.pDstTexture );
+        const auto& SrcTexDesc = pSrcTexVk->GetDesc();
         const auto& DstTexDesc = pDstTexVk->GetDesc();
-        VkImageCopy CopyRegion = {};
-        if (auto* pSrcBox = CopyAttribs.pSrcBox)
+        auto* pSrcBox = CopyAttribs.pSrcBox;
+        Box FullMipBox;
+        if (pSrcBox == nullptr)
         {
+            FullMipBox.MaxX = std::max(DstTexDesc.Width  >> CopyAttribs.SrcMipLevel, 1u);
+            FullMipBox.MaxY = std::max(DstTexDesc.Height >> CopyAttribs.SrcMipLevel, 1u);
+            if(DstTexDesc.Type == RESOURCE_DIM_TEX_3D)
+                FullMipBox.MaxZ = std::max(DstTexDesc.Depth >> CopyAttribs.SrcMipLevel, 1u);
+            else
+                FullMipBox.MaxZ = 1;
+            pSrcBox = &FullMipBox;
+        }
+        const auto& FmtAttribs = GetDevice()->GetTextureFormatInfo(DstTexDesc.Format);
+        if (SrcTexDesc.Usage != USAGE_STAGING && DstTexDesc.Usage != USAGE_STAGING)
+        {
+            VkImageCopy CopyRegion = {};
             CopyRegion.srcOffset.x = pSrcBox->MinX;
             CopyRegion.srcOffset.y = pSrcBox->MinY;
             CopyRegion.srcOffset.z = pSrcBox->MinZ;
             CopyRegion.extent.width  = pSrcBox->MaxX - pSrcBox->MinX;
             CopyRegion.extent.height = std::max(pSrcBox->MaxY - pSrcBox->MinY, 1u);
             CopyRegion.extent.depth  = std::max(pSrcBox->MaxZ - pSrcBox->MinZ, 1u);
-        }
-        else
-        {
-            CopyRegion.srcOffset = VkOffset3D{0,0,0};
-            CopyRegion.extent.width  = std::max(DstTexDesc.Width  >> CopyAttribs.SrcMipLevel, 1u);
-            CopyRegion.extent.height = std::max(DstTexDesc.Height >> CopyAttribs.SrcMipLevel, 1u);
-            if(DstTexDesc.Type == RESOURCE_DIM_TEX_3D)
-                CopyRegion.extent.depth = std::max(DstTexDesc.Depth >> CopyAttribs.SrcMipLevel, 1u);
+
+            VkImageAspectFlags aspectMask = 0;
+            if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH)
+                aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+            else if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
+            {
+                aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+            }
             else
-                CopyRegion.extent.depth = 1;
-        }
+                aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
-        const auto& FmtAttribs = GetDevice()->GetTextureFormatInfo(DstTexDesc.Format);
-        VkImageAspectFlags aspectMask = 0;
-        if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH)
-            aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-        else if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
+            CopyRegion.srcSubresource.baseArrayLayer = CopyAttribs.SrcSlice;
+            CopyRegion.srcSubresource.layerCount     = 1;
+            CopyRegion.srcSubresource.mipLevel       = CopyAttribs.SrcMipLevel;
+            CopyRegion.srcSubresource.aspectMask     = aspectMask;
+    
+            CopyRegion.dstSubresource.baseArrayLayer = CopyAttribs.DstSlice;
+            CopyRegion.dstSubresource.layerCount     = 1;
+            CopyRegion.dstSubresource.mipLevel       = CopyAttribs.DstMipLevel;
+            CopyRegion.dstSubresource.aspectMask     = aspectMask;
+
+            CopyRegion.dstOffset.x = CopyAttribs.DstX;
+            CopyRegion.dstOffset.y = CopyAttribs.DstY;
+            CopyRegion.dstOffset.z = CopyAttribs.DstZ;
+
+            CopyTextureRegion(pSrcTexVk, CopyAttribs.SrcTextureTransitionMode, pDstTexVk, CopyAttribs.DstTextureTransitionMode, CopyRegion);
+        }
+        else if (SrcTexDesc.Usage == USAGE_STAGING && DstTexDesc.Usage != USAGE_STAGING)
         {
-            aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+            DEV_CHECK_ERR((SrcTexDesc.CPUAccessFlags & CPU_ACCESS_WRITE), "Attempting to copy from staging texture that was not created with CPU_ACCESS_WRITE flag");
+            DEV_CHECK_ERR(pSrcTexVk->GetState() == RESOURCE_STATE_COPY_SOURCE, "Source staging texture must permanently be in RESOURCE_STATE_COPY_SOURCE state");
+
+            auto SrcBufferOffset    = GetStagingDataOffset(SrcTexDesc, CopyAttribs.SrcSlice, CopyAttribs.SrcMipLevel);
+            auto SrcMipLevelAttribs = GetMipLevelProperties(SrcTexDesc, CopyAttribs.SrcMipLevel);
+            // address of (x,y,z) = region->bufferOffset + (((z * imageHeight) + y) * rowLength + x) * texelBlockSize; (18.4.1)
+            SrcBufferOffset +=
+                (pSrcBox->MinZ * SrcMipLevelAttribs.Height + pSrcBox->MinY) * SrcMipLevelAttribs.RowSize + 
+                (FmtAttribs.ComponentType != COMPONENT_TYPE_COMPRESSED ?
+                    pSrcBox->MinX * FmtAttribs.ComponentSize * FmtAttribs.NumComponents :
+                    pSrcBox->MinX / FmtAttribs.BlockWidth * FmtAttribs.ComponentSize);
+
+            Box DstBox;
+            DstBox.MinX = CopyAttribs.DstX;
+            DstBox.MinY = CopyAttribs.DstY;
+            DstBox.MinZ = CopyAttribs.DstZ;
+            DstBox.MaxX = DstBox.MinX + pSrcBox->MaxX - pSrcBox->MinX;
+            DstBox.MaxY = DstBox.MinY + pSrcBox->MaxY - pSrcBox->MinY;
+            DstBox.MaxZ = DstBox.MinZ + pSrcBox->MaxZ - pSrcBox->MinZ;
+
+            CopyBufferToTexture(
+                pSrcTexVk->GetVkStagingBuffer(),
+                SrcBufferOffset,
+                SrcMipLevelAttribs.Width,
+                *pDstTexVk,
+                DstBox,
+                CopyAttribs.DstMipLevel,
+                CopyAttribs.DstSlice,
+                CopyAttribs.DstTextureTransitionMode                
+            );
+        }
+        else if (SrcTexDesc.Usage != USAGE_STAGING && DstTexDesc.Usage == USAGE_STAGING)
+        {
+            DEV_CHECK_ERR((DstTexDesc.CPUAccessFlags & CPU_ACCESS_READ), "Attempting to copy to staging texture that was not created with CPU_ACCESS_READ flag");
+            DEV_CHECK_ERR(pDstTexVk->GetState() == RESOURCE_STATE_COPY_DEST, "Destination staging texture must permanently be in RESOURCE_STATE_COPY_DEST state");
+
+            auto DstBufferOffset = GetStagingDataOffset(DstTexDesc, CopyAttribs.DstSlice, CopyAttribs.DstMipLevel);
+            auto DstMipLevelAttribs = GetMipLevelProperties(DstTexDesc, CopyAttribs.DstMipLevel);
+            // address of (x,y,z) = region->bufferOffset + (((z * imageHeight) + y) * rowLength + x) * texelBlockSize; (18.4.1)
+            DstBufferOffset +=
+                (CopyAttribs.DstZ * DstMipLevelAttribs.Height + CopyAttribs.DstY) * DstMipLevelAttribs.RowSize *
+                (FmtAttribs.ComponentType != COMPONENT_TYPE_COMPRESSED ?
+                    CopyAttribs.DstX * FmtAttribs.ComponentSize *  FmtAttribs.NumComponents : 
+                    CopyAttribs.DstX / FmtAttribs.BlockWidth * FmtAttribs.ComponentSize);
+
+            CopyTextureToBuffer(
+                *pSrcTexVk,
+                *pSrcBox,
+                CopyAttribs.SrcMipLevel,
+                CopyAttribs.SrcSlice,
+                CopyAttribs.SrcTextureTransitionMode,
+                pDstTexVk->GetVkStagingBuffer(),
+                DstBufferOffset,
+                DstMipLevelAttribs.Width
+            );
         }
         else
-            aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-
-        CopyRegion.srcSubresource.baseArrayLayer = CopyAttribs.SrcSlice;
-        CopyRegion.srcSubresource.layerCount     = 1;
-        CopyRegion.srcSubresource.mipLevel       = CopyAttribs.SrcMipLevel;
-        CopyRegion.srcSubresource.aspectMask     = aspectMask;
-    
-        CopyRegion.dstSubresource.baseArrayLayer = CopyAttribs.DstSlice;
-        CopyRegion.dstSubresource.layerCount     = 1;
-        CopyRegion.dstSubresource.mipLevel       = CopyAttribs.DstMipLevel;
-        CopyRegion.dstSubresource.aspectMask     = aspectMask;
-
-        CopyRegion.dstOffset.x = CopyAttribs.DstX;
-        CopyRegion.dstOffset.y = CopyAttribs.DstY;
-        CopyRegion.dstOffset.z = CopyAttribs.DstZ;
-
-        CopyTextureRegion(pSrcTexVk, CopyAttribs.SrcTextureTransitionMode, pDstTexVk, CopyAttribs.DstTextureTransitionMode, CopyRegion);
+        {
+            UNSUPPORTED("Copying data between staging textures is not supported and is likely not want you really want to do");
+        }
     }
 
     void DeviceContextVkImpl::CopyTextureRegion(TextureVkImpl*                 pSrcTexture,
@@ -1504,8 +1569,8 @@ namespace Diligent
         CopyBufferToTexture(Allocation.vkBuffer,
                             static_cast<Uint32>(Allocation.AlignedOffset),
                             CopyInfo.StrideInTexels,
-                            CopyInfo.Region,
                             TextureVk,
+                            CopyInfo.Region,
                             MipLevel,
                             Slice,
                             TextureTransitionMode);
@@ -1517,19 +1582,13 @@ namespace Diligent
         m_GenerateMipsHelper->GenerateMips(*ValidatedCast<TextureViewVkImpl>(pTexView), *this, *m_GenerateMipsSRB);
     }
 
-    void DeviceContextVkImpl::CopyBufferToTexture(VkBuffer                       vkBuffer,
-                                                  Uint32                         BufferOffset,
-                                                  Uint32                         BufferRowStrideInTexels,
-                                                  const Box&                     Region,
-                                                  TextureVkImpl&                 TextureVk,
-                                                  Uint32                         MipLevel,
-                                                  Uint32                         ArraySlice,
-                                                  RESOURCE_STATE_TRANSITION_MODE TextureTransitionMode)
+    static VkBufferImageCopy GetBufferImageCopyInfo(Uint32              BufferOffset,
+                                                    Uint32              BufferRowStrideInTexels,
+                                                    const TextureDesc&  TexDesc, 
+                                                    const Box&          Region,
+                                                    Uint32              MipLevel,
+                                                    Uint32              ArraySlice)
     {
-        EnsureVkCmdBuffer();
-        TransitionOrVerifyTextureState(TextureVk, TextureTransitionMode, RESOURCE_STATE_COPY_DEST, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                                       "Using texture as copy destination (DeviceContextVkImpl::CopyBufferToTexture)");
-
         VkBufferImageCopy CopyRegion = {};
         VERIFY( (BufferOffset % 4) == 0, "Source buffer offset must be multiple of 4 (18.4)");
         CopyRegion.bufferOffset = BufferOffset; // must be a multiple of 4 (18.4)
@@ -1537,10 +1596,9 @@ namespace Diligent
         // bufferRowLength and bufferImageHeight specify the data in buffer memory as a subregion of a larger two- or
         // three-dimensional image, and control the addressing calculations of data in buffer memory. If either of these
         // values is zero, that aspect of the buffer memory is considered to be tightly packed according to the imageExtent (18.4).
-        CopyRegion.bufferRowLength = BufferRowStrideInTexels;
+        CopyRegion.bufferRowLength   = BufferRowStrideInTexels;
         CopyRegion.bufferImageHeight = 0;
 
-        const auto& TexDesc = TextureVk.GetDesc();
         const auto& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
         // The aspectMask member of imageSubresource must only have a single bit set (18.4)
         if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH)
@@ -1558,8 +1616,8 @@ namespace Diligent
             CopyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
         CopyRegion.imageSubresource.baseArrayLayer = ArraySlice;
-        CopyRegion.imageSubresource.layerCount = 1;
-        CopyRegion.imageSubresource.mipLevel = MipLevel;
+        CopyRegion.imageSubresource.layerCount     = 1;
+        CopyRegion.imageSubresource.mipLevel       = MipLevel;
         // - imageOffset.x and (imageExtent.width + imageOffset.x) must both be greater than or equal to 0 and
         //   less than or equal to the image subresource width (18.4)
         // - imageOffset.y and (imageExtent.height + imageOffset.y) must both be greater than or equal to 0 and
@@ -1580,14 +1638,58 @@ namespace Diligent
                 static_cast<uint32_t>(Region.MaxY - Region.MinY),
                 static_cast<uint32_t>(Region.MaxZ - Region.MinZ)
             };
-        
+
+        return CopyRegion;
+    }
+
+    void DeviceContextVkImpl::CopyBufferToTexture(VkBuffer                       vkSrcBuffer,
+                                                  Uint32                         SrcBufferOffset,
+                                                  Uint32                         SrcBufferRowStrideInTexels,
+                                                  TextureVkImpl&                 DstTextureVk,
+                                                  const Box&                     DstRegion,
+                                                  Uint32                         DstMipLevel,
+                                                  Uint32                         DstArraySlice,
+                                                  RESOURCE_STATE_TRANSITION_MODE DstTextureTransitionMode)
+    {
+        EnsureVkCmdBuffer();
+        TransitionOrVerifyTextureState(DstTextureVk, DstTextureTransitionMode, RESOURCE_STATE_COPY_DEST, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                       "Using texture as copy destination (DeviceContextVkImpl::CopyBufferToTexture)");
+
+        const auto& TexDesc = DstTextureVk.GetDesc();
+        VkBufferImageCopy BuffImgCopy = GetBufferImageCopyInfo(SrcBufferOffset, SrcBufferRowStrideInTexels, TexDesc, DstRegion, DstMipLevel, DstArraySlice);
+
         m_CommandBuffer.CopyBufferToImage(
-            vkBuffer,
-            TextureVk.GetVkImage(),
+            vkSrcBuffer,
+            DstTextureVk.GetVkImage(),
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, // must be VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL or VK_IMAGE_LAYOUT_GENERAL (18.4)
             1,
-            &CopyRegion);
+            &BuffImgCopy);
     }
+
+    void DeviceContextVkImpl::CopyTextureToBuffer(TextureVkImpl&                 SrcTextureVk,
+                                                  const Box&                     SrcRegion,
+                                                  Uint32                         SrcMipLevel,
+                                                  Uint32                         SrcArraySlice,
+                                                  RESOURCE_STATE_TRANSITION_MODE SrcTextureTransitionMode,
+                                                  VkBuffer                       vkDstBuffer,
+                                                  Uint32                         DstBufferOffset,
+                                                  Uint32                         DstBufferRowStrideInTexels)
+    {
+        EnsureVkCmdBuffer();
+        TransitionOrVerifyTextureState(SrcTextureVk, SrcTextureTransitionMode, RESOURCE_STATE_COPY_SOURCE, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                                       "Using texture as source destination (DeviceContextVkImpl::CopyTextureToBuffer)");
+
+        const auto& TexDesc = SrcTextureVk.GetDesc();
+        VkBufferImageCopy BuffImgCopy = GetBufferImageCopyInfo(DstBufferOffset, DstBufferRowStrideInTexels, TexDesc, SrcRegion, SrcMipLevel, SrcArraySlice);
+       
+        m_CommandBuffer.CopyImageToBuffer(
+            SrcTextureVk.GetVkImage(),
+            VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, // must be VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL or VK_IMAGE_LAYOUT_GENERAL (18.4)
+            vkDstBuffer,
+            1,
+            &BuffImgCopy);
+    }
+
 
     void DeviceContextVkImpl::MapTextureSubresource( ITexture*                 pTexture,
                                                      Uint32                    MipLevel,
@@ -1601,16 +1703,7 @@ namespace Diligent
 
         TextureVkImpl& TextureVk = *ValidatedCast<TextureVkImpl>(pTexture);
         const auto& TexDesc = TextureVk.GetDesc();
-
-        if (MapType != MAP_WRITE)
-        {
-            LOG_ERROR("Textures can currently only be mapped for writing in Vulkan backend");
-            MappedData = MappedTextureSubresource{};
-            return;
-        }
-
-        if ((MapFlags & (MAP_FLAG_DISCARD | MAP_FLAG_DO_NOT_SYNCHRONIZE)) != 0)
-            LOG_WARNING_MESSAGE_ONCE("Mapping textures with flags MAP_FLAG_DISCARD or MAP_FLAG_DO_NOT_SYNCHRONIZE has no effect in Vulkan backend");
+        const auto& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
 
         Box FullExtentBox;
         if (pMapRegion == nullptr)
@@ -1621,27 +1714,84 @@ namespace Diligent
                 FullExtentBox.MaxZ = std::max(TexDesc.Depth >> MipLevel, 1u);
             pMapRegion = &FullExtentBox;
         }
-        
-        auto CopyInfo = GetBufferToTextureCopyInfo(TexDesc, MipLevel, *pMapRegion);
-        const auto& DeviceLimits = m_pDevice.RawPtr<RenderDeviceVkImpl>()->GetPhysicalDevice().GetProperties().limits;
-        // Source buffer offset must be multiple of 4 (18.4)
-        auto Alignment = std::max(DeviceLimits.optimalBufferCopyOffsetAlignment, VkDeviceSize{4});
-        // If the calling command's VkImage parameter is a compressed image, bufferOffset must be a multiple of 
-        // the compressed texel block size in bytes (18.4)
-        const auto& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
-        if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
+
+        if (TexDesc.Usage == USAGE_DYNAMIC)
         {
-            Alignment = std::max(Alignment, VkDeviceSize{FmtAttribs.ComponentSize});
+            if (MapType != MAP_WRITE)
+            {
+                LOG_ERROR("Textures can currently only be mapped for writing in Vulkan backend");
+                MappedData = MappedTextureSubresource{};
+                return;
+            }
+
+            if ((MapFlags & (MAP_FLAG_DISCARD | MAP_FLAG_DO_NOT_SYNCHRONIZE)) != 0)
+                LOG_INFO_MESSAGE_ONCE("Mapping textures with flags MAP_FLAG_DISCARD or MAP_FLAG_DO_NOT_SYNCHRONIZE has no effect in Vulkan backend");
+        
+            auto CopyInfo = GetBufferToTextureCopyInfo(TexDesc, MipLevel, *pMapRegion);
+            const auto& DeviceLimits = m_pDevice.RawPtr<RenderDeviceVkImpl>()->GetPhysicalDevice().GetProperties().limits;
+            // Source buffer offset must be multiple of 4 (18.4)
+            auto Alignment = std::max(DeviceLimits.optimalBufferCopyOffsetAlignment, VkDeviceSize{4});
+            // If the calling command's VkImage parameter is a compressed image, bufferOffset must be a multiple of 
+            // the compressed texel block size in bytes (18.4)
+            if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
+            {
+                Alignment = std::max(Alignment, VkDeviceSize{FmtAttribs.ComponentSize});
+            }
+            auto Allocation = AllocateDynamicSpace(CopyInfo.MemorySize, static_cast<Uint32>(Alignment));
+
+            MappedData.pData       = reinterpret_cast<Uint8*>(Allocation.pDynamicMemMgr->GetCPUAddress()) + Allocation.AlignedOffset;
+            MappedData.Stride      = CopyInfo.Stride;
+            MappedData.DepthStride = CopyInfo.DepthStride;
+
+            auto it = m_MappedTextures.emplace(MappedTextureKey{&TextureVk, MipLevel, ArraySlice}, MappedTexture{CopyInfo, std::move(Allocation)});
+            if(!it.second)
+                LOG_ERROR_MESSAGE("Mip level ", MipLevel, ", slice ", ArraySlice, " of texture '", TexDesc.Name, "' has already been mapped");
         }
-        auto Allocation = AllocateDynamicSpace(CopyInfo.MemorySize, static_cast<Uint32>(Alignment));
+        else if (TexDesc.Usage == USAGE_STAGING)
+        {
+            if( (MapFlags & MAP_FLAG_DO_NOT_SYNCHRONIZE) == 0 )
+            {
+                LOG_WARNING_MESSAGE_ONCE("Mapping staging textures is never synchronized in Vulkan backend. "
+                                         "Application must use fences or other synchronization methods to explicitly synchronize "
+                                         "access and map texture with MAP_FLAG_DO_NOT_SYNCHRONIZE flag.");
+            }
 
-        MappedData.pData       = reinterpret_cast<Uint8*>(Allocation.pDynamicMemMgr->GetCPUAddress()) + Allocation.AlignedOffset;
-        MappedData.Stride      = CopyInfo.Stride;
-        MappedData.DepthStride = CopyInfo.DepthStride;
+            auto SubresourceOffset = GetStagingDataOffset(TexDesc, ArraySlice, MipLevel);
+            auto MipLevelAttribs   = GetMipLevelProperties(TexDesc, MipLevel);
+            // address of (x,y,z) = region->bufferOffset + (((z * imageHeight) + y) * rowLength + x) * texelBlockSize; (18.4.1)
+            auto MapStartOffset = SubresourceOffset +
+                (pMapRegion->MinZ * MipLevelAttribs.Height + pMapRegion->MinY) * MipLevelAttribs.RowSize +
+                (FmtAttribs.ComponentType != COMPONENT_TYPE_COMPRESSED ?
+                    pMapRegion->MinX * FmtAttribs.ComponentSize * FmtAttribs.NumComponents :
+                    pMapRegion->MinX / FmtAttribs.BlockWidth * FmtAttribs.ComponentSize);
 
-        auto it = m_MappedTextures.emplace(MappedTextureKey{&TextureVk, MipLevel, ArraySlice}, MappedTexture{CopyInfo, std::move(Allocation)});
-        if(!it.second)
-            LOG_ERROR_MESSAGE("Mip level ", MipLevel, ", slice ", ArraySlice, " of texture '", TexDesc.Name, "' has already been mapped");
+            MappedData.pData = TextureVk.GetStagingDataCPUAddress() + MapStartOffset;
+            MappedData.Stride = MipLevelAttribs.RowSize;
+            MappedData.DepthStride = MipLevelAttribs.RowSize * MipLevelAttribs.Height;
+
+            if (MapType == MAP_READ)
+            {
+                DEV_CHECK_ERR((TexDesc.CPUAccessFlags & CPU_ACCESS_READ), "Texture '", TexDesc.Name, "' was not created with CPU_ACCESS_READ flag and can't be mapped for reading");
+                // Reaback memory is not created with HOST_COHERENT flag, so we have to explicitly invalidate the mapped range
+                // to make device writes visible to CPU reads
+                VERIFY_EXPR(pMapRegion->MaxZ >= 1 && pMapRegion->MaxY >= 1);
+                auto MapEndOffset = SubresourceOffset +
+                    ((pMapRegion->MaxZ-1) * MipLevelAttribs.Height + (pMapRegion->MaxY-1)) * MipLevelAttribs.RowSize +
+                    (FmtAttribs.ComponentType != COMPONENT_TYPE_COMPRESSED ?
+                        pMapRegion->MaxX * FmtAttribs.ComponentSize * FmtAttribs.NumComponents :
+                        pMapRegion->MaxX / FmtAttribs.BlockWidth * FmtAttribs.ComponentSize);
+                TextureVk.InvalidateStagingRange(MapStartOffset, MapEndOffset - MapStartOffset);
+            }
+            else if (MapType == MAP_WRITE)
+            {
+                DEV_CHECK_ERR((TexDesc.CPUAccessFlags & CPU_ACCESS_WRITE), "Texture '", TexDesc.Name, "' was not created with CPU_ACCESS_WRITE flag and can't be mapped for writing");
+                // Nothing needs to be done when mapping texture for writing
+            }
+        }
+        else
+        {
+            UNSUPPORTED(GetUsageString(TexDesc.Usage), " textures cannot currently be mapped in Vulkan back-end");
+        }
     }
 
     void DeviceContextVkImpl::UnmapTextureSubresource(ITexture* pTexture,
@@ -1652,23 +1802,43 @@ namespace Diligent
 
         TextureVkImpl& TextureVk = *ValidatedCast<TextureVkImpl>(pTexture);
         const auto& TexDesc = TextureVk.GetDesc();
-        auto UploadSpaceIt = m_MappedTextures.find(MappedTextureKey{&TextureVk, MipLevel, ArraySlice});
-        if(UploadSpaceIt != m_MappedTextures.end())
+
+        if (TexDesc.Usage == USAGE_DYNAMIC)
         {
-            auto& MappedTex = UploadSpaceIt->second;
-            CopyBufferToTexture(MappedTex.Allocation.pDynamicMemMgr->GetVkBuffer(),
-                                static_cast<Uint32>(MappedTex.Allocation.AlignedOffset),
-                                MappedTex.CopyInfo.StrideInTexels,
-                                MappedTex.CopyInfo.Region,
-                                TextureVk,
-                                MipLevel,
-                                ArraySlice,
-                                RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
-            m_MappedTextures.erase(UploadSpaceIt);
+            auto UploadSpaceIt = m_MappedTextures.find(MappedTextureKey{&TextureVk, MipLevel, ArraySlice});
+            if(UploadSpaceIt != m_MappedTextures.end())
+            {
+                auto& MappedTex = UploadSpaceIt->second;
+                CopyBufferToTexture(MappedTex.Allocation.pDynamicMemMgr->GetVkBuffer(),
+                                    static_cast<Uint32>(MappedTex.Allocation.AlignedOffset),
+                                    MappedTex.CopyInfo.StrideInTexels,
+                                    TextureVk,
+                                    MappedTex.CopyInfo.Region,
+                                    MipLevel,
+                                    ArraySlice,
+                                    RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+                m_MappedTextures.erase(UploadSpaceIt);
+            }
+            else
+            {
+                LOG_ERROR_MESSAGE("Failed to unmap mip level ", MipLevel, ", slice ", ArraySlice, " of texture '", TexDesc.Name, "'. The texture has either been unmapped already or has not been mapped");
+            }
+        }
+        else if (TexDesc.Usage == USAGE_STAGING)
+        {
+            if (TexDesc.CPUAccessFlags & CPU_ACCESS_READ)
+            {
+                // Nothing needs to be done
+            }
+            else if (TexDesc.CPUAccessFlags & CPU_ACCESS_WRITE)
+            {
+                // Upload textures are currently created with VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, so
+                // there is no need to explicitly flush the mapped range.
+            }
         }
         else
         {
-            LOG_ERROR_MESSAGE("Failed to unmap mip level ", MipLevel, ", slice ", ArraySlice, " of texture '", TexDesc.Name, "'. The texture has either been unmapped already or has not been mapped");
+            UNSUPPORTED(GetUsageString(TexDesc.Usage), " textures cannot currently be mapped in Vulkan back-end");
         }
     }
 

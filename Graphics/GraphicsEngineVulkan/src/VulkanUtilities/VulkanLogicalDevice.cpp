@@ -415,6 +415,16 @@ namespace VulkanUtilities
         vkUnmapMemory(m_VkDevice, memory);
     }
 
+    VkResult VulkanLogicalDevice::InvalidateMappedMemoryRanges(uint32_t memoryRangeCount, const VkMappedMemoryRange* pMemoryRanges)const
+    {
+        return vkInvalidateMappedMemoryRanges(m_VkDevice, memoryRangeCount, pMemoryRanges);
+    }
+
+    VkResult VulkanLogicalDevice::FlushMappedMemoryRanges(uint32_t memoryRangeCount, const VkMappedMemoryRange* pMemoryRanges)const
+    {
+        return vkFlushMappedMemoryRanges(m_VkDevice, memoryRangeCount, pMemoryRanges);
+    }
+
     VkResult VulkanLogicalDevice::GetFenceStatus(VkFence fence)const
     {
         return vkGetFenceStatus(m_VkDevice, fence);

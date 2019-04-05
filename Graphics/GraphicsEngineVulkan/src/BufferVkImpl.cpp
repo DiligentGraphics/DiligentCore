@@ -192,7 +192,7 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters*        pRefCounters,
             VkBufferCreateInfo VkStaginBuffCI = VkBuffCI;
             VkStaginBuffCI.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 
-            std::string StagingBufferName = "Staging buffer for '";
+            std::string StagingBufferName = "Upload buffer for '";
             StagingBufferName += m_Desc.Name;
             StagingBufferName += '\'';
             VulkanUtilities::BufferWrapper StagingBuffer = LogicalDevice.CreateBuffer(VkStaginBuffCI, StagingBufferName.c_str());

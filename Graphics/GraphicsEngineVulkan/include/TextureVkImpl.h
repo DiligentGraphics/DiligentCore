@@ -38,6 +38,18 @@ namespace Diligent
 
 class FixedBlockMemoryAllocator;
 
+struct MipLevelProperties
+{
+    Uint32 Width   = 0;
+    Uint32 Height  = 0;
+    Uint32 Depth   = 1;
+    Uint32 RowSize = 0;
+    Uint32 MipSize = 0;
+};
+
+MipLevelProperties GetMipLevelProperties(const TextureDesc& TexDesc, Uint32 MipLevel);
+Uint32 GetStagingDataOffset(const TextureDesc& TexDesc, Uint32 ArraySlice, Uint32 MipLevel);
+
 /// Base implementation of the Diligent::ITextureVk interface
 class TextureVkImpl final : public TextureBase<ITextureVk, RenderDeviceVkImpl, TextureViewVkImpl, FixedBlockMemoryAllocator>
 {
@@ -85,14 +97,31 @@ public:
     void SetLayout(VkImageLayout Layout)override final;
     VkImageLayout GetLayout()const override final;
 
+    VkBuffer GetVkStagingBuffer()const
+    {
+        return m_StagingBuffer;
+    }
+
+    uint8_t* GetStagingDataCPUAddress()const
+    {
+        auto* StagingDataCPUAddress = reinterpret_cast<uint8_t*>(m_MemoryAllocation.Page->GetCPUMemory());
+        VERIFY_EXPR(StagingDataCPUAddress != nullptr);
+        StagingDataCPUAddress += m_StagingDataAlignedOffset;
+        return StagingDataCPUAddress;
+    }
+
+    void InvalidateStagingRange(VkDeviceSize Offset, VkDeviceSize Size);
+
 protected:
     void CreateViewInternal( const struct TextureViewDesc& ViewDesc, ITextureView** ppView, bool bIsDefaultView )override;
     //void PrepareVkInitData(const TextureData &InitData, Uint32 NumSubresources, std::vector<Vk_SUBRESOURCE_DATA> &VkInitData);
     
     VulkanUtilities::ImageViewWrapper CreateImageView(TextureViewDesc &ViewDesc);
 
-    VulkanUtilities::ImageWrapper m_VulkanImage;
+    VulkanUtilities::ImageWrapper           m_VulkanImage;
+    VulkanUtilities::BufferWrapper          m_StagingBuffer;
     VulkanUtilities::VulkanMemoryAllocation m_MemoryAllocation;
+    VkDeviceSize                            m_StagingDataAlignedOffset;
 
     // Texture views needed for mipmap generation
     std::vector<std::unique_ptr<TextureViewVkImpl, STDDeleter<TextureViewVkImpl, FixedBlockMemoryAllocator> > > m_MipLevelSRV;

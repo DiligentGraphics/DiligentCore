@@ -31,10 +31,32 @@
 #include "EngineMemory.h"
 #include "StringTools.h"
 
-using namespace Diligent;
-
 namespace Diligent
 {
+
+MipLevelProperties GetMipLevelProperties(const TextureDesc& TexDesc, Uint32 MipLevel)
+{
+    MipLevelProperties MipProps;
+    const auto& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
+
+    MipProps.Width  = std::max(TexDesc.Width  >> MipLevel, 1u);
+    MipProps.Height = std::max(TexDesc.Height >> MipLevel, 1u);
+    MipProps.Depth  = (TexDesc.Type == RESOURCE_DIM_TEX_3D) ? std::max(TexDesc.Depth >> MipLevel, 1u) : 1u;
+    if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
+    {
+        VERIFY_EXPR(FmtAttribs.BlockWidth > 1 && FmtAttribs.BlockHeight > 1);
+        MipProps.Width   = (MipProps.Width  + FmtAttribs.BlockWidth -1) / FmtAttribs.BlockWidth;
+        MipProps.Height  = (MipProps.Height + FmtAttribs.BlockHeight-1) / FmtAttribs.BlockHeight;
+        MipProps.RowSize = MipProps.Width * Uint32{FmtAttribs.ComponentSize}; // ComponentSize is the block size
+    }
+    else
+    {
+        MipProps.RowSize = MipProps.Width * Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents};
+    }
+    MipProps.MipSize = MipProps.RowSize * MipProps.Height * MipProps.Depth;
+
+    return MipProps;
+}
 
 TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters, 
                                FixedBlockMemoryAllocator&   TexViewObjAllocator,
@@ -52,394 +74,465 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters,
 
     const auto& LogicalDevice = pRenderDeviceVk->GetLogicalDevice();
 
-    VkImageCreateInfo ImageCI = {};
-    ImageCI.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    ImageCI.pNext = nullptr;
-    ImageCI.flags = 0;
-    if(m_Desc.Type == RESOURCE_DIM_TEX_CUBE || m_Desc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY)
-        ImageCI.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
-    if(FmtAttribs.IsTypeless)
-        ImageCI.flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT; // Specifies that the image can be used to create a 
-                                                             // VkImageView with a different format from the image.
+    if (m_Desc.Usage == USAGE_STATIC || m_Desc.Usage == USAGE_DEFAULT || m_Desc.Usage == USAGE_DYNAMIC)
+    {
+        VkImageCreateInfo ImageCI = {};
+        ImageCI.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        ImageCI.pNext = nullptr;
+        ImageCI.flags = 0;
+        if(m_Desc.Type == RESOURCE_DIM_TEX_CUBE || m_Desc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY)
+            ImageCI.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+        if(FmtAttribs.IsTypeless)
+            ImageCI.flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT; // Specifies that the image can be used to create a 
+                                                                 // VkImageView with a different format from the image.
 
-    if (m_Desc.Type == RESOURCE_DIM_TEX_1D || m_Desc.Type == RESOURCE_DIM_TEX_1D_ARRAY)
-        ImageCI.imageType = VK_IMAGE_TYPE_1D;
-    else if (m_Desc.Type == RESOURCE_DIM_TEX_2D || m_Desc.Type == RESOURCE_DIM_TEX_2D_ARRAY || m_Desc.Type == RESOURCE_DIM_TEX_CUBE || m_Desc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY)
-        ImageCI.imageType = VK_IMAGE_TYPE_2D;
-    else if (m_Desc.Type == RESOURCE_DIM_TEX_3D)
-    {
-        ImageCI.imageType = VK_IMAGE_TYPE_3D;
-        ImageCI.flags |= VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT;
-    }
-    else
-    {
-        LOG_ERROR_AND_THROW("Unknown texture type");
-    }
-
-    if (FmtAttribs.IsTypeless)
-    {
-        TEXTURE_VIEW_TYPE DefaultTexView;
-        if(m_Desc.BindFlags & BIND_DEPTH_STENCIL)
-            DefaultTexView = TEXTURE_VIEW_DEPTH_STENCIL;
-        else if (m_Desc.BindFlags & BIND_UNORDERED_ACCESS)
-            DefaultTexView = TEXTURE_VIEW_UNORDERED_ACCESS;
-        else if (m_Desc.BindFlags & BIND_RENDER_TARGET)
-            DefaultTexView = TEXTURE_VIEW_RENDER_TARGET;
+        if (m_Desc.Type == RESOURCE_DIM_TEX_1D || m_Desc.Type == RESOURCE_DIM_TEX_1D_ARRAY)
+            ImageCI.imageType = VK_IMAGE_TYPE_1D;
+        else if (m_Desc.Type == RESOURCE_DIM_TEX_2D || m_Desc.Type == RESOURCE_DIM_TEX_2D_ARRAY || m_Desc.Type == RESOURCE_DIM_TEX_CUBE || m_Desc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY)
+            ImageCI.imageType = VK_IMAGE_TYPE_2D;
+        else if (m_Desc.Type == RESOURCE_DIM_TEX_3D)
+        {
+            ImageCI.imageType = VK_IMAGE_TYPE_3D;
+            ImageCI.flags |= VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT;
+        }
         else
-            DefaultTexView = TEXTURE_VIEW_SHADER_RESOURCE;
-        auto DefaultViewFormat = GetDefaultTextureViewFormat(m_Desc, DefaultTexView);
-        ImageCI.format = TexFormatToVkFormat(DefaultViewFormat);
-    }
-    else
-    {
-        ImageCI.format = TexFormatToVkFormat(m_Desc.Format);
-    }
+        {
+            LOG_ERROR_AND_THROW("Unknown texture type");
+        }
 
-    ImageCI.extent.width = m_Desc.Width;
-    ImageCI.extent.height = (m_Desc.Type == RESOURCE_DIM_TEX_1D || m_Desc.Type == RESOURCE_DIM_TEX_1D_ARRAY) ? 1 : m_Desc.Height;
-    ImageCI.extent.depth = (m_Desc.Type == RESOURCE_DIM_TEX_3D) ? m_Desc.Depth : 1;
+        if (FmtAttribs.IsTypeless)
+        {
+            TEXTURE_VIEW_TYPE DefaultTexView;
+            if(m_Desc.BindFlags & BIND_DEPTH_STENCIL)
+                DefaultTexView = TEXTURE_VIEW_DEPTH_STENCIL;
+            else if (m_Desc.BindFlags & BIND_UNORDERED_ACCESS)
+                DefaultTexView = TEXTURE_VIEW_UNORDERED_ACCESS;
+            else if (m_Desc.BindFlags & BIND_RENDER_TARGET)
+                DefaultTexView = TEXTURE_VIEW_RENDER_TARGET;
+            else
+                DefaultTexView = TEXTURE_VIEW_SHADER_RESOURCE;
+            auto DefaultViewFormat = GetDefaultTextureViewFormat(m_Desc, DefaultTexView);
+            ImageCI.format = TexFormatToVkFormat(DefaultViewFormat);
+        }
+        else
+        {
+            ImageCI.format = TexFormatToVkFormat(m_Desc.Format);
+        }
+
+        ImageCI.extent.width = m_Desc.Width;
+        ImageCI.extent.height = (m_Desc.Type == RESOURCE_DIM_TEX_1D || m_Desc.Type == RESOURCE_DIM_TEX_1D_ARRAY) ? 1 : m_Desc.Height;
+        ImageCI.extent.depth = (m_Desc.Type == RESOURCE_DIM_TEX_3D) ? m_Desc.Depth : 1;
     
-    ImageCI.mipLevels = m_Desc.MipLevels;
-    if (m_Desc.Type == RESOURCE_DIM_TEX_1D_ARRAY || 
-        m_Desc.Type == RESOURCE_DIM_TEX_2D_ARRAY || 
-        m_Desc.Type == RESOURCE_DIM_TEX_CUBE || 
-        m_Desc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY)
-        ImageCI.arrayLayers = m_Desc.ArraySize;
-    else
-        ImageCI.arrayLayers = 1;
+        ImageCI.mipLevels = m_Desc.MipLevels;
+        if (m_Desc.Type == RESOURCE_DIM_TEX_1D_ARRAY || 
+            m_Desc.Type == RESOURCE_DIM_TEX_2D_ARRAY || 
+            m_Desc.Type == RESOURCE_DIM_TEX_CUBE || 
+            m_Desc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY)
+            ImageCI.arrayLayers = m_Desc.ArraySize;
+        else
+            ImageCI.arrayLayers = 1;
 
-    ImageCI.samples = static_cast<VkSampleCountFlagBits>(1 << (m_Desc.SampleCount-1));
-    ImageCI.tiling = VK_IMAGE_TILING_OPTIMAL;
+        ImageCI.samples = static_cast<VkSampleCountFlagBits>(1 << (m_Desc.SampleCount-1));
+        ImageCI.tiling = VK_IMAGE_TILING_OPTIMAL;
 
-    ImageCI.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-    if (m_Desc.BindFlags & BIND_RENDER_TARGET)
-    {
-        // VK_IMAGE_USAGE_TRANSFER_DST_BIT is required for vkCmdClearColorImage()
-        ImageCI.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-    }
-    if (m_Desc.BindFlags & BIND_DEPTH_STENCIL)
-    {
-        // VK_IMAGE_USAGE_TRANSFER_DST_BIT is required for vkCmdClearDepthStencilImage()
-        ImageCI.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-    }
-    if ((m_Desc.BindFlags & BIND_UNORDERED_ACCESS) || (m_Desc.MiscFlags & MISC_TEXTURE_FLAG_GENERATE_MIPS))
-    {
-        ImageCI.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
-    }
-    if (m_Desc.BindFlags & BIND_SHADER_RESOURCE)
-    {
-        ImageCI.usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
-    }
+        ImageCI.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+        if (m_Desc.BindFlags & BIND_RENDER_TARGET)
+        {
+            // VK_IMAGE_USAGE_TRANSFER_DST_BIT is required for vkCmdClearColorImage()
+            ImageCI.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+        }
+        if (m_Desc.BindFlags & BIND_DEPTH_STENCIL)
+        {
+            // VK_IMAGE_USAGE_TRANSFER_DST_BIT is required for vkCmdClearDepthStencilImage()
+            ImageCI.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+        }
+        if ((m_Desc.BindFlags & BIND_UNORDERED_ACCESS) || (m_Desc.MiscFlags & MISC_TEXTURE_FLAG_GENERATE_MIPS))
+        {
+            ImageCI.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
+        }
+        if (m_Desc.BindFlags & BIND_SHADER_RESOURCE)
+        {
+            ImageCI.usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
+        }
 
-    ImageCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    ImageCI.queueFamilyIndexCount = 0;
-    ImageCI.pQueueFamilyIndices = nullptr;
+        ImageCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        ImageCI.queueFamilyIndexCount = 0;
+        ImageCI.pQueueFamilyIndices = nullptr;
 
-    // initialLayout must be either VK_IMAGE_LAYOUT_UNDEFINED or VK_IMAGE_LAYOUT_PREINITIALIZED (11.4)
-    // If it is VK_IMAGE_LAYOUT_PREINITIALIZED, then the image data can be preinitialized by the host 
-    // while using this layout, and the transition away from this layout will preserve that data. 
-    // If it is VK_IMAGE_LAYOUT_UNDEFINED, then the contents of the data are considered to be undefined, 
-    // and the transition away from this layout is not guaranteed to preserve that data.
-    ImageCI.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        // initialLayout must be either VK_IMAGE_LAYOUT_UNDEFINED or VK_IMAGE_LAYOUT_PREINITIALIZED (11.4)
+        // If it is VK_IMAGE_LAYOUT_PREINITIALIZED, then the image data can be preinitialized by the host 
+        // while using this layout, and the transition away from this layout will preserve that data. 
+        // If it is VK_IMAGE_LAYOUT_UNDEFINED, then the contents of the data are considered to be undefined, 
+        // and the transition away from this layout is not guaranteed to preserve that data.
+        ImageCI.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-    bool bInitializeTexture = (pInitData != nullptr && pInitData->pSubResources != nullptr && pInitData->NumSubresources > 0);
+        bool bInitializeTexture = (pInitData != nullptr && pInitData->pSubResources != nullptr && pInitData->NumSubresources > 0);
 
-    m_VulkanImage = LogicalDevice.CreateImage(ImageCI, m_Desc.Name);
+        m_VulkanImage = LogicalDevice.CreateImage(ImageCI, m_Desc.Name);
 
-    VkMemoryRequirements MemReqs = LogicalDevice.GetImageMemoryRequirements(m_VulkanImage);
+        VkMemoryRequirements MemReqs = LogicalDevice.GetImageMemoryRequirements(m_VulkanImage);
     
-    VkMemoryPropertyFlags ImageMemoryFlags = 0;
-    if (m_Desc.Usage == USAGE_STAGING)
-        ImageMemoryFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-    else
-        ImageMemoryFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+        VkMemoryPropertyFlags ImageMemoryFlags = 0;
+        if (m_Desc.Usage == USAGE_STAGING)
+            ImageMemoryFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+        else
+            ImageMemoryFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
-    VERIFY( IsPowerOfTwo(MemReqs.alignment), "Alignment is not power of 2!");
-    m_MemoryAllocation = pRenderDeviceVk->AllocateMemory(MemReqs, ImageMemoryFlags);
-    auto AlignedOffset = Align(m_MemoryAllocation.UnalignedOffset, MemReqs.alignment);
-    VERIFY_EXPR(m_MemoryAllocation.Size >= MemReqs.size + (AlignedOffset - m_MemoryAllocation.UnalignedOffset));
-    auto Memory = m_MemoryAllocation.Page->GetVkMemory();
-    auto err = LogicalDevice.BindImageMemory(m_VulkanImage, Memory, AlignedOffset);
-    CHECK_VK_ERROR_AND_THROW(err, "Failed to bind image memory");
+        VERIFY( IsPowerOfTwo(MemReqs.alignment), "Alignment is not power of 2!");
+        m_MemoryAllocation = pRenderDeviceVk->AllocateMemory(MemReqs, ImageMemoryFlags);
+        auto AlignedOffset = Align(m_MemoryAllocation.UnalignedOffset, MemReqs.alignment);
+        VERIFY_EXPR(m_MemoryAllocation.Size >= MemReqs.size + (AlignedOffset - m_MemoryAllocation.UnalignedOffset));
+        auto Memory = m_MemoryAllocation.Page->GetVkMemory();
+        auto err = LogicalDevice.BindImageMemory(m_VulkanImage, Memory, AlignedOffset);
+        CHECK_VK_ERROR_AND_THROW(err, "Failed to bind image memory");
 
     
-    // Vulkan validation layers do not like uninitialized memory, so if no initial data
-    // is provided, we will clear the memory
+        // Vulkan validation layers do not like uninitialized memory, so if no initial data
+        // is provided, we will clear the memory
 
-    VulkanUtilities::CommandPoolWrapper CmdPool;
-    VkCommandBuffer vkCmdBuff;
-    pRenderDeviceVk->AllocateTransientCmdPool(CmdPool, vkCmdBuff, "Transient command pool to copy staging data to a device buffer");
+        VulkanUtilities::CommandPoolWrapper CmdPool;
+        VkCommandBuffer vkCmdBuff;
+        pRenderDeviceVk->AllocateTransientCmdPool(CmdPool, vkCmdBuff, "Transient command pool to copy staging data to a device buffer");
 
-    VkImageAspectFlags aspectMask = 0;
-    if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH)
-        aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-    else if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
-    {
+        VkImageAspectFlags aspectMask = 0;
+        if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH)
+            aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+        else if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
+        {
+            if(bInitializeTexture)
+            {
+                UNSUPPORTED("Initializing depth-stencil texture is not currently supported");
+                // Only single aspect bit must be specified when copying texture data
+            }
+            aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+        }
+        else
+            aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+        // For either clear or copy command, dst layout must be VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
+        VkImageSubresourceRange SubresRange;
+        SubresRange.aspectMask = aspectMask;
+        SubresRange.baseArrayLayer = 0;
+        SubresRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+        SubresRange.baseMipLevel = 0;
+        SubresRange.levelCount = VK_REMAINING_MIP_LEVELS;
+        auto EnabledGraphicsShaderStages = LogicalDevice.GetEnabledGraphicsShaderStages();
+        VulkanUtilities::VulkanCommandBuffer::TransitionImageLayout(vkCmdBuff, m_VulkanImage, ImageCI.initialLayout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, SubresRange, EnabledGraphicsShaderStages);
+        SetState(RESOURCE_STATE_COPY_DEST);
+        const auto CurrentLayout = GetLayout();
+        VERIFY_EXPR(CurrentLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
         if(bInitializeTexture)
         {
-            UNSUPPORTED("Initializing depth-stencil texture is not currently supported");
-            // Only single aspect bit must be specified when copying texture data
-        }
-        aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-    }
-    else
-        aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            Uint32 ExpectedNumSubresources = ImageCI.mipLevels * ImageCI.arrayLayers;
+            if (pInitData->NumSubresources != ExpectedNumSubresources )
+                LOG_ERROR_AND_THROW("Incorrect number of subresources in init data. ", ExpectedNumSubresources, " expected, while ", pInitData->NumSubresources, " provided");
 
-    // For either clear or copy command, dst layout must be VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
-    VkImageSubresourceRange SubresRange;
-    SubresRange.aspectMask = aspectMask;
-    SubresRange.baseArrayLayer = 0;
-    SubresRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
-    SubresRange.baseMipLevel = 0;
-    SubresRange.levelCount = VK_REMAINING_MIP_LEVELS;
-    auto EnabledGraphicsShaderStages = LogicalDevice.GetEnabledGraphicsShaderStages();
-    VulkanUtilities::VulkanCommandBuffer::TransitionImageLayout(vkCmdBuff, m_VulkanImage, ImageCI.initialLayout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, SubresRange, EnabledGraphicsShaderStages);
-    SetState(RESOURCE_STATE_COPY_DEST);
-    const auto CurrentLayout = GetLayout();
-    VERIFY_EXPR(CurrentLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+            std::vector<VkBufferImageCopy> Regions(pInitData->NumSubresources);
 
-    if(bInitializeTexture)
-    {
-        Uint32 ExpectedNumSubresources = ImageCI.mipLevels * ImageCI.arrayLayers;
-        if (pInitData->NumSubresources != ExpectedNumSubresources )
-            LOG_ERROR_AND_THROW("Incorrect number of subresources in init data. ", ExpectedNumSubresources, " expected, while ", pInitData->NumSubresources, " provided");
-
-        std::vector<VkBufferImageCopy> Regions(pInitData->NumSubresources);
-
-        Uint64 uploadBufferSize = 0;
-        Uint32 subres = 0;
-        for(Uint32 layer = 0; layer < ImageCI.arrayLayers; ++layer)
-        {
-            for(Uint32 mip = 0; mip < ImageCI.mipLevels; ++mip)
+            Uint64 uploadBufferSize = 0;
+            Uint32 subres = 0;
+            for(Uint32 layer = 0; layer < ImageCI.arrayLayers; ++layer)
             {
-                const auto& SubResData = pInitData->pSubResources[subres]; (void)SubResData;
-                auto& CopyRegion = Regions[subres];
-
-                auto MipWidth  = std::max(m_Desc.Width  >> mip, 1u);
-                auto MipHeight = std::max(m_Desc.Height >> mip, 1u);
-                auto MipDepth  = (m_Desc.Type == RESOURCE_DIM_TEX_3D) ? std::max(m_Desc.Depth >> mip, 1u) : 1u;
-
-                CopyRegion.bufferOffset = uploadBufferSize; // offset in bytes from the start of the buffer object
-                // bufferRowLength and bufferImageHeight specify the data in buffer memory as a subregion 
-                // of a larger two- or three-dimensional image, and control the addressing calculations of 
-                // data in buffer memory. If either of these values is zero, that aspect of the buffer memory 
-                // is considered to be tightly packed according to the imageExtent. (18.4)
-                CopyRegion.bufferRowLength   = 0;
-                CopyRegion.bufferImageHeight = 0;
-                // For block-compression formats, all parameters are still specified in texels rather than compressed texel blocks (18.4.1)
-                CopyRegion.imageOffset = VkOffset3D{0, 0, 0};
-                CopyRegion.imageExtent = VkExtent3D{MipWidth, MipHeight, MipDepth};
-
-                CopyRegion.imageSubresource.aspectMask = aspectMask;
-                CopyRegion.imageSubresource.mipLevel = mip;
-                CopyRegion.imageSubresource.baseArrayLayer = layer;
-                CopyRegion.imageSubresource.layerCount = 1;
-
-                Uint32 RowSize = 0;
-                if(FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
+                for(Uint32 mip = 0; mip < ImageCI.mipLevels; ++mip)
                 {
-                    VERIFY_EXPR(FmtAttribs.BlockWidth > 1 && FmtAttribs.BlockHeight > 1);
-                    MipWidth  = (MipWidth  + FmtAttribs.BlockWidth -1) / FmtAttribs.BlockWidth;
-                    MipHeight = (MipHeight + FmtAttribs.BlockHeight-1) / FmtAttribs.BlockHeight;
-                    RowSize   = MipWidth * Uint32{FmtAttribs.ComponentSize}; // ComponentSize is the block size
-                }
-                else
-                {
-                    RowSize = MipWidth * Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents};
-                }
-                auto MipSize = RowSize * MipHeight * MipDepth;
-                VERIFY(SubResData.Stride == 0 || SubResData.Stride >= RowSize, "Stride is too small");
-                VERIFY(SubResData.DepthStride == 0 || SubResData.DepthStride >= RowSize * MipHeight, "Depth stride is too small");
+                    const auto& SubResData = pInitData->pSubResources[subres]; (void)SubResData;
+                    auto& CopyRegion = Regions[subres];
 
-                // bufferOffset must be a multiple of 4 (18.4)
-                // If the calling command's VkImage parameter is a compressed image, bufferOffset 
-                // must be a multiple of the compressed texel block size in bytes (18.4). This
-                // is automatically guaranteed as MipWidth and MipHeight are rounded to block size
-                uploadBufferSize += (MipSize + 3) & (~3);
-                ++subres;
+                    auto MipInfo = GetMipLevelProperties(m_Desc, mip);
+
+                    CopyRegion.bufferOffset = uploadBufferSize; // offset in bytes from the start of the buffer object
+                    // bufferRowLength and bufferImageHeight specify the data in buffer memory as a subregion 
+                    // of a larger two- or three-dimensional image, and control the addressing calculations of 
+                    // data in buffer memory. If either of these values is zero, that aspect of the buffer memory 
+                    // is considered to be tightly packed according to the imageExtent. (18.4)
+                    CopyRegion.bufferRowLength   = 0;
+                    CopyRegion.bufferImageHeight = 0;
+                    // For block-compression formats, all parameters are still specified in texels rather than compressed texel blocks (18.4.1)
+                    CopyRegion.imageOffset = VkOffset3D{0, 0, 0};
+                    CopyRegion.imageExtent = VkExtent3D{MipInfo.Width, MipInfo.Height, MipInfo.Depth};
+
+                    CopyRegion.imageSubresource.aspectMask     = aspectMask;
+                    CopyRegion.imageSubresource.mipLevel       = mip;
+                    CopyRegion.imageSubresource.baseArrayLayer = layer;
+                    CopyRegion.imageSubresource.layerCount     = 1;
+
+                    VERIFY(SubResData.Stride == 0 || SubResData.Stride >= MipInfo.RowSize, "Stride is too small");
+                    VERIFY(SubResData.DepthStride == 0 || SubResData.DepthStride >= MipInfo.RowSize * MipInfo.Height, "Depth stride is too small");
+
+                    // bufferOffset must be a multiple of 4 (18.4)
+                    // If the calling command's VkImage parameter is a compressed image, bufferOffset 
+                    // must be a multiple of the compressed texel block size in bytes (18.4). This
+                    // is automatically guaranteed as MipWidth and MipHeight are rounded to block size
+                    uploadBufferSize += (MipInfo.MipSize + 3) & (~3);
+                    ++subres;
+                }
             }
-        }
-        VERIFY_EXPR(subres == pInitData->NumSubresources);
+            VERIFY_EXPR(subres == pInitData->NumSubresources);
 
+            VkBufferCreateInfo VkStaginBuffCI = {};
+            VkStaginBuffCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+            VkStaginBuffCI.pNext = nullptr;
+            VkStaginBuffCI.flags = 0;
+            VkStaginBuffCI.size = uploadBufferSize;
+            VkStaginBuffCI.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+            VkStaginBuffCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+            VkStaginBuffCI.queueFamilyIndexCount = 0;
+            VkStaginBuffCI.pQueueFamilyIndices = nullptr;
+
+            std::string StagingBufferName = "Upload buffer for '";
+            StagingBufferName += m_Desc.Name;
+            StagingBufferName += '\'';
+            VulkanUtilities::BufferWrapper StagingBuffer = LogicalDevice.CreateBuffer(VkStaginBuffCI, StagingBufferName.c_str());
+
+            VkMemoryRequirements StagingBufferMemReqs = LogicalDevice.GetBufferMemoryRequirements(StagingBuffer);
+            VERIFY( IsPowerOfTwo(StagingBufferMemReqs.alignment), "Alignment is not power of 2!");
+            // VK_MEMORY_PROPERTY_HOST_COHERENT_BIT bit specifies that the host cache management commands vkFlushMappedMemoryRanges 
+            // and vkInvalidateMappedMemoryRanges are NOT needed to flush host writes to the device or make device writes visible
+            // to the host (10.2)
+            auto StagingMemoryAllocation = pRenderDeviceVk->AllocateMemory(StagingBufferMemReqs, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+            auto StagingBufferMemory = StagingMemoryAllocation.Page->GetVkMemory();
+            auto AlignedStagingMemOffset = Align(StagingMemoryAllocation.UnalignedOffset, StagingBufferMemReqs.alignment);
+            VERIFY_EXPR(StagingMemoryAllocation.Size >= StagingBufferMemReqs.size + (AlignedStagingMemOffset - StagingMemoryAllocation.UnalignedOffset));
+
+            auto *StagingData = reinterpret_cast<uint8_t*>(StagingMemoryAllocation.Page->GetCPUMemory());
+            VERIFY_EXPR(StagingData != nullptr);
+            StagingData += AlignedStagingMemOffset;
+
+            subres = 0;
+            for(Uint32 layer = 0; layer < ImageCI.arrayLayers; ++layer)
+            {
+                for(Uint32 mip = 0; mip < ImageCI.mipLevels; ++mip)
+                {
+                    const auto &SubResData = pInitData->pSubResources[subres];
+                    const auto &CopyRegion = Regions[subres];
+
+                    auto MipInfo = GetMipLevelProperties(m_Desc, mip);
+
+                    VERIFY_EXPR(MipInfo.Width  == CopyRegion.imageExtent.width);
+                    VERIFY_EXPR(MipInfo.Height == CopyRegion.imageExtent.height);
+                    VERIFY_EXPR(MipInfo.Depth  == CopyRegion.imageExtent.depth);
+
+                    VERIFY(SubResData.Stride == 0 || SubResData.Stride >= MipInfo.RowSize, "Stride is too small");
+                    VERIFY(SubResData.DepthStride == 0 || SubResData.DepthStride >= MipInfo.RowSize * MipInfo.Height, "Depth stride is too small");
+
+                    for(Uint32 z=0; z < MipInfo.Depth; ++z)
+                    {
+                        for(Uint32 y=0; y < MipInfo.Height; ++y)
+                        {
+                            memcpy(StagingData + CopyRegion.bufferOffset + (y + z * MipInfo.Height) * MipInfo.RowSize,
+                                   reinterpret_cast<const uint8_t*>(SubResData.pData) + y * SubResData.Stride + z * SubResData.DepthStride,
+                                   MipInfo.RowSize);
+                        }
+                    }
+               
+                    ++subres;
+                }
+            }
+            VERIFY_EXPR(subres == pInitData->NumSubresources);
+
+            err = LogicalDevice.BindBufferMemory(StagingBuffer, StagingBufferMemory, AlignedStagingMemOffset);
+            CHECK_VK_ERROR_AND_THROW(err, "Failed to bind staging bufer memory");
+
+            VulkanUtilities::VulkanCommandBuffer::BufferMemoryBarrier(vkCmdBuff, StagingBuffer, 0, VK_ACCESS_TRANSFER_READ_BIT, EnabledGraphicsShaderStages);
+
+            // Copy commands MUST be recorded outside of a render pass instance. This is OK here
+            // as copy will be the only command in the cmd buffer
+            vkCmdCopyBufferToImage(vkCmdBuff, StagingBuffer, m_VulkanImage,
+                CurrentLayout, // dstImageLayout must be VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL or VK_IMAGE_LAYOUT_GENERAL (18.4)
+                static_cast<uint32_t>(Regions.size()), Regions.data());
+
+            Uint32 QueueIndex = 0;
+	        pRenderDeviceVk->ExecuteAndDisposeTransientCmdBuff(QueueIndex, vkCmdBuff, std::move(CmdPool));
+
+            // After command buffer is submitted, safe-release resources. This strategy
+            // is little overconservative as the resources will be released after the first
+            // command buffer submitted through the immediate context will be completed
+            pRenderDeviceVk->SafeReleaseDeviceObject(std::move(StagingBuffer),           Uint64{1} << Uint64{QueueIndex});
+            pRenderDeviceVk->SafeReleaseDeviceObject(std::move(StagingMemoryAllocation), Uint64{1} << Uint64{QueueIndex});
+        }
+        else
+        {
+            VkImageSubresourceRange Subresource;
+            Subresource.aspectMask     = aspectMask;
+            Subresource.baseMipLevel   = 0;
+            Subresource.levelCount     = VK_REMAINING_MIP_LEVELS;
+            Subresource.baseArrayLayer = 0;
+            Subresource.layerCount     = VK_REMAINING_ARRAY_LAYERS;
+            if(aspectMask == VK_IMAGE_ASPECT_COLOR_BIT)
+            {
+                if(FmtAttribs.ComponentType != COMPONENT_TYPE_COMPRESSED)
+                {
+                    VkClearColorValue ClearColor = {};
+                    vkCmdClearColorImage(vkCmdBuff, m_VulkanImage,
+                                    CurrentLayout, // must be VK_IMAGE_LAYOUT_GENERAL or VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
+                                    &ClearColor, 1, &Subresource);
+                }
+            }
+            else if(aspectMask == VK_IMAGE_ASPECT_DEPTH_BIT || 
+                    aspectMask == (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT) )
+            {
+                VkClearDepthStencilValue ClearValue = {};
+                vkCmdClearDepthStencilImage(vkCmdBuff, m_VulkanImage,
+                                CurrentLayout, // must be VK_IMAGE_LAYOUT_GENERAL or VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
+                                &ClearValue, 1, &Subresource);
+            }
+            else
+            {
+                UNEXPECTED("Unexpected aspect mask");
+            }
+            Uint32 QueueIndex = 0;
+            pRenderDeviceVk->ExecuteAndDisposeTransientCmdBuff(QueueIndex, vkCmdBuff, std::move(CmdPool));
+        }
+
+
+        if(m_Desc.MiscFlags & MISC_TEXTURE_FLAG_GENERATE_MIPS)
+        {
+            if (m_Desc.Type != RESOURCE_DIM_TEX_2D && m_Desc.Type != RESOURCE_DIM_TEX_2D_ARRAY)
+            {
+                LOG_ERROR_AND_THROW("Mipmap generation is only supported for 2D textures and texture arrays");
+            }
+
+            m_MipLevelUAV.reserve(m_Desc.MipLevels);
+            for(Uint32 MipLevel = 0; MipLevel < m_Desc.MipLevels; ++MipLevel)
+            {
+                // Create mip level UAV
+                TextureViewDesc UAVDesc;
+                std::stringstream name_ss;
+                name_ss << "Mip " << MipLevel << " UAV for texture '" << m_Desc.Name << "'";
+                auto name = name_ss.str();
+                UAVDesc.Name = name.c_str();
+                // Always create texture array UAV
+                UAVDesc.TextureDim = RESOURCE_DIM_TEX_2D_ARRAY;
+                UAVDesc.ViewType = TEXTURE_VIEW_UNORDERED_ACCESS;
+                UAVDesc.FirstArraySlice = 0;
+                UAVDesc.NumArraySlices = m_Desc.ArraySize;
+                UAVDesc.MostDetailedMip = MipLevel;
+                if (m_Desc.Format == TEX_FORMAT_RGBA8_UNORM_SRGB)
+                    UAVDesc.Format = TEX_FORMAT_RGBA8_UNORM;
+                ITextureView* pMipUAV = nullptr;
+                CreateViewInternal( UAVDesc, &pMipUAV, true );
+                m_MipLevelUAV.emplace_back(ValidatedCast<TextureViewVkImpl>(pMipUAV), STDDeleter<TextureViewVkImpl, FixedBlockMemoryAllocator>(TexViewObjAllocator));
+            }
+            VERIFY_EXPR(m_MipLevelUAV.size() == m_Desc.MipLevels);
+
+            m_MipLevelSRV.reserve(m_Desc.MipLevels);
+            for(Uint32 MipLevel = 0; MipLevel < m_Desc.MipLevels; ++MipLevel)
+            {
+                // Create mip level SRV
+                TextureViewDesc TexArraySRVDesc;
+                std::stringstream name_ss;
+                name_ss << "Mip " << MipLevel << " SRV for texture '" << m_Desc.Name << "'";
+                auto name = name_ss.str();
+                TexArraySRVDesc.Name = name.c_str();
+                // Alaways create texture array view
+                TexArraySRVDesc.TextureDim = RESOURCE_DIM_TEX_2D_ARRAY;
+                TexArraySRVDesc.ViewType = TEXTURE_VIEW_SHADER_RESOURCE;
+                TexArraySRVDesc.FirstArraySlice = 0;
+                TexArraySRVDesc.NumArraySlices = m_Desc.ArraySize;
+                TexArraySRVDesc.MostDetailedMip = MipLevel;
+                TexArraySRVDesc.NumMipLevels = 1;
+                ITextureView* pMipLevelSRV = nullptr;
+                CreateViewInternal( TexArraySRVDesc, &pMipLevelSRV, true );
+                m_MipLevelSRV.emplace_back(ValidatedCast<TextureViewVkImpl>(pMipLevelSRV), STDDeleter<TextureViewVkImpl, FixedBlockMemoryAllocator>(TexViewObjAllocator));
+            }
+            VERIFY_EXPR(m_MipLevelSRV.size() == m_Desc.MipLevels);
+        }
+    }
+    else if(m_Desc.Usage == USAGE_STAGING)
+    {
         VkBufferCreateInfo VkStaginBuffCI = {};
         VkStaginBuffCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         VkStaginBuffCI.pNext = nullptr;
         VkStaginBuffCI.flags = 0;
-        VkStaginBuffCI.size = uploadBufferSize;
-        VkStaginBuffCI.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-        VkStaginBuffCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        VkStaginBuffCI.size  = GetStagingDataOffset(m_Desc, m_Desc.ArraySize, 0);
+
+        DEV_CHECK_ERR( (m_Desc.CPUAccessFlags & (CPU_ACCESS_READ | CPU_ACCESS_WRITE)) == CPU_ACCESS_READ || 
+                       (m_Desc.CPUAccessFlags & (CPU_ACCESS_READ | CPU_ACCESS_WRITE)) == CPU_ACCESS_WRITE,
+                      "Exactly one of CPU_ACCESS_READ or CPU_ACCESS_WRITE flags must be specified");
+        VkMemoryPropertyFlags MemProperties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+        if (m_Desc.CPUAccessFlags & CPU_ACCESS_READ)
+        {
+            VkStaginBuffCI.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+            MemProperties       |= VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
+            SetState(RESOURCE_STATE_COPY_DEST);
+        }
+        else if (m_Desc.CPUAccessFlags & CPU_ACCESS_WRITE)
+        {
+            VkStaginBuffCI.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+            // VK_MEMORY_PROPERTY_HOST_COHERENT_BIT bit specifies that the host cache management commands vkFlushMappedMemoryRanges 
+            // and vkInvalidateMappedMemoryRanges are NOT needed to flush host writes to the device or make device writes visible
+            // to the host (10.2)
+            MemProperties       |= VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+            SetState(RESOURCE_STATE_COPY_SOURCE);
+        }
+        else
+            UNEXPECTED("Unexpected CPU access");
+        
+        VkStaginBuffCI.sharingMode           = VK_SHARING_MODE_EXCLUSIVE;
         VkStaginBuffCI.queueFamilyIndexCount = 0;
-        VkStaginBuffCI.pQueueFamilyIndices = nullptr;
+        VkStaginBuffCI.pQueueFamilyIndices   = nullptr;
 
         std::string StagingBufferName = "Staging buffer for '";
         StagingBufferName += m_Desc.Name;
         StagingBufferName += '\'';
-        VulkanUtilities::BufferWrapper StagingBuffer = LogicalDevice.CreateBuffer(VkStaginBuffCI, StagingBufferName.c_str());
+        m_StagingBuffer = LogicalDevice.CreateBuffer(VkStaginBuffCI, StagingBufferName.c_str());
 
-        VkMemoryRequirements StagingBufferMemReqs = LogicalDevice.GetBufferMemoryRequirements(StagingBuffer);
+        VkMemoryRequirements StagingBufferMemReqs = LogicalDevice.GetBufferMemoryRequirements(m_StagingBuffer);
         VERIFY( IsPowerOfTwo(StagingBufferMemReqs.alignment), "Alignment is not power of 2!");
-        // VK_MEMORY_PROPERTY_HOST_COHERENT_BIT bit specifies that the host cache management commands vkFlushMappedMemoryRanges 
-        // and vkInvalidateMappedMemoryRanges are NOT needed to flush host writes to the device or make device writes visible
-        // to the host (10.2)
-        auto StagingMemoryAllocation = pRenderDeviceVk->AllocateMemory(StagingBufferMemReqs, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-        auto StagingBufferMemory = StagingMemoryAllocation.Page->GetVkMemory();
-        auto AlignedStagingMemOffset = Align(StagingMemoryAllocation.UnalignedOffset, StagingBufferMemReqs.alignment);
-        VERIFY_EXPR(StagingMemoryAllocation.Size >= StagingBufferMemReqs.size + (AlignedStagingMemOffset - StagingMemoryAllocation.UnalignedOffset));
 
-        auto *StagingData = reinterpret_cast<uint8_t*>(StagingMemoryAllocation.Page->GetCPUMemory());
-        VERIFY_EXPR(StagingData != nullptr);
-        StagingData += AlignedStagingMemOffset;
+        m_MemoryAllocation = pRenderDeviceVk->AllocateMemory(StagingBufferMemReqs, MemProperties);
+        auto StagingBufferMemory = m_MemoryAllocation.Page->GetVkMemory();
+        auto AlignedStagingMemOffset = Align(m_MemoryAllocation.UnalignedOffset, StagingBufferMemReqs.alignment);
+        VERIFY_EXPR(m_MemoryAllocation.Size >= StagingBufferMemReqs.size + (AlignedStagingMemOffset - m_MemoryAllocation.UnalignedOffset));
 
-        subres = 0;
-        for(Uint32 layer = 0; layer < ImageCI.arrayLayers; ++layer)
-        {
-            for(Uint32 mip = 0; mip < ImageCI.mipLevels; ++mip)
-            {
-                const auto &SubResData = pInitData->pSubResources[subres];
-                const auto &CopyRegion = Regions[subres];
-
-                auto MipWidth  = CopyRegion.imageExtent.width;
-                auto MipHeight = CopyRegion.imageExtent.height;
-                auto MipDepth  = CopyRegion.imageExtent.depth;
-                Uint32 RowSize = 0;
-                if(FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
-                {
-                    VERIFY_EXPR(FmtAttribs.BlockWidth > 1 && FmtAttribs.BlockHeight > 1);
-                    MipWidth  = (MipWidth  + FmtAttribs.BlockWidth -1) / FmtAttribs.BlockWidth;
-                    MipHeight = (MipHeight + FmtAttribs.BlockHeight-1) / FmtAttribs.BlockHeight;
-                    RowSize   = MipWidth * Uint32{FmtAttribs.ComponentSize}; // ComponentSize is the block size
-                }
-                else
-                {
-                    RowSize = MipWidth * Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents};
-                }
-                VERIFY(SubResData.Stride == 0 || SubResData.Stride >= RowSize, "Stride is too small");
-                VERIFY(SubResData.DepthStride == 0 || SubResData.DepthStride >= RowSize * MipHeight, "Depth stride is too small");
-
-                for(Uint32 z=0; z < MipDepth; ++z)
-                {
-                    for(Uint32 y=0; y < MipHeight; ++y)
-                    {
-                        memcpy(StagingData + CopyRegion.bufferOffset + (y + z * MipHeight) * RowSize,
-                               reinterpret_cast<const uint8_t*>(SubResData.pData) + y * SubResData.Stride + z * SubResData.DepthStride,
-                               RowSize);
-                    }
-                }
-               
-                ++subres;
-            }
-        }
-        VERIFY_EXPR(subres == pInitData->NumSubresources);
-
-        err = LogicalDevice.BindBufferMemory(StagingBuffer, StagingBufferMemory, AlignedStagingMemOffset);
+        auto err = LogicalDevice.BindBufferMemory(m_StagingBuffer, StagingBufferMemory, AlignedStagingMemOffset);
         CHECK_VK_ERROR_AND_THROW(err, "Failed to bind staging bufer memory");
-
-        VulkanUtilities::VulkanCommandBuffer::BufferMemoryBarrier(vkCmdBuff, StagingBuffer, 0, VK_ACCESS_TRANSFER_READ_BIT, EnabledGraphicsShaderStages);
-
-        // Copy commands MUST be recorded outside of a render pass instance. This is OK here
-        // as copy will be the only command in the cmd buffer
-        vkCmdCopyBufferToImage(vkCmdBuff, StagingBuffer, m_VulkanImage,
-            CurrentLayout, // dstImageLayout must be VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL or VK_IMAGE_LAYOUT_GENERAL (18.4)
-            static_cast<uint32_t>(Regions.size()), Regions.data());
-
-        Uint32 QueueIndex = 0;
-	    pRenderDeviceVk->ExecuteAndDisposeTransientCmdBuff(QueueIndex, vkCmdBuff, std::move(CmdPool));
-
-        // After command buffer is submitted, safe-release resources. This strategy
-        // is little overconservative as the resources will be released after the first
-        // command buffer submitted through the immediate context will be completed
-        pRenderDeviceVk->SafeReleaseDeviceObject(std::move(StagingBuffer),           Uint64{1} << Uint64{QueueIndex});
-        pRenderDeviceVk->SafeReleaseDeviceObject(std::move(StagingMemoryAllocation), Uint64{1} << Uint64{QueueIndex});
+        
+        m_StagingDataAlignedOffset = AlignedStagingMemOffset;
     }
     else
     {
-        VkImageSubresourceRange Subresource;
-        Subresource.aspectMask     = aspectMask;
-        Subresource.baseMipLevel   = 0;
-        Subresource.levelCount     = VK_REMAINING_MIP_LEVELS;
-        Subresource.baseArrayLayer = 0;
-        Subresource.layerCount     = VK_REMAINING_ARRAY_LAYERS;
-        if(aspectMask == VK_IMAGE_ASPECT_COLOR_BIT)
-        {
-            if(FmtAttribs.ComponentType != COMPONENT_TYPE_COMPRESSED)
-            {
-                VkClearColorValue ClearColor = {};
-                vkCmdClearColorImage(vkCmdBuff, m_VulkanImage,
-                                CurrentLayout, // must be VK_IMAGE_LAYOUT_GENERAL or VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
-                                &ClearColor, 1, &Subresource);
-            }
-        }
-        else if(aspectMask == VK_IMAGE_ASPECT_DEPTH_BIT || 
-                aspectMask == (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT) )
-        {
-            VkClearDepthStencilValue ClearValue = {};
-            vkCmdClearDepthStencilImage(vkCmdBuff, m_VulkanImage,
-                            CurrentLayout, // must be VK_IMAGE_LAYOUT_GENERAL or VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
-                            &ClearValue, 1, &Subresource);
-        }
-        else
-        {
-            UNEXPECTED("Unexpected aspect mask");
-        }
-        Uint32 QueueIndex = 0;
-        pRenderDeviceVk->ExecuteAndDisposeTransientCmdBuff(QueueIndex, vkCmdBuff, std::move(CmdPool));
-    }
-
-
-    if(m_Desc.MiscFlags & MISC_TEXTURE_FLAG_GENERATE_MIPS)
-    {
-        if (m_Desc.Type != RESOURCE_DIM_TEX_2D && m_Desc.Type != RESOURCE_DIM_TEX_2D_ARRAY)
-        {
-            LOG_ERROR_AND_THROW("Mipmap generation is only supported for 2D textures and texture arrays");
-        }
-
-        m_MipLevelUAV.reserve(m_Desc.MipLevels);
-        for(Uint32 MipLevel = 0; MipLevel < m_Desc.MipLevels; ++MipLevel)
-        {
-            // Create mip level UAV
-            TextureViewDesc UAVDesc;
-            std::stringstream name_ss;
-            name_ss << "Mip " << MipLevel << " UAV for texture '" << m_Desc.Name << "'";
-            auto name = name_ss.str();
-            UAVDesc.Name = name.c_str();
-            // Always create texture array UAV
-            UAVDesc.TextureDim = RESOURCE_DIM_TEX_2D_ARRAY;
-            UAVDesc.ViewType = TEXTURE_VIEW_UNORDERED_ACCESS;
-            UAVDesc.FirstArraySlice = 0;
-            UAVDesc.NumArraySlices = m_Desc.ArraySize;
-            UAVDesc.MostDetailedMip = MipLevel;
-            if (m_Desc.Format == TEX_FORMAT_RGBA8_UNORM_SRGB)
-                UAVDesc.Format = TEX_FORMAT_RGBA8_UNORM;
-            ITextureView* pMipUAV = nullptr;
-            CreateViewInternal( UAVDesc, &pMipUAV, true );
-            m_MipLevelUAV.emplace_back(ValidatedCast<TextureViewVkImpl>(pMipUAV), STDDeleter<TextureViewVkImpl, FixedBlockMemoryAllocator>(TexViewObjAllocator));
-        }
-        VERIFY_EXPR(m_MipLevelUAV.size() == m_Desc.MipLevels);
-
-        m_MipLevelSRV.reserve(m_Desc.MipLevels);
-        for(Uint32 MipLevel = 0; MipLevel < m_Desc.MipLevels; ++MipLevel)
-        {
-            // Create mip level SRV
-            TextureViewDesc TexArraySRVDesc;
-            std::stringstream name_ss;
-            name_ss << "Mip " << MipLevel << " SRV for texture '" << m_Desc.Name << "'";
-            auto name = name_ss.str();
-            TexArraySRVDesc.Name = name.c_str();
-            // Alaways create texture array view
-            TexArraySRVDesc.TextureDim = RESOURCE_DIM_TEX_2D_ARRAY;
-            TexArraySRVDesc.ViewType = TEXTURE_VIEW_SHADER_RESOURCE;
-            TexArraySRVDesc.FirstArraySlice = 0;
-            TexArraySRVDesc.NumArraySlices = m_Desc.ArraySize;
-            TexArraySRVDesc.MostDetailedMip = MipLevel;
-            TexArraySRVDesc.NumMipLevels = 1;
-            ITextureView* pMipLevelSRV = nullptr;
-            CreateViewInternal( TexArraySRVDesc, &pMipLevelSRV, true );
-            m_MipLevelSRV.emplace_back(ValidatedCast<TextureViewVkImpl>(pMipLevelSRV), STDDeleter<TextureViewVkImpl, FixedBlockMemoryAllocator>(TexViewObjAllocator));
-        }
-        VERIFY_EXPR(m_MipLevelSRV.size() == m_Desc.MipLevels);
+        UNSUPPORTED("Unsupported usage ", GetUsageString(m_Desc.Usage));
     }
 
     VERIFY_EXPR(IsInKnownState());
+}
+
+Uint32 GetStagingDataOffset(const TextureDesc& TexDesc, Uint32 ArraySlice, Uint32 MipLevel)
+{
+    VERIFY_EXPR(ArraySlice < TexDesc.ArraySize && MipLevel < TexDesc.MipLevels || ArraySlice == TexDesc.ArraySize && MipLevel == 0);
+
+    Uint32 Offset = 0;
+    if (ArraySlice > 0)
+    {
+        Uint32 ArraySliceSize = 0;
+        for (Uint32 mip = 0; mip < TexDesc.MipLevels; ++mip)
+        {
+            auto MipInfo = GetMipLevelProperties(TexDesc, mip);
+            // bufferOffset must be a multiple of 4 (18.4)
+            // If the calling command's VkImage parameter is a compressed image, bufferOffset 
+            // must be a multiple of the compressed texel block size in bytes (18.4). This
+            // is automatically guaranteed as MipWidth and MipHeight are rounded to block size
+            ArraySliceSize += (MipInfo.MipSize + 3) & (~3);
+        }
+
+        Offset = ArraySliceSize;
+        if (TexDesc.Type == RESOURCE_DIM_TEX_1D_ARRAY || 
+            TexDesc.Type == RESOURCE_DIM_TEX_2D_ARRAY || 
+            TexDesc.Type == RESOURCE_DIM_TEX_CUBE || 
+            TexDesc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY)
+            Offset *= TexDesc.ArraySize;
+    }
+
+    for (Uint32 mip = 0; mip < MipLevel; ++mip)
+    {
+        auto MipInfo = GetMipLevelProperties(TexDesc, mip);
+        // bufferOffset must be a multiple of 4 (18.4)
+        Offset += (MipInfo.MipSize + 3) & (~3);
+    }
+
+    return Offset;
 }
 
 TextureVkImpl::TextureVkImpl(IReferenceCounters*         pRefCounters,
@@ -494,7 +587,10 @@ TextureVkImpl :: ~TextureVkImpl()
 {
     // Vk object can only be destroyed when it is no longer used by the GPU
     // Wrappers for external texture will not be destroyed as they are created with null device pointer
-    m_pDevice->SafeReleaseDeviceObject(std::move(m_VulkanImage),      m_Desc.CommandQueueMask);
+    if (m_VulkanImage)
+        m_pDevice->SafeReleaseDeviceObject(std::move(m_VulkanImage),   m_Desc.CommandQueueMask);
+    if (m_StagingBuffer)
+        m_pDevice->SafeReleaseDeviceObject(std::move(m_StagingBuffer), m_Desc.CommandQueueMask);
     m_pDevice->SafeReleaseDeviceObject(std::move(m_MemoryAllocation), m_Desc.CommandQueueMask);
 }
 
@@ -648,6 +744,19 @@ void TextureVkImpl::SetLayout(VkImageLayout Layout)
 VkImageLayout TextureVkImpl::GetLayout()const
 {
     return ResourceStateToVkImageLayout(GetState());
+}
+
+void TextureVkImpl::InvalidateStagingRange(VkDeviceSize Offset, VkDeviceSize Size)
+{
+    const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
+    VkMappedMemoryRange InvalidateRange = {};
+    InvalidateRange.sType  = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+    InvalidateRange.pNext  = nullptr;
+    InvalidateRange.memory = m_MemoryAllocation.Page->GetVkMemory();
+    InvalidateRange.offset = m_StagingDataAlignedOffset + Offset;
+    InvalidateRange.size   = Size;
+    auto err = LogicalDevice.InvalidateMappedMemoryRanges(1, &InvalidateRange);
+    DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to invalidated mapped texture memory range");
 }
 
 }

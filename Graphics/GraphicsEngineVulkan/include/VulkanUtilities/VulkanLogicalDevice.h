@@ -130,6 +130,9 @@ namespace VulkanUtilities
         VkResult MapMemory(VkDeviceMemory memory, VkDeviceSize offset, VkDeviceSize size, VkMemoryMapFlags flags, void** ppData)const;
         void UnmapMemory(VkDeviceMemory memory)const;
 
+        VkResult InvalidateMappedMemoryRanges(uint32_t memoryRangeCount, const VkMappedMemoryRange* pMemoryRanges)const;
+        VkResult FlushMappedMemoryRanges(uint32_t memoryRangeCount, const VkMappedMemoryRange* pMemoryRanges)const;
+
         VkResult GetFenceStatus(VkFence fence)const;
         VkResult ResetFence(VkFence fence)const;
         VkResult WaitForFences(uint32_t          fenceCount,
