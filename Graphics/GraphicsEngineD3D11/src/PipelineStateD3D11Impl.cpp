@@ -342,7 +342,7 @@ Uint32 PipelineStateD3D11Impl::GetStaticVariableCount(SHADER_TYPE ShaderType) co
     return m_pStaticResourceLayouts[LayoutInd].GetTotalResourceCount();
 }
 
-IShaderResourceVariable* PipelineStateD3D11Impl::GetStaticShaderVariable(SHADER_TYPE ShaderType, const Char* Name)
+IShaderResourceVariable* PipelineStateD3D11Impl::GetStaticVariableByName(SHADER_TYPE ShaderType, const Char* Name)
 {
     const auto LayoutInd = m_ResourceLayoutIndex[GetShaderTypeIndex(ShaderType)];
     if (LayoutInd < 0)
@@ -351,7 +351,7 @@ IShaderResourceVariable* PipelineStateD3D11Impl::GetStaticShaderVariable(SHADER_
     return m_pStaticResourceLayouts[LayoutInd].GetShaderVariable(Name);
 }
 
-IShaderResourceVariable* PipelineStateD3D11Impl::GetStaticShaderVariable(SHADER_TYPE ShaderType, Uint32 Index)
+IShaderResourceVariable* PipelineStateD3D11Impl::GetStaticVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index)
 {
     const auto LayoutInd = m_ResourceLayoutIndex[GetShaderTypeIndex(ShaderType)];
     if (LayoutInd < 0)

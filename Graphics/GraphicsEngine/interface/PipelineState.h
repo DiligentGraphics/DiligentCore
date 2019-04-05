@@ -274,7 +274,7 @@ public:
     /// \param [in] Name - Name of the variable.
     /// \remark The method does not increment the reference counter
     ///         of the returned interface.
-    virtual IShaderResourceVariable* GetStaticShaderVariable(SHADER_TYPE ShaderType, const Char* Name) = 0;
+    virtual IShaderResourceVariable* GetStaticVariableByName(SHADER_TYPE ShaderType, const Char* Name) = 0;
 
 
     /// Returns static shader resource variable by its index.
@@ -287,7 +287,7 @@ public:
     /// \remark Only static shader resource variables can be accessed through this method.
     ///         Mutable and dynamic variables are accessed through Shader Resource 
     ///         Binding object
-    virtual IShaderResourceVariable* GetStaticShaderVariable(SHADER_TYPE ShaderType, Uint32 Index) = 0;
+    virtual IShaderResourceVariable* GetStaticVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index) = 0;
 
 
     /// Creates a shader resource binding object

@@ -208,7 +208,7 @@ Uint32 PipelineStateGLImpl::GetStaticVariableCount(SHADER_TYPE ShaderType) const
     }
 }
 
-IShaderResourceVariable* PipelineStateGLImpl::GetStaticShaderVariable(SHADER_TYPE ShaderType, const Char* Name)
+IShaderResourceVariable* PipelineStateGLImpl::GetStaticVariableByName(SHADER_TYPE ShaderType, const Char* Name)
 {
     if (m_GLProgram)
     {
@@ -221,7 +221,7 @@ IShaderResourceVariable* PipelineStateGLImpl::GetStaticShaderVariable(SHADER_TYP
     }
 }
 
-IShaderResourceVariable* PipelineStateGLImpl::GetStaticShaderVariable(SHADER_TYPE ShaderType, Uint32 Index)
+IShaderResourceVariable* PipelineStateGLImpl::GetStaticVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index)
 {
     if (m_GLProgram)
     {

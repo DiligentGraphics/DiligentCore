@@ -641,7 +641,7 @@ Uint32 PipelineStateVkImpl::GetStaticVariableCount(SHADER_TYPE ShaderType) const
     return StaticVarMgr.GetVariableCount();
 }
 
-IShaderResourceVariable* PipelineStateVkImpl::GetStaticShaderVariable(SHADER_TYPE ShaderType, const Char* Name)
+IShaderResourceVariable* PipelineStateVkImpl::GetStaticVariableByName(SHADER_TYPE ShaderType, const Char* Name)
 {
     const auto LayoutInd = m_ResourceLayoutIndex[GetShaderTypeIndex(ShaderType)];
     if (LayoutInd < 0)
@@ -651,7 +651,7 @@ IShaderResourceVariable* PipelineStateVkImpl::GetStaticShaderVariable(SHADER_TYP
     return StaticVarMgr.GetVariable(Name);
 }
 
-IShaderResourceVariable* PipelineStateVkImpl::GetStaticShaderVariable(SHADER_TYPE ShaderType, Uint32 Index)
+IShaderResourceVariable* PipelineStateVkImpl::GetStaticVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index)
 {
     const auto LayoutInd = m_ResourceLayoutIndex[GetShaderTypeIndex(ShaderType)];
     if (LayoutInd < 0)

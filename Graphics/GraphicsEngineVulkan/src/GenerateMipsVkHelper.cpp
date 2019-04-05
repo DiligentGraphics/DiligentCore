@@ -157,7 +157,7 @@ namespace Diligent
             PSODesc.ResourceLayout.NumStaticSamplers = 1;
             
             m_DeviceVkImpl.CreatePipelineState(PSODesc, &PSOs[NonPowOfTwo]);
-            PSOs[NonPowOfTwo]->GetStaticShaderVariable(SHADER_TYPE_COMPUTE, "CB")->Set(m_ConstantsCB);
+            PSOs[NonPowOfTwo]->GetStaticVariableByName(SHADER_TYPE_COMPUTE, "CB")->Set(m_ConstantsCB);
         }
 
         return PSOs;
