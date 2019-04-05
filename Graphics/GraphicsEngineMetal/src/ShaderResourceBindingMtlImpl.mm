@@ -55,7 +55,7 @@ void ShaderResourceBindingMtlImpl::InitializeStaticResources(const IPipelineStat
     LOG_ERROR_MESSAGE("ShaderResourceBindingMtlImpl::InitializeStaticResources() is not implemented");
 }
 
-IShaderResourceVariable* ShaderResourceBindingMtlImpl::GetVariable(SHADER_TYPE ShaderType, const char* Name)
+IShaderResourceVariable* ShaderResourceBindingMtlImpl::GetVariableByName(SHADER_TYPE ShaderType, const char* Name)
 {
     LOG_ERROR_MESSAGE("ShaderResourceBindingMtlImpl::GetVariable() is not implemented");
     return nullptr;
@@ -67,7 +67,7 @@ Uint32 ShaderResourceBindingMtlImpl::GetVariableCount(SHADER_TYPE ShaderType) co
     return 0;
 }
 
-IShaderResourceVariable* ShaderResourceBindingMtlImpl::GetVariable(SHADER_TYPE ShaderType, Uint32 Index)
+IShaderResourceVariable* ShaderResourceBindingMtlImpl::GetVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index)
 {
     LOG_ERROR_MESSAGE("ShaderResourceBindingMtlImpl::GetVariable() is not implemented");
     return nullptr;

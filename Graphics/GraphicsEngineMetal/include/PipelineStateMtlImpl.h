@@ -65,13 +65,13 @@ public:
         return 0;
     }
 
-    virtual IShaderResourceVariable* GetStaticShaderVariable(SHADER_TYPE ShaderType, const Char* Name) override final
+    virtual IShaderResourceVariable* GetStaticVariableByName(SHADER_TYPE ShaderType, const Char* Name) override final
     {
         LOG_ERROR_MESSAGE("PipelineStateMtlImpl::GetStaticShaderVariable() is not implemented");
         return nullptr;
     }
 
-    virtual IShaderResourceVariable* GetStaticShaderVariable(SHADER_TYPE ShaderType, Uint32 Index) override final
+    virtual IShaderResourceVariable* GetStaticVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index) override final
     {
         LOG_ERROR_MESSAGE("PipelineStateMtlImpl::GetStaticShaderVariable() is not implemented");
         return nullptr;
