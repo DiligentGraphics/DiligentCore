@@ -10,6 +10,7 @@
 * Renamed `USAGE_CPU_ACCESSIBLE` -> `USAGE_STAGING`
 * Added `SWAP_CHAIN_USAGE_FLAGS` enum
 * Replaced overloaded `IPipelineState::GetStaticShaderVariable()` with `IPipelineState::GetStaticVariableByName()` and `IPipelineState::GetStaticVariableByIndex()`
+* Replaced overloaded `IShaderResourceBinding::GetVariable()` with `IShaderResourceBinding::GetVariableByName()` and `IShaderResourceBinding::GetVariableByIndex()`
 
 ## v2.4.b
 

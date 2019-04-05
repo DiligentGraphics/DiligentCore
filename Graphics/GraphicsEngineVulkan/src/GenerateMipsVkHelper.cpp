@@ -208,13 +208,13 @@ namespace Diligent
         }
 
         const auto& ViewDesc = TexView.GetDesc();
-        auto* pSrcMipVar = SRB.GetVariable(SHADER_TYPE_COMPUTE, "SrcMip");
+        auto* pSrcMipVar = SRB.GetVariableByName(SHADER_TYPE_COMPUTE, "SrcMip");
         IShaderResourceVariable* pOutMipVar[4] =
         {
-            SRB.GetVariable(SHADER_TYPE_COMPUTE, "OutMip0"),
-            SRB.GetVariable(SHADER_TYPE_COMPUTE, "OutMip1"),
-            SRB.GetVariable(SHADER_TYPE_COMPUTE, "OutMip2"),
-            SRB.GetVariable(SHADER_TYPE_COMPUTE, "OutMip3")
+            SRB.GetVariableByName(SHADER_TYPE_COMPUTE, "OutMip0"),
+            SRB.GetVariableByName(SHADER_TYPE_COMPUTE, "OutMip1"),
+            SRB.GetVariableByName(SHADER_TYPE_COMPUTE, "OutMip2"),
+            SRB.GetVariableByName(SHADER_TYPE_COMPUTE, "OutMip3")
         };
 
         auto& PSOs = FindPSOs(ViewDesc.Format);

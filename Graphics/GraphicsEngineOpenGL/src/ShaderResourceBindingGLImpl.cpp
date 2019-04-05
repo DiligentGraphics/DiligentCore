@@ -72,7 +72,7 @@ void ShaderResourceBindingGLImpl::BindResources(Uint32 ShaderFlags, IResourceMap
     }
 }
 
-IShaderResourceVariable* ShaderResourceBindingGLImpl::GetVariable(SHADER_TYPE ShaderType, const char* Name)
+IShaderResourceVariable* ShaderResourceBindingGLImpl::GetVariableByName(SHADER_TYPE ShaderType, const char* Name)
 {
     if (IsUsingSeparatePrograms())
     {
@@ -98,7 +98,7 @@ Uint32 ShaderResourceBindingGLImpl::GetVariableCount(SHADER_TYPE ShaderType) con
     }
 }
 
-IShaderResourceVariable* ShaderResourceBindingGLImpl::GetVariable(SHADER_TYPE ShaderType, Uint32 Index)
+IShaderResourceVariable* ShaderResourceBindingGLImpl::GetVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index)
 {
     if (IsUsingSeparatePrograms())
     {
