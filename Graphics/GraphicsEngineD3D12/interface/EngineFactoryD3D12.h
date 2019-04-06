@@ -28,7 +28,7 @@
 
 #include <sstream>
 
-#include "../../../Primitives/interface/Object.h"
+#include "../../GraphicsEngine/interface/EngineFactory.h"
 #include "../../GraphicsEngine/interface/RenderDevice.h"
 #include "../../GraphicsEngine/interface/DeviceContext.h"
 #include "../../GraphicsEngine/interface/SwapChain.h"
@@ -44,7 +44,7 @@ namespace Diligent
 static const INTERFACE_ID IID_EngineFactoryD3D12 = 
 { 0x72bd38b0, 0x684a, 0x4889, { 0x9c, 0x68, 0xa, 0x80, 0xec, 0x80, 0x2d, 0xde } };
 
-class IEngineFactoryD3D12 : public IObject
+class IEngineFactoryD3D12 : public IEngineFactory
 {
 public:
     virtual void CreateDeviceAndContextsD3D12(const EngineD3D12CreateInfo& EngineCI, 

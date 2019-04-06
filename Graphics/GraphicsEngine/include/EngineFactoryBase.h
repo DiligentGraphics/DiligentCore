@@ -27,9 +27,12 @@
 /// Implementation of the Diligent::EngineFactoryBase template class
 
 #include "Object.h"
+#include "EngineFactory.h"
 
 namespace Diligent
 {
+
+const APIInfo& GetAPIInfo();
 
 /// Template class implementing base functionality for an engine factory
 
@@ -54,7 +57,7 @@ public:
             return;
 
         *ppInterface = nullptr;
-        if (IID == IID_Unknown || IID == m_FactoryIID)
+        if (IID == IID_Unknown || IID == m_FactoryIID || IID == IID_EngineFactory)
         {
             *ppInterface = this;
             (*ppInterface)->AddRef();
@@ -74,6 +77,11 @@ public:
     virtual IReferenceCounters* GetReferenceCounters()const override final
     {
         return const_cast<IReferenceCounters*>(static_cast<const IReferenceCounters*>(&m_RefCounters));
+    }
+
+    virtual const APIInfo& GetAPIInfo() const override final
+    {
+        return Diligent::GetAPIInfo();
     }
 
 private:
