@@ -343,8 +343,9 @@ ShaderCI.EntryPoint        = "MyPixelShader";
 ShaderCI.Desc.ShaderType   = SHADER_TYPE_PIXEL;
 ShaderCI.SourceLanguage    = SHADER_SOURCE_LANGUAGE_HLSL;
 const auto* SearchDirectories = "shaders;shaders\\inc;";
-BasicShaderSourceStreamFactory BasicSSSFactory(SearchDirectories);
-ShaderCI.pShaderSourceStreamFactory = &BasicSSSFactory;
+RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;
+m_pEngineFactory->CreateDefaultShaderSourceStreamFactory(nullptr, &pShaderSourceFactory);
+ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
 RefCntAutoPtr<IShader> pShader;
 m_pDevice->CreateShader(ShaderCI, &pShader);
 ```
